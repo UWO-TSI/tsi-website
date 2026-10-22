@@ -302,6 +302,18 @@ Each is small; lines are lines changed, not removed.
 
 **A11. SQL hardening (0 TS lines):** R16 and R17 in one new migration.
 
+**A12. The UI themes review follow-ups (coordinator, 2026-10-22; main 2d359c38).**
+- `styles/themes/dark.css` ships in every page (`styles/themes/index.ts:7` imports it unconditionally); load it in development only.
+- The shadow `0 24px 80px rgb(var(--ui-shade) / 0.28)` is written 3 times (`styles/game-tokens.css:261` `--gui-shadow-lg`, `components/gui/flat/flat.module.css:15`, `components/gui/gui.module.css:257`); use the one token.
+- `#4b7a68` is hard-coded at `styles/game-tokens.css:238` (`--gui-kit-primary-hover`); derive it from a token.
+- An empty "Focus" header at `styles/game-tokens.css:90`.
+- `DevUiTheme` is mounted twice (`app/dev/layout.tsx:8`, `components/game/DefaultIslandWorld.tsx:1206`).
+- Test: the theme tests (`components/gui/variant.test.tsx`) pass; a production build's CSS has no dark theme rules.
+
+**A13. Phase B leftovers.**
+- S7's real fix: `React.lazy` the café, Oracle, home and ruins scenes in `DefaultIslandWorld.tsx` once `game/hq-interior` merges (it changes that file). That also drops the combat JS from the village bundle. Phase B only gated the café room's and the temple's preloads on their drops.
+- ShopOverlay buys inline what `buyAtCounter` (`lib/game/shopCounter.ts`, tested) does; call it from the overlay.
+
 ### [DECISION]
 
 | # | What | Where | ~Lines |
@@ -370,3 +382,39 @@ Each is small; lines are lines changed, not removed.
 | [DECISION] D1 to D16 | ~2,900 | 5.7 MB of assets (D12), and ~1,850 more if the unlinked portal pages go (D15) |
 | **Total without decisions** | **~2,030** | |
 | **Total with decisions** | **~4,900** (~6,800 with D15) | |
+
+## Applied (Phase B, 2026-10-22, branch `game/ponytail`)
+
+Main merged in twice (3e6ced4b flat-ui, 2d359c38 themes). Gates on the head: full tsc (web and realtime), the full vitest (web: 353 files, 3,362 tests; realtime: 10 files, 222 tests), eslint on every changed file, the SQL smoke (green, "placeholder merch off sale ok"). Evidence in `specs/evidence/ponytail/`. Net in `web/` and `realtime/` code: about −1,650 lines from the [LAUNCH-SAFE] deletions.
+
+| Item | Commit | Lines | Note |
+|---|---|---|---|
+| R1 (David: "Take both off sale") | 1b3be9ef | +213 / −32 (mostly the generated migration and the smoke) | Both slugs in `RETIRED`; `20261022212455_catalogue_seed.sql` (soft deactivate), **not applied to prod**; the 9 merch slots show the three real items; the staff-pick tag gone; `033_smoke` turns the tote on only as its stock-1 fixture. |
+| F1 | (none) | 0 | Dropped: the env vars were set (R2 corrected). |
+| F2 | aceafa48 | +13 / −2 | Unblock unmutes too. |
+| F3 | 60ffb838 | +23 / −3 | **Needs a realtime deploy (Fly `tethos-rt`).** |
+| F4 | b2467e18 | +19 / −6 | |
+| F5 | f35b48e0 | +12 / −1 | Plus the smoke log. gen-seeds up to date. |
+| F6 | da384b8d | +5 / −5 | Dropped (R7 corrected): a test pins the existing link. |
+| F7 | 8a3e4218 | +12 / −4 | `showsAura` takes the drop. |
+| F8 | a3f24224 | +69 / −12 | `fire-pack.webp`, 13 KB; `build_pack.py fire`. |
+| F9 | 9e911da8 | +143 / −25 | `lib/game/character/hairAtlas.ts`; the full copy goes 3 s after the last creator-sized face. |
+| F10 | cb3c5bd5 | +35 / −9 | The hardening flow script sends a key too. |
+| F11 | e05b4077 | +26 / −0 | `NPC_CHAT_ENABLED=true` opens it. |
+| F12 | c6cfdbb2 | +7 / −4 | The ruins' ability swap keeps R. |
+| S1 | ed979892 | +6 / −708 | |
+| S2 | f331fd2e, a2af6ff1 | +4 / −491 | Also `fetchEmoteTypes` and the two bundled defaults. |
+| S3 | 69cc7ef9 | +4 / −133 | `SHOP_PATHS` kept: it backs the walk test. |
+| S5 | 7cb58eba | +10 / −226 | Kept: `buyAtCounter` (tested; see A13), `readBag` (its test reads it), `seqAfter`, `pushEv`, `isFriendCode` (test-only helpers in shared protocol code). `gui/flat` `Pill`/`railStep` are used since the flat-ui merge. |
+| S6 | a3bfdd94 | −106 | The NPC sprite PNGs it named (`assets/characters/npc/*-1.png`) are now unreferenced; not deleted. |
+| S7 | aeb43cb7 | +9 / −3 | Partial: the café room and the temple's pieces are warmed only once their drop opens. The home's wallpaper and flooring stay (the shop shows 6 of 8). Lazy-loading the scenes waits for `game/hq-interior` (A13). |
+| S8 | 57e8115b | +7 / −4 | One call in ApplicantWorld (recruitment, approved). Not seen in a browser: the applicant island needs Supabase. |
+| S9 | 9d10ca0a | +23 / −29 | |
+
+**Expected savings (not measured by the perf lane's quiet window, which ran on main before these):**
+- GPU on the v1 village: about 21 MiB (the campfire's combat pack becomes the fire pack), plus about 22 MiB more whenever a remote player with a family or kit is in view (F7), plus about 30 MiB for every new player after the creator (F9).
+- Download on village load: about 3.5 MB less (cafe-room.glb 1.84 MB, the Oracle shell and pieces 0.59 MB, the default ACNH nature 1.17 MB); the combat pack's 331 KB becomes the fire pack's 13 KB.
+
+**What the village asked for on load (by day), before and after:** `combat-pack.webp`, `cafe-room.glb`, `oracle.glb` and the ACNH default trees, bushes and flowers before; none of them after (they load on entering their scene, or on the applicant island), and `fire-pack.webp` instead. The café, the temple and the home still open (`s7-scenes-open.webp`), with no page errors.
+
+**Skipped (other lanes' files):** `DefaultIslandWorld.tsx`, `lib/game/keepers.ts`, `lib/game/perf/budget.ts`, `lib/game/modelMaterials.ts` and the HQ files are on `game/hq-interior`, so the scene lazy-loading (S7's full fix) waits. Nothing approved needed a `game/flat-ui` file after it merged.
