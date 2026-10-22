@@ -262,9 +262,3 @@ export function layRoad(t: WorldTerrain, points: readonly (readonly [number, num
   t.revision++;
   return rectOf(t, i0, i1, k0, k1);
 }
-
-/** Where a road laid along `points` ends, and the height it ends at (the next segment carries on from it). */
-export function roadEnd(t: WorldTerrain, points: readonly (readonly [number, number])[]): number {
-  const [x, z] = points[points.length - 1];
-  return terrainHeight(t, x, z);
-}

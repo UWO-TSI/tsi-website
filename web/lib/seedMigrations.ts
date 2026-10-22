@@ -68,6 +68,7 @@ const rowsOf = (text: string) => text.split("\n").map((r) => r.replace(/,$/, "")
 /**
  * Upserts for the rows `next` adds or changes against `prev` (one row per line,
  * as the generators write them), so they land even where the insert does nothing.
+ * `stock` is live (reservations take from it), so an edit never resets it; a new row still brings its own.
  */
 export function changedRowsUpsert(prev: string, next: string): string {
   const before = new Map([...prev.matchAll(INSERT)].map((m) => [`${m[1]}(${m[2]})`, new Set(rowsOf(m[3]))]));
@@ -75,7 +76,7 @@ export function changedRowsUpsert(prev: string, next: string): string {
     const old = before.get(`${table}(${cols})`), changed = rowsOf(rows).filter((r) => !old?.has(r));
     if (!changed.length) return [];
     const keys = conflict.split(",").map((c) => c.trim());
-    const set = cols.split(",").map((c) => c.trim()).filter((c) => !keys.includes(c)).map((c) => `${c} = EXCLUDED.${c}`);
+    const set = cols.split(",").map((c) => c.trim()).filter((c) => !keys.includes(c) && c !== "stock").map((c) => `${c} = EXCLUDED.${c}`);
     return [`INSERT INTO ${table} (${cols}) VALUES\n${changed.join(",\n")}\nON CONFLICT (${conflict}) DO UPDATE SET ${set.join(", ")};`];
   }).join("\n");
 }

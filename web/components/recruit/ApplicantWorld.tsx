@@ -22,7 +22,7 @@ import type { ApplicantDayPhase } from "@/lib/game/applicantTime";
 import HQInterior, { type InteriorStation } from "@/components/game/HQInterior";
 import PostFX from "@/components/game/PostFX";
 import { ACNHBuilding } from "@/components/game/ACNHBuilding";
-import { GLBProp, NatureTree, NatureBush, NatureFlowerCluster, NatureFence } from "@/components/game/NatureModels";
+import { GLBProp, NatureTree, NatureBush, NatureFlowerCluster, NatureFence, preloadDefaultNature } from "@/components/game/NatureModels";
 import { createApplicantVillage, APPLICANT_SPAWN, ISLAND_TREES, ISLAND_BUSHES, ISLAND_FLOWERS, ISLAND_PROPS } from "@/lib/game/applicantVillage";
 import { constrainClubhouse, HQ_CLOCK, HQ_LAYOUT, HQ_BOARD_APPROACH } from "@/lib/game/clubhouse";
 import type { Position } from "@/lib/recruitment";
@@ -44,6 +44,8 @@ import { Fireflies } from "@/components/game/AmbientLife";
 import "@/lib/game/aerialFog";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import { isGameControlTarget } from "@/lib/game/keyboardInput";
+
+preloadDefaultNature();
 
 export type VillageAction = "guide" | "enter" | "board" | "clock" | "exit" | "fish" | "flower" | null;
 const STATIONS: InteriorStation[] = [

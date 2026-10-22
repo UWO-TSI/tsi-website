@@ -24,7 +24,6 @@ export function dropsFor(hour: string): Drop[] {
   for (const [id, d] of drops) if (d.hour !== hour) drops.delete(id);
   return [...drops.values()];
 }
-export const dropOf = (nodeId: string, hour: string): Drop | null => { const d = drops.get(nodeId); return d && d.hour === hour ? d : null; };
 export function addDrop(d: Drop) { drops.set(d.nodeId, d); publish(); }
 export function removeDrop(nodeId: string) { if (drops.delete(nodeId)) publish(); }
 /** For useSyncExternalStore: changes when a drop lands or is taken. */

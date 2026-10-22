@@ -77,7 +77,6 @@ export const GLIDE_SPAWN: [number, number] = [-18, 26];
 export const SLIDE_SPAWN: [number, number] = [17.5, 25.5];
 export const SLIDE_GAP: Rect = [15, 19, 45, 51];
 export const SLIDE_TOWER: Rect = [9, 11, 30, 36];
-export const SLIDE_LIP: Rect = [8, 12, 39, 40];
 
 /** The course terrain: land, water, the two plateaus and their ramps. */
 export function courseMap(): IslandMap {

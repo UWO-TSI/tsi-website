@@ -4,10 +4,8 @@
 // so dev mode and prod render identically when Supabase is unreachable.
 
 import type {
-  EmoteType,
   NPCPersona,
   SeasonalPalette,
-  ShopItem,
 } from "@/lib/content/types";
 import { RESIDENT_TALK } from "@/lib/content/residentRoster";
 
@@ -183,105 +181,5 @@ export const DEFAULT_NPC_PERSONAS: NPCPersona[] = [
     active: true,
     created_at: NOW,
     updated_at: NOW,
-  },
-];
-
-// Sprint E2: mirrors migration 019 seed. All 5 are always-unlocked, active.
-export const DEFAULT_EMOTE_TYPES: EmoteType[] = [
-  {
-    id: "emote-wave-fallback",
-    slug: "wave",
-    display_name: "Wave",
-    animation_key: "wave",
-    icon_url: null,
-    unlock_condition: null,
-    active: true,
-    created_at: NOW,
-  },
-  {
-    id: "emote-dance-fallback",
-    slug: "dance",
-    display_name: "Dance",
-    animation_key: "dance",
-    icon_url: null,
-    unlock_condition: null,
-    active: true,
-    created_at: NOW,
-  },
-  {
-    id: "emote-laugh-fallback",
-    slug: "laugh",
-    display_name: "Laugh",
-    animation_key: "laugh",
-    icon_url: null,
-    unlock_condition: null,
-    active: true,
-    created_at: NOW,
-  },
-  {
-    id: "emote-point-fallback",
-    slug: "point",
-    display_name: "Point",
-    animation_key: "point",
-    icon_url: null,
-    unlock_condition: null,
-    active: true,
-    created_at: NOW,
-  },
-  {
-    id: "emote-sit-fallback",
-    slug: "sit",
-    display_name: "Sit",
-    animation_key: "sit",
-    icon_url: null,
-    unlock_condition: null,
-    active: true,
-    created_at: NOW,
-  },
-];
-
-export const DEFAULT_SHOP_ITEMS: ShopItem[] = [
-  {
-    id: "tsi-hoodie-fallback",
-    slug: "tsi-hoodie",
-    display_name: "TSI Hoodie",
-    category: "merch",
-    sprite_url: null,
-    description: "Heavyweight cotton hoodie with the TSI crest. Pickup at HQ.",
-    tc_price: 1500,
-    rarity: "rare",
-    stock: 50,
-    active: true,
-    released_at: NOW,
-    retired_at: null,
-  },
-  {
-    id: "glitch-aura-fallback",
-    slug: "glitch-aura",
-    display_name: "Glitch Aura",
-    category: "avatar-effect",
-    sprite_url: null,
-    description: "A flickering chromatic aberration that follows your avatar.",
-    tc_price: 800,
-    rarity: "epic",
-    stock: null,
-    active: true,
-    released_at: NOW,
-    retired_at: null,
-  },
-  {
-    id: "founder-badge-fallback",
-    slug: "founder-badge",
-    display_name: "Founder Badge",
-    category: "profile-customization",
-    sprite_url: null,
-    description:
-      "A rare badge displayed on your profile and in the directory.",
-    tc_price: 5000,
-    rarity: "legendary",
-    stock: 25,
-    active: true,
-    released_at: NOW,
-    retired_at: null,
   },
 ];

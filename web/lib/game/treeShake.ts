@@ -117,9 +117,3 @@ export function fallAt(from: { x: number; y: number; z: number }, rest: XZ, grou
   out.spin = spinAtLand + dist / Math.max(radius, 0.02);
   return "resting";
 }
-/** Seconds until it rests. */
-export function fallTime(fromY: number, rest: XZ, from: XZ, groundY: number, radius: number): number {
-  const tFall = Math.sqrt((2 * Math.max(0, fromY - groundY - radius)) / FALL.gravity);
-  const tHop = (2 * FALL.gravity * tFall * FALL.bounce) / FALL.gravity;
-  return tFall + tHop + FALL.rollBase + Math.hypot(rest.x - from.x, rest.z - from.z) * FALL.rollPerUnit;
-}

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { supabaseEconomyStore } from "@/lib/wallet/supabaseStore";
@@ -12,47 +12,6 @@ async function applyGems(userId: string, amount: number, type: string, descripti
   } catch (err) {
     return { error: err instanceof DomainError && err.code === "insufficient" ? "insufficient" : "failed" };
   }
-}
-
-// GET /api/economy — get own balance + recent transactions
-export async function GET(request: NextRequest) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { searchParams } = new URL(request.url);
-  const limit = Math.min(parseInt(searchParams.get("limit") ?? "50", 10), 100);
-
-  const [profileResult, transactionsResult] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("tethos_coins, xp, level")
-      .eq("id", user.id)
-      .single(),
-    supabase
-      .from("tc_transactions")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(limit),
-  ]);
-
-  const profile = profileResult.data;
-  if (profileResult.error || transactionsResult.error || !profile || typeof profile.tethos_coins !== "number" || !Number.isFinite(profile.tethos_coins) || profile.tethos_coins < 0) {
-    return NextResponse.json({ error: "Account balance unavailable" }, { status: 503 });
-  }
-
-  return NextResponse.json({
-    balance: profile.tethos_coins,
-    xp: profile?.xp ?? 0,
-    level: profile?.level ?? 1,
-    transactions: transactionsResult.data ?? [],
-  });
 }
 
 // POST /api/economy — purchase item (the admin Gem award is /api/economy/admin/award)

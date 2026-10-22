@@ -16,7 +16,6 @@
 import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { sampleTerrainHeightFast } from "./terrain";
 import { worldTime } from "@/lib/game/worldClock";
 import { rainStreak, viewFocus, type WorldWind } from "@/lib/game/worldFx";
 
@@ -64,7 +63,7 @@ const _turn = new THREE.Quaternion();
 const _pt = { x: 0, y: 0, z: 0 };
 const _focus = { x: 0, z: 0 };
 
-export default function RainFX({ wind, groundHeight = sampleTerrainHeightFast, kind = "rain" }: { wind: WorldWind; groundHeight?: (x: number, z: number) => number; kind?: keyof typeof KINDS }) {
+export default function RainFX({ wind, groundHeight, kind = "rain" }: { wind: WorldWind; groundHeight: (x: number, z: number) => number; kind?: keyof typeof KINDS }) {
   const look = KINDS[kind];
   const meshRef = useRef<THREE.InstancedMesh>(null);
 

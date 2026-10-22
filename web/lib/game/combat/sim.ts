@@ -79,7 +79,6 @@ export const PLANS: Record<string, PhasePlan> = {
     speed: [1, 0.72, 0.62], damage: [1, 1.1, 1.25], notes: ["Its shell cracks", "Enraged: claw slams"] },
 };
 export const phaseOf = (plan: PhasePlan, hpFraction: number): 1 | 2 | 3 => (hpFraction <= plan.at[1] ? 3 : hpFraction <= plan.at[0] ? 2 : 1);
-export const bossPhase = (hpFraction: number) => phaseOf(PLANS["guardian-statue"], hpFraction);
 
 export type EnemyState = "idle" | "chase" | "windup" | "active" | "recover" | "return" | "dead";
 export interface Enemy {

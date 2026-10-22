@@ -32,9 +32,11 @@ describe("what the shop shows (specs/interiors/shop.md, phase 2)", () => {
       expect(d!.icon).toMatch(/^\/assets\/icons\/.+\.webp$/);
       expect(d!.spec.url).toMatch(/\.(glb|png)$/);
     }
-    // The real merch upstairs is shown too; its other slots wait for David's merch list.
-    expect(shown.some(d => d.slug === "merch-tote")).toBe(true);
-    expect(shown.some(d => d.slug === "merch-sticker-pack")).toBe(true);
+    // Upstairs, every merch slot shows one of the three real items, never the placeholder tote or sticker pack
+    // (David, 2026-10-22: "Take both off sale").
+    const merch = shown.filter(d => d.slot.startsWith("merch-"));
+    expect(merch).toHaveLength(12);   // the wall, the counter, the plinths and the three real items' own spots
+    expect(new Set(merch.map(d => d.slug))).toEqual(new Set(["merch-tsi-keycap-keychain", "merch-tsi-lanyard", "merch-genesis-sticker"]));
   });
 
   it("puts today's three specials on the front plinths: the same each time on one day, a new set on another", () => {

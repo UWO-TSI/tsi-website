@@ -61,3 +61,28 @@ BEGIN
   ASSERT (SELECT count(*) FROM merch_reservations WHERE member_id = '00000000-0000-4000-8000-0000000044c0') = 3, 'the pickups kept';
   RAISE NOTICE 'club merch ok';
 END $$;
+
+-- David, 2026-10-22: "Take both off sale". The placeholder tote and sticker pack aren't real merch, so
+-- 20261022212455_catalogue_seed retires them (active false, rows and prices kept): a redeem is refused and the three
+-- real items stay on sale. Applying it again changes nothing. Fails before that migration: the sticker pack is active.
+DO $$
+DECLARE
+  M uuid := '00000000-0000-4000-8000-0000000044c0';
+  refused text;
+BEGIN
+  ASSERT NOT EXISTS (SELECT 1 FROM shop_items WHERE slug IN ('merch-tote', 'merch-sticker-pack') AND active), 'the placeholder merch is off sale';
+  ASSERT (SELECT count(*) FROM shop_items WHERE slug IN ('merch-tsi-keycap-keychain', 'merch-tsi-lanyard', 'merch-genesis-sticker') AND active) = 3, 'the three real items on sale';
+  BEGIN
+    PERFORM merch_reserve(M, (SELECT id FROM shop_items WHERE slug = 'merch-sticker-pack'), 'placeholder-1', 'STK01');
+  EXCEPTION WHEN OTHERS THEN refused := SQLERRM;
+  END;
+  ASSERT refused = 'not_for_sale', 'the sticker pack refused: ' || coalesce(refused, 'reserved');
+  ASSERT (SELECT tethos_coins FROM profiles WHERE id = M) = 200, 'no Gems taken';
+END $$;
+\ir ../migrations/20261022212455_catalogue_seed.sql
+DO $$
+BEGIN
+  ASSERT NOT EXISTS (SELECT 1 FROM shop_items WHERE slug IN ('merch-tote', 'merch-sticker-pack') AND active), 'still off sale';
+  ASSERT (SELECT count(*) FROM shop_items WHERE slug IN ('merch-tsi-keycap-keychain', 'merch-tsi-lanyard', 'merch-genesis-sticker') AND active) = 3, 'the real three still on sale';
+  RAISE NOTICE 'placeholder merch off sale ok';
+END $$;

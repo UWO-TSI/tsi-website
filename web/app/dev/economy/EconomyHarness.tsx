@@ -34,11 +34,11 @@ async function seed(): Promise<EconomyTransport> {
   await S.buy(m.store, ME, { item_id: id("furn-floor-lamp"), qty: 2, idempotency_key: "demo-buy-3" }, now);
   await S.equip(m.store, ME, { item_id: id("acc-straw-hat"), equipped: true });
   await S.sell(m.store, ME, { item_key: "fish_dace", qty: 2, idempotency_key: "demo-sell-1" });
-  await S.reserveMerch(m.store, ME, { item_id: id("merch-sticker-pack"), idempotency_key: "demo-merch-me" });
+  await S.reserveMerch(m.store, ME, { item_id: id("merch-genesis-sticker"), idempotency_key: "demo-merch-me" });
   m.fund(MAYA, 0, 800);
   m.fund(JORDAN, 0, 2000);
-  await S.reserveMerch(m.store, MAYA, { item_id: id("merch-tote"), idempotency_key: "demo-merch-maya" });
-  await S.reserveMerch(m.store, JORDAN, { item_id: id("merch-sticker-pack"), idempotency_key: "demo-merch-jordan-2" });
+  await S.reserveMerch(m.store, MAYA, { item_id: id("merch-tsi-lanyard"), idempotency_key: "demo-merch-maya" });
+  await S.reserveMerch(m.store, JORDAN, { item_id: id("merch-genesis-sticker"), idempotency_key: "demo-merch-jordan-2" });
   return memoryEconomyTransport(ME, m);
 }
 

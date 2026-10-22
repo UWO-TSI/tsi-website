@@ -134,17 +134,6 @@ export type NetStatus =
   | { kind: "offline"; retryAt: number }
   | { kind: "kicked"; reason: KickReason };
 
-/** Players per area in the shard, from the roster (NPC scaling, §5.8). */
-export type AreaHeadcount = Readonly<Record<Area, number>>;
-export function areaHeadcount(roster: readonly Pick<RosterEntry, "area">[]): AreaHeadcount {
-  const counts = Object.fromEntries(AREAS.map(a => [a, 0])) as Record<Area, number>;
-  for (const r of roster) {
-    const a = AREAS[r.area];
-    if (a) counts[a]++;
-  }
-  return counts;
-}
-
 /**
  * What NetWorld renders from: the Colyseus connection or the `?bots=N` loopback, the same either way. `status()` and
  * `roster()` return the same object until it changes (useSyncExternalStore snapshots).

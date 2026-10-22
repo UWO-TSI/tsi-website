@@ -8,6 +8,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Check, Copy, HeartHandshake, LogIn } from "lucide-react";
 import { Button, Empty, List, ListRow, Sheet, Tabs, toast } from "@/components/gui";
+import { chatStore } from "@/lib/net/chat";
 import { useNetStatus } from "@/lib/net/netStore";
 import { formatFriendCode } from "@/lib/world/friendCode";
 import { blockList, unblockWorld } from "@/lib/world/api";
@@ -30,6 +31,7 @@ function Blocked() {
     value={<Button size="sm" variant="secondary" onClick={async () => {
       const r = await unblockWorld(b.member_id);
       if (!r.ok) { toast(r.error); return; }
+      chatStore().unmute(b.member_id);
       setList(l => l?.filter(x => x.member_id !== b.member_id) ?? null);
       toast(`${b.world_name} is unblocked.`);
     }}>Unblock</Button>} />)}</List>;

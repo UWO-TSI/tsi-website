@@ -178,32 +178,3 @@ export default function ContactShadows({ tint, intensity, sunMap }: {
   useEffect(() => layer.hook(scene), [layer, scene]);
   return <><primitive object={layer.contacts} /><primitive object={layer.directed} /></>;
 }
-
-/** Soft tinted discs at fixed spots (rain puddles), the contact disc's shape without the shadow logic. */
-function softDiscs(count: number) {
-  const material = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
-  material.onBeforeCompile = shader => {
-    discVertex(shader);
-    shader.fragmentShader = shader.fragmentShader.replace("#include <opaque_fragment>", `diffuseColor.a *= ${FALLOFF};\n#include <opaque_fragment>`);
-  };
-  material.customProgramCacheKey = () => "soft-disc-v1";
-  const mesh = new THREE.InstancedMesh(DISC, material, Math.max(count, 1));
-  mesh.frustumCulled = false;
-  mesh.renderOrder = 1;
-  return mesh;
-}
-function layDiscs(mesh: THREE.InstancedMesh, spots: readonly (Ellipse & { y: number })[], color: string, opacity: number) {
-  const material = mesh.material as THREE.MeshBasicMaterial;
-  material.color.set(color);
-  material.opacity = opacity;
-  spots.forEach((s, i) => place(mesh, i, s, s.y + 0.03));
-  mesh.count = spots.length;
-  mesh.instanceMatrix.needsUpdate = true;
-}
-
-export function SoftDiscs({ spots, color, opacity }: { spots: readonly (Ellipse & { y: number })[]; color: string; opacity: number }) {
-  const mesh = useMemo(() => softDiscs(spots.length), [spots.length]);
-  useEffect(() => layDiscs(mesh, spots, color, opacity), [mesh, spots, color, opacity]);
-  useEffect(() => () => (mesh.material as THREE.Material).dispose(), [mesh]);
-  return <primitive object={mesh} />;
-}

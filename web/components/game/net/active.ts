@@ -18,7 +18,6 @@ interface Live { source: NetSource | null; area: Area | null }
 const live: Live = { source: null, area: null };
 const listeners = new Set<() => void>();
 let unhook: (() => void) | null = null;
-const NO_ROSTER: readonly RosterEntry[] = [];
 const NO_UIDS: ReadonlySet<string> = new Set();
 let uids: ReadonlySet<string> = NO_UIDS, uidsDirty = true;
 
@@ -56,10 +55,6 @@ export function areaCount(roster: readonly RosterEntry[], area: Area): number {
 /** Everyone in `area` but you: the roster includes you once joined, wherever `here` (your own area) is that area. */
 export function othersIn(roster: readonly RosterEntry[], area: Area, joined: boolean, here: Area | null): number {
   return Math.max(0, areaCount(roster, area) - (joined && here === area ? 1 : 0));
-}
-/** How many players are in an area of the shard (spec §5.8: every client in a shard agrees, it's room state). */
-export function useAreaHeadcount(area: Area): number {
-  return useSyncExternalStore(subscribe, () => areaCount(live.source?.roster() ?? NO_ROSTER, area), () => 0);
 }
 /** The other players in an area: 0 when offline or alone (spec §5.8: then everyone shows). */
 export function useOthersIn(area: Area): number {

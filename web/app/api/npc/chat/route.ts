@@ -24,6 +24,9 @@ const MAX_TOKENS = 250;
 const rateLimiter = createRateLimiter();
 
 export async function POST(request: Request) {
+  // 0. Closed unless switched on: nothing in v1 calls it, and every reply is a paid Anthropic call.
+  if (process.env.NPC_CHAT_ENABLED !== "true") return NextResponse.json({ error: "Not found" }, { status: 404 });
+
   // 1. Parse + validate input
   let body: unknown;
   try {
