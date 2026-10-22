@@ -178,6 +178,8 @@
 
 /* The rail: the kit's icons; an item's picture grey until it's the chosen one. */
 .creator[data-flat] .rail { grid-area: rail; gap: 6px; padding: 8px 0 18px; overflow-x: hidden; overflow-y: auto; }
+/* The creator's own line drawings are thinner than the kit's glyphs: a step bigger, so they read the same size. */
+.creator[data-flat] .rail svg { width: 28px; height: 28px; }
 .creator[data-flat] .rail img { object-fit: contain; pointer-events: none; filter: grayscale(1) opacity(0.5); transition: filter 0.15s ease-out; }
 .creator[data-flat] .rail button:hover img { filter: grayscale(0.4) opacity(0.85); }
 .creator[data-flat] .rail [aria-selected="true"] img { filter: none; }

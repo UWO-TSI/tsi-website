@@ -74,6 +74,15 @@ const creatorPage = async (surface, size) => {
 };
 
 const SCENES = {
+  // The closet alone (its rail's icons), desktop and phone.
+  closet: async () => {
+    let p = await creatorPage("wardrobe");
+    await category(p.page, "hair", "c-closet-hair", { pick: "Dreads with a cap" });
+    await p.ctx.close();
+    p = await creatorPage("wardrobe", PHONE);
+    await category(p.page, "tops", "c-phone-closet-tops");
+    await p.ctx.close();
+  },
   creator: async () => {
     // The closet (wardrobe mode): hair (a two-colour style: Own, the second colour, the wheel), eyes, accessories, tops.
     let p = await creatorPage("wardrobe");

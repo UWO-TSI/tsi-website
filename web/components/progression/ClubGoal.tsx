@@ -36,7 +36,8 @@ export default function ClubGoal({ goal, look = "page", onContribute }: { goal: 
       <span className={m.aside}>A club event check-in adds {goal.weights.event} pts</span>
     </div> : null}
   </>;
-  if (look === "notice") return <Card as="article" pinned tilt={-0.4} className={m.notice} aria-label={goal.title} data-testid="goal-notice">{body}</Card>;
+  // A notice stays paper in a flat menu too (data-gui-paper: the cream tokens again).
+  if (look === "notice") return <Card as="article" pinned tilt={-0.4} className={m.notice} aria-label={goal.title} data-testid="goal-notice" data-gui-paper="">{body}</Card>;
   return <article className={m.goal} aria-label={goal.title} data-testid="goal-page">{body}</article>;
 }
 

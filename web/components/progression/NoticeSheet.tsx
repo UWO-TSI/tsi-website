@@ -34,7 +34,8 @@ export function NoticeBody({ transport = lettersTransport }: { transport?: Lette
           : <Empty icon={<Flag size={32} />} title="No club goals right now">The next one goes up here.</Empty>}
       </div>
       <div className={m.boardSide}>
-        {state.objective ? <Card pinned tone="butter" tilt={1.2} className={m.nextStep} aria-label="Your next step">
+        {/* The notices stay paper in either palette (data-gui-paper). */}
+        {state.objective ? <Card pinned tone="butter" tilt={1.2} className={m.nextStep} aria-label="Your next step" data-gui-paper="">
           <p className={m.kicker}>Your next step</p>
           <p>{state.objective.text}</p>
         </Card> : null}
@@ -43,7 +44,7 @@ export function NoticeBody({ transport = lettersTransport }: { transport?: Lette
         </Section> : null}
         <Section title="From HQ">
           {mail.letters !== null && notices.length === 0 ? <p className={m.quietEmpty}>{mail.error === "signed-out" ? "Sign in to see HQ's notices." : mail.error ? "HQ's notices didn't load." : "No notices from HQ yet."}</p> : null}
-          {notices.map((l, i) => <Card key={l.id} pinned tilt={i % 2 ? 0.8 : -0.7} className={m.slipCard}>
+          {notices.map((l, i) => <Card key={l.id} pinned tilt={i % 2 ? 0.8 : -0.7} className={m.slipCard} data-gui-paper="">
             <button type="button" className={m.slip} onClick={() => { setReading(l); void mail.read(l); }} aria-label={`${l.subject || "A notice"}, from HQ, ${when(l.created_at)}${l.read_at ? "" : ", unread"}`}>
               <span className={m.byline}>{l.read_at ? null : <span className={m.unread} aria-hidden="true" />}{when(l.created_at)}</span>
               <span className={m.slipTitle}>{l.subject || "A notice"}</span>

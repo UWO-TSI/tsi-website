@@ -8,10 +8,15 @@
 - **Head:** see `git log -1` on `game/flat-ui`. Main (`feat/game-default-island` f66bafe6, wardrobe batch 2) merged in.
 - **Feature freeze Oct 24** (launch Oct 31; `specs/launch/v1-launch.md`, ledger row 317). Step 8 merges only if David approves it by Oct 24, otherwise after launch. Keep it opt-in and behaviour-identical; don't widen scope.
 - **Round 3, step 1 (the side panels and the motion): APPROVED** with notes (the verdict below): a spring instead of ease-in-out, a slight drop shadow on the hovered cell, and the four menus shown in the flat palette beside the cream ones.
-- **Round 3, step 8, the avatar creator and wardrobe: built and reported** (`round3-creator.webp`), waiting on David. Opt-in `flat` on `CharacterCreator` (closet, fitting room, the member's first creator); the applicant's is unchanged.
+- **Round 3, step 8, the avatar creator and wardrobe: APPROVED** (`round3-creator.webp`), with one note (the rail's icons a little bigger). Opt-in `flat` on `CharacterCreator` (closet, fitting room, the member's first creator); the applicant's is unchanged.
+- **Round 3b: built and reported** (`round3b-spring-theme.webp`): the spring, the hover shadow, the bigger rail icons, and the four redesigned menus in cream beside flat for David to pick. Main d251c36e merged in. The coordinator plans to merge game/flat-ui into main once David OKs round 3b, before the Oct 24 freeze.
 - **Step 7, the first four cream menus:** built (`round2-step7-first4.webp`), NO verdict yet. Leave them as they are; don't roll the direction out to the other menus until the coordinator relays David's OK.
 - **Approved:** the kit, the chest, the workbench, the furniture catalogue, the bag (filters and side panel).
 - **Merged to main:** step 1 (the kit), step 2 (the old shop pages).
+
+## David's decisions (step 8 verdict, relayed 2026-10-22)
+
+APPROVED: the creator, all three items. One note on the closet, verbatim: "left ui iicons could be slightly bigger". The IconRail icons a little bigger (roughly 20 to 24 px glyphs, the hit area grown to match); it's the kit's rail, so the shop, bag, collection and creator all match. Folded into round 3b.
 
 ## David's decisions (round 3 verdict, relayed 2026-10-22)
 
@@ -71,8 +76,8 @@ The verbatim notes are in `specs/polish/flat-ui.md`, under "Round 2".
 
 1. ~~Round 3 step 1: the side panels and the cells' motion; shoot; report.~~ Done.
 2. ~~Round 3 step 8, the creator: opt-in `flat`, shoot, report.~~ Done (`round3-creator.webp`).
-3. **The verdict's notes:** the spring (hover and select, the neighbours too) and the hovered cell's slight shadow; the four first menus in the flat palette beside the cream ones. One short sheet, `round3b-spring-theme.webp`, with a filmstrip of the spring. Report, then clean up and stop.
-4. After David picks a palette for the four menus (through the coordinator): apply the direction to the rest, with the `components/gui/cream` pieces: settings, wallet, tourney, cafe goals (it still uses `GoalCard`; move it to `ClubGoal`), trophies, showcase, donate, the Esc menu, friends. Shoot before and after into one sheet.
+3. ~~The verdict's notes: the spring, the hover shadow, the bigger rail icons, the four menus in flat beside cream; `round3b-spring-theme.webp`.~~ Done and reported. Wait for David's pick of the four menus' palette.
+4. When David picks the four menus' palette: if flat, flip `MenuPaletteContext`'s default (components/gui/variant) to "flat" (that's every ProgressionPanel and IslandSheet menu, so check the rest first with the coordinator, since he said not to convert them yet). Either way, after his OK (through the coordinator): apply the direction to the rest, with the `components/gui/cream` pieces: settings, wallet, tourney, cafe goals (it still uses `GoalCard`; move it to `ClubGoal`), trophies, showcase, donate, the Esc menu, friends. Shoot before and after into one sheet.
    - `progression.module.css` still serves the wallet, Contribute and cafe goals. When those move, delete what's left unused there and `GoalCard` (keep `rewardName`).
 
 Each step ends with:
@@ -96,6 +101,8 @@ Each step ends with:
 - **Locks:** `LANE=game/flat-ui /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh heavy <cmd>`. Swap has been over 9 GB, so the dev server has to be down (and the browser lock released) before the heavy lock.
 - **Killing the dev server:** in zsh an unquoted `$PIDS` isn't split; kill the PIDs by number (npm exec, next dev, next-server and its postcss workers).
 - **Round 3 shots:** `shots-round3.mjs <out> panels|stills|film|creator` on port 3192. `film` pauses only the animations under way and seeks them (`document.getAnimations()`), so each frame is its exact time; the finished entrances (the panel's rise, held by its fill) are left alone. The filmstrip sheet is composed by a small script in the scratchpad (`r3/film.py`), the before and after sheet by `sheet.py`.
+- **Palette preview:** `palette=flat` on `/dev/progression` and `/dev/flat-ui?surface=missions` (MenuPaletteContext); `PALETTE=flat` for `shots-round2-step7.mjs`. `sheet.py` takes `LABELS="cream,flat"` for a choice instead of a before and after.
+- **The spring:** `--nudge-ease` in the kit's CSS is a damped spring sampled into `linear()` (damping 0.55, 33 points); regenerate it with the formula in the comment if the feel changes. `film` times are 0 to 200 ms (hover) and 0 to 400 ms (select).
 - **Creator shots:** `/dev/flat-ui?surface=wardrobe` (the closet; `place=fitting` for the fitting room), `surface=creator` (the member's first creator, with the name field), `surface=creator-applicant` (the applicant island's, as ApplicantIsland mounts it). "Dreads with a cap" is the free two-colour hairstyle (Own, the second colour). Raw befores: scratchpad `r3/before/c-*.png`.
 - **The cells' motion:** `useNudge()` is a React 19 callback ref with a cleanup; the grid's direct children are the cells. It writes `--nudge-*` variables and `data-nudge` only where they change, and reads offsetLeft/Top (layout without transforms), so the motion never feeds back into itself. A cell with `z-index: 1` paints over a sticky sibling with no z-index: the side panel has `z-index: 2` for the phone.
 - **A transformed ancestor traps `position: fixed`:** the flat panel's entrance animation (`rise ... both`) makes the panel the containing block. Place pop-overs inside a positioned box of the content instead.

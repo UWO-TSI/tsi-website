@@ -242,3 +242,19 @@ APPROVED: the panels, the phone panels and the motion. His notes, verbatim:
    - The coordinator's reading: this clean flat palette becomes the base theme for the whole UI, and later UI themes (dark mode, an ACNH-style cream theme and so on) are sold in the shop.
    - Before the freeze (Oct 24): the four redesigned menus (journal, mission board, notice board, mailbox) are shown in the clean flat palette too, with their new layouts, and the paper kept for letters and notices, beside the cream versions so David can pick. The remaining menus are not converted yet.
    - **UI themes come from tokens (after launch, not built now):** a theme is a token set (the base flat, dark, cream or ACNH), swapped as a whole; the components read tokens only.
+
+## Step 8 verdict (David, relayed 2026-10-22)
+
+APPROVED: the creator, all three items (the closet, the fitting room, the first creator). One note on the closet, verbatim: "left ui iicons could be slightly bigger".
+- The `IconRail` icons a little bigger: roughly 20 to 24 px glyphs, the hit area grown to match.
+- It's the kit's rail, so the shop, the bag, the collection and the creator all match.
+
+### Round 3b built: the spring, the hover shadow, bigger rail icons, the four menus in flat (game/flat-ui, 2026-10-22)
+
+Evidence: `specs/evidence/flat-ui/round3b-spring-theme.webp`: the spring frame by frame (hover 0 to 200 ms, select 0 to 400 ms, seeked), round 3 beside round 3b (the hover shadow, the rail icons on the shop and the closet, the closet on a phone), and the four redesigned menus in cream beside the clean flat palette (the journal, the ruins mission board, the notice board, the mailbox and a letter; the journal and the mailbox on a phone).
+
+- **The spring:** the cells' motion now runs on a damped spring (damping ratio 0.55, sampled into CSS `linear()`; about 12% over, then it settles). Hover settles in 0.2 s, the pick in 0.4 s; the neighbours spring the same way, and so does the way back. Transforms only; still off under reduced motion. Without `linear()` support, a back-out cubic-bezier.
+- **The hover shadow:** the hovered cell lifts with a slight drop shadow (0 8px 20px, 10% black) as it grows out; the picked one keeps its ring and a softer lift. The creator's tiles do the same (the hovered tile white with the shadow).
+- **The rail's icons:** 24 px glyphs on a 54 px hit area (were about 22 on 48), set by the kit whatever size the caller drew them at, so every rail matches. Item pictures in a rail are 34 px. On a phone the row keeps its 48 px hit area (23 px glyphs) so it stays in view. The creator's own line drawings are 28 px, as they're thinner.
+- **The four menus in flat:** `MenuPaletteContext` (components/gui/variant) sets the palette the redesigned menus' frames wear (`ProgressionPanel`, `IslandSheet`). It is cream by default, so nothing shipped changes; the dev harnesses take `palette=flat` for the shots. If David picks flat, the default flips in that one place. The layouts are the round 2 redesign's. Letters and the notice board's notices stay paper in the flat palette (`data-gui-paper` on the goal notice, the next-step sticky note and HQ's slips).
+- **Themes (after launch, not built):** a UI theme is a token set (the base flat, dark, cream or ACNH), swapped as a whole; the components read tokens only. `MenuPaletteContext` is a stopgap for this one choice, not the theme system.
