@@ -14,7 +14,7 @@ import { useGLTF } from "@react-three/drei";
 import type { WeaponPaint } from "@/lib/game/combat/primitives";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
-import { BASE_URL, COLOUR_ATLAS_URL, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, HAIR_MAPS_URLS, PART_BY_ID, LOD_SKIN_URL, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, VERBS_URL, bodyKey, resolveParts, usesFacePage2, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
+import { BASE_URL, COLOUR_ATLAS_URL, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, PART_BY_ID, LOD_SKIN_URL, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, VERBS_URL, bodyKey, resolveParts, usesFacePage2, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
 import { characterLod, createLodState, detailSituation, drawnHeight, mixerStep, type DetailSituation } from "@/lib/game/character/lod";
 import { isDetailFocus } from "@/lib/game/character/detailFocus";
 import { readPhoto } from "@/lib/game/photoMode";
@@ -31,6 +31,7 @@ import { heldTemplate } from "@/lib/game/character/heldMesh";
 import { addContact } from "../ContactShadows";
 import { addGrassBender } from "@/lib/game/grassBenders";
 import { frameStats } from "@/lib/game/perf/frameStats";
+import { createHairAtlas } from "@/lib/game/character/hairAtlas";
 import { MOVE_TUNING } from "@/lib/game/movement/sim";
 import FishingRig from "./FishingRig";
 
@@ -51,29 +52,11 @@ const BODY_MATERIAL = new THREE.MeshPhysicalMaterial({ name: "CharacterBody", ve
  * matte with a soft gloss. A colour the member picks shifts the texture's hue and saturation in OKLab, each texel keeping
  * its lightness (hairColour.ts; rig.ts `hairA`, `hairB`); the alpha names the texel's channel (1 the hair's colour, 2/3 a
  * two-colour hair's second, 1/3 fixed: a cap or visor). Loaded the first time a mapped style is worn (sRGB: it reads back
- * linear), the world's half-size copy (HAIR_MAPS_URLS) unless a creator-sized face asks for the full one; until then a
- * white texel (the under-cap's tint alone).
+ * linear), the world's half-size copy (HAIR_MAPS_URLS) unless a creator-sized face asks for the full one, which goes
+ * again with the last such face (lib/game/character/hairAtlas.ts); until then a white texel (the under-cap's tint alone).
  */
-const HAIR_ATLAS: { value: THREE.Texture } = { value: new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1) };
-HAIR_ATLAS.value.needsUpdate = true;
-/** Which copy is loaded or loading: the world's half-size one first; the creator's full one replaces it for good. */
-let hairAtlasSize: "world" | "creator" | null = null;
-function ensureHairAtlas(size: "world" | "creator") {
-  if (hairAtlasSize === "creator" || hairAtlasSize === size) return;
-  hairAtlasSize = size;
-  new THREE.TextureLoader().load(HAIR_MAPS_URLS[size], tex => {
-    if (size === "world" && hairAtlasSize === "creator") { tex.dispose(); return; }   // the full one was asked for meanwhile
-    tex.flipY = false;                       // glTF UVs (top-left origin), as the face atlas
-    tex.colorSpace = THREE.SRGBColorSpace;   // colour: decoded to linear on sampling; the alpha is the channel, as stored
-    tex.generateMipmaps = true;
-    tex.minFilter = THREE.LinearMipmapLinearFilter;
-    tex.anisotropy = 4;
-    tex.needsUpdate = true;
-    const old = HAIR_ATLAS.value;
-    HAIR_ATLAS.value = tex;
-    old.dispose();
-  });
-}
+const HAIR = createHairAtlas();
+const HAIR_ATLAS = HAIR.uniform;
 /**
  * Wardrobe batch 2: the fixed-colour atlas (art/characters/colour_atlas.py). David's Roblox accessories and #22's hat keep
  * their own textures: a vertex whose u is 2 or more takes the texel at (u - 2, v), as drawn, never tinted. Loaded the
@@ -906,8 +889,10 @@ export default function Character({ look, motion, walkSpeed = MOVE_TUNING.walkSp
   // While a newly chosen part loads, keep showing the previous look instead of suspending.
   const shown = useDeferredValue(look);
   const parts = useMemo(() => resolveParts(shown), [shown]);
-  // the first mapped hairstyle loads the shared atlas: the world's copy, or the full one for a creator-sized face
-  useEffect(() => { if (parts.some(p => p.map)) ensureHairAtlas(faceSize >= 1024 ? "creator" : "world"); }, [parts, faceSize]);
+  // a mapped hairstyle loads the shared atlas: the world's copy, or the full one while a creator-sized face wears one
+  const mapped = parts.some(p => p.map), creatorSized = faceSize >= 1024;
+  useEffect(() => (creatorSized ? HAIR.creatorUp() : undefined), [creatorSized]);
+  useEffect(() => (mapped ? HAIR.wear(creatorSized) : undefined), [mapped, creatorSized]);
   useEffect(() => { if (parts.some(p => p.colour)) ensureColourAtlas(); }, [parts]);   // the first textured accessory loads the colour atlas
   const loaded = useGLTF([BASE_URL, ...parts.map(p => p.url)]) as unknown as Gltf[];
   const atlas = useLoader(THREE.TextureLoader, faceSize >= 1024 ? FACE_ATLAS_URLS.creator : FACE_ATLAS_URLS.world);
