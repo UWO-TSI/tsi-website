@@ -513,31 +513,8 @@ export const swellUniformsOf = (u: Record<string, THREE.IUniform>) => ({
   uSwellHeight: u.uSwellHeight, uSwellLength: u.uSwellLength, uSwellSpeed: u.uSwellSpeed, uShoreMap: u.uShoreMap, uShoreRect: u.uShoreRect,
 });
 
-const SW1 = Math.hypot(...SWELL.d1), SW2 = Math.hypot(...SWELL.d2), SW3 = Math.hypot(...SWELL.d3);
-const D1X = SWELL.d1[0] / SW1, D1Z = SWELL.d1[1] / SW1, D2X = SWELL.d2[0] / SW2, D2Z = SWELL.d2[1] / SW2, D3X = SWELL.d3[0] / SW3, D3Z = SWELL.d3[1] / SW3;
-const wrapPhase = (v: number) => v - 6.2831853 * Math.floor(v / 6.2831853);
 /** The share of the swell's height that reaches water `depth` deep (it dies away over the shallows). */
 export const swellFade = (depth: number) => smooth01(SWELL.fade[0], SWELL.fade[1], depth);
-/**
- * WATER_SWELL on the CPU, for what floats on the water (the boat, the buoys; arrival-wharf.md): the surface's rise at
- * world (x, z) at world time `t` (the shader's uTime), and its slope (∂h/∂x, ∂h/∂z) into `grad`. The same constants
- * print the shader, so the two cannot drift apart; read the live `p` from the water's uniforms
- * (components/game/grid/terrainMaterials.ts waterSurfaceUniforms) to ride the waves as drawn. `depth`: the water's
- * depth there (the swell fades over the shallows); floats ride deep water, so by default all of it.
- */
-export function waterSwellAt(x: number, z: number, t: number, p: Pick<WaterParams, "waveHeight" | "waveScale" | "waveSpeed" | "swellHeight" | "swellLength" | "swellSpeed">, grad?: { x: number; z: number }, depth = Infinity): number {
-  const k = 6.2831853 / Math.max(p.waveScale, 0.001), h = p.waveHeight;
-  const a1 = (x * D1X + z * D1Z) * k + wrapPhase(t * p.waveSpeed);
-  const a2 = (x * D2X + z * D2Z) * k * SWELL.k2 + wrapPhase(t * p.waveSpeed * SWELL.s2);
-  const k3 = 6.2831853 / Math.max(p.swellLength, 0.001), h3 = p.swellHeight * swellFade(depth);
-  const a3 = (x * D3X + z * D3Z) * k3 + wrapPhase(t * p.swellSpeed);
-  if (grad) {
-    const c1 = Math.cos(a1) * SWELL.w1 * k * h, c2 = Math.cos(a2) * SWELL.w2 * k * SWELL.k2 * h, c3 = Math.cos(a3) * k3 * h3;
-    grad.x = D1X * c1 + D2X * c2 + D3X * c3;
-    grad.z = D1Z * c1 + D2Z * c2 + D3Z * c3;
-  }
-  return (Math.sin(a1) * SWELL.w1 + Math.sin(a2) * SWELL.w2) * h + Math.sin(a3) * h3;
-}
 
 const SWELL_VERTEX_DECLS = /* glsl */ `
 varying vec3 vWaterWorld;

@@ -5,20 +5,28 @@
  * shared so the game's menus can wear the same style. One flat light-grey panel over most of the screen (`FlatPanel`):
  * a purse top left, the title, a round close; a rail of icons down the left (`IconRail`); white cards in a grid
  * (`CardGrid`, `ItemCard`); an item opened in the same panel on the white studio stage (`DetailView`, `SpecBand`); and the
- * small parts (`Pill`, `DarkButton`, `GhostButton`, `RoundButton`, `HairlineRow`). Colours: the --flat-* tokens in
- * styles/game-tokens.css. Nothing here knows about the shop: every piece takes plain props.
+ * small parts (`Pill`, `DarkButton`, `GhostButton`, `RoundButton`, `HairlineRow`). Colours: the theme's --ui-* tokens
+ * (styles/themes). Nothing here knows about the shop: every piece takes plain props.
  */
-import type { ButtonHTMLAttributes, HTMLAttributes, KeyboardEvent, ReactNode, Ref } from "react";
+import { Fragment, useMemo, useRef, type ButtonHTMLAttributes, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Sparkles, X } from "lucide-react";
 import { usePresence, useWorldDialog } from "@/lib/game/useWorldDialog";
 import { CurrencyIcon } from "@/components/economy/Amount";
 import PixelImage from "@/components/economy/PixelImage";
+import { GuiVariantContext } from "../variant";
+import { bothRefs, useMarker, useNudge } from "../motion";
 import f from "./flat.module.css";
 
 /** The kit's class names, for the odd surface that lays out its own content in the flat style. */
 export { f as flatStyles };
 /** The detail stage's classes: a viewer (TurnStage, ItemViewer, the keychain's stage) fills `stage`; a picture `picture`. */
 export const STAGE = { stage: f.stage, picture: f.stagePicture } as const;
+/**
+ * A grid of its own (the bag's slots, the catalogue's pieces) moving as `CardGrid` does: put `NUDGE_GRID` on it and
+ * `useNudge()`'s ref, and keep each cell a direct child.
+ */
+export const NUDGE_GRID = f.nudge;
+export { useNudge };
 
 const cx = (...names: (string | false | null | undefined)[]) => names.filter(Boolean).join(" ");
 
@@ -29,33 +37,39 @@ const cx = (...names: (string | false | null | undefined)[]) => names.filter(Boo
  * the purse slot (`purse`), the title and a round close, the rail (`rail`) down the left and the content. Focus,
  * Escape, the opening key (`keys`), the world's hotkeys held and the paper sound come from the dialog system
  * (lib/game/useWorldDialog), as every sheet's do. `embedded`: the same panel on a page (the portal's shop), with no
- * scrim and no dialog; no close without `onClose`.
+ * scrim and no dialog; no close without `onClose`. `contentKey`: what the content shows (the rail's choice); when it
+ * changes, the new content fades and slides in a few px.
  */
-export function FlatPanel({ open, onClose, title, purse, rail, keys, testId, embedded, children }: {
+export function FlatPanel({ open, onClose, title, purse, rail, keys, testId, embedded, contentKey, children }: {
   open: boolean; onClose?: () => void; title: string;
   /** Top left: the coins and Gems (`Purse`), or anything else short. */
   purse?: ReactNode;
   /** Down the left: an `IconRail`. */
   rail?: ReactNode;
-  keys?: string | readonly string[]; testId?: string; embedded?: boolean; children: ReactNode;
+  keys?: string | readonly string[]; testId?: string; embedded?: boolean; contentKey?: string; children: ReactNode;
 }) {
   const state = usePresence(open);
+  // A new key remounts the content, so it plays its entrance (flat.module.css .main > *).
+  const content = <Fragment key={contentKey ?? ""}>{children}</Fragment>;
   const panel = useWorldDialog<HTMLElement>(open && !embedded, onClose ?? noop, keys);
   const top = <header className={f.top}>
     {purse ?? <span />}
     <h2 className={f.heading}>{title}</h2>
     {onClose ? <button type="button" className={f.close} aria-label="Close" onClick={onClose}><X size={18} aria-hidden /></button> : <span />}
   </header>;
-  if (embedded) return <section aria-label={title} className={f.panel} data-testid={testId} data-rail={rail ? "" : undefined} data-embedded="">
-    {top}{rail}<div className={f.main}>{children}</div>
-  </section>;
+  // The GUI pieces inside wear the flat look too (components/gui/variant).
+  if (embedded) return <GuiVariantContext.Provider value="flat"><section aria-label={title} className={f.panel} data-testid={testId} data-rail={rail ? "" : undefined} data-embedded="" data-gui-flat="">
+    {top}{rail}<div className={f.main}>{content}</div>
+  </section></GuiVariantContext.Provider>;
   if (!state) return null;
   return <div className={f.layer} data-state={state}>
     <div className={f.scrim} onClick={onClose} aria-hidden="true" />
-    <section ref={panel} role="dialog" aria-modal aria-label={title} tabIndex={-1} data-gui-dialog data-gui-overlay className={f.panel} data-testid={testId} data-rail={rail ? "" : undefined}>
-      {top}
-      {rail}
-      <main className={f.main}>{children}</main>
+    <section ref={panel} role="dialog" aria-modal aria-label={title} tabIndex={-1} data-gui-dialog data-gui-overlay className={f.panel} data-testid={testId} data-rail={rail ? "" : undefined} data-gui-flat="">
+      <GuiVariantContext.Provider value="flat">
+        {top}
+        {rail}
+        <main className={f.main}>{content}</main>
+      </GuiVariantContext.Provider>
     </section>
   </div>;
 }
@@ -91,24 +105,31 @@ export function railStep<T extends string>(items: readonly RailItem<T>[], value:
 }
 
 /**
- * Icons only (their labels are for screen readers and the tooltip); the chosen one black with a dot under it, a count
- * badge where `badge` is set. Down the left of a `FlatPanel` (across the top on a phone); `horizontal` puts it across
+ * Icons only (their labels are for screen readers and the tooltip); the chosen one black with a dot under it that slides
+ * to the next choice, a press that dips and springs back, a count badge where `badge` is set. Down the left of a `FlatPanel` (across the top on a phone); `horizontal` puts it across
  * the top anywhere. `tabs`: it is a tab list (a flat `Sheet`'s `Tabs`): role tab, aria-selected, and the caller's
- * `onKeyDown` and `listRef` for the arrow keys.
+ * `onKeyDown` and `listRef` for the arrow keys. `itemAttrs`: more attributes for an icon's button (the creator's tab
+ * ids and the panel it controls).
  */
-export function IconRail<T extends string>({ items, value, onChange, label, orientation = "vertical", tabs, listRef, onKeyDown, className }: {
+export function IconRail<T extends string>({ items, value, onChange, label, orientation = "vertical", tabs, listRef, onKeyDown, className, itemAttrs }: {
   items: readonly RailItem<T>[]; value: T | null; onChange: (id: T) => void; label: string;
   orientation?: "vertical" | "horizontal"; tabs?: boolean; listRef?: Ref<HTMLElement>; onKeyDown?: (e: KeyboardEvent) => void; className?: string;
+  itemAttrs?: (item: RailItem<T>) => Record<string, string | undefined>;
 }) {
   // A tab list is a div (role tablist); a rail of shelves is the panel's nav.
   const Tag = (tabs ? "div" : "nav") as "nav";
-  return <Tag ref={listRef} className={cx(f.side, className)} aria-label={label} role={tabs ? "tablist" : undefined}
-    data-orientation={orientation === "horizontal" ? "horizontal" : undefined} onKeyDown={onKeyDown}>
+  const own = useRef<HTMLElement | null>(null);
+  const ref = useMemo(() => bothRefs<HTMLElement>(own, listRef), [listRef]);
+  const m = useMarker(own, tabs ? '[aria-selected="true"]' : "[aria-current]", value);
+  return <Tag ref={ref} className={cx(f.side, className)} aria-label={label} role={tabs ? "tablist" : undefined}
+    data-orientation={orientation === "horizontal" ? "horizontal" : undefined} data-marker={m ? "" : undefined} onKeyDown={onKeyDown}>
+    {/* The chosen icon's dot, sliding from one to the next (its own ::after until measured). */}
+    {m ? <span className={f.marker} aria-hidden style={{ transform: `translate(${m.x + m.w / 2 - 2}px, ${m.y + m.h - 7}px)` }} /> : null}
     {items.map(it => {
       const on = it.id === value, badge = badgeText(it.badge);
       return <button key={it.id} type="button" className={f.shelf} aria-label={it.label} title={it.label} disabled={it.disabled}
         {...(tabs ? { role: "tab", "aria-selected": on, tabIndex: on ? 0 : -1, "data-tab": it.id } : { "aria-current": on || undefined })}
-        onClick={() => onChange(it.id)}>
+        {...itemAttrs?.(it)} onClick={() => onChange(it.id)}>
         {it.icon}
         {badge ? <span className={f.badge}>{badge}</span> : null}
       </button>;
@@ -118,11 +139,17 @@ export function IconRail<T extends string>({ items, value, onChange, label, orie
 
 // ── Cards ───────────────────────────────────────────────────────────────────────────────────────────────────────────
 
-/** A shelf of cards, with its title above. `min`: the narrowest a card gets (px; 250 by default). */
-export function CardGrid({ title, min, label, children }: { title?: ReactNode; min?: number; label?: string; children: ReactNode }) {
+/**
+ * A shelf of cards, with its title above. `min`: the narrowest a card gets (px; 250 by default); `phoneMin`: on a phone
+ * (one card a row by default, as the shop has it). Its cells move (round 3): a hovered card grows a little out of the
+ * grid and its neighbours step aside, quickly; the picked one (`selected`) further, slower, and stays out.
+ */
+export function CardGrid({ title, min, phoneMin, label, children }: { title?: ReactNode; min?: number; phoneMin?: number; label?: string; children: ReactNode }) {
+  const style = { ...(min ? { "--card-min": `${min}px` } : {}), ...(phoneMin ? { "--card-min-phone": `${phoneMin}px` } : {}) } as CSSProperties;
+  const nudge = useNudge();
   return <>
     {title ? <h3 className={f.shelfTitle}>{title}</h3> : null}
-    <div className={f.grid} role={label ? "list" : undefined} aria-label={label} style={min ? { ["--card-min" as string]: `${min}px` } : undefined}>{children}</div>
+    <div ref={nudge} className={cx(f.grid, f.nudge)} role={label ? "list" : undefined} aria-label={label} style={min || phoneMin ? style : undefined}>{children}</div>
   </>;
 }
 
@@ -163,12 +190,50 @@ export function ItemCard({ picture, px = 44, name, line, price, pill: other, tag
   const look = { className: cx(f.card, className), "data-testid": testId, "data-cover": cover || undefined,
     "data-selected": selected || undefined, "data-size": size === "lg" ? undefined : size };
   if (!onClick) return <div {...(rest as HTMLAttributes<HTMLDivElement>)} {...look} role="img" aria-label={label}>{face}</div>;
-  return <button type="button" {...rest} {...look} onClick={onClick} aria-label={label} aria-pressed={selected === undefined ? undefined : selected}>{face}</button>;
+  // A card that is a radio or a tab (a finish to pick) says so by its role, not as a pressed button.
+  return <button type="button" {...rest} {...look} onClick={onClick} aria-label={label} aria-pressed={selected === undefined || rest.role ? undefined : selected}>{face}</button>;
 }
 
 /** The small grey pill (a price, a count). */
 export function Pill({ children }: { children: ReactNode }) {
   return <span className={f.pill}>{children}</span>;
+}
+
+// ── The side panel ──────────────────────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * A panel beside a grid (David, round 2: "a lil tab on the side with action item show dont need item open page"; round
+ * 3: "make the right tab ui more spacious and less compact, make it a bit bgiger so that theres breathing room and icon
+ * can be bigger"): the picture large on the panel's grey, then the quiet kind and the name, a line about it (`text`),
+ * what to know (`facts`, hairline rows with room between) and what to do (`actions`); `children` last, for notes. The
+ * grid stays in view (`WithSide`); on a phone it sits at the foot of the screen, the picture beside the name.
+ */
+export function SidePanel({ picture, title, kind, text, facts, actions, children, onClose, testId }: {
+  picture?: string | ReactNode; title: ReactNode; kind?: ReactNode; text?: ReactNode; facts?: readonly (readonly [string, ReactNode])[] | null; actions?: ReactNode;
+  children?: ReactNode; onClose: () => void; testId?: string;
+}) {
+  return <aside className={f.sidePanel} aria-label={typeof title === "string" ? title : "Details"} data-testid={testId} data-picture={picture === undefined ? undefined : ""}>
+    <button type="button" className={f.sideClose} aria-label="Close" title="Close" onClick={onClose}><X size={18} aria-hidden /></button>
+    <div className={f.sideHead}>
+      {picture === undefined ? null : <span className={f.sideStage} aria-hidden>{typeof picture === "string" ? <PixelImage src={picture} px={64} /> : picture}</span>}
+      <div className={f.sideText}>
+        {kind !== undefined ? <p className={f.sideKind}>{kind}</p> : null}
+        <h3 className={f.sideTitle}>{title}</h3>
+      </div>
+    </div>
+    {text !== undefined && text !== null && text !== false ? <p className={f.sideBody}>{text}</p> : null}
+    {facts && facts.length > 0 ? <dl className={f.facts}>{facts.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl> : null}
+    {actions ? <div className={f.sideActions}>{actions}</div> : null}
+    {children}
+  </aside>;
+}
+
+/** A grid with a side panel beside it (`side`, or null when nothing is picked): the grid narrows, it doesn't go away. */
+export function WithSide({ side, children }: { side: ReactNode | null; children: ReactNode }) {
+  return <div className={f.withSide} data-open={side ? "" : undefined}>
+    <div className={f.withSideMain}>{children}</div>
+    {side}
+  </div>;
 }
 
 // ── The detail ──────────────────────────────────────────────────────────────────────────────────────────────────────

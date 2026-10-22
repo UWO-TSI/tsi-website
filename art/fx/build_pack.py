@@ -9,6 +9,9 @@ Writes
   web/public/assets/fx/combat-pack.webp      the combat pack (specs/classes/design-sheet.md §1.7): heat in RGB, coverage in A
   web/lib/game/fx/combatPack.ts              its layout (generated: edit the COMBAT_SPRITES list here)
   specs/evidence/classes/K0-combat-atlas.webp   every combat row through three sample ramps, as the engine maps heat
+  web/public/assets/fx/fire-pack.webp        the campfire's and the candles' rows of the combat pack, cut out (build_fire)
+
+  python3 art/fx/build_pack.py fire          only the fire pack, cut from the committed combat pack (nothing repainted)
 
 Painted procedurally, no downloads and no references: each frame is brushwork in numpy. A puff is a few lobes of
 paint (a metaball field) cut at a rising threshold through two kinds of noise, so it grows, thins and breaks up the way
@@ -2369,6 +2372,28 @@ def write_combat_sheet(atlas):
     print("wrote", OUT_COMBAT_SHEET, sheet.size)
 
 
+OUT_FIRE = os.path.join(ROOT, "web", "public", "assets", "fx", "fire-pack.webp")
+# The combat pack's rows the campfire and the Oracle's candles draw (lib/game/fx/fxMaterial.ts FIRE_PACK, same order):
+# a fire on the village holds 2 rows on the GPU instead of the whole 33.
+FIRE_ROWS = ("flame", "mote")
+
+
+def build_fire():
+    combat = Image.open(OUT_COMBAT)
+    order = [name for name, *_ in COMBAT_SPRITES]
+    out = Image.new("RGBA", (FRAMES * CELL, len(FIRE_ROWS) * CELL))
+    for i, name in enumerate(FIRE_ROWS):
+        r = order.index(name)
+        out.paste(combat.crop((0, r * CELL, FRAMES * CELL, (r + 1) * CELL)), (0, i * CELL))
+    out.save(OUT_FIRE, "WEBP", lossless=True, quality=100, method=6, exact=True)
+    print("wrote", OUT_FIRE, out.size, os.path.getsize(OUT_FIRE) // 1024, "KB")
+
+
 if __name__ == "__main__":
-    build()
-    build_combat()
+    import sys
+    if sys.argv[1:] == ["fire"]:
+        build_fire()
+    else:
+        build()
+        build_combat()
+        build_fire()

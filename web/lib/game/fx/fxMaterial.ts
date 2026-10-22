@@ -9,6 +9,27 @@ import * as THREE from "three";
 import { COMBAT_PACK_COLS, COMBAT_PACK_ROWS } from "./combatPack";
 import { RAMP_ROWS, RAMP_STEPS, type RampTable } from "./combat";
 
+/**
+ * The campfire's and the Oracle candles' cut of the combat pack (art/fx/build_pack.py build_fire): its flame and mote
+ * rows only, so a fire holds 2 rows on the GPU instead of the whole 33-row pack.
+ */
+export const FIRE_PACK_URL = "/assets/fx/fire-pack.webp";
+export const FIRE_PACK = { flame: { row: 0 }, mote: { row: 1 } } as const;
+export const FIRE_PACK_ROWS = Object.keys(FIRE_PACK).length;
+
+const packs = new Map<string, THREE.Texture>();
+/** One texture per atlas URL, shared by every effect that draws from it (heat is data, not colour). */
+export function packTexture(url: string): THREE.Texture {
+  let t = packs.get(url);
+  if (!t) {
+    t = new THREE.TextureLoader().load(url);
+    t.colorSpace = THREE.NoColorSpace;
+    t.anisotropy = 4;
+    packs.set(url, t);
+  }
+  return t;
+}
+
 let rampTexture: THREE.DataTexture | null = null;
 /** The ramp table as a texture (rows uploaded as kits' ramps appear). */
 export function rampMap(table: RampTable): THREE.DataTexture {
@@ -70,8 +91,8 @@ void main() {
  * ground or streaked; the frame's heat mapped through the particle's ramp row (d.y), times its tint and alpha.
  * `saturation` 0.5 for ground decals (readability rule); additive for glows, laid over for smoke and ink.
  */
-export function createCombatParticleMaterial(map: THREE.Texture, ramp: THREE.Texture, additive: boolean, saturation = 1): THREE.ShaderMaterial {
-  const C = COMBAT_PACK_COLS.toFixed(1), R = COMBAT_PACK_ROWS.toFixed(1);
+export function createCombatParticleMaterial(map: THREE.Texture, ramp: THREE.Texture, additive: boolean, saturation = 1, rows = COMBAT_PACK_ROWS): THREE.ShaderMaterial {
+  const C = COMBAT_PACK_COLS.toFixed(1), R = rows.toFixed(1);
   return new THREE.ShaderMaterial({
     name: "CombatParticles",
     uniforms: { map: { value: map }, uRamp: { value: ramp }, uSat: { value: saturation } },

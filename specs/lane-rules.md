@@ -60,6 +60,20 @@ These rules are hard. The coordinator merges and pushes; lanes never push.
     - foliage keeps its leaf texture.
   - Share these presets so parts merge.
 
+## Code: ponytail (David, 2026-10-22)
+- Write code the ponytail way (the skill at `~/.claude/skills/ponytail/SKILL.md`, level full). Climb the ladder and stop at the first rung that holds:
+  1. Does it need to exist at all?
+  2. Is it already in this codebase? Search before writing.
+  3. Does the standard library do it?
+  4. Does a native platform feature cover it?
+  5. Does an installed dependency solve it? Never add a dependency for a few lines.
+  6. Can it be one line?
+  7. Only then, write the minimum code that works.
+- Deletion over addition. No unrequested abstractions, scaffolding or config for values that never change.
+- A bug fix goes at the root cause, where every caller routes through.
+- Never simplify away validation at trust boundaries, data-loss guards, security or accessibility.
+- When you replace something, delete the old one in the same lane: dead code, unused exports and the old copy of a component. Mention the deletions in your report.
+
 ## Reporting
 - Write tests first where there's logic. Gates are tsc, vitest and eslint on changed files.
 - Put evidence screenshots in `specs/evidence/<lane>/`.

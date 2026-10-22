@@ -91,9 +91,6 @@ export function layerWeight(t: number, length: number, fadeIn = 0.05, fadeOut = 
   if (t < 0 || t >= length) return 0;
   return Math.min(1, t / fadeIn, (length - t) / fadeOut);
 }
-/** Movement clips (lib/game/movement): quick crossfades so hops and landings read on time. */
-export const SNAPPY_CLIPS = new Set<ClipName>(["DodgeRoll", "Hit", "Jump", "Air", "Fall", "Land", "LandHeavy", "Roll", "Mantle", "Dash", "Skid", "Glide",
-  "Slide", "SlideIn", "SlideInDash", "SlideUp", "SlideJump", "SlideStand", "SlideBonk"]);
 
 /**
  * The transition table (specs/movement-feel.md §5): crossfade seconds for every pair of clips. Each clip belongs to a

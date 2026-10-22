@@ -1,0 +1,117 @@
+/* The cleaner cream menus (specs/polish/flat-ui.md round 2, step 7): the journal, the notice board and the mailbox.
+   The old palette, more air, one action that stands out per view, and paper only for paper things (a letter, a notice).
+   The older sheets that still share progression.module.css (the wallet, Contribute, cafe goals) keep it until they follow. */
+
+.menu { display: grid; min-width: 0; }
+.tabs { margin-bottom: 22px; }
+.note { margin: 0 0 16px; padding: 10px 14px; border-radius: 14px; background: var(--gui-paper-warm); color: var(--gui-ink-2); font: 700 var(--gui-text-sm)/1.45 var(--gui-font); }
+.note[data-tone="ok"] { background: var(--gui-success-soft); color: var(--gui-success); }
+.note[data-tone="err"] { background: var(--gui-danger-soft); color: var(--gui-danger); }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.text { max-width: 62ch; margin: 0 0 14px; color: var(--gui-ink-2); font: 600 var(--gui-text-md)/1.55 var(--gui-font); }
+.aside { margin: 0; color: var(--gui-muted); font: 600 var(--gui-text-sm)/1.45 var(--gui-font); }
+.after { margin-top: 28px; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 18px; }
+.end { margin-left: auto; }
+.kicker { margin: 0 0 4px; color: var(--gui-muted); font: 800 var(--gui-text-xs)/1.3 var(--gui-font); letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* ── The journal's chapters ──────────────────────────────────────────────────────────────────────────────────────── */
+.status { color: var(--gui-muted); font: 800 var(--gui-text-xs)/1 var(--gui-font); letter-spacing: 0.02em; }
+.status[data-s="ready"] { padding: 6px 10px; border-radius: var(--gui-r-pill); background: var(--gui-sage-soft); color: var(--gui-sage-deep); }
+.status[data-s="completed"], .status[data-s="skipped"] { color: var(--gui-success); }
+.steps { display: grid; gap: 12px; margin: 4px 0 0; padding: 0; list-style: none; }
+.step { display: flex; align-items: flex-start; gap: 12px; color: var(--gui-ink); font: 600 var(--gui-text-md)/1.4 var(--gui-font); }
+.check { flex: none; display: grid; place-items: center; width: 22px; height: 22px; margin-top: 0; border-radius: 7px; box-shadow: inset 0 0 0 2px var(--gui-paper-line); color: var(--gui-paper); }
+.step[data-done="true"] .check { background: var(--gui-sage); box-shadow: none; }
+.step[data-done="true"] .stepLabel { color: var(--gui-muted); text-decoration: line-through; text-decoration-color: rgb(114 100 80 / 0.45); }
+.stepText { display: grid; gap: 2px; min-width: 0; }
+/* The step to do now: the kit's highlighter swipe under it. */
+.step[data-now] .stepLabel { color: var(--gui-ink-strong); font-weight: 800; background: linear-gradient(transparent 56%, var(--ui-marker) 56% 92%, transparent 92%); border-radius: 3px; }
+.step[data-now] .check { box-shadow: inset 0 0 0 2px var(--gui-wood-light); }
+.hint { color: var(--gui-muted); font: 600 var(--gui-text-sm)/1.4 var(--gui-font); }
+.chapterBar { margin-top: 18px; }
+.foot { margin-top: 18px; padding: 6px 14px 0; border-top: 1.5px solid var(--gui-paper-edge); }
+
+/* ── Club goals ──────────────────────────────────────────────────────────────────────────────────────────────────── */
+.goals { display: grid; }
+.goal + .goal { margin-top: 28px; padding-top: 28px; border-top: 1.5px solid var(--gui-paper-edge); }
+.goalTitle { margin: 0 0 6px; color: var(--gui-ink-strong); font: 800 var(--gui-text-lg)/1.25 var(--gui-font); }
+.goalLine { display: flex; justify-content: space-between; gap: 12px; margin: 16px 0 6px; color: var(--gui-ink-2); font: 600 var(--gui-text-sm)/1.3 var(--gui-font); font-variant-numeric: tabular-nums; }
+.goalLine b { color: var(--gui-ink-strong); font-weight: 800; }
+.goalBar { margin: 0 0 10px; }
+.goalNumbers { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 0; color: var(--gui-ink-2); font: 600 var(--gui-text-sm)/1.4 var(--gui-font); font-variant-numeric: tabular-nums; }
+.goalNumbers b { color: var(--gui-ink-strong); font-weight: 800; }
+.reward { display: flex; align-items: flex-start; gap: 8px; margin: 14px 0 0; color: var(--gui-ink-2); font: 600 var(--gui-text-sm)/1.45 var(--gui-font); }
+.reward svg { flex: none; margin-top: 1px; color: var(--gui-coral-ink); }
+.reward b { color: var(--gui-ink-strong); }
+.upNext { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 4px 0; color: var(--gui-ink-2); font: 600 var(--gui-text-md)/1.45 var(--gui-font); }
+.upNext svg { flex: none; margin-top: 3px; color: var(--gui-taupe); }
+.upNext b { color: var(--gui-ink-strong); }
+.notice { padding: 30px 24px 22px; }
+
+/* ── The notice board: notices pinned up, the goal widest ────────────────────────────────────────────────────────── */
+.board { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); align-items: start; gap: 22px 26px; }
+.boardSide { display: grid; gap: 18px; min-width: 0; }
+.boardMain { display: grid; gap: 22px; min-width: 0; }
+.nextStep { padding: 22px 18px 16px; }
+.nextStep p:last-child { margin: 0; color: var(--gui-ink-strong); font: 800 var(--gui-text-md)/1.4 var(--gui-font); }
+.slipCard { padding: 0; }
+.slip { all: unset; box-sizing: border-box; display: grid; gap: 4px; width: 100%; padding: 26px 18px 16px; cursor: pointer; }
+.slip:hover { filter: brightness(1.015); }
+.slip:focus-visible { outline: 3px solid var(--gui-focus); outline-offset: 3px; }
+.slipTitle { margin: 0; color: var(--gui-ink-strong); font: 800 var(--gui-text-md)/1.3 var(--gui-font); }
+.slipText { display: -webkit-box; margin: 0; overflow: hidden; color: var(--gui-ink-2); font: 600 var(--gui-text-sm)/1.45 var(--gui-font); -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.unread { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--gui-coral); vertical-align: 1px; }
+.quietEmpty { margin: 0; padding: 4px 2px; color: var(--gui-muted); font: 600 var(--gui-text-sm)/1.45 var(--gui-font); }
+
+/* ── The mailbox: quiet rows; a letter you open is paper ─────────────────────────────────────────────────────────── */
+.mailHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.mailCount { color: var(--gui-muted); font: 700 var(--gui-text-sm)/1 var(--gui-font); }
+.mailCount b { color: var(--gui-ink-strong); font-weight: 800; }
+.mail { display: grid; margin: 0; padding: 0; list-style: none; }
+.mail > li { position: relative; }
+.mail > li + li::before { content: ""; position: absolute; top: 0; left: 62px; right: 12px; border-top: 1.5px solid var(--gui-paper-edge); }
+.mailRow { all: unset; box-sizing: border-box; display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: start; gap: 4px 14px; width: 100%; padding: 14px 12px; border-radius: 18px; cursor: pointer;
+  transition: background var(--gui-t-fast) ease; }
+.mailRow:hover { background: var(--gui-paper-warm); }
+.mail > li:hover + li::before, .mail > li:hover::before { opacity: 0; }
+.mailRow:focus-visible { outline: 3px solid var(--gui-focus); outline-offset: 1px; }
+.mailIcon { grid-row: span 2; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--gui-paper-deep); color: var(--gui-taupe); }
+.mailRow[data-unread="true"] .mailIcon { background: var(--gui-paper-hi); color: var(--gui-sage); box-shadow: inset 0 0 0 1.5px var(--gui-paper-line); }
+.mailFrom { min-width: 0; overflow: hidden; color: var(--gui-ink-2); font: 700 var(--gui-text-md)/1.35 var(--gui-font); text-overflow: ellipsis; white-space: nowrap; }
+.mailFrom span { color: var(--gui-muted); font-weight: 600; }
+.mailRow[data-unread="true"] .mailFrom { color: var(--gui-ink-strong); font-weight: 800; }
+.mailDate { color: var(--gui-muted); font: 600 var(--gui-text-sm)/1.35 var(--gui-font); white-space: nowrap; }
+.mailRow[data-unread="true"] .mailDate::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: var(--gui-coral); vertical-align: 1px; }
+.mailPreview { grid-column: 2 / -1; overflow: hidden; color: var(--gui-muted); font: 600 var(--gui-text-sm)/1.45 var(--gui-font); text-overflow: ellipsis; white-space: nowrap; }
+.readHead { display: grid; gap: 4px; margin: 14px 0 16px; }
+.readTitle { margin: 0; color: var(--gui-ink-strong); font: 800 var(--gui-text-xl)/1.25 var(--gui-font); }
+.byline { margin: 0; color: var(--gui-muted); font: 700 var(--gui-text-sm)/1.35 var(--gui-font); }
+/* A letter is paper: the grain, a hand-cut edge and a little lift. */
+.letter { margin: 0; padding: 26px 28px 30px; border-radius: 6px 9px 5px 8px; background: var(--gui-grain) var(--gui-paper-hi); box-shadow: 3px 5px 0 rgb(95 68 35 / 0.12), inset 0 0 0 1.5px var(--gui-paper-edge);
+  white-space: pre-wrap; color: var(--gui-ink); font: 600 var(--gui-text-md)/1.7 var(--gui-font); }
+.field { display: grid; gap: 6px; margin-bottom: 16px; }
+.label { color: var(--gui-ink-2); font: 800 var(--gui-text-sm)/1.3 var(--gui-font); }
+.input { width: 100%; min-height: 46px; padding: 10px 14px; border: 0; border-radius: 14px; background: var(--gui-paper-hi); box-shadow: inset 0 0 0 1.5px var(--gui-paper-edge); color: var(--gui-ink); font: 600 var(--gui-text-md)/1.4 var(--gui-font); box-sizing: border-box; }
+.input:focus { outline: 3px solid var(--gui-focus); outline-offset: 1px; }
+textarea.input { min-height: 160px; padding: 16px 18px; resize: vertical; line-height: 1.65; background: var(--gui-grain) var(--gui-paper-hi); }
+.to { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.who { display: inline-flex; align-items: center; min-height: 38px; padding: 0 14px; border-radius: var(--gui-r-pill); background: var(--gui-butter); color: var(--gui-ink-strong); font: 800 var(--gui-text-sm)/1 var(--gui-font); }
+.matches { display: flex; flex-wrap: wrap; gap: 6px; }
+.match { all: unset; display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; border-radius: var(--gui-r-pill); background: var(--gui-paper-hi); box-shadow: inset 0 0 0 1.5px var(--gui-paper-edge); color: var(--gui-ink-2); font: 700 var(--gui-text-sm)/1 var(--gui-font); cursor: pointer; }
+.match:hover { background: var(--gui-paper-warm); color: var(--gui-ink-strong); }
+.match:focus-visible { outline: 3px solid var(--gui-focus); outline-offset: 2px; }
+.count { color: var(--gui-muted); font: 600 var(--gui-text-xs)/1 var(--gui-font); text-align: right; }
+
+@media (max-width: 760px) {
+  /* One column; your next step first. */
+  .board { grid-template-columns: minmax(0, 1fr); }
+  .boardSide { display: contents; }
+  .nextStep { order: -1; }
+}
+@media (max-width: 560px) {
+  .mail > li + li::before { left: 12px; }
+  .letter { padding: 22px 20px 24px; }
+}
+:global(html[data-contrast="high"]) .letter, :global(html[data-contrast="high"]) .input { background: #ffffff; color: #000000; box-shadow: inset 0 0 0 2px #000000; }
+:global(html[data-contrast="high"]) .text, :global(html[data-contrast="high"]) .aside, :global(html[data-contrast="high"]) .mailPreview, :global(html[data-contrast="high"]) .hint { color: #000000; }

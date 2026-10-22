@@ -46,8 +46,6 @@ export const DROP_FEATURES = {
 export type DropFeature = keyof typeof DROP_FEATURES;
 export type DropFlags = Record<DropFeature, boolean>;
 
-export const LATEST_DROP: DropNumber = 4;
-
 /** Is `feature` released by drop `drop`? */
 export function featureOn(feature: DropFeature, drop: DropNumber): boolean {
   const at: DropNumber | null = DROP_FEATURES[feature];

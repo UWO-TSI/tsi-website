@@ -110,8 +110,8 @@ const move = keyStore<MoveAction>("tsi.moveKeys.v1", DEFAULT_MOVE_KEYS, {
 const ability = keyStore<AbilityId>("tsi.combatKeys.v3", DEFAULT_ABILITY_KEYS, { // v1 bound the prototype runes, not slots; v3 adds key 5 and the ult
   legacy: "tsi.combatKeys.v2",
   valid: (k, id) => k.length === 1 && (k !== "f" || id === "ult"), // F is the ult's alone (it decorates at home)
-  // Z (zoom), X (put away, at home), V (the camera reset) and F (decorate, at home) are fixed elsewhere; only the ruins read ability keys, where they win.
-  allow: ["z", "x", "v", "f"],
+  // Z (zoom), X (put away, at home), V (the camera reset), F (decorate, at home) and R (turn a piece, at home; the swap's default) are fixed elsewhere; only the ruins read ability keys, where they win.
+  allow: ["z", "x", "v", "f", "r"],
   taken: (): string[] => [...Object.values(readMoveKeys()), ...menuKeys(), readWheelKeys().wheel, readWheelKeys().emote],
   readTaken: (): string[] => Object.values(readMoveKeys()),
 });

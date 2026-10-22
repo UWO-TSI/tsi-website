@@ -3,6 +3,7 @@ import { CLASS_KITS } from "@/lib/combat/classes";
 import { FAMILIES } from "@/lib/game/oracle/family";
 import type { RemoteEntry, RemotePlayer } from "@/lib/net/types";
 import { createRig } from "./drive";
+import { DROPS } from "@/lib/game/drops";
 import { AuraStore, auraOf, showsAura } from "./RemoteAuras";
 
 const kit = CLASS_KITS.find(k => k.key)!;
@@ -16,8 +17,14 @@ describe("a remote's aura (spec §5.6)", () => {
     expect(auraOf(player({ family: "Warden" }))).toEqual({ family: FAMILIES.Warden.light });
     expect(auraOf(player({ kit: kit.key, family: "Warden", showClass: false }))).toBeNull();
     expect(auraOf(player({}))).toBeNull();
-    expect(showsAura(player({ family: "Arcane" }))).toBe(true);
-    expect(showsAura(player({ kit: "not-a-kit" }))).toBe(false);
+    expect(showsAura(player({ family: "Arcane" }), true)).toBe(true);
+    expect(showsAura(player({ kit: "not-a-kit" }), true)).toBe(false);
+  });
+
+  it("shows none before the classes drop (v1), as the local player's aura waits for it", () => {
+    expect(showsAura(player({ family: "Arcane" }), false)).toBe(false);
+    expect(showsAura(player({ kit: kit.key }), false)).toBe(false);
+    expect(showsAura(player({ family: "Arcane" }))).toBe(DROPS.classes);   // this build's drop
   });
 
   it("mounts the auras the tiers gave out, and tells React only when who has one, or their card, changes", () => {

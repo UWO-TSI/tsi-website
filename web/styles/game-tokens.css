@@ -15,30 +15,11 @@
 }
 
 :root {
-  /* ── Paper: the kit's creams ── */
-  --gui-page: #f7f1da;          /* page background behind panels */
-  --gui-paper: #fffbe7;         /* dialogue, sheets */
-  --gui-paper-hi: #fffff7;      /* cards and fields on paper */
-  --gui-paper-warm: #f8f4e8;    /* panel bodies, chips */
-  --gui-paper-deep: #eee9ca;    /* wells, tracks, list stripes */
-  --gui-paper-edge: #e3d9b8;    /* rules and hairlines */
-  --gui-paper-line: #d3c39c;    /* stronger outlines (fields, tiles) */
-  --gui-butter: #ffeea0;        /* selection, the menu box */
-  --gui-highlight: #ffcc00;     /* the highlighter swipe under a choice */
+  /* ── The paper, ink, sage and focus colours come from the theme (the rule below this one). ── */
   --gui-stripe-a: #f6d32d;      /* the chosen row's stripes */
   --gui-stripe-b: #f7e43f;
 
-  /* ── Ink ── */
-  --gui-ink-strong: #3a2e22;    /* titles, text on coloured tags */
-  --gui-ink: #4f3f31;           /* body */
-  --gui-ink-2: #6b5843;         /* secondary */
-  --gui-muted: #726450;         /* captions (AA on every cream, the deep well too) */
-  --gui-taupe: #8a7b66;         /* the kit's dialogue ink: large text, keycaps and icons only */
-
   /* ── Accents ── */
-  --gui-sage: #426b5b;          /* the primary action */
-  --gui-sage-deep: #2f5143;
-  --gui-sage-soft: #dfe9d9;
   --gui-teal: #04afa6;          /* checks and pips (no text on it) */
   --gui-teal-ink: #1b766c;      /* teal text, teal buttons */
   --gui-teal-pill: #73c7ba;     /* the name pill (ink text) */
@@ -68,33 +49,6 @@
   --gui-rarity-epic: #b77dee;
   --gui-rarity-legendary: #f7cd67;
   --gui-rarity-seaking: #7fd6dc;      /* the fish's crown tier (vacant until its marquee fish ship); holographic on the card */
-
-  --gui-scrim: rgb(64 52 36 / 0.3);
-
-  /* ── Flat UI: the shop overlay's style for the game's menus (specs/polish/flat-ui.md, row 315; components/gui/flat).
-     Black and white type on a light grey, white cards, no beige; the Tethos navy for round buttons. ── */
-  --flat-ink: #151515;          /* type */
-  --flat-quiet: #8a8a8a;        /* the muted line, the kind, hints */
-  --flat-body: #5f5f5f;         /* descriptions and spec values */
-  --flat-line: #e0e0e0;         /* hairlines */
-  --flat-ground: #f1f1f1;       /* the panel */
-  --flat-card: #ffffff;         /* cards, the spec band, the close */
-  --flat-card-dim: #f7f7f7;     /* a card for something not found yet */
-  --flat-pill: #ececec;         /* the price pill */
-  --flat-pill-ink: #6f6f6f;
-  --flat-rail: #a3a3a3;         /* an idle rail icon (the active one is ink) */
-  --flat-hint: #b0b0b0;         /* "Drag to turn" */
-  --flat-dark: #2a2a2a;         /* the dark pill button */
-  --flat-dark-hover: #000000;
-  --flat-disabled: #c9c9c9;
-  --flat-navy: #2e3a63;         /* round buttons, white glyphs (David, 2026-10-18) */
-  --flat-error: #c4513d;
-  --flat-accent: var(--gui-tethos-blue);   /* tags and badges */
-  --flat-scrim: rgb(18 18 18 / 0.42);
-  --flat-shadow: 0 24px 80px rgb(0 0 0 / 0.28);
-  /* The white studio stage: a seamless sweep fading to the floor, a soft contact shadow under the item. */
-  --flat-stage: radial-gradient(ellipse 24% 4.5% at 50% 87%, rgb(0 0 0 / 0.17), rgb(0 0 0 / 0.07) 55%, transparent 100%),
-    linear-gradient(180deg, #ffffff 0%, #ffffff 60%, #f5f5f5 84%, #eeeeee 100%);
 
   /* ── Type: one rounded face, 12 px at the smallest ── */
   --gui-font: "Tethos Nunito", "Nunito", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -134,7 +88,6 @@
   --gui-t-slow: 320ms;
 
   /* ── Focus: a honey ring, 3:1 against every cream ── */
-  --gui-focus: #a8722f;
 
   /* ── Painted paper ── */
   /* paper:start */
@@ -149,6 +102,32 @@
   /* paper:end */
 }
 
+/* ── The UI theme (specs/polish/ui-themes.md): the cream kit's colour tokens read the --ui-* tokens of the theme files
+   (styles/themes). Resolved on <html> (the cream base, styles/themes/cream.css), so the cream menus, the HUD, the portal
+   and recruitment keep the cream look whatever the theme; and again inside a flat menu ([data-gui-flat]), which wears
+   the player's theme (<body data-ui-theme>). ── */
+:root, [data-gui-flat] {
+  --gui-page: var(--ui-bg);
+  --gui-paper: var(--ui-panel);
+  --gui-paper-hi: var(--ui-card);
+  --gui-paper-warm: var(--ui-card-dim);
+  --gui-paper-deep: var(--ui-well);
+  --gui-paper-edge: var(--ui-line);
+  --gui-paper-line: var(--ui-line-strong);
+  --gui-butter: var(--ui-select);
+  --gui-highlight: var(--ui-highlight);
+  --gui-ink-strong: var(--ui-ink);
+  --gui-ink: var(--ui-ink-body);
+  --gui-ink-2: var(--ui-ink-2);
+  --gui-muted: var(--ui-muted);
+  --gui-taupe: var(--ui-quiet);
+  --gui-sage: var(--ui-accent);
+  --gui-sage-deep: var(--ui-accent-deep);
+  --gui-sage-soft: var(--ui-pill);
+  --gui-focus: var(--ui-focus);
+  --gui-scrim: var(--ui-scrim);
+}
+
 /* ── The scope: the member world, the portal shell, the companion ── */
 .gui {
   font-family: var(--gui-font);
@@ -158,25 +137,11 @@
   -webkit-font-smoothing: antialiased;
 
   /* The recruit kit's hooks (components/recruit/ui), so its pieces wear this sheet here and only here. */
-  --app-surface: var(--gui-paper);
-  --app-raised: var(--gui-paper-hi);
-  --app-soft: var(--gui-paper-warm);
-  --app-ink: var(--gui-ink);
-  --app-muted: var(--gui-muted);
-  --app-line: var(--gui-paper-line);
-  --app-link: var(--gui-sage);
-  --app-focus: var(--gui-focus);
   --app-error: var(--gui-danger);
   --app-error-bg: var(--gui-danger-soft);
   --app-success: var(--gui-success);
-  --app-accent-ink: var(--gui-ink-strong);
-  --gui-kit-primary: var(--gui-sage);
-  --gui-kit-primary-ink: var(--gui-paper);
-  --gui-kit-primary-hover: #4b7a68;
-  --gui-kit-butter: var(--gui-butter);
   --gui-kit-tag: var(--gui-coral);
   --gui-kit-tag-ink: var(--gui-ink-strong);
-  --gui-kit-keycap: var(--gui-bark);
   --gui-kit-chevron: var(--gui-amber);
   --gui-kit-blob: block;
   --gui-kit-dialogue-fill: transparent;
@@ -255,4 +220,93 @@
 
 @media (prefers-reduced-motion: reduce) {
   .gui *, .gui *::before, .gui *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+/* The recruit kit's hooks that a flat menu changes, on the cream kit's tokens (a paper thing again inside one). */
+.gui, [data-gui-paper] {
+  --app-surface: var(--gui-paper);
+  --app-raised: var(--gui-paper-hi);
+  --app-soft: var(--gui-paper-warm);
+  --app-ink: var(--gui-ink);
+  --app-muted: var(--gui-muted);
+  --app-line: var(--gui-paper-line);
+  --app-link: var(--gui-sage);
+  --app-focus: var(--gui-focus);
+  --app-accent-ink: var(--gui-ink-strong);
+  --gui-kit-primary: var(--gui-sage);
+  --gui-kit-primary-ink: var(--gui-paper);
+  --gui-kit-primary-hover: #4b7a68;
+  --gui-kit-butter: var(--gui-butter);
+  --gui-kit-keycap: var(--gui-bark);
+}
+
+/* ── Flat menus (specs/polish/flat-ui.md step 7): inside a flat sheet or panel ([data-gui-flat], set by Sheet's flat
+   variant, FlatPanel and the flat creator) the cream pieces follow the theme (the rule above), and change shape here:
+   no paper grain, round corners, soft shadows, the wood and the stripes as the theme's accent and selection. Status
+   colours and the rarity palette stay. ── */
+[data-gui-flat] {
+  --gui-stripe-a: var(--ui-select);
+  --gui-stripe-b: var(--ui-select);
+  --gui-wood: var(--ui-accent);
+  --gui-wood-light: var(--ui-quiet);
+  --gui-bark: var(--ui-ink);
+  --gui-grain: none;
+  --gui-confetti: none;
+  --gui-r-paper: 22px;
+  --gui-r-card: 16px;
+  --gui-r-blob: 14px;
+  --gui-r-tag: 8px;
+  --gui-shadow-sm: none;
+  --gui-shadow-md: 0 8px 22px rgb(var(--ui-shade) / 0.07);
+  --gui-shadow-lg: 0 24px 80px rgb(var(--ui-shade) / 0.28);
+  --gui-shadow-press: none;
+  --gui-shadow-inset: none;
+  --app-surface: var(--ui-panel);
+  --app-raised: var(--ui-card);
+  --app-soft: var(--ui-card-dim);
+  --app-ink: var(--ui-ink-body);
+  --app-muted: var(--ui-muted);
+  --app-line: var(--ui-line);
+  --app-link: var(--ui-ink);
+  --app-focus: var(--ui-focus);
+  --app-accent-ink: var(--ui-ink);
+  --gui-kit-primary: var(--ui-accent);
+  --gui-kit-primary-ink: var(--ui-accent-ink);
+  --gui-kit-primary-hover: var(--ui-accent-deep);
+  --gui-kit-butter: var(--ui-select);
+  --gui-kit-keycap: var(--ui-ink);
+}
+/* Paper things keep their paper inside a flat menu (David: mail and the notice board): the cream base's colours
+   (styles/themes/cream.css; lib/gui/contrast.test.ts keeps them equal) and the paper's own shapes. Not the --ui-* tokens
+   themselves: the flat menu's own buttons on a letter stay the theme's. */
+[data-gui-flat] [data-gui-paper] {
+  --gui-page: #f7f1da;
+  --gui-paper: #fffbe7;
+  --gui-paper-hi: #fffff7;
+  --gui-paper-warm: #f8f4e8;
+  --gui-paper-deep: #eee9ca;
+  --gui-paper-edge: #e3d9b8;
+  --gui-paper-line: #d3c39c;
+  --gui-butter: #ffeea0;
+  --gui-highlight: #ffcc00;
+  --gui-ink-strong: #3a2e22;
+  --gui-ink: #4f3f31;
+  --gui-ink-2: #6b5843;
+  --gui-muted: #726450;
+  --gui-taupe: #8a7b66;
+  --gui-sage: #426b5b;
+  --gui-sage-deep: #2f5143;
+  --gui-sage-soft: #dfe9d9;
+  --gui-focus: #a8722f;
+  --gui-stripe-a: #f6d32d;
+  --gui-stripe-b: #f7e43f;
+  --gui-wood: #946429;
+  --gui-wood-light: #bb813f;
+  --gui-bark: #725c4e;
+  --gui-r-card: 18px 22px 17px 21px / 20px 17px 22px 18px;
+  --gui-r-blob: 46% 50% 44% 48% / 54% 50% 46% 52%;
+  --gui-r-tag: 40% 43% 38% 40% / 45% 42% 45% 43%;
+  --gui-shadow-sm: 0 2px 0 rgb(114 92 78 / 0.14);
+  --gui-shadow-md: 0 4px 0 rgb(114 92 78 / 0.16), 0 10px 24px rgb(79 63 49 / 0.1);
+  color: var(--gui-ink);
 }

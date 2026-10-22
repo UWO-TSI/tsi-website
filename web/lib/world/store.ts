@@ -3,10 +3,8 @@
  * server writes, the reports members make and the blocks they keep. The routes reach them through this interface
  * (supabaseStore in production, memoryStore in tests). Member ids and world names only, never real names.
  */
-import { DomainError } from "@/lib/result";
 
 export type WorldErrorCode = "unavailable" | "failed";
-export class WorldError extends DomainError<WorldErrorCode> {}
 
 /** A logged chat line (world_chat_messages). */
 export interface WorldLine {

@@ -118,8 +118,9 @@ export class ChatStore {
     if (this.muted.delete(uid)) this.changed();
   }
   isMuted = (uid: string) => this.muted.has(uid);
-  /** You blocked them (the server stops lines from now on): what they already said goes too. */
-  blocked(uid: string) { this.forget(uid); }
+  /** You blocked them: what they already said goes, and their new lines stop here too, even if the room wasn't told
+   *  (a failed notify). Unblocking unmutes. */
+  blocked(uid: string) { this.muted.add(uid); this.forget(uid); }
   private forget(uid: string) {
     this.log = this.log.filter(e => e.kind !== "line" || e.uid !== uid);
     for (const [sid, b] of this.bubbles) if (b.uid === uid) this.bubbles.delete(sid);

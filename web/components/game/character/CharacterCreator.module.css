@@ -157,3 +157,140 @@
 }
 :global(html[data-contrast="high"]) .creator .tile, :global(html[data-contrast="high"]) .creator .railTab { background: #ffffff; box-shadow: inset 0 0 0 2px #000000; }
 :global(html[data-contrast="high"]) .creator .tile[aria-pressed="true"], :global(html[data-contrast="high"]) .creator .railTab[aria-selected="true"] { box-shadow: inset 0 0 0 4px #000000; }
+
+/* ── The flat look (the member world's creator and wardrobe; specs/polish/flat-ui.md round 3) ─────────────────────────
+   One light-grey screen: the title and the close across the top, the kit's icon rail down the left, the character on
+   the white studio stage (the shop's sweep and lights), the options in a roomy white panel, sections split by
+   hairlines, flat tiles and round swatches. The cream look above stays the applicant island's, untouched. */
+.creator[data-flat] {
+  --cr-tile: 92px;
+  grid-template-columns: 70px minmax(0, 1fr) clamp(400px, 32vw, 500px); grid-template-rows: 64px minmax(0, 1fr);
+  grid-template-areas: "top top top" "rail portrait panel"; gap: 0 22px; padding: 0 22px 22px 0;
+  background: var(--ui-panel); color: var(--ui-ink); font-weight: 500;
+}
+.creator[data-flat] :focus-visible { outline: 2px solid var(--ui-ink); outline-offset: 2px; }
+.top { grid-area: top; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding-left: 22px; }
+.topTitle { margin: 0; font: 600 17px/1 var(--gui-font); letter-spacing: 0.01em; color: var(--ui-ink); }
+.topClose { all: unset; justify-self: end; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--ui-card); color: var(--ui-ink); cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.topClose:active { transform: scale(0.9); transition-duration: 0.08s; }
+.topClose:focus-visible { outline: 2px solid var(--ui-ink); outline-offset: 2px; }
+
+/* The rail: the kit's icons; an item's picture grey until it's the chosen one. */
+.creator[data-flat] .rail { grid-area: rail; gap: 6px; padding: 8px 0 18px; overflow-x: hidden; overflow-y: auto; }
+/* The creator's own line drawings are thinner than the kit's glyphs: a step bigger, so they read the same size. */
+.creator[data-flat] .rail svg { width: 28px; height: 28px; }
+.creator[data-flat] .rail img { object-fit: contain; pointer-events: none; filter: grayscale(1) opacity(0.5); transition: filter 0.15s ease-out; }
+.creator[data-flat] .rail button:hover img { filter: grayscale(0.4) opacity(0.85); }
+.creator[data-flat] .rail [aria-selected="true"] img { filter: none; }
+
+/* The stage: the shop's white studio sweep and its soft floor; turn with the navy round buttons, the hint under it. */
+.creator[data-flat] .portrait { border-radius: 18px; background: var(--ui-stage); box-shadow: none; }
+.creator[data-flat] .portrait::after { display: none; }
+.creator[data-flat] .dragHint { top: auto; right: auto; bottom: 12px; left: 50%; transform: translateX(-50%); color: var(--ui-hint); font: 500 12px var(--gui-font); }
+.creator[data-flat] .turn { left: 16px; bottom: 16px; gap: 8px; }
+
+/* The panel: white, roomy, the category's name big and plain. */
+.creator[data-flat] .panel { border-radius: 22px; background: var(--ui-card); box-shadow: none; }
+.creator[data-flat] .panelHead { padding: 28px 30px 4px; }
+.creator[data-flat] .title { font: 600 26px/1.15 var(--gui-font); letter-spacing: -0.01em; color: var(--ui-ink); }
+.creator[data-flat] .title::after { display: none; }
+.creator[data-flat] .body { gap: 22px; padding: 16px 30px 26px; }
+.creator[data-flat] .body > * + :not(.lockNote) { padding-top: 22px; border-top: 1px solid var(--ui-line); }
+.creator[data-flat] .body h3 { margin: 0 0 12px; font: 600 14px/1.3 var(--gui-font); letter-spacing: 0; color: var(--ui-ink); }
+.creator[data-flat] .body[data-swap="a"] { animation: optionsA 0.18s ease-out; }
+.creator[data-flat] .body[data-swap="b"] { animation: optionsB 0.18s ease-out; }
+@keyframes optionsA { from { opacity: 0; transform: translateY(4px); } }
+@keyframes optionsB { from { opacity: 0; transform: translateY(4px); } }
+
+/* Sliders: a hairline track, an ink thumb. */
+.creator[data-flat] .sliders { gap: 6px; padding: 0; border-radius: 0; background: none; box-shadow: none; }
+.creator[data-flat] .slider { font: 500 13px/1.3 var(--gui-font); }
+.creator[data-flat] .slider label { color: var(--ui-ink-2); }
+.creator[data-flat] .slider output { color: var(--ui-quiet); font: 500 12px var(--gui-font); }
+.creator[data-flat] .slider input::-webkit-slider-runnable-track { height: 4px; border-radius: 999px; background: linear-gradient(90deg, var(--ui-ink) var(--fill), var(--ui-line) var(--fill)); box-shadow: none; }
+.creator[data-flat] .slider input::-webkit-slider-thumb { width: 18px; height: 18px; margin-top: -7px; background: var(--ui-card); box-shadow: 0 0 0 2px var(--ui-ink), 0 2px 6px rgb(var(--ui-shade) / 0.15); }
+.creator[data-flat] .slider input::-moz-range-track { height: 4px; background: var(--ui-line); }
+.creator[data-flat] .slider input::-moz-range-progress { height: 4px; background: var(--ui-ink); }
+.creator[data-flat] .slider input::-moz-range-thumb { width: 14px; height: 14px; border: 2px solid var(--ui-ink); background: var(--ui-card); }
+.creator[data-flat] .reset { min-height: 32px; padding: 4px 14px; border: 0; border-radius: 999px; background: var(--ui-panel); box-shadow: none; color: var(--ui-ink); font: 500 13px var(--gui-font); }
+
+/* Tiles: flat grey squares; the one worn white with an ink ring, lifted (and out of the grid: the kit's motion). */
+.creator[data-flat] .tiles { gap: 12px; }
+.creator[data-flat] .tile { padding: 8px; border-radius: 16px; background: var(--ui-panel); box-shadow: none;
+  transition: background 0.2s ease-out, box-shadow 0.2s ease-out; }
+.creator[data-flat] .tile:hover { transform: none; background: var(--ui-card); }
+.creator[data-flat] .tile[aria-pressed="true"] { background: var(--ui-card); box-shadow: inset 0 0 0 2px var(--ui-ink), 0 10px 26px rgb(var(--ui-shade) / 0.11); }
+/* The hovered tile lifts with a slight drop shadow as it grows out (the kit's motion; round 3 verdict). */
+.creator[data-flat] .tiles > [data-nudge="hover"] .tile { box-shadow: 0 8px 20px rgb(var(--ui-shade) / 0.1); }
+.creator[data-flat] .tile[data-locked] { background: var(--ui-card-dim); box-shadow: inset 0 0 0 1px var(--ui-line); outline: 1.5px dashed var(--ui-line); outline-offset: -7px; }
+.creator[data-flat] .tile[data-locked] img { opacity: 0.45; }
+.creator[data-flat] .lock { color: var(--ui-quiet); }
+.creator[data-flat] .none { color: var(--ui-quiet); font: 500 13px var(--gui-font); }
+.creator[data-flat] .baking { background: var(--ui-line); }
+
+/* Swatches: round dots, the chosen one ringed in ink (the kit's ColourDots). */
+.creator[data-flat] .swatches { gap: 12px; }
+.creator[data-flat] .swatches button { width: 36px; height: 36px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgb(var(--ui-shade) / 0.08);
+  transition: box-shadow 0.2s cubic-bezier(0.65, 0, 0.35, 1), transform 0.2s cubic-bezier(0.65, 0, 0.35, 1); }
+.creator[data-flat] .swatches[data-kind="skin"] button { width: 44px; height: 44px; }
+.creator[data-flat] .swatches button:hover:not(:disabled) { transform: scale(1.06); }
+.creator[data-flat] .swatches button[aria-pressed="true"] { transform: none; box-shadow: inset 0 0 0 1px rgb(var(--ui-shade) / 0.08), 0 0 0 2px var(--ui-card), 0 0 0 4px var(--ui-ink); }
+.creator[data-flat] .swatches button[data-own] { font: 700 11px/1 var(--gui-font); }
+.creator[data-flat] .swatches button[data-locked] { opacity: 0.45; outline: 1.5px dashed var(--ui-line); outline-offset: 2px; box-shadow: inset 0 0 0 1px rgb(var(--ui-shade) / 0.08); }
+
+/* The colour wheel. */
+.creator[data-flat] .wheel { margin-top: 18px; }
+.creator[data-flat] .wheelDisc { width: 120px; box-shadow: 0 0 0 1px var(--ui-line); }
+.creator[data-flat] .wheelDisc:focus-visible { outline: 2px solid var(--ui-ink); }
+.creator[data-flat] .wheelMark, .creator[data-flat] .wheel[data-active] .wheelMark { box-shadow: 0 0 0 2.5px var(--ui-card), 0 0 0 4px var(--ui-ink); }
+.creator[data-flat] .wheel[data-locked] .wheelDisc { width: 64px; }
+.creator[data-flat] .wheelLock { color: var(--ui-ink); }
+.creator[data-flat] .wheelChip { border-radius: 50%; box-shadow: inset 0 0 0 1px rgb(var(--ui-shade) / 0.08); }
+.creator[data-flat] .wheelHex input { border-radius: 10px; background: var(--ui-panel); box-shadow: none; color: var(--ui-ink); font: 600 14px var(--gui-font); }
+
+/* Words and notes. */
+.creator[data-flat] .hint { color: var(--ui-quiet); font: 400 13px/1.45 var(--gui-font); }
+.creator[data-flat] .hintLink, .creator[data-flat] .lockNote button { margin-top: 0; padding: 6px 14px; border-radius: 999px; background: var(--ui-accent); color: var(--ui-accent-ink); box-shadow: none; font: 600 13px var(--gui-font); }
+.creator[data-flat] .empty, .creator[data-flat] .lockNote { padding: 14px 16px; border-radius: 14px; background: var(--ui-panel); box-shadow: none; color: var(--ui-ink-2); font: 500 14px/1.45 var(--gui-font); }
+
+/* The foot: the name, then the main action across the panel and the quiet ones under it. */
+.creator[data-flat] .foot { gap: 12px; padding: 18px 30px 26px; border-top: 1px solid var(--ui-line); }
+.creator[data-flat] .nameOk { color: var(--ui-ink-2); font: 500 13px var(--gui-font); }
+.creator[data-flat] .actions { gap: 10px; justify-content: stretch; }
+.creator[data-flat] .actions > :first-child { flex: 1 1 100%; height: 48px; font-size: 15px; }
+.creator[data-flat] .actions > :not(:first-child) { display: inline-flex; align-items: center; justify-content: center; flex: 1 1 0; min-height: 0; height: 44px; padding: 0 16px; box-sizing: border-box; background: var(--ui-panel); font-size: 14px; text-align: center;
+  transition: background 0.15s ease-out, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.creator[data-flat] .actions > :not(:first-child):hover:not(:disabled) { background: var(--ui-line); }
+.creator[data-flat] .actions > :active:not(:disabled) { transform: scale(0.97); }
+
+@media (max-width: 1100px) and (min-width: 761px) {
+  .creator[data-flat] { grid-template-columns: 70px minmax(0, 1fr) 360px; gap: 0 16px; padding: 0 16px 16px 0; }
+  .creator[data-flat] .panelHead { padding: 22px 22px 4px; }
+  .creator[data-flat] .body { padding: 14px 22px 22px; }
+  .creator[data-flat] .foot { padding: 16px 22px 22px; }
+}
+/* Phone: the title across the top, the rail under it, the stage, then the options as a sheet to the foot. */
+@media (max-width: 760px) {
+  .creator[data-flat] { --cr-tile: 72px; grid-template-columns: minmax(0, 1fr); grid-template-rows: 56px auto minmax(190px, 32dvh) minmax(0, 1fr);
+    grid-template-areas: "top" "rail" "portrait" "panel"; gap: 0; padding: 0; }
+  .top { padding: 0 14px; }
+  .creator[data-flat] .rail { flex-direction: row; justify-content: flex-start; padding: 0 12px 6px; overflow-x: auto; overflow-y: hidden; }
+  .creator[data-flat] .portrait { margin: 0 12px; }
+  .creator[data-flat] .panel { margin-top: 10px; border-radius: 22px 22px 0 0; box-shadow: 0 -10px 30px rgb(var(--ui-shade) / 0.06); }
+  .creator[data-flat] .panelHead { padding: 18px 20px 2px; }
+  .creator[data-flat] .title { font-size: 22px; }
+  .creator[data-flat] .body { gap: 18px; padding: 10px 20px 16px; }
+  .creator[data-flat] .body > * + :not(.lockNote) { padding-top: 18px; }
+  .creator[data-flat] .sliders { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 14px; }
+  .creator[data-flat] .tiles { gap: 10px; }
+  .creator[data-flat] .foot { gap: 10px; padding: 12px 20px max(14px, env(safe-area-inset-bottom)); }
+  /* One row on a phone, the main action last (at the thumb), so the options keep the room. */
+  .creator[data-flat] .actions { flex-wrap: nowrap; }
+  .creator[data-flat] .actions > :first-child { order: 1; flex: 1.4 1 0; min-width: 0; min-height: 0; height: 44px; padding: 0 12px; font-size: 14px; }
+  .creator[data-flat] .actions > :not(:first-child) { min-width: 0; padding: 0 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .creator[data-flat] .body[data-swap] { animation: none; }
+  .creator[data-flat] .tile, .creator[data-flat] .swatches button, .creator[data-flat] .rail img, .topClose { transition: none; }
+}

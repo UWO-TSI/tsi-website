@@ -71,6 +71,16 @@
   background: transparent; color: var(--gui-ink-2); font: 800 var(--gui-text-sm)/1 var(--gui-font); white-space: nowrap; cursor: pointer; transition: background var(--gui-t-fast) ease, color var(--gui-t-fast) ease; }
 .tab:hover:not([aria-selected="true"]):not(:disabled) { background: rgb(255 255 247 / 0.7); color: var(--gui-ink); }
 .tab[aria-selected="true"] { background: var(--gui-butter); color: var(--gui-ink-strong); box-shadow: var(--gui-shadow-sm); }
+/* Measured, the chosen tab's pill is one element that slides under the next choice (components/gui/motion). */
+.tabPill { position: absolute; top: 0; left: 0; z-index: 0; border-radius: var(--gui-r-pill); background: var(--gui-butter); box-shadow: var(--gui-shadow-sm); pointer-events: none;
+  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), width 0.18s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.tabs[data-pill] .tab { z-index: 1; }
+.tabs[data-pill] .tab[aria-selected="true"] { background: transparent; box-shadow: none; }
+.tab:active:not(:disabled) { transform: scale(0.95); }
+.tab { transition: background var(--gui-t-fast) ease, color var(--gui-t-fast) ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.tabPanel { animation: tabIn 0.18s ease-out; }
+@keyframes tabIn { from { opacity: 0; transform: translateY(4px); } }
+@media (prefers-reduced-motion: reduce) { .tabPill, .tab { transition: none; } .tabPanel { animation: none; } .tab:active { transform: none; } }
 /* The kit's highlighter swipe under the chosen label. */
 .tab[aria-selected="true"] .tabLabel { background: linear-gradient(transparent 55%, var(--gui-highlight) 55% 90%, transparent 90%); border-radius: 3px; }
 .tab:disabled { opacity: 0.45; cursor: default; }
@@ -239,3 +249,40 @@ button.tile:hover { transform: translateY(-2px) scale(1.04); }
 .signInButton { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 22px; border-radius: var(--gui-r-pill); background: var(--gui-sage); color: var(--gui-paper); font-weight: 800; text-decoration: none; box-shadow: 0 3px 0 var(--gui-sage-deep); }
 .signInButton:hover { filter: brightness(1.06); }
 .signInButton:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--gui-sage-deep); }
+
+/* ── The flat variant (specs/polish/flat-ui.md step 7): the shop overlay's look for the game's menus ─────────────────
+   (Sheet variant="flat"; FlatPanel too for the pieces). The cream tokens are remapped on [data-gui-flat]
+   (styles/game-tokens.css); here, the frame and the pieces that change shape. */
+.layer[data-variant="flat"] .scrim { background: var(--ui-scrim); }
+.sheet[data-variant="flat"] { background: var(--ui-panel); color: var(--ui-ink); border-radius: 22px; box-shadow: 0 24px 80px rgb(var(--ui-shade) / 0.28); }
+.sheet[data-variant="flat"]::before { display: none; }
+.sheet[data-variant="flat"] .head { --head: transparent; background: transparent; padding: 18px 18px 6px 24px; }
+.sheet[data-variant="flat"] .head::after { display: none; }
+.sheet[data-variant="flat"] .head h2 { color: var(--ui-ink); font: 600 20px/1.2 var(--gui-font); letter-spacing: 0; }
+.sheet[data-variant="flat"] .eyebrow { color: var(--ui-quiet); font-weight: 500; letter-spacing: 0; }
+.sheet[data-variant="flat"] .headIcon { width: 30px; height: 30px; background: none; box-shadow: none; color: var(--ui-ink); }
+.sheet[data-variant="flat"] .close { width: 36px; height: 36px; background: var(--ui-card); box-shadow: none; color: var(--ui-ink); }
+.sheet[data-variant="flat"] .close:hover:not(:disabled) { transform: none; background: var(--ui-card); }
+.sheet[data-variant="flat"] .body { padding-top: 12px; scrollbar-color: var(--ui-line) transparent; }
+.sheet[data-variant="flat"] .foot { border-top: 1px solid var(--ui-line); }
+@media (max-width: 560px) { .sheet[data-variant="flat"], .sheet[data-variant="flat"][data-size] { border-radius: 22px 22px 0 0; } }
+/* The kit's buttons (Button) as the shop's pills: the dark one, white ghosts, a quiet red for danger. */
+.sheet[data-variant="flat"] button[data-variant] { border: 0; border-radius: 999px; box-shadow: none; font-weight: 600; transform: none; }
+.sheet[data-variant="flat"] button[data-variant="primary"]:not(:disabled) { background: var(--ui-accent); color: var(--ui-accent-ink); }
+.sheet[data-variant="flat"] button[data-variant="primary"]:hover:not(:disabled) { background: var(--ui-accent-deep); }
+.sheet[data-variant="flat"] button[data-variant="secondary"]:not(:disabled), .sheet[data-variant="flat"] button[data-variant="quiet"]:not(:disabled) { background: var(--ui-card); color: var(--ui-ink); }
+.sheet[data-variant="flat"] button[data-variant="secondary"]:hover:not(:disabled), .sheet[data-variant="flat"] button[data-variant="quiet"]:hover:not(:disabled) { background: var(--ui-card-hover); }
+.sheet[data-variant="flat"] button[data-variant="danger"]:not(:disabled) { background: var(--ui-card); color: var(--ui-error); }
+.sheet[data-variant="flat"] button[data-variant]:disabled { background: var(--ui-disabled); color: var(--ui-accent-ink); }
+.sheet[data-variant="flat"] button[data-variant]:active:not(:disabled) { transform: none; box-shadow: none; }
+.sheet[data-variant="flat"] [data-gui-paper] button[data-variant] { border-radius: 50% 48% 45% 47% / 48% 51% 45% 49%; }
+.sheet[data-variant="flat"] [data-gui-paper] button[data-variant="primary"]:not(:disabled) { background: var(--gui-sage); color: var(--gui-paper); box-shadow: 0 3px 0 var(--gui-sage-deep); }
+/* Text tabs: quiet words, the chosen one the dark pill. (Tabs with icons are an icon rail.) */
+.tabsWrap[data-flat] .tabs { padding: 0; gap: 6px; background: transparent; }
+.tabsWrap[data-flat] .tab { min-height: 36px; padding: 0 14px; color: var(--ui-quiet); font-weight: 600; }
+.tabsWrap[data-flat] .tab:hover:not([aria-selected="true"]):not(:disabled) { background: rgb(var(--ui-shade) / 0.04); color: var(--ui-ink); }
+.tabsWrap[data-flat] .tab[aria-selected="true"] { background: var(--ui-accent); color: var(--ui-accent-ink); box-shadow: none; }
+.tabsWrap[data-flat] .tabPill { background: var(--ui-accent); box-shadow: none; }
+.tabsWrap[data-flat] .tabs[data-pill] .tab[aria-selected="true"] { background: transparent; }
+.tabsWrap[data-flat] .tab[aria-selected="true"] .tabLabel { background: none; }
+.tabsWrap[data-flat] .tabKey { background: var(--ui-ink) !important; color: var(--ui-accent-ink) !important; }

@@ -11,6 +11,7 @@ import type * as THREE from "three";
 import FamilyAura from "../oracle/FamilyAura";
 import SubclassAura from "../oracle/SubclassAura";
 import { CLASS_KITS, classKit, type ClassKit } from "@/lib/combat/classes";
+import { DROPS } from "@/lib/game/drops";
 import { FX_BENCH, useFxBench, type FxBenchState } from "@/lib/game/perf/fxBench";
 import { FAMILIES } from "@/lib/game/oracle/family";
 import type { RemotePlayer } from "@/lib/net/types";
@@ -24,8 +25,8 @@ export function auraOf(p: RemotePlayer): { kit: ClassKit; mastery: number; colou
   return p.family ? { family: FAMILIES[p.family].light } : null;
 }
 
-/** Whether a player shows an aura at all (the re-tier asks for everyone in view). */
-export const showsAura = (p: RemotePlayer) => p.showClass && (!!p.family || !!classKit(p.kit));
+/** Whether a player shows an aura at all (the re-tier asks for everyone in view): never before the classes drop, as the local player's. */
+export const showsAura = (p: RemotePlayer, classesOn = DROPS.classes) => classesOn && p.showClass && (!!p.family || !!classKit(p.kit));
 
 export interface AuraView { sid: number; feet: { current: THREE.Vector3 }; player: RemotePlayer }
 

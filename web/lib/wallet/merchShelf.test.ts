@@ -24,7 +24,7 @@ describe("the club merch shelf (David's merch grid reference)", () => {
   it("tags only real merch rows", () => {
     const slugs = new Set(CATALOGUE.filter(c => c.category === "merch").map(c => c.slug));
     for (const slug of Object.keys(MERCH_TAGS)) expect(slugs.has(slug), slug).toBe(true);
-    expect(merchTag("merch-tote")).toBe("staff pick");
+    expect(merchTag("merch-tote")).toBeNull();   // off sale (David, 2026-10-22)
     expect(merchTag("merch-sticker-pack")).toBeNull();
   });
 });

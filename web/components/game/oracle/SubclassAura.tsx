@@ -14,14 +14,13 @@ import * as THREE from "three";
 import { fireflyOffsetInto } from "@/lib/game/fireflyPath";
 import { COMBAT_PACK, COMBAT_PACK_COLS, COMBAT_PACK_URL, type CombatSprite } from "@/lib/game/fx/combatPack";
 import { RampTable, sharedRamps } from "@/lib/game/fx/combat";
-import { createCombatParticleMaterial, rampMap } from "@/lib/game/fx/fxMaterial";
+import { createCombatParticleMaterial, packTexture, rampMap } from "@/lib/game/fx/fxMaterial";
 import { masteryCosmetics } from "@/lib/combat/mastery";
 import type { ClassKit } from "@/lib/combat/classes";
 import { combat } from "@/lib/game/combat/runtime";
 import { inCombat } from "@/lib/game/combat/classRuntime";
 
 const MOTES = 8, SECOND = 2, N = MOTES + SECOND + 1;
-let pack: THREE.Texture | null = null;
 const frame = (sprite: CombatSprite, f: number) => COMBAT_PACK[sprite].row * COMBAT_PACK_COLS + f;
 const drift: [number, number, number] = [0, 0, 0];
 
@@ -31,7 +30,6 @@ export default function SubclassAura({ player, kit, mastery, colour }: { player:
   const tier = masteryCosmetics(mastery).aura;
   const d = useMemo(() => {
     const ramps = (sharedRamps.table ??= new RampTable());
-    pack ??= new THREE.TextureLoader().load(COMBAT_PACK_URL);
     const g = new THREE.InstancedBufferGeometry(), quad = new THREE.PlaneGeometry(1, 1);
     g.index = quad.index;
     for (const n of ["position", "uv"]) g.setAttribute(n, quad.getAttribute(n));
@@ -39,7 +37,7 @@ export default function SubclassAura({ player, kit, mastery, colour }: { player:
     const attrs = arr.map(a => new THREE.InstancedBufferAttribute(a, 4).setUsage(THREE.DynamicDrawUsage));
     attrs.forEach((a, k) => g.setAttribute(`i${"ABCD"[k]}`, a));
     g.instanceCount = N;
-    const mesh = new THREE.Mesh(g, createCombatParticleMaterial(pack, rampMap(ramps), true));
+    const mesh = new THREE.Mesh(g, createCombatParticleMaterial(packTexture(COMBAT_PACK_URL), rampMap(ramps), true));
     mesh.frustumCulled = false; mesh.renderOrder = 3.7; // over the terrain's painted sand and soil layers (2, 3), like the movement particles
     return { mesh, g, arr, attrs, ramps };
   }, []);

@@ -19,8 +19,6 @@ import { fieldMods, scaleField, WARDEN_SKINS } from "./wardenData";
 import { RANGER_KITS, RANGER_SKINS } from "./rangerKits";
 
 export type Role = "tank" | "healer" | "damage" | "support";
-/** Future co-op threat per role (§1.12): a tank's hits draw 2.5×. Kit data now so groups need no rewrite. */
-export const ROLE_THREAT: Record<Role, number> = { tank: 2.5, healer: 1, damage: 1, support: 1 };
 
 /** The base stat each class is built to stack (David, 2026-10-02: "like Megabonk"), raised by mastery. */
 export type StatDirection = "max_mana" | "summon_count" | "cooldown" | "duration" | "attack_speed" | "crit_damage" | "reload_speed"

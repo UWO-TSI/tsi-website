@@ -3,7 +3,7 @@
 \set ON_ERROR_STOP 1
 DO $$
 DECLARE r record; A uuid := '00000000-0000-4000-8000-0000000000aa'; B uuid := '00000000-0000-4000-8000-0000000000bb';
-  C uuid := '00000000-0000-4000-8000-0000000000cc'; v int; rod uuid; hoodie uuid; tote uuid; res uuid;
+  C uuid := '00000000-0000-4000-8000-0000000000cc'; v int; rod uuid; hoodie uuid; tote uuid; tote_was boolean; res uuid;
 BEGIN
   -- 024 reconciliation: one source of truth
   ASSERT NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name IN ('coins', 'gear')), '033 legacy columns dropped';
@@ -46,8 +46,9 @@ BEGIN
   EXCEPTION WHEN raise_exception THEN ASSERT SQLERRM = 'insufficient_items', '033 sell none: ' || SQLERRM; END;
 
   -- merch: stock 1, reserve / sold out / cancel refunds / fulfil / replay; T1/T2 only
-  SELECT id INTO tote FROM shop_items WHERE slug = 'merch-tote';
-  UPDATE shop_items SET stock = 1 WHERE id = tote;
+  -- The placeholder tote is off sale since 20261022212455 (David, 2026-10-22): on again here only as a stock-1 fixture.
+  SELECT id, active INTO tote, tote_was FROM shop_items WHERE slug = 'merch-tote';
+  UPDATE shop_items SET stock = 1, active = TRUE WHERE id = tote;
   SELECT * INTO r FROM merch_reserve(C, tote, 'merch-0001', 'AB12');
   res := r.reservation_id;
   ASSERT r.gems_balance = 300 AND NOT r.replayed, '033 reserve';
@@ -70,6 +71,7 @@ BEGIN
   PERFORM merch_resolve(r.reservation_id, A, 'fulfil', 'picked up at HQ');
   ASSERT (SELECT status FROM merch_reservations WHERE id = r.reservation_id) = 'fulfilled', '033 fulfil';
   ASSERT (SELECT count(*) FROM tc_transactions WHERE user_id = C AND type IN ('spend_merch', 'refund_merch')) = 2, '033 gems ledger rows';
+  UPDATE shop_items SET active = tote_was WHERE id = tote;
 
   -- daily gift once per Toronto day
   SELECT * INTO r FROM daily_gift_claim(B);

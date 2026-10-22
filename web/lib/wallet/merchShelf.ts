@@ -27,7 +27,6 @@ export function merchKind(item: { slug: string; name: string }): MerchKind {
 export type MerchTag = "staff pick" | "new drop";
 /** The items with a tag on their card. */
 export const MERCH_TAGS: Readonly<Record<string, MerchTag>> = {
-  "merch-tote": "staff pick",
   "merch-tsi-keycap-keychain": "new drop",
 };
 export const merchTag = (slug: string): MerchTag | null => MERCH_TAGS[slug] ?? null;

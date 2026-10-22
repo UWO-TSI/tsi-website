@@ -373,20 +373,6 @@ export const Surface = {
 } as const;
 export type SurfaceId = (typeof Surface)[keyof typeof Surface];
 
-/** Road-kit material folder per surface, or null when it is not a road. */
-export const SURFACE_ROAD_KIT: Record<SurfaceId, string | null> = {
-  [Surface.Grass]: null,
-  [Surface.Soil]: "",
-  [Surface.Stone]: "stone-",
-  [Surface.Sand]: "sand-",
-  [Surface.Wood]: "wood-",
-  [Surface.Brick]: "brick-",
-  [Surface.River]: null,
-  [Surface.Void]: null,
-  // A ramp wears the surface it joins, not a road kit of its own.
-  [Surface.Ramp]: null,
-};
-
 export function isRiver(s: number): boolean {
   return s === Surface.River;
 }
@@ -920,7 +906,6 @@ export const Dir = {
   W: 6,
   NW: 7,
 } as const;
-export type DirId = (typeof Dir)[keyof typeof Dir];
 
 /** Cell offsets per direction bit, in the order above. */
 export const DIR_OFFSETS: ReadonlyArray<readonly [number, number]> = [
@@ -1326,11 +1311,6 @@ export function cliffPieceFor(
   // grass at y=0 and drops the wall to y=-15 raw. So it mounts at the cell's
   // own walking height and hangs down toward whatever is below.
   return { file, rotation, y: level * LEVEL_STEP };
-}
-
-/** Same surface: the test roads and rivers tile against. */
-export function sameSurface(surface: number) {
-  return (map: IslandMap, nx: number, nz: number) => surfaceAt(map, nx, nz) === surface;
 }
 
 // ── Natural shapes (rows 262, 263) ───────────────────────────────

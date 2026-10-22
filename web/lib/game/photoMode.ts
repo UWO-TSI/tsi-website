@@ -33,7 +33,6 @@ export function setPhoto(patch: Partial<PhotoState>) {
 export const readPhoto = () => state;
 const subscribe = (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; };
 export const usePhoto = () => useSyncExternalStore(subscribe, readPhoto, () => INITIAL);
-export const usePhotoOpen = () => useSyncExternalStore(subscribe, () => state.open, () => false);
 
 /**
  * The free camera's angles (photo.ts Orbit) and the selfie's swing, eased toward their targets every frame; the point

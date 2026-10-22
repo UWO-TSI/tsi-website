@@ -24,9 +24,9 @@ import { shadowClassFor } from "@/lib/game/shadows";
 import { CAMPFIRE_URL } from "@/lib/game/propModels";
 import { modelContact, useContactShadow } from "../ContactShadows";
 import { FACE, ParticlePool, seedAt, type Recipe } from "@/lib/game/fx/particles";
-import { COMBAT_PACK, COMBAT_PACK_URL, type CombatSprite } from "@/lib/game/fx/combatPack";
+import type { CombatSprite } from "@/lib/game/fx/combatPack";
 import { RampTable, sharedRamps, type Ramp } from "@/lib/game/fx/combat";
-import { createCombatParticleMaterial, rampMap } from "@/lib/game/fx/fxMaterial";
+import { FIRE_PACK, FIRE_PACK_ROWS, FIRE_PACK_URL, createCombatParticleMaterial, packTexture, rampMap } from "@/lib/game/fx/fxMaterial";
 import { DRUM_LAYERS, FIRE, drumDistanceGain, drumLayers, fireLit, fireScale, type Spot } from "@/lib/game/campfire";
 import { campfireLive, countPosed } from "@/lib/game/danceField";
 import { eventSolids } from "@/lib/game/defaultIsland";
@@ -57,15 +57,10 @@ const LIGHT = { intensity: 5, distance: 11, decay: 1.7, height: 1.15 } as const;
 /** How fast the fire grows and dies down (1/s). */
 const EASE = 2.2;
 
-let pack: THREE.Texture | null = null;
-function packMap() {
-  if (!pack) { pack = new THREE.TextureLoader().load(COMBAT_PACK_URL); pack.colorSpace = THREE.NoColorSpace; pack.anisotropy = 4; } // heat is data, not colour
-  return pack;
-}
 
 /** The flames and embers, in the fire's own frame (the group stands on the ground under the stack). */
 class FireSystem {
-  readonly pool = new ParticlePool(64, COMBAT_PACK);
+  readonly pool = new ParticlePool(64, FIRE_PACK);
   readonly mesh: THREE.Mesh;
   private readonly attrs: THREE.InstancedBufferAttribute[];
   private readonly geometry = new THREE.InstancedBufferGeometry();
@@ -84,7 +79,7 @@ class FireSystem {
       return a;
     });
     this.geometry.instanceCount = 0;
-    this.mesh = new THREE.Mesh(this.geometry, createCombatParticleMaterial(packMap(), rampMap(ramps), true));
+    this.mesh = new THREE.Mesh(this.geometry, createCombatParticleMaterial(packTexture(FIRE_PACK_URL), rampMap(ramps), true, 1, FIRE_PACK_ROWS));
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 3.5;
   }

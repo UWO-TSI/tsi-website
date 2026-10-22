@@ -2,7 +2,7 @@
 
 /**
  * Member-game character UI: the plain creator when there is no look and no arrival to make one in (row 142, skippable
- * with a random look; a new member makes theirs in the water, components/game/arrival). The emotes are the emote
+ * with a random look; a new member makes theirs in the water, components/game/arrival), in the flat UI's look. The emotes are the emote
  * wheel's (components/game/emotes/EmoteWheel.tsx).
  */
 import CharacterCreator from "./CharacterCreator";
@@ -27,7 +27,7 @@ export default function PlayerCharacterUI({ creator = true }: { creator?: boolea
   const mine = useMyLook();
   const identity = useWorldIdentity();
   return <>
-    {creator && mine.loaded && !mine.saved && <CharacterCreator initial={mine.look} askName={identity.signedIn ? { current: identity.display_name } : undefined}
+    {creator && mine.loaded && !mine.saved && <CharacterCreator flat initial={mine.look} askName={identity.signedIn ? { current: identity.display_name } : undefined}
       onDone={async (look, name) => { await saveMyLook(look); if (name) await saveName(name); }} />}
   </>;
 }

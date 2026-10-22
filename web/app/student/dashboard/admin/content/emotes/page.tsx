@@ -19,8 +19,7 @@ export default function AdminContentEmotesPage() {
   const [emotes, setEmotes] = useState<EmoteType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Admin listing includes inactive emotes so they can be re-enabled, so we
-  // query directly rather than reuse useEmoteTypes() which filters active=true.
+  // The admin listing includes inactive emotes, so they can be re-enabled.
   useEffect(() => {
     let cancelled = false;
     (async () => {
