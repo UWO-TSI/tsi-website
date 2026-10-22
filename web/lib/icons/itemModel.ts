@@ -16,10 +16,7 @@ export function itemSpec(row: IconRow): IconSpec | null {
 }
 
 /** An item's 3D model to turn in the detail view, or null where it has none (a finish's texture, or nothing). */
-export function itemModel(row: IconRow): IconSpec | null {
-  const s = itemSpec(row);
-  return s && s.view !== "roll" && s.view !== "tile" && /\.glb$/.test(s.url) ? s : null;
-}
+export const itemModel = (row: IconRow): IconSpec | null => keyModel(iconKey(row));
 
 /** Anything's 3D model by its icon key (a catch, a material, a tool: the bag's and the collection's detail views). */
 export function keyModel(key: string): IconSpec | null {

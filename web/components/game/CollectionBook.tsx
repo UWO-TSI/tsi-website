@@ -2,29 +2,22 @@
 
 /**
  * CollectionBook (cozy marathon G6) — the ACNH-style critterpedia/collection
- * viewer. A DOM overlay that fetches GET /api/collections and shows what the
- * member has shaken, picked, and caught, grouped by kind with their rendered
- * icons and counts. Collectibles carry no TC/XP — this is the reward: a filling book.
+ * viewer: what the player has shaken, picked, and caught, grouped by kind with
+ * their rendered icons and counts. Collectibles carry no TC/XP — this is the reward: a filling book.
  *
  * Undiscovered items show as a soft silhouette of their icon, a completion pull.
  */
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FISH, RARITY_META, type FishDef } from "@/lib/game/fishing";
 import { RarityBadge, SignInText } from "@/components/gui";
 import { iconUrl } from "@/lib/icons/keys";
 import { ROSTER } from "@/lib/collections/roster";
 import { AudioManager } from "@/lib/game/audio";
-import { localCollections, mergeWithLocal } from "@/lib/game/collections";
+import { localCollections } from "@/lib/game/collections";
 import { Check, X } from "lucide-react";
-import JournalPages, { fetchJournalPage } from "./JournalPages";
 import FlatCollection from "./FlatCollection";
 import { useWorldDialog } from "@/lib/game/useWorldDialog";
-
-interface Row {
-  item_key: string;
-  count: number;
-}
 
 // Almanac lookup (loop wake 29): clicking a DISCOVERED fish/sea-floor tile
 // shows its field notes — window, size, zone, rarity. Only these two groups
@@ -129,43 +122,11 @@ function ApplicantCollectionBook({ onClose, collectionScope }: { onClose: () => 
   );
 }
 
-/** The counts and the groups; `onClose` given: the applicant card's own header with its close button. */
-function CollectionBody({ collectionScope, onClose }: { collectionScope?: string; onClose?: () => void }) {
-  const [counts, setCounts] = useState(() => localCollections(collectionScope));
-  const [sync, setSync] = useState<Sync>(collectionScope ? "local" : "loading");
+/** The applicant island's counts and groups (kept on this device); `onClose` given: the card's own header with its close button. */
+function CollectionBody({ collectionScope, onClose }: { collectionScope: string; onClose?: () => void }) {
+  const [counts] = useState(() => localCollections(collectionScope));
   const [detailKey, setDetailKey] = useState<string | null>(null);
   const [fishFilter, setFishFilter] = useState<"all" | "river" | "sea" | "caught">("all");
-  // Journal pages from /api/collections/journal when the server has them; the local catalog otherwise.
-  const [journal, setJournal] = useState<Awaited<ReturnType<typeof fetchJournalPage>>>(null);
-  useEffect(() => {
-    if (collectionScope) return;
-    let alive = true;
-    void fetchJournalPage("fish").then(p => { if (alive) setJournal(p); });
-    return () => { alive = false; };
-  }, [collectionScope]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    let cancelled = false;
-    if (collectionScope) return () => { controller.abort(); };
-    fetch("/api/collections", { signal: controller.signal })
-      .then(async (r) => {
-        if (r.status === 401) { if (!cancelled) setSync("signed-out"); return; }
-        if (!r.ok) throw new Error("Collection sync unavailable");
-        const d: { collections?: Row[] } = await r.json();
-        if (!Array.isArray(d.collections)) throw new Error("Invalid collection response");
-        const map = Object.fromEntries(d.collections.map((row) => [row.item_key, row.count]));
-        if (!cancelled) {
-          setCounts(mergeWithLocal(map, collectionScope));
-          setSync("synced");
-        }
-      })
-      .catch(() => { if (!cancelled) setSync("local"); });
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [collectionScope]);
 
   const detail = detailKey ? FISH_BY_KEY.get(detailKey) ?? null : null;
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
@@ -175,7 +136,7 @@ function CollectionBody({ collectionScope, onClose }: { collectionScope?: string
   );
   const totalKinds = CATALOG.reduce((n, g) => n + g.items.length, 0);
 
-  const note = collectionNote(collectionScope, sync);
+  const note = collectionNote(collectionScope, "local");
   const summary = <p style={{ fontSize: 12, color: "var(--app-muted, #8A7B5E)", marginTop: 0, marginBottom: 0 }}>
     {discovered}/{totalKinds} kinds discovered · {total} caught
     <span role="status" style={{ display: "block", marginTop: 4 }}>{note && <SignInText text={note} />}</span>
@@ -200,7 +161,7 @@ function CollectionBody({ collectionScope, onClose }: { collectionScope?: string
         </header>
       ) : <div style={{ marginBottom: 16 }}>{summary}</div>}
 
-        {journal ? <JournalPages initial={journal} /> : CATALOG.map((g) => {
+        {CATALOG.map((g) => {
           // Loop wake 27: per-group completion count — the Critterpedia
           // "how far along am I" read; a gold check once the group is complete.
           const got = g.items.filter((it) => Object.hasOwn(counts, it.key)).length;

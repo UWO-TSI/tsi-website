@@ -7,7 +7,6 @@
 .count[data-done] { color: var(--flat-ink); }
 .filters { display: inline-flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
 .filters > [data-on] { background: var(--flat-ink); color: white; }
-.rarity { display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 50%; vertical-align: 0.05em; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12); }
 .kind { display: inline-flex; align-items: center; gap: 8px; }
 .museum { display: inline-flex; align-items: center; gap: 6px; margin: 0; color: var(--flat-body); font: 400 14px var(--gui-font); }
 @media (max-width: 760px) { .summary { font-size: 13px; } }
@@ -23,7 +22,6 @@
 .peekNotes > div { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 8px; }
 .peekNotes dt { color: var(--flat-quiet); }
 .peekNotes dd { margin: 0; color: var(--flat-ink); }
-.withIcon { display: inline-flex; align-items: center; gap: 6px; }
 .sideSilhouette { display: contents; }
 .sideSilhouette canvas { filter: brightness(0) opacity(0.22); }
 @media (prefers-reduced-motion: reduce) { .peek { animation: none; } }

@@ -31,7 +31,8 @@ const fmt = (n: number, c: string) => <Amount n={n} currency={c} />;
 // Signed out (the session ran out mid-visit): said as a sign-in, whose words link back here (reachability §3).
 const errText = (err: unknown) => (err instanceof ApiError ? (err.status === 401 ? "Sign in first." : err.message) : "Couldn't reach the shop. Try again.");
 
-function useLoad<T>(load: () => Promise<T>) {
+/** Loads once (and on `reload`), the error said for a person (a sign-in when signed out). */
+export function useLoad<T>(load: () => Promise<T>) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
   const reload = useCallback(async () => {

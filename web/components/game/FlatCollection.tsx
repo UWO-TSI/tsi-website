@@ -203,7 +203,7 @@ function Entries({ entries, picked, onPick }: { entries: Entry[]; picked: string
       onFocus={ev => { if ((ev.target as HTMLElement).matches?.(":focus-visible")) show(e.id, ev.currentTarget); }} onBlur={() => setPeek(p => (p?.id === e.id ? null : p))}
       onClickCapture={ev => { const p = press.current; press.current = null; if (p?.fired && p.id === e.id) { ev.stopPropagation(); ev.preventDefault(); } }}>
       <ItemCard size="sm" arrow={false} picture={e.picture} px={40} name={e.name} selected={picked === e.id}
-        line={e.found ? <>{e.rarity ? <i className={s.rarity} style={{ background: `var(--gui-rarity-${e.rarity})` }} aria-hidden /> : null}{e.rarity ? cap(e.rarity) : e.kind}</> : "Not found yet"}
+        line={e.found ? <>{e.rarity ? <i className={f.rarity} style={{ background: `var(--gui-rarity-${e.rarity})` }} aria-hidden /> : null}{e.rarity ? cap(e.rarity) : e.kind}</> : "Not found yet"}
         pill={e.donated ? <Landmark size={12} aria-label="On display at the museum" /> : null} tag={e.outNow ? "Out now" : null} cover={e.found ? null : "not-found"}
         onClick={() => { setPeek(null); onPick(e.id); }} label={e.found ? e.name : `Undiscovered · ${e.text}`} />
     </div>)}</CardGrid>
@@ -223,7 +223,7 @@ function EntryPanel({ e, onClose }: { e: Entry; onClose: () => void }) {
     title={e.found ? e.name : "Undiscovered"} kind={<span className={s.kind}>{e.kind}{e.rarity ? <RarityBadge rarity={e.rarity}>{RARITY_META[e.rarity as keyof typeof RARITY_META]?.label ?? e.rarity}</RarityBadge> : null}</span>}
     text={e.found ? e.quote : e.text} facts={e.notes}
     actions={e.key && inBag > 0 && pinnable(e.key) ? <DarkButton onClick={() => togglePin(e.key!)}>
-      <span className={s.withIcon}>{pinned ? <PinOff size={15} aria-hidden /> : <Pin size={15} aria-hidden />} {pinned ? "Unpin from the wheel" : "Pin to the wheel"}</span></DarkButton> : null}>
+      <span className={f.withIcon}>{pinned ? <PinOff size={15} aria-hidden /> : <Pin size={15} aria-hidden />} {pinned ? "Unpin from the wheel" : "Pin to the wheel"}</span></DarkButton> : null}>
     {e.found && e.donatable && !e.donated && inBag > 0 && <p className={s.museum}><Landmark size={14} aria-hidden /> Bring it to the curator to put it on show.</p>}
   </SidePanel>;
 }

@@ -2,7 +2,7 @@
 
 /**
  * /dev/flat-ui?surface=bag|chest|crafting|collection|collection-applicant|decorate|wallet|missions|wardrobe|creator|creator-applicant
- * (specs/polish/flat-ui.md; the mission board takes `palette=flat`): one in-game
+ * (specs/polish/flat-ui.md): one in-game
  * menu over a plain sky, on the in-memory services, for the rollout's before and after shots. The mission board takes
  * `mission=<id>` (that one under way, `done=1` ready to claim) and `cool=<id>` (that one on its cooldown). Add `collections=demo` (the bag, the
  * chest with `chest=1`, the collection; `bag=<slots>` fills the pockets) or `crafting=demo` (the workbench). The

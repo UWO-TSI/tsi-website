@@ -36,7 +36,7 @@ const errText = (err: unknown) => (err instanceof ApiError ? (err.status === 401
 const picture = (e: ShopEntry) => e.sprite_url ?? shopIcon({ slug: e.slug, catalogue_ref: e.catalogue_ref, category: e.category });
 /** An item's kind, the quiet line under its name. */
 export const kindOf = (e: ShopEntry) => e.category === "merch" ? `${cap(KIND_LABEL.get(merchKind(e)) ?? "merch")} · Tethos club` : CATEGORY_LABEL[e.category] ?? cap(e.category);
-const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+export const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 const tagOf = (e: ShopEntry) => e.category === "merch" ? merchTag(e.slug) : e.special ? "today's special" : null;
 
 /** The spec row along the bottom of an item: the keychain's parts, else the merch's pickup, else kind, set and stock. */

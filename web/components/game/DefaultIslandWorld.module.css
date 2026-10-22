@@ -351,15 +351,6 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .incantation[data-outcome="enhanced"] .runeReadout { color: #ffd34d; }
 /* Mission board */
 .missionSheet { width: min(560px, calc(100% - 32px)); }
-.missionList { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
-.missionList li { display: grid; gap: 2px; padding: 10px 12px; border-radius: 10px; background: #fffdf3; border: 1px solid #d8cbaa; }
-.missionList li[data-active] { border-color: #426b5b; box-shadow: inset 4px 0 0 #426b5b; }
-.missionList p { margin: 0; }
-.missionList button { justify-self: start; margin-top: 4px; min-height: 36px; padding: 4px 16px; border: 0; border-radius: 999px; background: #426b5b; color: #fffdf0; font: inherit; cursor: pointer; }
-.missionList button:disabled { opacity: 0.45; cursor: default; }
-.missionTemplate { justify-self: start; padding: 1px 8px; border-radius: 999px; background: #efe3cf; font: 600 10px "IBM Plex Mono", monospace; color: #6a4b2f; }
-.missionState { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
-.missionList h3 { margin: 0 0 4px; font: 600 11px "IBM Plex Mono", monospace; letter-spacing: 0.06em; text-transform: uppercase; color: #607069; }
 /* Fishing: its card takes the lane (the power gauge, the reel and a catch stand about 260 tall; a line of text about 120), so the toasts go up over it. */
 .world:has([data-fishing-overlay]) { --game-toast-bottom: calc(var(--hud-lane-bottom) + 270px); }
 .world:has([data-fishing-overlay="casting"], [data-fishing-overlay="waiting"], [data-fishing-overlay="bite"], [data-fishing-overlay="missed"]) { --game-toast-bottom: calc(var(--hud-lane-bottom) + 130px); }
@@ -397,7 +388,7 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .combatHud, .bossBar, .defeat, .banner, .missionTracker { background: rgb(255 251 231 / 0.96); color: var(--gui-ink); border-color: transparent; box-shadow: var(--gui-shadow-md); }
 .combatHud { border-radius: var(--gui-r-card); }
 .hpBar { background: var(--gui-paper-deep); }
-.hpBar b, .sweep kbd, .ultSlot kbd, .dodgePip kbd, .abilityBar li small, .abilityBar small, .runeReadout, .missionTemplate, .missionList h3, .pathLoadout kbd, .pathStats b { font-family: var(--gui-font); font-weight: 800; }
+.hpBar b, .sweep kbd, .ultSlot kbd, .dodgePip kbd, .abilityBar li small, .abilityBar small, .runeReadout, .pathLoadout kbd, .pathStats b { font-family: var(--gui-font); font-weight: 800; }
 .hpBar b { font-size: var(--gui-text-xs); color: var(--gui-ink-strong); }
 .energyBar b { font-size: var(--gui-text-xs); }
 .sweep kbd { background: var(--gui-paper-hi); color: var(--gui-ink-strong); font-size: var(--gui-text-xs); }
@@ -409,11 +400,6 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .ultSlot::before { background: var(--gui-paper-hi); border-color: var(--gui-paper-edge); }
 .masteryBar { height: 6px; border-radius: 99px; background: var(--gui-paper-deep); }
 .bossBar span { background: var(--gui-paper-deep); }
-.missionTemplate { background: var(--gui-gold); color: var(--gui-ink-strong); font-size: var(--gui-text-xs); }
-.missionList h3 { font-size: var(--gui-text-xs); color: var(--gui-muted); letter-spacing: 0.04em; }
-.missionList li { border: 0; border-radius: var(--gui-r-card); background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm), inset 0 0 0 1.5px var(--gui-paper-edge); }
-.missionList li[data-active] { box-shadow: inset 5px 0 0 var(--gui-sage), var(--gui-shadow-sm); }
-.missionList button { min-height: 40px; background: var(--gui-sage); color: var(--gui-paper); font-weight: 800; box-shadow: 0 3px 0 var(--gui-sage-deep); }
 .floater { font-weight: 900; }
 .floater[data-kind="info"] { background: var(--gui-paper); color: var(--gui-ink-strong); font-size: var(--gui-text-xs); }
 .safeBadge { background: var(--gui-success-soft); color: var(--gui-success); font-weight: 800; }

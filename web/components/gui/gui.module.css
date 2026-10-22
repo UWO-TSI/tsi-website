@@ -286,21 +286,3 @@ button.tile:hover { transform: translateY(-2px) scale(1.04); }
 .tabsWrap[data-flat] .tabs[data-pill] .tab[aria-selected="true"] { background: transparent; }
 .tabsWrap[data-flat] .tab[aria-selected="true"] .tabLabel { background: none; }
 .tabsWrap[data-flat] .tabKey { background: var(--flat-ink) !important; color: #ffffff !important; }
-/* Rows split by hairlines; the chosen one white, no stripes or glove. */
-.list[data-flat] > li + li::before { left: 2px; right: 2px; border-top: 1px solid var(--flat-line); }
-.row[data-flat] { margin: 0; padding: 12px 4px; border-radius: 0; }
-button.row[data-flat]:hover:not(:disabled):not([data-selected]) { background: rgb(0 0 0 / 0.03); }
-.row[data-flat][data-selected] { background: var(--flat-card); border-radius: 12px; padding-inline: 12px; color: var(--flat-ink); }
-.row[data-flat] .glove { display: none; }
-.row[data-flat] .rowTitle { font-weight: 600; }
-.row[data-flat] .leader { border-top: 1px solid var(--flat-line); }
-/* Item tiles as small white cards: the rarity a thin ring, the chosen one an ink ring. */
-.tile[data-flat] { border-radius: 14px; background: var(--flat-card); box-shadow: inset 0 0 0 2px var(--rarity, transparent); }
-button.tile[data-flat]:hover { transform: translateY(-2px); box-shadow: inset 0 0 0 2px var(--rarity, transparent), 0 8px 22px rgb(0 0 0 / 0.07); }
-.tile[data-flat][data-selected] { background: var(--flat-card); transform: none; box-shadow: inset 0 0 0 2px var(--flat-ink); }
-.tile[data-flat][data-empty] { background: transparent; box-shadow: inset 0 0 0 1.5px var(--flat-line); }
-.tile[data-flat] .count { background: var(--flat-ink); color: #ffffff; box-shadow: none; }
-/* Tags as the shop's pills: the kit's gold call to action (Donate) the dark pill, the rest quiet grey. */
-.badge[data-flat] { border-radius: 8px; font-weight: 600; }
-.badge[data-flat][data-tone="gold"] { background: var(--flat-dark); color: #ffffff; }
-.badge[data-flat][data-tone="neutral"], .badge[data-flat][data-tone="sage"] { background: var(--flat-pill); color: var(--flat-pill-ink); }

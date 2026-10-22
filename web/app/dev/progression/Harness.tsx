@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * /dev/progression?sheet=journal|goals|letters|contribute|notice|reader|compose[&demo=1][&goal=0.6][&palette=flat]
+ * /dev/progression?sheet=journal|goals|letters|contribute|notice|reader|compose[&demo=1][&goal=0.6]
  * demo=1 runs the real service against an in-memory store (no network) so
  * the sheets show mid-game state; without it the sheets call the live API.
  * ?admin=goal|chapter|seasonal[&event=<slug>] previews an editor.

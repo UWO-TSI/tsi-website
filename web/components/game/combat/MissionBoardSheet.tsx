@@ -21,6 +21,7 @@ import IslandSheet from "../IslandSheet";
 import { Button, Progress, SignInText } from "@/components/gui";
 import { Fold, Folds, QuietButton, Section } from "@/components/gui/cream";
 import { Amount } from "@/components/economy/Amount";
+import menus from "@/components/progression/menus.module.css";
 import s from "./MissionBoard.module.css";
 
 const TEMPLATE: Record<string, string> = { hunt: "Hunt", fetch: "Fetch", survive: "Survive waves", escort: "Escort" };
@@ -82,12 +83,12 @@ function MissionBoard({ gateNote }: { gateNote: string | null }) {
   const openId = picked === undefined ? (active ? null : free) : picked;
   const counted = active && active.def.template !== "fetch" && active.goal > 1;
   return <>
-    {gateNote && <p className={s.note}><SignInText text={gateNote} /></p>}
-    {note && <p className={s.note} role="status"><SignInText text={note} /></p>}
+    {gateNote && <p className={menus.note}><SignInText text={gateNote} /></p>}
+    {note && <p className={menus.note} role="status"><SignInText text={note} /></p>}
     {active ? <section className={s.now} aria-label="Under way" data-status={active.status}>
       <span className={s.nowIcon} aria-hidden="true">{TEMPLATE_ICON[active.def.template]}</span>
       <div className={s.nowText}>
-        <p className={s.kicker}>{active.status === "complete" ? "Done" : active.status === "failed" ? "Didn't work out" : "Under way"} · {ZONE[active.def.zone]}</p>
+        <p className={menus.kicker}>{active.status === "complete" ? "Done" : active.status === "failed" ? "Didn't work out" : "Under way"} · {ZONE[active.def.zone]}</p>
         <h3 className={s.nowTitle}>{active.def.title}</h3>
         {counted ? <Progress value={Math.min(active.progress.counter, active.goal)} max={active.goal} kind="xp" label={`${active.def.title} progress`} className={s.nowBar} /> : null}
         <p className={s.nowNote}>{active.note}</p>
@@ -109,12 +110,12 @@ function MissionBoard({ gateNote }: { gateNote: string | null }) {
             open={openId === m.id} onToggle={() => setPicked(openId === m.id ? null : m.id)}>
             <p className={s.blurb}>{m.blurb}</p>
             <Rewards m={m} />
-            <div className={s.actions}>
-              {mine ? <span className={s.aside}>Under way: its progress is at the top.</span>
-                : cool ? <span className={s.aside}>On cooldown. Back in {cool} h.</span>
+            <div className={menus.actions}>
+              {mine ? <span className={menus.aside}>Under way: its progress is at the top.</span>
+                : cool ? <span className={menus.aside}>On cooldown. Back in {cool} h.</span>
                 : <>
                   <Button disabled={active?.status === "active"} onClick={() => void accept(m.id)}>Accept</Button>
-                  {active?.status === "active" ? <span className={s.aside}>Finish or abandon {active.def.title} first.</span> : null}
+                  {active?.status === "active" ? <span className={menus.aside}>Finish or abandon {active.def.title} first.</span> : null}
                 </>}
             </div>
           </Fold>;

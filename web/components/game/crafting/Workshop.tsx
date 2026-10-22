@@ -33,7 +33,7 @@ import { seedAt } from "@/lib/game/fx/particles";
 import { handOf, liftPose, type Lift } from "@/lib/game/forageLift";
 import { prepareModel } from "@/lib/game/modelMaterials";
 import { SignInText } from "@/components/gui";
-import { CardGrid, DetailView, FlatPanel, HairlineRow, HairlineRows, IconRail, InfoHead, ItemCard, Quiet, STAGE, StatusLine } from "@/components/gui/flat";
+import { CardGrid, DetailView, FlatPanel, HairlineRow, HairlineRows, IconRail, InfoHead, ItemCard, Quiet, STAGE, StatusLine, flatStyles } from "@/components/gui/flat";
 import ItemViewer from "@/components/economy/ItemViewer";
 import { LayoutGrid, Shirt, Sofa, Swords, Wrench } from "lucide-react";
 import { CATALOGUE } from "@/lib/wallet/catalogue";
@@ -341,7 +341,7 @@ export default function CraftingSheet() {
     <FlatPanel open={open} title="Workbench" onClose={() => setOpen(false)} testId="crafting-sheet" keys="e" contentKey={`${shelf}${selected ? `:${selected.id}` : ""}`}
       purse={book ? <span className={styles.count}>{book.recipes.length} of {book.total} recipes known</span> : undefined}
       rail={book ? <IconRail label="Recipes" value={shelf} onChange={id => { setShelf(id); setPick(null); }} items={shelves} /> : undefined}>
-      {error && <StatusLine error><SignInText text={error} /> {!book && <button type="button" className={styles.retry} onClick={() => void load()}>Try again</button>}</StatusLine>}
+      {error && <StatusLine error><SignInText text={error} /> {!book && <button type="button" className={flatStyles.retry} onClick={() => void load()}>Try again</button>}</StatusLine>}
       {!book ? (error ? null : <Quiet>Laying out your recipes…</Quiet>)
         : selected ? <Recipe r={selected} list={list} busy={busy} onPick={id => { setPick(id); setError(null); }} onBack={() => { setPick(null); setError(null); }} onCraft={() => void craft(selected)} />
         : list.length === 0 ? <Quiet>No recipes here yet. Message bottles wash up on the village beach.</Quiet>

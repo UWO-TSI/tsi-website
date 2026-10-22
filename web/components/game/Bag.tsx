@@ -24,6 +24,8 @@ import { MAX_PINS } from "@/lib/game/toolWheel";
 import { togglePin, useHeld } from "@/lib/game/heldStore";
 import { AudioManager } from "@/lib/game/audio";
 import { ApiError } from "@/lib/apiClient";
+import { useLoad } from "@/components/economy/EconomySheets";
+import { cap } from "@/components/economy/ShopOverlay";
 import { bagWrite, loadBag, saveOrder, seeBag, sortBag, stockOf, swapSlots, useBag } from "@/lib/game/bagStore";
 import { httpEconomyTransport } from "@/lib/wallet/transport";
 import type { InventoryRow } from "@/lib/wallet/store";
@@ -37,7 +39,6 @@ const rarityOf = (key: string) => itemInfo(key)?.rarity ?? "common";
 const kindOf = (key: string) => { const sp = itemInfo(key); return (sp?.sub && KIND[sp.sub]) || (sp && KIND[sp.category]) || "Item"; };
 const priceOf = (key: string) => { const c = speciesClass(key); return c ? sellPrice(c.category, c.rarity) : null; };
 const usedIn = (key: string) => RECIPES.filter(r => key in r.ingredients).map(outputName);
-const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 export const errText = (e: unknown) => (e instanceof ApiError ? e.message : "Couldn't reach the island. Try again.");
 const DRAG = "application/x-tsi-slot";
 export type Dragged = { pane: "bag" | "chest"; i: number; key: string; qty: number };
@@ -46,7 +47,7 @@ export type Dragged = { pane: "bag" | "chest"; i: number; key: string; qty: numb
 
 /** The item's kind under its name, after a dot in its rarity's colour (the one rarity palette). */
 function KindLine({ itemKey }: { itemKey: string }) {
-  return <><i className={s.rarity} style={{ background: `var(--gui-rarity-${rarityOf(itemKey)})` }} aria-hidden />{kindOf(itemKey)}</>;
+  return <><i className={f.rarity} style={{ background: `var(--gui-rarity-${rarityOf(itemKey)})` }} aria-hidden />{kindOf(itemKey)}</>;
 }
 
 /**
@@ -159,7 +160,7 @@ function Pockets({ filter, title }: { filter: BagKind | null; title: string }) {
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [dropping, setDropping] = useState(false);
-  if (!view) return bag.error ? <StatusLine error>Your bag didn&apos;t load. <button type="button" className={s.retry} onClick={() => void loadBag()}>Try again</button></StatusLine>
+  if (!view) return bag.error ? <StatusLine error>Your bag didn&apos;t load. <button type="button" className={f.retry} onClick={() => void loadBag()}>Try again</button></StatusLine>
     : <Quiet>Opening your bag…</Quiet>;
   const key = sel !== null ? slots[sel] ?? null : null;
   const qty = sel !== null ? counts[sel] ?? 0 : 0;
@@ -175,7 +176,7 @@ function Pockets({ filter, title }: { filter: BagKind | null; title: string }) {
     <div className={s.head}>
       <h3 className={f.shelfTitle}>{title}</h3>
       {!filter && <GhostButton onClick={() => { sortBag(); setSel(null); setNote(null); AudioManager.playSFX("click", { rate: 1.2, gain: 0.35 }); }} disabled={!view.items.length}>
-        <span className={s.withIcon}><ArrowDownWideNarrow size={15} aria-hidden /> Sort</span>
+        <span className={f.withIcon}><ArrowDownWideNarrow size={15} aria-hidden /> Sort</span>
       </GhostButton>}
     </div>
     {over ? <p className={s.warn} role="status">Over by {view.used - view.capacity}: you keep everything, but you can&apos;t pick anything up until you make room.</p>
@@ -211,7 +212,7 @@ function Details({ itemKey, qty, total, view, locked, busy, note, onClose, onLoc
   const best = view.items.find(r => r.item_key === itemKey)?.best_size_cm ?? null;
   const pinned = pins.includes(itemKey), stack = stackSize(itemKey);
   return <SidePanel testId="bag-item" onClose={onClose} picture={iconUrl(itemKey)} title={nameOf(itemKey)}
-    kind={<><i className={s.rarity} style={{ background: `var(--gui-rarity-${rarityOf(itemKey)})` }} aria-hidden />{cap(rarityOf(itemKey))} · {kindOf(itemKey)}{locked ? " · Locked" : ""}</>}
+    kind={<><i className={f.rarity} style={{ background: `var(--gui-rarity-${rarityOf(itemKey)})` }} aria-hidden />{cap(rarityOf(itemKey))} · {kindOf(itemKey)}{locked ? " · Locked" : ""}</>}
     facts={[
       ["In your bag", `${total.toLocaleString()}${total > qty ? ` (this stack ${qty})` : ""}`],
       ["Sells for", price ? <><Amount n={price} /> each, at the shop&apos;s counter</> : "The shop doesn't buy it"],
@@ -221,8 +222,8 @@ function Details({ itemKey, qty, total, view, locked, busy, note, onClose, onLoc
     ]}
     actions={<>
       {pinnable(itemKey) && <DarkButton onClick={() => { togglePin(itemKey); AudioManager.playSFX(pinned ? "exit" : "confirm", { rate: 1.2, gain: 0.35 }); }}>
-        <span className={s.withIcon}>{pinned ? <PinOff size={15} aria-hidden /> : <Pin size={15} aria-hidden />} {pinned ? "Unpin" : "Pin to the wheel"}</span></DarkButton>}
-      <GhostButton disabled={busy} onClick={onLock}><span className={s.withIcon}>{locked ? <LockOpen size={14} aria-hidden /> : <Lock size={14} aria-hidden />} {locked ? "Unlock" : "Lock"}</span></GhostButton>
+        <span className={f.withIcon}>{pinned ? <PinOff size={15} aria-hidden /> : <Pin size={15} aria-hidden />} {pinned ? "Unpin" : "Pin to the wheel"}</span></DarkButton>}
+      <GhostButton disabled={busy} onClick={onLock}><span className={f.withIcon}>{locked ? <LockOpen size={14} aria-hidden /> : <Lock size={14} aria-hidden />} {locked ? "Unlock" : "Lock"}</span></GhostButton>
       <GhostButton disabled={busy || locked} onClick={onDrop}>Drop</GhostButton>
     </>}>
     {locked && <p className={s.hint}>Locked: the shop won&apos;t buy it and dropping skips it, and it stays in your bag when you store all materials.</p>}
@@ -264,15 +265,12 @@ const rowPicture = (r: InventoryRow) => r.item.sprite_url ?? shopIcon(r.item);
 /** One shelf of what you own (tools, clothes, furniture and finishes): cards, and the picked one in the side panel. */
 function Owned({ group }: { group: "tools" | "outfits" | "furniture" }) {
   const transport = httpEconomyTransport;
-  const [data, setData] = useState<InventoryView | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { data, error, reload, setError } = useLoad<InventoryView>(useCallback(() => transport.inventory(), [transport]));
   const [picked, setPicked] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const load = useCallback(() => transport.inventory().then(d => { setData(d); setError(null); }, e => setError(e instanceof ApiError && e.status === 401 ? "Sign in first." : errText(e))), [transport]);
-  useEffect(() => { void load(); }, [load]);
   const toggle = async (id: string, on: boolean) => {
     setBusy(true);
-    try { await transport.equip(id, on); await load(); }
+    try { await transport.equip(id, on); await reload(); }
     catch (e) { setError(errText(e)); }
     finally { setBusy(false); }
   };

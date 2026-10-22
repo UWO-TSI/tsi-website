@@ -1,7 +1,8 @@
 import { createElement as h, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { ConfirmDialog, GuiVariantContext, ItemTile, List, ListRow, Paper, Sheet, TabPanel, Tabs } from ".";
+import ProgressionPanel from "@/components/progression/ProgressionPanel";
+import { ConfirmDialog, GuiVariantContext, ListRow, Sheet, TabPanel, Tabs } from ".";
 import { FlatPanel } from "./flat";
 
 const html = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(el);
@@ -19,36 +20,25 @@ describe("Sheet's flat variant (specs/polish/flat-ui.md step 7)", () => {
     expect(out).toMatch(/<div[^>]*data-variant="flat"/);
     expect(out).toMatch(/<section[^>]*data-variant="flat" data-gui-flat=""/);
   });
-  it("turns its list rows into hairline rows and its tiles into white cards", () => {
-    const out = sheet(h(List, { children: [h(ListRow, { key: 1, title: "One" }), h(ListRow, { key: 2, title: "Two" })] }), "flat");
-    expect(out).toMatch(/<ul[^>]*data-flat=""/);
-    expect(out.match(/<div[^>]*data-flat=""[^>]*>/g)?.length).toBeGreaterThanOrEqual(2);
-    expect(sheet(h(ItemTile, { name: "Dace", icon: "/i.webp" }), "flat")).toMatch(/data-flat=""/);
-  });
-  it("draws tabs with icons as an icon rail, and text tabs as flat words", () => {
-    const rail = sheet(h(Tabs, { label: "Settings", value: "b", onChange: () => {}, tabs: ICON_TABS }), "flat");
-    expect(rail).toMatch(/role="tablist"[^>]*data-orientation="horizontal"/);
-    expect(rail).toMatch(/aria-label="Sound"[^>]*role="tab" aria-selected="true"/);
-    expect(rail).toContain('<i id="ga"></i>');
-    expect(rail).toMatch(/>2<\/span>/);
+  it("draws text tabs as flat words", () => {
     const words = sheet(h(Tabs, { label: "Settings", value: "a", onChange: () => {}, tabs: TABS }), "flat");
     expect(words).toMatch(/<div[^>]*data-flat=""[^>]*><div[^>]*role="tablist"/);
     expect(words).toContain("Graphics");
     // Cream tabs with icons keep their labels in the pill row.
-    expect(sheet(h(Tabs, { label: "Settings", value: "a", onChange: () => {}, tabs: ICON_TABS }))).not.toMatch(/data-orientation/);
-  });
-  it("keeps a paper thing paper inside it", () => {
-    const out = sheet(h(Paper, { as: "article", children: h(ListRow, { title: "A letter" }) }), "flat");
-    expect(out).toMatch(/<article data-gui-paper="">/);
-    expect(out).toMatch(/<article data-gui-paper=""><div(?![^>]*data-flat)[^>]*>/);
+    expect(sheet(h(Tabs, { label: "Settings", value: "a", onChange: () => {}, tabs: ICON_TABS }))).not.toMatch(/data-flat/);
   });
   it("asks its questions in the same look", () => {
     const flat = html(h(GuiVariantContext.Provider, { value: "flat", children: h(ConfirmDialog, { open: true, title: "Drop it?", onConfirm: () => {}, onCancel: () => {} }) }));
     expect(flat).toMatch(/data-variant="flat"/);
     expect(html(h(ConfirmDialog, { open: true, title: "Drop it?", onConfirm: () => {}, onCancel: () => {} }))).not.toMatch(/data-variant="flat"/);
   });
+  it("reaches a menu frame opened inside (Contribute from the journal), so no cream sheet sits in a flat one", () => {
+    const inner = h(ProgressionPanel, { open: true, onClose: () => {}, title: "Contribute", children: "x" });
+    expect(sheet(inner, "flat").match(/<section[^>]*data-variant="flat"/g)).toHaveLength(2);
+    expect(sheet(inner).match(/<section[^>]*data-variant="flat"/g)).toBeNull();
+  });
   it("is what a flat panel holds, too", () => {
-    const out = html(h(FlatPanel, { open: true, onClose: () => {}, title: "Bag", children: h(ListRow, { title: "Row" }) }));
+    const out = html(h(FlatPanel, { open: true, onClose: () => {}, title: "Bag", children: h(Tabs, { label: "Bag", value: "a", onChange: () => {}, tabs: TABS }) }));
     expect(out).toMatch(/<section[^>]*data-gui-flat=""/);
     expect(out).toMatch(/<div[^>]*data-flat=""/);
   });

@@ -14,11 +14,9 @@
 .pockets { display: grid; gap: 14px; }
 .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .head h3 { margin-bottom: 0; }
-.head button svg, .withIcon svg { vertical-align: -0.18em; }
-.withIcon { display: inline-flex; align-items: center; gap: 6px; }
+.head button svg { vertical-align: -0.18em; }
 .warn { margin: 0; color: var(--flat-error); font: 500 14px/1.4 var(--gui-font); }
 .hint { margin: 0; color: var(--flat-quiet); font: 400 13px/1.45 var(--gui-font); }
-.retry { all: unset; margin-left: 6px; text-decoration: underline; cursor: pointer; }
 
 /* The grid: white cards, many to a row; an empty slot a dashed space the size of a card. */
 .grid { --slot: 132px; list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--slot-w, 124px), 1fr)); gap: 10px; }
@@ -29,7 +27,6 @@
 .slot[data-over] { outline: 2px dashed var(--flat-error); outline-offset: 2px; }
 .empty { display: block; min-height: var(--slot); border-radius: 14px; box-shadow: inset 0 0 0 1.5px var(--flat-line); background: rgb(255 255 255 / 0.35); }
 .lock { position: absolute; left: 8px; bottom: 34px; padding: 4px; box-sizing: content-box; border-radius: 50%; background: var(--flat-ink); color: white; pointer-events: none; }
-.rarity { display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 50%; vertical-align: 0.05em; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12); }
 
 /* ── The tool wheel's pins ───────────────────────────────────────────────────────────────────────────────────────── */
 .pins { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }

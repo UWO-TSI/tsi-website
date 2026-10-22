@@ -16,6 +16,7 @@ import { Suspense, useEffect, useMemo, useRef, useSyncExternalStore, type RefObj
 import { createPortal, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import Character, { type CharacterMotion } from "./Character";
+import { StudioLights } from "@/components/economy/TurnStage";
 import { DEFAULT_LOOK, PART_BY_ID, wear, type CharacterLook } from "@/lib/game/character/look";
 import type { Framing } from "@/lib/game/character/creatorCategories";
 
@@ -33,21 +34,6 @@ export const FRAMES: Record<Framing, { at: [number, number, number]; h: number; 
 export function frameDistance(f: (typeof FRAMES)[Framing], aspect: number) {
   const t = Math.tan(THREE.MathUtils.degToRad(f.fov) / 2);
   return Math.max(f.h / 2 / t, f.w / 2 / (t * aspect));
-}
-
-/**
- * The white studio (the flat creator, specs/polish/flat-ui.md round 3: "the shop stage's lights"): the shop's turning
- * stage's rig (TurnStage), neutral white: a big soft key from the upper front side, a fill from the other, a rim from
- * behind, a cool grey sky. Still matte (the character's own materials).
- */
-function WhiteLights() {
-  return <>
-    <ambientLight intensity={0.35} />
-    <hemisphereLight args={["#ffffff", "#d9dbe0", 0.55]} />
-    <directionalLight position={[2.4, 3.0, 3.2]} intensity={2.3} />
-    <directionalLight position={[-3.0, 1.0, 2.4]} intensity={0.85} />
-    <directionalLight position={[0.4, 2.4, -3.6]} intensity={1.8} />
-  </>;
 }
 
 /** The studio: key, fill and rim fixed to the camera's side of the set, a little warm sky, nothing shiny. */
@@ -115,7 +101,7 @@ export function Portrait({ look, framing, yaw, studio = "warm" }: { look: Charac
     easeTurn(yaw.current, motion.current, dt);
   });
   return <>
-    {studio === "white" ? <WhiteLights /> : <Lights />}
+    {studio === "white" ? <StudioLights /> : <Lights />}
     <Contact studio={studio} />
     <Suspense fallback={null}><Character look={look} motion={motion} scale={1} faceSize={1024} lod={false} /></Suspense>
   </>;

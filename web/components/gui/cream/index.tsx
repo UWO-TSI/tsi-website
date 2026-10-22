@@ -14,9 +14,6 @@ import { useId, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { ChevronDown, ChevronLeft } from "lucide-react";
 import c from "./cream.module.css";
 
-/** The pieces' class names, for a menu that lays out its own content in the same rhythm. */
-export { c as creamStyles };
-
 const cx = (...names: (string | false | null | undefined)[]) => names.filter(Boolean).join(" ");
 
 /** A group under a quiet heading, `aside` at the heading's right (a count, a button). */

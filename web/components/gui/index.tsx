@@ -11,7 +11,6 @@ import { Children, cloneElement, isValidElement, useEffect, useId, useRef, useSt
 import { Pointer, X } from "lucide-react";
 import { inTopDialog, usePresence, useWorldDialog } from "@/lib/game/useWorldDialog";
 import { Keycap, NPCDialogue, VillageButton, VillageField, VillagePanel, VillageTextArea } from "@/components/recruit/ui";
-import { IconRail } from "./flat";
 import { GuiVariantContext, useGuiVariant, type GuiVariant } from "./variant";
 import { useMarker } from "./motion";
 import styles from "./gui.module.css";
@@ -19,8 +18,8 @@ import styles from "./gui.module.css";
 export { Keycap, NPCDialogue as Dialogue, VillageButton as Button, VillageField as Field, VillageTextArea as TextArea, VillagePanel as Panel };
 /** Toasts: the island's one lane (components/game/ToastHub), paper slips inside a .gui scope. `toast(text, icon?)` from anywhere. */
 export { default as ToastHub, toast } from "@/components/game/ToastHub";
-/** The flat UI's look for the game's menus (specs/polish/flat-ui.md): which one the pieces wear, and paper inside it. */
-export { GuiVariantContext, Paper, useGuiVariant, type GuiVariant } from "./variant";
+/** The flat UI's look for the game's menus (specs/polish/flat-ui.md): which one the pieces wear. */
+export { GuiVariantContext, useGuiVariant, type GuiVariant } from "./variant";
 /** "Sign in" links back to where you are (reachability §3). */
 export { SignInLink, SignInText, useSignInHref } from "./SignIn";
 
@@ -34,8 +33,8 @@ export type SheetSize = "sm" | "md" | "lg" | "xl";
  * held and the paper sound come from the dialog system (lib/game/useWorldDialog); it scales and fades in and out.
  * `modal` false: no scrim, the world stays bright behind it (the decorate panel). On a phone it is a bottom sheet.
  * `variant` "flat" (the game's menus, specs/polish/flat-ui.md step 7): the shop overlay's flat grey look, and the
- * pieces inside follow it (tabs with icons as an icon rail, hairline rows, white tiles); the default stays cream, as
- * the portal and recruitment pages have it.
+ * pieces inside follow it (text tabs as flat words, the buttons as pills); the default stays cream, as the portal and
+ * recruitment pages have it.
  */
 export function Sheet({ open, onClose, onEscape, title, eyebrow, icon, size = "md", tone, keys, modal = true, footer, headerExtra, testId, className, bodyClassName, variant = "cream", children }: {
   open: boolean; onClose: () => void; title: ReactNode; eyebrow?: ReactNode; icon?: ReactNode; size?: SheetSize; tone?: "butter" | "sage" | "oracle"; variant?: GuiVariant;
@@ -147,13 +146,6 @@ export function Tabs<T extends string>({ tabs, value, onChange, label, keyHints,
   const flat = useGuiVariant() === "flat";
   // The chosen tab's pill slides to the next one (round 2's micro animations; its own background until measured).
   const pill = useMarker(ref, '[aria-selected="true"]', value);
-  // In a flat menu, tabs with icons are the shop's icon rail, across the top (their names for screen readers and the tooltip).
-  if (flat && tabs.some(t => t.icon)) return <div className={cx(styles.tabsWrap, className)} data-flat="">
-    {keyHints && <Keycap aria-hidden="true" className={styles.tabKey} data-shape="square">{keyHints[0]}</Keycap>}
-    <IconRail tabs orientation="horizontal" label={label} value={value} onChange={onChange} listRef={ref} onKeyDown={onKey}
-      items={tabs.map(t => ({ id: t.id, label: typeof t.label === "string" ? t.label : t.id, icon: t.icon, badge: t.badge, disabled: t.disabled }))} />
-    {keyHints && <Keycap aria-hidden="true" className={styles.tabKey} data-shape="square">{keyHints[1]}</Keycap>}
-  </div>;
   return <div className={cx(styles.tabsWrap, className)} data-flat={flat ? "" : undefined}>
     {keyHints && <Keycap aria-hidden="true" className={styles.tabKey} data-shape="square">{keyHints[0]}</Keycap>}
     <div ref={ref} role="tablist" aria-label={label} className={styles.tabs} data-edges={edges ?? undefined} data-pill={pill ? "" : undefined} onKeyDown={onKey}>
@@ -207,14 +199,12 @@ export function ListRow({ icon, title, detail, value, leader, selected, disabled
     {leader && <span className={styles.leader} aria-hidden="true" />}
     {value !== undefined && <span className={styles.rowValue}>{value}</span>}
   </>;
-  const flat = useGuiVariant() === "flat";
-  const props = { ...rest, className: cx(styles.row, className), "data-selected": selected || undefined, "data-icon": icon !== undefined || undefined, "data-leader": leader || undefined, "data-flat": flat ? "" : undefined };
+  const props = { ...rest, className: cx(styles.row, className), "data-selected": selected || undefined, "data-icon": icon !== undefined || undefined, "data-leader": leader || undefined };
   return onClick ? <button type="button" {...props} onClick={onClick} disabled={disabled} aria-pressed={selected}>{body}</button> : <div {...props}>{body}</div>;
 }
 /** A list of rows with the kit's dashed rules between them. */
 export function List({ label, children, className }: { label?: string; children: ReactNode; className?: string }) {
-  const flat = useGuiVariant() === "flat";
-  return <ul className={cx(styles.list, className)} aria-label={label} data-flat={flat ? "" : undefined}>{Children.map(children, c => c && <li>{c}</li>)}</ul>;
+  return <ul className={cx(styles.list, className)} aria-label={label}>{Children.map(children, c => c && <li>{c}</li>)}</ul>;
 }
 
 export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
@@ -234,8 +224,7 @@ export function ItemTile({ icon, name, count, rarity, selected, isNew, unknown, 
     {!empty && count !== undefined && count > 1 && <b className={styles.count} aria-hidden="true">{count > 999 ? "999+" : count}</b>}
     {isNew && <i className={styles.newDot} aria-hidden="true" />}
   </>;
-  const flat = useGuiVariant() === "flat";
-  const look = { className: cx(styles.tile, className), style, title: empty ? undefined : unknown ? "???" : name, "data-selected": selected || undefined, "data-empty": empty || undefined, "data-unknown": unknown || undefined, "data-rarity": rarity, "data-flat": flat ? "" : undefined };
+  const look = { className: cx(styles.tile, className), style, title: empty ? undefined : unknown ? "???" : name, "data-selected": selected || undefined, "data-empty": empty || undefined, "data-unknown": unknown || undefined, "data-rarity": rarity };
   const named = rest["aria-label"] ?? label;
   const tile = onClick
     ? <button type="button" {...rest} {...look} aria-label={named} aria-pressed={!!selected} onClick={onClick}>{face}</button>
@@ -279,8 +268,7 @@ export function Select({ label, className, children, ...props }: SelectHTMLAttri
 export type BadgeTone = "neutral" | "sage" | "success" | "warn" | "danger" | "info" | "gold" | "new";
 /** A small status tag (the kit's olive "Daily Selection" pill is `gold`). */
 export function Badge({ tone = "neutral", children, className, ...rest }: HTMLAttributes<HTMLSpanElement> & { tone?: BadgeTone }) {
-  const flat = useGuiVariant() === "flat";
-  return <span {...rest} className={cx(styles.badge, className)} data-tone={tone} data-flat={flat ? "" : undefined}>{children}</span>;
+  return <span {...rest} className={cx(styles.badge, className)} data-tone={tone}>{children}</span>;
 }
 export type BadgeRarity = Rarity | "seaking";
 /** A rarity tag in the one rarity palette (--gui-rarity-*, ink text): the catch card, the journal, the book. */

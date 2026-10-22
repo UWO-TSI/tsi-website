@@ -245,3 +245,8 @@ div.card:hover { box-shadow: none; }
   .card, .shelf, .marker, .close, .round, .sideClose, .sideActions > * { transition: none; }
   .card:hover, .shelf:active, .close:active, .round:active, .sideClose:active, .sideActions > :active { transform: none; }
 }
+
+/* Small shared bits of the flat menus: an icon beside its words, a retry link, a rarity dot. */
+.withIcon { display: inline-flex; align-items: center; gap: 6px; }
+.retry { all: unset; margin-left: 6px; text-decoration: underline; cursor: pointer; }
+.rarity { display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 50%; vertical-align: 0.05em; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12); }

@@ -124,16 +124,24 @@ export default function TurnStage({ children, className, cameraZ = 4.2, label, s
       onPointerCancel={() => { turn.current.down = false; armed.current = null; }}>
       <Canvas dpr={STAGE_PIXEL} camera={{ position: [0, 0.15, cameraZ], fov: 30 }} gl={{ antialias: false, alpha: true }} style={{ imageRendering: "pixelated" }}
         onCreated={({ gl }) => { gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
-        {/* Studio lighting (on the overlay's white sweep): a big soft key from the upper front side, a fill from the
-            other, a rim from behind to lift the silver and the acrylic off the white, a softbox room to reflect. */}
-        <ambientLight intensity={0.35} />
-        <hemisphereLight args={["#ffffff", "#d9dbe0", 0.55]} />
-        <directionalLight position={[2.4, 3.0, 3.2]} intensity={2.3} />
-        <directionalLight position={[-3.0, 1.0, 2.4]} intensity={0.85} />
-        <directionalLight position={[0.4, 2.4, -3.6]} intensity={1.8} />
+        <StudioLights />
         <Studio />
         <Spinner turn={turn}>{children}</Spinner>
       </Canvas>
     </div>
   </StageContext.Provider>;
+}
+
+/**
+ * Studio lighting (on the overlay's white sweep; the flat creator's stage too): a big soft key from the upper front side,
+ * a fill from the other, a rim from behind to lift the silver and the acrylic off the white, a cool grey sky.
+ */
+export function StudioLights() {
+  return <>
+    <ambientLight intensity={0.35} />
+    <hemisphereLight args={["#ffffff", "#d9dbe0", 0.55]} />
+    <directionalLight position={[2.4, 3.0, 3.2]} intensity={2.3} />
+    <directionalLight position={[-3.0, 1.0, 2.4]} intensity={0.85} />
+    <directionalLight position={[0.4, 2.4, -3.6]} intensity={1.8} />
+  </>;
 }

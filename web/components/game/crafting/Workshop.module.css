@@ -2,7 +2,6 @@
    on the white studio stage with its ingredients as hairline rows (what was made shows on the shared reward card,
    RewardCard). */
 .count { color: var(--flat-ink); font: 600 15px/1 var(--gui-font); font-variant-numeric: tabular-nums; }
-.retry { all: unset; margin-left: 6px; text-decoration: underline; cursor: pointer; }
 /* What you have over what it needs: ink when there's enough, the error red when short. */
 .need { padding: 4px 9px; border-radius: 8px; background: var(--flat-pill); color: var(--flat-ink); font: 600 13px/1 var(--gui-font); font-variant-numeric: tabular-nums; }
 .need[data-short] { color: var(--flat-error); }

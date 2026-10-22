@@ -72,6 +72,14 @@ const SCENES = {
   people: dock("7o-people", async page => { await page.locator("[data-testid=menu-dock]").getByRole("button", { name: /^Here/ }).first().click().catch(() => console.log("no people entry")); }),
   "settings-phone": () => island("sheet=settings&collections=demo&progression=demo", async page => { await page.waitForTimeout(900); await shot(page, "7p-settings-phone"); }, { width: 390, height: 844 }),
   "journal-phone": () => island("sheet=journal&collections=demo&progression=demo", async page => { await page.waitForTimeout(900); await shot(page, "7q-journal-phone"); }, { width: 390, height: 844 }),
+  // Contribute opened from the flat notice board and journal: flat too, so no cream sheet sits inside a flat one.
+  "notice-contribute": () => island("sheet=notice&collections=demo&progression=demo", async page => {
+    await page.waitForTimeout(900); await page.getByRole("button", { name: "Contribute" }).first().click(); await page.waitForTimeout(1200); await shot(page, "7u-notice-contribute");
+  }),
+  "journal-contribute": () => island("sheet=journal&collections=demo&progression=demo", async page => {
+    await page.waitForTimeout(900); await page.getByRole("tab", { name: /^Club goals/ }).click(); await page.waitForTimeout(600);
+    await page.getByRole("button", { name: "Contribute" }).first().click(); await page.waitForTimeout(1200); await shot(page, "7v-journal-contribute");
+  }),
   "letters-phone": () => island("sheet=letters&collections=demo&progression=demo", async page => { await page.waitForTimeout(900); await shot(page, "7r-mail-phone"); }, { width: 390, height: 844 }),
   "notice-phone": () => island("sheet=notice&collections=demo&progression=demo", async page => { await page.waitForTimeout(900); await shot(page, "7s-notice-phone"); }, { width: 390, height: 844 }),
   "missions-phone": () => island("sheet=missions&collections=demo&progression=demo", async page => { await page.waitForTimeout(1500); await shot(page, "7t-mission-board-phone"); }, { width: 390, height: 844 }),

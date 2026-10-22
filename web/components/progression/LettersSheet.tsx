@@ -81,7 +81,7 @@ export function useLetters(transport: LettersTransport) {
  * subject and a line of it; unread ones in bold with a small dot. Writing a note is a quiet button at the top; a letter
  * opens on paper.
  */
-export function LettersBody({ transport = lettersTransport, systemOnly = false }: { transport?: LettersTransport; systemOnly?: boolean }) {
+export function LettersBody({ transport = lettersTransport }: { transport?: LettersTransport }) {
   const { letters, error, reload, load, read } = useLetters(transport);
   const [view, setView] = useState<View>({ mode: "list" });
 
@@ -89,20 +89,18 @@ export function LettersBody({ transport = lettersTransport, systemOnly = false }
   if (view.mode === "read") return <LetterReader letter={view.letter} transport={transport} onBack={() => setView({ mode: "list" })} onReply={(to) => setView({ mode: "compose", to })} />;
   if (view.mode === "compose") return <LetterComposer transport={transport} to={view.to} onDone={() => { setView({ mode: "list" }); void load(); }} />;
 
-  const shown = (letters ?? []).filter((l) => !systemOnly || l.kind === "system");
+  const shown = letters ?? [];
   const unread = shown.filter((l) => !l.outgoing && !l.read_at).length;
   return (
     <div className={m.menu}>
-      {!systemOnly ? (
-        <div className={m.mailHead}>
-          <span className={m.mailCount} role="status">{letters === null || error ? null : unread ? <><b>{unread}</b> unread</> : shown.length ? "All read" : null}</span>
-          <Button variant="quiet" size="sm" onClick={() => setView({ mode: "compose" })}><PenLine size={15} aria-hidden="true" /> Write a note</Button>
-        </div>
-      ) : null}
+      <div className={m.mailHead}>
+        <span className={m.mailCount} role="status">{letters === null || error ? null : unread ? <><b>{unread}</b> unread</> : shown.length ? "All read" : null}</span>
+        <Button variant="quiet" size="sm" onClick={() => setView({ mode: "compose" })}><PenLine size={15} aria-hidden="true" /> Write a note</Button>
+      </div>
       {letters === null ? <Loading label="Checking the mailbox…" /> : null}
       {error === "failed" ? <ErrorNote onRetry={reload}>Your mail didn’t load. The connection may have dropped.</ErrorNote> : null}
       {error === "signed-out" ? <Empty icon={<Mail size={32} />} title="Sign in to read your mail" action={<SignInLink button />}>Letters from members and HQ wait here.</Empty> : null}
-      {letters !== null && !error && shown.length === 0 ? <Empty icon={<Mail size={32} />} title={systemOnly ? "No notices from HQ yet" : "No letters yet"}>{systemOnly ? "Club news and ceremony letters go up here." : "When someone writes, it arrives here. You can write first."}</Empty> : null}
+      {letters !== null && !error && shown.length === 0 ? <Empty icon={<Mail size={32} />} title="No letters yet">When someone writes, it arrives here. You can write first.</Empty> : null}
       {shown.length ? <ul className={m.mail} aria-label="Letters">
         {shown.map((l) => {
           const fresh = !l.outgoing && !l.read_at;
