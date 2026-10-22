@@ -212,6 +212,7 @@ import { worldLabels } from "@/lib/game/labelLayout";
 import { localAvatar } from "@/lib/net/localAvatar";
 import { isSeatedPose, seatPrompt } from "@/lib/game/seatPrompt";
 import { roomHeading } from "@/lib/game/roomHeading";
+import { DevUiTheme } from "@/components/gui/DevUiTheme";
 import styles from "./DefaultIslandWorld.module.css";
 
 type Near = "knock" | "shop_enter" | "counter" | "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | "bram" | "founder" | null;
@@ -1202,6 +1203,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     <main className={`${styles.world} gui`} data-light={phase} data-inside={inside ?? undefined} data-site={site} data-trip={trip.active || undefined} data-cinematic={hudCinematic || undefined} data-compact={compact || undefined} data-ui={uiView || undefined} data-photo={photo.open || undefined}>
       {/* The branded dark round the rooms that show the space outside them (InteriorBackdrop): behind the canvas. */}
       {inside === "shop" || inside === "hq" || inside === "museum" || inside === "cafe" ? <InteriorBackdrop room={inside} /> : null}
+      <DevUiTheme />
       <Canvas ref={canvasRef} tabIndex={0} role="application" aria-label="Island walking area" style={{ zIndex: 0, imageRendering: graphics.pixelated ? "pixelated" : "auto" }} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={canvasDpr}
         camera={{ position: [0, 10.2, -21], fov: BASE_FOV, near: 0.1, far: 120 }} shadows={castShadows ? "percentage" : false} frameloop={creatorOpen ? "never" : "always"}
         onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>

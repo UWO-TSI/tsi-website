@@ -8,6 +8,7 @@
  * chest with `chest=1`, the collection; `bag=<slots>` fills the pockets) or `crafting=demo` (the workbench). The
  * economy's inventory (what you own: the bag's second shelf, the decorate catalogue) is answered here.
  */
+import { setUiTheme, UI_THEMES } from "@/styles/themes";
 import { useEffect, useState } from "react";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import { routeDemoFetch, reply } from "@/lib/game/demoFetch";
@@ -91,5 +92,9 @@ export default function Harness() {
       <DecorateSheet indoor selected={q.get("pick") ? { piece: q.get("pick")!, rot: 0 } : null} layout={layout} room={layout.rooms[0]}
         onChoose={close} onRotate={close} onPutAway={close} onDone={close} onFinish={close} onShop={close} />
     </div>}
+    {/* The UI theme, flipped live (specs/polish/ui-themes.md); ?uitheme=<name> starts on one. */}
+    <nav data-ui-theme-switch="" aria-label="UI theme" style={{ position: "fixed", right: 12, bottom: 12, zIndex: 999, display: "flex", gap: 6 }}>
+      {UI_THEMES.map(t => <button key={t} type="button" onClick={() => setUiTheme(t)}>{t}</button>)}
+    </nav>
   </main>;
 }

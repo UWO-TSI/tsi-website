@@ -5,8 +5,8 @@
  * shared so the game's menus can wear the same style. One flat light-grey panel over most of the screen (`FlatPanel`):
  * a purse top left, the title, a round close; a rail of icons down the left (`IconRail`); white cards in a grid
  * (`CardGrid`, `ItemCard`); an item opened in the same panel on the white studio stage (`DetailView`, `SpecBand`); and the
- * small parts (`Pill`, `DarkButton`, `GhostButton`, `RoundButton`, `HairlineRow`). Colours: the --flat-* tokens in
- * styles/game-tokens.css. Nothing here knows about the shop: every piece takes plain props.
+ * small parts (`Pill`, `DarkButton`, `GhostButton`, `RoundButton`, `HairlineRow`). Colours: the theme's --ui-* tokens
+ * (styles/themes). Nothing here knows about the shop: every piece takes plain props.
  */
 import { Fragment, useMemo, useRef, type ButtonHTMLAttributes, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Sparkles, X } from "lucide-react";

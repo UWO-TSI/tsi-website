@@ -2,9 +2,14 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 /** The GUI sheet's text pairs are AA (4.5:1; 3:1 for large text and for the focus ring against the paper). */
-const css = readFileSync(new URL("../../styles/game-tokens.css", import.meta.url), "utf8");
+const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
+const css = read("../../styles/game-tokens.css");
+const theme = (name: string) => read(`../../styles/themes/${name}.css`);
+const uiHex = (sheet: string, name: string) => sheet.match(new RegExp(`--ui-${name}:\\s*(#[0-9a-f]{6})\\b`, "i"))?.[1];
+/** A cream kit token: its own hex, or the cream base's value of the theme token it reads (styles/themes/cream.css). */
 const hex = (name: string) => {
-  const value = css.match(new RegExp(`--gui-${name}:\\s*(#[0-9a-f]{6})\\b`, "i"))?.[1];
+  const own = css.match(new RegExp(`--gui-${name}:\\s*(?:(#[0-9a-f]{6})\\b|var\\(--ui-([a-z0-9-]+)\\))`, "i"));
+  const value = own?.[1] ?? (own?.[2] && uiHex(theme("cream"), own[2]));
   if (!value) throw new Error(`--gui-${name} is not a hex colour`);
   return value;
 };
@@ -36,5 +41,26 @@ const PAIRS: [string, string, number][] = [
 describe("GUI sheet contrast", () => {
   it.each(PAIRS)("%s on %s is at least %s:1", (fg, bg, min) => {
     expect(contrast(hex(fg), hex(bg))).toBeGreaterThanOrEqual(min);
+  });
+});
+
+describe("UI themes (specs/polish/ui-themes.md)", () => {
+  const tokens = (sheet: string) => [...sheet.matchAll(/^\s*(--ui-[a-z0-9-]+):/gm)].map(m => m[1]).sort();
+  const themes = [...read("../../styles/themes/index.ts").matchAll(/import "\.\/([a-z-]+)\.css"/g)].map(m => m[1]);
+  it.each(themes)("%s sets every token, as clean does", name => {
+    expect(tokens(theme(name))).toEqual(tokens(theme("clean")));
+  });
+  it("paper things inside a flat menu wear the cream base's colours", () => {
+    const paper = css.slice(css.indexOf("[data-gui-flat] [data-gui-paper] {"));
+    const rule = css.slice(css.indexOf(":root, [data-gui-flat] {"), css.indexOf("}", css.indexOf(":root, [data-gui-flat] {")));
+    const aliases = [...rule.matchAll(/--gui-([a-z0-9-]+): var\(--ui-([a-z0-9-]+)\);/g)].filter(m => uiHex(theme("cream"), m[2]));
+    expect(aliases.length).toBeGreaterThan(15);
+    for (const [, gui, ui] of aliases) expect(paper.match(new RegExp(`--gui-${gui}: (#[0-9a-f]{6});`))?.[1], gui).toBe(uiHex(theme("cream"), ui));
+  });
+  it.each(themes)("%s keeps its text AA on its panels and cards", name => {
+    const t = theme(name), c = (k: string) => uiHex(t, k)!;
+    for (const [fg, bg] of [["ink", "panel"], ["ink", "card"], ["ink-body", "card"], ["ink-2", "panel"], ["ink-2", "card"], ["muted", "card"], ["accent-ink", "accent"], ["ink", "select"]]) {
+      expect(contrast(c(fg), c(bg)), `${name}: ${fg} on ${bg}`).toBeGreaterThanOrEqual(4.5);
+    }
   });
 });

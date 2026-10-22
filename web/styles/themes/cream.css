@@ -1,0 +1,35 @@
+/* The cream theme: the GUI sheet's warm paper, sage and wood (specs/polish/ui-themes.md). Also the base on <html>, which
+   the menus not yet on the flat kit, the HUD, the portal and recruitment wear whatever the theme. */
+:root, [data-ui-theme="cream"] {
+  --ui-bg: #f7f1da;
+  --ui-panel: #fffbe7;
+  --ui-card: #fffff7;
+  --ui-card-dim: #f8f4e8;
+  --ui-card-hover: #fffbe7;
+  --ui-well: #eee9ca;
+  --ui-line: #e3d9b8;
+  --ui-line-strong: #d3c39c;
+  --ui-select: #ffeea0;
+  --ui-highlight: #ffcc00;
+  --ui-marker: rgb(255 204 0 / 0.55);
+  --ui-ink: #3a2e22;
+  --ui-ink-body: #4f3f31;
+  --ui-ink-2: #6b5843;
+  --ui-muted: #726450;
+  --ui-quiet: #8a7b66;
+  --ui-rail: #b3a68f;
+  --ui-hint: #b3a68f;
+  --ui-accent: #426b5b;
+  --ui-accent-deep: #2f5143;
+  --ui-accent-ink: #fffbe7;
+  --ui-pill: #dfe9d9;
+  --ui-pill-ink: #6b5843;
+  --ui-disabled: #d3c39c;
+  --ui-round: #946429;
+  --ui-error: #b23a2e;
+  --ui-focus: #a8722f;
+  --ui-scrim: rgb(64 52 36 / 0.3);
+  --ui-shade: 114 92 78;
+  --ui-stage: radial-gradient(ellipse 24% 4.5% at 50% 87%, rgb(114 92 78 / 0.2), rgb(114 92 78 / 0.08) 55%, transparent 100%),
+    linear-gradient(180deg, #fffff7 0%, #fffff7 60%, #f8f4e8 84%, #eee9ca 100%);
+}

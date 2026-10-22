@@ -103,6 +103,7 @@ Paths are relative to `specs/` (current locations; a folder regroup is proposed,
 ## Game UI and polish
 `game-ui.md` | Tool wheel, held items, backpack, rows 279-281 | live
 `polish/flat-ui.md` | Flat UI: shop style across menus | live
+`polish/ui-themes.md` | UI themes: one colour sheet per theme, how to add one | live
 `polish/gui-sheet.md` | Own GUI sheet from AC UI kit, row 285 | reference
 `polish/menus.md` | Menus and sheets polish | reference
 `polish/README.md` | Polish plan index, rows 268, 273 | reference

@@ -7,8 +7,8 @@
 
 - **Head:** see `git log -1` on `game/flat-ui`. Main (`feat/game-default-island` 635e9c4a, the ponytail lane rules) merged in.
 - **Feature freeze Oct 24** (launch Oct 31; `specs/launch/v1-launch.md`, ledger row 317).
-- **Round 3b: APPROVED in full.** Task 1 built: the four redesigned menus are flat (`round3b-menus-flat.webp`). The coordinator runs a ponytail review and merges it before the freeze.
-- **Task 2, UI themes:** in progress (`specs/polish/ui-themes.md`). It lands after launch if it can't be pixel-identical by the freeze.
+- **Round 3b: APPROVED in full.** Task 1 built: the four redesigned menus are flat (`round3b-menus-flat.webp`), plus the merge review's fixes (1fe4cac6: Contribute nested in a flat menu is flat, the ponytail cleanup).
+- **Task 2, UI themes: built** (`specs/polish/ui-themes.md`, `ui-themes.webp`). Clean and cream are pixel-identical to today; dark is a dev-only sample. Reported; waiting for the coordinator's review.
 - **Step 7, the cream menus other than the four:** they stay cream for launch.
 - **Approved:** the kit, the chest, the workbench, the furniture catalogue, the bag, the collection, the motion, the creator and wardrobe, round 3b.
 - **Merged to main:** step 1 (the kit), step 2 (the old shop pages).
@@ -80,7 +80,7 @@ The verbatim notes are in `specs/polish/flat-ui.md`, under "Round 2".
 ## Next
 
 1. ~~Round 3b, task 1: the four menus flat, scoped; re-shoot in game; gates; commit; report the SHA.~~ Done.
-2. Task 2, UI themes (`specs/polish/ui-themes.md`): one `--ui-*` token layer, a theme per file in `web/styles/themes/`, `data-ui-theme`, a dev switch (`/dev/flat-ui` and `?uitheme=`), pixel diffs for clean and cream against today, the sheet `ui-themes.webp`. Report, then stop.
+2. ~~Task 2, UI themes: the `--ui-*` layer, a file per theme, `data-ui-theme`, the dev switch, the pixel diffs, `ui-themes.webp`.~~ Done.
 3. After launch, when David OKs it (through the coordinator): the rest of the menus in the redesigned direction, with the `components/gui/cream` pieces: settings, wallet, tourney, cafe goals (it still uses `GoalCard`; move it to `ClubGoal`), trophies, showcase, donate, the Esc menu, friends. Shoot before and after into one sheet.
    - `progression.module.css` still serves the wallet, Contribute and cafe goals. When those move, delete what's left unused there and `GoalCard` (keep `rewardName`).
 
@@ -105,6 +105,8 @@ Each step ends with:
 - **Locks:** `LANE=game/flat-ui /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh heavy <cmd>`. Swap has been over 9 GB, so the dev server has to be down (and the browser lock released) before the heavy lock.
 - **Killing the dev server:** in zsh an unquoted `$PIDS` isn't split; kill the PIDs by number (npm exec, next dev, next-server and its postcss workers).
 - **Round 3 shots:** `shots-round3.mjs <out> panels|stills|film|creator` on port 3192. `film` pauses only the animations under way and seeks them (`document.getAnimations()`), so each frame is its exact time; the finished entrances (the panel's rise, held by its fill) are left alone. The filmstrip sheet is composed by a small script in the scratchpad (`r3/film.py`), the before and after sheet by `sheet.py`.
+- **Theme shots:** `shots-themes.mjs <out> [scene ...]` (`UITHEME=<name>` adds `?uitheme=`), canvas boxes to `masks.json`. The noise floor between two shots of the same code: up to about 14 px off by 1 of 255; `/lab/gui` differs by its animated confetti. `/dev/flat-ui?surface=crafting` renders nothing on the harness.
+- **Themes:** the flat kit reads `--ui-*`; the cream kit reads `--gui-*` only (resolved on `<html>` from `cream.css`, again on `[data-gui-flat]`). Never put `data-ui-theme` on `<html>`: that would re-theme the cream menus. A paper thing inside a flat menu gets the cream values in `game-tokens.css` (`lib/gui/contrast.test.ts` keeps them equal to `cream.css`), not the `--ui-*` tokens, so the flat menu's buttons on a letter stay the theme's.
 - **Nested sheets:** `Sheet` isn't portalled, so a sheet opened inside another sits in its DOM and gets its descendant rules and tokens. A `ProgressionPanel` (Contribute) inside a flat sheet is flat for that reason; `ConfirmDialog` does the same.
 - **The four menus' frames:** `ProgressionPanel` and `IslandSheet` take `flat` (round 3b); the others stay cream. `sheet.py` takes `LABELS="a,b"` for other column names than before and after.
 - **In-game shots:** `shots-game.mjs <out> journal letters notice missions` and `journal-phone letters-phone notice-phone missions-phone` on `/lab/island`.
