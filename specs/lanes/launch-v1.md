@@ -34,8 +34,13 @@ Worktree `/Users/DavidLiu/Developer/uwotsi/.claude/worktrees/launch-v1`, cut fro
     3. The sanctions poll: no change needed (a missed cycle is already tolerated); optionally retry once 10 s after a failure instead of waiting 60 s.
   - Blocks stay a hard requirement (a join without them could let a blocked pair chat for a moment), so the retry is the fix there, not failing soft.
 - Browser lock released after the day run.
+- **Evening (coordinator):**
+  - main `4839153a` merged (ponytail fixes; realtime v5 on Fly);
+  - a fresh Preview `uwotsi-by2hxb24c-davids-projects-e31987e3.vercel.app`, built the same way (flow 3's routes pass there);
+  - the night run adds the moderation re-run and a block check after the campfire.
+  - Night begins at sunset + 1 h (`lib/game/sunTimes.ts`): 19:31 on Oct 22, so the run starts at 19:33 or later.
 - **Next:**
-  1. Night run after 19:30 Toronto (re-queue at 19:25): the campfire with 2 dancers.
+  1. Night run at 19:33 Toronto or later (re-queue at 19:25): the campfire with 2 dancers, then moderation and the block.
   2. Cleanup, the same evening (`cleanup.mjs collect`, then `delete`, then `verify`).
   3. Report to the coordinator.
 

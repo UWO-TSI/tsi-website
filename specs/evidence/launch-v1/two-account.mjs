@@ -489,6 +489,8 @@ async function night() {
     await Promise.all([shot(A, "22-a-fire-two-dancers"), shot(B, "23-b-fire-two-dancers")]);
     await A.page.waitForTimeout(4000);
     await Promise.all([shot(A, "24-a-fire-ring-turned"), shot(B, "25-b-fire-ring-turned")]);
+    for (const p of [A, B]) { await focusWorld(p); await p.page.keyboard.down("s"); await p.page.waitForTimeout(150); await p.page.keyboard.up("s"); }
+    await nightModeration(A, B);
     await Promise.all([A.ctx.close(), B.ctx.close()]);
   } finally {
     await browser.close();
@@ -496,6 +498,90 @@ async function night() {
     const fails = results.filter(r => !r.ok).length;
     log(`done: ${results.length - fails} pass, ${fails} fail`);
   }
+}
+
+/**
+ * The moderation steps again on realtime v5 (the coordinator, Oct 22 evening): A says a line, B reports it, M removes
+ * and mutes from the queue, A's next line is refused at once and never reaches B, M unmutes. Then a block: B blocks A
+ * from A's card, and A's new lines don't reach B (nor B's reach A).
+ */
+async function nightModeration(A, B) {
+  let since = Date.now();
+  await say(A, "evening birch, nice fire");
+  record("night chat: A's line reaches B", await waitFor(B, () => textShown(B, "evening birch, nice fire"), 8000, 150), `${Date.now() - since} ms`);
+  await closeSheets(B);
+  await focusWorld(B);
+  await B.page.keyboard.press("Enter");
+  await B.page.waitForSelector("[data-chat-open]", { timeout: 10000 });
+  await B.page.getByRole("button", { name: `${A.name}: open their card` }).last().click();
+  await B.page.waitForSelector("[data-testid=player-card]", { timeout: 10000 });
+  await B.page.getByRole("button", { name: /^Report/ }).click();
+  await B.page.getByRole("radiogroup", { name: "Reason" }).getByRole("radio").first().click();
+  const reported = B.page.waitForResponse(r => r.url().includes("/api/world/report"), { timeout: 15000 });
+  await B.page.getByRole("button", { name: "Send report" }).click();
+  const reportRes = await reported;
+  record("night report: B reports A's line", reportRes.status() === 200, `HTTP ${reportRes.status()}`);
+  await closeSheets(B);
+
+  if (!uuid.test(ids.m.id)) throw new Error("bad M id");
+  await sql(`update profiles set tier = 2 where id = '${ids.m.id}'`, { write: true });
+  mRaised = true;
+  let M;
+  try {
+    M = await player("m", { size: { width: 900, height: 600 } });
+    const queue = await api(M, "/api/admin/moderation");
+    const item = (queue.json?.world ?? []).find(w => w.target?.id === A.uid);
+    record("night moderation: the report is in the queue", queue.status === 200 && !!item, `HTTP ${queue.status}`);
+    if (item) {
+      const acted = await api(M, "/api/admin/moderation", "POST", { kind: "world", id: item.id, action: "remove_mute" });
+      const muteAt = Date.now();
+      record("night moderation: remove and mute", acted.status === 200, `HTTP ${acted.status}, realtime: ${acted.json?.moderation?.realtime}`);
+      record("night moderation env: /internal/sanction applied (realtime v5)", acted.json?.moderation?.realtime === "applied");
+      const muted = await sql(`select muted_until is not null and muted_until > now() as muted from member_identity where member_id = '${A.uid}'`);
+      record("night moderation: A muted in the database (F4: mute before the report closes)", muted[0]?.muted === true);
+      await say(A, "can anyone hear me");
+      record("night live mute: A's next line is refused at once", await waitFor(A, () => textShown(A, "You can't chat"), 5000, 100), `${Date.now() - muteAt} ms after the mute`);
+      await shot(A, "26-a-muted-refused-night");
+      await B.page.waitForTimeout(2500);
+      record("night live mute: B never receives the muted line", !(await textShown(B, "can anyone hear me")));
+      const un = await api(M, "/api/identity/moderate", "POST", { member_id: A.uid, action: "unmute" });
+      record("night moderation: unmute", un.status === 200, `HTTP ${un.status}, realtime: ${un.json?.realtime ?? un.json?.moderation?.realtime}`);
+      await A.page.waitForTimeout(2000);
+      since = Date.now();
+      await say(A, "back by the fire");
+      record("night live unmute: A's line reaches B again", await waitFor(B, () => textShown(B, "back by the fire"), 8000, 150), `${Date.now() - since} ms`);
+    }
+  } finally {
+    await sql(`update profiles set tier = 5 where id = '${ids.m.id}'`, { write: true });
+    mRaised = false;
+    log("M tier back to", JSON.stringify(await sql(`select tier from profiles where id = '${ids.m.id}'`)));
+    if (M) await M.ctx.close();
+  }
+
+  // The block: from A's card on B's screen.
+  await closeSheets(B);
+  await focusWorld(B);
+  await B.page.keyboard.press("Enter");
+  await B.page.waitForSelector("[data-chat-open]", { timeout: 10000 });
+  await B.page.getByRole("button", { name: `${A.name}: open their card` }).last().click();
+  await B.page.waitForSelector("[data-testid=player-card]", { timeout: 10000 });
+  await B.page.getByRole("button", { name: /^Block/ }).first().click();
+  const blocked = B.page.waitForResponse(r => r.url().includes("/api/world/blocks") && r.request().method() === "POST", { timeout: 15000 });
+  await B.page.getByRole("button", { name: "Block", exact: true }).last().click();
+  const blockRes = await blocked;
+  const blockJson = await blockRes.json().catch(() => null);
+  record("block: B blocks A", blockRes.status() === 200, `HTTP ${blockRes.status()}, realtime: ${blockJson?.realtime}`);
+  record("block env: /internal/block applied", blockJson?.realtime === "applied");
+  await closeSheets(B);
+  await A.page.waitForTimeout(1500);
+  await say(A, "are you still there birch");
+  await B.page.waitForTimeout(3000);
+  record("block: A's new line doesn't reach B (log or bubble)", !(await textShown(B, "are you still there birch")) && !(await tagShown(B, "are you still there birch")));
+  await shot(B, "27-b-after-block");
+  await say(B, "quiet evening");
+  await A.page.waitForTimeout(3000);
+  record("block: B's line doesn't reach A either", !(await textShown(A, "quiet evening")));
+  record("block: A's tag still shows for B (the world is shared)", await tagShown(B, A.name));
 }
 
 /** Smoke flow 3's routes without a browser: the share cookie from the redirect, A's session cookies, Node's fetch. */
