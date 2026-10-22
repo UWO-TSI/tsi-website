@@ -32,6 +32,7 @@
   - #01 bigger, covering the hair.
   - #02 rotated so the leaf faces the camera.
   - #04 properly on the head.
+  - #04's logo (round 5): "the M symbol is messed up make it the mcdonald m but flip it so its w". The golden-arches style M drawn by us, turned upside down so it reads as a W, in the visor's own yellow (`art/characters/accessories/arches_logo.py`, sheet `specs/evidence/wardrobe-b2/19-visor-logo.webp`).
   - #07 smaller and lower.
   - #10 slightly more centred.
   - #11's mapping is off, so put it on the eye.
