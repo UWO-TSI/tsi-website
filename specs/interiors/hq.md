@@ -283,3 +283,73 @@ island keeps its own clubhouse (`HQInterior.tsx`).
 - The plaque stays blank until David writes it.
 - Other players upstairs are drawn on the ground floor's height. The network sends no height, as in the shop.
 
+
+## Phase 3: layout B, the gallery, with taller storeys (2026-10-19 decision, built 2026-10-22)
+
+David, on the phase 2 review: "i said to do plan b, also make roofs taller for both floors". Layout B is the member
+HQ (`/lab/island?hq=inside` and through HQ's door in the village). The exterior is unchanged. Option A's code is gone
+(see the top of this file).
+
+**The room** (`web/lib/game/hqLayout.ts`, every number the models, the walker and the stations use):
+- **Size:** 20 x 16. **Each storey 4.6 high** (was 3.4), the slab 0.3, the ceiling at 9.2.
+- **The aquarium:** fills the back wall straight ahead of the door, 10 wide and 1.4 deep, from 0.25 to 9.0: the full
+  height of the room. Walnut cladding at its ends and over it, the warm strip along its base.
+- **The upper floor wraps the hall in a U**, three parts:
+  - **the bridge** over the entrance (z −8 to −3.5): the big lounge facing the tank head on, under the walnut oval
+    ceiling (7 x 3 ovals);
+  - **the left arm** (x 5.5 to 10): a reading corner by the bridge (two velvet chairs, a side table, a globe lamp) and
+    the two locked admin doors at its end, on the back wall;
+  - **the right arm** (x −10 to −5.5): the stair's well and its landing, a plant, the big canvas on the back wall over
+    the landing.
+- **The six yearly banners** (blank until David's designs) hang from poles off the arms' rails over the hall's edge,
+  three a side, one after another toward the tank, facing the door. Track spots on each arm's ceiling pick them out.
+- **The stair:** up the right wall under the right arm, toward the back, 22 steps of 0.21 rise and 0.30 run (about 35
+  degrees), foot at z 0, head at z 6.6. The upper floor is open over the whole flight, railed round.
+
+**Downstairs:**
+- **The entry under the bridge:** Wren's walnut desk left of the door with the register, the green marble coffee bar
+  right of it, the work lounge on the deep blue rug in the left corner (the daybed, the leather sofa, the glass table),
+  the workbench against the right wall, palms either side of the door.
+- **The hall:** the lamp-lit lounge before the tank (a long velvet sofa facing it, the travertine table and mushroom
+  lamp, two lounge chairs turned in, a globe floor lamp each side), a plant by the tank.
+- **Under the left arm:** the library wall along the left wall (3.6 tall, six bays, books and magazines face out, a warm
+  strip under each shelf), the long co-working desk before it, the trophy case, and at the back the clock and the
+  Founder's desk with its blank plaque on the walnut panelling.
+- **Under the right arm:** the notice board and the club goals on walnut panelling by the stair's foot.
+
+**The cut-away** (`createHqWalker`): downstairs and on the stair, a part of the upper floor is cut away while you're
+under it, or while it (its slab and rail, or anything of it, like a banner) stands between the walking camera and you;
+with hysteresis, so nothing flickers. Upstairs all of it shows. So from the door the bridge is away and the hall, the
+arms and the tank show; walking the hall's edge under the banners, their arm goes; under an arm, that arm goes.
+**The ceiling and the front wall** show only to a camera inside the room: the walking camera downstairs is now under
+the ceiling (8.4 against 9.2) but only looks down; upstairs it's above it; from the door it's outside.
+
+**The models** (`art/interiors/build_hq.py`; pieces on a side or the front wall are made facing −z and turned onto it):
+- `ground.glb` 27.9k triangles (the walls both storeys high, the back wall open behind the tank), `upper.glb` 17.5k in
+  three parts (`hq_upper_0..2`, 28 primitives), `ceiling.glb` 8.1k, `tank.glb` 10.5k. Budget exceptions for ground and
+  upper in `budget.ts`.
+- **The aquarium's shaders, fish and caustics** are phase 2's, turned to the back wall: the fish swim along x (five
+  silver schools up the two storeys, 20 orange fish low by the reef), the reef rises to the bridge's floor at the left
+  end. The glass is unlit (a lit pane caught the blue light and washed the water out from above).
+- **Light:** phase 2's: lamp pools and spot washes faked (`hqLight.ts`, now on the side and front walls too, the
+  upstairs ones per part), four real lights (the entry and the hall, the work floor under the left arm, the bridge's
+  lounge, the tank's blue), the lamps carrying the room at night.
+
+**Stations** (each on its own floor; the walk-through in `phase3/shots.mjs` "prompts", 2026-10-22): the exit, Wren's
+desk, the coffee bar, the notice board, the library, the trophy display, the Founder's desk, the clock, the aquarium and
+the workbench downstairs; the two admin doors upstairs. All twelve answer. Wren stands at her post behind the desk
+(`KEEPER_POSTS.memberHq`), seen over its counter from the walking camera, the bridge over her cut away (tested).
+
+**Shots:** `specs/evidence/hq-interior/phase3/hq-phase3-sheet.webp`, made headless by `shots.mjs` and `sheet.py` there:
+the plans of both floors, from the door, the aquarium straight ahead from the entrance, the bridge's lounge looking at
+the tank, the arms with their banners, under the left arm, the stair, the two storeys from the front, the height from
+the walking camera (the hall, the drop from the bridge), day and night where both.
+
+**Perf** (`specs/evidence/hq-interior/phase3/perf-check.txt`; the `hq` bench scene, from the door; passed):
+- High: 2.90 ms, 111 draws, 79k triangles.
+- Lite: 1.90 ms, 69 draws, 72k triangles.
+- Phase 2 was 2.70 ms and 104 draws on high: the upper floor's three parts cost seven draws. Under the cafe's budget on
+  every line.
+
+**Not done:** the banners and the plaque stay blank until David sends them; other players upstairs still draw at the
+ground floor's height (the network sends no height).
