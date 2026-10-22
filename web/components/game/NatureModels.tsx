@@ -132,15 +132,12 @@ export function NatureMushroom({ position, species, seed }: { position: [number,
 // don't pop in one by one after the loading screen ("well produced" = the
 // world arrives assembled). Files are 12-350KB each, ~2MB total.
 const PRELOAD = [
-  ...TREE_MODELS,
-  ...BUSH_MODELS,
   // The village's closed bushes, every season's (about 360 KB in all), so a season change doesn't pop them in.
   ...Object.values(SEASON_BUSHES).flat(),
   // Our flowers, every season's (art/trees/build_flowers.py).
   ...new Set(Object.values(SEASON_FLOWERS).flat()),
   // Our trees in today's season, near and far (about 0.6 MB): the other seasons load when the season turns.
   ...SEASON_TREES[seasonBlend().season].flatMap(url => [url, lodOf(url)].filter((u): u is string => !!u)),
-  ...FLOWER_MODELS,
   "/assets/acnh/plants/stump.glb",
   STREETLAMP_URL,
   LOG_BENCH_URL,
@@ -157,5 +154,9 @@ const PRELOAD = [
   "/assets/acnh/props/fence-log-a.glb",
 ];
 for (const url of PRELOAD) useGLTF.preload(url);
+/** The default (ACNH) trees, bushes and flowers: only the applicant island draws them, so it warms them itself. */
+export function preloadDefaultNature() {
+  for (const url of [...TREE_MODELS, ...BUSH_MODELS, ...FLOWER_MODELS]) useGLTF.preload(url);
+}
 
 // ─── Rock ───────────────────────────────────────────────────────
