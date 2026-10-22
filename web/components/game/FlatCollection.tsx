@@ -219,12 +219,11 @@ function EntryPanel({ e, onClose }: { e: Entry; onClose: () => void }) {
   const bag = useBag(), { pins } = useHeld();
   const inBag = e.key ? stockOf(bag.view)[e.key] ?? 0 : 0;
   const pinned = !!e.key && pins.includes(e.key);
-  return <SidePanel testId="collection-entry" onClose={onClose} picture={e.found ? e.picture : <span className={s.sideSilhouette}><PixelImage src={e.picture} px={40} /></span>}
+  return <SidePanel testId="collection-entry" onClose={onClose} picture={e.found ? e.picture : <span className={s.sideSilhouette}><PixelImage src={e.picture} px={64} /></span>}
     title={e.found ? e.name : "Undiscovered"} kind={<span className={s.kind}>{e.kind}{e.rarity ? <RarityBadge rarity={e.rarity}>{RARITY_META[e.rarity as keyof typeof RARITY_META]?.label ?? e.rarity}</RarityBadge> : null}</span>}
-    facts={e.notes}
+    text={e.found ? e.quote : e.text} facts={e.notes}
     actions={e.key && inBag > 0 && pinnable(e.key) ? <DarkButton onClick={() => togglePin(e.key!)}>
       <span className={s.withIcon}>{pinned ? <PinOff size={15} aria-hidden /> : <Pin size={15} aria-hidden />} {pinned ? "Unpin from the wheel" : "Pin to the wheel"}</span></DarkButton> : null}>
-    {e.found ? e.quote && <p className={s.text}>{e.quote}</p> : <p className={s.text}>{e.text}</p>}
     {e.found && e.donatable && !e.donated && inBag > 0 && <p className={s.museum}><Landmark size={14} aria-hidden /> Bring it to the curator to put it on show.</p>}
   </SidePanel>;
 }

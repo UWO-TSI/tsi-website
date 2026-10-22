@@ -1,7 +1,8 @@
 "use client";
 
 /**
- * /dev/flat-ui?surface=bag|chest|crafting|collection|collection-applicant|decorate|wallet|missions (specs/polish/flat-ui.md): one in-game
+ * /dev/flat-ui?surface=bag|chest|crafting|collection|collection-applicant|decorate|wallet|missions|wardrobe|creator|creator-applicant
+ * (specs/polish/flat-ui.md): one in-game
  * menu over a plain sky, on the in-memory services, for the rollout's before and after shots. The mission board takes
  * `mission=<id>` (that one under way, `done=1` ready to claim) and `cool=<id>` (that one on its cooldown). Add `collections=demo` (the bag, the
  * chest with `chest=1`, the collection; `bag=<slots>` fills the pockets) or `crafting=demo` (the workbench). The
@@ -24,6 +25,9 @@ import MissionBoardSheet from "@/components/game/combat/MissionBoardSheet";
 import { MISSIONS } from "@/lib/game/combat/data";
 import { startMission } from "@/lib/game/combat/missions";
 import { setMission } from "@/lib/game/combat/runtime";
+import WardrobeSheet from "@/components/game/peaceful/WardrobeSheet";
+import CharacterCreator from "@/components/game/character/CharacterCreator";
+import { DEFAULT_LOOK } from "@/lib/game/character/look";
 
 const ME = "00000000-0000-4000-8000-000000000001";
 let routed = false;
@@ -77,6 +81,11 @@ export default function Harness() {
     {surface === "crafting" && <CraftingSheet />}
     {surface === "wallet" && <WalletSheet open onClose={close} />}
     {surface === "missions" && <MissionBoardSheet open onClose={close} gateNote={null} />}
+    {/* The closet (the fitting room with place=fitting), and the member's first creator as a signed-in member sees it. */}
+    {surface === "wardrobe" && <WardrobeSheet open place={q.get("place") === "fitting" ? "fitting" : "closet"} onClose={close} onShop={close} />}
+    {surface === "creator" && <CharacterCreator initial={DEFAULT_LOOK} askName={{ current: "You" }} onDone={close} />}
+    {/* The applicant island's creator, as ApplicantIsland mounts it: shot to show it unchanged. */}
+    {surface === "creator-applicant" && <CharacterCreator initial={DEFAULT_LOOK} title="Make yourself at home" onDone={close} />}
     {/* Docked at the side as the world docks it (its --hud-* edges). */}
     {surface === "decorate" && <div style={{ position: "fixed", inset: 0, ["--hud-edge" as string]: "16px", ["--hud-side-bottom" as string]: "96px" }}>
       <DecorateSheet indoor selected={q.get("pick") ? { piece: q.get("pick")!, rot: 0 } : null} layout={layout} room={layout.rooms[0]}

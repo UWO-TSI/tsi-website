@@ -14,13 +14,19 @@ import { usePresence, useWorldDialog } from "@/lib/game/useWorldDialog";
 import { CurrencyIcon } from "@/components/economy/Amount";
 import PixelImage from "@/components/economy/PixelImage";
 import { GuiVariantContext } from "../variant";
-import { bothRefs, useMarker } from "../motion";
+import { bothRefs, useMarker, useNudge } from "../motion";
 import f from "./flat.module.css";
 
 /** The kit's class names, for the odd surface that lays out its own content in the flat style. */
 export { f as flatStyles };
 /** The detail stage's classes: a viewer (TurnStage, ItemViewer, the keychain's stage) fills `stage`; a picture `picture`. */
 export const STAGE = { stage: f.stage, picture: f.stagePicture } as const;
+/**
+ * A grid of its own (the bag's slots, the catalogue's pieces) moving as `CardGrid` does: put `NUDGE_GRID` on it and
+ * `useNudge()`'s ref, and keep each cell a direct child.
+ */
+export const NUDGE_GRID = f.nudge;
+export { useNudge };
 
 const cx = (...names: (string | false | null | undefined)[]) => names.filter(Boolean).join(" ");
 
@@ -133,13 +139,15 @@ export function IconRail<T extends string>({ items, value, onChange, label, orie
 
 /**
  * A shelf of cards, with its title above. `min`: the narrowest a card gets (px; 250 by default); `phoneMin`: on a phone
- * (one card a row by default, as the shop has it).
+ * (one card a row by default, as the shop has it). Its cells move (round 3): a hovered card grows a little out of the
+ * grid and its neighbours step aside, quickly; the picked one (`selected`) further, slower, and stays out.
  */
 export function CardGrid({ title, min, phoneMin, label, children }: { title?: ReactNode; min?: number; phoneMin?: number; label?: string; children: ReactNode }) {
   const style = { ...(min ? { "--card-min": `${min}px` } : {}), ...(phoneMin ? { "--card-min-phone": `${phoneMin}px` } : {}) } as CSSProperties;
+  const nudge = useNudge();
   return <>
     {title ? <h3 className={f.shelfTitle}>{title}</h3> : null}
-    <div className={f.grid} role={label ? "list" : undefined} aria-label={label} style={min || phoneMin ? style : undefined}>{children}</div>
+    <div ref={nudge} className={cx(f.grid, f.nudge)} role={label ? "list" : undefined} aria-label={label} style={min || phoneMin ? style : undefined}>{children}</div>
   </>;
 }
 
@@ -192,23 +200,26 @@ export function Pill({ children }: { children: ReactNode }) {
 // ── The side panel ──────────────────────────────────────────────────────────────────────────────────────────────────
 
 /**
- * A small panel beside a grid (David, round 2: "a lil tab on the side with action item show dont need item open
- * page"): a small picture, the name, a quiet line, what to know (`facts`, hairline rows) and what to do (`actions`).
- * The grid stays in view (`WithSide`); on a phone it sits at the foot of the screen.
+ * A panel beside a grid (David, round 2: "a lil tab on the side with action item show dont need item open page"; round
+ * 3: "make the right tab ui more spacious and less compact, make it a bit bgiger so that theres breathing room and icon
+ * can be bigger"): the picture large on the panel's grey, then the quiet kind and the name, a line about it (`text`),
+ * what to know (`facts`, hairline rows with room between) and what to do (`actions`); `children` last, for notes. The
+ * grid stays in view (`WithSide`); on a phone it sits at the foot of the screen, the picture beside the name.
  */
-export function SidePanel({ picture, title, kind, facts, actions, children, onClose, testId }: {
-  picture?: string | ReactNode; title: ReactNode; kind?: ReactNode; facts?: readonly (readonly [string, ReactNode])[] | null; actions?: ReactNode; children?: ReactNode;
-  onClose: () => void; testId?: string;
+export function SidePanel({ picture, title, kind, text, facts, actions, children, onClose, testId }: {
+  picture?: string | ReactNode; title: ReactNode; kind?: ReactNode; text?: ReactNode; facts?: readonly (readonly [string, ReactNode])[] | null; actions?: ReactNode;
+  children?: ReactNode; onClose: () => void; testId?: string;
 }) {
-  return <aside className={f.sidePanel} aria-label={typeof title === "string" ? title : "Details"} data-testid={testId}>
-    <button type="button" className={f.sideClose} aria-label="Close" title="Close" onClick={onClose}><X size={16} aria-hidden /></button>
+  return <aside className={f.sidePanel} aria-label={typeof title === "string" ? title : "Details"} data-testid={testId} data-picture={picture === undefined ? undefined : ""}>
+    <button type="button" className={f.sideClose} aria-label="Close" title="Close" onClick={onClose}><X size={18} aria-hidden /></button>
     <div className={f.sideHead}>
-      {picture === undefined ? null : typeof picture === "string" ? <PixelImage src={picture} px={40} className={f.sideArt} /> : <span className={f.sideArt} aria-hidden>{picture}</span>}
+      {picture === undefined ? null : <span className={f.sideStage} aria-hidden>{typeof picture === "string" ? <PixelImage src={picture} px={64} /> : picture}</span>}
       <div className={f.sideText}>
         {kind !== undefined ? <p className={f.sideKind}>{kind}</p> : null}
         <h3 className={f.sideTitle}>{title}</h3>
       </div>
     </div>
+    {text !== undefined && text !== null && text !== false ? <p className={f.sideBody}>{text}</p> : null}
     {facts && facts.length > 0 ? <dl className={f.facts}>{facts.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl> : null}
     {actions ? <div className={f.sideActions}>{actions}</div> : null}
     {children}

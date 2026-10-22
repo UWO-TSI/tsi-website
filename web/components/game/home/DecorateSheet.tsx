@@ -9,7 +9,7 @@
 import { useState, type ReactNode } from "react";
 import { Frame, LayoutGrid, PaintRoller, RectangleHorizontal, Sofa } from "lucide-react";
 import { useOwned } from "@/components/economy/EconomySheets";
-import { GhostButton, IconRail, ItemCard } from "@/components/gui/flat";
+import { GhostButton, IconRail, ItemCard, NUDGE_GRID, useNudge } from "@/components/gui/flat";
 import { CATALOGUE, type Mount } from "@/lib/homes/catalogue";
 import { FLOORINGS, FREE_FINISHES, placedCounts, WALLPAPERS, type HomeLayoutDoc, type RoomDoc } from "@/lib/homes/layout";
 import { STARTER_FURNITURE } from "@/lib/wallet/catalogue";
@@ -41,6 +41,7 @@ export default function DecorateSheet({ indoor, selected, layout, room, onChoose
   // Only the filters with something in them; the walls and floors indoors.
   const filters = FILTERS.filter(x => x.id === "all" || (x.id === "finishes" ? indoor && !!room : pieces.some(p => p.mount === x.id)));
   const shown = filters.some(x => x.id === filter) ? filter : "all";
+  const nudge = useNudge();
   return <section className={s.dock} aria-label="Decorate" data-testid="decorate-panel">
     <header className={s.head}>
       <h2>Decorate {indoor ? "your room" : "your island"}</h2>
@@ -55,7 +56,7 @@ export default function DecorateSheet({ indoor, selected, layout, room, onChoose
     {shown === "finishes" && room ? <div className={s.finishes}>
       <Finish label="Wallpaper" testId="wallpaper" options={finishes(WALLPAPERS, room.wallpaper)} value={room.wallpaper} picture={w => iconUrl(`wall-${w}`)} onPick={w => onFinish("wallpaper", w)} />
       <Finish label="Flooring" testId="flooring" options={finishes(FLOORINGS, room.flooring)} value={room.flooring} picture={f => iconUrl(`floor-${f}`)} onPick={f => onFinish("flooring", f)} />
-    </div> : <ul className={s.grid} aria-label="Your pieces">
+    </div> : <ul ref={nudge} className={`${s.grid} ${NUDGE_GRID}`} aria-label="Your pieces">
       {pieces.filter(item => shown === "all" || item.mount === shown).map(item => {
         const left = (owned.get(item.id) ?? 0) - (placed.get(item.id) ?? 0);
         const pick = selected?.piece === item.id;
@@ -73,9 +74,10 @@ export default function DecorateSheet({ indoor, selected, layout, room, onChoose
 function Finish({ label, testId, options, value, picture, onPick }: {
   label: string; testId: string; options: readonly string[]; value: string; picture: (id: string) => string; onPick: (id: string) => void;
 }) {
+  const nudge = useNudge();
   return <div className={s.finish}>
     <h3>{label}</h3>
-    <div className={s.swatches} role="radiogroup" aria-label={label} data-testid={testId}>
+    <div ref={nudge} className={`${s.swatches} ${NUDGE_GRID}`} role="radiogroup" aria-label={label} data-testid={testId}>
       {options.map(o => <ItemCard key={o} size="sm" arrow={false} picture={picture(o)} px={40} name={TITLE(o)} selected={o === value} className={s.card}
         role="radio" aria-checked={o === value} onClick={() => onPick(o)} label={`${label}: ${TITLE(o)}`} />)}
     </div>

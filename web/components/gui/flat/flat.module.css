@@ -10,7 +10,7 @@
 .layer[data-state="closing"] .scrim { animation: fade 0.16s ease-in reverse forwards; }
 @keyframes fade { from { opacity: 0; } }
 
-.panel { position: relative; display: grid; grid-template-columns: 76px minmax(0, 1fr); grid-template-rows: 64px minmax(0, 1fr);
+.panel { position: relative; display: grid; grid-template-columns: 70px minmax(0, 1fr); grid-template-rows: 64px minmax(0, 1fr);
   width: min(1320px, 95vw); height: min(880px, 95dvh); border-radius: 22px; background: var(--flat-ground); overflow: hidden; outline: none;
   box-shadow: var(--flat-shadow); animation: rise 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }
 /* No rail: the panel is one column, and the content keeps the rail's air on its left. */
@@ -49,18 +49,19 @@
 /* Across the top (a phone, or a rail inside a sheet). */
 .side[data-orientation="horizontal"] { flex-direction: row; justify-content: flex-start; padding: 0 0 6px; overflow-x: auto; scrollbar-width: none; }
 
-/* The content: big white cards on the grey, lots of air. */
-.main { position: relative; min-height: 0; overflow-y: auto; padding: 4px 22px 22px 4px; scrollbar-width: thin; }
+/* The content: big white cards on the grey, lots of air. Its left edge keeps room for a first-column card that grows
+   (round 3), the rail a step narrower, so the content sits where it did. */
+.main { position: relative; min-height: 0; overflow-y: auto; padding: 4px 22px 22px 10px; scrollbar-width: thin; }
 /* New content (another shelf, an item opened) fades in and rises a few px. */
 .main > * { animation: swapIn 0.18s ease-out; }
 @keyframes swapIn { from { opacity: 0; transform: translateY(4px); } }
 .shelfTitle { margin: 2px 0 14px 2px; font: 600 22px/1.2 var(--gui-font); }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(var(--card-min, 250px), 100%), 1fr)); gap: 12px; }
 .card { all: unset; position: relative; display: grid; grid-template-rows: 1fr auto; min-height: 300px; padding: 14px 14px 14px 16px; border-radius: 16px; background: var(--flat-card);
-  cursor: pointer; box-sizing: border-box; transition: transform 0.15s ease, box-shadow 0.15s ease; }
-.card:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgb(0 0 0 / 0.07); }
+  cursor: pointer; box-sizing: border-box; transition: box-shadow 0.17s cubic-bezier(0.65, 0, 0.35, 1); }
+.card:hover { box-shadow: 0 8px 22px rgb(0 0 0 / 0.07); }
 div.card { cursor: default; }
-div.card:hover { transform: none; box-shadow: none; }
+div.card:hover { box-shadow: none; }
 .cardArt { align-self: center; justify-self: center; width: 132px; height: 132px; margin: 26px 0 16px; }
 .cardFoot { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px; }
 .cardText { display: grid; gap: 3px; min-width: 0; }
@@ -71,8 +72,8 @@ div.card:hover { transform: none; box-shadow: none; }
   background: color-mix(in srgb, var(--flat-accent) 12%, white); color: var(--flat-accent); font: 500 12px/1.2 var(--gui-font); }
 .arrow { position: absolute; top: 14px; right: 14px; color: var(--flat-ink); }
 .soldOut { position: absolute; inset: 0; display: grid; place-items: center; border-radius: inherit; background: rgb(255 255 255 / 0.65); color: var(--flat-quiet); font: 600 14px var(--gui-font); }
-/* Picked (the bag's slot, the recipe): a black ring. */
-.card[data-selected] { box-shadow: inset 0 0 0 2px var(--flat-ink); }
+/* Picked (the bag's slot, the recipe): a black ring, and lifted off the grey. */
+.card[data-selected] { box-shadow: inset 0 0 0 2px var(--flat-ink), 0 10px 26px rgb(0 0 0 / 0.09); transition-duration: 0.32s; }
 /* Not found yet: the picture as a silhouette. */
 .card[data-cover="not-found"] { background: var(--flat-card-dim); }
 .card[data-cover="not-found"] .cardArt { filter: brightness(0) opacity(0.16); }
@@ -89,30 +90,48 @@ div.card:hover { transform: none; box-shadow: none; }
 .card[data-size="sm"] .arrow { top: 10px; right: 10px; }
 .card[data-size="sm"] .tag { top: 8px; left: 8px; padding: 2px 6px; font-size: 11px; }
 
-/* The side panel (round 2): beside the grid, the grid still in view; at the foot of the screen on a phone. */
-.withSide { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items: start; }
-.withSide[data-open] { grid-template-columns: minmax(0, 1fr) 300px; }
+/* The cells' motion (round 3; components/gui/motion useNudge writes the numbers): a hovered cell grows a little out of
+   the grid and its neighbours step aside, quick; the picked one grows further and stays out, its neighbours kept
+   aside, slower. Ease in and out (it speeds up, then settles). Two motions, two properties, so each keeps its pace:
+   the hover on translate and scale, the pick on transform. Transforms only, nothing reflows. */
+.nudge { --nudge-quick: 0.17s; --nudge-slow: 0.34s; --nudge-ease: cubic-bezier(0.65, 0, 0.35, 1); }
+.nudge > * { translate: var(--nudge-hx, 0px) var(--nudge-hy, 0px); scale: var(--nudge-hs, 1);
+  transform: translate(var(--nudge-sx, 0px), var(--nudge-sy, 0px)) scale(var(--nudge-ss, 1));
+  transition: translate var(--nudge-quick) var(--nudge-ease), scale var(--nudge-quick) var(--nudge-ease), transform var(--nudge-slow) var(--nudge-ease), box-shadow 0.17s var(--nudge-ease); }
+.nudge > [data-nudge] { z-index: 1; }
+
+/* The side panel (round 2; roomier in round 3): beside the grid, the grid still in view; at the foot of the screen on a phone. */
+.withSide { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; align-items: start; }
+.withSide[data-open] { grid-template-columns: minmax(0, 1fr) 380px; }
 .withSideMain { display: grid; align-content: start; gap: 14px; min-width: 0; }
-.sidePanel { position: sticky; top: 0; display: grid; gap: 14px; padding: 18px; border-radius: 18px; background: var(--flat-card); box-sizing: border-box; animation: sideIn 0.18s ease-out; }
+.sidePanel { position: sticky; top: 0; z-index: 2; display: grid; gap: 22px; padding: 26px 28px 28px; border-radius: 22px; background: var(--flat-card); box-sizing: border-box; animation: sideIn 0.18s ease-out; }
 @keyframes sideIn { from { opacity: 0; transform: translateX(8px); } }
-.sideClose { all: unset; position: absolute; top: 10px; right: 10px; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; color: var(--flat-quiet); cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.15s ease-out; }
+/* The close sits in the picture's corner (or the panel's, with no picture). */
+.sideClose { all: unset; position: absolute; top: 14px; right: 14px; z-index: 1; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; color: var(--flat-quiet); cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.15s ease-out, color 0.15s ease-out; }
+.sidePanel[data-picture] > .sideClose { top: 36px; right: 38px; background: var(--flat-card); color: var(--flat-body); }
 .sideClose:hover { color: var(--flat-ink); background: var(--flat-ground); }
+.sidePanel[data-picture] > .sideClose:hover { background: var(--flat-card); box-shadow: 0 2px 8px rgb(0 0 0 / 0.1); }
 .sideClose:active { transform: scale(0.9); }
 .sideClose:focus-visible { outline: 2px solid var(--flat-ink); outline-offset: 2px; }
-.sideHead { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 14px; padding-right: 26px; }
-.sideArt { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 14px; background: var(--flat-ground); }
-.sideText { display: grid; gap: 3px; min-width: 0; }
-.sideKind { margin: 0; color: var(--flat-quiet); font: 500 13px/1.3 var(--gui-font); }
-.sideTitle { margin: 0; font: 600 20px/1.2 var(--gui-font); }
+.sideHead { display: grid; gap: 18px; }
+.sidePanel:not([data-picture]) .sideHead { padding-right: 36px; }
+/* The picture, large on the panel's grey (twice its pixel size, so the pixels stay square). */
+.sideStage { display: grid; place-items: center; height: 196px; border-radius: 18px; background: var(--flat-ground); }
+.sideStage canvas { width: 128px; height: 128px; }
+.sideText { display: grid; gap: 6px; min-width: 0; }
+.sideKind { margin: 0; color: var(--flat-quiet); font: 500 14px/1.3 var(--gui-font); }
+.sideTitle { margin: 0; font: 600 26px/1.15 var(--gui-font); letter-spacing: -0.01em; }
+.sideBody { margin: -6px 0 0; color: var(--flat-body); font: 400 15px/1.5 var(--gui-font); }
 .facts { display: grid; margin: 0; }
-.facts > div { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 12px; padding: 9px 0; border-top: 1px solid var(--flat-line); font: 400 13px/1.4 var(--gui-font); }
+.facts > div { display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 16px; padding: 13px 0; border-top: 1px solid var(--flat-line); font: 400 14px/1.45 var(--gui-font); }
+.facts > div:last-child { border-bottom: 1px solid var(--flat-line); }
 .facts dt { color: var(--flat-quiet); }
 .facts dd { margin: 0; color: var(--flat-ink); }
 /* The main action across the panel; the quiet ones share the row under it, grey pills on the white. */
-.sideActions { display: flex; flex-wrap: wrap; gap: 8px; }
-.sideActions > .buy { flex: 1 1 100%; min-width: 0; height: 42px; padding: 0 18px; font-size: 14px; }
-.sideActions > .ghost { display: inline-flex; align-items: center; justify-content: center; flex: 1 1 0; padding: 10px 14px; background: var(--flat-ground); text-align: center; transition: background 0.15s ease-out, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.sideActions { display: flex; flex-wrap: wrap; gap: 10px; }
+.sideActions > .buy { flex: 1 1 100%; min-width: 0; height: 48px; padding: 0 20px; font-size: 15px; }
+.sideActions > .ghost { display: inline-flex; align-items: center; justify-content: center; flex: 1 1 0; padding: 13px 16px; font-size: 14px; background: var(--flat-ground); text-align: center; transition: background 0.15s ease-out, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .sideActions > .ghost:hover:not(:disabled) { background: var(--flat-line); }
 .sideActions > .ghost:active:not(:disabled), .sideActions > .buy:active:not(:disabled) { transform: scale(0.97); }
 
@@ -187,12 +206,24 @@ div.card:hover { transform: none; box-shadow: none; }
   .card[data-size="md"] { min-height: 180px; }
   .card[data-size="sm"] { min-height: 120px; }
   .withSide[data-open] { grid-template-columns: minmax(0, 1fr); }
-  .sidePanel { position: sticky; top: auto; bottom: 0; max-height: 55dvh; overflow-y: auto; box-shadow: 0 -10px 30px rgb(0 0 0 / 0.12); animation-name: sideUp; }
+  .sidePanel { position: sticky; top: auto; bottom: 0; gap: 18px; max-height: 58dvh; overflow-y: auto; padding: 20px 20px 22px; box-shadow: 0 -10px 30px rgb(0 0 0 / 0.12); animation-name: sideUp; }
+  .sideHead { grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 16px; padding-right: 36px; }
+  .sideStage { width: 96px; height: 96px; border-radius: 16px; }
+  .sideStage canvas { width: 72px; height: 72px; }
+  .sidePanel[data-picture] > .sideClose { top: 12px; right: 12px; background: transparent; color: var(--flat-quiet); }
+  .sideTitle { font-size: 22px; }
   @keyframes sideUp { from { opacity: 0; transform: translateY(12px); } }
   .title { font-size: 28px; }
 }
+@media (max-width: 1100px) and (min-width: 761px) {
+  .withSide[data-open] { grid-template-columns: minmax(0, 1fr) 320px; }
+  .sidePanel { padding: 22px; }
+  .sidePanel[data-picture] > .sideClose { top: 30px; right: 30px; }
+  .sideStage { height: 168px; }
+}
 @media (prefers-reduced-motion: reduce) {
   .panel, .scrim, .main > *, .sidePanel { animation: none; }
+  .nudge > * { translate: none; scale: none; transform: none; transition: none; }
   .card, .shelf, .marker, .close, .round, .sideClose, .sideActions > * { transition: none; }
   .card:hover, .shelf:active, .close:active, .round:active, .sideClose:active, .sideActions > :active { transform: none; }
 }

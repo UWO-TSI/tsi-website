@@ -174,3 +174,47 @@ Evidence: `specs/evidence/flat-ui/round2-step7-first4.webp` (before and after, d
   - "Write a note" is a quiet button;
   - an opened letter is paper, with Reply, and Report as a quiet link.
 - **The portal pages** `/student/dashboard/journal` and `/letters` render the same bodies, so they follow.
+
+## Round 3 (David, 2026-10-18; relayed 2026-10-22)
+
+David reviewed the round 2 pages (`round2-bag-collection.webp`, `round2-motion-filmstrip.webp`, `round2-step7-first4.webp`).
+
+- **The bag (filters and side panel):** APPROVED.
+- **The collection:** REDO. Verbatim: "make the right tab ui more spacious and less compact, make it a bit bgiger so that theres breathing room and icon can be bigger".
+  - The side panel gets wider, with more padding and row spacing, a bigger picture or icon of the entry, and a clear hierarchy.
+  - The bag's side panel gets the same breathing room, so they match. It's the same component.
+- **The micro animations:** REDO. Verbatim: "hover make a ease in out speed up slow down for the items clicked to slowly budge out a tiny bit to show its selected and push the other cells away for both hover (quicker) select(slower)".
+  - **Easing:** ease-in-out (it speeds up, then slows down).
+  - **Hover:** the hovered cell grows slightly out of the grid and the neighbouring cells shift away a little to make room. Quick, about 140 to 180 ms.
+  - **Select:** the clicked cell eases out a bit further and stays out while selected, and its neighbours stay nudged away. Slower, about 280 to 360 ms.
+  - Transforms only: no layout reflow, no jank.
+  - Off under prefers-reduced-motion.
+  - On the kit's `CardGrid` and `ItemCard`, so it covers the shop, the bag, the chest, the workbench, the collection and the furniture catalogue.
+- **The first four cream menus** (journal, mission board, notice board, mailbox): no verdict yet. They stay as they are, and the direction doesn't roll out to the other menus until his OK comes through the coordinator.
+- **Step 8, the avatar creator and wardrobe:** GO (wardrobe batch 2 has merged).
+  - The creator already has the rail, the big model and a right panel. Restyle it to the approved flat look: the flat panel, the `IconRail` with the new motion, the white studio stage behind the character (the shop stage's lights), hairline controls, and the same roomy side-panel feel.
+  - Every behaviour stays: the hair colour wheel, the "Own" swatches, two-colour hair, the hat cut, the detail tiers, the faces and the reflection creator flow.
+  - The applicant island's creator, if separate, stays untouched.
+
+### Round 3, built: the side panels and the cells' motion (game/flat-ui, 2026-10-22)
+
+Evidence: `specs/evidence/flat-ui/round3-panels-motion.webp` (before and after, desktop and phone, the bag and the collection, plus hover and select stills on the bag, the collection and the shop) and `round3-motion-filmstrip.webp` (frames at exact times, seeked through the Web Animations API).
+
+- **The side panel** (`SidePanel`, the bag's and the collection's alike):
+  - 380 px wide (was 300), 320 px between 761 and 1100 px wide; 24 px from the grid;
+  - padding 26 to 28 px, 22 px between its parts;
+  - the picture first and large: 128 px (twice its pixel size, so the pixels stay square) on a 196 px block of the panel's grey, the close in its corner;
+  - then the kind (14 px, muted) and the name (26 px);
+  - a line about it (`text`: the collection's one-liner or clue) under the name, where it reads first;
+  - the facts as hairline rows 13 px tall each way, 14 px type, the label column 116 px;
+  - the main action 48 px tall across the panel, the quiet ones under it.
+  - On a phone it stays at the foot of the screen, the picture (96 px block) beside the name.
+- **The cells' motion** (`useNudge` in `components/gui/motion.ts`, `.nudge` in the kit's CSS):
+  - a hovered cell grows 3 px a side and its eight neighbours step away (5 px for the four touching, less for the corners, a hair for the ring after), in 170 ms;
+  - the picked cell (the one holding `[data-selected]`) grows 5 px a side and stays out, its neighbours kept 8 px away, in 340 ms;
+  - both ease in and out (`cubic-bezier(0.65, 0, 0.35, 1)`). The hover runs on the `translate` and `scale` properties and the pick on `transform`, so each keeps its own pace;
+  - only CSS variables change (on the cells that move); nothing reflows. A touch only picks (no hover), and an empty slot or a spent piece stays still;
+  - none of it plays under prefers-reduced-motion.
+  - It's on `CardGrid` (the shop, the workbench, the collection, the bag's clothes and furniture shelves) and, through `NUDGE_GRID` and `useNudge`, on the bag's and the chest's slots and the furniture catalogue's pieces and finishes.
+  - The card's old hover lift (2 px up) is gone; its shadow stays. A picked card has a soft shadow under its ring.
+  - The panel's rail is 70 px (was 76) and the content's left padding 10 px (was 4), so a first-column card has room to grow without being clipped; the content sits where it did. The chest's grids have the same room inside their scroll.

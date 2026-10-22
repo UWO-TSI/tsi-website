@@ -2,7 +2,7 @@ import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { CardGrid, DetailView, FlatPanel, HairlineRow, IconRail, ItemCard, PayRow, Purse, SidePanel, SpecBand, WithSide, badgeText, priced, railStep, type RailItem } from ".";
-import { markerOf } from "../motion";
+import { NUDGE, markerOf, nudgeOf } from "../motion";
 
 const html = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(el);
 const RAIL: RailItem[] = [
@@ -151,9 +151,47 @@ describe("the side panel (round 2: a small panel beside the grid, no item page)"
     expect(out).toContain("<button>Pin</button>");
     expect(out).toContain('aria-label="Close"');
   });
+  it("puts the picture first, then the kind and the name, a line about it, the facts and the actions (round 3)", () => {
+    const out = html(h(SidePanel, { title: "Dace", kind: "Fish", picture: "/dace.webp", text: "Common as anything.", facts: [["Caught", "3×"]], actions: h("button", null, "Pin"), onClose: () => {} }));
+    expect(out).toMatch(/data-picture=""/);
+    expect(out).toMatch(/<canvas width="64" height="64"[\s\S]*>Fish<\/p><h3[^>]*>Dace<\/h3><\/div><\/div><p[^>]*>Common as anything.<\/p><dl/);
+    expect(html(h(SidePanel, { title: "Note", onClose: () => {} }))).not.toMatch(/data-picture|<canvas|<dl|<p[ >]/);
+  });
   it("keeps the grid beside it, and takes the grid's whole width when nothing is picked", () => {
     expect(html(h(WithSide, { side: h("aside", null, "x"), children: "grid" }))).toMatch(/data-open=""[\s\S]*grid[\s\S]*<aside>x<\/aside>/);
     expect(html(h(WithSide, { side: null, children: "grid" }))).not.toContain("data-open");
+  });
+});
+
+describe("the cells' motion (round 3: grow out, the neighbours step aside)", () => {
+  const at = (col: number, row: number) => ({ x: col * 134, y: row * 142, w: 124, h: 132 });
+  const A = at(2, 2);
+  it("grows the active cell by the same few px a side, whatever its size, and doesn't move it", () => {
+    const n = nudgeOf(A, A, NUDGE.hover);
+    expect(n.x).toBe(0);
+    expect(n.y).toBe(0);
+    expect(n.s).toBeCloseTo(1 + (2 * NUDGE.hover.grow) / 132, 3);
+    expect(nudgeOf({ x: 0, y: 0, w: 250, h: 300 }, { x: 0, y: 0, w: 250, h: 300 }, NUDGE.select).s).toBeCloseTo(1 + (2 * NUDGE.select.grow) / 300, 3);
+    expect(nudgeOf(A, A, NUDGE.select).s).toBeGreaterThan(n.s);
+  });
+  it("pushes the touching cells straight away by the full push, the corners less, the ring after a hair, and no further", () => {
+    expect(nudgeOf(at(3, 2), A, NUDGE.hover)).toEqual({ x: NUDGE.hover.push, y: 0, s: 1 });
+    expect(nudgeOf(at(1, 2), A, NUDGE.hover)).toEqual({ x: -NUDGE.hover.push, y: 0, s: 1 });
+    expect(nudgeOf(at(2, 1), A, NUDGE.select)).toEqual({ x: 0, y: -NUDGE.select.push, s: 1 });
+    const corner = nudgeOf(at(3, 3), A, NUDGE.select), far = nudgeOf(at(4, 2), A, NUDGE.select);
+    expect(corner.x).toBeGreaterThan(0);
+    expect(corner.y).toBeGreaterThan(0);
+    expect(Math.hypot(corner.x, corner.y)).toBeLessThan(NUDGE.select.push);
+    expect(far.x).toBeGreaterThan(0);
+    expect(far.x).toBeLessThan(Math.hypot(corner.x, corner.y));
+    expect(nudgeOf(at(5, 2), A, NUDGE.select)).toEqual({ x: 0, y: 0, s: 1 });
+    expect(nudgeOf(at(4, 4), A, NUDGE.select)).toEqual({ x: 0, y: 0, s: 1 });
+  });
+  it("makes room: a neighbour steps further than the active cell grows, and a pick moves more than a hover", () => {
+    expect(NUDGE.hover.push).toBeGreaterThan(NUDGE.hover.grow);
+    expect(NUDGE.select.push).toBeGreaterThan(NUDGE.select.grow);
+    expect(NUDGE.select.grow).toBeGreaterThan(NUDGE.hover.grow);
+    expect(NUDGE.select.push).toBeGreaterThan(NUDGE.hover.push);
   });
 });
 

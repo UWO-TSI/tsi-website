@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { Apple, ArrowDownWideNarrow, Backpack, Bug, Fish, Gem, Lock, LockOpen, Pin, PinOff, Shirt, Sofa, Wrench, X } from "lucide-react";
 import { ConfirmDialog, SignInText } from "@/components/gui";
-import { CardGrid, DarkButton, FlatPanel, GhostButton, IconRail, ItemCard, Quiet, SidePanel, StatusLine, WithSide, flatStyles as f } from "@/components/gui/flat";
+import { CardGrid, DarkButton, FlatPanel, GhostButton, IconRail, ItemCard, NUDGE_GRID, Quiet, SidePanel, StatusLine, WithSide, flatStyles as f, useNudge } from "@/components/gui/flat";
 import { Amount } from "@/components/economy/Amount";
 import { arrange, itemInfo, slotCounts, stackSize, type Slot } from "@/lib/collections/bag";
 import type { BagView } from "@/lib/collections/service";
@@ -52,7 +52,8 @@ function KindLine({ itemKey }: { itemKey: string }) {
 /**
  * Slots as white item cards: the real icon, the name, its kind, the stack in the pill, New and locked marks. Click picks
  * one (shift-click: `onShift`); drag moves it to another slot of this pane (`onSwap`), to the other pane (`onMoveIn`
- * there) or to a wheel pin. An empty slot is a dashed space; a slot past the size (a member over it) is ringed.
+ * there) or to a wheel pin. An empty slot is a dashed space; a slot past the size (a member over it) is ringed. The
+ * slots move as the kit's cards do (a hover grows one and its neighbours step aside; the picked one stays out).
  */
 export function Grid({ pane, slots, counts, capacity, selected, locked, fresh, label, only, onPick, onShift, onSwap, onMoveIn }: {
   pane: "bag" | "chest"; slots: readonly Slot[]; counts: readonly (number | null)[]; capacity: number; selected: number | null;
@@ -62,6 +63,7 @@ export function Grid({ pane, slots, counts, capacity, selected, locked, fresh, l
   onPick: (i: number) => void; onShift?: (i: number) => void; onSwap?: (from: number, to: number) => void; onMoveIn?: (d: Dragged) => void;
 }) {
   const shift = useRef(false);
+  const nudge = useNudge();
   const drop = (e: DragEvent, to: number | null) => {
     e.preventDefault();
     e.stopPropagation();
@@ -71,7 +73,7 @@ export function Grid({ pane, slots, counts, capacity, selected, locked, fresh, l
     if (from.pane !== pane) onMoveIn?.(from);
     else if (to !== null && to !== from.i && !only) onSwap?.(from.i, to);
   };
-  return <ul className={s.grid} aria-label={label} data-pane={pane} onDragOver={e => e.preventDefault()} onDrop={e => drop(e, null)}>
+  return <ul ref={nudge} className={`${s.grid} ${NUDGE_GRID}`} aria-label={label} data-pane={pane} onDragOver={e => e.preventDefault()} onDrop={e => drop(e, null)}>
     {slots.map((key, i) => {
       if (only && (!key || !only(key))) return null;
       const lock = !!key && !!locked?.has(key), n = counts[i] ?? 0;

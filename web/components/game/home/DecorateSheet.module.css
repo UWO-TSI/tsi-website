@@ -16,7 +16,7 @@ button:disabled > .key { background: var(--flat-quiet); }
 .grid > li { display: grid; }
 .card { width: 100%; }
 .card:disabled { opacity: 0.45; cursor: default; }
-.card:disabled:hover { transform: none; box-shadow: none; }
+.card:disabled:hover { box-shadow: none; }
 .finishes { display: grid; gap: 14px; }
 .finish h3 { margin: 0 0 8px; color: var(--flat-quiet); font: 500 13px var(--gui-font); }
 .shop { justify-content: center; width: 100%; box-sizing: border-box; padding: 10px 14px; background: var(--flat-dark); color: white; font-weight: 600; }

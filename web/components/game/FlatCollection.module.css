@@ -23,8 +23,7 @@
 .peekNotes > div { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 8px; }
 .peekNotes dt { color: var(--flat-quiet); }
 .peekNotes dd { margin: 0; color: var(--flat-ink); }
-.text { margin: 0; color: var(--flat-body); font: 400 14px/1.45 var(--gui-font); }
 .withIcon { display: inline-flex; align-items: center; gap: 6px; }
-.sideSilhouette { display: grid; place-items: center; }
-.sideSilhouette canvas { width: 44px; height: 44px; filter: brightness(0) opacity(0.22); }
+.sideSilhouette { display: contents; }
+.sideSilhouette canvas { filter: brightness(0) opacity(0.22); }
 @media (prefers-reduced-motion: reduce) { .peek { animation: none; } }

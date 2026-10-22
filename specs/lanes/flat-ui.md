@@ -3,40 +3,27 @@
 - **Worktree:** `/Users/DavidLiu/Developer/uwotsi/.claude/worktrees/flat-ui`
 - **Branch:** `game/flat-ui`
 
-## Status (2026-10-18)
+## Status (2026-10-22)
 
-- **Head:** see `git log -1` on `game/flat-ui`.
-- **Step 7, the first four menus: built, WAITING on David's OK on the direction** (sheet `specs/evidence/flat-ui/round2-step7-first4.webp`). Don't start the rest until the coordinator relays his OK.
-  - **Palette:** every in-game `Sheet` is back on cream. `variant="flat"` is gone from `IslandSheet`, `ProgressionPanel`, the Esc menu, friends, people here, the player card and start studying. The Sheet's flat variant code stays for `FlatPanel`'s pieces. So the menus not yet redesigned (settings, wallet and the rest) show their original cream look again.
-  - **The cream pieces** (`components/gui/cream`):
-    - `Folds` and `Fold`: rows that open in place, the open one the only paper, with that row's one action;
-    - `Section`: a quiet uppercase heading;
-    - `QuietButton`: second actions as underlined text;
-    - `BackLink`.
-  - **Journal** (`JournalSheet`, `ClubGoal`):
-    - quests: chapters as rows; the one under way is open, with its steps, the step to do now under the highlighter, and one action; skip is a quiet link. Locked chapters are plain rows.
-    - club goals: one bar, the points and percent above it, and one numbers line; what opens next is one line under "Up next".
-    - letters: the mailbox body.
-  - **Mission board** (`MissionBoardSheet`, `MissionBoard.module.css`, size lg):
-    - the mission under way sits on top in butter, with its progress and one action (Claim rewards, or Abandon as a quiet link);
-    - missions are rows by area: a kind icon, difficulty pips, and "Back in 14 h";
-    - the open row shows the story, reward chips and Accept.
-  - **Notice board** (`NoticeSheet`, size lg): notices pinned on paper.
-    - the goal is the big notice, with Contribute;
-    - your next step is a butter sticky note (first on a phone);
-    - "Up next" is one line;
-    - HQ notices are slips that open to read ("The board" goes back).
-  - **Mailbox** (`LettersSheet`, "more subtle"):
-    - quiet hairline rows: an envelope, the sender and subject, a line of the letter, and the date;
-    - unread is shown in bold with a coral dot;
-    - "Write a note" is the kit's quiet button;
-    - an opened letter is paper, with Reply, and Report as a quiet link;
-    - the composer has the paper textarea.
-  - **Shared bodies:** `JournalBody` and `LettersBody` also render the portal pages `/student/dashboard/journal` and `/letters`, so those pages pick up the new layout too (same palette).
-- **Round 2, the bag and the collection:** built, reported (`round2-bag-collection.webp`, `round2-motion-filmstrip.webp`), waiting on David.
+- **Head:** see `git log -1` on `game/flat-ui`. Main (`feat/game-default-island` f66bafe6, wardrobe batch 2) merged in.
+- **Round 3, step 1, done and reported:** the side panels roomier (the bag's and the collection's, one component) and the cells' new hover and select motion on every kit grid. Sheets: `specs/evidence/flat-ui/round3-panels-motion.webp`, `round3-motion-filmstrip.webp`. Waiting on David.
+- **Round 3, step 2, the avatar creator and wardrobe (step 8): GO, in progress.** Befores are shot (scratchpad; see Tools).
+- **Step 7, the first four cream menus:** built (`round2-step7-first4.webp`), NO verdict yet. Leave them as they are; don't roll the direction out to the other menus until the coordinator relays David's OK.
+- **Approved:** the kit, the chest, the workbench, the furniture catalogue, the bag (filters and side panel).
 - **Merged to main:** step 1 (the kit), step 2 (the old shop pages).
-- **Approved:** the kit, the chest, the workbench, the furniture catalogue.
-- **Waiting:** step 8, the avatar creator and wardrobe, needs the coordinator's go after `game/wardrobe-b2` merges.
+
+## David's decisions (round 3, 2026-10-18, relayed 2026-10-22)
+
+The verbatim notes are in `specs/polish/flat-ui.md`, under "Round 3".
+
+1. **Bag (filters and side panel):** APPROVED.
+2. **Collection:** REDO. "make the right tab ui more spacious and less compact, make it a bit bgiger so that theres breathing room and icon can be bigger". The side panel wider, more padding and row spacing, a bigger picture, a clear hierarchy; the bag's side panel the same (one component).
+3. **Micro animations:** REDO. "hover make a ease in out speed up slow down for the items clicked to slowly budge out a tiny bit to show its selected and push the other cells away for both hover (quicker) select(slower)".
+   - ease-in-out; hover: the cell grows slightly out of the grid, the neighbours shift away, about 140 to 180 ms; select: further out, stays out while selected, neighbours stay nudged, about 280 to 360 ms;
+   - transforms only, no reflow; off under prefers-reduced-motion;
+   - on the kit's CardGrid and ItemCard: the shop, bag, chest, workbench, collection and furniture catalogue.
+4. **The first four cream menus:** no verdict yet (see Status).
+5. **Step 8, the creator and wardrobe: GO.** Restyle to the flat look: flat panel, IconRail with the new motion, the white studio stage behind the character (the shop stage's lights), hairline controls, the roomy side-panel feel. Keep every behaviour: the hair colour wheel, the "Own" swatches, two-colour hair, the hat cut, the detail tiers, faces, the reflection creator flow. The applicant island's creator, if separate, stays untouched.
 
 ## David's decisions (round 2, 2026-10-18)
 
@@ -73,11 +60,10 @@ The verbatim notes are in `specs/polish/flat-ui.md`, under "Round 2".
 
 ## Next
 
-1. ~~Finish the WIP, shoot the bag and the collection, report.~~ Done.
-2. ~~Redesign the first four menus in cream, shoot, report.~~ Done (`round2-step7-first4.webp`). **STOP here until David's OK comes through the coordinator.** Fold in any notes he gives on the four first.
-3. After his OK, apply the direction to the rest, with the `components/gui/cream` pieces: settings, wallet, tourney, cafe goals (it still uses `GoalCard`; move it to `ClubGoal`), trophies, showcase, donate, the Esc menu, friends. Shoot before and after into one sheet.
+1. ~~Round 3 step 1: the side panels and the cells' motion; shoot; report.~~ Done.
+2. **Round 3 step 2 (step 8), the creator:** restyle `CharacterCreator` (closet, fitting room, the member's first creator) to the flat look. The applicant island mounts the same `CharacterCreator` (recruitment code, untouched), so the flat look is opt-in by prop and the default stays as it is (prove it unchanged with `surface=creator-applicant`). The reflection creator shares `CreatorControls` and the creator's CSS module: keep its look (scope the flat CSS under the flat root). Shoot after (desktop and phone, several categories) into `round3-creator.webp`, gates, update this file, commit, report, then clean up and stop.
+3. After David's OK on the four cream menus (through the coordinator): apply the direction to the rest, with the `components/gui/cream` pieces: settings, wallet, tourney, cafe goals (it still uses `GoalCard`; move it to `ClubGoal`), trophies, showcase, donate, the Esc menu, friends. Shoot before and after into one sheet.
    - `progression.module.css` still serves the wallet, Contribute and cafe goals. When those move, delete what's left unused there and `GoalCard` (keep `rewardName`).
-4. Step 8, the creator, only on the coordinator's go.
 
 Each step ends with:
 - full tsc;
@@ -97,7 +83,11 @@ Each step ends with:
 - **Shop recheck:** 2 club-merch states differ by about 25 px of antialiasing on the panel corner. That's known.
 - **`lib/game/shopRead.ts`** is unused since step 2. It's left in place.
 - **Round 2 shots:** `shots-round2.mjs <out> bag collection motion` on `/dev/flat-ui` (`motion` records a video; frames come out with `ffmpeg -vf fps=25`). Keep raw PNGs in the scratchpad, not the repo. The round 2 "before" panels are cropped from the step 3-4 and 5-6 sheets' "after" column (x 932, y 64 + 618 i + 40, 900 x 562).
-- **Locks:** `withlock.sh` in the scratchpad writes the owner `game/remodel-quick`; use a copy with `game/flat-ui` (`withlock-flat-ui.sh`). Swap has been over 9 GB, so the dev server has to be down before the heavy lock.
+- **Locks:** `LANE=game/flat-ui /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh heavy <cmd>`. Swap has been over 9 GB, so the dev server has to be down (and the browser lock released) before the heavy lock.
+- **Killing the dev server:** in zsh an unquoted `$PIDS` isn't split; kill the PIDs by number (npm exec, next dev, next-server and its postcss workers).
+- **Round 3 shots:** `shots-round3.mjs <out> panels|stills|film|creator` on port 3192. `film` pauses only the animations under way and seeks them (`document.getAnimations()`), so each frame is its exact time; the finished entrances (the panel's rise, held by its fill) are left alone. The filmstrip sheet is composed by a small script in the scratchpad (`r3/film.py`), the before and after sheet by `sheet.py`.
+- **Creator shots:** `/dev/flat-ui?surface=wardrobe` (the closet; `place=fitting` for the fitting room), `surface=creator` (the member's first creator, with the name field), `surface=creator-applicant` (the applicant island's, as ApplicantIsland mounts it). "Dreads with a cap" is the free two-colour hairstyle (Own, the second colour). Raw befores: scratchpad `r3/before/c-*.png`.
+- **The cells' motion:** `useNudge()` is a React 19 callback ref with a cleanup; the grid's direct children are the cells. It writes `--nudge-*` variables and `data-nudge` only where they change, and reads offsetLeft/Top (layout without transforms), so the motion never feeds back into itself. A cell with `z-index: 1` paints over a sticky sibling with no z-index: the side panel has `z-index: 2` for the phone.
 - **A transformed ancestor traps `position: fixed`:** the flat panel's entrance animation (`rise ... both`) makes the panel the containing block. Place pop-overs inside a positioned box of the content instead.
 - **A rail's marker:** `useMarker` re-measures on key, resize and child changes; a rail that gains items after load (the bag's filters) moved the icons under a stale dot before.
 - **Step 7 shots:** `shots-round2-step7.mjs <out> [scene ...]`.
