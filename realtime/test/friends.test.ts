@@ -75,7 +75,7 @@ async function until(cond: () => boolean, what = "condition", ms = 4000): Promis
   }
 }
 
-type P = { name: string; uid: string; client: Client; room: SdkRoom; friends: N.FriendPresence[][]; answers: N.FollowAnswer[]; code: number };
+type P = { name: string; uid: string; client: Client; room: SdkRoom; friends: N.FriendPresence[][]; answers: N.FollowAnswer[]; sys: N.SysMessage[]; code: number };
 const OPTS = (o: Partial<N.JoinOptions> = {}) => ({ v: N.PROTOCOL, area: 0, mobile: false, showClass: true, ...o });
 function wire(p: P, room: SdkRoom) {
   p.room = room;
@@ -92,7 +92,7 @@ function wire(p: P, room: SdkRoom) {
     p.answers.push(a);
   });
   room.onMessage(N.MSG.line, () => {});
-  room.onMessage(N.MSG.sys, () => {});
+  room.onMessage(N.MSG.sys, (m) => p.sys.push(N.parseSys(m)!));
   room.onMessage(N.MSG.pong, () => {});
   room.onLeave((code) => (p.code = code));
 }
@@ -100,7 +100,7 @@ function wire(p: P, room: SdkRoom) {
 async function join(name: string, roomId?: string, o: Partial<N.JoinOptions> = {}): Promise<P> {
   const client = new Client(WS);
   client.auth.token = `dev:${name}`;
-  const p = { name, uid: devUid(name), client, friends: [], answers: [], code: 0 } as unknown as P;
+  const p = { name, uid: devUid(name), client, friends: [], answers: [], sys: [], code: 0 } as unknown as P;
   wire(p, roomId ? await client.joinById(roomId, OPTS(o)) : await client.joinOrCreate(N.ROOM_NAME, OPTS(o)));
   await p.room.waitForInitialState();
   return p;
@@ -205,6 +205,24 @@ describe("join a friend's shard (follow)", () => {
     alice.room.send(N.MSG.follow, { uid: bob.uid });
     await until(() => alice.answers.length === 2, "the second answer");
     expect(alice.answers[1]).toEqual({ uid: bob.uid, refused: "here" });
+  });
+
+  it("a mute that lands mid-session goes with the player into a friend's shard", async () => {
+    pairs.push(["alice", "bob"]);
+    const alice = await join("alice");
+    const bob = await join("bob", await secondShard());
+    const r = await signed("/internal/sanction", { member_id: alice.uid, muted_until: new Date(Date.now() + 86_400_000).toISOString() });
+    expect(r).toMatchObject({ status: 200, body: { ok: true, sessions: 1 } });
+    alice.room.send(N.MSG.follow, { uid: bob.uid });
+    await until(() => alice.answers.length === 1, "the answer");
+    const a = alice.answers[0];
+    if (!("seat" in a)) throw new Error("no seat");
+    await alice.room.leave();
+    wire(alice, await alice.client.consumeSeatReservation(a.seat as never));
+    await alice.room.waitForInitialState();
+    alice.room.send(N.MSG.chat, { text: "hello?" });
+    await until(() => alice.sys.some((m) => m.kind === "refused"), "the refusal");
+    expect(alice.sys.find((m) => m.kind === "refused")).toMatchObject({ reason: "muted" });
   });
 
   it("says why not: not a friend, offline (a block is never said), full; and at most one ask per 3 s", async () => {

@@ -563,6 +563,8 @@ export function createIslandRoom(o: IslandRoomOptions) {
       for (const s of [...this.sessions.values()]) {
         if (s.uid !== uid || s.final !== undefined) continue;
         n++;
+        // The card too: a follow carries it to the friend's shard (onFollow), where the new session's sender is built from it.
+        s.card = { ...s.card, ...patch };
         if (patch.muted_until !== undefined) s.sender = { ...s.sender, mutedUntil: timeOf(patch.muted_until) };
         const removed = patch.removed_until !== undefined ? timeOf(patch.removed_until) : null;
         if (removed === null || removed <= now) continue;
