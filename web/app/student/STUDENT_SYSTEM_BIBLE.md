@@ -56,7 +56,7 @@ This bible was written before the 2026-03-29 product pivot to a **2.5D MMO RPG g
 - `specs/collab-design-track.md` — David-collab workflow (geo packs, interiors, furniture)
 - Memory file: `project_student_portal_vision.md` (in `~/.claude/projects/-Users-DavidLiu-Documents-GitHub-uwotsi/memory/`)
 
-**Onboarding new agents:** Read `CLAUDE.md` (entry point) → `AGENT_LOG.md` (current sprint + your role) → role-specific specs in `specs/`. Use this bible for feature mechanics; trust the canonical sources above for architecture and class/tier system.
+**Onboarding new agents:** Read `CLAUDE.md` (entry point), then `CODEMAP.md` and `specs/INDEX.md` for the right spec. Use this bible for feature mechanics; trust the canonical sources above for architecture and class/tier system.
 
 ---
 
