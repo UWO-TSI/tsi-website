@@ -129,6 +129,14 @@ describe("bubbles", () => {
     expect(store.bubble(3, BO)).toBeNull();
     expect(store.entries()).toEqual([]);
   });
+  it("drops a blocked player's new lines too, even when the room wasn't told; an unblock lets them through", () => {
+    const { store } = rig();
+    store.blocked(BO);
+    expect(store.receive(line(BO, 4, "still here?"))).toBe(false);
+    expect(store.bubble(4, BO)).toBeNull();
+    store.unmute(BO);
+    expect(store.receive(line(BO, 5, "hi"))).toBe(true);
+  });
 });
 
 describe("the typing flag", () => {
