@@ -159,6 +159,23 @@ describe("merch reservations (row 47)", () => {
     for (let i = 0; i < 3; i++) await reserveMerch(m.store, A, { item_id: sticker, idempotency_key: `merch-cap-${i}` });
     expect(await reserveMerch(m.store, A, { item_id: sticker, idempotency_key: "merch-cap-3" })).toMatchObject({ ok: false, code: "too_many_open" });
   });
+  it("puts the keycap keychain, the lanyard and the GENESIS sticker on sale at David's prices, unlimited (specs/merch/)", async () => {
+    const m = memoryEconomyStore(() => noon);
+    const rows = [["merch-tsi-keycap-keychain", 800], ["merch-tsi-lanyard", 800], ["merch-genesis-sticker", 200]] as const;
+    for (const [s, gems] of rows) {
+      expect(CATALOGUE.find((c) => c.slug === s), s).toMatchObject({ category: "merch", price_gems: gems, price_coins: null, stock: null });
+      expect(CATALOGUE.find((c) => c.slug === s)!.description, s).toMatch(/Pick up at HQ on campus\.$/);
+    }
+    m.fund(A, 0, 1800);
+    const shop = await getShop(m.store, A, noon);
+    for (const [s, gems] of rows) {
+      const e = shop.ok ? shop.data.tabs.merch.find((i) => i.slug === s) : undefined;
+      expect(e, s).toMatchObject({ currency: "gems", price: gems, stock: null, can_buy: true });   // Redeem on
+      expect((await reserveMerch(m.store, A, { item_id: slug(m, s), idempotency_key: `merch-new-${s}` })).ok, s).toBe(true);
+      expect(m.items.find((i) => i.slug === s)!.stock, s).toBeNull();                                // unlimited stays unlimited
+    }
+    expect(m.gemsOf(A)).toBe(0);
+  });
 });
 
 describe("inventory", () => {

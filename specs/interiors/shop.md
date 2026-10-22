@@ -211,7 +211,7 @@ My reading, built as `ShopOverlay`. It's one layout for both answers of the shop
   - Its item tag reads "TSI keycap keychain".
 - **In the merch view:** it hangs in the middle of the turning stage with the pixel finish (`KeychainStage`). Drag turns it, and it eases back to the slow turn; a tap on the keycap presses it, with the click.
 - **The click:** "keyswitch" in the game's audio, so it follows mute and the volume settings (`web/public/audio/sfx/keyswitch.ogg`). It's synthesized for now (`art/audio/synth_keyswitch.py`): the bottom-out at 0 and the return at 0.11 s. David's recording replaces that one file.
-- **Catalogue:** 500 Gems at first, 800 since David's prices (2026-10-18). It's in `lib/wallet/catalogue.ts` as `PENDING_MERCH`, not yet in `CATALOGUE`, and has no migration yet. A `CATALOGUE` row regenerates the economy and shop-icons seeds, and game/wardrobe-b2's unmerged `20261017172740_catalogue_seed.sql` regenerates shop-icons too. The coordinator decides the order.
+- **Catalogue:** 500 Gems at first, 800 since David's prices (2026-10-18). Since 2026-10-22 it's a `CATALOGUE` row in `lib/wallet/catalogue.ts` (position 40, after every earlier row), seeded by `20261022185120_catalogue_seed.sql` with the lanyard and the sticker; `PENDING_MERCH` is gone.
 - **Stock:** not set (unlimited) until David says how many.
 - **Shots:** `keychain-sheet.webp`:
   - David's photos beside the model's turnaround;
@@ -309,8 +309,8 @@ which turned out to be a slightly turned view.
   the strands; the strap bends along it, `components/game/Lanyard.tsx`). No walk orders during a drag.
 - **Merch view** (`LanyardStage`): close up by default so the print reads through the pixel finish, turning so both
   sides come round; "See it whole" shows all of it.
-- **Catalogue:** in `PENDING_MERCH`, now at 800 gems (David's price); it stays off sale like the keychain until its
-  catalogue row lands. (Before it had a price, the overlay showed "Price to come" with Redeem disabled.)
+- **Catalogue:** 800 gems (David's price), a `CATALOGUE` row since 2026-10-22 (`20261022185120_catalogue_seed.sql`), stock
+  unset. (Before it had a price, the overlay showed "Price to come" with Redeem disabled.)
 - **Shots:** `lanyard-sheet.webp`. The viewer is at the scratch path `lanyard-viewer.html`.
 
 ### The GENESIS sticker (2026-10-18, specs/merch/genesis-sticker.md)
@@ -340,6 +340,6 @@ which turned out to be a slightly turned view.
   - The two variants are thumbnails down the left of the stage.
   - The grid card's picture is a still of the sheen.
 - **Sprites:** each variant has one with the sheen baked in (`merch-genesis-sticker-{light,dark}-sprite.webp`).
-- **Catalogue:** in `PENDING_MERCH` at 200 gems (David's price, 2026-10-18; approved: "amazing"). It stays off sale until
-  its catalogue row lands.
+- **Catalogue:** 200 gems (David's price), a `CATALOGUE` row since 2026-10-22 (`20261022185120_catalogue_seed.sql`), stock
+  unset. Its card's picture is the light sprite with the foil baked in.
 - **Shots:** `sticker-sheet.webp`. The viewer is at the scratch path `sticker-viewer.html`.

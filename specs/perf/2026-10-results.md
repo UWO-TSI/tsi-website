@@ -129,7 +129,7 @@ One run per commit, the same session, the village (uncapped) and Shadow Garden (
   with crowds and matters more on weaker CPUs and GPUs.
 - **Draw calls barely moved.** The empty instanced meshes were already being culled (their bounding spheres were
   empty), so hiding them saves scene-graph work, not draws. The calls that remain are the world's (baseline: 400–500
-  draws with a material change on each, CLAUDE.md "Live-scene budget"), out of this pass's scope.
+  draws with a material change on each, `specs/known-defects-2026-07.md` "Live-scene budget"), out of this pass's scope.
 - **Adaptive quality** never engaged here (the M4 holds 120+ FPS). Under a 6× CPU slowdown (`specs/perf/governor-demo.mjs`,
   `runs/governor-demo.txt`, run with the four-level version) it stepped down a level every 3 s, found the frame no
   faster with every level on (the CPU, not the GPU, was the limit), gave all the detail back at 17 s and held; after the
