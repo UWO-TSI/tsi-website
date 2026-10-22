@@ -28,7 +28,7 @@ The keychain's pattern applies:
 
 - **2026-10-18: the item view is approved.** David on round 2 of the detail view (laid flat, front and back together,
   finer pixels): "lanyard looks good".
-- **Price:** 800 gems (in `PENDING_MERCH`). Stock comes from David. It stays off sale, like the keychain, until its
-  catalogue row lands.
+- **2026-10-22: on sale** at 800 gems, stock unset (unlimited): a `CATALOGUE` row in `lib/wallet/catalogue.ts`, seeded by
+  `web/supabase/migrations/20261022185120_catalogue_seed.sql`. Redeem is on once the coordinator applies it to prod.
 - **The snap hook:** approximate, from a 480 px crop of the photo, until David's close-ups. It needs one face on (flat,
   the trigger and rivet up) and one edge on (the swivel, the collar, the body's thickness).

@@ -29,4 +29,5 @@ David, 2026-10-18. A real TSI item for the shop's club merch section on the mezz
 
 - **2026-10-18: built, for David's review.** See `specs/evidence/shop-interior/phase2/sticker-sheet.webp` and
   `specs/interiors/shop.md`.
-- **Price and stock:** from David. Until then it's in `PENDING_MERCH` with no price, off sale.
+- **2026-10-22: on sale** at 200 gems (David, 2026-10-18), stock unset (unlimited): a `CATALOGUE` row in `lib/wallet/catalogue.ts`,
+  seeded by `web/supabase/migrations/20261022185120_catalogue_seed.sql`. Redeem is on once the coordinator applies it to prod.

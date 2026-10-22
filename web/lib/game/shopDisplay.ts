@@ -4,7 +4,7 @@
  * icon, lib/icons/manifest.ts). The front plinths carry today's specials (the shop's own daily picks, rules.ts
  * dailySpecials) until there's seasonal stock; everything else is a fixed pick from what's on sale.
  */
-import { CATALOGUE, OWNERSHIP_ITEMS, PENDING_MERCH, onSale, type CatalogueEntry } from "@/lib/wallet/catalogue";
+import { CATALOGUE, OWNERSHIP_ITEMS, onSale, type CatalogueEntry } from "@/lib/wallet/catalogue";
 import { dailySpecials, torontoDay, type ShopItem } from "@/lib/wallet/rules";
 import { iconKey, iconUrl, type IconSpec } from "@/lib/icons/manifest";
 import { itemSpec } from "@/lib/icons/itemModel";
@@ -45,7 +45,7 @@ export interface ShopDisplayItem {
   special: boolean;
 }
 
-const ON_SALE: readonly CatalogueEntry[] = [...CATALOGUE, ...OWNERSHIP_ITEMS, ...PENDING_MERCH].filter(onSale);
+const ON_SALE: readonly CatalogueEntry[] = [...CATALOGUE, ...OWNERSHIP_ITEMS].filter(onSale);
 const BY_SLUG = new Map(ON_SALE.map(e => [e.slug, e]));
 
 /** Today's specials as the shop picks them (the same shuffle the server runs on the same rows). */
