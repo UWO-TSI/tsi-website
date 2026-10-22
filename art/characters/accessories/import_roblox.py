@@ -24,6 +24,7 @@ with no other step. For each item:
                then welded and smooth-shaded (kit.weld_normals); LOD 1 is build_lod.py's
   4. colour    its texture, cropped to what the mesh samples, into its tile of the fixed-colour atlas (colour_atlas.py);
                the UVs move there with u + 2, which the body shader draws as the texel itself (never tinted)
+               (an entry's `logo`: #04's band takes its own tile, the logo drawn there by arches_logo.py)
   5. export    accessories/roblox/<id>.glb: the 22-bone rig and one mesh, one material (M_Acc), skinned to the head (hats,
                glasses), the neck (scarf, bow tie) or the torso (tie); the catalogue section `robloxAccessories`
 """
@@ -34,10 +35,11 @@ from mathutils import Vector, Matrix
 HERE = os.path.dirname(os.path.abspath(__file__))
 ART = os.path.dirname(HERE)
 ROOT = os.path.dirname(os.path.dirname(ART))
-for p in (ART, os.path.join(ART, "base"), os.path.join(ART, "skull"), os.path.join(ART, "hair")):
+for p in (ART, HERE, os.path.join(ART, "base"), os.path.join(ART, "skull"), os.path.join(ART, "hair")):
     sys.path.insert(0, p)
 import kit  # noqa: E402
 import colour_atlas  # noqa: E402
+import arches_logo  # noqa: E402
 from head_shape import HC, HAIR_ATT, STUD, CLASSIC, CLASSIC_C, head_point, EYE_LAT, EYE_LON, MOUTH_LAT, CHIN  # noqa: E402
 import body_shape as B  # noqa: E402
 import skull as SK  # noqa: E402
@@ -500,6 +502,8 @@ def main():
         box = colour_atlas.crop_of(ob.data, ww, hh)
         colour_atlas.claim(e["id"], px[box[1]:box[3], box[0]:box[2]])
         colour_atlas.remap(ob.data, e["id"], box, (ww, hh))
+        if e.get("logo"):                            # #04's logo, the arches flipped to a W, on its own tile
+            arches_logo.paint(ob.data, e["logo"], HC)
         ob = finish(ob, rig, e)
         rel = f"accessories/roblox/{e['id']}.glb"
         kit.export(ob, rig, os.path.join(ART, rel))
