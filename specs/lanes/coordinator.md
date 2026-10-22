@@ -23,7 +23,7 @@ All in `~/.claude/jobs/62203045/tmp/`, which survives reboots.
   - it uses `approve-template.html` and stores decisions in the `approvals` collection;
   - publish with `capabilities: {"db": {}}`, then read the decisions with ArtifactData `list approvals`.
 - `prod-dump.sh <label>`, `prod-query.sh <sql>` and `verify.sql` are for prod migrations. The procedure is in `STATE.md` and the memory files.
-- `withlock.sh heavy|blender|devserver <cmd>` lives in the session scratchpad (`/private/tmp/claude-501/-Users-DavidLiu/62203045-4999-4738-af95-c4357660b05d/scratchpad/`). It's referenced from `specs/lane-rules.md`. If `/tmp` is cleared, recreate it from the rules there.
+- `withlock.sh heavy|blender|devserver <cmd>` (set `LANE=game/<lane>`): takes a lock, waiting while swap is high and another lock is held. It lives in `~/.claude/jobs/62203045/tmp/`, the same folder as the helpers above, and is referenced from `specs/lane-rules.md`.
 
 ## Lanes as of 2026-10-18 (end of day)
 
