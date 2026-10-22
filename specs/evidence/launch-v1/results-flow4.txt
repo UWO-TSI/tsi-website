@@ -1,0 +1,46 @@
+{
+  "at": "2026-10-22T19:24:28.509Z",
+  "preview": "uwotsi-3w7kq9vdz-davids-projects-e31987e3.vercel.app",
+  "results": [
+    {
+      "step": "flow 4: the arrival paid Bram's coins once",
+      "ok": true,
+      "detail": "[[\"quest\",\"arrival\",30]]"
+    },
+    {
+      "step": "flow 4: cast at the wharf with the starter rod (1)",
+      "ok": true,
+      "detail": "HTTP 200 fish_snakehead"
+    },
+    {
+      "step": "flow 4: land it (1)",
+      "ok": true,
+      "detail": "HTTP 200 fish_snakehead"
+    },
+    {
+      "step": "flow 4: donate the catch (chapter step)",
+      "ok": true,
+      "detail": "HTTP 200 "
+    },
+    {
+      "step": "flow 4: report to Wren (no plot step in v1)",
+      "ok": true,
+      "detail": "HTTP 200 "
+    },
+    {
+      "step": "flow 4: a second report is refused",
+      "ok": true,
+      "detail": "HTTP 409"
+    },
+    {
+      "step": "flow 4: 100 coins once (chapter:settle-in)",
+      "ok": true,
+      "detail": "[[\"chapter\",\"settle-in\",100]]"
+    },
+    {
+      "step": "flow 4: the chapter letter is in the mailbox",
+      "ok": true,
+      "detail": "letters: 1"
+    }
+  ]
+}

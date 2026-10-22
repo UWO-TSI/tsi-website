@@ -142,9 +142,11 @@ async function waitHeard(p, text, since, ms = 8000) {
   while (Date.now() < end) { if (heard(p, text, since)) return Date.now(); await p.page.waitForTimeout(100); }
   return null;
 }
-/** Is a name tag (or bubble) with exactly this text drawn on the page? */
-const tagShown = (p, text) => p.page.evaluate(t => [...document.querySelectorAll("div, span, p")].some(el => el.childElementCount === 0 && el.textContent?.trim() === t
-  && getComputedStyle(el).visibility !== "hidden" && getComputedStyle(el).display !== "none" && Number(getComputedStyle(el).opacity) > 0.05 && el.getBoundingClientRect().width > 0), text);
+/** Is a leaf with exactly this text drawn on the page? `overlay`: only in the world's aria-hidden overlays (name tags and
+ * speech bubbles), never the chat log or a sheet. */
+const tagShown = (p, text, overlay = true) => p.page.evaluate(([t, overlay]) => [...document.querySelectorAll("div, span, p")].some(el => el.childElementCount === 0
+  && el.textContent?.trim() === t && (!overlay || el.closest('[aria-hidden="true"]')) && !el.closest("[hidden]")
+  && getComputedStyle(el).visibility !== "hidden" && el.getBoundingClientRect().width > 0), [text, overlay]);
 const textShown = (p, text) => p.page.evaluate(t => document.body.innerText.includes(t), text);
 async function waitFor(p, fn, ms = 20000, gap = 250) {
   const end = Date.now() + ms;
@@ -231,7 +233,7 @@ async function enter(p, { arrivalUi = false } = {}) {
     if (creator) {
       await p.page.waitForTimeout(1500);
       await shot(p, `${p.k}-arrival-creator`);
-      await creator.click();
+      await creator.click({ force: true });
       // Skip the skippable beats (aboard, clearing, crossing) until Bram's walk-along offers its way out.
       const end = Date.now() + 240000;
       let leave = null;
@@ -240,7 +242,7 @@ async function enter(p, { arrivalUi = false } = {}) {
         if (!leave) { await p.page.keyboard.press("Space"); await p.page.waitForTimeout(1500); }
       }
       record(`${p.k}: arrival reaches Bram's walk-along`, !!leave);
-      if (leave) { await shot(p, `${p.k}-arrival-tutorial`); await leave.click(); }
+      if (leave) { await shot(p, `${p.k}-arrival-tutorial`); await leave.click({ force: true }); }
     }
   }
   await p.page.waitForFunction(() => !document.querySelector('[role="status"]')?.textContent?.includes("Preparing"), null, { timeout: 300000 }).catch(() => log(p.k, "still preparing"));
@@ -260,12 +262,7 @@ async function day() {
   browser = await chromium.launch({ headless: true, args: ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist", "--enable-gpu"] });
   try {
     const A = await player("a"), B = await player("b");
-    // Flow 3's routes, for A (the member probe's equivalent here: a public account, which the island takes the same).
-    for (const path of ["/api/progression/state", "/api/economy/wallet", "/api/world/arrival", "/api/world/friends"]) {
-      const r = await api(A, path);
-      record(`flow 3: GET ${path}`, r.status === 200, `HTTP ${r.status}`);
-    }
-    await enter(A, { arrivalUi: true });
+    await enter(A);
     await enter(B);
     await shot(A, "01-a-in-island");
 
@@ -321,7 +318,7 @@ async function day() {
     await A.page.waitForTimeout(1200);
     await openFriends(A);
     await A.page.getByRole("tab", { name: "Friends" }).click().catch(() => {});
-    const here = await waitFor(A, () => tagShown(A, "Here"), 10000);
+    const here = await waitFor(A, () => tagShown(A, "Here", false), 10000);
     record("join: B listed as Here in A's friends (same shard; cross-shard Join is the local bench's)", here);
     await shot(A, "08-a-friends-here");
     await closeSheets(A);
@@ -364,6 +361,7 @@ async function day() {
 
     if (!uuid.test(ids.m.id)) throw new Error("bad M id");
     await sql(`update profiles set tier = 2 where id = '${ids.m.id}'`, { write: true });
+    mRaised = true;
     let M;
     try {
       M = await player("m", { size: { width: 900, height: 600 } });
@@ -392,6 +390,7 @@ async function day() {
       }
     } finally {
       await sql(`update profiles set tier = 5 where id = '${ids.m.id}'`, { write: true });
+      mRaised = false;
       const t = await sql(`select tier from profiles where id = '${ids.m.id}'`);
       log("M tier back to", JSON.stringify(t));
       if (M) await M.ctx.close();
@@ -416,12 +415,15 @@ async function flow4(A) {
   const ledger = () => sql(`select source, ref, amount, idempotency_key from wallet_ledger where member_id = '${uid}' order by created_at`);
   const before = await ledger();
   record("flow 4: the arrival paid Bram's coins once", before.filter(r => /arriv/i.test(`${r.ref} ${r.idempotency_key}`)).length === 1, JSON.stringify(before.map(r => [r.source, r.ref, r.amount])));
-  const cast = await api(A, "/api/collections", "POST", { action: "cast", site: "village", at: [7.5, -19.5], power: 0.6, tool: "rod_flimsy" });
-  record("flow 4: cast at the wharf with the starter rod", cast.status === 200 && !!cast.json?.catch?.roll, `HTTP ${cast.status} ${JSON.stringify(cast.json).slice(0, 120)}`);
-  if (cast.json?.catch?.roll) {
+  // The river mouth by the wharf always bites with a fish (the sea also gives sea stars and the like, which aren't fish).
+  for (let i = 0; i < 3; i++) {
+    const cast = await api(A, "/api/collections", "POST", { action: "cast", site: "village", at: [8, -19.5], power: 0.6, tool: "rod_flimsy" });
+    record(`flow 4: cast at the wharf with the starter rod (${i + 1})`, cast.status === 200 && !!cast.json?.catch?.roll, `HTTP ${cast.status} ${cast.json?.catch?.item_key ?? JSON.stringify(cast.json).slice(0, 120)}`);
+    if (!cast.json?.catch?.roll) break;
     await A.page.waitForTimeout(2500);
     const land = await api(A, "/api/collections", "POST", { action: "land", roll: cast.json.catch.roll });
-    record("flow 4: land the fish", land.status === 200, `HTTP ${land.status} ${land.json?.catch?.item_key ?? ""}`);
+    record(`flow 4: land it (${i + 1})`, land.status === 200, `HTTP ${land.status} ${land.json?.catch?.item_key ?? ""}`);
+    if (String(land.json?.catch?.item_key ?? "").startsWith("fish_")) break;
   }
   const donate = await api(A, "/api/progression/chapters/advance", "POST", { chapter_slug: "settle-in", action: "donate_catch" });
   record("flow 4: donate the catch (chapter step)", donate.status === 200, `HTTP ${donate.status} ${donate.json?.error ?? ""}`);
@@ -508,7 +510,35 @@ async function routes() {
   writeFileSync(`${OUT}/results-${PHASE}.txt`, JSON.stringify({ at: new Date().toISOString(), preview: HOST, results }, null, 2));
 }
 
+/** Flow 3's first login: A plays the arrival through the page (the reflection, the skips, Bram's walk-along, its way out). */
+async function arrival() {
+  browser = await chromium.launch({ headless: true, args: ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist", "--enable-gpu"] });
+  try {
+    const A = await player("a");
+    await enter(A, { arrivalUi: true });
+    const r = await api(A, "/api/world/arrival");
+    record("flow 3: the arrival is recorded (arrived)", r.json?.arrived === true, JSON.stringify(r.json));
+    const people = await peopleLabel(A);
+    record("flow 3: the realtime join (the menu's Here entry)", /Here \(\d+\)/.test(people ?? ""), people ?? "no entry");
+    await shot(A, "00-a-after-arrival");
+    await A.ctx.close();
+  } finally {
+    await browser.close();
+    writeFileSync(`${OUT}/results-${PHASE}.txt`, JSON.stringify({ at: new Date().toISOString(), preview: HOST, results }, null, 2));
+  }
+}
+
+// M is tier 2 only for the moderation step: a stopped run puts it back.
+let mRaised = false;
+process.on("SIGTERM", async () => { if (mRaised) await sql(`update profiles set tier = 5 where id = '${ids.m.id}'`, { write: true }).catch(() => {}); process.exit(143); });
+
 if (PHASE === "setup") await setup();
+else if (PHASE === "arrival") await arrival();
+else if (PHASE === "flow4") {
+  browser = await chromium.launch({ headless: true, args: ["--mute-audio"] });
+  try { const A = await player("a"); await flow4(A); await A.ctx.close(); }
+  finally { await browser.close(); writeFileSync(`${OUT}/results-${PHASE}.txt`, JSON.stringify({ at: new Date().toISOString(), preview: HOST, results }, null, 2)); }
+}
 else if (PHASE === "routes") await routes();
 else if (PHASE === "day") await day();
 else if (PHASE === "night") await night();

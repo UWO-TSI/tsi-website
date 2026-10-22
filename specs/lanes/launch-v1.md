@@ -14,9 +14,18 @@ Worktree `/Users/DavidLiu/Developer/uwotsi/.claude/worktrees/launch-v1`, cut fro
 - Main merged at `d251c36e`.
 - **Preview:** `uwotsi-3w7kq9vdz-davids-projects-e31987e3.vercel.app`. Its share token and the account and row ids live in the session scratchpad, never in the repo.
 - **Accounts:** created 2026-10-22 15:08 (A `598ba9ed`, B `3c5d65e4`, M `18a38805`; world names Probe Alder, Probe Birch, Probe Cedar).
-- **Flow 3's routes pass** on the Preview (`results-routes.json`).
-- **Next:** the day run when the browser lock comes round, then the night run, then cleanup.
-- Run sheet facts and runbook flows 3 to 5 are updated.
+- **Day run (15:17 to 15:25, under the browser lock), all on the Preview against prod Fly and prod Supabase:**
+  - **arrival:** A's first login plays it (creator, skips, Bram's walk-along, Skip the walk). The flag is recorded and the menu shows "Here (1)";
+  - **two accounts, 25 of 25 steps passed:** tags both ways; Here (2); chat both ways with bubbles (about 1.2 s); friend code ask and accept (`/internal/friend` applied, so the Vercel and Fly secrets match); "Here" in the friends list; a wave and both dances relayed; B's report reaches the T1/T2 queue; remove and mute (`/internal/sanction` applied); A's next line refused 1.2 s after the mute, and B never got it; unmute applied, and A's line goes through again;
+  - **flow 4, 8 of 8 passed:** Bram's coins once, a river fish at the wharf, donate, report to Wren: 100 coins once, a second report refused, the letter.
+  - The first flow 4 attempt cast into the sea and caught a sea star, which isn't a fish. That was the test's spot, not a bug. Evidence: `specs/evidence/launch-v1/`.
+- **Halloween, local** (dev server :3166, `?tradition=halloween`): pumpkins by day, the fog night with lit pumpkins, the knock (a treat), the closet's witch hat. Shots: `halloween-local-*`.
+- **Seen in the Fly logs during the day run:** from 19:18:40 to 19:19:52 UTC the realtime server's Supabase reads timed out (3 s): `sanctions_poll_failed` twice, and `friends_load_failed` for A and B. B's join was refused 3 times, so it backed off about 20 s before getting in. Probed afterwards from the machine (`fly ssh`), the same reads take 0.17 to 0.39 s. It looks transient; watch for it in the night run and on launch day.
+- Browser lock released after the day run.
+- **Next:**
+  1. Night run after 19:30 Toronto (re-queue at 19:25): the campfire with 2 dancers.
+  2. Cleanup, the same evening (`cleanup.mjs collect`, then `delete`, then `verify`).
+  3. Report to the coordinator.
 
 ## Phase A findings (2026-10-22)
 
@@ -70,5 +79,6 @@ Worktree `/Users/DavidLiu/Developer/uwotsi/.claude/worktrees/launch-v1`, cut fro
 - Root directory is `web`: deploy from the worktree root (a root `.vercel/project.json`), with an untracked root `.vercelignore` that drops `art/`, `references/`, `specs/`, `archive/`, `realtime/`, `web/node_modules` and `web/.next`. Otherwise the upload is about 500 MB.
 - The headless browser needs past Vercel SSO: a 23 h share link (`get_access_to_vercel_url`), or the project's automation bypass.
 - `vercel env pull` returns sensitive vars as placeholders. Read only booleans from a pull and delete the file.
+- `web/.env.local` (the prod env symlink) stores `SUPABASE_SERVICE_ROLE_KEY` quoted with a literal trailing `\n`. Read raw, the key answers 401: strip the quotes and the `\n` (the script does).
 - Read-only Supabase: `POST /v1/projects/rtbkrngsdbptbjhfbcud/database/query` with `"read_only": true`. Token: the Supabase CLI keychain entry.
 - Two game contexts plus one light moderator context in one headless Chromium with `--mute-audio`, under the browser lock.
