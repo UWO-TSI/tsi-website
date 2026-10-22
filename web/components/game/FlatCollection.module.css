@@ -1,0 +1,27 @@
+/* The Collection in the flat UI (FlatCollection; specs/polish/flat-ui.md step 6). */
+.summary { color: var(--flat-ink); font: 600 15px/1 var(--gui-font); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.note { margin: 0 0 12px 2px; color: var(--flat-quiet); font: 400 13px/1.45 var(--gui-font); }
+.head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 14px; }
+.head h3 { margin-bottom: 0; }
+.count { display: inline-flex; align-items: center; gap: 4px; color: var(--flat-quiet); font: 500 14px var(--gui-font); font-variant-numeric: tabular-nums; }
+.count[data-done] { color: var(--flat-ink); }
+.filters { display: inline-flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+.filters > [data-on] { background: var(--flat-ink); color: white; }
+.kind { display: inline-flex; align-items: center; gap: 8px; }
+.museum { display: inline-flex; align-items: center; gap: 6px; margin: 0; color: var(--flat-body); font: 400 14px var(--gui-font); }
+@media (max-width: 760px) { .summary { font-size: 13px; } }
+/* The hover card (a long press on a phone): over the tile, inside the grid's box (it scrolls with the tiles). */
+.entries { position: relative; }
+.cell { display: grid; }
+.peek { position: absolute; z-index: 5; width: 270px; box-sizing: border-box; padding: 12px 14px; border-radius: 14px; background: var(--flat-card); box-shadow: 0 12px 34px rgb(0 0 0 / 0.16);
+  transform: translateX(-50%); pointer-events: none; animation: peekIn 0.14s ease-out; }
+.peek[data-above] { transform: translate(-50%, -100%); }
+@keyframes peekIn { from { opacity: 0; } }
+.peekName { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; color: var(--flat-ink); font: 600 15px/1.3 var(--gui-font); }
+.peekNotes { display: grid; gap: 4px; margin: 0; font: 400 12px/1.4 var(--gui-font); }
+.peekNotes > div { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 8px; }
+.peekNotes dt { color: var(--flat-quiet); }
+.peekNotes dd { margin: 0; color: var(--flat-ink); }
+.sideSilhouette { display: contents; }
+.sideSilhouette canvas { filter: brightness(0) opacity(0.22); }
+@media (prefers-reduced-motion: reduce) { .peek { animation: none; } }

@@ -11,11 +11,15 @@ import { Children, cloneElement, isValidElement, useEffect, useId, useRef, useSt
 import { Pointer, X } from "lucide-react";
 import { inTopDialog, usePresence, useWorldDialog } from "@/lib/game/useWorldDialog";
 import { Keycap, NPCDialogue, VillageButton, VillageField, VillagePanel, VillageTextArea } from "@/components/recruit/ui";
+import { GuiVariantContext, useGuiVariant, type GuiVariant } from "./variant";
+import { useMarker } from "./motion";
 import styles from "./gui.module.css";
 
 export { Keycap, NPCDialogue as Dialogue, VillageButton as Button, VillageField as Field, VillageTextArea as TextArea, VillagePanel as Panel };
 /** Toasts: the island's one lane (components/game/ToastHub), paper slips inside a .gui scope. `toast(text, icon?)` from anywhere. */
 export { default as ToastHub, toast } from "@/components/game/ToastHub";
+/** The flat UI's look for the game's menus (specs/polish/flat-ui.md): which one the pieces wear. */
+export { GuiVariantContext, useGuiVariant, type GuiVariant } from "./variant";
 /** "Sign in" links back to where you are (reachability §3). */
 export { SignInLink, SignInText, useSignInHref } from "./SignIn";
 
@@ -28,9 +32,12 @@ export type SheetSize = "sm" | "md" | "lg" | "xl";
  * A paper sheet: the one dialog frame for every menu. Focus, Escape, its opening key (`keys`), the world's hotkeys
  * held and the paper sound come from the dialog system (lib/game/useWorldDialog); it scales and fades in and out.
  * `modal` false: no scrim, the world stays bright behind it (the decorate panel). On a phone it is a bottom sheet.
+ * `variant` "flat" (the game's menus, specs/polish/flat-ui.md step 7): the shop overlay's flat grey look, and the
+ * pieces inside follow it (text tabs as flat words, the buttons as pills); the default stays cream, as the portal and
+ * recruitment pages have it.
  */
-export function Sheet({ open, onClose, onEscape, title, eyebrow, icon, size = "md", tone, keys, modal = true, footer, headerExtra, testId, className, bodyClassName, children }: {
-  open: boolean; onClose: () => void; title: ReactNode; eyebrow?: ReactNode; icon?: ReactNode; size?: SheetSize; tone?: "butter" | "sage" | "oracle";
+export function Sheet({ open, onClose, onEscape, title, eyebrow, icon, size = "md", tone, keys, modal = true, footer, headerExtra, testId, className, bodyClassName, variant = "cream", children }: {
+  open: boolean; onClose: () => void; title: ReactNode; eyebrow?: ReactNode; icon?: ReactNode; size?: SheetSize; tone?: "butter" | "sage" | "oracle"; variant?: GuiVariant;
   keys?: string | readonly string[]; modal?: boolean; footer?: ReactNode; headerExtra?: ReactNode; testId?: string; className?: string; bodyClassName?: string; children: ReactNode;
   /** What Escape (and `keys`) do, when it isn't closing: the game's Esc Menu steps on to Settings. The ✕ and the scrim still close. */
   onEscape?: () => void;
@@ -44,10 +51,12 @@ export function Sheet({ open, onClose, onEscape, title, eyebrow, icon, size = "m
     || kept.footer !== footer || kept.children !== children)) setKept({ title, eyebrow, icon, headerExtra, footer, children });
   const shown = open ? { title, eyebrow, icon, headerExtra, footer, children } : kept;
   if (!state) return null;
-  return <div className={styles.layer} data-state={state} data-modal={modal || undefined}>
+  const flat = variant === "flat";
+  return <div className={styles.layer} data-state={state} data-modal={modal || undefined} data-variant={flat ? "flat" : undefined}>
     {modal && <div className={styles.scrim} onClick={onClose} aria-hidden="true" />}
     <section ref={ref} role="dialog" aria-modal={modal} aria-labelledby={titleId} tabIndex={-1} data-gui-dialog data-gui-overlay data-testid={testId}
-      className={cx(styles.sheet, className)} data-size={size} data-tone={tone}>
+      className={cx(styles.sheet, className)} data-size={size} data-tone={tone} data-variant={flat ? "flat" : undefined} data-gui-flat={flat ? "" : undefined}>
+      <GuiVariantContext.Provider value={variant}>
       <header className={styles.head}>
         {shown.icon && <span className={styles.headIcon} aria-hidden="true">{shown.icon}</span>}
         <div className={styles.headText}>
@@ -59,6 +68,7 @@ export function Sheet({ open, onClose, onEscape, title, eyebrow, icon, size = "m
       </header>
       <div className={cx(styles.body, bodyClassName)}>{shown.children}</div>
       {shown.footer && <footer className={styles.foot}>{shown.footer}</footer>}
+      </GuiVariantContext.Provider>
     </section>
   </div>;
 }
@@ -67,7 +77,9 @@ export function Sheet({ open, onClose, onEscape, title, eyebrow, icon, size = "m
 export function ConfirmDialog({ open, title, children, confirmLabel = "Yes", cancelLabel = "Not now", danger, busy, onConfirm, onCancel }: {
   open: boolean; title: ReactNode; children?: ReactNode; confirmLabel?: string; cancelLabel?: string; danger?: boolean; busy?: boolean; onConfirm: () => void; onCancel: () => void;
 }) {
-  return <Sheet open={open} onClose={onCancel} title={title} size="sm" footer={<>
+  // Asked from a flat menu (the bag's Drop), it is flat too.
+  const variant = useGuiVariant();
+  return <Sheet open={open} onClose={onCancel} title={title} size="sm" variant={variant} footer={<>
     <VillageButton variant="quiet" size="sm" onClick={onCancel}>{cancelLabel}</VillageButton>
     <VillageButton variant={danger ? "danger" : "primary"} size="sm" onClick={onConfirm} disabled={busy}>{busy ? "One moment…" : confirmLabel}</VillageButton>
   </>}>{children && <div className={styles.confirmText}>{children}</div>}</Sheet>;
@@ -131,9 +143,13 @@ export function Tabs<T extends string>({ tabs, value, onChange, label, keyHints,
     return () => window.removeEventListener("tsi:menu-tab", on);
   }, []);
   const onKey = (e: KeyboardEvent) => { if (e.key === "ArrowRight" || e.key === "ArrowLeft") { e.preventDefault(); stepTab(ref.current, live.current, e.key === "ArrowRight" ? 1 : -1); } };
-  return <div className={cx(styles.tabsWrap, className)}>
+  const flat = useGuiVariant() === "flat";
+  // The chosen tab's pill slides to the next one (round 2's micro animations; its own background until measured).
+  const pill = useMarker(ref, '[aria-selected="true"]', value);
+  return <div className={cx(styles.tabsWrap, className)} data-flat={flat ? "" : undefined}>
     {keyHints && <Keycap aria-hidden="true" className={styles.tabKey} data-shape="square">{keyHints[0]}</Keycap>}
-    <div ref={ref} role="tablist" aria-label={label} className={styles.tabs} data-edges={edges ?? undefined} onKeyDown={onKey}>
+    <div ref={ref} role="tablist" aria-label={label} className={styles.tabs} data-edges={edges ?? undefined} data-pill={pill ? "" : undefined} onKeyDown={onKey}>
+      {pill ? <span className={styles.tabPill} aria-hidden="true" style={{ width: pill.w, height: pill.h, transform: `translate(${pill.x}px, ${pill.y}px)` }} /> : null}
       {tabs.map(t => <button key={t.id} type="button" role="tab" data-tab={t.id} aria-selected={t.id === value} tabIndex={t.id === value ? 0 : -1} disabled={t.disabled}
         className={styles.tab} onClick={() => onChange(t.id)}>
         {t.icon && <span className={styles.tabIcon} aria-hidden="true">{t.icon}</span>}<span className={styles.tabLabel}>{t.label}</span>
@@ -142,6 +158,11 @@ export function Tabs<T extends string>({ tabs, value, onChange, label, keyHints,
     </div>
     {keyHints && <Keycap aria-hidden="true" className={styles.tabKey} data-shape="square">{keyHints[1]}</Keycap>}
   </div>;
+}
+
+/** A tab's content: when the tab changes (`id`), the new content fades in and rises a few px (round 2's micro animations). */
+export function TabPanel({ id, children, className }: { id: string; children: ReactNode; className?: string }) {
+  return <div key={id} role="tabpanel" className={cx(styles.tabPanel, className)}>{children}</div>;
 }
 
 /** Which ends of a sideways-scrolling row hide more (a pixel or two of slack). */

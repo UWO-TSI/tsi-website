@@ -2,12 +2,13 @@
 
 /**
  * The home storage chest (specs/game-ui.md §6): any wooden chest in your house opens it (E). Your bag and the chest
- * side by side; shift-click or drag a stack across, or store every material at once. Each move is the server's
- * (storage_move, once per key); a full bag or chest refuses it.
+ * side by side, white item cards in the flat UI's panel (specs/polish/flat-ui.md step 3); shift-click or drag a stack
+ * across, or store every material at once. Each move is the server's (storage_move, once per key); a full bag or chest
+ * refuses it.
  */
 import { useEffect, useMemo, useState } from "react";
-import { Archive } from "lucide-react";
-import { Button, ErrorNote, Loading, Sheet, SignInText } from "@/components/gui";
+import { SignInText } from "@/components/gui";
+import { DarkButton, FlatPanel, GhostButton, Quiet, StatusLine } from "@/components/gui/flat";
 import { isMaterial, slotCounts, sortSlots, type Slot } from "@/lib/collections/bag";
 import { AudioManager } from "@/lib/game/audio";
 import { bagWrite, loadBag, stockOf, swapSlots, useBag } from "@/lib/game/bagStore";
@@ -59,39 +60,40 @@ export function ChestSheet({ open, onClose, keys }: { open: boolean; onClose: ()
     if (key && qty) void move(key, qty, pane === "bag" ? "chest" : "bag");
   };
   const off = !view || bag.local;
-  return <Sheet open={open} onClose={onClose} title="Storage chest" icon={<Archive size={22} aria-hidden />} size="xl" keys={keys} testId="chest-sheet"
-    footer={<>
-      <span className={s.footHint}>Shift-click or drag a stack across to move it.</span>
-      {picked?.key && <Button size="sm" disabled={busy || off} onClick={() => void move(picked.key!, picked.qty ?? 1, sel!.pane === "bag" ? "chest" : "bag")}>
-        {sel!.pane === "bag" ? "Store" : "Take"} {picked.qty && picked.qty > 1 ? `${picked.qty} × ` : ""}{nameOf(picked.key)}</Button>}
-    </>}>
-    {!view ? bag.error ? <ErrorNote onRetry={() => void loadBag()}>The chest didn&apos;t open.</ErrorNote> : <Loading label="Opening the chest…" /> : <>
-      {bag.local && <p className={s.hint}><SignInText text="Sign in to keep a storage chest." /></p>}
-      {note && <p className={note.ok ? s.ok : s.bad} role="status">{note.text}</p>}
+  return <FlatPanel open={open} onClose={onClose} title="Storage chest" keys={keys} testId="chest-sheet">
+    {!view ? bag.error ? <StatusLine error>The chest didn&apos;t open. <button type="button" className={s.retry} onClick={() => void loadBag()}>Try again</button></StatusLine>
+      : <Quiet>Opening the chest…</Quiet> : <div className={s.chest}>
       <div className={s.panes}>
-        <section className={s.pane} aria-label="Your bag">
+        <section className={s.pane} aria-label="Your bag" data-pane="bag">
           <header className={s.paneHead}>
             <h3>Your bag</h3>
             <Readout used={view.used} capacity={view.capacity} label="Your bag" />
-            <Button size="sm" variant="secondary" disabled={busy || off} onClick={() => void storeAll()}>Store all materials</Button>
+            <GhostButton disabled={busy || off} onClick={() => void storeAll()}>Store all materials</GhostButton>
           </header>
-          <div className={s.pocket}>
+          <div className={s.paneGrid}>
             <Grid pane="bag" slots={slots} counts={counts} capacity={view.capacity} selected={sel?.pane === "bag" ? sel.i : null} locked={locked} label="Your bag"
               onPick={pick("bag")} onShift={off ? undefined : shift("bag")} onSwap={(a, b) => swapSlots(slots, a, b)}
               onMoveIn={d => !off && void move(d.key, d.qty, "bag")} />
           </div>
         </section>
-        <section className={s.pane} aria-label="Storage chest">
+        <section className={s.pane} aria-label="Storage chest" data-pane="chest">
           <header className={s.paneHead}>
             <h3>Storage chest</h3>
             <Readout used={view.chest_used} capacity={view.chest_capacity} label="Storage chest" />
           </header>
-          <div className={s.pocket} data-chest>
+          <div className={s.paneGrid}>
             <Grid pane="chest" slots={chest} counts={chestCounts} capacity={view.chest_capacity} selected={sel?.pane === "chest" ? sel.i : null} label="Storage chest"
               onPick={pick("chest")} onShift={off ? undefined : shift("chest")} onMoveIn={d => !off && void move(d.key, d.qty, "chest")} />
           </div>
         </section>
       </div>
-    </>}
-  </Sheet>;
+      <footer className={s.foot}>
+        {bag.local ? <span className={s.footHint}><SignInText text="Sign in to keep a storage chest." /></span>
+          : note ? <span className={s.footHint} role="status" data-error={!note.ok || undefined}>{note.text}</span>
+          : <span className={s.footHint}>Shift-click or drag a stack across to move it.</span>}
+        {picked?.key && <DarkButton disabled={busy || off} onClick={() => void move(picked.key!, picked.qty ?? 1, sel!.pane === "bag" ? "chest" : "bag")}>
+          {sel!.pane === "bag" ? "Store" : "Take"} {picked.qty && picked.qty > 1 ? `${picked.qty} × ` : ""}{nameOf(picked.key)}</DarkButton>}
+      </footer>
+    </div>}
+  </FlatPanel>;
 }

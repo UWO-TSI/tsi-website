@@ -9,12 +9,19 @@
  *
  * Categories, options and swatches come from the catalogue (lib/game/character/creatorCategories.ts). Tiles are
  * pictures, never live 3D: face parts are their atlas cells, clothes their item icons, hair a thumbnail baked once.
+ *
+ * `flat` (the member world's: the closet, the fitting room and the first creator; specs/polish/flat-ui.md round 3): the
+ * flat UI's look. One light-grey screen with the title and the close across the top, the kit's icon rail, the character
+ * on the white studio stage under the shop stage's lights, and the options in a roomy white panel with hairline
+ * sections. Same controls and behaviour. Without it (the applicant island's), the cream studio as it was.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import * as THREE from "three";
 import { RotateCcw, RotateCw, X } from "lucide-react";
 import { Button, Field, IconButton } from "@/components/gui";
+import { GuiVariantContext } from "@/components/gui/variant";
+import { DarkButton, GhostButton, RoundButton } from "@/components/gui/flat";
 import { SignInText } from "@/components/gui/SignIn";
 import { inTopDialog, useWorldDialog } from "@/lib/game/useWorldDialog";
 import { mentionsSignIn } from "@/lib/game/signIn";
@@ -41,12 +48,14 @@ export interface CreatorProps {
   onClose?: () => void;
   /** The wardrobe's open and close motion (WardrobeSheet keeps it mounted while it closes); without it, no motion. */
   presence?: "open" | "closing";
+  /** The flat UI's look (the member world's creator and wardrobe); the default is the cream studio (the applicant island's). */
+  flat?: boolean;
 }
 
 const STARTERS: ReadonlySet<string> = new Set(STARTER_PARTS);
 const stay = () => {};
 
-export default function CharacterCreator({ initial, mode = "create", title, askName, owned = STARTERS, onShop, onDone, onClose, presence }: CreatorProps) {
+export default function CharacterCreator({ initial, mode = "create", title, askName, owned = STARTERS, onShop, onDone, onClose, presence, flat = false }: CreatorProps) {
   const [graphics] = useGraphicsSettings();
   // A dialog (lib/game/useWorldDialog): the world's keys hold still under it (G no longer opens the emotes over it); Escape
   // closes the wardrobe, never the first-login creator. Closing, it lets go at once: focus goes back, the world moves.
@@ -63,7 +72,9 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
   const naming = useNameCheck(askName);
   useEffect(() => { root.current?.querySelector<HTMLButtonElement>("[role=tab][aria-selected=true]")?.focus(); }, [root]);
 
+  const [swap, setSwap] = useState(false);
   const openCat = (c: Category, focus = false) => {
+    if (c.id !== catId) setSwap(v => !v);
     setCatId(c.id);
     if (FRAMES[c.framing].yaw !== FRAMES[cat.framing].yaw || c.framing !== cat.framing) yaw.current.target = FRAMES[c.framing].yaw;
     if (focus) root.current?.querySelector<HTMLElement>(`[data-cat="${c.id}"]`)?.focus();
@@ -89,35 +100,54 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
   const turnBy = (rad: number) => { yaw.current.target += rad; };
 
 
-  return <section ref={root} className={styles.creator} role="dialog" aria-modal="true" aria-labelledby="creator-title" data-mode={mode} data-state={presence}>
+  const heading = title ?? (mode === "wardrobe" ? "Your closet" : "Make your character");
+  const turnLeft = () => turnBy(-Math.PI / 4), turnRight = () => turnBy(Math.PI / 4);
+  const surprise = () => setLook(randomLook(Math.random, owned)), skip = () => void confirm(randomLook(Math.random, owned)), done = () => void confirm(look);
+  const doneLabel = mode === "wardrobe" ? "Wear this" : "That's me";
+
+  return <section ref={root} className={styles.creator} role="dialog" aria-modal="true" aria-labelledby="creator-title" data-mode={mode} data-state={presence}
+    data-flat={flat || undefined} data-gui-flat={flat ? "" : undefined}>
+    <GuiVariantContext.Provider value={flat ? "flat" : "cream"}>
+    {/* The flat look's top: the title in the middle, the close at the end (the cream look has them on the portrait and the panel). */}
+    {flat && <header className={styles.top}>
+      <span />
+      <h1 id="creator-title" className={styles.topTitle}>{heading}</h1>
+      {onClose ? <button type="button" className={styles.topClose} aria-label="Close" title="Close" onClick={onClose}><X size={18} aria-hidden /></button> : <span />}
+    </header>}
     <CategoryRail cats={cats} cat={cat} onOpen={openCat} />
 
     <div className={styles.portrait} data-framing={cat.framing}
       onPointerDown={e => { if (e.button !== 0 || (e.target as Element).closest("button")) return; drag.current = { x: e.clientX, id: e.pointerId }; e.currentTarget.setPointerCapture(e.pointerId); }}
       onPointerMove={e => { const d = drag.current; if (!d || d.id !== e.pointerId) return; const dx = e.clientX - d.x; d.x = e.clientX; yaw.current.target += dx * 0.012; yaw.current.now = yaw.current.target; }}
       onPointerUp={e => { if (drag.current?.id === e.pointerId) drag.current = null; }} onPointerCancel={() => { drag.current = null; }}>
-      <h1 id="creator-title" className={styles.heading}>{title ?? (mode === "wardrobe" ? "Your closet" : "Make your character")}</h1>
+      {!flat && <h1 id="creator-title" className={styles.heading}>{heading}</h1>}
       <Canvas className={styles.canvas} gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }} dpr={tierDpr(graphics.liteMode, [1, 2])} camera={{ fov: FRAMES.face.fov, near: 0.05, far: 30 }}
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace;
           if (process.env.NODE_ENV !== "production") (window as unknown as { __creatorGl?: THREE.WebGLRenderer }).__creatorGl = gl;
         }}>
-        <Portrait look={look} framing={cat.framing} yaw={yaw} />
+        <Portrait look={look} framing={cat.framing} yaw={yaw} studio={flat ? "white" : "warm"} />
         <ThumbBaker />
       </Canvas>
       <p className={styles.dragHint} aria-hidden="true">Drag to turn</p>
       <div className={styles.turn}>
-        <IconButton label="Turn left" onClick={() => turnBy(-Math.PI / 4)}><RotateCcw size={20} strokeWidth={2.4} /></IconButton>
-        <IconButton label="Turn right" onClick={() => turnBy(Math.PI / 4)}><RotateCw size={20} strokeWidth={2.4} /></IconButton>
+        {flat ? <>
+          <RoundButton label="Turn left" onClick={turnLeft}><RotateCcw size={17} strokeWidth={2.4} aria-hidden /></RoundButton>
+          <RoundButton label="Turn right" onClick={turnRight}><RotateCw size={17} strokeWidth={2.4} aria-hidden /></RoundButton>
+        </> : <>
+          <IconButton label="Turn left" onClick={turnLeft}><RotateCcw size={20} strokeWidth={2.4} /></IconButton>
+          <IconButton label="Turn right" onClick={turnRight}><RotateCw size={20} strokeWidth={2.4} /></IconButton>
+        </>}
       </div>
     </div>
 
     <div className={styles.panel} role="tabpanel" id="creator-panel" aria-labelledby={`creator-tab-${cat.id}`}>
       <header className={styles.panelHead}>
         <h2 className={styles.title}>{cat.label}</h2>
-        {onClose && <IconButton label="Close" onClick={onClose} className={styles.close}><X size={20} strokeWidth={2.6} /></IconButton>}
+        {onClose && !flat && <IconButton label="Close" onClick={onClose} className={styles.close}><X size={20} strokeWidth={2.6} /></IconButton>}
       </header>
-      <div className={styles.body}>
+      {/* A new category's options fade in (flat): the two names restart the animation without remounting the options. */}
+      <div className={styles.body} data-swap={flat ? (swap ? "b" : "a") : undefined}>
         <CreatorOptions key={mode} cat={cat} look={look} setLook={setLook} mode={mode} owned={owned} onShop={onShop} />
       </div>
       <footer className={styles.foot}>
@@ -125,12 +155,17 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
           onChange={e => naming.type(e.target.value)} error={naming.nameNote && !naming.nameNote.ok && !mentionsSignIn(naming.nameNote.text) ? naming.nameNote.text : undefined} className={styles.name} />}
         {askName && naming.nameNote?.ok && <p className={styles.nameOk} role="status">{naming.nameNote.text}</p>}
         {askName && naming.nameNote && !naming.nameNote.ok && mentionsSignIn(naming.nameNote.text) && <p className={styles.nameOk} role="status"><SignInText text={naming.nameNote.text} /></p>}
-        <div className={styles.actions}>
-          {mode === "create" && <Button variant="quiet" onClick={() => setLook(randomLook(Math.random, owned))}>Surprise me</Button>}
-          {mode === "create" && <Button variant="quiet" disabled={saving} onClick={() => void confirm(randomLook(Math.random, owned))}>Skip</Button>}
-          <Button disabled={saving} onClick={() => void confirm(look)}>{mode === "wardrobe" ? "Wear this" : "That's me"}</Button>
-        </div>
+        {flat ? <div className={styles.actions}>
+          <DarkButton disabled={saving} onClick={done}>{doneLabel}</DarkButton>
+          {mode === "create" && <GhostButton onClick={surprise}>Surprise me</GhostButton>}
+          {mode === "create" && <GhostButton disabled={saving} onClick={skip}>Skip</GhostButton>}
+        </div> : <div className={styles.actions}>
+          {mode === "create" && <Button variant="quiet" onClick={surprise}>Surprise me</Button>}
+          {mode === "create" && <Button variant="quiet" disabled={saving} onClick={skip}>Skip</Button>}
+          <Button disabled={saving} onClick={done}>{doneLabel}</Button>
+        </div>}
       </footer>
     </div>
+    </GuiVariantContext.Provider>
   </section>;
 }

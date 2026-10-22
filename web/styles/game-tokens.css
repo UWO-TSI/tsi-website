@@ -256,3 +256,105 @@
 @media (prefers-reduced-motion: reduce) {
   .gui *, .gui *::before, .gui *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
+
+/* ── Flat menus (specs/polish/flat-ui.md step 7): inside a flat sheet or panel ([data-gui-flat], set by Sheet's flat
+   variant and FlatPanel) the cream tokens map onto the flat palette, so a menu's own content follows: paper becomes the
+   light grey and white, ink becomes black, the sage action the dark pill, a butter selection white with an ink ring.
+   Status colours and the rarity palette stay. ── */
+[data-gui-flat] {
+  --gui-page: #f1f1f1;
+  --gui-paper: #f1f1f1;
+  --gui-paper-hi: #ffffff;
+  --gui-paper-warm: #f7f7f7;
+  --gui-paper-deep: #e6e6e6;
+  --gui-paper-edge: #e0e0e0;
+  --gui-paper-line: #d0d0d0;
+  --gui-butter: #ffffff;
+  --gui-highlight: #151515;
+  --gui-stripe-a: #ffffff;
+  --gui-stripe-b: #ffffff;
+  --gui-ink-strong: #151515;
+  --gui-ink: #222222;
+  --gui-ink-2: #5f5f5f;
+  --gui-muted: #6b6b6b;
+  --gui-taupe: #8a8a8a;
+  --gui-sage: #2a2a2a;
+  --gui-sage-deep: #000000;
+  --gui-sage-soft: #ececec;
+  --gui-wood: #2a2a2a;
+  --gui-wood-light: #8a8a8a;
+  --gui-bark: #151515;
+  --gui-focus: #151515;
+  --gui-scrim: rgb(18 18 18 / 0.42);
+  --gui-grain: none;
+  --gui-confetti: none;
+  --gui-r-paper: 22px;
+  --gui-r-card: 16px;
+  --gui-r-blob: 14px;
+  --gui-r-tag: 8px;
+  --gui-shadow-sm: none;
+  --gui-shadow-md: 0 8px 22px rgb(0 0 0 / 0.07);
+  --gui-shadow-lg: 0 24px 80px rgb(0 0 0 / 0.28);
+  --gui-shadow-press: none;
+  --gui-shadow-inset: none;
+  --app-surface: #f1f1f1;
+  --app-raised: #ffffff;
+  --app-soft: #f7f7f7;
+  --app-ink: #222222;
+  --app-muted: #6b6b6b;
+  --app-line: #e0e0e0;
+  --app-link: #151515;
+  --app-focus: #151515;
+  --app-accent-ink: #151515;
+  --gui-kit-primary: #2a2a2a;
+  --gui-kit-primary-ink: #ffffff;
+  --gui-kit-primary-hover: #000000;
+  --gui-kit-butter: #ffffff;
+  --gui-kit-keycap: #151515;
+}
+/* Paper things keep their paper inside a flat menu (David: mail and the notice board): the cream tokens again. */
+[data-gui-flat] [data-gui-paper] {
+  --gui-page: #f7f1da;
+  --gui-paper: #fffbe7;
+  --gui-paper-hi: #fffff7;
+  --gui-paper-warm: #f8f4e8;
+  --gui-paper-deep: #eee9ca;
+  --gui-paper-edge: #e3d9b8;
+  --gui-paper-line: #d3c39c;
+  --gui-butter: #ffeea0;
+  --gui-highlight: #ffcc00;
+  --gui-stripe-a: #f6d32d;
+  --gui-stripe-b: #f7e43f;
+  --gui-ink-strong: #3a2e22;
+  --gui-ink: #4f3f31;
+  --gui-ink-2: #6b5843;
+  --gui-muted: #726450;
+  --gui-taupe: #8a7b66;
+  --gui-sage: #426b5b;
+  --gui-sage-deep: #2f5143;
+  --gui-sage-soft: #dfe9d9;
+  --gui-wood: #946429;
+  --gui-wood-light: #bb813f;
+  --gui-bark: #725c4e;
+  --gui-focus: #a8722f;
+  --gui-r-card: 18px 22px 17px 21px / 20px 17px 22px 18px;
+  --gui-r-blob: 46% 50% 44% 48% / 54% 50% 46% 52%;
+  --gui-r-tag: 40% 43% 38% 40% / 45% 42% 45% 43%;
+  --gui-shadow-sm: 0 2px 0 rgb(114 92 78 / 0.14);
+  --gui-shadow-md: 0 4px 0 rgb(114 92 78 / 0.16), 0 10px 24px rgb(79 63 49 / 0.1);
+  --app-surface: #fffbe7;
+  --app-raised: #fffff7;
+  --app-soft: #f8f4e8;
+  --app-ink: #4f3f31;
+  --app-muted: #726450;
+  --app-line: #d3c39c;
+  --app-link: #426b5b;
+  --app-focus: #a8722f;
+  --app-accent-ink: #3a2e22;
+  --gui-kit-primary: #426b5b;
+  --gui-kit-primary-ink: #fffbe7;
+  --gui-kit-primary-hover: #4b7a68;
+  --gui-kit-butter: #ffeea0;
+  --gui-kit-keycap: #725c4e;
+  color: var(--gui-ink);
+}
