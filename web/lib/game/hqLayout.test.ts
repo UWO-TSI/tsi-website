@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  HQ, HQ_CAMERA, HQ_FLOOR_HEIGHT as F, HQ_SLAB, HQ_SPAWN, HQ_WREN, createHqWalker, hidesYou, hqLayoutJson, onUpper, partBoxes, stairWell, walkable,
+  HQ, HQ_CAMERA, HQ_FLOOR_HEIGHT as F, HQ_ROOM, HQ_SLAB, HQ_SPAWN, HQ_WREN, createHqWalker, hidesYou, hqLayoutJson, onUpper, partBoxes, stairWell, walkable,
   type HqOption, type HqWalker,
 } from "./hqLayout";
 import { KEEPER_POSTS } from "./keepers";
@@ -38,6 +38,11 @@ const [BRIDGE, LEFT, RIGHT] = [0, 1, 2];
 describe("HQ's room (the gallery, two tall storeys)", () => {
   const o = HQ;
 
+  it("is a little bigger than phase 3's 20 x 16 (David, 2026-10-22: \"the building can be built a little bigger for more space\")", () => {
+    expect(2 * HQ_ROOM.halfW).toBeGreaterThanOrEqual(24);
+    expect(2 * HQ_ROOM.halfD).toBeGreaterThanOrEqual(18);
+  });
+
   it("is two storeys well above the old 3.4 each, the aquarium the full height of the room, on the back wall straight ahead", () => {
     expect(F).toBeGreaterThanOrEqual(4.4);
     expect(F).toBeLessThanOrEqual(4.8);
@@ -45,7 +50,7 @@ describe("HQ's room (the gallery, two tall storeys)", () => {
     expect(a.facing).toBe("-z");
     expect(a.y1).toBeGreaterThan(2 * F - 0.3);
     expect(a.y0).toBeLessThan(0.3);
-    expect(a.z1).toBe(8);
+    expect(a.z1).toBe(HQ_ROOM.halfD);
     expect(a.x0 + a.x1).toBeCloseTo(0);              // centred on the door
     expect(a.x1 - a.x0).toBeGreaterThanOrEqual(10);  // a whole wall of it
   });
@@ -53,12 +58,12 @@ describe("HQ's room (the gallery, two tall storeys)", () => {
   it("wraps the hall in a U: a bridge over the entrance and an arm down each side, the hall open to the tank", () => {
     expect(o.upper).toHaveLength(3);
     const [bridge, left, right] = o.upper;
-    expect(bridge.z0).toBe(-8);
+    expect(bridge.z0).toBe(-HQ_ROOM.halfD);
     expect(HQ_SPAWN[1]).toBeGreaterThan(bridge.z0);
     expect(HQ_SPAWN[1]).toBeLessThan(bridge.z1);                 // you come in under the bridge
     expect(left.x0).toBeGreaterThan(0);
     expect(right.x1).toBeLessThan(0);
-    for (const arm of [left, right]) { expect(arm.z0).toBe(bridge.z1); expect(arm.z1).toBe(8); }
+    for (const arm of [left, right]) { expect(arm.z0).toBe(bridge.z1); expect(arm.z1).toBe(HQ_ROOM.halfD); }
     expect(left.x0).toBeGreaterThanOrEqual(o.aquarium.x1);       // the tank fills the hall's back between the arms
     expect(right.x1).toBeLessThanOrEqual(o.aquarium.x0);
   });
@@ -94,7 +99,7 @@ describe("HQ's room (the gallery, two tall storeys)", () => {
     expect(run).toBeGreaterThanOrEqual(0.28);
     expect(Math.atan2(F, Math.abs(s.head - s.foot)) * 180 / Math.PI).toBeLessThan(37);
     // under the right arm, against the right wall
-    expect(s.x0).toBe(-10);
+    expect(s.x0).toBe(-HQ_ROOM.halfW);
     expect(s.x1).toBeLessThanOrEqual(o.upper[RIGHT].x1);
   });
 
@@ -115,7 +120,7 @@ describe("HQ's room (the gallery, two tall storeys)", () => {
     expect(bx).toBeLessThan(o.upper[RIGHT].x1);
     expect(bz).toBeGreaterThan(o.upper[RIGHT].z0 - 1);
     const s = o.stations.find(s => s.id === "board")!;
-    expect(Math.hypot(s.pos[0] - -8.9, s.pos[1] - o.stair.foot)).toBeLessThan(2.5);   // by the stair's foot
+    expect(Math.hypot(s.pos[0] - (o.stair.x0 + o.stair.x1) / 2, s.pos[1] - o.stair.foot)).toBeLessThan(2.5);   // by the stair's foot
   });
 
   it("never lets you off the upper floor's edge or into the stair's well, and never under or beside the flight", () => {
@@ -125,8 +130,8 @@ describe("HQ's room (the gallery, two tall storeys)", () => {
     expect(up.w.zone).toBe("upper");
     expect(onUpper(o, at[0], at[1])).toBe(true);
     // into the well from the arm
-    at = walkTo(up.w, at, [-7.0, 3.0]);
-    at = walkTo(up.w, at, [-9.0, 3.0]);
+    at = walkTo(up.w, at, [-7.4, 3.0]);
+    at = walkTo(up.w, at, [-11.5, 3.0]);
     expect(up.w.zone).toBe("upper");
     expect(at[0]).toBeGreaterThan(o.stair.x1);
     // downstairs, alongside the flight past its foot
@@ -141,6 +146,37 @@ describe("HQ's room (the gallery, two tall storeys)", () => {
     expect(gap).toBeGreaterThanOrEqual(0);
     expect(gap).toBeLessThan(1.5);
     expect(lounge.facing).toBe("+z");
+  });
+
+  it("makes the hall a real lounge: a big sectional, beanbags by the glass, a bigger rug (David, 2026-10-22)", () => {
+    const lounge = o.fixtures.find(f => f.id === "ground-lounge")!, [rug, ...rest] = lounge.blocks;
+    expect(rug.size[0] * rug.size[2]).toBeGreaterThan(7.4 * 4.6 * 1.6);         // phase 3's rug was 7.4 x 4.6
+    const seats = rest.filter(k => k.finish === "velvet");
+    expect(seats.length).toBeGreaterThanOrEqual(3);                              // the back run and its two returns
+    expect(seats.reduce((n, k) => n + Math.max(k.size[0], k.size[2]), 0)).toBeGreaterThan(10);
+    const bags = o.fixtures.find(f => f.id === "lounge-beanbags")!.blocks;
+    expect(bags.length).toBeGreaterThanOrEqual(4);
+    for (const k of bags) { expect(k.at[2]).toBeGreaterThan(seats[0].at[2]); expect(k.at[2]).toBeLessThan(o.aquarium.z0); }
+  });
+
+  it("puts the study on the left arm upstairs: the long table, monitors and chairs, shelves and a whiteboard", () => {
+    const table = o.fixtures.find(f => f.id === "study-table")!;
+    expect(table.level).toBe(1);
+    expect(table.part).toBe(LEFT);
+    expect(Math.max(table.blocks[0].size[0], table.blocks[0].size[2])).toBeGreaterThanOrEqual(5);
+    expect(table.blocks.filter(k => k.finish === "screen").length).toBeGreaterThanOrEqual(6);
+    expect(table.blocks.filter(k => k.finish === "leather").length).toBeGreaterThanOrEqual(6);
+    for (const id of ["study-shelves", "whiteboard"]) expect(o.fixtures.find(f => f.id === id)!.part).toBe(LEFT);
+    expect(walkable(o, 1, ...path(o, "upper").at(-1)!)).toBe(true);
+  });
+
+  it("has big modern windows on both storeys: wide panes, floor to ceiling where the wall is free", () => {
+    for (const w of o.windows) expect(w.z1 - w.z0).toBeGreaterThanOrEqual(2.3);
+    for (const w of o.frontWindows) expect(w.x1 - w.x0).toBeGreaterThanOrEqual(3.8);
+    const tall = [...o.windows, ...o.frontWindows].filter(w => w.y1 - w.y0 >= 3.8);
+    expect(tall.length).toBeGreaterThanOrEqual(8);
+    expect(tall.some(w => w.y0 < 0.3)).toBe(true);
+    expect(tall.some(w => w.y0 > F && w.y0 < F + 0.3)).toBe(true);
   });
 
   it("puts the big lounge on the bridge under the oval ceiling, facing the tank head on", () => {
@@ -161,8 +197,8 @@ describe("HQ's room (the gallery, two tall storeys)", () => {
       const cloth = f.blocks.find(b => b.finish === "banner")!;
       expect(f.level).toBe(1);
       expect(cloth.size[0]).toBeGreaterThan(cloth.size[2]);                   // its face across x: toward the door
-      expect(Math.abs(cloth.at[0])).toBeLessThan(5.5);                         // over the hall's edge
-      expect(Math.abs(cloth.at[0])).toBeGreaterThan(3.5);
+      expect(Math.abs(cloth.at[0])).toBeLessThan(o.upper[LEFT].x0);           // over the hall's edge
+      expect(Math.abs(cloth.at[0])).toBeGreaterThan(o.upper[LEFT].x0 - 2);
       expect(f.part).toBe(cloth.at[0] > 0 ? LEFT : RIGHT);                     // cut away with its arm
     }
     for (const side of [1, -1]) {
@@ -172,14 +208,24 @@ describe("HQ's room (the gallery, two tall storeys)", () => {
     }
   });
 
-  it("has the two locked admin doors upstairs, at the end of the left arm", () => {
+  it("has one locked admin door, on the ground floor under the stair's high end (David, 2026-10-22: \"make it 1, and place it like under the stairs\")", () => {
     const admin = o.stations.filter(s => s.action === "admin");
-    expect(admin.length).toBe(2);
-    for (const s of admin) {
-      expect(s.level).toBe(1);
-      expect(s.pos[0]).toBeGreaterThan(o.upper[LEFT].x0);
-    }
-    expect(o.fixtures.find(f => f.id === "admin-doors")!.part).toBe(LEFT);
+    expect(admin.length).toBe(1);
+    expect(admin[0].level).toBe(0);
+    const door = o.fixtures.filter(f => f.blocks.some(k => k.finish === "door"));
+    expect(door.length).toBe(1);
+    const k = door[0].blocks[0], s = o.stair;
+    expect(door[0].level).toBe(0);
+    expect(k.at[0]).toBeCloseTo(s.x1);                                       // in the flight's open side
+    expect(k.at[2]).toBeGreaterThan(s.foot);
+    expect(k.at[2]).toBeLessThan(s.head);
+    // headroom: the flight over the door's near edge is well above its top
+    const near = k.at[2] - k.size[2] / 2;
+    expect(F * (near - s.foot) / (s.head - s.foot) - 0.35).toBeGreaterThan(k.size[1]);
+    // you stand before it, never behind it under the flight
+    expect(walkable(o, 0, admin[0].pos[0], admin[0].pos[1])).toBe(true);
+    expect(walkable(o, 0, (s.x0 + s.x1) / 2, Math.min(o.upper[RIGHT].z1, s.head + 1.0))).toBe(false);
+    expect(Math.hypot(admin[0].pos[0] - k.at[0], admin[0].pos[1] - k.at[2])).toBeLessThan(admin[0].range);
   });
 
   it("cuts away the part of the upper floor you're under or that stands between the walking camera and you, and only that, without flicker", () => {
@@ -187,23 +233,23 @@ describe("HQ's room (the gallery, two tall storeys)", () => {
     const w = createHqWalker(o);
     expect(w.shown).toEqual([false, true, true]);
     // Into the hall the bridge stays away while the camera's over it, looking down past its rail at you.
-    let at = walkTo(w, HQ_SPAWN, [0, -3.0]);
-    at = walkTo(w, at, [0, 0.9]);
+    let at = walkTo(w, HQ_SPAWN, [0, -3.4]);
+    at = walkTo(w, at, [0, 0.5]);
     expect(w.shown[BRIDGE]).toBe(false);
     // At the back of the hall, before the tank, the whole gallery shows.
-    at = walkTo(w, at, [4.6, 0.9]);
-    at = walkTo(w, at, [4.6, 5.9]);
-    at = walkTo(w, at, [0, 5.9]);
+    at = walkTo(w, at, [5.8, 0.5]);
+    at = walkTo(w, at, [5.8, 6.95]);
+    at = walkTo(w, at, [0, 6.95]);
     expect(w.shown).toEqual([true, true, true]);
     // Under the left arm's edge by the clock: it goes, the rest stay.
-    at = walkTo(w, at, [4.6, 5.9]);
-    at = walkTo(w, at, [5.85, 5.3]);
+    at = walkTo(w, at, [5.8, 6.95]);
+    at = walkTo(w, at, [7.0, 6.4]);
     expect(w.shown).toEqual([true, false, true]);
     // Stepping back out a little doesn't bring it back (hysteresis)...
-    at = walkTo(w, at, [5.3, 5.0]);
+    at = walkTo(w, at, [6.4, 6.6]);
     expect(w.shown[LEFT]).toBe(false);
     // ...stepping clear does.
-    walkTo(w, at, [3.0, 5.0]);
+    walkTo(w, at, [3.5, 6.6]);
     expect(w.shown).toEqual([true, true, true]);
   });
 
@@ -215,25 +261,25 @@ describe("HQ's room (the gallery, two tall storeys)", () => {
 
   it("cuts away an arm's banners when they hang between the camera and you in the hall", () => {
     const w = createHqWalker(o);
-    let at = walkTo(w, HQ_SPAWN, [0, -3.0]);
-    at = walkTo(w, at, [0, 0.9]);
-    at = walkTo(w, at, [4.6, 0.9]);
-    // Under the banner line at x 4.6, two metres past a banner: it would hang right in front of you.
-    walkTo(w, at, [4.6, 4.0]);
+    let at = walkTo(w, HQ_SPAWN, [0, -3.4]);
+    at = walkTo(w, at, [0, 0.5]);
+    at = walkTo(w, at, [5.6, 0.5]);
+    // Under the banner line at x 5.6, two metres past a banner: it would hang right in front of you.
+    walkTo(w, at, [5.6, 3.8]);
     expect(w.shown[LEFT]).toBe(false);
     const boxes = partBoxes(o)[LEFT];
-    expect(hidesYou(boxes, 4.6, 4.0, 0)).toBe(true);
-    expect(hidesYou(boxes, 0, 4.0, 0)).toBe(false);
+    expect(hidesYou(boxes, 5.6, 3.8, 0)).toBe(true);
+    expect(hidesYou(boxes, 0, 3.8, 0)).toBe(false);
   });
 
-  it("cuts the bridge away while you start up the stair and brings it back by the top, the well never in the way", () => {
+  it("cuts the right arm away while you start up the stair under it and brings it back by the top, the well never in the way", () => {
     const w = createHqWalker(o);
     let at: [number, number] = [...HQ_SPAWN];
     for (const p of path(o, "to-stair")) at = walkTo(w, at, p);
-    at = walkTo(w, at, [-8.9, 0.6]);
+    at = walkTo(w, at, [-10.9, 1.2]);
     expect(w.zone).toBe("stair");
-    expect(w.shown[BRIDGE]).toBe(false);
-    at = walkTo(w, at, [-8.9, 6.0]);
+    expect(w.shown[RIGHT]).toBe(false);
+    at = walkTo(w, at, [-10.9, 6.6]);
     expect(w.zone).toBe("stair");
     expect(w.shown).toEqual([true, true, true]);
     // the well over the flight is open: nothing of the right arm there

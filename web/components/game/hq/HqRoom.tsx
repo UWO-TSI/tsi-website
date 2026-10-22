@@ -32,10 +32,20 @@ const GROUND = `${DIR}ground.glb`, UPPER = `${DIR}upper.glb`, CEILING = `${DIR}c
 const DEV = process.env.NODE_ENV !== "production";
 
 /**
- * The room's own light field for reflections and fill (the island's sky isn't indoors): a warm dim ceiling, the
- * plaster walls, the walnut floor's bounce. Darker than the shop's: HQ is lit by its lamps.
+ * The room's own light field for reflections and fill (the island's sky isn't indoors): the dark ceiling and its oval
+ * lights overhead, the lit plaster walls round the horizon, the walnut floor's bounce below, and what shines in the
+ * room: the big windows on both side walls, the lamps in the corners, the aquarium's blue straight ahead (+z). Polished
+ * marble, satin walnut, leather, chrome and glass reflect these (David, 2026-10-22: "make the textures of things more
+ * accurate like how they interact with the light"). Darker than the shop's: HQ is lit by its lamps.
  */
-const HQ_ENV: EnvPhaseSpec = { skyTop: "#e9dccb", skyBottom: "#b9a58e", ground: "#6e4b34", sun: "#ffdcae", intensity: 0.42, sunElev: 0.85, sunAzimuth: 90 };
+const HQ_ENV: EnvPhaseSpec = {
+  skyTop: "#6e5f50", skyBottom: "#a8937c", ground: "#5e3f2b", sun: "#ffe2b8", intensity: 0.5, sunElev: 0.8, sunAzimuth: 270,
+  glows: [
+    { azimuth: 0, elev: 0.2, color: "#eef3fb", r: 8 }, { azimuth: 180, elev: 0.2, color: "#eef3fb", r: 8 },
+    { azimuth: 90, elev: 0.25, color: "#5fcaf2", r: 9 },
+    ...[45, 135, 225, 315].map(azimuth => ({ azimuth, elev: 0.08, color: "#ffc98a", r: 4 })),
+  ],
+};
 
 export function preloadHqRoom() {
   for (const url of [GROUND, UPPER, CEILING]) useGLTF.preload(url);
@@ -77,8 +87,8 @@ const walkOn = (level: 0 | 1) => (e: ThreeEvent<MouseEvent>) => {
   AudioManager.playSFX("click");
 };
 
-/** The room's reflected fill follows the time of day too: at night most of it goes, and the lamps carry the room. */
-function envForDay(scene: THREE.Scene, day: number) { scene.environmentIntensity = HQ_ENV.intensity * (0.3 + 0.7 * day); }
+/** The room's reflected fill follows the time of day too: at night half of it goes, and the lamps carry the room. */
+function envForDay(scene: THREE.Scene, day: number) { scene.environmentIntensity = HQ_ENV.intensity * (0.5 + 0.5 * day); }
 /** The upper floor's parts in its model (hq_upper_0..2), in the layout's order. */
 function upperParts(model: THREE.Object3D): THREE.Object3D[] {
   const out: THREE.Object3D[] = [];

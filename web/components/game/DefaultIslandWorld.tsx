@@ -704,7 +704,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const [sceneShown, setSceneShown] = useState(0);
   const onSceneReady = useCallback(() => { setReady(true); setFading(false); tripSceneReady(); }, []);
   const [near, setNear] = useState<Near>(null);
-  // HQ's stations answer by what they do (lib/game/hqLayout.ts: the two admin doors share theirs).
+  // HQ's stations answer by what they do (lib/game/hqLayout.ts).
   const hqStation = useCallback((s: InteriorStation | null) => setNear((s?.action as Near) ?? null), []);
   // On a bench or in bed the seat's prompt stands you up (world audit item 17).
   const [seated, setSeated] = useState(false);

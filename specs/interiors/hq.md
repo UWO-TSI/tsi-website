@@ -353,3 +353,15 @@ the walking camera (the hall, the drop from the bridge), day and night where bot
 
 **Not done:** the banners and the plaque stay blank until David sends them; other players upstairs still draw at the
 ground floor's height (the network sends no height).
+
+
+## Phase 4: David's review of phase 3 (2026-10-22): redo
+
+David, verbatim:
+
+> "looks good for a v1, but make the textures of things more accurate like how they interact with the light. I also think the building can be built a little bigger for more space, make it more loungy, like utilize the first floor space infront of the fishtank to use for lounging, big cozy sofa and bean bag with bigger rug, second floor can utilize space better by adding like study fixtures on the left side, I want big clear windows like in modern appartments and not the curtain with the + kinda window, and add like long table with monitor and chairs and stuff, add more plants, and improve quality of these models"
+
+> "more lightings, lightsings should fade a little lighter and more light fixures so no dark corners at night"
+
+> "why is there 2 admin doors, make it 1, and place it like under the stairs"
+

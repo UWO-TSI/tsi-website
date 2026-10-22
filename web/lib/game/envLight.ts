@@ -24,6 +24,8 @@ export interface EnvPhaseSpec {
   sunElev: number; // 0..1, fraction of height from horizon
   /** Degrees, 0 = +x, 90 = +z (lookPreset sunAngles): puts the blob where the key light is, so glass and metal reflect the sun on the right side. Absent = the painted default. */
   sunAzimuth?: number;
+  /** A room's own bright things for its reflections (HQ: its windows, lamps and the aquarium), blobs like the sun's. */
+  glows?: { azimuth: number; elev: number; color: string; r?: number }[];
 }
 
 const environments = new WeakMap<THREE.Scene, {
@@ -53,17 +55,19 @@ function paintEquirect(spec: EnvPhaseSpec): HTMLCanvasElement {
   ctx.fillStyle = gnd;
   ctx.fillRect(0, h / 2, w, h / 2);
   // sun blob: hot core + warm halo, drawn again one width over so it wraps the seam
-  const sx = spec.sunAzimuth === undefined ? w * 0.3 : w * sunU(spec.sunAzimuth);
-  const sy = h / 2 - spec.sunElev * (h / 2);
+  const blob = (sx: number, sy: number, color: string, r: number) => {
+    for (const x of [sx - w, sx, sx + w]) {
+      const halo = ctx.createRadialGradient(x, sy, 0, x, sy, r);
+      halo.addColorStop(0, color);
+      halo.addColorStop(0.35, color);
+      halo.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = halo;
+      ctx.fillRect(x - r - 1, sy - r - 1, 2 * r + 2, 2 * r + 2);
+    }
+  };
   ctx.globalAlpha = 0.9;
-  for (const x of [sx - w, sx, sx + w]) {
-    const halo = ctx.createRadialGradient(x, sy, 0, x, sy, 7);
-    halo.addColorStop(0, spec.sun);
-    halo.addColorStop(0.35, spec.sun + "");
-    halo.addColorStop(1, "rgba(255,255,255,0)");
-    ctx.fillStyle = halo;
-    ctx.fillRect(x - 8, sy - 8, 16, 16);
-  }
+  blob(spec.sunAzimuth === undefined ? w * 0.3 : w * sunU(spec.sunAzimuth), h / 2 - spec.sunElev * (h / 2), spec.sun, 7);
+  for (const g of spec.glows ?? []) blob(w * sunU(g.azimuth), h / 2 - g.elev * (h / 2), g.color, g.r ?? 5);
   ctx.globalAlpha = 1;
   return cv;
 }

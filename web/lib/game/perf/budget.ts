@@ -205,10 +205,12 @@ export const ASSET_EXCEPTIONS: Record<string, Partial<AssetBudget> & { why: stri
   // The shop is two floors (David asked for it bigger, specs/interiors/shop.md): each floor is its own room model.
   "game/interiors/shop/ground.glb": { triangles: 17_088, why: "the shop's approved ground floor, one floor of a two-floor room: 2.70 ms high at the shop's perf check" },
   "game/interiors/shop/mezz.glb": { triangles: 18_244, why: "the shop's furnished mezzanine (the merch level), the second floor: 2.70 ms high at the shop's perf check" },
-  // HQ is two tall storeys and 20 x 16 (specs/interiors/hq.md, row 316; layout B, the gallery), nearly three times the shop's floor: each
-  // storey is its own model.
-  "game/interiors/hq/ground.glb": { triangles: 27_868, why: "HQ's ground floor: the walls both storeys high (9.2), the entry, the hall's lounge, the floor under both arms, the library wall (about 5.8k of books)" },
-  "game/interiors/hq/upper.glb": { triangles: 17_488, primitives: 28, why: "HQ's upper floor in three parts (the bridge's big lounge, the left arm with the admin doors, the right arm), each cut away on its own: a part's materials draw once per part" },
+  // HQ is two tall storeys, 24 x 18 since phase 4 (specs/interiors/hq.md, row 316; layout B, the gallery; David,
+  // 2026-10-22: "the building can be built a little bigger"), about three and a half times the shop's floor: each storey
+  // is its own model. Phase 4 rose on David's notes (the sectional, beanbags, the study's six monitors and chairs, more
+  // plants and lamps, rounder cushions) in a room 35% bigger: hq perf check, specs/evidence/hq-interior/phase4/.
+  "game/interiors/hq/ground.glb": { triangles: 36_776, why: "HQ's ground floor: the walls both storeys high (9.2), the entry and the window nook, the hall's big lounge (the sectional, beanbags), the floor under both arms, the library wall (about 5.8k of books)" },
+  "game/interiors/hq/upper.glb": { triangles: 28_140, primitives: 32, why: "HQ's upper floor in three parts (the bridge's big lounge, the left arm's study, the right arm), each cut away on its own: a part's materials draw once per part" },
   "game/buildings/cafe.glb": { primitives: 34, materials: 25, why: "the café exterior: 34 draws in the village, the most of any building" },
   // Dump models David kept and we only retouched (row 314, art/props/derive_*.py): their own geometry and textures.
   "game/props/beach-parasol.glb": { triangles: 4740, why: "the dump's parasol and two loungers kept as they were, recoloured only (one draw)" },

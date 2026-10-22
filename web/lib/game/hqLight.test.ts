@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { HQ, HQ_FLOOR_HEIGHT as F, HQ_ROOM } from "./hqLayout";
-import { hqPools, poolCorners } from "./hqLight";
+import { HQ, HQ_FLOOR_HEIGHT as F, HQ_ROOM, walkable } from "./hqLayout";
+import { hqPools, poolQuad } from "./hqLight";
 
 describe("HQ's faked light", () => {
   const pools = hqPools();
@@ -41,8 +41,29 @@ describe("HQ's faked light", () => {
     expect(near.at[0]).toBeCloseTo((a.x0 + a.x1) / 2);
   });
 
+  it("leaves no dark corner at night: everywhere you can stand by a wall has a lamp, a sconce or a spot's wash near it (David, 2026-10-22)", () => {
+    for (const level of [0, 1] as const) {
+      const lights = [...HQ.lamps.filter(l => l.level === level).map(l => [l.light[0], l.light[2]]),
+        ...pools.filter(p => p.level === level && p.id.startsWith("track:")).map(p => [p.at[0], p.at[2]])];
+      for (let x = -W + 0.7; x <= W - 0.7 + 1e-9; x += 0.5) for (let z = -D + 0.7; z <= D - 0.7 + 1e-9; z += 0.5) {
+        if (Math.min(W - Math.abs(x), D - Math.abs(z)) > 1.6 || !walkable(HQ, level, x, z)) continue;
+        const near = Math.min(...lights.map(([lx, lz]) => Math.hypot(lx - x, lz - z)));
+        expect(near, `level ${level} at (${x.toFixed(1)}, ${z.toFixed(1)})`).toBeLessThan(3.6);
+      }
+    }
+  });
+
+  it("fades each pool softly to its edge, cut to the room where a lamp stands in a corner", () => {
+    for (const p of pools) {
+      const { uvs } = poolQuad(p);
+      for (const [u, v] of uvs) { expect(Math.abs(u)).toBeLessThanOrEqual(1 + 1e-9); expect(Math.abs(v)).toBeLessThanOrEqual(1 + 1e-9); }
+    }
+    const corner = pools.find(p => p.id === "work-floor:floor")!, q = poolQuad(corner);
+    expect(Math.max(...q.uvs.map(([u]) => u))).toBeLessThan(1);               // cut at the left wall, its fade intact
+  });
+
   it("keeps every pool inside the room", () => {
-    for (const p of pools) for (const [x, y, z] of poolCorners(p)) {
+    for (const p of pools) for (const [x, y, z] of poolQuad(p).corners) {
       expect(Math.abs(x)).toBeLessThanOrEqual(W);
       expect(Math.abs(z)).toBeLessThanOrEqual(D);
       expect(y).toBeGreaterThanOrEqual(0);

@@ -8,7 +8,7 @@
  */
 import { useEffect, useMemo } from "react";
 import * as THREE from "three";
-import { poolCorners, type Pool } from "@/lib/game/hqLight";
+import { poolQuad, type Pool } from "@/lib/game/hqLight";
 
 /** Module scope (the react compiler forbids writing through hook values). */
 function setGain(m: THREE.ShaderMaterial, gain: number) { m.uniforms.uGain.value = gain; }
@@ -19,8 +19,8 @@ export default function LampPools({ pools, gain }: { pools: readonly Pool[]; gai
     const c = new THREE.Color();
     pools.forEach((p, i) => {
       c.set(p.color).multiplyScalar(p.strength);
-      poolCorners(p).forEach((v, j) => { pos.set(v, (i * 4 + j) * 3); col.set([c.r, c.g, c.b], (i * 4 + j) * 3); });
-      uv.set([-1, -1, 1, -1, 1, 1, -1, 1], i * 8);
+      const q = poolQuad(p);
+      q.corners.forEach((v, j) => { pos.set(v, (i * 4 + j) * 3); col.set([c.r, c.g, c.b], (i * 4 + j) * 3); uv.set(q.uvs[j], (i * 4 + j) * 2); });
       index.push(i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3);
     });
     const g = new THREE.BufferGeometry();
@@ -48,8 +48,9 @@ uniform float uGain;
 varying vec2 vUv;
 varying vec3 vCol;
 void main() {
+  // A soft, long fade (David, 2026-10-22: "lightsings should fade a little lighter").
   float a = 1.0 - smoothstep(0.0, 1.0, length(vUv));
-  gl_FragColor = vec4(vCol * a * a * (0.55 + 0.45 * a) * uGain, 1.0);
+  gl_FragColor = vec4(vCol * a * (0.4 + 0.6 * a) * uGain, 1.0);
   #include <colorspace_fragment>
 }`,
     transparent: true,

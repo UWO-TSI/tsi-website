@@ -2,18 +2,20 @@
 
 /**
  * HQ, the member clubhouse (specs/interiors/hq.md, ledger row 316): layout B, the gallery, furnished after David's
- * references, two tall storeys. The aquarium fills the back wall straight ahead of the door, the full height of the
- * room; the upper floor wraps the hall in a U. Downstairs: Wren's desk and the register, the green marble coffee bar and
- * the work lounge in the entry under the bridge; the lamp-lit lounge before the tank; the library, co-working, the
- * trophy case, the clock and the Founder's desk under the left arm; the notice board, the club goals and the stair under
- * the right; the workbench by the door. Upstairs: the big lounge on the bridge under the walnut oval ceiling, facing the
- * tank; the yearly banners off the arms; the two locked admin doors at the end of the left arm.
+ * references, two tall storeys (24 x 18 since phase 4). The aquarium fills the back wall straight ahead of the door, the
+ * full height of the room; the upper floor wraps the hall in a U. Downstairs: Wren's desk and the register, the green
+ * marble coffee bar, the work lounge and the window nook in the entry under the bridge; the big lounge before the tank
+ * (the sectional, beanbags, the big rug); the library, co-working, the trophy case, the clock and the Founder's desk
+ * under the left arm; the notice board, the club goals, the stair and the one locked admin door under it, under the
+ * right; the workbench by the door. Upstairs: the big lounge on the bridge under the walnut oval ceiling, facing the
+ * tank; the study on the left arm; reading nooks; the yearly banners off the arms.
  *
  * Every number is lib/game/hqLayout.ts's: the room's walker (createHqWalker) carries you up and down the stair, says
  * which parts of the upper floor show, and the stations answer on their own floor only. The light (specs: "from lamps,
  * strips and track spots, not ceiling panels"): the day through the windows (InteriorDaylight), the lamps' pools faked
- * (LampPools), and four real lights: the entry and the hall, the work floor under the left arm, the bridge's lounge, and
- * the aquarium's blue on the lounge before it. The lamps are always on and carry the room at night.
+ * (LampPools), and six real lights: the entry and the hall, the work floor under the left arm, the right arm's floor, the
+ * bridge's lounge, the study, and the aquarium's blue on the lounge before it. The lamps are always on and carry the room
+ * at night.
  */
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useThree } from "@react-three/fiber";
@@ -72,16 +74,19 @@ export default function HqInterior({ light = ISLAND_LIGHTING.day, frozen, talkin
 
   return (
     <group>
-      {/* The fill falls away at night, so the lamps, the strips and the tank carry the room (ref 2's lamp-lit lounge). */}
-      <InteriorDaylight light={light} shadows scale={{ key: 1.0, ambient: 0.14 + 0.18 * day, hemisphere: 0.1 + 0.18 * day, extent: 12 }} />
-      {/* The entry and the hall, and the work floor under the left arm: warm, from the track spots and the lamps (their
-          pools are LampPools). */}
-      <pointLight color="#ffd6a2" intensity={24 * lamps} distance={16} position={[-0.5, 3.6, -2.6]} />
-      <pointLight color="#ffd09a" intensity={13 * lamps} distance={10} position={[7.6, 3.0, 1.2]} />
-      {/* The bridge's lounge, under the arc lamp's globe. */}
-      <pointLight color="#ffcb92" intensity={14 * lamps} distance={11} position={[-0.8, F + 2.2, -5.8]} />
+      {/* The fill falls away at night, so the lamps, the strips and the tank carry the room (ref 2's lamp-lit lounge);
+          a warm floor stays so no corner goes black (David, 2026-10-22: "so no dark corners at night"). */}
+      <InteriorDaylight light={light} shadows scale={{ key: 1.0, ambient: 0.22 + 0.12 * day, hemisphere: 0.14 + 0.16 * day, extent: 14 }} />
+      {/* The entry and the hall, the work floor under the left arm, the right arm's floor by the stair: warm, from the
+          track spots and the lamps (their pools are LampPools). */}
+      <pointLight color="#ffd6a2" intensity={30 * lamps} distance={19} position={[0, 3.8, -2.8]} />
+      <pointLight color="#ffd09a" intensity={15 * lamps} distance={12} position={[9.2, 3.0, 2.0]} />
+      <pointLight color="#ffd09a" intensity={12 * lamps} distance={11} position={[-8.6, 3.0, 2.6]} />
+      {/* Upstairs: the bridge's lounge under the arc lamp's globe, the study down the left arm. */}
+      <pointLight color="#ffcb92" intensity={17 * lamps} distance={14} position={[-1.0, F + 2.4, -6.6]} />
+      <pointLight color="#ffd4a0" intensity={12 * lamps} distance={11} position={[9.3, F + 2.6, 3.0]} />
       {/* The aquarium's blue on the lounge before it: always on, the tank lights itself. */}
-      <pointLight color="#62c9f2" intensity={18} distance={10} position={[(a.x0 + a.x1) / 2, 2.6, a.z0 - 1.7]} />
+      <pointLight color="#62c9f2" intensity={22} distance={11} position={[(a.x0 + a.x1) / 2, 2.6, a.z0 - 1.9]} />
 
       <Suspense fallback={null}><HqRoom walker={walker} light={light} /></Suspense>
       {/* This week's biggest catches in 3D (the display's E opens the list), the workbench, the clock on the island's time. */}
