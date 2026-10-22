@@ -130,10 +130,7 @@ Ordered by what matters for Oct 31. All re-read at HEAD.
 - **Fix:** leave `stock` out of the SET list (1 line).
 - **Test:** `expect(changedRowsUpsert(prev, next)).not.toMatch(/stock = EXCLUDED/)`.
 
-**R7. MEDIUM [LAUNCH-FIX]: staff can't find the merch hand-over page.**
-- `/student/dashboard/admin/merch` (fulfil or cancel a Gem reservation) has no link anywhere. The admin hub links the legacy "Marketplace" instead (`app/student/dashboard/admin/page.tsx:69-74`).
-- **Fix:** a "Merch pickups" card on the hub (about 7 lines).
-- **Test:** the admin page test expects an href to `/student/dashboard/admin/merch`.
+**R7. Corrected (Phase B, 2026-10-22): not a risk.** The admin hub already links `/student/dashboard/admin/merch` as "Merch pickups" through the game content index (`components/portal/GameContentIndex.tsx:29`, built as `${A}/merch`, which the string search missed). The hub's separate "Marketplace" card (`app/student/dashboard/admin/page.tsx:69-74`) is the legacy system in D2. Phase B added only a test that pins the link.
 
 **R8. MEDIUM [DECISION]: the legacy marketplace purchase is unsafe.**
 - `POST /api/economy` (`app/api/economy/route.ts`) mints a random key per request (:130, :202), so a double submit charges twice and makes two orders. Stock is read, then written back as `item.stock - qty` (:125, :159-162), so concurrent buyers oversell. The avatar branch inserts into `player_inventory` with the member's client, which has had no INSERT policy since `20260926155000_schema_drift_reconcile.sql:74`, so it charges and then refunds.
@@ -265,7 +262,7 @@ Each is small; lines are lines changed, not removed.
 | F3 | R4 | `applySanction` updates `s.card` too (or `overlayCard` in `onFollow`); realtime deploy. | 1 | Mute, follow, chat: `refused: muted`. |
 | F4 | R5 | Mute before closing the report. | 6 moved | A throwing `setMute` leaves the report open. |
 | F5 | R6 | `stock` out of the generated `DO UPDATE SET`. | 1 | `changedRowsUpsert` output has no `stock = EXCLUDED`. |
-| F6 | R7 | A "Merch pickups" card on the admin hub. | 7 | The hub links `/student/dashboard/admin/merch`. |
+| F6 | R7 | Dropped: the hub already links it (correction above). A test pins the link. | 0 | The hub links `/student/dashboard/admin/merch`. |
 | F7 | R10a | `RemoteAvatars.tsx:100`: `hasAura` only when `DROPS.classes`. | 1 | A remote player with a family shows no aura in v1. |
 | F8 | R10c | A 2-row fire pack for Campfire and CandleFire; `rows` on the particle material; rebuild with `build_pack.py`. | 25 | No combat-pack.webp on the village; the fire looks the same. |
 | F9 | R11 | A creator-only hair uniform, disposed on unmount. | 15 | After the arrival the village hair atlas is 1536 wide. |
