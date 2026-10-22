@@ -1,0 +1,12 @@
+HQ phase 4 perf check, 2026-10-22 (game/hq-interior; SKIP_BUILD=1 SCENES=hq npm run perf:check on the measure build of 1fc340ac)
+
+| Scene | Tier | Median frame ms | p95 ms | Frame CPU ms | Draw calls | Triangles | Runs | Spread | Load |
+|---|---|---|---|---|---|---|---|---|---|
+| hq | high | 2.10 | 4.20 | 1.50 | 125 | 97402 | 3 | 14% | 24.9 |
+| hq | lite | 1.70 | 3.10 | 1.40 | 76 | 89846 | 3 | 12% | 41 |
+
+perf:check passed
+
+Phase 3 was high 2.90 ms, 111 draws, 79k triangles; lite 1.90 ms, 69 draws, 72k triangles. The room grew to 24 x 18 with
+David's new furniture, lamps and two more real lights: +14 draws and +18k triangles on high; the frame time stayed under
+the cafe's budget (the run's load was high, 25 to 41).

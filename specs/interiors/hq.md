@@ -2,7 +2,7 @@
 
 David, 2026-10-18. Ledger row 316. HQ is the second interior to be reworked from David's references, after the [shop](shop.md). Same process: the layout comes first and gets David's OK before anything is furnished.
 
-**Current layout: B, the gallery, with taller storeys** (phase 3, below). David, 2026-10-19, on the phase 2 review, verbatim:
+**Current layout: B, the gallery, with taller storeys** (phase 3, below), grown to 24 x 18 and refurnished on David's phase 3 notes (phase 4, at the end). David, 2026-10-19, on the phase 2 review, verbatim:
 
 > "i said to do plan b, also make roofs taller for both floors"
 
@@ -365,3 +365,58 @@ David, verbatim:
 
 > "why is there 2 admin doors, make it 1, and place it like under the stairs"
 
+
+### Phase 4 built (2026-10-22)
+
+Still layout B, the gallery, the aquarium on the back wall. The exterior is unchanged.
+
+- **Bigger:** 24 x 18 (was 20 x 16), the storeys still 4.6, the ceiling 9.2. The bridge is z −9 to −4, the arms x ±6.5 to
+  ±12, the tank 11 wide (x ±5.5) and still the full height. Every number is in `web/lib/game/hqLayout.ts`.
+- **The hall, a real lounge before the tank:** a deep U sectional in brown velvet facing the glass (an 8.2 back run, two
+  2.15 returns, throw pillows), the travertine table and mushroom lamp inside it, five velvet beanbags between it and the
+  glass, a 10.4 x 6.2 cream shag rug, a globe floor lamp at each back corner. The aquarium's station is on the walkway
+  before the glass. The work zones under the left arm stay (library, co-working, trophy case, clock, Founder's desk).
+- **Upstairs, the study on the left arm:** a reading nook by the bridge; the long walnut table (6 m) down the arm with
+  three monitors a side back to back, six leather office chairs and two brass task lamps; low walnut shelves of books
+  along the wall under the window; a whiteboard on the back wall. A reading nook on the right arm too; the bridge's
+  lounge as it was.
+- **Windows:** big modern panes, floor to ceiling where the wall is free (over the study's shelves from 1.1 up), thin
+  black frames, upright mullions no wider apart than 1.5, no transoms, no curtains. The front door is a black framed
+  double glass door, split down the middle only.
+- **One admin door, under the stair:** the space under the flight's high end is closed along its open side by walnut
+  panels whose tops follow the stringer; the door sits in them at z 5.4 (the flight 2.6 over its top), a black steel
+  frame, a dark walnut leaf, a brass lever, a keypad, the "ADMINS ONLY" plate and a line of light under it. Its station
+  is on the ground floor beside the stair: "Admins only. It's locked." Both upstairs doors are gone.
+- **Lighting:** 30 lamps (12 globe floor lamps, mushroom table lamps, 5 brass desk lamps, 6 sconces), warm cove strips
+  under the gallery's edges, track spots on the library, the board, the admin door, the trophy case, the plaque, the
+  banners, the whiteboard and the canvas. The pools fade softer and a little lighter (`LampPools.tsx`), are cut to the
+  room so a corner lamp lights up to its walls, and a floor lamp by a wall or a sconce washes the wall
+  (`lib/game/hqLight.ts`; a test checks every spot you can stand by a wall has a light within 3.6). Six real lights
+  (the entry and hall, under each arm, the bridge, the study, the tank's blue). Night keeps a warm fill.
+- **Materials** (`build_hq.py` `mats()`, `lib/game/modelMaterials.ts`): the floor and walnut satin with normal maps
+  (the planks' seams, the grain), plaster and the rugs' pile with normal relief, green marble polished with a clear coat,
+  velvet with a sheen at grazing angles (new preset `P_Velvet`, KHR_materials_sheen), leather a gentle highlight (new
+  preset `P_Leather`), chrome and brass dark enough that the look's metal class keeps them metal, glass see-through.
+  The room's reflections (`HQ_ENV`) now hold its windows, lamps and the aquarium's blue (`envLight.ts` `glows`).
+- **Models:** rounder cushions and arms, thicker back cushions on a solid back, throw pillows; slouchy beanbags; a
+  snake plant kind; more plants (13 on the floors and 2 on the study's shelves, was 8).
+- **Fixed:** the arms' floors read pale in phase 3: the floor sank under the slab's top where the curved world bent its
+  one big quad. The slab's top is now 5 cm under the planks and every floor is in 2 m cells.
+
+**Models and budget:** `ground.glb` 36.8k triangles, `upper.glb` 28.1k in three parts (32 draws), `ceiling.glb` 7.9k,
+`tank.glb` 10.5k. The exceptions in `budget.ts` rose with the reasons there.
+
+**Perf** (`specs/evidence/hq-interior/phase4/perf-check.txt`, passed): high 2.10 ms, 125 draws, 97k triangles; lite
+1.70 ms, 76 draws, 90k triangles.
+
+**Stations** (`phase4/shots.mjs` "prompts"): the exit, Wren's desk, the coffee bar, the notice board, the library, the
+trophy display, the Founder's desk, the clock, the aquarium, the admin door and the workbench all answer; Wren at her
+post. Nothing answers upstairs now.
+
+**Shots:** `specs/evidence/hq-interior/phase4/hq-phase4-sheet.webp`: the plans, from the door, the lounge before the tank
+(and on the sectional), the study (and at its table), the bridge, the windows upstairs and down, the admin door, four
+corners, close-ups of velvet, leather, marble, walnut and the chrome and glass, the walking camera in the hall and at
+the study, day and night side by side; the overview and the lines on screen by day.
+
+**Not done:** the banners and the plaque stay blank until David sends them; other players upstairs still draw at the
+ground floor's height.
