@@ -2,6 +2,7 @@
 // The journal, the notice board and the mailbox on /dev/progression's in-memory service (demo=1), the ruins mission
 // board on /dev/flat-ui (surface=missions). Desktop and phone. Headless and muted; the dev server on PORT with the
 // Supabase env blanked. Run from web/:   PORT=3192 node ../specs/evidence/flat-ui/shots-round2-step7.mjs <out-dir> [scene ...]
+// PALETTE=flat shoots them in the clean flat palette (round 3 verdict: beside the cream, for David to pick).
 import { createRequire } from "node:module";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
@@ -17,7 +18,7 @@ async function open(path, { width = 1440, height = 900, mobile = false } = {}) {
   const ctx = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1, ...(mobile ? { isMobile: true, hasTouch: true } : {}) });
   const page = await ctx.newPage();
   page.on("pageerror", e => console.log("pageerror", e.message.slice(0, 200)));
-  await page.goto(`${HOST}${path}`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${HOST}${path}${process.env.PALETTE ? `&palette=${process.env.PALETTE}` : ""}`, { waitUntil: "domcontentloaded" });
   await page.waitForSelector("[data-gui-dialog]", { timeout: 300000 });
   await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
   await page.waitForTimeout(1800);

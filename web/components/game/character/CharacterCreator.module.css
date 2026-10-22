@@ -178,7 +178,7 @@
 
 /* The rail: the kit's icons; an item's picture grey until it's the chosen one. */
 .creator[data-flat] .rail { grid-area: rail; gap: 6px; padding: 8px 0 18px; overflow-x: hidden; overflow-y: auto; }
-.creator[data-flat] .rail img { width: 30px; height: 30px; object-fit: contain; pointer-events: none; filter: grayscale(1) opacity(0.5); transition: filter 0.15s ease-out; }
+.creator[data-flat] .rail img { object-fit: contain; pointer-events: none; filter: grayscale(1) opacity(0.5); transition: filter 0.15s ease-out; }
 .creator[data-flat] .rail button:hover img { filter: grayscale(0.4) opacity(0.85); }
 .creator[data-flat] .rail [aria-selected="true"] img { filter: none; }
 
@@ -216,9 +216,11 @@
 /* Tiles: flat grey squares; the one worn white with an ink ring, lifted (and out of the grid: the kit's motion). */
 .creator[data-flat] .tiles { gap: 12px; }
 .creator[data-flat] .tile { padding: 8px; border-radius: 16px; background: var(--flat-ground); box-shadow: none;
-  transition: background 0.17s cubic-bezier(0.65, 0, 0.35, 1), box-shadow 0.34s cubic-bezier(0.65, 0, 0.35, 1); }
-.creator[data-flat] .tile:hover { transform: none; background: #e9e9e9; }
-.creator[data-flat] .tile[aria-pressed="true"] { background: var(--flat-card); box-shadow: inset 0 0 0 2px var(--flat-ink), 0 10px 26px rgb(0 0 0 / 0.09); }
+  transition: background 0.2s ease-out, box-shadow 0.2s ease-out; }
+.creator[data-flat] .tile:hover { transform: none; background: var(--flat-card); }
+.creator[data-flat] .tile[aria-pressed="true"] { background: var(--flat-card); box-shadow: inset 0 0 0 2px var(--flat-ink), 0 10px 26px rgb(0 0 0 / 0.11); }
+/* The hovered tile lifts with a slight drop shadow as it grows out (the kit's motion; round 3 verdict). */
+.creator[data-flat] .tiles > [data-nudge="hover"] .tile { box-shadow: 0 8px 20px rgb(0 0 0 / 0.1); }
 .creator[data-flat] .tile[data-locked] { background: var(--flat-card-dim); box-shadow: inset 0 0 0 1px var(--flat-line); outline: 1.5px dashed var(--flat-line); outline-offset: -7px; }
 .creator[data-flat] .tile[data-locked] img { opacity: 0.45; }
 .creator[data-flat] .lock { color: var(--flat-quiet); }

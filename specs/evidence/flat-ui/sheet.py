@@ -2,7 +2,7 @@
 after on the right, each panel labelled. Portrait (phone) shots are fitted whole on the sheet's dark.
   python3 sheet.py <out.webp> "<title>" "<surface>|<before.png>|<after.png>" ...
 """
-import sys
+import os, sys
 from PIL import Image, ImageDraw, ImageFont
 
 out, title, rows = sys.argv[1], sys.argv[2], [r.split("|") for r in sys.argv[3:]]
@@ -28,7 +28,9 @@ d = ImageDraw.Draw(sheet)
 d.text((PAD, 18), title, font=big, fill="#f2efe8")
 for i, (surface, before, after) in enumerate(rows):
     y = TOP + i * (H + CAP + PAD)
-    for j, (label, path, colour) in enumerate((("before", before, "#e8b4a0"), ("after", after, "#a8d8b0"))):
+    # LABELS="cream,flat": other names for the two columns (a choice, not a before and after).
+    left, right = os.environ.get("LABELS", "before,after").split(",")
+    for j, (label, path, colour) in enumerate(((left, before, "#e8b4a0"), (right, after, "#a8d8b0"))):
         x = PAD + j * (W + PAD)
         d.text((x + 2, y + 8), label, font=bold, fill=colour)
         lw = d.textlength(label + "  ", font=bold)

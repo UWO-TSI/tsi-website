@@ -139,14 +139,14 @@ const SCENES = {
     const clip = await around(page, branchCell);
     await page.mouse.move(1, 1); await page.waitForTimeout(400);
     await branch.hover(); await seek(page, 0, true);
-    await film(page, "f-hover", clip, [0, 40, 80, 120, 160, 200]);
+    await film(page, "f-hover", clip, [0, 25, 50, 75, 100, 150, 200]);
     // Select: slower. Open a panel on one card first (so the grid has settled beside it), then pick its neighbour.
     await page.mouse.move(1, 1);
     await btn(page, /^Apple/).click(); await page.waitForTimeout(800);
     const pick = btn(page, /^Tree branch/), pickCell = pick.locator("xpath=..");
     const clip2 = await around(page, pickCell);
     await pick.click(); await page.mouse.move(1, 1); await frames(page); await seek(page, 0, true);
-    await film(page, "f-select", clip2, [0, 60, 120, 180, 240, 300, 360]);
+    await film(page, "f-select", clip2, [0, 50, 100, 150, 200, 300, 400]);
     await ctx.close();
   },
 };

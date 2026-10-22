@@ -35,9 +35,13 @@
 /* The rail: icons only, the active one black with a dot under it. */
 .side { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0 18px; }
 /* A press dips the icon and lets it spring back (round 2: "micro animation ... clicking between icons"). */
-.shelf { all: unset; position: relative; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; color: var(--flat-rail); cursor: pointer;
+/* The icons a step bigger (round 3, David on the closet: "left ui iicons could be slightly bigger"): 24 px glyphs on a
+   54 px hit area, whatever size the caller drew them at, so every rail matches (the shop, the bag, the creator). */
+.shelf { all: unset; position: relative; display: grid; place-items: center; width: 54px; height: 54px; border-radius: 15px; color: var(--flat-rail); cursor: pointer;
   transition: color 0.15s ease-out, background 0.15s ease-out, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .shelf:active:not(:disabled) { transform: scale(0.88); transition-duration: 0.15s, 0.15s, 0.08s; }
+.shelf > svg { width: 24px; height: 24px; }
+.shelf > img { width: 34px; height: 34px; object-fit: contain; }
 .shelf:hover { color: var(--flat-ink); }
 .shelf[aria-current], .shelf[aria-selected="true"] { color: var(--flat-ink); }
 .shelf[aria-current]::after, .shelf[aria-selected="true"]::after { content: ""; position: absolute; bottom: 3px; width: 4px; height: 4px; border-radius: 50%; background: var(--flat-ink); }
@@ -58,8 +62,8 @@
 .shelfTitle { margin: 2px 0 14px 2px; font: 600 22px/1.2 var(--gui-font); }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(var(--card-min, 250px), 100%), 1fr)); gap: 12px; }
 .card { all: unset; position: relative; display: grid; grid-template-rows: 1fr auto; min-height: 300px; padding: 14px 14px 14px 16px; border-radius: 16px; background: var(--flat-card);
-  cursor: pointer; box-sizing: border-box; transition: box-shadow 0.17s cubic-bezier(0.65, 0, 0.35, 1); }
-.card:hover { box-shadow: 0 8px 22px rgb(0 0 0 / 0.07); }
+  cursor: pointer; box-sizing: border-box; transition: box-shadow 0.2s ease-out; }
+.card:hover { box-shadow: 0 8px 20px rgb(0 0 0 / 0.1); }
 div.card { cursor: default; }
 div.card:hover { box-shadow: none; }
 .cardArt { align-self: center; justify-self: center; width: 132px; height: 132px; margin: 26px 0 16px; }
@@ -73,7 +77,7 @@ div.card:hover { box-shadow: none; }
 .arrow { position: absolute; top: 14px; right: 14px; color: var(--flat-ink); }
 .soldOut { position: absolute; inset: 0; display: grid; place-items: center; border-radius: inherit; background: rgb(255 255 255 / 0.65); color: var(--flat-quiet); font: 600 14px var(--gui-font); }
 /* Picked (the bag's slot, the recipe): a black ring, and lifted off the grey. */
-.card[data-selected] { box-shadow: inset 0 0 0 2px var(--flat-ink), 0 10px 26px rgb(0 0 0 / 0.09); transition-duration: 0.32s; }
+.card[data-selected] { box-shadow: inset 0 0 0 2px var(--flat-ink), 0 10px 26px rgb(0 0 0 / 0.11); transition-duration: 0.4s; }
 /* Not found yet: the picture as a silhouette. */
 .card[data-cover="not-found"] { background: var(--flat-card-dim); }
 .card[data-cover="not-found"] .cardArt { filter: brightness(0) opacity(0.16); }
@@ -92,13 +96,23 @@ div.card:hover { box-shadow: none; }
 
 /* The cells' motion (round 3; components/gui/motion useNudge writes the numbers): a hovered cell grows a little out of
    the grid and its neighbours step aside, quick; the picked one grows further and stays out, its neighbours kept
-   aside, slower. Ease in and out (it speeds up, then settles). Two motions, two properties, so each keeps its pace:
-   the hover on translate and scale, the pick on transform. Transforms only, nothing reflows. */
-.nudge { --nudge-quick: 0.17s; --nudge-slow: 0.34s; --nudge-ease: cubic-bezier(0.65, 0, 0.35, 1); }
+   aside, slower. A spring (David, round 3 verdict: "make the fell more bouncy/springy rather than linear"): it pops
+   out, overshoots a little and settles; the neighbours spring the same way, and so does the way back. Two motions, two
+   properties, so each keeps its pace: the hover on translate and scale (settled in 0.2 s), the pick on transform
+   (0.4 s). Transforms only, nothing reflows. The curve is a damped spring sampled into linear() (damping ratio 0.55:
+   about 12% over, settled to within 0.1% at the end); without linear(), a back-out curve. */
+.nudge { --nudge-quick: 0.2s; --nudge-slow: 0.4s; --nudge-ease: cubic-bezier(0.34, 1.4, 0.64, 1); }
+@supports (transition-timing-function: linear(0, 1)) {
+  .nudge { --nudge-ease: linear(0, 0.045, 0.157, 0.308, 0.473, 0.634, 0.778, 0.898, 0.992, 1.059, 1.101, 1.122, 1.126, 1.119, 1.103, 1.084, 1.063, 1.043, 1.025,
+    1.01, 0.999, 0.991, 0.987, 0.984, 0.984, 0.985, 0.987, 0.99, 0.993, 0.995, 0.997, 0.999, 1); }
+}
 .nudge > * { translate: var(--nudge-hx, 0px) var(--nudge-hy, 0px); scale: var(--nudge-hs, 1);
   transform: translate(var(--nudge-sx, 0px), var(--nudge-sy, 0px)) scale(var(--nudge-ss, 1));
-  transition: translate var(--nudge-quick) var(--nudge-ease), scale var(--nudge-quick) var(--nudge-ease), transform var(--nudge-slow) var(--nudge-ease), box-shadow 0.17s var(--nudge-ease); }
+  transition: translate var(--nudge-quick) var(--nudge-ease), scale var(--nudge-quick) var(--nudge-ease), transform var(--nudge-slow) var(--nudge-ease), box-shadow 0.2s ease-out; }
 .nudge > [data-nudge] { z-index: 1; }
+/* A slight drop shadow under the cell that grows out (round 3 verdict: "add a slight drop shadow to the hover tab as
+   well"); the picked one keeps its own (its ring and a softer lift). */
+.nudge > [data-nudge="hover"] .card, .nudge > .card[data-nudge="hover"] { box-shadow: 0 8px 20px rgb(0 0 0 / 0.1); }
 
 /* The side panel (round 2; roomier in round 3): beside the grid, the grid still in view; at the foot of the screen on a phone. */
 .withSide { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; align-items: start; }
@@ -197,6 +211,10 @@ div.card:hover { box-shadow: none; }
   .top { grid-template-columns: 1fr auto; }
   .heading { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .side { flex-direction: row; justify-content: center; padding: 0 12px 6px; overflow-x: auto; }
+  /* A phone keeps its row of icons in view: the old hit area, the glyph a touch bigger. */
+  .shelf { width: 48px; height: 48px; flex: none; }
+  .shelf > svg { width: 23px; height: 23px; }
+  .shelf > img { width: 30px; height: 30px; }
   .main, .panel:not([data-rail]) .main { padding: 4px 14px 16px; }
   .detail { grid-template-columns: minmax(0, 1fr); grid-template-rows: 320px auto auto; margin-left: 0; }
   .info { padding: 16px 4px; }
