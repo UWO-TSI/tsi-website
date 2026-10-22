@@ -64,7 +64,7 @@ async function collect() {
   const rows = {};
   for (const [t, cs] of Object.entries(KEEPERS)) {
     const present = cs.filter(c => have.has(`${t}.${c}`));
-    if (!present.length) continue;
+    if (!present.length || !have.has(`${t}.id`)) continue; // no rows of ours there are keyed otherwise (the scan shows any left)
     const found = await sql(`select id::text from public."${t}" where ${present.map(c => `"${c}" in (${list})`).join(" or ")}`);
     if (found.length) rows[t] = found.map(r => r.id);
   }
