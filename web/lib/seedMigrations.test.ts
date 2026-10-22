@@ -16,6 +16,15 @@ describe("generated catalogue seeds", () => {
     expect(changedRowsUpsert(next, next)).toBe("");
   });
 
+  it("never resets live stock: a new row brings its stock, an edited one keeps what's left", () => {
+    const prev = "INSERT INTO shop_items (slug, price, stock) VALUES\n  ('tote', 600, 30)\nON CONFLICT (slug) DO NOTHING;";
+    const next = "INSERT INTO shop_items (slug, price, stock) VALUES\n  ('tote', 650, 30),\n  ('mug', 300, 20)\nON CONFLICT (slug) DO NOTHING;";
+    const sql = changedRowsUpsert(prev, next);
+    expect(sql).toContain("('mug', 300, 20)");
+    expect(sql).toMatch(/DO UPDATE SET price = EXCLUDED\.price;$/);
+    expect(sql).not.toMatch(/stock = EXCLUDED/);
+  });
+
   it("a catalogue change goes into a new tagged migration, never into the applied one", () => {
     const dir = mkdtempSync(join(tmpdir(), "seeds-"));
     try {
