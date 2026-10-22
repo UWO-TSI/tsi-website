@@ -3,20 +3,20 @@
 
 /* ── The pockets readout (top left, the panel's purse slot) ──────────────────────────────────────────────────────── */
 .readout { display: inline-flex; align-items: center; gap: 10px; font: 600 15px/1 var(--gui-font); font-variant-numeric: tabular-nums; }
-.bar { position: relative; width: 120px; height: 6px; border-radius: 999px; background: var(--flat-line); overflow: hidden; }
-.bar > i { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--flat-ink); transition: width 0.3s ease; }
-.readoutText { color: var(--flat-ink); white-space: nowrap; }
+.bar { position: relative; width: 120px; height: 6px; border-radius: 999px; background: var(--ui-line); overflow: hidden; }
+.bar > i { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--ui-ink); transition: width 0.3s ease; }
+.readoutText { color: var(--ui-ink); white-space: nowrap; }
 .readoutText b { font-weight: 600; }
-.readout[data-state="full"] .bar > i, .readout[data-state="over"] .bar > i { background: var(--flat-error); }
-.readout[data-state="full"] .readoutText, .readout[data-state="over"] .readoutText { color: var(--flat-error); }
+.readout[data-state="full"] .bar > i, .readout[data-state="over"] .bar > i { background: var(--ui-error); }
+.readout[data-state="full"] .readoutText, .readout[data-state="over"] .readoutText { color: var(--ui-error); }
 
 /* ── The pockets ─────────────────────────────────────────────────────────────────────────────────────────────────── */
 .pockets { display: grid; gap: 14px; }
 .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .head h3 { margin-bottom: 0; }
 .head button svg { vertical-align: -0.18em; }
-.warn { margin: 0; color: var(--flat-error); font: 500 14px/1.4 var(--gui-font); }
-.hint { margin: 0; color: var(--flat-quiet); font: 400 13px/1.45 var(--gui-font); }
+.warn { margin: 0; color: var(--ui-error); font: 500 14px/1.4 var(--gui-font); }
+.hint { margin: 0; color: var(--ui-quiet); font: 400 13px/1.45 var(--gui-font); }
 
 /* The grid: white cards, many to a row; an empty slot a dashed space the size of a card. */
 .grid { --slot: 132px; list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--slot-w, 124px), 1fr)); gap: 10px; }
@@ -24,22 +24,22 @@
 .slot > .card { width: 100%; min-height: var(--slot); cursor: grab; }
 .slot > .card:active { cursor: grabbing; }
 /* A slot past the bag's size (a member over capacity): their stacks, ringed in the warning colour. */
-.slot[data-over] { outline: 2px dashed var(--flat-error); outline-offset: 2px; }
-.empty { display: block; min-height: var(--slot); border-radius: 14px; box-shadow: inset 0 0 0 1.5px var(--flat-line); background: rgb(255 255 255 / 0.35); }
-.lock { position: absolute; left: 8px; bottom: 34px; padding: 4px; box-sizing: content-box; border-radius: 50%; background: var(--flat-ink); color: white; pointer-events: none; }
+.slot[data-over] { outline: 2px dashed var(--ui-error); outline-offset: 2px; }
+.empty { display: block; min-height: var(--slot); border-radius: 14px; box-shadow: inset 0 0 0 1.5px var(--ui-line); background: color-mix(in srgb, var(--ui-card) 35%, transparent); }
+.lock { position: absolute; left: 8px; bottom: 34px; padding: 4px; box-sizing: content-box; border-radius: 50%; background: var(--ui-ink); color: var(--ui-accent-ink); pointer-events: none; }
 
 /* ── The tool wheel's pins ───────────────────────────────────────────────────────────────────────────────────────── */
 .pins { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
-.pinsLabel { color: var(--flat-quiet); font: 500 13px var(--gui-font); }
-.pin { display: flex; align-items: center; gap: 8px; min-width: 170px; min-height: 44px; padding: 4px 6px 4px 8px; border-radius: 999px; background: var(--flat-card); box-sizing: border-box; }
-.pin[data-empty] { justify-content: center; background: transparent; box-shadow: inset 0 0 0 1.5px var(--flat-line); }
+.pinsLabel { color: var(--ui-quiet); font: 500 13px var(--gui-font); }
+.pin { display: flex; align-items: center; gap: 8px; min-width: 170px; min-height: 44px; padding: 4px 6px 4px 8px; border-radius: 999px; background: var(--ui-card); box-sizing: border-box; }
+.pin[data-empty] { justify-content: center; background: transparent; box-shadow: inset 0 0 0 1.5px var(--ui-line); }
 .pinArt { width: 30px; height: 30px; object-fit: contain; image-rendering: pixelated; }
-.pinName { flex: 1; color: var(--flat-ink); font: 500 13px var(--gui-font); }
-.pinCount { color: var(--flat-quiet); }
-.pinEmpty { padding: 0 12px; color: var(--flat-quiet); font: 400 12px var(--gui-font); }
-.unpin { all: unset; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: var(--flat-quiet); cursor: pointer; }
-.unpin:hover { color: var(--flat-ink); background: var(--flat-ground); }
-.unpin:focus-visible { outline: 2px solid var(--flat-ink); outline-offset: 2px; }
+.pinName { flex: 1; color: var(--ui-ink); font: 500 13px var(--gui-font); }
+.pinCount { color: var(--ui-quiet); }
+.pinEmpty { padding: 0 12px; color: var(--ui-quiet); font: 400 12px var(--gui-font); }
+.unpin { all: unset; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: var(--ui-quiet); cursor: pointer; }
+.unpin:hover { color: var(--ui-ink); background: var(--ui-panel); }
+.unpin:focus-visible { outline: 2px solid var(--ui-ink); outline-offset: 2px; }
 
 /* ── The chest's two panes ───────────────────────────────────────────────────────────────────────────────────────── */
 .chest { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 12px; height: 100%; }
@@ -53,10 +53,10 @@
 /* Room inside the scroll for a card that grows out of the grid (round 3), the pane's edge where it was. */
 .paneGrid { min-height: 0; overflow-y: auto; margin: -8px; padding: 8px; scrollbar-width: thin; }
 .pane[data-pane="chest"] .paneGrid { max-height: 100%; }
-.foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px 14px; padding-top: 12px; border-top: 1px solid var(--flat-line); }
-.footHint { margin-right: auto; color: var(--flat-quiet); font: 400 13px var(--gui-font); }
-.footHint[role="status"] { color: var(--flat-ink); font-weight: 500; }
-.footHint[data-error] { color: var(--flat-error); }
+.foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px 14px; padding-top: 12px; border-top: 1px solid var(--ui-line); }
+.footHint { margin-right: auto; color: var(--ui-quiet); font: 400 13px var(--gui-font); }
+.footHint[role="status"] { color: var(--ui-ink); font-weight: 500; }
+.footHint[data-error] { color: var(--ui-error); }
 
 @media (max-width: 760px) {
   .panes { grid-template-columns: minmax(0, 1fr); }
