@@ -13,7 +13,12 @@
 
 ## David's decisions
 
-- (none yet for this lane)
+- **2026-10-22, R1 (via the coordinator):** "Take both off sale". The TSI tote bag and the TSI sticker pack aren't real. Off the catalogue (a new generated migration) and off the shop's 3D merch displays.
+
+## Coordinator's corrections (2026-10-22)
+
+- R2 was wrong: the moderation env vars are set on Vercel (Preview and Production, since Oct 7) and on Fly. F1 dropped.
+- R7 was wrong too (found in Phase B): the admin hub links Merch pickups through `GameContentIndex`. F6 dropped; a test pins the link.
 
 ## Next
 

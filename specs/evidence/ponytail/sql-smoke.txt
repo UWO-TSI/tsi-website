@@ -83,9 +83,9 @@ NOTICE:  drops 3 once per recipe ok
 NOTICE:  drops 4 refused catches teach nothing ok
 NOTICE:  column "drop_rarity" of relation "crafting_recipes" already exists, skipping
 NOTICE:  relation "recipe_drop_chances" already exists, skipping
-NOTICE:  drops 5 rate rock_crystal: 121 of 6000 (chance 0.02)
-NOTICE:  drops 5 rate rock_gold_nugget: 185 of 4000 (chance 0.05)
-NOTICE:  drops 5 rate fish_golden_koi: 471 of 3000 (chance 0.15)
+NOTICE:  drops 5 rate rock_crystal: 124 of 6000 (chance 0.02)
+NOTICE:  drops 5 rate rock_gold_nugget: 225 of 4000 (chance 0.05)
+NOTICE:  drops 5 rate fish_golden_koi: 461 of 3000 (chance 0.15)
 NOTICE:  drops 5 rate rock_stone: 0 of 2000 (chance 0)
 recipe drops smoke ok
 ── catalogue_seed_smoke.sql
@@ -187,6 +187,7 @@ NOTICE:  taught tools 2 an owner keeps theirs ok
 NOTICE:  wardrobe b2 ok
 ── club_merch_smoke.sql
 NOTICE:  club merch ok
+NOTICE:  placeholder merch off sale ok
 chain ok (guard)
 NOTICE:  ok: anon cannot read profiles
 NOTICE:  ok: service_role changes tier/tethos_coins and reads email

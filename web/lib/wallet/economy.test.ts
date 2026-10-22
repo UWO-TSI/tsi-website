@@ -129,20 +129,20 @@ describe("merch reservations (row 47)", () => {
     const m = memoryEconomyStore(() => noon);
     m.fund(A, 0, 1000);
     m.fund(B, 0, 1000);
-    const tote = slug(m, "merch-tote");
-    m.items.find((i) => i.id === tote)!.stock = 1;
-    const [x, y] = await Promise.all([reserveMerch(m.store, A, { item_id: tote, idempotency_key: "merch-0001" }), reserveMerch(m.store, B, { item_id: tote, idempotency_key: "merch-0002" })]);
+    const keychain = slug(m, "merch-tsi-keycap-keychain");
+    m.items.find((i) => i.id === keychain)!.stock = 1;
+    const [x, y] = await Promise.all([reserveMerch(m.store, A, { item_id: keychain, idempotency_key: "merch-0001" }), reserveMerch(m.store, B, { item_id: keychain, idempotency_key: "merch-0002" })]);
     expect([x, y].filter((r) => r.ok)).toHaveLength(1);
     expect([x, y].find((r) => !r.ok)).toMatchObject({ code: "sold_out" });
-    expect(m.gemsOf(A) + m.gemsOf(B)).toBe(2000 - 600);
-    const again = await reserveMerch(m.store, A, { item_id: tote, idempotency_key: "merch-0001" });
+    expect(m.gemsOf(A) + m.gemsOf(B)).toBe(2000 - 800);
+    const again = await reserveMerch(m.store, A, { item_id: keychain, idempotency_key: "merch-0001" });
     if (x.ok) expect(again).toMatchObject({ ok: true, data: { replayed: true } });
   });
   it("admin cancel refunds once and restocks; fulfil is final; members can't resolve", async () => {
     const m = memoryEconomyStore(() => noon);
     m.fund(A, 0, 700);
     m.setTier(ADMIN, 1);
-    const r = await reserveMerch(m.store, A, { item_id: slug(m, "merch-tote"), idempotency_key: "merch-0003" });
+    const r = await reserveMerch(m.store, A, { item_id: slug(m, "merch-genesis-sticker"), idempotency_key: "merch-0003" });
     const id = r.ok ? r.data.reservation_id : "";
     expect(r.ok && r.data.reservation?.pickup_code).toBe(pickupCode(A, "merch-0003"));
     for (let i = 0; i < 200; i++) expect(pickupCode(`m${i}`, `key-${i}`)).toMatch(/^[A-HJ-NP-Z2-9]{5}$/);
@@ -155,7 +155,7 @@ describe("merch reservations (row 47)", () => {
   it("caps open reservations per member", async () => {
     const m = memoryEconomyStore(() => noon);
     m.fund(A, 0, 5000);
-    const sticker = slug(m, "merch-sticker-pack");
+    const sticker = slug(m, "merch-genesis-sticker");
     for (let i = 0; i < 3; i++) await reserveMerch(m.store, A, { item_id: sticker, idempotency_key: `merch-cap-${i}` });
     expect(await reserveMerch(m.store, A, { item_id: sticker, idempotency_key: "merch-cap-3" })).toMatchObject({ ok: false, code: "too_many_open" });
   });
@@ -175,6 +175,16 @@ describe("merch reservations (row 47)", () => {
       expect(m.items.find((i) => i.slug === s)!.stock, s).toBeNull();                                // unlimited stays unlimited
     }
     expect(m.gemsOf(A)).toBe(0);
+  });
+  it("keeps the placeholder tote and sticker pack off sale: not on the merch tab, refused if reserved (David, 2026-10-22)", async () => {
+    const m = memoryEconomyStore(() => noon);
+    m.fund(A, 0, 5000);
+    const shop = await getShop(m.store, A, noon);
+    expect(shop.ok && shop.data.tabs.merch.map((i) => i.slug).sort()).toEqual(["merch-genesis-sticker", "merch-tsi-keycap-keychain", "merch-tsi-lanyard"]);
+    for (const s of ["merch-tote", "merch-sticker-pack"]) {
+      expect(await reserveMerch(m.store, A, { item_id: slug(m, s), idempotency_key: `merch-off-${s}` }), s).toMatchObject({ ok: false, code: "not_for_sale" });
+    }
+    expect(m.gemsOf(A)).toBe(5000);
   });
 });
 

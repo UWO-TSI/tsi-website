@@ -99,7 +99,7 @@ Paths are under `web/`. Every commit in the Sep 30 "Applied" table is an ancesto
 
 Ordered by what matters for Oct 31. All re-read at HEAD.
 
-**R1. HIGH [DECISION]: placeholder merch is on sale for Gems.** (Oct 22: the coordinator is asking David; the rows stay as they are until he answers.)
+**R1. HIGH [DECISION]: placeholder merch is on sale for Gems.** **David, 2026-10-22: "Take both off sale". Done in Phase B:** both slugs join `RETIRED` (`PLACEHOLDER_MERCH`), the generator wrote `20261022212455_catalogue_seed.sql` (a soft deactivate, rows and prices kept), the 9 shop slots that showed them now show the keychain, the lanyard and the GENESIS sticker, the "staff pick" tag is gone, and `club_merch_smoke.sql` asserts both are off sale and a redeem is refused.
 - `lib/wallet/catalogue.ts:84-85` sells "TSI sticker pack" (150 Gems, stock 100) and "TSI tote bag" (600 Gems, stock 30) as active rows. `specs/merch/` lists only the keycap keychain, the lanyard and the GENESIS sticker.
 - The 3D shop puts them on 9 of the 12 merch slots, both featured slots included (`lib/game/shopDisplay.ts:24-27`, whose own comment says "placeholders until David's merch list"). The tote also has a "staff pick" tag (`lib/wallet/merchShelf.ts:30`).
 - If the tote and the sticker pack don't exist, members will reserve them with Gems on Oct 31 and the desk has to cancel.
