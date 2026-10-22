@@ -1,0 +1,145 @@
+{
+ "source": "David's picks in the Tethos New Wardrobe Pricing page, final 2026-10-15; Gem prices x10 (David, 2026-10-17: 5 -> 50, 10 -> 100, 20 -> 200, hair #22 30 -> 300); #12 and #13 deleted (David, 2026-10-17: duplicates of #10 and #07); round 2 (David, 2026-10-17): #22 is its ushanka and goggles alone (the hair removed) at 200 Gems, and #07 comes in silver too (acc-07s) at #07's price",
+ "items": {
+  "acc-01": {
+   "mode": "coins",
+   "price": 250
+  },
+  "acc-02": {
+   "mode": "coins",
+   "price": 300
+  },
+  "acc-03": {
+   "mode": "gems",
+   "price": 50
+  },
+  "acc-04": {
+   "mode": "coins",
+   "price": 120
+  },
+  "acc-05": {
+   "mode": "coins",
+   "price": 100
+  },
+  "acc-06": {
+   "mode": "free",
+   "price": null
+  },
+  "acc-07": {
+   "mode": "coins",
+   "price": 50
+  },
+  "acc-07s": {
+   "mode": "coins",
+   "price": 50
+  },
+  "acc-08": {
+   "mode": "gems",
+   "price": 50
+  },
+  "acc-09": {
+   "mode": "coins",
+   "price": 150
+  },
+  "acc-10": {
+   "mode": "coins",
+   "price": 100
+  },
+  "acc-11": {
+   "mode": "coins",
+   "price": 150
+  },
+  "acc-14": {
+   "mode": "gems",
+   "price": 100
+  },
+  "acc-15": {
+   "mode": "coins",
+   "price": 200
+  },
+  "acc-16": {
+   "mode": "skip",
+   "price": null
+  },
+  "acc-17": {
+   "mode": "gems",
+   "price": 100
+  },
+  "acc-18": {
+   "mode": "gems",
+   "price": 200
+  },
+  "acc-19": {
+   "mode": "gems",
+   "price": 50
+  },
+  "acc-20": {
+   "mode": "gems",
+   "price": 100
+  },
+  "acc-21": {
+   "mode": "coins",
+   "price": 150
+  },
+  "acc-22": {
+   "mode": "gems",
+   "price": 200
+  },
+  "acc-23": {
+   "mode": "coins",
+   "price": 250
+  },
+  "acc-24": {
+   "mode": "gems",
+   "price": 200
+  },
+  "face-20": {
+   "mode": "coins",
+   "price": 250
+  },
+  "face-21": {
+   "mode": "free",
+   "price": null
+  },
+  "face-22": {
+   "mode": "free",
+   "price": null
+  },
+  "face-23": {
+   "mode": "coins",
+   "price": 250
+  },
+  "face-24": {
+   "mode": "coins",
+   "price": 250
+  },
+  "face-25": {
+   "mode": "coins",
+   "price": 250
+  },
+  "hair-22": {
+   "mode": "gems",
+   "price": 200
+  },
+  "hair-23": {
+   "mode": "coins",
+   "price": 350
+  },
+  "hair-24": {
+   "mode": "coins",
+   "price": 350
+  },
+  "hair-25": {
+   "mode": "gems",
+   "price": 200
+  },
+  "hair-26": {
+   "mode": "gems",
+   "price": 200
+  },
+  "hair-27": {
+   "mode": "coins",
+   "price": 350
+  }
+ }
+}

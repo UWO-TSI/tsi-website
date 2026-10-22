@@ -3,7 +3,7 @@
 /**
  * /lab/hairthumbs: bakes the creator's hair tiles (head-v10, row 311; David: "it lags whenever changing hair color").
  * The creator's own thumbnail baker (CreatorStage ThumbBaker: the creator's lights, front view, the real Character) draws
- * every whole hairstyle once on the default head in a neutral colour (HAIR_THUMB_HEX); scripts/bake-hair-thumbs.mjs
+ * every whole hairstyle once on the default head in its own colours (round 2, David: hair as Roblox draws it); scripts/bake-hair-thumbs.mjs
  * reads them from window.__hairThumbs and writes public/assets/characters/v6/hair/thumbs/<id>.webp, which the creator
  * shows as plain pictures (CreatorControls PartArt). Dev-only via the lab layout.
  */
@@ -11,16 +11,15 @@ import { useEffect } from "react";
 import { Canvas } from "@react-three/fiber";
 import * as THREE from "three";
 import { ThumbBaker, thumbJob, useThumb } from "@/components/game/character/CreatorStage";
-import { DEFAULT_LOOK, PARTS, type CharacterLook } from "@/lib/game/character/look";
+import { DEFAULT_LOOK, NATURAL_HAIR, PARTS, type CharacterLook } from "@/lib/game/character/look";
 
-/** The tiles' neutral hair colour (a warm grey: the style's shape reads on the paper tile; the colour is the preview's). */
-const HAIR_THUMB_HEX = "#8F8379";
-const NEUTRAL: CharacterLook = { ...DEFAULT_LOOK, hairColor: HAIR_THUMB_HEX };
+/** Each tile in the hairstyle's own colours (NATURAL_HAIR, the default look's): what the shop sells. */
+const OWN: CharacterLook = { ...DEFAULT_LOOK, hair: NATURAL_HAIR };
 const IDS = PARTS.filter(p => p.slot === "back" && p.full).map(p => p.id);
 const done: Record<string, string> = {};
 
 function Thumb({ id }: { id: string }) {
-  const src = useThumb(thumbJob(id, NEUTRAL));
+  const src = useThumb(thumbJob(id, OWN));
   useEffect(() => {
     if (!src) return;
     done[id] = src;

@@ -491,11 +491,20 @@ import face_set_305  # noqa: E402
 P2_CELLS, P2_ANCHORS, P2_NAMES, P2_INFO = face_set_305.build(PX, dict(ANCHOR))
 ANCHOR.update(P2_ANCHORS)
 cells.update(P2_CELLS)
-P2_KEYS = set(P2_CELLS)
-P2_EYES = list(dict.fromkeys(k[1] for k in P2_CELLS if k[0] == "eyes"))
-P2_MOUTHS = [k[1] for k in P2_CELLS if k[0] == "mouth"]
-P2_EXTRAS = [k[1] for k in P2_CELLS if k[0] == "extras"]
-ATLAS2_H = pack(sorted(P2_KEYS, key=str), GUTTER)
+# wardrobe batch 2 (face_set_b2.py): David's faces #20-25, placed as set 305 is (the same Roblox head), in their own band
+import face_set_b2  # noqa: E402
+B2_CELLS, B2_ANCHORS, B2_NAMES, B2_INFO = face_set_b2.build(PX, dict(ANCHOR), (P2_INFO["place"]["k"], P2_INFO["place"]["w0"]))
+P2_INFO["place"] = {k: v for k, v in P2_INFO["place"].items() if k not in ("k", "w0")}
+P2_INFO["whole"] += B2_INFO["whole"]
+ANCHOR.update(B2_ANCHORS)
+cells.update(B2_CELLS)
+P2_KEYS = set(P2_CELLS) | set(B2_CELLS)
+P2_EYES = list(dict.fromkeys(k[1] for k in P2_CELLS if k[0] == "eyes")) + list(dict.fromkeys(k[1] for k in B2_CELLS if k[0] == "eyes"))
+P2_MOUTHS = [k[1] for k in P2_CELLS if k[0] == "mouth"] + [k[1] for k in B2_CELLS if k[0] == "mouth"]
+P2_EXTRAS = [k[1] for k in P2_CELLS if k[0] == "extras"] + [k[1] for k in B2_CELLS if k[0] == "extras"]
+P2_NAMES.update(B2_NAMES)
+ATLAS2_H = pack(sorted(set(P2_CELLS), key=str), GUTTER)
+ATLAS2_H = pack(sorted(set(B2_CELLS), key=str), ATLAS2_H + GUTTER)
 atlas2 = np.zeros((ATLAS2_H, ATLAS_W, 4), np.float32)
 for key in P2_KEYS:
     px_, py_, w, h = placements[key]
@@ -549,6 +558,9 @@ face = {
     },
     "expressions": EXPRESSIONS, "blink": BLINK, "talk": TALK, "emoteMouth": EMOTE_MOUTH,
     "names": {**face_set_301.NAMES, "brow_none": "No brows", **P2_NAMES},
+    # wardrobe batch 2: David's whole faces #20-25 by their key in specs/wardrobe/batch2-pricing.json; a priced face is
+    # one shop item whose ownership unlocks these parts (look.ts faceRef)
+    "faces": face_set_b2.faces(),
 }
 json.dump(face, open(os.path.join(OUT, "face_v7.json"), "w"), indent=1)
 
@@ -610,4 +622,4 @@ if COMPOSE_DIR:
         save_png(f"blink_{f}", compose(eye_frame=f), os.path.join(COMPOSE_DIR, f"blink_{f}.png"))
     for m in ["M1.1"] + TALK["frames"]:
         save_png(f"talk_{m}", compose(mouth=m), os.path.join(COMPOSE_DIR, f"talk_{m}.png"))
-print("FACE_OK", len(cells), "cells", ATLAS_W, "x", ATLAS_H, "page 2", ATLAS_W, "x", ATLAS2_H, json.dumps(P2_INFO))
+print("FACE_OK", len(cells), "cells", ATLAS_W, "x", ATLAS_H, "page 2", ATLAS_W, "x", ATLAS2_H, json.dumps(P2_INFO), json.dumps(B2_INFO))

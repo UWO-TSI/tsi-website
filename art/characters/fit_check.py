@@ -78,11 +78,14 @@ LIMITS = {
     # doll_lash and offset eyes at U 0.04-0.12 and down to W 0.88, the drool mouths to W 1.0), a little over v10's
     # measure (stretch 1.64, aniso 2.27 on the jaw-corner faces under the lowest eyes; eyes reach 58.6 deg round and face
     # 62.8 away, the mouths 58.5); the default parts keep the flat face's limit (face_default_facing_max_deg). Renders
-    # of those parts on v10: specs/evidence/head-v10/ (extreme faces).
+    # of those parts on v10: specs/evidence/head-v10/ (extreme faces). Wardrobe batch 2 (2026-10-16): David's faces #20-25,
+    # placed as set 305 is (the same Roblox head), reach further round: his wide cat eyes (#20) to 63.6 deg and facing
+    # 66.6 away; the limits follow his widest parts again, a little over (renders: specs/evidence/wardrobe-b2/).
     "face_stretch_max": 1.7,       # texture stretch where features are painted
-    "face_aniso_max": 2.35,
-    "eye_reach_lon_max_deg": 60.0,  # how far round the head (azimuth) any eye pixel sits (v8 55: ref 18's lid ends ~51)
-    "face_facing_max_deg": 64.0,   # no painted pixel of any eye or mouth faces more than this away from straight ahead
+    "face_aniso_max": 2.5,     # round 2 (2026-10-17): the halfway jaw David approved; the worst is an eye cell's corner at the
+                               # canvas's bottom edge (W 0.97, under the chin), 2.27 before the fuller jaw
+    "eye_reach_lon_max_deg": 64.5,  # how far round the head (azimuth) any eye pixel sits (v8 55: ref 18's lid ends ~51)
+    "face_facing_max_deg": 67.5,   # no painted pixel of any eye or mouth faces more than this away from straight ahead
     "face_default_facing_max_deg": 52.0,   # the default eyes and mouth (FACEV defaults): the flat face's limit, kept
     "lock_roots_exposed": 0,       # lock root-ring vertices not buried in the head or other hair
     "lock_dive_max": 0.002,        # m: how deep a lock's outward-facing surface goes under the skin past its root zone
@@ -99,7 +102,9 @@ bpy.ops.wm.read_factory_settings(use_empty=True)
 CAT = json.load(open(os.path.join(HERE, "character_catalog.json")))
 # head-roblox: a piece import_hair.py split off a hairstyle (manifest `split`: #8's visor) is listed after the hair but is
 # an accessory; it is checked as headwear, worn over the hairstyle it came off (it rests there in Roblox)
-SPLIT_FROM = {h["split"]["id"]: h["id"] for h in json.load(open(os.path.join(HERE, "hair", "source", "david", "manifest.json")))["hairs"] if h.get("split")}
+# the accessories split off a hairstyle (#8's visor; row 314: #22's ushanka and goggles), each worn over its own hair
+SPLIT_FROM = {h[k]["id"]: h["id"] for who in ("david", "david-b2") for h in json.load(open(os.path.join(HERE, "hair", "source", who, "manifest.json")))["hairs"]
+              for k in ("split", "split_own") if h.get(k) and not h.get("accessory_only")}   # round 2: #22's hat is a hat alone
 HAIR_PARTS = [h for h in CAT["hair"] if h["slot"] != "accessory"]
 HEAD_ACC = CAT["accessories"] + [h for h in CAT["hair"] if h["slot"] == "accessory"]
 V7_FACE = os.path.join(HERE, "v7", "face", "face_v7.json")
@@ -424,7 +429,7 @@ for layer, mask in LAYER_MASK.items():
     per_layer[layer] = {"stretch": round(ls, 3), "aniso": round(la, 3)}
 
 
-eye_reach, eye_lon, eye_centres = 0.0, 0.0, {}
+eye_reach, eye_lon, eye_centres, eye_lon_id = 0.0, 0.0, {}, None
 for fid in FACEV["layers"]["eyes"]["items"]:
     a = item_alpha("eyes", fid, RES)
     ys, xs = np.nonzero(a > 0.5)
@@ -432,7 +437,8 @@ for fid in FACEV["layers"]["eyes"]["items"]:
         p = locate((xs[k] + 0.5) / RES, (ys[k] + 0.5) / RES)
         if p is not None:
             eye_reach = max(eye_reach, facing(p))
-            eye_lon = max(eye_lon, abs(lon_of(p)))
+            if abs(lon_of(p)) > eye_lon:
+                eye_lon, eye_lon_id = abs(lon_of(p)), fid
     cen = {}
     for side, mask in (("R", xs < RES / 2), ("L", xs >= RES / 2)):     # canvas left = the character's right (-X)
         if mask.any():
@@ -475,7 +481,7 @@ def PAGE2_EYE(fid):
     cell = it["open"] if isinstance(it, dict) else it
     return len(cell) > 6 and cell[6] == 1
 face = {"feature_tris": n_feat, "stretch_max": round(worst_stretch, 3), "aniso_max": round(worst_aniso, 3), "per_layer": per_layer,
-        "stretch_worst_at": worst_at, "aniso_worst_at": aniso_at, "eye_reach_deg": round(eye_reach, 1), "eye_reach_lon_deg": round(eye_lon, 1), "facing_max_deg": facing_max,
+        "stretch_worst_at": worst_at, "aniso_worst_at": aniso_at, "eye_reach_deg": round(eye_reach, 1), "eye_reach_lon_deg": round(eye_lon, 1), "eye_reach_lon_item": eye_lon_id, "facing_max_deg": facing_max,
         "default_facing_deg": default_facing,
         "default_eye_centre_lon_deg": round(abs(lon_of(dflt["L"])), 1) if dflt.get("L") else None,
         "default_eye_centre_z": round(dflt["L"].z, 4) if dflt.get("L") else None}
@@ -750,7 +756,8 @@ for part in HEAD_ACC:
                                "offset_default": max(r["offset_default"] for r in res.values()), "sides": res}
         print(f"GLASSES {part['id']:20s} offset max={glasses[part['id']]['offset_max']} default={glasses[part['id']]['offset_default']}")
         continue
-    split = part["id"] in SPLIT_FROM
+    # a piece split off a hairstyle is drawn in M_Hair: all of it is the piece (#22's hat alone, round 2, too)
+    split = part["id"] in SPLIT_FROM or all(m["name"] == "M_Hair" for m in part["materials"])
     hat_bvh, _ = bvh_of(groups, (lambda n: True) if split else (lambda n: n != "M_Hair"))
     tuck_bvh, _ = bvh_of(groups, lambda n: n == "M_Hair")
     hat = part["hidesBackHair"]
@@ -759,7 +766,7 @@ for part in HEAD_ACC:
     # whatever hair is worn
     under = []
     h_in, h_out, h_every = ray_table(hat_bvh, keep_all=True)
-    if tuck_bvh and part["id"] not in SPLIT_FROM:   # (a split-off visor is drawn in M_Hair: all of it is the piece)
+    if tuck_bvh and not split:                     # (a split-off visor is drawn in M_Hair: all of it is the piece)
         under.append(ray_table(tuck_bvh))
     if part["id"] in SPLIT_FROM:                    # worn over the hairstyle it came off, which it rests on in Roblox
         under.append(tables[SPLIT_FROM[part["id"]]])
@@ -927,8 +934,11 @@ for pair, v in ledges.items():
 # never cutting the head.
 ENCLOSES = {a["id"] for a in CAT["accessories"] if a.get("encloses")}
 for pid, r in headwear.items():
-    if pid in SPLIT_FROM:   # Roblox's own piece, moved with its hairstyle: its fit over that hair (the brim, the mic,
-        continue            # strands through the band, open card edges) is Roblox's, reported in the JSON, not failed
+    # Roblox's own piece, split off a hairstyle (a visor moved with its hair; #22's ushanka, round 2, worn alone and cut
+    # into the hair by the hat cut): its fit (the brim, the mic, strands through the band, open card edges) is Roblox's,
+    # reported in the JSON, not failed
+    if pid in SPLIT_FROM or pid in {h["id"] for h in CAT["hair"] if h["slot"] == "accessory"}:
+        continue
     check("open_edges", r["open_edges"], LIMITS["hat_open_edges"], pid)
     if pid not in ENCLOSES:
         check("gap_max", r["gap"]["max"], LIMITS["hat_gap_max"], pid)

@@ -43,7 +43,8 @@ export const CAFE_OWNER = {
   name: "Rosa",
   look: {
     skin: 6, hair: 1, eyes: "F1.1", mouth: "M1.1", extras: [],
-    bangs: "", back: "hair_messy_low_pony", top: "top_collar_shirt", bottom: "bottom_overall_shorts", onepiece: null, shoes: "shoes_loafers",
+    // round 3 (David, 2026-10-17): the bob with a pigtail, the low pony removed
+    bangs: "", back: "hair_bob_pigtail", top: "top_collar_shirt", bottom: "bottom_overall_shorts", onepiece: null, shoes: "shoes_loafers",
     acc: { face: "acc_glasses_round" }, colors: { top_collar_shirt: 0, bottom_overall_shorts: 5, shoes_loafers: 14, acc_glasses_round: 5 },
   },
   lines: [

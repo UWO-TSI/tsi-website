@@ -1,7 +1,7 @@
 """Provisional Roblox attachments: where each of David's hairs sits on Roblox's classic head, estimated from its shape
 (specs/characters/head-roblox.md).
 
-  /Applications/Blender.app/Contents/MacOS/Blender -b -P art/characters/hair/seat_fit.py [-- --write]
+  /Applications/Blender.app/Contents/MacOS/Blender -b -P art/characters/hair/seat_fit.py [-- --write] [--only id,id]
 
 Roblox attaches a hair by its own HairAttachment (Position and Orientation in its Handle) to the head's HairAttachment,
 the classic head's top centre. Three of David's accessory files were readable (#1, #6, #11: hair/roblox_attachments.json,
@@ -30,8 +30,10 @@ from head_shape import CLASSIC  # noqa: E402
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 DATA = os.path.join(HERE, "roblox_attachments.json")
-SRC = os.path.join(HERE, "source", "david")
-MANIFEST = {h["id"]: h for h in json.load(open(os.path.join(SRC, "manifest.json")))["hairs"]}
+SETS = ("david", "david-b2")              # David's hair sets (wardrobe batch 2 added david-b2)
+MANIFEST = {h["id"]: dict(h, _dir=os.path.join(HERE, "source", who)) for who in SETS
+            for h in json.load(open(os.path.join(HERE, "source", who, "manifest.json")))["hairs"]}
+ONLY = set(ARGS[ARGS.index("--only") + 1].split(",")) if "--only" in ARGS else None
 LIFT = 0.196            # stud: #6 and #11 stand 0.192 and 0.200 above their seats in Roblox
 HC = np.array([0.0, 0.0, -CLASSIC["H"]])          # the classic head's centre, studs below its HairAttachment
 
@@ -106,22 +108,24 @@ def surf_r(d):
 SR = np.array([surf_r(d) for _, d in RAYS])
 
 
-def gaps(tree, t):
-    """Air between the classic head and the hair's inside on each ray (NaN: no hair), the hair moved by t."""
+def gaps(tree, t, grow=0.0):
+    """Air between the classic head (grown by `grow` studs) and the hair's inside on each ray (NaN: no hair), the hair
+    moved by t."""
     out = np.full(len(RAYS), np.nan)
     for i, (_, d) in enumerate(RAYS):
-        loc, _, _, _ = tree.ray_cast(Vector(HC + d * (SR[i] - 0.06) - t), Vector(d), 2.0)
+        loc, _, _, _ = tree.ray_cast(Vector(HC + d * (SR[i] + grow - 0.06) - t), Vector(d), 2.0)
         if loc is not None:
-            out[i] = np.dot(np.array(loc) + t - HC, d) - SR[i]
+            out[i] = np.dot(np.array(loc) + t - HC, d) - SR[i] - grow
     return out
 
 
-def seat(tree, vb):
-    """1. The translation seating the hair's inside on the head."""
+def seat(tree, vb, grow=0.0):
+    """1. The translation seating the hair's inside on the head; `grow` (studs): on the head grown by that much (wardrobe
+    batch 2: a hat seated over the hair, accessories/import_roblox.py)."""
     top = LATS >= 55
 
     def cost(t):
-        g = gaps(tree, t)
+        g = gaps(tree, t, grow)
         ok = ~np.isnan(g)
         if ok.sum() < 20:
             return 10.0
@@ -158,7 +162,7 @@ def lift(t):
 
 
 def estimate(e):
-    v, F = load_glb(os.path.join(SRC, e["file"]))
+    v, F = load_glb(os.path.join(MANIFEST[e["id"]]["_dir"], e["file"]))
     R = rot_orientation(e["orientation"])
     w = (np.asarray(e["mesh_scale"], float) * v) @ R          # R^T applied to row vectors
     vb = to_blender(w)
@@ -179,7 +183,7 @@ def main():
             err = np.linalg.norm(p - np.array(e["position"]))
             print(f"CALIBRATION #{e['n']:02d} {e['id']:22s} estimate {np.round(p, 3)} real {np.round(e['position'], 3)} error {err:.3f} stud")
     for e in doc["hairs"]:
-        if e["provisional"]:
+        if e["provisional"] and (not ONLY or e["id"] in ONLY):
             p = estimate(e)
             print(f"PROVISIONAL #{e['n']:02d} {e['id']:22s} position {np.round(p, 4)} orientation {e['orientation']}")
             if "--write" in ARGS:
@@ -189,4 +193,5 @@ def main():
         print("SEAT_FIT_WRITTEN", DATA)
 
 
-main()
+if __name__ == "__main__":       # art/characters/accessories/import_roblox.py imports seat() from here
+    main()

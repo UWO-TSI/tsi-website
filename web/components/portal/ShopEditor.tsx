@@ -30,6 +30,7 @@ const CATEGORIES: EditorCategory[] = [
   "outfit",
   "hair",
   "accessory",
+  "face",
   "furniture",
   "wallpaper",
   "flooring",

@@ -10,6 +10,7 @@
 import { useEffect, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { iconSpecs, type IconSpec } from "@/lib/icons/manifest";
 import { CATALOGUE, EVENT_ITEMS, OWNERSHIP_ITEMS, PENDING_MERCH } from "@/lib/wallet/catalogue";
@@ -47,7 +48,7 @@ function stage() {
 }
 
 /** Matte: the same colour, texture and vertex colours, no shine, no metal, no shader hacks. */
-function matte(model: THREE.Object3D, tints?: Record<string, string>) {
+function matte(model: THREE.Object3D, tints?: Record<string, string>, atlas?: THREE.Texture) {
   model.traverse(o => {
     const mesh = o as THREE.Mesh;
     if (!mesh.isMesh) return;
@@ -64,9 +65,10 @@ function matte(model: THREE.Object3D, tints?: Record<string, string>) {
           roughness: 0.2, metalness: 0, transparent: true, opacity: Math.max(0.42, src.opacity), depthWrite: false, side: THREE.DoubleSide });
       }
       return new THREE.MeshStandardMaterial({
-        name: src.name, map: src.map ?? null, color: tint ? new THREE.Color(tint) : src.color?.clone() ?? new THREE.Color("#ffffff"),
+        // wardrobe batch 2: a Roblox accessory's own texture, in the fixed-colour atlas at u - 2 (repeat wrapping reads it)
+        name: src.name, map: atlas ?? src.map ?? null, color: tint ? new THREE.Color(tint) : src.color?.clone() ?? new THREE.Color("#ffffff"),
         // Our models carry their light gradient in vertex colours; the old dump's textured ones carry masks there (black fish).
-        vertexColors: src.vertexColors && !src.map, roughness: 1, metalness: 0, side: THREE.DoubleSide,
+        vertexColors: src.vertexColors && !src.map && !atlas, roughness: 1, metalness: 0, side: THREE.DoubleSide,
         transparent: src.transparent && src.opacity < 1, opacity: src.opacity, alphaTest: src.alphaTest || (src.transparent ? 0.4 : 0),
         emissive: src.emissive?.clone() ?? new THREE.Color(0), emissiveMap: src.emissiveMap ?? null, emissiveIntensity: src.emissiveMap ? 0.6 : 0,
       });
@@ -126,7 +128,8 @@ function frame(camera: THREE.OrthographicCamera, subject: THREE.Object3D, view: 
   camera.updateProjectionMatrix();
 }
 
-const loader = new GLTFLoader();
+// the whole hairstyles and the Roblox accessories (wardrobe batch 2) ship meshopt-compressed (sync-character-assets.mjs)
+const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 const textures = new THREE.TextureLoader();
 async function subjectFor(spec: IconSpec): Promise<THREE.Object3D> {
   if (spec.view === "roll" || spec.view === "tile") return finish(await textures.loadAsync(spec.url), spec.view);
@@ -140,7 +143,14 @@ async function subjectFor(spec: IconSpec): Promise<THREE.Object3D> {
   }
   const model = spec.skinned ? cloneSkinned(scene) : prepareModel(scene, spec.url);
   const g = new THREE.Group();
-  g.add(matte(model, spec.tints));
+  let atlas: THREE.Texture | undefined;
+  if (spec.atlas) {
+    atlas = await textures.loadAsync(spec.atlas);
+    atlas.flipY = false;
+    atlas.wrapS = THREE.RepeatWrapping;
+    atlas.colorSpace = THREE.SRGBColorSpace;
+  }
+  g.add(matte(model, spec.tints, atlas));
   // Long things lie on the diagonal, the grip at the bottom left (ACNH's tool icons); a model authored lying down stands up.
   if (spec.view === "diagonal") g.rotation.z = -Math.PI / 4;
   if (spec.rotX) model.rotation.x = spec.rotX;

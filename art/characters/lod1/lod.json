@@ -43,6 +43,10 @@
   "tris": 1196,
   "lod1": 880
  },
+ "accessories/accessory/acc_ushanka_goggles.glb": {
+  "tris": 852,
+  "lod1": 852
+ },
  "accessories/accessory/acc_visor.glb": {
   "tris": 766,
   "lod1": 524
@@ -51,13 +55,101 @@
   "tris": 1184,
   "lod1": 964
  },
+ "accessories/roblox/acc_apple_stem.glb": {
+  "tris": 640,
+  "lod1": 360
+ },
+ "accessories/roblox/acc_bandage_blindfold.glb": {
+  "tris": 422,
+  "lod1": 302
+ },
+ "accessories/roblox/acc_bear_hood.glb": {
+  "tris": 1256,
+  "lod1": 380
+ },
+ "accessories/roblox/acc_cowboy_hat.glb": {
+  "tris": 864,
+  "lod1": 380
+ },
+ "accessories/roblox/acc_crew_visor.glb": {
+  "tris": 844,
+  "lod1": 380
+ },
+ "accessories/roblox/acc_drawn_top_hat.glb": {
+  "tris": 864,
+  "lod1": 380
+ },
+ "accessories/roblox/acc_gold_monocle.glb": {
+  "tris": 909,
+  "lod1": 326
+ },
+ "accessories/roblox/acc_gold_rimless_shades.glb": {
+  "tris": 423,
+  "lod1": 302
+ },
+ "accessories/roblox/acc_green_sprout.glb": {
+  "tris": 844,
+  "lod1": 380
+ },
+ "accessories/roblox/acc_half_rim_glasses.glb": {
+  "tris": 422,
+  "lod1": 250
+ },
+ "accessories/roblox/acc_half_rim_glasses_silver.glb": {
+  "tris": 422,
+  "lod1": 250
+ },
+ "accessories/roblox/acc_monkey_ears.glb": {
+  "tris": 844,
+  "lod1": 379
+ },
+ "accessories/roblox/acc_paper_bowtie.glb": {
+  "tris": 244,
+  "lod1": 162
+ },
+ "accessories/roblox/acc_paper_horns.glb": {
+  "tris": 168,
+  "lod1": 168
+ },
+ "accessories/roblox/acc_paper_tie.glb": {
+  "tris": 160,
+  "lod1": 160
+ },
+ "accessories/roblox/acc_plaid_scarf.glb": {
+  "tris": 422,
+  "lod1": 352
+ },
+ "accessories/roblox/acc_propeller_cap.glb": {
+  "tris": 864,
+  "lod1": 379
+ },
+ "accessories/roblox/acc_red_band_straw_hat.glb": {
+  "tris": 498,
+  "lod1": 350
+ },
+ "accessories/roblox/acc_square_shades.glb": {
+  "tris": 422,
+  "lod1": 302
+ },
+ "accessories/roblox/acc_thin_glasses.glb": {
+  "tris": 422,
+  "lod1": 302
+ },
+ "accessories/roblox/acc_wheat_stalk.glb": {
+  "tris": 422,
+  "lod1": 302
+ },
+ "accessories/roblox/acc_woven_hat.glb": {
+  "tris": 770,
+  "lod1": 378
+ },
  "base/skin.glb": {
   "tris": 864,
   "lod1": 760
  },
  "hair/full/hair_anime_spikes.glb": {
   "tris": 2226,
-  "lod1": 2226
+  "lod1": 1153
  },
  "hair/full/hair_baby_sprout.glb": {
   "tris": 2960,
@@ -71,9 +163,21 @@
   "tris": 2640,
   "lod1": 1360
  },
+ "hair/full/hair_curly_pigtails.glb": {
+  "tris": 4208,
+  "lod1": 2143
+ },
+ "hair/full/hair_double_buns.glb": {
+  "tris": 4368,
+  "lod1": 2224
+ },
  "hair/full/hair_dreads_cap.glb": {
   "tris": 4094,
-  "lod1": 2087
+  "lod1": 2086
+ },
+ "hair/full/hair_emo_layers.glb": {
+  "tris": 4385,
+  "lod1": 2232
  },
  "hair/full/hair_fluffy_boy.glb": {
   "tris": 1614,
@@ -85,7 +189,7 @@
  },
  "hair/full/hair_layered_shag.glb": {
   "tris": 4333,
-  "lod1": 2206
+  "lod1": 2205
  },
  "hair/full/hair_long_pigtails.glb": {
   "tris": 3316,
@@ -93,7 +197,7 @@
  },
  "hair/full/hair_long_scruffy.glb": {
   "tris": 4350,
-  "lod1": 2215
+  "lod1": 2214
  },
  "hair/full/hair_messy_boy.glb": {
   "tris": 1021,
@@ -103,17 +207,17 @@
   "tris": 4340,
   "lod1": 2209
  },
- "hair/full/hair_messy_low_pony.glb": {
-  "tris": 4175,
-  "lod1": 2126
- },
  "hair/full/hair_messy_wolf.glb": {
   "tris": 4381,
-  "lod1": 2229
+  "lod1": 2230
+ },
+ "hair/full/hair_ribbon_bob.glb": {
+  "tris": 4291,
+  "lod1": 2184
  },
  "hair/full/hair_short_tufts.glb": {
   "tris": 4370,
-  "lod1": 2225
+  "lod1": 2224
  },
  "hair/full/hair_swept_fringe.glb": {
   "tris": 4363,
@@ -121,23 +225,27 @@
  },
  "hair/full/hair_visor_messy.glb": {
   "tris": 2223,
-  "lod1": 2223
+  "lod1": 1151
  },
  "hair/full/hair_vkei.glb": {
-  "tris": 3797,
-  "lod1": 1938
+  "tris": 3828,
+  "lod1": 1953
  },
  "hair/full/hair_waves.glb": {
   "tris": 1328,
   "lod1": 1328
  },
+ "hair/full/hair_wavy_half_up.glb": {
+  "tris": 4403,
+  "lod1": 2240
+ },
  "hair/full/hair_windy_bob.glb": {
   "tris": 4403,
-  "lod1": 2241
+  "lod1": 2240
  },
  "hair/full/hair_wispy_ponytail.glb": {
   "tris": 4238,
-  "lod1": 2158
+  "lod1": 2159
  },
  "outfits/bottom/bottom_joggers.glb": {
   "tris": 314,

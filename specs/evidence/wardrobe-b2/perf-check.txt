@@ -1,0 +1,12 @@
+# perf:check after round 2 (c707a2f4): one measurement build (specs/perf/measure-build.sh, heavy lock), then SKIP_BUILD=1 SCENES=village and SCENES=cafe (headless), 2026-10-17 21:21, game/wardrobe-b2
+| Scene | Tier | Median frame ms | p95 ms | Frame CPU ms | Draw calls | Triangles | Runs | Spread | Load |
+|---|---|---|---|---|---|---|---|---|---|
+| village | high | 5.00 (3.90, +28.2%) | 6.20 (4.90, +26.5%) | 4.40 (3.40, +29.4%) | 381 (382, -0.3%) | 579692 (537560, +7.8%) | 5 | 4% | 4.6 |
+| village | lite | 3.10 (2.30, +34.8%) | 4.10 (3.40, +20.6%) | 2.70 (2.00, +35.0%) | 288 (288, 0.0%) | 379248 (353865, +7.2%) | 5 | 6% | 4.4 |
+perf:check FAILED
+
+| cafe | high | 2.30 (2.10, +9.5%) | 4.30 (3.10, +38.7%) | 0.80 (0.60, +33.3%) | 141 (140, +0.7%) | 69566 (69455, +0.2%) | 3 | 4% | 4.2 |
+| cafe | lite | 1.50 (1.50, 0.0%) | 2.80 (2.80, 0.0%) | 0.90 (0.70, +28.6%) | 107 (103, +3.9%) | 67223 (63874, +5.2%) | 3 | 0% | 4.1 |
+perf:check passed
+
+Village: +28% median frame and +29% frame CPU against the 2026-10-14 baseline, inside its budget (6 / 9 / 5 ms, 560 draws, 620k triangles); draws equal the baseline (381 vs 382) and triangles are below round 1's run (579,692 vs 589,901). The machine was loaded (load 4.4-4.6 vs 3.7 for round 1's run, other lanes building and benching). The cafe (characters only, where the new hair shader and the hat cut show) passed: +9.5% median at high, 0% at lite. Not rerun (lane rules).

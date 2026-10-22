@@ -27,7 +27,8 @@ export function iconKey(e: IconRow): string {
     const tool = toolByKey(ref) ?? toolByKey(e.slug);
     return tool?.key ?? e.slug;
   }
-  if (e.category === "hair") return ref.startsWith("hair:") ? `dye-${ref.slice(5)}` : e.slug;
+  if (e.category === "hair") return ref.startsWith("hair:") ? `dye-${ref.slice(5)}` : ref || e.slug;   // a dye, or a hairstyle (wardrobe batch 2)
+  if (e.category === "face") return `face-${ref.replace(/^face:/, "").replace(/_/g, "-")}`;   // a whole face (wardrobe batch 2)
   if (e.category === "wallpaper") return `wall-${ref}`;
   if (e.category === "flooring") return `floor-${ref}`;
   if (e.category === "outfit" || e.category === "accessory") return ref || RETIRED_PART[e.slug] || e.slug;

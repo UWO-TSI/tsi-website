@@ -42,6 +42,7 @@
   - **Delete #12 and #13** (duplicates of #10 and #07).
 - **Hats blended with hair:** #01, #04, #18, #21, #22, #23, #24.
 - **Shrunk items:** unshrink.
+- **Why the accessories sit where they do (round 3, David asked):** their positions are estimates. Each one is seat-fitted onto the head and hair by `art/characters/accessories/import_roblox.py` (rule `fit`, `provisional: true`), because the real Roblox attachment values (each accessory's attachment Position and Orientation in Studio) aren't available to us. David's tweaks are `override` offsets and scales on top of the estimate. When David sends the Studio values, they go into `art/characters/accessories/roblox_attachments.json` (`position`, `orientation`, `provisional: false`), and the build script places every item the way Roblox does. The hairs work the same way (`art/characters/hair/roblox_attachments.json`, `import_hair.py`).
 
 **Reflection creator:**
 - the boat angled slightly downward, more natural;

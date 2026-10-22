@@ -106,6 +106,6 @@ export function ownedCounts(rows: InventoryRow[]): Map<string, number> {
 }
 
 export const TAB_OF: Record<string, "tools" | "outfits" | "furniture" | "merch"> = {
-  tool: "tools", outfit: "outfits", hair: "outfits", accessory: "outfits", "avatar-outfit": "outfits", "avatar-effect": "outfits",
+  tool: "tools", outfit: "outfits", hair: "outfits", accessory: "outfits", face: "outfits", "avatar-outfit": "outfits", "avatar-effect": "outfits",
   furniture: "furniture", wallpaper: "furniture", flooring: "furniture", merch: "merch", "profile-customization": "outfits",
 };
