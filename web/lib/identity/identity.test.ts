@@ -90,6 +90,9 @@ describe("account settings (row 220)", () => {
     expect(mergeSettings(DEFAULT_SETTINGS, { text_size: "huge" })).toMatchObject({ ok: false });
     expect(mergeSettings(DEFAULT_SETTINGS, { key_bindings: { openJournal: "Escape" } })).toMatchObject({ ok: false, error: "escape is reserved." });
     expect(mergeSettings(DEFAULT_SETTINGS, { key_bindings: { openJournal: "W" } })).toMatchObject({ ok: false });
+    // P is photo mode and R turns a piece while decorating: fixed, so no menu action takes them.
+    expect(mergeSettings(DEFAULT_SETTINGS, { key_bindings: { openMap: "P" } })).toMatchObject({ ok: false, error: "p is reserved." });
+    expect(mergeSettings(DEFAULT_SETTINGS, { key_bindings: { openMap: "r" } })).toMatchObject({ ok: false, error: "r is reserved." });
     expect(mergeSettings(DEFAULT_SETTINGS, { key_bindings: { openJournal: "i" } })).toMatchObject({ ok: false, error: "i is bound twice." });
     expect(mergeSettings(DEFAULT_SETTINGS, { key_bindings: { teleport: "t" } })).toMatchObject({ ok: false });
     const swapped = mergeSettings(DEFAULT_SETTINGS, { key_bindings: { openJournal: "i", openBag: "n" } });
