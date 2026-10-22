@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 type Row = Record<string, unknown>;
-const mock = vi.hoisted(() => ({ ctx: null as unknown, tables: {} as Record<string, Row[]>, notices: [] as unknown[][] }));
+const mock = vi.hoisted(() => ({ ctx: null as unknown, tables: {} as Record<string, Row[]>, notices: [] as unknown[][], failUpsert: null as string | null }));
 vi.mock("@/lib/server/memberContext", async (original) => ({
   ...(await original<typeof import("@/lib/server/memberContext")>()),
   memberContext: async () => mock.ctx,
@@ -30,6 +30,7 @@ function from(table: string) {
     maybeSingle: async () => ({ data: hit()[0] ?? null, error: null }),
     update: (p: Row) => ((patch = p), b),
     upsert: async (row: Row) => {
+      if (mock.failUpsert === table) return { error: { message: "down", code: "XX000" } };
       const at = rows.findIndex((r) => r.member_id === row.member_id);
       if (at >= 0) Object.assign(rows[at], row);
       else rows.push(row);
@@ -57,6 +58,7 @@ const REPORTER = "00000000-0000-4000-8000-0000000000b1";
 const CONTEXT = [{ id: LINE, member_id: AUTHOR, world_name: "Ash", area: "cafe", body: "mean words", created_at: "2026-09-27T09:59:00Z" }];
 
 beforeEach(() => {
+  mock.failUpsert = null;
   mock.tables = {
     letters: [{ id: NOTE, sender_id: AUTHOR, recipient_id: "r", body: "rude", reported: true, hidden: false, reported_at: "2026-09-27T10:00:00Z" }],
     study_chat_messages: [{ id: CHAT, member_id: AUTHOR, reported_by: "r", body: "spam", reported: true, hidden: false, reported_at: "2026-09-27T10:00:00Z" }],
@@ -157,6 +159,16 @@ describe("/api/admin/moderation: world chat", () => {
     expect(mock.notices).toEqual([["/internal/sanction", { member_id: AUTHOR, muted_until: "2026-10-04T12:00:00.000Z" }]]);
     expect(mock.tables.moderation_log).toEqual([expect.objectContaining({ actor_id: "admin", action: "remove_mute", item_kind: "world_chat", item_id: REPORT, target_id: AUTHOR, excerpt: "mean words" })]);
     expect((await post({ kind: "world", id: REPORT2, action: "dismiss" })).status).toBe(404); // closed with it
+  });
+  it("remove and mute: a mute that doesn't save leaves the report open, so the retry lands", async () => {
+    mock.failUpsert = "member_identity";
+    expect((await post({ kind: "world", id: REPORT, action: "remove_mute" })).status).toBe(500);
+    expect(mock.tables.world_reports[0]).toMatchObject({ status: "open" });
+    expect(mock.tables.moderation_log).toEqual([]);
+    mock.failUpsert = null;
+    expect((await post({ kind: "world", id: REPORT, action: "remove_mute" })).status).toBe(200);
+    expect(mock.tables.world_reports[0]).toMatchObject({ status: "actioned" });
+    expect(mock.tables.member_identity[0]).toMatchObject({ member_id: AUTHOR, muted_until: "2026-10-04T12:00:00.000Z" });
   });
   it("dismiss keeps the line; a roster report has its reason as the excerpt; closed reports 404", async () => {
     expect((await post({ kind: "world", id: REPORT, action: "dismiss" })).status).toBe(200);

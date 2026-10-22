@@ -147,17 +147,18 @@ async function actOnWorldReport(ctx: MemberContext, id: string, action: "remove"
     if (lineError) return failed();
     excerpt = ((lines ?? []) as Row[])[0]?.body ?? reason;
   }
-  const resolved = { status: action === "dismiss" ? "dismissed" : "actioned", resolved_at: ctx.now.toISOString(), resolved_by: ctx.userId };
-  const { data: closedRows, error: closeError } = await ctx.db.from("world_reports").update(resolved).eq("id", id).eq("status", "open").select("id");
-  if (closeError) return failed();
-  if (!((closedRows ?? []) as Row[]).length) return closed();
-  if (lineId) await ctx.db.from("world_reports").update(resolved).eq("line_id", lineId).eq("status", "open");
+  // Mute before closing: a mute that doesn't save leaves the report open, so the admin's retry can land it.
   let muted: { muted_until: string; realtime: RealtimeNotice } | null = null;
   if (action === "remove_mute" && target) {
     const m = await mute(ctx, target);
     if (m instanceof NextResponse) return m;
     muted = m;
   }
+  const resolved = { status: action === "dismiss" ? "dismissed" : "actioned", resolved_at: ctx.now.toISOString(), resolved_by: ctx.userId };
+  const { data: closedRows, error: closeError } = await ctx.db.from("world_reports").update(resolved).eq("id", id).eq("status", "open").select("id");
+  if (closeError) return failed();
+  if (!((closedRows ?? []) as Row[]).length) return closed();
+  if (lineId) await ctx.db.from("world_reports").update(resolved).eq("line_id", lineId).eq("status", "open");
   if (!(await logModeration(ctx.db, ctx.userId, { action, item_kind: "world_chat", item_id: id, target_id: target, excerpt }))) return unlogged();
   return NextResponse.json({ ok: true, moderation: { kind: "world", id, action, muted_until: muted?.muted_until ?? null, ...(muted ? { realtime: muted.realtime } : {}) } });
 }
