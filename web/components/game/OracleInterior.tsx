@@ -27,6 +27,7 @@ import {
   InteriorPlayer, Piece, applyInteriorBackdrop, preloadPieces, useNearestStation,
   type InteriorStation, type RoomBounds,
 } from "./interiorShared";
+import { DROPS } from "@/lib/game/drops";
 import Keeper from "./Keeper";
 
 const BOUNDS: RoomBounds = { halfW: 6, halfD: 6, spawn: [0, -4.2] };
@@ -36,8 +37,11 @@ export const ORACLE_STATIONS: InteriorStation[] = [
   { id: "exit", name: "Exit", pos: [0, -5.4], action: "exit", range: 1.1 },
 ];
 
-preloadPieces(["altar", "remains-pillar", "magic-circle-rug", "candle"]);
-preloadShells(["oracle"]);
+// Warmed only once the temple opens (drop 2); the dev scene override (?temple=inside) still loads them on entry.
+if (DROPS.oracle) {
+  preloadPieces(["altar", "remains-pillar", "magic-circle-rug", "candle"]);
+  preloadShells(["oracle"]);
+}
 
 /** The banners along the back wall, screen right to left (build_interiors.py FAMILY_BANNERS: atlas cells 0..3). */
 const BANNER_FAMILIES: Family[] = ["Arcane", "Ranger", "Warden", "Vanguard"];
