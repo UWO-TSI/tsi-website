@@ -14,7 +14,8 @@ export function rewardName(slug: string): string {
 export default function GoalCard({ goal, waitingOnTitle, onContribute }: { goal: GoalProgressView; waitingOnTitle?: string; onContribute?: (slug: string) => void }) {
   const myRoom = Math.max(0, goal.caps.member_total - goal.my_points);
   return (
-    <article className={s.card} aria-label={goal.title}>
+    // A club goal is a notice: paper, inside the flat notice board and journal (David, row 315).
+    <article className={s.card} aria-label={goal.title} data-gui-paper="">
       <div className={s.row}>
         <div>
           <div className={s.eyebrow}>{goal.goal_type === "story" ? "Club goal" : `Seasonal goal · ${goal.cycle}`}</div>

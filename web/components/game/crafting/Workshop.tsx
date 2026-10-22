@@ -32,9 +32,16 @@ import { FINISH_GLINT, FINISH_SPARKS, GLINT_TINT, HAMMER_PUFF, SAWDUST, SAWDUST_
 import { seedAt } from "@/lib/game/fx/particles";
 import { handOf, liftPose, type Lift } from "@/lib/game/forageLift";
 import { prepareModel } from "@/lib/game/modelMaterials";
-import { ErrorNote, Loading, SignInText } from "@/components/gui";
+import { SignInText } from "@/components/gui";
+import { CardGrid, DetailView, FlatPanel, HairlineRow, HairlineRows, IconRail, InfoHead, ItemCard, Quiet, STAGE, StatusLine, flatStyles } from "@/components/gui/flat";
+import ItemViewer from "@/components/economy/ItemViewer";
+import { LayoutGrid, Shirt, Sofa, Swords, Wrench } from "lucide-react";
+import { CATALOGUE } from "@/lib/wallet/catalogue";
+import { CRAFTED_ITEMS } from "@/lib/crafting/recipes";
+import { iconUrl, shopIcon } from "@/lib/icons/keys";
+import { itemModel, keyModel } from "@/lib/icons/itemModel";
+import type { IconSpec } from "@/lib/icons/manifest";
 import { isTyping, worldKeysBlocked } from "@/lib/game/useWorldDialog";
-import IslandSheet from "../IslandSheet";
 import type { RecipeBook, RecipeView } from "@/lib/crafting/service";
 import { torontoDay } from "@/lib/wallet/rules";
 import { ApiError, apiCall, newKey } from "@/lib/apiClient";
@@ -247,12 +254,36 @@ function bottleTargetAt(d: number, spot: [number, number]) { bottleTarget.distan
 
 // ── Recipe sheet ──
 
+/** What a recipe makes, as the shop shows it: its catalogue entry (tools, clothes, furniture) or, for gear, its key. */
+const MADE = new Map([...CATALOGUE, ...CRAFTED_ITEMS].map(e => [e.slug, e]));
+function outputArt(r: RecipeView): { picture: string; spec: IconSpec | null; group: RecipeShelf } {
+  const e = MADE.get(r.id);
+  if (!e) return { picture: iconUrl(r.id), spec: keyModel(r.id), group: r.kind === "weapon" ? "gear" : "tools" };
+  const group: RecipeShelf = e.category === "furniture" ? "home" : e.category === "outfit" || e.category === "accessory" ? "clothes" : "tools";
+  return { picture: shopIcon(e), spec: itemModel(e), group };
+}
+type RecipeShelf = "all" | "tools" | "clothes" | "home" | "gear";
+const RECIPE_SHELVES: { id: RecipeShelf; label: string; icon: React.ReactNode }[] = [
+  { id: "all", label: "All recipes", icon: <LayoutGrid size={22} /> }, { id: "tools", label: "Tools", icon: <Wrench size={22} /> },
+  { id: "clothes", label: "Clothes", icon: <Shirt size={22} /> }, { id: "home", label: "Home", icon: <Sofa size={22} /> }, { id: "gear", label: "Gear", icon: <Swords size={22} /> },
+];
+const SOURCE: Record<string, string> = { starter: "Everyone knows this one.", bottle: "From a message bottle.", shop: "From a recipe card.", catch: "From a rare catch." };
+const sourceOf = (r: RecipeView) => SOURCE[r.source] ?? "Taught by a resident.";
+const KIND_NAME: Record<RecipeShelf, string> = { all: "Recipe", tools: "Tool", clothes: "Clothes", home: "Furniture", gear: "Gear" };
+const missing = (r: RecipeView) => r.ingredients.filter(i => i.have < i.need).length;
+
+/**
+ * The workbench in the flat UI (specs/polish/flat-ui.md step 4): the shop overlay's panel, recipes as white cards with
+ * what each makes, filtered from an icon rail; one opens on the white studio stage with its ingredients as hairline
+ * rows (have / need) and Craft as the dark button.
+ */
 export default function CraftingSheet() {
   const [open, setOpen] = useState(false);
   const [near, setNear] = useState(false);
   const [book, setBook] = useState<RecipeBook | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pick, setPick] = useState<string | null>(null);
+  const [shelf, setShelf] = useState<RecipeShelf>("all");
   const [busy, setBusy] = useState(false);
   // At the bench making something: no prompt until it's done.
   const [making, setMaking] = useState(false);
@@ -261,7 +292,7 @@ export default function CraftingSheet() {
   const load = useCallback(() => apiCall<RecipeBook>("/api/crafting/recipes", "book").then(
     b => { setBook(b); setError(null); },
     (e: unknown) => setError(e instanceof ApiError ? (e.status === 401 ? "Sign in to use the workbench." : e.message) : "The workbench isn't set up yet.")), []);
-  const show = useCallback(() => { setOpen(true); void load(); }, [load]);
+  const show = useCallback(() => { setOpen(true); setPick(null); void load(); }, [load]);
 
   useEffect(() => {
     const onNear = (e: Event) => setNear((e as CustomEvent<boolean>).detail);
@@ -300,36 +331,43 @@ export default function CraftingSheet() {
     }
   };
 
-  const selected = book?.recipes.find(r => r.id === pick) ?? book?.recipes[0] ?? null;
+  const recipes = book?.recipes ?? [];
+  const shelves = RECIPE_SHELVES.filter(x => x.id === "all" || recipes.some(r => outputArt(r).group === x.id));
+  const list = shelf === "all" ? recipes : recipes.filter(r => outputArt(r).group === shelf);
+  const selected = list.find(r => r.id === pick) ?? null;
 
   return <>
     {!open && near && !making && <button className={world.interact} onClick={show}><kbd>E</kbd>Use the workbench</button>}
-    <IslandSheet open={open} title="Workbench" onClose={() => setOpen(false)} testId="crafting-sheet" keys="e" size="lg">
-    {error && <ErrorNote onRetry={() => void load()}><SignInText text={error} /></ErrorNote>}
-    {!book ? (error ? null : <Loading label="Laying out your recipes…" />) : <>
-      <p className={styles.count}>{book.recipes.length} of {book.total} recipes known</p>
-      <div className={styles.body}>
-        <ul className={styles.list} aria-label="Recipes">{book.recipes.map(r => <li key={r.id}>
-          <button aria-pressed={selected?.id === r.id} onClick={() => { setPick(r.id); setError(null); }}>
-            <span>{r.name}</span><i data-ready={r.can_craft} data-owned={r.owned} aria-label={r.owned ? "owned" : r.can_craft ? "ready" : "missing materials"} />
-          </button>
-        </li>)}</ul>
-        {selected && <div className={styles.detail}>
-          <h3>{selected.name}{selected.qty > 1 ? ` ×${selected.qty}` : ""}</h3>
-          <small>{selected.source === "starter" ? "Everyone knows this one." : selected.source === "bottle" ? "From a message bottle." : selected.source === "shop" ? "From a recipe card." : selected.source === "catch" ? "From a rare catch." : "Taught by a resident."}</small>
-          <ul className={styles.ingredients} aria-label="Ingredients">{selected.ingredients.map(i => <li key={i.key} data-short={i.have < i.need}>
-            {i.icon ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={i.icon} alt="" width={22} height={22} />
-            ) : <b aria-hidden="true" />}
-            <span>{i.name}</span><output>{i.have}/{i.need}</output>
-          </li>)}</ul>
-          <button className={styles.craft} disabled={!selected.can_craft || busy} onClick={() => craft(selected)}>
-            {selected.owned ? "Already yours" : busy ? "Crafting…" : "Craft"}
-          </button>
-        </div>}
-      </div>
-    </>}
-    </IslandSheet>
+    <FlatPanel open={open} title="Workbench" onClose={() => setOpen(false)} testId="crafting-sheet" keys="e" contentKey={`${shelf}${selected ? `:${selected.id}` : ""}`}
+      purse={book ? <span className={styles.count}>{book.recipes.length} of {book.total} recipes known</span> : undefined}
+      rail={book ? <IconRail label="Recipes" value={shelf} onChange={id => { setShelf(id); setPick(null); }} items={shelves} /> : undefined}>
+      {error && <StatusLine error><SignInText text={error} /> {!book && <button type="button" className={flatStyles.retry} onClick={() => void load()}>Try again</button>}</StatusLine>}
+      {!book ? (error ? null : <Quiet>Laying out your recipes…</Quiet>)
+        : selected ? <Recipe r={selected} list={list} busy={busy} onPick={id => { setPick(id); setError(null); }} onBack={() => { setPick(null); setError(null); }} onCraft={() => void craft(selected)} />
+        : list.length === 0 ? <Quiet>No recipes here yet. Message bottles wash up on the village beach.</Quiet>
+        : <CardGrid title={RECIPE_SHELVES.find(x => x.id === shelf)!.label} min={200} phoneMin={150}>{list.map(r => {
+          const art = outputArt(r), short = missing(r);
+          return <ItemCard key={r.id} size="md" picture={art.picture} name={`${r.name}${r.qty > 1 ? ` ×${r.qty}` : ""}`} line={sourceOf(r)}
+            pill={r.owned ? null : r.can_craft ? "Ready" : `Missing ${short}`} cover={r.owned ? "owned" : null}
+            onClick={() => { setPick(r.id); setError(null); }} label={`${r.name}, ${r.owned ? "owned" : r.can_craft ? "ready" : "missing materials"}`} />;
+        })}</CardGrid>}
+    </FlatPanel>
   </>;
+}
+
+/** One recipe on the white studio stage: what it makes, its ingredients as hairline rows, Craft. */
+function Recipe({ r, list, busy, onPick, onBack, onCraft }: { r: RecipeView; list: RecipeView[]; busy: boolean; onPick: (id: string) => void; onBack: () => void; onCraft: () => void }) {
+  const art = useMemo(() => outputArt(r), [r]);
+  const i = list.indexOf(r), prev = list[(i - 1 + list.length) % list.length], next = list[(i + 1) % list.length];
+  return <DetailView testId="recipe-detail" onBack={onBack} backLabel="Recipes" hint={art.spec ? "Drag to turn" : null}
+    stage={<ItemViewer key={r.id} spec={art.spec} picture={art.picture} name={r.name} className={STAGE.stage} pictureClassName={STAGE.picture} />}
+    steps={list.length > 1 ? { prev: { label: `Previous: ${prev.name}`, onClick: () => onPick(prev.id) }, next: { label: `Next: ${next.name}`, onClick: () => onPick(next.id) } } : null}
+    info={<>
+      <InfoHead kind={KIND_NAME[art.group]} title={`${r.name}${r.qty > 1 ? ` ×${r.qty}` : ""}`} text={sourceOf(r)} />
+      <HairlineRows>{r.ingredients.map(g => <HairlineRow key={g.key} art={g.icon ?? <span className={styles.noArt} aria-hidden />} title={g.name}
+        end={<span className={styles.need} data-short={g.have < g.need || undefined} aria-label={`${g.have} of ${g.need}`}>{g.have}/{g.need}</span>} />)}</HairlineRows>
+    </>}
+    pay={{ action: { label: r.owned ? "Already yours" : busy ? "Crafting…" : "Craft", disabled: !r.can_craft || busy, onClick: onCraft } }}
+    fine={r.owned ? "You have one already." : r.can_craft ? "Made at the bench: you step up and hammer it out." : "Gather what's missing, then come back to the bench."}
+    specs={[["Makes", `${r.qty} ${r.qty > 1 ? "of them" : ""}`.trim()], ["Learned", sourceOf(r).replace(/\.$/, "")], ["Status", r.owned ? "Already yours" : r.can_craft ? "Ready to craft" : `Missing ${missing(r)} ${missing(r) === 1 ? "ingredient" : "ingredients"}`]]} />;
 }

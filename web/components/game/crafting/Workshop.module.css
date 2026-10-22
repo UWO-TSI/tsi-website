@@ -1,28 +1,8 @@
-/* The workbench sheet in the GUI sheet: recipes as list rows, the chosen one in the kit's butter, ingredients with their
-   real icons and counts like the kit's recipe list (what was made shows on the shared reward card, RewardCard). */
-.count { margin: 0 0 12px; color: var(--gui-muted); font-size: var(--gui-text-xs); font-weight: 800; }
-.error { margin: 6px 0; padding: 8px 12px; border-radius: 12px; background: var(--gui-danger-soft); color: var(--gui-danger); font-size: var(--gui-text-sm); font-weight: 700; }
-.body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 16px; }
-@media (max-width: 560px) { .body { grid-template-columns: 1fr; } }
-
-.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; max-height: 340px; overflow-y: auto; }
-.list button { width: 100%; min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 14px; border: 0; border-radius: 999px; background: transparent; color: var(--gui-ink); font: inherit; font-size: var(--gui-text-sm); font-weight: 700; text-align: left; cursor: pointer; }
-.list button:hover { background: var(--gui-paper-warm); }
-.list button[aria-pressed="true"] { background: repeating-linear-gradient(-45deg, var(--gui-stripe-a) 0 12px, var(--gui-stripe-b) 12px 24px); color: var(--gui-ink-strong); font-weight: 800; }
-.list i { flex: none; width: 11px; height: 11px; border-radius: 50%; background: var(--gui-paper-line); }
-.list i[data-ready="true"] { background: var(--gui-success); }
-.list i[data-owned="true"] { background: var(--gui-grey); }
-
-.detail h3 { margin: 0; color: var(--gui-ink-strong); font-size: var(--gui-text-lg); font-weight: 800; }
-.detail small { display: block; margin-top: 2px; color: var(--gui-muted); font-size: var(--gui-text-xs); }
-.ingredients { list-style: none; margin: 12px 0; padding: 0; display: grid; }
-.ingredients li { display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 10px; min-height: 40px; padding: 4px 8px; font-size: var(--gui-text-sm); font-weight: 700; }
-.ingredients li + li { border-top: 2px dashed var(--gui-paper-edge); }
-.ingredients img { width: 26px; height: 26px; object-fit: contain; }
-.ingredients b { width: 16px; height: 16px; margin: 0 5px; border-radius: 5px; background: var(--gui-paper-line); }
-/* The kit's count chips: what you have over what it needs. */
-.ingredients output { padding: 1px 9px; border-radius: 6px; background: var(--gui-paper-deep); color: var(--gui-success); font-weight: 900; font-variant-numeric: tabular-nums; }
-.ingredients li[data-short="true"] output { color: var(--gui-danger); }
-.craft { width: 100%; min-height: 46px; border: 0; border-radius: 999px; background: var(--gui-sage); color: var(--gui-paper); font: inherit; font-weight: 800; cursor: pointer; box-shadow: 0 3px 0 var(--gui-sage-deep); }
-.craft:disabled { background: var(--gui-paper-deep); color: var(--gui-muted); box-shadow: none; cursor: default; }
-
+/* The workbench sheet in the flat UI (components/gui/flat; specs/polish/flat-ui.md step 4): recipe cards, then a recipe
+   on the white studio stage with its ingredients as hairline rows (what was made shows on the shared reward card,
+   RewardCard). */
+.count { color: var(--flat-ink); font: 600 15px/1 var(--gui-font); font-variant-numeric: tabular-nums; }
+/* What you have over what it needs: ink when there's enough, the error red when short. */
+.need { padding: 4px 9px; border-radius: 8px; background: var(--flat-pill); color: var(--flat-ink); font: 600 13px/1 var(--gui-font); font-variant-numeric: tabular-nums; }
+.need[data-short] { color: var(--flat-error); }
+.noArt { display: block; width: 44px; height: 44px; border-radius: 10px; background: var(--flat-pill); }

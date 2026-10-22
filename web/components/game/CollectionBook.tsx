@@ -2,36 +2,30 @@
 
 /**
  * CollectionBook (cozy marathon G6) — the ACNH-style critterpedia/collection
- * viewer. A DOM overlay that fetches GET /api/collections and shows what the
- * member has shaken, picked, and caught, grouped by kind with their rendered
- * icons and counts. Collectibles carry no TC/XP — this is the reward: a filling book.
+ * viewer: what the player has shaken, picked, and caught, grouped by kind with
+ * their rendered icons and counts. Collectibles carry no TC/XP — this is the reward: a filling book.
  *
  * Undiscovered items show as a soft silhouette of their icon, a completion pull.
  */
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FISH, RARITY_META, type FishDef } from "@/lib/game/fishing";
-import { RarityBadge, Sheet, SignInText } from "@/components/gui";
+import { RarityBadge, SignInText } from "@/components/gui";
 import { iconUrl } from "@/lib/icons/keys";
 import { ROSTER } from "@/lib/collections/roster";
 import { AudioManager } from "@/lib/game/audio";
-import { localCollections, mergeWithLocal } from "@/lib/game/collections";
-import { BookOpen, Check, X } from "lucide-react";
-import JournalPages, { fetchJournalPage } from "./JournalPages";
+import { localCollections } from "@/lib/game/collections";
+import { Check, X } from "lucide-react";
+import FlatCollection from "./FlatCollection";
 import { useWorldDialog } from "@/lib/game/useWorldDialog";
-
-interface Row {
-  item_key: string;
-  count: number;
-}
 
 // Almanac lookup (loop wake 29): clicking a DISCOVERED fish/sea-floor tile
 // shows its field notes — window, size, zone, rarity. Only these two groups
 // carry FishDef data; other groups' tiles stay non-interactive.
-const FISH_BY_KEY = new Map<string, FishDef>(FISH.map((f) => [f.key, f]));
+export const FISH_BY_KEY = new Map<string, FishDef>(FISH.map((f) => [f.key, f]));
 
 // Every entry's icon is rendered from its model (row 281, lib/icons); one not found yet shows as its silhouette.
-const CATALOG: { group: string; items: { key: string; name: string; zone?: string }[] }[] = [
+export const CATALOG: { group: string; items: { key: string; name: string; zone?: string }[] }[] = [
   // The roster's groups (lib/collections/roster.ts); fish and the sea floor are the reel's own (FISH, with their zones).
   { group: "Fruit", items: ROSTER.filter((sp) => sp.category === "fruit") },
   { group: "Flowers", items: ROSTER.filter((sp) => sp.sub === "flower") },
@@ -43,7 +37,7 @@ const CATALOG: { group: string; items: { key: string; name: string; zone?: strin
   { group: "Shore", items: ROSTER.filter((sp) => sp.key.startsWith("shore_")) },
 ];
 
-type Sync = "loading" | "synced" | "signed-out" | "local";
+export type Sync = "loading" | "synced" | "signed-out" | "local";
 
 /** The line under the counts: where the collection is kept, said plainly (signed out is a sign-in, not an error). */
 export function collectionNote(collectionScope: string | undefined, sync: Sync): string | null {
@@ -56,16 +50,15 @@ export function collectionNote(collectionScope: string | undefined, sync: Sync):
 
 /**
  * `keys`: the key that opened it (the member world's Collection key), which closes it too. In the member world and on
- * the phone it is the GUI sheet's one dialog frame (audit-2026-10-ui item 1: a bottom sheet on a phone, its close
- * motion, focus, Escape and the opening key). The applicant island (`collectionScope`) keeps its own card, in the
- * --app-* tokens there.
+ * the phone it is the flat UI's panel (specs/polish/flat-ui.md step 6; focus, Escape, the opening key, full screen on a
+ * phone): an icon rail of the journal's pages, every entry a white card (a silhouette until found), and one opened on
+ * the white studio stage with its field notes. The applicant island (`collectionScope`) keeps its own card, in the
+ * --app-* tokens there, exactly as it was: the gate is here, and its body below is untouched.
  */
 export default function CollectionBook({ open, onClose, collectionScope, keys }: { open: boolean; onClose: () => void; collectionScope?: string; keys?: string }) {
   if (collectionScope) return open ? <ApplicantCollectionBook onClose={onClose} collectionScope={collectionScope} /> : null;
-  // The body mounts with each opening (a fresh read) and stays through the close motion (the sheet keeps it).
-  return <Sheet open={open} onClose={onClose} title="Collection" icon={<BookOpen size={22} aria-hidden />} size="md" keys={keys} testId="collection-sheet">
-    {open && <CollectionBody />}
-  </Sheet>;
+  // The body mounts with each opening (a fresh read).
+  return <FlatCollection open={open} onClose={onClose} keys={keys} />;
 }
 
 /** 11 px on the applicant island, the sheet's 12 px floor in the member world. */
@@ -129,43 +122,11 @@ function ApplicantCollectionBook({ onClose, collectionScope }: { onClose: () => 
   );
 }
 
-/** The counts and the groups; `onClose` given: the applicant card's own header with its close button. */
-function CollectionBody({ collectionScope, onClose }: { collectionScope?: string; onClose?: () => void }) {
-  const [counts, setCounts] = useState(() => localCollections(collectionScope));
-  const [sync, setSync] = useState<Sync>(collectionScope ? "local" : "loading");
+/** The applicant island's counts and groups (kept on this device); `onClose` given: the card's own header with its close button. */
+function CollectionBody({ collectionScope, onClose }: { collectionScope: string; onClose?: () => void }) {
+  const [counts] = useState(() => localCollections(collectionScope));
   const [detailKey, setDetailKey] = useState<string | null>(null);
   const [fishFilter, setFishFilter] = useState<"all" | "river" | "sea" | "caught">("all");
-  // Journal pages from /api/collections/journal when the server has them; the local catalog otherwise.
-  const [journal, setJournal] = useState<Awaited<ReturnType<typeof fetchJournalPage>>>(null);
-  useEffect(() => {
-    if (collectionScope) return;
-    let alive = true;
-    void fetchJournalPage("fish").then(p => { if (alive) setJournal(p); });
-    return () => { alive = false; };
-  }, [collectionScope]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    let cancelled = false;
-    if (collectionScope) return () => { controller.abort(); };
-    fetch("/api/collections", { signal: controller.signal })
-      .then(async (r) => {
-        if (r.status === 401) { if (!cancelled) setSync("signed-out"); return; }
-        if (!r.ok) throw new Error("Collection sync unavailable");
-        const d: { collections?: Row[] } = await r.json();
-        if (!Array.isArray(d.collections)) throw new Error("Invalid collection response");
-        const map = Object.fromEntries(d.collections.map((row) => [row.item_key, row.count]));
-        if (!cancelled) {
-          setCounts(mergeWithLocal(map, collectionScope));
-          setSync("synced");
-        }
-      })
-      .catch(() => { if (!cancelled) setSync("local"); });
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [collectionScope]);
 
   const detail = detailKey ? FISH_BY_KEY.get(detailKey) ?? null : null;
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
@@ -175,7 +136,7 @@ function CollectionBody({ collectionScope, onClose }: { collectionScope?: string
   );
   const totalKinds = CATALOG.reduce((n, g) => n + g.items.length, 0);
 
-  const note = collectionNote(collectionScope, sync);
+  const note = collectionNote(collectionScope, "local");
   const summary = <p style={{ fontSize: 12, color: "var(--app-muted, #8A7B5E)", marginTop: 0, marginBottom: 0 }}>
     {discovered}/{totalKinds} kinds discovered · {total} caught
     <span role="status" style={{ display: "block", marginTop: 4 }}>{note && <SignInText text={note} />}</span>
@@ -200,7 +161,7 @@ function CollectionBody({ collectionScope, onClose }: { collectionScope?: string
         </header>
       ) : <div style={{ marginBottom: 16 }}>{summary}</div>}
 
-        {journal ? <JournalPages initial={journal} /> : CATALOG.map((g) => {
+        {CATALOG.map((g) => {
           // Loop wake 27: per-group completion count — the Critterpedia
           // "how far along am I" read; a gold check once the group is complete.
           const got = g.items.filter((it) => Object.hasOwn(counts, it.key)).length;

@@ -1,7 +1,8 @@
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { CardGrid, DetailView, FlatPanel, HairlineRow, IconRail, ItemCard, PayRow, Purse, SpecBand, badgeText, priced, railStep, type RailItem } from ".";
+import { CardGrid, DetailView, FlatPanel, HairlineRow, IconRail, ItemCard, PayRow, Purse, SidePanel, SpecBand, WithSide, badgeText, priced, railStep, type RailItem } from ".";
+import { NUDGE, markerOf, nudgeOf } from "../motion";
 
 const html = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(el);
 const RAIL: RailItem[] = [
@@ -104,6 +105,7 @@ describe("the panel, the grid, the detail and the rows", () => {
   it("titles a grid only when it has a title", () => {
     expect(html(h(CardGrid, { title: "Tools", children: "c" }))).toMatch(/^<h3[^>]*>Tools<\/h3><div/);
     expect(html(h(CardGrid, { min: 160, children: "c" }))).toMatch(/^<div[^>]*style="--card-min:160px"/);
+    expect(html(h(CardGrid, { min: 180, phoneMin: 150, children: "c" }))).toMatch(/style="--card-min:180px;--card-min-phone:150px"/);
   });
   it("lays out a detail: back, steps, info and the spec band", () => {
     const out = html(h(DetailView, { stage: h("canvas"), onBack: () => {}, steps: { prev: { label: "Previous: A", onClick: () => {} }, next: { label: "Next: B", onClick: () => {} } },
@@ -137,5 +139,69 @@ describe("the panel, the grid, the detail and the rows", () => {
     const row = html(h(HairlineRow, { title: "Dace", detail: "Common fish", end: h("button", null, "Sell") }));
     expect(row).toMatch(/<b>Dace<\/b><span[^>]*>Common fish<\/span><\/span><button>Sell<\/button>/);
     expect(row).not.toContain("<canvas");
+  });
+});
+
+describe("the side panel (round 2: a small panel beside the grid, no item page)", () => {
+  it("shows the picture, the name, the facts and the actions, with a close", () => {
+    const out = html(h(SidePanel, { title: "Apple", kind: "Common · Fruit", picture: "/apple.webp", facts: [["In your bag", "10"]], actions: h("button", null, "Pin"), onClose: () => {} }));
+    expect(out).toMatch(/^<aside[^>]*aria-label="Apple"/);
+    expect(out).toContain("<canvas");
+    expect(out).toMatch(/<dt>In your bag<\/dt><dd>10<\/dd>/);
+    expect(out).toContain("<button>Pin</button>");
+    expect(out).toContain('aria-label="Close"');
+  });
+  it("puts the picture first, then the kind and the name, a line about it, the facts and the actions (round 3)", () => {
+    const out = html(h(SidePanel, { title: "Dace", kind: "Fish", picture: "/dace.webp", text: "Common as anything.", facts: [["Caught", "3×"]], actions: h("button", null, "Pin"), onClose: () => {} }));
+    expect(out).toMatch(/data-picture=""/);
+    expect(out).toMatch(/<canvas width="64" height="64"[\s\S]*>Fish<\/p><h3[^>]*>Dace<\/h3><\/div><\/div><p[^>]*>Common as anything.<\/p><dl/);
+    expect(html(h(SidePanel, { title: "Note", onClose: () => {} }))).not.toMatch(/data-picture|<canvas|<dl|<p[ >]/);
+  });
+  it("keeps the grid beside it, and takes the grid's whole width when nothing is picked", () => {
+    expect(html(h(WithSide, { side: h("aside", null, "x"), children: "grid" }))).toMatch(/data-open=""[\s\S]*grid[\s\S]*<aside>x<\/aside>/);
+    expect(html(h(WithSide, { side: null, children: "grid" }))).not.toContain("data-open");
+  });
+});
+
+describe("the cells' motion (round 3: grow out, the neighbours step aside)", () => {
+  const at = (col: number, row: number) => ({ x: col * 134, y: row * 142, w: 124, h: 132 });
+  const A = at(2, 2);
+  it("grows the active cell by the same few px a side, whatever its size, and doesn't move it", () => {
+    const n = nudgeOf(A, A, NUDGE.hover);
+    expect(n.x).toBe(0);
+    expect(n.y).toBe(0);
+    expect(n.s).toBeCloseTo(1 + (2 * NUDGE.hover.grow) / 132, 3);
+    expect(nudgeOf({ x: 0, y: 0, w: 250, h: 300 }, { x: 0, y: 0, w: 250, h: 300 }, NUDGE.select).s).toBeCloseTo(1 + (2 * NUDGE.select.grow) / 300, 3);
+    expect(nudgeOf(A, A, NUDGE.select).s).toBeGreaterThan(n.s);
+  });
+  it("pushes the touching cells straight away by the full push, the corners less, the ring after a hair, and no further", () => {
+    expect(nudgeOf(at(3, 2), A, NUDGE.hover)).toEqual({ x: NUDGE.hover.push, y: 0, s: 1 });
+    expect(nudgeOf(at(1, 2), A, NUDGE.hover)).toEqual({ x: -NUDGE.hover.push, y: 0, s: 1 });
+    expect(nudgeOf(at(2, 1), A, NUDGE.select)).toEqual({ x: 0, y: -NUDGE.select.push, s: 1 });
+    const corner = nudgeOf(at(3, 3), A, NUDGE.select), far = nudgeOf(at(4, 2), A, NUDGE.select);
+    expect(corner.x).toBeGreaterThan(0);
+    expect(corner.y).toBeGreaterThan(0);
+    expect(Math.hypot(corner.x, corner.y)).toBeLessThan(NUDGE.select.push);
+    expect(far.x).toBeGreaterThan(0);
+    expect(far.x).toBeLessThan(Math.hypot(corner.x, corner.y));
+    expect(nudgeOf(at(5, 2), A, NUDGE.select)).toEqual({ x: 0, y: 0, s: 1 });
+    expect(nudgeOf(at(4, 4), A, NUDGE.select)).toEqual({ x: 0, y: 0, s: 1 });
+  });
+  it("makes room: a neighbour steps further than the active cell grows, and a pick moves more than a hover", () => {
+    expect(NUDGE.hover.push).toBeGreaterThan(NUDGE.hover.grow);
+    expect(NUDGE.select.push).toBeGreaterThan(NUDGE.select.grow);
+    expect(NUDGE.select.grow).toBeGreaterThan(NUDGE.hover.grow);
+    expect(NUDGE.select.push).toBeGreaterThan(NUDGE.hover.push);
+  });
+});
+
+describe("the micro animations' marker", () => {
+  it("sits where the chosen one is inside its row, the row's scroll included", () => {
+    expect(markerOf({ left: 100, top: 50, scrollLeft: 0, scrollTop: 0 }, { left: 140, top: 58, width: 48, height: 48 })).toEqual({ x: 40, y: 8, w: 48, h: 48 });
+    expect(markerOf({ left: 0, top: 0, scrollLeft: 120, scrollTop: 0 }, { left: 30, top: 4, width: 80, height: 40 })).toEqual({ x: 150, y: 4, w: 80, h: 40 });
+  });
+  it("leaves the static rail its own dot until it's measured", () => {
+    const out = html(h(IconRail, { items: RAIL, value: "tools", onChange: () => {}, label: "Shelves" }));
+    expect(out).not.toContain("data-marker");
   });
 });

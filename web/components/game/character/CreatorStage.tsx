@@ -16,6 +16,7 @@ import { Suspense, useEffect, useMemo, useRef, useSyncExternalStore, type RefObj
 import { createPortal, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import Character, { type CharacterMotion } from "./Character";
+import { StudioLights } from "@/components/economy/TurnStage";
 import { DEFAULT_LOOK, PART_BY_ID, wear, type CharacterLook } from "@/lib/game/character/look";
 import type { Framing } from "@/lib/game/character/creatorCategories";
 
@@ -45,21 +46,22 @@ function Lights() {
   </>;
 }
 
-/** A soft round shadow under the feet: one textured quad. */
-let shadowTex: THREE.Texture | null = null;
-function contactTexture() {
-  if (shadowTex) return shadowTex;
+/** A soft round shadow under the feet: one textured quad (warm on the cream set, neutral on the white one). */
+const shadowTex: Partial<Record<Studio, THREE.Texture>> = {};
+function contactTexture(studio: Studio) {
+  const had = shadowTex[studio];
+  if (had) return had;
   const c = document.createElement("canvas");
   c.width = c.height = 128;
-  const g = c.getContext("2d")!, grad = g.createRadialGradient(64, 64, 4, 64, 64, 62);
-  grad.addColorStop(0, "rgba(70,50,30,0.55)"); grad.addColorStop(0.55, "rgba(70,50,30,0.22)"); grad.addColorStop(1, "rgba(70,50,30,0)");
+  const g = c.getContext("2d")!, grad = g.createRadialGradient(64, 64, 4, 64, 64, 62), rgb = studio === "white" ? "0,0,0" : "70,50,30";
+  grad.addColorStop(0, `rgba(${rgb},0.55)`); grad.addColorStop(0.55, `rgba(${rgb},0.22)`); grad.addColorStop(1, `rgba(${rgb},0)`);
   g.fillStyle = grad; g.fillRect(0, 0, 128, 128);
-  shadowTex = new THREE.CanvasTexture(c);
-  shadowTex.colorSpace = THREE.SRGBColorSpace;
-  return shadowTex;
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return (shadowTex[studio] = tex);
 }
-function Contact() {
-  const map = useMemo(() => contactTexture(), []);
+function Contact({ studio }: { studio: Studio }) {
+  const map = useMemo(() => contactTexture(studio), [studio]);
   return <mesh rotation-x={-Math.PI / 2} position={[0, 0.002, 0]} renderOrder={-1}>
     <planeGeometry args={[0.78, 0.6]} />
     <meshBasicMaterial map={map} transparent depthWrite={false} toneMapped={false} />
@@ -84,8 +86,11 @@ function easeTurn(yaw: { now: number; target: number }, motion: CharacterMotion,
   motion.yaw = yaw.now;
 }
 
+/** Which set the portrait stands on: the cream studio's warm lights, or the flat creator's white one. */
+export type Studio = "warm" | "white";
+
 /** The portrait: camera easing between framings, the turn eased toward its target. */
-export function Portrait({ look, framing, yaw }: { look: CharacterLook; framing: Framing; yaw: RefObject<{ now: number; target: number }> }) {
+export function Portrait({ look, framing, yaw, studio = "warm" }: { look: CharacterLook; framing: Framing; yaw: RefObject<{ now: number; target: number }>; studio?: Studio }) {
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: FRAMES[framing].yaw, lift: 0, pose: null, play: null });
   const at = useRef(new THREE.Vector3(...FRAMES[framing].at));
   const snapped = useRef(false);
@@ -96,8 +101,8 @@ export function Portrait({ look, framing, yaw }: { look: CharacterLook; framing:
     easeTurn(yaw.current, motion.current, dt);
   });
   return <>
-    <Lights />
-    <Contact />
+    {studio === "white" ? <StudioLights /> : <Lights />}
+    <Contact studio={studio} />
     <Suspense fallback={null}><Character look={look} motion={motion} scale={1} faceSize={1024} lod={false} /></Suspense>
   </>;
 }

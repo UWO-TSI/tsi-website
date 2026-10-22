@@ -36,7 +36,7 @@ const errText = (err: unknown) => (err instanceof ApiError ? (err.status === 401
 const picture = (e: ShopEntry) => e.sprite_url ?? shopIcon({ slug: e.slug, catalogue_ref: e.catalogue_ref, category: e.category });
 /** An item's kind, the quiet line under its name. */
 export const kindOf = (e: ShopEntry) => e.category === "merch" ? `${cap(KIND_LABEL.get(merchKind(e)) ?? "merch")} · Tethos club` : CATEGORY_LABEL[e.category] ?? cap(e.category);
-const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+export const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 const tagOf = (e: ShopEntry) => e.category === "merch" ? merchTag(e.slug) : e.special ? "today's special" : null;
 
 /** The spec row along the bottom of an item: the keychain's parts, else the merch's pickup, else kind, set and stock. */
@@ -195,7 +195,8 @@ export default function ShopOverlay({ open, onClose, title, section, sell = fals
     } finally { setBusy(null); }
   };
 
-  return <FlatPanel open={open} onClose={onClose} title={title} keys={keys} testId="shop-overlay" embedded={embedded}
+  // A new shelf or an item opened fades in (the kit's micro animations, round 2).
+  return <FlatPanel open={open} onClose={onClose} title={title} keys={keys} testId="shop-overlay" embedded={embedded} contentKey={`${current ?? ""}${item ? `:${item.id}` : ""}`}
     purse={<Purse coins={view ? view.coins : null} gems={view ? view.gems : null} coinsRef={coinsEl} gemsRef={gemsEl} />}
     rail={<IconRail label="Shelves" value={current} onChange={id => { setShelf(id); setPicked(null); setNote(null); }}
       items={shelves.map(id => ({ id, label: id === "pickups" ? "Your pickups" : SHELF_LABEL[id], icon: SHELF_ICON[id], badge: id === "specials" && view ? view.tabs.specials.length : undefined }))} />}>
