@@ -44,3 +44,5 @@ David, 2026-10-17. A real TSI item, sold in the shop's club merch section on the
   - The chain is 3.1 cm from cap to cap.
   - The keyring clasp is 2.26 x 1.76 cm.
   - The table is on `specs/evidence/shop-interior/phase2/keychain-round2-sheet.webp`.
+- **2026-10-22: on sale** at 800 gems, stock unset (unlimited): a `CATALOGUE` row in `lib/wallet/catalogue.ts`, seeded by
+  `web/supabase/migrations/20261022185120_catalogue_seed.sql`. Redeem is on once the coordinator applies it to prod.

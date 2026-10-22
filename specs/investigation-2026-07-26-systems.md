@@ -194,7 +194,7 @@ discrete and the art assumes it.* Same shape, other places:
    benefit that one loop can be frame-budgeted and staggered (update fireflies every
    3rd frame, butterflies every 2nd) without touching each component.
 5. **Placement as float literals.** 606 of them. Every one is a decision that cannot
-   be validated, versioned, or edited by an admin. Principle #8 in `CLAUDE.md` wants
+   be validated, versioned, or edited by an admin. Principle #8 in `specs/design-principles.md` wants
    monthly content drops without code pushes; that is impossible while the world is
    606 literals across 40 files. A tile map is data, and data can go in Supabase.
 

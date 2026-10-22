@@ -7,7 +7,6 @@ import MerchFulfilment from "@/components/economy/MerchFulfilment";
 import ShopOverlay from "@/components/economy/ShopOverlay";
 import { merchViewer } from "@/components/game/ShopCounter";
 import { memoryEconomyStore } from "@/lib/wallet/memoryStore";
-import { PENDING_MERCH } from "@/lib/wallet/catalogue";
 import { memoryEconomyTransport } from "@/lib/wallet/memoryTransport";
 import * as S from "@/lib/wallet/service";
 import type { EconomyTransport } from "@/lib/wallet/transport";
@@ -18,8 +17,6 @@ const JORDAN = "00000000-0000-4000-8000-000000000102";
 
 async function seed(): Promise<EconomyTransport> {
   const m = memoryEconomyStore();
-  // Club merch waiting on its migration (lib/wallet/catalogue.ts PENDING_MERCH) is on the dev shelf already.
-  PENDING_MERCH.forEach((c, i) => m.items.push({ ...c, id: `00000000-0000-4000-8000-0000000f${String(i + 1).padStart(4, "0")}`, active: true, available_from: null, available_until: null }));
   m.name(ME, "You");
   m.name(MAYA, "Maya Chen");
   m.name(JORDAN, "Jordan Park");

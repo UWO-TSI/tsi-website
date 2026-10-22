@@ -390,6 +390,14 @@ describe("wardrobe batch 2 (specs/playtest-round1.md \"New wardrobe batch\"; Dav
     }
     expect(resolveParts(DEFAULT_LOOK).some(p => p.colour)).toBe(false);
   });
+  it("draws #04's logo, the arches flipped to a W, from its own tile of the fixed-colour atlas (accessories/arches_logo.py)", () => {
+    // colour_atlas.py: acc_crew_visor_logo is the 256 px square at (1536, 768) of the 2048 x 1024 atlas; the band takes it at full LOD and LOD 1
+    for (const file of [join(art, "accessories/roblox/acc_crew_visor.glb"), join(art, "lod1/accessories/roblox/acc_crew_visor.glb")]) {
+      const uv = uvs(file), inLogo = [];
+      for (let i = 0; i < uv.length; i += 2) if (uv[i] >= 2 + 1536 / 2048 && uv[i] <= 2 + 1792 / 2048 && uv[i + 1] >= 768 / 1024) inLogo.push(i / 2);
+      expect(inLogo.length, file).toBeGreaterThan(6);
+    }
+  });
   it("puts David's faces in the atlas as mix-and-match parts, each priced face gating its own parts", () => {
     for (const [key, f] of Object.entries(FACE.faces)) {
       expect(FACE.layers.eyes.items[f.eyes], f.eyes).toBeDefined();
