@@ -1,0 +1,23 @@
+db_read lines from fly logs (tethos-rt v6), 2026-10-23 06:45:54 to 07:28:40 UTC: 80 lines, 0 failed, every read on its first attempt (attempt 0).
+  blocks    ok     n=24  min  92 ms  median 103 ms  max 257 ms
+  card      ok     n=23  min  80 ms  median 105 ms  max 232 ms
+  friends   ok     n=24  min  84 ms  median 102 ms  max 231 ms
+  sanctions ok     n= 9  min  73 ms  median 102 ms  max 215 ms
+  cold joins (each after 10 min with no realtime reads):
+    07:07:12 card      80 ms ok
+    07:07:12 friends   87 ms ok
+    07:07:12 blocks   206 ms ok
+    07:17:56 friends   84 ms ok
+    07:17:56 card      86 ms ok
+    07:17:56 blocks    92 ms ok
+    07:28:40 card      86 ms ok
+    07:28:40 blocks   204 ms ok
+    07:28:40 friends  213 ms ok
+  before (Oct 22, Nano): 29 friends_load_failed timeouts (3000 ms) in the night run; cold probe: all three reads aborted at 3000 ms, then 2.7-3.0 s, warm 0.25-0.6 s.
+
+Supabase metrics after the resize (/customer/v1/privileged/metrics, 2026-10-23 07:28 UTC; boot 06:42:55 UTC):
+  MemTotal 1924 MB, MemAvailable 1282 MB, swap used 0 MB of 1074 MB, pswpin 0, pswpout 0, major faults 2754, load1 0.02
+  at 06:45 UTC (3 min after boot): MemAvailable 1357 MB, swap used 0, pswpin 0.
+  before (Nano, Oct 23 00:00 UTC): MemTotal 426 MB, swap used ~440 MB, 433M pages swapped in over 34 days.
+
+Keep-warm read: not added. Cold reads after a 10 minute idle take 80 to 213 ms.

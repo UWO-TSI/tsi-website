@@ -1,0 +1,76 @@
+realtime-joins cleanup, 2026-10-23 07:29 UTC: two throwaway accounts A (e9982465…), B (6b0d8bea…), created 2026-10-23 06:45 UTC.
+
+== node cleanup.mjs scan
+{
+ "columns": 162,
+ "nonzero": [
+  {
+   "col": "identity_name_log.changed_by",
+   "n": 2
+  },
+  {
+   "col": "identity_name_log.member_id",
+   "n": 2
+  },
+  {
+   "col": "member_identity.member_id",
+   "n": 2
+  },
+  {
+   "col": "member_inventory.member_id",
+   "n": 44
+  },
+  {
+   "col": "member_progression.member_id",
+   "n": 2
+  },
+  {
+   "col": "member_weapons.member_id",
+   "n": 4
+  },
+  {
+   "col": "starter_grants.member_id",
+   "n": 2
+  },
+  {
+   "col": "wallet_ledger.member_id",
+   "n": 2
+  },
+  {
+   "col": "wallets.member_id",
+   "n": 2
+  },
+  {
+   "col": "world_friend_codes.member_id",
+   "n": 2
+  }
+ ]
+}
+
+== node cleanup.mjs collect
+{
+ "identity_name_log": 2
+}
+
+== node cleanup.mjs delete
+{
+ "rowTables": 1,
+ "userDeletes": {
+  "a": 200,
+  "b": 200
+ }
+}
+
+== node cleanup.mjs verify
+{
+ "scannedColumns": 162,
+ "nonzero": [],
+ "recordedRowsLeft": {
+  "identity_name_log": 0
+ }
+}
+
+== Previews deleted (vercel remove --yes), 2026-10-23 07:30 UTC; vercel inspect now answers "Can't find the deployment" for each:
+uwotsi-o3afq5l8y-davids-projects-e31987e3.vercel.app (this lane)
+uwotsi-3w7kq9vdz-davids-projects-e31987e3.vercel.app (launch-v1)
+uwotsi-by2hxb24c-davids-projects-e31987e3.vercel.app (launch-v1)
