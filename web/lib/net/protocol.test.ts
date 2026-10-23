@@ -6,6 +6,7 @@ import { FAMILIES } from "@/lib/game/oracle/family";
 import { village } from "@/lib/game/villageMap";
 import { CLIFF_LEVELS, LEVEL_STEP, Surface, TILE, createCenteredMap, heightField, rampRun, sampleGroundHeight, setCell } from "@/lib/game/grid";
 import { createRuins } from "@/lib/game/ruins";
+import worldDoc from "@/data/world/world.json";
 import type { Family } from "@/lib/oracle/engine";
 import type { Frame } from "@/lib/combat/mastery";
 import type { Phase } from "@/lib/study/rules";
@@ -500,17 +501,24 @@ describe("limits", () => {
   it("sanity numbers (§4.5)", () => {
     expect(SANITY).toEqual({ dtMinMs: 20, dtMaxMs: 2000, speed: 32, speedAvg: 26, speedAvgWindowMs: 1000, rise: 15, climbRatio: CLIMB_RATIO, fall: 22,
       teleportDist: 6, teleportWindowMs: 300, teleportGapMs: 2000, teleportPerMinute: 15, strikeDecayMs: 10_000, strikeKick: 10 });
-    expect(AREA_BOUNDS.village).toEqual({ half: 40, yMin: -3, yMax: 25 });
+    expect(AREA_BOUNDS.village).toEqual({ half: 300, yMin: -3, yMax: 40 });
     for (const a of ["cafe", "hq", "museum", "oracle", "house"] as const) expect(AREA_BOUNDS[a]).toEqual({ half: 20, yMin: -3, yMax: 25 });
     for (const a of ["ruins", "home"] as const) expect(AREA_BOUNDS[a]).toEqual(AREA_BOUNDS.village);
-    expect([inAreaBounds("village", 40, 25, -40), inAreaBounds("village", 40.01, 0, 0), inAreaBounds("village", 0, -3.01, 0), inAreaBounds("cafe", 0, 0, 20.5)])
+    expect([inAreaBounds("village", 300, 40, -300), inAreaBounds("village", 300.01, 0, 0), inAreaBounds("village", 0, -3.01, 0), inAreaBounds("cafe", 0, 0, 20.5)])
       .toEqual([true, false, false, false]);
   });
-  it("the bounds hold the shipped worlds: the village's land plus a glide out to sea, and the ruins map", () => {
+  it("the bounds hold the shipped worlds: the village's land and the new world's grid plus a glide out to sea, and the ruins map", () => {
     // A glide off the coast flies about 12 tiles (MOVE_TUNING's glider notes; the farthest found on the shipped map is 8.2).
     // If David paints the land past ±28 this fails: widen the village bound before players get struck for gliding.
     const b = village().bounds;
     expect(Math.max(-b.minX, b.maxX, -b.minZ, b.maxZ) + 12).toBeLessThanOrEqual(AREA_BOUNDS.village.half);
+    // The new world (web/data/world): its whole grid, whatever David sculpts on it, plus the glide; its height ceiling plus a jump.
+    const w = worldDoc as { width: number; depth: number; originX: number; originZ: number; heightRange: number[] };
+    const gridReach = Math.max(-(w.originX - 0.5), w.originX + w.width - 0.5, -(w.originZ - 0.5), w.originZ + w.depth - 0.5);
+    expect(gridReach + 12).toBeLessThanOrEqual(AREA_BOUNDS.village.half);
+    expect(w.heightRange[1] + MOVE_TUNING.jumpHeight + MOVE_TUNING.grabReach).toBeLessThanOrEqual(AREA_BOUNDS.village.yMax);
+    // The wire still carries it: positions quantize to int16 centimetres.
+    expect(AREA_BOUNDS.village.half * 100).toBeLessThan(32767);
     const { map } = createRuins();
     const reach = Math.max(Math.abs(map.originX - 0.5), Math.abs(map.originX + map.width - 0.5), Math.abs(map.originZ - 0.5), Math.abs(map.originZ + map.depth - 0.5));
     expect(reach).toBeLessThanOrEqual(AREA_BOUNDS.ruins.half);

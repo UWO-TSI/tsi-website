@@ -1,7 +1,7 @@
 /**
  * Server-rolled catches (roadmap "Server-authoritative catch rolls"). The
  * client only asks for a roll at a place; these check the place against the
- * island layouts and roll with the world's own tables and rules
+ * island layouts (the active world's: `activeVillage`) and roll with the world's own tables and rules
  * (lib/game/peaceful.ts, fishing.ts) on the server's clock and real weather.
  * Pure; the collections service records the result.
  */
@@ -14,7 +14,11 @@ import { homeNodes, villageNodes } from "@/lib/game/islandNodes";
 import { reelWeather, type IslandWeather } from "@/lib/game/islandWeather";
 import { hourKey, rollFishFor, rollNode } from "@/lib/game/peaceful";
 import type { RodTier } from "@/lib/game/rods";
-import { village } from "@/lib/game/villageMap";
+import { parseObjects, village, type VillageDoc } from "@/lib/game/villageMap";
+import { GAME_WORLD, type GameWorld } from "@/lib/game/world/active";
+import { villageOfCells, type WorldCells } from "@/lib/game/world/cells";
+import worldCells from "@/data/world/cells.json";
+import worldDoc from "@/data/world/world.json";
 import { torontoParts } from "@/lib/time";
 import { momentAt } from "./logic";
 import type { Species } from "./roster";
@@ -28,12 +32,21 @@ export const ROLL_TTL_MS = 180_000;
 /** Forage prompts show within 1.7 of a node and bugs flutter about half a unit: this allows for both. */
 export const NODE_REACH = 3;
 
+/**
+ * The member island the client walks (lib/game/world/active.ts): the village, or the smooth world from its cell view
+ * (web/data/world/cells.json, since the server can't decode the PNGs) and its document's objects.
+ */
+export const activeVillage = (world: GameWorld = GAME_WORLD) =>
+  world === "new" ? villageOfCells(worldCells as WorldCells, parseObjects(worldDoc.objects as VillageDoc["objects"])) : village();
+
 let sites: Record<Site, { map: ReturnType<typeof createHomeIsland>["map"]; classify: (x: number, z: number) => WaterType }> | null = null;
 let nodes: Map<string, NodeSpec & { bug: boolean }> | null = null;
-const layouts = () => (sites ??= { village: { map: village().map, classify: villageWater().classify }, home: { map: createHomeIsland().map, classify: () => "sea" } });
+let active: ReturnType<typeof activeVillage> | null = null;
+const islandNow = () => (active ??= activeVillage());
+const layouts = () => (sites ??= { village: { map: islandNow().map, classify: villageWater(islandNow()).classify }, home: { map: createHomeIsland().map, classify: () => "sea" } });
 const allNodes = () => {
   if (nodes) return nodes;
-  const v = villageNodes(), h = homeNodes();
+  const v = villageNodes(islandNow()), h = homeNodes();
   nodes = new Map([...v.forage, ...h.forage].map(n => [n.id, { ...n, bug: false }]));
   for (const n of [...v.bugs, ...h.bugs]) nodes.set(n.id, { ...n, bug: true });
   return nodes;

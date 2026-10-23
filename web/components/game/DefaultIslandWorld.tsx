@@ -116,6 +116,7 @@ import InteriorBackdrop from "./InteriorBackdrop";
 import ShopCounter from "./ShopCounter";
 import ShopkeeperChoice, { MERCH_LINE, type ShopSection } from "./ShopkeeperChoice";
 import IslandLoading from "./IslandLoading";
+import { loadGameWorld } from "@/lib/game/world/load";
 import TalkBox from "./TalkBox";
 import { emptyTalkView, requestTalk, subscribeTalk, talkStore, talkView } from "@/lib/game/residentTalk";
 import DailyGift from "./DailyGift";
@@ -692,6 +693,11 @@ function LoadingStatus({ ready }: { ready: boolean }) {
 
 /** `preset` (default: the game look, CURRENT) and `children` (mounted inside the Canvas) are for /lab/look only. */
 export default function DefaultIslandWorld({ preset, children }: { preset?: LookPreset; children?: ReactNode }) {
+  // The member island's world (NEXT_PUBLIC_GAME_WORLD): the new world loads into the village's place before anything mounts.
+  const [loading] = useState(loadGameWorld);
+  const [worldReady, setWorldReady] = useState(!loading);
+  useEffect(() => { void loading?.then(() => setWorldReady(true)); }, [loading]);
+  if (!worldReady) return <IslandLoading />;
   return <GameSceneBoundary><DefaultIslandWorldContent preset={preset}>{children}</DefaultIslandWorldContent></GameSceneBoundary>;
 }
 

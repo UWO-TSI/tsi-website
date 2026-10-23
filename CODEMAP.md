@@ -107,6 +107,7 @@ Dev server only (`/lab` and `/dev` 404 in production builds). Member island `/st
 | Combat | `?ruins=1`, `?mission=<id>` |
 | Position | `?at=x,z`, `?spawnat=x,z`, `?aerial=1&ax&az&ah&dir` |
 | Signed-out demo data | `?collections=demo`, `?progression=demo`, `?oracle=demo` |
+| World switch (build env) | `NEXT_PUBLIC_GAME_WORLD=new` plays the new world (`web/data/world`) on the member island and in the server's catch checks; unset is the village (`lib/game/world/active.ts`) |
 | Maps | `/lab/island?fixture=v2` walks the v2 world, `/lab/map?fixture=v2` paints it, `?fixture=terrain` opens the synthetic test island, `/lab/island?draft=1` walks the painter's draft |
 
 ## 6. Big files (over 40 KB; line ranges approximate)
