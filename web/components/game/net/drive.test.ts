@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import * as THREE from "three";
 import { WATER_DROP } from "@/lib/game/grid";
 import type { RemoteEntry, RemotePlayer, RemoteSample } from "@/lib/net/types";
-import { castSunShadows, createRig, driveRig, gateMixer, knownClip, type GroundWorld } from "./drive";
+import { FLAT_GROUND, ROOM_GROUND, castSunShadows, createRig, driveRig, gateMixer, knownClip, type GroundWorld } from "./drive";
+import { groundOf } from "./RemoteAvatars";
 import { FULL, HIDDEN, LOD, REDUCED } from "./lod";
 
 /** A test double for one remote (the client core's interpolation is its own concern): `script` writes the sample. */
@@ -34,6 +35,21 @@ describe("a remote's frame", () => {
     driveRig(low, 0, flat(0.75), null);
     expect(low.groundY).toBeCloseTo(0.2);
     expect(low.motion.lift).toBe(0);
+  });
+
+  it("stands a room's remote at the height they sent (an upper level, a stair), and an outdoor one on the ground under them", () => {
+    const up = createRig(entry(at({ x: 1, y: 3.2, z: 2 })));
+    up.anchor.current = new THREE.Group();
+    driveRig(up, 0, ROOM_GROUND, null);
+    expect(up.anchor.current.position.toArray()).toEqual([1, 3.2, 2]);
+    expect(up.groundY).toBeCloseTo(3.2);
+    expect(up.motion.lift).toBe(0);
+    // The same height outdoors is a jump: the anchor stays on the ground, the body lifts.
+    const jump = createRig(entry(at({ x: 1, y: 3.2, z: 2 })));
+    jump.anchor.current = new THREE.Group();
+    driveRig(jump, 0, FLAT_GROUND, null);
+    expect(jump.anchor.current.position.y).toBe(0);
+    expect(jump.motion.lift).toBeCloseTo(3.2);
   });
 
   it("stands in the water below its line, and keeps the water's top for a splash", () => {
@@ -199,5 +215,13 @@ describe("the tiers' costs", () => {
     castSunShadows(root, true);
     expect([body.userData.sunCaster, body.castShadow, tool.castShadow]).toEqual(["dynamic", true, true]);
     expect([decal.castShadow, decal.userData.sunCaster]).toEqual([false, undefined]);
+  });
+});
+
+describe("what each area stands remotes on", () => {
+  it("carries the rooms' walkers' heights, leaves the outdoors to the ground", () => {
+    for (const area of ["hq", "museum", "oracle", "house"] as const) expect(groundOf(area)).toBe(ROOM_GROUND);
+    for (const area of ["cafe", "ruins", "home"] as const) expect(groundOf(area)).toBe(FLAT_GROUND);
+    expect(groundOf("village")).not.toBe(FLAT_GROUND);
   });
 });

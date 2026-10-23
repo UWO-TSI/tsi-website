@@ -24,8 +24,13 @@ import { FX_BENCH, fxOn } from "@/lib/game/perf/fxBench";
 import { isEmoteClip } from "@/lib/net/protocol";
 
 /** What remotes stand on: the scene's walk world (movement's `top` and `wet`). Interiors are flat. */
-export interface GroundWorld { top(x: number, z: number): number; wet(x: number, z: number): boolean }
+export interface GroundWorld {
+  top(x: number, z: number): number; wet(x: number, z: number): boolean;
+  /** A room (InteriorPlayer's walker: no jump): the sender's y is its floor, so a stair or an upper level stands where it is. */
+  room?: boolean;
+}
 export const FLAT_GROUND: GroundWorld = { top: () => 0, wet: () => false };
+export const ROOM_GROUND: GroundWorld = { top: () => 0, wet: () => false, room: true };
 
 /**
  * Clips a seat holds (lib/game/character/clips SEAT_CLIPS: a bench, a bed, the ground, the campfire's rings): there the
@@ -117,7 +122,7 @@ export function driveRig(r: RemoteRig, now: number, world: GroundWorld, juice: J
   place?: ((s: RemoteSample) => void) | null): RemoteSample {
   const s = FX_BENCH ? benchSample(r, now) : r.entry.sample(now, r.sample), m = r.motion, tier = r.lod.tier;
   if (FX_BENCH && place) place(s);
-  const groundY = Math.min(s.y, floorUnder(r, world, s.x, s.z));
+  const groundY = world.room ? s.y : Math.min(s.y, floorUnder(r, world, s.x, s.z));
   r.groundY = groundY;
   r.feet.current.set(s.x, s.y, s.z);
   r.anchor.current?.position.set(s.x, groundY, s.z);
