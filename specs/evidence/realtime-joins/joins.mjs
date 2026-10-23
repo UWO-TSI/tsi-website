@@ -4,7 +4,8 @@
 // specs/evidence/launch-v1/two-account.mjs (same sign-in, share link and look). Run under the shared browser lock.
 //
 //   node joins.mjs setup      create the two accounts (ids to $IDS), set their world names and arrival (once)
-//   node joins.mjs run        N joins (default 20), results to $OUT/results-joins.json
+//   node joins.mjs run        N joins (default 20), results to $OUT/results-joins.json (kept in the repo as results-joins.txt)
+//   K=a node joins.mjs one    one join for account K (the cold joins after a 10 minute idle), appended to $OUT/results-cold.json
 //
 // A join is timed from the matchmake POST to the room's JOIN_ROOM frame. A socket that closes before JOIN_ROOM is a
 // refusal (4107 busy and friends). Pass: no refusals and every join under 5 s.
@@ -157,7 +158,20 @@ async function run() {
   log(JSON.stringify(summary));
 }
 
+async function one(k) {
+  const browser = await chromium.launch({ headless: true, args: ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist", "--enable-gpu"] });
+  try {
+    const j = await join(browser, k, await signIn(k));
+    const f = `${OUT}/results-cold.json`;
+    writeFileSync(f, JSON.stringify([...(existsSync(f) ? JSON.parse(readFileSync(f, "utf8")) : []), j], null, 1));
+    log(JSON.stringify(j));
+  } finally {
+    await browser.close();
+  }
+}
+
 const phase = process.argv[2];
 if (phase === "setup") await setup();
 else if (phase === "run") await run();
-else throw new Error("phase: setup | run");
+else if (phase === "one") await one(process.env.K ?? "a");
+else throw new Error("phase: setup | run | one");

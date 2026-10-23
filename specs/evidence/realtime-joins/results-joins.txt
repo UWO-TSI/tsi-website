@@ -1,0 +1,240 @@
+{
+ "preview": "uwotsi-o3afq5l8y-davids-projects-e31987e3.vercel.app",
+ "realtime": "tethos-rt v6",
+ "supabase": "Small (2 GB) since 2026-10-23 06:42 UTC",
+ "note": "joinMs = matchmake POST to the room JOIN_ROOM frame; pageToJoinMs = dashboard navigation to JOIN_ROOM. Fresh browser context per join.",
+ "spread": {
+  "summary": {
+   "joins": 20,
+   "joined": 20,
+   "refusals": 0,
+   "minMs": 528,
+   "medianMs": 619,
+   "maxMs": 769,
+   "under5s": true
+  },
+  "joins": [
+   {
+    "k": "a",
+    "at": "2026-10-23T06:46:11.785Z",
+    "matchmakes": 1,
+    "sockets": 1,
+    "refused": 0,
+    "joinMs": 769,
+    "pageToJoinMs": 5744
+   },
+   {
+    "k": "b",
+    "at": "2026-10-23T06:46:44.291Z",
+    "matchmakes": 1,
+    "sockets": 1,
+    "refused": 0,
+    "joinMs": 687,
+    "pageToJoinMs": 5305
+   },
+   {
+    "k": "a",
+    "at": "2026-10-23T06:47:16.792Z",
+    "matchmakes": 1,
+    "sockets": 1,
+    "refused": 0,
+    "joinMs": 569,
+    "pageToJoinMs": 4874
+   },
+   {
+    "k": "b",
+    "at": "2026-10-23T06:47:49.315Z",
+    "matchmakes": 1,
+    "sockets": 1,
+    "refused": 0,
+    "joinMs": 682,
+    "pageToJoinMs": 5376
+   },
+   {
+    "k": "a",
+    "at": "2026-10-23T06:48:21.748Z",
+    "matchmakes": 1,
+    "sockets": 1,
+    "refused": 0,
+    "joinMs": 704,
+    "pageToJoinMs": 5199
+   },
+   {
+    "k": "b",
+    "at": "2026-10-23T06:48:54.274Z",
+    "matchmakes": 1,
+    "sockets": 1,
+    "refused": 0,
+    "joinMs": 720,
+    "pageToJoinMs": 5366
+   },
+   {
+    "k": "a",
+    "at": "2026-10-23T06:49:26.740Z",
+    "matchmakes": 1,
+    "sockets": 1,
+    "refused": 0,
+    "joinMs": 709,
+    "pageToJoinMs": 6871
+   },
+   {
+    "k": "b",
+    "at": "2026-10-23T06:49:59.309Z",
+    "matchmakes": 1,
+    "sockets": 1,
+    "refused": 0,
+    "joinMs": 679,
+    "pageToJoinMs": 4739
+   },
+   {
+    "k": "a",
+    "at": "2026-10-23T06:50:31.752Z",
+    "matchmakes": 1,
+    "sockets": 1,
+    "refused": 0,
+    "joinMs": 541,
+    "pageToJoinMs": 4804
+   },
+   {
+    "k": "b",
+    "at": "2026-10-23T06:51:04.253Z",
+    "matchmakes": 1,
+    "sockets": 1,
+    "refused": 0,
+    "joinMs": 605,
+    "pageToJoinMs": 4886
+   },
+   {
+    "k": "a",
+    "at": "2026-10-23T06:51:37.313Z",
+    "matchmakes": 1,
+    "sockets": 1,
+    "refused": 0,
+    "joinMs": 545,
+    "pageToJoinMs": 5121
+   },
+   {
+    "k": "b",
+    "at": "2026-10-23T06:52:09.797Z",
+    "matchmakes": 1,
+    "sockets": 1,
+    "refused": 0,
+    "joinMs": 619,
+    "pageToJoinMs": 4917
+   },
+   {
+    "k": "a",
+    "at": "2026-10-23T06:52:42.295Z",
+    "matchmakes": 1,
+    "sockets": 1,
+    "refused": 0,
+    "joinMs": 650,
+    "pageToJoinMs": 5493
+   },
+   {
+    "k": "b",
+    "at": "2026-10-23T06:53:14.824Z",
+    "matchmakes": 1,
+    "sockets": 1,
+    "refused": 0,
+    "joinMs": 594,
+    "pageToJoinMs": 4996
+   },
+   {
+    "k": "a",
+    "at": "2026-10-23T06:53:47.294Z",
+    "matchmakes": 1,
+    "sockets": 1,
+    "refused": 0,
+    "joinMs": 528,
+    "pageToJoinMs": 5465
+   },
+   {
+    "k": "b",
+    "at": "2026-10-23T06:54:19.784Z",
+    "matchmakes": 1,
+    "sockets": 1,
+    "refused": 0,
+    "joinMs": 541,
+    "pageToJoinMs": 4994
+   },
+   {
+    "k": "a",
+    "at": "2026-10-23T06:54:52.306Z",
+    "matchmakes": 1,
+    "sockets": 1,
+    "refused": 0,
+    "joinMs": 603,
+    "pageToJoinMs": 5194
+   },
+   {
+    "k": "b",
+    "at": "2026-10-23T06:55:24.847Z",
+    "matchmakes": 1,
+    "sockets": 1,
+    "refused": 0,
+    "joinMs": 562,
+    "pageToJoinMs": 5187
+   },
+   {
+    "k": "a",
+    "at": "2026-10-23T06:55:57.330Z",
+    "matchmakes": 1,
+    "sockets": 1,
+    "refused": 0,
+    "joinMs": 742,
+    "pageToJoinMs": 5388
+   },
+   {
+    "k": "b",
+    "at": "2026-10-23T06:56:29.803Z",
+    "matchmakes": 1,
+    "sockets": 1,
+    "refused": 0,
+    "joinMs": 578,
+    "pageToJoinMs": 5130
+   }
+  ]
+ },
+ "afterTenMinuteIdle": {
+  "summary": {
+   "joins": 3,
+   "joined": 3,
+   "refusals": 0,
+   "minMs": 723,
+   "medianMs": 829,
+   "maxMs": 991,
+   "under5s": true
+  },
+  "joins": [
+   {
+    "k": "a",
+    "at": "2026-10-23T07:07:05.817Z",
+    "matchmakes": 1,
+    "sockets": 1,
+    "refused": 0,
+    "joinMs": 829,
+    "pageToJoinMs": 6440
+   },
+   {
+    "k": "b",
+    "at": "2026-10-23T07:17:49.692Z",
+    "matchmakes": 1,
+    "sockets": 1,
+    "refused": 0,
+    "joinMs": 723,
+    "pageToJoinMs": 6615
+   },
+   {
+    "k": "a",
+    "at": "2026-10-23T07:28:34.340Z",
+    "matchmakes": 1,
+    "sockets": 1,
+    "refused": 0,
+    "joinMs": 991,
+    "pageToJoinMs": 5991
+   }
+  ]
+ },
+ "pass": true
+}

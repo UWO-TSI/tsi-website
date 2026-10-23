@@ -14,7 +14,8 @@ David, 2026-10-22. Ledger row 317. The plan is `specs/v1-drop.md`; this is the r
 - **Must-ship features are in code:** the opening and tutorial, HQ onboarding, name tags, chat, emotes and dances, the campfire, friends and join, photo mode, Halloween, drop gating, moderation routes.
 - **Never run live with two players:** chat, friends, join, report through to a live mute, the campfire.
 - **Prod migrations:** every game migration is applied, per `~/tethos-launch-2026-09-29/migrations.log`. They're applied through the query API, so Supabase's own migration ledger doesn't list them; don't read that ledger as "unapplied".
-- **Realtime (Fly `tethos-rt`):** released v3 on Oct 13 and v4 on Oct 14, after the chat and friends code. It's current as of Oct 22.
+- **Realtime (Fly `tethos-rt`):** released v3 on Oct 13 and v4 on Oct 14, after the chat and friends code; v5 on Oct 22; v6 on Oct 23 (every Supabase read logged as `db_read`, one retry for the card and blocks reads, friends reloaded after a failed read).
+- **Prod Supabase (`rtbkrngsdbptbjhfbcud`, us-west-2): compute is Small (2 GB) since Oct 23, 02:42 Toronto.** It was on Nano (0.4 GB, more swapped out than in RAM), so the first reads after an idle spell stalled 3+ s and joins were refused for minutes. Live check on Small and realtime v6 (Oct 23): 23 joins from fresh contexts, 3 of them after a 10 minute idle, 0 refusals, the slowest 991 ms; every read 73 to 257 ms; no swap. Evidence: `specs/evidence/realtime-joins/`.
 - **Moderation env vars (corrected by the launch lane, Oct 22):**
   - already set: `REALTIME_INTERNAL_URL` and `REALTIME_INTERNAL_SECRET` on Vercel (Preview and Production, since Oct 7), and `REALTIME_INTERNAL_SECRET` on Fly (its `/internal/*` endpoints are on);
   - a live route answering `realtime: "applied"` proves the two secrets match.
