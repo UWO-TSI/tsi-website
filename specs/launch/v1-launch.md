@@ -1,5 +1,7 @@
 # v1 launch run (Oct 22 to 31)
 
+> **2026-10-23, row 318:** v1 now launches on the NEW world, with the village as the fallback behind a world switch, and go/no-go on Oct 28. Read `specs/launch/v1-new-world.md` first; the checklist below predates this.
+
 David, 2026-10-22. Ledger row 317. The plan is `specs/v1-drop.md`; this is the run to launch day, owned by the coordinator. The launch target is still **October 31**.
 
 ## David's decisions (2026-10-22)
