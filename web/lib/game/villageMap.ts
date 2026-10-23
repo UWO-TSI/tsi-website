@@ -185,6 +185,12 @@ export function setVillage(v: Village): void {
   swapped = true;
 }
 
+let shipped: Village | null = null;
+/** The village file itself, whatever the island was swapped to: the title stays on the village (row 318). */
+export function shippedVillage(): Village {
+  return swapped ? (shipped ??= buildVillage(villageDoc as VillageDoc)) : village();
+}
+
 /** Whether the island was already swapped (a lab, or the new world loaded: lib/game/world/load.ts), so nothing swaps it again. */
 export const villageSwapped = () => swapped;
 

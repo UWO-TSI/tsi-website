@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { FOG_NIGHT, KNOCK_SIDE, doorPoint, fogNightLight, homeOf, knockDoors, nextAnswer, pumpkinSpots } from "./halloween";
+import { FOG_NIGHT, KNOCK_SIDE, doorPoint, fogNightLight, knockDoors, nextAnswer, pumpkinSpots } from "./halloween";
+import { residentHome } from "./residentRoutine";
 import { islandOf, landmarks } from "./defaultIsland";
 import { buildVillage, objectsOf, village, type VillageDoc } from "./villageMap";
 import { PROPOSED_RESIDENTS } from "@/lib/content/residentRoster";
@@ -36,8 +37,8 @@ describe("Halloween on the island (lib/game/halloween.ts)", () => {
     expect(who.museum).toContain("curator");
     expect(who.oracle).toContain("oracle-keeper");
     expect(Object.values(who).flat()).not.toContain("wharf-keeper");
-    expect(homeOf({ post: "museum_curator", schedule: {} })).toBe("museum");
-    expect(homeOf({ post: "villager", schedule: { home: "shop" } })).toBe("shop");
+    expect(residentHome({ post: "museum_curator", schedule: {} }, v)).toBe("museum");
+    expect(residentHome({ post: "villager", schedule: { home: "shop" } }, v)).toBe("shop");
     // The knock spot is beside the door, where its pumpkin stands.
     const spots = pumpkinSpots(v, island.standable);
     for (const d of doors) {

@@ -119,7 +119,7 @@ Dev only (404 in production). It loads and saves `web/data/world/` through `/api
 | Left click (hold) | Lower, dig, cut, paint grass, remove an object, end a road |
 | Right click (hold) | Raise, fill, paint, place, lay a road point (or drag one), drag the selection |
 | 1–9 | Hotbar slot |
-| E | Palette: choose what the slot holds (terrain tools, paints, roads, buildings and houses, nature, props, markers, select) |
+| E | Palette: choose what the slot holds (terrain tools, paints, roads, buildings and houses, nature, props, markers, the residents' anchors by their schedule ids, select) |
 | B | Cell mode ⇄ brush mode (on the HUD) |
 | Scroll | Brush size; in cell mode, the N × N square |
 | Shift + scroll | Strength; in cell mode, the step (0.75 by default) |

@@ -13,6 +13,8 @@
  */
 import { ASHORE, MOORED, STEP_AT, mooredPose, type BoatPose } from "./wharf";
 import { CROSSING_S } from "./arrival/sequence";
+import { routeFor } from "./arrival/routes";
+import { GAME_WORLD } from "./world/active";
 
 export { newBoatPose, type BoatPose } from "./wharf";
 
@@ -92,8 +94,8 @@ for (let i = 1; i <= ARC_N; i++) ARC[i] = ARC[i - 1] + Math.hypot(bez(i / ARC_N,
 const IN_LEN = ARC[ARC_N], ARRIVE_T = (2 * IN_LEN) / (V_IN + V_ALONGSIDE);
 
 // ── A first login's crossing (specs/v1-drop.md §1.4) ──────────────────────────────────────────────────────────────
-/** Far out at sea, off the pier's boat side, heading in; it ends where the arrival's approach does (IN_TO), alongside. */
-const CROSS_FROM = { x: 14, z: -46, yaw: -0.24 };
+/** Far out at sea, heading in (the live world's route says where); it ends where the arrival's approach does (IN_TO), alongside. */
+const CROSS_FROM = routeFor(GAME_WORLD).crossFrom;
 /** The crossing's time: with the docking, the arrival's five shots (sequence.ts CROSSING_S). */
 export const CROSS_TIME = CROSSING_S - TRIP.dock;
 /** It eases off over the last seconds to come alongside at the docking's pace. */

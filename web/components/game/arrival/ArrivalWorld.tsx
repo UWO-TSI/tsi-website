@@ -40,6 +40,7 @@ import { ACTIVE_WORLD_BEND } from "@/lib/game/curvedWorld";
 import { awaitsTalk, newTutorial, stepTutorial } from "@/lib/game/arrival/tutorial";
 import { resolvePlace, resolveRoute, type PlaceWorld, type ResolvedStop, type TutorialRoute, type XZ } from "@/lib/game/arrival/route";
 import { routeFor } from "@/lib/game/arrival/routes";
+import { GAME_WORLD } from "@/lib/game/world/active";
 import { BRAM, fillKeys, hintLine, type HintKeys } from "@/lib/game/arrival/lines";
 import type { WheelItem } from "@/lib/game/toolWheel";
 import { worldLabels } from "@/lib/game/labelLayout";
@@ -98,7 +99,7 @@ const labelPoint = (object: THREE.Object3D, camera: THREE.Camera, size: { width:
   return p;
 };
 
-export default function ArrivalWorld({ v, island, player, dock, held, keys, world = "village" }: {
+export default function ArrivalWorld({ v, island, player, dock, held, keys, world = GAME_WORLD }: {
   v: Village; island: VillageIsland; player: React.RefObject<THREE.Vector3>; dock: Dock;
   held: WheelItem | null; keys: HintKeys;
   /** Whose route Bram walks (lib/game/arrival/routes). */

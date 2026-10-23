@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import doc from "../../data/village-map.json";
 import { buildVillage, landBounds, normaliseSea, parseVillage, serialiseVillage, village, villageJson, type VillageDoc } from "./villageMap";
@@ -84,6 +85,19 @@ describe("size-dependent settings follow the map's land", () => {
     expect(s.overview.offset[1]).toBeGreaterThan(21 * 2.5);
     expect(s.overview.far).toBeGreaterThan(120);
     expect(s.glintRadius).toBe(138);
+  });
+  it("frames the smooth world's open area on the minimap, not the whole island: its listed landmarks and spawn, plus a margin", async () => {
+    const { loadWorldFromDisk } = await import("./world/disk");
+    const { villageOfWorld } = await import("./world/village");
+    const { landmarks, UNLISTED } = await import("./defaultIsland");
+    const v = villageOfWorld(loadWorldFromDisk(join(__dirname, "../../data/world")));
+    const m = villageScale(v).minimap, open = landmarks(v).filter(l => !UNLISTED.has(l.id));
+    for (const l of open) expect(l.x > m.x0 && l.x < m.x1 && l.z > m.z0 && l.z < m.z1, l.id).toBe(true);
+    // The summit temple stays off it until it opens, and the frame is a fraction of the island.
+    expect(UNLISTED.has("oracle")).toBe(true);
+    const oracle = landmarks(v).find(l => l.id === "oracle")!;
+    expect(oracle.z < m.z0 || oracle.z > m.z1).toBe(true);
+    expect((m.x1 - m.x0) * (m.z1 - m.z0)).toBeLessThan(0.25 * v.bounds.halfW * v.bounds.halfD * 4);
   });
 });
 

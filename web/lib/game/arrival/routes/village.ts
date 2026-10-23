@@ -12,6 +12,8 @@ const CRATE_Z = -0.95;
 
 export const VILLAGE_ROUTE: TutorialRoute = {
   world: "village",
+  // Off the pier's boat side.
+  crossFrom: { x: 14, z: -46, yaw: -0.24 },
   crates: [{ at: { dock: [0, CRATE_Z] }, yaw: 0.03 }],
   stops: [
     // Beside the boat as you land; then over the crate, and he waits on the far side for you to hop it too.

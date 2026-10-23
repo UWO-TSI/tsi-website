@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { contactSize, meshShadow, shadowClassFor, sunShadow } from "./shadows";
+import * as THREE from "three";
+import { contactSize, meshShadow, shadowCentre, shadowClassFor, sunShadow } from "./shadows";
 
 const A = "/assets/acnh/";
 
@@ -103,5 +104,33 @@ describe("Light tier sun-directed shadow", () => {
     expect(sunShadow(round, 0.6, [1, 1, 0])).toBeNull();
     expect(sunShadow(round, 2, [0, 1, 0])).toBeNull();
     expect(sunShadow(round, 2, [1, -0.2, 0])).toBeNull();
+  });
+});
+
+describe("the smooth world's shadow box follows the player (shadowCentre)", () => {
+  const sun = [42, 55, -30] as const, stepX = 0.25, stepY = 0.2;
+  // The shadow camera three builds for a light at centre + sun looking at centre.
+  const lightFrame = (c: readonly number[]) => {
+    const cam = new THREE.OrthographicCamera();
+    cam.position.set(c[0] + sun[0], c[1] + sun[1], c[2] + sun[2]);
+    cam.lookAt(c[0], c[1], c[2]);
+    cam.updateMatrixWorld();
+    return cam.matrixWorldInverse;
+  };
+  it("stays on the light's texel grid: the map only ever moves by whole steps", () => {
+    for (const at of [{ x: 0, y: 0, z: 0 }, { x: 13.37, y: 2.2, z: -40.1 }, { x: -91.5, y: 0.4, z: 120.9 }]) {
+      const c = shadowCentre(sun, at, stepX, stepY), o = new THREE.Vector3(0, 0, 0).applyMatrix4(lightFrame(c));
+      // The world origin seen from the shadow camera sits on the step grid, so every texel boundary does too.
+      expect(Math.abs(o.x / stepX - Math.round(o.x / stepX))).toBeLessThan(1e-6);
+      expect(Math.abs(o.y / stepY - Math.round(o.y / stepY))).toBeLessThan(1e-6);
+    }
+  });
+  it("keeps the player within a step of the centre, and holds still while they move inside one", () => {
+    const at = { x: 20.3, y: 1, z: 7.9 }, c = shadowCentre(sun, at, stepX, stepY);
+    const p = new THREE.Vector3(at.x, at.y, at.z).applyMatrix4(lightFrame(c));
+    expect(Math.abs(p.x)).toBeLessThanOrEqual(stepX / 2 + 1e-9);
+    expect(Math.abs(p.y)).toBeLessThanOrEqual(stepY / 2 + 1e-9);
+    const stepCount = (a: { x: number; y: number; z: number }, b: { x: number; y: number; z: number }) => Math.hypot(...shadowCentre(sun, a, 8, 8).map((v, i) => v - shadowCentre(sun, b, 8, 8)[i]));
+    expect(stepCount({ x: 0.1, y: 0, z: 0.1 }, { x: 0.3, y: 0, z: 0.2 })).toBe(0);
   });
 });

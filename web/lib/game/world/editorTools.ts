@@ -4,6 +4,7 @@
  * terrain tool, a paint, a road, something to place (a building, a house, nature, a prop, a marker) or select.
  * Pure: the editor's UI and the tests share it.
  */
+import { RESIDENT_ANCHORS } from "@/lib/content/residents";
 import { BARRIERS, BARRIER_MODELS } from "../barriers";
 import { HOUSE_MODELS, LANDMARK_INFO, TREE_SLOTS, type LandmarkId } from "../defaultIsland";
 import { JOINED_FENCE } from "../fences";
@@ -59,18 +60,20 @@ export const PALETTE: readonly { group: string; items: readonly EditorItem[] }[]
   {
     group: "Markers",
     items: [
-      place("spawn", "Spawn"), place("anchor", "Resident anchor"), place("gather", "Ceremony spot"), place("puddle", "Puddle"),
-      place("bug", "Bug spot", { model: "ground" }), place("shell", "Shell"), place("bottle", "Bottle spot"), place("fitting", "Fitting room"), place("missions", "Mission board"),
+      place("spawn", "Spawn"), place("gather", "Ceremony spot"), place("puddle", "Puddle"),
+      place("bug", "Bug spot", { model: "ground" }), place("bug", "Bug spot: water's edge", { model: "water_edge" }), place("shell", "Shell"), place("bottle", "Bottle spot"), place("fitting", "Fitting room"), place("missions", "Mission board"),
       place("landmark", "Plaza", { id: "plaza" }), place("landmark", "Beach", { id: "beach" }), place("landmark", "Ruins gate", { id: "ruins" }),
     ],
   },
+  // The residents' anchors by the ids their schedules name (lib/content/residents.ts): one each, placing again moves it.
+  { group: "Anchors", items: Object.entries(RESIDENT_ANCHORS).map(([id, a]) => place("anchor", `Anchor: ${a.label}`, { id })) },
   { group: "Select", items: [{ type: "select", label: "Select · move · rotate · scale · delete" }] },
 ];
 
 /** The hotbar as it starts: raise, lower, smooth, flatten, level, paint path, road, a house, select. */
 export const DEFAULT_HOTBAR: readonly EditorItem[] = [
   PALETTE[0].items[0], PALETTE[0].items[1], PALETTE[0].items[2], PALETTE[0].items[3], PALETTE[0].items[4],
-  PALETTE[1].items[Paint.Path], PALETTE[2].items[0], PALETTE[3].items.find(i => i.type === "place" && i.object.kind === "house")!, PALETTE[7].items[0],
+  PALETTE[1].items[Paint.Path], PALETTE[2].items[0], PALETTE[3].items.find(i => i.type === "place" && i.object.kind === "house")!, PALETTE[8].items[0],
 ];
 
 /** Where the hotbar is kept between visits (this browser). */
@@ -88,10 +91,10 @@ export function hotbarFrom(saved: unknown): EditorItem[] {
 /** The world map's building scale (/lab/map's WORLD_BUILDING_SCALE). */
 export const WORLD_BUILDING_SCALE = 1.15;
 
-/** Unique ids: a landmark is its own id (one each), the default spawn, the fitting room and the mission board are single. */
+/** Unique ids: a landmark or a resident anchor is its own id (one each), the default spawn, the fitting room and the mission board are single. */
 export function idFor(item: Extract<EditorItem, { type: "place" }>, objects: readonly MapObject[]): string {
   const { kind, id } = item.object;
-  if (kind === "landmark" && id) return id;
+  if ((kind === "landmark" || kind === "anchor") && id) return id;
   if ((kind === "spawn" || kind === "fitting" || kind === "missions") && !objects.some(o => o.kind === kind && o.id === (kind === "spawn" ? "default" : kind))) return kind === "spawn" ? "default" : kind;
   const taken = new Set(objects.filter(o => o.kind === kind).map(o => o.id));
   let n = 0;
@@ -100,8 +103,8 @@ export function idFor(item: Extract<EditorItem, { type: "place" }>, objects: rea
 }
 
 /**
- * Place a palette item at (x, z): a new object, or for a landmark already on the map, that landmark moved here (one of
- * each). A tree's seed keeps its model and varies its turn; a house, a building or a prop keeps the ghost's yaw.
+ * Place a palette item at (x, z): a new object, or for a landmark or anchor already on the map, that one moved here (one
+ * of each). A tree's seed keeps its model and varies its turn; a house, a building or a prop keeps the ghost's yaw.
  */
 export function placeItem(item: Extract<EditorItem, { type: "place" }>, objects: readonly MapObject[], x: number, z: number, yaw = 0, seed = Math.random()): MapObject[] {
   const { kind, model } = item.object, id = idFor(item, objects);

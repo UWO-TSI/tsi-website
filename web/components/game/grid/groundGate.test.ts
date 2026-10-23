@@ -84,6 +84,16 @@ describe("the world switch", () => {
     expect(load.loadGameWorld()).not.toBeNull(); // the same load, never a second one
   });
 
+  it("keeps the title on the village file once the new world has loaded", async () => {
+    const { load, map, gate } = await live("new");
+    await load.loadGameWorld();
+    const title = map.shippedVillage();
+    expect(gate.groundKind(map.village())).toBe("heightfield");
+    expect(gate.groundKind(title)).toBe("cells");
+    expect(title.map.width).toBe(buildVillage(JSON.parse(readFileSync(join(web, "data/village-map.json"), "utf8"))).map.width);
+    expect(readFileSync(join(web, "components/title/TitleScene.tsx"), "utf8")).toMatch(/const v = shippedVillage\(\)/);
+  });
+
   it("leaves a lab's island alone (the painter's draft, a fixture), even with the new world live", async () => {
     const { load, map, gate } = await live("new");
     map.setVillageDoc(terrainFixtureDoc());
