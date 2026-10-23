@@ -68,8 +68,11 @@ Outside production, `http://localhost:*`, `http://play.localhost:*` and
 - **Card.** `realtime_player_card(uuid)` (service-only RPC) gives the world name (never
   the Google name), badge, tier, look, family, level, subclass, mastery, aura, frame,
   the classes v2 flag, mute/removal and the account's age. Cached 60 s per user,
-  3 s timeout, re-read on `refresh` at most once per 10 s. Dev tokens get a synthetic
-  card and never touch a database.
+  3 s timeout with one retry after 200 to 600 ms, re-read on `refresh` at most once
+  per 10 s. Dev tokens get a synthetic card and never touch a database.
+- **Reads.** Every Supabase read (card, blocks, friends, sanctions poll) goes through
+  `src/read.ts` and logs one `db_read` line per attempt: `read`, `uid` (or `n` for the
+  poll), `attempt`, `ms`, `ok` and the failure's `reason`.
 - Everything is injectable: `createApp({ env, verify, loadCard, origins })`. The tests
   use a local `jose.generateKeyPair` JWKS and in-memory cards.
 
@@ -117,7 +120,9 @@ contract (`web/lib/net/protocol.ts`).
   most 5000 lines and drops the oldest beyond that, so the rooms never wait on the
   database. Shutdown writes what's left.
 - **Blocks.** Read at join, both directions, with the card (`world_blocks`); if they
-  can't be read the join is refused as busy (4107). Lines and emotes stop between
+  can't be read twice (one retry after 200 to 600 ms) the join is refused as busy (4107).
+  Friends (`world_friends`) are read alongside; a failed read lets the player in with
+  none and reads them again 5 s later. Lines and emotes stop between
   the pair either way (movement still shows: the world is shared).
 - **Sanctions.** `member_identity.muted_until` refuses chat; `removed_until` closes
   the player with 4102 and refuses their rejoin. The web app's moderation routes tell

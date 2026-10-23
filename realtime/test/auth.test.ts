@@ -243,26 +243,52 @@ describe("card loader", () => {
     expect(source).toHaveBeenCalledTimes(1);
   });
 
-  it("gives up after 3 s and aborts the request", async () => {
+  it("aborts a read after 3 s, tries once more 200 to 600 ms later, then gives up", async () => {
     vi.useFakeTimers();
     try {
-      let aborted = false;
-      const load = createCardLoader({
-        source: (_uid, signal) =>
-          new Promise((resolve) => {
-            signal.addEventListener("abort", () => (aborted = true));
+      let aborts = 0;
+      const source = vi.fn(
+        (_uid: string, signal: AbortSignal) =>
+          new Promise<unknown>((resolve) => {
+            signal.addEventListener("abort", () => aborts++);
             setTimeout(() => resolve(CARD), 10_000);
           }),
-      });
-      const p = reason(load(IDENTITY));
-      await vi.advanceTimersByTimeAsync(2_999);
-      expect(aborted).toBe(false);
-      await vi.advanceTimersByTimeAsync(1);
+      );
+      const logs: Record<string, unknown>[] = [];
+      const p = reason(createCardLoader({ source, log: (event, f) => logs.push({ event, ...f }) })(IDENTITY));
+      await vi.advanceTimersByTimeAsync(3_000);
+      expect([aborts, source.mock.calls.length]).toEqual([1, 1]);
+      await vi.advanceTimersByTimeAsync(199);
+      expect(source).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(401);
+      expect(source).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(3_000);
       expect(await p).toBe("timeout");
-      expect(aborted).toBe(true);
+      expect(aborts).toBe(2);
+      expect(logs).toMatchObject([
+        { event: "db_read", read: "card", uid: MEMBER, attempt: 0, ok: false, reason: "timeout" },
+        { event: "db_read", read: "card", uid: MEMBER, attempt: 1, ok: false, reason: "timeout" },
+      ]);
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("a card read that fails once is read again and lets the player in", async () => {
+    let calls = 0;
+    const logs: Record<string, unknown>[] = [];
+    const load = createCardLoader({
+      source: async () => {
+        if (calls++ === 0) throw new Error("fetch failed");
+        return CARD;
+      },
+      log: (event, f) => logs.push({ event, ...f }),
+    });
+    expect(await load(IDENTITY)).toEqual(CARD);
+    expect(logs).toMatchObject([
+      { read: "card", attempt: 0, ok: false, reason: "fetch failed" },
+      { read: "card", attempt: 1, ok: true },
+    ]);
   });
 
   it("reports a missing profile, a malformed card and a failing database distinctly", async () => {

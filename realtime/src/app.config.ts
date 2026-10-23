@@ -12,6 +12,7 @@ import { createVerifier } from "./auth/verify";
 import { getEnv, type Env } from "./env";
 import { internalEndpoints } from "./internal";
 import { createIslandRoom, type IslandRoomOptions } from "./rooms/IslandRoom";
+import type { Log } from "./read";
 import { offlineWorldSources, supabaseWorldSources } from "./sources";
 import { createWorld, type World } from "./world";
 
@@ -43,7 +44,7 @@ export const health = createEndpoint("/health", { method: "GET" }, async () => {
 });
 
 /** The production services, built from the environment; any of them can be replaced. */
-export function createServices(env: Env, overrides: Partial<AppServices> = {}): AppServices {
+export function createServices(env: Env, overrides: Partial<AppServices>, log: Log): AppServices {
   const source =
     env.supabaseUrl && env.supabaseSecretKey
       ? supabaseCardSource(env.supabaseUrl, env.supabaseSecretKey)
@@ -56,7 +57,7 @@ export function createServices(env: Env, overrides: Partial<AppServices> = {}): 
     verify:
       overrides.verify ??
       createVerifier({ supabaseUrl: env.supabaseUrl, devAuth: env.devAuth, production: env.production }),
-    loadCard: overrides.loadCard ?? createCardLoader({ source }),
+    loadCard: overrides.loadCard ?? createCardLoader({ source, log }),
     now: overrides.now,
   };
 }
@@ -71,7 +72,7 @@ export function createApp(options: AppOptions = {}): ConfigOptions {
   const { env: envOverride, kickForMovement, graceS, log, world: given, ...overrides } = options;
   const env = envOverride ?? getEnv();
   const logFn = log ?? logLine;
-  const services = createServices(env, overrides);
+  const services = createServices(env, overrides, logFn);
   const world = given ?? createWorldFromEnv(env, logFn);
   if (!given) world.start();
   // A sanction's latest word outranks a card cached before it (M2: a removed player can't rejoin on an old card).
