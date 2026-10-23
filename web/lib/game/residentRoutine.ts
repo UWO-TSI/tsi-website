@@ -21,6 +21,7 @@ import { ISLAND_PHASES, type IslandPhase } from "./islandTime";
 import { DAWN_HOURS, EVENING_HALF_HOURS, sunFor, torontoDate, type SunDay } from "./sunTimes";
 import { hash01 } from "./worldFx";
 import { torontoInstant } from "@/lib/time";
+import { DROPS, type DropFlags } from "./drops";
 
 // ── Walking ─────────────────────────────────────────────────────────────
 /** A resident's stroll (world units/s): an unhurried ACNH pace. */
@@ -78,6 +79,17 @@ export const POST_HOME: Record<string, LandmarkId> = {
 };
 /** Landmarks a resident can live in (a door; the wharf: aboard a boat at the stub end, once one is docked there). */
 export const HOME_LANDMARKS: readonly LandmarkId[] = ["hq", "shop", "cafe", "oracle", "museum", "wharf"];
+
+/**
+ * The building a resident lives in: their schedule's `home`, else their post's. On the new world the temple stands on
+ * the sealed summit, so while it's closed (DROPS.oracle) its keeper lodges at HQ. The village's temple stands in the
+ * village, and there the keeper keeps it.
+ */
+export function residentHome(r: Pick<ResidentSource, "post" | "schedule">, v: Pick<Village, "terrain">, flags: DropFlags = DROPS): LandmarkId {
+  const own = r.schedule?.home;
+  const id = (typeof own === "string" && (HOME_LANDMARKS as readonly string[]).includes(own) ? own : POST_HOME[r.post ?? "villager"] ?? "hq") as LandmarkId;
+  return id === "oracle" && v.terrain && !flags.oracle ? "hq" : id;
+}
 
 /** What a resident's data says (npc_personas: slug, post, schedule). */
 export interface ResidentSource { slug: string; post?: string | null; schedule?: Record<string, unknown> | null }
@@ -428,8 +440,7 @@ const POST_ANCHOR: Record<string, string> = { hq_lead: "hq", shopkeeper: "shop",
  */
 export function planResident(r: ResidentSource, slot: number, v: Village, island: VillageIsland, res: Reservations = newReservations()): ResidentPlan {
   const nav = navGrid(island, v), seed = hashStr(r.slug);
-  const homeId = (typeof r.schedule?.home === "string" && (HOME_LANDMARKS as readonly string[]).includes(r.schedule.home) ? r.schedule.home : POST_HOME[r.post ?? "villager"] ?? "hq") as LandmarkId;
-  const home = homeStop(homeId, v, r.slug, nav) ?? homeStop("hq", v, r.slug, nav);
+  const home = homeStop(residentHome(r, v), v, r.slug, nav) ?? homeStop("hq", v, r.slug, nav);
   const work = r.post ? POST_ANCHOR[r.post] : undefined;
   const phases = {} as Record<IslandPhase, Stop[]>;
   for (const phase of ISLAND_PHASES) {

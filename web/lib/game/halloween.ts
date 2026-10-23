@@ -6,7 +6,7 @@
  */
 import * as THREE from "three";
 import { LANDMARK_INFO, landmarks, turn, type Landmark, type LandmarkId } from "./defaultIsland";
-import { HOME_LANDMARKS, POST_HOME, routineKeys } from "./residentRoutine";
+import { HOME_LANDMARKS, residentHome, routineKeys } from "./residentRoutine";
 import { objectsOf, type Village } from "./villageMap";
 import type { IslandLight } from "./islandLighting";
 
@@ -67,11 +67,6 @@ export function pumpkinSpots(v: Village, standable: (x: number, z: number) => bo
 
 /** What a resident's row says about their home. */
 export interface DoorResident { slug: string; display_name: string; post?: string | null; schedule?: Record<string, unknown> | null }
-/** The building a resident lives in (residentRoutine planResident's rule): their schedule's `home`, else their post's. */
-export function homeOf(r: Pick<DoorResident, "post" | "schedule">): LandmarkId {
-  const own = r.schedule?.home;
-  return (typeof own === "string" && (HOME_LANDMARKS as readonly string[]).includes(own) ? own : POST_HOME[r.post ?? "villager"] ?? "hq") as LandmarkId;
-}
 /** A knockable door: where you stand to knock, and who's behind it at night (in the order they answer). */
 export interface KnockDoor { home: LandmarkId; x: number; z: number; residents: { slug: string; name: string }[] }
 /** The doors with someone home at night: each resident whose night routine takes them home, at their building's door. */
@@ -80,7 +75,7 @@ export function knockDoors(v: Village, residents: readonly DoorResident[]): Knoc
   const doors = new Map<LandmarkId, KnockDoor>();
   for (const r of residents) {
     if (!routineKeys(r.schedule ?? null, "night").includes("home")) continue;
-    const home = homeOf(r), l = placed.get(home);
+    const home = residentHome(r, v), l = placed.get(home);
     if (!l || !DOOR_HOMES.includes(home)) continue;
     let d = doors.get(home);
     if (!d) { const [x, z] = besideDoor(l, KNOCK_SIDE, KNOCK_OUT); doors.set(home, d = { home, x, z, residents: [] }); }

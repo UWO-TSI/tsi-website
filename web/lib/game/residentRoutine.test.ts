@@ -5,8 +5,10 @@ import { PROPOSED_RESIDENTS } from "@/lib/content/residentRoster";
 import { DEFAULT_NPC_PERSONAS } from "@/data/content-defaults";
 import { CLIP_BY_NAME } from "./character/look";
 import {
-  MIN_STAY, RESIDENT_WALK, ResidentDay, buildDay, daySpan, idleAt, navGrid, newPose, phaseOn, planResident, planResidents, routineKeys, walkDistance, type Leg,
+  MIN_STAY, RESIDENT_WALK, ResidentDay, buildDay, daySpan, idleAt, navGrid, newPose, phaseOn, planResident, planResidents, residentHome, routineKeys, walkDistance, type Leg,
 } from "./residentRoutine";
+import { dropFlags } from "./drops";
+import type { WorldTerrain } from "./world/terrain";
 
 const v = village(), island = villageIsland(v), nav = navGrid(island, v);
 const SORTED = [...PROPOSED_RESIDENTS].sort((a, b) => a.slug.localeCompare(b.slug));
@@ -192,5 +194,20 @@ describe("resident routines", () => {
     for (let s = 0; s < 300; s += 1) seen.add(idleAt(stand, 3, 1, s).clip);
     expect(seen.size).toBeGreaterThan(1);
     expect(idleAt(stand, 3, 1, 120)).toEqual(idleAt(stand, 3, 1, 120));
+  });
+});
+
+describe("a resident's home", () => {
+  const sable = PROPOSED_RESIDENTS.find(r => r.post === "oracle_keeper")!;
+  const newWorld = { terrain: {} as WorldTerrain };
+  it("keeps the oracle's keeper off the new world's sealed summit until the temple opens, at HQ", () => {
+    expect(residentHome(sable, newWorld, dropFlags(1))).toBe("hq");
+    expect(residentHome({ post: "oracle_keeper" }, newWorld, dropFlags(1))).toBe("hq");
+    expect(residentHome(sable, newWorld, dropFlags(2))).toBe("oracle");
+  });
+  it("leaves the village's keeper at the temple, which stands in the village, and everyone else where they live", () => {
+    expect(residentHome(sable, v, dropFlags(1))).toBe("oracle");
+    expect(residentHome({ post: "shopkeeper" }, newWorld, dropFlags(1))).toBe("shop");
+    expect(residentHome({ post: "villager", schedule: { home: "museum" } }, newWorld, dropFlags(1))).toBe("museum");
   });
 });
