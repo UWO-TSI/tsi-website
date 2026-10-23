@@ -24,9 +24,13 @@ Worktree `/Users/DavidLiu/Developer/uwotsi/.claude/worktrees/realtime-joins`, cu
 
 ## Next
 
-1. The coordinator's call on the compute change (and a keep-warm read if it says no).
-2. Full gates, commit, "ready to deploy" to the coordinator; wait.
-3. After v6 is live: 20+ cold joins over ~10 min on a Preview with 2 throwaway prod accounts; record the `db_read` durations; cleanup with proof; delete the Previews (mine, `3w7kq9vdz`, `by2hxb24c`).
+- **Sent to the coordinator (00:16 UTC Oct 23):** "ready to deploy" at `88e552e3`, plus the compute ask. No reply by 01:23 UTC; Fly still on v5. Paused here.
+- **Preview built** (`vercel deploy` from the worktree, per-deployment `-e SUPABASE_SERVICE_ROLE_KEY`, `-b NEXT_PUBLIC_MEMBER_WORLD=open`): `uwotsi-o3afq5l8y-davids-projects-e31987e3.vercel.app`, Ready. Its share token (until Oct 23 23:21 Toronto) is in the session scratchpad `rj/preview.env`, never in the repo. Note: `web/.env.local`'s service key is now an `sb_secret_` key (41 characters), not a JWT.
+1. The coordinator deploys v6 and decides the compute change (and a keep-warm read if it says no).
+2. Under the browser lock: `IDS=<scratch>/ids.json PREVIEW=… SHARE=… node specs/evidence/realtime-joins/joins.mjs setup`, then `… run` (20 joins over ~11 min, results to `results-joins.json`). Pass: 0 refusals, every join under 5 s.
+3. `fly logs --app tethos-rt --no-tail | grep db_read` for the per-read durations of that window; record them.
+4. Cleanup with proof: `IDS=… node specs/evidence/realtime-joins/cleanup.mjs scan|collect|delete|verify`, into `cleanup-proof.txt`.
+5. Delete this Preview and `uwotsi-3w7kq9vdz-…`, `uwotsi-by2hxb24c-…` (`vercel remove <url> --yes`).
 
 ## Tools and gotchas
 
