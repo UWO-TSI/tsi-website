@@ -310,7 +310,7 @@ Server to client:
 - On the client there is a second, render-side cap (5.5).
 
 **4.5 Server sanity checks** (pure functions in `realtime/src/rooms/sanity.ts`, derived from `MOVE_TUNING` in `web/lib/game/movement/sim.ts`: walk 7.4, sprint 12, dash 18, momentum ceiling 18 plus 10 × slope downhill, max fall 18):
-- **Rejected outright:** values that aren't finite, enums out of range, positions outside the area's bounds (village |x|,|z| ≤ 40, y −3..25; interiors |x|,|z| ≤ 20).
+- **Rejected outright:** values that aren't finite, enums out of range, positions outside the area's bounds (outdoors |x|,|z| ≤ 300, y −3..40, which holds both the village and the new world; interiors |x|,|z| ≤ 20, y −3..25).
 - **Time between samples** must be 20–2000 ms, otherwise the baseline resets.
 - **Speed:**
   - horizontal at most 32 u/s instantly and 26 u/s averaged over a 1 s window;

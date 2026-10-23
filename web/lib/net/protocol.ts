@@ -141,7 +141,12 @@ export const PRIVATE_AREAS: readonly Area[] = ["ruins", "home", "house"];
 export const isPrivateArea = (area: Area) => PRIVATE_AREAS.includes(area);
 /** Where a body can be: |x| and |z| ≤ half, yMin ≤ y ≤ yMax (§4.5). */
 export interface AreaBounds { readonly half: number; readonly yMin: number; readonly yMax: number }
-const OUTDOOR: AreaBounds = { half: 40, yMin: -3, yMax: 25 }, INDOOR: AreaBounds = { half: 20, yMin: -3, yMax: 25 };
+/**
+ * Outdoors holds both worlds, since the server doesn't know which one a client plays: the village and the new world
+ * (web/data/world, 384 × 552 cells about the origin, so ±192 by ±276) plus a glide out to sea, and the new world's
+ * height ceiling (its heightmap tops out at 36 u) plus a jump. Positions quantize to ±327 u, so 300 still fits.
+ */
+const OUTDOOR: AreaBounds = { half: 300, yMin: -3, yMax: 40 }, INDOOR: AreaBounds = { half: 20, yMin: -3, yMax: 25 };
 export const AREA_BOUNDS: Readonly<Record<Area, AreaBounds>> = {
   village: OUTDOOR, cafe: INDOOR, hq: INDOOR, museum: INDOOR, oracle: INDOOR, ruins: OUTDOOR, home: OUTDOOR, house: INDOOR,
 };
