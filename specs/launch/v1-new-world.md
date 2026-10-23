@@ -3,6 +3,7 @@
 David, 2026-10-23: "i want v1 launch with the main new world". His drawing (`specs/references/terrain/terrainv1.png`) is a guideline for where things are, not a literal shape: "when you generated the terrain you took it too literarly and a lot of the terrrain are patchy because the art work wasnt the best".
 
 - **Planning page:** the terrain is planned with David section by section on the World Terrain Plan page, https://claude.ai/artifact/J6fE1DjDqxt732R8JPvpxs. Read his answers with ArtifactData `list`, collection `sections`. Follow-up questions go into each document's `followups` array as `{q, a}`.
+- **David's answers (2026-10-23):** all 11 sections done. The build is `specs/launch/terrain-v3.md` (lane `terrain-v3`). Open on Oct 31: the wharf, the west beach and the village; the rest closed naturally.
 - **Fallback:** the village stays the fallback behind a world switch. Go/no-go is Oct 28.
 
 ## Gap analysis (Oct 23)
