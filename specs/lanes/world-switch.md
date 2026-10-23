@@ -6,7 +6,9 @@ Read first: `specs/launch/v1-new-world.md` (the gap analysis), `specs/world-edit
 
 ## Status
 
-Started 2026-10-23. Head: see `git log`.
+Started 2026-10-23. All nine tasks done; main (51a9f7e9) merged in. Head: see `git log`.
+
+Gates at the head: web tsc and realtime tsc clean; web vitest 3385 passed (3 skipped), realtime vitest 227 passed, both under the heavy lock; eslint clean on every changed web file. Perf, one headless run, `SCENES=v2`: High 4.8 ms median (p95 6.9), 222 draws; Lite 2.9 ms, 162 draws (`specs/perf/effects-cost.md`).
 
 | # | Task | State |
 |---|---|---|
@@ -26,7 +28,7 @@ Started 2026-10-23. Head: see `git log`.
 
 ## Next
 
-Tasks 1 to 3 reported to the coordinator. Now 4 to 9, then the final gates and report.
+Done. When David's terrain lands: rerun `scripts/world-cells.ts` if the merge touched the world, run `sealed.test.ts` and `routes.test.ts` (the crossing start in `lib/game/arrival/routes/new.ts` may need moving), and check the minimap frame.
 
 ## Tools and gotchas
 
