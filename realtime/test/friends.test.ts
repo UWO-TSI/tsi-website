@@ -161,7 +161,7 @@ describe("friends' presence", () => {
     const erin = await join("erin");
     await until(() => latest(erin) !== null, "erin's list");
     expect(latest(erin)).toEqual([]);
-    expect(logs.some((l) => l.event === "friends_load_failed")).toBe(true);
+    expect(logs.some((l) => l.event === "db_read" && l.fields.read === "friends" && l.fields.ok === false)).toBe(true);
   });
 
   it("a friendship made or ended through /internal/friend shows at once, both ways; a block ends it too", async () => {

@@ -1,0 +1,37 @@
+realtime-joins: why joins were refused (4107) for minutes. All reads, no writes. 2026-10-22/23 UTC.
+
+1. Supabase compute (management API GET /v1/projects/rtbkrngsdbptbjhfbcud/billing/addons)
+   selected_addons: []  -> no compute addon: the project is on Nano (the org's Pro upgrade on Oct 14 did not move it).
+
+2. Supabase instance metrics (GET <SUPABASE_URL>/customer/v1/privileged/metrics, 2026-10-23 ~00:00)
+   node_memory_MemTotal_bytes      426,262,528   (0.4 GB: Nano)
+   node_memory_MemAvailable_bytes  238,776,320
+   node_memory_SwapTotal_bytes   1,073,737,728
+   node_memory_SwapFree_bytes      634,462,208   -> ~440 MB swapped out, more than the RAM
+   uptime                          2,966,770 s   (34.3 days, boot 2026-09-18)
+   node_vmstat_pswpin              433,058,214 pages  (~1.7 TB swapped in since boot, ~0.6 MB/s on average)
+   node_vmstat_pswpout             365,289,701 pages
+   node_vmstat_pgmajfault          279,749,670
+   cpu0 iowait                     109,684 s     (~3.7% of all CPU time waiting on disk)
+
+3. Cold reads reproduced from a FRESH process on the Fly machine (probe-reads.mjs: the server's own supabase-js
+   from /app/node_modules, same client options, same three join reads, 3 s budget each), 2026-10-22 23:56 UTC,
+   after ~10 min with no realtime traffic:
+   batch 1 (cold):  card, blocks, friends all aborted at 3000 ms (undici: connected at 90-97 ms, request headers
+                    sent at once, request:error = abort at 3048-3052 ms; no response)
+   batch 2 (+1 s):  card 2966 ms, blocks 2751 ms, friends 2729 ms (headers sent at +15-20 ms, responses at ~2.7-2.9 s)
+   then (+3 s .. +50 s idle gaps): 250 to 620 ms
+   TCP connect 2-6 ms and TLS 7-12 ms to the Cloudflare edge (Toronto), measured separately; the host has no AAAA
+   record (IPv4 only), node 24.22.1, autoSelectFamily on.
+
+4. pg_stat_activity (read-only, same minute): PostgREST's new backends for those requests started at 23:56:34.65,
+   23:56:38.04 and 23:56:38.12, i.e. ~3.5 s after the requests were sent, and the batch-2 responses came within
+   ~0.1 s of them. The wait is upstream of Postgres: the gateway and PostgREST being paged back in on a box that
+   has more swapped out than it has RAM. Queries themselves are fast once a backend exists.
+
+5. Warm (other traffic within the last minute), 2026-10-23 00:15 UTC, 15 s budget: card 322-541 ms, blocks
+   306-569 ms, friends 183-539 ms, /auth/v1/health 112-426 ms.
+
+Conclusion: not the realtime process, DNS, IPv6, undici pooling or TLS. The launch lane's "fresh process is
+fast" probes (0.1-0.8 s) ran right after the refused joins had warmed the box. The root fix is compute (Micro is
+covered by the Pro plan's compute credit; Small has headroom for the ~630 MB anonymous working set).
