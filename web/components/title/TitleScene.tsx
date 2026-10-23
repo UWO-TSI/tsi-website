@@ -15,7 +15,7 @@ import { InstancedModels } from "@/components/game/InstancedNature";
 import Residents from "@/components/game/NPC";
 import TitleVillage from "./TitleVillage";
 import { stagedShot, type Shot } from "./shots";
-import { village, objectsOf } from "@/lib/game/villageMap";
+import { shippedVillage, objectsOf } from "@/lib/game/villageMap";
 import { villageIsland, villageScale } from "@/lib/game/defaultIsland";
 import { villageWater } from "@/lib/game/fishingSpots";
 import { ISLAND_TERRAIN, islandLightAt, withSeason, withWeather } from "@/lib/game/islandLighting";
@@ -76,7 +76,8 @@ function CinematicCamera({ shot, ground }: { shot: Shot; ground: (x: number, z: 
 }
 
 function Scene() {
-  const v = village();
+  // The village file, even once the member island has loaded the new world (lib/game/world/active.ts).
+  const v = shippedVillage();
   const island = villageIsland(v);
   const scale = useMemo(() => villageScale(v), [v]);
   const conditions = useIslandConditions();
