@@ -10,7 +10,8 @@ Worktree `/Users/DavidLiu/Developer/uwotsi/.claude/worktrees/realtime-joins`, cu
   - `pg_stat_activity`: PostgREST's backends for those requests started ~3.5 s after the send, the responses followed within ~0.1 s. So the stall is before Postgres (the box paging the gateway and PostgREST back in), not the queries.
   - Ruled out: DNS and IPv6 (the host has no AAAA record; v4 Cloudflare edge, TLS in 7 to 12 ms), the Node client stack, undici pooling. The launch lane's "fresh process is fast" probes ran right after refused joins had warmed the box.
 - **Root fix:** a compute change (Nano to Micro, covered by the Pro credit, or Small at ~$5/mo over it). Asked the coordinator; not ours to apply.
-- **Built (uncommitted until gates pass):**
+- **Evidence:** `specs/evidence/realtime-joins/root-cause.txt` (numbers), `probe-reads.mjs` (the cold-read probe), `joins.mjs` (the live join test), `cleanup.mjs` (two accounts).
+- **Built and committed (`e30f21e8`; gates: realtime tsc clean, vitest 227 passed, eslint clean on the changed files via `web/node_modules/.bin/eslint -c web/eslint.config.mjs` from the worktree root):**
   - `realtime/src/read.ts` `timedRead`: every Supabase read (card, blocks, friends, sanctions) has its time budget, one `db_read` log line per attempt (`read`, `uid` or `n`, `attempt`, `ms`, `ok`, `reason`) and optional retries after 200 to 600 ms. Replaces world.ts's `withTimeout` and card.ts's own race.
   - Card and blocks: one retry before a 4107.
   - Friends: a failed join read lists none and is read again 5 s later (applyFriend + refreshFriends).
