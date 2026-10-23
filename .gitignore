@@ -18,6 +18,8 @@
 !web/data/island-map.json
 # The smooth world's document (specs/world-editor.md); its two PNGs sit beside it.
 !web/data/world/world.json
+# The server's cell view of it (catch checks), written with every save.
+!web/data/world/cells.json
 !web/data/characters/*.json
 
 # The multiplayer server package (specs/multiplayer.md §1.1). Its manifests,

@@ -4,6 +4,8 @@
  */
 import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { worldCells, worldCellsJson } from "./cells";
+import { cellMapOf } from "./terrain";
 import { decodeWorld, worldDocProblem, type World, type WorldDoc, type WorldFiles } from "./format";
 
 /** The three files' bytes as they are on disk. */
@@ -19,11 +21,18 @@ export function loadWorldFromDisk(dir: string): World {
   return decodeWorld(f.doc, f.height, f.surface);
 }
 
-/** Write the three files (the images under the names the document gives). */
+const put = (dir: string, name: string, data: string | Uint8Array) => { const tmp = join(dir, `${name}.saving`); writeFileSync(tmp, data); renameSync(tmp, join(dir, name)); };
+
+/** Write the three files (the images under the names the document gives), then the server's cell view of them. */
 export function writeWorldFiles(dir: string, files: WorldFiles): void {
   const doc = JSON.parse(files.json) as WorldDoc;
-  const put = (name: string, data: string | Uint8Array) => { const tmp = join(dir, `${name}.saving`); writeFileSync(tmp, data); renameSync(tmp, join(dir, name)); };
-  put(doc.height, files.height);
-  put(doc.surface, files.surface);
-  put("world.json", files.json);
+  put(dir, doc.height, files.height);
+  put(dir, doc.surface, files.surface);
+  put(dir, "world.json", files.json);
+  writeWorldCells(dir);
+}
+
+/** The server's cell view (cells.json, world/cells.ts) of the world on disk. Run `scripts/world-cells.ts` after a merge. */
+export function writeWorldCells(dir: string): void {
+  put(dir, "cells.json", worldCellsJson(worldCells(cellMapOf(loadWorldFromDisk(dir).terrain))));
 }
