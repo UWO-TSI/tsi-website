@@ -10,9 +10,9 @@ Started 2026-10-23. Head: see `git log`.
 
 | # | Task | State |
 |---|---|---|
-| 1 | Multiplayer bounds cover the new world (realtime needs deploy) | in progress |
-| 2 | Server catch checks against the active world | todo |
-| 3 | The world switch (`NEXT_PUBLIC_WORLD=new`) | todo |
+| 1 | Multiplayer bounds cover the new world (realtime needs deploy) | done `4817b59a` |
+| 2 | Server catch checks against the active world (`web/data/world/cells.json`) | done `c594cdbc` |
+| 3 | The world switch (`NEXT_PUBLIC_GAME_WORLD=new`) | done |
 | 4 | Editor: anchor picker, `water_edge` bug spots, oracle keeper off the summit | todo |
 | 5 | Sealed-zone test | todo |
 | 6 | Minimap and map sheet crop | todo |
@@ -26,10 +26,12 @@ Started 2026-10-23. Head: see `git log`.
 
 ## Next
 
-Tasks 1 to 3, then report to the coordinator ("main"), then 4 to 9.
+Tasks 1 to 3 reported to the coordinator. Now 4 to 9, then the final gates and report.
 
 ## Tools and gotchas
 
 - Lock helper: `LANE=game/world-switch /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh heavy <cmd>`.
 - Scratch scripts: `cd web && npx vite-node -c vitest.config.ts <script.ts>` (the `@/` alias resolves).
+- The switch: `NEXT_PUBLIC_GAME_WORLD=new` (build time, client and server). `lib/game/world/load.ts loadGameWorld` swaps the island in `DefaultIslandWorld` before it mounts, unless a lab already swapped it (`villageSwapped`).
+- `web/data/world/cells.json` is derived (the server's cell view); every editor save writes it, `scripts/world-cells.ts` rewrites it after a merge, `cells.test.ts` fails when stale.
 - The realtime server imports the shared contract from `web/lib/net` (`@net/*`), so a protocol change ships with a realtime deploy.

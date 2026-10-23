@@ -165,6 +165,7 @@ export const PAINTER_DRAFT_KEY = "lab-map-village-draft-v1";
 
 let source: VillageDoc = villageDoc as VillageDoc;
 let current: Village | null = null;
+let swapped = false;
 
 /** The member island every system reads: the shipped file, or a lab draft. */
 export function village(): Village {
@@ -175,12 +176,17 @@ export function village(): Village {
 export function setVillageDoc(doc: VillageDoc): void {
   source = doc;
   current = null;
+  swapped = true;
 }
 
 /** Replace the village outright (the smooth world, loaded asynchronously: lib/game/world). Call before the world mounts. */
 export function setVillage(v: Village): void {
   current = v;
+  swapped = true;
 }
+
+/** Whether the island was already swapped (a lab, or the new world loaded: lib/game/world/load.ts), so nothing swaps it again. */
+export const villageSwapped = () => swapped;
 
 /** Objects of one kind, in file order. */
 export function objectsOf(kind: ObjectKind, v: Village = village()): MapObject[] {
