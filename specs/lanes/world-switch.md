@@ -16,7 +16,7 @@ Started 2026-10-23. Head: see `git log`.
 | 4 | Editor: anchor picker, `water_edge` bug spots, oracle keeper off the summit | done `ab349b70` |
 | 5 | Sealed-zone test (`lib/game/world/sealed.test.ts`) | done |
 | 6 | Minimap and map sheet crop (smooth world: open landmarks + spawn + 14 u) | done |
-| 7 | Sun shadows follow the player (new world only) | todo |
+| 7 | Sun shadows follow the player (new world only: ±48 box, 128-texel steps) | done |
 | 8 | Title screen stays on the village | todo |
 | 9 | Arrival route from the active world | todo |
 

@@ -401,6 +401,8 @@ export function villageIsland(v: Village = village()): VillageIsland {
 
 /** Places a later drop opens, kept off the maps until then (lib/game/drops.ts): the ruins gate, the Oracle temple. */
 export const UNLISTED: ReadonlySet<string> = new Set([...(DROPS.combat ? [] : ["ruins"]), ...(DROPS.oracle ? [] : ["oracle"])]);
+/** Half the smooth world's sun shadow box, which follows the player (a 2048 map: about 5 cm a texel). */
+export const SHADOW_FOLLOW_EXTENT = 48;
 /** How far the smooth world's map reaches past its open landmarks. */
 const MAP_MARGIN = 14;
 
@@ -427,7 +429,8 @@ export function villageScale(v: Village = village()) {
   const x0 = Math.round(Math.min(frame.minX, deck?.x0 ?? Infinity) - 2.5), x1 = Math.round(Math.max(frame.maxX, deck?.x1 ?? -Infinity) + 2.5);
   const z0 = Math.round(Math.min(frame.minZ, deck?.z0 ?? Infinity) - 2.5), z1 = Math.round(Math.max(frame.maxZ, deck?.z1 ?? -Infinity) + 2.5);
   return {
-    shadowExtent: Math.max(reachX, reachZ) + 2.5,
+    // The smooth world's box follows the player (IslandAtmosphere shadowFollow) instead of holding the whole island.
+    shadowExtent: v.terrain ? SHADOW_FOLLOW_EXTENT : Math.max(reachX, reachZ) + 2.5,
     cloudSize: [2 * reachX - 1, 2 * reachZ - 1] as [number, number],
     overview: { focus: [b.cx, 0, b.cz] as [number, number, number], offset, far: 120 + further },
     /** Extra fog distance in the overview, on top of the phase's (+28 near, +15 far). */

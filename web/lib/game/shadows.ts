@@ -105,3 +105,22 @@ export function sunShadow(footprint: Ellipse, height: number, sun: readonly [num
   out.yaw = Math.atan2(ux, uz);
   return out;
 }
+
+/**
+ * The smooth world's sun shadow box (High): too big for one fixed box, so the box follows the player. This is its
+ * centre: the player's spot in the light's own frame (looking down `sun`, up +y), each axis snapped to whole steps of
+ * `stepX` and `stepY` (a whole number of texels each), so the map never slides by part of a texel (no shimmer) and
+ * the cached static map (SunShadows) re-renders only when the box steps. Written into `out`.
+ */
+export function shadowCentre(sun: readonly [number, number, number], at: { x: number; y: number; z: number }, stepX: number, stepY: number,
+  out: [number, number, number] = [0, 0, 0]): [number, number, number] {
+  // The shadow camera's axes (three's lookAt from the sun to its target): z toward the sun, x = up × z, y = z × x.
+  const zl = Math.hypot(sun[0], sun[1], sun[2]), z0 = sun[0] / zl, z1 = sun[1] / zl, z2 = sun[2] / zl;
+  const xl = Math.hypot(z2, z0) || 1, x0 = z2 / xl, x2 = -z0 / xl;
+  const y0 = z1 * x2, y1 = z2 * x0 - z0 * x2, y2 = -z1 * x0;
+  const px = Math.round((at.x * x0 + at.z * x2) / stepX) * stepX, py = Math.round((at.x * y0 + at.y * y1 + at.z * y2) / stepY) * stepY;
+  // Depth too, in steps, so the light holds still between steps (its depth never shimmers: the projection is orthographic).
+  const pz = Math.round((at.x * z0 + at.y * z1 + at.z * z2) / stepX) * stepX;
+  out[0] = px * x0 + py * y0 + pz * z0; out[1] = py * y1 + pz * z1; out[2] = px * x2 + py * y2 + pz * z2;
+  return out;
+}
