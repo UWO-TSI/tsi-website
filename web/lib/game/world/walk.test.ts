@@ -18,7 +18,9 @@ import { villageOfWorld } from "./village";
 
 const world = loadWorldFromDisk(join(__dirname, "../../../data/world"));
 const t = world.terrain;
-const objects = acceptProposed(world.objects, PROPOSALS.filter(p => p.target === "world-map").flatMap(p => p.objects));
+// The v1 barrier proposal is drawn for the v2 world (world-map.json, barriers.test.ts); the new world's closures are its
+// own border and terrain v3 R2's bridges and rockfall, so only the other proposals (the campfire) apply here.
+const objects = acceptProposed(world.objects, PROPOSALS.filter(p => p.target === "world-map").flatMap(p => p.objects).filter(o => o.kind !== "barrier"));
 const v = villageOfWorld({ terrain: t, objects });
 const island = villageIsland(v);
 
@@ -100,13 +102,14 @@ describe("walking the smooth world", () => {
   it("keeps every object, barrier and the campfire on the surface, on dry land", () => {
     for (const o of objects) {
       if (o.kind === "landmark" && o.id === "wharf") continue; // the jetty's origin stands at the water's edge
+      if (o.kind === "barrier" && o.model === "border") continue; // the invisible border runs out into the water at its ends
       const h = island.ground(o.x, o.z);
       expect(h, `${o.kind}:${o.id}`).toBeCloseTo(terrainHeight(t, o.x, o.z), 6);
       expect(h, `${o.kind}:${o.id} above the sea`).toBeGreaterThan(t.seaLevel);
     }
     const barriers = barrierPlacements(v);
     expect(barriers.length).toBeGreaterThan(5);
-    for (const b of barriers) expect(island.ground(b.x, b.z), b.id).toBeGreaterThan(t.seaLevel);
+    for (const b of barriers) if (b.model !== "border") expect(island.ground(b.x, b.z), b.id).toBeGreaterThan(t.seaLevel);
     const fire = campfireSite(v);
     expect(fire).not.toBeNull();
     expect(island.ground(fire!.x, fire!.z)).toBeGreaterThan(t.seaLevel);

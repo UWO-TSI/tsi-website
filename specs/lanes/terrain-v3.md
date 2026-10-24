@@ -19,14 +19,22 @@ Then look at the references in `specs/references/terrain/plan-2026-10-23/` and t
 
 ## Status
 
-R1 (e8675d5e) was reviewed by David on 2026-10-24: every item redo or noted, none approved, so nothing is merged to main. Main has moved (HQ round 4 and the upper-floor fix, 71135930 and later); merge it first. R1 as built:
+**R1b is built and waiting for David's notes** (head: the R1b commit on `game/terrain-v3`, after the main merge b8a36bc8). Nothing is approved or merged to main yet. R1 (e8675d5e) was reviewed 2026-10-24 (all redo); R1b applies the coordinator's reading of those notes:
 
-- **The generator:** `web/lib/game/world/generate.ts` (the zone plan `PLAN`, heights `H`, and `generateWorld`), run by `cd web && npx vite-node -c vitest.config.ts scripts/generate-world.ts --preview <png>` (about 9 s, deterministic). It keeps the objects (R1 moves none) and the village's house, lot and boat-arrival marks, and rewrites every zone's annotation from the plan.
-- **Reused from convert.ts:** `shelf`, `softMin` (now with a power), `rockRelief` (now with depth and scale), `wharfQuay`, `padBuildings`, `limitSteepness`, and the new `contourDistance` (split out of `tierDistance`).
-- **Reach:** the seal's walk, jump and glide reach moved from `sealed.test.ts` to `lib/game/world/reach.ts`, so the preview tints the reachable ground gold. `sealed.test.ts` now also closes the meadow, the mountain and the islets (every zone but the wharf, the beach and the village).
-- **Renders:** `specs/evidence/terrain-v3/r1/` (00 top-down, 01 to 12 in-game views), shot by `specs/evidence/terrain-v3/shoot.mjs`.
-- **Gates:** with `NEXT_PUBLIC_GAME_WORLD=new`, `lib/game/world`, `lib/game/arrival` and `groundGate.test` green (24 files, 161 tests), sealed with no leaks; tsc and eslint clean. No perf run in R1 (landform only; one run in R3).
-- **Questions for David:** `specs/launch/terrain-v3-questions.md` (the mountain can't be seen from the village; the meadow's closures; the quay's height; the terraces).
+- **Heights:** deck ground 1, stone quay 2 (a 1 u step 13.4 to 14.6 u in from the shore), a gentle climb to the village's 3 from 24 to 36 u in. The main island's base ground is now the village's 3, so no seam dips between zones.
+- **The wharf:** the shore moved out to x 74, the jetty to (74.5, 46), the wharf runs z 8 to 92. The stone path goes along the deck, up the step left (south) of the jetty at z 55 to 57, then on to the plaza. A short ramp joins the jetty (its deck still at 0) to the deck ground: raising the jetty is R2.
+- **The village:** dead level at 3, much bigger (blob round (6, 52)). The plaza is at (4, 50), radius 12. HQ is west at the back, the café north (right), the shop south (left) and the museum further out south-west. Benches, study tables and lamps sit round the plaza and up the path. The spawn is on the deck by the jetty. The house and lot marks moved into the gaps (`MARKS`).
+- **The map:** shorter and compact. The mountain is R1's, moved in to (-10, -42) and scaled 0.62 (`MT`, `inMt`), so its cliffs rise behind the café. The forest is the NE corner past z -4, 7 to 11 high, in two tiers. The north island is smaller and further west, at (-162, 10), with no bridgehead spits. The river runs from the mountain's west foot down the village's west side. The lighthouse islet is at (126, 104).
+- **The meadow:** at the village's level (3.4 to 5, rolling). It is closed by the invisible border `BORDER`, which runs from the river to the sea north of the wharf. It is built from barrier segments, model `"border"`: `lib/game/barriers.ts`, `url: null`, feature `meadow` (null in `drops.ts`). `components/game/BorderNotice.tsx` toasts "This area is releasing soon." when you walk up to it.
+- **The beach:** smooth and slightly smaller, with no grass patch and dry sand at its back for palms.
+- **Objects:** `layoutObjects` in generate.ts places them (`LAYOUT`) and rebuilds the border segments. `scripts/generate-world.ts` runs it, plus `moveMarks`.
+- **Renders:** `specs/evidence/terrain-v3/r1b/` (00 top-down, 01 to 11 views, 12 the border toast), from the R1b spots in `shoot.mjs`.
+- **Gates:** with `NEXT_PUBLIC_GAME_WORLD=new` and without it, `lib/game/world`, `lib/game/arrival`, barriers, drops, proposals and groundGate are green (27 files, 182 tests): sealed with no leaks, routes green. tsc and eslint are clean. No perf run (that is one run in R3).
+- **Grid kept** at 384 x 552 (the island is just smaller inside it).
+- **Tests changed:**
+  - `walk.test` no longer applies the v1 barrier proposal (it's drawn for the v2 world; `barriers.test` still checks it there), and it skips the border's segments in the dry-land check (their ends run into the water).
+  - `generate.test` is updated to the R1b heights and the dock.
+- **Questions for David:** `specs/launch/terrain-v3-questions.md` "R1b".
 
 ## David's decisions
 
@@ -81,13 +89,8 @@ The plan page answers, verbatim in the spec. The drawing is a guide to where thi
 
 ## Next
 
-1. **Merge main** into the branch, then regenerate `cells.json` if the merge touched the world.
-2. **R1b, the landform redo and the village layout.**
-   - Apply every point of the 2026-10-24 reading above: edit `PLAN` and rerun the generator.
-   - Place the existing buildings around the bigger plaza, and the spawn, lamps, benches and study tables to suit. The arrival route and `routes.test` must stay green.
-   - Shoot the views again from the same spots where they still make sense: the top-down, arrival, path, plaza, HQ, beach, the mountain from the village, the forest edge, the north island, and the meadow border.
-   - Commit the renders under `specs/evidence/terrain-v3/r1b/`.
-   - Message "main" with an image list and one line per image, then stop for David's notes.
+1. **Wait for David's R1b notes.** Then redo, or go on to R2.
+2. (Done in R1b: merge main, the landform redo and the village layout.)
 3. **R2**, on approval:
    - the path's stairs, fences and lamps;
    - the wharf's market stalls, carts, barrels, nets, ladders and lighthouse;
@@ -101,6 +104,9 @@ The plan page answers, verbatim in the spec. The drawing is a guide to where thi
 
 - **node_modules:** the worktree had none; cloned from `perf-v1` (same lockfile) with `cp -c -R .claude/worktrees/perf-v1/web/node_modules web/` (APFS clone, 9 s).
 - **Locks:** `LANE=game/terrain-v3 /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh heavy <cmd>` for vitest, tsc, builds and perf. The dev server takes the devserver lock by hand (queue line, mkdir, owner file), on port 3171. Never use port 3000.
+- **R1b dark band:** a zone seam with no zone on top falls to the plan's base ground. The main island's ground is the village's 3, so seams stay level.
+- **Object key order:** objects the generator writes must list their keys in the order `format.ts` reads them back (id, kind, x, z, yaw, scale, model), and leave out a zero yaw. Otherwise `world.test` ("same bytes") fails.
+- **Border toast check:** with `at=0,24`, camera yaw pi, hold W; the toast shows at about z 15.
 - **Views:** dev server `cd web && NEXT_PUBLIC_SUPABASE_URL= NEXT_PUBLIC_SUPABASE_ANON_KEY= NEXT_PUBLIC_GAME_WORLD=new npx next dev -p 3171`, then `PORT=3171 node specs/evidence/terrain-v3/shoot.mjs <dir> [view,...]` (headless, muted; `/lab/island?fixture=v2&at=x,z`, camera yaw 0 looks toward +z, 90 toward +x). `at=` stands you anywhere, closed zones too, so keep review spots in the open area unless the view is of a closed zone.
 - **Curved world:** the bend drops far things by 0.0032 d^2 (30 u at 100 u), so nothing more than about 80 u away shows from the open area.
 - **Annotations:** a land zone owns a cell only where the ground stands within 1.5 u of its own height, so a cliff's foot or a coast's last slope isn't counted as the closed zone above it (otherwise the seal test flags the foot).

@@ -3,9 +3,9 @@
  *
  *   cd web && npx vite-node -c vitest.config.ts scripts/generate-world.ts [--preview <png>]
  *
- * Objects stay where world.json has them; the village's house, lot and boat-arrival marks carry over; every zone's
- * annotation is rewritten from the plan. It overwrites web/data/world/, so once David sculpts in the editor it is
- * only for regional passes. `--preview <png>` also writes the labelled top-down map, the ground a player can reach from
+ * The open area's objects are laid out (layoutObjects) and the border's wall stood; the village's house, lot and
+ * boat-arrival marks move with it (moveMarks); every zone's annotation is rewritten from the plan. It overwrites
+ * web/data/world/, so once David sculpts in the editor it is only for regional passes. `--preview <png>` also writes the labelled top-down map, the ground a player can reach from
  * the spawn (walking, jumping, gliding: lib/game/world/reach.ts) tinted gold.
  */
 
@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 import { loadWorldFromDisk, writeWorldFiles } from "../lib/game/world/disk";
 import { encodeWorld } from "../lib/game/world/format";
-import { PLAN, generateWorld } from "../lib/game/world/generate";
+import { BORDER, PLAN, generateWorld, layoutObjects, moveMarks } from "../lib/game/world/generate";
 import { reach } from "../lib/game/world/reach";
 import { PAINT_SWATCH, type WorldTerrain } from "../lib/game/world/terrain";
 import { villageOfWorld } from "../lib/game/world/village";
@@ -26,7 +26,7 @@ const dir = join(web, "data/world");
 const started = Date.now();
 const before = loadWorldFromDisk(dir);
 const keep = before.annotations.filter(a => /^(House|Lot|Boat arrival)/.test(a.name));
-const { world, report } = generateWorld(before.objects, keep);
+const { world, report } = generateWorld(layoutObjects(before.objects), moveMarks(keep));
 writeWorldFiles(dir, encodeWorld(world));
 console.log(JSON.stringify({ ...report, annotations: world.annotations.length, ms: Date.now() - started }));
 
@@ -59,6 +59,7 @@ async function preview(w: World, out: string) {
   console.log(`reach: ${(open / 4).toFixed(0)} square units of land`);
   const X = (x: number) => ((x - t.x0) * t.res).toFixed(1), Z = (z: number) => ((z - t.z0) * t.res).toFixed(1);
   let svg = `<svg width="${cols}" height="${rows}" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">`;
+  svg += `<polyline points="${BORDER.map(([x, z]) => `${X(x)},${Z(z)}`).join(" ")}" fill="none" stroke="#fff" stroke-width="2" stroke-dasharray="6 4"/>`;
   for (const o of w.objects) if (o.kind === "landmark" || o.kind === "spawn") svg += `<circle cx="${X(o.x)}" cy="${Z(o.z)}" r="2.5" fill="#d33" stroke="#fff" stroke-width="0.8"/>`;
   const labels = [...PLAN.zones.map(z => z.label), ...PLAN.ramps.map(r => r.label)].filter((l): l is readonly [string, number, number] => !!l);
   const font = `font-weight="700" text-anchor="middle" fill="#fff" stroke="#1d2a33" paint-order="stroke"`;
@@ -68,8 +69,8 @@ async function preview(w: World, out: string) {
     if (detail) svg += `<text x="${X(x)}" y="${(+Z(z) + 15).toFixed(1)}" font-size="12" stroke-width="3" ${font}>(${detail}</text>`;
   }
   const note = (y: number, text: string) => `<text x="12" y="${rows - y}" font-size="13" fill="#fff" stroke="#1d2a33" stroke-width="3" paint-order="stroke">${text}</text>`;
-  svg += note(30, "Terrain v3 R1. Heights in units above the sea (a jump is 1.3).");
-  svg += note(12, "Gold: where a player can get to from the spawn. Red dots: buildings and the spawn (not moved in R1).") + "</svg>";
+  svg += note(30, "Terrain v3 R1b. Heights in units above the sea (a jump is 1.3). Dashed: the invisible border (opens soon).");
+  svg += note(12, "Gold: where a player can get to from the spawn. Red dots: buildings and the spawn.") + "</svg>";
   const img = await sharp(rgb, { raw: { width: cols, height: rows, channels: 3 } }).composite([{ input: Buffer.from(svg) }]).png().toBuffer();
   await sharp(img).png({ compressionLevel: 9 }).toFile(out);
   console.log(`preview: ${out}`);

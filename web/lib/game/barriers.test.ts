@@ -17,7 +17,7 @@ function flatIsland(objects: MapObject[]) {
 }
 /** The GLB's footprint where a body bumps it (vertices under 1.2 up; boughs overhead don't count), in the model's frame. */
 function glbBounds(model: string) {
-  const { json, bin } = readGlb(readFileSync(join(__dirname, "../../public", BARRIERS[model as keyof typeof BARRIERS].url)));
+  const { json, bin } = readGlb(readFileSync(join(__dirname, "../../public", BARRIERS[model as keyof typeof BARRIERS].url!)));
   const j = json as unknown as { meshes: { primitives: { attributes: { POSITION: number } }[] }[]; accessors: { bufferView: number; byteOffset?: number; count: number }[]; bufferViews: { byteOffset?: number; byteStride?: number }[] };
   let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
   for (const m of j.meshes) for (const p of m.primitives) {

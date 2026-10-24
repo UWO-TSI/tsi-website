@@ -68,7 +68,7 @@ export function sceneryOf(v: Village, ground: (x: number, z: number) => number, 
     // The connectable fences: a post on each, rails to the posts beside it (lib/game/fences.ts).
     ...fencePlacements(objectsOf("fence", v).filter(isJoinedFence), ground),
     // The natural barriers standing at this drop (lib/game/barriers.ts), where the walker blocks them.
-    ...barrierPlacements(v).map((b): ModelPlacement => ({ url: BARRIERS[b.model].url, position: [b.x, ground(b.x, b.z), b.z], rotation: b.yaw, scale: b.scale })),
+    ...barrierPlacements(v).flatMap((b): ModelPlacement[] => { const url = BARRIERS[b.model].url; return url ? [{ url, position: [b.x, ground(b.x, b.z), b.z], rotation: b.yaw, scale: b.scale }] : []; }),
   ];
 }
 

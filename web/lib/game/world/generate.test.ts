@@ -5,7 +5,7 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadWorldFromDisk } from "./disk";
-import { H, blob, generateWorld, sideOf, stairs, strip } from "./generate";
+import { DOCK, H, PLAZA, blob, generateWorld, layoutObjects, sideOf, stairs, strip } from "./generate";
 import { terrainHeight } from "./terrain";
 
 describe("the zone plan's shapes", () => {
@@ -27,12 +27,12 @@ describe("the zone plan's shapes", () => {
 
 describe("a generated world", () => {
   const before = loadWorldFromDisk(join(__dirname, "../../../data/world"));
-  const { world } = generateWorld(before.objects, []);
+  const objects = layoutObjects(before.objects), { world } = generateWorld(objects, []);
   const t = world.terrain, at = (x: number, z: number) => terrainHeight(t, x, z);
   const named = (name: string) => world.annotations.find(a => a.name === name);
 
   it("is the same twice", () => {
-    const again = generateWorld(before.objects, []).world.terrain;
+    const again = generateWorld(objects, []).world.terrain;
     expect(Buffer.from(again.heights.buffer).equals(Buffer.from(t.heights.buffer))).toBe(true);
     expect(Buffer.from(again.paint).equals(Buffer.from(t.paint))).toBe(true);
   });
@@ -41,11 +41,13 @@ describe("a generated world", () => {
     expect([t.width, t.depth, t.res, t.originX, t.originZ, t.seaLevel]).toEqual([384, 552, 2, -192, -276, before.terrain.seaLevel]);
   });
 
-  it("stands the village flat at its height, the quay low, the beach at the sea, the summit highest", () => {
-    for (const [x, z] of [[10, 60], [1, 60], [10, 72]]) expect(at(x, z)).toBeCloseTo(H.village, 1);
-    expect(Math.abs(at(45, 44))).toBeLessThan(0.3); // the quay beside the path
+  it("stands the village flat at its height, the deck and the quay below it, the beach at the sea, the summit highest", () => {
+    const of = (id: string) => objects.find(o => o.id === id)!;
+    for (const [x, z] of [PLAZA.at, [of("hq").x, of("hq").z], [of("museum").x, of("museum").z]]) expect(at(x, z)).toBeCloseTo(H.village, 1);
+    expect(at(DOCK.x - 9, DOCK.z - 6)).toBeCloseTo(H.deck, 1); // the deck boards' ground beside the jetty
+    expect(at(DOCK.x - 19, DOCK.z - 6)).toBeCloseTo(H.quay, 1); // the quay behind it
     expect(at(-15, 110)).toBeLessThan(1);
-    expect(at(-2, -152)).toBeCloseTo(H.summit, 0);
+    expect(at(of("oracle").x, of("oracle").z)).toBeCloseTo(H.summit, 0);
     let top = -Infinity;
     for (const h of t.heights) top = Math.max(top, h);
     expect(top).toBeLessThan(t.heightRange[1]);
@@ -66,6 +68,6 @@ describe("a generated world", () => {
     }
     const islet = named("Lighthouse islet")!.cells;
     expect(islet.length).toBeLessThan(120);
-    for (const [cx, cz] of islet) expect(Math.hypot(cx + t.originX - 49, cz + t.originZ - 50)).toBeGreaterThan(50);
+    for (const [cx, cz] of islet) expect(Math.hypot(cx + t.originX - DOCK.x, cz + t.originZ - DOCK.z)).toBeGreaterThan(50);
   });
 }, 60_000);
