@@ -13,7 +13,9 @@ Fix it at the source, the smallest change that makes remote players stand on the
 
 ## Status
 
-Not started.
+Done, awaiting merge. Cause: the sender and server already carry the walker's height (InteriorPlayer sends `heightAt()` as y; the stair slopes, 0.7 in the HQ and 0.67 in the shop, are under CLIMB_RATIO 0.9, and y 3.2 to 7.2 is inside INDOOR yMax 25). The receiver lost it: `groundOf` gave every non-village area `FLAT_GROUND` (top 0), so `driveRig` put the anchor at `min(s.y, 0)` = 0. The body was lifted by `motion.lift`, but the contact shadow, hit capsule, nameplate (groundY + 0.8), dust and combat centre stayed on the ground floor. Fix: `GroundWorld.room` + `ROOM_GROUND` (drive.ts); `groundOf` returns it for hq, museum, oracle, house (the InteriorPlayer rooms, where nobody jumps), and `driveRig` uses `s.y` as the floor there. Village, cafe, ruins and home keep the ground snap. No realtime change, no deploy needed.
+
+Note: the shop is still offline (`netReady = inside !== "shop"`, DefaultIslandWorld.tsx:722-723), and the HQ upper level lives on `game/hq-interior`; neither shows to others until those land. InteriorPlayer's seated branch (interiorShared.tsx ~line 182-186) sets y 0, so a seat on an upper floor would send y 0: fix there if a seat is ever put upstairs.
 
 ## Next
 
