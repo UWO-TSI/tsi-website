@@ -35,8 +35,8 @@ Read `specs/launch/v1-new-world.md` first, then `specs/launch/terrain-v3.md`. Th
   - **Open question:** the mountain can't be seen from the village, because the horizon bend sinks it. David picks A (move it in), B (soften the bend) or C (keep it as drawn) in the note on `r1-mountain-village`. I recommended A.
   - **Questions file:** `specs/launch/terrain-v3-questions.md`.
   - **When the notes come in:** merge R1 to main if it's approved, relay the notes to the lane file, and restart the lane fresh for R2.
-- **HQ round 4 approved** (all four items, 2026-10-23). The `hq-interior` lane is doing the cheap ponytail fixes and merging main, then the coordinator merges it.
-- **Upper-floor fix merged** (72a9b9c5). Remote players in rooms stand at the height they sent, with no realtime deploy needed. It shows once HQ merges.
+- **HQ round 4 merged** (71135930, David approved all four items 2026-10-23), with the ponytail cleanup. Later items are logged as A14. `hq-notice-board.glb` is no longer rendered but is still in the propModels table; delete both together after launch.
+- **Upper-floor fix merged** (72a9b9c5). Remote players in rooms stand at the height they sent, with no realtime deploy needed.
 - **Still open:** the shop is offline for multiplayer (`netReady = inside !== "shop"`, DefaultIslandWorld.tsx:722), so players in the shop vanish for others.
 - **Waiting on David:**
   - the R1 review;
