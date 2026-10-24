@@ -22,9 +22,9 @@ import { useThree } from "@react-three/fiber";
 import type * as THREE from "three";
 import { ISLAND_LIGHTING, type IslandLight } from "@/lib/game/islandLighting";
 import { interiorLight } from "@/lib/game/interiorLight";
-import { HQ, HQ_BENCH, HQ_CLOCK_AT, HQ_FLOOR_HEIGHT as F, HQ_ROOM, HQ_SPAWN, HQ_TROPHY, createHqWalker, type Station } from "@/lib/game/hqLayout";
+import { HQ, HQ_CLOCK_AT, HQ_FLOOR_HEIGHT as F, HQ_ROOM, HQ_SPAWN, HQ_TROPHY, createHqWalker, type Station } from "@/lib/game/hqLayout";
 import InteriorDaylight from "../InteriorDaylight";
-import { InteriorPlayer, applyInteriorBackdrop, nearestStation, type InteriorStation, type RoomBounds } from "../interiorShared";
+import { InteriorPlayer, applyInteriorBackdrop, nearestStation, reportIfChanged, type InteriorStation, type RoomBounds } from "../interiorShared";
 import Keeper from "../Keeper";
 import TickingClock from "../TickingClock";
 import TrophyCase from "../TrophyCase";
@@ -33,17 +33,13 @@ import HqRoom, { preloadHqRoom } from "./HqRoom";
 
 const BOUNDS: RoomBounds = { halfW: HQ_ROOM.halfW, halfD: HQ_ROOM.halfD, spawn: HQ_SPAWN };
 const toStation = ({ id, name, pos, action, range }: Station): InteriorStation => ({ id, name, pos, action, range });
-/** Each floor's stations: nothing to use from the stair, and the admin doors only from upstairs. */
+/** Each floor's stations: nothing to use from the stair (the admin door is a ground-floor station). */
 const GROUND = HQ.stations.filter(s => s.level === 0).map(toStation);
 const UPPER = HQ.stations.filter(s => s.level === 1).map(toStation);
 const NONE: InteriorStation[] = [];
 
 preloadHqRoom();
 
-/** Module scope (the react compiler forbids writing through hook values): the station in reach, reported when it changes. */
-function report(last: { current: InteriorStation | null | undefined }, s: InteriorStation | null, to: (s: InteriorStation | null) => void) {
-  if (s !== last.current) { last.current = s; to(s); }
-}
 /** You arrive a step inside the door, clear of its prompt (it shows when you walk back to it). */
 function arrive(player: React.MutableRefObject<THREE.Vector3>) { player.current.set(HQ_SPAWN[0], 0, HQ_SPAWN[1]); }
 
@@ -66,7 +62,7 @@ export default function HqInterior({ light = ISLAND_LIGHTING.day, frozen, talkin
   const last = useRef<InteriorStation | null | undefined>(undefined);
   const onMove = useCallback((x: number, z: number) => {
     const list = walker.zone === "ground" ? GROUND : walker.zone === "upper" ? UPPER : NONE;
-    report(last, nearestStation(list, x, z), onNearestStation);
+    reportIfChanged(last, nearestStation(list, x, z), onNearestStation);
   }, [walker, onNearestStation]);
   const height = useCallback(() => walker.height, [walker]);
   const { lamps, day } = interiorLight(light);
@@ -91,7 +87,7 @@ export default function HqInterior({ light = ISLAND_LIGHTING.day, frozen, talkin
       <Suspense fallback={null}><HqRoom walker={walker} light={light} /></Suspense>
       {/* This week's biggest catches in 3D (the display's E opens the list), the workbench, the clock on the island's time. */}
       <Suspense fallback={null}><TrophyCase member={member} at={[HQ_TROPHY.x, HQ_TROPHY.z]} yaw={HQ_TROPHY.yaw} /></Suspense>
-      <Workbench player={player} at={[HQ_BENCH.x, HQ_BENCH.z]} pile={false} />
+      <Workbench player={player} />
       <Suspense fallback={null}><TickingClock glassMaterial="FtrAntiqueClock_mat0" position={[HQ_CLOCK_AT.x, 0, HQ_CLOCK_AT.z]} rotY={HQ_CLOCK_AT.yaw} player={player} /></Suspense>
 
       {/* Wren behind her desk left of the door (lib/game/keepers.ts memberHq). */}

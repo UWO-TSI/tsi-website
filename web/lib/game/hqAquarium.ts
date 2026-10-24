@@ -11,7 +11,9 @@
  *
  * and faces the way it's going (yaw = atan2(dx/dt, dz/dt)). A school is fish on one path, strung out along it.
  */
+import * as THREE from "three";
 import { HQ, type HqOption } from "./hqLayout";
+import { seededRandom } from "./weatherSystem";
 
 export interface Fish {
   /** Along the tank (x): the middle and the reach of its run. */
@@ -33,22 +35,8 @@ export function swimBox(o: HqOption = HQ) {
   return { x0: a.x0 + 0.4, x1: a.x1 - 0.4, y0: a.y0 + 0.45, y1: a.y1 - 0.4, z0: a.z0 + 0.2, z1: a.z1 - 0.3 };
 }
 
-/** A seeded uniform in [0, 1) (mulberry32): the same tank every visit. */
-function rng(seed: number) {
-  let s = seed >>> 0;
-  return () => {
-    s = (s + 0x6d2b79f5) >>> 0;
-    let t = s;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
-
 export function tankFish(o: HqOption = HQ, seed = 7): Fish[] {
-  const r = rng(seed), box = swimBox(o), out: Fish[] = [];
+  const r = seededRandom(seed), box = swimBox(o), out: Fish[] = [];
   const aMid = (box.x0 + box.x1) / 2, aHalf = (box.x1 - box.x0) / 2, dMid = (box.z0 + box.z1) / 2, dHalf = (box.z1 - box.z0) / 2;
   // Five schools of silver, one above the other up the two storeys, each the length of the tank and back at its own pace.
   const schools = [{ y: 7.5, n: 11 }, { y: 6.1, n: 12 }, { y: 4.7, n: 12 }, { y: 3.3, n: 11 }, { y: 1.9, n: 9 }];
@@ -59,8 +47,8 @@ export function tankFish(o: HqOption = HQ, seed = 7): Fish[] {
       const ya = 0.08 + 0.1 * r(), da = Math.min(0.1, dHalf * 0.3);
       out.push({
         ac, aa, w, ph: ph - i * 0.045 - r() * 0.03,
-        y0: clamp(s.y + (r() * 2 - 1) * 0.45, box.y0 + ya, box.y1 - ya), ya,
-        d0: clamp(dMid + (r() * 2 - 1) * dHalf * 0.6, box.z0 + da, box.z1 - da), da,
+        y0: THREE.MathUtils.clamp(s.y + (r() * 2 - 1) * 0.45, box.y0 + ya, box.y1 - ya), ya,
+        d0: THREE.MathUtils.clamp(dMid + (r() * 2 - 1) * dHalf * 0.6, box.z0 + da, box.z1 - da), da,
         size: 0.3 + 0.12 * r(), beat: r() * 6.28, color: SILVER[(k + i) % SILVER.length],
       });
     }
@@ -69,9 +57,9 @@ export function tankFish(o: HqOption = HQ, seed = 7): Fish[] {
   for (let i = 0; i < 20; i++) {
     const aa = 0.35 + 0.9 * r(), ya = 0.1 + 0.15 * r(), da = Math.min(0.15, dHalf * 0.4);
     out.push({
-      ac: clamp(box.x0 + r() * (box.x1 - box.x0), box.x0 + aa, box.x1 - aa), aa, w: 0.35 + 0.3 * r(), ph: r() * Math.PI * 2,
-      y0: clamp(box.y0 + 0.2 + r() * 1.9, box.y0 + ya, box.y1 - ya), ya,
-      d0: clamp(dMid + (r() * 2 - 1) * dHalf * 0.5, box.z0 + da, box.z1 - da), da,
+      ac: THREE.MathUtils.clamp(box.x0 + r() * (box.x1 - box.x0), box.x0 + aa, box.x1 - aa), aa, w: 0.35 + 0.3 * r(), ph: r() * Math.PI * 2,
+      y0: THREE.MathUtils.clamp(box.y0 + 0.2 + r() * 1.9, box.y0 + ya, box.y1 - ya), ya,
+      d0: THREE.MathUtils.clamp(dMid + (r() * 2 - 1) * dHalf * 0.5, box.z0 + da, box.z1 - da), da,
       size: 0.13 + 0.06 * r(), beat: r() * 6.28, color: ORANGE[i % ORANGE.length],
     });
   }

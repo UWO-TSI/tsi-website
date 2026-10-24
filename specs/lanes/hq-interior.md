@@ -29,6 +29,10 @@
 
 ## David's decisions (newest first)
 
+- 2026-10-23: David approved HQ round 4 (all four items: the lounge, the materials, the stations and the windows). The
+  coordinator's pre-merge ponytail cleanup then dropped the dead `HQInterior` props (`light`, `talking`, `trophyCase`,
+  `noticeBoard`), the Workbench's `at`/`pile` parameterisation, `TrophyCase`'s `at` fallback and two small duplicates; four
+  larger ones are A14 in `specs/ponytail-audit-2026-10-22.md`. Behaviour unchanged.
 - 2026-10-22, on the phase 3 review: REDO. Verbatim:
   - "looks good for a v1, but make the textures of things more accurate like how they interact with the light. I also think the building can be built a little bigger for more space, make it more loungy, like utilize the first floor space infront of the fishtank to use for lounging, big cozy sofa and bean bag with bigger rug, second floor can utilize space better by adding like study fixtures on the left side, I want big clear windows like in modern appartments and not the curtain with the + kinda window, and add like long table with monitor and chairs and stuff, add more plants, and improve quality of these models"
   - "more lightings, lightsings should fade a little lighter and more light fixures so no dark corners at night"

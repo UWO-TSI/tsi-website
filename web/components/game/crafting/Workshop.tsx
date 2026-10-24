@@ -16,11 +16,11 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
-import { Piece } from "../interiorShared";
 import { GLBProp } from "../NatureModels";
 import { useMoveParticles } from "../movement/moveFx";
 import { useGlowParticles } from "../GlowFx";
 import { villageBottleSpot } from "@/lib/game/islandNodes";
+import { HQ_BENCH } from "@/lib/game/hqLayout";
 import { setPeacefulTarget } from "@/lib/game/peacefulNear";
 import { worldTime } from "@/lib/game/worldClock";
 import { installCraftingDemo } from "@/lib/crafting/demo";
@@ -56,12 +56,9 @@ const HAMMER_URL = "/assets/game/forage/hammer.glb";
 // ── Workbench (HQ, under the mezzanine behind the stair) ──
 
 const BENCH_TOP = 0.585;
-/** For a bench at (x, z), its working side facing +x: where its prompt shows, where you stand to work at it and where
- * the hammer comes down (HQ's is at lib/game/hqLayout.ts HQ_BENCH). */
-function benchSpots(x: number, z: number) {
-  return { x, z, approach: [x + 1.25, z] as [number, number], craft: [x + 0.95, z] as [number, number], strike: [x + 0.32, BENCH_TOP, z + 0.08] as [number, number, number] };
-}
-type BenchSpots = ReturnType<typeof benchSpots>;
+/** HQ's bench (lib/game/hqLayout.ts HQ_BENCH), its working side facing +x: where its prompt shows, where you stand to work at it and where the hammer comes down. */
+const { x: BX, z: BZ } = HQ_BENCH;
+const BENCH = { approach: [BX + 1.25, BZ] as const, craft: [BX + 0.95, BZ] as const, strike: [BX + 0.32, BENCH_TOP, BZ + 0.08] as const };
 /** The Craft clip's length (ms) and when its show beat holds the thing up (its phase 0.8). */
 const CRAFT_MS = (CLIP_BY_NAME.get("Craft")?.length ?? 2.6) * 1000;
 const SHOW_MS = CRAFT_MS * 0.8;
@@ -71,10 +68,10 @@ interface Making { id: string; name: string; kind: string; phase: "walk" | "work
 type Pools = { fx: ReturnType<typeof useMoveParticles>; glow: ReturnType<typeof useGlowParticles> };
 
 /** Module scope (outside the frame loop: it sets state and sounds): the blows, the finish and the card. */
-function work(m: Making, pools: Pools, player: THREE.Vector3, done: () => void, b: BenchSpots) {
-  window.dispatchEvent(new CustomEvent("tsi:act", { detail: { clip: "Craft", at: [b.x, b.z] } }));
+function work(m: Making, pools: Pools, player: THREE.Vector3, done: () => void) {
+  window.dispatchEvent(new CustomEvent("tsi:act", { detail: { clip: "Craft", at: [BX, BZ] } }));
   window.dispatchEvent(new CustomEvent("tsi:act-hold", { detail: { url: HAMMER_URL, hold: "hammer", ms: CRAFT_MS - 120 } }));
-  const [sx, sy, sz] = b.strike;
+  const [sx, sy, sz] = BENCH.strike;
   hitDelays("Craft").forEach((ms, i) => window.setTimeout(() => {
     pools.fx.pool.burst(HAMMER_PUFF, sx, sy + 0.03, sz, sy, 1, 0, 1, SAWDUST_TINT, seedAt(sx, sz, 70 + i));
     pools.fx.pool.burst(SAWDUST, sx, sy + 0.02, sz, sy, 1, 0, 1, SAWDUST_TINT, seedAt(sx, sz, 80 + i));
@@ -82,7 +79,7 @@ function work(m: Making, pools: Pools, player: THREE.Vector3, done: () => void, 
   }, ms));
   // Held up to look at: the finishing sparkle round it, in front of the maker's chest.
   window.setTimeout(() => {
-    const yaw = Math.atan2(b.x - player.x, b.z - player.z), at = handOf(player, yaw);
+    const yaw = Math.atan2(BX - player.x, BZ - player.z), at = handOf(player, yaw);
     pools.glow.pool.burst(FINISH_GLINT, at.x, at.y + 0.05, at.z, 0, 0, 0, 1, GLINT_TINT, seedAt(at.x, at.z, 91));
     pools.glow.pool.burst(FINISH_SPARKS, at.x, at.y, at.z, 0, 0, 0, 1, GLINT_TINT, seedAt(at.x, at.z, 92));
   }, SHOW_MS);
@@ -93,15 +90,7 @@ function work(m: Making, pools: Pools, player: THREE.Vector3, done: () => void, 
   }, SHOW_MS + 260);
 }
 
-export function Workbench({ player, at, pile = true }: {
-  player: React.RefObject<THREE.Vector3>;
-  /** Where the bench stands; its working side faces +x. */
-  at: readonly [number, number];
-  /** The cardboard pile beside it (the cosy clubhouse's; HQ's walnut room leaves it out). */
-  pile?: boolean;
-}) {
-  const [bx, bz] = at;
-  const b = useMemo(() => benchSpots(bx, bz), [bx, bz]);
+export function Workbench({ player }: { player: React.RefObject<THREE.Vector3> }) {
   const near = useRef(false);
   const fx = useMoveParticles(), glow = useGlowParticles();
   const making = useRef<Making | null>(null);
@@ -110,28 +99,27 @@ export function Workbench({ player, at, pile = true }: {
       const d = (e as CustomEvent<{ id: string; name: string; kind: string }>).detail;
       making.current = { ...d, phase: "walk", since: performance.now() };
       // Step up to the bench to work at it.
-      window.dispatchEvent(new CustomEvent("tsi:interior-move", { detail: { x: b.craft[0], z: b.craft[1] } }));
+      window.dispatchEvent(new CustomEvent("tsi:interior-move", { detail: { x: BENCH.craft[0], z: BENCH.craft[1] } }));
     };
     window.addEventListener("tsi:craft-begin", on);
     return () => window.removeEventListener("tsi:craft-begin", on);
-  }, [b]);
+  }, []);
   useFrame(() => {
     const p = player.current;
     // On its own floor (a room with an upstairs: not from the floor above it).
-    const now = p.y < 1 && Math.hypot(p.x - b.approach[0], p.z - b.approach[1]) < 1.3;
+    const now = p.y < 1 && Math.hypot(p.x - BENCH.approach[0], p.z - BENCH.approach[1]) < 1.3;
     if (now !== near.current) { near.current = now; window.dispatchEvent(new CustomEvent("tsi:workbench-near", { detail: now })); }
     const m = making.current;
     // At the bench (or as near as the walk got in a moment): to work. Outside the frame loop, which only notices.
-    if (m && m.phase === "walk" && (Math.hypot(p.x - b.craft[0], p.z - b.craft[1]) < 0.14 || performance.now() - m.since > 2200)) {
+    if (m && m.phase === "walk" && (Math.hypot(p.x - BENCH.craft[0], p.z - BENCH.craft[1]) < 0.14 || performance.now() - m.since > 2200)) {
       m.phase = "work";
-      window.setTimeout(() => work(m, { fx, glow }, p, () => { if (making.current === m) making.current = null; }, b), 0);
+      window.setTimeout(() => work(m, { fx, glow }, p, () => { if (making.current === m) making.current = null; }), 0);
     }
   });
   useEffect(() => () => { window.dispatchEvent(new CustomEvent("tsi:workbench-near", { detail: false })); }, []);
   return <Suspense fallback={null}>
-    <GLBProp url={`${P}workbench.glb`} scale={1.3} position={[bx, 0, bz]} rotation={[0, Math.PI / 2, 0]} />
-    <GLBProp url={`${P}branch.glb`} scale={1.3} position={[bx - 0.1, 0.585, bz + 0.45]} rotation={[0, 0.4, 0]} />
-    {pile && <Piece shadows name="cardboard-pile" position={[bx, 0, bz - 1.4]} rotY={Math.PI / 2} />}
+    <GLBProp url={`${P}workbench.glb`} scale={1.3} position={[BX, 0, BZ]} rotation={[0, Math.PI / 2, 0]} />
+    <GLBProp url={`${P}branch.glb`} scale={1.3} position={[BX - 0.1, 0.585, BZ + 0.45]} rotation={[0, 0.4, 0]} />
   </Suspense>;
 }
 
