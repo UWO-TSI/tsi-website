@@ -25,30 +25,25 @@ All in `~/.claude/jobs/62203045/tmp/`, which survives reboots.
 - `prod-dump.sh <label>`, `prod-query.sh <sql>` and `verify.sql` are for prod migrations. The procedure is in `STATE.md` and the memory files.
 - `withlock.sh heavy|blender|devserver <cmd>` (set `LANE=game/<lane>`): takes a lock, waiting while swap is high and another lock is held. It lives in `~/.claude/jobs/62203045/tmp/`, the same folder as the helpers above, and is referenced from `specs/lane-rules.md`.
 
-## Now (2026-10-23): v1 launches on the NEW world (row 318)
+## Now (2026-10-24): v1 launches on the NEW world (row 318)
 
-Read `specs/launch/v1-new-world.md` first: the gap analysis, the blockers and the smallest viable scope. The launch is Oct 31, go/no-go Oct 28, and the village stays as the fallback behind a world switch.
+Read `specs/launch/v1-new-world.md` first, then `specs/launch/terrain-v3.md`. The launch is Oct 31, go/no-go Oct 28, and the village stays as the fallback behind the world switch (`NEXT_PUBLIC_GAME_WORLD=new`, merged; realtime v7 deployed).
 
-- **Terrain plan with David:** https://claude.ai/artifact/J6fE1DjDqxt732R8JPvpxs. Read it with ArtifactData `list`, collection `sections`; add follow-ups to a document's `followups: [{q, a}]`. Each finished section becomes a build spec for the terrain rebuild lane, which hasn't started yet: it waits for David's answers, at least sections whole, wharf, village and launch.
-- **The `game/world-switch` lane is running (code only):**
-  - multiplayer bounds (needs a realtime v7 deploy by the coordinator);
-  - server catch checks on the active world;
-  - the NEXT_PUBLIC_WORLD switch;
-  - editor anchor names and water_edge bugs;
-  - the sealed-zone test;
-  - the minimap crop;
-  - follow-camera shadows;
-  - the arrival route from the world.
-- **Done Oct 22–23:**
-  - the flat UI and themes, ponytail Phase B, the launch two-account test and the visor logo are merged;
-  - the merch catalogue is applied (the tote and sticker pack off sale);
-  - prod Supabase resized Nano to Small (David OK'd it; about $5/mo net);
-  - realtime v6 (join retry, db_read logs); 23 cold joins passed.
+- **David answered the terrain plan** (all 11 sections, 2026-10-23): https://claude.ai/artifact/J6fE1DjDqxt732R8JPvpxs, collection `sections`. His answers, verbatim, and the build are in `specs/launch/terrain-v3.md`; his 20 references are in `specs/references/terrain/plan-2026-10-23/`. Open on Oct 31: the wharf, the west beach and the village. Everything else stays visible but closed naturally (broken bridges, landslides, a guard). He said cut nothing, so the work is ordered, not cut.
+- **Lane `terrain-v3`** (`game/terrain-v3`, not merged): R1 is done at e8675d5e. A deterministic zone-plan generator (`lib/game/world/generate.ts`, `scripts/generate-world.ts`), sealed.test green with no leaks. It waits on David's R1 notes before starting R2.
+  - **R1 review page:** https://claude.ai/artifact/U9bsDg9XdmeZo3iuwUZiHv (collection `approvals`, 12 items).
+  - **Open question:** the mountain can't be seen from the village, because the horizon bend sinks it. David picks A (move it in), B (soften the bend) or C (keep it as drawn) in the note on `r1-mountain-village`. I recommended A.
+  - **Questions file:** `specs/launch/terrain-v3-questions.md`.
+  - **When the notes come in:** merge R1 to main if it's approved, relay the notes to the lane file, and restart the lane fresh for R2.
+- **HQ round 4 approved** (all four items, 2026-10-23). The `hq-interior` lane is doing the cheap ponytail fixes and merging main, then the coordinator merges it.
+- **Upper-floor fix merged** (72a9b9c5). Remote players in rooms stand at the height they sent, with no realtime deploy needed. It shows once HQ merges.
+- **Still open:** the shop is offline for multiplayer (`netReady = inside !== "shop"`, DefaultIslandWorld.tsx:722), so players in the shop vanish for others.
 - **Waiting on David:**
-  - HQ round 4 review: https://claude.ai/artifact/8Nbrs8noRNY2isXrAQkMjM (HQ code is on `game/hq-interior`, head d4b10ddc);
-  - the speed-test quiet window, whose script is on `game/perf-v1` (`specs/perf/window-ab.sh`);
-  - the terrain plan answers.
-- **Open launch fix:** other players on upper floors (HQ, shop) draw at ground height because presence sends no y. Add the height to presence.
+  - the R1 review;
+  - the speed-test quiet window (script on `game/perf-v1`: `specs/perf/window-ab.sh`);
+  - the editor session after R2 (resident anchors, gather and bug spots, mailbox, boards);
+  - the play-through with a friend;
+  - the MacBook Air check.
 
 ## Merge check: ponytail
 
