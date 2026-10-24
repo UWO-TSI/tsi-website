@@ -1,0 +1,3804 @@
+{
+ "room": {
+  "halfW": 12,
+  "halfD": 9,
+  "wall": 0.3,
+  "lip": 0.9
+ },
+ "floorHeight": 4.6,
+ "slab": 0.3,
+ "door": {
+  "x": 0,
+  "half": 1
+ },
+ "rail": 1.05,
+ "desk": {
+  "x": 4.6,
+  "z": -6.4
+ },
+ "trophy": {
+  "x": 11.45,
+  "z": 4.6,
+  "yaw": 1.5707963267948966
+ },
+ "clock": {
+  "x": 7.4,
+  "z": 8.6,
+  "yaw": 3.141592653589793
+ },
+ "bench": {
+  "x": -11.25,
+  "z": -7.9
+ },
+ "founder": {
+  "x": 9.6,
+  "z": 8.3
+ },
+ "id": "b",
+ "name": "The gallery",
+ "summary": "The aquarium fills the back wall straight ahead; the upper floor wraps the hall in a U, the lounge on the bridge over the door facing the tank, the study on the left arm, the banners off the arms.",
+ "upper": [
+  {
+   "x0": -12,
+   "x1": 12,
+   "z0": -9,
+   "z1": -4
+  },
+  {
+   "x0": 6.5,
+   "x1": 12,
+   "z0": -4,
+   "z1": 9
+  },
+  {
+   "x0": -12,
+   "x1": -6.5,
+   "z0": -4,
+   "z1": 9
+  }
+ ],
+ "stair": {
+  "x0": -12,
+  "x1": -10.2,
+  "foot": 0.6,
+  "head": 7.2,
+  "steps": 22
+ },
+ "aquarium": {
+  "x0": -5.5,
+  "x1": 5.5,
+  "z0": 7.6,
+  "z1": 9,
+  "y0": 0.25,
+  "y1": 9,
+  "facing": "-z"
+ },
+ "rails": [
+  {
+   "from": [
+    -6.5,
+    -4
+   ],
+   "to": [
+    6.5,
+    -4
+   ],
+   "slab": [
+    0,
+    -1
+   ]
+  },
+  {
+   "from": [
+    6.5,
+    -4
+   ],
+   "to": [
+    6.5,
+    7.6
+   ],
+   "slab": [
+    1,
+    0
+   ]
+  },
+  {
+   "from": [
+    -6.5,
+    -4
+   ],
+   "to": [
+    -6.5,
+    7.6
+   ],
+   "slab": [
+    -1,
+    0
+   ]
+  },
+  {
+   "from": [
+    -10.2,
+    0.6
+   ],
+   "to": [
+    -10.2,
+    7.2
+   ],
+   "slab": [
+    1,
+    0
+   ]
+  },
+  {
+   "from": [
+    -12,
+    0.6
+   ],
+   "to": [
+    -10.2,
+    0.6
+   ],
+   "slab": [
+    0,
+    -1
+   ]
+  }
+ ],
+ "ovalCeiling": {
+  "x0": -9.6,
+  "x1": 9.6,
+  "z0": -8.8,
+  "z1": -4.25
+ },
+ "windows": [
+  {
+   "wall": "left",
+   "z0": -8.5,
+   "z1": -4.6,
+   "y0": 0.12,
+   "y1": 4
+  },
+  {
+   "wall": "left",
+   "z0": 6.1,
+   "z1": 8.5,
+   "y0": 0.12,
+   "y1": 4
+  },
+  {
+   "wall": "right",
+   "z0": -6.7,
+   "z1": -4.3,
+   "y0": 0.12,
+   "y1": 4
+  },
+  {
+   "wall": "left",
+   "z0": -8.5,
+   "z1": -4.4,
+   "y0": 4.72,
+   "y1": 8.95
+  },
+  {
+   "wall": "right",
+   "z0": -8.5,
+   "z1": -4.4,
+   "y0": 4.72,
+   "y1": 8.95
+  },
+  {
+   "wall": "left",
+   "z0": -3.6,
+   "z1": -0.1,
+   "y0": 4.72,
+   "y1": 8.95
+  },
+  {
+   "wall": "left",
+   "z0": 0.5,
+   "z1": 6.5,
+   "y0": 5.699999999999999,
+   "y1": 8.95
+  },
+  {
+   "wall": "right",
+   "z0": -3.6,
+   "z1": 6.4,
+   "y0": 4.72,
+   "y1": 8.95
+  }
+ ],
+ "frontWindows": [
+  {
+   "x0": 6.3,
+   "x1": 11.2,
+   "y0": 0.12,
+   "y1": 4
+  },
+  {
+   "x0": -10.3,
+   "x1": -6.3,
+   "y0": 0.12,
+   "y1": 4
+  },
+  {
+   "x0": 6.2,
+   "x1": 11.4,
+   "y0": 4.72,
+   "y1": 8.95
+  },
+  {
+   "x0": -11.4,
+   "x1": -6.2,
+   "y0": 4.72,
+   "y1": 8.95
+  }
+ ],
+ "tracks": [
+  {
+   "from": [
+    -5.6,
+    9.139999999999999,
+    1.2
+   ],
+   "to": [
+    5.6,
+    9.139999999999999,
+    1.2
+   ],
+   "spots": [
+    {
+     "at": -3.6,
+     "aim": [
+      -2.4,
+      0.5,
+      3.4
+     ]
+    },
+    {
+     "at": -1.2,
+     "aim": [
+      -0.6,
+      0.4,
+      3.4
+     ]
+    },
+    {
+     "at": 1.2,
+     "aim": [
+      0.6,
+      0.4,
+      3.4
+     ]
+    },
+    {
+     "at": 3.6,
+     "aim": [
+      2.4,
+      0.5,
+      3.4
+     ]
+    }
+   ]
+  },
+  {
+   "from": [
+    -10.8,
+    4.26,
+    -6.6
+   ],
+   "to": [
+    10.8,
+    4.26,
+    -6.6
+   ],
+   "spots": [
+    {
+     "at": -9.6,
+     "aim": [
+      -10.2,
+      0.8,
+      -5.4
+     ]
+    },
+    {
+     "at": -4.8,
+     "aim": [
+      -4.8,
+      1.1,
+      -6.2
+     ]
+    },
+    {
+     "at": 4.6,
+     "aim": [
+      4.6,
+      1.1,
+      -6.4
+     ]
+    },
+    {
+     "at": 9.8,
+     "aim": [
+      9.8,
+      0.5,
+      -6.6
+     ]
+    }
+   ]
+  },
+  {
+   "from": [
+    10.6,
+    4.26,
+    -3.6
+   ],
+   "to": [
+    10.6,
+    4.26,
+    8.4
+   ],
+   "spots": [
+    {
+     "at": -2.5,
+     "aim": [
+      11.55,
+      1.9,
+      -2.5
+     ]
+    },
+    {
+     "at": -0.3,
+     "aim": [
+      11.55,
+      1.9,
+      -0.3
+     ]
+    },
+    {
+     "at": 1.9,
+     "aim": [
+      11.55,
+      1.9,
+      1.9
+     ]
+    },
+    {
+     "at": 4.6,
+     "aim": [
+      11.6,
+      1.4,
+      4.6
+     ]
+    },
+    {
+     "at": 7.6,
+     "aim": [
+      9.6,
+      2,
+      8.9
+     ]
+    }
+   ]
+  },
+  {
+   "from": [
+    -9,
+    4.26,
+    -3.6
+   ],
+   "to": [
+    -9,
+    4.26,
+    6.4
+   ],
+   "spots": [
+    {
+     "at": -2.6,
+     "aim": [
+      -11.85,
+      1.7,
+      -2.6
+     ]
+    },
+    {
+     "at": -0.8,
+     "aim": [
+      -11.85,
+      1.7,
+      -0.8
+     ]
+    },
+    {
+     "at": 5.4,
+     "aim": [
+      -10.149999999999999,
+      1.6,
+      5.4
+     ]
+    }
+   ]
+  },
+  {
+   "from": [
+    -2.6,
+    9.139999999999999,
+    -8.2
+   ],
+   "to": [
+    2.6,
+    9.139999999999999,
+    -8.2
+   ],
+   "spots": [
+    {
+     "at": -1.6,
+     "aim": [
+      0,
+      6.35,
+      -8.95
+     ]
+    },
+    {
+     "at": 1.6,
+     "aim": [
+      0,
+      6.35,
+      -8.95
+     ]
+    }
+   ]
+  },
+  {
+   "from": [
+    7.6,
+    9.139999999999999,
+    -3.4
+   ],
+   "to": [
+    7.6,
+    9.139999999999999,
+    8.2
+   ],
+   "spots": [
+    {
+     "at": -2.7,
+     "aim": [
+      5.65,
+      4.8,
+      -1.8
+     ]
+    },
+    {
+     "at": 0.9,
+     "aim": [
+      5.65,
+      4.8,
+      1.8
+     ]
+    },
+    {
+     "at": 4.5,
+     "aim": [
+      5.65,
+      4.8,
+      5.4
+     ]
+    },
+    {
+     "at": 7.6,
+     "aim": [
+      9.2,
+      6.3,
+      8.95
+     ]
+    }
+   ]
+  },
+  {
+   "from": [
+    -7.6,
+    9.139999999999999,
+    -3.4
+   ],
+   "to": [
+    -7.6,
+    9.139999999999999,
+    8.2
+   ],
+   "spots": [
+    {
+     "at": -2.7,
+     "aim": [
+      -5.65,
+      4.8,
+      -1.8
+     ]
+    },
+    {
+     "at": 0.9,
+     "aim": [
+      -5.65,
+      4.8,
+      1.8
+     ]
+    },
+    {
+     "at": 4.5,
+     "aim": [
+      -5.65,
+      4.8,
+      5.4
+     ]
+    },
+    {
+     "at": 7.6,
+     "aim": [
+      -10.1,
+      6.6,
+      8.95
+     ]
+    }
+   ]
+  }
+ ],
+ "lamps": [
+  {
+   "id": "desk-lamp",
+   "kind": "mushroom",
+   "level": 0,
+   "light": [
+    3.6499999999999995,
+    1.18,
+    -5.78
+   ],
+   "on": 0.76,
+   "pool": 1.7
+  },
+  {
+   "id": "lounge-lamp",
+   "kind": "mushroom",
+   "level": 0,
+   "light": [
+    0.5,
+    0.68,
+    3.4
+   ],
+   "on": 0.38,
+   "pool": 2.3
+  },
+  {
+   "id": "work-lamp",
+   "kind": "mushroom",
+   "level": 0,
+   "light": [
+    9.9,
+    0.62,
+    -6.9
+   ],
+   "on": 0.4,
+   "pool": 1.8
+  },
+  {
+   "id": "cowork-lamp-1",
+   "kind": "desk",
+   "level": 0,
+   "light": [
+    9.25,
+    1.2,
+    -1.6
+   ],
+   "on": 0.76,
+   "pool": 1.5
+  },
+  {
+   "id": "cowork-lamp-2",
+   "kind": "desk",
+   "level": 0,
+   "light": [
+    9.25,
+    1.2,
+    1.1
+   ],
+   "on": 0.76,
+   "pool": 1.5
+  },
+  {
+   "id": "founder-lamp",
+   "kind": "desk",
+   "level": 0,
+   "light": [
+    10.25,
+    1.22,
+    8.45
+   ],
+   "on": 0.78,
+   "pool": 1.5
+  },
+  {
+   "id": "tank-sconce-l",
+   "kind": "sconce",
+   "level": 0,
+   "light": [
+    6,
+    2.6,
+    7.56
+   ],
+   "on": 0,
+   "pool": 1.3,
+   "wall": "-z"
+  },
+  {
+   "id": "tank-sconce-r",
+   "kind": "sconce",
+   "level": 0,
+   "light": [
+    -6,
+    2.6,
+    7.56
+   ],
+   "on": 0,
+   "pool": 1.3,
+   "wall": "-z"
+  },
+  {
+   "id": "admin-sconce",
+   "kind": "sconce",
+   "level": 0,
+   "light": [
+    -10.139999999999999,
+    2.75,
+    4.45
+   ],
+   "on": 0,
+   "pool": 1.3,
+   "wall": "+x"
+  },
+  {
+   "id": "door-sconce-l",
+   "kind": "sconce",
+   "level": 0,
+   "light": [
+    3.4,
+    2.6,
+    -8.94
+   ],
+   "on": 0,
+   "pool": 1.3,
+   "wall": "+z"
+  },
+  {
+   "id": "door-sconce-r",
+   "kind": "sconce",
+   "level": 0,
+   "light": [
+    -3.4,
+    2.6,
+    -8.94
+   ],
+   "on": 0,
+   "pool": 1.3,
+   "wall": "+z"
+  },
+  {
+   "id": "arc",
+   "kind": "arc",
+   "level": 1,
+   "light": [
+    -1,
+    2.2,
+    -6.9
+   ],
+   "on": 0,
+   "pool": 2.4,
+   "part": 0
+  },
+  {
+   "id": "upper-mushroom",
+   "kind": "mushroom",
+   "level": 1,
+   "light": [
+    5.6,
+    0.75,
+    -7.4
+   ],
+   "on": 0.45,
+   "pool": 1.6,
+   "part": 0
+  },
+  {
+   "id": "study-lamp-1",
+   "kind": "desk",
+   "level": 1,
+   "light": [
+    9.3,
+    1.2,
+    2.5
+   ],
+   "on": 0.76,
+   "pool": 1.6,
+   "part": 1
+  },
+  {
+   "id": "study-lamp-2",
+   "kind": "desk",
+   "level": 1,
+   "light": [
+    9.3,
+    1.2,
+    4.5
+   ],
+   "on": 0.76,
+   "pool": 1.6,
+   "part": 1
+  },
+  {
+   "id": "landing-sconce",
+   "kind": "sconce",
+   "level": 1,
+   "light": [
+    -11.94,
+    2.4,
+    8.1
+   ],
+   "on": 0,
+   "pool": 1.3,
+   "wall": "+x",
+   "part": 2
+  },
+  {
+   "id": "lounge-floor-l",
+   "kind": "floor",
+   "level": 0,
+   "light": [
+    4.6,
+    1.5,
+    1.2
+   ],
+   "on": 0,
+   "pool": 2.3
+  },
+  {
+   "id": "lounge-floor-r",
+   "kind": "floor",
+   "level": 0,
+   "light": [
+    -4.6,
+    1.5,
+    1.2
+   ],
+   "on": 0,
+   "pool": 2.3
+  },
+  {
+   "id": "work-floor",
+   "kind": "floor",
+   "level": 0,
+   "light": [
+    11.3,
+    1.5,
+    -8.35
+   ],
+   "on": 0,
+   "pool": 2
+  },
+  {
+   "id": "nook-floor",
+   "kind": "floor",
+   "level": 0,
+   "light": [
+    -9.3,
+    1.5,
+    -8.45
+   ],
+   "on": 0,
+   "pool": 2
+  },
+  {
+   "id": "founder-floor",
+   "kind": "floor",
+   "level": 0,
+   "light": [
+    11.3,
+    1.5,
+    8.3
+   ],
+   "on": 0,
+   "pool": 2
+  },
+  {
+   "id": "stair-floor",
+   "kind": "floor",
+   "level": 0,
+   "light": [
+    -7.2,
+    1.5,
+    8.35
+   ],
+   "on": 0,
+   "pool": 2
+  },
+  {
+   "id": "bridge-floor-l",
+   "kind": "floor",
+   "level": 1,
+   "light": [
+    10.9,
+    1.5,
+    -5
+   ],
+   "on": 0,
+   "pool": 2,
+   "part": 0
+  },
+  {
+   "id": "bridge-floor-r",
+   "kind": "floor",
+   "level": 1,
+   "light": [
+    -10.9,
+    1.5,
+    -5
+   ],
+   "on": 0,
+   "pool": 2,
+   "part": 0
+  },
+  {
+   "id": "bridge-floor-front",
+   "kind": "floor",
+   "level": 1,
+   "light": [
+    -8.2,
+    1.5,
+    -8.45
+   ],
+   "on": 0,
+   "pool": 2,
+   "part": 0
+  },
+  {
+   "id": "reading-floor",
+   "kind": "floor",
+   "level": 1,
+   "light": [
+    11.35,
+    1.5,
+    -0.3
+   ],
+   "on": 0,
+   "pool": 1.8,
+   "part": 1
+  },
+  {
+   "id": "study-floor",
+   "kind": "floor",
+   "level": 1,
+   "light": [
+    7.3,
+    1.5,
+    8.35
+   ],
+   "on": 0,
+   "pool": 2,
+   "part": 1
+  },
+  {
+   "id": "right-nook-floor",
+   "kind": "floor",
+   "level": 1,
+   "light": [
+    -11.35,
+    1.5,
+    -0.3
+   ],
+   "on": 0,
+   "pool": 1.8,
+   "part": 2
+  },
+  {
+   "id": "landing-floor",
+   "kind": "floor",
+   "level": 1,
+   "light": [
+    -8.2,
+    1.5,
+    8.4
+   ],
+   "on": 0,
+   "pool": 1.8,
+   "part": 2
+  },
+  {
+   "id": "well-floor",
+   "kind": "floor",
+   "level": 1,
+   "light": [
+    -9.75,
+    1.5,
+    4.2
+   ],
+   "on": 0,
+   "pool": 1.8,
+   "part": 2
+  }
+ ],
+ "fixtures": [
+  {
+   "id": "front-desk",
+   "level": 0,
+   "zone": "entry",
+   "label": "Wren's front desk",
+   "blocks": [
+    {
+     "at": [
+      4.6,
+      0,
+      -6.4
+     ],
+     "size": [
+      2.6,
+      1.05,
+      0.8
+     ],
+     "finish": "walnut"
+    },
+    {
+     "at": [
+      4.6,
+      0,
+      -5.75
+     ],
+     "size": [
+      2.6,
+      0.76,
+      0.55
+     ],
+     "finish": "walnut"
+    }
+   ],
+   "footprint": [
+    [
+     4.6,
+     -5.8500000000000005,
+     1.4,
+     1
+    ]
+   ]
+  },
+  {
+   "id": "register",
+   "level": 0,
+   "zone": "entry",
+   "label": "The island register",
+   "blocks": [
+    {
+     "at": [
+      5.35,
+      1.05,
+      -6.58
+     ],
+     "size": [
+      0.55,
+      0.07,
+      0.38
+     ],
+     "finish": "plaque"
+    }
+   ]
+  },
+  {
+   "id": "coffee-bar",
+   "level": 0,
+   "zone": "coffee",
+   "label": "Coffee bar (green marble)",
+   "blocks": [
+    {
+     "at": [
+      -4.8,
+      0,
+      -6.2
+     ],
+     "size": [
+      2.6,
+      1.05,
+      0.95
+     ],
+     "finish": "marble"
+    },
+    {
+     "at": [
+      -5.3999999999999995,
+      0,
+      -7.2
+     ],
+     "size": [
+      0.42,
+      0.78,
+      0.42
+     ],
+     "finish": "leather"
+    },
+    {
+     "at": [
+      -4.2,
+      0,
+      -7.2
+     ],
+     "size": [
+      0.42,
+      0.78,
+      0.42
+     ],
+     "finish": "leather"
+    }
+   ],
+   "footprint": [
+    [
+     -4.8,
+     -6.45,
+     1.3,
+     0.75
+    ]
+   ]
+  },
+  {
+   "id": "work-lounge",
+   "level": 0,
+   "zone": "work",
+   "label": "Work lounge on the deep blue rug",
+   "blocks": [
+    {
+     "at": [
+      9.7,
+      0,
+      -6.6
+     ],
+     "size": [
+      3.8,
+      0.02,
+      3.6
+     ],
+     "finish": "carpet"
+    },
+    {
+     "at": [
+      8.7,
+      0,
+      -6.6
+     ],
+     "size": [
+      0.72,
+      0.42,
+      2
+     ],
+     "finish": "leather"
+    },
+    {
+     "at": [
+      11.15,
+      0,
+      -6.6
+     ],
+     "size": [
+      0.95,
+      0.82,
+      2.4
+     ],
+     "finish": "velvet"
+    },
+    {
+     "at": [
+      9.9,
+      0,
+      -6.6
+     ],
+     "size": [
+      0.62,
+      0.4,
+      1.25
+     ],
+     "finish": "glass"
+    }
+   ],
+   "footprint": [
+    [
+     8.7,
+     -6.6,
+     0.36,
+     1
+    ],
+    [
+     11.15,
+     -6.6,
+     0.48,
+     1.2
+    ],
+    [
+     9.9,
+     -6.6,
+     0.31,
+     0.63
+    ]
+   ],
+   "facing": "-x"
+  },
+  {
+   "id": "nook",
+   "level": 0,
+   "zone": "entry",
+   "label": "Window nook",
+   "blocks": [
+    {
+     "at": [
+      -10.6,
+      0,
+      -5.5
+     ],
+     "size": [
+      0.95,
+      0.82,
+      0.95
+     ],
+     "finish": "leather"
+    },
+    {
+     "at": [
+      -9.55,
+      0,
+      -5.5
+     ],
+     "size": [
+      0.62,
+      0.4,
+      0.52
+     ],
+     "finish": "leather"
+    }
+   ],
+   "footprint": [
+    [
+     -10.6,
+     -5.5,
+     0.48,
+     0.48
+    ],
+    [
+     -9.55,
+     -5.5,
+     0.31,
+     0.26
+    ]
+   ],
+   "facing": "+x"
+  },
+  {
+   "id": "workbench",
+   "level": 0,
+   "zone": "work",
+   "label": "Workbench (crafting)",
+   "blocks": [
+    {
+     "at": [
+      -11.25,
+      0,
+      -7.9
+     ],
+     "size": [
+      0.9,
+      0.9,
+      1.8
+     ],
+     "finish": "walnut"
+    }
+   ],
+   "footprint": [
+    [
+     -11.25,
+     -7.9,
+     0.5,
+     0.95
+    ]
+   ]
+  },
+  {
+   "id": "palm-door-left",
+   "level": 0,
+   "zone": "entry",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      2,
+      0,
+      -8.4
+     ],
+     "size": [
+      1,
+      2.6,
+      1
+     ],
+     "finish": "plant"
+    }
+   ],
+   "footprint": [
+    [
+     2,
+     -8.4,
+     0.45,
+     0.45
+    ]
+   ]
+  },
+  {
+   "id": "palm-door-right",
+   "level": 0,
+   "zone": "entry",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      -2,
+      0,
+      -8.4
+     ],
+     "size": [
+      1,
+      2.6,
+      1
+     ],
+     "finish": "plant"
+    }
+   ],
+   "footprint": [
+    [
+     -2,
+     -8.4,
+     0.45,
+     0.45
+    ]
+   ]
+  },
+  {
+   "id": "palm-front-left",
+   "level": 0,
+   "zone": "entry",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      6.9,
+      0,
+      -8.35
+     ],
+     "size": [
+      0.9,
+      2.4,
+      0.9
+     ],
+     "finish": "plant"
+    }
+   ],
+   "footprint": [
+    [
+     6.9,
+     -8.35,
+     0.405,
+     0.405
+    ]
+   ]
+  },
+  {
+   "id": "palm-front-right",
+   "level": 0,
+   "zone": "entry",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      -6.9,
+      0,
+      -8.35
+     ],
+     "size": [
+      0.9,
+      2.4,
+      0.9
+     ],
+     "finish": "plant"
+    }
+   ],
+   "footprint": [
+    [
+     -6.9,
+     -8.35,
+     0.405,
+     0.405
+    ]
+   ]
+  },
+  {
+   "id": "snake-nook",
+   "level": 0,
+   "zone": "entry",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      -11.45,
+      0,
+      -4.3
+     ],
+     "size": [
+      0.5,
+      1.1,
+      0.5
+     ],
+     "finish": "plant"
+    }
+   ],
+   "footprint": [
+    [
+     -11.45,
+     -4.3,
+     0.225,
+     0.225
+    ]
+   ]
+  },
+  {
+   "id": "ground-lounge",
+   "level": 0,
+   "zone": "lounge",
+   "label": "Big lounge before the aquarium: the sectional, beanbags, the big rug",
+   "blocks": [
+    {
+     "at": [
+      0,
+      0,
+      4
+     ],
+     "size": [
+      10.4,
+      0.02,
+      6.2
+     ],
+     "finish": "shag"
+    },
+    {
+     "at": [
+      0,
+      0,
+      1.9
+     ],
+     "size": [
+      6,
+      0.86,
+      1.1
+     ],
+     "finish": "velvet"
+    },
+    {
+     "at": [
+      3.55,
+      0,
+      2.975
+     ],
+     "size": [
+      1.1,
+      0.86,
+      3.25
+     ],
+     "finish": "velvet"
+    },
+    {
+     "at": [
+      -3.55,
+      0,
+      2.975
+     ],
+     "size": [
+      1.1,
+      0.86,
+      3.25
+     ],
+     "finish": "velvet"
+    },
+    {
+     "at": [
+      0,
+      0,
+      3.4
+     ],
+     "size": [
+      2,
+      0.38,
+      1
+     ],
+     "finish": "stone"
+    }
+   ],
+   "footprint": [
+    [
+     0,
+     1.9,
+     3,
+     0.55
+    ],
+    [
+     3.55,
+     2.975,
+     0.55,
+     1.625
+    ],
+    [
+     -3.55,
+     2.975,
+     0.55,
+     1.625
+    ],
+    [
+     0,
+     3.4,
+     1,
+     0.5
+    ]
+   ],
+   "facing": "+z"
+  },
+  {
+   "id": "lounge-beanbags",
+   "level": 0,
+   "zone": "lounge",
+   "label": "Beanbags by the glass",
+   "blocks": [
+    {
+     "at": [
+      -2.7,
+      0,
+      5.45
+     ],
+     "size": [
+      0.92,
+      0.55,
+      0.92
+     ],
+     "finish": "beanbag"
+    },
+    {
+     "at": [
+      -1.3,
+      0,
+      5.85
+     ],
+     "size": [
+      0.92,
+      0.55,
+      0.92
+     ],
+     "finish": "beanbag"
+    },
+    {
+     "at": [
+      0.15,
+      0,
+      5.6
+     ],
+     "size": [
+      0.92,
+      0.55,
+      0.92
+     ],
+     "finish": "beanbag"
+    },
+    {
+     "at": [
+      1.55,
+      0,
+      5.9
+     ],
+     "size": [
+      0.92,
+      0.55,
+      0.92
+     ],
+     "finish": "beanbag"
+    },
+    {
+     "at": [
+      2.9,
+      0,
+      5.45
+     ],
+     "size": [
+      0.92,
+      0.55,
+      0.92
+     ],
+     "finish": "beanbag"
+    }
+   ],
+   "footprint": [
+    [
+     0,
+     5.65,
+     3.35,
+     0.46
+    ]
+   ]
+  },
+  {
+   "id": "plant-tank",
+   "level": 0,
+   "zone": "entry",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      -5,
+      0,
+      6.8
+     ],
+     "size": [
+      1,
+      2.4,
+      1
+     ],
+     "finish": "plant"
+    }
+   ],
+   "footprint": [
+    [
+     -5,
+     6.8,
+     0.45,
+     0.45
+    ]
+   ]
+  },
+  {
+   "id": "tank-ends",
+   "level": 0,
+   "zone": "aquarium",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      6,
+      0,
+      8.3
+     ],
+     "size": [
+      1,
+      9.2,
+      1.4
+     ],
+     "finish": "walnut"
+    },
+    {
+     "at": [
+      -6,
+      0,
+      8.3
+     ],
+     "size": [
+      1,
+      9.2,
+      1.4
+     ],
+     "finish": "walnut"
+    }
+   ],
+   "footprint": [
+    [
+     6,
+     8.3,
+     0.5,
+     0.7
+    ],
+    [
+     -6,
+     8.3,
+     0.5,
+     0.7
+    ]
+   ]
+  },
+  {
+   "id": "library",
+   "level": 0,
+   "zone": "library",
+   "label": "Library wall (walnut, books face-out)",
+   "blocks": [
+    {
+     "at": [
+      11.775,
+      0,
+      -0.3
+     ],
+     "size": [
+      0.45,
+      3.6,
+      6.6
+     ],
+     "finish": "walnut"
+    },
+    {
+     "at": [
+      11.5,
+      0.35,
+      -0.3
+     ],
+     "size": [
+      0.06,
+      2.9,
+      6.3
+     ],
+     "finish": "books"
+    }
+   ],
+   "footprint": [
+    [
+     11.75,
+     -0.3,
+     0.3,
+     3.3
+    ]
+   ],
+   "facing": "-x"
+  },
+  {
+   "id": "coworking",
+   "level": 0,
+   "zone": "work",
+   "label": "Co-working (long walnut desk, monitors)",
+   "blocks": [
+    {
+     "at": [
+      9,
+      0,
+      -0.3
+     ],
+     "size": [
+      1,
+      0.76,
+      5.4
+     ],
+     "finish": "walnut"
+    },
+    {
+     "at": [
+      9.3,
+      0.76,
+      -2.2
+     ],
+     "size": [
+      0.06,
+      0.42,
+      0.62
+     ],
+     "finish": "screen"
+    },
+    {
+     "at": [
+      9.3,
+      0.76,
+      -0.9
+     ],
+     "size": [
+      0.06,
+      0.42,
+      0.62
+     ],
+     "finish": "screen"
+    },
+    {
+     "at": [
+      9.3,
+      0.76,
+      0.4
+     ],
+     "size": [
+      0.06,
+      0.42,
+      0.62
+     ],
+     "finish": "screen"
+    },
+    {
+     "at": [
+      9.3,
+      0.76,
+      1.7
+     ],
+     "size": [
+      0.06,
+      0.42,
+      0.62
+     ],
+     "finish": "screen"
+    },
+    {
+     "at": [
+      7.95,
+      0,
+      -2.2
+     ],
+     "size": [
+      0.52,
+      0.95,
+      0.52
+     ],
+     "finish": "leather"
+    },
+    {
+     "at": [
+      7.95,
+      0,
+      -0.9
+     ],
+     "size": [
+      0.52,
+      0.95,
+      0.52
+     ],
+     "finish": "leather"
+    },
+    {
+     "at": [
+      7.95,
+      0,
+      0.4
+     ],
+     "size": [
+      0.52,
+      0.95,
+      0.52
+     ],
+     "finish": "leather"
+    },
+    {
+     "at": [
+      7.95,
+      0,
+      1.7
+     ],
+     "size": [
+      0.52,
+      0.95,
+      0.52
+     ],
+     "finish": "leather"
+    }
+   ],
+   "footprint": [
+    [
+     9,
+     -0.3,
+     0.5,
+     2.7
+    ],
+    [
+     7.95,
+     -0.25,
+     0.26,
+     2.21
+    ]
+   ],
+   "facing": "-x"
+  },
+  {
+   "id": "trophy-case",
+   "level": 0,
+   "zone": "work",
+   "label": "Trophy case",
+   "blocks": [
+    {
+     "at": [
+      11.45,
+      0,
+      4.6
+     ],
+     "size": [
+      0.7,
+      2,
+      2
+     ],
+     "finish": "glass"
+    }
+   ],
+   "footprint": [
+    [
+     11.5,
+     4.6,
+     0.4,
+     1
+    ]
+   ]
+  },
+  {
+   "id": "clock",
+   "level": 0,
+   "zone": "work",
+   "label": "Clock",
+   "blocks": [
+    {
+     "at": [
+      7.4,
+      0,
+      8.75
+     ],
+     "size": [
+      0.6,
+      2.1,
+      0.4
+     ],
+     "finish": "walnut"
+    }
+   ],
+   "footprint": [
+    [
+     7.4,
+     8.75,
+     0.3,
+     0.2
+    ]
+   ]
+  },
+  {
+   "id": "founder",
+   "level": 0,
+   "zone": "founder",
+   "label": "The Founder's desk and plaque",
+   "blocks": [
+    {
+     "at": [
+      9.6,
+      0,
+      8.3
+     ],
+     "size": [
+      1.9,
+      0.78,
+      0.9
+     ],
+     "finish": "walnut"
+    },
+    {
+     "at": [
+      9.299999999999999,
+      0,
+      7.4
+     ],
+     "size": [
+      0.6,
+      1.05,
+      0.6
+     ],
+     "finish": "leather"
+    },
+    {
+     "at": [
+      9.6,
+      1.75,
+      8.84
+     ],
+     "size": [
+      0.9,
+      0.6,
+      0.05
+     ],
+     "finish": "plaque"
+    }
+   ],
+   "footprint": [
+    [
+     9.6,
+     8,
+     0.95,
+     0.9
+    ]
+   ]
+  },
+  {
+   "id": "notice-board",
+   "level": 0,
+   "zone": "board",
+   "label": "Notice board and club goals",
+   "blocks": [
+    {
+     "at": [
+      -11.86,
+      1,
+      -2.6
+     ],
+     "size": [
+      0.08,
+      1.4,
+      2.1
+     ],
+     "finish": "cork"
+    },
+    {
+     "at": [
+      -11.86,
+      1,
+      -0.75
+     ],
+     "size": [
+      0.08,
+      1.4,
+      1.4
+     ],
+     "finish": "plaque"
+    }
+   ],
+   "facing": "+x"
+  },
+  {
+   "id": "admin-door",
+   "level": 0,
+   "zone": "admin",
+   "label": "Admins only (locked), under the stair",
+   "blocks": [
+    {
+     "at": [
+      -10.2,
+      0,
+      5.4
+     ],
+     "size": [
+      0.1,
+      2.3,
+      1.05
+     ],
+     "finish": "door"
+    }
+   ],
+   "footprint": [
+    [
+     -11.1,
+     5.6,
+     0.9000000000000004,
+     3.4
+    ]
+   ],
+   "facing": "+x"
+  },
+  {
+   "id": "plant-stair",
+   "level": 0,
+   "zone": "entry",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      -9.4,
+      0,
+      8.35
+     ],
+     "size": [
+      0.9,
+      2,
+      0.9
+     ],
+     "finish": "plant"
+    }
+   ],
+   "footprint": [
+    [
+     -9.4,
+     8.35,
+     0.405,
+     0.405
+    ]
+   ]
+  },
+  {
+   "id": "upper-carpet",
+   "level": 1,
+   "zone": "upper-lounge",
+   "label": "Big lounge: shag carpet, velvet sofas, beanbags",
+   "blocks": [
+    {
+     "at": [
+      0,
+      0,
+      -6.6
+     ],
+     "size": [
+      16,
+      0.03,
+      4.2
+     ],
+     "finish": "shag"
+    }
+   ]
+  },
+  {
+   "id": "upper-sofas",
+   "level": 1,
+   "zone": "upper-lounge",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      -2.9,
+      0,
+      -8.35
+     ],
+     "size": [
+      4,
+      0.86,
+      1
+     ],
+     "finish": "velvet"
+    },
+    {
+     "at": [
+      2.9,
+      0,
+      -8.35
+     ],
+     "size": [
+      4,
+      0.86,
+      1
+     ],
+     "finish": "velvet"
+    },
+    {
+     "at": [
+      7.6,
+      0,
+      -6.9
+     ],
+     "size": [
+      0.9,
+      0.82,
+      0.9
+     ],
+     "finish": "velvet"
+    }
+   ],
+   "footprint": [
+    [
+     -2.9,
+     -8.35,
+     2,
+     0.5
+    ],
+    [
+     2.9,
+     -8.35,
+     2,
+     0.5
+    ],
+    [
+     7.6,
+     -6.9,
+     0.45,
+     0.45
+    ]
+   ]
+  },
+  {
+   "id": "upper-tables",
+   "level": 1,
+   "zone": "upper-lounge",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      0,
+      0,
+      -6.9
+     ],
+     "size": [
+      2.2,
+      0.36,
+      1.1
+     ],
+     "finish": "stone"
+    },
+    {
+     "at": [
+      5.6,
+      0,
+      -7.4
+     ],
+     "size": [
+      0.8,
+      0.45,
+      0.8
+     ],
+     "finish": "leather"
+    }
+   ],
+   "footprint": [
+    [
+     0,
+     -6.9,
+     1.1,
+     0.55
+    ],
+    [
+     5.6,
+     -7.4,
+     0.4,
+     0.4
+    ]
+   ]
+  },
+  {
+   "id": "beanbags",
+   "level": 1,
+   "zone": "upper-lounge",
+   "label": "Beanbags by the rail",
+   "blocks": [
+    {
+     "at": [
+      -4.5,
+      0,
+      -4.75
+     ],
+     "size": [
+      0.92,
+      0.55,
+      0.92
+     ],
+     "finish": "beanbag"
+    },
+    {
+     "at": [
+      -1.5,
+      0,
+      -4.75
+     ],
+     "size": [
+      0.92,
+      0.55,
+      0.92
+     ],
+     "finish": "beanbag"
+    },
+    {
+     "at": [
+      1.5,
+      0,
+      -4.75
+     ],
+     "size": [
+      0.92,
+      0.55,
+      0.92
+     ],
+     "finish": "beanbag"
+    },
+    {
+     "at": [
+      4.5,
+      0,
+      -4.75
+     ],
+     "size": [
+      0.92,
+      0.55,
+      0.92
+     ],
+     "finish": "beanbag"
+    }
+   ],
+   "footprint": [
+    [
+     0,
+     -4.75,
+     4.96,
+     0.46
+    ]
+   ]
+  },
+  {
+   "id": "arc-lamp",
+   "level": 1,
+   "zone": "upper-lounge",
+   "label": "The arc lamp",
+   "blocks": [
+    {
+     "at": [
+      -5.9,
+      0,
+      -8.3
+     ],
+     "size": [
+      0.45,
+      3.6,
+      0.45
+     ],
+     "finish": "metal"
+    },
+    {
+     "at": [
+      -1,
+      2.2,
+      -6.9
+     ],
+     "size": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "finish": "lamp"
+    }
+   ],
+   "footprint": [
+    [
+     -5.9,
+     -8.3,
+     0.25,
+     0.25
+    ]
+   ]
+  },
+  {
+   "id": "art",
+   "level": 1,
+   "zone": "upper-lounge",
+   "label": "Lit art",
+   "blocks": [
+    {
+     "at": [
+      0,
+      1.15,
+      -8.92
+     ],
+     "size": [
+      1.2,
+      1.3,
+      0.06
+     ],
+     "finish": "plaque"
+    }
+   ],
+   "facing": "+z"
+  },
+  {
+   "id": "upper-plant-l",
+   "level": 1,
+   "zone": "upper-lounge",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      11.2,
+      0,
+      -8.4
+     ],
+     "size": [
+      0.9,
+      2,
+      0.9
+     ],
+     "finish": "plant"
+    }
+   ],
+   "footprint": [
+    [
+     11.2,
+     -8.4,
+     0.405,
+     0.405
+    ]
+   ],
+   "part": 0
+  },
+  {
+   "id": "upper-plant-r",
+   "level": 1,
+   "zone": "upper-lounge",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      -11.2,
+      0,
+      -8.4
+     ],
+     "size": [
+      0.9,
+      2,
+      0.9
+     ],
+     "finish": "plant"
+    }
+   ],
+   "footprint": [
+    [
+     -11.2,
+     -8.4,
+     0.405,
+     0.405
+    ]
+   ],
+   "part": 0
+  },
+  {
+   "id": "upper-snake",
+   "level": 1,
+   "zone": "upper-lounge",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      9,
+      0,
+      -8.55
+     ],
+     "size": [
+      0.5,
+      1.1,
+      0.5
+     ],
+     "finish": "plant"
+    }
+   ],
+   "footprint": [
+    [
+     9,
+     -8.55,
+     0.225,
+     0.225
+    ]
+   ],
+   "part": 0
+  },
+  {
+   "id": "arm-chairs",
+   "level": 1,
+   "zone": "study",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      10.9,
+      0,
+      -3.2
+     ],
+     "size": [
+      0.9,
+      0.82,
+      0.9
+     ],
+     "finish": "velvet"
+    },
+    {
+     "at": [
+      10.9,
+      0,
+      -1.2
+     ],
+     "size": [
+      0.9,
+      0.82,
+      0.9
+     ],
+     "finish": "velvet"
+    },
+    {
+     "at": [
+      11.35,
+      0,
+      -2.2
+     ],
+     "size": [
+      0.55,
+      0.5,
+      0.55
+     ],
+     "finish": "stone"
+    }
+   ],
+   "footprint": [
+    [
+     10.9,
+     -3.2,
+     0.45,
+     0.45
+    ],
+    [
+     10.9,
+     -1.2,
+     0.45,
+     0.45
+    ],
+    [
+     11.35,
+     -2.2,
+     0.28,
+     0.28
+    ]
+   ],
+   "part": 1
+  },
+  {
+   "id": "study-table",
+   "level": 1,
+   "zone": "study",
+   "label": "Study: the long table, monitors and chairs",
+   "blocks": [
+    {
+     "at": [
+      9.3,
+      0,
+      3.5
+     ],
+     "size": [
+      1.3,
+      0.76,
+      6
+     ],
+     "finish": "walnut"
+    },
+    {
+     "at": [
+      9.21,
+      0.76,
+      1.5
+     ],
+     "size": [
+      0.06,
+      0.42,
+      0.62
+     ],
+     "finish": "screen"
+    },
+    {
+     "at": [
+      9.39,
+      0.76,
+      1.5
+     ],
+     "size": [
+      0.06,
+      0.42,
+      0.62
+     ],
+     "finish": "screen"
+    },
+    {
+     "at": [
+      9.21,
+      0.76,
+      3.5
+     ],
+     "size": [
+      0.06,
+      0.42,
+      0.62
+     ],
+     "finish": "screen"
+    },
+    {
+     "at": [
+      9.39,
+      0.76,
+      3.5
+     ],
+     "size": [
+      0.06,
+      0.42,
+      0.62
+     ],
+     "finish": "screen"
+    },
+    {
+     "at": [
+      9.21,
+      0.76,
+      5.5
+     ],
+     "size": [
+      0.06,
+      0.42,
+      0.62
+     ],
+     "finish": "screen"
+    },
+    {
+     "at": [
+      9.39,
+      0.76,
+      5.5
+     ],
+     "size": [
+      0.06,
+      0.42,
+      0.62
+     ],
+     "finish": "screen"
+    },
+    {
+     "at": [
+      8.200000000000001,
+      0,
+      1.5
+     ],
+     "size": [
+      0.52,
+      0.95,
+      0.52
+     ],
+     "finish": "leather"
+    },
+    {
+     "at": [
+      10.4,
+      0,
+      1.5
+     ],
+     "size": [
+      0.52,
+      0.95,
+      0.52
+     ],
+     "finish": "leather"
+    },
+    {
+     "at": [
+      8.200000000000001,
+      0,
+      3.5
+     ],
+     "size": [
+      0.52,
+      0.95,
+      0.52
+     ],
+     "finish": "leather"
+    },
+    {
+     "at": [
+      10.4,
+      0,
+      3.5
+     ],
+     "size": [
+      0.52,
+      0.95,
+      0.52
+     ],
+     "finish": "leather"
+    },
+    {
+     "at": [
+      8.200000000000001,
+      0,
+      5.5
+     ],
+     "size": [
+      0.52,
+      0.95,
+      0.52
+     ],
+     "finish": "leather"
+    },
+    {
+     "at": [
+      10.4,
+      0,
+      5.5
+     ],
+     "size": [
+      0.52,
+      0.95,
+      0.52
+     ],
+     "finish": "leather"
+    }
+   ],
+   "footprint": [
+    [
+     9.3,
+     3.5,
+     0.65,
+     3
+    ],
+    [
+     8.200000000000001,
+     3.5,
+     0.26,
+     2.26
+    ],
+    [
+     10.4,
+     3.5,
+     0.26,
+     2.26
+    ]
+   ],
+   "part": 1
+  },
+  {
+   "id": "study-shelves",
+   "level": 1,
+   "zone": "study",
+   "label": "Study shelves under the window",
+   "blocks": [
+    {
+     "at": [
+      11.78,
+      0,
+      3.5
+     ],
+     "size": [
+      0.42,
+      0.95,
+      6.2
+     ],
+     "finish": "walnut"
+    },
+    {
+     "at": [
+      11.6,
+      0.1,
+      3.5
+     ],
+     "size": [
+      0.06,
+      0.8,
+      6
+     ],
+     "finish": "books"
+    }
+   ],
+   "footprint": [
+    [
+     11.78,
+     3.5,
+     0.25,
+     3.1
+    ]
+   ],
+   "facing": "-x",
+   "part": 1
+  },
+  {
+   "id": "whiteboard",
+   "level": 1,
+   "zone": "study",
+   "label": "Whiteboard",
+   "blocks": [
+    {
+     "at": [
+      9.2,
+      1,
+      8.95
+     ],
+     "size": [
+      3.4,
+      1.3,
+      0.04
+     ],
+     "finish": "board"
+    }
+   ],
+   "part": 1
+  },
+  {
+   "id": "arm-plant-left",
+   "level": 1,
+   "zone": "upper-lounge",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      11.3,
+      0,
+      7.5
+     ],
+     "size": [
+      0.9,
+      1.9,
+      0.9
+     ],
+     "finish": "plant"
+    }
+   ],
+   "footprint": [
+    [
+     11.3,
+     7.5,
+     0.405,
+     0.405
+    ]
+   ],
+   "part": 1
+  },
+  {
+   "id": "right-nook",
+   "level": 1,
+   "zone": "upper-lounge",
+   "label": "Reading nook",
+   "blocks": [
+    {
+     "at": [
+      -10.9,
+      0,
+      -3.2
+     ],
+     "size": [
+      0.9,
+      0.82,
+      0.9
+     ],
+     "finish": "velvet"
+    },
+    {
+     "at": [
+      -10.9,
+      0,
+      -1.2
+     ],
+     "size": [
+      0.9,
+      0.82,
+      0.9
+     ],
+     "finish": "velvet"
+    },
+    {
+     "at": [
+      -11.35,
+      0,
+      -2.2
+     ],
+     "size": [
+      0.55,
+      0.5,
+      0.55
+     ],
+     "finish": "stone"
+    }
+   ],
+   "footprint": [
+    [
+     -10.9,
+     -3.2,
+     0.45,
+     0.45
+    ],
+    [
+     -10.9,
+     -1.2,
+     0.45,
+     0.45
+    ],
+    [
+     -11.35,
+     -2.2,
+     0.28,
+     0.28
+    ]
+   ],
+   "facing": "+x",
+   "part": 2
+  },
+  {
+   "id": "arm-plant-right",
+   "level": 1,
+   "zone": "upper-lounge",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      -7,
+      0,
+      8.45
+     ],
+     "size": [
+      0.8,
+      1.8,
+      0.8
+     ],
+     "finish": "plant"
+    }
+   ],
+   "footprint": [
+    [
+     -7,
+     8.45,
+     0.36000000000000004,
+     0.36000000000000004
+    ]
+   ],
+   "part": 2
+  },
+  {
+   "id": "well-plant",
+   "level": 1,
+   "zone": "upper-lounge",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      -9.75,
+      0,
+      2.4
+     ],
+     "size": [
+      0.7,
+      1.4,
+      0.7
+     ],
+     "finish": "plant"
+    }
+   ],
+   "footprint": [
+    [
+     -9.75,
+     2.4,
+     0.315,
+     0.315
+    ]
+   ],
+   "part": 2
+  },
+  {
+   "id": "banner-1",
+   "level": 1,
+   "zone": "flags",
+   "label": "Yearly banners (blank until David's designs)",
+   "blocks": [
+    {
+     "at": [
+      5.725,
+      1.3,
+      -1.8
+     ],
+     "size": [
+      1.55,
+      0.05,
+      0.05
+     ],
+     "finish": "metal"
+    },
+    {
+     "at": [
+      5.65,
+      -1.3,
+      -1.8
+     ],
+     "size": [
+      1.2,
+      2.6,
+      0.04
+     ],
+     "finish": "banner"
+    }
+   ],
+   "part": 1
+  },
+  {
+   "id": "banner-2",
+   "level": 1,
+   "zone": "flags",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      5.725,
+      1.3,
+      1.8
+     ],
+     "size": [
+      1.55,
+      0.05,
+      0.05
+     ],
+     "finish": "metal"
+    },
+    {
+     "at": [
+      5.65,
+      -1.3,
+      1.8
+     ],
+     "size": [
+      1.2,
+      2.6,
+      0.04
+     ],
+     "finish": "banner"
+    }
+   ],
+   "part": 1
+  },
+  {
+   "id": "banner-3",
+   "level": 1,
+   "zone": "flags",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      5.725,
+      1.3,
+      5.4
+     ],
+     "size": [
+      1.55,
+      0.05,
+      0.05
+     ],
+     "finish": "metal"
+    },
+    {
+     "at": [
+      5.65,
+      -1.3,
+      5.4
+     ],
+     "size": [
+      1.2,
+      2.6,
+      0.04
+     ],
+     "finish": "banner"
+    }
+   ],
+   "part": 1
+  },
+  {
+   "id": "banner-4",
+   "level": 1,
+   "zone": "flags",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      -5.725,
+      1.3,
+      -1.8
+     ],
+     "size": [
+      1.55,
+      0.05,
+      0.05
+     ],
+     "finish": "metal"
+    },
+    {
+     "at": [
+      -5.65,
+      -1.3,
+      -1.8
+     ],
+     "size": [
+      1.2,
+      2.6,
+      0.04
+     ],
+     "finish": "banner"
+    }
+   ],
+   "part": 2
+  },
+  {
+   "id": "banner-5",
+   "level": 1,
+   "zone": "flags",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      -5.725,
+      1.3,
+      1.8
+     ],
+     "size": [
+      1.55,
+      0.05,
+      0.05
+     ],
+     "finish": "metal"
+    },
+    {
+     "at": [
+      -5.65,
+      -1.3,
+      1.8
+     ],
+     "size": [
+      1.2,
+      2.6,
+      0.04
+     ],
+     "finish": "banner"
+    }
+   ],
+   "part": 2
+  },
+  {
+   "id": "banner-6",
+   "level": 1,
+   "zone": "flags",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      -5.725,
+      1.3,
+      5.4
+     ],
+     "size": [
+      1.55,
+      0.05,
+      0.05
+     ],
+     "finish": "metal"
+    },
+    {
+     "at": [
+      -5.65,
+      -1.3,
+      5.4
+     ],
+     "size": [
+      1.2,
+      2.6,
+      0.04
+     ],
+     "finish": "banner"
+    }
+   ],
+   "part": 2
+  },
+  {
+   "id": "lounge-floor-l",
+   "level": 0,
+   "zone": "lounge",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      4.6,
+      0,
+      1.2
+     ],
+     "size": [
+      0.32,
+      1.55,
+      0.32
+     ],
+     "finish": "lamp"
+    }
+   ],
+   "footprint": [
+    [
+     4.6,
+     1.2,
+     0.17,
+     0.17
+    ]
+   ]
+  },
+  {
+   "id": "lounge-floor-r",
+   "level": 0,
+   "zone": "lounge",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      -4.6,
+      0,
+      1.2
+     ],
+     "size": [
+      0.32,
+      1.55,
+      0.32
+     ],
+     "finish": "lamp"
+    }
+   ],
+   "footprint": [
+    [
+     -4.6,
+     1.2,
+     0.17,
+     0.17
+    ]
+   ]
+  },
+  {
+   "id": "work-floor",
+   "level": 0,
+   "zone": "lounge",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      11.3,
+      0,
+      -8.35
+     ],
+     "size": [
+      0.32,
+      1.55,
+      0.32
+     ],
+     "finish": "lamp"
+    }
+   ],
+   "footprint": [
+    [
+     11.3,
+     -8.35,
+     0.17,
+     0.17
+    ]
+   ]
+  },
+  {
+   "id": "nook-floor",
+   "level": 0,
+   "zone": "lounge",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      -9.3,
+      0,
+      -8.45
+     ],
+     "size": [
+      0.32,
+      1.55,
+      0.32
+     ],
+     "finish": "lamp"
+    }
+   ],
+   "footprint": [
+    [
+     -9.3,
+     -8.45,
+     0.17,
+     0.17
+    ]
+   ]
+  },
+  {
+   "id": "founder-floor",
+   "level": 0,
+   "zone": "lounge",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      11.3,
+      0,
+      8.3
+     ],
+     "size": [
+      0.32,
+      1.55,
+      0.32
+     ],
+     "finish": "lamp"
+    }
+   ],
+   "footprint": [
+    [
+     11.3,
+     8.3,
+     0.17,
+     0.17
+    ]
+   ]
+  },
+  {
+   "id": "stair-floor",
+   "level": 0,
+   "zone": "lounge",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      -7.2,
+      0,
+      8.35
+     ],
+     "size": [
+      0.32,
+      1.55,
+      0.32
+     ],
+     "finish": "lamp"
+    }
+   ],
+   "footprint": [
+    [
+     -7.2,
+     8.35,
+     0.17,
+     0.17
+    ]
+   ]
+  },
+  {
+   "id": "bridge-floor-l",
+   "level": 1,
+   "zone": "upper-lounge",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      10.9,
+      0,
+      -5
+     ],
+     "size": [
+      0.32,
+      1.55,
+      0.32
+     ],
+     "finish": "lamp"
+    }
+   ],
+   "footprint": [
+    [
+     10.9,
+     -5,
+     0.17,
+     0.17
+    ]
+   ],
+   "part": 0
+  },
+  {
+   "id": "bridge-floor-r",
+   "level": 1,
+   "zone": "upper-lounge",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      -10.9,
+      0,
+      -5
+     ],
+     "size": [
+      0.32,
+      1.55,
+      0.32
+     ],
+     "finish": "lamp"
+    }
+   ],
+   "footprint": [
+    [
+     -10.9,
+     -5,
+     0.17,
+     0.17
+    ]
+   ],
+   "part": 0
+  },
+  {
+   "id": "bridge-floor-front",
+   "level": 1,
+   "zone": "upper-lounge",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      -8.2,
+      0,
+      -8.45
+     ],
+     "size": [
+      0.32,
+      1.55,
+      0.32
+     ],
+     "finish": "lamp"
+    }
+   ],
+   "footprint": [
+    [
+     -8.2,
+     -8.45,
+     0.17,
+     0.17
+    ]
+   ],
+   "part": 0
+  },
+  {
+   "id": "reading-floor",
+   "level": 1,
+   "zone": "upper-lounge",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      11.35,
+      0,
+      -0.3
+     ],
+     "size": [
+      0.32,
+      1.55,
+      0.32
+     ],
+     "finish": "lamp"
+    }
+   ],
+   "footprint": [
+    [
+     11.35,
+     -0.3,
+     0.17,
+     0.17
+    ]
+   ],
+   "part": 1
+  },
+  {
+   "id": "study-floor",
+   "level": 1,
+   "zone": "upper-lounge",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      7.3,
+      0,
+      8.35
+     ],
+     "size": [
+      0.32,
+      1.55,
+      0.32
+     ],
+     "finish": "lamp"
+    }
+   ],
+   "footprint": [
+    [
+     7.3,
+     8.35,
+     0.17,
+     0.17
+    ]
+   ],
+   "part": 1
+  },
+  {
+   "id": "right-nook-floor",
+   "level": 1,
+   "zone": "upper-lounge",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      -11.35,
+      0,
+      -0.3
+     ],
+     "size": [
+      0.32,
+      1.55,
+      0.32
+     ],
+     "finish": "lamp"
+    }
+   ],
+   "footprint": [
+    [
+     -11.35,
+     -0.3,
+     0.17,
+     0.17
+    ]
+   ],
+   "part": 2
+  },
+  {
+   "id": "landing-floor",
+   "level": 1,
+   "zone": "upper-lounge",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      -8.2,
+      0,
+      8.4
+     ],
+     "size": [
+      0.32,
+      1.55,
+      0.32
+     ],
+     "finish": "lamp"
+    }
+   ],
+   "footprint": [
+    [
+     -8.2,
+     8.4,
+     0.17,
+     0.17
+    ]
+   ],
+   "part": 2
+  },
+  {
+   "id": "well-floor",
+   "level": 1,
+   "zone": "upper-lounge",
+   "label": "",
+   "blocks": [
+    {
+     "at": [
+      -9.75,
+      0,
+      4.2
+     ],
+     "size": [
+      0.32,
+      1.55,
+      0.32
+     ],
+     "finish": "lamp"
+    }
+   ],
+   "footprint": [
+    [
+     -9.75,
+     4.2,
+     0.17,
+     0.17
+    ]
+   ],
+   "part": 2
+  }
+ ],
+ "stations": [
+  {
+   "id": "exit",
+   "name": "Island",
+   "pos": [
+    0,
+    -8.2
+   ],
+   "level": 0,
+   "range": 1.1,
+   "action": "exit"
+  },
+  {
+   "id": "desk",
+   "name": "Front desk",
+   "pos": [
+    4.6,
+    -7.5
+   ],
+   "level": 0,
+   "range": 1.8,
+   "action": "desk"
+  },
+  {
+   "id": "coffee",
+   "name": "Coffee bar",
+   "pos": [
+    -4.8,
+    -7.9
+   ],
+   "level": 0,
+   "range": 1.5,
+   "action": "coffee"
+  },
+  {
+   "id": "board",
+   "name": "Notice board",
+   "pos": [
+    -10.6,
+    -1.6
+   ],
+   "level": 0,
+   "range": 2,
+   "action": "board"
+  },
+  {
+   "id": "shelf",
+   "name": "Library",
+   "pos": [
+    10.7,
+    -3
+   ],
+   "level": 0,
+   "range": 1.8,
+   "action": "shelf"
+  },
+  {
+   "id": "display",
+   "name": "Trophy display",
+   "pos": [
+    10.4,
+    4.6
+   ],
+   "level": 0,
+   "range": 1.4,
+   "action": "display"
+  },
+  {
+   "id": "founder",
+   "name": "The Founder's desk",
+   "pos": [
+    9.4,
+    6.5
+   ],
+   "level": 0,
+   "range": 1.2,
+   "action": "founder"
+  },
+  {
+   "id": "clock",
+   "name": "Clock",
+   "pos": [
+    7.4,
+    7.6
+   ],
+   "level": 0,
+   "range": 1.3,
+   "action": "clock"
+  },
+  {
+   "id": "aquarium",
+   "name": "Aquarium",
+   "pos": [
+    0,
+    6.95
+   ],
+   "level": 0,
+   "range": 1.6,
+   "action": "aquarium"
+  },
+  {
+   "id": "admin",
+   "name": "Admins only",
+   "pos": [
+    -9.35,
+    5.4
+   ],
+   "level": 0,
+   "range": 1.2,
+   "action": "admin"
+  }
+ ],
+ "paths": [
+  {
+   "id": "aisle",
+   "level": 0,
+   "label": "From the door round the sectional to the aquarium",
+   "points": [
+    [
+     0,
+     -7.4
+    ],
+    [
+     0,
+     -3.4
+    ],
+    [
+     0,
+     0.5
+    ],
+    [
+     5.8,
+     0.5
+    ],
+    [
+     5.8,
+     6.95
+    ],
+    [
+     0,
+     6.95
+    ]
+   ]
+  },
+  {
+   "id": "to-desk",
+   "level": 0,
+   "label": "To Wren's desk",
+   "points": [
+    [
+     0,
+     -7.5
+    ],
+    [
+     4.6,
+     -7.5
+    ]
+   ]
+  },
+  {
+   "id": "to-coffee",
+   "level": 0,
+   "label": "To the coffee bar",
+   "points": [
+    [
+     0,
+     -7.6
+    ],
+    [
+     -4.8,
+     -7.6
+    ],
+    [
+     -4.8,
+     -7.9
+    ]
+   ]
+  },
+  {
+   "id": "to-stair",
+   "level": 0,
+   "label": "To the board and the stair",
+   "points": [
+    [
+     0,
+     -3.4
+    ],
+    [
+     -10.9,
+     -3.4
+    ],
+    [
+     -10.9,
+     0.3
+    ]
+   ]
+  },
+  {
+   "id": "left-arm",
+   "level": 0,
+   "label": "Under the left arm",
+   "points": [
+    [
+     0,
+     -3.4
+    ],
+    [
+     7,
+     -3.4
+    ],
+    [
+     7,
+     6.4
+    ],
+    [
+     9.4,
+     6.5
+    ]
+   ]
+  },
+  {
+   "id": "library",
+   "level": 0,
+   "label": "Along the library",
+   "points": [
+    [
+     7,
+     -3.4
+    ],
+    [
+     10.7,
+     -3.4
+    ],
+    [
+     10.7,
+     2.8
+    ]
+   ]
+  },
+  {
+   "id": "to-clock",
+   "level": 0,
+   "label": "To the clock",
+   "points": [
+    [
+     0,
+     -3.4
+    ],
+    [
+     7,
+     -3.4
+    ],
+    [
+     7,
+     6.4
+    ],
+    [
+     7.4,
+     7.6
+    ]
+   ]
+  },
+  {
+   "id": "right-arm",
+   "level": 0,
+   "label": "Under the right arm, beside the stair, to the admin door",
+   "points": [
+    [
+     0,
+     -3.4
+    ],
+    [
+     -7.4,
+     -3.4
+    ],
+    [
+     -7.4,
+     5.4
+    ],
+    [
+     -9.35,
+     5.4
+    ]
+   ]
+  },
+  {
+   "id": "flight",
+   "level": "stair",
+   "label": "Up the stair",
+   "points": [
+    [
+     -10.9,
+     0.6
+    ],
+    [
+     -10.9,
+     7.2
+    ]
+   ]
+  },
+  {
+   "id": "upper",
+   "level": 1,
+   "label": "Round the gallery to the study",
+   "points": [
+    [
+     -10.9,
+     7.75
+    ],
+    [
+     -7.4,
+     7.75
+    ],
+    [
+     -7.4,
+     -5.8
+    ],
+    [
+     7.25,
+     -5.8
+    ],
+    [
+     7.25,
+     7.35
+    ],
+    [
+     9.3,
+     7.35
+    ]
+   ]
+  }
+ ]
+}

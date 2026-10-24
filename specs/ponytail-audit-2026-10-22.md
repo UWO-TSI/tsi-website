@@ -314,6 +314,12 @@ Each is small; lines are lines changed, not removed.
 - S7's real fix: `React.lazy` the café, Oracle, home and ruins scenes in `DefaultIslandWorld.tsx` once `game/hq-interior` merges (it changes that file). That also drops the combat JS from the village bundle. Phase B only gated the café room's and the temple's preloads on their drops.
 - ShopOverlay buys inline what `buyAtCounter` (`lib/game/shopCounter.ts`, tested) does; call it from the overlay.
 
+**A14. HQ interior leftovers (from the `game/hq-interior` pre-merge review).**
+- `lib/game/hqLayout.ts:467-516` `createHqWalker`'s constrain loop duplicates `lib/game/shopLayout.ts:330` `createShopWalker`; one shared stair walker, both rooms parameterised. Test: `hqLayout.test.ts` and `shopLayout.test.ts` unchanged.
+- `components/game/hq/HqRoom.tsx:58,83` `useRoomModel` and `walkOn` copy `ShopRoom.tsx`, plus caster handling that `RoomShell`'s `prepareShell` already does. Share one hook and drop the caster pass. Test: the interior tests; the shop and HQ shots unchanged.
+- `lib/game/hqLayout.ts:78-94` the leftover `HqOption` A/B parameter (`HQ`, `swimBox(o)`, `tankFish(o)`): only the phase 1 and 2 evidence scripts read `__hqLayout.option`. Fold it into the one layout and retire those scripts' reads. Test: `hqLayout.test.ts`, `hqAquarium.test.ts`.
+- `components/gui/motion.ts:22` `useMarker` could be framer-motion's `layoutId`. Test: the tab and rail components' tests; a shot of the sliding marker.
+
 ### [DECISION]
 
 | # | What | Where | ~Lines |

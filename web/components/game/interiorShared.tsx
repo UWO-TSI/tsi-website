@@ -310,7 +310,7 @@ export function preloadPieces(names: string[]): void {
 }
 
 /** Module scope (the react compiler forbids writing through hook values). */
-function reportIfChanged(last: { current: InteriorStation | null | undefined }, s: InteriorStation | null, report: (s: InteriorStation | null) => void) {
+export function reportIfChanged(last: { current: InteriorStation | null | undefined }, s: InteriorStation | null, report: (s: InteriorStation | null) => void) {
   if (s !== last.current) { last.current = s; report(s); }
 }
 /** A room walker's `onMove`: reports the nearest station only when it changes, never a React update per step. */

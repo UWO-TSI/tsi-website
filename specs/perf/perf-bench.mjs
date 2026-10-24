@@ -1,6 +1,7 @@
 // The performance pass's bench (specs/perf/2026-10-baseline.md, 2026-10-results.md): the same scenes before and after.
 //   PORT=3149 node specs/perf/perf-bench.mjs [scenes] [outFile]
-//   scenes: comma list of village, cafe, shop (the shop from its door), v2 (the v2 world as the world editor's smooth heightfield, 384 × 552, with 24
+//   scenes: comma list of village, cafe, shop (the shop from its door), hq (HQ from its door: the hall, the aquarium, the
+//   mezzanine showing), v2 (the v2 world as the world editor's smooth heightfield, 384 × 552, with 24
 //   bots), v2cells (the same world as its old cell draft: the terrain swap priced in one build), ruins-<kit>
 //   (default: village,cafe and the four heavy ults' kits).
 //   Env: TIER=high|lite (default high), SECONDS (default 8), PROFILE=1 (a CPU profile after each run, top self time),
@@ -58,6 +59,8 @@ const ready = {
   ruins: () => !!window.__perf && !!window.__move?.sim?.current && !!window.__combatDev?.screenOf && !!window.__combat?.rt?.v2,
   // The shop (specs/interiors/shop.md): its room and walker up, from the door.
   shop: () => !!window.__perf && !!window.__shopWalker && !document.querySelector('[role="status"]')?.textContent?.includes("Preparing"),
+  // HQ (specs/interiors/hq.md): its room and walker up, from the door.
+  hq: () => !!window.__perf && !!window.__hqWalker && !document.querySelector('[role="status"]')?.textContent?.includes("Preparing"),
 };
 async function stage() {
   await page.evaluate(([x, z, pack]) => {
@@ -161,9 +164,9 @@ for (const scene of SCENES.split(",")) {
     await fresh();
     const fight = scene.startsWith("ruins-"), kit = fight ? scene.slice(6) : null;
     const url = fight ? `/lab/island?${BASE}&ruins=1&combat=demo&classes=v2&subclass=${kit}&mastery=20&traits=all&tamed=all`
-      : scene === "cafe" ? `/lab/island?${BASE}&cafe=inside&bots=24` : scene === "shop" ? `/lab/island?${BASE}&shop=inside` : scene === "v2" ? `/lab/island?${BASE}&fixture=v2&bots=24` : scene === "v2cells" ? `/lab/island?${BASE}&fixture=v2-cells&bots=24` : `/lab/island?${BASE}&bots=24`;
+      : scene === "cafe" ? `/lab/island?${BASE}&cafe=inside&bots=24` : scene === "shop" ? `/lab/island?${BASE}&shop=inside` : scene === "hq" ? `/lab/island?${BASE}&hq=inside` : scene === "v2" ? `/lab/island?${BASE}&fixture=v2&bots=24` : scene === "v2cells" ? `/lab/island?${BASE}&fixture=v2-cells&bots=24` : `/lab/island?${BASE}&bots=24`;
     await page.goto(`http://localhost:${PORT}${url}`, { waitUntil: "domcontentloaded" });
-    await settle(fight ? ready.ruins : scene === "cafe" ? ready.world : scene === "shop" ? ready.shop : ready.net);
+    await settle(fight ? ready.ruins : scene === "cafe" ? ready.world : scene === "shop" ? ready.shop : scene === "hq" ? ready.hq : ready.net);
     if (fight) await stage();
     const ult = fight ? await page.evaluate(() => window.__combat.rt.v2.ult.name) : null;
     let cdp = null, t0 = 0;

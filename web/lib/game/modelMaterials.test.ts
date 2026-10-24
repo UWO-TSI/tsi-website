@@ -188,7 +188,14 @@ it("reads a plain-colour part's preset from its P_ name, anywhere, and gives it 
   expect(P.paint.roughness).toBeGreaterThan(P.metal.roughness);
   expect(P.metal.metalness).toBeGreaterThan(0.6);
   expect(P.glass.roughness).toBeLessThan(0.15);
-  for (const k of ["wood", "stone", "paint", "cloth", "glass"] as const) expect(P[k].metalness).toBe(0);
+  for (const k of ["wood", "stone", "paint", "cloth", "glass", "leather", "velvet"] as const) expect(P[k].metalness).toBe(0);
+  // Leather a gentle highlight (glossier than paint, not a mirror), velvet a soft matte pile (its sheen is the GLB's).
+  expect(presetFor("P_Leather")).toBe("leather");
+  expect(presetFor("P_Velvet.002")).toBe("velvet");
+  expect(P.leather.roughness).toBeLessThan(P.paint.roughness);
+  expect(P.leather.roughness).toBeGreaterThan(0.25);
+  expect(P.velvet.roughness).toBeGreaterThan(0.7);
+  expect(P.velvet.roughness).toBeLessThan(P.cloth.roughness);
 });
 
 it("gives a prepared preset part its preset's roughness and metalness, whatever it was authored with", () => {

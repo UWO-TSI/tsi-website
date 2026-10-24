@@ -24,7 +24,7 @@ import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import type { Area } from "@/lib/net/protocol";
 import type { NetSource } from "@/lib/net/types";
 import { useMoveParticles, type MoveParticles } from "../movement/moveFx";
-import { FLAT_GROUND, castSunShadows, driveRig, gateMixer, itemShadow, type GroundWorld, type JuiceSink, type RemoteRig } from "./drive";
+import { FLAT_GROUND, ROOM_GROUND, castSunShadows, driveRig, gateMixer, itemShadow, type GroundWorld, type JuiceSink, type RemoteRig } from "./drive";
 import { moveAt, remoteDashTrail, remoteJuice, type FxGround } from "./fx";
 import { FULL, LOD, LOD_CAPS, assignLod, createLodScratch, type LodCaps, type LodEntry, type LodScratch } from "./lod";
 import { RemoteAvatar } from "./RemoteAvatar";
@@ -50,8 +50,8 @@ const DRY: FxGround = { wet: () => false };
 /** More than a shard ever holds (SHARD.max 40). */
 const MAX = LIVE_MAX;
 
-/** What remotes stand on in an area: the village's walk world; the rooms are flat. */
-export const groundOf = (area: Area): GroundWorld => (area === "village" ? villageIsland(village()) : FLAT_GROUND);
+/** What remotes stand on in an area: the village's walk world; a room is wherever its walker put them (a stair, an upper level). */
+export const groundOf = (area: Area): GroundWorld => (area === "village" ? villageIsland(village()) : INDOORS.has(area) ? ROOM_GROUND : FLAT_GROUND);
 
 /** The scene's movement particles (useMoveParticles), while this area throws any. */
 interface Particles { current: MoveParticles | null }

@@ -1,8 +1,8 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useProgress, useTexture } from "@react-three/drei";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { useProgress } from "@react-three/drei";
 import * as THREE from "three";
 import { Menu, Settings } from "lucide-react";
 import { Toggle } from "@/components/gui";
@@ -17,7 +17,6 @@ import PlayerAvatar from "./PlayerAvatar";
 import Residents from "./NPC";
 import GameSceneBoundary from "./GameSceneBoundary";
 import PostFX from "./PostFX";
-import HQInterior from "./HQInterior";
 import SunShadows from "./SunShadows";
 import PerfProbe from "./PerfProbe";
 import QualityGovernor from "./QualityGovernor";
@@ -110,7 +109,6 @@ import FishingOverlay from "./FishingOverlay";
 import ToastHub, { toast } from "./ToastHub";
 import RewardCard from "./RewardCard";
 import GlideGuide, { GlideGuideHint } from "./GlideGuide";
-import TrophyCase from "./TrophyCase";
 import ShopInterior from "./ShopInterior";
 import InteriorBackdrop from "./InteriorBackdrop";
 import ShopCounter from "./ShopCounter";
@@ -132,7 +130,8 @@ import { BRAM, TUTORIAL_REWARD, type HintKeys } from "@/lib/game/arrival/lines";
 import { useMoveUnlocks } from "@/lib/game/moveUnlocks";
 import { useHqOnboarding } from "./hq/useHqOnboarding";
 import { CheckInCard, PlaqueCard, RegisterCard } from "./hq/HqCards";
-import FounderDesk, { FOUNDER_STATION, constrainFounder } from "./hq/FounderDesk";
+import HqInterior from "./hq/HqInterior";
+import { HQ_LINES } from "@/lib/game/hqLayout";
 import { hqEvent } from "@/lib/game/arrival/hq/store";
 import { WREN } from "@/lib/game/arrival/hq/lines";
 import { phaseInstant, solarPosition } from "@/lib/game/sunPath";
@@ -179,8 +178,7 @@ import { catalogueItem } from "@/lib/homes/catalogue";
 import { ROOM_PRICE } from "@/lib/homes/layout";
 import { PROBE_FRAMES, PROBE_WARMUP, medianFrameMs, tierDpr, tierForFrameMs, type QualityTier } from "@/lib/game/qualityTier";
 import { ISLAND_PHASES, type IslandPhase } from "@/lib/game/islandTime";
-import { HQ_CLOCK, HQ_LAYOUT, HQ_BOARD_APPROACH } from "@/lib/game/clubhouse";
-import CraftingSheet, { BeachBottle, Workbench } from "./crafting/Workshop";
+import CraftingSheet, { BeachBottle } from "./crafting/Workshop";
 import StudySeats from "./study/StudySeats";
 import StudyHud from "./study/StudyHud";
 import CafeInterior from "./study/CafeInterior";
@@ -217,26 +215,16 @@ import { roomHeading } from "@/lib/game/roomHeading";
 import { DevUiTheme } from "@/components/gui/DevUiTheme";
 import styles from "./DefaultIslandWorld.module.css";
 
-type Near = "knock" | "shop_enter" | "counter" | "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | "bram" | "founder" | null;
+type Near = "knock" | "shop_enter" | "counter" | "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | "bram" | "founder" | "coffee" | "aquarium" | "admin" | null;
 type Sheet = "counter" | "shopkeeper" | "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | "bag" | "wallet" | "chest" | "plaque" | null;
 const DEV = process.env.NODE_ENV !== "production";
 const DEV_SHEETS: readonly Sheet[] = ["counter", "shopkeeper", "notice", "letters", "journal", "trophies", "showcase", "closet", "fitting", "oracle", "path", "settings", "missions", "tourney", "posters", "cafe", "wallet", "chest"];
 /** Sheets opened at a station with E: E closes them again (the dialog system's opening key). */
 const STATION_KEY = "e";
 const PHASE_NAMES: Record<IslandPhase, string> = { dawn: "Dawn", day: "Daylight", evening: "Evening", night: "Night" };
-const CLUBHOUSE_STATIONS: InteriorStation[] = [
-  { id: "board", name: "Notice board", pos: HQ_BOARD_APPROACH, action: "board", range: 2.3 },
-  { id: "display", name: "Trophy display", pos: [HQ_LAYOUT.display.position[0], 4.2], action: "display", range: 1.8 },
-  { id: "desk", name: "Front desk", pos: [HQ_LAYOUT.desk.position[0], HQ_LAYOUT.desk.position[2] - 1.2], action: "desk", range: 1.8 },
-  { id: "shelf", name: "Bookshelf", pos: [6.6, HQ_LAYOUT.shelf.position[2]], action: "shelf", range: 1.6 },
-  { id: "clock", name: "Clock", pos: [HQ_CLOCK[0], HQ_CLOCK[2] - 0.8], action: "clock", range: 1.8 },
-  // The Founder's empty desk and its blank plaque (row 312, components/game/hq/FounderDesk.tsx).
-  FOUNDER_STATION,
-  { id: "exit", name: "Island", pos: [0, -5.5], action: "exit", range: 1.1 },
-];
 const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   enter: "Enter HQ", exit: "Return to the island", board: "Read the notice board",
-  display: "Look at the trophy case", desk: "Front desk · profile showcase", shelf: "Browse the bookshelf", clock: "Check the clock",
+  display: "Look at the trophy case", desk: "Front desk · profile showcase", shelf: "Browse the library", clock: "Check the clock",
   notice: "Read the notice board", catch: "Check the catch board", mailbox: "Check the mailbox", monument: "Club monument",
   museum_enter: "Enter the museum", cafe_enter: "Enter the café", curator: "Talk to the curator", closet: "Open the closet", fitting: "Try on outfits", oracle_enter: "Enter the Oracle temple", altar: "Consult the crystal",
   home: "Take the boat home", fish: "Cast your line", forage: "Gather", net: "Swing the net", dig: "Dig", claim: "Claim your plot", donate: "Donate your first catch to the museum", report: "Report back to Wren", house: "Enter your house", village: "Take the boat to the village",
@@ -252,6 +240,8 @@ const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   // Bram on the walk-along (lib/game/arrival): talk to him, or on to his next line (bramPrompt).
   bram: "Talk to Bram",
   founder: "Look at the Founder's desk",
+  // HQ's new stations (specs/interiors/hq.md; the lines are drafts for David).
+  coffee: "Get a coffee", aquarium: "Look at the aquarium", admin: "Try the door",
 };
 const CLOSED: Near[] = ["museum", "monument"];
 /** The door in reach for trick-or-treat (components/game/Halloween.tsx): IslandScene writes it each frame, E knocks. */
@@ -346,9 +336,6 @@ function villageLayout(v: Village) {
 /** Floating names; the ruins gate and the Oracle temple only once their drops are out (lib/game/drops.ts). */
 const SIGNS: Partial<Record<Landmark["id"], string>> = { museum: "Museum · Closed", notice: "Notices", catch: "Catch board", shop: "Shop",
   ...(DROPS.combat ? { ruins: "Ruins gate" } : {}), ...(DROPS.oracle ? { oracle: "Oracle temple" } : {}) };
-const BOTANICAL_TEXTURES = ["/assets/acnh/icons/flower_rose.png", "/assets/acnh/icons/flower_cosmos.png"];
-useTexture.preload(BOTANICAL_TEXTURES);
-useTexture.preload("/assets/acnh/interior/hq-parquet-albedo.png");
 
 /** First-frame timing probe: once assets settle, pick Light or High for this device. */
 function QualityProbe({ onTier }: { onTier: (tier: QualityTier) => void }) {
@@ -650,36 +637,6 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
   </>;
 }
 
-function BotanicalFrames() {
-  const textures = useTexture(BOTANICAL_TEXTURES);
-  return <>{textures.map((texture, i) => <group key={i} scale={0.8} position={[[4.1, 5.55][i], 2.65, 5.87]} rotation={[0, Math.PI, 0]}>
-    <mesh><boxGeometry args={[1.1, 1.25, 0.12]} /><meshStandardMaterial color="#765234" roughness={1} /></mesh>
-    <mesh position={[0, 0, 0.07]}><planeGeometry args={[0.9, 1.05]} /><meshStandardMaterial color="#f4e8cd" roughness={1} /></mesh>
-    <mesh position={[0, 0, 0.08]}><planeGeometry args={[0.65, 0.7]} /><meshBasicMaterial map={texture} transparent /></mesh>
-  </group>)}</>;
-}
-
-/** Clubhouse HQ interior as shipped on the applicant island (sage walls, lounge, pendants). */
-function Clubhouse({ phase, light, player, frozen, talking, member, onNear }: { phase: IslandPhase; light: IslandLight; player: React.RefObject<THREE.Vector3>; frozen: boolean; talking: boolean; member: string; onNear: (near: Near) => void }) {
-  const wood = useTexture("/assets/acnh/interior/hq-parquet-albedo.png");
-  const floor = useMemo(() => {
-    const tex = wood.clone(); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(1, 0.75);
-    tex.colorSpace = THREE.SRGBColorSpace; tex.needsUpdate = true; return tex;
-  }, [wood]);
-  useEffect(() => () => floor.dispose(), [floor]);
-  const { camera } = useThree();
-  // You arrive a step inside the door, clear of its prompt (interiors §5): it shows when you walk back to it.
-  useEffect(() => { player.current.set(0, 0, -4.2); camera.position.set(0, 8.4, -11.4); onNear(null); }, [camera, onNear, player]);
-  const station = useCallback((s: InteriorStation | null) => onNear((s?.id as Near) ?? null), [onNear]);
-  return <>
-    <HQInterior clubhouse branded trophyCase noticeBoard phase={phase} light={light} floorTexture={floor} frozen={frozen} talking={talking} playerPosRef={player} onNearestStation={station} stations={CLUBHOUSE_STATIONS} constrainMove={constrainFounder} />
-    <BotanicalFrames />
-    <FounderDesk />
-    <Workbench player={player} />
-    {/* This week's biggest catches in 3D (the display's E still opens the list). */}
-    <TrophyCase member={member} />
-  </>;
-}
 
 /** The cream loading screen until the first warm-up (`ready`), then a fade; an asset that fails to load gets a reload card. */
 function LoadingStatus({ ready }: { ready: boolean }) {
@@ -755,6 +712,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const [sceneShown, setSceneShown] = useState(0);
   const onSceneReady = useCallback(() => { setReady(true); setFading(false); tripSceneReady(); }, []);
   const [near, setNear] = useState<Near>(null);
+  // HQ's stations answer by what they do (lib/game/hqLayout.ts).
+  const hqStation = useCallback((s: InteriorStation | null) => setNear((s?.action as Near) ?? null), []);
   // On a bench or in bed the seat's prompt stands you up (world audit item 17).
   const [seated, setSeated] = useState(false);
   // Dev (screenshots): `?sheet=<name>` opens that sheet (the Oracle path sheet once progression loads; donate, shop and bag too).
@@ -943,6 +902,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     // The plaza's board and HQ's own (the visit with Wren waits for you to read it there).
     if (action === "notice" || action === "board") { setSheet("notice"); if (action === "board") hqEvent("board"); return; }
     if (action === "founder") { setSheet("plaque"); return; }
+    // HQ's coffee bar, aquarium and locked admin doors: a line each, nothing more (principle 3: no reward for visiting).
+    if (action === "coffee" || action === "aquarium" || action === "admin") { toast(HQ_LINES[action], action === "coffee" ? iconUrl("lounge-tea") : undefined); return; }
     // In the shop, the shopkeeper asks what you're after first (ShopkeeperChoice): the game's things, or the club merch.
     if (action === "counter") { setSheet(inside === "shop" ? "shopkeeper" : "counter"); return; }
     if (action === "cafe") { setSheet("cafe"); return; }
@@ -1222,7 +1183,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
             : inside === "shop" ? <ShopInterior frozen={fading || sheet === "counter" || sheet === "shopkeeper" || sheet === "fitting"} talking={sheet === "counter" || sheet === "shopkeeper"} light={light} playerPosRef={player}
               onNearestStation={s => setNear(s?.id === "counter" ? "counter" : s?.id === "exit" ? "exit" : s?.id.startsWith("fitting") ? "fitting" : null)} />
             : inside === "museum" ? <MuseumInterior wings={museumWings} frozen={fading || donateOpen} talking={donateOpen} light={light} player={player} onNear={n => setNear(n === "donate" ? "curator" : n)} />
-            : inside === "hq" ? <Clubhouse phase={phase} light={light} player={player} frozen={fading} talking={sheet === "showcase" || hq.card !== null || (talking && talkNow.slug === WREN.slug)} member={peaceful.member} onNear={setNear} />
+            : inside === "hq" ? <HqInterior light={light} player={player} frozen={fading} talking={sheet === "showcase" || hq.card !== null || (talking && talkNow.slug === WREN.slug)} member={peaceful.member} onNearestStation={hqStation} />
             : inside === "house" ? <HomeInterior layout={layout} phase={phase} light={light} frozen={fading} player={player} onNear={(n: HouseNear) => setNear(n)}
               decorating={decor.decorating} selected={decor.selected} onPlace={decor.place} onPickUp={decor.pickUp} />
             : atHome ? <HomeIslandScene held={eating || trip.active ? null : held} identity={identity} level={level} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={devZoom}
