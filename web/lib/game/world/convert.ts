@@ -99,8 +99,11 @@ export function shelf(d: number): number {
   return bedDepth(d, TUNING_DEFAULTS.water, 1, CONVERT.shoal);
 }
 
-/** A soft minimum of two positive numbers that is exactly 0 when either is 0 (the shore meets the sea level exactly). */
-const softMin = (a: number, b: number) => (a <= 0 || b <= 0 ? Math.min(a, b, 0) : Math.pow(Math.pow(a, -4) + Math.pow(b, -4), -0.25));
+/**
+ * A soft minimum of two positive numbers that is exactly 0 when either is 0 (the shore meets the sea level exactly).
+ * The higher `power`, the closer to a hard minimum (the softness also lowers a plateau a little where its coast is far).
+ */
+export const softMin = (a: number, b: number, power = 4) => (a <= 0 || b <= 0 ? Math.min(a, b, 0) : Math.pow(Math.pow(a, -power) + Math.pow(b, -power), -1 / power));
 
 /** Standard normal CDF (Abramowitz & Stegun 7.1.26). */
 function phi(x: number): number {
@@ -164,8 +167,16 @@ export function tierDistance(inside: Uint8Array, W: number, D: number, res: numb
     corr[c] = inside[c] ? Math.max(0, 0.5 + core - v) : Math.min(0, 0.5 - core - v);
   }
   for (let k = 0; k < rows; k++) for (let i = 0; i < cols; i++) f[k * cols + i] += cellEase(corr, W, D, res, i, k);
+  return contourDistance(f, cols, rows, res, 0.5);
+}
+
+/**
+ * The signed distance (units, positive where `f` is above `level`) from a sampled field's `level` contour: a distance
+ * transform, and near the contour the field's own value over its slope (sub-sample exact).
+ */
+export function contourDistance(f: Float32Array, cols: number, rows: number, res: number, level: number): Float32Array {
   const mask = new Uint8Array(cols * rows);
-  for (let p = 0; p < mask.length; p++) mask[p] = f[p] >= 0.5 ? 1 : 0;
+  for (let p = 0; p < mask.length; p++) mask[p] = f[p] >= level ? 1 : 0;
   const sdf = sdfFromMask(mask, cols, rows, res, { minX: 0, minZ: 0, sizeX: cols / res, sizeZ: rows / res });
   const out = new Float32Array(cols * rows);
   for (let k = 0; k < rows; k++) for (let i = 0; i < cols; i++) {
@@ -173,7 +184,7 @@ export function tierDistance(inside: Uint8Array, W: number, D: number, res: numb
     if (w >= 1) { out[p] = d; continue; }
     const gx = (f[k * cols + Math.min(cols - 1, i + 1)] - f[k * cols + Math.max(0, i - 1)]) * res / 2;
     const gz = (f[Math.min(rows - 1, k + 1) * cols + i] - f[Math.max(0, k - 1) * cols + i]) * res / 2;
-    out[p] = ((f[p] - 0.5) / Math.max(Math.hypot(gx, gz), 0.05)) * (1 - w) + d * w;
+    out[p] = ((f[p] - level) / Math.max(Math.hypot(gx, gz), 0.05)) * (1 - w) + d * w;
   }
   return out;
 }
@@ -248,15 +259,15 @@ export function heightsFromCells(map: IslandMap, t: WorldTerrain, levels: Uint8A
  * Rock relief on steep land (the naturalize pass, CONVERT.natural): two octaves of noise, deepest where the ground is
  * steepest, nothing on walkable ground or within reach of the sea (the coast stays where it is).
  */
-export function rockRelief(t: WorldTerrain): void {
-  const nat = CONVERT.natural, h = t.heights, c = t.cols, out = new Float32Array(h.length);
+export function rockRelief(t: WorldTerrain, depth: number = CONVERT.natural.rock, scale: number = CONVERT.natural.rockScale): void {
+  const h = t.heights, c = t.cols, out = new Float32Array(h.length);
   for (let k = 1; k < t.rows - 1; k++) for (let i = 1; i < c - 1; i++) {
     const p = k * c + i;
     if (h[p] < t.seaLevel + 0.4) continue;
     const gx = (h[p + 1] - h[p - 1]) * t.res / 2, gz = (h[p + c] - h[p - c]) * t.res / 2, w = smoothstep(0.9, 1.8, Math.hypot(gx, gz));
     if (w <= 0) continue;
-    const x = sampleX(t, i), z = sampleZ(t, k), s = nat.rockScale;
-    out[p] = w * nat.rock * 2 * ((valueNoise(x / s, z / s, 81) - 0.5) + 0.5 * (valueNoise(x / (s * 0.45), z / (s * 0.45), 82) - 0.5));
+    const x = sampleX(t, i), z = sampleZ(t, k), s = scale;
+    out[p] = w * depth * 2 * ((valueNoise(x / s, z / s, 81) - 0.5) + 0.5 * (valueNoise(x / (s * 0.45), z / (s * 0.45), 82) - 0.5));
   }
   for (let p = 0; p < h.length; p++) h[p] += out[p];
 }
