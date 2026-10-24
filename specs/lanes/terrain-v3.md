@@ -19,7 +19,7 @@ Then look at the references in `specs/references/terrain/plan-2026-10-23/` and t
 
 ## Status
 
-R1 done, waiting for David's notes (don't start R2 until the coordinator relays them). Head: see `git log -1` on `game/terrain-v3` (the R1 commit, "[build] terrain-v3 R1").
+R1 (e8675d5e) was reviewed by David on 2026-10-24: every item redo or noted, none approved, so nothing is merged to main. Main has moved (HQ round 4 and the upper-floor fix, 71135930 and later); merge it first. R1 as built:
 
 - **The generator:** `web/lib/game/world/generate.ts` (the zone plan `PLAN`, heights `H`, and `generateWorld`), run by `cd web && npx vite-node -c vitest.config.ts scripts/generate-world.ts --preview <png>` (about 9 s, deterministic). It keeps the objects (R1 moves none) and the village's house, lot and boat-arrival marks, and rewrites every zone's annotation from the plan.
 - **Reused from convert.ts:** `shelf`, `softMin` (now with a power), `rockRelief` (now with depth and scale), `wharfQuay`, `padBuildings`, `limitSteepness`, and the new `contourDistance` (split out of `tierDistance`).
@@ -30,14 +30,72 @@ R1 done, waiting for David's notes (don't start R2 until the coordinator relays 
 
 ## David's decisions
 
-- 2026-10-23: the plan page answers, verbatim in the spec. The drawing is a guide to where things go, not a shape to trace. Open on Oct 31: the wharf, the west beach and the village. Close the rest naturally (broken bridges, landslides, a guard). Cut nothing; order the work instead.
+### 2026-10-24: R1 review, verbatim (https://claude.ai/artifact/U9bsDg9XdmeZo3iuwUZiHv)
+
+- **map (redo):** "village should be 2,3 wharf is 1, and wharf needs to be bigger, the step should go up later so push the stairs to the left more and expand the wharf so more wharf buildings, also the deck board area needs to be way bigger. i want you make the meadow area the same level and not sudden raise so it looks natural, but just put invisible boarders for now that says release soon"
+- **wharf (redo):** "quay needs to be a 2 with larger deck board to fit the fishing market, and larger deck"
+- **path (redo):** "the elevation to island is too high keep village 2,3"
+- **plaza (redo):** "I wan you to make plaza bigger, and have the buildings set around the plaza naturally, buildings can be side by side"
+- **hq (redo):** no note.
+- **beach (redo):** "remove that patch of grass, and have the beach shape redone and slightly smaller and smoothed out, there shuold pla places where palm tree can grow"
+- **mountain from the village:** "I want you to make the map shorter and have the mountain and allat moved closer, "
+- **mountain from the meadow:** "mountain will be redone in next version focus on main island and vilage for now"
+- **forest (redo):** "cliffs further out, rightnow it doesnt look natural the transirtion"
+- **north (redo):** "remove that straight thing" (the long narrow spit reaching toward the island in view 08)
+- **river:** "fine for now"
+- **slide (redo):** "I want you to make the village area bigger and enlarge and shrink the other parts, like make meadow and forest and hills shorter, make north island smaller and bring mountains closer"
+
+**The coordinator's reading** (heights are in u above the sea, as the review page gave them):
+1. **Heights:**
+   - the wharf's deck boards at 1;
+   - the stone quay at 2;
+   - the village at 2 to 3.
+   The climb from the quay is gentle and starts further inland. The stairs move to the LEFT as seen arriving from the jetty (view 01).
+2. **The wharf, much bigger:**
+   - a far larger deck-board area, room for the fish market's stalls and more wharf buildings;
+   - a larger quay.
+3. **The village and plaza, bigger:**
+   - the buildings sit around the plaza naturally and can stand side by side: HQ at the back centre, the café right, the shop left, the museum further out, per the plan;
+   - move the existing landmarks in this round.
+4. **A shorter, more compact map:**
+   - the mountain and the rest come closer to the village; it should show from the village (the bend hides anything past about 80 u);
+   - the village area grows;
+   - the meadow, forest and hills get lower and smaller;
+   - the north island gets smaller, and the straight spit toward it goes.
+   Keep the grid size unless shrinking it is clearly simpler; say which in the report.
+5. **The meadow:**
+   - at the village's level, a natural continuation with no sudden rise;
+   - closed for now by an invisible border that tells the player it's releasing soon. This overrides the spec's "no invisible walls" for the meadow.
+   - Reuse any existing barrier, toast or opening-soon message; the seal test must count the border.
+6. **The forest:** its cliffs further out, with a natural transition, not the abrupt wall by the jetty.
+7. **The beach:**
+   - no grass patch;
+   - reshaped, slightly smaller and smoothed;
+   - spots where palm trees can grow.
+8. **The mountain:** only moved closer now. Its redesign is a later version, so focus on the main island and the village.
+9. **The river:** fine for now.
+
+### 2026-10-23
+
+The plan page answers, verbatim in the spec. The drawing is a guide to where things go, not a shape to trace. Open on Oct 31: the wharf, the west beach and the village. Close the rest naturally (broken bridges, landslides, a guard). Cut nothing; order the work instead.
 
 ## Next
 
-1. Wait for David's R1 notes. Each note is an edit to `PLAN` and a rerun of `scripts/generate-world.ts` (it writes `cells.json` too), then the gates and the views again.
-2. R2 and R3 per the spec, each with its own review. R2 starts from the answers to the questions file (the mountain's place changes the landform).
+1. **Merge main** into the branch, then regenerate `cells.json` if the merge touched the world.
+2. **R1b, the landform redo and the village layout.**
+   - Apply every point of the 2026-10-24 reading above: edit `PLAN` and rerun the generator.
+   - Place the existing buildings around the bigger plaza, and the spawn, lamps, benches and study tables to suit. The arrival route and `routes.test` must stay green.
+   - Shoot the views again from the same spots where they still make sense: the top-down, arrival, path, plaza, HQ, beach, the mountain from the village, the forest edge, the north island, and the meadow border.
+   - Commit the renders under `specs/evidence/terrain-v3/r1b/`.
+   - Message "main" with an image list and one line per image, then stop for David's notes.
+3. **R2**, on approval:
+   - the path's stairs, fences and lamps;
+   - the wharf's market stalls, carts, barrels, nets, ladders and lighthouse;
+   - the campfire on the beach;
+   - the broken bridges, rockfall and borders.
+4. **R3**, per the spec.
 
-**Questions for David** go in `specs/launch/terrain-v3-questions.md`, one line each with your default. The coordinator relays them to the plan page. Carry on with your default meanwhile, unless the answer would change the landform.
+**Questions for David** go in `specs/launch/terrain-v3-questions.md`, one line each with your default. Carry on with your default meanwhile, unless the answer would change the landform.
 
 ## Tools and gotchas
 
