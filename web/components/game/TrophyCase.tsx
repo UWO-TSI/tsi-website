@@ -12,7 +12,6 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { apiCall } from "@/lib/apiClient";
-import { HQ_LAYOUT } from "@/lib/game/clubhouse";
 import type { Trophy } from "@/lib/collections/logic";
 import { ROSTER } from "@/lib/collections/roster";
 import { SPECIES as CRITTERS } from "./Critters";
@@ -92,7 +91,12 @@ function Cabinet() {
   return <><primitive object={shell} /><primitive object={plates} /></>;
 }
 
-export default function TrophyCase({ member }: { member: string | null }) {
+export default function TrophyCase({ member, at, yaw = 0 }: {
+  member: string | null;
+  /** Where it stands and which way it faces (its front toward −z at yaw 0). */
+  at: readonly [number, number];
+  yaw?: number;
+}) {
   const [trophies, setTrophies] = useState<Trophy[] | null>(null);
   const [week, setWeek] = useState("");
   useEffect(() => {
@@ -111,8 +115,8 @@ export default function TrophyCase({ member }: { member: string | null }) {
     void document.fonts?.ready.then(() => { if (alive) trophyLabels().draw(trophies, member, week); });
     return () => { alive = false; };
   }, [trophies, member, week]);
-  const [x, , z] = HQ_LAYOUT.display.position;
-  return <group position={[x, 0, z]}>
+  const [x, z] = at;
+  return <group position={[x, 0, z]} rotation={[0, yaw, 0]}>
     <Suspense fallback={null}><Cabinet /></Suspense>
     {(trophies ?? []).map((t, rank) => {
       const [sx, sy] = SLOTS[SLOT_OF_RANK[rank]];

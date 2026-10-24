@@ -12,7 +12,7 @@ import { useThree, type ThreeEvent } from "@react-three/fiber";
 import type * as THREE from "three";
 import { HQ_LAYOUT, HQ_PENDANTS } from "@/lib/game/clubhouse";
 import { AudioManager } from "@/lib/game/audio";
-import { CLUBHOUSE_LIGHTING, ISLAND_LIGHTING, type IslandLight } from "@/lib/game/islandLighting";
+import { CLUBHOUSE_LIGHTING, ISLAND_LIGHTING } from "@/lib/game/islandLighting";
 import { interiorLight } from "@/lib/game/interiorLight";
 import InteriorDaylight from "./InteriorDaylight";
 import TickingClock from "./TickingClock";
@@ -39,7 +39,7 @@ export const HQ_STATIONS: InteriorStation[] = [
 // ── real ACNH furniture (P2 dump extraction 2026-07-13) ──
 // Pieces are floor-origin normalized at extraction; ACNH items face -Z.
 preloadPieces([
-  "bulletinboard", "hq-notice-board", "gold-hha-trophy", "silver-hha-trophy", "bronze-hha-trophy",
+  "bulletinboard", "gold-hha-trophy", "silver-hha-trophy", "bronze-hha-trophy",
   "study-chair", "bookshelf", "acorn-rug", "antique-clock",
   "plant-monstera", "plant-yucca", "yellow-message-mat", "wooden-chest",
   "floor-lamp", "clubhouse-pendant", "lounge-rug", "reading-table", "lounge-sofa", "lounge-table", "lounge-tea", "lounge-book",
@@ -60,22 +60,10 @@ export default function HQInterior({
   clubhouse = false,
   floorTexture,
   phase = "day",
-  light: islandLight,
-  talking = false,
-  trophyCase = false,
-  noticeBoard = false,
   branded = false,
 }: {
   /** The member clubhouse: the branded dark round the room (InteriorBackdrop) instead of a flat colour. The applicant island keeps its own. */
   branded?: boolean;
-  /** The member clubhouse's own notice board (lib/game/propModels HQ_NOTICE_BOARD_URL); the applicant island's keeps the dump's. */
-  noticeBoard?: boolean;
-  /** The member clubhouse's 3D trophy case stands at the display (TrophyCase): the chest and its cups step aside. */
-  trophyCase?: boolean;
-  /** The island's light now (blended across the phases); the phase's look when not given (the applicant island). */
-  light?: IslandLight;
-  /** The front desk's sheet is open: the HQ lead serves you. */
-  talking?: boolean;
   clubhouse?: boolean;
   floorTexture?: THREE.Texture;
   phase?: IslandPhase;
@@ -86,7 +74,7 @@ export default function HQInterior({
   onNearestStation: (s: InteriorStation | null) => void;
 }) {
   const { scene } = useThree();
-  const outside = islandLight ?? ISLAND_LIGHTING[phase];
+  const outside = ISLAND_LIGHTING[phase];
   // Lamps at their night strength, eased down by day (lib/game/interiorLight.ts).
   const lamp = CLUBHOUSE_LIGHTING.night, lamps = interiorLight(outside).lamps;
 
@@ -144,15 +132,13 @@ export default function HQInterior({
 
       {/* Bulletin Board (→ Directory) hung on the north wall */}
       <Suspense fallback={null}>
-        <Piece name={noticeBoard ? "hq-notice-board" : "bulletinboard"} {...(clubhouse ? HQ_LAYOUT.board : { position: [-4.5, 1.15, 5.55] as [number, number, number], scale: 0.16 })} />
+        <Piece name="bulletinboard" {...(clubhouse ? HQ_LAYOUT.board : { position: [-4.5, 1.15, 5.55] as [number, number, number], scale: 0.16 })} />
 
-        {/* Trophy display (→ Leaderboard): chest pedestal + the HHA tier set (the member clubhouse's trophy case replaces it) */}
-        {!trophyCase && <>
-          <Piece shadows={clubhouse} name="wooden-chest" rotX={clubhouse ? -Math.PI / 2 : 0} position={clubhouse ? HQ_LAYOUT.display.position : [4.2, 0, 5.2]} rotY={clubhouse ? Math.PI : 0} />
-          <Piece shadows={clubhouse} name="gold-hha-trophy" rotX={clubhouse ? Math.PI / 2 : 0} position={[clubhouse ? HQ_LAYOUT.display.position[0] : 4.2, 0.8, 5.2]} rotY={clubhouse ? Math.PI : 0} />
-          <Piece shadows={clubhouse} name="silver-hha-trophy" rotX={clubhouse ? Math.PI / 2 : 0} position={[clubhouse ? HQ_LAYOUT.display.position[0] - 0.65 : 3.55, 0.8, 5.35]} rotY={clubhouse ? Math.PI : 0} scale={0.085} />
-          <Piece shadows={clubhouse} name="bronze-hha-trophy" rotX={clubhouse ? Math.PI / 2 : 0} position={[clubhouse ? HQ_LAYOUT.display.position[0] + 0.65 : 4.85, 0.8, 5.35]} rotY={clubhouse ? Math.PI : 0} scale={0.085} />
-        </>}
+        {/* Trophy display (→ Leaderboard): chest pedestal + the HHA tier set */}
+        <Piece shadows={clubhouse} name="wooden-chest" rotX={clubhouse ? -Math.PI / 2 : 0} position={clubhouse ? HQ_LAYOUT.display.position : [4.2, 0, 5.2]} rotY={clubhouse ? Math.PI : 0} />
+        <Piece shadows={clubhouse} name="gold-hha-trophy" rotX={clubhouse ? Math.PI / 2 : 0} position={[clubhouse ? HQ_LAYOUT.display.position[0] : 4.2, 0.8, 5.2]} rotY={clubhouse ? Math.PI : 0} />
+        <Piece shadows={clubhouse} name="silver-hha-trophy" rotX={clubhouse ? Math.PI / 2 : 0} position={[clubhouse ? HQ_LAYOUT.display.position[0] - 0.65 : 3.55, 0.8, 5.35]} rotY={clubhouse ? Math.PI : 0} scale={0.085} />
+        <Piece shadows={clubhouse} name="bronze-hha-trophy" rotX={clubhouse ? Math.PI / 2 : 0} position={[clubhouse ? HQ_LAYOUT.display.position[0] + 0.65 : 4.85, 0.8, 5.35]} rotY={clubhouse ? Math.PI : 0} scale={0.085} />
 
         {/* Front Desk (→ Profile) + chair */}
         <FrontDesk />
@@ -177,7 +163,7 @@ export default function HQInterior({
       </Suspense>
 
       {/* The HQ lead behind the front desk (lib/game/keepers.ts). */}
-      <Keeper room="hq" player={playerPosRef} frozen={frozen} engaged={talking} />
+      <Keeper room="hq" player={playerPosRef} frozen={frozen} />
       <InteriorPlayer frozen={frozen} bounds={BOUNDS} playerPosRef={playerPosRef} onMove={handleMove} constrainMove={constrainMove} />
     </group>
   );

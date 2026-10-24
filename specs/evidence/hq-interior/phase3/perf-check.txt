@@ -1,0 +1,14 @@
+perf:check, HQ scene only (SCENES=hq, SKIP_BUILD after specs/perf/measure-build.sh under the heavy lock), 2026-10-22, head 2aca913c.
+Layout B, the gallery, two storeys of 4.6 (specs/interiors/hq.md, phase 3). The bench scene is "hq" (specs/perf/perf-bench.mjs:
+/lab/island?hq=inside, from the door: the bridge cut away overhead, the arms, the hall and the tank showing). HQ has no
+baseline row and no scene budget yet (web/lib/game/perf/budget.ts), so the gate only reports it.
+
+| Scene | Tier | Median frame ms | p95 ms | Frame CPU ms | Draw calls | Triangles | Runs | Spread | Load |
+|---|---|---|---|---|---|---|---|---|---|
+| hq | high | 2.90 | 6.40 | 2.50 | 111 | 79192 | 3 | 121% | 7.1 |
+| hq | lite | 1.90 | 5.20 | 1.70 | 69 | 72258 | 3 | 21% | 6.2 |
+
+Against phase 2 (layout A, 2026-10-18): high 2.70 ms, 104 draws, 77k triangles; lite 1.80 ms, 62 draws, 70k triangles.
+The upper floor is now three parts drawn separately (+7 draws on each tier). The machine was loaded (load average 7.1,
+high's spread 121%); not rerun for noise (lane rules). Still under the cafe's budget (4 ms, 180 draws, 110k triangles on high).
+perf:check passed
