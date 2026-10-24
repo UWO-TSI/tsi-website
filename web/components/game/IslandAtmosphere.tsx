@@ -20,6 +20,7 @@ import RainFX from "./RainFX";
 import { applyEnvironment, disposeEnvironment } from "@/lib/game/envLight";
 import { fireflyNight, type IslandLight } from "@/lib/game/islandLighting";
 import { RIM_POSITION, fillForHeading, shadowHalfHeight } from "@/lib/game/lookPreset";
+import { shadowCentre } from "@/lib/game/shadows";
 import { SEASON_TREES, type SeasonLook } from "@/lib/game/seasonalLook";
 import type { IslandWeather } from "@/lib/game/islandWeather";
 import type { IslandPhase } from "@/lib/game/islandTime";
@@ -79,12 +80,21 @@ function turnFill(light: IslandLight, scene: THREE.Scene, ambient: THREE.Ambient
 export interface TreeSpot { x: number; z: number; seed: number }
 const NO_TREES: readonly TreeSpot[] = [];
 
-export function IslandAtmosphere({ phase, light, look, weather, liteMode, castShadows, overview = false, overviewFog = 0, ground, puddles = [], cloudSize, shadowExtent = 26, fireflyAnchors, trees = NO_TREES, fauna }: {
+/** The follow box's step (SHADOW_FOLLOW): the box moves, and the cached static map re-renders, every this many texels. */
+const FOLLOW_STEP_TEXELS = 128;
+const SHADOW_MAP = 2048;
+
+export function IslandAtmosphere({ phase, light, look, weather, liteMode, castShadows, overview = false, overviewFog = 0, ground, puddles = [], cloudSize, shadowExtent = 26, shadowFollow, fireflyAnchors, trees = NO_TREES, fauna }: {
   phase: IslandPhase; light: IslandLight; look: SeasonLook; weather: IslandWeather; liteMode: boolean; castShadows: boolean; overview?: boolean;
   /** Extra overview fog distance: a bigger island puts the overview camera further out. */
   overviewFog?: number;
   ground: (x: number, z: number) => number;
   puddles?: readonly [number, number][]; cloudSize: [number, number]; shadowExtent?: number;
+  /**
+   * The smooth world only: the sun's shadow box (±shadowExtent) follows this point, the player, in texel-snapped steps
+   * (lib/game/shadows.ts shadowCentre). Without it the box stays on the island's centre, as the village's always has.
+   */
+  shadowFollow?: React.RefObject<THREE.Vector3>;
   fireflyAnchors: readonly (readonly [number, number])[];
   /** The scene's trees: the ones that shed this season drop leaves or petals. */
   trees?: readonly TreeSpot[];
@@ -101,6 +111,16 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
   const ambient = useRef<THREE.AmbientLight>(null), hemisphere = useRef<THREE.HemisphereLight>(null);
   useFrame(() => turnFill(light, scene, ambient.current, hemisphere.current));
   const { shadow } = light, shadowHalf = shadowHalfHeight(light.sunPosition, shadowExtent);
+  const sun = useRef<THREE.DirectionalLight>(null), centre = useMemo<[number, number, number]>(() => [0, 0, 0], []);
+  useFrame(() => {
+    const key = sun.current;
+    if (!shadowFollow || !key) return;
+    const step = FOLLOW_STEP_TEXELS / SHADOW_MAP, [sx, sy, sz] = light.sunPosition;
+    shadowCentre(light.sunPosition, shadowFollow.current, 2 * shadowExtent * step, 2 * shadowHalf * step, centre);
+    key.position.set(centre[0] + sx, centre[1] + sy, centre[2] + sz);
+    key.target.position.set(...centre);
+    key.target.updateMatrixWorld();
+  });
   // One world wind from the shared weather: rain slant, leaves and mist agree.
   const wind = useMemo(() => worldWind(weather), [weather]);
   const leafTrees = useMemo(() => {
@@ -122,8 +142,8 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
     <fog attach="fog" args={[light.fogColor, overview ? light.fogNear + 28 + overviewFog : light.fogNear, overview ? light.fogFar + 15 + overviewFog : light.fogFar]} />
     <ambientLight ref={ambient} intensity={light.ambient} color={light.fill} />
     <hemisphereLight ref={hemisphere} args={[light.fill, light.bounce, light.hemisphere]} />
-    <directionalLight name="sun" position={light.sunPosition} color={light.sun} intensity={light.sunIntensity} castShadow={castShadows}
-      shadow-mapSize={[2048, 2048]} shadow-camera-left={-shadowExtent} shadow-camera-right={shadowExtent}
+    <directionalLight ref={sun} name="sun" position={shadowFollow ? undefined : light.sunPosition} color={light.sun} intensity={light.sunIntensity} castShadow={castShadows}
+      shadow-mapSize={[SHADOW_MAP, SHADOW_MAP]} shadow-camera-left={-shadowExtent} shadow-camera-right={shadowExtent}
       shadow-camera-top={shadowHalf} shadow-camera-bottom={-shadowHalf} shadow-camera-near={1} shadow-camera-far={75 + Math.max(0, shadowExtent - 26) * 2}
       onUpdate={key => key.shadow.camera.updateProjectionMatrix()}
       shadow-radius={shadow.radius} shadow-intensity={shadow.intensity} shadow-normalBias={0.02} shadow-bias={-0.0002} />

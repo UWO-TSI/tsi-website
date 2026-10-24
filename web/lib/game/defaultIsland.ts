@@ -5,6 +5,7 @@ import { ROCK_MODELS, ROCK_SIZE } from "./rocks";
 import { FURNITURE, studySolid, type Furniture } from "@/lib/study/seats";
 import { objectsOf, village, villageSpawnPoint, type MapObject, type Village } from "./villageMap";
 import { barrierBoxes, barrierFootprint, barrierPlacements, inBarrier } from "./barriers";
+import { DROPS } from "./drops";
 import { FENCE_POST_HALF, fenceSolids, isJoinedFence } from "./fences";
 import { MAX_CLIMB, terrainHeight, terrainSteepness, terrainSurface } from "./world/terrain";
 
@@ -398,6 +399,13 @@ export function villageIsland(v: Village = village()): VillageIsland {
   return island;
 }
 
+/** Places a later drop opens, kept off the maps until then (lib/game/drops.ts): the ruins gate, the Oracle temple. */
+export const UNLISTED: ReadonlySet<string> = new Set([...(DROPS.combat ? [] : ["ruins"]), ...(DROPS.oracle ? [] : ["oracle"])]);
+/** Half the smooth world's sun shadow box, which follows the player (a 2048 map: about 5 cm a texel). */
+export const SHADOW_FOLLOW_EXTENT = 48;
+/** How far the smooth world's map reaches past its open landmarks. */
+const MAP_MARGIN = 14;
+
 /**
  * Everything that scales with the island (specs/island-painter.md §7), from the
  * map's land bounds. The shipped 47×39 island gives exactly the numbers these
@@ -412,11 +420,17 @@ export function villageScale(v: Village = village()) {
   const k = Math.max(1, b.halfW / 23.5, b.halfD / 19.5);
   const offset: [number, number, number] = [12 * k, 21 * k, -27 * k];
   const further = Math.hypot(12, 21, 27) * (k - 1);
-  // The minimap frames the land and the wharf deck with a 2.5 margin.
-  const x0 = Math.round(Math.min(b.minX, deck?.x0 ?? Infinity) - 2.5), x1 = Math.round(Math.max(b.maxX, deck?.x1 ?? -Infinity) + 2.5);
-  const z0 = Math.round(Math.min(b.minZ, deck?.z0 ?? Infinity) - 2.5), z1 = Math.round(Math.max(b.maxZ, deck?.z1 ?? -Infinity) + 2.5);
+  // The minimap frames the land and the wharf deck with a 2.5 margin. The smooth world is far bigger than what's open
+  // on it, so there it frames the open area: the landmarks listed at this drop and the spawn, with a margin.
+  const open = v.terrain ? [...landmarks(v).filter(l => !UNLISTED.has(l.id)), ...objectsOf("spawn", v)] : [];
+  const frame = open.length
+    ? { minX: Math.min(...open.map(o => o.x)) - MAP_MARGIN, maxX: Math.max(...open.map(o => o.x)) + MAP_MARGIN, minZ: Math.min(...open.map(o => o.z)) - MAP_MARGIN, maxZ: Math.max(...open.map(o => o.z)) + MAP_MARGIN }
+    : b;
+  const x0 = Math.round(Math.min(frame.minX, deck?.x0 ?? Infinity) - 2.5), x1 = Math.round(Math.max(frame.maxX, deck?.x1 ?? -Infinity) + 2.5);
+  const z0 = Math.round(Math.min(frame.minZ, deck?.z0 ?? Infinity) - 2.5), z1 = Math.round(Math.max(frame.maxZ, deck?.z1 ?? -Infinity) + 2.5);
   return {
-    shadowExtent: Math.max(reachX, reachZ) + 2.5,
+    // The smooth world's box follows the player (IslandAtmosphere shadowFollow) instead of holding the whole island.
+    shadowExtent: v.terrain ? SHADOW_FOLLOW_EXTENT : Math.max(reachX, reachZ) + 2.5,
     cloudSize: [2 * reachX - 1, 2 * reachZ - 1] as [number, number],
     overview: { focus: [b.cx, 0, b.cz] as [number, number, number], offset, far: 120 + further },
     /** Extra fog distance in the overview, on top of the phase's (+28 near, +15 far). */

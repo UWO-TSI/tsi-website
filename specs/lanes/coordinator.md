@@ -25,19 +25,30 @@ All in `~/.claude/jobs/62203045/tmp/`, which survives reboots.
 - `prod-dump.sh <label>`, `prod-query.sh <sql>` and `verify.sql` are for prod migrations. The procedure is in `STATE.md` and the memory files.
 - `withlock.sh heavy|blender|devserver <cmd>` (set `LANE=game/<lane>`): takes a lock, waiting while swap is high and another lock is held. It lives in `~/.claude/jobs/62203045/tmp/`, the same folder as the helpers above, and is referenced from `specs/lane-rules.md`.
 
-## Lanes as of 2026-10-22 (launch run)
+## Now (2026-10-23): v1 launches on the NEW world (row 318)
 
-The run sheet is `specs/launch/v1-launch.md` (ledger row 317). The freeze is Oct 24 and the launch Oct 31.
+Read `specs/launch/v1-new-world.md` first: the gap analysis, the blockers and the smallest viable scope. The launch is Oct 31, go/no-go Oct 28, and the village stays as the fallback behind a world switch.
 
-| Lane | Branch | State |
-|---|---|---|
-| HQ interior | `game/hq-interior` | Switching to layout B with taller ceilings (David, Oct 19). It merges only if approved by Oct 24 |
-| Flat UI | `game/flat-ui` | Round 3 panels and motion are with David: https://claude.ai/artifact/7HiNbT9LBysksR13Y4p36w. Next is step 8, the creator. The four cream menus have no verdict yet: https://claude.ai/artifact/5VW76H2kqZJePHCobKEY9T |
-| Wardrobe follow-up | `game/wardrobe-followup` | The #04 visor logo (golden arches flipped into a W), then the merch catalogue migration. The coordinator applies it to prod |
-| Launch | `game/launch-v1` | Phase A: investigate the Preview, the env vars, test accounts, the two-account test design and the smoke flows. It waits for the coordinator's OK before anything outward-facing |
-| Perf | `game/perf-v1` | Phase A: deterministic comparison, both builds, the A/B script. Then a quiet window, when David closes his apps |
-
-Wardrobe batch 2 merged on Oct 22 and its seed was applied to prod.
+- **Terrain plan with David:** https://claude.ai/artifact/J6fE1DjDqxt732R8JPvpxs. Read it with ArtifactData `list`, collection `sections`; add follow-ups to a document's `followups: [{q, a}]`. Each finished section becomes a build spec for the terrain rebuild lane, which hasn't started yet: it waits for David's answers, at least sections whole, wharf, village and launch.
+- **The `game/world-switch` lane is running (code only):**
+  - multiplayer bounds (needs a realtime v7 deploy by the coordinator);
+  - server catch checks on the active world;
+  - the NEXT_PUBLIC_WORLD switch;
+  - editor anchor names and water_edge bugs;
+  - the sealed-zone test;
+  - the minimap crop;
+  - follow-camera shadows;
+  - the arrival route from the world.
+- **Done Oct 22–23:**
+  - the flat UI and themes, ponytail Phase B, the launch two-account test and the visor logo are merged;
+  - the merch catalogue is applied (the tote and sticker pack off sale);
+  - prod Supabase resized Nano to Small (David OK'd it; about $5/mo net);
+  - realtime v6 (join retry, db_read logs); 23 cold joins passed.
+- **Waiting on David:**
+  - HQ round 4 review: https://claude.ai/artifact/8Nbrs8noRNY2isXrAQkMjM (HQ code is on `game/hq-interior`, head d4b10ddc);
+  - the speed-test quiet window, whose script is on `game/perf-v1` (`specs/perf/window-ab.sh`);
+  - the terrain plan answers.
+- **Open launch fix:** other players on upper floors (HQ, shop) draw at ground height because presence sends no y. Add the height to presence.
 
 ## Merge check: ponytail
 

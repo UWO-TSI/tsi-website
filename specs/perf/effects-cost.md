@@ -166,6 +166,12 @@ touches. Radius 5 costs 1.05 ms and radius 20 costs 2.8 ms a frame (the stroke a
 re-bake for the stroke's region when it ends costs 2–4.5 ms. Headless at 60 Hz it held 60 FPS throughout, worst frame
 17.7 ms. The HUD shows the worst frame and the edit time live.
 
+**The world switch (game/world-switch, 2026-10-23).** On the smooth world the sun's shadow box follows the player (±48 u
+on a 2048 map, stepping every 128 texels, so the cached static map re-renders about every 6 u walked) instead of one box
+over the whole island, and the minimap draws only the rows of the open area. One headless run, `SCENES=v2`, 24 bots:
+High 4.8 ms median (p95 6.9), 222 draws, 622k triangles; Lite 2.9 ms (p95 3.8), 162 draws, 343k triangles. Both within
+SCENE_BUDGET; against the 2026-10-14 baseline that is 32 fewer draws on High, with every change since in between.
+
 ## Look fixes from playtest round 1: wide shallows, far sparkles, the kept face (2026-10-14)
 
 `game/look-fixes` (specs/playtest-round1.md). One `perf:check` (headless, the measurement build at 106c0690, 3 runs a

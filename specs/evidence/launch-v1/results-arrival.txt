@@ -1,0 +1,26 @@
+{
+  "at": "2026-10-22T19:19:14.196Z",
+  "preview": "uwotsi-3w7kq9vdz-davids-projects-e31987e3.vercel.app",
+  "results": [
+    {
+      "step": "a: arrival creator shows",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "a: arrival reaches Bram's walk-along",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "flow 3: the arrival is recorded (arrived)",
+      "ok": true,
+      "detail": "{\"ok\":true,\"arrived\":true,\"taught\":true}"
+    },
+    {
+      "step": "flow 3: the realtime join (the menu's Here entry)",
+      "ok": true,
+      "detail": "Here (1)"
+    }
+  ]
+}

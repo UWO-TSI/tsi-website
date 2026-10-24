@@ -26,7 +26,6 @@ export const HEIGHT_RANGE: readonly [number, number] = [-12, 36];
 
 /** The paint: what covers the ground at a sample. Values are stored in the surface PNG: append only. */
 export const Paint = { Grass: 0, Sand: 1, Path: 2, Rock: 3, Stone: 4 } as const;
-export type PaintId = (typeof Paint)[keyof typeof Paint];
 export const PAINT_NAMES = ["grass", "sand", "path", "rock", "stone"] as const;
 /** How each paint previews in the surface PNG (and in the editor's swatches). */
 export const PAINT_SWATCH: readonly (readonly [number, number, number])[] = [[143, 161, 108], [226, 203, 147], [186, 150, 100], [140, 133, 119], [176, 172, 166]];

@@ -1,6 +1,6 @@
 /**
  * The admin shop list's own read of shop_items (T1/T2 read every row, 014): retired items too, and the coin price
- * (price_coins, 20260926150600). The member loader (useShopItems) shows only what's on sale, priced in Gems.
+ * (price_coins, 20260926150600). Members see the shop through lib/wallet (getShop), which shows only what's on sale.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ShopItem } from "./types";

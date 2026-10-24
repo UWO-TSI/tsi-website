@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import worldDoc from "@/data/world/world.json";
 import { fishPoolFor } from "@/lib/game/peaceful";
 import { rodByTier } from "@/lib/game/rods";
 import { seededRandom } from "@/lib/game/weatherSystem";
@@ -57,5 +58,24 @@ describe("server rolls match the tables", () => {
     const rock = villageNodes().forage.find((n) => n.id.startsWith("rock-"))!;
     const a = nodeRoll("m1", rock, NOON, "clear"), b = nodeRoll("m1", rock, new Date(NOON.getTime() + 50 * 60_000), "clear");
     expect(a?.key).toBe(b?.key);
+  });
+});
+
+describe("catch checks follow the active world (lib/game/world/active.ts)", () => {
+  const wharf = (worldDoc.objects as { id: string; x: number; z: number }[]).find(o => o.id === "wharf")!;
+  const load = async (world: string | undefined) => {
+    vi.stubEnv("NEXT_PUBLIC_GAME_WORLD", world);
+    vi.resetModules();
+    try { return await import("./rolls"); } finally { vi.unstubAllEnvs(); }
+  };
+
+  it("casts from the new world's wharf only when the new world is live; the village stays the default", async () => {
+    const live = await load("new");
+    expect(live.activeVillage().terrain).toBeUndefined(); // the server's cell view, never the heightfield
+    expect(live.activeVillage().map.width).toBe(worldDoc.width);
+    expect(live.castWater("village", [wharf.x, wharf.z])).not.toBeNull();
+    const fallback = await load(undefined);
+    expect(fallback.activeVillage().map.width).not.toBe(worldDoc.width);
+    expect(fallback.castWater("village", [wharf.x, wharf.z])).toBeNull();
   });
 });

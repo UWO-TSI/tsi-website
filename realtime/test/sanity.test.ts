@@ -163,8 +163,11 @@ describe("cheats are refused", () => {
   });
 
   it("keeps positions inside the area", () => {
-    expect(feed([S(1000, 41, 0)], () => 1030).violations).toEqual(["0:bounds"]);
-    expect(feed([S(1000, 0, 0, 25.5)], () => 1030).violations).toEqual(["0:bounds"]);
+    expect(feed([S(1000, 301, 0)], () => 1030).violations).toEqual(["0:bounds"]);
+    expect(feed([S(1000, 0, 0, 40.5)], () => 1030).violations).toEqual(["0:bounds"]);
+    // The new world's wharf and plaza (web/data/world) lie past the old ±40: inside now, no strike.
+    expect(feed([S(1000, 49, 50)], () => 1030).violations).toEqual([]);
+    expect(feed([S(1000, 10, 60)], () => 1030).violations).toEqual([]);
     expect(feed([S(1000, 0, -3.5)], () => 1030, newTrack(), INTERIOR_BOUNDS).violations).toEqual([]);
     expect(feed([S(1000, 21, 0)], () => 1030, newTrack(), INTERIOR_BOUNDS).violations).toEqual(["0:bounds"]);
   });

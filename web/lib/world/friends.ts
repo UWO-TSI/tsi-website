@@ -9,14 +9,12 @@
  * same ones. A request to someone who already asked you is the accept. A block, either way, stops a request without
  * saying so.
  */
-import { FRIENDS_MAX } from "@/lib/net/protocol";
+import { FRIENDS_MAX, NAME_FALLBACK } from "@/lib/net/protocol";
 import { DomainError, toFailure, type Result } from "@/lib/result";
 import { makeFriendCode, parseFriendCode } from "./friendCode";
 
 /** The database's limits (world_friend_request): friends each, open requests out, new requests an hour. */
 export const FRIEND_LIMITS = { max: FRIENDS_MAX, pending: 30, hourly: 20 } as const;
-/** The name shown for a member without a world name (never the real one, row 222). */
-const NAME_FALLBACK = "Islander";
 
 export type FriendErrorCode = "invalid" | "not_found" | "blocked" | "limit" | "unavailable" | "failed";
 export class FriendError extends DomainError<FriendErrorCode> {}

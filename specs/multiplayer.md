@@ -175,7 +175,7 @@ New top-level package at `realtime/`.
   - `muted_until`, `removed_until` (the column arrives in M2; M1 returns null);
   - `profiles.created_at`.
 - The server calls it once per join, caches it 60 s per user, and re-reads on a `refresh` message (at most once per 10 s) after a wardrobe, name or class change.
-- If the card times out after 3 s, the join is refused and the client retries.
+- If the card or the blocks read times out after 3 s, it is tried once more after 200 to 600 ms; if that fails too, the join is refused and the client retries.
 - The server sends keys and numbers only. Clients derive the icon, title and aura ramp with the existing tables (`classKit()`, `masteryCosmetics()`), so no business logic is duplicated on the server.
 - Secret: a dedicated Supabase secret key named `realtime` (or the service role key), kept in Fly secrets as `SUPABASE_SECRET_KEY`.
 - Smoke test: `web/supabase/tests/realtime_card_smoke.sql` checks that anon and authenticated are denied, the fields come back, and the real name never appears.
@@ -310,7 +310,7 @@ Server to client:
 - On the client there is a second, render-side cap (5.5).
 
 **4.5 Server sanity checks** (pure functions in `realtime/src/rooms/sanity.ts`, derived from `MOVE_TUNING` in `web/lib/game/movement/sim.ts`: walk 7.4, sprint 12, dash 18, momentum ceiling 18 plus 10 × slope downhill, max fall 18):
-- **Rejected outright:** values that aren't finite, enums out of range, positions outside the area's bounds (village |x|,|z| ≤ 40, y −3..25; interiors |x|,|z| ≤ 20).
+- **Rejected outright:** values that aren't finite, enums out of range, positions outside the area's bounds (outdoors |x|,|z| ≤ 300, y −3..40, which holds both the village and the new world; interiors |x|,|z| ≤ 20, y −3..25).
 - **Time between samples** must be 20–2000 ms, otherwise the baseline resets.
 - **Speed:**
   - horizontal at most 32 u/s instantly and 26 u/s averaged over a 1 s window;

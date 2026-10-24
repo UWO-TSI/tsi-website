@@ -6,13 +6,12 @@
  * - A block is persistent: the realtime server stops chat lines and emotes between the pair, both ways. The routes
  *   tell it at once (lib/server/realtimeNotify).
  */
+import { NAME_FALLBACK } from "@/lib/net/protocol";
 import { toFailure, type Result } from "@/lib/result";
 import type { BlockRow, ContextLine, WorldLine, WorldStore } from "./store";
 
 export const REPORTS_PER_HOUR = 5;
 export const REPORT_CONTEXT = 20;
-/** The name shown for a member without a world name (never the real one, row 222). */
-export const NAME_FALLBACK = "Islander";
 
 const ERR: Record<string, [number, string]> = {
   unavailable: [503, "World chat isn't available right now."],

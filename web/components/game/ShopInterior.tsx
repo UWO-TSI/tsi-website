@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * ShopInterior: the shop (specs/interiors/shop.md, row 313), reworked from David's references. Phase 1 is the layout
- * only, as a greybox for his approval (ShopGreybox, every number in lib/game/shopLayout.ts). Two floors: the in-game
+ * ShopInterior: the shop (specs/interiors/shop.md, row 313), reworked from David's references, every number in
+ * lib/game/shopLayout.ts. Two floors: the in-game
  * items, the changing room and the tiled counter downstairs, the shopkeeper behind it at the end of the aisle from the
  * door; the club merch on the mezzanine over the back, by the stair up the right wall. The room's walker
  * (createShopWalker) carries you up and down the stair and says when the mezzanine shows. The counter's station opens

@@ -6,6 +6,7 @@
 import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { timedRead, type Log } from "../read";
 import type { Identity } from "./verify";
 
 /** Exactly the keys realtime_player_card returns (web/supabase/migrations/*_realtime_card.sql). */
@@ -65,7 +66,9 @@ export type LoadCard = (identity: Identity, opts?: { refresh?: boolean }) => Pro
 export type CardLoaderOptions = {
   source: CardSource;
   ttlMs?: number;
+  /** Per attempt; a failed read is tried once more after 200 to 600 ms. */
   timeoutMs?: number;
+  log?: Log;
   /** A refresh re-reads at most this often per user; sooner ones get the cached card. */
   refreshMinMs?: number;
   now?: () => number;
@@ -101,6 +104,7 @@ export function createCardLoader(opts: CardLoaderOptions): LoadCard {
   const timeoutMs = opts.timeoutMs ?? 3_000;
   const refreshMinMs = opts.refreshMinMs ?? 10_000;
   const now = opts.now ?? Date.now;
+  const log = opts.log ?? (() => {});
   const cache = new Map<string, Entry>();
   const inflight = new Map<string, Promise<PlayerCard>>();
   let lastSweep = now();
@@ -112,22 +116,13 @@ export function createCardLoader(opts: CardLoaderOptions): LoadCard {
   }
 
   async function fetchCard(uid: string): Promise<PlayerCard> {
-    const ac = new AbortController();
-    let timer: NodeJS.Timeout | undefined;
-    const timeout = new Promise<never>((_, reject) => {
-      timer = setTimeout(() => {
-        ac.abort();
-        reject(new CardError("timeout"));
-      }, timeoutMs);
-    });
     let raw: unknown;
     try {
-      raw = await Promise.race([opts.source(uid, ac.signal), timeout]);
+      raw = await timedRead("card", { timeoutMs, log, retries: 1, fields: { uid } }, (signal) => opts.source(uid, signal));
     } catch (e) {
       if (e instanceof CardError) throw e;
-      throw new CardError("unavailable", e instanceof Error ? e.message : undefined);
-    } finally {
-      clearTimeout(timer);
+      const message = e instanceof Error ? e.message : undefined;
+      throw message === "timeout" ? new CardError("timeout") : new CardError("unavailable", message);
     }
     if (raw === null || raw === undefined) throw new CardError("no_profile");
     const parsed = PlayerCardSchema.safeParse(raw);

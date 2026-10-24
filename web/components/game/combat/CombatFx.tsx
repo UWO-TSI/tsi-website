@@ -17,7 +17,7 @@ import { timeScale as worldSpeed } from "@/lib/game/slowMotion";
 import { ParticlePool, FACE } from "@/lib/game/fx/particles";
 import { COMBAT_PACK, COMBAT_PACK_URL } from "@/lib/game/fx/combatPack";
 import { DEFAULT_RAMP, FX, FX_POOLS, RampTable, sharedRamps, type MeshLayer } from "@/lib/game/fx/combat";
-import { createCombatParticleMaterial, createFxMaterial, createTrailMaterial, rampMap } from "@/lib/game/fx/fxMaterial";
+import { createCombatParticleMaterial, createFxMaterial, createTrailMaterial, packTexture, rampMap } from "@/lib/game/fx/fxMaterial";
 import { weaponTrail } from "@/lib/game/fx/trail";
 import { quality } from "@/lib/game/perf/governor";
 
@@ -25,11 +25,6 @@ type Ground = (x: number, z: number) => number;
 /** An area's effects scale with its radius against this one (the demo slam's). */
 const REF_RADIUS = 2.8;
 const ramps = (sharedRamps.table ??= new RampTable());
-let packTexture: THREE.Texture | null = null;
-function combatPackMap() {
-  if (!packTexture) { packTexture = new THREE.TextureLoader().load(COMBAT_PACK_URL); packTexture.colorSpace = THREE.NoColorSpace; packTexture.anisotropy = 4; } // heat is data, not colour
-  return packTexture;
-}
 
 /** A ParticlePool drawn as one instanced quad mesh in a combat material. */
 function poolMesh(pool: ParticlePool, material: THREE.Material, order: number) {
@@ -154,7 +149,7 @@ function stepFx(s: FxSystem, cam: { p: THREE.Vector3; d: THREE.Vector3 }, ground
 export default function CombatFx({ ground, lite = false }: { ground: Ground; lite?: boolean }) {
   const scene = useThree(s => s.scene);
   const sys = useMemo((): FxSystem => {
-    const map = combatPackMap(), ramp = rampMap(ramps);
+    const map = packTexture(COMBAT_PACK_URL), ramp = rampMap(ramps);
     const glow = new ParticlePool(FX_POOLS.glow, COMBAT_PACK), ink = new ParticlePool(FX_POOLS.ink, COMBAT_PACK), decals = new ParticlePool(FX_POOLS.decals, COMBAT_PACK);
     // Above the terrain's painted sand and soil layers (render orders 2, 3, transparent), under the telegraphs' rims (4).
     const layers = [poolMesh(decals, createCombatParticleMaterial(map, ramp, false, 0.5), 3.4), poolMesh(ink, createCombatParticleMaterial(map, ramp, false), 3.45), poolMesh(glow, createCombatParticleMaterial(map, ramp, true), 3.5)];

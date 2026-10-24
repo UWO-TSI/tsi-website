@@ -42,8 +42,10 @@ export interface TutorialStop {
 }
 
 export interface TutorialRoute {
-  /** The world it belongs to (the village today; the new map later). */
+  /** The world it belongs to (lib/game/world/active.ts: the village, or the new world). */
   world: string;
+  /** Where the first login's crossing starts, far out at sea in the dock's frame, heading in (lib/game/boatTrip.ts). */
+  crossFrom: { x: number; z: number; yaw: number };
   stops: readonly TutorialStop[];
   /** Crates on the way (the dock's movement bit): each solid, its lid a hop high, turned `yaw`. */
   crates: readonly { at: Place; yaw?: number }[];

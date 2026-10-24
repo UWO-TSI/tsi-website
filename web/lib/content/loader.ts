@@ -1,7 +1,7 @@
 "use client";
 
 // ─── Content Loader Hooks ───────────────────────────────────────────────────
-// Fetch NPC personas, shop items, season palettes and emotes from Supabase.
+// Fetch NPC personas and season palettes from Supabase.
 // Cache for 5 minutes; fall back to bundled JSON defaults when Supabase env
 // vars are missing or the query errors. Never throws to the UI.
 //
@@ -12,18 +12,13 @@
 import useSWR from "swr";
 import { createClient } from "@/lib/supabase/client";
 import {
-  DEFAULT_EMOTE_TYPES,
   DEFAULT_NPC_PERSONAS,
   DEFAULT_PALETTES,
-  DEFAULT_SHOP_ITEMS,
 } from "@/data/content-defaults";
 import { withProposed } from "@/lib/content/residentRoster";
 import type {
-  EmoteType,
   NPCPersona,
   SeasonalPalette,
-  ShopCategory,
-  ShopItem,
 } from "@/lib/content/types";
 
 const FIVE_MINUTES = 5 * 60 * 1000;
@@ -158,50 +153,6 @@ export function useNPCPersonas(options?: {
   };
 }
 
-// ─── Shop items ─────────────────────────────────────────────────────────────
-
-async function fetchShopItems(category?: ShopCategory): Promise<ShopItem[]> {
-  if (!hasSupabaseEnv()) return filterShop(DEFAULT_SHOP_ITEMS, category);
-  try {
-    const supabase = createClient();
-    let query = supabase
-      .from("shop_items")
-      .select(
-        "id, slug, display_name, category, sprite_url, description, tc_price, rarity, stock, active, released_at, retired_at",
-      )
-      .eq("active", true);
-    if (category) query = query.eq("category", category);
-    const { data, error } = await query;
-    if (error || !data) {
-      console.warn("[contentLoader] shop_items fetch failed, using defaults", error);
-      return filterShop(DEFAULT_SHOP_ITEMS, category);
-    }
-    return data as unknown as ShopItem[];
-  } catch (err) {
-    console.warn("[contentLoader] shop_items threw, using defaults", err);
-    return filterShop(DEFAULT_SHOP_ITEMS, category);
-  }
-}
-
-function filterShop(rows: ShopItem[], category?: ShopCategory): ShopItem[] {
-  const active = rows.filter((r) => r.active);
-  return category ? active.filter((r) => r.category === category) : active;
-}
-
-export function useShopItems(options?: { category?: ShopCategory }) {
-  const category = options?.category;
-  const { data, error, isLoading } = useSWR<ShopItem[]>(
-    `shop_items:${category ?? "all"}`,
-    () => fetchShopItems(category),
-    SWR_OPTS,
-  );
-  return {
-    data: data ?? filterShop(DEFAULT_SHOP_ITEMS, category),
-    isLoading,
-    error,
-  };
-}
-
 // ─── Season rows for the member island (2026-09-24) ─────────────────────────
 // The island blends all four season rows by date, so it reads them together
 // regardless of which row is `active`. Missing/malformed rows fall back to
@@ -234,40 +185,4 @@ async function fetchSeasonPalettes(): Promise<SeasonalPalette[]> {
 export function useSeasonPalettes(): SeasonalPalette[] {
   const { data } = useSWR<SeasonalPalette[]>("seasonal_palettes:seasons", fetchSeasonPalettes, SWR_OPTS);
   return data ?? defaultSeasonRows();
-}
-
-// ─── Emote types (sprint E2) ────────────────────────────────────────────────
-
-async function fetchEmoteTypes(): Promise<EmoteType[]> {
-  if (!hasSupabaseEnv()) return DEFAULT_EMOTE_TYPES;
-  try {
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("emote_types")
-      .select(
-        "id, slug, display_name, animation_key, icon_url, unlock_condition, active, created_at",
-      )
-      .eq("active", true);
-    if (error || !data) {
-      console.warn("[contentLoader] emote_types fetch failed, using defaults", error);
-      return DEFAULT_EMOTE_TYPES;
-    }
-    return data as unknown as EmoteType[];
-  } catch (err) {
-    console.warn("[contentLoader] emote_types threw, using defaults", err);
-    return DEFAULT_EMOTE_TYPES;
-  }
-}
-
-export function useEmoteTypes() {
-  const { data, error, isLoading } = useSWR<EmoteType[]>(
-    "emote_types:active",
-    fetchEmoteTypes,
-    SWR_OPTS,
-  );
-  return {
-    data: data ?? DEFAULT_EMOTE_TYPES,
-    isLoading,
-    error,
-  };
 }

@@ -275,3 +275,7 @@ Evidence: `specs/evidence/flat-ui/round3b-menus-flat.webp` (in game at `/lab/isl
 - `MenuPaletteContext` (the stopgap for the choice) and the harnesses' `palette=flat` are deleted.
 - Contribute opened from the journal or the notice board is flat too (`round3b-contribute-nested.webp`): a `ProgressionPanel` opened inside a flat sheet follows it (sheets aren't portalled, so a cream one nested in a flat one got the flat rules and tokens). Opened on its own, Contribute stays cream.
 - The merge review's cleanup (ponytail): the applicant collection's dead member branches and the `JournalPages` component, the flat branches of `ListRow`, `List`, `ItemTile`, `Badge` and the `Tabs` icon rail, `Paper`, `creamStyles`, `LettersBody`'s `systemOnly`, `ProgressionPanel`'s `eyebrow`, unused classes; one `StudioLights`, `itemModel` on `keyModel`, the bag on `useLoad`, shared small rules.
+
+### UI themes (game/flat-ui, 2026-10-22)
+
+David's request (verbatim above, round 3b verdict) is built: `specs/polish/ui-themes.md`. A theme is one CSS file of `--ui-*` values in `web/styles/themes/`, worn by `<body data-ui-theme>`; the flat kit and the flat menus read them, and the `--flat-*` tokens are gone. Clean (the default) and cream are pixel-identical to today; dark is a dev-only sample. Evidence: `specs/evidence/flat-ui/ui-themes.webp`.

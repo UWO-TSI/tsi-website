@@ -171,8 +171,3 @@ export default function PhotoMode({ allowed }: {
     </div>
   </div>;
 }
-
-/** The HUD's camera button (photo mode). */
-export function PhotoButton({ className, disabled }: { className?: string; disabled?: boolean }) {
-  return <button className={className} disabled={disabled} onClick={() => setPhoto({ open: true })} aria-label="Photo mode" title="Photo mode (P)"><Camera size={18} aria-hidden /></button>;
-}

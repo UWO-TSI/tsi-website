@@ -6,7 +6,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { worldGround } from "./GridWorld";
 import { buildVillage, village, type VillageDoc } from "@/lib/game/villageMap";
 import { villageIsland } from "@/lib/game/defaultIsland";
@@ -53,5 +53,51 @@ describe("the ground gate", () => {
     const w = loadWorldFromDisk(join(web, "data/world")), v = villageOfWorld(w);
     expect(groundKind(v)).toBe("heightfield");
     expect(typeof villageIsland(v).climb).toBe("function");
+  });
+});
+
+/** The member island's world switch (lib/game/world/active.ts, load.ts loadGameWorld), with the images read from disk. */
+describe("the world switch", () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+  const live = async (world: string | undefined) => {
+    vi.stubEnv("NEXT_PUBLIC_GAME_WORLD", world);
+    vi.stubGlobal("fetch", async (url: string) => new Response(readFileSync(fileURLToPath(url))));
+    vi.resetModules();
+    try {
+      return { load: await import("@/lib/game/world/load"), map: await import("@/lib/game/villageMap"), gate: await import("@/lib/game/world/village") };
+    } finally { vi.unstubAllEnvs(); }
+  };
+
+  it("keeps the village by default: nothing loads and the island walks its cells", async () => {
+    const { load, map, gate } = await live(undefined);
+    expect(load.loadGameWorld()).toBeNull();
+    expect(gate.groundKind(map.village())).toBe("cells");
+  });
+
+  it("loads the new world into the island before it mounts when NEXT_PUBLIC_GAME_WORLD=new", async () => {
+    const { load, map, gate } = await live("new");
+    await load.loadGameWorld();
+    const v = map.village();
+    expect(gate.groundKind(v)).toBe("heightfield");
+    expect(v.map.width).toBe(loadWorldFromDisk(join(web, "data/world")).terrain.width);
+    expect(map.objectById("landmark", "wharf", v)).not.toBeNull();
+    expect(load.loadGameWorld()).not.toBeNull(); // the same load, never a second one
+  });
+
+  it("keeps the title on the village file once the new world has loaded", async () => {
+    const { load, map, gate } = await live("new");
+    await load.loadGameWorld();
+    const title = map.shippedVillage();
+    expect(gate.groundKind(map.village())).toBe("heightfield");
+    expect(gate.groundKind(title)).toBe("cells");
+    expect(title.map.width).toBe(buildVillage(JSON.parse(readFileSync(join(web, "data/village-map.json"), "utf8"))).map.width);
+    expect(readFileSync(join(web, "components/title/TitleScene.tsx"), "utf8")).toMatch(/const v = shippedVillage\(\)/);
+  });
+
+  it("leaves a lab's island alone (the painter's draft, a fixture), even with the new world live", async () => {
+    const { load, map, gate } = await live("new");
+    map.setVillageDoc(terrainFixtureDoc());
+    expect(load.loadGameWorld()).toBeNull();
+    expect(gate.groundKind(map.village())).toBe("cells");
   });
 });

@@ -2,14 +2,10 @@
 
 import { useMemo } from "react";
 import { Surface, surfaceAt } from "@/lib/game/grid";
-import { landmarks, villageScale, wharfDecks } from "@/lib/game/defaultIsland";
+import { UNLISTED, landmarks, villageScale, wharfDecks } from "@/lib/game/defaultIsland";
 import { WATER_CLASS, villageWater } from "@/lib/game/fishingSpots";
 import { village } from "@/lib/game/villageMap";
 import type { MiniMapPlot } from "./MiniMap";
-import { DROPS } from "@/lib/game/drops";
-
-/** Places a later drop opens aren't on the map yet (lib/game/drops.ts): the ruins gate, the Oracle temple. */
-const UNLISTED = new Set([...(DROPS.combat ? [] : ["ruins"]), ...(DROPS.oracle ? [] : ["oracle"])]);
 
 const FILL: Partial<Record<number, string>> = {
   [Surface.Grass]: "#7EC167", [Surface.Sand]: "#E4CD96", [Surface.Soil]: "#D9B380",
@@ -27,10 +23,11 @@ const FILL: Partial<Record<number, string>> = {
 export function useDefaultIslandPlot(opened: readonly string[] = []): MiniMapPlot {
   const openedKey = opened.join();
   return useMemo(() => {
-    const v = village(), { map } = v, water = villageWater(v).classes;
+    const v = village(), { map } = v, water = villageWater(v).classes, { x0, x1, z0, z1 } = villageScale(v).minimap;
     const runs: { x: number; z: number; w: number; fill: string }[] = [];
     for (let cz = 0; cz < map.depth; cz++) {
       const z = cz + map.originZ;
+      if (z < z0 - 1 || z > z1 + 1) continue; // only the rows the frame shows (the smooth world's is a crop)
       let start = 0, current: string | undefined;
       for (let cx = 0; cx <= map.width; cx++) {
         const fill = cx < map.width && water[cz * map.width + cx] !== WATER_CLASS.sea ? FILL[surfaceAt(map, cx, cz)] : undefined;
@@ -41,7 +38,7 @@ export function useDefaultIslandPlot(opened: readonly string[] = []): MiniMapPlo
         }
       }
     }
-    const { x0, x1, z0, z1 } = villageScale(v).minimap, decks = wharfDecks(v);
+    const decks = wharfDecks(v);
     const content = <g transform="scale(-1 1)">
       {runs.map((r, i) => <rect key={i} x={r.x} y={-(r.z + 0.5)} width={r.w} height={1.02} fill={r.fill} />)}
       {decks.map((deck, i) => <rect key={i} x={deck.x0} y={-deck.z1} width={deck.x1 - deck.x0} height={deck.z1 - deck.z0} fill="#B98C60" />)}

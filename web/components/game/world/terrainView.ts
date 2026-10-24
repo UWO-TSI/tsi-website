@@ -12,7 +12,7 @@ import * as THREE from "three";
 import { CurvedCull } from "@/lib/game/curvedCull";
 import { deepestSeabed } from "@/lib/game/seabed";
 import {
-  CHUNK_CELLS, LOD_STRIDES, WATER_BLOCK_CHUNKS, chunkBox, chunkGeometry, chunkIsDeepSea, listChunkRefs, lodFor, refreshChunkGeometry, waterBlocks, waterGeometry,
+  LOD_STRIDES, chunkBox, chunkGeometry, chunkIsDeepSea, listChunkRefs, lodFor, refreshChunkGeometry, waterBlocks, waterGeometry,
   type ChunkRef,
 } from "@/lib/game/world/mesh";
 import type { WorldTerrain } from "@/lib/game/world/terrain";
@@ -186,7 +186,3 @@ export class TerrainView {
     this.paint.dispose();
   }
 }
-
-/** Chunks a side, for the docs and the HUD. */
-export const VIEW_CHUNK_CELLS = CHUNK_CELLS;
-export const VIEW_WATER_BLOCK = CHUNK_CELLS * WATER_BLOCK_CHUNKS;

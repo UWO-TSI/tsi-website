@@ -71,13 +71,14 @@ Decided with David on 2026-10-14, after he walked the terrain v2 world and said 
 
 ## Data format (built 2026-10-14, `game/world-editor`)
 
-Three files in `web/data/world/`. One loader reads them for the game, the editor, the dev save route, the conversion script and the tests: `decodeWorld` / `encodeWorld` in `web/lib/game/world/format.ts` (the browser fetches the images in `world/load.ts`; Node reads them in `world/disk.ts`). The old `web/data/world-map.json` stays until David accepts the new world.
+Three files in `web/data/world/`, plus the derived `cells.json`. One loader reads them for the game, the editor, the dev save route, the conversion script and the tests: `decodeWorld` / `encodeWorld` in `web/lib/game/world/format.ts` (the browser fetches the images in `world/load.ts`; Node reads them in `world/disk.ts`). The old `web/data/world-map.json` stays until David accepts the new world.
 
 | File | What it holds |
 |---|---|
 | `world.json` | The document: `format: "tethos-world"`, `version: 1`; the grid (`width` × `depth` cells of 1 u, `originX`/`originZ` the centre of cell (0, 0), as in `world-map.json`); `resolution` (samples per unit, 2); `heightRange` (the heightmap's 0 and 65535 in world units, `[-12, 36]`); `seaLevel` (the still water, −0.078, where the old sea and rivers sat); `surfaces` (the paint names by id); the two image file names; then `annotations` and `objects`, one per line, in the village file's object vocabulary (`lib/game/villageMap.ts`). |
 | `height.png` | 16-bit greyscale, (width·2 + 1) × (depth·2 + 1) samples, a sample every half unit, row 0 at the low z edge, sample (0, 0) on the map's outer corner (originX − 0.5, originZ − 0.5). Value q is the height `heightRange[0] + q·(heightRange[1] − heightRange[0])/65535`: a step of 0.73 mm. |
 | `surface.png` | 8-bit indexed, the same grid: each pixel a paint id (0 grass, 1 sand, 2 path, 3 rock, 4 stone; append only). The palette is only how it previews, so the file reads as a colour map in a diff viewer. |
+| `cells.json` | Derived, never edited: the server's cell view (`world/cells.ts`), each cell water, built ground or land, run-length coded per row (about 9 KB). The server's catch checks read it, since it can't decode the PNGs. Every save writes it; after a merge, `cd web && npx vite-node -c vitest.config.ts scripts/world-cells.ts`. `cells.test.ts` fails when it's stale. |
 
 - **Lossless.** Heights are quantised to the 16-bit step on save and read back to exactly the value they stand for, so load → save is byte-identical and save → load → save is stable (`format.test.ts`, and `world.test.ts` on the committed files). The PNG writer is deterministic (per-row minimum-sum filter, zlib level 9), so an unchanged save leaves git clean.
 - **Commits sanely.** About 290 KB of heights, 7 KB of paint and 215 KB of JSON (most of it the annotations' cell lists) for the 384 × 552 world. Both images preview in a diff viewer.
@@ -118,7 +119,7 @@ Dev only (404 in production). It loads and saves `web/data/world/` through `/api
 | Left click (hold) | Lower, dig, cut, paint grass, remove an object, end a road |
 | Right click (hold) | Raise, fill, paint, place, lay a road point (or drag one), drag the selection |
 | 1–9 | Hotbar slot |
-| E | Palette: choose what the slot holds (terrain tools, paints, roads, buildings and houses, nature, props, markers, select) |
+| E | Palette: choose what the slot holds (terrain tools, paints, roads, buildings and houses, nature, props, markers, the residents' anchors by their schedule ids, select) |
 | B | Cell mode ⇄ brush mode (on the HUD) |
 | Scroll | Brush size; in cell mode, the N × N square |
 | Shift + scroll | Strength; in cell mode, the step (0.75 by default) |

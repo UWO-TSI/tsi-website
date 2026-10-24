@@ -10,7 +10,7 @@ import { iconKey, iconUrl, type IconSpec } from "@/lib/icons/manifest";
 import { itemSpec } from "@/lib/icons/itemModel";
 import { SHOP_SLOTS, SHOP_TAG_RANGE, type Level } from "./shopLayout";
 
-/** Every slot but the front plinths' and the merch placeholders': the catalogue row it shows (slug). */
+/** Every slot but the front plinths': the catalogue row it shows (slug). */
 export const SHOP_PICKS: Record<string, string> = {
   "clothes-1": "wear-top-cardigan", "clothes-2": "wear-top-collar-shirt", "clothes-3": "wear-top-tsi-crew",
   "clothes-4": "wear-shoes-loafers", "clothes-5": "wear-shoes-boots", "clothes-6": "wear-shoes-sandals",
@@ -20,11 +20,12 @@ export const SHOP_PICKS: Record<string, string> = {
   "furniture-1": "furn-lounge-sofa", "furniture-2": "furn-floor-lamp", "furniture-3": "furn-study-chair",
   "wallpaper-1": "wall-stripe", "wallpaper-2": "wall-log", "wallpaper-3": "wall-brick",
   "flooring-1": "floor-tatami", "flooring-2": "floor-carpet", "flooring-3": "floor-plain",
-  // The club merch upstairs: the two real items; the other merch slots hold placeholders until David's merch list.
-  "merch-bags-1": "merch-tote", "merch-bags-2": "merch-tote",
-  "merch-small-1": "merch-sticker-pack", "merch-small-2": "merch-sticker-pack", "merch-small-3": "merch-sticker-pack",
-  "merch-small-4": "merch-sticker-pack", "merch-small-5": "merch-sticker-pack",
-  "merch-featured-1": "merch-tote", "merch-featured-2": "merch-sticker-pack",
+  // The club merch upstairs is only the three real items (specs/merch/; David, 2026-10-22, the placeholder tote and
+  // sticker pack off sale): the slots that held those show more of the three.
+  "merch-bags-1": "merch-tsi-keycap-keychain", "merch-bags-2": "merch-tsi-lanyard",
+  "merch-small-1": "merch-genesis-sticker", "merch-small-2": "merch-tsi-keycap-keychain", "merch-small-3": "merch-genesis-sticker",
+  "merch-small-4": "merch-tsi-keycap-keychain", "merch-small-5": "merch-genesis-sticker",
+  "merch-featured-1": "merch-tsi-lanyard", "merch-featured-2": "merch-genesis-sticker",
   "merch-keychain-1": "merch-tsi-keycap-keychain",
   "merch-lanyard-1": "merch-tsi-lanyard",
   "merch-sticker-1": "merch-genesis-sticker",

@@ -114,6 +114,8 @@ import InteriorBackdrop from "./InteriorBackdrop";
 import ShopCounter from "./ShopCounter";
 import ShopkeeperChoice, { MERCH_LINE, type ShopSection } from "./ShopkeeperChoice";
 import IslandLoading from "./IslandLoading";
+import { loadGameWorld } from "@/lib/game/world/load";
+import { GAME_WORLD } from "@/lib/game/world/active";
 import TalkBox from "./TalkBox";
 import { emptyTalkView, requestTalk, subscribeTalk, talkStore, talkView } from "@/lib/game/residentTalk";
 import DailyGift from "./DailyGift";
@@ -210,6 +212,7 @@ import { worldLabels } from "@/lib/game/labelLayout";
 import { localAvatar } from "@/lib/net/localAvatar";
 import { isSeatedPose, seatPrompt } from "@/lib/game/seatPrompt";
 import { roomHeading } from "@/lib/game/roomHeading";
+import { DevUiTheme } from "@/components/gui/DevUiTheme";
 import styles from "./DefaultIslandWorld.module.css";
 
 type Near = "knock" | "shop_enter" | "counter" | "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | "bram" | "founder" | "coffee" | "aquarium" | "admin" | null;
@@ -433,7 +436,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   // The arrival (components/game/arrival): Bram walks you through, the fish crate on the pier until the tour is over.
   const arrivalPhase = useArrivalPhase();
   const dock = useMemo(() => { const w = landmark("wharf", v); return w ? { x: w.x, z: w.z, yaw: w.yaw ?? 0 } : null; }, [v]);
-  const crated = useMemo(() => (dock ? withCrates(island, crateSpots(routeFor("village"), placeWorld(dock, v))) : null), [island, dock, v]);
+  const crated = useMemo(() => (dock ? withCrates(island, crateSpots(routeFor(GAME_WORLD), placeWorld(dock, v))) : null), [island, dock, v]);
   const walkOn = crated && (arrivalPhase === "crossing" || arrivalPhase === "landing" || arrivalPhase === "tutorial") ? crated : island;
   const spots = useMemo(() => eventSpots(event?.decor ?? null), [event]);
   const cafeAt = useMemo(() => { const c = layout.landmarks.find(l => l.id === "cafe"); return c ? { x: c.x, z: c.z, yaw: c.yaw ?? 0, scale: c.scale ?? 1 } : null; }, [layout]);
@@ -502,7 +505,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   return (
     <>
       <IslandAtmosphere phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} overview={overview} overviewFog={layout.scale.overviewFog}
-        ground={island.ground} puddles={layout.puddles} cloudSize={layout.scale.cloudSize} shadowExtent={layout.scale.shadowExtent} fireflyAnchors={layout.fireflies} trees={layout.trees} fauna={fauna} />
+        ground={island.ground} puddles={layout.puddles} cloudSize={layout.scale.cloudSize} shadowExtent={layout.scale.shadowExtent} shadowFollow={v.terrain ? player : undefined} fireflyAnchors={layout.fireflies} trees={layout.trees} fauna={fauna} />
       <GridWorld map={island.map} field={v.field} light={light} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} lite={liteMode} clear={grassClear} terrain={v.terrain} waves ownGround />
       <GridOcean map={island.map} lite={liteMode} skip={layout.underWharf} radius={layout.scale.glintRadius} waves ownGround />
       <Suspense fallback={null}><Seabed map={island.map} lite={liteMode} skip={layout.underWharf} /></Suspense>
@@ -648,6 +651,11 @@ function LoadingStatus({ ready }: { ready: boolean }) {
 
 /** `preset` (default: the game look, CURRENT) and `children` (mounted inside the Canvas) are for /lab/look only. */
 export default function DefaultIslandWorld({ preset, children }: { preset?: LookPreset; children?: ReactNode }) {
+  // The member island's world (NEXT_PUBLIC_GAME_WORLD): the new world loads into the village's place before anything mounts.
+  const [loading] = useState(loadGameWorld);
+  const [worldReady, setWorldReady] = useState(!loading);
+  useEffect(() => { void loading?.then(() => setWorldReady(true)); }, [loading]);
+  if (!worldReady) return <IslandLoading />;
   return <GameSceneBoundary><DefaultIslandWorldContent preset={preset}>{children}</DefaultIslandWorldContent></GameSceneBoundary>;
 }
 
@@ -1163,6 +1171,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     <main className={`${styles.world} gui`} data-light={phase} data-inside={inside ?? undefined} data-site={site} data-trip={trip.active || undefined} data-cinematic={hudCinematic || undefined} data-compact={compact || undefined} data-ui={uiView || undefined} data-photo={photo.open || undefined}>
       {/* The branded dark round the rooms that show the space outside them (InteriorBackdrop): behind the canvas. */}
       {inside === "shop" || inside === "hq" || inside === "museum" || inside === "cafe" ? <InteriorBackdrop room={inside} /> : null}
+      <DevUiTheme />
       <Canvas ref={canvasRef} tabIndex={0} role="application" aria-label="Island walking area" style={{ zIndex: 0, imageRendering: graphics.pixelated ? "pixelated" : "auto" }} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={canvasDpr}
         camera={{ position: [0, 10.2, -21], fov: BASE_FOV, near: 0.1, far: 120 }} shadows={castShadows ? "percentage" : false} frameloop={creatorOpen ? "never" : "always"}
         onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>

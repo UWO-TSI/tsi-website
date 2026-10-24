@@ -9,7 +9,6 @@ import type { ClipName } from "./character/clips";
 
 /** The clips a gathering or crafting act plays. */
 export const ACT_CLIPS = ["Pickup", "Forage", "Shake", "Strike", "Dig", "Net", "Craft"] as const satisfies readonly ClipName[];
-export type ActClip = (typeof ACT_CLIPS)[number];
 
 /** Milliseconds from the clip's start to each of its contacts, at `rate`. */
 export function hitDelays(clip: ClipName, rate = 1): number[] {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { RESIDENT_ANCHORS } from "@/lib/content/residents";
 import { LEVEL_STEP } from "../grid";
 import { objectFootprint } from "../defaultIsland";
 import type { MapObject } from "../villageMap";
@@ -206,5 +207,18 @@ describe("the hotbar and palette", () => {
     objects = placeItem(hq, objects, 9, 9, Math.PI / 2);
     expect(objects).toHaveLength(3);
     expect(objects[1]).toMatchObject({ id: "hq", x: 9, z: 9, scale: 1.15 });
+  });
+
+  it("names resident anchors by the ids their schedules use (one each, placing again moves it), and places water's-edge bug spots", () => {
+    const all = PALETTE.flatMap(g => g.items).filter((i): i is Extract<EditorItem, { type: "place" }> => i.type === "place");
+    const anchors = all.filter(i => i.object.kind === "anchor");
+    expect(anchors.map(i => i.object.id).sort()).toEqual(Object.keys(RESIDENT_ANCHORS).sort());
+    const wharf = anchors.find(i => i.object.id === "wharf")!;
+    let objects = placeItem(wharf, [], 3, 4);
+    expect(objects).toEqual([{ id: "wharf", kind: "anchor", x: 3, z: 4 }]);
+    objects = placeItem(wharf, objects, 7, 8);
+    expect(objects).toEqual([{ id: "wharf", kind: "anchor", x: 7, z: 8 }]);
+    const edge = all.find(i => i.object.kind === "bug" && i.object.model === "water_edge")!;
+    expect(placeItem(edge, objects, 1, 2)[1]).toMatchObject({ kind: "bug", model: "water_edge", id: "bug-0" });
   });
 });

@@ -183,9 +183,11 @@ export const OWNERSHIP_ITEMS: CatalogueEntry[] = [
  * 2026-10-17, "take them off sale"). Off sale; owners keep them, and the better tiers stay on the shelf.
  */
 export const TAUGHT_TOOL_SLUGS = ["net-basic", "shovel-basic"];
-/** Shop rows with no character part: the pre-ownership outfits, the wardrobe cut's (CUT_WEARABLES), and the taught tools. Off sale. */
+/** The placeholder tote and sticker pack, which aren't real merch (David, 2026-10-22: "Take both off sale"). */
+export const PLACEHOLDER_MERCH = ["merch-sticker-pack", "merch-tote"];
+/** Shop rows with no character part: the pre-ownership outfits, the wardrobe cut's (CUT_WEARABLES), and the taught tools; and the placeholder merch. Off sale. */
 export const RETIRED = ["outfit-sage-overalls", "outfit-cream-knit", "outfit-wharf-raincoat", "outfit-club-tee", "hair-chestnut", "hair-sea-glass", "hair-sunset", "acc-straw-hat", "acc-round-glasses", "acc-bandana",
-  ...CUT_WEARABLES.map((c) => wearSlug(c.id)), ...TAUGHT_TOOL_SLUGS];
+  ...CUT_WEARABLES.map((c) => wearSlug(c.id)), ...TAUGHT_TOOL_SLUGS, ...PLACEHOLDER_MERCH];
 /** Sold, as opposed to only granted: starter clothes stay off sale. */
 export const onSale = (c: CatalogueEntry) => !RETIRED.includes(c.slug) && !(c.category !== "furniture" && c.catalogue_ref !== null && STARTER_REFS.has(c.catalogue_ref));
 

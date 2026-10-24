@@ -23,4 +23,7 @@ describe("the admin hub (#27)", () => {
     expect(html({ profile: { tier: 4 }, loading: false })).toContain("Admins only");
     expect(html({ profile: null, loading: false })).toContain("Admins only");
   });
+  it("links the merch pickups desk, where staff hand over or cancel Gem reservations", () => {
+    expect(html({ profile: { tier: 2 }, loading: false })).toContain('href="/student/dashboard/admin/merch"');
+  });
 });

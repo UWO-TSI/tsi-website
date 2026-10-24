@@ -14,6 +14,7 @@ import type { Identity } from "./auth/verify";
 import type { PlayerCard } from "./auth/card";
 import { createChatLog, type ChatLog, type WriteChat } from "./chatLog";
 import { FRIENDS_MAX } from "@net/protocol";
+import { timedRead, type Log } from "./read";
 
 /** A sanction change: a field that's present replaces the old value (ISO time, or null for none). */
 export type SanctionPatch = { muted_until?: string | null; removed_until?: string | null };
@@ -51,11 +52,11 @@ export type WorldSources = {
 };
 
 export type WorldOptions = WorldSources & {
-  log: (event: string, fields: Record<string, unknown>) => void;
+  log: Log;
   now?: () => number;
   /** The safety-net poll's period. */
   pollMs?: number;
-  /** A read of blocks or sanctions that takes longer fails. */
+  /** A read of blocks, friends or sanctions that takes longer fails (blocks get one retry). */
   timeoutMs?: number;
   /** How long a sanction's latest word outranks the player card (the card cache's 60 s, twice). */
   holdMs?: number;
@@ -69,7 +70,7 @@ export type World = {
   unregister(room: WorldRoom): void;
   /** A joining player's blocks (refuse the join if this throws: the database is down). */
   loadBlocks(identity: Identity): Promise<Blocks>;
-  /** A joining player's friends; never throws (a failed read is logged and lists none). */
+  /** A joining player's friends; never throws (a failed read lists none and is read again a few seconds later). */
   loadFriends(identity: Identity): Promise<string[]>;
   /** Where a member is in any room, or null. */
   presence(uid: string): Presence | null;
@@ -91,24 +92,6 @@ export type World = {
 /** At most this many ids per poll call (realtime_sanctions_poll reads 2000). */
 const POLL_CHUNK = 2000;
 
-async function withTimeout<T>(ms: number, run: (signal: AbortSignal) => Promise<T>): Promise<T> {
-  const ac = new AbortController();
-  let t: NodeJS.Timeout | undefined;
-  try {
-    return await Promise.race([
-      run(ac.signal),
-      new Promise<never>((_, reject) => {
-        t = setTimeout(() => {
-          ac.abort();
-          reject(new Error("timeout"));
-        }, ms);
-      }),
-    ]);
-  } finally {
-    clearTimeout(t);
-  }
-}
-
 export function createWorld(o: WorldOptions): World {
   const now = o.now ?? Date.now;
   const pollMs = o.pollMs ?? 60_000;
@@ -120,6 +103,11 @@ export function createWorld(o: WorldOptions): World {
   const chatLog = createChatLog({ write: o.writeChat, log: o.log, flushMs: o.chatFlushMs, max: o.chatQueueMax, now });
   let timer: NodeJS.Timeout | null = null;
   let polling = false;
+
+  async function readFriends(uid: string): Promise<string[]> {
+    const ids = await timedRead("friends", { timeoutMs, log: o.log, fields: { uid } }, (signal) => o.loadFriends(uid, signal));
+    return [...new Set(ids.map((id) => id.toLowerCase()))].filter((id) => id !== uid).slice(0, FRIENDS_MAX);
+  }
 
   function hold(uid: string, patch: SanctionPatch, at: number) {
     const prev = held.get(uid);
@@ -139,16 +127,26 @@ export function createWorld(o: WorldOptions): World {
     unregister: (room) => void rooms.delete(room),
 
     async loadBlocks(identity) {
-      const b = await withTimeout(timeoutMs, (signal) => o.loadBlocks(identity.uid, signal));
+      const b = await timedRead("blocks", { timeoutMs, log: o.log, retries: 1, fields: { uid: identity.uid } }, (signal) =>
+        o.loadBlocks(identity.uid, signal),
+      );
       return { blocks: [...new Set(b.blocks)], blockedBy: [...new Set(b.blockedBy)] };
     },
 
     async loadFriends(identity) {
       try {
-        const ids = await withTimeout(timeoutMs, (signal) => o.loadFriends(identity.uid, signal));
-        return [...new Set(ids.map((id) => id.toLowerCase()))].filter((id) => id !== identity.uid).slice(0, FRIENDS_MAX);
-      } catch (e) {
-        o.log("friends_load_failed", { uid: identity.uid, message: e instanceof Error ? e.message : String(e) });
+        return await readFriends(identity.uid);
+      } catch {
+        // Logged by the read. One more try 5 s later, once the player is in: their list fills then.
+        setTimeout(() => {
+          readFriends(identity.uid).then(
+            (ids) => {
+              for (const r of rooms) for (const id of ids) r.applyFriend(identity.uid, id, true);
+              for (const r of rooms) r.refreshFriends(identity.uid);
+            },
+            () => {},
+          );
+        }, 5000).unref();
         return [];
       }
     },
@@ -204,7 +202,8 @@ export function createWorld(o: WorldOptions): World {
       try {
         const ids = [...new Set([...rooms].flatMap((r) => r.memberIds()))];
         for (let i = 0; i < ids.length; i += POLL_CHUNK) {
-          const rows = await withTimeout(timeoutMs, (signal) => o.pollSanctions(ids.slice(i, i + POLL_CHUNK), signal));
+          const chunk = ids.slice(i, i + POLL_CHUNK);
+          const rows = await timedRead("sanctions", { timeoutMs, log: o.log, fields: { n: chunk.length } }, (signal) => o.pollSanctions(chunk, signal));
           for (const row of rows) {
             // News that came while this poll was out is newer than what it read.
             if ((held.get(row.member_id)?.at ?? -Infinity) > started) continue;

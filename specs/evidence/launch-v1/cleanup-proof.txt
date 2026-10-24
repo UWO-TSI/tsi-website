@@ -1,0 +1,35 @@
+Cleanup of the launch test's three throwaway accounts, 2026-10-22 evening (counts only; ids kept in the session scratchpad).
+
+BEFORE: 162 columns scanned; catch_rolls.member_id=2, collection_catch_hours.user_id=2, identity_name_log.changed_by=2, identity_name_log.member_id=2, letters.recipient_id=1, member_collections.user_id=2, member_identity.member_id=2, member_inventory.member_id=44, member_progression.member_id=2, member_quest_progress.member_id=1, member_weapons.member_id=4, moderation_log.actor_id=4, moderation_log.target_id=4, starter_grants.member_id=2, wallet_ledger.member_id=3, wallets.member_id=2, weekly_catch_bests.user_id=2, world_blocks.blocked_id=1, world_blocks.blocker_id=1, world_chat_messages.member_id=6, world_friend_codes.member_id=2, world_reports.reporter_id=2, world_reports.resolved_by=2, world_reports.target_id=2
+
+Collected (rows that only go to NULL on a user delete, deleted by id):
+{
+ "world_chat_messages": 6,
+ "world_reports": 2,
+ "moderation_log": 4,
+ "letters": 1,
+ "identity_name_log": 2
+}
+
+Delete:
+{
+ "rowTables": 5,
+ "userDeletes": {
+  "a": 200,
+  "b": 200,
+  "m": 200
+ }
+}
+
+AFTER (every public uuid column, auth.users and profiles for the three ids; the recorded row ids):
+{
+ "scannedColumns": 162,
+ "nonzero": [],
+ "recordedRowsLeft": {
+  "world_chat_messages": 0,
+  "world_reports": 0,
+  "moderation_log": 0,
+  "letters": 0,
+  "identity_name_log": 0
+ }
+}

@@ -1,0 +1,34 @@
+/* The dark theme: a sample that proves the swap (specs/polish/ui-themes.md). Dev only: ?uitheme=dark. */
+[data-ui-theme="dark"] {
+  --ui-bg: #161618;
+  --ui-panel: #1c1c1f;
+  --ui-card: #27272b;
+  --ui-card-dim: #222225;
+  --ui-card-hover: #2d2d32;
+  --ui-well: #303036;
+  --ui-line: #36363c;
+  --ui-line-strong: #48484f;
+  --ui-select: #34343a;
+  --ui-highlight: #f2f2f2;
+  --ui-marker: rgb(255 204 0 / 0.28);
+  --ui-ink: #f2f2f2;
+  --ui-ink-body: #e2e2e5;
+  --ui-ink-2: #b6b6bc;
+  --ui-muted: #a4a4aa;
+  --ui-quiet: #8f8f96;
+  --ui-rail: #6f6f76;
+  --ui-hint: #6f6f76;
+  --ui-accent: #f2f2f2;
+  --ui-accent-deep: #ffffff;
+  --ui-accent-ink: #151515;
+  --ui-pill: #34343a;
+  --ui-pill-ink: #b6b6bc;
+  --ui-disabled: #48484f;
+  --ui-round: #4a5a94;
+  --ui-error: #f08a74;
+  --ui-focus: #f2f2f2;
+  --ui-scrim: rgb(0 0 0 / 0.55);
+  --ui-shade: 0 0 0;
+  --ui-stage: radial-gradient(ellipse 24% 4.5% at 50% 87%, rgb(0 0 0 / 0.45), rgb(0 0 0 / 0.18) 55%, transparent 100%),
+    linear-gradient(180deg, #2c2c31 0%, #2c2c31 60%, #242428 84%, #1f1f22 100%);
+}

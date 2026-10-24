@@ -84,8 +84,6 @@ const GROUND: Record<GroundKind, GroundFx> = {
 };
 const HARD = new Set<GroundKind>(["stone", "wood"]);
 
-export const stepSound = (g: GroundKind) => GROUND[g].sound;
-
 /** Salts keep two bursts of one event apart. */
 const SALT = { step: 1, rain: 2, kick: 3, extra: 4, ring: 5, plume: 6, dash: 7, side: 8, air: 9, swirl: 10, streak: 11, trail: 12, settle: 13, wisp: 14, ready: 15, splash: 16, ripple: 17, leaf: 18, mantle: 19, scuff: 20, sit: 21,
   slide: 24, slideSpray: 25, slideScuff: 26, slideBurst: 27, slidePop: 28, print: 29, skid: 30, roll: 31 };
@@ -252,14 +250,6 @@ export function puffRing(pool: ParticlePool, g: GroundKind, x: number, y: number
   if (amount <= 0) return;
   pool.burst(SIT, x, y, z, y, 0, 0, amount, GROUND[g].dust, seedAt(x, z, SALT.sit), HARD.has(g) ? 0.5 : 1);
 }
-/** The leaf glider opens: a few leaf bits shaken loose round the grip. */
-export function leafBits(pool: ParticlePool, x: number, y: number, z: number, groundY: number, amount = 1) {
-  if (amount > 0) pool.burst(LEAF_BITS, x, y, z, groundY, 0, 0, amount, 0x9db86a, seedAt(x, z, SALT.leaf));
-}
-/** Hands on a ledge: a little dust off the lip. */
-export function handPuff(pool: ParticlePool, g: GroundKind, x: number, y: number, z: number, amount = 1) {
-  if (amount > 0) pool.burst(HAND_PUFF, x, y, z, y, 0, 0, amount, GROUND[g].dust, seedAt(x, z, SALT.mantle), HARD.has(g) ? 0.5 : 1);
-}
 /** A skid's scuff on the ground, turned along the slide (not on boards or stone). */
 export function scuff(pool: ParticlePool, g: GroundKind, x: number, y: number, z: number, vx: number, vz: number, amount = 1) {
   const tint = GROUND[g].scuff;
@@ -321,7 +311,6 @@ const PRINTS: Partial<Record<GroundKind, { tint: number; life: number; alpha: nu
   sand: { tint: 0xb39563, life: 7, alpha: 0.85 },
   wetSand: { tint: 0x7d6847, life: 11, alpha: 0.92 },
 };
-export const takesPrints = (g: GroundKind) => !!PRINTS[g];
 /**
  * A footprint on sand or wet sand where a foot came down at (x, z), its toe the way the body faces: crisp at first,
  * crumbling and filling in, gone after a few seconds (longer in wet sand). Into the scene's print pool (its own decal

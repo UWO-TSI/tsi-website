@@ -503,5 +503,3 @@ export function attune(rt: CombatRuntime, elements: string[]) {
   if (v.passive.kind === "attunement" && v.element && v.element !== key) chargeUlt(rt, v.passive.value);
   v.element = key;
 }
-
-export const zoneHas = inZone;

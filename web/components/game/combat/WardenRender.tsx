@@ -20,13 +20,12 @@ import { beastKit, beastState, RITUAL, tamedList } from "@/lib/game/combat/beast
 import { nextToTame } from "@/lib/combat/wardenData";
 import { COMBAT_PACK, COMBAT_PACK_COLS, COMBAT_PACK_URL, type CombatSprite } from "@/lib/game/fx/combatPack";
 import { DEFAULT_RAMP, RampTable, sharedRamps, type Ramp } from "@/lib/game/fx/combat";
-import { createCombatParticleMaterial, rampMap } from "@/lib/game/fx/fxMaterial";
+import { createCombatParticleMaterial, packTexture, rampMap } from "@/lib/game/fx/fxMaterial";
 import styles from "../DefaultIslandWorld.module.css";
 
 type Ground = (x: number, z: number) => number;
 const P = "/assets/game/props/", E = "/assets/game/enemies/";
 const ramps = (sharedRamps.table ??= new RampTable());
-let pack: THREE.Texture | null = null;
 const frameOf = (s: CombatSprite, f: number) => COMBAT_PACK[s].row * COMBAT_PACK_COLS + (f % 8);
 // The streaks add light, so the ritual's rune and ward and the vine glow pale (dark inks and greens added nothing on the
 // grass and couldn't be seen).
@@ -37,14 +36,13 @@ const ease = (u: number) => u * u * (3 - 2 * u);
 const MAX = 48;
 function useStreaks() {
   return useMemo(() => {
-    pack ??= Object.assign(new THREE.TextureLoader().load(COMBAT_PACK_URL), { colorSpace: THREE.NoColorSpace });
     const g = new THREE.InstancedBufferGeometry(), quad = new THREE.PlaneGeometry(1, 1);
     g.index = quad.index;
     for (const n of ["position", "uv"]) g.setAttribute(n, quad.getAttribute(n));
     const arr = [0, 1, 2, 3].map(() => new Float32Array(MAX * 4));
     const attrs = arr.map((a, k) => { const at = new THREE.InstancedBufferAttribute(a, 4).setUsage(THREE.DynamicDrawUsage); g.setAttribute(`i${"ABCD"[k]}`, at); return at; });
     g.instanceCount = 0;
-    const glow = new THREE.Mesh(g, createCombatParticleMaterial(pack, rampMap(ramps), true));
+    const glow = new THREE.Mesh(g, createCombatParticleMaterial(packTexture(COMBAT_PACK_URL), rampMap(ramps), true));
     glow.frustumCulled = false; glow.renderOrder = 3.55;
     let n = 0;
     /** One quad: centre, size, rotation, sprite frame, alpha, ramp row; face 0 billboard, 1 flat on the ground, 2 streaked along (dx, dz). */
