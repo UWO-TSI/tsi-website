@@ -30,11 +30,13 @@ All in `~/.claude/jobs/62203045/tmp/`, which survives reboots.
 Read `specs/launch/v1-new-world.md` first, then `specs/launch/terrain-v3.md`. The launch is Oct 31, go/no-go Oct 28, and the village stays as the fallback behind the world switch (`NEXT_PUBLIC_GAME_WORLD=new`, merged; realtime v7 deployed).
 
 - **David answered the terrain plan** (all 11 sections, 2026-10-23): https://claude.ai/artifact/J6fE1DjDqxt732R8JPvpxs, collection `sections`. His answers, verbatim, and the build are in `specs/launch/terrain-v3.md`; his 20 references are in `specs/references/terrain/plan-2026-10-23/`. Open on Oct 31: the wharf, the west beach and the village. Everything else stays visible but closed naturally (broken bridges, landslides, a guard). He said cut nothing, so the work is ordered, not cut.
-- **Lane `terrain-v3`** (`game/terrain-v3`, not merged): R1 is done at e8675d5e. A deterministic zone-plan generator (`lib/game/world/generate.ts`, `scripts/generate-world.ts`), sealed.test green with no leaks. It waits on David's R1 notes before starting R2.
-  - **R1 review page:** https://claude.ai/artifact/U9bsDg9XdmeZo3iuwUZiHv (collection `approvals`, 12 items).
-  - **Open question:** the mountain can't be seen from the village, because the horizon bend sinks it. David picks A (move it in), B (soften the bend) or C (keep it as drawn) in the note on `r1-mountain-village`. I recommended A.
-  - **Questions file:** `specs/launch/terrain-v3-questions.md`.
-  - **When the notes come in:** merge R1 to main if it's approved, relay the notes to the lane file, and restart the lane fresh for R2.
+- **Lane `terrain-v3`** (`game/terrain-v3`, not merged).
+  - **R1** (e8675d5e): David redid every item on 2026-10-24. His notes, verbatim with my reading, are in `specs/lanes/terrain-v3.md`.
+  - **R1b** (616e39e9) applies them:
+    - a compact map; deck 1, quay 2, village 3; a bigger plaza with the buildings moved; the mountain moved in;
+    - the meadow at village level behind an invisible border that reads "This area is releasing soon." (`barriers.ts` model `border`, `BorderNotice.tsx`, drop feature `meadow`).
+  - **R1b review page:** https://claude.ai/artifact/GEg5mHuG6ACN95UdZiLJou (collection `approvals`, 13 items).
+  - **When approved:** merge it to main and restart the lane fresh for R2: deck boards and the fish market, the jetty raised to 1 with ladders, stairs, fences, lamps, houses filling the plaza gaps, the campfire on the beach, broken bridges and rockfall.
 - **HQ round 4 merged** (71135930, David approved all four items 2026-10-23), with the ponytail cleanup. Later items are logged as A14. `hq-notice-board.glb` is no longer rendered but is still in the propModels table; delete both together after launch.
 - **Upper-floor fix merged** (72a9b9c5). Remote players in rooms stand at the height they sent, with no realtime deploy needed.
 - **Still open:** the shop is offline for multiplayer (`netReady = inside !== "shop"`, DefaultIslandWorld.tsx:722), so players in the shop vanish for others.
