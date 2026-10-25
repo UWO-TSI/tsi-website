@@ -1,12 +1,11 @@
 /**
  * Gameplay on the smooth world (specs/world-editor.md v0 step 4), on the committed world files: the walker stands on
  * the drawn ground, slopes too steep block walking (on foot and for residents, both ways the sim moves), buildings
- * stand on flat pads, and every object, barrier, the campfire and the residents' stops stay on the surface.
+ * stand on flat pads, and every object, the campfire and the residents' stops stay on the surface.
  */
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { DECK_Y, landmarkHalf, villageIsland, wharfDecks, type LandmarkId } from "../defaultIsland";
-import { barrierPlacements } from "../barriers";
 import { campfireSite } from "../campfireSite";
 import { MOVE_TUNING, NO_INPUT, createMoveState, stepMove, STEP, type MoveWorld } from "../movement/sim";
 import { navGrid, planResidents } from "../residentRoutine";
@@ -99,7 +98,7 @@ describe("walking the smooth world", () => {
     }
   });
 
-  it("keeps every object, barrier and the campfire on the surface, on dry land", () => {
+  it("keeps every object and the campfire on the surface, on dry land", () => {
     for (const o of objects) {
       if (o.kind === "landmark" && o.id === "wharf") continue; // the jetty's origin stands at the water's edge
       if (o.kind === "barrier" && o.model === "border") continue; // the invisible border runs out into the water at its ends
@@ -107,9 +106,6 @@ describe("walking the smooth world", () => {
       expect(h, `${o.kind}:${o.id}`).toBeCloseTo(terrainHeight(t, o.x, o.z), 6);
       expect(h, `${o.kind}:${o.id} above the sea`).toBeGreaterThan(t.seaLevel);
     }
-    const barriers = barrierPlacements(v);
-    expect(barriers.length).toBeGreaterThan(5);
-    for (const b of barriers) if (b.model !== "border") expect(island.ground(b.x, b.z), b.id).toBeGreaterThan(t.seaLevel);
     const fire = campfireSite(v);
     expect(fire).not.toBeNull();
     expect(island.ground(fire!.x, fire!.z)).toBeGreaterThan(t.seaLevel);

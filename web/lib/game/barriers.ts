@@ -23,10 +23,9 @@ export const BARRIER_MODELS = ["unbuilt-bridge", "forest-edge", "ruins-rubble", 
 /**
  * Plus "border": the new world's invisible wall round the meadow (David, terrain v3 R1 notes 2026-10-24: "invisible
  * boarders for now that says release soon", overriding the no-invisible-wall rule there), in segments
- * (lib/game/world/generate.ts BORDER); walking up to it says BORDER_NOTE (components/game/BorderNotice.tsx).
+ * (lib/game/world/generate.ts BORDER); walking up to it says so (components/game/BorderNotice.tsx).
  */
 export type BarrierModel = (typeof BARRIER_MODELS)[number] | "border";
-export const BORDER_NOTE = "This area is releasing soon.";
 
 /** A solid rectangle in the model's own frame (before its yaw and scale): centre x, z and half extents. */
 export type BarrierSolid = readonly [cx: number, cz: number, hw: number, hd: number];

@@ -25,7 +25,7 @@ type XZ = readonly [number, number];
 type Field = (x: number, z: number) => number;
 
 /** Fractal value noise in [0, 1]. */
-export function fbm(x: number, z: number, seed: number, octaves = 3): number {
+function fbm(x: number, z: number, seed: number, octaves = 3): number {
   let s = 0, a = 1, n = 0, f = 1;
   for (let o = 0; o < octaves; o++) { s += a * valueNoise(x * f, z * f, seed + o * 17); n += a; a *= 0.5; f *= 2.03; }
   return s / n;
@@ -77,13 +77,6 @@ export function sideOf(pts: readonly XZ[]): Field {
     const [ax, az] = pts[j], [bx, bz] = pts[j + 1];
     return Math.sign((bx - ax) * (z - az) - (bz - az) * (x - ax)) * d;
   };
-}
-
-/** A smooth staircase: `riser` up at every `tread` from 0, each face `face` wide, topping out at `top`. */
-export function stairs(d: number, riser: number, tread: number, face: number, top: number): number {
-  let h = 0;
-  for (let k = 0; k * riser < top - 1e-6; k++) h += riser * smoothstep(-face, face, d - k * tread);
-  return Math.min(top, h);
 }
 
 export interface Zone {
@@ -149,7 +142,8 @@ const westOfRiver = sideOf(RIVER);
  * south of it and east of the river.
  */
 export const BORDER: readonly XZ[] = [[-52, 8], [-30, 10], [-8, 13], [14, 13], [36, 11], [56, 9], [84, 6]];
-const OPEN: Field = (x, z) => Math.min(sideOf(BORDER)(x, z), -westOfRiver(x, z) - 1);
+const southOfBorder = sideOf(BORDER);
+const OPEN: Field = (x, z) => Math.min(southOfBorder(x, z), -westOfRiver(x, z) - 1);
 /** The shore along the wharf, north to south: the deck stands out to it, the quay and the climb step back from it. */
 const QUAY: readonly XZ[] = [[69, 8], [73, 28], [74, 46], [73, 64], [66, 92]];
 const westOfQuay = sideOf(QUAY);
@@ -253,10 +247,10 @@ function borderObjects(): World["objects"] {
   const out: World["objects"][number][] = [];
   for (let j = 0; j + 1 < BORDER.length; j++) {
     const [ax, az] = BORDER[j], [bx, bz] = BORDER[j + 1], len = Math.hypot(bx - ax, bz - az), n = Math.ceil(len / BORDER_SEGMENT);
+    const yaw = +Math.atan2(-(bz - az), bx - ax).toFixed(4);
     for (let q = 0; q < n; q++) {
       const f = (q + 0.5) / n;
       // Keys in the order the world file reads them back (format.ts), so it saves back to the same bytes.
-      const yaw = +Math.atan2(-(bz - az), bx - ax).toFixed(4);
       out.push({ id: `border-${out.length}`, kind: "barrier", x: +(ax + (bx - ax) * f).toFixed(2), z: +(az + (bz - az) * f).toFixed(2), ...(yaw ? { yaw } : {}), scale: +((len / n) / BORDER_SEGMENT).toFixed(3), model: "border" });
     }
   }
@@ -309,7 +303,6 @@ export function moveMarks(keep: readonly MapAnnotation[]): MapAnnotation[] {
   });
 }
 
-
 /**
  * Layered rock: on ground too steep to walk, the face is pulled toward a ledge every STRATA.band units of height, so a
  * cliff reads as stacked layers (the whole-island reference) rather than one smooth wall. Walkable ground is untouched.
@@ -332,7 +325,7 @@ export interface GenerateReport { land: number; heights: [number, number]; quays
  * The world from a plan: heights, paint and zone annotations; `objects` (already laid out: `layoutObjects`) stand on
  * their pads; `keep` are annotations carried over (the village's house and lot marks: `moveMarks`).
  */
-export function generateWorld(objects: World["objects"], keep: readonly MapAnnotation[], plan: Plan = PLAN): { world: World; report: GenerateReport } {
+export function generateWorld(objects: World["objects"], keep: readonly MapAnnotation[]): { world: World; report: GenerateReport } {
   const t = createTerrain(GRID.width, GRID.depth, GRID.x0, GRID.z0);
   const { cols, rows, res } = t, n = cols * rows;
   // The land: the union of the land zones, less the water.
@@ -340,7 +333,7 @@ export function generateWorld(objects: World["objects"], keep: readonly MapAnnot
   for (let k = 0; k < rows; k++) for (let i = 0; i < cols; i++) {
     const x = sampleX(t, i), z = sampleZ(t, k);
     let l = -1e3, wet = -1e3;
-    for (const zn of plan.zones) {
+    for (const zn of PLAN.zones) {
       if (zn.kind === "shape") continue;
       const d = zn.shape(x, z);
       if (zn.kind === "water") wet = Math.max(wet, d); else l = Math.max(l, d);
@@ -351,24 +344,24 @@ export function generateWorld(objects: World["objects"], keep: readonly MapAnnot
   const shore: ShoreSdf = { data: inland.map(v => -v), width: cols, height: rows, scale: res, minX: t.x0 - 0.5 / res, minZ: t.z0 - 0.5 / res, sizeX: cols / res, sizeZ: rows / res };
 
   // The ground, zone by zone, then the ramps, then the coast.
-  const member = plan.zones.map(() => new Float32Array(n));
+  const member = PLAN.zones.map(() => new Uint8Array(n));
   const painted = new Int8Array(n).fill(-1), below = new Float32Array(n);
   for (let k = 0; k < rows; k++) for (let i = 0; i < cols; i++) {
     const p = k * cols + i, x = sampleX(t, i), z = sampleZ(t, k), d = inland[p];
-    let h = plan.base, g = CONVERT.bank;
-    plan.zones.forEach((zn, j) => {
+    let h = PLAN.base, g = CONVERT.bank;
+    PLAN.zones.forEach((zn, j) => {
       // The rim's steepness wanders along it (some faces sheer, some leaning), as a cliff does.
       const e = (typeof zn.edge === "number" ? zn.edge : zn.edge(x, z)) * (0.55 + 0.9 * fbm(x / 9, z / 9, 200 + j, 2));
       const sd = zn.shape(x, z), ledge = (zn.ledge ?? 3) * (0.6 + 0.8 * fbm(x / 11, z / 11, 300 + j, 2));
       let m = 0;
       (zn.tiers ?? [1]).forEach((share, q) => { m += share * smoothstep(-e, e, sd - q * ledge); });
-      member[j][p] = m;
+      member[j][p] = m >= 0.5 ? 1 : 0;
       if (m <= 0) return;
       if (zn.kind !== "water") h += ((typeof zn.ground === "number" ? zn.ground : zn.ground(x, z, d, h)) - h) * m;
       if (zn.coast !== undefined) g += (zn.coast - g) * m;
       if (zn.paint !== undefined && m > 0.5) { painted[p] = zn.paint; below[p] = zn.paintBelow ?? Infinity; }
     });
-    for (const r of plan.ramps) {
+    for (const r of PLAN.ramps) {
       const { d: off, s } = nearest(r.pts, x, z), w = 1 - smoothstep(r.half, r.half + r.shoulder, off);
       if (w <= 0) continue;
       const j = Math.min(r.pts.length - 2, Math.floor(s)), f = s - j;
@@ -402,8 +395,8 @@ export function generateWorld(objects: World["objects"], keep: readonly MapAnnot
     const p = (cz * res + res / 2) * cols + cx * res + res / 2, c = cz * t.width + cx, h = t.heights[p];
     const x = sampleX(t, cx * res + res / 2), z = sampleZ(t, cz * res + res / 2);
     let owner: string | undefined;
-    plan.zones.forEach((zn, j) => {
-      if (member[j][p] < 0.5) return;
+    PLAN.zones.forEach((zn, j) => {
+      if (!member[j][p]) return;
       const land = !zn.kind || zn.kind === "land";
       if (land) {
         const own = typeof zn.ground === "number" ? zn.ground : zn.ground(x, z, inland[p], h);

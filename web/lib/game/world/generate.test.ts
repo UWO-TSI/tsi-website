@@ -5,7 +5,7 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadWorldFromDisk } from "./disk";
-import { DOCK, H, PLAZA, blob, generateWorld, layoutObjects, sideOf, stairs, strip } from "./generate";
+import { DOCK, H, PLAZA, blob, generateWorld, layoutObjects, sideOf, strip } from "./generate";
 import { terrainHeight } from "./terrain";
 
 describe("the zone plan's shapes", () => {
@@ -15,13 +15,6 @@ describe("the zone plan's shapes", () => {
     expect(round(13, 0)).toBeCloseTo(-3);
     expect(strip([[0, 0], [10, 0]], 2)(5, 1)).toBeCloseTo(1);
     expect(sideOf([[0, 0], [0, 10]])(-3, 5)).toBeCloseTo(3); // west of a line running toward +z
-  });
-
-  it("step a staircase up to its top and no further", () => {
-    expect(stairs(-3, 1.5, 5.5, 0.6, 4.5)).toBeCloseTo(0);
-    expect(stairs(3, 1.5, 5.5, 0.6, 4.5)).toBeCloseTo(1.5);
-    expect(stairs(8, 1.5, 5.5, 0.6, 4.5)).toBeCloseTo(3);
-    expect(stairs(40, 1.5, 5.5, 0.6, 4.5)).toBeCloseTo(4.5);
   });
 });
 

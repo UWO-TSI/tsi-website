@@ -259,14 +259,14 @@ export function heightsFromCells(map: IslandMap, t: WorldTerrain, levels: Uint8A
  * Rock relief on steep land (the naturalize pass, CONVERT.natural): two octaves of noise, deepest where the ground is
  * steepest, nothing on walkable ground or within reach of the sea (the coast stays where it is).
  */
-export function rockRelief(t: WorldTerrain, depth: number = CONVERT.natural.rock, scale: number = CONVERT.natural.rockScale): void {
+export function rockRelief(t: WorldTerrain, depth: number = CONVERT.natural.rock, s: number = CONVERT.natural.rockScale): void {
   const h = t.heights, c = t.cols, out = new Float32Array(h.length);
   for (let k = 1; k < t.rows - 1; k++) for (let i = 1; i < c - 1; i++) {
     const p = k * c + i;
     if (h[p] < t.seaLevel + 0.4) continue;
     const gx = (h[p + 1] - h[p - 1]) * t.res / 2, gz = (h[p + c] - h[p - c]) * t.res / 2, w = smoothstep(0.9, 1.8, Math.hypot(gx, gz));
     if (w <= 0) continue;
-    const x = sampleX(t, i), z = sampleZ(t, k), s = scale;
+    const x = sampleX(t, i), z = sampleZ(t, k);
     out[p] = w * depth * 2 * ((valueNoise(x / s, z / s, 81) - 0.5) + 0.5 * (valueNoise(x / (s * 0.45), z / (s * 0.45), 82) - 0.5));
   }
   for (let p = 0; p < h.length; p++) h[p] += out[p];
@@ -278,7 +278,7 @@ export function rockRelief(t: WorldTerrain, depth: number = CONVERT.natural.rock
  * plateau straight off the sea) the face would otherwise be a near-vertical wall a few samples tall. Nothing crosses
  * the sea level: land stays land and water stays water, so the coast does not move.
  */
-export function limitSteepness(t: WorldTerrain, maxGrade: number = CONVERT.maxGrade, passes = 64): number {
+export function limitSteepness(t: WorldTerrain, maxGrade = CONVERT.maxGrade, passes = 64): number {
   const m = maxGrade / t.res, h = t.heights, c = t.cols, sea = t.seaLevel, margin = 0.02;
   const wet = new Uint8Array(h.length);
   for (let p = 0; p < h.length; p++) wet[p] = h[p] <= sea ? 1 : 0;
