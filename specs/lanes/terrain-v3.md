@@ -19,7 +19,12 @@ Then look at the references in `specs/references/terrain/plan-2026-10-23/` and t
 
 ## Status
 
-**R1c and R2 are built and waiting on one review** (2026-10-25). Head: 909dd199 (R2), on d08623f4 (R1c) and 2e9ae1bf (the ponytail fixes, merged to main as cbf729af).
+**R1c and R2 are built and waiting on one review** (2026-10-25). R2 909dd199, on d08623f4 (R1c) and 2e9ae1bf (the ponytail fixes, merged to main as cbf729af). The R2 code review (merge-safe) fixes are in the commit after 507e2deb:
+- the arrival's fish crate stands on the raised jetty (`Crates` takes the deck's height), one `CRATE_URL` in propModels.ts;
+- deck board tops a hair (0.01) over the ground, so feet and props stand on them; the ground under the boards is painted dark earth (a "shape" zone, d < 7.8) so the gaps read dark, and the stone path now starts at the stairs;
+- treads sample the ground at their middles; `hash01` replaces the sine hash; `LADDERS` no longer exported; path fences have their own id counter (the old ids were dropped from world.json once);
+- `DefaultIslandWorld` uses `layout.dock`; `Wharf` computes `deckY` once; the palm list is typed as const.
+- Views 01, 13 and 14 in `r2/` reshot after the board change.
 
 R1c (David's R1b notes, the reading below 1 to 7):
 - **Map 10 u longer:** the main island's north radii grow up to 10 and the mountain sits at (0, -47) (`MT.to`), a little north and east of R1b's, so its cliffs still show behind the café from the plaza (view 07).

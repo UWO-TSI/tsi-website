@@ -7,6 +7,7 @@
 import { WATER_DROP } from "./grid";
 import { waterWaveAt, type WaveState } from "./waves";
 import { waterFieldAt } from "./waterField";
+import { hash01 } from "./worldFx";
 
 /** Where a dock stands in the world: the pier's origin, its turn about +y (radians, three's rotation.y) and its deck's height (0 by default). */
 export interface Dock { x: number; z: number; yaw: number; y?: number }
@@ -272,7 +273,6 @@ export interface WoodBox { x: number; y: number; z: number; w: number; h: number
 
 /** A `deck` square (terrain v3, the wharf's deck boards): its side, the boards' pitch, gap and thickness, a stair's treads. */
 export const DECK = { size: 4, pitch: 0.32, gap: 0.03, thick: 0.08, treads: 4 } as const;
-const rand = (n: number) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
 
 /**
  * The boards of the `deck` squares, in world space. A square lies level at the ground under its centre, its boards side
@@ -284,21 +284,21 @@ export function deckBoards(decks: readonly { x: number; z: number; yaw?: number;
   decks.forEach((o, k) => {
     const d = { x: o.x, z: o.z, yaw: o.yaw ?? 0 }, put = (lx: number, lz: number) => dockToWorld(d, lx, lz, at);
     if (o.model === "steps") {
-      const run = DECK.size / DECK.treads, base = ground(put(0, -half).x, at.z) - 0.1;
+      const run = DECK.size / DECK.treads, foot = put(0, -half), base = ground(foot.x, foot.z) - 0.1;
       for (let t = 0; t < DECK.treads; t++) {
-        const lz = -half + (t + 0.5) * run, top = ground(put(0, lz + run / 2).x, at.z);
-        put(0, lz);
-        out.push({ x: at.x, y: (top + base) / 2, z: at.z, w: DECK.size, h: top - base, d: run - DECK.gap, yaw: d.yaw, tone: rand(k * 13 + t) });
+        const p = put(0, -half + (t + 0.5) * run), top = ground(p.x, p.z);
+        out.push({ x: p.x, y: (top + base) / 2, z: p.z, w: DECK.size, h: top - base, d: run - DECK.gap, yaw: d.yaw, tone: hash01(k, t) });
       }
       return;
     }
-    const y = ground(o.x, o.z) + DECK.thick / 2, n = Math.round(DECK.size / DECK.pitch);
+    // The boards' tops a hair over the ground, so feet and props stand on them.
+    const y = ground(o.x, o.z) - DECK.thick / 2 + 0.01, n = Math.round(DECK.size / DECK.pitch);
     for (let b = 0; b < n; b++) {
-      const lx = -half + (b + 0.5) * (DECK.size / n), cut = -half + DECK.size * (0.25 + 0.5 * rand(k * 97 + b));
-      for (const [z0, z1] of [[-half, cut], [cut, half]]) {
-        put(lx, (z0 + z1) / 2);
-        out.push({ x: at.x, y, z: at.z, w: DECK.size / n - DECK.gap, h: DECK.thick, d: z1 - z0 - DECK.gap, yaw: d.yaw, tone: rand(k * 31 + b * 7 + z0) });
-      }
+      const lx = -half + (b + 0.5) * (DECK.size / n), cut = -half + DECK.size * (0.25 + 0.5 * hash01(k, b));
+      [[-half, cut], [cut, half]].forEach(([z0, z1], j) => {
+        const p = put(lx, (z0 + z1) / 2);
+        out.push({ x: p.x, y, z: p.z, w: DECK.size / n - DECK.gap, h: DECK.thick, d: z1 - z0 - DECK.gap, yaw: d.yaw, tone: hash01(k * 7 + j, b + 1000) });
+      });
     }
   });
   return out;
@@ -309,7 +309,7 @@ export function deckBoards(decks: readonly { x: number; z: number; yaw?: number;
  * along z; a quarter: on a z face). Outside the piles: on the jetty's -x side, off the finger pier's end, and on its
  * seaward face by the rowboats.
  */
-export const LADDERS: readonly (readonly [number, number, number])[] = [[-1.2, -0.6, 0], [-4.82, -2.875, 0], [-3.95, -3.62, Math.PI / 2]];
+const LADDERS: readonly (readonly [number, number, number])[] = [[-1.2, -0.6, 0], [-4.82, -2.875, 0], [-3.95, -3.62, Math.PI / 2]];
 /** The ladders' rails and rungs, in the dock's frame, from the deck down to below the water `rise` under it; none on a deck at the water. */
 export function ladderBoxes(rise: number): WoodBox[] {
   if (rise <= 0) return [];

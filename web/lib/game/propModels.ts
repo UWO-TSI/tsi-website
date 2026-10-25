@@ -54,9 +54,11 @@ export const SHOP_CART_URL = `${P}shop-cart.glb`;
 
 /** Map props by the model the map stores (`bench-wood`): ours where remodelled, else the dump's. */
 export const REMODELLED_PROPS: Readonly<Record<string, string>> = { "bench-wood": LOG_BENCH_URL };
+/** The fish crate (art/wharf/build_crate.py): the market's, and the arrival's on the pier. */
+export const CRATE_URL = "/assets/game/wharf/crate.glb";
 /** The `prop` kind's scenery outside the dump's props folder, by model name (terrain v3: the market, the beach, the lighthouse). */
 export const SCENERY_URLS: Readonly<Record<string, string>> = {
-  barrel: "/assets/acnh/furniture/barrel.glb", lighthouse: "/assets/acnh/furniture/lighthouse.glb", crate: "/assets/game/wharf/crate.glb",
+  barrel: "/assets/acnh/furniture/barrel.glb", lighthouse: "/assets/acnh/furniture/lighthouse.glb", crate: CRATE_URL,
   "shop-cart": SHOP_CART_URL, "beach-parasol": BEACH_PARASOL_URL, "palm-a": "/assets/acnh/plants/tree-palm-a.glb", "palm-b": "/assets/acnh/plants/tree-palm-b.glb",
 };
 export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? `/assets/acnh/props/${model}.glb`;

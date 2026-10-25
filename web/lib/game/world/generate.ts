@@ -242,6 +242,8 @@ export const PLAN: Plan = {
       ground: (x, z) => { const d = westOfQuay(x, z); return H.deck + (H.quay - H.deck) * smoothstep(8.9, 10.1, d) + (H.village - H.quay) * smoothstep(16, 24, d); },
       edge: 1, coast: 2.5, paint: Paint.Stone, paintBelow: 2.6,
     },
+    // Under the deck boards (the `deck` squares, `scenery`) the ground is dark earth, so the gaps between boards read dark.
+    { shape: (x, z) => Math.min(westOfQuay(x, z) + 1, 7.8 - westOfQuay(x, z), 38 - Math.abs(z - 50)), ground: (_x, _z, _i, h) => h, edge: 0.5, kind: "shape", paint: Paint.Path },
     // BEACH: sea level, wide yellow sand from the river's mouth east, tapering off into the wharf's south end, smooth,
     // with dry sand at its back for palms.
     {
@@ -254,9 +256,9 @@ export const PLAN: Plan = {
   ramps: [
     // The jetty's land end, flush with the deck ground (the jetty stands at its height: defaultIsland jettyY).
     { pts: [[DOCK.x - 1.3, DOCK.z, H.deck], [DOCK.x - 5, DOCK.z, H.deck]], half: 1.6, shoulder: 1.5 },
-    // The stone path: along the deck, up the stairs (STAIRS) to the quay left of the jetty (south), then straight up the
+    // The stone path: from the deck boards up the stairs (STAIRS) to the quay left of the jetty (south), then straight up the
     // short climb between its fences to the plaza.
-    { label: ["Stone path", 56, 68], pts: [[DOCK.x - 5, DOCK.z, H.deck], [67.5, 51, H.deck], [STAIRS.x + 2, STAIRS.z, H.deck], [STAIRS.x - 2, STAIRS.z, H.quay], [58, STAIRS.z, H.quay], [49, STAIRS.z, H.village], [PX + 13, PZ + 1, H.village]], half: 1.8, shoulder: 2.5, paint: Paint.Stone },
+    { label: ["Stone path", 56, 68], pts: [[STAIRS.x + 2, STAIRS.z, H.deck], [STAIRS.x - 2, STAIRS.z, H.quay], [58, STAIRS.z, H.quay], [49, STAIRS.z, H.village], [PX + 13, PZ + 1, H.village]], half: 1.8, shoulder: 2.5, paint: Paint.Stone },
     // The way down to the beach, past the shop.
     { pts: [[36, 80, H.village], [34, 92, 2], [31, 101, H.beach + 0.3]], half: 1.6, shoulder: 3, paint: Paint.Path },
   ],
@@ -331,12 +333,13 @@ function scenery(): Obj[] {
   for (let z = 14; z <= 86; z += 4) for (const d of [1.6, 5.6]) { const q = quayAt(z, d); out.push(obj("deck", `deck-${out.length}`, q.x, q.z, q.yaw)); }
   out.push(obj("deck", "stairs", STAIRS.x, STAIRS.z, STAIRS.yaw, 1, "steps"));
   MARKET.forEach(([model, z, d, turn, scale], i) => { const q = quayAt(z, d); out.push(obj("prop", `market-${i}`, q.x, q.z, q.yaw + Math.PI + turn, scale, model)); });
-  for (const side of [-2.9, 2.9]) for (let x = 50; x <= 57; x++) out.push(obj("fence", `path-fence-${out.length}`, x, STAIRS.z + side, 0, 1, JOINED_FENCE));
+  let fence = 0;
+  for (const side of [-2.9, 2.9]) for (let x = 50; x <= 57; x++) out.push(obj("fence", `path-fence-${fence++}`, x, STAIRS.z + side, 0, 1, JOINED_FENCE));
   [[30, 3.5], [78, 3.5]].forEach(([z, d], i) => { const q = quayAt(z, d); out.push(obj("lamp", `lamp-${11 + i}`, q.x, q.z)); });
   HOUSES.forEach(([x, z, colour], i) => out.push(obj("house", `house-${i + 1}`, x, z, facing(PX - x, PZ - z), 1, `chalet-${colour}`)));
   out.push(obj("campfire", "campfire", 14, 104));
-  [[-40, 99, "palm-a"], [-31, 98, "palm-b"], [-22, 99.5, "palm-a"], [2, 99, "palm-b"], [24, 99, "palm-a"], [30, 100, "palm-b"], [42, 97, "palm-a"]]
-    .forEach(([x, z, model], i) => out.push(obj("prop", `palm-${i}`, +x, +z, +x * 0.37, 1.5, `${model}`)));
+  ([[-40, 99, "palm-a"], [-31, 98, "palm-b"], [-22, 99.5, "palm-a"], [2, 99, "palm-b"], [24, 99, "palm-a"], [30, 100, "palm-b"], [42, 97, "palm-a"]] as const)
+    .forEach(([x, z, model], i) => out.push(obj("prop", `palm-${i}`, x, z, x * 0.37, 1.5, model)));
   [[-30, 109], [-22, 110], [28, 108]].forEach(([x, z], i) => out.push(obj("prop", `parasol-${i}`, x, z, x * 0.21, 1, "beach-parasol")));
   out.push(obj("prop", "lighthouse", 126, 104, -0.6, 0.2, "lighthouse"));
   out.push(obj("barrier", "slide-mountain", 26, 8.5, 0.1, 1.4, "rockslide"));

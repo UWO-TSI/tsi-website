@@ -152,9 +152,9 @@ export default function Wharf({ dock, light, place, dressed = false, children }:
     return () => handles.forEach(h => foamRings.remove(h));
   }, [dockX, dockZ, dockYaw]);
   // A raised deck (lib/game/defaultIsland.ts jettyY) lifts the pier and the finger pier, with ladders down to the water.
-  const ladders = useMemo(() => ladderBoxes(dock.y ?? 0), [dock.y]);
+  const deckY = dock.y ?? 0, ladders = useMemo(() => ladderBoxes(deckY), [deckY]);
   return <group position={[dock.x, 0, dock.z]} rotation={[0, dock.yaw, 0]}>
-    <group position-y={dock.y ?? 0}>
+    <group position-y={deckY}>
       <primitive object={pier} />
       <WoodBoxes boxes={ladders} />
     </group>

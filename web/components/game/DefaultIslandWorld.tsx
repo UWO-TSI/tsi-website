@@ -440,7 +440,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   const fauna = useMemo(() => ({ ...layout.fauna, ground: island.ground, standable: island.standable, surface: island.surface, top: island.top, player }), [layout, island, player]);
   // The arrival (components/game/arrival): Bram walks you through, the fish crate on the pier until the tour is over.
   const arrivalPhase = useArrivalPhase();
-  const dock = useMemo(() => wharfDock(v), [v]);
+  const dock = layout.dock;
   const crated = useMemo(() => (dock ? withCrates(island, crateSpots(routeFor(GAME_WORLD), placeWorld(dock, v))) : null), [island, dock, v]);
   const walkOn = crated && (arrivalPhase === "crossing" || arrivalPhase === "landing" || arrivalPhase === "tutorial") ? crated : island;
   const spots = useMemo(() => eventSpots(event?.decor ?? null), [event]);
@@ -607,7 +607,7 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
   const placed = new Map(layout.landmarks.map(l => [l.id, l]));
   const at = (l: Landmark, dy = 0): [number, number, number] => [l.x, ground(l.x, l.z) + dy, l.z];
   const front = (l: Landmark) => l.z - (l.half?.[1] ?? 0);
-  const { hq, shop, oracle, cafe, museum, ruins, monument, mailbox, notice, wharf } = Object.fromEntries(placed) as Partial<Record<Landmark["id"], Landmark>>;
+  const { hq, shop, oracle, cafe, museum, ruins, monument, mailbox, notice } = Object.fromEntries(placed) as Partial<Record<Landmark["id"], Landmark>>;
   const board = placed.get("catch"), { missions } = layout;
   return <>
     {hq && <>
@@ -636,8 +636,7 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {notice && <GLBProp url={NOTICE_BOARD_URL} position={at(notice)} rotation={[0, Math.PI + (notice.yaw ?? 0), 0]} />}
     {board && <GLBProp url={CATCH_BOARD_URL} position={at(board)} rotation={[0, Math.PI + (board.yaw ?? 0), 0]} />}
     {missions && DROPS.combat && <GLBProp url={NOTICE_BOARD_URL} position={[missions.at[0], ground(...missions.at), missions.at[1] + 0.3]} rotation={[0, missions.yaw, 0]} />}
-    {wharf && layout.dock && <Wharf dock={layout.dock} light={light} place="village" dressed />}
-    {/* The wharf's deck boards and steps (the `deck` squares; none on a map that lays none). */}
+    {layout.dock && <Wharf dock={layout.dock} light={light} place="village" dressed />}
     <WoodBoxes boxes={layout.boards} />
     {layout.landmarks.filter(l => SIGNS[l.id] && !opened.includes(l.id as WorldGoalId)).map(l => <LandmarkTag key={l.id} position={[l.x, ground(l.x, l.z) + (l.half && l.half[0] > 1 ? 3.6 : 2.3), l.z - (l.half?.[1] ?? 0)]} closed={!l.open}>
       {SIGNS[l.id]}

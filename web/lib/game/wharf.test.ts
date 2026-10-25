@@ -170,7 +170,7 @@ describe("the wharf's deck boards and ladders", () => {
   it("lays a square's boards level on the ground under its centre, covering it", () => {
     const boards = deckBoards([{ x: 10, z: 5, yaw: 0.3 }], (x) => 1 + x * 0.01);
     expect(boards.length).toBe(2 * Math.round(DECK.size / DECK.pitch));
-    for (const b of boards) expect(b.y - b.h / 2).toBeCloseTo(1.1, 6);
+    for (const b of boards) expect(b.y + b.h / 2).toBeCloseTo(1.11, 6); // the tops a hair over the ground
     const area = boards.reduce((a, b) => a + b.w * b.d, 0);
     expect(area).toBeGreaterThan(DECK.size * DECK.size * 0.85);
   });
@@ -179,7 +179,7 @@ describe("the wharf's deck boards and ladders", () => {
     const steps = deckBoards([{ x: 0, z: 0, model: "steps" }], (_x, z) => 1 + Math.max(0, Math.min(1, (z + 2) / 4)));
     expect(steps.length).toBe(DECK.treads);
     steps.forEach((s, i) => { if (i) expect(s.y + s.h / 2).toBeGreaterThan(steps[i - 1].y + steps[i - 1].h / 2); });
-    expect(steps.at(-1)!.y + steps.at(-1)!.h / 2).toBeCloseTo(2, 6);
+    expect(steps.at(-1)!.y + steps.at(-1)!.h / 2).toBeCloseTo(1.875, 6); // the ground under the top tread's middle
   });
 
   it("hangs ladders from a raised deck to below the water, and none from a deck at the water", () => {

@@ -27,6 +27,7 @@ import { worldNow } from "@/lib/game/worldClock";
 import { myTrip } from "@/lib/game/myTrip";
 import { CROSS_TIME, boatPose, newBoatPose } from "@/lib/game/boatTrip";
 import { BOAT, dockToWorld, floatBoat, newFloat, type Dock } from "@/lib/game/wharf";
+import { CRATE_URL } from "@/lib/game/propModels";
 import { liveWaves } from "@/lib/game/waves";
 import { landmark, landmarkPoint, type VillageIsland } from "@/lib/game/defaultIsland";
 import type { Village } from "@/lib/game/villageMap";
@@ -49,7 +50,6 @@ import rs from "../residents.module.css";
 import tags from "../nameTags.module.css";
 import aw from "./ArrivalWorld.module.css";
 
-const CRATE_URL = "/assets/game/wharf/crate.glb";
 useGLTF.preload(CRATE_URL);
 /**
  * A fish crate (art/wharf/build_crate.py) where the route puts one (lib/game/arrival/routes: the village's fills the
@@ -124,7 +124,7 @@ export default function ArrivalWorld({ v, island, player, dock, held, keys, worl
   return <>
     {crossing && <CrossingDirector dock={dock} player={player} />}
     {crossing && <BramAboard dock={dock} />}
-    {(crossing || ashore) && <Suspense fallback={null}><Crates spots={crates} /></Suspense>}
+    {(crossing || ashore) && <Suspense fallback={null}><Crates spots={crates} y={dock.y ?? 0} /></Suspense>}
     {ashore && <BramGuide v={v} island={island} player={player} dock={dock} keys={keys} route={route} places={pw} />}
   </>;
 }
@@ -199,11 +199,11 @@ function BramAboard({ dock }: { dock: Dock }) {
 }
 
 /** The route's fish crates. */
-function Crates({ spots }: { spots: readonly (XZ & { yaw: number })[] }) {
+function Crates({ spots, y }: { spots: readonly (XZ & { yaw: number })[]; y: number }) {
   const { scene } = useGLTF(CRATE_URL);
   const models = useMemo(() => spots.map(() => prepareModel(scene, CRATE_URL, undefined, "solid")), [scene, spots]);
   useEffect(() => () => models.forEach(disposeModelMaterials), [models]);
-  return <>{spots.map((c, i) => <primitive key={i} object={models[i]} position={[c.x, 0, c.z]} rotation={[0, c.yaw, 0]} />)}</>;
+  return <>{spots.map((c, i) => <primitive key={i} object={models[i]} position={[c.x, y, c.z]} rotation={[0, c.yaw, 0]} />)}</>;
 }
 
 // ── The walk-along ────────────────────────────────────────────────────────────────────────────────────────────────
