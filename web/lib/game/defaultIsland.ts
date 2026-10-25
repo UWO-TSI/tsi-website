@@ -6,6 +6,7 @@ import { FURNITURE, studySolid, type Furniture } from "@/lib/study/seats";
 import { objectsOf, village, villageSpawnPoint, type MapObject, type Village } from "./villageMap";
 import { barrierBoxes, barrierFootprint, barrierPlacements, inBarrier } from "./barriers";
 import { DROPS } from "./drops";
+import { PIER, type Dock } from "./wharf";
 import { FENCE_POST_HALF, fenceSolids, isJoinedFence } from "./fences";
 import { MAX_CLIMB, terrainHeight, terrainSteepness, terrainSurface } from "./world/terrain";
 
@@ -85,11 +86,15 @@ export const PROP_FOOTPRINT: Record<string, [number, number]> = {
   "fence-country-a": [0.5, 0.16], "fence-country-b": [0.5, 0.16],
   // The faceted boulders (lib/game/rocks.ts, art/rocks/build_rocks.py).
   ...Object.fromEntries(ROCK_MODELS.map(m => [m, ROCK_SIZE[m].half])),
+  // The `prop` kind's scenery, in the model's own units (its object's scale sizes it): a palm or a parasol by its trunk or pole.
+  barrel: [4.85, 4.85], lighthouse: [9, 9], crate: [0.91, 0.3], "market-cart": [3.77, 1.03], "shop-cart": [0.44, 0.28],
+  "beach-parasol": [0.1, 0.1], "palm-a": [0.3, 0.3], "palm-b": [0.25, 0.25],
 };
 /** Prop tops before scale, measured from the GLB bounds: what a jump clears or lands on (lib/game/movement). */
 export const PROP_TOP: Record<string, number> = {
   "bench-wood": 0.51, "rock-a": 0.61, "rock-b": 0.59, "rock-c": 0.52, "fence-country-a": 0.7, "fence-country-b": 0.69,
   ...Object.fromEntries(ROCK_MODELS.map(m => [m, ROCK_SIZE[m].top])),
+  barrel: 11.66, lighthouse: 38, crate: 0.52, "market-cart": 2.84, "shop-cart": 0.87, "beach-parasol": 2.33, "palm-a": 3.94, "palm-b": 2.7,
 };
 /**
  * Residents' houses (the `house` kind, specs/world-editor.md decision 10): the chalet in its three colourways, the
@@ -163,6 +168,21 @@ export function wharfDeck(v: Village = village()) {
   const w = landmark("wharf", v);
   return w ? turnedRect(w.x, w.z, WHARF_DECK_LOCAL, w.yaw) : null;
 }
+/**
+ * The jetty's deck height: DECK_Y, or on a smooth world whose quay stands higher (terrain v3: the wharf's deck boards at
+ * 1), level with the ground at its land end, to the quarter unit.
+ */
+export function jettyY(v: Village = village()): number {
+  const w = landmark("wharf", v);
+  if (!w || !v.terrain) return DECK_Y;
+  const [dx, dz] = turn(0, PIER.land, w.yaw);
+  return Math.max(DECK_Y, Math.round(terrainHeight(v.terrain, w.x + dx, w.z + dz) * 4) / 4);
+}
+/** The wharf as a dock (lib/game/wharf.ts): where its pier stands, its turn and its deck's height. */
+export function wharfDock(v: Village = village()): Dock | null {
+  const w = landmark("wharf", v);
+  return w ? { x: w.x, z: w.z, yaw: w.yaw ?? 0, y: jettyY(v) } : null;
+}
 /** Every walkable deck of the wharf in world XZ: the jetty and its finger pier. */
 export function wharfDecks(v: Village = village()) {
   const w = landmark("wharf", v);
@@ -190,8 +210,8 @@ export function villageSpawn(v: Village = village()): [number, number, number] {
   return [x, 0, z];
 }
 
-/** The benches, rocks and fences: the props with a solid footprint. */
-export const propsOf = (v: Village = village()) => [...objectsOf("bench", v), ...objectsOf("rock", v), ...objectsOf("fence", v)];
+/** The benches, rocks, fences and scenery props: the props with a solid footprint. */
+export const propsOf = (v: Village = village()) => [...objectsOf("bench", v), ...objectsOf("rock", v), ...objectsOf("fence", v), ...objectsOf("prop", v)];
 
 /** Solid footprint of a bench, rock or fence: half extents × scale (before its yaw). */
 export function propFootprint(o: Pick<MapObject, "model" | "scale">): [number, number] | null {
@@ -312,10 +332,13 @@ export const DECK_Y = 0;
 /** Walking on a village: ground height, solids and the stepping rule, from its map and objects. */
 export function islandOf(v: Village): VillageIsland {
   const { map, field, terrain } = v;
-  const decks = [...wharfDecks(v), ...bridgeDecks(v)];
+  const jetty = wharfDecks(v), bridges = bridgeDecks(v), decks = [...jetty, ...bridges], jettyTop = jettyY(v);
   // The smooth world walks its heightfield (the drawn ground); a deck over its water is walked at the deck's height.
   const ground = terrain
-    ? (x: number, z: number) => { const h = terrainHeight(terrain, x, z); return h < DECK_Y && decks.some(d => inRect(x, z, d)) ? DECK_Y : h; }
+    ? (x: number, z: number) => {
+      const h = terrainHeight(terrain, x, z);
+      return h < jettyTop && jetty.some(d => inRect(x, z, d)) ? jettyTop : h < DECK_Y && bridges.some(d => inRect(x, z, d)) ? DECK_Y : h;
+    }
     : (x: number, z: number) => sampleGroundHeight(map, field, x, z);
   const surface = terrain ? (x: number, z: number) => terrainSurface(terrain, x, z) : (x: number, z: number) => drawnSurfaceAt(map, x, z);
   const rails = bridgeRails(v);

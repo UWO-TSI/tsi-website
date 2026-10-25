@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BUOYS, FINGER, MOORED, ROWBOAT, ROWBOATS, SEA_Y, dockToWorld, fitPlane, floatBoat, floatBuoy, floatRowboat, mooredPose, newBoatPose, newFloat, newRide, worldToDock, type Dock } from "./wharf";
+import { BUOYS, DECK, FINGER, MOORED, ROWBOAT, ROWBOATS, SEA_Y, deckBoards, dockToWorld, ladderBoxes, fitPlane, floatBoat, floatBuoy, floatRowboat, mooredPose, newBoatPose, newFloat, newRide, worldToDock, type Dock } from "./wharf";
 import { TRAINS, waterWaveAt, waveState } from "./waves";
 import { mirrorWaterField } from "./waterField";
 import { TUNING_DEFAULTS } from "./tuning";
@@ -163,5 +163,29 @@ describe("the village wharf's finger pier and rowboats", () => {
       expect(Math.abs(f.y - SEA_Y)).toBeLessThanOrEqual(RANGE + 1e-9);
       expect(Math.abs(f.pitch) + Math.abs(f.roll)).toBeLessThan(0.15);
     }
+  });
+});
+
+describe("the wharf's deck boards and ladders", () => {
+  it("lays a square's boards level on the ground under its centre, covering it", () => {
+    const boards = deckBoards([{ x: 10, z: 5, yaw: 0.3 }], (x) => 1 + x * 0.01);
+    expect(boards.length).toBe(2 * Math.round(DECK.size / DECK.pitch));
+    for (const b of boards) expect(b.y - b.h / 2).toBeCloseTo(1.1, 6);
+    const area = boards.reduce((a, b) => a + b.w * b.d, 0);
+    expect(area).toBeGreaterThan(DECK.size * DECK.size * 0.85);
+  });
+
+  it("climbs a steps square's ground in treads, each higher than the last", () => {
+    const steps = deckBoards([{ x: 0, z: 0, model: "steps" }], (_x, z) => 1 + Math.max(0, Math.min(1, (z + 2) / 4)));
+    expect(steps.length).toBe(DECK.treads);
+    steps.forEach((s, i) => { if (i) expect(s.y + s.h / 2).toBeGreaterThan(steps[i - 1].y + steps[i - 1].h / 2); });
+    expect(steps.at(-1)!.y + steps.at(-1)!.h / 2).toBeCloseTo(2, 6);
+  });
+
+  it("hangs ladders from a raised deck to below the water, and none from a deck at the water", () => {
+    expect(ladderBoxes(0)).toEqual([]);
+    const rails = ladderBoxes(1).filter(b => b.h > 1);
+    expect(rails.length).toBe(6);
+    for (const r of rails) expect(r.y - r.h / 2).toBeLessThan(SEA_Y - 1);
   });
 });

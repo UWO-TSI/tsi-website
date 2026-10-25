@@ -27,6 +27,8 @@ import { ACNHBuilding, ACNHParts, CHALET_VARIANTS } from "./ACNHBuilding";
 import { FenceLine } from "./NatureModels";
 import { BRIDGE_URL, CATCH_BOARD_URL, MAILBOX_URL, MONUMENT_SIGN_URL, NOTICE_BOARD_URL } from "@/lib/game/propModels";
 import Wharf from "./wharf/Wharf";
+import WoodBoxes from "./wharf/WoodBoxes";
+import { deckBoards } from "@/lib/game/wharf";
 import TripVeil from "./wharf/TripVeil";
 import { tripSceneReady, useTripControl } from "./wharf/useTripControl";
 import { myTrip } from "@/lib/game/myTrip";
@@ -42,7 +44,7 @@ import JournalSheet from "@/components/progression/JournalSheet";
 import { useProgressionWorld, useCeremony, useChapterActions, type WorldGoalId } from "@/lib/game/progressionBridge";
 import confetti from "canvas-confetti";
 import type { InteriorStation } from "./interiorShared";
-import { villageIsland, villageSpawn, villageScale, landmark, landmarks, landmarkPoint, turn, wharfDecks, benchSeat, propFootprint, BENCH_SEAT_TOP, houseHalf, houseModel, type Landmark } from "@/lib/game/defaultIsland";
+import { villageIsland, villageSpawn, villageScale, landmark, landmarks, landmarkPoint, turn, wharfDecks, wharfDock, benchSeat, propFootprint, BENCH_SEAT_TOP, houseHalf, houseModel, type Landmark } from "@/lib/game/defaultIsland";
 import { village, objectsOf, type Village } from "@/lib/game/villageMap";
 import { LEVEL_STEP, levelAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
@@ -297,6 +299,8 @@ function villageLayout(v: Village) {
     /** Inside a building's footprint, with a step's margin (the glide guide never marks a ledge behind one). */
     underBuilding: (x: number, z: number) => [...marks, ...houseBoxes].some(l => !!l.half && Math.abs(x - l.x) < l.half[0] + 0.5 && Math.abs(z - l.z) < l.half[1] + 0.5),
     houses,
+    dock: wharfDock(v),
+    boards: deckBoards(objectsOf("deck", v), island.ground),
     fireflies: objectsOf("bush", v).map(xz),
     /** The beach campfire (specs/v1-drop.md §3): the map's, or open sand by the beach until one is placed. */
     campfire: campfireSite(v),
@@ -436,7 +440,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   const fauna = useMemo(() => ({ ...layout.fauna, ground: island.ground, standable: island.standable, surface: island.surface, top: island.top, player }), [layout, island, player]);
   // The arrival (components/game/arrival): Bram walks you through, the fish crate on the pier until the tour is over.
   const arrivalPhase = useArrivalPhase();
-  const dock = useMemo(() => { const w = landmark("wharf", v); return w ? { x: w.x, z: w.z, yaw: w.yaw ?? 0 } : null; }, [v]);
+  const dock = useMemo(() => wharfDock(v), [v]);
   const crated = useMemo(() => (dock ? withCrates(island, crateSpots(routeFor(GAME_WORLD), placeWorld(dock, v))) : null), [island, dock, v]);
   const walkOn = crated && (arrivalPhase === "crossing" || arrivalPhase === "landing" || arrivalPhase === "tutorial") ? crated : island;
   const spots = useMemo(() => eventSpots(event?.decor ?? null), [event]);
@@ -632,7 +636,9 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {notice && <GLBProp url={NOTICE_BOARD_URL} position={at(notice)} rotation={[0, Math.PI + (notice.yaw ?? 0), 0]} />}
     {board && <GLBProp url={CATCH_BOARD_URL} position={at(board)} rotation={[0, Math.PI + (board.yaw ?? 0), 0]} />}
     {missions && DROPS.combat && <GLBProp url={NOTICE_BOARD_URL} position={[missions.at[0], ground(...missions.at), missions.at[1] + 0.3]} rotation={[0, missions.yaw, 0]} />}
-    {wharf && <Wharf dock={{ x: wharf.x, z: wharf.z, yaw: wharf.yaw ?? 0 }} light={light} place="village" dressed />}
+    {wharf && layout.dock && <Wharf dock={layout.dock} light={light} place="village" dressed />}
+    {/* The wharf's deck boards and steps (the `deck` squares; none on a map that lays none). */}
+    <WoodBoxes boxes={layout.boards} />
     {layout.landmarks.filter(l => SIGNS[l.id] && !opened.includes(l.id as WorldGoalId)).map(l => <LandmarkTag key={l.id} position={[l.x, ground(l.x, l.z) + (l.half && l.half[0] > 1 ? 3.6 : 2.3), l.z - (l.half?.[1] ?? 0)]} closed={!l.open}>
       {SIGNS[l.id]}
     </LandmarkTag>)}
@@ -762,8 +768,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const talkNow = useSyncExternalStore(subscribeTalk, talkView, emptyTalkView);
   const talking = talkNow.activeId !== null;
   // The boat between the village and your island, and a first login's arrival by it (arrival-wharf.md §3).
-  const wharfDock = useMemo(() => { const w = landmark("wharf"); return w ? { x: w.x, z: w.z, yaw: w.yaw ?? 0 } : null; }, []);
-  const dockOf = useCallback((place: TripPlace) => (place === "home" ? HOME_PIER : wharfDock), [wharfDock]);
+  const villageDock = useMemo(() => wharfDock(), []);
+  const dockOf = useCallback((place: TripPlace) => (place === "home" ? HOME_PIER : villageDock), [villageDock]);
   const goTo = useCallback((place: TripPlace) => {
     setSite(place); setInside(null); setReturned(false); setExitFrom(null); setFromBoat(place === "village");
     setSceneShown(n => n + 1); // a fresh scene gate: the boat comes in once the island has loaded and warmed up

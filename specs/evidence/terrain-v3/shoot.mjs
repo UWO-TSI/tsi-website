@@ -8,12 +8,12 @@ import { mkdirSync } from "node:fs";
 const require = createRequire("/opt/homebrew/lib/node_modules/");
 const { chromium } = require("playwright");
 
-// R1c spots (the jetty at (74.5, 46), the plaza at (30, 50), the border along z 6 to 13).
+// R1c and R2 spots (the jetty at (74.5, 46), the plaza at (30, 50), the border along z 6 to 13).
 export const VIEWS = {
   "01-arrival-wharf": { at: [68.5, 46], yaw: -90, pitch: 0.45, zoom: 1.6 },
   "02-wharf-from-south": { at: [62, 80], yaw: 170, pitch: 0.42, zoom: 1.6 },
   "03-path-down-to-wharf": { at: [44, 54], yaw: 90, pitch: 0.45, zoom: 1.6 },
-  "04-plaza": { at: [42, 60], yaw: 215, pitch: 0.42, zoom: 1.6 },
+  "04-plaza": { at: [44, 53], yaw: 250, pitch: 0.42, zoom: 1.6 },
   "05-hq": { at: [28, 50], yaw: -90, pitch: 0.45, zoom: 1.3 },
   "06-beach": { at: [-10, 102], yaw: 75, pitch: 0.42, zoom: 1.6 },
   "07-mountain-from-village": { at: [30, 44], yaw: 195, pitch: 0.35, zoom: 1.6 },
@@ -21,6 +21,11 @@ export const VIEWS = {
   "09-forest-edge": { at: [60, 22], yaw: 165, pitch: 0.38, zoom: 1.6 },
   "10-river-and-meadow": { at: [-34, 60], yaw: -70, pitch: 0.42, zoom: 1.6 },
   "11-north-strait": { at: [-96, 10], yaw: -90, pitch: 0.4, zoom: 1.6 },
+  // R2 close views: the fish market on the deck boards, the jetty's ladders, the houses round the plaza, the campfire.
+  "13-market": { at: [64, 46], yaw: 165, pitch: 0.42, zoom: 1.2 },
+  "14-jetty-ladders": { at: [73.4, 40.5], yaw: 75, pitch: 0.38, zoom: 0.9 },
+  "15-plaza-houses": { at: [30, 66], yaw: 180, pitch: 0.55, zoom: 1.6 },
+  "16-campfire": { at: [14, 97], yaw: 0, pitch: 0.45, zoom: 1.2 },
 };
 
 const [OUT = "/tmp/terrain-v3", ONLY] = process.argv.slice(2), PORT = process.env.PORT ?? 3171;

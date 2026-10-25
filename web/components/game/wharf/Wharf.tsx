@@ -14,7 +14,7 @@ import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { disposeModelMaterials, prepareModel } from "@/lib/game/modelMaterials";
 import type { IslandLight } from "@/lib/game/islandLighting";
-import { BUOYS, DRESSING_URL, FINGER, LANTERNS, PIER, PIER_URL, ROWBOAT, ROWBOATS, ROWBOAT_URL, dockToWorld, floatBuoy, floatRowboat, newFloat, newRide, type Dock, type Float, type Ride } from "@/lib/game/wharf";
+import { BUOYS, DRESSING_URL, FINGER, LANTERNS, PIER, PIER_URL, ROWBOAT, ROWBOATS, ROWBOAT_URL, dockToWorld, floatBuoy, floatRowboat, ladderBoxes, newFloat, newRide, type Dock, type Float, type Ride } from "@/lib/game/wharf";
 import { liveWaves } from "@/lib/game/waves";
 import { windowLit } from "@/lib/game/islandLighting";
 import { RopeLine } from "./ropeLine";
@@ -23,6 +23,7 @@ import { foamRings } from "@/lib/game/foamRings";
 import { berthTaken, type TripPlace } from "@/lib/game/boatTrip";
 import { myTrip, readMyTrip, subscribeMyTrip } from "@/lib/game/myTrip";
 import Boat from "./Boat";
+import WoodBoxes from "./WoodBoxes";
 import { useTripBoat } from "./useTripBoat";
 
 /** Our buoy (art/props/build_buoy.py) at scale 1: its float meets the water BUOY_WATERLINE up its model (its weighted stem hangs below). */
@@ -66,7 +67,7 @@ function rideMoored(boats: readonly Moored[], groups: readonly (THREE.Group | nu
     g.position.set(rb.x + b.float.sway, b.float.y - ROWBOAT.draft, rb.z);
     g.rotation.set(b.float.pitch, rb.yaw, b.float.roll, "YXZ");
     g.updateMatrix();
-    if (b.line) b.line.update(_post.set(rb.post[0], FINGER.postTop - 0.06, rb.post[1]), _bow.copy(BOW_RING).applyMatrix4(g.matrix), 0.12, 0);
+    if (b.line) b.line.update(_post.set(rb.post[0], FINGER.postTop - 0.06 + (dock.y ?? 0), rb.post[1]), _bow.copy(BOW_RING).applyMatrix4(g.matrix), 0.12, 0);
     const c = Math.cos(rb.yaw), s = Math.sin(rb.yaw);
     [-0.38, 0.32].forEach((along, k) => {
       dockToWorld(dock, rb.x + along * s, rb.z + along * c, at);
@@ -109,7 +110,7 @@ function Dressing({ dock, light, rope }: { dock: Dock; light: IslandLight; rope:
   }, [dockX, dockZ, dockYaw]);
   useFrame((_, raw) => rideMoored(moored, groups.current, rings.current, dock, Math.min(raw, 0.1)));
   return <>
-    <primitive object={dressing.model} />
+    <primitive object={dressing.model} position-y={dock.y ?? 0} />
     {boats.map((b, i) => <group key={i} ref={g => { groups.current[i] = g; }} matrixAutoUpdate={false}><primitive object={b} /></group>)}
     {moored.map((m, i) => m.line && <primitive key={i} object={m.line.mesh} />)}
   </>;
@@ -150,8 +151,13 @@ export default function Wharf({ dock, light, place, dressed = false, children }:
     for (const [x, z] of BUOYS) { dockToWorld(d, x, z, at); handles.push(foamRings.add(at.x, at.z, 0.33, 0.7)); }
     return () => handles.forEach(h => foamRings.remove(h));
   }, [dockX, dockZ, dockYaw]);
+  // A raised deck (lib/game/defaultIsland.ts jettyY) lifts the pier and the finger pier, with ladders down to the water.
+  const ladders = useMemo(() => ladderBoxes(dock.y ?? 0), [dock.y]);
   return <group position={[dock.x, 0, dock.z]} rotation={[0, dock.yaw, 0]}>
-    <primitive object={pier} />
+    <group position-y={dock.y ?? 0}>
+      <primitive object={pier} />
+      <WoodBoxes boxes={ladders} />
+    </group>
     {BUOYS.map(([x, z], i) => <Buoy key={i} dock={dock} x={x} z={z} />)}
     <Boat dock={dock} light={light} rope={rope} poseAt={boat.poseAt} onPlaced={boat.onPlaced} />
     {dressed && <Dressing dock={dock} light={light} rope={rope} />}

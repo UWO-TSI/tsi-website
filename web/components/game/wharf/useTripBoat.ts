@@ -50,7 +50,7 @@ function tripFrame(trip: BoatTrip, own: boolean, dock: Dock, pose: BoatPose, flo
   // The bench, wherever the boat is and however it leans; the step on the pier; and between them, mid-step, the arc.
   _seat.set(BOAT.seatAt[0], BOAT.floor, BOAT.seatAt[1]).applyMatrix4(group.matrix);
   dockToWorld(dock, r.x + (_seat.x - r.x) * a, r.z + (_seat.z - r.z) * a, _w);
-  ride.x = _w.x; ride.z = _w.z; ride.y = _seat.y * a + r.arc;
+  ride.x = _w.x; ride.z = _w.z; ride.y = _seat.y * a + (dock.y ?? 0) * (1 - a) + r.arc;
   const boatYaw = pose.yaw + dock.yaw;
   ride.yaw = lerpAngle(r.yaw + dock.yaw, boatYaw, a);
   ride.speed = r.speed; ride.seated = r.seated; ride.lift = SIT_LIFT;

@@ -20,6 +20,8 @@ import { smoothstep, valueNoise, type MapAnnotation, type ShoreSdf } from "../gr
 import { CONVERT, contourDistance, limitSteepness, padBuildings, rockRelief, shelf, softMin, wharfQuay } from "./convert";
 import type { World } from "./format";
 import { Paint, createTerrain, sampleX, sampleZ } from "./terrain";
+import { JOINED_FENCE } from "../fences";
+import type { ObjectKind } from "../villageMap";
 
 type XZ = readonly [number, number];
 type Field = (x: number, z: number) => number;
@@ -151,6 +153,16 @@ const QUAY: readonly XZ[] = [[69, 8], [73, 28], [74, 46], [73, 64], [66, 92]];
 const westOfQuay = sideOf(QUAY);
 /** The jetty (the wharf landmark): its land end at the shore, out to sea eastward. */
 export const DOCK = { x: 74.5, z: 46, yaw: -Math.PI / 2 } as const;
+/** A point `d` in from the wharf's shore at `z`, and the yaw that turns a square's local z inland there. */
+function quayAt(z: number, d: number): { x: number; z: number; yaw: number } {
+  let j = 0;
+  while (j < QUAY.length - 2 && QUAY[j + 1][1] < z) j++;
+  const [ax, az] = QUAY[j], [bx, bz] = QUAY[j + 1], len = Math.hypot(bx - ax, bz - az), f = (z - az) / (bz - az);
+  const nx = -(bz - az) / len, nz = (bx - ax) / len;
+  return { x: ax + (bx - ax) * f + nx * d, z: z + nz * d, yaw: Math.atan2(nx, nz) };
+}
+/** The path's stairs from the deck up to the quay: a "steps" deck square across the step, south of the jetty. */
+const STAIRS = quayAt(56, 9.5);
 /** The plaza's centre and radius (its stone). */
 export const PLAZA: { at: XZ; r: number } = { at: [30, 50], r: 12 };
 
@@ -240,10 +252,11 @@ export const PLAN: Plan = {
     { name: "River", label: ["River (sea level)", -80, 64], shape: strip(RIVER, 4, 7, 0.6, 9, 97), ground: 0, edge: 6, coast: 2.4, kind: "water" },
   ],
   ramps: [
-    // The jetty's land end (deck height 0 until R2 raises the pier) up onto the deck ground at 1.
-    { pts: [[DOCK.x - 1.3, DOCK.z, 0], [DOCK.x - 5, DOCK.z, H.deck]], half: 1.6, shoulder: 1.5 },
-    // The stone path: along the deck, up the stairs to the quay left of the jetty (south), then the short climb to the plaza.
-    { label: ["Stone path", 56, 68], pts: [[DOCK.x - 5, DOCK.z, H.deck], [67, 52, H.deck], [65.5, 55, H.deck], [62.5, 56.5, H.quay], [58, 57, H.quay], [49, 55, H.village], [PX + 13, PZ + 1, H.village]], half: 1.8, shoulder: 2.5, paint: Paint.Stone },
+    // The jetty's land end, flush with the deck ground (the jetty stands at its height: defaultIsland jettyY).
+    { pts: [[DOCK.x - 1.3, DOCK.z, H.deck], [DOCK.x - 5, DOCK.z, H.deck]], half: 1.6, shoulder: 1.5 },
+    // The stone path: along the deck, up the stairs (STAIRS) to the quay left of the jetty (south), then straight up the
+    // short climb between its fences to the plaza.
+    { label: ["Stone path", 56, 68], pts: [[DOCK.x - 5, DOCK.z, H.deck], [67.5, 51, H.deck], [STAIRS.x + 2, STAIRS.z, H.deck], [STAIRS.x - 2, STAIRS.z, H.quay], [58, STAIRS.z, H.quay], [49, STAIRS.z, H.village], [PX + 13, PZ + 1, H.village]], half: 1.8, shoulder: 2.5, paint: Paint.Stone },
     // The way down to the beach, past the shop.
     { pts: [[36, 80, H.village], [34, 92, 2], [31, 101, H.beach + 0.3]], half: 1.6, shoulder: 3, paint: Paint.Path },
   ],
@@ -284,18 +297,64 @@ const LAYOUT: Record<string, { x: number; z: number; yaw?: number }> = {
   beach: { x: -8, z: 106 },
   "study-0": { x: PX - 5, z: PZ - 10 }, "study-1": { x: PX + 11, z: PZ - 10 }, "study-2": { x: PX - 5, z: PZ + 10 }, "study-3": { x: PX + 11, z: PZ + 10 },
   "bench-0": { x: PX - 9, z: PZ - 4 }, "bench-1": { x: PX - 9, z: PZ + 4 }, "bench-2": { x: PX + 13.5, z: PZ - 6 }, "bench-3": { x: PX + 13.5, z: PZ + 6 },
-  "lamp-0": { x: 70.5, z: 51 }, "lamp-1": { x: 62, z: 59.5 }, "lamp-2": { x: 60, z: 53.5 }, "lamp-3": { x: 53, z: 59 }, "lamp-4": { x: 52, z: 52.5 },
-  "lamp-5": { x: 46, z: 56 }, "lamp-6": { x: PX - 11, z: PZ - 9 }, "lamp-7": { x: PX + 14, z: PZ - 10 }, "lamp-8": { x: PX - 11, z: PZ + 9 },
+  "lamp-0": { x: 70.5, z: 51 }, "lamp-1": { x: 62, z: 59.5 }, "lamp-2": { x: 60, z: 53 }, "lamp-3": { x: 53.5, z: 60 }, "lamp-4": { x: 52.5, z: 52 },
+  "lamp-5": { x: 46, z: 57.5 }, "lamp-6": { x: PX - 11, z: PZ - 9 }, "lamp-7": { x: PX + 14, z: PZ - 10 }, "lamp-8": { x: PX - 11, z: PZ + 9 },
   "lamp-9": { x: PX + 14, z: PZ + 10 }, "lamp-10": { x: 39, z: 84 },
 };
+
+type Obj = World["objects"][number];
+/** An object with its keys in the order the world file reads them back (format.ts), defaults left out, so it saves to the same bytes. */
+const obj = (kind: ObjectKind, id: string, x: number, z: number, yaw = 0, scale = 1, model?: string): Obj => ({
+  id, kind, x: +x.toFixed(2), z: +z.toFixed(2), ...(+yaw.toFixed(4) ? { yaw: +yaw.toFixed(4) } : {}), ...(scale !== 1 ? { scale } : {}), ...(model ? { model } : {}),
+});
+/** The village's resident houses (scenery shells, their doors closed) in the gaps round the plaza, by colourway. */
+const HOUSES: readonly [number, number, string][] = [
+  [PX + 15, PZ - 15, "yellow"], [PX - 14, PZ - 20, "red"], [PX - 26, PZ - 12, "brown"], [PX - 26, PZ + 12, "yellow"],
+  [PX + 15, PZ + 16, "red"], [PX - 10, PZ + 28, "brown"], [PX - 8, PZ - 26, "brown"], [PX - 36, PZ, "red"],
+];
+/** The fish market on the deck boards (quayAt's z and d, a turn off facing the water, a scale): stalls, carts, barrels and crates. */
+const MARKET: readonly (readonly [model: string, z: number, d: number, turn: number, scale: number])[] = [
+  ...[22, 28, 34, 40, 68, 74, 80].map(z => ["market-cart", z, 6, 0, 0.55] as const),
+  ...[[25, 7.6], [25.7, 7], [31, 7.6], [37, 7.6], [43, 7.3], [71, 7.6], [77, 7.6], [77.7, 7], [19, 1.4], [63, 1.4], [83, 7.4]].map(([z, d]) => ["barrel", z, d, z, 0.07] as const),
+  ...[[20, 1.2], [26.5, 1.3], [33, 1.2], [66, 1.2], [72.5, 1.3], [84, 1.2]].map(([z, d]) => ["crate", z, d, Math.PI / 2, 1] as const),
+  ["shop-cart", 43.5, 3.5, 0.4, 1.5], ["shop-cart", 61, 3.5, -0.3, 1.5],
+];
+/**
+ * R2's scenery (David's notes and the coordinator's reading, specs/lanes/terrain-v3.md): deck boards over the wharf's
+ * deck and the stairs up to the quay, the fish market on them, fences up the climb, lamps along the deck, the houses
+ * round the plaza, the campfire, palms and parasols on the beach, the lighthouse on its islet, and the closures:
+ * rockfall on the mountain way, the forest's edge on the forest way, a washed-out bridge over the river and an
+ * unbuilt one toward the north island.
+ */
+function scenery(): Obj[] {
+  const out: Obj[] = [];
+  for (let z = 14; z <= 86; z += 4) for (const d of [1.6, 5.6]) { const q = quayAt(z, d); out.push(obj("deck", `deck-${out.length}`, q.x, q.z, q.yaw)); }
+  out.push(obj("deck", "stairs", STAIRS.x, STAIRS.z, STAIRS.yaw, 1, "steps"));
+  MARKET.forEach(([model, z, d, turn, scale], i) => { const q = quayAt(z, d); out.push(obj("prop", `market-${i}`, q.x, q.z, q.yaw + Math.PI + turn, scale, model)); });
+  for (const side of [-2.9, 2.9]) for (let x = 50; x <= 57; x++) out.push(obj("fence", `path-fence-${out.length}`, x, STAIRS.z + side, 0, 1, JOINED_FENCE));
+  [[30, 3.5], [78, 3.5]].forEach(([z, d], i) => { const q = quayAt(z, d); out.push(obj("lamp", `lamp-${11 + i}`, q.x, q.z)); });
+  HOUSES.forEach(([x, z, colour], i) => out.push(obj("house", `house-${i + 1}`, x, z, facing(PX - x, PZ - z), 1, `chalet-${colour}`)));
+  out.push(obj("campfire", "campfire", 14, 104));
+  [[-40, 99, "palm-a"], [-31, 98, "palm-b"], [-22, 99.5, "palm-a"], [2, 99, "palm-b"], [24, 99, "palm-a"], [30, 100, "palm-b"], [42, 97, "palm-a"]]
+    .forEach(([x, z, model], i) => out.push(obj("prop", `palm-${i}`, +x, +z, +x * 0.37, 1.5, `${model}`)));
+  [[-30, 109], [-22, 110], [28, 108]].forEach(([x, z], i) => out.push(obj("prop", `parasol-${i}`, x, z, x * 0.21, 1, "beach-parasol")));
+  out.push(obj("prop", "lighthouse", 126, 104, -0.6, 0.2, "lighthouse"));
+  out.push(obj("barrier", "slide-mountain", 26, 8.5, 0.1, 1.4, "rockslide"));
+  out.push(obj("barrier", "edge-forest-0", 58, 6.5, 0.1, 1, "forest-edge"), obj("barrier", "edge-forest-1", 66, 5.6, 0.1, 1, "forest-edge"));
+  out.push(obj("barrier", "bridge-river", -41, 52, Math.PI / 2, 1.2, "unbuilt-bridge"), obj("barrier", "bridge-north", -100, 8, 0, 1.4, "unbuilt-bridge"));
+  return out;
+}
+
+/** The layout's moves, then the generated objects (the border and the scenery) in place of any earlier copy of them. */
 export function layoutObjects(objects: World["objects"]): World["objects"] {
-  return [...objects.filter(o => !(o.kind === "barrier" && o.model === "border")).map(o => (LAYOUT[o.id] ? { ...o, ...LAYOUT[o.id] } : o)), ...borderObjects()];
+  const made = [...borderObjects(), ...scenery()], ids = new Set(made.map(o => `${o.kind}:${o.id}`));
+  return [...objects.filter(o => !ids.has(`${o.kind}:${o.id}`) && !(o.kind === "barrier" && o.model === "border")).map(o => (LAYOUT[o.id] ? { ...o, ...LAYOUT[o.id] } : o)), ...made];
 }
 
 /** The village's house and lot marks for David's editor session, in the gaps round the new plaza (5 x 5 cells each). */
 const MARKS: Record<string, XZ> = {
-  "House 1": [PX + 20, 34], "House 2": [PX - 14, 30], "House 3": [PX - 24, 36], "House 4": [PX - 24, 64], "House 5": [PX + 18, 66], "House 6": [PX - 12, 76],
-  "Lot: future shop (street wall, south)": [PX + 24, 60], "Lot: future shop (street wall, north)": [PX + 24, 42],
+  ...Object.fromEntries(HOUSES.slice(0, 6).map(([x, z], i) => [`House ${i + 1}`, [x, z] as XZ])),
+  "Lot: future shop (street wall, south)": [PX + 14, 61], "Lot: future shop (street wall, north)": [PX + 14, 40],
   "Lot: workshop (sudo pets, P2+)": [PX - 38, 52], "Lot: future houses (west lane)": [PX - 40, 36],
   "Lot: future houses (north lane)": [PX - 30, 24], "Lot: civic expansion": [PX - 20, 84],
   "Boat arrival: first-login cutscene lands here": [DOCK.x - 3, DOCK.z],

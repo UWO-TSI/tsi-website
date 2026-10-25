@@ -8,8 +8,8 @@ import { WATER_DROP } from "./grid";
 import { waterWaveAt, type WaveState } from "./waves";
 import { waterFieldAt } from "./waterField";
 
-/** Where a dock stands in the world: the pier's origin and its turn about +y (radians, three's rotation.y). */
-export interface Dock { x: number; z: number; yaw: number }
+/** Where a dock stands in the world: the pier's origin, its turn about +y (radians, three's rotation.y) and its deck's height (0 by default). */
+export interface Dock { x: number; z: number; yaw: number; y?: number }
 
 export const PIER_URL = "/assets/game/wharf/pier.glb";
 /** The sea's surface in a dock's frame (level 0's water). */
@@ -265,4 +265,59 @@ export function berthWeight(dock: { x: number; z: number; yaw?: number }, x: num
   if (out >= edge) return 0;
   const t = out / edge;
   return 1 - t * t * (3 - 2 * t);
+}
+
+/** A wooden box (a deck board, a tread, a ladder's rail or rung): its centre, size (across, up, along), turn and tone (0 to 1). */
+export interface WoodBox { x: number; y: number; z: number; w: number; h: number; d: number; yaw: number; tone: number }
+
+/** A `deck` square (terrain v3, the wharf's deck boards): its side, the boards' pitch, gap and thickness, a stair's treads. */
+export const DECK = { size: 4, pitch: 0.32, gap: 0.03, thick: 0.08, treads: 4 } as const;
+const rand = (n: number) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
+
+/**
+ * The boards of the `deck` squares, in world space. A square lies level at the ground under its centre, its boards side
+ * by side across it (its local x), each split at its own place so the joints stagger, so a square at the shore
+ * overhangs the water. A "steps" square instead climbs its ground along its local z in DECK.treads treads.
+ */
+export function deckBoards(decks: readonly { x: number; z: number; yaw?: number; model?: string }[], ground: (x: number, z: number) => number): WoodBox[] {
+  const out: WoodBox[] = [], half = DECK.size / 2, at = { x: 0, z: 0 };
+  decks.forEach((o, k) => {
+    const d = { x: o.x, z: o.z, yaw: o.yaw ?? 0 }, put = (lx: number, lz: number) => dockToWorld(d, lx, lz, at);
+    if (o.model === "steps") {
+      const run = DECK.size / DECK.treads, base = ground(put(0, -half).x, at.z) - 0.1;
+      for (let t = 0; t < DECK.treads; t++) {
+        const lz = -half + (t + 0.5) * run, top = ground(put(0, lz + run / 2).x, at.z);
+        put(0, lz);
+        out.push({ x: at.x, y: (top + base) / 2, z: at.z, w: DECK.size, h: top - base, d: run - DECK.gap, yaw: d.yaw, tone: rand(k * 13 + t) });
+      }
+      return;
+    }
+    const y = ground(o.x, o.z) + DECK.thick / 2, n = Math.round(DECK.size / DECK.pitch);
+    for (let b = 0; b < n; b++) {
+      const lx = -half + (b + 0.5) * (DECK.size / n), cut = -half + DECK.size * (0.25 + 0.5 * rand(k * 97 + b));
+      for (const [z0, z1] of [[-half, cut], [cut, half]]) {
+        put(lx, (z0 + z1) / 2);
+        out.push({ x: at.x, y, z: at.z, w: DECK.size / n - DECK.gap, h: DECK.thick, d: z1 - z0 - DECK.gap, yaw: d.yaw, tone: rand(k * 31 + b * 7 + z0) });
+      }
+    }
+  });
+  return out;
+}
+
+/**
+ * Ladders down off a raised jetty into the water, in the dock's frame: (x, z) and a turn (0: on a -x face, its rungs
+ * along z; a quarter: on a z face). Outside the piles: on the jetty's -x side, off the finger pier's end, and on its
+ * seaward face by the rowboats.
+ */
+export const LADDERS: readonly (readonly [number, number, number])[] = [[-1.2, -0.6, 0], [-4.82, -2.875, 0], [-3.95, -3.62, Math.PI / 2]];
+/** The ladders' rails and rungs, in the dock's frame, from the deck down to below the water `rise` under it; none on a deck at the water. */
+export function ladderBoxes(rise: number): WoodBox[] {
+  if (rise <= 0) return [];
+  const bottom = -rise - 0.6, out: WoodBox[] = [];
+  for (const [x, z, yaw] of LADDERS) {
+    const ax = Math.sin(yaw), az = Math.cos(yaw);
+    for (const side of [-0.2, 0.2]) out.push({ x: x + ax * side, y: (bottom + 0.15) / 2, z: z + az * side, w: 0.06, h: 0.15 - bottom, d: 0.06, yaw, tone: 0.3 });
+    for (let y = -0.25; y > bottom; y -= 0.28) out.push({ x, y, z, w: 0.05, h: 0.045, d: 0.4, yaw, tone: 0.6 });
+  }
+  return out;
 }

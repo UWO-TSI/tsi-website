@@ -5,7 +5,7 @@
  */
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { DECK_Y, landmarkHalf, villageIsland, wharfDecks, type LandmarkId } from "../defaultIsland";
+import { jettyY, landmarkHalf, villageIsland, wharfDecks, type LandmarkId } from "../defaultIsland";
 import { campfireSite } from "../campfireSite";
 import { MOVE_TUNING, NO_INPUT, createMoveState, stepMove, STEP, type MoveWorld } from "../movement/sim";
 import { navGrid, planResidents } from "../residentRoutine";
@@ -59,10 +59,11 @@ describe("walking the smooth world", () => {
     expect(worst).toBeLessThan(0.05);
   });
 
-  it("walks the wharf's deck at the deck's height, over deep water", () => {
+  it("walks the wharf's jetty level with the deck ground at 1, over deep water", () => {
+    expect(jettyY(v)).toBe(1);
     for (const d of wharfDecks(v)) {
       const x = (d.x0 + d.x1) / 2, z = d.z0 + 0.3;
-      expect(island.ground(x, z)).toBeGreaterThanOrEqual(DECK_Y - 1e-6);
+      expect(island.ground(x, z)).toBeCloseTo(1, 6);
       expect(island.wet(x, z)).toBe(false);
     }
   });
