@@ -8,15 +8,15 @@ import { mkdirSync } from "node:fs";
 const require = createRequire("/opt/homebrew/lib/node_modules/");
 const { chromium } = require("playwright");
 
-// R1b spots (the new layout: the jetty at (74.5, 46), the plaza at (4, 50), the border along z 8 to 13).
+// R1c spots (the jetty at (74.5, 46), the plaza at (30, 50), the border along z 6 to 13).
 export const VIEWS = {
   "01-arrival-wharf": { at: [68.5, 46], yaw: -90, pitch: 0.45, zoom: 1.6 },
   "02-wharf-from-south": { at: [62, 80], yaw: 170, pitch: 0.42, zoom: 1.6 },
-  "03-path-down-to-wharf": { at: [36, 56], yaw: 90, pitch: 0.45, zoom: 1.6 },
-  "04-plaza": { at: [16, 60], yaw: 215, pitch: 0.42, zoom: 1.6 },
-  "05-hq": { at: [2, 50], yaw: -90, pitch: 0.45, zoom: 1.3 },
+  "03-path-down-to-wharf": { at: [44, 54], yaw: 90, pitch: 0.45, zoom: 1.6 },
+  "04-plaza": { at: [42, 60], yaw: 215, pitch: 0.42, zoom: 1.6 },
+  "05-hq": { at: [28, 50], yaw: -90, pitch: 0.45, zoom: 1.3 },
   "06-beach": { at: [-10, 102], yaw: 75, pitch: 0.42, zoom: 1.6 },
-  "07-mountain-from-village": { at: [4, 44], yaw: 180, pitch: 0.35, zoom: 1.6 },
+  "07-mountain-from-village": { at: [30, 44], yaw: 195, pitch: 0.35, zoom: 1.6 },
   "08-meadow-border": { at: [-6, 18], yaw: 200, pitch: 0.38, zoom: 1.6 },
   "09-forest-edge": { at: [60, 22], yaw: 165, pitch: 0.38, zoom: 1.6 },
   "10-river-and-meadow": { at: [-34, 60], yaw: -70, pitch: 0.42, zoom: 1.6 },

@@ -122,7 +122,9 @@ export interface Plan {
 // THE PLAN. Heights in world units (the sea at -0.08; a jump is 1.28, a ledge grab 1.15 more). x east, z south on
 // the top-down map. Zone order is stacking order. R1b (David's R1 notes, 2026-10-24, specs/lanes/terrain-v3.md): the
 // wharf's deck at 1 and quay at 2, the village at 2 to 3, a bigger wharf and village, the meadow at the village's level
-// behind an invisible border, and the whole map pulled in round the village.
+// behind an invisible border, and the whole map pulled in round the village. R1c (his R1b notes, 2026-10-25): the map
+// 10 u longer, one bigger islet with a cluster beside it, the wharf two thirds as deep and a little shorter, the village
+// right up against it, the beach tapering off into the wharf, the forest rising gradually.
 // ---------------------------------------------------------------------------------------------------------------
 
 /** The grid (unchanged from the village's conversion): width and depth in units, the north-west corner. */
@@ -132,9 +134,9 @@ const GRID = { width: 384, depth: 552, x0: -192, z0: -276 } as const;
 export const H = { beach: 0.7, deck: 1, quay: 2, village: 3, meadow: 3.4, island: 4.5, islet: 2.4, forest: 9, m1: 16.5, m2: 25, summit: 31 } as const;
 
 /** The main island's outline: radii round (-15, 5) every 22.5 degrees from +x toward +z (the beach is +z, the mountain -z). */
-const MAIN = blob([-15, 5], [86, 82, 92, 100, 100, 99, 94, 92, 90, 90, 86, 92, 90, 92, 86, 86], 3, 18, 2);
+const MAIN = blob([-15, 5], [86, 82, 92, 100, 100, 99, 94, 92, 90, 93, 92, 101, 100, 101, 92, 89], 3, 18, 2);
 /** The river: from its spring at the mountain's west foot, south down the meadow's side of the village to its mouth west of the beach. */
-const RIVER: readonly XZ[] = [[-44, -14], [-46, 4], [-47, 22], [-48, 40], [-52, 58], [-58, 78], [-64, 98], [-72, 120]];
+const RIVER: readonly XZ[] = [[-44, -22], [-46, 4], [-47, 22], [-48, 40], [-52, 58], [-58, 78], [-64, 98], [-72, 120]];
 const westOfRiver = sideOf(RIVER);
 /**
  * The border (David: "invisible boarders for now that says release soon"): an invisible wall from the river, across the
@@ -150,13 +152,17 @@ const westOfQuay = sideOf(QUAY);
 /** The jetty (the wharf landmark): its land end at the shore, out to sea eastward. */
 export const DOCK = { x: 74.5, z: 46, yaw: -Math.PI / 2 } as const;
 /** The plaza's centre and radius (its stone). */
-export const PLAZA: { at: XZ; r: number } = { at: [4, 50], r: 12 };
+export const PLAZA: { at: XZ; r: number } = { at: [30, 50], r: 12 };
 
-/** The mountain as R1 drew it round (4, -142), moved in to (-10, -42) and shrunk to 0.62 (David: "have the mountain and allat moved closer"). */
-const MT = { from: [4, -142] as XZ, to: [-10, -42] as XZ, s: 0.62 };
+/** The mountain as R1 drew it round (4, -142), moved in to (0, -47) and shrunk to 0.62 (David: "have the mountain and allat moved closer", then "very slightly longer"). */
+const MT = { from: [4, -142] as XZ, to: [0, -47] as XZ, s: 0.62 };
 const inMt = (f: Field): Field => (x, z) => MT.s * f(MT.from[0] + (x - MT.to[0]) / MT.s, MT.from[1] + (z - MT.to[1]) / MT.s);
 const mt = (x: number, z: number): [number, number] => [MT.to[0] + (x - MT.from[0]) * MT.s, MT.to[1] + (z - MT.from[1]) * MT.s];
 const mtLabel = (text: string, x: number, z: number) => [text, ...mt(x, z)] as const;
+
+const [PX, PZ] = PLAZA.at;
+const VILLAGE = blob([PX + 2, 52], [42, 44, 42, 44, 50, 52, 38, 42], 2, 12, 81);
+const BEACH = strip([[58, 92], [40, 100], [10, 105], [-20, 105], [-50, 101]], 9, 8, 0.8, 16, 95);
 
 /** At the village's level, rolling a little, rising a touch toward the mountain: no sudden rise anywhere. */
 const meadowGround = (x: number, z: number) => H.meadow + wob(x, z, 0.8, 40, 11) + 1.6 * smoothstep(0, -50, z);
@@ -176,21 +182,22 @@ export const PLAN: Plan = {
     { name: "Meadow", label: ["Meadow (rolling, 3 to 5)", -78, 20], shape: (x, z) => Math.min(MAIN(x, z), -OPEN(x, z)), ground: meadowGround, edge: 1.2, coast: 1.6 },
     // NORTH ISLAND: smaller, hilly, a wide strait off the meadow (out of any glide); no bridgeheads yet.
     { name: "North island", label: ["North island (hilly, 3 to 6)", -162, 10], shape: blob([-162, 10], [20, 24, 44, 24, 20, 24, 42, 24], 3, 12, 5), ground: hilly(H.island, 1.6, 18, 31), edge: 3, coast: 1.4 },
-    // ISLETS: low, hilly, small; boats open them later.
-    { name: "Islands biome: boat later", label: ["Islets (low, 1 to 4)", 36, 190], shape: ellipse([36, 190], 30, 13, -0.35, 3, 10, 41), ground: hilly(H.islet, 1.4, 12, 42), edge: 2, coast: 1.2 },
-    { name: "Islands biome: boat later", shape: ellipse([-30, 170], 9, 7, 0.4, 1.5, 6, 43), ground: hilly(H.islet, 1.2, 8, 44), edge: 2, coast: 1.6 },
-    { name: "Islands biome: boat later", shape: ellipse([-52, 194], 6, 5, 0, 1, 5, 45), ground: H.islet + 1, edge: 1.5, coast: 2.5 },
-    { name: "Islands biome: boat later", shape: ellipse([84, 160], 6, 4.5, 0.6, 1, 5, 46), ground: H.islet, edge: 1.5, coast: 1.2 },
-    { name: "Islands biome: boat later", shape: ellipse([2, 224], 8, 6, 0.2, 1.5, 6, 47), ground: hilly(H.islet + 0.5, 1, 7, 48), edge: 2, coast: 2 },
-    { name: "Islands biome: boat later", shape: ellipse([74, 232], 5, 4, 0, 1, 5, 49), ground: H.islet + 1.5, edge: 1.5, coast: 2.5 },
+    // ISLETS: low, hilly; one bigger islet and a cluster of small ones close beside it (David: "1 bigger with a bunch of
+    // small close together"); boats open them later.
+    { name: "Islands biome: boat later", label: ["Islets (low, 1 to 4)", 26, 186], shape: ellipse([26, 184], 38, 18, -0.3, 3, 12, 41), ground: hilly(H.islet, 1.6, 14, 42), edge: 2, coast: 1.2 },
+    { name: "Islands biome: boat later", shape: ellipse([82, 168], 7, 5, 0.4, 1, 5, 43), ground: hilly(H.islet, 1, 6, 44), edge: 1.5, coast: 1.6 },
+    { name: "Islands biome: boat later", shape: ellipse([95, 180], 5, 4, 0, 1, 5, 45), ground: H.islet + 0.6, edge: 1.5, coast: 2.2 },
+    { name: "Islands biome: boat later", shape: ellipse([80, 186], 6, 4.5, 0.6, 1, 5, 46), ground: H.islet, edge: 1.5, coast: 1.4 },
+    { name: "Islands biome: boat later", shape: ellipse([92, 197], 4, 3.5, 0.2, 0.8, 4, 47), ground: H.islet + 0.4, edge: 1.2, coast: 2 },
+    { name: "Islands biome: boat later", shape: ellipse([105, 168], 3.5, 3, 0, 0.6, 4, 49), ground: H.islet + 0.8, edge: 1.2, coast: 2.5 },
     // LIGHTHOUSE ISLET: small and well off shore, south-east of the wharf, out of the boat's way in.
     { name: "Lighthouse islet", label: ["Lighthouse islet", 126, 114], shape: ellipse([126, 104], 5.5, 4.5, 0.3, 0.6, 4, 51), ground: H.islet, edge: 1.2, coast: 2 },
     // FOREST AND RUINS: high, hilly and bent, the island's north-east between the mountain and the sea, well back from
-    // the wharf: foothills out of the meadow, then two tiers of cliff.
+    // the wharf: a gradual rise out of the meadow, in two long tiers.
     {
       name: "Ruins in forest", label: ["Forest and ruins (hilly, 7 to 11)", 48, -30],
       shape: (x, z) => Math.min(MAIN(x, z), x - 26 + wob(x, z, 6, 16, 13), -4 - z + wob(x, z, 5, 14, 14)),
-      ground: forestGround, edge: 3, tiers: [0.5, 0.5], ledge: 5, coast: 2.5,
+      ground: forestGround, edge: 6, tiers: [0.5, 0.5], ledge: 9, coast: 2.5,
     },
     // MOUNTAIN: the highest point, as R1 drew it, moved in behind the meadow. Layered cliffs, each layer a shelf; peaks standing off its sides.
     { name: "Mountain", label: mtLabel("Mountain (layers at 16.5 and 25)", 20, -196), shape: inMt(blob([4, -142], [66, 60, 64, 58, 62, 58, 70, 62], 5, 15, 61)), ground: (x, z) => H.m1 + wob(x, z, 1, 20, 62), edge: 1.3, tiers: [0.4, 0.3, 0.3], ledge: 2.6, coast: 2.5 },
@@ -209,24 +216,25 @@ export const PLAN: Plan = {
     { name: "Falls", label: mtLabel("Main fall", -26, -118), shape: inMt(strip([[-1, -143], [2, -128], [6, -113]], 1.6, 2.2, 0.3, 4, 72)), ground: (_x, _z, _i, h) => h - 0.7, edge: 0.6, kind: "shape", paint: Paint.Rock },
     { name: "Pond (dry until elevated water)", shape: inMt(ellipse([7, -104], 7, 5.5, 0.2, 0.8, 4, 73)), ground: H.m1 - 1.3, edge: 1.5, kind: "shape", paint: Paint.Stone },
     { name: "Cave mouth", shape: inMt(ellipse([17, -108], 3.5, 3, 0, 0, 4, 74)), ground: H.m1, edge: 0.8, kind: "shape" },
-    // VILLAGE: dead level at 3 (so neighbouring pads agree) round the plaza, bigger; the climb from the quay is the 2 to 3.
+    // VILLAGE: dead level at 3 (so neighbouring pads agree) round the plaza, right up against the wharf's climb.
     {
-      name: "Village (re-plan)", label: ["Village (flat, 3)", -20, 60],
-      shape: blob([6, 52], [42, 40, 36, 44, 50, 52, 38, 42], 2, 12, 81), ground: H.village,
+      name: "Village (re-plan)", label: ["Village (flat, 3)", 4, 66],
+      shape: (x, z) => Math.min(VILLAGE(x, z), westOfQuay(x, z) - 20), ground: H.village,
       edge: (_x, z) => 1.5 + 5 * smoothstep(60, 80, z), coast: 0.35,
     },
     // WHARF: the deck boards' ground at 1 along the water (the fish market, the huts), the stone quay a step up at 2,
-    // then a gentle climb to the village's 3, starting well inland.
+    // then a gentle climb to the village's 3; two thirds of R1b's depth, so the village shows from the jetty.
     {
-      name: "Wharf", label: ["Wharf (deck 1, quay 2)", 62, 76],
-      shape: (x, z) => Math.min(westOfQuay(x, z), 44 - Math.abs(z - 50) + wob(x, z, 2, 8, 91), 38 - westOfQuay(x, z), OPEN(x, z)),
-      ground: (x, z) => { const d = westOfQuay(x, z); return H.deck + (H.quay - H.deck) * smoothstep(13.4, 14.6, d) + (H.village - H.quay) * smoothstep(24, 36, d); },
+      name: "Wharf", label: ["Wharf (deck 1, quay 2)", 62, 80],
+      shape: (x, z) => Math.min(westOfQuay(x, z), 40 - Math.abs(z - 50) + wob(x, z, 2, 8, 91), 26 - westOfQuay(x, z), OPEN(x, z)),
+      ground: (x, z) => { const d = westOfQuay(x, z); return H.deck + (H.quay - H.deck) * smoothstep(8.9, 10.1, d) + (H.village - H.quay) * smoothstep(16, 24, d); },
       edge: 1, coast: 2.5, paint: Paint.Stone, paintBelow: 2.6,
     },
-    // BEACH: sea level, wide yellow sand from the wharf's south end west to the river's mouth, smooth, with dry sand at its back for palms.
+    // BEACH: sea level, wide yellow sand from the river's mouth east, tapering off into the wharf's south end, smooth,
+    // with dry sand at its back for palms.
     {
       name: "Beach", label: ["Beach (sea level)", 4, 124],
-      shape: strip([[62, 92], [40, 101], [10, 105], [-20, 105], [-50, 101]], 9, 8, 0.8, 16, 95), ground: H.beach + 0.3, edge: 5, coast: 0.12, paint: Paint.Sand, paintBelow: 2.4,
+      shape: (x, z) => Math.min(BEACH(x, z), 0.4 * (60 - x)), ground: H.beach + 0.3, edge: 5, coast: 0.12, paint: Paint.Sand, paintBelow: 2.4,
     },
     // THE RIVER: sea level, down the meadow's side of the village (wide enough near the open area that no glide crosses it).
     { name: "River", label: ["River (sea level)", -80, 64], shape: strip(RIVER, 4, 7, 0.6, 9, 97), ground: 0, edge: 6, coast: 2.4, kind: "water" },
@@ -234,10 +242,10 @@ export const PLAN: Plan = {
   ramps: [
     // The jetty's land end (deck height 0 until R2 raises the pier) up onto the deck ground at 1.
     { pts: [[DOCK.x - 1.3, DOCK.z, 0], [DOCK.x - 5, DOCK.z, H.deck]], half: 1.6, shoulder: 1.5 },
-    // The stone path: along the deck, up the stairs to the quay left of the jetty (south), then the gentle climb to the plaza.
-    { label: ["Stone path", 44, 66], pts: [[DOCK.x - 5, DOCK.z, H.deck], [65, 52, H.deck], [62.5, 55, H.deck], [58, 57, H.quay], [50, 57.5, H.quay], [38, 56, H.village], [16, 52, H.village]], half: 1.8, shoulder: 2.5, paint: Paint.Stone },
+    // The stone path: along the deck, up the stairs to the quay left of the jetty (south), then the short climb to the plaza.
+    { label: ["Stone path", 56, 68], pts: [[DOCK.x - 5, DOCK.z, H.deck], [67, 52, H.deck], [65.5, 55, H.deck], [62.5, 56.5, H.quay], [58, 57, H.quay], [49, 55, H.village], [PX + 13, PZ + 1, H.village]], half: 1.8, shoulder: 2.5, paint: Paint.Stone },
     // The way down to the beach, past the shop.
-    { pts: [[12, 78, H.village], [8, 90, 2], [3, 100, H.beach + 0.3]], half: 1.6, shoulder: 3, paint: Paint.Path },
+    { pts: [[36, 80, H.village], [34, 92, 2], [31, 101, H.beach + 0.3]], half: 1.6, shoulder: 3, paint: Paint.Path },
   ],
 };
 
@@ -265,7 +273,6 @@ const facing = (dx: number, dz: number) => +Math.atan2(-dx, -dz).toFixed(4);
  * spawn on the deck by the jetty, the beach's spot on the sand; benches, study tables and lamps round the plaza and up
  * the path. Ids the layout doesn't name keep their places; the border's segments are rebuilt.
  */
-const [PX, PZ] = PLAZA.at;
 const LAYOUT: Record<string, { x: number; z: number; yaw?: number }> = {
   wharf: DOCK, default: { x: DOCK.x - 6, z: DOCK.z },
   plaza: { x: PX, z: PZ }, monument: { x: PX + 3, z: PZ + 2 },
@@ -277,9 +284,9 @@ const LAYOUT: Record<string, { x: number; z: number; yaw?: number }> = {
   beach: { x: -8, z: 106 },
   "study-0": { x: PX - 5, z: PZ - 10 }, "study-1": { x: PX + 11, z: PZ - 10 }, "study-2": { x: PX - 5, z: PZ + 10 }, "study-3": { x: PX + 11, z: PZ + 10 },
   "bench-0": { x: PX - 9, z: PZ - 4 }, "bench-1": { x: PX - 9, z: PZ + 4 }, "bench-2": { x: PX + 13.5, z: PZ - 6 }, "bench-3": { x: PX + 13.5, z: PZ + 6 },
-  "lamp-0": { x: 67, z: 50 }, "lamp-1": { x: 60.5, z: 53.5 }, "lamp-2": { x: 52, z: 55 }, "lamp-3": { x: 44, z: 54.5 }, "lamp-4": { x: 34, z: 53.5 },
-  "lamp-5": { x: 24, z: 52.5 }, "lamp-6": { x: PX - 11, z: PZ - 9 }, "lamp-7": { x: PX + 14, z: PZ - 10 }, "lamp-8": { x: PX - 11, z: PZ + 9 },
-  "lamp-9": { x: PX + 14, z: PZ + 10 }, "lamp-10": { x: 14, z: 82 },
+  "lamp-0": { x: 70.5, z: 51 }, "lamp-1": { x: 62, z: 59.5 }, "lamp-2": { x: 60, z: 53.5 }, "lamp-3": { x: 53, z: 59 }, "lamp-4": { x: 52, z: 52.5 },
+  "lamp-5": { x: 46, z: 56 }, "lamp-6": { x: PX - 11, z: PZ - 9 }, "lamp-7": { x: PX + 14, z: PZ - 10 }, "lamp-8": { x: PX - 11, z: PZ + 9 },
+  "lamp-9": { x: PX + 14, z: PZ + 10 }, "lamp-10": { x: 39, z: 84 },
 };
 export function layoutObjects(objects: World["objects"]): World["objects"] {
   return [...objects.filter(o => !(o.kind === "barrier" && o.model === "border")).map(o => (LAYOUT[o.id] ? { ...o, ...LAYOUT[o.id] } : o)), ...borderObjects()];
@@ -287,10 +294,10 @@ export function layoutObjects(objects: World["objects"]): World["objects"] {
 
 /** The village's house and lot marks for David's editor session, in the gaps round the new plaza (5 x 5 cells each). */
 const MARKS: Record<string, XZ> = {
-  "House 1": [24, 34], "House 2": [-10, 30], "House 3": [-20, 36], "House 4": [-20, 64], "House 5": [22, 66], "House 6": [-8, 76],
-  "Lot: future shop (street wall, south)": [28, 60], "Lot: future shop (street wall, north)": [28, 42],
-  "Lot: workshop (sudo pets, P2+)": [-34, 52], "Lot: future houses (west lane)": [-36, 36],
-  "Lot: future houses (north lane)": [-26, 24], "Lot: civic expansion": [-16, 84],
+  "House 1": [PX + 20, 34], "House 2": [PX - 14, 30], "House 3": [PX - 24, 36], "House 4": [PX - 24, 64], "House 5": [PX + 18, 66], "House 6": [PX - 12, 76],
+  "Lot: future shop (street wall, south)": [PX + 24, 60], "Lot: future shop (street wall, north)": [PX + 24, 42],
+  "Lot: workshop (sudo pets, P2+)": [PX - 38, 52], "Lot: future houses (west lane)": [PX - 40, 36],
+  "Lot: future houses (north lane)": [PX - 30, 24], "Lot: civic expansion": [PX - 20, 84],
   "Boat arrival: first-login cutscene lands here": [DOCK.x - 3, DOCK.z],
 };
 export function moveMarks(keep: readonly MapAnnotation[]): MapAnnotation[] {
