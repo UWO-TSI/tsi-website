@@ -109,6 +109,7 @@ import FishingOverlay from "./FishingOverlay";
 import ToastHub, { toast } from "./ToastHub";
 import RewardCard from "./RewardCard";
 import GlideGuide, { GlideGuideHint } from "./GlideGuide";
+import BorderNotice from "./BorderNotice";
 import ShopInterior from "./ShopInterior";
 import InteriorBackdrop from "./InteriorBackdrop";
 import ShopCounter from "./ShopCounter";
@@ -516,6 +517,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       <BeachBottle player={player} ground={island.ground} />
       {/* After the first leaf glider is made: a marked edge and a ring to land in (the guided first glide). */}
       <GlideGuide map={island.map} ground={island.ground} player={player} owned={peaceful.glider} active={!fishing && !arriving} blocked={layout.underBuilding} />
+      <BorderNotice village={v} player={player} />
       <StudySeats area="village" player={player} ground={island.ground} open={DROPS.cafe} />
       <VillageLandmarks layout={layout} ground={island.ground} opened={progression.opened} stage={progression.stage} ceremony={ceremony} light={light} />
       {!DROPS.cafe && cafeAt && <CafeSweeper cafe={cafeAt} ground={island.ground} player={player} night={phase === "night"} />}

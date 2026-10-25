@@ -42,6 +42,8 @@ export const DROP_FEATURES = {
   homeIsland: 4,
   /** The north island's bridge: not scheduled. */
   northIsland: null,
+  /** The new world's meadow (and the forest past it) beyond the invisible border (lib/game/barriers.ts "border"): not scheduled. */
+  meadow: null,
 } as const satisfies Record<string, DropNumber | null>;
 export type DropFeature = keyof typeof DROP_FEATURES;
 export type DropFlags = Record<DropFeature, boolean>;

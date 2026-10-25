@@ -18,14 +18,21 @@
 import { DROPS, type DropFeature, type DropFlags } from "./drops";
 import type { MapObject, Village } from "./villageMap";
 
+/** The barrier props (each a model). */
 export const BARRIER_MODELS = ["unbuilt-bridge", "forest-edge", "ruins-rubble", "rockslide"] as const;
-export type BarrierModel = (typeof BARRIER_MODELS)[number];
+/**
+ * Plus "border": the new world's invisible wall round the meadow (David, terrain v3 R1 notes 2026-10-24: "invisible
+ * boarders for now that says release soon", overriding the no-invisible-wall rule there), in segments
+ * (lib/game/world/generate.ts BORDER); walking up to it says so (components/game/BorderNotice.tsx).
+ */
+export type BarrierModel = (typeof BARRIER_MODELS)[number] | "border";
 
 /** A solid rectangle in the model's own frame (before its yaw and scale): centre x, z and half extents. */
 export type BarrierSolid = readonly [cx: number, cz: number, hw: number, hd: number];
 export interface BarrierDef {
   label: string;
-  url: string;
+  /** Its model; null draws nothing (the border). */
+  url: string | null;
   /** The drop feature that clears it. */
   feature: DropFeature;
   /** What blocks, covering the model's footprint on the ground (art/barriers/build_barriers.py). */
@@ -38,6 +45,8 @@ export const BARRIERS: Record<BarrierModel, BarrierDef> = {
   "forest-edge": { label: "Dense forest edge", url: url("forest-edge"), feature: "forest", solids: [[-0.08, 0.14, 2.62, 1.12]] },
   "ruins-rubble": { label: "Ruins rubble", url: url("ruins-rubble"), feature: "ruins", solids: [[0.09, -0.05, 1.8, 1.19]] },
   "rockslide": { label: "Rockslide", url: url("rockslide"), feature: "mountain", solids: [[-0.03, 0.18, 2.2, 1.75]] },
+  // 8 u a segment at scale 1, overlapping its neighbours a little at the bends.
+  "border": { label: "Border (opens soon)", url: null, feature: "meadow", solids: [[0, 0, 4.4, 1]] },
 };
 export const isBarrierModel = (m: string | undefined): m is BarrierModel => !!m && m in BARRIERS;
 
@@ -64,12 +73,12 @@ export function barrierBoxes(placements: readonly BarrierPlacement[]): BarrierBo
   }));
 }
 
-/** Is (x, z) inside any barrier? (The same turned-rectangle test as a prop's footprint, defaultIsland inFootprint.) */
-export function inBarrier(boxes: readonly BarrierBox[], x: number, z: number): boolean {
+/** Is (x, z) inside any barrier, or within `pad` of one? (The same turned-rectangle test as a prop's footprint, defaultIsland inFootprint.) */
+export function inBarrier(boxes: readonly BarrierBox[], x: number, z: number, pad = 0): boolean {
   for (const b of boxes) {
     const dx = x - b.x, dz = z - b.z;
-    if (Math.abs(dx) > b.reach || Math.abs(dz) > b.reach) continue;
-    if (Math.abs(dx * Math.cos(b.yaw) - dz * Math.sin(b.yaw)) < b.hw && Math.abs(dx * Math.sin(b.yaw) + dz * Math.cos(b.yaw)) < b.hd) return true;
+    if (Math.abs(dx) > b.reach + pad || Math.abs(dz) > b.reach + pad) continue;
+    if (Math.abs(dx * Math.cos(b.yaw) - dz * Math.sin(b.yaw)) < b.hw + pad && Math.abs(dx * Math.sin(b.yaw) + dz * Math.cos(b.yaw)) < b.hd + pad) return true;
   }
   return false;
 }
