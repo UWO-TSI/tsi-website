@@ -25,23 +25,23 @@ All in `~/.claude/jobs/62203045/tmp/`, which survives reboots.
 - `prod-dump.sh <label>`, `prod-query.sh <sql>` and `verify.sql` are for prod migrations. The procedure is in `STATE.md` and the memory files.
 - `withlock.sh heavy|blender|devserver <cmd>` (set `LANE=game/<lane>`): takes a lock, waiting while swap is high and another lock is held. It lives in `~/.claude/jobs/62203045/tmp/`, the same folder as the helpers above, and is referenced from `specs/lane-rules.md`.
 
-## Now (2026-10-24): v1 launches on the NEW world (row 318)
+## Now (2026-10-25): v1 launches on the NEW world (row 318)
 
 Read `specs/launch/v1-new-world.md` first, then `specs/launch/terrain-v3.md`. The launch is Oct 31, go/no-go Oct 28, and the village stays as the fallback behind the world switch (`NEXT_PUBLIC_GAME_WORLD=new`, merged; realtime v7 deployed).
 
 - **David answered the terrain plan** (all 11 sections, 2026-10-23): https://claude.ai/artifact/J6fE1DjDqxt732R8JPvpxs, collection `sections`. His answers, verbatim, and the build are in `specs/launch/terrain-v3.md`; his 20 references are in `specs/references/terrain/plan-2026-10-23/`. Open on Oct 31: the wharf, the west beach and the village. Everything else stays visible but closed naturally (broken bridges, landslides, a guard). He said cut nothing, so the work is ordered, not cut.
-- **Lane `terrain-v3`** (`game/terrain-v3`, not merged).
-  - **R1** (e8675d5e): David redid every item on 2026-10-24. His notes, verbatim with my reading, are in `specs/lanes/terrain-v3.md`.
-  - **R1b** (616e39e9) applies them:
+- **Lane `terrain-v3`** (`game/terrain-v3`), running: ponytail fixes done, now R1c then R2, one review for both.
+  - **R1** (e8675d5e): David redid every item on 2026-10-24.
+  - **R1b merged** (cbf729af, with the ponytail fixes 2e9ae1bf): David approved it 2026-10-25 ("terrain approved read feedback") with notes on the review page https://claude.ai/artifact/GEg5mHuG6ACN95UdZiLJou (collection `approvals`). It holds:
     - a compact map; deck 1, quay 2, village 3; a bigger plaza with the buildings moved; the mountain moved in;
     - the meadow at village level behind an invisible border that reads "This area is releasing soon." (`barriers.ts` model `border`, `BorderNotice.tsx`, drop feature `meadow`).
-  - **R1b review page:** https://claude.ai/artifact/GEg5mHuG6ACN95UdZiLJou (collection `approvals`, 13 items).
-  - **When approved:** merge it to main and restart the lane fresh for R2: deck boards and the fish market, the jetty raised to 1 with ladders, stairs, fences, lamps, houses filling the plaza gaps, the campfire on the beach, broken bridges and rockfall.
+  - **R1c** (David's R1b notes, verbatim with my reading in `specs/lanes/terrain-v3.md`): the map very slightly longer (he clarified "the cut" is the horizontal band taken out to shorten it); one bigger islet with small ones close by; the wharf half to two thirds as deep and slightly shorter; the path way shorter so the village sits by the wharf; the beach tapering into the wharf; a more gradual forest.
+  - **R2** straight after, on the R1c ground: plank flooring and the fish market, the jetty at 1 with ladders, stairs, fences, lamps, houses in the plaza gaps, the campfire, chairs and palms, broken bridges and rockfall, the lighthouse.
+  - **When the lane reports:** build one review page from its `specs/evidence/terrain-v3/r2/` images. Over 300 new code lines again means a ponytail review before the merge.
 - **HQ round 4 merged** (71135930, David approved all four items 2026-10-23), with the ponytail cleanup. Later items are logged as A14. `hq-notice-board.glb` is no longer rendered but is still in the propModels table; delete both together after launch.
 - **Upper-floor fix merged** (72a9b9c5). Remote players in rooms stand at the height they sent, with no realtime deploy needed.
 - **Still open:** the shop is offline for multiplayer (`netReady = inside !== "shop"`, DefaultIslandWorld.tsx:722), so players in the shop vanish for others.
 - **Waiting on David:**
-  - the R1 review;
   - the speed-test quiet window (script on `game/perf-v1`: `specs/perf/window-ab.sh`);
   - the editor session after R2 (resident anchors, gather and bug spots, mailbox, boards);
   - the play-through with a friend;
