@@ -19,24 +19,29 @@ Then look at the references in `specs/references/terrain/plan-2026-10-23/` and t
 
 ## Status
 
-**R1b was reviewed 2026-10-25: "terrain approved", with notes** (below, verbatim). Head: 616e39e9. The ponytail review passed it as merge-safe with three fixes before the merge (Next, step 1). R1c (the notes) and R2 then run straight on, with one review for both.
+**R1c and R2 are built and waiting on one review** (2026-10-25). Head: 909dd199 (R2), on d08623f4 (R1c) and 2e9ae1bf (the ponytail fixes, merged to main as cbf729af).
 
-What R1b built:
+R1c (David's R1b notes, the reading below 1 to 7):
+- **Map 10 u longer:** the main island's north radii grow up to 10 and the mountain sits at (0, -47) (`MT.to`), a little north and east of R1b's, so its cliffs still show behind the café from the plaza (view 07).
+- **Islets:** one bigger islet at (26, 184), 38 x 18, and five small ones close beside it to the east (x 80 to 105, z 168 to 197). The lighthouse islet is unchanged.
+- **The wharf:** two thirds of R1b's depth: deck 0 to 9 u in from the shore, the step to the quay at 9 to 10, the quay to 16, the climb to the village's 3 from 16 to 24. It runs z 10 to 90 (was 6 to 94).
+- **The village:** the plaza moved to (30, 50), right at the top of the wharf's climb; HQ, café, shop and museum keep their places round it. The village zone is clipped 20 u in from the shore (`westOfQuay - 20`). The house and lot marks moved with it.
+- **The beach:** keeps its shape; it tapers to nothing at x 60 where it meets the wharf (`0.4 * (60 - x)`).
+- **The forest:** edge 6 and two tiers 9 u apart (was edge 3, 5 apart): a gradual rise.
 
-- **Heights:** deck ground 1, stone quay 2 (a 1 u step 13.4 to 14.6 u in from the shore), a gentle climb to the village's 3 from 24 to 36 u in. The main island's base ground is now the village's 3, so no seam dips between zones.
-- **The wharf:** the shore moved out to x 74, the jetty to (74.5, 46), the wharf runs z 8 to 92. The stone path goes along the deck, up the step left (south) of the jetty at z 55 to 57, then on to the plaza. A short ramp joins the jetty (its deck still at 0) to the deck ground: raising the jetty is R2.
-- **The village:** dead level at 3, much bigger (blob round (6, 52)). The plaza is at (4, 50), radius 12. HQ is west at the back, the café north (right), the shop south (left) and the museum further out south-west. Benches, study tables and lamps sit round the plaza and up the path. The spawn is on the deck by the jetty. The house and lot marks moved into the gaps (`MARKS`).
-- **The map:** shorter and compact. The mountain is R1's, moved in to (-10, -42) and scaled 0.62 (`MT`, `inMt`), so its cliffs rise behind the café. The forest is the NE corner past z -4, 7 to 11 high, in two tiers. The north island is smaller and further west, at (-162, 10), with no bridgehead spits. The river runs from the mountain's west foot down the village's west side. The lighthouse islet is at (126, 104).
-- **The meadow:** at the village's level (3.4 to 5, rolling). It is closed by the invisible border `BORDER`, which runs from the river to the sea north of the wharf. It is built from barrier segments, model `"border"`: `lib/game/barriers.ts`, `url: null`, feature `meadow` (null in `drops.ts`). `components/game/BorderNotice.tsx` toasts "This area is releasing soon." when you walk up to it.
-- **The beach:** smooth and slightly smaller, with no grass patch and dry sand at its back for palms.
-- **Objects:** `layoutObjects` in generate.ts places them (`LAYOUT`) and rebuilds the border segments. `scripts/generate-world.ts` runs it, plus `moveMarks`.
-- **Renders:** `specs/evidence/terrain-v3/r1b/` (00 top-down, 01 to 11 views, 12 the border toast), from the R1b spots in `shoot.mjs`.
-- **Gates:** with `NEXT_PUBLIC_GAME_WORLD=new` and without it, `lib/game/world`, `lib/game/arrival`, barriers, drops, proposals and groundGate are green (27 files, 182 tests): sealed with no leaks, routes green. tsc and eslint are clean. No perf run (that is one run in R3).
-- **Grid kept** at 384 x 552 (the island is just smaller inside it).
-- **Tests changed:**
-  - `walk.test` no longer applies the v1 barrier proposal (it's drawn for the v2 world; `barriers.test` still checks it there), and it skips the border's segments in the dry-land check (their ends run into the water).
-  - `generate.test` is updated to the R1b heights and the dock.
-- **Questions for David:** `specs/launch/terrain-v3-questions.md` "R1b".
+R2 (on the R1c ground):
+- **New object kinds** (appended to `OBJECT_KINDS`): `prop` (solid scenery, `model` from `propModels.ts SCENERY_URLS` or the dump's props, sized by `scale`; footprints and tops in `defaultIsland.ts PROP_FOOTPRINT/PROP_TOP`, walked by `propsOf`) and `deck` (a 4 u square of deck boards; model "steps" climbs its ground in treads). `/lab/map` has styles for both.
+- **Deck boards:** 39 squares over the deck band and the stairs square where the path climbs to the quay (`STAIRS`), drawn as one instanced mesh of wooden boxes (`components/game/wharf/WoodBoxes.tsx`, `lib/game/wharf.ts deckBoards`).
+- **The jetty at 1:** `defaultIsland.ts jettyY` (the ground at the jetty's land end, to the quarter unit; DECK_Y on the cell worlds, so the village and applicant island are unchanged) and `wharfDock`. `Dock.y` lifts the pier and the finger pier in `Wharf.tsx`, the boat's lines in `Boat.tsx` and the rider on the pier in `useTripBoat.ts`; the walker stands on the jetty at it. Ladders (`LADDERS`, `ladderBoxes`) hang off the jetty's -x side, the finger's end and its seaward face.
+- **The fish market** (`MARKET`): 7 market-cart stalls, barrels, crates and 2 shop carts on the deck, north and south of the path; 2 more deck lamps.
+- **The path:** straight up the climb at z 56 between joined fences (x 50 to 57); lamps beside it.
+- **Houses:** 8 chalets (`HOUSES`, the `house` kind, doors closed) round the plaza; House 1 to 6 marks sit on the first six.
+- **Beach:** the campfire at (14, 104), 7 palms on the dry sand at its back, 3 parasols.
+- **Lighthouse** on its islet (prop, scale 0.2).
+- **Closures:** rockslide on the mountain way north of the café, two forest-edge segments on the forest way north of the wharf, an unbuilt bridge on the river's village bank (the washed-out crossing) and one on the meadow's coast toward the north island. The invisible border is unchanged.
+- **Renders:** `specs/evidence/terrain-v3/r2/` (00 top-down, 01 to 11 the R1b views, 13 market, 14 the jetty and ladders, 15 the plaza's houses, 16 the campfire).
+- **Gates:** with and without the switch, 37 files and 292 tests green (world, arrival with routes, barriers, drops, proposals, campfire, wharf, defaultIsland, mapHealth, villageMap, propModels, fences, residentRoutine, shadows, groundGate, wharf components). tsc and eslint clean. No perf run (one run in R3).
+- **Not in R2:** fishing nets (no net model in the assets; `tool-net` is the bug net). Questions: `specs/launch/terrain-v3-questions.md` "R2".
 
 ## David's decisions
 
@@ -119,26 +124,8 @@ The plan page answers, verbatim in the spec. The drawing is a guide to where thi
 
 ## Next
 
-1. **Ponytail fixes, then tell the coordinator** (the review of 616e39e9):
-   - delete `stairs` in `generate.ts` (about lines 82 to 87) and its test in `generate.test.ts`; only its test uses it now;
-   - `walk.test.ts` (about 110 to 112): the barrier check passes on the 19 border segments alone and the dry-land loop then skips all of them, so it checks nothing on the new world. Assert the border count, or drop the two lines and the `barrierPlacements` import;
-   - `BorderNotice.tsx:23`: use `toast(...)` from `./ToastHub` (DefaultIslandWorld already does) instead of the hand-made `CustomEvent` and `setTimeout(0)`;
-   - while in there, the cheap ones: move `BORDER_NOTE` into `BorderNotice.tsx`; drop the `!p` guard; hoist `sideOf(BORDER)` like `westOfRiver`; store `member` as a `Uint8Array` of `m >= 0.5` (it is about 92 MB of Float32Arrays now); drop the unused `plan` parameter of the generator; stop exporting `fbm`; compute `yaw` once per border segment; chain `.composite(...).png(...).toFile(out)` in `generate-world.ts`; drop the `s = scale` alias and redundant `: number` in `convert.ts`'s defaulted parameters; the double blank line at about 311.
-   - Gates under the heavy lock, with and without the switch, then commit and SendMessage "main" with the commit and the gate results. Don't wait for the reply: the coordinator merges that commit and you go straight on.
-2. **R1c, the R1b notes** (the reading above, 1 to 7). Regenerate, rerun the seal, the routes and walk tests, and render the top-down map and views 01 to 03 for yourself. Don't stop for a review.
-3. **R2 on the R1c ground:**
-   - wooden plank flooring over the deck area, and the fish market on it (stalls, carts, barrels, nets);
-   - the jetty, the finger pier and the boat's step raised to 1, with ladders down to the water;
-   - the path's stairs, fences and lamps;
-   - houses filling the gaps round the plaza, so it reads as one town (existing house models as scenery shells, doors closed);
-   - the campfire, chairs and palms on the beach's dry sand;
-   - the broken bridges and rockfall that close the zones naturally;
-   - the lighthouse on its islet;
-   - the spawn and the arrival route checked on the new ground (routes test green).
-
-   Assets only from `web/public/assets/` (the spec's R2 and R3 list). Instance repeated props.
-4. **One review for R1c and R2:** render under `specs/evidence/terrain-v3/r2/` (the top-down map, the R1b views again, plus close views of the market, the jetty's ladders, the plaza's houses and the campfire), then SendMessage "main" with the images and a one-line fact for each, and stop.
-5. **R3**, per the spec, after David's R2 notes.
+1. **Wait for David's notes on R1c and R2** (the coordinator publishes `specs/evidence/terrain-v3/r2/`).
+2. **R2 fixes** from his notes, then **R3** per the spec (light trees and bushes in the village, dense cedars in the forest, trees on the meadow and the north island, rock on the cliffs) and its one perf run (`SCENES=v2`).
 
 **Questions for David** go in `specs/launch/terrain-v3-questions.md`, one line each with your default. Carry on with your default meanwhile, unless the answer would change the landform.
 
@@ -157,4 +144,7 @@ The plan page answers, verbatim in the spec. The drawing is a guide to where thi
 - **Sealed zones:** `cd web && NEXT_PUBLIC_GAME_WORLD=new npx vitest run lib/game/world/sealed.test.ts` prints the leaks.
 - **After any world change:** the generator writes `cells.json` itself; after a merge, `cd web && npx vite-node -c vitest.config.ts scripts/world-cells.ts`, then `cells.test.ts`.
 - **Assets:** only those already in `web/public/assets/`. Never fetch art or references.
+- **Scenery in the generator:** `scenery()` in generate.ts builds every R2 object; `layoutObjects` replaces any earlier copy by kind and id, so a rerun is idempotent. Place along the wharf with `quayAt(z, d)` (d in from the shore, and the yaw that turns local z inland).
+- **Model sizes:** `prop` footprints are in the model's own units (bounds measured from the GLB). The ACNH furniture is at about 10x (barrel scale 0.07, lighthouse 0.2); market-cart at 0.55 is a 4 u stall.
+- **View spots:** keep the camera clear of houses (view 04 moved to (44, 53) for that). Ladders read only from close (view 14).
 - **Git:** commit with the `[build]` prefix. Never push. Never use bare `git stash`.
