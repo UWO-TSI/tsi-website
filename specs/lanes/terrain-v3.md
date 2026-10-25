@@ -19,7 +19,9 @@ Then look at the references in `specs/references/terrain/plan-2026-10-23/` and t
 
 ## Status
 
-**R1b is built and waiting for David's notes** (head: the R1b commit on `game/terrain-v3`, after the main merge b8a36bc8). Nothing is approved or merged to main yet. R1 (e8675d5e) was reviewed 2026-10-24 (all redo); R1b applies the coordinator's reading of those notes:
+**R1b was reviewed 2026-10-25: "terrain approved", with notes** (below, verbatim). Head: 616e39e9. The ponytail review passed it as merge-safe with three fixes before the merge (Next, step 1). R1c (the notes) and R2 then run straight on, with one review for both.
+
+What R1b built:
 
 - **Heights:** deck ground 1, stone quay 2 (a 1 u step 13.4 to 14.6 u in from the shore), a gentle climb to the village's 3 from 24 to 36 u in. The main island's base ground is now the village's 3, so no seam dips between zones.
 - **The wharf:** the shore moved out to x 74, the jetty to (74.5, 46), the wharf runs z 8 to 92. The stone path goes along the deck, up the step left (south) of the jetty at z 55 to 57, then on to the plaza. A short ramp joins the jetty (its deck still at 0) to the deck ground: raising the jetty is R2.
@@ -37,6 +39,34 @@ Then look at the references in `specs/references/terrain/plan-2026-10-23/` and t
 - **Questions for David:** `specs/launch/terrain-v3-questions.md` "R1b".
 
 ## David's decisions
+
+### 2026-10-25: R1b review, verbatim (https://claude.ai/artifact/GEg5mHuG6ACN95UdZiLJou)
+
+David's message: "terrain approved read feedback".
+
+- **map (redo):** "make the cut smaller so less of the island is cut, thye islets should be 1 bigger with a bunch of small close togetherpl". Asked which cut, he said: "you made a horizontal cut  to make the map shorter, i want you to make it very slightly longer".
+- **arrival (redo):** "place but make the flooring like plankes around the water,male the village closer so its in vlew, the wharf a like tooo big now maybe in thems of height like 2/3 or half of what so theres enough to have buildings on the side but not so big the villlage is out of view"
+- **wharf-long (redo):** "slightly slightly shorter"
+- **path:** "again the path should be way shorter so that the village is next to the wharf"
+- **plaza, hq:** no note.
+- **beach:** "look good, a little long i was thinking of tapering it off naturally when it transitions to wharf"
+- **mountain:** "looks good, eventually need to edit it but it looks good so far"
+- **meadow (approve):** "good for now"
+- **toast (approve):** no note.
+- **forest (redo):** "more gradual"
+- **river (approve):** "its fine for now"
+- **north (approve):** "good for now"
+
+**The coordinator's reading:**
+1. **Map length (z, north to south):** R1b took a horizontal band out to shorten the map. Put a little of it back: very slightly longer, about 10 u, not back to R1's length. The mountain's cliffs must still show behind the café from the plaza.
+2. **Islets:** replace the scattered islets with one bigger islet and a cluster of small ones close beside it. The lighthouse islet stays.
+3. **The wharf's depth (x, from the water inland):** about half to two thirds of R1b's. Keep enough room for wharf buildings along its sides, but the village must be in view from the jetty (view 01). Keep the heights: deck 1, quay 2, village 3.
+4. **The path:** way shorter. The village sits right next to the wharf; it follows from 3. The plaza layout (HQ back, café right, shop left, museum further out) moves with the village and keeps its shape.
+5. **The wharf's length along the water (z):** slightly shorter.
+6. **The beach:** keep its shape, a little shorter, tapering off naturally where it meets the wharf.
+7. **The forest:** a more gradual transition from the wharf and village up to its cliffs.
+8. **Approved as is:** the meadow and its border, the toast's wording, the river, the north island, the mountain (redesign later).
+9. **The R1b questions:** every default stands. R2 raises the jetty to 1 with ladders; the deck area gets wooden planks ("make the flooring like plankes around the water") and the fish market; the mountain stays as the base for its redesign; the wording stays.
 
 ### 2026-10-24: R1 review, verbatim (https://claude.ai/artifact/U9bsDg9XdmeZo3iuwUZiHv)
 
@@ -89,14 +119,26 @@ The plan page answers, verbatim in the spec. The drawing is a guide to where thi
 
 ## Next
 
-1. **Wait for David's R1b notes.** Then redo, or go on to R2.
-2. (Done in R1b: merge main, the landform redo and the village layout.)
-3. **R2**, on approval:
+1. **Ponytail fixes, then tell the coordinator** (the review of 616e39e9):
+   - delete `stairs` in `generate.ts` (about lines 82 to 87) and its test in `generate.test.ts`; only its test uses it now;
+   - `walk.test.ts` (about 110 to 112): the barrier check passes on the 19 border segments alone and the dry-land loop then skips all of them, so it checks nothing on the new world. Assert the border count, or drop the two lines and the `barrierPlacements` import;
+   - `BorderNotice.tsx:23`: use `toast(...)` from `./ToastHub` (DefaultIslandWorld already does) instead of the hand-made `CustomEvent` and `setTimeout(0)`;
+   - while in there, the cheap ones: move `BORDER_NOTE` into `BorderNotice.tsx`; drop the `!p` guard; hoist `sideOf(BORDER)` like `westOfRiver`; store `member` as a `Uint8Array` of `m >= 0.5` (it is about 92 MB of Float32Arrays now); drop the unused `plan` parameter of the generator; stop exporting `fbm`; compute `yaw` once per border segment; chain `.composite(...).png(...).toFile(out)` in `generate-world.ts`; drop the `s = scale` alias and redundant `: number` in `convert.ts`'s defaulted parameters; the double blank line at about 311.
+   - Gates under the heavy lock, with and without the switch, then commit and SendMessage "main" with the commit and the gate results. Don't wait for the reply: the coordinator merges that commit and you go straight on.
+2. **R1c, the R1b notes** (the reading above, 1 to 7). Regenerate, rerun the seal, the routes and walk tests, and render the top-down map and views 01 to 03 for yourself. Don't stop for a review.
+3. **R2 on the R1c ground:**
+   - wooden plank flooring over the deck area, and the fish market on it (stalls, carts, barrels, nets);
+   - the jetty, the finger pier and the boat's step raised to 1, with ladders down to the water;
    - the path's stairs, fences and lamps;
-   - the wharf's market stalls, carts, barrels, nets, ladders and lighthouse;
-   - the campfire on the beach;
-   - the broken bridges, rockfall and borders.
-4. **R3**, per the spec.
+   - houses filling the gaps round the plaza, so it reads as one town (existing house models as scenery shells, doors closed);
+   - the campfire, chairs and palms on the beach's dry sand;
+   - the broken bridges and rockfall that close the zones naturally;
+   - the lighthouse on its islet;
+   - the spawn and the arrival route checked on the new ground (routes test green).
+
+   Assets only from `web/public/assets/` (the spec's R2 and R3 list). Instance repeated props.
+4. **One review for R1c and R2:** render under `specs/evidence/terrain-v3/r2/` (the top-down map, the R1b views again, plus close views of the market, the jetty's ladders, the plaza's houses and the campfire), then SendMessage "main" with the images and a one-line fact for each, and stop.
+5. **R3**, per the spec, after David's R2 notes.
 
 **Questions for David** go in `specs/launch/terrain-v3-questions.md`, one line each with your default. Carry on with your default meanwhile, unless the answer would change the landform.
 
