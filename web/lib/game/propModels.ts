@@ -127,9 +127,10 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // root at the origin, not solid: a full mound (a), a low spreading one along x (b), a tall loose one (c, 1.4), a small
   // sparse tuft (d), a big lush one (e, 2.2 across) and a lopsided loose pair of clumps (f). Turn and scale them freely.
   ...Object.fromEntries(["a", "b", "c", "d", "e", "f"].map(m => [`shrub-${m}`, `/assets/game/plants/shrub-${m}.glb`])),
-  // game/wharf-art2: the fish market, remodelled (art/buildings/build_fish_market.py): a timber shop 5.2 by 4.2 on a stone
-  // footing, front +z, a giant wooden swordfish bursting up out of its roof toward +x (the bill reaches x 5.1, top 10.6),
-  // a porch out to z 3.9 over the door and a table of fish; an exterior only, the origin at the middle of its floor. The
+  // game/wharf-art2: the fish market, remodelled (art/buildings/build_fish_market.py), widened by art-r2f: a timber shop
+  // 7.8 by 4.2 on a stone footing, front +z, a giant wooden swordfish burst up through its front slope toward +x, its
+  // back third inside (the bill reaches x 5.6, top 12), a porch out to z 3.9 over the door and a table of fish; an
+  // exterior only, the origin at the middle of its floor. The
   // sell barrel (same builder) is the quick sell: a big barrel of fish, a hanging scale and a SELL board, front +z.
   "fish-market": "/assets/game/buildings/fish-market.glb", "sell-barrel": "/assets/game/wharf/sell-barrel.glb",
   ...Object.fromEntries(["a", "b", "c"].map(m => [`reeds-${m}`, `/assets/game/plants/reeds-${m}.glb`])),
@@ -147,9 +148,10 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // dead snag (6). Scale them uniformly only (0.8 to 1.25), never stretched; the instance tint goes on mForestCrown.
   ...Object.fromEntries(["cedar", "fir", "spire", "old-fir", "leaning", "broken", "young", "broadleaf", "birch", "wide", "sapling", "snag"]
     .map(m => [`forest-tree-${m}`, `/assets/game/plants/forest-tree-${m}.glb`])),
-  // Riverbank trees (the same builder), 650 to 810 triangles, the trunk's foot at the origin, solid at the trunk only: a
-  // weeping willow (8 tall, sprays hung to about 2 over the ground), a tall alder (8.9), a big oak (8.7, 7.5 across)
-  // and one leaning out over the water to +x (8.6 tall, its crown 4.3 out): turn it to face the river.
+  // Riverbank trees (the same builder, redone by art-r2f), 680 to 1100 triangles, the trunk's foot at the origin, solid
+  // at the trunk only: a weeping willow (7.7 tall, 7.5 across, curtains hung nearly to the ground), a group of three
+  // alders from one root (9.3 tall), a spreading oak (8.3 tall, 9.8 across) and one leaning out over the water to +x
+  // (8.7 tall, its crown out to x 6.8): turn it to face the river.
   ...Object.fromEntries(["willow", "alder", "oak", "lean"].map(m => [`river-tree-${m}`, `/assets/game/plants/river-tree-${m}.glb`])),
   // game/wharf-art2: coral reefs for the shallows (art/water/build_coral_reefs.py), the coral clumps above tinted and massed
   // on low rocks, the origin on the seabed at the middle, not solid: a broad (2.8 by 2), b round and tall (2 across), c a
@@ -166,6 +168,13 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // (5.4, -1.078, -3.6) in the shed's frame (the sea's level under a deck at 1), same yaw. The gangplank is the shed's:
   // it runs off the pier to (4.3, 0.16, -2) in the shed's frame, just over the boat's gunwale. The boat's not solid.
   ...Object.fromEntries(["shipwright-shed", "shipwright-boat"].map(m => [m, `/assets/game/wharf/${m}.glb`])),
+  // art-r2f: the shipwright's ship, to replace the shed and its boat (David, R2e: "a big boat docked to the side"), the
+  // same frame (an edge shop): the deck's water edge at z 0, the deck +z. A wooden hull 14 long along x (bow to +x, x
+  // -7.1 to 10.6 with the bowsprit) from z -0.35 out to -5.2, its deck at y 0.35, a workshop on it with its door toward
+  // the deck, scaffolding round the bow on poles to the seabed, a mast to y 9.45. On the deck itself: the gangway from
+  // (1.3, 0, 1.7) up through the bulwark to (1.3, 0.37, -0.8), and two bollards at (5.6, 0.55) and (-6, 0.55). Not
+  // solid (all of it is over the sea but the gangway's foot); it stays still (the scaffold and bollards are fixed).
+  "shipwright-ship": "/assets/game/wharf/shipwright-ship.glb",
   // More shells for the sand (art/props/build_beach_shells.py), scenery beside the four forage shells, lying on the sand
   // at y 0, not solid, one P_Paint each so they merge: a sea star 0.34 across, a sand dollar 0.22, a conch 0.34 along z.
   ...Object.fromEntries(["starfish", "sand-dollar", "conch"].map(m => [m, `${P}${m}.glb`])),
