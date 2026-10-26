@@ -21,6 +21,45 @@ The CPU profile shows no single hog; the time goes on three.js's per-draw work a
 
 ## Status
 
+**Pass 2: R2d (terrain-v3 7aee495b merged; this branch is the release candidate)**
+
+A/B in the same session, 24 bots, 3 runs each (medians of the pairs; frame / CPU in ms, then draws):
+
+| | R2d as merged (load 5.5 to 8.5) | After the cuts (load 5.5 to 7.8) |
+|---|---|---|
+| v2 High | 6.6 / 5.7, 413 | 5.6 / 4.9, 405 |
+| village High | 5.6 / 4.9, 378 | 5.5 / 4.8, 374 |
+| v2 Lite | 4.0 / 3.7, 341 | 3.7 / 3.3, 332 |
+| village Lite | 3.2 / 2.9, 293 | 3.3 / 2.9, 295 |
+
+- The R2d breakdown's top costs (High):
+  - critters and fish: 44 draws (the bug spots are about 34 single-bug draws);
+  - trees: 34 draws and 10 hull shadows;
+  - characters: 23 draws and 8 shadows;
+  - post: 21;
+  - shrubs and flowers: 20;
+  - terrain: 20;
+  - lamps: about 21, now 7;
+  - merged scenery: about 45.
+- Hiding groups priced the merged scenery at about 0.3 ms, the lamps 0.45, the shrubs 0.25 and the characters 0.4.
+- Cuts made:
+  - the new world's lamps are merged by look across every kind (`GlowingLamps` over `MergedModels`). The village keeps `Lanterns`, which lost its `reach` option.
+- Review fixes, d1673736:
+  - no jetty preload;
+  - no sushi glow url;
+  - contacts check `shown` before the multiply;
+  - merged props cast as their class says, so the static shadow map draws less;
+  - fireflies capped at 64 on High;
+  - the lamp pool's distances are computed once a frame;
+  - E closes the sell sheet;
+  - mapHealth checks every deck.
+- Gates:
+  - game and economy tests green with and without `NEXT_PUBLIC_GAME_WORLD=new` (2007 of 2007, budget.test included);
+  - tsc and eslint clean.
+- Renders: `specs/evidence/perf-newworld/r2d/` (01, 03, 04, 18), matching `terrain-v3/r2d/`.
+
+**Pass 1 (R2c)**
+
 Head: see `git log` (the `[build] perf-newworld` commits on 76f4b591).
 
 **Measured, apples to apples** (the measurement build, `perf-bench.mjs`, same session, 24 bots; medians):
