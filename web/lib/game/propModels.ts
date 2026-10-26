@@ -167,6 +167,13 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // (5.4, -1.078, -3.6) in the shed's frame (the sea's level under a deck at 1), same yaw. The gangplank is the shed's:
   // it runs off the pier to (4.3, 0.16, -2) in the shed's frame, just over the boat's gunwale. The boat's not solid.
   ...Object.fromEntries(["shipwright-shed", "shipwright-boat"].map(m => [m, `/assets/game/wharf/${m}.glb`])),
+  // art-r2f: the shipwright's ship, to replace the shed and its boat (David, R2e: "a big boat docked to the side"), the
+  // same frame (an edge shop): the deck's water edge at z 0, the deck +z. A wooden hull 14 long along x (bow to +x, x
+  // -7.1 to 10.6 with the bowsprit) from z -0.35 out to -5.2, its deck at y 0.35, a workshop on it with its door toward
+  // the deck, scaffolding round the bow on poles to the seabed, a mast to y 9.45. On the deck itself: the gangway from
+  // (1.3, 0, 1.7) up through the bulwark to (1.3, 0.37, -0.8), and two bollards at (5.6, 0.55) and (-6, 0.55). Not
+  // solid (all of it is over the sea but the gangway's foot); it stays still (the scaffold and bollards are fixed).
+  "shipwright-ship": "/assets/game/wharf/shipwright-ship.glb",
   // More shells for the sand (art/props/build_beach_shells.py), scenery beside the four forage shells, lying on the sand
   // at y 0, not solid, one P_Paint each so they merge: a sea star 0.34 across, a sand dollar 0.22, a conch 0.34 along z.
   ...Object.fromEntries(["starfish", "sand-dollar", "conch"].map(m => [m, `${P}${m}.glb`])),

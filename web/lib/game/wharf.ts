@@ -308,7 +308,7 @@ export const JETTY = {
 export const SELL_BARREL = "sell-barrel";
 
 /** The wharf's shops on the deck's water edge (wharf-art4's, in the old ship houses' frame: their backs over the sea on piles, facing in). */
-export const EDGE_SHOPS: readonly string[] = ["tackle-shop", "shipwright-shed"];
+export const EDGE_SHOPS: readonly string[] = ["tackle-shop", "shipwright-shed", "shipwright-ship"];
 /** How near a deck square's middle a shop leaves its water edge bare. */
 const SHED_CLEAR = 4.2;
 /** A wharf kit model placed on the deck (art/wharf/build_wharf_kit.py, lib/game/propModels.ts SCENERY_URLS): world x, y, z and its turn. */
