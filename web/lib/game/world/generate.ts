@@ -381,8 +381,8 @@ const HOUSE_IN = 0.84;
 const HOUSES: readonly [number, number, string][] = ([
   [15, -15, "yellow"], [-14, -20, "red"], [-26, -12, "brown"], [-26, 12, "yellow"], [15, 16, "red"], [-10, 28, "brown"], [-8, -26, "brown"], [-36, 0, "red"],
 ] as const).map(([dx, dz, colour]) => [PX + HOUSE_IN * dx, PZ + HOUSE_IN * dz, colour]);
-/** Along the wharf (quayAt's z): the quick-sell barrel, and the ship houses on the water's edge, spaced unevenly. */
-const SELL_AT = 36;
+/** Along the wharf (quayAt's z): the quick-sell stall, and the ship houses on the water's edge, spaced unevenly. */
+const SELL_AT = 38;
 const SHIP_HOUSES: readonly (readonly [z: number, model: string])[] = [[17, "a"], [26, "d"], [63.5, "c"], [73.5, "b"]];
 /** The fish market on the deck boards (quayAt's z and d, a turn off facing the water, a scale): stalls, carts, barrels and crates. */
 const MARKET: readonly (readonly [model: string, z: number, d: number, turn: number, scale: number])[] = [
@@ -395,7 +395,7 @@ const MARKET: readonly (readonly [model: string, z: number, d: number, turn: num
   ...[[20.4, 1.2], [66.3, 1.2]].map(([z, d]) => ["crate", z, d, Math.PI / 2, 1] as const),
   ["shop-cart", 43.5, 3.5, 0.4, 1.5], ["shop-cart", 61, 3.5, -0.3, 1.5],
   // wharf-art's dock decor: nets heaped and over crates, crates under cloth, crates of fish tipped toward the walk.
-  ["net-heap", 38.6, 2.2, 0.5, 1], ["crate-cloth", 23.8, 3.2, 0.3, 1],
+  ["net-heap", 42.6, 3.6, 0.5, 1], ["crate-cloth", 23.8, 3.2, 0.3, 1],
   ["fish-crate", 69.8, 2.4, -0.2, 1], ["net-heap", 75.6, 2.4, 1.2, 1], ["crate-cloth", 64.5, 5.4, 0, 1], ["crate-net", 58.6, 6.3, 0.1, 1], ["net-heap", 18.4, 5.6, 2.1, 1],
 ];
 /**
@@ -409,9 +409,10 @@ function scenery(): Obj[] {
   const out: Obj[] = [];
   for (let z = DECK_Z[0]; z <= DECK_Z[1]; z += 4) for (const d of [1, 5]) { const q = quayAt(z, d); out.push(obj("deck", `deck-${out.length}`, q.x, q.z, q.yaw)); }
   MARKET.forEach(([model, z, d, turn, scale], i) => { const q = quayAt(z, d); out.push(obj("prop", `market-${i}`, q.x, q.z, q.yaw + Math.PI + turn, scale, model)); });
-  // The quick-sell barrel just outside the fish market's porch, beside its steps (David, R2c: "a big barrel that you can
-  // sell outside for quick sell"): E there opens the sell sheet (DefaultIslandWorld, by its id).
-  { const q = quayAt(SELL_AT, 0); out.push(obj("prop", SELL_BARREL, q.x, q.z, q.yaw + Math.PI, 1, "sell-barrel")); }
+  // The quick-sell stall (wharf-art3's) at the fish market's south corner, its buyer's side along the deck toward the
+  // jetty's gangways, room to walk up to it (David, R2c: "a big barrel that you can sell outside for quick sell"): E
+  // there opens the sell sheet (DefaultIslandWorld, by its id).
+  { const q = quayAt(SELL_AT, 1); out.push(obj("prop", SELL_BARREL, q.x, q.z, q.yaw + Math.PI / 2, 1, "sell-barrel")); }
   // wharf-art2's ship houses on the deck's water edge, their backs over the sea, facing in (David, R2c: "build on the
   // side of the wharf and face inwards").
   SHIP_HOUSES.forEach(([z, m]) => { const q = quayAt(z, -1); out.push(obj("prop", `ship-house-${m}`, q.x, q.z, q.yaw, 1, `ship-house-${m}`)); });

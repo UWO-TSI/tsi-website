@@ -477,7 +477,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       // Not while Bram brings you in and walks you round (the arrival): the boat home waits for after.
       : DROPS.homeIsland && within(doors.boat, 1.6) && !arrivalPhase ? ["home", doors.boat]
       : within(layout.fitting, 1.5) ? ["fitting", layout.fitting]
-      : within(layout.sellBarrel, 1.9) ? ["sell", layout.sellBarrel]
+      : within(layout.sellBarrel, 2.2) ? ["sell", layout.sellBarrel]
       : DROPS.oracle && within(doors.oracle, 1.6) ? ["oracle_enter", doors.oracle]
       : within(doors.shop, 1.6) ? ["shop_enter", doors.shop]
       : DROPS.cafe && within(doors.cafe, CAFE_DOOR_RANGE) ? [progression.opened.includes("cafe") ? "cafe_enter" : "cafe", doors.cafe]
