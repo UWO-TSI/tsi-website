@@ -97,6 +97,8 @@ export const PROP_FOOTPRINT: Record<string, [number, number]> = {
   "plaza-fountain": [4, 4], "banner-pole": [0.1, 0.1], "flag-pole": [0.12, 0.12], "fruit-stall": [1.4, 0.6], "fruit-barrel": [0.38, 0.38],
   "fruit-crate": [0.32, 0.22], "flower-planter": [0.62, 0.22], "flower-pot": [0.24, 0.24], "round-planter": [0.52, 0.52],
   "planter-bench": [1.3, 0.28], "market-sign": [0.31, 0.25],
+  "path-rock-slab": [0.2, 0.12], "path-rock-low": [0.33, 0.28], "path-rock-cluster": [0.4, 0.28], "rustic-fence-a": [1.25, 0.08],
+  "rustic-fence-b": [0.85, 0.08], "rustic-post": [0.07, 0.07],
 };
 /** Prop tops before scale, measured from the GLB bounds: what a jump clears or lands on (lib/game/movement). */
 export const PROP_TOP: Record<string, number> = {
@@ -107,6 +109,7 @@ export const PROP_TOP: Record<string, number> = {
   "stump-seat": 0.45, "firewood-stack": 0.86, "fish-rack": 1.43, "forest-mass-a": 8.83, "forest-mass-b": 9.48, "forest-mass-c": 9.73,
   "plaza-fountain": 3.21, "banner-pole": 3.3, "flag-pole": 4.13, "fruit-stall": 2.5, "fruit-barrel": 1.005, "fruit-crate": 0.495,
   "flower-planter": 0.623, "flower-pot": 0.627, "round-planter": 1.091, "planter-bench": 0.731, "market-sign": 0.987,
+  "path-rock-slab": 0.626, "path-rock-low": 0.286, "path-rock-cluster": 0.376, "rustic-fence-a": 0.99, "rustic-fence-b": 0.91, "rustic-post": 0.931,
 };
 /**
  * Residents' houses (the `house` kind, specs/world-editor.md decision 10): the chalet in its three colourways, the
