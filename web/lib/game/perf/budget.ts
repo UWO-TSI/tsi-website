@@ -185,8 +185,6 @@ export const ASSET_CATEGORIES: readonly AssetCategory[] = [
   // trunk only in the sun's map. Triangles count all four; the far model (.lod1) is held under half the near one
   // (natureLod.test.ts).
   { name: "tree", prefixes: ["game/plants/tree-", "game/plants/conifer-"], triangles: 3200, primitives: 4, materials: 4, texture: 512, bones: 0 },
-  // terrain v3's forest masses (art/trees/build_forest_masses.py): a stand of cedars in one mesh, instanced over the closed forest.
-  { name: "forest mass", prefixes: ["game/plants/forest-"], triangles: 3200, primitives: 2, materials: 2, texture: 256, bones: 0 },
   // game/remodel-trees (art/trees/build_flowers.py): a clump of stems with petal cards, one cut-out material on the
   // painted petal atlas, one draw for every flower of its kind.
   { name: "flower", prefixes: ["game/plants/flower-"], triangles: 600, primitives: 1, materials: 1, texture: 512, bones: 0 },

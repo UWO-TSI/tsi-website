@@ -204,7 +204,7 @@ const VILLAGE = blob([PX + 2, 52], [42, 44, 42, 44, 50, 52, 38, 42], 2, 12, 81);
  * end, its back (local -z) turned to the open sea south-east, its customers' deck toward the way down from the village,
  * on a level pad 0.9 high.
  */
-const SUSHI = [47, 99] as const;
+const SUSHI = [44, 96.5] as const;
 const BEACH = strip([[58, 92], [40, 100], [10, 105], [-20, 105], [-50, 101]], 9, 8, 0.8, 16, 95);
 
 /**
@@ -441,7 +441,7 @@ function scenery(): Obj[] {
     [24, 99, "lean"], [30, 100, "short"], [27, 97.4, "small"], [52, 95, "tall"], [54.5, 96.6, "small"]] as const)
     .forEach(([x, z, kind], i) => out.push(obj("prop", `palm-${i}`, x, z, kind === "lean" ? -Math.PI / 2 : x * 0.37, BEACH_PALM, `palm-${kind}`)));
   [[-30, 109], [-22, 110], [28, 108]].forEach(([x, z], i) => out.push(obj("prop", `parasol-${i}`, x, z, x * 0.21, 1, "beach-parasol")));
-  out.push(...plazaSet(), ...beachSet(), ...lamps(), ...nature());
+  out.push(...plazaSet(), ...beachSet(), ...lamps(), ...nature(), ...boulders());
   out.push(obj("prop", "lighthouse", 126, 104, -0.6, 0.2, "lighthouse"));
   out.push(obj("barrier", "slide-mountain", 26, 8.5, 0.1, 1.4, "rockslide"));
   out.push(obj("barrier", "edge-forest-0", 58, 6.5, 0.1, 1, "forest-edge"), obj("barrier", "edge-forest-1", 66, 5.6, 0.1, 1, "forest-edge"));
@@ -513,6 +513,19 @@ function lamps(): Obj[] {
   return out;
 }
 
+/**
+ * village-art2's mossy boulders (each set at the lowest ground under it: NatureModels propY): at the plaza's edges clear
+ * of its roads, outside the path's bends, and along the river's near bank.
+ */
+function boulders(): Obj[] {
+  const at: [number, number][] = [
+    onPlaza(312, 14), onPlaza(228, 14.5), onPlaza(128, 14),
+    ...([[9.4, 4.2], [13.6, -4.4], [18.2, 4.6]] as const).map(([s, side]): [number, number] => { const q = onPath(s, side); return [q.x, q.z]; }),
+    [-40.5, 26], [-41.5, 45], [-45, 62], [-51, 82], [-53.5, 92],
+  ];
+  return at.map(([x, z], i) => obj("prop", `boulder-${i}`, x, z, hash01(i, 80) * 6.28, +(0.8 + 0.7 * hash01(i, 81)).toFixed(2), `moss-boulder-${i % 3 ? "a" : "b"}`));
+}
+
 /** The way down to the beach (the second ramp). */
 const BEACH_WAY: readonly XZ[] = [[36, 80], [34, 92], [31, 101]];
 /**
@@ -548,7 +561,7 @@ function shallows(t: World["terrain"]): Obj[] {
     const x = -56 + i * 1.9 + 1.5 * (hash01(i, k + 60) - 0.5), z = 100 + k * 1.9 + 1.5 * (hash01(k, i + 61) - 0.5), h = hash01(i * 3 + k, 62);
     const depth = t.seaLevel - terrainHeight(t, x, z);
     // In reefs (David, R2c: "have coral reeffs"), with a few loners between.
-    if ((fbm(x / 9, z / 9, 65) < 0.56 || h > 0.75) && h > 0.06) continue;
+    if ((fbm(x / 9, z / 9, 65) < 0.5 || h > 0.85) && h > 0.06) continue;
     if (depth < 0.8 || depth > 1.6) continue;
     out.push(obj("prop", `coral-${out.length}`, x, z, h * 21, +(0.8 + 0.5 * hash01(k, i + 63)).toFixed(2), `coral-${"abcd"[Math.floor(hash01(i, k + 64) * 4)]}`));
   }
@@ -558,14 +571,14 @@ function shallows(t: World["terrain"]): Obj[] {
 /**
  * The closed forest (David, R2c: "a low render for performance that also looks like busy forest over there but also look
  * natural"): many single low-poly trees (the far versions of our cedar and two broadleaf shapes, instanced: a few draws
- * for the lot), packed on a jittered 3.4 u grid over the whole forest off the mountain's foot and now and then left out,
+ * for the lot), packed on a jittered 2.9 u grid over the whole forest off the mountain's foot and now and then left out,
  * mostly cedars, each turned and sized its own way (never stretched) and standing on its own ground.
  */
 function forestTrees(): Obj[] {
   const out: Obj[] = [];
-  for (let i = 0; i < 34; i++) for (let k = 0; k < 44; k++) {
-    const x = 20 + i * 3.4 + 2.8 * (hash01(i, k) - 0.5), z = -138 + k * 3.4 + 2.8 * (hash01(k + 50, i) - 0.5), h = hash01(i * 31 + k, 7);
-    if (FOREST(x, z) < 1.5 || MT_FOOT(x, z) > -2 || hash01(i + 70, k) < 0.08) continue;
+  for (let i = 0; i < 40; i++) for (let k = 0; k < 52; k++) {
+    const x = 20 + i * 2.9 + 2.4 * (hash01(i, k) - 0.5), z = -140 + k * 2.9 + 2.4 * (hash01(k + 50, i) - 0.5), h = hash01(i * 31 + k, 7);
+    if (FOREST(x, z) < 1 || MT_FOOT(x, z) > -2 || hash01(i + 70, k) < 0.08) continue;
     const model = h < 0.55 ? "forest-cedar" : h < 0.8 ? "forest-tall" : "forest-round";
     out.push(obj("prop", `forest-${out.length}`, x, z, hash01(k, i * 13) * 2 * Math.PI, +((model === "forest-cedar" ? 1.5 : 1.3) + 0.6 * hash01(i, k + 99)).toFixed(2), model));
   }

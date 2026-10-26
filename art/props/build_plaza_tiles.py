@@ -24,15 +24,16 @@ def tone(a, b, t):
     return "#" + "".join(f"{int(round(v * 255)):02x}" for v in np.clip(ca + (cb - ca) * t, 0, 1))
 
 
-def sett(k, M, r0, r1, a0, a1, col):
-    """One sett: the ring sector r0..r1, a0..a1 (radians), its top at TOP, its sides down into the ground."""
+def sett(k, M, r0, r1, a0, a1, col, sides):
+    """One sett: the ring sector r0..r1, a0..a1 (radians), its top at TOP; with `sides`, its sides down into the ground
+    (only the kerb's: an inner sett stands 0.03 proud, too little to see, and the budget is 3000 triangles)."""
     pts = lambda r, y: [(r * math.cos(a), y, r * math.sin(a)) for a in (a0, a1)]
     top = [*pts(r0, TOP), *reversed(pts(r1, TOP))]
     bot = [*pts(r0, TOP - THICK), *reversed(pts(r1, TOP - THICK))]
     uv = lambda p: (p[0] / 1.6, p[2] / 1.6)
     vt, vb = [k.vert(p) for p in top], [k.vert(p) for p in bot]
     k.face(vt, [uv(p) for p in top], M, col)
-    for i in range(4):
+    for i in range(4 if sides else 0):
         j = (i + 1) % 4
         k.face([vb[i], vb[j], vt[j], vt[i]], [uv(bot[i]), uv(bot[j]), (uv(top[j])[0], uv(top[j])[1] + 0.03), (uv(top[i])[0], uv(top[i])[1] + 0.03)], M, tone(col, KERB, 0.4))
 
@@ -52,7 +53,7 @@ def build():
             a0, a1 = turn + 2 * math.pi * i / n, turn + 2 * math.pi * (i + 1) / n
             g = GAP / 2 / ((r + r1) / 2)
             col = tone(KERB, DARK, rng.uniform(0, 0.5)) if kerb else tone(DARK, LIGHT, rng.uniform(0.3, 1.0) if ring % 4 else rng.uniform(0.0, 0.5))
-            sett(k, M, r, r1 - GAP, a0 + g, a1 - g, col)
+            sett(k, M, r, r1 - GAP, a0 + g, a1 - g, col, kerb)
         r, ring = r1, ring + 1
     k.tint_gradient(0.95, 1.0, TOP - THICK, TOP)
     ob = k.finish(smooth_deg=30)
