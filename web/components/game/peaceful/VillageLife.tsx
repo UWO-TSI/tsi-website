@@ -44,7 +44,7 @@ import { LIFT, handOf, liftPose, type Lift } from "@/lib/game/forageLift";
 import { FACE, seedAt, type Recipe } from "@/lib/game/fx/particles";
 import { CHIPS, CHIP_TINT, DIG_RISE, FLOWER_TINT, GLINT, GLINT_EVERY, GLINT_TINT, HOLE_TINT, LIFT_PUFF, PETALS, ROCK_DUST, SAND_BURST, SAND_GRAINS, SAND_TINT, STRIKE_PUFF } from "@/lib/game/forageFx";
 import { hash01 } from "@/lib/game/worldFx";
-import { TREE_WIND, WORLD_SNOW, leafTintHex, prepareModel } from "@/lib/game/modelMaterials";
+import { TREE_WIND, WORLD_SNOW, disposeModelMaterials, leafTintHex, prepareModel } from "@/lib/game/modelMaterials";
 import TreeFruit, { FRUIT_REST_RADIUS, type HangingFruit } from "./TreeFruit";
 
 export interface NodeSpec { id: string; x: number; z: number; biomes: Biome[]; categories: Species["category"][]; /** Tree canopy (fruit hangs up here). */ canopy?: boolean; /** Always this species (a tree's branch) instead of a roster roll. */ drop?: Species; /** The tree a canopy node belongs to: its fruit hangs in this tree's crown. */ tree?: TreeSpot }
@@ -54,6 +54,8 @@ function readHarvested(): Record<string, string> {
   try { return JSON.parse(localStorage.getItem(HARVEST_KEY) ?? "{}") as Record<string, string>; } catch { return {}; }
 }
 const MODEL_OF = new Map(CRITTERS.map(c => [c.key, c]));
+/** A bug model at its scale: the bugs that draw together (BugFlock). */
+const FLOCK_OF = new Map(CRITTERS.map(c => [c.key, `${c.model}|${c.scale}`]));
 /** How near you stand to pick by hand, to shake a tree (its trunk blocks at 0.65), and to pick up what fell. */
 const REACH = 1.7, TREE_REACH = 1.25, DROP_REACH = 1.35;
 const BRANCH_URL = "/assets/game/props/branch.glb";
@@ -189,6 +191,66 @@ function FallenBranch({ drop, lifts }: { drop: Drop; lifts: ReadonlyMap<string, 
   const group = useRef<THREE.Group>(null);
   useFrame(() => placeBranch(group.current, drop, lifts.get(drop.nodeId), performance.now()));
   return <group ref={group} visible={false}><primitive object={model} /></group>;
+}
+
+/** One bug model's InstancedMeshes (one a sub-mesh), each sub-mesh's place in the model, and how many are filled this frame. */
+interface Flock { meshes: THREE.InstancedMesh[]; local: THREE.Matrix4[]; n: number }
+/**
+ * Every bug of one model at one scale as one InstancedMesh per sub-mesh (perf-newworld: a bug was a draw per material
+ * each). A bug standing where it lives draws in its flock; one fleeing (fading), lifted into a hand or hidden draws
+ * its own model instead (fillFlocks, each frame).
+ */
+function BugFlock({ url, scale, cap, flocks }: { url: string; scale: number; cap: number; flocks: Map<string, Flock> }) {
+  const { scene } = useGLTF(url);
+  const model = useMemo(() => {
+    const m = prepareModel(scene, url);
+    m.scale.setScalar(scale);
+    m.updateMatrixWorld(true);
+    return m;
+  }, [scene, url, scale]);
+  useEffect(() => () => disposeModelMaterials(model), [model]);
+  const flock = useMemo(() => {
+    const f: Flock = { meshes: [], local: [], n: 0 };
+    model.traverse(o => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh || !m.visible) return;
+      const im = new THREE.InstancedMesh(m.geometry, m.material, cap);
+      // The curved world bends far things down into view (modelMaterials prepareModel): never culled by their own bounds.
+      Object.assign(im, { castShadow: m.castShadow, receiveShadow: m.receiveShadow, frustumCulled: false, count: 0 });
+      f.meshes.push(im);
+      f.local.push(m.matrixWorld.clone());
+    });
+    return f;
+  }, [model, cap]);
+  useEffect(() => {
+    const key = `${url}|${scale}`;
+    flocks.set(key, flock);
+    return () => { flocks.delete(key); flock.meshes.forEach(m => m.dispose()); };
+  }, [flocks, flock, url, scale]);
+  return <>{flock.meshes.map((m, i) => <primitive key={i} object={m} />)}</>;
+}
+const _bugAt = new THREE.Matrix4(), _part = new THREE.Matrix4();
+let _ownShown = true;
+function showOwnOne(o: THREE.Object3D) { if ((o as THREE.Mesh).isMesh) o.visible = _ownShown; }
+const startFlock = (f: Flock) => { f.n = 0; };
+function endFlock(f: Flock) { for (const m of f.meshes) { m.count = f.n; m.instanceMatrix.needsUpdate = true; } }
+/** Module scope (the react compiler forbids writing through hook values): each bug into its flock, or drawn alone. */
+function fillFlocks(bugs: readonly LiveBug[], live: ReadonlyMap<string, LiveBug>, groups: ReadonlyMap<string, THREE.Group>, lifts: ReadonlyMap<string, Lift>, flocks: Map<string, Flock>) {
+  flocks.forEach(startFlock);
+  for (let i = 0; i < bugs.length; i++) {
+    const bug = live.get(bugs[i].id), g = groups.get(bugs[i].id);
+    if (!g) continue;
+    const flock = flocks.get(FLOCK_OF.get(bugs[i].sp.key)!);
+    const alone = !flock || !bug || !g.visible || bug.fled || bug.faded || lifts.has(bug.id);
+    _ownShown = alone;
+    g.traverse(showOwnOne);
+    if (alone || !g.parent) continue;
+    g.updateMatrix();
+    _bugAt.multiplyMatrices(g.parent.matrixWorld, g.matrix);
+    for (let k = 0; k < flock.meshes.length; k++) flock.meshes[k].setMatrixAt(flock.n, _part.multiplyMatrices(_bugAt, flock.local[k]));
+    flock.n++;
+  }
+  flocks.forEach(endFlock);
 }
 
 interface LiveBug {
@@ -523,6 +585,12 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
     return () => window.removeEventListener("tsi:peaceful-act", onAct);
   }, [forage, lyingByNode, forageTargets, ground, treeModels, hour, fx, struck, lifts, player, markHarvested]);
 
+  const flocks = useMemo(() => new Map<string, Flock>(), []);
+  const flockSizes = useMemo(() => {
+    const n = new Map<string, number>();
+    for (const b of bugs) { const key = FLOCK_OF.get(b.sp.key)!; n.set(key, (n.get(key) ?? 0) + 1); }
+    return [...n];
+  }, [bugs]);
   useFrame((_, delta) => {
     const p = player.current, nowMs = performance.now();
     // A jump of more than a stride in one frame is a spawn or teleport, not running at the bug.
@@ -607,6 +675,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
       if (reaction === "catchable" && (!best || d < best.distance)) { bug.target.distance = d; best = bug.target; }
     }
     setPeacefulTarget(best);
+    fillFlocks(bugs, live, groups.current, lifts, flocks);
   });
   useEffect(() => () => setPeacefulTarget(null), []);
 
@@ -627,6 +696,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
     {spentRocks.map(({ n, sp }) => <Suspense key={n.id} fallback={null}><Outcrop sp={sp!} at={[n.x, ground(n.x, n.z), n.z]} nodeId={n.id} struck={struck} spent /></Suspense>)}
     {pieces.map(p => <Suspense key={p.key} fallback={null}><LiftedPiece piece={p} lifts={lifts} /></Suspense>)}
     <Holes />
+    {flockSizes.map(([key, n]) => { const [url, scale] = key.split("|"); return <Suspense key={key} fallback={null}><BugFlock url={url} scale={+scale} cap={n} flocks={flocks} /></Suspense>; })}
     {bugs.map(b => {
       const model = MODEL_OF.get(b.sp.key)!;
       return <group key={b.id} ref={g => { if (g) { g.userData.base = 1; groups.current.set(b.id, g); } else groups.current.delete(b.id); }}>
