@@ -21,6 +21,7 @@ export const VIEWS = {
   "14-dock": { at: [71, 37], yaw: 60, pitch: 0.4, zoom: 1.3 },
   "16-campfire": { at: [14, 95.5], yaw: 0, pitch: 0.5, zoom: 1.2 },
   "17-deck-edge": { at: [72.5, 30], yaw: 160, pitch: 0.4, zoom: 1.0 },
+  "18-wharf-night": { at: [66, 50], yaw: 120, pitch: 0.42, zoom: 1.6, time: "night" },
 };
 
 const [OUT = "/tmp/terrain-v3", ONLY] = process.argv.slice(2), PORT = process.env.PORT ?? 3171;
@@ -37,7 +38,7 @@ for (const [name, v] of Object.entries(VIEWS)) {
   } catch {} }, [LOOK, JSON.stringify({ yaw: (v.yaw * Math.PI) / 180, pitch: v.pitch, zoom: v.zoom, mouseLook: false, autoFollow: false, sensitivity: 1, invertY: false })]);
   const page = await ctx.newPage();
   page.on("pageerror", e => console.log("pageerror", name, e.message.slice(0, 200)));
-  await page.goto(`http://localhost:${PORT}/lab/island?fixture=v2&at=${v.at.join(",")}${v.flat ? "&aerial=1" : ""}&time=day&weather=clear&season=summer`);
+  await page.goto(`http://localhost:${PORT}/lab/island?fixture=v2&at=${v.at.join(",")}${v.flat ? "&aerial=1" : ""}&time=${v.time ?? "day"}&weather=clear&season=summer`);
   await page.waitForFunction(() => !!window.__move?.sim?.current, null, { timeout: 240000 });
   await page.waitForTimeout(8000);
   if (await page.evaluate(() => { const g = window.__governor; if (!g) return false; g.hold = 1e9; g.set(0); return true; })) await page.waitForTimeout(1500);

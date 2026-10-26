@@ -69,7 +69,7 @@ async function preview(w: World, out: string) {
     if (detail) svg += `<text x="${X(x)}" y="${(+Z(z) + 15).toFixed(1)}" font-size="12" stroke-width="3" ${font}>(${detail}</text>`;
   }
   const note = (y: number, text: string) => `<text x="12" y="${rows - y}" font-size="13" fill="#fff" stroke="#1d2a33" stroke-width="3" paint-order="stroke">${text}</text>`;
-  svg += note(30, "Terrain v3 R2. Heights in units above the sea (a jump is 1.3). Dashed: the invisible border (opens soon).");
+  svg += note(30, "Terrain v3 R2b. Heights in units above the sea (a jump is 1.3). Dashed: the invisible border (opens soon).");
   svg += note(12, "Gold: where a player can get to from the spawn. Red dots: buildings, houses and the spawn.") + "</svg>";
   await sharp(rgb, { raw: { width: cols, height: rows, channels: 3 } }).composite([{ input: Buffer.from(svg) }]).png({ compressionLevel: 9 }).toFile(out);
   console.log(`preview: ${out}`);

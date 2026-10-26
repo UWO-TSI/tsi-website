@@ -21,6 +21,7 @@ import { CONVERT, contourDistance, limitSteepness, padBuildings, rockRelief, she
 import type { World } from "./format";
 import { Paint, createTerrain, sampleX, sampleZ } from "./terrain";
 import { JOINED_FENCE } from "../fences";
+import { hash01 } from "../worldFx";
 import type { ObjectKind } from "../villageMap";
 
 type XZ = readonly [number, number];
@@ -189,6 +190,10 @@ const forestGround = (x: number, z: number) => {
   const wx = x + 9 * (fbm(x / 30, z / 30, 21) - 0.5), wz = z + 9 * (fbm(x / 30, z / 30, 22) - 0.5);
   return H.forest + 2.2 * (2 * fbm(wx / 19, wz / 19, 23) - 1);
 };
+/** The forest and ruins: the island's north-east between the mountain and the sea. */
+const FOREST: Field = (x, z) => Math.min(MAIN(x, z), x - 26 + wob(x, z, 6, 16, 13), -4 - z + wob(x, z, 5, 14, 14));
+/** The mountain's foot (its first layer's outline). */
+const MT_FOOT = inMt(blob([4, -142], [66, 60, 64, 58, 62, 58, 70, 62], 5, 15, 61));
 const hilly = (base: number, amp: number, scale: number, seed: number) => (x: number, z: number) => base + amp * (2 * fbm(x / scale, z / scale, seed) - 1);
 
 export const PLAN: Plan = {
@@ -214,11 +219,10 @@ export const PLAN: Plan = {
     // the wharf: a gradual rise out of the meadow, in two long tiers.
     {
       name: "Ruins in forest", label: ["Forest and ruins (hilly, 7 to 11)", 48, -30],
-      shape: (x, z) => Math.min(MAIN(x, z), x - 26 + wob(x, z, 6, 16, 13), -4 - z + wob(x, z, 5, 14, 14)),
-      ground: forestGround, edge: 6, tiers: [0.5, 0.5], ledge: 9, coast: 2.5,
+      shape: FOREST, ground: forestGround, edge: 6, tiers: [0.5, 0.5], ledge: 9, coast: 2.5,
     },
     // MOUNTAIN: the highest point, as R1 drew it, moved in behind the meadow. Layered cliffs, each layer a shelf; peaks standing off its sides.
-    { name: "Mountain", label: mtLabel("Mountain (layers at 16.5 and 25)", 20, -196), shape: inMt(blob([4, -142], [66, 60, 64, 58, 62, 58, 70, 62], 5, 15, 61)), ground: (x, z) => H.m1 + wob(x, z, 1, 20, 62), edge: 1.3, tiers: [0.4, 0.3, 0.3], ledge: 2.6, coast: 2.5 },
+    { name: "Mountain", label: mtLabel("Mountain (layers at 16.5 and 25)", 20, -196), shape: MT_FOOT, ground: (x, z) => H.m1 + wob(x, z, 1, 20, 62), edge: 1.3, tiers: [0.4, 0.3, 0.3], ledge: 2.6, coast: 2.5 },
     { name: "Mountain", shape: inMt(blob([-2, -150], [38, 34, 37, 36, 40, 36, 42, 34], 3.5, 11, 63)), ground: (x, z) => H.m2 + wob(x, z, 0.8, 16, 64), edge: 1.2, tiers: [0.4, 0.3, 0.3], ledge: 2.2 },
     { name: "Mountain", shape: inMt(ellipse([26, -168], 6, 7, 0, 1, 4, 65)), ground: 34, edge: 1.2 },
     { name: "Mountain", shape: inMt(ellipse([-30, -164], 7, 6, 0, 1, 4, 66)), ground: 30, edge: 1.2 },
@@ -373,11 +377,27 @@ function scenery(): Obj[] {
   return out;
 }
 
+/**
+ * The closed forest as a dense wood without single trees (David: "low qual so it looks like dense forest"): terrain-art's
+ * forest masses (stands of cedars on a mound, 10 to 16 u across) on a jittered 8 u lattice over the whole forest, off
+ * the mountain's foot, each turned and sized its own way so no repeat reads from the open area.
+ */
+function forestMasses(): Obj[] {
+  const out: Obj[] = [];
+  for (let i = 0; i < 14; i++) for (let k = 0; k < 18; k++) {
+    const x = 22 + i * 8 + 5 * (hash01(i, k) - 0.5), z = -136 + k * 8 + 5 * (hash01(k + 50, i) - 0.5);
+    if (FOREST(x, z) < 2 || MT_FOOT(x, z) > -3) continue;
+    const h = hash01(i * 31 + k, 7), model = `forest-mass-${"abc"[Math.floor(h * 3)]}`;
+    out.push(obj("prop", `forest-${out.length}`, x, z, hash01(k, i * 13) * 2 * Math.PI, +(0.9 + 0.25 * hash01(i, k + 99)).toFixed(2), model));
+  }
+  return out;
+}
+
 /** The kinds only the generator places (every one of them is rebuilt each run). */
 const GENERATED: ReadonlySet<string> = new Set(["deck", "prop", "house"]);
 /** The layout's moves, then the generated objects (the border and the scenery) in place of any earlier copy of them. */
 export function layoutObjects(objects: World["objects"]): World["objects"] {
-  const made = [...borderObjects(), ...scenery()], ids = new Set(made.map(o => `${o.kind}:${o.id}`));
+  const made = [...borderObjects(), ...scenery(), ...forestMasses()], ids = new Set(made.map(o => `${o.kind}:${o.id}`));
   const stale = (o: Obj) => GENERATED.has(o.kind) || ids.has(`${o.kind}:${o.id}`) || (o.kind === "barrier" && o.model === "border");
   return [...objects.filter(o => !stale(o)).map(o => (LAYOUT[o.id] ? { ...o, ...LAYOUT[o.id] } : o)), ...made];
 }

@@ -19,7 +19,17 @@ Then look at the references in `specs/references/terrain/plan-2026-10-23/` and t
 
 ## Status
 
-**R1c and R2 reviewed 2026-10-26** (head e11d0444, not merged): map, houses, meadow, mountain and north approved; the rest redo (notes below, verbatim). Next is R2b (Next, below), in parallel with the lane `terrain-art` (`specs/lanes/terrain-art.md`), which models the new 3D assets in Blender.
+**R2b built, waiting on review** (2026-10-26; head: the lane-file commit after 8cf6f218). Renders `specs/evidence/terrain-v3/r2b/`. terrain-art merged through ec364e38 (all its batches). The coordinator stopped the round before R3: David sent a new batch of references and notes (palms, lamps, dock decor, sushi bar, lifeguard tower, coral, wadeable shore, wavy sand edge, curving dirt path, plaza fountain, lush nature), for new art lanes. The next round starts fresh from this file with those notes.
+
+What R2b built (David's R2 notes, the reading 1 to 10 below):
+- **The landform:** no stone quay; behind the deck boards a grassy band at their level (1) out to 13 u from the shore, then the climb to the village's 3 by 24 (`generate.ts` Wharf zone). The path starts on the boards at z 56 (`PATH_Z`); the "steps" square and `STAIRS` are gone. The meadow across the river is 1.5 lower (`meadowGround`, about 2 there against the village's 3).
+- **The jetty** (`art/wharf/build_jetty.py`, `jetty.glb`, the kit's wood and rope): a landing at the water (top 0) where the boat moors as at the pier, stairs up to a 9 x 4 platform at 1, three gangways to the deck boards, piles, rope fencing, two ladders, a cleat. The wharf landmark's `model: "jetty"` switches it (`defaultIsland.ts isJetty`, `wharfDock` gives `y: JETTY.top`); `wharfDecks` returns each deck with its height function (stairs ramp). `DOCK` moved out to x 82.1. R2's raise plumbing is gone (Boat lines, rider, crate, dressing, `jettyY`, `ladderBoxes`), and the new world draws no finger pier or rowboats (`dressed={!dock.y}`).
+- **The wharf kit** on the deck squares (`wharf.ts deckPieces`, drawn in `NatureModels sceneryOf`): a deck tile on each, two piles on every water-edge square, a ladder on every fifth, rope fencing on about half of the rest, none within 7 u of the gangways. `WoodBoxes`, `deckBoards`, `DECK` deleted.
+- **Plaza:** HQ, café, shop and museum at scale 1.32 (1.15 x R2's 1.15), houses at 1.15; the floor is `plaza-tiles` (`art/props/build_plaza_tiles.py`, stone setts in rings, a prop at the plaza's centre).
+- **terrain-art's assets placed:** palms (tall, lean, short) on the grassy band and the beach in place of palm-a/b; the lamps by model (`lamp` objects carry `model` village, wharf or camp and a yaw turning the arm; `DefaultIslandWorld lampSets`), two lantern posts on the jetty's platform; the campfire filled out (3 log benches as sittable `bench`es, 4 stumps, firewood stack, fish rack, 2 camp lanterns, all outside the dance ring); 23 forest masses over the whole closed forest (`forestMasses`, jittered 8 u lattice off the mountain's foot).
+- **Generated kinds:** `layoutObjects` now drops every deck, prop and house before adding the generated ones (`GENERATED`), so a removed object never lingers.
+- **Gates:** with and without the switch, 35 files and 290 tests green; tsc and eslint clean. No perf run (skipped by the coordinator).
+- **Not verified:** the palms' sway in motion (stills only); light pools at night are faint at play distance (view 18: the glass glows, the pools are small).
 
 What R1c and R2 built:
 
@@ -48,7 +58,7 @@ R2 (on the R1c ground):
 - **Beach:** the campfire at (14, 104), 7 palms on the dry sand at its back, 3 parasols.
 - **Lighthouse** on its islet (prop, scale 0.2).
 - **Closures:** rockslide on the mountain way north of the café, two forest-edge segments on the forest way north of the wharf, an unbuilt bridge on the river's village bank (the washed-out crossing) and one on the meadow's coast toward the north island. The invisible border is unchanged.
-- **Renders:** `specs/evidence/terrain-v3/r2/` (00 top-down, 01 to 11 the R1b views, 13 market, 14 the jetty and ladders, 15 the plaza's houses, 16 the campfire).
+- **Renders:** `specs/evidence/terrain-v3/r2/` (00 top-down, 01 to 11 the R1b views, 13 market, 14 the jetty and ladders, 15 the plaza's houses, 16 the campfire); R2b in `r2b/` (shoot.mjs views take `time`).
 - **Gates:** with and without the switch, 37 files and 292 tests green (world, arrival with routes, barriers, drops, proposals, campfire, wharf, defaultIsland, mapHealth, villageMap, propModels, fences, residentRoutine, shadows, groundGate, wharf components). tsc and eslint clean. No perf run (one run in R3).
 - **Not in R2:** fishing nets (no net model in the assets; `tool-net` is the bug net). Questions: `specs/launch/terrain-v3-questions.md` "R2".
 
@@ -165,17 +175,8 @@ The plan page answers, verbatim in the spec. The drawing is a guide to where thi
 
 ## Next
 
-1. **R2b, landform and layout** (the reading above, 2, 3, 5, 10):
-   - behind the boards: the grassy band at the boards' level, the climb to the village behind it, no stone step;
-   - the dock wider, three ways onto it from the deck, and a lower boat level stepping out at the water. You own the dock's model (Blender, headless, under `art/`) and its walk surfaces, since they are tied to `wharf.ts`, `jettyY`, the boat trip and the arrival route; the routes test and the tutorial crate must still work;
-   - the plaza's buildings and houses at 1.15 scale, pads grown to match, doors and entries still working; the plaza floor tiled (use an existing tile or paving texture if the repo has one; otherwise add a question with your default);
-   - the meadow bank across the river 1 to 2 u lower.
-2. **Wire `terrain-art`'s assets as they land.** The coordinator tells you when to `git merge game/terrain-art` (it branches from your e11d0444). Then: the bigger deck boards replacing the code boxes, pillars along the deck's water edge, ladders, rope fencing on some stretches, palms on the grassy band, the campfire area filled out, and the forest masses over the whole closed forest. Don't add `propModels.ts` entries for that lane's models; it registers them. Until they land, do step 1 and leave placeholders out.
-3. **Skip** the path's redesign and the plaza's decor until the coordinator sends David's references.
-4. **Review:** render `specs/evidence/terrain-v3/r2b/` (the top-down map, views 01 to 03, 04 the plaza, 06 the beach, 09 the forest, 10 the river, 13 the market, 14 the dock, 16 the campfire, plus a close view of the deck's edge with pillars and rope fencing), then SendMessage "main" with the images and a one-line fact for each.
-5. **Then R3 straight on** without waiting: light trees and bushes in the village, trees on the meadow and the north island, rock on the cliffs; and the one perf run (`SCENES=v2`) at the end, against the new world's High budget (4.8 ms, 222 draws). Report it and stop.
-
-**Questions for David** go in `specs/launch/terrain-v3-questions.md`, one line each with your default. Carry on with your default meanwhile, unless the answer would change the landform.
+1. Wait for the coordinator: the next round starts from David's new notes and references (`specs/references/terrain/r2-2026-10-26/`). Don't build from them until told.
+2. R3 (dressing) and the one perf run (`SCENES=v2`, High budget 4.8 ms and 222 draws) are still to do; forest masses, palms, lamps and the jetty all add draws, so price them in that run.
 
 ## Tools and gotchas
 
@@ -184,6 +185,9 @@ The plan page answers, verbatim in the spec. The drawing is a guide to where thi
 - **R1b dark band:** a zone seam with no zone on top falls to the plan's base ground. The main island's ground is the village's 3, so seams stay level.
 - **Object key order:** objects the generator writes must list their keys in the order `format.ts` reads them back (id, kind, x, z, yaw, scale, model), and leave out a zero yaw. Otherwise `world.test` ("same bytes") fails.
 - **Border toast check:** with `at=0,24`, camera yaw pi, hold W; the toast shows at about z 15.
+- **Jetty frame:** dock frame x across (+x the boat side), z inland, the landing's tip at -3.5. `JETTY` in `wharf.ts` mirrors `build_jetty.py` (rects and piles); rebuild the model and edit both together. The gangways' walk rects run to z 9.2, past the boards' edge, because the coast drops to 0.5 right at the shoreline.
+- **Spawn:** at `SHORE_X - 6` on the boards; nearer the gangways the residents' plaza ring lands on a deck and walk.test fails.
+- **Blender:** `LANE=game/terrain-v3 withlock.sh blender /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P art/wharf/build_jetty.py -- review <dir>` (review images land as `<name>.0.png`, `.1.png`).
 - **Views:** dev server `cd web && NEXT_PUBLIC_SUPABASE_URL= NEXT_PUBLIC_SUPABASE_ANON_KEY= NEXT_PUBLIC_GAME_WORLD=new npx next dev -p 3171`, then `PORT=3171 node specs/evidence/terrain-v3/shoot.mjs <dir> [view,...]` (headless, muted; `/lab/island?fixture=v2&at=x,z`, camera yaw 0 looks toward +z, 90 toward +x). `at=` stands you anywhere, closed zones too, so keep review spots in the open area unless the view is of a closed zone.
 - **Curved world:** the bend drops far things by 0.0032 d^2 (30 u at 100 u), so nothing more than about 80 u away shows from the open area.
 - **Annotations:** a land zone owns a cell only where the ground stands within 1.5 u of its own height, so a cliff's foot or a coast's last slope isn't counted as the closed zone above it (otherwise the seal test flags the foot).
