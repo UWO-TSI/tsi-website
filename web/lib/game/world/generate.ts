@@ -165,6 +165,8 @@ function quayAt(z: number, d: number): { x: number; z: number; yaw: number } {
   const nx = -(bz - az) / len, nz = (bx - ax) / len;
   return { x: ax + (bx - ax) * f + nx * d, z: z + nz * d, yaw: Math.atan2(nx, nz) };
 }
+/** The beach's campfire. */
+const FIRE_AT = [14, 104] as const;
 /** The path up to the village leaves the deck boards here (z). */
 const PATH_Z = 56;
 /** The plaza's centre and radius (its stone). */
@@ -285,6 +287,11 @@ function borderObjects(): World["objects"] {
 
 /** Facing a point: the yaw that turns a landmark's front (-z in its frame) toward (dx, dz). */
 const facing = (dx: number, dz: number) => +Math.atan2(-dx, -dz).toFixed(4);
+/** A lamp (lib/game/propModels.ts NEW_LAMPS: "village" on the path and the plaza, "wharf" on the deck) turned so its arm reaches toward (tx, tz). */
+const lamp = (model: "village" | "wharf" | "camp", x: number, z: number, tx: number, tz: number) => {
+  const yaw = +Math.atan2(-(tz - z), tx - x).toFixed(4);
+  return { x, z, ...(yaw ? { yaw } : {}), model };
+};
 /**
  * The open area's objects (R1b: David's layout, specs/launch/terrain-v3.md): HQ at the back of the plaza (west, the far
  * side seen from the jetty), the café to its right (north), the shop to its left (south), the museum further out; the
@@ -304,9 +311,10 @@ const LAYOUT: Record<string, { x: number; z: number; yaw?: number; scale?: numbe
   beach: { x: -8, z: 106 },
   "study-0": { x: PX - 5, z: PZ - 10 }, "study-1": { x: PX + 11, z: PZ - 10 }, "study-2": { x: PX - 5, z: PZ + 10 }, "study-3": { x: PX + 11, z: PZ + 10 },
   "bench-0": { x: PX - 9, z: PZ - 4 }, "bench-1": { x: PX - 9, z: PZ + 4 }, "bench-2": { x: PX + 13.5, z: PZ - 6 }, "bench-3": { x: PX + 13.5, z: PZ + 6 },
-  "lamp-0": { x: 70.5, z: 51 }, "lamp-1": { x: 62, z: 59.5 }, "lamp-2": { x: 60, z: 53 }, "lamp-3": { x: 53.5, z: 60 }, "lamp-4": { x: 52.5, z: 52 },
-  "lamp-5": { x: 46, z: 57.5 }, "lamp-6": { x: PX - 11, z: PZ - 9 }, "lamp-7": { x: PX + 14, z: PZ - 10 }, "lamp-8": { x: PX - 11, z: PZ + 9 },
-  "lamp-9": { x: PX + 14, z: PZ + 10 }, "lamp-10": { x: 39, z: 84 },
+  "lamp-0": lamp("wharf", 70.5, 51, SHORE_X, 51),
+  ...Object.fromEntries(([[62, 59.5], [60, 53], [53.5, 60], [52.5, 52], [46, 57.5]] as const).map(([x, z], i) => [`lamp-${i + 1}`, lamp("village", x, z, x, PATH_Z)])),
+  ...Object.fromEntries(([[PX - 11, PZ - 9], [PX + 14, PZ - 10], [PX - 11, PZ + 9], [PX + 14, PZ + 10]] as const).map(([x, z], i) => [`lamp-${i + 6}`, lamp("village", x, z, PX, PZ)])),
+  "lamp-10": lamp("village", 39, 84, 35, 84),
 };
 
 type Obj = World["objects"][number];
@@ -339,11 +347,24 @@ function scenery(): Obj[] {
   MARKET.forEach(([model, z, d, turn, scale], i) => { const q = quayAt(z, d); out.push(obj("prop", `market-${i}`, q.x, q.z, q.yaw + Math.PI + turn, scale, model)); });
   let fence = 0;
   for (const side of [-2.9, 2.9]) for (let x = 50; x <= 57; x++) out.push(obj("fence", `path-fence-${fence++}`, x, PATH_Z + side, 0, 1, JOINED_FENCE));
-  [[30, 3.5], [78, 3.5]].forEach(([z, d], i) => { const q = quayAt(z, d); out.push(obj("lamp", `lamp-${11 + i}`, q.x, q.z)); });
+  // Lantern posts on the deck, their arms out over the boards toward the water, and on the jetty's platform toward its stairs.
+  [[30, 3.5], [78, 3.5]].forEach(([z, d], i) => { const q = quayAt(z, d), e = quayAt(z, 0), l = lamp("wharf", q.x, q.z, e.x, e.z); out.push(obj("lamp", `lamp-${11 + i}`, l.x, l.z, l.yaw ?? 0, 1, l.model)); });
+  [-4, 4].forEach((lx, i) => { const l = lamp("wharf", DOCK.x - 2, DOCK.z + lx, DOCK.x - 2, DOCK.z); out.push(obj("lamp", `lamp-${13 + i}`, l.x, l.z, l.yaw ?? 0, 1, l.model)); });
+  // Palms (terrain-art's, light fronds and coconuts) on the grassy band behind the boards, either side of the path.
+  ([[18, 10.5, "tall"], [25, 11.5, "short"], [32, 10, "lean"], [39, 11, "tall"], [62, 10.5, "short"], [68, 11, "tall"], [75, 10, "lean"], [82, 11.5, "short"]] as const)
+    .forEach(([z, d, kind], i) => { const q = quayAt(z, d); out.push(obj("prop", `band-palm-${i}`, q.x, q.z, kind === "lean" ? 0 : z * 0.41, 1, `palm-${kind}`)); });
+  out.push(obj("prop", "plaza-tiles", PX, PZ, 0, 1, "plaza-tiles"));
   HOUSES.forEach(([x, z, colour], i) => out.push(obj("house", `house-${i + 1}`, x, z, facing(PX - x, PZ - z), HOUSE_SCALE, `chalet-${colour}`)));
-  out.push(obj("campfire", "campfire", 14, 104));
-  ([[-40, 99, "palm-a"], [-31, 98, "palm-b"], [-22, 99.5, "palm-a"], [2, 99, "palm-b"], [24, 99, "palm-a"], [30, 100, "palm-b"], [42, 97, "palm-a"]] as const)
-    .forEach(([x, z, model], i) => out.push(obj("prop", `palm-${i}`, x, z, x * 0.37, 1.5, model)));
+  out.push(obj("campfire", "campfire", ...FIRE_AT));
+  // Round it, clear of the sit and dance rings (lib/game/campfire.ts FIRE): log benches to sit on and stumps on the
+  // landward side, the firewood stack and the fish rack a little back, two lanterns on their branches.
+  const round = (deg: number, r: number) => { const a = (deg * Math.PI) / 180; return [FIRE_AT[0] + r * Math.cos(a), FIRE_AT[1] + r * Math.sin(a), +Math.atan2(-Math.cos(a), -Math.sin(a)).toFixed(4)] as const; };
+  [0, 270, 180].forEach((deg, i) => { const [x, z, yaw] = round(deg, 4.3); out.push(obj("bench", `fire-bench-${i}`, x, z, yaw, 1, "log-bench")); });
+  [225, 315, 135, 45].forEach((deg, i) => { const [x, z, yaw] = round(deg, 4.1); out.push(obj("prop", `fire-stump-${i}`, x, z, yaw + i, 1, "stump-seat")); });
+  ([[240, 6.8, "firewood-stack"], [300, 7, "fish-rack"]] as const).forEach(([deg, r, model]) => { const [x, z, yaw] = round(deg, r); out.push(obj("prop", model, x, z, yaw, 1, model)); });
+  [200, 340].forEach((deg, i) => { const [x, z] = round(deg, 5.4), l = lamp("camp", x, z, ...FIRE_AT); out.push(obj("lamp", `fire-lamp-${i}`, l.x, l.z, l.yaw ?? 0, 1, l.model)); });
+  ([[-40, 99, "tall"], [-31, 98, "lean"], [-22, 99.5, "short"], [2, 99, "tall"], [24, 99, "lean"], [30, 100, "short"], [42, 97, "tall"]] as const)
+    .forEach(([x, z, kind], i) => out.push(obj("prop", `palm-${i}`, x, z, kind === "lean" ? -Math.PI / 2 : x * 0.37, 1, `palm-${kind}`)));
   [[-30, 109], [-22, 110], [28, 108]].forEach(([x, z], i) => out.push(obj("prop", `parasol-${i}`, x, z, x * 0.21, 1, "beach-parasol")));
   out.push(obj("prop", "lighthouse", 126, 104, -0.6, 0.2, "lighthouse"));
   out.push(obj("barrier", "slide-mountain", 26, 8.5, 0.1, 1.4, "rockslide"));

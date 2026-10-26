@@ -25,7 +25,7 @@ import { GLBProp, sceneryOf } from "./NatureModels";
 import { InstancedModels } from "./InstancedNature";
 import { ACNHBuilding, ACNHParts, CHALET_VARIANTS } from "./ACNHBuilding";
 import { FenceLine } from "./NatureModels";
-import { BRIDGE_URL, CATCH_BOARD_URL, MAILBOX_URL, MONUMENT_SIGN_URL, NOTICE_BOARD_URL } from "@/lib/game/propModels";
+import { BRIDGE_URL, CATCH_BOARD_URL, MAILBOX_URL, MONUMENT_SIGN_URL, NEW_LAMPS, NOTICE_BOARD_URL } from "@/lib/game/propModels";
 import Wharf from "./wharf/Wharf";
 import TripVeil from "./wharf/TripVeil";
 import { tripSceneReady, useTripControl } from "./wharf/useTripControl";
@@ -432,7 +432,11 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   // No blades through a building, a trunk or a rock: where something solid stands, its top is above the ground.
   const grassClear = useMemo(() => (x: number, z: number) => island.top(x, z) <= island.ground(x, z) + 0.01, [island]);
   const scenery = useMemo(() => sceneryOf(v, island.ground, look.season), [v, island, look.season]);
-  const lampSpots = useMemo(() => layout.lamps.map((l): [number, number, number] => [l.x, island.ground(l.x, l.z), l.z]), [layout, island]);
+  // The lamps by model: the street lamp (none), or the new world's (propModels NEW_LAMPS), each turned by its yaw.
+  const lampSets = useMemo(() => (["", "village", "wharf", "camp"] as const).map(kind => {
+    const ls = layout.lamps.filter(l => (l.model ?? "") === kind);
+    return { kind, positions: ls.map((l): [number, number, number] => [l.x, island.ground(l.x, l.z), l.z]), yaws: kind ? ls.map(l => l.yaw ?? 0) : undefined };
+  }).filter(s => s.positions.length), [layout, island]);
   const near = useRef<Near>(null);
   const fauna = useMemo(() => ({ ...layout.fauna, ground: island.ground, standable: island.standable, surface: island.surface, top: island.top, player }), [layout, island, player]);
   // The arrival (components/game/arrival): Bram walks you through, the fish crate on the pier until the tour is over.
@@ -526,7 +530,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       <EventDecor event={event} ground={island.ground} light={light} weather={weather} />
       <HalloweenLayer content={traditions.content} v={v} island={island} light={light} night={phase === "night"} fog={fogNight} weather={weather} residents={personas} />
       {layout.bridges.map(b => <GLBProp key={b.id} url={BRIDGE_URL} position={[b.x, b.y, b.z]} rotation={[0, b.yaw ?? 0, 0]} />)}
-      <Lanterns positions={lampSpots} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} />
+      {lampSets.map(s => <Lanterns key={s.kind} positions={s.positions} yaws={s.yaws} lamp={s.kind ? NEW_LAMPS[s.kind] : undefined} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} />)}
       {layout.campfire && <Campfire site={layout.campfire} ground={island.ground} phase={phase} player={player} />}
       {/* Nature and props from the map, instanced: one draw per model sub-mesh however many the island has. */}
       <InstancedModels items={scenery} />

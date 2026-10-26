@@ -74,6 +74,10 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // a `deck` square and its "steps" (4 x 4, local +z inland), a pile to stand just outside the deck's edge, a ladder off
   // the edge (the edge at z 0, the water toward -z), and rope fencing (a post, and a rope from x -1 to +1 between two).
   ...Object.fromEntries(["deck-tile", "deck-steps", "wharf-piling", "wharf-ladder", "rope-post", "rope-span"].map(m => [m, `/assets/game/wharf/${m}.glb`])),
+  // The log bench (art/props) as a map `bench`: the new world's round the beach campfire.
+  "log-bench": LOG_BENCH_URL,
+  // The new world's plaza floor (art/props/build_plaza_tiles.py): stone setts in rings, 12 round, laid on the ground.
+  "plaza-tiles": `${P}plaza-tiles.glb`,
   // Its palms (art/trees/build_palms.py): light fronds and coconuts, the origin at the trunk's foot, at scale 1.
   ...Object.fromEntries(["tall", "lean", "short"].map(m => [`palm-${m}`, `/assets/game/plants/tree-palm-${m}.glb`])),
   // Its campfire set (art/props/build_campfire_set.py), round the campfire with the log benches: a stump to sit on, a
