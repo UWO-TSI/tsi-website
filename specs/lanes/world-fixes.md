@@ -24,6 +24,14 @@ Production is on the new world tonight (`NEXT_PUBLIC_GAME_WORLD=new`), and David
 
 Then commit, update Status here, SendMessage "main" with the commit and gates, and stop.
 
+## Status
+
+- **Done (2026-10-26):**
+  - **River:** `classifyWater` (fishingSpots.ts) takes the world's river cells, its "River" annotation (the generator writes it from the River zone), and keeps them river where the sea pass took them. The village carries them as `Village.rivers`: `villageOfWorld` reads `w.annotations`, the server's `villageOfCells` takes the world document's annotations (rolls.ts `activeVillage`). All 1724 River cells now class as river (14 before); from the banks, 548 of 550 casts land in river water (the 2 sea ones are at the mouth). The village has no `rivers`, so its classes are unchanged. `cells.json` doesn't change; client and server agree (cells.test checks both with the annotations).
+  - **Bottles:** `gatherSpots` (generate.ts) places 4 bottle spots on the beach's waterline (ids `gather-bottle-0..3`, on land cells of the derived cell map, as `villageBottleSpot` requires), defaults David can move in the editor.
+  - World regenerated: only `world.json` changed (the 4 bottles); a second run reproduced it byte for byte; PNGs and `cells.json` unchanged.
+  - Gates: vitest 3434 passed with and without `NEXT_PUBLIC_GAME_WORLD=new` (`--testTimeout=30000`), a new cells.test case for both fixes; tsc and eslint clean.
+
 ## Rules
 
 - **Headless only:** never open a window, tab, app or audio on David's screen; never `open`; never the Playwright MCP. Never port 3000.

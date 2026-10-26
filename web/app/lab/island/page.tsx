@@ -44,7 +44,7 @@ export default function IslandBench() {
         const proposals = query.get("proposals") === "1";
         void loadShippedWorld().then((w) => {
           const objects = proposals ? acceptProposed(w.objects, PROPOSALS.filter(p => p.target === "world-map").flatMap(p => p.objects)) : w.objects;
-          setVillage(villageOfWorld({ terrain: w.terrain, objects }));
+          setVillage(villageOfWorld({ terrain: w.terrain, objects, annotations: w.annotations }));
           setMode("world");
         });
         return;

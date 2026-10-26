@@ -1187,6 +1187,10 @@
     {"id":"gather-shell-2","kind":"shell","x":-8,"z":103},
     {"id":"gather-shell-3","kind":"shell","x":25.75,"z":102.57},
     {"id":"gather-shell-4","kind":"shell","x":40,"z":103},
-    {"id":"gather-shell-5","kind":"shell","x":50.27,"z":102}
+    {"id":"gather-shell-5","kind":"shell","x":50.27,"z":102},
+    {"id":"gather-bottle-0","kind":"bottle","x":-34,"z":107.5},
+    {"id":"gather-bottle-1","kind":"bottle","x":-6,"z":110},
+    {"id":"gather-bottle-2","kind":"bottle","x":22,"z":110.5},
+    {"id":"gather-bottle-3","kind":"bottle","x":45.57,"z":106.75}
   ]
 }
