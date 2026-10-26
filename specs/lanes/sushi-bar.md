@@ -26,9 +26,24 @@ Then go straight on. At the end, update Status here, send the full list, and sto
 
 ## Status
 
-Not started.
+Steps 1 to 5 built; terrain-v3 placed the bar at (44, 96.5), yaw -3pi/4 (merged into this branch at 32cd7cb3). Paused 2026-10-26: David is planning the bar with the coordinator; change nothing until the plan comes. In-game shots `specs/evidence/sushi-bar/ingame/` (bar-front, bar-front-night, bar-chefs, bar-seat, bar-seat-night).
+
+1. **The model** (f7fbca92, `art/buildings/build_sushi_bar.py`): `sushi-bar.glb` (11.3k tris, 7 materials; still, merged) and `sushi-bar-glow.glb` (3.3k tris, M_Glow palette + P_Paint; drawn by `SushiBar.tsx`). About 9.2 by 6.1, origin at the middle of the solid core, footprint [4.0, 1.5], top 4.68; guests' deck and six stools toward +z, the open window toward -z (the sea). The old shark head is deleted from `art/props/build_beach_set.py`. Preview `specs/evidence/sushi-bar/sushi-bar.webp`.
+2. **Lights:** the glow model eases on at night and breathes like flame; HQ's faked pools (`hq/LampPools`, `BAR_POOLS` in `lib/game/sushiBar.ts`) light the deck, counter, kitchen, bottles and pillars; the bar's light is one of the LampPool's points (`BAR_LIGHT`); warm strips under the shelf, the counter lip and the fish case.
+3. **Sitting:** the stools are seats (`barSeat`, prompt "Sit at the counter", claim key `sushi:<id>#i`); while seated the follow camera eases to `seatView` (FollowScene `seat`).
+4. **Chefs:** two, the café owner's station loop (`CHEF_STATIONS`, `CHEF_LOOKS`), no names.
+5. **Music:** near the bar (8 in, 10 out) the music director's "bar" slot: `bar.mp3` when it lands, else the other fallback track. Not heard (headless, muted).
+
+**Open, seen in the in-game shots:**
+- The seated view: the player's own head fills the lower left and the window shows mostly sky (the sea sits under the back counter's line). The eye needs to move up and aside, or the avatar hidden while seated, and the look lowered to the horizon.
+- The chefs read from behind in `bar-chefs` (hair toward the guests): their facing (CHEF_STATIONS yaw 0 at the fish case) may need a half turn; check the rig's yaw convention.
+- At night the inside is warm and bright from the pools and strips; from the beach the bar reads lit but the deck could use more spill onto the sand in front.
+- `budget.test` fails on `game/props/plaza-tiles.glb` (5640 tris, another lane's), so the sushi files were checked by their numbers only (11.3k and 3.3k tris, under the 12k building row).
+- `art/props/build_beach_set.py`: with the shark head removed its rng runs differently, so a rerun reshapes the corals slightly.
 
 ## Next
+
+Wait for the coordinator's plan (David is planning the bar with them). The original list:
 
 **References:** `specs/references/terrain/sushi-bar-2026-10-26/` (README with David's words, `bar-day.jpg`, `bar-evening.jpg`) and the earlier `plan-2026-10-23/wharf-sharkbar.jpg`. David's words: "a long horizontal bar ... really big open bar where you can sit down and it changes camera anger to more first person, it has festive lighting inside, it back of the bar is open window to see beatiful view in the back, 1-2 sushi npc making sushi ... re modeled in blender properly and it needs to looks visually stunning", and "good decore, speaker with music, lights and fishtank".
 
@@ -58,3 +73,6 @@ Not started.
 - **node_modules:** cloned (`cp -c -R`).
 - **propModels.ts:** other lanes append to the same tables. Add your entries in one block with a comment line naming your lane.
 - **Git:** commit with the `[build]` prefix. Never push. Never use bare `git stash`. Don't touch other worktrees.
+- **Builder:** `withlock.sh blender .../Blender -b --factory-startup -P art/buildings/build_sushi_bar.py [-- review <dir>]` writes both GLBs; review renders front, back, stool view, and night (glow on, no lights).
+- **Shots:** `PORT=3175 node specs/evidence/sushi-bar/shoot.mjs <dir> [view,...]` (headless, muted; `sit` presses E by a stool). Dev server on 3175 with `NEXT_PUBLIC_GAME_WORLD=new`, Supabase blanked, under the devserver lock.
+- **Big props and the walker's buckets:** `islandOf` buckets props by their centre (4 u buckets, +-1 searched), so a footprint half over 4 is missed at its ends: keep the core at hw 4.
