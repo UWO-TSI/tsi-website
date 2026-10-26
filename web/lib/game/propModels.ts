@@ -107,9 +107,10 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // tipped toward +z, and a hoist whose jib reaches along +x.
   ...Object.fromEntries(["dock-pile-rope", "rope-net", "life-ring", "net-heap", "crate-net", "crate-cloth", "fish-crate", "dock-hoist"]
     .map(m => [m, `/assets/game/wharf/${m}.glb`])),
-  // game/village-art: the path's edges (art/props/build_path_edge.py): mossy side rocks (scale them freely), and the loose
-  // fence in short runs along x (leave gaps between runs; the lone post fills one); and a meadow patch of wild flowers in
-  // grass and a clump of tall grass (art/trees/build_flowers.py, a tile across at scale 1).
+  // game/village-art: the path's edges: mossy side rocks (art/props/build_stones.py, remodelled organic by game/village-art2;
+  // scale them freely), and the loose fence in short runs along x (art/props/build_path_edge.py; leave gaps between runs,
+  // the lone post fills one); and a meadow patch of wild flowers in grass and a clump of tall grass (art/trees/build_flowers.py,
+  // a tile across at scale 1).
   ...Object.fromEntries(["path-rock-slab", "path-rock-low", "path-rock-cluster", "rustic-fence-a", "rustic-fence-b", "rustic-post"].map(m => [m, `${P}${m}.glb`])),
   ...Object.fromEntries(["meadow", "tallgrass"].map(m => [`flower-${m}`, `/assets/game/plants/flower-${m}.glb`])),
   // game/wharf-art: the beach set (art/props/build_beach_set.py), the origin on the ground: the sushi bar, a shark's head
@@ -121,6 +122,9 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   "fish-market": "/assets/game/buildings/fish-market.glb",
   ...Object.fromEntries(["a", "b", "c"].map(m => [`surfboard-${m}`, `${P}surfboard-${m}.glb`])),
   ...Object.fromEntries(["a", "b", "c", "d"].map(m => [`coral-${m}`, `/assets/game/water/coral-${m}.glb`])),
+  // game/village-art2 (David, R2c): big mossy stones (art/props/build_stones.py), sunk a little under their origin: a
+  // chiselled boulder on a broken slab (1.4 across, 0.86 tall) and a low outcrop of three stepped slabs (2.3 by 1.5).
+  ...Object.fromEntries(["a", "b"].map(m => [`moss-boulder-${m}`, `${P}moss-boulder-${m}.glb`])),
 };
 export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? `/assets/acnh/props/${model}.glb`;
 
