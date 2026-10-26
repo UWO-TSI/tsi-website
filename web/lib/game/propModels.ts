@@ -164,6 +164,12 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // shop: walls z -2.45 to 1.15, a porch under a striped awning to z 2.45, a giant rod on the roof whose line hangs a
   // bobber and a lure off the porch's +x corner (x 2.35, z 3.05, down to y 1.6).
   "tackle-shop": "/assets/game/wharf/tackle-shop.glb",
+  // The shipwright: the shed (walls x +-1.9, z +-2; doors open to the front and to a side pier along +x over the water,
+  // x 2.15 to 3.45, z -2.25 to 0.4) and its boat, a hull half planked with the ribs showing at the bow, a separate model
+  // so it can bob. The boat's origin is on the waterline at its middle, the bow to -z; it floats with its origin at
+  // (5.4, -1.078, -3.6) in the shed's frame (the sea's level under a deck at 1), same yaw. The gangplank is the shed's:
+  // it runs off the pier to (4.3, 0.16, -2) in the shed's frame, just over the boat's gunwale. The boat's not solid.
+  ...Object.fromEntries(["shipwright-shed", "shipwright-boat"].map(m => [m, `/assets/game/wharf/${m}.glb`])),
 };
 export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? `/assets/acnh/props/${model}.glb`;
 
