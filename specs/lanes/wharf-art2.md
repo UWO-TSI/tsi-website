@@ -31,6 +31,7 @@ Previews in `specs/evidence/wharf-art2/`. Placement is terrain-v3's. The budget 
 1. **Fish market and sell barrel** (`art/buildings/build_fish_market.py`): `fish-market` remodelled (11,892 tris, 868 KB; footprint [3.1, 3.6], top 10.569); `sell-barrel` new (`game/wharf/`, 2,162 tris, 150 KB; footprint [0.66, 0.78], top 3.394).
 2. **Ship houses** (`art/wharf/build_ship_houses.py`, `game/wharf/`): origin on the deck's top at the floor's middle, door +z (inland), the back half over the sea on piles to -3.4. `ship-house-a` red boathouse (6,548 tris, 468 KB; [2.1, 2.3], top 4.48), `-b` stilt house with a balcony off +x (8,644, 608 KB; [2.4, 2.0], 4.13), `-c` net loft (6,454, 484 KB; [1.9, 2.0], 6.28), `-d` shack with a front porch (3,992, 276 KB; [2.1, 2.1], 3.178).
 3. **Lifeguard tower, taller** (`art/props/build_beach_set.py lifeguard_tower`, replaced): the deck at 2.7 (was 1.8), legs splayed wider and braced in two tiers with a ring beam, a longer ladder to z 1.85. 2,766 tris, 180 KB; footprint [1.02, 1.02], top 4.7. The rest of the beach set rebuilds byte-identical.
+4. **Beach things** (`art/props/build_beach_things.py`, `game/props/`): `beach-ball-a/b/c` (224 tris each, 13 KB, not solid; the game has no kickable or throwable ball yet, and the dump's `beach-ball.glb` is unused), `beach-towel-a/b` (168, 8 KB, not solid), `beach-lounger` (1,520, 90 KB; [0.34, 0.95], top 0.948), `sandcastle` (1,820, 95 KB; [0.55, 0.5], 0.78), `beach-cooler` (416, 23 KB; [0.33, 0.22], 0.486), `volleyball-net` (960, 69 KB; [2.62, 0.08], 2.14).
 
 ## Next
 

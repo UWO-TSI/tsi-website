@@ -150,6 +150,11 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   ...Object.fromEntries(["a", "b", "c"].map(m => [`reeds-${m}`, `/assets/game/plants/reeds-${m}.glb`])),
   ...Object.fromEntries(["a", "b"].map(m => [`lily-pads-${m}`, `/assets/game/water/lily-pads-${m}.glb`])),
   ...Object.fromEntries(["river-stones-a", "river-stones-b", "driftwood-a", "driftwood-b"].map(m => [m, `${P}${m}.glb`])),
+  // game/wharf-art2: more for the beach (art/props/build_beach_things.py), the origin on the sand: beach balls 0.56 across
+  // (scenery: nothing kicks or throws them yet), towels laid along z (0.9 by 1.8), a lounger along z (backrest at -z, the
+  // sitter looks to +z), a sandcastle with its bucket and spade, a cool box, a volleyball net along x (posts at x +-2.6).
+  ...Object.fromEntries(["beach-ball-a", "beach-ball-b", "beach-ball-c", "beach-towel-a", "beach-towel-b", "beach-lounger", "sandcastle", "beach-cooler",
+    "volleyball-net"].map(m => [m, `${P}${m}.glb`])),
 };
 export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? `/assets/acnh/props/${model}.glb`;
 
