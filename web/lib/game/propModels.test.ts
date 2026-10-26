@@ -139,7 +139,7 @@ describe("remodelled props (propModels.ts)", () => {
       if (!url.startsWith("/assets/game/")) continue;
       const b = bounds(url), top = PROP_TOP[model], foot = PROP_FOOTPRINT[model];
       if (top !== undefined) expect(b.max[1], model).toBeCloseTo(top, 2);
-      if (foot && /^(wharf-|rope-|firewood|fish)/.test(model)) for (const [i, half] of [[0, foot[0]], [2, foot[1]]]) expect(Math.max(-b.min[i], b.max[i]), model).toBeLessThanOrEqual(half + 0.01);
+      if (foot && /^(wharf-|rope-|firewood|fish-(rack|crate))/.test(model)) for (const [i, half] of [[0, foot[0]], [2, foot[1]]]) expect(Math.max(-b.min[i], b.max[i]), model).toBeLessThanOrEqual(half + 0.01);
     }
   });
   it("hangs each new lamp's lantern round its light point, the street lamp as tall as the old one", () => {

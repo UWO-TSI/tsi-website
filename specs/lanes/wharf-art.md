@@ -20,15 +20,16 @@ Worktree `.claude/worktrees/wharf-art`, branch `game/wharf-art`. Agent type `uwo
 
 ## Status
 
-In progress. Previews in `specs/evidence/wharf-art/`.
+Done; not yet reviewed by David. Previews in `specs/evidence/wharf-art/`. Gates: the propModels, modelMaterials and budget tests green. Placement is terrain-v3's.
 
 1. **Palms, redone twice** (`art/trees/build_palms.py`; the R2b redo replaced the leaflet texture, now deleted): solid low-poly fronds (an arched shell, a bare stem first, the hem cut into fingers), plain colour, in two layers; coconuts at the crown's heart, clear from the play angle; a thick trunk of overlapping scales. Four sizes: `palm-tall` (top 6.21, 1156 tris with casters), `palm-lean` (5.03, 1092), `palm-short` (3.46, 960), `palm-small` (1.95, 732, new). Evidence `palms.webp` (true scale, two camera heights).
 2. **Dock and wharf decor** (`art/wharf/build_dock_decor.py`, `game/wharf/`, game units at scale 1, the deck's top at y 0): `dock-pile-rope` (960 tris; 0.9 over the deck, down to -3.4, rope lashings), `rope-net` (2040; posts at x +-1, floats on the top rope), `life-ring` (864; upright in x-y, foot at the origin, 0.93 tall), `net-heap` (1176), `crate-net` (2312), `crate-cloth` (1272), `fish-crate` (1320; tipped toward +z), `dock-hoist` (1510; jib along +x, top 2.645). Registered with footprints and tops. Evidence `dock-decor.webp`.
 3. **The beach set** (`art/props/build_beach_set.py`): `sushi-bar` (`game/buildings/`, 4408 tris; a shark's head open-mouthed toward +z over its own 5.6 by 4.4 platform: thatch, teeth, eyes, a fin, the counter with sushi, three stools, shelves, a barrel, paper lanterns, a noren; top 3.41, solid), `lifeguard-tower` (`game/props/`, 2238; ladder to +z, top 3.8), `surfboard-a/b/c` (296 each, tails 0.37 into the sand), `coral-a/b/c/d` (`game/water/`, 244 to 696; not solid). Evidence `beach-set.webp`.
+4. **The fish market** (`art/buildings/build_fish_market.py`, `game/buildings/fish-market.glb`, 7000 tris, 473 KB): a red board house 5 by 3.6 with corner posts, a door and a shuttered window, a gabled roof of staggered orange shingles along x, a chimney, a big blue marlin nose up on the ridge (top 6.15), a fish sign, a plank awning out to z 2.75 over a table of open crates of fish, a life ring, a barrel. Front to +z, the origin at the middle of its floor; solid 2.6 by 1.9 (the house). Stands on a 2 by 2 patch of deck tiles. Evidence `fish-market.webp`.
 
 ## Next
 
-Done: 1 and 2 (batches bb4a1418, 80cd90bf), A (palms again, 56381235), B (the beach set). Now, in this order (R2b):
+Done: everything below (batches bb4a1418, 80cd90bf, 56381235, a401d420, and C, the fish market). Now, in this order (R2b):
 
 A. **Palms, again:** solid low-poly leaves like the dump palms (no fine leaflet texture), matching our other trees; several clearly different sizes; thicker trunks of overlapping scale-like bark segments, not a ringed cylinder; coconuts clearly visible. `palm-shape.jpg` / `palm-style.jpg` stay the silhouette guide.
 B. **The beach set** (3 below), but the sushi bar follows `specs/references/terrain/plan-2026-10-23/wharf-sharkbar.jpg` (on main; read it from `.claude/worktrees/restart-art-cohesion/specs/references/terrain/plan-2026-10-23/`): a big fish-head shell over a bar counter with stools and hanging lanterns, our style, low detail.
@@ -58,4 +59,6 @@ The original list:
 - **Headless only:** never open a window, tab, app or audio on David's screen; never `open`; never the Playwright MCP. Never port 3000.
 - **node_modules:** cloned (`cp -c -R`).
 - **propModels.ts:** another art lane appends to the same tables. Add your entries in one block with a comment line naming your lane, so merges stay simple.
+- **Previews:** `art/trees/preview.py` frames one GLB at a time; the props builders take `-- review <dir>` (the camera's azimuth 0 looks from -z, so 180 is the front of a model facing +z).
+- **propModels.test.ts** checks containment in the footprint only for `wharf-`, `rope-`, `firewood`, `fish-rack` and `fish-crate` (it was `fish`, which caught `fish-market`'s roof and awning).
 - **Git:** commit with the `[build]` prefix. Never push. Never use bare `git stash`. Don't touch other worktrees. Don't edit `generate.ts` or `web/data/world/` (placement is terrain-v3's job).
