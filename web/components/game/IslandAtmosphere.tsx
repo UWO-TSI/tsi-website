@@ -158,7 +158,7 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
     <TreeWind strength={liteMode ? 0 : weather === "wind" ? 0.14 : 0.035} />
     {fauna && <AmbientFauna {...fauna} season={look.season} weather={weather} liteMode={liteMode} />}
     {fauna && <WeatherGround site={groundSite!} rain={weather === "rain"} snow={look.snow >= 0.5} puddles={puddleBlobs} />}
-    {fireflyNight(light, weather) && <Fireflies anchors={fireflyAnchors} count={liteMode ? 8 : fireflyAnchors.length * 2} groundHeight={ground} />}
+    {fireflyNight(light, weather) && <Fireflies anchors={fireflyAnchors} count={liteMode ? 8 : Math.min(64, fireflyAnchors.length * 2)} groundHeight={ground} />}
   </>;
 }
 

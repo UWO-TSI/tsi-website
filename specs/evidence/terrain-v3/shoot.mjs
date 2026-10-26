@@ -28,14 +28,32 @@ export const VIEWS = {
   "19-path-night": { at: [60, 58], yaw: -100, pitch: 0.45, zoom: 1.6, time: "night" },
   "20-plaza-night": { at: [44, 53], yaw: 250, pitch: 0.42, zoom: 1.6, time: "night" },
   "21-shallows": { at: [9, 115], yaw: 0, pitch: 0.55, zoom: 1.2 },
-  "22-ship-houses": { at: [66, 66], yaw: 100, pitch: 0.42, zoom: 1.4 },
+  "22-shops": { at: [66, 66], yaw: 100, pitch: 0.42, zoom: 1.4 },
+  // R2e: the fish market at the north end from the deck, the shops, the shipwright's boat, the way to the beach, the
+  // swash on the sand, the forest from inside.
+  "23-market-front": { at: [70, 33], yaw: 190, pitch: 0.4, zoom: 1.4 },
+  "24-shipwright": { at: [64, 79], yaw: 75, pitch: 0.42, zoom: 1.3 },
+  "25-wharf-to-beach": { at: [52, 95], yaw: 140, pitch: 0.42, zoom: 1.6 },
+  "26-swash": { at: [-2, 110.5], yaw: 20, pitch: 0.5, zoom: 0.75, frames: { count: 2, every: 1800 } },
+  "27-forest": { at: [44, -10], yaw: 180, pitch: 0.4, zoom: 1.6 },
+  // R2f: the plaza's heart at night, close.
+  "28-plaza-centre-night": { at: [39, 50], yaw: 270, pitch: 0.45, zoom: 1.2, time: "night" },
 };
 
+// VILLAGE=1: the shipped village instead (no fixture; run the dev server without NEXT_PUBLIC_GAME_WORLD), the launch
+// fallback's check views.
+export const VILLAGE_VIEWS = {
+  "v1-plaza": { at: [-1.5, -2], yaw: 0, pitch: 0.42, zoom: 1.6 },
+  "v2-wharf": { at: [6, -13], yaw: 180, pitch: 0.45, zoom: 1.6 },
+  "v3-buildings": { at: [0, 3], yaw: 180, pitch: 0.42, zoom: 1.6 },
+  "v4-night": { at: [-1.5, -2], yaw: 0, pitch: 0.42, zoom: 1.6, time: "night" },
+};
+const village = !!process.env.VILLAGE;
 const [OUT = "/tmp/terrain-v3", ONLY] = process.argv.slice(2), PORT = process.env.PORT ?? 3171;
 mkdirSync(OUT, { recursive: true });
 const LOOK = JSON.stringify({ skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [], bangs: "bangs_curtain", back: "back_bob", top: "top_hoodie", bottom: "bottom_joggers", onepiece: null, shoes: "shoes_sneakers", acc: {}, colors: {} });
 const browser = await chromium.launch({ headless: true, args: ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist"] });
-for (const [name, v] of Object.entries(VIEWS)) {
+for (const [name, v] of Object.entries(village ? VILLAGE_VIEWS : VIEWS)) {
   if (ONLY && !ONLY.split(",").includes(name)) continue;
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
   await ctx.addInitScript(([look, cam]) => { try {
@@ -45,12 +63,14 @@ for (const [name, v] of Object.entries(VIEWS)) {
   } catch {} }, [LOOK, JSON.stringify({ yaw: (v.yaw * Math.PI) / 180, pitch: v.pitch, zoom: v.zoom, mouseLook: false, autoFollow: false, sensitivity: 1, invertY: false })]);
   const page = await ctx.newPage();
   page.on("pageerror", e => console.log("pageerror", name, e.message.slice(0, 200)));
-  await page.goto(`http://localhost:${PORT}/lab/island?fixture=v2&at=${v.at.join(",")}${v.flat ? "&aerial=1" : ""}&time=${v.time ?? "day"}&weather=clear&season=summer`);
+  await page.goto(`http://localhost:${PORT}/lab/island?${village ? "" : "fixture=v2&"}at=${v.at.join(",")}${v.flat ? "&aerial=1" : ""}&time=${v.time ?? "day"}&weather=clear&season=summer`);
   await page.waitForFunction(() => !!window.__move?.sim?.current, null, { timeout: 240000 });
   await page.waitForTimeout(8000);
   if (await page.evaluate(() => { const g = window.__governor; if (!g) return false; g.hold = 1e9; g.set(0); return true; })) await page.waitForTimeout(1500);
   await page.addStyleTag({ content: "nav, [role=status], #island-options, [aria-controls='island-options'], nextjs-portal { display: none !important; }" }).catch(() => {});
   await page.screenshot({ path: `${OUT}/${name}.png` });
+  // `frames`: more shots this many ms apart (motion: the swash), named -1, -2.
+  for (let f = 1; f <= (v.frames?.count ?? 0); f++) { await page.waitForTimeout(v.frames.every); await page.screenshot({ path: `${OUT}/${name}-${f}.png` }); }
   console.log("shot", name, JSON.stringify(await page.evaluate(() => { const p = window.__move?.sim?.current?.pos ?? window.__move?.sim?.current?.position; return p ? [p.x ?? p[0], p.y ?? p[1], p.z ?? p[2]].map(n => +(+n).toFixed(2)) : null; })));
   await ctx.close();
 }

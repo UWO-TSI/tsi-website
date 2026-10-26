@@ -33,6 +33,7 @@ import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { applyModelTextures, disposeModelMaterials, prepareModel } from "@/lib/game/modelMaterials";
 import { shadowClassFor } from "@/lib/game/shadows";
 import { lodOf, updateNear } from "@/lib/game/natureLod";
+import { hash01 } from "@/lib/game/worldFx";
 import { addContact, modelContact } from "./ContactShadows";
 
 export interface NaturePlacement {
@@ -44,6 +45,14 @@ export interface NaturePlacement {
 const _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
 const matrixOf = (p: NaturePlacement, base: number) =>
   new THREE.Matrix4().compose(_p.set(...p.position), _q.setFromAxisAngle(_up, p.rotation ?? 0), _s.setScalar((p.scale ?? 1) * base));
+
+const _tint = new THREE.Color();
+/** A crown's tint from where it stands: a touch lighter or darker, yellower or bluer. */
+function crownTint(m: THREE.Matrix4, out: THREE.Color): THREE.Color {
+  const e = m.elements, a = hash01(Math.round(e[12] * 7), Math.round(e[14] * 7)), b = hash01(Math.round(e[14] * 5), Math.round(e[12] * 3));
+  const v = 0.86 + 0.24 * a, warm = 0.12 * (b - 0.5);
+  return out.setRGB(v * (1 + warm), v, v * (1 - warm));
+}
 
 interface InstancedGLBProps {
   url: string;
@@ -69,6 +78,8 @@ function useInstanced(url: string, matrices: readonly THREE.Matrix4[], emissiveI
       if (!m.isMesh || !m.geometry || !matrices.length) return;
       const im = new THREE.InstancedMesh(m.geometry, m.material, matrices.length);
       matrices.forEach((matrix, i) => im.setMatrixAt(i, matrix));
+      // The forest's crowns, each tree its own shade of green (trees-art: the hue is in the vertex colour, the tint multiplies it).
+      if ((m.material as THREE.Material).name === "mForestCrown") matrices.forEach((matrix, i) => im.setColorAt(i, crownTint(matrix, _tint)));
       // The shadow role prepareModel gave this sub-mesh (caster-only hulls stay hidden until SunShadows draws them).
       Object.assign(im, { name: m.name, castShadow: m.castShadow, receiveShadow: m.receiveShadow, visible: m.visible, frustumCulled: false, customDepthMaterial: m.customDepthMaterial });
       // Its own visibility, which a level's packing (InstancedLodGLB) keeps: a caster-only hull stays hidden.
@@ -181,11 +192,11 @@ function imageKeys(gltf: GLTF, out: Map<THREE.Texture, string>) {
 export const layoutKey = (g: THREE.BufferGeometry) => Object.entries(g.attributes).map(([n, a]) => `${n}:${a.itemSize}:${(a as THREE.BufferAttribute).array.constructor.name}:${a.normalized}`).sort().join(",") + `|${g.index ? "i" : "n"}`;
 
 /**
- * Each prepared model baked in at each of its placements and joined into one mesh per look across them all, casting and
- * receiving (still props and buildings). `images` merges looks whose textures share an image (imageKeys).
+ * Each prepared model baked in at each of its placements and joined into one mesh per look across them all, casting as
+ * its class says (prepareModel) and receiving (still props and buildings). `images` merges looks whose textures share an image (imageKeys).
  */
 export function mergeByLook(placed: readonly (readonly [THREE.Object3D, THREE.Matrix4])[], images?: ReadonlyMap<THREE.Texture, string>) {
-  const groups = new Map<string, { material: THREE.Material; geometries: THREE.BufferGeometry[] }>();
+  const groups = new Map<string, { material: THREE.Material; cast: boolean; geometries: THREE.BufferGeometry[] }>();
   for (const [model, place] of placed) {
     model.updateMatrixWorld(true);
     model.traverse(o => {
@@ -193,16 +204,16 @@ export function mergeByLook(placed: readonly (readonly [THREE.Object3D, THREE.Ma
       if (!mesh.isMesh || !mesh.visible || Array.isArray(mesh.material)) return;
       const g = mesh.geometry.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(place, mesh.matrixWorld));
       if (!g.index) g.setIndex([...Array(g.attributes.position.count).keys()]);
-      const key = `${lookKey(mesh.material, images)}#${layoutKey(g)}`;
-      const group = groups.get(key) ?? { material: mesh.material, geometries: [] };
+      const key = `${lookKey(mesh.material, images)}#${layoutKey(g)}#${mesh.castShadow}`;
+      const group = groups.get(key) ?? { material: mesh.material, cast: mesh.castShadow, geometries: [] };
       group.geometries.push(g);
       groups.set(key, group);
     });
   }
-  return [...groups.values()].map(({ material, geometries }) => {
+  return [...groups.values()].map(({ material, cast, geometries }) => {
     const mesh = new THREE.Mesh(geometries.length === 1 ? geometries[0] : mergeGeometries(geometries, false) ?? geometries[0], material);
     // The curved world bends far things down into view (modelMaterials prepareModel): never culled by their own bounds.
-    mesh.castShadow = true; mesh.receiveShadow = true; mesh.frustumCulled = false;
+    mesh.castShadow = cast; mesh.receiveShadow = true; mesh.frustumCulled = false;
     return mesh;
   });
 }
@@ -213,11 +224,11 @@ export function mergeByLook(placed: readonly (readonly [THREE.Object3D, THREE.Ma
  * 2026-10-17), so dozens of small props draw in a handful of calls. Each placement keeps its contact shadow. For models
  * that never move, sway or glow on their own.
  */
-export function MergedModels({ items }: { items: readonly ModelPlacement[] }) {
+export function MergedModels({ items, emissiveIntensity }: { items: readonly ModelPlacement[]; emissiveIntensity?: number }) {
   const urls = useMemo(() => [...new Set(items.map(i => i.url))], [items]);
   const gltfs = useGLTF(urls) as unknown as GLTF[];
   const images = useMemo(() => gltfs.reduce((out, gltf) => imageKeys(gltf, out), new Map<THREE.Texture, string>()), [gltfs]);
-  const models = useMemo(() => urls.map((url, i) => prepareModel(gltfs[i].scene, url, undefined, shadowClassFor(url))), [gltfs, urls]);
+  const models = useMemo(() => urls.map((url, i) => prepareModel(gltfs[i].scene, url, emissiveIntensity, shadowClassFor(url))), [gltfs, urls, emissiveIntensity]);
   useEffect(() => {
     models.forEach((model, i) => applyModelTextures(model, urls[i]));
     return () => models.forEach(model => disposeModelMaterials(model));
@@ -236,3 +247,56 @@ export function MergedModels({ items }: { items: readonly ModelPlacement[] }) {
   }, [world, owner, items, urls, models]);
   return <primitive object={owner}>{meshes.map((m, i) => <primitive key={i} object={m} />)}</primitive>;
 }
+
+/** One model's InstancedMeshes (one a sub-mesh), each sub-mesh's place in the model, and how many are filled this frame. */
+export interface Flock { meshes: THREE.InstancedMesh[]; local: THREE.Matrix4[]; n: number }
+/**
+ * Every moving copy of one model at one scale (the bugs, the shore crabs) as one InstancedMesh per sub-mesh
+ * (perf-newworld: each copy was a draw per material). Each copy keeps its own group and model, its meshes hidden
+ * (`showOwn`) while it draws in the flock; the frame loop that moves the groups fills it (startFlock, addToFlock,
+ * endFlock), in `flocks` under `url|scale`.
+ */
+export function ModelFlock({ url, scale, cap, flocks }: { url: string; scale: number; cap: number; flocks: Map<string, Flock> }) {
+  const { scene } = useGLTF(url);
+  const model = useMemo(() => {
+    const m = prepareModel(scene, url);
+    m.scale.setScalar(scale);
+    m.updateMatrixWorld(true);
+    return m;
+  }, [scene, url, scale]);
+  useEffect(() => () => disposeModelMaterials(model), [model]);
+  const flock = useMemo(() => {
+    const f: Flock = { meshes: [], local: [], n: 0 };
+    model.traverse(o => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh || !m.visible) return;
+      const im = new THREE.InstancedMesh(m.geometry, m.material, cap);
+      // The curved world bends far things down into view (modelMaterials prepareModel): never culled by their own bounds.
+      Object.assign(im, { castShadow: m.castShadow, receiveShadow: m.receiveShadow, frustumCulled: false, count: 0 });
+      f.meshes.push(im);
+      f.local.push(m.matrixWorld.clone());
+    });
+    return f;
+  }, [model, cap]);
+  useEffect(() => {
+    const key = `${url}|${scale}`;
+    flocks.set(key, flock);
+    return () => { flocks.delete(key); flock.meshes.forEach(m => m.dispose()); };
+  }, [flocks, flock, url, scale]);
+  return <>{flock.meshes.map((m, i) => <primitive key={i} object={m} />)}</>;
+}
+const _copyAt = new THREE.Matrix4(), _part = new THREE.Matrix4();
+let _ownShown = true;
+function showOwnOne(o: THREE.Object3D) { if ((o as THREE.Mesh).isMesh) o.visible = _ownShown; }
+/** A copy's own meshes shown (drawn alone) or hidden (drawn in its flock); its group, and so its contact shadow, stay. */
+export function showOwn(group: THREE.Object3D, on: boolean) { _ownShown = on; group.traverse(showOwnOne); }
+export const startFlock = (f: Flock) => { f.n = 0; };
+/** The copy whose group is `group` (moved this frame) into the flock's next slot. */
+export function addToFlock(f: Flock, group: THREE.Object3D) {
+  if (!group.parent || f.n >= f.meshes[0]?.instanceMatrix.count) return;
+  group.updateMatrix();
+  _copyAt.multiplyMatrices(group.parent.matrixWorld, group.matrix);
+  for (let k = 0; k < f.meshes.length; k++) f.meshes[k].setMatrixAt(f.n, _part.multiplyMatrices(_copyAt, f.local[k]));
+  f.n++;
+}
+export function endFlock(f: Flock) { for (const m of f.meshes) { m.count = f.n; m.instanceMatrix.needsUpdate = true; } }

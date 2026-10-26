@@ -163,8 +163,8 @@ export class ContactLayer {
     if (light) _sun.setFromMatrixPosition(light.matrixWorld).sub(_target.setFromMatrixPosition(light.target.matrixWorld)).toArray(_sunXYZ);
     let n = 0, d = 0;
     for (const c of CONTACTS.get(scene) ?? []) {
-      const e = (c.at ? _at.multiplyMatrices(c.object.matrixWorld, c.at) : c.object.matrixWorld).elements;
       if (!shown(c.object, scene)) continue;
+      const e = (c.at ? _at.multiplyMatrices(c.object.matrixWorld, c.at) : c.object.matrixWorld).elements;
       const sx = Math.hypot(e[0], e[1], e[2]), sy = Math.hypot(e[4], e[5], e[6]), sz = Math.hypot(e[8], e[9], e[10]);
       _foot.x = e[0] * c.cx + e[8] * c.cz + e[12]; _foot.z = e[2] * c.cx + e[10] * c.cz + e[14];
       _foot.rx = c.rx * sx; _foot.rz = c.rz * sz; _foot.yaw = Math.atan2(e[8], e[10]);

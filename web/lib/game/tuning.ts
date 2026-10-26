@@ -177,6 +177,7 @@ export const TUNING_DEFAULTS: Tuning = {
     foamPulse: 0.8,
     foamPulseReach: 1.1,
     foamPulseSpeed: 0.16,
+    swash: 0,
     blobScale: 3.2,
     blobDarken: 0.88,
     blobSpeed: 0.35,

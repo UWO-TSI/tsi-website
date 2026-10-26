@@ -52,7 +52,7 @@ export default function SmoothTerrain({ terrain, shore, grass, windScale, lite =
   return (
     <>
       <primitive object={view.group} />
-      {grassOn && <GrassField sampler={sampler} color={grass ?? SPLAT_COLORS.grass} windScale={windScale} lite={lite} revision={revision} />}
+      {grassOn && <GrassField sampler={sampler} color={grass ?? SPLAT_COLORS.grass} windScale={windScale} lite={lite} revision={revision} lush />}
     </>
   );
 }

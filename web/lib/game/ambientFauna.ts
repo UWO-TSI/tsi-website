@@ -74,6 +74,8 @@ export interface FaunaSite {
   map: IslandMap;
   flowers: readonly (readonly [number, number])[];
   water: (x: number, z: number) => WaterType;
+  /** The open beach (x, z, radius): the crabs keep to its waterline (the new world, round its campfire), more of them. */
+  beach?: readonly [number, number, number];
 }
 
 /** Land cells next to river or pond water: where dragonflies patrol. */
@@ -140,9 +142,9 @@ export function flyersFor(site: FaunaSite, season: Season, count = { butterflies
 }
 
 export const CRAB_MODELS = ["/assets/acnh/props/crab-gazami.glb", "/assets/acnh/props/crab-hermit.glb"];
-/** Crabs along the beach, spread out (no two within 3 units). */
+/** Crabs along the beach (the site's open beach when it names one), spread out (no two within 3 units). */
 export function crabsFor(site: FaunaSite, count = 6): Crab[] {
-  const cells = beachCells(site), out: Crab[] = [];
+  const b = site.beach, cells = beachCells(site).filter(c => !b || Math.hypot(c.at[0] - b[0], c.at[1] - b[1]) < b[2]), out: Crab[] = [];
   for (let k = 0; k < cells.length * 4 && out.length < count; k++) {
     const c = cells[Math.floor(hash01(k, 31) * cells.length)];
     if (!c || out.some(o => Math.hypot(o.home[0] - c.at[0], o.home[1] - c.at[1]) < 3)) continue;

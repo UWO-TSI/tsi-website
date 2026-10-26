@@ -20,12 +20,12 @@ import PostFX from "./PostFX";
 import SunShadows from "./SunShadows";
 import PerfProbe from "./PerfProbe";
 import QualityGovernor from "./QualityGovernor";
-import { FadeLight, LampPool, Lanterns, lampLight } from "./AmbientProps";
+import { FadeLight, GlowingLamps, LampGlow, LampPool, Lanterns, lampLight } from "./AmbientProps";
 import { GLBProp, sceneryOf } from "./NatureModels";
 import { InstancedModels, MergedModels } from "./InstancedNature";
 import { ACNHBuilding, ACNHHouses, ACNHParts, CHALET_VARIANTS, type PartsPlacement } from "./ACNHBuilding";
 import { FenceLine } from "./NatureModels";
-import { BRIDGE_URL, CATCH_BOARD_URL, MAILBOX_URL, MONUMENT_SIGN_URL, NEW_LAMPS, NOTICE_BOARD_URL } from "@/lib/game/propModels";
+import { BRIDGE_URL, CATCH_BOARD_URL, MAILBOX_URL, MONUMENT_SIGN_URL, NEW_LAMPS, NOTICE_BOARD_URL, STREETLAMP_URL } from "@/lib/game/propModels";
 import Wharf from "./wharf/Wharf";
 import TripVeil from "./wharf/TripVeil";
 import { tripSceneReady, useTripControl } from "./wharf/useTripControl";
@@ -286,7 +286,7 @@ function gullPerchSpots(v: Village, ground: (x: number, z: number) => number): [
  */
 function villageLayout(v: Village) {
   const decks = wharfDecks(v);
-  const fitting = objectsOf("fitting", v)[0], missions = objectsOf("missions", v)[0], marks = landmarks(v);
+  const fitting = objectsOf("fitting", v)[0], missions = objectsOf("missions", v)[0], marks = landmarks(v), fire = campfireSite(v);
   const island = villageIsland(v), trees = objectsOf("tree", v).map((o): TreeSpot => ({ x: o.x, z: o.z, seed: o.seed ?? 0 }));
   // The residents' houses (the `house` kind; none on a map that places none) stand like the landmarks.
   const houses = objectsOf("house", v), houseBoxes = houses.map(o => ({ x: o.x, z: o.z, half: houseHalf(o.yaw, o.scale) }));
@@ -306,7 +306,7 @@ function villageLayout(v: Village) {
     // Round the bushes (the new world's wild shrubs).
     fireflies: [...objectsOf("bush", v), ...objectsOf("prop", v).filter(o => o.model?.startsWith("shrub-"))].map(xz),
     /** The beach campfire (specs/v1-drop.md §3): the map's, or open sand by the beach until one is placed. */
-    campfire: campfireSite(v),
+    campfire: fire,
     puddles: objectsOf("puddle", v).map(xz),
     benches: objectsOf("bench", v),
     lamps: objectsOf("lamp", v),
@@ -330,7 +330,7 @@ function villageLayout(v: Village) {
     water: villageWater(v).classify,
     scale: villageScale(v),
     /** Ambient life (AmbientFauna): flowers for the butterflies, the water's kinds, gulls off the shores in view. */
-    fauna: { site: { map: v.map, flowers: objectsOf("flower", v).map(xz), water: villageWater(v).classify }, gulls: gullAnchors(v.bounds), perches: gullPerchSpots(v, island.ground) },
+    fauna: { site: { map: v.map, flowers: objectsOf("flower", v).map(xz), water: villageWater(v).classify, ...(v.terrain && fire ? { beach: [fire.x, fire.z, 30] as const } : {}) }, gulls: gullAnchors(v.bounds), perches: gullPerchSpots(v, island.ground) },
     /**
      * The map's rocks (centre and footprint radius): the ones standing in the water wear a foam ring (WaterContacts). A
      * rock model without a measured footprint rings at half a unit times its scale. The cliff-foot boulders standing in
@@ -447,16 +447,26 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   const grassClear = useMemo(() => (x: number, z: number) => island.top(x, z) <= island.ground(x, z) + 0.01, [island]);
   const scenery = useMemo(() => sceneryOf(v, island.ground, look.season), [v, island, look.season]);
   // The new world's still props (our own art: props, the wharf kit, buildings, coral) merge by look into a few draws.
+  // The plaza fountain at night (David, R2e: "lighting in the fountain"): a glow over its pool, a halo on its top jet and
+  // one warm light in its basin. Its pool is 0.4 up and its jet 3.14 in the model's units.
+  const fountain = useMemo(() => {
+    const f = scenery.find(p => p.url.endsWith("/plaza-fountain.glb"));
+    if (!f) return null;
+    const [x, y, z] = f.position, s = f.scale ?? 1;
+    return { jet: [[x, y + 3.14 * s, z]] as const, water: () => y + 0.36 * s, light: [x, y + 0.9 * s, z] as const };
+  }, [scenery]);
   const [sceneryStill, sceneryMoving] = useMemo(() => (v.terrain ? [scenery.filter(p => STILL.test(p.url)), scenery.filter(p => !STILL.test(p.url))] : [[], scenery]), [v, scenery]);
   // The lamps by model: the street lamp (none), or the new world's (propModels NEW_LAMPS), each turned by its yaw.
   const lampSets = useMemo(() => (["", ...Object.keys(NEW_LAMPS) as (keyof typeof NEW_LAMPS)[]] as const).map(kind => {
     const ls = layout.lamps.filter(l => (l.model ?? "") === kind);
     return { kind, positions: ls.map((l): [number, number, number] => [l.x, island.ground(l.x, l.z), l.z]), yaws: kind ? ls.map(l => l.yaw ?? 0) : undefined };
   }).filter(s => s.positions.length), [layout, island]);
+  const lampModels = useMemo(() => lampSets.flatMap(s => s.positions.map((position, i) => ({ url: s.kind ? NEW_LAMPS[s.kind].url : STREETLAMP_URL, position, rotation: s.yaws?.[i] }))), [lampSets]);
+  const lampPoints = useMemo(() => lampSets.flatMap(s => (s.kind === "hand" ? [] : s.positions.map((p, i) => lampLight(p, s.yaws?.[i] ?? 0, s.kind ? NEW_LAMPS[s.kind].light : [0, 2.4, 0])))), [lampSets]);
+  const handPoints = useMemo(() => lampSets.flatMap(s => (s.kind === "hand" ? s.positions.map((p, i) => lampLight(p, s.yaws?.[i] ?? 0, NEW_LAMPS.hand.light)) : [])), [lampSets]);
   // The sushi bar (game/sushi-bar): E at its entrance seats you on a stool while it's open, its light is one of the pool's points (over its counter).
   const bar = useMemo(() => barOf(v), [v]), barY = bar ? island.ground(bar.x, bar.z) : 0, barView = useRef<BarView | null>(null);
-  const lampPoints = useMemo(() => [...lampSets.flatMap(s => (s.kind === "hand" ? [] : s.positions.map((p, i) => lampLight(p, s.yaws?.[i] ?? 0, s.kind ? NEW_LAMPS[s.kind].light : [0, 2.4, 0])))),
-    ...(bar ? [lampLight([bar.x, barY, bar.z], bar.yaw ?? 0, BAR_LIGHT)] : [])], [lampSets, bar, barY]);
+  const poolPoints = useMemo(() => (bar ? [...lampPoints, lampLight([bar.x, barY, bar.z], bar.yaw ?? 0, BAR_LIGHT)] : lampPoints), [lampPoints, bar, barY]);
   const near = useRef<Near>(null);
   const fauna = useMemo(() => ({ ...layout.fauna, ground: island.ground, standable: island.standable, surface: island.surface, top: island.top, player }), [layout, island, player]);
   // The arrival (components/game/arrival): Bram walks you through, the fish crate on the pier until the tour is over.
@@ -483,7 +493,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       // Not while Bram brings you in and walks you round (the arrival): the boat home waits for after.
       : DROPS.homeIsland && within(doors.boat, 1.6) && !arrivalPhase ? ["home", doors.boat]
       : within(layout.fitting, 1.5) ? ["fitting", layout.fitting]
-      : within(layout.sellBarrel, 1.9) ? ["sell", layout.sellBarrel]
+      : within(layout.sellBarrel, 2.2) ? ["sell", layout.sellBarrel]
       : DROPS.oracle && within(doors.oracle, 1.6) ? ["oracle_enter", doors.oracle]
       : within(doors.shop, 1.6) ? ["shop_enter", doors.shop]
       : DROPS.cafe && within(doors.cafe, CAFE_DOOR_RANGE) ? [progression.opened.includes("cafe") ? "cafe_enter" : "cafe", doors.cafe]
@@ -535,7 +545,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
         ground={island.ground} puddles={layout.puddles} cloudSize={layout.scale.cloudSize} shadowExtent={layout.scale.shadowExtent} shadowFollow={v.terrain ? player : undefined} fireflyAnchors={layout.fireflies} trees={layout.trees} fauna={fauna} />
       <GridWorld map={island.map} field={v.field} light={light} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} lite={liteMode} clear={grassClear} terrain={v.terrain} waves ownGround />
       <GridOcean map={island.map} lite={liteMode} skip={layout.underWharf} radius={layout.scale.glintRadius} waves ownGround />
-      <Suspense fallback={null}><Seabed map={island.map} lite={liteMode} skip={layout.underWharf} /></Suspense>
+      <Suspense fallback={null}><Seabed map={island.map} lite={liteMode} skip={layout.underWharf} submerged={!!v.terrain} /></Suspense>
       <WaterContacts map={island.map} player={player} ground={island.ground} rocks={layout.rocks} />
       <GlassWater />
       <Suspense fallback={null}><DecorativeFish map={island.map} lite={liteMode} skip={layout.underWharf} max={v.terrain ? 40 : undefined} near={layout.reefs} /></Suspense>
@@ -552,8 +562,15 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       <HalloweenLayer content={traditions.content} v={v} island={island} light={light} night={phase === "night"} fog={fogNight} weather={weather} residents={personas} />
       {layout.bridges.map(b => <GLBProp key={b.id} url={BRIDGE_URL} position={[b.x, b.y, b.z]} rotation={[0, b.yaw ?? 0, 0]} />)}
       {/* The new world's lamps only glow; their pools come from the few nearest you (LampPool). */}
-      {lampSets.map(s => <Lanterns key={s.kind} positions={s.positions} yaws={s.yaws} lamp={s.kind ? NEW_LAMPS[s.kind] : undefined} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} reach={v.terrain ? 0 : 5} />)}
-      {v.terrain && <LampPool points={lampPoints} intensity={light.lampsOn ? light.lamp * 1.5 : 0} reach={8.5} player={player} />}
+      {v.terrain
+        ? <Suspense fallback={null}><GlowingLamps items={lampModels} glow={light.lampsOn ? 1.2 : 0} /></Suspense>
+        : lampSets.map(s => <Lanterns key={s.kind} positions={s.positions} yaws={s.yaws} lamp={s.kind ? NEW_LAMPS[s.kind] : undefined} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} />)}
+      {v.terrain && <LampPool points={poolPoints} intensity={light.lampsOn ? light.lamp * 2 : 0} reach={11} player={player} />}
+      {/* Every lamp's warm halo and ground pool, breathing like a flame (two draws a set). */}
+      {v.terrain && <LampGlow points={lampPoints} ground={island.ground} on={light.lampsOn} />}
+      {v.terrain && <LampGlow points={handPoints} ground={island.ground} on={light.lampsOn} halo={1.1} pool={2.2} />}
+      {fountain && <LampGlow points={fountain.jet} ground={fountain.water} on={light.lampsOn} halo={2.4} pool={3} color="#a8e8ff" />}
+      {fountain && <FadeLight position={fountain.light} color="#ffd59a" intensity={light.lampsOn ? light.lamp * 2 : 0} distance={12} />}
       {bar && <Suspense fallback={null}><SushiBar bar={bar} y={barY} player={player} phase={phase} viewRef={barView} onNear={onBar} /></Suspense>}
       {layout.campfire && <Campfire site={layout.campfire} ground={island.ground} phase={phase} player={player} />}
       {/* Nature and props from the map, instanced: one draw per model sub-mesh however many the island has. */}
@@ -1357,7 +1374,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <LettersSheet open={sheet === "letters"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openMail} />
       <BagSheet open={sheet === "bag"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openBag} />
       <ChestSheet open={sheet === "chest"} onClose={() => setSheet(null)} keys={STATION_KEY} />
-      <SellSheet open={sheet === "sell"} onClose={() => setSheet(null)} />
+      <SellSheet open={sheet === "sell"} onClose={() => setSheet(null)} keys={STATION_KEY} />
       <WalletSheet open={sheet === "wallet"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openWallet} />
       <WardrobeSheet open={sheet === "closet" || sheet === "fitting"} place={sheet === "closet" ? "closet" : "fitting"} onClose={() => { if (sheet === "fitting") window.dispatchEvent(new CustomEvent("tsi:fitting")); setSheet(null); }} onShop={() => { setSheet(null); toShop("More clothes"); }} />
       <PlayerCharacterUI creator={step === "creator"} />

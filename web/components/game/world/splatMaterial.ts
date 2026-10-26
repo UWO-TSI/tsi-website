@@ -107,7 +107,8 @@ const BODY = /* glsl */ `
   // A worn edge: the soft weights pushed past a noisy threshold.
   paintW = smoothstep(vec4(0.3), vec4(0.7), paintW + (edgeN - 0.5) * 0.35);
   float broad = splatNoise(vTerrainWorld.xz * 0.11);
-  vec3 ground = uGrassC * (0.9 + 0.18 * broad + 0.06 * edgeN);
+  // The lawn a shade deeper, the blades' own mid-tone, so blades and ground read as one even grass (David, R2d).
+  vec3 ground = uGrassC * (0.8 + 0.12 * broad + 0.03 * edgeN);
   ground = mix(ground, uSandC * (0.95 + 0.08 * edgeN), paintW.r);
   vec2 pathUv = vTerrainWorld.xz / ${PATH_TILE.toFixed(1)};
   vec3 pathDirt = mix(texture2D(uPathTex, pathUv).rgb, texture2D(uPathTex, mat2(0.8, -0.6, 0.6, 0.8) * pathUv * 0.77 + 0.37).rgb,

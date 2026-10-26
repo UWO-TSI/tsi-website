@@ -40,6 +40,8 @@ export function villageNodes(v: Village = village()): { forage: NodeSpec[]; bugs
     ...trees.slice(4, 9).map(({ x, z }, i): NodeSpec => ({ id: `bug-tree-${i}`, x, z: z - 0.6, biomes: ["trees"], categories: ["bug"] })),
     ...spots("water_edge").map(({ x, z }, i): NodeSpec => ({ id: `bug-water-${i}`, x, z, biomes: ["water_edge"], categories: ["bug"] })),
     ...spots("ground").map(({ x, z }, i): NodeSpec => ({ id: `bug-ground-${i}`, x, z, biomes: ["ground"], categories: ["bug"] })),
+    // Bug spots among blooms (the new world's lamps: its night butterflies come to the light).
+    ...spots("flowers").map(({ x, z }, i): NodeSpec => ({ id: `bug-bloom-${i}`, x, z, biomes: ["flowers"], categories: ["bug"] })),
   ];
   const onLand = (n: NodeSpec) => isGroundAtWorld(v.map, n.x, n.z);
   return { forage: [...fruit, ...shells, ...rocks, ...woods, ...blooms, ...branchNodes(trees, "")].filter(onLand), bugs: bugs.filter(onLand) };
