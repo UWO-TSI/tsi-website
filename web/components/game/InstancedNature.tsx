@@ -24,7 +24,7 @@
  * the placements re-packed between them only when one crosses the line.
  */
 
-import { Suspense, useEffect, useMemo } from "react";
+import { Suspense, useEffect, useLayoutEffect, useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
@@ -273,30 +273,34 @@ export function ModelFlock({ url, scale, cap, flocks }: { url: string; scale: nu
       const im = new THREE.InstancedMesh(m.geometry, m.material, cap);
       // The curved world bends far things down into view (modelMaterials prepareModel): never culled by their own bounds.
       Object.assign(im, { castShadow: m.castShadow, receiveShadow: m.receiveShadow, frustumCulled: false, count: 0 });
+      im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      // Its copies move: SunShadows casts it every frame, never from the cached static map.
+      if (m.castShadow) im.userData.sunCaster = "dynamic";
       f.meshes.push(im);
       f.local.push(m.matrixWorld.clone());
     });
     return f;
   }, [model, cap]);
-  useEffect(() => {
+  // Before the frame after the commit that mounts its meshes, so a rebuilt flock (a new count) never misses a frame.
+  useLayoutEffect(() => {
     const key = `${url}|${scale}`;
     flocks.set(key, flock);
     return () => { flocks.delete(key); flock.meshes.forEach(m => m.dispose()); };
   }, [flocks, flock, url, scale]);
   return <>{flock.meshes.map((m, i) => <primitive key={i} object={m} />)}</>;
 }
-const _copyAt = new THREE.Matrix4(), _part = new THREE.Matrix4();
+const _part = new THREE.Matrix4();
 let _ownShown = true;
 function showOwnOne(o: THREE.Object3D) { if ((o as THREE.Mesh).isMesh) o.visible = _ownShown; }
 /** A copy's own meshes shown (drawn alone) or hidden (drawn in its flock); its group, and so its contact shadow, stay. */
 export function showOwn(group: THREE.Object3D, on: boolean) { _ownShown = on; group.traverse(showOwnOne); }
 export const startFlock = (f: Flock) => { f.n = 0; };
-/** The copy whose group is `group` (moved this frame) into the flock's next slot. */
-export function addToFlock(f: Flock, group: THREE.Object3D) {
-  if (!group.parent || f.n >= f.meshes[0]?.instanceMatrix.count) return;
+/** The copy whose group is `group` (moved this frame, a sibling of the flock's meshes) into the flock's next slot; false when the flock is full. */
+export function addToFlock(f: Flock, group: THREE.Object3D): boolean {
+  if (f.n >= (f.meshes[0]?.instanceMatrix.count ?? 0)) return false;
   group.updateMatrix();
-  _copyAt.multiplyMatrices(group.parent.matrixWorld, group.matrix);
-  for (let k = 0; k < f.meshes.length; k++) f.meshes[k].setMatrixAt(f.n, _part.multiplyMatrices(_copyAt, f.local[k]));
+  for (let k = 0; k < f.meshes.length; k++) f.meshes[k].setMatrixAt(f.n, _part.multiplyMatrices(group.matrix, f.local[k]));
   f.n++;
+  return true;
 }
 export function endFlock(f: Flock) { for (const m of f.meshes) { m.count = f.n; m.instanceMatrix.needsUpdate = true; } }

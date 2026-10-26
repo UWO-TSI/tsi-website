@@ -47,6 +47,15 @@ A/B in the same session, 24 bots, 3 runs each (frame / CPU in ms, then draws):
   - game and economy tests green with and without `NEXT_PUBLIC_GAME_WORLD=new` (2007 of 2007, budget.test included);
   - tsc and eslint clean.
 - Renders: `specs/evidence/perf-newworld/r2e/` (01, 03, 04, 06, 18), matching `terrain-v3/r2e/`.
+- Review fixes on the flock:
+  - it registers in a layout effect;
+  - a copy the flock can't place draws its own model;
+  - the instance matrix comes from the group alone;
+  - flock meshes that cast are marked dynamic casters;
+  - the instance buffers use dynamic draw;
+  - the crab keys are memoised;
+  - snow caps read the instance's turn.
+  Tests are still green in both worlds. The village render with its bugs drawn in flocks is `r2e/village-bugs.webp`.
 - Left: the trees' 54 draws need a different structure (each kind's near and far sets are their own instanced meshes).
 
 **Pass 2: R2d (terrain-v3 7aee495b merged; this branch is the release candidate)**

@@ -19,11 +19,28 @@ Then look at the references in `specs/references/terrain/plan-2026-10-23/` and t
 
 ## Status
 
-**R2f in progress 2026-10-26.** Step 1 is done (f5431d3b) and reported. It is waiting on the coordinator's word to merge `game/art-r2f` and `game/perf-newworld`.
+**R2f built 2026-10-26, waiting on review** (head: the commit after e7adec1d). Merged in: art-r2f bea55f85 (the wider fish market, the shipwright's ship, the river trees) and perf-newworld 81edf2f8 (the R2e perf pass: bugs and crabs through `ModelFlock`). Renders are in `specs/evidence/terrain-v3/r2f/`: 01, 06, 10, 20, 23, 24, 25 and 28.
 - **Palms:** 14 of the 20 beach palms moved to 1 to 2 u off the grass at the back of the sand (measured from the paint). The wharf end's two moved off the waterline to (55.6, 92.4) and (53, 92.6).
 - **Path:** `WHARF_WAY` deleted (its ramp and its nature exclusion).
-- **Plaza night centre:** `lamp-fountain-0..3` (village posts at r 5.4 between the benches, arms over the basin, no bug spots). The fountain gets a pool glow and a jet halo (`LampGlow color`) plus one warm `FadeLight` in its basin (`DefaultIslandWorld fountain`, matched by `/plaza-fountain.glb`, so the village is untouched).
-- **Renders:** `r2f/` 06, 20, 25, 28 (28-plaza-centre-night is new in shoot.mjs).
+- **Plaza night centre:**
+  - `lamp-fountain-0..3`: village posts at r 5.4 between the benches, their arms over the basin, no bug spots.
+  - The fountain gets a pool glow and a jet halo (`LampGlow color`), plus one warm `FadeLight` in its basin (`DefaultIslandWorld fountain`). It matches `/plaza-fountain.glb`, so the village is untouched.
+- **Fish market:** art-r2f's, 7.8 wide, at the same spot (quayAt 19.5, d 4). It fits the deck: d 0.1 to 7.9 and z 16 to 23.5.
+- **Shipwright:** `shipwright-ship` in SHOPS at z 73.5, in the edge-shop frame. Its bow points south, the hull spans z about 66 to 84, and it is still and not solid.
+  - The edge kit leaves the edge bare along the whole hull, plus 2 each way (`wharf.ts SHIP_SPAN`, `shedClears`).
+  - Deleted: `shipwright-shed.glb`, `shipwright-boat.glb` and `ShipwrightBoat.tsx` with its use; their propModels, PROP_FOOTPRINT, PROP_TOP and EDGE_SHOPS entries; and the shed and boat builders and constants in `build_wharf_shops.py`.
+- **River trees:** art-r2f's remodels under the same names. Nothing was moved.
+- **Gates:** tsc and eslint clean. lib/game + components/game: 245 files and 2006 tests green with and without the switch, budget.test included.
+- **Perf** (`SCENES=village,v2`, load 4.5 to 4.8, spread up to 37%):
+
+  | | v2 frame / CPU (ms), draws | village frame / CPU (ms), draws |
+  |---|---|---|
+  | High | 5.2 / 4.5, 391 | 4.3 / 3.8, 359 |
+  | Lite | 3.5 / 3.2, 322 | 2.6 / 2.3, 273 |
+
+  - Draws are below perf-newworld's after-cuts 400 / 327.
+  - The fountain adds one real light (about 0.1 ms by perf-newworld's pricing) and 2 glow draws. The 4 posts merge with the other lamps.
+  - Triangles are 1.37M High and 1.15M Lite, over the budget lines (1.2M and 0.95M). No R2e triangle count exists to attribute the change against.
 
 **R2e reviewed 2026-10-26** (head 55e48459). Approved:
 - the arrival, the market from the docks, the shops, the wharf;
@@ -374,14 +391,7 @@ The plan page answers, verbatim in the spec. The drawing is a guide to where thi
 
 ## Next
 
-**R2f: David's R2e notes** (the reading above, 1 to 4).
-1. ~~**Without new art:** the palms (1), the path removed (2) and the plaza's night centre (3).~~ Done, f5431d3b.
-2. **When the coordinator says,** merge `game/art-r2f` and place:
-   - the wider fish market;
-   - the shipwright's docked ship, replacing the shed and boat. Keep or adapt ShipwrightBoat's bob if the ship floats;
-   - the river trees.
-3. **Merge `game/perf-newworld`** when told: the R2e perf pass.
-4. **Renders** into `specs/evidence/terrain-v3/r2f/`: the beach, the market front, the shipwright, the river, the plaza at night, and the wharf to the beach. SendMessage "main" with them and a one-line fact for each. Update Status, then stop.
+R2f is built: steps 1 to 4 (David's R2e notes, the reading 1 to 4) are done, and the build is reported (Status). Wait for David's R2f review. If the coordinator wants the triangle count attributed, run a draw breakdown of v2 High (gotchas, "Perf runs").
 
 ## Tools and gotchas
 
@@ -413,4 +423,5 @@ The plan page answers, verbatim in the spec. The drawing is a guide to where thi
 - **Generated bug spots:** `bug` isn't a generated kind (hand-placed ones survive); the lamps' (`bug-lamp-*`) are all dropped and rebuilt each run.
 - **Wharf shops and lily pads** stand off the ground on purpose: walk.test skips them (`EDGE_SHOPS`, and the water's coral, reeds and stones).
 - **Swash:** stills can't show it; `frames: { count, every }` on a shoot.mjs view takes more shots in the same session.
+- **Edge shops' frame:** at the wharf's yaw (about -1.82), local +x runs south along the edge (+z) and local +z runs inland. The ship's bow points south.
 - **Lamps:** every lamp is generated (`lamps()`), and the generated kinds now include lamp, tree, flower, bush and fence: anything of those kinds in world.json is rebuilt each run.

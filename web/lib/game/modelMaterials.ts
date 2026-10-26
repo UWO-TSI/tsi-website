@@ -116,7 +116,11 @@ function addSnowCap(shader: WebGLProgramParametersWithUniforms) {
   shader.uniforms.uWorldSnow = WORLD_SNOW;
   shader.vertexShader = "varying float vSnowUp;\n" + shader.vertexShader.replace("#include <beginnormal_vertex>", `
     #include <beginnormal_vertex>
-    vSnowUp = normalize(mat3(modelMatrix) * objectNormal).y;`);
+    #ifdef USE_INSTANCING
+      vSnowUp = normalize(mat3(modelMatrix) * mat3(instanceMatrix) * objectNormal).y;
+    #else
+      vSnowUp = normalize(mat3(modelMatrix) * objectNormal).y;
+    #endif`);
   shader.fragmentShader = "uniform float uWorldSnow;\nvarying float vSnowUp;\n" + shader.fragmentShader.replace("#include <map_fragment>", `
     #include <map_fragment>
     diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.93, 0.97), uWorldSnow * smoothstep(0.45, 0.8, vSnowUp));`);

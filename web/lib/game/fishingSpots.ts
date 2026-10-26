@@ -58,9 +58,10 @@ export const WATER_CLASS = { land: 0, sea: 1, river: 2, pond: 3 } as const;
  * toward the shore; a narrower channel (a river, even one running out to sea)
  * stays river. A pond that opens onto a river is found from its `ponds` marker
  * (the pond landmark): the open water around it (2+ cells from land), grown one
- * cell to its banks. Off the map is sea.
+ * cell to its banks. A river the world marks (`rivers`, cells: the smooth world's River zone) stays river where it
+ * opens wide to the sea. Off the map is sea.
  */
-export function classifyWater(map: IslandMap, ponds: readonly (readonly [number, number])[] = [], open = 2): Uint8Array {
+export function classifyWater(map: IslandMap, ponds: readonly (readonly [number, number])[] = [], rivers: readonly (readonly [number, number])[] = [], open = 2): Uint8Array {
   const { width: W, depth: D } = map, n = W * D;
   const water = (i: number) => isWater(map.surfaces[i]);
   const out = new Uint8Array(n);
@@ -124,6 +125,7 @@ export function classifyWater(map: IslandMap, ponds: readonly (readonly [number,
   const core: number[] = [];
   for (let i = 0; i < n; i++) if (out[i] === WATER_CLASS.sea) core.push(i);
   grow(core, open, true, () => true, WATER_CLASS.sea);
+  for (const [cx, cz] of rivers) if (inBounds(map, cx, cz) && out[cz * W + cx] === WATER_CLASS.sea) out[cz * W + cx] = WATER_CLASS.river;
   // Ponds joined to a river: the open water around each marker, then its banks.
   for (const [px, pz] of ponds) {
     const cx = worldToCellX(map, px), cz = worldToCellZ(map, pz), i = cz * W + cx;
@@ -153,7 +155,7 @@ export function villageWater(v: Village = village()) {
   let w = waters.get(v);
   if (!w) {
     const ponds = objectsOf("landmark", v).filter(o => o.id === "pond").map(o => [o.x, o.z] as const);
-    const classes = classifyWater(v.map, ponds);
+    const classes = classifyWater(v.map, ponds, v.rivers);
     waters.set(v, w = { classes, classify: waterClassifier(v.map, classes) });
   }
   return w;
