@@ -213,11 +213,11 @@ export function mergeByLook(placed: readonly (readonly [THREE.Object3D, THREE.Ma
  * 2026-10-17), so dozens of small props draw in a handful of calls. Each placement keeps its contact shadow. For models
  * that never move, sway or glow on their own.
  */
-export function MergedModels({ items }: { items: readonly ModelPlacement[] }) {
+export function MergedModels({ items, emissiveIntensity }: { items: readonly ModelPlacement[]; emissiveIntensity?: number }) {
   const urls = useMemo(() => [...new Set(items.map(i => i.url))], [items]);
   const gltfs = useGLTF(urls) as unknown as GLTF[];
   const images = useMemo(() => gltfs.reduce((out, gltf) => imageKeys(gltf, out), new Map<THREE.Texture, string>()), [gltfs]);
-  const models = useMemo(() => urls.map((url, i) => prepareModel(gltfs[i].scene, url, undefined, shadowClassFor(url))), [gltfs, urls]);
+  const models = useMemo(() => urls.map((url, i) => prepareModel(gltfs[i].scene, url, emissiveIntensity, shadowClassFor(url))), [gltfs, urls, emissiveIntensity]);
   useEffect(() => {
     models.forEach((model, i) => applyModelTextures(model, urls[i]));
     return () => models.forEach(model => disposeModelMaterials(model));

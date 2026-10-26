@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { GLBProp } from "./NatureModels";
-import InstancedGLB from "./InstancedNature";
+import InstancedGLB, { MergedModels, type ModelPlacement } from "./InstancedNature";
 import { STREETLAMP_URL } from "@/lib/game/propModels";
 
 /** Seconds-ish a lamp takes to come up to full (or go out): an ease, never a switch (living-village §5). */
@@ -71,10 +71,8 @@ function easeGlowOnce(group: THREE.Object3D, target: number, dt: number) {
  * The globes share their materials, so they ease up and down together as the Lanterns' did; each lamp keeps its own
  * pool of light.
  */
-export function Lanterns({ positions, intensity, glow, lamp = { url: LAMP_URL, light: [0, 2.4, 0] }, yaws, reach = 5 }: {
+export function Lanterns({ positions, intensity, glow, lamp = { url: LAMP_URL, light: [0, 2.4, 0] }, yaws }: {
   positions: readonly [number, number, number][]; intensity: number; glow: number;
-  /** How far each lamp's pool of light reaches; 0: they only glow (no light of their own). */
-  reach?: number;
   /** Which lamp (propModels NEW_LAMPS) and its light point in the model; `yaws` turn each (radians about +y). */
   lamp?: { url: string; light: readonly [number, number, number] }; yaws?: readonly number[];
 }) {
@@ -85,9 +83,16 @@ export function Lanterns({ positions, intensity, glow, lamp = { url: LAMP_URL, l
     <group>
       {/* The globes start dark and ease to their target (a fixed prepared intensity, so the model is never rebuilt). */}
       <group ref={group}><InstancedGLB url={lamp.url} placements={placements} emissiveIntensity={0} /></group>
-      {reach > 0 && positions.map((p, i) => <FadeLight key={i} color="#FFA040" intensity={intensity} distance={reach} position={lampLight(p, yaws?.[i] ?? 0, lamp.light)} />)}
+      {positions.map((p, i) => <FadeLight key={i} color="#FFA040" intensity={intensity} distance={5} position={lampLight(p, yaws?.[i] ?? 0, lamp.light)} />)}
     </group>
   );
+}
+
+/** The new world's lamps, which only glow (their pools are LampPool's): every kind's placements merged by look (perf-newworld), the globes easing together. */
+export function GlowingLamps({ items, glow }: { items: readonly ModelPlacement[]; glow: number }) {
+  const group = useRef<THREE.Group>(null);
+  useFrame((_, raw) => { if (group.current) easeGlowOnce(group.current, glow, Math.min(raw, 0.1)); });
+  return <group ref={group}><MergedModels items={items} emissiveIntensity={0} /></group>;
 }
 
 /** Where a lamp's light sits: its model's light point turned by its yaw. */
