@@ -285,7 +285,7 @@ function gullPerchSpots(v: Village, ground: (x: number, z: number) => number): [
  */
 function villageLayout(v: Village) {
   const decks = wharfDecks(v);
-  const fitting = objectsOf("fitting", v)[0], missions = objectsOf("missions", v)[0], marks = landmarks(v);
+  const fitting = objectsOf("fitting", v)[0], missions = objectsOf("missions", v)[0], marks = landmarks(v), fire = campfireSite(v);
   const island = villageIsland(v), trees = objectsOf("tree", v).map((o): TreeSpot => ({ x: o.x, z: o.z, seed: o.seed ?? 0 }));
   // The residents' houses (the `house` kind; none on a map that places none) stand like the landmarks.
   const houses = objectsOf("house", v), houseBoxes = houses.map(o => ({ x: o.x, z: o.z, half: houseHalf(o.yaw, o.scale) }));
@@ -305,7 +305,7 @@ function villageLayout(v: Village) {
     // Round the bushes (the new world's wild shrubs).
     fireflies: [...objectsOf("bush", v), ...objectsOf("prop", v).filter(o => o.model?.startsWith("shrub-"))].map(xz),
     /** The beach campfire (specs/v1-drop.md §3): the map's, or open sand by the beach until one is placed. */
-    campfire: campfireSite(v),
+    campfire: fire,
     puddles: objectsOf("puddle", v).map(xz),
     benches: objectsOf("bench", v),
     lamps: objectsOf("lamp", v),
@@ -329,7 +329,7 @@ function villageLayout(v: Village) {
     water: villageWater(v).classify,
     scale: villageScale(v),
     /** Ambient life (AmbientFauna): flowers for the butterflies, the water's kinds, gulls off the shores in view. */
-    fauna: { site: { map: v.map, flowers: objectsOf("flower", v).map(xz), water: villageWater(v).classify }, gulls: gullAnchors(v.bounds), perches: gullPerchSpots(v, island.ground) },
+    fauna: { site: { map: v.map, flowers: objectsOf("flower", v).map(xz), water: villageWater(v).classify, ...(v.terrain && fire ? { beach: [fire.x, fire.z, 30] as const } : {}) }, gulls: gullAnchors(v.bounds), perches: gullPerchSpots(v, island.ground) },
     /**
      * The map's rocks (centre and footprint radius): the ones standing in the water wear a foam ring (WaterContacts). A
      * rock model without a measured footprint rings at half a unit times its scale. The cliff-foot boulders standing in
@@ -531,7 +531,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
         ground={island.ground} puddles={layout.puddles} cloudSize={layout.scale.cloudSize} shadowExtent={layout.scale.shadowExtent} shadowFollow={v.terrain ? player : undefined} fireflyAnchors={layout.fireflies} trees={layout.trees} fauna={fauna} />
       <GridWorld map={island.map} field={v.field} light={light} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} lite={liteMode} clear={grassClear} terrain={v.terrain} waves ownGround />
       <GridOcean map={island.map} lite={liteMode} skip={layout.underWharf} radius={layout.scale.glintRadius} waves ownGround />
-      <Suspense fallback={null}><Seabed map={island.map} lite={liteMode} skip={layout.underWharf} /></Suspense>
+      <Suspense fallback={null}><Seabed map={island.map} lite={liteMode} skip={layout.underWharf} submerged={!!v.terrain} /></Suspense>
       <WaterContacts map={island.map} player={player} ground={island.ground} rocks={layout.rocks} />
       <GlassWater />
       <Suspense fallback={null}><DecorativeFish map={island.map} lite={liteMode} skip={layout.underWharf} max={v.terrain ? 40 : undefined} near={layout.reefs} /></Suspense>

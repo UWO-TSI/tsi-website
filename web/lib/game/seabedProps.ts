@@ -60,9 +60,10 @@ function cellRandom(cx: number, cz: number, salt: number) {
 /**
  * The seabed's props on a map: four candidate spots a cell over the sea's water (level 0), each taking at most one
  * kind whose depth suits it. `skip`: spots to leave clear (under the wharf's deck). `lite`: Lite's cheaper seabed (the
- * kinds marked `lite`, at 45% of the density).
+ * kinds marked `lite`, at 45% of the density). `submerged`: no rock standing out of the water (the new world's wide
+ * shallows; David, R2d: "get rid of ... the rocks").
  */
-export function seabedProps(map: IslandMap, shore: ShoreSdf, { skip, lite = false }: { skip?: (x: number, z: number) => boolean; lite?: boolean } = {}): SeabedLayout {
+export function seabedProps(map: IslandMap, shore: ShoreSdf, { skip, lite = false, submerged = false }: { skip?: (x: number, z: number) => boolean; lite?: boolean; submerged?: boolean } = {}): SeabedLayout {
   const items: Record<string, SeabedItem[]> = Object.fromEntries(SEABED_KINDS.map(k => [k.name, []]));
   const breaking: SeabedLayout["breaking"] = [];
   const surface = -WATER_DROP;
@@ -85,8 +86,9 @@ export function seabedProps(map: IslandMap, shore: ShoreSdf, { skip, lite = fals
         // Plants stay under the water: one too tall for the depth here grows smaller, or not at all.
         if (!rock) scale = Math.min(scale, (dip - 0.06) / kind.height);
         if (scale < kind.scale[0] * 0.6) break;
-        items[kind.name].push({ x, y, z, yaw, scale, tint });
         const top = y + kind.height * scale;
+        if (rock && submerged && top > surface) break;
+        items[kind.name].push({ x, y, z, yaw, scale, tint });
         // A rock that stands out of the water, ringed with foam where it meets it (a third of its footprint's span).
         if (rock && top > surface + 0.03) breaking.push({ x, z, r: (kind.name === "boulder_c" ? 0.3 : 0.38) * scale, top, kind: kind.name });
         break;

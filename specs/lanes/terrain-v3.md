@@ -360,6 +360,6 @@ The plan page answers, verbatim in the spec. The drawing is a guide to where thi
 - **Don't chain** the generator and a shoot in one call: the generator can take 15 minutes when the machine is busy (usually 12 s).
 - **cells.test** takes 5 to 10 s on its fishing sample under load (the classifier's first call, same on the old world); run it with `--testTimeout=30000` on a busy machine.
 - **Village check:** `VILLAGE=1 PORT=3171 node specs/evidence/terrain-v3/shoot.mjs <dir>` with the dev server run without the switch shoots the village's four check views. For a before set, `git archive <sha> web | tar -x -C <scratch>` and clone node_modules into it (no new worktree).
-- **Generated bug spots:** `bug` isn't a generated kind (hand-placed ones survive), so lamp bug spots are replaced by id each run; a renamed one would linger.
+- **Generated bug spots:** `bug` isn't a generated kind (hand-placed ones survive); the lamps' (`bug-lamp-*`) are all dropped and rebuilt each run.
 - **Ship houses and lily pads** stand off the ground on purpose: walk.test skips them (and the water's coral, reeds and stones).
 - **Lamps:** every lamp is generated (`lamps()`), and the generated kinds now include lamp, tree, flower, bush and fence: anything of those kinds in world.json is rebuilt each run.

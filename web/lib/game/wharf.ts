@@ -342,7 +342,7 @@ export function deckPieces(decks: readonly { x: number; z: number; yaw?: number 
       ladder = i;
       const side = hash01(i, 10) < 0.5 ? 1 : -1;
       put("wharf-ladder", 0.6 * side, -2);
-      if (hash01(i, 11) < 0.7) put("life-ring", -1.2 * side, -1.75);
+      put("life-ring", -1.2 * side, -1.75);
     }
     else if (open && hash01(i, 7) < 0.25) put("rope-net", 0, -1.8);
     else if (open && hash01(i, 7) < 0.55) {

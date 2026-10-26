@@ -542,7 +542,7 @@ function lamps(): Obj[] {
   put("lamp-beach-way", "village", 39, 84, 35, 84);
   // The deck: lantern posts here and there, their arms toward the water, one lighting the market's front (David, R2d:
   // "lighting ... make it organic"); hand lanterns along its edge at uneven gaps, on the market's porch and by its stall.
-  ([[24.6, 0.7], [31.5, 4.4], [38.6, 3.1], [52.6, 3.7], [57.6, 5.1], [68.2, 3.2], [76.6, 4.6]] as const)
+  ([[24.6, 1.6], [31.5, 4.4], [38.6, 3.1], [52.6, 3.7], [57.6, 5.1], [68.2, 3.2], [76.6, 4.6]] as const)
     .forEach(([z, d], i) => { const q = quayAt(z, d), e = quayAt(z, -1); put(`lamp-deck-${i}`, "wharf", q.x, q.z, e.x, e.z); });
   for (let z = 15, i = 0; z <= 79; z += 4.2 + 2.6 * hash01(i, 50), i++) {
     if (Math.abs(z - DOCK.z) > 5 && [SELL_AT, ...SHOPS.map(h => h[0])].every(at => Math.abs(z - at) > 3)) { const q = quayAt(z, 0.1 + 0.5 * hash01(i, 51)); put(`lamp-deck-hand-${i}`, "hand", q.x, q.z); }
@@ -556,9 +556,9 @@ function lamps(): Obj[] {
   [200, 340].forEach((deg, i) => { const a = (deg * Math.PI) / 180; put(`fire-lamp-${i}`, "camp", FIRE_AT[0] + 5.4 * Math.cos(a), FIRE_AT[1] + 5.4 * Math.sin(a), ...FIRE_AT); });
   [25, 65, 115, 155, 265, 320].forEach((deg, i) => { const a = (deg * Math.PI) / 180; put(`fire-hand-${i}`, "hand", FIRE_AT[0] + 6.3 * Math.cos(a), FIRE_AT[1] + 6.3 * Math.sin(a)); });
   // Night bugs to catch at the lamps (David, 2026-10-26: "more night bugs near lamps to catch"): a bug spot among
-  // blooms (lib/game/islandNodes.ts) a step off every other lamp post, where the roster's night butterflies come out.
+  // blooms (lib/game/islandNodes.ts) a step off every other lamp post on land, where the roster's night butterflies come out.
   const bugs: Obj[] = [];
-  out.filter(l => l.model !== "hand").forEach((l, i) => {
+  out.filter(l => l.model !== "hand" && !l.id.startsWith("lamp-jetty")).forEach((l, i) => {
     if (i % 2) return;
     const a = hash01(i, 120) * 6.28;
     bugs.push(obj("bug", `bug-lamp-${i}`, l.x + 1.1 * Math.cos(a), l.z + 1.1 * Math.sin(a), 0, 1, "flowers"));
@@ -643,6 +643,22 @@ function shallows(t: World["terrain"]): Obj[] {
  * boulder up the bank, lily pads in the still water of the bends and the mouth, driftwood on the sand there. Clear of
  * the washed-out bridge.
  */
+/**
+ * wharf-art4's shells on the beach's sand (David, R2d: "more crabs shells"): sea stars, sand dollars and conches, a few
+ * anywhere on it, more along the waterline and round the campfire (outside its rings), from the generated ground.
+ */
+function shells(t: World["terrain"]): Obj[] {
+  const out: Obj[] = [];
+  for (let x = -50; x < 58; x += 2) for (let z = 92; z < 122; z += 2) {
+    const k = out.length + x * 31 + z, px = x + 1.6 * (hash01(x, z + 60) - 0.5), pz = z + 1.6 * (hash01(z, x + 61) - 0.5), y = terrainHeight(t, px, pz);
+    const fire = Math.hypot(px - FIRE_AT[0], pz - FIRE_AT[1]);
+    if (y < t.seaLevel + 0.06 || y > H.beach + 0.35 || BEACH(px, pz) < -4 || fire < 7.2 || Math.hypot(px - SUSHI[0], pz - SUSHI[1]) < 7) continue;
+    if (hash01(x + 200, z) > 0.08 + 0.45 * (1 - smoothstep(0.08, 0.35, y - t.seaLevel)) + 0.35 * (1 - smoothstep(8, 13, fire))) continue;
+    out.push(obj("prop", `shell-${out.length}`, px, pz, hash01(k, 62) * 6.28, +(0.85 + 0.35 * hash01(k, 63)).toFixed(2), ["starfish", "sand-dollar", "conch"][Math.floor(hash01(k, 64) * 3)]));
+  }
+  return out;
+}
+
 function riverside(t: World["terrain"]): Obj[] {
   const out: Obj[] = [], sea = t.seaLevel;
   const put = (x: number, z: number, yaw: number, scale: number, model: string) => out.push(obj("prop", `river-${out.length}`, x, z, yaw, scale, model));
@@ -696,13 +712,13 @@ function forestTrees(): Obj[] {
   for (let i = 0; i < 55; i++) for (let k = 0; k < 71; k++) {
     const x = 20 + i * 2.15 + 1.1 * (hash01(i, k) - 0.5), z = -140 + k * 2.15 + 1.1 * (hash01(k + 50, i) - 0.5), in_ = FOREST(x, z);
     if (in_ < 1 || MT_FOOT(x, z) > -2 || hash01(i + 70, k) < 0.06) continue;
-    // trees-art's twelve: mostly fir, cedar, spire and old fir, with patches of broadleaf, wide and birch, a few leaning
-    // and broken, a rare dead snag; within 6 u of the edge, young trees, saplings and firs more often than not (David,
+    // trees-art's: mostly fir, cedar, spire and old fir, with patches of broadleaf, wide and birch, a few leaning (the
+    // broken tree and the snag would come out a handful each, two draws apiece: left out); within 6 u of the edge, young trees, saplings and firs more often than not (David,
     // R2d: "model better looking low poly trees instead of copy pasting 1 model").
     const h = hash01(i * 31 + k, 7), edgy = hash01(i, k + 7) < 0.6 * (1 - smoothstep(1, 6, in_)), leafy = fbm(x / 22, z / 22, 31) > 0.6;
     const model = edgy ? (h < 0.4 ? "young" : h < 0.7 ? "sapling" : "fir")
       : leafy ? (h < 0.4 ? "broadleaf" : h < 0.7 ? "wide" : h < 0.9 ? "birch" : "fir")
-        : h < 0.025 ? "snag" : h < 0.065 ? "leaning" : h < 0.1 ? "broken" : h < 0.36 ? "fir" : h < 0.6 ? "cedar" : h < 0.8 ? "spire" : "old-fir";
+        : h < 0.06 ? "leaning" : h < 0.36 ? "fir" : h < 0.6 ? "cedar" : h < 0.8 ? "spire" : "old-fir";
     out.push(obj("prop", `forest-${out.length}`, x, z, hash01(k, i * 13) * 2 * Math.PI, +(0.8 + 0.45 * hash01(i, k + 99)).toFixed(2), `forest-tree-${model}`));
   }
   return out;
@@ -713,7 +729,7 @@ const GENERATED: ReadonlySet<string> = new Set(["deck", "prop", "house", "bush",
 /** The layout's moves, then the generated objects (the border and the scenery) in place of any earlier copy of them. */
 export function layoutObjects(objects: World["objects"]): World["objects"] {
   const made = [...borderObjects(), ...scenery(), ...forestTrees()], ids = new Set(made.map(o => `${o.kind}:${o.id}`));
-  const stale = (o: Obj) => GENERATED.has(o.kind) || ids.has(`${o.kind}:${o.id}`) || (o.kind === "barrier" && o.model === "border");
+  const stale = (o: Obj) => GENERATED.has(o.kind) || ids.has(`${o.kind}:${o.id}`) || (o.kind === "barrier" && o.model === "border") || (o.kind === "bug" && o.id.startsWith("bug-lamp-"));
   return [...objects.filter(o => !stale(o)).map(o => (LAYOUT[o.id] ? { ...o, ...LAYOUT[o.id] } : o)), ...made];
 }
 
@@ -809,7 +825,7 @@ export function generateWorld(objects: World["objects"], keep: readonly MapAnnot
   const pads = padBuildings(t, objects);
   const steepMoved = limitSteepness(t);
   strata(t);
-  objects = [...objects.filter(o => !o.id.startsWith("coral-") && !o.id.startsWith("river-")), ...shallows(t), ...riverside(t)];
+  objects = [...objects.filter(o => !/^(coral|river|shell)-/.test(o.id)), ...shallows(t), ...riverside(t), ...shells(t)];
 
   let land = 0, lo = Infinity, hi = -Infinity;
   for (let p = 0; p < n; p++) {

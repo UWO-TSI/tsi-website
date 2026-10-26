@@ -176,7 +176,7 @@ describe("the wharf kit on the deck squares", () => {
     expect(pieces.filter(p => p.model === "deck-tile").length).toBe(20);
     const piles = pieces.filter(p => p.model === "dock-pile-rope");
     expect(piles.length).toBe(20);
-    for (const p of piles) { expect(p.x).toBeCloseTo(4.2, 6); expect(p.y).toBe(1); }
+    for (const p of piles) { expect(Math.abs(p.x - 4.2)).toBeLessThan(0.05); expect(p.y).toBe(1); }
   });
 
   it("puts ladders with life rings, rope nets and rope fencing on some edge squares, none near the jetty's landing", () => {

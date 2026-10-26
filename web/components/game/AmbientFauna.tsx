@@ -277,7 +277,8 @@ export default function AmbientFauna({ site, ground, standable, gulls, perches, 
     for (const f of flyers) groups.set(f.species, [...(groups.get(f.species) ?? []), f]);
     return [...groups];
   }, [flyers]);
-  const crabs = useMemo(() => crabsFor(site, liteMode ? 4 : 6), [site, liteMode]);
+  // The new world's open beach has more (David, R2d: "more crabs shells and little critters moving around in the sand").
+  const crabs = useMemo(() => crabsFor(site, site.beach ? (liteMode ? 8 : 14) : liteMode ? 4 : 6), [site, liteMode]);
   const isSea = useMemo(() => (x: number, z: number) => seaAt(site, x, z), [site]);
   // Flyers take cover from rain and snow over a few seconds and come back the same way.
   const presence = useRef(flyingWeather(weather) ? 1 : 0);
