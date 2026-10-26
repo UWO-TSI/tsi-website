@@ -27,7 +27,6 @@ import { useTripBoat } from "./useTripBoat";
 
 /** Our buoy (art/props/build_buoy.py) at scale 1: its float meets the water BUOY_WATERLINE up its model (its weighted stem hangs below). */
 useGLTF.preload(PIER_URL);
-useGLTF.preload(JETTY.url);
 useGLTF.preload(BUOY_URL);
 useGLTF.preload(DRESSING_URL);
 useGLTF.preload(ROWBOAT_URL);

@@ -74,9 +74,8 @@ export const SHOP_CART_URL = `${P}shop-cart.glb`;
 export const REMODELLED_PROPS: Readonly<Record<string, string>> = { "bench-wood": LOG_BENCH_URL };
 /** The fish crate (art/wharf/build_crate.py): the market's, and the arrival's on the pier. */
 export const CRATE_URL = "/assets/game/wharf/crate.glb";
-/** The sushi bar (game/sushi-bar), and its lanterns, string lights, neon and tank water, which glow at night like a lamp's glass. */
+/** The sushi bar (game/sushi-bar). */
 export const SUSHI_BAR_URL = "/assets/game/buildings/sushi-bar.glb";
-export const SUSHI_BAR_GLOW_URL = "/assets/game/buildings/sushi-bar-glow.glb";
 /** The `prop` kind's scenery outside the dump's props folder, by model name (terrain v3: the market, the beach, the lighthouse). */
 export const SCENERY_URLS: Readonly<Record<string, string>> = {
   barrel: "/assets/acnh/furniture/barrel.glb", lighthouse: "/assets/acnh/furniture/lighthouse.glb", crate: CRATE_URL,
@@ -117,7 +116,7 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   "lifeguard-tower": `${P}lifeguard-tower.glb`,
   // game/sushi-bar: the sushi bar (art/buildings/build_sushi_bar.py), a long open bar about 9.2 by 6.1, the origin at the
   // middle of its solid kitchen core (x ±4, z ±1.5), the guests' deck and six stools toward +z, the open window onto the
-  // sea toward -z. What glows is its own model (SUSHI_BAR_GLOW_URL), drawn by components/game/SushiBar.tsx.
+  // sea toward -z.
   "sushi-bar": SUSHI_BAR_URL,
   ...Object.fromEntries(["a", "b", "c"].map(m => [`surfboard-${m}`, `${P}surfboard-${m}.glb`])),
   ...Object.fromEntries(["a", "b", "c", "d"].map(m => [`coral-${m}`, `/assets/game/water/coral-${m}.glb`])),
