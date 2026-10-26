@@ -16,6 +16,7 @@ import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import Seagulls from "./Seagulls";
 import { GLBProp } from "./NatureModels";
+import { ModelFlock, addToFlock, endFlock, showOwn, startFlock, type Flock } from "./InstancedNature";
 import { useMoveParticles } from "./movement/moveFx";
 import { worldNow, worldTime } from "@/lib/game/worldClock";
 import { torontoHour } from "@/lib/game/islandTime";
@@ -123,8 +124,9 @@ function FlyerSwarm({ species, flyers, ground, presence }: { species: FlyerSpeci
 
 // ── Crabs ──────────────────────────────────────────────────────────────
 /** Module scope, as tickFlyers: step every crab and place its model; a scuttle judders, digging in sinks it under the sand. */
-function tickCrabs(crabs: readonly Crab[], states: CrabState[], groups: (THREE.Group | null)[], dt: number, p: THREE.Vector3, ground: Ground, standable: (x: number, z: number) => boolean) {
+function tickCrabs(crabs: readonly Crab[], states: CrabState[], groups: (THREE.Group | null)[], dt: number, p: THREE.Vector3, ground: Ground, standable: (x: number, z: number) => boolean, flocks: Map<string, Flock>) {
   const t = worldNow() / 1000;
+  flocks.forEach(startFlock);
   for (let i = 0; i < states.length; i++) {
     const s = states[i];
     crabStep(crabs[i], s, t, dt, p.x, p.z, standable);
@@ -134,20 +136,31 @@ function tickCrabs(crabs: readonly Crab[], states: CrabState[], groups: (THREE.G
     g.position.set(s.x, ground(s.x, s.z) - s.sink * 0.16 + jig, s.z);
     g.rotation.y = s.yaw + (s.fleeT >= 0 ? Math.sin(s.fleeT * 31) * 0.12 : 0);
     g.visible = s.sink < 0.98;
+    // Drawn in its model's flock; alone until the flock has loaded.
+    const flock = flocks.get(`${crabs[i].model}|${CRAB_SCALE}`);
+    showOwn(g, !flock);
+    if (flock && g.visible) addToFlock(flock, g);
   }
+  flocks.forEach(endFlock);
 }
+const CRAB_SCALE = 1.5;
 
 function Crabs({ crabs, ground, standable, player }: { crabs: readonly Crab[]; ground: Ground; standable: (x: number, z: number) => boolean; player: React.RefObject<THREE.Vector3> }) {
   const groups = useRef<(THREE.Group | null)[]>([]);
   const states = useRef<CrabState[]>([]);
   useEffect(() => { states.current = crabs.map(newCrabState); }, [crabs]);
-  useFrame((_, raw) => tickCrabs(crabs, states.current, groups.current, Math.min(raw, 0.1), player.current, ground, standable));
-  return <>{crabs.map((c, i) => (
-    <group key={c.seed} ref={g => { groups.current[i] = g; }}>
-      {/* Small: a contact shadow only (the Small class). */}
-      <Suspense fallback={null}><GLBProp url={c.model} scale={1.5} /></Suspense>
-    </group>
-  ))}</>;
+  const flocks = useMemo(() => new Map<string, Flock>(), []);
+  const sizes = useMemo(() => [...crabs.reduce((n, c) => n.set(c.model, (n.get(c.model) ?? 0) + 1), new Map<string, number>())], [crabs]);
+  useFrame((_, raw) => tickCrabs(crabs, states.current, groups.current, Math.min(raw, 0.1), player.current, ground, standable, flocks));
+  return <>
+    {sizes.map(([url, n]) => <Suspense key={url} fallback={null}><ModelFlock url={url} scale={CRAB_SCALE} cap={n} flocks={flocks} /></Suspense>)}
+    {crabs.map((c, i) => (
+      <group key={c.seed} ref={g => { groups.current[i] = g; }}>
+        {/* Small: a contact shadow only (the Small class). Its own model draws only until its flock has loaded. */}
+        <Suspense fallback={null}><GLBProp url={c.model} scale={CRAB_SCALE} /></Suspense>
+      </group>
+    ))}
+  </>;
 }
 
 // ── Fish leaping at sea ────────────────────────────────────────────────

@@ -247,3 +247,56 @@ export function MergedModels({ items, emissiveIntensity }: { items: readonly Mod
   }, [world, owner, items, urls, models]);
   return <primitive object={owner}>{meshes.map((m, i) => <primitive key={i} object={m} />)}</primitive>;
 }
+
+/** One model's InstancedMeshes (one a sub-mesh), each sub-mesh's place in the model, and how many are filled this frame. */
+export interface Flock { meshes: THREE.InstancedMesh[]; local: THREE.Matrix4[]; n: number }
+/**
+ * Every moving copy of one model at one scale (the bugs, the shore crabs) as one InstancedMesh per sub-mesh
+ * (perf-newworld: each copy was a draw per material). Each copy keeps its own group and model, its meshes hidden
+ * (`showOwn`) while it draws in the flock; the frame loop that moves the groups fills it (startFlock, addToFlock,
+ * endFlock), in `flocks` under `url|scale`.
+ */
+export function ModelFlock({ url, scale, cap, flocks }: { url: string; scale: number; cap: number; flocks: Map<string, Flock> }) {
+  const { scene } = useGLTF(url);
+  const model = useMemo(() => {
+    const m = prepareModel(scene, url);
+    m.scale.setScalar(scale);
+    m.updateMatrixWorld(true);
+    return m;
+  }, [scene, url, scale]);
+  useEffect(() => () => disposeModelMaterials(model), [model]);
+  const flock = useMemo(() => {
+    const f: Flock = { meshes: [], local: [], n: 0 };
+    model.traverse(o => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh || !m.visible) return;
+      const im = new THREE.InstancedMesh(m.geometry, m.material, cap);
+      // The curved world bends far things down into view (modelMaterials prepareModel): never culled by their own bounds.
+      Object.assign(im, { castShadow: m.castShadow, receiveShadow: m.receiveShadow, frustumCulled: false, count: 0 });
+      f.meshes.push(im);
+      f.local.push(m.matrixWorld.clone());
+    });
+    return f;
+  }, [model, cap]);
+  useEffect(() => {
+    const key = `${url}|${scale}`;
+    flocks.set(key, flock);
+    return () => { flocks.delete(key); flock.meshes.forEach(m => m.dispose()); };
+  }, [flocks, flock, url, scale]);
+  return <>{flock.meshes.map((m, i) => <primitive key={i} object={m} />)}</>;
+}
+const _copyAt = new THREE.Matrix4(), _part = new THREE.Matrix4();
+let _ownShown = true;
+function showOwnOne(o: THREE.Object3D) { if ((o as THREE.Mesh).isMesh) o.visible = _ownShown; }
+/** A copy's own meshes shown (drawn alone) or hidden (drawn in its flock); its group, and so its contact shadow, stay. */
+export function showOwn(group: THREE.Object3D, on: boolean) { _ownShown = on; group.traverse(showOwnOne); }
+export const startFlock = (f: Flock) => { f.n = 0; };
+/** The copy whose group is `group` (moved this frame) into the flock's next slot. */
+export function addToFlock(f: Flock, group: THREE.Object3D) {
+  if (!group.parent || f.n >= f.meshes[0]?.instanceMatrix.count) return;
+  group.updateMatrix();
+  _copyAt.multiplyMatrices(group.parent.matrixWorld, group.matrix);
+  for (let k = 0; k < f.meshes.length; k++) f.meshes[k].setMatrixAt(f.n, _part.multiplyMatrices(_copyAt, f.local[k]));
+  f.n++;
+}
+export function endFlock(f: Flock) { for (const m of f.meshes) { m.count = f.n; m.instanceMatrix.needsUpdate = true; } }
