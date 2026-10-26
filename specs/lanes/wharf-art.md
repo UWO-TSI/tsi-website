@@ -14,6 +14,10 @@ Worktree `.claude/worktrees/wharf-art`, branch `game/wharf-art`. Agent type `uwo
 
 **Reporting:** one batch per commit. After each, SendMessage "main" with the commit, each asset's name, triangles, size, preview path and any placement notes for terrain-v3, then go straight on. At the end update Status here, SendMessage "main" with the full list, and stop. Questions: one line each with your default in `specs/launch/terrain-v3-questions.md` under your lane's name; carry on with the default.
 
+## David's decisions
+
+- 2026-10-26, R2b review (via the coordinator), on the palms: "redo the pamls, i lowk like the old low poly leafs, so like go towards that directio nmore, this one has too much detail tha makes it look less like the other trees, make it different sizes, and trucks bigger, make truckes have the scale kinda thing instead of a normal cylinder". The "old low poly leafs" are the dump palms `web/public/assets/acnh/plants/tree-palm-a.glb` and `-b.glb`. On the fish market: "did you see the fishmarket reference i sent you previously, i need you to start modeling that".
+
 ## Status
 
 In progress. Previews in `specs/evidence/wharf-art/`.
@@ -22,6 +26,14 @@ In progress. Previews in `specs/evidence/wharf-art/`.
 2. **Dock and wharf decor** (`art/wharf/build_dock_decor.py`, `game/wharf/`, game units at scale 1, the deck's top at y 0): `dock-pile-rope` (960 tris; 0.9 over the deck, down to -3.4, rope lashings), `rope-net` (2040; posts at x +-1, floats on the top rope), `life-ring` (864; upright in x-y, foot at the origin, 0.93 tall), `net-heap` (1176), `crate-net` (2312), `crate-cloth` (1272), `fish-crate` (1320; tipped toward +z), `dock-hoist` (1510; jib along +x, top 2.645). Registered with footprints and tops. Evidence `dock-decor.webp`.
 
 ## Next
+
+Done: 1 and 2 (batches bb4a1418, 80cd90bf). Now, in this order (R2b):
+
+A. **Palms, again:** solid low-poly leaves like the dump palms (no fine leaflet texture), matching our other trees; several clearly different sizes; thicker trunks of overlapping scale-like bark segments, not a ringed cylinder; coconuts clearly visible. `palm-shape.jpg` / `palm-style.jpg` stay the silhouette guide.
+B. **The beach set** (3 below), but the sushi bar follows `specs/references/terrain/plan-2026-10-23/wharf-sharkbar.jpg` (on main; read it from `.claude/worktrees/restart-art-cohesion/specs/references/terrain/plan-2026-10-23/`): a big fish-head shell over a bar counter with stools and hanging lanterns, our style, low detail.
+C. **The fish market:** a building exterior from `wharf-fishing-hut-1.jpg` (same folder: the timber shop with the big marlin on the roof and the fish sign) and `dock-fish-hut.jpg` (fish crates on display, awning, life ring, lantern). Low detail, nobody enters it in v1, sized to stand on the wharf's deck.
+
+The original list:
 
 1. **Palms, redone** (`palm-shape.jpg` for the shape, `palm-style.jpg` for the style): broad, wide leaves in two layers, a cluster of coconuts under them, a tapering trunk with soft rings. Low detail. Replace the files of `palm-tall`, `palm-lean` and `palm-short` (only the new world uses them).
 2. **The dock and wharf decor** (`dock-pillars-rope.jpg`, `dock-decor.jpg`, `dock-fish-hut.jpg`, `dock-walkways.jpg`):
