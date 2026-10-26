@@ -19,6 +19,37 @@ Worktree `.claude/worktrees/perf-newworld`, branch `game/perf-newworld`, cut fro
 
 The CPU profile shows no single hog; the time goes on three.js's per-draw work and matrix updates. Frustum culling alone doesn't help, because the curved world bends far things into view. But the bend also sinks far things (0.0032 d², so nothing past about 80 u from the player shows), which a distance or chunk cull can use.
 
+## Status
+
+Head: see `git log` (the `[build] perf-newworld` commits on 76f4b591).
+
+**Measured, apples to apples** (the measurement build, `perf-bench.mjs`, same session, 24 bots; medians):
+
+| | High frame / CPU / draws | Lite frame / CPU / draws | Load |
+|---|---|---|---|
+| Village, before | 4.6 / 4.0 / 384 | 2.8 / 2.5 / 295 | 3.4-4.0 |
+| New world (v2), before | 6.1 / 5.4 / 430 | 3.75 / 3.4 / 353 | 3.4-4.0 |
+| Village, after | 4.55 / 4.0 / 377 | 3.2 / 2.9 / 293 | 4.6-7.7 |
+| New world (v2), after | 5.05 / 4.45 / 386 | 3.75 / 3.35 / 313 | 4.6-7.7 |
+
+The 20.7 ms of R2c doesn't reproduce: the same build measured 6.1 ms here (that run had contention).
+
+**What cost what** (hiding a group in the running v2 scene, A/B interleaved, `attrib.mjs` in the lane's scratchpad):
+- contact-shadow anchors 0.6 ms;
+- the merged scenery's 60 draws 0.5;
+- the lamp pool's 8 point lights 0.9 (three uploads every light's uniforms on each program switch);
+- houses 0.2, trees 0.2.
+
+**Done:**
+1. Contact shadows update once a frame, not three times (N8AO renders the scene twice more). A still placement's contact stands at a matrix under its owner group, with no node of its own (786 fewer scene objects): `ContactShadows addContact(..., at)`, used by InstancedNature, MergedModels, ACNHHouses and the pumpkins.
+2. MergedModels keys a texture by its image's bytes (`imageKeys`), so the art's shared rope and decor wood merge across GLBs: 13 rope draws down to 6, decor wood 8 down to 1, logs, piles and nets down to 1 each.
+3. The houses are merged by look across all three colourways (`ACNHHouses`, `mergeByLook`): 39 draws down to 21. ACNHParts lost its `at` path.
+4. Caster-only hulls are hidden from the frame's draw list; only the shadow passes draw them (`SunShadows frame`). That was 10 wasted draws in v2 and 8 in the village.
+
+**Open, David's call:** the lamp pool. Keep 8 lights (v2 about 0.45 ms over the village), 4 lights (about -0.4 ms, at the village's level), or a ground glow instead of lights (about -0.9 ms; walls and characters no longer lit by lamps).
+
+**Gates:** game tests green with and without `NEXT_PUBLIC_GAME_WORLD=new` (2005 of 2006; the one failure is budget.test's jetty and plaza-tiles triangles, inherited from terrain-v3, which is rebuilding them). tsc clean, eslint clean on changed files. Renders 01, 03, 04 and 18 in `specs/evidence/perf-newworld/`, matching R2c.
+
 ## Next
 
 1. **Measure first, apples to apples:** the village (`SCENES=village` or the baseline scene) and the new world in the same session at the same load, so the gap is real and not the load's. Note the load.
