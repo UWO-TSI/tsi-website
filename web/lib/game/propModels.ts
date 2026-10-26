@@ -17,6 +17,8 @@ export const STREETLAMP_URL = `${P}streetlamp.glb`;
 export const NEW_LAMPS = {
   village: { url: `${P}village-lamp.glb`, light: [0.52, 2.08, 0] },
   wharf: { url: `${P}lantern-post.glb`, light: [0.56, 1.78, 0] },
+  /** The campfire's lantern on a crooked branch (art/props/build_campfire_set.py). */
+  camp: { url: `${P}camp-lantern.glb`, light: [0.3, 1.18, 0] },
 } as const;
 /** The wharf's channel buoys (wharf/Wharf.tsx): the float meets the water BUOY_WATERLINE up its model. */
 export const BUOY_URL = `${P}buoy.glb`;
@@ -74,6 +76,9 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   ...Object.fromEntries(["deck-tile", "deck-steps", "wharf-piling", "wharf-ladder", "rope-post", "rope-span"].map(m => [m, `/assets/game/wharf/${m}.glb`])),
   // Its palms (art/trees/build_palms.py): light fronds and coconuts, the origin at the trunk's foot, at scale 1.
   ...Object.fromEntries(["tall", "lean", "short"].map(m => [`palm-${m}`, `/assets/game/plants/tree-palm-${m}.glb`])),
+  // Its campfire set (art/props/build_campfire_set.py), round the campfire with the log benches: a stump to sit on, a
+  // firewood stack with its chopping block, a fish-drying rack (along x).
+  ...Object.fromEntries(["stump-seat", "firewood-stack", "fish-rack"].map(m => [m, `${P}${m}.glb`])),
 };
 export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? `/assets/acnh/props/${model}.glb`;
 
