@@ -7,9 +7,10 @@
 import { WATER_DROP } from "./grid";
 import { waterWaveAt, type WaveState } from "./waves";
 import { waterFieldAt } from "./waterField";
+import { hash01 } from "./worldFx";
 
-/** Where a dock stands in the world: the pier's origin and its turn about +y (radians, three's rotation.y). */
-export interface Dock { x: number; z: number; yaw: number }
+/** Where a dock stands in the world: the pier's origin, its turn about +y (radians, three's rotation.y) and its deck's height (0 by default). */
+export interface Dock { x: number; z: number; yaw: number; y?: number }
 
 export const PIER_URL = "/assets/game/wharf/pier.glb";
 /** The sea's surface in a dock's frame (level 0's water). */
@@ -265,4 +266,76 @@ export function berthWeight(dock: { x: number; z: number; yaw?: number }, x: num
   if (out >= edge) return 0;
   const t = out / edge;
   return 1 - t * t * (3 - 2 * t);
+}
+
+/**
+ * The new world's jetty (terrain v3, art/wharf/build_jetty.py; the wharf landmark's model "jetty"), in the dock's frame:
+ * a wide platform at the wharf's deck height with three gangways to the deck boards, and three piers out from it, spread
+ * out and each its own length, each stepping down by stairs to a low level a hand over the water (`low`), where a
+ * walkway across joins them and runs on past the outer two; past it their ends reach on as fingers, the boat moored off
+ * the middle one's +x side (as the pier's tip). `decks`: where it is walked, each at its height (`rise`: stairs
+ * climbing that much from z0 to z1). `land`: where the gangways meet the deck boards (z). `piles`: where its piles meet
+ * the water.
+ */
+const PIERS = [[0, -3.5], [-10.5, -9.5], [11, -6.5]] as const, GANGWAYS = [-6, 0, 6];
+const WALK = [0.6, 3.4] as const, STAIR = [3.4, 6.6] as const, PLAT = [9, 13.5] as const, WALK_X = [-14, 14.5] as const, EDGE = 12.5;
+/** A pier's low piles from its tip, every 2.6 short of the walkway. */
+const lowPiles = (tip: number) => Array.from({ length: Math.ceil((WALK[0] - 0.3 - tip - 0.08) / 2.6) }, (_, i) => +(tip + 0.08 + 2.6 * i).toFixed(2));
+export const JETTY = {
+  url: "/assets/game/wharf/jetty.glb",
+  top: 1,
+  low: 0.3,
+  land: 16,
+  decks: [
+    ...PIERS.flatMap(([x, tip]) => [
+      { x0: x - 1, x1: x + 1, z0: tip, z1: WALK[0], y: 0.3 },
+      { x0: x - 1, x1: x + 1, z0: STAIR[0], z1: STAIR[1], y: 0.3, rise: 0.7 },
+      { x0: x - 1, x1: x + 1, z0: STAIR[1], z1: PLAT[0], y: 1 },
+    ]),
+    { x0: WALK_X[0], x1: WALK_X[1], z0: WALK[0], z1: WALK[1], y: 0.3 },
+    { x0: -EDGE, x1: EDGE, z0: PLAT[0], z1: PLAT[1], y: 1 },
+    // The gangways' walk runs on past the boards' edge: the coast drops to 0.5 right at the shoreline.
+    ...GANGWAYS.map(x => ({ x0: x - 0.8, x1: x + 0.8, z0: PLAT[1], z1: 17.3, y: 1 })),
+  ],
+  piles: [
+    ...PIERS.flatMap(([x, tip]) => [-1.15, 1.15].flatMap(sx => [...lowPiles(tip).map(z => [x + sx, z]), [x + sx, 7.8]])),
+    ...[WALK_X[0] + 0.15, -5.3, 5.5, WALK_X[1] - 0.15].flatMap(x => [[x, WALK[0] + 0.15], [x, WALK[1] - 0.15]]),
+    ...[-1, 1].flatMap(sx => [[sx * (EDGE + 0.15), 9.6], [sx * (EDGE + 0.15), 13.3]]), [-5.3, 8.85], [5.5, 8.85],
+  ] as [number, number][],
+} as const;
+
+/** The new world's quick-sell stall outside the fish market (a prop by this id; art/wharf/build_sell_stall.py): E there opens the sell sheet. */
+export const SELL_BARREL = "sell-barrel";
+
+/** How near a deck square's middle a ship house leaves its water edge bare. */
+const SHED_CLEAR = 4.2;
+/** A wharf kit model placed on the deck (art/wharf/build_wharf_kit.py, lib/game/propModels.ts SCENERY_URLS): world x, y, z and its turn. */
+export interface KitPiece { model: string; x: number; y: number; z: number; yaw: number }
+/**
+ * The wharf kit on the `deck` squares (each 4 u, local +z inland, level at the ground under its middle): a deck tile on
+ * each; on each square at the water's edge two rope-lashed piles just outside it (David: "wood pillars on the side with
+ * rope attached"), and on some a ladder down with a life ring by it, a rope net with floats, or rope fencing along it,
+ * never within `clear` of `keep` (the jetty's gangways land there); none at all on the edge within SHED_CLEAR of what
+ * stands there (`sheds`: the ship houses, the quick-sell stall).
+ */
+export function deckPieces(decks: readonly { x: number; z: number; yaw?: number }[], ground: (x: number, z: number) => number, keep?: { x: number; z: number }, clear = 9,
+  sheds: readonly { x: number; z: number }[] = []): KitPiece[] {
+  const out: KitPiece[] = [], at = { x: 0, z: 0 };
+  let edge = 0;
+  for (const o of decks) {
+    const d = { x: o.x, z: o.z, yaw: o.yaw ?? 0 }, y = ground(o.x, o.z);
+    const put = (model: string, lx: number, lz: number) => { dockToWorld(d, lx, lz, at); out.push({ model, x: at.x, y, z: at.z, yaw: d.yaw }); };
+    put("deck-tile", 0, 0);
+    dockToWorld(d, 0, -2.6, at);
+    if (ground(at.x, at.z) > 0 || sheds.some(s => Math.hypot(o.x - s.x, o.z - s.z) < SHED_CLEAR)) continue;
+    const i = edge++, open = !keep || Math.hypot(o.x - keep.x, o.z - keep.z) > clear;
+    for (const lx of [-1, 1]) put("dock-pile-rope", lx, -2.2);
+    if (open && i % 5 === 2) { put("wharf-ladder", 0.6, -2); put("life-ring", -1.2, -1.75); }
+    else if (open && hash01(i, 7) < 0.25) put("rope-net", 0, -1.8);
+    else if (open && hash01(i, 7) < 0.55) {
+      for (const lx of [-2, 0, 2]) put("rope-post", lx, -1.8);
+      for (const lx of [-1, 1]) put("rope-span", lx, -1.8);
+    }
+  }
+  return out;
 }

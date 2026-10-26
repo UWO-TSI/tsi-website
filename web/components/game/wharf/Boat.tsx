@@ -14,7 +14,7 @@ import * as THREE from "three";
 import { disposeModelMaterials, prepareModel } from "@/lib/game/modelMaterials";
 import { windowLit, type IslandLight } from "@/lib/game/islandLighting";
 import { worldNow } from "@/lib/game/worldClock";
-import { BOAT, MOORED, PIER, SEA_Y, dockToWorld, floatBoat, newBoatPose, newFloat, newRide, type BoatPose, type Dock, type Float, type Ride } from "@/lib/game/wharf";
+import { BOAT, JETTY, MOORED, PIER, SEA_Y, dockToWorld, floatBoat, newBoatPose, newFloat, newRide, type BoatPose, type Dock, type Float, type Ride } from "@/lib/game/wharf";
 import { liveWaves } from "@/lib/game/waves";
 import { foamRings } from "@/lib/game/foamRings";
 import { liveWind } from "../movement/moveFx";
@@ -52,7 +52,7 @@ function hangLine(line: RopeLine, pier: THREE.Vector3, boatPoint: THREE.Vector3,
 }
 
 type BoatParts = { model: THREE.Object3D; lantern: THREE.MeshStandardMaterial | null; pivot: THREE.Group; uniform: { value: THREE.Vector3 } };
-type BoatLines = { bow: RopeLine; stern: RopeLine; bowRest: number; sternRest: number } | null;
+type BoatLines = { bow: RopeLine; stern: RopeLine; bowRest: number; sternRest: number; bowAt: THREE.Vector3; sternAt: THREE.Vector3 } | null;
 type BoatState = { pose: BoatPose; float: Float; ride: Ride; glow: number; flagYaw: number; lastX: number; lastZ: number; time: number };
 /**
  * Module scope (the react compiler forbids writing through hook values): one frame of the boat. Its pose at world now,
@@ -100,8 +100,8 @@ function placeBoat(g: THREE.Group | null, dock: Dock, light: IslandLight, poseAt
   s.time += dt;
   parts.uniform.value.set(s.time, Math.min(1.4, 0.35 + felt * 0.16), Math.max(0, 1.3 - felt * 0.25));
   if (lines) {
-    hangLine(lines.bow, BOW_CLEAT, BOW_LINE, g, lines.bowRest, s.pose.lines);
-    hangLine(lines.stern, STERN_POST, STERN_LINE, g, lines.sternRest, s.pose.lines);
+    hangLine(lines.bow, lines.bowAt, BOW_LINE, g, lines.bowRest, s.pose.lines);
+    hangLine(lines.stern, lines.sternAt, STERN_LINE, g, lines.sternRest, s.pose.lines);
   }
   if (rings) ringHull(rings, dock, s.pose);
   onPlaced?.(s.pose, s.float, g, now, dt);
@@ -154,10 +154,12 @@ export default function Boat({ dock, light, rope, poseAt, onPlaced }: {
     moored.position.set(MOORED.x, SEA_Y - BOAT.draft, MOORED.z);
     moored.rotation.set(0, MOORED.yaw, 0);
     moored.updateMatrix();
-    const bowRest = BOW_CLEAT.distanceTo(BOW_LINE.clone().applyMatrix4(moored.matrix)) * 1.12;
-    const sternRest = STERN_POST.distanceTo(STERN_LINE.clone().applyMatrix4(moored.matrix)) * 1.12;
-    return { bow: new RopeLine(rope, 14, 7, 0.022, 0.13, bowRest), stern: new RopeLine(rope, 14, 7, 0.022, 0.13, sternRest), bowRest, sternRest };
-  }, [rope]);
+    // On the jetty the cleat and the tip pile stand on its low level.
+    const lift = new THREE.Vector3(0, dock.y ? JETTY.low : 0, 0), bowAt = BOW_CLEAT.clone().add(lift), sternAt = STERN_POST.clone().add(lift);
+    const bowRest = bowAt.distanceTo(BOW_LINE.clone().applyMatrix4(moored.matrix)) * 1.12;
+    const sternRest = sternAt.distanceTo(STERN_LINE.clone().applyMatrix4(moored.matrix)) * 1.12;
+    return { bow: new RopeLine(rope, 14, 7, 0.022, 0.13, bowRest), stern: new RopeLine(rope, 14, 7, 0.022, 0.13, sternRest), bowRest, sternRest, bowAt, sternAt };
+  }, [rope, dock.y]);
   useEffect(() => () => { lines?.bow.dispose(); lines?.stern.dispose(); }, [lines]);
 
   const group = useRef<THREE.Group>(null);

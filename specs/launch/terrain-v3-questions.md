@@ -17,3 +17,18 @@ Images: `specs/evidence/terrain-v3/r1b/`.
 2. **The deck boards.** The deck area is a stone band 13 u deep and about 80 u long along the water, at 1; the quay is a 1 u step up behind it, at 2. [R2 lays wooden deck boards over the band and puts the fish market on it.]
 3. **The mountain.** It now sits right behind the village at 0.62 of its R1 size, so its cliffs rise behind the café and over the meadow (views 04, 07, 08); the summit still sinks below the bend from the plaza. [Keep this as the base for its redesign.]
 4. **The border's message.** Walking up to it says "This area is releasing soon." (view 12). It runs from the river to the sea north of the wharf. [Keep the wording.]
+
+## R2 (2026-10-25)
+
+Images: `specs/evidence/terrain-v3/r2/`.
+
+1. **Nets for the market.** There is no fishing net model in the assets (the only net is the bug net), so the market has stalls, carts, barrels and crates but no nets. [Leave nets out until a net model exists.]
+2. **The river's washed-out bridge.** It uses the unbuilt-bridge prop, which goes away with the north island's drop, not the meadow's. [Keep for launch; opening the meadow needs a real bridge there anyway.]
+3. **The deck boards.** They are laid in 4 u squares, so from high up the board joints show the squares (view 02). [Keep; it reads as decking at play height.]
+
+## R2b (2026-10-26)
+
+Images: `specs/evidence/terrain-v3/r2b/`.
+
+1. **"3 entrances" to the dock.** Read as three gangways from the deck boards over a strip of water onto a wide platform, with stairs down from it to the boat's landing (views 01, 14). [Keep.]
+2. **The plaza's buildings.** They were already at 1.15 in the world file, so 15% bigger is 1.32; the houses go from 1 to 1.15. [Keep.]

@@ -17,18 +17,22 @@
  * the key light by their height, so both tiers agree on direction.
  */
 import { useEffect, useMemo } from "react";
-import { useThree } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { contactSize, sunShadow, type ContactSize, type Ellipse, type ShadowClass } from "@/lib/game/shadows";
 
-interface Contact extends ContactSize { object: THREE.Object3D }
+interface Contact extends ContactSize { object: THREE.Object3D; at?: THREE.Matrix4 }
 const CONTACTS = new WeakMap<THREE.Object3D, Set<Contact>>();
 
-/** Add `object`'s contact shadow (`size` in the object's own frame) to its scene; returns the removal. */
-export function addContact(scene: THREE.Object3D, object: THREE.Object3D, size: ContactSize) {
+/**
+ * Add `object`'s contact shadow (`size` in the object's own frame) to its scene; returns the removal. With `at`, the
+ * contact stands at `at` in `object`'s frame (a still placement of an instanced or merged model, which has no node of
+ * its own; `object` holds its meshes).
+ */
+export function addContact(scene: THREE.Object3D, object: THREE.Object3D, size: ContactSize, at?: THREE.Matrix4) {
   let set = CONTACTS.get(scene);
   if (!set) CONTACTS.set(scene, set = new Set());
-  const contact = { object, ...size };
+  const contact = { object, at, ...size };
   set.add(contact);
   return () => { set.delete(contact); };
 }
@@ -76,7 +80,7 @@ const CONTACT = { sunMap: 0.3, none: 0.42 };
 const DIRECTED = 0.36;
 /** Instances per draw; past it the layer adds another (a bigger painted island). */
 const CHUNK = 1024;
-const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
+const _m = new THREE.Matrix4(), _at = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
 const _sun = new THREE.Vector3(), _target = new THREE.Vector3(), _strength = new THREE.Color();
 const _sunXYZ: [number, number, number] = [0, 0, 0];
 const _foot: Ellipse = { x: 0, z: 0, rx: 0, rz: 0, yaw: 0 }, _cast: Ellipse = { x: 0, z: 0, rx: 0, rz: 0, yaw: 0 };
@@ -145,7 +149,14 @@ export class ContactLayer {
     };
   }
 
+  /** Due this frame: the AO pass renders the scene twice more after the frame's first render, with nothing moved. */
+  private due = true;
+  /** A new frame (ContactShadows' frame loop, before the frame's renders). */
+  next() { this.due = true; }
+
   private update(scene: THREE.Scene) {
+    if (!this.due) return;
+    this.due = false;
     const a = this.contacts, b = this.directed;
     if (!this.sunMap && (!this.sun || !shown(this.sun, scene))) this.sun = (scene.getObjectByName("sun") as THREE.DirectionalLight | undefined) ?? null;
     const light = this.sunMap ? null : this.sun;
@@ -153,7 +164,7 @@ export class ContactLayer {
     let n = 0, d = 0;
     for (const c of CONTACTS.get(scene) ?? []) {
       if (!shown(c.object, scene)) continue;
-      const e = c.object.matrixWorld.elements;
+      const e = (c.at ? _at.multiplyMatrices(c.object.matrixWorld, c.at) : c.object.matrixWorld).elements;
       const sx = Math.hypot(e[0], e[1], e[2]), sy = Math.hypot(e[4], e[5], e[6]), sz = Math.hypot(e[8], e[9], e[10]);
       _foot.x = e[0] * c.cx + e[8] * c.cz + e[12]; _foot.z = e[2] * c.cx + e[10] * c.cz + e[14];
       _foot.rx = c.rx * sx; _foot.rz = c.rz * sz; _foot.yaw = Math.atan2(e[8], e[10]);
@@ -176,5 +187,6 @@ export default function ContactShadows({ tint, intensity, sunMap }: {
   const layer = useMemo(() => new ContactLayer(), []);
   useEffect(() => layer.look(tint, intensity, sunMap), [layer, tint, intensity, sunMap]);
   useEffect(() => layer.hook(scene), [layer, scene]);
+  useFrame(() => layer.next());
   return <><primitive object={layer.contacts} /><primitive object={layer.directed} /></>;
 }

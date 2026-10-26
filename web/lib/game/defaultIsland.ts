@@ -6,6 +6,7 @@ import { FURNITURE, studySolid, type Furniture } from "@/lib/study/seats";
 import { objectsOf, village, villageSpawnPoint, type MapObject, type Village } from "./villageMap";
 import { barrierBoxes, barrierFootprint, barrierPlacements, inBarrier } from "./barriers";
 import { DROPS } from "./drops";
+import { JETTY, worldToDock, type Dock } from "./wharf";
 import { FENCE_POST_HALF, fenceSolids, isJoinedFence } from "./fences";
 import { MAX_CLIMB, terrainHeight, terrainSteepness, terrainSurface } from "./world/terrain";
 
@@ -85,11 +86,40 @@ export const PROP_FOOTPRINT: Record<string, [number, number]> = {
   "fence-country-a": [0.5, 0.16], "fence-country-b": [0.5, 0.16],
   // The faceted boulders (lib/game/rocks.ts, art/rocks/build_rocks.py).
   ...Object.fromEntries(ROCK_MODELS.map(m => [m, ROCK_SIZE[m].half])),
+  // The `prop` kind's scenery, in the model's own units (its object's scale sizes it): a palm or a parasol by its trunk or pole.
+  barrel: [4.85, 4.85], lighthouse: [9, 9], crate: [0.91, 0.3], "market-cart": [3.77, 1.03], "shop-cart": [0.44, 0.28],
+  "beach-parasol": [0.1, 0.1], "palm-a": [0.3, 0.3], "palm-b": [0.25, 0.25],
+  "wharf-piling": [0.15, 0.15], "rope-post": [0.1, 0.1], "rope-span": [1, 0.03],
+  "palm-tall": [0.45, 0.45], "palm-lean": [0.42, 0.42], "palm-short": [0.4, 0.4], "palm-small": [0.3, 0.3],
+  "log-bench": [0.95, 0.24], "stump-seat": [0.3, 0.3], "firewood-stack": [0.95, 0.46], "fish-rack": [1.02, 0.37],
+  // game/village-art's plaza set: the fountain's box sits inside its round basin (a body stops on the rim's cap).
+  "plaza-fountain": [4, 4], "banner-pole": [0.1, 0.1], "flag-pole": [0.12, 0.12], "fruit-stall": [1.4, 0.6], "fruit-barrel": [0.38, 0.38],
+  "fruit-crate": [0.32, 0.22], "flower-planter": [0.62, 0.22], "flower-pot": [0.24, 0.24], "round-planter": [0.52, 0.52],
+  "planter-bench": [1.3, 0.28], "market-sign": [0.31, 0.25],
+  "dock-pile-rope": [0.25, 0.25], "rope-net": [1.13, 0.13], "life-ring": [0.48, 0.09], "net-heap": [0.7, 0.5], "crate-net": [0.7, 0.4],
+  "crate-cloth": [0.35, 0.35], "fish-crate": [0.36, 0.42], "dock-hoist": [0.28, 0.28],
+  "path-rock-slab": [0.2, 0.12], "path-rock-low": [0.3, 0.3], "path-rock-cluster": [0.36, 0.26], "rustic-fence-a": [1.25, 0.08],
+  "rustic-fence-b": [0.85, 0.08], "rustic-post": [0.07, 0.07],
+  "sushi-bar": [4.0, 1.5], "fish-market": [3.1, 3.6], "sell-barrel": [1.25, 0.6],
+  "ship-house-a": [2.1, 2.3], "ship-house-b": [2.4, 2.0], "ship-house-c": [1.9, 2.0], "ship-house-d": [2.1, 2.1], "beach-lounger": [0.34, 0.95], sandcastle: [0.55, 0.5], "beach-cooler": [0.33, 0.22], "volleyball-net": [2.62, 0.08], "lifeguard-tower": [1.02, 1.02], "surfboard-a": [0.2, 0.1], "surfboard-b": [0.2, 0.1], "surfboard-c": [0.2, 0.1],
+  // game/village-art2
+  "moss-boulder-a": [0.65, 0.5], "moss-boulder-b": [1.05, 0.65], "river-stones-b": [0.55, 0.4],
 };
 /** Prop tops before scale, measured from the GLB bounds: what a jump clears or lands on (lib/game/movement). */
 export const PROP_TOP: Record<string, number> = {
   "bench-wood": 0.51, "rock-a": 0.61, "rock-b": 0.59, "rock-c": 0.52, "fence-country-a": 0.7, "fence-country-b": 0.69,
   ...Object.fromEntries(ROCK_MODELS.map(m => [m, ROCK_SIZE[m].top])),
+  barrel: 11.66, lighthouse: 38, crate: 0.52, "market-cart": 2.84, "shop-cart": 0.87, "beach-parasol": 2.33, "palm-a": 3.94, "palm-b": 2.7,
+  "wharf-piling": 0.35, "rope-post": 0.87, "rope-span": 0.68, "palm-tall": 6.21, "palm-lean": 5.03, "palm-short": 3.46, "palm-small": 1.95,
+  "log-bench": 0.51, "stump-seat": 0.45, "firewood-stack": 0.86, "fish-rack": 1.43,
+  "plaza-fountain": 3.21, "banner-pole": 3.3, "flag-pole": 4.13, "fruit-stall": 2.5, "fruit-barrel": 1.005, "fruit-crate": 0.495,
+  "flower-planter": 0.623, "flower-pot": 0.627, "round-planter": 1.091, "planter-bench": 0.731, "market-sign": 0.987,
+  "dock-pile-rope": 0.9, "rope-net": 1.15, "life-ring": 0.93, "net-heap": 0.39, "crate-net": 0.7, "crate-cloth": 0.74, "fish-crate": 0.48,
+  "dock-hoist": 2.645,
+  "path-rock-slab": 0.538, "path-rock-low": 0.247, "path-rock-cluster": 0.294, "rustic-fence-a": 0.99, "rustic-fence-b": 0.91, "rustic-post": 0.931,
+  "sushi-bar": 4.68, "fish-market": 10.569, "sell-barrel": 2.62,
+  "ship-house-a": 4.48, "ship-house-b": 4.13, "ship-house-c": 6.28, "ship-house-d": 3.178, "beach-lounger": 0.948, sandcastle: 0.78, "beach-cooler": 0.486, "volleyball-net": 2.14, "lifeguard-tower": 4.7, "surfboard-a": 1.755, "surfboard-b": 1.759, "surfboard-c": 1.763,
+  "moss-boulder-a": 0.855, "moss-boulder-b": 0.761, "river-stones-b": 0.475,
 };
 /**
  * Residents' houses (the `house` kind, specs/world-editor.md decision 10): the chalet in its three colourways, the
@@ -158,16 +188,29 @@ function turnedRect(x: number, z: number, r: { x0: number; x1: number; z0: numbe
   return { x0: Math.min(...xs), x1: Math.max(...xs), z0: Math.min(...zs), z1: Math.max(...zs) };
 }
 
-/** The wharf's walkable deck in world XZ, or null without a wharf. */
-export function wharfDeck(v: Village = village()) {
+/** Whether the wharf is the new world's jetty (its landmark's model "jetty": lib/game/wharf.ts JETTY) rather than the pier. */
+const isJetty = (v: Village) => objectsOf("landmark", v).some(o => o.id === "wharf" && o.model === "jetty");
+/** The wharf as a dock (lib/game/wharf.ts): where its pier stands and its turn; the jetty's platform height as `y`. */
+export function wharfDock(v: Village = village()): Dock | null {
   const w = landmark("wharf", v);
-  return w ? turnedRect(w.x, w.z, WHARF_DECK_LOCAL, w.yaw) : null;
+  return w ? { x: w.x, z: w.z, yaw: w.yaw ?? 0, ...(isJetty(v) ? { y: JETTY.top } : {}) } : null;
 }
-/** Every walkable deck of the wharf in world XZ: the jetty and its finger pier. */
-export function wharfDecks(v: Village = village()) {
+/** A walkable deck in world XZ and its height at a point (stairs climb). */
+export type Deck = { x0: number; x1: number; z0: number; z1: number; y: (x: number, z: number) => number };
+/** Every walkable deck of the wharf in world XZ: the pier and its finger pier at DECK_Y, or the jetty's landing, stairs, platform and gangways. */
+export function wharfDecks(v: Village = village()): Deck[] {
   const w = landmark("wharf", v);
-  return w ? [WHARF_DECK_LOCAL, WHARF_FINGER_LOCAL].map(r => turnedRect(w.x, w.z, r, w.yaw)) : [];
+  if (!w) return [];
+  const flat = (y: number) => () => y;
+  if (!isJetty(v)) return [WHARF_DECK_LOCAL, WHARF_FINGER_LOCAL].map(r => ({ ...turnedRect(w.x, w.z, r, w.yaw), y: flat(DECK_Y) }));
+  const dock = { x: w.x, z: w.z, yaw: w.yaw ?? 0 }, local = { x: 0, z: 0 };
+  return JETTY.decks.map(r => {
+    const rise = "rise" in r ? r.rise : 0;
+    return { ...turnedRect(w.x, w.z, r, w.yaw), y: rise ? (x: number, z: number) => r.y + rise * Math.min(1, Math.max(0, (worldToDock(dock, x, z, local).z - r.z0) / (r.z1 - r.z0))) : flat(r.y) };
+  });
 }
+/** The wharf's main walkable deck in world XZ (the pier, or the jetty's landing), or null without a wharf. */
+export const wharfDeck = (v: Village = village()): Deck | null => wharfDecks(v)[0] ?? null;
 
 /** Walkable bridge decks in world XZ. */
 export function bridgeDecks(v: Village = village()) {
@@ -190,8 +233,8 @@ export function villageSpawn(v: Village = village()): [number, number, number] {
   return [x, 0, z];
 }
 
-/** The benches, rocks and fences: the props with a solid footprint. */
-export const propsOf = (v: Village = village()) => [...objectsOf("bench", v), ...objectsOf("rock", v), ...objectsOf("fence", v)];
+/** The benches, rocks, fences and scenery props: the props with a solid footprint. */
+export const propsOf = (v: Village = village()) => [...objectsOf("bench", v), ...objectsOf("rock", v), ...objectsOf("fence", v), ...objectsOf("prop", v)];
 
 /** Solid footprint of a bench, rock or fence: half extents × scale (before its yaw). */
 export function propFootprint(o: Pick<MapObject, "model" | "scale">): [number, number] | null {
@@ -309,13 +352,19 @@ export interface VillageIsland {
 /** The jetty deck's walk height on the smooth world (the pier model's deck top): the quay stands at it (lib/game/world/convert.ts). */
 export const DECK_Y = 0;
 
+/** How deep the smooth world's shallows are waded (David, R2b: "can dip toes in"): a step or two out from any shore, never across a river. */
+export const WADE = 0.25;
+
 /** Walking on a village: ground height, solids and the stepping rule, from its map and objects. */
 export function islandOf(v: Village): VillageIsland {
   const { map, field, terrain } = v;
-  const decks = [...wharfDecks(v), ...bridgeDecks(v)];
+  const decks: Deck[] = [...wharfDecks(v), ...bridgeDecks(v).map(r => ({ ...r, y: () => DECK_Y }))];
   // The smooth world walks its heightfield (the drawn ground); a deck over its water is walked at the deck's height.
   const ground = terrain
-    ? (x: number, z: number) => { const h = terrainHeight(terrain, x, z); return h < DECK_Y && decks.some(d => inRect(x, z, d)) ? DECK_Y : h; }
+    ? (x: number, z: number) => {
+      const h = terrainHeight(terrain, x, z), d = decks.find(r => inRect(x, z, r));
+      return d ? Math.max(h, d.y(x, z)) : h;
+    }
     : (x: number, z: number) => sampleGroundHeight(map, field, x, z);
   const surface = terrain ? (x: number, z: number) => terrainSurface(terrain, x, z) : (x: number, z: number) => drawnSurfaceAt(map, x, z);
   const rails = bridgeRails(v);
@@ -339,7 +388,7 @@ export function islandOf(v: Village): VillageIsland {
   const propGrid = buckets(props), treeGrid = buckets(objectsOf("tree", v));
   const onDeck = (x: number, z: number) => decks.some(d => inRect(x, z, d));
   const wet = terrain
-    ? (x: number, z: number) => !onDeck(x, z) && terrainHeight(terrain, x, z) <= terrain.seaLevel
+    ? (x: number, z: number) => !onDeck(x, z) && terrainHeight(terrain, x, z) <= terrain.seaLevel - WADE
     : (x: number, z: number) => !onDeck(x, z) && !isGroundAtWorld(map, x, z);
   /** The smooth world's slope rule: no step up onto ground too steep to climb. */
   const steep = terrain ? (x: number, z: number) => !onDeck(x, z) && terrainSteepness(terrain, x, z) > MAX_CLIMB : undefined;

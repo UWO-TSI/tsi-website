@@ -162,7 +162,9 @@ def build(name):
     for k in range(F.get("straps", 0)):
         a = math.tau * k / F["straps"] + rng.uniform(-0.3, 0.3)
         out = Vector((math.cos(a), math.sin(a), 0))
-        leaf_card(b, out * 0.03, out, F.get("strap_len", 0.3) * rng.uniform(0.85, 1.1), FC.uv("strap-leaf"), LEAF, rise=2.2, width=0.6)
+        foot = F.get("strap_foot", 0.03) * (rng.uniform(0.2, 1.0) if "strap_foot" in F else 1)
+        leaf_card(b, out * foot, out, F.get("strap_len", 0.3) * rng.uniform(0.85, 1.1), FC.uv("strap-leaf"), LEAF,
+                  rise=F.get("strap_rise", 2.2) * rng.uniform(0.8, 1.2) if "strap_rise" in F else 2.2, width=0.6)
     for k in range(F.get("rosette", 0)):
         a = math.tau * k / F["rosette"] + rng.uniform(-0.3, 0.3)
         out = Vector((math.cos(a), math.sin(a), 0))
@@ -241,6 +243,15 @@ def lily(b, top, axis, across, rng, i):
     dome(b, top + axis * 0.01 * HEAD, axis, 0.018, 0.05, FC.centre_uv("button"), W, segs=6)
 
 
+def meadow(b, top, axis, across, rng, i):
+    # game/village-art (David, 2026-10-26: nature-feel.jpg, "not just empty"): wild daisies, every third a buttercup
+    if i % 3 == 2:
+        ring(b, top, axis, across, 5, "mum-gold", 0.06, math.radians(62), W, fold=0.3, rng=rng, jit=0.08)
+    else:
+        ring(b, top, axis, across, 7, "windflower-white", 0.075, math.radians(80), W, rng=rng, jit=0.08)
+        dome(b, top + axis * 0.006 * HEAD, axis, 0.02, 0.016, FC.centre_uv("yellow"), W, segs=5)
+
+
 FLOWERS = {
     "mum": dict(head=mum, stems=4, spread=0.22, height=(0.22, 0.32), leaves=2, rosette=7, face=0.3),
     "cosmos": dict(head=cosmos, stems=5, spread=0.24, height=(0.28, 0.4), leaves=2, leaf_len=0.12, rosette=6, face=0.35),
@@ -250,6 +261,11 @@ FLOWERS = {
     "pansy": dict(head=pansy, stems=5, spread=0.22, height=(0.1, 0.18), leaves=0, rosette=8, face=0.8, lean=0.2),
     "hyacinth": dict(head=hyacinth, stems=3, spread=0.18, height=(0.14, 0.2), leaves=0, straps=7, strap_len=0.24, face=0.08, stem=0.012),
     "lily": dict(head=lily, stems=3, spread=0.2, height=(0.34, 0.42), leaves=3, leaf_len=0.14, rosette=6, face=0.6),
+    # game/village-art: a patch of wild meadow flowers in grass blades (a tile across), and a clump of tall grass blades
+    # for the path's edges and the meadows; they carry no season of their own.
+    "meadow": dict(head=meadow, stems=12, spread=0.48, height=(0.12, 0.24), leaves=1, leaf_len=0.1, straps=12, strap_len=0.2, strap_foot=0.4,
+                   strap_rise=2.6, face=0.3, stem=0.007),
+    "tallgrass": dict(head=None, stems=0, spread=0.2, height=(0, 0), straps=30, strap_len=0.42, strap_foot=0.16, strap_rise=3.4),
 }
 
 

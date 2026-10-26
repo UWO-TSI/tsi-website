@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { useGLTF } from "@react-three/drei";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { applyModelTextures, disposeModelMaterials, lightHQWindows, prepareModel } from "@/lib/game/modelMaterials";
-import { modelContact, useContactShadow } from "./ContactShadows";
+import { addContact, modelContact, useContactShadow } from "./ContactShadows";
+import { mergeByLook } from "./InstancedNature";
 
 // ─── ACNH textured building models (2026-07 revamp) ─────────────
 // Source pack is authored at ~10 units per meter; ACNH_SCALE brings them
@@ -88,8 +89,55 @@ function lightPanes(root: THREE.Object3D) {
   });
 }
 
+/** A part list's prepared models in one group, turned to face the camera (ACNH). Parts share the source coordinate space. */
+function partsGroup(gltfs: readonly { scene: THREE.Object3D }[], parts: readonly string[], windowColor: string | undefined, lights: boolean) {
+  const g = new THREE.Group();
+  gltfs.forEach(({ scene }, index) => g.add(prepareModel(scene, parts[index])));
+  g.scale.setScalar(ACNH_SCALE);
+  g.rotation.y = Math.PI;
+  matteACNH(g);
+  if (windowColor) lightHQWindows(g, windowColor);
+  else if (lights) lightPanes(g);
+  return g;
+}
+
 /**
- * Mounts a part list as one group, turned to face the camera (ACNH). Parts share the source coordinate space.
+ * The glowing materials under `root` easing to the light: by `windowGlow`, or by `lit` (0 day → 1 night) the panes
+ * from dark to a warm glow, the porch lanterns off by day and on at night, the model's own lit rooms up a little.
+ */
+function useEmitters(root: THREE.Object3D, isHQ: boolean, windowColor?: string, windowGlow?: number, lit?: number) {
+  const emitters = useRef<{ material: THREE.MeshStandardMaterial; gain: number; pane: boolean; lamp: boolean }[]>([]);
+  useEffect(() => {
+    const materials = new Set<THREE.MeshStandardMaterial>();
+    root.traverse((object) => {
+      const mesh = object as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+        if (material instanceof THREE.MeshStandardMaterial && (material.emissiveMap || material.userData.pane || windowColor && /^m(?:Window[LR]|SideWindow)$/.test(material.name))) materials.add(material);
+      }
+    });
+    emitters.current = [...materials].map((material) => ({
+      material,
+      // The HQ window lightmaps are much dimmer than its clock/lamp map.
+      gain: isHQ && !windowColor && /^mWindow[LR]$/.test(material.name) ? 4 : 1,
+      pane: !!material.userData.pane,
+      lamp: LAMP.test(material.name),
+    }));
+    return () => { emitters.current = []; };
+  }, [root, isHQ, windowColor]);
+  useFrame((_, delta) => {
+    if (windowGlow === undefined && lit === undefined) return;
+    for (const { material, gain, pane, lamp } of emitters.current) {
+      const target = windowGlow !== undefined ? windowGlow * gain : pane ? 1.3 * lit! : lamp ? 1.7 * lit! : 1 + 0.7 * lit!;
+      // These are instance-owned Three materials, animated outside React rendering.
+      // eslint-disable-next-line react-hooks/immutability
+      material.emissiveIntensity = THREE.MathUtils.damp(material.emissiveIntensity, target, 1.2, Math.min(delta, 0.1));
+    }
+  });
+}
+
+/**
+ * Mounts a part list as one group.
  *
  * The extractor strips skinning, so node clones are sufficient; materials
  * are cloned separately before applying the instance's finish and textures.
@@ -108,56 +156,47 @@ export function ACNHParts({
 }) {
   const gltfs = useGLTF(parts as string[]);
   const lights = lit !== undefined;
-  const group = useMemo(() => {
-    const g = new THREE.Group();
-    gltfs.forEach(({ scene }, index) => g.add(prepareModel(scene, parts[index])));
-    g.scale.setScalar(ACNH_SCALE);
-    g.rotation.y = Math.PI;
-    matteACNH(g);
-    if (windowColor) lightHQWindows(g, windowColor);
-    else if (lights) lightPanes(g);
-    return g;
-  }, [gltfs, parts, windowColor, lights]);
-  useContactShadow(group, useMemo(() => modelContact(group, parts[0], "solid"), [group, parts]));
-
-  const emitters = useRef<{ material: THREE.MeshStandardMaterial; gain: number; pane: boolean; lamp: boolean }[]>([]);
-  useEffect(() => {
-    const materials = new Set<THREE.MeshStandardMaterial>();
-    group.traverse((object) => {
-      const mesh = object as THREE.Mesh;
-      if (!mesh.isMesh) return;
-      for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
-        if (material instanceof THREE.MeshStandardMaterial && (material.emissiveMap || material.userData.pane || windowColor && /^m(?:Window[LR]|SideWindow)$/.test(material.name))) materials.add(material);
-      }
-    });
-    const isHQ = parts.some((part) => part.endsWith("/hq-office.glb"));
-    emitters.current = [...materials].map((material) => ({
-      material,
-      // The HQ window lightmaps are much dimmer than its clock/lamp map.
-      gain: isHQ && !windowColor && /^mWindow[LR]$/.test(material.name) ? 4 : 1,
-      pane: !!material.userData.pane,
-      lamp: LAMP.test(material.name),
-    }));
-    return () => { emitters.current = []; };
-  }, [group, parts, windowColor]);
-  useFrame((_, delta) => {
-    if (windowGlow === undefined && lit === undefined) return;
-    for (const { material, gain, pane, lamp } of emitters.current) {
-      // Lit: panes from dark to a warm glow, the porch lanterns off by day and on at night, the model's own lit rooms
-      // from their day level up a little.
-      const target = windowGlow !== undefined ? windowGlow * gain : pane ? 1.3 * lit! : lamp ? 1.7 * lit! : 1 + 0.7 * lit!;
-      // These are instance-owned Three materials, animated outside React rendering.
-      // eslint-disable-next-line react-hooks/immutability
-      material.emissiveIntensity = THREE.MathUtils.damp(material.emissiveIntensity, target, 1.2, Math.min(delta, 0.1));
-    }
-  });
-
+  const group = useMemo(() => partsGroup(gltfs, parts, windowColor, lights), [gltfs, parts, windowColor, lights]);
+  const contact = useMemo(() => modelContact(group, parts[0], "solid"), [group, parts]);
+  useContactShadow(group, contact);
+  useEmitters(group, parts.some((part) => part.endsWith("/hq-office.glb")), windowColor, windowGlow, lit);
   useEffect(() => {
     group.children.forEach((part, index) => applyModelTextures(part, parts[index]));
     return () => disposeModelMaterials(group);
   }, [group, parts]);
-
   return <primitive object={group} />;
+}
+
+/** Where one of many placements of a part list stands: its ground point, turn and scale. */
+export interface PartsPlacement { position: readonly [number, number, number]; yaw: number; scale: number }
+const UP = new THREE.Vector3(0, 1, 0);
+const placeOf = (p: PartsPlacement) => new THREE.Matrix4().compose(new THREE.Vector3(...p.position), new THREE.Quaternion().setFromAxisAngle(UP, p.yaw), new THREE.Vector3().setScalar(p.scale));
+
+/**
+ * The residents' houses (perf-newworld): every colourway's placements baked in and joined into one mesh per look across
+ * them all, so the panes, curtains, inner walls, chimney holes and door every colourway shares draw once.
+ */
+export function ACNHHouses({ sets, lit }: { sets: readonly (readonly [readonly string[], readonly PartsPlacement[]])[]; lit: number }) {
+  const urls = useMemo(() => sets.flatMap(([parts]) => parts), [sets]);
+  const gltfs = useGLTF(urls);
+  const groups = useMemo(() => sets.map(([parts]) => partsGroup(parts.map(url => gltfs[urls.indexOf(url)]), parts, undefined, true)), [gltfs, urls, sets]);
+  useEffect(() => () => groups.forEach(g => disposeModelMaterials(g)), [groups]);
+  const owner = useMemo(() => {
+    const o = new THREE.Group();
+    o.add(...mergeByLook(sets.flatMap(([, at], i) => at.map(p => [groups[i], placeOf(p)] as const))));
+    return o;
+  }, [groups, sets]);
+  useEffect(() => () => owner.children.forEach(m => (m as THREE.Mesh).geometry.dispose()), [owner]);
+  useEmitters(owner, false, undefined, undefined, lit);
+  const scene = useThree(s => s.scene);
+  useEffect(() => {
+    const removals = sets.flatMap(([parts, at], i) => {
+      const contact = modelContact(groups[i], parts[0], "solid");
+      return contact ? at.map(p => addContact(scene, owner, contact, placeOf(p).multiply(groups[i].matrixWorld))) : [];
+    });
+    return () => removals.forEach(remove => remove());
+  }, [scene, owner, groups, sets]);
+  return <primitive object={owner} />;
 }
 
 /** ACNH building: fixed scale, origin-grounded, original materials kept. */

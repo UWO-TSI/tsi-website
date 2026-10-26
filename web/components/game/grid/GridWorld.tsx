@@ -87,12 +87,17 @@ export default function GridWorld(props: GridWorldProps) {
   return worldGround(props) === "heightfield" ? <SmoothWorld {...props} terrain={props.terrain!} /> : <CellWorld {...props} />;
 }
 
+/** How much higher the smooth world's wind waves and swell run than the light's sea. */
+const SMOOTH_SEA = { wave: 1.5, swell: 1.4 } as const;
+
 /** The smooth world: the heightfield, its water and its grass (components/game/world/SmoothTerrain.tsx), the water's frame as the cells have it. */
 function SmoothWorld({ map, light, palette, windScale, lite = false, clear, terrain, waves, ownGround }: GridWorldProps & { terrain: WorldTerrain }) {
   const sea = seaOf(waves);
   useEffect(() => { TERRAIN_WET.value = light.wet ?? 0; }, [light.wet]);
   useEffect(() => () => { TERRAIN_WET.value = 0; }, []);
-  useWaterFrame(light, lite, sea, groundOf(ownGround));
+  // Its sea runs higher than the village's (David, R2b: "water needs to be more wavy").
+  const wavy = useMemo(() => ({ ...light, water: { ...light.water, waveHeight: light.water.waveHeight * SMOOTH_SEA.wave, swellHeight: light.water.swellHeight * SMOOTH_SEA.swell } }), [light]);
+  useWaterFrame(wavy, lite, sea, groundOf(ownGround));
   // The village registered its water for the derived cell map (lib/game/world/village.ts): the same field the fish read,
   // and the waves' calm over it (its rivers and its wharf's berth).
   const shore = useMemo(() => { const f = shoreFieldOf(map) as ShoreSdf & { depth?: Float32Array }; return { ...f, calm: bakeWaveCalm(f, map) }; }, [map]);

@@ -20,12 +20,12 @@ import PostFX from "./PostFX";
 import SunShadows from "./SunShadows";
 import PerfProbe from "./PerfProbe";
 import QualityGovernor from "./QualityGovernor";
-import { FadeLight, Lanterns } from "./AmbientProps";
+import { FadeLight, GlowingLamps, LampGlow, LampPool, Lanterns, lampLight } from "./AmbientProps";
 import { GLBProp, sceneryOf } from "./NatureModels";
-import { InstancedModels } from "./InstancedNature";
-import { ACNHBuilding, ACNHParts, CHALET_VARIANTS } from "./ACNHBuilding";
+import { InstancedModels, MergedModels } from "./InstancedNature";
+import { ACNHBuilding, ACNHHouses, ACNHParts, CHALET_VARIANTS, type PartsPlacement } from "./ACNHBuilding";
 import { FenceLine } from "./NatureModels";
-import { BRIDGE_URL, CATCH_BOARD_URL, MAILBOX_URL, MONUMENT_SIGN_URL, NOTICE_BOARD_URL } from "@/lib/game/propModels";
+import { BRIDGE_URL, CATCH_BOARD_URL, MAILBOX_URL, MONUMENT_SIGN_URL, NEW_LAMPS, NOTICE_BOARD_URL, STREETLAMP_URL } from "@/lib/game/propModels";
 import Wharf from "./wharf/Wharf";
 import TripVeil from "./wharf/TripVeil";
 import { tripSceneReady, useTripControl } from "./wharf/useTripControl";
@@ -42,11 +42,12 @@ import JournalSheet from "@/components/progression/JournalSheet";
 import { useProgressionWorld, useCeremony, useChapterActions, type WorldGoalId } from "@/lib/game/progressionBridge";
 import confetti from "canvas-confetti";
 import type { InteriorStation } from "./interiorShared";
-import { villageIsland, villageSpawn, villageScale, landmark, landmarks, landmarkPoint, turn, wharfDecks, benchSeat, propFootprint, BENCH_SEAT_TOP, houseHalf, houseModel, type Landmark } from "@/lib/game/defaultIsland";
+import { villageIsland, villageSpawn, villageScale, landmark, landmarks, landmarkPoint, turn, wharfDecks, wharfDock, benchSeat, propFootprint, BENCH_SEAT_TOP, houseHalf, houseModel, type Landmark } from "@/lib/game/defaultIsland";
 import { village, objectsOf, type Village } from "@/lib/game/villageMap";
+import { SELL_BARREL } from "@/lib/game/wharf";
 import { LEVEL_STEP, levelAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
-import { CLUBHOUSE_LIGHTING, ISLAND_TERRAIN, islandLightAt, weatherLight, windowLit, withSeason, type IslandLight } from "@/lib/game/islandLighting";
+import { CLUBHOUSE_LIGHTING, ISLAND_TERRAIN, islandLightAt, smoothWorldLight, weatherLight, windowLit, withSeason, type IslandLight } from "@/lib/game/islandLighting";
 import { SEASON_TREES, paletteBySeason, seasonLook, type SeasonLook } from "@/lib/game/seasonalLook";
 import { useNPCPersonas, useSeasonPalettes } from "@/lib/content/loader";
 import type { IslandWeather } from "@/lib/game/islandWeather";
@@ -54,7 +55,7 @@ import { useIslandConditions } from "@/lib/game/useIslandConditions";
 import { IslandAtmosphere, useFollowCamera, type TreeSpot } from "./IslandAtmosphere";
 import PeacefulLayer, { peacefulNear } from "./peaceful/PeacefulLayer";
 import WardrobeSheet from "./peaceful/WardrobeSheet";
-import { WalletSheet } from "@/components/economy/EconomySheets";
+import { SellSheet, WalletSheet } from "@/components/economy/EconomySheets";
 import { BagSheet } from "./Bag";
 import { ChestSheet } from "./ChestSheet";
 import { BagButton } from "./BagButton";
@@ -216,8 +217,8 @@ import { roomHeading } from "@/lib/game/roomHeading";
 import { DevUiTheme } from "@/components/gui/DevUiTheme";
 import styles from "./DefaultIslandWorld.module.css";
 
-type Near = "knock" | "shop_enter" | "counter" | "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | "bram" | "founder" | "coffee" | "aquarium" | "admin" | null;
-type Sheet = "counter" | "shopkeeper" | "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | "bag" | "wallet" | "chest" | "plaque" | null;
+type Near = "knock" | "shop_enter" | "counter" | "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | "bram" | "founder" | "coffee" | "aquarium" | "admin" | "sell" | null;
+type Sheet = "counter" | "shopkeeper" | "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | "bag" | "wallet" | "chest" | "plaque" | "sell" | null;
 const DEV = process.env.NODE_ENV !== "production";
 const DEV_SHEETS: readonly Sheet[] = ["counter", "shopkeeper", "notice", "letters", "journal", "trophies", "showcase", "closet", "fitting", "oracle", "path", "settings", "missions", "tourney", "posters", "cafe", "wallet", "chest"];
 /** Sheets opened at a station with E: E closes them again (the dialog system's opening key). */
@@ -243,6 +244,8 @@ const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   founder: "Look at the Founder's desk",
   // HQ's new stations (specs/interiors/hq.md; the lines are drafts for David).
   coffee: "Get a coffee", aquarium: "Look at the aquarium", admin: "Try the door",
+  // The new world's quick-sell barrel by the fish market.
+  sell: "Quick sell your catch",
 };
 const CLOSED: Near[] = ["museum", "monument"];
 /** The door in reach for trick-or-treat (components/game/Halloween.tsx): IslandScene writes it each frame, E knocks. */
@@ -297,7 +300,9 @@ function villageLayout(v: Village) {
     /** Inside a building's footprint, with a step's margin (the glide guide never marks a ledge behind one). */
     underBuilding: (x: number, z: number) => [...marks, ...houseBoxes].some(l => !!l.half && Math.abs(x - l.x) < l.half[0] + 0.5 && Math.abs(z - l.z) < l.half[1] + 0.5),
     houses,
-    fireflies: objectsOf("bush", v).map(xz),
+    dock: wharfDock(v),
+    // Round the bushes (the new world's wild shrubs).
+    fireflies: [...objectsOf("bush", v), ...objectsOf("prop", v).filter(o => o.model?.startsWith("shrub-"))].map(xz),
     /** The beach campfire (specs/v1-drop.md §3): the map's, or open sand by the beach until one is placed. */
     campfire: campfireSite(v),
     puddles: objectsOf("puddle", v).map(xz),
@@ -312,6 +317,10 @@ function villageLayout(v: Village) {
     },
     /** Fitting room beside the shop; ruins mission board beside the cliff gate (combat-foundation.md §6). */
     fitting: fitting ? xz(fitting) : null,
+    /** The new world's coral reefs, where its fish gather. */
+    reefs: objectsOf("prop", v).filter(o => o.model?.startsWith("coral-reef-")).map(xz),
+    /** The new world's quick-sell barrel (lib/game/wharf.ts SELL_BARREL), or none. */
+    sellBarrel: (b => (b ? xz(b) : null))(objectsOf("prop", v).find(o => o.id === SELL_BARREL)),
     missions: missions ? { at: xz(missions), yaw: missions.yaw ?? 0 } : null,
     // The ruins gate is combat's (lib/game/drops.ts): before its drop the gate is fallen rubble, nothing to press.
     prompts: marks.filter(l => PROMPT_IDS.includes(l.id) && (l.id !== "ruins" || DROPS.combat)),
@@ -334,6 +343,8 @@ function villageLayout(v: Village) {
     underWharf: (x: number, z: number) => decks.some(deck => x > deck.x0 - 0.4 && x < deck.x1 + 0.4 && z > deck.z0 - 0.4 && z < deck.z1 + 0.4),
   };
 }
+/** Our own still models (no sway, no glow of their own), merged in the new world (InstancedNature MergedModels). */
+const STILL = /^\/assets\/game\/(props|wharf|buildings|water)\//;
 /** Floating names; the ruins gate and the Oracle temple only once their drops are out (lib/game/drops.ts). */
 const SIGNS: Partial<Record<Landmark["id"], string>> = { museum: "Museum · Closed", notice: "Notices", catch: "Catch board", shop: "Shop",
   ...(DROPS.combat ? { ruins: "Ruins gate" } : {}), ...(DROPS.oracle ? { oracle: "Oracle temple" } : {}) };
@@ -431,12 +442,21 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   // No blades through a building, a trunk or a rock: where something solid stands, its top is above the ground.
   const grassClear = useMemo(() => (x: number, z: number) => island.top(x, z) <= island.ground(x, z) + 0.01, [island]);
   const scenery = useMemo(() => sceneryOf(v, island.ground, look.season), [v, island, look.season]);
-  const lampSpots = useMemo(() => layout.lamps.map((l): [number, number, number] => [l.x, island.ground(l.x, l.z), l.z]), [layout, island]);
+  // The new world's still props (our own art: props, the wharf kit, buildings, coral) merge by look into a few draws.
+  const [sceneryStill, sceneryMoving] = useMemo(() => (v.terrain ? [scenery.filter(p => STILL.test(p.url)), scenery.filter(p => !STILL.test(p.url))] : [[], scenery]), [v, scenery]);
+  // The lamps by model: the street lamp (none), or the new world's (propModels NEW_LAMPS), each turned by its yaw.
+  const lampSets = useMemo(() => (["", ...Object.keys(NEW_LAMPS) as (keyof typeof NEW_LAMPS)[]] as const).map(kind => {
+    const ls = layout.lamps.filter(l => (l.model ?? "") === kind);
+    return { kind, positions: ls.map((l): [number, number, number] => [l.x, island.ground(l.x, l.z), l.z]), yaws: kind ? ls.map(l => l.yaw ?? 0) : undefined };
+  }).filter(s => s.positions.length), [layout, island]);
+  const lampModels = useMemo(() => lampSets.flatMap(s => s.positions.map((position, i) => ({ url: s.kind ? NEW_LAMPS[s.kind].url : STREETLAMP_URL, position, rotation: s.yaws?.[i] }))), [lampSets]);
+  const lampPoints = useMemo(() => lampSets.flatMap(s => (s.kind === "hand" ? [] : s.positions.map((p, i) => lampLight(p, s.yaws?.[i] ?? 0, s.kind ? NEW_LAMPS[s.kind].light : [0, 2.4, 0])))), [lampSets]);
+  const handPoints = useMemo(() => lampSets.flatMap(s => (s.kind === "hand" ? s.positions.map((p, i) => lampLight(p, s.yaws?.[i] ?? 0, NEW_LAMPS.hand.light)) : [])), [lampSets]);
   const near = useRef<Near>(null);
   const fauna = useMemo(() => ({ ...layout.fauna, ground: island.ground, standable: island.standable, surface: island.surface, top: island.top, player }), [layout, island, player]);
   // The arrival (components/game/arrival): Bram walks you through, the fish crate on the pier until the tour is over.
   const arrivalPhase = useArrivalPhase();
-  const dock = useMemo(() => { const w = landmark("wharf", v); return w ? { x: w.x, z: w.z, yaw: w.yaw ?? 0 } : null; }, [v]);
+  const dock = layout.dock;
   const crated = useMemo(() => (dock ? withCrates(island, crateSpots(routeFor(GAME_WORLD), placeWorld(dock, v))) : null), [island, dock, v]);
   const walkOn = crated && (arrivalPhase === "crossing" || arrivalPhase === "landing" || arrivalPhase === "tutorial") ? crated : island;
   const spots = useMemo(() => eventSpots(event?.decor ?? null), [event]);
@@ -458,6 +478,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       // Not while Bram brings you in and walks you round (the arrival): the boat home waits for after.
       : DROPS.homeIsland && within(doors.boat, 1.6) && !arrivalPhase ? ["home", doors.boat]
       : within(layout.fitting, 1.5) ? ["fitting", layout.fitting]
+      : within(layout.sellBarrel, 2.2) ? ["sell", layout.sellBarrel]
       : DROPS.oracle && within(doors.oracle, 1.6) ? ["oracle_enter", doors.oracle]
       : within(doors.shop, 1.6) ? ["shop_enter", doors.shop]
       : DROPS.cafe && within(doors.cafe, CAFE_DOOR_RANGE) ? [progression.opened.includes("cafe") ? "cafe_enter" : "cafe", doors.cafe]
@@ -512,7 +533,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       <Suspense fallback={null}><Seabed map={island.map} lite={liteMode} skip={layout.underWharf} /></Suspense>
       <WaterContacts map={island.map} player={player} ground={island.ground} rocks={layout.rocks} />
       <GlassWater />
-      <Suspense fallback={null}><DecorativeFish map={island.map} lite={liteMode} skip={layout.underWharf} /></Suspense>
+      <Suspense fallback={null}><DecorativeFish map={island.map} lite={liteMode} skip={layout.underWharf} max={v.terrain ? 40 : undefined} near={layout.reefs} /></Suspense>
       <PeacefulLayer map={island.map} nodes={layout.nodes} moment={peaceful.moment} member={peaceful.member} player={player} ground={island.ground} highTier={!liteMode} active={!fishing} treeModels={SEASON_TREES[look.season]} />
       <BeachBottle player={player} ground={island.ground} />
       {/* After the first leaf glider is made: a marked edge and a ring to land in (the guided first glide). */}
@@ -525,10 +546,18 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       <EventDecor event={event} ground={island.ground} light={light} weather={weather} />
       <HalloweenLayer content={traditions.content} v={v} island={island} light={light} night={phase === "night"} fog={fogNight} weather={weather} residents={personas} />
       {layout.bridges.map(b => <GLBProp key={b.id} url={BRIDGE_URL} position={[b.x, b.y, b.z]} rotation={[0, b.yaw ?? 0, 0]} />)}
-      <Lanterns positions={lampSpots} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} />
+      {/* The new world's lamps only glow; their pools come from the few nearest you (LampPool). */}
+      {v.terrain
+        ? <Suspense fallback={null}><GlowingLamps items={lampModels} glow={light.lampsOn ? 1.2 : 0} /></Suspense>
+        : lampSets.map(s => <Lanterns key={s.kind} positions={s.positions} yaws={s.yaws} lamp={s.kind ? NEW_LAMPS[s.kind] : undefined} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} />)}
+      {v.terrain && <LampPool points={lampPoints} intensity={light.lampsOn ? light.lamp * 2 : 0} reach={11} player={player} />}
+      {/* Every lamp's warm halo and ground pool, breathing like a flame (two draws a set). */}
+      {v.terrain && <LampGlow points={lampPoints} ground={island.ground} on={light.lampsOn} />}
+      {v.terrain && <LampGlow points={handPoints} ground={island.ground} on={light.lampsOn} halo={1.1} pool={2.2} />}
       {layout.campfire && <Campfire site={layout.campfire} ground={island.ground} phase={phase} player={player} />}
       {/* Nature and props from the map, instanced: one draw per model sub-mesh however many the island has. */}
-      <InstancedModels items={scenery} />
+      <InstancedModels items={sceneryMoving} />
+      {sceneryStill.length > 0 && <Suspense fallback={null}><MergedModels items={sceneryStill} /></Suspense>}
       {/* Residents walk their routines on the world clock (residentRoutine.ts); during a ceremony they gather at the monument and cheer.
           While Bram brings a new arrival in and walks them round, his walking self stays out of sight: one Bram. */}
       <Residents personas={personas} phase={phase} ceremony={ceremony} player={player} island={island} v={v} away={arrivalPhase ? BRAM.slug : null}
@@ -603,8 +632,12 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
   const placed = new Map(layout.landmarks.map(l => [l.id, l]));
   const at = (l: Landmark, dy = 0): [number, number, number] => [l.x, ground(l.x, l.z) + dy, l.z];
   const front = (l: Landmark) => l.z - (l.half?.[1] ?? 0);
-  const { hq, shop, oracle, cafe, museum, ruins, monument, mailbox, notice, wharf } = Object.fromEntries(placed) as Partial<Record<Landmark["id"], Landmark>>;
+  const { hq, shop, oracle, cafe, museum, ruins, monument, mailbox, notice } = Object.fromEntries(placed) as Partial<Record<Landmark["id"], Landmark>>;
   const board = placed.get("catch"), { missions } = layout;
+  // The residents' houses by colourway, each set instanced (one draw per part for all its houses).
+  const houseSets = useMemo(() => (Object.keys(CHALET_VARIANTS) as (keyof typeof CHALET_VARIANTS)[]).map(colour => [CHALET_VARIANTS[colour], layout.houses
+    .filter(h => houseModel(h.model) === `chalet-${colour}`)
+    .map((h): PartsPlacement => ({ position: [h.x, ground(h.x, h.z), h.z], yaw: h.yaw ?? 0, scale: h.scale ?? 1 }))] as const).filter(([, at]) => at.length), [layout, ground]);
   return <>
     {hq && <>
       {/* The clubhouse model's origin is 2.35 in front of its footprint centre; porch lamps flank the door.
@@ -619,7 +652,7 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {cafe && <group position={at(cafe)} rotation={[0, cafe.yaw ?? 0, 0]} scale={cafe.scale ?? 1}><CafeBuilding state={!DROPS.cafe ? "soon" : opened.includes("cafe") ? "open" : "boarded"} light={light} /></group>}
     {museum && <group position={at(museum)} rotation={[0, museum.yaw ?? 0, 0]} scale={museum.scale ?? 1}><ACNHParts parts={CHALET_VARIANTS.red} lit={windowLit(light)} /></group>}
     {/* The residents' houses: the chalet in the colourway its model names. */}
-    {layout.houses.map(h => <group key={h.id} position={[h.x, ground(h.x, h.z), h.z]} rotation={[0, h.yaw ?? 0, 0]} scale={h.scale ?? 1}><ACNHParts parts={CHALET_VARIANTS[houseModel(h.model).slice(7) as keyof typeof CHALET_VARIANTS]} lit={windowLit(light)} /></group>)}
+    {houseSets.length > 0 && <ACNHHouses sets={houseSets} lit={windowLit(light)} />}
     {/* Boarded doors: the connectable fence across the museum's entrance, three posts and their rails (lib/game/fences.ts;
         the café boards its own, CafeBuilding). */}
     {museum && !opened.includes(museum.id as WorldGoalId) && <FenceLine x0={museum.x - 1} z0={front(museum) - 0.35} dx={1} dz={0} n={3} ground={ground} />}
@@ -632,7 +665,7 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {notice && <GLBProp url={NOTICE_BOARD_URL} position={at(notice)} rotation={[0, Math.PI + (notice.yaw ?? 0), 0]} />}
     {board && <GLBProp url={CATCH_BOARD_URL} position={at(board)} rotation={[0, Math.PI + (board.yaw ?? 0), 0]} />}
     {missions && DROPS.combat && <GLBProp url={NOTICE_BOARD_URL} position={[missions.at[0], ground(...missions.at), missions.at[1] + 0.3]} rotation={[0, missions.yaw, 0]} />}
-    {wharf && <Wharf dock={{ x: wharf.x, z: wharf.z, yaw: wharf.yaw ?? 0 }} light={light} place="village" dressed />}
+    {layout.dock && <Wharf dock={layout.dock} light={light} place="village" dressed={!layout.dock.y} />}
     {layout.landmarks.filter(l => SIGNS[l.id] && !opened.includes(l.id as WorldGoalId)).map(l => <LandmarkTag key={l.id} position={[l.x, ground(l.x, l.z) + (l.half && l.half[0] > 1 ? 3.6 : 2.3), l.z - (l.half?.[1] ?? 0)]} closed={!l.open}>
       {SIGNS[l.id]}
     </LandmarkTag>)}
@@ -762,8 +795,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const talkNow = useSyncExternalStore(subscribeTalk, talkView, emptyTalkView);
   const talking = talkNow.activeId !== null;
   // The boat between the village and your island, and a first login's arrival by it (arrival-wharf.md §3).
-  const wharfDock = useMemo(() => { const w = landmark("wharf"); return w ? { x: w.x, z: w.z, yaw: w.yaw ?? 0 } : null; }, []);
-  const dockOf = useCallback((place: TripPlace) => (place === "home" ? HOME_PIER : wharfDock), [wharfDock]);
+  const villageDock = useMemo(() => wharfDock(), []);
+  const dockOf = useCallback((place: TripPlace) => (place === "home" ? HOME_PIER : villageDock), [villageDock]);
   const goTo = useCallback((place: TripPlace) => {
     setSite(place); setInside(null); setReturned(false); setExitFrom(null); setFromBoat(place === "village");
     setSceneShown(n => n + 1); // a fresh scene gate: the boat comes in once the island has loaded and warmed up
@@ -883,7 +916,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const dayLight = useMemo(() => weatherLight(withSeason(islandLightAt(lookPreset, blend, sun), look), weatherBlend), [blend, look, weatherBlend, lookPreset, sun]);
   // A fog night eases in with the dark (the porch-light curve) while a tradition has fog nights on; never on the crossing.
   const fogNight = traditions.content.fog_nights && !inside && !golden ? windowLit(dayLight) : 0;
-  const light = useMemo(() => fogNightLight(dayLight, fogNight), [dayLight, fogNight]);
+  // The new world (a heightfield in the village's place) has its own warmer fog and livelier night.
+  const smooth = useMemo(() => !!village().terrain, []);
+  const light = useMemo(() => fogNightLight(smooth ? smoothWorldLight(dayLight) : dayLight, fogNight), [smooth, dayLight, fogNight]);
   const conditionsLabel = `${season.season[0].toUpperCase()}${season.season.slice(1)}${Object.values(season.weights).some(w => w > 0 && w < 1) ? " (changing)" : ""} · ${weather[0].toUpperCase()}${weather.slice(1)}`;
   const grade = inside === "cafe" ? { ...CLUBHOUSE_LIGHTING[phase].grade, ...CAFE_GRADE } : inside ? CLUBHOUSE_LIGHTING[phase].grade : light.grade;
   const atHome = site === "home";
@@ -909,6 +944,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     // In the shop, the shopkeeper asks what you're after first (ShopkeeperChoice): the game's things, or the club merch.
     if (action === "counter") { setSheet(inside === "shop" ? "shopkeeper" : "counter"); return; }
     if (action === "cafe") { setSheet("cafe"); return; }
+    if (action === "sell") { setSheet("sell"); return; }
     if (action === "owner") { window.dispatchEvent(new CustomEvent("tsi:cafe-owner-talk")); return; }
     if (action === "talk") { requestTalk(talkStore.near.id); return; }
     if (action === "bram") { arrivalEvent("talked"); return; }
@@ -1319,6 +1355,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <LettersSheet open={sheet === "letters"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openMail} />
       <BagSheet open={sheet === "bag"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openBag} />
       <ChestSheet open={sheet === "chest"} onClose={() => setSheet(null)} keys={STATION_KEY} />
+      <SellSheet open={sheet === "sell"} onClose={() => setSheet(null)} keys={STATION_KEY} />
       <WalletSheet open={sheet === "wallet"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openWallet} />
       <WardrobeSheet open={sheet === "closet" || sheet === "fitting"} place={sheet === "closet" ? "closet" : "fitting"} onClose={() => { if (sheet === "fitting") window.dispatchEvent(new CustomEvent("tsi:fitting")); setSheet(null); }} onShop={() => { setSheet(null); toShop("More clothes"); }} />
       <PlayerCharacterUI creator={step === "creator"} />

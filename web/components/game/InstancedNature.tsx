@@ -28,6 +28,8 @@ import { Suspense, useEffect, useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { applyModelTextures, disposeModelMaterials, prepareModel } from "@/lib/game/modelMaterials";
 import { shadowClassFor } from "@/lib/game/shadows";
 import { lodOf, updateNear } from "@/lib/game/natureLod";
@@ -79,33 +81,25 @@ function useInstanced(url: string, matrices: readonly THREE.Matrix4[], emissiveI
   return { model, meshes, cls };
 }
 
-/** One contact shadow per placement, from the model's own bounds (what GLBProp registers per clone). */
+/** One contact shadow per placement, from the model's own bounds (what GLBProp registers per clone), shown with the returned group. */
 function useContacts(model: THREE.Object3D, url: string, cls: ReturnType<typeof shadowClassFor>, matrices: readonly THREE.Matrix4[]) {
   const world = useThree((s) => s.scene);
   const contact = useMemo(() => modelContact(model, url, cls), [model, url, cls]);
-  const anchors = useMemo(() => matrices.map((matrix) => {
-    const o = new THREE.Object3D();
-    o.matrixAutoUpdate = false;
-    o.matrix.copy(matrix);
-    return o;
-  }), [matrices]);
+  const owner = useMemo(() => new THREE.Group(), []);
   useEffect(() => {
     if (!contact) return;
-    const removals = anchors.map((a) => addContact(world, a, contact));
+    const removals = matrices.map((matrix) => addContact(world, owner, contact, matrix));
     return () => removals.forEach((remove) => remove());
-  }, [world, anchors, contact]);
-  return anchors;
+  }, [world, owner, matrices, contact]);
+  return owner;
 }
 
 /** Render N placements of one GLB: one InstancedMesh per sub-mesh, all sharing the placements. */
 export default function InstancedGLB({ url, placements, baseScale = 1, emissiveIntensity }: InstancedGLBProps) {
   const matrices = useMemo(() => placements.map((p) => matrixOf(p, baseScale)), [placements, baseScale]);
   const { model, meshes, cls } = useInstanced(url, matrices, emissiveIntensity);
-  const anchors = useContacts(model, url, cls, matrices);
-  return <>
-    {meshes.map((m, i) => <primitive key={i} object={m} />)}
-    {anchors.map((a, i) => <primitive key={`contact-${i}`} object={a} />)}
-  </>;
+  const owner = useContacts(model, url, cls, matrices);
+  return <primitive object={owner}>{meshes.map((m, i) => <primitive key={i} object={m} />)}</primitive>;
 }
 
 /** Module scope, as assignLevels: the level meshes' matrices change as the camera moves. */
@@ -134,7 +128,7 @@ function assignLevels(flags: Uint8Array, matrices: readonly THREE.Matrix4[], nea
 function InstancedLodGLB({ url, far, placements }: { url: string; far: string; placements: readonly NaturePlacement[] }) {
   const matrices = useMemo(() => placements.map((p) => matrixOf(p, 1)), [placements]);
   const hi = useInstanced(url, matrices), lo = useInstanced(far, matrices);
-  const anchors = useContacts(hi.model, url, hi.cls, matrices);
+  const owner = useContacts(hi.model, url, hi.cls, matrices);
   const state = useMemo(() => {
     const xyz = new Float32Array(placements.length * 3);
     placements.forEach((p, i) => xyz.set(p.position, i * 3));
@@ -147,10 +141,7 @@ function InstancedLodGLB({ url, far, placements }: { url: string; far: string; p
   useFrame(({ camera }) => {
     if (updateNear(state.flags, state.xyz, camera.position.x, camera.position.y, camera.position.z)) assignLevels(state.flags, matrices, hi.meshes, lo.meshes);
   });
-  return <>
-    {[...hi.meshes, ...lo.meshes].map((m, i) => <primitive key={i} object={m} />)}
-    {anchors.map((a, i) => <primitive key={`contact-${i}`} object={a} />)}
-  </>;
+  return <primitive object={owner}>{[...hi.meshes, ...lo.meshes].map((m, i) => <primitive key={i} object={m} />)}</primitive>;
 }
 
 /** One placed model: its url and world transform. */
@@ -167,4 +158,81 @@ export function InstancedModels({ items }: { items: readonly ModelPlacement[] })
     const far = lodOf(url);
     return <Suspense key={url} fallback={null}>{far ? <InstancedLodGLB url={url} far={far} placements={placements} /> : <InstancedGLB url={url} placements={placements} />}</Suspense>;
   })}</>;
+}
+
+/** A material's look, for merging: two materials that draw alike share a merged mesh. `images` names textures by their image (imageKeys). */
+export const lookKey = (m: THREE.Material, images?: ReadonlyMap<THREE.Texture, string>) => {
+  const s = m as THREE.MeshStandardMaterial, tex = (t: THREE.Texture | null) => t && (images?.get(t) ?? t.uuid);
+  return [m.name, s.color?.getHexString(), tex(s.map), tex(s.emissiveMap), s.vertexColors, m.transparent, m.opacity, s.roughness, s.metalness, m.side, m.userData.lookClass].join("|");
+};
+/** Each of a GLB's textures by its image's bytes: every file loads its own copy of a shared image (the rope, the decor wood), and the copies merge. */
+function imageKeys(gltf: GLTF, out: Map<THREE.Texture, string>) {
+  const { json, associations, extensions } = gltf.parser, body: ArrayBuffer | undefined = extensions.KHR_binary_glTF?.body;
+  for (const [texture, ref] of associations) {
+    const view = body && ref.textures !== undefined && json.bufferViews[json.images[json.textures[ref.textures].source]?.bufferView];
+    if (!view) continue;
+    let h = 2166136261;
+    for (const b of new Uint8Array(body, view.byteOffset ?? 0, view.byteLength)) h = Math.imul(h ^ b, 16777619);
+    out.set(texture as THREE.Texture, `${view.byteLength}:${h >>> 0}`);
+  }
+  return out;
+}
+/** The geometry's attribute layout (mergeGeometries needs it the same). */
+export const layoutKey = (g: THREE.BufferGeometry) => Object.entries(g.attributes).map(([n, a]) => `${n}:${a.itemSize}:${(a as THREE.BufferAttribute).array.constructor.name}:${a.normalized}`).sort().join(",") + `|${g.index ? "i" : "n"}`;
+
+/**
+ * Each prepared model baked in at each of its placements and joined into one mesh per look across them all, casting as
+ * its class says (prepareModel) and receiving (still props and buildings). `images` merges looks whose textures share an image (imageKeys).
+ */
+export function mergeByLook(placed: readonly (readonly [THREE.Object3D, THREE.Matrix4])[], images?: ReadonlyMap<THREE.Texture, string>) {
+  const groups = new Map<string, { material: THREE.Material; cast: boolean; geometries: THREE.BufferGeometry[] }>();
+  for (const [model, place] of placed) {
+    model.updateMatrixWorld(true);
+    model.traverse(o => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh || !mesh.visible || Array.isArray(mesh.material)) return;
+      const g = mesh.geometry.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(place, mesh.matrixWorld));
+      if (!g.index) g.setIndex([...Array(g.attributes.position.count).keys()]);
+      const key = `${lookKey(mesh.material, images)}#${layoutKey(g)}#${mesh.castShadow}`;
+      const group = groups.get(key) ?? { material: mesh.material, cast: mesh.castShadow, geometries: [] };
+      group.geometries.push(g);
+      groups.set(key, group);
+    });
+  }
+  return [...groups.values()].map(({ material, cast, geometries }) => {
+    const mesh = new THREE.Mesh(geometries.length === 1 ? geometries[0] : mergeGeometries(geometries, false) ?? geometries[0], material);
+    // The curved world bends far things down into view (modelMaterials prepareModel): never culled by their own bounds.
+    mesh.castShadow = cast; mesh.receiveShadow = true; mesh.frustumCulled = false;
+    return mesh;
+  });
+}
+
+/**
+ * Still props merged (the new world's dressing, R2c perf): every placement of every model baked into place and joined
+ * into one mesh per look across all the models (the art lanes share their material presets so parts merge: David,
+ * 2026-10-17), so dozens of small props draw in a handful of calls. Each placement keeps its contact shadow. For models
+ * that never move, sway or glow on their own.
+ */
+export function MergedModels({ items, emissiveIntensity }: { items: readonly ModelPlacement[]; emissiveIntensity?: number }) {
+  const urls = useMemo(() => [...new Set(items.map(i => i.url))], [items]);
+  const gltfs = useGLTF(urls) as unknown as GLTF[];
+  const images = useMemo(() => gltfs.reduce((out, gltf) => imageKeys(gltf, out), new Map<THREE.Texture, string>()), [gltfs]);
+  const models = useMemo(() => urls.map((url, i) => prepareModel(gltfs[i].scene, url, emissiveIntensity, shadowClassFor(url))), [gltfs, urls, emissiveIntensity]);
+  useEffect(() => {
+    models.forEach((model, i) => applyModelTextures(model, urls[i]));
+    return () => models.forEach(model => disposeModelMaterials(model));
+  }, [models, urls]);
+  const meshes = useMemo(() => mergeByLook(items.map(({ url, ...p }) => [models[urls.indexOf(url)], matrixOf(p, 1)] as const), images), [models, urls, items, images]);
+  useEffect(() => () => meshes.forEach(m => m.geometry.dispose()), [meshes]);
+  const world = useThree(s => s.scene);
+  const owner = useMemo(() => new THREE.Group(), []);
+  useEffect(() => {
+    const contacts = urls.map((url, i) => modelContact(models[i], url, shadowClassFor(url)));
+    const removals = items.flatMap(({ url, ...p }) => {
+      const contact = contacts[urls.indexOf(url)];
+      return contact ? [addContact(world, owner, contact, matrixOf(p, 1))] : [];
+    });
+    return () => removals.forEach(remove => remove());
+  }, [world, owner, items, urls, models]);
+  return <primitive object={owner}>{meshes.map((m, i) => <primitive key={i} object={m} />)}</primitive>;
 }

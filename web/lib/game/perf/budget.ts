@@ -172,6 +172,9 @@ export const ASSET_CATEGORIES: readonly AssetCategory[] = [
   { name: "enemy", prefixes: ["game/enemies/"], triangles: 1500, primitives: 16, materials: 8, texture: 512, bones: 0 },
   { name: "interior room", prefixes: ["game/cafe/", "game/interiors/"], triangles: 12_000, primitives: 24, materials: 24, texture: 1024, bones: 0 },
   { name: "building", prefixes: ["acnh/buildings/", "buildings/", "game/buildings/", "game/wharf/"], triangles: 12_000, primitives: 10, materials: 10, texture: 1024, bones: 0 },
+  // game/wharf-art2 (art/water/build_coral_reefs.py): a reef is a dozen of the coral clumps on rocks in one mesh and one
+  // plain material, one draw where the clumps it stands in for were each their own prop. Before the seabed row: first match wins.
+  { name: "coral reef", prefixes: ["game/water/coral-reef-"], triangles: 3000, primitives: 1, materials: 1, texture: 0, bones: 0 },
   // v1 water (2026-10-13): the seabed's kinds and the decorative fish, each node drawn instanced (one draw per kind
   // however many lie in reach), so primitives are the scene's draws for the whole seabed.
   { name: "seabed and water life", prefixes: ["game/water/"], triangles: 1200, primitives: 10, materials: 6, texture: 256, bones: 0 },
@@ -180,6 +183,11 @@ export const ASSET_CATEGORIES: readonly AssetCategory[] = [
   { name: "shore and forage", prefixes: ["game/forage/mushroom-", "game/forage/shell-"], triangles: 2000, primitives: 1, materials: 1, texture: 256, bones: 0 },
   // game/remodel-r2 (art/nature/close_bushes.py): the dump's bushes closed all round, one primitive on the dump's leaf texture.
   { name: "closed bush", prefixes: ["game/plants/bush-"], triangles: 1000, primitives: 1, materials: 1, texture: 128, bones: 0 },
+  // game/village-art2 (art/trees/build_shrubs.py): the new world's wild shrubs, lobes of leaf cards on the summer atlas
+  // (one cut-out material) and their twigs in colour.
+  { name: "shrub", prefixes: ["game/plants/shrub-"], triangles: 1200, primitives: 2, materials: 2, texture: 256, bones: 0 },
+  // game/village-art2 (art/props/build_river_set.py): reeds and cattails, blades in colour, one material.
+  { name: "reeds", prefixes: ["game/plants/reeds-"], triangles: 800, primitives: 1, materials: 1, texture: 0, bones: 0 },
   // game/remodel-trees (art/trees): our trees, leaf or needle cards over closed volumes on a trunk, drawn instanced: the
   // cards with their volume (one cut-out material on the painted atlas) and the bark in colour, the crown's hull and the
   // trunk only in the sun's map. Triangles count all four; the far model (.lod1) is held under half the near one

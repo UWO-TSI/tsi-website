@@ -14,7 +14,7 @@ import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { disposeModelMaterials, prepareModel } from "@/lib/game/modelMaterials";
 import type { IslandLight } from "@/lib/game/islandLighting";
-import { BUOYS, DRESSING_URL, FINGER, LANTERNS, PIER, PIER_URL, ROWBOAT, ROWBOATS, ROWBOAT_URL, dockToWorld, floatBuoy, floatRowboat, newFloat, newRide, type Dock, type Float, type Ride } from "@/lib/game/wharf";
+import { BUOYS, DRESSING_URL, FINGER, JETTY, LANTERNS, PIER, PIER_URL, ROWBOAT, ROWBOATS, ROWBOAT_URL, dockToWorld, floatBuoy, floatRowboat, newFloat, newRide, type Dock, type Float, type Ride } from "@/lib/game/wharf";
 import { liveWaves } from "@/lib/game/waves";
 import { windowLit } from "@/lib/game/islandLighting";
 import { RopeLine } from "./ropeLine";
@@ -124,13 +124,13 @@ const LANTERN_FEET = LANTERNS;
  * trip's (useTripBoat), carrying their avatar; otherwise it lies moored. Others' trips (multiplayer) will be drawn the
  * same way, each on its own boat.
  */
-/** `dressed`: the village wharf's finger pier, lanterns and rowboats (v1 water item 7). */
+/** `dressed`: the village wharf's finger pier, lanterns and rowboats (v1 water item 7). A dock with a `y` is the new world's jetty (lib/game/wharf.ts JETTY) in place of the pier. */
 export default function Wharf({ dock, light, place, dressed = false, children }: { dock: Dock; light: IslandLight; place: TripPlace; dressed?: boolean; children?: ReactNode }) {
   const tripKey = useSyncExternalStore(subscribeMyTrip, readMyTrip, () => "");
   const trip = tripKey && berthTaken(myTrip.current, place) ? myTrip.current : null;
   const boat = useTripBoat(trip, dock, light, myTrip.ride);
-  const { scene } = useGLTF(PIER_URL);
-  const pier = useMemo(() => prepareModel(scene, PIER_URL, undefined, "solid"), [scene]);
+  const url = dock.y ? JETTY.url : PIER_URL, { scene } = useGLTF(url);
+  const pier = useMemo(() => prepareModel(scene, url, undefined, "solid"), [scene, url]);
   useEffect(() => () => disposeModelMaterials(pier), [pier]);
   // The rail's rope, for the boat's lines: the same rope.
   const rope = useMemo(() => {
@@ -139,17 +139,18 @@ export default function Wharf({ dock, light, place, dressed = false, children }:
     return found;
   }, [pier]);
   // Foam where the piles and the buoys meet the water (v1 water item 3); a ring over the beach is never drawn.
-  const { x: dockX, z: dockZ, yaw: dockYaw } = dock;
+  const { x: dockX, z: dockZ, yaw: dockYaw } = dock, jetty = !!dock.y;
   useEffect(() => {
     const d = { x: dockX, z: dockZ, yaw: dockYaw }, at = { x: 0, z: 0 }, handles: number[] = [];
-    for (const side of [-1, 1]) {
+    if (jetty) for (const [x, z] of JETTY.piles) { dockToWorld(d, x, z, at); handles.push(foamRings.add(at.x, at.z, 0.16, 0.95)); }
+    else for (const side of [-1, 1]) {
       for (const z of PIER.railZ) { dockToWorld(d, side * PIER.postX, z, at); handles.push(foamRings.add(at.x, at.z, PIER.postR * 1.05, 0.95)); }
       for (const z of PIER.underZ) { dockToWorld(d, side * PIER.underX, z, at); handles.push(foamRings.add(at.x, at.z, PIER.postR * 0.9, 0.85)); }
     }
     // The buoy's float is 0.61 across where it meets the water: the foam laps just outside it.
     for (const [x, z] of BUOYS) { dockToWorld(d, x, z, at); handles.push(foamRings.add(at.x, at.z, 0.33, 0.7)); }
     return () => handles.forEach(h => foamRings.remove(h));
-  }, [dockX, dockZ, dockYaw]);
+  }, [dockX, dockZ, dockYaw, jetty]);
   return <group position={[dock.x, 0, dock.z]} rotation={[0, dock.yaw, 0]}>
     <primitive object={pier} />
     {BUOYS.map(([x, z], i) => <Buoy key={i} dock={dock} x={x} z={z} />)}

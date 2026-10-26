@@ -16,7 +16,7 @@ import {
   CLIFF_LEVELS, DIR_OFFSETS, ORTHOGONAL, cliffPieceFor, inBounds, isGroundAtWorld, isLandCell, isRamp, isVoid, levelAt,
   needsCliff, rampDir, rampRun, surfaceAt, worldToCellX, worldToCellZ, type IslandMap,
 } from "./grid";
-import { LANDMARK_IDS, PROBE, TREE_TRUNK, bridgeDecks, inRect, islandOf, landmarks, objectFootprint, turn, wharfDeck } from "./defaultIsland";
+import { LANDMARK_IDS, PROBE, TREE_TRUNK, bridgeDecks, inRect, islandOf, landmarks, objectFootprint, turn, wharfDecks } from "./defaultIsland";
 import { CAST_REACH, WATER_CLASS, fishingSpot, villageWater } from "./fishingSpots";
 import { villageNodes, villageBottleSpot } from "./islandNodes";
 import { OBJECT_KINDS, objectsOf, villageSpawnPoint, type MapObject, type Village } from "./villageMap";
@@ -151,8 +151,8 @@ export function villageHealth(v: Village): VillageHealth {
     const cx = worldToCellX(map, x), cz = worldToCellZ(map, z);
     return inBounds(map, cx, cz) && terrain.reach[cz * map.width + cx] === 1;
   };
-  const deck = wharfDeck(v);
-  const onDeck = (x: number, z: number) => !!deck && inRect(x, z, deck);
+  const decks = wharfDecks(v), deck = decks[0];
+  const onDeck = (x: number, z: number) => decks.some(deck => inRect(x, z, deck));
 
   // Ids: unique within a kind (parseVillage drops unknown kinds).
   const seen = new Set<string>();

@@ -12,6 +12,7 @@ import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { prepareModel } from "@/lib/game/modelMaterials";
+import { layoutKey, lookKey } from "./InstancedNature";
 import { SHOP_FLOOR_HEIGHT, SHOP_SLOTS, type DisplaySlot } from "@/lib/game/shopLayout";
 import type { ShopDisplayItem } from "@/lib/game/shopDisplay";
 
@@ -84,14 +85,6 @@ function ModelItem({ item, s }: { item: ShopDisplayItem; s: DisplaySlot }) {
   }, [scene, item, s]);
   return <primitive object={object} />;
 }
-
-/** A material's look, for merging: two materials that draw alike share a merged mesh. */
-const lookKey = (m: THREE.Material) => {
-  const s = m as THREE.MeshStandardMaterial;
-  return [m.name, s.color?.getHexString(), s.map?.uuid, s.emissiveMap?.uuid, s.vertexColors, m.transparent, m.opacity, s.roughness, s.metalness, m.side, m.userData.lookClass].join("|");
-};
-/** The geometry's attribute layout (mergeGeometries needs it the same). */
-const layoutKey = (g: THREE.BufferGeometry) => Object.entries(g.attributes).map(([n, a]) => `${n}:${a.itemSize}:${(a as THREE.BufferAttribute).array.constructor.name}:${a.normalized}`).sort().join(",") + `|${g.index ? "i" : "n"}`;
 
 /**
  * The static models on a floor, merged (the perf: each item is several meshes, each a draw, twice with shadows): every

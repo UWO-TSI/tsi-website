@@ -27,6 +27,7 @@ import { worldNow } from "@/lib/game/worldClock";
 import { myTrip } from "@/lib/game/myTrip";
 import { CROSS_TIME, boatPose, newBoatPose } from "@/lib/game/boatTrip";
 import { BOAT, dockToWorld, floatBoat, newFloat, type Dock } from "@/lib/game/wharf";
+import { CRATE_URL } from "@/lib/game/propModels";
 import { liveWaves } from "@/lib/game/waves";
 import { landmark, landmarkPoint, type VillageIsland } from "@/lib/game/defaultIsland";
 import type { Village } from "@/lib/game/villageMap";
@@ -49,7 +50,6 @@ import rs from "../residents.module.css";
 import tags from "../nameTags.module.css";
 import aw from "./ArrivalWorld.module.css";
 
-const CRATE_URL = "/assets/game/wharf/crate.glb";
 useGLTF.preload(CRATE_URL);
 /**
  * A fish crate (art/wharf/build_crate.py) where the route puts one (lib/game/arrival/routes: the village's fills the

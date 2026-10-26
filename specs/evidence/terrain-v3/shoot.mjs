@@ -8,26 +8,43 @@ import { mkdirSync } from "node:fs";
 const require = createRequire("/opt/homebrew/lib/node_modules/");
 const { chromium } = require("playwright");
 
-// R1b spots (the new layout: the jetty at (74.5, 46), the plaza at (4, 50), the border along z 8 to 13).
+// R2d spots (the jetty: its middle finger's tip at (94.3, 46), its platform at x 77.3 to 81.8, the gangways meeting
+// the deck boards at x 74.8; the path from (65.5, 56) winding up to the plaza at (30, 50); the fish market at (69.4, 34)).
 export const VIEWS = {
-  "01-arrival-wharf": { at: [68.5, 46], yaw: -90, pitch: 0.45, zoom: 1.6 },
-  "02-wharf-from-south": { at: [62, 80], yaw: 170, pitch: 0.42, zoom: 1.6 },
-  "03-path-down-to-wharf": { at: [36, 56], yaw: 90, pitch: 0.45, zoom: 1.6 },
-  "04-plaza": { at: [16, 60], yaw: 215, pitch: 0.42, zoom: 1.6 },
-  "05-hq": { at: [2, 50], yaw: -90, pitch: 0.45, zoom: 1.3 },
+  "05-docks-above": { at: [84, 46], yaw: 90, pitch: 0.82, zoom: 1.6 },
+  "01-arrival-wharf": { at: [93.5, 46], yaw: -90, pitch: 0.42, zoom: 1.6 },
+  "02-wharf-from-south": { at: [62, 82], yaw: 170, pitch: 0.42, zoom: 1.6 },
+  "03-path-up": { at: [64, 56.5], yaw: -100, pitch: 0.45, zoom: 1.6 },
+  "04-plaza": { at: [44, 53], yaw: 250, pitch: 0.42, zoom: 1.6 },
   "06-beach": { at: [-10, 102], yaw: 75, pitch: 0.42, zoom: 1.6 },
-  "07-mountain-from-village": { at: [4, 44], yaw: 180, pitch: 0.35, zoom: 1.6 },
-  "08-meadow-border": { at: [-6, 18], yaw: 200, pitch: 0.38, zoom: 1.6 },
+  "07-beach-wharf-end": { at: [50, 92], yaw: 30, pitch: 0.45, zoom: 1.6 },
   "09-forest-edge": { at: [60, 22], yaw: 165, pitch: 0.38, zoom: 1.6 },
   "10-river-and-meadow": { at: [-34, 60], yaw: -70, pitch: 0.42, zoom: 1.6 },
-  "11-north-strait": { at: [-96, 10], yaw: -90, pitch: 0.4, zoom: 1.6 },
+  "13-market": { at: [73.5, 42], yaw: 195, pitch: 0.42, zoom: 1.3 },
+  "14-docks": { at: [87, 54], yaw: 200, pitch: 0.5, zoom: 1.6 },
+  "16-campfire": { at: [14, 95.5], yaw: 0, pitch: 0.5, zoom: 1.2 },
+  "17-deck-edge": { at: [72, 21], yaw: 160, pitch: 0.4, zoom: 1.0 },
+  "18-wharf-night": { at: [66, 50], yaw: 120, pitch: 0.42, zoom: 1.6, time: "night" },
+  "19-path-night": { at: [60, 58], yaw: -100, pitch: 0.45, zoom: 1.6, time: "night" },
+  "20-plaza-night": { at: [44, 53], yaw: 250, pitch: 0.42, zoom: 1.6, time: "night" },
+  "21-shallows": { at: [9, 115], yaw: 0, pitch: 0.55, zoom: 1.2 },
+  "22-ship-houses": { at: [66, 66], yaw: 100, pitch: 0.42, zoom: 1.4 },
 };
 
+// VILLAGE=1: the shipped village instead (no fixture; run the dev server without NEXT_PUBLIC_GAME_WORLD), the launch
+// fallback's check views.
+export const VILLAGE_VIEWS = {
+  "v1-plaza": { at: [-1.5, -2], yaw: 0, pitch: 0.42, zoom: 1.6 },
+  "v2-wharf": { at: [6, -13], yaw: 180, pitch: 0.45, zoom: 1.6 },
+  "v3-buildings": { at: [0, 3], yaw: 180, pitch: 0.42, zoom: 1.6 },
+  "v4-night": { at: [-1.5, -2], yaw: 0, pitch: 0.42, zoom: 1.6, time: "night" },
+};
+const village = !!process.env.VILLAGE;
 const [OUT = "/tmp/terrain-v3", ONLY] = process.argv.slice(2), PORT = process.env.PORT ?? 3171;
 mkdirSync(OUT, { recursive: true });
 const LOOK = JSON.stringify({ skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [], bangs: "bangs_curtain", back: "back_bob", top: "top_hoodie", bottom: "bottom_joggers", onepiece: null, shoes: "shoes_sneakers", acc: {}, colors: {} });
 const browser = await chromium.launch({ headless: true, args: ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist"] });
-for (const [name, v] of Object.entries(VIEWS)) {
+for (const [name, v] of Object.entries(village ? VILLAGE_VIEWS : VIEWS)) {
   if (ONLY && !ONLY.split(",").includes(name)) continue;
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
   await ctx.addInitScript(([look, cam]) => { try {
@@ -37,7 +54,7 @@ for (const [name, v] of Object.entries(VIEWS)) {
   } catch {} }, [LOOK, JSON.stringify({ yaw: (v.yaw * Math.PI) / 180, pitch: v.pitch, zoom: v.zoom, mouseLook: false, autoFollow: false, sensitivity: 1, invertY: false })]);
   const page = await ctx.newPage();
   page.on("pageerror", e => console.log("pageerror", name, e.message.slice(0, 200)));
-  await page.goto(`http://localhost:${PORT}/lab/island?fixture=v2&at=${v.at.join(",")}${v.flat ? "&aerial=1" : ""}&time=day&weather=clear&season=summer`);
+  await page.goto(`http://localhost:${PORT}/lab/island?${village ? "" : "fixture=v2&"}at=${v.at.join(",")}${v.flat ? "&aerial=1" : ""}&time=${v.time ?? "day"}&weather=clear&season=summer`);
   await page.waitForFunction(() => !!window.__move?.sim?.current, null, { timeout: 240000 });
   await page.waitForTimeout(8000);
   if (await page.evaluate(() => { const g = window.__governor; if (!g) return false; g.hold = 1e9; g.set(0); return true; })) await page.waitForTimeout(1500);

@@ -5,7 +5,8 @@
  */
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { DECK_Y, landmarkHalf, villageIsland, wharfDecks, type LandmarkId } from "../defaultIsland";
+import { inRect, landmarkHalf, villageIsland, wharfDock, wharfDecks, type LandmarkId } from "../defaultIsland";
+import { JETTY, dockToWorld } from "../wharf";
 import { campfireSite } from "../campfireSite";
 import { MOVE_TUNING, NO_INPUT, createMoveState, stepMove, STEP, type MoveWorld } from "../movement/sim";
 import { navGrid, planResidents } from "../residentRoutine";
@@ -59,12 +60,16 @@ describe("walking the smooth world", () => {
     expect(worst).toBeLessThan(0.05);
   });
 
-  it("walks the wharf's deck at the deck's height, over deep water", () => {
-    for (const d of wharfDecks(v)) {
-      const x = (d.x0 + d.x1) / 2, z = d.z0 + 0.3;
-      expect(island.ground(x, z)).toBeGreaterThanOrEqual(DECK_Y - 1e-6);
-      expect(island.wet(x, z)).toBe(false);
-    }
+  it("walks from the jetty's middle finger at the water up its pier's stairs, across its platform and a gangway onto the deck boards", () => {
+    const dock = wharfDock(v)!, at = (lz: number) => dockToWorld(dock, 0, lz, { x: 0, z: 0 });
+    expect(dock.y).toBe(JETTY.top);
+    const landing = at(-2.5), platform = at(11), boards = at(JETTY.land + 1.6);
+    expect(island.ground(landing.x, landing.z)).toBeCloseTo(JETTY.low, 6);
+    expect(island.ground(platform.x, platform.z)).toBeCloseTo(1, 6);
+    expect(island.ground(boards.x, boards.z)).toBeCloseTo(1, 1);
+    for (const p of [landing, platform, boards]) expect(island.wet(p.x, p.z)).toBe(false);
+    const [x, z] = island.move(landing.x, landing.z, boards.x, boards.z);
+    expect(Math.hypot(x - boards.x, z - boards.z)).toBeLessThan(0.01);
   });
 
   it("blocks walking up a slope too steep to climb, and lets you walk down it", () => {
@@ -102,8 +107,11 @@ describe("walking the smooth world", () => {
     for (const o of objects) {
       if (o.kind === "landmark" && o.id === "wharf") continue; // the jetty's origin stands at the water's edge
       if (o.kind === "barrier" && o.model === "border") continue; // the invisible border runs out into the water at its ends
-      const h = island.ground(o.x, o.z);
-      expect(h, `${o.kind}:${o.id}`).toBeCloseTo(terrainHeight(t, o.x, o.z), 6);
+      if (/^(coral|reeds|river-stones|lily-pads)-/.test(o.model ?? "")) continue; // the coral, reeds and stones stand in the shallows, the lily pads float
+      if (o.model?.startsWith("ship-house-")) continue; // a ship house straddles the deck's water edge, its back on piles in the sea
+      // On the ground, or on the jetty's decks (its lanterns stand on its platform).
+      const h = island.ground(o.x, o.z), decked = wharfDecks(v).some(d => inRect(o.x, o.z, d));
+      expect(h, `${o.kind}:${o.id}`).toBeCloseTo(decked ? wharfDecks(v).find(d => inRect(o.x, o.z, d))!.y(o.x, o.z) : terrainHeight(t, o.x, o.z), 6);
       expect(h, `${o.kind}:${o.id} above the sea`).toBeGreaterThan(t.seaLevel);
     }
     const fire = campfireSite(v);
