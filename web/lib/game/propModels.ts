@@ -159,6 +159,11 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // on low rocks, the origin on the seabed at the middle, not solid: a broad (2.8 by 2), b round and tall (2 across), c a
   // long ribbon along x (3.4 by 1.2).
   ...Object.fromEntries(["a", "b", "c"].map(m => [`coral-reef-${m}`, `/assets/game/water/coral-reef-${m}.glb`])),
+  // game/wharf-art4: the wharf shops (art/wharf/build_wharf_shops.py), in the ship houses' frame: the origin on the deck's
+  // top at the middle of the floor, the door to +z (inland), the back over the sea on piles down to y -3.4. The tackle
+  // shop: walls z -2.45 to 1.15, a porch under a striped awning to z 2.45, a giant rod on the roof whose line hangs a
+  // bobber and a lure off the porch's +x corner (x 2.35, z 3.05, down to y 1.6).
+  "tackle-shop": "/assets/game/wharf/tackle-shop.glb",
 };
 export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? `/assets/acnh/props/${model}.glb`;
 
