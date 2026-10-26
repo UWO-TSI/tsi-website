@@ -29,11 +29,15 @@ web/scripts/finish-greenery.mjs. Two draws a kind (the snag one):
   sapling   broadleaf sapling, 2.6 tall
   snag      dead snag, bare grey with a broken top, 6 tall (one draw)
 The riverbank trees, few and richer (David, R2d, the river: "trees a bit small and look like bushes, still doesnt feel
-natural"): tall clear trunks with crowns well over the shrubs.
-  willow    weeping willow, a low dome with sprays hung all round, 8 tall
-  alder     tall straight alder, an upright oval crown, 8.9 tall
-  oak       big oak on four heavy limbs, 8.7 tall, 7.5 across
-  lean      leaning out over the water to +x, its crown 4.3 out, 8.6 tall
+natural"; redone by art-r2f after R2e: "redo these tree models", the crowns sat like lollipops on thin bent trunks):
+full crowns of lumps built round the limbs that carry them, starting low on thick trunks.
+  willow    weeping willow, a broad low dome on a stout forked bole, long curtains hung all round it two rings deep,
+            falling nearly to the ground, 7.7 tall, 7.5 across
+  alder     a group of three alders from one root, upright oval crowns merging, 9.3 tall, 4.8 across
+  oak       spreading riverside oak, five heavy limbs nearly level from a short thick bole, a broad dome hanging low at
+            its rim, 8.3 tall, 9.8 across
+  lean      leaning out over the water to +x, a thick bowed stem, its crown full along its last third, 8.7 tall,
+            reaching x 6.8
 Seeded: a rebuild writes the same models.
 """
 import math, os, random, subprocess, sys
@@ -149,6 +153,20 @@ def conifer(b, h, base, r0, tiers, segs, col, seed, axis=STRAIGHT, overlap=1.75,
 
 
 # ================================================================ broadleaves
+def lump(b, q, r, sq, col, tone, seed, c, lo, hi, segs=7):
+    """One lump of leaves round q (r across, sq tall), a wobbled ellipsoid lit darker under it and lighter up the
+    whole crown (lo to hi), its normals leaning out of the crown's middle c so the lumps shade as one mass."""
+    first = len(b.faces)
+    K.ellipsoid(b, q, Vector((r, r, sq)), LEAF,
+                lambda v: shaded(col, tone * (0.5 + 0.3 * min(1, max(0, (v.z - q.z) / sq * 0.5 + 0.5)) + 0.32 * min(1, max(0, (v.z - lo) / (hi - lo))))),
+                segs=segs, rings=4, wobble=0.16, seed=seed, normal_of=lambda v: (soft(v, c, 0.3) * 0.75 + (v - q).normalized() * 0.25).normalized())
+    # The kit's UVs run the atlas twice round in steps of segs / 4, flat (one texel column) on some faces at 6 or 7
+    # sides: wrap the leaves once round each lump, mirrored, and up it, from the points themselves.
+    for f in range(first, len(b.faces)):
+        b.uvs[f] = [(K.tri_wave(math.atan2(b.verts[k].y - q.y, b.verts[k].x - q.x) / math.pi + 1),
+                     LEAF[1] + (LEAF[3] - LEAF[1]) * min(1, max(0, (b.verts[k].z - q.z) / sq * 0.5 + 0.5))) for k in b.faces[f]]
+
+
 def crown(b, c, R, lumps, col, seed, flat=0.78, spread=0.55, size=(0.42, 0.58), lift=(-0.2, 0.65), segs=7):
     """A broadleaf crown round c: a big middle lump and `lumps` more round it (golden-angle turns, each its own
     height and size), wobbled low ellipsoids whose normals lean out of the whole crown. Returns the lumps' centres."""
@@ -161,17 +179,7 @@ def crown(b, c, R, lumps, col, seed, flat=0.78, spread=0.55, size=(0.42, 0.58), 
         spots.append((c + d * R * spread * rng.uniform(0.85, 1.15), R * rng.uniform(*size)))
     lo, hi = c.z - R * flat, c.z + R * flat
     for i, (q, r) in enumerate(spots):
-        sq, first = r * 0.8, len(b.faces)
-        tone = rng.uniform(0.92, 1.06)
-        K.ellipsoid(b, q, Vector((r, r, sq)), LEAF,
-                    lambda v, q=q, sq=sq, tone=tone: shaded(col, tone * (0.5 + 0.3 * min(1, max(0, (v.z - q.z) / sq * 0.5 + 0.5)) + 0.32 * min(1, max(0, (v.z - lo) / (hi - lo))))),
-                    segs=segs, rings=4, wobble=0.16, seed=seed * 7 + i,
-                    normal_of=lambda v, q=q: (soft(v, c, 0.3) * 0.75 + (v - q).normalized() * 0.25).normalized())
-        # The kit's UVs run the atlas twice round in steps of segs / 4, flat (one texel column) on some faces at 6 or 7
-        # sides: wrap the leaves once round each lump, mirrored, and up it, from the points themselves.
-        for f in range(first, len(b.faces)):
-            b.uvs[f] = [(K.tri_wave(math.atan2(b.verts[k].y - q.y, b.verts[k].x - q.x) / math.pi + 1),
-                         LEAF[1] + (LEAF[3] - LEAF[1]) * min(1, max(0, (b.verts[k].z - q.z) / sq * 0.5 + 0.5))) for k in b.faces[f]]
+        lump(b, q, r, r * 0.8, col, rng.uniform(0.92, 1.06), seed * 7 + i, c, lo, hi, segs)
     return [q for q, _ in spots]
 
 
@@ -274,19 +282,33 @@ def t_snag(b, w):
         K.tube(w, [s, s + Vector((math.cos(a), math.sin(a), 0.55)) * rng.uniform(0.7, 1.2)], [0.08, 0.03], 4, bark)
 
 
-# ================================================================ river trees (few of them: richer, 600 to 1000 triangles)
+# ================================================================ river trees (art-r2f, David's R2e note: "redo these tree models")
+# Full crowns sized to their trunks, starting low on them, built round the limbs that carry them; trunks thick enough.
+def canopy(b, w, fork, spots, col, seed, bark=BARK, limb_r=0.2, segs=7):
+    """Lumps of leaves at `spots` [(centre, across, tall)], each fed by a limb from the fork (or from the point given
+    with it) that ends inside it; lit as one crown round their middle."""
+    rng = random.Random(seed)
+    c = sum((q for q, *_ in spots), Vector()) / len(spots)
+    lo, hi = min(q.z - h for q, r, h, *_ in spots), max(q.z + h for q, r, h, *_ in spots)
+    for i, (q, r, h, *src) in enumerate(spots):
+        lump(b, q, r, h, col, rng.uniform(0.9, 1.06), seed * 7 + i, c, lo, hi, segs)
+        if src and src[0] is not None:
+            limb(w, src[0], src[0] + (q - src[0]) * 0.8, limb_r * src[1], bark, rise=0.12)
+    return c
+
+
 def strand(b, top, d, length, width, col, c, tone):
-    """A willow's hanging spray: a ribbon folded out along its middle, arching out of the crown's rim, then hanging
-    and narrowing to its tip; the needle strokes run down it."""
+    """A willow's hanging curtain: a broad ribbon folded out along its middle, arching out of the crown, then falling
+    straight and narrowing a little to a blunt tip; the needle strokes run down it."""
     s = Vector((-d.y, d.x, 0))
-    pts = [top, top + d * 0.45 - Vector((0, 0, length * 0.18)), top + d * 0.62 - Vector((0, 0, length * 0.58)), top + d * 0.68 - Vector((0, 0, length))]
+    pts = [top, top + d * 0.35 - Vector((0, 0, length * 0.12)), top + d * 0.5 - Vector((0, 0, length * 0.55)), top + d * 0.56 - Vector((0, 0, length))]
     rows = []
     for i, p in enumerate(pts):
-        t, w = i / 3, width * (1 - 0.8 * i / 3)
+        t, w = i / 3, width * (1 - 0.5 * i / 3)
         n = (soft(p, c, 0.1) + d).normalized()
-        rows.append([(b.vert(p + s * w / 2, n), 0.0, t), (b.vert(p + d * w * 0.35, n), 0.5, t), (b.vert(p - s * w / 2, n), 1.0, t)])
+        rows.append([(b.vert(p + s * w / 2, n), 0.0, t), (b.vert(p + d * w * 0.3, n), 0.5, t), (b.vert(p - s * w / 2, n), 1.0, t)])
     uv = lambda e: (e[1], NEEDLE[1] + (NEEDLE[3] - NEEDLE[1]) * (1 - e[2]))
-    sh = lambda e: shaded(col, tone * (0.62 + 0.38 * e[2]))
+    sh = lambda e: shaded(col, tone * (0.6 + 0.42 * e[2]))
     for i in range(3):
         for k in range(2):
             q = [rows[i][k], rows[i + 1][k], rows[i + 1][k + 1], rows[i][k + 1]]
@@ -294,49 +316,83 @@ def strand(b, top, d, length, width, col, c, tone):
 
 
 def r_willow(b, w):
-    """A weeping willow: a stout leaning bole, three limbs up into a low dome, and sprays hung all round to near the
-    ground's height of a shrub."""
+    """A weeping willow: a stout leaning bole forking into three limbs under a broad low dome of leaves, and long
+    curtains hung all round it, two rings deep, falling nearly to the ground."""
     rng = random.Random(41)
-    axis = lambda z: Vector((0.12 * z, 0.05 * z, 0))
-    fork = at(axis, 2.8)
-    trunk(w, 2.8, 0.42, BARK, axis=axis, sides=6, rings=2)
-    c, col = Vector((0.5, 0.2, 6.2)), K.lin("#a6c55e")
-    tips = crown(b, c, 2.8, 6, col, 42, flat=0.55, spread=0.6, size=(0.38, 0.5), lift=(-0.1, 0.5), segs=8)
-    for q in tips[1:6:2] + tips[6:7]:
-        limb(w, fork, fork + (q - fork) * 0.8, 0.2, BARK, rise=0.1)
-    for i in range(30):
-        a = i * 2.4 + rng.uniform(-0.3, 0.3)
-        d = Vector((math.cos(a), math.sin(a), 0))
-        top = c + d * 2.8 * rng.uniform(0.55, 0.95) + Vector((0, 0, rng.uniform(-0.6, 0.5)))
-        strand(b, top, d, rng.uniform(2.6, 4.0), rng.uniform(0.7, 1.0), col, c, rng.uniform(0.85, 1.05))
+    axis = lambda z: Vector((0.1 * z, 0.04 * z, 0))
+    fork = at(axis, 2.6)
+    trunk(w, 2.9, 0.55, BARK, axis=axis, sides=7, rings=2)
+    c, col = Vector((0.4, 0.15, 5.7)), K.lin("#a6c55e")
+    spots = [(c + Vector((0, 0, 0.5)), 2.3, 1.5, fork, 1.2)]
+    for i in range(6):
+        a = i * math.tau / 6 + rng.uniform(-0.25, 0.25)
+        q = c + Vector((math.cos(a) * 2.2, math.sin(a) * 2.2, rng.uniform(-0.5, 0.1)))
+        spots.append((q, rng.uniform(1.5, 1.8), rng.uniform(1.0, 1.2), fork if i % 2 else None, 1.0))
+    canopy(b, w, fork, spots, col, 42, limb_r=0.22, segs=8)
+    for ring, n, rad, z, L, tone in ((0, 40, (2.6, 3.2), (-0.9, 0.0), (3.0, 4.6), (0.86, 1.06)), (1, 14, (1.5, 2.1), (0.4, 1.1), (3.0, 4.0), (0.74, 0.92))):
+        for i in range(n):
+            a = i * math.tau / n + ring * 0.2 + rng.uniform(-0.1, 0.1)
+            d = Vector((math.cos(a), math.sin(a), 0))
+            top = c + d * rng.uniform(*rad) + Vector((0, 0, rng.uniform(*z)))
+            strand(b, top, d, rng.uniform(*L), rng.uniform(1.0, 1.35), col, c, rng.uniform(*tone))
 
 
 def r_alder(b, w):
-    """A tall straight alder: a clean grey-brown stem up the middle, an upright oval crown of lumps round it."""
-    trunk(w, 7.6, 0.3, K.lin("#6f6455"), sides=6, rings=4)
-    tips = crown(b, Vector((0, 0, 7.0)), 2.3, 10, K.lin("#7caa54"), 43, flat=1.5, spread=0.62, size=(0.38, 0.5), lift=(-0.75, 0.75), segs=8)
-    for q in tips[1:10:3]:
-        limb(w, Vector((0, 0, q.z - 1.0)), q, 0.09, K.lin("#6f6455"), rise=0.1)
+    """A group of three alders from one root, their grey-brown stems leaning a little apart, each with an upright
+    oval crown from low on it to its top, the crowns merging."""
+    rng = random.Random(43)
+    bark = K.lin("#6f6455")
+    for k, (h, r, a) in enumerate(((9.0, 0.27, 0.3), (7.8, 0.23, 2.5), (6.8, 0.21, 4.4))):
+        d = Vector((math.cos(a), math.sin(a), 0))
+        axis = lambda z, d=d, k=k: d * (0.3 + 0.1 * z) if k else d * 0.04 * z
+        trunk(w, h - 1.2, r, bark, axis=axis, sides=6, rings=3)
+        spots = []
+        for j, f in enumerate((0.48, 0.6, 0.72, 0.84)):
+            z = h * f
+            off = Vector((math.cos(a + j * 2.1), math.sin(a + j * 2.1), 0)) * h * 0.09
+            spots.append((at(axis, z) + off, h * (0.17 - 0.02 * j) * rng.uniform(0.9, 1.1), h * 0.16, at(axis, z - 1.2), 0.5))
+        spots.append((at(axis, h * 0.94), h * 0.1, h * 0.09, None))
+        canopy(b, w, None, spots, K.lin("#7caa54"), 43 + k, bark=bark, limb_r=0.18)
 
 
 def r_oak(b, w):
-    """A big old oak: a thick flared bole splitting into four heavy limbs, a broad crown of many lumps over them."""
-    fork = Vector((0, 0, 3.0))
-    trunk(w, fork.z, 0.48, BARK, sides=7, rings=2)
-    tips = crown(b, Vector((0, 0, 6.4)), 3.7, 11, K.lin("#8ab656"), 44, flat=0.62, spread=0.66, size=(0.34, 0.48), lift=(-0.25, 0.55), segs=8)
-    for q in tips[1:12:3]:
-        limb(w, fork, fork + (q - fork) * 0.85, 0.26, BARK, rise=0.15)
+    """A spreading riverside oak: a short thick flared bole splitting into five heavy limbs that reach out nearly
+    level, then up; a broad irregular dome of clusters at their ends and between, its rim hanging low."""
+    rng = random.Random(44)
+    fork = Vector((0, 0, 2.4))
+    trunk(w, 2.9, 0.58, BARK, sides=7, rings=2)
+    col, ph, spots, ends = K.lin("#8ab656"), rng.uniform(0, math.tau), [], []
+    for i in range(5):
+        a = ph + i * math.tau / 5 + rng.uniform(-0.2, 0.2)
+        d = Vector((math.cos(a), math.sin(a), 0))
+        end = fork + d * rng.uniform(3.0, 3.6) + Vector((0, 0, rng.uniform(1.8, 2.6)))
+        K.tube(w, [fork, fork + d * 1.5 + Vector((0, 0, 0.5)), end], [0.3, 0.2, 0.1], 5, lambda q: shaded(BARK, 0.85))
+        ends.append(end)
+        spots.append((end + Vector((0, 0, 0.35)), rng.uniform(1.7, 2.0), rng.uniform(1.25, 1.45), None))
+        spots.append((fork + d * 3.6 + Vector((0, 0, 1.0)), rng.uniform(1.0, 1.2), 0.8, None))           # the rim hanging low
+        m = Vector((math.cos(a + math.pi / 5), math.sin(a + math.pi / 5), 0))
+        spots.append((fork + m * 2.9 + Vector((0, 0, 3.0)), rng.uniform(1.5, 1.7), 1.2, fork + m * 1.0 + Vector((0, 0, 0.4)), 0.8))
+    for i in range(3):
+        a = ph + i * math.tau / 3 + 0.5
+        spots.append((fork + Vector((math.cos(a) * 1.2, math.sin(a) * 1.2, 4.4)), rng.uniform(1.9, 2.1), 1.4, fork, 1.0))
+    canopy(b, w, fork, spots, col, 44, limb_r=0.18)
 
 
 def r_lean(b, w):
-    """A riverside tree leaning out over the water (+x): the stem bowed out and turning back up, its crown out past
-    the bank."""
-    axis = lambda z: Vector((1.1 * z - 0.07 * z * z, 0, 0))
-    trunk(w, 5.6, 0.32, BARK, axis=axis, sides=6, rings=4)
-    top = at(axis, 5.6)
-    tips = crown(b, top + Vector((0.3, 0, 1.3)), 2.9, 10, K.lin("#93bd5a"), 45, flat=0.7, spread=0.6, size=(0.36, 0.5), lift=(-0.25, 0.6), segs=8)
-    for q in tips[1:8:3]:
-        limb(w, top, top + (q - top) * 0.8, 0.15, BARK, rise=0.1)
+    """A riverside tree leaning out over the water (+x): a thick stem bowed out and turning back up, its crown full
+    along the last third of it and round its top, hanging lower on the water's side."""
+    rng = random.Random(45)
+    axis = lambda z: Vector((0.95 * z - 0.06 * z * z, 0, 0))
+    trunk(w, 6.0, 0.45, BARK, axis=axis, sides=6, rings=4)
+    spots = []
+    for j, z in enumerate((3.4, 4.3, 5.1, 5.8)):
+        p = at(axis, z)
+        for sg in (-1, 1):
+            spots.append((p + Vector((0.2 * j, sg * rng.uniform(1.0, 1.4), 0.6 + 0.2 * j)), rng.uniform(1.3, 1.6), 1.1, p, 0.7))
+    top = at(axis, 6.0)
+    spots += [(top + Vector((0.4, 0, 1.3)), 2.0, 1.4, None), (top + Vector((1.6, 0.3, 0.2)), 1.5, 1.1, top - Vector((0.3, 0, 0.3)), 0.8),
+              (top + Vector((-1.0, -0.3, 1.0)), 1.5, 1.1, None)]
+    canopy(b, w, None, spots, K.lin("#93bd5a"), 45, limb_r=0.18)
 
 
 TREES = {"forest-tree-" + k: f for k, f in {

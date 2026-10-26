@@ -23,7 +23,6 @@ import QualityGovernor from "./QualityGovernor";
 import { FadeLight, GlowingLamps, LampGlow, LampPool, Lanterns, lampLight } from "./AmbientProps";
 import { GLBProp, sceneryOf } from "./NatureModels";
 import { InstancedModels, MergedModels } from "./InstancedNature";
-import ShipwrightBoat from "./wharf/ShipwrightBoat";
 import { ACNHBuilding, ACNHHouses, ACNHParts, CHALET_VARIANTS, type PartsPlacement } from "./ACNHBuilding";
 import { FenceLine } from "./NatureModels";
 import { BRIDGE_URL, CATCH_BOARD_URL, MAILBOX_URL, MONUMENT_SIGN_URL, NEW_LAMPS, NOTICE_BOARD_URL, STREETLAMP_URL } from "@/lib/game/propModels";
@@ -444,7 +443,14 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   const grassClear = useMemo(() => (x: number, z: number) => island.top(x, z) <= island.ground(x, z) + 0.01, [island]);
   const scenery = useMemo(() => sceneryOf(v, island.ground, look.season), [v, island, look.season]);
   // The new world's still props (our own art: props, the wharf kit, buildings, coral) merge by look into a few draws.
-  const shipwright = useMemo(() => scenery.find(p => p.url.endsWith("/shipwright-shed.glb")), [scenery]);
+  // The plaza fountain at night (David, R2e: "lighting in the fountain"): a glow over its pool, a halo on its top jet and
+  // one warm light in its basin. Its pool is 0.4 up and its jet 3.14 in the model's units.
+  const fountain = useMemo(() => {
+    const f = scenery.find(p => p.url.endsWith("/plaza-fountain.glb"));
+    if (!f) return null;
+    const [x, y, z] = f.position, s = f.scale ?? 1;
+    return { jet: [[x, y + 3.14 * s, z]] as const, water: () => y + 0.36 * s, light: [x, y + 0.9 * s, z] as const };
+  }, [scenery]);
   const [sceneryStill, sceneryMoving] = useMemo(() => (v.terrain ? [scenery.filter(p => STILL.test(p.url)), scenery.filter(p => !STILL.test(p.url))] : [[], scenery]), [v, scenery]);
   // The lamps by model: the street lamp (none), or the new world's (propModels NEW_LAMPS), each turned by its yaw.
   const lampSets = useMemo(() => (["", ...Object.keys(NEW_LAMPS) as (keyof typeof NEW_LAMPS)[]] as const).map(kind => {
@@ -556,10 +562,11 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       {/* Every lamp's warm halo and ground pool, breathing like a flame (two draws a set). */}
       {v.terrain && <LampGlow points={lampPoints} ground={island.ground} on={light.lampsOn} />}
       {v.terrain && <LampGlow points={handPoints} ground={island.ground} on={light.lampsOn} halo={1.1} pool={2.2} />}
+      {fountain && <LampGlow points={fountain.jet} ground={fountain.water} on={light.lampsOn} halo={2.4} pool={3} color="#a8e8ff" />}
+      {fountain && <FadeLight position={fountain.light} color="#ffd59a" intensity={light.lampsOn ? light.lamp * 2 : 0} distance={12} />}
       {layout.campfire && <Campfire site={layout.campfire} ground={island.ground} phase={phase} player={player} />}
       {/* Nature and props from the map, instanced: one draw per model sub-mesh however many the island has. */}
       <InstancedModels items={sceneryMoving} />
-      {shipwright && <Suspense fallback={null}><ShipwrightBoat shed={shipwright} /></Suspense>}
       {sceneryStill.length > 0 && <Suspense fallback={null}><MergedModels items={sceneryStill} /></Suspense>}
       {/* Residents walk their routines on the world clock (residentRoutine.ts); during a ceremony they gather at the monument and cheer.
           While Bram brings a new arrival in and walks them round, his walking self stays out of sight: one Bram. */}

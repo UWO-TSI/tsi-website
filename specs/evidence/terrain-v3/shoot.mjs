@@ -36,6 +36,8 @@ export const VIEWS = {
   "25-wharf-to-beach": { at: [52, 95], yaw: 140, pitch: 0.42, zoom: 1.6 },
   "26-swash": { at: [-2, 110.5], yaw: 20, pitch: 0.5, zoom: 0.75, frames: { count: 2, every: 1800 } },
   "27-forest": { at: [44, -10], yaw: 180, pitch: 0.4, zoom: 1.6 },
+  // R2f: the plaza's heart at night, close.
+  "28-plaza-centre-night": { at: [39, 50], yaw: 270, pitch: 0.45, zoom: 1.2, time: "night" },
 };
 
 // VILLAGE=1: the shipped village instead (no fixture; run the dev server without NEXT_PUBLIC_GAME_WORLD), the launch

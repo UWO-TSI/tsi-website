@@ -12,28 +12,32 @@ Writes, under web/public/assets/game/wharf/, in game units at scale 1:
                    the roof with a big reel at its butt, its line hanging off the front +x corner to a red and white
                    bobber and a lure; a striped awning over a porch with a rack of rods, a lure board on the wall, a
                    serving hatch with a tackle box on its counter, a bait bucket and a landing net by the door.
-  shipwright-shed.glb  the boatbuilder's shed: brown boards under a blue tiled gable, a big ship's wheel on the front
-                   gable, wide doors swung open, a side bay open onto a pier along +x over the water with a lantern
-                   post and a railed gangplank off it to the boat (PLANK_END); a sawhorse with a half-sawn plank and the
-                   saw in the cut, planks leaned on the -x wall, a tool board, a tar barrel, a rope coil.
-  shipwright-boat.glb  the boat being built, afloat beside the shed (BOAT_AT): a keel, a tall stem at the bow (-z),
-                   thirteen ribs standing proud, the lower strakes the whole length and the upper ones stopping short
-                   of the bow, a blue top strake and transom, floorboards, thwarts, loose planks, a bucket, a mallet,
-                   a lantern on a stick at the stern. Its origin on the waterline at its middle, so it can bob.
+  shipwright-ship.glb  the shipwright's ship (art-r2f; David's R2e note, 2026-10-26: "making the building a boat or the
+                   building part of a boat, like a big boat docked to the side you can go in"), in the same frame,
+                   replacing the shed and its boat: a big wooden hull 14 long (bow to +x) alongside the deck's water
+                   edge (z 0), its inboard side 0.35 off it, its main deck at y 0.35; a red bottom, a cream stripe and a
+                   blue top strake, the inboard bow being replanked (the upper strakes off, the ribs bare, a strake
+                   clamped on) inside scaffolding on poles to the seabed with a plank walk and a ladder; a workshop on
+                   the deck (cream boards under a blue shingled gable, a red door with a porthole toward the gangway,
+                   a lantern and a saw-and-hammer sign by it, a stovepipe, a ship's wheel on its bow gable); a raised
+                   stern deck with a rail and the helm's wheel; a mast with two furled sails, a top and a pennant,
+                   shrouds, a bowsprit; fenders; mooring lines to two bollards on the deck; a railed gangway from the
+                   deck (GANG_FOOT) through a gap in the bulwark to the ship's deck (GANG_TOP); planks, a sawhorse,
+                   barrels, a crate and a coil on board. Nobody goes aboard for launch.
 
 Wood is the wharf's grain under COLOR_0, rope its rope, the net the dock decor's; the rest the shared plain presets
 (P_Paint, P_Glass, P_Metal). Seeded.
 """
 import math, os, sys
 import numpy as np
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "props"))
 sys.path.insert(0, HERE)
 import propkit as K  # noqa: E402
 from build_wharf_kit import DARK, LIGHT, WATER, mix, report, wet, wood_mat  # noqa: E402
-from build_dock_decor import ROPE, coil, net_texture  # noqa: E402
+from build_dock_decor import ROPE, coil, crate, net_texture  # noqa: E402
 from build_ship_houses import BEAM, FLOOR, Wall, boards, corners, door, gable, lantern, pile, platform, post, window  # noqa: E402
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
@@ -253,189 +257,243 @@ def tackle_shop(M, Mp, Mg, Mr, Mm, Mn):
 
 
 # ================================================================ the shipwright
-BOAT_AT = (5.4, WATER, -3.6)        # where the boat's origin sits in the shed's frame (on the sea's level); see the docstring
-PLANK_END = (4.3, 0.16, -2.0)       # the gangplank's far end in the shed's frame, just over the boat's gunwale
 
-
-def shipwright_shed(M, Mp, Mg, Mr, Mm):
-    k = K.Kit("shipwright-shed")
-    W, D, H, RID = 3.8, 4.0, 2.6, 4.5
-    WALL, TRIM, ROOF = ("#a8784e", "#8d6240"), "#efe6d6", ("#4f7fa6", "#5b8db5", "#456f94", "#5687ae")
-    platform(k, M, W, D)
-    front, back = Wall((0, 0, D / 2), 0), Wall((0, 0, -D / 2), math.pi)
-    left, right = Wall((-W / 2, 0, 0), -math.pi / 2), Wall((W / 2, 0, 0), math.pi / 2)
-    gtop = lambda a: H + (RID - H - 0.15) * (1 - abs(a) / (W / 2 + 0.4))
-    boards(k, M, front, W / 2, FLOOR, gtop, WALL, skip=[(-1.1, 1.1, 0, 2.3)])
-    boards(k, M, back, W / 2, FLOOR, gtop, WALL, skip=[(-0.45, 0.45, 1.15, 1.85)])
-    boards(k, M, left, D / 2, FLOOR, lambda a: H, WALL, skip=[(-0.45, 0.45, 1.1, 1.8)])
-    boards(k, M, right, D / 2, FLOOR, lambda a: H, WALL, skip=[(-1.55, 0.1, 0, 2.3)])
-    corners(k, M, W, D, H, TRIM)
-    for w in (front, back):
-        k.rbox(w.p(0, H, 0.05), (W + 0.1, 0.12, 0.06), 0.01, M, TRIM, rot=w.rot, segs=1)
-    # The wide front doors swung open, the dark inside, a header beam; the side bay open to the pier (+x).
-    for w, a, half in ((front, 0.0, 1.1), (right, -0.725, 0.825)):
-        k.rbox(w.p(a, 1.15, -0.25), (2 * half, 2.3, 0.03), 0.0, M, "#2b2420", rot=w.rot, segs=1)
-        k.beam(w.p(a - half - 0.1, 2.38, 0.06), w.p(a + half + 0.1, 2.38, 0.06), 0.16, 0.18, 0.02, M, BEAM, segs=1)
-    for s in (-1, 1):
-        lw = Wall(front.p(s * 1.1, 0, 0.55), -s * math.pi / 2 + s * 0.35)
-        for i in range(3):
-            k.rbox(lw.p((i - 1) * 0.36 * -s, 1.15 + FLOOR, 0.0), (0.34, 2.25, 0.06), 0.01, M, mix("#c0583c", "#20303a", 0.1 * i), rot=lw.rot, segs=1,
-                   uv_len=1.2, v_axis=1)
-        k.beam(lw.p(-0.5 * s, 0.4, 0.04), lw.p(0.5 * s, 1.9, 0.04), 0.08, 0.05, 0.01, M, TRIM, segs=1)
-    window(k, M, Mg, back, 0.0, 1.5, 0.9, 0.7, TRIM)
-    window(k, M, Mg, left, 0.0, 1.45, 0.9, 0.7, TRIM, shutter="#c0583c")
-    gable(k, M, (0, 0, 0), (0, 0, 1), D / 2 + 0.4, W / 2 + 0.4, H - 0.15, RID, 6, 9, ROOF, 51, barge=TRIM)
-    # A big ship's wheel on the front gable: the rim, eight spokes through it to turned handles, a brass hub.
-    wc, R = Vector(front.p(0, RID - 1.05, 0.22)), 0.62
-    k.tube([tuple(wc + Vector((math.cos(a) * R, math.sin(a) * R, 0))) for a in np.linspace(0, math.tau, 16, endpoint=False)], 0.07, M, "#7a4a2a", n=6,
-           closed_path=True)
-    k.tube([tuple(wc + Vector((math.cos(a) * R * 0.55, math.sin(a) * R * 0.55, 0.02))) for a in np.linspace(0, math.tau, 12, endpoint=False)], 0.035, M,
-           "#7a4a2a", n=5, closed_path=True)
+def wheel(k, M, Mm, w, a, y, R, out=0.0):
+    """A ship's wheel on wall w's plane, its hub at (a, y) and `out` off it: the rim, eight spokes through it to turned
+    handles, a brass hub."""
+    wc = Vector(w.p(a, y, out))
+    on = lambda ang, r, o=0.0: tuple(wc + w.t * math.cos(ang) * r + Vector((0, math.sin(ang) * r, 0)) + w.n * o)
+    k.tube([on(ang, R) for ang in np.linspace(0, math.tau, 16, endpoint=False)], 0.07 * R / 0.62, M, "#7a4a2a", n=6, closed_path=True)
+    k.tube([on(ang, R * 0.55, 0.02) for ang in np.linspace(0, math.tau, 12, endpoint=False)], 0.035 * R / 0.62, M, "#7a4a2a", n=5, closed_path=True)
     for i in range(8):
-        a = i * math.tau / 8 + math.pi / 8
-        dvec = Vector((math.cos(a), math.sin(a), 0))
-        k.beam(tuple(wc), tuple(wc + dvec * (R + 0.08)), 0.06, 0.05, 0.01, M, "#8a5a32", up=(0, 0, 1), segs=1)
+        ang = i * math.tau / 8 + math.pi / 8
+        dvec = Vector(on(ang, 1.0)) - wc
+        k.beam(tuple(wc), tuple(wc + dvec * (R + 0.08)), 0.06, 0.05, 0.01, M, "#8a5a32", up=tuple(w.n), segs=1)
         k.lathe(tuple(wc + dvec * (R + 0.07)), [(0.0, 0.0), (0.05, 0.0), (0.06, 0.12), (0.04, 0.2), (0.055, 0.27), (0.0, 0.31)], M, "#8a5a32", d=tuple(dvec), n=6)
-    k.lathe(tuple(wc), [(0.0, -0.1), (0.13, -0.1), (0.13, 0.08), (0.0, 0.12)], Mm, "#c79a3c", d=(0, 0, 1), n=10)
+    k.lathe(tuple(wc), [(0.0, -0.1), (0.13, -0.1), (0.13, 0.08), (0.0, 0.12)], Mm, "#c79a3c", d=tuple(w.n), n=10)
 
-    # The side pier along +x over the water, on its own piles, the gangplank off its far edge to the boat.
-    px0, px1, pz0, pz1 = W / 2 + 0.25, W / 2 + 1.55, -D / 2 - 0.25, 0.4
-    for i in range(5):
-        z = pz0 + (i + 0.5) * (pz1 - pz0) / 5
-        k.rbox(((px0 + px1) / 2 + rng.uniform(-0.03, 0.03), FLOOR - 0.05, z), (px1 - px0, 0.1, (pz1 - pz0) / 5 - 0.03), 0.015, M, mix(DARK, LIGHT, rng.uniform(0.3, 0.9)),
-               segs=1, uv_len=2.0, v_axis=0)
-    for x, z in ((px1 - 0.12, pz0 + 0.12), (px1 - 0.12, pz1 - 0.12), (px1 - 0.12, (pz0 + pz1) / 2)):
-        pile(k, M, x, z, r=0.12)
-    gx0, (gx1, gy1, gz) = px1 - 0.1, PLANK_END
-    for s in (-1, 1):                                             # two runners, cleats across them, rope rails on stanchions
-        k.beam((gx0, FLOOR + 0.02, gz + s * 0.28), (gx1, gy1 + 0.02, gz + s * 0.28), 0.08, 0.1, 0.01, M, BEAM, segs=1)
-    n = 7
+
+# ================================================================ the shipwright's ship (art-r2f)
+LS, BS = 7.0, 2.4                    # the ship's half length (x, the bow to +x) and half beam
+ZC = -0.35 - BS                      # its middle line: the inboard side clears the deck's water edge (z 0) by 0.35
+DECK_Y = 0.35                        # its main deck, a step up from the wharf
+POOP_Y = DECK_Y + 0.8                # the raised deck at the stern, the wheel on it
+GANG_FOOT, GANG_TOP = Vector((1.3, FLOOR, 1.7)), Vector((1.3, DECK_Y + 0.02, -0.8))   # the gangway's ends: on the wharf, on the deck
+GAP = (0.75, 1.85)                   # the gangway's gap in the inboard bulwark (x)
+
+
+def ship_hull(u, s, side=1):
+    """A point on the ship's skin: u along it (-1 the transom, 1 the stem), s from the keel (0) to the gunwale (1),
+    side 1 inboard (toward the wharf, +z) or -1 out to sea."""
+    bg = BS * ((1 - u ** 1.8) if u > 0 else (1 - 0.35 * u * u))
+    yk = -2.4 + 2.2 * max(0.0, u) ** 3 + 0.5 * max(0.0, -u) ** 3
+    yg = 1.15 + 1.0 * max(0.0, u) ** 2.2 + 0.7 * max(0.0, -u) ** 2
+    return Vector((u * LS, yk + (yg - yk) * s ** 1.25, ZC + side * bg * math.sin(s * math.pi / 2) ** 0.55))
+
+
+def ship_half(u, y):
+    """The hull's half width inside at height y, station u."""
+    lo, hi = ship_hull(u, 0.0).y, ship_hull(u, 1.0).y
+    s = min(1.0, max(0.0, (y - lo) / (hi - lo))) ** 0.8
+    return ship_hull(u, s).z - ZC
+
+
+def ship_deck(k, M, y, x0, x1, n, inset=0.12):
+    """Planks along x at height y from x0 to x1, n across, each stopping where the hull narrows round it."""
+    w = 2 * BS / n
     for i in range(n):
-        t = (i + 0.5) / n
-        k.rbox((gx0 + (gx1 - gx0) * t, FLOOR + 0.09 + (gy1 - FLOOR) * t, gz), (1.2 / n - 0.03, 0.05, 0.7), 0.01, M, mix(DARK, LIGHT, rng.uniform(0.4, 0.95)),
-               rot=K.game_rot(roll=math.atan2(gy1 - FLOOR, gx1 - gx0)), segs=1, uv_len=1.5, v_axis=2)
-    for s in (-1, 1):
-        tops = []
-        for t in (0.08, 0.92):
-            x, y = gx0 + (gx1 - gx0) * t, FLOOR + (gy1 - FLOOR) * t
-            k.beam((x, y + 0.08, gz + s * 0.32), (x, y + 0.85, gz + s * 0.32), 0.05, 0.05, 0.01, M, TRIM, segs=1)
-            tops.append(Vector((x, y + 0.82, gz + s * 0.32)))
-        k.tube([tuple(tops[0] + (tops[1] - tops[0]) * t - Vector((0, 0.08 * math.sin(math.pi * t), 0))) for t in np.linspace(0, 1, 6)], 0.018, Mr, ROPE, n=4)
-    # A lantern post at the pier's corner by the gangplank.
-    lp = (px1 - 0.12, pz1 - 0.12)
-    k.beam((lp[0], FLOOR, lp[1]), (lp[0], 2.1, lp[1]), 0.1, 0.1, 0.01, M, BEAM, segs=1)
-    lantern(k, Mm, Mg, Wall((lp[0], 0, lp[1]), math.pi / 2), 0.0, 1.75)
-
-    # Out front: a sawhorse with a plank on it half sawn, the saw in the cut, shavings; planks leaned on the -x wall;
-    # a tool board by the door; a tar barrel, a rope coil, a mallet.
-    sx_, sz_ = -0.6, D / 2 + 0.75
-    for x in (sx_ - 0.45, sx_ + 0.45):
-        for s in (-1, 1):
-            k.beam((x + 0.0, FLOOR, sz_ + s * 0.25), (x, 0.62, sz_), 0.06, 0.06, 0.01, M, "#8a6a4c", up=(1, 0, 0), segs=1)
-    k.rbox((sx_, 0.66, sz_), (1.2, 0.08, 0.1), 0.01, M, "#7a5434", segs=1, uv_len=1.5, v_axis=0)
-    k.rbox((sx_ + 0.15, 0.74, sz_), (1.9, 0.06, 0.3), 0.01, M, mix(DARK, LIGHT, 0.85), segs=1, uv_len=2.0, v_axis=0)
-    blade = [(0.0, 0.0), (0.6, 0.0), (0.6, 0.06), (0.0, 0.16)]
-    k.extrude(blade, -0.006, 0.006, Mm, "#c9ccd0", rot=K.game_rot(yaw=math.pi / 2, roll=-0.25), at=(sx_ + 0.75, 0.66, sz_ + 0.25))
-    k.rbox((sx_ + 0.75, 0.86, sz_ + 0.27), (0.07, 0.16, 0.05), 0.02, M, "#c0583c", rot=K.game_rot(roll=-0.25), segs=1)
-    for i in range(7):
-        k.blob((sx_ + 0.6 + rng.uniform(-0.25, 0.25), FLOOR + 0.01, sz_ + rng.uniform(-0.3, 0.3)), (0.05, 0.015, 0.04), Mp, "#e8cfa0", segs=5, rings=2)
-    for i in range(5):
-        x = -W / 2 - 0.12 - i * 0.07
-        k.beam((x - 0.5, FLOOR, D / 2 - 0.3 - i * 0.55), (x, 2.5 - i * 0.1, D / 2 - 0.35 - i * 0.55 + rng.uniform(-0.1, 0.1)), 0.32, 0.05, 0.01, M,
-               mix(DARK, LIGHT, rng.uniform(0.5, 1.0)), up=(1, 0, 0), segs=1, uv_len=2.0)
-    tb = Wall(front.p(1.55, 0, 0.05), 0)
-    k.rbox(tb.p(0, 1.45, 0.0), (0.5, 0.9, 0.04), 0.01, M, "#e9dcc0", rot=tb.rot, segs=1)
-    k.beam(tb.p(-0.05, 1.05, 0.05), tb.p(-0.05, 1.45, 0.05), 0.04, 0.03, 0.0, M, "#c0583c", segs=1)        # a hammer
-    k.rbox(tb.p(-0.05, 1.48, 0.06), (0.2, 0.06, 0.06), 0.01, Mm, "#5d6168", rot=tb.rot, segs=1)
-    k.extrude([(0.0, 0.0), (0.12, 0.0), (0.12, 0.22), (0.0, 0.3)], -0.01, 0.01, Mm, "#c9ccd0", rot=tb.rot, at=tb.p(0.06, 1.55, 0.05))   # a chisel and a square
-    k.extrude([(0.0, 0.0), (0.05, 0.0), (0.05, 0.3), (0.0, 0.3)], -0.01, 0.01, Mm, "#c79a3c", rot=tb.rot, at=tb.p(0.1, 1.1, 0.05))
-    k.extrude([(0.0, 0.0), (0.2, 0.0), (0.2, 0.04), (0.0, 0.04)], -0.01, 0.01, Mm, "#c79a3c", rot=tb.rot, at=tb.p(0.1, 1.1, 0.05))
-    bx, bz = 1.35, D / 2 + 0.55
-    k.lathe((bx, FLOOR, bz), [(0.0, 0.0), (0.24, 0.0), (0.28, 0.35), (0.24, 0.7), (0.0, 0.7)], M, "#4a3a2e", n=10, wobble=lambda kk, i: 1.0)
-    for y in (0.12, 0.58):
-        k.lathe((bx, FLOOR + y, bz), [(0.26 + (0.02 if y > 0.3 else 0.0), -0.03), (0.26 + (0.02 if y > 0.3 else 0.0), 0.03)], Mm, "#3d3936", n=10)
-    k.blob((bx, FLOOR + 0.69, bz), (0.22, 0.02, 0.22), Mp, "#1d1a18", segs=10, rings=2)
-    coil(k, Mr, (px0 + 0.6, FLOOR, -0.4), r1=0.24)
-    k.tint_gradient(0.84, 1.0, 0.0, RID)
-    wet(k)
-    return k.finish(smooth_deg=40)
+        o = -BS + (i + 0.5) * w
+        xs = [u * LS for u in np.linspace(-1, 1, 81) if x0 <= u * LS <= x1 and ship_half(u, y) - inset > abs(o) + w / 2]
+        if len(xs) < 2:
+            continue
+        k.rbox(((xs[0] + xs[-1]) / 2, y - 0.04, ZC + o), (xs[-1] - xs[0], 0.08, w - 0.03), 0.0, M, mix(DARK, LIGHT, rng.uniform(0.45, 1.0)), segs=1,
+               uv_len=2.0, v_axis=0, uv_off=(rng.random(), rng.random()))
 
 
-BB, LH = 1.25, 3.5                   # the boat's half beam and half length
-
-
-def hull(u, s):
-    """A point on the hull's starboard (+x) skin: u along it (-1 the bow, out at -z; 1 the transom), s from the keel (0)
-    to the gunwale (1). The origin sits on the waterline at the middle."""
-    bg = BB * ((1 - (-u) ** 1.6) if u < 0 else (1 - 0.4 * u * u))
-    yk = -0.45 + 0.55 * max(0.0, -u) ** 3 + 0.12 * u ** 4
-    yg = 1.1 + 0.25 * u * u + 0.6 * max(0.0, -u) ** 2.5
-    return Vector((bg * math.sin(s * math.pi / 2) ** 0.55, yk + (yg - yk) * s ** 1.25, u * LH))
-
-
-def shipwright_boat(M, Mp, Mr, Mm):
-    """A boat being built, afloat: ribs on a keel, the lower strakes and the stern planked, the upper bow open."""
-    k = K.Kit("shipwright-boat")
-    U = list(np.linspace(-0.97, 1.0, 24))
-    pt = lambda u, s, side, out=0.0: (lambda p: Vector((side * (p.x + out), p.y - out * 0.3, p.z)))(hull(u, s))
-    # Strakes: nine a side; the lowest six run the whole length, the upper ones stop short of the bow, each further
-    # aft than the one below (the starboard side further on than port); the top one painted.
-    NS = 9
+def shipwright_ship(M, Mp, Mg, Mr, Mm):
+    """The shipwright's ship, docked along the wharf: a big wooden hull with a little workshop built on its deck."""
+    k = K.Kit("shipwright-ship")
+    # The hull: ten strakes a side, red below, wood, a cream stripe and a blue top strake; on the inboard side the
+    # upper strakes stop short of the bow, each further aft than the one below (it's being replanked), and the
+    # bulwark's open for the gangway.
+    U = list(np.linspace(-1.0, 1.0, 25))
+    NS = 10
     for side in (-1, 1):
         for j in range(NS):
-            s0, s1 = 0.04 + j * 0.96 / NS, 0.04 + (j + 1) * 0.96 / NS - 0.012
-            cut = -2.0 if j < 6 else -0.45 + 0.3 * (j - 6) + (0.0 if side > 0 else 0.15)
-            us = [u for u in U if u >= cut]
-            if len(us) < 2:
-                continue
-            col = mix("#b98a5a", "#d7aa74", rng.uniform(0, 1)) if j < NS - 1 else "#3f7fb8"
-            for u0, u1 in zip(us, us[1:]):
-                q = [pt(u0, s0, side, 0.04), pt(u1, s0, side, 0.04), pt(u1, s1, side, 0.04), pt(u0, s1, side, 0.04)]
-                uv = [(u0 * LH, s0 * 4), (u1 * LH, s0 * 4), (u1 * LH, s1 * 4), (u0 * LH, s1 * 4)]
-                if side < 0:
+            s0, s1 = j / NS, (j + 1) / NS - 0.008
+            cut = 0.42 + 0.1 * (NS - 1 - j) if side > 0 and j >= 5 else 2.0
+            col = "#8a4a36" if j < 5 else "#efe6d6" if j == 8 else "#3f6a9a" if j == 9 else mix("#a8784e", "#c9955f", rng.uniform(0, 1))
+            for u0, u1 in zip(U, U[1:]):
+                if u1 > cut + 1e-6 or (side > 0 and j >= 8 and GAP[0] < (u0 + u1) / 2 * LS < GAP[1]):
+                    continue
+                q = [ship_hull(u0, s0, side), ship_hull(u1, s0, side), ship_hull(u1, s1, side), ship_hull(u0, s1, side)]
+                uv = [(u0 * LS / 2, s0 * 6), (u1 * LS / 2, s0 * 6), (u1 * LS / 2, s1 * 6), (u0 * LS / 2, s1 * 6)]
+                if side > 0:
                     q, uv = q[::-1], uv[::-1]
                 k.face([k.vert(tuple(p)) for p in q], uv, M, col)
-    # Ribs: a square-ish frame round the section at each station, standing proud of the gunwale.
-    for u in np.linspace(-0.88, 0.9, 13):
-        path = [pt(u, 1.12 - i / 6 * 1.12, -1) for i in range(7)] + [pt(u, i / 6 * 1.12, 1) for i in range(1, 7)]
-        k.tube([tuple(p) for p in path], 0.06, M, "#8a5a32", n=4, caps=True)
-    # The keel, the stem rising at the bow, the transom, a ribband along each gunwale.
-    keel = [hull(u, 0.0) - Vector((0, 0.07, 0)) for u in np.linspace(-0.9, 1.0, 12)]
-    k.tube([tuple(p) for p in keel], 0.1, M, "#6e4a30", n=6)
-    y0, y1 = hull(-0.97, 0.0).y, hull(-1.0, 1.0).y
-    stem = [hull(-0.9, 0.0)] + [Vector((0, y0 + (y1 - y0) * t, -LH - 0.2 * math.sin(t * math.pi / 2) - 0.03)) for t in np.linspace(0, 1, 7)]
-    stem.append(Vector((0, y1 + 0.35, -LH - 0.26)))
-    k.tube([tuple(p) for p in stem], 0.1, M, "#6e4a30", n=6, caps=True)
-    rim = [hull(1.0, s) for s in np.linspace(0, 1, 7)]
-    ring = [Vector((-p.x, p.y, p.z + 0.04)) for p in rim[::-1]] + [Vector((p.x, p.y, p.z + 0.04)) for p in rim[1:]]
-    cen = k.vert(tuple(sum(ring, Vector()) / len(ring)))
-    vs = [k.vert(tuple(p)) for p in ring]
+    # The ribs bared where it's being replanked, the stem rising at the bow, the transom with its stern windows.
+    for u in np.linspace(0.5, 0.92, 4):
+        path = [ship_hull(u, 1.0 - i / 6, -1) for i in range(6)] + [ship_hull(u, i / 6 * 1.06, 1) for i in range(7)]
+        k.tube([tuple(p + (Vector((0, 0, ZC)) - Vector((0, 0, p.z))) * 0.05) for p in path], 0.07, M, "#8a5a32", n=4, caps=True)
+    k.tube([(LS - 0.4, -0.75, ZC), (LS, -0.15, ZC), (LS + 0.12, 1.0, ZC), (LS + 0.2, 2.5, ZC)], 0.13, M, "#6e4a30", n=6, caps=True)
+    rim = [ship_hull(-1.0, s, -1) for s in np.linspace(1, 0, 6)] + [ship_hull(-1.0, s, 1) for s in np.linspace(0, 1, 6)[1:]]
+    cen = k.vert(tuple(sum(rim, Vector()) / len(rim) + Vector((-0.02, 0, 0))))
+    vs = [k.vert(tuple(p + Vector((-0.02, 0, 0)))) for p in rim]
     for i in range(len(vs) - 1):
-        k.face([cen, vs[i + 1], vs[i]], [(0.5, 0.5), (i / 12, 1), ((i + 1) / 12, 1)], M, "#3f7fb8")
+        k.face([cen, vs[i], vs[i + 1]], [(0.5, 0.5), (i / 10, 1), ((i + 1) / 10, 1)], M, "#3f6a9a")
+    stern = Wall((-LS - 0.04, POOP_Y, ZC), -math.pi / 2)
+    for a in (-0.5, 0.5):
+        window(k, M, Mg, stern, a, 0.15, 0.45, 0.42, "#efe6d6")
+    # The cap rail along each gunwale (broken at the gangway), fenders hung on the inboard side, mooring lines to two
+    # bollards on the wharf.
     for side in (-1, 1):
-        k.tube([tuple(pt(u, 1.0, side, 0.06) + Vector((0, 0.04, 0))) for u in U], 0.05, M, "#6e4a30", n=5, caps=True)
-    # Inside: thwarts, floorboards, loose planks, a bucket and a mallet; a lantern on a stick at the stern; a blank name
-    # board on the transom; a line off the bow.
-    for z, s in ((1.6, 0.8), (-0.4, 0.84)):
-        p = hull(z / LH, s)
-        k.rbox((0, p.y, z), (2 * p.x + 0.06, 0.07, 0.36), 0.01, M, mix(DARK, LIGHT, 0.8), segs=1, uv_len=2.0, v_axis=0)
-    for x in (-0.36, -0.12, 0.12, 0.36):
-        k.rbox((x, -0.2, 0.3), (0.22, 0.05, 4.4), 0.01, M, mix(DARK, LIGHT, rng.uniform(0.5, 0.9)), segs=1, uv_len=2.0, v_axis=2)
-    for i in range(3):
-        k.beam((-0.55 + i * 0.14, -0.14 + i * 0.06, -1.9 - i * 0.12), (0.45 + i * 0.12, 0.35 + i * 0.14, 0.9 + i * 0.25), 0.28, 0.05, 0.01, M,
-               mix("#b98a5a", "#d7aa74", rng.uniform(0, 1)), up=(0, 1, 0), segs=1, uv_len=2.0)
-    k.lathe((0.45, -0.17, 2.3), [(0.0, 0.0), (0.15, 0.0), (0.18, 0.3), (0.0, 0.3)], Mm, "#8fa3ad", n=10)
-    k.lathe((-0.4, -0.04, 1.9), [(0.0, -0.13), (0.1, -0.13), (0.1, 0.13), (0.0, 0.13)], M, "#c0583c", d=(1, 0, 0), n=8)
-    k.beam((-0.4, -0.04, 1.9), (-0.1, 0.01, 2.3), 0.04, 0.04, 0.01, M, "#c9a072", segs=1)
-    top = hull(1.0, 1.0)
-    k.beam((0.0, top.y - 0.4, top.z - 0.2), (0.0, top.y + 1.4, top.z - 0.2), 0.07, 0.07, 0.01, M, BEAM, segs=1)
-    lantern(k, Mm, Mp, Wall((0.0, 0, top.z - 0.2), math.pi / 2), 0.0, top.y + 1.05)
-    k.rbox((0.0, top.y - 0.35, top.z + 0.09), (1.1, 0.24, 0.05), 0.01, Mp, "#efe6d6", segs=1)
-    bow = Vector((0, y1 + 0.2, -LH - 0.25))
-    k.tube([tuple(bow), tuple(bow + Vector((0.4, -0.6, -0.5))), tuple(bow + Vector((0.6, -1.2, -0.6)))], 0.025, Mr, ROPE, n=4)
-    k.tint_gradient(0.84, 1.0, -0.45, 1.8)
-    wet(k, below=0.0)
-    return k.finish(smooth_deg=45)
+        runs = [[u for u in U if u * LS < GAP[0]], [u for u in U if u * LS > GAP[1]]] if side > 0 else [U]
+        for run in runs:
+            k.tube([tuple(ship_hull(u, 1.0, side) + Vector((0, 0.05, 0))) for u in run], 0.08, M, "#6e4a30", n=4, caps=True)
+    for x in (-3.0, -0.4, 3.0):
+        p = ship_hull(x / LS, 1.0)
+        k.tube([tuple(p), tuple(p + Vector((0, -0.35, 0.12)))], 0.012, Mr, ROPE, n=3)
+        k.lathe(tuple(p + Vector((0, -0.62, 0.15))), [(0.0, -0.28), (0.15, -0.26), (0.17, 0.0), (0.15, 0.26), (0.0, 0.28)], Mr, ROPE, n=6)
+    for u, (bx, bz) in ((0.66, (5.6, 0.55)), (-0.82, (-6.0, 0.55))):
+        k.lathe((bx, FLOOR, bz), [(0.0, 0.0), (0.17, 0.0), (0.14, 0.3), (0.2, 0.36), (0.2, 0.44), (0.0, 0.44)], Mm, "#3d3936", n=8)
+        a, b = ship_hull(u, 1.0) + Vector((0, 0.05, 0)), Vector((bx, FLOOR + 0.3, bz))
+        k.tube([tuple(a + (b - a) * t - Vector((0, 0.25 * math.sin(math.pi * t), 0))) for t in np.linspace(0, 1, 6)], 0.03, Mr, ROPE, n=4)
+    # The decks: the main deck, and the raised deck at the stern on its boarded front (the workshop backs onto it),
+    # railed, the wheel on it.
+    ship_deck(k, M, DECK_Y, -LS * 0.66, LS * 0.92, 9)
+    ship_deck(k, M, POOP_Y, -LS, -4.0, 9, inset=0.05)
+    poop = Wall((-4.0, DECK_Y, ZC), math.pi / 2)
+    hw = ship_half(-4.0 / LS, POOP_Y)
+    boards(k, M, poop, hw, 0.0, lambda a: POOP_Y - DECK_Y, (BEAM, "#6e4a30"))
+    for side in (-1, 1):
+        pts = [Vector((u * LS, POOP_Y + 0.8, ZC + side * (ship_half(u, POOP_Y) - 0.08))) for u in np.linspace(-0.98, -4.0 / LS, 6)]
+        k.tube([tuple(p) for p in pts], 0.05, M, "#efe6d6", n=4, caps=True)
+        for p in pts:
+            k.beam(tuple(p - Vector((0, 0.8, 0))), tuple(p), 0.06, 0.06, 0.0, M, "#efe6d6", segs=1)
+        a = Vector((-4.0, POOP_Y + 0.8, ZC + side * (hw - 0.08)))
+        b = Vector((-4.0, POOP_Y + 0.8, ZC + side * 1.5))
+        k.beam(tuple(a), tuple(b), 0.07, 0.05, 0.0, M, "#efe6d6", segs=1)
+        for t in np.linspace(0.1, 0.9, 4):
+            p = a + (b - a) * t
+            k.beam(tuple(p - Vector((0, 0.8, 0))), tuple(p), 0.07, 0.07, 0.0, M, "#efe6d6", segs=1)
+    k.beam((-5.3, POOP_Y, ZC), (-5.3, POOP_Y + 0.95, ZC), 0.16, 0.16, 0.0, M, BEAM, segs=1)
+    wheel(k, M, Mm, Wall((-5.3, POOP_Y, ZC), math.pi / 2), 0.0, 1.05, 0.48, out=0.14)
+    # The workshop on the main deck: cream boards under a blue shingled gable, a red door with a porthole toward the
+    # gangway, a lantern by it and a sign over it (a saw and a hammer), windows, a stovepipe; a big ship's wheel on the
+    # gable toward the bow.
+    X0, X1, HD, H, RID = -3.95, 0.35, 1.45, 2.3, 3.5
+    WALL, TRIM, ROOF = ("#e9dcc0", "#cdbb98"), "#5a3b26", ("#4f7fa6", "#5b8db5", "#456f94", "#5687ae")
+    xm, half = (X0 + X1) / 2, (X1 - X0) / 2
+    front, back = Wall((xm, DECK_Y, ZC + HD), 0), Wall((xm, DECK_Y, ZC - HD), math.pi)
+    bow_end, stern_end = Wall((X1, DECK_Y, ZC), math.pi / 2), Wall((X0, DECK_Y, ZC), -math.pi / 2)
+    gtop = lambda a: H + (RID - H - 0.15) * (1 - abs(a) / (HD + 0.4))
+    door_a = 1.2
+    boards(k, M, front, half, FLOOR, lambda a: H, WALL, skip=[(door_a - 0.48, door_a + 0.48, 0, 1.95), (-0.75, 0.05, 1.0, 1.75), (-1.85, -1.05, 1.0, 1.75)])
+    boards(k, M, back, half, FLOOR, lambda a: H, WALL, skip=[(-0.6, 0.6, 1.0, 1.75)])
+    boards(k, M, bow_end, HD, FLOOR, gtop, WALL, skip=[(-0.35, 0.35, 0.95, 1.65)])
+    boards(k, M, stern_end, HD, FLOOR, gtop, WALL)
+    for x in (X0, X1):
+        for z in (ZC - HD, ZC + HD):
+            post(k, M, (x, DECK_Y, z), (x, DECK_Y + H + 0.05, z), w=0.16, col=TRIM, r=0.0)
+    door(k, M, Mp, Mg, front, door_a, 0.9, 1.9, "#c0583c", TRIM, porthole=True)
+    for a in (-0.35, -1.45):
+        window(k, M, Mg, front, a, 1.38, 0.7, 0.65, TRIM, shutter="#3f6a9a")
+    window(k, M, Mg, back, 0.0, 1.38, 1.1, 0.65, TRIM)
+    window(k, M, Mg, bow_end, 0.0, 1.3, 0.6, 0.6, TRIM)
+    lantern(k, Mm, Mg, front, door_a + 0.75, 1.55)
+    k.rbox(front.p(door_a, 2.13, 0.06), (1.2, 0.3, 0.05), 0.0, Mp, "#efe6d6", rot=front.rot, segs=1)
+    k.extrude([(0.0, 0.0), (0.42, 0.0), (0.42, 0.05), (0.0, 0.12)], -0.012, 0.012, Mm, "#9aa1a8", rot=front.rot @ Matrix.Rotation(0.35, 3, "Z"),
+              at=front.p(door_a - 0.45, 2.04, 0.1))                                               # the saw
+    k.rbox(front.p(door_a - 0.1, 2.12, 0.1), (0.1, 0.17, 0.04), 0.0, Mp, "#c0583c", rot=front.rot @ Matrix.Rotation(0.35, 3, "Z"), segs=1)
+    k.beam(front.p(door_a + 0.28, 2.0, 0.1), front.p(door_a + 0.48, 2.24, 0.1), 0.04, 0.03, 0.0, Mp, "#a8784e", up=tuple(front.n), segs=1)   # the hammer
+    k.rbox(front.p(door_a + 0.5, 2.24, 0.1), (0.2, 0.07, 0.05), 0.0, Mm, "#5d6168", rot=front.rot @ Matrix.Rotation(-0.7, 3, "Z"), segs=1)
+    gable(k, M, (xm, DECK_Y, ZC), (1, 0, 0), half + 0.35, HD + 0.4, H - 0.15, RID, 5, 10, ROOF, 71, barge=TRIM)
+    k.lathe((-2.9, 0, ZC - 0.75), [(0.0, DECK_Y + 2.6), (0.11, DECK_Y + 2.6), (0.11, DECK_Y + 4.2), (0.16, DECK_Y + 4.25), (0.16, DECK_Y + 4.35), (0.0, DECK_Y + 4.35)],
+            Mm, "#3d3936", n=8)
+    wheel(k, M, Mm, bow_end, 0.0, RID - 0.95, 0.5, out=0.12)
+    # The mast forward of the workshop: two yards with their sails furled, a top, a pennant, shrouds to the gunwales;
+    # the bowsprit and a stay to it.
+    MX = 2.9
+    k.lathe((MX, 0, ZC), [(0.0, DECK_Y - 0.1), (0.17, DECK_Y - 0.1), (0.15, 6.0), (0.1, 9.3), (0.0, 9.45)], M, "#8a5a32", n=8, v_len=2.0)
+    for y, L in ((4.4, 2.3), (7.0, 1.8)):
+        k.tube([(MX + 0.18, y, ZC - L), (MX + 0.18, y, ZC + L)], 0.08, M, "#6e4a30", n=5, caps=True)
+        k.tube([(MX + 0.32, y - 0.18 - 0.08 * math.sin(math.pi * t), ZC - L * 0.95 + 2 * L * 0.95 * t) for t in np.linspace(0, 1, 7)], 0.2, Mp, "#efe6d6", n=6, caps=True,
+               radii=[0.5, 1.0, 0.85, 1.05, 0.85, 1.0, 0.5])
+    k.lathe((MX, 7.9, ZC), [(0.0, -0.08), (0.55, -0.08), (0.55, 0.08), (0.0, 0.08)], M, "#6e4a30", n=8)
+    k.extrude([(0.0, 0.0), (0.0, -0.32), (1.1, -0.15)], -0.01, 0.01, Mp, "#c0583c", at=(MX, 9.35, ZC))
+    for side in (-1, 1):
+        for x in (MX - 0.7, MX, MX + 0.7):
+            k.tube([(MX, 7.7, ZC), tuple(ship_hull(x / LS, 1.0, side) + Vector((0, 0.05, 0)))], 0.022, Mr, ROPE, n=3)
+    tip = Vector((LS + 3.6, 3.4, ZC))
+    k.lathe((LS - 0.6, 1.95, ZC), [(0.0, 0.0), (0.16, 0.0), (0.09, (tip - Vector((LS - 0.6, 1.95, ZC))).length), (0.0, (tip - Vector((LS - 0.6, 1.95, ZC))).length)],
+            M, "#6e4a30", d=tuple((tip - Vector((LS - 0.6, 1.95, ZC))).normalized()), n=6)
+    k.tube([(MX, 9.1, ZC), tuple(tip)], 0.022, Mr, ROPE, n=3)
+    k.tube([(MX, 9.1, ZC), (-LS + 0.3, POOP_Y + 0.8, ZC)], 0.022, Mr, ROPE, n=3)
+    # Scaffolding round the bow on the wharf's side, poles down to the seabed, a plank walk with a ladder up to it, a
+    # strake clamped to the ribs, a tar bucket and a mallet on it.
+    xs = (3.3, 4.6, 5.9)
+    rows = [[(x, -0.22) for x in xs], [(x, ship_hull(x / LS, 0.75).z + 0.35) for x in xs]]
+    for row in rows:
+        for x, z in row:
+            pile(k, M, x, z, top=2.7, r=0.09)
+        for (xa, za), (xb, zb) in zip(row, row[1:]):
+            k.beam((xa, 0.95, za), (xb, 0.95, zb), 0.1, 0.12, 0.0, M, BEAM, segs=1)
+            k.beam((xa, -0.6, za), (xb, 2.4, zb), 0.07, 0.07, 0.0, M, BEAM, segs=1)
+    for (xa, za), (xb, zb) in zip(*rows):
+        k.beam((xa, 0.95, za), (xb, 0.95, zb), 0.1, 0.12, 0.0, M, BEAM, segs=1)
+    for z in (-0.42, -0.72):
+        k.rbox(((xs[0] + xs[-1]) / 2, 1.05, z), (xs[-1] - xs[0] + 0.4, 0.06, 0.28), 0.0, M, mix(DARK, LIGHT, rng.uniform(0.5, 1.0)), segs=1, uv_len=2.0, v_axis=0)
+    for s in (-1, 1):
+        k.beam((xs[0] - 0.55, FLOOR, 0.45 + s * 0.22), (xs[0] - 0.15, 1.6, -0.3 + s * 0.22), 0.06, 0.06, 0.0, M, "#8a6a4c", segs=1)
+    for i in range(5):
+        t = (i + 0.7) / 6
+        a, b = Vector((xs[0] - 0.55, FLOOR, 0.45)), Vector((xs[0] - 0.15, 1.6, -0.3))
+        p = a + (b - a) * t
+        k.beam(tuple(p - Vector((0, 0, 0.24))), tuple(p + Vector((0, 0, 0.24))), 0.04, 0.04, 0.0, M, "#8a6a4c", segs=1)
+    a, b = ship_hull(0.5, 0.68, 1) + Vector((0, 0, 0.08)), ship_hull(0.86, 0.75, 1) + Vector((0, 0.2, 0.08))
+    k.beam(tuple(a), tuple(b), 0.36, 0.05, 0.0, M, "#d7aa74", up=(0, 0, 1), segs=1)
+    for t in (0.2, 0.75):
+        p = a + (b - a) * t
+        k.rbox(tuple(p + Vector((0, 0, 0.06))), (0.08, 0.5, 0.06), 0.0, Mm, "#c0583c", segs=1)
+    k.lathe((4.1, 1.08, -0.55), [(0.0, 0.0), (0.13, 0.0), (0.15, 0.25), (0.0, 0.25)], Mm, "#3d3936", n=8)
+    k.blob((4.1, 1.32, -0.55), (0.12, 0.02, 0.12), Mp, "#1d1a18", segs=8, rings=2)
+    k.lathe((5.2, 1.16, -0.5), [(0.0, -0.13), (0.1, -0.13), (0.1, 0.13), (0.0, 0.13)], M, "#c0583c", d=(0, 0, 1), n=8)
+    k.beam((5.2, 1.12, -0.5), (5.45, 1.1, -0.2), 0.04, 0.04, 0.0, M, "#c9a072", segs=1)
+    # The gangway from the wharf to the deck: runners, cleats, rope rails on stanchions.
+    d = GANG_TOP - GANG_FOOT
+    for s in (-1, 1):
+        k.beam(tuple(GANG_FOOT + Vector((s * 0.3, 0.03, 0))), tuple(GANG_TOP + Vector((s * 0.3, 0.03, 0))), 0.08, 0.1, 0.0, M, BEAM, segs=1)
+    for i in range(7):
+        p = GANG_FOOT + d * ((i + 0.5) / 7) + Vector((0, 0.1, 0))
+        k.beam(tuple(p - Vector((0.36, 0, 0))), tuple(p + Vector((0.36, 0, 0))), d.length / 7 - 0.04, 0.05, 0.0, M, mix(DARK, LIGHT, rng.uniform(0.4, 0.95)), segs=1)
+    for s in (-1, 1):
+        tops = []
+        for t in (0.06, 0.94):
+            p = GANG_FOOT + d * t + Vector((s * 0.34, 0, 0))
+            k.beam(tuple(p + Vector((0, 0.08, 0))), tuple(p + Vector((0, 0.9, 0))), 0.05, 0.05, 0.0, M, "#efe6d6", segs=1)
+            tops.append(p + Vector((0, 0.87, 0)))
+        k.tube([tuple(tops[0] + (tops[1] - tops[0]) * t - Vector((0, 0.08 * math.sin(math.pi * t), 0))) for t in np.linspace(0, 1, 6)], 0.018, Mr, ROPE, n=4)
+    # On deck: planks stacked forward and a sawhorse with one half sawn, barrels and crates by the workshop, a coil.
+    for i in range(5):
+        k.rbox((4.0 + 0.05 * i, DECK_Y + 0.04 + i * 0.07, ZC - 0.5 + 0.03 * (i % 2)), (2.4 - 0.15 * i, 0.06, 0.32), 0.0, M, mix(DARK, LIGHT, rng.uniform(0.6, 1.0)),
+               rot=K.game_rot(yaw=0.04 * (i - 2)), segs=1, uv_len=2.0, v_axis=0)
+    sx_, sz_ = 4.0, ZC + 0.75
+    for x in (sx_ - 0.4, sx_ + 0.4):
+        for s in (-1, 1):
+            k.beam((x, DECK_Y, sz_ + s * 0.25), (x, DECK_Y + 0.62, sz_), 0.06, 0.06, 0.0, M, "#8a6a4c", up=(1, 0, 0), segs=1)
+    k.rbox((sx_, DECK_Y + 0.66, sz_), (1.1, 0.08, 0.1), 0.0, M, "#7a5434", segs=1, uv_len=1.5, v_axis=0)
+    k.rbox((sx_ + 0.1, DECK_Y + 0.74, sz_), (1.8, 0.06, 0.3), 0.0, M, mix(DARK, LIGHT, 0.85), segs=1, uv_len=2.0, v_axis=0)
+    k.extrude([(0.0, 0.0), (0.6, 0.0), (0.6, 0.06), (0.0, 0.16)], -0.006, 0.006, Mm, "#c9ccd0", rot=K.game_rot(yaw=math.pi / 2, roll=-0.25),
+              at=(sx_ + 0.7, DECK_Y + 0.66, sz_ + 0.25))
+    for bx, bz in ((0.75, ZC - 0.95), (0.85, ZC - 0.35)):
+        k.lathe((bx, DECK_Y, bz), [(0.0, 0.0), (0.24, 0.0), (0.28, 0.35), (0.24, 0.7), (0.0, 0.7)], M, "#8a6440", n=8)
+        for y in (0.12, 0.58):
+            k.lathe((bx, DECK_Y + y, bz), [(0.27, -0.03), (0.27, 0.03)], Mm, "#3d3936", n=8)
+    crate(k, M, (-0.1 + X1 + 0.35, DECK_Y, ZC - 1.6), 0.55)
+    coil(k, Mr, (2.2, DECK_Y, ZC + 1.4), r1=0.26, n=20)
+    k.tint_gradient(0.84, 1.0, -1.0, 4.0)
+    wet(k)
+    return k.finish(smooth_deg=40)
 
 
 def mats():
@@ -448,8 +506,7 @@ def mats():
 def build():
     m = mats()
     obs = {"tackle-shop": tackle_shop(m["M"], m["Mp"], m["Mg"], m["Mr"], m["Mm"], m["Mn"]),
-           "shipwright-shed": shipwright_shed(m["M"], m["Mp"], m["Mg"], m["Mr"], m["Mm"]),
-           "shipwright-boat": shipwright_boat(m["M"], m["Mp"], m["Mr"], m["Mm"])}
+           "shipwright-ship": shipwright_ship(m["M"], m["Mp"], m["Mg"], m["Mr"], m["Mm"])}
     for name, ob in obs.items():
         K.export([ob], f"{OUT}{name}.glb")
         report(ob)
@@ -457,9 +514,9 @@ def build():
 
 
 def scene(obs, out, views, only=None):
-    """The models on a deck edge, the sea behind them, the boat afloat where BOAT_AT puts it beside its shed."""
+    """The models on a deck edge, the sea behind them."""
     import bpy
-    at = {"tackle-shop": (-8.0, 0, 0), "shipwright-shed": (1.0, 0, 0), "shipwright-boat": (1.0 + BOAT_AT[0], BOAT_AT[1], BOAT_AT[2])}
+    at = {"tackle-shop": (-8.0, 0, 0), "shipwright-ship": (14.0, 0, 0)}
     shown = []
     for name, ob in obs.items():
         ob.hide_render = True
@@ -471,7 +528,7 @@ def scene(obs, out, views, only=None):
         shown.append(o)
     for name, y, z0, z1, col in (("sea", WATER, -9, 0.0, "#5fa7b8"), ("deck", 0.0, -0.2, 5.0, "#8a6a4c")):
         me = bpy.data.meshes.new(name)
-        me.from_pydata([K.G(-12, y, z0), K.G(10, y, z0), K.G(10, y, z1), K.G(-12, y, z1)], [], [(0, 1, 2, 3)])
+        me.from_pydata([K.G(-12, y, z0), K.G(24, y, z0), K.G(24, y, z1), K.G(-12, y, z1)], [], [(0, 1, 2, 3)])
         o = bpy.data.objects.new(name, me)
         bpy.context.scene.collection.objects.link(o)
         me.materials.append(K.Mat(f"M_{name}", col, rough=0.5).m)

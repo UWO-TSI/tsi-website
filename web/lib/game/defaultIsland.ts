@@ -100,14 +100,14 @@ export const PROP_FOOTPRINT: Record<string, [number, number]> = {
   "crate-cloth": [0.35, 0.35], "fish-crate": [0.36, 0.42], "dock-hoist": [0.28, 0.28],
   "path-rock-slab": [0.2, 0.12], "path-rock-low": [0.3, 0.3], "path-rock-cluster": [0.36, 0.26], "rustic-fence-a": [1.25, 0.08],
   "rustic-fence-b": [0.85, 0.08], "rustic-post": [0.07, 0.07],
-  "sushi-bar": [4.0, 1.5], "fish-market": [3.1, 3.6], "sell-barrel": [1.25, 0.6],
+  "sushi-bar": [4.0, 1.5], "fish-market": [4.4, 3.6], "sell-barrel": [1.25, 0.6],
   "beach-lounger": [0.34, 0.95], sandcastle: [0.55, 0.5], "beach-cooler": [0.33, 0.22], "volleyball-net": [2.62, 0.08], "lifeguard-tower": [1.02, 1.02], "surfboard-a": [0.2, 0.1], "surfboard-b": [0.2, 0.1], "surfboard-c": [0.2, 0.1],
   // game/village-art2
   "moss-boulder-a": [0.65, 0.5], "moss-boulder-b": [1.05, 0.65], "river-stones-b": [0.55, 0.4],
   // game/wharf-art4
-  "tackle-shop": [2.3, 2.45], "shipwright-shed": [2.0, 2.1],
+  "tackle-shop": [2.3, 2.45],
   // game/trees-art: the riverbank trees' trunks at the ground.
-  "river-tree-willow": [0.5, 0.5], "river-tree-alder": [0.36, 0.36], "river-tree-oak": [0.6, 0.6], "river-tree-lean": [0.4, 0.4],
+  "river-tree-willow": [0.7, 0.7], "river-tree-alder": [0.65, 0.65], "river-tree-oak": [0.75, 0.75], "river-tree-lean": [0.6, 0.6],
 };
 /** Prop tops before scale, measured from the GLB bounds: what a jump clears or lands on (lib/game/movement). */
 export const PROP_TOP: Record<string, number> = {
@@ -121,10 +121,10 @@ export const PROP_TOP: Record<string, number> = {
   "dock-pile-rope": 0.9, "rope-net": 1.15, "life-ring": 0.93, "net-heap": 0.39, "crate-net": 0.7, "crate-cloth": 0.74, "fish-crate": 0.48,
   "dock-hoist": 2.645,
   "path-rock-slab": 0.538, "path-rock-low": 0.247, "path-rock-cluster": 0.294, "rustic-fence-a": 0.99, "rustic-fence-b": 0.91, "rustic-post": 0.931,
-  "sushi-bar": 4.68, "fish-market": 10.569, "sell-barrel": 2.62,
+  "sushi-bar": 4.68, "fish-market": 11.97, "sell-barrel": 2.62,
   "beach-lounger": 0.948, sandcastle: 0.78, "beach-cooler": 0.486, "volleyball-net": 2.14, "lifeguard-tower": 4.7, "surfboard-a": 1.755, "surfboard-b": 1.759, "surfboard-c": 1.763,
   "moss-boulder-a": 0.855, "moss-boulder-b": 0.761, "river-stones-b": 0.475,
-  "tackle-shop": 6.741, "shipwright-shed": 4.68,
+  "tackle-shop": 6.741,
 };
 /**
  * Residents' houses (the `house` kind, specs/world-editor.md decision 10): the chalet in its three colourways, the

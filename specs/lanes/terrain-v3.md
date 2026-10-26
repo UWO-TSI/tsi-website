@@ -19,6 +19,38 @@ Then look at the references in `specs/references/terrain/plan-2026-10-23/` and t
 
 ## Status
 
+**R2f built 2026-10-26, waiting on review** (head: the commit after e7adec1d). Merged in: art-r2f bea55f85 (the wider fish market, the shipwright's ship, the river trees) and perf-newworld 81edf2f8 (the R2e perf pass: bugs and crabs through `ModelFlock`). Renders are in `specs/evidence/terrain-v3/r2f/`: 01, 06, 10, 20, 23, 24, 25 and 28.
+- **Palms:** 14 of the 20 beach palms moved to 1 to 2 u off the grass at the back of the sand (measured from the paint). The wharf end's two moved off the waterline to (55.6, 92.4) and (53, 92.6).
+- **Path:** `WHARF_WAY` deleted (its ramp and its nature exclusion).
+- **Plaza night centre:**
+  - `lamp-fountain-0..3`: village posts at r 5.4 between the benches, their arms over the basin, no bug spots.
+  - The fountain gets a pool glow and a jet halo (`LampGlow color`), plus one warm `FadeLight` in its basin (`DefaultIslandWorld fountain`). It matches `/plaza-fountain.glb`, so the village is untouched.
+- **Fish market:** art-r2f's, 7.8 wide, at the same spot (quayAt 19.5, d 4). It fits the deck: d 0.1 to 7.9 and z 16 to 23.5.
+- **Shipwright:** `shipwright-ship` in SHOPS at z 73.5, in the edge-shop frame. Its bow points south, the hull spans z about 66 to 84, and it is still and not solid.
+  - The edge kit leaves the edge bare along the whole hull, plus 2 each way (`wharf.ts SHIP_SPAN`, `shedClears`).
+  - Deleted: `shipwright-shed.glb`, `shipwright-boat.glb` and `ShipwrightBoat.tsx` with its use; their propModels, PROP_FOOTPRINT, PROP_TOP and EDGE_SHOPS entries; and the shed and boat builders and constants in `build_wharf_shops.py`.
+- **River trees:** art-r2f's remodels under the same names. Nothing was moved.
+- **Gates:** tsc and eslint clean. lib/game + components/game: 245 files and 2006 tests green with and without the switch, budget.test included.
+- **Perf** (`SCENES=village,v2`, load 4.5 to 4.8, spread up to 37%):
+
+  | | v2 frame / CPU (ms), draws | village frame / CPU (ms), draws |
+  |---|---|---|
+  | High | 5.2 / 4.5, 391 | 4.3 / 3.8, 359 |
+  | Lite | 3.5 / 3.2, 322 | 2.6 / 2.3, 273 |
+
+  - Draws are below perf-newworld's after-cuts 400 / 327.
+  - The fountain adds one real light (about 0.1 ms by perf-newworld's pricing) and 2 glow draws. The 4 posts merge with the other lamps.
+  - Triangles are 1.37M High and 1.15M Lite, over the budget lines (1.2M and 0.95M). No R2e triangle count exists to attribute the change against.
+
+**R2e reviewed 2026-10-26** (head 55e48459). Approved:
+- the arrival, the market from the docks, the shops, the wharf;
+- the swash (both stills), the shallows, the campfire;
+- the plaza, the forest and the forest edge;
+- the wharf at night.
+
+The rest are redos; his notes are below, verbatim. R2e merges to main through `game/perf-newworld` after the perf re-measure. Next is R2f (Next, below).
+
+
 **R2e built 2026-10-26, waiting on review** (head: the commit after this file's). Merged in: wharf-art4 76f320c3 (tackle shop, shipwright shed and boat, shells), trees-art 18de35ff (12 forest trees, 4 river trees, tint check), perf-newworld cde23580 (R2d as merged to main 2241eca2). Renders in `specs/evidence/terrain-v3/r2e/` (00 top-down, 01 to 27; 26-swash, -1, -2 are one wave 1.8 s apart), the village check in `r2e/village-check/` (same as r2d's by eye).
 
 What R2e built (David's R2d notes, the reading 1 to 8, and the coordinator's adds):
@@ -115,6 +147,32 @@ R2 (on the R1c ground):
 - **Not in R2:** fishing nets (no net model in the assets; `tool-net` is the bug net). Questions: `specs/launch/terrain-v3-questions.md` "R2".
 
 ## David's decisions
+
+### 2026-10-26: R2e review, verbatim (https://claude.ai/artifact/UfadMDJoYq9ts7DZBGVmCr)
+
+- **approved, no note:** arrival, forest, forest-edge, night-wharf, plaza, shallows, shops, swash, swash-2, wharf.
+- **market (approve):** "looks good"
+- **campfire (approve):** "add a volly ball net somewhere where you can play 2v2 vollyball with friends"
+- **beach (redo):** "maybe move them slightly more closer to the grassy area" (the palms)
+- **market-front (redo):** "make building a bit wider, remodel the sword fish coming out so it looks proper"
+- **night-plaza (redo):** "more lighting in the middle of the plaza, like lighting in the fountain and make it still lively in the center of game"
+- **river (redo):** "redo these tree models"
+- **shipwright (redo):** "i was thinking of making the building a boat or the building part of a boat, like a big boat docked to the side you can go in the guys a shipwright and you can ask if he can build you a ship kinda thing"
+- **wharf-beach (redo):** "less or no dirt path"
+
+**The coordinator's reading:**
+1. **The beach's palms:** a little closer to the grass, at the back of the sand.
+2. **The wharf-to-beach path:** remove it.
+3. **The plaza's centre at night:** light in the fountain (an underwater glow in the basin, lit jets), plus warm light round the centre, so the plaza's heart stays lively at night. Keep it cheap: emissive and the ground-glow pools, at most one more real light.
+4. **New art from `art-r2f`:**
+   - the fish market wider, with a remodelled swordfish that properly bursts out through the roof;
+   - the shipwright as a big ship docked to the wharf's side, with the workshop built on and in it;
+   - new river tree models.
+
+   Place them as they land.
+5. **After launch** (logged in the spec):
+   - a playable 2v2 volleyball on the beach's net;
+   - going inside the shipwright's ship, where the shipwright builds you a ship.
 
 ### 2026-10-26: R2d review, verbatim (https://claude.ai/artifact/UdD2So4dkLxzTX2NLqy1qy)
 
@@ -333,7 +391,7 @@ The plan page answers, verbatim in the spec. The drawing is a guide to where thi
 
 ## Next
 
-**R2e is waiting on David's review.** Next: his R2e notes, when the coordinator relays them.
+R2f is built: steps 1 to 4 (David's R2e notes, the reading 1 to 4) are done, and the build is reported (Status). Wait for David's R2f review. If the coordinator wants the triangle count attributed, run a draw breakdown of v2 High (gotchas, "Perf runs").
 
 ## Tools and gotchas
 
@@ -365,4 +423,5 @@ The plan page answers, verbatim in the spec. The drawing is a guide to where thi
 - **Generated bug spots:** `bug` isn't a generated kind (hand-placed ones survive); the lamps' (`bug-lamp-*`) are all dropped and rebuilt each run.
 - **Wharf shops and lily pads** stand off the ground on purpose: walk.test skips them (`EDGE_SHOPS`, and the water's coral, reeds and stones).
 - **Swash:** stills can't show it; `frames: { count, every }` on a shoot.mjs view takes more shots in the same session.
+- **Edge shops' frame:** at the wharf's yaw (about -1.82), local +x runs south along the edge (+z) and local +z runs inland. The ship's bow points south.
 - **Lamps:** every lamp is generated (`lamps()`), and the generated kinds now include lamp, tree, flower, bush and fence: anything of those kinds in world.json is rebuilt each run.
