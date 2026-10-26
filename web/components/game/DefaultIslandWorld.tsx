@@ -27,8 +27,6 @@ import { ACNHBuilding, ACNHParts, CHALET_VARIANTS } from "./ACNHBuilding";
 import { FenceLine } from "./NatureModels";
 import { BRIDGE_URL, CATCH_BOARD_URL, MAILBOX_URL, MONUMENT_SIGN_URL, NOTICE_BOARD_URL } from "@/lib/game/propModels";
 import Wharf from "./wharf/Wharf";
-import WoodBoxes from "./wharf/WoodBoxes";
-import { deckBoards } from "@/lib/game/wharf";
 import TripVeil from "./wharf/TripVeil";
 import { tripSceneReady, useTripControl } from "./wharf/useTripControl";
 import { myTrip } from "@/lib/game/myTrip";
@@ -300,7 +298,6 @@ function villageLayout(v: Village) {
     underBuilding: (x: number, z: number) => [...marks, ...houseBoxes].some(l => !!l.half && Math.abs(x - l.x) < l.half[0] + 0.5 && Math.abs(z - l.z) < l.half[1] + 0.5),
     houses,
     dock: wharfDock(v),
-    boards: deckBoards(objectsOf("deck", v), island.ground),
     fireflies: objectsOf("bush", v).map(xz),
     /** The beach campfire (specs/v1-drop.md §3): the map's, or open sand by the beach until one is placed. */
     campfire: campfireSite(v),
@@ -636,8 +633,7 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {notice && <GLBProp url={NOTICE_BOARD_URL} position={at(notice)} rotation={[0, Math.PI + (notice.yaw ?? 0), 0]} />}
     {board && <GLBProp url={CATCH_BOARD_URL} position={at(board)} rotation={[0, Math.PI + (board.yaw ?? 0), 0]} />}
     {missions && DROPS.combat && <GLBProp url={NOTICE_BOARD_URL} position={[missions.at[0], ground(...missions.at), missions.at[1] + 0.3]} rotation={[0, missions.yaw, 0]} />}
-    {layout.dock && <Wharf dock={layout.dock} light={light} place="village" dressed />}
-    <WoodBoxes boxes={layout.boards} />
+    {layout.dock && <Wharf dock={layout.dock} light={light} place="village" dressed={!layout.dock.y} />}
     {layout.landmarks.filter(l => SIGNS[l.id] && !opened.includes(l.id as WorldGoalId)).map(l => <LandmarkTag key={l.id} position={[l.x, ground(l.x, l.z) + (l.half && l.half[0] > 1 ? 3.6 : 2.3), l.z - (l.half?.[1] ?? 0)]} closed={!l.open}>
       {SIGNS[l.id]}
     </LandmarkTag>)}

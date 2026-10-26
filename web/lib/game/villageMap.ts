@@ -40,7 +40,7 @@ export const OBJECT_KINDS = [
   // Scenery that stands solid (terrain v3: the market's stalls, barrels and crates, palms, the lighthouse): `model`
   // names it (lib/game/propModels.ts SCENERY_URLS), `scale` sizes it from the model's own units.
   "prop",
-  // A 4 u square of wooden deck boards on the ground (terrain v3: the wharf's deck); `model` "steps" climbs its ground in treads.
+  // A 4 u square of wooden deck boards on the ground (terrain v3: the wharf's deck; lib/game/wharf.ts deckPieces).
   "deck",
 ] as const;
 export type ObjectKind = (typeof OBJECT_KINDS)[number];

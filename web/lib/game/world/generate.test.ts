@@ -34,11 +34,11 @@ describe("a generated world", () => {
     expect([t.width, t.depth, t.res, t.originX, t.originZ, t.seaLevel]).toEqual([384, 552, 2, -192, -276, before.terrain.seaLevel]);
   });
 
-  it("stands the village flat at its height, the deck and the quay below it, the beach at the sea, the summit highest", () => {
+  it("stands the village flat at its height, the deck and the grassy band at the deck's level below it, the beach at the sea, the summit highest", () => {
     const of = (id: string) => objects.find(o => o.id === id)!;
     for (const [x, z] of [PLAZA.at, [of("hq").x, of("hq").z], [of("museum").x, of("museum").z]]) expect(at(x, z)).toBeCloseTo(H.village, 1);
-    expect(at(DOCK.x - 5, DOCK.z - 6)).toBeCloseTo(H.deck, 1); // the deck boards' ground beside the jetty
-    expect(at(DOCK.x - 13, DOCK.z - 6)).toBeCloseTo(H.quay, 1); // the quay behind it
+    expect(at(DOCK.x - 13, DOCK.z - 6)).toBeCloseTo(H.deck, 1); // the deck boards' ground beside the jetty
+    expect(at(DOCK.x - 20, DOCK.z - 6)).toBeCloseTo(H.deck, 1); // the grassy band behind them, at their level
     expect(at(-15, 110)).toBeLessThan(1);
     expect(at(of("oracle").x, of("oracle").z)).toBeCloseTo(H.summit, 0);
     let top = -Infinity;

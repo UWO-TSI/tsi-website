@@ -124,7 +124,7 @@ export default function ArrivalWorld({ v, island, player, dock, held, keys, worl
   return <>
     {crossing && <CrossingDirector dock={dock} player={player} />}
     {crossing && <BramAboard dock={dock} />}
-    {(crossing || ashore) && <Suspense fallback={null}><Crates spots={crates} y={dock.y ?? 0} /></Suspense>}
+    {(crossing || ashore) && <Suspense fallback={null}><Crates spots={crates} /></Suspense>}
     {ashore && <BramGuide v={v} island={island} player={player} dock={dock} keys={keys} route={route} places={pw} />}
   </>;
 }
@@ -199,11 +199,11 @@ function BramAboard({ dock }: { dock: Dock }) {
 }
 
 /** The route's fish crates. */
-function Crates({ spots, y }: { spots: readonly (XZ & { yaw: number })[]; y: number }) {
+function Crates({ spots }: { spots: readonly (XZ & { yaw: number })[] }) {
   const { scene } = useGLTF(CRATE_URL);
   const models = useMemo(() => spots.map(() => prepareModel(scene, CRATE_URL, undefined, "solid")), [scene, spots]);
   useEffect(() => () => models.forEach(disposeModelMaterials), [models]);
-  return <>{spots.map((c, i) => <primitive key={i} object={models[i]} position={[c.x, y, c.z]} rotation={[0, c.yaw, 0]} />)}</>;
+  return <>{spots.map((c, i) => <primitive key={i} object={models[i]} position={[c.x, 0, c.z]} rotation={[0, c.yaw, 0]} />)}</>;
 }
 
 // ── The walk-along ────────────────────────────────────────────────────────────────────────────────────────────────

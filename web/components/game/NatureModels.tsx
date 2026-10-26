@@ -6,7 +6,8 @@ import { useGLTF } from "@react-three/drei";
 import { prepareModel, disposeModelMaterials, applyModelTextures } from "@/lib/game/modelMaterials";
 import { shadowClassFor, type ShadowClass } from "@/lib/game/shadows";
 import { modelContact, useContactShadow } from "./ContactShadows";
-import { propsOf } from "@/lib/game/defaultIsland";
+import { propsOf, wharfDock } from "@/lib/game/defaultIsland";
+import { JETTY, deckPieces, dockToWorld } from "@/lib/game/wharf";
 import { BARRIERS, barrierPlacements } from "@/lib/game/barriers";
 import { BUSH_MODELS, FLOWER_MODELS, TREE_MODELS, bushParts, flowerParts, mushroomUrl, treeParts, type NaturePart } from "@/lib/game/natureParts";
 import { SEASON_BUSHES, SEASON_FLOWERS, SEASON_TREES } from "@/lib/game/seasonalLook";
@@ -65,11 +66,19 @@ export function sceneryOf(v: Village, ground: (x: number, z: number) => number, 
     ...at("bush", seed => bushParts(seed, SEASON_BUSHES[season])),
     ...(SEASON_FLOWERS[season].length ? at("flower", seed => flowerParts(seed, SEASON_FLOWERS[season])) : []),
     ...propsOf(v).filter(o => o.model && !isJoinedFence(o)).map((p): ModelPlacement => ({ url: isRockModel(p.model) ? rockUrl(p.model) : propUrl(p.model!), position: [p.x, ground(p.x, p.z), p.z], rotation: p.yaw ?? 0, scale: p.scale ?? 1 })),
+    // The wharf kit on the deck squares, kept clear where the jetty's gangways land (lib/game/wharf.ts deckPieces).
+    ...deckPieces(objectsOf("deck", v), ground, jettyLanding(v)).map((p): ModelPlacement => ({ url: propUrl(p.model), position: [p.x, p.y, p.z], rotation: p.yaw, scale: 1 })),
     // The connectable fences: a post on each, rails to the posts beside it (lib/game/fences.ts).
     ...fencePlacements(objectsOf("fence", v).filter(isJoinedFence), ground),
     // The natural barriers standing at this drop (lib/game/barriers.ts), where the walker blocks them.
     ...barrierPlacements(v).flatMap((b): ModelPlacement[] => { const url = BARRIERS[b.model].url; return url ? [{ url, position: [b.x, ground(b.x, b.z), b.z], rotation: b.yaw, scale: b.scale }] : []; }),
   ];
+}
+
+/** Where the jetty's gangways meet the deck boards (world XZ), or none without the jetty. */
+function jettyLanding(v: Village) {
+  const d = wharfDock(v);
+  return d?.y ? dockToWorld(d, 0, JETTY.decks[3].z1, { x: 0, z: 0 }) : undefined;
 }
 
 function Parts({ position, parts }: { position: [number, number, number]; parts: NaturePart[] }) {

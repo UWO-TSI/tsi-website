@@ -5,7 +5,8 @@
  */
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { jettyY, landmarkHalf, villageIsland, wharfDecks, type LandmarkId } from "../defaultIsland";
+import { landmarkHalf, villageIsland, wharfDock, type LandmarkId } from "../defaultIsland";
+import { JETTY, dockToWorld } from "../wharf";
 import { campfireSite } from "../campfireSite";
 import { MOVE_TUNING, NO_INPUT, createMoveState, stepMove, STEP, type MoveWorld } from "../movement/sim";
 import { navGrid, planResidents } from "../residentRoutine";
@@ -59,13 +60,16 @@ describe("walking the smooth world", () => {
     expect(worst).toBeLessThan(0.05);
   });
 
-  it("walks the wharf's jetty level with the deck ground at 1, over deep water", () => {
-    expect(jettyY(v)).toBe(1);
-    for (const d of wharfDecks(v)) {
-      const x = (d.x0 + d.x1) / 2, z = d.z0 + 0.3;
-      expect(island.ground(x, z)).toBeCloseTo(1, 6);
-      expect(island.wet(x, z)).toBe(false);
-    }
+  it("walks from the jetty's landing at the water up its stairs, across its platform and a gangway onto the deck boards", () => {
+    const dock = wharfDock(v)!, at = (lz: number) => dockToWorld(dock, 0, lz, { x: 0, z: 0 });
+    expect(dock.y).toBe(JETTY.top);
+    const landing = at(-2.5), platform = at(3.5), boards = at(9.5);
+    expect(island.ground(landing.x, landing.z)).toBeCloseTo(0, 6);
+    expect(island.ground(platform.x, platform.z)).toBeCloseTo(1, 6);
+    expect(island.ground(boards.x, boards.z)).toBeCloseTo(1, 1);
+    for (const p of [landing, platform, boards]) expect(island.wet(p.x, p.z)).toBe(false);
+    const [x, z] = island.move(landing.x, landing.z, boards.x, boards.z);
+    expect(Math.hypot(x - boards.x, z - boards.z)).toBeLessThan(0.01);
   });
 
   it("blocks walking up a slope too steep to climb, and lets you walk down it", () => {

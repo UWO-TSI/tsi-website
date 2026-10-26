@@ -14,7 +14,7 @@ import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { disposeModelMaterials, prepareModel } from "@/lib/game/modelMaterials";
 import type { IslandLight } from "@/lib/game/islandLighting";
-import { BUOYS, DRESSING_URL, FINGER, LANTERNS, PIER, PIER_URL, ROWBOAT, ROWBOATS, ROWBOAT_URL, dockToWorld, floatBuoy, floatRowboat, ladderBoxes, newFloat, newRide, type Dock, type Float, type Ride } from "@/lib/game/wharf";
+import { BUOYS, DRESSING_URL, FINGER, JETTY, LANTERNS, PIER, PIER_URL, ROWBOAT, ROWBOATS, ROWBOAT_URL, dockToWorld, floatBuoy, floatRowboat, newFloat, newRide, type Dock, type Float, type Ride } from "@/lib/game/wharf";
 import { liveWaves } from "@/lib/game/waves";
 import { windowLit } from "@/lib/game/islandLighting";
 import { RopeLine } from "./ropeLine";
@@ -23,11 +23,11 @@ import { foamRings } from "@/lib/game/foamRings";
 import { berthTaken, type TripPlace } from "@/lib/game/boatTrip";
 import { myTrip, readMyTrip, subscribeMyTrip } from "@/lib/game/myTrip";
 import Boat from "./Boat";
-import WoodBoxes from "./WoodBoxes";
 import { useTripBoat } from "./useTripBoat";
 
 /** Our buoy (art/props/build_buoy.py) at scale 1: its float meets the water BUOY_WATERLINE up its model (its weighted stem hangs below). */
 useGLTF.preload(PIER_URL);
+useGLTF.preload(JETTY.url);
 useGLTF.preload(BUOY_URL);
 useGLTF.preload(DRESSING_URL);
 useGLTF.preload(ROWBOAT_URL);
@@ -67,7 +67,7 @@ function rideMoored(boats: readonly Moored[], groups: readonly (THREE.Group | nu
     g.position.set(rb.x + b.float.sway, b.float.y - ROWBOAT.draft, rb.z);
     g.rotation.set(b.float.pitch, rb.yaw, b.float.roll, "YXZ");
     g.updateMatrix();
-    if (b.line) b.line.update(_post.set(rb.post[0], FINGER.postTop - 0.06 + (dock.y ?? 0), rb.post[1]), _bow.copy(BOW_RING).applyMatrix4(g.matrix), 0.12, 0);
+    if (b.line) b.line.update(_post.set(rb.post[0], FINGER.postTop - 0.06, rb.post[1]), _bow.copy(BOW_RING).applyMatrix4(g.matrix), 0.12, 0);
     const c = Math.cos(rb.yaw), s = Math.sin(rb.yaw);
     [-0.38, 0.32].forEach((along, k) => {
       dockToWorld(dock, rb.x + along * s, rb.z + along * c, at);
@@ -110,7 +110,7 @@ function Dressing({ dock, light, rope }: { dock: Dock; light: IslandLight; rope:
   }, [dockX, dockZ, dockYaw]);
   useFrame((_, raw) => rideMoored(moored, groups.current, rings.current, dock, Math.min(raw, 0.1)));
   return <>
-    <primitive object={dressing.model} position-y={dock.y ?? 0} />
+    <primitive object={dressing.model} />
     {boats.map((b, i) => <group key={i} ref={g => { groups.current[i] = g; }} matrixAutoUpdate={false}><primitive object={b} /></group>)}
     {moored.map((m, i) => m.line && <primitive key={i} object={m.line.mesh} />)}
   </>;
@@ -125,13 +125,13 @@ const LANTERN_FEET = LANTERNS;
  * trip's (useTripBoat), carrying their avatar; otherwise it lies moored. Others' trips (multiplayer) will be drawn the
  * same way, each on its own boat.
  */
-/** `dressed`: the village wharf's finger pier, lanterns and rowboats (v1 water item 7). */
+/** `dressed`: the village wharf's finger pier, lanterns and rowboats (v1 water item 7). A dock with a `y` is the new world's jetty (lib/game/wharf.ts JETTY) in place of the pier. */
 export default function Wharf({ dock, light, place, dressed = false, children }: { dock: Dock; light: IslandLight; place: TripPlace; dressed?: boolean; children?: ReactNode }) {
   const tripKey = useSyncExternalStore(subscribeMyTrip, readMyTrip, () => "");
   const trip = tripKey && berthTaken(myTrip.current, place) ? myTrip.current : null;
   const boat = useTripBoat(trip, dock, light, myTrip.ride);
-  const { scene } = useGLTF(PIER_URL);
-  const pier = useMemo(() => prepareModel(scene, PIER_URL, undefined, "solid"), [scene]);
+  const url = dock.y ? JETTY.url : PIER_URL, { scene } = useGLTF(url);
+  const pier = useMemo(() => prepareModel(scene, url, undefined, "solid"), [scene, url]);
   useEffect(() => () => disposeModelMaterials(pier), [pier]);
   // The rail's rope, for the boat's lines: the same rope.
   const rope = useMemo(() => {
@@ -140,24 +140,20 @@ export default function Wharf({ dock, light, place, dressed = false, children }:
     return found;
   }, [pier]);
   // Foam where the piles and the buoys meet the water (v1 water item 3); a ring over the beach is never drawn.
-  const { x: dockX, z: dockZ, yaw: dockYaw } = dock;
+  const { x: dockX, z: dockZ, yaw: dockYaw } = dock, jetty = !!dock.y;
   useEffect(() => {
     const d = { x: dockX, z: dockZ, yaw: dockYaw }, at = { x: 0, z: 0 }, handles: number[] = [];
-    for (const side of [-1, 1]) {
+    if (jetty) for (const [x, z] of JETTY.piles) { dockToWorld(d, x, z, at); handles.push(foamRings.add(at.x, at.z, 0.16, 0.95)); }
+    else for (const side of [-1, 1]) {
       for (const z of PIER.railZ) { dockToWorld(d, side * PIER.postX, z, at); handles.push(foamRings.add(at.x, at.z, PIER.postR * 1.05, 0.95)); }
       for (const z of PIER.underZ) { dockToWorld(d, side * PIER.underX, z, at); handles.push(foamRings.add(at.x, at.z, PIER.postR * 0.9, 0.85)); }
     }
     // The buoy's float is 0.61 across where it meets the water: the foam laps just outside it.
     for (const [x, z] of BUOYS) { dockToWorld(d, x, z, at); handles.push(foamRings.add(at.x, at.z, 0.33, 0.7)); }
     return () => handles.forEach(h => foamRings.remove(h));
-  }, [dockX, dockZ, dockYaw]);
-  // A raised deck (lib/game/defaultIsland.ts jettyY) lifts the pier and the finger pier, with ladders down to the water.
-  const deckY = dock.y ?? 0, ladders = useMemo(() => ladderBoxes(deckY), [deckY]);
+  }, [dockX, dockZ, dockYaw, jetty]);
   return <group position={[dock.x, 0, dock.z]} rotation={[0, dock.yaw, 0]}>
-    <group position-y={deckY}>
-      <primitive object={pier} />
-      <WoodBoxes boxes={ladders} />
-    </group>
+    <primitive object={pier} />
     {BUOYS.map(([x, z], i) => <Buoy key={i} dock={dock} x={x} z={z} />)}
     <Boat dock={dock} light={light} rope={rope} poseAt={boat.poseAt} onPlaced={boat.onPlaced} />
     {dressed && <Dressing dock={dock} light={light} rope={rope} />}

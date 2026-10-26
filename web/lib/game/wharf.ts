@@ -268,56 +268,47 @@ export function berthWeight(dock: { x: number; z: number; yaw?: number }, x: num
   return 1 - t * t * (3 - 2 * t);
 }
 
-/** A wooden box (a deck board, a tread, a ladder's rail or rung): its centre, size (across, up, along), turn and tone (0 to 1). */
-export interface WoodBox { x: number; y: number; z: number; w: number; h: number; d: number; yaw: number; tone: number }
-
-/** A `deck` square (terrain v3, the wharf's deck boards): its side, the boards' pitch, gap and thickness, a stair's treads. */
-export const DECK = { size: 4, pitch: 0.32, gap: 0.03, thick: 0.08, treads: 4 } as const;
-
 /**
- * The boards of the `deck` squares, in world space. A square lies level at the ground under its centre, its boards side
- * by side across it (its local x), each split at its own place so the joints stagger, so a square at the shore
- * overhangs the water. A "steps" square instead climbs its ground along its local z in DECK.treads treads.
+ * The new world's jetty (terrain v3 R2b, art/wharf/build_jetty.py; the wharf landmark's model "jetty"), in the dock's
+ * frame: a landing at the water where the boat moors (as the pier's tip, its top at 0), stairs up its +z end to a wide
+ * platform at the wharf's deck height, and three gangways from the platform to the deck boards. `decks`: where it is
+ * walked, each at its height (`rise`: stairs climbing that much from z0 to z1). `piles`: where its piles meet the water.
  */
-export function deckBoards(decks: readonly { x: number; z: number; yaw?: number; model?: string }[], ground: (x: number, z: number) => number): WoodBox[] {
-  const out: WoodBox[] = [], half = DECK.size / 2, at = { x: 0, z: 0 };
-  decks.forEach((o, k) => {
-    const d = { x: o.x, z: o.z, yaw: o.yaw ?? 0 }, put = (lx: number, lz: number) => dockToWorld(d, lx, lz, at);
-    if (o.model === "steps") {
-      const run = DECK.size / DECK.treads, foot = put(0, -half), base = ground(foot.x, foot.z) - 0.1;
-      for (let t = 0; t < DECK.treads; t++) {
-        const p = put(0, -half + (t + 0.5) * run), top = ground(p.x, p.z);
-        out.push({ x: p.x, y: (top + base) / 2, z: p.z, w: DECK.size, h: top - base, d: run - DECK.gap, yaw: d.yaw, tone: hash01(k, t) });
-      }
-      return;
-    }
-    // The boards' tops a hair over the ground, so feet and props stand on them.
-    const y = ground(o.x, o.z) - DECK.thick / 2 + 0.01, n = Math.round(DECK.size / DECK.pitch);
-    for (let b = 0; b < n; b++) {
-      const lx = -half + (b + 0.5) * (DECK.size / n), cut = -half + DECK.size * (0.25 + 0.5 * hash01(k, b));
-      [[-half, cut], [cut, half]].forEach(([z0, z1], j) => {
-        const p = put(lx, (z0 + z1) / 2);
-        out.push({ x: p.x, y, z: p.z, w: DECK.size / n - DECK.gap, h: DECK.thick, d: z1 - z0 - DECK.gap, yaw: d.yaw, tone: hash01(k * 7 + j, b + 1000) });
-      });
-    }
-  });
-  return out;
-}
+export const JETTY = {
+  url: "/assets/game/wharf/jetty.glb",
+  top: 1,
+  decks: [
+    { x0: -2, x1: 1, z0: -3.5, z1: -0.5, y: 0 },
+    { x0: -2, x1: 1, z0: -0.5, z1: 1.5, y: 0, rise: 1 },
+    { x0: -4.5, x1: 4.5, z0: 1.5, z1: 5.5, y: 1 },
+    ...[-3.2, 0, 3.2].map(x => ({ x0: x - 0.8, x1: x + 0.8, z0: 5.5, z1: 9.2, y: 1 })),
+  ],
+  piles: [[-2.2, -3.4], [-2.2, -1.9], [1.15, -3.42], [1.15, -0.7], [-4.3, 1.3], [-2.3, 1.3], [1.3, 1.3], [4.3, 1.3], [-4.7, 3.5], [4.7, 3.5], [-4.7, 5.3], [4.7, 5.3], [-1.6, 5.7], [1.6, 5.7]],
+} as const;
 
+/** A wharf kit model placed on the deck (art/wharf/build_wharf_kit.py, lib/game/propModels.ts SCENERY_URLS): world x, y, z and its turn. */
+export interface KitPiece { model: string; x: number; y: number; z: number; yaw: number }
 /**
- * Ladders down off a raised jetty into the water, in the dock's frame: (x, z) and a turn (0: on a -x face, its rungs
- * along z; a quarter: on a z face). Outside the piles: on the jetty's -x side, off the finger pier's end, and on its
- * seaward face by the rowboats.
+ * The wharf kit on the `deck` squares (each 4 u, local +z inland, level at the ground under its middle): a deck tile on
+ * each; on each square at the water's edge two piles just outside it, and on some a ladder down or rope fencing along
+ * it, never within `clear` of `keep` (the jetty's gangways land there).
  */
-const LADDERS: readonly (readonly [number, number, number])[] = [[-1.2, -0.6, 0], [-4.82, -2.875, 0], [-3.95, -3.62, Math.PI / 2]];
-/** The ladders' rails and rungs, in the dock's frame, from the deck down to below the water `rise` under it; none on a deck at the water. */
-export function ladderBoxes(rise: number): WoodBox[] {
-  if (rise <= 0) return [];
-  const bottom = -rise - 0.6, out: WoodBox[] = [];
-  for (const [x, z, yaw] of LADDERS) {
-    const ax = Math.sin(yaw), az = Math.cos(yaw);
-    for (const side of [-0.2, 0.2]) out.push({ x: x + ax * side, y: (bottom + 0.15) / 2, z: z + az * side, w: 0.06, h: 0.15 - bottom, d: 0.06, yaw, tone: 0.3 });
-    for (let y = -0.25; y > bottom; y -= 0.28) out.push({ x, y, z, w: 0.05, h: 0.045, d: 0.4, yaw, tone: 0.6 });
+export function deckPieces(decks: readonly { x: number; z: number; yaw?: number }[], ground: (x: number, z: number) => number, keep?: { x: number; z: number }, clear = 7): KitPiece[] {
+  const out: KitPiece[] = [], at = { x: 0, z: 0 };
+  let edge = 0;
+  for (const o of decks) {
+    const d = { x: o.x, z: o.z, yaw: o.yaw ?? 0 }, y = ground(o.x, o.z);
+    const put = (model: string, lx: number, lz: number) => { dockToWorld(d, lx, lz, at); out.push({ model, x: at.x, y, z: at.z, yaw: d.yaw }); };
+    put("deck-tile", 0, 0);
+    dockToWorld(d, 0, -2.6, at);
+    if (ground(at.x, at.z) > 0) continue;
+    const i = edge++, open = !keep || Math.hypot(o.x - keep.x, o.z - keep.z) > clear;
+    for (const lx of [-1, 1]) put("wharf-piling", lx, -2.2);
+    if (open && i % 5 === 2) put("wharf-ladder", 0.6, -2);
+    else if (open && hash01(i, 7) < 0.5) {
+      for (const lx of [-2, 0, 2]) put("rope-post", lx, -1.8);
+      for (const lx of [-1, 1]) put("rope-span", lx, -1.8);
+    }
   }
   return out;
 }
