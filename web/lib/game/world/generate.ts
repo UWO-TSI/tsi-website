@@ -188,9 +188,8 @@ const DECK_Z = [14, 78] as const;
  * plaza. Points (x, z, height), the heights the climb's own at each.
  */
 const PATH: readonly (readonly [number, number, number])[] = [[65.5, 56, H.deck], [61, 57.5, H.deck], [57, 60, 1.45], [53, 59.5, 2.45], [49.5, 56.5, H.village], [46, 53, H.village], [43, 51, H.village]];
-/** The way down to the beach past the shop, and the way along from the wharf's south end onto the sand (David, R2d: "amke path connected to beach"). */
+/** The way down to the beach past the shop (David, R2d: "amke path connected to beach"; R2e: "less or no dirt path" from the wharf's south end, so that one's gone). */
 const BEACH_WAY: readonly (readonly [number, number, number])[] = [[36, 80, H.village], [34, 92, 2], [31, 101, H.beach + 0.3]];
-const WHARF_WAY: readonly (readonly [number, number, number])[] = [[65.5, 79, H.deck], [61, 85.5, H.deck], [55.5, 91, H.beach + 0.3]];
 /** The plaza's centre and radius (its stone). */
 export const PLAZA: { at: XZ; r: number } = { at: [30, 50], r: 12 };
 
@@ -308,7 +307,6 @@ export const PLAN: Plan = {
   ramps: [
     { label: ["Dirt path", 56, 68], pts: PATH, half: 1.8, shoulder: 2.5, paint: Paint.Path },
     { pts: BEACH_WAY, half: 1.6, shoulder: 3, paint: Paint.Path },
-    { pts: WHARF_WAY, half: 1.5, shoulder: 2.5, paint: Paint.Path },
   ],
 };
 
@@ -463,9 +461,10 @@ function scenery(): Obj[] {
   [0, 270, 180].forEach((deg, i) => { const [x, z, yaw] = round(deg, 4.3); out.push(obj("bench", `fire-bench-${i}`, x, z, yaw, 1, "log-bench")); });
   [225, 315, 135, 45].forEach((deg, i) => { const [x, z, yaw] = round(deg, 4.1); out.push(obj("prop", `fire-stump-${i}`, x, z, yaw + i, 1, "stump-seat")); });
   ([[240, 6.8, "firewood-stack"], [300, 7, "fish-rack"]] as const).forEach(([deg, r, model]) => { const [x, z, yaw] = round(deg, r); out.push(obj("prop", model, x, z, yaw, 1, model)); });
-  ([[-42, 98, "tall"], [-39, 96.5, "small"], [-31, 98, "lean"], [-22, 99.5, "short"], [-19.5, 97.5, "small"], [2, 99, "tall"], [4.8, 97.4, "small"],
-    [24, 99, "lean"], [30, 100, "short"], [27, 97.4, "small"], [52, 95, "tall"], [54.5, 96.6, "small"], [-48, 99.5, "short"], [-34.5, 100, "small"],
-    [-11, 100.5, "tall"], [-8.5, 98.8, "small"], [34.5, 96, "tall"], [36.8, 97.6, "small"], [63, 89, "lean"], [57.5, 84, "short"]] as const)
+  // At the back of the sand, a step or two off the grass (David, R2e: "move them slightly more closer to the grassy area").
+  ([[-42, 95.3, "tall"], [-39.1, 95.9, "small"], [-30.9, 97.5, "lean"], [-21.8, 99.1, "short"], [-19.5, 97.5, "small"], [2, 98.9, "tall"], [4.8, 97.4, "small"],
+    [23.4, 97.2, "lean"], [29, 96.8, "short"], [26.5, 96.6, "small"], [55.6, 92.4, "tall"], [53, 92.6, "small"], [-46, 95.7, "short"], [-35.3, 95.9, "small"],
+    [-10.8, 98.4, "tall"], [-8.4, 98.1, "small"], [34.5, 96, "tall"], [37.2, 95.4, "small"], [63, 89, "lean"], [57.5, 84, "short"]] as const)
     .forEach(([x, z, kind], i) => out.push(obj("prop", `palm-${i}`, x, z, kind === "lean" ? -Math.PI / 2 : x * 0.37, BEACH_PALM, `palm-${kind}`)));
   [[-30, 109], [-22, 110], [28, 108]].forEach(([x, z], i) => out.push(obj("prop", `parasol-${i}`, x, z, x * 0.21, 1, "beach-parasol")));
   out.push(...plazaSet(), ...beachSet(), ...lamps(), ...nature(), ...boulders());
@@ -555,10 +554,13 @@ function lamps(): Obj[] {
   // The campfire: its two lanterns on branches and hand lanterns on the sand round it, outside its rings.
   [200, 340].forEach((deg, i) => { const a = (deg * Math.PI) / 180; put(`fire-lamp-${i}`, "camp", FIRE_AT[0] + 5.4 * Math.cos(a), FIRE_AT[1] + 5.4 * Math.sin(a), ...FIRE_AT); });
   [25, 65, 115, 155, 265, 320].forEach((deg, i) => { const a = (deg * Math.PI) / 180; put(`fire-hand-${i}`, "hand", FIRE_AT[0] + 6.3 * Math.cos(a), FIRE_AT[1] + 6.3 * Math.sin(a)); });
+  // The plaza's heart at night (David, R2e: "more lighting in the middle of the plaza ... still lively in the center"):
+  // a lamp post between each pair of the fountain's benches, its arm over the basin (the fountain lights itself too).
+  [0, 90, 180, 270].forEach((deg, i) => put(`lamp-fountain-${i}`, "village", ...onPlaza(deg, 5.4), PX, PZ));
   // Night bugs to catch at the lamps (David, 2026-10-26: "more night bugs near lamps to catch"): a bug spot among
   // blooms (lib/game/islandNodes.ts) a step off every other lamp post on land, where the roster's night butterflies come out.
   const bugs: Obj[] = [];
-  out.filter(l => l.model !== "hand" && !l.id.startsWith("lamp-jetty")).forEach((l, i) => {
+  out.filter(l => l.model !== "hand" && !/^lamp-(jetty|fountain)/.test(l.id)).forEach((l, i) => {
     if (i % 2) return;
     const a = hash01(i, 120) * 6.28;
     bugs.push(obj("bug", `bug-lamp-${i}`, l.x + 1.1 * Math.cos(a), l.z + 1.1 * Math.sin(a), 0, 1, "flowers"));
@@ -591,7 +593,7 @@ function nature(): Obj[] {
     const x = -40 + i * 4.5 + 3.6 * (hash01(i, k + 40) - 0.5), z = 14 + k * 4.5 + 3.6 * (hash01(k, i + 41) - 0.5), h = hash01(i * 7 + k, 42);
     const path = nearest(PATH, x, z).d, tree = h < 0.13 && (i + k) % 2 === 0;
     if (OPEN(x, z) < 3 || MAIN(x, z) < 5 || Math.min(BEACH(x, z), 0.4 * (60 - x)) > -2 || westOfQuay(x, z) < 8.5 || Math.hypot(x - PX, z - PZ) < PLAZA.r + 3) continue;
-    if (path < (tree ? 6 : 4) || Math.min(nearest(BEACH_WAY, x, z).d, nearest(WHARF_WAY, x, z).d) < 3.5 || Math.hypot(x - FIRE_AT[0], z - FIRE_AT[1]) < 9 || buildings.some(([bx, bz, r]) => Math.hypot(x - bx, z - bz) < r)) continue;
+    if (path < (tree ? 6 : 4) || nearest(BEACH_WAY, x, z).d < 3.5 || Math.hypot(x - FIRE_AT[0], z - FIRE_AT[1]) < 9 || buildings.some(([bx, bz, r]) => Math.hypot(x - bx, z - bz) < r)) continue;
     // In clumps with clean lawn between them, not spread evenly over it (David, R2d: "grass for feel like fass and not feel like a mess").
     if (!tree && hash01(i * 5 + k, 46) > smoothstep(0.38, 0.62, fbm(x / 16, z / 16, 77))) continue;
     const id = `nature-${out.length}`, seed = Math.floor(hash01(i, k + 43) * 1000);

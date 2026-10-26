@@ -181,15 +181,17 @@ function glowFrame(u: GlowUniforms, objects: readonly THREE.Object3D[], on: bool
  * breathing like a flame at its own phase (the shader, from one time uniform). Two draws for all of them: the halos are
  * points, the pools one instanced disc. `on` (0 to 1) eases them in and out with the lamps.
  */
-export function LampGlow({ points, ground, on, halo = 2.6, pool = 5.5 }: {
+export function LampGlow({ points, ground, on, halo = 2.6, pool = 5.5, color }: {
   points: readonly (readonly [number, number, number])[]; ground: (x: number, z: number) => number; on: boolean;
   /** The halo's size (world units across) and the pool's radius. */
   halo?: number; pool?: number;
+  /** Halo and pool in one colour (the fountain's water), in place of the flame's two. */
+  color?: string;
 }) {
   const uniforms = useMemo((): GlowUniforms => ({ uTime: { value: 0 }, uOn: { value: 0 } }), []);
   const halos = useMemo(() => {
     const geometry = new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(points.flat(), 3));
-    const material = new THREE.PointsMaterial({ color: "#ffb35c", map: glowTexture(), size: halo, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+    const material = new THREE.PointsMaterial({ color: color ?? "#ffb35c", map: glowTexture(), size: halo, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
     material.onBeforeCompile = shader => {
       breathe(shader, uniforms, "position");
       // The halo grows and shrinks with the flame.
@@ -200,11 +202,11 @@ export function LampGlow({ points, ground, on, halo = 2.6, pool = 5.5 }: {
     p.frustumCulled = false;
     p.renderOrder = 2;
     return p;
-  }, [points, halo, uniforms]);
+  }, [points, halo, color, uniforms]);
   const pools = useMemo(() => {
     const geometry = new THREE.CircleGeometry(pool, 24).rotateX(-Math.PI / 2);
     // The disc's uv runs 0 to 1 across it, as the glow wants.
-    const material = new THREE.MeshBasicMaterial({ color: "#ff9a3c", map: glowTexture(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.55,
+    const material = new THREE.MeshBasicMaterial({ color: color ?? "#ff9a3c", map: glowTexture(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.55,
       polygonOffset: true, polygonOffsetFactor: -2 });
     material.onBeforeCompile = shader => breathe(shader, uniforms, "(instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz");
     material.customProgramCacheKey = () => "lamp-pool-v1";
@@ -213,7 +215,7 @@ export function LampGlow({ points, ground, on, halo = 2.6, pool = 5.5 }: {
     mesh.frustumCulled = false;
     mesh.renderOrder = 1;
     return mesh;
-  }, [points, ground, pool, uniforms]);
+  }, [points, ground, pool, color, uniforms]);
   const meshes = useMemo(() => [halos, pools], [halos, pools]);
   useEffect(() => () => { for (const o of meshes) { o.geometry.dispose(); (o.material as THREE.Material).dispose(); } }, [meshes]);
   useFrame(({ clock }, raw) => glowFrame(uniforms, meshes, on, clock.elapsedTime, Math.min(raw, 0.1)));
