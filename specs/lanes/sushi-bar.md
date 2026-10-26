@@ -63,8 +63,42 @@ The coordinator read "fov" as: see more (wider). terrain-v3 removes the tall sea
 
 ## Next
 
-1. Wait for David's review of round 2 (the shots above).
-2. Phase B after launch.
+**Phase A round 3: David's review of 6adf023d** (https://claude.ai/artifact/XdBpx1btgh54CCm6dUxGiF, 2026-10-26), verbatim:
+- **model, glide, seated evening:** approved.
+- **entrance (approved):** "corners curl more, "
+- **closed (approved):** "taklking to him gives you fishing quests"
+- **day:** "have lanterns on the corners, and the spine of the roof curl up with fish design on the edges"
+- **night (redo):** "too much fog, maybe because of halloween , i wanna see what its like on natural day, lanters on beach doesnt make sense"
+- **approach (redo):** "those lanterns dont make sense on the beach"
+- **seated, looking left (redo):** "because now its a close up, things need to be well modeled and look really good quality, because its close up"
+- **seated, night (redo):** "have everything be considered for remodeling, especially the food, then refine sushi cooking movements as well, the background islants need to look better than just blobs"
+
+**The coordinator's reading:**
+1. **The roof:**
+   - the corners curl up more;
+   - a lantern hangs at each roof corner;
+   - the ridge's ends curl up and carry fish ornaments, in the spirit of shachihoko (golden carp on castle roofs) in our style.
+2. **The beach lanterns:** remove the lantern post and the six hand lanterns on the sand. The bar's own lights and the boardwalk's lanterns are enough.
+3. **Night shots without the Halloween layer:** find where the Halloween layer darkens or fogs the night (`components/game/Halloween.tsx`, the season flag), and take the night shots with it off (a shoot option is fine), so David sees the bar on a natural night. Don't change the Halloween layer for players. Say what the Halloween layer adds to fog or light.
+4. **Close-up quality,** for everything seen from the stool:
+   - **The food:** nigiri with distinct fish (tuna, salmon, shrimp, tamago), maki, a sushi geta and a ginger mound, soy dish and chopsticks. Well modelled and appetising, because they're close up.
+   - **The counter:** its top, the fish case and its fish, the cutting board, knives and bowls.
+   - **The wall behind:** the sake bottles, the menu tags, the lucky cat.
+   - Keep each piece small in triangles, and spend the triangles where the eye lands.
+5. **Cooking movements:** Bancha draws the knife through the fish in a proper slicing motion (a long pull, not a chop), shapes the rice, lays the fish on top and sets it on the geta. The server picks up the plate and sets it at a seat. Smooth and readable. Use our animation or rig if the knife needs its own grip.
+6. **The islands:** better than blobs. Layered limestone stacks with ledges, trees and palms on top, a small island with a hut or a torii, maybe a far lighthouse. Readable silhouettes on the horizon.
+7. **Later, not now:** talking to the chef gives fishing quests (phase B, after launch). Leave a TODO in the spec, not code.
+8. **The server's name** is still pending from David.
+
+Shots into `specs/evidence/sushi-bar/phase-a3/`:
+- the bar by day;
+- the bar at night, with Halloween off;
+- the approach at night;
+- the roof's corners close up;
+- the seated view at evening and at night, centre, left and right;
+- a close shot of the food on the geta.
+
+Gates as before, and an A/B perf check against 57e7f47c if you change triangle counts a lot. Commit, update Status, SendMessage "main", stop.
 
 ## Tools and gotchas
 
