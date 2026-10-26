@@ -93,6 +93,13 @@ Read `specs/launch/v1-new-world.md` first, then `specs/launch/terrain-v3.md`. Th
     - **sushi-bar:** Bancho-style long bar, its lights, seating with a close camera, chef NPCs, music.
 
     All are cut from terrain-v3. Relay each art batch to terrain-v3, and merge perf into terrain-v3 when it's done.
+  - **Sushi bar paused for planning** (David, 2026-10-26: "Plan it with me first"). It's built up to 145642d5 on game/sushi-bar, not merged:
+    - the model, its glow and lights;
+    - stool seating with the close camera;
+    - two chefs;
+    - a "bar" music slot.
+
+    The lane is taking in-game shots, then stopping. Plan page: https://claude.ai/artifact/QddVeVSPgcEZRZEBgYJAjm (collection `sections`, 6 sections, uploads on). Read his answers there, then restart the lane from them.
   - **After launch (David's words):** the fish market inside (buy shop, appraisal) and the fog's horror look.
   - **Post-launch:** the building redesign (he wants less medieval, more fun; it "needs more planning"), the lighting pass and the dungeon lamps. Logged in `specs/launch/terrain-v3.md`.
 - **HQ round 4 merged** (71135930, David approved all four items 2026-10-23), with the ponytail cleanup. Later items are logged as A14. `hq-notice-board.glb` is no longer rendered but is still in the propModels table; delete both together after launch.
