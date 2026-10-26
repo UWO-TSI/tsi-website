@@ -141,10 +141,13 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // sitter looks to +z), a sandcastle with its bucket and spade, a cool box, a volleyball net along x (posts at x +-2.6).
   ...Object.fromEntries(["beach-ball-a", "beach-ball-b", "beach-ball-c", "beach-towel-a", "beach-towel-b", "beach-lounger", "sandcastle", "beach-cooler",
     "volleyball-net"].map(m => [m, `${P}${m}.glb`])),
-  // Single low-poly forest trees for the closed forest (art/trees/build_forest_trees.py, the masses' own tree makers), 100
-  // to 220 triangles, the trunk's foot at the origin (it runs 0.8 under): a broad cedar (7.5 tall), a tall narrow fir
-  // (10), a round broadleaf (5.4) and a young conifer (3.4). Scale them uniformly only (0.8 to 1.25), never stretched.
-  ...Object.fromEntries(["cedar", "fir", "broadleaf", "young"].map(m => [`forest-tree-${m}`, `/assets/game/plants/forest-tree-${m}.glb`])),
+  // Single low-poly forest trees for the closed forest (art/trees/build_forest_trees.py, game/trees-art), 120 to 380
+  // triangles, the trunk's foot at the origin (it runs 0.8 under), not solid. Conifers: a layered cedar (8 tall), a fir
+  // (10), a slender spire (12), a broad old fir (9), one leaning to +x (8), one with a broken top (7.6), a young one (3.4);
+  // broadleaves: an oak-like round crown (6.6), a pale birch (7.6), a wide spreading crown (6.2), a sapling (2.6); and a
+  // dead snag (6). Scale them uniformly only (0.8 to 1.25), never stretched; the instance tint goes on mForestCrown.
+  ...Object.fromEntries(["cedar", "fir", "spire", "old-fir", "leaning", "broken", "young", "broadleaf", "birch", "wide", "sapling", "snag"]
+    .map(m => [`forest-tree-${m}`, `/assets/game/plants/forest-tree-${m}.glb`])),
   // game/wharf-art2: coral reefs for the shallows (art/water/build_coral_reefs.py), the coral clumps above tinted and massed
   // on low rocks, the origin on the seabed at the middle, not solid: a broad (2.8 by 2), b round and tall (2 across), c a
   // long ribbon along x (3.4 by 1.2).
