@@ -107,6 +107,7 @@ R2 (on the R1c ground):
 - **night-wharf (redo):** "there should be different ship houses, it should be build on the side of the wharf and face inwards. the lighting in our game is still weak, should have like a glow homey feel and it should light up larger area"
 - **night-path (approve):** "looks better"
 - **night-plaza (redo):** "make the flag tsi logo flag. needs to work on the fog effect later cuz it looks like a horror game"
+- **lights (2026-10-26, later):** "lights should breath like fire, glow should grow and shrink like real lamps, more night bugs near lamps to catch."
 
 **The coordinator's reading:**
 1. **The docks:**
@@ -130,6 +131,8 @@ R2 (on the R1c ground):
 10. **The forest:** a closed, busy, natural forest that's cheap to draw, with no clumps or stretched trees. Drop the forest masses. Instead, use many single low-poly trees from a few variants (the existing `.lod1` trees and cedars, plus any `village-art2` adds), instanced, so it's one draw per variant. Give each tree its own uniform scale, turn and slight tint, set each at its own ground height, and pack them densely.
 11. **The river:** natural, not barren: reeds, stones, bushes, flowers and trees along the banks, and lily pads (`village-art2` makes the missing pieces).
 12. **The plaza flags:** the TSI logo (`web/public/assets/branding/tethos-mark.svg`) on them (`village-art2`).
+13. **Lights breathe:** every lamp's light and glow breathes like a flame, a soft, slow, uneven flicker in intensity and halo size, each lamp out of phase. Cheap: one time uniform in the shader, or one per-frame update over the few real lights; no per-lamp React state or per-lamp work each frame.
+14. **Night bugs at the lamps:** more moth-type bugs to catch near the lamps on the new world, from the existing bug system's species and spawn rules (no new system); if spots are placed by hand, add them for the lamps in the world data the way the system expects.
 
 ### 2026-10-26: R2b review, verbatim (https://claude.ai/artifact/TE3dCaECrP8qUTBTHyxUZz)
 
@@ -282,7 +285,7 @@ The plan page answers, verbatim in the spec. The drawing is a guide to where thi
    - fish you can see in the shallows (reuse `web/public/assets/game/water/fish.glb` and any existing ambient fish code);
    - the forest as instanced single trees (10);
    - the quick-sell barrel wired to the existing sell flow (4).
-2. **Lighting (2):** keep it cheap. Don't edit the files the perf lane is changing (`InstancedNature` merges, `ACNHParts`, `ContactShadows`, matrix and cull code) until the coordinator says it's merged in; put the work in the lamp and lighting code.
+2. **Lighting (2, 13, 14):** keep it cheap; the lamps breathe like flames (13) and draw night bugs (14). Don't edit the files the perf lane is changing (`InstancedNature` merges, `ACNHParts`, `ContactShadows`, matrix and cull code) until the coordinator says it's merged in; put the work in the lamp and lighting code.
 3. **Place the art as it lands** from `wharf-art2` and `village-art2`. The coordinator tells you when to merge each branch.
 4. **Renders** under `specs/evidence/terrain-v3/r2d/`, the r2c set again. SendMessage "main" with the images and a one-line fact for each. Update Status, then stop. No perf run: the perf lane owns it.
 

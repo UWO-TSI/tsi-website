@@ -157,10 +157,10 @@ export default function Campfire({ site, ground, phase, player }: {
   useContactShadow(stack.model, useMemo(() => modelContact(stack.model, STACK_URL, shadowClassFor(STACK_URL)), [stack]));
   // The stack is solid: you walk round it.
   useEffect(() => {
-    const r = { x0: at.x - SOLID_HALF, x1: at.x + SOLID_HALF, z0: at.z - SOLID_HALF, z1: at.z + SOLID_HALF };
+    const h = SOLID_HALF * (site.scale ?? 1), r = { x0: at.x - h, x1: at.x + h, z0: at.z - h, z1: at.z + h };
     eventSolids.push(r);
     return () => { const i = eventSolids.indexOf(r); if (i >= 0) eventSolids.splice(i, 1); };
-  }, [at]);
+  }, [at, site.scale]);
   // Where it is and whether it burns, for the emote wheel (sit and dance by it).
   useEffect(() => {
     campfireLive.site = { x: at.x, z: at.z };
@@ -174,7 +174,7 @@ export default function Campfire({ site, ground, phase, player }: {
     return () => { delete (window as { __campfire?: unknown }).__campfire; };
   }, [at, system]);
   useFrame(({ camera }, raw) => burn(state.current, system, light.current, stack.embers, at, lit, player.current, camera, raw));
-  return <group position={[at.x, at.y, at.z]}>
+  return <group position={[at.x, at.y, at.z]} scale={site.scale ?? 1}>
     <primitive object={stack.model} />
     <primitive object={system.mesh} />
     <pointLight ref={light} color="#ffad5c" intensity={0} distance={LIGHT.distance} decay={LIGHT.decay} position={[0, LIGHT.height, 0]} />

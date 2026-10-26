@@ -67,7 +67,7 @@ export function sceneryOf(v: Village, ground: (x: number, z: number) => number, 
     ...(SEASON_FLOWERS[season].length ? at("flower", seed => flowerParts(seed, SEASON_FLOWERS[season])) : []),
     ...propsOf(v).filter(o => o.model && !isJoinedFence(o)).map((p): ModelPlacement => ({ url: isRockModel(p.model) ? rockUrl(p.model) : propUrl(p.model!), position: [p.x, propY(p, ground), p.z], rotation: p.yaw ?? 0, scale: p.scale ?? 1 })),
     // The wharf kit on the deck squares, kept clear where the jetty's gangways land (lib/game/wharf.ts deckPieces).
-    ...deckPieces(objectsOf("deck", v), ground, jettyLanding(v)).map((p): ModelPlacement => ({ url: propUrl(p.model), position: [p.x, p.y, p.z], rotation: p.yaw, scale: 1 })),
+    ...deckPieces(objectsOf("deck", v), ground, jettyLanding(v), undefined, propsOf(v).filter(o => o.model?.startsWith("ship-house-"))).map((p): ModelPlacement => ({ url: propUrl(p.model), position: [p.x, p.y, p.z], rotation: p.yaw, scale: 1 })),
     // The connectable fences: a post on each, rails to the posts beside it (lib/game/fences.ts).
     ...fencePlacements(objectsOf("fence", v).filter(isJoinedFence), ground),
     // The natural barriers standing at this drop (lib/game/barriers.ts), where the walker blocks them.
@@ -78,13 +78,15 @@ export function sceneryOf(v: Village, ground: (x: number, z: number) => number, 
 /** The bunting's ends hang this far up its banner poles (village-art's plaza set). */
 const BUNTING_LIFT = 3.1;
 /**
- * Where a prop stands: on the ground under it; the bunting up at its poles' tops; a forest mass at the lowest ground
- * under its footprint (its trunks run on below), so it sinks into a slope or a cliff's lip instead of hovering.
+ * Where a prop stands: on the ground under it; a ship house at its deck's height; the bunting up at its poles' tops; a mossy boulder at the lowest ground
+ * under its footprint, so it sinks into a slope or a bank instead of hovering.
  */
-function propY(p: { x: number; z: number; model?: string; scale?: number }, ground: (x: number, z: number) => number): number {
+function propY(p: { x: number; z: number; yaw?: number; model?: string; scale?: number }, ground: (x: number, z: number) => number): number {
+  // A ship house stands on the deck's water edge, its back over the sea: at the deck's height 2 in (along its +z).
+  if (p.model?.startsWith("ship-house-")) return ground(p.x + 2 * Math.sin(p.yaw ?? 0), p.z + 2 * Math.cos(p.yaw ?? 0));
   let y = ground(p.x, p.z);
   if (p.model === "bunting-string") return y + BUNTING_LIFT;
-  if (!p.model?.startsWith("forest-mass")) return y;
+  if (!p.model?.startsWith("moss-boulder")) return y;
   const r = Math.max(...(PROP_FOOTPRINT[p.model] ?? [0])) * (p.scale ?? 1);
   for (let a = 0; a < 8; a++) y = Math.min(y, ground(p.x + r * Math.cos((a * Math.PI) / 4), p.z + r * Math.sin((a * Math.PI) / 4)));
   return y;

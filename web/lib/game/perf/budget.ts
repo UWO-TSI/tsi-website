@@ -180,13 +180,16 @@ export const ASSET_CATEGORIES: readonly AssetCategory[] = [
   { name: "shore and forage", prefixes: ["game/forage/mushroom-", "game/forage/shell-"], triangles: 2000, primitives: 1, materials: 1, texture: 256, bones: 0 },
   // game/remodel-r2 (art/nature/close_bushes.py): the dump's bushes closed all round, one primitive on the dump's leaf texture.
   { name: "closed bush", prefixes: ["game/plants/bush-"], triangles: 1000, primitives: 1, materials: 1, texture: 128, bones: 0 },
+  // game/village-art2 (art/trees/build_shrubs.py): the new world's wild shrubs, lobes of leaf cards on the summer atlas
+  // (one cut-out material) and their twigs in colour.
+  { name: "shrub", prefixes: ["game/plants/shrub-"], triangles: 1200, primitives: 2, materials: 2, texture: 256, bones: 0 },
+  // game/village-art2 (art/props/build_river_set.py): reeds and cattails, blades in colour, one material.
+  { name: "reeds", prefixes: ["game/plants/reeds-"], triangles: 800, primitives: 1, materials: 1, texture: 0, bones: 0 },
   // game/remodel-trees (art/trees): our trees, leaf or needle cards over closed volumes on a trunk, drawn instanced: the
   // cards with their volume (one cut-out material on the painted atlas) and the bark in colour, the crown's hull and the
   // trunk only in the sun's map. Triangles count all four; the far model (.lod1) is held under half the near one
   // (natureLod.test.ts).
   { name: "tree", prefixes: ["game/plants/tree-", "game/plants/conifer-"], triangles: 3200, primitives: 4, materials: 4, texture: 512, bones: 0 },
-  // terrain v3's forest masses (art/trees/build_forest_masses.py): a stand of cedars in one mesh, instanced over the closed forest.
-  { name: "forest mass", prefixes: ["game/plants/forest-"], triangles: 3200, primitives: 2, materials: 2, texture: 256, bones: 0 },
   // game/remodel-trees (art/trees/build_flowers.py): a clump of stems with petal cards, one cut-out material on the
   // painted petal atlas, one draw for every flower of its kind.
   { name: "flower", prefixes: ["game/plants/flower-"], triangles: 600, primitives: 1, materials: 1, texture: 512, bones: 0 },

@@ -95,11 +95,10 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // Its campfire set (art/props/build_campfire_set.py), round the campfire with the log benches: a stump to sit on, a
   // firewood stack with its chopping block, a fish-drying rack (along x).
   ...Object.fromEntries(["stump-seat", "firewood-stack", "fish-rack"].map(m => [m, `${P}${m}.glb`])),
-  // Its forest masses (art/trees/build_forest_masses.py, remodelled by game/village-art): a stand of trees that each grow
-  // their own way (cedars, firs, broadleaf, young trees, a snag) in one mesh, about 12 (a), 16 by 9 along x (b), 10 (c),
-  // a 14 by 8 kidney (d) and 18 by 13 (e) across, to instance over the closed forest so it reads dense from the open
-  // area. Each runs 2.2 below its origin (trunks and a plug of floor): set it at the lowest ground under its footprint.
-  ...Object.fromEntries(["a", "b", "c", "d", "e"].map(m => [`forest-mass-${m}`, `/assets/game/plants/forest-mass-${m}.glb`])),
+  // The closed forest's trees (lib/game/world/generate.ts forestTrees): the far versions of our cedar and two broadleaf
+  // shapes, about 3.9, 3.4 and 2.9 tall at scale 1, instanced.
+  "forest-cedar": "/assets/game/plants/conifer-cedar.lod1.glb", "forest-tall": "/assets/game/plants/tree-tall-summer.lod1.glb",
+  "forest-round": "/assets/game/plants/tree-round-summer.lod1.glb",
   // game/village-art: the plaza's set (art/props/build_plaza_set.py), fronts toward +z. The fountain is 9.6 across (scale
   // it uniformly to the plaza); the bunting hangs between (-2, 0, 0) and (2, 0, 0), so set it at the hang height and scale
   // x by the span / 4; the wall banner's origin is its bracket's plate on a wall in the x-y plane, the banner out along +z.
@@ -111,9 +110,10 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // tipped toward +z, and a hoist whose jib reaches along +x.
   ...Object.fromEntries(["dock-pile-rope", "rope-net", "life-ring", "net-heap", "crate-net", "crate-cloth", "fish-crate", "dock-hoist"]
     .map(m => [m, `/assets/game/wharf/${m}.glb`])),
-  // game/village-art: the path's edges (art/props/build_path_edge.py): mossy side rocks (scale them freely), and the loose
-  // fence in short runs along x (leave gaps between runs; the lone post fills one); and a meadow patch of wild flowers in
-  // grass and a clump of tall grass (art/trees/build_flowers.py, a tile across at scale 1).
+  // game/village-art: the path's edges: mossy side rocks (art/props/build_stones.py, remodelled organic by game/village-art2;
+  // scale them freely), and the loose fence in short runs along x (art/props/build_path_edge.py; leave gaps between runs,
+  // the lone post fills one); and a meadow patch of wild flowers in grass and a clump of tall grass (art/trees/build_flowers.py,
+  // a tile across at scale 1).
   ...Object.fromEntries(["path-rock-slab", "path-rock-low", "path-rock-cluster", "rustic-fence-a", "rustic-fence-b", "rustic-post"].map(m => [m, `${P}${m}.glb`])),
   ...Object.fromEntries(["meadow", "tallgrass"].map(m => [`flower-${m}`, `/assets/game/plants/flower-${m}.glb`])),
   // game/wharf-art: the beach set (art/props/build_beach_set.py), the origin on the ground: a lifeguard tower (its ladder
@@ -123,11 +123,33 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // middle of its solid kitchen core (x ±4, z ±1.5), the guests' deck and six stools toward +z, the open window onto the
   // sea toward -z. What glows is its own model (SUSHI_BAR_GLOW_URL), drawn by components/game/SushiBar.tsx.
   "sushi-bar": SUSHI_BAR_URL,
-  // The fish market (art/buildings/build_fish_market.py): a red board house 5 by 3.6, its front to +z, a marlin on the ridge,
-  // an awning out to z 2.75 over a table of fish; an exterior only, the origin at the middle of its floor.
-  "fish-market": "/assets/game/buildings/fish-market.glb",
   ...Object.fromEntries(["a", "b", "c"].map(m => [`surfboard-${m}`, `${P}surfboard-${m}.glb`])),
   ...Object.fromEntries(["a", "b", "c", "d"].map(m => [`coral-${m}`, `/assets/game/water/coral-${m}.glb`])),
+  // game/village-art2 (David, R2c): big mossy stones (art/props/build_stones.py), sunk a little under their origin: a
+  // chiselled boulder on a broken slab (1.4 across, 0.86 tall) and a low outcrop of three stepped slabs (2.3 by 1.5).
+  ...Object.fromEntries(["a", "b"].map(m => [`moss-boulder-${m}`, `${P}moss-boulder-${m}.glb`])),
+  // Wild shrubs (art/trees/build_shrubs.py): loose clumps of leaf cards in different sizes and densities, never a ball, the
+  // root at the origin, not solid: a full mound (a), a low spreading one along x (b), a tall loose one (c, 1.4), a small
+  // sparse tuft (d), a big lush one (e, 2.2 across) and a lopsided loose pair of clumps (f). Turn and scale them freely.
+  ...Object.fromEntries(["a", "b", "c", "d", "e", "f"].map(m => [`shrub-${m}`, `/assets/game/plants/shrub-${m}.glb`])),
+  // game/wharf-art2: the fish market, remodelled (art/buildings/build_fish_market.py): a timber shop 5.2 by 4.2 on a stone
+  // footing, front +z, a giant wooden swordfish bursting up out of its roof toward +x (the bill reaches x 5.1, top 10.6),
+  // a porch out to z 3.9 over the door and a table of fish; an exterior only, the origin at the middle of its floor. The
+  // sell barrel (same builder) is the quick sell: a big barrel of fish, a hanging scale and a SELL board, front +z.
+  "fish-market": "/assets/game/buildings/fish-market.glb", "sell-barrel": "/assets/game/wharf/sell-barrel.glb",
+  // game/wharf-art2: the ship houses (art/wharf/build_ship_houses.py), to straddle the deck's water edge facing in: the
+  // origin on the deck's top at the middle of the floor, the door to +z (inland), the back half over the sea on piles
+  // down to y -3.4. a the red boathouse (boat door open at the back), b the stilt house (a balcony on piles off +x), c
+  // the net loft (two storeys), d the shack (a porch to z 2.45 under a roof falling to the back).
+  ...Object.fromEntries(["a", "b", "c", "d"].map(m => [`ship-house-${m}`, `/assets/game/wharf/ship-house-${m}.glb`])),
+  // The river's dressing (art/props/build_river_set.py): reeds with cattails rooted at y 0 for the banks and the shallows
+  // (a clump, a small loose one, a run along x for a bank's edge), lily pads floating at their origin (set it on the
+  // water's level: a with a lily in flower, b with a bud), smooth river stones (a scatter, and two big ones that stand in
+  // a shallow), and bleached driftwood lying along x (a log with its root plate at -x, a forked branch). Only the big
+  // stones are solid.
+  ...Object.fromEntries(["a", "b", "c"].map(m => [`reeds-${m}`, `/assets/game/plants/reeds-${m}.glb`])),
+  ...Object.fromEntries(["a", "b"].map(m => [`lily-pads-${m}`, `/assets/game/water/lily-pads-${m}.glb`])),
+  ...Object.fromEntries(["river-stones-a", "river-stones-b", "driftwood-a", "driftwood-b"].map(m => [m, `${P}${m}.glb`])),
 };
 export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? `/assets/acnh/props/${model}.glb`;
 

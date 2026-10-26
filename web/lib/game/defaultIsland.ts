@@ -92,16 +92,18 @@ export const PROP_FOOTPRINT: Record<string, [number, number]> = {
   "wharf-piling": [0.15, 0.15], "rope-post": [0.1, 0.1], "rope-span": [1, 0.03],
   "palm-tall": [0.45, 0.45], "palm-lean": [0.42, 0.42], "palm-short": [0.4, 0.4], "palm-small": [0.3, 0.3],
   "log-bench": [0.95, 0.24], "stump-seat": [0.3, 0.3], "firewood-stack": [0.95, 0.46], "fish-rack": [1.02, 0.37],
-  "forest-mass-a": [4.5, 4.5], "forest-mass-b": [6, 3.5], "forest-mass-c": [3.8, 3.8], "forest-mass-d": [5.2, 3], "forest-mass-e": [7, 4.8],
   // game/village-art's plaza set: the fountain's box sits inside its round basin (a body stops on the rim's cap).
   "plaza-fountain": [4, 4], "banner-pole": [0.1, 0.1], "flag-pole": [0.12, 0.12], "fruit-stall": [1.4, 0.6], "fruit-barrel": [0.38, 0.38],
   "fruit-crate": [0.32, 0.22], "flower-planter": [0.62, 0.22], "flower-pot": [0.24, 0.24], "round-planter": [0.52, 0.52],
   "planter-bench": [1.3, 0.28], "market-sign": [0.31, 0.25],
   "dock-pile-rope": [0.25, 0.25], "rope-net": [1.13, 0.13], "life-ring": [0.48, 0.09], "net-heap": [0.7, 0.5], "crate-net": [0.7, 0.4],
   "crate-cloth": [0.35, 0.35], "fish-crate": [0.36, 0.42], "dock-hoist": [0.28, 0.28],
-  "path-rock-slab": [0.2, 0.12], "path-rock-low": [0.33, 0.28], "path-rock-cluster": [0.4, 0.28], "rustic-fence-a": [1.25, 0.08],
+  "path-rock-slab": [0.2, 0.12], "path-rock-low": [0.3, 0.3], "path-rock-cluster": [0.36, 0.26], "rustic-fence-a": [1.25, 0.08],
   "rustic-fence-b": [0.85, 0.08], "rustic-post": [0.07, 0.07],
-  "sushi-bar": [4.0, 1.5], "fish-market": [2.6, 1.9], "lifeguard-tower": [0.86, 0.86], "surfboard-a": [0.2, 0.1], "surfboard-b": [0.2, 0.1], "surfboard-c": [0.2, 0.1],
+  "sushi-bar": [4.0, 1.5], "fish-market": [3.1, 3.6], "sell-barrel": [0.66, 0.78],
+  "ship-house-a": [2.1, 2.3], "ship-house-b": [2.4, 2.0], "ship-house-c": [1.9, 2.0], "ship-house-d": [2.1, 2.1], "lifeguard-tower": [1.02, 1.02], "surfboard-a": [0.2, 0.1], "surfboard-b": [0.2, 0.1], "surfboard-c": [0.2, 0.1],
+  // game/village-art2
+  "moss-boulder-a": [0.65, 0.5], "moss-boulder-b": [1.05, 0.65], "river-stones-b": [0.55, 0.4],
 };
 /** Prop tops before scale, measured from the GLB bounds: what a jump clears or lands on (lib/game/movement). */
 export const PROP_TOP: Record<string, number> = {
@@ -109,14 +111,15 @@ export const PROP_TOP: Record<string, number> = {
   ...Object.fromEntries(ROCK_MODELS.map(m => [m, ROCK_SIZE[m].top])),
   barrel: 11.66, lighthouse: 38, crate: 0.52, "market-cart": 2.84, "shop-cart": 0.87, "beach-parasol": 2.33, "palm-a": 3.94, "palm-b": 2.7,
   "wharf-piling": 0.35, "rope-post": 0.87, "rope-span": 0.68, "palm-tall": 6.21, "palm-lean": 5.03, "palm-short": 3.46, "palm-small": 1.95,
-  "log-bench": 0.51, "stump-seat": 0.45, "firewood-stack": 0.86, "fish-rack": 1.43, "forest-mass-a": 10.376, "forest-mass-b": 11.011, "forest-mass-c": 10.347,
-  "forest-mass-d": 8.431, "forest-mass-e": 9.258,
+  "log-bench": 0.51, "stump-seat": 0.45, "firewood-stack": 0.86, "fish-rack": 1.43,
   "plaza-fountain": 3.21, "banner-pole": 3.3, "flag-pole": 4.13, "fruit-stall": 2.5, "fruit-barrel": 1.005, "fruit-crate": 0.495,
   "flower-planter": 0.623, "flower-pot": 0.627, "round-planter": 1.091, "planter-bench": 0.731, "market-sign": 0.987,
   "dock-pile-rope": 0.9, "rope-net": 1.15, "life-ring": 0.93, "net-heap": 0.39, "crate-net": 0.7, "crate-cloth": 0.74, "fish-crate": 0.48,
   "dock-hoist": 2.645,
-  "path-rock-slab": 0.626, "path-rock-low": 0.286, "path-rock-cluster": 0.376, "rustic-fence-a": 0.99, "rustic-fence-b": 0.91, "rustic-post": 0.931,
-  "sushi-bar": 4.68, "fish-market": 6.15, "lifeguard-tower": 3.8, "surfboard-a": 1.755, "surfboard-b": 1.759, "surfboard-c": 1.763,
+  "path-rock-slab": 0.538, "path-rock-low": 0.247, "path-rock-cluster": 0.294, "rustic-fence-a": 0.99, "rustic-fence-b": 0.91, "rustic-post": 0.931,
+  "sushi-bar": 4.68, "fish-market": 10.569, "sell-barrel": 3.394,
+  "ship-house-a": 4.48, "ship-house-b": 4.13, "ship-house-c": 6.28, "ship-house-d": 3.178, "lifeguard-tower": 4.7, "surfboard-a": 1.755, "surfboard-b": 1.759, "surfboard-c": 1.763,
+  "moss-boulder-a": 0.855, "moss-boulder-b": 0.761, "river-stones-b": 0.475,
 };
 /**
  * Residents' houses (the `house` kind, specs/world-editor.md decision 10): the chalet in its three colourways, the
