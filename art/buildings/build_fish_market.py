@@ -8,19 +8,17 @@ plain colours on one painted grain, low detail. An exterior: nobody enters it in
 
   /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P art/buildings/build_fish_market.py [-- review <dir>]
 
-Writes, in game units at scale 1, the origin on the ground (the deck's top) at the middle of the house's floor, front +z:
+Writes, in game units at scale 1, the origin on the ground (the deck's top) at the middle of the house's floor, front +z
+(the quick-sell stall outside it is art/wharf/build_sell_stall.py):
   game/buildings/fish-market.glb  the house 5.2 wide (x) by 4.2 deep on a stone footing (solid 2.75 by 2.3 with it),
                                   the upper floor jettied out to z +-2.4, a gabled roof along x (ridge 6.2), skirts of
                                   shingles over the side walls, a porch out to z 3.9 over the door (left) and a table
                                   of fish on ice (right), fish hung from the porch beam, the sign on the porch roof. The
                                   swordfish comes out of the front slope by the ridge, pitched up toward +z.
-  game/wharf/sell-barrel.glb      the quick-sell barrel: a big open barrel (1.3 tall) of fish on ice, a post at its back
-                                  with an arm over it holding a hanging fish scale (a fish on the hook), a painted SELL
-                                  board with a coin at the top. The origin at the barrel's foot; front +z; solid 0.66.
 
 Wood is one painted grain (art/wharf/build_wharf_kit.py wood_mat) under COLOR_0, the shingles and the fish included;
-rope the kit's rope; the rest the shared plain presets (P_Paint, P_Glass, P_Stone, P_Metal). The sell board has its own
-small painted texture (our brush lettering, art/props/paintkit.py). Seeded: a rebuild writes the same models.
+rope the kit's rope; the rest the shared plain presets (P_Paint, P_Glass, P_Stone, P_Metal). Seeded: a rebuild writes
+the same model.
 """
 import math, os, sys
 import numpy as np
@@ -30,7 +28,6 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "props"))
 sys.path.insert(0, os.path.join(HERE, "..", "wharf"))
 import propkit as K  # noqa: E402
-import paintkit as PK  # noqa: E402
 from build_wharf_kit import mix, report, wood_mat  # noqa: E402
 from build_dock_decor import ROPE, lashing, ring_into  # noqa: E402
 
@@ -412,78 +409,13 @@ def fish_market(wood, rope, paint, glass, stone, metal):
     return k.finish(smooth_deg=40)
 
 
-# ================================================================ the sell barrel
-def sign_texture(seed=2703):
-    """The SELL board: our grain in a warm light wood, a gold coin, the word in dark brush capitals."""
-    h, w = 128, 256
-    base = np.transpose(K.grain(w, h, seed, "#d8b07c", lines=(5, 13, 31), contrast=0.2, knots=1), (1, 0, 2))
-    Wf, Hf = 2.0, 1.0
-    coin = [(0.38 + 0.27 * math.cos(a), 0.5 + 0.27 * math.sin(a)) for a in np.linspace(0, math.tau, 40, endpoint=False)]
-    base = PK.paint(base, PK.fill_poly(h, w, Wf, Hf, coin), "#e8b63a", wet=1.0)
-    base = PK.paint(base, PK.strokes_alpha(h, w, Wf, Hf, [PK.arc(0.38, 0.5, 0.2, 0.2, 0, 360, 24)], 0.025, seed=seed), "#b07c1e")
-    base = PK.paint(base, PK.strokes_alpha(h, w, Wf, Hf, [[(0.38, 0.38), (0.38, 0.62)]], 0.035, seed=seed + 1), "#b07c1e")
-    base = PK.paint(base, PK.strokes_alpha(h, w, Wf, Hf, PK.text_strokes("SELL", 1.27, 0.27, 0.46, seed=seed + 2), 0.055, seed=seed + 3), "#3a281c", wet=0.95)
-    edge = PK.strokes_alpha(h, w, Wf, Hf, [[(0.04, 0.04), (1.96, 0.04), (1.96, 0.96), (0.04, 0.96), (0.04, 0.04)]], 0.03, seed=seed + 4, smooth_curves=False)
-    return PK.paint(base, edge, "#7a5434", wet=0.6)
-
-
-def sell_barrel(wood, rope, paint, metal, sign):
-    k = K.Kit("sell-barrel")
-    n = 18
-    prof = [(0.0, 0.0), (0.5, 0.0), (0.56, 0.2), (0.63, 0.55), (0.64, 0.7), (0.62, 0.95), (0.55, 1.3), (0.49, 1.3), (0.49, 1.12), (0.0, 1.12)]
-    faces = k.lathe((0, 0, 0), prof, wood, "#a87a4c", n=n, v_len=1.3)
-    for i, f in enumerate(faces):                       # staves, each its own shade
-        s = mix("#b08050", "#8a6038", ((i % n) * 5 % 7) / 6)
-        for lp in f.loops:
-            lp[k.col] = (*K.lin(s), 1.0)
-    for y, r in ((0.12, 0.535), (0.62, 0.645), (1.18, 0.595)):
-        k.lathe((0, y, 0), [(r - 0.01, -0.045), (r + 0.015, -0.03), (r + 0.015, 0.03), (r - 0.01, 0.045)], metal, "#55524e", n=n)
-    k.blob((0, 1.14, 0), (0.47, 0.12, 0.47), paint, "#dceef2", segs=12, rings=5, seed=3, lumpy=0.3)          # crushed ice
-    for i, (x, z, yaw, tilt, col) in enumerate(((-0.18, 0.05, 0.3, 0.5, "#5f86b5"), (0.15, -0.12, 2.0, 0.9, "#c56a55"), (0.2, 0.2, -0.6, 0.3, "#6aa36b"),
-                                                 (-0.05, -0.25, 1.2, 1.1, "#5f86b5"), (-0.25, 0.25, 2.6, 0.2, "#c56a55"))):
-        d = (math.cos(yaw) * math.cos(tilt), math.sin(tilt), math.sin(yaw) * math.cos(tilt))
-        fish_along(k, paint, (x, 1.24 + 0.12 * math.sin(tilt), z), d, 0.5, col, (-math.sin(yaw), 0, math.cos(yaw)))
-    # The post at its back, lashed to it; an arm out over it with the hanging scale; the SELL board on top.
-    px, pz, top = -0.05, -0.68, 3.25
-    k.beam((px, 0.0, pz), (px, top, pz), 0.17, 0.17, 0.03, wood, BEAM, up=(0, 0, 1), segs=1, uv_len=1.6)
-    lashing(k, rope, (px, 0, pz), 0.1, 1.0, wraps=3)
-    ay = 2.45
-    k.beam((px, ay, pz - 0.1), (px, ay, 0.92), 0.12, 0.14, 0.02, wood, mix(BEAM, BEAM_LIGHT, 0.3), segs=1)
-    k.beam((px, 1.85, pz + 0.05), (px, ay - 0.05, 0.1), 0.08, 0.08, 0.01, wood, BEAM, up=(1, 0, 0), segs=1)
-    sx_, sz_ = px, 0.78
-    k.tube([(sx_, ay - 0.07, sz_), (sx_, 2.24, sz_)], 0.012, rope, ROPE, n=4, v_len=0.2)
-    k.lathe((sx_, 2.24, sz_), [(0.0, 0.0), (0.035, 0.0), (0.035, -0.06), (0.0, -0.06)], metal, "#8a7a52", n=8)          # its ring
-    dial_y = 2.03
-    k.lathe((sx_, dial_y, sz_ - 0.05), [(0.0, 0.0), (0.17, 0.0), (0.19, 0.03), (0.19, 0.08), (0.17, 0.1), (0.0, 0.1)], metal, "#c79a3c", d=(0, 0, 1), n=16)
-    k.lathe((sx_, dial_y, sz_ + 0.06), [(0.0, 0.0), (0.155, 0.0)], paint, "#f3ead6", d=(0, 0, 1), n=16)
-    for j in range(8):
-        a = math.tau * j / 8
-        k.rbox((sx_ + 0.12 * math.cos(a), dial_y + 0.12 * math.sin(a), sz_ + 0.066), (0.025, 0.025, 0.01), 0.0, paint, "#3a3530", segs=1)
-    k.beam((sx_, dial_y, sz_ + 0.075), (sx_ + 0.08, dial_y + 0.09, sz_ + 0.075), 0.022, 0.012, 0.0, paint, "#c8483c", segs=1)
-    hook = [(sx_, dial_y - 0.19, sz_), (sx_, dial_y - 0.3, sz_), (sx_ + 0.01, dial_y - 0.38, sz_), (sx_ - 0.04, dial_y - 0.43, sz_),
-            (sx_ - 0.08, dial_y - 0.39, sz_)]
-    k.tube(hook, 0.016, metal, "#5d6168", n=6, v_len=0.2, caps=True)
-    hung_fish(k, paint, (sx_, dial_y - 0.42 - 0.28, sz_), 0.56, "#5f86b5")
-    # The SELL board on the post's top, a little roof over it.
-    by, bw, bh = 2.95, 1.0, 0.5
-    k.rbox((px, by, pz + 0.13), (bw + 0.08, bh + 0.08, 0.06), 0.02, wood, BEAM, segs=1, uv_len=1.5, v_axis=0)
-    zf = pz + 0.165
-    k.quad([(px - bw / 2, by - bh / 2, zf), (px + bw / 2, by - bh / 2, zf), (px + bw / 2, by + bh / 2, zf), (px - bw / 2, by + bh / 2, zf)], sign)
-    for sg in (-1, 1):
-        k.beam((px, top + 0.12, pz + 0.12), (px + sg * 0.62, by + bh / 2 + 0.02, pz + 0.12), 0.32, 0.05, 0.0, wood, mix(BEAM, "#8f6440", 0.4), segs=1)
-    k.tint_gradient(0.84, 1.0, 0.0, top)
-    return k.finish(smooth_deg=45)
-
-
 def build():
     K.reset()
     wood = wood_mat("M_DecorWood", 2614)
     rope = K.Mat("M_Rope", tex=K.image("rope", K.rope(64, 128, 2613, "#ffffff")), rough=1.0)
     paint, glass, stone, metal = K.Mat("P_Paint", rough=0.45), K.Mat("P_Glass", rough=0.08), K.Mat("P_Stone", rough=0.95), K.Mat("P_Metal", rough=0.4)
-    sign = K.Mat("M_SellSign", tex=K.image("sell-sign", sign_texture()), rough=0.9)
     obs = {}
-    for path, fn in (("game/buildings/fish-market", lambda: fish_market(wood, rope, paint, glass, stone, metal)),
-                     ("game/wharf/sell-barrel", lambda: sell_barrel(wood, rope, paint, metal, sign))):
+    for path, fn in (("game/buildings/fish-market", lambda: fish_market(wood, rope, paint, glass, stone, metal)),):
         ob = fn()
         K.export([ob], f"{path}.glb")
         report(ob)
@@ -494,7 +426,7 @@ def build():
 def scene(obs, out):
     import bpy
     shown = []
-    for name, (x, z) in {"fish-market": (0, 0), "sell-barrel": (-1.6, 5.4)}.items():
+    for name, (x, z) in {"fish-market": (0, 0)}.items():
         o = obs[name].copy()
         bpy.context.scene.collection.objects.link(o)
         o.location = K.G(x, 0, z)
@@ -512,6 +444,3 @@ if __name__ == "__main__":
     if "review" in ARGS:
         d = ARGS[ARGS.index("review") + 1]
         scene(obs, os.path.join(d, "fish-market.png"))
-        if "barrel" in ARGS:
-            obs["sell-barrel"].hide_render = False
-            K.review([obs["sell-barrel"]], os.path.join(d, "sell-barrel.png"), views=((200, 18), (150, 30)), size=600)
