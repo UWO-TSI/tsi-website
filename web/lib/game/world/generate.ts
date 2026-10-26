@@ -174,6 +174,8 @@ function quayAt(z: number, d: number): { x: number; z: number; yaw: number } {
   const nx = -(bz - az) / len, nz = (bx - ax) / len;
   return { x: ax + (bx - ax) * f + nx * d, z: z + nz * d, yaw: Math.atan2(nx, nz) };
 }
+/** The sandcastle's z, just up from the water's edge at x 8. */
+const SANDCASTLE_Z = 112;
 /** The beach's palms, bigger than the wharf's (David, R2c: "bigger trees"). */
 const BEACH_PALM = 1.35;
 /** The beach's campfire. */
@@ -208,10 +210,14 @@ const SUSHI = [44, 96.5] as const;
 const BEACH = strip([[58, 92], [40, 100], [10, 105], [-20, 105], [-50, 101]], 9, 8, 0.8, 16, 95);
 
 /**
- * How fast the seabed falls away from the shore: off the beach (east of the river's mouth) the shelf runs out 2.5 times
- * as far, a wide wading shallows (David, R2c: "make the shallow water area bigger and you can dip your toes in water").
+ * The seabed `d` out from the shore at (x, z): off the beach (east of the river's mouth) the shelf runs out 2.5 times as
+ * far and its first 0.6 of depth is a third shallower, a wide wading shallows (David, R2c: "make the shallow water area
+ * bigger and you can dip your toes in water"; defaultIsland WADE).
  */
-const shoal = (x: number, z: number) => 1 - 0.6 * smoothstep(-22, -4, BEACH(x, z)) * smoothstep(-46, -38, x);
+function bed(x: number, z: number, d: number): number {
+  const w = smoothstep(-22, -4, BEACH(x, z)) * smoothstep(-46, -38, x), b = shelf(d * (1 - 0.6 * w));
+  return b - 0.35 * w * Math.min(b, 0.6);
+}
 /** At the village's level, rolling a little, rising a touch toward the mountain: no sudden rise anywhere; across the river 1.5 lower (David: "slighly shorter by 1-2 blocks"). */
 const meadowGround = (x: number, z: number) => H.meadow + wob(x, z, 0.8, 40, 11) + 1.6 * smoothstep(0, -50, z) - 1.5 * smoothstep(0, 12, westOfRiver(x, z));
 const forestGround = (x: number, z: number) => {
@@ -496,6 +502,19 @@ function beachSet(): Obj[] {
   const out: Obj[] = [obj("prop", "sushi-bar", ...SUSHI, facing(1, 1), 1, "sushi-bar"), obj("prop", "lifeguard-tower", 1, 108.5, 0, 1, "lifeguard-tower")];
   ([[4.5, 107.4, "a"], [5.1, 107.8, "b"], [5.7, 107.3, "c"], [-16, 107, "c"], [-15.4, 107.5, "a"], [33, 104, "b"], [33.6, 104.4, "a"]] as const)
     .forEach(([x, z, m], i) => out.push(obj("prop", `surfboard-${i}`, x, z, 0.4 * (hash01(i, 30) - 0.5) + (x > 30 ? 2.6 : 0), 1, `surfboard-${m}`)));
+  // wharf-art2's beach things (David, R2c: "brainstorm for more beach stuff, maybe beach balls"): by each parasol a
+  // lounger looking out to sea, a towel or two, the cool box and a ball; the volleyball net on open sand well off the
+  // campfire, a ball by it; the sandcastle by the water's edge.
+  [[-30, 109], [-22, 110], [28, 108]].forEach(([x, z], i) => {
+    const h = (q: number) => hash01(i, 140 + q);
+    out.push(obj("prop", `beach-lounger-${i}`, x + 1.3, z - 0.2, 0.3 * (h(0) - 0.5), 1, "beach-lounger"));
+    out.push(obj("prop", `beach-towel-${i}`, x - 1.5, z + 0.3, 0.5 * (h(1) - 0.5), 1, h(2) < 0.5 ? "beach-towel-a" : "beach-towel-b"));
+    if (h(3) < 0.6) out.push(obj("prop", `beach-towel-${i}-b`, x - 2.6, z + 0.5, 0.5 * (h(4) - 0.5), 1, h(2) < 0.5 ? "beach-towel-b" : "beach-towel-a"));
+    out.push(obj("prop", `beach-cooler-${i}`, x + 0.5, z - 1.2, h(5) * 6.28, 1, "beach-cooler"));
+    out.push(obj("prop", `beach-ball-${i}`, x + 2.3, z + 1.5, h(6) * 6.28, 1, `beach-ball-${"abc"[i]}`));
+  });
+  out.push(obj("prop", "volleyball-net", -4, 103.5, 0, 1, "volleyball-net"), obj("prop", "beach-ball-net", -2.2, 105.6, 1.3, 1, "beach-ball-b"));
+  out.push(obj("prop", "sandcastle", 8, SANDCASTLE_Z, 0.4, 1, "sandcastle"));
   return out;
 }
 
@@ -634,9 +653,9 @@ function forestTrees(): Obj[] {
   for (let i = 0; i < 55; i++) for (let k = 0; k < 71; k++) {
     const x = 20 + i * 2.15 + 1.1 * (hash01(i, k) - 0.5), z = -140 + k * 2.15 + 1.1 * (hash01(k + 50, i) - 0.5), in_ = FOREST(x, z);
     if (in_ < 1 || MT_FOOT(x, z) > -2 || hash01(i + 70, k) < 0.06) continue;
-    // Toward the edge (within 6 u of it) the firs and young trees take most of the cedars' share.
-    const h = hash01(i * 31 + k, 7), edge = 0.3 * (1 - smoothstep(1, 6, in_)), e = h + edge;
-    const model = h < 0.4 - edge ? "cedar" : e < 0.65 + edge ? "fir" : h < 0.87 ? "broadleaf" : "young";
+    // Within 6 u of the edge, a fir or a young tree more often than not.
+    const h = hash01(i * 31 + k, 7), edgy = hash01(i, k + 7) < 0.6 * (1 - smoothstep(1, 6, in_));
+    const model = edgy ? (h < 0.6 ? "fir" : "young") : h < 0.4 ? "cedar" : h < 0.65 ? "fir" : h < 0.87 ? "broadleaf" : "young";
     out.push(obj("prop", `forest-${out.length}`, x, z, hash01(k, i * 13) * 2 * Math.PI, +(0.8 + 0.45 * hash01(i, k + 99)).toFixed(2), `forest-tree-${model}`));
   }
   return out;
@@ -736,7 +755,7 @@ export function generateWorld(objects: World["objects"], keep: readonly MapAnnot
       if (r.paint !== undefined && off < r.half) { painted[p] = r.paint; below[p] = Infinity; }
     }
     if (Math.hypot(x - PLAZA.at[0], z - PLAZA.at[1]) < PLAZA.r + wob(x, z, 0.6, 3, 99)) { painted[p] = Paint.Stone; below[p] = Infinity; }
-    t.heights[p] = d <= 0 ? t.seaLevel - shelf(-d * shoal(x, z)) : t.seaLevel + softMin(h - t.seaLevel, g * d, 12);
+    t.heights[p] = d <= 0 ? t.seaLevel - bed(x, z, -d) : t.seaLevel + softMin(h - t.seaLevel, g * d, 12);
   }
   rockRelief(t, 0.35, 2.2);
   const quays = wharfQuay(t, objects, shore);
