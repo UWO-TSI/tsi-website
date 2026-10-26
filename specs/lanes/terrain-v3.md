@@ -19,7 +19,7 @@ Then look at the references in `specs/references/terrain/plan-2026-10-23/` and t
 
 ## Status
 
-**R2b built, waiting on review** (2026-10-26; head: the lane-file commit after 8cf6f218). Renders `specs/evidence/terrain-v3/r2b/`. terrain-art merged through ec364e38 (all its batches). The coordinator stopped the round before R3: David sent a new batch of references and notes (palms, lamps, dock decor, sushi bar, lifeguard tower, coral, wadeable shore, wavy sand edge, curving dirt path, plaza fountain, lush nature), for new art lanes. The next round starts fresh from this file with those notes.
+**R2b reviewed 2026-10-26** (head a9da52b0, not merged): the map's size, the dock model and the deck's edge approved; the rest redo (notes below, verbatim). Next is R2c (Next, below), which also takes David's 2026-10-26 references (`specs/references/terrain/r2-2026-10-26/README.md`) and the art from the lanes `wharf-art` and `village-art`.
 
 What R2b built (David's R2 notes, the reading 1 to 10 below):
 - **The landform:** no stone quay; behind the deck boards a grassy band at their level (1) out to 13 u from the shore, then the climb to the village's 3 by 24 (`generate.ts` Wharf zone). The path starts on the boards at z 56 (`PATH_Z`); the "steps" square and `STAIRS` are gone. The meadow across the river is 1.5 lower (`meadowGround`, about 2 there against the village's 3).
@@ -63,6 +63,35 @@ R2 (on the R1c ground):
 - **Not in R2:** fishing nets (no net model in the assets; `tool-net` is the bug net). Questions: `specs/launch/terrain-v3-questions.md` "R2".
 
 ## David's decisions
+
+### 2026-10-26: R2b review, verbatim (https://claude.ai/artifact/TE3dCaECrP8qUTBTHyxUZz)
+
+- **map (approve):** "size looks good"
+- **arrival (redo):** "dock needs improvement, the boat dock is too small, needs to be longer, and more branches, currently 1 branch, should have multiple docks erected from wharf, im thinking 3 and the kinda connect on sea level, if you get what i mean, so like 3 branches that kinda also connect for boats to park and stuff. water needs to be more wavy "
+- **dock (approve):** "dock looking much better"
+- **edge (approve):** no note.
+- **wharf (redo):** "again tranition between grassy area sand and dock needs to be worked on. should not be hovering over sand"
+- **market (redo):** "did you see the fishmarket reference i sent you previously, i need you to start modeling that "
+- **night (redo):** "more lighting and stronger is needed, it looks too dark and spooky and ominous, it should be viby"
+- **path (redo):** "dirt needs to be more yellow and organic, small rocks pebbles imperfaction, fencing need to run up higher, bushes around fencing, and more lamps for lighting"
+- **plaza:** "looking better, tile color could be slightly lighter, houses could come together a bit closer. the distance fog making it kinda spooky instead of the vibe i was thining"
+- **beach (redo):** "redo the pamls, i lowk like the old low poly leafs, so like go towards that directio nmore, this one has too much detail tha makes it look less like the other trees, make it different sizes, and trucks bigger, make truckes have the scale kinda thing instead of a normal cylinder. grash and beach blen can be worked on"
+- **campfire (redo):** "good for now , more floor lantersn and stuff"
+- **forest (redo):** "trees are hovering near the cliff and the trees are paced odd, the trees are all the same exact copy paste model so it looks so unnatural, this tree needs multiple versions and remodeled because it should grow differengly, "
+- **river (redo):** "much better, make the other side more gradual insteaad of looking like a cliff"
+
+**The coordinator's reading:**
+1. **The docks:** three piers out from the wharf, longer than today's, joined near their outer ends by a walkway at sea level, so the water between them forms slips where boats park. Same wood and build as the approved dock (`build_jetty.py`). The arrival boat moors in one slip; the arrival route and the tutorial crate still work.
+2. **The water:** more wavy, for the new world.
+3. **Wharf transitions:** the deck never hovers over sand. It meets the water on pilings, and where grass, sand and deck meet (the wharf's south end into the beach) they blend naturally.
+4. **The fish market:** a building on the wharf from his earlier references (`specs/references/terrain/plan-2026-10-23/wharf-fishing-hut-1.jpg`, the marlin shop) and `dock-fish-hut.jpg`; `wharf-art` models it.
+5. **Night:** more lamps and stronger, warmer light, with bigger, brighter pools. A lively night, not dark or spooky.
+6. **The path:** more yellow, organic dirt with pebbles, small rocks and imperfections; the fencing runs further up the path, with bushes round it; more lamps.
+7. **The plaza:** slightly lighter tiles; the houses a bit closer together; the distance fog lighter and warmer, so it isn't spooky.
+8. **The palms:** `wharf-art` redoes them toward the old low-poly leaves, in different sizes, with thicker scaly trunks. The grass and sand blend still needs work.
+9. **The campfire:** more floor lanterns and dressing.
+10. **The forest:** grounded, with nothing hovering near the cliffs, and natural spacing. `village-art` remodels the masses with varied trees, so no copy-paste.
+11. **The river:** the far bank a gentle slope, not a cliff.
 
 ### 2026-10-26: R1c and R2 review, verbatim (https://claude.ai/artifact/5mbexjtNp5WJrTsWibqmmJ)
 
@@ -175,8 +204,28 @@ The plan page answers, verbatim in the spec. The drawing is a guide to where thi
 
 ## Next
 
-1. Wait for the coordinator: the next round starts from David's new notes and references (`specs/references/terrain/r2-2026-10-26/`). Don't build from them until told.
-2. R3 (dressing) and the one perf run (`SCENES=v2`, High budget 4.8 ms and 222 draws) are still to do; forest masses, palms, lamps and the jetty all add draws, so price them in that run.
+**R2c: David's R2b notes (reading above, 1 to 11) and his 2026-10-26 references** (`specs/references/terrain/r2-2026-10-26/README.md`; the reading there, 1 to 8). Fog, night light and water changes apply to the new world only: the default village is the launch fallback and stays unchanged.
+
+1. **Merge the art branches** when the coordinator says (`git merge game/wharf-art`, `git merge game/village-art`; both cut from terrain-art ec364e38). Their lane files and Status list each asset, its name in `propModels.ts` and its placement notes. They keep delivering batches during this round; merge again when told.
+2. **Landform and layout first** (no new art needed):
+   - the three docks joined at sea level (reading 1); the water more wavy;
+   - the wharf's transitions (3); the river's far bank (11);
+   - the beach: a gradual slope into shallow water you can wade in, and a wavy, blended sand-to-grass edge;
+   - the path: curving, not straight, with the yellow organic dirt (`village-art` paints the texture; say where it hooks in);
+   - the plaza: the houses closer, the tiles lighter, the fountain in the middle;
+   - the night and the fog (5, 7).
+3. **Place the art as it lands:**
+   - lamps and hand lanterns along the path, the wharf, the docks and the campfire, plenty of them, warm;
+   - the plaza set: fountain, flags, banners, bunting, the fruit stall, barrels, crates, planters, the sign;
+   - the path set: side rocks, the loose fencing running up the path, bushes round it;
+   - the dock decor: rope-lashed pilings, nets, life rings, crates, and lots of hand lanterns;
+   - the fish market on the wharf, with the stalls round it;
+   - the beach set: the sushi bar, the lifeguard tower, surfboards, and coral in the shallows;
+   - the new palms;
+   - the remodelled forest masses, grounded;
+   - lush nature everywhere, like `nature-feel.jpg`: the new pieces plus the existing bushes, flowers and trees.
+4. **The perf run** (`SCENES=v2`, High budget 4.8 ms and 222 draws), this round: launch go/no-go is Oct 28. Instance repeats; if it's over budget, say what costs what and what you'd trim.
+5. **Review:** render `specs/evidence/terrain-v3/r2c/`: the top-down map; views 01, 02 and 03; the plaza; the beach; the forest; the river; the market; the docks; the campfire; the deck's edge; and night views of the wharf, the path and the plaza. SendMessage "main" with the images, a one-line fact each and the perf numbers. Update Status, then stop.
 
 ## Tools and gotchas
 
