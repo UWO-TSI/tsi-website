@@ -99,13 +99,18 @@ Read `specs/launch/v1-new-world.md` first, then `specs/launch/terrain-v3.md`. Th
     - **Village check:** these changes touch the village too, so terrain-v3 takes village shots after the merge.
     - **Still failing:** budget.test on the jetty and plaza tiles (terrain-v3 is fixing it), and perf:check on v2 Lite triangles (969k against 950k).
   - **Art lanes:** wharf-art2 (0ee8bd95), village-art2 (8608aec7) and the sushi-bar model (f7fbca92) are all relayed to terrain-v3.
-  - **Sushi bar paused for planning** (David, 2026-10-26: "Plan it with me first"). It's built up to 145642d5 on game/sushi-bar, not merged:
-    - the model, its glow and lights;
-    - stool seating with the close camera;
-    - two chefs;
-    - a "bar" music slot.
+  - **Sushi bar planned** (2026-10-26, all "Nice to have" for Oct 31): `specs/launch/sushi-bar.md`.
+    - **Phase A, the place:**
+      - stilts over the water on the west of the beach;
+      - closed by day; open in the evening and at night;
+      - E moves the camera smoothly into first person at one of 6 seats;
+      - a chef and a server of our own design, in the spirit of his Dave the Diver refs;
+      - music slots for his Suno tracks.
 
-    The lane is taking in-game shots, then stopping. Plan page: https://claude.ai/artifact/QddVeVSPgcEZRZEBgYJAjm (collection `sections`, 6 sections, uploads on). Read his answers there, then restart the lane from them.
+      Lane `sushi-bar` is restarted on it.
+    - **Phase B (after launch):** ordering, buffs, legendary-fish dishes, the chef's fishing orders.
+    - **Open with David:** the server's name, and whether "left" means west.
+  - **wharf-art3** (sell stall from his FISK and Coco Loco refs, replacing `sell-barrel` under the same name) is running.
   - **After launch (David's words):** the fish market inside (buy shop, appraisal) and the fog's horror look.
   - **Post-launch:** the building redesign (he wants less medieval, more fun; it "needs more planning"), the lighting pass and the dungeon lamps. Logged in `specs/launch/terrain-v3.md`.
 - **HQ round 4 merged** (71135930, David approved all four items 2026-10-23), with the ponytail cleanup. Later items are logged as A14. `hq-notice-board.glb` is no longer rendered but is still in the propModels table; delete both together after launch.
