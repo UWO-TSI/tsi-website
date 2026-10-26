@@ -46,7 +46,13 @@ The 20.7 ms of R2c doesn't reproduce: the same build measured 6.1 ms here (that 
 3. The houses are merged by look across all three colourways (`ACNHHouses`, `mergeByLook`): 39 draws down to 21. ACNHParts lost its `at` path.
 4. Caster-only hulls are hidden from the frame's draw list; only the shadow passes draw them (`SunShadows frame`). That was 10 wasted draws in v2 and 8 in the village.
 
-**Open, David's call:** the lamp pool. Keep 8 lights (v2 about 0.45 ms over the village), 4 lights (about -0.4 ms, at the village's level), or a ground glow instead of lights (about -0.9 ms; walls and characters no longer lit by lamps).
+5. **David's call on the lamp pool:** 4 real lights (the 4 nearest lamps) plus a warm ground glow under every lamp. The pool is set to 4 here (`LampPool count`). terrain-v3 builds the glow pools and the flame flicker; this lane leaves those alone. Hiding the 8 pool lights saved about 0.9 ms; 4 saves about 0.4 to 0.45.
+
+**perf:check, final** (SCENES=village,v2, 5 runs, load 5.0 to 5.2, against the 10-14 baseline):
+- High: v2 5.2 ms (CPU 4.6, 384 draws), village 4.9 (CPU 4.3, 374).
+- Lite: v2 3.5 (CPU 3.1, 313), village 2.9 (CPU 2.7, 293).
+- The village reads +25% against the baseline because of the load: its draws went down (382 to 374).
+- It fails only on the v2 Lite triangles: 969k against the 950k budget. That count was the same before this lane (the R2c art; terrain-v3 is rebuilding the jetty).
 
 **Gates:** game tests green with and without `NEXT_PUBLIC_GAME_WORLD=new` (2005 of 2006; the one failure is budget.test's jetty and plaza-tiles triangles, inherited from terrain-v3, which is rebuilding them). tsc clean, eslint clean on changed files. Renders 01, 03, 04 and 18 in `specs/evidence/perf-newworld/`, matching R2c.
 
