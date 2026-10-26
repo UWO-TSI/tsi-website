@@ -140,6 +140,10 @@ Every asset comes from the repo (`web/public/assets/`): palms, cedar, pines, roc
 5. Meadow farm fields and side quests; the north island's purpose; boats to the islets.
 6. The world's lighting, after David's side note "check out this game lighting" (`specs/references/terrain/r2-2026-10-26/lighting-game.jpg`).
 7. The dungeon and cave lamps in the style of `lamp-dungeon.jpg` (same folder), when the cave is built.
+8. Beach volleyball you can play 2v2 with friends on the beach's net (David, 2026-10-26: "add a volly ball net somewhere where you can play 2v2 vollyball with friends"). The net is placed; the game needs ball physics and a match.
+9. The shipwright's ship you can go into, where the shipwright builds you a ship (David, 2026-10-26).
+10. The fish market's inside (a buy shop and appraisal) and the tackle shop's store (rods and equipment).
+11. The sushi bar's phase B: `specs/launch/sushi-bar.md`.
 
 ## Gates (every round)
 

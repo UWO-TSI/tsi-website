@@ -125,6 +125,20 @@ Read `specs/launch/v1-new-world.md` first, then `specs/launch/terrain-v3.md`. Th
   - **Release candidate (done) = game/perf-newworld:** R2d 7aee495b, plus the perf re-measure, plus the review fixes. It merges to main when the perf lane reports. terrain-v3 R2e then merges it.
   - **Running:** terrain-v3 R2e (from d258b30c), wharf-art4 (tackle shop, shipwright, crab), trees-art (forest and river trees), sushi-bar phase A, perf-newworld.
   - **Music:** David's Suno "Smoky Night Groove" is going in as bar-night.mp3 through the sushi lane; the evening track is being redone.
+  - **R2e reviewed (2026-10-26):** mostly approved.
+    - **Redos:** palms closer to the grass; no wharf-to-beach path; the plaza's centre lit at night with the fountain; the fish market wider with a proper bursting swordfish; the shipwright as a big docked ship; the river trees remodelled.
+    - **Lanes:** art-r2f (market, ship, river trees) and terrain-v3 R2f (from 4cd9604d).
+    - **Merge:** R2e goes to main through perf-newworld after its re-measure. The perf lane is merging 55e48459 and trying to instance the bugs.
+    - **After launch** (in `specs/launch/terrain-v3.md`): 2v2 volleyball, the shipwright's ship inside, the shop interiors, sushi phase B.
+  - **Sushi bar phase A round 2** (lane restarted from 57e7f47c):
+    - Japanese building and lanterns;
+    - path and rocks removed;
+    - chefs visibly preparing food;
+    - wider view with look-around;
+    - distant islands;
+    - better decor.
+
+    The server's name is still pending from David.
   - **Sushi bar phase A built** (2a7c87cb on game/sushi-bar, not merged). Review page: https://claude.ai/artifact/Xh3WqWHGxrB5z1a5xjSAKJ (collection `approvals`, 9 items).
     - **What's built:**
       - on stilts at (-47, 119.5), west beach, with a path and lanterns;
