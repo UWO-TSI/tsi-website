@@ -121,6 +121,15 @@ Read `specs/launch/v1-new-world.md` first, then `specs/launch/terrain-v3.md`. Th
   - **Release candidate = game/perf-newworld:** R2d 7aee495b, plus the perf re-measure, plus the review fixes. It merges to main when the perf lane reports. terrain-v3 R2e then merges it.
   - **Running:** terrain-v3 R2e (from d258b30c), wharf-art4 (tackle shop, shipwright, crab), trees-art (forest and river trees), sushi-bar phase A, perf-newworld.
   - **Music:** David's Suno "Smoky Night Groove" is going in as bar-night.mp3 through the sushi lane; the evening track is being redone.
+  - **Sushi bar phase A built** (2a7c87cb on game/sushi-bar, not merged). Review page: https://claude.ai/artifact/Xh3WqWHGxrB5z1a5xjSAKJ (collection `approvals`, 9 items).
+    - **What's built:**
+      - on stilts at (-47, 119.5), west beach, with a path and lanterns;
+      - closed by day; open evening and night;
+      - E glides into first person at 6 claimed stools;
+      - the chef Bancha and a diver server (name pending from David);
+      - bar-evening.mp3 (海辺の夕食) and bar-night.mp3 (Smoky Night Groove), looped by art/audio/loop_track.py.
+    - **Open:** dim from afar at night; no afro or dive mask in the catalogue.
+  - **Known test gap on main:** `app/api/collections/route.test.ts` fails 21 tests with NEXT_PUBLIC_GAME_WORLD=new (it posts village coordinates). It fails on main too. Fix it, and check collecting in the new world, before the switch flips.
   - **Sushi bar planned** (2026-10-26, all "Nice to have" for Oct 31): `specs/launch/sushi-bar.md`.
     - **Phase A, the place:**
       - stilts over the water on the west of the beach;
