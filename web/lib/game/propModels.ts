@@ -90,6 +90,11 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // Its forest masses (art/trees/build_forest_masses.py): a stand of tall cedars in one mesh, about 12 (a), 16 by 9 along
   // x (b) and 10 (c) across, to instance over the closed forest so it reads dense from the open area.
   ...Object.fromEntries(["a", "b", "c"].map(m => [`forest-mass-${m}`, `/assets/game/plants/forest-mass-${m}.glb`])),
+  // game/village-art: the plaza's set (art/props/build_plaza_set.py), fronts toward +z. The fountain is 9.6 across (scale
+  // it uniformly to the plaza); the bunting hangs between (-2, 0, 0) and (2, 0, 0), so set it at the hang height and scale
+  // x by the span / 4; the wall banner's origin is its bracket's plate on a wall in the x-y plane, the banner out along +z.
+  ...Object.fromEntries(["plaza-fountain", "bunting-string", "banner-pole", "flag-pole", "wall-banner", "fruit-stall", "fruit-barrel", "fruit-crate",
+    "flower-planter", "flower-pot", "round-planter", "planter-bench", "market-sign"].map(m => [m, `${P}${m}.glb`])),
 };
 export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? `/assets/acnh/props/${model}.glb`;
 
