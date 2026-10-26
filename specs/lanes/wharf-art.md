@@ -22,12 +22,12 @@ Worktree `.claude/worktrees/wharf-art`, branch `game/wharf-art`. Agent type `uwo
 
 In progress. Previews in `specs/evidence/wharf-art/`.
 
-1. **Palms, redone** (`art/trees/build_palms.py`, the frond texture repainted by `art/trees/paint_textures.py palm-fronds`): `palm-tall` (top 5.65), `palm-lean` (4.86), `palm-short` (3.32); two layers of broad fronds folded so their leaflets hang, coconuts in the gaps of the lower layer, a tapering softly ringed trunk. 1290 to 1560 tris with casters. Evidence `palms.webp`.
+1. **Palms, redone twice** (`art/trees/build_palms.py`; the R2b redo replaced the leaflet texture, now deleted): solid low-poly fronds (an arched shell, a bare stem first, the hem cut into fingers), plain colour, in two layers; coconuts at the crown's heart, clear from the play angle; a thick trunk of overlapping scales. Four sizes: `palm-tall` (top 6.21, 1156 tris with casters), `palm-lean` (5.03, 1092), `palm-short` (3.46, 960), `palm-small` (1.95, 732, new). Evidence `palms.webp` (true scale, two camera heights).
 2. **Dock and wharf decor** (`art/wharf/build_dock_decor.py`, `game/wharf/`, game units at scale 1, the deck's top at y 0): `dock-pile-rope` (960 tris; 0.9 over the deck, down to -3.4, rope lashings), `rope-net` (2040; posts at x +-1, floats on the top rope), `life-ring` (864; upright in x-y, foot at the origin, 0.93 tall), `net-heap` (1176), `crate-net` (2312), `crate-cloth` (1272), `fish-crate` (1320; tipped toward +z), `dock-hoist` (1510; jib along +x, top 2.645). Registered with footprints and tops. Evidence `dock-decor.webp`.
 
 ## Next
 
-Done: 1 and 2 (batches bb4a1418, 80cd90bf). Now, in this order (R2b):
+Done: 1 and 2 (batches bb4a1418, 80cd90bf), A (palms again). Now, in this order (R2b):
 
 A. **Palms, again:** solid low-poly leaves like the dump palms (no fine leaflet texture), matching our other trees; several clearly different sizes; thicker trunks of overlapping scale-like bark segments, not a ringed cylinder; coconuts clearly visible. `palm-shape.jpg` / `palm-style.jpg` stay the silhouette guide.
 B. **The beach set** (3 below), but the sushi bar follows `specs/references/terrain/plan-2026-10-23/wharf-sharkbar.jpg` (on main; read it from `.claude/worktrees/restart-art-cohesion/specs/references/terrain/plan-2026-10-23/`): a big fish-head shell over a bar counter with stools and hanging lanterns, our style, low detail.
