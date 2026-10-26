@@ -106,6 +106,8 @@ export const PROP_FOOTPRINT: Record<string, [number, number]> = {
   "moss-boulder-a": [0.65, 0.5], "moss-boulder-b": [1.05, 0.65], "river-stones-b": [0.55, 0.4],
   // game/wharf-art4
   "tackle-shop": [2.3, 2.45], "shipwright-shed": [2.0, 2.1],
+  // game/trees-art: the riverbank trees' trunks at the ground.
+  "river-tree-willow": [0.5, 0.5], "river-tree-alder": [0.36, 0.36], "river-tree-oak": [0.6, 0.6], "river-tree-lean": [0.4, 0.4],
 };
 /** Prop tops before scale, measured from the GLB bounds: what a jump clears or lands on (lib/game/movement). */
 export const PROP_TOP: Record<string, number> = {
