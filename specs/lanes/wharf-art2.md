@@ -29,6 +29,7 @@ Then go straight on. At the end, update Status here, send the full list, and sto
 Previews in `specs/evidence/wharf-art2/`. Placement is terrain-v3's. The budget test's two failures (`plaza-tiles`, `jetty`) came with the branch, not from this lane.
 
 1. **Fish market and sell barrel** (`art/buildings/build_fish_market.py`): `fish-market` remodelled (11,892 tris, 868 KB; footprint [3.1, 3.6], top 10.569); `sell-barrel` new (`game/wharf/`, 2,162 tris, 150 KB; footprint [0.66, 0.78], top 3.394).
+2. **Ship houses** (`art/wharf/build_ship_houses.py`, `game/wharf/`): origin on the deck's top at the floor's middle, door +z (inland), the back half over the sea on piles to -3.4. `ship-house-a` red boathouse (6,548 tris, 468 KB; [2.1, 2.3], top 4.48), `-b` stilt house with a balcony off +x (8,644, 608 KB; [2.4, 2.0], 4.13), `-c` net loft (6,454, 484 KB; [1.9, 2.0], 6.28), `-d` shack with a front porch (3,992, 276 KB; [2.1, 2.1], 3.178).
 
 ## Next
 
