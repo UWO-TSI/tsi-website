@@ -201,9 +201,8 @@ function fillFlocks(bugs: readonly LiveBug[], live: ReadonlyMap<string, LiveBug>
     const bug = live.get(bugs[i].id), g = groups.get(bugs[i].id);
     if (!g) continue;
     const flock = flocks.get(FLOCK_OF.get(bugs[i].sp.key)!);
-    const alone = !flock || !bug || !g.visible || bug.fled || bug.faded || lifts.has(bug.id);
-    showOwn(g, alone);
-    if (!alone) addToFlock(flock, g);
+    const flocked = !!flock && !!bug && g.visible && !bug.fled && !bug.faded && !lifts.has(bug.id) && addToFlock(flock, g);
+    showOwn(g, !flocked);
   }
   flocks.forEach(endFlock);
 }

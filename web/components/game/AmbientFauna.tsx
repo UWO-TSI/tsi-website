@@ -124,7 +124,7 @@ function FlyerSwarm({ species, flyers, ground, presence }: { species: FlyerSpeci
 
 // ── Crabs ──────────────────────────────────────────────────────────────
 /** Module scope, as tickFlyers: step every crab and place its model; a scuttle judders, digging in sinks it under the sand. */
-function tickCrabs(crabs: readonly Crab[], states: CrabState[], groups: (THREE.Group | null)[], dt: number, p: THREE.Vector3, ground: Ground, standable: (x: number, z: number) => boolean, flocks: Map<string, Flock>) {
+function tickCrabs(crabs: readonly Crab[], keys: readonly string[], states: CrabState[], groups: (THREE.Group | null)[], dt: number, p: THREE.Vector3, ground: Ground, standable: (x: number, z: number) => boolean, flocks: Map<string, Flock>) {
   const t = worldNow() / 1000;
   flocks.forEach(startFlock);
   for (let i = 0; i < states.length; i++) {
@@ -136,10 +136,9 @@ function tickCrabs(crabs: readonly Crab[], states: CrabState[], groups: (THREE.G
     g.position.set(s.x, ground(s.x, s.z) - s.sink * 0.16 + jig, s.z);
     g.rotation.y = s.yaw + (s.fleeT >= 0 ? Math.sin(s.fleeT * 31) * 0.12 : 0);
     g.visible = s.sink < 0.98;
-    // Drawn in its model's flock; alone until the flock has loaded.
-    const flock = flocks.get(`${crabs[i].model}|${CRAB_SCALE}`);
-    showOwn(g, !flock);
-    if (flock && g.visible) addToFlock(flock, g);
+    // Drawn in its model's flock; alone until the flock has loaded (or past its count).
+    const flock = flocks.get(keys[i]);
+    showOwn(g, !(flock && g.visible && addToFlock(flock, g)));
   }
   flocks.forEach(endFlock);
 }
@@ -151,7 +150,8 @@ function Crabs({ crabs, ground, standable, player }: { crabs: readonly Crab[]; g
   useEffect(() => { states.current = crabs.map(newCrabState); }, [crabs]);
   const flocks = useMemo(() => new Map<string, Flock>(), []);
   const sizes = useMemo(() => [...crabs.reduce((n, c) => n.set(c.model, (n.get(c.model) ?? 0) + 1), new Map<string, number>())], [crabs]);
-  useFrame((_, raw) => tickCrabs(crabs, states.current, groups.current, Math.min(raw, 0.1), player.current, ground, standable, flocks));
+  const keys = useMemo(() => crabs.map(c => `${c.model}|${CRAB_SCALE}`), [crabs]);
+  useFrame((_, raw) => tickCrabs(crabs, keys, states.current, groups.current, Math.min(raw, 0.1), player.current, ground, standable, flocks));
   return <>
     {sizes.map(([url, n]) => <Suspense key={url} fallback={null}><ModelFlock url={url} scale={CRAB_SCALE} cap={n} flocks={flocks} /></Suspense>)}
     {crabs.map((c, i) => (
