@@ -180,6 +180,9 @@ export const ASSET_CATEGORIES: readonly AssetCategory[] = [
   { name: "shore and forage", prefixes: ["game/forage/mushroom-", "game/forage/shell-"], triangles: 2000, primitives: 1, materials: 1, texture: 256, bones: 0 },
   // game/remodel-r2 (art/nature/close_bushes.py): the dump's bushes closed all round, one primitive on the dump's leaf texture.
   { name: "closed bush", prefixes: ["game/plants/bush-"], triangles: 1000, primitives: 1, materials: 1, texture: 128, bones: 0 },
+  // game/village-art2 (art/trees/build_shrubs.py): the new world's wild shrubs, lobes of leaf cards on the summer atlas
+  // (one cut-out material) and their twigs in colour.
+  { name: "shrub", prefixes: ["game/plants/shrub-"], triangles: 1200, primitives: 2, materials: 2, texture: 256, bones: 0 },
   // game/remodel-trees (art/trees): our trees, leaf or needle cards over closed volumes on a trunk, drawn instanced: the
   // cards with their volume (one cut-out material on the painted atlas) and the bark in colour, the crown's hull and the
   // trunk only in the sun's map. Triangles count all four; the far model (.lod1) is held under half the near one
