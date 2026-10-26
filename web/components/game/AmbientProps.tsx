@@ -71,8 +71,10 @@ function easeGlowOnce(group: THREE.Object3D, target: number, dt: number) {
  * The globes share their materials, so they ease up and down together as the Lanterns' did; each lamp keeps its own
  * pool of light.
  */
-export function Lanterns({ positions, intensity, glow, lamp = { url: LAMP_URL, light: [0, 2.4, 0] }, yaws }: {
+export function Lanterns({ positions, intensity, glow, lamp = { url: LAMP_URL, light: [0, 2.4, 0] }, yaws, reach = 5 }: {
   positions: readonly [number, number, number][]; intensity: number; glow: number;
+  /** How far each lamp's pool of light reaches. */
+  reach?: number;
   /** Which lamp (propModels NEW_LAMPS) and its light point in the model; `yaws` turn each (radians about +y). */
   lamp?: { url: string; light: readonly [number, number, number] }; yaws?: readonly number[];
 }) {
@@ -86,7 +88,7 @@ export function Lanterns({ positions, intensity, glow, lamp = { url: LAMP_URL, l
       <group ref={group}><InstancedGLB url={lamp.url} placements={placements} emissiveIntensity={0} /></group>
       {positions.map((p, i) => {
         const c = Math.cos(yaws?.[i] ?? 0), s = Math.sin(yaws?.[i] ?? 0);
-        return <FadeLight key={i} color="#FFA040" intensity={intensity} distance={5} position={[p[0] + lx * c + lz * s, p[1] + ly, p[2] - lx * s + lz * c]} />;
+        return <FadeLight key={i} color="#FFA040" intensity={intensity} distance={reach} position={[p[0] + lx * c + lz * s, p[1] + ly, p[2] - lx * s + lz * c]} />;
       })}
     </group>
   );

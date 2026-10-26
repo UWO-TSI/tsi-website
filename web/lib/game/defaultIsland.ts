@@ -201,10 +201,10 @@ export function wharfDecks(v: Village = village()): Deck[] {
   const flat = (y: number) => () => y;
   if (!isJetty(v)) return [WHARF_DECK_LOCAL, WHARF_FINGER_LOCAL].map(r => ({ ...turnedRect(w.x, w.z, r, w.yaw), y: flat(DECK_Y) }));
   const dock = { x: w.x, z: w.z, yaw: w.yaw ?? 0 }, local = { x: 0, z: 0 };
-  return JETTY.decks.map(r => ({
-    ...turnedRect(w.x, w.z, r, w.yaw),
-    y: "rise" in r ? (x: number, z: number) => r.y + r.rise * Math.min(1, Math.max(0, (worldToDock(dock, x, z, local).z - r.z0) / (r.z1 - r.z0))) : flat(r.y),
-  }));
+  return JETTY.decks.map(r => {
+    const rise = "rise" in r ? r.rise : 0;
+    return { ...turnedRect(w.x, w.z, r, w.yaw), y: rise ? (x: number, z: number) => r.y + rise * Math.min(1, Math.max(0, (worldToDock(dock, x, z, local).z - r.z0) / (r.z1 - r.z0))) : flat(r.y) };
+  });
 }
 /** The wharf's main walkable deck in world XZ (the pier, or the jetty's landing), or null without a wharf. */
 export const wharfDeck = (v: Village = village()): Deck | null => wharfDecks(v)[0] ?? null;

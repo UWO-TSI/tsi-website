@@ -15,7 +15,7 @@ import propkit as K  # noqa: E402
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 R, CENTRE, BAND, GAP, TOP, THICK = 12.0, 1.1, 0.85, 0.06, 0.03, 0.08
-LIGHT, DARK, KERB = "#c9c2b6", "#a59d90", "#8d867b"
+LIGHT, DARK, KERB = "#dcd6cb", "#bdb5a8", "#a29b8f"  # lighter (David, R2b: "tile color could be slightly lighter")
 rng = np.random.default_rng(1212)
 
 

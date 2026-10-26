@@ -46,7 +46,7 @@ import { villageIsland, villageSpawn, villageScale, landmark, landmarks, landmar
 import { village, objectsOf, type Village } from "@/lib/game/villageMap";
 import { LEVEL_STEP, levelAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
-import { CLUBHOUSE_LIGHTING, ISLAND_TERRAIN, islandLightAt, weatherLight, windowLit, withSeason, type IslandLight } from "@/lib/game/islandLighting";
+import { CLUBHOUSE_LIGHTING, ISLAND_TERRAIN, islandLightAt, smoothWorldLight, weatherLight, windowLit, withSeason, type IslandLight } from "@/lib/game/islandLighting";
 import { SEASON_TREES, paletteBySeason, seasonLook, type SeasonLook } from "@/lib/game/seasonalLook";
 import { useNPCPersonas, useSeasonPalettes } from "@/lib/content/loader";
 import type { IslandWeather } from "@/lib/game/islandWeather";
@@ -530,7 +530,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       <EventDecor event={event} ground={island.ground} light={light} weather={weather} />
       <HalloweenLayer content={traditions.content} v={v} island={island} light={light} night={phase === "night"} fog={fogNight} weather={weather} residents={personas} />
       {layout.bridges.map(b => <GLBProp key={b.id} url={BRIDGE_URL} position={[b.x, b.y, b.z]} rotation={[0, b.yaw ?? 0, 0]} />)}
-      {lampSets.map(s => <Lanterns key={s.kind} positions={s.positions} yaws={s.yaws} lamp={s.kind ? NEW_LAMPS[s.kind] : undefined} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} />)}
+      {lampSets.map(s => <Lanterns key={s.kind} positions={s.positions} yaws={s.yaws} lamp={s.kind ? NEW_LAMPS[s.kind] : undefined} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} reach={v.terrain ? 7.5 : 5} />)}
       {layout.campfire && <Campfire site={layout.campfire} ground={island.ground} phase={phase} player={player} />}
       {/* Nature and props from the map, instanced: one draw per model sub-mesh however many the island has. */}
       <InstancedModels items={scenery} />
@@ -888,7 +888,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const dayLight = useMemo(() => weatherLight(withSeason(islandLightAt(lookPreset, blend, sun), look), weatherBlend), [blend, look, weatherBlend, lookPreset, sun]);
   // A fog night eases in with the dark (the porch-light curve) while a tradition has fog nights on; never on the crossing.
   const fogNight = traditions.content.fog_nights && !inside && !golden ? windowLit(dayLight) : 0;
-  const light = useMemo(() => fogNightLight(dayLight, fogNight), [dayLight, fogNight]);
+  // The new world (a heightfield in the village's place) has its own warmer fog and livelier night.
+  const smooth = useMemo(() => !!village().terrain, []);
+  const light = useMemo(() => fogNightLight(smooth ? smoothWorldLight(dayLight) : dayLight, fogNight), [smooth, dayLight, fogNight]);
   const conditionsLabel = `${season.season[0].toUpperCase()}${season.season.slice(1)}${Object.values(season.weights).some(w => w > 0 && w < 1) ? " (changing)" : ""} · ${weather[0].toUpperCase()}${weather.slice(1)}`;
   const grade = inside === "cafe" ? { ...CLUBHOUSE_LIGHTING[phase].grade, ...CAFE_GRADE } : inside ? CLUBHOUSE_LIGHTING[phase].grade : light.grade;
   const atHome = site === "home";
