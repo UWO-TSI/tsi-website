@@ -19,6 +19,15 @@ Then look at the references in `specs/references/terrain/plan-2026-10-23/` and t
 
 ## Status
 
+**R2e reviewed 2026-10-26** (head 55e48459). Approved:
+- the arrival, the market from the docks, the shops, the wharf;
+- the swash (both stills), the shallows, the campfire;
+- the plaza, the forest and the forest edge;
+- the wharf at night.
+
+The rest are redos; his notes are below, verbatim. R2e merges to main through `game/perf-newworld` after the perf re-measure. Next is R2f (Next, below).
+
+
 **R2e built 2026-10-26, waiting on review** (head: the commit after this file's). Merged in: wharf-art4 76f320c3 (tackle shop, shipwright shed and boat, shells), trees-art 18de35ff (12 forest trees, 4 river trees, tint check), perf-newworld cde23580 (R2d as merged to main 2241eca2). Renders in `specs/evidence/terrain-v3/r2e/` (00 top-down, 01 to 27; 26-swash, -1, -2 are one wave 1.8 s apart), the village check in `r2e/village-check/` (same as r2d's by eye).
 
 What R2e built (David's R2d notes, the reading 1 to 8, and the coordinator's adds):
@@ -115,6 +124,32 @@ R2 (on the R1c ground):
 - **Not in R2:** fishing nets (no net model in the assets; `tool-net` is the bug net). Questions: `specs/launch/terrain-v3-questions.md` "R2".
 
 ## David's decisions
+
+### 2026-10-26: R2e review, verbatim (https://claude.ai/artifact/UfadMDJoYq9ts7DZBGVmCr)
+
+- **approved, no note:** arrival, forest, forest-edge, night-wharf, plaza, shallows, shops, swash, swash-2, wharf.
+- **market (approve):** "looks good"
+- **campfire (approve):** "add a volly ball net somewhere where you can play 2v2 vollyball with friends"
+- **beach (redo):** "maybe move them slightly more closer to the grassy area" (the palms)
+- **market-front (redo):** "make building a bit wider, remodel the sword fish coming out so it looks proper"
+- **night-plaza (redo):** "more lighting in the middle of the plaza, like lighting in the fountain and make it still lively in the center of game"
+- **river (redo):** "redo these tree models"
+- **shipwright (redo):** "i was thinking of making the building a boat or the building part of a boat, like a big boat docked to the side you can go in the guys a shipwright and you can ask if he can build you a ship kinda thing"
+- **wharf-beach (redo):** "less or no dirt path"
+
+**The coordinator's reading:**
+1. **The beach's palms:** a little closer to the grass, at the back of the sand.
+2. **The wharf-to-beach path:** remove it.
+3. **The plaza's centre at night:** light in the fountain (an underwater glow in the basin, lit jets), plus warm light round the centre, so the plaza's heart stays lively at night. Keep it cheap: emissive and the ground-glow pools, at most one more real light.
+4. **New art from `art-r2f`:**
+   - the fish market wider, with a remodelled swordfish that properly bursts out through the roof;
+   - the shipwright as a big ship docked to the wharf's side, with the workshop built on and in it;
+   - new river tree models.
+
+   Place them as they land.
+5. **After launch** (logged in the spec):
+   - a playable 2v2 volleyball on the beach's net;
+   - going inside the shipwright's ship, where the shipwright builds you a ship.
 
 ### 2026-10-26: R2d review, verbatim (https://claude.ai/artifact/UdD2So4dkLxzTX2NLqy1qy)
 
@@ -333,7 +368,14 @@ The plan page answers, verbatim in the spec. The drawing is a guide to where thi
 
 ## Next
 
-**R2e is waiting on David's review.** Next: his R2e notes, when the coordinator relays them.
+**R2f: David's R2e notes** (the reading above, 1 to 4).
+1. **Without new art:** the palms (1), the path removed (2) and the plaza's night centre (3).
+2. **When the coordinator says,** merge `game/art-r2f` and place:
+   - the wider fish market;
+   - the shipwright's docked ship, replacing the shed and boat. Keep or adapt ShipwrightBoat's bob if the ship floats;
+   - the river trees.
+3. **Merge `game/perf-newworld`** when told: the R2e perf pass.
+4. **Renders** into `specs/evidence/terrain-v3/r2f/`: the beach, the market front, the shipwright, the river, the plaza at night, and the wharf to the beach. SendMessage "main" with them and a one-line fact for each. Update Status, then stop.
 
 ## Tools and gotchas
 
