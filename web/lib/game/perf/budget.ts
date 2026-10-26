@@ -220,6 +220,7 @@ export const ASSET_EXCEPTIONS: Record<string, Partial<AssetBudget> & { why: stri
   "game/interiors/hq/ground.glb": { triangles: 36_776, why: "HQ's ground floor: the walls both storeys high (9.2), the entry and the window nook, the hall's big lounge (the sectional, beanbags), the floor under both arms, the library wall (about 5.8k of books)" },
   "game/interiors/hq/upper.glb": { triangles: 28_140, primitives: 32, why: "HQ's upper floor in three parts (the bridge's big lounge, the left arm's study, the right arm), each cut away on its own: a part's materials draw once per part" },
   "game/buildings/cafe.glb": { primitives: 34, materials: 25, why: "the café exterior: 34 draws in the village, the most of any building" },
+  "game/buildings/sushi-bar.glb": { triangles: 16_000, why: "the sushi bar made Japanese (David, phase A round 2): a kawara roof of round tiles with turned-up corners, its interior's decor; still, merged with the props, 7 draws, new world only" },
   // Dump models David kept and we only retouched (row 314, art/props/derive_*.py): their own geometry and textures.
   "game/props/beach-parasol.glb": { triangles: 4740, why: "the dump's parasol and two loungers kept as they were, recoloured only (one draw)" },
   "game/props/hq-notice-board.glb": { texture: 768, why: "the dump's metal HQ board kept with its own 768 x 384 atlas, the notes made plain; one board, indoors" },

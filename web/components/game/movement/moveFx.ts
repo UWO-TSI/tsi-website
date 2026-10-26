@@ -52,6 +52,8 @@ export const MOVE_JUICE = {
 export type MoveJuice = typeof MOVE_JUICE;
 /** The follow camera's field of view at a walk (the Canvases' camera); speed and dashes widen it from here. */
 export const BASE_FOV = 48;
+/** First person on a seat (the sushi bar's stools; David: "make fov higher slightly ... to see more"): wider, so the whole counter and the window show. */
+export const SEAT_FOV = 60;
 
 /** Touch intent (screen space: x right, z up the screen) and presses waiting for the sim; TouchControls writes it, the avatar reads it. `crouch`: the Slide button held. */
 export interface StickInput { x: number; z: number; jump: boolean; jumpPressed: boolean; dashPressed: boolean; crouch: boolean }

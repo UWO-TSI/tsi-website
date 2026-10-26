@@ -40,7 +40,7 @@ import { crouchKey, useKeyboardLocked, useMoveKeys } from "@/lib/game/movement/k
 import { easeFacing } from "@/lib/game/locomotion";
 import { routePilot, type RouteStep } from "@/lib/game/movement/course";
 import type { AvatarRide } from "@/lib/game/movement/ride";
-import { BASE_FOV, EVENT_CLIP, MOVE_JUICE, TAKEOFF, applyFov, liveWind, momentumOf, screenOf, touchStick, useMoveParticles, type MoveJuice, type MoveTelemetry } from "./movement/moveFx";
+import { BASE_FOV, EVENT_CLIP, SEAT_FOV, MOVE_JUICE, TAKEOFF, applyFov, liveWind, momentumOf, screenOf, touchStick, useMoveParticles, type MoveJuice, type MoveTelemetry } from "./movement/moveFx";
 import { SPLASH, cooldownWisp, dashBurst, dashReady as dashBack, footprint, footstep, glideFurl, glideOpen, glideRibbon, glideSetDown, groundUnder, landKind, landing, mantleGrab, mantleStep, puffRing, rollTumble, scuff, settle, skidKick, skidPush, slideBurst, slidePop, slideTrail, splash, springStep, streak, takeoff, trail, type GroundKind } from "@/lib/game/movement/juice";
 
 /**
@@ -752,7 +752,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     camTarget?.current.copy(f.focus);
     f.punch *= Math.exp(-6 * dt);
     const fast = THREE.MathUtils.clamp((speed - t.walkSpeed) / Math.max(0.1, topSpeed(t) - t.walkSpeed), 0, 1);
-    applyFov(camera, BASE_FOV + j.fovKick * fast + f.punch, Math.min(rawDelta, 0.1));
+    // First person on a seat (the sushi bar's stools) sees wider; the camera eases to it with the glide in.
+    applyFov(camera, sitting?.hide ? SEAT_FOV : BASE_FOV + j.fovKick * fast + f.punch, Math.min(rawDelta, 0.1));
 
     if (telemetry) Object.assign(telemetry.current, { x, y, z, speed, mode: state.mode, hops: state.hops, dashReady, long: state.long, momentum: momentumOf(state, speed, t.walkSpeed, t.sprintSpeed), slideJump: state.slideJump });
     const last = reported.current;

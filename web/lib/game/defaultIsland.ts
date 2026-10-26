@@ -118,7 +118,7 @@ export const PROP_TOP: Record<string, number> = {
   "dock-pile-rope": 0.9, "rope-net": 1.15, "life-ring": 0.93, "net-heap": 0.39, "crate-net": 0.7, "crate-cloth": 0.74, "fish-crate": 0.48,
   "dock-hoist": 2.645,
   "path-rock-slab": 0.538, "path-rock-low": 0.247, "path-rock-cluster": 0.294, "rustic-fence-a": 0.99, "rustic-fence-b": 0.91, "rustic-post": 0.931,
-  "sushi-bar": 4.68, "fish-market": 10.569, "sell-barrel": 3.394,
+  "sushi-bar": 5.02, "fish-market": 10.569, "sell-barrel": 3.394,
   "ship-house-a": 4.48, "ship-house-b": 4.13, "ship-house-c": 6.28, "ship-house-d": 3.178, "beach-lounger": 0.948, sandcastle: 0.78, "beach-cooler": 0.486, "volleyball-net": 2.14, "lifeguard-tower": 4.7, "surfboard-a": 1.755, "surfboard-b": 1.759, "surfboard-c": 1.763,
   "moss-boulder-a": 0.855, "moss-boulder-b": 0.761, "river-stones-b": 0.475,
 };

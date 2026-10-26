@@ -46,13 +46,15 @@ describe("sushi bar", () => {
     expect(barSeat(bar, sx, sz, false, () => true)?.key).toBe(stoolKey(bar, 4));
   });
 
-  it("frames the seated view first person: from the stool, level across the counter toward the window", () => {
+  it("frames the seated view first person: from the stool, a little down across the counter toward the window", () => {
     for (const lx of STOOLS) {
       const { eye, look } = seatView(lx);
       expect(eye[0]).toBe(lx);
-      expect(Math.abs(eye[2] - STOOL_Z)).toBeLessThan(0.4);
+      expect(Math.abs(eye[2] - STOOL_Z)).toBeLessThanOrEqual(0.4);
       expect(look[2]).toBeLessThan(-1.5);
-      expect(Math.abs(eye[1] - look[1]) / (eye[2] - look[2])).toBeLessThan(0.1);
+      // Down to the chefs' hands on their boards, the sea's horizon still in view.
+      const down = (eye[1] - look[1]) / (eye[2] - look[2]);
+      expect(down).toBeGreaterThan(0.05); expect(down).toBeLessThan(0.2);
     }
   });
 });

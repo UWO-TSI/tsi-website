@@ -75,12 +75,15 @@ export const REMODELLED_PROPS: Readonly<Record<string, string>> = { "bench-wood"
 /** The fish crate (art/wharf/build_crate.py): the market's, and the arrival's on the pier. */
 export const CRATE_URL = "/assets/game/wharf/crate.glb";
 /**
- * The sushi bar (game/sushi-bar), and what lives with it: its lanterns, string lights, neon and tank water, which glow at
- * night like a lamp's glass; its hours (the blinds down while it's closed, the noren up while it's open).
+ * The sushi bar (game/sushi-bar), and what lives with it: its paper lanterns, neon and tank water, which glow at night
+ * like a lamp's glass; its hours (the blinds down while it's closed, the noren up and the nigiri set out while it's
+ * open); the islands out to sea seen from its stools; the chef's knife.
  */
 export const SUSHI_BAR_URL = "/assets/game/buildings/sushi-bar.glb";
 export const SUSHI_BAR_GLOW_URL = "/assets/game/buildings/sushi-bar-glow.glb";
 export const SUSHI_BAR_HOURS_URL = "/assets/game/buildings/sushi-bar-hours.glb";
+export const SUSHI_BAR_ISLES_URL = "/assets/game/buildings/sushi-bar-isles.glb";
+export const SUSHI_KNIFE_URL = "/assets/game/tools/sushi-knife.glb";
 /** The `prop` kind's scenery outside the dump's props folder, by model name (terrain v3: the market, the beach, the lighthouse). */
 export const SCENERY_URLS: Readonly<Record<string, string>> = {
   barrel: "/assets/acnh/furniture/barrel.glb", lighthouse: "/assets/acnh/furniture/lighthouse.glb", crate: CRATE_URL,

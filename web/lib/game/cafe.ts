@@ -54,7 +54,7 @@ export const CAFE_OWNER = {
   ],
 };
 
-export type OwnerClip = "Idle" | "Walk" | "Forage" | "Trace" | "Sweep";
+export type OwnerClip = "Idle" | "Walk" | "Forage" | "Trace" | "Sweep" | "Craft";
 /** Where the owner works behind the bar, in walking order: x, z, the way she faces while there, how long she stays, and what she does. */
 export interface OwnerStation { at: [number, number]; yaw: number; stay: number; clip: OwnerClip }
 export const OWNER_STATIONS: OwnerStation[] = [

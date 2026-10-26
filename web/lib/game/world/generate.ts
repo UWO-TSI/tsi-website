@@ -209,9 +209,10 @@ const VILLAGE = blob([PX + 2, 52], [42, 44, 42, 44, 50, 52, 38, 42], 2, 12, 81);
  */
 export const SUSHI = [-47, 119.5] as const, SUSHI_YAW = Math.PI;
 /**
- * The way to the sushi bar (David, R2d: "there should be a path to the front of it"): off the beach's main stretch west
- * of the volleyball net, between the parasols and the palms, down to the boardwalk's end at its height (sushiBar.ts
- * BAR_DECKS), hand lanterns along it. Points (x, z, height), the sand's own heights but the last.
+ * The way to the sushi bar (David, R2d: "there should be a path to the front of it"; then, round 2: "get rid of that ugly
+ * path i the sand"): off the beach's main stretch west of the volleyball net, between the parasols and the palms, to the
+ * boardwalk's end, marked by hand lanterns on the open sand; only its last stretch eases the sand down to the boardwalk's
+ * height (sushiBar.ts BAR_DECKS), unpainted. Points (x, z, height), the sand's own heights but the last.
  */
 const SUSHI_PATH: readonly (readonly [number, number, number])[] = [[-8, 105, 0.89], [-20, 104.2, 0.91], [-30, 104.2, 0.85], [-38, 105.2, 0.6], [-44, 106.6, 0.4], [-47, 107.4, 0.32]];
 const BEACH = strip([[58, 92], [40, 100], [10, 105], [-20, 105], [-50, 101]], 9, 8, 0.8, 16, 95);
@@ -311,8 +312,8 @@ export const PLAN: Plan = {
     { label: ["Dirt path", 56, 68], pts: PATH, half: 1.8, shoulder: 2.5, paint: Paint.Path },
     // The way down to the beach, past the shop.
     { pts: [[36, 80, H.village], [34, 92, 2], [31, 101, H.beach + 0.3]], half: 1.6, shoulder: 3, paint: Paint.Path },
-    // The way to the sushi bar's boardwalk.
-    { pts: SUSHI_PATH, half: 1.1, shoulder: 1.5, paint: Paint.Path },
+    // The sand eased down to the sushi bar's boardwalk.
+    { pts: SUSHI_PATH.slice(-2), half: 1.1, shoulder: 2 },
     // Brick roads from the plaza to HQ, the café, the shop and the museum, and down the path's level stretch (David, R2c:
     // "have brick roads to the important shops"): the stone paint, drawn as village-art2's brick (splatMaterial).
     ...[[[PX - 10, PZ], SPOT.hq], [[PX + 3, PZ - 10], SPOT.cafe], [[PX + 3, PZ + 10], SPOT.shop], [[PX - 8, PZ + 6], SPOT.museum], [[43, 51], [49.5, 56.5]]].map(([a, b]): Ramp => (

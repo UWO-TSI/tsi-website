@@ -11,7 +11,10 @@ const { chromium } = require("playwright");
 // Phase A spots (specs/launch/sushi-bar.md): the bar on its stilts at (-47, 119.5), yaw pi, so its frame's (lx, lz) is the
 // world's (-47 - lx, 119.5 - lz): its pier runs north (-z) to the sand at z 107.5, the entrance at (-47, 114.5), its window
 // onto the sea to the south. `sit` stands you at the entrance and presses E (Enter the sushi bar); `frames` are the ms
-// after E to shoot the glide in (each its own png, name-<ms>), then the seated view.
+// after E to shoot the glide in (each its own png, name-<ms>), then the seated view; `turn` then looks round from the
+// stool (radians, + left) and holds it there; `wait` waits that many ms more (the ?time= clock starts each shot at
+// much the same moment of the staff's loops).
+const SIT = { at: [-47, 114.8], yaw: 0, pitch: 0.42, zoom: 1.0, sit: true };
 export const VIEWS = {
   "bar-day": { at: [-36, 111], yaw: 305, pitch: 0.3, zoom: 1.4 },
   "bar-evening": { at: [-36, 111], yaw: 305, pitch: 0.3, zoom: 1.4, time: "evening" },
@@ -19,9 +22,14 @@ export const VIEWS = {
   "approach-day": { at: [-16, 104.6], yaw: 278, pitch: 0.3, zoom: 1.3 },
   "approach-night": { at: [-16, 104.6], yaw: 278, pitch: 0.3, zoom: 1.3, time: "night" },
   "chef-outside": { at: [-46.2, 112.2], yaw: 20, pitch: 0.3, zoom: 0.7 },
-  "entry": { at: [-47, 114.8], yaw: 0, pitch: 0.42, zoom: 1.0, sit: true, time: "night", frames: [0, 500, 1000, 1500] },
-  "seat-evening": { at: [-47, 114.8], yaw: 0, pitch: 0.42, zoom: 1.0, sit: true, time: "evening" },
-  "seat-night": { at: [-47, 114.8], yaw: 0, pitch: 0.42, zoom: 1.0, sit: true, time: "night" },
+  "entrance": { at: [-46.6, 111.2], yaw: 0, pitch: 0.36, zoom: 0.75, time: "evening" },
+  "entry": { ...SIT, time: "night", frames: [300, 900, 1500] },
+  "seat-evening": { ...SIT, time: "evening", wait: 8000 },
+  "seat-evening-left": { ...SIT, time: "evening", turn: 0.95 },
+  "seat-evening-right": { ...SIT, time: "evening", turn: -0.95 },
+  "seat-night": { ...SIT, time: "night" },
+  "seat-night-left": { ...SIT, time: "night", turn: 0.95 },
+  "seat-night-right": { ...SIT, time: "night", turn: -0.95 },
 };
 
 const [OUT = "specs/evidence/sushi-bar", ONLY] = process.argv.slice(2), PORT = process.env.PORT ?? 3175;
@@ -47,7 +55,8 @@ for (const [name, v] of Object.entries(VIEWS)) {
     await page.keyboard.press("e");
     let t0 = 0;
     for (const ms of v.frames ?? []) { await page.waitForTimeout(ms - t0); t0 = ms; await page.screenshot({ path: `${OUT}/${name}-${ms}.png` }); }
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(3000 + (v.wait ?? 0));
+    if (v.turn) { await page.evaluate(t => { const o = window.__orbit.orbit; o.target.yaw += t; o.idle = -1e9; }, v.turn); await page.waitForTimeout(1500); }
   }
   await page.screenshot({ path: `${OUT}/${name}.png` });
   console.log("shot", name, JSON.stringify(await page.evaluate(() => { const p = window.__move?.sim?.current?.pos ?? window.__move?.sim?.current?.position; return p ? [p.x ?? p[0], p.y ?? p[1], p.z ?? p[2]].map(n => +(+n).toFixed(2)) : null; })));

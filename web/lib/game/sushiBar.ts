@@ -31,8 +31,12 @@ export const BAR_DECKS = [
 /** The entrance (on the landing, before the gate) and how near it E takes you in; where getting up puts you. */
 export const ENTRY = [0, 5] as const, ENTRY_RANGE = 1.5;
 const EXIT = [0, 5.3] as const;
-/** The duckboard behind the counter the staff stand on (the builder's STAFF_Y), so their faces clear the fish case. */
-export const STAFF_Y = 0.15;
+/**
+ * The raised board floor behind the counter the staff stand on (the builder's STAFF_Y): high enough that their hands
+ * work the boards on the ledge behind the fish case in the guests' view (David: "first person should be able to see the
+ * npcs preparing the food").
+ */
+export const STAFF_Y = 0.3;
 /** The blinds' tops (the builder's HOURS_TOP): they roll up to it as the bar opens. */
 export const HOURS_TOP = 2.87;
 /** Open for dinner in the evening, a bar at night; closed by day (David: "day is closed ... eveing open, dinner, night more bar vibes"). */
@@ -66,19 +70,24 @@ export const BAR_MUSIC_IN = 8, BAR_MUSIC_OUT = 10;
 
 /**
  * The staff's work loops behind the counter (cafe.ts ownerAt; facing the guests is yaw 0, the back counter π). The chef
- * (David's "Bancha": cool and focused, he rarely talks) works the fish case and the cutting board; the server (a
- * cheerful diver, his name David's call) goes up and down the counter, picks up plates and serves.
+ * (David's "Bancha": cool and focused, he rarely talks) slices at his two cutting boards on the ledge behind the fish
+ * case (the Craft clip, his knife in hand: he stands where its blows land on the fish, the builder's BOARDS), then forms
+ * the nigiri and sets them on the geta beside the board one by one (Trace; `board`: SushiBar.tsx shows them), and
+ * reaches to the back counter for rice; the server (a cheerful diver, his name David's call) plates up and down the
+ * counter's far end.
  */
-const GUESTS = 0, BACK = Math.PI;
-export const CHEF_STATIONS: readonly OwnerStation[] = [
-  { at: [-1.6, 0.25], yaw: GUESTS, stay: 6, clip: "Trace" }, { at: [-1.6, -0.5], yaw: BACK, stay: 4, clip: "Trace" },
-  { at: [-0.3, 0.25], yaw: GUESTS, stay: 6, clip: "Trace" }, { at: [0.3, -0.5], yaw: BACK, stay: 4, clip: "Trace" },
-  { at: [-0.8, 0.2], yaw: GUESTS, stay: 3, clip: "Idle" },
+export type BarStation = OwnerStation & { board?: number };
+const GUESTS = 0, BACK = Math.PI, AT_BOARD = -0.26;
+export const CHEF_STATIONS: readonly BarStation[] = [
+  { at: [-1.4, AT_BOARD], yaw: GUESTS, stay: 7.8, clip: "Craft", board: 0 }, { at: [-1.4, AT_BOARD], yaw: GUESTS, stay: 4.5, clip: "Trace", board: 0 },
+  { at: [-1.0, -0.55], yaw: BACK, stay: 1.4, clip: "Forage" },
+  { at: [0.5, AT_BOARD], yaw: GUESTS, stay: 7.8, clip: "Craft", board: 1 }, { at: [0.5, AT_BOARD], yaw: GUESTS, stay: 4.5, clip: "Trace", board: 1 },
+  { at: [0.9, -0.55], yaw: BACK, stay: 1.4, clip: "Forage" },
 ];
-export const SERVER_STATIONS: readonly OwnerStation[] = [
-  { at: [2.9, 0.3], yaw: GUESTS, stay: 4, clip: "Idle" }, { at: [1.5, -0.5], yaw: BACK, stay: 1.3, clip: "Forage" },
-  { at: [1.1, 0.3], yaw: GUESTS, stay: 3, clip: "Trace" }, { at: [2.2, -0.5], yaw: BACK, stay: 3, clip: "Trace" },
-  { at: [3.3, 0.3], yaw: GUESTS, stay: 3, clip: "Trace" },
+export const SERVER_STATIONS: readonly BarStation[] = [
+  { at: [2.9, -0.2], yaw: GUESTS, stay: 4, clip: "Idle" }, { at: [1.6, -0.55], yaw: BACK, stay: 1.3, clip: "Forage" },
+  { at: [1.6, -0.2], yaw: GUESTS, stay: 3, clip: "Trace" }, { at: [2.4, -0.55], yaw: BACK, stay: 1.3, clip: "Forage" },
+  { at: [3.3, -0.2], yaw: GUESTS, stay: 3, clip: "Trace" },
 ];
 /** While it's closed the chef stands on the landing beside the entrance, looking up the beach (his quests come later). */
 export const CHEF_OUTSIDE = { at: [-1.75, 5.05] as const, yaw: 0 };
@@ -131,11 +140,12 @@ export function barSeat(bar: Bar, x: number, z: number, open: boolean, taken?: (
 export const stoolAt = (bar: Bar, x: number, z: number) => STOOLS.findIndex(lx => { const [sx, sz] = barPoint(bar, lx, STOOL_Z); return Math.hypot(sx - x, sz - z) < 0.05; });
 
 /**
- * The seated view, first person (David: "first person at the bar ... seeking the food infront of you"): from your eyes on
- * the stool at lx (a touch back and up, so the counter's in view and the sea shows over the back counter), across the
- * counter at the chef, the sea through the window behind him. The eye and the point it
- * looks at in the bar's frame (x, y over its floor, z).
+ * The seated view, first person (David: "first person at the bar ... seeking the food infront of you"; round 2: "see the
+ * npcs preparing the food ... make fov higher slightly"): from your eyes on the stool at lx (a touch back and up, so the
+ * sea shows over the back counter), a little down across the counter at the chefs' hands on their boards, the sea and
+ * its islands through the window behind them (the builder's EYE, which the islands are raised for). The eye and the
+ * point it looks at in the bar's frame (x, y over its floor, z). The camera sees wider there (movement/moveFx SEAT_FOV).
  */
 export function seatView(lx: number): { eye: [number, number, number]; look: [number, number, number] } {
-  return { eye: [lx, STOOL_TOP + 1.1, STOOL_Z + 0.3], look: [lx * 0.85, STOOL_TOP + 0.65, -2.5] };
+  return { eye: [lx, STOOL_TOP + 1.1, STOOL_Z + 0.4], look: [lx * 0.85, STOOL_TOP + 0.45, -2.5] };
 }
