@@ -99,9 +99,10 @@ export function lampLight(p: readonly [number, number, number], yaw: number, [lx
 /**
  * The pools of light of the `count` lamps nearest the player (the new world's many lamps, terrain v3 R2c): a fixed few
  * point lights that follow you from lamp to lamp, so the scene never pays for every lamp's light (each light costs
- * every lit draw, on or off). A light fades out as its lamp nears the edge of the nearest few, so none pops.
+ * every lit draw, on or off: each of the eight it had cost about 0.1 ms a frame on High, perf-newworld). A light fades
+ * out as its lamp nears the edge of the nearest few, so none pops.
  */
-export function LampPool({ points, intensity, reach, player, count = 8 }: {
+export function LampPool({ points, intensity, reach, player, count = 4 }: {
   points: readonly (readonly [number, number, number])[]; intensity: number; reach: number; player: React.RefObject<THREE.Vector3>; count?: number;
 }) {
   const lights = useRef<(THREE.PointLight | null)[]>([]);

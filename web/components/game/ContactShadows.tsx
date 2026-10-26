@@ -98,19 +98,6 @@ function shown(object: THREE.Object3D, scene: THREE.Object3D): boolean {
   return false;
 }
 
-/** The largest contact's half extent (a house's, about 6 u). */
-const LARGEST = 8;
-/**
- * How far from the camera a contact can show: the farthest corner of the view frustum, past which nothing draws (the
- * bend only lowers things, it never brings them nearer), plus the largest contact. Unbounded for other cameras.
- */
-function sightOf(camera: THREE.Camera) {
-  const c = camera as THREE.PerspectiveCamera;
-  if (!c.isPerspectiveCamera) return Infinity;
-  const t = Math.tan(THREE.MathUtils.degToRad(c.fov / 2)) / c.zoom;
-  return c.far * Math.hypot(1, t, t * c.aspect) + LARGEST;
-}
-
 /** Instanced discs in draws of CHUNK, one material; grows by a draw when an instance passes the last. */
 class Discs extends THREE.Group {
   private meshes: THREE.InstancedMesh[] = [];
@@ -154,7 +141,7 @@ export class ContactLayer {
   /** After the frame's movement and matrix update, before the draw list is built: contacts never trail their objects. */
   hook(scene: THREE.Scene) {
     const before = scene.onBeforeRender;
-    scene.onBeforeRender = (...args) => { before.apply(scene, args); this.update(scene, args[2]); };
+    scene.onBeforeRender = (...args) => { before.apply(scene, args); this.update(scene); };
     return () => {
       scene.onBeforeRender = before;
       (this.contacts.material as THREE.Material).dispose();
@@ -167,18 +154,17 @@ export class ContactLayer {
   /** A new frame (ContactShadows' frame loop, before the frame's renders). */
   next() { this.due = true; }
 
-  private update(scene: THREE.Scene, camera: THREE.Camera) {
+  private update(scene: THREE.Scene) {
     if (!this.due) return;
     this.due = false;
     const a = this.contacts, b = this.directed;
-    const reach = sightOf(camera), cx = camera.position.x, cz = camera.position.z;
     if (!this.sunMap && (!this.sun || !shown(this.sun, scene))) this.sun = (scene.getObjectByName("sun") as THREE.DirectionalLight | undefined) ?? null;
     const light = this.sunMap ? null : this.sun;
     if (light) _sun.setFromMatrixPosition(light.matrixWorld).sub(_target.setFromMatrixPosition(light.target.matrixWorld)).toArray(_sunXYZ);
     let n = 0, d = 0;
     for (const c of CONTACTS.get(scene) ?? []) {
       const e = (c.at ? _at.multiplyMatrices(c.object.matrixWorld, c.at) : c.object.matrixWorld).elements;
-      if (Math.hypot(e[12] - cx, e[14] - cz) > reach || !shown(c.object, scene)) continue;
+      if (!shown(c.object, scene)) continue;
       const sx = Math.hypot(e[0], e[1], e[2]), sy = Math.hypot(e[4], e[5], e[6]), sz = Math.hypot(e[8], e[9], e[10]);
       _foot.x = e[0] * c.cx + e[8] * c.cz + e[12]; _foot.z = e[2] * c.cx + e[10] * c.cz + e[14];
       _foot.rx = c.rx * sx; _foot.rz = c.rz * sz; _foot.yaw = Math.atan2(e[8], e[10]);
