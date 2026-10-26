@@ -106,6 +106,21 @@ Read `specs/launch/v1-new-world.md` first, then `specs/launch/terrain-v3.md`. Th
     - **Open from the lane:**
       - the seabed's tall boulder_c rocks stick out of the wider shallows (shared code, so left alone);
       - no per-tree tint in the forest.
+  - **R2d reviewed (2026-10-26).**
+    - **Approved:** the arrival, the docks, the path, the shallows, the night views.
+    - **Redos** (verbatim in `specs/lanes/terrain-v3.md`):
+      - the fish market to the north end as the main building, the ship houses replaced by a tackle shop and a shipwright with a floating boat;
+      - fewer palms on the wharf and a path to the beach;
+      - waves that break on the shore;
+      - crabs and shells;
+      - the brick roads removed and the grass updated;
+      - bigger river trees, more forest tree models with tint.
+    - **Ponytail review:** merge-safe once the fixes are in.
+      - **Before merge:** delete the jetty preload in Wharf.tsx (the village was downloading jetty.glb); drop the sushi glow export; ContactShadows `shown` before the multiply.
+      - **Cheap extras sent too:** the merge key keeps castShadow, fireflies capped, AmbientProps per-frame allocations, SellSheet keys, mapHealth wharfDecks.
+  - **Release candidate = game/perf-newworld:** R2d 7aee495b, plus the perf re-measure, plus the review fixes. It merges to main when the perf lane reports. terrain-v3 R2e then merges it.
+  - **Running:** terrain-v3 R2e (from d258b30c), wharf-art4 (tackle shop, shipwright, crab), trees-art (forest and river trees), sushi-bar phase A, perf-newworld.
+  - **Music:** David's Suno "Smoky Night Groove" is going in as bar-night.mp3 through the sushi lane; the evening track is being redone.
   - **Sushi bar planned** (2026-10-26, all "Nice to have" for Oct 31): `specs/launch/sushi-bar.md`.
     - **Phase A, the place:**
       - stilts over the water on the west of the beach;
