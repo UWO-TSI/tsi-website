@@ -124,6 +124,11 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // a porch out to z 3.9 over the door and a table of fish; an exterior only, the origin at the middle of its floor. The
   // sell barrel (same builder) is the quick sell: a big barrel of fish, a hanging scale and a SELL board, front +z.
   "fish-market": "/assets/game/buildings/fish-market.glb", "sell-barrel": "/assets/game/wharf/sell-barrel.glb",
+  // game/wharf-art2: the ship houses (art/wharf/build_ship_houses.py), to straddle the deck's water edge facing in: the
+  // origin on the deck's top at the middle of the floor, the door to +z (inland), the back half over the sea on piles
+  // down to y -3.4. a the red boathouse (boat door open at the back), b the stilt house (a balcony on piles off +x), c
+  // the net loft (two storeys), d the shack (a porch to z 2.45 under a roof falling to the back).
+  ...Object.fromEntries(["a", "b", "c", "d"].map(m => [`ship-house-${m}`, `/assets/game/wharf/ship-house-${m}.glb`])),
 };
 export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? `/assets/acnh/props/${model}.glb`;
 
