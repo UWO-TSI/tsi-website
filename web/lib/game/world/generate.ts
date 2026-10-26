@@ -265,7 +265,7 @@ export const PLAN: Plan = {
     // fall's lip; the big fall drops from layer 2 to layer 1 into a dry basin (the pond, once water can sit up here),
     // which drains into the cave; the river comes back out at the mountain's foot.
     { name: "Falls", label: mtLabel("Main fall", -26, -118), shape: inMt(strip([[-1, -143], [2, -128], [6, -113]], 1.6, 2.2, 0.3, 4, 72)), ground: (_x, _z, _i, h) => h - 0.7, edge: 0.6, kind: "shape", paint: Paint.Rock },
-    { name: "Pond (dry until elevated water)", shape: inMt(ellipse([7, -104], 7, 5.5, 0.2, 0.8, 4, 73)), ground: H.m1 - 1.3, edge: 1.5, kind: "shape", paint: Paint.Stone },
+    { name: "Pond (dry until elevated water)", shape: inMt(ellipse([7, -104], 7, 5.5, 0.2, 0.8, 4, 73)), ground: H.m1 - 1.3, edge: 1.5, kind: "shape", paint: Paint.Rock },
     { name: "Cave mouth", shape: inMt(ellipse([17, -108], 3.5, 3, 0, 0, 4, 74)), ground: H.m1, edge: 0.8, kind: "shape" },
     // VILLAGE: dead level at 3 (so neighbouring pads agree) round the plaza, right up against the wharf's climb.
     {
@@ -301,7 +301,7 @@ export const PLAN: Plan = {
     // The way down to the beach, past the shop.
     { pts: [[36, 80, H.village], [34, 92, 2], [31, 101, H.beach + 0.3]], half: 1.6, shoulder: 3, paint: Paint.Path },
     // Brick roads from the plaza to HQ, the café, the shop and the museum, and down the path's level stretch (David, R2c:
-    // "have brick roads to the important shops"); the plaza's stone until village-art2's brick lands.
+    // "have brick roads to the important shops"): the stone paint, drawn as village-art2's brick (splatMaterial).
     ...[[[PX - 10, PZ], SPOT.hq], [[PX + 3, PZ - 10], SPOT.cafe], [[PX + 3, PZ + 10], SPOT.shop], [[PX - 8, PZ + 6], SPOT.museum], [[43, 51], [49.5, 56.5]]].map(([a, b]): Ramp => (
       { pts: [[a[0], a[1], H.village], [b[0], b[1], H.village]], half: 1.3, shoulder: 0.6, paint: Paint.Stone })),
   ],
