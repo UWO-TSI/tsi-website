@@ -342,7 +342,21 @@ def counter(k, M):
         F.yunomi(k, M, (sx + 0.3, TOP_Y, z - 0.02), ["#6f8f73", "#c9a46a", "#8a6c9a"][i % 3])
         F.soy_dish(k, M, (sx - 0.24, TOP_Y, z - 0.06))
         F.chopsticks(k, M, (sx + 0.02, TOP_Y, z + 0.1), 0.0)
-        box(k, (sx + 0.44, TOP_Y + 0.07, z - 0.1), (0.1, 0.13, 0.02), Mp, "#3a62b4", rot=K.game_rot(pitch=-0.25))
+        menu_stand(k, M, (sx + 0.44, TOP_Y, z - 0.1))
+
+
+def menu_stand(k, M, c):
+    """A little menu at each place: a cream card printed with the dishes in ink and a red seal, in a dark wooden stand."""
+    x, y, z = c
+    box(k, (x, y + 0.012, z), (0.12, 0.024, 0.05), M["wood"], "#3a2a1e")
+    tilt = K.game_rot(pitch=-0.2)
+    k.rbox((x, y + 0.085, z - 0.006), (0.1, 0.13, 0.008), 0.004, M["paint"], "#f3e8cc", rot=tilt, segs=1)
+    for j, w in enumerate((0.06, 0.05, 0.065, 0.04)):
+        h = y + 0.125 - j * 0.024
+        p = [(x - w / 2, h, z), (x + w / 2, h, z), (x + w / 2, h + 0.008, z), (x - w / 2, h + 0.008, z)]
+        k.face([k.vert(tuple(np.array((px, py, pz)) + np.array(tilt @ Vector((0, 0, 0.0045))) + np.array((0, 0, (py - y - 0.085) * 0.2)))) for px, py, pz in p],
+               [(0, 0)] * 4, M["paint"], INK)
+    k.face([k.vert((x + 0.02 + dx, y + 0.04 + dy, z + 0.009 - dy * 0.2)) for dx, dy in ((0, 0), (0.018, 0), (0.018, 0.018), (0, 0.018))], [(0, 0)] * 4, M["paint"], RED)
 
 
 def fish_case(k, M):
@@ -629,20 +643,37 @@ def tank(k, W, Mp, Mpane, Ms):
                    ((x1, y0, z1), (x1, y1, z1)), ((x0, y0, z1), (x0, y1, z1)), ((x1, y0, z0), (x1, y1, z0))):
         k.beam(a, b, 0.035, 0.035, 0.0, Mp, "#1f2124")
     box(k, (cx, y1 + 0.05, cz), (x1 - x0 + 0.04, 0.09, z1 - z0 + 0.04), Mp, "#1f2124", r=0.02)
-    box(k, (cx, y0 + 0.05, cz), (x1 - x0 - 0.04, 0.1, z1 - z0 - 0.04), Ms, "#e6d3a6")
+    k.blob((cx, y0 + 0.05, cz), ((x1 - x0) / 2 - 0.03, 0.06, (z1 - z0) / 2 - 0.03), Ms, "#e6d3a6", segs=10, rings=4, seed=11, lumpy=0.25, flat_bottom=-0.02)
     panel(k, Mpane, [(x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1)], "#e8f6f8")
     panel(k, Mpane, [(x1, y0, z0), (x1, y0, z1), (x1, y1, z1), (x1, y1, z0)], "#e8f6f8")
-    for (x, z, col) in ((-3.75, 0.75, "#ef8f8f"), (-3.3, 0.7, "#f2a04a"), (-3.55, 1.1, "#9b6cc4")):
-        k.blob((x, y0 + 0.1, z), (0.1, 0.12, 0.08), Ms, col, segs=6, rings=4, seed=int(-x * 10), lumpy=0.35, flat_bottom=0.0)
-    for j, (x, z) in enumerate(((-3.85, 0.62), (-3.2, 0.95), (-3.45, 0.58))):
-        k.tube([(x, y0 + 0.1, z), (x + 0.04, y0 + 0.3, z), (x - 0.03, y0 + 0.5, z), (x + 0.02, y0 + 0.62, z)], 0.02, Ms, "#4f9a5a", n=4,
-               radii=[1.0, 0.9, 0.7, 0.4])
+    # A rock arch, brain and branching coral, swaying weed, pebbles; an air stone's bubbles.
+    k.blob((-3.7, y0 + 0.16, 0.7), (0.14, 0.12, 0.1), Ms, "#8a8478", segs=7, rings=4, seed=21, lumpy=0.4)
+    k.blob((-3.5, y0 + 0.13, 0.66), (0.08, 0.1, 0.07), Ms, "#9a9488", segs=6, rings=4, seed=22, lumpy=0.4)
+    for (x, z, col) in ((-3.3, 0.72, "#f2a04a"), (-3.55, 1.12, "#9b6cc4")):
+        k.blob((x, y0 + 0.11, z), (0.08, 0.07, 0.07), Ms, col, segs=7, rings=4, seed=int(-x * 10), lumpy=0.45, flat_bottom=0.0)
+    for x, z in ((-3.8, 1.05), (-3.2, 1.2)):                  # branching coral
+        for d in range(5):
+            a = d * math.tau / 5 + x
+            tip = (x + 0.08 * math.cos(a), y0 + 0.24 + 0.05 * (d % 2), z + 0.06 * math.sin(a))
+            k.tube([(x, y0 + 0.08, z), ((x + tip[0]) / 2, y0 + 0.17, (z + tip[2]) / 2), tip], 0.016, Ms, "#ef7f8f", n=4, radii=[1.0, 0.8, 0.45])
+    for j, (x, z) in enumerate(((-3.88, 0.62), (-3.62, 0.95), (-3.42, 0.56), (-3.15, 0.9), (-3.9, 1.3))):
+        sway = 0.05 * (1 if j % 2 else -1)
+        k.tube([(x, y0 + 0.08, z), (x + sway, y0 + 0.28, z), (x - sway, y0 + 0.48, z), (x + sway * 0.5, y0 + 0.6 + 0.05 * j % 0.1, z)], 0.018, Ms,
+               ["#4f9a5a", "#6fb85a", "#3f8a4a"][j % 3], n=4, radii=[1.0, 0.9, 0.7, 0.35])
+    for i in range(7):
+        k.blob((-3.25, y0 + 0.14 + i * 0.09, 1.3 + 0.012 * math.sin(i * 2.0)), (0.012 + 0.002 * i,) * 3, Mpane, "#ffffff", segs=5, rings=3)
+    # The fish: a round body, a forked tail, a dorsal fin and a dark eye, swimming both ways.
     for j, (x, y, z, col, sc) in enumerate(((-3.6, 1.3, 1.15, "#f28a3a", 1.0), (-3.3, 1.12, 0.9, "#3a7ad8", 1.1), (-3.75, 1.45, 0.85, "#f2d04a", 0.9),
                                              (-3.35, 1.5, 1.25, "#f28a3a", 0.8), (-3.8, 1.05, 1.2, "#e8e4da", 0.85))):
         d = 1 if j % 2 else -1
-        k.blob((x, y, z), (0.07 * sc, 0.045 * sc, 0.025 * sc), Mp, col, segs=6, rings=4)
-        t = [k.vert((x - d * 0.06 * sc, y, z)), k.vert((x - d * 0.12 * sc, y + 0.04 * sc, z)), k.vert((x - d * 0.12 * sc, y - 0.04 * sc, z))]
-        k.face(t, [(0, 0)] * 3, Mp, col)
+        k.blob((x, y, z), (0.07 * sc, 0.048 * sc, 0.028 * sc), Mp, col, segs=8, rings=5)
+        for s_ in (1, -1):
+            t = [k.vert((x - d * 0.055 * sc, y, z)), k.vert((x - d * 0.13 * sc, y + s_ * 0.05 * sc, z)), k.vert((x - d * 0.105 * sc, y, z))]
+            k.face(t, [(0, 0)] * 3, Mp, mix(col, INK, 0.15))
+        k.face([k.vert((x - d * 0.03 * sc, y + 0.04 * sc, z)), k.vert((x + d * 0.02 * sc, y + 0.075 * sc, z)), k.vert((x + d * 0.03 * sc, y + 0.04 * sc, z))],
+               [(0, 0)] * 3, Mp, mix(col, INK, 0.15))
+        for w in (-1, 1):
+            k.blob((x + d * 0.04 * sc, y + 0.012 * sc, z + w * 0.022 * sc), (0.008 * sc,) * 3, Mp, INK, segs=5, rings=3)
 
 
 def plants(k, Mp, W):
@@ -650,21 +681,25 @@ def plants(k, Mp, W):
     for x, z in ((-4.1, 2.35), (3.95, 3.7)):
         box(k, (x, FLOOR + 0.2, z), (0.42, 0.4, 0.42), W, CEDAR, r=0.02)
         box(k, (x, FLOOR + 0.41, z), (0.48, 0.04, 0.48), W, POST)
+        k.blob((x, FLOOR + 0.4, z), (0.18, 0.03, 0.18), Mp, "#4a3a2c", segs=8, rings=3, seed=int(z * 10), lumpy=0.3)   # the soil
         for i in range(5):
             a = i * math.tau / 5 + x
             bx, bz, h = x + 0.11 * math.cos(a), z + 0.11 * math.sin(a), rng.uniform(1.5, 2.3)
             lean = np.array((math.cos(a), 0.0, math.sin(a))) * 0.12
-            pts = [np.array((bx, FLOOR + 0.4, bz)) + lean * t * t + np.array((0, h * t, 0)) for t in (0.0, 0.5, 1.0)]
-            k.tube([tuple(p) for p in pts], 0.028, Mp, mix("#6f9a4a", "#9fbe5a", rng.uniform(0, 1)), n=5, v_len=0.3, radii=[1.0, 0.9, 0.7])
-            for j in range(3):   # a spray of narrow leaves off the culm's top half
-                t = 0.55 + 0.18 * j
-                p = pts[0] + (pts[2] - pts[0]) * t
-                for m in range(3):
+            at = lambda t: np.array((bx, FLOOR + 0.4, bz)) + lean * t * t + np.array((0, h * t, 0))
+            green = mix("#6f9a4a", "#9fbe5a", rng.uniform(0, 1))
+            k.tube([tuple(at(t)) for t in (0.0, 0.5, 1.0)], 0.034, Mp, green, n=6, v_len=0.3, radii=[1.0, 0.9, 0.65])
+            for t in np.arange(0.2, 0.95, 0.19):      # the nodes: a pale band round the culm
+                k.lathe(tuple(at(t)), [(0.039 * (1 - 0.35 * t), -0.007), (0.039 * (1 - 0.35 * t), 0.007)], Mp, mix(green, "#e6e2b0", 0.45), n=5)
+            for t in (0.55, 0.72, 0.88, 1.0):   # a spray of narrow leaves at the upper nodes, drooping
+                p = at(t)
+                for m in range(4):
                     d = rng.uniform(0, math.tau)
-                    tip = p + np.array((math.cos(d) * 0.26, -0.05, math.sin(d) * 0.26))
-                    side = np.array((-math.sin(d), 0.0, math.cos(d))) * 0.035
-                    k.face([k.vert(tuple(p)), k.vert(tuple((p + tip) / 2 + side)), k.vert(tuple(tip)), k.vert(tuple((p + tip) / 2 - side))],
-                           [(0, 0)] * 4, Mp, mix("#4f8a3a", "#8cc05a", rng.uniform(0, 1)))
+                    out = np.array((math.cos(d), 0.0, math.sin(d)))
+                    tip, mid = p + out * 0.3 + np.array((0, -0.12, 0)), p + out * 0.15 + np.array((0, 0.02, 0))
+                    side = np.array((-math.sin(d), 0.0, math.cos(d))) * 0.03
+                    k.face([k.vert(tuple(p)), k.vert(tuple(mid + side)), k.vert(tuple(tip)), k.vert(tuple(mid - side))],
+                           [(0, 0)] * 4, Mp, mix("#3f7a32", "#8cc05a", rng.uniform(0, 1)))
     # The bonsai: a shallow blue pot, a twisting trunk, three cloud pads of needles.
     x, y, z = -3.45, BACK_TOP + 0.025, -HD + 0.3
     k.lathe((x, y, z), [(0.0, 0.0), (0.17, 0.0), (0.2, 0.08), (0.18, 0.09), (0.0, 0.08)], Mp, "#3f6f8f", n=8, sx=1.3)
@@ -924,7 +959,7 @@ def served(M):
 
 def pane_glass():
     """A see-through glass (alpha blended in the GLB) for the fish case and the tank."""
-    M = K.Mat("M_PaneGlass", rough=0.08)
+    M = K.Mat("M_PaneGlass", rough=0.3)
     b = next(n for n in M.m.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
     b.inputs["Alpha"].default_value = 0.2
     for attr, val in (("surface_render_method", "BLENDED"), ("blend_method", "BLEND")):

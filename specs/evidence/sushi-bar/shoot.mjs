@@ -24,7 +24,7 @@ export const VIEWS = {
   "bar-night": { at: [-36, 111], yaw: 305, pitch: 0.3, zoom: 1.4, time: "night", calm: true },
   "approach-day": { at: [-16, 104.6], yaw: 278, pitch: 0.3, zoom: 1.3 },
   "approach-night": { at: [-16, 104.6], yaw: 278, pitch: 0.3, zoom: 1.3, time: "night", calm: true },
-  "corner": { at: [-50.6, 112.6], yaw: 330, pitch: 0.35, zoom: 0.8, time: "evening" },
+  "corner": { at: [-52.4, 111.2], yaw: 22, pitch: 0.35, zoom: 0.6, time: "evening" },
   "chef-outside": { at: [-46.2, 112.2], yaw: 20, pitch: 0.3, zoom: 0.7 },
   "entrance": { at: [-46.6, 111.2], yaw: 0, pitch: 0.36, zoom: 0.75, time: "evening" },
   "entry": { ...SIT, time: "night", frames: [300, 900, 1500] },
@@ -34,7 +34,7 @@ export const VIEWS = {
   "seat-night": { ...SIT, time: "night", calm: true },
   "seat-night-left": { ...SIT, time: "night", turn: 0.95, calm: true },
   "seat-night-right": { ...SIT, time: "night", turn: -0.95, calm: true },
-  "food": { ...SIT, time: "evening", served: 2, tilt: 0.25 },
+  "food": { ...SIT, time: "evening", served: 2, tilt: 0.12 },
 };
 
 const [OUT = "specs/evidence/sushi-bar", ONLY] = process.argv.slice(2), PORT = process.env.PORT ?? 3175;
