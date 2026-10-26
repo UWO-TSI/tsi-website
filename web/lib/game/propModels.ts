@@ -19,7 +19,15 @@ export const NEW_LAMPS = {
   wharf: { url: `${P}lantern-post.glb`, light: [0.56, 1.78, 0] },
   /** The campfire's lantern on a crooked branch (art/props/build_campfire_set.py). */
   camp: { url: `${P}camp-lantern.glb`, light: [0.3, 1.18, 0] },
+  // game/village-art (art/props/build_path_lamps.py): the path's lamps, one iron lantern on a timber post with an angled
+  // brace, or on a crooked branch post on a stone plinth; and the hand lantern alone, standing on its foot (to hang it
+  // from a hook, its foot HAND_LANTERN_RING under the hook).
+  woodPost: { url: `${P}wood-post-lamp.glb`, light: [0.8, 1.886, 0] },
+  branchPost: { url: `${P}branch-post-lamp.glb`, light: [0.5, 1.731, 0] },
+  hand: { url: `${P}hand-lantern.glb`, light: [0, 0.143, 0] },
 } as const;
+/** The hand lantern's ring top over its foot. */
+export const HAND_LANTERN_RING = 0.542;
 /** The wharf's channel buoys (wharf/Wharf.tsx): the float meets the water BUOY_WATERLINE up its model. */
 export const BUOY_URL = `${P}buoy.glb`;
 export const BUOY_WATERLINE = 0.66;

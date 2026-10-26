@@ -149,6 +149,7 @@ describe("remodelled props (propModels.ts)", () => {
       expect(b.max[0], url).toBeGreaterThan(light[0] + 0.06);
       expect(b.max[1], url).toBeGreaterThan(light[1] + 0.2);
     }
+    expect(bounds(Props.NEW_LAMPS.hand.url).max[1]).toBeCloseTo(Props.HAND_LANTERN_RING, 2);
   });
   it("lays the wharf kit in the deck's frame: a 4 u square at the boards' top, steps up 1, a ladder and a pile down into the sea", () => {
     const tile = bounds(Props.SCENERY_URLS["deck-tile"]), steps = bounds(Props.SCENERY_URLS["deck-steps"]);
