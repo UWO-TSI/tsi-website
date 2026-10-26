@@ -7,7 +7,7 @@ import { prepareModel, disposeModelMaterials, applyModelTextures } from "@/lib/g
 import { shadowClassFor, type ShadowClass } from "@/lib/game/shadows";
 import { modelContact, useContactShadow } from "./ContactShadows";
 import { PROP_FOOTPRINT, propsOf, wharfDock } from "@/lib/game/defaultIsland";
-import { JETTY, SEA_Y, deckPieces, dockToWorld } from "@/lib/game/wharf";
+import { JETTY, SEA_Y, SELL_BARREL, deckPieces, dockToWorld } from "@/lib/game/wharf";
 import { BARRIERS, barrierPlacements } from "@/lib/game/barriers";
 import { BUSH_MODELS, FLOWER_MODELS, TREE_MODELS, bushParts, flowerParts, mushroomUrl, treeParts, type NaturePart } from "@/lib/game/natureParts";
 import { SEASON_BUSHES, SEASON_FLOWERS, SEASON_TREES } from "@/lib/game/seasonalLook";
@@ -67,7 +67,7 @@ export function sceneryOf(v: Village, ground: (x: number, z: number) => number, 
     ...(SEASON_FLOWERS[season].length ? at("flower", seed => flowerParts(seed, SEASON_FLOWERS[season])) : []),
     ...propsOf(v).filter(o => o.model && !isJoinedFence(o)).map((p): ModelPlacement => ({ url: isRockModel(p.model) ? rockUrl(p.model) : propUrl(p.model!), position: [p.x, propY(p, ground), p.z], rotation: p.yaw ?? 0, scale: p.scale ?? 1 })),
     // The wharf kit on the deck squares, kept clear where the jetty's gangways land (lib/game/wharf.ts deckPieces).
-    ...deckPieces(objectsOf("deck", v), ground, jettyLanding(v), undefined, propsOf(v).filter(o => o.model?.startsWith("ship-house-"))).map((p): ModelPlacement => ({ url: propUrl(p.model), position: [p.x, p.y, p.z], rotation: p.yaw, scale: 1 })),
+    ...deckPieces(objectsOf("deck", v), ground, jettyLanding(v), undefined, propsOf(v).filter(o => o.model?.startsWith("ship-house-") || o.id === SELL_BARREL)).map((p): ModelPlacement => ({ url: propUrl(p.model), position: [p.x, p.y, p.z], rotation: p.yaw, scale: 1 })),
     // The connectable fences: a post on each, rails to the posts beside it (lib/game/fences.ts).
     ...fencePlacements(objectsOf("fence", v).filter(isJoinedFence), ground),
     // The natural barriers standing at this drop (lib/game/barriers.ts), where the walker blocks them.
