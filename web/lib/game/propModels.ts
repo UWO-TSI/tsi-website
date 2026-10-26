@@ -19,7 +19,15 @@ export const NEW_LAMPS = {
   wharf: { url: `${P}lantern-post.glb`, light: [0.56, 1.78, 0] },
   /** The campfire's lantern on a crooked branch (art/props/build_campfire_set.py). */
   camp: { url: `${P}camp-lantern.glb`, light: [0.3, 1.18, 0] },
+  // game/village-art (art/props/build_path_lamps.py): the path's lamps, one iron lantern on a timber post with an angled
+  // brace, or on a crooked branch post on a stone plinth; and the hand lantern alone, standing on its foot (to hang it
+  // from a hook, its foot HAND_LANTERN_RING under the hook).
+  woodPost: { url: `${P}wood-post-lamp.glb`, light: [0.8, 1.886, 0] },
+  branchPost: { url: `${P}branch-post-lamp.glb`, light: [0.5, 1.731, 0] },
+  hand: { url: `${P}hand-lantern.glb`, light: [0, 0.143, 0] },
 } as const;
+/** The hand lantern's ring top over its foot. */
+export const HAND_LANTERN_RING = 0.542;
 /** The wharf's channel buoys (wharf/Wharf.tsx): the float meets the water BUOY_WATERLINE up its model. */
 export const BUOY_URL = `${P}buoy.glb`;
 export const BUOY_WATERLINE = 0.66;
@@ -86,6 +94,11 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // Its forest masses (art/trees/build_forest_masses.py): a stand of tall cedars in one mesh, about 12 (a), 16 by 9 along
   // x (b) and 10 (c) across, to instance over the closed forest so it reads dense from the open area.
   ...Object.fromEntries(["a", "b", "c"].map(m => [`forest-mass-${m}`, `/assets/game/plants/forest-mass-${m}.glb`])),
+  // game/village-art: the plaza's set (art/props/build_plaza_set.py), fronts toward +z. The fountain is 9.6 across (scale
+  // it uniformly to the plaza); the bunting hangs between (-2, 0, 0) and (2, 0, 0), so set it at the hang height and scale
+  // x by the span / 4; the wall banner's origin is its bracket's plate on a wall in the x-y plane, the banner out along +z.
+  ...Object.fromEntries(["plaza-fountain", "bunting-string", "banner-pole", "flag-pole", "wall-banner", "fruit-stall", "fruit-barrel", "fruit-crate",
+    "flower-planter", "flower-pot", "round-planter", "planter-bench", "market-sign"].map(m => [m, `${P}${m}.glb`])),
 };
 export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? `/assets/acnh/props/${model}.glb`;
 
