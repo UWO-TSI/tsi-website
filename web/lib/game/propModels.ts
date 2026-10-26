@@ -158,6 +158,10 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // dead snag (6). Scale them uniformly only (0.8 to 1.25), never stretched; the instance tint goes on mForestCrown.
   ...Object.fromEntries(["cedar", "fir", "spire", "old-fir", "leaning", "broken", "young", "broadleaf", "birch", "wide", "sapling", "snag"]
     .map(m => [`forest-tree-${m}`, `/assets/game/plants/forest-tree-${m}.glb`])),
+  // Riverbank trees (the same builder), 650 to 810 triangles, the trunk's foot at the origin, solid at the trunk only: a
+  // weeping willow (8 tall, sprays hung to about 2 over the ground), a tall alder (8.9), a big oak (8.7, 7.5 across)
+  // and one leaning out over the water to +x (8.6 tall, its crown 4.3 out): turn it to face the river.
+  ...Object.fromEntries(["willow", "alder", "oak", "lean"].map(m => [`river-tree-${m}`, `/assets/game/plants/river-tree-${m}.glb`])),
   // game/wharf-art2: coral reefs for the shallows (art/water/build_coral_reefs.py), the coral clumps above tinted and massed
   // on low rocks, the origin on the seabed at the middle, not solid: a broad (2.8 by 2), b round and tall (2 across), c a
   // long ribbon along x (3.4 by 1.2).

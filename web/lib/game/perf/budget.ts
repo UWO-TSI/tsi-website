@@ -196,6 +196,8 @@ export const ASSET_CATEGORIES: readonly AssetCategory[] = [
   // game/trees-art (art/trees/build_forest_trees.py): the closed forest's single low-poly trees, instanced by the
   // hundred: the crown on one small painted texture and the trunk in colour.
   { name: "forest tree", prefixes: ["game/plants/forest-tree-"], triangles: 400, primitives: 2, materials: 2, texture: 256, bones: 0 },
+  // game/trees-art: the few riverbank trees, richer (a willow's hanging sprays, many-lumped crowns) on the same texture.
+  { name: "river tree", prefixes: ["game/plants/river-tree-"], triangles: 1200, primitives: 2, materials: 2, texture: 256, bones: 0 },
   // game/remodel-trees (art/trees/build_flowers.py): a clump of stems with petal cards, one cut-out material on the
   // painted petal atlas, one draw for every flower of its kind.
   { name: "flower", prefixes: ["game/plants/flower-"], triangles: 600, primitives: 1, materials: 1, texture: 512, bones: 0 },
