@@ -456,8 +456,8 @@ function plazaSet(): Obj[] {
  * lifeguard tower facing the sea, surfboards in twos and threes. The coral comes after the ground (`shallows`).
  */
 function beachSet(): Obj[] {
-  const out: Obj[] = [obj("prop", "sushi-bar", ...SUSHI, front(-1, 0.2), 1, "sushi-bar"), obj("prop", "lifeguard-tower", 12, 107.5, 0, 1, "lifeguard-tower")];
-  ([[16, 106.4, "a"], [16.6, 106.8, "b"], [17.2, 106.3, "c"], [-14, 107, "c"], [-13.4, 107.5, "a"], [33, 104, "b"], [33.6, 104.4, "a"]] as const)
+  const out: Obj[] = [obj("prop", "sushi-bar", ...SUSHI, front(-1, 0.2), 1, "sushi-bar"), obj("prop", "lifeguard-tower", 1, 108.5, 0, 1, "lifeguard-tower")];
+  ([[4.5, 107.4, "a"], [5.1, 107.8, "b"], [5.7, 107.3, "c"], [-16, 107, "c"], [-15.4, 107.5, "a"], [33, 104, "b"], [33.6, 104.4, "a"]] as const)
     .forEach(([x, z, m], i) => out.push(obj("prop", `surfboard-${i}`, x, z, 0.4 * (hash01(i, 30) - 0.5) + (x > 30 ? 2.6 : 0), 1, `surfboard-${m}`)));
   return out;
 }

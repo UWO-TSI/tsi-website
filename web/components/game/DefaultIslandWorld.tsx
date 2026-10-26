@@ -530,7 +530,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       <EventDecor event={event} ground={island.ground} light={light} weather={weather} />
       <HalloweenLayer content={traditions.content} v={v} island={island} light={light} night={phase === "night"} fog={fogNight} weather={weather} residents={personas} />
       {layout.bridges.map(b => <GLBProp key={b.id} url={BRIDGE_URL} position={[b.x, b.y, b.z]} rotation={[0, b.yaw ?? 0, 0]} />)}
-      {lampSets.map(s => <Lanterns key={s.kind} positions={s.positions} yaws={s.yaws} lamp={s.kind ? NEW_LAMPS[s.kind] : undefined} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} reach={s.kind === "hand" ? 0 : v.terrain ? 7.5 : 5} />)}
+      {lampSets.map(s => <Lanterns key={s.kind} positions={s.positions} yaws={s.yaws} lamp={s.kind ? NEW_LAMPS[s.kind] : undefined} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} reach={s.kind === "hand" ? 0 : v.terrain ? 8.5 : 5} />)}
       {layout.campfire && <Campfire site={layout.campfire} ground={island.ground} phase={phase} player={player} />}
       {/* Nature and props from the map, instanced: one draw per model sub-mesh however many the island has. */}
       <InstancedModels items={scenery} />

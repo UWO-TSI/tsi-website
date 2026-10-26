@@ -246,7 +246,7 @@ export function fireflyNight(light: IslandLight, weather: IslandWeather): boolea
  * "too dark and spooky and ominous, it should be viby"): its fog further off and warmer, and as the windows light (by
  * night) its lamps stronger and the dark lifted. The village's light stays as it is.
  */
-export const SMOOTH_LIGHT = { fogNear: 1.5, fogFar: 1.4, warmFog: "#f4e4c8", warmDay: 0.3, nightFog: "#5c4a66", warmNight: 0.3, lamp: 0.8, ambient: 0.14, hemisphere: 0.5 } as const;
+export const SMOOTH_LIGHT = { fogNear: 1.5, fogFar: 1.4, warmFog: "#f4e4c8", warmDay: 0.3, nightFog: "#5c4a66", warmNight: 0.3, lamp: 1.2, ambient: 0.16, hemisphere: 0.5 } as const;
 const _w = new Color(), _x = new Color();
 const warm = (a: string, b: string, t: number) => `#${_w.set(a).lerp(_x.set(b), t).getHexString()}`;
 export function smoothWorldLight(light: IslandLight): IslandLight {
