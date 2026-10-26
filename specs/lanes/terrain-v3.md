@@ -19,6 +19,12 @@ Then look at the references in `specs/references/terrain/plan-2026-10-23/` and t
 
 ## Status
 
+**R2f in progress 2026-10-26.** Step 1 is done (f5431d3b) and reported. It is waiting on the coordinator's word to merge `game/art-r2f` and `game/perf-newworld`.
+- **Palms:** 14 of the 20 beach palms moved to 1 to 2 u off the grass at the back of the sand (measured from the paint). The wharf end's two moved off the waterline to (55.6, 92.4) and (53, 92.6).
+- **Path:** `WHARF_WAY` deleted (its ramp and its nature exclusion).
+- **Plaza night centre:** `lamp-fountain-0..3` (village posts at r 5.4 between the benches, arms over the basin, no bug spots). The fountain gets a pool glow and a jet halo (`LampGlow color`) plus one warm `FadeLight` in its basin (`DefaultIslandWorld fountain`, matched by `/plaza-fountain.glb`, so the village is untouched).
+- **Renders:** `r2f/` 06, 20, 25, 28 (28-plaza-centre-night is new in shoot.mjs).
+
 **R2e reviewed 2026-10-26** (head 55e48459). Approved:
 - the arrival, the market from the docks, the shops, the wharf;
 - the swash (both stills), the shallows, the campfire;
@@ -369,7 +375,7 @@ The plan page answers, verbatim in the spec. The drawing is a guide to where thi
 ## Next
 
 **R2f: David's R2e notes** (the reading above, 1 to 4).
-1. **Without new art:** the palms (1), the path removed (2) and the plaza's night centre (3).
+1. ~~**Without new art:** the palms (1), the path removed (2) and the plaza's night centre (3).~~ Done, f5431d3b.
 2. **When the coordinator says,** merge `game/art-r2f` and place:
    - the wider fish market;
    - the shipwright's docked ship, replacing the shed and boat. Keep or adapt ShipwrightBoat's bob if the ship floats;
