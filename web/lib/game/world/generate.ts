@@ -372,17 +372,21 @@ const HOUSE_IN = 0.84;
 const HOUSES: readonly [number, number, string][] = ([
   [15, -15, "yellow"], [-14, -20, "red"], [-26, -12, "brown"], [-26, 12, "yellow"], [15, 16, "red"], [-10, 28, "brown"], [-8, -26, "brown"], [-36, 0, "red"],
 ] as const).map(([dx, dz, colour]) => [PX + HOUSE_IN * dx, PZ + HOUSE_IN * dz, colour]);
+/** Along the wharf (quayAt's z): the quick-sell barrel, and the ship houses on the water's edge, spaced unevenly. */
+const SELL_AT = 36;
+const SHIP_HOUSES: readonly (readonly [z: number, model: string])[] = [[17, "a"], [26, "d"], [63.5, "c"], [73.5, "b"]];
 /** The fish market on the deck boards (quayAt's z and d, a turn off facing the water, a scale): stalls, carts, barrels and crates. */
 const MARKET: readonly (readonly [model: string, z: number, d: number, turn: number, scale: number])[] = [
-  // wharf-art's fish market (David's marlin-shop reference) on 2 x 2 of the inland deck squares, its awning toward the
-  // water; the stalls either side of it and along the deck.
+  // wharf-art2's fish market (David, R2c: "the sword fish bigger and incorperated within the build"), 6.2 by 7.2 of the
+  // deck, its porch toward the water and its swordfish's bill out over its north side (kept clear); the stalls either
+  // side of it and along the deck, clear of the ship houses.
   ["fish-market", 34, 4.6, 0, 1],
-  ...[22, 28, 40, 68, 74, 80].map(z => ["market-cart", z, 6, 0, 0.55] as const),
-  ...[[25, 7.6], [25.7, 7], [30.6, 6.6], [43, 7.3], [71, 7.6], [77, 7.6], [77.7, 7], [19, 1.4], [63, 1.4]].map(([z, d]) => ["barrel", z, d, z, 0.07] as const),
-  ...[[20, 1.2], [26.5, 1.3], [66, 1.2], [72.5, 1.3]].map(([z, d]) => ["crate", z, d, Math.PI / 2, 1] as const),
+  ...[22, 40, 68, 80].map(z => ["market-cart", z, 6, 0, 0.55] as const),
+  ...[[25, 7.6], [25.7, 7], [43, 7.3], [71, 7.6], [77, 7.6], [77.7, 7]].map(([z, d]) => ["barrel", z, d, z, 0.07] as const),
+  ...[[20.4, 1.2], [66.3, 1.2]].map(([z, d]) => ["crate", z, d, Math.PI / 2, 1] as const),
   ["shop-cart", 43.5, 3.5, 0.4, 1.5], ["shop-cart", 61, 3.5, -0.3, 1.5],
   // wharf-art's dock decor: nets heaped and over crates, crates under cloth, crates of fish tipped toward the walk.
-  ["net-heap", 37.8, 2.2, 0.5, 1], ["crate-cloth", 23.8, 3.2, 0.3, 1], ["fish-crate", 36.9, 1.2, 0.2, 1],
+  ["net-heap", 38.6, 2.2, 0.5, 1], ["crate-cloth", 23.8, 3.2, 0.3, 1],
   ["fish-crate", 69.8, 2.4, -0.2, 1], ["net-heap", 75.6, 2.4, 1.2, 1], ["crate-cloth", 64.5, 5.4, 0, 1], ["crate-net", 58.6, 6.3, 0.1, 1], ["net-heap", 18.4, 5.6, 2.1, 1],
 ];
 /**
@@ -396,10 +400,12 @@ function scenery(): Obj[] {
   const out: Obj[] = [];
   for (let z = DECK_Z[0]; z <= DECK_Z[1]; z += 4) for (const d of [1, 5]) { const q = quayAt(z, d); out.push(obj("deck", `deck-${out.length}`, q.x, q.z, q.yaw)); }
   MARKET.forEach(([model, z, d, turn, scale], i) => { const q = quayAt(z, d); out.push(obj("prop", `market-${i}`, q.x, q.z, q.yaw + Math.PI + turn, scale, model)); });
-  // The quick-sell barrel outside the fish market (David, R2c: "a big barrel that you can sell outside for quick sell"):
-  // E there opens the sell sheet (DefaultIslandWorld, by its id). The ACNH barrel at twice the market's until
-  // wharf-art2's lands.
-  { const q = quayAt(30, 2.2); out.push(obj("prop", SELL_BARREL, q.x, q.z, q.yaw, 0.15, "barrel")); }
+  // The quick-sell barrel just outside the fish market's porch, beside its steps (David, R2c: "a big barrel that you can
+  // sell outside for quick sell"): E there opens the sell sheet (DefaultIslandWorld, by its id).
+  { const q = quayAt(SELL_AT, 0); out.push(obj("prop", SELL_BARREL, q.x, q.z, q.yaw + Math.PI, 1, "sell-barrel")); }
+  // wharf-art2's ship houses on the deck's water edge, their backs over the sea, facing in (David, R2c: "build on the
+  // side of the wharf and face inwards").
+  SHIP_HOUSES.forEach(([z, m]) => { const q = quayAt(z, -1); out.push(obj("prop", `ship-house-${m}`, q.x, q.z, q.yaw, 1, `ship-house-${m}`)); });
   // The path's loose fencing (David: "the fencing is loosely there not a straight fencing but one with gaps", running
   // "up higher"): short runs and lone posts either side all the way up, bushes scattered behind them.
   let fence = 0, bush = 0;
@@ -502,7 +508,9 @@ function lamps(): Obj[] {
   put("lamp-beach-way", "village", 39, 84, 35, 84);
   // The deck: lantern posts mid-deck clear of the stalls, their arms toward the water; hand lanterns along its edge.
   [18, 25, 39, 51, 57, 65, 71, 77].forEach((z, i) => { const q = quayAt(z, 3.8), e = quayAt(z, 0); put(`lamp-deck-${i}`, "wharf", q.x, q.z, e.x, e.z); });
-  for (let z = 15, i = 0; z <= 79; z += 5.5, i++) if (Math.abs(z - DOCK.z) > 5) { const q = quayAt(z, 0.1); put(`lamp-deck-hand-${i}`, "hand", q.x, q.z); }
+  for (let z = 15, i = 0; z <= 79; z += 5.5, i++) {
+    if (Math.abs(z - DOCK.z) > 5 && [SELL_AT, ...SHIP_HOUSES.map(h => h[0])].every(at => Math.abs(z - at) > 3)) { const q = quayAt(z, 0.1); put(`lamp-deck-hand-${i}`, "hand", q.x, q.z); }
+  }
   // The jetty: lantern posts on the platform and at the walkway's ends, a hand lantern at each pier's tip (David, R2c:
   // "make the dock bigger so it feels less clutter").
   ([[-3.2, 11.2], [3.2, 11.2], [-13.4, 2], [13.9, 2]] as const).forEach(([lx, lz], i) => { dockToWorld(DOCK, lx, lz, at); put(`lamp-jetty-${i}`, "wharf", at.x, at.z, at.x, DOCK.z); });

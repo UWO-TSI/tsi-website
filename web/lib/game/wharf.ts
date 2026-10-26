@@ -307,15 +307,19 @@ export const JETTY = {
 /** The new world's quick-sell barrel outside the fish market (a prop by this id): E there opens the sell sheet. */
 export const SELL_BARREL = "sell-barrel";
 
+/** How near a deck square's middle a ship house leaves its water edge bare. */
+const SHED_CLEAR = 4.2;
 /** A wharf kit model placed on the deck (art/wharf/build_wharf_kit.py, lib/game/propModels.ts SCENERY_URLS): world x, y, z and its turn. */
 export interface KitPiece { model: string; x: number; y: number; z: number; yaw: number }
 /**
  * The wharf kit on the `deck` squares (each 4 u, local +z inland, level at the ground under its middle): a deck tile on
  * each; on each square at the water's edge two rope-lashed piles just outside it (David: "wood pillars on the side with
  * rope attached"), and on some a ladder down with a life ring by it, a rope net with floats, or rope fencing along it,
- * never within `clear` of `keep` (the jetty's gangways land there).
+ * never within `clear` of `keep` (the jetty's gangways land there); none at all on the edge within SHED_CLEAR of a ship
+ * house (`sheds`) standing there.
  */
-export function deckPieces(decks: readonly { x: number; z: number; yaw?: number }[], ground: (x: number, z: number) => number, keep?: { x: number; z: number }, clear = 9): KitPiece[] {
+export function deckPieces(decks: readonly { x: number; z: number; yaw?: number }[], ground: (x: number, z: number) => number, keep?: { x: number; z: number }, clear = 9,
+  sheds: readonly { x: number; z: number }[] = []): KitPiece[] {
   const out: KitPiece[] = [], at = { x: 0, z: 0 };
   let edge = 0;
   for (const o of decks) {
@@ -323,7 +327,7 @@ export function deckPieces(decks: readonly { x: number; z: number; yaw?: number 
     const put = (model: string, lx: number, lz: number) => { dockToWorld(d, lx, lz, at); out.push({ model, x: at.x, y, z: at.z, yaw: d.yaw }); };
     put("deck-tile", 0, 0);
     dockToWorld(d, 0, -2.6, at);
-    if (ground(at.x, at.z) > 0) continue;
+    if (ground(at.x, at.z) > 0 || sheds.some(s => Math.hypot(o.x - s.x, o.z - s.z) < SHED_CLEAR)) continue;
     const i = edge++, open = !keep || Math.hypot(o.x - keep.x, o.z - keep.z) > clear;
     for (const lx of [-1, 1]) put("dock-pile-rope", lx, -2.2);
     if (open && i % 5 === 2) { put("wharf-ladder", 0.6, -2); put("life-ring", -1.2, -1.75); }
