@@ -103,7 +103,7 @@ export const PROP_FOOTPRINT: Record<string, [number, number]> = {
   "rustic-fence-b": [0.85, 0.08], "rustic-post": [0.07, 0.07],
   "sushi-bar": [2.8, 2.2], "fish-market": [2.6, 1.9], "lifeguard-tower": [0.86, 0.86], "surfboard-a": [0.2, 0.1], "surfboard-b": [0.2, 0.1], "surfboard-c": [0.2, 0.1],
   // game/village-art2
-  "moss-boulder-a": [0.65, 0.5], "moss-boulder-b": [1.05, 0.65],
+  "moss-boulder-a": [0.65, 0.5], "moss-boulder-b": [1.05, 0.65], "river-stones-b": [0.55, 0.4],
 };
 /** Prop tops before scale, measured from the GLB bounds: what a jump clears or lands on (lib/game/movement). */
 export const PROP_TOP: Record<string, number> = {
@@ -119,7 +119,7 @@ export const PROP_TOP: Record<string, number> = {
   "dock-hoist": 2.645,
   "path-rock-slab": 0.538, "path-rock-low": 0.247, "path-rock-cluster": 0.294, "rustic-fence-a": 0.99, "rustic-fence-b": 0.91, "rustic-post": 0.931,
   "sushi-bar": 3.41, "fish-market": 6.15, "lifeguard-tower": 3.8, "surfboard-a": 1.755, "surfboard-b": 1.759, "surfboard-c": 1.763,
-  "moss-boulder-a": 0.855, "moss-boulder-b": 0.761,
+  "moss-boulder-a": 0.855, "moss-boulder-b": 0.761, "river-stones-b": 0.475,
 };
 /**
  * Residents' houses (the `house` kind, specs/world-editor.md decision 10): the chalet in its three colourways, the

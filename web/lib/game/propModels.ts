@@ -130,6 +130,14 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // root at the origin, not solid: a full mound (a), a low spreading one along x (b), a tall loose one (c, 1.4), a small
   // sparse tuft (d), a big lush one (e, 2.2 across) and a lopsided loose pair of clumps (f). Turn and scale them freely.
   ...Object.fromEntries(["a", "b", "c", "d", "e", "f"].map(m => [`shrub-${m}`, `/assets/game/plants/shrub-${m}.glb`])),
+  // The river's dressing (art/props/build_river_set.py): reeds with cattails rooted at y 0 for the banks and the shallows
+  // (a clump, a small loose one, a run along x for a bank's edge), lily pads floating at their origin (set it on the
+  // water's level: a with a lily in flower, b with a bud), smooth river stones (a scatter, and two big ones that stand in
+  // a shallow), and bleached driftwood lying along x (a log with its root plate at -x, a forked branch). Only the big
+  // stones are solid.
+  ...Object.fromEntries(["a", "b", "c"].map(m => [`reeds-${m}`, `/assets/game/plants/reeds-${m}.glb`])),
+  ...Object.fromEntries(["a", "b"].map(m => [`lily-pads-${m}`, `/assets/game/water/lily-pads-${m}.glb`])),
+  ...Object.fromEntries(["river-stones-a", "river-stones-b", "driftwood-a", "driftwood-b"].map(m => [m, `${P}${m}.glb`])),
 };
 export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? `/assets/acnh/props/${model}.glb`;
 
