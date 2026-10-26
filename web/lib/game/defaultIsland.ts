@@ -92,7 +92,7 @@ export const PROP_FOOTPRINT: Record<string, [number, number]> = {
   "wharf-piling": [0.15, 0.15], "rope-post": [0.1, 0.1], "rope-span": [1, 0.03],
   "palm-tall": [0.3, 0.3], "palm-lean": [0.3, 0.3], "palm-short": [0.3, 0.3],
   "log-bench": [0.95, 0.24], "stump-seat": [0.3, 0.3], "firewood-stack": [0.95, 0.46], "fish-rack": [1.02, 0.37],
-  "forest-mass-a": [5, 5], "forest-mass-b": [7, 4], "forest-mass-c": [4.5, 4.5],
+  "forest-mass-a": [4.5, 4.5], "forest-mass-b": [6, 3.5], "forest-mass-c": [3.8, 3.8], "forest-mass-d": [5.2, 3], "forest-mass-e": [7, 4.8],
   // game/village-art's plaza set: the fountain's box sits inside its round basin (a body stops on the rim's cap).
   "plaza-fountain": [4, 4], "banner-pole": [0.1, 0.1], "flag-pole": [0.12, 0.12], "fruit-stall": [1.4, 0.6], "fruit-barrel": [0.38, 0.38],
   "fruit-crate": [0.32, 0.22], "flower-planter": [0.62, 0.22], "flower-pot": [0.24, 0.24], "round-planter": [0.52, 0.52],
@@ -108,7 +108,8 @@ export const PROP_TOP: Record<string, number> = {
   ...Object.fromEntries(ROCK_MODELS.map(m => [m, ROCK_SIZE[m].top])),
   barrel: 11.66, lighthouse: 38, crate: 0.52, "market-cart": 2.84, "shop-cart": 0.87, "beach-parasol": 2.33, "palm-a": 3.94, "palm-b": 2.7,
   "wharf-piling": 0.35, "rope-post": 0.87, "rope-span": 0.68, "palm-tall": 5.65, "palm-lean": 4.86, "palm-short": 3.32,
-  "log-bench": 0.51, "stump-seat": 0.45, "firewood-stack": 0.86, "fish-rack": 1.43, "forest-mass-a": 8.83, "forest-mass-b": 9.48, "forest-mass-c": 9.73,
+  "log-bench": 0.51, "stump-seat": 0.45, "firewood-stack": 0.86, "fish-rack": 1.43, "forest-mass-a": 10.376, "forest-mass-b": 11.011, "forest-mass-c": 10.347,
+  "forest-mass-d": 8.431, "forest-mass-e": 9.258,
   "plaza-fountain": 3.21, "banner-pole": 3.3, "flag-pole": 4.13, "fruit-stall": 2.5, "fruit-barrel": 1.005, "fruit-crate": 0.495,
   "flower-planter": 0.623, "flower-pot": 0.627, "round-planter": 1.091, "planter-bench": 0.731, "market-sign": 0.987,
   "dock-pile-rope": 0.9, "rope-net": 1.15, "life-ring": 0.93, "net-heap": 0.39, "crate-net": 0.7, "crate-cloth": 0.74, "fish-crate": 0.48,

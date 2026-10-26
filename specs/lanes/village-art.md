@@ -16,21 +16,16 @@ Worktree `.claude/worktrees/village-art`, branch `game/village-art`. Agent type 
 
 ## Status
 
-Not started.
+Done, head after this file's commit (batches aeab21e2, c0a0de5c, d1b3a1c3, 7780d908). Not yet reviewed by David. Everything is registered (`NEW_LAMPS` or `SCENERY_URLS`, footprints and tops in `defaultIsland`), in game units at scale 1, with previews in `specs/evidence/village-art/`. Gates: propModels, modelMaterials, budget, defaultIsland and natureLod tests green; eslint clean on the changed TS.
+
+1. **Lamps** (`art/props/build_path_lamps.py`, `path-lamps.webp` with a night frame): `wood-post-lamp` (674 tris, light (0.8, 1.886, 0)), `branch-post-lamp` (1370, light (0.5, 1.731, 0)), `hand-lantern` (236, light (0, 0.143, 0), ring top `HAND_LANTERN_RING` 0.542), as `NEW_LAMPS.woodPost`, `.branchPost`, `.hand`. `lantern-post` is left as it is (`NEW_LAMPS.wharf`).
+2. **Plaza** (`art/props/build_plaza_set.py`, `plaza-set.webp`, `plaza-pieces.webp`): `plaza-fountain` (2928 tris, 9.6 across, water is P_Glass in COLOR_0 rings, static), `bunting-string`, `banner-pole`, `flag-pole`, `wall-banner`, `fruit-stall`, `fruit-barrel`, `fruit-crate`, `flower-planter`, `flower-pot`, `round-planter`, `planter-bench`, `market-sign`. All plain colour on the P_* presets.
+3. **Path and nature** (`art/props/build_path_edge.py`, `art/terrain/build_path_dirt.py`, `build_flowers.py` meadow and tallgrass; `path-edge.webp`, `path-dirt.webp`): `path-rock-slab`, `-low`, `-cluster`, `rustic-fence-a`, `-b`, `rustic-post`, `flower-meadow`, `flower-tallgrass`, and `game/terrain/path-albedo.png` (512, sRGB, drawn untinted with soil-normal; terrain-v3 hooks it in `groundTextures.ts` as a "path" texture).
+4. **Forest masses remodelled** (`art/trees/build_forest_masses.py`, `forest-masses.webp`; David R2b: "the trees are all the same exact copy paste model"): the same file names a, b, c replaced, plus new d (kidney) and e (big). Every tree its own (cedar, fir, broadleaf, young, snag; height, spread, tiers, lean, shade), loose cluster in an irregular outline, 1700 to 3050 tris each, under the forest-mass budget row (unchanged). Trunks and a floor plug run 2.2 below the origin: set a mass at the lowest ground under its footprint.
 
 ## Next
 
-1. **Lamps and lanterns** (`lamp-wood-post.jpg`, `lamp-branch-post.jpg`, `lantern.jpg`): a wooden post lamp with an angled brace and an iron collar; a branch post with a rope lashing on a small stone plinth; and a hand lantern (the iron lantern, warm glass) that stands on the ground or hangs from a hook, for the path and the dock. All glow (`NEW_LAMPS`, the `M_Glass`/`M_Iron` naming). Warm light, lovely at night. Rework `lantern-post` toward the first if that is simpler than a new one.
-2. **The plaza** (`plaza-fountain.jpg`, `plaza-vibe.jpg`):
-   - a water fountain for the plaza's middle: a round basin with a tiered centre, as wide as the plaza can hold (the plaza's radius is about 12 u). Say how the water should draw (reuse the game's water look if there is one for small pools);
-   - flags, banners and bunting strings, to hang between posts and buildings;
-   - a fruit stall, fruit barrels and fruit crates; flower planters and pots;
-   - one or two more lively pieces of your choice in the same spirit (a sign board, a bench with a planter).
-3. **The path and nature** (`path.jpg`, `nature-feel.jpg`):
-   - natural side rocks for the path's edges (two or three shapes, mossy);
-   - a loose rustic fence: posts and rails with gaps, leaning a little, in short runs (check `fence-post` and `fence-rail` first);
-   - a yellowish dirt texture for the path, painted for the terrain (say where terrain-v3 should hook it);
-   - check the existing bushes, flowers and trees in `web/public/assets/game/plants/` and `web/public/assets/nature/`, and only add what's missing for a lush `nature-feel` look (for example grass tufts or small wild-flower clumps).
+Nothing left; wait for David's review notes. The list as given, all done: 1 lamps and lanterns; 2 the plaza (fountain, flags and banners, fruit stall and crates, planters, a sign board and a planter bench); 3 the path and nature (side rocks, loose fence, path dirt texture, meadow flowers and tall grass); 4 (added by the coordinator from David's R2b review) remodel the forest masses so the trees grow differently and sink into slopes.
 
 ## Tools and gotchas
 
@@ -40,3 +35,5 @@ Not started.
 - **node_modules:** cloned (`cp -c -R`).
 - **propModels.ts:** another art lane appends to the same tables. Add your entries in one block with a comment line naming your lane, so merges stay simple.
 - **Git:** commit with the `[build]` prefix. Never push. Never use bare `git stash`. Don't touch other worktrees. Don't edit `generate.ts` or `web/data/world/` (placement is terrain-v3's job).
+- **Reviews:** each props builder takes `-- review <dir>`; `build_plaza_set.py` and `build_path_edge.py` also take model names to rebuild only those. Plants: `build_flowers.py -- meadow tallgrass` and `build_forest_masses.py -- a b ...` run finish-greenery themselves.
+- **propModels test:** the scenery footprint check (`/^(wharf-|rope-|firewood|fish)/`) asserts the model fits inside its footprint, so don't add pieces that overhang their solid box (awnings, round basins) to it.
