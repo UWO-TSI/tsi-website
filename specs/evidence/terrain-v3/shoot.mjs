@@ -11,7 +11,7 @@ const { chromium } = require("playwright");
 // R2c spots (the jetty: its middle finger's tip at (93.1, 46), its platform at x 78.6, the gangways meeting the deck
 // boards at x 74.2; the path from (65.5, 56) winding up to the plaza at (30, 50)).
 export const VIEWS = {
-  "00-docks-above": { at: [80, 46], yaw: 90, pitch: 0.8, zoom: 1.6 },
+  "05-docks-above": { at: [80, 46], yaw: 90, pitch: 0.8, zoom: 1.6 },
   "01-arrival-wharf": { at: [91.6, 46], yaw: -90, pitch: 0.42, zoom: 1.6 },
   "02-wharf-from-south": { at: [62, 82], yaw: 170, pitch: 0.42, zoom: 1.6 },
   "03-path-up": { at: [64, 56.5], yaw: -100, pitch: 0.45, zoom: 1.6 },

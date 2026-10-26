@@ -19,6 +19,21 @@ Then look at the references in `specs/references/terrain/plan-2026-10-23/` and t
 
 ## Status
 
+**R2c built 2026-10-26, waiting on review** (head: the commit after 854b65d8). All art merged: village-art 7bdb2e75 (lamps, hand lantern, plaza set, path and nature set, forest remodel) and wharf-art c951d6eb (dock decor, palms third pass, beach set, fish market). Renders in `specs/evidence/terrain-v3/r2c/` (00 top-down, 01 to 20).
+
+What R2c built (David's R2b notes, the reading 1 to 11, and his 2026-10-26 references):
+- **Docks** (`build_jetty.py`, `wharf.ts JETTY`): the platform at 1 with its three gangways, three piers out from it (x 0, -6.6, 6.6, 2 wide), each down three treads to a low level at 0.3 (`JETTY.low`, a hand over the waves) where a walkway joins all three (z 1 to 2.6); past it the fingers reach to the tip at -3.5, slips between. 19 u tip to land (was 11). The boat moors on the middle finger as before (MOORED, STEP_AT unchanged); its lines lift by `JETTY.low` (`Boat.tsx`). `DOCK.x = SHORE_X + 0.8 + JETTY.land`.
+- **Water:** the smooth world's waves x1.5, swell x1.4 (`GridWorld SmoothWorld`, `SMOOTH_SEA`); the village's sea untouched.
+- **Wharf:** deck squares only z 14 to 78 (`DECK_Z`), on the grassy band at their level, overhanging the water by 1 (d 1 and 5); the wharf zone's south edge widens to ease into the beach; the beach's taper into it wobbles. Rope-lashed piles (`dock-pile-rope`), rope nets, ladders with life rings on the edge (`deckPieces`); the hoist at z 54; the fish market at z 34 on the inland row, awning to the water, stalls and decor round it (`MARKET`).
+- **River:** the far bank a gentle slope (`farBank`, the coast grade a field now); the invisible border runs down that bank to the sea (`FAR_BANK`, `BORDERS`), since a glide off the village could land on the low bank.
+- **Beach:** wading (`defaultIsland WADE` 0.25, smooth world only: about 1.5 u out, never across the river); a ragged, patchy sand edge (`ragged` zones); the sushi bar by the wharf end, the lifeguard tower at (1, 108.5), surfboards, coral where the sea is 0.8 to 1.6 deep (`shallows`, after the ground); palms in four sizes.
+- **Path:** winding (`PATH`, `onPath`), yellow dirt (`splatMaterial` reads `path-albedo.png`, two turned reads crossfaded), loose rustic fence runs and lone posts both sides all the way up (kept clear of the bends), bushes behind, edge stones, wood and branch lamp posts, hand lanterns.
+- **Plaza:** houses 12% in (`HOUSE_IN`), lighter tiles (Blender rebuild), the fountain in the middle (scale 0.75), the monument in front of HQ, flags, banner poles with bunting (lifted 3.1 in `NatureModels propY`), the sign, planter benches, planters, the fruit stall with barrels and crates by the shop.
+- **Night and fog** (`islandLighting smoothWorldLight`, new world only): fog 1.5x further and warmer by day, warm violet by night; lamps 2.2x at night, ambient and hemisphere lifted; 80 lamps (56 hand lanterns glow only), pools from the 8 lamps nearest you (`AmbientProps LampPool`), 8.5 u.
+- **Nature:** trees (three broadleaf shapes), bushes, flowers, wild-flower patches and tall grass scattered over the green (`nature`); the five forest masses scattered, sunk to the lowest ground under each (`NatureModels propY`).
+- **Perf work:** still props merged by look (`InstancedNature MergedModels`, new world only; the look keys moved there from ShopDisplays), houses instanced by colourway (`ACNHParts at`), lamp pool. v2 High 20.7 ms (CPU 16.5), 425 draws; Lite 8.4 ms (CPU 6.9), 342 draws (machine load 3; baseline 5.4 / 254 and 3.0 / 172). Over budget: see Next.
+- **Gates:** with and without the switch, 48 files and 389 tests green; tsc and eslint clean.
+
 **R2b reviewed 2026-10-26** (head a9da52b0, not merged): the map's size, the dock model and the deck's edge approved; the rest redo (notes below, verbatim). Next is R2c (Next, below), which also takes David's 2026-10-26 references (`specs/references/terrain/r2-2026-10-26/README.md`) and the art from the lanes `wharf-art` and `village-art`.
 
 What R2b built (David's R2 notes, the reading 1 to 10 below):
@@ -204,28 +219,8 @@ The plan page answers, verbatim in the spec. The drawing is a guide to where thi
 
 ## Next
 
-**R2c: David's R2b notes (reading above, 1 to 11) and his 2026-10-26 references** (`specs/references/terrain/r2-2026-10-26/README.md`; the reading there, 1 to 8). Fog, night light and water changes apply to the new world only: the default village is the launch fallback and stays unchanged.
-
-1. **Merge the art branches** when the coordinator says (`git merge game/wharf-art`, `git merge game/village-art`; both cut from terrain-art ec364e38). Their lane files and Status list each asset, its name in `propModels.ts` and its placement notes. They keep delivering batches during this round; merge again when told.
-2. **Landform and layout first** (no new art needed):
-   - the three docks joined at sea level (reading 1); the water more wavy;
-   - the wharf's transitions (3); the river's far bank (11);
-   - the beach: a gradual slope into shallow water you can wade in, and a wavy, blended sand-to-grass edge;
-   - the path: curving, not straight, with the yellow organic dirt (`village-art` paints the texture; say where it hooks in);
-   - the plaza: the houses closer, the tiles lighter, the fountain in the middle;
-   - the night and the fog (5, 7).
-3. **Place the art as it lands:**
-   - lamps and hand lanterns along the path, the wharf, the docks and the campfire, plenty of them, warm;
-   - the plaza set: fountain, flags, banners, bunting, the fruit stall, barrels, crates, planters, the sign;
-   - the path set: side rocks, the loose fencing running up the path, bushes round it;
-   - the dock decor: rope-lashed pilings, nets, life rings, crates, and lots of hand lanterns;
-   - the fish market on the wharf, with the stalls round it;
-   - the beach set: the sushi bar, the lifeguard tower, surfboards, and coral in the shallows;
-   - the new palms;
-   - the remodelled forest masses, grounded;
-   - lush nature everywhere, like `nature-feel.jpg`: the new pieces plus the existing bushes, flowers and trees.
-4. **The perf run** (`SCENES=v2`, High budget 4.8 ms and 222 draws), this round: launch go/no-go is Oct 28. Instance repeats; if it's over budget, say what costs what and what you'd trim.
-5. **Review:** render `specs/evidence/terrain-v3/r2c/`: the top-down map; views 01, 02 and 03; the plaza; the beach; the forest; the river; the market; the docks; the campfire; the deck's edge; and night views of the wharf, the path and the plaza. SendMessage "main" with the images, a one-line fact each and the perf numbers. Update Status, then stop.
+1. **David's R2c review** (the coordinator publishes `r2c/`). Then his notes here, verbatim, and the round they set.
+2. **Perf trims, if the coordinator wants them before Oct 28** (the v2 bench, 425 draws High, from `specs/perf/draw-breakdown.mjs`): scenery sets at the scene root about 150 (13 `M_Rope` groups: each GLB carries its own rope texture, one shared rope image in the art scripts would make them one; 8 `M_DecorWood`; ACNH props and barriers one set each), houses about 40 (merge each chalet's parts by material), lamps 21 (merge the lamp bodies, keep the glass apart), terrain chunks 20, characters 41 (the bench's 24 bots), trees with their LOD and hulls about 25. CPU is spread over three's per-draw work and matrix updates (no single hog in a CPU profile), so draws are the lever. Pumpkins (the Halloween layer) stand at every lamp, 80 now.
 
 ## Tools and gotchas
 
@@ -249,3 +244,8 @@ The plan page answers, verbatim in the spec. The drawing is a guide to where thi
 - **Model sizes:** `prop` footprints are in the model's own units (bounds measured from the GLB). The ACNH furniture is at about 10x (barrel scale 0.07, lighthouse 0.2); market-cart at 0.55 is a 4 u stall.
 - **View spots:** keep the camera clear of houses (view 04 moved to (44, 53) for that). Ladders read only from close (view 14).
 - **Git:** commit with the `[build]` prefix. Never push. Never use bare `git stash`.
+- **Frustum culling:** never cull by a model's own bounds: the curved world bends far things down into view (`modelMaterials prepareModel` sets `frustumCulled = false`); merged and instanced meshes keep that.
+- **Perf runs:** build with `withlock.sh heavy sh specs/perf/measure-build.sh` (under 10 min) as its own call, then `SKIP_BUILD=1 KEEP_BUILD=1 SCENES=v2 LOCK_OWNER=game/terrain-v3 npm run perf:check` (it takes the devserver lock itself; release yours first). Draw breakdown: serve the build (`next start -p 3158`, Supabase blanked) under the devserver lock, then `PORT=3158 TIER=high node specs/perf/draw-breakdown.mjs "fixture=v2&bots=24" <out.json>`.
+- **Don't chain** the generator and a shoot in one call: the generator can take 15 minutes when the machine is busy (usually 12 s).
+- **cells.test** takes 5 to 10 s on its fishing sample under load (the classifier's first call, same on the old world); run it with `--testTimeout=30000` on a busy machine.
+- **Lamps:** every lamp is generated (`lamps()`), and the generated kinds now include lamp, tree, flower, bush and fence: anything of those kinds in world.json is rebuilt each run.
