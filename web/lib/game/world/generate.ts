@@ -543,7 +543,15 @@ function lamps(): Obj[] {
   // The campfire: its two lanterns on branches and hand lanterns on the sand round it, outside its rings.
   [200, 340].forEach((deg, i) => { const a = (deg * Math.PI) / 180; put(`fire-lamp-${i}`, "camp", FIRE_AT[0] + 5.4 * Math.cos(a), FIRE_AT[1] + 5.4 * Math.sin(a), ...FIRE_AT); });
   [25, 65, 115, 155, 265, 320].forEach((deg, i) => { const a = (deg * Math.PI) / 180; put(`fire-hand-${i}`, "hand", FIRE_AT[0] + 6.3 * Math.cos(a), FIRE_AT[1] + 6.3 * Math.sin(a)); });
-  return out;
+  // Night bugs to catch at the lamps (David, 2026-10-26: "more night bugs near lamps to catch"): a bug spot among
+  // blooms (lib/game/islandNodes.ts) a step off every other lamp post, where the roster's night butterflies come out.
+  const bugs: Obj[] = [];
+  out.filter(l => l.model !== "hand").forEach((l, i) => {
+    if (i % 2) return;
+    const a = hash01(i, 120) * 6.28;
+    bugs.push(obj("bug", `bug-lamp-${i}`, l.x + 1.1 * Math.cos(a), l.z + 1.1 * Math.sin(a), 0, 1, "flowers"));
+  });
+  return [...out, ...bugs];
 }
 
 /**
