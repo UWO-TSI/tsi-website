@@ -127,9 +127,10 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // root at the origin, not solid: a full mound (a), a low spreading one along x (b), a tall loose one (c, 1.4), a small
   // sparse tuft (d), a big lush one (e, 2.2 across) and a lopsided loose pair of clumps (f). Turn and scale them freely.
   ...Object.fromEntries(["a", "b", "c", "d", "e", "f"].map(m => [`shrub-${m}`, `/assets/game/plants/shrub-${m}.glb`])),
-  // game/wharf-art2: the fish market, remodelled (art/buildings/build_fish_market.py): a timber shop 5.2 by 4.2 on a stone
-  // footing, front +z, a giant wooden swordfish bursting up out of its roof toward +x (the bill reaches x 5.1, top 10.6),
-  // a porch out to z 3.9 over the door and a table of fish; an exterior only, the origin at the middle of its floor. The
+  // game/wharf-art2: the fish market, remodelled (art/buildings/build_fish_market.py), widened by art-r2f: a timber shop
+  // 7.8 by 4.2 on a stone footing, front +z, a giant wooden swordfish burst up through its front slope toward +x, its
+  // back third inside (the bill reaches x 5.6, top 12), a porch out to z 3.9 over the door and a table of fish; an
+  // exterior only, the origin at the middle of its floor. The
   // sell barrel (same builder) is the quick sell: a big barrel of fish, a hanging scale and a SELL board, front +z.
   "fish-market": "/assets/game/buildings/fish-market.glb", "sell-barrel": "/assets/game/wharf/sell-barrel.glb",
   ...Object.fromEntries(["a", "b", "c"].map(m => [`reeds-${m}`, `/assets/game/plants/reeds-${m}.glb`])),
