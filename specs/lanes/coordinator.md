@@ -53,6 +53,24 @@ Read `specs/launch/v1-new-world.md` first, then `specs/launch/terrain-v3.md`. Th
 
     terrain-v3 stops after its R2b renders. Its next round (R2c) starts fresh with these notes and merges all the art branches.
   - **R2b built** (a9da52b0 on game/terrain-v3, includes terrain-art ec364e38): grass band at the boards' level, the new Blender dock (three gangways, boat landing at 0), deck tiles with pilings, the tiled plaza, buildings 1.32 and houses 1.15, the river bank 1.5 lower, the campfire set, 23 forest masses. Review page: https://claude.ai/artifact/TE3dCaECrP8qUTBTHyxUZz (collection `approvals`, 13 items, not watched). No perf run yet; it adds draws.
+  - **R2b reviewed 2026-10-26:**
+    - **Approved:** the map's size, the dock model, the deck's edge.
+    - **Redos** (verbatim in `specs/lanes/terrain-v3.md`):
+      - three docks joined at sea level;
+      - wavier water;
+      - no deck hovering over sand;
+      - the fish market modelled (his earlier `wharf-fishing-hut-1.jpg`);
+      - night brighter and warmer, not spooky;
+      - the path yellower with pebbles, fencing further up with bushes, more lamps;
+      - plaza tiles lighter, houses closer, the fog less spooky;
+      - palms back toward the old low-poly leaves, with scaly trunks;
+      - more lanterns at the campfire;
+      - forest trees varied and grounded;
+      - the river's far bank gentle.
+  - **R2c running** (terrain-v3, fresh from 4403efa4): those notes plus the 2026-10-26 references, merging wharf-art and village-art as their batches land, with the perf run this round.
+    - **wharf-art's queue:** dock decor, palms again, the beach set with the sushi bar from `wharf-sharkbar.jpg`, the fish market.
+    - **village-art's queue:** the path and nature set, then forest masses remodelled.
+    - **When either reports a batch:** tell terrain-v3 to merge it.
   - **Post-launch:** the building redesign (he wants less medieval, more fun; it "needs more planning"), the lighting pass and the dungeon lamps. Logged in `specs/launch/terrain-v3.md`.
 - **HQ round 4 merged** (71135930, David approved all four items 2026-10-23), with the ponytail cleanup. Later items are logged as A14. `hq-notice-board.glb` is no longer rendered but is still in the propModels table; delete both together after launch.
 - **Upper-floor fix merged** (72a9b9c5). Remote players in rooms stand at the height they sent, with no realtime deploy needed.
