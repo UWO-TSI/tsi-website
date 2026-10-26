@@ -19,6 +19,14 @@ Then look at the references in `specs/references/terrain/plan-2026-10-23/` and t
 
 ## Status
 
+**R2d reviewed 2026-10-26** (head 7aee495b). Approved:
+- the arrival, the docks from the side and from above;
+- the path, and the path, plaza and wharf at night;
+- the shallows.
+
+The rest are redos; his notes are below, verbatim. R2d itself merges to main through `game/perf-newworld`: the perf lane re-measures it there and the code review's fixes land there. Next is R2e (Next, below), on this branch.
+
+
 **R2d built 2026-10-26, waiting on review** (head: the commit after 4ac9b07a). Merged in: village-art2 8608aec7, wharf-art2 0ee8bd95, wharf-art3 a1b8e1ff (the sell stall), sushi-bar f7fbca92 (the bar model only; the sushi-bar lane now owns the bar's placement and boardwalk in generate.ts, so don't move it), perf-newworld 2b28dd51 (its files are ours again). Renders in `specs/evidence/terrain-v3/r2d/` (00 top-down, 01 to 22), the village check in `r2d/village-check/` (v1 to v4: same as before the merges by eye).
 
 What R2d built (David's R2c notes, the reading 1 to 14):
@@ -91,6 +99,39 @@ R2 (on the R1c ground):
 - **Not in R2:** fishing nets (no net model in the assets; `tool-net` is the bug net). Questions: `specs/launch/terrain-v3-questions.md` "R2".
 
 ## David's decisions
+
+### 2026-10-26: R2d review, verbatim (https://claude.ai/artifact/UdD2So4dkLxzTX2NLqy1qy)
+
+- **arrival (approve):** "LOOKIN MUCH BETTER NOW WERE TALKING, now start working on the small details stuff, like lighting, crates, ladder, make it organic"
+- **docks (approve), docks-above (approve), path (approve), night-path (approve), night-plaza (approve):** no notes.
+- **night-wharf (approve):** "looks good"
+- **shallows (approve):** "looks good"
+- **beach (redo):** "looking good, work on the water and foam logic a bit and have waves come up and crash on the seashore and not just hover there"
+- **campfire (redo):** "more crabs shells and little critters moving around in the sand occasionally"
+- **edge (redo):** "read what i said earlier, idk if these are necessary? maybe move fish building as north side main building these are removed"
+- **ship-houses (redo):** "houses need better use, maybe one for selling rods/equipment , with a big rod on the roof or smth and one for building ships and instead of a building its half buildign half ship floating on the water wit ha small wood bridge extended, and it wobbles with the wave?"
+- **market:** "rotate the fishmakret so it faces the right side"
+- **forest (redo):** "can you model better looking low poly trees instead of copy pasting 1 model"
+- **plaza (redo):** "get rid of that dirt texture it looks ugly, i think grass needs an updatem it looks ugly, doesnt fit, i want grass for feel like fass and not feel like a mess"
+- **river (redo):** "trees a bit small and look like bushes, still doesnt feel natural"
+- **sushi:** "sushi bar needs remodelingand placement is off, kidna in the middle of nowhere there should be a bath to the from of it kidna thing" (the sushi-bar lane owns it)
+- **wharf (redo):** "less palm trees there, more on the beach, amke path connected to beach"
+- **map:** no answer.
+
+**The coordinator's reading:**
+1. **Small details, organic:** on the wharf, docks and market, vary and loosen the crates, barrels, ladders and lanterns, so nothing sits in a neat row or grid, and fill the lighting gaps.
+2. **The wharf's buildings:**
+   - The fish market moves to the north end of the wharf as its main building, and the ship houses there (a and d) go. It faces down the wharf toward the docks, so its front, with the swordfish and the sell stall, is what you see from the docks and the walkway. That's the coordinator's reading of "faces the right side"; ask David if a render suggests otherwise.
+   - The other ship houses go too. Two buildings with a purpose replace them:
+     - a tackle shop for rods and equipment, with a big fishing rod on the roof;
+     - a shipwright: half building, half ship floating on the water, joined by a small wooden bridge, the ship bobbing with the waves.
+   - `wharf-art4` models both. Nobody enters them for launch (scenery); the shops themselves come later.
+3. **The wharf's palms:** fewer on the grass band, more on the beach. A path joins the wharf to the beach.
+4. **The beach's waves:** waves run up the sand and break with foam, then draw back, instead of a foam line hovering at the shore. New world only.
+5. **Beach critters:** crabs that scuttle across the sand now and then, and more shells. Use the existing critter and ambient systems; `wharf-art4` models the crab if none exists.
+6. **The plaza:** remove the brick roads (they read as a dirt smear). The grass needs an update: it should read as clean, lush grass, not noisy speckle. New world first; say if the change would also touch the village.
+7. **The river:** bigger, natural trees along the banks, not bush-sized. `trees-art` models them.
+8. **The forest:** more, better-looking low-poly tree models from `trees-art`, so it doesn't read as copy-paste. Add a per-instance tint (`InstancedMesh.instanceColor`) for subtle variation.
 
 ### 2026-10-26: R2c review, verbatim (https://claude.ai/artifact/2WJiN8D8WAQF22E9CL1pPu)
 
@@ -276,7 +317,21 @@ The plan page answers, verbatim in the spec. The drawing is a guide to where thi
 
 ## Next
 
-Wait for David's R2d review (the coordinator relays it). Then the round after: his notes, the fog pass when he asks for it.
+**R2e: David's R2d notes** (the reading above, 1 to 8). New world only; the village stays unchanged.
+
+1. **Layout and look first,** with no new art needed:
+   - the fish market to the north end, facing down the wharf (2), with ship houses a and d removed;
+   - the palms moved and the wharf-to-beach path (3);
+   - the shore waves (4);
+   - the brick roads removed and the grass updated (6);
+   - the organic small details (1).
+2. **Then the art,** when the coordinator says to merge it:
+   - `wharf-art4`: the tackle shop, the shipwright and its floating ship (bobbing is yours: a cheap shader or a single per-frame transform), and the crab;
+   - `trees-art`: forest and river trees, with the per-instance tint.
+3. **Merges:**
+   - `game/perf-newworld`, when told: it holds R2d with the perf re-measure and the code review's fixes.
+   - The sushi bar is the sushi-bar lane's job; don't move it.
+4. **Renders** into `specs/evidence/terrain-v3/r2e/`: the redone views plus a night wharf. SendMessage "main" with the images and a one-line fact for each. Update Status, then stop.
 
 ## Tools and gotchas
 
