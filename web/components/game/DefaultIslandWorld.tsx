@@ -22,8 +22,8 @@ import PerfProbe from "./PerfProbe";
 import QualityGovernor from "./QualityGovernor";
 import { FadeLight, Lanterns } from "./AmbientProps";
 import { GLBProp, sceneryOf } from "./NatureModels";
-import { InstancedModels } from "./InstancedNature";
-import { ACNHBuilding, ACNHParts, CHALET_VARIANTS } from "./ACNHBuilding";
+import { InstancedModels, MergedModels } from "./InstancedNature";
+import { ACNHBuilding, ACNHParts, CHALET_VARIANTS, type PartsPlacement } from "./ACNHBuilding";
 import { FenceLine } from "./NatureModels";
 import { BRIDGE_URL, CATCH_BOARD_URL, MAILBOX_URL, MONUMENT_SIGN_URL, NEW_LAMPS, NOTICE_BOARD_URL } from "@/lib/game/propModels";
 import Wharf from "./wharf/Wharf";
@@ -335,6 +335,8 @@ function villageLayout(v: Village) {
     underWharf: (x: number, z: number) => decks.some(deck => x > deck.x0 - 0.4 && x < deck.x1 + 0.4 && z > deck.z0 - 0.4 && z < deck.z1 + 0.4),
   };
 }
+/** Our own still models (no sway, no glow of their own), merged in the new world (InstancedNature MergedModels). */
+const STILL = /^\/assets\/game\/(props|wharf|buildings|water)\//;
 /** Floating names; the ruins gate and the Oracle temple only once their drops are out (lib/game/drops.ts). */
 const SIGNS: Partial<Record<Landmark["id"], string>> = { museum: "Museum · Closed", notice: "Notices", catch: "Catch board", shop: "Shop",
   ...(DROPS.combat ? { ruins: "Ruins gate" } : {}), ...(DROPS.oracle ? { oracle: "Oracle temple" } : {}) };
@@ -432,6 +434,8 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   // No blades through a building, a trunk or a rock: where something solid stands, its top is above the ground.
   const grassClear = useMemo(() => (x: number, z: number) => island.top(x, z) <= island.ground(x, z) + 0.01, [island]);
   const scenery = useMemo(() => sceneryOf(v, island.ground, look.season), [v, island, look.season]);
+  // The new world's still props (our own art: props, the wharf kit, buildings, coral) merge by look into a few draws.
+  const [sceneryStill, sceneryMoving] = useMemo(() => (v.terrain ? [scenery.filter(p => STILL.test(p.url)), scenery.filter(p => !STILL.test(p.url))] : [[], scenery]), [v, scenery]);
   // The lamps by model: the street lamp (none), or the new world's (propModels NEW_LAMPS), each turned by its yaw.
   const lampSets = useMemo(() => (["", ...Object.keys(NEW_LAMPS) as (keyof typeof NEW_LAMPS)[]] as const).map(kind => {
     const ls = layout.lamps.filter(l => (l.model ?? "") === kind);
@@ -533,7 +537,8 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       {lampSets.map(s => <Lanterns key={s.kind} positions={s.positions} yaws={s.yaws} lamp={s.kind ? NEW_LAMPS[s.kind] : undefined} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} reach={s.kind === "hand" ? 0 : v.terrain ? 8.5 : 5} />)}
       {layout.campfire && <Campfire site={layout.campfire} ground={island.ground} phase={phase} player={player} />}
       {/* Nature and props from the map, instanced: one draw per model sub-mesh however many the island has. */}
-      <InstancedModels items={scenery} />
+      <InstancedModels items={sceneryMoving} />
+      {sceneryStill.length > 0 && <Suspense fallback={null}><MergedModels items={sceneryStill} /></Suspense>}
       {/* Residents walk their routines on the world clock (residentRoutine.ts); during a ceremony they gather at the monument and cheer.
           While Bram brings a new arrival in and walks them round, his walking self stays out of sight: one Bram. */}
       <Residents personas={personas} phase={phase} ceremony={ceremony} player={player} island={island} v={v} away={arrivalPhase ? BRAM.slug : null}
@@ -610,6 +615,10 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
   const front = (l: Landmark) => l.z - (l.half?.[1] ?? 0);
   const { hq, shop, oracle, cafe, museum, ruins, monument, mailbox, notice } = Object.fromEntries(placed) as Partial<Record<Landmark["id"], Landmark>>;
   const board = placed.get("catch"), { missions } = layout;
+  // The residents' houses by colourway, each set instanced (one draw per part for all its houses).
+  const houseSets = useMemo(() => (Object.keys(CHALET_VARIANTS) as (keyof typeof CHALET_VARIANTS)[]).map(colour => [colour, layout.houses
+    .filter(h => houseModel(h.model) === `chalet-${colour}`)
+    .map((h): PartsPlacement => ({ position: [h.x, ground(h.x, h.z), h.z], yaw: h.yaw ?? 0, scale: h.scale ?? 1 }))] as const).filter(([, at]) => at.length), [layout, ground]);
   return <>
     {hq && <>
       {/* The clubhouse model's origin is 2.35 in front of its footprint centre; porch lamps flank the door.
@@ -624,7 +633,7 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {cafe && <group position={at(cafe)} rotation={[0, cafe.yaw ?? 0, 0]} scale={cafe.scale ?? 1}><CafeBuilding state={!DROPS.cafe ? "soon" : opened.includes("cafe") ? "open" : "boarded"} light={light} /></group>}
     {museum && <group position={at(museum)} rotation={[0, museum.yaw ?? 0, 0]} scale={museum.scale ?? 1}><ACNHParts parts={CHALET_VARIANTS.red} lit={windowLit(light)} /></group>}
     {/* The residents' houses: the chalet in the colourway its model names. */}
-    {layout.houses.map(h => <group key={h.id} position={[h.x, ground(h.x, h.z), h.z]} rotation={[0, h.yaw ?? 0, 0]} scale={h.scale ?? 1}><ACNHParts parts={CHALET_VARIANTS[houseModel(h.model).slice(7) as keyof typeof CHALET_VARIANTS]} lit={windowLit(light)} /></group>)}
+    {houseSets.map(([colour, at]) => <ACNHParts key={colour} parts={CHALET_VARIANTS[colour]} lit={windowLit(light)} at={at} />)}
     {/* Boarded doors: the connectable fence across the museum's entrance, three posts and their rails (lib/game/fences.ts;
         the café boards its own, CafeBuilding). */}
     {museum && !opened.includes(museum.id as WorldGoalId) && <FenceLine x0={museum.x - 1} z0={front(museum) - 0.35} dx={1} dz={0} n={3} ground={ground} />}

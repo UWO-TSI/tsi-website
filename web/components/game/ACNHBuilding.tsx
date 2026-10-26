@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { useGLTF } from "@react-three/drei";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { applyModelTextures, disposeModelMaterials, lightHQWindows, prepareModel } from "@/lib/game/modelMaterials";
-import { modelContact, useContactShadow } from "./ContactShadows";
+import { addContact, modelContact, useContactShadow } from "./ContactShadows";
 
 // ─── ACNH textured building models (2026-07 revamp) ─────────────
 // Source pack is authored at ~10 units per meter; ACNH_SCALE brings them
@@ -99,12 +99,15 @@ export function ACNHParts({
   windowGlow,
   windowColor,
   lit,
+  at,
 }: {
   parts: readonly string[];
   windowGlow?: number;
   windowColor?: string;
   /** Night (0 day → 1 night, islandLighting windowLit): the panes glow and the model's own lamps and lit rooms brighten, easing over a few seconds. */
   lit?: number;
+  /** Placed many times (the residents' houses): each sub-mesh one InstancedMesh over every placement, one draw for all. */
+  at?: readonly PartsPlacement[];
 }) {
   const gltfs = useGLTF(parts as string[]);
   const lights = lit !== undefined;
@@ -118,7 +121,16 @@ export function ACNHParts({
     else if (lights) lightPanes(g);
     return g;
   }, [gltfs, parts, windowColor, lights]);
-  useContactShadow(group, useMemo(() => modelContact(group, parts[0], "solid"), [group, parts]));
+  const contact = useMemo(() => modelContact(group, parts[0], "solid"), [group, parts]);
+  useContactShadow(group, at ? null : contact);
+  const placed = useMemo(() => (at ? instanceParts(group, at) : null), [group, at]);
+  const scene = useThree(s => s.scene);
+  useEffect(() => () => placed?.meshes.forEach(m => m.dispose()), [placed]);
+  useEffect(() => {
+    if (!placed || !contact) return;
+    const removals = placed.anchors.map(a => addContact(scene, a, contact));
+    return () => removals.forEach(remove => remove());
+  }, [scene, placed, contact]);
 
   const emitters = useRef<{ material: THREE.MeshStandardMaterial; gain: number; pane: boolean; lamp: boolean }[]>([]);
   useEffect(() => {
@@ -157,8 +169,28 @@ export function ACNHParts({
     return () => disposeModelMaterials(group);
   }, [group, parts]);
 
-  return <primitive object={group} />;
+  return placed ? <>{[...placed.meshes, ...placed.anchors].map((o, i) => <primitive key={i} object={o} />)}</> : <primitive object={group} />;
 }
+
+/** Where one of many placements of a part list stands: its ground point, turn and scale. */
+export interface PartsPlacement { position: readonly [number, number, number]; yaw: number; scale: number }
+/** A prepared part group as one InstancedMesh per sub-mesh over the placements, and an anchor per placement for its contact shadow. */
+function instanceParts(group: THREE.Group, at: readonly PartsPlacement[]) {
+  group.updateWorldMatrix(false, true);
+  const places = at.map(p => new THREE.Matrix4().compose(new THREE.Vector3(...p.position), new THREE.Quaternion().setFromAxisAngle(UP, p.yaw), new THREE.Vector3().setScalar(p.scale)));
+  const meshes: THREE.InstancedMesh[] = [];
+  group.traverse(o => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh) return;
+    const im = new THREE.InstancedMesh(m.geometry, m.material, places.length);
+    places.forEach((place, i) => im.setMatrixAt(i, new THREE.Matrix4().multiplyMatrices(place, m.matrixWorld)));
+    Object.assign(im, { name: m.name, castShadow: m.castShadow, receiveShadow: m.receiveShadow, visible: m.visible, frustumCulled: m.frustumCulled, customDepthMaterial: m.customDepthMaterial });
+    meshes.push(im);
+  });
+  const anchors = places.map(place => { const a = new THREE.Object3D(); a.matrixAutoUpdate = false; a.matrix.multiplyMatrices(place, group.matrixWorld); return a; });
+  return { meshes, anchors };
+}
+const UP = new THREE.Vector3(0, 1, 0);
 
 /** ACNH building: fixed scale, origin-grounded, original materials kept. */
 export function ACNHBuilding({ id, windowGlow, windowColor, lit }: { id: string; windowGlow?: number; windowColor?: string; lit?: number }) {

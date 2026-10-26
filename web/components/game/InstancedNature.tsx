@@ -28,6 +28,7 @@ import { Suspense, useEffect, useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { applyModelTextures, disposeModelMaterials, prepareModel } from "@/lib/game/modelMaterials";
 import { shadowClassFor } from "@/lib/game/shadows";
 import { lodOf, updateNear } from "@/lib/game/natureLod";
@@ -167,4 +168,67 @@ export function InstancedModels({ items }: { items: readonly ModelPlacement[] })
     const far = lodOf(url);
     return <Suspense key={url} fallback={null}>{far ? <InstancedLodGLB url={url} far={far} placements={placements} /> : <InstancedGLB url={url} placements={placements} />}</Suspense>;
   })}</>;
+}
+
+/** A material's look, for merging: two materials that draw alike share a merged mesh. */
+export const lookKey = (m: THREE.Material) => {
+  const s = m as THREE.MeshStandardMaterial;
+  return [m.name, s.color?.getHexString(), s.map?.uuid, s.emissiveMap?.uuid, s.vertexColors, m.transparent, m.opacity, s.roughness, s.metalness, m.side, m.userData.lookClass].join("|");
+};
+/** The geometry's attribute layout (mergeGeometries needs it the same). */
+export const layoutKey = (g: THREE.BufferGeometry) => Object.entries(g.attributes).map(([n, a]) => `${n}:${a.itemSize}:${(a as THREE.BufferAttribute).array.constructor.name}:${a.normalized}`).sort().join(",") + `|${g.index ? "i" : "n"}`;
+
+/**
+ * Still props merged (the new world's dressing, R2c perf): every placement of every model baked into place and joined
+ * into one mesh per look across all the models (the art lanes share their material presets so parts merge: David,
+ * 2026-10-17), so dozens of small props draw in a handful of calls. Each placement keeps its contact shadow. For models
+ * that never move, sway or glow on their own.
+ */
+export function MergedModels({ items }: { items: readonly ModelPlacement[] }) {
+  const urls = useMemo(() => [...new Set(items.map(i => i.url))], [items]);
+  const gltfs = useGLTF(urls) as unknown as { scene: THREE.Object3D }[];
+  const models = useMemo(() => urls.map((url, i) => prepareModel(gltfs[i].scene, url, undefined, shadowClassFor(url))), [gltfs, urls]);
+  useEffect(() => {
+    models.forEach((model, i) => applyModelTextures(model, urls[i]));
+    return () => models.forEach(model => disposeModelMaterials(model));
+  }, [models, urls]);
+  const meshes = useMemo(() => {
+    const groups = new Map<string, { material: THREE.Material; geometries: THREE.BufferGeometry[] }>();
+    for (const { url, ...p } of items) {
+      const model = models[urls.indexOf(url)], place = matrixOf(p, 1);
+      model.updateMatrixWorld(true);
+      model.traverse(o => {
+        const mesh = o as THREE.Mesh;
+        if (!mesh.isMesh || !mesh.visible || Array.isArray(mesh.material)) return;
+        const g = mesh.geometry.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(place, mesh.matrixWorld));
+        if (!g.index) g.setIndex([...Array(g.attributes.position.count).keys()]);
+        const key = `${lookKey(mesh.material)}#${layoutKey(g)}`;
+        const group = groups.get(key) ?? { material: mesh.material, geometries: [] };
+        group.geometries.push(g);
+        groups.set(key, group);
+      });
+    }
+    return [...groups.values()].map(({ material, geometries }) => {
+      const mesh = new THREE.Mesh(geometries.length === 1 ? geometries[0] : mergeGeometries(geometries, false) ?? geometries[0], material);
+      // The curved world bends far things down into view (modelMaterials prepareModel): never culled by their own bounds.
+      mesh.castShadow = true; mesh.receiveShadow = true; mesh.frustumCulled = false;
+      return mesh;
+    });
+  }, [models, urls, items]);
+  useEffect(() => () => meshes.forEach(m => m.geometry.dispose()), [meshes]);
+  const world = useThree(s => s.scene);
+  const anchors = useMemo(() => items.map(({ url, ...p }) => {
+    const o = new THREE.Object3D(), i = urls.indexOf(url);
+    o.matrixAutoUpdate = false;
+    o.matrix.copy(matrixOf(p, 1));
+    return { o, contact: modelContact(models[i], url, shadowClassFor(url)) };
+  }), [items, urls, models]);
+  useEffect(() => {
+    const removals = anchors.flatMap(({ o, contact }) => (contact ? [addContact(world, o, contact)] : []));
+    return () => removals.forEach(remove => remove());
+  }, [world, anchors]);
+  return <>
+    {meshes.map((m, i) => <primitive key={i} object={m} />)}
+    {anchors.map(({ o }, i) => <primitive key={`contact-${i}`} object={o} />)}
+  </>;
 }
