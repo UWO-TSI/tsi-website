@@ -80,33 +80,25 @@ function useInstanced(url: string, matrices: readonly THREE.Matrix4[], emissiveI
   return { model, meshes, cls };
 }
 
-/** One contact shadow per placement, from the model's own bounds (what GLBProp registers per clone). */
+/** One contact shadow per placement, from the model's own bounds (what GLBProp registers per clone), shown with the returned group. */
 function useContacts(model: THREE.Object3D, url: string, cls: ReturnType<typeof shadowClassFor>, matrices: readonly THREE.Matrix4[]) {
   const world = useThree((s) => s.scene);
   const contact = useMemo(() => modelContact(model, url, cls), [model, url, cls]);
-  const anchors = useMemo(() => matrices.map((matrix) => {
-    const o = new THREE.Object3D();
-    o.matrixAutoUpdate = false;
-    o.matrix.copy(matrix);
-    return o;
-  }), [matrices]);
+  const owner = useMemo(() => new THREE.Group(), []);
   useEffect(() => {
     if (!contact) return;
-    const removals = anchors.map((a) => addContact(world, a, contact));
+    const removals = matrices.map((matrix) => addContact(world, owner, contact, matrix));
     return () => removals.forEach((remove) => remove());
-  }, [world, anchors, contact]);
-  return anchors;
+  }, [world, owner, matrices, contact]);
+  return owner;
 }
 
 /** Render N placements of one GLB: one InstancedMesh per sub-mesh, all sharing the placements. */
 export default function InstancedGLB({ url, placements, baseScale = 1, emissiveIntensity }: InstancedGLBProps) {
   const matrices = useMemo(() => placements.map((p) => matrixOf(p, baseScale)), [placements, baseScale]);
   const { model, meshes, cls } = useInstanced(url, matrices, emissiveIntensity);
-  const anchors = useContacts(model, url, cls, matrices);
-  return <>
-    {meshes.map((m, i) => <primitive key={i} object={m} />)}
-    {anchors.map((a, i) => <primitive key={`contact-${i}`} object={a} />)}
-  </>;
+  const owner = useContacts(model, url, cls, matrices);
+  return <primitive object={owner}>{meshes.map((m, i) => <primitive key={i} object={m} />)}</primitive>;
 }
 
 /** Module scope, as assignLevels: the level meshes' matrices change as the camera moves. */
@@ -135,7 +127,7 @@ function assignLevels(flags: Uint8Array, matrices: readonly THREE.Matrix4[], nea
 function InstancedLodGLB({ url, far, placements }: { url: string; far: string; placements: readonly NaturePlacement[] }) {
   const matrices = useMemo(() => placements.map((p) => matrixOf(p, 1)), [placements]);
   const hi = useInstanced(url, matrices), lo = useInstanced(far, matrices);
-  const anchors = useContacts(hi.model, url, hi.cls, matrices);
+  const owner = useContacts(hi.model, url, hi.cls, matrices);
   const state = useMemo(() => {
     const xyz = new Float32Array(placements.length * 3);
     placements.forEach((p, i) => xyz.set(p.position, i * 3));
@@ -148,10 +140,7 @@ function InstancedLodGLB({ url, far, placements }: { url: string; far: string; p
   useFrame(({ camera }) => {
     if (updateNear(state.flags, state.xyz, camera.position.x, camera.position.y, camera.position.z)) assignLevels(state.flags, matrices, hi.meshes, lo.meshes);
   });
-  return <>
-    {[...hi.meshes, ...lo.meshes].map((m, i) => <primitive key={i} object={m} />)}
-    {anchors.map((a, i) => <primitive key={`contact-${i}`} object={a} />)}
-  </>;
+  return <primitive object={owner}>{[...hi.meshes, ...lo.meshes].map((m, i) => <primitive key={i} object={m} />)}</primitive>;
 }
 
 /** One placed model: its url and world transform. */
@@ -217,18 +206,14 @@ export function MergedModels({ items }: { items: readonly ModelPlacement[] }) {
   }, [models, urls, items]);
   useEffect(() => () => meshes.forEach(m => m.geometry.dispose()), [meshes]);
   const world = useThree(s => s.scene);
-  const anchors = useMemo(() => items.map(({ url, ...p }) => {
-    const o = new THREE.Object3D(), i = urls.indexOf(url);
-    o.matrixAutoUpdate = false;
-    o.matrix.copy(matrixOf(p, 1));
-    return { o, contact: modelContact(models[i], url, shadowClassFor(url)) };
-  }), [items, urls, models]);
+  const owner = useMemo(() => new THREE.Group(), []);
   useEffect(() => {
-    const removals = anchors.flatMap(({ o, contact }) => (contact ? [addContact(world, o, contact)] : []));
+    const contacts = urls.map((url, i) => modelContact(models[i], url, shadowClassFor(url)));
+    const removals = items.flatMap(({ url, ...p }) => {
+      const contact = contacts[urls.indexOf(url)];
+      return contact ? [addContact(world, owner, contact, matrixOf(p, 1))] : [];
+    });
     return () => removals.forEach(remove => remove());
-  }, [world, anchors]);
-  return <>
-    {meshes.map((m, i) => <primitive key={i} object={m} />)}
-    {anchors.map(({ o }, i) => <primitive key={`contact-${i}`} object={o} />)}
-  </>;
+  }, [world, owner, items, urls, models]);
+  return <primitive object={owner}>{meshes.map((m, i) => <primitive key={i} object={m} />)}</primitive>;
 }

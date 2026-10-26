@@ -128,7 +128,7 @@ export function ACNHParts({
   useEffect(() => () => placed?.meshes.forEach(m => m.dispose()), [placed]);
   useEffect(() => {
     if (!placed || !contact) return;
-    const removals = placed.anchors.map(a => addContact(scene, a, contact));
+    const removals = placed.contacts.map(m => addContact(scene, placed.owner, contact, m));
     return () => removals.forEach(remove => remove());
   }, [scene, placed, contact]);
 
@@ -169,12 +169,12 @@ export function ACNHParts({
     return () => disposeModelMaterials(group);
   }, [group, parts]);
 
-  return placed ? <>{[...placed.meshes, ...placed.anchors].map((o, i) => <primitive key={i} object={o} />)}</> : <primitive object={group} />;
+  return placed ? <primitive object={placed.owner}>{placed.meshes.map((o, i) => <primitive key={i} object={o} />)}</primitive> : <primitive object={group} />;
 }
 
 /** Where one of many placements of a part list stands: its ground point, turn and scale. */
 export interface PartsPlacement { position: readonly [number, number, number]; yaw: number; scale: number }
-/** A prepared part group as one InstancedMesh per sub-mesh over the placements, and an anchor per placement for its contact shadow. */
+/** A prepared part group as one InstancedMesh per sub-mesh over the placements, in a group, and where each placement's contact shadow stands. */
 function instanceParts(group: THREE.Group, at: readonly PartsPlacement[]) {
   group.updateWorldMatrix(false, true);
   const places = at.map(p => new THREE.Matrix4().compose(new THREE.Vector3(...p.position), new THREE.Quaternion().setFromAxisAngle(UP, p.yaw), new THREE.Vector3().setScalar(p.scale)));
@@ -187,8 +187,7 @@ function instanceParts(group: THREE.Group, at: readonly PartsPlacement[]) {
     Object.assign(im, { name: m.name, castShadow: m.castShadow, receiveShadow: m.receiveShadow, visible: m.visible, frustumCulled: m.frustumCulled, customDepthMaterial: m.customDepthMaterial });
     meshes.push(im);
   });
-  const anchors = places.map(place => { const a = new THREE.Object3D(); a.matrixAutoUpdate = false; a.matrix.multiplyMatrices(place, group.matrixWorld); return a; });
-  return { meshes, anchors };
+  return { owner: new THREE.Group(), meshes, contacts: places.map(place => new THREE.Matrix4().multiplyMatrices(place, group.matrixWorld)) };
 }
 const UP = new THREE.Vector3(0, 1, 0);
 

@@ -61,21 +61,18 @@ function PumpkinLanterns({ spots, ground, light }: { spots: readonly PumpkinSpot
   }, [model, matrices]);
   useEffect(() => () => meshes.forEach(m => m.dispose()), [meshes]);
   const contact = useMemo(() => modelContact(model, PUMPKIN_URL, cls), [model, cls]);
-  const anchors = useMemo(() => matrices.map(mx => { const o = new THREE.Object3D(); o.matrixAutoUpdate = false; o.matrix.copy(mx); return o; }), [matrices]);
+  const owner = useMemo(() => new THREE.Group(), []);
   useEffect(() => {
     if (!contact) return;
-    const removals = anchors.map(a => addContact(world, a, contact));
+    const removals = matrices.map(mx => addContact(world, owner, contact, mx));
     return () => removals.forEach(r => r());
-  }, [world, anchors, contact]);
+  }, [world, owner, matrices, contact]);
   // Dim by day (a candle in daylight), bright after dark: the porch-light curve the windows follow.
   useFrame((_, raw) => {
     const target = 0.3 + 3.4 * windowLit(light), dt = Math.min(raw, 0.1);
     easeGlow(glow, target, dt);
   });
-  return <>
-    {meshes.map((m, i) => <primitive key={i} object={m} />)}
-    {anchors.map((a, i) => <primitive key={`c${i}`} object={a} />)}
-  </>;
+  return <primitive object={owner}>{meshes.map((m, i) => <primitive key={i} object={m} />)}</primitive>;
 }
 
 // ── Trick-or-treat ─────────────────────────────────────────────────────────────────────────────────────────────────
