@@ -95,7 +95,7 @@ export const PROP_FOOTPRINT: Record<string, [number, number]> = {
   "forest-mass-a": [5, 5], "forest-mass-b": [7, 4], "forest-mass-c": [4.5, 4.5],
   "dock-pile-rope": [0.25, 0.25], "rope-net": [1.13, 0.13], "life-ring": [0.48, 0.09], "net-heap": [0.7, 0.5], "crate-net": [0.7, 0.4],
   "crate-cloth": [0.35, 0.35], "fish-crate": [0.36, 0.42], "dock-hoist": [0.28, 0.28],
-  "sushi-bar": [2.8, 2.2], "lifeguard-tower": [0.86, 0.86], "surfboard-a": [0.2, 0.1], "surfboard-b": [0.2, 0.1], "surfboard-c": [0.2, 0.1],
+  "sushi-bar": [2.8, 2.2], "fish-market": [2.6, 1.9], "lifeguard-tower": [0.86, 0.86], "surfboard-a": [0.2, 0.1], "surfboard-b": [0.2, 0.1], "surfboard-c": [0.2, 0.1],
 };
 /** Prop tops before scale, measured from the GLB bounds: what a jump clears or lands on (lib/game/movement). */
 export const PROP_TOP: Record<string, number> = {
@@ -106,7 +106,7 @@ export const PROP_TOP: Record<string, number> = {
   "stump-seat": 0.45, "firewood-stack": 0.86, "fish-rack": 1.43, "forest-mass-a": 8.83, "forest-mass-b": 9.48, "forest-mass-c": 9.73,
   "dock-pile-rope": 0.9, "rope-net": 1.15, "life-ring": 0.93, "net-heap": 0.39, "crate-net": 0.7, "crate-cloth": 0.74, "fish-crate": 0.48,
   "dock-hoist": 2.645,
-  "sushi-bar": 3.41, "lifeguard-tower": 3.8, "surfboard-a": 1.755, "surfboard-b": 1.759, "surfboard-c": 1.763,
+  "sushi-bar": 3.41, "fish-market": 6.15, "lifeguard-tower": 3.8, "surfboard-a": 1.755, "surfboard-b": 1.759, "surfboard-c": 1.763,
 };
 /**
  * Residents' houses (the `house` kind, specs/world-editor.md decision 10): the chalet in its three colourways, the
