@@ -86,7 +86,7 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   "log-bench": LOG_BENCH_URL,
   // The new world's plaza floor (art/props/build_plaza_tiles.py): stone setts in rings, 12 round, laid on the ground.
   "plaza-tiles": `${P}plaza-tiles.glb`,
-  // Its palms (art/trees/build_palms.py): light fronds and coconuts, the origin at the trunk's foot, at scale 1.
+  // Its palms (art/trees/build_palms.py): two layers of broad fronds over a coconut cluster, the origin at the trunk's foot, at scale 1.
   ...Object.fromEntries(["tall", "lean", "short"].map(m => [`palm-${m}`, `/assets/game/plants/tree-palm-${m}.glb`])),
   // Its campfire set (art/props/build_campfire_set.py), round the campfire with the log benches: a stump to sit on, a
   // firewood stack with its chopping block, a fish-drying rack (along x).
@@ -99,6 +99,12 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // x by the span / 4; the wall banner's origin is its bracket's plate on a wall in the x-y plane, the banner out along +z.
   ...Object.fromEntries(["plaza-fountain", "bunting-string", "banner-pole", "flag-pole", "wall-banner", "fruit-stall", "fruit-barrel", "fruit-crate",
     "flower-planter", "flower-pot", "round-planter", "planter-bench", "market-sign"].map(m => [m, `${P}${m}.glb`])),
+  // game/wharf-art: the dock decor (art/wharf/build_dock_decor.py), on the deck's top at y 0: a roped pile standing 0.9 over
+  // the deck (down into the sea, like wharf-piling), a rope net with floats between posts at x -1 and +1, a life ring upright
+  // in x-y (its foot at the origin: lean it or hang it), a net heap, crates under a net and under a cloth, a crate of fish
+  // tipped toward +z, and a hoist whose jib reaches along +x.
+  ...Object.fromEntries(["dock-pile-rope", "rope-net", "life-ring", "net-heap", "crate-net", "crate-cloth", "fish-crate", "dock-hoist"]
+    .map(m => [m, `/assets/game/wharf/${m}.glb`])),
 };
 export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? `/assets/acnh/props/${model}.glb`;
 
