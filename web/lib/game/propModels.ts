@@ -170,6 +170,9 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // (5.4, -1.078, -3.6) in the shed's frame (the sea's level under a deck at 1), same yaw. The gangplank is the shed's:
   // it runs off the pier to (4.3, 0.16, -2) in the shed's frame, just over the boat's gunwale. The boat's not solid.
   ...Object.fromEntries(["shipwright-shed", "shipwright-boat"].map(m => [m, `/assets/game/wharf/${m}.glb`])),
+  // More shells for the sand (art/props/build_beach_shells.py), scenery beside the four forage shells, lying on the sand
+  // at y 0, not solid, one P_Paint each so they merge: a sea star 0.34 across, a sand dollar 0.22, a conch 0.34 along z.
+  ...Object.fromEntries(["starfish", "sand-dollar", "conch"].map(m => [m, `${P}${m}.glb`])),
 };
 export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? `/assets/acnh/props/${model}.glb`;
 
