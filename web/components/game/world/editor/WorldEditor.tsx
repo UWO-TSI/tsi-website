@@ -143,7 +143,7 @@ export default function WorldEditor() {
     if (document.pointerLockElement) document.exitPointerLock();
     // Drop in where the camera is (over the sea: where it is aimed).
     const t = ed.world.terrain, over = terrainHeight(t, ed.camera.x, ed.camera.z) > t.seaLevel ? ed.camera : ed.hit ?? ed.camera;
-    setVillage(villageOfWorld({ terrain: t, objects: ed.objects }));
+    setVillage(villageOfWorld({ terrain: t, objects: ed.objects, annotations: ed.world.annotations }));
     const q = new URLSearchParams(window.location.search);
     q.set("at", `${over.x.toFixed(1)},${over.z.toFixed(1)}`);
     window.history.replaceState(null, "", `?${q}`);

@@ -16,10 +16,10 @@
  * R1b also lays out the open area's objects (`layoutObjects`) and the border's invisible wall.
  * Water stays at sea level (no elevated water yet): the mountain's pond is a dry basin, its falls dry channels.
  */
-import { smoothstep, valueNoise, type MapAnnotation, type ShoreSdf } from "../grid";
+import { isGroundAtWorld, smoothstep, valueNoise, type MapAnnotation, type ShoreSdf } from "../grid";
 import { CONVERT, contourDistance, limitSteepness, padBuildings, rockRelief, shelf, softMin, wharfQuay } from "./convert";
 import type { World } from "./format";
-import { Paint, createTerrain, paintAt, sampleX, sampleZ, terrainHeight, terrainSteepness } from "./terrain";
+import { Paint, cellMapOf, createTerrain, paintAt, sampleX, sampleZ, terrainHeight, terrainSteepness } from "./terrain";
 import { hash01 } from "../worldFx";
 import { JETTY, SELL_BARREL, dockToWorld } from "../wharf";
 import type { ObjectKind } from "../villageMap";
@@ -663,7 +663,7 @@ function shells(t: World["terrain"]): Obj[] {
 
 /**
  * The gather spots the village has (lib/game/islandNodes.ts): rocks a shovel strikes, in the village's own outcrop
- * models, and buried shells to dig on the beach's dry sand, about the village's count of each. Defaults David can move
+ * models, buried shells to dig on the beach's dry sand and the message bottle's spots, about the village's count of each. Defaults David can move
  * in the editor. Each from its anchor (the village's edges, the path's bend, the river's near bank, the beach's back;
  * along the beach) to the nearest open spot: off the path, the plaza, the deck and the campfire, clear of everything.
  */
@@ -689,6 +689,12 @@ function gatherSpots(t: World["terrain"], objects: readonly Obj[]): Obj[] {
   [-40, -24, -8, 26, 40, 52].forEach((x, i) => {
     const at = near([x, 103], (x, z) => open(x, z) && paintAt(t, x, z) === Paint.Sand && terrainHeight(t, x, z) > sea + 0.35 && terrainHeight(t, x, z) < H.beach + 0.5 && clear(x, z, 1.5));
     if (at) out.push({ id: `gather-shell-${i}`, kind: "shell", x: at[0], z: at[1] });
+  });
+  // Where the day's message bottle washes up (islandNodes.ts villageBottleSpot): the beach's waterline, on a land cell.
+  const cells = cellMapOf(t);
+  [-34, -6, 22, 46].forEach((x, i) => {
+    const at = near([x, 107], (x, z) => open(x, z) && paintAt(t, x, z) === Paint.Sand && terrainHeight(t, x, z) > sea + 0.1 && terrainHeight(t, x, z) < sea + 0.45 && isGroundAtWorld(cells, x, z) && clear(x, z, 1.5));
+    if (at) out.push({ id: `gather-bottle-${i}`, kind: "bottle", x: at[0], z: at[1] });
   });
   return out;
 }

@@ -152,6 +152,8 @@ export interface Village {
    * Every other world (the village, the applicant island, the ruins, the home island, the title) has none.
    */
   terrain?: WorldTerrain;
+  /** The cells a smooth world marks as river (its "River" annotation): they fish as river where the river opens to the sea. */
+  rivers?: readonly (readonly [number, number])[];
 }
 
 export function buildVillage(doc: VillageDoc): Village {

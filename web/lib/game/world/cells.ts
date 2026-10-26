@@ -5,7 +5,7 @@
  * run-length coded per row. That is all the coast (grid.ts terrainOf), the water classes (fishingSpots.ts) and the node
  * ids (islandNodes.ts) read, so the server's village gives exactly the client's casts and nodes.
  */
-import { Surface, createMap, isWater, type IslandMap } from "../grid";
+import { Surface, createMap, isWater, type IslandMap, type MapAnnotation } from "../grid";
 import { villageOf, type MapObject, type Village } from "../villageMap";
 
 export interface WorldCells { width: number; depth: number; originX: number; originZ: number; rows: string[] }
@@ -44,5 +44,9 @@ export function cellsMap(c: WorldCells): IslandMap {
   return map;
 }
 
-/** The server's village of the smooth world: its cells and the world document's objects. */
-export const villageOfCells = (c: WorldCells, objects: readonly MapObject[]): Village => villageOf(cellsMap(c), objects);
+/** A world's river cells (its "River" annotation), which fish as river (lib/game/fishingSpots.ts classifyWater). */
+export const riverCells = (annotations: readonly MapAnnotation[] = []) => annotations.find(a => a.name === "River")?.cells;
+
+/** The server's village of the smooth world: its cells and the world document's objects and annotations (its river). */
+export const villageOfCells = (c: WorldCells, objects: readonly MapObject[], annotations?: readonly MapAnnotation[]): Village =>
+  ({ ...villageOf(cellsMap(c), objects), rivers: riverCells(annotations) });

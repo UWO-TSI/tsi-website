@@ -8,7 +8,7 @@
 import type { NodeSpec } from "@/components/game/peaceful/VillageLife";
 import { CAST, rollSize, type EventCatches, type FishDef } from "@/lib/game/fishing";
 import { fishingSpot, villageWater, type WaterType } from "@/lib/game/fishingSpots";
-import { inBounds, worldToCellX, worldToCellZ } from "@/lib/game/grid";
+import { inBounds, worldToCellX, worldToCellZ, type MapAnnotation } from "@/lib/game/grid";
 import { createHomeIsland } from "@/lib/game/homeIsland";
 import { homeNodes, villageNodes } from "@/lib/game/islandNodes";
 import { reelWeather, type IslandWeather } from "@/lib/game/islandWeather";
@@ -34,10 +34,10 @@ export const NODE_REACH = 3;
 
 /**
  * The member island the client walks (lib/game/world/active.ts): the village, or the smooth world from its cell view
- * (web/data/world/cells.json, since the server can't decode the PNGs) and its document's objects.
+ * (web/data/world/cells.json, since the server can't decode the PNGs) and its document's objects and river.
  */
 export const activeVillage = (world: GameWorld = GAME_WORLD) =>
-  world === "new" ? villageOfCells(worldCells as WorldCells, parseObjects(worldDoc.objects as VillageDoc["objects"])) : village();
+  world === "new" ? villageOfCells(worldCells as WorldCells, parseObjects(worldDoc.objects as VillageDoc["objects"]), worldDoc.annotations as MapAnnotation[]) : village();
 
 let sites: Record<Site, { map: ReturnType<typeof createHomeIsland>["map"]; classify: (x: number, z: number) => WaterType }> | null = null;
 let nodes: Map<string, NodeSpec & { bug: boolean }> | null = null;
