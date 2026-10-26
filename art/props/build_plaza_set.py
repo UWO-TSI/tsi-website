@@ -10,8 +10,10 @@ Writes, under web/public/assets/game/props/, in game units at scale 1, the origi
                       (top 3.2), water falling from each bowl's lip. Scale it uniformly to fit the plaza.
   bunting-string.glb  a sagging rope of pennants hung between (-2, 0, 0) and (2, 0, 0) (its origin midway between the
                       two hang points): set it at the hang height and scale x by the span over 4.
-  banner-pole.glb     a pole (3.3) with a hanging swallow-tail banner on a cross arm, facing +z.
-  flag-pole.glb       a tall pole (4.1) flying a flag out along +x.
+  banner-pole.glb     a pole (3.3) with a hanging swallow-tail TSI banner on a cross arm, facing +z.
+  flag-pole.glb       a tall pole (4.1) flying the TSI flag out along +x (game/village-art2; David, R2c: "make the flag
+                      tsi logo flag"): the island flag's green (branding/island-flag.svg) with the white TSI mark
+                      (branding/tethos-mark.svg) and gold hems, rippled as it flies. It doesn't move.
   wall-banner.glb     a shop's blade banner on an iron bracket: the origin at the bracket's wall plate (the wall is the
                       x-y plane, the bracket out along +z), the banner hanging under it to y -1.0.
   fruit-stall.glb     a market stall 2.6 wide under a striped awning (top 2.5), three crates of fruit on its counter.
@@ -23,9 +25,10 @@ Writes, under web/public/assets/game/props/, in game units at scale 1, the origi
   planter-bench.glb   a bench 2.6 long between two planter boxes (seat at 0.48).
   market-sign.glb     an A-frame board with a painted apple, no words.
 All plain colour on the shared presets (P_Wood, P_Stone, P_Paint, P_Cloth, P_Metal, and P_Glass for the water), the
-colour in COLOR_0, so each model is a few draws and no textures. Seeded: a rebuild writes the same models.
+colour in COLOR_0, so each model is a few draws and no textures; but the flag's and the TSI banner's cloth carries the
+mark on a 256 px painted linen (the mark is drawn from the SVG by sharp, in web/node_modules). Seeded: a rebuild writes the same models.
 """
-import math, os, sys
+import math, os, subprocess, sys
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -38,6 +41,49 @@ STONE, STONE2, STONE3 = "#d8ccb4", "#cbbda3", "#e2d8c4"
 WATER, WATER_HI, WATER_DEEP = "#7fd0d6", "#b8ece8", "#4fb3c2"
 CORAL, GOLD, TEAL, CREAM, LEAF, PLUM = "#e0675a", "#e9b84e", "#3f8f93", "#f4ead2", "#78b057", "#8a5aa8"
 APPLE, ORANGE, PEAR, LEMON = "#d8453b", "#f0973a", "#b9cf55", "#f2d34a"
+
+
+MARK_SVG = os.path.join(K.ROOT, "web", "public", "assets", "branding", "tethos-mark.svg")
+FIELD = "#426b5b"   # the island flag's green (branding/island-flag.svg)
+MARK_ASPECT = 1410 / 1352   # the mark's width over its height, trimmed
+
+
+def mark(w, h):
+    """The TSI mark, trimmed and drawn into w x h pixels (stretched to fit): its alpha, row 0 at the top."""
+    import bpy, tempfile
+    out = os.path.join(tempfile.mkdtemp(), "mark.png")
+    js = f"require('sharp')('{MARK_SVG}', {{density: 300}}).trim().resize({w}, {h}, {{fit: 'fill'}}).png().toFile('{out}')"
+    subprocess.run(["node", "-e", js], cwd=os.path.join(K.ROOT, "web"), check=True)
+    img = bpy.data.images.load(out)
+    a = np.array(img.pixels[:]).reshape(h, w, 4)[::-1, :, 3]
+    bpy.data.images.remove(img)
+    return a
+
+
+def tsi_cloth(name, aspect, mark_h, mark_v, hem):
+    """The TSI cloth, 256 px square laid over a cloth `aspect` times as wide as tall: the island flag's green on a linen
+    weave, gold hems ('tb' top and bottom, 'lr' down the sides), the white mark mark_h of the cloth's height with its
+    middle at mark_v down it, drawn so it keeps its true shape on the cloth."""
+    n = 256
+    rgb = K.linen(n, n, 3, FIELD, threads=48)
+    U, V = K.grid(n, n)
+    edge = np.minimum(V, 1 - V) < 0.07 if hem == "tb" else np.minimum(U, 1 - U) < 0.09
+    rgb[edge] = K.linen(n, n, 4, GOLD, threads=48)[edge]
+    h = int(n * mark_h)
+    w = min(n - 8, int(h * MARK_ASPECT / aspect))
+    a = mark(w, h)[..., None]
+    y0, x0 = int(n * mark_v) - h // 2, (n - w) // 2
+    rgb[y0:y0 + h, x0:x0 + w] = rgb[y0:y0 + h, x0:x0 + w] * (1 - a) + K.arr("#fbf6e8") * a
+    return K.Mat("P_Cloth", rough=1.0, tex=K.image(name, rgb))
+
+
+def tex_grid(k, mat, pts):
+    """Quads over a grid of game points pts[i][j] (i down, j across), the texture laid once over the whole grid."""
+    ny, nx = len(pts) - 1, len(pts[0]) - 1
+    for i in range(ny):
+        for j in range(nx):
+            k.face([k.vert(pts[i][j]), k.vert(pts[i][j + 1]), k.vert(pts[i + 1][j + 1]), k.vert(pts[i + 1][j])],
+                   [(j / nx, 1 - i / ny), ((j + 1) / nx, 1 - i / ny), ((j + 1) / nx, 1 - (i + 1) / ny), (j / nx, 1 - (i + 1) / ny)], mat)
 
 
 def presets(*names):
@@ -176,27 +222,34 @@ def banner(k, M, x0, x1, ytop, ybot, z, body, trim, wave=0.03):
 
 def banner_pole():
     K.reset()
-    M = presets("wood", "cloth", "metal")
+    M = presets("wood", "metal")
     k = K.Kit("banner-pole")
     k.lathe((0, 0, 0), [(0.11, -0.02), (0.11, 0.12), (0.06, 0.16), (0.05, 3.15), (0.0, 3.15)], M["wood"], DARKW, n=8)
     k.blob((0, 3.22, 0), (0.07, 0.08, 0.07), M["metal"], GOLD, segs=8, rings=5)
     k.tube([(-0.42, 2.98, 0.06), (0.42, 2.98, 0.06)], 0.025, M["wood"], DARKW, n=6, caps=True)
     for x in (-0.42, 0.42):
         k.blob((x, 2.98, 0.06), (0.035, 0.035, 0.035), M["metal"], GOLD, segs=6, rings=4)
-    banner(k, M, -0.36, 0.36, 2.96, 1.5, 0.08, TEAL, GOLD)
+    cloth = tsi_cloth("tsi-banner", 0.72 / 1.46, 0.36, 0.37, "lr")
+    nx, ny = 6, 8
+    pts = [[(-0.36 + 0.72 * j / nx, 2.96 - 1.46 * i / ny + 0.16 * (1 - abs(2 * j / nx - 1)) * (i / ny) ** 6 * 1.46,
+             0.08 + 0.03 * math.sin(i / ny * 3.0 + j / nx * 2.0) * i / ny) for j in range(nx + 1)] for i in range(ny + 1)]
+    tex_grid(k, cloth, pts)
     k.tint_gradient(0.85, 1.0, 0.0, 3.3)
     return k.finish(smooth_deg=40), {"top": 3.3}
 
 
 def flag_pole():
     K.reset()
-    M = presets("wood", "cloth", "metal")
+    M = presets("wood", "metal")
     k = K.Kit("flag-pole")
     k.lathe((0, 0, 0), [(0.12, -0.02), (0.12, 0.14), (0.06, 0.18), (0.045, 4.0), (0.0, 4.0)], M["wood"], LIGHTW, n=8)
     k.blob((0, 4.06, 0), (0.07, 0.07, 0.07), M["metal"], GOLD, segs=8, rings=5)
-    nx, ny = 8, 4
-    pts = [[(0.05 + 1.15 * j / nx, 3.9 - 0.72 * i / ny - 0.04 * j / nx, 0.09 * math.sin(j / nx * 4.2) * (j / nx)) for j in range(nx + 1)] for i in range(ny + 1)]
-    cloth_grid(k, M, pts, lambda i, j: CREAM if i in (1, 2) else CORAL)
+    W, H, nx, ny = 1.3, 0.82, 10, 5
+    pts = [[(0.06 + W * s, 3.92 - H * t - 0.06 * s ** 1.5, 0.12 * math.sin(s * 4.6 - 0.4 * t) * s + 0.025 * math.sin(t * 3.0 + s * 6.0) * s)
+            for s in (j / nx for j in range(nx + 1))] for t in (i / ny for i in range(ny + 1))]
+    tex_grid(k, tsi_cloth("tsi-flag", W / H, 0.62, 0.5, "tb"), pts)
+    for y in (3.88, 3.14):   # the rings that hold its hoist to the pole
+        k.tube([(0.065 * math.cos(a), y, 0.065 * math.sin(a)) for a in np.linspace(0, TAU, 8, endpoint=False)], 0.012, M["metal"], GOLD, n=4, closed_path=True)
     k.tint_gradient(0.85, 1.0, 0.0, 4.1)
     return k.finish(smooth_deg=40), {"top": 4.13}
 
