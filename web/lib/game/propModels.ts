@@ -82,6 +82,12 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // Its forest masses (art/trees/build_forest_masses.py): a stand of tall cedars in one mesh, about 12 (a), 16 by 9 along
   // x (b) and 10 (c) across, to instance over the closed forest so it reads dense from the open area.
   ...Object.fromEntries(["a", "b", "c"].map(m => [`forest-mass-${m}`, `/assets/game/plants/forest-mass-${m}.glb`])),
+  // game/wharf-art: the dock decor (art/wharf/build_dock_decor.py), on the deck's top at y 0: a roped pile standing 0.9 over
+  // the deck (down into the sea, like wharf-piling), a rope net with floats between posts at x -1 and +1, a life ring upright
+  // in x-y (its foot at the origin: lean it or hang it), a net heap, crates under a net and under a cloth, a crate of fish
+  // tipped toward +z, and a hoist whose jib reaches along +x.
+  ...Object.fromEntries(["dock-pile-rope", "rope-net", "life-ring", "net-heap", "crate-net", "crate-cloth", "fish-crate", "dock-hoist"]
+    .map(m => [m, `/assets/game/wharf/${m}.glb`])),
 };
 export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? `/assets/acnh/props/${model}.glb`;
 

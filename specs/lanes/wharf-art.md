@@ -19,6 +19,7 @@ Worktree `.claude/worktrees/wharf-art`, branch `game/wharf-art`. Agent type `uwo
 In progress. Previews in `specs/evidence/wharf-art/`.
 
 1. **Palms, redone** (`art/trees/build_palms.py`, the frond texture repainted by `art/trees/paint_textures.py palm-fronds`): `palm-tall` (top 5.65), `palm-lean` (4.86), `palm-short` (3.32); two layers of broad fronds folded so their leaflets hang, coconuts in the gaps of the lower layer, a tapering softly ringed trunk. 1290 to 1560 tris with casters. Evidence `palms.webp`.
+2. **Dock and wharf decor** (`art/wharf/build_dock_decor.py`, `game/wharf/`, game units at scale 1, the deck's top at y 0): `dock-pile-rope` (960 tris; 0.9 over the deck, down to -3.4, rope lashings), `rope-net` (2040; posts at x +-1, floats on the top rope), `life-ring` (864; upright in x-y, foot at the origin, 0.93 tall), `net-heap` (1176), `crate-net` (2312), `crate-cloth` (1272), `fish-crate` (1320; tipped toward +z), `dock-hoist` (1510; jib along +x, top 2.645). Registered with footprints and tops. Evidence `dock-decor.webp`.
 
 ## Next
 
