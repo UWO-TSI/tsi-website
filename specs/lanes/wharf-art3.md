@@ -8,6 +8,16 @@ Worktree `.claude/worktrees/wharf-art3`, branch `game/wharf-art3`, cut from `gam
 
 **Read first:** that README and the images; `specs/lanes/wharf-art2.md` (how `sell-barrel` and the fish market were built and registered); `art/props/propkit.py`, `paintkit.py`; `web/lib/game/propModels.ts`, `defaultIsland.ts` (`PROP_FOOTPRINT`, `PROP_TOP`), `perf/budget.ts`.
 
+## Status
+
+Done; not yet reviewed by David. Preview `specs/evidence/wharf-art3/sell-stall.webp` (front three-quarter, front from the right, high from the left).
+
+- **The sell stall** (`art/wharf/build_sell_stall.py`) replaces `game/wharf/sell-barrel.glb` under the same name: a crate on legs tipped toward the buyer, heaped with fish on ice, a crab, an octopus and a starfish, a net under its front; a barrel with a lantern and a tub of fish on the left, a barrel with a rope coil and a life ring on the right; a frame behind with a coral SELL board (the cart's colour), a net under it, a hung fish, a hanging lantern and two gulls on the top bar.
+- 7,438 tris, 472 KB, 3 materials: `M_DecorWood` (the fish market's grain, so they merge), `P_Paint`, and the path lamps' `M_Glass` for the two lantern panes. The panes are emissive in the GLB, so they glow day and night (no `NEW_LAMPS` light). It falls under the "building" budget row (`game/wharf/`).
+- Footprint [1.25, 0.6] (was [0.66, 0.78]); top 2.62 (was 3.394). The origin is on the ground at the crate's middle; the front (buyer's side) is +z, as before.
+- The old sell barrel's code and SELL texture are deleted from `build_fish_market.py`; the fish market rebuilds byte-identical. `ring_into` (`build_dock_decor.py`) takes optional resolution arguments; its defaults are unchanged.
+- Gates: the propModels, budget and modelMaterials tests pass (41); eslint is clean on the changed TS. Not checked in the game: placement and scale next to the character. At `quayAt(36, 0)` the deeper stall leaves about 0.4 to the deck's water edge and 0.2 to the market porch (both were already tight with the barrel).
+
 ## Next
 
 1. **The sell stall**, replacing the file of `sell-barrel` (same name, so terrain-v3's placement and the sell interaction keep working):

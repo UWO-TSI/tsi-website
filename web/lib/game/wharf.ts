@@ -304,7 +304,7 @@ export const JETTY = {
   ] as [number, number][],
 } as const;
 
-/** The new world's quick-sell barrel outside the fish market (a prop by this id): E there opens the sell sheet. */
+/** The new world's quick-sell stall outside the fish market (a prop by this id; art/wharf/build_sell_stall.py): E there opens the sell sheet. */
 export const SELL_BARREL = "sell-barrel";
 
 /** How near a deck square's middle a ship house leaves its water edge bare. */

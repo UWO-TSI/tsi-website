@@ -204,23 +204,24 @@ def rope_net(M, Mr, Mp):
     return k.finish(smooth_deg=50)
 
 
-def ring_into(k, Mp, Mr, c=(0.0, 0.0, 0.0), s=1.0):
-    """A life ring upright in the x-y plane, its foot at c, scaled by s (0.93 tall at 1)."""
-    R, r, nu, nv = 0.36 * s, 0.085 * s, 24, 8
+def ring_into(k, Mp, Mr, c=(0.0, 0.0, 0.0), s=1.0, nu=24, nv=8, rope_n=48):
+    """A life ring upright in the x-y plane, its foot at c, scaled by s (0.93 tall at 1); nu and nv its sections round
+    and across (nu a multiple of 8), rope_n the grab rope's points."""
+    R, r = 0.36 * s, 0.085 * s
     cy = R + r + 0.005 * s
     pt = lambda a, b: (c[0] + math.cos(a) * (R + r * math.cos(b)), c[1] + cy + math.sin(a) * (R + r * math.cos(b)), c[2] + r * math.sin(b))
     for i in range(nu):
         a0, a1 = math.tau * i / nu, math.tau * (i + 1) / nu
-        col = FLOAT_RED if (i // 3) % 2 == 0 else "#f4efe6"      # four red bands, four white
+        col = FLOAT_RED if (i // (nu // 8)) % 2 == 0 else "#f4efe6"      # four red bands, four white
         for j in range(nv):
             b0, b1 = math.tau * j / nv, math.tau * (j + 1) / nv
             k.face([k.vert(pt(a0, b0)), k.vert(pt(a1, b0)), k.vert(pt(a1, b1)), k.vert(pt(a0, b1))],
                    [(i / nu, j / nv), ((i + 1) / nu, j / nv), ((i + 1) / nu, (j + 1) / nv), (i / nu, (j + 1) / nv)], Mp, col)
     # The grab rope: scalloped round the outside, tied at the middle of each white band.
     pts = []
-    for i in range(48):
-        a = math.tau * i / 48
-        tie = abs(math.cos(4 * (a - math.tau * 4.5 / nu)))    # 1 at the ties
+    for i in range(rope_n):
+        a = math.tau * i / rope_n
+        tie = abs(math.cos(4 * (a - math.tau * 4.5 / 24)))    # 1 at the ties (the white bands' middles)
         rr = R + r * 0.85 + 0.03 * s * (1 - tie) ** 2
         pts.append((c[0] + math.cos(a) * rr, c[1] + cy + math.sin(a) * rr, c[2]))
     k.tube(pts, 0.014 * s, Mr, ROPE, n=5, v_len=0.12, closed_path=True)
