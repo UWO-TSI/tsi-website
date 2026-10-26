@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 import { loadWorldFromDisk, writeWorldFiles } from "../lib/game/world/disk";
 import { encodeWorld } from "../lib/game/world/format";
-import { BORDER, PLAN, generateWorld, layoutObjects, moveMarks } from "../lib/game/world/generate";
+import { BORDERS, PLAN, generateWorld, layoutObjects, moveMarks } from "../lib/game/world/generate";
 import { reach } from "../lib/game/world/reach";
 import { PAINT_SWATCH, type WorldTerrain } from "../lib/game/world/terrain";
 import { villageOfWorld } from "../lib/game/world/village";
@@ -59,7 +59,7 @@ async function preview(w: World, out: string) {
   console.log(`reach: ${(open / 4).toFixed(0)} square units of land`);
   const X = (x: number) => ((x - t.x0) * t.res).toFixed(1), Z = (z: number) => ((z - t.z0) * t.res).toFixed(1);
   let svg = `<svg width="${cols}" height="${rows}" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">`;
-  svg += `<polyline points="${BORDER.map(([x, z]) => `${X(x)},${Z(z)}`).join(" ")}" fill="none" stroke="#fff" stroke-width="2" stroke-dasharray="6 4"/>`;
+  for (const line of BORDERS) svg += `<polyline points="${line.map(([x, z]) => `${X(x)},${Z(z)}`).join(" ")}" fill="none" stroke="#fff" stroke-width="2" stroke-dasharray="6 4"/>`;
   for (const o of w.objects) if (o.kind === "landmark" || o.kind === "spawn" || o.kind === "house") svg += `<circle cx="${X(o.x)}" cy="${Z(o.z)}" r="2.5" fill="#d33" stroke="#fff" stroke-width="0.8"/>`;
   const labels = [...PLAN.zones.map(z => z.label), ...PLAN.ramps.map(r => r.label)].filter((l): l is readonly [string, number, number] => !!l);
   const font = `font-weight="700" text-anchor="middle" fill="#fff" stroke="#1d2a33" paint-order="stroke"`;

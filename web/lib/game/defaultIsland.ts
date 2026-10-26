@@ -347,6 +347,9 @@ export interface VillageIsland {
 /** The jetty deck's walk height on the smooth world (the pier model's deck top): the quay stands at it (lib/game/world/convert.ts). */
 export const DECK_Y = 0;
 
+/** How deep the smooth world's shallows are waded (David, R2b: "can dip toes in"): a step or two out from any shore, never across a river. */
+export const WADE = 0.25;
+
 /** Walking on a village: ground height, solids and the stepping rule, from its map and objects. */
 export function islandOf(v: Village): VillageIsland {
   const { map, field, terrain } = v;
@@ -380,7 +383,7 @@ export function islandOf(v: Village): VillageIsland {
   const propGrid = buckets(props), treeGrid = buckets(objectsOf("tree", v));
   const onDeck = (x: number, z: number) => decks.some(d => inRect(x, z, d));
   const wet = terrain
-    ? (x: number, z: number) => !onDeck(x, z) && terrainHeight(terrain, x, z) <= terrain.seaLevel
+    ? (x: number, z: number) => !onDeck(x, z) && terrainHeight(terrain, x, z) <= terrain.seaLevel - WADE
     : (x: number, z: number) => !onDeck(x, z) && !isGroundAtWorld(map, x, z);
   /** The smooth world's slope rule: no step up onto ground too steep to climb. */
   const steep = terrain ? (x: number, z: number) => !onDeck(x, z) && terrainSteepness(terrain, x, z) > MAX_CLIMB : undefined;

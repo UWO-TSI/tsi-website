@@ -20,7 +20,6 @@ import { smoothstep, valueNoise, type MapAnnotation, type ShoreSdf } from "../gr
 import { CONVERT, contourDistance, limitSteepness, padBuildings, rockRelief, shelf, softMin, wharfQuay } from "./convert";
 import type { World } from "./format";
 import { Paint, createTerrain, sampleX, sampleZ } from "./terrain";
-import { JOINED_FENCE } from "../fences";
 import { hash01 } from "../worldFx";
 import { JETTY, dockToWorld } from "../wharf";
 import type { ObjectKind } from "../villageMap";
@@ -98,12 +97,14 @@ export interface Zone {
   tiers?: readonly number[];
   ledge?: number;
   /** Rise over run where it meets the sea (or, for a river, its banks). */
-  coast?: number;
+  coast?: number | Field;
   /** "land" (default) adds to the land; "water" carves a sea-level river or strait; "shape" only reshapes the ground. */
   kind?: "land" | "water" | "shape";
   paint?: number;
-  /** Only below this height (the beach's sand stops where its ground climbs; the quay's stone is the low tread). */
+  /** Only below this height (the beach's sand stops where its ground climbs). */
   paintBelow?: number;
+  /** How far its paint's edge wanders (a share of the blend, and twice that in height under `paintBelow`), squiggly and patchy. */
+  ragged?: number;
 }
 
 /** A path graded through whatever it crosses: points (x, z, height), linear between them, `half` wide plus a `shoulder`. */
@@ -144,12 +145,17 @@ const MAIN = blob([-15, 5], [86, 82, 92, 100, 100, 99, 94, 92, 90, 93, 92, 101, 
 /** The river: from its spring at the mountain's west foot, south down the meadow's side of the village to its mouth west of the beach. */
 const RIVER: readonly XZ[] = [[-44, -22], [-46, 4], [-47, 22], [-48, 40], [-52, 58], [-58, 78], [-64, 98], [-72, 120]];
 const westOfRiver = sideOf(RIVER);
+/** The river's far bank (the meadow's side), easing back from it: a gentle slope down to the water, not a cliff (David, R2b: "make the other side more gradual"). */
+const farBank: Field = (x, z) => smoothstep(-2, 2, westOfRiver(x, z)) * (1 - smoothstep(12, 20, westOfRiver(x, z)));
 /**
  * The border (David: "invisible boarders for now that says release soon"): an invisible wall from the river, across the
- * meadow north of the village, to the sea north of the wharf. `layoutObjects` stands its segments; the open area is
- * south of it and east of the river.
+ * meadow north of the village, to the sea north of the wharf, and on down the river's far bank to the sea (that bank
+ * slopes gently to the water now, so a glide off the village could land on it). `layoutObjects` stands its segments;
+ * the open area is south of it and east of the river.
  */
 export const BORDER: readonly XZ[] = [[-52, 8], [-30, 10], [-8, 13], [14, 13], [36, 11], [56, 9], [84, 6]];
+const FAR_BANK: readonly XZ[] = [[-52, 8], [-53.4, 22], [-54.8, 40], [-59.2, 58], [-65.6, 78], [-72, 98], [-80.5, 120], [-86, 130]];
+export const BORDERS: readonly (readonly XZ[])[] = [BORDER, FAR_BANK];
 const southOfBorder = sideOf(BORDER);
 const OPEN: Field = (x, z) => Math.min(southOfBorder(x, z), -westOfRiver(x, z) - 1);
 /** The shore along the wharf, north to south: the deck stands out to it, the grassy band and the climb step back from it. */
@@ -169,8 +175,14 @@ function quayAt(z: number, d: number): { x: number; z: number; yaw: number } {
 }
 /** The beach's campfire. */
 const FIRE_AT = [14, 104] as const;
-/** The path up to the village leaves the deck boards here (z). */
-const PATH_Z = 56;
+/** The deck squares' middles run from z to z (every 4 u): their south end stops where the grassy band still stands at their level. */
+const DECK_Z = [14, 78] as const;
+/**
+ * The dirt path up to the village (David, R2b: "dirt needs to be more yellow and organic"; his path reference: "path
+ * isnt perfectly straight"): off the deck boards south of the jetty, across the grassy band, winding up the climb to the
+ * plaza. Points (x, z, height), the heights the climb's own at each.
+ */
+const PATH: readonly (readonly [number, number, number])[] = [[65.5, 56, H.deck], [61, 57.5, H.deck], [57, 60, 1.45], [53, 59.5, 2.45], [49.5, 56.5, H.village], [46, 53, H.village], [43, 51, H.village]];
 /** The plaza's centre and radius (its stone). */
 export const PLAZA: { at: XZ; r: number } = { at: [30, 50], r: 12 };
 
@@ -203,7 +215,7 @@ export const PLAN: Plan = {
     // THE MAIN ISLAND: one landmass at the village's level (so no seam dips between zones); the zones below shape it.
     { shape: MAIN, ground: H.village, edge: 3 },
     // MEADOW: at the village's level, gently rolling; everything past the border (north of the village, west of the river).
-    { name: "Meadow", label: ["Meadow (rolling, 3 to 5)", -78, 20], shape: (x, z) => Math.min(MAIN(x, z), -OPEN(x, z)), ground: meadowGround, edge: 1.2, coast: 1.6 },
+    { name: "Meadow", label: ["Meadow (rolling, 3 to 5)", -78, 20], shape: (x, z) => Math.min(MAIN(x, z), -OPEN(x, z)), ground: meadowGround, edge: 1.2, coast: (x, z) => 1.6 - 1.35 * farBank(x, z) },
     // NORTH ISLAND: smaller, hilly, a wide strait off the meadow (out of any glide); no bridgeheads yet.
     { name: "North island", label: ["North island (hilly, 3 to 6)", -162, 10], shape: blob([-162, 10], [20, 24, 44, 24, 20, 24, 42, 24], 3, 12, 5), ground: hilly(H.island, 1.6, 18, 31), edge: 3, coast: 1.4 },
     // ISLETS: low, hilly; one bigger islet and a cluster of small ones close beside it (David: "1 bigger with a bunch of
@@ -252,23 +264,22 @@ export const PLAN: Plan = {
       name: "Wharf", label: ["Wharf (deck 1)", 62, 80],
       shape: (x, z) => Math.min(westOfQuay(x, z), 40 - Math.abs(z - 50) + wob(x, z, 2, 8, 91), 26 - westOfQuay(x, z), OPEN(x, z)),
       ground: (x, z) => H.deck + (H.village - H.deck) * smoothstep(13, 24, westOfQuay(x, z)),
-      edge: 1, coast: 2.5,
+      // Its south end eases down into the beach (David, R2b: "tranition between grassy area sand and dock").
+      edge: (_x, z) => 1 + 5 * smoothstep(70, 90, z), coast: 2.5,
     },
-    // Under the deck boards (the `deck` squares, `scenery`) the ground is dark earth, so the gaps between boards read dark.
-    { shape: (x, z) => Math.min(westOfQuay(x, z) + 1, 7.8 - westOfQuay(x, z), 38 - Math.abs(z - 50)), ground: (_x, _z, _i, h) => h, edge: 0.5, kind: "shape", paint: Paint.Path },
+    // Under the deck boards (the `deck` squares, `scenery`) the ground is earth.
+    { shape: (x, z) => Math.min(westOfQuay(x, z) + 1, 7.8 - westOfQuay(x, z), DECK_Z[1] + 2 - z, z - DECK_Z[0] + 2), ground: (_x, _z, _i, h) => h, edge: 0.5, kind: "shape", paint: Paint.Path },
     // BEACH: sea level, wide yellow sand from the river's mouth east, tapering off into the wharf's south end, smooth,
     // with dry sand at its back for palms.
     {
       name: "Beach", label: ["Beach (sea level)", 4, 124],
-      shape: (x, z) => Math.min(BEACH(x, z), 0.4 * (60 - x)), ground: H.beach + 0.3, edge: 5, coast: 0.12, paint: Paint.Sand, paintBelow: 2.4,
+      shape: (x, z) => Math.min(BEACH(x, z), 0.4 * (60 - x)), ground: H.beach + 0.3, edge: 5, coast: 0.12, paint: Paint.Sand, paintBelow: 2.4, ragged: 0.3,
     },
     // THE RIVER: sea level, down the meadow's side of the village (wide enough near the open area that no glide crosses it).
-    { name: "River", label: ["River (sea level)", -80, 64], shape: strip(RIVER, 4, 7, 0.6, 9, 97), ground: 0, edge: 6, coast: 2.4, kind: "water" },
+    { name: "River", label: ["River (sea level)", -80, 64], shape: strip(RIVER, 4, 7, 0.6, 9, 97), ground: 0, edge: 6, coast: (x, z) => 2.4 - 2.15 * farBank(x, z), kind: "water" },
   ],
   ramps: [
-    // The stone path: from the deck boards left of the jetty (south) across the grassy band, then straight up the short
-    // climb between its fences to the plaza.
-    { label: ["Stone path", 56, 68], pts: [[65.5, PATH_Z, H.deck], [60.5, PATH_Z, H.deck], [49.5, PATH_Z, H.village], [PX + 13, PZ + 1, H.village]], half: 1.8, shoulder: 2.5, paint: Paint.Stone },
+    { label: ["Dirt path", 56, 68], pts: PATH, half: 1.8, shoulder: 2.5, paint: Paint.Path },
     // The way down to the beach, past the shop.
     { pts: [[36, 80, H.village], [34, 92, 2], [31, 101, H.beach + 0.3]], half: 1.6, shoulder: 3, paint: Paint.Path },
   ],
@@ -278,8 +289,8 @@ export const PLAN: Plan = {
 const BORDER_SEGMENT = 8;
 function borderObjects(): World["objects"] {
   const out: World["objects"][number][] = [];
-  for (let j = 0; j + 1 < BORDER.length; j++) {
-    const [ax, az] = BORDER[j], [bx, bz] = BORDER[j + 1], len = Math.hypot(bx - ax, bz - az), n = Math.ceil(len / BORDER_SEGMENT);
+  for (const line of BORDERS) for (let j = 0; j + 1 < line.length; j++) {
+    const [ax, az] = line[j], [bx, bz] = line[j + 1], len = Math.hypot(bx - ax, bz - az), n = Math.ceil(len / BORDER_SEGMENT);
     const yaw = +Math.atan2(-(bz - az), bx - ax).toFixed(4);
     for (let q = 0; q < n; q++) {
       const f = (q + 0.5) / n;
@@ -305,9 +316,11 @@ const lamp = (model: "village" | "wharf" | "camp", x: number, z: number, tx: num
  */
 /** The plaza's buildings and houses, 15% bigger than R2's (David: "increase building sizes by 15%"). */
 const BUILDING_SCALE = 1.32, HOUSE_SCALE = 1.15;
+/** The fountain in the plaza's middle (David's plaza-fountain reference), 7.2 across. */
+const FOUNTAIN_SCALE = 0.75;
 const LAYOUT: Record<string, { x: number; z: number; yaw?: number; scale?: number; model?: string }> = {
   wharf: { ...DOCK, model: "jetty" }, default: { x: SHORE_X - 6, z: DOCK.z },
-  plaza: { x: PX, z: PZ }, monument: { x: PX + 3, z: PZ + 2 },
+  plaza: { x: PX, z: PZ }, monument: { x: PX - 8.5, z: PZ },
   hq: { x: PX - 19, z: PZ, yaw: facing(1, 0.06), scale: BUILDING_SCALE },
   cafe: { x: PX + 3, z: PZ - 17.5, yaw: facing(-0.08, 1), scale: BUILDING_SCALE },
   shop: { x: PX + 3, z: PZ + 17, yaw: facing(-0.1, -1), scale: BUILDING_SCALE },
@@ -317,21 +330,31 @@ const LAYOUT: Record<string, { x: number; z: number; yaw?: number; scale?: numbe
   "study-0": { x: PX - 5, z: PZ - 10 }, "study-1": { x: PX + 11, z: PZ - 10 }, "study-2": { x: PX - 5, z: PZ + 10 }, "study-3": { x: PX + 11, z: PZ + 10 },
   "bench-0": { x: PX - 9, z: PZ - 4 }, "bench-1": { x: PX - 9, z: PZ + 4 }, "bench-2": { x: PX + 13.5, z: PZ - 6 }, "bench-3": { x: PX + 13.5, z: PZ + 6 },
   "lamp-0": lamp("wharf", 70.5, 51, SHORE_X, 51),
-  ...Object.fromEntries(([[62, 59.5], [60, 53], [53.5, 60], [52.5, 52], [46, 57.5]] as const).map(([x, z], i) => [`lamp-${i + 1}`, lamp("village", x, z, x, PATH_Z)])),
+  // Lamps up the path, either side by turns, their arms over it.
+  ...Object.fromEntries([3, 8, 13, 18, 23].map((s, i) => { const q = onPath(s, i % 2 ? 2.6 : -2.6), c = onPath(s); return [`lamp-${i + 1}`, lamp("village", q.x, q.z, c.x, c.z)]; })),
   ...Object.fromEntries(([[PX - 11, PZ - 9], [PX + 14, PZ - 10], [PX - 11, PZ + 9], [PX + 14, PZ + 10]] as const).map(([x, z], i) => [`lamp-${i + 6}`, lamp("village", x, z, PX, PZ)])),
   "lamp-10": lamp("village", 39, 84, 35, 84),
 };
 
 type Obj = World["objects"][number];
+/** A point `s` units along the path's middle, `side` units off it, and the yaw that turns a model's x along it there. */
+function onPath(s: number, side = 0): { x: number; z: number; yaw: number } {
+  for (let j = 0; ; j++) {
+    const [ax, az] = PATH[j], [bx, bz] = PATH[j + 1], len = Math.hypot(bx - ax, bz - az);
+    if (s > len && j + 2 < PATH.length) { s -= len; continue; }
+    const ux = (bx - ax) / len, uz = (bz - az) / len;
+    return { x: ax + ux * s - uz * side, z: az + uz * s + ux * side, yaw: Math.atan2(-uz, ux) };
+  }
+}
 /** An object with its keys in the order the world file reads them back (format.ts), defaults left out, so it saves to the same bytes. */
 const obj = (kind: ObjectKind, id: string, x: number, z: number, yaw = 0, scale = 1, model?: string): Obj => ({
   id, kind, x: +x.toFixed(2), z: +z.toFixed(2), ...(+yaw.toFixed(4) ? { yaw: +yaw.toFixed(4) } : {}), ...(scale !== 1 ? { scale } : {}), ...(model ? { model } : {}),
 });
-/** The village's resident houses (scenery shells, their doors closed) in the gaps round the plaza, by colourway. */
-const HOUSES: readonly [number, number, string][] = [
-  [PX + 15, PZ - 15, "yellow"], [PX - 14, PZ - 20, "red"], [PX - 26, PZ - 12, "brown"], [PX - 26, PZ + 12, "yellow"],
-  [PX + 15, PZ + 16, "red"], [PX - 10, PZ + 28, "brown"], [PX - 8, PZ - 26, "brown"], [PX - 36, PZ, "red"],
-];
+/** The village's resident houses (scenery shells, their doors closed) in the gaps round the plaza, by colourway, drawn in a little closer (David, R2b: "houses could come together a bit closer"). */
+const HOUSE_IN = 0.88;
+const HOUSES: readonly [number, number, string][] = ([
+  [15, -15, "yellow"], [-14, -20, "red"], [-26, -12, "brown"], [-26, 12, "yellow"], [15, 16, "red"], [-10, 28, "brown"], [-8, -26, "brown"], [-36, 0, "red"],
+] as const).map(([dx, dz, colour]) => [PX + HOUSE_IN * dx, PZ + HOUSE_IN * dz, colour]);
 /** The fish market on the deck boards (quayAt's z and d, a turn off facing the water, a scale): stalls, carts, barrels and crates. */
 const MARKET: readonly (readonly [model: string, z: number, d: number, turn: number, scale: number])[] = [
   ...[22, 28, 34, 40, 68, 74, 80].map(z => ["market-cart", z, 6, 0, 0.55] as const),
@@ -348,17 +371,29 @@ const MARKET: readonly (readonly [model: string, z: number, d: number, turn: num
  */
 function scenery(): Obj[] {
   const out: Obj[] = [];
-  for (let z = 14; z <= 86; z += 4) for (const d of [1.6, 5.6]) { const q = quayAt(z, d); out.push(obj("deck", `deck-${out.length}`, q.x, q.z, q.yaw)); }
+  for (let z = DECK_Z[0]; z <= DECK_Z[1]; z += 4) for (const d of [1.6, 5.6]) { const q = quayAt(z, d); out.push(obj("deck", `deck-${out.length}`, q.x, q.z, q.yaw)); }
   MARKET.forEach(([model, z, d, turn, scale], i) => { const q = quayAt(z, d); out.push(obj("prop", `market-${i}`, q.x, q.z, q.yaw + Math.PI + turn, scale, model)); });
-  let fence = 0;
-  for (const side of [-2.9, 2.9]) for (let x = 50; x <= 57; x++) out.push(obj("fence", `path-fence-${fence++}`, x, PATH_Z + side, 0, 1, JOINED_FENCE));
+  // The path's loose fencing (David: "the fencing is loosely there not a straight fencing but one with gaps", running
+  // "up higher"): short runs and lone posts either side all the way up, bushes scattered behind them.
+  let fence = 0, bush = 0;
+  for (const side of [-2.8, 2.8]) for (let s = 3, n = side > 0 ? 7 : 0; s < 24; n++) {
+    const h = hash01(n, 1), model = h < 0.45 ? "rustic-fence-a" : h < 0.8 ? "rustic-fence-b" : "rustic-post", len = h < 0.45 ? 2.3 : h < 0.8 ? 1.7 : 0.2;
+    const q = onPath(s + len / 2, side);
+    out.push(obj("prop", `path-fence-${fence++}`, q.x, q.z, q.yaw + 0.15 * (hash01(n, 2) - 0.5), 1, model));
+    s += len + 1 + 2 * hash01(n, 3);
+  }
+  for (const side of [-1, 1]) for (let s = 2; s < 25; s += 1.6 + 1.8 * hash01(bush, 4)) {
+    if (hash01(bush, 5) < 0.3) { bush++; continue; }
+    const q = onPath(s, side * (3.6 + 1.4 * hash01(bush, 6)));
+    out.push({ id: `path-bush-${bush}`, kind: "bush", x: +q.x.toFixed(2), z: +q.z.toFixed(2), seed: bush++ });
+  }
   // Lantern posts on the deck, their arms out over the boards toward the water, and on the jetty's platform toward its stairs.
   [[30, 3.5], [78, 3.5]].forEach(([z, d], i) => { const q = quayAt(z, d), e = quayAt(z, 0), l = lamp("wharf", q.x, q.z, e.x, e.z); out.push(obj("lamp", `lamp-${11 + i}`, l.x, l.z, l.yaw ?? 0, 1, l.model)); });
   [-5, 5].forEach((lx, i) => { const p = dockToWorld(DOCK, lx, 11, { x: 0, z: 0 }), l = lamp("wharf", p.x, p.z, p.x, DOCK.z); out.push(obj("lamp", `lamp-${13 + i}`, l.x, l.z, l.yaw ?? 0, 1, l.model)); });
   // Palms (terrain-art's, light fronds and coconuts) on the grassy band behind the boards, either side of the path.
   ([[18, 10.5, "tall"], [25, 11.5, "short"], [32, 10, "lean"], [39, 11, "tall"], [62, 10.5, "short"], [68, 11, "tall"], [75, 10, "lean"], [82, 11.5, "short"]] as const)
     .forEach(([z, d, kind], i) => { const q = quayAt(z, d); out.push(obj("prop", `band-palm-${i}`, q.x, q.z, kind === "lean" ? 0 : z * 0.41, 1, `palm-${kind}`)); });
-  out.push(obj("prop", "plaza-tiles", PX, PZ, 0, 1, "plaza-tiles"));
+  out.push(obj("prop", "plaza-tiles", PX, PZ, 0, 1, "plaza-tiles"), obj("prop", "plaza-fountain", PX, PZ, 0, FOUNTAIN_SCALE, "plaza-fountain"));
   HOUSES.forEach(([x, z, colour], i) => out.push(obj("house", `house-${i + 1}`, x, z, facing(PX - x, PZ - z), HOUSE_SCALE, `chalet-${colour}`)));
   out.push(obj("campfire", "campfire", ...FIRE_AT));
   // Round it, clear of the sit and dance rings (lib/game/campfire.ts FIRE): log benches to sit on and stumps on the
@@ -395,7 +430,7 @@ function forestMasses(): Obj[] {
 }
 
 /** The kinds only the generator places (every one of them is rebuilt each run). */
-const GENERATED: ReadonlySet<string> = new Set(["deck", "prop", "house"]);
+const GENERATED: ReadonlySet<string> = new Set(["deck", "prop", "house", "bush"]);
 /** The layout's moves, then the generated objects (the border and the scenery) in place of any earlier copy of them. */
 export function layoutObjects(objects: World["objects"]): World["objects"] {
   const made = [...borderObjects(), ...scenery(), ...forestMasses()], ids = new Set(made.map(o => `${o.kind}:${o.id}`));
@@ -476,8 +511,9 @@ export function generateWorld(objects: World["objects"], keep: readonly MapAnnot
       member[j][p] = m >= 0.5 ? 1 : 0;
       if (m <= 0) return;
       if (zn.kind !== "water") h += ((typeof zn.ground === "number" ? zn.ground : zn.ground(x, z, d, h)) - h) * m;
-      if (zn.coast !== undefined) g += (zn.coast - g) * m;
-      if (zn.paint !== undefined && m > 0.5) { painted[p] = zn.paint; below[p] = zn.paintBelow ?? Infinity; }
+      if (zn.coast !== undefined) g += ((typeof zn.coast === "number" ? zn.coast : zn.coast(x, z)) - g) * m;
+      const jag = zn.ragged ? zn.ragged * (2 * fbm(x / 7, z / 7, 400 + j) - 1 + 0.6 * (hash01(i, k) - 0.5)) : 0;
+      if (zn.paint !== undefined && m > 0.5 + jag) { painted[p] = zn.paint; below[p] = (zn.paintBelow ?? Infinity) + 2 * jag; }
     });
     for (const r of PLAN.ramps) {
       const { d: off, s } = nearest(r.pts, x, z), w = 1 - smoothstep(r.half, r.half + r.shoulder, off);

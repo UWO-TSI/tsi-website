@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { loadWorldFromDisk } from "./disk";
 import { DOCK, H, PLAZA, blob, generateWorld, layoutObjects, sideOf, strip } from "./generate";
 import { terrainHeight } from "./terrain";
+import { JETTY } from "../wharf";
 
 describe("the zone plan's shapes", () => {
   it("measure about the distance to their rim, positive inside", () => {
@@ -37,8 +38,9 @@ describe("a generated world", () => {
   it("stands the village flat at its height, the deck and the grassy band at the deck's level below it, the beach at the sea, the summit highest", () => {
     const of = (id: string) => objects.find(o => o.id === id)!;
     for (const [x, z] of [PLAZA.at, [of("hq").x, of("hq").z], [of("museum").x, of("museum").z]]) expect(at(x, z)).toBeCloseTo(H.village, 1);
-    expect(at(DOCK.x - 13, DOCK.z - 6)).toBeCloseTo(H.deck, 1); // the deck boards' ground beside the jetty
-    expect(at(DOCK.x - 20, DOCK.z - 6)).toBeCloseTo(H.deck, 1); // the grassy band behind them, at their level
+    const shore = DOCK.x - JETTY.land; // where the gangways meet the deck boards
+    expect(at(shore - 5, DOCK.z - 6)).toBeCloseTo(H.deck, 1); // the deck boards' ground beside the jetty
+    expect(at(shore - 12, DOCK.z - 6)).toBeCloseTo(H.deck, 1); // the grassy band behind them, at their level
     expect(at(-15, 110)).toBeLessThan(1);
     expect(at(of("oracle").x, of("oracle").z)).toBeCloseTo(H.summit, 0);
     let top = -Infinity;
