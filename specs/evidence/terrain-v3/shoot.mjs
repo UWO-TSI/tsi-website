@@ -28,7 +28,7 @@ export const VIEWS = {
   "19-path-night": { at: [60, 58], yaw: -100, pitch: 0.45, zoom: 1.6, time: "night" },
   "20-plaza-night": { at: [44, 53], yaw: 250, pitch: 0.42, zoom: 1.6, time: "night" },
   "21-shallows": { at: [9, 115], yaw: 0, pitch: 0.55, zoom: 1.2 },
-  "22-ship-houses": { at: [66, 66], yaw: 100, pitch: 0.42, zoom: 1.4 },
+  "22-shops": { at: [66, 66], yaw: 100, pitch: 0.42, zoom: 1.4 },
   // R2e: the fish market at the north end from the deck, the shops, the shipwright's boat, the way to the beach, the
   // swash on the sand, the forest from inside.
   "23-market-front": { at: [70, 33], yaw: 190, pitch: 0.4, zoom: 1.4 },

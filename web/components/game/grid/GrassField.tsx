@@ -223,13 +223,13 @@ const FRAGMENT_MAP = /* glsl */ `
 `;
 
 /** The uniforms every layer shares (one object each, so a frame writes them once). */
-function sharedUniforms(dataTex: THREE.DataTexture, bendTex: THREE.DataTexture, data: number) {
+function sharedUniforms(dataTex: THREE.DataTexture, bendTex: THREE.DataTexture, data: number, lush: boolean) {
   return {
     uTime: { value: 0 }, uWind: { value: new THREE.Vector4() }, uWindDir: { value: new THREE.Vector2(WIND_DIR.x, WIND_DIR.z) },
     uFocus: { value: new THREE.Vector2() }, uFade: { value: new THREE.Vector2(20, 30) },
     uData: { value: dataTex }, uDataN: { value: new THREE.Vector2(data, DATA_TEXEL) },
     uBend: { value: bendTex }, uBendN: { value: new THREE.Vector3(BEND_N, BEND_TEXEL, 1) },
-    uGrassColor: { value: new THREE.Color() }, uGrassLook: TERRAIN_GRASS, uSnow: TERRAIN_SNOW, uWet: TERRAIN_WET, uLean: { value: 0.6 }, uLush: { value: 0 },
+    uGrassColor: { value: new THREE.Color() }, uGrassLook: TERRAIN_GRASS, uSnow: TERRAIN_SNOW, uWet: TERRAIN_WET, uLean: { value: 0.6 }, uLush: { value: lush ? 1 : 0 },
     uBlade: { value: bladeMap() },
   };
 }
@@ -307,21 +307,20 @@ export default function GrassField({ map, field: suppliedField, color, windScale
       tex.colorSpace = THREE.NoColorSpace;
       tex.needsUpdate = true;
     }
-    const shared = sharedUniforms(dataTex, bendTex, tier.data);
+    const shared = sharedUniforms(dataTex, bendTex, tier.data, lush);
     const layers = tier.layers.map(layer => {
       const n = Math.ceil((layer.half * 2) / layer.spacing);
       const grid = { value: new THREE.Vector4(n, layer.spacing, 1, layer.width) }, ring = { value: new THREE.Vector4(-2, -1, 1e5, 1e5 + 1) };
       return { layer, grid, ring, material: grassMaterial({ ...shared, uGrid: grid, uRing: ring, uLayerH: { value: layer.height } }), geometry: grassCard(layer.cards, n * n) };
     });
     return { data, dataTex, bend, bendTex, uniforms: shared, layers };
-  }, [map, field, clear, tier, sampler]);
+  }, [map, field, clear, tier, sampler, lush]);
   useEffect(() => { if (revision) refill(state); }, [state, revision]);
   useEffect(() => () => {
     state.dataTex.dispose(); state.bendTex.dispose();
     for (const l of state.layers) { l.material.dispose(); l.geometry.dispose(); }
   }, [state]);
   useEffect(() => { state.uniforms.uGrassColor.value.set(color); }, [state, color]);
-  useEffect(() => { state.uniforms.uLush.value = lush ? 1 : 0; }, [state, lush]);
 
   useFrame(({ camera }, delta) => advance(state, camera, delta, t.grass, windScale, tier));
 

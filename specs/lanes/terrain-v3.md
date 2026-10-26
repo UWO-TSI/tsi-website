@@ -19,6 +19,22 @@ Then look at the references in `specs/references/terrain/plan-2026-10-23/` and t
 
 ## Status
 
+**R2e built 2026-10-26, waiting on review** (head: the commit after this file's). Merged in: wharf-art4 76f320c3 (tackle shop, shipwright shed and boat, shells), trees-art 18de35ff (12 forest trees, 4 river trees, tint check), perf-newworld cde23580 (R2d as merged to main 2241eca2). Renders in `specs/evidence/terrain-v3/r2e/` (00 top-down, 01 to 27; 26-swash, -1, -2 are one wave 1.8 s apart), the village check in `r2e/village-check/` (same as r2d's by eye).
+
+What R2e built (David's R2d notes, the reading 1 to 8, and the coordinator's adds):
+- **Wharf:** the fish market at the north end (quayAt 19.5, d 4), porch turned south down the deck to the docks, the swordfish's bill out over the water; the sell stall at its front (`SELL_AT` 26.6). Ship houses a to d and their GLBs deleted. wharf-art4's tackle shop (z 63.5) and shipwright shed (z 73.5) on the water edge (`SHOPS`, `wharf.ts EDGE_SHOPS` for propY and the kit's clear edge); the shipwright's boat floats beside its shed and rocks about the plank's end (`components/game/wharf/ShipwrightBoat.tsx`, one transform a frame, drawn from DefaultIslandWorld).
+- **Organic details:** market carts, barrels, crates and nets in loose clusters with their own turns (`MARKET`); deck lamp posts at varied depths, hand lanterns at uneven gaps and on the market's porch and stall; the deck kit's piles, ladders, rings, nets and ropes jittered and turned (`deckPieces`), ladders at uneven gaps on either side.
+- **Palms:** 4 on the band (was 12), 8 more on the beach; a dirt path from the deck's south end onto the sand (`WHARF_WAY`).
+- **Waves (new world only):** the swash (`waterShader SWASH`, `SMOOTH_SEA` swash 2.5 cells, pulse reach 4): each pulse that reaches the sand runs up it fast, draws back slowly past the waterline, its front foaming wide while it breaks; the water near the shore lifts 0.15 per cell of run, is cut past the front and thins toward it. `WATER_MARGIN` 0.45 so the water mesh reaches under the sand it climbs. Main's swell (applicant island) byte-identical (seaGate.test); the village's waves run with swash 0, same output.
+- **Plaza and grass:** brick roads gone (the plaza's stone stays under its tiles); `GrassField lush` (smooth world only): even colour, softer root-to-tip, 20% taller; the splat lawn a shade deeper; nature scattered in clumps with clean lawn between (`nature`).
+- **Forest:** trees-art's mix (fir, cedar, spire, old fir; broadleaf, wide and birch patches; leaning; young and sapling at the edges). broken and snag came out at 3 each and are left out (their GLBs stay in trees-art's set). Per-instance crown tint on mForestCrown (`InstancedNature crownTint`, 0.86 to 1.10, +-6% warmth).
+- **River:** trees-art's willow, alder, oak and lean tree every third step along both banks (the lean one turned out over the water), a shrub at each foot (`riverside`).
+- **Beach life:** 53 shells (starfish, sand dollar, conch) on the sand, more at the waterline and round the campfire (`shells`); crabs keep to the open beach within 30 of the campfire, 14 (Lite 8) (`FaunaSite.beach`, new world only).
+- **Seabed:** no rock standing out of the new world's water (`seabedProps submerged`); the village keeps its seabed.
+- **Lamp bug spots** (`bug-lamp-*`) are dropped and rebuilt each run, none at the jetty's lamps.
+- **Gates:** tsc and eslint clean on changed files; lib/game + components/game 245 files, 2006 tests green with and without the switch. No perf run (the perf lane's).
+- **Not done / open:** the forest's broken and snag kinds unplaced; the swash is judged from stills (three frames), not in motion; the sushi bar's sand path is the sushi-bar lane's.
+
 **R2d reviewed 2026-10-26** (head 7aee495b). Approved:
 - the arrival, the docks from the side and from above;
 - the path, and the path, plaza and wharf at night;
@@ -317,21 +333,7 @@ The plan page answers, verbatim in the spec. The drawing is a guide to where thi
 
 ## Next
 
-**R2e: David's R2d notes** (the reading above, 1 to 8). New world only; the village stays unchanged.
-
-1. **Layout and look first,** with no new art needed:
-   - the fish market to the north end, facing down the wharf (2), with ship houses a and d removed;
-   - the palms moved and the wharf-to-beach path (3);
-   - the shore waves (4);
-   - the brick roads removed and the grass updated (6);
-   - the organic small details (1).
-2. **Then the art,** when the coordinator says to merge it:
-   - `wharf-art4`: the tackle shop, the shipwright and its floating ship (bobbing is yours: a cheap shader or a single per-frame transform), and the crab;
-   - `trees-art`: forest and river trees, with the per-instance tint.
-3. **Merges:**
-   - `game/perf-newworld`, when told: it holds R2d with the perf re-measure and the code review's fixes.
-   - The sushi bar is the sushi-bar lane's job; don't move it.
-4. **Renders** into `specs/evidence/terrain-v3/r2e/`: the redone views plus a night wharf. SendMessage "main" with the images and a one-line fact for each. Update Status, then stop.
+**R2e is waiting on David's review.** Next: his R2e notes, when the coordinator relays them.
 
 ## Tools and gotchas
 
@@ -361,5 +363,6 @@ The plan page answers, verbatim in the spec. The drawing is a guide to where thi
 - **cells.test** takes 5 to 10 s on its fishing sample under load (the classifier's first call, same on the old world); run it with `--testTimeout=30000` on a busy machine.
 - **Village check:** `VILLAGE=1 PORT=3171 node specs/evidence/terrain-v3/shoot.mjs <dir>` with the dev server run without the switch shoots the village's four check views. For a before set, `git archive <sha> web | tar -x -C <scratch>` and clone node_modules into it (no new worktree).
 - **Generated bug spots:** `bug` isn't a generated kind (hand-placed ones survive); the lamps' (`bug-lamp-*`) are all dropped and rebuilt each run.
-- **Ship houses and lily pads** stand off the ground on purpose: walk.test skips them (and the water's coral, reeds and stones).
+- **Wharf shops and lily pads** stand off the ground on purpose: walk.test skips them (`EDGE_SHOPS`, and the water's coral, reeds and stones).
+- **Swash:** stills can't show it; `frames: { count, every }` on a shoot.mjs view takes more shots in the same session.
 - **Lamps:** every lamp is generated (`lamps()`), and the generated kinds now include lamp, tree, flower, bush and fence: anything of those kinds in world.json is rebuilt each run.
