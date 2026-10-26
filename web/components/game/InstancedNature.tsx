@@ -29,6 +29,7 @@ import { useGLTF } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { applyModelTextures, disposeModelMaterials, prepareModel } from "@/lib/game/modelMaterials";
 import { shadowClassFor } from "@/lib/game/shadows";
 import { lodOf, updateNear } from "@/lib/game/natureLod";
@@ -159,13 +160,52 @@ export function InstancedModels({ items }: { items: readonly ModelPlacement[] })
   })}</>;
 }
 
-/** A material's look, for merging: two materials that draw alike share a merged mesh. */
-export const lookKey = (m: THREE.Material) => {
-  const s = m as THREE.MeshStandardMaterial;
-  return [m.name, s.color?.getHexString(), s.map?.uuid, s.emissiveMap?.uuid, s.vertexColors, m.transparent, m.opacity, s.roughness, s.metalness, m.side, m.userData.lookClass].join("|");
+/** A material's look, for merging: two materials that draw alike share a merged mesh. `images` names textures by their image (imageKeys). */
+export const lookKey = (m: THREE.Material, images?: ReadonlyMap<THREE.Texture, string>) => {
+  const s = m as THREE.MeshStandardMaterial, tex = (t: THREE.Texture | null) => t && (images?.get(t) ?? t.uuid);
+  return [m.name, s.color?.getHexString(), tex(s.map), tex(s.emissiveMap), s.vertexColors, m.transparent, m.opacity, s.roughness, s.metalness, m.side, m.userData.lookClass].join("|");
 };
+/** Each of a GLB's textures by its image's bytes: every file loads its own copy of a shared image (the rope, the decor wood), and the copies merge. */
+function imageKeys(gltf: GLTF, out: Map<THREE.Texture, string>) {
+  const { json, associations, extensions } = gltf.parser, body: ArrayBuffer | undefined = extensions.KHR_binary_glTF?.body;
+  for (const [texture, ref] of associations) {
+    const view = body && ref.textures !== undefined && json.bufferViews[json.images[json.textures[ref.textures].source]?.bufferView];
+    if (!view) continue;
+    let h = 2166136261;
+    for (const b of new Uint8Array(body, view.byteOffset ?? 0, view.byteLength)) h = Math.imul(h ^ b, 16777619);
+    out.set(texture as THREE.Texture, `${view.byteLength}:${h >>> 0}`);
+  }
+  return out;
+}
 /** The geometry's attribute layout (mergeGeometries needs it the same). */
 export const layoutKey = (g: THREE.BufferGeometry) => Object.entries(g.attributes).map(([n, a]) => `${n}:${a.itemSize}:${(a as THREE.BufferAttribute).array.constructor.name}:${a.normalized}`).sort().join(",") + `|${g.index ? "i" : "n"}`;
+
+/**
+ * Each prepared model baked in at each of its placements and joined into one mesh per look across them all, casting and
+ * receiving (still props and buildings). `images` merges looks whose textures share an image (imageKeys).
+ */
+export function mergeByLook(placed: readonly (readonly [THREE.Object3D, THREE.Matrix4])[], images?: ReadonlyMap<THREE.Texture, string>) {
+  const groups = new Map<string, { material: THREE.Material; geometries: THREE.BufferGeometry[] }>();
+  for (const [model, place] of placed) {
+    model.updateMatrixWorld(true);
+    model.traverse(o => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh || !mesh.visible || Array.isArray(mesh.material)) return;
+      const g = mesh.geometry.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(place, mesh.matrixWorld));
+      if (!g.index) g.setIndex([...Array(g.attributes.position.count).keys()]);
+      const key = `${lookKey(mesh.material, images)}#${layoutKey(g)}`;
+      const group = groups.get(key) ?? { material: mesh.material, geometries: [] };
+      group.geometries.push(g);
+      groups.set(key, group);
+    });
+  }
+  return [...groups.values()].map(({ material, geometries }) => {
+    const mesh = new THREE.Mesh(geometries.length === 1 ? geometries[0] : mergeGeometries(geometries, false) ?? geometries[0], material);
+    // The curved world bends far things down into view (modelMaterials prepareModel): never culled by their own bounds.
+    mesh.castShadow = true; mesh.receiveShadow = true; mesh.frustumCulled = false;
+    return mesh;
+  });
+}
 
 /**
  * Still props merged (the new world's dressing, R2c perf): every placement of every model baked into place and joined
@@ -175,35 +215,14 @@ export const layoutKey = (g: THREE.BufferGeometry) => Object.entries(g.attribute
  */
 export function MergedModels({ items }: { items: readonly ModelPlacement[] }) {
   const urls = useMemo(() => [...new Set(items.map(i => i.url))], [items]);
-  const gltfs = useGLTF(urls) as unknown as { scene: THREE.Object3D }[];
+  const gltfs = useGLTF(urls) as unknown as GLTF[];
+  const images = useMemo(() => gltfs.reduce((out, gltf) => imageKeys(gltf, out), new Map<THREE.Texture, string>()), [gltfs]);
   const models = useMemo(() => urls.map((url, i) => prepareModel(gltfs[i].scene, url, undefined, shadowClassFor(url))), [gltfs, urls]);
   useEffect(() => {
     models.forEach((model, i) => applyModelTextures(model, urls[i]));
     return () => models.forEach(model => disposeModelMaterials(model));
   }, [models, urls]);
-  const meshes = useMemo(() => {
-    const groups = new Map<string, { material: THREE.Material; geometries: THREE.BufferGeometry[] }>();
-    for (const { url, ...p } of items) {
-      const model = models[urls.indexOf(url)], place = matrixOf(p, 1);
-      model.updateMatrixWorld(true);
-      model.traverse(o => {
-        const mesh = o as THREE.Mesh;
-        if (!mesh.isMesh || !mesh.visible || Array.isArray(mesh.material)) return;
-        const g = mesh.geometry.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(place, mesh.matrixWorld));
-        if (!g.index) g.setIndex([...Array(g.attributes.position.count).keys()]);
-        const key = `${lookKey(mesh.material)}#${layoutKey(g)}`;
-        const group = groups.get(key) ?? { material: mesh.material, geometries: [] };
-        group.geometries.push(g);
-        groups.set(key, group);
-      });
-    }
-    return [...groups.values()].map(({ material, geometries }) => {
-      const mesh = new THREE.Mesh(geometries.length === 1 ? geometries[0] : mergeGeometries(geometries, false) ?? geometries[0], material);
-      // The curved world bends far things down into view (modelMaterials prepareModel): never culled by their own bounds.
-      mesh.castShadow = true; mesh.receiveShadow = true; mesh.frustumCulled = false;
-      return mesh;
-    });
-  }, [models, urls, items]);
+  const meshes = useMemo(() => mergeByLook(items.map(({ url, ...p }) => [models[urls.indexOf(url)], matrixOf(p, 1)] as const), images), [models, urls, items, images]);
   useEffect(() => () => meshes.forEach(m => m.geometry.dispose()), [meshes]);
   const world = useThree(s => s.scene);
   const owner = useMemo(() => new THREE.Group(), []);
