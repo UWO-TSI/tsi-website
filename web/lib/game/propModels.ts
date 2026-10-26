@@ -105,6 +105,11 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // tipped toward +z, and a hoist whose jib reaches along +x.
   ...Object.fromEntries(["dock-pile-rope", "rope-net", "life-ring", "net-heap", "crate-net", "crate-cloth", "fish-crate", "dock-hoist"]
     .map(m => [m, `/assets/game/wharf/${m}.glb`])),
+  // game/village-art: the path's edges (art/props/build_path_edge.py): mossy side rocks (scale them freely), and the loose
+  // fence in short runs along x (leave gaps between runs; the lone post fills one); and a meadow patch of wild flowers in
+  // grass and a clump of tall grass (art/trees/build_flowers.py, a tile across at scale 1).
+  ...Object.fromEntries(["path-rock-slab", "path-rock-low", "path-rock-cluster", "rustic-fence-a", "rustic-fence-b", "rustic-post"].map(m => [m, `${P}${m}.glb`])),
+  ...Object.fromEntries(["meadow", "tallgrass"].map(m => [`flower-${m}`, `/assets/game/plants/flower-${m}.glb`])),
 };
 export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? `/assets/acnh/props/${model}.glb`;
 
