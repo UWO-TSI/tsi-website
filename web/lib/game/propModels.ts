@@ -95,10 +95,6 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // Its campfire set (art/props/build_campfire_set.py), round the campfire with the log benches: a stump to sit on, a
   // firewood stack with its chopping block, a fish-drying rack (along x).
   ...Object.fromEntries(["stump-seat", "firewood-stack", "fish-rack"].map(m => [m, `${P}${m}.glb`])),
-  // The closed forest's trees (lib/game/world/generate.ts forestTrees): the far versions of our cedar and two broadleaf
-  // shapes, about 3.9, 3.4 and 2.9 tall at scale 1, instanced.
-  "forest-cedar": "/assets/game/plants/conifer-cedar.lod1.glb", "forest-tall": "/assets/game/plants/tree-tall-summer.lod1.glb",
-  "forest-round": "/assets/game/plants/tree-round-summer.lod1.glb",
   // game/village-art: the plaza's set (art/props/build_plaza_set.py), fronts toward +z. The fountain is 9.6 across (scale
   // it uniformly to the plaza); the bunting hangs between (-2, 0, 0) and (2, 0, 0), so set it at the hang height and scale
   // x by the span / 4; the wall banner's origin is its bracket's plate on a wall in the x-y plane, the banner out along +z.
@@ -155,6 +151,10 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // sitter looks to +z), a sandcastle with its bucket and spade, a cool box, a volleyball net along x (posts at x +-2.6).
   ...Object.fromEntries(["beach-ball-a", "beach-ball-b", "beach-ball-c", "beach-towel-a", "beach-towel-b", "beach-lounger", "sandcastle", "beach-cooler",
     "volleyball-net"].map(m => [m, `${P}${m}.glb`])),
+  // Single low-poly forest trees for the closed forest (art/trees/build_forest_trees.py, the masses' own tree makers), 100
+  // to 220 triangles, the trunk's foot at the origin (it runs 0.8 under): a broad cedar (7.5 tall), a tall narrow fir
+  // (10), a round broadleaf (5.4) and a young conifer (3.4). Scale them uniformly only (0.8 to 1.25), never stretched.
+  ...Object.fromEntries(["cedar", "fir", "broadleaf", "young"].map(m => [`forest-tree-${m}`, `/assets/game/plants/forest-tree-${m}.glb`])),
 };
 export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? `/assets/acnh/props/${model}.glb`;
 

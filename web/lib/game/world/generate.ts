@@ -624,17 +624,20 @@ function riverside(t: World["terrain"]): Obj[] {
 
 /**
  * The closed forest (David, R2c: "a low render for performance that also looks like busy forest over there but also look
- * natural"): many single low-poly trees (the far versions of our cedar and two broadleaf shapes, instanced: a few draws
- * for the lot), packed on a jittered 2.9 u grid over the whole forest off the mountain's foot and now and then left out,
- * mostly cedars, each turned and sized its own way (never stretched) and standing on its own ground.
+ * natural"): many single low-poly trees (village-art2's forest trees, instanced: two draws a kind), packed about 2.15 u
+ * apart on a jittered grid over the whole forest off the mountain's foot and now and then left out; cedars most, then
+ * firs, broadleaves and young trees, the firs and young ones toward the forest's edge; each turned its own way, sized
+ * uniformly 0.8 to 1.25 (never stretched) and standing on its own ground.
  */
 function forestTrees(): Obj[] {
   const out: Obj[] = [];
-  for (let i = 0; i < 40; i++) for (let k = 0; k < 52; k++) {
-    const x = 20 + i * 2.9 + 2.4 * (hash01(i, k) - 0.5), z = -140 + k * 2.9 + 2.4 * (hash01(k + 50, i) - 0.5), h = hash01(i * 31 + k, 7);
-    if (FOREST(x, z) < 1 || MT_FOOT(x, z) > -2 || hash01(i + 70, k) < 0.08) continue;
-    const model = h < 0.55 ? "forest-cedar" : h < 0.8 ? "forest-tall" : "forest-round";
-    out.push(obj("prop", `forest-${out.length}`, x, z, hash01(k, i * 13) * 2 * Math.PI, +((model === "forest-cedar" ? 1.5 : 1.3) + 0.6 * hash01(i, k + 99)).toFixed(2), model));
+  for (let i = 0; i < 55; i++) for (let k = 0; k < 71; k++) {
+    const x = 20 + i * 2.15 + 1.1 * (hash01(i, k) - 0.5), z = -140 + k * 2.15 + 1.1 * (hash01(k + 50, i) - 0.5), in_ = FOREST(x, z);
+    if (in_ < 1 || MT_FOOT(x, z) > -2 || hash01(i + 70, k) < 0.06) continue;
+    // Toward the edge (within 6 u of it) the firs and young trees take most of the cedars' share.
+    const h = hash01(i * 31 + k, 7), edge = 0.3 * (1 - smoothstep(1, 6, in_)), e = h + edge;
+    const model = h < 0.4 - edge ? "cedar" : e < 0.65 + edge ? "fir" : h < 0.87 ? "broadleaf" : "young";
+    out.push(obj("prop", `forest-${out.length}`, x, z, hash01(k, i * 13) * 2 * Math.PI, +(0.8 + 0.45 * hash01(i, k + 99)).toFixed(2), `forest-tree-${model}`));
   }
   return out;
 }
