@@ -301,7 +301,8 @@ function villageLayout(v: Village) {
     underBuilding: (x: number, z: number) => [...marks, ...houseBoxes].some(l => !!l.half && Math.abs(x - l.x) < l.half[0] + 0.5 && Math.abs(z - l.z) < l.half[1] + 0.5),
     houses,
     dock: wharfDock(v),
-    fireflies: objectsOf("bush", v).map(xz),
+    // Round the bushes (the new world's wild shrubs).
+    fireflies: [...objectsOf("bush", v), ...objectsOf("prop", v).filter(o => o.model?.startsWith("shrub-"))].map(xz),
     /** The beach campfire (specs/v1-drop.md §3): the map's, or open sand by the beach until one is placed. */
     campfire: campfireSite(v),
     puddles: objectsOf("puddle", v).map(xz),
