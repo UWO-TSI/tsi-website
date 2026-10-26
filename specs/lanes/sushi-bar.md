@@ -43,27 +43,28 @@ Steps 1 to 5 built; terrain-v3 placed the bar at (44, 96.5), yaw -3pi/4 (merged 
 
 ## Next
 
-Wait for the coordinator's plan (David is planning the bar with them). The original list:
+**Phase A of `specs/launch/sushi-bar.md`** (David's plan, 2026-10-26, verbatim there). Read the spec first. Phase B (ordering, buffs, quests) is after launch: don't build it.
 
-**References:** `specs/references/terrain/sushi-bar-2026-10-26/` (README with David's words, `bar-day.jpg`, `bar-evening.jpg`) and the earlier `plan-2026-10-23/wharf-sharkbar.jpg`. David's words: "a long horizontal bar ... really big open bar where you can sit down and it changes camera anger to more first person, it has festive lighting inside, it back of the bar is open window to see beatiful view in the back, 1-2 sushi npc making sushi ... re modeled in blender properly and it needs to looks visually stunning", and "good decore, speaker with music, lights and fishtank".
+1. **Move it onto stilts over the water, toward the left (west) side of the beach**, with a short boardwalk from the sand to the entrance. Add to the outside: a sign, a "today's menu" board, lanterns and a clear entrance. You own the bar's placement in `generate.ts` (the sushi-bar object only, plus its boardwalk). terrain-v3 is editing the same file, so keep your change to those objects and say so in your report.
+2. **Hours:**
+   - By day it's closed: shutters or a curtain down, and the chef stands outside the entrance.
+   - It opens in the evening; at night the lights and music feel more like a bar.
+   - Use the game's clock and the music director's slots: an evening "dinner" track and a night "bar" track.
+3. **Entering:**
+   - When it's open, E at the entrance moves the camera smoothly, never through a black screen, into first person at a free stool.
+   - Six seats with network claims (you have `sushi:<id>#i`), so friends sit side by side. Stay as long as you like; E leaves.
+   - In first person, hide your own avatar, and look level across the counter at the chef working, with the sea through the window behind him.
+   - That fixes both issues from your shots: your head blocking the view, and the window showing only sky.
+4. **Inside:** sake, paper lanterns, drapes, posters and the fish tank on the side, cozy and warm. Most of it exists already; fill what's missing.
+5. **Staff:** a sushi chef and a server, both our own designs in the spirit of David's references (`staff-chef-ref.jpg`, `staff-server-ref.jpg`), not copies of Dave the Diver's Bancho and Dave.
+   - **The chef:** a Black man, cool and focused, working behind the counter facing the guests (fix the half-turn). He talks rarely.
+   - **The server:** a cheerful diver type, moving along the counter.
 
-1. **The model** (replace `sushi-bar`, only the new world uses it):
-   - a long, open bar on the beach by the wharf, in the wharf's wood and rope;
-   - a long counter with stools along it;
-   - sake bottles along the top beam;
-   - speakers at the corners;
-   - a wide open window behind the bar framing the sea;
-   - round paper lanterns and string lights, red drapes, a big fan;
-   - a neon sign (no real brand names; your own wording or a symbol);
-   - a fish tank;
-   - a menu board.
-
-   Visually stunning, but within budget. Report its footprint and front early (one message), so terrain-v3 can make room on the beach.
-2. **Its lights:** the lanterns and neon glow at night (`NEW_LAMPS` or emissive, cheaply), so it reads festive.
-3. **Sitting:** the stools are seats. Reuse the café's seating (`components/game/study/StudySeats.tsx`, `interiorShared.tsx`). When a player sits, the camera moves to a lower, closer, almost first-person view across the counter toward the window. Reuse any seat-camera code first.
-4. **Chefs:** one or two sushi chef NPCs behind the counter, working (an idle or prep loop). Use the existing NPC or resident system (`components/game/NPC.tsx`) and existing outfits; no real names.
-5. **Music:** soft music from the speakers when you're near or seated (`web/public/assets/audio/music/`, the game's existing audio code), respecting the game's sound settings.
-6. **Placement:** terrain-v3 places the model. You may set it on the beach yourself in `generate.ts` only if terrain-v3 has said it's done; otherwise give the position you want.
+   Names: the chef "Bancha" as David wrote it, and the server's name left for David. Use existing outfits and parts where you can.
+6. **Music:** the evening and night slots point at `bar-evening.mp3` and `bar-night.mp3`, for David's Suno tracks, and fall back to the existing tracks until those exist.
+7. **Shots and report:**
+   - In-game shots into `specs/evidence/sushi-bar/phase-a/`: the bar by day (closed), at evening, at night, the entry transition (2 or 3 frames), and the first-person view at night.
+   - Commit, update Status, then SendMessage "main" and stop.
 
 ## Tools and gotchas
 
