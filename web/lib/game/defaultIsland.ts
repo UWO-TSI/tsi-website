@@ -90,13 +90,14 @@ export const PROP_FOOTPRINT: Record<string, [number, number]> = {
   barrel: [4.85, 4.85], lighthouse: [9, 9], crate: [0.91, 0.3], "market-cart": [3.77, 1.03], "shop-cart": [0.44, 0.28],
   "beach-parasol": [0.1, 0.1], "palm-a": [0.3, 0.3], "palm-b": [0.25, 0.25],
   "wharf-piling": [0.15, 0.15], "rope-post": [0.1, 0.1], "rope-span": [1, 0.03],
+  "palm-tall": [0.3, 0.3], "palm-lean": [0.3, 0.3], "palm-short": [0.3, 0.3],
 };
 /** Prop tops before scale, measured from the GLB bounds: what a jump clears or lands on (lib/game/movement). */
 export const PROP_TOP: Record<string, number> = {
   "bench-wood": 0.51, "rock-a": 0.61, "rock-b": 0.59, "rock-c": 0.52, "fence-country-a": 0.7, "fence-country-b": 0.69,
   ...Object.fromEntries(ROCK_MODELS.map(m => [m, ROCK_SIZE[m].top])),
   barrel: 11.66, lighthouse: 38, crate: 0.52, "market-cart": 2.84, "shop-cart": 0.87, "beach-parasol": 2.33, "palm-a": 3.94, "palm-b": 2.7,
-  "wharf-piling": 0.35, "rope-post": 0.87, "rope-span": 0.68,
+  "wharf-piling": 0.35, "rope-post": 0.87, "rope-span": 0.68, "palm-tall": 5.7, "palm-lean": 4.82, "palm-short": 3.33,
 };
 /**
  * Residents' houses (the `house` kind, specs/world-editor.md decision 10): the chalet in its three colourways, the
