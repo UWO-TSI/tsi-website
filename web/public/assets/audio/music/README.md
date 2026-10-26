@@ -40,6 +40,9 @@ loop-trim locally after export.
 
 - `cafe.mp3` — plays instead of the hourly block while the player is inside
   the cafe (any time of day).
+- `bar.mp3`: plays instead of the hourly block near the sushi bar and on its
+  stools (new world). Until it lands, the bar plays the other fallback track
+  from the one outside, so the song changes as you walk in.
 - `interior.mp3` — plays instead of the hourly block inside any other
   building (HQ, house, museum, Oracle temple).
 - `{block}-{season}.mp3` (e.g. `12-winter.mp3`) — a seasonal variant slot for

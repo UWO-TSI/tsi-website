@@ -168,6 +168,8 @@ export interface FollowScene {
   ground: (x: number, z: number) => number; player: React.RefObject<THREE.Vector3>; occluders: readonly Occluder[];
   /** A weapon is out (the ruins): while mouse-look holds the crosshair, the view looks further ahead so it sits past you. */
   aim?: boolean;
+  /** A seat's own view while you sit there (the sushi bar's stools, components/game/SushiBar.tsx): the camera eases to it. */
+  seat?: { current: { eye: { x: number; y: number; z: number }; look: { x: number; y: number; z: number } } | null };
 }
 /** How far ahead of the focus the camera looks: walking, and aiming with the crosshair (the crosshair clears your head and its ground point lands about 3 ahead; further, you would sink behind the combat HUD). */
 const LOOK_AHEAD = 1.5, AIM_AHEAD = 2.2;
@@ -188,7 +190,8 @@ const CLEARANCE = 0.8;
 export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: number, overview: Overview | null, scene?: FollowScene) {
   const { camera } = useThree();
   useOrbitInput(!scene?.aim);
-  const rig = useMemo(() => ({ ahead: LOOK_AHEAD, cut: 0, chest: new THREE.Vector3(), head: new THREE.Vector3(), last: new THREE.Vector3(NaN, 0, 0), vx: 0, vz: 0 }), []);
+  const rig = useMemo(() => ({ ahead: LOOK_AHEAD, cut: 0, chest: new THREE.Vector3(), head: new THREE.Vector3(), last: new THREE.Vector3(NaN, 0, 0), vx: 0, vz: 0,
+    seat: 0, seatEye: new THREE.Vector3(), seatLook: new THREE.Vector3() }), []);
   useEffect(() => () => { CUTOUT.value.w = 0; CUTOUT_CROWN.value.x = 0; }, []);
   const baseFar = useRef<number | null>(null);
   const blend = useRef({ zoom, overview: overview ? 1 : 0, last: overview });
@@ -233,6 +236,11 @@ export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: num
       camera.position.lerp(far.at, b.overview);
       look.lerp(far.look, b.overview);
     }
+    // A seat's view (the sushi bar's stools): eased in as you sit, out as you get up, from the last one held.
+    const sv = scene?.seat?.current;
+    if (sv) { rig.seatEye.set(sv.eye.x, sv.eye.y, sv.eye.z); rig.seatLook.set(sv.look.x, sv.look.y, sv.look.z); }
+    rig.seat = THREE.MathUtils.damp(rig.seat, sv ? 1 : 0, 4, dt);
+    if (rig.seat > 1e-3) { camera.position.lerp(rig.seatEye, rig.seat); look.lerp(rig.seatLook, rig.seat); }
     camera.lookAt(look);
     camera.updateMatrixWorld();
     // A building, tree or cliff on the line of sight to the player's chest or head eases the cut in; the circle sits where they are drawn.

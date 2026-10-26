@@ -15,8 +15,11 @@ import type { Season } from "./season";
 export const MUSIC_BLOCKS = ["00", "02", "04", "06", "08", "10", "12", "14", "16", "18", "20", "22"] as const;
 export type MusicBlock = (typeof MUSIC_BLOCKS)[number];
 
-/** Interior beds override the outdoor hourly block; cafe gets its own slot. */
-export type MusicOverride = "cafe" | "interior" | null;
+/**
+ * Interior beds override the outdoor hourly block; cafe gets its own slot. The sushi bar's speakers ("bar", near the
+ * bar or on its stools) play its own slot, or until one lands the other of the two tracks, so walking in changes the song.
+ */
+export type MusicOverride = "cafe" | "interior" | "bar" | null;
 
 const MUSIC_DIR = "/assets/audio/music";
 
@@ -59,6 +62,6 @@ export function buildMusicSrcList(block: MusicBlock, opts: { season?: Season | n
   const { season, override } = opts;
   const names = override ? [`${override}.mp3`] : season ? [`${block}-${season}.mp3`, `${block}.mp3`] : [`${block}.mp3`];
   const list = names.filter(name => files.has(name)).map(name => `${MUSIC_DIR}/${name}`);
-  list.push(fallbackTrackFor(block));
+  list.push(override === "bar" ? fallbackTrackFor(DAY_BLOCKS.has(block) ? "20" : "12") : fallbackTrackFor(block));
   return list;
 }

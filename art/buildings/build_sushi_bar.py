@@ -536,6 +536,12 @@ def glow(M):
         glow_uv(k, k.tube([tuple(p) for p in corners], 0.013, G, closed_path=True, n=4), "pink")
     # The roof sign's light box (the fish and the frame are the still model's).
     glow_uv(k, k.rbox((0, 3.92, 3.35 + 0.05), (1.72, 0.46, 0.04), 0.0, G, segs=1), "sign")
+    # Warm light strips (the coordinator, for the night: a homey glow inside): under the bottle shelf's lip, under the
+    # counter top's front edge over the stools, and along the fish case's lid.
+    glow_uv(k, k.rbox((0, SHELF_Y - 0.06, -HD + 0.27), (2 * HW, 0.025, 0.03), 0.0, G, segs=1), "bulb")
+    glow_uv(k, k.rbox(((CX0 + CX1) / 2, TOP_Y - 0.08, 1.74), (CX1 - CX0 - 0.1, 0.02, 0.03), 0.0, G, segs=1), "lantern")
+    for x0, x1 in ((-2.65, 0.5), (0.6, 3.75)):
+        glow_uv(k, k.rbox(((x0 + x1) / 2, TOP_Y + 0.185, 0.9), (x1 - x0 - 0.1, 0.012, 0.04), 0.0, G, segs=1), "bulb")
     # The tank's water: its back and its wall side, lit from within at night.
     x0, x1, z0, z1 = TANK
     water = [k.quad([(x0 + 0.01, 0.9, z0 + 0.02), (x1, 0.9, z0 + 0.02), (x1, 1.6, z0 + 0.02), (x0 + 0.01, 1.6, z0 + 0.02)], G),

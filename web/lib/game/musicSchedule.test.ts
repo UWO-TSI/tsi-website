@@ -61,6 +61,12 @@ describe("musicSchedule", () => {
     ]);
   });
 
+  it("plays the bar's own slot near the sushi bar, else the other track from the one outside", () => {
+    expect(buildMusicSrcList("12", { override: "bar" }, new Set(["bar.mp3"]))[0]).toBe("/assets/audio/music/bar.mp3");
+    expect(buildMusicSrcList("12", { override: "bar" }, new Set())).toEqual([fallbackTrackFor("22")]);
+    expect(buildMusicSrcList("22", { override: "bar" }, new Set())).toEqual([fallbackTrackFor("12")]);
+  });
+
   it("orders candidates: seasonal variant, then the plain block, then the fallback", () => {
     expect(buildMusicSrcList("14", { season: "winter" }, ALL)).toEqual([
       "/assets/audio/music/14-winter.mp3",
