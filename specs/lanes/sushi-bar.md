@@ -62,44 +62,36 @@ The coordinator read "fov" as: see more (wider). terrain-v3 removes the tall sea
 
 ## Next
 
-Round 3 is built (Status). Next: David's review of the phase-a3 shots.
+**Ship-readiness: a review of 2dd046db before production** (2026-10-26). Production now runs the new world (`NEXT_PUBLIC_GAME_WORLD=new`, the member world open; David is testing multiplayer). Main is at 1877dcb5 or later. The review found:
 
-**Phase A round 3 (done): David's review of 6adf023d** (https://claude.ai/artifact/XdBpx1btgh54CCm6dUxGiF, 2026-10-26), verbatim:
-- **model, glide, seated evening:** approved.
-- **entrance (approved):** "corners curl more, "
-- **closed (approved):** "taklking to him gives you fishing quests"
-- **day:** "have lanterns on the corners, and the spine of the roof curl up with fish design on the edges"
-- **night (redo):** "too much fog, maybe because of halloween , i wanna see what its like on natural day, lanters on beach doesnt make sense"
-- **approach (redo):** "those lanterns dont make sense on the beach"
-- **seated, looking left (redo):** "because now its a close up, things need to be well modeled and look really good quality, because its close up"
-- **seated, night (redo):** "have everything be considered for remodeling, especially the food, then refine sushi cooking movements as well, the background islants need to look better than just blobs"
+1. **The merge clashes with main.**
+   - Since you branched, main added gatherSpots: rocks, shell dig spots and bottle spots, kept 7 m from SUSHI. You moved SUSHI and changed the terrain.
+   - Merge origin/main, resolve `generate.ts` so both changes stand, then rerun `scripts/generate-world.ts`. The world data comes from the generator, never from picking a side.
+   - Then run walk.test, sealed.test, cells.test (`--testTimeout=30000`) and `app/api/collections/route.test.ts`, with and without the switch.
+   - Check that the gather nodes, which now sit by the bar's new spot, are still on dry sand and reachable.
+2. **Two players who press E together get the same stool** (`sushiBar.ts:191`: first free in a fixed SEAT_ORDER, and the other's claim arrives late). After sitting, if a remote holds the same key, the later claim (the higher sid) moves to the next free stool. Or start the order at an offset hashed from the uid. Test it.
+3. **A stool claim leaks** after a wheel sit or sleep: `PlayerAvatar.tsx:307` swaps the stool for a ground sit in one handler, so `sender.ts:251` keeps sending `sushi:...#i`. Clear `sitKey` on `tsi:sit-here` and `tsi:stand` in sender.ts. Benches share the path, so check them too.
+4. **Loads when nobody is at the bar:**
+   - mount the islands (`SushiBar.tsx:93`) in their own Suspense, only once seated;
+   - beyond about 40 m, skip the staff's per-frame work and their rendering (`:152-153`).
+5. **Per-frame allocations for every new-world player:**
+   - `DefaultIslandWorld.tsx:503` calls `barSeat` every frame; skip it when the player is more than 8 from the bar;
+   - `stoolAt` and `barPoint` allocate arrays and closures;
+   - `SushiBar.tsx:130-138` makes closures and sets `instanceMatrix.needsUpdate` every frame.
 
-**The coordinator's reading:**
-1. **The roof:**
-   - the corners curl up more;
-   - a lantern hangs at each roof corner;
-   - the ridge's ends curl up and carry fish ornaments, in the spirit of shachihoko (golden carp on castle roofs) in our style.
-2. **The beach lanterns:** remove the lantern post and the six hand lanterns on the sand. The bar's own lights and the boardwalk's lanterns are enough.
-3. **Night shots without the Halloween layer:** find where the Halloween layer darkens or fogs the night (`components/game/Halloween.tsx`, the season flag), and take the night shots with it off (a shoot option is fine), so David sees the bar on a natural night. Don't change the Halloween layer for players. Say what the Halloween layer adds to fog or light.
-4. **Close-up quality,** for everything seen from the stool:
-   - **The food:** nigiri with distinct fish (tuna, salmon, shrimp, tamago), maki, a sushi geta and a ginger mound, soy dish and chopsticks. Well modelled and appetising, because they're close up.
-   - **The counter:** its top, the fish case and its fish, the cutting board, knives and bowls.
-   - **The wall behind:** the sake bottles, the menu tags, the lucky cat.
-   - Keep each piece small in triangles, and spend the triangles where the eye lands.
-5. **Cooking movements:** Bancha draws the knife through the fish in a proper slicing motion (a long pull, not a chop), shapes the rice, lays the fish on top and sets it on the geta. The server picks up the plate and sets it at a seat. Smooth and readable. Use our animation or rig if the knife needs its own grip.
-6. **The islands:** better than blobs. Layered limestone stacks with ledges, trees and palms on top, a small island with a hut or a torii, maybe a far lighthouse. Readable silhouettes on the horizon.
-7. **Later, not now:** talking to the chef gives fishing quests (phase B, after launch). Leave a TODO in the spec, not code.
-8. **The server's name** is still pending from David.
+   Write the loops without per-frame allocation, and set `needsUpdate` only when the served set changes.
+6. **Seated guests look sunk about 8 cm to others:** `drive.ts:96` applies WATER_DROP over water, but the lift is measured from ground height. Add WATER_DROP to the lift for over-water seats. Show the sit note (♪) only when the avatar isn't hidden (`PlayerAvatar.tsx:297`).
+7. **The overview zoom-out does nothing while seated** (`IslandAtmosphere.tsx:265` overwrites the overview blend). Let the overview win.
 
-Shots into `specs/evidence/sushi-bar/phase-a3/`:
-- the bar by day;
-- the bar at night, with Halloween off;
-- the approach at night;
-- the roof's corners close up;
-- the seated view at evening and at night, centre, left and right;
-- a close shot of the food on the geta.
+Gates:
+- the full vitest suite with and without the switch;
+- tsc and eslint;
+- budget.test;
+- a quick A/B perf check against main.
 
-Gates as before, and an A/B perf check against 57e7f47c if you change triangle counts a lot. Commit, update Status, SendMessage "main", stop.
+Take a few shots: the bar at night; two players seated side by side, if you can simulate it with a bot or a second client.
+
+Commit, update Status, SendMessage "main" with the commit and gates, and stop. Don't push. The coordinator merges and deploys.
 
 ## Tools and gotchas
 
