@@ -60,6 +60,10 @@ export const CRATE_URL = "/assets/game/wharf/crate.glb";
 export const SCENERY_URLS: Readonly<Record<string, string>> = {
   barrel: "/assets/acnh/furniture/barrel.glb", lighthouse: "/assets/acnh/furniture/lighthouse.glb", crate: CRATE_URL,
   "shop-cart": SHOP_CART_URL, "beach-parasol": BEACH_PARASOL_URL, "palm-a": "/assets/acnh/plants/tree-palm-a.glb", "palm-b": "/assets/acnh/plants/tree-palm-b.glb",
+  // The new world's wharf kit (art/wharf/build_wharf_kit.py, game units at scale 1; the deck's top at y 0, the sea 1.08 under):
+  // a `deck` square and its "steps" (4 x 4, local +z inland), a pile to stand just outside the deck's edge, a ladder off
+  // the edge (the edge at z 0, the water toward -z), and rope fencing (a post, and a rope from x -1 to +1 between two).
+  ...Object.fromEntries(["deck-tile", "deck-steps", "wharf-piling", "wharf-ladder", "rope-post", "rope-span"].map(m => [m, `/assets/game/wharf/${m}.glb`])),
 };
 export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? `/assets/acnh/props/${model}.glb`;
 

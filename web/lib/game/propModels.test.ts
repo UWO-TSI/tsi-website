@@ -133,4 +133,20 @@ describe("remodelled props (propModels.ts)", () => {
       expect(b.max[1], url).toBeLessThan(0.87);
     }
   });
+  it("ships the new world's scenery, ours with their measured tops and inside their solid footprints (terrain v3)", () => {
+    for (const [model, url] of Object.entries(Props.SCENERY_URLS)) {
+      expect(existsSync(fileOf(url)), url).toBe(true);
+      if (!url.startsWith("/assets/game/") || !["deck", "wharf-", "rope-"].some(p => model.startsWith(p))) continue;
+      const b = bounds(url), top = PROP_TOP[model], foot = PROP_FOOTPRINT[model];
+      if (top !== undefined) expect(b.max[1], model).toBeCloseTo(top, 2);
+      if (foot) for (const [i, half] of [[0, foot[0]], [2, foot[1]]]) expect(Math.max(-b.min[i], b.max[i]), model).toBeLessThanOrEqual(half + 0.01);
+    }
+  });
+  it("lays the wharf kit in the deck's frame: a 4 u square at the boards' top, steps up 1, a ladder and a pile down into the sea", () => {
+    const tile = bounds(Props.SCENERY_URLS["deck-tile"]), steps = bounds(Props.SCENERY_URLS["deck-steps"]);
+    for (const b of [tile, steps]) for (const i of [0, 2]) expect(Math.max(-b.min[i], b.max[i])).toBeLessThanOrEqual(2.02);
+    expect(tile.max[1]).toBeCloseTo(0.01, 3);
+    expect(steps.max[1]).toBeCloseTo(1, 2);
+    for (const m of ["wharf-ladder", "wharf-piling"]) expect(bounds(Props.SCENERY_URLS[m]).min[1], m).toBeLessThan(-1.9);
+  });
 });
