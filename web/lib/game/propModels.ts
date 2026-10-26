@@ -129,6 +129,11 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // down to y -3.4. a the red boathouse (boat door open at the back), b the stilt house (a balcony on piles off +x), c
   // the net loft (two storeys), d the shack (a porch to z 2.45 under a roof falling to the back).
   ...Object.fromEntries(["a", "b", "c", "d"].map(m => [`ship-house-${m}`, `/assets/game/wharf/ship-house-${m}.glb`])),
+  // game/wharf-art2: more for the beach (art/props/build_beach_things.py), the origin on the sand: beach balls 0.56 across
+  // (scenery: nothing kicks or throws them yet), towels laid along z (0.9 by 1.8), a lounger along z (backrest at -z, the
+  // sitter looks to +z), a sandcastle with its bucket and spade, a cool box, a volleyball net along x (posts at x +-2.6).
+  ...Object.fromEntries(["beach-ball-a", "beach-ball-b", "beach-ball-c", "beach-towel-a", "beach-towel-b", "beach-lounger", "sandcastle", "beach-cooler",
+    "volleyball-net"].map(m => [m, `${P}${m}.glb`])),
 };
 export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? `/assets/acnh/props/${model}.glb`;
 
