@@ -238,15 +238,6 @@ export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: num
     const [ox, oy, oz] = orbitOffset(v.yaw, v.pitch, ORBIT_DISTANCE * b.zoom * v.zoom);
     camera.position.set(look.x + ox, look.y + oy, look.z + oz);
     if (scene) camera.position.y = Math.max(camera.position.y, scene.ground(camera.position.x, camera.position.z) + CLEARANCE);
-    const o = b.last;
-    if (b.overview > 0 && o) {
-      const [tx, tz] = turnOffset(o.offset[0], o.offset[2], v.yaw);
-      far.at.set(tx + o.focus[0], o.offset[1], tz + o.focus[2]);
-      far.look.set(...o.focus);
-      far.look.y -= far.at.distanceToSquared(far.look) * WORLD_BEND;
-      camera.position.lerp(far.at, b.overview);
-      look.lerp(far.look, b.overview);
-    }
     // A seat's view (the sushi bar's stools; David: "a camera angle switch transition", never a black screen): a glide
     // over SEAT_GLIDE s, slow out and slow in, as you sit, and back as you get up, from the last one held.
     // Gliding in it starts from the view as it was (sitting moved you to the seat at once); gliding out it ends on the
@@ -271,6 +262,16 @@ export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: num
       const y0 = camera.position.y;
       camera.position.lerp(rig.seatEye, glide); look.lerp(rig.seatLook, glide);
       camera.position.y = THREE.MathUtils.lerp(y0, rig.seatEye.y, THREE.MathUtils.smootherstep(Math.min(1, rig.seat * SEAT_DROP), 0, 1));
+    }
+    // The overview after the seat's view, so zooming out works seated too.
+    const o = b.last;
+    if (b.overview > 0 && o) {
+      const [tx, tz] = turnOffset(o.offset[0], o.offset[2], v.yaw);
+      far.at.set(tx + o.focus[0], o.offset[1], tz + o.focus[2]);
+      far.look.set(...o.focus);
+      far.look.y -= far.at.distanceToSquared(far.look) * WORLD_BEND;
+      camera.position.lerp(far.at, b.overview);
+      look.lerp(far.look, b.overview);
     }
     camera.lookAt(look);
     rig.lastCam.copy(camera.position); rig.lastLook.copy(look);

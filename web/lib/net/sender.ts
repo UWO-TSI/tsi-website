@@ -167,6 +167,8 @@ export function createSender(source: NetSource, deps: Partial<SenderDeps> = {}):
       sitKey = typeof detail?.key === "string" && isSeatKey(detail.key) ? detail.key : null;
       snapUntil = d.clock() + SNAP_WINDOW_MS;
     }),
+    // A sit on the ground (the emote wheel) or getting up for a dance leaves the seat named last: its claim goes with it.
+    ...["tsi:sit-here", "tsi:stand"].map(type => d.listen(type, () => { sitKey = null; })),
     ...["keydown", "pointerdown", "pointermove", "wheel", "touchstart"].map(type => d.listen(type, () => { lastInput = d.clock(); })),
   ];
   const stopPoll = d.every(HIDDEN_POLL_MS, () => { if (source.status().kind === "joined") slow(d.clock(), true); });

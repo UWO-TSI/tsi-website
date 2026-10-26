@@ -146,7 +146,8 @@ export function prepAt(b: number, t: number): number {
 /** Whether a served geta is on the shelf before stool i at chef loop time t (set down mid-reach, eaten EAT_S later). */
 export function servedAt(i: number, t: number): boolean {
   const r = mod(t - SERVER.start, SERVER.loop);
-  return SERVER.serves.some(s => s.stool === i && mod(r - s.at - SERVE_S * HANDOFF, SERVER.loop) < EAT_S);
+  for (const s of SERVER.serves) if (s.stool === i && mod(r - s.at - SERVE_S * HANDOFF, SERVER.loop) < EAT_S) return true;
+  return false;
 }
 /** While it's closed the chef stands on the landing beside the entrance, looking up the beach (his quests come later). */
 export const CHEF_OUTSIDE = { at: [-1.75, 5.05] as const, yaw: 0 };
@@ -176,27 +177,55 @@ export function barPoint(bar: Bar, lx: number, lz: number): [number, number] {
 /** A stool's claim key (protocol isSeatKey): `sushi:<map id>#<stool>`. */
 export const stoolKey = (bar: Bar, i: number) => `sushi:${bar.id}#${i}`;
 
-/** A stool as a `tsi:sit` detail: facing the window, its claim key, first person (your own avatar hidden), getting up at the entrance. */
-export interface BarSeat { x: number; z: number; yaw: number; key: string; top: number; hide: true; exit: { x: number; z: number; yaw: number } }
+/**
+ * A stool as a `tsi:sit` detail: facing the window, its claim key, first person (your own avatar hidden), getting up at
+ * the entrance. `clash`: another's claim outranks yours on the stool you're on, so it's sent at once (another stool
+ * moves you there, your own gets you up).
+ */
+export interface BarSeat { x: number; z: number; yaw: number; key: string; top: number; hide: true; exit: { x: number; z: number; yaw: number }; clash?: true }
+
+/** How far from the bar's middle its entrance and stools are within: beyond it barSeat answers at once. */
+export const BAR_REACH = 8;
+/** (x, z) in the bar's frame (barPoint's inverse), in one object reused (called every frame). */
+const local = { x: 0, z: 0 };
+function toBar(bar: Bar, x: number, z: number) {
+  const c = Math.cos(bar.yaw ?? 0), s = Math.sin(bar.yaw ?? 0), dx = x - bar.x, dz = z - bar.z;
+  local.x = dx * c - dz * s; local.z = dx * s + dz * c;
+  return local;
+}
+/** The next free stool in SEAT_ORDER (friends side by side), or -1. */
+function freeStool(bar: Bar, taken?: (key: string) => boolean) {
+  for (const j of SEAT_ORDER) if (!taken?.(stoolKey(bar, j))) return j;
+  return -1;
+}
 
 /**
  * What E sits you on at the bar: the stool you're on (E again gets you up), or, at the entrance while it's open, the
- * next free stool in SEAT_ORDER (friends side by side); null when none.
+ * next free stool; null when none. Two who press E together claim the same stool: whoever `outranked` says yields
+ * (active.ts remoteSeatOutranks: the uid that sorts later) and is moved to the next free one, or gets up if none is.
  */
-export function barSeat(bar: Bar, x: number, z: number, open: boolean, taken?: (key: string) => boolean): BarSeat | null {
-  let i = stoolAt(bar, x, z);
-  if (i < 0) {
-    const [ex, ez] = barPoint(bar, ...ENTRY);
-    if (!open || Math.hypot(ex - x, ez - z) > ENTRY_RANGE) return null;
-    i = SEAT_ORDER.find(j => !taken?.(stoolKey(bar, j))) ?? -1;
+export function barSeat(bar: Bar, x: number, z: number, open: boolean, taken?: (key: string) => boolean, outranked?: (key: string) => boolean): BarSeat | null {
+  if (Math.hypot(x - bar.x, z - bar.z) > BAR_REACH) return null;
+  let i = stoolAt(bar, x, z), clash = false;
+  if (i >= 0 && outranked?.(stoolKey(bar, i))) { clash = true; const j = freeStool(bar, taken); if (j >= 0) i = j; }
+  else if (i < 0) {
+    const p = toBar(bar, x, z);
+    if (!open || Math.hypot(p.x - ENTRY[0], p.z - ENTRY[1]) > ENTRY_RANGE) return null;
+    i = freeStool(bar, taken);
     if (i < 0) return null;
   }
   const [sx, sz] = barPoint(bar, STOOLS[i], STOOL_Z), [ox, oz] = barPoint(bar, ...EXIT), yaw = bar.yaw ?? 0;
-  return { x: sx, z: sz, yaw: yaw + Math.PI, key: stoolKey(bar, i), top: STOOL_TOP, hide: true, exit: { x: ox, z: oz, yaw } };
+  const seat: BarSeat = { x: sx, z: sz, yaw: yaw + Math.PI, key: stoolKey(bar, i), top: STOOL_TOP, hide: true, exit: { x: ox, z: oz, yaw } };
+  if (clash) seat.clash = true;
+  return seat;
 }
 
 /** The stool (x, z) is on (a seated player is set exactly on it), or -1. */
-export const stoolAt = (bar: Bar, x: number, z: number) => STOOLS.findIndex(lx => { const [sx, sz] = barPoint(bar, lx, STOOL_Z); return Math.hypot(sx - x, sz - z) < 0.05; });
+export function stoolAt(bar: Bar, x: number, z: number): number {
+  const p = toBar(bar, x, z);
+  for (let i = 0; i < STOOLS.length; i++) if (Math.hypot(p.x - STOOLS[i], p.z - STOOL_Z) < 0.05) return i;
+  return -1;
+}
 
 /**
  * The seated view, first person (David: "first person at the bar ... seeking the food infront of you"; round 2: "see the

@@ -287,13 +287,17 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     const onSit = (e: Event) => {
       const { x, z, clip, seatY, yaw = Math.PI, ground, drive, hide, exit } = (e as CustomEvent<{ x: number; z: number; clip?: ClipName; seatY?: number; yaw?: number; ground?: boolean; drive?: SeatDrive; hide?: boolean; exit?: SeatExit }>).detail;
       const cur = seat.current, same = !!cur && cur.x === x && cur.z === z;
-      const at = (c: ClipName): Seat => ({ x, z, clip: c, yaw, lift: seatY === undefined ? 0 : seatLift(c, seatY - groundHeight(x, z), CHARACTER_SCALE), ground, drive, hide, exit });
+      // Over water the avatar is drawn at the water's line, WATER_DROP under the ground there (here and on others' screens, drive.ts floorUnder): the lift is from it.
+      const floor = groundHeight(x, z) - (world.wet(x, z) ? WATER_DROP : 0);
+      const at = (c: ClipName): Seat => ({ x, z, clip: c, yaw, lift: seatY === undefined ? 0 : seatLift(c, seatY - floor, CHARACTER_SCALE), ground, drive, hide, exit });
       if (same && clip) { seat.current = at(clip); return; }
       if (same) { leaveSeat(); return; }
       seat.current = at(clip ?? "Sit");
       motion.current.pose = seat.current.clip;
       target.current = null;
-      if (!hide) puffRing(particles.pool, groundAt(groundSurface, world, x, z), x, groundHeight(x, z), z);
+      // Hidden (first person on a stool): no puff and no note over an avatar nobody here sees.
+      if (hide) return;
+      puffRing(particles.pool, groundAt(groundSurface, world, x, z), x, groundHeight(x, z), z);
       setSitNote(true);
       if (sitNoteTimer.current) window.clearTimeout(sitNoteTimer.current);
       sitNoteTimer.current = window.setTimeout(() => setSitNote(false), 1700);

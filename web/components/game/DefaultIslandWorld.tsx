@@ -209,7 +209,7 @@ import NetHud from "./net/NetHud";
 import PhotoMode from "./photo/PhotoMode";
 import PhotoCamera from "./photo/PhotoCamera";
 import { photoRig, usePhoto } from "@/lib/game/photoMode";
-import { remoteSeatTaken } from "./net/active";
+import { remoteSeatOutranks, remoteSeatTaken } from "./net/active";
 import LabelLayer from "./LabelLayer";
 import LandmarkTag from "./LandmarkTag";
 import { worldLabels } from "@/lib/game/labelLayout";
@@ -500,8 +500,10 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       : within(sweeper, SWEEPER_TALK) ? ["owner", sweeper]
       : DROPS.combat && within(layout.missions?.at ?? null, 1.5) ? ["missions", layout.missions!.at] : [null, null];
     let next: Near = door[0], nextD = gap(door[1]);
-    const b = benchSeat(px, pz, 1.3, v, layout.benches, remoteSeatTaken), stool = !b && bar ? barSeat(bar, px, pz, barOpen(phase), remoteSeatTaken) : null;
+    const b = benchSeat(px, pz, 1.3, v, layout.benches, remoteSeatTaken), stool = !b && bar ? barSeat(bar, px, pz, barOpen(phase), remoteSeatTaken, remoteSeatOutranks) : null;
     benchSpot.current = b ? { ...b, seatY: island.ground(b.x, b.z) + BENCH_SEAT_TOP } : stool && { ...stool, seatY: barY + stool.top };
+    // Another's claim on your stool outranks yours (you both pressed E together): on to the next free one, or up.
+    if (stool?.clash) window.dispatchEvent(new CustomEvent("tsi:sit", { detail: benchSpot.current }));
     // An event spot and a bench both in reach: the nearer one takes E.
     const ev = spots.find(s => within([s.x, s.z], s.range)), seat = benchSpot.current;
     const nearer = (p: { x: number; z: number }) => Math.hypot(px - p.x, pz - p.z);

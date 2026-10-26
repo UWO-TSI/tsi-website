@@ -41,11 +41,13 @@ const HANDS = [0.5, 0.24] as const;
 const GETAS = STOOLS.length + 1;
 /** The islands out to sea show once the glide into a stool is nearly done (the camera this near its eye): they are raised for the stool's view. */
 const ISLES_NEAR = 1.5;
+/** The staff are there (drawn, at work) only while you're this near the bar; a little further before they go. */
+const STAFF_IN = 40, STAFF_OUT = 44;
 
 /** Module scope (the react compiler forbids writing through hook values): the glow's materials and the pools' gain. */
 function shine(mats: readonly THREE.MeshStandardMaterial[], pools: THREE.Object3D | null, level: number) {
   for (const m of mats) m.emissiveIntensity = GLOW * level;
-  pools?.traverse(o => { const u = ((o as THREE.Mesh).material as THREE.ShaderMaterial | undefined)?.uniforms?.uGain; if (u) u.value = level; });
+  if (pools) for (const o of pools.children) { const u = ((o as THREE.Mesh).material as THREE.ShaderMaterial | undefined)?.uniforms?.uGain; if (u) u.value = level; }
 }
 const show = (o: THREE.Object3D, on: boolean) => { o.visible = on; };
 /** A board's geta (the hours model's prep-geta-<board>) and its nigiri (prep-<board>): the first `n` pieces through its meshes' draw range; -1, the geta gone. */
@@ -54,16 +56,23 @@ function setOut(prep: THREE.Object3D | undefined, geta: THREE.Object3D | undefin
   if (geta) geta.visible = n >= 0;
 }
 const at = new THREE.Matrix4(), hands = new THREE.Vector3(), spot = new THREE.Vector3(), turn = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), UP = new THREE.Vector3(0, 1, 0);
-/** The served geta on the shelf before each stool it's set at now, and the carried one where the server's hands are (`carry`, null: none). */
-function setGetas(meshes: readonly THREE.InstancedMesh[], open: boolean, t: number, carry: THREE.Object3D) {
-  let n = 0;
-  const put = (x: number, y: number, z: number, yaw: number) => {
-    at.compose(spot.set(x, y, z), turn.setFromAxisAngle(UP, yaw), one);
-    for (const m of meshes) m.setMatrixAt(n, at);
-    n++;
-  };
-  if (open) STOOLS.forEach((_, i) => { if (servedAt(i, t)) put(...SERVED_AT[i], 0); });
-  if (open && carry.visible) put(carry.position.x, carry.position.y, carry.position.z, carry.rotation.y);
+function putGeta(meshes: readonly THREE.InstancedMesh[], n: number, x: number, y: number, z: number, yaw: number) {
+  at.compose(spot.set(x, y, z), turn.setFromAxisAngle(UP, yaw), one);
+  for (const m of meshes) m.setMatrixAt(n, at);
+  return n + 1;
+}
+/**
+ * The served geta on the shelf before each stool it's set at now, and the carried one where the server's hands are
+ * (`carry`, unseen: none). Written only when the served set changes or while one is carried (`last`: what was written).
+ */
+function setGetas(meshes: readonly THREE.InstancedMesh[], open: boolean, t: number, carry: THREE.Object3D, last: { served: number; carried: boolean }) {
+  let served = 0, n = 0;
+  if (open) for (let i = 0; i < STOOLS.length; i++) if (servedAt(i, t)) served |= 1 << i;
+  const carried = open && carry.visible;
+  if (served === last.served && !carried && !last.carried) return;
+  last.served = served; last.carried = carried;
+  for (let i = 0; i < STOOLS.length; i++) if (served & (1 << i)) { const p = SERVED_AT[i]; n = putGeta(meshes, n, p[0], p[1], p[2], 0); }
+  if (carried) n = putGeta(meshes, n, carry.position.x, carry.position.y, carry.position.z, carry.rotation.y);
   for (const m of meshes) { m.count = n; m.instanceMatrix.needsUpdate = true; }
 }
 /** The carried geta's place: taken up off a board's geta mid-reach, in the hands, slid onto the shelf before a stool mid-reach. */
@@ -90,7 +99,7 @@ export default function SushiBar({ bar, y, player, phase, viewRef, onNear }: {
   onNear: (near: boolean) => void;
 }) {
   const open = barOpen(phase), level = phase === "night" ? 1 : EVENING;
-  const glowGltf = useGLTF(SUSHI_BAR_GLOW_URL), hoursGltf = useGLTF(SUSHI_BAR_HOURS_URL), islesGltf = useGLTF(SUSHI_BAR_ISLES_URL), getaGltf = useGLTF(SUSHI_BAR_GETA_URL);
+  const glowGltf = useGLTF(SUSHI_BAR_GLOW_URL), hoursGltf = useGLTF(SUSHI_BAR_HOURS_URL), getaGltf = useGLTF(SUSHI_BAR_GETA_URL);
   const glow = useMemo(() => {
     const model = prepareModel(glowGltf.scene, SUSHI_BAR_GLOW_URL, 0), mats = new Set<THREE.MeshStandardMaterial>();
     model.traverse(o => { const m = (o as THREE.Mesh).material; if (m instanceof THREE.MeshStandardMaterial && m.emissiveMap) mats.add(m); });
@@ -114,44 +123,64 @@ export default function SushiBar({ bar, y, player, phase, viewRef, onNear }: {
     });
     return { model, group, meshes, carry: new THREE.Object3D() };
   }, [getaGltf.scene]);
-  const isles = useMemo(() => { const model = prepareModel(islesGltf.scene, SUSHI_BAR_ISLES_URL); model.visible = false; return model; }, [islesGltf.scene]);
   useEffect(() => () => disposeModelMaterials(glow.model), [glow]);
   useEffect(() => () => disposeModelMaterials(hours.model), [hours]);
-  useEffect(() => () => disposeModelMaterials(isles), [isles]);
   useEffect(() => () => { getas.meshes.forEach(m => m.geometry.dispose()); disposeModelMaterials(getas.model); }, [getas]);
   const pools = useRef<THREE.Group>(null);
-  const s = useRef({ on: 0, open: open ? 1 : 0, near: false, seat: { eye: { x: 0, y: 0, z: 0 }, look: { x: 0, y: 0, z: 0 } } as BarView });
+  const [seated, setSeated] = useState(false), [staffOn, setStaffOn] = useState(false);
+  const s = useRef({
+    on: 0, open: open ? 1 : 0, near: false, staff: false, stool: -1, prep: [NaN, NaN], getas: { served: -1, carried: false },
+    seat: { eye: { x: 0, y: 0, z: 0 }, look: { x: 0, y: 0, z: 0 } } as BarView,
+  });
   useEffect(() => () => { viewRef.current = null; }, [viewRef]);
-  useFrame(({ camera }, raw) => {
+  useFrame((_, raw) => {
     const dt = Math.min(raw, 0.1), st = s.current, t = worldTime(), p = player.current, now = worldNow() / 1000;
     st.on = THREE.MathUtils.damp(st.on, open ? level : 0, RATE, dt);
     st.open = THREE.MathUtils.damp(st.open, open ? 1 : 0, ROLL, dt);
     // A flame's slow breath (David: "lights should breath like fire"), two slow waves so it never reads as a pulse.
     shine(glow.mats, pools.current, st.on * (0.88 + 0.07 * Math.sin(t * 1.7) + 0.05 * Math.sin(t * 4.3 + 1.1)));
     hang(hours.shutters, hours.noren, st.open);
-    hours.prep.forEach((p, b) => setOut(p, hours.getas[b], open ? prepAt(b, now) : 0));
-    setGetas(getas.meshes, open, now, getas.carry);
+    for (let b = 0; b < hours.prep.length; b++) {
+      const n = open ? prepAt(b, now) : 0;
+      if (n !== st.prep[b]) { st.prep[b] = n; setOut(hours.prep[b], hours.getas[b], n); }
+    }
+    setGetas(getas.meshes, open, now, getas.carry, st.getas);
     const d = Math.hypot(p.x - bar.x, p.z - bar.z), near = open && (st.near ? d < BAR_MUSIC_OUT : d < BAR_MUSIC_IN);
     if (near !== st.near) { st.near = near; onNear(near); }
-    const i = isSeatedPose(localAvatar()?.motion.current?.pose) ? stoolAt(bar, p.x, p.z) : -1;
-    if (i < 0) { viewRef.current = null; show(isles, false); return; }
-    const { eye, look } = seatView(STOOLS[i]), [ex, ez] = barPoint(bar, eye[0], eye[2]), [lx, lz] = barPoint(bar, look[0], look[2]);
-    Object.assign(st.seat.eye, { x: ex, y: y + eye[1], z: ez });
-    Object.assign(st.seat.look, { x: lx, y: y + look[1], z: lz });
-    viewRef.current = st.seat;
-    const c = camera.position, e = st.seat.eye;
-    show(isles, Math.hypot(c.x - e.x, c.y - e.y, c.z - e.z) < ISLES_NEAR);
+    const staff = d < (st.staff ? STAFF_OUT : STAFF_IN);
+    if (staff !== st.staff) { st.staff = staff; setStaffOn(staff); }
+    const i = d < STAFF_IN && isSeatedPose(localAvatar()?.motion.current?.pose) ? stoolAt(bar, p.x, p.z) : -1;
+    if ((i >= 0) !== (st.stool >= 0)) setSeated(i >= 0);
+    if (i !== st.stool && i >= 0) {
+      const { eye, look } = seatView(STOOLS[i]), [ex, ez] = barPoint(bar, eye[0], eye[2]), [lx, lz] = barPoint(bar, look[0], look[2]);
+      Object.assign(st.seat.eye, { x: ex, y: y + eye[1], z: ez });
+      Object.assign(st.seat.look, { x: lx, y: y + look[1], z: lz });
+    }
+    st.stool = i;
+    viewRef.current = i < 0 ? null : st.seat;
   });
   useEffect(() => () => onNear(false), [onNear]);
   return <group position={[bar.x, y, bar.z]} rotation={[0, bar.yaw ?? 0, 0]}>
     <primitive object={glow.model} />
     <primitive object={hours.model} />
-    <primitive object={isles} />
+    {seated && <Suspense fallback={null}><Isles viewRef={viewRef} /></Suspense>}
     <group ref={pools}><LampPools pools={BAR_POOLS} gain={0} /></group>
     <primitive object={getas.group} />
-    <Staff look={CHEF_LOOK} stations={CHEF_STATIONS} outside={open ? null : CHEF_OUTSIDE} />
-    {open && <Staff look={SERVER_LOOK} stations={SERVER.stations} offset={-SERVER.start} carry={getas.carry} />}
+    {staffOn && <Staff look={CHEF_LOOK} stations={CHEF_STATIONS} outside={open ? null : CHEF_OUTSIDE} />}
+    {staffOn && open && <Staff look={SERVER_LOOK} stations={SERVER.stations} offset={-SERVER.start} carry={getas.carry} />}
   </group>;
+}
+
+/** The islands out to sea, for the seated view alone (loaded the first time you sit): shown once the glide in is nearly done. */
+function Isles({ viewRef }: { viewRef: { current: BarView | null } }) {
+  const gltf = useGLTF(SUSHI_BAR_ISLES_URL);
+  const model = useMemo(() => { const m = prepareModel(gltf.scene, SUSHI_BAR_ISLES_URL); m.visible = false; return m; }, [gltf.scene]);
+  useEffect(() => () => disposeModelMaterials(model), [model]);
+  useFrame(({ camera }) => {
+    const c = camera.position, e = viewRef.current?.eye;
+    show(model, !!e && Math.hypot(c.x - e.x, c.y - e.y, c.z - e.z) < ISLES_NEAR);
+  });
+  return <primitive object={model} />;
 }
 
 /**
@@ -169,6 +198,8 @@ function Staff({ look: raw, stations, offset = 0, outside = null, carry }: {
   const group = useRef<THREE.Group>(null);
   const [knife, setKnife] = useState(false);
   const r = useRef<{ pose: OwnerPose; station: number; since: number }>({ pose: { x: 0, z: 0, yaw: 0, clip: "Idle", moving: false, station: 0 }, station: -1, since: 0 });
+  // Gone (far off, or closing): nothing left in their hands.
+  useEffect(() => () => { if (carry) carry.visible = false; }, [carry]);
   useFrame((_, raw) => {
     const o = r.current, m = motion.current, dt = Math.min(raw, 0.1), now = worldNow() / 1000;
     if (outside) {

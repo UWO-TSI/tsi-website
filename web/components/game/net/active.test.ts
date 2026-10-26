@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { AREAS, type RosterEntry } from "@/lib/net/protocol";
+import { chatStore } from "@/lib/net/chat";
 import type { NetSource, NetStatus, RemoteChange, RemoteEntry, RemotePlayer } from "@/lib/net/types";
-import { activeNet, areaCount, liveRemotes, othersIn, remoteNear, remoteSeatTaken, remoteUids, setActiveNet } from "./active";
+import { activeNet, areaCount, liveRemotes, othersIn, remoteNear, remoteSeatOutranks, remoteSeatTaken, remoteUids, setActiveNet } from "./active";
 
 /** A test double for a NetSource: a roster, a status and remotes in view, changed by hand. */
 function source(roster: RosterEntry[], players: Partial<RemotePlayer>[] = [], status: NetStatus = { kind: "joined", shard: 1 }) {
@@ -60,6 +61,17 @@ describe("who else is here (spec §5.8: the headcount is room state, every clien
     expect(remoteSeatTaken("bench:bench-1#1")).toBe(false);
     setActiveNet(null, null);
     expect(remoteSeatTaken("bench:bench-1#0")).toBe(false);
+  });
+
+  it("of two holding one seat, the uid that sorts first keeps it; nobody outranks you before the roster names you", () => {
+    setActiveNet(source([], [{ uid: "b", seat: "sushi:sushi-bar#2" }]), "village");
+    expect(remoteSeatOutranks("sushi:sushi-bar#2")).toBe(false);
+    chatStore().setSelf("c");
+    expect(remoteSeatOutranks("sushi:sushi-bar#2")).toBe(true);
+    expect(remoteSeatOutranks("sushi:sushi-bar#3")).toBe(false);
+    chatStore().setSelf("a");
+    expect(remoteSeatOutranks("sushi:sushi-bar#2")).toBe(false);
+    chatStore().setSelf(null);
   });
 
   it("forgets the frame's remote positions when multiplayer goes off", () => {

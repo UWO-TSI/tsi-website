@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CHEF_LOOP, CHEF_STATIONS, ENTRY, ENTRY_RANGE, PIECES, SERVER, STOOLS, STOOL_TOP, STOOL_Z, barOpen, barPoint, barSeat, prepAt, seatView, servedAt, stoolAt, stoolKey, type Bar } from "./sushiBar";
+import { BAR_REACH, CHEF_LOOP, CHEF_STATIONS, ENTRY, ENTRY_RANGE, PIECES, SERVER, STOOLS, STOOL_TOP, STOOL_Z, barOpen, barPoint, barSeat, prepAt, seatView, servedAt, stoolAt, stoolKey, type Bar } from "./sushiBar";
 import { ownerAt } from "./cafe";
 import { isSeatKey } from "@/lib/net/protocol";
 
@@ -38,6 +38,20 @@ describe("sushi bar", () => {
     expect(barSeat(bar, ex, ez, true, k => held.has(k))).toBeNull();
     expect(barSeat(bar, ex, ez, false)).toBeNull();
     expect(barSeat(bar, ex + ENTRY_RANGE + 0.5, ez, true)).toBeNull();
+  });
+
+  it("of two who claimed one stool together, moves the outranked one to the next free stool, or gets them up when none is", () => {
+    const [sx, sz] = barPoint(bar, STOOLS[2], STOOL_Z), held = new Set([stoolKey(bar, 2)]);
+    const them = (k: string) => k === stoolKey(bar, 2);
+    expect(barSeat(bar, sx, sz, true, k => held.has(k), them)).toMatchObject({ key: stoolKey(bar, 3), clash: true });
+    // Every other stool taken: the same stool back, which gets you up.
+    expect(barSeat(bar, sx, sz, true, () => true, them)).toMatchObject({ key: stoolKey(bar, 2), clash: true });
+    // Not outranked: you keep it, as ever.
+    expect(barSeat(bar, sx, sz, true, k => held.has(k), () => false)).not.toHaveProperty("clash");
+  });
+
+  it("answers nothing far from the bar", () => {
+    expect(barSeat(bar, bar.x + BAR_REACH + 0.1, bar.z, true)).toBeNull();
   });
 
   it("gets you up from the stool you're on, open or not", () => {

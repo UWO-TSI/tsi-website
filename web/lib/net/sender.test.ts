@@ -281,6 +281,17 @@ describe("slow state, on change only", () => {
     r.run(300);
     expect(r.src.slows.slice(2).map(strip)).toEqual([{ pose: "", seat: "" }]);
   });
+  it("a sit on the ground from a seat (the emote wheel swaps them in one go, the pose never empty) gives the seat back", () => {
+    const r = rig();
+    r.run(500);
+    r.fire("tsi:sit", { x: 1, z: 0, key: "sushi:sushi-bar#2" });
+    r.frame(() => { r.motion.current.pose = "Sit"; });
+    r.run(300);
+    r.fire("tsi:sit-here", { clip: "SitGround" });
+    r.frame(() => { r.motion.current.pose = "SitGround"; });
+    r.run(300);
+    expect(r.src.slows.slice(-1).map(strip)).toEqual([{ pose: "SitGround", seat: "" }]);
+  });
   it("a study seat's key comes from the study state when tsi:sit names none; the phase and its end on the room timeline", () => {
     const r = rig();
     r.run(500);
