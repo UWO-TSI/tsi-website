@@ -19,7 +19,7 @@
 import { smoothstep, valueNoise, type MapAnnotation, type ShoreSdf } from "../grid";
 import { CONVERT, contourDistance, limitSteepness, padBuildings, rockRelief, shelf, softMin, wharfQuay } from "./convert";
 import type { World } from "./format";
-import { Paint, createTerrain, sampleX, sampleZ, terrainHeight } from "./terrain";
+import { Paint, createTerrain, paintAt, sampleX, sampleZ, terrainHeight, terrainSteepness } from "./terrain";
 import { hash01 } from "../worldFx";
 import { JETTY, SELL_BARREL, dockToWorld } from "../wharf";
 import type { ObjectKind } from "../villageMap";
@@ -661,6 +661,38 @@ function shells(t: World["terrain"]): Obj[] {
   return out;
 }
 
+/**
+ * The gather spots the village has (lib/game/islandNodes.ts): rocks a shovel strikes, in the village's own outcrop
+ * models, and buried shells to dig on the beach's dry sand, about the village's count of each. Defaults David can move
+ * in the editor. Each from its anchor (the village's edges, the path's bend, the river's near bank, the beach's back;
+ * along the beach) to the nearest open spot: off the path, the plaza, the deck and the campfire, clear of everything.
+ */
+function gatherSpots(t: World["terrain"], objects: readonly Obj[]): Obj[] {
+  const out: Obj[] = [], sea = t.seaLevel;
+  const clear = (x: number, z: number, r: number) => [...objects, ...out].every(o => Math.hypot(o.x - x, o.z - z) >= r);
+  const open = (x: number, z: number) => nearest(PATH, x, z).d > 3.5 && nearest(BEACH_WAY, x, z).d > 3 && Math.hypot(x - PX, z - PZ) > PLAZA.r + 2.5
+    && westOfQuay(x, z) > 8.5 && Math.hypot(x - FIRE_AT[0], z - FIRE_AT[1]) > 7.2 && Math.hypot(x - SUSHI[0], z - SUSHI[1]) > 7;
+  const flat = (x: number, z: number) => terrainHeight(t, x, z) > sea + 0.35 && terrainSteepness(t, x, z) < 0.4;
+  const near = ([ax, az]: XZ, ok: (x: number, z: number) => boolean): [number, number] | null => {
+    for (let r = 0; r <= 8; r += 0.5) for (let a = 0; a < 12; a++) {
+      const x = +(ax + r * Math.cos((a * Math.PI) / 6)).toFixed(2), z = +(az + r * Math.sin((a * Math.PI) / 6)).toFixed(2);
+      if (ok(x, z)) return [x, z];
+    }
+    return null;
+  };
+  // A rock's node is 0.9 in front of it (-z), where the outcrop stands and the player strikes.
+  const bend = onPath(11.5, -5.5);
+  ([[bend.x, bend.z], [PX + 8, 26], [PX - 34, 68], [-37, 36], [-26, 93]] as XZ[]).forEach((anchor, i) => {
+    const at = near(anchor, (x, z) => open(x, z) && flat(x, z) && flat(x, z - 0.9) && paintAt(t, x, z) !== Paint.Path && paintAt(t, x, z) !== Paint.Stone && clear(x, z, 2) && clear(x, z - 0.9, 1.6));
+    if (at) out.push(obj("rock", `gather-rock-${i}`, ...at, +(hash01(i, 150) * 6.28).toFixed(2), +(0.8 + 0.5 * hash01(i, 151)).toFixed(2), `rock-${"abc"[i % 3]}`));
+  });
+  [-40, -24, -8, 26, 40, 52].forEach((x, i) => {
+    const at = near([x, 103], (x, z) => open(x, z) && paintAt(t, x, z) === Paint.Sand && terrainHeight(t, x, z) > sea + 0.35 && terrainHeight(t, x, z) < H.beach + 0.5 && clear(x, z, 1.5));
+    if (at) out.push({ id: `gather-shell-${i}`, kind: "shell", x: at[0], z: at[1] });
+  });
+  return out;
+}
+
 function riverside(t: World["terrain"]): Obj[] {
   const out: Obj[] = [], sea = t.seaLevel;
   const put = (x: number, z: number, yaw: number, scale: number, model: string) => out.push(obj("prop", `river-${out.length}`, x, z, yaw, scale, model));
@@ -827,7 +859,7 @@ export function generateWorld(objects: World["objects"], keep: readonly MapAnnot
   const pads = padBuildings(t, objects);
   const steepMoved = limitSteepness(t);
   strata(t);
-  objects = [...objects.filter(o => !/^(coral|river|shell)-/.test(o.id)), ...shallows(t), ...riverside(t), ...shells(t)];
+  objects = [...objects.filter(o => !/^(coral|river|shell|gather)-/.test(o.id)), ...shallows(t), ...riverside(t), ...shells(t)];
 
   let land = 0, lo = Infinity, hi = -Infinity;
   for (let p = 0; p < n; p++) {
@@ -838,6 +870,7 @@ export function generateWorld(objects: World["objects"], keep: readonly MapAnnot
     // Sand under the water and on any low shore; a zone's sand stops where its ground climbs.
     t.paint[p] = !dry || (want < 0 && h < t.seaLevel + 0.9 && inland[p] < 6) ? Paint.Sand : want >= 0 && h < below[p] ? want : Paint.Grass;
   }
+  objects = [...objects, ...gatherSpots(t, objects)];
 
   // The zones' annotations. A land zone owns the cells (centre inside it, on land) where its ground is the one on top
   // (the last in stacking order) and the ground stands at its height (not a cliff's foot or a coast's last slope down);

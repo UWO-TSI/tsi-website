@@ -8,14 +8,13 @@ import { NextResponse } from "next/server";
 import { memoryCollectionsStore } from "@/lib/collections/memoryStore";
 import { villageNodes } from "@/lib/game/islandNodes";
 import { fishingSpot, villageWater } from "@/lib/game/fishingSpots";
-import { village } from "@/lib/game/villageMap";
 import { isGroundAtWorld } from "@/lib/game/grid";
 import { DEFAULT_GOALS, SEASONAL_GOALS } from "@/lib/progression/defaults";
 import { memoryCraftingStore } from "@/lib/crafting/memoryStore";
 import { RECIPE_DROPS, RECIPE_DROP_CHANCE } from "@/lib/crafting/recipes";
 import { seededRandom } from "@/lib/game/weatherSystem";
 import { ROSTER } from "@/lib/collections/roster";
-import { fishRoll } from "@/lib/collections/rolls";
+import { activeVillage, fishRoll } from "@/lib/collections/rolls";
 
 const mock = vi.hoisted(() => ({ ctx: null as unknown, weather: "clear", goals: [] as unknown[] }));
 vi.mock("@/lib/server/memberContext", async (original) => ({
@@ -45,15 +44,17 @@ const post = async (body: unknown) => {
 };
 const later = (ms: number) => (clock = new Date(clock.getTime() + ms));
 
-// A shore point with water in casting reach, and one in the middle of the land with none.
-const v = village();
+// A shore point with water in casting reach, and one in the middle of the land with none, on the island the server
+// checks (the active world, lib/game/world/active.ts).
+const v = activeVillage();
 const classify = villageWater(v).classify;
 const cells = Array.from({ length: v.map.width * v.map.depth }, (_, i) => [v.map.originX + (i % v.map.width) + 0.5, v.map.originZ + Math.floor(i / v.map.width) + 0.5] as [number, number]);
 const SHORE = cells.find(([x, z]) => fishingSpot(v.map, classify, x, z))!;
 const INLAND = cells.find(([x, z]) => isGroundAtWorld(v.map, x, z) && !fishingSpot(v.map, classify, x, z))!;
 /** Everyone's tier-1 tools (lib/game/tools.ts), held for a cast, a bug or a dig. */
 const ROD = "rod_flimsy", NET = "net-basic", SHOVEL = "shovel-basic";
-const node = (prefix: string) => [...villageNodes().forage, ...villageNodes().bugs].find((n) => n.id.startsWith(prefix))!;
+const nodes = villageNodes(v);
+const node = (prefix: string) => [...nodes.forage, ...nodes.bugs].find((n) => n.id.startsWith(prefix))!;
 
 beforeEach(() => {
   clock = new Date("2026-09-24T16:00:00Z"); // noon in Toronto
@@ -67,6 +68,8 @@ describe("POST /api/collections: the server rolls every catch", () => {
   it("has the fixtures it needs", () => {
     expect(SHORE).toBeDefined();
     expect(INLAND).toBeDefined();
+    // Every world has rocks to strike and shells to dig (the shovel's quest, lib/game/arrival/hq/teachers.ts).
+    for (const prefix of ["rock-", "shell-", "mush-", "bug-flower-"]) expect(node(prefix), prefix).toBeDefined();
   });
 
   it("refuses a client-reported species and size", async () => {
