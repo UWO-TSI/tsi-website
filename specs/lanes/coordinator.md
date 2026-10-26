@@ -76,6 +76,24 @@ Read `specs/launch/v1-new-world.md` first, then `specs/launch/terrain-v3.md`. Th
     - The lane `perf-newworld` (game/perf-newworld, cut from 76f4b591, `specs/lanes/perf-newworld.md`) is cutting it.
     - David's R2c notes go to terrain-v3 on its own branch.
     - Merge order: perf into terrain-v3, then one ponytail review of the whole terrain-v3 diff, then merge to main.
+  - **Perf, measured side by side:** v2 High 6.1 ms and 430 draws against the village's 4.6 ms and 384. Lite 3.75 ms against 2.8. The 20.7 ms was load. perf-newworld keeps cutting.
+  - **R2c reviewed 2026-10-26:**
+    - **Approved:** the map, the water edge, the wharf, the path at night.
+    - **Redos:** verbatim in `specs/lanes/terrain-v3.md`. Sushi bar refs are in `specs/references/terrain/sushi-bar-2026-10-26/`.
+  - **Five lanes now:**
+    - **terrain-v3 R2d** (from c13ea8e7):
+      - docks spread out and bigger, fewer pumpkins, warmer and wider light;
+      - brick roads, buildings closer;
+      - bigger wading area and palms, the campfire 1.15, fish in the shallows;
+      - the forest as instanced single trees;
+      - the quick-sell barrel on the existing sell flow.
+    - **perf-newworld.**
+    - **wharf-art2:** fish market remodel and sell barrel, ship houses, taller lifeguard tower, beach things, coral reefs.
+    - **village-art2:** organic rocks, fluffy bushes, TSI flag, brick texture, river dressing, forest trees.
+    - **sushi-bar:** Bancho-style long bar, its lights, seating with a close camera, chef NPCs, music.
+
+    All are cut from terrain-v3. Relay each art batch to terrain-v3, and merge perf into terrain-v3 when it's done.
+  - **After launch (David's words):** the fish market inside (buy shop, appraisal) and the fog's horror look.
   - **Post-launch:** the building redesign (he wants less medieval, more fun; it "needs more planning"), the lighting pass and the dungeon lamps. Logged in `specs/launch/terrain-v3.md`.
 - **HQ round 4 merged** (71135930, David approved all four items 2026-10-23), with the ponytail cleanup. Later items are logged as A14. `hq-notice-board.glb` is no longer rendered but is still in the propModels table; delete both together after launch.
 - **Upper-floor fix merged** (72a9b9c5). Remote players in rooms stand at the height they sent, with no realtime deploy needed.
