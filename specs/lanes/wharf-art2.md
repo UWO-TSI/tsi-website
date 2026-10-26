@@ -26,7 +26,9 @@ Then go straight on. At the end, update Status here, send the full list, and sto
 
 ## Status
 
-Not started.
+Previews in `specs/evidence/wharf-art2/`. Placement is terrain-v3's. The budget test's two failures (`plaza-tiles`, `jetty`) came with the branch, not from this lane.
+
+1. **Fish market and sell barrel** (`art/buildings/build_fish_market.py`): `fish-market` remodelled (11,892 tris, 868 KB; footprint [3.1, 3.6], top 10.569); `sell-barrel` new (`game/wharf/`, 2,162 tris, 150 KB; footprint [0.66, 0.78], top 3.394).
 
 ## Next
 

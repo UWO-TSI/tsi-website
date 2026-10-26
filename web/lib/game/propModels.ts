@@ -117,11 +117,13 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // open-mouthed toward +z over its own platform (5.6 by 4.4, nobody enters it in v1), a lifeguard tower (its ladder to
   // +z), surfboards stuck in the sand, and coral clumps for the shallows (their foot on the seabed, not solid).
   "sushi-bar": "/assets/game/buildings/sushi-bar.glb", "lifeguard-tower": `${P}lifeguard-tower.glb`,
-  // The fish market (art/buildings/build_fish_market.py): a red board house 5 by 3.6, its front to +z, a marlin on the ridge,
-  // an awning out to z 2.75 over a table of fish; an exterior only, the origin at the middle of its floor.
-  "fish-market": "/assets/game/buildings/fish-market.glb",
   ...Object.fromEntries(["a", "b", "c"].map(m => [`surfboard-${m}`, `${P}surfboard-${m}.glb`])),
   ...Object.fromEntries(["a", "b", "c", "d"].map(m => [`coral-${m}`, `/assets/game/water/coral-${m}.glb`])),
+  // game/wharf-art2: the fish market, remodelled (art/buildings/build_fish_market.py): a timber shop 5.2 by 4.2 on a stone
+  // footing, front +z, a giant wooden swordfish bursting up out of its roof toward +x (the bill reaches x 5.1, top 10.6),
+  // a porch out to z 3.9 over the door and a table of fish; an exterior only, the origin at the middle of its floor. The
+  // sell barrel (same builder) is the quick sell: a big barrel of fish, a hanging scale and a SELL board, front +z.
+  "fish-market": "/assets/game/buildings/fish-market.glb", "sell-barrel": "/assets/game/wharf/sell-barrel.glb",
 };
 export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? `/assets/acnh/props/${model}.glb`;
 
