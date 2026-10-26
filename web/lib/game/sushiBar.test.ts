@@ -50,7 +50,7 @@ describe("sushi bar", () => {
     for (const lx of STOOLS) {
       const { eye, look } = seatView(lx);
       expect(eye[0]).toBe(lx);
-      expect(Math.abs(eye[2] - STOOL_Z)).toBeLessThan(0.2);
+      expect(Math.abs(eye[2] - STOOL_Z)).toBeLessThan(0.4);
       expect(look[2]).toBeLessThan(-1.5);
       expect(Math.abs(eye[1] - look[1]) / (eye[2] - look[2])).toBeLessThan(0.1);
     }

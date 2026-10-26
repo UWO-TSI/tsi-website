@@ -29,7 +29,7 @@ const MUSIC_DIR = "/assets/audio/music";
  * track goes straight to the fallback instead of a 404 on every load (audit 2026-10 world item 19). Add a name here
  * when its file lands; `audioFiles.test.ts` checks every listed file is on disk.
  */
-export const MUSIC_FILES: ReadonlySet<string> = new Set<string>([]);
+export const MUSIC_FILES: ReadonlySet<string> = new Set<string>(["bar-evening.mp3", "bar-night.mp3"]);
 
 /** Which 2-hour block a Toronto-local fractional hour (0-24) falls in. */
 export function blockForHour(hour: number): MusicBlock {

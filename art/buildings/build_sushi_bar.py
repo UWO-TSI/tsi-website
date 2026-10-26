@@ -55,7 +55,10 @@ DECK_Z, DECK_W, FLOOR = 4.05, 4.45, 0.06            # the guests' deck: z HD..DE
 RIDGE_Z, RIDGE_Y = 0.9, 4.4
 FRONT_Z, FRONT_Y, BACK_Z, BACK_Y = 4.25, 3.12, -2.05, 3.26
 HEADER_Y, HEADER_Z, PLATE_Y = 3.0, 3.95, 3.1       # the front beam on the posts; the top plates and lantern beam
-WIN_X, SILL_Y, BEAM_Y, SHELF_Y = 3.2, 1.0, 2.5, 2.82
+WIN_X, SILL_Y, BEAM_Y, SHELF_Y = 3.2, 0.72, 2.5, 2.82
+# The back counter under the window, low so the sea shows over it from a stool (the curved world drops the far sea about
+# 10 degrees under a seated eye); the duckboard the staff stand on behind the counter (lib/game/sushiBar.ts STAFF_Y).
+BACK_TOP, STAFF_Y = 0.7, 0.15
 CX0, CX1, TOP_Y = -2.95, 4.0, 0.84                  # the counter, its top
 SEAT_TOP, SEAT_Z = 0.6, 2.05                        # the stools (lib/game/sushiBar.ts SEATS mirrors these)
 SEATS = [0.5 + (i - 2.5) * 1.1 for i in range(6)]
@@ -229,7 +232,7 @@ def counter(k, W, Mp, Mpane, Mg):
     for x0, x1 in ((-2.65, 0.5), (0.6, 3.75)):
         cx = (x0 + x1) / 2
         box(k, (cx, TOP_Y + 0.015, 0.82), (x1 - x0, 0.03, 0.34), Mp, "#f3f1ea")
-        box(k, (cx, TOP_Y + 0.11, 0.82), (x1 - x0 + 0.02, 0.18, 0.36), Mpane, "#dff3f6", r=0.02)
+        box(k, (cx, TOP_Y + 0.08, 0.82), (x1 - x0 + 0.02, 0.12, 0.36), Mpane, "#dff3f6", r=0.02)
         x = x0 + 0.12
         while x < x1 - 0.15:
             col = ["#f08a5a", "#d8394a", "#f6efe4", "#f2c95c", "#e86f6f"][rng.integers(0, 5)]
@@ -265,24 +268,28 @@ def stools(k, W, Mc, Mr):
 def kitchen(k, W, Mp, Mg, Ms):
     # The back counter under the window: a board cabinet, a pale top; on it a rice tub, a cutting board with a fish,
     # stacked plates, a teapot and a knife block. Shelves on the side walls with bowls.
-    zc = -HD + 0.3
-    box(k, (0, 0.45, zc), (2 * HW - 0.1, 0.9, 0.48), W, mix(DARK, POST, 0.3), uv_len=2.0, v_axis=0)
-    box(k, (0, 0.92, zc + 0.02), (2 * HW - 0.08, 0.05, 0.54), W, HINOKI, r=0.015, uv_len=2.0, v_axis=0)
+    zc, B = -HD + 0.3, BACK_TOP
+    box(k, (0, (BACK_TOP - 0.02) / 2, zc), (2 * HW - 0.1, BACK_TOP - 0.02, 0.48), W, mix(DARK, POST, 0.3), uv_len=2.0, v_axis=0)
+    box(k, (0, BACK_TOP, zc + 0.02), (2 * HW - 0.08, 0.05, 0.54), W, HINOKI, r=0.015, uv_len=2.0, v_axis=0)
     for i in range(5):  # cabinet doors
         x = -3.2 + i * 1.6
-        panel(k, W, [(x - 0.7, 0.12, zc + 0.245), (x + 0.7, 0.12, zc + 0.245), (x + 0.7, 0.8, zc + 0.245), (x - 0.7, 0.8, zc + 0.245)],
+        panel(k, W, [(x - 0.7, 0.12, zc + 0.245), (x + 0.7, 0.12, zc + 0.245), (x + 0.7, BACK_TOP - 0.12, zc + 0.245), (x - 0.7, BACK_TOP - 0.12, zc + 0.245)],
               tone(LIGHT, KITCHEN, 0.0, 1.0), uv=(0, 1))
-    k.lathe((-1.6, 0.945, zc), [(0.0, 0.0), (0.3, 0.0), (0.34, 0.14), (0.31, 0.14), (0.27, 0.03), (0.0, 0.03)], W, "#b07a46", n=12)
-    k.blob((-1.6, 0.99, zc), (0.26, 0.06, 0.26), Ms, "#f7f5ee", segs=10, rings=4, flat_bottom=0.0)
-    box(k, (0.3, 0.97, zc), (0.62, 0.05, 0.36), W, "#e9cf9e")
-    k.blob((0.3, 1.04, zc), (0.22, 0.06, 0.08), Mp, "#7b9bb3", segs=8, rings=4)
-    box(k, (0.18, 1.06, zc), (0.2, 0.04, 0.1), Mp, "#f08a5a", r=0.01)
+    for i in range(9):  # the duckboard behind the counter the staff stand on, slats along it on bearers
+        box(k, (0.2, STAFF_Y - 0.03, -0.88 + i * 0.175), (6.3, 0.05, 0.15), W, tone(lo=0.5), v_axis=0, uv_len=2.0)
+    for x in (-2.6, 0.2, 3.0):
+        box(k, (x, (STAFF_Y - 0.05 + FLOOR) / 2, -0.21), (0.1, STAFF_Y - 0.05 - FLOOR, 1.6), W, POST)
+    k.lathe((-1.6, (B + 0.025), zc), [(0.0, 0.0), (0.3, 0.0), (0.34, 0.14), (0.31, 0.14), (0.27, 0.03), (0.0, 0.03)], W, "#b07a46", n=12)
+    k.blob((-1.6, (B + 0.070), zc), (0.26, 0.06, 0.26), Ms, "#f7f5ee", segs=10, rings=4, flat_bottom=0.0)
+    box(k, (0.3, (B + 0.050), zc), (0.62, 0.05, 0.36), W, "#e9cf9e")
+    k.blob((0.3, (B + 0.120), zc), (0.22, 0.06, 0.08), Mp, "#7b9bb3", segs=8, rings=4)
+    box(k, (0.18, (B + 0.140), zc), (0.2, 0.04, 0.1), Mp, "#f08a5a", r=0.01)
     for j in range(4):
-        k.lathe((1.5, 0.945 + j * 0.035, zc), [(0.0, 0.0), (0.13, 0.0), (0.16, 0.03), (0.0, 0.03)], Mp, "#f1ece2" if j % 2 else "#2f4f7a", n=10)
-    k.lathe((2.4, 0.945, zc), [(0.0, 0.0), (0.09, 0.0), (0.11, 0.08), (0.08, 0.15), (0.03, 0.17), (0.0, 0.17)], Mp, "#3e5a4a", n=8)
-    box(k, (-0.6, 1.02, zc - 0.1), (0.16, 0.16, 0.1), W, INK)
+        k.lathe((1.5, (B + 0.025) + j * 0.035, zc), [(0.0, 0.0), (0.13, 0.0), (0.16, 0.03), (0.0, 0.03)], Mp, "#f1ece2" if j % 2 else "#2f4f7a", n=10)
+    k.lathe((2.4, (B + 0.025), zc), [(0.0, 0.0), (0.09, 0.0), (0.11, 0.08), (0.08, 0.15), (0.03, 0.17), (0.0, 0.17)], Mp, "#3e5a4a", n=8)
+    box(k, (-0.6, (B + 0.100), zc - 0.1), (0.16, 0.16, 0.1), W, INK)
     for j in range(3):
-        box(k, (-0.65 + j * 0.05, 1.15, zc - 0.1), (0.02, 0.1, 0.03), Mp, "#c9ced3")
+        box(k, (-0.65 + j * 0.05, (B + 0.230), zc - 0.1), (0.02, 0.1, 0.03), Mp, "#c9ced3")
     for sx in (-1, 1):
         x = sx * (HW - 0.17)
         for y in (1.55, 2.05):
@@ -717,7 +724,7 @@ def glow(M):
     glow_uv(k, k.rbox((0, SHELF_Y - 0.06, -HD + 0.27), (2 * HW, 0.025, 0.03), 0.0, G, segs=1), "bulb")
     glow_uv(k, k.rbox(((CX0 + CX1) / 2, TOP_Y - 0.08, 1.74), (CX1 - CX0 - 0.1, 0.02, 0.03), 0.0, G, segs=1), "lantern")
     for x0, x1 in ((-2.65, 0.5), (0.6, 3.75)):
-        glow_uv(k, k.rbox(((x0 + x1) / 2, TOP_Y + 0.185, 0.9), (x1 - x0 - 0.1, 0.012, 0.04), 0.0, G, segs=1), "bulb")
+        glow_uv(k, k.rbox(((x0 + x1) / 2, TOP_Y + 0.125, 0.9), (x1 - x0 - 0.1, 0.012, 0.04), 0.0, G, segs=1), "bulb")
     # The tank's water: its back and its wall side, lit from within at night.
     x0, x1, z0, z1 = TANK
     water = [k.quad([(x0 + 0.01, 0.9, z0 + 0.02), (x1, 0.9, z0 + 0.02), (x1, 1.6, z0 + 0.02), (x0 + 0.01, 1.6, z0 + 0.02)], G),

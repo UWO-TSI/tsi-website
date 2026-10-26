@@ -31,6 +31,8 @@ export const BAR_DECKS = [
 /** The entrance (on the landing, before the gate) and how near it E takes you in; where getting up puts you. */
 export const ENTRY = [0, 5] as const, ENTRY_RANGE = 1.5;
 const EXIT = [0, 5.3] as const;
+/** The duckboard behind the counter the staff stand on (the builder's STAFF_Y), so their faces clear the fish case. */
+export const STAFF_Y = 0.15;
 /** The blinds' tops (the builder's HOURS_TOP): they roll up to it as the bar opens. */
 export const HOURS_TOP = 2.87;
 /** Open for dinner in the evening, a bar at night; closed by day (David: "day is closed ... eveing open, dinner, night more bar vibes"). */
@@ -47,7 +49,7 @@ const pool = (id: string, at: [number, number, number], face: Pool["face"], half
   ({ id, level: 0, part: 0, at, face, half, color, strength });
 export const BAR_POOLS: readonly Pool[] = [
   pool("deck", [0.4, 0.075, 2.6], "up", [4.6, 1.8], 0.55),
-  pool("kitchen", [0.3, 0.07, -0.2], "up", [3.9, 1.3], 0.45),
+  pool("kitchen", [0.3, 0.16, -0.2], "up", [3.3, 0.9], 0.45),
   ...[-2, 0, 2].map((x, i) => pool(`top-${i}`, [x + 0.5, 0.848, 1.25], "up", [1.5, 0.75], 0.5)),
   pool("face", [0.5, 0.42, 1.52], "+z", [3.7, 0.45], 0.35),
   pool("bottles", [0, 2.97, -1.37], "+z", [4.1, 0.47], 0.45),
@@ -130,9 +132,10 @@ export const stoolAt = (bar: Bar, x: number, z: number) => STOOLS.findIndex(lx =
 
 /**
  * The seated view, first person (David: "first person at the bar ... seeking the food infront of you"): from your eyes on
- * the stool at lx, level across the counter at the chef, the sea through the window behind him. The eye and the point it
+ * the stool at lx (a touch back and up, so the counter's in view and the sea shows over the back counter), across the
+ * counter at the chef, the sea through the window behind him. The eye and the point it
  * looks at in the bar's frame (x, y over its floor, z).
  */
 export function seatView(lx: number): { eye: [number, number, number]; look: [number, number, number] } {
-  return { eye: [lx, STOOL_TOP + 0.82, STOOL_Z - 0.08], look: [lx * 0.85, STOOL_TOP + 0.66, -2.5] };
+  return { eye: [lx, STOOL_TOP + 1.1, STOOL_Z + 0.3], look: [lx * 0.85, STOOL_TOP + 0.65, -2.5] };
 }

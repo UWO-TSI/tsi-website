@@ -208,6 +208,12 @@ const VILLAGE = blob([PX + 2, 52], [42, 44, 42, 44, 50, 52, 38, 42], 2, 12, 81);
  * BAR_DECKS); the water under its guests' deck too deep to wade, so the way in is the entrance.
  */
 export const SUSHI = [-47, 119.5] as const, SUSHI_YAW = Math.PI;
+/**
+ * The way to the sushi bar (David, R2d: "there should be a path to the front of it"): off the beach's main stretch west
+ * of the volleyball net, between the parasols and the palms, down to the boardwalk's end at its height (sushiBar.ts
+ * BAR_DECKS), hand lanterns along it. Points (x, z, height), the sand's own heights but the last.
+ */
+const SUSHI_PATH: readonly (readonly [number, number, number])[] = [[-8, 105, 0.89], [-20, 104.2, 0.91], [-30, 104.2, 0.85], [-38, 105.2, 0.6], [-44, 106.6, 0.4], [-47, 107.4, 0.32]];
 const BEACH = strip([[58, 92], [40, 100], [10, 105], [-20, 105], [-50, 101]], 9, 8, 0.8, 16, 95);
 
 /**
@@ -305,6 +311,8 @@ export const PLAN: Plan = {
     { label: ["Dirt path", 56, 68], pts: PATH, half: 1.8, shoulder: 2.5, paint: Paint.Path },
     // The way down to the beach, past the shop.
     { pts: [[36, 80, H.village], [34, 92, 2], [31, 101, H.beach + 0.3]], half: 1.6, shoulder: 3, paint: Paint.Path },
+    // The way to the sushi bar's boardwalk.
+    { pts: SUSHI_PATH, half: 1.1, shoulder: 1.5, paint: Paint.Path },
     // Brick roads from the plaza to HQ, the café, the shop and the museum, and down the path's level stretch (David, R2c:
     // "have brick roads to the important shops"): the stone paint, drawn as village-art2's brick (splatMaterial).
     ...[[[PX - 10, PZ], SPOT.hq], [[PX + 3, PZ - 10], SPOT.cafe], [[PX + 3, PZ + 10], SPOT.shop], [[PX - 8, PZ + 6], SPOT.museum], [[43, 51], [49.5, 56.5]]].map(([a, b]): Ramp => (
@@ -363,10 +371,10 @@ type Obj = World["objects"][number];
 const shrub = (id: string, x: number, z: number, h: number, models: string) =>
   obj("prop", id, x, z, h * 37.7, +(0.8 + 0.5 * ((h * 7.3) % 1)).toFixed(2), `shrub-${models[Math.floor(((h * 13.1) % 1) * models.length)]}`);
 /** A point `s` units along the path's middle, `side` units off it, and the yaw that turns a model's x along it there. */
-function onPath(s: number, side = 0): { x: number; z: number; yaw: number } {
+function onPath(s: number, side = 0, path = PATH): { x: number; z: number; yaw: number } {
   for (let j = 0; ; j++) {
-    const [ax, az] = PATH[j], [bx, bz] = PATH[j + 1], len = Math.hypot(bx - ax, bz - az);
-    if (s > len && j + 2 < PATH.length) { s -= len; continue; }
+    const [ax, az] = path[j], [bx, bz] = path[j + 1], len = Math.hypot(bx - ax, bz - az);
+    if (s > len && j + 2 < path.length) { s -= len; continue; }
     const ux = (bx - ax) / len, uz = (bz - az) / len;
     return { x: ax + ux * s - uz * side, z: az + uz * s + ux * side, yaw: Math.atan2(-uz, ux) };
   }
@@ -530,6 +538,9 @@ function lamps(): Obj[] {
   [5.5, 10.5, 15.5, 20.5].forEach((s, i) => [-1, 1].forEach(side => { const q = onPath(s + side * 0.6, side * 2.2); put(`lamp-path-hand-${i}-${side > 0 ? 1 : 0}`, "hand", q.x, q.z); }));
   ([[PX - 11, PZ - 9], [PX + 14, PZ - 10], [PX - 11, PZ + 9], [PX + 14, PZ + 10], [PX - 4.5, PZ - 13.5], [PX - 15, PZ + 15]] as const).forEach(([x, z], i) => put(`lamp-plaza-${i}`, "village", x, z, PX, PZ));
   put("lamp-beach-way", "village", 39, 84, 35, 84);
+  // The way to the sushi bar: a lantern post where it leaves the beach's main stretch, hand lanterns either side after.
+  { const q = onPath(0.5, -2, SUSHI_PATH), c = onPath(0.5, 0, SUSHI_PATH); put("lamp-sushi-way", "wharf", q.x, q.z, c.x, c.z); }
+  [6, 12, 18, 24, 30, 36].forEach((d, i) => { const q = onPath(d, i % 2 ? 1.9 : -1.9, SUSHI_PATH); put(`lamp-sushi-hand-${i}`, "hand", q.x, q.z); });
   // The deck: lantern posts mid-deck clear of the stalls, their arms toward the water; hand lanterns along its edge.
   [18, 25, 39, 51, 57, 65, 71, 77].forEach((z, i) => { const q = quayAt(z, 3.8), e = quayAt(z, 0); put(`lamp-deck-${i}`, "wharf", q.x, q.z, e.x, e.z); });
   for (let z = 15, i = 0; z <= 79; z += 5.5, i++) {

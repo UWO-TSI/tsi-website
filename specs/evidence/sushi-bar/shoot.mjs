@@ -13,9 +13,11 @@ const { chromium } = require("playwright");
 // onto the sea to the south. `sit` stands you at the entrance and presses E (Enter the sushi bar); `frames` are the ms
 // after E to shoot the glide in (each its own png, name-<ms>), then the seated view.
 export const VIEWS = {
-  "bar-day": { at: [-43.5, 103], yaw: 345, pitch: 0.38, zoom: 1.5 },
-  "bar-evening": { at: [-43.5, 103], yaw: 345, pitch: 0.38, zoom: 1.5, time: "evening" },
-  "bar-night": { at: [-43.5, 103], yaw: 345, pitch: 0.38, zoom: 1.5, time: "night" },
+  "bar-day": { at: [-36, 111], yaw: 305, pitch: 0.3, zoom: 1.4 },
+  "bar-evening": { at: [-36, 111], yaw: 305, pitch: 0.3, zoom: 1.4, time: "evening" },
+  "bar-night": { at: [-36, 111], yaw: 305, pitch: 0.3, zoom: 1.4, time: "night" },
+  "approach-day": { at: [-16, 104.6], yaw: 278, pitch: 0.3, zoom: 1.3 },
+  "approach-night": { at: [-16, 104.6], yaw: 278, pitch: 0.3, zoom: 1.3, time: "night" },
   "chef-outside": { at: [-46.2, 112.2], yaw: 20, pitch: 0.3, zoom: 0.7 },
   "entry": { at: [-47, 114.8], yaw: 0, pitch: 0.42, zoom: 1.0, sit: true, time: "night", frames: [0, 500, 1000, 1500] },
   "seat-evening": { at: [-47, 114.8], yaw: 0, pitch: 0.42, zoom: 1.0, sit: true, time: "evening" },

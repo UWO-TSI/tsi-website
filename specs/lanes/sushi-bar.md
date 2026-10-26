@@ -26,45 +26,30 @@ Then go straight on. At the end, update Status here, send the full list, and sto
 
 ## Status
 
-Steps 1 to 5 built; terrain-v3 placed the bar at (44, 96.5), yaw -3pi/4 (merged into this branch at 32cd7cb3). Paused 2026-10-26: David is planning the bar with the coordinator; change nothing until the plan comes. In-game shots `specs/evidence/sushi-bar/ingame/` (bar-front, bar-front-night, bar-chefs, bar-seat, bar-seat-night).
+**Phase A built, 2026-10-26** (branch game/sushi-bar; terrain-v3 merged in at e0ca3cf9). Shots `specs/evidence/sushi-bar/phase-a/`: bar-day (closed, blinds down), bar-evening, bar-night, approach-day and approach-night (the path from the beach), chef-outside (closed, the chef on the landing), entry-0/500/1000/1500 then entry (the glide in from the entrance), seat-evening and seat-night (first person).
 
-1. **The model** (f7fbca92, `art/buildings/build_sushi_bar.py`): `sushi-bar.glb` (11.3k tris, 7 materials; still, merged) and `sushi-bar-glow.glb` (3.3k tris, M_Glow palette + P_Paint; drawn by `SushiBar.tsx`). About 9.2 by 6.1, origin at the middle of the solid core, footprint [4.0, 1.5], top 4.68; guests' deck and six stools toward +z, the open window toward -z (the sea). The old shark head is deleted from `art/props/build_beach_set.py`. Preview `specs/evidence/sushi-bar/sushi-bar.webp`.
-2. **Lights:** the glow model eases on at night and breathes like flame; HQ's faked pools (`hq/LampPools`, `BAR_POOLS` in `lib/game/sushiBar.ts`) light the deck, counter, kitchen, bottles and pillars; the bar's light is one of the LampPool's points (`BAR_LIGHT`); warm strips under the shelf, the counter lip and the fish case.
-3. **Sitting:** the stools are seats (`barSeat`, prompt "Sit at the counter", claim key `sushi:<id>#i`); while seated the follow camera eases to `seatView` (FollowScene `seat`).
-4. **Chefs:** two, the café owner's station loop (`CHEF_STATIONS`, `CHEF_LOOKS`), no names.
-5. **Music:** near the bar (8 in, 10 out) the music director's "bar" slot: `bar.mp3` when it lands, else the other fallback track. Not heard (headless, muted).
+1. **Where:** on stilts off the beach's west end, `SUSHI = [-47, 119.5]`, yaw pi (`generate.ts`: the bar, its pier object `sushi-bar-pier` at the same origin, `SUSHI_PATH` and its lanterns; the old sand pad zone removed; world regenerated). Its window looks south to the open sea, its pier runs north to the sand (land end z 107.5). The water under its guests' deck is too deep to wade, so the way in is the entrance (walk.test checks it).
+2. **The path (David, R2d: "there should be a path to the front of it"):** a dirt path (a ramp, Paint.Path, half 1.1) off the beach's main stretch west of the volleyball net, between the parasols and the palms, down to the boardwalk's end at its height; a wharf lantern post where it starts, six hand lanterns along it (`lamps()`, ids `lamp-sushi-*`).
+3. **Models** (`art/buildings/build_sushi_bar.py`): `sushi-bar.glb` 11.5k tris (lower back counter and sill so the sea shows over them from a stool, a lower fish case, a duckboard for the staff, posters, today's menu easel moved out to the landing); `sushi-bar-pier.glb` 4.7k (piles and braces, the landing, the boardwalk sloping 0.4 to the sand, rope rails, four lantern posts, the entrance gate with the bar's board); `sushi-bar-hours.glb` 620 (`shutters`: bamboo blinds over the front and sides; `noren`: the entrance curtain); `sushi-bar-glow.glb` 4.9k (six more lanterns outside). All under the 12k building row; budget.test green.
+4. **Decks** (`defaultIsland.ts barDecks`, `sushiBar.ts BAR_DECKS`): the bar's floor at `BAR_Y` 0.7 (its origin), the landing (x +-1.4) and the boardwalk (x +-0.8, falling 0.4); the jetty's deck code and the bar's share `localDecks`.
+5. **Hours** (`barOpen`: evening and night): by day the blinds are down and the chef stands on the landing (Phase B gives him quests); from the evening the blinds roll up (`SushiBar.tsx hang`, about `HOURS_TOP`), the noren is hung, the lights come on (a little dimmer in the evening), the chef and the server work behind the counter.
+6. **Entering:** E at the entrance (`ENTRY`, range 1.5) while it's open: `barSeat` gives the next free stool in `SEAT_ORDER` (2, 3, 1, 4, 0, 5: each new guest sits beside the last), claim key `sushi:<id>#i`. The seat detail carries `hide` (PlayerAvatar hides your own avatar) and `exit` (getting up puts you on the landing facing out). The prompt reads "Enter the sushi bar", seated "Leave the bar"; E or moving gets you up. The follow camera glides from the view as it was to the first-person eye over 1.8 s (smootherstep), and back out (`IslandAtmosphere SEAT_GLIDE`; no black screen, the occluder cut off while seated).
+7. **First person:** `seatView`: eye 1.7 over the floor, 0.3 behind the stool's middle, looking across the counter to the chef with the sea in a band over the back counter. (The curved world drops the far sea about 10 degrees under a seated eye, which is why the back counter and sill went down to 0.7.)
+8. **Staff:** chef "Bancha" (our design: dark skin, full hair `hair_fluffy_boy`, gold shades, white shirt, indigo trousers, deadpan; no afro part exists in the catalogue); the server (navy raincoat as a diving suit, yellow rain boots as fins, open smile, blush; no diving mask part exists). His name is David's call. The old "facing away" was the chef's face hidden behind the fish case: fixed by the duckboard (`STAFF_Y`) and the lower case.
+9. **Music:** slots `bar-evening` and `bar-night` (`musicSchedule.ts`), both files in: David's Suno tracks "海辺の夕食" and "Smoky Night Groove", looped on bar lines by `art/audio/loop_track.py` (one-beat crossfade of the next bar into the start, 3 ms edge fades), -14.9 LUFS, about -1 dBTP, 128 kbps. Sources and prompts in the music README. Not heard (headless, muted).
 
-**Open, seen in the in-game shots:**
-- The seated view: the player's own head fills the lower left and the window shows mostly sky (the sea sits under the back counter's line). The eye needs to move up and aside, or the avatar hidden while seated, and the look lowered to the horizon.
-- The chefs read from behind in `bar-chefs` (hair toward the guests): their facing (CHEF_STATIONS yaw 0 at the fish case) may need a half turn; check the rig's yaw convention.
-- At night the inside is warm and bright from the pools and strips; from the beach the bar reads lit but the deck could use more spill onto the sand in front.
-- `budget.test` fails on `game/props/plaza-tiles.glb` (5640 tris, another lane's), so the sushi files were checked by their numbers only (11.3k and 3.3k tris, under the 12k building row).
-- `art/props/build_beach_set.py`: with the shark head removed its rng runs differently, so a rerun reshapes the corals slightly.
+**Gates (head of this lane):** tsc clean; eslint clean on changed files; vitest default village 3441 passed; with `NEXT_PUBLIC_GAME_WORLD=new` all pass but `app/api/collections/route.test.ts` (21: it posts village coordinates; nothing on its path changed in this lane, not rerun on the merge base); budget.test green. The old `integration.test` regex for the bench claims was fixed for the stool line.
+
+**Open:**
+- David to confirm "left" (west) and the spot; the night view from the beach is dim at distance (the bar's pools light its own deck and landing).
+- The chef and server use existing parts only: no afro hair, no diving mask in the catalogue. A dedicated hair or mask would be new character art.
+- The music element's loop (`audio.ts`, an HTMLAudioElement) is not sample-exact; the files are made to wrap cleanly but the browser may leave a few ms.
+- The evening seated view sometimes shows the chef at a back-counter station, his back to you (his loop).
+- Phase B (menu, ordering, food, buffs, quests, photos) after launch.
 
 ## Next
 
-**Phase A of `specs/launch/sushi-bar.md`** (David's plan, 2026-10-26, verbatim there). Read the spec first. Phase B (ordering, buffs, quests) is after launch: don't build it.
-
-1. **Move it onto stilts over the water, toward the left (west) side of the beach**, with a short boardwalk from the sand to the entrance. Add to the outside: a sign, a "today's menu" board, lanterns and a clear entrance. You own the bar's placement in `generate.ts` (the sushi-bar object only, plus its boardwalk). terrain-v3 is editing the same file, so keep your change to those objects and say so in your report.
-2. **Hours:**
-   - By day it's closed: shutters or a curtain down, and the chef stands outside the entrance.
-   - It opens in the evening; at night the lights and music feel more like a bar.
-   - Use the game's clock and the music director's slots: an evening "dinner" track and a night "bar" track.
-3. **Entering:**
-   - When it's open, E at the entrance moves the camera smoothly, never through a black screen, into first person at a free stool.
-   - Six seats with network claims (you have `sushi:<id>#i`), so friends sit side by side. Stay as long as you like; E leaves.
-   - In first person, hide your own avatar, and look level across the counter at the chef working, with the sea through the window behind him.
-   - That fixes both issues from your shots: your head blocking the view, and the window showing only sky.
-4. **Inside:** sake, paper lanterns, drapes, posters and the fish tank on the side, cozy and warm. Most of it exists already; fill what's missing.
-5. **Staff:** a sushi chef and a server, both our own designs in the spirit of David's references (`staff-chef-ref.jpg`, `staff-server-ref.jpg`), not copies of Dave the Diver's Bancho and Dave.
-   - **The chef:** a Black man, cool and focused, working behind the counter facing the guests (fix the half-turn). He talks rarely.
-   - **The server:** a cheerful diver type, moving along the counter.
-
-   Names: the chef "Bancha" as David wrote it, and the server's name left for David. Use existing outfits and parts where you can.
-6. **Music:** the evening and night slots point at `bar-evening.mp3` and `bar-night.mp3`, for David's Suno tracks, and fall back to the existing tracks until those exist.
-7. **Shots and report:**
-   - In-game shots into `specs/evidence/sushi-bar/phase-a/`: the bar by day (closed), at evening, at night, the entry transition (2 or 3 frames), and the first-person view at night.
-   - Commit, update Status, then SendMessage "main" and stop.
+Phase A is done and waiting on David's review. Phase B (`specs/launch/sushi-bar.md`) after launch: don't start it without the coordinator.
 
 ## Tools and gotchas
 
@@ -75,5 +60,8 @@ Steps 1 to 5 built; terrain-v3 placed the bar at (44, 96.5), yaw -3pi/4 (merged 
 - **propModels.ts:** other lanes append to the same tables. Add your entries in one block with a comment line naming your lane.
 - **Git:** commit with the `[build]` prefix. Never push. Never use bare `git stash`. Don't touch other worktrees.
 - **Builder:** `withlock.sh blender .../Blender -b --factory-startup -P art/buildings/build_sushi_bar.py [-- review <dir>]` writes both GLBs; review renders front, back, stool view, and night (glow on, no lights).
-- **Shots:** `PORT=3175 node specs/evidence/sushi-bar/shoot.mjs <dir> [view,...]` (headless, muted; `sit` presses E by a stool). Dev server on 3175 with `NEXT_PUBLIC_GAME_WORLD=new`, Supabase blanked, under the devserver lock.
+- **Shots:** `PORT=3175 node specs/evidence/sushi-bar/shoot.mjs <dir> [view,...]` (headless, muted; `sit` stands you at the entrance and presses E, `frames` shoots the glide). Dev server on 3175 with `NEXT_PUBLIC_GAME_WORLD=new`, Supabase blanked, under the devserver lock. The bar's frame (lx, lz) is the world's (-47 - lx, 119.5 - lz).
+- **World:** after editing `generate.ts`, `cd web && npx vite-node -c vitest.config.ts scripts/generate-world.ts` (about 15 s), then walk.test, generate.test, world.test, cells.test, sealed.test with `NEXT_PUBLIC_GAME_WORLD=new`.
+- **Music:** `python3 art/audio/loop_track.py <export> web/public/assets/audio/music/<slot>.mp3 <bpm>` reads the export (never moves it) and writes the looped slot; list the name in `MUSIC_FILES`.
+- **Builder mirrors:** `BAR_DECKS`, `ENTRY`, `HOURS_TOP`, `STAFF_Y`, `STOOLS` in `lib/game/sushiBar.ts` mirror the builder's LAND_*, WALK_*, GATE_*, HOURS_TOP, STAFF_Y, SEATS: change both together.
 - **Big props and the walker's buckets:** `islandOf` buckets props by their centre (4 u buckets, +-1 searched), so a footprint half over 4 is missed at its ends: keep the core at hw 4.

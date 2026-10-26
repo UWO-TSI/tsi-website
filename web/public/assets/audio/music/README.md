@@ -42,15 +42,28 @@ loop-trim locally after export.
   the cafe (any time of day).
 - `bar-evening.mp3` and `bar-night.mp3`: play instead of the hourly block near
   the sushi bar and on its stools while it's open (new world): dinner in the
-  evening, a bar at night. Until they land, the bar plays the other fallback
-  track from the one outside, so the song changes as you walk in. Suno prompts
-  (David's tracks):
-  - evening: "lofi japanese jazz hip hop, nujabes style, warm rhodes piano,
-    soft upright bass, brushed drums, gentle shakuhachi phrases, sunset by the
-    sea, relaxed dinner at a seaside sushi bar, instrumental, 85 bpm"
-  - night: "late night japanese jazz hop, nujabes style, smoky saxophone,
-    mellow jazz guitar, dusty vinyl drums, deep bass, neon lanterns over dark
-    water, cozy bar after hours, instrumental, 78 bpm"
+  evening, a bar at night. A slot without its file plays the other fallback
+  track from the one outside, so the song changes as you walk in.
+  - `bar-evening.mp3`: "海辺の夕食" (Dinner by the Sea), Suno, made by David,
+    2026-10-26. Prompt: "warm Japanese jazz-hop instrumental, seamless loop,
+    steady head-nod groove from the first bar to the last, no intro, no outro,
+    no build-ups or drops, hopeful chopped jazz piano loop with major 7th
+    chords, airy bamboo flute melody, round walking upright bass, crisp swung
+    boom-bap drums with ghost snares, soft vinyl warmth, 92 BPM, golden hour by
+    the sea". From his export (3:28): 75 bars, 6.06 s to 201.87 s (3:16).
+  - `bar-night.mp3`: "Smoky Night Groove", Suno, made by David, 2026-10-26.
+    Prompt: "jazzy hip hop instrumental, smoky alto sax lead, chopped Rhodes
+    and string samples, lush string swells, walking upright bass, laid-back
+    swung boom-bap with rimshots, dusty sampled feel, 88 BPM, nostalgic night
+    city, warm and soulful". From his export (4:03): 77 bars (it plays at about
+    83 BPM), 3.95 s to 227.09 s (3:43).
+  - Both made loopable by `art/audio/loop_track.py` (`python3
+    art/audio/loop_track.py <export> <slot>.mp3 <bpm>`): cut on bar lines, the
+    bar after the cut crossfaded into the start over one beat, 3 ms to silence
+    at each end, then one gain to the game's music level (-14.9 LUFS
+    integrated, about -1 dBTP; the fallback tracks measure -13.3 and -14.9),
+    128 kbps, 48 kHz. The originals stay with David. Suno licence tier still to
+    check before shipping (as above).
 - `interior.mp3` — plays instead of the hourly block inside any other
   building (HQ, house, museum, Oracle temple).
 - `{block}-{season}.mp3` (e.g. `12-winter.mp3`) — a seasonal variant slot for

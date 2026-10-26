@@ -26,7 +26,7 @@ import { SUSHI_BAR_GLOW_URL, SUSHI_BAR_HOURS_URL } from "@/lib/game/propModels";
 import { localAvatar } from "@/lib/net/localAvatar";
 import { isSeatedPose } from "@/lib/game/seatPrompt";
 import {
-  BAR_MUSIC_IN, BAR_MUSIC_OUT, BAR_POOLS, CHEF_LOOK, CHEF_OUTSIDE, CHEF_STATIONS, HOURS_TOP, SERVER_LOOK, SERVER_STATIONS, STOOLS,
+  BAR_MUSIC_IN, BAR_MUSIC_OUT, BAR_POOLS, CHEF_LOOK, CHEF_OUTSIDE, CHEF_STATIONS, HOURS_TOP, SERVER_LOOK, SERVER_STATIONS, STAFF_Y, STOOLS,
   barOpen, barPoint, seatView, stoolAt, type Bar, type BarView,
 } from "@/lib/game/sushiBar";
 
@@ -116,7 +116,7 @@ function Staff({ look: raw, stations, offset = 0, outside = null }: {
     m.pose = !at.moving && at.clip === "Trace" ? "Trace" : null;
     m.speed = at.moving ? OWNER_WALK : 0;
     m.yaw = easeFacing(m.yaw, at.yaw, 6, dt);
-    group.current?.position.set(at.x, 0.06, at.z);
+    group.current?.position.set(at.x, STAFF_Y, at.z);
   });
   return <group ref={group}><Suspense fallback={null}><Character look={look} motion={motion} walkSpeed={OWNER_WALK} /></Suspense></group>;
 }

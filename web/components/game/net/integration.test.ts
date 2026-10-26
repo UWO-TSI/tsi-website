@@ -25,8 +25,8 @@ describe("multiplayer's edits to the shared scene files", () => {
     // (the UI view, Esc 1, keeps the chat's last lines up: playtest round 1)
     expect(world).toMatch(/<NetHud area=\{area\}( hidden=\{hudCinematic[^}]*\})?( expanded=\{uiView\})? \/>(<\/div>)?\n(\s*<PhotoMode [^\n]*\/>\n)?\s*<LoadingStatus ready=\{ready\} \/>/);
     expect(world).toMatch(/benchSeat\(px, pz, 1\.3, v, layout\.benches, remoteSeatTaken\)/);
-    // The bench's claim key rides the tsi:sit detail (the sender's `seat`).
-    expect(world).toMatch(/benchSpot\.current = b && \{ \.\.\.b, seatY:/);
+    // The bench's claim key rides the tsi:sit detail (the sender's `seat`), and the sushi bar's stool's (barSeat's key).
+    expect(world).toMatch(/benchSpot\.current = b \? \{ \.\.\.b, seatY:[^\n]*: stool && \{ \.\.\.stool, seatY:/);
   });
 
   it("mounts nothing and costs nothing with multiplayer off (no realtime URL, no ?bots): the applicant island and solo play", () => {
