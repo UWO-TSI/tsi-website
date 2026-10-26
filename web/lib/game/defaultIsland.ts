@@ -92,6 +92,7 @@ export const PROP_FOOTPRINT: Record<string, [number, number]> = {
   "wharf-piling": [0.15, 0.15], "rope-post": [0.1, 0.1], "rope-span": [1, 0.03],
   "palm-tall": [0.3, 0.3], "palm-lean": [0.3, 0.3], "palm-short": [0.3, 0.3],
   "stump-seat": [0.3, 0.3], "firewood-stack": [0.95, 0.46], "fish-rack": [1.02, 0.37],
+  "forest-mass-a": [5, 5], "forest-mass-b": [7, 4], "forest-mass-c": [4.5, 4.5],
 };
 /** Prop tops before scale, measured from the GLB bounds: what a jump clears or lands on (lib/game/movement). */
 export const PROP_TOP: Record<string, number> = {
@@ -99,7 +100,7 @@ export const PROP_TOP: Record<string, number> = {
   ...Object.fromEntries(ROCK_MODELS.map(m => [m, ROCK_SIZE[m].top])),
   barrel: 11.66, lighthouse: 38, crate: 0.52, "market-cart": 2.84, "shop-cart": 0.87, "beach-parasol": 2.33, "palm-a": 3.94, "palm-b": 2.7,
   "wharf-piling": 0.35, "rope-post": 0.87, "rope-span": 0.68, "palm-tall": 5.7, "palm-lean": 4.82, "palm-short": 3.33,
-  "stump-seat": 0.45, "firewood-stack": 0.86, "fish-rack": 1.43,
+  "stump-seat": 0.45, "firewood-stack": 0.86, "fish-rack": 1.43, "forest-mass-a": 8.83, "forest-mass-b": 9.48, "forest-mass-c": 9.73,
 };
 /**
  * Residents' houses (the `house` kind, specs/world-editor.md decision 10): the chalet in its three colourways, the

@@ -79,6 +79,9 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // Its campfire set (art/props/build_campfire_set.py), round the campfire with the log benches: a stump to sit on, a
   // firewood stack with its chopping block, a fish-drying rack (along x).
   ...Object.fromEntries(["stump-seat", "firewood-stack", "fish-rack"].map(m => [m, `${P}${m}.glb`])),
+  // Its forest masses (art/trees/build_forest_masses.py): a stand of tall cedars in one mesh, about 12 (a), 16 by 9 along
+  // x (b) and 10 (c) across, to instance over the closed forest so it reads dense from the open area.
+  ...Object.fromEntries(["a", "b", "c"].map(m => [`forest-mass-${m}`, `/assets/game/plants/forest-mass-${m}.glb`])),
 };
 export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? `/assets/acnh/props/${model}.glb`;
 
