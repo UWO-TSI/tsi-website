@@ -508,7 +508,8 @@ function nature(): Obj[] {
     if (OPEN(x, z) < 3 || MAIN(x, z) < 5 || Math.min(BEACH(x, z), 0.4 * (60 - x)) > -2 || westOfQuay(x, z) < 8.5 || Math.hypot(x - PX, z - PZ) < PLAZA.r + 3) continue;
     if (path < (tree ? 6 : 4) || nearest(BEACH_WAY, x, z).d < 3.5 || Math.hypot(x - FIRE_AT[0], z - FIRE_AT[1]) < 9 || buildings.some(([bx, bz, r]) => Math.hypot(x - bx, z - bz) < r)) continue;
     const id = `nature-${out.length}`, seed = Math.floor(hash01(i, k + 43) * 1000);
-    if (tree) out.push({ id, kind: "tree", x: +x.toFixed(2), z: +z.toFixed(2), seed });
+    // Trees in the three broadleaf shapes only (seed 0 to 2: lib/game/natureParts.ts), so they instance in few draws.
+    if (tree) out.push({ id, kind: "tree", x: +x.toFixed(2), z: +z.toFixed(2), seed: seed % 3 });
     else if (h < 0.42) out.push({ id, kind: "bush", x: +x.toFixed(2), z: +z.toFixed(2), seed });
     else if (h < 0.62) out.push({ id, kind: "flower", x: +x.toFixed(2), z: +z.toFixed(2), seed });
     else out.push(obj("prop", id, x, z, h * 40, +(1 + 0.4 * hash01(i, k + 44)).toFixed(2), h < 0.82 ? "flower-meadow" : "flower-tallgrass"));

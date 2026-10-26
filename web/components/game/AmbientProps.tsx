@@ -81,17 +81,44 @@ export function Lanterns({ positions, intensity, glow, lamp = { url: LAMP_URL, l
   const group = useRef<THREE.Group>(null);
   const placements = useMemo(() => positions.map((position, i) => ({ position, rotation: yaws?.[i] })), [positions, yaws]);
   useFrame((_, raw) => { if (group.current) easeGlowOnce(group.current, glow, Math.min(raw, 0.1)); });
-  const [lx, ly, lz] = lamp.light;
   return (
     <group>
       {/* The globes start dark and ease to their target (a fixed prepared intensity, so the model is never rebuilt). */}
       <group ref={group}><InstancedGLB url={lamp.url} placements={placements} emissiveIntensity={0} /></group>
-      {reach > 0 && positions.map((p, i) => {
-        const c = Math.cos(yaws?.[i] ?? 0), s = Math.sin(yaws?.[i] ?? 0);
-        return <FadeLight key={i} color="#FFA040" intensity={intensity} distance={reach} position={[p[0] + lx * c + lz * s, p[1] + ly, p[2] - lx * s + lz * c]} />;
-      })}
+      {reach > 0 && positions.map((p, i) => <FadeLight key={i} color="#FFA040" intensity={intensity} distance={reach} position={lampLight(p, yaws?.[i] ?? 0, lamp.light)} />)}
     </group>
   );
+}
+
+/** Where a lamp's light sits: its model's light point turned by its yaw. */
+export function lampLight(p: readonly [number, number, number], yaw: number, [lx, ly, lz]: readonly [number, number, number]): [number, number, number] {
+  const c = Math.cos(yaw), s = Math.sin(yaw);
+  return [p[0] + lx * c + lz * s, p[1] + ly, p[2] - lx * s + lz * c];
+}
+
+/**
+ * The pools of light of the `count` lamps nearest the player (the new world's many lamps, terrain v3 R2c): a fixed few
+ * point lights that follow you from lamp to lamp, so the scene never pays for every lamp's light (each light costs
+ * every lit draw, on or off). A light fades out as its lamp nears the edge of the nearest few, so none pops.
+ */
+export function LampPool({ points, intensity, reach, player, count = 8 }: {
+  points: readonly (readonly [number, number, number])[]; intensity: number; reach: number; player: React.RefObject<THREE.Vector3>; count?: number;
+}) {
+  const lights = useRef<(THREE.PointLight | null)[]>([]);
+  const order = useMemo(() => points.map((_, i) => i), [points]);
+  useFrame((_, raw) => {
+    const { x, z } = player.current, d = (i: number) => Math.hypot(points[i][0] - x, points[i][2] - z);
+    order.sort((a, b) => d(a) - d(b));
+    const edge = order.length > count ? d(order[count]) : Infinity, dt = Math.min(raw, 0.1);
+    lights.current.forEach((light, k) => {
+      if (!light) return;
+      const i = order[k];
+      if (i === undefined) { light.intensity = 0; return; }
+      light.position.set(...points[i]);
+      easeLight(light, intensity * Math.min(1, Math.max(0, (edge - d(i)) / 6)), dt);
+    });
+  });
+  return <>{Array.from({ length: count }, (_, k) => <pointLight key={k} ref={l => { lights.current[k] = l; }} color="#FFA040" intensity={0} distance={reach} />)}</>;
 }
 
 /** A point light that eases to its intensity (porch and doorway lamps): mounted always, so lights never recompile the scene. */

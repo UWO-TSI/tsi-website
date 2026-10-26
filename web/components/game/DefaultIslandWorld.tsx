@@ -20,7 +20,7 @@ import PostFX from "./PostFX";
 import SunShadows from "./SunShadows";
 import PerfProbe from "./PerfProbe";
 import QualityGovernor from "./QualityGovernor";
-import { FadeLight, Lanterns } from "./AmbientProps";
+import { FadeLight, LampPool, Lanterns, lampLight } from "./AmbientProps";
 import { GLBProp, sceneryOf } from "./NatureModels";
 import { InstancedModels, MergedModels } from "./InstancedNature";
 import { ACNHBuilding, ACNHParts, CHALET_VARIANTS, type PartsPlacement } from "./ACNHBuilding";
@@ -441,6 +441,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     const ls = layout.lamps.filter(l => (l.model ?? "") === kind);
     return { kind, positions: ls.map((l): [number, number, number] => [l.x, island.ground(l.x, l.z), l.z]), yaws: kind ? ls.map(l => l.yaw ?? 0) : undefined };
   }).filter(s => s.positions.length), [layout, island]);
+  const lampPoints = useMemo(() => lampSets.flatMap(s => (s.kind === "hand" ? [] : s.positions.map((p, i) => lampLight(p, s.yaws?.[i] ?? 0, s.kind ? NEW_LAMPS[s.kind].light : [0, 2.4, 0])))), [lampSets]);
   const near = useRef<Near>(null);
   const fauna = useMemo(() => ({ ...layout.fauna, ground: island.ground, standable: island.standable, surface: island.surface, top: island.top, player }), [layout, island, player]);
   // The arrival (components/game/arrival): Bram walks you through, the fish crate on the pier until the tour is over.
@@ -534,7 +535,9 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       <EventDecor event={event} ground={island.ground} light={light} weather={weather} />
       <HalloweenLayer content={traditions.content} v={v} island={island} light={light} night={phase === "night"} fog={fogNight} weather={weather} residents={personas} />
       {layout.bridges.map(b => <GLBProp key={b.id} url={BRIDGE_URL} position={[b.x, b.y, b.z]} rotation={[0, b.yaw ?? 0, 0]} />)}
-      {lampSets.map(s => <Lanterns key={s.kind} positions={s.positions} yaws={s.yaws} lamp={s.kind ? NEW_LAMPS[s.kind] : undefined} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} reach={s.kind === "hand" ? 0 : v.terrain ? 8.5 : 5} />)}
+      {/* The new world's lamps only glow; their pools come from the few nearest you (LampPool). */}
+      {lampSets.map(s => <Lanterns key={s.kind} positions={s.positions} yaws={s.yaws} lamp={s.kind ? NEW_LAMPS[s.kind] : undefined} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} reach={v.terrain ? 0 : 5} />)}
+      {v.terrain && <LampPool points={lampPoints} intensity={light.lampsOn ? light.lamp * 1.5 : 0} reach={8.5} player={player} />}
       {layout.campfire && <Campfire site={layout.campfire} ground={island.ground} phase={phase} player={player} />}
       {/* Nature and props from the map, instanced: one draw per model sub-mesh however many the island has. */}
       <InstancedModels items={sceneryMoving} />
