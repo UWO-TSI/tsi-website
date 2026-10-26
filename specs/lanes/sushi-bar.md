@@ -26,30 +26,31 @@ Then go straight on. At the end, update Status here, send the full list, and sto
 
 ## Status
 
-**Phase A built, 2026-10-26** (branch game/sushi-bar; terrain-v3 merged in at e0ca3cf9). Shots `specs/evidence/sushi-bar/phase-a/`: bar-day (closed, blinds down), bar-evening, bar-night, approach-day and approach-night (the path from the beach), chef-outside (closed, the chef on the landing), entry-0/500/1000/1500 then entry (the glide in from the entrance), seat-evening and seat-night (first person).
+**Phase A round 2 built, 2026-10-26** (branch game/sushi-bar, f8b4b78b on 57e7f47c; terrain-v3 not merged in since e0ca3cf9). Shots `specs/evidence/sushi-bar/phase-a2/`: bar-day, bar-night, approach-day, approach-night (no sand path), chef-outside (closed), entrance (evening, close up), entry-300/900/1500 (the glide), seat-evening and seat-night with -left and -right (looking round), model-front, model-back, model-gate-night (Blender review renders).
 
-1. **Where:** on stilts off the beach's west end, `SUSHI = [-47, 119.5]`, yaw pi (`generate.ts`: the bar, its pier object `sushi-bar-pier` at the same origin, `SUSHI_PATH` and its lanterns; the old sand pad zone removed; world regenerated). Its window looks south to the open sea, its pier runs north to the sand (land end z 107.5). The water under its guests' deck is too deep to wade, so the way in is the entrance (walk.test checks it).
-2. **The path (David, R2d: "there should be a path to the front of it"):** a dirt path (a ramp, Paint.Path, half 1.1) off the beach's main stretch west of the volleyball net, between the parasols and the palms, down to the boardwalk's end at its height; a wharf lantern post where it starts, six hand lanterns along it (`lamps()`, ids `lamp-sushi-*`).
-3. **Models** (`art/buildings/build_sushi_bar.py`): `sushi-bar.glb` 11.5k tris (lower back counter and sill so the sea shows over them from a stool, a lower fish case, a duckboard for the staff, posters, today's menu easel moved out to the landing); `sushi-bar-pier.glb` 4.7k (piles and braces, the landing, the boardwalk sloping 0.4 to the sand, rope rails, four lantern posts, the entrance gate with the bar's board); `sushi-bar-hours.glb` 620 (`shutters`: bamboo blinds over the front and sides; `noren`: the entrance curtain); `sushi-bar-glow.glb` 4.9k (six more lanterns outside). All under the 12k building row; budget.test green.
-4. **Decks** (`defaultIsland.ts barDecks`, `sushiBar.ts BAR_DECKS`): the bar's floor at `BAR_Y` 0.7 (its origin), the landing (x +-1.4) and the boardwalk (x +-0.8, falling 0.4); the jetty's deck code and the bar's share `localDecks`.
-5. **Hours** (`barOpen`: evening and night): by day the blinds are down and the chef stands on the landing (Phase B gives him quests); from the evening the blinds roll up (`SushiBar.tsx hang`, about `HOURS_TOP`), the noren is hung, the lights come on (a little dimmer in the evening), the chef and the server work behind the counter.
-6. **Entering:** E at the entrance (`ENTRY`, range 1.5) while it's open: `barSeat` gives the next free stool in `SEAT_ORDER` (2, 3, 1, 4, 0, 5: each new guest sits beside the last), claim key `sushi:<id>#i`. The seat detail carries `hide` (PlayerAvatar hides your own avatar) and `exit` (getting up puts you on the landing facing out). The prompt reads "Enter the sushi bar", seated "Leave the bar"; E or moving gets you up. The follow camera glides from the view as it was to the first-person eye over 1.8 s (smootherstep), and back out (`IslandAtmosphere SEAT_GLIDE`; no black screen, the occluder cut off while seated).
-7. **First person:** `seatView`: eye 1.7 over the floor, 0.3 behind the stool's middle, looking across the counter to the chef with the sea in a band over the back counter. (The curved world drops the far sea about 10 degrees under a seated eye, which is why the back counter and sill went down to 0.7.)
-8. **Staff:** chef "Bancha" (our design: dark skin, full hair `hair_fluffy_boy`, gold shades, white shirt, indigo trousers, deadpan; no afro part exists in the catalogue); the server (navy raincoat as a diving suit, yellow rain boots as fins, open smile, blush; no diving mask part exists). His name is David's call. The old "facing away" was the chef's face hidden behind the fish case: fixed by the duckboard (`STAFF_Y`) and the lower case.
-9. **Music:** slots `bar-evening` and `bar-night` (`musicSchedule.ts`), both files in: David's Suno tracks "海辺の夕食" and "Smoky Night Groove", looped on bar lines by `art/audio/loop_track.py` (one-beat crossfade of the next bar into the start, 3 ms edge fades), -14.9 LUFS, about -1 dBTP, 128 kbps. Sources and prompts in the music README. Not heard (headless, muted).
+1. **Japanese, a better model** (`art/buildings/build_sushi_bar.py`): a kawara roof (`roof`, `roof_pt`: the tiles' bed, 25 rows of round cover tiles a slope with pale end discs, the corners turned up by SORI, a stacked ridge with an onigawara at each end, dark bargeboards and eave fascia); the side walls charred-cedar boards to RAIL_Y under white plaster between dark timbers, plaster over the bottle beam; an indigo valance with white crests either side of the entrance (the red swags gone); the round front posts without rope or glass floats; the entrance under the eave (`pier`): dark posts on stone footings, a head beam, the kanban in a dark frame, a shimenawa with straw tassels and shide; the noren deep indigo with the bar's crest on the middle panel; the roof sign under a little tiled cap.
+2. **Lanterns** (`chochin`): tall ribbed paper bodies, each rib its own darker glow block (`lantern-rib`, `red-rib`), black lacquer caps, tassels; a big red pair at the door; a row of eleven small red and white ones on a cord across the kitchen in front of the bottles (ROW_Y). The string lights are gone.
+3. **The sand path:** its paint is gone; only its last stretch still eases the sand to the boardwalk, unpainted (`generate.ts`, `SUSHI_PATH.slice(-2)`); the lantern post and six hand lanterns still mark the way (they read well at night: approach-night). World regenerated (height.png, surface.png; world.json unchanged).
+4. **The chefs at work in view:** a raised board floor behind the counter (STAFF_Y 0.3) and a work ledge behind the fish case (LEDGE_Z) with two cutting boards (BOARDS, a block of salmon and of tuna) and a geta beside each. Bancha slices at a board (`CHEF_STATIONS` Craft, `Staff` replays the Craft clip each CRAFT_S with `sushi-knife.glb` held on the hammer's grip), then sets nigiri on its geta one by one (Trace; the hours model's `prep-<board>`, shown through the mesh's draw range, cleared as he starts slicing there again), reaches to the back counter; the server plates at the far end. `OwnerClip` gained "Craft" (cafe.ts).
+5. **The seated view:** `SEAT_FOV` 60 (moveFx.ts, PlayerAvatar while a seat hides you); the eye 0.4 behind the stool, a little down (seatView). Looking round (`IslandAtmosphere` SEAT_YAW 60 degrees either side, SEAT_TILT about 20 up or down from the orbit's middle pitch, eases back after SEAT_SETTLE 1.5 s; the pitch you had comes back as you get up); mouse after a click, the arrows, or two fingers. The glide now drops first (SEAT_DROP) and goes in through the noren.
+6. **Islands out the window** (`sushi-bar-isles.glb`, 4.0k tris, one P_Stone draw): limestone stacks with green tops and palms, a long island far off, a palm islet; each raised to sit on the sea's horizon from the stool's eye ((d sqrt(k) - sqrt(h))², `isle_base`, mirroring curvedWorld's bend); drawn only while seated, once the camera is within ISLES_NEAR of the eye.
+7. **Decor:** menu tags along the window beam, sake shelves on the right wall (big bottles with labels, tokkuri, wooden cups), a great-wave poster, a bonsai on the back counter, bamboo planters (the palms gone), two sake casks on the deck, a lucky cat on the counter's end.
 
-**Gates (head of this lane):** tsc clean; eslint clean on changed files; vitest default village 3441 passed; with `NEXT_PUBLIC_GAME_WORLD=new` all pass but `app/api/collections/route.test.ts` (21: it posts village coordinates; nothing on its path changed in this lane, not rerun on the merge base); budget.test green. The old `integration.test` regex for the bench claims was fixed for the stool line.
+**Models:** sushi-bar 15.7k tris (budget exception row in `perf/budget.ts`, 16k, 7 draws), glow 6.9k, pier 5.2k, hours 1.4k, isles 4.0k, sushi-knife 80 (three same-look parts, merged in the hand). PROP_TOP sushi-bar 5.02.
+
+**Gates (f8b4b78b):** tsc clean; eslint clean on changed files; vitest default village all pass (3442); with `NEXT_PUBLIC_GAME_WORLD=new` all pass but `app/api/collections/route.test.ts` (21, as before: it posts village coordinates). perf:check SCENES=v2 against the 2026-10-14 baseline (before the new world): high 5.6 ms (5.4), 395 draws (254), 1.28M tris; lite 3.7 ms (3.0), 324 draws (172), 1.07M tris: FAILED on draws and triangles, the new world's own growth; this lane adds at most about 7.5k triangles and no still draws at the bar (the isles only while seated, the nigiri draws only while set). An A/B against 57e7f47c was not run.
 
 **Open:**
-- David to confirm "left" (west) and the spot; the night view from the beach is dim at distance (the bar's pools light its own deck and landing).
-- The chef and server use existing parts only: no afro hair, no diving mask in the catalogue. A dedicated hair or mask would be new character art.
-- The music element's loop (`audio.ts`, an HTMLAudioElement) is not sample-exact; the files are made to wrap cleanly but the browser may leave a few ms.
-- The evening seated view sometimes shows the chef at a back-counter station, his back to you (his loop).
+- The server's name: not given yet, unnamed.
+- The night view from the beach is still dim at distance (the bar's pools light its own deck and landing).
+- The chef and server use existing parts only (no afro hair, no diving mask in the catalogue).
+- The `?time=` clock starts every shot at much the same moment of the staff's loops; the shoot script's `wait` moves the evening seat shot into the chef's slicing. In play the loop runs on the world clock.
+- The knife's grip is the hammer's (Character.tsx HELD_GRIPS); from a stool it reads as a knife raised and brought down on the fish, not a drawn slice.
 - Phase B (menu, ordering, food, buffs, quests, photos) after launch.
 
-## Next
+## David's decisions
 
-**Phase A round 2: David's review of 2a7c87cb** (https://claude.ai/artifact/Xh3WqWHGxrB5z1a5xjSAKJ, 2026-10-26), verbatim:
+**Phase A round 2, his review of 2a7c87cb** (https://claude.ai/artifact/Xh3WqWHGxrB5z1a5xjSAKJ, 2026-10-26), verbatim:
 - **spot, approach by day, day, night:** approved.
 - **closed (approved):** "more japanese style, lanters better modeled, this should be japanese"
 - **glide (approved):** "looks good but need to enhance the building model here"
@@ -58,26 +59,12 @@ Then go straight on. At the end, update Status here, send the full list, and sto
 - **seated, night (redo):** "reduce fov to see more, can look around, the interior needs better decore"
 - **The server's name:** not given yet; keep it unnamed.
 
-**The coordinator's reading:**
-1. **Japanese, and a better model:**
-   - the building reads clearly Japanese: a tiled or cedar-shingle roof with upturned eaves, wooden lattice and shoji panels, a proper noren, rope (shimenawa) or a wooden sign plaque;
-   - the lanterns modelled properly: red and white chochin with ribs and black caps, and a pair of big ones at the entrance;
-   - more care on the building as a whole. It's the bar's face from the glide and the beach.
-2. **The sand path:** remove the dirt path in the sand. You can keep a few lanterns marking the way, if they look good without the path. terrain-v3 removes the tall seabed rocks on the new world.
-3. **The seated view:**
-   - **The chefs:** you see them preparing food. Their upper bodies and hands are at work over a cutting board in clear view, not hidden behind the fish case. Give them a visible prep loop: slicing, plating.
-   - **The view:** "see more", so a wider field of view than now. David wrote both "fov higher" and "reduce fov to see more"; the intent is to see more.
-   - **Looking around:** a limited range while seated, by mouse or drag, about 60 degrees each side and some up and down. It eases back to centre.
-   - **Islands in the distance:** small islands through the window, so the view is beautiful. The curved world sinks far things, so use cheap backdrop islands placed or raised to sit on the horizon from the seat, drawn only when seated if that's cheapest.
-4. **The interior's decor:** richer and cozier. Sake shelves, posters, a hanging lantern row, plants, the fish tank, menu tags on the wall, a lucky cat.
+The coordinator read "fov" as: see more (wider). terrain-v3 removes the tall seabed rocks on the new world.
 
-Then shots into `specs/evidence/sushi-bar/phase-a2/`:
-- the bar by day and at night;
-- the entrance close up;
-- the glide (3 frames);
-- the seated view at evening and at night, looking centre, left and right.
+## Next
 
-Gates as before (with and without the switch, tsc, eslint, budget.test). Commit, update Status, SendMessage "main", stop.
+1. Wait for David's review of round 2 (the shots above).
+2. Phase B after launch.
 
 ## Tools and gotchas
 
@@ -91,5 +78,8 @@ Gates as before (with and without the switch, tsc, eslint, budget.test). Commit,
 - **Shots:** `PORT=3175 node specs/evidence/sushi-bar/shoot.mjs <dir> [view,...]` (headless, muted; `sit` stands you at the entrance and presses E, `frames` shoots the glide). Dev server on 3175 with `NEXT_PUBLIC_GAME_WORLD=new`, Supabase blanked, under the devserver lock. The bar's frame (lx, lz) is the world's (-47 - lx, 119.5 - lz).
 - **World:** after editing `generate.ts`, `cd web && npx vite-node -c vitest.config.ts scripts/generate-world.ts` (about 15 s), then walk.test, generate.test, world.test, cells.test, sealed.test with `NEXT_PUBLIC_GAME_WORLD=new`.
 - **Music:** `python3 art/audio/loop_track.py <export> web/public/assets/audio/music/<slot>.mp3 <bpm>` reads the export (never moves it) and writes the looped slot; list the name in `MUSIC_FILES`.
-- **Builder mirrors:** `BAR_DECKS`, `ENTRY`, `HOURS_TOP`, `STAFF_Y`, `STOOLS` in `lib/game/sushiBar.ts` mirror the builder's LAND_*, WALK_*, GATE_*, HOURS_TOP, STAFF_Y, SEATS: change both together.
+- **Builder mirrors:** `BAR_DECKS`, `ENTRY`, `HOURS_TOP`, `STAFF_Y`, `STOOLS` in `lib/game/sushiBar.ts` mirror the builder's LAND_*, WALK_*, GATE_*, HOURS_TOP, STAFF_Y, SEATS: change both together. `CHEF_STATIONS` stand where the Craft clip's blow lands on the builder's BOARDS (0.63 ahead of the feet, 0.585 over them: Workshop.tsx BENCH). The builder's EYE (the islands' raise) mirrors `seatView`'s eye.
+- **The builder writes six GLBs** (sushi-bar, -glow, -pier, -hours, -isles in game/buildings; sushi-knife in game/tools). A tool GLB must be several parts of one look (heldMesh.test): the knife's three `knife_*` materials.
+- **perf:check:** `measure-build.sh` rewrites and then restores game files from git: commit first. Build under `withlock.sh heavy sh specs/perf/measure-build.sh`, then `SKIP_BUILD=1 SCENES=v2 LOCK_OWNER=game/sushi-bar npm run perf:check` (it takes the devserver lock itself and deletes web/.next).
+- **Shots:** `shoot.mjs` views `turn` (look round from the stool, radians, + left) and `wait` (ms more before the shot).
 - **Big props and the walker's buckets:** `islandOf` buckets props by their centre (4 u buckets, +-1 searched), so a footprint half over 4 is missed at its ends: keep the core at hw 4.
