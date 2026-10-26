@@ -16,7 +16,9 @@ Worktree `.claude/worktrees/wharf-art`, branch `game/wharf-art`. Agent type `uwo
 
 ## Status
 
-Not started.
+In progress. Previews in `specs/evidence/wharf-art/`.
+
+1. **Palms, redone** (`art/trees/build_palms.py`, the frond texture repainted by `art/trees/paint_textures.py palm-fronds`): `palm-tall` (top 5.65), `palm-lean` (4.86), `palm-short` (3.32); two layers of broad fronds folded so their leaflets hang, coconuts in the gaps of the lower layer, a tapering softly ringed trunk. 1290 to 1560 tris with casters. Evidence `palms.webp`.
 
 ## Next
 

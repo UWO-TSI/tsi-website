@@ -74,7 +74,7 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // a `deck` square and its "steps" (4 x 4, local +z inland), a pile to stand just outside the deck's edge, a ladder off
   // the edge (the edge at z 0, the water toward -z), and rope fencing (a post, and a rope from x -1 to +1 between two).
   ...Object.fromEntries(["deck-tile", "deck-steps", "wharf-piling", "wharf-ladder", "rope-post", "rope-span"].map(m => [m, `/assets/game/wharf/${m}.glb`])),
-  // Its palms (art/trees/build_palms.py): light fronds and coconuts, the origin at the trunk's foot, at scale 1.
+  // Its palms (art/trees/build_palms.py): two layers of broad fronds over a coconut cluster, the origin at the trunk's foot, at scale 1.
   ...Object.fromEntries(["tall", "lean", "short"].map(m => [`palm-${m}`, `/assets/game/plants/tree-palm-${m}.glb`])),
   // Its campfire set (art/props/build_campfire_set.py), round the campfire with the log benches: a stump to sit on, a
   // firewood stack with its chopping block, a fish-drying rack (along x).

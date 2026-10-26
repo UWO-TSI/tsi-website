@@ -99,7 +99,7 @@ export const PROP_TOP: Record<string, number> = {
   "bench-wood": 0.51, "rock-a": 0.61, "rock-b": 0.59, "rock-c": 0.52, "fence-country-a": 0.7, "fence-country-b": 0.69,
   ...Object.fromEntries(ROCK_MODELS.map(m => [m, ROCK_SIZE[m].top])),
   barrel: 11.66, lighthouse: 38, crate: 0.52, "market-cart": 2.84, "shop-cart": 0.87, "beach-parasol": 2.33, "palm-a": 3.94, "palm-b": 2.7,
-  "wharf-piling": 0.35, "rope-post": 0.87, "rope-span": 0.68, "palm-tall": 5.7, "palm-lean": 4.82, "palm-short": 3.33,
+  "wharf-piling": 0.35, "rope-post": 0.87, "rope-span": 0.68, "palm-tall": 5.65, "palm-lean": 4.86, "palm-short": 3.32,
   "stump-seat": 0.45, "firewood-stack": 0.86, "fish-rack": 1.43, "forest-mass-a": 8.83, "forest-mass-b": 9.48, "forest-mass-c": 9.73,
 };
 /**
