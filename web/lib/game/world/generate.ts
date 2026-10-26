@@ -387,7 +387,7 @@ const HOUSES: readonly [number, number, string][] = ([
  * in the ship houses' frame: EDGE_SHOPS).
  */
 const SELL_AT = 26.6;
-const SHOPS: readonly (readonly [z: number, model: string])[] = [[63.5, "tackle-shop"]];
+const SHOPS: readonly (readonly [z: number, model: string])[] = [[63.5, "tackle-shop"], [73.5, "shipwright-shed"]];
 /**
  * The fish market on the deck boards (quayAt's z and d, a turn off facing the water, a scale): the market, its carts,
  * barrels and crates in loose clusters, each its own turn (David, R2d: "make it organic").
@@ -420,7 +420,8 @@ function scenery(): Obj[] {
   // there opens the sell sheet (DefaultIslandWorld, by its id).
   { const q = quayAt(SELL_AT, 1); out.push(obj("prop", SELL_BARREL, q.x, q.z, q.yaw + Math.PI / 2, 1, "sell-barrel")); }
   // The wharf's shops on the deck's water edge, their backs over the sea, facing in (David, R2d: "one for selling
-  // rods/equipment, with a big rod on the roof").
+  // rods/equipment, with a big rod on the roof ... and one for building ships"); the shipwright's boat floats beside its
+  // shed (components/game/wharf/ShipwrightBoat.tsx).
   SHOPS.forEach(([z, m]) => { const q = quayAt(z, -1); out.push(obj("prop", m, q.x, q.z, q.yaw, 1, m)); });
   // The path's loose fencing (David: "the fencing is loosely there not a straight fencing but one with gaps", running
   // "up higher"): short runs and lone posts either side all the way up, bushes scattered behind them.
