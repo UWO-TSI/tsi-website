@@ -29,6 +29,13 @@ export const VIEWS = {
   "20-plaza-night": { at: [44, 53], yaw: 250, pitch: 0.42, zoom: 1.6, time: "night" },
   "21-shallows": { at: [9, 115], yaw: 0, pitch: 0.55, zoom: 1.2 },
   "22-ship-houses": { at: [66, 66], yaw: 100, pitch: 0.42, zoom: 1.4 },
+  // R2e: the fish market at the north end from the deck, the shops, the shipwright's boat, the way to the beach, the
+  // swash on the sand, the forest from inside.
+  "23-market-front": { at: [70, 33], yaw: 190, pitch: 0.4, zoom: 1.4 },
+  "24-shipwright": { at: [64, 79], yaw: 75, pitch: 0.42, zoom: 1.3 },
+  "25-wharf-to-beach": { at: [52, 95], yaw: 140, pitch: 0.42, zoom: 1.6 },
+  "26-swash": { at: [-2, 110.5], yaw: 20, pitch: 0.5, zoom: 0.75, frames: { count: 2, every: 1800 } },
+  "27-forest": { at: [44, -10], yaw: 180, pitch: 0.4, zoom: 1.6 },
 };
 
 // VILLAGE=1: the shipped village instead (no fixture; run the dev server without NEXT_PUBLIC_GAME_WORLD), the launch
@@ -60,6 +67,8 @@ for (const [name, v] of Object.entries(village ? VILLAGE_VIEWS : VIEWS)) {
   if (await page.evaluate(() => { const g = window.__governor; if (!g) return false; g.hold = 1e9; g.set(0); return true; })) await page.waitForTimeout(1500);
   await page.addStyleTag({ content: "nav, [role=status], #island-options, [aria-controls='island-options'], nextjs-portal { display: none !important; }" }).catch(() => {});
   await page.screenshot({ path: `${OUT}/${name}.png` });
+  // `frames`: more shots this many ms apart (motion: the swash), named -1, -2.
+  for (let f = 1; f <= (v.frames?.count ?? 0); f++) { await page.waitForTimeout(v.frames.every); await page.screenshot({ path: `${OUT}/${name}-${f}.png` }); }
   console.log("shot", name, JSON.stringify(await page.evaluate(() => { const p = window.__move?.sim?.current?.pos ?? window.__move?.sim?.current?.position; return p ? [p.x ?? p[0], p.y ?? p[1], p.z ?? p[2]].map(n => +(+n).toFixed(2)) : null; })));
   await ctx.close();
 }

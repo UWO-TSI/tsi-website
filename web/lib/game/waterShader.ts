@@ -632,7 +632,7 @@ const VERTEX_BODY = /* glsl */ `
 /** Where the two seas' water differs: the normal (the swell's vertex gradient, the waves' per-pixel sum), the shade, the whitecaps. */
 const PIECES: Record<SeaKind, { swash: string; normal: string; shade: string; caps: string }> = {
   waves: {
-    swash: `  // The swash (SWASH): its front up the sand (cells, negative on land), cut past it, and how wide its foam breaks.
+    swash: `  // The swash (SWASH): its front up the sand (cells, negative on land), cut past it, and how much wider its foam breaks (cells).
   float front = 0.0, surge = 0.0;
   if (uSwash > 0.0) {
     float sr;
@@ -640,7 +640,7 @@ const PIECES: Record<SeaKind, { swash: string; normal: string; shade: string; ca
     front = -uSwash * swashRun(vWaterRest, sr) * sf.y * sf.y;
     if (shore < front) discard;
     float lace = 0.5 + 0.5 * sin(vWaterWorld.x * 1.9 + sin(vWaterWorld.z * 1.3) * 2.0) * sin(vWaterWorld.z * 1.7 + sin(vWaterWorld.x * 1.1) * 2.0);
-    surge = (1.0 - smoothstep(0.08, 0.5, sr)) * sf.y * (2.0 + 3.0 * lace);
+    surge = 0.2 + (1.0 - smoothstep(0.08, 0.55, sr)) * sf.y * (0.5 + 1.0 * lace);
   }
 `,
     normal: `  // Surface normal from the waves, evaluated here per pixel (the same sum the vertices moved by, each train faded once
@@ -734,7 +734,7 @@ ${PIECES[sea].shade}
   // shimmering. It sits OVER the rings and glare, which is why it is applied
   // last and why the sun is killed inside it.
   float aa = max(fwidth(edge), 1e-5) * 0.8 + uFoamSoft;
-${sea === "waves" ? `  float fw = uFoamWidth * (1.0 + surge);
+${sea === "waves" ? `  float fw = uFoamWidth + surge;
   float foam = 1.0 - smoothstep(fw - aa, fw + aa, edge);
   foam *= step(front, shore); // nothing under the land itself (past the swash's front)` : `  float foam = 1.0 - smoothstep(uFoamWidth - aa, uFoamWidth + aa, edge);
   foam *= step(0.0, shore); // nothing under the land itself`}
