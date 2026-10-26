@@ -303,8 +303,9 @@ export const JETTY = {
 export interface KitPiece { model: string; x: number; y: number; z: number; yaw: number }
 /**
  * The wharf kit on the `deck` squares (each 4 u, local +z inland, level at the ground under its middle): a deck tile on
- * each; on each square at the water's edge two piles just outside it, and on some a ladder down or rope fencing along
- * it, never within `clear` of `keep` (the jetty's gangways land there).
+ * each; on each square at the water's edge two rope-lashed piles just outside it (David: "wood pillars on the side with
+ * rope attached"), and on some a ladder down with a life ring by it, a rope net with floats, or rope fencing along it,
+ * never within `clear` of `keep` (the jetty's gangways land there).
  */
 export function deckPieces(decks: readonly { x: number; z: number; yaw?: number }[], ground: (x: number, z: number) => number, keep?: { x: number; z: number }, clear = 7): KitPiece[] {
   const out: KitPiece[] = [], at = { x: 0, z: 0 };
@@ -316,9 +317,10 @@ export function deckPieces(decks: readonly { x: number; z: number; yaw?: number 
     dockToWorld(d, 0, -2.6, at);
     if (ground(at.x, at.z) > 0) continue;
     const i = edge++, open = !keep || Math.hypot(o.x - keep.x, o.z - keep.z) > clear;
-    for (const lx of [-1, 1]) put("wharf-piling", lx, -2.2);
-    if (open && i % 5 === 2) put("wharf-ladder", 0.6, -2);
-    else if (open && hash01(i, 7) < 0.5) {
+    for (const lx of [-1, 1]) put("dock-pile-rope", lx, -2.2);
+    if (open && i % 5 === 2) { put("wharf-ladder", 0.6, -2); put("life-ring", -1.2, -1.75); }
+    else if (open && hash01(i, 7) < 0.25) put("rope-net", 0, -1.8);
+    else if (open && hash01(i, 7) < 0.55) {
       for (const lx of [-2, 0, 2]) put("rope-post", lx, -1.8);
       for (const lx of [-1, 1]) put("rope-span", lx, -1.8);
     }

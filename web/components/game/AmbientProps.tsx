@@ -73,7 +73,7 @@ function easeGlowOnce(group: THREE.Object3D, target: number, dt: number) {
  */
 export function Lanterns({ positions, intensity, glow, lamp = { url: LAMP_URL, light: [0, 2.4, 0] }, yaws, reach = 5 }: {
   positions: readonly [number, number, number][]; intensity: number; glow: number;
-  /** How far each lamp's pool of light reaches. */
+  /** How far each lamp's pool of light reaches; 0: they only glow (no light of their own). */
   reach?: number;
   /** Which lamp (propModels NEW_LAMPS) and its light point in the model; `yaws` turn each (radians about +y). */
   lamp?: { url: string; light: readonly [number, number, number] }; yaws?: readonly number[];
@@ -86,7 +86,7 @@ export function Lanterns({ positions, intensity, glow, lamp = { url: LAMP_URL, l
     <group>
       {/* The globes start dark and ease to their target (a fixed prepared intensity, so the model is never rebuilt). */}
       <group ref={group}><InstancedGLB url={lamp.url} placements={placements} emissiveIntensity={0} /></group>
-      {positions.map((p, i) => {
+      {reach > 0 && positions.map((p, i) => {
         const c = Math.cos(yaws?.[i] ?? 0), s = Math.sin(yaws?.[i] ?? 0);
         return <FadeLight key={i} color="#FFA040" intensity={intensity} distance={reach} position={[p[0] + lx * c + lz * s, p[1] + ly, p[2] - lx * s + lz * c]} />;
       })}

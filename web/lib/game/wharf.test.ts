@@ -171,18 +171,18 @@ describe("the wharf kit on the deck squares", () => {
   const ground = (x: number) => (x > 4 ? -1.4 : 1);
   const row = (x: number) => Array.from({ length: 10 }, (_, i) => ({ x, z: i * 4, yaw: -Math.PI / 2 }));
 
-  it("lays a tile on every square at its ground, and piles only along the water's edge", () => {
+  it("lays a tile on every square at its ground, and rope-lashed piles only along the water's edge", () => {
     const pieces = deckPieces([...row(2), ...row(-2)], ground);
     expect(pieces.filter(p => p.model === "deck-tile").length).toBe(20);
-    const piles = pieces.filter(p => p.model === "wharf-piling");
+    const piles = pieces.filter(p => p.model === "dock-pile-rope");
     expect(piles.length).toBe(20);
     for (const p of piles) { expect(p.x).toBeCloseTo(4.2, 6); expect(p.y).toBe(1); }
   });
 
-  it("puts ladders and rope on some edge squares, none near the jetty's landing", () => {
+  it("puts ladders with life rings, rope nets and rope fencing on some edge squares, none near the jetty's landing", () => {
     const all = deckPieces(row(2), ground), kept = deckPieces(row(2), ground, { x: 0, z: 18 }, 7);
     expect(all.some(p => p.model === "wharf-ladder")).toBe(true);
-    expect(all.some(p => p.model === "rope-span")).toBe(true);
-    for (const p of kept) if (p.model !== "deck-tile" && p.model !== "wharf-piling") expect(Math.abs(p.z - 18)).toBeGreaterThan(5);
+    for (const m of ["rope-span", "rope-net", "life-ring"]) expect(all.some(p => p.model === m), m).toBe(true);
+    for (const p of kept) if (p.model !== "deck-tile" && p.model !== "dock-pile-rope") expect(Math.abs(p.z - 18)).toBeGreaterThan(5);
   });
 });

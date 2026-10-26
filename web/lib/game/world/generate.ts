@@ -19,10 +19,11 @@
 import { smoothstep, valueNoise, type MapAnnotation, type ShoreSdf } from "../grid";
 import { CONVERT, contourDistance, limitSteepness, padBuildings, rockRelief, shelf, softMin, wharfQuay } from "./convert";
 import type { World } from "./format";
-import { Paint, createTerrain, sampleX, sampleZ } from "./terrain";
+import { Paint, createTerrain, sampleX, sampleZ, terrainHeight } from "./terrain";
 import { hash01 } from "../worldFx";
 import { JETTY, dockToWorld } from "../wharf";
 import type { ObjectKind } from "../villageMap";
+import type { NEW_LAMPS } from "../propModels";
 
 type XZ = readonly [number, number];
 type Field = (x: number, z: number) => number;
@@ -303,8 +304,8 @@ function borderObjects(): World["objects"] {
 
 /** Facing a point: the yaw that turns a landmark's front (-z in its frame) toward (dx, dz). */
 const facing = (dx: number, dz: number) => +Math.atan2(-dx, -dz).toFixed(4);
-/** A lamp (lib/game/propModels.ts NEW_LAMPS: "village" on the path and the plaza, "wharf" on the deck) turned so its arm reaches toward (tx, tz). */
-const lamp = (model: "village" | "wharf" | "camp", x: number, z: number, tx: number, tz: number) => {
+/** A lamp (lib/game/propModels.ts NEW_LAMPS) turned so its arm reaches toward (tx, tz). */
+const lamp = (model: keyof typeof NEW_LAMPS, x: number, z: number, tx: number, tz: number) => {
   const yaw = +Math.atan2(-(tz - z), tx - x).toFixed(4);
   return { x, z, ...(yaw ? { yaw } : {}), model };
 };
@@ -329,11 +330,6 @@ const LAYOUT: Record<string, { x: number; z: number; yaw?: number; scale?: numbe
   beach: { x: -8, z: 106 },
   "study-0": { x: PX - 5, z: PZ - 10 }, "study-1": { x: PX + 11, z: PZ - 10 }, "study-2": { x: PX - 5, z: PZ + 10 }, "study-3": { x: PX + 11, z: PZ + 10 },
   "bench-0": { x: PX - 9, z: PZ - 4 }, "bench-1": { x: PX - 9, z: PZ + 4 }, "bench-2": { x: PX + 13.5, z: PZ - 6 }, "bench-3": { x: PX + 13.5, z: PZ + 6 },
-  "lamp-0": lamp("wharf", 70.5, 51, SHORE_X, 51),
-  // Lamps up the path, either side by turns, their arms over it.
-  ...Object.fromEntries([3, 8, 13, 18, 23].map((s, i) => { const q = onPath(s, i % 2 ? 2.6 : -2.6), c = onPath(s); return [`lamp-${i + 1}`, lamp("village", q.x, q.z, c.x, c.z)]; })),
-  ...Object.fromEntries(([[PX - 11, PZ - 9], [PX + 14, PZ - 10], [PX - 11, PZ + 9], [PX + 14, PZ + 10]] as const).map(([x, z], i) => [`lamp-${i + 6}`, lamp("village", x, z, PX, PZ)])),
-  "lamp-10": lamp("village", 39, 84, 35, 84),
 };
 
 type Obj = World["objects"][number];
@@ -357,10 +353,16 @@ const HOUSES: readonly [number, number, string][] = ([
 ] as const).map(([dx, dz, colour]) => [PX + HOUSE_IN * dx, PZ + HOUSE_IN * dz, colour]);
 /** The fish market on the deck boards (quayAt's z and d, a turn off facing the water, a scale): stalls, carts, barrels and crates. */
 const MARKET: readonly (readonly [model: string, z: number, d: number, turn: number, scale: number])[] = [
-  ...[22, 28, 34, 40, 68, 74, 80].map(z => ["market-cart", z, 6, 0, 0.55] as const),
-  ...[[25, 7.6], [25.7, 7], [31, 7.6], [37, 7.6], [43, 7.3], [71, 7.6], [77, 7.6], [77.7, 7], [19, 1.4], [63, 1.4], [83, 7.4]].map(([z, d]) => ["barrel", z, d, z, 0.07] as const),
-  ...[[20, 1.2], [26.5, 1.3], [33, 1.2], [66, 1.2], [72.5, 1.3], [84, 1.2]].map(([z, d]) => ["crate", z, d, Math.PI / 2, 1] as const),
+  // wharf-art's fish market (David's marlin-shop reference) on 2 x 2 of the inland deck squares, its awning toward the
+  // water; the stalls either side of it and along the deck.
+  ["fish-market", 34, 4.6, 0, 1],
+  ...[22, 28, 40, 68, 74, 80].map(z => ["market-cart", z, 6, 0, 0.55] as const),
+  ...[[25, 7.6], [25.7, 7], [30.6, 6.6], [43, 7.3], [71, 7.6], [77, 7.6], [77.7, 7], [19, 1.4], [63, 1.4]].map(([z, d]) => ["barrel", z, d, z, 0.07] as const),
+  ...[[20, 1.2], [26.5, 1.3], [66, 1.2], [72.5, 1.3]].map(([z, d]) => ["crate", z, d, Math.PI / 2, 1] as const),
   ["shop-cart", 43.5, 3.5, 0.4, 1.5], ["shop-cart", 61, 3.5, -0.3, 1.5],
+  // wharf-art's dock decor: nets heaped and over crates, crates under cloth, crates of fish tipped toward the walk.
+  ["net-heap", 37.8, 2.2, 0.5, 1], ["crate-net", 29.6, 2.6, 0, 1], ["crate-cloth", 23.8, 3.2, 0.3, 1], ["fish-crate", 31.2, 1.3, 0, 1], ["fish-crate", 36.9, 1.2, 0.2, 1],
+  ["fish-crate", 69.8, 2.4, -0.2, 1], ["net-heap", 75.6, 2.4, 1.2, 1], ["crate-cloth", 64.5, 5.4, 0, 1], ["crate-net", 58.6, 6.3, 0.1, 1], ["net-heap", 18.4, 5.6, 2.1, 1],
 ];
 /**
  * R2's scenery (David's notes and the coordinator's reading, specs/lanes/terrain-v3.md): deck boards over the wharf's
@@ -389,12 +391,18 @@ function scenery(): Obj[] {
     if (nearest(PATH, q.x, q.z).d < 3.2) { bush++; continue; }
     out.push({ id: `path-bush-${bush}`, kind: "bush", x: +q.x.toFixed(2), z: +q.z.toFixed(2), seed: bush++ });
   }
-  // Lantern posts on the deck, their arms out over the boards toward the water, and on the jetty's platform toward its stairs.
-  [[30, 3.5], [78, 3.5]].forEach(([z, d], i) => { const q = quayAt(z, d), e = quayAt(z, 0), l = lamp("wharf", q.x, q.z, e.x, e.z); out.push(obj("lamp", `lamp-${11 + i}`, l.x, l.z, l.yaw ?? 0, 1, l.model)); });
-  [-5, 5].forEach((lx, i) => { const p = dockToWorld(DOCK, lx, 11, { x: 0, z: 0 }), l = lamp("wharf", p.x, p.z, p.x, DOCK.z); out.push(obj("lamp", `lamp-${13 + i}`, l.x, l.z, l.yaw ?? 0, 1, l.model)); });
-  // Palms (terrain-art's, light fronds and coconuts) on the grassy band behind the boards, either side of the path.
-  ([[18, 10.5, "tall"], [25, 11.5, "short"], [32, 10, "lean"], [39, 11, "tall"], [62, 10.5, "short"], [68, 11, "tall"], [75, 10, "lean"], [82, 11.5, "short"]] as const)
+  // The path's edge stones (village-art's mossy rocks, at one and a half to twice their size), clear of its lanterns.
+  for (let k = 0; k < 10; k++) for (const side of [-1, 1]) {
+    const h = hash01(k, side + 20), q = onPath(2.5 + 2.5 * k + 0.8 * (h - 0.5), side * (2.15 + 0.3 * hash01(k, side + 21)));
+    if (k % 2 && hash01(k, side + 22) < 0.5) continue;
+    out.push(obj("prop", `path-rock-${k}-${side > 0 ? 1 : 0}`, q.x, q.z, h * 6.28, +(1.5 + 0.5 * hash01(k, side + 23)).toFixed(2), ["path-rock-slab", "path-rock-low", "path-rock-cluster"][(k + (side > 0 ? 1 : 0)) % 3]));
+  }
+  // Palms (wharf-art's, in four sizes, the small ones at the edges of each group) on the grassy band behind the boards.
+  ([[18, 10.5, "tall"], [16.5, 12.6, "small"], [25, 11.5, "short"], [32, 10, "lean"], [34, 12.2, "small"], [39, 11, "tall"], [62, 10.5, "short"], [64, 12.6, "small"],
+    [68, 11, "tall"], [75, 10, "lean"], [82, 11.5, "short"], [80, 13, "small"]] as const)
     .forEach(([z, d, kind], i) => { const q = quayAt(z, d); out.push(obj("prop", `band-palm-${i}`, q.x, q.z, kind === "lean" ? 0 : z * 0.41, 1, `palm-${kind}`)); });
+  // The dock's hoist at the deck's edge, its jib out over the water.
+  { const q = quayAt(54, 0.4); out.push(obj("prop", "dock-hoist", q.x, q.z, q.yaw + Math.PI / 2, 1, "dock-hoist")); }
   out.push(obj("prop", "plaza-tiles", PX, PZ, 0, 1, "plaza-tiles"), obj("prop", "plaza-fountain", PX, PZ, 0, FOUNTAIN_SCALE, "plaza-fountain"));
   HOUSES.forEach(([x, z, colour], i) => out.push(obj("house", `house-${i + 1}`, x, z, facing(PX - x, PZ - z), HOUSE_SCALE, `chalet-${colour}`)));
   out.push(obj("campfire", "campfire", ...FIRE_AT));
@@ -404,10 +412,11 @@ function scenery(): Obj[] {
   [0, 270, 180].forEach((deg, i) => { const [x, z, yaw] = round(deg, 4.3); out.push(obj("bench", `fire-bench-${i}`, x, z, yaw, 1, "log-bench")); });
   [225, 315, 135, 45].forEach((deg, i) => { const [x, z, yaw] = round(deg, 4.1); out.push(obj("prop", `fire-stump-${i}`, x, z, yaw + i, 1, "stump-seat")); });
   ([[240, 6.8, "firewood-stack"], [300, 7, "fish-rack"]] as const).forEach(([deg, r, model]) => { const [x, z, yaw] = round(deg, r); out.push(obj("prop", model, x, z, yaw, 1, model)); });
-  [200, 340].forEach((deg, i) => { const [x, z] = round(deg, 5.4), l = lamp("camp", x, z, ...FIRE_AT); out.push(obj("lamp", `fire-lamp-${i}`, l.x, l.z, l.yaw ?? 0, 1, l.model)); });
-  ([[-40, 99, "tall"], [-31, 98, "lean"], [-22, 99.5, "short"], [2, 99, "tall"], [24, 99, "lean"], [30, 100, "short"], [42, 97, "tall"]] as const)
+  ([[-42, 98, "tall"], [-39, 96.5, "small"], [-31, 98, "lean"], [-22, 99.5, "short"], [-19.5, 97.5, "small"], [2, 99, "tall"], [4.8, 97.4, "small"],
+    [24, 99, "lean"], [30, 100, "short"], [27, 97.4, "small"], [52, 95, "tall"], [54.5, 96.6, "small"]] as const)
     .forEach(([x, z, kind], i) => out.push(obj("prop", `palm-${i}`, x, z, kind === "lean" ? -Math.PI / 2 : x * 0.37, 1, `palm-${kind}`)));
   [[-30, 109], [-22, 110], [28, 108]].forEach(([x, z], i) => out.push(obj("prop", `parasol-${i}`, x, z, x * 0.21, 1, "beach-parasol")));
+  out.push(...plazaSet(), ...beachSet(), ...lamps(), ...nature());
   out.push(obj("prop", "lighthouse", 126, 104, -0.6, 0.2, "lighthouse"));
   out.push(obj("barrier", "slide-mountain", 26, 8.5, 0.1, 1.4, "rockslide"));
   out.push(obj("barrier", "edge-forest-0", 58, 6.5, 0.1, 1, "forest-edge"), obj("barrier", "edge-forest-1", 66, 5.6, 0.1, 1, "forest-edge"));
@@ -415,24 +424,133 @@ function scenery(): Obj[] {
   return out;
 }
 
+/** A point `r` from the plaza's centre at `deg` (from +x toward +z). */
+const onPlaza = (deg: number, r: number): [number, number] => [PX + r * Math.cos((deg * Math.PI) / 180), PZ + r * Math.sin((deg * Math.PI) / 180)];
+/** The yaw that turns a model's front (+z) toward (dx, dz). */
+const front = (dx: number, dz: number) => Math.atan2(dx, dz);
 /**
- * The closed forest as a dense wood without single trees (David: "low qual so it looks like dense forest"): terrain-art's
- * forest masses (stands of cedars on a mound, 10 to 16 u across) on a jittered 8 u lattice over the whole forest, off
- * the mountain's foot, each turned and sized its own way so no repeat reads from the open area.
+ * The plaza's dressing (village-art's set; David's plaza references: "flag and banner and stuff and less empty more
+ * styff everywhere ... fruit barrel and crates outside fruit shops"): flags round the rim, banner poles with bunting
+ * between them where the path comes in and its sign, planter benches round the fountain, planters by HQ and the café,
+ * the fruit stall with its barrels and crates by the shop.
+ */
+function plazaSet(): Obj[] {
+  const out: Obj[] = [];
+  [25, 155, 205, 335].forEach((deg, i) => out.push(obj("prop", `plaza-flag-${i}`, ...onPlaza(deg, 12.8), deg * 0.05, 1, "flag-pole")));
+  // The bunting hangs from the banner poles' tops (NatureModels lifts it), 6 u between them.
+  out.push(obj("prop", "plaza-banner-0", PX + 12.5, PZ - 2, 0, 1, "banner-pole"), obj("prop", "plaza-banner-1", PX + 12.5, PZ + 4, 0, 1, "banner-pole"));
+  out.push(obj("prop", "plaza-bunting", PX + 12.5, PZ + 1, -Math.PI / 2, 1.5, "bunting-string"), obj("prop", "plaza-sign", PX + 14, PZ - 3.4, Math.PI / 2, 1, "market-sign"));
+  [45, 135, 225, 315].forEach((deg, i) => { const [x, z] = onPlaza(deg, 6.4); out.push(obj("prop", `plaza-bench-${i}`, x, z, front(PX - x, PZ - z), 1, "planter-bench")); });
+  out.push(obj("prop", "plaza-planter-0", PX - 13, PZ - 2.6, Math.PI / 2, 1, "flower-planter"), obj("prop", "plaza-planter-1", PX - 13, PZ + 2.6, Math.PI / 2, 1, "flower-planter"));
+  out.push(obj("prop", "plaza-pot-0", PX - 1.5, PZ - 12.6, 0, 1, "round-planter"), obj("prop", "plaza-pot-1", PX + 7.5, PZ - 12.6, 0, 1, "round-planter"));
+  out.push(obj("prop", "fruit-stall", PX - 3, PZ + 12.2, Math.PI, 1, "fruit-stall"));
+  ([[PX - 5.6, PZ + 12.6, "fruit-barrel"], [PX - 6.2, PZ + 11.8, "fruit-barrel"], [PX - 0.4, PZ + 12.7, "fruit-crate"], [PX + 6.6, PZ + 12.6, "fruit-crate"],
+    [PX + 7.2, PZ + 11.9, "fruit-barrel"], [PX + 1.2, PZ + 12.8, "flower-pot"], [PX + 4.8, PZ + 12.8, "flower-pot"]] as const)
+    .forEach(([x, z, model], i) => out.push(obj("prop", `plaza-shop-${i}`, x, z, i * 0.7, 1, model)));
+  return out;
+}
+
+/**
+ * The beach (wharf-art's set; David: "a sushi bar ... coral in the shallow waters ... some surfboard sticking in the sand,
+ * a life guard tower"): the sushi bar by the wharf's end, its shark's mouth toward the way down from the village, the
+ * lifeguard tower facing the sea, surfboards in twos and threes. The coral comes after the ground (`shallows`).
+ */
+function beachSet(): Obj[] {
+  const out: Obj[] = [obj("prop", "sushi-bar", ...SUSHI, front(-1, 0.2), 1, "sushi-bar"), obj("prop", "lifeguard-tower", 12, 107.5, 0, 1, "lifeguard-tower")];
+  ([[16, 106.4, "a"], [16.6, 106.8, "b"], [17.2, 106.3, "c"], [-14, 107, "c"], [-13.4, 107.5, "a"], [33, 104, "b"], [33.6, 104.4, "a"]] as const)
+    .forEach(([x, z, m], i) => out.push(obj("prop", `surfboard-${i}`, x, z, 0.4 * (hash01(i, 30) - 0.5) + (x > 30 ? 2.6 : 0), 1, `surfboard-${m}`)));
+  return out;
+}
+/** The sushi bar. */
+const SUSHI = [44, 98.5] as const;
+
+/**
+ * The lights (David, R2b: "more lighting and stronger is needed ... it should be viby"; his lamp and lantern references):
+ * wood and branch lamp posts up the path and hand lanterns at its sides, lamps round the plaza, lantern posts along the
+ * deck and on the jetty's platform, hand lanterns along the deck's edge and all over the jetty, round the campfire and
+ * the sushi bar. A hand lantern glows without a pool of light of its own (DefaultIslandWorld lampSets).
+ */
+function lamps(): Obj[] {
+  const out: Obj[] = [], at = { x: 0, z: 0 };
+  const put = (id: string, model: keyof typeof NEW_LAMPS, x: number, z: number, tx = x + 1, tz = z) => { const l = lamp(model, x, z, tx, tz); out.push(obj("lamp", id, l.x, l.z, l.yaw ?? 0, 1, l.model)); };
+  [3, 8, 13, 18, 23].forEach((s, i) => { const q = onPath(s, i % 2 ? 2.4 : -2.4), c = onPath(s); put(`lamp-path-${i}`, i % 2 ? "branchPost" : "woodPost", q.x, q.z, c.x, c.z); });
+  [5.5, 10.5, 15.5, 20.5].forEach((s, i) => [-1, 1].forEach(side => { const q = onPath(s + side * 0.6, side * 2.2); put(`lamp-path-hand-${i}-${side > 0 ? 1 : 0}`, "hand", q.x, q.z); }));
+  ([[PX - 11, PZ - 9], [PX + 14, PZ - 10], [PX - 11, PZ + 9], [PX + 14, PZ + 10], [PX - 4.5, PZ - 13.5], [PX - 15, PZ + 15]] as const).forEach(([x, z], i) => put(`lamp-plaza-${i}`, "village", x, z, PX, PZ));
+  put("lamp-beach-way", "village", 39, 84, 35, 84);
+  // The deck: lantern posts mid-deck clear of the stalls, their arms toward the water; hand lanterns along its edge.
+  [18, 25, 39, 51, 57, 65, 71, 77].forEach((z, i) => { const q = quayAt(z, 3.8), e = quayAt(z, 0); put(`lamp-deck-${i}`, "wharf", q.x, q.z, e.x, e.z); });
+  for (let z = 15, i = 0; z <= 79; z += 5.5, i++) if (Math.abs(z - DOCK.z) > 5) { const q = quayAt(z, 0.1); put(`lamp-deck-hand-${i}`, "hand", q.x, q.z); }
+  // The jetty: posts on the platform, hand lanterns down every pier, along the walkway and round the platform.
+  [-5, 5].forEach((lx, i) => { dockToWorld(DOCK, lx, 11, at); put(`lamp-jetty-${i}`, "wharf", at.x, at.z, at.x, DOCK.z); });
+  const hands: [number, number][] = [[-3.3, 2.3], [3.3, 2.3], [-7.1, 9.4], [7.1, 9.4], [-7.1, 12.6], [7.1, 12.6]];
+  for (const px of [0, -6.6, 6.6]) for (const sx of [-0.75, 0.75]) for (const lz of [-3, -0.4, 5.6, 8.2]) if (!(px === 0 && sx > 0 && lz < 1)) hands.push([px + sx, lz]);
+  hands.forEach(([lx, lz], i) => { dockToWorld(DOCK, lx, lz, at); put(`lamp-jetty-hand-${i}`, "hand", at.x, at.z); });
+  // The campfire: its two lanterns on branches and hand lanterns on the sand round it, outside its rings.
+  [200, 340].forEach((deg, i) => { const a = (deg * Math.PI) / 180; put(`fire-lamp-${i}`, "camp", FIRE_AT[0] + 5.4 * Math.cos(a), FIRE_AT[1] + 5.4 * Math.sin(a), ...FIRE_AT); });
+  [25, 65, 115, 155, 265, 320].forEach((deg, i) => { const a = (deg * Math.PI) / 180; put(`fire-hand-${i}`, "hand", FIRE_AT[0] + 6.3 * Math.cos(a), FIRE_AT[1] + 6.3 * Math.sin(a)); });
+  ([[-2.8, -2.4], [-2.6, 3], [2.6, -2.4], [2.8, 2.6]] as const).forEach(([dx, dz], i) => put(`sushi-hand-${i}`, "hand", SUSHI[0] + dx, SUSHI[1] + dz));
+  return out;
+}
+
+/** The way down to the beach (the second ramp). */
+const BEACH_WAY: readonly XZ[] = [[36, 80], [34, 92], [31, 101]];
+/**
+ * Lush nature round the village (David: "nature should feel like this [nature-feel.jpg] and not just empty"): trees,
+ * bushes, flowers, village-art's wild-flower patches and tall grass, scattered over the open green on a jittered 4.5 u
+ * grid, kept off the plaza, the paths, the buildings, the deck, the beach and the campfire.
+ */
+function nature(): Obj[] {
+  const out: Obj[] = [];
+  const buildings = [...["hq", "cafe", "shop", "museum"].map(id => [LAYOUT[id].x, LAYOUT[id].z, 10] as const), ...HOUSES.map(([x, z]) => [x, z, 6.5] as const)];
+  for (let i = 0; i < 24; i++) for (let k = 0; k < 19; k++) {
+    const x = -40 + i * 4.5 + 3.6 * (hash01(i, k + 40) - 0.5), z = 14 + k * 4.5 + 3.6 * (hash01(k, i + 41) - 0.5), h = hash01(i * 7 + k, 42);
+    const path = nearest(PATH, x, z).d, tree = h < 0.13 && (i + k) % 2 === 0;
+    if (OPEN(x, z) < 3 || MAIN(x, z) < 5 || Math.min(BEACH(x, z), 0.4 * (60 - x)) > -2 || westOfQuay(x, z) < 8.5 || Math.hypot(x - PX, z - PZ) < PLAZA.r + 3) continue;
+    if (path < (tree ? 6 : 4) || nearest(BEACH_WAY, x, z).d < 3.5 || Math.hypot(x - FIRE_AT[0], z - FIRE_AT[1]) < 9 || buildings.some(([bx, bz, r]) => Math.hypot(x - bx, z - bz) < r)) continue;
+    const id = `nature-${out.length}`, seed = Math.floor(hash01(i, k + 43) * 1000);
+    if (tree) out.push({ id, kind: "tree", x: +x.toFixed(2), z: +z.toFixed(2), seed });
+    else if (h < 0.42) out.push({ id, kind: "bush", x: +x.toFixed(2), z: +z.toFixed(2), seed });
+    else if (h < 0.62) out.push({ id, kind: "flower", x: +x.toFixed(2), z: +z.toFixed(2), seed });
+    else out.push(obj("prop", id, x, z, h * 40, +(1 + 0.4 * hash01(i, k + 44)).toFixed(2), h < 0.82 ? "flower-meadow" : "flower-tallgrass"));
+  }
+  return out;
+}
+
+/**
+ * The coral (wharf-art's) in the beach's shallows, past the wading: where the sea is 0.8 to 1.6 deep, scattered, each
+ * turned and sized its own way. From the generated ground, so it follows the seabed.
+ */
+function shallows(t: World["terrain"]): Obj[] {
+  const out: Obj[] = [];
+  for (let i = 0; i < 60; i++) for (let k = 0; k < 14; k++) {
+    const x = -56 + i * 1.9 + 1.5 * (hash01(i, k + 60) - 0.5), z = 100 + k * 1.9 + 1.5 * (hash01(k, i + 61) - 0.5), h = hash01(i * 3 + k, 62);
+    const depth = t.seaLevel - terrainHeight(t, x, z);
+    if (h > 0.3 || depth < 0.8 || depth > 1.6) continue;
+    out.push(obj("prop", `coral-${out.length}`, x, z, h * 21, +(0.8 + 0.5 * hash01(k, i + 63)).toFixed(2), `coral-${"abcd"[Math.floor(hash01(i, k + 64) * 4)]}`));
+  }
+  return out;
+}
+
+/**
+ * The closed forest as a dense wood without single trees (David: "low qual so it looks like dense forest"; R2b: "the
+ * trees are all the same exact copy paste model ... trees are paced odd"): village-art's five forest masses (stands of
+ * mixed trees, each grown its own way) scattered over the whole forest off the mountain's foot, a cell of 8 u each
+ * jittered most of its width and now and then left out, each turned and sized its own way. Each sinks to the lowest
+ * ground under it (NatureModels), so none hovers at a cliff's lip.
  */
 function forestMasses(): Obj[] {
   const out: Obj[] = [];
   for (let i = 0; i < 14; i++) for (let k = 0; k < 18; k++) {
-    const x = 22 + i * 8 + 5 * (hash01(i, k) - 0.5), z = -136 + k * 8 + 5 * (hash01(k + 50, i) - 0.5);
-    if (FOREST(x, z) < 2 || MT_FOOT(x, z) > -3) continue;
-    const h = hash01(i * 31 + k, 7), model = `forest-mass-${"abc"[Math.floor(h * 3)]}`;
-    out.push(obj("prop", `forest-${out.length}`, x, z, hash01(k, i * 13) * 2 * Math.PI, +(0.9 + 0.25 * hash01(i, k + 99)).toFixed(2), model));
+    const x = 22 + i * 8 + 7 * (hash01(i, k) - 0.5), z = -136 + k * 8 + 7 * (hash01(k + 50, i) - 0.5);
+    if (FOREST(x, z) < 2 || MT_FOOT(x, z) > -3 || hash01(i + 70, k) < 0.12) continue;
+    const model = `forest-mass-${"abcde"[Math.floor(hash01(i * 31 + k, 7) * 5)]}`;
+    out.push(obj("prop", `forest-${out.length}`, x, z, hash01(k, i * 13) * 2 * Math.PI, +(0.85 + 0.3 * hash01(i, k + 99)).toFixed(2), model));
   }
   return out;
 }
 
 /** The kinds only the generator places (every one of them is rebuilt each run). */
-const GENERATED: ReadonlySet<string> = new Set(["deck", "prop", "house", "bush", "fence"]);
+const GENERATED: ReadonlySet<string> = new Set(["deck", "prop", "house", "bush", "fence", "lamp", "tree", "flower"]);
 /** The layout's moves, then the generated objects (the border and the scenery) in place of any earlier copy of them. */
 export function layoutObjects(objects: World["objects"]): World["objects"] {
   const made = [...borderObjects(), ...scenery(), ...forestMasses()], ids = new Set(made.map(o => `${o.kind}:${o.id}`));
@@ -532,6 +650,7 @@ export function generateWorld(objects: World["objects"], keep: readonly MapAnnot
   const pads = padBuildings(t, objects);
   const steepMoved = limitSteepness(t);
   strata(t);
+  objects = [...objects.filter(o => !o.id.startsWith("coral-")), ...shallows(t)];
 
   let land = 0, lo = Infinity, hi = -Infinity;
   for (let p = 0; p < n; p++) {

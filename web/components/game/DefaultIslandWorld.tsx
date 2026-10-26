@@ -433,7 +433,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   const grassClear = useMemo(() => (x: number, z: number) => island.top(x, z) <= island.ground(x, z) + 0.01, [island]);
   const scenery = useMemo(() => sceneryOf(v, island.ground, look.season), [v, island, look.season]);
   // The lamps by model: the street lamp (none), or the new world's (propModels NEW_LAMPS), each turned by its yaw.
-  const lampSets = useMemo(() => (["", "village", "wharf", "camp"] as const).map(kind => {
+  const lampSets = useMemo(() => (["", ...Object.keys(NEW_LAMPS) as (keyof typeof NEW_LAMPS)[]] as const).map(kind => {
     const ls = layout.lamps.filter(l => (l.model ?? "") === kind);
     return { kind, positions: ls.map((l): [number, number, number] => [l.x, island.ground(l.x, l.z), l.z]), yaws: kind ? ls.map(l => l.yaw ?? 0) : undefined };
   }).filter(s => s.positions.length), [layout, island]);
@@ -530,7 +530,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       <EventDecor event={event} ground={island.ground} light={light} weather={weather} />
       <HalloweenLayer content={traditions.content} v={v} island={island} light={light} night={phase === "night"} fog={fogNight} weather={weather} residents={personas} />
       {layout.bridges.map(b => <GLBProp key={b.id} url={BRIDGE_URL} position={[b.x, b.y, b.z]} rotation={[0, b.yaw ?? 0, 0]} />)}
-      {lampSets.map(s => <Lanterns key={s.kind} positions={s.positions} yaws={s.yaws} lamp={s.kind ? NEW_LAMPS[s.kind] : undefined} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} reach={v.terrain ? 7.5 : 5} />)}
+      {lampSets.map(s => <Lanterns key={s.kind} positions={s.positions} yaws={s.yaws} lamp={s.kind ? NEW_LAMPS[s.kind] : undefined} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} reach={s.kind === "hand" ? 0 : v.terrain ? 7.5 : 5} />)}
       {layout.campfire && <Campfire site={layout.campfire} ground={island.ground} phase={phase} player={player} />}
       {/* Nature and props from the map, instanced: one draw per model sub-mesh however many the island has. */}
       <InstancedModels items={scenery} />

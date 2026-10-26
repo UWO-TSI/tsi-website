@@ -107,6 +107,7 @@ describe("walking the smooth world", () => {
     for (const o of objects) {
       if (o.kind === "landmark" && o.id === "wharf") continue; // the jetty's origin stands at the water's edge
       if (o.kind === "barrier" && o.model === "border") continue; // the invisible border runs out into the water at its ends
+      if (o.model?.startsWith("coral-")) continue; // the coral stands on the seabed in the shallows
       // On the ground, or on the jetty's decks (its lanterns stand on its platform).
       const h = island.ground(o.x, o.z), decked = wharfDecks(v).some(d => inRect(o.x, o.z, d));
       expect(h, `${o.kind}:${o.id}`).toBeCloseTo(decked ? wharfDecks(v).find(d => inRect(o.x, o.z, d))!.y(o.x, o.z) : terrainHeight(t, o.x, o.z), 6);
