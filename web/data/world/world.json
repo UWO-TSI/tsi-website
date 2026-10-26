@@ -163,7 +163,7 @@
     {"id":"market-28","kind":"prop","x":63.46,"z":17.01,"yaw":3.8682,"scale":0.9,"model":"net-heap"},
     {"id":"sell-barrel","kind":"prop","x":71.74,"z":26.8,"yaw":0.1974,"model":"sell-barrel"},
     {"id":"tackle-shop","kind":"prop","x":74.03,"z":63.56,"yaw":-1.6263,"model":"tackle-shop"},
-    {"id":"shipwright-shed","kind":"prop","x":71.6,"z":73.74,"yaw":-1.8158,"model":"shipwright-shed"},
+    {"id":"shipwright-ship","kind":"prop","x":71.6,"z":73.74,"yaw":-1.8158,"model":"shipwright-ship"},
     {"id":"path-fence-0","kind":"prop","x":62.73,"z":59.87,"yaw":-2.8218,"model":"rustic-fence-b"},
     {"id":"path-fence-1","kind":"prop","x":60.37,"z":61.2,"yaw":-2.5498,"model":"rustic-fence-b"},
     {"id":"path-fence-2","kind":"prop","x":55.54,"z":62.64,"yaw":3.0211,"model":"rustic-fence-b"},
