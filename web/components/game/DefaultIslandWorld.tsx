@@ -317,6 +317,8 @@ function villageLayout(v: Village) {
     },
     /** Fitting room beside the shop; ruins mission board beside the cliff gate (combat-foundation.md §6). */
     fitting: fitting ? xz(fitting) : null,
+    /** The new world's coral reefs, where its fish gather. */
+    reefs: objectsOf("prop", v).filter(o => o.model?.startsWith("coral-reef-")).map(xz),
     /** The new world's quick-sell barrel (lib/game/wharf.ts SELL_BARREL), or none. */
     sellBarrel: (b => (b ? xz(b) : null))(objectsOf("prop", v).find(o => o.id === SELL_BARREL)),
     missions: missions ? { at: xz(missions), yaw: missions.yaw ?? 0 } : null,
@@ -529,7 +531,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       <Suspense fallback={null}><Seabed map={island.map} lite={liteMode} skip={layout.underWharf} /></Suspense>
       <WaterContacts map={island.map} player={player} ground={island.ground} rocks={layout.rocks} />
       <GlassWater />
-      <Suspense fallback={null}><DecorativeFish map={island.map} lite={liteMode} skip={layout.underWharf} max={v.terrain ? 40 : undefined} /></Suspense>
+      <Suspense fallback={null}><DecorativeFish map={island.map} lite={liteMode} skip={layout.underWharf} max={v.terrain ? 40 : undefined} near={layout.reefs} /></Suspense>
       <PeacefulLayer map={island.map} nodes={layout.nodes} moment={peaceful.moment} member={peaceful.member} player={player} ground={island.ground} highTier={!liteMode} active={!fishing} treeModels={SEASON_TREES[look.season]} />
       <BeachBottle player={player} ground={island.ground} />
       {/* After the first leaf glider is made: a marked edge and a ring to land in (the guided first glide). */}

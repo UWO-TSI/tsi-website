@@ -585,12 +585,24 @@ function nature(): Obj[] {
 }
 
 /**
- * The coral (wharf-art's) in the beach's shallows, past the wading: where the sea is 0.8 to 1.6 deep, in reefs, each
- * turned and sized its own way. From the generated ground, so it follows the seabed.
+ * The coral in the beach's shallows, past the wading, where the sea is 0.8 to 1.6 deep: wharf-art2's reefs off the beach
+ * and the campfire, seen from the shore and while wading (David, R2c: "have coral reeffs and fish you can see in the
+ * shallow water"), and wharf-art's clumps massed round them, each turned and sized its own way. From the generated
+ * ground, so it follows the seabed.
  */
 function shallows(t: World["terrain"]): Obj[] {
   const out: Obj[] = [];
-  for (let i = 0; i < 60; i++) for (let k = 0; k < 14; k++) {
+  // A reef every 4.5 u or so along the beach, out where the sea first reaches 0.8 deep.
+  for (let i = 0, k = 0; i < 18; i++) {
+    const x = -30 + i * 4.5 + 2 * (hash01(i, 66) - 0.5);
+    let z = 110;
+    while (z < 140 && t.seaLevel - terrainHeight(t, x, z) < 0.8) z += 0.5;
+    z += 0.6 + 1.2 * hash01(i, 67);
+    const depth = t.seaLevel - terrainHeight(t, x, z);
+    if (depth < 0.8 || depth > 1.6 || hash01(i, k + 68) > 0.7) continue;
+    out.push(obj("prop", `coral-reef-${out.length}`, x, z, hash01(i, k + 69) * 6.28, +(0.9 + 0.3 * hash01(k, i + 70)).toFixed(2), `coral-reef-${"abc"[Math.floor(hash01(i, k + 71) * 3)]}`));
+  }
+  for (let i = 0; i < 60; i++) for (let k = 0; k < 18; k++) {
     const x = -56 + i * 1.9 + 1.5 * (hash01(i, k + 60) - 0.5), z = 100 + k * 1.9 + 1.5 * (hash01(k, i + 61) - 0.5), h = hash01(i * 3 + k, 62);
     const depth = t.seaLevel - terrainHeight(t, x, z);
     // In reefs (David, R2c: "have coral reeffs"), with a few loners between.
@@ -634,7 +646,7 @@ function riverside(t: World["terrain"]): Obj[] {
       if (h(13) < 0.08) put(...at(-0.15, -0.9), h(14) * 6.28, 1, "river-stones-b");
       if (h(15) < 0.3) put(...at(2.4 + 2 * h(16), 0.8 * (h(17) - 0.5)), h(18) * 37.7, +(0.8 + 0.5 * h(19)).toFixed(2), `shrub-${"aef"[Math.floor(h(20) * 3)]}`);
       if (h(21) < 0.05) put(...at(1.8), h(22) * 6.28, +(0.8 + 0.6 * h(23)).toFixed(2), "moss-boulder-a");
-      if (still && h(24) < 0.4) put(...at(-1.6 - 1.6 * h(25), 0.5), h(26) * 6.28, 1, h(27) < 0.5 ? "lily-pads-a" : "lily-pads-b");
+      if (still && h(24) < 0.7) put(...at(-1.6 - 1.6 * h(25), 0.5), h(26) * 6.28, 1, h(27) < 0.5 ? "lily-pads-a" : "lily-pads-b");
       if (cz > 95 && h(28) < 0.35) put(...at(1 + h(29)), along + h(30) - 0.5, 1, h(31) < 0.5 ? "driftwood-a" : "driftwood-b");
     }
   }
