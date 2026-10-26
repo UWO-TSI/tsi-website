@@ -269,21 +269,33 @@ export function berthWeight(dock: { x: number; z: number; yaw?: number }, x: num
 }
 
 /**
- * The new world's jetty (terrain v3 R2b, art/wharf/build_jetty.py; the wharf landmark's model "jetty"), in the dock's
- * frame: a landing at the water where the boat moors (as the pier's tip, its top at 0), stairs up its +z end to a wide
- * platform at the wharf's deck height, and three gangways from the platform to the deck boards. `decks`: where it is
- * walked, each at its height (`rise`: stairs climbing that much from z0 to z1). `piles`: where its piles meet the water.
+ * The new world's jetty (terrain v3, art/wharf/build_jetty.py; the wharf landmark's model "jetty"), in the dock's frame:
+ * a wide platform at the wharf's deck height with three gangways to the deck boards, and three piers out from it, each
+ * stepping down by stairs to the water's level, where a walkway across joins them; past it their ends reach on as
+ * fingers, the boat moored off the middle one's +x side (as the pier's tip, its top at 0). `decks`: where it is
+ * walked, each at its height (`rise`: stairs climbing that much from z0 to z1). `land`: where the gangways meet the
+ * deck boards (z). `piles`: where its piles meet the water.
  */
+const PIERS = [0, -6.6, 6.6], GANGWAYS = [-3.2, 0, 3.2];
 export const JETTY = {
   url: "/assets/game/wharf/jetty.glb",
   top: 1,
+  land: 15.4,
   decks: [
-    { x0: -2, x1: 1, z0: -3.5, z1: -0.5, y: 0 },
-    { x0: -2, x1: 1, z0: -0.5, z1: 1.5, y: 0, rise: 1 },
-    { x0: -4.5, x1: 4.5, z0: 1.5, z1: 5.5, y: 1 },
-    ...[-3.2, 0, 3.2].map(x => ({ x0: x - 0.8, x1: x + 0.8, z0: 5.5, z1: 9.2, y: 1 })),
+    ...PIERS.flatMap(x => [
+      { x0: x - 1, x1: x + 1, z0: -3.5, z1: 1, y: 0 },
+      { x0: x - 1, x1: x + 1, z0: 2.6, z1: 4.6, y: 0, rise: 1 },
+      { x0: x - 1, x1: x + 1, z0: 4.6, z1: 9, y: 1 },
+    ]),
+    { x0: -7.6, x1: 7.6, z0: 1, z1: 2.6, y: 0 },
+    { x0: -7.6, x1: 7.6, z0: 9, z1: 13, y: 1 },
+    // The gangways' walk runs on past the boards' edge: the coast drops to 0.5 right at the shoreline.
+    ...GANGWAYS.map(x => ({ x0: x - 0.8, x1: x + 0.8, z0: 13, z1: 16.7, y: 1 })),
   ],
-  piles: [[-2.2, -3.4], [-2.2, -1.9], [1.15, -3.42], [1.15, -0.7], [-4.3, 1.3], [-2.3, 1.3], [1.3, 1.3], [4.3, 1.3], [-4.7, 3.5], [4.7, 3.5], [-4.7, 5.3], [4.7, 5.3], [-1.6, 5.7], [1.6, 5.7]],
+  piles: [
+    ...PIERS.flatMap(x => [-1.15, 1.15].flatMap(sx => [[x + sx, -3.42], [x + sx, -1.2], [x + sx, 5], [x + sx, 7.6]])),
+    [-3.3, 0.85], [3.3, 0.85], [-7.75, 10.8], [-7.75, 13], [7.75, 10.8], [7.75, 13], [-3.3, 8.85], [3.3, 8.85],
+  ],
 } as const;
 
 /** A wharf kit model placed on the deck (art/wharf/build_wharf_kit.py, lib/game/propModels.ts SCENERY_URLS): world x, y, z and its turn. */

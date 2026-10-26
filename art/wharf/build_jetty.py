@@ -1,16 +1,18 @@
-"""The new world's jetty (terrain v3 R2b; David, 2026-10-26: "make the actual doc thing widider and also have a lower level
-as well for boat docking naturally out", "have 3 entrance to actual doc").
+"""The new world's jetty (terrain v3; David, 2026-10-26: "make the actual doc thing widider and also have a lower level
+as well for boat docking naturally out", "have 3 entrance to actual doc"; R2b: "the boat dock is too small, needs to be
+longer, and more branches ... 3 branches that kinda also connect on sea level ... for boats to park").
 
   /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P art/wharf/build_jetty.py [-- review <dir>]
 
 One model in the wharf kit's wood and rope (art/wharf/build_wharf_kit.py): a wide platform at the wharf's deck height,
-three gangways from it over a strip of water to the deck boards, stairs down from its seaward face to a landing at the
-water where the boat moors (as the old pier's tip: lib/game/wharf.ts MOORED, STEP_AT), piles under every edge, rope
-fencing on posts, ladders down the platform's sides, a cleat and a stern post for the boat's lines.
+three gangways from it over a strip of water to the deck boards, and three piers out to sea from it. Each pier steps
+down by stairs to the water's level, where a walkway across joins all three; past it their ends reach on as fingers,
+the water between them slips where boats moor. The boat moors on the middle finger's +x side (as the old pier's tip:
+lib/game/wharf.ts MOORED, STEP_AT). Piles under every edge, rope fencing on posts, ladders, a cleat for the bow line.
 
 Writes web/public/assets/game/wharf/jetty.glb in the wharf landmark's frame (lib/game/wharf.ts, before its yaw): x across
-(+x the boat's side), z along it (+z inland, the landing's tip at -3.5), y up: the landing's top at 0, the platform's and
-the gangways' at 1, the sea at -0.078. lib/game/wharf.ts JETTY mirrors the rects and the piles.
+(+x the boat's side), z along it (+z inland, the fingers' tips at -3.5), y up: the low level's top at 0, the platform's
+and the gangways' at 1, the sea at -0.078. lib/game/wharf.ts JETTY mirrors the rects and the piles.
 """
 import math, os, sys
 import numpy as np
@@ -22,15 +24,19 @@ from build_wharf_kit import K  # noqa: E402
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 SEA = -0.078
 TOP = 1.0                                      # the platform's deck (generate.ts H.deck)
-LANDING = (-2.0, 1.0, -3.5, -0.5)              # x0, x1, z0, z1 at y 0
-STAIRS = (-2.0, 1.0, -0.5, 1.5)                # climbing 0 to TOP along +z in four treads
-PLATFORM = (-4.5, 4.5, 1.5, 5.5)
+PIERS = (0.0, -6.6, 6.6)                       # the piers' middles (x), 2 wide; the boat moors off the middle one's +x side
+TIP, WALK, STAIR, PLAT = -3.5, (1.0, 2.6), (2.6, 4.6), (9.0, 13.0)   # z: fingers' tips, the low walkway, each pier's stairs, the platform
+HALF = 1.0                                     # a pier's half width
+EDGE = 7.6                                     # the platform's and the walkway's half width
 GANGWAYS = (-3.2, 0.0, 3.2)                    # their middles (x); 1.6 wide, from the platform to the deck boards
-GANG_Z = (5.5, 7.9)
-PILES = [((-2.2, -3.4), 0), ((-2.2, -1.9), 0), ((1.15, -3.42), 0), ((1.15, -0.7), 0),
-         ((-4.3, 1.3), TOP), ((-2.3, 1.3), TOP), ((1.3, 1.3), TOP), ((4.3, 1.3), TOP),
-         ((-4.7, 3.5), TOP), ((4.7, 3.5), TOP), ((-4.7, 5.3), TOP), ((4.7, 5.3), TOP), ((-1.6, 5.7), TOP), ((1.6, 5.7), TOP)]
-LADDERS = [((-4.5, 3.5), math.pi / 2), ((4.5, 3.5), -math.pi / 2)]
+GANG_Z = (13.0, 15.4)
+# Piles: (x, z), the deck's height over them. Every pier both sides, the walkway's seaward face between the piers,
+# the platform's corners and seaward face.
+PILES = ([((px + sx * 1.15, z), 0) for px in PIERS for sx in (-1, 1) for z in (-3.42, -1.2)]
+         + [((px + sx * 1.15, z), TOP) for px in PIERS for sx in (-1, 1) for z in (5.0, 7.6)]
+         + [((x, 0.85), 0) for x in (-3.3, 3.3)]
+         + [((sx * 7.75, z), TOP) for sx in (-1, 1) for z in (10.8, 13.0)] + [((x, 8.85), TOP) for x in (-3.3, 3.3)])
+LADDERS = [((-EDGE, 11.6), math.pi / 2), ((EDGE, 11.6), -math.pi / 2)]
 rng = np.random.default_rng(2610)
 
 
@@ -48,8 +54,8 @@ def boards(k, M, x0, x1, z0, z1, y):
         k.rbox(((x0 + x1) / 2, y - W.THICK - 0.1, z), (x1 - x0 - 0.02, 0.2, 0.17), 0.02, M, W.mix(W.DARK, "#4a3624", 0.5), segs=1, uv_len=2.0, v_axis=0)
 
 
-def stairs(k, M):
-    x0, x1, z0, z1 = STAIRS
+def stairs(k, M, x0, x1, z0, z1):
+    """Four treads climbing 0 to TOP along +z over the rect, between cheeks."""
     w, run, rise, cheek = x1 - x0, (z1 - z0) / 4, TOP / 4, 0.09
     xc = (x0 + x1) / 2
     for i in range(4):
@@ -110,28 +116,36 @@ def build():
     K.reset()
     deck, wood, rope = W.wood_mat("M_DeckWood", 2611), W.wood_mat("M_PileWood", 2612), K.Mat("M_Rope", tex=K.image("rope", K.rope(64, 128, 2613, "#ffffff")), rough=1.0)
     k = K.Kit("jetty")
-    boards(k, deck, *LANDING, 0.0)
-    stairs(k, deck)
-    boards(k, deck, *PLATFORM, TOP)
+    for px in PIERS:
+        x0, x1 = px - HALF, px + HALF
+        boards(k, deck, x0, x1, TIP, WALK[0], 0.0)
+        stairs(k, deck, x0, x1, *STAIR)
+        boards(k, deck, x0, x1, STAIR[1], PLAT[0], TOP)
+    boards(k, deck, -EDGE, EDGE, *WALK, 0.0)
+    boards(k, deck, -EDGE, EDGE, *PLAT, TOP)
     for g in GANGWAYS:
         boards(k, deck, g - 0.8, g + 0.8, *GANG_Z, TOP)
     for (x, z), top in PILES:
         pile(k, wood, x, z, top)
     for at, yaw in LADDERS:
         ladder(k, wood, *at, yaw)
-    # Rope fencing: the landing's far side and tip (its boat side open), the platform's seaward face either side of
-    # the stairs, its sides either side of the ladders, both sides of each gangway and the land face between them.
-    fence(k, wood, rope, [(-0.4, -3.4), (-1.9, -3.4), (-1.9, -2.0), (-1.9, -0.6)], 0.0)
-    fence(k, wood, rope, [(-4.4, 2.9), (-4.4, 1.6), (-2.1, 1.6)], TOP)
-    fence(k, wood, rope, [(1.1, 1.6), (4.4, 1.6), (4.4, 2.9)], TOP)
+    # Rope fencing: the side piers' outer edges and their fingers' far sides (the slips' sides stay open for boats),
+    # the high piers' sides over the basins, the platform's seaward face between the piers and its sides round the
+    # ladders, both sides of each gangway and the land face between them.
     for sx in (-1, 1):
-        fence(k, wood, rope, [(sx * 4.4, 4.1), (sx * 4.4, 5.4), (sx * 3.95, 5.6)], TOP)
+        o = sx * (EDGE - 0.1)
+        fence(k, wood, rope, [(o, TIP + 0.1), (o, -1.2), (o, WALK[1] - 0.1)], 0.0)
+        fence(k, wood, rope, [(o, STAIR[1] + 0.1), (o, 6.8), (o, PLAT[0] + 0.1), (o, 10.9)], TOP)
+        fence(k, wood, rope, [(o, 12.3), (o, PLAT[1] - 0.1), (sx * 3.95, PLAT[1] - 0.1)], TOP)
+        i = sx * (EDGE - 2 * HALF + 0.1)
+        fence(k, wood, rope, [(i, STAIR[1] + 0.1), (i, PLAT[0] + 0.1), (sx * (HALF - 0.1), PLAT[0] + 0.1), (sx * (HALF - 0.1), STAIR[1] + 0.1)], TOP)
+    fence(k, wood, rope, [(-0.9, TIP + 0.1), (-0.9, -1.2)], 0.0)
     for g in GANGWAYS:
         for sx in (-1, 1):
-            fence(k, wood, rope, [(g + sx * 0.75, 5.6), (g + sx * 0.75, 7.3)], TOP)
+            fence(k, wood, rope, [(g + sx * 0.75, PLAT[1] + 0.1), (g + sx * 0.75, GANG_Z[1] - 0.6)], TOP)
     for a, b in zip(GANGWAYS, GANGWAYS[1:]):
-        fence(k, wood, rope, [(a + 0.75, 5.6), (b - 0.75, 5.6)], TOP)
-    # The bow line's cleat (wharf.ts PIER.bowCleat) on the landing's boat side.
+        fence(k, wood, rope, [(a + 0.75, PLAT[1] + 0.1), (b - 0.75, PLAT[1] + 0.1)], TOP)
+    # The bow line's cleat (wharf.ts PIER.bowCleat) on the middle finger's boat side.
     k.rbox((0.8, 0.03, -1.98), (0.07, 0.05, 0.22), 0.015, wood, W.mix(W.DARK, "#4a3624", 0.5), segs=1)
     W.wet(k, below=SEA)
     k.tint_gradient(0.82, 1.0, -0.6, TOP + 0.9)
@@ -144,4 +158,4 @@ def build():
 if __name__ == "__main__":
     ob = build()
     if "review" in ARGS:
-        K.review([ob], os.path.join(ARGS[ARGS.index("review") + 1], "jetty.png"), views=((35, 28), (210, 22)), size=560)
+        K.review([ob], os.path.join(ARGS[ARGS.index("review") + 1], "jetty.png"), views=((35, 32), (210, 26)), size=640)

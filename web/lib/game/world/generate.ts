@@ -22,6 +22,7 @@ import type { World } from "./format";
 import { Paint, createTerrain, sampleX, sampleZ } from "./terrain";
 import { JOINED_FENCE } from "../fences";
 import { hash01 } from "../worldFx";
+import { JETTY, dockToWorld } from "../wharf";
 import type { ObjectKind } from "../villageMap";
 
 type XZ = readonly [number, number];
@@ -156,8 +157,8 @@ const QUAY: readonly XZ[] = [[69, 8], [73, 28], [74, 46], [73, 64], [66, 92]];
 const westOfQuay = sideOf(QUAY);
 /** The wharf's shore at the jetty (QUAY at z 46). */
 const SHORE_X = 74;
-/** The jetty (the wharf landmark, lib/game/wharf.ts JETTY): out to sea eastward, its gangways' ends (7.9 out along it) just under the deck boards' edge 0.4 past the shore. */
-export const DOCK = { x: SHORE_X + 0.4 + 7.7, z: 46, yaw: -Math.PI / 2 } as const;
+/** The jetty (the wharf landmark, lib/game/wharf.ts JETTY): out to sea eastward, its gangways' ends (JETTY.land along it) just under the deck boards' edge 0.4 past the shore. */
+export const DOCK = { x: SHORE_X + 0.2 + JETTY.land, z: 46, yaw: -Math.PI / 2 } as const;
 /** A point `d` in from the wharf's shore at `z`, and the yaw that turns a square's local z inland there. */
 function quayAt(z: number, d: number): { x: number; z: number; yaw: number } {
   let j = 0;
@@ -353,7 +354,7 @@ function scenery(): Obj[] {
   for (const side of [-2.9, 2.9]) for (let x = 50; x <= 57; x++) out.push(obj("fence", `path-fence-${fence++}`, x, PATH_Z + side, 0, 1, JOINED_FENCE));
   // Lantern posts on the deck, their arms out over the boards toward the water, and on the jetty's platform toward its stairs.
   [[30, 3.5], [78, 3.5]].forEach(([z, d], i) => { const q = quayAt(z, d), e = quayAt(z, 0), l = lamp("wharf", q.x, q.z, e.x, e.z); out.push(obj("lamp", `lamp-${11 + i}`, l.x, l.z, l.yaw ?? 0, 1, l.model)); });
-  [-4, 4].forEach((lx, i) => { const l = lamp("wharf", DOCK.x - 2, DOCK.z + lx, DOCK.x - 2, DOCK.z); out.push(obj("lamp", `lamp-${13 + i}`, l.x, l.z, l.yaw ?? 0, 1, l.model)); });
+  [-5, 5].forEach((lx, i) => { const p = dockToWorld(DOCK, lx, 11, { x: 0, z: 0 }), l = lamp("wharf", p.x, p.z, p.x, DOCK.z); out.push(obj("lamp", `lamp-${13 + i}`, l.x, l.z, l.yaw ?? 0, 1, l.model)); });
   // Palms (terrain-art's, light fronds and coconuts) on the grassy band behind the boards, either side of the path.
   ([[18, 10.5, "tall"], [25, 11.5, "short"], [32, 10, "lean"], [39, 11, "tall"], [62, 10.5, "short"], [68, 11, "tall"], [75, 10, "lean"], [82, 11.5, "short"]] as const)
     .forEach(([z, d, kind], i) => { const q = quayAt(z, d); out.push(obj("prop", `band-palm-${i}`, q.x, q.z, kind === "lean" ? 0 : z * 0.41, 1, `palm-${kind}`)); });

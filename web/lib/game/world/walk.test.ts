@@ -60,10 +60,10 @@ describe("walking the smooth world", () => {
     expect(worst).toBeLessThan(0.05);
   });
 
-  it("walks from the jetty's landing at the water up its stairs, across its platform and a gangway onto the deck boards", () => {
+  it("walks from the jetty's middle finger at the water up its pier's stairs, across its platform and a gangway onto the deck boards", () => {
     const dock = wharfDock(v)!, at = (lz: number) => dockToWorld(dock, 0, lz, { x: 0, z: 0 });
     expect(dock.y).toBe(JETTY.top);
-    const landing = at(-2.5), platform = at(3.5), boards = at(9.5);
+    const landing = at(-2.5), platform = at(11), boards = at(JETTY.land + 1.6);
     expect(island.ground(landing.x, landing.z)).toBeCloseTo(0, 6);
     expect(island.ground(platform.x, platform.z)).toBeCloseTo(1, 6);
     expect(island.ground(boards.x, boards.z)).toBeCloseTo(1, 1);

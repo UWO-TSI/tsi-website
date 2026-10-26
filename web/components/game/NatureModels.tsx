@@ -78,7 +78,7 @@ export function sceneryOf(v: Village, ground: (x: number, z: number) => number, 
 /** Where the jetty's gangways meet the deck boards (world XZ), or none without the jetty. */
 function jettyLanding(v: Village) {
   const d = wharfDock(v);
-  return d?.y ? dockToWorld(d, 0, JETTY.decks[3].z1, { x: 0, z: 0 }) : undefined;
+  return d?.y ? dockToWorld(d, 0, JETTY.land, { x: 0, z: 0 }) : undefined;
 }
 
 function Parts({ position, parts }: { position: [number, number, number]; parts: NaturePart[] }) {
