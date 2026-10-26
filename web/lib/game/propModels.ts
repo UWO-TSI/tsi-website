@@ -89,6 +89,12 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // tipped toward +z, and a hoist whose jib reaches along +x.
   ...Object.fromEntries(["dock-pile-rope", "rope-net", "life-ring", "net-heap", "crate-net", "crate-cloth", "fish-crate", "dock-hoist"]
     .map(m => [m, `/assets/game/wharf/${m}.glb`])),
+  // game/wharf-art: the beach set (art/props/build_beach_set.py), the origin on the ground: the sushi bar, a shark's head
+  // open-mouthed toward +z over its own platform (5.6 by 4.4, nobody enters it in v1), a lifeguard tower (its ladder to
+  // +z), surfboards stuck in the sand, and coral clumps for the shallows (their foot on the seabed, not solid).
+  "sushi-bar": "/assets/game/buildings/sushi-bar.glb", "lifeguard-tower": `${P}lifeguard-tower.glb`,
+  ...Object.fromEntries(["a", "b", "c"].map(m => [`surfboard-${m}`, `${P}surfboard-${m}.glb`])),
+  ...Object.fromEntries(["a", "b", "c", "d"].map(m => [`coral-${m}`, `/assets/game/water/coral-${m}.glb`])),
 };
 export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? `/assets/acnh/props/${model}.glb`;
 
