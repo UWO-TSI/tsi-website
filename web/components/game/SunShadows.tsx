@@ -162,6 +162,8 @@ class SunShadowCache {
     if (this.moving.parent !== scene) scene.add(this.moving);
     this.follow(light);
     this.cast(false);
+    // Caster-only meshes show in the shadow passes alone (each pass's `cast`, after the frame's draw list is built).
+    for (const mesh of this.dynamics) if (mesh.userData.casterOnly) mesh.visible = false;
     light.shadow.autoUpdate = false;
     if (dirty || this.seen.length !== this.statics.size || !this.key.matches(light)) this.pending = true;
     if (this.pending) light.shadow.needsUpdate = true;
