@@ -307,7 +307,9 @@ export const JETTY = {
 /** The new world's quick-sell stall outside the fish market (a prop by this id; art/wharf/build_sell_stall.py): E there opens the sell sheet. */
 export const SELL_BARREL = "sell-barrel";
 
-/** How near a deck square's middle a ship house leaves its water edge bare. */
+/** The wharf's shops on the deck's water edge (wharf-art4's, in the old ship houses' frame: their backs over the sea on piles, facing in). */
+export const EDGE_SHOPS: readonly string[] = ["tackle-shop"];
+/** How near a deck square's middle a shop leaves its water edge bare. */
 const SHED_CLEAR = 4.2;
 /** A wharf kit model placed on the deck (art/wharf/build_wharf_kit.py, lib/game/propModels.ts SCENERY_URLS): world x, y, z and its turn. */
 export interface KitPiece { model: string; x: number; y: number; z: number; yaw: number }
@@ -316,25 +318,36 @@ export interface KitPiece { model: string; x: number; y: number; z: number; yaw:
  * each; on each square at the water's edge two rope-lashed piles just outside it (David: "wood pillars on the side with
  * rope attached"), and on some a ladder down with a life ring by it, a rope net with floats, or rope fencing along it,
  * never within `clear` of `keep` (the jetty's gangways land there); none at all on the edge within SHED_CLEAR of what
- * stands there (`sheds`: the ship houses, the quick-sell stall).
+ * stands there (`sheds`: the shops, the quick-sell stall). Everything but the tiles sits a little off and turned its
+ * own way, the ladders at uneven gaps (David, R2d: "make it organic").
  */
 export function deckPieces(decks: readonly { x: number; z: number; yaw?: number }[], ground: (x: number, z: number) => number, keep?: { x: number; z: number }, clear = 9,
   sheds: readonly { x: number; z: number }[] = []): KitPiece[] {
   const out: KitPiece[] = [], at = { x: 0, z: 0 };
-  let edge = 0;
+  let edge = 0, ladder = -9;
   for (const o of decks) {
     const d = { x: o.x, z: o.z, yaw: o.yaw ?? 0 }, y = ground(o.x, o.z);
-    const put = (model: string, lx: number, lz: number) => { dockToWorld(d, lx, lz, at); out.push({ model, x: at.x, y, z: at.z, yaw: d.yaw }); };
-    put("deck-tile", 0, 0);
+    let k = 0;
+    const put = (model: string, lx: number, lz: number, loose = 1) => {
+      const h = hash01(edge * 16 + k++, 9) - 0.5;
+      dockToWorld(d, lx + 0.3 * loose * h, lz + 0.12 * loose * h, at);
+      out.push({ model, x: at.x, y, z: at.z, yaw: d.yaw + 0.16 * loose * h });
+    };
+    put("deck-tile", 0, 0, 0);
     dockToWorld(d, 0, -2.6, at);
     if (ground(at.x, at.z) > 0 || sheds.some(s => Math.hypot(o.x - s.x, o.z - s.z) < SHED_CLEAR)) continue;
     const i = edge++, open = !keep || Math.hypot(o.x - keep.x, o.z - keep.z) > clear;
-    for (const lx of [-1, 1]) put("dock-pile-rope", lx, -2.2);
-    if (open && i % 5 === 2) { put("wharf-ladder", 0.6, -2); put("life-ring", -1.2, -1.75); }
+    for (const lx of [-1, 1]) put("dock-pile-rope", lx, -2.2, 0.5);
+    if (open && i - ladder > 2 && hash01(i, 8) < 0.4) {
+      ladder = i;
+      const side = hash01(i, 10) < 0.5 ? 1 : -1;
+      put("wharf-ladder", 0.6 * side, -2);
+      if (hash01(i, 11) < 0.7) put("life-ring", -1.2 * side, -1.75);
+    }
     else if (open && hash01(i, 7) < 0.25) put("rope-net", 0, -1.8);
     else if (open && hash01(i, 7) < 0.55) {
-      for (const lx of [-2, 0, 2]) put("rope-post", lx, -1.8);
-      for (const lx of [-1, 1]) put("rope-span", lx, -1.8);
+      for (const lx of [-2, 0, 2]) put("rope-post", lx, -1.8, 0.4);
+      for (const lx of [-1, 1]) put("rope-span", lx, -1.8, 0.2);
     }
   }
   return out;

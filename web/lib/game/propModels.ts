@@ -133,16 +133,6 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // a porch out to z 3.9 over the door and a table of fish; an exterior only, the origin at the middle of its floor. The
   // sell barrel (same builder) is the quick sell: a big barrel of fish, a hanging scale and a SELL board, front +z.
   "fish-market": "/assets/game/buildings/fish-market.glb", "sell-barrel": "/assets/game/wharf/sell-barrel.glb",
-  // game/wharf-art2: the ship houses (art/wharf/build_ship_houses.py), to straddle the deck's water edge facing in: the
-  // origin on the deck's top at the middle of the floor, the door to +z (inland), the back half over the sea on piles
-  // down to y -3.4. a the red boathouse (boat door open at the back), b the stilt house (a balcony on piles off +x), c
-  // the net loft (two storeys), d the shack (a porch to z 2.45 under a roof falling to the back).
-  ...Object.fromEntries(["a", "b", "c", "d"].map(m => [`ship-house-${m}`, `/assets/game/wharf/ship-house-${m}.glb`])),
-  // The river's dressing (art/props/build_river_set.py): reeds with cattails rooted at y 0 for the banks and the shallows
-  // (a clump, a small loose one, a run along x for a bank's edge), lily pads floating at their origin (set it on the
-  // water's level: a with a lily in flower, b with a bud), smooth river stones (a scatter, and two big ones that stand in
-  // a shallow), and bleached driftwood lying along x (a log with its root plate at -x, a forked branch). Only the big
-  // stones are solid.
   ...Object.fromEntries(["a", "b", "c"].map(m => [`reeds-${m}`, `/assets/game/plants/reeds-${m}.glb`])),
   ...Object.fromEntries(["a", "b"].map(m => [`lily-pads-${m}`, `/assets/game/water/lily-pads-${m}.glb`])),
   ...Object.fromEntries(["river-stones-a", "river-stones-b", "driftwood-a", "driftwood-b"].map(m => [m, `${P}${m}.glb`])),
