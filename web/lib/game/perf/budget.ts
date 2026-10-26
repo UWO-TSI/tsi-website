@@ -183,6 +183,8 @@ export const ASSET_CATEGORIES: readonly AssetCategory[] = [
   // game/village-art2 (art/trees/build_shrubs.py): the new world's wild shrubs, lobes of leaf cards on the summer atlas
   // (one cut-out material) and their twigs in colour.
   { name: "shrub", prefixes: ["game/plants/shrub-"], triangles: 1200, primitives: 2, materials: 2, texture: 256, bones: 0 },
+  // game/village-art2 (art/props/build_river_set.py): reeds and cattails, blades in colour, one material.
+  { name: "reeds", prefixes: ["game/plants/reeds-"], triangles: 800, primitives: 1, materials: 1, texture: 0, bones: 0 },
   // game/remodel-trees (art/trees): our trees, leaf or needle cards over closed volumes on a trunk, drawn instanced: the
   // cards with their volume (one cut-out material on the painted atlas) and the bark in colour, the crown's hull and the
   // trunk only in the sun's map. Triangles count all four; the far model (.lod1) is held under half the near one
