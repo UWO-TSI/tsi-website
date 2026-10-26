@@ -11,7 +11,7 @@ Writes, in game units at scale 1, the origin on the ground (y 0):
                                   with sushi on a board, three stools before it, shelves of bottles at the back, a
                                   barrel, paper lanterns hung round the jaw and a noren across it. Nobody enters it in
                                   v1 (the counter blocks the way). About 5.6 by 4.4.
-  game/props/lifeguard-tower.glb  a white lifeguard tower: four splayed legs braced, a deck at 1.8 with a rail, a hut
+  game/props/lifeguard-tower.glb  a white lifeguard tower: splayed legs braced in two tiers, a deck at 2.7 with a rail, a hut
                                   with a red and white roof, a ladder up its front (+z), a flag, a life ring.
   game/props/surfboard-{a,b,c}.glb  a surfboard stuck nose up in the sand, leaning a little, its tail under y 0.
   game/water/coral-{a,b,c,d}.glb  low coral clumps for the shallows, their foot on the seabed: a staghorn (a), a brain
@@ -180,13 +180,19 @@ def sushi_bar(Mw, Mr, Mp, Mc, Mwood, Mg):
 # ================================================================ the lifeguard tower
 def lifeguard_tower(Mw, Mr, Mp, Mc):
     k = K.Kit("lifeguard-tower")
-    white, deck_y = "#f1ede4", 1.8
+    white, deck_y = "#f1ede4", 2.7          # game/wharf-art2: 1.5 x the first tower's 1.8 (David, R2c: "light guard tower taller")
+    leg = lambda s, y: s * (0.95 - 0.4 * y / deck_y)     # the legs splay from 0.95 out at the foot to 0.55 under the deck
     for sx in (-1, 1):
         for sz in (-1, 1):
-            k.beam((sx * 0.8, 0.0, sz * 0.8), (sx * 0.55, deck_y, sz * 0.55), 0.12, 0.12, 0.02, Mp, white, segs=1)
-    for sz in (-1, 1):   # cross braces on the sides and the back
-        k.beam((-0.76, 0.3, sz * 0.76), (0.6, 1.5, sz * 0.6), 0.06, 0.06, 0.01, Mp, white, segs=1, up=(0, 0, 1))
-    k.beam((-0.76, 0.3, -0.76), (-0.6, 1.5, 0.6), 0.06, 0.06, 0.01, Mp, white, segs=1, up=(1, 0, 0))
+            k.beam((leg(sx, 0), 0.0, leg(sz, 0)), (leg(sx, deck_y), deck_y, leg(sz, deck_y)), 0.13, 0.13, 0.02, Mp, white, segs=1)
+    for y0, y1 in ((0.25, 1.35), (1.35, 2.45)):     # cross braces in two tiers on the sides and the back, a ring beam between
+        for sz in (-1, 1):
+            k.beam((leg(-1, y0), y0, leg(sz, y0)), (leg(1, y1), y1, leg(sz, y1)), 0.06, 0.06, 0.01, Mp, white, segs=1, up=(0, 0, 1))
+        k.beam((leg(-1, y0), y0, leg(-1, y0)), (leg(-1, y1), y1, leg(1, y1)), 0.06, 0.06, 0.01, Mp, white, segs=1, up=(1, 0, 0))
+        k.beam((leg(1, y0), y0, leg(1, y0)), (leg(1, y1), y1, leg(-1, y1)), 0.06, 0.06, 0.01, Mp, white, segs=1, up=(1, 0, 0))
+    y = 1.35
+    for a, b in (((-1, -1), (1, -1)), ((1, -1), (1, 1)), ((1, 1), (-1, 1)), ((-1, 1), (-1, -1))):
+        k.beam((leg(a[0], y), y, leg(a[1], y)), (leg(b[0], y), y, leg(b[1], y)), 0.08, 0.08, 0.01, Mp, white, segs=1)
     k.rbox((0, deck_y + 0.05, 0), (1.5, 0.1, 1.5), 0.02, Mw, mix(WOOD, WOOD_LIGHT, 0.6), segs=1, uv_len=1.5, v_axis=0)
     for x in (-0.7, 0.7):  # the rail round the front half
         k.beam((x, deck_y + 0.1, 0.7), (x, deck_y + 0.75, 0.7), 0.05, 0.05, 0.01, Mp, white, segs=1, up=(0, 0, 1))
@@ -203,14 +209,14 @@ def lifeguard_tower(Mw, Mr, Mp, Mc):
         k.beam((x, hy + 1.3, 0.25), (x, hy + 1.1, -0.8), 0.25, 0.05, 0.01, Mp, FLOAT_RED if i % 2 == 0 else white, segs=1)
     # The ladder up the front, a flag on a pole at the corner, a life ring on the rail.
     for x in (-0.25, 0.25):
-        k.beam((x, 0.0, 1.45), (x, deck_y + 0.1, 0.72), 0.06, 0.05, 0.01, Mw, WOOD_LIGHT, segs=1)
-    for i in range(1, 7):
-        t = i / 7
-        k.beam((-0.25, t * (deck_y + 0.1), 1.45 - 0.73 * t), (0.25, t * (deck_y + 0.1), 1.45 - 0.73 * t), 0.05, 0.04, 0.01, Mw, WOOD, segs=1)
+        k.beam((x, 0.0, 1.85), (x, deck_y + 0.1, 0.72), 0.06, 0.05, 0.01, Mw, WOOD_LIGHT, segs=1)
+    for i in range(1, 10):
+        t = i / 10
+        k.beam((-0.25, t * (deck_y + 0.1), 1.85 - 1.13 * t), (0.25, t * (deck_y + 0.1), 1.85 - 1.13 * t), 0.05, 0.04, 0.01, Mw, WOOD, segs=1)
     k.tube([(0.7, deck_y, -0.7), (0.7, deck_y + 2.0, -0.7)], 0.025, Mp, "#9aa0a6", n=6, v_len=1.0)
     prism(k, Mc, [(deck_y + 1.95, -0.7), (deck_y + 1.55, -0.7), (deck_y + 1.75, -0.12)], 0.69, 0.71, "#e8553c")
     ring_into(k, Mp, Mr, c=(-0.48, deck_y + 0.1, 0.76), s=0.6)
-    k.tint_gradient(0.86, 1.0, 0.0, 3.5)
+    k.tint_gradient(0.86, 1.0, 0.0, deck_y + 1.7)
     return k.finish(smooth_deg=40)
 
 
