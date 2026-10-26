@@ -10,6 +10,14 @@ export const CAMPFIRE_URL = `${P}campfire.glb`;
 export const MAILBOX_URL = `${P}mailbox.glb`;
 /** The street lamp (AmbientProps Lanterns, instanced): 2.67 to its finial, the lantern's glass round the light at 2.4. */
 export const STREETLAMP_URL = `${P}streetlamp.glb`;
+/**
+ * The new world's lamps (art/props/build_new_lamps.py), each with its light point in the model (its arm reaches +x):
+ * draw them with AmbientProps Lanterns' `lamp` (and `yaws` to turn the arms). The street lamp keeps the old one's top.
+ */
+export const NEW_LAMPS = {
+  village: { url: `${P}village-lamp.glb`, light: [0.52, 2.08, 0] },
+  wharf: { url: `${P}lantern-post.glb`, light: [0.56, 1.78, 0] },
+} as const;
 /** The wharf's channel buoys (wharf/Wharf.tsx): the float meets the water BUOY_WATERLINE up its model. */
 export const BUOY_URL = `${P}buoy.glb`;
 export const BUOY_WATERLINE = 0.66;
@@ -64,6 +72,8 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // a `deck` square and its "steps" (4 x 4, local +z inland), a pile to stand just outside the deck's edge, a ladder off
   // the edge (the edge at z 0, the water toward -z), and rope fencing (a post, and a rope from x -1 to +1 between two).
   ...Object.fromEntries(["deck-tile", "deck-steps", "wharf-piling", "wharf-ladder", "rope-post", "rope-span"].map(m => [m, `/assets/game/wharf/${m}.glb`])),
+  // Its palms (art/trees/build_palms.py): light fronds and coconuts, the origin at the trunk's foot, at scale 1.
+  ...Object.fromEntries(["tall", "lean", "short"].map(m => [`palm-${m}`, `/assets/game/plants/tree-palm-${m}.glb`])),
 };
 export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? `/assets/acnh/props/${model}.glb`;
 

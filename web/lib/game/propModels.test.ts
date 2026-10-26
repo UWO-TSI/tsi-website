@@ -136,10 +136,18 @@ describe("remodelled props (propModels.ts)", () => {
   it("ships the new world's scenery, ours with their measured tops and inside their solid footprints (terrain v3)", () => {
     for (const [model, url] of Object.entries(Props.SCENERY_URLS)) {
       expect(existsSync(fileOf(url)), url).toBe(true);
-      if (!url.startsWith("/assets/game/") || !["deck", "wharf-", "rope-"].some(p => model.startsWith(p))) continue;
+      if (!url.startsWith("/assets/game/")) continue;
       const b = bounds(url), top = PROP_TOP[model], foot = PROP_FOOTPRINT[model];
       if (top !== undefined) expect(b.max[1], model).toBeCloseTo(top, 2);
-      if (foot) for (const [i, half] of [[0, foot[0]], [2, foot[1]]]) expect(Math.max(-b.min[i], b.max[i]), model).toBeLessThanOrEqual(half + 0.01);
+      if (foot && /^(wharf-|rope-)/.test(model)) for (const [i, half] of [[0, foot[0]], [2, foot[1]]]) expect(Math.max(-b.min[i], b.max[i]), model).toBeLessThanOrEqual(half + 0.01);
+    }
+  });
+  it("hangs each new lamp's lantern round its light point, the street lamp as tall as the old one", () => {
+    expect(bounds(Props.NEW_LAMPS.village.url).max[1]).toBeCloseTo(2.67, 2);
+    for (const { url, light } of Object.values(Props.NEW_LAMPS)) {
+      const b = bounds(url);
+      expect(b.max[0], url).toBeGreaterThan(light[0] + 0.08);
+      expect(b.max[1], url).toBeGreaterThan(light[1] + 0.2);
     }
   });
   it("lays the wharf kit in the deck's frame: a 4 u square at the boards' top, steps up 1, a ladder and a pile down into the sea", () => {
