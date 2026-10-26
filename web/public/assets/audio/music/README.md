@@ -40,9 +40,17 @@ loop-trim locally after export.
 
 - `cafe.mp3` — plays instead of the hourly block while the player is inside
   the cafe (any time of day).
-- `bar.mp3`: plays instead of the hourly block near the sushi bar and on its
-  stools (new world). Until it lands, the bar plays the other fallback track
-  from the one outside, so the song changes as you walk in.
+- `bar-evening.mp3` and `bar-night.mp3`: play instead of the hourly block near
+  the sushi bar and on its stools while it's open (new world): dinner in the
+  evening, a bar at night. Until they land, the bar plays the other fallback
+  track from the one outside, so the song changes as you walk in. Suno prompts
+  (David's tracks):
+  - evening: "lofi japanese jazz hip hop, nujabes style, warm rhodes piano,
+    soft upright bass, brushed drums, gentle shakuhachi phrases, sunset by the
+    sea, relaxed dinner at a seaside sushi bar, instrumental, 85 bpm"
+  - night: "late night japanese jazz hop, nujabes style, smoky saxophone,
+    mellow jazz guitar, dusty vinyl drums, deep bass, neon lanterns over dark
+    water, cozy bar after hours, instrumental, 78 bpm"
 - `interior.mp3` — plays instead of the hourly block inside any other
   building (HQ, house, museum, Oracle temple).
 - `{block}-{season}.mp3` (e.g. `12-winter.mp3`) — a seasonal variant slot for

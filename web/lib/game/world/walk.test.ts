@@ -5,7 +5,8 @@
  */
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { inRect, landmarkHalf, villageIsland, wharfDock, wharfDecks, type LandmarkId } from "../defaultIsland";
+import { barDecks, inRect, landmarkHalf, villageIsland, wharfDock, wharfDecks, type LandmarkId } from "../defaultIsland";
+import { BAR_Y, ENTRY, STOOLS, STOOL_Z, barOf, barPoint } from "../sushiBar";
 import { JETTY, dockToWorld } from "../wharf";
 import { campfireSite } from "../campfireSite";
 import { MOVE_TUNING, NO_INPUT, createMoveState, stepMove, STEP, type MoveWorld } from "../movement/sim";
@@ -72,6 +73,20 @@ describe("walking the smooth world", () => {
     expect(Math.hypot(x - boards.x, z - boards.z)).toBeLessThan(0.01);
   });
 
+  it("walks from the sand up the sushi bar's boardwalk to its entrance, on stilts over water too deep to wade under its guests' deck", () => {
+    const bar = barOf(v)!, at = (lx: number, lz: number) => barPoint(bar, lx, lz);
+    const [sx, sz] = at(0, 12.5), [ex, ez] = at(...ENTRY), [cx, cz] = at(0, 0);
+    expect(island.ground(cx, cz)).toBeCloseTo(BAR_Y, 6);
+    // The boardwalk's end meets the sand at its own height: no step up onto it.
+    expect(Math.abs(terrainHeight(t, ...at(0, 12)) - (BAR_Y + 0.04 - 0.4))).toBeLessThan(0.15);
+    expect(island.wet(sx, sz)).toBe(false);
+    const [x, z] = island.move(sx, sz, ex, ez);
+    expect(Math.hypot(x - ex, z - ez)).toBeLessThan(0.01);
+    expect(island.ground(ex, ez)).toBeCloseTo(BAR_Y + 0.04, 6);
+    // The guests' deck and the stools are reached only by the entrance (E there): the water under them is too deep to wade.
+    for (const lx of [-4.3, ...STOOLS, 4.3]) for (const lz of [STOOL_Z, 3.2, 4.1]) expect(island.standable(...at(lx, lz)), `${lx}, ${lz}`).toBe(false);
+  });
+
   it("blocks walking up a slope too steep to climb, and lets you walk down it", () => {
     const { low, high } = steepFace();
     // The walker's own step rule.
@@ -109,9 +124,9 @@ describe("walking the smooth world", () => {
       if (o.kind === "barrier" && o.model === "border") continue; // the invisible border runs out into the water at its ends
       if (/^(coral|reeds|river-stones|lily-pads)-/.test(o.model ?? "")) continue; // the coral, reeds and stones stand in the shallows, the lily pads float
       if (o.model?.startsWith("ship-house-")) continue; // a ship house straddles the deck's water edge, its back on piles in the sea
-      // On the ground, or on the jetty's decks (its lanterns stand on its platform).
-      const h = island.ground(o.x, o.z), decked = wharfDecks(v).some(d => inRect(o.x, o.z, d));
-      expect(h, `${o.kind}:${o.id}`).toBeCloseTo(decked ? wharfDecks(v).find(d => inRect(o.x, o.z, d))!.y(o.x, o.z) : terrainHeight(t, o.x, o.z), 6);
+      // On the ground, or on the jetty's decks (its lanterns stand on its platform) or the sushi bar's (it stands on its stilts).
+      const deck = [...wharfDecks(v), ...barDecks(v)].find(d => inRect(o.x, o.z, d)), h = island.ground(o.x, o.z);
+      expect(h, `${o.kind}:${o.id}`).toBeCloseTo(deck ? deck.y(o.x, o.z) : terrainHeight(t, o.x, o.z), 6);
       expect(h, `${o.kind}:${o.id} above the sea`).toBeGreaterThan(t.seaLevel);
     }
     const fire = campfireSite(v);

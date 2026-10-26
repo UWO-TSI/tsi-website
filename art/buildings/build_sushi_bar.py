@@ -4,6 +4,7 @@ inside, it back of the bar is open window to see beatiful view in the back, 1-2 
 pictures: "good decore, speaker with music, lights and fishtank"; specs/references/terrain/sushi-bar-2026-10-26/).
 
   /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P art/buildings/build_sushi_bar.py [-- review <dir>]
+  (on the shared Mac mini: under withlock.sh blender, headless only)
 
 Writes, in game units at scale 1, the origin on the ground at the middle of the solid core (counter and kitchen,
 x +-4, z +-1.5: defaultIsland PROP_FOOTPRINT), the front (the guests' side) toward +z:
@@ -13,8 +14,16 @@ x +-4, z +-1.5: defaultIsland PROP_FOOTPRINT), the front (the guests' side) towa
                                      behind it, and a wide open window in the back wall onto the sea; sake bottles along
                                      the beam over the window, speakers at its ends, a big red fan between, red drapes
                                      along the front and curtains at the window, a wooden menu of hanging plaques, a fish
-                                     tank at the counter's end, a chalk menu easel and potted palms on the deck, a sign
-                                     on the roof.
+                                     tank at the counter's end, posters on the side walls, potted palms on the deck, a
+                                     sign on the roof, today's menu on its easel out on the landing.
+  game/buildings/sushi-bar-pier.glb  still too, placed with the bar (David's plan, specs/launch/sushi-bar.md: "on stilts
+                                     on the water"): the piles under the floor, braced; the landing before the entrance
+                                     and the boardwalk down to the sand (LAND_*, WALK_*: lib/game/sushiBar.ts BAR_DECKS),
+                                     rope rails on posts, lantern posts; the entrance, a lacquered gate with the bar's
+                                     board on its lintel.
+  game/buildings/sushi-bar-hours.glb the bar's hours, drawn by it: `shutters`, bamboo blinds over the front and the
+                                     deck's sides while it's closed (rolled up to HOURS_TOP), and `noren`, the split
+                                     curtain in the entrance while it's open.
   game/buildings/sushi-bar-glow.glb  what glows at night, drawn on its own by the bar (components/game/SushiBar.tsx)
                                      like a lamp, so it eases on and off with the lamps: paper lanterns over the
                                      counter and the deck, string lights along the front, the neon fish on the back
@@ -51,6 +60,20 @@ CX0, CX1, TOP_Y = -2.95, 4.0, 0.84                  # the counter, its top
 SEAT_TOP, SEAT_Z = 0.6, 2.05                        # the stools (lib/game/sushiBar.ts SEATS mirrors these)
 SEATS = [0.5 + (i - 2.5) * 1.1 for i in range(6)]
 TANK = (-3.97, -3.03, 0.5, 1.45)                    # x0, x1, z0, z1
+# The pier (on stilts over the water; lib/game/sushiBar.ts BAR_DECKS mirrors these): the landing before the entrance
+# (walked within +-LAND_WALK), then the boardwalk to the sand (walked within +-WALK_HW), falling WALK_DROP over its
+# length; the piles reach PILE_Y under the floor (the seabed is never deeper there).
+LAND_Z, LAND_HW, LAND_WALK = 6.0, 2.2, 1.4
+WALK_Z, WALK_HW, WALK_DROP = 12.0, 0.8, 0.4
+PILE_Y = -4.0
+GATE_X, GATE_Z, GATE_Y = 1.0, DECK_Z + 0.14, 2.42   # the entrance: its posts, and its lintel
+HOURS_TOP = HEADER_Y - 0.13                          # the blinds' tops, what they roll up to (SushiBar.tsx HOURS_TOP)
+LAMP_POSTS = [(sx * (LAND_HW - 0.08), LAND_Z - 0.08) for sx in (-1, 1)] + [(sx * (WALK_HW + 0.2), WALK_Z - 0.3) for sx in (-1, 1)]
+
+
+def walk_y(z):
+    """The walk's top over the floor at z along the pier (flat on the landing, then down to the sand)."""
+    return -WALK_DROP * min(1.0, max(0.0, (z - LAND_Z) / (WALK_Z - LAND_Z)))
 
 DARK, LIGHT = "#6e5137", "#a98762"                  # the wharf's weathered deck
 POST, ROOF_A, ROOF_B = "#5a4230", "#4a7880", "#6f9ea2"      # the roof painted a weathered sea green
@@ -382,8 +405,8 @@ def signs_and_menu(k, W, Mp):
     k.extrude(fish, sz + 0.075, sz + 0.095, Mp, INK, at=(0, 3.92, 0))
     for x in (-0.82, 0.78):
         k.lathe((x, 3.92, sz + 0.075), [(0.0, 0.0), (0.06, 0.0), (0.06, 0.02), (0.0, 0.02)], Mp, INK, d=(0, 0, 1), n=8)
-    # The chalk menu on an easel at the deck's left front.
-    ex, ez = -3.75, 3.45
+    # Today's menu: the chalk board on its easel on the landing, beside the entrance, toward the way in.
+    ex, ez = 1.75, 5.25
     for sx in (-1, 1):
         k.beam((ex + sx * 0.28, FLOOR, ez + 0.12), (ex + sx * 0.24, 1.25, ez - 0.05), 0.05, 0.05, 0.0, W, POST)
     k.beam((ex, FLOOR, ez - 0.35), (ex, 1.1, ez - 0.05), 0.04, 0.04, 0.0, W, POST)
@@ -443,6 +466,154 @@ def plants(k, Mp, W):
                     k.face([k.vert(strip[0][j]), k.vert(strip[0][j + 1]), k.vert(strip[1][j + 1]), k.vert(strip[1][j])], [(0, 0)] * 4, Mp, col)
 
 
+def posters(k, Mp):
+    """Two posters on the side walls over the tank and the cask: a fish on the sea, and a sake cup under a rising sun."""
+    for sx, bg, z in ((-1, "#2f6f9a", 1.0), (1, "#c3283a", 1.0)):
+        x, cy = sx * (HW - 0.075), 2.2
+        w, h = 0.52, 0.7
+        pt = lambda u, v, d=0.0: (x - sx * d, cy + v, z + sx * u)
+        panel(k, Mp, [pt(-w / 2, -h / 2), pt(w / 2, -h / 2), pt(w / 2, h / 2), pt(-w / 2, h / 2)], "#f1e6cc", uv=(2, 1))
+        panel(k, Mp, [pt(-w / 2 + 0.04, -h / 2 + 0.16, 0.004), pt(w / 2 - 0.04, -h / 2 + 0.16, 0.004), pt(w / 2 - 0.04, h / 2 - 0.04, 0.004),
+                      pt(-w / 2 + 0.04, h / 2 - 0.04, 0.004)], bg, uv=(2, 1))
+        if sx < 0:   # an orange fish leaping over two waves
+            fish = [(0.17, 0.05), (0.06, 0.12), (-0.08, 0.1), (-0.15, 0.03), (-0.22, 0.1), (-0.21, -0.04), (-0.15, -0.01), (-0.06, -0.06), (0.07, -0.04)]
+            k.face([k.vert(pt(u, v + 0.06, 0.008)) for u, v in fish], [(0, 0)] * len(fish), Mp, "#f28a3a")
+            for j in range(2):
+                yy = -0.12 - j * 0.07
+                panel(k, Mp, [pt(-0.2, yy, 0.008), pt(0.2, yy, 0.008), pt(0.2, yy + 0.025, 0.008), pt(-0.2, yy + 0.025, 0.008)], "#f1e6cc", uv=(2, 1))
+        else:        # a white sun, a sake cup under it
+            k.face([k.vert(pt(0.13 * math.cos(a), 0.1 + 0.13 * math.sin(a), 0.008)) for a in np.linspace(0, math.tau, 13)[:-1]], [(0, 0)] * 12, Mp, "#f6f0e2")
+            k.face([k.vert(pt(u, v, 0.012)) for u, v in ((-0.1, -0.1), (0.1, -0.1), (0.07, -0.2), (-0.07, -0.2))], [(0, 0)] * 4, Mp, "#f1ece2")
+        for j in range(3):   # the poster's lines of text under the picture
+            yy, ww = -h / 2 + 0.11 - j * 0.035, (0.36, 0.28, 0.2)[j]
+            panel(k, Mp, [pt(-ww / 2, yy, 0.006), pt(ww / 2, yy, 0.006), pt(ww / 2, yy + 0.018, 0.006), pt(-ww / 2, yy + 0.018, 0.006)], INK, uv=(2, 1))
+
+
+def pile(k, W, Mr, x, z, top, bottom=PILE_Y, r=0.15):
+    """A round pile from `top` down to `bottom`, roped where it meets the water (the floor's 0.78 over the sea)."""
+    k.lathe((x, bottom, z), [(r * 1.05, 0.0), (r, top - bottom - 0.08), (0.0, top - bottom)], W, POST, n=8, v_len=1.2, u_tiles=0.5,
+            wobble=lambda j, i: 1.0 + 0.04 * math.sin(j * 2.1 + x + z))
+    if top > -0.6:
+        lashing(k, Mr, (x, -0.74, z), r + 0.01)
+
+
+def pier(M):
+    """The bar's stilts and its pier: piles under the floor, braced; the landing before the entrance and the boardwalk
+    down to the sand on posts, rope rails along both; lantern posts at the landing and the boardwalk's end (their
+    lanterns are the glow model's); the entrance, a lacquered gate with the bar's board on its lintel."""
+    W, Mr, Mp = M["wood"], M["rope"], M["paint"]
+    k = K.Kit("sushi-bar-pier")
+    # Piles under the bar: the front ones carry on down from the posts (the still bar's, to -0.3).
+    xs = (-4.3, -1.5, 1.5, 4.3)
+    for x in xs:
+        for z in (BACK_Z + 0.15, -0.2, HD + 0.1):
+            pile(k, W, Mr, x, z, -0.1)
+        pile(k, W, Mr, x, HEADER_Z, -0.3, r=0.155)
+    # Joists under the boards, and X braces between the piles along the front and the back.
+    for z in (BACK_Z + 0.15, -0.2, HD + 0.1, HEADER_Z):
+        k.beam((-4.45, -0.17, z), (4.45, -0.17, z), 0.12, 0.14, 0.0, W, mix(POST, DARK, 0.3), uv_len=2.0)
+    for z in (BACK_Z + 0.15, HEADER_Z):
+        for a, b in zip(xs, xs[1:]):
+            k.beam((a, -0.3, z + 0.17), (b, -1.6, z + 0.17), 0.07, 0.09, 0.0, W, POST, uv_len=2.0)
+            k.beam((b, -0.3, z + 0.17), (a, -1.6, z + 0.17), 0.07, 0.09, 0.0, W, POST, uv_len=2.0)
+    for sx in (-1, 1):   # the deck's sides and the kitchen's, a fascia over the joists' ends
+        k.beam((sx * 4.47, -0.1, BACK_Z + 0.1), (sx * 4.47, -0.1, DECK_Z), 0.06, 0.16, 0.0, W, mix(DARK, POST, 0.5), uv_len=2.0)
+    k.beam((-4.47, -0.1, BACK_Z + 0.05), (4.47, -0.1, BACK_Z + 0.05), 0.06, 0.16, 0.0, W, mix(DARK, POST, 0.5), uv_len=2.0)
+    # The landing: boards across, its edge a fascia; then the boardwalk's boards, each a step lower toward the sand.
+    top = FLOOR - 0.02
+    n = 7
+    for i in range(n):
+        z = DECK_Z + (i + 0.5) * (LAND_Z - DECK_Z) / n
+        box(k, (0, top - 0.05, z), (2 * LAND_HW, 0.1, (LAND_Z - DECK_Z) / n - 0.025), W, tone(), v_axis=0, uv_len=2.0)
+    n = 22
+    for i in range(n):
+        z = LAND_Z + (i + 0.5) * (WALK_Z - LAND_Z) / n
+        box(k, (rng.uniform(-0.03, 0.03), top + walk_y(z) - 0.05, z), (2 * WALK_HW + 0.3, 0.1, (WALK_Z - LAND_Z) / n - 0.03), W, tone(),
+            v_axis=0, uv_len=2.0, rot=K.game_rot(yaw=rng.uniform(-0.02, 0.02)))
+    for sx in (-1, 1):   # stringers under the boardwalk, and a fascia along the landing's sides
+        k.beam((sx * 0.75, top - 0.16, LAND_Z - 0.1), (sx * 0.75, top + walk_y(WALK_Z) - 0.16, WALK_Z), 0.1, 0.12, 0.0, W, POST, uv_len=2.0)
+        k.beam((sx * LAND_HW, top - 0.12, DECK_Z), (sx * LAND_HW, top - 0.12, LAND_Z), 0.06, 0.14, 0.0, W, mix(DARK, POST, 0.5), uv_len=2.0)
+    k.beam((-LAND_HW, top - 0.12, LAND_Z), (LAND_HW, top - 0.12, LAND_Z), 0.06, 0.14, 0.0, W, mix(DARK, POST, 0.5), uv_len=2.0)
+    # Posts with rope rails: round the landing (open toward the boardwalk and the entrance), along the boardwalk.
+    rail = WALK_HW + 0.2
+    land = [(-LAND_HW + 0.08, DECK_Z + 0.25), (-LAND_HW + 0.08, LAND_Z - 0.08), (-rail, LAND_Z - 0.08)]
+    walk_zs = [LAND_Z + 0.4 + (WALK_Z - 0.3 - LAND_Z - 0.4) * t for t in np.linspace(0, 1, 4)]
+    for sx in (-1, 1):
+        runs = [[(-sx * x, z) for x, z in land], [(sx * rail, z) for z in walk_zs]]
+        for run in runs:
+            tops = []
+            for x, z in run:
+                y = top + walk_y(z)
+                pile(k, W, Mr, x, z, y + 0.95, r=0.075)
+                tops.append((x, y, z))
+            for a, b in zip(tops, tops[1:]):
+                for h in (0.86, 0.5):
+                    pts = [tuple(np.array(a) + (np.array(b) - np.array(a)) * t + np.array((0, h - 0.07 * math.sin(math.pi * t), 0))) for t in np.linspace(0, 1, 6)]
+                    k.tube(pts, 0.022, Mr, ROPE, n=4, v_len=0.12)
+    # Lantern posts: at the landing's outer corners and at the boardwalk's end, an arm out over the walk.
+    for x, z in LAMP_POSTS:
+        y = top + walk_y(z)
+        k.beam((x, y - 1.2, z), (x, y + 2.25, z), 0.11, 0.11, 0.015, W, POST, segs=1, uv_len=1.2)
+        sx = -1 if x > 0 else 1
+        k.beam((x, y + 2.15, z), (x + sx * 0.5, y + 2.15, z), 0.07, 0.08, 0.0, W, POST, uv_len=1.0)
+        k.beam((x, y + 1.8, z), (x + sx * 0.3, y + 2.12, z), 0.05, 0.05, 0.0, W, POST, uv_len=1.0)
+    # The entrance: lacquered posts, a dark lintel with its ends turned up, the bar's board on it.
+    for sx in (-1, 1):
+        k.lathe((sx * GATE_X, top, GATE_Z), [(0.1, 0.0), (0.09, 0.08), (0.085, GATE_Y + 0.4), (0.0, GATE_Y + 0.42)], Mp, RED, n=10)
+        k.lathe((sx * GATE_X, top, GATE_Z), [(0.12, 0.0), (0.12, 0.12), (0.0, 0.12)], Mp, INK, n=10)
+    k.beam((-1.3, GATE_Y, GATE_Z), (1.3, GATE_Y, GATE_Z), 0.13, 0.13, 0.02, Mp, RED, segs=1)
+    lintel = [(-1.55, GATE_Y + 0.5), (-1.2, GATE_Y + 0.36), (0, GATE_Y + 0.3), (1.2, GATE_Y + 0.36), (1.55, GATE_Y + 0.5)]
+    k.tube([(x, y, GATE_Z) for x, y in lintel], 0.085, Mp, INK, n=6, v_len=0.3, caps=True, radii=[0.7, 1.0, 1.0, 1.0, 0.7])
+    box(k, (0, GATE_Y + 0.17, GATE_Z + 0.05), (0.95, 0.34, 0.05), W, HINOKI, r=0.015)
+    fish = [(0.3, 0.0), (0.16, 0.07), (-0.03, 0.08), (-0.19, 0.03), (-0.3, 0.09), (-0.27, 0.0), (-0.3, -0.09), (-0.19, -0.03), (-0.03, -0.08), (0.16, -0.07)]
+    k.extrude(fish, GATE_Z + 0.076, GATE_Z + 0.086, Mp, INK, at=(-0.08, GATE_Y + 0.17, 0))
+    k.lathe((0.33, GATE_Y + 0.17, GATE_Z + 0.076), [(0.0, 0.0), (0.07, 0.0), (0.07, 0.012), (0.0, 0.012)], Mp, RED, d=(0, 0, 1), n=10)
+    return k.finish(smooth_deg=40)
+
+
+def hours(M):
+    """What opens and shuts with the bar's hours, drawn by the bar (components/game/SushiBar.tsx): `shutters`, bamboo
+    blinds rolled down over the front and the deck's sides while it's closed (rolled up about their tops, HOURS_TOP);
+    `noren`, the split curtain hung in the entrance while it's open."""
+    W, Mr, Mc = M["wood"], M["rope"], M["cloth"]
+    k = K.Kit("shutters")
+    y0, y1 = FLOOR + 0.03, HOURS_TOP
+
+    def blind(p0, p1):
+        """A blind between game points p0 and p1 (its bottom edge), slats across it in two bamboo tones, cords down it."""
+        a, b = np.array(p0), np.array(p1)
+        n = 34
+        for i in range(n):
+            ya, yb = y0 + (y1 - y0) * i / n, y0 + (y1 - y0) * (i + 1) / n - 0.006
+            col = mix("#c8a868", "#e2c88e", 0.15 + 0.7 * ((i * 7) % 5) / 4)
+            panel(k, W, [(a[0], ya, a[2]), (b[0], ya, b[2]), (b[0], yb, b[2]), (a[0], yb, a[2])], col, uv=(0, 1), uv_len=1.5)
+        for t in (0.15, 0.5, 0.85):
+            c = a + (b - a) * t
+            k.tube([(c[0], y0, c[2]), (c[0], y1, c[2])], 0.01, Mr, ROPE, n=3, v_len=0.12)
+        k.beam((a[0], y0 + 0.02, a[2]), (b[0], y0 + 0.02, b[2]), 0.04, 0.04, 0.0, W, POST, uv_len=1.5)
+        k.beam((a[0], y1, a[2]), (b[0], y1, b[2]), 0.07, 0.07, 0.0, W, POST, uv_len=1.5)
+
+    z = HEADER_Z - 0.2
+    for a, b in ((-4.3, -1.5), (-1.5, 1.5), (1.5, 4.3)):
+        blind((a + 0.17, 0, z), (b - 0.17, 0, z))
+    for sx in (-1, 1):
+        blind((sx * (HW - 0.03), 0, HD + 0.12), (sx * (HW - 0.03), 0, HEADER_Z - 0.16))
+    shutters = k.finish(smooth_deg=30)
+    # The noren: three panels from the gate's tie beam, navy, a white wave across their feet.
+    k = K.Kit("noren")
+    top, drop, zc = GATE_Y - 0.07, 0.78, GATE_Z + 0.02
+    for i in range(3):
+        x0 = -GATE_X + 0.1 + i * (2 * GATE_X - 0.2) / 3
+        w = (2 * GATE_X - 0.2) / 3 - 0.03
+        cloth_grid(k, Mc, lambda u, v, x0=x0, w=w: (x0 + w * u, top - drop * v, zc + 0.015 * math.sin(u * math.pi + i) * v),
+                   2, 3, lambda t: mix(NAVY, "#1a2540", t))
+        cloth_grid(k, Mc, lambda u, v, x0=x0, w=w: (x0 + w * u, top - drop * (0.62 + 0.12 * v) + 0.04 * math.sin((x0 + w * u) * 7.0), zc + 0.008),
+                   4, 1, lambda t: "#f1ece2")
+    k.tube([(-GATE_X, top + 0.02, zc), (GATE_X, top + 0.02, zc)], 0.025, Mc, POST, n=5)
+    noren = k.finish(smooth_deg=40)
+    return [shutters, noren]
+
+
 def pane_glass():
     """A see-through glass (alpha blended in the GLB) for the fish case and the tank."""
     M = K.Mat("M_PaneGlass", rough=0.08)
@@ -471,21 +642,26 @@ def bar(M):
     signs_and_menu(k, M["wood"], M["paint"])
     tank(k, M["wood"], M["paint"], M["pane"], M["stone"])
     plants(k, M["paint"], M["wood"])
+    posters(k, M["paint"])
     k.tint_gradient(0.86, 1.0, 0.0, RIDGE_Y)
     return k.finish(smooth_deg=40)
 
 
 # ================================================================ what glows
-LANTERNS = [(-3.0, 1.5, "red", 0.27), (-1.0, 1.5, "lantern", 0.3), (1.0, 1.5, "lantern", 0.3), (3.0, 1.5, "red", 0.27),
-            (-2.9, HEADER_Z - 0.2, "lantern", 0.22), (0.0, HEADER_Z - 0.2, "red", 0.24), (2.9, HEADER_Z - 0.2, "lantern", 0.22)]
+# Paper lanterns (x, z, glow, radius, the height they hang from): over the counter and the deck, under the lamp posts'
+# arms outside, and at the entrance's lintel ends.
+LANTERNS = ([(x, z, key, r, PLATE_Y - 0.08 if z < 2 else HEADER_Y - 0.12) for x, z, key, r in (
+    (-3.0, 1.5, "red", 0.27), (-1.0, 1.5, "lantern", 0.3), (1.0, 1.5, "lantern", 0.3), (3.0, 1.5, "red", 0.27),
+    (-2.9, HEADER_Z - 0.2, "lantern", 0.22), (0.0, HEADER_Z - 0.2, "red", 0.24), (2.9, HEADER_Z - 0.2, "lantern", 0.22))]
+    + [(x - math.copysign(0.45, x), z, "lantern", 0.2, FLOOR - 0.02 + walk_y(z) + 2.11) for x, z in LAMP_POSTS]
+    + [(sx * 1.22, GATE_Z + 0.02, "red", 0.15, GATE_Y + 0.32) for sx in (-1, 1)])
 
 
 def glow(M):
     G, Mp = M["glow"], M["paint"]
     k = K.Kit("sushi-bar-glow")
     # Round paper lanterns, ribbed, black lacquer caps, hung by a cord from the beam over them.
-    for x, z, key, r in LANTERNS:
-        hang = PLATE_Y - 0.08 if z < 2 else HEADER_Y - 0.12
+    for x, z, key, r, hang in LANTERNS:
         cy = hang - 0.2 - r
         prof = []
         for i in range(10):
@@ -568,11 +744,13 @@ def build():
          "paint": K.Mat("P_Paint", rough=0.45), "cloth": K.Mat("P_Cloth", rough=1.0), "glass": K.Mat("P_Glass", rough=0.08),
          "stone": K.Mat("P_Stone", rough=0.95), "pane": pane_glass(), "glow": glow_mat()}
     out = {}
-    for name, fn in (("sushi-bar", bar), ("sushi-bar-glow", glow)):
-        ob = fn(M)
-        K.export([ob], f"game/buildings/{name}.glb")
-        report(ob)
-        out[name] = ob
+    for name, fn in (("sushi-bar", bar), ("sushi-bar-glow", glow), ("sushi-bar-pier", pier), ("sushi-bar-hours", hours)):
+        obs = fn(M)
+        obs = obs if isinstance(obs, list) else [obs]
+        K.export(obs, f"game/buildings/{name}.glb")
+        for ob in obs:
+            report(ob)
+        out[name] = obs
     return out
 
 
@@ -587,7 +765,8 @@ def review(obs, out_dir):
     except TypeError:
         sc.render.engine = "BLENDER_EEVEE"
     sc.view_settings.view_transform = "Standard"
-    shown = list(obs.values())
+    shown = [o for group in obs.values() for o in group]
+    shutters, noren = obs["sushi-bar-hours"]
     K.show_vertex_colors(shown)
     world = bpy.data.worlds.new("W")
     sc.world = world
@@ -597,11 +776,11 @@ def review(obs, out_dir):
     so = bpy.data.objects.new("Key", sun)
     sc.collection.objects.link(so)
     so.rotation_euler = (math.radians(50), 0, math.radians(-150))
-    # A sand ground and a sea band behind, so the window frames something.
+    # The sea under the stilts (the floor 0.78 over it) and the sand where the boardwalk lands.
     me = bpy.data.meshes.new("ground")
-    me.from_pydata([K.G(-30, -0.01, -3), K.G(30, -0.01, -3), K.G(30, -0.01, 30), K.G(-30, -0.01, 30)], [], [(0, 1, 2, 3)])
+    me.from_pydata([K.G(-30, -0.4, WALK_Z - 0.5), K.G(30, -0.4, WALK_Z - 0.5), K.G(30, -0.4, 40), K.G(-30, -0.4, 40)], [], [(0, 1, 2, 3)])
     sea = bpy.data.meshes.new("sea")
-    sea.from_pydata([K.G(-60, -0.4, -3), K.G(60, -0.4, -3), K.G(60, -0.4, -80), K.G(-60, -0.4, -80)], [], [(0, 1, 2, 3)])
+    sea.from_pydata([K.G(-60, -0.78, 40), K.G(60, -0.78, 40), K.G(60, -0.78, -80), K.G(-60, -0.78, -80)], [], [(0, 1, 2, 3)])
     for mesh, col in ((me, "#e9d7ad"), (sea, "#3aa6c4")):
         m = bpy.data.materials.new(mesh.name)
         m.diffuse_color = (*K.lin(col), 1)
@@ -615,11 +794,12 @@ def review(obs, out_dir):
     co = bpy.data.objects.new("C", cam)
     sc.collection.objects.link(co)
     sc.camera = co
-    shots = {"front": ((7.5, 4.2, 13.5), (0.0, 1.8, 0.8), 30, (1200, 800)),
-             "back": ((-6.0, 3.6, -11.0), (0.0, 1.9, 0.0), 30, (1200, 800)),
-             "seat": ((0.6, 1.3, 2.75), (0.3, 1.75, -2.0), 20, (1200, 700))}
+    shots = {"front": ((8.5, 4.6, 19.0), (0.0, 0.9, 3.0), 26, (1200, 800)),
+             "back": ((-6.0, 3.6, -11.0), (0.0, 1.0, 0.0), 30, (1200, 800)),
+             "seat": ((0.5, 1.45, 2.0), (0.42, 1.3, -2.0), 22, (1200, 700))}
     frames = []
     for night in (False, True):
+        shutters.hide_render, noren.hide_render = night, not night
         bg.inputs[0].default_value = (*K.lin("#12203f" if night else "#bfe3f2"), 1)
         bg.inputs[1].default_value = 0.35 if night else 1.0
         sun.energy = 0.15 if night else 3.0

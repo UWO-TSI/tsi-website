@@ -7,6 +7,7 @@ import { objectsOf, village, villageSpawnPoint, type MapObject, type Village } f
 import { barrierBoxes, barrierFootprint, barrierPlacements, inBarrier } from "./barriers";
 import { DROPS } from "./drops";
 import { JETTY, worldToDock, type Dock } from "./wharf";
+import { BAR_DECKS, barOf } from "./sushiBar";
 import { FENCE_POST_HALF, fenceSolids, isJoinedFence } from "./fences";
 import { MAX_CLIMB, terrainHeight, terrainSteepness, terrainSurface } from "./world/terrain";
 
@@ -201,12 +202,20 @@ export type Deck = { x0: number; x1: number; z0: number; z1: number; y: (x: numb
 export function wharfDecks(v: Village = village()): Deck[] {
   const w = landmark("wharf", v);
   if (!w) return [];
-  const flat = (y: number) => () => y;
-  if (!isJetty(v)) return [WHARF_DECK_LOCAL, WHARF_FINGER_LOCAL].map(r => ({ ...turnedRect(w.x, w.z, r, w.yaw), y: flat(DECK_Y) }));
-  const dock = { x: w.x, z: w.z, yaw: w.yaw ?? 0 }, local = { x: 0, z: 0 };
-  return JETTY.decks.map(r => {
-    const rise = "rise" in r ? r.rise : 0;
-    return { ...turnedRect(w.x, w.z, r, w.yaw), y: rise ? (x: number, z: number) => r.y + rise * Math.min(1, Math.max(0, (worldToDock(dock, x, z, local).z - r.z0) / (r.z1 - r.z0))) : flat(r.y) };
+  if (!isJetty(v)) return [WHARF_DECK_LOCAL, WHARF_FINGER_LOCAL].map(r => ({ ...turnedRect(w.x, w.z, r, w.yaw), y: () => DECK_Y }));
+  return localDecks({ x: w.x, z: w.z, yaw: w.yaw ?? 0 }, JETTY.decks);
+}
+/** The sushi bar's decks in world XZ (lib/game/sushiBar.ts BAR_DECKS): its floor on the stilts, the landing and the boardwalk. */
+export function barDecks(v: Village = village()): Deck[] {
+  const b = barOf(v);
+  return b ? localDecks({ x: b.x, z: b.z, yaw: b.yaw ?? 0 }, BAR_DECKS) : [];
+}
+/** Decks given in a frame's own coordinates, each at its height `y`, a ramp climbing `rise` from z0 to z1. */
+function localDecks(d: Dock, rects: readonly { x0: number; x1: number; z0: number; z1: number; y: number; rise?: number }[]): Deck[] {
+  const local = { x: 0, z: 0 };
+  return rects.map(r => {
+    const rise = r.rise ?? 0;
+    return { ...turnedRect(d.x, d.z, r, d.yaw), y: rise ? (x: number, z: number) => r.y + rise * Math.min(1, Math.max(0, (worldToDock(d, x, z, local).z - r.z0) / (r.z1 - r.z0))) : () => r.y };
   });
 }
 /** The wharf's main walkable deck in world XZ (the pier, or the jetty's landing), or null without a wharf. */
@@ -358,7 +367,7 @@ export const WADE = 0.25;
 /** Walking on a village: ground height, solids and the stepping rule, from its map and objects. */
 export function islandOf(v: Village): VillageIsland {
   const { map, field, terrain } = v;
-  const decks: Deck[] = [...wharfDecks(v), ...bridgeDecks(v).map(r => ({ ...r, y: () => DECK_Y }))];
+  const decks: Deck[] = [...wharfDecks(v), ...barDecks(v), ...bridgeDecks(v).map(r => ({ ...r, y: () => DECK_Y }))];
   // The smooth world walks its heightfield (the drawn ground); a deck over its water is walked at the deck's height.
   const ground = terrain
     ? (x: number, z: number) => {

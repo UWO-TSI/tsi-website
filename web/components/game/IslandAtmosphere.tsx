@@ -175,6 +175,8 @@ export interface FollowScene {
 const LOOK_AHEAD = 1.5, AIM_AHEAD = 2.2;
 /** The top of the head over the feet (a character stands 1.36): the cut also follows the line of sight to it. */
 const HEAD = 1.3;
+/** How long the glide into a seat's own view takes (and back out), in seconds. */
+const SEAT_GLIDE = 1.8;
 /** The least height the camera keeps over the ground under it (a hill or cliff behind you lifts it, never through). */
 const CLEARANCE = 0.8;
 /**
@@ -191,7 +193,7 @@ export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: num
   const { camera } = useThree();
   useOrbitInput(!scene?.aim);
   const rig = useMemo(() => ({ ahead: LOOK_AHEAD, cut: 0, chest: new THREE.Vector3(), head: new THREE.Vector3(), last: new THREE.Vector3(NaN, 0, 0), vx: 0, vz: 0,
-    seat: 0, seatEye: new THREE.Vector3(), seatLook: new THREE.Vector3() }), []);
+    seat: 0, seatEye: new THREE.Vector3(), seatLook: new THREE.Vector3(), from: new THREE.Vector3(), fromLook: new THREE.Vector3(), lastCam: new THREE.Vector3(), lastLook: new THREE.Vector3() }), []);
   useEffect(() => () => { CUTOUT.value.w = 0; CUTOUT_CROWN.value.x = 0; }, []);
   const baseFar = useRef<number | null>(null);
   const blend = useRef({ zoom, overview: overview ? 1 : 0, last: overview });
@@ -236,18 +238,27 @@ export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: num
       camera.position.lerp(far.at, b.overview);
       look.lerp(far.look, b.overview);
     }
-    // A seat's view (the sushi bar's stools): eased in as you sit, out as you get up, from the last one held.
+    // A seat's view (the sushi bar's stools; David: "a camera angle switch transition", never a black screen): a glide
+    // over SEAT_GLIDE s, slow out and slow in, as you sit, and back as you get up, from the last one held.
+    // Gliding in it starts from the view as it was (sitting moved you to the seat at once); gliding out it ends on the
+    // follow view where you got up.
     const sv = scene?.seat?.current;
-    if (sv) { rig.seatEye.set(sv.eye.x, sv.eye.y, sv.eye.z); rig.seatLook.set(sv.look.x, sv.look.y, sv.look.z); }
-    rig.seat = THREE.MathUtils.damp(rig.seat, sv ? 1 : 0, 4, dt);
-    if (rig.seat > 1e-3) { camera.position.lerp(rig.seatEye, rig.seat); look.lerp(rig.seatLook, rig.seat); }
+    if (sv) {
+      if (rig.seat === 0) { rig.from.copy(rig.lastCam); rig.fromLook.copy(rig.lastLook); }
+      rig.seatEye.set(sv.eye.x, sv.eye.y, sv.eye.z); rig.seatLook.set(sv.look.x, sv.look.y, sv.look.z);
+      camera.position.copy(rig.from); look.copy(rig.fromLook);
+    }
+    rig.seat = THREE.MathUtils.clamp(rig.seat + (sv ? dt : -dt) / SEAT_GLIDE, 0, 1);
+    const glide = THREE.MathUtils.smootherstep(rig.seat, 0, 1);
+    if (glide > 1e-3) { camera.position.lerp(rig.seatEye, glide); look.lerp(rig.seatLook, glide); }
     camera.lookAt(look);
+    rig.lastCam.copy(camera.position); rig.lastLook.copy(look);
     camera.updateMatrixWorld();
     // A building, tree or cliff on the line of sight to the player's chest or head eases the cut in; the circle sits where they are drawn.
     if (!p || !(camera instanceof THREE.PerspectiveCamera)) return;
     const c = rig.chest.set(p.x, p.y + 1, p.z), h = rig.head.set(p.x, p.y + HEAD, p.z), list = scene!.occluders;
     const crown = b.overview === 0 && canopyAround(h, list);
-    const blocked = b.overview === 0 && (crown || lineBlocked(camera.position, c, list) || lineBlocked(camera.position, h, list) || groundBlocks(camera.position, c, scene!.ground));
+    const blocked = b.overview === 0 && rig.seat < 0.5 && (crown || lineBlocked(camera.position, c, list) || lineBlocked(camera.position, h, list) || groundBlocks(camera.position, c, scene!.ground));
     rig.cut = THREE.MathUtils.damp(rig.cut, blocked ? 1 : 0, 8, dt);
     c.applyMatrix4(camera.matrixWorldInverse);
     const depth = -c.z;

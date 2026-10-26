@@ -1,4 +1,4 @@
-// Sushi bar review views (game/sushi-bar; terrain-v3/shoot.mjs with the bar's views and a sit): in-game shots of the new world (web/data/world) on /lab/island?fixture=v2,
+// Sushi bar review views (game/sushi-bar; terrain-v3/shoot.mjs with the bar's views and the way in): in-game shots of the new world (web/data/world) on /lab/island?fixture=v2,
 // headless Chromium (WebGL), muted, signed out, against a dev server on PORT with the Supabase env blanked.
 //   PORT=3175 node specs/evidence/sushi-bar/shoot.mjs <out_dir> [view,view,...]
 // Each view stands the player at (x, z) with the orbit camera at a heading (yaw: 0 looks toward +z, 90 toward +x), a tilt
@@ -8,17 +8,18 @@ import { mkdirSync } from "node:fs";
 const require = createRequire("/opt/homebrew/lib/node_modules/");
 const { chromium } = require("playwright");
 
-// R2c spots (the jetty: its middle finger's tip at (93.1, 46), its platform at x 78.6, the gangways meeting the deck
-// boards at x 74.2; the path from (65.5, 56) winding up to the plaza at (30, 50)).
-// The sushi bar at (44, 96.5), yaw -3pi/4 (terrain-v3's placement): its guests' side toward (-x, -z), its window onto the sea
-// toward (+x, +z). `sit` stands you by a stool and presses E (Sit at the counter), then waits for the seated view.
+// Phase A spots (specs/launch/sushi-bar.md): the bar on its stilts at (-47, 119.5), yaw pi, so its frame's (lx, lz) is the
+// world's (-47 - lx, 119.5 - lz): its pier runs north (-z) to the sand at z 107.5, the entrance at (-47, 114.5), its window
+// onto the sea to the south. `sit` stands you at the entrance and presses E (Enter the sushi bar); `frames` are the ms
+// after E to shoot the glide in (each its own png, name-<ms>), then the seated view.
 export const VIEWS = {
-  "bar-front": { at: [39.4, 92.6], yaw: 45, pitch: 0.42, zoom: 1.3 },
-  "bar-front-night": { at: [39.4, 92.6], yaw: 45, pitch: 0.42, zoom: 1.3, time: "night" },
-  "bar-seat": { at: [42.4, 94.8], yaw: 45, pitch: 0.42, zoom: 1.0, sit: true },
-  "bar-seat-night": { at: [42.4, 94.8], yaw: 45, pitch: 0.42, zoom: 1.0, sit: true, time: "night" },
-  "bar-sea": { at: [49.5, 101.5], yaw: 225, pitch: 0.4, zoom: 1.3 },
-  "bar-chefs": { at: [40.6, 95.2], yaw: 45, pitch: 0.3, zoom: 0.8 },
+  "bar-day": { at: [-43.5, 103], yaw: 345, pitch: 0.38, zoom: 1.5 },
+  "bar-evening": { at: [-43.5, 103], yaw: 345, pitch: 0.38, zoom: 1.5, time: "evening" },
+  "bar-night": { at: [-43.5, 103], yaw: 345, pitch: 0.38, zoom: 1.5, time: "night" },
+  "chef-outside": { at: [-46.2, 112.2], yaw: 20, pitch: 0.3, zoom: 0.7 },
+  "entry": { at: [-47, 114.8], yaw: 0, pitch: 0.42, zoom: 1.0, sit: true, time: "night", frames: [0, 500, 1000, 1500] },
+  "seat-evening": { at: [-47, 114.8], yaw: 0, pitch: 0.42, zoom: 1.0, sit: true, time: "evening" },
+  "seat-night": { at: [-47, 114.8], yaw: 0, pitch: 0.42, zoom: 1.0, sit: true, time: "night" },
 };
 
 const [OUT = "specs/evidence/sushi-bar", ONLY] = process.argv.slice(2), PORT = process.env.PORT ?? 3175;
@@ -39,8 +40,13 @@ for (const [name, v] of Object.entries(VIEWS)) {
   await page.waitForFunction(() => !!window.__move?.sim?.current, null, { timeout: 240000 });
   await page.waitForTimeout(8000);
   if (await page.evaluate(() => { const g = window.__governor; if (!g) return false; g.hold = 1e9; g.set(0); return true; })) await page.waitForTimeout(1500);
-  if (v.sit) { await page.keyboard.press("e"); await page.waitForTimeout(3000); }
   await page.addStyleTag({ content: "nav, [role=status], #island-options, [aria-controls='island-options'], nextjs-portal { display: none !important; }" }).catch(() => {});
+  if (v.sit) {
+    await page.keyboard.press("e");
+    let t0 = 0;
+    for (const ms of v.frames ?? []) { await page.waitForTimeout(ms - t0); t0 = ms; await page.screenshot({ path: `${OUT}/${name}-${ms}.png` }); }
+    await page.waitForTimeout(3000);
+  }
   await page.screenshot({ path: `${OUT}/${name}.png` });
   console.log("shot", name, JSON.stringify(await page.evaluate(() => { const p = window.__move?.sim?.current?.pos ?? window.__move?.sim?.current?.position; return p ? [p.x ?? p[0], p.y ?? p[1], p.z ?? p[2]].map(n => +(+n).toFixed(2)) : null; })));
   await ctx.close();

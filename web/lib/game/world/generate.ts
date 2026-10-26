@@ -202,11 +202,12 @@ const [PX, PZ] = PLAZA.at;
 const SPOT = { hq: [PX - 17.5, PZ], cafe: [PX + 3, PZ - 16.2], shop: [PX + 3, PZ + 16], museum: [PX - 26, PZ + 20.5] } as const;
 const VILLAGE = blob([PX + 2, 52], [42, 44, 42, 44, 50, 52, 38, 42], 2, 12, 81);
 /**
- * The sushi bar (the sushi-bar lane's long open bar, 9.2 by 6.1, its back window to the sea): on the sand by the wharf's
- * end, its back (local -z) turned to the open sea south-east, its customers' deck toward the way down from the village,
- * on a level pad 0.9 high.
+ * The sushi bar (the sushi-bar lane; David's plan, specs/launch/sushi-bar.md: "on the beach on stilts on the water more
+ * left side of the beach"): over the water off the beach's west end, its back window (local -z) to the open sea south,
+ * its pier (local +z) running north to the sand, its end on the sand at the boardwalk's height (lib/game/sushiBar.ts
+ * BAR_DECKS); the water under its guests' deck too deep to wade, so the way in is the entrance.
  */
-const SUSHI = [44, 96.5] as const;
+export const SUSHI = [-47, 119.5] as const, SUSHI_YAW = Math.PI;
 const BEACH = strip([[58, 92], [40, 100], [10, 105], [-20, 105], [-50, 101]], 9, 8, 0.8, 16, 95);
 
 /**
@@ -297,8 +298,6 @@ export const PLAN: Plan = {
       name: "Beach", label: ["Beach (sea level)", 4, 124],
       shape: (x, z) => Math.min(BEACH(x, z), 0.4 * (60 - x) + wob(x, z, 2.5, 9, 96)), ground: H.beach + 0.3, edge: 5, coast: 0.12, paint: Paint.Sand, paintBelow: 2.4, ragged: 0.45,
     },
-    // The sushi bar's pad: level sand under it and its customers' deck.
-    { shape: blob([SUSHI[0] - 0.7, SUSHI[1] - 0.7], [5.8, 5.8, 5.8, 5.8], 0, 14, 1), ground: 0.9, edge: 1.5, kind: "shape" },
     // THE RIVER: sea level, down the meadow's side of the village (wide enough near the open area that no glide crosses it).
     { name: "River", label: ["River (sea level)", -80, 64], shape: strip(RIVER, 4, 7, 0.6, 9, 97), ground: 0, edge: 6, coast: (x, z) => 2.4 - 2.15 * farBank(x, z), kind: "water" },
   ],
@@ -495,11 +494,11 @@ function plazaSet(): Obj[] {
 
 /**
  * The beach (wharf-art's set; David: "a sushi bar ... coral in the shallow waters ... some surfboard sticking in the sand,
- * a life guard tower"): the sushi bar by the wharf's end, its shark's mouth toward the way down from the village, the
- * lifeguard tower facing the sea, surfboards in twos and threes. The coral comes after the ground (`shallows`).
+ * a life guard tower"): the sushi bar and its pier off the west end (SUSHI), the lifeguard tower facing the sea,
+ * surfboards in twos and threes. The coral comes after the ground (`shallows`).
  */
 function beachSet(): Obj[] {
-  const out: Obj[] = [obj("prop", "sushi-bar", ...SUSHI, facing(1, 1), 1, "sushi-bar"), obj("prop", "lifeguard-tower", 1, 108.5, 0, 1, "lifeguard-tower")];
+  const out: Obj[] = [...["sushi-bar", "sushi-bar-pier"].map(m => obj("prop", m, ...SUSHI, SUSHI_YAW, 1, m)), obj("prop", "lifeguard-tower", 1, 108.5, 0, 1, "lifeguard-tower")];
   ([[4.5, 107.4, "a"], [5.1, 107.8, "b"], [5.7, 107.3, "c"], [-16, 107, "c"], [-15.4, 107.5, "a"], [33, 104, "b"], [33.6, 104.4, "a"]] as const)
     .forEach(([x, z, m], i) => out.push(obj("prop", `surfboard-${i}`, x, z, 0.4 * (hash01(i, 30) - 0.5) + (x > 30 ? 2.6 : 0), 1, `surfboard-${m}`)));
   // wharf-art2's beach things (David, R2c: "brainstorm for more beach stuff, maybe beach balls"): by each parasol a

@@ -188,7 +188,7 @@ import CafeGoalSheet from "./study/CafeGoalSheet";
 import CafeBuilding from "./study/CafeBuilding";
 import CafeSweeper, { cafeSweeper } from "./study/CafeSweeper";
 import SushiBar from "./SushiBar";
-import { BAR_LIGHT, barOf, barSeat, type BarView } from "@/lib/game/sushiBar";
+import { BAR_LIGHT, barOf, barOpen, barSeat, type BarView } from "@/lib/game/sushiBar";
 import { SWEEPER_TALK } from "@/lib/game/cafe";
 import { DROPS } from "@/lib/game/drops";
 import HalloweenLayer, { knockAt, knockNear } from "./Halloween";
@@ -234,7 +234,7 @@ const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   home: "Take the boat home", fish: "Cast your line", forage: "Gather", net: "Swing the net", dig: "Dig", claim: "Claim your plot", donate: "Donate your first catch to the museum", report: "Report back to Wren", house: "Enter your house", village: "Take the boat to the village",
   buy: `Add a room · ${ROOM_PRICE.coins} TC + ${ROOM_PRICE.materials}`,
   cafe: "Boarded up · help reopen it at the monument", museum: "Museum · Closed for now", ruins: "Enter the ruins", missions: "Read the mission board", ruins_exit: "Back to the village", lantern: "Pick it up",
-  bench: "Sit on the bench", stool: "Sit at the counter", bed: "Sleep in your bed", chest: "Open your storage chest",
+  bench: "Sit on the bench", stool: "Enter the sushi bar", bed: "Sleep in your bed", chest: "Open your storage chest",
   trophy: "Read the tourney board", posters: "Look at the GENESIS posters", cocoa: "Get a hot cocoa", picnic: "Join the picnic",
   knock: "Knock: trick or treat",
   owner: `Talk to ${CAFE_OWNER.name}`,
@@ -453,7 +453,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     const ls = layout.lamps.filter(l => (l.model ?? "") === kind);
     return { kind, positions: ls.map((l): [number, number, number] => [l.x, island.ground(l.x, l.z), l.z]), yaws: kind ? ls.map(l => l.yaw ?? 0) : undefined };
   }).filter(s => s.positions.length), [layout, island]);
-  // The sushi bar (game/sushi-bar): its stools are seats, its light is one of the pool's points (over its counter).
+  // The sushi bar (game/sushi-bar): E at its entrance seats you on a stool while it's open, its light is one of the pool's points (over its counter).
   const bar = useMemo(() => barOf(v), [v]), barY = bar ? island.ground(bar.x, bar.z) : 0, barView = useRef<BarView | null>(null);
   const lampPoints = useMemo(() => [...lampSets.flatMap(s => (s.kind === "hand" ? [] : s.positions.map((p, i) => lampLight(p, s.yaws?.[i] ?? 0, s.kind ? NEW_LAMPS[s.kind].light : [0, 2.4, 0])))),
     ...(bar ? [lampLight([bar.x, barY, bar.z], bar.yaw ?? 0, BAR_LIGHT)] : [])], [lampSets, bar, barY]);
@@ -490,7 +490,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       : within(sweeper, SWEEPER_TALK) ? ["owner", sweeper]
       : DROPS.combat && within(layout.missions?.at ?? null, 1.5) ? ["missions", layout.missions!.at] : [null, null];
     let next: Near = door[0], nextD = gap(door[1]);
-    const b = benchSeat(px, pz, 1.3, v, layout.benches, remoteSeatTaken), stool = !b && bar ? barSeat(bar, px, pz, remoteSeatTaken) : null;
+    const b = benchSeat(px, pz, 1.3, v, layout.benches, remoteSeatTaken), stool = !b && bar ? barSeat(bar, px, pz, barOpen(phase), remoteSeatTaken) : null;
     benchSpot.current = b ? { ...b, seatY: island.ground(b.x, b.z) + BENCH_SEAT_TOP } : stool && { ...stool, seatY: barY + stool.top };
     // An event spot and a bench both in reach: the nearer one takes E.
     const ev = spots.find(s => within([s.x, s.z], s.range)), seat = benchSpot.current;
@@ -554,7 +554,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       {/* The new world's lamps only glow; their pools come from the few nearest you (LampPool). */}
       {lampSets.map(s => <Lanterns key={s.kind} positions={s.positions} yaws={s.yaws} lamp={s.kind ? NEW_LAMPS[s.kind] : undefined} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} reach={v.terrain ? 0 : 5} />)}
       {v.terrain && <LampPool points={lampPoints} intensity={light.lampsOn ? light.lamp * 1.5 : 0} reach={8.5} player={player} />}
-      {bar && <Suspense fallback={null}><SushiBar bar={bar} y={barY} player={player} night={light.lampsOn} viewRef={barView} onNear={onBar} /></Suspense>}
+      {bar && <Suspense fallback={null}><SushiBar bar={bar} y={barY} player={player} phase={phase} viewRef={barView} onNear={onBar} /></Suspense>}
       {layout.campfire && <Campfire site={layout.campfire} ground={island.ground} phase={phase} player={player} />}
       {/* Nature and props from the map, instanced: one draw per model sub-mesh however many the island has. */}
       <InstancedModels items={sceneryMoving} />
@@ -779,7 +779,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // follows the real clock everywhere on this island; cafe and other
   // interiors override the outdoor block with their own bed.
   const [atBar, setAtBar] = useState(false);
-  const musicOverride = inside === "cafe" ? "cafe" : inside ? "interior" : atBar ? "bar" : null;
+  const musicOverride = inside === "cafe" ? "cafe" : inside ? "interior" : atBar ? (phase === "night" ? "bar-night" : "bar-evening") : null;
   useMusicDirector({ season: season.season, override: musicOverride });
   const ambientPhase: AmbientPhase = phase === "evening" ? "dusk" : phase;
   const [fishing, setFishing] = useState(false);
@@ -1300,7 +1300,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       </section>}
       {near && !toolNear && !sheet && !hq.card && !cinematic && !talking && !(reveal && inside === "oracle") && (CLOSED.includes(near)
         ? <p className={styles.interact} data-closed="true" role="status">{NEAR_LABELS[near]}</p>
-        : fishing ? null : <button className={styles.interact} onClick={() => act(near)}><kbd>{touch ? "Tap" : "E"}</kbd>{near === "forage" ? targetLabel ?? NEAR_LABELS[near] : near === "talk" && talkNow.nearName ? `Talk to ${talkNow.nearName}` : near === "bram" ? bramPrompt() : near === "desk" && hq.waiting === "wren" ? `Talk to ${WREN.name}` : near === "bench" || near === "stool" || near === "bed" ? seatPrompt(NEAR_LABELS[near], seated) : NEAR_LABELS[near]}</button>)}
+        : fishing ? null : <button className={styles.interact} onClick={() => act(near)}><kbd>{touch ? "Tap" : "E"}</kbd>{near === "forage" ? targetLabel ?? NEAR_LABELS[near] : near === "talk" && talkNow.nearName ? `Talk to ${talkNow.nearName}` : near === "bram" ? bramPrompt() : near === "desk" && hq.waiting === "wren" ? `Talk to ${WREN.name}` : near === "stool" && seated ? "Leave the bar" : near === "bench" || near === "stool" || near === "bed" ? seatPrompt(NEAR_LABELS[near], seated) : NEAR_LABELS[near]}</button>)}
       {/* The held item's use (specs/game-ui.md §2): what left click does with it here, or the tool something in reach wants. Touch presses the prompt. */}
       {!sheet && !cinematic && !talking && !fishing && !inside && site !== "ruins" && (toolAction && (toolAction.target && (toolNear || toolAction.verb === "eat"))
         ? <button className={styles.interact} data-use onPointerDown={e => { if (e.pointerType !== "mouse" || capture.state !== "captured") applyTool(); }}><kbd>{touch ? "Tap" : "Click"}</kbd>{toolAction.label}</button>
