@@ -93,6 +93,12 @@ Read `specs/launch/v1-new-world.md` first, then `specs/launch/terrain-v3.md`. Th
     - **sushi-bar:** Bancho-style long bar, its lights, seating with a close camera, chef NPCs, music.
 
     All are cut from terrain-v3. Relay each art batch to terrain-v3, and merge perf into terrain-v3 when it's done.
+  - **perf-newworld done** (2b28dd51), merged into terrain-v3 next.
+    - **Now (load 5):** v2 High 5.2 ms / 384 draws against the village's 4.9 / 374. At a quiet load, about 4.6 to 4.8 is expected.
+    - **What changed:** contacts once a frame and as matrices; byte-identical textures merged across GLBs; houses merged across colourways; caster-only hulls out of the main pass; lamp pool cut to 4 lights (David's pick: 4 real lights plus ground glow).
+    - **Village check:** these changes touch the village too, so terrain-v3 takes village shots after the merge.
+    - **Still failing:** budget.test on the jetty and plaza tiles (terrain-v3 is fixing it), and perf:check on v2 Lite triangles (969k against 950k).
+  - **Art lanes:** wharf-art2 (0ee8bd95), village-art2 (8608aec7) and the sushi-bar model (f7fbca92) are all relayed to terrain-v3.
   - **Sushi bar paused for planning** (David, 2026-10-26: "Plan it with me first"). It's built up to 145642d5 on game/sushi-bar, not merged:
     - the model, its glow and lights;
     - stool seating with the close camera;
