@@ -99,6 +99,13 @@ Read `specs/launch/v1-new-world.md` first, then `specs/launch/terrain-v3.md`. Th
     - **Village check:** these changes touch the village too, so terrain-v3 takes village shots after the merge.
     - **Still failing:** budget.test on the jetty and plaza tiles (terrain-v3 is fixing it), and perf:check on v2 Lite triangles (969k against 950k).
   - **Art lanes:** wharf-art2 (0ee8bd95), village-art2 (8608aec7) and the sushi-bar model (f7fbca92) are all relayed to terrain-v3.
+  - **R2d built** (7aee495b on game/terrain-v3; all art merged, including wharf-art3's sell stall and perf-newworld). Review page: https://claude.ai/artifact/UdD2So4dkLxzTX2NLqy1qy (collection `approvals`, 19 items, not watched).
+    - **Village check:** same by eye (`r2d/village-check/`). budget.test passes.
+    - **Running now:** a perf re-measure (the perf-newworld lane, after merging 7aee495b) and a ponytail review of the whole terrain-v3 diff against main.
+    - **Merge to main after:** David's R2d notes, the perf result and the review fixes.
+    - **Open from the lane:**
+      - the seabed's tall boulder_c rocks stick out of the wider shallows (shared code, so left alone);
+      - no per-tree tint in the forest.
   - **Sushi bar planned** (2026-10-26, all "Nice to have" for Oct 31): `specs/launch/sushi-bar.md`.
     - **Phase A, the place:**
       - stilts over the water on the west of the beach;
