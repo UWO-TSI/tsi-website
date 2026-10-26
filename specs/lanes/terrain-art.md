@@ -15,9 +15,17 @@ The lane `terrain-v3` (`specs/lanes/terrain-v3.md`) builds the new world's landf
 
 ## Status
 
-Not started.
+Done, head after this file's commit (batches 5d2e432c, 6c9973aa, 5b7ef2bb, bd2293cb, ae16f45a). Not yet reviewed by David. All registered in `SCENERY_URLS` (or `NEW_LAMPS`), game units at scale 1, previews in `specs/evidence/terrain-art/`. Gates: propModels, modelMaterials and budget tests green, tsc and eslint clean.
+
+1. **Wharf kit** (`art/wharf/build_wharf_kit.py`, `game/wharf/`): `deck-tile` (836 tris; 4 x 4, 8 boards along +z on 3 joists, top 0.01), `deck-steps` (880; 4 treads of 0.25 up +z, top 1), `wharf-piling` (220; cap 0.35 over the deck top y 0, down to -3.4, wet under y -1.08), `wharf-ladder` (480; deck edge at z 0, water toward -z), `rope-post` (310; 0.87, rope at 0.66), `rope-span` (120; x -1 to 1 between post centres, scale x). Evidence `wharf-kit.webp`.
+2. **Palms** (`art/trees/build_palms.py`, frond texture `art/trees/textures/palm-fronds.png` from `paint_textures.py palm-fronds`): `palm-tall` (5.7 tall), `palm-lean`, `palm-short`, 550 to 770 visible tris, through `finish-greenery`. Evidence `palms.webp`.
+3. **Lamps** (`art/props/build_new_lamps.py`): `village-lamp` (1490 tris; finial 2.67, light (0.52, 2.08, 0)) and `lantern-post` (1184; light (0.56, 1.78, 0)), as `NEW_LAMPS.village` / `.wharf`. `AmbientProps` `Lanterns` takes `lamp` and `yaws` (default: the old lamp, so the village is unchanged). Evidence `lamps.webp`.
+4. **Campfire set** (`art/props/build_campfire_set.py`, reuses `build_campfire`'s log and the lamps' lantern): `stump-seat`, `firewood-stack`, `fish-rack` (scenery), `camp-lantern` (`NEW_LAMPS.camp`, light (0.3, 1.18, 0)). Evidence `campfire-set.webp`.
+5. **Forest masses** (`art/trees/build_forest_masses.py`): `forest-mass-a` (round, 12 across), `-b` (16 by 9 along x), `-c` (10 across), 1600 to 2550 tris, two materials; a "forest mass" row in `perf/budget.ts`. Evidence `forest-masses.webp`.
 
 ## Next
+
+Nothing left from the list below; wait for David's review notes. (The original list, kept for reference:)
 
 Build in this order, one batch per commit. After each batch, SendMessage "main" with the commit, each asset's name, triangles, file size and its preview image, then go straight on.
 
@@ -48,3 +56,7 @@ At the end, update this file's Status and SendMessage "main" with the full list,
 - **Headless only:** never open a window, tab, app or audio on David's screen; never `open`; never the Playwright MCP. Never port 3000.
 - **node_modules:** cloned from terrain-v3 (`cp -c -R`).
 - **Git:** commit with the `[build]` prefix. Never push. Never use bare `git stash`. Don't touch other worktrees.
+- **Builders:** wharf kit and props use `art/props/propkit.py` (game coordinates); plants use `art/trees/greenery_kit.py` and end in `web/scripts/finish-greenery.mjs`. Review renders: `-- review <dir>` on the props builders, `art/trees/preview.py` for plants; combine frames with `magick ... +append` into a webp.
+- `build_conifers.py` runs `main()` on import (no guard): don't import from it.
+- `lookClassFor` only gives metal and glass under `/props/` (and a few other folders), so glowing lamps live in `game/props/`.
+
