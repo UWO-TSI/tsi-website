@@ -1176,6 +1176,17 @@
     {"id":"shell-49","kind":"prop","x":51.91,"z":103.29,"yaw":0.5688,"scale":1.01,"model":"sand-dollar"},
     {"id":"shell-50","kind":"prop","x":54.47,"z":96.18,"yaw":2.3728,"scale":0.85,"model":"conch"},
     {"id":"shell-51","kind":"prop","x":55.98,"z":95.85,"yaw":3.4519,"scale":1.07,"model":"starfish"},
-    {"id":"shell-52","kind":"prop","x":55.73,"z":99.21,"yaw":2.5998,"scale":0.94,"model":"sand-dollar"}
+    {"id":"shell-52","kind":"prop","x":55.73,"z":99.21,"yaw":2.5998,"scale":0.94,"model":"sand-dollar"},
+    {"id":"gather-rock-0","kind":"rock","x":55.79,"z":65.2,"yaw":2.59,"scale":0.88,"model":"rock-a"},
+    {"id":"gather-rock-1","kind":"rock","x":38,"z":26,"yaw":2.26,"scale":0.81,"model":"rock-b"},
+    {"id":"gather-rock-2","kind":"rock","x":-4,"z":68,"yaw":1.19,"scale":1.01,"model":"rock-c"},
+    {"id":"gather-rock-3","kind":"rock","x":-37,"z":34.5,"yaw":0.59,"scale":1.1,"model":"rock-a"},
+    {"id":"gather-rock-4","kind":"rock","x":-26.87,"z":93.5,"yaw":5.34,"scale":1.26,"model":"rock-b"},
+    {"id":"gather-shell-0","kind":"shell","x":-40,"z":103},
+    {"id":"gather-shell-1","kind":"shell","x":-24,"z":103},
+    {"id":"gather-shell-2","kind":"shell","x":-8,"z":103},
+    {"id":"gather-shell-3","kind":"shell","x":25.75,"z":102.57},
+    {"id":"gather-shell-4","kind":"shell","x":40,"z":103},
+    {"id":"gather-shell-5","kind":"shell","x":50.27,"z":102}
   ]
 }
