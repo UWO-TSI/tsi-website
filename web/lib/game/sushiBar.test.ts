@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { ENTRY, ENTRY_RANGE, STOOLS, STOOL_TOP, STOOL_Z, barOpen, barPoint, barSeat, seatView, stoolAt, stoolKey, type Bar } from "./sushiBar";
+import { CHEF_LOOP, CHEF_STATIONS, ENTRY, ENTRY_RANGE, PIECES, SERVER, STOOLS, STOOL_TOP, STOOL_Z, barOpen, barPoint, barSeat, prepAt, seatView, servedAt, stoolAt, stoolKey, type Bar } from "./sushiBar";
+import { ownerAt } from "./cafe";
 import { isSeatKey } from "@/lib/net/protocol";
 
 const bar: Bar = { id: "sushi-bar", x: 40, z: 100, yaw: Math.PI / 2 };
@@ -57,4 +58,30 @@ describe("sushi bar", () => {
       expect(down).toBeGreaterThan(0.05); expect(down).toBeLessThan(0.2);
     }
   });
+
+  it("has the chef make each board's four nigiri one by one, and the server take each full geta while the chef is at his other board", () => {
+    for (let t = 0; t < 3 * CHEF_LOOP; t += 0.05) {
+      const chef = ownerAt(t, CHEF_STATIONS), server = ownerAt(t - SERVER.start, SERVER.stations), s = SERVER.stations[server.station];
+      if (!server.moving && s.board !== undefined) {
+        expect(prepAt(s.board, t), `the geta is full when he comes for it, t ${t.toFixed(2)}`).not.toBe(0);
+        expect(Math.abs(chef.x - server.x), "the chef is at his other board").toBeGreaterThan(1.2);
+      }
+      if (!server.moving && s.stool !== undefined) expect(Math.abs(chef.x - server.x), "serving clear of the chef").toBeGreaterThan(0.6);
+    }
+    // Four pieces appear one by one while he shapes, then the geta goes, and a fresh one comes with his next slicing.
+    const counts = new Set<number>();
+    for (let t = 0; t < CHEF_LOOP; t += 0.1) counts.add(prepAt(0, t));
+    expect([...counts].sort()).toEqual([-1, 0, 1, 2, 3, 4]);
+    expect(prepAt(0, 0.1)).toBe(0);
+  });
+
+  it("times the server's round to the chef's loops, every wait a real one, and serves every stool in turn", () => {
+    expect(SERVER.loop).toBeCloseTo(3 * CHEF_LOOP, 6);
+    for (const s of SERVER.stations) expect(s.stay).toBeGreaterThanOrEqual(0);
+    expect(SERVER.serves.map(s => s.stool).sort()).toEqual([0, 1, 2, 3, 4, 5]);
+    const shown = STOOLS.map((_, i) => [...Array(400).keys()].some(n => servedAt(i, (n / 400) * SERVER.loop)));
+    expect(shown.every(Boolean)).toBe(true);
+    expect(PIECES).toBe(4);
+  });
 });
+

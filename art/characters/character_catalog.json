@@ -4962,5 +4962,30 @@
    "coversHair": true,
    "hatCut": 4
   }
- ]
+ ],
+ "staff": {
+  "glb": "base/v8_staff.glb",
+  "fps": 30,
+  "note": "The sushi bar's staff at work (game/sushi-bar): the rig and its actions only, loaded by the bar's chef and server.",
+  "clips": [
+   {
+    "name": "SushiSlice",
+    "length": 2.0,
+    "loop": true,
+    "frames": 60
+   },
+   {
+    "name": "SushiShape",
+    "length": 2.0,
+    "loop": true,
+    "frames": 60
+   },
+   {
+    "name": "SushiServe",
+    "length": 1.4,
+    "loop": true,
+    "frames": 42
+   }
+  ]
+ }
 }

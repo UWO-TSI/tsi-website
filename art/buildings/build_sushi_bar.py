@@ -42,7 +42,9 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "props"))
 sys.path.insert(0, os.path.join(HERE, "..", "wharf"))
+sys.path.insert(0, HERE)
 import propkit as K  # noqa: E402
+import sushi_food as F  # noqa: E402
 from mathutils import Matrix, Vector  # noqa: E402
 from build_wharf_kit import mix, report, wood_mat  # noqa: E402
 from build_dock_decor import ROPE  # noqa: E402
@@ -65,8 +67,16 @@ RAIL_Y = 1.05                                       # the side walls' cedar boar
 BACK_TOP, STAFF_Y = 0.7, 0.3
 CX0, CX1, TOP_Y = -2.95, 4.0, 0.84                  # the counter, its top
 LEDGE_Z = 0.15                                      # the chefs' work ledge behind the fish case runs back to here
-BOARD_Z, BOARDS = 0.37, ((-1.5, "#f08a5a"), (0.4, "#d8394a"))   # the cutting boards (x, the fish on it); a geta GETA_DX on
-GETA_DX = 0.6                                       # from each, where the nigiri are set (the hours model's prep-<i>)
+# The cutting boards (x, the fish he cuts there); his geta GETA_DX to his left of each, where the nigiri are set (the
+# hours model's prep-<i>, on its board prep-geta-<i>), his rice tub TUB_DX to his right.
+BOARD_Z, BOARDS = 0.37, ((-1.5, "salmon"), (0.4, "tuna"))
+GETA_DX, TUB_DX = 0.5, -0.45
+# The fish case along the chefs' side of the counter in two runs, a serving shelf (tsuke-dai) over its back half where
+# the served geta are set before each stool (lib/game/sushiBar.ts SERVED mirrors SERVE_*), the fish on ice in its front
+# half under slanted glass.
+CASE_Z0, CASE_Z1, CASE_TOP = 0.64, 1.0, TOP_Y + 0.11
+SERVE_Z0, SERVE_Z1, SERVE_Y = 0.62, 0.82, TOP_Y + 0.14
+CASE_RUNS = ((-2.65, 0.5), (0.6, 3.75))
 SEAT_TOP, SEAT_Z = 0.6, 2.05                        # the stools (lib/game/sushiBar.ts SEATS mirrors these)
 SEATS = [0.5 + (i - 2.5) * 1.1 for i in range(6)]
 TANK = (-3.97, -3.03, 0.5, 1.45)                    # x0, x1, z0, z1
@@ -92,8 +102,11 @@ RED, RED_DEEP, NAVY, INK = "#c3283a", "#9e1f2e", "#22314f", "#2a2420"
 # Japanese (David, phase A round 2: "more japanese style ... this should be japanese"): a roof of smoked kawara tiles
 # with turned-up corners, white plaster between dark timbers over charred-cedar boards.
 TILE, TILE_DARK, TILE_EDGE = "#5f6976", "#3c444f", "#8a94a0"
+GOLD, GOLD_DARK = "#e8b64a", "#b8862a"
 PLASTER, CEDAR = "#eee5d2", "#3f322b"
-ROOF_X, SORI = 4.8, 0.32                            # the tiles' half length along the ridge; how far the corners turn up
+# The tiles' half length along the ridge; how far the corners turn up, from where (David, round 3: "corners curl more"),
+# and how far the ridge's ends sweep up under their fish (shachihoko, "the spine of the roof curl up with fish design").
+ROOF_X, SORI, SORI_FROM, RIDGE_CURL = 4.8, 0.62, 2.4, 0.42
 
 # The glow palette: one block per glow, its day colour (base) and its night colour (emission). A paper lantern's ribs
 # are its own darker block, so they show lit.
@@ -110,12 +123,19 @@ def roof_y(z):
     return RIDGE_Y + (BACK_Y - RIDGE_Y) * (RIDGE_Z - z) / (RIDGE_Z - BACK_Z)
 
 
+def corner(x):
+    """0 along the roof's middle, rising to 1 at its ends: how much a point at x turns up with the corners."""
+    s = min(1.0, max(0.0, (abs(x) - SORI_FROM) / (ROOF_X - SORI_FROM)))
+    return s * s * (3 - 2 * s) * s
+
+
 def roof_pt(x, t, front, lift=0.0):
     """A point on the tiles: x along the ridge, t from the ridge (0) down to the eave (1) on the front or back slope.
-    The corners turn up toward the eaves (sori) and the eave lifts a little all along."""
+    The corners turn up toward the eaves (sori), and kick out a little past the walls; the eave lifts a little all along."""
+    s = corner(x)
     z = RIDGE_Z + t * ((FRONT_Z if front else BACK_Z) + (0.12 if front else -0.12) - RIDGE_Z)
-    s = min(1.0, max(0.0, (abs(x) - 2.9) / (ROOF_X - 2.9)))
-    return (x, roof_y(z) + 0.07 + lift + SORI * s * s * (0.3 + 0.7 * t) + 0.08 * t ** 3, z)
+    z += (1 if front else -1) * 0.16 * s * t ** 2
+    return (x * (1 + 0.025 * s * t), roof_y(z) + 0.07 + lift + SORI * s * (0.2 + 0.8 * t ** 1.6) + 0.08 * t ** 3, z)
 
 
 def tone(a=DARK, b=LIGHT, lo=0.25, hi=0.95):
@@ -179,39 +199,76 @@ def floor_and_frame(k, W, Mr, Mg):
             k.beam((x, roof_y(z0) - 0.1, z0), (x, RIDGE_Y - 0.1, RIDGE_Z), 0.12, 0.14, 0.0, W, POST, uv_len=2.0)
 
 
-def roof(k, W, Mt):
+def roof(k, W, Mt, Mm):
     """A kawara roof: the pan tiles' bed down both slopes, rows of round cover tiles over it, each ending in a pale
-    disc at the eave; the corners turned up (roof_pt); a stacked ridge with a demon tile (onigawara) at each end, dark
+    disc at the eave; the corners turned up (roof_pt); a stacked ridge sweeping up to a golden fish (shachihoko) at each end, dark
     bargeboards down the gables and a fascia along the eaves."""
     for front in (True, False):
-        nu, nv = 16, 4
-        g = [[k.vert(roof_pt(-ROOF_X + 2 * ROOF_X * i / nu, j / nv, front)) for i in range(nu + 1)] for j in range(nv + 1)]
+        xs = [ROOF_X * math.copysign(abs(u) ** 0.8, u) for u in np.linspace(-1, 1, 25)]   # finer toward the turned-up ends
+        nv = 5
+        g = [[k.vert(roof_pt(x, j / nv, front)) for x in xs] for j in range(nv + 1)]
         for j in range(nv):
-            for i in range(nu):
+            for i in range(len(xs) - 1):
                 k.face([g[j][i], g[j][i + 1], g[j + 1][i + 1], g[j + 1][i]], [(i / 4, j), ((i + 1) / 4, j), ((i + 1) / 4, j + 1), (i / 4, j + 1)],
                        Mt, TILE_DARK)
-        n = 25
+        n = 21
         for i in range(n):
             x = -ROOF_X + 0.14 + i * (2 * ROOF_X - 0.28) / (n - 1)
-            pts = [roof_pt(x, t, front, 0.03) for t in (0.04, 0.4, 0.75, 1.0)]
-            k.tube(pts, 0.062, Mt, mix(TILE, TILE_DARK, rng.uniform(0.0, 0.35)), n=5, v_len=0.5)
+            pts = [roof_pt(x, t, front, 0.03) for t in (0.04, 0.3, 0.55, 0.8, 1.0)]
+            k.tube(pts, 0.072, Mt, mix(TILE, TILE_DARK, rng.uniform(0.0, 0.35)), n=4, v_len=0.5)
             d = np.array(pts[-1]) - np.array(pts[-2])
             k.lathe(pts[-1], [(0.078, 0.0), (0.078, 0.03), (0.0, 0.03)], Mt, TILE_EDGE, d=tuple(d / np.linalg.norm(d)), n=6)
-        eave = [roof_pt(-ROOF_X + 2 * ROOF_X * i / 10, 1.0, front, -0.06) for i in range(11)]
+        eave = [roof_pt(x, 1.0, front, -0.06) for x in xs[::2]]
         k.tube(eave, 0.075, W, POST, n=4, v_len=1.5)
         for sx in (-1, 1):   # the bargeboards down the gables
-            edge = [roof_pt(sx * (ROOF_X + 0.02), t, front, -0.1) for t in (0.0, 0.35, 0.7, 1.0)]
+            edge = [roof_pt(sx * (ROOF_X + 0.02), t, front, -0.1) for t in (0.0, 0.25, 0.5, 0.75, 1.0)]
             for a, b in zip(edge, edge[1:]):
                 k.beam(a, b, 0.07, 0.24, 0.0, W, POST, uv_len=1.5)
-    # The ridge: a course of flat tiles, a round crown over it, rising with the corners; a demon tile at each end.
-    ridge = [roof_pt(-ROOF_X - 0.1 + 2 * (ROOF_X + 0.1) * i / 12, 0.0, True) for i in range(13)]
-    k.tube([(x, y + 0.05, z) for x, y, z in ridge], 0.17, Mt, TILE_DARK, n=4, v_len=1.0)
-    k.tube([(x, y + 0.24, z) for x, y, z in ridge], 0.11, Mt, TILE, n=8, v_len=1.0)
-    oni = [(0.3, 0.0), (0.33, 0.24), (0.24, 0.46), (0.13, 0.38), (0.0, 0.5), (-0.13, 0.38), (-0.24, 0.46), (-0.33, 0.24), (-0.3, 0.0)]
-    for sx in (-1, 1):
-        x, y, z = ridge[0] if sx < 0 else ridge[-1]
-        k.extrude(oni, -0.07, 0.07, Mt, TILE, bevel=0.02, rot=Matrix(((0, 0, 1), (0, 1, 0), (1, 0, 0))), at=(x, y - 0.05, z))
-        k.lathe((x + sx * 0.075, y + 0.17, z), [(0.0, 0.0), (0.09, 0.0), (0.09, 0.02), (0.0, 0.02)], Mt, TILE_EDGE, d=(sx, 0, 0), n=8)
+    # The ridge: a course of flat tiles, a round crown over it, sweeping up at its ends (RIDGE_CURL), a golden fish
+    # (shachihoko) riding each end, its tail flung up.
+    ridge = []
+    for u in np.linspace(-1, 1, 17):
+        x, y, z = roof_pt(ROOF_X * u, 0.0, True)
+        ridge.append((x, y + RIDGE_CURL * abs(u) ** 5, z))
+    k.tube([(x, y + 0.05, z) for x, y, z in ridge], 0.17, Mt, TILE_DARK, n=4, v_len=1.0, caps=True)
+    k.tube([(x, y + 0.24, z) for x, y, z in ridge], 0.11, Mt, TILE, n=8, v_len=1.0, caps=True)
+    for end in (ridge[0], ridge[-1]):
+        out = math.copysign(1, end[0])
+        shachihoko(k, Mm, (end[0] - out * 0.32, end[1] + 0.3, end[2]), -out)
+
+
+def shachihoko(k, M, at, inward):
+    """A golden carp-tiger on the ridge's end (in our style): its head down on the ridge facing out, its body arched,
+    its tail fanned high over its back, curling inward; a dorsal crest, pectoral fins, eyes and whiskers. Gold (P_Metal)."""
+    Mg = M
+    x0, y0, z0 = at
+    out = -inward
+    P = lambda u, v, w=0.0: (x0 + out * u * 1.35, y0 + v * 1.35, z0 + w * 1.35)
+    spine = [P(0.16, 0.05), P(0.06, 0.14), P(-0.06, 0.3), P(-0.1, 0.48), P(-0.05, 0.62), P(0.04, 0.7)]
+    k.tube(spine, 0.15, Mg, GOLD, n=8, radii=[0.95, 1.1, 1.0, 0.75, 0.5, 0.32], caps=True, v_len=0.3)
+    # The head: a broad snout, the mouth open a little, eyes, barbels.
+    k.blob(P(0.2, 0.07), (0.135, 0.115, 0.135), Mg, GOLD, segs=8, rings=5)
+    k.blob(P(0.29, 0.04), (0.047, 0.04, 0.074), Mg, GOLD_DARK, segs=7, rings=4)
+    for w in (-1, 1):
+        k.blob(P(0.24, 0.12, w * 0.07), (0.038, 0.04, 0.03), Mg, "#f6f0dc", segs=7, rings=4)
+        k.blob(P(0.255, 0.122, w * 0.085), (0.016, 0.022, 0.014), Mg, INK, segs=6, rings=3)
+        k.tube([P(0.28, 0.05, w * 0.05), P(0.33, 0.08, w * 0.12), P(0.31, 0.14, w * 0.16)], 0.008, Mg, GOLD_DARK, n=3, radii=[1.0, 0.8, 0.5])
+        # A pectoral fin swept back from behind the head.
+        k.face([k.vert(P(0.1, 0.12, w * 0.09)), k.vert(P(-0.02, 0.2, w * 0.2)), k.vert(P(0.0, 0.1, w * 0.17)), k.vert(P(0.08, 0.07, w * 0.1))],
+               [(0, 0)] * 4, Mg, GOLD_DARK)
+    # The tail: two broad lobes fanned up and inward from its end.
+    tip = spine[-1]
+    for w, rise in ((-1, 0.0), (1, 0.05)):
+        lobe = [tip, P(0.2, 0.86 + rise, w * 0.1), P(0.3, 0.78 + rise, w * 0.15), P(0.22, 0.7, w * 0.06)]
+        k.face([k.vert(p) for p in lobe], [(0, 0)] * 4, Mg, GOLD)
+    # The crest down its back: a row of spines.
+    for i in range(5):
+        t = 0.2 + i * 0.15
+        a, b = spine[int(t * 5)], spine[min(5, int(t * 5) + 1)]
+        p = np.array(a) + (np.array(b) - np.array(a)) * (t * 5 % 1)
+        back = np.array(P(-0.11, 0.0)) - np.array(P(0, 0))
+        k.face([k.vert(tuple(p + back * 0.6 + (0, 0.02, 0))), k.vert(tuple(p + back * 1.3 + (0, 0.07, 0))), k.vert(tuple(p + back * 0.6 + (0, 0.1, 0)))],
+               [(0, 0)] * 3, Mg, GOLD_DARK)
 
 
 def walls(k, W, Ms):
@@ -250,7 +307,8 @@ def walls(k, W, Ms):
         k.beam((out, PLATE_Y, (HD + DECK_Z) / 2), (out, roof_y((HD + DECK_Z) / 2) - 0.05, (HD + DECK_Z) / 2), 0.1, 0.06, 0.0, W, POST, uv_len=2.0)
 
 
-def counter(k, W, Mp, Mpane, Mg):
+def counter(k, M):
+    W, Mp = M["wood"], M["paint"]
     # The body, its face of upright boards toward the guests, a kick at its foot, a thick pale top.
     box(k, ((CX0 + CX1) / 2, (TOP_Y - 0.06) / 2, 1.05), (CX1 - CX0, TOP_Y - 0.06, 0.9), W, mix(DARK, POST, 0.4), uv_len=2.0, v_axis=0)
     n = 28
@@ -259,53 +317,81 @@ def counter(k, W, Mp, Mpane, Mg):
         panel(k, W, [(x0, 0.1, HD + 0.006), (x1, 0.1, HD + 0.006), (x1, TOP_Y - 0.07, HD + 0.006), (x0, TOP_Y - 0.07, HD + 0.006)],
               tone(LIGHT, "#c9a57a", 0.0, 1.0), uv=(0, 1), uv_len=1.2)
     box(k, ((CX0 + CX1) / 2, 0.05, HD + 0.01), (CX1 - CX0, 0.1, 0.06), W, INK)
-    box(k, ((CX0 + CX1) / 2 - 0.03, TOP_Y - 0.035, 1.17), (CX1 - CX0 + 0.06, 0.07, 1.25), W, HINOKI, r=0.025, uv_len=2.5, v_axis=0)
-    # The fish case along the chef's side: a glass case, a white tray, slabs of fish and a few prawns.
-    for x0, x1 in ((-2.65, 0.5), (0.6, 3.75)):
-        cx = (x0 + x1) / 2
-        box(k, (cx, TOP_Y + 0.015, 0.82), (x1 - x0, 0.03, 0.34), Mp, "#f3f1ea")
-        box(k, (cx, TOP_Y + 0.08, 0.82), (x1 - x0 + 0.02, 0.12, 0.36), Mpane, "#dff3f6", r=0.02)
-        x = x0 + 0.12
-        while x < x1 - 0.15:
-            col = ["#f08a5a", "#d8394a", "#f6efe4", "#f2c95c", "#e86f6f"][rng.integers(0, 5)]
-            w = rng.uniform(0.18, 0.3)
-            box(k, (x + w / 2, TOP_Y + 0.06, 0.82), (w, 0.06, 0.2), Mp, col, r=0.015)
-            x += w + 0.06
-    # The chefs' work ledge behind the case (the tsukeba), the counter's height: a cutting board at each chef's place
-    # with a block of fish on it, a geta beside it where his nigiri are set (the hours model's prep-<i>), a dish of
-    # ginger; the server's end with a stack of geta.
+    k.rbox(((CX0 + CX1) / 2 - 0.03, TOP_Y - 0.035, 1.17), (CX1 - CX0 + 0.06, 0.07, 1.25), 0.03, W, HINOKI, segs=2, uv_len=2.5, v_axis=0)
+    fish_case(k, M)
+    # The chefs' work ledge behind the case (the tsukeba), the counter's height: at each chef's place a board with his
+    # block of fish and the slices he has cut, his rice tub to his right with the hand-water bowl, a cloth; the server's
+    # end with a stack of geta.
     box(k, ((CX0 + CX1) / 2, (TOP_Y - 0.04) / 2, (LEDGE_Z + 0.6) / 2), (CX1 - CX0, TOP_Y - 0.04, 0.6 - LEDGE_Z), W, mix(DARK, POST, 0.5), uv_len=2.0, v_axis=0)
-    box(k, ((CX0 + CX1) / 2 - 0.03, TOP_Y - 0.02, (LEDGE_Z + 0.58) / 2), (CX1 - CX0 + 0.06, 0.04, 0.6 - LEDGE_Z), W, HINOKI, r=0.012, uv_len=2.5, v_axis=0)
-    for bx, fish in BOARDS:
-        box(k, (bx, TOP_Y + 0.018, BOARD_Z), (0.62, 0.035, 0.3), W, "#f0dcb4", r=0.008, uv_len=1.0, v_axis=0)
-        box(k, (bx + 0.1, TOP_Y + 0.07, BOARD_Z - 0.02), (0.3, 0.07, 0.12), Mp, fish, r=0.02)
-        for j in range(4):   # the block's white fat lines
-            panel(k, Mp, [(bx - 0.04 + j * 0.07, TOP_Y + 0.106, BOARD_Z - 0.08), (bx - 0.025 + j * 0.07, TOP_Y + 0.106, BOARD_Z - 0.08),
-                          (bx - 0.005 + j * 0.07, TOP_Y + 0.106, BOARD_Z + 0.04), (bx - 0.02 + j * 0.07, TOP_Y + 0.106, BOARD_Z + 0.04)], "#fbe7d6")
-        geta(k, W, bx + GETA_DX, BOARD_Z)
-        k.lathe((bx - 0.4, TOP_Y, BOARD_Z + 0.05), [(0.0, 0.0), (0.05, 0.0), (0.07, 0.03), (0.0, 0.03)], Mp, "#2f4f7a", n=8)
-        k.blob((bx - 0.4, TOP_Y + 0.035, BOARD_Z + 0.05), (0.045, 0.02, 0.045), Mp, "#f4b8a8", segs=6, rings=3)
+    box(k, ((CX0 + CX1) / 2 - 0.03, TOP_Y - 0.02, (LEDGE_Z + 0.62) / 2), (CX1 - CX0 + 0.06, 0.04, 0.62 - LEDGE_Z), W, HINOKI, r=0.012, uv_len=2.5, v_axis=0)
+    for i, (bx, kind) in enumerate(BOARDS):
+        k.rbox((bx, TOP_Y + 0.02, BOARD_Z), (0.5, 0.04, 0.28), 0.012, W, "#f2dfb8", segs=2, uv_len=0.8, v_axis=0)
+        for j in range(3):     # knife marks
+            x = bx - 0.15 + j * 0.13
+            panel(k, Mp, [(x, TOP_Y + 0.0405, BOARD_Z - 0.08), (x + 0.004, TOP_Y + 0.0405, BOARD_Z - 0.08), (x + 0.03, TOP_Y + 0.0405, BOARD_Z + 0.07),
+                          (x + 0.026, TOP_Y + 0.0405, BOARD_Z + 0.07)], "#d9c49c")
+        F.saku(k, Mp, (bx + 0.1, TOP_Y + 0.04 + 0.024, BOARD_Z + 0.03), math.pi / 2, 0.2, 0.085, 0.048, kind, cut=3)
+        F.hangiri(k, M, (bx + TUB_DX, TOP_Y, BOARD_Z - 0.02))
+        F.tezu(k, M, (bx + TUB_DX + 0.02, TOP_Y, BOARD_Z + 0.2))
+        F.towel(k, M, (bx - 0.12, TOP_Y + 0.009, 0.555), 0.08 * (i - 0.5))
     for j in range(3):
-        geta(k, W, 2.6, BOARD_Z, TOP_Y + j * 0.05)
-    # The guests' places: a soy pot, a tea cup and a menu card at each, a board of nigiri at some.
+        box(k, (2.6, TOP_Y + 0.04 + j * 0.035, BOARD_Z), (0.44, 0.022, 0.19), W, "#e4c38d" if j % 2 else "#d8b47c")
+    # The guests' places: a tea cup, a soy dish, chopsticks on their rest and a menu card at each.
     for i, sx in enumerate(SEATS):
-        z = 1.62
-        k.lathe((sx + 0.32, TOP_Y, z), [(0.0, 0.0), (0.05, 0.0), (0.055, 0.08), (0.02, 0.12), (0.0, 0.13)], Mg, "#d9d3c4", n=6)
-        k.lathe((sx - 0.25, TOP_Y, z + 0.02), [(0.0, 0.0), (0.04, 0.0), (0.05, 0.09), (0.042, 0.09), (0.0, 0.01)], Mp, ["#6f8f73", "#c9a46a", "#8a6c9a"][i % 3], n=6)
-        box(k, (sx + 0.42, TOP_Y + 0.07, z - 0.08), (0.1, 0.13, 0.02), Mp, "#3a62b4", rot=K.game_rot(pitch=-0.25))
-        if i in (1, 3, 4):
-            box(k, (sx, TOP_Y + 0.025, z - 0.02), (0.36, 0.04, 0.16), W, "#c8945c")
-            for j in range(3):
-                x = sx - 0.11 + j * 0.11
-                box(k, (x, TOP_Y + 0.065, z - 0.02), (0.08, 0.04, 0.05), Mp, "#fbf8f0", r=0.015)
-                box(k, (x, TOP_Y + 0.09, z - 0.02), (0.09, 0.02, 0.06), Mp, ["#f08a5a", "#d8394a", "#f2c95c"][j], r=0.008)
+        z = 1.6
+        F.yunomi(k, M, (sx + 0.3, TOP_Y, z - 0.02), ["#6f8f73", "#c9a46a", "#8a6c9a"][i % 3])
+        F.soy_dish(k, M, (sx - 0.24, TOP_Y, z - 0.06))
+        F.chopsticks(k, M, (sx + 0.02, TOP_Y, z + 0.1), 0.0)
+        box(k, (sx + 0.44, TOP_Y + 0.07, z - 0.1), (0.1, 0.13, 0.02), Mp, "#3a62b4", rot=K.game_rot(pitch=-0.25))
 
 
-def geta(k, W, x, z, y=TOP_Y):
-    """A sushi geta: a pale board on two low feet, its top at y + 0.05."""
-    box(k, (x, y + 0.04, z), (0.42, 0.02, 0.18), W, "#e2c08a", uv_len=1.0, v_axis=0)
-    for dx in (-0.15, 0.15):
-        box(k, (x + dx, y + 0.015, z), (0.03, 0.03, 0.16), W, "#b88c58")
+def fish_case(k, M):
+    """The fish case (neta case) along the chefs' side: a steel tray of crushed ice under slanted glass, hinoki ends, the
+    serving shelf over its back half; on the ice, blocks of tuna, salmon and yellowtail, a whole sea bream, cooked
+    shrimp, shiso leaves and lemon wheels, so the guests see the fish they'll eat."""
+    W, Mp, Mpane = M["wood"], M["paint"], M["pane"]
+    order = (("saku", "tuna"), ("shiso",), ("saku", "salmon"), ("lemon",), ("ebi",), ("saku", "hamachi"), ("tai",), ("shiso",), ("saku", "tuna"),
+             ("ebi",), ("lemon",), ("saku", "salmon"))
+    m = 0
+    for x0, x1 in CASE_RUNS:
+        cx = (x0 + x1) / 2
+        k.rbox((cx, TOP_Y + 0.008, (CASE_Z0 + CASE_Z1) / 2), (x1 - x0, 0.016, CASE_Z1 - CASE_Z0), 0.004, M["metal"], "#d9dee2", segs=1)
+        F.ice(k, M, x0 + 0.03, x1 - 0.03, SERVE_Z1 - 0.02, CASE_Z1 - 0.035, TOP_Y + 0.022, seed=int(abs(x0) * 10))
+        # Slanted glass to the guests, a flat glass top back to the shelf, hinoki ends, the shelf on its back rail.
+        fy, ty, gz = TOP_Y + 0.016, CASE_TOP, CASE_Z1 - 0.1
+        panel(k, Mpane, [(x0, fy, CASE_Z1), (x1, fy, CASE_Z1), (x1, ty, gz), (x0, ty, gz)], "#e2f4f6")
+        panel(k, Mpane, [(x0, ty, gz), (x1, ty, gz), (x1, ty, SERVE_Z1), (x0, ty, SERVE_Z1)], "#e2f4f6")
+        for x in (x0, x1):
+            pts = [(x, TOP_Y, CASE_Z0), (x, TOP_Y, CASE_Z1 + 0.01), (x, ty + 0.012, gz), (x, SERVE_Y - 0.03, SERVE_Z1), (x, SERVE_Y - 0.03, CASE_Z0)]
+            panel(k, W, pts, HINOKI, uv=(2, 1))
+        k.rbox((cx, SERVE_Y - 0.016, (SERVE_Z0 + SERVE_Z1) / 2), (x1 - x0 + 0.04, 0.032, SERVE_Z1 - SERVE_Z0), 0.008, W, HINOKI, segs=2,
+               uv_len=1.5, v_axis=0)
+        k.rbox((cx, (TOP_Y + SERVE_Y) / 2 - 0.01, SERVE_Z0 + 0.03), (x1 - x0, SERVE_Y - TOP_Y - 0.02, 0.04), 0.0, W, mix(DARK, POST, 0.3))
+        # The fish on the ice, in the front half under the glass.
+        x, y, z = x0 + 0.08, TOP_Y + 0.026, (SERVE_Z1 + CASE_Z1) / 2 - 0.01
+        while x < x1 - 0.3:
+            item = order[m % len(order)]
+            m += 1
+            if item[0] == "saku":
+                F.saku(k, Mp, (x + 0.11, y + 0.022, z), math.pi / 2 + rng.uniform(-0.08, 0.08), 0.2, 0.075, 0.044, item[1])
+                x += 0.26
+            elif item[0] == "tai":
+                F.tai(k, M, (x + 0.15, y, z + 0.005), 0.1)
+                x += 0.33
+            elif item[0] == "ebi":
+                for j in range(3):
+                    c = (x + 0.04 + j * 0.055, y + 0.012, z)
+                    arc = [(c[0] + 0.022 * math.cos(a), c[1] + 0.01 * math.sin(a * 0.5), c[2] + 0.03 * math.sin(a)) for a in np.linspace(-1.7, 1.7, 6)]
+                    k.tube(arc, 0.012, Mp, "#f27a4a", n=5, radii=[0.5, 0.9, 1.0, 1.0, 0.85, 0.6])
+                    k.face([k.vert((arc[0][0] - 0.004, y + 0.014, arc[0][2] - 0.012)), k.vert((arc[0][0] + 0.016, y + 0.012, arc[0][2] - 0.02)),
+                            k.vert((arc[0][0] + 0.008, y + 0.014, arc[0][2]))], [(0, 0)] * 3, Mp, "#e2462a")
+                x += 0.2
+            elif item[0] == "shiso":
+                F.shiso(k, M, (x + 0.04, y + 0.004, z - 0.03), rng.uniform(-0.5, 0.5))
+                x += 0.07
+            else:
+                F.lemon(k, M, (x + 0.03, y + 0.026, z + 0.02), 0.4)
+                x += 0.06
 
 
 def stools(k, W, Mc, Mr):
@@ -365,24 +451,40 @@ def kitchen(k, W, Mp, Mg, Ms):
                     k.lathe((x, y + 0.02, z), [(0.0, 0.0), (0.05, 0.0), (0.075, 0.08), (0.03, 0.17), (0.035, 0.2), (0.0, 0.2)], Mp, ["#f1ece2", "#3e5a7a"][j % 2], n=7)
                     continue
                 h = 0.4 if y < 2 else 0.34
-                k.lathe((x, y + 0.02, z), [(0.0, 0.0), (0.065, 0.0), (0.065, h * 0.62), (0.025, h * 0.85), (0.02, h), (0.0, h)], Mg,
-                        ["#3f7a4f", "#6a3f22", "#284a6a", "#a7b49a"][(j + int(y * 10)) % 4], n=6)
-                k.lathe((x, y + 0.02, z), [(0.068, h * 0.2), (0.068, h * 0.5)], Mp, ["#f2ead8", "#d84a3a", "#e8d9a8"][j % 3], n=6, phase=0.5)
+                sake_bottle(k, Mg, Mp, (x, y + 0.02, z), h, 0.062, GLASS[(j + int(y * 10)) % len(GLASS)], LABELS[j % 3], ["#d6a84a", RED][j % 2])
         if sx > 0:
             for j in range(3):
                 box(k, (x, 1.6 + j * 0.06, 0.38), (0.12, 0.055, 0.12), W, "#dcc08e")
 
 
+LABELS = ("#f2ead8", "#e8d9a8", "#d84a3a", "#f1ece2", "#2a2420")
+GLASS = ("#2f6a42", "#6a3f22", "#284a6a", "#a7b49a", "#4f6a2f", "#7a2a2a")
+
+
+def sake_bottle(k, Mg, Mp, c, h, r, col, label, cap):
+    """A sake bottle: round shoulders into a long neck with a lip, a foil cap, a paper label round its body with an ink
+    mark (the brewery's name) and a red seal."""
+    x, y, z = c
+    prof = [(0.0, 0.0), (r, 0.0), (r, h * 0.56), (r * 0.62, h * 0.72), (r * 0.37, h * 0.8), (r * 0.35, h * 0.92), (0.0, h * 0.92)]
+    k.lathe(c, prof, Mg, col, n=8)
+    k.lathe((x, y + h * 0.88, z), [(r * 0.42, 0.0), (r * 0.42, h * 0.12), (0.0, h * 0.12 + 0.004)], Mp, cap, n=6)
+    k.lathe(c, [(r * 1.03, h * 0.16), (r * 1.03, h * 0.5)], Mp, label, n=8, phase=0.4)
+    mark, f = INK if label != INK else "#f1ece2", r * 1.05
+    for (x0, x1, y0, y1), col_ in (((-0.18, 0.18, 0.2, 0.46), mark), ((0.26, 0.42, 0.38, 0.45), RED)):
+        k.face([k.vert((x + r * x0, y + h * y0, z + f)), k.vert((x + r * x1, y + h * y0, z + f)), k.vert((x + r * x1, y + h * y1, z + f)),
+                k.vert((x + r * x0, y + h * y1, z + f))], [(0, 0)] * 4, Mp, col_)
+
+
 def bottles(k, Mg, Mp):
-    """Sake bottles along the shelf over the window, either side of the fan, between the speakers."""
+    """Sake bottles along the shelf over the window, either side of the fan, between the speakers: tall isshobin and
+    shorter ones, their labels to the guests."""
     for side in (-1, 1):
         for i in range(10):
             x = side * (0.92 + i * 0.235) + rng.uniform(-0.02, 0.02)
-            h, r = rng.uniform(0.3, 0.42), rng.uniform(0.05, 0.06)
-            col = ["#3f7a4f", "#6a3f22", "#284a6a", "#a7b49a", "#4f6a2f"][rng.integers(0, 5)]
-            z = -HD + 0.13
-            k.lathe((x, SHELF_Y, z), [(0.0, 0.0), (r, 0.0), (r, h * 0.6), (0.024, h * 0.82), (0.021, h), (0.0, h)], Mg, col, n=6)
-            k.lathe((x, SHELF_Y, z), [(r * 1.05, h * 0.18), (r * 1.05, h * 0.5)], Mp, ["#f2ead8", "#e8d9a8", "#d84a3a"][rng.integers(0, 3)], n=6, phase=0.5)
+            tall = i % 3 != 1
+            h, r = (rng.uniform(0.38, 0.44), 0.058) if tall else (rng.uniform(0.28, 0.32), 0.05)
+            sake_bottle(k, Mg, Mp, (x, SHELF_Y, -HD + 0.13), h, r, GLASS[rng.integers(0, len(GLASS))], LABELS[rng.integers(0, len(LABELS))],
+                        ["#d6a84a", RED, INK][rng.integers(0, 3)])
 
 
 def speaker_frame(sx):
@@ -476,15 +578,22 @@ def signs_and_menu(k, W, Mp):
                           (x - 0.02, y + 0.17, -HD + 0.104)], INK)
             panel(k, Mp, [(x - 0.03, y - 0.2, -HD + 0.105), (x + 0.03, y - 0.2, -HD + 0.105), (x + 0.03, y - 0.17, -HD + 0.105),
                           (x - 0.03, y - 0.17, -HD + 0.105)], RED)
-    # Wooden menu tags hung along the beam over the window, either side of the fan: a dish in ink on each, a red price.
+    # Wooden menu tags (o-shinagaki) hung along the beam over the window, either side of the fan: a pale board with a
+    # dark rim and a rounded head, a dish written down it in ink strokes, its price under a red seal, each on its cord.
     for side in (-1, 1):
         for i in range(8):
-            x, y, z = side * (0.98 + i * 0.205), BEAM_Y - 0.17, -HD + 0.2
-            box(k, (x, y, z), (0.16, 0.3, 0.02), W, "#efdcb0" if (i + side) % 3 else "#f6ead0")
-            panel(k, Mp, [(x - 0.022, y - 0.06, z + 0.011), (x + 0.022, y - 0.06, z + 0.011), (x + 0.022, y + 0.12, z + 0.011),
-                          (x - 0.022, y + 0.12, z + 0.011)], INK)
-            panel(k, Mp, [(x - 0.04, y - 0.12, z + 0.012), (x + 0.04, y - 0.12, z + 0.012), (x + 0.04, y - 0.09, z + 0.012),
-                          (x - 0.04, y - 0.09, z + 0.012)], RED)
+            x, y, z = side * (0.98 + i * 0.205), BEAM_Y - 0.19, -HD + 0.2
+            tilt = K.game_rot(roll=rng.uniform(-0.04, 0.04))
+            box(k, (x, y, z), (0.165, 0.32, 0.018), W, "#3a2a1e", rot=tilt)
+            k.rbox((x, y - 0.005, z + 0.004), (0.145, 0.295, 0.016), 0.01, W, "#f1dfb6" if (i + side) % 3 else "#f6ead0", rot=tilt, segs=1)
+            strokes = [(0.0, 0.1, 0.07, 0.014), (0.0, 0.065, 0.05, 0.03), (0.01, 0.02, 0.06, 0.012), (-0.008, -0.015, 0.04, 0.03),
+                       (0.0, -0.05, 0.065, 0.012)][: 3 + (i % 3)]
+            for (dx, dy, w, h) in strokes:
+                panel(k, Mp, [(x + dx - w / 2, y + dy - h / 2, z + 0.0135), (x + dx + w / 2, y + dy - h / 2, z + 0.0135),
+                              (x + dx + w / 2, y + dy + h / 2, z + 0.0135), (x + dx - w / 2, y + dy + h / 2, z + 0.0135)], INK)
+            panel(k, Mp, [(x - 0.022, y - 0.13, z + 0.0135), (x + 0.022, y - 0.13, z + 0.0135), (x + 0.022, y - 0.09, z + 0.0135),
+                          (x - 0.022, y - 0.09, z + 0.0135)], RED)
+            k.tube([(x, y + 0.16, z), (x, BEAM_Y - 0.02, z)], 0.004, Mp, INK, n=3)
     # The roof sign over the front: a kanban board in a dark frame on two posts from the roof, under its own little
     # tiled cap (its light box glows: the glow model).
     sz = 3.35
@@ -565,22 +674,40 @@ def plants(k, Mp, W):
         k.blob((x + dx, y + dy, z), (r, r * 0.45, r * 0.85), Mp, mix("#3f6a3a", "#5f8a45", rng.uniform(0, 1)), segs=7, rings=4, seed=int(dy * 100), lumpy=0.4)
 
 
-def lucky_cat(k, Mp, c, yaw):
-    """A beckoning cat (maneki-neko) on the counter's end, facing the guests: white, a red collar and a gold bell, one
-    paw raised."""
+def lucky_cat(k, Mp, Mm, c, yaw):
+    """A beckoning cat (maneki-neko) on the counter's end, facing the guests, on a red cushion: white with calico
+    patches, its eyes shut in a smile, whiskers, a red collar with a gold bell, the left paw raised, the right holding a
+    gold coin (koban)."""
     R = K.game_rot(yaw=yaw)
     at = lambda u, v, w: tuple(np.array(c) + np.array(R @ Vector((u, v, w))))
-    k.blob(at(0, 0.1, 0), (0.1, 0.1, 0.08), Mp, "#f6f2ea", segs=8, rings=5, rot=R, flat_bottom=-0.1)
-    k.blob(at(0, 0.25, 0.01), (0.1, 0.085, 0.085), Mp, "#f6f2ea", segs=8, rings=5, rot=R)
+    WHITE, PINK = "#f8f4ec", "#f2a6b0"
+    k.rbox(at(0, 0.02, 0), (0.24, 0.04, 0.22), 0.018, Mp, "#b8283a", rot=R, segs=2)
+    for u, w in ((-1, -1), (-1, 1), (1, -1), (1, 1)):
+        k.tube([at(0.12 * u, 0.025, 0.11 * w), at(0.135 * u, 0.0, 0.125 * w)], 0.008, Mp, "#e0b040", n=4, radii=[0.6, 1.2])
+    k.blob(at(0, 0.13, 0), (0.095, 0.095, 0.08), Mp, WHITE, segs=12, rings=7, rot=R, flat_bottom=-0.08)
+    k.blob(at(0, 0.27, 0.01), (0.105, 0.088, 0.088), Mp, WHITE, segs=12, rings=7, rot=R)
+    k.blob(at(-0.05, 0.31, 0.02), (0.045, 0.035, 0.07), Mp, "#e8973e", segs=8, rings=4, rot=R)       # calico patches
+    k.blob(at(0.06, 0.14, -0.04), (0.04, 0.04, 0.05), Mp, "#2a2420", segs=8, rings=4, rot=R)
     for s_ in (-1, 1):
-        k.lathe(at(s_ * 0.06, 0.31, 0.0), [(0.03, 0.0), (0.0, 0.06)], Mp, "#f6f2ea", d=tuple(R @ Vector((s_ * 0.3, 1, 0))), n=4)
-        k.blob(at(s_ * 0.035, 0.26, 0.08), (0.012, 0.016, 0.006), Mp, INK, segs=5, rings=3, rot=R)
-    k.blob(at(0, 0.235, 0.09), (0.012, 0.008, 0.006), Mp, "#e88a9a", segs=5, rings=3, rot=R)
-    k.tube([at(0.085 * math.cos(a), 0.17, 0.07 * math.sin(a) + 0.005) for a in np.linspace(0, math.tau, 9)[:-1]], 0.012, Mp, RED, n=4, closed_path=True)
-    k.blob(at(0, 0.15, 0.075), (0.022, 0.022, 0.022), Mp, "#e8b83a", segs=6, rings=4)
-    k.blob(at(0.09, 0.3, 0.03), (0.03, 0.05, 0.03), Mp, "#f6f2ea", segs=6, rings=4, rot=R)   # the beckoning paw
-    k.blob(at(-0.055, 0.06, 0.07), (0.03, 0.025, 0.03), Mp, "#f6f2ea", segs=6, rings=3, rot=R)
-    k.blob(at(0, 0.1, 0.075), (0.05, 0.05, 0.02), Mp, "#e8b83a", segs=6, rings=3, rot=R)   # the gold coin it holds
+        ear = R @ Vector((s_ * 0.35, 1, 0.05))
+        k.lathe(at(s_ * 0.06, 0.33, 0.0), [(0.034, 0.0), (0.0, 0.06)], Mp, WHITE, d=tuple(ear), n=6)
+        k.lathe(at(s_ * 0.06, 0.335, 0.012), [(0.02, 0.0), (0.0, 0.04)], Mp, PINK, d=tuple(ear), n=5)
+        k.tube([at(s_ * 0.052, 0.272, 0.084), at(s_ * 0.036, 0.281, 0.088), at(s_ * 0.02, 0.272, 0.086)], 0.004, Mp, INK, n=3)
+        for j in range(3):
+            k.tube([at(s_ * 0.05, 0.243 + j * 0.01, 0.083), at(s_ * 0.11, 0.236 + j * 0.018, 0.07)], 0.0016, Mp, INK, n=3)
+    k.blob(at(0, 0.252, 0.09), (0.011, 0.008, 0.006), Mp, PINK, segs=6, rings=3, rot=R)
+    k.tube([at(0.085 * math.cos(a), 0.2, 0.072 * math.sin(a) + 0.008) for a in np.linspace(0, math.tau, 11)[:-1]], 0.011, Mp, RED, n=4, closed_path=True)
+    k.blob(at(0, 0.18, 0.083), (0.022, 0.022, 0.022), Mm, "#e8b83a", segs=8, rings=5)
+    k.tube([at(-0.012, 0.176, 0.104), at(0.012, 0.176, 0.104)], 0.003, Mp, INK, n=3)
+    # The raised left paw (its pink pad to the guests), the right paw at its chest holding the koban.
+    k.tube([at(0.075, 0.18, 0.04), at(0.11, 0.26, 0.05), at(0.105, 0.34, 0.05)], 0.028, Mp, WHITE, n=7, radii=[1.0, 0.9, 1.0])
+    k.blob(at(0.105, 0.36, 0.05), (0.034, 0.034, 0.03), Mp, WHITE, segs=8, rings=5, rot=R)
+    k.blob(at(0.105, 0.358, 0.078), (0.016, 0.014, 0.006), Mp, PINK, segs=6, rings=3, rot=R)
+    k.blob(at(0, 0.105, 0.08), (0.06, 0.042, 0.012), Mm, "#e8b83a", segs=10, rings=4, rot=R)
+    for j in range(3):
+        k.tube([at(-0.03, 0.08 + j * 0.02, 0.093), at(0.03, 0.08 + j * 0.02, 0.093)], 0.002, Mp, "#b8862a", n=3)
+    k.blob(at(-0.04, 0.115, 0.085), (0.025, 0.022, 0.02), Mp, WHITE, segs=7, rings=4, rot=R)
+    k.tube([at(-0.07, 0.04, -0.06), at(-0.11, 0.07, -0.02), at(-0.1, 0.1, 0.03)], 0.016, Mp, WHITE, n=5, radii=[1.0, 0.9, 0.6])   # the tail
 
 
 def sake_casks(k, Mp, Mr):
@@ -772,17 +899,27 @@ def hours(M):
               zc + 0.016, zc + 0.02, Mc, "#f1ece2", at=(0.0, cy, 0))
     k.tube([(-GATE_X - 0.1, top + 0.02, zc), (GATE_X + 0.1, top + 0.02, zc)], 0.025, Mc, "#c9a46a", n=5, caps=True)
     noren = k.finish(smooth_deg=40)
-    # The nigiri the chefs set on the geta beside their boards, one by one (SushiBar.tsx shows them through the
-    # mesh's draw range: every piece the same triangles, in order along the geta).
+    # The nigiri the chef sets on the geta beside each board, one by one, of the fish he cut there (SushiBar.tsx shows
+    # them through the mesh's draw range: every piece the same triangles, in order along the geta), and the geta itself
+    # (prep-geta-<i>: the server takes it away to a stool, and the chef has a fresh one when he starts there again).
     prep = []
-    for i, (bx, _) in enumerate(BOARDS):
+    for i, (bx, kind) in enumerate(BOARDS):
         k = K.Kit(f"prep-{i}")
         for j in range(4):
-            x, y, z = bx + GETA_DX - 0.14 + j * 0.093, TOP_Y + 0.05, BOARD_Z
-            k.blob((x, y + 0.022, z), (0.034, 0.024, 0.05), M["stone"], "#fbf8f0", segs=6, rings=4, flat_bottom=-0.02)
-            box(k, (x, y + 0.05, z), (0.075, 0.016, 0.11), M["paint"], ["#f08a5a", "#d8394a", "#f2c95c", "#f6efe4"][(j + i) % 4], r=0.007)
+            F.nigiri(k, M, (bx + GETA_DX - 0.135 + j * 0.09, TOP_Y + 0.051, BOARD_Z), 0.08 * (j % 2 - 0.5), kind, seed=j)
         prep.append(k.finish(smooth_deg=50))
+        k = K.Kit(f"prep-geta-{i}")
+        F.geta_board(k, M["wood"], (bx + GETA_DX, TOP_Y, BOARD_Z))
+        prep.append(k.finish(smooth_deg=40))
     return [shutters, noren, *prep]
+
+
+def served(M):
+    """The served geta (sushi-bar-geta.glb, F.served): drawn by the bar at each stool it's set before, on the serving
+    shelf, and in the server's hands as he brings it (SushiBar.tsx); its origin the middle of its foot."""
+    k = K.Kit("sushi-bar-geta")
+    F.served(k, M, (0.0, 0.0, 0.0))
+    return k.finish(smooth_deg=50)
 
 
 def pane_glass():
@@ -801,9 +938,9 @@ def pane_glass():
 def bar(M):
     k = K.Kit("sushi-bar")
     floor_and_frame(k, M["wood"], M["rope"], M["glass"])
-    roof(k, M["wood"], M["paint"])
+    roof(k, M["wood"], M["paint"], M["metal"])
     walls(k, M["wood"], M["stone"])
-    counter(k, M["wood"], M["paint"], M["pane"], M["glass"])
+    counter(k, M)
     stools(k, M["wood"], M["cloth"], M["rope"])
     kitchen(k, M["wood"], M["paint"], M["glass"], M["stone"])
     bottles(k, M["glass"], M["paint"])
@@ -813,7 +950,7 @@ def bar(M):
     signs_and_menu(k, M["wood"], M["paint"])
     tank(k, M["wood"], M["paint"], M["pane"], M["stone"])
     plants(k, M["paint"], M["wood"])
-    lucky_cat(k, M["paint"], (3.78, TOP_Y, 1.3), -1.27)
+    lucky_cat(k, M["paint"], M["metal"], (3.78, TOP_Y, 1.3), -1.27)
     sake_casks(k, M["paint"], M["rope"])
     posters(k, M["paint"])
     k.tint_gradient(0.86, 1.0, 0.0, RIDGE_Y)
@@ -828,8 +965,10 @@ def bar(M):
 # is raised so its foot sits on that horizon line however far it is, (d sqrt(k) - sqrt(h))² over the sea for the eye h
 # over it (the floor stands 0.78 over the sea).
 EYE, SEA, BEND, BEND_SIDE = (0.5, SEAT_TOP + 1.1, SEAT_Z + 0.4), -0.78, 0.0032, 0.0011
-ISLES = ((-34, 44, "karst", 1.0), (-12, 88, "long", 1.6), (8, 32, "islet", 1.0), (22, 58, "pair", 1.2), (44, 40, "cliff", 1.0))
-ROCK, ROCK_DARK, GREEN, GREEN_DARK, SAND = "#94a0a8", "#6e7a84", "#6aa04e", "#3f7a3a", "#ecdcae"
+ISLES = ((-34, 44, "karst", 1.0), (-21, 64, "pair", 0.85), (-12, 88, "long", 1.6), (6, 33, "islet", 1.0), (15, 46, "torii", 1.0),
+         (25, 60, "pair", 1.1), (42, 40, "cliff", 1.0))
+ROCK, ROCK_DARK, ROCK_WET, GREEN, GREEN_DARK, SAND = "#a9b0aa", "#7f8a86", "#56615f", "#6aa04e", "#3f7a3a", "#ecdcae"
+VERT = Matrix(((1, 0, 0), (0, 0, 1), (0, -1, 0)))     # extrude's sweep (local z) up the game y, its outline on the ground
 
 
 def isle_base(theta, d):
@@ -851,37 +990,95 @@ def palm(k, M, x, y, z, h, lean):
                mix(GREEN_DARK, GREEN, (i % 3) / 2))
 
 
+def tree(k, M, x, y, z, r, seed):
+    """A round-crowned tree clinging to a ledge: a short trunk under two lumps of leaves."""
+    k.tube([(x, y - 0.2, z), (x, y + r * 0.8, z)], 0.08 * r, M, "#6a5040", n=4)
+    k.blob((x, y + r * 1.1, z), (r, r * 0.75, r), M, mix(GREEN_DARK, GREEN, 0.4), segs=7, rings=4, seed=seed, lumpy=0.35)
+    k.blob((x + r * 0.5, y + r * 0.8, z + r * 0.3), (r * 0.6, r * 0.5, r * 0.6), M, GREEN_DARK, segs=6, rings=3, seed=seed + 1, lumpy=0.3)
+
+
+def stack(k, M, x, y, z, w, h, seed):
+    """A limestone stack (karst): tiers of fluted rock, undercut at the waterline, each tier set back from the one below
+    or overhanging it, so ledges step up its sides; streaked darker down its flutes; jungle on its ledges and its top."""
+    r = np.random.default_rng(seed)
+    tiers = [(0.0, 0.1, 0.72), (0.1, 0.38, 1.0), (0.38, 0.6, 0.86), (0.6, 0.82, 0.92), (0.82, 1.0, 0.7)]
+    cx, cz, n = 0.0, 0.0, 11
+    for j, (t0, t1, ww) in enumerate(tiers):
+        rad = [w * ww * (1 + 0.28 * (r.random() - 0.5)) for _ in range(n)]
+        ring = [(rad[i] * math.cos(math.tau * i / n), rad[i] * 0.8 * math.sin(math.tau * i / n)) for i in range(n)]
+        faces = k.extrude(ring, y + t0 * h, y + t1 * h + 0.05, M, ROCK, rot=VERT, at=(x + cx, 0, z + cz), caps=True)
+        for i, f in enumerate(faces):
+            col = ROCK_WET if j == 0 else (ROCK_DARK if (i + j) % 3 == 0 else mix(ROCK, ROCK_DARK, r.uniform(0, 0.4)))
+            for lp in f.loops:
+                lp[k.col] = (*K.lin(col), 1.0)
+        if 0 < j < len(tiers) - 1 and r.random() < 0.7:        # jungle on the ledge
+            a = r.uniform(0, math.tau)
+            tree(k, M, x + cx + w * ww * 0.7 * math.cos(a), y + t1 * h, z + cz + w * ww * 0.55 * math.sin(a), 0.45 * w, seed + j)
+        cx, cz = cx + r.uniform(-0.12, 0.12) * w, cz + r.uniform(-0.1, 0.1) * w
+    top = y + h + 0.05
+    k.blob((x + cx, top + 0.15, z + cz), (w * 0.8, 0.55, w * 0.65), M, GREEN, segs=8, rings=4, seed=seed + 9, lumpy=0.4)
+    tree(k, M, x + cx - w * 0.3, top + 0.3, z + cz + 0.2, 0.55 * w, seed + 11)
+    palm(k, M, x + cx + w * 0.25, top + 0.3, z + cz, 1.5, 0.45)
+
+
+def torii(k, M, x, y, z, s):
+    """A red torii on a rock in the sea: two posts, the tie beam, and the top beam swept up at its ends."""
+    for sx in (-1, 1):
+        k.beam((x + sx * 0.9 * s, y, z), (x + sx * 0.82 * s, y + 2.3 * s, z), 0.18 * s, 0.18 * s, 0.0, M, "#d23a2a", segs=1)
+    k.beam((x - 1.15 * s, y + 1.75 * s, z), (x + 1.15 * s, y + 1.75 * s, z), 0.12 * s, 0.16 * s, 0.0, M, "#d23a2a", segs=1)
+    top = [(x + u * 1.5 * s, y + (2.45 + 0.18 * u ** 4) * s, z) for u in np.linspace(-1, 1, 7)]
+    k.tube(top, 0.13 * s, M, "#2a2420", n=4)
+    k.tube([(p[0], p[1] - 0.16 * s, p[2]) for p in top[1:-1]], 0.11 * s, M, "#d23a2a", n=4)
+
+
+def hut(k, M, x, y, z, s):
+    """A fisherman's hut on stilts: a plank box under a steep thatched roof."""
+    for dx, dz in ((-0.6, -0.5), (0.6, -0.5), (-0.6, 0.5), (0.6, 0.5)):
+        k.beam((x + dx * s, y - 0.5, z + dz * s), (x + dx * s, y + 0.5 * s, z + dz * s), 0.1 * s, 0.1 * s, 0.0, M, "#6a5040", segs=1)
+    k.rbox((x, y + 0.95 * s, z), (1.4 * s, 0.9 * s, 1.2 * s), 0.0, M, "#9a7a58", segs=1)
+    k.lathe((x, y + 1.35 * s, z), [(1.15 * s, 0.0), (0.0, 1.1 * s)], M, "#c9a868", n=4, phase=math.pi / 4)
+
+
+def lighthouse(k, M, x, y, z, s):
+    """A far lighthouse: a white tapered tower in red bands, its lamp room dark under a red cap."""
+    k.lathe((x, y, z), [(0.6 * s, 0.0), (0.4 * s, 3.6 * s), (0.0, 3.6 * s)], M, "#f1ece2", n=8)
+    for y0 in (0.9, 2.3):
+        k.lathe((x, y + y0 * s, z), [(0.62 * s - 0.05 * y0 * s, 0.0), (0.6 * s - 0.05 * y0 * s, 0.5 * s)], M, "#c8342a", n=8)
+    k.lathe((x, y + 3.6 * s, z), [(0.0, 0.0), (0.42 * s, 0.0), (0.42 * s, 0.55 * s), (0.0, 0.55 * s)], M, "#3a3a40", n=8)
+    k.lathe((x, y + 4.15 * s, z), [(0.5 * s, 0.0), (0.0, 0.45 * s)], M, "#c8342a", n=8)
+
+
 def isles(M):
-    """The islands out to sea: limestone stacks with green tops (Dave the Diver's backdrop, in our style), a long low
-    island with hills far off, a sandy islet with two palms; one plain matte material, one draw."""
+    """The islands out to sea (David, round 3: "the background islants need to look better than just blobs"): limestone
+    stacks in tiers with ledges, fluted and streaked, jungle on their ledges and palms on their tops (a karst bay in our
+    style), a long low island with a lighthouse at its end, a sandy islet with a fisherman's hut and palms, a torii on its
+    rock in the sea. One plain matte material, one draw."""
     S = M["stone"]
     k = K.Kit("sushi-bar-isles")
     for n, (theta, d, kind, s) in enumerate(ISLES):
         x, y, z = isle_base(theta, d)
-        lump = lambda c, r, col, seed, lumpy=0.3: k.blob((x + c[0] * s, y + c[1] * s, z + c[2] * s), tuple(v * s for v in r), S, col,
-                                                        segs=10, rings=7, seed=seed + n * 10, lumpy=lumpy)
         if kind in ("karst", "pair", "cliff"):
-            stacks = {"karst": ((0, 0, 0, 1.0),), "pair": ((-1.8, 0, 0, 1.15), (2.0, 0, 0.8, 0.75)), "cliff": ((0, 0, 0, 0.8), (2.2, 0, 0.3, 0.6))}[kind]
-            for j, (ox, _, oz, hs) in enumerate(stacks):
-                w = 2.6 if kind == "cliff" else 1.5
-                lump((ox, 3.6 * hs, oz), (w, 4.2 * hs, w * 0.9), mix(ROCK_DARK, ROCK, 0.3 + 0.3 * j), 1 + j)
-                lump((ox + 0.7, 2.0 * hs, oz + 0.5), (w * 0.8, 2.6 * hs, w * 0.8), ROCK_DARK, 3 + j)
-                lump((ox, 7.6 * hs, oz), (w * 1.1, 0.9, w), GREEN, 5 + j, 0.4)
-                lump((ox - 0.6, 5.2 * hs, oz + 0.6), (w * 0.6, 0.6, w * 0.5), GREEN_DARK, 7 + j, 0.4)
-                palm(k, S, x + (ox + 0.4) * s, y + 8.1 * hs * s, z + oz * s, 1.4, 0.4)
-            lump((0, 0.2, 0), (3.2, 0.5, 2.4), SAND, 9, 0.2)
+            stacks = {"karst": ((0, 0, 1.5, 9.0), (2.4, 0.8, 0.9, 4.5)), "pair": ((-1.8, 0, 1.4, 8.5), (2.0, 0.8, 1.1, 6.0)),
+                      "cliff": ((0, 0, 2.6, 7.0), (2.9, 0.3, 1.4, 5.0), (-2.4, -0.4, 1.2, 3.6))}[kind]
+            for j, (ox, oz, w, h) in enumerate(stacks):
+                stack(k, S, x + ox * s, y - 0.3, z + oz * s, w * s, h * s, 100 * n + 10 * j)
+            k.blob((x, y + 0.1, z), (3.2 * s, 0.4, 2.2 * s), S, SAND, segs=10, rings=4, seed=n, lumpy=0.2)
         elif kind == "long":
-            lump((0, 0.2, 0), (9.0, 0.6, 2.8), SAND, 1, 0.2)
-            lump((0, 0.8, 0), (8.2, 1.5, 2.4), ROCK_DARK, 2)
-            for j, (ox, hh) in enumerate(((-5.0, 2.4), (-1.5, 3.4), (2.5, 2.8), (5.5, 1.8))):
-                lump((ox, 1.6, 0), (2.8, hh, 2.0), mix(GREEN_DARK, GREEN, j / 3), 3 + j, 0.35)
-            for ox in (-3.2, 0.8, 4.2):
-                palm(k, S, x + ox * s, y + 2.4 * s, z, 1.6, 0.5)
+            k.blob((x, y + 0.2, z), (9.0 * s, 0.6, 2.8 * s), S, SAND, segs=12, rings=4, seed=1, lumpy=0.2)
+            for j, (ox, w, h) in enumerate(((-4.6, 2.2, 2.6), (-1.2, 2.8, 3.8), (2.6, 2.2, 2.8))):
+                stack(k, S, x + ox * s, y, z, w * s * 0.6, h * s, 200 + j)
+            for ox in (-3.0, 1.0):
+                tree(k, S, x + ox * s, y + 0.6, z + 1.2, 1.1 * s, 300 + int(ox))
+            lighthouse(k, S, x + 6.8 * s, y + 0.4, z, 0.9 * s)
+        elif kind == "islet":
+            k.blob((x, y + 0.15, z), (2.4, 0.45, 1.8), S, SAND, segs=10, rings=4, seed=2, lumpy=0.2)
+            k.blob((x + 1.1, y + 0.45, z - 0.3), (0.9, 0.7, 0.8), S, ROCK_DARK, segs=7, rings=4, seed=3, lumpy=0.35)
+            hut(k, S, x - 0.5, y + 0.4, z, 0.9)
+            for ox, lean in ((0.9, 0.5), (-1.7, -0.4)):
+                palm(k, S, x + ox, y + 0.45, z + 0.4, 2.3, lean)
         else:
-            lump((0, 0.15, 0), (2.2, 0.45, 1.7), SAND, 1, 0.2)
-            lump((0.4, 0.6, 0), (1.2, 0.9, 1.0), ROCK, 2)
-            for ox, lean in ((-0.8, -0.5), (0.2, 0.4)):
-                palm(k, S, x + ox, y + 0.5, z, 2.2, lean)
+            k.blob((x, y + 0.2, z), (1.4, 0.7, 1.1), S, ROCK_WET, segs=8, rings=4, seed=5, lumpy=0.35)
+            torii(k, S, x, y + 0.6, z, 0.9 * s)
     return k.finish(smooth_deg=60)
 
 
@@ -900,17 +1097,18 @@ def knife(M):
 
 
 # ================================================================ what glows
-# Paper lanterns (x, z, glow, radius, the height they hang from): over the counter and the deck, under the lamp posts'
-# arms outside, and at the entrance's lintel ends.
 # Paper lanterns (chochin: x, z, glow, radius, the height they hang from, a tassel): over the counter, inside the front
-# header, under the lamp posts' arms outside, the big red pair at the entrance; and a row of small ones on a cord across
-# the kitchen, in front of the bottles (David, phase A round 2: "lanters better modeled").
+# header, under the lamp posts' arms outside, the big red pair at the entrance; a row of small ones on a cord across
+# the kitchen, in front of the bottles (David, phase A round 2: "lanters better modeled"); and one under each of the
+# roof's turned-up corners (round 3: "have lanterns on the corners").
+CORNERS = [roof_pt(sx * (ROOF_X - 0.3), 1.0, front, -0.13) for sx in (-1, 1) for front in (True, False)]
 ROW_Y = 2.9
 LANTERNS = ([(x, 1.5, key, r, PLATE_Y - 0.08, True) for x, key, r in ((-3.0, "red", 0.22), (-1.0, "lantern", 0.25), (1.0, "lantern", 0.25), (3.0, "red", 0.22))]
             + [(x, HEADER_Z - 0.2, key, 0.2, HEADER_Y - 0.12, False) for x, key in ((-2.9, "lantern"), (0.0, "red"), (2.9, "lantern"))]
             + [(x - math.copysign(0.45, x), z, "lantern", 0.17, FLOOR - 0.02 + walk_y(z) + 2.11, False) for x, z in LAMP_POSTS]
             + [(sx * 1.32, GATE_Z + 0.1, "red", 0.22, 3.1, True) for sx in (-1, 1)]
-            + [(-3.5 + i * 0.7, -0.1, "red" if i % 2 else "lantern", 0.095, ROW_Y - 0.1 * math.sin(math.pi * (i + 0.5) / 11) - 0.02, False) for i in range(11)])
+            + [(-3.5 + i * 0.7, -0.1, "red" if i % 2 else "lantern", 0.095, ROW_Y - 0.1 * math.sin(math.pi * (i + 0.5) / 11) - 0.02, False) for i in range(11)]
+            + [(x, z, "red", 0.18, y, True) for x, y, z in CORNERS])
 
 
 def chochin(k, G, Mp, x, z, key, r, hang, tassel):
@@ -942,6 +1140,9 @@ def glow(M):
     k = K.Kit("sushi-bar-glow")
     for lantern in LANTERNS:
         chochin(k, G, Mp, *lantern)
+    # An iron hook under each roof corner the corner lanterns hang from.
+    for x, y, z in CORNERS:
+        k.tube([(x, y + 0.1, z), (x, y - 0.01, z), (x + 0.03, y - 0.04, z)], 0.012, Mp, INK, n=4)
     # The cord the kitchen's row of small lanterns hangs from.
     k.tube([(-3.95 + 7.9 * t, ROW_Y - 0.1 * math.sin(math.pi * t), -0.1) for t in np.linspace(0, 1, 12)], 0.008, Mp, INK, n=3)
     # The neon on the left pillar: a fish over two waves, and the speakers' neon trim.
@@ -974,8 +1175,8 @@ def glow(M):
     # counter top's front edge over the stools, and along the fish case's lid.
     glow_uv(k, k.rbox((0, SHELF_Y - 0.06, -HD + 0.27), (2 * HW, 0.025, 0.03), 0.0, G, segs=1), "bulb")
     glow_uv(k, k.rbox(((CX0 + CX1) / 2, TOP_Y - 0.08, 1.74), (CX1 - CX0 - 0.1, 0.02, 0.03), 0.0, G, segs=1), "lantern")
-    for x0, x1 in ((-2.65, 0.5), (0.6, 3.75)):
-        glow_uv(k, k.rbox(((x0 + x1) / 2, TOP_Y + 0.125, 0.9), (x1 - x0 - 0.1, 0.012, 0.04), 0.0, G, segs=1), "bulb")
+    for x0, x1 in CASE_RUNS:
+        glow_uv(k, k.rbox(((x0 + x1) / 2, CASE_TOP + 0.006, SERVE_Z1 + 0.012), (x1 - x0 - 0.1, 0.01, 0.02), 0.0, G, segs=1), "bulb")
     # The tank's water: its back and its wall side, lit from within at night.
     x0, x1, z0, z1 = TANK
     water = [k.quad([(x0 + 0.01, 0.9, z0 + 0.02), (x1, 0.9, z0 + 0.02), (x1, 1.6, z0 + 0.02), (x0 + 0.01, 1.6, z0 + 0.02)], G),
@@ -1000,10 +1201,10 @@ def build():
     K.reset()
     M = {"wood": wood_mat("M_DecorWood", 2614), "rope": K.Mat("M_Rope", tex=K.image("rope", K.rope(64, 128, 2613, "#ffffff")), rough=1.0),
          "paint": K.Mat("P_Paint", rough=0.45), "cloth": K.Mat("P_Cloth", rough=1.0), "glass": K.Mat("P_Glass", rough=0.08),
-         "stone": K.Mat("P_Stone", rough=0.95), "pane": pane_glass(), "glow": glow_mat()}
+         "stone": K.Mat("P_Stone", rough=0.95), "metal": K.Mat("P_Metal", rough=0.4), "pane": pane_glass(), "glow": glow_mat()}
     out = {}
     for name, fn in (("sushi-bar", bar), ("sushi-bar-glow", glow), ("sushi-bar-pier", pier), ("sushi-bar-hours", hours), ("sushi-bar-isles", isles),
-                     ("sushi-knife", knife)):
+                     ("sushi-bar-geta", served), ("sushi-knife", knife)):
         obs = fn(M)
         obs = obs if isinstance(obs, list) else [obs]
         K.export(obs, f"game/{'tools' if name == 'sushi-knife' else 'buildings'}/{name}.glb")
@@ -1024,10 +1225,11 @@ def review(obs, out_dir):
     except TypeError:
         sc.render.engine = "BLENDER_EEVEE"
     sc.view_settings.view_transform = "Standard"
-    shown = [o for name, group in obs.items() for o in group if name not in ("sushi-bar-isles", "sushi-knife")]
-    for name in ("sushi-bar-isles", "sushi-knife"):
-        for o in obs[name]:
-            o.hide_render = True
+    shown = [o for name, group in obs.items() for o in group if name != "sushi-knife"]
+    for o in obs["sushi-knife"]:
+        o.hide_render = True
+    isles_ob = obs["sushi-bar-isles"][0]
+    obs["sushi-bar-geta"][0].location = K.G(SEATS[2], SERVE_Y, (SERVE_Z0 + SERVE_Z1) / 2)
     shutters, noren, *_ = obs["sushi-bar-hours"]
     K.show_vertex_colors(shown)
     world = bpy.data.worlds.new("W")
@@ -1059,7 +1261,11 @@ def review(obs, out_dir):
     shots = {"front": ((8.5, 4.6, 19.0), (0.0, 0.9, 3.0), 26, (1200, 800)),
              "back": ((-6.0, 3.6, -11.0), (0.0, 1.0, 0.0), 30, (1200, 800)),
              "seat": (EYE, (0.45, 1.05, -2.5), 20, (1280, 800)),
-             "gate": ((0.6, 1.5, 8.6), (0.0, 2.1, 4.2), 30, (1000, 800))}
+             "gate": ((0.6, 1.5, 8.6), (0.0, 2.1, 4.2), 30, (1000, 800)),
+             "corner": ((7.2, 2.2, 7.8), (4.4, 3.4, 3.6), 40, (1000, 800)),
+             "food": ((SEATS[2] + 0.05, SERVE_Y + 0.38, 1.38), (SEATS[2], SERVE_Y + 0.02, 0.7), 50, (1000, 800)),
+             "case": ((SEATS[3], TOP_Y + 0.35, 1.75), (SEATS[3] - 0.2, TOP_Y + 0.02, 0.6), 38, (1000, 800)),
+             "isles": (EYE, (0.45, 2.2, -40.0), 26, (1400, 700))}
     frames = []
     for night in (False, True):
         shutters.hide_render, noren.hide_render = night, not night
@@ -1069,8 +1275,13 @@ def review(obs, out_dir):
         sun.color = (0.6, 0.7, 1.0) if night else (1.0, 0.95, 0.88)
         glow_b.inputs["Emission Strength"].default_value = 3.0 if night else 0.0
         for name, (at, look, lens, (w, h)) in shots.items():
-            if night and name == "back":
+            if night and name in ("back", "corner", "food", "case", "isles"):
                 continue
+            # The islands are raised for the curved world's horizon (they float over this flat sea): shown on their own.
+            for o in shown:
+                o.hide_render = (o is not isles_ob) if name == "isles" else o is isles_ob
+            bpy.data.objects["sea"].hide_render = name == "isles"
+            shutters.hide_render, noren.hide_render = night or name == "isles", not night or name == "isles"
             cam.lens = lens
             sc.render.resolution_x, sc.render.resolution_y = w, h
             co.location = K.G(*at)

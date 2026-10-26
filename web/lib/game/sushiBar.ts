@@ -5,7 +5,7 @@
  * own frame (the origin at the middle of its kitchen core, on its floor; the guests' deck, the entrance and the pier
  * toward +z, the open window onto the sea toward -z), and where those are in the world for a placed bar.
  */
-import type { OwnerStation } from "./cafe";
+import { walkOf, type OwnerStation } from "./cafe";
 import type { Pool } from "./hqLight";
 import type { IslandPhase } from "./islandTime";
 import { objectsOf, village, type MapObject, type Village } from "./villageMap";
@@ -69,26 +69,85 @@ export interface BarView { eye: { x: number; y: number; z: number }; look: { x: 
 export const BAR_MUSIC_IN = 8, BAR_MUSIC_OUT = 10;
 
 /**
- * The staff's work loops behind the counter (cafe.ts ownerAt; facing the guests is yaw 0, the back counter π). The chef
- * (David's "Bancha": cool and focused, he rarely talks) slices at his two cutting boards on the ledge behind the fish
- * case (the Craft clip, his knife in hand: he stands where its blows land on the fish, the builder's BOARDS), then forms
- * the nigiri and sets them on the geta beside the board one by one (Trace; `board`: SushiBar.tsx shows them), and
- * reaches to the back counter for rice; the server (a cheerful diver, his name David's call) plates up and down the
- * counter's far end.
+ * The staff at work behind the counter (cafe.ts ownerAt on the world clock; facing the guests is yaw 0; David, round 3:
+ * "refine sushi cooking movements"; their clips, build_clips.py `-- staff`). The chef (David's "Bancha": cool and
+ * focused, he rarely talks) works his two boards on the ledge behind the fish case in turn: he slices the block of fish
+ * there (SushiSlice, his knife in hand, a long pull a slice), then makes four nigiri of it, a pinch of rice from the tub
+ * at his right shaped in his hand, a slice laid on, set on the geta at his left (SushiShape, one a loop: the hours
+ * model's prep-<board>). The server (a cheerful diver, his name David's call) takes each full geta while the chef is at
+ * his other board, carries it along the back of the kitchen and slides it onto the serving shelf before a stool
+ * (SushiServe), where it stays a while (EAT_S). The builder's BOARDS, GETA_DX, BOARD_Z, TOP_Y and SERVE_* place these:
+ * change both together.
  */
-export type BarStation = OwnerStation & { board?: number };
-const GUESTS = 0, BACK = Math.PI, AT_BOARD = -0.26;
-export const CHEF_STATIONS: readonly BarStation[] = [
-  { at: [-1.4, AT_BOARD], yaw: GUESTS, stay: 7.8, clip: "Craft", board: 0 }, { at: [-1.4, AT_BOARD], yaw: GUESTS, stay: 4.5, clip: "Trace", board: 0 },
-  { at: [-1.0, -0.55], yaw: BACK, stay: 1.4, clip: "Forage" },
-  { at: [0.5, AT_BOARD], yaw: GUESTS, stay: 7.8, clip: "Craft", board: 1 }, { at: [0.5, AT_BOARD], yaw: GUESTS, stay: 4.5, clip: "Trace", board: 1 },
-  { at: [0.9, -0.55], yaw: BACK, stay: 1.4, clip: "Forage" },
-];
-export const SERVER_STATIONS: readonly BarStation[] = [
-  { at: [2.9, -0.2], yaw: GUESTS, stay: 4, clip: "Idle" }, { at: [1.6, -0.55], yaw: BACK, stay: 1.3, clip: "Forage" },
-  { at: [1.6, -0.2], yaw: GUESTS, stay: 3, clip: "Trace" }, { at: [2.4, -0.55], yaw: BACK, stay: 1.3, clip: "Forage" },
-  { at: [3.3, -0.2], yaw: GUESTS, stay: 3, clip: "Trace" },
-];
+export type BarStation = OwnerStation & { board?: number; stool?: number; carry?: boolean };
+const GUESTS = 0, AT_BOARD = -0.02;
+export const BOARD_X = [-1.5, 0.4] as const;
+/** The clips' lengths (build_clips.py staff clips): a slice, a nigiri, a reach across the counter. */
+export const SLICE_S = 2, SHAPE_S = 2, SERVE_S = 1.4, PIECES = 4;
+/** Where a board's geta sits (its foot), and where a served geta sits on the shelf before stool i (the builder's SERVE_*). */
+export const PREP_AT = BOARD_X.map(x => [x + 0.44, 0.84, 0.37] as const);
+export const SERVED_AT = STOOLS.map(x => [x, 0.98, 0.72] as const);
+export const CHEF_STATIONS: readonly BarStation[] = BOARD_X.flatMap((x, board): BarStation[] => [
+  { at: [x, AT_BOARD], yaw: GUESTS, stay: 3 * SLICE_S, clip: "SushiSlice", board },
+  { at: [x, AT_BOARD], yaw: GUESTS, stay: PIECES * SHAPE_S, clip: "SushiShape", board },
+]);
+const mod = (a: number, n: number) => ((a % n) + n) % n;
+/** Seconds walking from station i to station j along a loop's stations. */
+const walking = (stations: readonly BarStation[], i: number, j: number) => { let w = 0; for (let n = i; n < j; n++) w += walkOf(stations, n); return w; };
+export const CHEF_LOOP = walking(CHEF_STATIONS, 0, CHEF_STATIONS.length) + CHEF_STATIONS.reduce((t, s) => t + s.stay, 0);
+/** A board's geta: when its slicing starts and its nigiri start, in the chef's loop, and when the server takes it up (3 s after the four are done: the chef is at his other board). */
+const BOARD_T = BOARD_X.map((_, b) => {
+  const slice = CHEF_STATIONS.slice(0, 2 * b).reduce((t, s) => t + s.stay, 0) + walking(CHEF_STATIONS, 0, 2 * b), shape = slice + CHEF_STATIONS[2 * b].stay;
+  return { slice, shape, take: shape + PIECES * SHAPE_S + 3 };
+});
+/** The server's round, three of the chef's loops: from which board to which stool (never where the chef is at work then: the middle stools first). */
+const SERVES = [[0, 1], [1, 2], [0, 5], [1, 3], [0, 0], [1, 4]] as const;
+const HOME = [3.1, -0.05] as const, LANE_Z = -0.6, PICK_Z = -0.05, SERVE_Z = 0.0;
+/** Where in a SushiServe reach the geta changes hands, and how long a served geta stays before it's eaten. */
+export const HANDOFF = 0.45, EAT_S = 40;
+/**
+ * The server's round: from the server's end along the lane at the back of the kitchen to a board's geta, taken up,
+ * carried to a stool, slid onto the shelf, and back to the end; each wait at the end timed so the pick-up lands on its
+ * board's `take`, the rest of the round waited out at the end. `start` is the chef's loop time the round starts at.
+ */
+export const SERVER = (() => {
+  const stations: BarStation[] = [];
+  const add = (x: number, z: number, more: Partial<BarStation> = {}) => stations.push({ at: [x, z], yaw: GUESTS, stay: 0, clip: "Idle", ...more }) - 1;
+  const homes = SERVES.map(([board, stool]) => {
+    const gx = PREP_AT[board][0], sx = STOOLS[stool], home = add(HOME[0], HOME[1]);
+    add(HOME[0], LANE_Z); add(gx, LANE_Z); add(gx, PICK_Z, { stay: SERVE_S, clip: "SushiServe", board });
+    add(gx, LANE_Z, { carry: true }); add(sx, LANE_Z, { carry: true }); add(sx, SERVE_Z, { stay: SERVE_S, clip: "SushiServe", stool, carry: true });
+    add(sx, LANE_Z); add(HOME[0], LANE_Z);
+    return home;
+  });
+  const end = add(HOME[0], HOME[1]);
+  const due = SERVES.map(([board], k) => Math.floor(k / 2) * CHEF_LOOP + BOARD_T[board].take);
+  const start = due[0] - 1 - walking(stations, homes[0], homes[0] + 3);
+  const picks: { at: number; board: number }[] = [], serves: { at: number; stool: number }[] = [];
+  let t = 0;
+  stations.forEach((s, i) => {
+    const k = homes.indexOf(i);
+    if (k >= 0) s.stay = due[k] - start - t - walking(stations, i, i + 3);
+    if (i === end) s.stay = 3 * CHEF_LOOP - t;
+    if (s.board !== undefined) picks.push({ at: t, board: s.board });
+    if (s.stool !== undefined) serves.push({ at: t, stool: s.stool });
+    t += s.stay + walkOf(stations, i);
+  });
+  return { stations: stations as readonly BarStation[], start, picks, serves, loop: 3 * CHEF_LOOP };
+})();
+
+/** How many of board b's nigiri are on its geta at chef loop time t (0 to PIECES), or -1 when the server has taken it. */
+export function prepAt(b: number, t: number): number {
+  const { slice, shape, take } = BOARD_T[b], u = mod(t, CHEF_LOOP), gone = take + SERVE_S * HANDOFF;
+  if (mod(u - gone, CHEF_LOOP) < mod(slice - gone, CHEF_LOOP)) return -1;
+  if (mod(u - slice, CHEF_LOOP) < shape - slice) return 0;
+  return Math.min(PIECES, Math.floor(mod(u - shape, CHEF_LOOP) / SHAPE_S + 0.12));
+}
+/** Whether a served geta is on the shelf before stool i at chef loop time t (set down mid-reach, eaten EAT_S later). */
+export function servedAt(i: number, t: number): boolean {
+  const r = mod(t - SERVER.start, SERVER.loop);
+  return SERVER.serves.some(s => s.stool === i && mod(r - s.at - SERVE_S * HANDOFF, SERVER.loop) < EAT_S);
+}
 /** While it's closed the chef stands on the landing beside the entrance, looking up the beach (his quests come later). */
 export const CHEF_OUTSIDE = { at: [-1.75, 5.05] as const, yaw: 0 };
 /**

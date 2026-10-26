@@ -2,7 +2,7 @@
 /**
  * Copies the character art the engine ships from art/characters into the web
  * app: every catalogue GLB plus the clip-bearing base body (the catalogue's
- * base.clips_glb: v7_clips.glb, the hand-modeled v7 head) and the verb library (verbs.glb) to
+ * base.clips_glb: v7_clips.glb, the hand-modeled v7 head), the verb library (verbs.glb) and the sushi bar staff's clips (staff.glb) to
  * public/assets/characters/v6/, the v7 face layer atlases next to it, the
  * catalogue/palette/face JSON to data/characters/, and the official TSI mark
  * (public/logo.svg, ruling 24) as the crewneck decal PNG, and the LOD 1 GLBs (art/characters/lod1, build_lod.py) to lod1/.
@@ -34,6 +34,7 @@ for (const part of parts) copy(join(art, part.glb), join(out, part.glb));
 copy(join(art, catalog.base.clips_glb), join(out, catalog.base.clips_glb));
 // The verb library (classes v2): the rig's combat actions only, loaded by the ruins beside the clip base.
 if (catalog.verbs) copy(join(art, catalog.verbs.glb), join(out, catalog.verbs.glb));
+if (catalog.staff) copy(join(art, catalog.staff.glb), join(out, catalog.staff.glb));
 // LOD 1 (art/characters/build_lod.py): every part decimated, and the base's skin, for characters seen small.
 const lod = JSON.parse(readFileSync(join(art, "lod1/lod.json"), "utf8"));
 for (const glb of Object.keys(lod)) copy(join(art, "lod1", glb), join(out, "lod1", glb));
