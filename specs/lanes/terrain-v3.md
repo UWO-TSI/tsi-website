@@ -19,6 +19,10 @@ Then look at the references in `specs/references/terrain/plan-2026-10-23/` and t
 
 ## Status
 
+**R1c and R2 reviewed 2026-10-26** (head e11d0444, not merged): map, houses, meadow, mountain and north approved; the rest redo (notes below, verbatim). Next is R2b (Next, below), in parallel with the lane `terrain-art` (`specs/lanes/terrain-art.md`), which models the new 3D assets in Blender.
+
+What R1c and R2 built:
+
 **R1c and R2 are built and waiting on one review** (2026-10-25). R2 909dd199, on d08623f4 (R1c) and 2e9ae1bf (the ponytail fixes, merged to main as cbf729af). The R2 code review (merge-safe) fixes are in the commit after 507e2deb:
 - the arrival's fish crate stands on the raised jetty (`Crates` takes the deck's height), one `CRATE_URL` in propModels.ts;
 - deck board tops a hair (0.01) over the ground, so feet and props stand on them; the ground under the boards is painted dark earth (a "shape" zone, d < 7.8) so the gaps read dark, and the stone path now starts at the stairs;
@@ -49,6 +53,38 @@ R2 (on the R1c ground):
 - **Not in R2:** fishing nets (no net model in the assets; `tool-net` is the bug net). Questions: `specs/launch/terrain-v3-questions.md` "R2".
 
 ## David's decisions
+
+### 2026-10-26: R1c and R2 review, verbatim (https://claude.ai/artifact/5mbexjtNp5WJrTsWibqmmJ)
+
+- **map (approve):** "looks good fro now"
+- **arrival (redo):** "bigger wood boards, develop proper flooring for wharf, have wood pillars to make it structurally make sense that connecs down to the water, have ladders, small wood pillar with rope fencing for some spots, have 3 entrance to actual doc"
+- **wharf (redo):** "the transition from board to rock is too sudden, plan to make it more natural by making it same level and grassy for palm trees and stuff"
+- **market (redo):** "improve lighing assets, use blending for all 3d design assets"
+- **jetty (redo):** "make the actual doc thing widider and also have a lower level as well for boat docking naturally out"
+- **path (redo):** "can create new flow terrain asset that makes the path more natural i will provide refence images"
+- **plaza (redo):** "looks good, increase building sizes by 15%, have floor be tiles"
+- **houses (approve):** no note.
+- **hq (redo):** "have proper decore, ask for reference image for what plaza should look like"
+- **beach (redo):** "palm tree leaves needs more work, needs to be lighter with coconuts, model in blender properly"
+- **campfire (redo):** "a little bare brain storm to fill it out"
+- **mountain (approve), meadow (approve), north (approve):** no notes.
+- **forest (redo):** "yea but make it look like a dense forest without actually rendering so many trees, like just low qual so it looks like dense forest that isnt opened that entire section"
+- **river (redo):** "good ideas, the island on the otherside needs to be slighly shorter by 1-2 blocks, "
+
+**The coordinator's reading** ("blending" is Blender):
+1. **The wharf floor:** a proper built deck: bigger boards; wooden pillars under its water edge going down into the water, so it reads as a structure; ladders down to the water; short wooden posts with rope fencing along some stretches of the edge, not all of it.
+2. **The dock (the jetty):** wider, with three ways onto it from the deck, and a lower level stepping out from it at the water where boats dock.
+3. **Behind the boards:** no sudden step from boards to stone. The ground behind the boards is at the boards' level and grassy, with room for palms and other dressing; the climb to the village starts behind it.
+4. **Every new 3D asset is modelled in Blender** (headless), not built from code boxes; that includes the deck boards, pillars, ladders and rope fencing. The lamps ("lighting assets") get better models. The `terrain-art` lane makes these; this lane places and wires them.
+5. **The plaza:** buildings (HQ, café, shop, museum and the houses round it) 15% bigger; the plaza's floor tiled. Its decor waits for David's plaza references.
+6. **The path:** a new, more natural flowing path. Waits for David's references.
+7. **The beach's palms:** lighter leaves with coconuts, modelled properly in Blender (`terrain-art`).
+8. **The campfire:** fill out the area round it (log benches, stumps, firewood, a lantern and the like).
+9. **The forest:** the whole closed forest section reads as a dense forest without rendering many trees: cheap, low-detail tree masses (`terrain-art` makes them), instanced.
+10. **The river:** keep the washed-out bridge; the far bank (the meadow side) 1 to 2 u lower.
+11. **Approved as is:** the map, the houses, the meadow, the mountain, the north island.
+
+References: David was asked for plaza and path pictures (optional: palms, lamps, the wharf's structure, the campfire, the forest) on https://claude.ai/artifact/XgY2yxq2rJKjm3CupjT2Ju. The coordinator saves them under `specs/references/terrain/r2-2026-10-26/` and messages you.
 
 ### 2026-10-25: R1b review, verbatim (https://claude.ai/artifact/GEg5mHuG6ACN95UdZiLJou)
 
@@ -129,8 +165,15 @@ The plan page answers, verbatim in the spec. The drawing is a guide to where thi
 
 ## Next
 
-1. **Wait for David's notes on R1c and R2** (the coordinator publishes `specs/evidence/terrain-v3/r2/`).
-2. **R2 fixes** from his notes, then **R3** per the spec (light trees and bushes in the village, dense cedars in the forest, trees on the meadow and the north island, rock on the cliffs) and its one perf run (`SCENES=v2`).
+1. **R2b, landform and layout** (the reading above, 2, 3, 5, 10):
+   - behind the boards: the grassy band at the boards' level, the climb to the village behind it, no stone step;
+   - the dock wider, three ways onto it from the deck, and a lower boat level stepping out at the water. You own the dock's model (Blender, headless, under `art/`) and its walk surfaces, since they are tied to `wharf.ts`, `jettyY`, the boat trip and the arrival route; the routes test and the tutorial crate must still work;
+   - the plaza's buildings and houses at 1.15 scale, pads grown to match, doors and entries still working; the plaza floor tiled (use an existing tile or paving texture if the repo has one; otherwise add a question with your default);
+   - the meadow bank across the river 1 to 2 u lower.
+2. **Wire `terrain-art`'s assets as they land.** The coordinator tells you when to `git merge game/terrain-art` (it branches from your e11d0444). Then: the bigger deck boards replacing the code boxes, pillars along the deck's water edge, ladders, rope fencing on some stretches, palms on the grassy band, the campfire area filled out, and the forest masses over the whole closed forest. Don't add `propModels.ts` entries for that lane's models; it registers them. Until they land, do step 1 and leave placeholders out.
+3. **Skip** the path's redesign and the plaza's decor until the coordinator sends David's references.
+4. **Review:** render `specs/evidence/terrain-v3/r2b/` (the top-down map, views 01 to 03, 04 the plaza, 06 the beach, 09 the forest, 10 the river, 13 the market, 14 the dock, 16 the campfire, plus a close view of the deck's edge with pillars and rope fencing), then SendMessage "main" with the images and a one-line fact for each.
+5. **Then R3 straight on** without waiting: light trees and bushes in the village, trees on the meadow and the north island, rock on the cliffs; and the one perf run (`SCENES=v2`) at the end, against the new world's High budget (4.8 ms, 222 draws). Report it and stop.
 
 **Questions for David** go in `specs/launch/terrain-v3-questions.md`, one line each with your default. Carry on with your default meanwhile, unless the answer would change the landform.
 
