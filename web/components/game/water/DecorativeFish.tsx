@@ -72,11 +72,11 @@ function swim(f: Fish, camera: THREE.Camera) {
   if (f.mesh.instanceColor) f.mesh.instanceColor.needsUpdate = true;
 }
 
-/** `max`: how many schools (lib/game/decorativeFish.ts fishSchools; the new world's wide shallows hold more). */
-export default function DecorativeFish({ map, lite = false, skip, max }: { map: IslandMap; lite?: boolean; skip?: (x: number, z: number) => boolean; max?: number }) {
+/** `max`: how many schools, `near`: where to gather half of them (lib/game/decorativeFish.ts fishSchools; the new world's wide shallows and reefs). */
+export default function DecorativeFish({ map, lite = false, skip, max, near }: { map: IslandMap; lite?: boolean; skip?: (x: number, z: number) => boolean; max?: number; near?: readonly [number, number][] }) {
   const { nodes } = useGLTF(FISH_URL) as unknown as { nodes: Record<string, THREE.Mesh> };
   const fish = useMemo((): Fish | null => {
-    const schools = fishSchools(map, shoreFieldOf(map), { avoid: skip, lite, max });
+    const schools = fishSchools(map, shoreFieldOf(map), { avoid: skip, lite, max, near });
     const total = schools.reduce((a, s) => a + s.count, 0), geometry = nodes.fish?.geometry;
     if (!total || !geometry) return null;
     const mesh = new THREE.InstancedMesh(geometry, fishMaterial(), total);
@@ -86,7 +86,7 @@ export default function DecorativeFish({ map, lite = false, skip, max }: { map: 
     mesh.frustumCulled = false; // placed every frame round the focus; one draw
     mesh.castShadow = false;
     return { mesh, schools };
-  }, [map, skip, lite, max, nodes]);
+  }, [map, skip, lite, max, near, nodes]);
   useEffect(() => () => { if (fish) { (fish.mesh.material as THREE.Material).dispose(); fish.mesh.dispose(); } }, [fish]);
   useFrame(({ camera }) => { if (fish) swim(fish, camera); });
   return fish ? <primitive object={fish.mesh} /> : null;

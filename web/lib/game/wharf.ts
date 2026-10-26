@@ -315,8 +315,8 @@ export interface KitPiece { model: string; x: number; y: number; z: number; yaw:
  * The wharf kit on the `deck` squares (each 4 u, local +z inland, level at the ground under its middle): a deck tile on
  * each; on each square at the water's edge two rope-lashed piles just outside it (David: "wood pillars on the side with
  * rope attached"), and on some a ladder down with a life ring by it, a rope net with floats, or rope fencing along it,
- * never within `clear` of `keep` (the jetty's gangways land there); none at all on the edge within SHED_CLEAR of a ship
- * house (`sheds`) standing there.
+ * never within `clear` of `keep` (the jetty's gangways land there); none at all on the edge within SHED_CLEAR of what
+ * stands there (`sheds`: the ship houses, the quick-sell stall).
  */
 export function deckPieces(decks: readonly { x: number; z: number; yaw?: number }[], ground: (x: number, z: number) => number, keep?: { x: number; z: number }, clear = 9,
   sheds: readonly { x: number; z: number }[] = []): KitPiece[] {

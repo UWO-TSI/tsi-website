@@ -8,25 +8,27 @@ import { mkdirSync } from "node:fs";
 const require = createRequire("/opt/homebrew/lib/node_modules/");
 const { chromium } = require("playwright");
 
-// R2c spots (the jetty: its middle finger's tip at (93.1, 46), its platform at x 78.6, the gangways meeting the deck
-// boards at x 74.2; the path from (65.5, 56) winding up to the plaza at (30, 50)).
+// R2d spots (the jetty: its middle finger's tip at (94.3, 46), its platform at x 77.3 to 81.8, the gangways meeting
+// the deck boards at x 74.8; the path from (65.5, 56) winding up to the plaza at (30, 50); the fish market at (69.4, 34)).
 export const VIEWS = {
-  "05-docks-above": { at: [80, 46], yaw: 90, pitch: 0.8, zoom: 1.6 },
-  "01-arrival-wharf": { at: [91.6, 46], yaw: -90, pitch: 0.42, zoom: 1.6 },
+  "05-docks-above": { at: [84, 46], yaw: 90, pitch: 0.82, zoom: 1.6 },
+  "01-arrival-wharf": { at: [93.5, 46], yaw: -90, pitch: 0.42, zoom: 1.6 },
   "02-wharf-from-south": { at: [62, 82], yaw: 170, pitch: 0.42, zoom: 1.6 },
   "03-path-up": { at: [64, 56.5], yaw: -100, pitch: 0.45, zoom: 1.6 },
   "04-plaza": { at: [44, 53], yaw: 250, pitch: 0.42, zoom: 1.6 },
   "06-beach": { at: [-10, 102], yaw: 75, pitch: 0.42, zoom: 1.6 },
-  "07-beach-wharf-end": { at: [50, 96], yaw: 30, pitch: 0.45, zoom: 1.6 },
+  "07-beach-wharf-end": { at: [50, 92], yaw: 30, pitch: 0.45, zoom: 1.6 },
   "09-forest-edge": { at: [60, 22], yaw: 165, pitch: 0.38, zoom: 1.6 },
   "10-river-and-meadow": { at: [-34, 60], yaw: -70, pitch: 0.42, zoom: 1.6 },
   "13-market": { at: [73.5, 42], yaw: 195, pitch: 0.42, zoom: 1.3 },
-  "14-docks": { at: [86, 52], yaw: 200, pitch: 0.5, zoom: 1.6 },
+  "14-docks": { at: [87, 54], yaw: 200, pitch: 0.5, zoom: 1.6 },
   "16-campfire": { at: [14, 95.5], yaw: 0, pitch: 0.5, zoom: 1.2 },
   "17-deck-edge": { at: [72, 21], yaw: 160, pitch: 0.4, zoom: 1.0 },
   "18-wharf-night": { at: [66, 50], yaw: 120, pitch: 0.42, zoom: 1.6, time: "night" },
   "19-path-night": { at: [60, 58], yaw: -100, pitch: 0.45, zoom: 1.6, time: "night" },
   "20-plaza-night": { at: [44, 53], yaw: 250, pitch: 0.42, zoom: 1.6, time: "night" },
+  "21-shallows": { at: [9, 115], yaw: 0, pitch: 0.55, zoom: 1.2 },
+  "22-ship-houses": { at: [66, 66], yaw: 100, pitch: 0.42, zoom: 1.4 },
 };
 
 const [OUT = "/tmp/terrain-v3", ONLY] = process.argv.slice(2), PORT = process.env.PORT ?? 3171;

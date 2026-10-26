@@ -174,6 +174,8 @@ function quayAt(z: number, d: number): { x: number; z: number; yaw: number } {
   const nx = -(bz - az) / len, nz = (bx - ax) / len;
   return { x: ax + (bx - ax) * f + nx * d, z: z + nz * d, yaw: Math.atan2(nx, nz) };
 }
+/** The sandcastle's z, just up from the water's edge at x 8. */
+const SANDCASTLE_Z = 112;
 /** The beach's palms, bigger than the wharf's (David, R2c: "bigger trees"). */
 const BEACH_PALM = 1.35;
 /** The beach's campfire. */
@@ -208,10 +210,14 @@ const SUSHI = [44, 96.5] as const;
 const BEACH = strip([[58, 92], [40, 100], [10, 105], [-20, 105], [-50, 101]], 9, 8, 0.8, 16, 95);
 
 /**
- * How fast the seabed falls away from the shore: off the beach (east of the river's mouth) the shelf runs out 2.5 times
- * as far, a wide wading shallows (David, R2c: "make the shallow water area bigger and you can dip your toes in water").
+ * The seabed `d` out from the shore at (x, z): off the beach (east of the river's mouth) the shelf runs out 2.5 times as
+ * far and its first 0.6 of depth is a third shallower, a wide wading shallows (David, R2c: "make the shallow water area
+ * bigger and you can dip your toes in water"; defaultIsland WADE).
  */
-const shoal = (x: number, z: number) => 1 - 0.6 * smoothstep(-22, -4, BEACH(x, z)) * smoothstep(-46, -38, x);
+function bed(x: number, z: number, d: number): number {
+  const w = smoothstep(-22, -4, BEACH(x, z)) * smoothstep(-46, -38, x), b = shelf(d * (1 - 0.6 * w));
+  return b - 0.35 * w * Math.min(b, 0.6);
+}
 /** At the village's level, rolling a little, rising a touch toward the mountain: no sudden rise anywhere; across the river 1.5 lower (David: "slighly shorter by 1-2 blocks"). */
 const meadowGround = (x: number, z: number) => H.meadow + wob(x, z, 0.8, 40, 11) + 1.6 * smoothstep(0, -50, z) - 1.5 * smoothstep(0, 12, westOfRiver(x, z));
 const forestGround = (x: number, z: number) => {
@@ -354,6 +360,9 @@ const LAYOUT: Record<string, { x: number; z: number; yaw?: number; scale?: numbe
 };
 
 type Obj = World["objects"][number];
+/** One of village-art2's wild shrubs (`h` a hash: its pick of `models`, its turn and size, 0.8 to 1.3). */
+const shrub = (id: string, x: number, z: number, h: number, models: string) =>
+  obj("prop", id, x, z, h * 37.7, +(0.8 + 0.5 * ((h * 7.3) % 1)).toFixed(2), `shrub-${models[Math.floor(((h * 13.1) % 1) * models.length)]}`);
 /** A point `s` units along the path's middle, `side` units off it, and the yaw that turns a model's x along it there. */
 function onPath(s: number, side = 0): { x: number; z: number; yaw: number } {
   for (let j = 0; ; j++) {
@@ -416,12 +425,15 @@ function scenery(): Obj[] {
     if (nearest(PATH, q.x + ex, q.z + ez).d > 2.6 && nearest(PATH, q.x - ex, q.z - ez).d > 2.6 && nearest(PATH, q.x, q.z).d > 2.6) out.push(obj("prop", `path-fence-${fence++}`, q.x, q.z, yaw, 1, model));
     s += len + 0.6 + 1.6 * hash01(n, 3);
   }
-  for (const side of [-1, 1]) for (let s = 2; s < 25; s += 1.6 + 1.8 * hash01(bush, 4)) {
-    if (hash01(bush, 5) < 0.3) { bush++; continue; }
+  // village-art2's wild shrubs behind the fences (David, R2c: "fluffy and density varies"): mostly full, low and lopsided
+  // clumps, a tall or a sparse one in the gaps, in thickets and thin stretches; a big lush one at each bend.
+  for (const side of [-1, 1]) for (let s = 2; s < 25; s += 1.2 + 1.8 * hash01(bush, 4)) {
+    if (hash01(bush, 5) > 0.35 + 0.6 * fbm(s / 5, side, 9)) { bush++; continue; }
     const q = onPath(s, side * (3.6 + 1.4 * hash01(bush, 6)));
     if (nearest(PATH, q.x, q.z).d < 3.2) { bush++; continue; }
-    out.push({ id: `path-bush-${bush}`, kind: "bush", x: +q.x.toFixed(2), z: +q.z.toFixed(2), seed: bush++ });
+    out.push(shrub(`path-shrub-${bush}`, q.x, q.z, hash01(bush++, 7), "abfabfdc"));
   }
+  ([[9.4, 5.8], [13.6, -6], [18.2, 6.2]] as const).forEach(([s, side], i) => { const q = onPath(s, side); out.push(shrub(`path-shrub-bend-${i}`, q.x, q.z, hash01(i, 8), "e")); });
   // The path's edge stones (village-art's mossy rocks, at one and a half to twice their size), clear of its lanterns.
   for (let k = 0; k < 10; k++) for (const side of [-1, 1]) {
     const h = hash01(k, side + 20), q = onPath(2.5 + 2.5 * k + 0.8 * (h - 0.5), side * (2.15 + 0.3 * hash01(k, side + 21)));
@@ -490,6 +502,19 @@ function beachSet(): Obj[] {
   const out: Obj[] = [obj("prop", "sushi-bar", ...SUSHI, facing(1, 1), 1, "sushi-bar"), obj("prop", "lifeguard-tower", 1, 108.5, 0, 1, "lifeguard-tower")];
   ([[4.5, 107.4, "a"], [5.1, 107.8, "b"], [5.7, 107.3, "c"], [-16, 107, "c"], [-15.4, 107.5, "a"], [33, 104, "b"], [33.6, 104.4, "a"]] as const)
     .forEach(([x, z, m], i) => out.push(obj("prop", `surfboard-${i}`, x, z, 0.4 * (hash01(i, 30) - 0.5) + (x > 30 ? 2.6 : 0), 1, `surfboard-${m}`)));
+  // wharf-art2's beach things (David, R2c: "brainstorm for more beach stuff, maybe beach balls"): by each parasol a
+  // lounger looking out to sea, a towel or two, the cool box and a ball; the volleyball net on open sand well off the
+  // campfire, a ball by it; the sandcastle by the water's edge.
+  [[-30, 109], [-22, 110], [28, 108]].forEach(([x, z], i) => {
+    const h = (q: number) => hash01(i, 140 + q);
+    out.push(obj("prop", `beach-lounger-${i}`, x + 1.3, z - 0.2, 0.3 * (h(0) - 0.5), 1, "beach-lounger"));
+    out.push(obj("prop", `beach-towel-${i}`, x - 1.5, z + 0.3, 0.5 * (h(1) - 0.5), 1, h(2) < 0.5 ? "beach-towel-a" : "beach-towel-b"));
+    if (h(3) < 0.6) out.push(obj("prop", `beach-towel-${i}-b`, x - 2.6, z + 0.5, 0.5 * (h(4) - 0.5), 1, h(2) < 0.5 ? "beach-towel-b" : "beach-towel-a"));
+    out.push(obj("prop", `beach-cooler-${i}`, x + 0.5, z - 1.2, h(5) * 6.28, 1, "beach-cooler"));
+    out.push(obj("prop", `beach-ball-${i}`, x + 2.3, z + 1.5, h(6) * 6.28, 1, `beach-ball-${"abc"[i]}`));
+  });
+  out.push(obj("prop", "volleyball-net", -4, 103.5, 0, 1, "volleyball-net"), obj("prop", "beach-ball-net", -2.2, 105.6, 1.3, 1, "beach-ball-b"));
+  out.push(obj("prop", "sandcastle", 8, SANDCASTLE_Z, 0.4, 1, "sandcastle"));
   return out;
 }
 
@@ -552,7 +577,7 @@ function nature(): Obj[] {
     const id = `nature-${out.length}`, seed = Math.floor(hash01(i, k + 43) * 1000);
     // Trees in the three broadleaf shapes only (seed 0 to 2: lib/game/natureParts.ts), so they instance in few draws.
     if (tree) out.push({ id, kind: "tree", x: +x.toFixed(2), z: +z.toFixed(2), seed: seed % 3 });
-    else if (h < 0.42) out.push({ id, kind: "bush", x: +x.toFixed(2), z: +z.toFixed(2), seed });
+    else if (h < 0.42) out.push(shrub(id, x, z, hash01(i, k + 45), "abfabfdce"));
     else if (h < 0.62) out.push({ id, kind: "flower", x: +x.toFixed(2), z: +z.toFixed(2), seed });
     else out.push(obj("prop", id, x, z, h * 40, +(1 + 0.4 * hash01(i, k + 44)).toFixed(2), h < 0.82 ? "flower-meadow" : "flower-tallgrass"));
   }
@@ -560,12 +585,24 @@ function nature(): Obj[] {
 }
 
 /**
- * The coral (wharf-art's) in the beach's shallows, past the wading: where the sea is 0.8 to 1.6 deep, in reefs, each
- * turned and sized its own way. From the generated ground, so it follows the seabed.
+ * The coral in the beach's shallows, past the wading, where the sea is 0.8 to 1.6 deep: wharf-art2's reefs off the beach
+ * and the campfire, seen from the shore and while wading (David, R2c: "have coral reeffs and fish you can see in the
+ * shallow water"), and wharf-art's clumps massed round them, each turned and sized its own way. From the generated
+ * ground, so it follows the seabed.
  */
 function shallows(t: World["terrain"]): Obj[] {
   const out: Obj[] = [];
-  for (let i = 0; i < 60; i++) for (let k = 0; k < 14; k++) {
+  // A reef every 4.5 u or so along the beach, out where the sea first reaches 0.8 deep.
+  for (let i = 0, k = 0; i < 18; i++) {
+    const x = -30 + i * 4.5 + 2 * (hash01(i, 66) - 0.5);
+    let z = 110;
+    while (z < 140 && t.seaLevel - terrainHeight(t, x, z) < 0.8) z += 0.5;
+    z += 0.6 + 1.2 * hash01(i, 67);
+    const depth = t.seaLevel - terrainHeight(t, x, z);
+    if (depth < 0.8 || depth > 1.6 || hash01(i, k + 68) > 0.7) continue;
+    out.push(obj("prop", `coral-reef-${out.length}`, x, z, hash01(i, k + 69) * 6.28, +(0.9 + 0.3 * hash01(k, i + 70)).toFixed(2), `coral-reef-${"abc"[Math.floor(hash01(i, k + 71) * 3)]}`));
+  }
+  for (let i = 0; i < 60; i++) for (let k = 0; k < 18; k++) {
     const x = -56 + i * 1.9 + 1.5 * (hash01(i, k + 60) - 0.5), z = 100 + k * 1.9 + 1.5 * (hash01(k, i + 61) - 0.5), h = hash01(i * 3 + k, 62);
     const depth = t.seaLevel - terrainHeight(t, x, z);
     // In reefs (David, R2c: "have coral reeffs"), with a few loners between.
@@ -577,18 +614,61 @@ function shallows(t: World["terrain"]): Obj[] {
 }
 
 /**
+ * The river dressed (village-art2's river set; David, R2c: "it feels so barren and unnatural"), from the generated
+ * ground: every 2.2 u down the river, on each bank's waterline, reeds (thicker on the inside of a bend, a straight run
+ * where the bank runs straight), stones in the shallows and big ones half in the water, shrubs and now and then a mossy
+ * boulder up the bank, lily pads in the still water of the bends and the mouth, driftwood on the sand there. Clear of
+ * the washed-out bridge.
+ */
+function riverside(t: World["terrain"]): Obj[] {
+  const out: Obj[] = [], sea = t.seaLevel;
+  const put = (x: number, z: number, yaw: number, scale: number, model: string) => out.push(obj("prop", `river-${out.length}`, x, z, yaw, scale, model));
+  for (let j = 0, n = 0; j + 1 < RIVER.length; j++) {
+    const [ax, az] = RIVER[j], [bx, bz] = RIVER[j + 1], len = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / len, uz = (bz - az) / len;
+    const along = Math.atan2(-uz, ux);
+    for (let s = 1.1; s < len; s += 2.2, n++) for (const side of [-1, 1]) {
+      const cx = ax + ux * s, cz = az + uz * s, px = -uz * side, pz = ux * side;
+      if (Math.hypot(cx - -41, cz - 52) < 9) continue;
+      let w = 0;
+      while (w < 14 && terrainHeight(t, cx + px * w, cz + pz * w) <= sea) w += 0.25;
+      if (w >= 14) continue;
+      // The inside of a bend: the river turning toward this bank, near either end of the stretch.
+      const [ox, oz] = s > len / 2 ? (RIVER[j + 2] ? [RIVER[j + 2][0] - bx, RIVER[j + 2][1] - bz] : [0, 0]) : (j ? [ax - RIVER[j - 1][0], az - RIVER[j - 1][1]] : [0, 0]);
+      const turn = (ox * px + oz * pz) / (Math.hypot(ox, oz) || 1) * (s > len / 2 ? 1 : -1);
+      const inside = turn > 0.08 && Math.min(s, len - s) < 7, still = inside || cz > 100, k = n * 2 + (side > 0 ? 1 : 0), h = (q: number) => hash01(k, 100 + q);
+      const at = (off: number, slide = 0): [number, number] => [cx + px * (w + off) + ux * slide, cz + pz * (w + off) + uz * slide];
+      if (h(0) < (inside ? 0.95 : 0.6)) {
+        if (!inside && h(1) < 0.3) put(...at(-0.2), along, 1, "reeds-c");
+        else put(...at(-0.6 + 0.9 * h(2), 0.6 * (h(3) - 0.5)), h(4) * 6.28, +(0.8 + 0.4 * h(5)).toFixed(2), h(6) < 0.6 ? "reeds-a" : "reeds-b");
+        if (inside && h(7) < 0.7) put(...at(-0.3, 1.1), h(8) * 6.28, 1, "reeds-b");
+      }
+      if (h(9) < 0.2) put(...at(-0.9 - 0.5 * h(10), 0.8), h(11) * 6.28, +(0.7 + 0.8 * h(12)).toFixed(2), "river-stones-a");
+      if (h(13) < 0.08) put(...at(-0.15, -0.9), h(14) * 6.28, 1, "river-stones-b");
+      if (h(15) < 0.3) put(...at(2.4 + 2 * h(16), 0.8 * (h(17) - 0.5)), h(18) * 37.7, +(0.8 + 0.5 * h(19)).toFixed(2), `shrub-${"aef"[Math.floor(h(20) * 3)]}`);
+      if (h(21) < 0.05) put(...at(1.8), h(22) * 6.28, +(0.8 + 0.6 * h(23)).toFixed(2), "moss-boulder-a");
+      if (still && h(24) < 0.7) put(...at(-1.6 - 1.6 * h(25), 0.5), h(26) * 6.28, 1, h(27) < 0.5 ? "lily-pads-a" : "lily-pads-b");
+      if (cz > 95 && h(28) < 0.35) put(...at(1 + h(29)), along + h(30) - 0.5, 1, h(31) < 0.5 ? "driftwood-a" : "driftwood-b");
+    }
+  }
+  return out;
+}
+
+/**
  * The closed forest (David, R2c: "a low render for performance that also looks like busy forest over there but also look
- * natural"): many single low-poly trees (the far versions of our cedar and two broadleaf shapes, instanced: a few draws
- * for the lot), packed on a jittered 2.9 u grid over the whole forest off the mountain's foot and now and then left out,
- * mostly cedars, each turned and sized its own way (never stretched) and standing on its own ground.
+ * natural"): many single low-poly trees (village-art2's forest trees, instanced: two draws a kind), packed about 2.15 u
+ * apart on a jittered grid over the whole forest off the mountain's foot and now and then left out; cedars most, then
+ * firs, broadleaves and young trees, the firs and young ones toward the forest's edge; each turned its own way, sized
+ * uniformly 0.8 to 1.25 (never stretched) and standing on its own ground.
  */
 function forestTrees(): Obj[] {
   const out: Obj[] = [];
-  for (let i = 0; i < 40; i++) for (let k = 0; k < 52; k++) {
-    const x = 20 + i * 2.9 + 2.4 * (hash01(i, k) - 0.5), z = -140 + k * 2.9 + 2.4 * (hash01(k + 50, i) - 0.5), h = hash01(i * 31 + k, 7);
-    if (FOREST(x, z) < 1 || MT_FOOT(x, z) > -2 || hash01(i + 70, k) < 0.08) continue;
-    const model = h < 0.55 ? "forest-cedar" : h < 0.8 ? "forest-tall" : "forest-round";
-    out.push(obj("prop", `forest-${out.length}`, x, z, hash01(k, i * 13) * 2 * Math.PI, +((model === "forest-cedar" ? 1.5 : 1.3) + 0.6 * hash01(i, k + 99)).toFixed(2), model));
+  for (let i = 0; i < 55; i++) for (let k = 0; k < 71; k++) {
+    const x = 20 + i * 2.15 + 1.1 * (hash01(i, k) - 0.5), z = -140 + k * 2.15 + 1.1 * (hash01(k + 50, i) - 0.5), in_ = FOREST(x, z);
+    if (in_ < 1 || MT_FOOT(x, z) > -2 || hash01(i + 70, k) < 0.06) continue;
+    // Within 6 u of the edge, a fir or a young tree more often than not.
+    const h = hash01(i * 31 + k, 7), edgy = hash01(i, k + 7) < 0.6 * (1 - smoothstep(1, 6, in_));
+    const model = edgy ? (h < 0.6 ? "fir" : "young") : h < 0.4 ? "cedar" : h < 0.65 ? "fir" : h < 0.87 ? "broadleaf" : "young";
+    out.push(obj("prop", `forest-${out.length}`, x, z, hash01(k, i * 13) * 2 * Math.PI, +(0.8 + 0.45 * hash01(i, k + 99)).toFixed(2), `forest-tree-${model}`));
   }
   return out;
 }
@@ -687,14 +767,14 @@ export function generateWorld(objects: World["objects"], keep: readonly MapAnnot
       if (r.paint !== undefined && off < r.half) { painted[p] = r.paint; below[p] = Infinity; }
     }
     if (Math.hypot(x - PLAZA.at[0], z - PLAZA.at[1]) < PLAZA.r + wob(x, z, 0.6, 3, 99)) { painted[p] = Paint.Stone; below[p] = Infinity; }
-    t.heights[p] = d <= 0 ? t.seaLevel - shelf(-d * shoal(x, z)) : t.seaLevel + softMin(h - t.seaLevel, g * d, 12);
+    t.heights[p] = d <= 0 ? t.seaLevel - bed(x, z, -d) : t.seaLevel + softMin(h - t.seaLevel, g * d, 12);
   }
   rockRelief(t, 0.35, 2.2);
   const quays = wharfQuay(t, objects, shore);
   const pads = padBuildings(t, objects);
   const steepMoved = limitSteepness(t);
   strata(t);
-  objects = [...objects.filter(o => !o.id.startsWith("coral-")), ...shallows(t)];
+  objects = [...objects.filter(o => !o.id.startsWith("coral-") && !o.id.startsWith("river-")), ...shallows(t), ...riverside(t)];
 
   let land = 0, lo = Infinity, hi = -Infinity;
   for (let p = 0; p < n; p++) {

@@ -76,10 +76,10 @@ function fits(map: IslandMap, shore: ShoreSdf, s: FishSchool, skip?: (x: number,
 
 /**
  * The map's schools: tried at seeded spots over the sea's shallows (level-0 water), each kept if its whole loop stays
- * in the shallows, clear of `avoid` (the fishing spots, the wharf) and 6 u from the others. `lite`: a third as many,
- * smaller schools.
+ * in the shallows, clear of `avoid` (the fishing spots, the wharf) and 6 u from the others, half of them round `near`
+ * where it can. `lite`: a third as many, smaller schools.
  */
-export function fishSchools(map: IslandMap, shore: ShoreSdf, { avoid, lite = false, max = 12 }: { avoid?: (x: number, z: number) => boolean; lite?: boolean; max?: number } = {}): FishSchool[] {
+export function fishSchools(map: IslandMap, shore: ShoreSdf, { avoid, lite = false, max = 12, near = [] }: { avoid?: (x: number, z: number) => boolean; lite?: boolean; max?: number; near?: readonly (readonly [number, number])[] } = {}): FishSchool[] {
   const r = random(0x51f15e), out: FishSchool[] = [], want = lite ? Math.ceil(max / 3) : max;
   const cells: [number, number][] = [];
   for (let cz = 0; cz < map.depth; cz++) for (let cx = 0; cx < map.width; cx++) {
@@ -87,8 +87,10 @@ export function fishSchools(map: IslandMap, shore: ShoreSdf, { avoid, lite = fal
     const x = cellToWorldX(map, cx), z = cellToWorldZ(map, cz), dip = seabedDip(map, shore, x, z);
     if (dip > 0.45 && dip < 1.3) cells.push([x, z]);
   }
+  // Half the tries round the `near` spots (the new world's reefs), where there are cells there.
+  const by = cells.filter(([x, z]) => near.some(([nx, nz]) => Math.hypot(x - nx, z - nz) < 6));
   for (let tries = 0; tries < 600 && out.length < want && cells.length; tries++) {
-    const [x, z] = cells[Math.floor(r() * cells.length)];
+    const from = by.length && r() < 0.5 ? by : cells, [x, z] = from[Math.floor(r() * from.length)];
     const a = 1.1 + r() * 1.6, s: FishSchool = {
       cx: x + (r() - 0.5) * 0.8, cz: z + (r() - 0.5) * 0.8, a, b: a * (0.45 + r() * 0.35), turn: r() * Math.PI,
       count: lite ? 4 + Math.floor(r() * 2) : 6 + Math.floor(r() * 4), speed: 0.45 + r() * 0.35, dir: r() < 0.5 ? 1 : -1,

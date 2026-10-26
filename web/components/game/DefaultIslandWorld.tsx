@@ -23,7 +23,7 @@ import QualityGovernor from "./QualityGovernor";
 import { FadeLight, LampPool, Lanterns, lampLight } from "./AmbientProps";
 import { GLBProp, sceneryOf } from "./NatureModels";
 import { InstancedModels, MergedModels } from "./InstancedNature";
-import { ACNHBuilding, ACNHParts, CHALET_VARIANTS, type PartsPlacement } from "./ACNHBuilding";
+import { ACNHBuilding, ACNHHouses, ACNHParts, CHALET_VARIANTS, type PartsPlacement } from "./ACNHBuilding";
 import { FenceLine } from "./NatureModels";
 import { BRIDGE_URL, CATCH_BOARD_URL, MAILBOX_URL, MONUMENT_SIGN_URL, NEW_LAMPS, NOTICE_BOARD_URL } from "@/lib/game/propModels";
 import Wharf from "./wharf/Wharf";
@@ -303,7 +303,8 @@ function villageLayout(v: Village) {
     underBuilding: (x: number, z: number) => [...marks, ...houseBoxes].some(l => !!l.half && Math.abs(x - l.x) < l.half[0] + 0.5 && Math.abs(z - l.z) < l.half[1] + 0.5),
     houses,
     dock: wharfDock(v),
-    fireflies: objectsOf("bush", v).map(xz),
+    // Round the bushes (the new world's wild shrubs).
+    fireflies: [...objectsOf("bush", v), ...objectsOf("prop", v).filter(o => o.model?.startsWith("shrub-"))].map(xz),
     /** The beach campfire (specs/v1-drop.md §3): the map's, or open sand by the beach until one is placed. */
     campfire: campfireSite(v),
     puddles: objectsOf("puddle", v).map(xz),
@@ -318,6 +319,8 @@ function villageLayout(v: Village) {
     },
     /** Fitting room beside the shop; ruins mission board beside the cliff gate (combat-foundation.md §6). */
     fitting: fitting ? xz(fitting) : null,
+    /** The new world's coral reefs, where its fish gather. */
+    reefs: objectsOf("prop", v).filter(o => o.model?.startsWith("coral-reef-")).map(xz),
     /** The new world's quick-sell barrel (lib/game/wharf.ts SELL_BARREL), or none. */
     sellBarrel: (b => (b ? xz(b) : null))(objectsOf("prop", v).find(o => o.id === SELL_BARREL)),
     missions: missions ? { at: xz(missions), yaw: missions.yaw ?? 0 } : null,
@@ -535,7 +538,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       <Suspense fallback={null}><Seabed map={island.map} lite={liteMode} skip={layout.underWharf} /></Suspense>
       <WaterContacts map={island.map} player={player} ground={island.ground} rocks={layout.rocks} />
       <GlassWater />
-      <Suspense fallback={null}><DecorativeFish map={island.map} lite={liteMode} skip={layout.underWharf} max={v.terrain ? 40 : undefined} /></Suspense>
+      <Suspense fallback={null}><DecorativeFish map={island.map} lite={liteMode} skip={layout.underWharf} max={v.terrain ? 40 : undefined} near={layout.reefs} /></Suspense>
       <PeacefulLayer map={island.map} nodes={layout.nodes} moment={peaceful.moment} member={peaceful.member} player={player} ground={island.ground} highTier={!liteMode} active={!fishing} treeModels={SEASON_TREES[look.season]} />
       <BeachBottle player={player} ground={island.ground} />
       {/* After the first leaf glider is made: a marked edge and a ring to land in (the guided first glide). */}
@@ -633,7 +636,7 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
   const { hq, shop, oracle, cafe, museum, ruins, monument, mailbox, notice } = Object.fromEntries(placed) as Partial<Record<Landmark["id"], Landmark>>;
   const board = placed.get("catch"), { missions } = layout;
   // The residents' houses by colourway, each set instanced (one draw per part for all its houses).
-  const houseSets = useMemo(() => (Object.keys(CHALET_VARIANTS) as (keyof typeof CHALET_VARIANTS)[]).map(colour => [colour, layout.houses
+  const houseSets = useMemo(() => (Object.keys(CHALET_VARIANTS) as (keyof typeof CHALET_VARIANTS)[]).map(colour => [CHALET_VARIANTS[colour], layout.houses
     .filter(h => houseModel(h.model) === `chalet-${colour}`)
     .map((h): PartsPlacement => ({ position: [h.x, ground(h.x, h.z), h.z], yaw: h.yaw ?? 0, scale: h.scale ?? 1 }))] as const).filter(([, at]) => at.length), [layout, ground]);
   return <>
@@ -650,7 +653,7 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {cafe && <group position={at(cafe)} rotation={[0, cafe.yaw ?? 0, 0]} scale={cafe.scale ?? 1}><CafeBuilding state={!DROPS.cafe ? "soon" : opened.includes("cafe") ? "open" : "boarded"} light={light} /></group>}
     {museum && <group position={at(museum)} rotation={[0, museum.yaw ?? 0, 0]} scale={museum.scale ?? 1}><ACNHParts parts={CHALET_VARIANTS.red} lit={windowLit(light)} /></group>}
     {/* The residents' houses: the chalet in the colourway its model names. */}
-    {houseSets.map(([colour, at]) => <ACNHParts key={colour} parts={CHALET_VARIANTS[colour]} lit={windowLit(light)} at={at} />)}
+    {houseSets.length > 0 && <ACNHHouses sets={houseSets} lit={windowLit(light)} />}
     {/* Boarded doors: the connectable fence across the museum's entrance, three posts and their rails (lib/game/fences.ts;
         the café boards its own, CafeBuilding). */}
     {museum && !opened.includes(museum.id as WorldGoalId) && <FenceLine x0={museum.x - 1} z0={front(museum) - 0.35} dx={1} dz={0} n={3} ground={ground} />}
