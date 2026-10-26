@@ -667,7 +667,15 @@ function riverside(t: World["terrain"]): Obj[] {
       }
       if (h(9) < 0.2) put(...at(-0.9 - 0.5 * h(10), 0.8), h(11) * 6.28, +(0.7 + 0.8 * h(12)).toFixed(2), "river-stones-a");
       if (h(13) < 0.08) put(...at(-0.15, -0.9), h(14) * 6.28, 1, "river-stones-b");
-      if (h(15) < 0.3) put(...at(2.4 + 2 * h(16), 0.8 * (h(17) - 0.5)), h(18) * 37.7, +(0.8 + 0.5 * h(19)).toFixed(2), `shrub-${"aef"[Math.floor(h(20) * 3)]}`);
+      // trees-art's river trees every few steps along both banks (David, R2d: "trees a bit small and look like bushes"):
+      // willows and alders right on the bank, oaks a few units back, the leaning one out over the water; a shrub at the foot.
+      const tree = (n + (side > 0 ? 1 : 0)) % 3 === 0 && cz < 92 && h(32) < 0.8 ? (h(33) < 0.35 ? "willow" : h(33) < 0.65 ? "alder" : h(33) < 0.85 ? "oak" : "lean") : null;
+      if (tree) {
+        const back = tree === "oak" ? 3.2 + h(34) : 0.7 + 0.5 * h(34), scale = +(0.9 + 0.25 * h(35)).toFixed(2);
+        put(...at(back, 0.6 * (h(36) - 0.5)), tree === "lean" ? Math.atan2(pz, -px) : h(37) * 6.28, scale, `river-tree-${tree}`);
+        put(...at(back + 1.2, 1.1 * (h(38) - 0.5)), h(39) * 37.7, +(0.8 + 0.4 * h(40)).toFixed(2), `shrub-${"aef"[Math.floor(h(41) * 3)]}`);
+      }
+      else if (h(15) < 0.3) put(...at(2.4 + 2 * h(16), 0.8 * (h(17) - 0.5)), h(18) * 37.7, +(0.8 + 0.5 * h(19)).toFixed(2), `shrub-${"aef"[Math.floor(h(20) * 3)]}`);
       if (h(21) < 0.05) put(...at(1.8), h(22) * 6.28, +(0.8 + 0.6 * h(23)).toFixed(2), "moss-boulder-a");
       if (still && h(24) < 0.7) put(...at(-1.6 - 1.6 * h(25), 0.5), h(26) * 6.28, 1, h(27) < 0.5 ? "lily-pads-a" : "lily-pads-b");
       if (cz > 95 && h(28) < 0.35) put(...at(1 + h(29)), along + h(30) - 0.5, 1, h(31) < 0.5 ? "driftwood-a" : "driftwood-b");

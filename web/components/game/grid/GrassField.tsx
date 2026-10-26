@@ -122,6 +122,7 @@ uniform vec2 uGrassLook;
 uniform float uSnow;
 uniform float uWet;
 uniform float uLean;
+uniform float uLush;     // 1: the smooth world's lawn, one even, lush green (0: the village's, as it was)
 varying vec3 vGrass;
 varying float vFade;
 varying vec2 vBladeUv;
@@ -166,7 +167,7 @@ const VERTEX_BODY = /* glsl */ `
   // Patches: the lawn grows thicker and taller in places (world noise), thinner where it meets a path.
   float gPatch = grassNoise(gRoot * 0.21);
   float gH = uWind.w * uLayerH * (0.62 + 0.6 * gr.w) * mix(0.72, 1.22, gPatch) * mix(0.4, 1.0, smoothstep(0.05, 0.7, gDensity));
-  gH *= (1.0 - 0.85 * uSnow) * mix(0.5, 1.0, gFade);
+  gH *= (1.0 - 0.85 * uSnow) * mix(0.5, 1.0, gFade) * (1.0 + 0.2 * uLush);
   // Face the camera (with a twist per clump and per card) and lean away from it as the view looks down.
   float gCard = position.z;
   vec2 gToCamH = normalize(gToCam.xz + vec2(1e-4, 0.0));
@@ -195,8 +196,8 @@ const VERTEX_BODY = /* glsl */ `
   vec2 gq = gRoot * ${PATCH_UV.toFixed(4)} * 0.9;
   float gHue = sin(gq.x * 1.3 + sin(gq.y * 1.1) * 1.6) * sin(gq.y * 1.5 + sin(gq.x * 0.9) * 1.8);
   vec3 gShift = mix(vec3(1.0), gHue > 0.0 ? vec3(1.08, 1.02, 0.82) : vec3(0.9, 1.0, 1.06), abs(gHue) * uGrassLook.y);
-  vec3 gBase = uGrassColor * gShift * (0.9 + 0.16 * gr2.w + 0.14 * (gPatch - 0.5));
-  vec3 gC = mix(gBase * 0.52, gBase * vec3(1.14, 1.2, 0.9) + vec3(0.02, 0.03, 0.0), smoothstep(0.0, 1.0, gUp));
+  vec3 gBase = uGrassColor * gShift * (0.98 + mix(0.16, 0.05, uLush) * (gr2.w - 0.5) + mix(0.14, 0.06, uLush) * (gPatch - 0.5));
+  vec3 gC = mix(gBase * mix(0.52, 0.72, uLush), gBase * mix(vec3(1.14, 1.2, 0.9), vec3(1.06, 1.12, 0.96), uLush) + vec3(0.02, 0.03, 0.0) * (1.0 - uLush), smoothstep(0.0, 1.0, gUp));
   gC *= 1.0 + 0.16 * gGust * gUp * min(1.0, uWind.x / 0.3);
   gC *= 1.0 - 0.24 * gPressed;
   gC *= 1.0 - 0.14 * uWet;
@@ -228,7 +229,7 @@ function sharedUniforms(dataTex: THREE.DataTexture, bendTex: THREE.DataTexture, 
     uFocus: { value: new THREE.Vector2() }, uFade: { value: new THREE.Vector2(20, 30) },
     uData: { value: dataTex }, uDataN: { value: new THREE.Vector2(data, DATA_TEXEL) },
     uBend: { value: bendTex }, uBendN: { value: new THREE.Vector3(BEND_N, BEND_TEXEL, 1) },
-    uGrassColor: { value: new THREE.Color() }, uGrassLook: TERRAIN_GRASS, uSnow: TERRAIN_SNOW, uWet: TERRAIN_WET, uLean: { value: 0.6 },
+    uGrassColor: { value: new THREE.Color() }, uGrassLook: TERRAIN_GRASS, uSnow: TERRAIN_SNOW, uWet: TERRAIN_WET, uLean: { value: 0.6 }, uLush: { value: 0 },
     uBlade: { value: bladeMap() },
   };
 }
@@ -282,12 +283,14 @@ const _dir = new THREE.Vector3(), _at = new THREE.Vector3(), _focus = { x: 0, z:
  * `color`: the island's grass (the seasonal palette's). `windScale` multiplies the sway (0 holds it still). `clear`:
  * false where a solid stands (buildings, trunks, rocks), so no blades grow through it.
  */
-export default function GrassField({ map, field: suppliedField, color, windScale = 1, lite = false, clear, sampler, revision = 0 }: {
+export default function GrassField({ map, field: suppliedField, color, windScale = 1, lite = false, clear, sampler, revision = 0, lush = false }: {
   map?: IslandMap; field?: Float32Array; color: string; windScale?: number; lite?: boolean; clear?: (x: number, z: number) => boolean;
   /** Where grass grows and the ground under it, when the world is not a cell map (the smooth world: lib/game/world/terrain.ts). */
   sampler?: GrassSampler;
   /** Bump after editing the ground in place (the world editor): every texel in view is resampled. */
   revision?: number;
+  /** One even, lush green instead of the speckled lawn (the smooth world; David, R2d: "i want grass for feel like fass and not feel like a mess"). */
+  lush?: boolean;
 }) {
   const t = useTuning();
   const tier = lite ? GRASS_TIERS.lite : GRASS_TIERS.high;
@@ -318,6 +321,7 @@ export default function GrassField({ map, field: suppliedField, color, windScale
     for (const l of state.layers) { l.material.dispose(); l.geometry.dispose(); }
   }, [state]);
   useEffect(() => { state.uniforms.uGrassColor.value.set(color); }, [state, color]);
+  useEffect(() => { state.uniforms.uLush.value = lush ? 1 : 0; }, [state, lush]);
 
   useFrame(({ camera }, delta) => advance(state, camera, delta, t.grass, windScale, tier));
 
