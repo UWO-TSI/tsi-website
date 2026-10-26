@@ -594,30 +594,33 @@ function nature(): Obj[] {
 }
 
 /**
- * The coral in the beach's shallows, past the wading, where the sea is 0.8 to 1.6 deep: wharf-art2's reefs off the beach
+ * The coral in the beach's shallows, past the wading, always a hand under the water: wharf-art2's reefs off the beach
  * and the campfire, seen from the shore and while wading (David, R2c: "have coral reeffs and fish you can see in the
  * shallow water"), and wharf-art's clumps massed round them, each turned and sized its own way. From the generated
  * ground, so it follows the seabed.
  */
+/** The coral models' tops at scale 1 (their GLB bounds; the reefs' tallest). */
+const CORAL_TOP = { a: 0.65, b: 0.36, c: 0.55, d: 0.42, reef: 1.34 } as const;
 function shallows(t: World["terrain"]): Obj[] {
   const out: Obj[] = [];
-  // A reef every 4.5 u or so along the beach, out where the sea first reaches 0.8 deep.
-  for (let i = 0, k = 0; i < 18; i++) {
-    const x = -30 + i * 4.5 + 2 * (hash01(i, 66) - 0.5);
+  // A reef every 4.5 u or so along the beach, out where the sea is deep enough to keep it under (its top 1.34 at scale
+  // 1, a hand of water over it).
+  for (let i = 0; i < 18; i++) {
+    const x = -30 + i * 4.5 + 2 * (hash01(i, 66) - 0.5), scale = +(0.75 + 0.2 * hash01(i, 70)).toFixed(2);
     let z = 110;
-    while (z < 140 && t.seaLevel - terrainHeight(t, x, z) < 0.8) z += 0.5;
-    z += 0.6 + 1.2 * hash01(i, 67);
+    while (z < 140 && t.seaLevel - terrainHeight(t, x, z) < CORAL_TOP.reef * scale + 0.2) z += 0.5;
+    z += 0.3 + 0.8 * hash01(i, 67);
     const depth = t.seaLevel - terrainHeight(t, x, z);
-    if (depth < 0.8 || depth > 1.6 || hash01(i, k + 68) > 0.7) continue;
-    out.push(obj("prop", `coral-reef-${out.length}`, x, z, hash01(i, k + 69) * 6.28, +(0.9 + 0.3 * hash01(k, i + 70)).toFixed(2), `coral-reef-${"abc"[Math.floor(hash01(i, k + 71) * 3)]}`));
+    if (depth < CORAL_TOP.reef * scale + 0.2 || depth > 2.4 || hash01(i, 68) > 0.7) continue;
+    out.push(obj("prop", `coral-reef-${out.length}`, x, z, hash01(i, 69) * 6.28, scale, `coral-reef-${"abc"[Math.floor(hash01(i, 71) * 3)]}`));
   }
   for (let i = 0; i < 60; i++) for (let k = 0; k < 18; k++) {
     const x = -56 + i * 1.9 + 1.5 * (hash01(i, k + 60) - 0.5), z = 100 + k * 1.9 + 1.5 * (hash01(k, i + 61) - 0.5), h = hash01(i * 3 + k, 62);
-    const depth = t.seaLevel - terrainHeight(t, x, z);
-    // In reefs (David, R2c: "have coral reeffs"), with a few loners between.
+    const depth = t.seaLevel - terrainHeight(t, x, z), m = "abcd"[Math.floor(hash01(i, k + 64) * 4)] as keyof typeof CORAL_TOP, scale = +(0.8 + 0.5 * hash01(k, i + 63)).toFixed(2);
+    // In reefs (David, R2c: "have coral reeffs"), with a few loners between, always under the water.
     if ((fbm(x / 9, z / 9, 65) < 0.5 || h > 0.85) && h > 0.06) continue;
-    if (depth < 0.8 || depth > 1.6) continue;
-    out.push(obj("prop", `coral-${out.length}`, x, z, h * 21, +(0.8 + 0.5 * hash01(k, i + 63)).toFixed(2), `coral-${"abcd"[Math.floor(hash01(i, k + 64) * 4)]}`));
+    if (depth < CORAL_TOP[m] * scale + 0.2 || depth > 2) continue;
+    out.push(obj("prop", `coral-${out.length}`, x, z, h * 21, scale, `coral-${m}`));
   }
   return out;
 }
