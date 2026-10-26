@@ -71,15 +71,23 @@ function easeGlowOnce(group: THREE.Object3D, target: number, dt: number) {
  * The globes share their materials, so they ease up and down together as the Lanterns' did; each lamp keeps its own
  * pool of light.
  */
-export function Lanterns({ positions, intensity, glow }: { positions: readonly [number, number, number][]; intensity: number; glow: number }) {
+export function Lanterns({ positions, intensity, glow, lamp = { url: LAMP_URL, light: [0, 2.4, 0] }, yaws }: {
+  positions: readonly [number, number, number][]; intensity: number; glow: number;
+  /** Which lamp (propModels NEW_LAMPS) and its light point in the model; `yaws` turn each (radians about +y). */
+  lamp?: { url: string; light: readonly [number, number, number] }; yaws?: readonly number[];
+}) {
   const group = useRef<THREE.Group>(null);
-  const placements = useMemo(() => positions.map(position => ({ position })), [positions]);
+  const placements = useMemo(() => positions.map((position, i) => ({ position, rotation: yaws?.[i] })), [positions, yaws]);
   useFrame((_, raw) => { if (group.current) easeGlowOnce(group.current, glow, Math.min(raw, 0.1)); });
+  const [lx, ly, lz] = lamp.light;
   return (
     <group>
       {/* The globes start dark and ease to their target (a fixed prepared intensity, so the model is never rebuilt). */}
-      <group ref={group}><InstancedGLB url={LAMP_URL} placements={placements} emissiveIntensity={0} /></group>
-      {positions.map((p, i) => <FadeLight key={i} color="#FFA040" intensity={intensity} distance={5} position={[p[0], p[1] + 2.4, p[2]]} />)}
+      <group ref={group}><InstancedGLB url={lamp.url} placements={placements} emissiveIntensity={0} /></group>
+      {positions.map((p, i) => {
+        const c = Math.cos(yaws?.[i] ?? 0), s = Math.sin(yaws?.[i] ?? 0);
+        return <FadeLight key={i} color="#FFA040" intensity={intensity} distance={5} position={[p[0] + lx * c + lz * s, p[1] + ly, p[2] - lx * s + lz * c]} />;
+      })}
     </group>
   );
 }

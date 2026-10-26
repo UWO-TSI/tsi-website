@@ -10,6 +10,14 @@ export const CAMPFIRE_URL = `${P}campfire.glb`;
 export const MAILBOX_URL = `${P}mailbox.glb`;
 /** The street lamp (AmbientProps Lanterns, instanced): 2.67 to its finial, the lantern's glass round the light at 2.4. */
 export const STREETLAMP_URL = `${P}streetlamp.glb`;
+/**
+ * The new world's lamps (art/props/build_new_lamps.py), each with its light point in the model (its arm reaches +x):
+ * draw them with AmbientProps Lanterns' `lamp` (and `yaws` to turn the arms). The street lamp keeps the old one's top.
+ */
+export const NEW_LAMPS = {
+  village: { url: `${P}village-lamp.glb`, light: [0.52, 2.08, 0] },
+  wharf: { url: `${P}lantern-post.glb`, light: [0.56, 1.78, 0] },
+} as const;
 /** The wharf's channel buoys (wharf/Wharf.tsx): the float meets the water BUOY_WATERLINE up its model. */
 export const BUOY_URL = `${P}buoy.glb`;
 export const BUOY_WATERLINE = 0.66;

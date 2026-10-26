@@ -142,6 +142,14 @@ describe("remodelled props (propModels.ts)", () => {
       if (foot && /^(wharf-|rope-)/.test(model)) for (const [i, half] of [[0, foot[0]], [2, foot[1]]]) expect(Math.max(-b.min[i], b.max[i]), model).toBeLessThanOrEqual(half + 0.01);
     }
   });
+  it("hangs each new lamp's lantern round its light point, the street lamp as tall as the old one", () => {
+    expect(bounds(Props.NEW_LAMPS.village.url).max[1]).toBeCloseTo(2.67, 2);
+    for (const { url, light } of Object.values(Props.NEW_LAMPS)) {
+      const b = bounds(url);
+      expect(b.max[0], url).toBeGreaterThan(light[0] + 0.08);
+      expect(b.max[1], url).toBeGreaterThan(light[1] + 0.2);
+    }
+  });
   it("lays the wharf kit in the deck's frame: a 4 u square at the boards' top, steps up 1, a ladder and a pile down into the sea", () => {
     const tile = bounds(Props.SCENERY_URLS["deck-tile"]), steps = bounds(Props.SCENERY_URLS["deck-steps"]);
     for (const b of [tile, steps]) for (const i of [0, 2]) expect(Math.max(-b.min[i], b.max[i])).toBeLessThanOrEqual(2.02);
