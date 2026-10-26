@@ -138,6 +138,10 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   ...Object.fromEntries(["a", "b", "c"].map(m => [`reeds-${m}`, `/assets/game/plants/reeds-${m}.glb`])),
   ...Object.fromEntries(["a", "b"].map(m => [`lily-pads-${m}`, `/assets/game/water/lily-pads-${m}.glb`])),
   ...Object.fromEntries(["river-stones-a", "river-stones-b", "driftwood-a", "driftwood-b"].map(m => [m, `${P}${m}.glb`])),
+  // Single low-poly forest trees for the closed forest (art/trees/build_forest_trees.py, the masses' own tree makers), 100
+  // to 220 triangles, the trunk's foot at the origin (it runs 0.8 under): a broad cedar (7.5 tall), a tall narrow fir
+  // (10), a round broadleaf (5.4) and a young conifer (3.4). Scale them uniformly only (0.8 to 1.25), never stretched.
+  ...Object.fromEntries(["cedar", "fir", "broadleaf", "young"].map(m => [`forest-tree-${m}`, `/assets/game/plants/forest-tree-${m}.glb`])),
 };
 export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? `/assets/acnh/props/${model}.glb`;
 

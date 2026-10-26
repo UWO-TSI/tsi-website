@@ -205,4 +205,5 @@ def main():
     subprocess.run(["node", "scripts/finish-greenery.mjs", *written], cwd=os.path.join(K.ROOT, "web"), check=True)
 
 
-main()
+if __name__ == "__main__":
+    main()
