@@ -49,7 +49,35 @@ Then go straight on. At the end, update Status here, send the full list, and sto
 
 ## Next
 
-Phase A is done and waiting on David's review. Phase B (`specs/launch/sushi-bar.md`) after launch: don't start it without the coordinator.
+**Phase A round 2: David's review of 2a7c87cb** (https://claude.ai/artifact/Xh3WqWHGxrB5z1a5xjSAKJ, 2026-10-26), verbatim:
+- **spot, approach by day, day, night:** approved.
+- **closed (approved):** "more japanese style, lanters better modeled, this should be japanese"
+- **glide (approved):** "looks good but need to enhance the building model here"
+- **approach at night (redo):** "get rid of that ugly path i the sand and the rocks"
+- **seated, evening (redo):** " first person should be able to see the npcs preparing the food, the background should havethe small islets or maybe some ilands in the distance to make it look beautiful, make fov higher slightly"
+- **seated, night (redo):** "reduce fov to see more, can look around, the interior needs better decore"
+- **The server's name:** not given yet; keep it unnamed.
+
+**The coordinator's reading:**
+1. **Japanese, and a better model:**
+   - the building reads clearly Japanese: a tiled or cedar-shingle roof with upturned eaves, wooden lattice and shoji panels, a proper noren, rope (shimenawa) or a wooden sign plaque;
+   - the lanterns modelled properly: red and white chochin with ribs and black caps, and a pair of big ones at the entrance;
+   - more care on the building as a whole. It's the bar's face from the glide and the beach.
+2. **The sand path:** remove the dirt path in the sand. You can keep a few lanterns marking the way, if they look good without the path. terrain-v3 removes the tall seabed rocks on the new world.
+3. **The seated view:**
+   - **The chefs:** you see them preparing food. Their upper bodies and hands are at work over a cutting board in clear view, not hidden behind the fish case. Give them a visible prep loop: slicing, plating.
+   - **The view:** "see more", so a wider field of view than now. David wrote both "fov higher" and "reduce fov to see more"; the intent is to see more.
+   - **Looking around:** a limited range while seated, by mouse or drag, about 60 degrees each side and some up and down. It eases back to centre.
+   - **Islands in the distance:** small islands through the window, so the view is beautiful. The curved world sinks far things, so use cheap backdrop islands placed or raised to sit on the horizon from the seat, drawn only when seated if that's cheapest.
+4. **The interior's decor:** richer and cozier. Sake shelves, posters, a hanging lantern row, plants, the fish tank, menu tags on the wall, a lucky cat.
+
+Then shots into `specs/evidence/sushi-bar/phase-a2/`:
+- the bar by day and at night;
+- the entrance close up;
+- the glide (3 frames);
+- the seated view at evening and at night, looking centre, left and right.
+
+Gates as before (with and without the switch, tsc, eslint, budget.test). Commit, update Status, SendMessage "main", stop.
 
 ## Tools and gotchas
 
