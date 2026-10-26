@@ -76,6 +76,8 @@ export interface WaterParams {
   foamPulse: number;
   foamPulseReach: number;
   foamPulseSpeed: number;
+  /** The swash (the waves' sea only): how far up the sand each pulse runs once it reaches the shore, in cells. 0 off. */
+  swash: number;
   /** Size of the multiply blobs, world units per blob. */
   blobScale: number;
   /** How far the blobs darken the base. 1 is off. */
@@ -187,7 +189,7 @@ export function waterRampAt(depth: number, p: Pick<WaterParams, "bedColor" | "sh
 const WATER_KEYS = [
   "navyColor", "deepColor", "midColor", "shallowColor", "bedColor", "foamColor", "ringColor", "depthFalloff", "bedDepth", "bedSlope",
   "shelfDepth", "shelfFrom", "shelfTo",
-  "foamWidth", "foamStrength", "foamSoft", "foamWave", "foamWaveSpeed", "foamPulse", "foamPulseReach", "foamPulseSpeed", "blobScale", "blobDarken", "blobSpeed", "ringWidth",
+  "foamWidth", "foamStrength", "foamSoft", "foamWave", "foamWaveSpeed", "foamPulse", "foamPulseReach", "foamPulseSpeed", "swash", "blobScale", "blobDarken", "blobSpeed", "ringWidth",
   "ringStrength", "shoreAlpha", "opacity", "fresnel", "glare", "roughness", "sunGlint", "sunSize", "waveHeight", "waveScale", "waveSpeed",
   "swellHeight", "swellLength", "swellSpeed", "waveSteepness", "waveShoalLag", "waveFoam", "swellShade", "haze", "hazeFrom", "hazeTo",
 ] as const satisfies readonly (keyof WaterParams)[];
@@ -388,7 +390,7 @@ ${keys.map(k => `uniform ${k.endsWith("Color") ? "vec3" : "float"} ${uniformOf(k
 `;
 const UNIFORM_DECLS = uniformDecls(WATER_KEYS);
 /** The keys the waves added (game/waves): main's swell declares none of them. */
-const WAVE_ONLY_KEYS: readonly string[] = ["waveSteepness", "waveShoalLag", "waveFoam"];
+const WAVE_ONLY_KEYS: readonly string[] = ["waveSteepness", "waveShoalLag", "waveFoam", "swash"];
 const SWELL_UNIFORM_DECLS = uniformDecls(WATER_KEYS.filter(k => !WAVE_ONLY_KEYS.includes(k)));
 
 /** How many foam rings the water has room for (lib/game/foamRings.ts FOAM_RING_SLOTS.high; Lite fills fewer). */
@@ -402,14 +404,33 @@ export const FOAM_RING_MAX = 32;
  *    edge wobbling round it, and a thin ring lapping out from it and fading. The nearest FOAM_RING_MAX to the view.
  * Time is wrapped on whole cycles before fract(), as WATER_PHASE does for sin(): uTime runs to a day of seconds.
  */
+const PULSE = /* glsl */ `
+float pulseCycle(vec2 xz) {
+  float speed = floor(uFoamPulseSpeed * 1000.0 + 0.5) / 1000.0;
+  float drift = 0.25 * sin(xz.x * 0.21 + xz.y * 0.13) + 0.2 * sin(xz.y * 0.37 - xz.x * 0.17);
+  return fract(mod(uTime, 1000.0) * speed + drift);
+}
+`;
+/**
+ * The swash (the new world's beaches: `uSwash` cells up the sand; 0 everywhere else): each pulse that reaches the shore
+ * runs up the sand quickly, then draws back slowly, a little past the waterline, before the next. 1 at the top of its
+ * run, -0.2 drawn back; `r` the phase since the pulse arrived. The water lifts SWASH_RISE per cell of run near the shore
+ * (VERTEX_BODY), so it climbs the sand; past its front it is cut, and its front foams, wide while it breaks.
+ */
+const SWASH_RISE = 0.15;
+const SWASH = /* glsl */ `
+float swashRun(vec2 xz, out float r) {
+  r = fract(pulseCycle(xz) + 0.15);
+  return r < 0.3 ? sin(r / 0.3 * 1.5708) : mix(1.0, -0.2, smoothstep(0.3, 0.9, r)) + 0.2 * smoothstep(0.9, 1.0, r);
+}
+`;
 const WATER_FOAM = /* glsl */ `
 uniform vec4 uFoamRings[${FOAM_RING_MAX}];
 uniform int uFoamRingCount;
+${PULSE}
 float shorePulse(float shore, vec2 xz, float px) {
   if (uFoamPulse <= 0.0 || shore < 0.0 || shore > uFoamPulseReach + 0.4) return 0.0;
-  float speed = floor(uFoamPulseSpeed * 1000.0 + 0.5) / 1000.0;
-  float drift = 0.25 * sin(xz.x * 0.21 + xz.y * 0.13) + 0.2 * sin(xz.y * 0.37 - xz.x * 0.17);
-  float cyc = fract(mod(uTime, 1000.0) * speed + drift);
+  float cyc = pulseCycle(xz);
   float at = uFoamPulseReach * (1.0 - cyc);
   float band = 1.0 - smoothstep(0.035, 0.075 + px * 1.5, abs(shore - at));
   float broken = smoothstep(-0.25, 0.35, sin(xz.x * 1.3 + sin(xz.y * 0.9) * 2.0) * sin(xz.y * 1.1 + sin(xz.x * 0.7) * 2.0) + 0.35);
@@ -588,7 +609,9 @@ attribute float aWaveLod;
 varying vec3 vWaterWorld;
 varying vec2 vWaterRest;
 varying float vWaterRise;
-${WATER_WAVES}`;
+uniform float uSwash;
+uniform float uFoamPulseSpeed;
+${WATER_WAVES}${PULSE}${SWASH}`;
 
 const VERTEX_BODY = /* glsl */ `
 {
@@ -597,6 +620,11 @@ const VERTEX_BODY = /* glsl */ `
   vec3 wd;
   vec2 wg;
   waterWaves(wp.x, wp.z, wf.x, wf.y, max(aWaveLod, 1.0), wd, wg);
+  // The swash lifts the water near the shore (in its calm: none in a river or the berth), so it runs up the sand.
+  if (uSwash > 0.0) {
+    float sr, shoreAt = texture2D(uShoreMap, (wp.xz - uShoreRect.xy) / uShoreRect.zw).r;
+    wd.y += uSwash * ${SWASH_RISE.toFixed(2)} * swashRun(wp.xz, sr) * wf.y * wf.y * (1.0 - smoothstep(0.0, 4.0, shoreAt));
+  }
   transformed += wd;
   vWaterRest = wp.xz;
   vWaterWorld = wp + wd;
@@ -605,8 +633,19 @@ const VERTEX_BODY = /* glsl */ `
 `;
 
 /** Where the two seas' water differs: the normal (the swell's vertex gradient, the waves' per-pixel sum), the shade, the whitecaps. */
-const PIECES: Record<SeaKind, { normal: string; shade: string; caps: string }> = {
+const PIECES: Record<SeaKind, { swash: string; normal: string; shade: string; caps: string }> = {
   waves: {
+    swash: `  // The swash (SWASH): its front up the sand (cells, negative on land), cut past it, and how wide its foam breaks.
+  float front = 0.0, surge = 0.0;
+  if (uSwash > 0.0) {
+    float sr;
+    vec2 sf = waveField(vWaterRest);
+    front = -uSwash * swashRun(vWaterRest, sr) * sf.y * sf.y;
+    if (shore < front) discard;
+    float lace = 0.5 + 0.5 * sin(vWaterWorld.x * 1.9 + sin(vWaterWorld.z * 1.3) * 2.0) * sin(vWaterWorld.z * 1.7 + sin(vWaterWorld.x * 1.1) * 2.0);
+    surge = (1.0 - smoothstep(0.08, 0.5, sr)) * sf.y * (2.0 + 3.0 * lace);
+  }
+`,
     normal: `  // Surface normal from the waves, evaluated here per pixel (the same sum the vertices moved by, each train faded once
   // it is shorter than the pixel can show, so the far sea neither shimmers nor goes flat where its mesh is coarse),
   // and the ripple texture, in world space. cameraPosition is a built-in, so no view-space bookkeeping.
@@ -631,6 +670,8 @@ const PIECES: Record<SeaKind, { normal: string; shade: string; caps: string }> =
 `,
   },
   swell: {
+    swash: `  float front = 0.0, surge = 0.0;
+`,
     normal: `  // Surface normal from the swell gradient and the ripple texture, in world
   // space. cameraPosition is a built-in, so no view-space bookkeeping.
   vec2 detailNormal = waterDetailNormal(vWaterWorld.xz);
@@ -646,7 +687,7 @@ const PIECES: Record<SeaKind, { normal: string; shade: string; caps: string }> =
 const fragmentBody = (sea: SeaKind) => /* glsl */ `
 {
   float shore = shoreDistance(vWaterWorld.xz);
-
+${PIECES[sea].swash}
   // THE WATERLINE RUNS UP AND BACK. A travelling wave along the shore rather
   // than a pulse, so the beach does not breathe in and out as one piece: two
   // cells apart are at different points in the same swash. This is the sea's
@@ -654,10 +695,12 @@ const fragmentBody = (sea: SeaKind) => /* glsl */ `
   // river, where it wants to be near zero.
   float lap = sin(vWaterWorld.x * 0.9 + vWaterWorld.z * 0.7 + waterPhase(uTime * uFoamWaveSpeed)) * uFoamWave;
 
-  float edge = max(shore - lap, 0.0);
+  float edge = max(shore - lap - front, 0.0);
   // How deep the water is here: the known seabed (the bake's depth channel, the same seabed the bed mesh is built
   // on) under the surface as the swell has it now. No depth pass: the bed's height is known, so the depth is too.
   float depth = max(waterDepthAt(vWaterWorld.xz) + vWaterRise, 0.0);
+  // Up the sand the swash thins to nothing at its front.
+  if (front < 0.0 && shore < 0.0) depth *= 1.0 - shore / front;
   float t = 1.0 - exp(-depth / max(uDepthFalloff, 0.001));
 
   vec3 col = waterRamp(depth);
@@ -697,8 +740,9 @@ ${PIECES[sea].shade}
   // shimmering. It sits OVER the rings and glare, which is why it is applied
   // last and why the sun is killed inside it.
   float aa = max(fwidth(edge), 1e-5) * 0.8 + uFoamSoft;
-  float foam = 1.0 - smoothstep(uFoamWidth - aa, uFoamWidth + aa, edge);
-  foam *= step(0.0, shore); // nothing under the land itself
+  float fw = uFoamWidth * (1.0 + surge);
+  float foam = 1.0 - smoothstep(fw - aa, fw + aa, edge);
+  foam *= step(front, shore); // nothing under the land itself (past the swash's front)
   foam = clamp(foam * uFoamStrength, 0.0, 1.0);
   // The band running in to the beach, and the collars round what stands in the water (v1 water item 3).
   float px = max(length(fwidth(vWaterWorld.xz)), 1e-4) * 0.7;
@@ -766,7 +810,8 @@ export function waterMaterial(uniforms: Record<string, THREE.IUniform>, sea: Sea
               WAVE_FIELD +
               WAVE_FN +
               WATER_RIPPLE +
-              WATER_FUNCTIONS
+              WATER_FUNCTIONS +
+              SWASH
           : "#include <common>\nvarying vec3 vWaterWorld;\nvarying vec2 vWaterGrad;\nvarying float vWaterRise;\n" +
               SWELL_UNIFORM_DECLS +
               WATER_CLOUDS +

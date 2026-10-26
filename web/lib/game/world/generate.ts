@@ -450,7 +450,7 @@ function scenery(): Obj[] {
   // Palms (wharf-art's, in four sizes) on the grassy band behind the boards, a few (David, R2d: "less palm trees there,
   // more on the beach").
   ([[24, 11.5, "short"], [39, 11, "tall"], [68, 11, "tall"], [70.5, 12.6, "small"]] as const)
-    .forEach(([z, d, kind], i) => { const q = quayAt(z, d); out.push(obj("prop", `band-palm-${i}`, q.x, q.z, kind === "lean" ? 0 : z * 0.41, 1, `palm-${kind}`)); });
+    .forEach(([z, d, kind], i) => { const q = quayAt(z, d); out.push(obj("prop", `band-palm-${i}`, q.x, q.z, z * 0.41, 1, `palm-${kind}`)); });
   // The dock's hoist at the deck's edge, its jib out over the water.
   { const q = quayAt(54, 0.4); out.push(obj("prop", "dock-hoist", q.x, q.z, q.yaw + Math.PI / 2, 1, "dock-hoist")); }
   out.push(obj("prop", "plaza-tiles", PX, PZ, 0, 1, "plaza-tiles"), obj("prop", "plaza-fountain", PX, PZ, 0, FOUNTAIN_SCALE, "plaza-fountain"));
@@ -687,9 +687,13 @@ function forestTrees(): Obj[] {
   for (let i = 0; i < 55; i++) for (let k = 0; k < 71; k++) {
     const x = 20 + i * 2.15 + 1.1 * (hash01(i, k) - 0.5), z = -140 + k * 2.15 + 1.1 * (hash01(k + 50, i) - 0.5), in_ = FOREST(x, z);
     if (in_ < 1 || MT_FOOT(x, z) > -2 || hash01(i + 70, k) < 0.06) continue;
-    // Within 6 u of the edge, a fir or a young tree more often than not.
-    const h = hash01(i * 31 + k, 7), edgy = hash01(i, k + 7) < 0.6 * (1 - smoothstep(1, 6, in_));
-    const model = edgy ? (h < 0.6 ? "fir" : "young") : h < 0.4 ? "cedar" : h < 0.65 ? "fir" : h < 0.87 ? "broadleaf" : "young";
+    // trees-art's twelve: mostly fir, cedar, spire and old fir, with patches of broadleaf, wide and birch, a few leaning
+    // and broken, a rare dead snag; within 6 u of the edge, young trees, saplings and firs more often than not (David,
+    // R2d: "model better looking low poly trees instead of copy pasting 1 model").
+    const h = hash01(i * 31 + k, 7), edgy = hash01(i, k + 7) < 0.6 * (1 - smoothstep(1, 6, in_)), leafy = fbm(x / 22, z / 22, 31) > 0.6;
+    const model = edgy ? (h < 0.4 ? "young" : h < 0.7 ? "sapling" : "fir")
+      : leafy ? (h < 0.4 ? "broadleaf" : h < 0.7 ? "wide" : h < 0.9 ? "birch" : "fir")
+        : h < 0.025 ? "snag" : h < 0.065 ? "leaning" : h < 0.1 ? "broken" : h < 0.36 ? "fir" : h < 0.6 ? "cedar" : h < 0.8 ? "spire" : "old-fir";
     out.push(obj("prop", `forest-${out.length}`, x, z, hash01(k, i * 13) * 2 * Math.PI, +(0.8 + 0.45 * hash01(i, k + 99)).toFixed(2), `forest-tree-${model}`));
   }
   return out;

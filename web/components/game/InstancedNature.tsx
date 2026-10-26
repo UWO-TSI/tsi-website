@@ -33,6 +33,7 @@ import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { applyModelTextures, disposeModelMaterials, prepareModel } from "@/lib/game/modelMaterials";
 import { shadowClassFor } from "@/lib/game/shadows";
 import { lodOf, updateNear } from "@/lib/game/natureLod";
+import { hash01 } from "@/lib/game/worldFx";
 import { addContact, modelContact } from "./ContactShadows";
 
 export interface NaturePlacement {
@@ -44,6 +45,14 @@ export interface NaturePlacement {
 const _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
 const matrixOf = (p: NaturePlacement, base: number) =>
   new THREE.Matrix4().compose(_p.set(...p.position), _q.setFromAxisAngle(_up, p.rotation ?? 0), _s.setScalar((p.scale ?? 1) * base));
+
+const _tint = new THREE.Color();
+/** A crown's tint from where it stands: a touch lighter or darker, yellower or bluer. */
+function crownTint(m: THREE.Matrix4, out: THREE.Color): THREE.Color {
+  const e = m.elements, a = hash01(Math.round(e[12] * 7), Math.round(e[14] * 7)), b = hash01(Math.round(e[14] * 5), Math.round(e[12] * 3));
+  const v = 0.86 + 0.24 * a, warm = 0.12 * (b - 0.5);
+  return out.setRGB(v * (1 + warm), v, v * (1 - warm));
+}
 
 interface InstancedGLBProps {
   url: string;
@@ -69,6 +78,8 @@ function useInstanced(url: string, matrices: readonly THREE.Matrix4[], emissiveI
       if (!m.isMesh || !m.geometry || !matrices.length) return;
       const im = new THREE.InstancedMesh(m.geometry, m.material, matrices.length);
       matrices.forEach((matrix, i) => im.setMatrixAt(i, matrix));
+      // The forest's crowns, each tree its own shade of green (trees-art: the hue is in the vertex colour, the tint multiplies it).
+      if ((m.material as THREE.Material).name === "mForestCrown") matrices.forEach((matrix, i) => im.setColorAt(i, crownTint(matrix, _tint)));
       // The shadow role prepareModel gave this sub-mesh (caster-only hulls stay hidden until SunShadows draws them).
       Object.assign(im, { name: m.name, castShadow: m.castShadow, receiveShadow: m.receiveShadow, visible: m.visible, frustumCulled: false, customDepthMaterial: m.customDepthMaterial });
       // Its own visibility, which a level's packing (InstancedLodGLB) keeps: a caster-only hull stays hidden.
