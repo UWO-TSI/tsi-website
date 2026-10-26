@@ -26,9 +26,18 @@ Then go straight on. At the end, update Status here, send the full list, and sto
 
 ## Status
 
-Not started.
+Done, head after this file's commit (batches 89b6b805, 51a7601f, 996bbcb2, 756cba39, d20ac6a9, ad3aa13e). Not yet reviewed by David. Everything is in game units at scale 1, registered in `SCENERY_URLS` (footprints and tops in `defaultIsland` where solid), with previews in `specs/evidence/village-art2/`. Gates: propModels, modelMaterials and natureLod tests green; budget.test fails only on `game/props/plaza-tiles.glb` (and `game/wharf/jetty.glb` in the first runs), both already on the branch and not this lane's. eslint is clean on the changed TS.
+
+1. **Stones** (`art/props/build_stones.py`, `stones.webp`): chiselled hulls with bevelled edges, layered slabs, moss on the faces that look up, P_Stone in colour. Replaced `path-rock-slab` (260 tris), `-low` (320), `-cluster` (368), and added `moss-boulder-a` (1144, solid) and `-b` (1506, solid). The old blob rocks are gone from `build_path_edge.py`.
+2. **Shrubs** (`art/trees/build_shrubs.py`, `shrubs.webp`): `shrub-a` to `-f` in `game/plants/`, 314 to 1070 tris, lobes of leaf cards of varied density on the summer atlas plus twigs, not solid. New budget row "shrub".
+3. **The TSI flag** (`build_plaza_set.py`, `tsi-flag.webp`): `flag-pole` and `banner-pole` rebuilt with the island flag's green, the white TSI mark (sharp rasterises `branding/tethos-mark.svg`) and gold hems on a 256 px linen. Same names and tops. Static, like the old flag.
+4. **Brick road** (`art/terrain/build_road_brick.py`, `road-brick.webp`): `game/terrain/road-brick-albedo.png` (512) and `road-brick-normal.png` (256). Hook: like `pathTexture` in `splatMaterial.ts`, a tile of 2 u, one read (no turned second read), on the stone (A) weight or a new paint kind.
+5. **River dressing** (`art/props/build_river_set.py`, `river-set.webp`): `reeds-a/b/c` (game/plants, new budget row "reeds"), `lily-pads-a/b` (game/water, float at y 0), `river-stones-a`, `river-stones-b` (solid), `driftwood-a/b`.
+6. **Forest trees** (`art/trees/build_forest_trees.py`, `forest-trees.webp`): `forest-tree-cedar/fir/broadleaf/young`, 110 to 220 tris each, from the masses' own tree makers (`build_forest_masses.py`'s main is now guarded). The village `.lod1` trees are squat leaf-card trees near 1000 tris, too heavy and too short for a packed forest.
 
 ## Next
+
+Nothing left; wait for David's review notes. The list as given, all done:
 
 1. **Rocks, remodelled organic** ("remodel rocks to be more organic shape than just spheres, use blender, treat each asset properly"): irregular, faceted, layered stones in several sizes, mossy where they face up. Replace `path-rock-slab`, `path-rock-low` and `path-rock-cluster`, and add a couple of bigger boulders.
 2. **Bushes, fluffy with varied density** ("the bushes are too dense and looks like a sphere from afar, i should feel more fluffy and density varies"): four to six bush variants, irregular, lumpy and leafy, some sparse and some full, different sizes, never a ball. New names, for the new world.
@@ -45,3 +54,5 @@ Not started.
 - **node_modules:** cloned (`cp -c -R`).
 - **propModels.ts:** other lanes append to the same tables. Add your entries in one block with a comment line naming your lane.
 - **Git:** commit with the `[build]` prefix. Never push. Never use bare `git stash`. Don't touch other worktrees.
+- **Builders:** `build_stones.py`, `build_river_set.py` and `build_plaza_set.py` take model names to rebuild only those, and `review <dir>`. `build_shrubs.py` and `build_forest_trees.py` run finish-greenery themselves. `art/trees/preview.py -- <dir> <size> <glb>...` renders any GLB.
+- **Bounds:** the GLB accessor min/max is what propModels.test measures for `PROP_TOP`; read it straight from the GLB's JSON rather than from Blender's bound_box.
