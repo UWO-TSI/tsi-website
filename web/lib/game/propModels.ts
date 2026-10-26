@@ -92,11 +92,10 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // Its campfire set (art/props/build_campfire_set.py), round the campfire with the log benches: a stump to sit on, a
   // firewood stack with its chopping block, a fish-drying rack (along x).
   ...Object.fromEntries(["stump-seat", "firewood-stack", "fish-rack"].map(m => [m, `${P}${m}.glb`])),
-  // Its forest masses (art/trees/build_forest_masses.py, remodelled by game/village-art): a stand of trees that each grow
-  // their own way (cedars, firs, broadleaf, young trees, a snag) in one mesh, about 12 (a), 16 by 9 along x (b), 10 (c),
-  // a 14 by 8 kidney (d) and 18 by 13 (e) across, to instance over the closed forest so it reads dense from the open
-  // area. Each runs 2.2 below its origin (trunks and a plug of floor): set it at the lowest ground under its footprint.
-  ...Object.fromEntries(["a", "b", "c", "d", "e"].map(m => [`forest-mass-${m}`, `/assets/game/plants/forest-mass-${m}.glb`])),
+  // The closed forest's trees (lib/game/world/generate.ts forestTrees): the far versions of our cedar and two broadleaf
+  // shapes, about 3.9, 3.4 and 2.9 tall at scale 1, instanced.
+  "forest-cedar": "/assets/game/plants/conifer-cedar.lod1.glb", "forest-tall": "/assets/game/plants/tree-tall-summer.lod1.glb",
+  "forest-round": "/assets/game/plants/tree-round-summer.lod1.glb",
   // game/village-art: the plaza's set (art/props/build_plaza_set.py), fronts toward +z. The fountain is 9.6 across (scale
   // it uniformly to the plaza); the bunting hangs between (-2, 0, 0) and (2, 0, 0), so set it at the hang height and scale
   // x by the span / 4; the wall banner's origin is its bracket's plate on a wall in the x-y plane, the banner out along +z.

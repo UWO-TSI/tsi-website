@@ -21,7 +21,7 @@ const KEEP_CLEAR: Partial<Record<ObjectKind, number>> = { study: FIRE.danceRadiu
 export function campfireSite(v: Village = village()): Spot | null {
   if (found.has(v)) return found.get(v)!;
   const placed = objectsOf("campfire", v)[0];
-  let site: Spot | null = placed ? { x: placed.x, z: placed.z } : null;
+  let site: Spot | null = placed ? { x: placed.x, z: placed.z, ...(placed.scale ? { scale: placed.scale } : {}) } : null;
   if (!site) {
     const beach = objectById("landmark", "beach", v);
     site = beach ? openSpotNear(v, beach.x, beach.z) : null;

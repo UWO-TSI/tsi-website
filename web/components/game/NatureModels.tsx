@@ -78,13 +78,13 @@ export function sceneryOf(v: Village, ground: (x: number, z: number) => number, 
 /** The bunting's ends hang this far up its banner poles (village-art's plaza set). */
 const BUNTING_LIFT = 3.1;
 /**
- * Where a prop stands: on the ground under it; the bunting up at its poles' tops; a forest mass at the lowest ground
- * under its footprint (its trunks run on below), so it sinks into a slope or a cliff's lip instead of hovering.
+ * Where a prop stands: on the ground under it; the bunting up at its poles' tops; a mossy boulder at the lowest ground
+ * under its footprint, so it sinks into a slope or a bank instead of hovering.
  */
 function propY(p: { x: number; z: number; model?: string; scale?: number }, ground: (x: number, z: number) => number): number {
   let y = ground(p.x, p.z);
   if (p.model === "bunting-string") return y + BUNTING_LIFT;
-  if (!p.model?.startsWith("forest-mass")) return y;
+  if (!p.model?.startsWith("moss-boulder")) return y;
   const r = Math.max(...(PROP_FOOTPRINT[p.model] ?? [0])) * (p.scale ?? 1);
   for (let a = 0; a < 8; a++) y = Math.min(y, ground(p.x + r * Math.cos((a * Math.PI) / 4), p.z + r * Math.sin((a * Math.PI) / 4)));
   return y;

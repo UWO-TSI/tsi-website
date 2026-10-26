@@ -59,7 +59,7 @@ export function fireScale(dancers: number): { size: number; light: number } {
   return { size: 1 + 0.115 * n, light: 1 + 0.175 * n };
 }
 
-export interface Spot { x: number; z: number }
+export interface Spot { x: number; z: number; scale?: number }
 export interface RingPoint extends Spot { yaw: number }
 
 /** Sit slot `k`: on the sit ring, facing the fire. */

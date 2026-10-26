@@ -54,6 +54,9 @@ export function pumpkinSpots(v: Village, standable: (x: number, z: number) => bo
     out.push({ x, z, yaw: faceYaw + (u - 0.5) * 0.7, scale: 0.85 + 0.3 * hash01(`${by}#s`), by });
   };
   for (const l of objectsOf("lamp", v)) {
+    // The new world's lamps (each with its model) keep a pumpkin at one in five posts, none at the hand lanterns (David,
+    // R2c: "less pumpkins").
+    if (l.model && (l.model === "hand" || hash01(`${l.id}#p`) > 0.2)) continue;
     const a = hash01(l.id) * Math.PI * 2;
     add(l.x + Math.cos(a) * 0.5, l.z + Math.sin(a) * 0.5, 0, `lamp:${l.id}`);
   }
