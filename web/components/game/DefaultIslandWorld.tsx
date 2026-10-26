@@ -20,13 +20,13 @@ import PostFX from "./PostFX";
 import SunShadows from "./SunShadows";
 import PerfProbe from "./PerfProbe";
 import QualityGovernor from "./QualityGovernor";
-import { FadeLight, LampGlow, LampPool, Lanterns, lampLight } from "./AmbientProps";
+import { FadeLight, GlowingLamps, LampGlow, LampPool, Lanterns, lampLight } from "./AmbientProps";
 import { GLBProp, sceneryOf } from "./NatureModels";
 import { InstancedModels, MergedModels } from "./InstancedNature";
 import ShipwrightBoat from "./wharf/ShipwrightBoat";
 import { ACNHBuilding, ACNHHouses, ACNHParts, CHALET_VARIANTS, type PartsPlacement } from "./ACNHBuilding";
 import { FenceLine } from "./NatureModels";
-import { BRIDGE_URL, CATCH_BOARD_URL, MAILBOX_URL, MONUMENT_SIGN_URL, NEW_LAMPS, NOTICE_BOARD_URL } from "@/lib/game/propModels";
+import { BRIDGE_URL, CATCH_BOARD_URL, MAILBOX_URL, MONUMENT_SIGN_URL, NEW_LAMPS, NOTICE_BOARD_URL, STREETLAMP_URL } from "@/lib/game/propModels";
 import Wharf from "./wharf/Wharf";
 import TripVeil from "./wharf/TripVeil";
 import { tripSceneReady, useTripControl } from "./wharf/useTripControl";
@@ -451,6 +451,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     const ls = layout.lamps.filter(l => (l.model ?? "") === kind);
     return { kind, positions: ls.map((l): [number, number, number] => [l.x, island.ground(l.x, l.z), l.z]), yaws: kind ? ls.map(l => l.yaw ?? 0) : undefined };
   }).filter(s => s.positions.length), [layout, island]);
+  const lampModels = useMemo(() => lampSets.flatMap(s => s.positions.map((position, i) => ({ url: s.kind ? NEW_LAMPS[s.kind].url : STREETLAMP_URL, position, rotation: s.yaws?.[i] }))), [lampSets]);
   const lampPoints = useMemo(() => lampSets.flatMap(s => (s.kind === "hand" ? [] : s.positions.map((p, i) => lampLight(p, s.yaws?.[i] ?? 0, s.kind ? NEW_LAMPS[s.kind].light : [0, 2.4, 0])))), [lampSets]);
   const handPoints = useMemo(() => lampSets.flatMap(s => (s.kind === "hand" ? s.positions.map((p, i) => lampLight(p, s.yaws?.[i] ?? 0, NEW_LAMPS.hand.light)) : [])), [lampSets]);
   const near = useRef<Near>(null);
@@ -548,7 +549,9 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       <HalloweenLayer content={traditions.content} v={v} island={island} light={light} night={phase === "night"} fog={fogNight} weather={weather} residents={personas} />
       {layout.bridges.map(b => <GLBProp key={b.id} url={BRIDGE_URL} position={[b.x, b.y, b.z]} rotation={[0, b.yaw ?? 0, 0]} />)}
       {/* The new world's lamps only glow; their pools come from the few nearest you (LampPool). */}
-      {lampSets.map(s => <Lanterns key={s.kind} positions={s.positions} yaws={s.yaws} lamp={s.kind ? NEW_LAMPS[s.kind] : undefined} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} reach={v.terrain ? 0 : 5} />)}
+      {v.terrain
+        ? <Suspense fallback={null}><GlowingLamps items={lampModels} glow={light.lampsOn ? 1.2 : 0} /></Suspense>
+        : lampSets.map(s => <Lanterns key={s.kind} positions={s.positions} yaws={s.yaws} lamp={s.kind ? NEW_LAMPS[s.kind] : undefined} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} />)}
       {v.terrain && <LampPool points={lampPoints} intensity={light.lampsOn ? light.lamp * 2 : 0} reach={11} player={player} />}
       {/* Every lamp's warm halo and ground pool, breathing like a flame (two draws a set). */}
       {v.terrain && <LampGlow points={lampPoints} ground={island.ground} on={light.lampsOn} />}
@@ -1355,7 +1358,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <LettersSheet open={sheet === "letters"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openMail} />
       <BagSheet open={sheet === "bag"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openBag} />
       <ChestSheet open={sheet === "chest"} onClose={() => setSheet(null)} keys={STATION_KEY} />
-      <SellSheet open={sheet === "sell"} onClose={() => setSheet(null)} />
+      <SellSheet open={sheet === "sell"} onClose={() => setSheet(null)} keys={STATION_KEY} />
       <WalletSheet open={sheet === "wallet"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openWallet} />
       <WardrobeSheet open={sheet === "closet" || sheet === "fitting"} place={sheet === "closet" ? "closet" : "fitting"} onClose={() => { if (sheet === "fitting") window.dispatchEvent(new CustomEvent("tsi:fitting")); setSheet(null); }} onShop={() => { setSheet(null); toShop("More clothes"); }} />
       <PlayerCharacterUI creator={step === "creator"} />

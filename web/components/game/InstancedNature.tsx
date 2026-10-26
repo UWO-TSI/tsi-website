@@ -192,11 +192,11 @@ function imageKeys(gltf: GLTF, out: Map<THREE.Texture, string>) {
 export const layoutKey = (g: THREE.BufferGeometry) => Object.entries(g.attributes).map(([n, a]) => `${n}:${a.itemSize}:${(a as THREE.BufferAttribute).array.constructor.name}:${a.normalized}`).sort().join(",") + `|${g.index ? "i" : "n"}`;
 
 /**
- * Each prepared model baked in at each of its placements and joined into one mesh per look across them all, casting and
- * receiving (still props and buildings). `images` merges looks whose textures share an image (imageKeys).
+ * Each prepared model baked in at each of its placements and joined into one mesh per look across them all, casting as
+ * its class says (prepareModel) and receiving (still props and buildings). `images` merges looks whose textures share an image (imageKeys).
  */
 export function mergeByLook(placed: readonly (readonly [THREE.Object3D, THREE.Matrix4])[], images?: ReadonlyMap<THREE.Texture, string>) {
-  const groups = new Map<string, { material: THREE.Material; geometries: THREE.BufferGeometry[] }>();
+  const groups = new Map<string, { material: THREE.Material; cast: boolean; geometries: THREE.BufferGeometry[] }>();
   for (const [model, place] of placed) {
     model.updateMatrixWorld(true);
     model.traverse(o => {
@@ -204,16 +204,16 @@ export function mergeByLook(placed: readonly (readonly [THREE.Object3D, THREE.Ma
       if (!mesh.isMesh || !mesh.visible || Array.isArray(mesh.material)) return;
       const g = mesh.geometry.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(place, mesh.matrixWorld));
       if (!g.index) g.setIndex([...Array(g.attributes.position.count).keys()]);
-      const key = `${lookKey(mesh.material, images)}#${layoutKey(g)}`;
-      const group = groups.get(key) ?? { material: mesh.material, geometries: [] };
+      const key = `${lookKey(mesh.material, images)}#${layoutKey(g)}#${mesh.castShadow}`;
+      const group = groups.get(key) ?? { material: mesh.material, cast: mesh.castShadow, geometries: [] };
       group.geometries.push(g);
       groups.set(key, group);
     });
   }
-  return [...groups.values()].map(({ material, geometries }) => {
+  return [...groups.values()].map(({ material, cast, geometries }) => {
     const mesh = new THREE.Mesh(geometries.length === 1 ? geometries[0] : mergeGeometries(geometries, false) ?? geometries[0], material);
     // The curved world bends far things down into view (modelMaterials prepareModel): never culled by their own bounds.
-    mesh.castShadow = true; mesh.receiveShadow = true; mesh.frustumCulled = false;
+    mesh.castShadow = cast; mesh.receiveShadow = true; mesh.frustumCulled = false;
     return mesh;
   });
 }
@@ -224,11 +224,11 @@ export function mergeByLook(placed: readonly (readonly [THREE.Object3D, THREE.Ma
  * 2026-10-17), so dozens of small props draw in a handful of calls. Each placement keeps its contact shadow. For models
  * that never move, sway or glow on their own.
  */
-export function MergedModels({ items }: { items: readonly ModelPlacement[] }) {
+export function MergedModels({ items, emissiveIntensity }: { items: readonly ModelPlacement[]; emissiveIntensity?: number }) {
   const urls = useMemo(() => [...new Set(items.map(i => i.url))], [items]);
   const gltfs = useGLTF(urls) as unknown as GLTF[];
   const images = useMemo(() => gltfs.reduce((out, gltf) => imageKeys(gltf, out), new Map<THREE.Texture, string>()), [gltfs]);
-  const models = useMemo(() => urls.map((url, i) => prepareModel(gltfs[i].scene, url, undefined, shadowClassFor(url))), [gltfs, urls]);
+  const models = useMemo(() => urls.map((url, i) => prepareModel(gltfs[i].scene, url, emissiveIntensity, shadowClassFor(url))), [gltfs, urls, emissiveIntensity]);
   useEffect(() => {
     models.forEach((model, i) => applyModelTextures(model, urls[i]));
     return () => models.forEach(model => disposeModelMaterials(model));

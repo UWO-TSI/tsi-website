@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { GLBProp } from "./NatureModels";
-import InstancedGLB from "./InstancedNature";
+import InstancedGLB, { MergedModels, type ModelPlacement } from "./InstancedNature";
 import { STREETLAMP_URL } from "@/lib/game/propModels";
 
 /** Seconds-ish a lamp takes to come up to full (or go out): an ease, never a switch (living-village §5). */
@@ -71,10 +71,8 @@ function easeGlowOnce(group: THREE.Object3D, target: number, dt: number) {
  * The globes share their materials, so they ease up and down together as the Lanterns' did; each lamp keeps its own
  * pool of light.
  */
-export function Lanterns({ positions, intensity, glow, lamp = { url: LAMP_URL, light: [0, 2.4, 0] }, yaws, reach = 5 }: {
+export function Lanterns({ positions, intensity, glow, lamp = { url: LAMP_URL, light: [0, 2.4, 0] }, yaws }: {
   positions: readonly [number, number, number][]; intensity: number; glow: number;
-  /** How far each lamp's pool of light reaches; 0: they only glow (no light of their own). */
-  reach?: number;
   /** Which lamp (propModels NEW_LAMPS) and its light point in the model; `yaws` turn each (radians about +y). */
   lamp?: { url: string; light: readonly [number, number, number] }; yaws?: readonly number[];
 }) {
@@ -85,9 +83,16 @@ export function Lanterns({ positions, intensity, glow, lamp = { url: LAMP_URL, l
     <group>
       {/* The globes start dark and ease to their target (a fixed prepared intensity, so the model is never rebuilt). */}
       <group ref={group}><InstancedGLB url={lamp.url} placements={placements} emissiveIntensity={0} /></group>
-      {reach > 0 && positions.map((p, i) => <FadeLight key={i} color="#FFA040" intensity={intensity} distance={reach} position={lampLight(p, yaws?.[i] ?? 0, lamp.light)} />)}
+      {positions.map((p, i) => <FadeLight key={i} color="#FFA040" intensity={intensity} distance={5} position={lampLight(p, yaws?.[i] ?? 0, lamp.light)} />)}
     </group>
   );
+}
+
+/** The new world's lamps, which only glow (their pools are LampPool's): every kind's placements merged by look (perf-newworld), the globes easing together. */
+export function GlowingLamps({ items, glow }: { items: readonly ModelPlacement[]; glow: number }) {
+  const group = useRef<THREE.Group>(null);
+  useFrame((_, raw) => { if (group.current) easeGlowOnce(group.current, glow, Math.min(raw, 0.1)); });
+  return <group ref={group}><MergedModels items={items} emissiveIntensity={0} /></group>;
 }
 
 /** Where a lamp's light sits: its model's light point turned by its yaw. */
@@ -97,12 +102,6 @@ export function lampLight(p: readonly [number, number, number], yaw: number, [lx
 }
 
 /**
- * The pools of light of the `count` lamps nearest the player (the new world's many lamps, terrain v3 R2c): a fixed few
- * point lights that follow you from lamp to lamp, so the scene never pays for every lamp's light (each light costs
- * every lit draw, on or off: each of the eight it had cost about 0.1 ms a frame on High, perf-newworld). A light fades
- * out as its lamp nears the edge of the nearest few, so none pops.
- */
-/**
  * A flame's breath (David, 2026-10-26: "lights should breath like fire, glow should grow and shrink like real lamps"):
  * a slow swell, a quicker waver and a flutter, uneven, each lamp at its own phase. LampGlow's shaders run the same sum.
  */
@@ -111,24 +110,32 @@ const BREATH_GLSL = "(0.84 + 0.09 * sin(uTime * 1.9 + ph) + 0.05 * sin(uTime * 4
 /** A lamp's phase from where it stands. */
 export const lampPhase = (x: number, z: number) => x * 1.7 + z * 2.3;
 
+/**
+ * The pools of light of the `count` lamps nearest the player (the new world's many lamps, terrain v3 R2c): a fixed few
+ * point lights that follow you from lamp to lamp, so the scene never pays for every lamp's light (each light costs
+ * every lit draw, on or off: each of the eight it had cost about 0.1 ms a frame on High, perf-newworld). A light fades
+ * out as its lamp nears the edge of the nearest few, so none pops.
+ */
 export function LampPool({ points, intensity, reach, player, count = 4 }: {
   points: readonly (readonly [number, number, number])[]; intensity: number; reach: number; player: React.RefObject<THREE.Vector3>; count?: number;
 }) {
   const lights = useRef<(THREE.PointLight | null)[]>([]);
   const order = useMemo(() => points.map((_, i) => i), [points]);
+  const dist = useMemo(() => new Float32Array(points.length), [points]);
   // Each light's eased strength before its flame's breath.
   const base = useRef<number[]>([]);
   useFrame(({ clock }, raw) => {
-    const { x, z } = player.current, d = (i: number) => Math.hypot(points[i][0] - x, points[i][2] - z);
-    order.sort((a, b) => d(a) - d(b));
-    const edge = order.length > count ? d(order[count]) : Infinity, dt = Math.min(raw, 0.1), t = clock.elapsedTime;
+    const { x, z } = player.current;
+    points.forEach(([px, , pz], i) => { dist[i] = Math.hypot(px - x, pz - z); });
+    order.sort((a, b) => dist[a] - dist[b]);
+    const edge = order.length > count ? dist[order[count]] : Infinity, dt = Math.min(raw, 0.1), t = clock.elapsedTime;
     lights.current.forEach((light, k) => {
       if (!light) return;
       const i = order[k];
       if (i === undefined) { light.intensity = 0; return; }
       const [px, py, pz] = points[i];
       light.position.set(px, py, pz);
-      base.current[k] = THREE.MathUtils.damp(base.current[k] ?? 0, intensity * Math.min(1, Math.max(0, (edge - d(i)) / 6)), LAMP_RATE, dt);
+      base.current[k] = THREE.MathUtils.damp(base.current[k] ?? 0, intensity * Math.min(1, Math.max(0, (edge - dist[i]) / 6)), LAMP_RATE, dt);
       light.intensity = base.current[k] * breath(t, lampPhase(px, pz));
     });
   });
@@ -207,8 +214,9 @@ export function LampGlow({ points, ground, on, halo = 2.6, pool = 5.5 }: {
     mesh.renderOrder = 1;
     return mesh;
   }, [points, ground, pool, uniforms]);
-  useEffect(() => () => { for (const o of [halos, pools]) { o.geometry.dispose(); (o.material as THREE.Material).dispose(); } }, [halos, pools]);
-  useFrame(({ clock }, raw) => glowFrame(uniforms, [halos, pools], on, clock.elapsedTime, Math.min(raw, 0.1)));
+  const meshes = useMemo(() => [halos, pools], [halos, pools]);
+  useEffect(() => () => { for (const o of meshes) { o.geometry.dispose(); (o.material as THREE.Material).dispose(); } }, [meshes]);
+  useFrame(({ clock }, raw) => glowFrame(uniforms, meshes, on, clock.elapsedTime, Math.min(raw, 0.1)));
   return <><primitive object={pools} /><primitive object={halos} /></>;
 }
 

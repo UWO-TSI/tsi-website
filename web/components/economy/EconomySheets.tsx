@@ -260,7 +260,7 @@ export function WalletBody({ transport = httpEconomyTransport }: { transport?: E
 const signedOut = (message: string) => message === "Sign in first.";
 
 type SheetProps = ProgressionSheetProps & { transport?: EconomyTransport; keys?: string };
-export const SellSheet = ({ open, onClose, transport }: SheetProps) => <ProgressionPanel open={open} onClose={onClose} title="Sell"><SellBody transport={transport} /></ProgressionPanel>;
+export const SellSheet = ({ open, onClose, transport, keys }: SheetProps) => <ProgressionPanel open={open} onClose={onClose} title="Sell" keys={keys}><SellBody transport={transport} /></ProgressionPanel>;
 /** The Bag (items you own); `keys`: the bag key, which closes it too. */
 export const InventorySheet = ({ open, onClose, transport, keys }: SheetProps) => <ProgressionPanel open={open} onClose={onClose} title="Bag" keys={keys}><InventoryBody transport={transport} /></ProgressionPanel>;
 /** The wallet; `keys`: the wallet key, which closes it too. */
