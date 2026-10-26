@@ -271,23 +271,24 @@ export function berthWeight(dock: { x: number; z: number; yaw?: number }, x: num
 /**
  * The new world's jetty (terrain v3, art/wharf/build_jetty.py; the wharf landmark's model "jetty"), in the dock's frame:
  * a wide platform at the wharf's deck height with three gangways to the deck boards, and three piers out from it, each
- * stepping down by stairs to the water's level, where a walkway across joins them; past it their ends reach on as
- * fingers, the boat moored off the middle one's +x side (as the pier's tip, its top at 0). `decks`: where it is
- * walked, each at its height (`rise`: stairs climbing that much from z0 to z1). `land`: where the gangways meet the
+ * stepping down by stairs to a low level a hand over the water (`low`), where a walkway across joins them; past it
+ * their ends reach on as fingers, the boat moored off the middle one's +x side (as the pier's tip). `decks`: where it
+ * is walked, each at its height (`rise`: stairs climbing that much from z0 to z1). `land`: where the gangways meet the
  * deck boards (z). `piles`: where its piles meet the water.
  */
 const PIERS = [0, -6.6, 6.6], GANGWAYS = [-3.2, 0, 3.2];
 export const JETTY = {
   url: "/assets/game/wharf/jetty.glb",
   top: 1,
+  low: 0.3,
   land: 15.4,
   decks: [
     ...PIERS.flatMap(x => [
-      { x0: x - 1, x1: x + 1, z0: -3.5, z1: 1, y: 0 },
-      { x0: x - 1, x1: x + 1, z0: 2.6, z1: 4.6, y: 0, rise: 1 },
+      { x0: x - 1, x1: x + 1, z0: -3.5, z1: 1, y: 0.3 },
+      { x0: x - 1, x1: x + 1, z0: 2.6, z1: 4.6, y: 0.3, rise: 0.7 },
       { x0: x - 1, x1: x + 1, z0: 4.6, z1: 9, y: 1 },
     ]),
-    { x0: -7.6, x1: 7.6, z0: 1, z1: 2.6, y: 0 },
+    { x0: -7.6, x1: 7.6, z0: 1, z1: 2.6, y: 0.3 },
     { x0: -7.6, x1: 7.6, z0: 9, z1: 13, y: 1 },
     // The gangways' walk runs on past the boards' edge: the coast drops to 0.5 right at the shoreline.
     ...GANGWAYS.map(x => ({ x0: x - 0.8, x1: x + 0.8, z0: 13, z1: 16.7, y: 1 })),

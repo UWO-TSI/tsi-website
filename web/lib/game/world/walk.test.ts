@@ -64,7 +64,7 @@ describe("walking the smooth world", () => {
     const dock = wharfDock(v)!, at = (lz: number) => dockToWorld(dock, 0, lz, { x: 0, z: 0 });
     expect(dock.y).toBe(JETTY.top);
     const landing = at(-2.5), platform = at(11), boards = at(JETTY.land + 1.6);
-    expect(island.ground(landing.x, landing.z)).toBeCloseTo(0, 6);
+    expect(island.ground(landing.x, landing.z)).toBeCloseTo(JETTY.low, 6);
     expect(island.ground(platform.x, platform.z)).toBeCloseTo(1, 6);
     expect(island.ground(boards.x, boards.z)).toBeCloseTo(1, 1);
     for (const p of [landing, platform, boards]) expect(island.wet(p.x, p.z)).toBe(false);

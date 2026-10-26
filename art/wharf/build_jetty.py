@@ -6,12 +6,12 @@ longer, and more branches ... 3 branches that kinda also connect on sea level ..
 
 One model in the wharf kit's wood and rope (art/wharf/build_wharf_kit.py): a wide platform at the wharf's deck height,
 three gangways from it over a strip of water to the deck boards, and three piers out to sea from it. Each pier steps
-down by stairs to the water's level, where a walkway across joins all three; past it their ends reach on as fingers,
+down by stairs to a low level a hand over the water, where a walkway across joins all three; past it their ends reach on as fingers,
 the water between them slips where boats moor. The boat moors on the middle finger's +x side (as the old pier's tip:
 lib/game/wharf.ts MOORED, STEP_AT). Piles under every edge, rope fencing on posts, ladders, a cleat for the bow line.
 
 Writes web/public/assets/game/wharf/jetty.glb in the wharf landmark's frame (lib/game/wharf.ts, before its yaw): x across
-(+x the boat's side), z along it (+z inland, the fingers' tips at -3.5), y up: the low level's top at 0, the platform's
+(+x the boat's side), z along it (+z inland, the fingers' tips at -3.5), y up: the low level's top at 0.3, the platform's
 and the gangways' at 1, the sea at -0.078. lib/game/wharf.ts JETTY mirrors the rects and the piles.
 """
 import math, os, sys
@@ -24,6 +24,7 @@ from build_wharf_kit import K  # noqa: E402
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 SEA = -0.078
 TOP = 1.0                                      # the platform's deck (generate.ts H.deck)
+LOW = 0.3                                      # the low level's deck, a hand over the waves
 PIERS = (0.0, -6.6, 6.6)                       # the piers' middles (x), 2 wide; the boat moors off the middle one's +x side
 TIP, WALK, STAIR, PLAT = -3.5, (1.0, 2.6), (2.6, 4.6), (9.0, 13.0)   # z: fingers' tips, the low walkway, each pier's stairs, the platform
 HALF = 1.0                                     # a pier's half width
@@ -32,9 +33,9 @@ GANGWAYS = (-3.2, 0.0, 3.2)                    # their middles (x); 1.6 wide, fr
 GANG_Z = (13.0, 15.4)
 # Piles: (x, z), the deck's height over them. Every pier both sides, the walkway's seaward face between the piers,
 # the platform's corners and seaward face.
-PILES = ([((px + sx * 1.15, z), 0) for px in PIERS for sx in (-1, 1) for z in (-3.42, -1.2)]
+PILES = ([((px + sx * 1.15, z), LOW) for px in PIERS for sx in (-1, 1) for z in (-3.42, -1.2)]
          + [((px + sx * 1.15, z), TOP) for px in PIERS for sx in (-1, 1) for z in (5.0, 7.6)]
-         + [((x, 0.85), 0) for x in (-3.3, 3.3)]
+         + [((x, 0.85), LOW) for x in (-3.3, 3.3)]
          + [((sx * 7.75, z), TOP) for sx in (-1, 1) for z in (10.8, 13.0)] + [((x, 8.85), TOP) for x in (-3.3, 3.3)])
 LADDERS = [((-EDGE, 11.6), math.pi / 2), ((EDGE, 11.6), -math.pi / 2)]
 rng = np.random.default_rng(2610)
@@ -55,14 +56,14 @@ def boards(k, M, x0, x1, z0, z1, y):
 
 
 def stairs(k, M, x0, x1, z0, z1):
-    """Four treads climbing 0 to TOP along +z over the rect, between cheeks."""
-    w, run, rise, cheek = x1 - x0, (z1 - z0) / 4, TOP / 4, 0.09
+    """Three treads climbing LOW to TOP along +z over the rect, between cheeks."""
+    w, run, rise, cheek = x1 - x0, (z1 - z0) / 3, (TOP - LOW) / 3, 0.09
     xc = (x0 + x1) / 2
-    for i in range(4):
-        top, a = (i + 1) * rise, z0 + i * run
+    for i in range(3):
+        top, a = LOW + (i + 1) * rise, z0 + i * run
         k.rbox((xc, top - 0.04, a + run / 2), (w - 2 * cheek - 0.01, 0.08, run - 0.02), 0.018, M, W.board_tone(), segs=1, uv_len=2.0, v_axis=0,
                uv_off=(rng.random(), rng.random()))
-        lo = i * rise - 0.2
+        lo = LOW + i * rise - 0.2
         k.rbox((xc, (lo + top - 0.08) / 2, a + 0.03), (w - 2 * cheek - 0.01, top - 0.08 - lo, 0.05), 0.012, M, W.mix(W.board_tone(), W.DARK, 0.4),
                segs=1, uv_len=2.0, v_axis=0)
         for x in (x0 + cheek / 2, x1 - cheek / 2):
@@ -118,10 +119,10 @@ def build():
     k = K.Kit("jetty")
     for px in PIERS:
         x0, x1 = px - HALF, px + HALF
-        boards(k, deck, x0, x1, TIP, WALK[0], 0.0)
+        boards(k, deck, x0, x1, TIP, WALK[0], LOW)
         stairs(k, deck, x0, x1, *STAIR)
         boards(k, deck, x0, x1, STAIR[1], PLAT[0], TOP)
-    boards(k, deck, -EDGE, EDGE, *WALK, 0.0)
+    boards(k, deck, -EDGE, EDGE, *WALK, LOW)
     boards(k, deck, -EDGE, EDGE, *PLAT, TOP)
     for g in GANGWAYS:
         boards(k, deck, g - 0.8, g + 0.8, *GANG_Z, TOP)
@@ -134,19 +135,19 @@ def build():
     # ladders, both sides of each gangway and the land face between them.
     for sx in (-1, 1):
         o = sx * (EDGE - 0.1)
-        fence(k, wood, rope, [(o, TIP + 0.1), (o, -1.2), (o, WALK[1] - 0.1)], 0.0)
+        fence(k, wood, rope, [(o, TIP + 0.1), (o, -1.2), (o, WALK[1] - 0.1)], LOW)
         fence(k, wood, rope, [(o, STAIR[1] + 0.1), (o, 6.8), (o, PLAT[0] + 0.1), (o, 10.9)], TOP)
         fence(k, wood, rope, [(o, 12.3), (o, PLAT[1] - 0.1), (sx * 3.95, PLAT[1] - 0.1)], TOP)
         i = sx * (EDGE - 2 * HALF + 0.1)
         fence(k, wood, rope, [(i, STAIR[1] + 0.1), (i, PLAT[0] + 0.1), (sx * (HALF - 0.1), PLAT[0] + 0.1), (sx * (HALF - 0.1), STAIR[1] + 0.1)], TOP)
-    fence(k, wood, rope, [(-0.9, TIP + 0.1), (-0.9, -1.2)], 0.0)
+    fence(k, wood, rope, [(-0.9, TIP + 0.1), (-0.9, -1.2)], LOW)
     for g in GANGWAYS:
         for sx in (-1, 1):
             fence(k, wood, rope, [(g + sx * 0.75, PLAT[1] + 0.1), (g + sx * 0.75, GANG_Z[1] - 0.6)], TOP)
     for a, b in zip(GANGWAYS, GANGWAYS[1:]):
         fence(k, wood, rope, [(a + 0.75, PLAT[1] + 0.1), (b - 0.75, PLAT[1] + 0.1)], TOP)
     # The bow line's cleat (wharf.ts PIER.bowCleat) on the middle finger's boat side.
-    k.rbox((0.8, 0.03, -1.98), (0.07, 0.05, 0.22), 0.015, wood, W.mix(W.DARK, "#4a3624", 0.5), segs=1)
+    k.rbox((0.8, LOW + 0.03, -1.98), (0.07, 0.05, 0.22), 0.015, wood, W.mix(W.DARK, "#4a3624", 0.5), segs=1)
     W.wet(k, below=SEA)
     k.tint_gradient(0.82, 1.0, -0.6, TOP + 0.9)
     ob = k.finish(smooth_deg=45)

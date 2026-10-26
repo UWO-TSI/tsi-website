@@ -163,8 +163,8 @@ const QUAY: readonly XZ[] = [[69, 8], [73, 28], [74, 46], [73, 64], [66, 92]];
 const westOfQuay = sideOf(QUAY);
 /** The wharf's shore at the jetty (QUAY at z 46). */
 const SHORE_X = 74;
-/** The jetty (the wharf landmark, lib/game/wharf.ts JETTY): out to sea eastward, its gangways' ends (JETTY.land along it) just under the deck boards' edge 0.4 past the shore. */
-export const DOCK = { x: SHORE_X + 0.2 + JETTY.land, z: 46, yaw: -Math.PI / 2 } as const;
+/** The jetty (the wharf landmark, lib/game/wharf.ts JETTY): out to sea eastward, its gangways' ends (JETTY.land along it) just under the deck boards' edge 1 past the shore. */
+export const DOCK = { x: SHORE_X + 0.8 + JETTY.land, z: 46, yaw: -Math.PI / 2 } as const;
 /** A point `d` in from the wharf's shore at `z`, and the yaw that turns a square's local z inland there. */
 function quayAt(z: number, d: number): { x: number; z: number; yaw: number } {
   let j = 0;
@@ -268,12 +268,12 @@ export const PLAN: Plan = {
       edge: (_x, z) => 1 + 5 * smoothstep(70, 90, z), coast: 2.5,
     },
     // Under the deck boards (the `deck` squares, `scenery`) the ground is earth.
-    { shape: (x, z) => Math.min(westOfQuay(x, z) + 1, 7.8 - westOfQuay(x, z), DECK_Z[1] + 2 - z, z - DECK_Z[0] + 2), ground: (_x, _z, _i, h) => h, edge: 0.5, kind: "shape", paint: Paint.Path },
+    { shape: (x, z) => Math.min(westOfQuay(x, z) + 1, 7.2 - westOfQuay(x, z), DECK_Z[1] + 2 - z, z - DECK_Z[0] + 2), ground: (_x, _z, _i, h) => h, edge: 0.5, kind: "shape", paint: Paint.Path },
     // BEACH: sea level, wide yellow sand from the river's mouth east, tapering off into the wharf's south end, smooth,
     // with dry sand at its back for palms.
     {
       name: "Beach", label: ["Beach (sea level)", 4, 124],
-      shape: (x, z) => Math.min(BEACH(x, z), 0.4 * (60 - x)), ground: H.beach + 0.3, edge: 5, coast: 0.12, paint: Paint.Sand, paintBelow: 2.4, ragged: 0.3,
+      shape: (x, z) => Math.min(BEACH(x, z), 0.4 * (60 - x) + wob(x, z, 2.5, 9, 96)), ground: H.beach + 0.3, edge: 5, coast: 0.12, paint: Paint.Sand, paintBelow: 2.4, ragged: 0.45,
     },
     // THE RIVER: sea level, down the meadow's side of the village (wide enough near the open area that no glide crosses it).
     { name: "River", label: ["River (sea level)", -80, 64], shape: strip(RIVER, 4, 7, 0.6, 9, 97), ground: 0, edge: 6, coast: (x, z) => 2.4 - 2.15 * farBank(x, z), kind: "water" },
@@ -371,20 +371,22 @@ const MARKET: readonly (readonly [model: string, z: number, d: number, turn: num
  */
 function scenery(): Obj[] {
   const out: Obj[] = [];
-  for (let z = DECK_Z[0]; z <= DECK_Z[1]; z += 4) for (const d of [1.6, 5.6]) { const q = quayAt(z, d); out.push(obj("deck", `deck-${out.length}`, q.x, q.z, q.yaw)); }
+  for (let z = DECK_Z[0]; z <= DECK_Z[1]; z += 4) for (const d of [1, 5]) { const q = quayAt(z, d); out.push(obj("deck", `deck-${out.length}`, q.x, q.z, q.yaw)); }
   MARKET.forEach(([model, z, d, turn, scale], i) => { const q = quayAt(z, d); out.push(obj("prop", `market-${i}`, q.x, q.z, q.yaw + Math.PI + turn, scale, model)); });
   // The path's loose fencing (David: "the fencing is loosely there not a straight fencing but one with gaps", running
   // "up higher"): short runs and lone posts either side all the way up, bushes scattered behind them.
   let fence = 0, bush = 0;
   for (const side of [-2.8, 2.8]) for (let s = 3, n = side > 0 ? 7 : 0; s < 24; n++) {
     const h = hash01(n, 1), model = h < 0.45 ? "rustic-fence-a" : h < 0.8 ? "rustic-fence-b" : "rustic-post", len = h < 0.45 ? 2.3 : h < 0.8 ? 1.7 : 0.2;
-    const q = onPath(s + len / 2, side);
-    out.push(obj("prop", `path-fence-${fence++}`, q.x, q.z, q.yaw + 0.15 * (hash01(n, 2) - 0.5), 1, model));
-    s += len + 1 + 2 * hash01(n, 3);
+    const q = onPath(s + len / 2, side), yaw = q.yaw + 0.15 * (hash01(n, 2) - 0.5), ex = (Math.cos(yaw) * len) / 2, ez = (-Math.sin(yaw) * len) / 2;
+    // Where the path bends a straight run would cut across it: leave that one out.
+    if (nearest(PATH, q.x + ex, q.z + ez).d > 2.6 && nearest(PATH, q.x - ex, q.z - ez).d > 2.6 && nearest(PATH, q.x, q.z).d > 2.6) out.push(obj("prop", `path-fence-${fence++}`, q.x, q.z, yaw, 1, model));
+    s += len + 0.6 + 1.6 * hash01(n, 3);
   }
   for (const side of [-1, 1]) for (let s = 2; s < 25; s += 1.6 + 1.8 * hash01(bush, 4)) {
     if (hash01(bush, 5) < 0.3) { bush++; continue; }
     const q = onPath(s, side * (3.6 + 1.4 * hash01(bush, 6)));
+    if (nearest(PATH, q.x, q.z).d < 3.2) { bush++; continue; }
     out.push({ id: `path-bush-${bush}`, kind: "bush", x: +q.x.toFixed(2), z: +q.z.toFixed(2), seed: bush++ });
   }
   // Lantern posts on the deck, their arms out over the boards toward the water, and on the jetty's platform toward its stairs.
@@ -430,7 +432,7 @@ function forestMasses(): Obj[] {
 }
 
 /** The kinds only the generator places (every one of them is rebuilt each run). */
-const GENERATED: ReadonlySet<string> = new Set(["deck", "prop", "house", "bush"]);
+const GENERATED: ReadonlySet<string> = new Set(["deck", "prop", "house", "bush", "fence"]);
 /** The layout's moves, then the generated objects (the border and the scenery) in place of any earlier copy of them. */
 export function layoutObjects(objects: World["objects"]): World["objects"] {
   const made = [...borderObjects(), ...scenery(), ...forestMasses()], ids = new Set(made.map(o => `${o.kind}:${o.id}`));
@@ -512,7 +514,7 @@ export function generateWorld(objects: World["objects"], keep: readonly MapAnnot
       if (m <= 0) return;
       if (zn.kind !== "water") h += ((typeof zn.ground === "number" ? zn.ground : zn.ground(x, z, d, h)) - h) * m;
       if (zn.coast !== undefined) g += ((typeof zn.coast === "number" ? zn.coast : zn.coast(x, z)) - g) * m;
-      const jag = zn.ragged ? zn.ragged * (2 * fbm(x / 7, z / 7, 400 + j) - 1 + 0.6 * (hash01(i, k) - 0.5)) : 0;
+      const jag = zn.ragged ? zn.ragged * (1.3 * (2 * fbm(x / 14, z / 14, 400 + j) - 1) + 0.5 * (hash01(i, k) - 0.5)) : 0;
       if (zn.paint !== undefined && m > 0.5 + jag) { painted[p] = zn.paint; below[p] = (zn.paintBelow ?? Infinity) + 2 * jag; }
     });
     for (const r of PLAN.ramps) {
