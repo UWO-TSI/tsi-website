@@ -143,6 +143,7 @@ wherever its node is drawn, and another in the shadow pass if it casts.
 | Effect | `game/props` | 3,000 | 6 | 6 | 512 | – |
 | Enemy | `game/enemies` | 1,500 | 16 (instanced: one draw per part per type) | 8 | 512 | – |
 | Building | `acnh/buildings`, `buildings`, `game/buildings`, `game/wharf` | 12,000 | 10 | 10 | 1,024 | – |
+| Coral reef (game/wharf-art2, 2026-10-26: a cluster of the coral in one mesh, in place of a dozen coral props) | `game/water/coral-reef-` | 3,000 | 1 | 1 | 0 | – |
 | Seabed and water life (v1 water, 2026-10-13) | `game/water` | 1,200 (the whole set) | 10 (one instanced draw each) | 6 | 256 | – |
 | Interior room | `game/cafe`, `game/interiors` | 12,000 | 24 | 24 | 1,024 | – |
 

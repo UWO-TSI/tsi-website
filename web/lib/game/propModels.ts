@@ -155,6 +155,10 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // to 220 triangles, the trunk's foot at the origin (it runs 0.8 under): a broad cedar (7.5 tall), a tall narrow fir
   // (10), a round broadleaf (5.4) and a young conifer (3.4). Scale them uniformly only (0.8 to 1.25), never stretched.
   ...Object.fromEntries(["cedar", "fir", "broadleaf", "young"].map(m => [`forest-tree-${m}`, `/assets/game/plants/forest-tree-${m}.glb`])),
+  // game/wharf-art2: coral reefs for the shallows (art/water/build_coral_reefs.py), the coral clumps above tinted and massed
+  // on low rocks, the origin on the seabed at the middle, not solid: a broad (2.8 by 2), b round and tall (2 across), c a
+  // long ribbon along x (3.4 by 1.2).
+  ...Object.fromEntries(["a", "b", "c"].map(m => [`coral-reef-${m}`, `/assets/game/water/coral-reef-${m}.glb`])),
 };
 export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? `/assets/acnh/props/${model}.glb`;
 
