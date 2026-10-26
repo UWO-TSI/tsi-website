@@ -6,7 +6,7 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { inRect, landmarkHalf, villageIsland, wharfDock, wharfDecks, type LandmarkId } from "../defaultIsland";
-import { JETTY, dockToWorld } from "../wharf";
+import { EDGE_SHOPS, JETTY, dockToWorld } from "../wharf";
 import { campfireSite } from "../campfireSite";
 import { MOVE_TUNING, NO_INPUT, createMoveState, stepMove, STEP, type MoveWorld } from "../movement/sim";
 import { navGrid, planResidents } from "../residentRoutine";
@@ -108,7 +108,7 @@ describe("walking the smooth world", () => {
       if (o.kind === "landmark" && o.id === "wharf") continue; // the jetty's origin stands at the water's edge
       if (o.kind === "barrier" && o.model === "border") continue; // the invisible border runs out into the water at its ends
       if (/^(coral|reeds|river-stones|lily-pads)-/.test(o.model ?? "")) continue; // the coral, reeds and stones stand in the shallows, the lily pads float
-      if (o.model?.startsWith("ship-house-")) continue; // a ship house straddles the deck's water edge, its back on piles in the sea
+      if (EDGE_SHOPS.includes(o.model!)) continue; // a wharf shop straddles the deck's water edge, its back on piles in the sea
       // On the ground, or on the jetty's decks (its lanterns stand on its platform).
       const h = island.ground(o.x, o.z), decked = wharfDecks(v).some(d => inRect(o.x, o.z, d));
       expect(h, `${o.kind}:${o.id}`).toBeCloseTo(decked ? wharfDecks(v).find(d => inRect(o.x, o.z, d))!.y(o.x, o.z) : terrainHeight(t, o.x, o.z), 6);

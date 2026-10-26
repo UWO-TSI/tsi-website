@@ -21,6 +21,43 @@ The CPU profile shows no single hog; the time goes on three.js's per-draw work a
 
 ## Status
 
+**Pass 3: R2e (terrain-v3 55e48459 merged)**
+
+A/B in the same session, 24 bots, 3 runs each (frame / CPU in ms, then draws):
+
+| | R2e as merged (load 3.8 to 4.7) | After the cuts (load 5.1 to 6.2; Lite 4.1 to 4.8) |
+|---|---|---|
+| v2 High | 5.7 / 5.0, 433 | 5.1 / 4.4, 400 |
+| village High | 4.9 / 4.2, 380 | 5.1 / 4.5, 365 |
+| v2 Lite | not measured | 3.2 / 3.0, 327 |
+| village Lite | not measured | 2.7 / 2.5, 280 |
+
+- The R2e breakdown's top costs (High, 437 draws):
+  - trees: 54 draws (16 kinds, near and far sets), plus 10 hull shadows;
+  - bugs and crabs: about 46 draws (each bug a draw per material);
+  - merged scenery: about 48 draws;
+  - characters: 14 draws plus 6 shadows;
+  - post: 21;
+  - flowers: 12.
+- Hiding groups priced the bugs at about 0.6 ms, the trees 0.5 and the merged scenery 0.5.
+- Cuts made:
+  - the bugs (VillageLife) and the shore crabs (AmbientFauna Crabs) are instanced per model and scale (`ModelFlock` in InstancedNature). A bug that flees (fading), is lifted into a hand or is hidden draws its own model; each keeps its group and contact shadow.
+  - v2 lost 33 draws and the village 15.
+- Gates:
+  - game and economy tests green with and without `NEXT_PUBLIC_GAME_WORLD=new` (2007 of 2007, budget.test included);
+  - tsc and eslint clean.
+- Renders: `specs/evidence/perf-newworld/r2e/` (01, 03, 04, 06, 18), matching `terrain-v3/r2e/`.
+- Review fixes on the flock:
+  - it registers in a layout effect;
+  - a copy the flock can't place draws its own model;
+  - the instance matrix comes from the group alone;
+  - flock meshes that cast are marked dynamic casters;
+  - the instance buffers use dynamic draw;
+  - the crab keys are memoised;
+  - snow caps read the instance's turn.
+  Tests are still green in both worlds. The village render with its bugs drawn in flocks is `r2e/village-bugs.webp`.
+- Left: the trees' 54 draws need a different structure (each kind's near and far sets are their own instanced meshes).
+
 **Pass 2: R2d (terrain-v3 7aee495b merged; this branch is the release candidate)**
 
 A/B in the same session, 24 bots, 3 runs each (medians of the pairs; frame / CPU in ms, then draws):

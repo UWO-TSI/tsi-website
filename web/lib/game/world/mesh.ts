@@ -22,8 +22,8 @@ export const LOD_STRIDES = [1, 2, 4, 8] as const;
 /** Camera distance (world units, to the chunk's nearest point) where each level hands over to the next; a little hysteresis. */
 export const LOD_DISTANCE = [56, 112, 224] as const;
 export const LOD_HYSTERESIS = 8;
-/** Water is drawn over a cell whose ground anywhere dips below this far over the sea (the swell's reach). */
-export const WATER_MARGIN = 0.12;
+/** Water is drawn over a cell whose ground anywhere dips below this far over the sea (the swell's reach and the swash up the sand: waterShader SWASH). */
+export const WATER_MARGIN = 0.45;
 /** Water quads merge in blocks of this many chunks a side. */
 export const WATER_BLOCK_CHUNKS = 4;
 

@@ -20,6 +20,7 @@ import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { GLBProp, NatureMushroom } from "../NatureModels";
+import { ModelFlock, addToFlock, endFlock, showOwn, startFlock, type Flock } from "../InstancedNature";
 import { SPECIES as CRITTERS } from "../Critters";
 import { packMap, spriteQuad, useMoveParticles } from "../movement/moveFx";
 import { useGlowParticles } from "../GlowFx";
@@ -54,6 +55,8 @@ function readHarvested(): Record<string, string> {
   try { return JSON.parse(localStorage.getItem(HARVEST_KEY) ?? "{}") as Record<string, string>; } catch { return {}; }
 }
 const MODEL_OF = new Map(CRITTERS.map(c => [c.key, c]));
+/** A bug model at its scale: the bugs that draw together (ModelFlock). */
+const FLOCK_OF = new Map(CRITTERS.map(c => [c.key, `${c.model}|${c.scale}`]));
 /** How near you stand to pick by hand, to shake a tree (its trunk blocks at 0.65), and to pick up what fell. */
 const REACH = 1.7, TREE_REACH = 1.25, DROP_REACH = 1.35;
 const BRANCH_URL = "/assets/game/props/branch.glb";
@@ -189,6 +192,19 @@ function FallenBranch({ drop, lifts }: { drop: Drop; lifts: ReadonlyMap<string, 
   const group = useRef<THREE.Group>(null);
   useFrame(() => placeBranch(group.current, drop, lifts.get(drop.nodeId), performance.now()));
   return <group ref={group} visible={false}><primitive object={model} /></group>;
+}
+
+/** Module scope (the react compiler forbids writing through hook values): each bug into its flock (ModelFlock), or drawn alone while it flees (fading), is lifted into a hand or is hidden. */
+function fillFlocks(bugs: readonly LiveBug[], live: ReadonlyMap<string, LiveBug>, groups: ReadonlyMap<string, THREE.Group>, lifts: ReadonlyMap<string, Lift>, flocks: Map<string, Flock>) {
+  flocks.forEach(startFlock);
+  for (let i = 0; i < bugs.length; i++) {
+    const bug = live.get(bugs[i].id), g = groups.get(bugs[i].id);
+    if (!g) continue;
+    const flock = flocks.get(FLOCK_OF.get(bugs[i].sp.key)!);
+    const flocked = !!flock && !!bug && g.visible && !bug.fled && !bug.faded && !lifts.has(bug.id) && addToFlock(flock, g);
+    showOwn(g, !flocked);
+  }
+  flocks.forEach(endFlock);
 }
 
 interface LiveBug {
@@ -523,6 +539,12 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
     return () => window.removeEventListener("tsi:peaceful-act", onAct);
   }, [forage, lyingByNode, forageTargets, ground, treeModels, hour, fx, struck, lifts, player, markHarvested]);
 
+  const flocks = useMemo(() => new Map<string, Flock>(), []);
+  const flockSizes = useMemo(() => {
+    const n = new Map<string, number>();
+    for (const b of bugs) { const key = FLOCK_OF.get(b.sp.key)!; n.set(key, (n.get(key) ?? 0) + 1); }
+    return [...n];
+  }, [bugs]);
   useFrame((_, delta) => {
     const p = player.current, nowMs = performance.now();
     // A jump of more than a stride in one frame is a spawn or teleport, not running at the bug.
@@ -607,6 +629,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
       if (reaction === "catchable" && (!best || d < best.distance)) { bug.target.distance = d; best = bug.target; }
     }
     setPeacefulTarget(best);
+    fillFlocks(bugs, live, groups.current, lifts, flocks);
   });
   useEffect(() => () => setPeacefulTarget(null), []);
 
@@ -627,6 +650,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
     {spentRocks.map(({ n, sp }) => <Suspense key={n.id} fallback={null}><Outcrop sp={sp!} at={[n.x, ground(n.x, n.z), n.z]} nodeId={n.id} struck={struck} spent /></Suspense>)}
     {pieces.map(p => <Suspense key={p.key} fallback={null}><LiftedPiece piece={p} lifts={lifts} /></Suspense>)}
     <Holes />
+    {flockSizes.map(([key, n]) => { const [url, scale] = key.split("|"); return <Suspense key={key} fallback={null}><ModelFlock url={url} scale={+scale} cap={n} flocks={flocks} /></Suspense>; })}
     {bugs.map(b => {
       const model = MODEL_OF.get(b.sp.key)!;
       return <group key={b.id} ref={g => { if (g) { g.userData.base = 1; groups.current.set(b.id, g); } else groups.current.delete(b.id); }}>

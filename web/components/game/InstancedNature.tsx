@@ -24,7 +24,7 @@
  * the placements re-packed between them only when one crosses the line.
  */
 
-import { Suspense, useEffect, useMemo } from "react";
+import { Suspense, useEffect, useLayoutEffect, useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
@@ -33,6 +33,7 @@ import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { applyModelTextures, disposeModelMaterials, prepareModel } from "@/lib/game/modelMaterials";
 import { shadowClassFor } from "@/lib/game/shadows";
 import { lodOf, updateNear } from "@/lib/game/natureLod";
+import { hash01 } from "@/lib/game/worldFx";
 import { addContact, modelContact } from "./ContactShadows";
 
 export interface NaturePlacement {
@@ -44,6 +45,14 @@ export interface NaturePlacement {
 const _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
 const matrixOf = (p: NaturePlacement, base: number) =>
   new THREE.Matrix4().compose(_p.set(...p.position), _q.setFromAxisAngle(_up, p.rotation ?? 0), _s.setScalar((p.scale ?? 1) * base));
+
+const _tint = new THREE.Color();
+/** A crown's tint from where it stands: a touch lighter or darker, yellower or bluer. */
+function crownTint(m: THREE.Matrix4, out: THREE.Color): THREE.Color {
+  const e = m.elements, a = hash01(Math.round(e[12] * 7), Math.round(e[14] * 7)), b = hash01(Math.round(e[14] * 5), Math.round(e[12] * 3));
+  const v = 0.86 + 0.24 * a, warm = 0.12 * (b - 0.5);
+  return out.setRGB(v * (1 + warm), v, v * (1 - warm));
+}
 
 interface InstancedGLBProps {
   url: string;
@@ -69,6 +78,8 @@ function useInstanced(url: string, matrices: readonly THREE.Matrix4[], emissiveI
       if (!m.isMesh || !m.geometry || !matrices.length) return;
       const im = new THREE.InstancedMesh(m.geometry, m.material, matrices.length);
       matrices.forEach((matrix, i) => im.setMatrixAt(i, matrix));
+      // The forest's crowns, each tree its own shade of green (trees-art: the hue is in the vertex colour, the tint multiplies it).
+      if ((m.material as THREE.Material).name === "mForestCrown") matrices.forEach((matrix, i) => im.setColorAt(i, crownTint(matrix, _tint)));
       // The shadow role prepareModel gave this sub-mesh (caster-only hulls stay hidden until SunShadows draws them).
       Object.assign(im, { name: m.name, castShadow: m.castShadow, receiveShadow: m.receiveShadow, visible: m.visible, frustumCulled: false, customDepthMaterial: m.customDepthMaterial });
       // Its own visibility, which a level's packing (InstancedLodGLB) keeps: a caster-only hull stays hidden.
@@ -236,3 +247,60 @@ export function MergedModels({ items, emissiveIntensity }: { items: readonly Mod
   }, [world, owner, items, urls, models]);
   return <primitive object={owner}>{meshes.map((m, i) => <primitive key={i} object={m} />)}</primitive>;
 }
+
+/** One model's InstancedMeshes (one a sub-mesh), each sub-mesh's place in the model, and how many are filled this frame. */
+export interface Flock { meshes: THREE.InstancedMesh[]; local: THREE.Matrix4[]; n: number }
+/**
+ * Every moving copy of one model at one scale (the bugs, the shore crabs) as one InstancedMesh per sub-mesh
+ * (perf-newworld: each copy was a draw per material). Each copy keeps its own group and model, its meshes hidden
+ * (`showOwn`) while it draws in the flock; the frame loop that moves the groups fills it (startFlock, addToFlock,
+ * endFlock), in `flocks` under `url|scale`.
+ */
+export function ModelFlock({ url, scale, cap, flocks }: { url: string; scale: number; cap: number; flocks: Map<string, Flock> }) {
+  const { scene } = useGLTF(url);
+  const model = useMemo(() => {
+    const m = prepareModel(scene, url);
+    m.scale.setScalar(scale);
+    m.updateMatrixWorld(true);
+    return m;
+  }, [scene, url, scale]);
+  useEffect(() => () => disposeModelMaterials(model), [model]);
+  const flock = useMemo(() => {
+    const f: Flock = { meshes: [], local: [], n: 0 };
+    model.traverse(o => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh || !m.visible) return;
+      const im = new THREE.InstancedMesh(m.geometry, m.material, cap);
+      // The curved world bends far things down into view (modelMaterials prepareModel): never culled by their own bounds.
+      Object.assign(im, { castShadow: m.castShadow, receiveShadow: m.receiveShadow, frustumCulled: false, count: 0 });
+      im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      // Its copies move: SunShadows casts it every frame, never from the cached static map.
+      if (m.castShadow) im.userData.sunCaster = "dynamic";
+      f.meshes.push(im);
+      f.local.push(m.matrixWorld.clone());
+    });
+    return f;
+  }, [model, cap]);
+  // Before the frame after the commit that mounts its meshes, so a rebuilt flock (a new count) never misses a frame.
+  useLayoutEffect(() => {
+    const key = `${url}|${scale}`;
+    flocks.set(key, flock);
+    return () => { flocks.delete(key); flock.meshes.forEach(m => m.dispose()); };
+  }, [flocks, flock, url, scale]);
+  return <>{flock.meshes.map((m, i) => <primitive key={i} object={m} />)}</>;
+}
+const _part = new THREE.Matrix4();
+let _ownShown = true;
+function showOwnOne(o: THREE.Object3D) { if ((o as THREE.Mesh).isMesh) o.visible = _ownShown; }
+/** A copy's own meshes shown (drawn alone) or hidden (drawn in its flock); its group, and so its contact shadow, stay. */
+export function showOwn(group: THREE.Object3D, on: boolean) { _ownShown = on; group.traverse(showOwnOne); }
+export const startFlock = (f: Flock) => { f.n = 0; };
+/** The copy whose group is `group` (moved this frame, a sibling of the flock's meshes) into the flock's next slot; false when the flock is full. */
+export function addToFlock(f: Flock, group: THREE.Object3D): boolean {
+  if (f.n >= (f.meshes[0]?.instanceMatrix.count ?? 0)) return false;
+  group.updateMatrix();
+  for (let k = 0; k < f.meshes.length; k++) f.meshes[k].setMatrixAt(f.n, _part.multiplyMatrices(group.matrix, f.local[k]));
+  f.n++;
+  return true;
+}
+export function endFlock(f: Flock) { for (const m of f.meshes) { m.count = f.n; m.instanceMatrix.needsUpdate = true; } }

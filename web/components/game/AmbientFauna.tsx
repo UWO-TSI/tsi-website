@@ -16,6 +16,7 @@ import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import Seagulls from "./Seagulls";
 import { GLBProp } from "./NatureModels";
+import { ModelFlock, addToFlock, endFlock, showOwn, startFlock, type Flock } from "./InstancedNature";
 import { useMoveParticles } from "./movement/moveFx";
 import { worldNow, worldTime } from "@/lib/game/worldClock";
 import { torontoHour } from "@/lib/game/islandTime";
@@ -123,8 +124,9 @@ function FlyerSwarm({ species, flyers, ground, presence }: { species: FlyerSpeci
 
 // ── Crabs ──────────────────────────────────────────────────────────────
 /** Module scope, as tickFlyers: step every crab and place its model; a scuttle judders, digging in sinks it under the sand. */
-function tickCrabs(crabs: readonly Crab[], states: CrabState[], groups: (THREE.Group | null)[], dt: number, p: THREE.Vector3, ground: Ground, standable: (x: number, z: number) => boolean) {
+function tickCrabs(crabs: readonly Crab[], keys: readonly string[], states: CrabState[], groups: (THREE.Group | null)[], dt: number, p: THREE.Vector3, ground: Ground, standable: (x: number, z: number) => boolean, flocks: Map<string, Flock>) {
   const t = worldNow() / 1000;
+  flocks.forEach(startFlock);
   for (let i = 0; i < states.length; i++) {
     const s = states[i];
     crabStep(crabs[i], s, t, dt, p.x, p.z, standable);
@@ -134,20 +136,31 @@ function tickCrabs(crabs: readonly Crab[], states: CrabState[], groups: (THREE.G
     g.position.set(s.x, ground(s.x, s.z) - s.sink * 0.16 + jig, s.z);
     g.rotation.y = s.yaw + (s.fleeT >= 0 ? Math.sin(s.fleeT * 31) * 0.12 : 0);
     g.visible = s.sink < 0.98;
+    // Drawn in its model's flock; alone until the flock has loaded (or past its count).
+    const flock = flocks.get(keys[i]);
+    showOwn(g, !(flock && g.visible && addToFlock(flock, g)));
   }
+  flocks.forEach(endFlock);
 }
+const CRAB_SCALE = 1.5;
 
 function Crabs({ crabs, ground, standable, player }: { crabs: readonly Crab[]; ground: Ground; standable: (x: number, z: number) => boolean; player: React.RefObject<THREE.Vector3> }) {
   const groups = useRef<(THREE.Group | null)[]>([]);
   const states = useRef<CrabState[]>([]);
   useEffect(() => { states.current = crabs.map(newCrabState); }, [crabs]);
-  useFrame((_, raw) => tickCrabs(crabs, states.current, groups.current, Math.min(raw, 0.1), player.current, ground, standable));
-  return <>{crabs.map((c, i) => (
-    <group key={c.seed} ref={g => { groups.current[i] = g; }}>
-      {/* Small: a contact shadow only (the Small class). */}
-      <Suspense fallback={null}><GLBProp url={c.model} scale={1.5} /></Suspense>
-    </group>
-  ))}</>;
+  const flocks = useMemo(() => new Map<string, Flock>(), []);
+  const sizes = useMemo(() => [...crabs.reduce((n, c) => n.set(c.model, (n.get(c.model) ?? 0) + 1), new Map<string, number>())], [crabs]);
+  const keys = useMemo(() => crabs.map(c => `${c.model}|${CRAB_SCALE}`), [crabs]);
+  useFrame((_, raw) => tickCrabs(crabs, keys, states.current, groups.current, Math.min(raw, 0.1), player.current, ground, standable, flocks));
+  return <>
+    {sizes.map(([url, n]) => <Suspense key={url} fallback={null}><ModelFlock url={url} scale={CRAB_SCALE} cap={n} flocks={flocks} /></Suspense>)}
+    {crabs.map((c, i) => (
+      <group key={c.seed} ref={g => { groups.current[i] = g; }}>
+        {/* Small: a contact shadow only (the Small class). Its own model draws only until its flock has loaded. */}
+        <Suspense fallback={null}><GLBProp url={c.model} scale={CRAB_SCALE} /></Suspense>
+      </group>
+    ))}
+  </>;
 }
 
 // ── Fish leaping at sea ────────────────────────────────────────────────
@@ -277,7 +290,8 @@ export default function AmbientFauna({ site, ground, standable, gulls, perches, 
     for (const f of flyers) groups.set(f.species, [...(groups.get(f.species) ?? []), f]);
     return [...groups];
   }, [flyers]);
-  const crabs = useMemo(() => crabsFor(site, liteMode ? 4 : 6), [site, liteMode]);
+  // The new world's open beach has more (David, R2d: "more crabs shells and little critters moving around in the sand").
+  const crabs = useMemo(() => crabsFor(site, site.beach ? (liteMode ? 8 : 14) : liteMode ? 4 : 6), [site, liteMode]);
   const isSea = useMemo(() => (x: number, z: number) => seaAt(site, x, z), [site]);
   // Flyers take cover from rain and snow over a few seconds and come back the same way.
   const presence = useRef(flyingWeather(weather) ? 1 : 0);

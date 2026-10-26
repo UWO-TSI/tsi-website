@@ -132,16 +132,6 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // a porch out to z 3.9 over the door and a table of fish; an exterior only, the origin at the middle of its floor. The
   // sell barrel (same builder) is the quick sell: a big barrel of fish, a hanging scale and a SELL board, front +z.
   "fish-market": "/assets/game/buildings/fish-market.glb", "sell-barrel": "/assets/game/wharf/sell-barrel.glb",
-  // game/wharf-art2: the ship houses (art/wharf/build_ship_houses.py), to straddle the deck's water edge facing in: the
-  // origin on the deck's top at the middle of the floor, the door to +z (inland), the back half over the sea on piles
-  // down to y -3.4. a the red boathouse (boat door open at the back), b the stilt house (a balcony on piles off +x), c
-  // the net loft (two storeys), d the shack (a porch to z 2.45 under a roof falling to the back).
-  ...Object.fromEntries(["a", "b", "c", "d"].map(m => [`ship-house-${m}`, `/assets/game/wharf/ship-house-${m}.glb`])),
-  // The river's dressing (art/props/build_river_set.py): reeds with cattails rooted at y 0 for the banks and the shallows
-  // (a clump, a small loose one, a run along x for a bank's edge), lily pads floating at their origin (set it on the
-  // water's level: a with a lily in flower, b with a bud), smooth river stones (a scatter, and two big ones that stand in
-  // a shallow), and bleached driftwood lying along x (a log with its root plate at -x, a forked branch). Only the big
-  // stones are solid.
   ...Object.fromEntries(["a", "b", "c"].map(m => [`reeds-${m}`, `/assets/game/plants/reeds-${m}.glb`])),
   ...Object.fromEntries(["a", "b"].map(m => [`lily-pads-${m}`, `/assets/game/water/lily-pads-${m}.glb`])),
   ...Object.fromEntries(["river-stones-a", "river-stones-b", "driftwood-a", "driftwood-b"].map(m => [m, `${P}${m}.glb`])),
@@ -150,14 +140,35 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // sitter looks to +z), a sandcastle with its bucket and spade, a cool box, a volleyball net along x (posts at x +-2.6).
   ...Object.fromEntries(["beach-ball-a", "beach-ball-b", "beach-ball-c", "beach-towel-a", "beach-towel-b", "beach-lounger", "sandcastle", "beach-cooler",
     "volleyball-net"].map(m => [m, `${P}${m}.glb`])),
-  // Single low-poly forest trees for the closed forest (art/trees/build_forest_trees.py, the masses' own tree makers), 100
-  // to 220 triangles, the trunk's foot at the origin (it runs 0.8 under): a broad cedar (7.5 tall), a tall narrow fir
-  // (10), a round broadleaf (5.4) and a young conifer (3.4). Scale them uniformly only (0.8 to 1.25), never stretched.
-  ...Object.fromEntries(["cedar", "fir", "broadleaf", "young"].map(m => [`forest-tree-${m}`, `/assets/game/plants/forest-tree-${m}.glb`])),
+  // Single low-poly forest trees for the closed forest (art/trees/build_forest_trees.py, game/trees-art), 120 to 380
+  // triangles, the trunk's foot at the origin (it runs 0.8 under), not solid. Conifers: a layered cedar (8 tall), a fir
+  // (10), a slender spire (12), a broad old fir (9), one leaning to +x (8), one with a broken top (7.6), a young one (3.4);
+  // broadleaves: an oak-like round crown (6.6), a pale birch (7.6), a wide spreading crown (6.2), a sapling (2.6); and a
+  // dead snag (6). Scale them uniformly only (0.8 to 1.25), never stretched; the instance tint goes on mForestCrown.
+  ...Object.fromEntries(["cedar", "fir", "spire", "old-fir", "leaning", "broken", "young", "broadleaf", "birch", "wide", "sapling", "snag"]
+    .map(m => [`forest-tree-${m}`, `/assets/game/plants/forest-tree-${m}.glb`])),
+  // Riverbank trees (the same builder), 650 to 810 triangles, the trunk's foot at the origin, solid at the trunk only: a
+  // weeping willow (8 tall, sprays hung to about 2 over the ground), a tall alder (8.9), a big oak (8.7, 7.5 across)
+  // and one leaning out over the water to +x (8.6 tall, its crown 4.3 out): turn it to face the river.
+  ...Object.fromEntries(["willow", "alder", "oak", "lean"].map(m => [`river-tree-${m}`, `/assets/game/plants/river-tree-${m}.glb`])),
   // game/wharf-art2: coral reefs for the shallows (art/water/build_coral_reefs.py), the coral clumps above tinted and massed
   // on low rocks, the origin on the seabed at the middle, not solid: a broad (2.8 by 2), b round and tall (2 across), c a
   // long ribbon along x (3.4 by 1.2).
   ...Object.fromEntries(["a", "b", "c"].map(m => [`coral-reef-${m}`, `/assets/game/water/coral-reef-${m}.glb`])),
+  // game/wharf-art4: the wharf shops (art/wharf/build_wharf_shops.py), in the ship houses' frame: the origin on the deck's
+  // top at the middle of the floor, the door to +z (inland), the back over the sea on piles down to y -3.4. The tackle
+  // shop: walls z -2.45 to 1.15, a porch under a striped awning to z 2.45, a giant rod on the roof whose line hangs a
+  // bobber and a lure off the porch's +x corner (x 2.35, z 3.05, down to y 1.6).
+  "tackle-shop": "/assets/game/wharf/tackle-shop.glb",
+  // The shipwright: the shed (walls x +-1.9, z +-2; doors open to the front and to a side pier along +x over the water,
+  // x 2.15 to 3.45, z -2.25 to 0.4) and its boat, a hull half planked with the ribs showing at the bow, a separate model
+  // so it can bob. The boat's origin is on the waterline at its middle, the bow to -z; it floats with its origin at
+  // (5.4, -1.078, -3.6) in the shed's frame (the sea's level under a deck at 1), same yaw. The gangplank is the shed's:
+  // it runs off the pier to (4.3, 0.16, -2) in the shed's frame, just over the boat's gunwale. The boat's not solid.
+  ...Object.fromEntries(["shipwright-shed", "shipwright-boat"].map(m => [m, `/assets/game/wharf/${m}.glb`])),
+  // More shells for the sand (art/props/build_beach_shells.py), scenery beside the four forage shells, lying on the sand
+  // at y 0, not solid, one P_Paint each so they merge: a sea star 0.34 across, a sand dollar 0.22, a conch 0.34 along z.
+  ...Object.fromEntries(["starfish", "sand-dollar", "conch"].map(m => [m, `${P}${m}.glb`])),
 };
 export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? `/assets/acnh/props/${model}.glb`;
 
