@@ -19,6 +19,17 @@ Then look at the references in `specs/references/terrain/plan-2026-10-23/` and t
 
 ## Status
 
+**R2c reviewed 2026-10-26** (head 76f4b591, not merged): the map, the wharf's water edge, the wharf and the path at night are approved; the rest are redos (notes below, verbatim). Next is R2d (Next, below).
+
+Perf is handled by its own lane: `perf-newworld` (`game/perf-newworld`, cut from 76f4b591, `specs/lanes/perf-newworld.md`). Measured side by side, v2 High is 6.1 ms and 430 draws against the village's 4.6 ms and 384. The lane is cutting:
+- the houses' colourways;
+- the rope and wood merges;
+- contacts and statics culled by distance;
+- trees.
+
+Its branch merges into yours when the coordinator says.
+
+
 **R2c built 2026-10-26, waiting on review** (head: the commit after 854b65d8). All art merged: village-art 7bdb2e75 (lamps, hand lantern, plaza set, path and nature set, forest remodel) and wharf-art c951d6eb (dock decor, palms third pass, beach set, fish market). Renders in `specs/evidence/terrain-v3/r2c/` (00 top-down, 01 to 20).
 
 What R2c built (David's R2b notes, the reading 1 to 11, and his 2026-10-26 references):
@@ -78,6 +89,47 @@ R2 (on the R1c ground):
 - **Not in R2:** fishing nets (no net model in the assets; `tool-net` is the bug net). Questions: `specs/launch/terrain-v3-questions.md` "R2".
 
 ## David's decisions
+
+### 2026-10-26: R2c review, verbatim (https://claude.ai/artifact/2WJiN8D8WAQF22E9CL1pPu)
+
+- **map (approve), edge (approve), wharf (approve):** no notes.
+- **arrival (redo):** "looks good, but spread out more, bigger spread and gaps and make it more natural"
+- **docks-above:** "spread out, not so univor, the horizontal docks go wider and go for longer"
+- **docks (redo):** "stairs down need to be more fitting, less pumpkins, ore lighing, make the dock bigger so it feels less clutter"
+- **market (redo):** "the shop should look more similar to reference, the model of the sword fish bigger and incorperated within the build, and bigger so that its like lunched out the building. i want a big barrel that you can sell outside for quick sell or go in for more details and buy shop and appraisal and stuff"
+- **path (redo):** "looking a lot better, I want more brain storing to make it look better, i think the bushes are too dense and looks like a sphere from afar, i should feel more fluffy and density varies so some of it fees more organic "
+- **plaza (redo):** "have brick roads to the important shops, have building come together slightly closer. remodel rocks to be more organic shape than just spheres, use blender, treat each asset properly"
+- **beach (redo):** "light guard tower taller, make the shallow water area bigger and you can dip your toes in water, bigger trees. brainstorm for more beach stuff, maybe beach balls you can play with"
+- **sushi (redo):** "the sushi bar needs to be a long horizontal bar, reference bancho sushi in dave the diver, it should have a long bar style, the decore is similar to wharf, its a really big open bar where you can sit down and it changes camera anger to more first person, it has festive lighting inside, it back of the bar is open window to see beatiful view in the back, 1-2 sushi npc making sushi. i will drop reference image in chat. the bar entirely needs to be re modeled in blender properly and it needs to looks visually stunning."
+- **campfire (redo):** "slightly bigger camp fire 15%, have coral reeffs and fish you can see in the shallow water"
+- **forest (redo):** "tree is still fucked up and weird, theres a bunch of clumps and wtv super stretched trees, i just need a low render for performance that also looks like busy forest over there but also look natural, cuz theyre not walking there its closed off"
+- **river (redo):** "needs work on feeling natural, it feels so barren and unnatural right now"
+- **night-wharf (redo):** "there should be different ship houses, it should be build on the side of the wharf and face inwards. the lighting in our game is still weak, should have like a glow homey feel and it should light up larger area"
+- **night-path (approve):** "looks better"
+- **night-plaza (redo):** "make the flag tsi logo flag. needs to work on the fog effect later cuz it looks like a horror game"
+
+**The coordinator's reading:**
+1. **The docks:**
+   - spread out, with bigger gaps between the piers, less uniform and more natural;
+   - the cross walkways wider and longer;
+   - the stairs down fit the build better;
+   - the whole dock bigger, so it feels less cluttered (fewer props per area);
+   - fewer pumpkins: on the new world, drop the pumpkin at every lamp and keep a few.
+2. **Lighting:** warm, homey glow that lights a larger area, on the wharf first and everywhere at night. Prefer cheap ground light pools and glow halos to more real lights, since perf is tight. The fog's horror look is a later pass (post-launch).
+3. **Ship houses:** several different boathouses or fishing huts built along the sides of the wharf, facing in. `wharf-art2` models them.
+4. **The fish market:** remodelled closer to `wharf-fishing-hut-1.jpg`, with the swordfish much bigger, built into the building and bursting out of it (`wharf-art2`). A big barrel outside is the quick sell: interacting opens the game's existing sell flow (`/api/economy/sell`, `bagStore`). The inside (buy shop, appraisal) comes after launch.
+5. **The path:** fluffier bushes with varied density, not spheres (`village-art2` makes them), and more ideas to make it lovely.
+6. **The plaza:** brick roads from the plaza to the important buildings (HQ, café, shop, museum, and the path to the wharf); the buildings slightly closer. Rocks remodelled as organic shapes, not spheres (`village-art2`).
+7. **The beach:**
+   - the lifeguard tower taller (`wharf-art2`);
+   - a bigger shallow wading area;
+   - bigger palms;
+   - more beach things, with beach balls first. Whether you can play with them depends on what the game already has; otherwise they're scenery for now and play comes later.
+8. **The sushi bar:** a full redo as a long, open bar in the style of Bancho Sushi in Dave the Diver. David is sending references. It's its own lane, so leave the current one where it is.
+9. **The campfire:** 15% bigger. Coral reefs and fish you can see in the shallow water.
+10. **The forest:** a closed, busy, natural forest that's cheap to draw, with no clumps or stretched trees. Drop the forest masses. Instead, use many single low-poly trees from a few variants (the existing `.lod1` trees and cedars, plus any `village-art2` adds), instanced, so it's one draw per variant. Give each tree its own uniform scale, turn and slight tint, set each at its own ground height, and pack them densely.
+11. **The river:** natural, not barren: reeds, stones, bushes, flowers and trees along the banks, and lily pads (`village-art2` makes the missing pieces).
+12. **The plaza flags:** the TSI logo (`web/public/assets/branding/tethos-mark.svg`) on them (`village-art2`).
 
 ### 2026-10-26: R2b review, verbatim (https://claude.ai/artifact/TE3dCaECrP8qUTBTHyxUZz)
 
@@ -219,8 +271,20 @@ The plan page answers, verbatim in the spec. The drawing is a guide to where thi
 
 ## Next
 
-1. **David's R2c review** (the coordinator publishes `r2c/`). Then his notes here, verbatim, and the round they set.
-2. **Perf trims, if the coordinator wants them before Oct 28** (the v2 bench, 425 draws High, from `specs/perf/draw-breakdown.mjs`): scenery sets at the scene root about 150 (13 `M_Rope` groups: each GLB carries its own rope texture, one shared rope image in the art scripts would make them one; 8 `M_DecorWood`; ACNH props and barriers one set each), houses about 40 (merge each chalet's parts by material), lamps 21 (merge the lamp bodies, keep the glass apart), terrain chunks 20, characters 41 (the bench's 24 bots), trees with their LOD and hulls about 25. CPU is spread over three's per-draw work and matrix updates (no single hog in a CPU profile), so draws are the lever. Pumpkins (the Halloween layer) stand at every lamp, 80 now.
+**R2d: David's R2c notes** (the reading above, 1 to 12, except 8, the sushi bar). Fog, light and water changes apply to the new world only.
+
+1. **Layout and landform first:**
+   - the docks spread out and bigger (1);
+   - fewer pumpkins;
+   - the plaza's brick roads and its buildings closer (6), using `village-art2`'s brick texture when it lands, a placeholder until then;
+   - the bigger wading area and the bigger palms (7);
+   - the campfire at 1.15;
+   - fish you can see in the shallows (reuse `web/public/assets/game/water/fish.glb` and any existing ambient fish code);
+   - the forest as instanced single trees (10);
+   - the quick-sell barrel wired to the existing sell flow (4).
+2. **Lighting (2):** keep it cheap. Don't edit the files the perf lane is changing (`InstancedNature` merges, `ACNHParts`, `ContactShadows`, matrix and cull code) until the coordinator says it's merged in; put the work in the lamp and lighting code.
+3. **Place the art as it lands** from `wharf-art2` and `village-art2`. The coordinator tells you when to merge each branch.
+4. **Renders** under `specs/evidence/terrain-v3/r2d/`, the r2c set again. SendMessage "main" with the images and a one-line fact for each. Update Status, then stop. No perf run: the perf lane owns it.
 
 ## Tools and gotchas
 
