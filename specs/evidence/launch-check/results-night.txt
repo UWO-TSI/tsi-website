@@ -1,0 +1,116 @@
+{
+  "at": "2026-10-26T23:41:24.813Z",
+  "preview": "play.tethos.ca",
+  "results": [
+    {
+      "step": "night: both in the island and in view",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "night: no join refused or dropped (sockets closed before play)",
+      "ok": true,
+      "detail": "A 0, B 0"
+    },
+    {
+      "step": "night: both islands are in the night phase (the fire is lit)",
+      "ok": true,
+      "detail": "night, night"
+    },
+    {
+      "step": "campfire: A walks to the fire",
+      "ok": true,
+      "detail": "{\"ok\":true,\"here\":{\"x\":16.006677518100343,\"z\":103.37249395063694},\"dist\":0.8635944705212105}"
+    },
+    {
+      "step": "campfire: B walks to the fire",
+      "ok": true,
+      "detail": "{\"ok\":true,\"here\":{\"x\":12.156009570776662,\"z\":102.57111386018903},\"dist\":1.616559949909006}"
+    },
+    {
+      "step": "campfire: A's dance by the fire turns to the stomp, B sees it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "campfire: B's dance by the fire turns to the stomp, A sees it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "night chat: A's line reaches B",
+      "ok": true,
+      "detail": "1139 ms"
+    },
+    {
+      "step": "night report: B reports A's line",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "step": "night moderation: the report is in the queue",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "step": "night moderation: remove and mute",
+      "ok": true,
+      "detail": "HTTP 200, realtime: applied"
+    },
+    {
+      "step": "night moderation env: /internal/sanction applied (realtime v5)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "night moderation: A muted in the database (F4: mute before the report closes)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "night live mute: A's next line is refused at once",
+      "ok": true,
+      "detail": "1657 ms after the mute"
+    },
+    {
+      "step": "night live mute: B never receives the muted line",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "night moderation: unmute",
+      "ok": true,
+      "detail": "HTTP 200, realtime: applied"
+    },
+    {
+      "step": "night live unmute: A's line reaches B again",
+      "ok": true,
+      "detail": "873 ms"
+    },
+    {
+      "step": "block: B blocks A",
+      "ok": true,
+      "detail": "HTTP 200, realtime: applied"
+    },
+    {
+      "step": "block env: /internal/block applied",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "block: A's new line doesn't reach B (log or bubble)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "block: B's line doesn't reach A either",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "block: A's tag still shows for B (the world is shared)",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}

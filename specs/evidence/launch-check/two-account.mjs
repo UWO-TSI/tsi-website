@@ -93,20 +93,24 @@ async function setup() {
   log("profiles", JSON.stringify(rows));
 }
 
+/** The site's auth cookie on tethos.ca hosts (web/lib/supabase/cookie.ts: one name, shared across the subdomains). */
+const COOKIE = /(^|\.)tethos\.ca$/.test(HOST)
+  ? { name: readFileSync(WEB + "lib/supabase/cookie.ts", "utf8").match(/SHARED_AUTH_COOKIE = "([^"]+)"/)[1], domain: ".tethos.ca" } : undefined;
+
 /** A fresh random password (memory only), then a signed-in session's cookies, as @supabase/ssr writes them. */
 async function signIn(k) {
   const pw = password();
   const r = await admin(`users/${ids[k].id}`, { method: "PUT", body: JSON.stringify({ password: pw }) });
   if (!r.ok) throw new Error(`password ${k}: HTTP ${r.status}`);
   const jar = new Map();
-  const sb = createServerClient(SB_URL, ANON, { cookies: {
+  const sb = createServerClient(SB_URL, ANON, { cookieOptions: COOKIE, cookies: {
     getAll: () => [...jar].map(([name, value]) => ({ name, value })),
     setAll: list => { for (const c of list) c.value ? jar.set(c.name, c.value) : jar.delete(c.name); },
   } });
   const { data, error } = await sb.auth.signInWithPassword({ email: ids[k].email, password: pw });
   if (error) throw new Error(`sign-in ${k}: ${error.message}`);
   await new Promise(res => setTimeout(res, 50));
-  return { uid: data.user.id, cookies: [...jar].map(([name, value]) => ({ name, value, domain: HOST, path: "/", sameSite: "Lax", secure: true, httpOnly: false })) };
+  return { uid: data.user.id, cookies: [...jar].map(([name, value]) => ({ name, value, domain: COOKIE?.domain ?? HOST, path: "/", sameSite: "Lax", secure: true, httpOnly: false })) };
 }
 
 // ── Browser helpers ─────────────────────────────────────────────────
@@ -277,7 +281,8 @@ async function day() {
     const met = await waitFor(A, async () => (await tagShown(A, B.name)) && (await tagShown(B, A.name)), 90000, 500);
     record("tags: each sees the other's name tag", met, met ? "" : `A sees B: ${await tagShown(A, B.name)}, B sees A: ${await tagShown(B, A.name)}`);
     const people = await peopleLabel(A);
-    record("presence: A's menu says Here (2)", /Here \(2\)/.test(people ?? ""), people ?? "no entry");
+    // Production is live: anyone else on the island counts too.
+    record("presence: A's menu counts both (Here (2) or more)", Number(/Here \((\d+)\)/.exec(people ?? "")?.[1]) >= 2, people ?? "no entry");
     await shot(A, "02-a-sees-b-tag");
     await shot(B, "03-b-sees-a-tag");
 
@@ -403,6 +408,7 @@ async function day() {
       if (M) await M.ctx.close();
     }
     await flow4(A);
+    await shovel(A);
     await Promise.all([A.ctx.close(), B.ctx.close()]);
   } finally {
     await browser.close();
@@ -423,14 +429,16 @@ async function flow4(A) {
   const before = await ledger();
   record("flow 4: the arrival paid Bram's coins once", before.filter(r => /arriv/i.test(`${r.ref} ${r.idempotency_key}`)).length === 1, JSON.stringify(before.map(r => [r.source, r.ref, r.amount])));
   // River water always bites with a fish (the sea also gives sea stars and the like, which aren't fish): the active
-  // world's river spot nearest the beach (spots.ts).
+  // world's river, from its east bank (spots.ts).
   for (let i = 0; i < 3; i++) {
     const cast = await api(A, "/api/collections", "POST", { action: "cast", site: "village", at: SPOTS.cast, power: 0.6, tool: "rod_flimsy" });
-    record(`flow 4: cast at the wharf with the starter rod (${i + 1})`, cast.status === 200 && !!cast.json?.catch?.roll, `HTTP ${cast.status} ${cast.json?.catch?.item_key ?? JSON.stringify(cast.json).slice(0, 120)}`);
+    record(`flow 4: cast into the river with the starter rod (${i + 1})`, cast.status === 200 && !!cast.json?.catch?.roll, `HTTP ${cast.status} ${cast.json?.catch?.item_key ?? JSON.stringify(cast.json).slice(0, 120)}`);
     if (!cast.json?.catch?.roll) break;
     await A.page.waitForTimeout(2500);
     const land = await api(A, "/api/collections", "POST", { action: "land", roll: cast.json.catch.roll });
     record(`flow 4: land it (${i + 1})`, land.status === 200, `HTTP ${land.status} ${land.json?.catch?.item_key ?? ""}`);
+    const key = String(land.json?.catch?.item_key ?? "");
+    if (key) record(`flow 4: the river gives a river catch (${i + 1})`, SPOTS.riverFish.includes(key), key);
     if (String(land.json?.catch?.item_key ?? "").startsWith("fish_")) break;
   }
   const donate = await api(A, "/api/progression/chapters/advance", "POST", { chapter_slug: "settle-in", action: "donate_catch" });
@@ -444,6 +452,28 @@ async function flow4(A) {
   record("flow 4: 100 coins once (chapter:settle-in)", settle.length === 1 && Number(settle[0].amount) === 100, JSON.stringify(settle.map(r => [r.source, r.ref, r.amount])));
   const letters = await sql(`select count(*)::int as n from letters where recipient_id = '${uid}'`);
   record("flow 4: the chapter letter is in the mailbox", letters[0]?.n >= 1, `letters: ${letters[0]?.n}`);
+}
+
+/**
+ * The shovel in the new world, through the routes the island calls, as A (a new arrival: tools taught, row 312): the dig
+ * is refused before Pim hands the shovel over (POST /api/world/tools, as his talk does); then a rock struck and a shell on
+ * the beach dug or picked (whatever its node holds this hour; the buried one is the dig).
+ */
+async function shovel(A) {
+  const SHOVEL = "shovel-basic", harvest = n => api(A, "/api/collections", "POST", { action: "harvest", node: n.id, at: [n.x, n.z], tool: SHOVEL });
+  record("shovel: the active world has rocks and beach shells", SPOTS.rocks.length > 0 && SPOTS.shells.length > 0, `rocks ${SPOTS.rocks.length}, shells ${SPOTS.shells.length}`);
+  const before = await harvest(SPOTS.rocks[0]);
+  record("shovel: a new arrival's dig is refused before Pim hands the shovel over", before.status === 403 && before.json?.code === "tool_not_owned", `HTTP ${before.status} ${before.json?.code ?? ""}`);
+  const given = await api(A, "/api/world/tools", "POST", { tool: "shovel" });
+  record("shovel: Pim hands it over (POST /api/world/tools)", given.status === 200 && given.json?.tool?.granted === true, `HTTP ${given.status} ${JSON.stringify(given.json?.tool ?? given.json).slice(0, 120)}`);
+  const tries = [];
+  for (const n of SPOTS.rocks) { const r = await harvest(n); tries.push(`${n.id} ${r.status} ${r.json?.catch?.item_key ?? r.json?.code ?? ""}`); if (r.status === 200) break; }
+  record("shovel: strike a rock", /rock_/.test(tries.at(-1) ?? "") && / 200 /.test(tries.at(-1)), tries.join("; "));
+  const shells = [];
+  let dug = false;
+  for (const n of SPOTS.shells) { const r = await harvest(n); shells.push(`${n.id} ${r.status} ${r.json?.catch?.item_key ?? r.json?.code ?? ""}`); if (r.status === 200 && r.json?.catch?.item_key === "shell_asari") { dug = true; break; } }
+  record("shovel: a beach shell node gives its catch", shells.some(t => / 200 /.test(t)), shells.join("; "));
+  record("shovel: a buried shell dug up on the beach (the shovel quest's catch)", dug, dug ? "" : "none buried at these nodes this hour");
 }
 
 // The campfire (lib/game/campfire.ts): lit at real night; A and B walk to it (steered by the minimap's dot), dance, and
@@ -488,6 +518,9 @@ async function night() {
   browser = await chromium.launch({ headless: true, args: ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist", "--enable-gpu"] });
   try {
     const A = await player("a"), B = await player("b");
+    // A rerun starts unblocked (the last step blocks; "not blocked is fine").
+    const unblock = await api(B, `/api/world/blocks?member_id=${A.uid}`, "DELETE");
+    log("B unblocks A before the run", unblock.status, unblock.json?.realtime ?? "");
     await enter(A); await enter(B);
     const met = await waitFor(A, async () => (await tagShown(A, B.name)) && (await tagShown(B, A.name)), 90000, 500);
     record("night: both in the island and in view", met);
@@ -528,6 +561,8 @@ async function nightModeration(A, B) {
   let since = Date.now();
   await say(A, "evening birch, nice fire");
   record("night chat: A's line reaches B", await waitFor(B, () => textShown(B, "evening birch, nice fire"), 8000, 150), `${Date.now() - since} ms`);
+  // The realtime server writes the chat log every 2 s (realtime/src/chatLog.ts): a report sooner is told "try again in a moment".
+  await B.page.waitForTimeout(3000);
   await closeSheets(B);
   await focusWorld(B);
   await B.page.keyboard.press("Enter");

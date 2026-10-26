@@ -1,0 +1,81 @@
+{
+  "at": "2026-10-26T23:39:19.588Z",
+  "preview": "play.tethos.ca",
+  "results": [
+    {
+      "step": "night: both in the island and in view",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "night: no join refused or dropped (sockets closed before play)",
+      "ok": true,
+      "detail": "A 0, B 0"
+    },
+    {
+      "step": "night: both islands are in the night phase (the fire is lit)",
+      "ok": true,
+      "detail": "night, night"
+    },
+    {
+      "step": "campfire: A walks to the fire",
+      "ok": true,
+      "detail": "{\"ok\":true,\"here\":{\"x\":15.3395427248147,\"z\":103.23070075500016},\"dist\":1.4766766304526127}"
+    },
+    {
+      "step": "campfire: B walks to the fire",
+      "ok": true,
+      "detail": "{\"ok\":true,\"here\":{\"x\":11.43501126894065,\"z\":102.47145453917493},\"dist\":1.5289463740634481}"
+    },
+    {
+      "step": "campfire: A's dance by the fire turns to the stomp, B sees it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "campfire: B's dance by the fire turns to the stomp, A sees it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "night chat: A's line reaches B",
+      "ok": true,
+      "detail": "1151 ms"
+    },
+    {
+      "step": "night report: B reports A's line",
+      "ok": false,
+      "detail": "HTTP 404"
+    },
+    {
+      "step": "night moderation: the report is in the queue",
+      "ok": false,
+      "detail": "HTTP 200"
+    },
+    {
+      "step": "block: B blocks A",
+      "ok": true,
+      "detail": "HTTP 200, realtime: applied"
+    },
+    {
+      "step": "block env: /internal/block applied",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "block: A's new line doesn't reach B (log or bubble)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "block: B's line doesn't reach A either",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "block: A's tag still shows for B (the world is shared)",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}

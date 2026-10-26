@@ -39,8 +39,8 @@ async function scan() {
     on t.table_schema = c.table_schema and t.table_name = c.table_name and t.table_type = 'BASE TABLE'
     where c.table_schema = 'public' and c.data_type = 'uuid' and c.column_name <> 'id' order by 1, 2`);
   const parts = cols.map(({ t, c }) => `select '${t}.${c}' as col, count(*)::int as n from public."${t}" where "${c}" in (${list})`);
-  parts.push(`select 'auth.users.id', count(*)::int from auth.users where id in (${list})`);
-  parts.push(`select 'public.profiles.id', count(*)::int from public.profiles where id in (${list})`);
+  parts.push(`select 'auth.users.id' as col, count(*)::int as n from auth.users where id in (${list})`);
+  parts.push(`select 'public.profiles.id' as col, count(*)::int as n from public.profiles where id in (${list})`);
   const rows = [];
   for (let i = 0; i < parts.length; i += 40) rows.push(...await sql(parts.slice(i, i + 40).join("\nunion all\n")));
   return { columns: rows.length, nonzero: rows.filter(r => r.n > 0) };
