@@ -162,14 +162,8 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // shop: walls z -2.45 to 1.15, a porch under a striped awning to z 2.45, a giant rod on the roof whose line hangs a
   // bobber and a lure off the porch's +x corner (x 2.35, z 3.05, down to y 1.6).
   "tackle-shop": "/assets/game/wharf/tackle-shop.glb",
-  // The shipwright: the shed (walls x +-1.9, z +-2; doors open to the front and to a side pier along +x over the water,
-  // x 2.15 to 3.45, z -2.25 to 0.4) and its boat, a hull half planked with the ribs showing at the bow, a separate model
-  // so it can bob. The boat's origin is on the waterline at its middle, the bow to -z; it floats with its origin at
-  // (5.4, -1.078, -3.6) in the shed's frame (the sea's level under a deck at 1), same yaw. The gangplank is the shed's:
-  // it runs off the pier to (4.3, 0.16, -2) in the shed's frame, just over the boat's gunwale. The boat's not solid.
-  ...Object.fromEntries(["shipwright-shed", "shipwright-boat"].map(m => [m, `/assets/game/wharf/${m}.glb`])),
-  // art-r2f: the shipwright's ship, to replace the shed and its boat (David, R2e: "a big boat docked to the side"), the
-  // same frame (an edge shop): the deck's water edge at z 0, the deck +z. A wooden hull 14 long along x (bow to +x, x
+  // art-r2f: the shipwright's ship (David, R2e: "a big boat docked to the side"), in the tackle shop's
+  // frame (an edge shop): the deck's water edge at z 0, the deck +z. A wooden hull 14 long along x (bow to +x, x
   // -7.1 to 10.6 with the bowsprit) from z -0.35 out to -5.2, its deck at y 0.35, a workshop on it with its door toward
   // the deck, scaffolding round the bow on poles to the seabed, a mast to y 9.45. On the deck itself: the gangway from
   // (1.3, 0, 1.7) up through the bulwark to (1.3, 0.37, -0.8), and two bollards at (5.6, 0.55) and (-6, 0.55). Not

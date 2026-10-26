@@ -308,9 +308,20 @@ export const JETTY = {
 export const SELL_BARREL = "sell-barrel";
 
 /** The wharf's shops on the deck's water edge (wharf-art4's, in the old ship houses' frame: their backs over the sea on piles, facing in). */
-export const EDGE_SHOPS: readonly string[] = ["tackle-shop", "shipwright-shed", "shipwright-ship"];
+export const EDGE_SHOPS: readonly string[] = ["tackle-shop", "shipwright-ship"];
 /** How near a deck square's middle a shop leaves its water edge bare. */
 const SHED_CLEAR = 4.2;
+/**
+ * Along the edge (its frame's x) the shipwright's ship runs from bowsprit to stern (art-r2f, propModels.ts), a square's
+ * half more each way: no kit on the edge there, clear of its bollards and their lines.
+ */
+const SHIP_SPAN = [-7.1 - 2, 10.6 + 2] as const;
+/** Whether a shop keeps the edge square at (x, z) bare. */
+function shedClears(s: { x: number; z: number; yaw?: number; model?: string }, x: number, z: number): boolean {
+  if (s.model !== "shipwright-ship") return Math.hypot(x - s.x, z - s.z) < SHED_CLEAR;
+  const c = Math.cos(s.yaw ?? 0), n = Math.sin(s.yaw ?? 0), along = (x - s.x) * c - (z - s.z) * n;
+  return along > SHIP_SPAN[0] && along < SHIP_SPAN[1] && Math.abs((x - s.x) * n + (z - s.z) * c) < 6;
+}
 /** A wharf kit model placed on the deck (art/wharf/build_wharf_kit.py, lib/game/propModels.ts SCENERY_URLS): world x, y, z and its turn. */
 export interface KitPiece { model: string; x: number; y: number; z: number; yaw: number }
 /**
@@ -322,7 +333,7 @@ export interface KitPiece { model: string; x: number; y: number; z: number; yaw:
  * own way, the ladders at uneven gaps (David, R2d: "make it organic").
  */
 export function deckPieces(decks: readonly { x: number; z: number; yaw?: number }[], ground: (x: number, z: number) => number, keep?: { x: number; z: number }, clear = 9,
-  sheds: readonly { x: number; z: number }[] = []): KitPiece[] {
+  sheds: readonly { x: number; z: number; yaw?: number; model?: string }[] = []): KitPiece[] {
   const out: KitPiece[] = [], at = { x: 0, z: 0 };
   let edge = 0, ladder = -9;
   for (const o of decks) {
@@ -335,7 +346,7 @@ export function deckPieces(decks: readonly { x: number; z: number; yaw?: number 
     };
     put("deck-tile", 0, 0, 0);
     dockToWorld(d, 0, -2.6, at);
-    if (ground(at.x, at.z) > 0 || sheds.some(s => Math.hypot(o.x - s.x, o.z - s.z) < SHED_CLEAR)) continue;
+    if (ground(at.x, at.z) > 0 || sheds.some(s => shedClears(s, o.x, o.z))) continue;
     const i = edge++, open = !keep || Math.hypot(o.x - keep.x, o.z - keep.z) > clear;
     for (const lx of [-1, 1]) put("dock-pile-rope", lx, -2.2, 0.5);
     if (open && i - ladder > 2 && hash01(i, 8) < 0.4) {

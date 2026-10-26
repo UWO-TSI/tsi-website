@@ -105,7 +105,7 @@ export const PROP_FOOTPRINT: Record<string, [number, number]> = {
   // game/village-art2
   "moss-boulder-a": [0.65, 0.5], "moss-boulder-b": [1.05, 0.65], "river-stones-b": [0.55, 0.4],
   // game/wharf-art4
-  "tackle-shop": [2.3, 2.45], "shipwright-shed": [2.0, 2.1],
+  "tackle-shop": [2.3, 2.45],
   // game/trees-art: the riverbank trees' trunks at the ground.
   "river-tree-willow": [0.7, 0.7], "river-tree-alder": [0.65, 0.65], "river-tree-oak": [0.75, 0.75], "river-tree-lean": [0.6, 0.6],
 };
@@ -124,7 +124,7 @@ export const PROP_TOP: Record<string, number> = {
   "sushi-bar": 4.68, "fish-market": 11.97, "sell-barrel": 2.62,
   "beach-lounger": 0.948, sandcastle: 0.78, "beach-cooler": 0.486, "volleyball-net": 2.14, "lifeguard-tower": 4.7, "surfboard-a": 1.755, "surfboard-b": 1.759, "surfboard-c": 1.763,
   "moss-boulder-a": 0.855, "moss-boulder-b": 0.761, "river-stones-b": 0.475,
-  "tackle-shop": 6.741, "shipwright-shed": 4.68,
+  "tackle-shop": 6.741,
 };
 /**
  * Residents' houses (the `house` kind, specs/world-editor.md decision 10): the chalet in its three colourways, the

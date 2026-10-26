@@ -385,13 +385,13 @@ const HOUSES: readonly [number, number, string][] = ([
  * in the ship houses' frame: EDGE_SHOPS).
  */
 const SELL_AT = 26.6;
-const SHOPS: readonly (readonly [z: number, model: string])[] = [[63.5, "tackle-shop"], [73.5, "shipwright-shed"]];
+const SHOPS: readonly (readonly [z: number, model: string])[] = [[63.5, "tackle-shop"], [73.5, "shipwright-ship"]];
 /**
  * The fish market on the deck boards (quayAt's z and d, a turn off facing the water, a scale): the market, its carts,
  * barrels and crates in loose clusters, each its own turn (David, R2d: "make it organic").
  */
 const MARKET: readonly (readonly [model: string, z: number, d: number, turn: number, scale: number])[] = [
-  // wharf-art2's fish market, 6.2 by 7.2, its porch turned south down the deck, its swordfish's bill out over the water.
+  // art-r2f's fish market, 7.8 wide by 4.2 deep, its porch turned south down the deck, its swordfish bursting up through the roof (R2e: "make building a bit wider").
   ["fish-market", 19.5, 4, -Math.PI / 2, 1],
   ["market-cart", 31.2, 5.7, 0.25, 0.55], ["market-cart", 40.6, 6.4, -0.2, 0.55], ["market-cart", 70.5, 6.1, 0.15, 0.53], ["market-cart", 79.6, 5.5, -0.35, 0.56],
   ...[[24.4, 6.9, 0.07], [25.1, 6.3, 0.066], [24.7, 7.5, 0.072], [29.6, 2.2, 0.07], [43.4, 7.1, 0.068], [57.8, 1.6, 0.07], [58.4, 2.2, 0.065], [72.7, 7.3, 0.07], [77.2, 7.5, 0.07], [77.9, 6.8, 0.066]]
@@ -418,8 +418,8 @@ function scenery(): Obj[] {
   // there opens the sell sheet (DefaultIslandWorld, by its id).
   { const q = quayAt(SELL_AT, 1); out.push(obj("prop", SELL_BARREL, q.x, q.z, q.yaw + Math.PI / 2, 1, "sell-barrel")); }
   // The wharf's shops on the deck's water edge, their backs over the sea, facing in (David, R2d: "one for selling
-  // rods/equipment, with a big rod on the roof ... and one for building ships"); the shipwright's boat floats beside its
-  // shed (components/game/wharf/ShipwrightBoat.tsx).
+  // rods/equipment, with a big rod on the roof ... and one for building ships"; R2e: "a big boat docked to the side"):
+  // the tackle shop and the shipwright's ship moored along the edge, its gangway onto the deck.
   SHOPS.forEach(([z, m]) => { const q = quayAt(z, -1); out.push(obj("prop", m, q.x, q.z, q.yaw, 1, m)); });
   // The path's loose fencing (David: "the fencing is loosely there not a straight fencing but one with gaps", running
   // "up higher"): short runs and lone posts either side all the way up, bushes scattered behind them.
