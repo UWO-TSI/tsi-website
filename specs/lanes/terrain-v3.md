@@ -19,16 +19,18 @@ Then look at the references in `specs/references/terrain/plan-2026-10-23/` and t
 
 ## Status
 
-**R2c reviewed 2026-10-26** (head 76f4b591, not merged): the map, the wharf's water edge, the wharf and the path at night are approved; the rest are redos (notes below, verbatim). Next is R2d (Next, below).
+**R2d built 2026-10-26, waiting on review** (head: the commit after 4ac9b07a). Merged in: village-art2 8608aec7, wharf-art2 0ee8bd95, wharf-art3 a1b8e1ff (the sell stall), sushi-bar f7fbca92 (the bar model only; the sushi-bar lane now owns the bar's placement and boardwalk in generate.ts, so don't move it), perf-newworld 2b28dd51 (its files are ours again). Renders in `specs/evidence/terrain-v3/r2d/` (00 top-down, 01 to 22), the village check in `r2d/village-check/` (v1 to v4: same as before the merges by eye).
 
-Perf is handled by its own lane: `perf-newworld` (`game/perf-newworld`, cut from 76f4b591, `specs/lanes/perf-newworld.md`). Measured side by side, v2 High is 6.1 ms and 430 draws against the village's 4.6 ms and 384. The lane is cutting:
-- the houses' colourways;
-- the rope and wood merges;
-- contacts and statics culled by distance;
-- trees.
-
-Its branch merges into yours when the coordinator says.
-
+What R2d built (David's R2c notes, the reading 1 to 14):
+- **Docks** (`build_jetty.py`, `wharf.ts JETTY`, mirrored): piers at x 0, -10.5, 11, tips -3.5, -9.5, -6.5; walkway z 0.6 to 3.4 from x -14 to 14.5; platform z 9 to 13.5, 25 wide; gangways at -6, 0, 6 to `land` 16; open six-tread stairs on sloped stringers with rope rails. 9160 tris (plain boxes, six-sided piles and posts, thin ropes). `deckPieces` clear 9 round the landing, none on the edge round the ship houses and the sell stall (`sheds`).
+- **Lamps:** jetty 4 posts and 3 tip lanterns. Pumpkins: the new world's lamps keep one at about 1 in 5 posts (`halloween.ts`). Every lamp breathes like a flame (`AmbientProps breath`): the 4-light `LampPool` per frame (reach 11, x2), and `LampGlow` halos (points) and ground pools (an instanced disc) from one time uniform, 4 draws. Bug spots among blooms (`kind bug, model "flowers"`, generated in `lamps()`, read by `islandNodes` spots("flowers")) at every other post: the roster's night butterflies.
+- **Plaza:** buildings about 1.5 closer (`SPOT`), houses 0.84 in; brick roads as stone-paint ramps; the splat draws the stone paint with `road-brick-albedo` (crisp edge, `splatMaterial`), the dry pond repainted rock. Plaza tiles 1672 tris (inner setts lost their sides).
+- **Beach:** `bed()` stretches the shelf 2.5x off the beach and lifts its first 0.6 by a third: wading about 8 u out (WADE unchanged). Palms 1.35; campfire 1.15 (`Spot.scale`, the solid scales too); beach things per parasol, the volleyball net, the sandcastle. Sushi bar at (44, 96.5) on a 0.9 pad, back to the sea, its hand lanterns gone.
+- **Water:** coral reefs and clumps always a hand under the water (`CORAL_TOP`); 40 fish schools on the new world, half round the reefs (`fishSchools near`).
+- **Nature:** the forest is 338 single forest trees (village-art2's, 2.15 grid, firs and young toward the edge, uniform 0.8 to 1.25); forest masses gone. Wild shrubs for every round bush (fireflies follow them). The river dressed from the ground (`riverside`): reeds, stones, lily pads (on the water: `propY`), driftwood, shrubs, boulders. Mossy boulders at the plaza, the path's bends and the river (lowest ground under them).
+- **Wharf:** the fish market's deck and clear bill side; wharf-art3's sell stall at quayAt(38, 1) turned to the deck, E opens `SellSheet` (`Near "sell"`); ship houses a, d, c, b on the water's edge at z 17, 26, 63.5, 73.5, at deck height (`propY`).
+- **Gates:** tsc and eslint clean; lib/game + components/game 245 files, 2006 tests green with and without the switch, budget.test included. No perf run (the perf lane's).
+- **Not done / open:** no per-tree tint in the forest (instanced, no colour attribute); the water lane's tall `boulder_c` seabed rocks stand out of the now wide shallows (`seabedProps`, shared with the village, left as is); the fog's horror look is a later pass.
 
 **R2c built 2026-10-26, waiting on review** (head: the commit after 854b65d8). All art merged: village-art 7bdb2e75 (lamps, hand lantern, plaza set, path and nature set, forest remodel) and wharf-art c951d6eb (dock decor, palms third pass, beach set, fish market). Renders in `specs/evidence/terrain-v3/r2c/` (00 top-down, 01 to 20).
 
@@ -274,20 +276,7 @@ The plan page answers, verbatim in the spec. The drawing is a guide to where thi
 
 ## Next
 
-**R2d: David's R2c notes** (the reading above, 1 to 12, except 8, the sushi bar). Fog, light and water changes apply to the new world only.
-
-1. **Layout and landform first:**
-   - the docks spread out and bigger (1);
-   - fewer pumpkins;
-   - the plaza's brick roads and its buildings closer (6), using `village-art2`'s brick texture when it lands, a placeholder until then;
-   - the bigger wading area and the bigger palms (7);
-   - the campfire at 1.15;
-   - fish you can see in the shallows (reuse `web/public/assets/game/water/fish.glb` and any existing ambient fish code);
-   - the forest as instanced single trees (10);
-   - the quick-sell barrel wired to the existing sell flow (4).
-2. **Lighting (2, 13, 14):** keep it cheap; the lamps breathe like flames (13) and draw night bugs (14). Don't edit the files the perf lane is changing (`InstancedNature` merges, `ACNHParts`, `ContactShadows`, matrix and cull code) until the coordinator says it's merged in; put the work in the lamp and lighting code.
-3. **Place the art as it lands** from `wharf-art2` and `village-art2`. The coordinator tells you when to merge each branch.
-4. **Renders** under `specs/evidence/terrain-v3/r2d/`, the r2c set again. SendMessage "main" with the images and a one-line fact for each. Update Status, then stop. No perf run: the perf lane owns it.
+Wait for David's R2d review (the coordinator relays it). Then the round after: his notes, the fog pass when he asks for it.
 
 ## Tools and gotchas
 
@@ -315,4 +304,7 @@ The plan page answers, verbatim in the spec. The drawing is a guide to where thi
 - **Perf runs:** build with `withlock.sh heavy sh specs/perf/measure-build.sh` (under 10 min) as its own call, then `SKIP_BUILD=1 KEEP_BUILD=1 SCENES=v2 LOCK_OWNER=game/terrain-v3 npm run perf:check` (it takes the devserver lock itself; release yours first). Draw breakdown: serve the build (`next start -p 3158`, Supabase blanked) under the devserver lock, then `PORT=3158 TIER=high node specs/perf/draw-breakdown.mjs "fixture=v2&bots=24" <out.json>`.
 - **Don't chain** the generator and a shoot in one call: the generator can take 15 minutes when the machine is busy (usually 12 s).
 - **cells.test** takes 5 to 10 s on its fishing sample under load (the classifier's first call, same on the old world); run it with `--testTimeout=30000` on a busy machine.
+- **Village check:** `VILLAGE=1 PORT=3171 node specs/evidence/terrain-v3/shoot.mjs <dir>` with the dev server run without the switch shoots the village's four check views. For a before set, `git archive <sha> web | tar -x -C <scratch>` and clone node_modules into it (no new worktree).
+- **Generated bug spots:** `bug` isn't a generated kind (hand-placed ones survive), so lamp bug spots are replaced by id each run; a renamed one would linger.
+- **Ship houses and lily pads** stand off the ground on purpose: walk.test skips them (and the water's coral, reeds and stones).
 - **Lamps:** every lamp is generated (`lamps()`), and the generated kinds now include lamp, tree, flower, bush and fence: anything of those kinds in world.json is rebuilt each run.
