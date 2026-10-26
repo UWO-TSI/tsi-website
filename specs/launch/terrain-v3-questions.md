@@ -25,3 +25,10 @@ Images: `specs/evidence/terrain-v3/r2/`.
 1. **Nets for the market.** There is no fishing net model in the assets (the only net is the bug net), so the market has stalls, carts, barrels and crates but no nets. [Leave nets out until a net model exists.]
 2. **The river's washed-out bridge.** It uses the unbuilt-bridge prop, which goes away with the north island's drop, not the meadow's. [Keep for launch; opening the meadow needs a real bridge there anyway.]
 3. **The deck boards.** They are laid in 4 u squares, so from high up the board joints show the squares (view 02). [Keep; it reads as decking at play height.]
+
+## R2b (2026-10-26)
+
+Images: `specs/evidence/terrain-v3/r2b/`.
+
+1. **"3 entrances" to the dock.** Read as three gangways from the deck boards over a strip of water onto a wide platform, with stairs down from it to the boat's landing (views 01, 14). [Keep.]
+2. **The plaza's buildings.** They were already at 1.15 in the world file, so 15% bigger is 1.32; the houses go from 1 to 1.15. [Keep.]
