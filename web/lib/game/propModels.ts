@@ -86,8 +86,9 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   "log-bench": LOG_BENCH_URL,
   // The new world's plaza floor (art/props/build_plaza_tiles.py): stone setts in rings, 12 round, laid on the ground.
   "plaza-tiles": `${P}plaza-tiles.glb`,
-  // Its palms (art/trees/build_palms.py): two layers of broad fronds over a coconut cluster, the origin at the trunk's foot, at scale 1.
-  ...Object.fromEntries(["tall", "lean", "short"].map(m => [`palm-${m}`, `/assets/game/plants/tree-palm-${m}.glb`])),
+  // Its palms (art/trees/build_palms.py): solid low-poly fronds in two layers, coconuts at the crown, a scaled trunk, in four
+  // sizes (about 6.2, 5, 3.5 and 2 tall), the origin at the trunk's foot, at scale 1.
+  ...Object.fromEntries(["tall", "lean", "short", "small"].map(m => [`palm-${m}`, `/assets/game/plants/tree-palm-${m}.glb`])),
   // Its campfire set (art/props/build_campfire_set.py), round the campfire with the log benches: a stump to sit on, a
   // firewood stack with its chopping block, a fish-drying rack (along x).
   ...Object.fromEntries(["stump-seat", "firewood-stack", "fish-rack"].map(m => [m, `${P}${m}.glb`])),

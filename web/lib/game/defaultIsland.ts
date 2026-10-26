@@ -90,7 +90,7 @@ export const PROP_FOOTPRINT: Record<string, [number, number]> = {
   barrel: [4.85, 4.85], lighthouse: [9, 9], crate: [0.91, 0.3], "market-cart": [3.77, 1.03], "shop-cart": [0.44, 0.28],
   "beach-parasol": [0.1, 0.1], "palm-a": [0.3, 0.3], "palm-b": [0.25, 0.25],
   "wharf-piling": [0.15, 0.15], "rope-post": [0.1, 0.1], "rope-span": [1, 0.03],
-  "palm-tall": [0.3, 0.3], "palm-lean": [0.3, 0.3], "palm-short": [0.3, 0.3],
+  "palm-tall": [0.45, 0.45], "palm-lean": [0.42, 0.42], "palm-short": [0.4, 0.4], "palm-small": [0.3, 0.3],
   "log-bench": [0.95, 0.24], "stump-seat": [0.3, 0.3], "firewood-stack": [0.95, 0.46], "fish-rack": [1.02, 0.37],
   "forest-mass-a": [4.5, 4.5], "forest-mass-b": [6, 3.5], "forest-mass-c": [3.8, 3.8], "forest-mass-d": [5.2, 3], "forest-mass-e": [7, 4.8],
   // game/village-art's plaza set: the fountain's box sits inside its round basin (a body stops on the rim's cap).
@@ -107,7 +107,7 @@ export const PROP_TOP: Record<string, number> = {
   "bench-wood": 0.51, "rock-a": 0.61, "rock-b": 0.59, "rock-c": 0.52, "fence-country-a": 0.7, "fence-country-b": 0.69,
   ...Object.fromEntries(ROCK_MODELS.map(m => [m, ROCK_SIZE[m].top])),
   barrel: 11.66, lighthouse: 38, crate: 0.52, "market-cart": 2.84, "shop-cart": 0.87, "beach-parasol": 2.33, "palm-a": 3.94, "palm-b": 2.7,
-  "wharf-piling": 0.35, "rope-post": 0.87, "rope-span": 0.68, "palm-tall": 5.65, "palm-lean": 4.86, "palm-short": 3.32,
+  "wharf-piling": 0.35, "rope-post": 0.87, "rope-span": 0.68, "palm-tall": 6.21, "palm-lean": 5.03, "palm-short": 3.46, "palm-small": 1.95,
   "log-bench": 0.51, "stump-seat": 0.45, "firewood-stack": 0.86, "fish-rack": 1.43, "forest-mass-a": 10.376, "forest-mass-b": 11.011, "forest-mass-c": 10.347,
   "forest-mass-d": 8.431, "forest-mass-e": 9.258,
   "plaza-fountain": 3.21, "banner-pole": 3.3, "flag-pole": 4.13, "fruit-stall": 2.5, "fruit-barrel": 1.005, "fruit-crate": 0.495,

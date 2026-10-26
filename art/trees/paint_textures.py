@@ -458,66 +458,6 @@ def needles(snow=False, seed=23):
     return atlas(cards, mass, snow_field(rng), seed)
 
 
-# ================================================================ palm fronds (art/trees/build_palms.py)
-# David, 2026-10-26 (palm-shape.jpg, palm-style.jpg): broad, wide leaves, in our style, low detail. Each cell a body
-# green and a lighter, yellower tip green (the reference's leaflets lighten to their ends).
-PALM = (("#5fb846", "#b3dd62"), ("#6cc04c", "#c0e46c"))
-
-
-def frond(rng, body, tip, w=256, h=512):
-    """One broad frond on a cell w x h, its stem at the bottom and its tip at the top: a pale rib up the middle and wide
-    leaflets off both sides, each a rounded finger swept toward the tip, overlapping its neighbours so the frond reads
-    as one broad leaf with a scalloped edge. Each leaflet darker at the rib and along its own edge (the line between
-    two), lightening to a yellow-green tip. The bottom eighth is bare stem. Fills the cell's width (build_palms.py folds
-    the card so the leaflets hang)."""
-    W, H = w * SS, h * SS
-    cv = Canvas(W, H)
-    cx = W / 2
-    yy, xx = np.mgrid[0:H, 0:W]
-    n = 10
-    # The blade under the leaflets: a broad leaf, so only the leaflets' outer ends part into fingers.
-    ty = 1 - yy / H                                   # along the frond, per texel
-    env = cx * 0.66 * np.sin(np.pi * np.clip((ty - 0.1) / 0.8, 0, 1)) ** 0.6
-    blade = (np.abs(xx - cx) < env) & (ty > 0.1)
-    cv.put(np.broadcast_to(body * 0.82, (H, W, 3)) * (0.85 + 0.15 * ty)[..., None], blade.astype(np.float64), 0, 0)
-    for i in reversed(range(n + 1)):                      # tip first, so each leaflet lies over the one beyond it
-        for side in (-1, 1):
-            if i == n and side > 0:
-                continue                                                  # the tip leaflet: one, straight on
-            t = 0.14 + 0.8 * (i + rng.uniform(-0.15, 0.15)) / (n - 1) if i < n else 0.84
-            y0 = H * (1 - t)
-            reach = cx * 0.97 * (1 - 0.5 * smoothstep(0.62, 1.0, t))
-            ang = math.radians(64 - 26 * t + rng.uniform(-3, 3)) if i < n else 0.0   # from the rib, swept toward the tip
-            wd = W * 0.2 * (1 - 0.35 * t) * rng.uniform(0.95, 1.05)
-            r = wd / 2
-            L = min(reach / max(math.sin(ang), 1e-3), (y0 - 0.015 * H - r) / math.cos(ang))   # inside the cell's top
-            dx, dy = side * math.sin(ang), -math.cos(ang)
-            ax = (xx - cx) * dx + (yy - y0) * dy
-            ac = -(xx - cx) * dy + (yy - y0) * dx
-            # A finger: narrow where it leaves the rib, full through its middle, a round end.
-            half = r * (0.55 + 0.45 * np.clip(ax / (0.35 * L), 0, 1)) * np.sqrt(np.clip(1 - (np.maximum(ax - (L - r), 0) / r) ** 2, 0, 1))
-            mask = ((ax > -r * 0.3) & (ax < L) & (np.abs(ac) < half)).astype(np.float64)
-            if not mask.any():
-                continue
-            sfrac = np.clip(ax / L, 0, 1)
-            b, tp = jitter(body, rng, 0.012, 0.06, 0.05), jitter(tip, rng, 0.012, 0.06, 0.05)
-            k = smoothstep(0.58, 0.95, sfrac)[..., None]
-            rgb = (b * (1 - k) + tp * k) * (0.8 + 0.22 * sfrac)[..., None]
-            edge = np.abs(ac) / np.maximum(half, 1e-3)
-            rgb *= (1 - 0.2 * smoothstep(0.72, 1.0, edge))[..., None]
-            rgb *= (1 + 0.06 * np.exp(-(ac / np.maximum(half * 0.12, 1)) ** 2))[..., None]   # a faint vein down it
-            cv.put(np.clip(rgb, 0, 1), mask, 0, 0)
-    rib = (np.abs(xx - cx) < W * (0.035 - 0.025 * ty)) & (ty < 0.97)
-    cv.put(np.broadcast_to(hexc("#cfe07c"), (H, W, 3)) * (0.85 + 0.15 * ty)[..., None], rib.astype(np.float64), 0, 0)
-    return cv
-
-
-def palm_fronds(seed=41):
-    """512 x 512: two frond cells side by side (u 0..0.5 and 0.5..1), each a frond stem to tip, bottom to top."""
-    rng = random.Random(seed)
-    return np.hstack([finish(frond(rng, hexc(b), hexc(t)), (256, 512), wash_amp=0.04, seed=seed + i) for i, (b, t) in enumerate(PALM)])
-
-
 # ================================================================ petals (art/trees/build_flowers.py)
 def petal_width(shape, t):
     """Half width (of the cell) of a petal or leaf `shape` at t (0 base .. 1 tip)."""
@@ -680,7 +620,6 @@ JOBS = {
     "needles": lambda: needles(False, 23),
     "needles-snow": lambda: needles(True, 24),
     "petals": lambda: petals_atlas(),
-    "palm-fronds": lambda: palm_fronds(),
 }
 
 
