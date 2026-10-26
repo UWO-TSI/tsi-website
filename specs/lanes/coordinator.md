@@ -31,7 +31,14 @@ David asked for the current version on play.tethos.ca so he could test multiplay
 - `NEXT_PUBLIC_GAME_WORLD=new`;
 - `NEXT_PUBLIC_MEMBER_WORLD=open`, which opens the member world to every member early. Keep it until he says to close it again. To undo: `vercel env rm <name> production` and redeploy.
 
-Main holds R2d, R2e (with the flock fixes) and R2f. The sushi bar isn't merged yet; round 3 is still running. The realtime server needs no change (v7; no protocol changes).
+Main holds:
+- R2d, R2e (with the flock fixes) and R2f;
+- launch-check: gather nodes (rocks, shell dig spots) and the collections test made world-aware;
+- world-fixes: the river fishes as river, and bottle spots.
+
+Production deploy 1877dcb5 (Ready). The two-account test on play.tethos.ca against prod Fly v7 passed: day 35/36 (the miss was a real player, "Islander", in the Here count) and night 22/22. Cleanup is proven (`specs/evidence/launch-check/`).
+
+The sushi bar is held back: the pre-production review found a world-data merge clash with the gather nodes, a two-players-one-stool bug, a stool claim leak, eager loads and per-frame allocations. The sushi-bar lane is fixing these; then merge and deploy. The sushi bar isn't merged yet; round 3 is still running. The realtime server needs no change (v7; no protocol changes).
 
 ## Now (2026-10-25): v1 launches on the NEW world (row 318)
 
