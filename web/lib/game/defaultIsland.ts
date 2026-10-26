@@ -100,7 +100,7 @@ export const PROP_FOOTPRINT: Record<string, [number, number]> = {
   "crate-cloth": [0.35, 0.35], "fish-crate": [0.36, 0.42], "dock-hoist": [0.28, 0.28],
   "path-rock-slab": [0.2, 0.12], "path-rock-low": [0.3, 0.3], "path-rock-cluster": [0.36, 0.26], "rustic-fence-a": [1.25, 0.08],
   "rustic-fence-b": [0.85, 0.08], "rustic-post": [0.07, 0.07],
-  "sushi-bar": [2.8, 2.2], "fish-market": [2.6, 1.9], "lifeguard-tower": [0.86, 0.86], "surfboard-a": [0.2, 0.1], "surfboard-b": [0.2, 0.1], "surfboard-c": [0.2, 0.1],
+  "sushi-bar": [2.8, 2.2], "fish-market": [3.1, 3.6], "sell-barrel": [0.66, 0.78], "lifeguard-tower": [0.86, 0.86], "surfboard-a": [0.2, 0.1], "surfboard-b": [0.2, 0.1], "surfboard-c": [0.2, 0.1],
   // game/village-art2
   "moss-boulder-a": [0.65, 0.5], "moss-boulder-b": [1.05, 0.65],
 };
@@ -116,7 +116,7 @@ export const PROP_TOP: Record<string, number> = {
   "dock-pile-rope": 0.9, "rope-net": 1.15, "life-ring": 0.93, "net-heap": 0.39, "crate-net": 0.7, "crate-cloth": 0.74, "fish-crate": 0.48,
   "dock-hoist": 2.645,
   "path-rock-slab": 0.538, "path-rock-low": 0.247, "path-rock-cluster": 0.294, "rustic-fence-a": 0.99, "rustic-fence-b": 0.91, "rustic-post": 0.931,
-  "sushi-bar": 3.41, "fish-market": 6.15, "lifeguard-tower": 3.8, "surfboard-a": 1.755, "surfboard-b": 1.759, "surfboard-c": 1.763,
+  "sushi-bar": 3.41, "fish-market": 10.569, "sell-barrel": 3.394, "lifeguard-tower": 3.8, "surfboard-a": 1.755, "surfboard-b": 1.759, "surfboard-c": 1.763,
   "moss-boulder-a": 0.855, "moss-boulder-b": 0.761,
 };
 /**
