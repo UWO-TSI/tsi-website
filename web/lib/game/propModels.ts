@@ -125,6 +125,10 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // game/village-art2 (David, R2c): big mossy stones (art/props/build_stones.py), sunk a little under their origin: a
   // chiselled boulder on a broken slab (1.4 across, 0.86 tall) and a low outcrop of three stepped slabs (2.3 by 1.5).
   ...Object.fromEntries(["a", "b"].map(m => [`moss-boulder-${m}`, `${P}moss-boulder-${m}.glb`])),
+  // Wild shrubs (art/trees/build_shrubs.py): loose clumps of leaf cards in different sizes and densities, never a ball, the
+  // root at the origin, not solid: a full mound (a), a low spreading one along x (b), a tall loose one (c, 1.4), a small
+  // sparse tuft (d), a big lush one (e, 2.2 across) and a lopsided loose pair of clumps (f). Turn and scale them freely.
+  ...Object.fromEntries(["a", "b", "c", "d", "e", "f"].map(m => [`shrub-${m}`, `/assets/game/plants/shrub-${m}.glb`])),
 };
 export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? `/assets/acnh/props/${model}.glb`;
 
