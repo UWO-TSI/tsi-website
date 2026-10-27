@@ -1,0 +1,35 @@
+# Lane: remodel (our own models in place of the old and ACNH-dump ones; the fish fitted to our look)
+
+Worktree `.claude/worktrees/remodel`, branch `game/remodel`, cut from main at 00f0593f. Agent type `uwotsi-lane`. Runs overnight; David reviews in the morning.
+
+David, 2026-10-27 (night), verbatim: "I want you to go ahead and remodel some old models or some of the models from animal crossing dump that we are currently using, maybe tweak the fish models we have so it fits our game, i want you to do a artifact fro before after your remodels, make sure to remodel on blender, use pinterest for reference photos"
+
+**1. Inventory first** (`specs/evidence/remodel/inventory.md`): every model from the ACNH dump (`web/public/assets/acnh/`) and every other old model still drawn in the game. Count the new world (production) and the views every player sees: the fish reveal and the fish market, the critters, the props, the plants, the tools. Rank them by how much a player sees them, and say what each one's file, triangles and textures are. Many are referenced by id at runtime (`lib/game/fishCatalog.ts`, `ambientFauna.ts`, `propModels.ts`, `NatureModels.tsx`), so trace those too.
+
+**2. Remodel, most-seen first,** as many as the night allows. Do quality over count: about 8 to 12 props, plus the fish.
+- **Our style:** cozy and cartoony like ACNH, but our own shapes, never a copy of a Nintendo model. Simpler and smoother, with soft silhouettes that read at game distance. Follow `specs/lane-rules.md` "Textures only where they show": plain colour plus the material look classes (`lib/game/modelMaterials.ts`), shared materials, and small textures only where seen up close. Fit the palette of the new world and of what's already ours (the wharf, the plaza set, the lamps, the trees: `art/props/`, `art/wharf/`, `art/trees/`).
+- **Drop-in:** the same scale, pivot, facing and footprint as the model it replaces, and triangles at or under it. The collision footprints and PROP_TOP in `lib/game/defaultIsland.ts` must stay right; re-measure if a shape changes.
+- **Blender:** build every model in a script under `art/remodel/` (one `build_*.py` per family) and export GLB headless: `/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P <script>`, under the Blender lock, closed after each batch. Never the blender MCP tools; they drive David's visible Blender. No asset libraries, no generators, no imported meshes from anywhere: model from primitives and code.
+- **The fish:** tweak the fish we have so they sit in our game's look: consistent proportions, palette, softness and outline with the rest of our art. Keep every species recognisable, because players learn them, and keep their sizes and ids.
+
+**3. References: Pinterest, David's request for this pass.** This is an exception to the usual rule, for this lane only. Search Pinterest for references of each kind of object (for example "cozy game lamp post 3d", "stylized low poly fish", "cute 3d crab model") with a **headless** browser only. Use a script with Chromium and `--mute-audio`, never a visible window, never the Playwright MCP. Save the images you use **outside the repo**, in `/private/tmp/claude-501/remodel-refs/`. Record each one's source URL, and what it informed, in `specs/references/remodel-2026-10-27/README.md` (URLs and notes only: the repo is public and the pictures are other people's). The references guide shape, colour and mood; never copy one design. If Pinterest won't load headless without signing in, try its public search pages and the `i.pinimg.com` images they link. If that fails too, say so and carry on from our own art.
+
+**4. Before and after for David's review page:** for each model, the old and the new side by side under the same camera and light, as a Blender render and a headless in-game shot where it stands. Put them in `specs/evidence/remodel/<name>-before.webp` and `<name>-after.webp`, with a one-line note each. The coordinator builds the page. Wire the new models into the game on this branch, but nothing merges before David approves each one.
+
+**Read first:** `CODEMAP.md` rows "Art pipeline", "Nature, grass, FX", "Fishing"; `specs/lane-rules.md` (textures, perf); one existing build script of ours for the conventions (`art/props/build_new_lamps.py`, and `art/wharf/`).
+
+**Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, and one `perf:check` at the end (`SCENES=village,v2`). Message "main" with the inventory as soon as it's done, then at the end with the head SHA, the before and after list, triangles before and after, the gates and perf, and anything you couldn't do.
+
+## Status
+
+(none yet)
+
+## Rules
+
+- **Headless only:** never open a window, tab, app or audio on David's screen; never `open`; never the Playwright MCP, the claude-in-chrome tools or the `blender` MCP tools. Blender only as `/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P <script>`. Never port 3000.
+- **Locks:** `LANE=game/remodel /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh heavy|blender|devserver <cmd>` (`specs/lane-rules.md`).
+- **The default village world stays unchanged** (the launch fallback). New-world changes sit behind `NEXT_PUBLIC_GAME_WORLD=new`; run vitest with and without it.
+- **Git:** commit with the `[build]` prefix. Never push. Never bare `git stash`. Work only in this worktree. Never touch prod; ask the coordinator for any read-only prod query.
+- **Text:** no em dashes; real names never show in game; never write the gem-to-money rate anywhere (the repo is public).
+- **Code:** ponytail (`specs/lane-rules.md`): search first, smallest change at the root cause, delete what you replace.
+- **Art:** the Pinterest exception above is for this lane only. No asset libraries, generators or imported meshes. Reference images never go in the repo.
