@@ -13,7 +13,7 @@
  */
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Html, useGLTF } from "@react-three/drei";
+import { Html, useGLTF, useProgress } from "@react-three/drei";
 import * as THREE from "three";
 import Character, { CHARACTER_HEIGHT, type CharacterMotion } from "../character/Character";
 import { tripBoatFloat } from "../wharf/useTripBoat";
@@ -203,10 +203,19 @@ function BramAboard({ dock }: { dock: Dock }) {
   return <group ref={group} matrixAutoUpdate={false}><Suspense fallback={null}><Character look={BRAM_LOOK} motion={motion} /></Suspense></group>;
 }
 
-/** Compile what the crossing draws once it has mounted (warmHidden: the whole scene, the linked programs are skipped). */
+/** Compile what the crossing draws once it has mounted and loaded (warmHidden: the whole scene; linked programs are skipped). */
 function WarmCrossing() {
   const { gl, scene, camera } = useThree();
-  useEffect(() => { const t = window.setTimeout(() => void warmHidden(gl, scene, camera).catch(() => {}), 600); return () => window.clearTimeout(t); }, [gl, scene, camera]);
+  useEffect(() => {
+    let done = false;
+    const t = window.setInterval(() => {
+      if (done || useProgress.getState().active) return;
+      done = true;
+      window.clearInterval(t);
+      void warmHidden(gl, scene, camera).catch(() => {});
+    }, 400);
+    return () => window.clearInterval(t);
+  }, [gl, scene, camera]);
   return null;
 }
 
