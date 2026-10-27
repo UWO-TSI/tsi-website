@@ -134,7 +134,7 @@ Signed in, on www.tethos.ca, with two throwaway accounts made for the smoke and 
 4. **Chapter 1 (v1).** There's no plot step: the home island is drop 4.
    - The arrival paid Bram's coins once (one arrival row in `wallet_ledger`).
    - Catch a fish with the starter rod at the wharf, then donate it.
-   - Report to Wren at HQ: 100 coins once (one `chapter:settle-in` row; a second report is refused), and the chapter letter in the mailbox.
+   - Report to Alice at HQ: 100 coins once (one `chapter:settle-in` row; a second report is refused), and the chapter letter in the mailbox.
 5. **RSVP: pending.** Prod has no approved upcoming event, so this was skipped on 2026-10-22 (no test event goes in prod). Run it once a real event is approved: on that event, RSVP, then cancel; the `event_attendance` row is gone.
 6. **Security spot checks** with the member probe's JWT against PostgREST (the Phase 1 list, `specs/evidence/phase1/flows.md` §9): own `tier`/`membership`/`tethos_coins` PATCH → 403; `rpc/wallet_apply` → permission denied; `invite_codes` → `[]`; `member_badges` with the anon key → permission denied.
 7. **Members page.** As T1 on `/student/dashboard/admin/members`: change the member probe's tier, then active and alumni; reload: the changes stayed. Your own tier: refused ("You can't change your own tier").

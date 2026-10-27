@@ -15,7 +15,7 @@
  * Schedules: per phase, one anchor or a routine of stops (map anchors, `bench`,
  * `home`); `home` names the building they live in (lib/game/residentRoutine.ts).
  * Nights (principle 2, the village never empties): three stay out where it's lit
- * (Wren on the HQ porch and the lamp bench, Bram at the wharf lanterns, Nell on
+ * (Alice on the HQ porch and the lamp bench, Bram at the wharf lanterns, Nell on
  * the lamp bench and the beach); the rest linger a stop or two and go in at
  * different times, so the village thins out rather than emptying at once.
  *
@@ -133,7 +133,7 @@ const row = (r: Pick<NPCPersona, "slug" | "display_name" | "post" | "bio" | "ton
  * the rest are new. Schedules use the map's anchors (plaza, path, hq, shop, cafe, oracle, museum, pond, beach, wharf).
  */
 export const PROPOSED_RESIDENTS: NPCPersona[] = [
-  row({ slug: "wren", display_name: "Wren", post: "hq_lead", tone: "warm",
+  row({ slug: "wren", display_name: "Alice", post: "hq_lead", tone: "warm",
     bio: "Keeps HQ running, more or less: club goals, the notice board, everyone's first day. Meets every new member on the wharf.",
     schedule: { home: "hq", dawn: ["hq"], day: ["hq", "plaza", "path", "hq", "pond"], evening: ["plaza", "bench"], night: ["hq", "bench", "hq"] },
     canned_dialogue: [

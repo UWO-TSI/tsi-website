@@ -3,7 +3,7 @@
 /**
  * HQ, the member clubhouse (specs/interiors/hq.md, ledger row 316): layout B, the gallery, furnished after David's
  * references, two tall storeys (24 x 18 since phase 4). The aquarium fills the back wall straight ahead of the door, the
- * full height of the room; the upper floor wraps the hall in a U. Downstairs: Wren's desk and the register, the green
+ * full height of the room; the upper floor wraps the hall in a U. Downstairs: Alice's desk and the register, the green
  * marble coffee bar, the work lounge and the window nook in the entry under the bridge; the big lounge before the tank
  * (the sectional, beanbags, the big rug); the library, co-working, the trophy case, the clock and the Founder's desk
  * under the left arm; the notice board, the club goals, the stair and the one locked admin door under it, under the
@@ -47,7 +47,7 @@ export default function HqInterior({ light = ISLAND_LIGHTING.day, frozen, talkin
   /** The island's light now: the windows and the lamps follow the time of day. */
   light?: IslandLight;
   frozen: boolean;
-  /** Wren's sheet or the visit's card is up: she faces you and talks you through it. */
+  /** Alice's sheet or the visit's card is up: she faces you and talks you through it. */
   talking?: boolean;
   /** The signed-in member (their trophies say "Yours"). */
   member: string | null;
@@ -90,7 +90,7 @@ export default function HqInterior({ light = ISLAND_LIGHTING.day, frozen, talkin
       <Workbench player={player} />
       <Suspense fallback={null}><TickingClock glassMaterial="FtrAntiqueClock_mat0" position={[HQ_CLOCK_AT.x, 0, HQ_CLOCK_AT.z]} rotY={HQ_CLOCK_AT.yaw} player={player} /></Suspense>
 
-      {/* Wren behind her desk left of the door (lib/game/keepers.ts memberHq). */}
+      {/* Alice behind her desk left of the door (lib/game/keepers.ts memberHq). */}
       <Keeper room="memberHq" player={player} frozen={frozen} engaged={talking} />
       <InteriorPlayer frozen={frozen} bounds={BOUNDS} playerPosRef={player} onMove={onMove} constrainMove={walker.constrain} heightAt={height} />
     </group>

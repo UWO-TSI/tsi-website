@@ -1,5 +1,5 @@
 /**
- * The HQ visit's state (row 312): which beat of script.ts you're on and whether Wren is saying its lines or it's
+ * The HQ visit's state (row 312): which beat of script.ts you're on and whether Alice is saying its lines or it's
  * waiting for you. Pure: the island feeds it events (her lines said, the desk, the register signed, Esc, the map, the
  * board) and acts on what `visitCue` asks for (say these lines, open this card). Kept on this device between visits
  * (store.ts), so a reload picks up at the beat you were on (her lines again, then the wait).
@@ -11,7 +11,7 @@ import type { TrackedQuest } from "@/lib/game/questTracker";
 export interface HqState {
   /** Index into the script; the script's length is the farewell. */
   beat: number;
-  /** Wren is to say the beat's lines (or the farewell), or the beat waits for you. */
+  /** Alice is to say the beat's lines (or the farewell), or the beat waits for you. */
   stage: "say" | "wait";
   done: boolean;
 }

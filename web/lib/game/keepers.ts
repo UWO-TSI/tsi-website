@@ -5,7 +5,7 @@
  * screen left, the camera looking up +z from the cut-away near wall, so a keeper facing the room faces yaw π.
  *
  * The residents are the roster's (lib/content/residentRoster.ts): the persona holding the post wins (the Residents
- * editor); until one does, the proposed resident for it stands there (Wren, Toren, Odile, Sable, Bram).
+ * editor); until one does, the proposed resident for it stands there (Alice, Toren, Odile, Sable, Bram).
  */
 import type { OwnerStation } from "./cafe";
 import type { ResidentPost } from "@/lib/content/residents";
