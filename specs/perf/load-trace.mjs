@@ -44,7 +44,8 @@ await ctx.addInitScript(() => {
     const sig = [...KEYS.map(k => (src.includes(`#define ${k}\n`) ? k.replace(/^USE_|^SHADOWMAP_TYPE_/, "") : "")),
       ...[...src.matchAll(/uniform \w+ (\w+)\[ (\d+) \]/g)].filter(m => /Light|Shadow/.test(m[1])).map(m => `${m[1].replace(/Lights?$|s$/, "")}${m[2]}`)].filter(Boolean).join(",");
     const kind = KINDS.filter(k => src.includes(`#define ${k}\n`)).map(k => k.replace(/^USE_/, "").toLowerCase()).join("+");
-    return [Math.round(performance.now()), `${name}${kind ? `(${kind})` : ""}`, sig];
+    const defs = [...new Set([...src.matchAll(/#define (\w+)( [^\n]*)?/g)].map(m => m[1] + (m[2] && m[2].length < 24 ? m[2] : "")))].sort().join(" ");
+    return [Math.round(performance.now()), `${name}${kind ? `(${kind})` : ""}`, sig, defs];
   };
   const SH = ["compileShader", "linkProgram", "getProgramParameter", "getShaderParameter", "getProgramInfoLog", "getShaderInfoLog", "getUniformLocation", "getAttribLocation", "getActiveUniform", "getActiveAttrib", "getUniformBlockIndex"];
   const TEX = ["texImage2D", "texSubImage2D", "texImage3D", "texSubImage3D", "texStorage2D", "texStorage3D", "compressedTexImage2D", "compressedTexSubImage2D", "generateMipmap"];

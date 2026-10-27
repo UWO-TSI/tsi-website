@@ -812,7 +812,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // Arriving (before the walk-along): the player holds still, so no prompt and no key hints; the HUD stands back.
   const welcoming = arrivalPhase !== null && arrivalPhase !== "tutorial";
   // Golden hour for the crossing, whatever the real time (specs/v1-drop.md §1.4): the light, the sun and a clear sky.
-  const golden = arrivalPhase === "clearing" || arrivalPhase === "crossing";
+  // From the boat's first beat: aboard and in the creator the island is paused under the reflection, so the golden
+  // island mounts there unseen and is compiled before the crossing shows it (ArrivalWorld WarmCrossing).
+  const golden = arrivalPhase === "aboard" || arrivalPhase === "creator" || arrivalPhase === "clearing" || arrivalPhase === "crossing";
   // Talking with a resident (lib/game/residentTalk.ts): this viewer's own; who's in reach names the prompt.
   const talkNow = useSyncExternalStore(subscribeTalk, talkView, emptyTalkView);
   const talking = talkNow.activeId !== null;
