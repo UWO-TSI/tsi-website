@@ -120,3 +120,9 @@ Verbatim: "i want you to reedit the fish so that epic is considered like the cur
 - **The hook "!":** every fish shows an exclamation mark over you when it bites. Legendary gets a golden one with effects; divine an even bigger one with stronger effects.
 - **The bite sound:** a distinct sound when a fish bites, scaled up for legendary and divine. Make it ourselves; never fetch sound or music.
 - **Which fish:** David sets rarities in the Catalogue editor (https://claude.ai/artifact/5XzAaR5Wipoe2ZN2Hby3FG). It needs the Divine tier from lane `rod-gear`'s rarity ladder.
+
+**Addition (David, the same evening), verbatim:** "one fish is landed for legendary or divine, there will be a cut scene of it apearing in the water kinda thing, legendary is like fish out of legends kinda thing like sea monsters and stuff thats like building level and divine is like actually crazy big models and is like server size fight"
+- **A cutscene:** when a legendary or divine bites, a short cutscene shows it surfacing out of the water before the fight. (My reading of "landed"; ask David if he meant after the catch.)
+- **Legendary:** creatures out of legend, sea monsters about the size of a building.
+- **Divine:** enormous creatures, and the fight involves the whole server (every player in the room can join), a raid boss.
+- **New creature models** are needed. Asked David which creatures he wants and for references; art follows his references (no self-found references).
