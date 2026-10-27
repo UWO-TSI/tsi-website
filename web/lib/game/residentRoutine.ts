@@ -15,7 +15,7 @@
  * frame loop allocates nothing.
  */
 import { CLIFF_LEVELS, levelAt, rampRun, worldToCellX, worldToCellZ } from "./grid";
-import { BENCH_SEAT_TOP, LANDMARK_INFO, benchSlotKey, benchSlotPoint, landmark, type LandmarkId, type VillageIsland } from "./defaultIsland";
+import { BENCH_SEAT_TOP, LANDMARK_INFO, benchSlotKey, benchSlotPoint, landmark, landmarkPoint, type LandmarkId, type VillageIsland } from "./defaultIsland";
 import { objectById, objectsOf, villageSpawnPoint, type Village } from "./villageMap";
 import { ISLAND_PHASES, type IslandPhase } from "./islandTime";
 import { DAWN_HOURS, EVENING_HALF_HOURS, sunFor, torontoDate, type SunDay } from "./sunTimes";
@@ -377,10 +377,24 @@ export function seatChoice(stop: Stop, held: (key: string, x: number, z: number)
   return alt && !held(alt.key, alt.at[0], alt.at[1]) ? 1 : 2;
 }
 
+/**
+ * Where a schedule's place is: its `anchor` object, placed in /lab/map. The new world (a terrain world) has none, so
+ * there a place is the landmark of the same name: a building's exit step (out front), the wharf's landing, the plaza's
+ * or the beach's middle; the temple not while it's sealed (DROPS.oracle). The village's plaza without one: the spawn.
+ * Null when the place isn't on this map (the resident skips it).
+ */
+export function placeAt(key: string, v: Village, flags: DropFlags = DROPS): [number, number] | null {
+  const a = objectById("anchor", key, v);
+  if (a) return [a.x, a.z];
+  if (!v.terrain) return key === "plaza" ? villageSpawnPoint(v) : null;
+  if (!Object.hasOwn(LANDMARK_INFO, key) || (key === "oracle" && !flags.oracle)) return null;
+  const l = landmark(key as LandmarkId, v);
+  return l && (landmarkPoint(key as LandmarkId, "exit", v) ?? [l.x, l.z]);
+}
+
 /** A spot at an anchor for this resident: its ring slot (or the next free one), facing the place's point of interest. */
 function anchorStop(key: string, v: Village, nav: NavGrid, slot: number, work: boolean, night: boolean, slug: string, res: Reservations): Stop | null {
-  const a = objectById("anchor", key, v);
-  const base: [number, number] | null = a ? [a.x, a.z] : key === "plaza" ? villageSpawnPoint(v) : null;
+  const base = placeAt(key, v);
   if (!base) return null;
   // The same spot at a place all day: theirs once taken.
   const mine = `${slug}|${key}`;
