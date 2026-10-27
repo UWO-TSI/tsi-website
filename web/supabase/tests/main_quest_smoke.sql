@@ -47,3 +47,13 @@ DO $$ BEGIN
   ASSERT (SELECT count(*) FROM pg_constraint WHERE conrelid = 'shop_items'::regclass AND contype = 'c' AND pg_get_constraintdef(oid) LIKE '%shovel%') = 1, 'idempotent: one slot CHECK';
   RAISE NOTICE 'main quest 4 idempotent ok';
 END $$;
+-- The catalogue seed after it (20261027195451_catalogue_seed): Juno, the pickaxe, rocks that need it, the buried finds.
+DO $$ BEGIN
+  ASSERT (SELECT display_name || '|' || post || '|' || (schedule->>'home') FROM npc_personas WHERE slug = 'docent') = 'Juno|museum_guide|museum', 'Juno, the museum''s guide';
+  ASSERT (SELECT slot || '|' || active::text FROM shop_items WHERE slug = 'pickaxe-basic') = 'pickaxe|false', 'the pickaxe: a tool, off sale (Eliza gives it)';
+  ASSERT (SELECT string_agg(key || ':' || tool || ':' || biome, ',' ORDER BY key) FROM collection_species WHERE key IN ('rock_stone', 'rock_iron_nugget', 'rock_clay')) =
+    'rock_clay:pickaxe:mountain,rock_iron_nugget:pickaxe:rocks,rock_stone:pickaxe:rocks', 'rocks give stone and iron, with the pickaxe';
+  ASSERT (SELECT count(*) FROM collection_species WHERE key LIKE 'find\_%' AND tool = 'shovel' AND wing = 'nature_room' AND donatable) = 7, 'seven buried finds for the museum';
+  ASSERT (SELECT biome FROM collection_species WHERE key = 'shell_asari') = 'dig_sand', 'clams are dug at the marked spots';
+  RAISE NOTICE 'main quest 5 catalogue ok';
+END $$;

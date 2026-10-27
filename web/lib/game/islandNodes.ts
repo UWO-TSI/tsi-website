@@ -32,7 +32,7 @@ const DIG_GAP = 7, DIG_EACH = 8;
 const digCache = new WeakMap<Village, { x: number; z: number; soil: boolean }[]>();
 /**
  * Where things are buried (m3): spots on sand and on soil (dirt), read off the painted map (never authored), spread at
- * least DIG_GAP apart, in from each surface's edge and clear of buildings and props. Deterministic, so the client and
+ * least DIG_GAP apart, in from each surface's edge (two cells where there's room), and clear of buildings and props. Deterministic, so the client and
  * the server (lib/collections/rolls.ts) agree. Each is a node whose roll is a buried find; its mark is the DigSpot.
  */
 export function digSpots(v: Village = village()): { x: number; z: number; soil: boolean }[] {
@@ -41,14 +41,20 @@ export function digSpots(v: Village = village()): { x: number; z: number; soil: 
   const m = v.map, out: { x: number; z: number; soil: boolean }[] = [];
   const blocked = (x: number, z: number) => v.objects.some(o => Math.hypot(o.x - x, o.z - z) < 1.8)
     || landmarks(v).some(l => Math.abs(x - l.x) < (l.half?.[0] ?? 0) + 1.5 && Math.abs(z - l.z) < (l.half?.[1] ?? 0) + 1.5);
+  /** How many cells in from the surface's edge the cell is, up to 2 (surfaces only: the server's cell view has no levels). */
+  const margin = (cx: number, cz: number, want: number) => {
+    for (let r = 1; r <= 2; r++) for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++)
+      if (surfaceAt(m, cx + dx, cz + dz) !== want) return r - 1;
+    return 2;
+  };
   for (const soil of [false, true]) {
-    const want = soil ? Surface.Soil : Surface.Sand, cells: [number, number][] = [];
-    for (let cz = 1; cz < m.depth - 1; cz++) for (let cx = 1; cx < m.width - 1; cx++) {
-      let inside = true;
-      for (let dz = -1; dz <= 1 && inside; dz++) for (let dx = -1; dx <= 1; dx++) if (surfaceAt(m, cx + dx, cz + dz) !== want) { inside = false; break; }
-      if (inside) cells.push([cx, cz]);
+    const want = soil ? Surface.Soil : Surface.Sand, cells: [number, number, number][] = [];
+    for (let cz = 2; cz < m.depth - 2; cz++) for (let cx = 2; cx < m.width - 2; cx++) {
+      const k = surfaceAt(m, cx, cz) === want ? margin(cx, cz, want) : 0;
+      if (k > 0) cells.push([cx, cz, k]);
     }
-    cells.sort((a, b) => fnv1a(`dig:${a[0]},${a[1]}`) - fnv1a(`dig:${b[0]},${b[1]}`));
+    // Open ground first (two cells in), then a narrower strip of it (a path, a thin beach) if that's all there is.
+    cells.sort((a, b) => b[2] - a[2] || fnv1a(`dig:${a[0]},${a[1]}`) - fnv1a(`dig:${b[0]},${b[1]}`));
     let n = 0;
     for (const [cx, cz] of cells) {
       const x = cellToWorldX(m, cx), z = cellToWorldZ(m, cz);

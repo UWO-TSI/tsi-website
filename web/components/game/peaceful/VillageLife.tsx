@@ -91,13 +91,21 @@ function Outcrop({ sp, at, nodeId, struck, spent = false }: { sp: Species; at: [
   </group>;
 }
 
-/** A dig spot (a buried find): a little star of cracks in the ground from our pack, each spot its own frame. */
-let crackMaterial: THREE.MeshStandardMaterial | null = null;
-const crackLook = () => (crackMaterial ??= new THREE.MeshStandardMaterial({ name: "DigSpot", map: packMap(), color: "#6f5a40", roughness: 1, metalness: 0, transparent: true,
-  depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
-const CRACKS = Array.from({ length: 8 }, (_, f) => spriteQuad("crack", f, 0.62).rotateX(-Math.PI / 2));
-function DigSpot({ at, seed }: { at: [number, number, number]; seed: number }) {
-  return <mesh geometry={CRACKS[Math.floor(hash01(seed, 7) * 8) % 8]} material={crackLook()} position={[at[0], at[1] + 0.015, at[2]]} rotation={[0, seed * 1.3, 0]} renderOrder={2} receiveShadow />;
+/**
+ * A dig spot (a buried find, m3): a star of cracks in the ground from our pack, each spot its own frame, big and dark
+ * enough to spot from a few steps off: a dark umber on the sand, a near-black brown on the dirt (which is darker itself).
+ * A cut-out (alpha-tested, depth-written) rather than a blended decal: blended, the island's passes lost it entirely.
+ */
+const crackLooks = new Map<boolean, THREE.MeshStandardMaterial>();
+const crackLook = (soil: boolean) => {
+  let m = crackLooks.get(soil);
+  if (!m) crackLooks.set(soil, m = new THREE.MeshStandardMaterial({ name: "DigSpot", map: packMap(), color: soil ? "#2e2117" : "#5a4128", roughness: 1, metalness: 0, alphaTest: 0.3,
+    polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+  return m;
+};
+const CRACKS = Array.from({ length: 8 }, (_, f) => spriteQuad("crack", f, 0.9).rotateX(-Math.PI / 2));
+function DigSpot({ at, seed, soil }: { at: [number, number, number]; seed: number; soil: boolean }) {
+  return <mesh geometry={CRACKS[Math.floor(hash01(seed, 7) * 8) % 8]} material={crackLook(soil)} position={[at[0], at[1] + 0.02, at[2]]} rotation={[0, seed * 1.3, 0]} receiveShadow />;
 }
 
 /** A dug hole (our pack's hole, its 8 frames from fresh to filled), filling back in on the world clock (lib/game/forageWorld.ts). */
@@ -656,7 +664,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
       const y = ground(n.x, n.z);
       // A rock is its outcrop (struck where it stands); a buried find its crack in the ground.
       if (sp!.category === "mineral" && !n.canopy) return <Suspense key={n.id} fallback={null}><Outcrop sp={sp!} at={[n.x, y, n.z]} nodeId={n.id} struck={struck} /></Suspense>;
-      if (buried(sp!)) return dug.has(n.id) ? null : <DigSpot key={n.id} at={[n.x, y, n.z]} seed={n.x * 13.1 + n.z * 7.7} />;
+      if (buried(sp!)) return dug.has(n.id) ? null : <DigSpot key={n.id} at={[n.x, y, n.z]} seed={n.x * 13.1 + n.z * 7.7} soil={n.biomes.includes("dig_soil")} />;
       return <Suspense key={n.id} fallback={null}>
         <group position={[n.x, y, n.z]} ref={g => { if (g) nodeGroups.current.set(n.id, g); else nodeGroups.current.delete(n.id); }}>
           <NodeVisual sp={sp!} canopy={n.canopy} />
