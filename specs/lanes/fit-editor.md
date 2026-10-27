@@ -24,6 +24,18 @@ David, 2026-10-27, verbatim: "i want you to make a editor for the face parts so 
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint. Message "main" when the bundle is ready to publish (its folder, size, and what you checked), then stop.
 
+## Round 2 (2026-10-27): reposition, not just height
+
+David, verbatim: "i want you to giv eme an editor where io can reposition the hairs and face locations"
+
+Face Fit (https://claude.ai/artifact/D1gkmSBHBGspFPH5to9yA8, published by the coordinator from `dist/`) sets only height today. Nothing has been saved in its db yet, so the doc shapes can change freely; keep the old `{y}` readable anyway.
+
+1. **Hairstyles and accessories:** move on all three axes of the head: up and down, forward and back, left and right. Keep the steps fine (0.5 mm), with a reset per axis and for the whole item.
+2. **Faces:** the eyes up and down, the eyes closer together or further apart (both eyes move as a mirrored pair), and the mouth up and down. Every expression frame, blink and talking mouth moves with them, as the height does now.
+3. **Moving it:** the buttons and sliders per axis, the keyboard arrows on the focused view (up/down and left/right in the front view; forward/back with the arrows in the side view), and dragging the item in the front view (left/right and up/down) and the side view (forward/back and up/down). Show the values in millimetres.
+4. **Runtime:** extend the catalogue's `fit` map: `{ x, y, z }` in metres along the head's own axes for a hair or accessory, and `{ eyes, mouth, eyesApart }` for a face, with every missing value 0. The game applies them exactly as the editor draws them (the editor keeps using the game's own code). Extend `apply-fit.mjs` and its test. Add tests that each axis moves the item by exactly its value with the head turned, and that `eyesApart` moves the eyes symmetrically.
+5. Rebuild `dist/`, run `check.mjs` (extend it to the new controls and doc shapes: a drag saves once, the arrows save, reset saves 0), keep every file a served type, and message the coordinator to publish.
+
 ## Status
 
 **Runtime field in** (commit after 08aecf1a; see `git log`). The catalogue's top-level `fit` map (`web/data/characters/character_catalog.json` and its art source, both), by item id:
