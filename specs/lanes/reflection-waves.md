@@ -48,25 +48,29 @@ Approved: the sweep (r2-sweep), the first wave in the mist (r2-first-wave), the 
 
 ## Status
 
-Round 2 built 2026-10-27, awaiting David's review. Head: the last commit on `game/reflection-waves`. Round 1 (the wave, small waves, "That's me", no wheel) is approved for desktop, phone and small waves.
+Round 3 built 2026-10-27 on `game/reflection-waves` (main merged at 139d3b1e first), awaiting David's review. Rounds 1 and 2 approved (the sweep, the first wave, the swatches, the panel).
 
-- **The sweep (round 2.1):** a change no longer swaps the look in one frame. The new look's reflection shows behind the latest wave's crest and the old one's ahead of it, the seam along the middle of the foam cap (`WATER_FRAG` `swept`, `uSweepT`, `tReflOld`). While a wave sweeps, a second Character in the old look is mounted (`before`) and drawn into its own mirror target (`reflectionPasses.ts` `renderReflection(..., { now, old })`, made the first time it is needed); over the side you keep the old look until the crest has crossed you. `ReflectionCreator` `edit()` wraps the panel's setLook: a change before the crest reaches you rides that wave (`waveBeats().ride`); one crossing you finishes first and the next wave sets off at `done` with the latest look; the old layer is dropped at `done`. `SET.wave.ahead/behind` tune those beats.
-- **The first wave in the mist (round 2.2):** the water writes its waves (foam and crest) into the frame's alpha and the composite keeps them sharp and unwashed through the blur, so the crest and the sweep read clearly while the world is still hazy.
-- **Hair colours (round 2.3):** wheel still removed. Blond changed in place to golden `#E8BE48` (was `#D6A866`), ginger `#DA6E2A` appended as index 12; `FREE_HAIR = [0..5, 12]` and `DYE_HAIR = [6..11]` replace `FREE_HAIR_COLOURS` (`look.ts`, `catalogue.ts`, `CreatorControls`, tests). No palette index moved, no shop row changed, no migration. `art/characters/palette.json` and its web copy both changed.
-- **Open for David:** hair colour keeps each style's lightness (his 2026-10-17 ruling, `hairColour.ts`, unchanged), so blond and ginger barely show on dark or white styles in the reflection. `12-hair-lightness-choice.webp` shows today against a thrown-away lightness-lift experiment; the coordinator puts it to him as a choice.
-- **Gates:** tsc clean, eslint clean on changed files, vitest 361 files / 3451 tests passed with and without `NEXT_PUBLIC_GAME_WORLD=new`.
-- **Evidence (round 2):** `specs/evidence/reflection-waves/07-sweep.webp`, `08-sweep-mid.webp`, `09-first-wave-mist.webp`, `10-hair-swatches-on-skin.webp`, `11-hair-on-skins-style12.webp`, `11-hair-on-skins-style13.webp`, `12-hair-lightness-choice.webp`, `06-hair-colours-no-wheel.webp` (redone). Scripts: `shoot.mjs` (`sweep mist skins`), `sheets2.py`.
+- **No pool lines (r2-sweep-mid):** the crossing light lines on the small waves (`glints` in `ReflectionScene.tsx` `WATER_FRAG`) are gone; swell, chop, the reflection's wobble, the crest light and the clearing-world sparkles stay.
+- **Hair colour sets lightness too (r2-lightness, whole game):** `hairColour.ts` `hairShift` now lands the texture's median exactly on the picked colour (OKLab L, hue, chroma). Texels keep their light and dark around it: `L' = s L + d`, s the range squeezed only as far as it must to fit in [0, 1], never below 0.5. The chroma cap of 3 is gone, so a near-grey source also reaches the full picked chroma. `tent` now centres on the picked lightness. New `shiftTexel` (the shader's maths in TS; tests use it), `HairShift.L`. `rig.ts` carries a 4th hair attribute `hairL` (sA, dA, sB, dB); `Character.tsx` `shiftHair` takes it (program key v8). "Own" (NO_SHIFT) still draws each style as drawn. Two-tone channel b shifts the same way.
+- **Under-hair:** no new code. The under-cap is COLOR_0 (0.55) times `shiftedMedian`, which is now the picked colour itself, so it is a darker shade of blond or ginger instead of black.
+- **Eyes on dark skins (r2-on-skins):** `faceMaterial.ts` `EYE_RIM`: on skins darker than mid tan (linear luminance 0.03 to 0.2 fade), the two eye slots sit on a soft glow of the same skin lit up 3.2x (plus 15% cream), the eye's shape grown by 0.012 of the face (16 taps). Lighter skins draw exactly as before. Covers all 29 eye styles (David's faces #20-25 included). David's batch 3 faces are not on main yet (wardrobe-b3), so they are unchecked. Mouths are unchanged.
+- **Gates:** tsc clean; eslint clean on changed files; vitest 363 files / 3473 tests passed, with and without `NEXT_PUBLIC_GAME_WORLD=new`.
+- **perf:check (SCENES=cafe, once):** FAILED on frame time: high 7.7 ms (baseline 2.1), lite 3.7 ms (1.5). The run was noisy: load 10.8, the Blender lock held by another lane, spread 56-65%. Frame CPU rose 5x, but this change adds no per-frame CPU work. Draw calls (132 vs 140) and triangles went down. Not rerun (rules). Ask the coordinator's combined check to confirm.
+- **Evidence (round 3):** `13-water-no-lines.webp` (rest and a wave at the face, before and after); `14-hair-{bob_pigtail,anime_spikes,swept_fringe,ribbon_bob}.webp` (own, free 0-5 and 12, dyes 10 and 11, on skins 1, 6 and 11, before and after); `15-under-hair.webp`; `16-eyes-{1,2,3}.webp` (all 29 eye styles on all 12 skins, before and after). Scripts: `shoot3.mjs`, `sheets3.py`. New lab sheets: `/lab/avatar?sheet=haircolours` and `?sheet=eyeskins`.
 
 ## Next
 
-1. David reviews round 2, and decides on the hair lightness (`12-hair-lightness-choice.webp`); apply his notes.
+1. David reviews round 3 (water, hair lightness on 4 styles, under-hair, eyes on 12 skins); apply his notes.
+2. Once wardrobe-b3 lands (David's batch 3 faces, the 7-row hair atlas), reshoot `?sheet=eyeskins` and `?sheet=haircolours` on it.
 
 ## Tools and gotchas
 
 - `?arrival=1` on `/lab/island` now opens straight on the reflection (phase `creator`): don't wait for `underwater`.
 - Shots: hold the browser lock, dev server on 3171 (Supabase env blanked), then `node specs/evidence/reflection-waves/shoot.mjs <dir> desktop phone [clear] [colours]` (`MID_MS=620` times the crest-at-face shot), then `python3 specs/evidence/reflection-waves/sheets.py <dir> <clear_dir> <colours_dir> specs/evidence/reflection-waves`.
 - Tune the wave live in dev: `window.__reflect.wave` (heading, speed, lead, exit, height, ahead, behind).
-- Hair colour only turns hue (lightness kept), so colour evidence needs a mid-lightness style; hairstyle tiles by index in `section[aria-label="Hairstyles"]` (12 mid-brown spiky, 13 white, 15 the default bob). Swatch buttons in `[aria-label="hair colours"]`: 0 is "Own", then FREE_HAIR in order.
+- Round 3: hair colour sets lightness too, so any style shows a colour. Lab sheets (dev server, browser lock): `node specs/evidence/reflection-waves/shoot3.mjs <dir> sheet <name> "sheet=haircolours&ids=hair_bob_pigtail&face=512"` (W= viewport width; it grows the viewport to the grid, since drei Views draw into one fixed canvas), `shoot3.mjs <dir> water`, then `python3 specs/evidence/reflection-waves/sheets3.py <before> <after> specs/evidence/reflection-waves`. Eyes framing: `sheet=eyeskins&zoom=1.7&look=0.73&face=512`.
+- zsh does not word-split `$VAR` in `for x in $VAR`: loop over an array, or pass one comma list (round 3 lost two id pairs that way).
+- Hairstyle tiles by index in `section[aria-label="Hairstyles"]` (12 mid-brown spiky, 13 white, 15 the default bob). Swatch buttons in `[aria-label="hair colours"]`: 0 is "Own", then FREE_HAIR in order.
 
 ## Rules
 
