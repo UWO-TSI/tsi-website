@@ -25,7 +25,32 @@ Don't move or rearrange anything (David paints the layout; `specs/terrain-law.md
 
 ## Status
 
-(none yet)
+- **Wharf deck edge: done, 6969b2ac** (can ship first). The `deck` board squares are walkable decks (turned, at their
+  tile's height); the shallows within 1.5 of any deck are unwadeable water, so every deck edge over the sea holds you.
+  Test: `walk.test.ts` "holds you on every deck right up to its drawn edge" (sprint and dash across every edge of the
+  squares, the jetty and the sushi bar: never into the water, and stopped at the edge, not short of it).
+- **Hitbox audit: done** (this commit; head SHA in the report). Table and before/after renders in
+  `specs/evidence/collision/audit.md`. Fixes, all on the smooth world only (the village's cell walker is unchanged):
+  prop tops stand on the ground under them (they were read as heights over the sea, so the plaza's and the wharf's
+  props were walked through); buildings block their measured wall box, turned with them (`BUILDING_SOLID`); lamp posts
+  are solid (`NEW_LAMPS[kind].post`); new-world footprints fitted (centre offsets in `PROP_FOOTPRINT`, the round
+  fountain `ROUND_PROPS`). Tests in `walk.test.ts` and `propModels.test.ts`.
+- Not approved by David yet. Flagged to the coordinator: the broken market-cart GLB, the walk-through campfire, the
+  invisible seatable plaza benches, the village's same building offsets (all in audit.md).
+
+## Next
+
+- Nothing, unless review asks. If David repaints the world, rerun the audit:
+  `cd web && AUDIT_OUT=/tmp/audit npx vitest run lib/game/world/collisionAudit.test.ts`.
+
+## Tools and gotchas
+
+- The audit generator `web/lib/game/world/collisionAudit.test.ts` is skipped in normal runs; it writes PNGs and
+  `audit.json` to `AUDIT_OUT` (`AUDIT_PNG=0` for the table only). Its "before" renders came from a detached worktree at
+  main 1d9a951e with the same file copied in.
+- `scripts/glb-bbox.mjs` reads accessor min/max only: it can't see a broken index buffer (the market cart) or a body
+  height slice; the audit reads triangles.
+- A test that starts the sim at a point inside a solid gets y = Infinity (the plaza lamp 5.4 east of the fountain).
 
 ## Rules
 

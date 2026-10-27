@@ -89,7 +89,7 @@ function propY(p: { x: number; z: number; yaw?: number; model?: string; scale?: 
   // Lily pads float on the water.
   if (p.model?.startsWith("lily-pads-")) return Math.max(y, SEA_Y);
   if (!p.model?.startsWith("moss-boulder")) return y;
-  const r = Math.max(...(PROP_FOOTPRINT[p.model] ?? [0])) * (p.scale ?? 1);
+  const f = PROP_FOOTPRINT[p.model], r = (f ? Math.max(f[0], f[1]) : 0) * (p.scale ?? 1);
   for (let a = 0; a < 8; a++) y = Math.min(y, ground(p.x + r * Math.cos((a * Math.PI) / 4), p.z + r * Math.sin((a * Math.PI) / 4)));
   return y;
 }

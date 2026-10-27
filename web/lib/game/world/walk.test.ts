@@ -5,9 +5,10 @@
  */
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { DECK_SQUARE_HALF, barDecks, inFootprint, inRect, landmarkHalf, villageIsland, wharfDock, wharfDecks, type LandmarkId } from "../defaultIsland";
+import { BUILDING_SOLID, DECK_SQUARE_HALF, PROP_TOP, ROUND_PROPS, barDecks, inFootprint, inRect, landmarkHalf, landmarkPoint, landmarks, propFootprint, propsOf, turn, villageIsland, wharfDock, wharfDecks, type LandmarkId } from "../defaultIsland";
 import { BAR_Y, ENTRY, STOOLS, STOOL_Z, barOf, barPoint } from "../sushiBar";
 import { EDGE_SHOPS, JETTY, dockToWorld } from "../wharf";
+import { barrierBoxes, barrierPlacements, inBarrier } from "../barriers";
 import { campfireSite } from "../campfireSite";
 import { MOVE_TUNING, NO_INPUT, createMoveState, stepMove, STEP, type MoveWorld } from "../movement/sim";
 import { navGrid, planResidents } from "../residentRoutine";
@@ -124,6 +125,66 @@ describe("walking the smooth world", () => {
     expect(runs).toBeGreaterThan(400);
     expect(fell, fell.slice(0, 12).join("; ")).toEqual([]);
     expect(short, short.slice(0, 12).join("; ")).toEqual([]);
+  });
+
+  it("blocks at every building's walls, turned with it, and leaves the ground round it and its door open (David, 2026-10-26: \"the big buildings hit box vs actual box is not matched\")", () => {
+    const nav = navGrid(island, v), [sx, sz] = villageSpawnPoint(v), open: string[] = [];
+    const buildings = [...landmarks(v).filter(l => BUILDING_SOLID[l.id]).map(l => ({ id: l.id as LandmarkId | "house", name: l.id, x: l.x, z: l.z, yaw: l.yaw ?? 0, k: l.scale ?? 1 })),
+      ...objectsOf("house", v).map(o => ({ id: "house" as const, name: o.id, x: o.x, z: o.z, yaw: o.yaw ?? 0, k: o.scale ?? 1 }))];
+    expect(buildings.length).toBeGreaterThan(10);
+    for (const b of buildings) {
+      const [cx, cz, hw, hd] = BUILDING_SOLID[b.id]!, at = (lx: number, lz: number) => { const [dx, dz] = turn((cx + lx) * b.k, (cz + lz) * b.k, b.yaw); return [b.x + dx, b.z + dz] as const; };
+      // Inside the walls, at the corners and the middle: solid.
+      for (const [a, c] of [[0, 0], [-0.9, -0.9], [0.9, -0.9], [0.9, 0.9], [-0.9, 0.9]]) expect(island.top(...at(a * hw, c * hd)), `${b.name} inside`).toBe(Infinity);
+      // Just past each wall, where the old unturned bound stood: free unless something else stands there.
+      const out = 0.3 / b.k;
+      for (const [a, c] of [[hw + out, 0], [-hw - out, 0], [0, hd + out], [0, -hd - out]]) if (island.top(...at(a, c)) === Infinity) open.push(`${b.name} ${a.toFixed(1)},${c.toFixed(1)}`);
+      if (b.id === "house") continue;
+      // Its door's prompt stands clear and is walked to from the spawn.
+      const door = landmarkPoint(b.id as LandmarkId, "door", v);
+      if (!door || b.id === "oracle") continue; // the temple stands past the border (its drop)
+      expect(island.standable(...door), `${b.name} door`).toBe(true);
+      expect(nav.path(sx, sz, ...door), `${b.name} door reached`).not.toBeNull();
+    }
+    expect(open, open.join("; ")).toEqual([]);
+  });
+
+  it("stands each prop's solid on the ground under it, so the plaza's and the wharf's props stop you; the soft ones don't", () => {
+    // A prop's top was measured from its own foot but read as a height over the sea: on the plaza (3 up) and the wharf (1
+    // up) nearly every prop was walked through (the collision audit). Now its top stands on the ground under it.
+    let solid = 0;
+    for (const o of propsOf(v)) {
+      const f = propFootprint(o), top = (PROP_TOP[o.model!] ?? Infinity) * (o.scale ?? 1);
+      if (!f || top < MOVE_TUNING.stepUp + 0.05) continue;
+      const [dx, dz] = turn(f[2], f[3], o.yaw), x = o.x + dx, z = o.z + dz;
+      expect(island.top(x, z) - island.ground(o.x, o.z), `${o.id} ${o.model}`).toBeGreaterThanOrEqual(top - 1e-6);
+      solid++;
+    }
+    expect(solid).toBeGreaterThan(150);
+    // Run at the fountain, a bench, a lamp's post and a barrel.
+    const fountain = objects.find(o => o.model === "plaza-fountain")!, r = propFootprint(fountain)![0];
+    expect(ROUND_PROPS.has("plaza-fountain")).toBe(true);
+    for (const o of [fountain, objects.find(o => o.kind === "bench" && o.model)!, objects.find(o => o.kind === "lamp" && o.model === "village")!, objects.find(o => o.model === "barrel")!]) {
+      // From 2 past its side, the first way round that starts on open ground.
+      const reach = o === fountain ? r : Math.max(...(propFootprint(o)?.slice(0, 2) ?? [0.08])), way = Array.from({ length: 16 }, (_, i) => [Math.cos(i * Math.PI / 8), Math.sin(i * Math.PI / 8)])
+        .find(([a, b]) => [0.5, 1, 1.5, 2].every(e => island.top(o.x + a * (reach + e), o.z + b * (reach + e)) === island.ground(o.x + a * (reach + e), o.z + b * (reach + e))));
+      expect(way, `${o.id} has open ground beside it`).toBeDefined();
+      const [ux, uz] = way!;
+      let s = createMoveState(o.x + ux * (reach + 2), o.z + uz * (reach + 2), island);
+      let near = Infinity;
+      for (let i = 0; i < 120; i++) { s = stepMove(s, { ...NO_INPUT, x: -ux, z: -uz }, STEP * 2, island, MOVE_TUNING); near = Math.min(near, Math.hypot(s.x - o.x, s.z - o.z)); }
+      // Aimed at its middle: stopped at its side or turned round it, never through it.
+      expect(near, `${o.id} stops you`).toBeGreaterThan(o === fountain ? r : 0.1);
+    }
+    // Grass, flowers, shrubs, shells and the hand lanterns are walked through.
+    const barriers = barrierBoxes(barrierPlacements(v));
+    for (const o of objects) {
+      if (!(o.kind === "flower" || o.kind === "shell" || (o.kind === "lamp" && o.model === "hand") || /^(flower-meadow|flower-tallgrass|shrub-|beach-towel|starfish|sand-dollar|conch)/.test(o.model ?? ""))) continue;
+      if (inBarrier(barriers, o.x, o.z)) continue; // a shrub under the invisible border
+      // Not where a solid one stands (a lantern on the fish market's porch).
+      if (propsOf(v).some(p => { const f = propFootprint(p), [dx, dz] = f ? turn(f[2], f[3], p.yaw) : [0, 0]; return p !== o && f && inFootprint(o.x, o.z, { x: p.x + dx, z: p.z + dz }, p.yaw ?? 0, f[0] + 0.3, f[1] + 0.3); })) continue;
+      expect(island.top(o.x, o.z), `${o.kind}:${o.id}`).toBe(island.ground(o.x, o.z));
+    }
   });
 
   it("blocks walking up a slope too steep to climb, and lets you walk down it", () => {

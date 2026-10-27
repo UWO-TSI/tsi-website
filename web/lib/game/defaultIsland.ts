@@ -9,6 +9,7 @@ import { DROPS } from "./drops";
 import { JETTY, worldToDock, type Dock } from "./wharf";
 import { BAR_DECKS, barOf } from "./sushiBar";
 import { FENCE_POST_HALF, fenceSolids, isJoinedFence } from "./fences";
+import { NEW_LAMPS } from "./propModels";
 import { MAX_CLIMB, terrainHeight, terrainSteepness, terrainSurface } from "./world/terrain";
 
 /**
@@ -81,8 +82,13 @@ export const WHARF_FINGER_LOCAL = { x0: -4.62, x1: -0.85, z0: -3.4, z1: -2.35 };
 export const BRIDGE_DECK_HALF: [number, number] = [1.9, 1.0];
 /** The rails are solid from the deck's edge out to here (across, relative), along the whole deck: on water or on the bank. */
 export const BRIDGE_RAIL_OUT = 1.65;
-/** Solid footprints (half width, half depth, before rotation and scale), from the measured GLB bounds. */
-export const PROP_FOOTPRINT: Record<string, [number, number]> = {
+/**
+ * Solid footprints (half width, half depth, before rotation and scale), from the measured GLB bounds; a third and fourth
+ * number move its centre off the model's origin (in its own frame). The new world's are fitted to what each model draws
+ * at body height (0.3 to 1.8 over the ground; the collision lane's audit, specs/evidence/collision/audit.md): a tree or a
+ * palm by its trunk, a pole by its pole (the cloth and the leaves are soft).
+ */
+export const PROP_FOOTPRINT: Record<string, readonly [number, number, number?, number?]> = {
   "bench-wood": [0.98, 0.27], "rock-a": [0.48, 0.45], "rock-b": [0.46, 0.42], "rock-c": [0.5, 0.5],
   "fence-country-a": [0.5, 0.16], "fence-country-b": [0.5, 0.16],
   // The faceted boulders (lib/game/rocks.ts, art/rocks/build_rocks.py).
@@ -91,25 +97,28 @@ export const PROP_FOOTPRINT: Record<string, [number, number]> = {
   barrel: [4.85, 4.85], lighthouse: [9, 9], crate: [0.91, 0.3], "market-cart": [3.77, 1.03], "shop-cart": [0.44, 0.28],
   "beach-parasol": [0.1, 0.1], "palm-a": [0.3, 0.3], "palm-b": [0.25, 0.25],
   "wharf-piling": [0.15, 0.15], "rope-post": [0.1, 0.1], "rope-span": [1, 0.03],
-  "palm-tall": [0.45, 0.45], "palm-lean": [0.42, 0.42], "palm-short": [0.4, 0.4], "palm-small": [0.3, 0.3],
+  "palm-tall": [0.45, 0.45], "palm-lean": [0.59, 0.47, 0.12, 0], "palm-short": [0.4, 0.4], "palm-small": [0.3, 0.3],
   "log-bench": [0.95, 0.24], "stump-seat": [0.3, 0.3], "firewood-stack": [0.95, 0.46], "fish-rack": [1.02, 0.37],
   // game/village-art's plaza set: the fountain's box sits inside its round basin (a body stops on the rim's cap).
-  "plaza-fountain": [4, 4], "banner-pole": [0.1, 0.1], "flag-pole": [0.12, 0.12], "fruit-stall": [1.4, 0.6], "fruit-barrel": [0.38, 0.38],
+  "plaza-fountain": [4.52, 4.52], "banner-pole": [0.1, 0.1], "flag-pole": [0.12, 0.12], "fruit-stall": [1.27, 0.57], "fruit-barrel": [0.38, 0.38],
   "fruit-crate": [0.32, 0.22], "flower-planter": [0.62, 0.22], "flower-pot": [0.24, 0.24], "round-planter": [0.52, 0.52],
   "planter-bench": [1.3, 0.28], "market-sign": [0.31, 0.25],
-  "dock-pile-rope": [0.25, 0.25], "rope-net": [1.13, 0.13], "life-ring": [0.48, 0.09], "net-heap": [0.7, 0.5], "crate-net": [0.7, 0.4],
-  "crate-cloth": [0.35, 0.35], "fish-crate": [0.36, 0.42], "dock-hoist": [0.28, 0.28],
-  "path-rock-slab": [0.2, 0.12], "path-rock-low": [0.3, 0.3], "path-rock-cluster": [0.36, 0.26], "rustic-fence-a": [1.25, 0.08],
-  "rustic-fence-b": [0.85, 0.08], "rustic-post": [0.07, 0.07],
-  "sushi-bar": [4.0, 1.5], "fish-market": [4.4, 3.6], "sell-barrel": [1.25, 0.6],
-  "beach-lounger": [0.34, 0.95], sandcastle: [0.55, 0.5], "beach-cooler": [0.33, 0.22], "volleyball-net": [2.62, 0.08], "lifeguard-tower": [1.02, 1.02], "surfboard-a": [0.2, 0.1], "surfboard-b": [0.2, 0.1], "surfboard-c": [0.2, 0.1],
+  "dock-pile-rope": [0.25, 0.25], "rope-net": [1.13, 0.13], "life-ring": [0.48, 0.09], "net-heap": [0.53, 0.46, -0.08, -0.02], "crate-net": [0.7, 0.4],
+  "crate-cloth": [0.41, 0.41, 0.05, -0.03], "fish-crate": [0.36, 0.42], "dock-hoist": [0.15, 0.15],
+  "path-rock-slab": [0.2, 0.12], "path-rock-low": [0.22, 0.26, -0.07, 0.05], "path-rock-cluster": [0.2, 0.17, -0.15, 0.02], "rustic-fence-a": [1.29, 0.12, 0.01, 0.02],
+  "rustic-fence-b": [0.93, 0.1, 0.06, 0.03], "rustic-post": [0.22, 0.11, 0.1, 0.05],
+  "sushi-bar": [4.0, 1.5], "fish-market": [4.46, 3.05, 0.36, 0.75], "sell-barrel": [1.25, 0.6],
+  "beach-lounger": [0.34, 0.95], sandcastle: [0.55, 0.38, -0.06, 0.05], "beach-cooler": [0.33, 0.22], "volleyball-net": [3.51, 0.08], "lifeguard-tower": [1.02, 1.45, 0, 0.42],
+  "surfboard-a": [0.25, 0.14, -0.12, -0.1], "surfboard-b": [0.24, 0.14, 0.11, -0.09], "surfboard-c": [0.22, 0.16, -0.11, -0.07],
   // game/village-art2
   "moss-boulder-a": [0.65, 0.5], "moss-boulder-b": [1.05, 0.65], "river-stones-b": [0.55, 0.4],
   // game/wharf-art4
   "tackle-shop": [2.3, 2.45],
   // game/trees-art: the riverbank trees' trunks at the ground.
-  "river-tree-willow": [0.7, 0.7], "river-tree-alder": [0.65, 0.65], "river-tree-oak": [0.75, 0.75], "river-tree-lean": [0.6, 0.6],
+  "river-tree-willow": [0.7, 0.7], "river-tree-alder": [0.46, 0.6, -0.15, 0.08], "river-tree-oak": [0.75, 0.75], "river-tree-lean": [0.6, 0.6],
 };
+/** Props whose footprint is round, `hw` its radius: the plaza fountain's basin (a square would stand out past its rim). */
+export const ROUND_PROPS: ReadonlySet<string> = new Set(["plaza-fountain"]);
 /** Prop tops before scale, measured from the GLB bounds: what a jump clears or lands on (lib/game/movement). */
 export const PROP_TOP: Record<string, number> = {
   "bench-wood": 0.51, "rock-a": 0.61, "rock-b": 0.59, "rock-c": 0.52, "fence-country-a": 0.7, "fence-country-b": 0.69,
@@ -140,6 +149,18 @@ export function houseHalf(yaw = 0, scale = 1): [number, number] {
   const c = Math.abs(Math.cos(yaw)), n = Math.abs(Math.sin(yaw));
   return [(HOUSE_HALF[0] * c + HOUSE_HALF[1] * n) * scale, (HOUSE_HALF[0] * n + HOUSE_HALF[1] * c) * scale];
 }
+
+/**
+ * The smooth world's building walls (the collision lane's audit, 2026-10-26: "the big buildings hit box vs actual box is
+ * not matched"): centre offset and half extents in the building's own frame, before its scale, measured from the drawn
+ * models at body height (0.3 to 1.8 over the ground). The ACNH buildings stand behind their origin (turned a half turn),
+ * so their walls sit well off the centred halves; the smooth world turns each building its own way, so the box turns
+ * with it. The village keeps its centred, unturned halves (LANDMARK_INFO, HOUSE_HALF). The café keeps its authored 5 x 5.
+ */
+const CHALET_SOLID = [0, 1.2, 2.35, 1.34] as const;
+export const BUILDING_SOLID: Readonly<Partial<Record<LandmarkId | "house", readonly [number, number, number, number]>>> = {
+  hq: [-0.17, -0.75, 2.93, 1.4], shop: [-0.2, 1.79, 3.01, 1.71], oracle: [0, 2.08, 3.38, 1.46], cafe: [0, 0, 2.5, 2.5], museum: CHALET_SOLID, house: CHALET_SOLID,
+};
 
 /** A tree trunk blocks this far from its centre. */
 export const TREE_TRUNK = 0.65;
@@ -252,10 +273,10 @@ export function villageSpawn(v: Village = village()): [number, number, number] {
 /** The benches, rocks, fences and scenery props: the props with a solid footprint. */
 export const propsOf = (v: Village = village()) => [...objectsOf("bench", v), ...objectsOf("rock", v), ...objectsOf("fence", v), ...objectsOf("prop", v)];
 
-/** Solid footprint of a bench, rock or fence: half extents × scale (before its yaw). */
-export function propFootprint(o: Pick<MapObject, "model" | "scale">): [number, number] | null {
-  const f = o.model ? PROP_FOOTPRINT[o.model] : undefined;
-  return f ? [f[0] * (o.scale ?? 1), f[1] * (o.scale ?? 1)] : null;
+/** Solid footprint of a bench, rock or fence: half extents and centre offset × scale (before its yaw). */
+export function propFootprint(o: Pick<MapObject, "model" | "scale">): [number, number, number, number] | null {
+  const f = o.model ? PROP_FOOTPRINT[o.model] : undefined, k = o.scale ?? 1;
+  return f ? [f[0] * k, f[1] * k, (f[2] ?? 0) * k, (f[3] ?? 0) * k] : null;
 }
 
 /** Whether (x, z) is inside half extents hw × hd around `at`, turned by `yaw`. */
@@ -286,7 +307,7 @@ export function objectFootprint(o: MapObject): { hw: number; hd: number; cx: num
     return { hw, hd, cx, cz };
   }
   const f = propFootprint(o);
-  return f ? { hw: f[0], hd: f[1], cx: 0, cz: 0 } : null;
+  return f ? { hw: f[0], hd: f[1], cx: f[2], cz: f[3] } : null;
 }
 
 /** Bench-wood seat top: its slats measure 0.48–0.51 above the ground. */
@@ -400,13 +421,27 @@ export function islandOf(v: Village): VillageIsland {
   const surface = terrain ? (x: number, z: number) => terrainSurface(terrain, x, z) : (x: number, z: number) => drawnSurfaceAt(map, x, z);
   const rails = bridgeRails(v);
   // Buildings: the landmarks with a footprint and the residents' houses.
-  const solids: { x: number; z: number; half?: [number, number] }[] = [...landmarks(v).filter(l => l.half), ...objectsOf("house", v).map(o => ({ x: o.x, z: o.z, half: houseHalf(o.yaw, o.scale) }))];
+  // On the smooth world, each its walls' box, turned and scaled with it (BUILDING_SOLID).
+  const wall = (id: LandmarkId | "house", o: { x: number; z: number; yaw?: number; scale?: number }) => {
+    const [cx, cz, hw, hd] = BUILDING_SOLID[id]!, k = o.scale ?? 1, [dx, dz] = turn(cx * k, cz * k, o.yaw);
+    return { x: o.x + dx, z: o.z + dz, yaw: o.yaw ?? 0, hw: hw * k, hd: hd * k };
+  };
+  const solids = terrain
+    ? [...landmarks(v).filter(l => l.half).map(l => BUILDING_SOLID[l.id] ? wall(l.id, l) : { x: l.x, z: l.z, yaw: 0, hw: l.half![0], hd: l.half![1] }), ...objectsOf("house", v).map(o => wall("house", o))]
+    : [...landmarks(v).filter(l => l.half).map(l => ({ x: l.x, z: l.z, yaw: 0, hw: l.half![0], hd: l.half![1] })),
+      ...objectsOf("house", v).map(o => { const [hw, hd] = houseHalf(o.yaw, o.scale); return { x: o.x, z: o.z, yaw: 0, hw, hd }; })];
   // The natural barriers standing at this drop (lib/game/barriers.ts): solid like a building, never jumped.
   const barriers = barrierBoxes(barrierPlacements(v));
+  // A prop's top stands on the ground under it: the smooth world's ground is anywhere from the sea to the summit (the
+  // plaza at 3, the wharf at 1). The village's cells keep tops over their own zero.
   const props = [...propsOf(v).flatMap(o => {
-    const f = propFootprint(o);
-    return f ? [{ x: o.x, z: o.z, yaw: o.yaw ?? 0, hw: f[0], hd: f[1], top: (PROP_TOP[o.model!] ?? Infinity) * (o.scale ?? 1) }] : [];
-  }), ...fenceSolids(objectsOf("fence", v).filter(isJoinedFence))];
+    const f = propFootprint(o), base = terrain ? ground(o.x, o.z) : 0;
+    if (!f) return [];
+    const [dx, dz] = turn(f[2], f[3], o.yaw);
+    return [{ x: o.x + dx, z: o.z + dz, yaw: o.yaw ?? 0, hw: f[0], hd: f[1], top: base + (PROP_TOP[o.model!] ?? Infinity) * (o.scale ?? 1), round: ROUND_PROPS.has(o.model!) }];
+  }), ...fenceSolids(objectsOf("fence", v).filter(isJoinedFence)),
+    // The lamps' posts (the hand lantern has none): never climbed.
+    ...objectsOf("lamp", v).flatMap(o => { const post = NEW_LAMPS[o.model as keyof typeof NEW_LAMPS]?.post; return post ? [{ x: o.x, z: o.z, yaw: 0, hw: post, hd: post, top: Infinity }] : []; })];
   // Trees and props by 4-unit bucket (numeric keys), so a painted island with hundreds of them walks as cheaply as a small one.
   const buckets = <T extends { x: number; z: number }>(items: readonly T[]) => {
     const grid = new Map<number, T[]>();
@@ -430,13 +465,13 @@ export function islandOf(v: Village): VillageIsland {
   const climb = steep ? (x: number, z: number, nx: number, nz: number) => !(ground(nx, nz) > ground(x, z) + 1e-4 && steep(nx, nz)) : undefined;
   /** Top of the solid at a point: a prop's measured top, Infinity for buildings, study furniture and trunks, -Infinity for none. */
   const solidTop = (x: number, z: number) => {
-    if (solids.some(l => Math.abs(x - l.x) < l.half![0] && Math.abs(z - l.z) < l.half![1]) || eventSolids.some(r => inRect(x, z, r)) || rails.some(r => inRect(x, z, r))
+    if (solids.some(l => inFootprint(x, z, l, l.yaw, l.hw, l.hd)) || eventSolids.some(r => inRect(x, z, r)) || rails.some(r => inRect(x, z, r))
       || inBarrier(barriers, x, z)) return Infinity;
     let top = -Infinity, trunk = false;
     const bx = Math.floor(x / 4), bz = Math.floor(z / 4);
     for (let oz = -1; oz <= 1; oz++) for (let ox = -1; ox <= 1; ox++) {
       const k = (bx + ox) * 4096 + bz + oz;
-      for (const p of propGrid.get(k) ?? NONE) if (inFootprint(x, z, p, p.yaw, p.hw, p.hd)) top = Math.max(top, p.top);
+      for (const p of propGrid.get(k) ?? NONE) if ("round" in p && p.round ? Math.hypot(x - p.x, z - p.z) < p.hw : inFootprint(x, z, p, p.yaw, p.hw, p.hd)) top = Math.max(top, p.top);
       for (const t of treeGrid.get(k) ?? NONE) if (Math.hypot(t.x - x, t.z - z) < TREE_TRUNK) trunk = true;
     }
     if (top === Infinity || studySolid("village", x, z, 0, v)) return Infinity;
