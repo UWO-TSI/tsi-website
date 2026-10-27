@@ -117,7 +117,7 @@ import ShopCounter from "./ShopCounter";
 import ShopkeeperChoice, { MERCH_LINE, type ShopSection } from "./ShopkeeperChoice";
 import IslandLoading from "./IslandLoading";
 import { loadGameWorld } from "@/lib/game/world/load";
-import { GAME_WORLD } from "@/lib/game/world/active";
+import { GAME_WORLD, worldModel } from "@/lib/game/world/active";
 import TalkBox from "./TalkBox";
 import { emptyTalkView, requestTalk, subscribeTalk, talkStore, talkView } from "@/lib/game/residentTalk";
 import DailyGift from "./DailyGift";
@@ -604,7 +604,7 @@ function ClubMonument({ position, stage, ceremony }: { position: [number, number
     {!done && <>
       <GLBProp url={MONUMENT_SIGN_URL} position={[1.3, 0, -1.25]} rotation={[0, -0.3, 0]} />
       {[[-1.1, -1.1, 0], [1.1, -1.1, 0], [-1.1, 1.1, Math.PI], [1.1, 1.1, Math.PI]].map(([x, z, r], i) => (
-        <GLBProp key={i} url="/assets/acnh/props/fence-rope-a.glb" position={[x, 0, z]} rotation={[0, r, 0]} />
+        <GLBProp key={i} url={worldModel("/assets/acnh/props/fence-rope-a.glb")} position={[x, 0, z]} rotation={[0, r, 0]} />
       ))}
     </>}
     {stage >= 1 && !done && <>

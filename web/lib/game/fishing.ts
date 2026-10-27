@@ -21,6 +21,7 @@ import { getLabHour } from "./devLab";
 import { liveIslandWeather, reelWeather } from "./islandWeather";
 import { torontoParts } from "@/lib/time";
 import { EXTRA_FISH } from "./fishCatalog";
+import { worldModel } from "./world/active";
 import { weatherMods } from "./weatherPerks";
 import { SEASONAL_GOALS } from "@/lib/progression/defaults";
 import { ROSTER } from "@/lib/collections/roster";
@@ -142,7 +143,8 @@ const SEA_CREATURES: FishDef[] = [
   { key: "sea_giant_isopod", label: "a Giant Isopod", name: "Giant Isopod", model: "/assets/acnh/sea/giant-isopod.glb", rarity: "epic", zone: "sea", creature: true, sizeCm: [20, 40], raw: true, move: { speed: 0.3, accel: 1.4, jitter: 0.007, dartChance: 0.26, dartMul: 2.3, retargetMs: 1250 }, when: (h) => h >= 20 || h < 4, whenLabel: "night (20-4h)" },
 ];
 
-export const FISH: FishDef[] = [...CORE_FISH, ...EXTRA_FISH, ...SEA_CREATURES];
+/** Every species; in the new world the fish are our tweaked models (worldModel, art/remodel/build_fish.py). */
+export const FISH: FishDef[] = [...CORE_FISH, ...EXTRA_FISH, ...SEA_CREATURES].map(f => ({ ...f, model: worldModel(f.model) }));
 
 /**
  * Limited-time catches (specs/seasonal-events.md): species a seasonal goal
