@@ -6,6 +6,7 @@
 //   faces    ?sheet=b2faces&keys=face-26..32: the seven whole faces, front, 3/4, side and back
 //   acc      ?sheet=b2acc&keys=acc-25..27: the three face accessories over the ribbon bob, front, 3/4, side and back
 //   kits     ?sheet=facekit and ?sheet=hairkit (every face option, every hat, band and glasses), 3/4
+//   ids:<name>:<id,id,...>  any hairstyles by id, front, 3/4, side and back
 //   same     the existing hairstyles the bigger atlas touched (the default bob, a two-tone one, the ushanka, the ribbon
 //            bob), in their own colours and dyed: run once on the old assets (out_dir before/) and once on the new
 import { createRequire } from "node:module";
@@ -39,6 +40,10 @@ const V4 = "views=front,34,side,back";
 for (const scene of SCENES) {
   if (scene === "hairs") for (let i = 0; i < HAIRS.length; i += 3)
     await shot(`hairs-${i / 3 + 1}`, `sheet=roblox&framing=hat&skin=3&${V4}&cols=4&ids=${HAIRS.slice(i, i + 3).join(",")}`, [1400, 1100]);
+  if (scene.startsWith("ids:")) {          // ids:<name>:<id,id,...>: any hairstyles, front, 3/4, side and back (the placement and under-cap evidence)
+    const [, name, list] = scene.split(":");
+    await shot(name, `sheet=roblox&framing=hat&skin=3&${V4}&cols=4&ids=${list}`, [1400, 300 + 380 * list.split(",").length]);
+  }
   if (scene === "faces") {
     const keys = Array.from({ length: 7 }, (_, i) => `face-${26 + i}`);
     await shot("faces-1", `sheet=b2faces&framing=head&skins=3&${V4}&cols=4&keys=${keys.slice(0, 4).join(",")}`, [1400, 1450]);

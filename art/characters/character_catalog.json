@@ -2374,39 +2374,6 @@
    }
   },
   {
-   "id": "hair_fluffy_crop",
-   "slot": "back",
-   "name": "Fluffy crop",
-   "glb": "hair/full/hair_fluffy_crop.glb",
-   "tris": 2309,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "full": true,
-   "skull": "v10",
-   "source": "hair/source/david-b3/29-Black-Messy-Short-Fringe-V2-15563758601.glb",
-   "roblox": {
-    "provisional": true
-   },
-   "key": "hair-33",
-   "map": {
-    "cell": 27,
-    "natural": {
-     "a": [
-      0.1149,
-      0.0,
-      89.88
-     ]
-    }
-   }
-  },
-  {
    "id": "hair_straight_layers",
    "slot": "back",
    "name": "Straight layers",
@@ -2433,39 +2400,6 @@
     "natural": {
      "a": [
       0.1149,
-      0.0,
-      89.88
-     ]
-    }
-   }
-  },
-  {
-   "id": "hair_long_windswept",
-   "slot": "back",
-   "name": "Long windswept",
-   "glb": "hair/full/hair_long_windswept.glb",
-   "tris": 3851,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "full": true,
-   "skull": "v10",
-   "source": "hair/source/david-b3/31-White-Long-Japanese-Windy-Messy-Hair-86707394443389.glb",
-   "roblox": {
-    "provisional": true
-   },
-   "key": "hair-35",
-   "map": {
-    "cell": 29,
-    "natural": {
-     "a": [
-      0.7794,
       0.0,
       89.88
      ]
@@ -2510,7 +2444,7 @@
    "slot": "back",
    "name": "Tousled spikes",
    "glb": "hair/full/hair_tousled_spikes.glb",
-   "tris": 4104,
+   "tris": 4161,
    "materials": [
     {
      "name": "M_Hair",
@@ -2606,40 +2540,6 @@
    }
   },
   {
-   "id": "hair_space_buns",
-   "slot": "back",
-   "name": "Space buns with fluffy edges",
-   "glb": "hair/full/hair_space_buns.glb",
-   "tris": 4109,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "full": true,
-   "skull": "v10",
-   "source": "hair/source/david-b3/36-Black-Space-Buns-W-Fluffy-Edges-77782189856723.glb",
-   "roblox": {
-    "provisional": true
-   },
-   "key": "hair-40",
-   "map": {
-    "cell": 34,
-    "natural": {
-     "a": [
-      0.2357,
-      0.0022,
-      65.8
-     ]
-    },
-    "fixed": true
-   }
-  },
-  {
    "id": "hair_buns_braid",
    "slot": "back",
    "name": "Messy buns with a braid",
@@ -2668,39 +2568,6 @@
       0.9618,
       0.0306,
       81.77
-     ]
-    }
-   }
-  },
-  {
-   "id": "hair_messy_braid",
-   "slot": "back",
-   "name": "Messy with a braid",
-   "glb": "hair/full/hair_messy_braid.glb",
-   "tris": 3703,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "full": true,
-   "skull": "v10",
-   "source": "hair/source/david-b3/38-Black-Messy-Hair-w-a-Braid-82798715506608.glb",
-   "roblox": {
-    "provisional": true
-   },
-   "key": "hair-42",
-   "map": {
-    "cell": 36,
-    "natural": {
-     "a": [
-      0.0,
-      0.0,
-      0.0
      ]
     }
    }
@@ -5391,32 +5258,6 @@
    "roblox": {
     "provisional": true,
     "attachment": "FaceFrontAttachment"
-   },
-   "colourAtlas": true
-  },
-  {
-   "id": "acc_cross_bandage",
-   "slot": "accessory",
-   "name": "Cross bandage",
-   "glb": "accessories/roblox/acc_cross_bandage.glb",
-   "tris": 293,
-   "materials": [
-    {
-     "name": "M_Acc",
-     "tint": null,
-     "color": "#FFFFFF"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "group": "face",
-   "skull": "v10",
-   "key": "acc-26",
-   "source": "accessories/source/david-b3/face/26-White-Bandages-5972888848.glb",
-   "roblox": {
-    "provisional": true,
-    "attachment": "FaceCenterAttachment"
    },
    "colourAtlas": true
   },

@@ -862,7 +862,9 @@
     1
    ],
    "provisional": true,
-   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (the lenses, the side a bandage faces) to the front, read off the raw mesh (wardrobe batch 3)"
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (the lenses, the side a bandage faces) to the front, read off the raw mesh (wardrobe batch 3)",
+   "removed": true,
+   "removed_why": "David, 2026-10-27 (lane wardrobe-b3): removed from the catalogue, creator and shop; key acc-26 stays unused. His source GLB stays."
   },
   {
    "n": 27,

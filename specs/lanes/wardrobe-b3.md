@@ -21,6 +21,16 @@ David, 2026-10-27, verbatim: "add these new hair fance accessories, i want you t
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, `fit_check` PASS, gen-seeds up to date (no seed yet; the coordinator writes prices after David picks). Message "main" when the evidence is ready, with the head SHA, the item list (key, id, name, triangles) and the gates, then stop.
 
+## Removal (David, 2026-10-27): "remove fluffy crop and wind swept"
+
+Remove `hair_fluffy_crop` (hair-33, Fluffy crop, source #29) and `hair_long_windswept` (hair-35, Long windswept, source #31) from batch 3 entirely, the way hair-shelf removed three hairstyles (`specs/lanes/hair-shelf.md` Status):
+- their catalogue entries in both copies, their GLBs at full, lod1 and lod2, thumbs, shop icons and lod.json entries;
+- mark them removed in the import manifest (`art/characters/hair/source/david-b3/manifest.json` or wherever batch 3's list lives), so a re-import doesn't bring them back. Keep David's source GLBs as they are;
+- leave their atlas cells empty; don't re-bake the atlas;
+- don't renumber the other keys (hair-33 and hair-35 just stay unused);
+- tests and counts updated; any resident or default look that uses them repointed to a free hairstyle.
+Gates as before (vitest both worlds, tsc, eslint, fit_check). Commit, update Status, message "main" with the head SHA, and stop.
+
 ## Status (2026-10-27)
 
 - **Head:** the commit carrying this file (on top of `4d5d7b3f`). Main `58e6f63f` (hair-shelf merged) is merged in. Evidence ready; nothing approved yet. Nothing merges before David prices and fits them.

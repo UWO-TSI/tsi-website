@@ -35,8 +35,19 @@ NAMES = {26: "Squiggle face", 27: "Zombie face", 28: "Big eyes face", 29: "Cryin
          32: "Wink face"}
 
 
+# David, 2026-10-27 ("remove moody face"): out of the game. Its cells keep their place in the atlas (no re-bake); build_face.py
+# leaves the face and its three parts out of face_v7.json, so a re-run never brings it back.
+REMOVED = (30,)
+
+
+def removed_parts():
+    """(eyes id, mouth id, accent id) of every removed face: out of face_v7.json's layers and names too."""
+    return [(FACES[n][0], FACES[n][2], ACCENTS[n][0] if n in ACCENTS else None) for n in REMOVED]
+
+
 def faces():
-    return face_set_b2.faces(FACES, ACCENTS, NAMES)
+    out = face_set_b2.faces(FACES, ACCENTS, NAMES)
+    return {k: v for k, v in out.items() if int(k.split("-")[1]) not in REMOVED}
 
 
 def build(PX, anchors, place):

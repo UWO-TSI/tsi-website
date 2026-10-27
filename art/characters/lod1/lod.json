@@ -75,10 +75,6 @@
   "tris": 844,
   "lod1": 380
  },
- "accessories/roblox/acc_cross_bandage.glb": {
-  "tris": 422,
-  "lod1": 250
- },
  "accessories/roblox/acc_drawn_top_hat.glb": {
   "tris": 864,
   "lod1": 380
@@ -199,10 +195,6 @@
   "tris": 4385,
   "lod1": 2232
  },
- "hair/full/hair_fluffy_crop.glb": {
-  "tris": 4010,
-  "lod1": 2045
- },
  "hair/full/hair_freeform_afro.glb": {
   "tris": 4304,
   "lod1": 2192
@@ -223,17 +215,9 @@
   "tris": 4350,
   "lod1": 2214
  },
- "hair/full/hair_long_windswept.glb": {
-  "tris": 4348,
-  "lod1": 2214
- },
  "hair/full/hair_messy_boy.glb": {
   "tris": 1021,
   "lod1": 1021
- },
- "hair/full/hair_messy_braid.glb": {
-  "tris": 4207,
-  "lod1": 2143
  },
  "hair/full/hair_messy_dreads.glb": {
   "tris": 4340,
@@ -267,10 +251,6 @@
   "tris": 4398,
   "lod1": 2239
  },
- "hair/full/hair_space_buns.glb": {
-  "tris": 4324,
-  "lod1": 2202
- },
  "hair/full/hair_spiky_messy.glb": {
   "tris": 4255,
   "lod1": 2166
@@ -288,8 +268,8 @@
   "lod1": 2220
  },
  "hair/full/hair_tousled_spikes.glb": {
-  "tris": 4341,
-  "lod1": 2209
+  "tris": 4361,
+  "lod1": 2219
  },
  "hair/full/hair_vkei.glb": {
   "tris": 3828,
