@@ -3,7 +3,8 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CATALOGUE } from "./catalogue";
 import { memoryEconomyStore } from "./memoryStore";
-import { dailySpecials, seedItems, sellPrice, speciesClass, torontoDay } from "./rules";
+import { dailySpecials, seedItems, sellPrice, speciesClass, speciesSellPrice, torontoDay } from "./rules";
+import { ROSTER } from "@/lib/collections/roster";
 import { buy, claimDailyGift, equip, getShop, getWallet, pickupCode, reserveMerch, resolveMerch, sell, sellList } from "./service";
 
 const A = "00000000-0000-4000-8000-0000000000aa";
@@ -227,5 +228,19 @@ describe("Gems have one write path", () => {
       return /\.(update|insert|upsert)\(\s*\{[^}]*\btethos_coins\b/.test(src) || /from\("tc_transactions"\)\s*\.(insert|update|upsert|delete)/.test(src);
     });
     expect(writers).toEqual([]);
+  });
+});
+
+describe("species sell prices (the catalogue editor)", () => {
+  it("pays a species' own price when the roster sets one, else its category and rarity's", () => {
+    const apple = ROSTER.find((s) => s.key === "apple")!;
+    expect(speciesSellPrice("apple")).toBe(sellPrice("fruit", "common"));
+    apple.price = 33;
+    try {
+      expect(speciesSellPrice("apple")).toBe(33);
+    } finally {
+      delete apple.price;
+    }
+    expect(speciesSellPrice("not_a_thing")).toBeNull();
   });
 });

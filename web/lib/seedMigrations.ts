@@ -11,8 +11,8 @@
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { EVENT_SPECIES, LAUNCH_ROSTER, REEL_FISH } from "./collections/roster";
-import { seedSql } from "./collections/seed";
+import { EVENT_SPECIES, LAUNCH_ROSTER, REEL_FISH, ROSTER } from "./collections/roster";
+import { seedSql, speciesPricesSql } from "./collections/seed";
 import { craftingSeedSql, recipeDropsSql } from "./crafting/seed";
 import { combatSeedSql } from "./combat/seed";
 import { seasonalGoalsSql } from "./progression/seed";
@@ -41,6 +41,8 @@ export const SEEDS: readonly Seed[] = [
   { name: "shop-icons", file: "20261002052225_catalogue_seed.sql", sql: () => shopIconsSql([...CATALOGUE, ...OWNERSHIP_ITEMS, ...EVENT_ITEMS, ...CRAFTED_ITEMS, ...RECIPE_CARDS]) },
   // Row 217 (David, 2026-10-17): the resident roster in production, as development has it (lib/content/residentSeed.ts).
   { name: "residents", file: "20261017020000_resident_roster.sql", sql: residentsSeedSql },
+  // David, 2026-10-27: each species' own sell price (the catalogue editor), set by update so the rows' other columns keep any admin edit.
+  { name: "species-prices", file: "20261027180000_species_sell_price.sql", sql: () => speciesPricesSql(ROSTER) },
 ];
 
 /** A generated block's first and last lines: its BEGIN and END markers. */

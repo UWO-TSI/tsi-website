@@ -12,11 +12,18 @@
  *
  * Hours are local island time, [start, end) wrapping past midnight; null = all
  * day. Months 1-12 (northern hemisphere, Ontario); [] = all year. `weather` []
- * = any. `rainAnyHour`: also out in the rain outside its hours.
+ * = any. `rainAnyHour`: also out in the rain outside its hours. `price`: its
+ * sell price in coins when set, else lib/wallet/catalogue.ts SELL_PRICES by
+ * category and rarity. David edits these on the catalogue editor
+ * (specs/tools/catalogue-editor), applied by scripts/apply-species.mjs.
  */
 export type Category = "fish" | "sea" | "bug" | "fruit" | "nature" | "mineral";
 export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
-export type Biome = "river" | "pond" | "cliff_pool" | "sea" | "beach" | "flowers" | "trees" | "ground" | "water_edge" | "bush" | "woods" | "rocks";
+/** Where rod catches bite (the reel: sea, else river; pond fish only in ponds) and where land finds turn up (the island's nodes). */
+export const WATER_BIOMES = ["river", "pond", "cliff_pool", "sea"] as const;
+export const LAND_BIOMES = ["beach", "flowers", "trees", "ground", "water_edge", "bush", "woods", "rocks"] as const;
+export type Biome = (typeof WATER_BIOMES)[number] | (typeof LAND_BIOMES)[number];
+export const WEATHERS = ["clear", "cloudy", "rain", "snow"] as const;
 export type Tool = "rod" | "net" | "hand" | "shovel";
 export type Wing = "aquarium" | "insect_hall" | "nature_room";
 
@@ -31,7 +38,7 @@ export interface Species {
   size: [number, number] | null;
   hours: [number, number] | null;
   rainAnyHour: boolean;
-  weather: ("clear" | "cloudy" | "rain" | "snow")[];
+  weather: (typeof WEATHERS)[number][];
   months: number[];
   oneLiner: string;
   icon: string | null;
@@ -40,6 +47,7 @@ export interface Species {
   donatable: boolean;
   wing: Wing | null;
   position: number;
+  price?: number;
 }
 
 const DAY: [number, number] = [6, 18];

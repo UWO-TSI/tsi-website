@@ -21,7 +21,7 @@ describe("roster", () => {
     expect(new Set(ROSTER.filter((s) => s.category === "fish").map((s) => s.biome))).toEqual(new Set(["river", "pond", "cliff_pool", "sea"]));
     expect(new Set(ROSTER.filter((s) => s.category === "fish").map((s) => s.rarity)).size).toBe(5);
   });
-  it("seeds fish and sea creatures from the game's FISH table (rarity, size, hours), and every fish the reel lands is on it (row 260)", () => {
+  it("gives the reel the roster's rarity, size and hours, and every fish the reel lands is on it (row 260)", () => {
     expect(FISH.filter((f) => !ROSTER.some((s) => s.key === f.key)).map((f) => f.key)).toEqual([]);
     const fish = new Map(FISH.map((f) => [f.key, f]));
     for (const s of ROSTER.filter((x) => x.category === "fish" || x.key.startsWith("sea_"))) {
