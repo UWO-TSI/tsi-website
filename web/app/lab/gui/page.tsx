@@ -171,8 +171,8 @@ export default function GuiShowroom() {
     </Section>
 
     <Section id="dialogue" title="Dialogue" kit={["dialogue", "menu", "tutorial"]} note="Our painted speech paper with the coral name tag and the amber continue chevron (the recruit kit’s NPCDialogue, in this sheet’s scope).">
-      <Dialogue speaker="Wren · HQ lead" onContinue={() => {}} continueLabel="Next"><p>Welcome to Tethos Island, <strong>Juniper</strong>! Your plot is waiting past the café.</p></Dialogue>
-      <Row label="Name tags"><NameTag>Wren</NameTag><NameTag tone="sage">Rosa · Café</NameTag><NameTag tone="paper">Sable</NameTag></Row>
+      <Dialogue speaker="Alice · HQ lead" onContinue={() => {}} continueLabel="Next"><p>Welcome to Tethos Island, <strong>Juniper</strong>! Your plot is waiting past the café.</p></Dialogue>
+      <Row label="Name tags"><NameTag>Alice</NameTag><NameTag tone="sage">Rosa · Café</NameTag><NameTag tone="paper">Sable</NameTag></Row>
     </Section>
 
     <Section id="badges" title="Badges and counters" kit={["recipe", "phone"]} note="Status tags and the red count on a shoulder (nothing at zero).">

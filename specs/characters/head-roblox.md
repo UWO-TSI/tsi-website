@@ -138,7 +138,7 @@ transform and kept when the Roblox values are filled in:
 
 | Who | Hairstyle |
 |---|---|
-| Wren (HQ lead) | `hair_wispy_ponytail` |
+| Alice (HQ lead) | `hair_wispy_ponytail` |
 | Mayor | `hair_messy_low_pony` |
 | Shopkeeper | `hair_messy_boy` |
 | Curator | `hair_hime_short` |

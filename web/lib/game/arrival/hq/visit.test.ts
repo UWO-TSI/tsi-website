@@ -19,7 +19,7 @@ function playThrough() {
   return { s, seen };
 }
 
-describe("the HQ visit with Wren (row 312)", () => {
+describe("the HQ visit with Alice (row 312)", () => {
   it("runs in the order David chose: report, register, the real club, the lore, Esc and the map, the board, goodbye", () => {
     expect(playThrough().seen).toEqual([
       "wait:wren",
@@ -34,15 +34,15 @@ describe("the HQ visit with Wren (row 312)", () => {
     expect(playThrough().s.done).toBe(true);
   });
 
-  it("is where Bram's tour hands you off: his last line sends you to Wren at HQ", () => {
-    expect(END_LINE).toMatch(/Wren will want you signed in at HQ/);
+  it("is where Bram's tour hands you off: his last line sends you to Alice at HQ", () => {
+    expect(END_LINE).toMatch(/Alice will want you signed in at HQ/);
   });
 
   it("starts by waiting for you at the desk: Bram's hand-off is the tracker's first step", () => {
     const s = newVisit();
     expect(visitCue(s)).toBeNull();
     expect(waitingFor(s)).toBe("wren");
-    expect(hqQuest(s).steps[0]).toEqual({ id: "report", label: "Report to Wren at HQ", done: false });
+    expect(hqQuest(s).steps[0]).toEqual({ id: "report", label: "Report to Alice at HQ", done: false });
   });
 
   it("moves on only for what the beat waits for, and only once she has said its lines", () => {
