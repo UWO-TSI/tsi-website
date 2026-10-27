@@ -116,6 +116,54 @@ export function SellBody({ transport = httpEconomyTransport }: { transport?: Eco
   );
 }
 
+// ── The fish market's daily requests (f-requests) ──────────────────────────────
+
+export function RequestsBody({ transport = httpEconomyTransport }: { transport?: EconomyTransport }) {
+  const load = useCallback(() => Promise.all([transport.requests(), transport.sellable()]), [transport]);
+  const { data, error, reload, setError } = useLoad(load);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [earned, setEarned] = useState(0);
+  const handOver = async (item: string) => {
+    setBusy(item);
+    try {
+      const r = await transport.fillRequest(item, newKey());
+      setEarned((x) => x + r.paid);
+      await reload();
+    } catch (err) {
+      setError(errText(err));
+    } finally {
+      setBusy(null);
+    }
+  };
+  if (!data) return error ? <ErrorNote onRetry={() => void reload()}><SignInText text={error} /></ErrorNote> : <Loading label="Reading the board…" />;
+  const [{ requests }, stock] = data;
+  return (
+    <div>
+      <p className={p.muted} style={{ marginBottom: 10 }}>Three fish wanted today, the same for everyone. Bring one of each for a bonus. New requests every morning.</p>
+      {earned > 0 ? <p role="status" className={`${p.note} ${p.ok}`}>+{fmt(earned, "coins")} this visit</p> : null}
+      {error ? <ErrorNote><SignInText text={error} /></ErrorNote> : null}
+      <ul className={s.list}>
+        {requests.map((r) => {
+          const have = stock.find((e) => e.item_key === r.item_key);
+          return (
+            <li key={r.item_key} className={s.row} data-icon>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className={s.rowIcon} src={iconUrl(r.item_key)} alt="" width={36} height={36} />
+              <span>
+                <b>{r.name}</b>{have ? <> ×{have.count}</> : null}
+                <span className={p.muted} style={{ display: "block" }}>{r.rarity} · pays {fmt(r.reward, "coins")}</span>
+              </span>
+              {r.filled ? <Badge tone="success"><Check size={12} aria-hidden /> Done today</Badge>
+                : have?.locked ? <Badge tone="warn"><Lock size={12} aria-hidden /> Locked in your bag</Badge>
+                : <Button size="sm" disabled={busy !== null || !have} onClick={() => handOver(r.item_key)}>{have ? "Hand one over" : "None yet"}</Button>}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 // ── Inventory ────────────────────────────────────────────────────────────────
 
 const GROUP_LABEL: Record<string, string> = { tools: "Tools", outfits: "Outfits & accessories", furniture: "Furniture & finishes" };

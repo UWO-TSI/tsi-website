@@ -10,6 +10,7 @@ export function memoryEconomyStore(clock: () => Date = () => new Date()) {
   const ledger: (LedgerEntry & { member: string; key: string })[] = [];
   const inventory = new Map<string, InventoryRow>(); // `${member}:${itemId}`
   const collections = new Map<string, number>(); // `${member}:${key}`
+  const fills: { member: string; day: string; item: string }[] = []; // fish_request_fills
   const locks = new Set<string>(); // the bag's locked favourites (member_collections.locked)
   const claims = new Set<string>();
   const granted = new Set<string>(); // starter_grants
@@ -90,6 +91,22 @@ export function memoryEconomyStore(clock: () => Date = () => new Date()) {
       collections.set(`${m}:${itemKey}`, have - qty);
       const r = apply(m, "coins", price * qty, "sell", itemKey, k);
       return { balance: r.balance, remaining: have - qty, paid: price * qty, replayed: false };
+    },
+    async requestFills(m, day) {
+      return fills.filter((f) => f.member === m && f.day === day).map((f) => f.item);
+    },
+    async fillRequest(m, day, itemKey, reward, key) {
+      const k = `fish_request:${key}`;
+      const prior = ledger.find((l) => l.member === m && l.key === k);
+      if (prior) return { balance: coins.get(m) ?? 0, remaining: collections.get(`${m}:${itemKey}`) ?? 0, paid: prior.amount, replayed: true };
+      if (fills.some((f) => f.member === m && f.day === day && f.item === itemKey)) throw new EconomyError("already_filled");
+      if (locks.has(`${m}:${itemKey}`)) throw new EconomyError("locked");
+      const have = collections.get(`${m}:${itemKey}`) ?? 0;
+      if (have < 1) throw new EconomyError("insufficient_items");
+      collections.set(`${m}:${itemKey}`, have - 1);
+      fills.push({ member: m, day, item: itemKey });
+      const r = apply(m, "coins", reward, "quest", `fish_request:${itemKey}`, k);
+      return { balance: r.balance, remaining: have - 1, paid: reward, replayed: false };
     },
     async setEquipped(m, itemId, equipped) {
       const row = inventory.get(`${m}:${itemId}`);

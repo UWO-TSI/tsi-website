@@ -1,10 +1,12 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { CATALOGUE } from "./catalogue";
+import { CATALOGUE, FISH_REQUEST_PAY } from "./catalogue";
+import { fishOutToday } from "@/lib/game/peaceful";
+import { ROSTER } from "@/lib/collections/roster";
 import { memoryEconomyStore } from "./memoryStore";
-import { dailySpecials, seedItems, sellPrice, speciesClass, torontoDay } from "./rules";
-import { buy, claimDailyGift, equip, getShop, getWallet, pickupCode, reserveMerch, resolveMerch, sell, sellList } from "./service";
+import { dailySpecials, fishRequests, seedItems, sellPrice, speciesClass, torontoDay } from "./rules";
+import { buy, claimDailyGift, equip, fillFishRequest, fishRequestsView, getShop, getWallet, pickupCode, reserveMerch, resolveMerch, sell, sellList } from "./service";
 
 const A = "00000000-0000-4000-8000-0000000000aa";
 const B = "00000000-0000-4000-8000-0000000000bb";
@@ -107,6 +109,51 @@ describe("selling by rarity (row 91)", () => {
     expect(await sell(m.store, A, { item_key: "fish_dace", qty: 2, idempotency_key: "sell-0102" })).toMatchObject({ ok: true, data: { paid: 16 } });
     m.lock(A, "fish_golden_koi", false);
     expect(await sell(m.store, A, { item_key: "fish_golden_koi", qty: 1, idempotency_key: "sell-0103" })).toMatchObject({ ok: true, data: { paid: 600 } });
+  });
+});
+
+describe("the fish market's daily requests (f-requests)", () => {
+  const waters = ["sea", "river"] as const;
+  it("posts 3 different fish a day, the same for everyone, common to rare, each paying a multiple of its sell price", () => {
+    const day = fishRequests("2026-10-27", waters);
+    expect(day).toHaveLength(3);
+    expect(new Set(day.map((r) => r.item_key)).size).toBe(3);
+    expect(day.map((r) => r.rarity)).toEqual(["common", "uncommon", "rare"]);
+    expect(fishRequests("2026-10-27", waters)).toEqual(day);
+    for (const r of day) expect(r.reward).toBe(sellPrice(speciesClass(r.item_key)!.category, r.rarity)! * FISH_REQUEST_PAY);
+    const week = ["2026-10-21", "2026-10-22", "2026-10-23", "2026-10-24", "2026-10-25", "2026-10-26"].map((d) => fishRequests(d, waters).map((r) => r.item_key).join());
+    expect(new Set(week).size).toBeGreaterThan(3);
+  });
+  it("only asks for fish that bite that day in the waters given (no pond fish on a world without a pond)", () => {
+    for (let d = 1; d <= 28; d++) {
+      const day = `2026-10-${String(d).padStart(2, "0")}`;
+      const out = new Set(fishOutToday(waters, 10).map((o) => o.fish.key));
+      expect(fishRequests(day, waters).every((r) => out.has(r.item_key))).toBe(true);
+      expect(fishRequests(day, ["sea"]).every((r) => ROSTER.find((s) => s.key === r.item_key)?.biome !== "pond")).toBe(true);
+    }
+  });
+  it("takes one of a requested fish once a day per member, pays the reward, and checks everything on the server", async () => {
+    const m = memoryEconomyStore();
+    const view = await fishRequestsView(m.store, A, noon, waters);
+    expect(view.ok && view.data.requests.every((r) => !r.filled)).toBe(true);
+    const [want] = fishRequests(torontoDay(noon), waters);
+    const fill = (key: string, item = want.item_key) => fillFishRequest(m.store, A, { item_key: item, idempotency_key: key }, noon, waters);
+    expect(await fill("req-0001")).toMatchObject({ ok: false, code: "insufficient_items" });
+    m.give(A, want.item_key, 2);
+    m.lock(A, want.item_key, true);
+    expect(await fill("req-0002")).toMatchObject({ ok: false, code: "locked" });
+    m.lock(A, want.item_key, false);
+    expect(await fill("req-0003")).toMatchObject({ ok: true, data: { paid: want.reward, remaining: 1, replayed: false } });
+    expect(await fill("req-0003")).toMatchObject({ ok: true, data: { replayed: true } });
+    expect(await fill("req-0004")).toMatchObject({ ok: false, code: "already_filled" });
+    expect(await fill("req-0005", "fish_coelacanth")).toMatchObject({ ok: false, code: "not_requested" });
+    expect(m.coinsOf(A)).toBe(want.reward);
+    const after = await fishRequestsView(m.store, A, noon, waters);
+    expect(after.ok && after.data.requests.map((r) => r.filled)).toEqual([true, false, false]);
+    // Tomorrow is a new board.
+    const next = new Date(noon.getTime() + 86_400_000);
+    const tomorrow = await fishRequestsView(m.store, A, next, waters);
+    expect(tomorrow.ok && tomorrow.data.requests.some((r) => r.filled)).toBe(false);
   });
 });
 

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Trophy } from "lucide-react";
+import { Fish, Trophy } from "lucide-react";
+import { RecordsBody } from "@/components/game/peaceful/FishMarketSheet";
 import type { LeaderboardEntry, Tier } from "@/lib/supabase/types";
 import { useUser } from "@/components/portal/UserContext";
 import { Badge, Banner, Empty, Loading } from "@/components/gui";
@@ -221,6 +222,12 @@ export default function LeaderboardPage() {
               />
             </div>
           ) : null}
+        </div>
+
+        {/* The fish market's catch board (f-records): the club's biggest of each fish this week, and your size records. */}
+        <div style={{ marginTop: 28 }}>
+          <Banner title="Catch board" icon={<Fish size={26} />} tone="butter">The biggest of each fish caught this week, the same board as the fish market&apos;s.</Banner>
+          <RecordsBody />
         </div>
       </div>
     </div>

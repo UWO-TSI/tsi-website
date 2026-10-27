@@ -8,8 +8,8 @@
  */
 import { memoryCollectionsStore } from "@/lib/collections/memoryStore";
 import { torontoParts } from "@/lib/time";
-import { bagAction, bagView, catchAction, donate, getShowcase, journal, museum, setShowcase, tourney, trophies } from "@/lib/collections/service";
-import { sellPrice, speciesClass } from "@/lib/wallet/rules";
+import { bagAction, bagView, catchAction, donate, getShowcase, journal, museum, records, setShowcase, tourney, trophies } from "@/lib/collections/service";
+import { fishRequests, sellPrice, speciesClass, torontoDay } from "@/lib/wallet/rules";
 import { memoryEconomyStore } from "@/lib/wallet/memoryStore";
 import { buy, getShop } from "@/lib/wallet/service";
 import { ROSTER } from "@/lib/collections/roster";
@@ -41,6 +41,10 @@ export function installCollectionsDemo(): void {
     const eco = memoryEconomyStore();
     eco.fund(ME, 1200);
     m.name(ME, "You");
+    // The fish market's requests (f-requests) as the server would pick them on a world with sea and river; `?requests=1`
+    // puts one of each of today's first two in the pockets, so the board has something to hand over.
+    const filled = new Set<string>(), requestsToday = () => fishRequests(torontoDay(new Date()), ["sea", "river"]);
+    if (query.get("requests")) for (const r of requestsToday().slice(0, 2)) m.give(ME, r.item_key, 1);
     [...OTHERS, ...ANGLERS].forEach(([id, name]) => m.name(id, name));
     const ready = (async () => {
       const seed: [string, string, number | null][] = [
@@ -106,6 +110,18 @@ export function installCollectionsDemo(): void {
           eco.fund(ME, eco.coinsOf(ME) + price * body.qty);
           return reply({ ok: true, data: { balance: eco.coinsOf(ME), remaining: row.count - body.qty, paid: price * body.qty, replayed: false } }, "sale");
         }
+        case "/api/economy/requests": {
+          if (method !== "POST") return reply({ ok: true, data: { day: torontoDay(now), requests: requestsToday().map(r => ({ ...r, filled: filled.has(r.item_key) })) } }, "requests");
+          const req = requestsToday().find(r => r.item_key === body.item_key), row = (await m.store.bag(ME)).items.find(r => r.item_key === body.item_key);
+          if (!req) return reply({ ok: false, status: 409, code: "not_requested", error: "The fish market isn't asking for that today." }, "fill");
+          if (filled.has(req.item_key)) return reply({ ok: false, status: 409, code: "already_filled", error: "You've already brought that one in today." }, "fill");
+          if (!row || row.count < 1) return reply({ ok: false, status: 409, code: "insufficient_items", error: "You don't have that many." }, "fill");
+          m.give(ME, req.item_key, -1);
+          filled.add(req.item_key);
+          eco.fund(ME, eco.coinsOf(ME) + req.reward);
+          return reply({ ok: true, data: { balance: eco.coinsOf(ME), remaining: row.count - 1, paid: req.reward, replayed: false } }, "fill");
+        }
+        case "/api/collections/records": return reply(await records(m.store, ME, now), "records");
         case "/api/economy/shop": return reply(await getShop(eco.store, ME, now), "shop");
         case "/api/economy/buy": return reply(await buy(eco.store, ME, body, now), "purchase");
         case "/api/economy/wallet": return reply({ ok: true, data: { coins: eco.coinsOf(ME), gems: eco.gemsOf(ME), daily_claimed: true, day: "", recent: [] } }, "wallet");

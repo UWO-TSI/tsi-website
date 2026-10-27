@@ -3,7 +3,8 @@ import { DomainError } from "@/lib/result";
 
 export type EconomyErrorCode =
   | "unavailable" | "insufficient" | "not_found" | "not_for_sale" | "already_owned" | "bad_qty" | "bad_price" | "sold_out"
-  | "not_sellable" | "insufficient_items" | "too_many_open" | "already_resolved" | "forbidden" | "not_owned" | "no_slot" | "locked" | "failed";
+  | "not_sellable" | "insufficient_items" | "too_many_open" | "already_resolved" | "forbidden" | "not_owned" | "no_slot" | "locked" | "failed"
+  | "not_requested" | "already_filled";
 export class EconomyError extends DomainError<EconomyErrorCode> {}
 
 export interface LedgerEntry {
@@ -50,6 +51,13 @@ export interface EconomyStore {
   buy(memberId: string, itemId: string, qty: number, priceEach: number, key: string): Promise<{ balance: number; owned: number; replayed: boolean }>;
   collections(memberId: string): Promise<Sellable[]>;
   sell(memberId: string, itemKey: string, qty: number, key: string): Promise<{ balance: number; remaining: number; paid: number; replayed: boolean }>;
+  /** The fish market's requests (f-requests) this member filled on a Toronto day: their item keys. */
+  requestFills(memberId: string, day: string): Promise<string[]>;
+  /**
+   * Atomic, once per key (fish_request_fill): hand over one unlocked `itemKey` for the day's request and earn `reward`
+   * coins; already_filled when this member filled it that day under another key.
+   */
+  fillRequest(memberId: string, day: string, itemKey: string, reward: number, key: string): Promise<{ balance: number; remaining: number; paid: number; replayed: boolean }>;
   setEquipped(memberId: string, itemId: string, equipped: boolean): Promise<void>;
   dailyGift(memberId: string): Promise<{ coins: number; balance: number; claimed: boolean; day: string }>;
   dailyClaimed(memberId: string, day: string): Promise<boolean>;

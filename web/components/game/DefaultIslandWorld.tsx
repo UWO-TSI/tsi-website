@@ -55,7 +55,8 @@ import { useIslandConditions } from "@/lib/game/useIslandConditions";
 import { IslandAtmosphere, useFollowCamera, type TreeSpot } from "./IslandAtmosphere";
 import PeacefulLayer, { peacefulNear } from "./peaceful/PeacefulLayer";
 import WardrobeSheet from "./peaceful/WardrobeSheet";
-import { SellSheet, WalletSheet } from "@/components/economy/EconomySheets";
+import { WalletSheet } from "@/components/economy/EconomySheets";
+import { FishMarketSheet } from "@/components/game/peaceful/FishMarketSheet";
 import { BagSheet } from "./Bag";
 import { ChestSheet } from "./ChestSheet";
 import { BagButton } from "./BagButton";
@@ -247,7 +248,7 @@ const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   // HQ's new stations (specs/interiors/hq.md; the lines are drafts for David).
   coffee: "Get a coffee", aquarium: "Look at the aquarium", admin: "Try the door",
   // The new world's quick-sell barrel by the fish market.
-  sell: "Quick sell your catch",
+  sell: "Visit the fish market",
 };
 const CLOSED: Near[] = ["museum", "monument"];
 /** The door in reach for trick-or-treat (components/game/Halloween.tsx): IslandScene writes it each frame, E knocks. */
@@ -1379,7 +1380,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <LettersSheet open={sheet === "letters"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openMail} />
       <BagSheet open={sheet === "bag"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openBag} />
       <ChestSheet open={sheet === "chest"} onClose={() => setSheet(null)} keys={STATION_KEY} />
-      <SellSheet open={sheet === "sell"} onClose={() => setSheet(null)} keys={STATION_KEY} />
+      <FishMarketSheet open={sheet === "sell"} onClose={() => setSheet(null)} keys={STATION_KEY} />
       <WalletSheet open={sheet === "wallet"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openWallet} />
       <WardrobeSheet open={sheet === "closet" || sheet === "fitting"} place={sheet === "closet" ? "closet" : "fitting"} onClose={() => { if (sheet === "fitting") window.dispatchEvent(new CustomEvent("tsi:fitting")); setSheet(null); }} onShop={() => { setSheet(null); toShop("More clothes"); }} />
       <PlayerCharacterUI creator={step === "creator"} />

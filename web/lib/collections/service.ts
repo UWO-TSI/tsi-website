@@ -175,6 +175,29 @@ export async function trophies(store: CollectionsStore, now: Date): Promise<Resu
   }
 }
 
+export interface Records {
+  week_start: string;
+  /** The club's catch board: every species' biggest this week (the trophy case's ranking, uncapped). */
+  board: (Trophy & { mine: boolean })[];
+  /** Your size record per fish and sea species. */
+  mine: { key: string; name: string; icon: string | null; rarity: string; best_size_cm: number }[];
+}
+/** Size records and the weekly catch board (f-records): the fish market's Records tab and the portal leaderboard. */
+export async function records(store: CollectionsStore, memberId: string, now: Date): Promise<Result<Records>> {
+  try {
+    const week = weekStart(now);
+    const [roster, bests, items] = await Promise.all([store.roster(), store.weeklyBests(week), store.memberItems(memberId)]);
+    const board = weeklyTrophies(roster, bests, Infinity, Infinity).map((t) => ({ ...t, mine: t.member_id === memberId }));
+    const mine = items.flatMap((r) => {
+      const sp = roster.find((s) => s.key === r.item_key);
+      return sp && trophyFor(sp, r.best_size_cm) ? [{ key: sp.key, name: sp.name, icon: sp.icon, rarity: sp.rarity, best_size_cm: r.best_size_cm! }] : [];
+    });
+    return { ok: true, data: { week_start: week, board, mine } };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
 export interface ShowcaseItem {
   slot: number;
   key: string;

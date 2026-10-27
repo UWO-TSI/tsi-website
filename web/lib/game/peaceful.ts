@@ -4,7 +4,7 @@
  * bugs, and the museum curator's lines. Pure functions; the world wires them.
  */
 import { FISH, fishingPool, type FishDef, type FishingContext } from "./fishing";
-import { canHook, castLuck, type RodTier } from "./rods";
+import { RODS, canHook, castLuck, type RodTier } from "./rods";
 import type { WaterType } from "./fishingSpots";
 import { fnv1a } from "./weatherSystem";
 import { torontoParts } from "@/lib/time";
@@ -30,6 +30,22 @@ export function rollFishFor(water: WaterType, luck: number, rod: RodTier, contex
   let r = random() * pool.reduce((s, e) => s + e.weight, 0);
   for (const { fish, weight } of pool) { r -= weight; if (r <= 0) return fish; }
   return pool[pool.length - 1].fish;
+}
+
+/**
+ * What bites now in `waters` (the tackle shop's board, d-now), with the best rod so nothing is hidden: each fish once,
+ * under the first of `waters` it bites in.
+ */
+export function fishOut(waters: readonly WaterType[], context: FishingContext): { fish: FishDef; water: WaterType }[] {
+  const seen = new Set<string>(), out: { fish: FishDef; water: WaterType }[] = [];
+  for (const water of waters) for (const { fish } of fishPoolFor(water, 0, RODS[RODS.length - 1], context)) if (!seen.has(fish.key)) { seen.add(fish.key); out.push({ fish, water }); }
+  return out;
+}
+/** Everything out at some hour of a fair-weather day in `month` (the fish market's daily requests: none waits on rain). */
+export function fishOutToday(waters: readonly WaterType[], month: number): { fish: FishDef; water: WaterType }[] {
+  const all = new Map<string, { fish: FishDef; water: WaterType }>();
+  for (const weather of ["sunny", "cloudy"]) for (let hour = 0; hour < 24; hour++) for (const o of fishOut(waters, { hour, weather, month })) if (!all.has(o.fish.key)) all.set(o.fish.key, o);
+  return [...all.values()];
 }
 
 /** The one-liner for the catch card, from the shared roster. */

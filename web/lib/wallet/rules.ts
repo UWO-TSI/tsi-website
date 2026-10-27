@@ -7,7 +7,9 @@ import { ROSTER } from "@/lib/collections/roster";
 import { FISH } from "@/lib/game/fishing";
 import { fnv1a, seededRandom } from "@/lib/game/weatherSystem";
 import { torontoParts } from "@/lib/time";
-import { CATALOGUE, EVENT_ITEMS, OWNERSHIP_ITEMS, onSale, SELL_PRICES, SETTINGS, type ShopCategory, type Slot, type Tier } from "./catalogue";
+import { fishOutToday } from "@/lib/game/peaceful";
+import type { WaterType } from "@/lib/game/fishingSpots";
+import { CATALOGUE, EVENT_ITEMS, FISH_REQUEST_PAY, OWNERSHIP_ITEMS, onSale, SELL_PRICES, SETTINGS, type ShopCategory, type Slot, type Tier } from "./catalogue";
 import type { InventoryRow } from "./store";
 
 export interface ShopItem {
@@ -85,6 +87,31 @@ export function speciesClass(itemKey: string, fishRarity: (key: string) => strin
 
 export function sellPrice(category: string, rarity: string, table: Record<string, Record<string, number>> = SELL_PRICES): number | null {
   return table[category]?.[rarity] ?? null;
+}
+
+export interface FishRequest {
+  item_key: string;
+  name: string;
+  rarity: string;
+  /** Coins for handing one over: FISH_REQUEST_PAY times its sell price. */
+  reward: number;
+}
+const REQUEST_RARITIES = ["common", "uncommon", "rare"];
+/**
+ * The fish market's 3 requests for a Toronto day (f-requests): the same for everyone, one common, one uncommon and one
+ * rare (or the nearest left), each a fish that bites that day in fair weather in `waters`, the waters the world has.
+ */
+export function fishRequests(day: string, waters: readonly WaterType[]): FishRequest[] {
+  const pool = fishOutToday(waters, Number(day.slice(5, 7))).flatMap(({ fish }) => {
+    const cls = speciesClass(fish.key), price = cls && sellPrice(cls.category, cls.rarity);
+    return cls && price && REQUEST_RARITIES.includes(cls.rarity) ? [{ item_key: fish.key, name: fish.name, rarity: cls.rarity, reward: price * FISH_REQUEST_PAY }] : [];
+  }).sort((a, b) => a.item_key.localeCompare(b.item_key));
+  const r = seededRandom(fnv1a(`fish-requests:${day}`)), out: FishRequest[] = [];
+  for (const rarity of REQUEST_RARITIES) {
+    const left = pool.filter((f) => !out.includes(f)), same = left.filter((f) => f.rarity === rarity), from = same.length ? same : left;
+    if (from.length) out.push(from[Math.floor(r() * from.length)]);
+  }
+  return out;
 }
 
 /** Catalogue rows as the memory store / previews see them (033's seed, then the ownership migration's). */

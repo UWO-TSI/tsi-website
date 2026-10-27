@@ -255,7 +255,7 @@ export const TROPHIES_PER_MEMBER = 2;
  * rarity, then how close to the species maximum it was, then who caught it
  * first. At most two cases per member so the wall shows the club.
  */
-export function weeklyTrophies(roster: Species[], bests: WeeklyBest[], slots = TROPHY_SLOTS): Trophy[] {
+export function weeklyTrophies(roster: Species[], bests: WeeklyBest[], slots = TROPHY_SLOTS, perMemberCap = TROPHIES_PER_MEMBER): Trophy[] {
   const bySpecies = new Map(roster.filter((s) => (s.category === "fish" || s.category === "sea") && s.size).map((s) => [s.key, s]));
   const top = new Map<string, WeeklyBest>();
   for (const b of bests) {
@@ -275,7 +275,7 @@ export function weeklyTrophies(roster: Species[], bests: WeeklyBest[], slots = T
   for (const { b, sp, ratio } of ranked) {
     if (out.length >= slots) break;
     const n = perMember.get(b.user_id) ?? 0;
-    if (n >= TROPHIES_PER_MEMBER) continue;
+    if (n >= perMemberCap) continue;
     perMember.set(b.user_id, n + 1);
     out.push({ rank: out.length + 1, key: sp.key, name: sp.name, icon: sp.icon, rarity: sp.rarity, size_cm: b.size_cm, size_ratio: Math.round(ratio * 100) / 100, member_id: b.user_id, member_name: b.member_name, caught_at: b.caught_at });
   }

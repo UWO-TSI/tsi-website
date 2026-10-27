@@ -6,7 +6,8 @@
 import { ROSTER } from "@/lib/collections/roster";
 import { FISH } from "@/lib/game/fishing";
 import { fnv1a } from "@/lib/game/weatherSystem";
-import { dailySpecials, effectivePrice, isOnSale, ownedCounts, sellPrice, speciesClass, TAB_OF, torontoDay, type ShopItem, type Special } from "./rules";
+import { dailySpecials, effectivePrice, fishRequests, isOnSale, ownedCounts, sellPrice, speciesClass, TAB_OF, torontoDay, type FishRequest, type ShopItem, type Special } from "./rules";
+import type { WaterType } from "@/lib/game/fishingSpots";
 import { toFailure, type Result } from "@/lib/result";
 import { EconomyError, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation } from "./store";
 
@@ -27,6 +28,8 @@ const ERR: Record<string, [number, string]> = {
   not_owned: [409, "You don't own that."],
   no_slot: [422, "That isn't something you wear or hold."],
   locked: [409, "That's locked in your bag. Unlock it to sell it."],
+  not_requested: [409, "The fish market isn't asking for that today."],
+  already_filled: [409, "You've already brought that one in today."],
   failed: [500, "Something went wrong. Try again."],
 };
 const fail = <T>(err: unknown): Result<T> => toFailure(ERR, err);
@@ -144,6 +147,24 @@ export const sellList = (store: EconomyStore, m: string) =>
 
 export const sell = (store: EconomyStore, m: string, input: { item_key: string; qty: number; idempotency_key: string }) =>
   run(() => store.sell(m, input.item_key, input.qty, input.idempotency_key));
+
+export interface FishRequestsView {
+  day: string;
+  requests: (FishRequest & { filled: boolean })[];
+}
+/** The fish market's requests today (f-requests) and which this member filled; `waters`: the world's (rolls.ts activeWaters). */
+export const fishRequestsView = (store: EconomyStore, m: string, now: Date, waters: readonly WaterType[]) =>
+  run<FishRequestsView>(async () => {
+    const day = torontoDay(now), filled = new Set(await store.requestFills(m, day));
+    return { day, requests: fishRequests(day, waters).map((r) => ({ ...r, filled: filled.has(r.item_key) })) };
+  });
+/** Hand one requested fish over: the server picks today's requests and the reward; the store takes the fish once. */
+export const fillFishRequest = (store: EconomyStore, m: string, input: { item_key: string; idempotency_key: string }, now: Date, waters: readonly WaterType[]) =>
+  run(async () => {
+    const day = torontoDay(now), req = fishRequests(day, waters).find((r) => r.item_key === input.item_key);
+    if (!req) throw new EconomyError("not_requested");
+    return store.fillRequest(m, day, req.item_key, req.reward, input.idempotency_key);
+  });
 
 export interface InventoryView {
   groups: Record<string, InventoryRow[]>;

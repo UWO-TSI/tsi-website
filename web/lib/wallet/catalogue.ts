@@ -210,6 +210,9 @@ export const SELL_PRICES: Record<string, Record<string, number>> = {
   mineral: { common: 5, uncommon: 15, rare: 45, epic: 135, legendary: 450 },
 };
 
+/** The fish market's daily requests (f-requests, lib/wallet/rules.ts fishRequests) pay this many times the fish's sell price. */
+export const FISH_REQUEST_PAY = 3;
+
 /** Daily gift (row 225): 10 coins, doubled on Fridays (Toronto day). */
 export function dailyGiftAmount(day: string, base: number = SETTINGS.daily_gift_coins): number {
   const [y, m, d] = day.split("-").map(Number);

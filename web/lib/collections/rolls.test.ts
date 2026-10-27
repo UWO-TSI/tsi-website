@@ -5,7 +5,8 @@ import { rodByTier } from "@/lib/game/rods";
 import { seededRandom } from "@/lib/game/weatherSystem";
 import { villageNodes } from "@/lib/game/islandNodes";
 import { ROSTER, type Rarity } from "./roster";
-import { fishRoll, nodeRoll } from "./rolls";
+import { activeWaters, fishRoll, nodeRoll } from "./rolls";
+import { GAME_WORLD } from "@/lib/game/world/active";
 
 const NOON = new Date("2026-09-24T16:00:00Z"); // 12:00 in Toronto
 const close = (observed: number, p: number, n: number) => Math.abs(observed - p) <= 4 * Math.sqrt((p * (1 - p)) / n) + 0.002;
@@ -77,5 +78,12 @@ describe("catch checks follow the active world (lib/game/world/active.ts)", () =
     const fallback = await load(undefined);
     expect(fallback.activeVillage().map.width).not.toBe(worldDoc.width);
     expect(fallback.castWater("village", [wharf.x, wharf.z])).toBeNull();
+  });
+});
+
+describe("the member island's waters", () => {
+  // When a pond is painted into the new world (f-pond), its line here gains "pond".
+  it("are what the world has: the new world has no pond yet, the village has all three", () => {
+    expect(activeWaters()).toEqual(GAME_WORLD === "new" ? ["sea", "river"] : ["sea", "river", "pond"]);
   });
 });

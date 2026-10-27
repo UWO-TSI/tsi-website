@@ -28,11 +28,12 @@ function toSpecies(r: Row): Species {
   };
 }
 
+/** World names (member_identity) for the museum's plaques, the trophy case and the boards: real names never show in game. */
 async function names(db: SupabaseClient, ids: string[]): Promise<Map<string, string>> {
   const out = new Map<string, string>();
   if (!ids.length) return out;
-  const { data } = await db.from("profiles").select("id, display_name").in("id", ids);
-  for (const p of (data ?? []) as Row[]) out.set(String(p.id), String(p.display_name ?? "Member"));
+  const { data } = await db.from("member_identity").select("member_id, world_name").in("member_id", ids);
+  for (const p of (data ?? []) as Row[]) if (p.world_name) out.set(String(p.member_id), String(p.world_name));
   return out;
 }
 

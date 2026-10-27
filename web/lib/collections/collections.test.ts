@@ -5,7 +5,7 @@ import { FISH } from "@/lib/game/fishing";
 import { availableAt, clueFor, journalPage, laterToday, museumWings, validateShowcase, weekStart, weeklyTrophies, type WeeklyBest } from "./logic";
 import { memoryCollectionsStore } from "./memoryStore";
 import { LAUNCH_ROSTER, ROSTER, type Species } from "./roster";
-import { donate, journal, trophies } from "./service";
+import { donate, journal, records, trophies } from "./service";
 
 const A = "00000000-0000-4000-8000-0000000000aa";
 const B = "00000000-0000-4000-8000-0000000000bb";
@@ -166,6 +166,29 @@ describe("weekly trophy case (row 204)", () => {
     m.record(A, "fish_carp", 55);
     const r = await trophies(m.store, new Date("2026-09-24T16:00:00Z"));
     expect(r).toMatchObject({ ok: true, data: { week_start: "2026-09-21", trophies: [{ key: "fish_carp", size_cm: 60, member_name: "Maya" }] } });
+  });
+});
+
+describe("size records and the weekly catch board (f-records)", () => {
+  it("lists every species' biggest catch this week, marks yours, and keeps your personal best per species", async () => {
+    const m = memoryCollectionsStore();
+    m.name(A, "Maya");
+    m.name(B, "Jordan");
+    m.record(A, "fish_carp", 60);
+    m.record(B, "fish_carp", 70);
+    m.record(A, "fish_dace", 12);
+    m.record(A, "fish_dace", 14);
+    m.record(A, "fish_dace", 13);
+    m.record(B, "fish_tuna", 200);
+    m.record(A, "flower_rose", 9);
+    const r = await records(m.store, A, new Date("2026-09-24T16:00:00Z"));
+    if (!r.ok) throw new Error(r.error);
+    expect(r.data.week_start).toBe("2026-09-21");
+    const board = Object.fromEntries(r.data.board.map((t) => [t.key, [t.member_name, t.size_cm, t.mine]]));
+    expect(board).toEqual({ fish_carp: ["Jordan", 70, false], fish_dace: ["Maya", 14, true], fish_tuna: ["Jordan", 200, false] });
+    expect(r.data.board.map((t) => t.rank)).toEqual([1, 2, 3]);
+    expect(r.data.mine.map((x) => [x.key, x.best_size_cm])).toEqual(expect.arrayContaining([["fish_carp", 60], ["fish_dace", 14]]));
+    expect(r.data.mine).toHaveLength(2);
   });
 });
 

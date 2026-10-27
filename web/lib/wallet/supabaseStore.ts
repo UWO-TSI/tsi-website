@@ -4,7 +4,7 @@ import { raisePg } from "@/lib/result";
 import { EconomyError, type EconomyErrorCode, type EconomyStore, type LedgerEntry, type Reservation } from "./store";
 
 type Row = Record<string, unknown>;
-const CODES: EconomyErrorCode[] = ["insufficient", "not_found", "not_for_sale", "already_owned", "bad_qty", "bad_price", "sold_out", "not_sellable", "insufficient_items", "too_many_open", "already_resolved", "forbidden", "locked"];
+const CODES: EconomyErrorCode[] = ["insufficient", "not_found", "not_for_sale", "already_owned", "bad_qty", "bad_price", "sold_out", "not_sellable", "insufficient_items", "too_many_open", "already_resolved", "forbidden", "locked", "already_filled"];
 const raise = (error: { code?: string; message?: string } | null): never => raisePg(error, CODES);
 const first = (data: unknown) => ((Array.isArray(data) ? data[0] : data) ?? {}) as Row;
 const ITEM_COLS = "id, slug, display_name, category, description, price_coins, tc_price, tier, slot, special_pool, stackable, stock, catalogue_ref, sprite_url, position, active, available_from, available_until, retired_at";
@@ -69,6 +69,17 @@ export function supabaseEconomyStore(db: SupabaseClient): EconomyStore {
     },
     async sell(m, key, qty, idem) {
       const { data, error } = await db.rpc("economy_sell", { p_member_id: m, p_item_key: key, p_qty: qty, p_idempotency_key: idem });
+      if (error) raise(error);
+      const r = first(data);
+      return { balance: Number(r.balance), remaining: Number(r.remaining), paid: Number(r.paid), replayed: r.replayed === true };
+    },
+    async requestFills(m, day) {
+      const { data, error } = await db.from("fish_request_fills").select("item_key").eq("member_id", m).eq("day", day);
+      if (error) raise(error);
+      return ((data ?? []) as Row[]).map((r) => String(r.item_key));
+    },
+    async fillRequest(m, day, itemKey, reward, idem) {
+      const { data, error } = await db.rpc("fish_request_fill", { p_member_id: m, p_day: day, p_item_key: itemKey, p_reward: reward, p_idempotency_key: idem });
       if (error) raise(error);
       const r = first(data);
       return { balance: Number(r.balance), remaining: Number(r.remaining), paid: Number(r.paid), replayed: r.replayed === true };
