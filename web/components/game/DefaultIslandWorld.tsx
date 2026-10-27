@@ -34,7 +34,7 @@ import type { TripPlace } from "@/lib/game/boatTrip";
 import { HOME_PIER } from "@/lib/game/homeIsland";
 import FittingRoom, { FITTING_STEP_MS } from "./FittingRoom";
 import { BASE_FOV } from "./movement/moveFx";
-import MiniMap, { MapSheet } from "./MiniMap";
+import MiniMap, { MapSheet, type MiniMapPlot } from "./MiniMap";
 import { useDefaultIslandPlot } from "./DefaultIslandMap";
 import LettersSheet from "@/components/progression/LettersSheet";
 import NoticeSheet from "@/components/progression/NoticeSheet";
@@ -116,6 +116,7 @@ import InteriorBackdrop from "./InteriorBackdrop";
 import ShopCounter from "./ShopCounter";
 import ShopkeeperChoice, { MERCH_LINE, type ShopSection } from "./ShopkeeperChoice";
 import IslandLoading from "./IslandLoading";
+import { setLoadPart } from "@/lib/game/loadProgress";
 import { loadGameWorld } from "@/lib/game/world/load";
 import { GAME_WORLD } from "@/lib/game/world/active";
 import TalkBox from "./TalkBox";
@@ -694,12 +695,13 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
 
 
 /** The cream loading screen until the first warm-up (`ready`), then a fade; an asset that fails to load gets a reload card. */
-function LoadingStatus({ ready }: { ready: boolean }) {
+function LoadingStatus({ ready, plot }: { ready: boolean; plot: MiniMapPlot }) {
   const { active, progress, errors } = useProgress();
   const [gone, setGone] = useState(false);
   useEffect(() => { if (!ready) return; const t = window.setTimeout(() => setGone(true), 700); return () => window.clearTimeout(t); }, [ready]);
+  useEffect(() => { if (!ready) setLoadPart("files", progress / 100); }, [progress, ready]);
   return <>
-    {!gone && <IslandLoading stage={active ? "loading" : progress >= 100 ? "warming" : "start"} leaving={ready} />}
+    {!gone && <IslandLoading stage={active ? "loading" : progress >= 100 ? "warming" : "start"} leaving={ready} plot={plot} />}
     {errors.length > 0 && <div className={styles.loading} role="alert">An island asset could not load.<button className={styles.return} onClick={() => window.location.reload()}>Reload island</button></div>}
   </>;
 }
@@ -710,6 +712,9 @@ export default function DefaultIslandWorld({ preset, children }: { preset?: Look
   const [loading] = useState(loadGameWorld);
   const [worldReady, setWorldReady] = useState(!loading);
   useEffect(() => { void loading?.then(() => setWorldReady(true)); }, [loading]);
+  // The loading screen's progress (lib/game/loadProgress.ts): the island's code is running; then its world is in.
+  useEffect(() => setLoadPart("code", 1), []);
+  useEffect(() => { if (worldReady) setLoadPart("world", 1); }, [worldReady]);
   if (!worldReady) return <IslandLoading />;
   return <GameSceneBoundary><DefaultIslandWorldContent preset={preset}>{children}</DefaultIslandWorldContent></GameSceneBoundary>;
 }
@@ -1408,7 +1413,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         keys={{ wheel: keyName(wheelKeys.wheel), bag: keyName(identity.settings.key_bindings.openJournal) }} onCross={startCrossing} onSaveLook={keepLook} onDone={finishArrival} />
       <div className={styles.netHud} data-hidden={hudCinematic || undefined}><NetHud area={area} hidden={hudCinematic || photo.open} expanded={uiView} /></div>
       <PhotoMode allowed={photoAllowed} />
-      <LoadingStatus ready={ready} />
+      <LoadingStatus ready={ready} plot={plot} />
     </main>
   );
 }

@@ -21,7 +21,8 @@ import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useProgress } from "@react-three/drei";
 import * as THREE from "three";
-import { COMPILE_AT, WARMUP_TIMEOUT_MS, warmedUp, warmupFrame } from "@/lib/game/sceneGate";
+import { COMPILE_AT, WARMUP_FRAMES, WARMUP_TIMEOUT_MS, warmedUp, warmupFrame } from "@/lib/game/sceneGate";
+import { setLoadPart } from "@/lib/game/loadProgress";
 
 const TEXTURE_KEYS = ["map", "emissiveMap", "alphaMap", "normalMap", "roughnessMap", "metalnessMap", "aoMap"] as const;
 
@@ -70,6 +71,7 @@ export function WarmupProbe({ onReady }: { onReady: () => void }) {
       void warmHidden(gl, scene, camera).catch(() => {}).finally(() => { job.done = true; });
     }
     framesRef.current = warmupFrame(framesRef.current, loaded, timedOut, !!compile.current && !compile.current.done);
+    setLoadPart("warm", framesRef.current / WARMUP_FRAMES); // the loading screen's last stretch
     if (warmedUp(framesRef.current)) {
       firedRef.current = true;
       // Defer out of the R3F frame loop: firing setState synchronously here
