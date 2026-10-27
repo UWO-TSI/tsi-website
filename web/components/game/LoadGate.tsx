@@ -42,9 +42,23 @@ function uploadTextures(gl: THREE.WebGLRenderer, scene: THREE.Scene) {
   for (const t of seen) if ((t as THREE.Texture & { image?: unknown }).image) gl.initTexture(t);
 }
 
-export function warmHidden(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) {
+/**
+ * Lights that come and go with the time of day (IslandAtmosphere's rim, at dawn and dusk): a light count changing
+ * relinks every lit material. Each material keeps the programs it has had, so compiling once more with it toggled
+ * makes the switch free later, at no cost to any frame.
+ */
+const TRANSIENT_LIGHTS = ["rim"];
+
+export async function warmHidden(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) {
   uploadTextures(gl, scene);
-  return gl.compileAsync(scene, camera);
+  await gl.compileAsync(scene, camera);
+  for (const name of TRANSIENT_LIGHTS) {
+    const there = scene.getObjectByName(name);
+    if (!there && !scene.getObjectByProperty("type", "HemisphereLight")) continue; // not a lit island scene
+    const stand = there ? null : Object.assign(new THREE.DirectionalLight(0x000000, 0), { name });
+    if (there) there.visible = false; else scene.add(stand!);
+    try { await gl.compileAsync(scene, camera); } finally { if (there) there.visible = true; else scene.remove(stand!); }
+  }
 }
 
 export function WarmupProbe({ onReady }: { onReady: () => void }) {
