@@ -1,5 +1,10 @@
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { BUOYS, FINGER, MOORED, ROWBOAT, ROWBOATS, SEA_Y, deckPieces, dockToWorld, fitPlane, floatBoat, floatBuoy, floatRowboat, mooredPose, newBoatPose, newFloat, newRide, worldToDock, type Dock } from "./wharf";
+import { islandOf } from "./defaultIsland";
+import { objectsOf, type Village } from "./villageMap";
+import { loadWorldFromDisk } from "./world/disk";
+import { villageOfWorld } from "./world/village";
+import { BUOYS, CATCH_BOARD, FINGER, MOORED, catchBoardOf, ROWBOAT, ROWBOATS, SEA_Y, deckPieces, dockToWorld, fitPlane, floatBoat, floatBuoy, floatRowboat, mooredPose, newBoatPose, newFloat, newRide, worldToDock, type Dock } from "./wharf";
 import { TRAINS, waterWaveAt, waveState } from "./waves";
 import { mirrorWaterField } from "./waterField";
 import { TUNING_DEFAULTS } from "./tuning";
@@ -185,4 +190,16 @@ describe("the wharf kit on the deck squares", () => {
     for (const m of ["rope-span", "rope-net", "life-ring"]) expect(all.some(p => p.model === m), m).toBe(true);
     for (const p of kept) if (p.model !== "deck-tile" && p.model !== "dock-pile-rope") expect(Math.abs(p.z - 18)).toBeGreaterThan(5);
   });
+});
+
+describe("the tackle shop's catch board (d-now)", () => {
+  it("stands on the new world's tackle shop porch, with open deck in front to read it from", () => {
+    const v = villageOfWorld(loadWorldFromDisk(fileURLToPath(new URL("../../data/world/", import.meta.url)))) as Village;
+    const b = catchBoardOf(objectsOf("prop", v))!;
+    expect(b).not.toBeNull();
+    expect(Math.hypot(b.x - b.shop.x, b.z - b.shop.z)).toBeCloseTo(Math.hypot(CATCH_BOARD.x, CATCH_BOARD.z), 5);
+    const front = dockToWorld({ x: b.shop.x, z: b.shop.z, yaw: b.yaw }, CATCH_BOARD.x, 3.3, { x: 0, z: 0 });
+    expect(islandOf(v).standable(front.x, front.z)).toBe(true);
+    expect(catchBoardOf([])).toBeNull();
+  }, 60_000);
 });

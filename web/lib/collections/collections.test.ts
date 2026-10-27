@@ -202,6 +202,16 @@ describe("showcase", () => {
   });
 });
 
+it("journal pages carry the seasonal view: in season this month, leaving after it, back next month", () => {
+  const autumn = ROSTER.find((s) => s.category === "fish" && s.months.join() === "9,10,11")!;
+  const entry = (month: number) => journalPage(ROSTER, "fish", [], [], A, { hour: 12, month, weather: "clear" }).entries.find((e) => e.clue === clueFor(autumn))!;
+  expect(entry(10)).toMatchObject({ in_season: true, leaving: false, arriving: false });
+  expect(entry(11)).toMatchObject({ in_season: true, leaving: true, arriving: false });
+  expect(entry(8)).toMatchObject({ in_season: false, leaving: false, arriving: true });
+  const allYear = journalPage(ROSTER, "fish", [], [], A, { hour: 12, month: 3, weather: "clear" }).entries.filter((e, i) => !ROSTER.filter((s) => s.category === "fish").sort((a, b) => a.position - b.position)[i].months.length);
+  expect(allYear.every((e) => e.in_season && !e.leaving && !e.arriving)).toBe(true);
+});
+
 it("journal page helper exposes clue + availability on known entries too", () => {
   const page = journalPage(ROSTER, "bug", [{ item_key: "bug_firefly", count: 1, total_collected: 1, best_size_cm: null, first_collected_at: "x" }], [], A, { hour: 21, month: 6, weather: "clear" });
   expect(page.entries.find((e) => e.discovered)).toMatchObject({ key: "bug_firefly", available_now: true });

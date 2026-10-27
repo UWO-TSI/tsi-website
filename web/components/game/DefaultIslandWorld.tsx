@@ -44,7 +44,8 @@ import confetti from "canvas-confetti";
 import type { InteriorStation } from "./interiorShared";
 import { villageIsland, villageSpawn, villageScale, landmark, landmarks, landmarkPoint, turn, wharfDecks, wharfDock, benchSeat, propFootprint, BENCH_SEAT_TOP, houseHalf, houseModel, type Landmark } from "@/lib/game/defaultIsland";
 import { village, objectsOf, type Village } from "@/lib/game/villageMap";
-import { SELL_BARREL } from "@/lib/game/wharf";
+import { SELL_BARREL, catchBoardOf } from "@/lib/game/wharf";
+import { CatchBoard, OutNowSheet } from "@/components/game/peaceful/CatchBoard";
 import { LEVEL_STEP, levelAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import { CLUBHOUSE_LIGHTING, ISLAND_TERRAIN, islandLightAt, smoothWorldLight, weatherLight, windowLit, withSeason, type IslandLight } from "@/lib/game/islandLighting";
@@ -168,7 +169,7 @@ import { useFriends } from "./net/friendActions";
 import { useFlash } from "./useFlash";
 
 import { villageNodes } from "@/lib/game/islandNodes";
-import { villageWater, type FishingSpot } from "@/lib/game/fishingSpots";
+import { villageWater, watersOf, type FishingSpot } from "@/lib/game/fishingSpots";
 import { gullAnchors } from "@/lib/game/ambientFauna";
 import { getPeacefulTarget, peacefulLabel, subscribePeacefulLabel } from "@/lib/game/peacefulNear";
 import type { WorldMoment } from "@/lib/collections/logic";
@@ -220,8 +221,8 @@ import { roomHeading } from "@/lib/game/roomHeading";
 import { DevUiTheme } from "@/components/gui/DevUiTheme";
 import styles from "./DefaultIslandWorld.module.css";
 
-type Near = "knock" | "shop_enter" | "counter" | "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "stool" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | "bram" | "founder" | "coffee" | "aquarium" | "admin" | "sell" | null;
-type Sheet = "counter" | "shopkeeper" | "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | "bag" | "wallet" | "chest" | "plaque" | "sell" | null;
+type Near = "knock" | "shop_enter" | "counter" | "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "stool" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | "bram" | "founder" | "coffee" | "aquarium" | "admin" | "sell" | "catchboard" | null;
+type Sheet = "counter" | "shopkeeper" | "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | "bag" | "wallet" | "chest" | "plaque" | "sell" | "outnow" | null;
 const DEV = process.env.NODE_ENV !== "production";
 const DEV_SHEETS: readonly Sheet[] = ["counter", "shopkeeper", "notice", "letters", "journal", "trophies", "showcase", "closet", "fitting", "oracle", "path", "settings", "missions", "tourney", "posters", "cafe", "wallet", "chest"];
 /** Sheets opened at a station with E: E closes them again (the dialog system's opening key). */
@@ -249,6 +250,8 @@ const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   coffee: "Get a coffee", aquarium: "Look at the aquarium", admin: "Try the door",
   // The new world's quick-sell barrel by the fish market.
   sell: "Visit the fish market",
+  // The tackle shop's chalkboard (d-now): what bites this hour.
+  catchboard: "Read the catch board",
 };
 const CLOSED: Near[] = ["museum", "monument"];
 /** The door in reach for trick-or-treat (components/game/Halloween.tsx): IslandScene writes it each frame, E knocks. */
@@ -324,6 +327,10 @@ function villageLayout(v: Village) {
     reefs: objectsOf("prop", v).filter(o => o.model?.startsWith("coral-reef-")).map(xz),
     /** The new world's quick-sell barrel (lib/game/wharf.ts SELL_BARREL), or none. */
     sellBarrel: (b => (b ? xz(b) : null))(objectsOf("prop", v).find(o => o.id === SELL_BARREL)),
+    /** The tackle shop's catch board (lib/game/wharf.ts catchBoardOf), or none. */
+    catchBoard: catchBoardOf(objectsOf("prop", v)),
+    /** The water types the island has (the catch board lists fish for those). */
+    waters: watersOf(villageWater(v).classes),
     missions: missions ? { at: xz(missions), yaw: missions.yaw ?? 0 } : null,
     // The ruins gate is combat's (lib/game/drops.ts): before its drop the gate is fallen rubble, nothing to press.
     prompts: marks.filter(l => PROMPT_IDS.includes(l.id) && (l.id !== "ruins" || DROPS.combat)),
@@ -495,6 +502,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       : DROPS.homeIsland && within(doors.boat, 1.6) && !arrivalPhase ? ["home", doors.boat]
       : within(layout.fitting, 1.5) ? ["fitting", layout.fitting]
       : within(layout.sellBarrel, 2.2) ? ["sell", layout.sellBarrel]
+      : within(layout.catchBoard && [layout.catchBoard.x, layout.catchBoard.z], 1.9) ? ["catchboard", [layout.catchBoard!.x, layout.catchBoard!.z]]
       : DROPS.oracle && within(doors.oracle, 1.6) ? ["oracle_enter", doors.oracle]
       : within(doors.shop, 1.6) ? ["shop_enter", doors.shop]
       : DROPS.cafe && within(doors.cafe, CAFE_DOOR_RANGE) ? [progression.opened.includes("cafe") ? "cafe_enter" : "cafe", doors.cafe]
@@ -574,6 +582,8 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       {v.terrain && <LampGlow points={handPoints} ground={island.ground} on={light.lampsOn} halo={1.1} pool={2.2} />}
       {fountain && <LampGlow points={fountain.jet} ground={fountain.water} on={light.lampsOn} halo={2.4} pool={3} color="#a8e8ff" />}
       {fountain && <FadeLight position={fountain.light} color="#ffd59a" intensity={light.lampsOn ? light.lamp * 2 : 0} distance={12} />}
+      {layout.catchBoard && <CatchBoard shop={{ ...layout.catchBoard.shop, yaw: layout.catchBoard.yaw }} waters={layout.waters} hour={peaceful.moment.hour} month={peaceful.moment.month} weather={weather}
+        y={island.ground(layout.catchBoard.shop.x + 2 * Math.sin(layout.catchBoard.yaw), layout.catchBoard.shop.z + 2 * Math.cos(layout.catchBoard.yaw))} />}
       {bar && <Suspense fallback={null}><SushiBar bar={bar} y={barY} player={player} phase={phase} viewRef={barView} onNear={onBar} /></Suspense>}
       {layout.campfire && <Campfire site={layout.campfire} ground={island.ground} phase={phase} player={player} walled={!!v.terrain} />}
       {/* Nature and props from the map, instanced: one draw per model sub-mesh however many the island has. */}
@@ -718,6 +728,8 @@ export default function DefaultIslandWorld({ preset, children }: { preset?: Look
 function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; children?: ReactNode }) {
   const [graphics, actions] = useGraphicsSettings();
   const conditions = useIslandConditions();
+  // The water types the island has, for the tackle shop's catch board (its sheet).
+  const catchWaters = useMemo(() => watersOf(villageWater(village()).classes), []);
   const islandEvent = useIslandEvent(conditions.now);
   // The traditions calendar (lib/content/traditions.ts): Halloween's pumpkins, costumes, trick-or-treat and fog nights.
   const traditions = useTraditions(conditions.now);
@@ -970,6 +982,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     if (action === "counter") { setSheet(inside === "shop" ? "shopkeeper" : "counter"); return; }
     if (action === "cafe") { setSheet("cafe"); return; }
     if (action === "sell") { setSheet("sell"); return; }
+    if (action === "catchboard") { setSheet("outnow"); return; }
     if (action === "owner") { window.dispatchEvent(new CustomEvent("tsi:cafe-owner-talk")); return; }
     if (action === "talk") { requestTalk(talkStore.near.id); return; }
     if (action === "bram") { arrivalEvent("talked"); return; }
@@ -1381,6 +1394,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <BagSheet open={sheet === "bag"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openBag} />
       <ChestSheet open={sheet === "chest"} onClose={() => setSheet(null)} keys={STATION_KEY} />
       <FishMarketSheet open={sheet === "sell"} onClose={() => setSheet(null)} keys={STATION_KEY} />
+      <OutNowSheet open={sheet === "outnow"} onClose={() => setSheet(null)} keys={STATION_KEY} waters={catchWaters} hour={peaceful.moment.hour} month={peaceful.moment.month} weather={conditions.weather} />
       <WalletSheet open={sheet === "wallet"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openWallet} />
       <WardrobeSheet open={sheet === "closet" || sheet === "fitting"} place={sheet === "closet" ? "closet" : "fitting"} onClose={() => { if (sheet === "fitting") window.dispatchEvent(new CustomEvent("tsi:fitting")); setSheet(null); }} onShop={() => { setSheet(null); toShop("More clothes"); }} />
       <PlayerCharacterUI creator={step === "creator"} />

@@ -110,6 +110,10 @@ export interface JournalEntryKnown {
   clue: string;
   available_now: boolean;
   later_today: boolean;
+  /** The seasonal view (d-now): out this month, its last month, or back next month. */
+  in_season: boolean;
+  leaving: boolean;
+  arriving: boolean;
   donatable: boolean;
   museum: { donated: boolean; donor_name: string | null; by_me: boolean };
 }
@@ -120,6 +124,9 @@ export interface JournalEntryUnknown {
   clue: string;
   available_now: boolean;
   later_today: boolean;
+  in_season: boolean;
+  leaving: boolean;
+  arriving: boolean;
 }
 export interface JournalPage {
   category: Category;
@@ -138,7 +145,8 @@ export function journalPage(roster: Species[], category: Category, mine: MemberI
   const list = speciesInCategory(roster, category);
   const entries = list.map((sp, i): JournalEntryKnown | JournalEntryUnknown => {
     const row = owned.get(sp.key);
-    const base = { slot: i + 1, clue: clueFor(sp), available_now: availableAt(sp, m), later_today: laterToday(sp, m) };
+    const now = inSeason(sp, m.month), next = inSeason(sp, (m.month % 12) + 1);
+    const base = { slot: i + 1, clue: clueFor(sp), available_now: availableAt(sp, m), later_today: laterToday(sp, m), in_season: now, leaving: now && !next, arriving: !now && next };
     if (!row) return { ...base, discovered: false, silhouette: `/api/collections/silhouette/${category}/${i + 1}` };
     const d = donated.get(sp.key);
     return {

@@ -307,6 +307,20 @@ export const JETTY = {
 /** The new world's quick-sell stall outside the fish market (a prop by this id; art/wharf/build_sell_stall.py): E there opens the sell sheet. */
 export const SELL_BARREL = "sell-barrel";
 
+/**
+ * The tackle shop's catch board (d-now): a chalkboard on its porch left of the door, in the shop's frame (propModels.ts
+ * "tackle-shop": the porch runs z 1.15 to 2.45, the bobber hangs off the +x corner), facing out. E in front reads it.
+ */
+export const TACKLE_SHOP = "tackle-shop";
+export const CATCH_BOARD = { x: -1.55, z: 2.05, w: 1.0, h: 0.72, legs: 0.55 } as const;
+/** Where the board stands in the world, and the shop's turn; null on a world without the tackle shop. */
+export function catchBoardOf(shops: readonly { model?: string; x: number; z: number; yaw?: number }[]): { x: number; z: number; yaw: number; shop: { x: number; z: number } } | null {
+  const s = shops.find(o => o.model === TACKLE_SHOP);
+  if (!s) return null;
+  const yaw = s.yaw ?? 0, at = dockToWorld({ x: s.x, z: s.z, yaw }, CATCH_BOARD.x, CATCH_BOARD.z, { x: 0, z: 0 });
+  return { ...at, yaw, shop: { x: s.x, z: s.z } };
+}
+
 /** The wharf's shops on the deck's water edge (wharf-art4's, in the old ship houses' frame: their backs over the sea on piles, facing in). */
 export const EDGE_SHOPS: readonly string[] = ["tackle-shop", "shipwright-ship"];
 /** How near a deck square's middle a shop leaves its water edge bare. */

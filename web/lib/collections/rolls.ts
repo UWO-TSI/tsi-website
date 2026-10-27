@@ -7,7 +7,7 @@
  */
 import type { NodeSpec } from "@/components/game/peaceful/VillageLife";
 import { CAST, rollSize, type EventCatches, type FishDef } from "@/lib/game/fishing";
-import { WATER_CLASS, fishingSpot, villageWater, type WaterType } from "@/lib/game/fishingSpots";
+import { fishingSpot, villageWater, watersOf, type WaterType } from "@/lib/game/fishingSpots";
 import { inBounds, worldToCellX, worldToCellZ, type MapAnnotation } from "@/lib/game/grid";
 import { createHomeIsland } from "@/lib/game/homeIsland";
 import { homeNodes, villageNodes } from "@/lib/game/islandNodes";
@@ -70,11 +70,8 @@ export function forageSize(sp: Species, random = Math.random): number | null {
   return sp.size ? Math.round((sp.size[0] + (sp.size[1] - sp.size[0]) * random()) * 10) / 10 : null;
 }
 
-/** The water types the member island has (the fish market's requests and the tackle shop's board ask only for those). */
-export const activeWaters = (): WaterType[] => {
-  const { classes } = villageWater(islandNow()), has = new Set(classes);
-  return (["sea", "river", "pond"] as const).filter((w) => has.has(WATER_CLASS[w]));
-};
+/** The water types the member island has (fishingSpots.ts watersOf). */
+export const activeWaters = (): WaterType[] => watersOf(villageWater(islandNow()).classes);
 
 /** The water a player standing at `at` casts into, or null when no water is in reach (PeacefulLayer's fishing prompt). */
 export function castWater(site: Site, [x, z]: [number, number]): WaterType | null {

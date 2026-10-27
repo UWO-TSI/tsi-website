@@ -60,8 +60,9 @@ interface Entry {
 function fromJournal(p: Page): Entry[] {
   return p.entries.map(e => {
     const when = e.available_now ? "Out right now" : e.later_today ? "Out later today" : "Not out right now";
+    const season: [string, string] = ["Season", e.leaving ? "Its last month this year" : e.arriving ? "Back next month" : e.in_season ? "In season" : "Out of season"];
     if (!e.discovered) return { id: `${p.category}-${e.slot}`, key: null, found: false, name: "???", picture: e.silhouette, rarity: null, kind: LABEL[p.category],
-      text: e.clue, quote: null, outNow: e.available_now, donated: false, donatable: false, notes: [["Where and when", e.clue], ["Now", when]] };
+      text: e.clue, quote: null, outNow: e.available_now, donated: false, donatable: false, notes: [["Where and when", e.clue], ["Now", when], season] };
     const k = e as JournalEntryKnown;
     return {
       id: `${p.category}-${k.slot}`, key: k.key, found: true, name: k.name, picture: k.icon ?? iconUrl(k.key), rarity: k.rarity as BadgeRarity, kind: LABEL[p.category],
@@ -71,6 +72,7 @@ function fromJournal(p: Page): Entry[] {
         ...(k.best_size_cm !== null || k.size_range ? [["Record", k.best_size_cm !== null ? `${k.best_size_cm} cm` : `${k.size_range![0]}-${k.size_range![1]} cm`] as [string, string]] : []),
         ["Where and when", k.clue],
         ["Now", when],
+        season,
         ["Museum", k.museum.donated ? `On display, donated by ${k.museum.by_me ? "you" : k.museum.donor_name ?? "a member"}` : k.donatable ? "Not in the museum yet" : "The museum doesn't collect this"],
       ],
     };
@@ -97,6 +99,8 @@ export default function FlatCollection({ open, onClose, keys }: { open: boolean;
   const [group, setGroup] = useState(CATALOG.find(g => g.group === "Fish")!.group);
   const [picked, setPicked] = useState<string | null>(null);
   const [fishFilter, setFishFilter] = useState<"all" | "river" | "sea" | "caught">("all");
+  // The seasonal view (d-now): the journal's pages by this month's season; the tackle shop's board has the hour.
+  const [seasonFilter, setSeasonFilter] = useState<"all" | "in_season" | "leaving" | "arriving">("all");
 
   // Each opening starts on the grid and reads the book again: the counts, then the journal's page.
   const [wasOpen, setWasOpen] = useState(open);
@@ -128,14 +132,14 @@ export default function FlatCollection({ open, onClose, keys }: { open: boolean;
 
   const catalogGroup = CATALOG.find(g => g.group === group) ?? CATALOG[0];
   const entries = useMemo(() => {
-    if (page) return fromJournal(page);
+    if (page) return seasonFilter === "all" ? fromJournal(page) : fromJournal(page).filter((_, i) => page.entries[i][seasonFilter]);
     const all = fromCatalog(catalogGroup, counts);
     if (catalogGroup.group !== "Fish" || fishFilter === "all") return all;
     return all.filter((e, i) => {
       const zone = catalogGroup.items[i].zone;
       return fishFilter === "river" ? zone !== "sea" : fishFilter === "sea" ? zone === "sea" : e.found;
     });
-  }, [page, catalogGroup, counts, fishFilter]);
+  }, [page, catalogGroup, counts, fishFilter, seasonFilter]);
   const entry = entries.find(e => e.id === picked) ?? null;
   const title = page ? LABEL[page.category] : catalogGroup.group;
   const got = page ? page.discovered : catalogGroup.items.filter(it => Object.hasOwn(counts, it.key)).length;
@@ -152,6 +156,10 @@ export default function FlatCollection({ open, onClose, keys }: { open: boolean;
     <div className={s.head}>
       <h3 className={f.shelfTitle}>{title}</h3>
       <span className={s.count} data-done={got === of || undefined}>{got === of ? <Check size={14} strokeWidth={3} aria-label="Complete" /> : null}{got}/{of}</span>
+      {page && <span className={s.filters} role="group" aria-label="Season">
+        {([["all", "All"], ["in_season", "In season"], ["leaving", "Leaving soon"], ["arriving", "Next month"]] as const).map(([k, label]) =>
+          <GhostButton key={k} aria-pressed={seasonFilter === k} data-on={seasonFilter === k || undefined} onClick={() => setSeasonFilter(k)}>{label}</GhostButton>)}
+      </span>}
       {!page && catalogGroup.group === "Fish" && <span className={s.filters} role="group" aria-label="Show">
         {([["all", "All"], ["river", "River"], ["sea", "Sea"], ["caught", "Discovered"]] as const).map(([k, label]) =>
           <GhostButton key={k} aria-pressed={fishFilter === k} data-on={fishFilter === k || undefined} onClick={() => setFishFilter(k)}>{label}</GhostButton>)}
