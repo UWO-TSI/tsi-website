@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Face Fit</title>
+<style>
+:root {
+  --bg: #f4efe6; --panel: #fffaf2; --view: #ece4d4; --ink: #2b241c; --muted: #6f6253; --line: #ddd2c0;
+  --accent: #3f6b4f; --accent-ink: #ffffff; --chip: #e3eee5; --chip-ink: #2f5a3d; --warn: #9a3b2b; --focus: #2f6fd1;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1b1916; --panel: #24211d; --view: #34302a; --ink: #f1eadf; --muted: #b5a998; --line: #3d3830;
+    --accent: #8cc49e; --accent-ink: #13221a; --chip: #2c3d31; --chip-ink: #bfe3c8; --warn: #f0a08f; --focus: #8db6ff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1b1916; --panel: #24211d; --view: #34302a; --ink: #f1eadf; --muted: #b5a998; --line: #3d3830;
+  --accent: #8cc49e; --accent-ink: #13221a; --chip: #2c3d31; --chip-ink: #bfe3c8; --warn: #f0a08f; --focus: #8db6ff;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; overflow-x: hidden; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.app { min-height: 100vh; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; padding: 14px 16px 10px; border-bottom: 1px solid var(--line); }
+h1 { font-size: 20px; margin: 0; letter-spacing: .01em; }
+.status { margin: 0; color: var(--muted); font-size: 13px; }
+.status.error { color: var(--warn); }
+.status.offline { color: var(--warn); }
+.body { display: grid; grid-template-columns: 260px minmax(0, 1fr); }
+nav { border-right: 1px solid var(--line); background: var(--panel); height: calc(100vh - 52px); overflow-y: auto; position: sticky; top: 0; padding: 8px 8px 24px; }
+nav h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 14px 8px 6px; }
+nav ul { list-style: none; margin: 0; padding: 0; }
+nav li button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 8px; border: 0; border-radius: 8px; background: none; text-align: left; cursor: pointer; }
+nav li button:hover { background: var(--view); }
+nav li button[aria-current="true"] { background: var(--chip); color: var(--chip-ink); font-weight: 600; }
+.thumb { width: 40px; height: 40px; border-radius: 8px; background: var(--view); object-fit: contain; flex: none; }
+.thumb.none { display: grid; place-items: center; color: var(--muted); font-weight: 600; }
+.name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badge { font-size: 11px; padding: 1px 7px; border-radius: 99px; background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+main { padding: 12px 16px 32px; min-width: 0; }
+.controls { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; gap: 12px; max-width: 640px; }
+.controls h2 { margin: 0; font-size: 17px; }
+.lift-head { display: flex; justify-content: space-between; gap: 8px; }
+.lift-label { font-weight: 600; }
+output { font-variant-numeric: tabular-nums; color: var(--muted); }
+.lift-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.lift-row input { flex: 1; min-width: 0; accent-color: var(--accent); }
+.lift-row button { min-width: 40px; height: 36px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); cursor: pointer; }
+.lift-row button:disabled { opacity: .45; cursor: default; }
+.lift-row .reset { padding: 0 12px; }
+.row h3 { font-size: 13px; color: var(--muted); font-weight: 600; margin: 16px 0 6px; }
+.cells { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.cell { margin: 0; }
+.view { width: 100%; aspect-ratio: 1 / 1; background: var(--view); border-radius: 10px; }
+.cell.ref .view { outline: 1px dashed var(--line); outline-offset: -1px; }
+figcaption { font-size: 12px; color: var(--muted); text-align: center; padding-top: 3px; }
+.port { position: fixed !important; inset: 0; pointer-events: none; }
+@media (max-width: 760px) {
+  .body { grid-template-columns: minmax(0, 1fr); }
+  nav { position: static; height: auto; max-height: 38vh; border-right: 0; border-bottom: 1px solid var(--line); }
+  .cells { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="editor.js"></script>
+</body>
+</html>

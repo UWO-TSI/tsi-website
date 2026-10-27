@@ -6,7 +6,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { adoptPrimitive, CUTS, hasBit, mergeLook, refCache, skinnedPrimitives } from "./rig";
 import { NO_SHIFT } from "./hairColour";
-import { PART_BY_ID, PARTS } from "./look";
+import { FIT, PART_BY_ID, PARTS, resolveParts, DEFAULT_LOOK, bodyKey } from "./look";
 
 function skinned(boneNames: string[], joints: number[], color?: number[]) {
   const bones = boneNames.map(n => Object.assign(new THREE.Bone(), { name: n }));
@@ -126,5 +126,52 @@ describe("character rig assembly", () => {
     expect(cache.acquire("a", make)).toBe(cache.acquire("a", make));
     cache.release("a"); expect(disposed).toBe(0);
     cache.release("a"); expect([disposed, cache.size()]).toEqual([1, 0]);
+  });
+});
+
+describe("David's fit (the fit editor: catalogue `fit`, a head piece's lift `y` in metres)", () => {
+  const head = (bones: readonly THREE.Bone[]) => bones.find(b => b.name === "mixamorigHead")!;
+  it("binds every head piece's head with its Y axis straight up, so a lift is along the head's up axis", async () => {
+    for (const p of PARTS.filter(x => x.slot === "back" || x.group === "face" || x.group === "head")) {
+      const m = skinnedPrimitives(await load(p.glb))[0], i = m.skeleton.bones.findIndex(b => b.name === "mixamorigHead");
+      const up = new THREE.Vector3().setFromMatrixColumn(m.skeleton.boneInverses[i].clone().invert(), 1);
+      expect(up.distanceTo(new THREE.Vector3(0, 1, 0)), p.id).toBeLessThan(1e-5);
+      expect(m.bindMatrix.equals(new THREE.Matrix4()), p.id).toBe(true);
+    }
+  });
+  it("moves the piece in the game's scene by exactly its lift along the head's up axis, at rest and with the head turned", async () => {
+    for (const file of ["hair/full/hair_bowl_cut.glb", "accessories/roblox/acc_thin_glasses.glb"]) {
+      const root = await load(file), src = skinnedPrimitives(root)[0], bones = src.skeleton.bones;
+      const draw = (lift: number) => {
+        const m = new THREE.SkinnedMesh(mergeLook([{ root, tints: {}, lift }], bones));
+        m.bind(src.skeleton, src.bindMatrix);
+        return m;
+      };
+      const [plain, lifted] = [draw(0), draw(0.025)];
+      const check = () => {
+        root.updateMatrixWorld(true);
+        const up = new THREE.Vector3().setFromMatrixColumn(head(bones).matrixWorld, 1).normalize();
+        const a = new THREE.Vector3(), b = new THREE.Vector3(), n = plain.geometry.getAttribute("position").count;
+        for (let i = 0; i < n; i += 97) {
+          plain.getVertexPosition(i, a); lifted.getVertexPosition(i, b);
+          const d = b.sub(a);
+          expect(d.length()).toBeCloseTo(0.025, 6);
+          expect(d.normalize().dot(up)).toBeCloseTo(1, 6);
+        }
+      };
+      check();
+      head(bones).rotation.x += 0.5; head(bones).rotation.z -= 0.3;
+      check();
+    }
+  });
+  it("comes from the catalogue: a part's lift resolves, changes the body's cache key, and is 0 when unset", () => {
+    const look = { ...DEFAULT_LOOK };
+    expect(resolveParts(look).every(p => p.lift === 0)).toBe(true);
+    const key = bodyKey(look);
+    FIT[look.back] = { y: 0.01 };
+    try {
+      expect(resolveParts(look).find(p => p.id === look.back)!.lift).toBe(0.01);
+      expect(bodyKey(look)).not.toBe(key);
+    } finally { delete FIT[look.back]; }
   });
 });

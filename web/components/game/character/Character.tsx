@@ -211,7 +211,7 @@ function lookPieces(look: CharacterLook, parts: ResolvedPart[], base: THREE.Obje
   const hat = parts.map(p => PART_BY_ID.get(p.id)).find(p => p?.hatCut !== undefined);
   const hooded = parts.some(p => PART_BY_ID.get(p.id)?.coversHead);
   return [{ root: base, tints: { M_Skin: PALETTE.skin[look.skin] }, keep: (m: string) => m === "M_Skin", cut: hooded ? { name: "_HOODCUT", bit: 0 } : null },
-    ...parts.map((p, i) => ({ root: scenes[i], tints: p.tints, keep: (m: string) => m !== "M_Decal", map: p.map,
+    ...parts.map((p, i) => ({ root: scenes[i], tints: p.tints, keep: (m: string) => m !== "M_Decal", map: p.map, lift: p.lift,
       cut: hat && PART_BY_ID.get(p.id)?.full ? { name: "_HATCUT", bit: hat.hatCut! } : null }))];
 }
 

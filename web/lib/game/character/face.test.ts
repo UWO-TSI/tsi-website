@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { CLIP_EXPRESSION, EXPRESSIONS, FACE_SLOT_COUNT, FaceAnimator, blinkFrame, canBlink, faceSlots, restPose } from "./face";
 import { DANCE_RING, EMOTE_RING } from "../emoteWheel";
-import { DEFAULT_LOOK, FACE, FACE_ATLAS_URLS, PALETTE, parseLook, randomLook, seeded, usesFacePage2, type CharacterLook, type FaceCell } from "./look";
+import { DEFAULT_LOOK, FACE, FACE_ATLAS_URLS, FIT, PALETTE, parseLook, randomLook, seeded, usesFacePage2, type CharacterLook, type FaceCell } from "./look";
 
 const look = (x: Partial<CharacterLook> = {}): CharacterLook => ({ ...DEFAULT_LOOK, ...x });
 
@@ -351,5 +351,47 @@ describe("David's faces #20-25 (wardrobe batch 2, art/characters/v7/face_set_b2.
     }
     const mixed = parseLook({ ...DEFAULT_LOOK, eyes: "caret_hash", mouth: "M1.1", extras: ["nose_shade", "blush"] });
     expect([mixed.eyes, mixed.mouth, mixed.extras]).toEqual(["caret_hash", "M1.1", ["nose_shade", "blush"]]);
+  });
+});
+
+describe("David's face fit (the fit editor: catalogue `fit`, eyes and mouth lifts in face canvas units)", () => {
+  const f = Object.values(FACE.faces).find(x => x.mouth)!;
+  const l = look({ eyes: f.eyes, mouth: f.mouth!, extras: f.extras });
+  const slots = (pose = restPose(l, "neutral"), x = l) => faceSlots(x, pose).slice(-3);
+  const shift = (a: number[], b: number[]) => [a[1] - b[1], a[3] - b[3]];
+  const lifted = <T,>(eyes: number, mouth: number, run: () => T): T => {
+    FIT[f.id] = { eyes, mouth };
+    try { return run(); } finally { delete FIT[f.id]; }
+  };
+
+  it("moves the face's eyes and mouth up the canvas by exactly their lifts, each on its own", () => {
+    const before = slots();
+    const after = lifted(0.03, -0.02, () => slots());
+    for (const i of [0, 1]) if (before[i].src) {
+      expect(shift(before[i].dst, after[i].dst).map(v => +v.toFixed(9))).toEqual([0.03, 0.03]);
+      expect(+(before[i].pose[1] - after[i].pose[1]).toFixed(9)).toBe(0.03);
+    }
+    expect(shift(before[2].dst, after[2].dst).map(v => +v.toFixed(9))).toEqual([-0.02, -0.02]);
+    expect(after.map(s => s.src)).toEqual(before.map(s => s.src));
+  });
+  it("moves every frame with them: an expression's eyes and mouth, and the talking mouths", () => {
+    const happy = restPose(l, "happy");
+    const [b, a] = [slots(happy), lifted(0.02, 0.01, () => slots(happy))];
+    expect(+(b[0].dst[1] - a[0].dst[1]).toFixed(9)).toBe(0.02);
+    expect(+(b[2].dst[1] - a[2].dst[1]).toFixed(9)).toBe(0.01);
+    for (const talk of FACE.talk.frames) {
+      const pose = { ...restPose(l, "neutral"), mouth: talk };
+      expect(+(slots(pose)[2].dst[1] - lifted(0, 0.01, () => slots(pose))[2].dst[1]).toFixed(9)).toBe(0.01);
+    }
+  });
+  it("starts the creator's sliders from the lifted place", () => {
+    const placed = look({ ...l, place: { mouth: [2, 0, 0, 0] } });
+    const [b, a] = [slots(restPose(placed, "neutral"), placed), lifted(0, 0.01, () => slots(restPose(placed, "neutral"), placed))];
+    expect(+(b[2].dst[1] - a[2].dst[1]).toFixed(9)).toBe(0.01);
+  });
+  it("leaves every other face exactly as it was, and a face without a lift unchanged", () => {
+    const other = look();
+    expect(lifted(0.03, 0.03, () => slots(restPose(other, "neutral"), other))).toEqual(slots(restPose(other, "neutral"), other));
+    expect(lifted(0, 0, () => slots())).toEqual(slots());
   });
 });

@@ -7,7 +7,7 @@
  * round 1, David 2026-10-14).
  * Pure: FaceAnimator picks the frame, faceSlots turns it into slot data, faceMaterial.ts uploads it.
  */
-import { FACE, PLACE_STEPS, type CharacterLook, type EyeFrame, type FaceCell, type Placement } from "./look";
+import { FACE, faceLift, PLACE_STEPS, type CharacterLook, type EyeFrame, type FaceCell, type Placement } from "./look";
 
 export type Expression = "neutral" | "happy" | "surprised" | "sad" | "angry" | "sleepy";
 export const EXPRESSIONS: readonly Expression[] = ["neutral", "happy", "surprised", "sad", "angry", "sleepy"];
@@ -146,8 +146,8 @@ function slot(cell: FaceCell, anchor: [number, number], mirror: 0 | 1 | 2, tint:
  * symmetrically, rotation mirrored, the same size), clamped by their union so the pair never goes lopsided.
  */
 const flip = (t: FaceSlot): FaceSlot => ({ ...t, dst: [1 - t.dst[2], t.dst[1], 1 - t.dst[0], t.dst[3]], pose: [1 - t.pose[0], t.pose[1], t.pose[2], -t.pose[3]] });
-function slotPair(right: FaceCell, left: FaceCell, place?: Placement): [FaceSlot, FaceSlot] {
-  const A = FACE.anchors, r = slot(right, A.eye, 0), l = slot(left, A.eye_left, 0);
+function slotPair(right: FaceCell, left: FaceCell, place: Placement | undefined, lift: number): [FaceSlot, FaceSlot] {
+  const A = FACE.anchors, r = slot(right, raised(A.eye, lift), 0), l = slot(left, raised(A.eye_left, lift), 0);
   if (!place || !place.some(v => v !== 0)) return [r, l];
   const [x, y, w, h, ax, ay, page] = left;
   const [rp, lp] = placedTogether([[r, right], [flip(l), [x, y, w, h, w - ax, ay, page]]], place, true);
@@ -219,12 +219,14 @@ function placedTogether(parts: [FaceSlot, FaceCell][], [up, apart, rotate, size]
  * drawn as one cell (left: null, marks across the centre line) sits at eye_pair on the centre line, and the second
  * slot is off (its spacing slider has nothing to spread).
  */
-function eyeSlots(eye: ReturnType<typeof eyeCells>, cell: FaceCell, place?: Placement): [FaceSlot, FaceSlot] {
+function eyeSlots(eye: ReturnType<typeof eyeCells>, cell: FaceCell, place: Placement | undefined, lift: number): [FaceSlot, FaceSlot] {
   const A = FACE.anchors;
-  if (eye.left === null) return [slot(cell, A.eye_pair, 0, null, place, false), OFF];
-  if (eye.left) return slotPair(cell, eye.left, place);
-  return [slot(cell, A.eye, 0, null, place), slot(cell, A.eye, 2, null, place)];
+  if (eye.left === null) return [slot(cell, raised(A.eye_pair, lift), 0, null, place, false), OFF];
+  if (eye.left) return slotPair(cell, eye.left, place, lift);
+  return [slot(cell, raised(A.eye, lift), 0, null, place), slot(cell, raised(A.eye, lift), 2, null, place)];
 }
+/** An anchor moved up the face canvas by David's fit (look.ts FIT, faceLift): before placement, so the sliders and their clamp start there. */
+const raised = ([u, w]: [number, number], lift: number): [number, number] => [u, w - lift];
 
 /** The slots (each extra, right eye, left eye, mouth) for a look showing `pose`. */
 export function faceSlots(look: CharacterLook, pose: FacePose): FaceSlot[] {
@@ -233,11 +235,11 @@ export function faceSlots(look: CharacterLook, pose: FacePose): FaceSlot[] {
     const it = extras.items[id];
     return look.extras.includes(id) && it ? slot(it.cell, A[it.anchor], it.mirror ? 1 : 0) : OFF;
   };
-  const eye = eyeCells(pose.eyes), eyeCell = eye[pose.eyeFrame] ?? eye.open;
+  const eye = eyeCells(pose.eyes), eyeCell = eye[pose.eyeFrame] ?? eye.open, lift = faceLift(look);
   return [
     ...EXTRA_ORDER.map(extra),
-    ...eyeSlots(eye, eyeCell, P?.eyes),
-    slot(mouth.items[pose.mouth] ?? FACE.layers.talk.items[pose.mouth] ?? mouth.items[mouth.default], A.mouth, 0, null, P?.mouth),
+    ...eyeSlots(eye, eyeCell, P?.eyes, lift.eyes),
+    slot(mouth.items[pose.mouth] ?? FACE.layers.talk.items[pose.mouth] ?? mouth.items[mouth.default], raised(A.mouth, lift.mouth), 0, null, P?.mouth),
   ];
 }
 
