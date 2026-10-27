@@ -21,7 +21,26 @@ Reuse what exists before writing new water: `web/lib/game/waterShader.ts` (swell
 
 ## Status
 
-(none yet)
+Built 2026-10-27, awaiting David's review (visual work: not merged before he approves). Head: see the last commit on `game/reflection-waves`.
+
+- **Rolling wave:** `ReflectionScene.tsx` WATER_FRAG `waves()`: a bowed crest rolling along `SET.wave.heading`, steep front, long back, a scalloped white foam cap, a shade under the lip, foam blobs left lying behind that melt. It runs past where the camera's ray to your face's reflection crosses the sea (computed per frame), sets off `SET.wave.lead` before it, crosses your face after `waveReach()` (0.61 s), and the look is rewritten then (`ReflectionCreator` effect). The ring ripple (`Ripple`, `uRip`, `REWRITE_MS`, `faceOverWater`) is deleted.
+- **No stacking:** a change while a wave is still on its way to your face rides that wave; once it has passed, the next change sets a new one off behind it. At most `WAVE_MAX` (3) in the shader.
+- **Small waves always:** the old swell plus the game's `WATER_CHOP` (reused from `waterShader.ts`) as the reflection's wobble, soft light and shade bands, and thin drifting `glints()` on the wavelets.
+- **No colour wheel:** `CreatorOptions` takes `wheel={false}` from the arrival only; the wardrobe and fitting room keep it.
+- **"That's me":** `YES_LABEL`; the pill has `white-space: nowrap`. The code's `yes`/`onYes` names are unchanged (net-identity edits the naming code in `ReflectionCreator`: don't restructure it).
+- **Gates:** tsc clean; eslint clean on changed files; vitest 361 files / 3450 tests passed, with and without `NEXT_PUBLIC_GAME_WORLD=new`.
+- **Evidence:** `specs/evidence/reflection-waves/01-desktop.webp`, `02-phone.webp`, `03-wave-sequence.webp`, `04-wave-sequence-clearer.webp`, `05-small-waves.webp`, `06-hair-colours-no-wheel.webp` (scripts `shoot.mjs`, `sheets.py` there).
+- **Not run:** `perf:check` (the scene is the creator's own canvas; the cost is one fragment pass with up to 3 short loops and three value-noise taps, no new draw calls).
+
+## Next
+
+1. David reviews the evidence; apply his notes (the look is all in `WATER_FRAG` and `SET.wave`).
+
+## Tools and gotchas
+
+- `?arrival=1` on `/lab/island` now opens straight on the reflection (phase `creator`): don't wait for `underwater`.
+- Shots: hold the browser lock, dev server on 3171 (Supabase env blanked), then `node specs/evidence/reflection-waves/shoot.mjs <dir> desktop phone [clear] [colours]` (`MID_MS=620` times the crest-at-face shot), then `python3 specs/evidence/reflection-waves/sheets.py <dir> <clear_dir> <colours_dir> specs/evidence/reflection-waves`.
+- Tune the wave live in dev: `window.__reflect.wave` (heading, speed, lead, exit, height).
 
 ## Rules
 

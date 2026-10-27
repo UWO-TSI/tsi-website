@@ -3,14 +3,15 @@
 /**
  * The reflection creator (specs/v1-drop.md §1.3; David's sketch, references/ui/creator/2026-10-13-reflection-creator-sketch.png):
  * the left two-thirds is the scene (the boat's edge on a diagonal, the back of your head leaning over it, your reflection
- * in the water), the options panel sits right of it, the category rail runs down the far right edge, and a "Yes" pill
+ * in the water), the options panel sits right of it, the category rail runs down the far right edge, and a "That's me" pill
  * floats on the water at the bottom. On a phone the scene is on top with the pill on its water, the options under it and
  * the rail a tab row along the bottom.
  *
  * The creator's data and controls are the Li'l Lads creator's (CreatorControls: the catalogue's categories, tiles,
- * swatches and face sliders). Each change sends a ripple across the water that rewrites that feature (the scene's look
- * catches up as the ripple passes your face), and counts as a choice: each sharpens the world a little (the sequence's
- * clarity), Yes clears it. The same canvas shows the aboard beat before it, the panels out of the way.
+ * swatches and face sliders; no colour wheel here, David 2026-10-26: it is a shop unlock in the wardrobe). Each change
+ * sends a small foam-capped wave rolling past that rewrites that feature (the scene's look catches up as its crest
+ * crosses your face), and counts as a choice: each sharpens the world a little (the sequence's clarity), "That's me"
+ * clears it. The same canvas shows the aboard beat before it, the panels out of the way.
  */
 import { useEffect, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
@@ -28,13 +29,11 @@ import type { ArrivalPhase } from "@/lib/game/arrival/sequence";
 import { AudioManager } from "@/lib/game/audio";
 import { tierDpr } from "@/lib/game/qualityTier";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
-import ReflectionScene, { faceOverWater, type Ripple } from "./ReflectionScene";
+import ReflectionScene, { WAVE_MAX, waveReach } from "./ReflectionScene";
 import cc from "@/components/game/character/CharacterCreator.module.css";
 import s from "./ReflectionCreator.module.css";
 
 const STARTERS: ReadonlySet<string> = new Set(STARTER_PARTS);
-/** The ripple reaches your face's reflection this long after a change: the scene's look is rewritten then. */
-const REWRITE_MS = 190;
 /** Slider drags count as one choice per this long. */
 const CHOICE_EVERY_MS = 700;
 
@@ -42,19 +41,19 @@ export default function ReflectionCreator({ phase, initial, askName, onYes }: {
   phase: ArrivalPhase;
   initial: CharacterLook;
   askName?: { current: string };
-  /** Yes: the look (and the name, if typed) to keep. */
+  /** "That's me": the look (and the name, if typed) to keep. */
   onYes: (look: CharacterLook, name: string | null) => void;
 }) {
   const creating = phase === "creator";
   const [graphics] = useGraphicsSettings();
   const root = useWorldDialog<HTMLElement>(true, () => {}, undefined, true);
   const [look, setLook] = useState(initial);
-  // What the water shows: it follows the panel's look as each ripple passes over your face.
+  // What the water shows: it follows the panel's look as each wave's crest crosses your face.
   const [shown, setShown] = useState(initial);
   const [catId, setCatId] = useState(CATEGORIES[0].id);
   const cat = CATEGORIES.find(c => c.id === catId)!;
   const naming = useNameCheck(askName);
-  const ripples = useRef<Ripple[]>([]);
+  const waves = useRef<number[]>([]);
   const clock = useRef(0);
   const lastChoice = useRef(0);
   const sceneRef = useRef<HTMLDivElement>(null);
@@ -75,7 +74,7 @@ export default function ReflectionCreator({ phase, initial, askName, onYes }: {
     return () => ro.disconnect();
   }, [root]);
 
-  // Bram's words over the scene: aboard his two lines, then the prompt as you lean over, a word as it comes back, Yes.
+  // Bram's words over the scene: aboard his two lines, then the prompt as you lean over, a word as it comes back, "That's me".
   const [second, setSecond] = useState(false), [coming, setComing] = useState(false);
   useEffect(() => {
     if (phase !== "aboard") return;
@@ -90,7 +89,8 @@ export default function ReflectionCreator({ phase, initial, askName, onYes }: {
     return () => blips.forEach(window.clearTimeout);
   }, [said]);
 
-  // A change: a drop off your chin lands on your face's reflection, the ring runs out, the water rewrites you as it passes.
+  // A change: a small wave rolls past and the water rewrites you as its crest crosses your face. A wave still on its way
+  // to your face carries the change too; once it is past, the next change sets a new one off behind it.
   const change = () => {
     const a = arrivalRun.current, nowMs = performance.now();
     if (a && nowMs - lastChoice.current > CHOICE_EVERY_MS) {
@@ -98,14 +98,17 @@ export default function ReflectionCreator({ phase, initial, askName, onYes }: {
       a.choices++;
       if (a.choices === 3) setComing(true);
     }
-    const face = faceOverWater();
-    ripples.current.push({ x: face.x + (Math.random() - 0.5) * 0.08, z: face.z + (Math.random() - 0.5) * 0.08, t: clock.current, strength: 1 });
-    if (ripples.current.length > 6) ripples.current.shift();
+    const last = waves.current.at(-1);
+    if (last === undefined || clock.current - last >= waveReach()) {
+      waves.current.push(clock.current);
+      if (waves.current.length > WAVE_MAX) waves.current.shift();
+    }
     AudioManager.playSFX("blip2", { rate: 0.55 + Math.random() * 0.1, gain: 0.35 });
   };
   useEffect(() => {
     if (look === shown) return;
-    const t = window.setTimeout(() => setShown(look), REWRITE_MS);
+    const last = waves.current.at(-1) ?? -Infinity;
+    const t = window.setTimeout(() => setShown(look), Math.max(0, (last + waveReach() - clock.current) * 1000));
     return () => window.clearTimeout(t);
   }, [look, shown]);
 
@@ -135,7 +138,7 @@ export default function ReflectionCreator({ phase, initial, askName, onYes }: {
         gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace;
         if (process.env.NODE_ENV !== "production") (window as unknown as { __reflectGl?: THREE.WebGLRenderer }).__reflectGl = gl;
       }}>
-      <ReflectionScene look={shown} ripples={ripples} clock={clock} view={view} />
+      <ReflectionScene look={shown} waves={waves} clock={clock} view={view} />
     </Canvas>
     <div ref={sceneRef} className={s.scene}>
       {said && <p key={said} className={s.bubble} role="status"><b>{BRAM.name}</b><span>{said}</span></p>}
@@ -144,7 +147,7 @@ export default function ReflectionCreator({ phase, initial, askName, onYes }: {
     <div className={`${cc.panel} ${s.panel}`} role="tabpanel" id="creator-panel" aria-labelledby={`creator-tab-${cat.id}`} aria-hidden={!creating} inert={!creating}>
       <header className={cc.panelHead}><h2 className={cc.title}>{cat.label}</h2></header>
       <div className={cc.body}>
-        <CreatorOptions cat={cat} look={look} setLook={setLook} mode="create" owned={STARTERS} onChange={change} />
+        <CreatorOptions cat={cat} look={look} setLook={setLook} mode="create" owned={STARTERS} onChange={change} wheel={false} />
       </div>
       {askName && <footer className={cc.foot}>
         <Field label="Your name on the island" hint="Letters and numbers; everyone in the world sees it." value={naming.name} maxLength={24}

@@ -68,11 +68,12 @@ export type CreatorChange = "tile" | "colour" | "place";
 
 /**
  * One category's options. `mode="create"` offers only what is owned (the identity parts are always free); the
- * wardrobe shows the rest locked with a note (and `onShop`). `onChange` hears every change made here.
+ * wardrobe shows the rest locked with a note (and `onShop`). `onChange` hears every change made here. `wheel={false}`
+ * leaves out the hair colour wheel (the arrival's reflection creator keeps to the swatches, David 2026-10-26).
  */
-export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChange }: {
+export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChange, wheel: showWheel = true }: {
   cat: Category; look: CharacterLook; setLook: (update: (l: CharacterLook) => CharacterLook) => void; mode: "create" | "wardrobe";
-  owned: ReadonlySet<string>; onShop?: () => void; onChange?: (kind: CreatorChange) => void;
+  owned: ReadonlySet<string>; onShop?: () => void; onChange?: (kind: CreatorChange) => void; wheel?: boolean;
 }) {
   const [lastAccessory, setLastAccessory] = useState<string | null>(null);
   // The flat creator's tiles move as the kit's cards do (a hover grows one, the worn ones stay out).
@@ -205,7 +206,7 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
             disabled={cat.swatch === "outfit" && !target} onClick={() => paint(i)} />;
         })}
       </div>
-      {cat.swatch === "hair" && <ColourWheel value={hairHex(look) ?? naturalHex(PART_BY_ID.get(look.back))} active={!!look.hairColor} locked={!customHairUnlocked(owned)} onShop={onShop} onChange={wheel} />}
+      {cat.swatch === "hair" && showWheel && <ColourWheel value={hairHex(look) ?? naturalHex(PART_BY_ID.get(look.back))} active={!!look.hairColor} locked={!customHairUnlocked(owned)} onShop={onShop} onChange={wheel} />}
       {cat.swatch === "outfit" && !target && <p className={styles.hint}>Wear something here to colour it.</p>}
     </div>}
     {accentPart && <div className={styles.swatchBlock}>
