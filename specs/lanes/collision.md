@@ -29,7 +29,8 @@ Don't move or rearrange anything (David paints the layout; `specs/terrain-law.md
   tile's height); the shallows within 1.5 of any deck are unwadeable water, so every deck edge over the sea holds you.
   Test: `walk.test.ts` "holds you on every deck right up to its drawn edge" (sprint and dash across every edge of the
   squares, the jetty and the sushi bar: never into the water, and stopped at the edge, not short of it).
-- **Hitbox audit: done** (this commit; head SHA in the report). Table and before/after renders in
+- **Hitbox audit: done, fad7a9ee.** Gates at fad7a9ee: vitest 361 files / 3458 tests green with and without
+  `NEXT_PUBLIC_GAME_WORLD=new`, tsc clean, eslint clean on the changed files. Table and before/after renders in
   `specs/evidence/collision/audit.md`. Fixes, all on the smooth world only (the village's cell walker is unchanged):
   prop tops stand on the ground under them (they were read as heights over the sea, so the plaza's and the wharf's
   props were walked through); buildings block their measured wall box, turned with them (`BUILDING_SOLID`); lamp posts
