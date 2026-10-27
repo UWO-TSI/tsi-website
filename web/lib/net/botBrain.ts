@@ -23,6 +23,8 @@ import { objectsOf, village, villageSpawnPoint } from "@/lib/game/villageMap";
 import { airPhase, isLoop, seatLift, type ClipName } from "@/lib/game/character/clips";
 import { ringPoint, sitPoint, FIRE } from "@/lib/game/campfire";
 import { worldTimeAt } from "@/lib/game/worldClock";
+import { ENTRY, barPoint, barSeat, type Bar } from "@/lib/game/sushiBar";
+import { WATER_DROP } from "@/lib/game/grid";
 import { randomLook, seeded } from "@/lib/game/character/look";
 import { landKind } from "@/lib/game/movement/juice";
 import { CLASS_KITS } from "@/lib/combat/classes";
@@ -44,7 +46,7 @@ export const BENCH_SLOT = BENCH_SLOTS[1];
 const NAME_WORDS = ["Pebble", "Juniper", "Bramble", "Saffron", "Tidepool", "Marlow", "Thistle", "Clover", "Puffin", "Driftwood", "Sorrel", "Kelp",
   "Lantern", "Minnow", "Bracken", "Quill", "Hazel", "Sparrow", "Cobble", "Fennel", "Otter", "Nettle", "Cinder", "Moss"] as const;
 
-export type BotRole = "wander" | "rest" | "study" | "fireDance" | "fireSit";
+export type BotRole = "wander" | "rest" | "study" | "fireDance" | "fireSit" | "barSit";
 /** A bot's card and join: what the server's player card and the join options would hold. */
 export interface BotCard {
   name: string;
@@ -127,6 +129,8 @@ export interface BotWorld {
    * round it on the world clock, two sit warming their hands.
    */
   fire?: { x: number; z: number; epoch: number };
+  /** Development (`?bots=N&botbar=1`, evidence): the sushi bar, whose first two free stools the first two bots take. */
+  bar?: Bar;
 }
 
 let shared: Omit<BotWorld, "taken"> | null = null;
@@ -279,6 +283,17 @@ export class Bot {
     if (card.role === "study") this.sitStudy();
     else if (card.role === "rest") this.sitBench(true);
     else if (card.role === "fireDance" || card.role === "fireSit") this.joinFire(card.role);
+    else if (card.role === "barSit") this.sitBar();
+  }
+
+  /** Development: straight onto the sushi bar's next free stool (`BotWorld.bar`), lifted onto it as PlayerAvatar's tsi:sit does, held for good. */
+  private sitBar() {
+    const bar = this.w.bar, s = bar && barSeat(bar, ...barPoint(bar, ...ENTRY), true, k => this.w.taken.has(k));
+    if (!bar || !s) return;
+    this.w.taken.add(s.key);
+    const y = this.w.ground(s.x, s.z), floor = y - (this.w.move.wet(s.x, s.z) ? WATER_DROP : 0);
+    this.seat = { x: s.x, y, z: s.z, yaw: s.yaw, lift: seatLift("Sit", this.w.ground(bar.x, bar.z) + s.top - floor, CHARACTER_SCALE), clip: "Sit" };
+    this.plan = { kind: "seated", key: s.key, stand: [s.x, s.z], until: Infinity, nextEmote: Infinity };
   }
 
   /** Development: straight into a campfire ring (`BotWorld.fire`), held for good. */
@@ -659,8 +674,12 @@ function hashName(name: string) {
 export function createBots(n: number, seed: number, startMs = 0, world: BotWorld = botWorld()): Bot[] {
   return Array.from({ length: n }, (_, i) => new Bot(world, fireCard(world, botCard(seed, i), i), mix(seed, i, 0xb075), startMs));
 }
-/** Development (`BotWorld.fire`): the first four bots dance round the campfire, the next two sit by it, all in the village. */
+/**
+ * Development (`BotWorld.fire`): the first four bots dance round the campfire, the next two sit by it, all in the village;
+ * (`BotWorld.bar`) the first two sit side by side at the sushi bar.
+ */
 function fireCard(world: BotWorld, card: BotCard, i: number): BotCard {
+  if (world.bar && i < 2) return { ...card, role: "barSit", area: "village", mobile: false };
   if (!world.fire || i >= 6) return card;
   return { ...card, role: i < 4 ? "fireDance" : "fireSit", area: "village", mobile: false };
 }

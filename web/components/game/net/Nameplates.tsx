@@ -27,9 +27,14 @@ import { LOD } from "./lod";
 import styles from "./net.module.css";
 import tags from "../nameTags.module.css";
 
-/** Over the head as yours is (PlayerAvatar: the character's height and 0.28; the leaf's open height clears an open leaf). */
+/** How much sitting lowers a head, which a seat's lift makes up: up to a bench's (0.34) a seated plate stays where a stander's is. */
+const SIT_DROP = 0.34;
+/**
+ * Over the head as yours is (PlayerAvatar: the character's height and 0.28; the leaf's open height clears an open leaf).
+ * Seated, from the floor under them, raised by a seat higher than a bench (the sushi bar's stools, over the sea floor).
+ */
 export function plateY(r: RemoteRig): number {
-  return (r.seated ? r.groundY : r.feet.current.y + Math.min(1, r.motion.leaf ?? 0) * 0.45) + CHARACTER_HEIGHT + 0.28;
+  return (r.seated ? r.groundY + Math.max(0, r.motion.lift - SIT_DROP) : r.feet.current.y + Math.min(1, r.motion.leaf ?? 0) * 0.45) + CHARACTER_HEIGHT + 0.28;
 }
 
 /**

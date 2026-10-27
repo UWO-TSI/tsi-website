@@ -16,7 +16,8 @@ const { chromium } = require("playwright");
 // (the ?time= clock starts each shot at much the same moment of the staff's loops); `served` waits until the server's
 // round (lib/game/sushiBar.ts SERVER: start, loop, the serve's time) has a geta on the shelf before that stool. `calm`
 // turns the season's traditions off (?tradition=none: Halloween's fog nights darken and fog the night), to see the bar
-// on a natural night.
+// on a natural night. `bots` seats two dev bots side by side at the bar first (?bots=2&botbar=1: lib/net/botBrain.ts
+// sitBar), so a `sit` takes the next stool beside them; `overview` switches to the overview camera once seated.
 const SIT = { at: [-47, 114.8], yaw: 0, pitch: 0.42, zoom: 1.0, sit: true };
 export const VIEWS = {
   "bar-day": { at: [-36, 111], yaw: 305, pitch: 0.3, zoom: 1.4 },
@@ -35,6 +36,9 @@ export const VIEWS = {
   "seat-night-left": { ...SIT, time: "night", turn: 0.95, calm: true },
   "seat-night-right": { ...SIT, time: "night", turn: -0.95, calm: true },
   "food": { ...SIT, time: "evening", served: 2, tilt: 0.12 },
+  "pair-outside": { at: [-45.7, 114.9], yaw: -60, pitch: 0.3, zoom: 0.6, time: "evening", bots: true },
+  "pair-seat": { ...SIT, time: "night", calm: true, bots: true, turn: -0.95 },
+  "seat-overview": { ...SIT, time: "night", calm: true, overview: true },
 };
 
 const [OUT = "specs/evidence/sushi-bar", ONLY] = process.argv.slice(2), PORT = process.env.PORT ?? 3175;
@@ -51,7 +55,7 @@ for (const [name, v] of Object.entries(VIEWS)) {
   } catch {} }, [LOOK, JSON.stringify({ yaw: (v.yaw * Math.PI) / 180, pitch: v.pitch, zoom: v.zoom, mouseLook: false, autoFollow: false, sensitivity: 1, invertY: false })]);
   const page = await ctx.newPage();
   page.on("pageerror", e => console.log("pageerror", name, e.message.slice(0, 200)));
-  await page.goto(`http://localhost:${PORT}/lab/island?fixture=v2&at=${v.at.join(",")}${v.flat ? "&aerial=1" : ""}&time=${v.time ?? "day"}&weather=clear&season=summer${v.calm ? "&tradition=none" : ""}`);
+  await page.goto(`http://localhost:${PORT}/lab/island?fixture=v2&at=${v.at.join(",")}${v.flat ? "&aerial=1" : ""}&time=${v.time ?? "day"}&weather=clear&season=summer${v.calm ? "&tradition=none" : ""}${v.bots ? "&bots=2&botbar=1" : ""}`);
   await page.waitForFunction(() => !!window.__move?.sim?.current, null, { timeout: 240000 });
   await page.waitForTimeout(8000);
   if (await page.evaluate(() => { const g = window.__governor; if (!g) return false; g.hold = 1e9; g.set(0); return true; })) await page.waitForTimeout(1500);
@@ -66,9 +70,11 @@ for (const [name, v] of Object.entries(VIEWS)) {
       const from = ROUND.at[v.served] + 3, wait = ((from - r) % ROUND.loop + ROUND.loop) % ROUND.loop;
       if (wait < ROUND.loop - 30) await page.waitForTimeout(wait * 1000);
     }
+    if (v.overview) { await page.evaluate(() => [...document.querySelectorAll("button")].find(b => b.textContent === "Overview")?.click()); await page.waitForTimeout(3000); }
     if (v.turn || v.tilt) { await page.evaluate(([t, p]) => { const o = window.__orbit.orbit; o.target.yaw += t; o.target.pitch += p; o.idle = -1e9; }, [v.turn ?? 0, v.tilt ?? 0]); await page.waitForTimeout(1500); }
   }
   await page.screenshot({ path: `${OUT}/${name}.png` });
+  if (v.bots) console.log("remotes", JSON.stringify(await page.evaluate(() => window.__net?.remotes())));
   console.log("shot", name, JSON.stringify(await page.evaluate(() => { const p = window.__move?.sim?.current?.pos ?? window.__move?.sim?.current?.position; return p ? [p.x ?? p[0], p.y ?? p[1], p.z ?? p[2]].map(n => +(+n).toFixed(2)) : null; })));
   await ctx.close();
 }

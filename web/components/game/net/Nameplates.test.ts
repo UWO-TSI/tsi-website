@@ -57,6 +57,11 @@ describe("the nameplate pool", () => {
     expect(plateY(r)).toBeCloseTo(2.45 + CHARACTER_HEIGHT + 0.28);
     r.seated = true;
     expect(plateY(r)).toBeCloseTo(0.5 + CHARACTER_HEIGHT + 0.28);
+    // A bench's lift leaves it there; a stool high over the sea floor raises it with the sitter.
+    r.motion.lift = 0.34;
+    expect(plateY(r)).toBeCloseTo(0.5 + CHARACTER_HEIGHT + 0.28);
+    r.motion.lift = 2.6;
+    expect(plateY(r)).toBeCloseTo(0.5 + 2.26 + CHARACTER_HEIGHT + 0.28);
   });
 
   it("stacks by distance on your nameplate's scale (drei's [40, 0] from near to far)", () => {

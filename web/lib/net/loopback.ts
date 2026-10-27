@@ -18,6 +18,7 @@
  */
 import { botArea, botWorld, createBots, type Bot } from "./botBrain";
 import { campfireSite } from "@/lib/game/campfireSite";
+import { barOf } from "@/lib/game/sushiBar";
 import { RemoteBuffer, Remotes, type Netsim } from "./interp";
 import {
   AREAS, CHAT, FLAG, PACKET_FLAG, decodeEvent, decodePose, encodeEvent, hasFlag, isPrivateArea, nextTp, parseSlowState, createPose,
@@ -43,6 +44,8 @@ export interface LoopbackOptions {
   timer?: boolean;
   /** Development (`?botfire=1`): the first bots dance round the campfire and sit by it (botBrain BotWorld.fire). */
   fire?: boolean;
+  /** Development (`?botbar=1`): the first two bots sit side by side at the sushi bar (botBrain BotWorld.bar). */
+  bar?: boolean;
   /** Bots in view say a line about this often (seconds); 0 or unset: they don't chat. */
   chatEvery?: number;
   /** Where lines go (the page's chat store by default). */
@@ -111,6 +114,7 @@ export function createLoopback(o: LoopbackOptions): Loopback {
   const world = botWorld();
   const site = o.fire ? campfireSite() : null;
   if (site) world.fire = { ...site, epoch };
+  if (o.bar) world.bar = barOf() ?? undefined;
   const bots = createBots(n, o.seed ?? 1, 0, world);
   const peers: Peer[] = bots.map((bot, i) => {
     const c = bot.card;
