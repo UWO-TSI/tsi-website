@@ -29,6 +29,18 @@ Built and wired, awaiting David's review (nothing approved). Head: `git log -1` 
 - Evidence: `specs/evidence/remodel/<name>-{before,after}.webp` and `notes.md` (one line and triangles each). In-game frames for barrel, cart, lighthouse, crabs, rocks, rope fence; Blender only for the flyers, crawlers and fish (too small or under water to frame).
 - Not deleted: the dump files stay (the village, interiors, homes, seasonal events and /lab still use them).
 - Not done: icons (lib/icons/manifest.ts still renders bug and fish icons from the dump models).
+- Gates: tsc clean; vitest 3460 passed with and without NEXT_PUBLIC_GAME_WORLD=new after the cart's PROP_TOP fix (propModels.test.ts measured 2.8); eslint clean on changed files. perf:check (SCENES=village,v2, GAME_WORLD=new) fails against the Oct 14 baseline, which predates terrain v3: `specs/evidence/remodel/perf-check.txt`. This lane lowers triangles per model and adds at most about ten draws (barrel +1, lighthouse +2, butterflies +1 each, rope fence +1).
+
+## David's decisions
+
+- 2026-10-27 (night), verbatim at the top of this file. Oct 17 (art-direction-oct17.md): "old fruits are way better, it has soul": fruit kept.
+
+## Next
+
+1. David reviews `specs/evidence/remodel/*.webp` (notes.md). Per model: approve, redo, or keep the dump's (drop its line from worldModel's REMODELLED, or its SCENERY_URLS entry).
+2. If the fish tweak reads too subtle, `art/remodel/build_fish.py` grade() and BACK are the knobs.
+3. Not done: the firefly, the village buildings, the arrival boat, the seagull, re-rendering bug and fish icons (lib/icons/manifest.ts) from our models.
+
 ## Tools and gotchas
 
 - Census: `PORT=3191 node ../specs/evidence/remodel/tools/census.mjs <all-stats.json> <out.json>` from web/, dev server with `NEXT_PUBLIC_GAME_WORLD=new`.
