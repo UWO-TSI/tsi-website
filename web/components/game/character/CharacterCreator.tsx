@@ -69,7 +69,7 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
   const cat = cats.find(c => c.id === catId)!;
   const yaw = useRef({ now: FRAMES[cat.framing].yaw, target: FRAMES[cat.framing].yaw });
   const [saving, setSaving] = useState(false);
-  const naming = useNameCheck(askName);
+  const naming = useNameCheck(askName, mode === "create");
   useEffect(() => { root.current?.querySelector<HTMLButtonElement>("[role=tab][aria-selected=true]")?.focus(); }, [root]);
 
   const [swap, setSwap] = useState(false);
@@ -90,6 +90,7 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
   }, [root]);
 
   const confirm = async (final: CharacterLook) => {
+    if (naming.missing()) return;
     setSaving(true);
     await onDone(final, naming.wanted);
     setSaving(false);
@@ -151,7 +152,7 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
         <CreatorOptions key={mode} cat={cat} look={look} setLook={setLook} mode={mode} owned={owned} onShop={onShop} />
       </div>
       <footer className={styles.foot}>
-        {askName && <Field label="Your name on the island" hint="Letters and numbers; everyone in the world sees it." value={naming.name} maxLength={24}
+        {askName && <Field id={naming.id} label="Your name on the island" hint="Letters and numbers; everyone in the world sees it." value={naming.name} maxLength={24}
           onChange={e => naming.type(e.target.value)} error={naming.nameNote && !naming.nameNote.ok && !mentionsSignIn(naming.nameNote.text) ? naming.nameNote.text : undefined} className={styles.name} />}
         {askName && naming.nameNote?.ok && <p className={styles.nameOk} role="status">{naming.nameNote.text}</p>}
         {askName && naming.nameNote && !naming.nameNote.ok && mentionsSignIn(naming.nameNote.text) && <p className={styles.nameOk} role="status"><SignInText text={naming.nameNote.text} /></p>}
