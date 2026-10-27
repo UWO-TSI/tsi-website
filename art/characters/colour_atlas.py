@@ -31,6 +31,7 @@ TILES = {
     "acc_gold_rimless_shades": 128, "acc_apple_stem": 128,
     "acc_half_rim_glasses_silver": 128,          # round 2: last, so no earlier tile moves
     "acc_crew_visor_logo": 256,                  # #04's logo on its own (accessories/arches_logo.py): last, so no tile moves
+    "acc_kitty_bow_glasses": 128, "acc_cross_bandage": 128, "acc_face_bandaids": 128,   # batch 3: last, so no tile moves (the atlas has five 128s left)
 }
 
 

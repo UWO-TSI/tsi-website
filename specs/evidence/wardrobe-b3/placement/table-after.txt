@@ -1,0 +1,13 @@
+After (only hair_tousled_spikes moved: override offset 0.28 stud back, so 100 mm back; nothing else rebuilt for placement)
+hair (mm, + = right/fwd/up)      cx      cz     top |   zback  zfront    zmid
+hair_spiky_messy           -12      -5     203 |    -365     355      -5
+hair_straight_layers       -13       2     106 |    -302     307       2
+hair_rolled_mask             4     -13     112 |    -279     253     -13
+hair_tousled_spikes          1     -23     217 |    -457     412     -23
+hair_ski_mask_dreads         8     -16     105 |    -316     285     -16
+hair_braided_pigtails        4     -10      90 |    -269     248     -10
+hair_buns_braid             10     -42     135 |    -317     232     -42
+hair_freeform_afro          13     -98     249 |    -458     262     -98
+hair_sponge_twists           4     -42     224 |    -366     281     -42
+hair_middle_part             3     -87     181 |    -360     186     -87
+hair_mod_cut                19     -11     145 |    -314     292     -11
