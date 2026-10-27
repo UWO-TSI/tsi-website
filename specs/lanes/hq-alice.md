@@ -1,0 +1,32 @@
+# Lane: hq-alice (the HQ's resident is named Alice)
+
+Worktree `.claude/worktrees/hq-alice`, branch `game/hq-alice`, cut from main at 00f0593f. Agent type `uwotsi-lane-light`.
+
+David, 2026-10-27, verbatim: "i want the npc in the hq to be named Alice"
+
+The HQ's resident is the HQ lead, today named **Wren** (`lib/game/welcome.ts` `HQ_LEAD`, `lib/game/keepers.ts` slug `wren`, the resident roster `lib/content/residentRoster.ts` and its prod table).
+
+**Do:**
+1. Every name a player sees becomes **Alice**: her name tag, dialogue headers, every line that says "Wren" (hers and other residents' that mention her), quest and chapter text ("report to Wren"), the Journal, the bag, the shop, the workshop, the portal and tools pages, toasts, mail signatures. Search the whole repo for "Wren" in player-facing strings, including `web/app/student/dashboard/` and `web/components/portal/`.
+2. **Keep internal ids as they are** (the slug `wren`, `HQ_WREN`, quest ids, keys, saved progress), so saved data and the server keep working. Only rename an identifier if it's purely local and cheap; say which.
+3. **The database:** the prod tables hold her name and lines (`web/supabase/migrations/20261017020000_resident_roster.sql` row `wren`, and `20261017010000_hq_onboarding_copy.sql`). Write one new migration (timestamped after the newest file on main; never edit an applied one) that updates her display name and replaces "Wren" with "Alice" in the text columns of those rows, idempotent. Stop after writing it; the coordinator applies it to prod.
+4. Check the lines that talk about her with pronouns still read right with the name Alice. Change nothing else in her lines.
+5. Update `specs/lore.md` and the specs that name her (a short find and replace in prose; don't rewrite).
+
+**Read first:** `CODEMAP.md` rows "Villagers", "Arrival", "Progression"; the files above.
+
+**Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new` (update tests that assert the name), tsc, eslint on changed files, and `grep -rn "Wren" web/lib web/components web/app web/data` showing only internal ids and comments. No `perf:check`. Then message "main" with the head SHA, the migration's file name and the gates, and stop.
+
+## Status
+
+(none yet)
+
+## Rules
+
+- **Headless only:** never open a window, tab, app or audio on David's screen; never `open`; never the Playwright MCP, the claude-in-chrome tools or the `blender` MCP tools. Blender only as `/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P <script>`. Never port 3000.
+- **Locks:** `LANE=game/hq-alice /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh heavy|blender|devserver <cmd>` (`specs/lane-rules.md`).
+- **The default village world stays unchanged** (the launch fallback). New-world changes sit behind `NEXT_PUBLIC_GAME_WORLD=new`; run vitest with and without it.
+- **Git:** commit with the `[build]` prefix. Never push. Never bare `git stash`. Work only in this worktree. Never touch prod; ask the coordinator for any read-only prod query.
+- **Text:** no em dashes; real names never show in game; never write the gem-to-money rate anywhere (the repo is public).
+- **Art:** David supplies every reference; never fetch art, textures or music; no asset libraries or generators.
+- **Code:** ponytail (`specs/lane-rules.md`): search first, smallest change at the root cause, delete what you replace.
