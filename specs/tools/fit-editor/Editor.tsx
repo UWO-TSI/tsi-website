@@ -4,13 +4,45 @@
  * page's db (collection `fit`, one doc per item id: `{ y }` or `{ eyes, mouth }`); scripts/apply-fit.mjs writes an
  * export of it into the catalogue's `fit` map, which the game reads as look.ts FIT. The page writes the same map live.
  */
-import { StrictMode, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Component, StrictMode, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import * as THREE from "three";
 import { createRoot } from "react-dom/client";
 import { Canvas } from "@react-three/fiber";
 import { PerspectiveCamera, View } from "@react-three/drei";
 import Character from "@/components/game/character/Character";
 import type { CharacterMotion } from "@/lib/game/character/clips";
 import { DEFAULT_LOOK, FACE, FIT, PARTS, type CharacterLook, type Fit } from "@/lib/game/character/look";
+
+// ---- running inside the artifact frame -----------------------------------------------------------------------------
+/** Any uncaught error, on a line at the top, so David can say what it says. */
+const fault = (m: string) => { const el = document.getElementById("fault"); if (el) { el.hidden = false; el.textContent = `Something went wrong: ${m}`; } };
+addEventListener("error", e => fault(e.message || String(e.error)));
+addEventListener("unhandledrejection", e => fault(String((e.reason as { message?: string })?.message ?? e.reason)));
+/**
+ * The models are .glb.json files (build.mjs): a GLB in base64. The artifact frame refuses data: and blob: fetches, so
+ * each is fetched as the page's own file and handed to the game's loader as the GLB bytes it asked for.
+ */
+const fileLoad = THREE.FileLoader.prototype.load;
+THREE.FileLoader.prototype.load = function (this: THREE.FileLoader, url, onLoad, onProgress, onError) {
+  if (!url.endsWith(".glb.json")) return fileLoad.call(this, url, onLoad, onProgress, onError);
+  const at = this.manager.resolveURL(this.path + url);
+  this.manager.itemStart(at);
+  fetch(at).then(r => { if (!r.ok) throw new Error(`${r.status} ${at}`); return r.json() as Promise<string>; })
+    .then(b64 => { const s = atob(b64), b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i); onLoad?.(b.buffer); })
+    .catch(e => { onError?.(e); this.manager.itemError(at); })
+    .finally(() => this.manager.itemEnd(at));
+};
+/** A failure inside it shows `fallback` instead of unmounting the page. */
+class Catch extends Component<{ children: ReactNode; fallback: (message: string) => ReactNode }, { error: string | null }> {
+  state = { error: null as string | null };
+  static getDerivedStateFromError(e: unknown) { return { error: String((e as { message?: string })?.message ?? e) }; }
+  render() { return this.state.error === null ? this.props.children : this.props.fallback(this.state.error); }
+}
+/** Inside the 3D tree a fallback can't draw DOM: it hands the message to its cell. */
+function Report({ message, to }: { message: string; to: (m: string) => void }) {
+  useEffect(() => to(message), [message, to]);
+  return null;
+}
 
 type Kind = "hair" | "face" | "acc";
 interface Item { id: string; name: string; kind: Kind; look: (skin: number) => CharacterLook; thumbs: string[]; noMouth?: boolean }
@@ -106,8 +138,10 @@ function Stage({ look, yaw }: { look: CharacterLook; yaw: number }) {
   </>;
 }
 function Cell({ look, yaw, label, reference }: { look: CharacterLook; yaw: number; label: string; reference?: boolean }) {
+  const [error, setError] = useState<string | null>(null);
   return <figure className={reference ? "cell ref" : "cell"}>
-    <View className="view"><Stage look={look} yaw={yaw} /></View>
+    <View className="view"><Catch fallback={m => <Report message={m} to={setError} />}><Stage look={look} yaw={yaw} /></Catch></View>
+    {error && <p className="cell-error" role="alert">Couldn&apos;t draw this: {error}</p>}
     <figcaption>{label}</figcaption>
   </figure>;
 }
@@ -156,7 +190,7 @@ function App() {
       <p className={`status ${status.state}`} role="status">{status.state === "error" ? status.message : STATUS[status.state]}</p>
     </header>
     <div className="body">
-      <nav aria-label="Items">
+      <Catch fallback={m => <p className="failed" role="alert">The list failed: {m}</p>}><nav aria-label="Items">
         {GROUPS.map(([kind, title]) => <section key={kind}>
           <h2>{title}</h2>
           <ul>{ITEMS.filter(i => i.kind === kind).map(i => <li key={i.id}>
@@ -165,8 +199,8 @@ function App() {
             </button>
           </li>)}</ul>
         </section>)}
-      </nav>
-      <main>
+      </nav></Catch>
+      <Catch fallback={m => <p className="failed" role="alert">The views failed: {m}</p>}><main>
         <div className="controls">
           <h2>{item.name}</h2>
           {FIELDS[item.kind].map(f => <Lift key={f} field={f} value={FIT[item.id]?.[f] ?? 0} disabled={f === "mouth" && item.noMouth} onChange={v => change(f, v)} />)}
@@ -178,12 +212,12 @@ function App() {
             <Cell look={{ ...DEFAULT_LOOK, skin }} yaw={0} label={reference} reference />
           </div>
         </section>)}
-      </main>
+      </main></Catch>
     </div>
-    <Canvas className="port" eventSource={root as React.RefObject<HTMLElement>} gl={{ antialias: true, alpha: true }} dpr={[1, 2]}>
+    <Catch fallback={m => <p className="failed" role="alert">3D drawing failed: {m}</p>}><Canvas className="port" eventSource={root as React.RefObject<HTMLElement>} gl={{ antialias: true, alpha: true }} dpr={[1, 2]}>
       <View.Port />
-    </Canvas>
+    </Canvas></Catch>
   </div>;
 }
 
-createRoot(document.getElementById("root")!).render(<StrictMode><App /></StrictMode>);
+createRoot(document.getElementById("root")!).render(<StrictMode><Catch fallback={m => <p className="failed" role="alert">Face Fit failed: {m}</p>}><App /></Catch></StrictMode>);

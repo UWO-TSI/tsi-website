@@ -1,6 +1,8 @@
 /**
- * Headless check of the built Face Fit page (dist/): served from a local static server, opened in headless Chromium
- * (muted), with a stand-in for the artifact's db. Fails on any console error, page error or failed request; checks the
+ * Headless check of the built Face Fit page (dist/): served from a local static server with the artifact frame's strict
+ * CSP, inside a sandboxed iframe from a second origin (as claude.ai frames it), in headless Chromium (muted), with a
+ * stand-in for the artifact's db. Fails on any CSP violation, console error, page error, failed request, blank root or
+ * shown error, and renders with localStorage refused (the frame can refuse storage); checks the
  * page starts from saved docs, saves each change, says when it can't save, and writes desktop and phone screenshots to
  * specs/evidence/fit-editor/. `node specs/tools/fit-editor/check.mjs [port]` while holding the browser lock.
  */
@@ -15,14 +17,21 @@ const { chromium } = require("playwright");
 const here = dirname(fileURLToPath(import.meta.url)), dist = join(here, "dist"), evidence = join(here, "../../evidence/fit-editor");
 const PORT = Number(process.argv[2] ?? 3473);
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".png": "image/png", ".webp": "image/webp", ".glb": "model/gltf-binary", ".json": "application/json" };
+/** The artifact frame's policy (as the coordinator gave it): own files only, no data:/blob: fetches, no WebAssembly. */
+const CSP = "default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; connect-src 'self'; " +
+  "img-src 'self' data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; worker-src 'self' blob:";
 const server = createServer((req, res) => {
   const path = normalize(decodeURIComponent(new URL(req.url, "http://x").pathname)).replace(/^[/\\]+/, "") || "index.html";
   const file = join(dist, path);
   try {
     if (!file.startsWith(dist) || !statSync(file).isFile()) throw new Error();
-    res.writeHead(200, { "content-type": TYPES[extname(file)] ?? "application/octet-stream" }).end(readFileSync(file));
+    res.writeHead(200, { "content-type": TYPES[extname(file)] ?? "application/octet-stream", "content-security-policy": CSP }).end(readFileSync(file));
   } catch { res.writeHead(404).end(); }
 }).listen(PORT);
+/** The host page, on another origin, framing the page as claude.ai does. */
+const host = createServer((req, res) => res.writeHead(200, { "content-type": "text/html" }).end(
+  `<!doctype html><body style="margin:0"><iframe sandbox="allow-scripts allow-same-origin" src="http://localhost:${PORT}/index.html" style="border:0;width:100vw;height:100vh;display:block"></iframe></body>`,
+)).listen(PORT + 1);
 mkdirSync(evidence, { recursive: true });
 /** What a claude.ai artifact serves, by extension: anything else in dist/ can't be published. */
 const SERVED = new Set([".html", ".css", ".js", ".mjs", ".wasm", ".json", ".map", ".txt", ".md", ".csv", ".xml", ".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".avif", ".ico", ".woff", ".woff2", ".ttf", ".otf", ".mp3", ".wav", ".ogg", ".mp4", ".webm", ".pdf"]);
@@ -38,31 +47,40 @@ const FAKE_DB = seed => `
     doc: id => ({ set: async d => { docs.set(id, d); window.__sets.push([name, id, d]); } }),
   }) };
   window.claude = { use: async n => (n === "db" ? db : null) };`;
+const WATCH = `document.addEventListener("securitypolicyviolation", e => console.error("CSP violation: " + e.violatedDirective + " " + e.blockedURI));`;
+const NO_STORAGE = `for (const k of ["localStorage", "sessionStorage"]) Object.defineProperty(window, k, { get() { throw new DOMException("refused", "SecurityError"); } });`;
 
 const problems = unserved.map(f => `not publishable (type or over 16 MB): ${f}`), log = [];
 const browser = await chromium.launch({ headless: true, args: ["--mute-audio", "--enable-unsafe-swiftshader", "--use-angle=swiftshader"] });
-async function open(viewport, seed) {
+async function open(viewport, seed, noStorage = false) {
   const context = await browser.newContext({ viewport, deviceScaleFactor: 1 });
+  await context.addInitScript(WATCH);
   if (seed) await context.addInitScript(FAKE_DB(seed));
+  if (noStorage) await context.addInitScript(NO_STORAGE);
   const page = await context.newPage();
   page.on("console", m => { if (m.type() === "error") problems.push(`console: ${m.text()}`); });
   page.on("pageerror", e => problems.push(`pageerror: ${e.message}`));
   page.on("requestfailed", r => problems.push(`requestfailed: ${r.url()} ${r.failure()?.errorText}`));
   page.on("response", r => {
     if (r.status() >= 400) problems.push(`http ${r.status()}: ${r.url()}`);
-    if (r.url().startsWith("http") && !SERVED.has(extname(new URL(r.url()).pathname))) problems.push(`asks for a type artifacts don't serve: ${r.url()}`);
+    if (r.url().startsWith(`http://localhost:${PORT}/`) && !SERVED.has(extname(new URL(r.url()).pathname))) problems.push(`asks for a type artifacts don't serve: ${r.url()}`);
   });
-  await page.goto(`http://localhost:${PORT}/index.html`);
+  await page.goto(`http://127.0.0.1:${PORT + 1}/`);
   await page.waitForLoadState("networkidle");
   await page.waitForTimeout(2500);
-  return { page, context };
+  const frame = page.frames().find(f => f.url().endsWith("/index.html"));
+  // not blank, and nothing it shows is an error
+  const drawn = await frame.evaluate(() => ({ root: document.getElementById("root").childElementCount,
+    shown: [...document.querySelectorAll("[role=alert]")].filter(e => !e.hidden).map(e => e.textContent) }));
+  expect(drawn.root > 0 && !drawn.shown.length, `renders in the frame${noStorage ? " with storage refused" : ""}: ${JSON.stringify(drawn)}`);
+  return { page: frame, shot: page, context };
 }
 const expect = (ok, what) => { log.push(`${ok ? "ok  " : "FAIL"} ${what}`); if (!ok) problems.push(what); };
 const height = page => page.locator(".lift").first().locator("output").textContent();
 
 try {
   // Desktop, saving: starts from a saved doc, saves each change.
-  const { page, context } = await open({ width: 1280, height: 900 }, { hair_baby_sprout: { y: 0.01 } });
+  const { page, shot, context } = await open({ width: 1280, height: 900 }, { hair_baby_sprout: { y: 0.01 } });
   expect((await page.locator(".status").textContent()) === "All changes saved", "db connected: All changes saved");
   await page.getByRole("button", { name: /Baby sprout/ }).click();
   expect((await height(page)) === "+10.0 mm", `starts from the saved doc (${await height(page)})`);
@@ -72,7 +90,7 @@ try {
   expect((await height(page)) === "+11.5 mm", `three steps up: ${await height(page)}`);
   const sets = await page.evaluate(() => window.__sets);
   expect(JSON.stringify(sets.at(-1)) === JSON.stringify(["fit", "hair_baby_sprout", { y: 0.0115 }]), `saved once after the burst: ${JSON.stringify(sets)}`);
-  await page.screenshot({ path: join(evidence, "desktop-hair.png") });
+  await shot.screenshot({ path: join(evidence, "desktop-hair.png") });
   // a face: two lifts, saved as { eyes, mouth }
   const face = page.locator("nav section").nth(1).locator("button").first();
   await face.click();
@@ -82,14 +100,14 @@ try {
   const last = (await page.evaluate(() => window.__sets)).at(-1);
   expect(last[2].eyes === 0.001 && last[2].mouth === -0.001, `a face saves { eyes, mouth }: ${JSON.stringify(last)}`);
   await page.waitForTimeout(1500);
-  await page.screenshot({ path: join(evidence, "desktop-face.png") });
+  await shot.screenshot({ path: join(evidence, "desktop-face.png") });
   await page.getByRole("button", { name: "Reset" }).first().click();
   await page.waitForTimeout(900);
   expect((await page.evaluate(() => window.__sets)).at(-1)[2].eyes === 0, "reset saves 0");
   // a face accessory
   await page.locator("nav section").nth(2).locator("button").first().click();
   await page.waitForTimeout(2500);
-  await page.screenshot({ path: join(evidence, "desktop-accessory.png") });
+  await shot.screenshot({ path: join(evidence, "desktop-accessory.png") });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "no horizontal scroll at desktop width");
   await context.close();
 
@@ -98,14 +116,18 @@ try {
   expect((await phone.page.locator(".status").textContent()).startsWith("Can't save here"), "without a db it says it can't save");
   expect(await phone.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "no horizontal scroll at phone width");
   // viewport captures: the views draw on one fixed canvas, so a full-page capture leaves the cells below the fold empty
-  await phone.page.screenshot({ path: join(evidence, "phone-top.png") });
+  await phone.shot.screenshot({ path: join(evidence, "phone-top.png") });
   await phone.page.locator(".row").first().scrollIntoViewIfNeeded();
   await phone.page.waitForTimeout(1500);
-  await phone.page.screenshot({ path: join(evidence, "phone-views.png") });
+  await phone.shot.screenshot({ path: join(evidence, "phone-views.png") });
   await phone.context.close();
+
+  // The frame refuses storage: still renders (open checks it).
+  await (await open({ width: 1280, height: 900 }, {}, true)).context.close();
 } finally {
   await browser.close();
   server.close();
+  host.close();
 }
 console.log(log.join("\n"));
 if (problems.length) { console.error(`\n${problems.length} problem(s):\n${problems.join("\n")}`); process.exit(1); }

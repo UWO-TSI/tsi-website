@@ -56,7 +56,10 @@ output { font-variant-numeric: tabular-nums; color: var(--muted); }
 .lift-row .reset { padding: 0 12px; }
 .row h3 { font-size: 13px; color: var(--muted); font-weight: 600; margin: 16px 0 6px; }
 .cells { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.cell { margin: 0; }
+.cell { margin: 0; position: relative; }
+.cell-error { position: absolute; inset: 8px 8px auto; margin: 0; font-size: 12px; color: var(--warn); }
+.failed { margin: 16px; color: var(--warn); }
+#fault { margin: 0; padding: 8px 16px; background: var(--panel); color: var(--warn); border-bottom: 1px solid var(--line); font-size: 13px; overflow-wrap: anywhere; }
 .view { width: 100%; aspect-ratio: 1 / 1; background: var(--view); border-radius: 10px; }
 .cell.ref .view { outline: 1px dashed var(--line); outline-offset: -1px; }
 figcaption { font-size: 12px; color: var(--muted); text-align: center; padding-top: 3px; }
@@ -69,6 +72,7 @@ figcaption { font-size: 12px; color: var(--muted); text-align: center; padding-t
 </style>
 </head>
 <body>
+<p id="fault" role="alert" hidden></p>
 <div id="root"></div>
 <script src="editor.js"></script>
 </body>

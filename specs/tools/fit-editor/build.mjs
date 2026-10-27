@@ -4,6 +4,9 @@
  * `node specs/tools/fit-editor/build.mjs` from the repo root (or anywhere).
  */
 import { build } from "../../../web/node_modules/esbuild/lib/main.js";
+import { NodeIO, VertexLayout } from "../../../web/node_modules/@gltf-transform/core/dist/index.js";
+import { ALL_EXTENSIONS } from "../../../web/node_modules/@gltf-transform/extensions/dist/index.js";
+import { MeshoptDecoder } from "../../../web/node_modules/three/examples/jsm/libs/meshopt_decoder.module.js";
 import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -25,9 +28,13 @@ await build({
   define: { "process.env.NODE_ENV": '"production"', "process.env": "{}", __THUMBS__: JSON.stringify(thumbs) },
   plugins: [{
     // the game serves its assets from the site root, the page beside itself; artifacts don't serve .glb, so every model
-    // is an embedded glTF JSON file (.glb.json, written below): URLs in the web sources and the catalogue JSON follow
+    // is a .glb.json (written below, read by Editor.tsx's loader shim): URLs in the web sources and the catalogue follow
     name: "relative-assets",
     setup(b) {
+      // the artifact frame's CSP refuses WebAssembly and outside scripts: no meshopt (decoded below) or Draco decoder
+      b.onLoad({ filter: /@react-three[\\/]drei[\\/]core[\\/]Gltf\.js$/ }, args => ({
+        contents: readFileSync(args.path, "utf8").replace("useDraco = true, useMeshopt = true", "useDraco = false, useMeshopt = false"), loader: "js",
+      }));
       const fix = s => s.replaceAll('"/assets/', '"assets/').replace(/\.glb(["`])/g, ".glb.json$1");
       b.onLoad({ filter: /[\\/]web[\\/](components|lib)[\\/].*\.tsx?$/ }, args => ({
         contents: fix(readFileSync(args.path, "utf8")), loader: args.path.endsWith("x") ? "tsx" : "ts",
@@ -46,20 +53,35 @@ mkdirSync(join(out, "assets/icons"), { recursive: true });
 for (const f of readdirSync(icons)) if (ICON.test(f)) cpSync(join(icons, f), join(out, "assets/icons", f));
 cpSync(join(web, "public/assets/game/tools/bobber.glb"), join(out, "assets/game/tools/bobber.glb"));
 
-// Each GLB as glTF JSON with its BIN chunk as a base64 data URI (GLTFLoader parses either; the extension doesn't matter).
-const glbToGltf = buf => {
-  if (buf.readUInt32LE(0) !== 0x46546c67) throw new Error("not a GLB");
-  const jsonLen = buf.readUInt32LE(12), json = JSON.parse(buf.toString("utf8", 20, 20 + jsonLen)), bin = 20 + jsonLen;
-  if (bin < buf.length) {
-    if (buf.readUInt32LE(bin + 4) !== 0x004e4942) throw new Error("second chunk is not BIN");
-    if (!json.buffers?.[0] || json.buffers[0].uri) throw new Error("BIN chunk without its buffer");
-    json.buffers[0].uri = `data:application/octet-stream;base64,${buf.subarray(bin + 8, bin + 8 + buf.readUInt32LE(bin)).toString("base64")}`;
-  }
-  return JSON.stringify(json);
-};
+// Each GLB as a .glb.json: the whole GLB in base64, as a JSON string. The artifact frame's CSP lets the page fetch its
+// own files but not data: or blob: URLs, nor compile WebAssembly, so the meshopt compression is decoded here and every
+// embedded image becomes its own file beside the model (<model>.glb.<i>.png), fetched by a relative URL.
+await MeshoptDecoder.ready;
+const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ "meshopt.decoder": MeshoptDecoder })
+  .setVertexLayout(VertexLayout.SEPARATE);                               // as the game's files: the merge can't mix interleaved
+const pad = (b, fill) => Buffer.concat([b, Buffer.alloc((4 - (b.length % 4)) % 4, fill)]);
+async function convert(file) {
+  const doc = await io.read(file);
+  for (const e of doc.getRoot().listExtensionsUsed()) if (e.extensionName === "EXT_meshopt_compression") e.dispose();
+  const glb = Buffer.from(await io.writeBinary(doc)), jsonLen = glb.readUInt32LE(12);
+  const json = JSON.parse(glb.toString("utf8", 20, 20 + jsonLen)), bin = glb.subarray(20 + jsonLen);
+  const binStart = 8;                                                    // the BIN chunk's data, after its header
+  (json.images ?? []).forEach((img, i) => {
+    if (img.bufferView === undefined) return;
+    const v = json.bufferViews[img.bufferView], ext = img.mimeType === "image/jpeg" ? "jpg" : img.mimeType === "image/webp" ? "webp" : "png";
+    const name = `${file.slice(file.lastIndexOf("/") + 1)}.${i}.${ext}`;
+    writeFileSync(join(dirname(file), name), bin.subarray(binStart + (v.byteOffset ?? 0), binStart + (v.byteOffset ?? 0) + v.byteLength));
+    img.uri = name; delete img.bufferView; delete img.mimeType;
+  });
+  const head = pad(Buffer.from(JSON.stringify(json)), 0x20), total = 12 + 8 + head.length + bin.length;
+  const header = Buffer.alloc(20);
+  header.writeUInt32LE(0x46546c67, 0); header.writeUInt32LE(2, 4); header.writeUInt32LE(total, 8);
+  header.writeUInt32LE(head.length, 12); header.writeUInt32LE(0x4e4f534a, 16);
+  return JSON.stringify(Buffer.concat([header, head, bin]).toString("base64"));
+}
 const walk = dir => readdirSync(dir).flatMap(f => (statSync(join(dir, f)).isDirectory() ? walk(join(dir, f)) : [join(dir, f)]));
 for (const f of walk(out).filter(f => f.endsWith(".glb"))) {
-  writeFileSync(`${f}.json`, glbToGltf(readFileSync(f)));
+  writeFileSync(`${f}.json`, await convert(f));
   rmSync(f);
 }
 const big = walk(out).filter(f => statSync(f).size > 16e6);
