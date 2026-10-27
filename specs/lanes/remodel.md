@@ -37,6 +37,16 @@ David, 2026-10-27 (night), verbatim: "I want you to go ahead and remodel some ol
 
 **Evidence** for round 2: the barrel, the rocks (in game and in Blender, old next to new), a bug in the world (new cheap) beside its close-up (old), and the fish icons before and after, in `specs/evidence/remodel/round2/`. Same gates; one `perf:check` at the end.
 
+## Round 3 (David's review of round 2, 2026-10-27; https://claude.ai/artifact/5yR9MapBKhCw5SvmpHnoxp)
+
+**Approved:** the market barrel, the gather rocks, the crawlers (cheap in the world, old up close) and the bug close-ups.
+
+**Fish icons:** approved, with a note, verbatim: "make sure the orientation of these fish models are correct". Check every one of the 81 icons, and the 3D fish too, for facing and upright: all facing the same way, belly down, none mirrored or upside down. Fix any that aren't.
+
+**Butterflies and dragonflies:** redo, verbatim: "shape should still replicate the before like gneral overall shape of wings". Keep them cheap in the world, but trace each species' wing outline from the old model: the overall shape, the proportions, the forewing and hindwing lobes, the tails where they have them. Cheap means fewer triangles, not a different silhouette.
+
+**Step 1, ship first:** merge main; put the butterflies and dragonflies back on the old models; fix the fish orientation; run the gates; commit and message the coordinator with that SHA. Then step 2: redo the flyers, and make shots of old and new wings side by side for his review.
+
 ## Status
 
 Round 2 done, awaiting David's review of the redos. Head: `git log -1` on game/remodel. Main (139d3b1e) merged.
