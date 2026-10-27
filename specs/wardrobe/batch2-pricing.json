@@ -1,5 +1,5 @@
 {
- "source": "David's picks in the Tethos New Wardrobe Pricing page, final 2026-10-15; Gem prices x10 (David, 2026-10-17: 5 -> 50, 10 -> 100, 20 -> 200, hair #22 30 -> 300); #12 and #13 deleted (David, 2026-10-17: duplicates of #10 and #07); round 2 (David, 2026-10-17): #22 is its ushanka and goggles alone (the hair removed) at 200 Gems, and #07 comes in silver too (acc-07s) at #07's price; hair shelf (David, 2026-10-27): #24 removed (wavy half-up), and four hairstyles go on sale for 350 coins (#28 to #31: Baby sprout, Layered shag, Swept fringe, V-kei layers)",
+ "source": "David's picks in the Tethos New Wardrobe Pricing page, final 2026-10-15; Gem prices x10 (David, 2026-10-17: 5 -> 50, 10 -> 100, 20 -> 200, hair #22 30 -> 300); #12 and #13 deleted (David, 2026-10-17: duplicates of #10 and #07); round 2 (David, 2026-10-17): #22 is its ushanka and goggles alone (the hair removed) at 200 Gems, and #07 comes in silver too (acc-07s) at #07's price; hair shelf (David, 2026-10-27): #24 removed (wavy half-up), and four hairstyles go on sale for 350 coins (#28 to #31: Baby sprout, Layered shag, Swept fringe, V-kei layers); wardrobe batch 3 (David, 2026-10-27, the shelf page): hair-32, hair-41 and hair-44 at 350 coins, hair-36 and hair-38 at 200 Gems, hair-34, hair-39, hair-43, hair-45 and hair-46 free; face-29 and face-31 at 250 coins, face-26, face-27, face-28 and face-32 at 100 Gems; acc-27 at 150 coins and acc-25 at 100 Gems; removed, so never priced: hair-33, hair-35, hair-37, hair-40, hair-42, face-30, acc-26",
  "items": {
   "acc-01": {
    "mode": "coins",
@@ -93,6 +93,14 @@
    "mode": "gems",
    "price": 200
   },
+  "acc-25": {
+   "mode": "gems",
+   "price": 100
+  },
+  "acc-27": {
+   "mode": "coins",
+   "price": 150
+  },
   "face-20": {
    "mode": "coins",
    "price": 250
@@ -116,6 +124,30 @@
   "face-25": {
    "mode": "coins",
    "price": 250
+  },
+  "face-26": {
+   "mode": "gems",
+   "price": 100
+  },
+  "face-27": {
+   "mode": "gems",
+   "price": 100
+  },
+  "face-28": {
+   "mode": "gems",
+   "price": 100
+  },
+  "face-29": {
+   "mode": "coins",
+   "price": 250
+  },
+  "face-31": {
+   "mode": "coins",
+   "price": 250
+  },
+  "face-32": {
+   "mode": "gems",
+   "price": 100
   },
   "hair-22": {
    "mode": "gems",
@@ -152,6 +184,46 @@
   "hair-31": {
    "mode": "coins",
    "price": 350
+  },
+  "hair-32": {
+   "mode": "coins",
+   "price": 350
+  },
+  "hair-34": {
+   "mode": "free",
+   "price": null
+  },
+  "hair-36": {
+   "mode": "gems",
+   "price": 200
+  },
+  "hair-38": {
+   "mode": "gems",
+   "price": 200
+  },
+  "hair-39": {
+   "mode": "free",
+   "price": null
+  },
+  "hair-41": {
+   "mode": "coins",
+   "price": 350
+  },
+  "hair-43": {
+   "mode": "free",
+   "price": null
+  },
+  "hair-44": {
+   "mode": "coins",
+   "price": 350
+  },
+  "hair-45": {
+   "mode": "free",
+   "price": null
+  },
+  "hair-46": {
+   "mode": "free",
+   "price": null
   }
  }
 }

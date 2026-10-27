@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as THREE from "three";
@@ -108,14 +108,15 @@ describe("character rig assembly", () => {
     // merged without a map (mergeLook's map argument): every hairMap is zero
     expect(Array.from(merged.getAttribute("hairMap").array).every(x => x === 0)).toBe(true);
   });
-  it("marks a mapped hair's vertices and carries each channel's shift and median lightness (round 2)", () => {
+  it("marks a mapped hair's vertices and carries each channel's shift and lightness (rounds 2 and 3)", () => {
     const part = skinned(["mixamorigHead"], [0, 0, 0]);
     part.geometry.setAttribute("uv", new THREE.Float32BufferAttribute([0, 0, 1, 0, 0, 1], 2));
-    const a = { m: [0.5, -0.2, 0.2, 0.5] as [number, number, number, number], o: [0.01, -0.02] as [number, number], l: 0.3 };
+    const a = { m: [0.5, -0.2, 0.2, 0.5] as [number, number, number, number], o: [0.01, -0.02] as [number, number], l: 0.3, L: [0.5, 0.4] as [number, number] };
     const g = adoptPrimitive(part, new Map([["mixamorigHead", 0]]), new THREE.Color(1, 1, 1), { a, b: NO_SHIFT });
     expect(Array.from(g.getAttribute("hairMap").array).map(x => Math.round(x * 100) / 100)).toEqual([1, 0.3, 0.5, 1, 0.3, 0.5, 1, 0.3, 0.5]);
     expect(Array.from(g.getAttribute("hairA").array.slice(0, 4)).map(x => Math.round(x * 100) / 100)).toEqual([0.5, 0.2, 0.01, -0.02]);   // p, q, o
     expect(Array.from(g.getAttribute("hairB").array.slice(0, 4))).toEqual([1, 0, 0, 0]);                                                  // identity
+    expect(Array.from(g.getAttribute("hairL").array.slice(0, 4)).map(x => Math.round(x * 100) / 100)).toEqual([0.5, 0.4, 1, 0]);         // lightness: a's, b's identity
     const plain = adoptPrimitive(part, new Map([["mixamorigHead", 0]]), null);
     expect(Array.from(plain.getAttribute("hairMap").array)).toEqual(new Array(9).fill(0));
   });
@@ -130,6 +131,10 @@ describe("character rig assembly", () => {
 });
 
 describe("David's fit (the fit editor: catalogue `fit`, a head piece's `x`, `y`, `z` in metres along the head's axes)", () => {
+  // the tests set their own fits: each starts from none, and the catalogue's go back after
+  const saved = { ...FIT };
+  beforeEach(() => { for (const k in FIT) delete FIT[k]; });
+  afterEach(() => { for (const k in FIT) delete FIT[k]; Object.assign(FIT, saved); });
   const head = (bones: readonly THREE.Bone[]) => bones.find(b => b.name === "mixamorigHead")!;
   it("binds every head piece's head with its axes on the bind axes, so a move is along the head's own axes", async () => {
     for (const p of PARTS.filter(x => x.slot === "back" || x.group === "face" || x.group === "head")) {

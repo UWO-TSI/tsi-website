@@ -47,7 +47,7 @@ export const RESIDENT_LOOKS: Record<string, Look> = {
   "wharf-keeper": look({ skin: 6, hair: 9, extras: ["freckles"], back: "hair_swept_fringe", top: "top_stripe_ls", bottom: "bottom_trousers", shoes: "shoes_rainboots",
     acc: { head: "acc_cap" }, colors: { top_stripe_ls: 11, bottom_trousers: 12, shoes_rainboots: 6, acc_cap: 12 } }),
   // Oracle keeper: quiet, speaks in riddles. A lavender kimono, long dark hair, sandals.
-  "oracle-keeper": look({ skin: 10, hair: 0, eyes: "half_lid", back: "hair_long_scruffy", onepiece: "outfit_koi_kimono", shoes: "shoes_sandals",
+  "oracle-keeper": look({ skin: 9, hair: 0, eyes: "half_lid", back: "hair_long_scruffy", onepiece: "outfit_koi_kimono", shoes: "shoes_sandals",
     acc: { neck: "acc_shell_necklace" }, colors: { outfit_koi_kimono: 13 } }),
   // Workshop crafter: a tinkerer with a cap on backwards. Wood-brown overalls over a cream tee, backpack of tools.
   crafter: look({ skin: 4, hair: 7, extras: ["blush"], back: "hair_anime_spikes", top: "top_tee", bottom: "bottom_overall_shorts", shoes: "shoes_boots",

@@ -49,8 +49,8 @@ const BODY_MATERIAL = new THREE.MeshPhysicalMaterial({ name: "CharacterBody", ve
 /**
  * Mapped hairstyles, round 2 (David, 2026-10-17: "you really messed up the hair"): one shared atlas of every hairstyle's
  * own source texture (art/characters/hair/import_hair.py natural_map), drawn as Roblox draws it: its colours, its strands,
- * matte with a soft gloss. A colour the member picks shifts the texture's hue and saturation in OKLab, each texel keeping
- * its lightness (hairColour.ts; rig.ts `hairA`, `hairB`); the alpha names the texel's channel (1 the hair's colour, 2/3 a
+ * matte with a soft gloss. A colour the member picks moves the texture's median onto it in OKLab, lightness too (round 3),
+ * each texel keeping its light and dark around it (hairColour.ts; rig.ts `hairA`, `hairB`, `hairL`); the alpha names the texel's channel (1 the hair's colour, 2/3 a
  * two-colour hair's second, 1/3 fixed: a cap or visor). Loaded the first time a mapped style is worn (sRGB: it reads back
  * linear), the world's half-size copy (HAIR_MAPS_URLS) unless a creator-sized face asks for the full one, which goes
  * again with the last such face (lib/game/character/hairAtlas.ts); until then a white texel (the under-cap's tint alone).
@@ -97,21 +97,22 @@ vec3 fromOklab(vec3 o) {
   return vec3(dot(lms, vec3(4.0767416621, -3.3077115913, 0.2309699292)), dot(lms, vec3(-1.2684380046, 2.6097574011, -0.3413193965)),
     dot(lms, vec3(-0.0041960863, -0.7034186147, 1.7076147010)));
 }
-vec3 shiftHair(vec3 c, vec4 s, float l) {
-  if (s == vec4(1.0, 0.0, 0.0, 0.0)) return c;            // the style's own colour: the texel as drawn
+vec3 shiftHair(vec3 c, vec4 s, float l, vec2 lift) {
+  if (s == vec4(1.0, 0.0, 0.0, 0.0) && lift == vec2(1.0, 0.0)) return c;   // the style's own colour: the texel as drawn
   vec3 o = toOklab(c);
-  float tent = clamp(min(o.x / l, (1.0 - o.x) / (1.0 - l)), 0.0, 1.0);
+  float L = clamp(lift.x * o.x + lift.y, 0.0, 1.0);       // round 3: the picked colour's lightness, the texel's light and dark around it
+  float tent = clamp(min(L / l, (1.0 - L) / (1.0 - l)), 0.0, 1.0);
   vec2 ab = vec2(s.x * o.y - s.y * o.z, s.y * o.y + s.x * o.z) + s.zw * tent;
-  return clamp(fromOklab(vec3(o.x, ab)), 0.0, 1.0);
+  return clamp(fromOklab(vec3(L, ab)), 0.0, 1.0);
 }`;
 BODY_MATERIAL.onBeforeCompile = shader => {
   shader.uniforms.uHairAtlas = HAIR_ATLAS;
   shader.uniforms.uColourAtlas = COLOUR_ATLAS;
   shader.vertexShader = shader.vertexShader
-    .replace("#include <uv_pars_vertex>", "#include <uv_pars_vertex>\nattribute vec3 hairMap;\nattribute vec4 hairA;\nattribute vec4 hairB;\nvarying vec2 vHairUv;\nvarying vec3 vHairMap;\nvarying vec4 vHairA;\nvarying vec4 vHairB;")
-    .replace("#include <uv_vertex>", "#include <uv_vertex>\nvHairUv = uv;\nvHairMap = hairMap;\nvHairA = hairA;\nvHairB = hairB;");
+    .replace("#include <uv_pars_vertex>", "#include <uv_pars_vertex>\nattribute vec3 hairMap;\nattribute vec4 hairA;\nattribute vec4 hairB;\nvarying vec2 vHairUv;\nvarying vec3 vHairMap;\nvarying vec4 vHairA;\nvarying vec4 vHairB;\nattribute vec4 hairL;\nvarying vec4 vHairL;")
+    .replace("#include <uv_vertex>", "#include <uv_vertex>\nvHairUv = uv;\nvHairMap = hairMap;\nvHairA = hairA;\nvHairB = hairB;\nvHairL = hairL;");
   shader.fragmentShader = shader.fragmentShader
-    .replace("#include <uv_pars_fragment>", `#include <uv_pars_fragment>\nuniform sampler2D uHairAtlas;\nuniform sampler2D uColourAtlas;\nvarying vec2 vHairUv;\nvarying vec3 vHairMap;\nvarying vec4 vHairA;\nvarying vec4 vHairB;\n${HAIR_SHIFT}`)
+    .replace("#include <uv_pars_fragment>", `#include <uv_pars_fragment>\nuniform sampler2D uHairAtlas;\nuniform sampler2D uColourAtlas;\nvarying vec2 vHairUv;\nvarying vec3 vHairMap;\nvarying vec4 vHairA;\nvarying vec4 vHairB;\nvarying vec4 vHairL;\n${HAIR_SHIFT}`)
     // in place of the vertex colour's multiply: u < 0, the under-cap (no texture: its COLOR_0 and the tint, the texture's
     // median shifted as the texture is) and every other surface take the vertex colour; a mapped hairstyle takes its texel,
     // each channel shifted on its own (round 2), the fixed one as drawn.
@@ -123,8 +124,8 @@ BODY_MATERIAL.onBeforeCompile = shader => {
       vec4 t = texture2D(uHairAtlas, vHairUv);
       float wa = clamp((t.a - 0.6667) * 3.0, 0.0, 1.0), wf = clamp((0.6667 - t.a) * 3.0, 0.0, 1.0), wb = 1.0 - wa - wf;
       vec3 c = t.rgb * wf;
-      if (wa > 0.0) c += shiftHair(t.rgb, vHairA, vHairMap.y) * wa;
-      if (wb > 0.0) c += shiftHair(t.rgb, vHairB, vHairMap.z) * wb;
+      if (wa > 0.0) c += shiftHair(t.rgb, vHairA, vHairMap.y, vHairL.xy) * wa;
+      if (wb > 0.0) c += shiftHair(t.rgb, vHairB, vHairMap.z, vHairL.zw) * wb;
       diffuseColor.rgb *= c;
     } else {
       diffuseColor.rgb *= vColor;
@@ -139,7 +140,7 @@ BODY_MATERIAL.onBeforeCompile = shader => {
       material.specularF90 = ${HAIR_GLOSS.f90.toFixed(2)};
     }`);
 };
-BODY_MATERIAL.customProgramCacheKey = () => "character-body-hairmap-v7";
+BODY_MATERIAL.customProgramCacheKey = () => "character-body-hairmap-v8";
 let decalMaterial: THREE.MeshPhysicalMaterial | null = null;
 const bodies = refCache<THREE.BufferGeometry>();
 const decals = new Map<string, THREE.BufferGeometry>();

@@ -2440,39 +2440,6 @@
    }
   },
   {
-   "id": "hair_tousled_spikes",
-   "slot": "back",
-   "name": "Tousled spikes",
-   "glb": "hair/full/hair_tousled_spikes.glb",
-   "tris": 4161,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "full": true,
-   "skull": "v10",
-   "source": "hair/source/david-b3/33-Black-Gojo-Anime-Resting-Messy-Hair-17379327411.glb",
-   "roblox": {
-    "provisional": true
-   },
-   "key": "hair-37",
-   "map": {
-    "cell": 31,
-    "natural": {
-     "a": [
-      0.1591,
-      0.0,
-      89.88
-     ]
-    }
-   }
-  },
-  {
    "id": "hair_ski_mask_dreads",
    "slot": "back",
    "name": "Ski mask and dreads",
@@ -5312,5 +5279,173 @@
     "frames": 42
    }
   ]
+ },
+ "fit": {
+  "acc_bandage_blindfold": {
+   "y": -0.021
+  },
+  "acc_glasses_round": {
+   "y": -0.042
+  },
+  "acc_glasses_square": {
+   "y": -0.0375
+  },
+  "acc_gold_rimless_shades": {
+   "y": -0.039
+  },
+  "acc_half_rim_glasses": {
+   "y": -0.0335
+  },
+  "acc_half_rim_glasses_silver": {
+   "y": -0.036
+  },
+  "acc_kitty_bow_glasses": {
+   "y": -0.045
+  },
+  "acc_square_shades": {
+   "y": -0.0295
+  },
+  "acc_thin_glasses": {
+   "y": -0.042,
+   "z": -0.0015
+  },
+  "acc_wheat_stalk": {
+   "x": -0.008,
+   "y": -0.006
+  },
+  "big_eyes": {
+   "eyes": -0.026,
+   "eyesApart": -0.02,
+   "eyesSize": 0.74
+  },
+  "crying": {
+   "mouth": 0.022
+  },
+  "dizzy": {
+   "eyes": -0.018,
+   "eyesApart": -0.026,
+   "eyesSize": 0.82
+  },
+  "hair_anime_spikes": {
+   "x": -0.0065,
+   "z": 0.035
+  },
+  "hair_bob_pigtail": {
+   "y": -0.0155,
+   "z": 0.002
+  },
+  "hair_bowl_cut": {
+   "y": -0.0285
+  },
+  "hair_braided_pigtails": {
+   "y": -0.0145,
+   "z": -0.011
+  },
+  "hair_buns_braid": {
+   "z": 0.01
+  },
+  "hair_double_buns": {
+   "y": -0.0095
+  },
+  "hair_dreads_cap": {
+   "y": 0.0025,
+   "z": 0.0095
+  },
+  "hair_emo_layers": {
+   "y": -0.0045,
+   "z": 0.004
+  },
+  "hair_freeform_afro": {
+   "y": -0.04,
+   "z": 0.04
+  },
+  "hair_hime_short": {
+   "z": 0.0015
+  },
+  "hair_long_pigtails": {
+   "y": -0.008
+  },
+  "hair_long_scruffy": {
+   "y": -0.0115
+  },
+  "hair_messy_dreads": {
+   "y": -0.0025
+  },
+  "hair_messy_wolf": {
+   "z": -0.0295
+  },
+  "hair_middle_part": {
+   "y": -0.055,
+   "z": 0.043
+  },
+  "hair_rolled_mask": {
+   "y": -0.006
+  },
+  "hair_short_tufts": {
+   "y": 0.003
+  },
+  "hair_ski_mask_dreads": {
+   "y": 0.001,
+   "z": -0.043
+  },
+  "hair_spiky_messy": {
+   "y": -0.004
+  },
+  "hair_sponge_twists": {
+   "y": -0.038,
+   "z": 0.0235
+  },
+  "hair_swept_fringe": {
+   "z": -0.025
+  },
+  "hair_vkei": {
+   "y": -0.005
+  },
+  "hair_waves": {
+   "y": 0.0015
+  },
+  "silly": {
+   "eyes": -0.054,
+   "eyesApart": -0.027,
+   "eyesSize": 0.82,
+   "mouth": -0.008
+  },
+  "silly_cat": {
+   "eyes": -0.016,
+   "eyesApart": -0.018,
+   "eyesSize": 0.76,
+   "mouth": 0.003,
+   "mouthSize": 0.74
+  },
+  "silly_smile": {
+   "eyes": -0.012
+  },
+  "squiggle": {
+   "eyes": -0.08,
+   "eyesSize": 0.96
+  },
+  "tired": {
+   "eyes": -0.08,
+   "eyesSize": 0.92
+  },
+  "vampire": {
+   "eyes": -0.08,
+   "eyesApart": -0.019,
+   "eyesSize": 0.96
+  },
+  "weirdcore_eyes": {
+   "eyes": -0.049,
+   "eyesApart": -0.006,
+   "eyesSize": 0.96
+  },
+  "wink": {
+   "eyes": -0.01,
+   "eyesApart": -0.009,
+   "eyesSize": 0.92
+  },
+  "zombie": {
+   "eyes": -0.08,
+   "mouth": -0.006
+  }
  }
 }

@@ -107,6 +107,9 @@ export const VERB_BY_NAME = new Map(VERB_CLIPS.map(c => [c.name, c]));
 /** The sushi bar staff's clips (build_clips.py `-- staff`): the rig and its actions, loaded by the bar's chef and server (Character `clips`). */
 export const STAFF_URL = `${CHARACTER_ROOT}${catalog.staff.glb}`;
 export const PALETTE = { skin: palette.skin, hair: palette.hair, outfit: palette.outfit };
+/** Skins a player can pick: the first 10. The two darkest (10, 11) left (David, 2026-10-27); their indices stay and a
+ * saved look with one loads as 9. */
+export const SKIN_PICKS = 10;
 /** An atlas cell: rect [x, y, w, h] (px, top-left origin) and the point (ax, ay) in it that sits on its anchor; a 7th
  * value 1 puts it on the second atlas page. */
 export type FaceCell = [number, number, number, number, number, number, (0 | 1)?];
@@ -263,7 +266,7 @@ export function parseLook(raw: unknown): CharacterLook {
   const colors: Record<string, number> = {};
   if (r.colors && typeof r.colors === "object") for (const [id, v] of Object.entries(r.colors)) if (PART_BY_ID.has(id)) colors[id] = index(v, PALETTE.outfit.length, 0);
   const look: CharacterLook = {
-    skin: index(r.skin, PALETTE.skin.length, d.skin), hair: r.hair === NATURAL_HAIR ? NATURAL_HAIR : index(r.hair, PALETTE.hair.length, d.hair),
+    skin: Math.min(index(r.skin, PALETTE.skin.length, d.skin), SKIN_PICKS - 1), hair: r.hair === NATURAL_HAIR ? NATURAL_HAIR : index(r.hair, PALETTE.hair.length, d.hair),
     // A saved look's `brows` (and its brows placement) is dropped: eyebrows were removed.
     eyes: faceItem("eyes", r.eyes, d.eyes), mouth: faceItem("mouth", r.mouth, d.mouth),
     extras: Array.isArray(r.extras) ? [...new Set(r.extras.filter((e): e is string => typeof e === "string" && e in FACE.layers.extras.items))] : [],
@@ -452,8 +455,13 @@ export function eventPartOpen(id: string, open: ReadonlySet<string> = EVENTS_OPE
 export const openEventParts = (open: ReadonlySet<string> = EVENTS_OPEN): string[] => PARTS.filter(p => p.event && open.has(p.event)).map(p => p.id);
 
 // ── Ownership (coordinator ruling on audit item 22) ─────────────────────────
-/** Identity is free: skin, face, every hair style and the first six hair colours. The other six are shop dyes. */
-export const FREE_HAIR_COLOURS = 6;
+/**
+ * Identity is free: skin, face, every hair style and these hair colours (palette indices). `DYE_HAIR` are the shop's
+ * dyes (`hair:6`..`hair:11`). Ginger (12) joined the free ones after the dyes (David, 2026-10-27), so no colour's index
+ * moved: saved looks and the shop's rows keep their meaning.
+ */
+export const FREE_HAIR: readonly number[] = [0, 1, 2, 3, 4, 5, 12];
+export const DYE_HAIR: readonly number[] = [6, 7, 8, 9, 10, 11];
 /** Clothes every account starts with, granted once through the inventory (20260926180000_ownership.sql; the rain-cape
  * left with David's wardrobe cut). */
 export const STARTER_PARTS: readonly string[] = ["top_tee", "top_hoodie", "top_stripe_ls", "bottom_shorts", "bottom_trousers", "bottom_joggers", "shoes_slipon", "shoes_sneakers"];
@@ -464,6 +472,17 @@ export interface Batch2Price { mode: "free" | "coins" | "gems" | "skip"; price: 
 export const BATCH2_PRICES = batch2Pricing.items as Record<string, Batch2Price>;
 /** A batch-2 item's mode and price by its key ("hair-22", "acc-01", "face-20"); null for anything else. */
 export const priceOf = (key: string | undefined): Batch2Price | null => (key ? BATCH2_PRICES[key] ?? null : null);
+/**
+ * Offered to players (the creator, the wardrobe, the shop; never random looks or residents): everything except a keyed
+ * part, or a face part of a keyed whole face, that specs/wardrobe/batch2-pricing.json doesn't list yet. David hasn't
+ * priced it, so it isn't free, it isn't offered at all (coordinator, 2026-10-27). Face Fit and the /lab sheets read the
+ * catalogue directly and still list every part. This is the one place the rule lives.
+ */
+export const offered = (id: string): boolean => {
+  const p = PART_BY_ID.get(id);
+  if (p) return !p.key || priceOf(p.key) !== null;
+  return !Object.entries(FACE.faces ?? {}).some(([key, f]) => priceOf(key) === null && (f.eyes === id || f.mouth === id || f.extras.includes(id)));
+};
 const sold = (key: string | undefined) => { const m = priceOf(key)?.mode; return m === "coins" || m === "gems"; };
 /**
  * Inventory ref that unlocks a part (a variant counts as its base part); null for free hair styles and face items.
@@ -474,7 +493,7 @@ export function partRef(id: string): string | null {
   const p = PART_BY_ID.get(id);
   if (!p) return null;
   if (p.grantedBy) return partRef(p.grantedBy);           // row 314: #22's hat comes with the hair
-  if (p.key) return sold(p.key) ? p.variantOf ?? p.id : null;   // batch 3: a keyed item David hasn't priced yet is free until he does
+  if (p.key) return sold(p.key) ? p.variantOf ?? p.id : null;   // a keyed item priced "free" is free; one David hasn't priced isn't offered at all (offered)
   return p.slot === "bangs" || p.slot === "back" ? null : p.variantOf ?? p.id;
 }
 /** Inventory ref of a whole face (wardrobe batch 2): the shop row's catalogue_ref. */
@@ -505,7 +524,7 @@ export const ownsRef = (owned: Owned, ref: string) => (ref === CUSTOM_HAIR_REF ?
 export function lookRefs(look: CharacterLook): string[] {
   const refs = [...new Set([look.top, look.bottom, look.onepiece, look.shoes, look.back, ...Object.values(look.acc)].flatMap(id => (id && partRef(id)) || [])
     .concat([look.eyes, look.mouth, ...look.extras].flatMap(id => facePartRef(id) ?? [])))];
-  const dyes = [look.hair, ...(look.hairAccent !== undefined ? [look.hairAccent] : [])].filter(i => i >= FREE_HAIR_COLOURS);
+  const dyes = [look.hair, ...(look.hairAccent !== undefined ? [look.hairAccent] : [])].filter(i => DYE_HAIR.includes(i));
   return [...refs, ...[...new Set(dyes)].map(dyeRef), ...(look.hairColor && !CUSTOM_HAIR_FREE ? [CUSTOM_HAIR_REF] : [])];
 }
 
@@ -519,7 +538,7 @@ export function randomLook(rand: () => number = Math.random, owned?: ReadonlySet
   const ids = (slot: PartSlot) => partsIn(slot).filter(p => !p.variantOf && !p.key && !p.grantedBy && (!owned || !partRef(p.id) || owned.has(p.id))).map(p => p.id);
   let look: CharacterLook = {
     ...DEFAULT_LOOK,
-    skin: Math.floor(rand() * PALETTE.skin.length), hair: Math.floor(rand() * (owned ? FREE_HAIR_COLOURS : PALETTE.hair.length)),
+    skin: Math.floor(rand() * SKIN_PICKS), hair: owned ? FREE_HAIR[Math.floor(rand() * FREE_HAIR.length)] : Math.floor(rand() * PALETTE.hair.length),
     // sheet-coded styles only (F eyes, M mouths, what the wardrobe cut kept of them): later sets stay creator picks
     eyes: pick(Object.keys(FACE.layers.eyes.items).filter(e => /^[EF]\d/.test(e))), mouth: pick(Object.keys(FACE.layers.mouth.items).filter(m => m.startsWith("M"))),
     extras: rand() < 0.3 ? ["blush"] : [], bangs: "", back: pick(ids("back")), shoes: pick(ids("shoes")), acc: {}, colors: {},

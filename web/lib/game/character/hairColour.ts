@@ -1,20 +1,22 @@
 /**
- * A hairstyle's colour, round 2 (David, 2026-10-17: "you really messed up the hair"): every hairstyle draws its own
- * source texture as Roblox does (art/characters/hair/import_hair.py natural_map: hair_colour.png), and a colour the
- * member picks is a hue and saturation shift of that texture, never a flat tint or a shade map: each texel keeps its
- * lightness (OKLab L) exactly, and its chroma is turned and scaled so the texture's median lands on the picked colour.
- * A near-grey source (a black or white hair) has no hue to turn: it takes the picked colour's chroma at its median
- * lightness, less toward black and white (tent), so its strands stay as they are and its sheen stays pale. Two-colour
- * hairs shift each colour on its own.
+ * A hairstyle's colour. Every hairstyle draws its own source texture as Roblox does (art/characters/hair/import_hair.py
+ * natural_map: hair_colour.png), and a colour the member picks recolours that texture, never a flat tint or a shade map.
+ * Round 3 (David, 2026-10-27: "when changing to blond all the hair takes that hue of blond"; reverses 2026-10-17's
+ * keep-lightness rule): the picked colour sets the hair's colour fully, lightness too. The texture's median lands on
+ * the picked colour exactly (OKLab L, hue and chroma), and every texel keeps its light and dark around it: its lightness
+ * moves with the median (L' = s L + d, s squeezing the texture's range only as far as it must to fit, never below half),
+ * its chroma is turned and scaled as the median's is. A near-grey source (a black or white hair) has no hue to turn: it
+ * takes the picked colour's chroma at the new median lightness, less toward black and white (tent), so its sheen stays
+ * pale. Two-colour hairs shift each colour on its own. The under-cap takes the shifted median, darkened by its COLOR_0.
  *
- * The body shader applies it per texel (Character.tsx): `ab' = M ab + o tent(L)`, tent(L) = min(L / l, (1 - L) / (1 - l))
- * clamped to [0, 1], with M (a 2 x 2 rotation and scale), o and l (the source's median lightness) from hairShift.
- * Identity (M = I, o = 0) draws the texture as it is.
+ * The body shader applies it per texel (Character.tsx): `L' = s L + d`, `ab' = M ab + o tent(L')`, tent(L') =
+ * min(L' / l, (1 - L') / (1 - l)) clamped to [0, 1], with M (a 2 x 2 rotation and scale), o, l (the picked colour's
+ * lightness) and [s, d] from hairShift. Identity (M = I, o = 0, [1, 0]) draws the texture as it is.
  */
 
 export type Oklch = [L: number, C: number, h: number];
-export interface HairShift { m: [number, number, number, number]; o: [number, number]; l: number }
-export const NO_SHIFT: HairShift = { m: [1, 0, 0, 1], o: [0, 0], l: 0.5 };
+export interface HairShift { m: [number, number, number, number]; o: [number, number]; l: number; L: [s: number, d: number] }
+export const NO_SHIFT: HairShift = { m: [1, 0, 0, 1], o: [0, 0], l: 0.5, L: [1, 0] };
 /** Below this chroma a source counts as grey (its hue is noise): the picked colour's chroma is laid in instead. */
 const GREY_C = 0.04;
 
@@ -41,25 +43,29 @@ export function oklabToHex([L, a, b]: [number, number, number]): string {
 
 export const oklchToOklab = ([L, C, h]: Oklch): [number, number, number] => [L, C * Math.cos((h * Math.PI) / 180), C * Math.sin((h * Math.PI) / 180)];
 
-/** The shift that moves a texture whose median is `source` onto `target` (sRGB hex), each texel keeping its lightness. */
+/** The shift that moves a texture whose median is `source` onto `target` (sRGB hex), each texel keeping its light and dark around it. */
 export function hairShift(source: Oklch, target: string): HairShift {
-  const [, at, bt] = hexToOklab(target);
+  const [Lt, at, bt] = hexToOklab(target);
   const [Ls, Cs, hs] = source;
   const Ct = Math.hypot(at, bt);
   const w = Math.min(1, Cs / GREY_C);                   // how coloured the source is: 0 grey, 1 fully
-  const k = w * Math.min(3, Ct / Math.max(Cs, 1e-4));
+  const k = (w * Ct) / Math.max(Cs, 1e-4);              // w / Cs <= 1 / GREY_C: the turned part and o sum to the picked chroma
   const turn = Math.atan2(bt, at) - (hs * Math.PI) / 180;
   const [c, s] = [Math.cos(turn), Math.sin(turn)];
-  // o: the picked chroma a grey source takes at its median lightness l (the tent)
-  return { m: [k * c, -k * s, k * s, k * c], o: [(1 - w) * at, (1 - w) * bt], l: Math.min(0.95, Math.max(0.05, Ls)) };
+  // the lightness: the median onto the picked colour's, the range squeezed only as far as it must to stay in [0, 1]
+  const ls = Math.max(0.5, Math.min(1, Lt / Math.max(Ls, 1e-4), (1 - Lt) / Math.max(1 - Ls, 1e-4)));
+  // o: the picked chroma a grey source takes at the picked lightness l (the tent)
+  return { m: [k * c, -k * s, k * s, k * c], o: [(1 - w) * at, (1 - w) * bt], l: Math.min(0.95, Math.max(0.05, Lt)), L: [ls, Lt - ls * Ls] };
 }
 
-/** The grey part's weight at lightness L: 1 at the source's median, falling to 0 at black and white. */
+/** A texel (OKLab) through a shift, as the body shader does it (Character.tsx shiftHair). */
+export function shiftTexel([L, a, b]: [number, number, number], s: HairShift): [number, number, number] {
+  const [m00, m01, m10, m11] = s.m, L2 = Math.min(1, Math.max(0, s.L[0] * L + s.L[1])), t = tent(L2, s.l);
+  return [L2, m00 * a + m01 * b + s.o[0] * t, m10 * a + m11 * b + s.o[1] * t];
+}
+
+/** The grey part's weight at lightness L: 1 at l (the picked colour's), falling to 0 at black and white. */
 export const tent = (L: number, l: number) => Math.min(1, Math.max(0, Math.min(L / l, (1 - L) / (1 - l))));
 
-/** The colour a shift makes of the source's median (sRGB hex): the under-cap's, before its shade. */
-export function shiftedMedian(source: Oklch, shift: HairShift): string {
-  const [L, a, b] = oklchToOklab(source);
-  const [m00, m01, m10, m11] = shift.m, t = tent(L, shift.l);
-  return oklabToHex([L, m00 * a + m01 * b + shift.o[0] * t, m10 * a + m11 * b + shift.o[1] * t]);
-}
+/** The colour a shift makes of the source's median (sRGB hex): the under-cap's, before its shade (COLOR_0, 0.55). */
+export const shiftedMedian = (source: Oklch, shift: HairShift) => oklabToHex(shiftTexel(oklchToOklab(source), shift));

@@ -25,6 +25,37 @@ All in `~/.claude/jobs/62203045/tmp/`, which survives reboots.
 - `prod-dump.sh <label>`, `prod-query.sh <sql>` and `verify.sql` are for prod migrations. The procedure is in `STATE.md` and the memory files.
 - `withlock.sh heavy|blender|devserver <cmd>` (set `LANE=game/<lane>`): takes a lock, waiting while swap is high and another lock is held. It lives in `~/.claude/jobs/62203045/tmp/`, the same folder as the helpers above, and is referenced from `specs/lane-rules.md`.
 
+## Editors published (2026-10-27 evening)
+
+- **Residents:** https://claude.ai/artifact/QtZYAgMFEbFg4YNpVcBYwU (game/npc-editor cd1c64eb, collection `residents`). Apply: `cd web && node scripts/apply-residents.mjs <export.json>`. It writes the TS, runs gen-seeds (a new migration for npc_personas) and lists old-name strings to reword by hand. Looks come only from `RESIDENT_LOOKS` in code.
+- **Catalogue:** https://claude.ai/artifact/5XzAaR5Wipoe2ZN2Hby3FG (game/catalogue-editor 49d0a386, collection `species`). Apply: `cd web && node scripts/apply-species.mjs <export.json> [--dry]`. It needs migration `20261027180000_species_sell_price.sql` on prod (sell_price column plus economy_sell) when the branch merges. The branch also makes fishing read the roster (the duplicate fish data is deleted).
+- Face Fit's check showed burst-save count flakes under swap after npc-editor moved its frame code (frame.tsx). Rerun when the machine is quiet, before republishing Face Fit from that branch.
+
+## V1 gameplay lanes (2026-10-27, from David's picks)
+
+David picked almost everything for the next launch and moved the date off Oct 31 (new date unknown; asked). His notes verbatim, my readings and the workstreams are in `specs/launch/v1-gameplay.md`. Five lanes, cut from local main 10b5a7b1 or later:
+- `tutorial-v2`: builds the shared guide arrow first;
+- `main-quest`: the quest dropdown and chapters 1 to 6;
+- `rod-gear`: the rarity ladder first, then 5 rods, add-ons and the hex radar;
+- `fishing-depth`: the pond first, then requests, records, the now board and sushi phase B;
+- `daily-social`: dash first, then the 7-day bonus, friendship, the monument, campfire hour and fishing together.
+
+Shared owners: the arrow (tutorial-v2), the tracker and dropdown (main-quest), the rarity (rod-gear). When an owner reports its commit, merge it into the lanes that need it.
+
+Remodel round 2 reviewed: barrel, rocks, crawlers, close-ups and fish icons approved (with an orientation check on the fish); the flyers redone in round 3, back on the old models until then.
+
+## Planning and editors (2026-10-27 afternoon)
+
+- **V1 gameplay plan** for David to pick (Launch / Soon after / Later / No + notes): https://claude.ai/artifact/UAh1iey4axcvavuPXLdZe4, collection `picks`, own ideas in `notes/david`. 29 ideas in 6 sections: the first ten minutes, a main quest (chapters 2 to 7: Odile's net, Pim's shovel, Bram's rod challenge, fill the museum, the pickaxe, the fishing boat), fishing depth (pond fix, daily requests, records, tourney), daily reasons, together, and hollow-feature fixes. Built from an inventory of the game (no personal quest after chapter 1; pond fish unreachable; glider/dash never unlock; shop items that do nothing).
+- **Lanes running:**
+  - `catalogue-editor`: species editor page;
+  - `npc-editor`: resident editor page. Its new-world places fix is cherry-picked to local main (844dcad4);
+  - `wardrobe-b3`: offered() rule, Tousled spikes removal, prices plus seed, monocle, under-cap;
+  - `remodel`: round 2;
+  - `reflection-waves`: round 4 (drop skins 10 and 11, perf A/B).
+- **Local main ahead of origin, not pushed** (David stopped my last push): the grass merge (71a43b41, all approved) and the places fix (844dcad4). Push when David says.
+- **TSI zip hoodie review:** https://claude.ai/artifact/TiHe1w3zCSdHEtQkt3F89M (game/clothing-v2 aafbe9fe).
+
 ## David's fit values (2026-10-27 afternoon)
 
 David finished Face Fit ("face and hair scales done"). I exported 53 docs from the `fit` collection and saved 47 to `game/fit-editor`: `specs/evidence/fit-editor/export/fit-export-2026-10-27.json`.

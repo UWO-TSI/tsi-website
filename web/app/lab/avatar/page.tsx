@@ -35,6 +35,9 @@
  *                  just those, &views=front,34,side,back (wardrobe batch 3)
  * ?sheet=b2faces  wardrobe batches 2 and 3: David's whole faces #20-32 on the head, front and 3/4 (&skins=, default 3), then
  *                  a mix row; &keys=face-26,... just those (no mix row), &views=front,34,side,back
+ * ?sheet=haircolours  reflection-waves round 3: each style in &ids= on each of &skins= (default 1,6,11), a row of the hair colours in
+ *                  &hairs= (default own, the free ones, two dyes; own is the style's own colours), &yaw= one view
+ * ?sheet=eyeskins  reflection-waves round 3: every eye style in &ids= (default all) on every skin a player can pick (SKIN_PICKS), front, eyes open
  * ?sheet=hatcut   wardrobe batch 2: each hat with a hair cut (&hats= to pick) over each hairstyle in &ids= (default six), &yaw= one view; with
  *                  &cut=0 the hair the hat hides is drawn too (the hat cut's before and after)
  */
@@ -44,7 +47,7 @@ import { Canvas } from "@react-three/fiber";
 import { PerspectiveCamera, View } from "@react-three/drei";
 import Character, { type CharacterMotion } from "@/components/game/character/Character";
 import { CUTS } from "@/lib/game/character/rig";
-import { DEFAULT_LOOK, FACE, NATURAL_HAIR, PARTS, parseLook, partsIn, type CharacterLook, type EyeFrame } from "@/lib/game/character/look";
+import { DEFAULT_LOOK, FACE, NATURAL_HAIR, PARTS, parseLook, partsIn, SKIN_PICKS, type CharacterLook, type EyeFrame } from "@/lib/game/character/look";
 import { RESIDENT_LOOKS } from "@/lib/content/residentRoster";
 import { HQ_LEAD } from "@/lib/game/welcome";
 import { CAFE_OWNER } from "@/lib/game/cafe";
@@ -176,6 +179,13 @@ function AvatarBench() {
           label: `mix: ${FACE.names[eyes] ?? eyes} / ${FACE.names[mouth] ?? mouth}${extras.length ? ` + ${FACE.names[extras[0]] ?? extras[0]}` : ""}`,
           look: { ...hair, eyes, mouth, extras }, yaw: 0, face: OPEN })));
     }
+    if (sheet === "haircolours") {
+      const hairs = (q.get("hairs") ?? "own,0,1,2,3,4,5,12,10,11").split(",");
+      return (q.get("ids") ?? DEFAULT_LOOK.back).split(",").flatMap(back => (q.get("skins") ?? "1,6,11").split(",").map(Number).flatMap(skin =>
+        hairs.map(h => ({ label: `${back.replace("hair_", "")} s${skin} ${h}`, look: { ...base, back, skin, hair: h === "own" ? NATURAL_HAIR : Number(h) }, yaw, face: OPEN }))));
+    }
+    if (sheet === "eyeskins") return (q.get("ids")?.split(",") ?? Object.keys(FACE.layers.eyes.items)).flatMap(eyes =>
+      Array.from({ length: SKIN_PICKS }, (_, skin) => ({ label: `${eyes} s${skin}`, look: { ...base, back: "hair_waves", skin, eyes, extras: [] }, yaw: 0, face: OPEN })));
     // David's faces: the second atlas page's eyes and mouths, in his order (face_set_305.FACES), with his two accents
     const davidEyes = Object.keys(FACE.layers.eyes.items).filter(id => FACE.layers.eyes.items[id].open[6] === 1);
     const davidMouths = Object.keys(FACE.layers.mouth.items).filter(id => FACE.layers.mouth.items[id][6] === 1);
@@ -195,7 +205,7 @@ function AvatarBench() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sheet, yaw, q]);
   const root = useRef<HTMLDivElement>(null);
-  const cols = q.get("cols") ? Number(q.get("cols")) : sheet === "hatcut" ? 6 : sheet === "b2acc" ? 8 : sheet === "b2faces" ? 6 : sheet === "roblox" ? (q.get("views") ?? "front,34,side,back").split(",").length : sheet === "facekit" ? 13 : sheet === "hairkit" ? 10 : sheet === "fullkit" ? 7 : sheet === "styles" || sheet === "backs" || sheet === "faces" || sheet === "residents" || sheet === "emote" ? 6 : sheet === "hats" || sheet === "mix" ? 8 : sheet === "david" ? 10 : cells.length;
+  const cols = q.get("cols") ? Number(q.get("cols")) : sheet === "hatcut" ? 6 : sheet === "eyeskins" ? SKIN_PICKS : sheet === "haircolours" ? (q.get("hairs") ?? "own,0,1,2,3,4,5,12,10,11").split(",").length : sheet === "b2acc" ? 8 : sheet === "b2faces" ? 6 : sheet === "roblox" ? (q.get("views") ?? "front,34,side,back").split(",").length : sheet === "facekit" ? 13 : sheet === "hairkit" ? 10 : sheet === "fullkit" ? 7 : sheet === "styles" || sheet === "backs" || sheet === "faces" || sheet === "residents" || sheet === "emote" ? 6 : sheet === "hats" || sheet === "mix" ? 8 : sheet === "david" ? 10 : cells.length;
   return <div ref={root} style={{ position: "relative", paddingTop: 48, minHeight: "100vh", background: "#efe7d6" }}>
     <div data-sheet={sheet} style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, ${cols === 1 ? "420px" : "1fr"})`, gap: 8, padding: 8 }}>
       {cells.map(c => <figure key={c.label} style={{ margin: 0 }}>

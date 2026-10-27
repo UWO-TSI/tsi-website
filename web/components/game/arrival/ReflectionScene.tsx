@@ -3,8 +3,10 @@
 /**
  * The arrival's boat scenes (specs/v1-drop.md §1.2-1.3), in the reflection creator's own canvas while the island's is
  * paused under it: aboard Bram's boat out at sea, the world heavily blurred and washed out (your memories are gone);
- * then you lean over the side and your reflection in the water is the character creator. Every change sends a ripple
- * across the water that rewrites that feature; each choice sharpens the reflection and the world a little; Yes clears it.
+ * then you lean over the side and your reflection in the water is the character creator. A change sends a small wave
+ * with a foam cap rolling past, and the new look sweeps across your reflection with its crest (ahead of the crest the
+ * water still shows the old one, the seam under the foam); each choice
+ * sharpens the reflection and the world a little; "That's me" clears it. The sea under it never quite settles.
  *
  * Built from the game's own parts: the wharf's boat (BOAT), Bram in the roster's look, you on the shared rig. The water
  * is a planar mirror: a render target drawn from the camera mirrored in the sea, only while this canvas exists (it is
@@ -25,18 +27,19 @@ import { RESIDENT_LOOKS } from "@/lib/content/residentRoster";
 import { arrivalRun } from "@/lib/game/arrival/arrivalStore";
 import { ARRIVAL_TIMES, clarityAt } from "@/lib/game/arrival/sequence";
 import { mirrorCamera, renderReflection } from "@/lib/game/arrival/reflectionPasses";
+import { WATER_CHOP } from "@/lib/game/waterShader";
 
 useGLTF.preload(BOAT.url);
 
 /** How high your face is up your body from the hips' pivot (the creator's framing aims its reflection there). */
 const FACE_UP = CHARACTER_SCALE * 0.82;
-/** Where your face is over the water as you lean out (the boat's frame, on the sea): ripples rewrite you from there. */
-export function faceOverWater(): { x: number; z: number } {
-  return { x: SET.you.x - FACE_UP * Math.sin(SET.you.lean), z: SET.you.z };
-}
-
-/** A ripple on the water: where (the boat's frame, on the sea), when it started (s, this canvas's clock) and how strong. */
-export interface Ripple { x: number; z: number; t: number; strength: number }
+/** Rolling waves on the water at once, at most (a new change sets one off behind the last; the oldest gives way). */
+export const WAVE_MAX = 3;
+/**
+ * A wave's beats (s from setting off): until `ride` its crest has not reached your reflection yet, so a change still
+ * rides it; by `done` the crest has crossed all of you and the old look is gone.
+ */
+export const waveBeats = () => ({ ride: (SET.wave.lead - SET.wave.ahead) / SET.wave.speed, done: (SET.wave.lead + SET.wave.behind) / SET.wave.speed });
 
 /**
  * The set, in the boat's frame (bow +z, the sea at y 0): where you kneel and lean out over the starboard side, where
@@ -63,6 +66,13 @@ export const SET = {
    * your head bottom left, the gunwale on a diagonal under it, your reflection face and shirt in the middle (the sketch).
    */
   creator: { aim: 0.8, dist: 5.5, azimuth: 4.0, elevation: 0.98, fov: 24, roll: 0 },
+  /**
+   * The rolling wave a change sends past (David, 2026-10-26: "a wave with foam that rolls past instead of ripple"):
+   * its heading on the sea (radians from +x toward +z), its speed (m/s), how far before your face's reflection it sets
+   * off and how far past it it runs (m), and its height (the reflection's wobble at the crest). `ahead`, `behind`: how
+   * far your reflection reaches before and after your face along the wave's way (m), so it knows when it is crossing you.
+   */
+  wave: { heading: 0.4, speed: 1.8, lead: 1.1, exit: 1.5, height: 0.013, ahead: 0.35, behind: 0.65 },
 };
 /** The sea's colours at golden hour (the deep, the shallower tint, the sky the reflection shows round you). */
 const SEA = { deep: "#2a6c80", shallow: "#4b9aa6", sky: "#dfe9e4", haze: "#f3e6cf", sun: "#fff1cf" };
@@ -78,54 +88,100 @@ void main() {
   gl_Position = projectionMatrix * viewMatrix * w;
 }`;
 const WATER_FRAG = /* glsl */ `
-uniform sampler2D tRefl;
-uniform float uTime, uBlur, uClarity;
-uniform vec4 uRip[6];
+uniform sampler2D tRefl, tReflOld;
+uniform float uTime, uBlur, uClarity, uSweepT;
+uniform float uWaveT[${WAVE_MAX}];
+uniform vec2 uWaveAt, uWaveDir;
+uniform vec4 uWaveRun;
 uniform vec3 uDeep, uShallow, uSun, uCam;
 varying vec3 vW;
 varying vec4 vR;
-// Slow swells and a fine chop, as a height's slope (the reflection's wobble and the light on it).
-vec2 slope(vec2 p, float t) {
+float waterPhase(float x) { return mod(x, 6.2831853); }
+${WATER_CHOP}
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + 1.0), f.x), f.y);
+}
+// The living sea: a slow swell from two directions and the game's small chop (WATER_CHOP), as a height's slope.
+vec2 sea(vec2 p, float t) {
   vec2 g = vec2(0.0);
   g += vec2(0.6, 0.3) * cos(dot(p, vec2(0.6, 0.3)) * 2.1 + t * 0.9) * 0.05;
   g += vec2(-0.25, 0.7) * cos(dot(p, vec2(-0.25, 0.7)) * 3.3 + t * 1.3) * 0.035;
-  g += vec2(0.8, -0.5) * cos(dot(p, vec2(0.8, -0.5)) * 7.0 + t * 2.1) * 0.012;
-  g += vec2(-0.7, -0.6) * cos(dot(p, vec2(-0.7, -0.6)) * 11.0 + t * 2.7) * 0.007;
+  return g + chopSlope(p, t) * 0.13;
+}
+// The rolling waves: each a crest across the water, steep in front and long behind, rolling along uWaveDir, a white
+// foam cap along its top and foam left lying behind it that breaks up and melts. uWaveRun: speed, lead (how far
+// behind your face's reflection it sets off), height, how far past it it runs before it is gone. "swept": how far the
+// wave sweeping a new look in (the one that set off at uSweepT) has passed here: 1 behind its crest (the new look's
+// reflection), 0 ahead of it (the old one's), the seam along the middle of its foam cap.
+vec2 waves(vec2 p, out float foam, out float lift, out float shade, out float swept) {
+  vec2 g = vec2(0.0);
+  foam = 0.0; lift = 0.0; shade = 0.0; swept = 1.0;
+  vec2 d = p - uWaveAt;
+  float across = dot(d, vec2(-uWaveDir.y, uWaveDir.x));
+  // A gently bowed crest, its middle a little ahead.
+  float along = dot(d, uWaveDir) + across * across * 0.1;
+  for (int i = 0; i < ${WAVE_MAX}; i++) {
+    float t0 = uWaveT[i];
+    if (t0 < 0.0) continue;
+    float age = uTime - t0, run = age * uWaveRun.x - uWaveRun.y;
+    bool sweeping = abs(t0 - uSweepT) < 1e-3;
+    if (age < 0.0) { if (sweeping) swept = 0.0; continue; }
+    if (run > uWaveRun.w) continue;
+    float life = smoothstep(0.0, 0.3, age) * (1.0 - smoothstep(uWaveRun.w - 0.5, uWaveRun.w, run));
+    float x = along - run;
+    // The cap's scallops, wobbling along the crest.
+    float wob = 0.035 * sin(across * 5.0 + t0 * 4.0 + age * 1.2) + 0.022 * sin(across * 13.0 + t0 * 7.0 + age * 2.0) + 0.012 * sin(across * 29.0 - age * 3.0 + t0 * 3.0);
+    if (sweeping) swept = 1.0 - smoothstep(-0.08, -0.05, x + wob);
+    if (x > 0.4 || x < -1.2) continue;
+    float w = x > 0.0 ? 0.08 : 0.3, h = exp(-x * x / (w * w)) * life;
+    g += uWaveDir * (-2.0 * x / (w * w)) * h * uWaveRun.z;
+    lift = max(lift, h);
+    // The cap: a scalloped band on the crest.
+    float cap = smoothstep(-0.14, -0.12, x + wob) * (1.0 - smoothstep(0.0, 0.012, x + wob * 0.6));
+    // What it leaves behind: blobs of foam lying on the water, fewer and smaller the further back.
+    float n = noise(p * 15.0 + t0 * 13.0) * 0.6 + noise(p * 37.0 - t0 * 5.0) * 0.4;
+    float lace = smoothstep(0.0, 0.03, n - mix(0.6, 0.9, clamp(-x / 0.7, 0.0, 1.0))) * step(x, -0.1);
+    foam = max(foam, max(cap, lace * 0.75) * life);
+    // The shade under the lip, just ahead of the crest.
+    shade = max(shade, smoothstep(0.0, 0.015, x + wob * 0.6) * (1.0 - smoothstep(0.04, 0.12, x + wob * 0.6)) * life);
+  }
   return g;
 }
 void main() {
   vec2 p = vW.xz;
-  vec2 g = slope(p, uTime);
-  float ring = 0.0;
-  for (int i = 0; i < 6; i++) {
-    vec4 r = uRip[i];
-    if (r.w <= 0.0) continue;
-    float age = uTime - r.z;
-    if (age < 0.0 || age > 4.0) continue;
-    vec2 d = p - r.xy;
-    float dist = length(d), front = age * 0.85, x = dist - front;
-    float env = exp(-x * x / 0.012) * r.w * exp(-age * 0.9);
-    vec2 n = d / max(dist, 1e-3);
-    g += n * env * sin(x * 38.0) * 0.55;
-    // The drop's splash where it lands, the first moment.
-    g += d * 6.0 * exp(-dist * dist / 0.01) * exp(-age * 7.0) * r.w * sin(age * 40.0);
-    ring += env;
-  }
+  float foam, lift, shade, swept;
+  vec2 g = sea(p, uTime) + waves(p, foam, lift, shade, swept);
   vec4 proj = vR;
   proj.xy += g * 0.22 * proj.w;
-  vec3 refl = texture2D(tRefl, proj.xy / proj.w, uBlur).rgb;
+  vec2 uv = proj.xy / proj.w;
+  vec3 refl = texture2D(tRefl, uv, uBlur).rgb;
+  // Ahead of a sweeping wave's crest the water still shows the look it is replacing.
+  if (swept < 1.0) refl = mix(texture2D(tReflOld, uv, uBlur).rgb, refl, swept);
   vec3 V = normalize(uCam - vW);
   float fres = pow(1.0 - clamp(V.y, 0.0, 1.0), 4.0);
-  // The water's own colour, a little brighter where the swell faces the light.
-  vec3 water = mix(uDeep, uShallow, clamp(0.45 + dot(g, vec2(1.6, 1.0)) * 3.0, 0.0, 1.0));
-  vec3 col = mix(water, refl, 0.8 + 0.15 * fres);
-  // Light on the rings and sparkles off the chop, only once the world is clearing.
-  col += uSun * (ring * 0.12 + smoothstep(0.07, 0.1, length(g)) * 0.25 * uClarity);
-  gl_FragColor = vec4(col, 1.0);
+  // The water's own colour, a little brighter where the swell faces the light, and soft bands of light and shade
+  // where the small waves tilt toward or away from it.
+  float face = dot(g, vec2(1.6, 1.0));
+  vec3 water = mix(uDeep, uShallow, clamp(0.45 + face * 3.0, 0.0, 1.0));
+  vec3 col = mix(water, refl, 0.8 + 0.15 * fres) * (1.0 + clamp(face, -0.12, 0.12));
+  // The crest's back catching the sun, the shade under its lip, and sparkles off the chop once the world is clearing
+  // (round 3, David: no light lines on the small waves, "it looks like if it were a pool").
+  col *= 1.0 - shade * 0.22;
+  col += uSun * (lift * 0.1 + smoothstep(0.07, 0.1, length(g)) * 0.25 * uClarity);
+  // The foam, soft cream.
+  col = mix(col, vec3(0.98, 0.97, 0.93), foam);
+  // Alpha marks the waves for the composite, which keeps them clear through the mist.
+  gl_FragColor = vec4(col, 1.0 - 0.85 * clamp(max(foam, lift), 0.0, 1.0));
 }`;
 
 const POST_VERT = /* glsl */ `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
-/** The composite: a soft disk blur on the frame's mips (less round your reflection), washed toward the morning haze. */
+/**
+ * The composite: a soft disk blur on the frame's mips (less round your reflection and on the waves, which the water
+ * marks in the frame's alpha), washed toward the morning haze.
+ */
 const COMPOSITE_FRAG = /* glsl */ `
 uniform sampler2D tScene;
 uniform vec2 uRes, uFocus, uFocusR;
@@ -135,7 +191,8 @@ varying vec2 vUv;
 void main() {
   vec2 q = (vUv - uFocus) / uFocusR;
   float m = uFocusOn * (1.0 - smoothstep(0.55, 1.0, length(q)));
-  float lod = mix(uLod, uLod * 0.2, m);
+  float wave = 1.0 - texture2D(tScene, vUv).a;
+  float lod = mix(uLod, uLod * 0.2, max(m, wave));
   float r = exp2(lod) * 1.35 / uRes.y;
   vec2 k = vec2(uRes.y / uRes.x, 1.0) * r;
   vec3 c = texture2D(tScene, vUv, lod).rgb * 2.0;
@@ -148,7 +205,7 @@ void main() {
   c += texture2D(tScene, vUv + vec2(0.7, -0.7) * k, lod).rgb;
   c += texture2D(tScene, vUv + vec2(-0.7, -0.7) * k, lod).rgb;
   c /= 10.0;
-  float wash = uWash * (1.0 - 0.75 * m);
+  float wash = uWash * (1.0 - 0.75 * max(m, wave));
   float l = dot(c, vec3(0.299, 0.587, 0.114));
   c = mix(c, mix(vec3(l), uHaze, 0.5) * 1.06 + 0.04, wash);
   gl_FragColor = vec4(c, 1.0);
@@ -187,8 +244,9 @@ function makeGpu() {
   const water = new THREE.ShaderMaterial({
     vertexShader: WATER_VERT, fragmentShader: WATER_FRAG,
     uniforms: {
-      tRefl: { value: refl.texture }, uTex: { value: texMatrix }, uTime: { value: 0 }, uBlur: { value: 2 }, uClarity: { value: 0 },
-      uRip: { value: Array.from({ length: 6 }, () => new THREE.Vector4()) }, uDeep: { value: new THREE.Color(SEA.deep) }, uShallow: { value: new THREE.Color(SEA.shallow) },
+      tRefl: { value: refl.texture }, tReflOld: { value: refl.texture }, uSweepT: { value: -1 }, uTex: { value: texMatrix }, uTime: { value: 0 }, uBlur: { value: 2 }, uClarity: { value: 0 },
+      uWaveT: { value: Array<number>(WAVE_MAX).fill(-1) }, uWaveAt: { value: new THREE.Vector2() }, uWaveDir: { value: new THREE.Vector2(1, 0) },
+      uWaveRun: { value: new THREE.Vector4() }, uDeep: { value: new THREE.Color(SEA.deep) }, uShallow: { value: new THREE.Color(SEA.shallow) },
       uSun: { value: new THREE.Color(SEA.sun) }, uCam: { value: new THREE.Vector3() },
     },
   });
@@ -201,11 +259,13 @@ function makeGpu() {
   post.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), composite));
   const sky = new THREE.ShaderMaterial({ vertexShader: SKY_VERT, fragmentShader: SKY_FRAG, side: THREE.BackSide, depthWrite: false,
     uniforms: { uTop: { value: new THREE.Color("#9fc7d6") }, uHorizon: { value: new THREE.Color("#f4d8ae") }, uSun: { value: new THREE.Color(SEA.sun) } } });
-  return { refl, frame, mirror, texMatrix, clip, water, composite, post, postCam, sky };
+  // The old look's mirror, made the first time a wave sweeps a change in (reflectionPasses.ts).
+  const reflOld = null as THREE.WebGLRenderTarget | null;
+  return { refl, reflOld, frame, mirror, texMatrix, clip, water, composite, post, postCam, sky };
 }
 /** Everything the creator's canvas made, gone with it (the mirror exists only while the creator does). */
 function disposeGpu(gpu: Gpu) {
-  gpu.refl.dispose(); gpu.frame.dispose(); gpu.water.dispose(); gpu.composite.dispose(); gpu.sky.dispose();
+  gpu.refl.dispose(); gpu.reflOld?.dispose(); gpu.frame.dispose(); gpu.water.dispose(); gpu.composite.dispose(); gpu.sky.dispose();
   gpu.post.traverse(o => (o as THREE.Mesh).geometry?.dispose());
 }
 function resizeGpu(gpu: Gpu, w: number, h: number) { gpu.frame.setSize(Math.max(1, Math.round(w)), Math.max(1, Math.round(h))); }
@@ -213,8 +273,8 @@ function resizeGpu(gpu: Gpu, w: number, h: number) { gpu.frame.setSize(Math.max(
 interface Frame {
   gl: THREE.WebGLRenderer; scene: THREE.Scene; camera: THREE.PerspectiveCamera; size: { width: number; height: number }; gpu: Gpu;
   tmp: { a: THREE.Vector3; b: THREE.Vector3; up: THREE.Vector3; head: THREE.Vector3; eye: THREE.Vector3; aim: THREE.Vector3; qa: THREE.Quaternion; qc: THREE.Quaternion };
-  clock: React.RefObject<number>; ripples: React.RefObject<Ripple[]>; view: React.RefObject<{ x: number; y: number; w: number; h: number } | null>;
-  you: THREE.Group | null; bram: THREE.Group | null; boat: THREE.Group | null; water: THREE.Mesh | null; youMotion: CharacterMotion; bramMotion: CharacterMotion;
+  clock: React.RefObject<number>; waves: React.RefObject<number[]>; view: React.RefObject<{ x: number; y: number; w: number; h: number } | null>;
+  you: THREE.Group | null; youNow: THREE.Group | null; youOld: THREE.Group | null; bram: THREE.Group | null; boat: THREE.Group | null; water: THREE.Mesh | null; youMotion: CharacterMotion; bramMotion: CharacterMotion;
 }
 const Y = new THREE.Vector3(0, 1, 0), _m = new THREE.Matrix4();
 /** A camera at `eye` looking at `at` with `up`, turned `roll` about its view axis, as a quaternion. */
@@ -288,12 +348,23 @@ function drawReflection(f: Frame, dt: number) {
   // The mirror: the camera reflected in the sea (y 0), drawing only what is above it (lib/game/arrival/reflectionPasses.ts).
   mirrorCamera(cam, gpu.mirror, gpu.texMatrix);
 
-  // Uniforms: time, ripples, how clear you are, where your face's reflection is on screen.
+  // Uniforms: time, the waves, how clear you are, where your face's reflection is on screen.
   const w = gpu.water.uniforms;
   w.uTime.value = t; w.uClarity.value = clarity; w.uCam.value.copy(cam.position);
   w.uBlur.value = (1 - clarity) * 1.0;
-  const rip = w.uRip.value as THREE.Vector4[], list = f.ripples.current;
-  for (let i = 0; i < rip.length; i++) { const r = list[list.length - 1 - i]; rip[i].set(r?.x ?? 0, r?.z ?? 0, r?.t ?? 0, r ? r.strength : 0); }
+  const starts = w.uWaveT.value as number[], list = f.waves.current, W0 = SET.wave;
+  for (let i = 0; i < WAVE_MAX; i++) starts[i] = list[list.length - 1 - i] ?? -1;
+  // The waves run past where your face's reflection is on the water: where the camera's ray to it crosses the sea.
+  const lean1 = SET.you.lean, fy = SET.you.y + FACE_UP * Math.cos(lean1), cy = cam.position.y, k1 = cy / (cy + fy);
+  w.uWaveAt.value.set(cam.position.x + (SET.you.x - FACE_UP * Math.sin(lean1) - cam.position.x) * k1, cam.position.z + (SET.you.z - cam.position.z) * k1);
+  w.uWaveDir.value.set(Math.cos(W0.heading), Math.sin(W0.heading));
+  w.uWaveRun.value.set(W0.speed, W0.lead, W0.height, W0.exit);
+  // A change being swept in (the old look still there): the latest wave carries it.
+  if (f.youOld && !gpu.reflOld) {
+    gpu.reflOld = new THREE.WebGLRenderTarget(gpu.refl.width, gpu.refl.height, { type: THREE.HalfFloatType, colorSpace: THREE.LinearSRGBColorSpace, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter });
+    w.tReflOld.value = gpu.reflOld.texture;
+  }
+  w.uSweepT.value = f.youOld ? list[list.length - 1] ?? -1 : -1;
   const c = gpu.composite.uniforms;
   c.uLod.value = (1 - clarity) * 5.2;
   c.uWash.value = (1 - clarity) * 0.8;
@@ -304,17 +375,21 @@ function drawReflection(f: Frame, dt: number) {
   c.uFocus.value.set(tmp.head.x * 0.5 + 0.5, tmp.head.y * 0.5 + 0.5);
   c.uFocusR.value.set(0.3 * Math.min(1, H / W), 0.3);
 
-  // The mirror pass and the frame, of the one scene: the you over the side and the you in the water are the same character.
-  renderReflection(gl, scene, f.water, cam, gpu.mirror, gpu, gpu.clip);
+  // The mirror pass and the frame, of the one scene: the you over the side and the you in the water are the same character
+  // (and the old look's too while a wave sweeps a change in).
+  renderReflection(gl, scene, f.water, cam, gpu.mirror, gpu, gpu.clip, { now: f.youNow, old: f.youOld });
   gl.setRenderTarget(null);
   gl.render(gpu.post, gpu.postCam);
 }
 
-export default function ReflectionScene({ look, ripples, clock, view }: {
-  /** The look the scene shows (it lags the panel's while a ripple rewrites it). */
+export default function ReflectionScene({ look, before, waves, clock, view }: {
+  /** The look the water shows behind the latest wave's crest. */
   look: CharacterLook;
-  ripples: React.RefObject<Ripple[]>;
-  /** This canvas's clock (s), shared with the ripples' start times. */
+  /** While a wave sweeps `look` in: the look it replaces, still shown ahead of the crest and over the side. */
+  before: CharacterLook | null;
+  /** When each rolling wave set off (s, `clock`), oldest first. */
+  waves: React.RefObject<number[]>;
+  /** This canvas's clock (s), shared with the waves' start times. */
   clock: React.RefObject<number>;
   /**
    * The part of the canvas the scene shows in once the panels are in (px, from the top left): the creator's framing is
@@ -326,7 +401,7 @@ export default function ReflectionScene({ look, ripples, clock, view }: {
   const { scene: boatGltf } = useGLTF(BOAT.url);
   const boat = useMemo(() => prepareModel(boatGltf, BOAT.url, undefined, "solid"), [boatGltf]);
   useEffect(() => () => disposeModelMaterials(boat), [boat]);
-  const you = useRef<THREE.Group>(null), bram = useRef<THREE.Group>(null), boatGroup = useRef<THREE.Group>(null);
+  const you = useRef<THREE.Group>(null), youNow = useRef<THREE.Group>(null), youOld = useRef<THREE.Group>(null), bram = useRef<THREE.Group>(null), boatGroup = useRef<THREE.Group>(null);
   const youMotion = useRef<CharacterMotion>({ speed: 0, yaw: -Math.PI / 2, lift: 0, pose: "CrouchIdle", play: null });
   const bramMotion = useRef<CharacterMotion>({ speed: 0, yaw: SET.bram.yaw, lift: 0, pose: "Idle", play: null });
 
@@ -338,7 +413,7 @@ export default function ReflectionScene({ look, ripples, clock, view }: {
   const tmp = useMemo(() => ({ a: new THREE.Vector3(), b: new THREE.Vector3(), up: new THREE.Vector3(), head: new THREE.Vector3(), eye: new THREE.Vector3(),
     aim: new THREE.Vector3(), qa: new THREE.Quaternion(), qc: new THREE.Quaternion() }), []);
   // Takes over the canvas's rendering (priority 1): the mirror, the frame, the composite. The thumbnail baker (priority 0) reads back before it.
-  useFrame((_, raw) => drawReflection({ gl, scene, camera: camera as THREE.PerspectiveCamera, size, gpu, tmp, clock, ripples, view, you: you.current, bram: bram.current,
+  useFrame((_, raw) => drawReflection({ gl, scene, camera: camera as THREE.PerspectiveCamera, size, gpu, tmp, clock, waves, view, you: you.current, youNow: youNow.current, youOld: youOld.current, bram: bram.current,
     boat: boatGroup.current, water: waterMesh.current, youMotion: youMotion.current, bramMotion: bramMotion.current }, Math.min(raw, 0.1)), 1);
 
   return <>
@@ -351,7 +426,10 @@ export default function ReflectionScene({ look, ripples, clock, view }: {
     <mesh ref={waterMesh} material={gpu.water} rotation-x={-Math.PI / 2}><planeGeometry args={[160, 160, 1, 1]} /></mesh>
     <group ref={boatGroup}><primitive object={boat} scale={BOAT.scale} /></group>
     <group ref={bram}><Suspense fallback={null}><Character look={BRAM_LOOK} motion={bramMotion} lod={false} faceSize={1024} /></Suspense></group>
-    <group ref={you}><Suspense fallback={null}><Character look={look} motion={youMotion} lod={false} faceSize={1024} /></Suspense></group>
+    <group ref={you}>
+      <group ref={youNow}><Suspense fallback={null}><Character look={look} motion={youMotion} lod={false} faceSize={1024} /></Suspense></group>
+      {before && <group ref={youOld}><Suspense fallback={null}><Character look={before} motion={youMotion} lod={false} faceSize={1024} /></Suspense></group>}
+    </group>
     <ThumbBaker />
   </>;
 }

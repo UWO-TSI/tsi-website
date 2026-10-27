@@ -20,7 +20,8 @@ with no other step. For each item:
   2. place     the shared transform above, after the provisional fit (hats over the hair: HAIR_OVER, over_hair); flat
                paper items (the tie, the bow tie) bend onto the chest they lie on; an entry's override.scale scales the
                mesh before the fit (David, 2026-10-17: the hats bigger, covering the hair)
-  3. detail    within the per-asset budget (budget.ts `accessory`, FULL_MAX): an edge collapse that keeps the UV seams,
+  3. detail    within the per-asset budget (budget.ts `accessory`, FULL_MAX): an edge collapse that keeps the UV seams
+               (an entry's `piece_budget`: the big piece and the small ones collapsed apart, decimate_pieces),
                then welded and smooth-shaded (kit.weld_normals); LOD 1 is build_lod.py's
   4. colour    its texture, cropped to what the mesh samples, into its tile of the fixed-colour atlas (colour_atlas.py);
                the UVs move there with u + 2, which the body shader draws as the texel itself (never tinted)
@@ -387,6 +388,41 @@ def decimate(ob, max_tris, recalc=False):
     return kit.ntris(ob)
 
 
+def decimate_pieces(ob, spec, recalc=False):
+    """An item of one big piece and many small ones (#11's ring and its chain's 40 links): collapsing the whole mesh to its
+    cap shreds the ring and eats the links (129 triangles of a torn ring). The biggest piece keeps spec["main"] triangles
+    alone, and the rest, thinned to every spec["keep_every"]th piece by distance from the big one (a chain of fewer links),
+    share spec["rest"], each group collapsed on its own and then joined back into `ob`. Returns the triangle count."""
+    parts = sorted(pieces(ob, gap=0.0), key=len, reverse=True)
+    co = np.array([v.co[:] for v in ob.data.vertices])
+    c0 = co[parts[0]].mean(0)
+    rest = sorted(parts[1:], key=lambda idx: np.linalg.norm(co[idx].mean(0) - c0))[::spec.get("keep_every", 1)]
+    outs = []
+    for idx, budget in ((parts[0], spec["main"]), (np.concatenate(rest), spec["rest"])):
+        keep = set(int(i) for i in idx)
+        cp = ob.copy()
+        cp.data = ob.data.copy()
+        bpy.context.collection.objects.link(cp)
+        bm = bmesh.new()
+        bm.from_mesh(cp.data)
+        bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.verts[0].index not in keep], context="FACES")
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+        bm.to_mesh(cp.data)
+        bm.free()
+        decimate(cp, budget, recalc)
+        outs.append(cp)
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in outs:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = outs[0]
+    bpy.ops.object.join()
+    old = ob.data
+    ob.data = outs[0].data
+    bpy.data.objects.remove(outs[0], do_unlink=True)
+    bpy.data.meshes.remove(old)
+    return kit.ntris(ob)
+
+
 # ================================================================ 5. export
 def finish(ob, rig, e):
     me = ob.data
@@ -500,7 +536,8 @@ def main():
             bend_onto_chest(ob)
         if e["provisional"] and e["fit"] in ("top", "ears"):
             over_hair(ob)
-        tris = decimate(ob, full_cap(e), recalc=bool(e.get("recalc_normals")))
+        tris = (decimate_pieces(ob, e["piece_budget"], recalc=bool(e.get("recalc_normals"))) if e.get("piece_budget")
+                else decimate(ob, full_cap(e), recalc=bool(e.get("recalc_normals"))))
         co = np.array([v.co[:] for v in ob.data.vertices])
         e_box = (np.round(co.min(0), 3).tolist(), np.round(co.max(0), 3).tolist())
         if RENDER:

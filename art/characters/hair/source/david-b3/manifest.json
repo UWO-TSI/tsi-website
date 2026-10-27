@@ -40,7 +40,9 @@
    "file": "33-Black-Gojo-Anime-Resting-Messy-Hair-17379327411.glb",
    "id": "hair_tousled_spikes",
    "name": "Tousled spikes",
-   "key": "hair-37"
+   "key": "hair-37",
+   "removed": true,
+   "removed_why": "David, 2026-10-27 (lane wardrobe-b3): removed from the catalogue, creator and shop; it keeps its atlas cell, key hair-37 stays unused. His source GLB stays."
   },
   {
    "file": "34-UA-Rolled-Up-Ski-Mask-w-Messy-Dreads-119266145525998.glb",

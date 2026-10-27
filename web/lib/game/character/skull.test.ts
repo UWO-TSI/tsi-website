@@ -61,7 +61,7 @@ describe("the shared skull", () => {
     const data = JSON.parse(readFileSync(join(web, "../art/characters/hair/roblox_attachments.json"), "utf8")) as {
       hairs: { id: string; asset_id: number; position: number[]; orientation: number[]; mesh_scale: number[]; provisional: boolean }[] };
     const roblox = PARTS.filter(p => p.roblox && p.full);
-    expect(roblox.length).toBe(33);   // 21 less #14 (round 3), wardrobe batch 2's five, less #8, #9 and #24 (the hair shelf); batch 3's 15 less #29, #31, #36 and #38
+    expect(roblox.length).toBe(32);   // 21 less #14 (round 3), wardrobe batch 2's five, less #8, #9 and #24 (the hair shelf); batch 3's 15 less #29, #31, #33, #36 and #38
     const byId = new Map(data.hairs.map(h => [h.id, h]));
     for (const p of roblox) {
       const h = byId.get(p.id);
