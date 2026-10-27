@@ -30,6 +30,14 @@ David, 2026-10-27, verbatim: "I want you to do artifat for all foraging model re
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new` (the roster and seed tests), tsc, eslint, the headless page check. Message "main" when the folder is ready to publish (path, file list, size, what you checked), then stop.
 
+## Round 2 (David, 2026-10-27 evening)
+
+David, verbatim: "you need to redo the legendary i shouldnt see any legendary yet and then ill give it a pass". With the fish-tier rules ("epic is considered like the current legendary"; see `specs/launch/v1-gameplay.md`, "Fish tiers and fights"), this means:
+1. Merge `cb7bed43` from game/rod-gear: the seven-tier rarity ladder in `web/lib/rarity.ts`, with Divine.
+2. **Re-tier the roster:** every species that is legendary today becomes epic (fish and every other category), so the page shows no legendary at all. Update the tests, the rare-catch drops and anything else that keys on "legendary": the rod-tier rule for legendaries now applies to epic too, which keeps today's gate unchanged. Keep saved collections valid.
+3. The page's rarity picker offers all six player tiers (common to Divine; Contraband stays out of the picker).
+4. Rebuild `dist/`, pass check.mjs, commit, and message the coordinator to publish. Lane fish-tiers will merge this branch for the re-tier instead of doing it again.
+
 ## Status
 
 Head: see `git log -1` on game/catalogue-editor (the lane file commit after 0c9c9495). Ready to publish; reported to main.
