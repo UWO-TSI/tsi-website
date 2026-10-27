@@ -2444,7 +2444,7 @@
    "slot": "back",
    "name": "Tousled spikes",
    "glb": "hair/full/hair_tousled_spikes.glb",
-   "tris": 4104,
+   "tris": 4161,
    "materials": [
     {
      "name": "M_Hair",
