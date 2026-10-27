@@ -2444,7 +2444,7 @@
    "slot": "back",
    "name": "Long windswept",
    "glb": "hair/full/hair_long_windswept.glb",
-   "tris": 3847,
+   "tris": 3851,
    "materials": [
     {
      "name": "M_Hair",
