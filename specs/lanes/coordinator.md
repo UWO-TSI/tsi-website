@@ -25,6 +25,18 @@ All in `~/.claude/jobs/62203045/tmp/`, which survives reboots.
 - `prod-dump.sh <label>`, `prod-query.sh <sql>` and `verify.sql` are for prod migrations. The procedure is in `STATE.md` and the memory files.
 - `withlock.sh heavy|blender|devserver <cmd>` (set `LANE=game/<lane>`): takes a lock, waiting while swap is high and another lock is held. It lives in `~/.claude/jobs/62203045/tmp/`, the same folder as the helpers above, and is referenced from `specs/lane-rules.md`.
 
+## David's production notes (2026-10-26 night) and the six lanes
+
+David played production from another computer and sent eight notes (verbatim in each lane file). Lanes cut from 1d9a951e, all `uwotsi-lane`:
+- `net-identity`: everyone shows as "Islander" in the default look. Prod has 0 rows in `member_identity` (329 profiles, 40 with a saved look), so no world name has ever saved. Launch blocker.
+- `collision`: falling off the wharf deck near its ledge; hitboxes that don't match objects and buildings. The wharf fix ships first.
+- `reflection-waves`: the arrival's reflection creator: a foam wave rolling past instead of the ripple, small natural waves, no colour wheel there, "That's me" instead of "Yes". Review before merge.
+- `grass-wind`: longer blades, wind travelling in waves, colour from the ground; new world only, no extra triangles. Review before merge.
+- `loading`: measure, preload from the title page, cutscenes preloaded and smooth, lag spikes, then a new loading screen (review).
+- `clothing-v2`: universal garment models that fit, designs as paint; round 1 the starter set. Review before merge.
+
+Hair shelf page (David picks free vs coins vs Gems per hairstyle): https://claude.ai/artifact/EyLDXZLTsdRVTYZeABzy3h, collection `hairs` (doc per hair id, `{mode}`), note in `notes/david`. Today 20 free, 5 priced (`specs/wardrobe/batch2-pricing.json`). Apply his picks there and in the catalogue keys when he's done.
+
 ## Production flipped to the new world (2026-10-26 evening, David's request)
 
 David asked for the current version on play.tethos.ca so he could test multiplayer from another computer ("nobody playing rn so its fine"). Set in Vercel Production:
