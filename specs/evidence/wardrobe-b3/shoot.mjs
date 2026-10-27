@@ -44,6 +44,10 @@ for (const scene of SCENES) {
     const [, name, list] = scene.split(":");
     await shot(name, `sheet=roblox&framing=hat&skin=3&${V4}&cols=4&ids=${list}`, [1400, 300 + 380 * list.split(",").length]);
   }
+  if (scene.startsWith("acc:")) {          // acc:<name>:<key,key,...>: face accessories by key, front, 3/4, side and back
+    const [, name, list] = scene.split(":");
+    await shot(name, `sheet=b2acc&groups=face&framing=head&skin=3&views=front,34,side&cols=3&keys=${list}`, [1050, 700]);
+  }
   if (scene === "faces") {
     const keys = Array.from({ length: 7 }, (_, i) => `face-${26 + i}`);
     await shot("faces-1", `sheet=b2faces&framing=head&skins=3&${V4}&cols=4&keys=${keys.slice(0, 4).join(",")}`, [1400, 1450]);

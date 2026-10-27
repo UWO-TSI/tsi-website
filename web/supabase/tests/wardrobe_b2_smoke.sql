@@ -41,7 +41,7 @@ BEGIN
   ASSERT (SELECT display_name FROM shop_items WHERE slug = 'wear-acc-ushanka-goggles') = 'Ushanka and goggles', '#22 named for its hat';
   ASSERT NOT (SELECT active FROM shop_items WHERE slug = 'net-basic') AND NOT (SELECT active FROM shop_items WHERE slug = 'shovel-basic'), 'the tier-1 net and shovel stay retired';
   ASSERT NOT EXISTS (SELECT 1 FROM shop_items WHERE slug LIKE '%visor-blue%' OR slug LIKE '%sci-fi%'), 'the sci-fi visor skipped';
-  ASSERT NOT EXISTS (SELECT 1 FROM shop_items WHERE position BETWEEN 600 AND 799 AND special_pool <> (price_coins IS NOT NULL)), 'specials: coin rows only';
+  ASSERT NOT EXISTS (SELECT 1 FROM shop_items WHERE position BETWEEN 600 AND 799 AND slug <> 'wear-hair-wavy-half-up' AND special_pool <> (price_coins IS NOT NULL AND category = 'accessory')), 'specials: coin accessories only (a hairstyle or face has no plinth model)';
   -- Every row has its icon; earlier rows did not move.
   ASSERT NOT EXISTS (SELECT 1 FROM shop_items WHERE position BETWEEN 600 AND 799 AND sprite_url NOT LIKE '/assets/icons/%'), 'icons set';
   ASSERT (SELECT position FROM shop_items WHERE slug = 'wear-acc-visor') = 232 AND (SELECT position FROM shop_items WHERE slug = 'dye-wheat-blonde') = 233, 'earlier rows in place';

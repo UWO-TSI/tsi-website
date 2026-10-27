@@ -173,7 +173,7 @@ describe("wardrobe batch 2 (David's modes and prices, specs/wardrobe/batch2-pric
       const rows = rowOf(ref);
       if (mode === "free") { expect(rows, key).toHaveLength(0); continue; }
       expect(rows, key).toHaveLength(1);
-      expect(rows[0], key).toMatchObject({ category, active: true, price_coins: mode === "coins" ? price : null, price_gems: mode === "gems" ? price : null, special_pool: mode === "coins", sprite_url: expect.stringMatching(/^\/assets\/icons\/.+\.webp$/) });
+      expect(rows[0], key).toMatchObject({ category, active: true, price_coins: mode === "coins" ? price : null, price_gems: mode === "gems" ? price : null, special_pool: mode === "coins" && category === "accessory",   /* a hairstyle or face is never a daily special */ sprite_url: expect.stringMatching(/^\/assets\/icons\/.+\.webp$/) });
     }
     expect(WARDROBE_B2_ITEMS).toHaveLength(priced.filter((x) => BATCH2_PRICES[x.key].mode !== "free").length);
     expect(WARDROBE_B2_ITEMS.filter((r) => r.price_gems !== null)).toHaveLength(Object.values(BATCH2_PRICES).filter((x) => x.mode === "gems").length);

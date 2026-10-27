@@ -199,9 +199,9 @@ describe("seeded hashes stay identical across callers", () => {
     // coin hairstyles; wardrobe batch 3 priced, 2026-10-27: three coin hairs, two coin faces, one coin accessory), so the day's shuffle moved
     expect(dailySpecials(seedItems(), "2026-09-26").map((i) => i.slug)).toMatchInlineSnapshot(`
       [
-        "furn-fence-country-a",
-        "furn-bookshelf",
-        "furn-home-bed",
+        "wear-bottom-long-skirt",
+        "wear-acc-monkey-ears",
+        "wear-acc-shoulder-bag",
       ]
     `);
     expect(itemOrder("x").slice(0, 8)).toMatchInlineSnapshot(`
