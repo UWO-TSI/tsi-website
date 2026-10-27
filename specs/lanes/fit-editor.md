@@ -49,6 +49,15 @@ Rebuild `dist/`, pass check.mjs in the emulated frame, commit, and message the c
 
 ## Status
 
+**Round 3 built (2026-10-27): eyes and mouth size.** Code at f349c007; this lane-file commit is the head.
+- Runtime: a face's `fit` doc gains `eyesSize` and `mouthSize` (a scale about the part's anchor, missing = 1). look.ts `Fit` and `faceLift` (now also returns both sizes); face.ts `slot(..., size)` scales the cell's rect about its (already lifted and spread) anchor, and `placed`/`placedTogether(..., fitSize)` multiply the creator's size slider on top, so sliders and their clamp start from the sized part. Both eyes (mirrored, eye_left pairs, one-piece eye_pair) take the eyes size; every frame, blink and talk mouth scales with them.
+- apply-fit.mjs: the face keys gain `eyesSize`, `mouthSize`, each 0.5 to 1.6 (outside refuses the export), a value of 1 dropped like a 0. Older docs read as before.
+- Tests: face.test (over every face, in neutral, happy and the closed blink, after lifts and spacing: each size scales its slots' rects about the pivot by exactly the value, src unchanged, the other part untouched; the creator's mouth size slider multiplies by exactly the fit size; other faces unchanged), apply-fit.test (the new fields, 1 dropped, limits, wrong kind refused).
+- Editor: Eyes size and Mouth size rows (slider 50% to 160% in 2% steps, − and + buttons, a reset to 100%), shown as a percentage; Mouth size is off for a face without a mouth; Reset all sets sizes to 1; the "set" badge ignores sizes of 1. A face doc saves `{ eyes, eyesApart, eyesSize, mouth, mouthSize }`.
+- check.mjs PASS (frame CSP, sandboxed second origin, stand-in db, storage refused): plus a size burst (5 eyes up, 2 mouth down) saves once as `eyesSize 1.1, mouthSize 0.96`, shows 110%, redraws the Front view; a size reset saves 1; a face's Reset all saves zeros and sizes of 1.
+- Gates: web tsc clean; Editor.tsx tsc clean; eslint clean on the changed web files; vitest 3477 passed with and without `NEXT_PUBLIC_GAME_WORLD=new`. dist: 236 files, 29.7 MB; only `editor.js` changed (1.42 MB).
+- Not verified: the real claude.ai frame and db (emulated as before).
+
 **Round 2 built (2026-10-27).** David also asked, via the coordinator: "for the hair fit, also provide x and z shifts, also make the viewer draggable so i can seea ll agnes".
 - Runtime: the catalogue's `fit` is `{ x, y, z }` (metres along the head's own axes: x its left, which is screen right in the front view; y up; z forward) for a hairstyle or accessory, and `{ eyes, mouth, eyesApart }` (face canvas units: up, up, and each eye away from the centre line) for a whole face. Every missing value is 0. look.ts `Fit`, `ResolvedPart.fit` (a triple, in `bodyKey`), and `faceLift` (now also returns `eyesApart`); rig.ts `adoptPrimitive`/piece `fit` (the old `lift`, replaced) adds the triple to the bind-space positions; face.ts `moved` (the old `raised`, replaced) shifts an anchor up and away from u = 0.5 on its own side, so mirrored eyes and eye_left pairs spread symmetrically, and eye_pair and the mouth have no apart.
 - Tests: rig.test (every head piece binds the head with all three axes on the bind axes; real GLBs move exactly each axis's value along the head's own axis, at rest and with the head turned on all three axes; resolves from the catalogue), face.test (eyesApart over every face and three poses, the closed blink among them: both eyes move by exactly the value, outward, height and mouth unchanged; one-cell pairs unchanged), apply-fit.test (the new fields, round 1 `{y}` docs still read, limits on each).
@@ -78,7 +87,7 @@ Items listed: hairstyles (catalogue hair, slot `back`), whole faces (`FACE.faces
 
 ## Next
 
-0. Round 2 is waiting for the coordinator to publish it (report sent with the head SHA). After that, David sets values and the coordinator runs apply-fit.
+0. Round 3 is waiting for the coordinator to publish it (only `dist/editor.js` changed). After that, David sets values and the coordinator runs apply-fit.
 
 1. When the coordinator says wardrobe-b3 landed: merge main, `node specs/tools/fit-editor/build.mjs`, take the browser lock, `node specs/tools/fit-editor/check.mjs`, report the new size. The list reads the catalogue and `FACE.faces`, so new items need no code.
 2. After David sets values: the coordinator exports the db and runs `node web/scripts/apply-fit.mjs <export.json>` from `web/`.
