@@ -15,7 +15,7 @@
  * Schedules: per phase, one anchor or a routine of stops (map anchors, `bench`,
  * `home`); `home` names the building they live in (lib/game/residentRoutine.ts).
  * Nights (principle 2, the village never empties): three stay out where it's lit
- * (Wren on the HQ porch and the lamp bench, Bram at the wharf lanterns, Nell on
+ * (Alice on the HQ porch and the lamp bench, Bram at the wharf lanterns, Nell on
  * the lamp bench and the beach); the rest linger a stop or two and go in at
  * different times, so the village thins out rather than emptying at once.
  *
@@ -47,7 +47,7 @@ export const RESIDENT_LOOKS: Record<string, Look> = {
   "wharf-keeper": look({ skin: 6, hair: 9, extras: ["freckles"], back: "hair_swept_fringe", top: "top_stripe_ls", bottom: "bottom_trousers", shoes: "shoes_rainboots",
     acc: { head: "acc_cap" }, colors: { top_stripe_ls: 11, bottom_trousers: 12, shoes_rainboots: 6, acc_cap: 12 } }),
   // Oracle keeper: quiet, speaks in riddles. A lavender kimono, long dark hair, sandals.
-  "oracle-keeper": look({ skin: 10, hair: 0, eyes: "half_lid", back: "hair_long_scruffy", onepiece: "outfit_koi_kimono", shoes: "shoes_sandals",
+  "oracle-keeper": look({ skin: 9, hair: 0, eyes: "half_lid", back: "hair_long_scruffy", onepiece: "outfit_koi_kimono", shoes: "shoes_sandals",
     acc: { neck: "acc_shell_necklace" }, colors: { outfit_koi_kimono: 13 } }),
   // Workshop crafter: a tinkerer with a cap on backwards. Wood-brown overalls over a cream tee, backpack of tools.
   crafter: look({ skin: 4, hair: 7, extras: ["blush"], back: "hair_anime_spikes", top: "top_tee", bottom: "bottom_overall_shorts", shoes: "shoes_boots",
@@ -133,7 +133,7 @@ const row = (r: Pick<NPCPersona, "slug" | "display_name" | "post" | "bio" | "ton
  * the rest are new. Schedules use the map's anchors (plaza, path, hq, shop, cafe, oracle, museum, pond, beach, wharf).
  */
 export const PROPOSED_RESIDENTS: NPCPersona[] = [
-  row({ slug: "wren", display_name: "Wren", post: "hq_lead", tone: "warm",
+  row({ slug: "wren", display_name: "Alice", post: "hq_lead", tone: "warm",
     bio: "Keeps HQ running, more or less: club goals, the notice board, everyone's first day. Meets every new member on the wharf.",
     schedule: { home: "hq", dawn: ["hq"], day: ["hq", "plaza", "path", "hq", "pond"], evening: ["plaza", "bench"], night: ["hq", "bench", "hq"] },
     canned_dialogue: [

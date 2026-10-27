@@ -1,0 +1,71 @@
+{
+  "at": "2026-10-27T09:24:58.520Z",
+  "preview": "play.tethos.ca",
+  "results": [
+    {
+      "step": "wardrobe: D starts with no world name (shown as Islander)",
+      "ok": true,
+      "detail": "A sees: null"
+    },
+    {
+      "step": "wardrobe: A waits by the shop's door",
+      "ok": true,
+      "detail": "{\"x\":32.70971958912558,\"z\":59.84578720818129}"
+    },
+    {
+      "step": "wardrobe: B enters the shop (Enter the shop)",
+      "ok": true,
+      "detail": "Enter the shop {\"x\":32.42675494338061,\"z\":62.63625705891955}"
+    },
+    {
+      "step": "wardrobe: B at a changing room (Try on outfits)",
+      "ok": true,
+      "detail": "Try on outfits at {\"x\":-5.18417125527527,\"z\":3.2577646250095507}"
+    },
+    {
+      "step": "wardrobe: the fitting room opens with the name field",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "wardrobe: B picks a new name, hairstyle and hair colour",
+      "ok": true,
+      "detail": "Probe Rowan (free: true) | Short with tufts | hair colour 2"
+    },
+    {
+      "step": "wardrobe: Wear this saves B's look and new name",
+      "ok": true,
+      "detail": "Probe Rowan; {\"skin\":4,\"hair\":1,\"back\":\"hair_short_tufts\",\"bangs\":\"\"}"
+    },
+    {
+      "step": "wardrobe: B leaves the shop (Return to the island)",
+      "ok": true,
+      "detail": "Return to the island"
+    },
+    {
+      "step": "wardrobe: A sees B's new name and hair within about 15 s of B stepping out, no rejoin on A's side",
+      "ok": true,
+      "detail": "10.6 s after B stepped out, 21.6 s after the save; A's sockets 1"
+    },
+    {
+      "step": "wardrobe: B's tag on A's screen reads the new name",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "identity: C, joining later, sees A's name and look at join",
+      "ok": true,
+      "detail": "27.6 s after C's island loaded"
+    },
+    {
+      "step": "identity: C, joining later, sees B's new name and look at join",
+      "ok": true,
+      "detail": "27.6 s after"
+    },
+    {
+      "step": "identity: both tags on C's screen",
+      "ok": true,
+      "detail": "Probe Alder: true, Probe Rowan: true"
+    }
+  ]
+}

@@ -2,6 +2,8 @@
  * Our own village props (game/remodel-props; art/props/build_*.py), replacing the ACNH dump's (specs/asset-audit). Each
  * is authored in game units and drawn at scale 1 unless its note says otherwise.
  */
+import { worldModel } from "./world/active";
+
 const P = "/assets/game/props/";
 
 /** The beach campfire's stack: stone ring, log teepee, ember bed (components/game/campfire/Campfire.tsx). */
@@ -13,18 +15,20 @@ export const STREETLAMP_URL = `${P}streetlamp.glb`;
 /**
  * The new world's lamps (art/props/build_new_lamps.py), each with its light point in the model (its arm reaches +x):
  * draw them with AmbientProps Lanterns' `lamp` (and `yaws` to turn the arms). The street lamp keeps the old one's top.
+ * `post`: the half side of the square its post fills at body height round its foot, solid to the walker
+ * (lib/game/defaultIsland.ts); the hand lantern's is 0 (a small thing at your feet, not in the way).
  */
 export const NEW_LAMPS = {
-  village: { url: `${P}village-lamp.glb`, light: [0.52, 2.08, 0] },
-  wharf: { url: `${P}lantern-post.glb`, light: [0.56, 1.78, 0] },
+  village: { url: `${P}village-lamp.glb`, light: [0.52, 2.08, 0], post: 0.08 },
+  wharf: { url: `${P}lantern-post.glb`, light: [0.56, 1.78, 0], post: 0.15 },
   /** The campfire's lantern on a crooked branch (art/props/build_campfire_set.py). */
-  camp: { url: `${P}camp-lantern.glb`, light: [0.3, 1.18, 0] },
+  camp: { url: `${P}camp-lantern.glb`, light: [0.3, 1.18, 0], post: 0.08 },
   // game/village-art (art/props/build_path_lamps.py): the path's lamps, one iron lantern on a timber post with an angled
   // brace, or on a crooked branch post on a stone plinth; and the hand lantern alone, standing on its foot (to hang it
   // from a hook, its foot HAND_LANTERN_RING under the hook).
-  woodPost: { url: `${P}wood-post-lamp.glb`, light: [0.8, 1.886, 0] },
-  branchPost: { url: `${P}branch-post-lamp.glb`, light: [0.5, 1.731, 0] },
-  hand: { url: `${P}hand-lantern.glb`, light: [0, 0.143, 0] },
+  woodPost: { url: `${P}wood-post-lamp.glb`, light: [0.8, 1.886, 0], post: 0.14 },
+  branchPost: { url: `${P}branch-post-lamp.glb`, light: [0.5, 1.731, 0], post: 0.18 },
+  hand: { url: `${P}hand-lantern.glb`, light: [0, 0.143, 0], post: 0 },
 } as const;
 /** The hand lantern's ring top over its foot. */
 export const HAND_LANTERN_RING = 0.542;
@@ -87,7 +91,8 @@ export const SUSHI_BAR_GETA_URL = "/assets/game/buildings/sushi-bar-geta.glb";
 export const SUSHI_KNIFE_URL = "/assets/game/tools/sushi-knife.glb";
 /** The `prop` kind's scenery outside the dump's props folder, by model name (terrain v3: the market, the beach, the lighthouse). */
 export const SCENERY_URLS: Readonly<Record<string, string>> = {
-  barrel: "/assets/acnh/furniture/barrel.glb", lighthouse: "/assets/acnh/furniture/lighthouse.glb", crate: CRATE_URL,
+  // game/remodel (art/remodel/build_market.py, build_lighthouse.py): ours in the dump pieces' frames (the map's scales hold); the barrel is being redone.
+  barrel: "/assets/acnh/furniture/barrel.glb", lighthouse: `${P}lighthouse.glb`, "market-cart": `${P}market-cart.glb`, crate: CRATE_URL,
   "shop-cart": SHOP_CART_URL, "beach-parasol": BEACH_PARASOL_URL, "palm-a": "/assets/acnh/plants/tree-palm-a.glb", "palm-b": "/assets/acnh/plants/tree-palm-b.glb",
   // The new world's wharf kit (art/wharf/build_wharf_kit.py, game units at scale 1; the deck's top at y 0, the sea 1.08 under):
   // a `deck` square and its "steps" (4 x 4, local +z inland), a pile to stand just outside the deck's edge, a ladder off
@@ -184,7 +189,7 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // at y 0, not solid, one P_Paint each so they merge: a sea star 0.34 across, a sand dollar 0.22, a conch 0.34 along z.
   ...Object.fromEntries(["starfish", "sand-dollar", "conch"].map(m => [m, `${P}${m}.glb`])),
 };
-export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? `/assets/acnh/props/${model}.glb`;
+export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? SCENERY_URLS[model] ?? worldModel(`/assets/acnh/props/${model}.glb`);
 
 /**
  * Interior pieces (interiorShared Piece, by the dump's furniture name) now drawn from our own model. Each is authored at

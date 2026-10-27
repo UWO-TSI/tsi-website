@@ -14,6 +14,7 @@ import { sceneryOf } from "@/components/game/NatureModels";
 import { InstancedModels } from "@/components/game/InstancedNature";
 import Residents from "@/components/game/NPC";
 import TitleVillage from "./TitleVillage";
+import { preloadGame } from "./preloadGame";
 import { stagedShot, type Shot } from "./shots";
 import { shippedVillage, objectsOf } from "@/lib/game/villageMap";
 import { villageIsland, villageScale } from "@/lib/game/defaultIsland";
@@ -122,7 +123,7 @@ function Scene() {
   );
 }
 
-/** The live backdrop. `onReady` fires after the first frames have drawn, so the page can fade it in. */
+/** The live backdrop. `onReady` fires after the first frames have drawn, so the page can fade it in; then the game prefetches. */
 // 0.65 (was 0.4): the cinematic pass needs the quilt, the tufts and the sky's
 // clouds to survive the downsample; the finish still reads as crisp pixels.
 const PIXEL_SCALE = 0.65;
@@ -151,6 +152,7 @@ function Ready({ onReady }: { onReady?: () => void }) {
     if (done.current || ++frames.current < 20) return;
     done.current = true;
     onReady?.();
+    preloadGame(); // the title has drawn: the island's files load behind it
   });
   useEffect(() => () => { done.current = true; }, []);
   return null;

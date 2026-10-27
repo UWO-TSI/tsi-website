@@ -46,7 +46,7 @@ David, 2026-10-22. Ledger row 317. The plan is `specs/v1-drop.md`; this is the r
 | 6 | Oct 24–25 | The perf bench on merged main in a quiet window: fix the village regression, then refresh the baseline | perf lane, David (quiet window) |
 | 7 | Oct 25 | Halloween on the Preview: pumpkins, door knocks, fog nights, the costume closet | launch lane |
 | 8 | Oct 25–26 | MacBook Air: play the Preview and bench it | David, coordinator |
-| 9 | Oct 26–27 | David and one friend play the Preview for about 15 minutes from fresh accounts. Collect David's lines (Bram, Wren, the doors) and the plaque text | David |
+| 9 | Oct 26–27 | David and one friend play the Preview for about 15 minutes from fresh accounts. Collect David's lines (Bram, Alice, the doors) and the plaque text | David |
 | 10 | Oct 28–30 | Fix only what the play-through and the tests find. Runbook section 0: tests, smoke, backup | lanes, coordinator |
 | 11 | Oct 31 | Open the member world, redeploy, run smoke flows 3 to 5 live, watch Fly and Supabase | coordinator |
 

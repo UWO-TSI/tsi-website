@@ -1,0 +1,24 @@
+| Scene | Tier | Median frame ms | p95 ms | Frame CPU ms | Draw calls | Triangles | Runs | Spread | Load |
+| village | high | 7.10 (3.90, +82.1%) | 9.70 (4.90, +98.0%) | 5.60 (3.40, +64.7%) | 421 (382, +10.2%) | 1368043 (537560, +154.5%) | 5 | 4% | 5.4 |
+| v2 | high | 7.30 (5.40, +35.2%) | 9.90 (6.80, +45.6%) | 5.70 (5.00, +14.0%) | 422 (254, +66.1%) | 1367903 (912237, +50.0%) | 5 | 8% | 5.1 |
+| village | lite | 3.80 (2.30, +65.2%) | 6.10 (3.40, +79.4%) | 3.50 (2.00, +75.0%) | 353 (288, +22.6%) | 1159734 (353865, +227.7%) | 5 | 26% | 4.9 |
+| v2 | lite | 4.00 (3.00, +33.3%) | 6.20 (3.70, +67.6%) | 3.70 (2.80, +32.1%) | 354 (172, +105.8%) | 1157770 (629051, +84.1%) | 5 | 15% | 4.7 |
+perf:check FAILED
+- village|high: median frame 7.1 ms, +82.1% on the baseline's 3.9
+- village|high: 421 draw calls, +10.2% on the baseline's 382
+- village|high: frameMs 7.1 over the budget's 6 (web/lib/game/perf/budget.ts)
+- village|high: cpuMs 5.6 over the budget's 5 (web/lib/game/perf/budget.ts)
+- village|high: triangles 1368043 over the budget's 620000 (web/lib/game/perf/budget.ts)
+- v2|high: median frame 7.3 ms, +35.2% on the baseline's 5.4
+- v2|high: 422 draw calls, +66.1% on the baseline's 254
+- v2|high: frameMs 7.3 over the budget's 6.5 (web/lib/game/perf/budget.ts)
+- v2|high: triangles 1367903 over the budget's 1200000 (web/lib/game/perf/budget.ts)
+- village|lite: median frame 3.8 ms, +65.2% on the baseline's 2.3
+- village|lite: 353 draw calls, +22.6% on the baseline's 288
+- village|lite: triangles 1159734 over the budget's 420000 (web/lib/game/perf/budget.ts)
+- v2|lite: median frame 4 ms, +33.3% on the baseline's 3
+- v2|lite: 354 draw calls, +105.8% on the baseline's 172
+- v2|lite: cpuMs 3.7 over the budget's 3.5 (web/lib/game/perf/budget.ts)
+- v2|lite: triangles 1157770 over the budget's 950000 (web/lib/game/perf/budget.ts)
+
+Run with NEXT_PUBLIC_GAME_WORLD=new, so both scenes are the new world (the village scene too). The baseline (8809c517, 2026-10-14) predates terrain v3; this lane only lowers triangles per model (notes.md) and adds a draw or two to a few models (barrel 2 materials, lighthouse 5, flyers 2, rope fence 2).

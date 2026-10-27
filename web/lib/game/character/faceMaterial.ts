@@ -45,10 +45,28 @@ vec4 faceLayer(vec2 p, vec4 src, vec4 dst, vec4 pz, vec4 tint, float mode, float
 }
 `;
 
+/**
+ * Round 3 (David, 2026-10-27: "the eyes dissapear if skin is too dark"): on a dark skin each eye (the slots before the
+ * mouth) sits on a soft glow of the same skin lit up (`lift` times as bright, a touch of cream), its own shape grown by
+ * `radius` of the face and fading out across it, so a dark eye reads; it fades out by mid tan (`from`, `to`: the skin's
+ * linear luminance), so the lighter skins draw every face exactly as before. The skin is the material's colour.
+ */
+const EYE_RIM = { radius: 0.012, lift: 3.2, from: 0.03, to: 0.2 };
 const FACE_DRAW = /* glsl */ `
 {
   vec3 faceCol = diffuseColor.rgb;
+  float dark = 1.0 - smoothstep(${EYE_RIM.from}, ${EYE_RIM.to}, dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722)));
+  vec3 rimCol = mix(min(diffuseColor.rgb * ${EYE_RIM.lift}, vec3(1.0)), vec3(0.92, 0.78, 0.64), 0.15);
   for (int i = 0; i < ${N}; i++) {
+    if (dark > 0.0 && (i == ${N - 3} || i == ${N - 2})) {
+      float rim = 0.0;
+      for (int k = 0; k < 8; k++) {
+        vec2 o = ${EYE_RIM.radius} * vec2(cos(float(k) * 0.7854), sin(float(k) * 0.7854));
+        rim += faceLayer(vFaceUv + o, uFaceSrc[i], uFaceDst[i], uFacePose[i], uFaceTint[i], uFaceMode[i], uFacePage[i]).a;
+        rim += faceLayer(vFaceUv + o * 0.5, uFaceSrc[i], uFaceDst[i], uFacePose[i], uFaceTint[i], uFaceMode[i], uFacePage[i]).a;
+      }
+      faceCol = mix(faceCol, rimCol, min(rim * 0.3, 1.0) * dark);
+    }
     vec4 t = faceLayer(vFaceUv, uFaceSrc[i], uFaceDst[i], uFacePose[i], uFaceTint[i], uFaceMode[i], uFacePage[i]);
     faceCol = mix(faceCol, t.rgb, t.a);
   }
@@ -95,7 +113,7 @@ export function createFaceMaterial(atlas: THREE.Texture): FaceMaterial {
   const material = new THREE.MeshPhysicalMaterial({ name: "CharacterFace", ...MATTE });
   material.userData.face = u;
   material.onBeforeCompile = faceCompile;
-  material.customProgramCacheKey = () => `character-face-v7-matte-${N}`;
+  material.customProgramCacheKey = () => `character-face-v8-rim-${N}`;
   const tint = new THREE.Color();
   return {
     material,

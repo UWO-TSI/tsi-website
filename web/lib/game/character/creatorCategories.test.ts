@@ -49,11 +49,11 @@ describe("creator categories (read from the catalogue)", () => {
     expect(colourTarget(cat("accessories"), two, "acc_shoulder_bag")).toBe("acc_shoulder_bag");
     expect(colourTarget(cat("eyes"), two, null)).toBeNull();
   });
-  it("offer David's 25 whole hairstyles (wardrobe batch 2 added five; #22 is its hat alone; #14 removed) as Hair's only row, recolourable (head-roblox)", () => {
+  it("offer David's 22 whole hairstyles (wardrobe batch 2 added five; #22 is its hat alone; #14, #8, #9 and #24 removed) as Hair's only row, recolourable (head-roblox)", () => {
     const hair = cat("hair");
     expect(hair.sections.map(s => s.id)).toEqual(["hairstyles"]);
     expect(hair.sections[0].options).toEqual(PARTS.filter(p => p.full).map(p => p.id));
-    expect(hair.sections[0].options).toHaveLength(25);
+    expect(hair.sections[0].options).toHaveLength(22);
     expect(hair.swatch).toBe("hair");
     const full = hair.sections[0];
     const l = choose(DEFAULT_LOOK, full, full.options[0]);

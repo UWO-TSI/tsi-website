@@ -1,5 +1,5 @@
 /**
- * What Wren says through the HQ visit, the visit's tracker steps and cards, and what each resident says when they hand
+ * What Alice says through the HQ visit, the visit's tracker steps and cards, and what each resident says when they hand
  * you a tool (row 312, specs/hq-onboarding.md). DRAFTS for David's review, all of them.
  *
  * Lore rules (specs/lore.md): never resolve the war, never name the player's substrate, no school or campus words.
@@ -10,14 +10,14 @@
  * ("[happy]", lib/content/talk.ts), as the residents' do. Lines show a box at a time in the dialogue box.
  */
 
-/** Wren, the HQ lead (lib/game/welcome.ts HQ_LEAD, residentRoster `wren`). */
-export const WREN = { slug: "wren", name: "Wren", post: "hq_lead" } as const;
+/** Alice, the HQ lead (lib/game/welcome.ts HQ_LEAD, residentRoster `wren`). */
+export const WREN = { slug: "wren", name: "Alice", post: "hq_lead" } as const;
 
 /** Her lines by key (script.ts says which beat says which). */
 export const WREN_LINES: Readonly<Record<string, readonly string[]>> = {
   // Registering.
   welcome: [
-    "[happy] There you are! Bram said you'd be up. I'm Wren. I keep HQ running, more or less.",
+    "[happy] There you are! Bram said you'd be up. I'm Alice. I keep HQ running, more or less.",
     "First things first: the island register. Everyone who stays signs it.",
     "Just your world name. That's the one everybody here knows you by.",
   ],
@@ -70,7 +70,7 @@ export const escPhrase = (touch: boolean) => (touch ? "Tap the menu button." : "
 /** The visit as the quest tracker shows it: its title and a step per beat (script.ts ids). `{esc}`: the key. */
 export const HQ_TITLE = "Register at HQ";
 export const HQ_TRACKER: Readonly<Record<string, string>> = {
-  report: "Report to Wren at HQ",
+  report: "Report to Alice at HQ",
   register: "Sign the island register",
   checkin: "Find out about check-ins",
   founder: "Look at the Founder's desk",

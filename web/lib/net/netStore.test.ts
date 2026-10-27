@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AREAS, EV, PROTOCOL, RESTART_JITTER_MS, parseJoinOptions, type Area, type NetPlayer, type RosterEntry } from "./protocol";
 import { createRemoteSample, type NetSource, type NetStatus } from "./types";
 import {
-  LEAVE_DELAY_MS, RECONNECT_TRIES, botsFromSearch, devNameFromSearch, loopbackStore, netMode, refCounted, resetNetStore, roomStore, useNetSource, useNetStatus,
+  CARD_REFRESH_MS, LEAVE_DELAY_MS, RECONNECT_TRIES, botsFromSearch, devNameFromSearch, loopbackStore, netMode, refCounted, refreshCard, resetNetStore, roomStore, useNetSource, useNetStatus,
   useRoster, type SdkCallbacks, type SdkModule, type SdkRoom,
 } from "./netStore";
 import { BURST_GAP_MS } from "./clock";
@@ -592,6 +592,47 @@ describe("world chat through the store (v1, specs/v1-drop.md §3)", () => {
     r.src.sendTyping(false);
     expect(room.sentOf("s")).toEqual([{ typing: true }, { typing: false }]);
     expect(r.src.roomId).toBe("room-1");
+  });
+});
+
+describe("the card refresh after a saved look or name (specs/multiplayer.md §2.2)", () => {
+  it("sends one refresh per burst of saves, never sooner than the server re-reads the card", async () => {
+    const r = roomRig();
+    r.store.acquire();
+    await r.settle();
+    const room = await r.join();
+    refreshCard(); // no page store here: a no-op
+    r.store.refreshCard(); // the look, then the name a moment later: one refresh
+    await r.advance(100);
+    r.store.refreshCard();
+    await r.advance(CARD_REFRESH_MS - 101);
+    expect(room.sentOf("refresh")).toHaveLength(0); // the join's read is under 10 s old: the server would answer with it
+    await r.advance(1);
+    expect(room.sentOf("refresh")).toHaveLength(1);
+    r.store.refreshCard(); // a wardrobe change right after: after the server's 10 s
+    await r.advance(CARD_REFRESH_MS - 1);
+    expect(room.sentOf("refresh")).toHaveLength(1);
+    await r.advance(1);
+    expect(room.sentOf("refresh")).toHaveLength(2);
+    await r.advance(60_000);
+    expect(room.sentOf("refresh")).toHaveLength(2); // nothing else waiting
+  });
+
+  it("a save before the join, or while reconnecting, is sent once joined", async () => {
+    const r = roomRig();
+    r.store.refreshCard();
+    r.store.acquire();
+    await r.settle();
+    const room = await r.join();
+    await r.advance(CARD_REFRESH_MS);
+    expect(room.sentOf("refresh")).toHaveLength(1);
+    room.drop(1006);
+    r.store.refreshCard();
+    await r.advance(CARD_REFRESH_MS * 2);
+    expect(room.sentOf("refresh")).toHaveLength(1); // not while the connection is down
+    room.reconnected();
+    await r.advance(0); // due already: the last refresh was long enough ago
+    expect(room.sentOf("refresh")).toHaveLength(2);
   });
 });
 

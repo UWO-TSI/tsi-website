@@ -1003,7 +1003,7 @@ def aquarium_surround(k, m):
 
 
 def front_desk(k, m):
-    """Wren's front desk facing the door: a walnut counter with a fluted front on a black kick, a travertine top, a warm
+    """Alice's front desk facing the door: a walnut counter with a fluted front on a black kick, a travertine top, a warm
     strip under its lip; the lower work surface behind it with the mushroom lamp; the register open on the ledge."""
     body, back = FX["front-desk"]["blocks"]
     (x, _, z), (sx, sy, sz) = body["at"], body["size"]

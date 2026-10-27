@@ -3,19 +3,19 @@
 Decided with David on 2026-10-16. After Bram's walk-along ends at the beach, the player's next step is the HQ, where they register, get a little lore and a short tutorial.
 
 ## Decisions
-1. **Host: Wren, the HQ lead.**
-   - Bram's last line hands you off to the HQ ("Wren will want you signed in at HQ").
-   - The tracker's next step is "Report to Wren at HQ".
-   - Wren meets you inside and runs the whole visit.
+1. **Host: Alice, the HQ lead.** (Named Wren until David, 2026-10-27: "i want the npc in the hq to be named Alice". The internal id, the slug `wren`, stays.)
+   - Bram's last line hands you off to the HQ ("Alice will want you signed in at HQ").
+   - The tracker's next step is "Report to Alice at HQ".
+   - Alice meets you inside and runs the whole visit.
 2. **Registering means both of these:**
-   - **Sign the island register.** A short in-world moment at the HQ desk: you sign the register with your world name, which is confirmed (real names never show). That makes you a resident. Your friend code is issued and your mailbox is set up, and Wren tells you about both in one line each.
-   - **Your real club membership.** Wren explains that you're part of the real club. She teaches real-event check-ins: at a real TSI event you enter the check-in code, and that's what levels you up and earns rewards. Use the existing check-in flow; this is a guided intro plus where to find it, not a new system.
+   - **Sign the island register.** A short in-world moment at the HQ desk: you sign the register with your world name, which is confirmed (real names never show). That makes you a resident. Your friend code is issued and your mailbox is set up, and Alice tells you about both in one line each.
+   - **Your real club membership.** Alice explains that you're part of the real club. She teaches real-event check-ins: at a real TSI event you enter the check-in code, and that's what levels you up and earns rewards. Use the existing check-in flow; this is a guided intro plus where to find it, not a new system.
 3. **Lore, kept light. Two beats only:**
    - **Real life counts.** "The island measures you by what you do out there, not in here." Lore and the XP doctrine (principle 3) are the same fact.
-   - **The Founder.** You see the Founder's empty desk and the plaque. Only David writes the plaque text. Until he does, it shows a draped or blank plaque, and Wren says the Founder left it for whoever came next. Write no Founder words ourselves.
+   - **The Founder.** You see the Founder's empty desk and the plaque. Only David writes the plaque text. Until he does, it shows a draped or blank plaque, and Alice says the Founder left it for whoever came next. Write no Founder words ourselves.
    - Follow `specs/lore.md`: never resolve the war, never name the player's substrate, no school vocabulary.
 4. **The HQ tutorial teaches:**
-   - **The Esc menu:** map, quests and journal, bag, friends and mail. Wren asks you to press Esc and open the map.
+   - **The Esc menu:** map, quests and journal, bag, friends and mail. Alice asks you to press Esc and open the map.
    - **Club goals and the notice board:** the board, the club goals, and how the café and museum funds grow from real activity and deliveries.
    - **Real event check-ins:** as in 2.
 5. **Tools are unlocked by people, not handed out.**
@@ -26,7 +26,7 @@ Decided with David on 2026-10-16. After Bram's walk-along ends at the beach, the
    - Existing players who already own tools keep them.
 
 ## Notes for the lane
-- Build it data-driven, like the tutorial route (`web/lib/game/arrival/routes/`): an HQ onboarding script plus a table mapping each tool to its NPC, lines and quest steps. Wren's lines and each tool's lines are drafts for David.
+- Build it data-driven, like the tutorial route (`web/lib/game/arrival/routes/`): an HQ onboarding script plus a table mapping each tool to its NPC, lines and quest steps. Alice's lines and each tool's lines are drafts for David.
 - Pick who teaches which tool from the resident roster and `specs/lore.md` (each resident has one question). Propose the pairing; David reviews it.
 - The chapter 1 steps (`settle-in`) should read sensibly after this: the plot is hidden in v1 (row 307), and "Report back to HQ" may become "Register at HQ". Any seed or copy change is a new migration.
 
@@ -34,23 +34,23 @@ Decided with David on 2026-10-16. After Bram's walk-along ends at the beach, the
 Everything below is a proposal or a draft for David unless it says otherwise.
 
 ### The hand-off
-- Bram's last line: "That's the lot. Wren will want you signed in at HQ. Up the path, the big house." (`web/lib/game/arrival/lines.ts` END_LINE). The rest of his walk-along is unchanged.
-- The tracker's next step is "Report to Wren at HQ", the HQ visit's first step.
+- Bram's last line: "That's the lot. Alice will want you signed in at HQ. Up the path, the big house." (`web/lib/game/arrival/lines.ts` END_LINE). The rest of his walk-along is unchanged.
+- The tracker's next step is "Report to Alice at HQ", the HQ visit's first step.
 
 ### The HQ visit, as data
-- The script: `web/lib/game/arrival/hq/script.ts`. Each beat: Wren's lines (by key), an optional card, and what it waits for.
+- The script: `web/lib/game/arrival/hq/script.ts`. Each beat: Alice's lines (by key), an optional card, and what it waits for.
 - The state machine: `web/lib/game/arrival/hq/visit.ts` (pure, tested in `visit.test.ts`). It's kept on the device (`tsi.hq.v1`), so a reload resumes the beat you were on.
 - Order:
-  1. **Report.** E at the front desk. While you report, the desk's prompt is "Talk to Wren".
-  2. **Register.** Wren's welcome. Then the register card: "Sign as" your world name. Once signed, it shows your friend code (the real one from the friends API; "Issued once you're signed in" signed out) and your mailbox ("By the plaza", with the real count of letters waiting).
-  3. **The real club.** Wren covers the friend code and the mailbox in one line each, then real-event check-ins. The check-in card points to the existing flow: the QR at the event's door opens `play.tethos.ca/student/check-in`, and only real events level you up. There's no new backend.
+  1. **Report.** E at the front desk. While you report, the desk's prompt is "Talk to Alice".
+  2. **Register.** Alice's welcome. Then the register card: "Sign as" your world name. Once signed, it shows your friend code (the real one from the friends API; "Issued once you're signed in" signed out) and your mailbox ("By the plaza", with the real count of letters waiting).
+  3. **The real club.** Alice covers the friend code and the mailbox in one line each, then real-event check-ins. The check-in card points to the existing flow: the QR at the event's door opens `play.tethos.ca/student/check-in`, and only real events level you up. There's no new backend.
   4. **Lore, two beats.** "The island measures you by what you do out there, not in here." Then the Founder's desk:
      - it sits on HQ's back wall, between the notice board and the lounge;
      - a study desk with its chair pushed back, and a plaque above it, its canvas blank;
      - E opens the plaque card, which is blank and says only "The plaque is blank.";
-     - Wren: "That's the Founder's desk. Nobody sits there. The Founder left it for whoever came next."
+     - Alice: "That's the Founder's desk. Nobody sits there. The Founder left it for whoever came next."
      - No Founder words are written. `FOUNDER_PLAQUE` in `hq/lines.ts` is null until David writes it; the card shows his text once it's set.
-  5. **The Esc menu and the map.** Wren: "Press Esc", then "Open the map". The island map now opens at HQ too, with you at HQ's door; the minimap stays outdoors.
+  5. **The Esc menu and the map.** Alice: "Press Esc", then "Open the map". The island map now opens at HQ too, with you at HQ's door; the minimap stays outdoors.
   6. **The notice board and the club goals.** E at HQ's board opens the notice sheet. It used to do nothing there.
   7. **Farewell.** The club goals (the café and museum funds grow from deliveries at the monument and from real events), the next step (donate your first find, then come back and tell her) and where the tools are ("Odile has a spare net and Pim always has a shovel").
 - Every line, the tracker labels and the card copy are drafts in `web/lib/game/arrival/hq/lines.ts`.
@@ -81,10 +81,10 @@ The pairing is approved. Each resident's question is still a draft: the roster h
 
 ### Chapter copy (new migration, unapplied)
 - `web/supabase/migrations/20261017010000_hq_onboarding_copy.sql` (copy only).
-  - The report step becomes "Report back to Wren at HQ".
-  - The summary becomes "Make your first catch and donate it to the museum, then report back to Wren at HQ."
+  - The report step becomes "Report back to Alice at HQ".
+  - The summary becomes "Make your first catch and donate it to the museum, then report back to Alice at HQ."
   - Only copy still as it was seeded changes, so an admin's edit stays.
-- The code mirrors it: `DEFAULT_CHAPTERS` and the step's fallback, and the HQ door's prompt "Report back to Wren".
+- The code mirrors it: `DEFAULT_CHAPTERS` and the step's fallback, and the HQ door's prompt "Report back to Alice".
 - It's smoke-tested on a throwaway Postgres: `specs/evidence/hq-onboarding/sql-smoke.sh` and `web/supabase/tests/hq_onboarding_copy_smoke.sql`.
 - It isn't applied anywhere.
 
@@ -104,7 +104,7 @@ The pairing is approved. Each resident's question is still a draft: the roster h
 2. **Every line, the residents' questions and the plaque text.**
 
 ### Migrations, in apply order (all unapplied; smoke: `specs/evidence/hq-onboarding/sql-smoke.sh`)
-1. `20261017010000_hq_onboarding_copy.sql`: chapter 1's report step names Wren.
+1. `20261017010000_hq_onboarding_copy.sql`: chapter 1's report step names Alice.
 2. `20261017020000_resident_roster.sql`: the resident roster in production.
 3. `20261017163142_catalogue_seed.sql`: the tier-1 net and shovel off sale.
 
