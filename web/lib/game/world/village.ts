@@ -15,10 +15,13 @@ export function groundKind(v: Pick<Village, "terrain">): "heightfield" | "cells"
   return v.terrain ? "heightfield" : "cells";
 }
 
-/** A village from a smooth world. Build a fresh one after editing the terrain (the cell map is derived once). */
-export function villageOfWorld(w: { terrain: WorldTerrain; objects: readonly MapObject[]; annotations?: readonly MapAnnotation[] }): Village {
+/**
+ * A village from a smooth world. Build a fresh one after editing the terrain (the cell map is derived once). `shore` is
+ * the terrain's shore field when it was already made (lib/game/world/derive.ts, in a worker).
+ */
+export function villageOfWorld(w: { terrain: WorldTerrain; objects: readonly MapObject[]; annotations?: readonly MapAnnotation[] }, made?: ReturnType<typeof terrainShoreField>): Village {
   const t = w.terrain, map = cellMapOf(t);
-  let shore: ReturnType<typeof terrainShoreField> | null = null;
+  let shore: ReturnType<typeof terrainShoreField> | null = made ?? null;
   setWaterSource(map, { dip: (x, z) => seabedDepth(t, x, z), shore: () => (shore ??= terrainShoreField(t)) });
   // Its wharves' berths stay calm-ish for the moored boats (the waves' calm, lib/game/seabed.ts bakeWaveCalm).
   setBerths(map, w.objects.filter(o => o.kind === "landmark" && o.id === "wharf").map(o => ({ x: o.x, z: o.z, yaw: o.yaw ?? 0 })));

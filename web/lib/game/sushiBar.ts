@@ -156,7 +156,7 @@ export const CHEF_OUTSIDE = { at: [-1.75, 5.05] as const, yaw: 0 };
  * gold shades, his hair full; the server in a navy diving suit, yellow boots for fins, all smiles. Our own designs.
  */
 export const CHEF_LOOK = {
-  skin: 10, hair: 0, back: "hair_fluffy_boy", eyes: "focused", mouth: "deadpan", acc: { face: "acc_gold_rimless_shades" },
+  skin: 10, hair: 0, back: "hair_messy_boy", eyes: "focused", mouth: "deadpan", acc: { face: "acc_gold_rimless_shades" },
   top: "top_collar_shirt", bottom: "bottom_trousers", shoes: "shoes_slipon", colors: { top_collar_shirt: 1, bottom_trousers: 12, shoes_slipon: 14 },
 } as const;
 export const SERVER_LOOK = {

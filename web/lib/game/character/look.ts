@@ -212,7 +212,7 @@ export const OLD_HAIR: Readonly<Record<string, string>> = {
   bangs_swept_l: "hair_swept_fringe", bangs_swept_r: "hair_swept_fringe", bangs_curtain: "hair_windy_bob",
   bangs_curtain_long: "hair_long_scruffy", bangs_centre_split: "hair_layered_shag", bangs_spiky: "hair_anime_spikes",
   bangs_hime: "hair_hime_short", bangs_choppy: "hair_messy_boy", bangs_swept_back: "hair_waves", bangs_single_strand: "hair_vkei",
-  bangs_wavy: "hair_fluffy_boy", bangs_asym_block: "hair_hime_short",
+  bangs_wavy: "hair_messy_boy", bangs_asym_block: "hair_hime_short",
   // round 3 (David, 2026-10-17): #14, the messy low pony, removed
   hair_messy_low_pony: "hair_wispy_ponytail",
 };

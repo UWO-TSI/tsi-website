@@ -63,7 +63,7 @@ A floor-to-ceiling tank, two storeys tall. It's the room's centrepiece.
 All of HQ's current functions stay and keep working.
 
 - **Existing:**
-  - Wren's front desk and the island register;
+  - Alice's front desk and the island register;
   - the notice board and the club goals;
   - the Founder's desk and its plaque (`specs/hq-onboarding.md`).
 - **New:**
@@ -110,7 +110,7 @@ Every number was in `web/lib/game/hqLayout.ts`, for two options, drawn as matte 
 
   | Station | Where | E opens |
   |---|---|---|
-  | Front desk | (−5.2, −3.6) | Wren: the onboarding visit, the register, the profile showcase |
+  | Front desk | (−5.2, −3.6) | Alice: the onboarding visit, the register, the profile showcase |
   | Notice board | (0, 4.3) | The notice sheet and the club goals (onboarding step 6) |
   | Trophy display | (−4.5, 4.2) | The tourney list (the 3D case stands at the display) |
   | Bookshelf | (6.6, −1.3) | Quests |
@@ -119,7 +119,7 @@ Every number was in `web/lib/game/hqLayout.ts`, for two options, drawn as matte 
   | Workbench | (−6.0, 1.0) | Crafting |
   | Exit | (0, −5.5) | The island |
 
-- **Wren's post:** behind the front desk, at (−5.05, −1.78), in `lib/game/keepers.ts`.
+- **Alice's post:** behind the front desk, at (−5.05, −1.78), in `lib/game/keepers.ts`.
 - **The onboarding script:** it's driven by these stations' events, not by positions (`lib/game/arrival/hq/script.ts`).
   Moving the stations moves the onboarding with them.
 
@@ -128,7 +128,7 @@ Every number was in `web/lib/game/hqLayout.ts`, for two options, drawn as matte 
 - **Size:** 20 x 16, two storeys. The floors are 3.4 apart and the ceiling is at 6.8.
 - **Door and arrival:** the door stays in the middle of the front wall. You arrive at (0, −6.4) and the exit is at (0, −7.2).
 - **Aquarium:** two storeys tall (0.25 to 6.6), its water a single bright blue in the greybox.
-- **Ground floor:** Wren's front desk and the register by the door, plus the green marble coffee bar, the long walnut
+- **Ground floor:** Alice's front desk and the register by the door, plus the green marble coffee bar, the long walnut
   co-working desk, the library wall, and the lamp-lit lounge in front of the aquarium.
   - The notice board and club goals, the Founder's desk and plaque, the trophy case, the clock and the workbench each
     get a station.
@@ -155,7 +155,7 @@ Every number was in `web/lib/game/hqLayout.ts`, for two options, drawn as matte 
 - **The aquarium:** fills the left wall of the double-height front hall (z −5.4 to 1.2). The ground lounge sits in front
   of it. Its top half is seen from the mezzanine's front-left corner.
 - **Ground floor:**
-  - Wren's desk faces the door on the right.
+  - Alice's desk faces the door on the right.
   - The coffee bar stands in the hall.
   - The work floor is under the mezzanine: co-working, the library wall across the back, the notice board and goals,
     the clock, the Founder's desk, the trophy case and the workbench.
@@ -171,7 +171,7 @@ Every number was in `web/lib/game/hqLayout.ts`, for two options, drawn as matte 
   - An arm runs down each side.
   - The six banners hang from poles off the arms' rails, one after another toward the tank as you walk in.
 - **Ground floor:**
-  - The entry is under the bridge, with Wren's desk on the left and the coffee bar on the right.
+  - The entry is under the bridge, with Alice's desk on the left and the coffee bar on the right.
   - The library wall and co-working are under the left arm, with the Founder's desk and the trophy case at the back.
   - The notice board is under the right arm by the stair, with the workbench at the back.
 - **Stair:** up the right wall, under the right arm, toward the back. You walk the arm to the bridge.
@@ -194,7 +194,7 @@ Every number was in `web/lib/game/hqLayout.ts`, for two options, drawn as matte 
 - Lamps and lighting by the time of day.
 - The coffee bar's, the aquarium's and the admin doors' prompts. The new stations are in the layout; the greybox
   answers only the ones HQ has now.
-- Wren walking her new post.
+- Alice walking her new post.
 - The HQ perf bench and the room's meshes against the interior budget.
 
 ## Phase 2: layout A furnished (2026-10-18)
@@ -220,7 +220,7 @@ island keeps its own clubhouse (`HQInterior.tsx`).
   shades' undersides and the oval lights are `M_Glow`. Budget exceptions for `ground.glb` and `upper.glb` are in
   `budget.ts`, like the shop's.
 - **Downstairs:**
-  - Wren's walnut desk by the door: a fluted front, a travertine top, a warm strip under the lip, the register open on
+  - Alice's walnut desk by the door: a fluted front, a travertine top, a warm strip under the lip, the register open on
     the ledge and a mushroom lamp;
   - the green marble coffee bar with an espresso machine and two walnut stools;
   - the lamp-lit lounge before the aquarium: a cream shag rug, a velvet sofa facing the glass, a travertine table with
@@ -256,7 +256,7 @@ island keeps its own clubhouse (`HQInterior.tsx`).
 - **The rest:** the warm strip along its base, and every tank shader bends with the curved world.
 
 **Stations** (each on its own floor; nothing answers from the stair):
-- Every station HQ had: the exit, Wren's desk (the visit's report and the register), the notice board, the Founder's
+- Every station HQ had: the exit, Alice's desk (the visit's report and the register), the notice board, the Founder's
   desk, the trophy display, the clock, and the workbench (its own prompt).
 - The library replaces the bookshelf: "Browse the library".
 - New stations, their lines drafts for David (`HQ_LINES` in `hqLayout.ts`):
@@ -264,7 +264,7 @@ island keeps its own clubhouse (`HQInterior.tsx`).
   - the aquarium: "Look at the aquarium" → "Silver fish turn together in the blue. A small orange one goes its own way.";
   - the admin doors: "Try the door" → "Admins only. It's locked."
 - No reward for any of them (principle 3).
-- Wren stands at her new post behind the desk (`KEEPER_POSTS.memberHq`), seen over its counter from the walking camera
+- Alice stands at her new post behind the desk (`KEEPER_POSTS.memberHq`), seen over its counter from the walking camera
   (tested).
 
 **Perf** (`specs/evidence/hq-interior/phase2/perf-check.txt`; the `hq` bench scene, from the door):
@@ -275,7 +275,7 @@ island keeps its own clubhouse (`HQInterior.tsx`).
 **Shots:** `specs/evidence/hq-interior/phase2/hq-phase2-sheet.webp`, made headless by `shots.mjs` and `sheet.py` there.
 - Day and night side by side: the plans, from the door, walking in, the aquarium from the lounge and close up, the work
   floor, the upper lounge and its view of the tank, upstairs walking.
-- By day only: the overview, the top of the stairs, the board and the Founder's desk, the coffee bar and Wren's desk, the
+- By day only: the overview, the top of the stairs, the board and the Founder's desk, the coffee bar and Alice's desk, the
   admin doors, walking under the mezzanine, and the three new stations' lines on screen.
 
 **Not done:**
@@ -307,7 +307,7 @@ HQ (`/lab/island?hq=inside` and through HQ's door in the village). The exterior 
   degrees), foot at z 0, head at z 6.6. The upper floor is open over the whole flight, railed round.
 
 **Downstairs:**
-- **The entry under the bridge:** Wren's walnut desk left of the door with the register, the green marble coffee bar
+- **The entry under the bridge:** Alice's walnut desk left of the door with the register, the green marble coffee bar
   right of it, the work lounge on the deep blue rug in the left corner (the daybed, the leather sofa, the glass table),
   the workbench against the right wall, palms either side of the door.
 - **The hall:** the lamp-lit lounge before the tank (a long velvet sofa facing it, the travertine table and mushroom
@@ -335,9 +335,9 @@ the ceiling (8.4 against 9.2) but only looks down; upstairs it's above it; from 
   upstairs ones per part), four real lights (the entry and the hall, the work floor under the left arm, the bridge's
   lounge, the tank's blue), the lamps carrying the room at night.
 
-**Stations** (each on its own floor; the walk-through in `phase3/shots.mjs` "prompts", 2026-10-22): the exit, Wren's
+**Stations** (each on its own floor; the walk-through in `phase3/shots.mjs` "prompts", 2026-10-22): the exit, Alice's
 desk, the coffee bar, the notice board, the library, the trophy display, the Founder's desk, the clock, the aquarium and
-the workbench downstairs; the two admin doors upstairs. All twelve answer. Wren stands at her post behind the desk
+the workbench downstairs; the two admin doors upstairs. All twelve answer. Alice stands at her post behind the desk
 (`KEEPER_POSTS.memberHq`), seen over its counter from the walking camera, the bridge over her cut away (tested).
 
 **Shots:** `specs/evidence/hq-interior/phase3/hq-phase3-sheet.webp`, made headless by `shots.mjs` and `sheet.py` there:
@@ -409,8 +409,8 @@ Still layout B, the gallery, the aquarium on the back wall. The exterior is unch
 **Perf** (`specs/evidence/hq-interior/phase4/perf-check.txt`, passed): high 2.10 ms, 125 draws, 97k triangles; lite
 1.70 ms, 76 draws, 90k triangles.
 
-**Stations** (`phase4/shots.mjs` "prompts"): the exit, Wren's desk, the coffee bar, the notice board, the library, the
-trophy display, the Founder's desk, the clock, the aquarium, the admin door and the workbench all answer; Wren at her
+**Stations** (`phase4/shots.mjs` "prompts"): the exit, Alice's desk, the coffee bar, the notice board, the library, the
+trophy display, the Founder's desk, the clock, the aquarium, the admin door and the workbench all answer; Alice at her
 post. Nothing answers upstairs now.
 
 **Shots:** `specs/evidence/hq-interior/phase4/hq-phase4-sheet.webp`: the plans, from the door, the lounge before the tank

@@ -13,11 +13,12 @@
  */
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Html, useGLTF } from "@react-three/drei";
+import { Html, useGLTF, useProgress } from "@react-three/drei";
 import * as THREE from "three";
 import Character, { CHARACTER_HEIGHT, type CharacterMotion } from "../character/Character";
 import { tripBoatFloat } from "../wharf/useTripBoat";
 import { useMoveParticles } from "../movement/moveFx";
+import { warmHidden } from "../LoadGate";
 import { parseLook } from "@/lib/game/character/look";
 import { RESIDENT_LOOKS } from "@/lib/content/residentRoster";
 import { calculateCurvedHtmlPosition } from "@/lib/game/worldProjection";
@@ -121,10 +122,14 @@ export default function ArrivalWorld({ v, island, player, dock, held, keys, worl
   if (!phase) return null;
   const crossing = phase === "clearing" || phase === "crossing";
   const ashore = phase === "landing" || phase === "tutorial";
+  // Aboard and in the creator the island is paused under the reflection: the crossing's cast is mounted there and
+  // compiled, so the drone shot opens on programs already linked.
+  const early = phase === "aboard" || phase === "creator";
   return <>
     {crossing && <CrossingDirector dock={dock} player={player} />}
-    {crossing && <BramAboard dock={dock} />}
-    {(crossing || ashore) && <Suspense fallback={null}><Crates spots={crates} /></Suspense>}
+    {(crossing || early) && <BramAboard dock={dock} />}
+    {(crossing || ashore || early) && <Suspense fallback={null}><Crates spots={crates} /></Suspense>}
+    {early && <WarmCrossing />}
     {ashore && <BramGuide v={v} island={island} player={player} dock={dock} keys={keys} route={route} places={pw} />}
   </>;
 }
@@ -196,6 +201,22 @@ function BramAboard({ dock }: { dock: Dock }) {
     g.matrixWorldNeedsUpdate = true;
   }, -4);
   return <group ref={group} matrixAutoUpdate={false}><Suspense fallback={null}><Character look={BRAM_LOOK} motion={motion} /></Suspense></group>;
+}
+
+/** Compile what the crossing draws once it has mounted and loaded (warmHidden: the whole scene; linked programs are skipped). */
+function WarmCrossing() {
+  const { gl, scene, camera } = useThree();
+  useEffect(() => {
+    let done = false;
+    const t = window.setInterval(() => {
+      if (done || useProgress.getState().active) return;
+      done = true;
+      window.clearInterval(t);
+      void warmHidden(gl, scene, camera).catch(() => {});
+    }, 400);
+    return () => window.clearInterval(t);
+  }, [gl, scene, camera]);
+  return null;
 }
 
 /** The route's fish crates. */

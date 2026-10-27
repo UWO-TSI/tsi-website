@@ -185,9 +185,11 @@ export const OWNERSHIP_ITEMS: CatalogueEntry[] = [
 export const TAUGHT_TOOL_SLUGS = ["net-basic", "shovel-basic"];
 /** The placeholder tote and sticker pack, which aren't real merch (David, 2026-10-22: "Take both off sale"). */
 export const PLACEHOLDER_MERCH = ["merch-sticker-pack", "merch-tote"];
+/** Hairstyles David removed from the game (2026-10-27: Messy with headset, Fluffy boy, Wavy half-up): their shop rows go off sale. */
+export const REMOVED_HAIR = ["hair_wavy_half_up"];
 /** Shop rows with no character part: the pre-ownership outfits, the wardrobe cut's (CUT_WEARABLES), and the taught tools; and the placeholder merch. Off sale. */
 export const RETIRED = ["outfit-sage-overalls", "outfit-cream-knit", "outfit-wharf-raincoat", "outfit-club-tee", "hair-chestnut", "hair-sea-glass", "hair-sunset", "acc-straw-hat", "acc-round-glasses", "acc-bandana",
-  ...CUT_WEARABLES.map((c) => wearSlug(c.id)), ...TAUGHT_TOOL_SLUGS, ...PLACEHOLDER_MERCH];
+  ...CUT_WEARABLES.map((c) => wearSlug(c.id)), ...REMOVED_HAIR.map(wearSlug), ...TAUGHT_TOOL_SLUGS, ...PLACEHOLDER_MERCH];
 /** Sold, as opposed to only granted: starter clothes stay off sale. */
 export const onSale = (c: CatalogueEntry) => !RETIRED.includes(c.slug) && !(c.category !== "furniture" && c.catalogue_ref !== null && STARTER_REFS.has(c.catalogue_ref));
 

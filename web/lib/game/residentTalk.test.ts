@@ -8,7 +8,7 @@ import {
   talkTyping, typeMs, typedAt,
 } from "./residentTalk";
 
-const WREN = { id: "r-wren", slug: "wren", name: "Wren", post: "hq_lead", seed: 7 };
+const WREN = { id: "r-wren", slug: "wren", name: "Alice", post: "hq_lead", seed: 7 };
 const LINES = [{ text: "Oh! Hi there.", face: "happy" as const }, { text: "Club goals are coming along.", face: null }];
 
 describe("talking to residents: approach", () => {

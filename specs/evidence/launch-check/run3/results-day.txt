@@ -1,0 +1,261 @@
+{
+  "at": "2026-10-27T09:27:50.518Z",
+  "preview": "play.tethos.ca",
+  "results": [
+    {
+      "step": "tags: each sees the other's name tag",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "presence: A's menu counts both (Here (2) or more)",
+      "ok": true,
+      "detail": "Here (2)"
+    },
+    {
+      "step": "chat: A's line reaches B",
+      "ok": true,
+      "detail": "1246 ms"
+    },
+    {
+      "step": "chat: A's bubble over A on B's screen",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "chat: B's line reaches A",
+      "ok": true,
+      "detail": "1139 ms"
+    },
+    {
+      "step": "chat: B's bubble over B on A's screen",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "friends: A asks by B's code",
+      "ok": true,
+      "detail": "{\"status\":\"requested\"}"
+    },
+    {
+      "step": "friends: B accepts",
+      "ok": true,
+      "detail": "realtime: applied"
+    },
+    {
+      "step": "moderation env: /internal/friend applied (Vercel and Fly secrets match)",
+      "ok": true,
+      "detail": "realtime: applied"
+    },
+    {
+      "step": "join: B listed as Here in A's friends (same shard; cross-shard Join is the local bench's)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "emotes: A's wave reaches B",
+      "ok": true,
+      "detail": "756 ms"
+    },
+    {
+      "step": "dance: A's dance reaches B",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "dance: B's dance reaches A",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "report: B reports A's line",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "step": "moderation: the report is in the T1/T2 queue (World chat)",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "step": "moderation: remove and mute 7 d",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "step": "moderation env: /internal/sanction applied",
+      "ok": true,
+      "detail": "realtime: applied"
+    },
+    {
+      "step": "live mute: A's next line is refused at once",
+      "ok": true,
+      "detail": "1191 ms after the mute"
+    },
+    {
+      "step": "live mute: B never receives the muted line",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "moderation: unmute",
+      "ok": true,
+      "detail": "HTTP 200, realtime: applied"
+    },
+    {
+      "step": "live unmute: A's line reaches B again",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "flow 4: the arrival paid Bram's coins once",
+      "ok": true,
+      "detail": "[[\"quest\",\"arrival\",30]]"
+    },
+    {
+      "step": "flow 4: cast into the river with the starter rod (1)",
+      "ok": true,
+      "detail": "HTTP 200 fish_pike"
+    },
+    {
+      "step": "flow 4: land it (1)",
+      "ok": true,
+      "detail": "HTTP 200 fish_pike"
+    },
+    {
+      "step": "flow 4: the river gives a river catch (1)",
+      "ok": true,
+      "detail": "fish_pike"
+    },
+    {
+      "step": "flow 4: donate the catch (chapter step)",
+      "ok": true,
+      "detail": "HTTP 200 "
+    },
+    {
+      "step": "flow 4: report to Alice (no plot step in v1)",
+      "ok": true,
+      "detail": "HTTP 200 "
+    },
+    {
+      "step": "flow 4: a second report is refused",
+      "ok": true,
+      "detail": "HTTP 409"
+    },
+    {
+      "step": "flow 4: 100 coins once (chapter:settle-in)",
+      "ok": true,
+      "detail": "[[\"chapter\",\"settle-in\",100]]"
+    },
+    {
+      "step": "flow 4: the chapter letter is in the mailbox",
+      "ok": true,
+      "detail": "letters: 1"
+    },
+    {
+      "step": "shovel: the active world has rocks and beach shells",
+      "ok": true,
+      "detail": "rocks 5, shells 6"
+    },
+    {
+      "step": "shovel: a new arrival's dig is refused before Pim hands the shovel over",
+      "ok": true,
+      "detail": "HTTP 403 tool_not_owned"
+    },
+    {
+      "step": "shovel: Pim hands it over (POST /api/world/tools)",
+      "ok": true,
+      "detail": "HTTP 200 {\"tool\":\"shovel\",\"key\":\"shovel-basic\",\"granted\":true}"
+    },
+    {
+      "step": "shovel: strike a rock",
+      "ok": true,
+      "detail": "rock-0 200 rock_clay"
+    },
+    {
+      "step": "shovel: a beach shell node gives its catch",
+      "ok": true,
+      "detail": "shell-0 200 shell_asari"
+    },
+    {
+      "step": "shovel: a buried shell dug up on the beach (the shovel quest's catch)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "bench: A is offered a seat on a bench by the fire",
+      "ok": true,
+      "detail": "fire-bench-0: reached, prompt \"Sit on the bench\""
+    },
+    {
+      "step": "bench: E sits A down (the prompt says Stand up)",
+      "ok": true,
+      "detail": "Stand up"
+    },
+    {
+      "step": "bench: E stands A up",
+      "ok": true,
+      "detail": "Sit on the bench"
+    },
+    {
+      "step": "sushi: the active world has the bar",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "sushi: A walks to the entrance",
+      "ok": true,
+      "detail": "{\"ok\":true,\"here\":{\"x\":-46.531142026427894,\"z\":113.90567350090735},\"dist\":0.5983063330326616}"
+    },
+    {
+      "step": "sushi: B walks to the entrance",
+      "ok": true,
+      "detail": "{\"ok\":true,\"here\":{\"x\":-46.9312935002041,\"z\":114.1192139155473},\"dist\":0.6039190836675677}"
+    },
+    {
+      "step": "sushi: both are offered the bar (open tonight)",
+      "ok": true,
+      "detail": "Enter the sushi bar | Enter the sushi bar"
+    },
+    {
+      "step": "sushi: E together seats both (the prompt says Leave the bar)",
+      "ok": true,
+      "detail": "Leave the bar | Leave the bar"
+    },
+    {
+      "step": "sushi: they end on different stools",
+      "ok": true,
+      "detail": "A stool 3, B stool 2"
+    },
+    {
+      "step": "sushi: E stands A up at the exit",
+      "ok": true,
+      "detail": "Enter the sushi bar at {\"x\":-47.000038935974096,\"z\":114.20000000014302}"
+    },
+    {
+      "step": "sushi: A sees B seated, the tag over the head",
+      "ok": true,
+      "detail": "{\"x\":636,\"y\":0.43,\"inView\":true}"
+    },
+    {
+      "step": "sushi: A sits again from the entrance",
+      "ok": true,
+      "detail": "Leave the bar"
+    },
+    {
+      "step": "sushi: E stands B up at the exit",
+      "ok": true,
+      "detail": "Enter the sushi bar at {\"x\":-47.000038935974096,\"z\":114.20000000014302}"
+    },
+    {
+      "step": "sushi: B sees A seated, the tag over the head",
+      "ok": true,
+      "detail": "{\"x\":724,\"y\":0.43,\"inView\":true}"
+    },
+    {
+      "step": "sushi: E stands A up again",
+      "ok": true,
+      "detail": "Enter the sushi bar"
+    }
+  ]
+}

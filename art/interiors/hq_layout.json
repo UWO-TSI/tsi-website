@@ -929,7 +929,7 @@
    "id": "front-desk",
    "level": 0,
    "zone": "entry",
-   "label": "Wren's front desk",
+   "label": "Alice's front desk",
    "blocks": [
     {
      "at": [
@@ -3616,7 +3616,7 @@
   {
    "id": "to-desk",
    "level": 0,
-   "label": "To Wren's desk",
+   "label": "To Alice's desk",
    "points": [
     [
      0,

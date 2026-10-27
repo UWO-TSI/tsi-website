@@ -95,6 +95,7 @@ const st = (r: SdkRoom): AnyState => {
   const s = r.state as unknown as Partial<AnyState>;
   return { epoch: s.epoch ?? 0, shard: s.shard ?? 0, players: s.players ?? EMPTY, roster: s.roster ?? EMPTY };
 };
+const rosterOf = (r: SdkRoom) => { const out: N.RosterEntry[] = []; st(r).roster.forEach((e) => out.push(e)); return out; };
 const sees = (viewer: SdkRoom, other: SdkRoom) => st(viewer).players.get(other.sessionId) !== undefined;
 const now = (r: SdkRoom) => Date.now() - st(r).epoch;
 
@@ -258,6 +259,27 @@ describe("pose relay", () => {
     await until(() => st(bob).players.get(alice.sessionId)?.x === N.quantPos(last.x), "the last sample");
     const session = (serverRoom(alice).sessions as Map<string, { track: { strikes: number } }>).get(alice.sessionId)!;
     expect(session.track.strikes).toBe(0);
+  });
+});
+
+describe("the card after a change (refresh)", () => {
+  it("a saved name and look reach the others without a rejoin; a returning player has them at join", async () => {
+    const alice = await join("alice");
+    const bob = await join("bob");
+    await until(() => sees(bob, alice), "bob sees alice");
+    expect(st(bob).players.get(alice.sessionId)!.look).toBe("");
+    // The arrival saved her look and world name (lookStore, saveName), then the client sent refresh.
+    const look = { skin: 4, hair: 2, back: "hair_waves", top: "top_tee", colors: { top_tee: 5 } };
+    cards.set("alice", { name: "Pebble", look });
+    alice.send(N.MSG.refresh);
+    await until(() => st(bob).players.get(alice.sessionId)?.name === "Pebble", "bob sees her new name");
+    expect(JSON.parse(st(bob).players.get(alice.sessionId)!.look)).toEqual(look);
+    await until(() => rosterOf(bob).some((e) => e.name === "Pebble"), "the roster's name");
+    // Back another day: the card at join already has them.
+    const carol = await join("carol");
+    await until(() => sees(carol, alice), "carol sees alice");
+    expect(st(carol).players.get(alice.sessionId)!.name).toBe("Pebble");
+    expect(JSON.parse(st(carol).players.get(alice.sessionId)!.look)).toEqual(look);
   });
 });
 

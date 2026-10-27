@@ -1584,7 +1584,8 @@
       0.0
      ]
     }
-   }
+   },
+   "key": "hair-28"
   },
   {
    "id": "hair_messy_boy",
@@ -1779,70 +1780,6 @@
    }
   },
   {
-   "id": "hair_visor_messy",
-   "slot": "back",
-   "name": "Messy with headset",
-   "glb": "hair/full/hair_visor_messy.glb",
-   "tris": 2119,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "full": true,
-   "skull": "v10",
-   "source": "hair/source/david/08-McDonalds-106903086636118.glb",
-   "roblox": {
-    "provisional": true
-   },
-   "map": {
-    "cell": 7,
-    "natural": {
-     "a": [
-      0.0,
-      0.0,
-      0.0
-     ]
-    }
-   }
-  },
-  {
-   "id": "hair_fluffy_boy",
-   "slot": "back",
-   "name": "Fluffy boy",
-   "glb": "hair/full/hair_fluffy_boy.glb",
-   "tris": 1297,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "full": true,
-   "skull": "v10",
-   "source": "hair/source/david/09-Low-Poly-Fluffy-Messy-Boy-Hair-Brown-86495776285585.glb",
-   "roblox": {
-    "provisional": true
-   },
-   "map": {
-    "cell": 8,
-    "natural": {
-     "a": [
-      0.3886,
-      0.0247,
-      49.66
-     ]
-    }
-   }
-  },
-  {
    "id": "hair_messy_wolf",
    "slot": "back",
    "name": "Messy wolf cut",
@@ -1936,7 +1873,8 @@
       262.57
      ]
     }
-   }
+   },
+   "key": "hair-29"
   },
   {
    "id": "hair_anime_spikes",
@@ -2000,7 +1938,8 @@
       89.88
      ]
     }
-   }
+   },
+   "key": "hair-31"
   },
   {
    "id": "hair_swept_fringe",
@@ -2032,7 +1971,8 @@
       89.88
      ]
     }
-   }
+   },
+   "key": "hair-30"
   },
   {
    "id": "hair_bob_pigtail",
@@ -2267,39 +2207,6 @@
    },
    "accent": {
     "default": 10
-   }
-  },
-  {
-   "id": "hair_wavy_half_up",
-   "slot": "back",
-   "name": "Wavy half-up",
-   "glb": "hair/full/hair_wavy_half_up.glb",
-   "tris": 4131,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "full": true,
-   "skull": "v10",
-   "source": "hair/source/david-b2/24-Messy-Wavy-IT-Girl-Hair-100884389158278.glb",
-   "roblox": {
-    "provisional": true
-   },
-   "key": "hair-24",
-   "map": {
-    "cell": 23,
-    "natural": {
-     "a": [
-      0.3911,
-      0.0322,
-      51.39
-     ]
-    }
    }
   },
   {

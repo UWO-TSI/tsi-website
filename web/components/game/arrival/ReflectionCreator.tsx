@@ -53,7 +53,7 @@ export default function ReflectionCreator({ phase, initial, askName, onYes }: {
   const queued = useRef(0), drop = useRef(0);
   const [catId, setCatId] = useState(CATEGORIES[0].id);
   const cat = CATEGORIES.find(c => c.id === catId)!;
-  const naming = useNameCheck(askName);
+  const naming = useNameCheck(askName, true);
   const waves = useRef<number[]>([]);
   const clock = useRef(0);
   const lastChoice = useRef(0);
@@ -133,7 +133,7 @@ export default function ReflectionCreator({ phase, initial, askName, onYes }: {
   }, [root]);
 
   const confirm = () => {
-    if (yes) return;
+    if (yes || naming.missing()) return;
     setYes(true);
     window.clearTimeout(queued.current); window.clearTimeout(drop.current);
     setWater({ shown: look, before: null });
@@ -158,7 +158,7 @@ export default function ReflectionCreator({ phase, initial, askName, onYes }: {
         <CreatorOptions cat={cat} look={look} setLook={edit} mode="create" owned={STARTERS} onChange={change} wheel={false} />
       </div>
       {askName && <footer className={cc.foot}>
-        <Field label="Your name on the island" hint="Letters and numbers; everyone in the world sees it." value={naming.name} maxLength={24}
+        <Field id={naming.id} label="Your name on the island" hint="Letters and numbers; everyone in the world sees it." value={naming.name} maxLength={24}
           onChange={e => naming.type(e.target.value)} error={naming.nameNote && !naming.nameNote.ok && !mentionsSignIn(naming.nameNote.text) ? naming.nameNote.text : undefined} className={cc.name} />
         {naming.nameNote?.ok && <p className={cc.nameOk} role="status">{naming.nameNote.text}</p>}
         {naming.nameNote && !naming.nameNote.ok && mentionsSignIn(naming.nameNote.text) && <p className={cc.nameOk} role="status"><SignInText text={naming.nameNote.text} /></p>}

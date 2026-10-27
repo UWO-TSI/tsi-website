@@ -44,8 +44,8 @@ export const TASK_DONE_LINES: Readonly<Record<string, string>> = {
   crate: "Light on your feet. This way.",
   catch: "There she is!",
 };
-/** Said at the very end (your collection opened), with the reward: he hands you off to Wren at HQ (row 312). */
-export const END_LINE = "That's the lot. Wren will want you signed in at HQ. Up the path, the big house.";
+/** Said at the very end (your collection opened), with the reward: he hands you off to Alice at HQ (row 312). */
+export const END_LINE = "That's the lot. Alice will want you signed in at HQ. Up the path, the big house.";
 
 /** The quest tracker's title and its steps' labels (by stop id, then task id), drafts. `{bag}`: the player's key. */
 export const TRACKER_TITLE = "Walk with Bram";

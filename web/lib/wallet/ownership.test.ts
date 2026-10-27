@@ -168,7 +168,7 @@ describe("wardrobe batch 2 (David's modes and prices, specs/wardrobe/batch2-pric
 
   it("sells each item exactly as priced: coins in price_coins, Gems in tc_price (price_gems); free and skipped ones unsold", () => {
     expect(priced).toHaveLength(Object.values(BATCH2_PRICES).filter((x) => x.mode !== "skip").length);
-    expect(priced).toHaveLength(34);
+    expect(priced).toHaveLength(37);
     for (const { key, ref, category } of priced) {
       const { mode, price } = BATCH2_PRICES[key];
       const rows = rowOf(ref);
