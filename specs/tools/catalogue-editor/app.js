@@ -44,7 +44,7 @@
   };
   const show = {
     rarity: v => v[0].toUpperCase() + v.slice(1),
-    price: v => (v === null ? "rarity table" : `${v} coins`),
+    price: v => (v === null ? "the rarity table" : `${v} coins`),
     hours: v => (v ? `${hh(v[0])} to ${hh(v[1])}${v[1] < v[0] ? " (overnight)" : ""}` : "All day"),
     months: v => (v.length ? runs(v) : "All year"),
     biome: v => v.replace(/_/g, " "),
@@ -278,7 +278,7 @@
         startH.setAttribute("aria-valuenow", hv[0]); startH.setAttribute("aria-valuetext", hh(hv[0]));
         endH.setAttribute("aria-valuenow", hv[1]); endH.setAttribute("aria-valuetext", hh(hv[1]));
       }
-      readout.textContent = hv ? `Out from ${show.hours(hv)}. Drag the handles, or drag across the bar to paint a new window.` : "Out all day.";
+      readout.textContent = hv ? `Out from ${show.hours(hv)}. Drag the handles, or drag across the bar to paint a new window.` : "Out all day. Drag across the bar to give it hours.";
     }, true));
 
     // months
