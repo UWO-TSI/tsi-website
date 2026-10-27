@@ -43,6 +43,6 @@ export default function PeacefulLayer({ map, nodes, moment, member, player, grou
   return <>
     <VillageLife nodes={nodes.forage} bugNodes={nodes.bugs} moment={moment} member={member} player={player} ground={ground} highTier={highTier} active={active} treeModels={treeModels} />
     <BagFullNote ground={ground} />
-    {fishBosses() && <BossCreature />}
+    {fishBosses() && <BossCreature player={player} />}
   </>;
 }

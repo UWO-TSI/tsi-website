@@ -31,10 +31,11 @@ import { setWorldClockOffset } from "@/lib/game/worldClock";
 import { parseClockOverride } from "@/lib/game/islandTime";
 import {
   AREAS, CHAT, DEV_TOKEN_PREFIX, MSG, NET_PLAYER_FIELDS, PROTOCOL, RATE_LIMITS, RECONNECT_GRACE_S, REJOIN_BACKOFF_S, RESTART_JITTER_MS, ROOM_NAME, decodeEvent, isPrivateArea,
-  joinRefusal, parseChatLine, parseFollowAnswer, parseFriends, parsePong, parseSys, type Area, type FollowRefusal, type NetPlayer, type PosePacket, type RosterEntry,
+  joinRefusal, parseChatLine, parseFollowAnswer, parseFriends, parsePong, parseRaidView, parseSys, type Area, type FollowRefusal, type NetPlayer, type PosePacket, type RosterEntry,
   type SeatReservation, type SlowState, type SysMessage,
 } from "./protocol";
 import { chatStore, type ChatStore } from "./chat";
+import { raidLink } from "./raid";
 import { friendsStore, type FriendsStore } from "./friends";
 import { toRemotePlayer, type FollowResult, type KickReason, type NetSource, type NetStatus } from "./types";
 import { RemoteBuffer, Remotes, parseNetsim, type Netsim } from "./interp";
@@ -381,6 +382,7 @@ export function roomStore(o: RoomStoreOptions): RoomStore {
   function attach(r: SdkRoom, sdk: SdkModule, joinedArea: Area, joinedShowClass: boolean) {
     const gen = ++generation;
     room = r;
+    raidLink.attach(up => r.send(MSG.raid, up));
     serverArea = joinedArea;
     serverShowClass = joinedShowClass;
     r.reconnection.maxRetries = RECONNECT_TRIES;
@@ -421,6 +423,7 @@ export function roomStore(o: RoomStoreOptions): RoomStore {
     });
     // A chat line (yours too: your copy is the acceptance) and a refused one go to the chat; a restart's notice stays here.
     r.onMessage(MSG.line, msg => { const l = parseChatLine(msg); if (l) chat.receive(l); });
+    r.onMessage(MSG.raid, msg => { const v = parseRaidView(msg); if (v && gen === generation) raidLink.receive(v); });
     r.onMessage(MSG.sys, msg => {
       const m = parseSys(msg);
       if (m?.kind === "refused") chat.refused(m.reason, m.text);
@@ -449,6 +452,7 @@ export function roomStore(o: RoomStoreOptions): RoomStore {
   function detach() {
     generation++;
     room = null;
+    raidLink.detach();
     cancelCard?.();
     cancelCard = null;
     clock.stop();

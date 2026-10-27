@@ -11,8 +11,9 @@
  * (no designed creatures here). They stay mounted from the start, parked far below the world, so the loading
  * warm-up (LoadGate) compiles them and the cutscene never stalls on a first draw.
  *
- * Driven by the overlay's window events for this client's own cast (`live.cast`, set by useWorldClips):
- *   tsi:boss-surface {tier} → surface; tsi:fish-caught → land it; tsi:fish-escaped → sink; tsi:fish-end → gone.
+ * Driven by the overlay's window events for this client's own cast (`live.cast`, set by useWorldClips), or a raid
+ * joined from elsewhere (`at`, where it was hooked):
+ *   tsi:boss-surface {tier, at?} → surface; tsi:fish-caught → land it; tsi:fish-escaped → sink; tsi:fish-end → gone.
  */
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
@@ -21,7 +22,7 @@ import { frameBoss, releaseBossCam } from "@/lib/game/bossCam";
 import { creatureFor } from "@/lib/game/bossCreatures";
 import { shakeCamera } from "@/lib/game/cameraJuice";
 import { HOOK, type HookTier } from "@/lib/game/fishing";
-import { live } from "@/lib/game/fishingRig";
+import { live, sceneWater } from "@/lib/game/fishingRig";
 import { fishLeaps } from "@/lib/game/fx/fishingFx";
 import type { ParticlePool } from "@/lib/game/fx/particles";
 import { useMoveParticles } from "../movement/moveFx";
@@ -42,19 +43,34 @@ interface Boss {
   side: number; up: number; toward: number; tilt: number;
 }
 
-export default function BossCreature() {
+/** Joining a raid from further off than this (u), the shot is taken this far from it instead. */
+const FAR_SHOT = 30;
+
+export default function BossCreature({ player }: { player: React.RefObject<THREE.Vector3> }) {
   const particles = useMoveParticles();
   const legendary = useRef<THREE.Group>(null), divine = useRef<THREE.Group>(null);
   const boss = useRef<Boss>({ tier: null, mode: "parked", t: 0, x: 0, y: 0, z: 0, dirX: 0, dirZ: 1, height: 1, splashed: 0, side: 0, up: 0, toward: 0, tilt: 0 });
   useEffect(() => {
     const b = boss.current;
     const onSurface = (e: Event) => {
-      const tier = (e as CustomEvent<{ tier?: HookTier }>).detail?.tier, c = live.cast;
-      if (!c || (tier !== "legendary" && tier !== "divine")) return;
+      const d = (e as CustomEvent<{ tier?: HookTier; at?: { x: number; z: number } }>).detail, tier = d?.tier, c = live.cast, p = player.current;
+      if (tier !== "legendary" && tier !== "divine") return;
       const size = SIZE[tier];
-      Object.assign(b, { tier, mode: "surface", t: 0, splashed: 0, side: 0, up: 0, toward: 0, tilt: 0, dirX: c.dirX, dirZ: c.dirZ, height: size.height, y: c.waterY });
-      b.x = c.landX + c.dirX * size.past; b.z = c.landZ + c.dirZ * size.past;
-      frameBoss(c.fromX, c.waterY + 1, c.fromZ, c.dirX, c.dirZ, Math.hypot(b.x - c.fromX, b.z - c.fromZ), size.height);
+      // Your own catch surfaces past your bobber; a raid you joined from elsewhere, where its angler hooked it, framed
+      // from you, or from near it when you're far off (the shot cuts there).
+      let fromX: number, fromZ: number, dirX: number, dirZ: number, waterY: number, x: number, z: number;
+      if (d.at && p) {
+        const dx = d.at.x - p.x, dz = d.at.z - p.z, l = Math.hypot(dx, dz) || 1;
+        dirX = dx / l; dirZ = dz / l; waterY = sceneWater.height(d.at.x, d.at.z);
+        x = d.at.x + dirX * size.past; z = d.at.z + dirZ * size.past;
+        const back = Math.min(l, FAR_SHOT);
+        fromX = d.at.x - dirX * back; fromZ = d.at.z - dirZ * back;
+      } else if (c) {
+        dirX = c.dirX; dirZ = c.dirZ; waterY = c.waterY; fromX = c.fromX; fromZ = c.fromZ;
+        x = c.landX + c.dirX * size.past; z = c.landZ + c.dirZ * size.past;
+      } else return;
+      Object.assign(b, { tier, mode: "surface", t: 0, splashed: 0, side: 0, up: 0, toward: 0, tilt: 0, dirX, dirZ, height: size.height, y: waterY, x, z });
+      frameBoss(fromX, waterY + 1, fromZ, dirX, dirZ, Math.hypot(x - fromX, z - fromZ), size.height);
       shakeCamera(HOOK[tier].shake * 0.6, 3); // a long rumble as it comes up
     };
     const onCaught = () => { if (b.tier && b.mode !== "parked") { b.mode = "landed"; b.t = 0; b.splashed = 0; } };
@@ -71,7 +87,7 @@ export default function BossCreature() {
       window.removeEventListener("tsi:fish-end", onEnd);
       park(b);
     };
-  }, []);
+  }, [player]);
   useFrame((_, dt) => step(boss.current, legendary.current, divine.current, particles.pool, Math.min(dt, 0.1)));
   return <>
     <group ref={legendary} position={[0, PARKED, 0]}><LegendaryPlaceholder /></group>
