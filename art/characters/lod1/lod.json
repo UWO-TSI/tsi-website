@@ -323,6 +323,10 @@
   "tris": 351,
   "lod1": 297
  },
+ "outfits/top/top_hoodie_zip.glb": {
+  "tris": 343,
+  "lod1": 289
+ },
  "outfits/top/top_longsleeve.glb": {
   "tris": 328,
   "lod1": 204

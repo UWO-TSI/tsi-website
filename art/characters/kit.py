@@ -644,7 +644,7 @@ def entry(spec, rel, tris, used, images):
                       for n, (k, v) in spec["mats"].items() if n in used],
         "decalSlot": {"material": "M_Decal", "uv": [0, 0, 1, 1], "alphaMode": "MASK"} if m.get("decal") else None,
         "hidesBackHair": m.get("hidesBackHair", False), "hides": list(m.get("hides", [])),
-        **{key: m[key] for key in ("group", "variantOf", "item", "event", "encloses", "design", "bodyCut") if key in m},
+        **{key: m[key] for key in ("group", "variantOf", "item", "event", "encloses", "design", "bodyCut", "key") if key in m},
         **({"skull": SKULL_VERSION} if m.get("group") in ("head", "face") else {}),
     }
 

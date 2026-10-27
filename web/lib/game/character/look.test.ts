@@ -330,7 +330,7 @@ describe("David's wardrobe cut (playtest round 1, 2026-10-14)", () => {
 });
 
 describe("wardrobe batch 2 (specs/playtest-round1.md \"New wardrobe batch\"; David's prices, specs/wardrobe/batch2-pricing.json)", () => {
-  const keyed = PARTS.filter(p => p.key);
+  const keyed = PARTS.filter(p => p.key && p.key in BATCH2_PRICES);   // a key David has not priced yet (the TSI zip hoodie) is not batch 2
   const sold = (key: string) => ["coins", "gems"].includes(BATCH2_PRICES[key]?.mode);
   /** A GLB's first TEXCOORD_0 (the art copy: not compressed), as [u, v] pairs. */
   function uvs(file: string): number[] {

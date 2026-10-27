@@ -96,7 +96,7 @@ describe("the starting creator after the wardrobe cut (playtest round 1)", () =>
 describe("wardrobe batch 2 in the creator and the closet (David's prices, specs/wardrobe/batch2-pricing.json)", () => {
   const offered = (mode: "create" | "wardrobe", owned: ReadonlySet<string>) => new Set(CATEGORIES.flatMap(c => c.sections.flatMap(s =>
     shownOptions(s, mode, id => { const ref = id && unlockRef(id); return !ref || owned.has(ref); }))));
-  const b2 = PARTS.filter(p => p.key);
+  const b2 = PARTS.filter(p => p.key && p.key in BATCH2_PRICES);   // a key David has not priced yet (the TSI zip hoodie) is not batch 2
   const free = (key: string) => BATCH2_PRICES[key].mode === "free";
   const faceParts = (key: string) => { const f = FACE.faces[key]; return [f.eyes, f.mouth, ...f.extras].filter((x): x is string => !!x); };
 

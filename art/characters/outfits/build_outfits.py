@@ -550,6 +550,17 @@ def design_uv(ob):
                 rest = [d[0] for d in uv if d is not c and min(d[0] - lo, hi - d[0]) >= 1e-3]
                 if rest:
                     c[0] = hi if sum(rest) / len(rest) > (lo + hi) / 2 else lo
+        # a face across the seam with no corner on it (the hood's middle column): its corners on the far side of the
+        # seam go onto it, or the face would sweep the whole row of the design (the zip and the logo on the hood)
+        isl = {(c[2], c[3]) for c in uv}
+        if len(isl) == 1:
+            lo, hi = (uv[0][2], uv[0][2] + 0.5) if uv[0][3] else (0.0, 1.0)
+            mid = (lo + hi) / 2
+            if max(c[0] for c in uv) - min(c[0] for c in uv) > (hi - lo) / 2:
+                up = sum(c[0] > mid for c in uv) * 2 >= len(uv)
+                for c in uv:
+                    if (c[0] > mid) != up:
+                        c[0] = hi if up else lo
         for li, c in zip(poly.loop_indices, uv):
             uvl.data[li].uv = (c[0], 1.0 - c[1])        # Blender's v runs up; glTF's (the design image's) down
 
@@ -562,7 +573,9 @@ def fit(ob, spec):
 
 
 # ---------------------------------------------------------------- the designs: one atlas, a cell per design
-DESIGN_GRID, DESIGN_CELL, DESIGN_GUTTER = 4, 256, 0.03125
+# 2 x 2 cells of 512 px (a 1024 atlas): the TSI zip hoodie's logo needs ~570 texels a metre round the torso to read at
+# the creator's close-up (256 px cells gave ~280)
+DESIGN_GRID, DESIGN_CELL, DESIGN_GUTTER = 2, 512, 0.03125
 
 
 def stripe_design(n=DESIGN_CELL, ss=4):
@@ -581,7 +594,128 @@ def stripe_design(n=DESIGN_CELL, ss=4):
     return out
 
 
-DESIGNS = {"stripe": stripe_design}
+# ---------------------------------------------------------------- the TSI zip hoodie (David's photo, 2026-10-27:
+# specs/references/clothing/2026-10-27-tsi-zip-hoodie.png): washed navy, lighter up top, darker ribbing, a silver zip with a
+# blue pull tab, slanted pocket welts, the TSI varsity patch on the wearer's left chest with "EST." and "24".
+TSI_ZIP = {"wash": "#4D659E", "mid": "#33508A", "deep": "#1E3463", "rib": "#172750", "line": "#0E1836", "cream": "#EDE7D4",
+           "outline": "#13213F", "zip": "#C9CED8", "tab": "#2F58D8"}
+# glyphs as rects (x0, y0, x1, y1) in their own box, y down: the patch's varsity serifs, and a 3 x 5 type for "EST." and "24"
+VARSITY = {"T": [(0, 0, 1, 0.2), (0.33, 0, 0.67, 1), (0.18, 0.85, 0.82, 1), (0, 0, 0.14, 0.34), (0.86, 0, 1, 0.34)],
+           "S": [(0.12, 0, 0.88, 0.19), (0, 0.07, 0.3, 0.52), (0.12, 0.41, 0.88, 0.59), (0.7, 0.48, 1, 0.93),
+                 (0.12, 0.81, 0.88, 1), (0.7, 0, 1, 0.3), (0, 0.7, 0.3, 1)],
+           "I": [(0.3, 0, 0.7, 1), (0.06, 0, 0.94, 0.17), (0.06, 0.83, 0.94, 1)]}
+SMALL = {"E": [(0, 0, 0.36, 1), (0, 0, 1, 0.2), (0, 0.4, 0.85, 0.6), (0, 0.8, 1, 1)],
+         "S": [(0, 0, 1, 0.2), (0, 0, 0.36, 0.6), (0, 0.4, 1, 0.6), (0.64, 0.4, 1, 1), (0, 0.8, 1, 1)],
+         "T": [(0, 0, 1, 0.2), (0.32, 0, 0.68, 1)], ".": [(0, 0.78, 1, 1)],
+         "2": [(0, 0, 1, 0.2), (0.64, 0, 1, 0.6), (0, 0.4, 1, 0.6), (0, 0.4, 0.36, 1), (0, 0.8, 1, 1)],
+         "4": [(0, 0, 0.36, 0.6), (0, 0.4, 1, 0.6), (0.64, 0, 1, 1)]}
+
+
+def _hex(h):
+    return np.array([int(h[i:i + 2], 16) / 255 for i in (1, 3, 5)])
+
+
+def _ss(a, b, x):
+    t = np.clip((x - a) / (b - a), 0.0, 1.0)
+    return t * t * (3 - 2 * t)
+
+
+def _type(S, Z, text, font, s0, z_top, w, h, gap, grow=0.0, arch=None):
+    """Mask of `text` set from (s0, z_top) on the garment (s m round from the front centre, z m up), glyphs w x h m;
+    with `arch` (a radius, m) the glyphs sit on an arc over the text's centre, each turned to it (the patch's arch)."""
+    m = np.zeros(S.shape, bool)
+    mid = s0 + _width(text, w, gap) / 2
+    x = s0
+    for ch in text:
+        gw = w * (0.4 if ch == "." else 1.0)
+        dx = x + gw / 2 - mid
+        ang = dx / arch if arch else 0.0
+        px, pz = S - (x + gw / 2), Z - (z_top - h / 2 - (dx * dx / (2 * arch) if arch else 0.0))
+        xl, zl = np.cos(ang) * px - np.sin(ang) * pz, np.sin(ang) * px + np.cos(ang) * pz
+        for x0, y0, x1, y1 in font[ch]:
+            m |= ((xl >= (x0 - 0.5) * gw - grow) & (xl <= (x1 - 0.5) * gw + grow) &
+                  (zl <= (0.5 - y0) * h + grow) & (zl >= (0.5 - y1) * h - grow))
+        x += gw + gap
+    return m
+
+
+def _width(text, w, gap):
+    return sum(w * (0.4 if ch == "." else 1.0) for ch in text) + gap * (len(text) - 1)
+
+
+def tsi_zip_design(n=DESIGN_CELL, ss=4):
+    """The TSI zip hoodie on the tops layout, opaque: each torso texel placed by its arc length round the hoodie from
+    the front centre (s, + toward the wearer's left) and its height, each sleeve texel by its distance along the arm and
+    its angle round it, so the patch and the welts keep their shape on the curved front."""
+    N = n * ss
+    v, u = (np.mgrid[0:N, 0:N] + 0.5) / N
+    C = {k: _hex(c) for k, c in TSI_ZIP.items()}
+    out = np.zeros((N, N, 3))
+    # torso: height from v; s from the angle round the hoodie's own ellipse (design_uv's, grown to the shell)
+    rows = int(np.searchsorted(v[:, 0], TORSO_V))
+    Z = DZ_TOP - v[:rows] / TORSO_V * (DZ_TOP - DZ_BOT)
+    th = np.radians(u[:rows] * 360.0 - 180.0)
+    ab = np.array([torso_at_ab(z) for z in Z[:, 0]])
+    a, b = ab[:, :1], ab[:, 1:]
+    r = 1.0 / np.sqrt((np.sin(th) / a) ** 2 + (np.cos(th) / b) ** 2)
+    px, py = r * np.sin(th), r * np.cos(th)
+    seg = np.hypot(np.diff(px, axis=1, prepend=px[:, :1]), np.diff(py, axis=1, prepend=py[:, :1]))
+    S = np.cumsum(seg, axis=1)
+    S -= S[:, N // 2 - 1:N // 2 + 1].mean(axis=1, keepdims=True)
+    col = C["deep"] + (C["mid"] - C["deep"]) * _ss(0.31, 0.40, Z)[..., None]
+    col += (C["wash"] - col) * _ss(0.40, 0.475, Z)[..., None]
+    mottle = 0.05 * np.sin(3 * th + 1.3) * np.cos(40 * Z + 0.7) + 0.03 * np.sin(5 * th + 0.4) * np.sin(70 * Z + 2.1)
+    col *= (1 + mottle)[..., None]
+    rib = Z < 0.317                                                     # the hem band
+    col[rib] = C["rib"] * (1 + 0.08 * np.sign(np.sin(2 * np.pi * S[rib] / 0.005)))[..., None]
+    for side in (-1, 1):                                                # the slanted welt pockets, open toward the zip
+        t = np.linspace(0, 1, 48)[:, None]
+        p0, c0, p1 = np.array([side * 0.088, 0.388]), np.array([side * 0.114, 0.368]), np.array([side * 0.124, 0.330])
+        curve = (1 - t) ** 2 * p0 + 2 * (1 - t) * t * c0 + t ** 2 * p1
+        box = (np.abs(S - side * 0.106) < 0.03) & (np.abs(Z - 0.359) < 0.04)
+        d = np.min(np.hypot(S[box][:, None] - curve[:, 0], Z[box][:, None] - curve[:, 1]), axis=1)
+        lip = np.min(np.hypot(S[box][:, None] - curve[:, 0] + side * 0.0024, Z[box][:, None] - curve[:, 1]), axis=1)
+        cb = col[box]
+        cb[lip < 0.0011] *= 1.18
+        cb[d < 0.0012] = C["line"]
+        col[box] = cb
+    zip_ = (np.abs(S) < 0.0034) & (Z < 0.516)                          # the zip: tape, then silver teeth, hem to neck
+    col[zip_] = C["line"]
+    teeth = (np.abs(S) < 0.0019) & (Z < 0.516)
+    col[teeth] = C["zip"] * (0.82 + 0.18 * (np.sin(2 * np.pi * Z[teeth] / 0.0024) > 0))[..., None]
+    col[(np.abs(S) < 0.0032) & (Z > 0.497) & (Z < 0.512)] = C["zip"] * 1.06    # the slider
+    col[(np.abs(S) < 0.0032) & (Z > 0.299) & (Z < 0.305)] = C["zip"]           # the stop
+    col[(np.abs(S) < 0.0022) & (Z > 0.481) & (Z <= 0.497)] = C["tab"]            # the blue pull tab
+    # the patch: TSI, cream with a dark outline, centred 0.082 m round to the wearer's left; EST. and 24 beside it
+    lw, lh, lg, sc, zt = 0.0185, 0.03, 0.0035, 0.082, 0.462
+    s0 = sc - _width("TSI", lw, lg) / 2
+    col[_type(S, Z, "TSI", VARSITY, s0, zt, lw, lh, lg, grow=0.0024, arch=0.12)] = C["outline"]
+    col[_type(S, Z, "TSI", VARSITY, s0, zt, lw, lh, lg, arch=0.12)] = C["cream"]
+    tw, th_, tg = 0.0062, 0.0105, 0.0013
+    tz = zt - lh * 0.62 + th_ / 2 - 0.002
+    col[_type(S, Z, "EST.", SMALL, s0 - 0.004 - _width("EST.", tw, tg), tz, tw, th_, tg)] = C["cream"]
+    col[_type(S, Z, "24", SMALL, s0 + _width("TSI", lw, lg) + 0.004, tz, tw, th_, tg)] = C["cream"]
+    out[:rows] = col
+    # sleeves: along the arm from DX_ARM[0], the angle round it from the top; faded on top and at the shoulder
+    xa = DX_ARM[0] + (v[rows:] - TORSO_V) / (1 - TORSO_V) * (DX_ARM[1] - DX_ARM[0])
+    phi = np.radians(((u[rows:] * 2) % 1.0) * 360.0 - 180.0)
+    col = C["wash"] + (C["deep"] - C["wash"]) * _ss(0.09, 0.24, xa)[..., None]
+    col += (C["wash"] - col) * (0.35 * (0.5 + 0.5 * np.cos(phi)))[..., None]
+    col *= (1 + 0.04 * np.sin(2 * phi + 0.8) * np.cos(30 * xa))[..., None]
+    cuff = xa > 0.243
+    col[cuff] = C["rib"] * (1 + 0.08 * np.sign(np.sin(70 * phi[cuff])))[..., None]
+    out[rows:] = col
+    img = out.reshape(n, ss, n, ss, 3).mean(axis=(1, 3))
+    return np.concatenate([np.clip(img, 0, 1), np.ones((n, n, 1))], axis=2).astype(np.float32)
+
+
+def torso_at_ab(z, off=0.018):
+    """The hoodie shell's ellipse half-axes at height z (x, y)."""
+    _, a, b = B.torso_at(min(max(z, B.TORSO[0][0].z), B.TORSO[-1][0].z), off)
+    return a, b
+
+
+DESIGNS = {"stripe": stripe_design, "tsi_zip": tsi_zip_design}
 
 
 def design_atlas():
@@ -621,16 +755,30 @@ def tee(pc):
     sleeves(pc, [X0 * 0.8, 0.138, 0.176], [0.014, 0.012, 0.016])
 
 
-@part("top_hoodie", "top", "Hoodie", {"M_Main": ("outfit", 11), "M_Accent": ("outfit", 1)}, **uni("top_hoodie", 2, 279))
-def hoodie(pc):
-    """Roomy hoodie: a ribbed hem band, full sleeves gathered into cuffs, the hood down on the back, drawstrings."""
+def hoodie_shell(pc):
+    """The universal hoodie: a ribbed hem band, full sleeves gathered into cuffs, the hood down on the back."""
     trunk(pc, [0.300, 0.316, 0.362, 0.405, Z_SH - 0.001, Z_NECK], [0.013, 0.019, 0.020, 0.018, 0.016, 0.012])
     sleeves(pc, [X0 * 0.8, 0.138, 0.199, 0.243, 0.262], [0.017, 0.016, 0.016, 0.019, 0.010])
     hood_down(pc, 0.036)
+
+
+@part("top_hoodie", "top", "Hoodie", {"M_Main": ("outfit", 11), "M_Accent": ("outfit", 1)}, **uni("top_hoodie", 2, 279))
+def hoodie(pc):
+    """Roomy pullover hoodie: the universal hoodie and its drawstrings."""
+    hoodie_shell(pc)
     pc.mat = "M_Accent"
     for s in (-1, 1):
         strip(pc, [T(s * 13, Z_NECK - 0.004, 0.014), T(s * 14, 0.47, 0.022), T(s * 15, 0.452, 0.022)], 0.008)
     pc.mat = "M_Main"
+
+
+@part("top_tsi_zip_hoodie", "top", "TSI zip hoodie", {"M_Main": ("fixed", TSI_ZIP["mid"])}, key="tsi-zip-hoodie",
+      **uni("top_hoodie_zip", 8, 279, "tsi_zip"))
+def tsi_zip_hoodie(pc):
+    """David's TSI zip hoodie (2026-10-27): the universal hoodie without the pullover's drawstrings (same rings, so the
+    same weights, and the same skin cut under its own bit, 8: one bit per model); its zip, pockets, ribbing, wash and logo are the tsi_zip design. Unpriced: its
+    `key` is not in specs/wardrobe/batch2-pricing.json yet (David prices it), so it has no shop row."""
+    hoodie_shell(pc)
 
 
 @part("top_stripe_ls", "top", "Striped long-sleeve", {"M_Main": ("outfit", 1)}, **uni("top_longsleeve", 1, 256, "stripe"))

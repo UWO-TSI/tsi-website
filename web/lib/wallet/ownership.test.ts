@@ -160,7 +160,7 @@ describe("look save (PATCH /api/profile)", () => {
 describe("wardrobe batch 2 (David's modes and prices, specs/wardrobe/batch2-pricing.json)", () => {
   /** Every item David priced: its key, the shop row's catalogue_ref and category. */
   const priced = [
-    ...PARTS.filter((p) => p.key).map((p) => ({ key: p.key!, ref: p.id, category: p.slot === "accessory" ? "accessory" : "hair" })),
+    ...PARTS.filter((p) => p.key && p.key in BATCH2_PRICES).map((p) => ({ key: p.key!, ref: p.id, category: p.slot === "accessory" ? "accessory" : "hair" })),
     ...Object.entries(FACE.faces).map(([key, f]) => ({ key, ref: faceRef(f.id), category: "face" })),
   ];
   const rowOf = (ref: string) => seedItems().filter((i) => i.catalogue_ref === ref);

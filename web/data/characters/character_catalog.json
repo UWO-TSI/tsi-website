@@ -642,6 +642,26 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": []
+  },
+  {
+   "id": "top_tsi_zip_hoodie",
+   "slot": "top",
+   "name": "TSI zip hoodie",
+   "glb": "outfits/top/top_hoodie_zip.glb",
+   "tris": 263,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": null,
+     "color": "#33508A"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "design": 1,
+   "bodyCut": 8,
+   "key": "tsi-zip-hoodie"
   }
  ],
  "accessories": [
@@ -4952,13 +4972,14 @@
  },
  "designs": {
   "atlas": "outfits/designs.png",
-  "grid": 4,
+  "grid": 2,
   "gutter": 0.03125,
   "materials": [
    "M_Main"
   ],
   "cells": {
-   "stripe": 0
+   "stripe": 0,
+   "tsi_zip": 1
   }
  }
 }

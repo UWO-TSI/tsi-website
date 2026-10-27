@@ -32,7 +32,26 @@ Round 1's review is still out with David, so keep this on top of round 1, on thi
 
 ## Status
 
-Round 1 built, in review (not merged). Head: see `git log -1` on `game/clothing-v2`.
+Round 1 built, in review (not merged). The TSI zip hoodie built on top of it, shots ready for David (2026-10-27). Head: see
+`git log -1` on `game/clothing-v2`.
+- **TSI zip hoodie** (part `top_tsi_zip_hoodie`, "TSI zip hoodie"): model `top/top_hoodie_zip.glb` = the universal hoodie
+  less the pullover's drawstrings (`hoodie_shell` shared by both; 263 tris, the pullover 271), same rings and weights,
+  its own body-cut bit 8 (one bit per model, rig.test; the same 24 skin triangles as bit 2). M_Main fixed `#2A4680`
+  (no colour pick). Design `tsi_zip` (cell 1): opaque wash (dusty top, deep navy hem), darker ribbed hem and cuffs,
+  silver zip with slider, stop and blue pull tab, slanted welt pockets, the patch (arched varsity TSI, cream on a navy
+  outline, "EST." and "24" in a 3 x 5 type), all primitives and type in `build_outfits.py` placed by arc length round
+  the hoodie. Unpriced: `key: "tsi-zip-hoodie"`, not in `specs/wardrobe/batch2-pricing.json` (coordinator: a keyed part
+  missing from the pricing JSON is hidden everywhere until David prices it; lane wardrobe-b3 adds that helper to look.ts.
+  On this branch alone it shows locked in the closet). The batch-2 tests now count only keys in the pricing JSON.
+- **Design atlas now 2 x 2 cells of 512 px** (still 1024 px; was 4 x 4 of 256): the logo needs ~570 texels a metre round
+  the torso to read at the creator's close-up. Room for 4 designs; round 2 needs grid 4 (2048) or smaller cells.
+- **design_uv seam fix:** a face across a family's seam with no corner on it (the hood's middle column) swept the whole
+  design row (the zip and logo showed on the hood). Its far corners now go onto the seam. UV-only change to the
+  hoodie, shorts, trousers, joggers, slip-ons and sneakers GLBs (no design on them, so nothing visible changed).
+- **Evidence** (`specs/evidence/clothing-v2/tsi-zip-hoodie/`): `photo_vs_ours.png` (photo, then front, 3/4 and back in the
+  creator's lights), `logo_closeup.png`, `run_jump_sit.png` (in game, the pullover below it), `fit_report.txt`.
+- **Gates (TSI zip hoodie):** tsc clean; vitest 3453 passed / 3 skipped, with and without `NEXT_PUBLIC_GAME_WORLD=new`;
+  eslint clean on changed files. No perf:check (no new draw call, same atlas size).
 - **Universal models** (`art/characters/outfits/build_outfits.py`, section "clothing-v2"): tee, long-sleeve, hoodie,
   shorts, trousers, joggers, slip-ons, sneakers. One mesh per type (`model=`); the striped long-sleeve is
   `outfits/top/top_longsleeve.glb` + the stripe design (the old `top_stripe_ls.glb` is deleted). Part ids unchanged, so
@@ -58,12 +77,15 @@ Round 1 built, in review (not merged). Head: see `git log -1` on `game/clothing-
   and tier (frame +7 to +44%, cafe lite included) with machine load 5 and swap over 10 GB; v2's +70% draw calls and
   +54% triangles are the v2 world's growth since that baseline. This lane adds no draw call (designs share the body
   material) and lowers garment triangles; the coordinator's combined check should judge it.
+- **Evidence tools (zip hoodie):** `/lab/avatar?sheet=look&look=<json>&views=front,34,back&light=creator&framing=body`
+  (`&zoom=3.2&at=0.44` for the logo; on this sheet the height looked at is `&at=`, since `&look=` is the JSON).
 - **Evidence tools:** `outfits/render_fit.py` (+ `FIT_ROOT` for the last commit's assets), `outfits/fit_sheet.py`
   (`BEFORE=`), `/lab/avatar?sheet=fit` + `web/scripts/fit-shots.mjs` (in-game, `&cut=0` shows the cut skin).
 
 ## Next
 
-1. David reviews round 1 (`specs/evidence/clothing-v2/`). Apply his notes.
+1. David reviews round 1 (`specs/evidence/clothing-v2/`) and the TSI zip hoodie (`.../tsi-zip-hoodie/`). Apply his notes;
+   he prices the hoodie by adding `tsi-zip-hoodie` to `specs/wardrobe/batch2-pricing.json`.
 2. Round 2: the rest of `art/characters/outfits/` on the same models (TSI crew = sweater + a TSI design, so the decal
    mesh can go), plus new models for skirts, boots, sandals, loafers, rain boots and the one-pieces.
 

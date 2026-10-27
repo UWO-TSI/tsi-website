@@ -44,6 +44,7 @@ import { useSearchParams } from "next/navigation";
 import { Canvas } from "@react-three/fiber";
 import { PerspectiveCamera, View } from "@react-three/drei";
 import Character, { type CharacterMotion, type ClipName } from "@/components/game/character/Character";
+import { Lights as CreatorLights } from "@/components/game/character/CreatorStage";
 import { CUTS } from "@/lib/game/character/rig";
 import { DEFAULT_LOOK, FACE, NATURAL_HAIR, PARTS, parseLook, partsIn, STARTER_PARTS, type CharacterLook, type EyeFrame } from "@/lib/game/character/look";
 import { RESIDENT_LOOKS } from "@/lib/content/residentRoster";
@@ -64,6 +65,8 @@ const VIEW_PITCH: Record<string, number> = { high: 0.55, low: -0.3 };
 if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("cut") === "0") CUTS.on = false;
 /** `&charlod=1|2`: the cells load their LOD meshes and draw that tier (Character's SHOW_LOD). */
 const LOD_SHEET = typeof window !== "undefined" && !!new URLSearchParams(window.location.search).get("charlod");
+/** &light=creator: the creator's studio lights (CreatorStage) in place of the bench's (the TSI zip hoodie's review shots). */
+const CREATOR_LIGHT = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("light") === "creator";
 /** Kit sheets hold the eyes open (no blink lands mid-capture). */
 const OPEN: FaceOverride = { eyeFrame: "open" };
 interface Cell { label: string; look: CharacterLook; yaw: number; face?: FaceOverride | null; talk?: boolean; pitch?: number;
@@ -91,9 +94,11 @@ function Stage({ cell, framing, faceSize, orbit }: { cell: Cell; framing: keyof 
   const at: [number, number, number] = [f.at[0] / orbit.zoom, look + (dy * cp + dz * sp) / orbit.zoom, (dz * cp - dy * sp) / orbit.zoom];
   return <>
     <PerspectiveCamera makeDefault fov={30} position={at} onUpdate={c => c.lookAt(0, look, 0)} />
-    <ambientLight intensity={1.1} color="#fff6e6" />
-    <hemisphereLight args={["#fff8ec", "#b7c7a8", 0.9]} />
-    <directionalLight position={[1.6, 2.6, 2.2]} intensity={1.7} color="#fff1d8" />
+    {CREATOR_LIGHT ? <CreatorLights /> : <>
+      <ambientLight intensity={1.1} color="#fff6e6" />
+      <hemisphereLight args={["#fff8ec", "#b7c7a8", 0.9]} />
+      <directionalLight position={[1.6, 2.6, 2.2]} intensity={1.7} color="#fff1d8" />
+    </>}
     <Suspense fallback={null}><Character look={cell.look} motion={motion} scale={1} faceSize={faceSize} lod={LOD_SHEET} /></Suspense>
   </>;
 }
@@ -112,7 +117,9 @@ function AvatarBench() {
     ...(q.get("color") ? { hairColor: `#${q.get("color")!.toUpperCase()}` } : {}), ...(q.get("accent") ? { hairAccent: Number(q.get("accent")) } : {}) };
   const style = (s: string) => ({ ...base, ...STYLES[s] });
   const yaw = Number(q.get("yaw") ?? -0.5);
-  const orbit: Orbit = { pitch: Number(q.get("pitch") ?? 0), zoom: Number(q.get("zoom") ?? 1), look: q.get("look") ? Number(q.get("look")) : null };
+  // the height looked at is &look=, or &at= on ?sheet=look, whose &look= is the look's JSON
+  const lookAt = q.get(sheet === "look" ? "at" : "look");
+  const orbit: Orbit = { pitch: Number(q.get("pitch") ?? 0), zoom: Number(q.get("zoom") ?? 1), look: lookAt ? Number(lookAt) : null };
   const view = VIEWS[q.get("view") ?? "34"] ?? VIEWS["34"];
   const cells = useMemo<Cell[]>(() => {
     const bob = style(q.get("style") ?? "bob");
@@ -125,7 +132,7 @@ function AvatarBench() {
       .map(([label, look]) => ({ label: label as string, look: parseLook(look), yaw: 0, face: OPEN }));
     if (sheet === "look") {
       const look = parseLook(JSON.parse(q.get("look") ?? "{}"));
-      return [{ label: `${q.get("label") ?? "look"} front`, look, yaw: 0, face: OPEN }, { label: `${q.get("label") ?? "look"} 3/4`, look, yaw: -0.6, face: OPEN }];
+      return (q.get("views") ?? "front,34").split(",").map(v => ({ label: `${q.get("label") ?? "look"} ${v}`, look, yaw: VIEWS[v] ?? 0, pitch: VIEW_PITCH[v], face: OPEN }));
     }
     if (sheet === "fit") return (q.get("ids")?.split(",") ?? [...STARTER_PARTS]).flatMap(id => {
       const slot = PARTS.find(p => p.id === id)!.slot;
