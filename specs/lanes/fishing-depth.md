@@ -31,7 +31,12 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 ## Status
 
-(none yet)
+- **f-pond: blocked on a painted area (asked the coordinator, 2026-10-27).** Measured on the new world (`web/data/world`, NEXT_PUBLIC_GAME_WORLD=new):
+  - the only pond is the annotation "Pond (dry until elevated water)", 47 cells, all inside the closed Mountain zone, at mountain layer 1 (generate.ts: `H.m1 - 1.3`, painted rock); the nearest point a player can reach from the spawn is 34 u away (reach.ts);
+  - from every reachable point, casts find only sea and river (the wharf's narrow channels); no pond water exists in the open zones (wharf, west beach, village);
+  - so watering the mountain pond (elevated water, terrain-v3's post-launch mountain work) would not make pond fish catchable at launch.
+  - No code is needed for a painted pond: any water body in an open zone that doesn't reach the map edge already fishes as pond (fishingSpots.ts classifyWater), and the server's cells.json is rewritten on save.
+- Next items (f-requests, f-records, d-now, f-sushi) go ahead meanwhile.
 
 ## Rules
 
