@@ -29,7 +29,7 @@
  * &pitch= &zoom= &look= the camera's orbit (radians up, closer by, the height looked at)
  * &hair=<0-11> (none: the hairstyles' own colours) &color=RRGGBB &accent=<0-11> &skin=<0-11>&face=512 (the world atlas) &framing=head|hat|body &charlod=1|2 (every cell at LOD 1 or LOD 2)
  * &cut=0 (draw what a hat or hood hides: hidden_cut.py's marks ignored)
- * In ?sheet=roblox an id may carry a head accessory worn with it: &ids=hair_visor_messy+acc_visor (encode the + as %2B in a URL)
+ * In ?sheet=roblox an id may carry a head accessory worn with it: &ids=hair_messy_boy+acc_visor (encode the + as %2B in a URL)
  * ?sheet=b2acc    wardrobe batch 2: David's Roblox accessories, each worn over a hairstyle (&style=, default the ribbon bob),
  *                  front and 3/4; &groups=head,face (default all) &framing=body for the neck and front ones
  * ?sheet=b2faces  wardrobe batch 2: David's whole faces #20-25 on the head, front and 3/4 (&skins=, default 3), then a mix row
