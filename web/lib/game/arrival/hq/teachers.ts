@@ -36,10 +36,9 @@ export const TOOL_TEACHERS: readonly ToolTeacher[] = [
   { tool: "net", npc: "curator", live: true, key: "net-basic", finish: "bug" },
   // Pim, the tinkerer: combs the beach, finds what's buried, "perfectly good".
   { tool: "shovel", npc: "crafter", live: true, key: "shovel-basic", finish: "dig" },
-  // Later tools (proposals in the spec; nothing here is built). Dash and the glider are already planned as Keeper-taught
-  // moves (lib/game/moveUnlocks.ts `unlockMove` is their hook).
+  // Later tools (proposals in the spec; nothing here is built). The dash is everyone's from the start; the glider comes
+  // with the mountain expansion (lib/game/moveUnlocks.ts `unlockMove` is its hook).
   { tool: "axe", npc: "mayor", live: false, key: null, finish: null },
-  { tool: "dash", npc: "juniper", live: false, key: null, finish: null },
   { tool: "glider", npc: "nell", live: false, key: null, finish: null },
 ];
 

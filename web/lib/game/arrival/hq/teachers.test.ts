@@ -16,7 +16,7 @@ describe("tools unlocked by people (row 312)", () => {
     expect(live.map(t => t.tool).sort()).toEqual([...TAUGHT_KINDS].sort());
     for (const t of TOOL_TEACHERS) if (t.npc) expect(PROPOSED_RESIDENTS.some(r => r.slug === t.npc), t.npc).toBe(true);
     for (const t of live) expect(toolByKey(t.key)?.tier).toBe(1);
-    expect(TOOL_TEACHERS.filter(t => !t.live).map(t => t.tool)).toEqual(["axe", "dash", "glider"]);
+    expect(TOOL_TEACHERS.filter(t => !t.live).map(t => t.tool)).toEqual(["axe", "glider"]);
   });
 
   it("walks one tool from start to finish: offer, hand-over, the quest in the tracker, the catch, yours", () => {

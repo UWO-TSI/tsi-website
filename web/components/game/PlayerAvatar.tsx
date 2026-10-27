@@ -98,8 +98,6 @@ interface PlayerAvatarProps {
   timeScale?: number;
   telemetry?: React.RefObject<MoveTelemetry>;
   walkSpeed?: number;
-  /** The dash (Q) is yours: a Keeper teaches it (lib/game/moveUnlocks.ts); until then Q does nothing. The ruins' dodge is the encounter's. */
-  dash?: boolean;
   /** Walk only (the café, cafe-polish §4): no running, jumping or dashing. */
   walkOnly?: boolean;
   /** What this player holds from the tool wheel (specs/game-ui.md): drawn in the hand. In an encounter the weapon is the runtime's. */
@@ -183,7 +181,7 @@ const AIR_TAP = 0.18;
 type SeatExit = { x: number; z: number; yaw: number };
 type Seat = { x: number; z: number; clip: ClipName; lift: number; yaw: number; ground?: boolean; drive?: SeatDrive; hide?: boolean; exit?: SeatExit };
 
-export default function PlayerAvatar({ spawnPosition, player, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = false, playerLevel, member = false, combat: inCombat = false, respawn = 0, glider = false, dash = true, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed, walkOnly = false, held = null, ride }: PlayerAvatarProps) {
+export default function PlayerAvatar({ spawnPosition, player, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = false, playerLevel, member = false, combat: inCombat = false, respawn = 0, glider = false, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed, walkOnly = false, held = null, ride }: PlayerAvatarProps) {
   const anchor = useRef<THREE.Group>(null), body = useRef<THREE.Group>(null), head = useRef<THREE.Group>(null);
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null, move: null, afterimages: true });
   const { look } = useMyLook();
@@ -412,7 +410,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     let ix = (k[b.right] ? 1 : 0) - (k[b.left] ? 1 : 0), iz = (k[b.forward] ? 1 : 0) - (k[b.back] ? 1 : 0);
     const keyed = Math.hypot(ix, iz), tilt = Math.hypot(st.x, st.z);
     if (keyed) { ix /= keyed; iz /= keyed; } else { ix = st.x; iz = st.z; }
-    const jumpPressed = !walkOnly && (presses.current.jump || st.jumpPressed), dashPressed = !walkOnly && (dash || inCombat) && (presses.current.dash || st.dashPressed);
+    const jumpPressed = !walkOnly && (presses.current.jump || st.jumpPressed), dashPressed = !walkOnly && (presses.current.dash || st.dashPressed);
     presses.current.jump = presses.current.dash = false;
     st.jumpPressed = st.dashPressed = false;
     if (frozen || keyed || tilt > 0.05) target.current = null;

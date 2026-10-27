@@ -8,8 +8,7 @@ import { touchStick as stick } from "./moveFx";
  * Sized by the page (world audit item 11): `--touch-stick` (132px) and `--touch-scale` (1) shrink them for a phone on its side, and the buttons keep
  * clear of the right safe area through `--hud-edge`.
  */
-/** `dash`: the dash is taught by a Keeper (lib/game/moveUnlocks.ts); until then there's no Dash button. */
-export default function TouchControls({ left = 24, bottom = 28, walkOnly = false, dash = true }: { left?: number | string; bottom?: number | string; walkOnly?: boolean; dash?: boolean }) {
+export default function TouchControls({ left = 24, bottom = 28, walkOnly = false }: { left?: number | string; bottom?: number | string; walkOnly?: boolean }) {
   const base = useRef<HTMLDivElement>(null), knob = useRef<HTMLDivElement>(null);
   // The knob moves through its style, not state: pointermove fires far more often than a render is worth.
   const setKnob = (x: number, y: number) => { if (knob.current) knob.current.style.transform = `translate(${x}px, ${y}px)`; };
@@ -37,7 +36,7 @@ export default function TouchControls({ left = 24, bottom = 28, walkOnly = false
       <div ref={knob} style={{ position: "absolute", left: "calc(50% - 26px * var(--touch-scale, 1))", top: "calc(50% - 26px * var(--touch-scale, 1))", width: "calc(52px * var(--touch-scale, 1))", height: "calc(52px * var(--touch-scale, 1))", borderRadius: "50%", background: "rgb(255 250 230 / 0.95)", boxShadow: "0 3px 0 rgb(114 92 78 / 0.25)", pointerEvents: "none" }} />
     </div>
     <div style={{ position: "absolute", right: "max(24px, var(--hud-edge, 0px))", bottom, display: "flex", gap: "calc(14px * var(--touch-scale, 1))", alignItems: "flex-end", zIndex: 20 }}>
-      {!walkOnly && <>{button("slide", "Slide", 60)}{dash && button("dash", "Dash", 64)}{button("jump", "Jump", 84)}</>}
+      {!walkOnly && <>{button("slide", "Slide", 60)}{button("dash", "Dash", 64)}{button("jump", "Jump", 84)}</>}
     </div>
   </>;
 }
