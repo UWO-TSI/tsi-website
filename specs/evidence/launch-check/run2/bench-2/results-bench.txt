@@ -1,0 +1,21 @@
+{
+  "at": "2026-10-27T00:48:50.833Z",
+  "preview": "play.tethos.ca",
+  "results": [
+    {
+      "step": "bench: A is offered a seat on a bench by the fire",
+      "ok": true,
+      "detail": "fire-bench-0: reached, prompt \"Sit on the bench\""
+    },
+    {
+      "step": "bench: E sits A down (the prompt says Stand up)",
+      "ok": true,
+      "detail": "Stand up"
+    },
+    {
+      "step": "bench: E stands A up",
+      "ok": true,
+      "detail": "Sit on the bench"
+    }
+  ]
+}

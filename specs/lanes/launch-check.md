@@ -20,6 +20,14 @@ Worktree `.claude/worktrees/launch-check`, branch `game/launch-check`, cut from 
   - **Script fixes:** production's auth cookie is `sb-tethos-auth` on `.tethos.ca` (`web/lib/supabase/cookie.ts`), so the script signs in under that name; the cleanup scan's auth.users and profiles rows had no column names and were dropped from the counts (fixed: aliased).
   - **Cleanup:** 5 tables' set-null rows deleted by id, A's mute cleared, the 3 users deleted (200 each); verify: 162 columns plus auth.users and profiles hold 0 rows for the three ids, 0 recorded rows left (`specs/evidence/launch-check/cleanup-proof.txt`).
 
+- **Run 2 (2026-10-26, 20:40 to 20:55 Toronto, night), production main 2fe3e3b8 (the sushi bar, phase A), merged here:** evidence `specs/evidence/launch-check/run2/`.
+  - **day: 47 of 49 passed.** Everything from run 1 again (presence Here (2), chat, friends, wave, dances, report, live mute and unmute, flow 4 with a river `fish_dace`, the shovel gate, Pim's grant, `rock_stone`).
+  - **Sushi bar, all 11 passed:** both walk to the entrance (west beach, `(-47, 114.5)`), both offered "Enter the sushi bar", E pressed together seats both ("Leave the bar"), on different stools (3 and 2); each in turn stands with E at the exit, the camera back behind them, and sees the other seated, the tag over the counter at stool height (44% down the view, shots 33 and 35); A sits again and stands again.
+  - **Fail 1, not a game fault:** no buried shell this hour (the six shell nodes gave coconuts, a whelk and scallops; run 1 dug `shell_asari`). The dig is the hour's roll.
+  - **Fail 2, intermittent, not reproduced:** the bench. In the day run A stood 1.06 from fire-bench-0 with no prompt; in the first bench-only run E at fire-bench-1 cleared the prompt without seating A. Three later tries all sat and stood properly (prompt Sit on the bench, then Stand up, the avatar on the slot). Likely a resident holding the slots at the fire at night, but not proven.
+  - Cleanup: 5 tables' set-null rows by id, the 3 users (200 each); verify 0 rows left (`run2/cleanup-proof.txt`).
+  - New in the script: `bench` (a phase of its own too) and `sushiBar` steps; spots.ts gives the bar's entrance, exit, stools and the fire's benches with routes.
+
 ## Next
 
 1. **Fix `web/app/api/collections/route.test.ts` for the new world.** With `NEXT_PUBLIC_GAME_WORLD=new`, 21 tests fail with 422, because they cast at village coordinates. The server rightly refuses a spot that isn't water in the active world.

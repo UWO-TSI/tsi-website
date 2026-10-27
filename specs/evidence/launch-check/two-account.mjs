@@ -409,6 +409,8 @@ async function day() {
     }
     await flow4(A);
     await shovel(A);
+    await bench(A);
+    await sushiBar(A, B);
     await Promise.all([A.ctx.close(), B.ctx.close()]);
   } finally {
     await browser.close();
@@ -476,16 +478,115 @@ async function shovel(A) {
   record("shovel: a buried shell dug up on the beach (the shovel quest's catch)", dug, dug ? "" : "none buried at these nodes this hour");
 }
 
+/** The E prompt's text, or "". */
+const prompt = p => p.page.evaluate(() => {
+  const el = [...document.querySelectorAll("button, p")].find(e => /^(E|Tap)$/.test(e.querySelector("kbd")?.textContent ?? ""));
+  return el ? el.textContent.slice(el.querySelector("kbd").textContent.length).trim() : "";
+});
+const pressE = async p => { await focusWorld(p); await p.page.keyboard.press("e"); };
+/** Is k's name tag on p's screen, inside the view, and where (its box's centre, as a share of the view's height)? */
+const tagBox = (p, text) => p.page.evaluate(t => {
+  const el = [...document.querySelectorAll('[aria-hidden="true"] div, [aria-hidden="true"] span')].find(e => e.childElementCount === 0 && e.textContent?.trim() === t && e.getBoundingClientRect().width > 0 && getComputedStyle(e).visibility !== "hidden");
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  return { x: +(r.x + r.width / 2).toFixed(0), y: +((r.y + r.height / 2) / innerHeight).toFixed(2), inView: r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth };
+}, text);
+
+/**
+ * A bench (the seating code the sushi bar changed): A walks to a bench by the fire (the next one when residents hold
+ * both its slots), E sits (the prompt turns to Stand up), E stands A up.
+ */
+async function bench(A) {
+  let offer = false, tried = [];
+  for (const b of SPOTS.benches) {
+    const w = await walkRoute(A, { x: b.x, z: b.z }, b.route, 1.2);
+    offer = await waitFor(A, async () => (await prompt(A)) === "Sit on the bench", 6000);
+    tried.push(`${b.id}: ${w.ok ? "reached" : "not reached"}, prompt "${await prompt(A)}"`);
+    if (offer) break;
+    await shot(A, `30-a-no-seat-${b.id}`);
+  }
+  record("bench: A is offered a seat on a bench by the fire", offer, tried.join("; "));
+  if (!offer) return;
+  const before = await where(A);
+  await pressE(A);
+  const trace = [];
+  for (let i = 0; i < 8; i++) { await A.page.waitForTimeout(150); trace.push(`${await prompt(A)}@${JSON.stringify(await where(A))}`); }
+  log("bench trace", JSON.stringify(before), trace.join(" | "));
+  await shot(A, "30-a-after-e");
+  const sat = await waitFor(A, async () => (await prompt(A)) === "Stand up", 5000, 150);
+  record("bench: E sits A down (the prompt says Stand up)", sat, await prompt(A));
+  await A.page.waitForTimeout(1200);
+  await shot(A, "30-a-on-bench");
+  await pressE(A);
+  const up = await waitFor(A, async () => (await prompt(A)) !== "Stand up", 5000, 150);
+  record("bench: E stands A up", up, await prompt(A));
+}
+
+/**
+ * The sushi bar (specs/launch/sushi-bar.md; lib/game/sushiBar.ts), open in the evening and at night: A and B walk to its
+ * entrance on the west beach and press E at the same moment. They end on different stools (the clash settles), each one's
+ * dot on a stool; the prompt says Leave the bar. Then each in turn stands (E: at the bar's exit, the prompt back to Enter)
+ * and, from the landing, sees the other seated: the other's tag on screen over the counter, never sunk to the sea floor.
+ */
+async function sushiBar(A, B) {
+  const S = SPOTS.sushi;
+  record("sushi: the active world has the bar", !!S);
+  if (!S) return;
+  const [ex, ez] = S.entrance;
+  const [wa, wb] = await Promise.all([walkRoute(A, { x: ex + 0.4, z: ez }, S.route, 0.9), walkRoute(B, { x: ex - 0.4, z: ez }, S.route, 0.9)]);
+  record("sushi: A walks to the entrance", wa.ok, JSON.stringify(wa));
+  record("sushi: B walks to the entrance", wb.ok, JSON.stringify(wb));
+  const offered = await Promise.all([A, B].map(p => waitFor(p, async () => (await prompt(p)) === "Enter the sushi bar", 8000)));
+  record("sushi: both are offered the bar (open tonight)", offered.every(Boolean), (await Promise.all([A, B].map(prompt))).join(" | "));
+  if (!offered.every(Boolean)) return;
+  await Promise.all([focusWorld(A), focusWorld(B)]);
+  await Promise.all([A.page.keyboard.press("e"), B.page.keyboard.press("e")]);
+  const stoolOf = async p => { const h = await where(p); const i = h ? S.stools.findIndex(([x, z]) => Math.hypot(x - h.x, z - h.z) < 0.3) : -1; return { i, h }; };
+  const settled = await waitFor(A, async () => {
+    const [a, b] = [await stoolOf(A), await stoolOf(B)];
+    return a.i >= 0 && b.i >= 0 && a.i !== b.i && (await prompt(A)) === "Leave the bar" && (await prompt(B)) === "Leave the bar";
+  }, 8000, 250);
+  const [sa, sb] = [await stoolOf(A), await stoolOf(B)];
+  record("sushi: E together seats both (the prompt says Leave the bar)", (await prompt(A)) === "Leave the bar" && (await prompt(B)) === "Leave the bar", `${await prompt(A)} | ${await prompt(B)}`);
+  record("sushi: they end on different stools", settled, `A stool ${sa.i}, B stool ${sb.i}`);
+  await A.page.waitForTimeout(1500);
+  await Promise.all([shot(A, "31-a-seated-first-person"), shot(B, "32-b-seated-first-person")]);
+  // Each in turn: up (E), at the exit, the camera back behind them, the other seated in front (the camera looks +z).
+  for (const [up, seated, n] of [[A, B, 33], [B, A, 35]]) {
+    await pressE(up);
+    const stood = await waitFor(up, async () => (await prompt(up)) !== "Leave the bar", 5000, 150);
+    await up.page.waitForTimeout(1200);
+    const h = await where(up);
+    const atExit = h && Math.hypot(h.x - S.exit[0], h.z - S.exit[1]) < 1;
+    record(`sushi: E stands ${up.k.toUpperCase()} up at the exit`, stood && !!atExit, `${await prompt(up)} at ${JSON.stringify(h)}`);
+    const tag = await waitFor(up, async () => !!(await tagBox(up, seated.name))?.inView, 5000);
+    const box = await tagBox(up, seated.name);
+    // Seated on a stool 3 u ahead, the tag sits over the counter: in the upper half of the view (sunk to the sea floor it'd be low or gone).
+    record(`sushi: ${up.k.toUpperCase()} sees ${seated.k.toUpperCase()} seated, the tag over the head`, tag && box?.y < 0.5, JSON.stringify(box));
+    await shot(up, `${n}-${up.k}-sees-${seated.k}-seated`);
+    if (up === A) {
+      // A sits again, so B, getting up next, sees A seated.
+      await pressE(A);
+      const again = await waitFor(A, async () => (await prompt(A)) === "Leave the bar", 5000, 150);
+      record("sushi: A sits again from the entrance", again, await prompt(A));
+    }
+  }
+  await pressE(A);
+  record("sushi: E stands A up again", await waitFor(A, async () => (await prompt(A)) !== "Leave the bar", 5000, 150), await prompt(A));
+  await A.page.waitForTimeout(1200);
+  await shot(A, "37-a-stood-camera-back");
+}
+
 // The campfire (lib/game/campfire.ts): lit at real night; A and B walk to it (steered by the minimap's dot), dance, and
 // the dance near the fire turns into the stomp dance, which each one's socket carries from the other.
 const FIRE = SPOTS.fire;
 /** Along the route (spots.ts: the spawn to the fire on walkable ground) from its point nearest where p stands, then to the target. */
-async function walkRoute(p, target) {
+async function walkRoute(p, target, path = SPOTS.route, within = 2.5) {
   const here = await where(p);
-  const route = SPOTS.route.map(([x, z]) => ({ x, z }));
+  const route = path.map(([x, z]) => ({ x, z }));
   const from = here ? route.reduce((b, q, i) => (Math.hypot(q.x - here.x, q.z - here.z) < Math.hypot(route[b].x - here.x, route[b].z - here.z) ? i : b), 0) : 0;
   for (const q of route.slice(from + 1, -1)) { const r = await walkTo(p, q, 1.5, 30000); if (!r.ok) return r; }
-  return walkTo(p, target);
+  return walkTo(p, target, within);
 }
 async function walkTo(p, target, within = 2.5, ms = 90000) {
   // Calibrate W and D from the dot once (the camera stays put: autoFollow off, yaw 0).
@@ -704,6 +805,11 @@ else if (PHASE === "diag") {
 else if (PHASE === "flow4") {
   browser = await chromium.launch({ headless: true, args: ["--mute-audio"] });
   try { const A = await player("a"); await flow4(A); await A.ctx.close(); }
+  finally { await browser.close(); writeFileSync(`${OUT}/results-${PHASE}.txt`, JSON.stringify({ at: new Date().toISOString(), preview: HOST, results }, null, 2)); }
+}
+else if (PHASE === "bench") {
+  browser = await chromium.launch({ headless: true, args: ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist", "--enable-gpu"] });
+  try { const A = await player("a"); await enter(A); await bench(A); await A.ctx.close(); }
   finally { await browser.close(); writeFileSync(`${OUT}/results-${PHASE}.txt`, JSON.stringify({ at: new Date().toISOString(), preview: HOST, results }, null, 2)); }
 }
 else if (PHASE === "routes") await routes();
