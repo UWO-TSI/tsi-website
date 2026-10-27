@@ -51,13 +51,20 @@ import {
 import { weatherMods } from "@/lib/game/weatherPerks";
 import { liveIslandWeather, reelWeather } from "@/lib/game/islandWeather";
 import { advanceFishingReel, createFishingReel } from "@/lib/game/fishingReel";
-import { FISHING_HINTS, bindFishingCastLifecycle, bindFishingInput, castDevice, trackCastDevice, type CastDevice, type FishingHeldInput } from "@/lib/game/fishingInput";
+import { FISHING_HINTS, REEL_TEACH, bindFishingCastLifecycle, bindFishingInput, castDevice, trackCastDevice, type CastDevice, type FishingHeldInput } from "@/lib/game/fishingInput";
 import { isGameControlTarget } from "@/lib/game/keyboardInput";
 import { live } from "@/lib/game/fishingRig";
+import { firstCatch } from "@/lib/game/arrival/arrivalStore";
+import { Keycap } from "@/components/gui";
+import { MousePointerClick, Hand } from "lucide-react";
 
 type Phase = "idle" | "charging" | "casting" | "waiting" | "bite" | "reeling" | "revealing" | "missed";
 
 const BITE_WINDOW_MS = 1400;
+/** The first catch (t-catch): the bite waits this much longer, and the line never drains below TEACH_FLOOR. */
+const TEACH_BITE_MS = 2600, TEACH_FLOOR = 0.08;
+/** A hold only starts the first reel once its card has been up this long (the hook's own click isn't it). */
+const TEACH_READ_MS = 700;
 /** The catch card arrives this long after the reel is won: the world's beat first (the fish out of the water and into your hands). */
 const REVEAL_DELAY_MS = 520;
 /** How far the camera leans in (degrees of field of view) on you and the catch while its card is up: a touch, so the
@@ -92,6 +99,8 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
   const active = phase !== "idle";
   useEffect(() => { onActiveChange?.(active); }, [active, onActiveChange]);
   const [fish, setFish] = useState<FishDef | null>(null);
+  /** This reel is the first catch: it pauses to teach the hold (t-catch). */
+  const [teach, setTeach] = useState(false);
   const [caughtSize, setCaughtSize] = useState<number | null>(null);
   const [wasNew, setWasNew] = useState(false);
   const [newRecord, setNewRecord] = useState(false);
@@ -214,7 +223,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         // The "!" alert: the kit's chime, the one cue a bite has until its splash sound exists (specs/polish/fishing-questions.md).
         AudioManager.playSFX("confirm");
         // Cast power widens the hook window (max cast: 1.4s → 2.2s).
-        const windowMs = BITE_WINDOW_MS + CAST.biteBonusMs * powerRef.current + rod.biteWindowMs;
+        const windowMs = BITE_WINDOW_MS + CAST.biteBonusMs * powerRef.current + rod.biteWindowMs + (firstCatch() ? TEACH_BITE_MS : 0);
         biteDeadlineRef.current = performance.now() + windowMs;
         // Auto-miss if the window lapses: the fish lets go and the bobber bobs back up.
         timersRef.current.push(
@@ -288,6 +297,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
       const rolled = answer && FISH.find(f => f.key === answer.catch.item_key);
       landRef.current = rolled && answer.catch.roll ? { roll: answer.catch.roll, size: answer.catch.size_cm } : null;
       const hooked = rolled || local();
+      setTeach(firstCatch());
       setFish(hooked);
       changePhase("reeling");
       // The yank, the line taut, the reel; the species' model rides along so the world has it ready when it comes out.
@@ -442,7 +452,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
       {phase === "charging" ? (
         <CastMeter onRelease={castNow} releaseRequestedRef={releaseRequestedRef} hint={FISHING_HINTS[device].charge} />
       ) : phase === "reeling" && fish ? (
-        <ReelMinigame fish={fish} known={ownedRef.current.has(fish.key)} onDone={onReelDone} initialInput={reelInputRef.current} tensionMul={rod.tensionMul} help={FISHING_HINTS[device].reel} />
+        <ReelMinigame fish={fish} known={ownedRef.current.has(fish.key)} onDone={onReelDone} initialInput={reelInputRef.current} tensionMul={rod.tensionMul} help={FISHING_HINTS[device].reel} teach={teach ? device : undefined} />
       ) : (
         <div
           style={{
@@ -549,6 +559,7 @@ export function ReelMinigame({
   initialInput,
   tensionMul = 1,
   help = FISHING_HINTS.mouse.reel,
+  teach,
 }: {
   fish: FishDef;
   known: boolean;
@@ -557,10 +568,13 @@ export function ReelMinigame({
   tensionMul?: number;
   /** How to reel on the device that started the cast (FISHING_HINTS). */
   help?: string;
+  /** The first catch (t-catch): the reel waits on a card teaching the hold (on this device) until you hold, and the fish can't get away. */
+  teach?: CastDevice;
 }) {
   const reelRef = useRef<HTMLDivElement>(null);
   const pausedLabelRef = useRef<HTMLDivElement>(null);
   const pausedRef = useRef(false);
+  const teachRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const fishRef = useRef<HTMLImageElement>(null);
   const progRef = useRef<HTMLDivElement>(null);
@@ -579,9 +593,12 @@ export function ReelMinigame({
     const previouslyFocused = document.activeElement as HTMLElement | null;
     const reel = reelRef.current;
     reel?.focus({ preventScroll: true });
-    const simulation = createFishingReel(fish);
+    const simulation = createFishingReel(fish, teach ? TEACH_FLOOR : 0);
     doneRef.current = false;
     holdingRef.current = false;
+    // The first catch waits on its card; a hold that starts once it has been read a moment starts the reel.
+    let teaching = !!teach;
+    const shownAt = performance.now();
 
     const finish = (success: boolean) => {
       if (doneRef.current) return;
@@ -593,7 +610,7 @@ export function ReelMinigame({
     const step = (now: number) => {
       const dt = (now - last) / 1000;
       last = now;
-      if (pausedRef.current) {
+      if (pausedRef.current || teaching) {
         raf = requestAnimationFrame(step);
         return;
       }
@@ -640,7 +657,14 @@ export function ReelMinigame({
 
     const releaseInput = bindFishingInput({
       initialInput,
-      onHold: (holding) => { holdingRef.current = holding; },
+      onHold: (holding) => {
+        holdingRef.current = holding;
+        if (teaching && holding && performance.now() - shownAt > TEACH_READ_MS) {
+          teaching = false;
+          last = performance.now();
+          teachRef.current?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 220, fill: "forwards" }).finished.then(() => { if (teachRef.current) teachRef.current.hidden = true; }).catch(() => {});
+        }
+      },
       onCancel: () => finish(false),
       onPointerFocus: () => reel?.focus({ preventScroll: true }),
       onPause: (paused) => {
@@ -680,6 +704,7 @@ export function ReelMinigame({
         userSelect: "none",
         touchAction: "none",
         animation: "reel-slap-in 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)",
+        position: "relative",
       }}
     >
       <style>{`
@@ -688,11 +713,32 @@ export function ReelMinigame({
           70% { transform: scale(1.05); opacity: 1; }
           100% { transform: scale(1); opacity: 1; }
         }
+        @keyframes reel-hold {
+          0%, 30%, 100% { transform: translateY(0); box-shadow: 0 3px 0 rgba(74, 64, 52, 0.35); }
+          45%, 85% { transform: translateY(3px); box-shadow: 0 0 0 rgba(74, 64, 52, 0.35); }
+        }
         @keyframes reel-heartbeat {
           0%, 100% { box-shadow: 0 0 0 0 rgba(255, 209, 102, 0); }
           50% { box-shadow: 0 0 10px 2px rgba(255, 209, 102, 0.85); }
         }
       `}</style>
+      {/* The first catch's card (t-catch): what to hold, the press itself drawn held and let go, until you hold. */}
+      {teach && <div ref={teachRef} role="status" data-testid="reel-teach" style={{
+        position: "absolute", inset: 0, zIndex: 2, borderRadius: 12, padding: "10px 16px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6,
+        background: "var(--app-surface, #FFFDF5)", color: "var(--app-ink, #4A4034)", textAlign: "center",
+      }}>
+        <strong style={{ fontSize: 15 }}>{REEL_TEACH.title}</strong>
+        <span style={{ fontSize: "max(12px, var(--gui-min-text, 0px))", maxWidth: 440, lineHeight: 1.35 }}>{REEL_TEACH.body[teach]}</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 700 }}>
+          {teach === "touch"
+            ? <Hand size={22} aria-hidden style={{ animation: "reel-hold 1.6s ease-in-out infinite", borderRadius: 8 }} />
+            : <>
+              <Keycap aria-hidden="true" style={{ animation: "reel-hold 1.6s ease-in-out infinite" }}>Space</Keycap>
+              <MousePointerClick size={22} aria-hidden style={{ animation: "reel-hold 1.6s ease-in-out infinite 0.2s", borderRadius: 6 }} />
+            </>}
+          <span style={{ color: "var(--app-muted, #635745)", fontWeight: 600 }}>{REEL_TEACH.start}</span>
+        </span>
+      </div>}
       {/* Header: species (or ??? for unknowns — rarity is never shown here).
           Zone chip is always safe to show — you know where you cast. */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>

@@ -2,9 +2,11 @@ import { DAMPING, EDGE_BOUNCE, FILL_RATE, GRAVITY, HOLD_ACCEL, RARITY_META, STAR
 
 const STEP = 1 / 60;
 
-export function createFishingReel(fish: FishDef) {
+/** `floor`: progress never drains below it, so the fish can't get away (the first catch, taught: t-catch). */
+export function createFishingReel(fish: FishDef, floor = 0) {
   return {
     fish,
+    floor,
     barWidth: RARITY_META[fish.rarity].barW,
     position: 0,
     velocity: 0,
@@ -67,7 +69,7 @@ export function advanceFishingReel(state: FishingReel, delta: number, holding: b
     else if (state.fishPosition > 1) { state.fishPosition = 1; state.fishVelocity = 0; }
 
     state.inside = state.fishPosition >= state.position - 0.015 && state.fishPosition <= state.position + state.barWidth + 0.015;
-    state.progress = Math.max(0, Math.min(1, state.progress + (state.inside ? FILL_RATE : -drainRate) * STEP));
+    state.progress = Math.max(state.floor, Math.min(1, state.progress + (state.inside ? FILL_RATE : -drainRate) * STEP));
     state.tension = state.inside ? Math.min(1, state.tension + STEP / 1.2) : Math.max(0, state.tension - STEP / 0.5);
     if (state.progress === 1) state.result = true;
     else if (state.progress === 0) state.result = false;

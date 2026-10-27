@@ -86,6 +86,12 @@ export function useTutorialQuest(keys: { bag: string; touch: boolean }): Tracked
   }, [key, phase, keys.bag, keys.touch]);
 }
 
+/** The walk-along's catch is on: the first reel pauses to teach the hold, and the fish can't get away (t-catch). */
+export function firstCatch(): boolean {
+  const t = arrivalRun.tutorial, stop = t ? arrivalRun.stops?.[t.stop] : null;
+  return arrivalRun.current?.phase === "tutorial" && !!t && !t.done && t.stage === "task" && stop?.task?.kind === "catch";
+}
+
 /** E talks to Bram here: he's waiting at his stop (or talking) and you're within reach. */
 export function bramNear(x: number, z: number): boolean {
   const b = arrivalRun.bram;
