@@ -34,16 +34,23 @@ export interface HairMapUse { a: HairShift; b: HairShift }
  * with u < 0 (the under-cap) to its COLOR_0 and tint alone.
  */
 export function adoptPrimitive(mesh: THREE.SkinnedMesh, boneIndex: ReadonlyMap<string, number>, tint: THREE.Color | null, map: HairMapUse | null = null,
-  cut: PieceCut | null = null): THREE.BufferGeometry {
+  cuts: readonly PieceCut[] = [], design: DesignUse | null = null): THREE.BufferGeometry {
   const src = mesh.geometry, n = src.getAttribute("position").count;
   const g = new THREE.BufferGeometry();
-  if (src.index) g.setIndex(cutIndex(src, cut));
+  if (src.index) g.setIndex(cutIndex(src, cuts));
   g.setAttribute("position", src.getAttribute("position"));
   g.setAttribute("normal", src.getAttribute("normal"));
   const uv = src.getAttribute("uv");
-  g.setAttribute("uv", uv ?? new THREE.BufferAttribute(new Float32Array(n * 2), 2));
+  const base = src.getAttribute("color");
+  const painted = !!(design && uv);
+  if (painted) {
+    const out = new Float32Array(n * 2);
+    for (let i = 0; i < n; i++) { out[i * 2] = DESIGN_U + design!.u0 + uv.getX(i) * design!.s; out[i * 2 + 1] = design!.v0 + uv.getY(i) * design!.s; }
+    g.setAttribute("uv", new THREE.BufferAttribute(out, 2));
+  } else g.setAttribute("uv", uv ?? new THREE.BufferAttribute(new Float32Array(n * 2), 2));
   const mapped = !!(map && uv);
   const hm = new Float32Array(n * 3), ha = new Float32Array(n * 4), hb = new Float32Array(n * 4);
+  if (painted) for (let i = 0; i < n; i++) hm[i * 3 + 1] = base ? base.getX(i) : 1;
   if (mapped) {
     const pa = [map!.a.m[0], map!.a.m[2], ...map!.a.o], pb = [map!.b.m[0], map!.b.m[2], ...map!.b.o];
     for (let i = 0; i < n; i++) {
@@ -54,7 +61,7 @@ export function adoptPrimitive(mesh: THREE.SkinnedMesh, boneIndex: ReadonlyMap<s
   g.setAttribute("hairMap", new THREE.BufferAttribute(hm, 3));
   g.setAttribute("hairA", new THREE.BufferAttribute(ha, 4));
   g.setAttribute("hairB", new THREE.BufferAttribute(hb, 4));
-  const base = src.getAttribute("color"), color = new Float32Array(n * 3), t = tint ?? new THREE.Color(1, 1, 1);
+  const color = new Float32Array(n * 3), t = tint ?? new THREE.Color(1, 1, 1);
   for (let i = 0; i < n; i++) {
     color[i * 3] = (base ? base.getX(i) : 1) * t.r;
     color[i * 3 + 1] = (base ? base.getY(i) : 1) * t.g;
@@ -78,6 +85,15 @@ export function adoptPrimitive(mesh: THREE.SkinnedMesh, boneIndex: ReadonlyMap<s
 }
 
 /**
+ * A garment's design (clothing-v2: one universal mesh per garment, a design is paint on it): its cell in the design
+ * atlas (look.ts designUse). The primitive's uv (0..1 over the garment family's design layout) moves into the cell and
+ * over by DESIGN_U; the body material draws u >= DESIGN_U - 0.5 from the design atlas, the texel painted over the tint by
+ * its alpha, and keeps the vertex's top-light shade (its COLOR_0) for the paint in hairMap.y (unused off mapped hair).
+ */
+export interface DesignUse { u0: number; v0: number; s: number }
+export const DESIGN_U = 4;
+
+/**
  * What a look never shows (art/characters/hidden_cut.py; David, 2026-10-17: "find ways to not render part of hair"):
  * covering hat i hides the hair whose `_HATCUT` marks carry bit i (the sum of 2^i over the hats that hide a vertex), the
  * hood the head skin its `_HOODCUT` marks (bit 0). A triangle all three of whose vertices carry the bit is left out of
@@ -89,22 +105,24 @@ export const CUTS = { on: true };
 export interface PieceCut { name: string; bit: number }
 /** Whether a mark (a float holding a sum of powers of two) carries bit. */
 export const hasBit = (mark: number, bit: number) => Math.floor(Math.round(mark) / 2 ** bit) % 2 === 1;
-function cutIndex(src: THREE.BufferGeometry, cut: PieceCut | null): number[] {
+function cutIndex(src: THREE.BufferGeometry, cuts: readonly PieceCut[]): number[] {
   const index = Array.from(src.index!.array as ArrayLike<number>);
-  const mark = cut && CUTS.on ? src.getAttribute(cut.name.toLowerCase()) : undefined;
-  if (!mark || !cut) return index;
+  const live = CUTS.on ? cuts.map(cut => ({ bit: cut.bit, mark: src.getAttribute(cut.name.toLowerCase()) })).filter(c => c.mark) : [];
+  if (!live.length) return index;
   const out: number[] = [];
   for (let i = 0; i < index.length; i += 3) {
     const a = index[i], b = index[i + 1], c = index[i + 2];
-    if (hasBit(mark.getX(a), cut.bit) && hasBit(mark.getX(b), cut.bit) && hasBit(mark.getX(c), cut.bit)) continue;
+    if (live.some(({ bit, mark }) => hasBit(mark.getX(a), bit) && hasBit(mark.getX(b), bit) && hasBit(mark.getX(c), bit))) continue;
     out.push(a, b, c);
   }
   return out;
 }
 
 export interface PieceSource { root: THREE.Object3D; tints: Record<string, string>; keep?: (materialName: string) => boolean;
-  /** A vertex mark and bit (`_HATCUT` and the worn hat's, `_HOODCUT` and 0): triangles all three of whose vertices carry it are not drawn. */
-  cut?: PieceCut | null;
+  /** Vertex marks and bits (`_HATCUT` and the worn hat's, `_HOODCUT` and 0, `_BODYCUT` and each worn garment's): triangles all three of whose vertices carry one are not drawn. */
+  cuts?: readonly PieceCut[];
+  /** A garment's design and the materials it paints (catalogue `designs.materials`). */
+  design?: { use: DesignUse; materials: readonly string[] } | null;
   /** A mapped hairstyle (head fit): its hair primitive draws its texture from the hair atlas, shifted. */
   map?: HairMapUse | null }
 /**
@@ -122,7 +140,8 @@ export function mergeLook(pieces: PieceSource[], bones: readonly THREE.Bone[]): 
     const hex = piece.tints[name];
     const own = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as THREE.MeshStandardMaterial;
     const m = piece.map && name === "M_Hair" ? piece.map : null;
-    parts.push(adoptPrimitive(mesh, boneIndex, hex ? new THREE.Color(hex) : own.color ?? null, m, piece.cut ?? null));
+    const d = piece.design && piece.design.materials.includes(name) ? piece.design.use : null;
+    parts.push(adoptPrimitive(mesh, boneIndex, hex ? new THREE.Color(hex) : own.color ?? null, m, piece.cuts ?? [], d));
   }
   // The intermediate pieces share attributes with the loaded GLBs and were never uploaded: no dispose, the GC takes them.
   const merged = mergeGeometries(parts, false);

@@ -4,9 +4,9 @@ import { join } from "node:path";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
-import { adoptPrimitive, CUTS, hasBit, mergeLook, refCache, skinnedPrimitives } from "./rig";
+import { adoptPrimitive, CUTS, DESIGN_U, hasBit, mergeLook, refCache, skinnedPrimitives } from "./rig";
 import { NO_SHIFT } from "./hairColour";
-import { PART_BY_ID, PARTS } from "./look";
+import { DESIGNS, designUse, PART_BY_ID, PARTS } from "./look";
 
 function skinned(boneNames: string[], joints: number[], color?: number[]) {
   const bones = boneNames.map(n => Object.assign(new THREE.Bone(), { name: n }));
@@ -43,22 +43,22 @@ describe("what a look never shows (wardrobe batch 2: art/characters/hidden_cut.p
     expect(hats.map(p => p.hatCut).sort((x, y) => x! - y!)).toEqual(hats.map((_, i) => i));
     expect(hats.filter(p => !p.coversHair).map(p => p.id)).toEqual(["acc_crew_visor"]);
     for (const hat of hats) {
-      const g = adoptPrimitive(mesh, index, null, null, { name: "_HATCUT", bit: hat.hatCut! });
+      const g = adoptPrimitive(mesh, index, null, null, [{ name: "_HATCUT", bit: hat.hatCut! }]);
       const ix = mesh.geometry.index!;
       let hidden = 0;
       for (let i = 0; i < ix.count; i += 3) if ([0, 1, 2].every(k => hasBit(mark.getX(ix.getX(i + k)), hat.hatCut!))) hidden++;
       expect(g.index!.count / 3, hat.id).toBe(all - hidden);
     }
-    expect(adoptPrimitive(mesh, index, null, null, null).index!.count / 3).toBe(all);
+    expect(adoptPrimitive(mesh, index, null, null, []).index!.count / 3).toBe(all);
     // the bench's &cut=0 draws everything
     try {
       CUTS.on = false;
-      expect(adoptPrimitive(mesh, index, null, null, { name: "_HATCUT", bit: 0 }).index!.count / 3).toBe(all);
+      expect(adoptPrimitive(mesh, index, null, null, [{ name: "_HATCUT", bit: 0 }]).index!.count / 3).toBe(all);
     } finally {
       CUTS.on = true;
     }
     // hats always win (round 2): the cap takes the bob above its rim; a wide hat leaves the hair under its brim
-    const cut = (id: string) => all - adoptPrimitive(mesh, index, null, null, { name: "_HATCUT", bit: PART_BY_ID.get(id)!.hatCut! }).index!.count / 3;
+    const cut = (id: string) => all - adoptPrimitive(mesh, index, null, null, [{ name: "_HATCUT", bit: PART_BY_ID.get(id)!.hatCut! }]).index!.count / 3;
     expect(cut("acc_propeller_cap")).toBeGreaterThan(all / 3);
     for (const wide of ["acc_cowboy_hat", "acc_woven_hat", "acc_red_band_straw_hat"]) expect(cut(wide), wide).toBeLessThan(all * 0.9);
   });
@@ -72,11 +72,67 @@ describe("what a look never shows (wardrobe batch 2: art/characters/hidden_cut.p
       const head = skinnedPrimitives(root).find(m => m.geometry.getAttribute("_hoodcut"))!;
       expect(head, file).toBeDefined();
       const index = new Map(head.skeleton.bones.map((b, i) => [b.name, i]));
-      const all = head.geometry.index!.count / 3, kept = adoptPrimitive(head, index, null, null, { name: "_HOODCUT", bit: 0 }).index!.count / 3;
+      const all = head.geometry.index!.count / 3, kept = adoptPrimitive(head, index, null, null, [{ name: "_HOODCUT", bit: 0 }]).index!.count / 3;
       expect(kept, file).toBeLessThan(all);
       expect(kept, file).toBeGreaterThan(all / 4);       // the face side stays
     }
     expect(PARTS.filter(p => p.coversHead).map(p => p.id)).toEqual(["acc_bear_hood"]);
+  });
+  it("leaves out the body skin each worn garment covers (clothing-v2), on the clip base and the LOD skin", async () => {
+    const buf = readFileSync(join(__dirname, "../../../public/assets/characters/v6/base/v8_clips.glb"));
+    const gltf = JSON.parse(buf.subarray(20, 20 + buf.readUInt32LE(12)).toString("utf8")) as { meshes: { name: string; primitives: { attributes: Record<string, number> }[] }[] };
+    expect(gltf.meshes.find(m => m.name === "V6_Body")!.primitives.some(p => "_BODYCUT" in p.attributes)).toBe(true);
+    // one bit per universal model, none missing; every design on one model shares its bit
+    const garments = PARTS.filter(p => p.bodyCut !== undefined);
+    const bits = new Map<string, number>();
+    for (const p of garments) {
+      expect(bits.get(p.glb) ?? p.bodyCut, p.id).toBe(p.bodyCut);
+      bits.set(p.glb, p.bodyCut!);
+    }
+    expect([...bits.values()].sort((x, y) => x - y)).toEqual([...bits.values()].map((_, i) => i));
+    const root = await load("lod1/base/skin.glb");
+    const body = skinnedPrimitives(root).find(m => m.geometry.getAttribute("_bodycut"))!;
+    expect(body, "the LOD skin carries _BODYCUT").toBeDefined();
+    const index = new Map(body.skeleton.bones.map((b, i) => [b.name, i]));
+    const all = body.geometry.index!.count / 3;
+    const kept = (...ids: string[]) => adoptPrimitive(body, index, null, null, ids.map(id => ({ name: "_BODYCUT", bit: PART_BY_ID.get(id)!.bodyCut! }))).index!.count / 3;
+    for (const p of garments) expect(kept(p.id), p.id).toBeLessThan(all);           // every garment hides some skin
+    expect(kept("top_stripe_ls"), "a long sleeve hides more arm than a tee").toBeLessThan(kept("top_tee"));
+    expect(kept("bottom_trousers"), "trousers hide more leg than shorts").toBeLessThan(kept("bottom_shorts"));
+    // a look's cuts add up: the tee, the trousers and the sneakers together hide more than any one
+    expect(kept("top_tee", "bottom_trousers", "shoes_sneakers")).toBeLessThan(Math.min(kept("top_tee"), kept("bottom_trousers"), kept("shoes_sneakers")));
+  });
+});
+
+describe("designs (clothing-v2: one universal mesh per garment, a design is paint on it)", () => {
+  it("a designed garment's uv moves into its atlas cell, past DESIGN_U, its shade kept for the paint", () => {
+    const part = skinned(["mixamorigHips"], [0, 0, 0], [0.8, 0.8, 0.8, 1, 1, 1, 0.9, 0.9, 0.9]);
+    part.geometry.setAttribute("uv", new THREE.Float32BufferAttribute([0, 0, 1, 0, 0.5, 1], 2));
+    const use = designUse(5);
+    const g = adoptPrimitive(part, new Map([["mixamorigHips", 0]]), new THREE.Color(1, 1, 1), null, [], use);
+    const uv = Array.from(g.getAttribute("uv").array);
+    expect(uv[0]).toBeCloseTo(DESIGN_U + use.u0);
+    expect(uv[1]).toBeCloseTo(use.v0);
+    expect(uv[2]).toBeCloseTo(DESIGN_U + use.u0 + use.s);
+    expect(uv[5]).toBeCloseTo(use.v0 + use.s);
+    expect(Array.from(g.getAttribute("hairMap").array).filter((_, i) => i % 3 === 1).map(x => +x.toFixed(3))).toEqual([0.8, 1, 0.9]);
+    expect(Array.from(g.getAttribute("hairMap").array).filter((_, i) => i % 3 === 0)).toEqual([0, 0, 0]);   // never a mapped hairstyle
+    // without a design: the uv as it is
+    expect(Array.from(adoptPrimitive(part, new Map([["mixamorigHips", 0]]), null).getAttribute("uv").array)).toEqual([0, 0, 1, 0, 0.5, 1]);
+  });
+  it("the cells sit inside the atlas, inside their own gutters, one per design", () => {
+    const cells = Object.values(DESIGNS.cells);
+    expect(new Set(cells).size).toBe(cells.length);
+    for (const c of cells) {
+      const { u0, v0, s } = designUse(c);
+      const g = DESIGNS.grid, col = c % g, row = Math.floor(c / g);
+      expect(u0).toBeGreaterThan(col / g);
+      expect(u0 + s).toBeLessThan((col + 1) / g);
+      expect(v0).toBeGreaterThan(row / g);
+      expect(v0 + s).toBeLessThan((row + 1) / g);
+    }
+    // the striped long-sleeve is the long-sleeve with the stripe design on it
+    expect(PART_BY_ID.get("top_stripe_ls")).toMatchObject({ glb: "outfits/top/top_longsleeve.glb", design: DESIGNS.cells.stripe });
   });
 });
 

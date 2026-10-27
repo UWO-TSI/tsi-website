@@ -248,8 +248,8 @@
   "lod1": 2159
  },
  "outfits/bottom/bottom_joggers.glb": {
-  "tris": 314,
-  "lod1": 250
+  "tris": 294,
+  "lod1": 294
  },
  "outfits/bottom/bottom_long_skirt.glb": {
   "tris": 240,
@@ -264,12 +264,12 @@
   "lod1": 140
  },
  "outfits/bottom/bottom_shorts.glb": {
-  "tris": 194,
-  "lod1": 194
+  "tris": 178,
+  "lod1": 178
  },
  "outfits/bottom/bottom_trousers.glb": {
-  "tris": 258,
-  "lod1": 168
+  "tris": 242,
+  "lod1": 184
  },
  "outfits/onepiece/onepiece_sundress.glb": {
   "tris": 288,
@@ -320,24 +320,24 @@
   "lod1": 226
  },
  "outfits/top/top_hoodie.glb": {
-  "tris": 359,
-  "lod1": 265
+  "tris": 351,
+  "lod1": 297
+ },
+ "outfits/top/top_longsleeve.glb": {
+  "tris": 328,
+  "lod1": 204
  },
  "outfits/top/top_raincoat.glb": {
   "tris": 298,
   "lod1": 196
- },
- "outfits/top/top_stripe_ls.glb": {
-  "tris": 336,
-  "lod1": 336
  },
  "outfits/top/top_sweater_vest.glb": {
   "tris": 268,
   "lod1": 268
  },
  "outfits/top/top_tee.glb": {
-  "tris": 232,
-  "lod1": 202
+  "tris": 224,
+  "lod1": 194
  },
  "outfits/top/top_tsi_crew.glb": {
   "tris": 336,

@@ -33,6 +33,9 @@
  * ?sheet=b2acc    wardrobe batch 2: David's Roblox accessories, each worn over a hairstyle (&style=, default the ribbon bob),
  *                  front and 3/4; &groups=head,face (default all) &framing=body for the neck and front ones
  * ?sheet=b2faces  wardrobe batch 2: David's whole faces #20-25 on the head, front and 3/4 (&skins=, default 3), then a mix row
+ * ?sheet=fit      clothing-v2: each garment in &ids= (default the starter set) worn with plain companions (a top over the
+ *                  shorts, a bottom under the tee, shoes under both), in a run, a jump and a sit (each frozen at one phase),
+ *                  front, side and back; with &cut=0 the body skin the garments cut is drawn too (&framing=body)
  * ?sheet=hatcut   wardrobe batch 2: each hat with a hair cut (&hats= to pick) over each hairstyle in &ids= (default six), &yaw= one view; with
  *                  &cut=0 the hair the hat hides is drawn too (the hat cut's before and after)
  */
@@ -40,9 +43,9 @@ import { Suspense, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Canvas } from "@react-three/fiber";
 import { PerspectiveCamera, View } from "@react-three/drei";
-import Character, { type CharacterMotion } from "@/components/game/character/Character";
+import Character, { type CharacterMotion, type ClipName } from "@/components/game/character/Character";
 import { CUTS } from "@/lib/game/character/rig";
-import { DEFAULT_LOOK, FACE, NATURAL_HAIR, PARTS, parseLook, partsIn, type CharacterLook, type EyeFrame } from "@/lib/game/character/look";
+import { DEFAULT_LOOK, FACE, NATURAL_HAIR, PARTS, parseLook, partsIn, STARTER_PARTS, type CharacterLook, type EyeFrame } from "@/lib/game/character/look";
 import { RESIDENT_LOOKS } from "@/lib/content/residentRoster";
 import { HQ_LEAD } from "@/lib/game/welcome";
 import { CAFE_OWNER } from "@/lib/game/cafe";
@@ -63,7 +66,14 @@ if (typeof window !== "undefined" && new URLSearchParams(window.location.search)
 const LOD_SHEET = typeof window !== "undefined" && !!new URLSearchParams(window.location.search).get("charlod");
 /** Kit sheets hold the eyes open (no blink lands mid-capture). */
 const OPEN: FaceOverride = { eyeFrame: "open" };
-interface Cell { label: string; look: CharacterLook; yaw: number; face?: FaceOverride | null; talk?: boolean; pitch?: number }
+interface Cell { label: string; look: CharacterLook; yaw: number; face?: FaceOverride | null; talk?: boolean; pitch?: number;
+  /** A clip held at a phase (?sheet=fit). */
+  clip?: [ClipName, number] }
+/** ?sheet=fit: the poses (clip, phase) and views, and each slot's plain companions (render_fit.py's). */
+const FIT_POSES: [string, ClipName, number][] = [["run", "Run", 0.3], ["jump", "Jump", 0.5], ["sit", "Sit", 0.5]];
+const FIT_VIEWS: [string, number][] = [["front", 0], ["side", -Math.PI / 2], ["back", Math.PI]];
+const FIT_WITH: Record<string, Partial<CharacterLook>> = { top: { bottom: "bottom_shorts", shoes: "shoes_slipon" },
+  bottom: { top: "top_tee", shoes: "shoes_slipon" }, shoes: { top: "top_tee", bottom: "bottom_shorts" } };
 
 /** The camera by framing: the head, the head with room above it for a hat (wardrobe batch 2), the whole body. */
 const FRAMING = { head: { at: [0, 0.86, 1.3], look: 0.8 }, hat: { at: [0, 0.98, 1.7], look: 0.9 }, body: { at: [0.15, 0.6, 2.05], look: 0.5 } } as const;
@@ -73,7 +83,7 @@ const FRAMING = { head: { at: [0, 0.86, 1.3], look: 0.8 }, hat: { at: [0, 0.98, 
 interface Orbit { pitch: number; zoom: number; look: number | null }
 
 function Stage({ cell, framing, faceSize, orbit }: { cell: Cell; framing: keyof typeof FRAMING; faceSize: number; orbit: Orbit }) {
-  const motion = useRef<CharacterMotion>({ speed: 0, yaw: cell.yaw, lift: 0, pose: null, play: null, face: cell.face ?? null, talk: cell.talk ? 1e9 : 0 });
+  const motion = useRef<CharacterMotion>({ speed: 0, yaw: cell.yaw, lift: 0, pose: cell.clip?.[0] ?? null, freeze: cell.clip?.[1], play: null, face: cell.face ?? null, talk: cell.talk ? 1e9 : 0 });
   const f = FRAMING[framing] ?? FRAMING.head;
   const look = orbit.look ?? f.look;
   const [dy, dz] = [f.at[1] - f.look, f.at[2]];
@@ -117,6 +127,11 @@ function AvatarBench() {
       const look = parseLook(JSON.parse(q.get("look") ?? "{}"));
       return [{ label: `${q.get("label") ?? "look"} front`, look, yaw: 0, face: OPEN }, { label: `${q.get("label") ?? "look"} 3/4`, look, yaw: -0.6, face: OPEN }];
     }
+    if (sheet === "fit") return (q.get("ids")?.split(",") ?? [...STARTER_PARTS]).flatMap(id => {
+      const slot = PARTS.find(p => p.id === id)!.slot;
+      const look = { ...base, ...FIT_WITH[slot], [slot]: id };
+      return FIT_POSES.flatMap(([pose, clip, t]) => FIT_VIEWS.map(([v, y]) => ({ label: `${id} ${pose} ${v}`, look, yaw: y, face: OPEN, clip: [clip, t] as [ClipName, number] })));
+    });
     if (sheet === "live") return [{ label: q.get("style") ?? "bob", look: bob, yaw, talk: q.get("talk") === "1" }];
     // head-roblox: the hair is David's whole hairstyles (no bangs or backs); every one, turned
     if (sheet === "backs") return partsIn("back").map(p => ({ label: p.id, look: { ...bob, back: p.id }, yaw: yaw - 0.9 }));
@@ -190,7 +205,7 @@ function AvatarBench() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sheet, yaw, q]);
   const root = useRef<HTMLDivElement>(null);
-  const cols = q.get("cols") ? Number(q.get("cols")) : sheet === "hatcut" ? 6 : sheet === "b2acc" ? 8 : sheet === "b2faces" ? 6 : sheet === "roblox" ? (q.get("views") ?? "front,34,side,back").split(",").length : sheet === "facekit" ? 13 : sheet === "hairkit" ? 10 : sheet === "fullkit" ? 7 : sheet === "styles" || sheet === "backs" || sheet === "faces" || sheet === "residents" || sheet === "emote" ? 6 : sheet === "hats" || sheet === "mix" ? 8 : sheet === "david" ? 10 : cells.length;
+  const cols = q.get("cols") ? Number(q.get("cols")) : sheet === "hatcut" ? 6 : sheet === "b2acc" ? 8 : sheet === "b2faces" ? 6 : sheet === "roblox" ? (q.get("views") ?? "front,34,side,back").split(",").length : sheet === "facekit" ? 13 : sheet === "fit" ? 9 : sheet === "hairkit" ? 10 : sheet === "fullkit" ? 7 : sheet === "styles" || sheet === "backs" || sheet === "faces" || sheet === "residents" || sheet === "emote" ? 6 : sheet === "hats" || sheet === "mix" ? 8 : sheet === "david" ? 10 : cells.length;
   return <div ref={root} style={{ position: "relative", paddingTop: 48, minHeight: "100vh", background: "#efe7d6" }}>
     <div data-sheet={sheet} style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, ${cols === 1 ? "420px" : "1fr"})`, gap: 8, padding: 8 }}>
       {cells.map(c => <figure key={c.label} style={{ margin: 0 }}>

@@ -5,38 +5,25 @@
    "slot": "top",
    "name": "Base tee",
    "glb": "outfits/top/top_tee.glb",
-   "tris": 152,
+   "tris": 144,
    "materials": [
     {
      "name": "M_Main",
      "tint": "outfit",
      "default": 0
-    },
-    {
-     "name": "M_Decal",
-     "decal": true,
-     "default": null
     }
    ],
-   "decalSlot": {
-    "material": "M_Decal",
-    "uv": [
-     0,
-     0,
-     1,
-     1
-    ],
-    "alphaMode": "MASK"
-   },
+   "decalSlot": null,
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "bodyCut": 0
   },
   {
    "id": "top_hoodie",
    "slot": "top",
    "name": "Hoodie",
    "glb": "outfits/top/top_hoodie.glb",
-   "tris": 279,
+   "tris": 271,
    "materials": [
     {
      "name": "M_Main",
@@ -47,25 +34,12 @@
      "name": "M_Accent",
      "tint": "outfit",
      "default": 1
-    },
-    {
-     "name": "M_Decal",
-     "decal": true,
-     "default": null
     }
    ],
-   "decalSlot": {
-    "material": "M_Decal",
-    "uv": [
-     0,
-     0,
-     1,
-     1
-    ],
-    "alphaMode": "MASK"
-   },
+   "decalSlot": null,
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "bodyCut": 2
   },
   {
    "id": "top_cardigan",
@@ -112,37 +86,20 @@
    "id": "top_stripe_ls",
    "slot": "top",
    "name": "Striped long-sleeve",
-   "glb": "outfits/top/top_stripe_ls.glb",
-   "tris": 256,
+   "glb": "outfits/top/top_longsleeve.glb",
+   "tris": 248,
    "materials": [
     {
      "name": "M_Main",
      "tint": "outfit",
      "default": 1
-    },
-    {
-     "name": "M_Stripe",
-     "tint": "outfit",
-     "default": 12
-    },
-    {
-     "name": "M_Decal",
-     "decal": true,
-     "default": null
     }
    ],
-   "decalSlot": {
-    "material": "M_Decal",
-    "uv": [
-     0,
-     0,
-     1,
-     1
-    ],
-    "alphaMode": "MASK"
-   },
+   "decalSlot": null,
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "design": 0,
+   "bodyCut": 1
   },
   {
    "id": "top_collar_shirt",
@@ -330,7 +287,7 @@
    "slot": "bottom",
    "name": "Base shorts",
    "glb": "outfits/bottom/bottom_shorts.glb",
-   "tris": 114,
+   "tris": 98,
    "materials": [
     {
      "name": "M_Main",
@@ -340,14 +297,15 @@
    ],
    "decalSlot": null,
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "bodyCut": 3
   },
   {
    "id": "bottom_trousers",
    "slot": "bottom",
    "name": "Long trousers",
    "glb": "outfits/bottom/bottom_trousers.glb",
-   "tris": 178,
+   "tris": 162,
    "materials": [
     {
      "name": "M_Main",
@@ -357,7 +315,8 @@
    ],
    "decalSlot": null,
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "bodyCut": 4
   },
   {
    "id": "bottom_pleated_skirt",
@@ -403,7 +362,7 @@
    "slot": "bottom",
    "name": "Jogger pants",
    "glb": "outfits/bottom/bottom_joggers.glb",
-   "tris": 234,
+   "tris": 214,
    "materials": [
     {
      "name": "M_Main",
@@ -418,7 +377,8 @@
    ],
    "decalSlot": null,
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "bodyCut": 5
   },
   {
    "id": "bottom_long_skirt",
@@ -554,7 +514,8 @@
    ],
    "decalSlot": null,
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "bodyCut": 6
   },
   {
    "id": "shoes_sneakers",
@@ -581,7 +542,8 @@
    ],
    "decalSlot": null,
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "bodyCut": 7
   },
   {
    "id": "shoes_boots",
@@ -4987,5 +4949,16 @@
     "frames": 42
    }
   ]
+ },
+ "designs": {
+  "atlas": "outfits/designs.png",
+  "grid": 4,
+  "gutter": 0.03125,
+  "materials": [
+   "M_Main"
+  ],
+  "cells": {
+   "stripe": 0
+  }
  }
 }

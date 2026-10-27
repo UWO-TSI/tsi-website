@@ -18,10 +18,20 @@ Modes (each rewrites the GLBs in place: the triangles and vertex arrays it keeps
            the hat.
   hoodcut  The head under the hood: the base skin's vertices (the clip base and the LOD 1 skin) the bear hood hides from
            every direction, marked `_HOODCUT`; a look wearing it draws none of the head triangles all marked.
+  bodycut  (clothing-v2) The body under each universal garment: the base skin's vertices (the clip base and the LOD 1
+           skin) that a garment's model (catalogue `bodyCut` bit i) hides in its rest pose and in every POSE_STEP-th frame
+           of every clip, marked `_BODYCUT` (the sum of 2^i): every one of COVER_DIRS rays (its normal and three rings round
+           it, the last grazing the skin) meets the garment or the body. A look wearing the garment draws none of the skin triangles all three of
+           whose vertices carry its bit (rig.ts cutIndex), so no skin under it can poke through. Then the fit report, at
+           Full over the same poses: skin that shows through the garment where it is not cut (`poke`: the garment lies
+           just under the skin, before the ray leaves the limb), a bottom showing through a top over it (`layer`), and how
+           far the garment strays from the body (`float`: the most any vertex moves off the body over its rest distance). `-- bodycut fit`
+           reports without marking (`step=N`: every Nth frame, for a quick look). Rerun after build_outfits.py and
+           build_lod.py.
   measure  The heaviest wearable look at Full, LOD 1 and LOD 2 (budget.test.ts's rule, with the hat cut), printed.
   tris     The catalogue's `tris` from the Full GLBs (hidden runs it).
-Run hidden first (it changes the meshes), then hatcut and hoodcut (marks on the final meshes); rerun after any hair,
-hat or base rebuild (import_hair.py, import_roblox.py, build_lod.py).
+Run hidden first (it changes the meshes), then hatcut, hoodcut and bodycut (marks on the final meshes); rerun after any
+hair, hat, garment or base rebuild (import_hair.py, import_roblox.py, build_outfits.py, build_lod.py).
 """
 import bpy, json, math, os, struct, sys
 import numpy as np
@@ -712,6 +722,255 @@ def hoodcut():
     print("HOODCUT_OK")
 
 
+# ================================================================ bodycut (clothing-v2)
+POSE_STEP = next((int(a[5:]) for a in ARGS if a.startswith("step=")), 3)   # every third frame of every clip (step=N), and rest
+COVER_TILT = (40.0, 70.0, 87.0)  # degrees from the skin's normal: the rings of COVER_DIRS, the last one grazing (a view down a
+                                 # sleeve or a trouser leg)
+COVER_RING = 8
+POKE_DEPTH = 0.02          # m: a garment this close under an uncut skin vertex (along its normal) shows the skin through it
+LAYER_DEPTH = 0.012        # m: a top this close under a bottom's vertex shows the bottom through it
+
+
+def to_blender(a):
+    """glTF axes (y up) to Blender's (z up)."""
+    return np.stack([a[:, 0], -a[:, 2], a[:, 1]], 1)
+
+
+class Rig:
+    """The clip base's rig in Blender: each pose's skinning matrices (Blender armature space) by bone name."""
+
+    def __init__(self):
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        bpy.ops.import_scene.gltf(filepath=os.path.join(HERE, CAT["base"]["clips_glb"]))
+        self.sc = bpy.context.scene
+        self.rig = next(o for o in self.sc.objects if o.type == "ARMATURE")
+        self.inv = {b.name: np.array(b.matrix_local.inverted()) for b in self.rig.data.bones}
+
+    def poses(self):
+        """(label, {bone: 4x4}) for the rest pose and every POSE_STEP-th frame of every clip."""
+        ad = self.rig.animation_data or self.rig.animation_data_create()
+        ad.action = None
+        self.rig.data.pose_position = "REST"
+        self.sc.frame_set(0)
+        yield "rest", self.mats()
+        self.rig.data.pose_position = "POSE"
+        for act in sorted(bpy.data.actions, key=lambda a: a.name):
+            ad.action = act
+            if hasattr(ad, "action_slot") and len(getattr(act, "slots", [])):
+                ad.action_slot = act.slots[0]
+            f0, f1 = (int(round(x)) for x in act.frame_range)
+            for f in range(f0, f1 + 1, POSE_STEP):
+                self.sc.frame_set(f)
+                yield f"{act.name}@{f}", self.mats()
+
+    def mats(self):
+        return {pb.name: np.array(pb.matrix) @ self.inv[pb.name] for pb in self.rig.pose.bones}
+
+
+class Skinned:
+    """A GLB's primitives (those keep(p, j) takes), skinned in Blender axes: positions, triangles and normals per pose."""
+
+    def __init__(self, path, keep=lambda p, j: True):
+        self.j, self.arrays = load_all(path)
+        self.prims = [p for p in primitives(self.j) if keep(p, self.j)]
+        names = [self.j["nodes"][n]["name"] for n in self.j["skins"][0]["joints"]]
+        self.parts = []
+        for p in self.prims:
+            a = p["attributes"]
+            pos = to_blender(self.arrays[a["POSITION"]].astype(float))
+            jn = self.arrays[a["JOINTS_0"]].astype(int)
+            w = self.arrays[a["WEIGHTS_0"]].astype(float)
+            if self.j["accessors"][a["WEIGHTS_0"]]["componentType"] != 5126:
+                w = w / w.sum(1, keepdims=True)
+            self.parts.append((pos, jn, w, self.arrays[p["indices"]].reshape(-1, 3).astype(int)))
+        self.names = names
+
+    def posed(self, mats):
+        """Per primitive: (positions, triangles)."""
+        M = np.stack([mats[n] for n in self.names])
+        out = []
+        for pos, jn, w, tri in self.parts:
+            ph = np.c_[pos, np.ones(len(pos))]
+            p = np.zeros((len(pos), 3))
+            for k in range(4):
+                p += w[:, k:k + 1] * np.einsum("nij,nj->ni", M[jn[:, k]], ph)[:, :3]
+            out.append((p, tri))
+        return out
+
+    def tris(self, mats):
+        return np.concatenate([p[t] for p, t in self.posed(mats)])
+
+
+def vertex_normals(pos, tri):
+    """Area-weighted normals, shared by every vertex at one position (the GLB splits vertices at seams)."""
+    key = np.unique(np.round(pos, 5), axis=0, return_inverse=True)[1].reshape(-1)
+    fn = np.cross(pos[tri[:, 1]] - pos[tri[:, 0]], pos[tri[:, 2]] - pos[tri[:, 0]])
+    acc = np.zeros((key.max() + 1, 3))
+    for k in range(3):
+        np.add.at(acc, key[tri[:, k]], fn)
+    n = acc[key]
+    return n / np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-12), key
+
+
+def cover_dirs(n):
+    """The normal and COVER_RING rays at each COVER_TILT round it (alternate rings turned half a step)."""
+    t1 = np.cross(n, [0.0, 0.0, 1.0] if abs(n[2]) < 0.9 else [1.0, 0.0, 0.0])
+    t1 /= np.linalg.norm(t1)
+    t2 = np.cross(n, t1)
+    out = [n]
+    for tilt in COVER_TILT:
+        a = math.radians(tilt)
+        for k in range(COVER_RING):
+            ph = 2 * math.pi * (k + 0.5 * (COVER_TILT.index(tilt) % 2)) / COVER_RING
+            out.append(math.cos(a) * n + math.sin(a) * (math.cos(ph) * t1 + math.sin(ph) * t2))
+    return out
+
+
+def blocked(trees, o, d, far=2.0):
+    ov, dv = Vector(o), Vector(d)
+    return any(t.ray_cast(ov, dv, far)[0] is not None for t in trees)
+
+
+def hit_within(tree, o, d, dist):
+    return tree.ray_cast(Vector(o), Vector(d), dist)[0] is not None
+
+
+def bodycut():
+    report_only = "fit" in ARGS[1:]
+    models = {}
+    for p in CAT["outfits"]:
+        if p.get("bodyCut") is not None:
+            models.setdefault(p["glb"], (p["bodyCut"], p["slot"], p["id"]))
+    rig = Rig()
+    body_skin = lambda p, j: j["materials"][p["material"]]["name"] == "M_Skin" and "Body" in next(
+        m for m in j["meshes"] if p in m["primitives"])["name"]
+    any_skin = lambda p, j: j["materials"][p["material"]]["name"] == "M_Skin"
+    tiers = [("full", os.path.join(HERE, CAT["base"]["clips_glb"]), lambda g: os.path.join(HERE, g))]
+    if not report_only:
+        tiers.append(("lod1", os.path.join(HERE, "lod1", "base", "skin.glb"), lambda g: os.path.join(HERE, "lod1", g)))
+    poses = list(rig.poses())
+    print(f"BODYCUT {len(poses)} poses, {len(models)} garment models")
+    lbs_check(rig, poses, body_skin)
+    for tier, skin_path, garment_path in tiers:
+        skin = Skinned(skin_path, body_skin)
+        occl = Skinned(skin_path, any_skin)                  # the whole skin (head too) also blocks a view
+        gar = {glb: Skinned(garment_path(glb)) for glb in models}
+        (pos0, tri0), = skin.posed(poses[0][1])
+        _, key = vertex_normals(pos0, tri0)
+        covered = {glb: np.ones(len(pos0), bool) for glb in models}
+        for label, mats in poses:
+            (pos, tri), = skin.posed(mats)
+            nrm, _ = vertex_normals(pos, tri)
+            body = bvh(occl.tris(mats))
+            for glb, live in covered.items():
+                idx = np.nonzero(live)[0]
+                if not len(idx):
+                    continue
+                trees = [bvh(gar[glb].tris(mats)), body]
+                for i in idx:
+                    o = pos[i] + nrm[i] * SAMPLES_EPS
+                    if not all(blocked(trees, o, d) for d in cover_dirs(nrm[i])):
+                        live[i] = False
+        bits = np.zeros(len(pos0), np.int64)
+        for glb, live in covered.items():
+            # one position, one mark: a seam's split vertices are cut together or not at all
+            ok = np.ones(key.max() + 1, bool)
+            np.logical_and.at(ok, key, live)
+            covered[glb] = ok[key]
+            bits |= covered[glb].astype(np.int64) << models[glb][0]
+            print(f"BODYCUT {tier} {models[glb][2]:16s} bit {models[glb][0]}: {int(covered[glb][tri0].all(1).sum())} of {len(tri0)} skin triangles cut")
+        if not report_only:
+            j, arrays = load_all(skin_path)
+            prim = next(p for p in primitives(j) if body_skin(p, j))
+            set_mask(j, arrays, prim, "_BODYCUT", bits)
+            save(skin_path, j, arrays)
+        if tier == "full":
+            fit_report(poses, skin, gar, models, covered)
+    print("BODYCUT_OK")
+
+
+def lbs_check(rig, poses, keep):
+    """The skinning here against Blender's own (the evaluated base body) in a running pose: they must agree."""
+    from mathutils.kdtree import KDTree
+    label, mats = next(p for p in poses if p[0].startswith("Run@"))
+    act, f = label.split("@")
+    ad = rig.rig.animation_data
+    ad.action = bpy.data.actions[act]
+    if hasattr(ad, "action_slot") and len(getattr(ad.action, "slots", [])):
+        ad.action_slot = ad.action.slots[0]
+    rig.sc.frame_set(int(f))
+    ob = bpy.data.objects["V6_Body"].evaluated_get(bpy.context.evaluated_depsgraph_get())
+    vs = [ob.matrix_world @ v.co for v in ob.data.vertices]
+    kd = KDTree(len(vs))
+    for i, v in enumerate(vs):
+        kd.insert(v, i)
+    kd.balance()
+    (pos, _), = Skinned(os.path.join(HERE, CAT["base"]["clips_glb"]), keep).posed(mats)
+    print(f"LBS_CHECK {label}: worst {max(kd.find(Vector(p))[2] for p in pos) * 1000:.3f} mm from Blender's skinning")
+
+
+def fit_report(poses, skin, gar, models, covered):
+    """Worst over every pose: skin showing through each garment where it is not cut, a bottom through a top, strays."""
+    tops = [g for g in models if models[g][1] == "top"]
+    bottoms = [g for g in models if models[g][1] == "bottom"]
+    poke = {g: (0, "", 0.0, []) for g in models}
+    (rest_pos, _), = skin.posed(poses[0][1])
+    layer = {(t, b): (0, "") for t in tops for b in bottoms}
+    rest_d = {}
+    far = {g: (0.0, "") for g in models}
+    proxy = Skinned(os.path.join(HERE, CAT["base"]["clips_glb"]),
+                    lambda p, j: j["materials"][p["material"]]["name"] in ("M_Skin", "M_Top", "M_Bottom"))
+    for label, mats in poses:
+        (pos, tri), = skin.posed(mats)
+        nrm, _ = vertex_normals(pos, tri)
+        body = bvh(proxy.tris(mats))      # the skin, and the base tee and shorts standing in for the torso
+        own = bvh(pos[tri])
+        posed = {g: gar[g].posed(mats) for g in models}
+        trees = {g: bvh(np.concatenate([p[t] for p, t in posed[g]])) for g in models}
+        for g in models:
+            n, deep, where = 0, 0.0, []
+            for i in np.nonzero(~covered[g])[0]:
+                # the garment just under the skin, before the ray leaves the limb (not a hand resting on a lap)
+                o, d = Vector(pos[i] - nrm[i] * SAMPLES_EPS), Vector(-nrm[i])
+                loc = trees[g].ray_cast(o, d, POKE_DEPTH)[0]
+                if loc is None:
+                    continue
+                exit_ = own.ray_cast(o + d * 1e-4, d, POKE_DEPTH)[0]
+                if exit_ is None or (loc - o).length < (exit_ - o).length:
+                    n += 1
+                    deep = max(deep, (loc - o).length)
+                    where.append(i)
+            if n > poke[g][0]:
+                poke[g] = (n, label, deep, where)
+            # straying: how much further from the body each vertex is than at rest (the worst vertex)
+            gp = np.concatenate([p for p, _ in posed[g]])
+            d = np.array([body.find_nearest(Vector(v))[3] for v in gp])
+            if label == "rest":
+                rest_d[g] = d
+            gain = float((d - rest_d[g]).max())
+            if gain > far[g][0]:
+                far[g] = (gain, label)
+        for t in tops:
+            for b in bottoms:
+                n = 0
+                for p, tri_b in posed[b]:
+                    nb, _ = vertex_normals(p, tri_b)
+                    for v, nv in zip(p, nb):
+                        o = v - nv * SAMPLES_EPS
+                        if hit_within(trees[t], o, -nv, LAYER_DEPTH) and not hit_within(trees[t], v + nv * SAMPLES_EPS, nv, 0.05):
+                            n += 1
+                if n > layer[(t, b)][0]:
+                    layer[(t, b)] = (n, label)
+    for g in models:
+        n, label, deep, where = poke[g]
+        if where:       # where on the body (rest pose): the skin vertices' spots, rounded to 1 cm
+            print(f"  {models[g][2]} poke at", sorted({tuple(np.round(rest_pos[i], 2)) for i in where})[:12])
+        print(f"FIT {models[g][2]:16s} poke {n:3d} skin vertices (worst {label or '-'}, {deep * 1000:.1f} mm under the skin)   "
+              f"float +{far[g][0] * 1000:.1f} mm off the body at worst ({far[g][1]}) over the rest pose")
+    for (t, b), (n, label) in layer.items():
+        print(f"LAYER {models[t][2]:16s} over {models[b][2]:16s} {n:3d} bottom vertices through it (worst {label})")
+
+
 def tri_count(path, cut=None, bit=0):
     """Triangles drawn; with cut (an attribute) and bit, those all three of whose vertices carry the bit left out."""
     j, arrays = load_all(path)
@@ -787,4 +1046,5 @@ def roundtrip():
 
 if MODE in ("hidden", "hatcut", "hoodcut"):
     BASE = base_tris()
-{"hidden": hidden, "hatcut": hatcut, "hoodcut": hoodcut, "measure": measure, "tris": tris, "roundtrip": roundtrip}[MODE]()
+{"hidden": hidden, "hatcut": hatcut, "hoodcut": hoodcut, "bodycut": bodycut, "measure": measure, "tris": tris,
+ "roundtrip": roundtrip}[MODE]()

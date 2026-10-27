@@ -69,6 +69,8 @@ if (catalog.hairMaps?.atlas_world) execFileSync("magick", [join(art, catalog.hai
 // wardrobe batch 2: the fixed-colour atlas (art/characters/colour_atlas.py: the Roblox accessories' and #22's hat's own
 // textures) and David's prices for the batch (specs/wardrobe/batch2-pricing.json)
 copy(join(art, "colour_atlas.png"), join(out, "colour_atlas.png"));
+// clothing-v2: the garment designs, one atlas cell each (art/characters/outfits/build_outfits.py)
+copy(join(art, catalog.designs.atlas), join(out, catalog.designs.atlas));
 copy(resolve(web, "../specs/wardrobe/batch2-pricing.json"), join(data, "batch2-pricing.json"));
 for (const name of ["character_catalog.json", "palette.json", "v7/face/face_v7.json", "skull/skull.json"]) copy(join(art, name), join(data, name.replace(/^.*\//, "")));
 
@@ -79,4 +81,4 @@ writeFileSync(tmp, svg.replace(/<svg ([^>]*)>/, '<svg $1 preserveAspectRatio="xM
 execFileSync("rsvg-convert", ["-w", "192", "-h", "184", "-o", join(out, "decal_tsi_mark.png"), tmp]);
 execFileSync("magick", [join(out, "decal_tsi_mark.png"), "-background", "none", "-gravity", "center", "-extent", "256x256", join(out, "decal_tsi_mark.png")]);
 execFileSync("rm", [tmp]);
-console.log(`synced ${parts.length} parts (${hairGlbs.length} hairstyles meshopt-compressed in 3 tiers, ${accGlbs.length} Roblox accessories in 2), base, ${Object.keys(lod).length} LOD 1 and ${Object.keys(lod2).length} LOD 2 GLBs, 4 face atlases (2 pages), the hair and colour atlases, 5 JSON files, TSI decal`);
+console.log(`synced ${parts.length} parts (${hairGlbs.length} hairstyles meshopt-compressed in 3 tiers, ${accGlbs.length} Roblox accessories in 2), base, ${Object.keys(lod).length} LOD 1 and ${Object.keys(lod2).length} LOD 2 GLBs, 4 face atlases (2 pages), the hair, colour and design atlases, 5 JSON files, TSI decal`);

@@ -12,6 +12,7 @@ import faceV7 from "@/data/characters/face_v7.json";
 import batch2Pricing from "@/data/characters/batch2-pricing.json";
 import { LOOK_MAX_BYTES } from "@/lib/net/protocol";
 import { hairShift, NO_SHIFT, oklabToHex, oklchToOklab, shiftedMedian, type HairShift, type Oklch } from "./hairColour";
+import type { DesignUse } from "./rig";
 
 export const CHARACTER_ROOT = "/assets/characters/v6/";
 /** The clip-bearing base: the v6 body with the hand-modeled v7 head (avatar v7). */
@@ -36,6 +37,18 @@ export const HAIR_THUMB_URL = (id: string) => `${CHARACTER_ROOT}hair/thumbs/${id
 /** Wardrobe batch 2: the fixed-colour atlas (art/characters/colour_atlas.py): David's Roblox accessories and #22's hat keep
  * their own textures. A vertex whose u is 2 or more draws the texel at (u - 2, v), never tinted (Character.tsx). */
 export const COLOUR_ATLAS_URL = `${CHARACTER_ROOT}colour_atlas.png`;
+/**
+ * clothing-v2 (David, 2026-10-26: universal garments, a new design only changes the paint over them): one mesh
+ * per garment type, a design is paint on it. Every design is one cell of this atlas (art/characters/outfits/
+ * build_outfits.py), drawn over the garment's tint by its alpha (Character.tsx); a part names its cell (`design`).
+ */
+export const DESIGNS = catalog.designs as { atlas: string; grid: number; gutter: number; materials: string[]; cells: Record<string, number> };
+export const DESIGN_ATLAS_URL = `${CHARACTER_ROOT}${DESIGNS.atlas}`;
+/** Where a design cell sits in the atlas: a garment's uv (0..1) maps to (u0 + u s, v0 + v s) (rig.ts DesignUse). */
+export function designUse(cell: number): DesignUse {
+  const g = DESIGNS.grid, s = (1 - 2 * DESIGNS.gutter) / g;
+  return { u0: (cell % g + DESIGNS.gutter) / g, v0: (Math.floor(cell / g) + DESIGNS.gutter) / g, s };
+}
 /** Ruling 24: the crewneck carries the site's own TSI mark (public/logo.svg, rasterised by the sync script). */
 export const TSI_DECAL_URL = `${CHARACTER_ROOT}decal_tsi_mark.png`;
 
@@ -69,6 +82,11 @@ export interface CatalogPart {
   hatCut?: number;
   /** The bear hood: a look wearing it draws none of the head skin it hides (the base's `_HOODCUT` marks). */
   coversHead?: boolean;
+  /** A garment (clothing-v2): its design's cell in the design atlas (DESIGNS), painted over its tint. */
+  design?: number;
+  /** A garment (clothing-v2): its bit in the body skin's `_BODYCUT` marks: a look wearing it draws none of the skin it
+   * covers in every clip (art/characters/hidden_cut.py bodycut). Every design on one universal mesh shares it. */
+  bodyCut?: number;
   /** Owned with that part, never sold alone (row 314: #22's ushanka and goggles come with hair #22). */
   grantedBy?: string;
   /** The economy item (crafted) that unlocks this part; its catalogue_ref is this part's id. Such parts are never sold. */
@@ -349,6 +367,8 @@ export function wornParts(look: CharacterLook): CatalogPart[] {
 export interface ResolvedPart { id: string; url: string; /** Its LOD 1 GLB. */ lod: string; /** Its LOD 2 GLB (a whole hairstyle's own; else its LOD 1). */ lod2: string; tints: Record<string, string>; decal: string | null;
   /** It draws texels from the fixed-colour atlas (COLOUR_ATLAS_URL). */
   colour: boolean;
+  /** Its design's cell in the design atlas (DESIGN_ATLAS_URL), or null: plain. */
+  design: number | null;
   /** A mapped hairstyle: its texture's shift for each recolour channel (hairColour.ts; identity: drawn as it is). */
   map: { a: HairShift; b: HairShift } | null }
 /** The colour a look picks for its hair (sRGB hex): the colour wheel's, else the palette colour; null: the style's own. */
@@ -390,7 +410,8 @@ export function resolveParts(look: CharacterLook): ResolvedPart[] {
       } else if (m.color) tints[m.name] = m.color;
     }
     const map = part.map ? hairShifts(look, part) : null;
-    return { id: part.id, url: CHARACTER_ROOT + part.glb, lod: LOD_ROOT + part.glb, lod2: (part.full ? LOD2_ROOT : LOD_ROOT) + part.glb, tints, decal, map, colour: !!part.colourAtlas };
+    return { id: part.id, url: CHARACTER_ROOT + part.glb, lod: LOD_ROOT + part.glb, lod2: (part.full ? LOD2_ROOT : LOD_ROOT) + part.glb, tints, decal, map, colour: !!part.colourAtlas,
+      design: part.design ?? null };
   });
 }
 

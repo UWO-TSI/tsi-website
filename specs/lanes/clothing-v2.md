@@ -20,7 +20,42 @@ What that means:
 
 ## Status
 
-(none yet)
+Round 1 built, in review (not merged). Head: see `git log -1` on `game/clothing-v2`.
+- **Universal models** (`art/characters/outfits/build_outfits.py`, section "clothing-v2"): tee, long-sleeve, hoodie,
+  shorts, trousers, joggers, slip-ons, sneakers. One mesh per type (`model=`); the striped long-sleeve is
+  `outfits/top/top_longsleeve.glb` + the stripe design (the old `top_stripe_ls.glb` is deleted). Part ids unchanged, so
+  saved looks keep working. Triangles at or under the old ones (144/248/271/114/178/198/216/156).
+- **Fit:** each model's rings sit where the skin has its own, none between two across a joint; weights transferred
+  from the clip base's skin (nearest point on the same side); the seat under the hips takes body_shape's skirt weights
+  so it follows the thighs into a sit.
+- **Body cut:** `hidden_cut.py bodycut` marks `_BODYCUT` on the base skin (clip base and LOD 1 skin): bit `bodyCut` per
+  model = skin hidden from every view (normal + rings at 40/70/87 degrees) in rest and every 3rd frame of all 73 clips.
+  Engine: `rig.ts` cuts a list of `PieceCut`s; `Character.tsx lookPieces` adds one per worn garment.
+- **Designs:** `outfits/designs.png` (4x4 cells of 256 px, 8 px gutters), catalogue `designs` + part `design` (cell).
+  Shared layout per family (`design_uv`): tops torso + sleeves, bottoms hips + legs, shoes feet. Engine: uv moved into
+  the cell + `DESIGN_U` (4); the body material paints the texel over the tint by its alpha, the vertex's COLOR_0 shade
+  in `hairMap.y`.
+- **Evidence tools:** `outfits/render_fit.py` (+ `FIT_ROOT` for the last commit's assets), `outfits/fit_sheet.py`
+  (`BEFORE=`), `/lab/avatar?sheet=fit` + `web/scripts/fit-shots.mjs` (in-game, `&cut=0` shows the cut skin).
+
+## Next
+
+1. David reviews round 1 (`specs/evidence/clothing-v2/`). Apply his notes.
+2. Round 2: the rest of `art/characters/outfits/` on the same models (TSI crew = sweater + a TSI design, so the decal
+   mesh can go), plus new models for skirts, boots, sandals, loafers, rain boots and the one-pieces.
+
+## Tools and gotchas
+
+- Order after any garment change: `build_outfits.py -- <ids>` → `build_lod.py -- <ids>` (not `base`: that rebuilds
+  the LOD skin and drops its marks) → `hidden_cut.py -- bodycut` (prints the FIT/LAYER report; `-- bodycut fit step=15`
+  for a quick look without marking) → `node web/scripts/sync-character-assets.mjs` (then `git checkout` the
+  regenerated `decal_tsi_mark.png` and `hair_colour_world.png`: tool noise).
+- The FIT `poke` count includes a forearm resting into the belly in Sit and a shoe collar sinking into the shin in a
+  crouch (the garment inside the skin, not skin through the garment); judge by the renders.
+- A ring between two skin rings across a joint (the old knee ring at 0.13) sinks into the back of the knee as it
+  bends: the skin has rings at 0.289/0.17/0.09/0.035 (legs) and 0.076/0.138/0.199/0.263/0.273 (arms).
+- With swap over 9 GB the Blender lock waits for the dev server lock; run Blender batches in the background in a
+  retry loop on withlock's exit 75.
 
 ## Rules
 
