@@ -16,6 +16,9 @@ import { Dialogue } from "@/components/gui";
 import { AudioManager } from "@/lib/game/audio";
 import { useWorldDialog } from "@/lib/game/useWorldDialog";
 import { POST_TITLES, type ResidentPost } from "@/lib/content/residents";
+import { Heart } from "lucide-react";
+import { useFriendLevel } from "@/lib/game/friendship";
+import { FRIEND_MAX } from "@/lib/npc/friendship";
 import { blipAt, emptyTalkView, endTalk, leaveTalk, pressTalk, stepTalk, subscribeTalk, talkChanged, talkStore, talkView, voiceBlip } from "@/lib/game/residentTalk";
 import styles from "./TalkBox.module.css";
 
@@ -102,6 +105,7 @@ export default function TalkBox() {
     if (phase === "speaking" && el && !el.contains(document.activeElement)) el.focus({ preventScroll: true });
   }, [phase, panel]);
 
+  const friend = useFriendLevel(view.slug);
   if (!open) return null;
   const line = talkStore.active?.lines[view.index]?.text ?? "";
   const title = view.post && view.post !== "villager" ? POST_TITLES[view.post as ResidentPost] : null;
@@ -112,5 +116,8 @@ export default function TalkBox() {
       <p className={styles.line} aria-hidden="true"><span ref={shown} /><span ref={rest} className={styles.rest} /></p>
       <p className={styles.sr} aria-live="polite">{view.phase === "speaking" ? line : ""}</p>
     </Dialogue>
+    {friend > 0 && <span className={styles.hearts} role="img" aria-label={`Friendship ${friend} of ${FRIEND_MAX}`}>
+      {Array.from({ length: FRIEND_MAX }, (_, i) => <Heart key={i} size={15} strokeWidth={2.4} data-on={i < friend || undefined} aria-hidden="true" />)}
+    </span>}
   </div>;
 }

@@ -1,9 +1,9 @@
 /** In-memory EconomyStore mirroring 20260926150600_economy.sql (tests, dev harness). */
-import { dailyGiftAmount, SELL_PRICES, SETTINGS, STARTER_REFS } from "./catalogue";
+import { boxPool, dailyGiftAmount, SELL_PRICES, SETTINGS, STARTER_REFS, WELCOME_DAYS, welcomeCoins, welcomeDay } from "./catalogue";
 import { seedItems, sellPrice, speciesClass, torontoDay, type ShopItem } from "./rules";
 import { EconomyError, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation } from "./store";
 
-export function memoryEconomyStore(clock: () => Date = () => new Date()) {
+export function memoryEconomyStore(clock: () => Date = () => new Date(), random: () => number = Math.random) {
   const items: ShopItem[] = seedItems();
   const coins = new Map<string, number>();
   const gems = new Map<string, number>();
@@ -100,14 +100,31 @@ export function memoryEconomyStore(clock: () => Date = () => new Date()) {
     },
     async dailyGift(m) {
       const day = torontoDay(clock());
-      if (claims.has(`${m}:${day}`)) return { coins: 0, balance: coins.get(m) ?? 0, claimed: false, day };
+      if (claims.has(`${m}:${day}`)) return { coins: 0, balance: coins.get(m) ?? 0, claimed: false, day, welcome: null };
       claims.add(`${m}:${day}`);
       const amount = dailyGiftAmount(day);
-      const r = apply(m, "coins", amount, "daily_gift", day, `daily:${day}`);
-      return { coins: amount, balance: r.balance, claimed: true, day };
+      let balance = apply(m, "coins", amount, "daily_gift", day, `daily:${day}`).balance;
+      const n = welcomeDay(await store.giftDays(m));
+      if (n === null) return { coins: amount, balance, claimed: true, day, welcome: null };
+      let bonus = welcomeCoins(n), item: ShopItem | null = null;
+      if (n === WELCOME_DAYS) {
+        const owned = new Set([...inventory.keys()].filter((k) => k.startsWith(`${m}:`)).map((k) => k.slice(m.length + 1)));
+        const pool = boxPool(items, owned);
+        item = pool.length ? pool[Math.floor(random() * pool.length)] : null;
+        if (item) {
+          const row = inventory.get(`${m}:${item.id}`);
+          if (row) row.qty += 1;
+          else inventory.set(`${m}:${item.id}`, { item, qty: 1, equipped: false, acquired_at: clock().toISOString() });
+        } else bonus = SETTINGS.welcome_box_coins;
+      }
+      if (bonus > 0) balance = apply(m, "coins", bonus, "daily_gift", `welcome:${n}`, `welcome:${n}`).balance;
+      return { coins: amount, balance, claimed: true, day, welcome: { day: n, coins: bonus, item: item?.slug ?? null } };
     },
     async dailyClaimed(m, day) {
       return claims.has(`${m}:${day}`);
+    },
+    async giftDays(m) {
+      return [...claims].filter((c) => c.startsWith(`${m}:`)).length;
     },
     async merchReserve(m, itemId, key, code) {
       const prior = reservations.find((r) => r.member_id === m && (r as Reservation & { key?: string }).key === key);

@@ -119,7 +119,7 @@ import IslandLoading from "./IslandLoading";
 import { loadGameWorld } from "@/lib/game/world/load";
 import { GAME_WORLD, worldModel } from "@/lib/game/world/active";
 import TalkBox from "./TalkBox";
-import { emptyTalkView, requestTalk, subscribeTalk, talkStore, talkView } from "@/lib/game/residentTalk";
+import { emptyTalkView, onTalkEnd, requestTalk, subscribeTalk, talkStore, talkView } from "@/lib/game/residentTalk";
 import DailyGift from "./DailyGift";
 import { markWelcomed, welcomeStep } from "@/lib/game/welcome";
 import Arrival from "./arrival/Arrival";
@@ -130,6 +130,9 @@ import { gateWheel } from "@/lib/game/arrival/tools";
 import { postArrival, useArrivalFlag } from "@/lib/game/arrival/arrivalFlag";
 import { BRAM, TUTORIAL_REWARD, type HintKeys } from "@/lib/game/arrival/lines";
 import { useMoveUnlocks } from "@/lib/game/moveUnlocks";
+import { loadFriends, talkedTo } from "@/lib/game/friendship";
+import { isCampfireHour } from "@/lib/game/campfire";
+import { friendNote } from "@/lib/npc/friendship";
 import { useHqOnboarding } from "./hq/useHqOnboarding";
 import { CheckInCard, PlaqueCard, RegisterCard } from "./hq/HqCards";
 import HqInterior from "./hq/HqInterior";
@@ -179,12 +182,13 @@ import { useHomeLayout } from "@/lib/homes/useHomeLayout";
 import { catalogueItem } from "@/lib/homes/catalogue";
 import { ROOM_PRICE } from "@/lib/homes/layout";
 import { PROBE_FRAMES, PROBE_WARMUP, medianFrameMs, tierDpr, tierForFrameMs, type QualityTier } from "@/lib/game/qualityTier";
-import { ISLAND_PHASES, type IslandPhase } from "@/lib/game/islandTime";
+import { ISLAND_PHASES, torontoHour, type IslandPhase } from "@/lib/game/islandTime";
 import CraftingSheet, { BeachBottle } from "./crafting/Workshop";
 import StudySeats from "./study/StudySeats";
 import StudyHud from "./study/StudyHud";
 import CafeInterior from "./study/CafeInterior";
 import CafeGoalSheet from "./study/CafeGoalSheet";
+import MonumentSheet from "@/components/progression/MonumentSheet";
 import CafeBuilding from "./study/CafeBuilding";
 import CafeSweeper, { cafeSweeper } from "./study/CafeSweeper";
 import SushiBar from "./SushiBar";
@@ -220,7 +224,7 @@ import { DevUiTheme } from "@/components/gui/DevUiTheme";
 import styles from "./DefaultIslandWorld.module.css";
 
 type Near = "knock" | "shop_enter" | "counter" | "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "stool" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | "bram" | "founder" | "coffee" | "aquarium" | "admin" | "sell" | null;
-type Sheet = "counter" | "shopkeeper" | "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | "bag" | "wallet" | "chest" | "plaque" | "sell" | null;
+type Sheet = "counter" | "shopkeeper" | "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | "bag" | "wallet" | "chest" | "plaque" | "sell" | "monument" | null;
 const DEV = process.env.NODE_ENV !== "production";
 const DEV_SHEETS: readonly Sheet[] = ["counter", "shopkeeper", "notice", "letters", "journal", "trophies", "showcase", "closet", "fitting", "oracle", "path", "settings", "missions", "tourney", "posters", "cafe", "wallet", "chest"];
 /** Sheets opened at a station with E: E closes them again (the dialog system's opening key). */
@@ -229,7 +233,7 @@ const PHASE_NAMES: Record<IslandPhase, string> = { dawn: "Dawn", day: "Daylight"
 const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   enter: "Enter HQ", exit: "Return to the island", board: "Read the notice board",
   display: "Look at the trophy case", desk: "Front desk · profile showcase", shelf: "Browse the library", clock: "Check the clock",
-  notice: "Read the notice board", catch: "Check the catch board", mailbox: "Check the mailbox", monument: "Club monument",
+  notice: "Read the notice board", catch: "Check the catch board", mailbox: "Check the mailbox", monument: "See the club goal",
   museum_enter: "Enter the museum", cafe_enter: "Enter the café", curator: "Talk to the curator", closet: "Open the closet", fitting: "Try on outfits", oracle_enter: "Enter the Oracle temple", altar: "Consult the crystal",
   home: "Take the boat home", fish: "Cast your line", forage: "Gather", net: "Swing the net", dig: "Dig", claim: "Claim your plot", donate: "Donate your first catch to the museum", report: "Report back to Alice", house: "Enter your house", village: "Take the boat to the village",
   buy: `Add a room · ${ROOM_PRICE.coins} TC + ${ROOM_PRICE.materials}`,
@@ -249,7 +253,7 @@ const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   // The new world's quick-sell barrel by the fish market.
   sell: "Quick sell your catch",
 };
-const CLOSED: Near[] = ["museum", "monument"];
+const CLOSED: Near[] = ["museum"];
 /** The door in reach for trick-or-treat (components/game/Halloween.tsx): IslandScene writes it each frame, E knocks. */
 const knockSpot: { current: KnockDoor | null } = { current: null };
 /** The village bench in reach as a `tsi:sit` detail: IslandScene writes it each frame, E sits (or stands) there. */
@@ -413,7 +417,9 @@ function Performance({ player, output }: { player: React.RefObject<THREE.Vector3
   return null;
 }
 
-function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpot, fishing, chapter, phase, light, look, weather, overview, zoom, reset, returned, fromBoat, liteMode, castShadows, player, onNear, progression, ceremony, event, arriving, hintKeys, talking, traditions, fogNight, onBar }: {
+function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpot, fishing, chapter, phase, campfireHour, light, look, weather, overview, zoom, reset, returned, fromBoat, liteMode, castShadows, player, onNear, progression, ceremony, event, arriving, hintKeys, talking, traditions, fogNight, onBar }: {
+  /** Campfire hour (lib/game/campfire.ts): the fire burns, the drum circle plays, sitting by it earns the bonus. */
+  campfireHour: boolean;
   /** Near the sushi bar (its music): lib/game/sushiBar.ts BAR_MUSIC_IN. */
   onBar: (near: boolean) => void;
   /** The traditions running now (lib/game/useTraditions.ts) and the fog night's strength (0 to 1): Halloween's layer. */
@@ -572,7 +578,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       {fountain && <LampGlow points={fountain.jet} ground={fountain.water} on={light.lampsOn} halo={2.4} pool={3} color="#a8e8ff" />}
       {fountain && <FadeLight position={fountain.light} color="#ffd59a" intensity={light.lampsOn ? light.lamp * 2 : 0} distance={12} />}
       {bar && <Suspense fallback={null}><SushiBar bar={bar} y={barY} player={player} phase={phase} viewRef={barView} onNear={onBar} /></Suspense>}
-      {layout.campfire && <Campfire site={layout.campfire} ground={island.ground} phase={phase} player={player} walled={!!v.terrain} />}
+      {layout.campfire && <Campfire site={layout.campfire} ground={island.ground} phase={phase} hour={campfireHour} player={player} walled={!!v.terrain} />}
       {/* Nature and props from the map, instanced: one draw per model sub-mesh however many the island has. */}
       <InstancedModels items={sceneryMoving} />
       {sceneryStill.length > 0 && <Suspense fallback={null}><MergedModels items={sceneryStill} /></Suspense>}
@@ -762,6 +768,10 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const [fading, setFading] = useState(false);
   // The world is revealed (and a door fade lifts) once WarmupProbe says the scene has loaded and compiled (hud-first-login §5).
   const [ready, setReady] = useState(false);
+  // Campfire hour (s-campfire): the HUD says so as it starts, or as you arrive during it.
+  const campfireHour = isCampfireHour(torontoHour(new Date(conditions.now)));
+  const campfireCall = ready && campfireHour;
+  useEffect(() => { if (campfireCall) toast("Campfire hour! The drums are going by the campfire. Sit by the fire a while for a little bonus."); }, [campfireCall]);
   const [sceneShown, setSceneShown] = useState(0);
   const onSceneReady = useCallback(() => { setReady(true); setFading(false); tripSceneReady(); }, []);
   const [near, setNear] = useState<Near>(null);
@@ -790,6 +800,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   useEffect(() => { if (inside === "museum" && !loadMuseumRef.current) { loadMuseumRef.current = true; loadMuseum(); } if (inside !== "museum") loadMuseumRef.current = false; }, [inside, loadMuseum]);
   // The glider waits for the mountain expansion (lib/game/moveUnlocks.ts); the dash is everyone's from the start.
   const unlocks = useMoveUnlocks();
+  // Resident friendship (d-friends): the day's first talk with a resident raises it; a level's letter or gift is told.
+  useEffect(() => { loadFriends(); return onTalkEnd(slug => void talkedTo(slug).then(f => { if (f?.leveled) toast(friendNote(f, f.name)); })); }, []);
   const peacefulRaw = usePeacefulContext(weather, conditions.now);
   const peaceful = useMemo(() => ({ ...peacefulRaw, glider: peacefulRaw.glider && unlocks.glider }), [peacefulRaw, unlocks.glider]);
   // Audio pass (row 169 / polish-ownership item 9): the hourly music player
@@ -974,6 +986,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     // The catch board's clues are the collection journal's.
     if (action === "catch") { setBagOpen(true); return; }
     if (action === "mailbox") { setSheet("letters"); return; }
+    if (action === "monument") { setSheet("monument"); return; }
     if (action === "curator") { setDonateOpen(true); return; }
     if (action === "display") { setSheet("trophies"); return; }
     // Reporting to Alice (the visit's first step): the desk is hers to talk at; otherwise the profile showcase.
@@ -1250,7 +1263,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
               overview={overview} returned={returned} player={player} onNear={(n: HomeNear) => setNear(n)} outdoor={layout.outdoor}
               decorating={decor.decorating} selected={decor.selected} onPlace={item => decor.place("outdoor", item)} onPickUp={item => decor.pickUp("outdoor", item)} />
             : <IslandScene held={eating || trip.active ? null : held} identity={identity} level={level} devAt={devAt} exitFrom={exitFrom} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} chapter={chapterFlags} fromBoat={fromBoat} progression={progressionWorld} ceremony={ceremony} event={islandEvent} traditions={traditions} fogNight={fogNight}
-              arriving={welcoming} hintKeys={hintKeys} talking={talking} phase={scenePhase} light={light} look={look} weather={sceneWeather} overview={overview} zoom={devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onNear={setNear} onBar={setAtBar} />}
+              arriving={welcoming} hintKeys={hintKeys} campfireHour={campfireHour} talking={talking} phase={scenePhase} light={light} look={look} weather={sceneWeather} overview={overview} zoom={devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onNear={setNear} onBar={setAtBar} />}
           {/* Classes v2: the subclass's aura replaces the family's once its kit exists (§1.9). */}
           {DROPS.classes && identity.aura && (classAura ? <Suspense fallback={null}><SubclassAura player={player} kit={classAura.kit} mastery={classAura.mastery} colour={classAura.colour} /></Suspense>
             : identity.family && <Suspense fallback={null}><FamilyAura player={player} color={FAMILIES[identity.family].light} /></Suspense>)}
@@ -1392,6 +1405,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <TourneySheet open={sheet === "tourney"} onClose={() => setSheet(null)} />
       <PostersSheet open={sheet === "posters"} onClose={() => setSheet(null)} event={islandEvent} />
       <CafeGoalSheet open={sheet === "cafe"} onClose={() => setSheet(null)} />
+      <MonumentSheet open={sheet === "monument"} onClose={() => setSheet(null)} keys={STATION_KEY} />
       {site === "ruins" && <CombatHud player={player} />}
       {DEV && site === "ruins" && <PlaytestHud />}
       {/* Clear of the minimap (left) and the audio widget (bottom right). */}

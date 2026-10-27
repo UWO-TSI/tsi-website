@@ -20,12 +20,14 @@ import { HOLO_GRADIENT, REVEAL, celebrate, fishOdds, iconFor, RARITY_META, type 
 import { oneLinerFor } from "@/lib/game/peaceful";
 import { Badge, Button, RarityBadge } from "@/components/gui";
 
-export default function FishReveal({ fish, sizeCm, recipe, isNew = true, newRecord = false, delay = 0, onDone }: {
+export default function FishReveal({ fish, sizeCm, recipe, together, isNew = true, newRecord = false, delay = 0, onDone }: {
   fish: FishDef;
   /** Null: no size recorded (a fish off the roster). */
   sizeCm: number | null;
   /** A recipe the catch taught (rare catches). */
   recipe?: string | null;
+  /** Fished with this friend nearby (s-fishtogether): the card's stamp. */
+  together?: string | null;
   /** The first of its kind: it develops from a silhouette, with its odds. */
   isNew?: boolean;
   /** A repeat that beat your record for the species. */
@@ -127,6 +129,7 @@ export default function FishReveal({ fish, sizeCm, recipe, isNew = true, newReco
             {odds !== null && <span style={{ fontSize: "var(--gui-text-xs, 12px)", color: "var(--gui-muted, #726450)" }}>Base odds · 1 in {odds}</span>}
           </div>
           {line && <p style={{ margin: "8px 0 0", fontSize: "var(--gui-text-sm, 13px)", fontStyle: "italic", color: "var(--gui-ink-2, #6b5843)", opacity: developed ? 1 : 0, transition: "opacity 300ms ease-out 160ms" }} data-testid="catch-one-liner">“{line}”</p>}
+          {together && <p className="tsi-fished-with" data-testid="reveal-together"><span aria-hidden="true">✦</span> Fished with {together}</p>}
           {recipe && <p style={{ margin: "6px 0 0", fontSize: "var(--gui-text-sm, 13px)", fontWeight: 800, color: "var(--gui-sage, #426b5b)" }} data-testid="reveal-recipe">You learned a recipe: {recipe}</p>}
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
             <Button size="sm" variant="secondary" onClick={next}>{developed ? "Continue" : "Show me"}</Button>
@@ -154,6 +157,8 @@ export default function FishReveal({ fish, sizeCm, recipe, isNew = true, newReco
         /* At the foot of the screen under the catch you hold up (Animal Crossing's text box); on touch, the HUD's lane
            above the stick and buttons. */
         .tsi-catch-card { bottom: 36px; }
+        /* Fishing together: a little ink stamp on the card. */
+        .tsi-fished-with { display: inline-block; margin: 8px 0 0; padding: 3px 10px; border: 2px dashed var(--gui-coral-ink, #b4513a); border-radius: 8px; color: var(--gui-coral-ink, #b4513a); font-size: var(--gui-text-sm, 13px); font-weight: 800; letter-spacing: 0.02em; transform: rotate(-3deg); }
         @media (pointer: coarse) { .tsi-catch-card { bottom: var(--hud-lane-bottom, 120px); } }
         @media (prefers-reduced-motion: reduce) {
           [data-catch-card] { animation-duration: 1ms !important; }

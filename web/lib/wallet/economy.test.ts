@@ -1,10 +1,10 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { CATALOGUE } from "./catalogue";
+import { BOX_CATEGORIES, boxPool, CATALOGUE, SETTINGS } from "./catalogue";
 import { memoryEconomyStore } from "./memoryStore";
 import { dailySpecials, seedItems, sellPrice, speciesClass, torontoDay } from "./rules";
-import { buy, claimDailyGift, equip, getShop, getWallet, pickupCode, reserveMerch, resolveMerch, sell, sellList } from "./service";
+import { buy, claimDailyGift, equip, getShop, getWallet, pickupCode, reserveMerch, resolveMerch, sell, sellList, type GiftView } from "./service";
 
 const A = "00000000-0000-4000-8000-0000000000aa";
 const B = "00000000-0000-4000-8000-0000000000bb";
@@ -119,8 +119,60 @@ describe("daily gift", () => {
     expect(await claimDailyGift(m.store, A)).toMatchObject({ ok: true, data: { claimed: false, coins: 0 } });
     now = new Date("2026-09-25T04:01:00Z"); // midnight in Toronto: Friday
     expect(await claimDailyGift(m.store, A)).toMatchObject({ ok: true, data: { claimed: true, coins: 20, day: "2026-09-25" } });
-    expect(m.coinsOf(A)).toBe(30);
+    expect(m.coinsOf(A)).toBe(30 + 10 + 20); // the gifts, and welcome days 1 and 2
     expect((await getWallet(m.store, A, now)).ok).toBe(true);
+  });
+});
+
+describe("the welcome week (d-streak)", () => {
+  const day = (n: number) => new Date(Date.UTC(2026, 10, 2 + n, 17)); // Nov 3 onwards, noon in Toronto
+  it("adds a bonus on the first seven gift days and a mystery box on the seventh, then stops", async () => {
+    let now = day(0);
+    const m = memoryEconomyStore(() => now, () => 0.99);
+    const got: (GiftView["welcome"])[] = [];
+    for (let n = 0; n < 8; n++) {
+      now = day(n * 2); // gift days, not a streak: a missed day doesn't reset it
+      const w = await getWallet(m.store, A, now);
+      expect(w.ok && w.data.welcome_day).toBe(n < 7 ? n + 1 : null);
+      const r = await claimDailyGift(m.store, A);
+      if (!r.ok) throw new Error(r.error);
+      got.push(r.data.welcome);
+    }
+    expect(got.slice(0, 6).map(w => w?.coins)).toEqual([10, 20, 30, 40, 50, 60]);
+    expect(got[6]).toMatchObject({ day: 7, coins: 0, item: { slug: expect.any(String), name: expect.any(String), icon: expect.stringMatching(/\.webp$/) } });
+    expect(got[6]!.reel.length).toBeGreaterThan(3);
+    expect(got[6]!.reel.map(p => p.slug)).toContain(got[6]!.item!.slug);
+    expect(got[7]).toBeNull();
+    const box = m.items.find(i => i.slug === got[6]!.item!.slug)!;
+    expect(box.special_pool && box.active && box.price_coins !== null).toBe(true);
+    expect((await m.store.inventory(A)).some(r => r.item.slug === box.slug)).toBe(true);
+    // Once a day: the same day again pays nothing and opens no box.
+    expect(await claimDailyGift(m.store, A)).toMatchObject({ ok: true, data: { claimed: false, welcome: null } });
+  });
+  it("holds only starter loot and never Contraband (staff-only, David 2026-10-27)", () => {
+    const items = memoryEconomyStore().items;
+    const contraband = { ...items.find(i => i.special_pool && i.active && i.category === "accessory")!, id: "x-contraband", slug: "acc-contraband", rarity: "contraband" };
+    const pool = boxPool([...items, contraband], new Set());
+    expect(pool.length).toBeGreaterThan(10);
+    expect(pool.some(i => i.id === "x-contraband")).toBe(false);
+    for (const i of pool) {
+      expect(BOX_CATEGORIES as readonly string[]).toContain(i.category);
+      expect(i.price_coins).not.toBeNull();
+      expect(i.price_coins!).toBeLessThanOrEqual(SETTINGS.welcome_box_coins);
+    }
+    // No tools, no merch, nothing in gems.
+    expect(pool.some(i => i.category === "tool" || i.category === "merch" || i.price_gems !== null)).toBe(false);
+  });
+  it("pays coins when the member already owns everything the box could hold", async () => {
+    let now = day(0);
+    const m = memoryEconomyStore(() => now);
+    for (const it of m.items) if (it.stackable) it.special_pool = false; // furniture never runs out: take it out of the box
+    const pool = m.items.filter(i => i.special_pool && i.active && i.price_coins !== null);
+    for (const it of pool) m.inventory.set(`${A}:${it.id}`, { item: it, qty: 1, equipped: false, acquired_at: "" });
+    for (let n = 0; n < 7; n++) { now = day(n); await claimDailyGift(m.store, A); }
+    expect((await getWallet(m.store, A, now)).ok).toBe(true);
+    const ledger = m.ledger.filter(l => l.member === A && l.ref === "welcome:7");
+    expect(ledger.map(l => l.amount)).toEqual([300]);
   });
 });
 

@@ -16,7 +16,7 @@ import { seededRandom } from "@/lib/game/weatherSystem";
 import { ROSTER } from "@/lib/collections/roster";
 import { activeVillage, fishRoll } from "@/lib/collections/rolls";
 
-const mock = vi.hoisted(() => ({ ctx: null as unknown, weather: "clear", goals: [] as unknown[] }));
+const mock = vi.hoisted(() => ({ ctx: null as unknown, weather: "clear", goals: [] as unknown[], friends: [] as unknown[] }));
 vi.mock("@/lib/server/memberContext", async (original) => ({
   ...(await original<typeof import("@/lib/server/memberContext")>()),
   withStore: async () => mock.ctx,
@@ -29,6 +29,9 @@ vi.mock("@/lib/collections/rolls", async (original) => {
 });
 // The club goals carry the seasonal events (20260929120000); none unless a test sets them.
 vi.mock("@/lib/progression/supabaseStore", () => ({ supabaseProgressionStore: () => ({ listGoals: async () => mock.goals }) }));
+
+// Fishing together: the caller's friends (world_friends), none unless a test sets them.
+vi.mock("@/lib/world/friendsSupabase", () => ({ supabaseFriendStore: () => ({ friends: async () => mock.friends }) }));
 
 import { POST } from "./route";
 
@@ -61,6 +64,7 @@ beforeEach(() => {
   m = memoryCollectionsStore(() => clock);
   mock.weather = "clear";
   mock.goals = [];
+  mock.friends = [];
   as(A);
 });
 
@@ -469,5 +473,20 @@ describe("POST /api/collections: a full backpack refuses the pickup (rows 279–
     m.own(A, ["bag:30"]);
     expect((await harvest("rock-", SHOVEL)).status).toBe(200);
     expect((await cast()).status).toBe(200);
+  });
+});
+
+describe("fishing together (s-fishtogether)", () => {
+  it("rolls a cast with a friend nearby a little luckier and names them for the card; a stranger gets nothing", async () => {
+    const { fishRoll: watched } = await import("@/lib/collections/rolls");
+    mock.friends = [{ member_id: B, world_name: "Mika", since: "2026-10-01" }];
+    const together = await post({ action: "cast", site: "village", at: SHORE, power: 0.5, tool: ROD, with: B });
+    expect(together.body.catch.together).toBe("Mika");
+    expect(vi.mocked(watched).mock.calls.at(-1)?.[7]).toBe(true);
+    later(60_000);
+    mock.friends = [];
+    const alone = await post({ action: "cast", site: "village", at: SHORE, power: 0.5, tool: ROD, with: B });
+    expect(alone.body.catch.together).toBeNull();
+    expect(vi.mocked(watched).mock.calls.at(-1)?.[7]).toBe(false);
   });
 });

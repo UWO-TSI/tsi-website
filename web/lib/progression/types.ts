@@ -164,7 +164,8 @@ export interface Objective {
 
 export interface LetterView {
   id: string;
-  kind: "system" | "note";
+  /** "resident": a resident's friendship letter (a system row keyed `friend:<slug>:<level>`, lib/npc/friendship.ts). */
+  kind: "system" | "note" | "resident";
   sender_id: string | null;
   sender_name: string;
   recipient_id: string;

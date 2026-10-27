@@ -6,10 +6,26 @@ import { seededRandom } from "@/lib/game/weatherSystem";
 import { villageNodes } from "@/lib/game/islandNodes";
 import { ROSTER, type Rarity } from "./roster";
 import { fishRoll, nodeRoll } from "./rolls";
+import { TOGETHER } from "@/lib/game/fishing";
 
 const NOON = new Date("2026-09-24T16:00:00Z"); // 12:00 in Toronto
 const close = (observed: number, p: number, n: number) => Math.abs(observed - p) <= 4 * Math.sqrt((p * (1 - p)) / n) + 0.002;
 const tally = (keys: string[]) => keys.reduce((m, k) => m.set(k, (m.get(k) ?? 0) + 1), new Map<string, number>());
+
+describe("fishing together (s-fishtogether)", () => {
+  it("rolls with a little more luck: the pool of a cast TOGETHER.luck luckier", () => {
+    const rod = rodByTier(3), at = { hour: 12, weather: "clear" as const, month: 9 };
+    const rare = (luck: number) => { const pool = fishPoolFor("river", luck, rod, at), total = pool.reduce((s, e) => s + e.weight, 0);
+      return pool.filter((e) => e.fish.rarity !== "common").reduce((s, e) => s + e.weight, 0) / total; };
+    expect(rare(0.5 + TOGETHER.luck)).toBeGreaterThan(rare(0.5));
+    // The roll uses it: same seed, the together roll matches the luckier pool's.
+    const a = fishRoll("river", 0.5, rod, NOON, "clear", seededRandom(3), undefined, true).fish.key;
+    const pool = fishPoolFor("river", 0.5 + TOGETHER.luck, rod, at), r = seededRandom(3)() * pool.reduce((s, e) => s + e.weight, 0);
+    let left = r, want = pool[pool.length - 1].fish.key;
+    for (const e of pool) { left -= e.weight; if (left <= 0) { want = e.fish.key; break; } }
+    expect(a).toBe(want);
+  });
+});
 
 describe("server rolls match the tables", () => {
   it("fish: the reel's weighted pool for the water, rod, cast luck, hour and weather", () => {

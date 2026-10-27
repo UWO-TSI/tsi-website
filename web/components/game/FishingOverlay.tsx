@@ -30,6 +30,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import FishReveal from "./FishReveal";
+import { remoteNearest } from "./net/active";
+import { friendsStore } from "@/lib/net/friends";
 import { AudioManager } from "@/lib/game/audio";
 import { castLine, collect, landCatch, localCollections, localRecord, mergeWithLocal, type CatchAnswer } from "@/lib/game/collections";
 import { rodByTier, type RodTier } from "@/lib/game/rods";
@@ -38,6 +40,7 @@ import type { WaterType } from "@/lib/game/fishingSpots";
 import { punchZoom, setAimZoom, setTensionZoom, shakeCamera } from "@/lib/game/cameraJuice";
 import {
   CAST,
+  TOGETHER,
   FISH,
   RARITY_META,
   START_PROGRESS,
@@ -96,6 +99,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
   const [wasNew, setWasNew] = useState(false);
   const [newRecord, setNewRecord] = useState(false);
   const [learned, setLearned] = useState<string | null>(null); // a recipe the landed catch taught
+  const [buddy, setBuddy] = useState<string | null>(null); // the friend this one was fished with (s-fishtogether)
   const [missNote, setMissNote] = useState<string | null>(null);
   // The hints name the input that started the cast (E, the click or a tap): fishingInput.ts FISHING_HINTS.
   const [device, setDevice] = useState<CastDevice>("mouse");
@@ -246,7 +250,8 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     changePhase("casting");
     // Member island: the server rolls what will bite now; a refusal (too soon, no water here) ends the cast.
     const from = collectionScope ? null : castFromRef.current;
-    rollRef.current = from && castLine(from.site, from.from, power, rod.key);
+    // Fishing together: the nearest friend within a few steps rides along on the cast (the server checks the friendship).
+    rollRef.current = from && castLine(from.site, from.from, power, rod.key, remoteNearest(from.from[0], from.from[1], TOGETHER.range, uid => friendsStore().isFriend(uid)));
     void rollRef.current?.then(answer => {
       if (answer && !answer.ok && (phaseRef.current === "casting" || phaseRef.current === "waiting")) { bagFull(answer); miss(answer.error); }
     });
@@ -287,6 +292,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
       if (answer && !answer.ok) { bagFull(answer); miss(answer.error); return; }
       const rolled = answer && FISH.find(f => f.key === answer.catch.item_key);
       landRef.current = rolled && answer.catch.roll ? { roll: answer.catch.roll, size: answer.catch.size_cm } : null;
+      setBuddy(rolled ? answer.catch.together ?? null : null);
       const hooked = rolled || local();
       setFish(hooked);
       changePhase("reeling");
@@ -405,7 +411,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
 
   // The catch card, for every catch: it replaces the bottom card.
   if (phase === "revealing" && fish) {
-    return <FishReveal fish={fish} sizeCm={caughtSize} recipe={learned} isNew={wasNew} newRecord={newRecord} delay={REVEAL_DELAY_MS} onDone={cancel} />;
+    return <FishReveal fish={fish} sizeCm={caughtSize} recipe={learned} together={buddy} isNew={wasNew} newRecord={newRecord} delay={REVEAL_DELAY_MS} onDone={cancel} />;
   }
 
   const label =

@@ -31,4 +31,22 @@
 :global(html[data-contrast="high"]) .card { background: #ffffff; color: #000000; border: 2px solid #000000; }
 :global(html[data-contrast="high"]) .card p { color: #000000; }
 @media (max-width: 700px) { .card { top: 112px; } }
-@media (prefers-reduced-motion: reduce) { .card, .card[data-state="closing"], .gift, .card[data-phase] .gift, .prize { animation: none; } .coin { display: none; } .card[data-phase="opened"] .gift { display: none; } }
+/* The welcome week (d-streak): seven days, the opened ones filled, today ringed, day 7 the box. */
+.week { display: flex; justify-content: center; gap: 6px; margin: 0 0 8px; padding: 0; list-style: none; }
+.week li { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 999px; font: 800 12px/1 var(--gui-font); color: var(--gui-ink-2); background: var(--gui-paper-hi); box-shadow: inset 0 0 0 1.5px var(--gui-paper-edge); }
+.week li[data-day="done"] { background: var(--gui-sage); color: var(--gui-paper); box-shadow: 0 2px 0 var(--gui-sage-deep); }
+.week li[data-day="today"] { color: var(--gui-coral-ink); box-shadow: inset 0 0 0 2.5px var(--gui-coral-ink); animation: dayPulse 1.6s ease-in-out infinite; }
+.week li:last-child { color: var(--gui-coral-ink); }
+.week li:last-child[data-day="done"] { background: var(--gui-coral-ink); color: var(--gui-paper); box-shadow: none; }
+@keyframes dayPulse { 50% { transform: scale(1.12); } }
+/* The mystery box's roulette: the strip slides left under the marker and eases to a stop on the prize. */
+.card[data-box] { width: min(380px, calc(100% - 32px)); }
+.reel { position: relative; height: 76px; margin: 2px -8px 4px; overflow: hidden; border-radius: 14px; background: var(--gui-paper-hi); box-shadow: inset 0 0 0 1.5px var(--gui-paper-edge); -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent); mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent); }
+.strip { position: absolute; left: 50%; top: 10px; display: flex; transform: translateX(var(--x)); }
+.strip[data-spun] { transition: transform 3.4s cubic-bezier(0.1, 0.75, 0.15, 1); }
+.tile { flex: 0 0 56px; height: 56px; margin-right: 6px; display: grid; place-items: center; border-radius: 12px; background: var(--gui-paper); box-shadow: var(--gui-shadow-sm); transition: transform 0.3s cubic-bezier(0.3, 1.6, 0.5, 1) 3.4s, box-shadow 0.3s 3.4s; }
+.tile img { width: 44px; height: 44px; object-fit: contain; }
+.tile[data-won] { transform: scale(1.12); box-shadow: 0 0 0 3px var(--gui-coral-ink), var(--gui-shadow-sm); }
+.marker { position: absolute; left: 50%; top: 0; bottom: 0; width: 0; border-left: 2px solid var(--gui-coral-ink); transform: translateX(-1px); }
+.marker::before { content: ""; position: absolute; top: 0; left: -7px; border: 6px solid transparent; border-top: 8px solid var(--gui-coral-ink); }
+@media (prefers-reduced-motion: reduce) { .card, .card[data-state="closing"], .gift, .card[data-phase] .gift, .prize, .week li { animation: none; } .coin { display: none; } .card[data-phase="opened"] .gift { display: none; } .strip[data-spun], .tile { transition: none; } }

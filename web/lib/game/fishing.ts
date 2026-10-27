@@ -193,6 +193,13 @@ export const CAST = {
   biteBonusMs: 800, // max power widens the 1.4s hook window by this
 };
 
+/**
+ * Fishing together (s-fishtogether, specs/launch/v1-gameplay.md): a cast within `range` (a few steps) of a friend rolls
+ * with `luck` more (a small rare-odds boost, a third of a MAX cast's) and the catch card wears a "Fished with" stamp. Each
+ * of you gets it on your own casts. The server checks you're friends (POST /api/collections cast `with`).
+ */
+export const TOGETHER = { luck: 0.1, range: 4 } as const;
+
 /** Luck-aware weight: cast power inflates rare-and-up odds (max ≈ 2×). */
 function luckWeight(f: FishDef, weather: string, luck: number): number {
   let w = fishWeight(f, weather);

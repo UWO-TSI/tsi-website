@@ -17,3 +17,7 @@
 @keyframes chevron { 50% { transform: translateY(4px); } }
 @media (prefers-reduced-motion: reduce) { .talk[data-phase] { animation: none; } .talk[data-ready] button > span { animation: none; } }
 @media (max-width: 560px) { .talk { bottom: calc(18px + env(safe-area-inset-bottom)); } }
+/* Your friendship with them (d-friends): five hearts on the box's top edge, the earned ones filled. */
+.hearts { position: absolute; top: -12px; right: 34px; display: flex; gap: 3px; padding: 5px 9px; border-radius: 999px; background: var(--gui-paper); box-shadow: var(--gui-shadow-sm); color: var(--gui-coral-ink); pointer-events: none; }
+.hearts svg { fill: none; opacity: 0.45; }
+.hearts svg[data-on] { fill: currentColor; opacity: 1; }

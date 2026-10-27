@@ -11,8 +11,9 @@ import { useSyncExternalStore } from "react";
 import { API_WRITE } from "@/lib/apiClient";
 import { httpEconomyTransport } from "@/lib/wallet/transport";
 
-export interface HudState { coins: number | null; xp: number | null; giftClaimed: boolean; day: string | null }
-const EMPTY: HudState = { coins: null, xp: null, giftClaimed: true, day: null };
+/** `welcomeDay`: today's day of a new member's welcome week (1 to 7), null after it (lib/wallet/catalogue.ts welcomeDay). */
+export interface HudState { coins: number | null; xp: number | null; giftClaimed: boolean; day: string | null; welcomeDay: number | null }
+const EMPTY: HudState = { coins: null, xp: null, giftClaimed: true, day: null, welcomeDay: null };
 let state = EMPTY;
 let started = false;
 let timer: ReturnType<typeof setTimeout> | undefined;
@@ -20,7 +21,7 @@ const listeners = new Set<() => void>();
 const publish = (next: Partial<HudState>) => { state = { ...state, ...next }; listeners.forEach(l => l()); };
 
 export function refreshHudWallet(): Promise<void> {
-  return httpEconomyTransport.wallet().then(w => publish({ coins: w.coins, giftClaimed: w.daily_claimed, day: w.day }), () => {});
+  return httpEconomyTransport.wallet().then(w => publish({ coins: w.coins, giftClaimed: w.daily_claimed, day: w.day, welcomeDay: w.welcome_day }), () => {});
 }
 export const setHudCoins = (coins: number) => publish({ coins });
 export const setHudXp = (xp: number) => publish({ xp });

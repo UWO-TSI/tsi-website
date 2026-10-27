@@ -27,7 +27,9 @@ import { FACE, ParticlePool, seedAt, type Recipe } from "@/lib/game/fx/particles
 import type { CombatSprite } from "@/lib/game/fx/combatPack";
 import { RampTable, sharedRamps, type Ramp } from "@/lib/game/fx/combat";
 import { FIRE_PACK, FIRE_PACK_ROWS, FIRE_PACK_URL, createCombatParticleMaterial, packTexture, rampMap } from "@/lib/game/fx/fxMaterial";
-import { DRUM_LAYERS, FIRE, drumDistanceGain, drumLayers, fireLit, fireScale, type Spot } from "@/lib/game/campfire";
+import { CAMPFIRE_SIT_S, DRUM_LAYERS, FIRE, drumDistanceGain, drumLayers, fireLit, fireScale, type Spot } from "@/lib/game/campfire";
+import { apiCall } from "@/lib/apiClient";
+import { toast } from "../ToastHub";
 import { campfireLive, countPosed } from "@/lib/game/danceField";
 import { eventSolids } from "@/lib/game/defaultIsland";
 import { worldTime } from "@/lib/game/worldClock";
@@ -107,13 +109,22 @@ class FireSystem {
 
 const camPos = new THREE.Vector3(), camDir = new THREE.Vector3();
 /** What the fire's frame keeps between frames: its size and light, eased. */
-interface Burn { size: number; light: number; dancers: number }
+interface Burn { size: number; light: number; dancers: number; sat: number; asked: boolean }
+
+/** Campfire hour's bonus: asked for once a visit after sitting long enough; the server pays once a day, in the hour. */
+function claimBonus() {
+  apiCall<{ coins: number; paid: boolean }>("/api/world/campfire", "campfire", {})
+    .then(r => { if (r.paid) toast(`+${r.coins} coins for sitting by the campfire. Cozy!`); }, () => {});
+}
 
 /** The frame (module scope: the react compiler forbids writing through hook values). */
-function burn(b: Burn, sys: FireSystem, light: THREE.PointLight | null, embers: THREE.MeshStandardMaterial | null, site: Spot & { y: number }, lit: boolean, you: THREE.Vector3, camera: THREE.Camera, raw: number) {
+function burn(b: Burn, sys: FireSystem, light: THREE.PointLight | null, embers: THREE.MeshStandardMaterial | null, site: Spot & { y: number }, lit: boolean, hour: boolean, you: THREE.Vector3, camera: THREE.Camera, raw: number) {
   const dt = Math.min(raw, 0.1);
   // Dancers in the ring: the remotes holding the stomp near the fire, and you.
-  const mine = localAvatar()?.motion.current?.pose === "DanceStomp" && Math.hypot(you.x - site.x, you.z - site.z) < FIRE.joinRadius;
+  const pose = localAvatar()?.motion.current?.pose, by = Math.hypot(you.x - site.x, you.z - site.z) < FIRE.joinRadius;
+  const mine = pose === "DanceStomp" && by;
+  // Campfire hour: sat by the fire long enough, the day's bonus.
+  if (hour && by && pose === "SitWarm" && !b.asked && (b.sat += dt) >= CAMPFIRE_SIT_S) { b.asked = true; claimBonus(); }
   const dancers = lit ? countPosed("DanceStomp", site.x, site.z, FIRE.joinRadius) + (mine ? 1 : 0) : 0;
   b.dancers = dancers;
   const want = fireScale(dancers), k = 1 - Math.exp(-EASE * dt);
@@ -128,25 +139,27 @@ function burn(b: Burn, sys: FireSystem, light: THREE.PointLight | null, embers: 
   }
   if (embers) embers.emissiveIntensity = EMBER_GLOW * b.light * (0.85 + 0.15 * Math.sin(worldTime() * 2.3));
   // The drum song: a layer per dancer, faded by how far you are from the fire.
-  const near = lit ? drumDistanceGain(Math.hypot(you.x - site.x, you.z - site.z)) : 0, layers = drumLayers(dancers);
+  const near = lit ? drumDistanceGain(Math.hypot(you.x - site.x, you.z - site.z)) : 0, layers = drumLayers(dancers, hour);
   for (let i = 0; i < DRUM_LAYERS.length; i++) AudioManager.setLoop(DRUM_LAYERS[i].src, i < layers ? DRUM_LAYERS[i].gain * near : 0);
 }
 
-export default function Campfire({ site, ground, phase, player, walled = false }: {
+export default function Campfire({ site, ground, phase, hour = false, player, walled = false }: {
   site: Spot;
+  /** Campfire hour (lib/game/campfire.ts isCampfireHour): lit, the full drum circle, the sitting bonus. */
+  hour?: boolean;
   /** The walker already walls the pit (the smooth world: defaultIsland FIRE_PIT_RING); else the scene adds its square. */
   walled?: boolean;
   ground: (x: number, z: number) => number;
   phase: IslandPhase;
   player: RefObject<THREE.Vector3>;
 }) {
-  const lit = fireLit(phase);
+  const lit = fireLit(phase, hour);
   const y = ground(site.x, site.z);
   const at = useMemo(() => ({ x: site.x, y, z: site.z }), [site.x, site.z, y]);
   const system = useMemo(() => new FireSystem(), []);
   useEffect(() => () => system.dispose(), [system]);
   const light = useRef<THREE.PointLight>(null);
-  const state = useRef<Burn>({ size: 1, light: 0, dancers: 0 });
+  const state = useRef<Burn>({ size: 1, light: 0, dancers: 0, sat: 0, asked: false });
   // The stack, prepared as GLBProp would (its shadow class and contact), keeping the ember bed's material to light.
   const { scene } = useGLTF(STACK_URL);
   const stack = useMemo(() => {
@@ -176,7 +189,7 @@ export default function Campfire({ site, ground, phase, player, walled = false }
     Object.assign(window, { __campfire: { site: at, lit: () => campfireLive.lit, dancers: () => state.current.dancers, size: () => state.current.size, light: () => light.current?.intensity ?? 0, particles: () => system.pool.alive } });
     return () => { delete (window as { __campfire?: unknown }).__campfire; };
   }, [at, system]);
-  useFrame(({ camera }, raw) => burn(state.current, system, light.current, stack.embers, at, lit, player.current, camera, raw));
+  useFrame(({ camera }, raw) => burn(state.current, system, light.current, stack.embers, at, lit, hour, player.current, camera, raw));
   return <group position={[at.x, at.y, at.z]} scale={site.scale ?? 1}>
     <primitive object={stack.model} />
     <primitive object={system.mesh} />

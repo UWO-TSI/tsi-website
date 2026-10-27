@@ -1,6 +1,6 @@
 /** Economy transport: /api/economy/* by default; in-memory for the dev harness. */
 import { apiCall } from "@/lib/apiClient";
-import type { InventoryView, ShopView, SellEntry, WalletView } from "./service";
+import type { GiftView, InventoryView, ShopView, SellEntry, WalletView } from "./service";
 import type { Reservation } from "./store";
 
 export interface MerchView {
@@ -16,7 +16,7 @@ export interface EconomyTransport {
   sell(itemKey: string, qty: number, key: string): Promise<{ balance: number; remaining: number; paid: number; replayed: boolean }>;
   inventory(): Promise<InventoryView>;
   equip(itemId: string, equipped: boolean): Promise<InventoryView>;
-  dailyGift(): Promise<{ coins: number; balance: number; claimed: boolean; day: string }>;
+  dailyGift(): Promise<GiftView>;
   merch(): Promise<MerchView>;
   reserve(itemId: string, key: string): Promise<{ reservation: Reservation | null; gems_balance: number; replayed: boolean }>;
   adminReservations(status?: string): Promise<Reservation[]>;

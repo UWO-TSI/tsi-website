@@ -245,7 +245,11 @@ export function endTalk(): void {
   const t = talkStore.active;
   talkStore.active = null; talkStore.request = null; talkChanged();
   if (t?.script) scriptListeners.forEach(l => l(t.script!, t.slug));
+  if (t) endListeners.forEach(l => l(t.slug));
 }
+const endListeners = new Set<(slug: string) => void>();
+/** Any talk ended (said through, or left with Escape): who it was with (resident friendship, lib/game/friendship.ts). */
+export function onTalkEnd(l: (slug: string) => void) { endListeners.add(l); return () => { endListeners.delete(l); }; }
 const scriptListeners = new Set<(script: string, slug: string) => void>();
 /** A scripted conversation ended (said through, or left with Escape): its id and who said it. */
 export function onTalkScript(l: (script: string, slug: string) => void) { scriptListeners.add(l); return () => { scriptListeners.delete(l); }; }
