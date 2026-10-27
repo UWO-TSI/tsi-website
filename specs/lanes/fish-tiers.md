@@ -31,7 +31,39 @@ Read `specs/launch/v1-gameplay.md`, section "Fish tiers and fights" (David's not
 
 ## Status
 
-(none yet)
+Branch head: see `git log -1` (this file is committed with it). Main has not merged any of it yet.
+
+**Coordinator changes since the lane file was written (verbatim summaries in `specs/launch/v1-gameplay.md`, "Addition"):**
+- Step 2 (today's legendaries re-tiered to epic) moved to lane catalogue-editor round 2. Don't re-tier data here; merge its SHA when the coordinator sends it (it includes rod-gear's rarity ladder cb7bed43: Sea King renamed Divine, `web/lib/rarity.ts`).
+- The legendary boss fight, the divine raid and the surfacing cutscene are for a later launch: all behind `NEXT_PUBLIC_FISH_BOSSES=1` (`lib/game/fishing.ts` fishBosses/bossOf), off by default. David's creature list is drafts: don't model, block out or name any creature; placeholders stay generic shapes. No fish is legendary or divine in the live catalogue.
+- Only step 1 ships at launch.
+
+**Done:**
+1. Step 1, commit 7e82ecb8: the hook "!" per tier (`components/game/character/hookBang.ts` popBang: common paper bubble; legendary golden with glow and gold sparks; divine bigger, holographic, beam, turning rays, bursting rings; reduced motion keeps the look, drops the effects), drawn by FishingRig (member island label) and FishingBobber (applicant island). Bite sounds synthesized by `art/audio/synth_bite.py` into `web/public/audio/sfx/bite{,-legendary,-divine}.ogg` (WAVs in `specs/evidence/fish-tiers/sounds/`), table `HOOK` in `lib/game/fishing.ts` (sound, shake, punch, surfaceMs). The overlay now rolls the fish as it bites (the cast's server roll or a local one) so the tier is known at the "!". `/lab/fishing` has "! common / legendary / divine" preview buttons.
+2. Step 3 (behind the flag): boss reel in `lib/game/fishingReel.ts` (BOSS, BossReel, stamina, the line, phases by stamina, telegraphed run/jump/dive/slack), its UI in ReelMinigame (stamina bar with phase notches, the move call), tuned by `lib/game/fishingBoss.test.ts` (a bot that heeds warnings lands it about half the time in about 40 s; one that ignores them mostly loses). Surfacing cutscene: overlay phase "surfacing" (HOOK.surfaceMs), `lib/game/bossCam.ts` blended in IslandAtmosphere useFollowCamera, `components/game/fishing/BossCreature.tsx` (generic placeholder shapes, parked below the world so LoadGate's warm-up compiles them). Creature data model `lib/game/bossCreatures.ts` (id, name, tier, scale, phases; two placeholders).
+3. Step 4 (behind the flag): the divine raid. Protocol note 11 in `web/lib/net/protocol.ts` (`raid` both ways, no PROTOCOL bump: the server sends every joiner a view and the client sends only after hearing one), RAID constants. Server `realtime/src/rooms/raid.ts` + IslandRoom (one raid per shard, capped wear, regen, 180 s, signed helper credits with REALTIME_INTERNAL_SECRET), tests `realtime/test/raid.test.ts` (rules + 4 real clients). Client `lib/net/raid.ts` (fed by netStore), `components/game/fishing/RaidCall.tsx` (join from anywhere), overlay opener/helper flow, reel shared stamina. Web credit: catch route action `raid` (`lib/collections/raidCredit.ts`, store.rolled checks the opener's roll is that divine; recorded once per member per roll through harvest with node `raid:<roll>`: no migration). Realtime needs a Fly deploy before the flag is turned on (the coordinator).
+
+**Gates so far:** tsc clean; vitest default world 3498 passed; eslint clean on changed files; realtime raid tests and typecheck pass. Pending: vitest with NEXT_PUBLIC_GAME_WORLD=new, full realtime `npm test`, evidence strips, perf:check.
+
+## David's decisions
+
+- 2026-10-27 (via the coordinator): creature list is drafts for a later launch ("dont model any of these yet, later launch in game"); keep the fights behind a flag. Full record in `specs/launch/v1-gameplay.md` (8fd228bf).
+- 2026-10-27: the "Addition" (cutscene, building-size legendaries, server-wide divine raid), verbatim in `specs/launch/v1-gameplay.md`.
+
+## Next
+
+1. Evidence: frame strips of each "!" and the boss reel from `/lab/fishing` (script `web/scripts/_fish-tiers-strip.mjs`, uncommitted, run in one devserver batch); stitch to `specs/evidence/fish-tiers/`.
+2. Report step 1 to the coordinator (SHA 7e82ecb8 is step 1 alone).
+3. When the coordinator sends catalogue-editor's SHA: merge it, map `HOOK_TIER` to the new `divine` rarity (it maps `seaking` now), drop the `seaking` cases.
+4. Two-client run of a divine raid in the browser (needs a divine species: none exists until David picks; a dev-only stand-in or `/lab`), then the propose-list for David (step 5).
+5. One perf:check at the end.
+
+## Tools and gotchas
+
+- Locks: `withlock.sh devserver|heavy`, retried in a background loop while it exits 75; no queue file.
+- The fish is rolled at the bite now (FishingOverlay `bite`), not at the hook.
+- `fishBosses()` reads `process.env.NEXT_PUBLIC_FISH_BOSSES` at call time (tests stub it with `vi.stubEnv`).
+- The placeholders are parked at y = -1000, not hidden: three's compile skips invisible objects.
 
 ## Rules
 
