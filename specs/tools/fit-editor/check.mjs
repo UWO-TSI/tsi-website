@@ -142,7 +142,7 @@ try {
   await page.getByRole("button", { name: "Reset all" }).click();
   await settle();
   expect(JSON.stringify((await lastSet())[2]) === JSON.stringify({ y: 0, z: 0, x: 0 }), `reset all saves zeros: ${JSON.stringify(await lastSet())}`);
-  // a face with eyes that spread: three fields, saved as { eyes, eyesApart, mouth }
+  // a face with eyes that spread: saved as { eyes, eyesApart, eyesSize, mouth, mouthSize }
   const faces = page.locator("nav section").nth(1).locator("button");
   for (let i = 0; i < await faces.count(); i++) {
     await faces.nth(i).click();
@@ -163,11 +163,29 @@ try {
   await shot.keyboard.press("ArrowUp");
   await settle();
   expect((await lastSet())[2].mouth === 0 && (await lastSet())[2].eyes === 0.001, `with Mouth chosen, the arrow moves the mouth: ${JSON.stringify(await lastSet())}`);
+  // eyes and mouth size: a burst of steps saves once, shown as a percentage, and the face redraws
   await page.waitForTimeout(1500);
+  const unsized = await front.locator(".view").screenshot(), n2 = (await sets()).length;
+  for (let i = 0; i < 5; i++) await page.getByRole("button", { name: "Eyes size: bigger" }).click();
+  for (let i = 0; i < 2; i++) await page.getByRole("button", { name: "Mouth size: smaller" }).click();
+  await settle();
+  const sized = await sets(), sz = sized.at(-1)[2];
+  expect(sized.length === n2 + 1 && sz.eyesSize === 1.1 && sz.mouthSize === 0.96 && sz.eyes === 0.001 && sz.mouth === 0,
+    `a size change saves once, as { eyesSize, mouthSize } beside the moves: ${sized.length - n2} saves, ${JSON.stringify(sz)}`);
+  const pct = await page.locator(".lift").filter({ hasText: "Eyes size" }).locator("output").textContent();
+  expect(pct === "110%", `eyes size shown as a percentage: ${pct}`);
+  await page.waitForTimeout(1500);
+  expect(!unsized.equals(await front.locator(".view").screenshot()), "a size change redraws the face");
   await shot.screenshot({ path: join(evidence, "desktop-face.png") });
+  await page.getByRole("button", { name: "Reset Eyes size" }).click();
+  await settle();
+  expect((await lastSet())[2].eyesSize === 1 && (await lastSet())[2].mouthSize === 0.96, `a size reset saves 1: ${JSON.stringify(await lastSet())}`);
   await page.getByRole("button", { name: "Reset Eyes up / down" }).click();
   await settle();
   expect((await lastSet())[2].eyes === 0, "reset saves 0");
+  await page.getByRole("button", { name: "Reset all" }).click();
+  await settle();
+  expect(JSON.stringify((await lastSet())[2]) === JSON.stringify({ eyes: 0, eyesApart: 0, eyesSize: 1, mouth: 0, mouthSize: 1 }), `a face's reset all saves zeros and sizes of 1: ${JSON.stringify(await lastSet())}`);
   // a face accessory
   await page.locator("nav section").nth(2).locator("button").first().click();
   await page.waitForTimeout(2500);

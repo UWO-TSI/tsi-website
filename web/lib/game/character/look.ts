@@ -162,19 +162,21 @@ export const partsIn = (slot: PartSlot) => PARTS.filter(p => p.slot === slot);
  * David's own fit (the fit editor, specs/lanes/fit-editor.md), the catalogue's `fit` map by item id: a hairstyle's or
  * accessory's `x`, `y`, `z`, metres along the head's own axes (x its left, y up, z forward: rig.ts mergeLook); a whole
  * face's (FACE.faces, by its `id`) `eyes` and `mouth`, face canvas units up, and `eyesApart`, face canvas units each eye
- * moves away from the centre line (face.ts faceSlots: every frame, blink, expression and talk cell moves with them).
- * Absent is 0. A top-level map, so an importer that rebuilds an entry keeps it. The editor writes into it live.
+ * moves away from the centre line, and `eyesSize` and `mouthSize`, each a scale about its anchor (face.ts faceSlots:
+ * every frame, blink, expression and talk cell moves and scales with them). Absent is 0, and 1 for a size. A top-level
+ * map, so an importer that rebuilds an entry keeps it. The editor writes into it live.
  */
-export interface Fit { x?: number; y?: number; z?: number; eyes?: number; mouth?: number; eyesApart?: number }
+export interface Fit { x?: number; y?: number; z?: number; eyes?: number; mouth?: number; eyesApart?: number; eyesSize?: number; mouthSize?: number }
 export const FIT: Record<string, Fit> = (catalog as { fit?: Record<string, Fit> }).fit ?? {};
 /** A worn eye style's and mouth's fit: from the whole face it belongs to. */
-export function faceLift(look: Pick<CharacterLook, "eyes" | "mouth">): { eyes: number; mouth: number; eyesApart: number } {
-  let eyes = 0, mouth = 0, eyesApart = 0;
+export function faceLift(look: Pick<CharacterLook, "eyes" | "mouth">) {
+  let eyes = 0, mouth = 0, eyesApart = 0, eyesSize = 1, mouthSize = 1;
   for (const f of Object.values(FACE.faces ?? {})) {
-    if (f.eyes === look.eyes) { eyes = FIT[f.id]?.eyes ?? 0; eyesApart = FIT[f.id]?.eyesApart ?? 0; }
-    if (f.mouth === look.mouth) mouth = FIT[f.id]?.mouth ?? 0;
+    const fit = FIT[f.id];
+    if (f.eyes === look.eyes) { eyes = fit?.eyes ?? 0; eyesApart = fit?.eyesApart ?? 0; eyesSize = fit?.eyesSize ?? 1; }
+    if (f.mouth === look.mouth) { mouth = fit?.mouth ?? 0; mouthSize = fit?.mouthSize ?? 1; }
   }
-  return { eyes, mouth, eyesApart };
+  return { eyes, mouth, eyesApart, eyesSize, mouthSize };
 }
 
 /**

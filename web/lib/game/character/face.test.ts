@@ -414,9 +414,46 @@ describe("David's face fit (the fit editor: catalogue `fit`, eyes and mouth lift
     }
     expect(pairs).toBeGreaterThan(10);
   });
+  it("scales every face's eyes and mouth about their anchors by exactly eyesSize and mouthSize, every frame, each on its own", () => {
+    // a slot's rect from its pivot, which a size leaves where it was
+    const rel = (s: FaceSlot) => [s.dst[0] - s.pose[0], s.dst[1] - s.pose[1], s.dst[2] - s.pose[0], s.dst[3] - s.pose[1]];
+    const scaled = (b: FaceSlot, a: FaceSlot, k: number, id: string) => {
+      expect(a.pose.map(v => +v.toFixed(9)), id).toEqual(b.pose.map(v => +v.toFixed(9)));
+      expect(Math.max(...rel(a).map((v, i) => Math.abs(v - rel(b)[i] * k))), id).toBeLessThan(1e-12);
+      expect(a.src, id).toEqual(b.src);
+    };
+    let eyes = 0, mouths = 0;
+    for (const face of Object.values(FACE.faces)) {
+      const x = look({ eyes: face.eyes, mouth: face.mouth ?? DEFAULT_LOOK.mouth, extras: face.extras });
+      const at = (pose: ReturnType<typeof restPose>, fit = {}) => { FIT[face.id] = fit; try { return faceSlots(x, pose).slice(-3); } finally { delete FIT[face.id]; } };
+      for (const pose of [restPose(x, "neutral"), restPose(x, "happy"), { ...restPose(x, "neutral"), eyeFrame: "closed" as const }]) {
+        // after the lifts and the spacing: about the moved anchor
+        const moved = { eyes: 0.01, eyesApart: 0.01, mouth: -0.01 }, b = at(pose, moved);
+        const e = at(pose, { ...moved, eyesSize: 1.3 });
+        for (const i of [0, 1]) if (b[i].src) { scaled(b[i], e[i], 1.3, face.id); eyes++; }
+        expect(e[2], face.id).toEqual(b[2]);
+        if (!face.mouth) continue;
+        const m = at(pose, { ...moved, mouthSize: 0.6 });
+        scaled(b[2], m[2], 0.6, face.id);
+        expect(m.slice(0, 2), face.id).toEqual(b.slice(0, 2));
+        mouths++;
+      }
+    }
+    expect(eyes).toBeGreaterThan(40);
+    expect(mouths).toBeGreaterThan(20);
+  });
+  it("sizes before the creator's sliders: their size multiplies it", () => {
+    const sized = look({ ...l, place: { mouth: [0, 0, 0, 1] } }), pose = restPose(sized, "neutral");
+    const width = (s: FaceSlot) => s.dst[2] - s.dst[0];
+    const [b, a] = [slots(pose, sized), (() => { FIT[f.id] = { mouthSize: 1.1 }; try { return slots(pose, sized); } finally { delete FIT[f.id]; } })()];
+    expect(width(b[2])).toBeGreaterThan(width(slots(restPose(l, "neutral"))[2]));
+    expect(+(width(a[2]) / width(b[2])).toFixed(9)).toBe(1.1);
+  });
   it("leaves every other face exactly as it was, and a face without a lift unchanged", () => {
     const other = look();
     expect(lifted(0.03, 0.03, () => slots(restPose(other, "neutral"), other))).toEqual(slots(restPose(other, "neutral"), other));
+    FIT[f.id] = { eyesSize: 1.4, mouthSize: 0.7 };
+    try { expect(slots(restPose(other, "neutral"), other)).toEqual(lifted(0, 0, () => slots(restPose(other, "neutral"), other))); } finally { delete FIT[f.id]; }
     expect(lifted(0, 0, () => slots())).toEqual(slots());
   });
 });

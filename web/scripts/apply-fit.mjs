@@ -2,9 +2,9 @@
  * Writes David's fit from the fit editor (specs/lanes/fit-editor.md) into the character catalogue's `fit` map (look.ts
  * FIT): `node scripts/apply-fit.mjs <export.json>`. The export is the editor page's db collection `fit`: one doc per
  * item id, `{ x, y, z }` for a hairstyle or accessory (metres along the head's own axes: its left, up, forward),
- * `{ eyes, mouth, eyesApart }` for a whole face (face canvas units up, and each eye away from the centre line); an
- * older doc with fewer fields reads the same. It may be an array of docs (`{ id | doc_id, data }`, or the fields beside the id) or an `{ id: fields }`
- * map. Every id and value is checked before anything is written; zeros are dropped. Both copies are written, the art
+ * `{ eyes, mouth, eyesApart, eyesSize, mouthSize }` for a whole face (face canvas units up, and each eye away from the
+ * centre line; each size a scale about its anchor, 1 as drawn); an older doc with fewer fields reads the same. It may be an array of docs (`{ id | doc_id, data }`, or the fields beside the id) or an `{ id: fields }`
+ * map. Every id and value is checked before anything is written; zeros (and sizes of 1) are dropped. Both copies are written, the art
  * source and the web copy (look.test.ts checks they match), changing only the `fit` key's text.
  */
 import { readFileSync, writeFileSync } from "node:fs";
@@ -16,6 +16,8 @@ export const CATALOGUES = [join(web, "../art/characters/character_catalog.json")
 const FACES = join(web, "data/characters/face_v7.json");
 /** The furthest a move may go: a head piece's in metres, a face part's in face canvas units. */
 export const LIMIT = { x: 0.15, y: 0.15, z: 0.15, eyes: 0.2, mouth: 0.2, eyesApart: 0.2 };
+/** A face's eyes and mouth size: a scale about each anchor, 1 as drawn. */
+const SIZE = { eyesSize: [0.5, 1.6], mouthSize: [0.5, 1.6] };
 
 /** The export's docs as [id, fields] pairs. */
 function docs(raw) {
@@ -32,14 +34,17 @@ export function fitFrom(raw, catalog, faces) {
   const faceIds = new Set(Object.values(faces.faces ?? {}).map(f => f.id));
   const out = {}, errors = [];
   for (const [id, fields] of docs(raw)) {
-    const keys = parts.has(id) ? ["x", "y", "z"] : faceIds.has(id) ? ["eyes", "mouth", "eyesApart"] : null;
+    const keys = parts.has(id) ? ["x", "y", "z"] : faceIds.has(id) ? ["eyes", "mouth", "eyesApart", "eyesSize", "mouthSize"] : null;
     if (!keys) { errors.push(`${id}: not a catalogue part or a whole face`); continue; }
     const fit = {};
     for (const [k, v] of Object.entries(fields ?? {})) {
       if (!keys.includes(k)) { errors.push(`${id}: ${k} is not one of ${keys.join(", ")}`); continue; }
-      if (typeof v !== "number" || !Number.isFinite(v) || Math.abs(v) > LIMIT[k]) { errors.push(`${id}: ${k} ${v} is not a number within ${LIMIT[k]}`); continue; }
+      const [lo, hi] = SIZE[k] ?? [-LIMIT[k], LIMIT[k]];
+      if (typeof v !== "number" || !Number.isFinite(v) || v < lo || v > hi) {
+        errors.push(`${id}: ${k} ${v} is not a number ${SIZE[k] ? `from ${lo} to ${hi}` : `within ${hi}`}`); continue;
+      }
       const r = Math.round(v * 1e4) / 1e4;
-      if (r !== 0) fit[k] = r;
+      if (r !== (SIZE[k] ? 1 : 0)) fit[k] = r;
     }
     if (Object.keys(fit).length) out[id] = fit;
   }

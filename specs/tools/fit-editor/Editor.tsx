@@ -1,9 +1,9 @@
 /**
  * Face Fit (specs/lanes/fit-editor.md): David places each hairstyle and face accessory on the head (three axes) and each
- * whole face's eyes (up, apart) and mouth (up), on the game's own character (Character.tsx, the face painter, the
- * catalogue), bundled by build.mjs: buttons and sliders per axis, the arrow keys on a focused Front or Side view, and
- * dragging in them. Each change writes the page's db (collection `fit`, one doc per item id: `{ x, y, z }` or
- * `{ eyes, mouth, eyesApart }`; an older doc with fewer fields reads the same); scripts/apply-fit.mjs writes an
+ * whole face's eyes (up, apart, size) and mouth (up, size), on the game's own character (Character.tsx, the face
+ * painter, the catalogue), bundled by build.mjs: buttons and sliders per axis, the arrow keys on a focused Front or Side
+ * view, and dragging in them. Each change writes the page's db (collection `fit`, one doc per item id: `{ x, y, z }` or
+ * `{ eyes, mouth, eyesApart, eyesSize, mouthSize }`; an older doc with fewer fields reads the same); scripts/apply-fit.mjs writes an
  * export of it into the catalogue's `fit` map, which the game reads as look.ts FIT. The page writes the same map live.
  */
 import { Component, StrictMode, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -49,7 +49,7 @@ function Report({ message, to }: { message: string; to: (m: string) => void }) {
 
 type Kind = "hair" | "face" | "acc";
 interface Item { id: string; name: string; kind: Kind; look: (skin: number) => CharacterLook; thumbs: string[]; noMouth?: boolean; noApart?: boolean }
-type Field = "x" | "y" | "z" | "eyes" | "mouth" | "eyesApart";
+type Field = "x" | "y" | "z" | "eyes" | "mouth" | "eyesApart" | "eyesSize" | "mouthSize";
 
 const ROOT = "assets/characters/v6/", ICONS = "assets/icons/";
 /** The thumbnail files the bundle carries (build.mjs). */
@@ -64,29 +64,39 @@ const ITEMS: Item[] = [
     look: skin => ({ ...DEFAULT_LOOK, skin, acc: { face: p.id } }) })),
 ];
 const GROUPS: [Kind, string][] = [["hair", "Hairstyles"], ["face", "Faces"], ["acc", "Face accessories"]];
-const FIELDS: Record<Kind, Field[]> = { hair: ["y", "z", "x"], acc: ["y", "z", "x"], face: ["eyes", "eyesApart", "mouth"] };
-const ALL: Field[] = ["x", "y", "z", "eyes", "mouth", "eyesApart"];
+const FIELDS: Record<Kind, Field[]> = { hair: ["y", "z", "x"], acc: ["y", "z", "x"], face: ["eyes", "eyesApart", "eyesSize", "mouth", "mouthSize"] };
+const ALL: Field[] = ["x", "y", "z", "eyes", "mouth", "eyesApart", "eyesSize", "mouthSize"];
 /** Each axis's name and its two directions (x is as you look at the front: + is to your right, the character's left). */
-const LABEL: Record<Field, string> = { y: "Up / down", z: "Forward / back", x: "Left / right", eyes: "Eyes up / down", eyesApart: "Eyes apart", mouth: "Mouth up / down" };
+const LABEL: Record<Field, string> = { y: "Up / down", z: "Forward / back", x: "Left / right", eyes: "Eyes up / down", eyesApart: "Eyes apart", mouth: "Mouth up / down",
+  eyesSize: "Eyes size", mouthSize: "Mouth size" };
 const DIRS: Record<Field, [string, string, string, string]> = {
   y: ["down", "up", "▼", "▲"], z: ["back", "forward", "Back", "Fwd"], x: ["left", "right", "◀", "▶"],
   eyes: ["down", "up", "▼", "▲"], mouth: ["down", "up", "▼", "▲"], eyesApart: ["closer", "apart", "▶◀", "◀▶"],
+  eyesSize: ["smaller", "bigger", "−", "+"], mouthSize: ["smaller", "bigger", "−", "+"],
 };
-/** Each step and the reach either way: a head piece in metres, a face part in face canvas units (FACE.canvas_m wide). */
-const STEP: Record<Field, number> = { x: 0.0005, y: 0.0005, z: 0.0005, eyes: 0.001, mouth: 0.001, eyesApart: 0.001 };
-const REACH: Record<Field, number> = { x: 0.15, y: 0.15, z: 0.15, eyes: 0.08, mouth: 0.08, eyesApart: 0.08 };
+/**
+ * Each step, its range and its value when unset: a head piece in metres, a face part's move in face canvas units
+ * (FACE.canvas_m wide), a size as a scale about its anchor (1 as drawn).
+ */
+const STEP: Record<Field, number> = { x: 0.0005, y: 0.0005, z: 0.0005, eyes: 0.001, mouth: 0.001, eyesApart: 0.001, eyesSize: 0.02, mouthSize: 0.02 };
+const RANGE: Record<Field, [number, number]> = { x: [-0.15, 0.15], y: [-0.15, 0.15], z: [-0.15, 0.15], eyes: [-0.08, 0.08], mouth: [-0.08, 0.08],
+  eyesApart: [-0.08, 0.08], eyesSize: [0.5, 1.6], mouthSize: [0.5, 1.6] };
+const isSize = (f: string) => f === "eyesSize" || f === "mouthSize";
+const BASE = (f: string) => (isSize(f) ? 1 : 0);
 const CANVAS_M = (FACE as unknown as { canvas_m: number }).canvas_m ?? 0.449;
 const isFace = (f: Field) => f === "eyes" || f === "mouth" || f === "eyesApart";
 /** Metres per unit: a face part's units are face canvas widths. */
 const unit = (f: Field) => (isFace(f) ? CANVAS_M : 1);
-const mm = (f: Field, v: number) => {
+/** A value as shown: a move in millimetres, a size as a percentage. */
+const shown = (f: Field, v: number) => {
+  if (isSize(f)) return `${Math.round(v * 100)}%`;
   const x = v * unit(f) * 1000;
   return `${x > 0 ? "+" : x < 0 ? "−" : ""}${Math.abs(x).toFixed(1)} mm`;
 };
 const round = (v: number) => Math.round(v * 1e4) / 1e4;
-/** A value on its axis's grid, within its reach. */
-const snap = (f: Field, v: number) => round(Math.max(-REACH[f], Math.min(REACH[f], Math.round(v / STEP[f]) * STEP[f])));
-const isSet = (id: string) => Object.values(FIT[id] ?? {}).some(v => v);
+/** A value on its axis's grid, within its range. */
+const snap = (f: Field, v: number) => round(Math.max(RANGE[f][0], Math.min(RANGE[f][1], Math.round(v / STEP[f]) * STEP[f])));
+const isSet = (id: string) => Object.entries(FIT[id] ?? {}).some(([f, v]) => v !== BASE(f));
 
 /** The skins it is judged on: a light one and a dark one. */
 const SKINS: [number, string][] = [[1, "Light skin"], [10, "Dark skin"]];
@@ -132,7 +142,7 @@ function useStore(onLoaded: () => void) {
     clearTimeout(timers.current.get(item.id));
     setStatus({ state: "saving" });
     timers.current.set(item.id, setTimeout(() => {
-      const data = Object.fromEntries(FIELDS[item.kind].map(f => [f, FIT[item.id]?.[f] ?? 0]));
+      const data = Object.fromEntries(FIELDS[item.kind].map(f => [f, FIT[item.id]?.[f] ?? BASE(f)]));
       pending.current++;
       const next = (chains.current.get(item.id) ?? Promise.resolve()).then(() => db.current!.collection("fit").doc(item.id).set(data)).then(
         () => { if (--pending.current === 0) setStatus(s => (s.state === "error" ? s : { state: "saved" })); },
@@ -220,14 +230,14 @@ const orbitFrame = (camera: THREE.Camera | null): Frame => {
 
 // ---- controls -------------------------------------------------------------------------------------------------------
 function Axis({ field, value, disabled, onChange }: { field: Field; value: number; disabled?: string; onChange: (v: number) => void }) {
-  const s = STEP[field], r = REACH[field], set = (v: number) => onChange(snap(field, v)), [neg, pos, negIcon, posIcon] = DIRS[field];
+  const s = STEP[field], [min, max] = RANGE[field], base = BASE(field), set = (v: number) => onChange(snap(field, v)), [neg, pos, negIcon, posIcon] = DIRS[field];
   return <div className="lift">
-    <div className="lift-head"><span className="lift-label">{LABEL[field]}</span><output>{disabled ?? mm(field, value)}</output></div>
+    <div className="lift-head"><span className="lift-label">{LABEL[field]}</span><output>{disabled ?? shown(field, value)}</output></div>
     <div className="lift-row">
       <button type="button" aria-label={`${LABEL[field]}: ${neg}`} disabled={!!disabled} onClick={() => set(value - s)}>{negIcon}</button>
-      <input type="range" aria-label={LABEL[field]} min={-r} max={r} step={s} value={value} disabled={!!disabled} onChange={e => set(Number(e.target.value))} />
+      <input type="range" aria-label={LABEL[field]} min={min} max={max} step={s} value={value} disabled={!!disabled} onChange={e => set(Number(e.target.value))} />
       <button type="button" aria-label={`${LABEL[field]}: ${pos}`} disabled={!!disabled} onClick={() => set(value + s)}>{posIcon}</button>
-      <button type="button" className="reset" aria-label={`Reset ${LABEL[field]}`} disabled={!!disabled || value === 0} onClick={() => set(0)}>Reset</button>
+      <button type="button" className="reset" aria-label={`Reset ${LABEL[field]}`} disabled={!!disabled || value === base} onClick={() => set(base)}>Reset</button>
     </div>
   </div>;
 }
@@ -251,7 +261,7 @@ function App() {
   const looks = useMemo(() => SKINS.map(([skin]) => item.look(skin)), [item, rev]); // eslint-disable-line react-hooks/exhaustive-deps
   const root = useRef<HTMLDivElement>(null);
   const [target, setTarget] = useState<"eyes" | "mouth">("eyes");
-  const off = (f: Field) => (f === "mouth" && item.noMouth ? "no mouth" : f === "eyesApart" && item.noApart ? "one-piece eyes" : undefined);
+  const off = (f: Field) => ((f === "mouth" || f === "mouthSize") && item.noMouth ? "no mouth" : f === "eyesApart" && item.noApart ? "one-piece eyes" : undefined);
   const write = (fit: Fit, commit: boolean) => {
     FIT[item.id] = fit;
     bump();
@@ -302,7 +312,7 @@ function App() {
       <Catch fallback={m => <p className="failed" role="alert">The views failed: {m}</p>}><main>
         <div className="controls">
           <h2>{item.name}</h2>
-          {FIELDS[item.kind].map(f => <Axis key={f} field={f} value={FIT[item.id]?.[f] ?? 0} disabled={off(f)} onChange={v => change(f, v)} />)}
+          {FIELDS[item.kind].map(f => <Axis key={f} field={f} value={FIT[item.id]?.[f] ?? BASE(f)} disabled={off(f)} onChange={v => change(f, v)} />)}
           {item.kind === "face" && <fieldset className="target">
             <legend>Dragging and arrow keys move</legend>
             <label><input type="radio" name="target" checked={target === "eyes"} onChange={() => setTarget("eyes")} /> Eyes</label>
@@ -310,7 +320,7 @@ function App() {
           </fieldset>}
           <div className="hint">
             <p>Drag the big view to look around (wheel or pinch to zoom). To move the item: Shift-drag there or turn on Move, drag the Front or Side views, or use the buttons, sliders and arrow keys (Shift for 10 steps).</p>
-            <button type="button" className="reset" disabled={!anySet} onClick={() => write(Object.fromEntries(FIELDS[item.kind].map(f => [f, 0])), true)}>Reset all</button>
+            <button type="button" className="reset" disabled={!anySet} onClick={() => write(Object.fromEntries(FIELDS[item.kind].map(f => [f, BASE(f)])), true)}>Reset all</button>
           </div>
         </div>
         <section className="around" aria-label="Look around">

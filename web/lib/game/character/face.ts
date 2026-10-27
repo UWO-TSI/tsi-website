@@ -133,11 +133,12 @@ const EXTRA_ORDER = [...new Set(["blush_band", "blush", "freckles", "mole", ...O
 export const FACE_SLOT_COUNT = EXTRA_ORDER.length + 3;
 const OFF: FaceSlot = { src: null, dst: [0, 0, 0, 0], mirror: 0, tint: null, pose: [0, 0, 0, 0], page: 0 };
 
-function slot(cell: FaceCell, anchor: [number, number], mirror: 0 | 1 | 2, tint: string | null = null, place?: Placement, paired?: boolean): FaceSlot {
-  const [x, y, w, h, ax, ay, page = 0] = cell, [W, H] = page ? FACE.atlas2_size : FACE.atlas_size, k = 1 / FACE.density;
+/** `size`: David's fit scale (faceLift), about the anchor, before the creator's sliders. */
+function slot(cell: FaceCell, anchor: [number, number], mirror: 0 | 1 | 2, tint: string | null = null, place?: Placement, paired?: boolean, size = 1): FaceSlot {
+  const [x, y, w, h, ax, ay, page = 0] = cell, [W, H] = page ? FACE.atlas2_size : FACE.atlas_size, k = size / FACE.density;
   const u0 = anchor[0] - ax * k, w0 = anchor[1] - ay * k;
   const s: FaceSlot = { src: [x / W, y / H, w / W, h / H], dst: [u0, w0, u0 + w * k, w0 + h * k], mirror, tint, pose: [anchor[0], anchor[1], 0, 0], page };
-  return place && place.some(v => v !== 0) ? placed(s, cell, place, paired) : s;
+  return place && place.some(v => v !== 0) ? placed(s, cell, place, paired, size) : s;
 }
 
 /**
@@ -147,10 +148,10 @@ function slot(cell: FaceCell, anchor: [number, number], mirror: 0 | 1 | 2, tint:
  */
 const flip = (t: FaceSlot): FaceSlot => ({ ...t, dst: [1 - t.dst[2], t.dst[1], 1 - t.dst[0], t.dst[3]], pose: [1 - t.pose[0], t.pose[1], t.pose[2], -t.pose[3]] });
 function slotPair(right: FaceCell, left: FaceCell, place: Placement | undefined, fit: Moved): [FaceSlot, FaceSlot] {
-  const A = FACE.anchors, r = slot(right, moved(A.eye, fit), 0), l = slot(left, moved(A.eye_left, fit), 0);
+  const A = FACE.anchors, r = slot(right, moved(A.eye, fit), 0, null, undefined, undefined, fit.size), l = slot(left, moved(A.eye_left, fit), 0, null, undefined, undefined, fit.size);
   if (!place || !place.some(v => v !== 0)) return [r, l];
   const [x, y, w, h, ax, ay, page] = left;
-  const [rp, lp] = placedTogether([[r, right], [flip(l), [x, y, w, h, w - ax, ay, page]]], place, true);
+  const [rp, lp] = placedTogether([[r, right], [flip(l), [x, y, w, h, w - ax, ay, page]]], place, true, fit.size);
   return [rp, flip(lp)];
 }
 
@@ -186,12 +187,12 @@ export function slotBounds(s: FaceSlot): [number, number, number, number] {
  * Then clamped: shrunk if it can't fit, and slid back inside the face area (paired parts also stay on their own side
  * of the centre line). Only the slot's existing rect and pose change: the shader, its uniforms and draws are as before.
  */
-function placed(s: FaceSlot, cell: FaceCell, place: Placement, paired = s.mirror !== 0 || s.dst[2] <= 0.5): FaceSlot {
-  return placedTogether([[s, cell]], place, paired)[0];
+function placed(s: FaceSlot, cell: FaceCell, place: Placement, paired = s.mirror !== 0 || s.dst[2] <= 0.5, size = 1): FaceSlot {
+  return placedTogether([[s, cell]], place, paired, size)[0];
 }
 
 /** placed() for cells that share one pivot, moved and clamped as one (their bounds' union). */
-function placedTogether(parts: [FaceSlot, FaceCell][], [up, apart, rotate, size]: Placement, paired: boolean): FaceSlot[] {
+function placedTogether(parts: [FaceSlot, FaceCell][], [up, apart, rotate, size]: Placement, paired: boolean, fitSize = 1): FaceSlot[] {
   const k = 1 / FACE.density, s = parts[0][0];
   const union = (bs: [number, number, number, number][]): [number, number, number, number] =>
     [Math.min(...bs.map(b => b[0])), Math.min(...bs.map(b => b[1])), Math.max(...bs.map(b => b[2])), Math.max(...bs.map(b => b[3]))];
@@ -199,7 +200,7 @@ function placedTogether(parts: [FaceSlot, FaceCell][], [up, apart, rotate, size]
   const area = [Math.min(FACE_AREA[0], before[0]), Math.min(FACE_AREA[1], before[1]), Math.max(FACE_AREA[2], before[2]), Math.max(FACE_AREA[3], before[3])];
   if (paired) area[2] = Math.max(Math.min(area[2], 0.5 - CENTRE_GAP), before[2]);
   const turn = ((rotate / PLACE_STEPS) * PLACE_RANGE.rotate * Math.PI) / 180;
-  let scale = PLACE_RANGE.size ** (size / PLACE_STEPS);
+  let scale = fitSize * PLACE_RANGE.size ** (size / PLACE_STEPS);
   let u = s.pose[0] - (paired ? (apart / PLACE_STEPS) * PLACE_RANGE.apart : 0), v = s.pose[1] - (up / PLACE_STEPS) * PLACE_RANGE.up;
   const at = (): FaceSlot[] => parts.map(([p, [, , w, h, ax, ay]]) => {
     const kk = k * scale, u0 = u - ax * kk, w0 = v - ay * kk;
@@ -221,18 +222,21 @@ function placedTogether(parts: [FaceSlot, FaceCell][], [up, apart, rotate, size]
  */
 function eyeSlots(eye: ReturnType<typeof eyeCells>, cell: FaceCell, place: Placement | undefined, fit: Moved): [FaceSlot, FaceSlot] {
   const A = FACE.anchors;
-  if (eye.left === null) return [slot(cell, moved(A.eye_pair, fit), 0, null, place, false), OFF];
+  if (eye.left === null) return [slot(cell, moved(A.eye_pair, fit), 0, null, place, false, fit.size), OFF];
   if (eye.left) return slotPair(cell, eye.left, place, fit);
-  return [slot(cell, moved(A.eye, fit), 0, null, place), slot(cell, moved(A.eye, fit), 2, null, place)];
+  return [slot(cell, moved(A.eye, fit), 0, null, place, undefined, fit.size), slot(cell, moved(A.eye, fit), 2, null, place, undefined, fit.size)];
 }
-/** David's fit for a part: `up` canvas units up, `apart` canvas units away from the centre line (look.ts FIT, faceLift). */
-type Moved = { up: number; apart: number };
+/**
+ * David's fit for a part (look.ts FIT, faceLift): `up` canvas units up, `apart` canvas units away from the centre line,
+ * then `size`, a scale about the moved anchor.
+ */
+type Moved = { up: number; apart: number; size: number };
 /**
  * An anchor moved by David's fit: before placement, so the sliders and their clamp start there. Away from the centre
  * line on its own side, so a mirrored eye and an eye_left pair spread symmetrically; one on the line (eye_pair, the
  * mouth) has no apart.
  */
-const moved = ([u, w]: [number, number], { up, apart }: Moved): [number, number] => [u + Math.sign(u - 0.5) * apart, w - up];
+const moved = ([u, w]: [number, number], { up, apart }: Pick<Moved, "up" | "apart">): [number, number] => [u + Math.sign(u - 0.5) * apart, w - up];
 
 /** The slots (each extra, right eye, left eye, mouth) for a look showing `pose`. */
 export function faceSlots(look: CharacterLook, pose: FacePose): FaceSlot[] {
@@ -244,8 +248,8 @@ export function faceSlots(look: CharacterLook, pose: FacePose): FaceSlot[] {
   const eye = eyeCells(pose.eyes), eyeCell = eye[pose.eyeFrame] ?? eye.open, lift = faceLift(look);
   return [
     ...EXTRA_ORDER.map(extra),
-    ...eyeSlots(eye, eyeCell, P?.eyes, { up: lift.eyes, apart: lift.eyesApart }),
-    slot(mouth.items[pose.mouth] ?? FACE.layers.talk.items[pose.mouth] ?? mouth.items[mouth.default], moved(A.mouth, { up: lift.mouth, apart: 0 }), 0, null, P?.mouth),
+    ...eyeSlots(eye, eyeCell, P?.eyes, { up: lift.eyes, apart: lift.eyesApart, size: lift.eyesSize }),
+    slot(mouth.items[pose.mouth] ?? FACE.layers.talk.items[pose.mouth] ?? mouth.items[mouth.default], moved(A.mouth, { up: lift.mouth, apart: 0 }), 0, null, P?.mouth, undefined, lift.mouthSize),
   ];
 }
 
