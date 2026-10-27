@@ -37,7 +37,11 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 ## Status
 
-(none yet)
+- **The guide arrow (shared), committed.** `web/lib/game/guideArrow.ts` (API, tested) and `web/components/game/GuideArrow.tsx` (a faint chevron a step ahead of your feet, one mesh, mounted in `IslandScene`). Other lanes call:
+  - `const clear = showGuide(owner, { x, z } | () => XZ | null, { near })`; the newest guide wins, clearing it brings back the one under it; `clearGuide(owner)`; `guideNow()`.
+  - Dev hook: `window.__guide.{show, clear, now}`.
+  - Bram uses it during the tour (owner `bram`, near 7 m). He walks brisker with you on his heels (`bramPace` in `lib/game/arrival/tutorial.ts`).
+- Next up: the new tour order (below).
 
 ## Rules
 

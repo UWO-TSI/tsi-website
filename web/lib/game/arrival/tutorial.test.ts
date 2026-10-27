@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { HINT_AFTER_S, HINT_AGAIN_S, TALK_R, awaitsTalk, lineSeconds, newTutorial, stepTutorial, tutorialQuest, type TutorialCue, type TutorialEvent, type TutorialState } from "./tutorial";
+import { BRAM_PACE, HINT_AFTER_S, HINT_AGAIN_S, TALK_R, WAIT_GAP, awaitsTalk, bramPace, lineSeconds, newTutorial, stepTutorial, tutorialQuest, type TutorialCue, type TutorialEvent, type TutorialState } from "./tutorial";
 import { END_LINE, STOP_LINES, TASK_DONE_LINES, TRACKER, TRACKER_TITLE, fillKeys, hintLine, type HintKeys } from "./lines";
 import { resolvePlace, resolveRoute, type PlaceWorld, type ResolvedStop, type TutorialRoute, type XZ } from "./route";
 import { VILLAGE_ROUTE } from "./routes/village";
@@ -239,4 +239,14 @@ describe("the walk-along in the quest tracker", () => {
 /** The resolved route the tests walk, sanity: every stop placed. */
 it("resolves the village route in a world that has its places", () => {
   expect(STOPS.every((s: ResolvedStop) => Number.isFinite(s.stand.x) && Number.isFinite(s.stand.z))).toBe(true);
+});
+
+describe("Bram's pace (t-short)", () => {
+  it("walks brisker with you on his heels, ambles with you a way back, waits once you've lost him", () => {
+    expect(bramPace(2, false)).toBe(BRAM_PACE.brisk);
+    expect(bramPace(6, false)).toBe(BRAM_PACE.walk);
+    expect(bramPace(WAIT_GAP + 1, false)).toBe(0);
+    expect(bramPace(5, true)).toBe(BRAM_PACE.jog);
+    expect(BRAM_PACE.brisk).toBeGreaterThan(BRAM_PACE.walk);
+  });
 });

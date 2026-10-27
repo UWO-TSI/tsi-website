@@ -23,6 +23,13 @@ export const HINT_AGAIN_S = 20;
 export const TALK_R = 2.4;
 /** Getting this much closer to a stop's place is progress (the stall clock starts again). */
 const CLOSER = 0.75;
+/** Bram's pace (m/s) as he leads: an amble, a brisk walk while you're on his heels (t-short), a jog when you're ahead. */
+export const BRAM_PACE = { walk: 3.1, brisk: 5.6, jog: 6.2 } as const;
+/** Within this of him you're on his heels; this far behind you've lost him and he waits (the guide arrow shows him). */
+export const HEELS = 4, WAIT_GAP = 9;
+/** How fast he walks on with you `gap` behind him; `ahead`: you're nearer his goal than he is. */
+export const bramPace = (gap: number, ahead: boolean) =>
+  ahead && gap > 3.5 ? BRAM_PACE.jog : gap > WAIT_GAP ? 0 : gap <= HEELS ? BRAM_PACE.brisk : BRAM_PACE.walk;
 /** A line stays up this long unless E moves it on. */
 export const lineSeconds = (line: string) => Math.max(3.2, 1.4 + line.length * 0.05);
 

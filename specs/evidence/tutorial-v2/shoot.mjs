@@ -308,6 +308,43 @@ async function reelBot(page) {
 }
 const CAMERA = JSON.stringify({ yaw: 0, pitch: 0.55, zoom: 1, sensitivity: 1, invertY: false, mouseLook: false, autoFollow: false });
 
+/** The guide arrow (t-short): ashore, walk well away from Bram and the arrow at your feet points back to him; then a quest's guide on top of his. */
+async function arrow(page, P) {
+  const T = page.evaluate.bind(page);
+  const go = (x, z, yaw = 0) => T(([a, b, y]) => { window.__move.teleport(a, b, 0); window.__orbit.orbit.target.yaw = y; window.__orbit.orbit.view.yaw = y; }, [x, z, yaw]);
+  await T(() => window.__arrival.skip());
+  await at(page, "creator", 1.0);
+  await page.click('[data-testid="reflection-yes"]', { force: true });
+  await at(page, "crossing", 0.6);
+  await T(() => window.__arrival.skip());
+  await at(page, "tutorial", 1.2);
+  await page.waitForFunction(() => window.__bram?.().talkable, null, { timeout: 90000, polling: 50 });
+  const b = await T(() => window.__bram());
+  const me = await T(() => { const s = window.__move.sim.current.state; return { x: s.x, z: s.z }; });
+  await sleep(600);
+  await shot(page, `${P}-01-near-bram-no-arrow`);
+  // 14 m away from him, inland of where you stand, facing away from him.
+  const dx = me.x - b.x, dz = me.z - b.z, d = Math.hypot(dx, dz) || 1, far = { x: b.x + dx / d * 14, z: b.z + dz / d * 14 };
+  await go(far.x, far.z, Math.atan2(dx, dz) + Math.PI);
+  await sleep(1500);
+  log.push({ guide: await T(() => window.__guide.now()) });
+  await shot(page, `${P}-02-far-arrow-to-bram`);
+  await go(far.x, far.z, Math.atan2(dx, dz) + Math.PI * 0.5);
+  await sleep(1200);
+  await shot(page, `${P}-03-far-arrow-side`);
+  // A quest's guide (another lane's call) on top of Bram's.
+  await T(([x, z]) => window.__guide.show("quest", { x, z }), [far.x + 30, far.z]);
+  await sleep(1200);
+  log.push({ guide: await T(() => window.__guide.now()) });
+  await shot(page, `${P}-04-quest-guide`);
+  await T(() => window.__guide.clear("quest"));
+}
+
+if (SCENES.includes("arrow")) {
+  const { page } = await open({ width: 1440, height: 900 }, { extra: { "tsi.camera.v1": CAMERA } });
+  await arrow(page, "10");
+  await page.context().close();
+}
 if (SCENES.includes("tour")) {
   const { page } = await open({ width: 1440, height: 900 }, { extra: { "tsi.camera.v1": CAMERA } });
   await tour(page, "05", false);
