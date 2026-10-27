@@ -15,6 +15,7 @@ import type { WaterType } from "./fishingSpots";
 import type { Season } from "./season";
 import type { IslandWeather } from "./islandWeather";
 import { hash01, type Point3 } from "./worldFx";
+import { worldModel } from "./world/active";
 
 const TAU = Math.PI * 2;
 const smooth = (x: number) => { const t = Math.min(1, Math.max(0, x)); return t * t * (3 - 2 * t); };
@@ -32,14 +33,14 @@ export interface FlyerSpecies {
  * every wingspan about a quarter of a unit (half a unit read as birds from the follow camera, row 284).
  */
 export const FLYERS: readonly FlyerSpecies[] = [
-  { key: "common", model: "/assets/acnh/critters/common-butterfly.glb", kind: "butterfly", scale: 0.065, seasons: ["spring", "summer", "autumn"], hours: [7, 17.5] },
-  { key: "tiger", model: "/assets/acnh/critters/tiger-butterfly.glb", kind: "butterfly", scale: 0.0375, seasons: ["spring", "summer"], hours: [7.5, 17] },
-  { key: "agrias", model: "/assets/acnh/critters/agrias-butterfly.glb", kind: "butterfly", scale: 0.0375, seasons: ["summer"], hours: [8, 17] },
-  { key: "monarch", model: "/assets/acnh/critters/monarch-butterfly.glb", kind: "butterfly", scale: 0.0375, seasons: ["summer", "autumn"], hours: [8, 17] },
-  { key: "peacock", model: "/assets/acnh/critters/peacock-butterfly.glb", kind: "butterfly", scale: 0.0375, seasons: ["spring", "summer", "autumn"], hours: [5, 19] },
-  { key: "emperor", model: "/assets/acnh/critters/emperor-butterfly.glb", kind: "butterfly", scale: 0.035, seasons: ["summer", "autumn"], hours: [17, 21] },
-  { key: "darner", model: "/assets/acnh/critters/darner-dragonfly.glb", kind: "dragonfly", scale: 0.0375, seasons: ["spring", "summer"], hours: [8, 17] },
-  { key: "red", model: "/assets/acnh/critters/red-dragonfly.glb", kind: "dragonfly", scale: 0.05, seasons: ["summer", "autumn"], hours: [8, 18.5] },
+  { key: "common", model: worldModel("/assets/acnh/critters/common-butterfly.glb"), kind: "butterfly", scale: 0.065, seasons: ["spring", "summer", "autumn"], hours: [7, 17.5] },
+  { key: "tiger", model: worldModel("/assets/acnh/critters/tiger-butterfly.glb"), kind: "butterfly", scale: 0.0375, seasons: ["spring", "summer"], hours: [7.5, 17] },
+  { key: "agrias", model: worldModel("/assets/acnh/critters/agrias-butterfly.glb"), kind: "butterfly", scale: 0.0375, seasons: ["summer"], hours: [8, 17] },
+  { key: "monarch", model: worldModel("/assets/acnh/critters/monarch-butterfly.glb"), kind: "butterfly", scale: 0.0375, seasons: ["summer", "autumn"], hours: [8, 17] },
+  { key: "peacock", model: worldModel("/assets/acnh/critters/peacock-butterfly.glb"), kind: "butterfly", scale: 0.0375, seasons: ["spring", "summer", "autumn"], hours: [5, 19] },
+  { key: "emperor", model: worldModel("/assets/acnh/critters/emperor-butterfly.glb"), kind: "butterfly", scale: 0.035, seasons: ["summer", "autumn"], hours: [17, 21] },
+  { key: "darner", model: worldModel("/assets/acnh/critters/darner-dragonfly.glb"), kind: "dragonfly", scale: 0.0375, seasons: ["spring", "summer"], hours: [8, 17] },
+  { key: "red", model: worldModel("/assets/acnh/critters/red-dragonfly.glb"), kind: "dragonfly", scale: 0.05, seasons: ["summer", "autumn"], hours: [8, 18.5] },
 ];
 
 /** Flyers hide from rain and snow, and from a gale. */
@@ -141,7 +142,7 @@ export function flyersFor(site: FaunaSite, season: Season, count = { butterflies
   return out;
 }
 
-export const CRAB_MODELS = ["/assets/acnh/props/crab-gazami.glb", "/assets/acnh/props/crab-hermit.glb"];
+export const CRAB_MODELS = ["/assets/acnh/props/crab-gazami.glb", "/assets/acnh/props/crab-hermit.glb"].map(u => worldModel(u));
 /** Crabs along the beach (the site's open beach when it names one), spread out (no two within 3 units). */
 export function crabsFor(site: FaunaSite, count = 6): Crab[] {
   const b = site.beach, cells = beachCells(site).filter(c => !b || Math.hypot(c.at[0] - b[0], c.at[1] - b[1]) < b[2]), out: Crab[] = [];
@@ -309,7 +310,7 @@ export function seaAt(site: FaunaSite, x: number, z: number): boolean {
 }
 /** A world grid of sea squares; each may have a fish leap in each slot, at a seeded moment and spot. */
 const FISH_CELL = 10, FISH_SLOT = 11, FISH_CHANCE = 0.22, LEAP = 0.95;
-export const FISH_MODELS = ["/assets/acnh/fish/horse-mackerel.glb", "/assets/acnh/fish/anchovy.glb", "/assets/acnh/fish/sea-bass.glb"];
+export const FISH_MODELS = ["/assets/acnh/fish/horse-mackerel.glb", "/assets/acnh/fish/anchovy.glb", "/assets/acnh/fish/sea-bass.glb"].map(u => worldModel(u));
 export interface Leap { x: number; z: number; yaw: number; u: number; model: number; t0: number; id: number }
 
 /**

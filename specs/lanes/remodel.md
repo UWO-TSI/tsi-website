@@ -22,7 +22,21 @@ David, 2026-10-27 (night), verbatim: "I want you to go ahead and remodel some ol
 
 ## Status
 
-(none yet)
+In progress (2026-10-27 night). Head: see `git log -1` on game/remodel. Main merged at f9f4dc5d (the collision fixes).
+- Inventory done: `specs/evidence/remodel/inventory.md` (sent to main). Fruit kept (David, Oct 17). Buildings and the arrival boat not tonight.
+- Built (art/remodel/, GLBs in web/public/assets/game/): market barrel, market cart (the old one was broken: two of four meshes empty), lighthouse (game/props/), six butterflies and two dragonflies (game/remodel/critters/), crabs and gather rocks and the monument rope fence (game/remodel/props/), all 81 fish tweaked (game/remodel/fish/).
+- Wiring: barrel, cart, lighthouse straight in `lib/game/propModels.ts` SCENERY_URLS (new world only). Everything shared with the village goes through `worldModel` in `lib/game/world/active.ts` (the dump's url -> /assets/game/remodel/<same path> when NEXT_PUBLIC_GAME_WORLD=new), applied in propUrl, fishing.ts FISH, ambientFauna, Critters.tsx and the monument.
+- Evidence: before in-game shots taken (cams in /private/tmp/claude-501/remodel-work/ig/cams.json); Blender before/after renders via art/remodel/review.py; webps to compose into specs/evidence/remodel/.
+- Nothing approved yet.
+
+## Tools and gotchas
+
+- Census: `PORT=3191 node ../specs/evidence/remodel/tools/census.mjs <all-stats.json> <out.json>` from web/, dev server with `NEXT_PUBLIC_GAME_WORLD=new`.
+- Stats: `node ../specs/evidence/remodel/tools/glb-stats.mjs <out.json> <dirs>` (signatures for census and ingame).
+- Renders: `Blender -b --factory-startup -P art/remodel/review.py -- <spec.json> <out-dir> [ids]` (spec in the script's docstring; the night's spec is /private/tmp/claude-501/remodel-work/spec.json).
+- In-game: `PORT=3191 node ../specs/evidence/remodel/tools/ingame.mjs <stats.json> <out-dir> before|after [ids]`. `?time=10` renders dusk; use `time=day`. Crabs and fish are hard to catch in frame (they move or sit under water).
+- Pinterest signed out gives images but no pin links: the README records image URLs and the search page.
+- withlock.sh waits for every other lock while swap is over 9 GB: run Blender batches with run_in_background, never under a 10 minute foreground timeout.
 
 ## Rules
 
