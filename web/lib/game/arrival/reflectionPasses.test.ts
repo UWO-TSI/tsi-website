@@ -68,6 +68,26 @@ describe("the reflection creator's passes", () => {
     expect(gl.clippingPlanes).toEqual([]);
   });
 
+  it("while a wave sweeps the new look in, draw the old look's reflection too, and keep the old one over the side", () => {
+    const { scene, you, body, water } = set();
+    const old = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.3, 0.3));
+    old.userData.look = parseLook(DEFAULT_LOOK);
+    you.add(old);
+    const cam = camera(), mirror = new THREE.PerspectiveCamera();
+    const refl = new THREE.WebGLRenderTarget(4, 4), reflOld = new THREE.WebGLRenderTarget(4, 4), frame = new THREE.WebGLRenderTarget(4, 4);
+    const { gl, passes } = recorder();
+    mirrorCamera(cam, mirror, new THREE.Matrix4());
+    renderReflection(gl, scene, water, cam, mirror, { refl, reflOld, frame }, new THREE.Plane(new THREE.Vector3(0, 1, 0), 0.002), { now: body, old });
+    // The old look's reflection (ahead of the crest), the new one's (behind it), then the frame with the old you over the side.
+    expect(passes.map(p => [p.target, p.camera, p.visible, p.clipped])).toEqual([[reflOld, mirror, [old], true], [refl, mirror, [body], true], [frame, cam, [old, water], false]]);
+    expect([body.visible, old.visible, water.visible]).toEqual([true, true, true]);
+    // No wave sweeping: the one look, the two passes.
+    passes.length = 0;
+    you.remove(old);
+    renderReflection(gl, scene, water, cam, mirror, { refl, reflOld, frame }, new THREE.Plane(new THREE.Vector3(0, 1, 0), 0.002), { now: body, old: null });
+    expect(passes.map(p => [p.target, p.visible])).toEqual([[refl, [body]], [frame, [body, water]]]);
+  });
+
   it("put each point's reflection where the water sees it: the mirror image of you, not anything else", () => {
     const { you } = set();
     const cam = camera(), mirror = new THREE.PerspectiveCamera(), tex = new THREE.Matrix4();

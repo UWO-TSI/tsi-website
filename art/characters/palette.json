@@ -20,13 +20,13 @@
     "#6B3A22",
     "#8C5E3C",
     "#B07A4A",
-    "#D6A866",
+    "#E8BE48",
     "#EBCB8B",
     "#C25B3A",
     "#9E3B2E",
     "#8A8F99",
     "#F0A3B5",
-    "#6F8FC9"
+    "#6F8FC9", "#DA6E2A"
   ],
   "outfit": [
     "#F3E9D2",
@@ -48,7 +48,7 @@
   ],
   "counts": {
     "skin": 12,
-    "hair": 12,
+    "hair": 13,
     "outfit": 16
   },
   "base_body_defaults": {
