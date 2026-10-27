@@ -1,4 +1,4 @@
-import { DAMPING, EDGE_BOUNCE, FILL_RATE, GRAVITY, HOLD_ACCEL, HOOK_TIER, RARITY_META, START_PROGRESS, type FishDef } from "./fishing";
+import { DAMPING, EDGE_BOUNCE, FILL_RATE, GRAVITY, HOLD_ACCEL, RARITY_META, START_PROGRESS, bossOf, type FishDef } from "./fishing";
 
 const STEP = 1 / 60;
 
@@ -11,7 +11,8 @@ const STEP = 1 / 60;
  *   dive   it sounds: the bar grows heavy and answers slowly either way;
  *   slack  it swims at you and the line goes slack: keep reeling (hold) to take it up.
  * Three phases by stamina, each with shorter warnings and quicker moves. A divine fish's stamina is the room's
- * (`shared`): the reel reports the damage it deals (`dealt`) and the server sets `stamina`.
+ * (`shared`): the reel reports the damage it deals (`dealt`) and the server sets `stamina`. Behind the flag (fishing.ts
+ * fishBosses): off, every fish reels the ordinary way.
  */
 export type BossMove = "run" | "jump" | "dive" | "slack";
 export const BOSS_MOVES: readonly BossMove[] = ["run", "jump", "dive", "slack"];
@@ -53,7 +54,7 @@ export interface BossReel {
 
 export const bossPhase = (stamina: number): 1 | 2 | 3 => (stamina > 2 / 3 ? 1 : stamina > 1 / 3 ? 2 : 3);
 
-export function createFishingReel(fish: FishDef, boss: "solo" | "shared" | null = HOOK_TIER[fish.rarity] === "common" ? null : HOOK_TIER[fish.rarity] === "divine" ? "shared" : "solo") {
+export function createFishingReel(fish: FishDef, boss = bossOf(fish.rarity)) {
   return {
     fish,
     barWidth: RARITY_META[fish.rarity].barW * (boss ? BOSS.barMul[0] : 1),

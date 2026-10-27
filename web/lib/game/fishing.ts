@@ -266,6 +266,19 @@ export const HOOK: Record<HookTier, { sfx: "bite" | "bite-legendary" | "bite-div
   divine: { sfx: "bite-divine", shake: 0.2, punch: 6, surfaceMs: 3800 },
 };
 
+/**
+ * The boss fights (a legendary's boss reel and surfacing cutscene, a divine's room raid) are for a later launch (David,
+ * 2026-10-27): off unless the build sets NEXT_PUBLIC_FISH_BOSSES=1. Off, every catch reels the ordinary way; the "!"
+ * and the bite sound still go by tier.
+ */
+export const fishBosses = () => process.env.NEXT_PUBLIC_FISH_BOSSES === "1";
+/** The fight a catch puts up: a boss reel of your own (legendary), the room's raid (divine), or none. */
+export function bossOf(rarity: Rarity): "solo" | "shared" | null {
+  if (!fishBosses()) return null;
+  const tier = HOOK_TIER[rarity];
+  return tier === "legendary" ? "solo" : tier === "divine" ? "shared" : null;
+}
+
 /** "1 in N" odds for a species under the current hour/weather pool. */
 export function fishOdds(fish: FishDef): number {
   const context = currentFishingContext(), { weather } = context;

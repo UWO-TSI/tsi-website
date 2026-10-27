@@ -2,7 +2,7 @@
 
 /**
  * The boss catch in the world (specs/launch/v1-gameplay.md, "Fish tiers and fights", and David's addition): a
- * legendary is a sea monster the size of a building, a divine something far bigger. Hooked, it surfaces out of the
+ * legendary surfaces as a creature the size of a building, a divine as something far bigger (lib/game/bossCreatures.ts). Hooked, it surfaces out of the
  * water past your bobber while the camera pulls out to frame it (lib/game/bossCam.ts), fights through the reel's
  * moves (lib/game/fishingRig.ts `live.boss`: it rears back on a warning, tears sideways on a run, leaps, sounds, lunges
  * on slack), and when it's landed rears up and crashes down in a great splash; if it gets away it sinks out of sight.
@@ -18,6 +18,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { frameBoss, releaseBossCam } from "@/lib/game/bossCam";
+import { creatureFor } from "@/lib/game/bossCreatures";
 import { shakeCamera } from "@/lib/game/cameraJuice";
 import { HOOK, type HookTier } from "@/lib/game/fishing";
 import { live } from "@/lib/game/fishingRig";
@@ -26,10 +27,10 @@ import type { ParticlePool } from "@/lib/game/fx/particles";
 import { useMoveParticles } from "../movement/moveFx";
 
 type BossTier = Exclude<HookTier, "common">;
-/** Each creature's height over the water (u), how far past the bobber it surfaces, and its splash's size (bursts). */
+/** Each creature's height over the water (u, bossCreatures.ts scale), how far past the bobber it surfaces, and its splash's size (bursts). */
 const SIZE: Record<BossTier, { height: number; past: number; splash: number }> = {
-  legendary: { height: 13, past: 7, splash: 3 },
-  divine: { height: 34, past: 24, splash: 6 },
+  legendary: { height: creatureFor("legendary").scale, past: 7, splash: 3 },
+  divine: { height: creatureFor("divine").scale, past: 24, splash: 6 },
 };
 const PARKED = -1000;
 const LAND_S = 2.4, ESCAPE_S = 1.4;
@@ -73,8 +74,8 @@ export default function BossCreature() {
   }, []);
   useFrame((_, dt) => step(boss.current, legendary.current, divine.current, particles.pool, Math.min(dt, 0.1)));
   return <>
-    <group ref={legendary} position={[0, PARKED, 0]}><SeaSerpent /></group>
-    <group ref={divine} position={[0, PARKED, 0]}><Leviathan /></group>
+    <group ref={legendary} position={[0, PARKED, 0]}><LegendaryPlaceholder /></group>
+    <group ref={divine} position={[0, PARKED, 0]}><DivinePlaceholder /></group>
   </>;
 }
 
@@ -140,35 +141,35 @@ function step(b: Boss, legendary: THREE.Group | null, divine: THREE.Group | null
 }
 
 // ── Placeholder shapes (temporary until David's references) ─────────────────────────────────────────────────────
-const serpentSkin = new THREE.MeshStandardMaterial({ name: "BossPlaceholderSerpent", color: "#2f5d62", roughness: 0.75, metalness: 0 });
-const serpentBelly = new THREE.MeshStandardMaterial({ name: "BossPlaceholderBelly", color: "#9cc7b4", roughness: 0.8, metalness: 0 });
-const leviathanSkin = new THREE.MeshStandardMaterial({ name: "BossPlaceholderLeviathan", color: "#d9def7", roughness: 0.6, metalness: 0.1, emissive: "#8a6dff", emissiveIntensity: 0.18 });
+const legendaryBody = new THREE.MeshStandardMaterial({ name: "BossPlaceholderLegendary", color: "#2f5d62", roughness: 0.75, metalness: 0 });
+const legendaryUnder = new THREE.MeshStandardMaterial({ name: "BossPlaceholderBelly", color: "#9cc7b4", roughness: 0.8, metalness: 0 });
+const divineBody = new THREE.MeshStandardMaterial({ name: "BossPlaceholderDivine", color: "#d9def7", roughness: 0.6, metalness: 0.1, emissive: "#8a6dff", emissiveIntensity: 0.18 });
 const eyeGlow = new THREE.MeshStandardMaterial({ name: "BossPlaceholderEye", color: "#fff3a8", emissive: "#ffd84a", emissiveIntensity: 1.6, roughness: 0.4 });
 const holoEye = new THREE.MeshStandardMaterial({ name: "BossPlaceholderHoloEye", color: "#d6fff0", emissive: "#7dffc4", emissiveIntensity: 2, roughness: 0.3 });
 const ball = new THREE.SphereGeometry(1, 20, 14);
 
-/** A sea serpent about 13 u tall: a tapering neck rising in an arc toward you, a long head, humps trailing behind. */
-function SeaSerpent() {
+/** The legendary placeholder, about 13 u tall: generic spheres (a column rising toward you, a top, a trail behind). */
+function LegendaryPlaceholder() {
   const neck = useMemo(() => Array.from({ length: 10 }, (_, i) => {
     const u = i / 9;
     return { y: -1 + 12 * (1 - (1 - u) * (1 - u)), z: 4 * (1 - u) - 1.2 * u, r: 2.3 - 1.1 * u };
   }), []);
   return <group>
-    {neck.map((s, i) => <mesh key={i} geometry={ball} material={serpentSkin} position={[0, s.y, s.z]} scale={[s.r, s.r * 1.1, s.r]} />)}
-    <mesh geometry={ball} material={serpentSkin} position={[0, 11.4, -2.6]} scale={[1.5, 1.1, 2.6]} rotation={[0.25, 0, 0]} />
-    <mesh geometry={ball} material={serpentBelly} position={[0, 10.8, -3.2]} scale={[1.2, 0.6, 2]} rotation={[0.25, 0, 0]} />
+    {neck.map((s, i) => <mesh key={i} geometry={ball} material={legendaryBody} position={[0, s.y, s.z]} scale={[s.r, s.r * 1.1, s.r]} />)}
+    <mesh geometry={ball} material={legendaryBody} position={[0, 11.4, -2.6]} scale={[1.5, 1.1, 2.6]} rotation={[0.25, 0, 0]} />
+    <mesh geometry={ball} material={legendaryUnder} position={[0, 10.8, -3.2]} scale={[1.2, 0.6, 2]} rotation={[0.25, 0, 0]} />
     {[-0.8, 0.8].map((x) => <mesh key={x} geometry={ball} material={eyeGlow} position={[x, 12, -3.6]} scale={0.32} />)}
-    {[7, 10.5, 14].map((z, i) => <mesh key={z} geometry={ball} material={serpentSkin} position={[(i % 2 ? 1 : -1) * 1.2, -0.4, z]} scale={[1.9 - i * 0.3, 1.9 - i * 0.3, 2.4]} />)}
+    {[7, 10.5, 14].map((z, i) => <mesh key={z} geometry={ball} material={legendaryBody} position={[(i % 2 ? 1 : -1) * 1.2, -0.4, z]} scale={[1.9 - i * 0.3, 1.9 - i * 0.3, 2.4]} />)}
   </group>;
 }
 
-/** Something enormous, about 34 u tall: a vast back and head breaking the surface, two fins, glowing eyes. */
-function Leviathan() {
+/** The divine placeholder, about 34 u tall: generic spheres (a vast mass breaking the surface, two flat side pieces, two lights). */
+function DivinePlaceholder() {
   return <group>
-    <mesh geometry={ball} material={leviathanSkin} position={[0, 8, 16]} scale={[13, 16, 30]} />
-    <mesh geometry={ball} material={leviathanSkin} position={[0, 20, -6]} scale={[10, 14, 13]} />
-    <mesh geometry={ball} material={leviathanSkin} position={[0, 27, 6]} scale={[2.2, 9, 5]} rotation={[-0.4, 0, 0]} />
-    {[-1, 1].map((s) => <mesh key={s} geometry={ball} material={leviathanSkin} position={[s * 15, 6, 0]} scale={[11, 1.6, 6]} rotation={[0, 0, s * 0.5]} />)}
+    <mesh geometry={ball} material={divineBody} position={[0, 8, 16]} scale={[13, 16, 30]} />
+    <mesh geometry={ball} material={divineBody} position={[0, 20, -6]} scale={[10, 14, 13]} />
+    <mesh geometry={ball} material={divineBody} position={[0, 27, 6]} scale={[2.2, 9, 5]} rotation={[-0.4, 0, 0]} />
+    {[-1, 1].map((s) => <mesh key={s} geometry={ball} material={divineBody} position={[s * 15, 6, 0]} scale={[11, 1.6, 6]} rotation={[0, 0, s * 0.5]} />)}
     {[-4.5, 4.5].map((x) => <mesh key={x} geometry={ball} material={holoEye} position={[x, 23, -17]} scale={1.4} />)}
   </group>;
 }

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { FISH, type FishDef } from "./fishing";
 import { BOSS, advanceFishingReel, bossPhase, createFishingReel, type FishingReel } from "./fishingReel";
 
@@ -31,6 +31,16 @@ function fight(seed: number, policy: (s: FishingReel) => boolean, fish = boss) {
 }
 
 describe("the boss reel", () => {
+  beforeAll(() => { vi.stubEnv("NEXT_PUBLIC_FISH_BOSSES", "1"); });
+  afterAll(() => { vi.unstubAllEnvs(); });
+
+  it("stays off unless the build turns the fights on (a later launch)", () => {
+    vi.stubEnv("NEXT_PUBLIC_FISH_BOSSES", "");
+    expect(createFishingReel(boss).boss).toBeNull();
+    expect(createFishingReel({ ...boss, rarity: "seaking" }).boss).toBeNull();
+    vi.stubEnv("NEXT_PUBLIC_FISH_BOSSES", "1");
+  });
+
   it("is only for legendary and divine fish, and a divine fish's stamina is the room's", () => {
     expect(createFishingReel({ ...boss, rarity: "epic" }).boss).toBeNull();
     expect(createFishingReel(boss).boss?.shared).toBe(false);

@@ -42,6 +42,7 @@ import {
   HOOK,
   HOOK_TIER,
   RARITY_META,
+  bossOf,
   START_PROGRESS,
   catchShake,
   currentFishingContext,
@@ -304,7 +305,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     if (!hooked) return;
     setFish(hooked);
     const tier = HOOK_TIER[hooked.rarity];
-    if (tier === "common") changePhase("reeling");
+    if (!bossOf(hooked.rarity)) changePhase("reeling");
     else {
       // The cutscene: the camera pulls out and it surfaces; then the fight.
       changePhase("surfacing");
@@ -344,7 +345,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         // zone + spot coords ride along for world reactions (gull swoop).
         window.dispatchEvent(
           new CustomEvent("tsi:fish-caught", {
-            detail: { key: fish.key, model: fish.model, raw: fish.raw, sizeCm: size, zone: fish.zone ?? "river", x: spotRef.current?.x, z: spotRef.current?.z, boss: HOOK_TIER[fish.rarity] !== "common" },
+            detail: { key: fish.key, model: fish.model, raw: fish.raw, sizeCm: size, zone: fish.zone ?? "river", x: spotRef.current?.x, z: spotRef.current?.z, boss: bossOf(fish.rarity) !== null },
           })
         );
         if (collectionScope) collect(fish.key, { scope: collectionScope });
@@ -425,7 +426,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
 
   // The catch card, for every catch: it replaces the bottom card.
   if (phase === "revealing" && fish) {
-    return <FishReveal fish={fish} sizeCm={caughtSize} recipe={learned} isNew={wasNew} newRecord={newRecord} delay={HOOK_TIER[fish.rarity] === "common" ? REVEAL_DELAY_MS : BOSS_REVEAL_DELAY_MS} onDone={cancel} />;
+    return <FishReveal fish={fish} sizeCm={caughtSize} recipe={learned} isNew={wasNew} newRecord={newRecord} delay={bossOf(fish.rarity) ? BOSS_REVEAL_DELAY_MS : REVEAL_DELAY_MS} onDone={cancel} />;
   }
 
   const label =
@@ -597,7 +598,7 @@ export function ReelMinigame({
   const lastThunkRef = useRef(0);
 
   // The boss reel narrows its bar by phase (fishingReel.ts BOSS); the bar's width is set from the simulation.
-  const boss = HOOK_TIER[fish.rarity] !== "common";
+  const boss = bossOf(fish.rarity) !== null;
   const barW = RARITY_META[fish.rarity].barW * (boss ? BOSS.barMul[0] : 1);
 
   useEffect(() => {
