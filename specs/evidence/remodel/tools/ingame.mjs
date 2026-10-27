@@ -26,12 +26,12 @@ const SHOTS = [
   { id: "market-cart", old: [`${A}props/market-cart.glb`], new: [`${G}props/market-cart.glb`], stop: [66, 36], az: 250, el: 24, k: 1.15 },
   { id: "lighthouse", old: [`${A}furniture/lighthouse.glb`], new: [`${G}props/lighthouse.glb`], stop: [118, 98], az: 300, el: 14, k: 1.25 },
   { id: "butterflies", old: [`${A}critters/common-butterfly.glb`, `${A}critters/tiger-butterfly.glb`, `${A}critters/monarch-butterfly.glb`, `${A}critters/agrias-butterfly.glb`, `${A}critters/peacock-butterfly.glb`],
-    new: [`${G}critters/common-butterfly.glb`, `${G}critters/tiger-butterfly.glb`, `${G}critters/monarch-butterfly.glb`, `${G}critters/agrias-butterfly.glb`, `${G}critters/peacock-butterfly.glb`],
-    stop: [30, 52], az: 30, el: 20, k: 1.6, moving: true },
-  { id: "crabs", old: [`${A}props/crab-gazami.glb`, `${A}props/crab-hermit.glb`], new: [`${G}critters/crab-swimmer.glb`, `${G}critters/crab-hermit.glb`], stop: [-8, 100], az: 20, el: 35, k: 1.4, moving: true },
-  { id: "gather-rocks", old: [`${A}props/rock-a.glb`], new: [`${G}props/gather-rock-a.glb`], stop: [55.8, 63], az: 160, el: 30, k: 2.4 },
-  { id: "rope-fence", old: [`${A}props/fence-rope-a.glb`], new: [`${G}props/rope-fence.glb`], stop: [21.5, 52], az: 150, el: 28, k: 2.2 },
-  { id: "fish", old: [`${A}fish/sea-bass.glb`, `${A}fish/horse-mackerel.glb`], new: [`${G}fish/sea-bass.glb`, `${G}fish/horse-mackerel.glb`], stop: [68, 46], az: 20, el: 50, k: 2, moving: true },
+    new: [`${G}remodel/critters/common-butterfly.glb`, `${G}remodel/critters/tiger-butterfly.glb`, `${G}remodel/critters/monarch-butterfly.glb`, `${G}remodel/critters/agrias-butterfly.glb`, `${G}remodel/critters/peacock-butterfly.glb`],
+    stop: [30, 52], az: 30, el: 20, k: 0.8, moving: true },
+  { id: "crabs", old: [`${A}props/crab-gazami.glb`, `${A}props/crab-hermit.glb`], new: [`${G}remodel/props/crab-gazami.glb`, `${G}remodel/props/crab-hermit.glb`], stop: [-8, 100], az: 20, el: 35, k: 1.4, moving: true },
+  { id: "gather-rocks", old: [`${A}props/rock-a.glb`], new: [`${G}remodel/props/rock-a.glb`], stop: [55.8, 63], az: 160, el: 30, k: 2.4 },
+  { id: "rope-fence", old: [`${A}props/fence-rope-a.glb`], new: [`${G}remodel/props/fence-rope-a.glb`], stop: [21.5, 52], az: 150, el: 28, k: 2.2 },
+  { id: "fish", old: [`${A}fish/sea-bass.glb`, `${A}fish/horse-mackerel.glb`], new: [`${G}remodel/fish/sea-bass.glb`, `${G}remodel/fish/horse-mackerel.glb`], stop: [68, 46], az: 20, el: 50, k: 2, moving: true },
 ].filter(s => !only || only.split(",").includes(s.id));
 
 const LOOK = JSON.stringify({ skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [], bangs: "bangs_curtain", back: "back_bob", top: "top_hoodie", bottom: "bottom_joggers", onepiece: null, shoes: "shoes_sneakers", acc: {}, colors: {} });
@@ -136,8 +136,8 @@ for (const s of SHOTS) {
     cam = { pos, target: c, fov, teleport: [c[0] + right[0] * off, c[2] + right[1] * off] };
     if (mode === "before") cams[s.id] = cam;
   }
-  await page.evaluate(([x, z]) => window.__move.teleport(x, z, 0), cam.teleport);
-  await page.waitForTimeout(s.moving ? 300 : 2500);
+  // A moving critter shies from the player: leave the player at the stop and shoot it where it is now.
+  if (!s.moving) { await page.evaluate(([x, z]) => window.__move.teleport(x, z, 0), cam.teleport); await page.waitForTimeout(2500); }
   await page.evaluate(AIM, cam);
   await page.evaluate(() => new Promise(res => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(res)))));
   await page.waitForTimeout(300);
