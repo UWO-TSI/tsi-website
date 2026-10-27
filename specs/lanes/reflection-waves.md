@@ -26,6 +26,26 @@ Round 1 review (2026-10-27, relayed by the coordinator): approved desktop, phone
 - wave-first: REDO, no note (coordinator asking). Until then: the first wave must read clearly through the mist and use the sweep.
 - no-wheel: REDO: "change hair color options, the black brow looks good but blond sound be less skin color, and a ginger color too". Wheel stays removed; blond clearly golden, not skin; add a free ginger; never shift palette indices (dyes `hair:6`..`hair:11` are shop rows); a shop row change means a new migration and a stop for the coordinator.
 
+## Round 3 (David's round 2 review, 2026-10-27; https://claude.ai/artifact/Sc2JrcPsEPotE4VA2zHizU, items r2-*)
+
+Approved: the sweep (r2-sweep), the first wave in the mist (r2-first-wave), the swatches (r2-swatches), the panel (r2-panel). Notes and redos, verbatim:
+
+1. **r2-sweep-mid (approved, with a note):** "looks good but why is there white cross squiglgy lines in the water it looks like if it were a pool"
+   - Take the crossing white light lines (the caustic-like pattern) off the water. Keep the gentle swell, the chop and the reflection's wobble; the water should read as sea, not a pool.
+2. **r2-lightness (APPROVED: lift the lightness), note:** "make it so that when changing to blond all the hair takes that hue of blond. also change the head under hair to be a slightly darker version of blond or ginger instead of black"
+   - This reverses the keep-lightness rule from 2026-10-17 (`web/lib/game/character/hairColour.ts`, the hair shader in `Character.tsx`) for the whole game, not just the creator.
+   - A picked hair colour sets the hair's colour fully (hue and lightness), so blond is blond on every hairstyle. Keep the texture's own shading and strand detail as relative light and dark around that colour.
+   - Two-tone styles keep their second colour working the same way.
+   - "Natural" (no colour picked) still draws each style's own colours.
+   - The dark under-hair layer (the under-cap or inner shell under the hair) takes a slightly darker shade of the hair colour instead of black.
+3. **r2-on-skins (REDO), note:** "yeah we need the hair to show its proper color, also the eyes dissapear if skin is too dark"
+   - The hair part is item 2.
+   - The eyes: on the darkest skins the dark eyes vanish. Make every face's eyes readable on all 12 skin tones. The game draws the face (`faceMaterial.ts`), so keep each face's design; it's a contrast fix, not a redraw. For example, a light rim or catchlight that shows on dark skin, or a minimum contrast against the skin. Check every face, David's batch 3 faces included once they're on main.
+
+**Merge first:** main has moved (collision, hair-shelf, Alice, net-identity, loading). Merge `feat/game-default-island` before you start. Lane `wardrobe-b3` (not on main yet) rebuilt every hair with a 7-row atlas; lane `fit-editor` (not on main yet) adds a `fit` map in `Character.tsx`, `rig.ts` and `face.ts`. Keep your hair change in `hairColour.ts` and the hair shader, as small as you can, so they merge cleanly.
+
+**Evidence:** the water before and after (no lines); every free colour plus two dyes on 4 hairstyles (the default bob, a mid-brown style, the white style, a two-tone style) on 3 skins, today and after; the under-hair close up; every face's eyes on all 12 skins, before and after. Run the full gates, and one `perf:check` (SCENES=cafe, characters changed). Then message "main".
+
 ## Status
 
 Round 2 built 2026-10-27, awaiting David's review. Head: the last commit on `game/reflection-waves`. Round 1 (the wave, small waves, "That's me", no wheel) is approved for desktop, phone and small waves.
