@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { CLIP_EXPRESSION, EXPRESSIONS, FACE_SLOT_COUNT, FaceAnimator, blinkFrame, canBlink, faceSlots, restPose } from "./face";
 import { DANCE_RING, EMOTE_RING } from "../emoteWheel";
-import { DEFAULT_LOOK, FACE, FACE_ATLAS_URLS, PALETTE, parseLook, randomLook, seeded, usesFacePage2, type CharacterLook, type FaceCell } from "./look";
+import { BATCH2_PRICES, DEFAULT_LOOK, FACE, FACE_ATLAS_URLS, PALETTE, parseLook, randomLook, seeded, usesFacePage2, type CharacterLook, type FaceCell } from "./look";
 
 const look = (x: Partial<CharacterLook> = {}): CharacterLook => ({ ...DEFAULT_LOOK, ...x });
 
@@ -225,7 +225,8 @@ describe("David's 19 faces (face set 305, art/characters/v7/face_set_305.py)", (
       expect(FACE.names[id].length, id).toBeLessThanOrEqual(14);
     }
     expect(new Set(Object.values(FACE.names)).size).toBe(Object.keys(FACE.names).length);
-    for (const [W, H] of [FACE.atlas_size, FACE.atlas2_size]) expect(W <= 2048 && H <= 4096).toBe(true);
+    // batch 3 widened the second page (its own columns on the right) rather than run it past 4,096 px down
+    for (const [W, H] of [FACE.atlas_size, FACE.atlas2_size]) expect(W <= 4096 && H <= 4096).toBe(true);
   });
 
   it("keep every earlier cell, anchor and the first page as the wardrobe cut left them (kept looks draw the same)", () => {
@@ -320,7 +321,7 @@ describe("expressions and emote mouths after the wardrobe cut (playtest round 1)
 });
 
 describe("David's faces #20-25 (wardrobe batch 2, art/characters/v7/face_set_b2.py)", () => {
-  const faces = Object.values(FACE.faces);
+  const faces = Object.entries(FACE.faces).filter(([key]) => Number(key.slice(5)) <= 25).map(([, f]) => f);
   const page2 = (c: FaceCell) => { const [W, H] = FACE.atlas2_size; return [c[0] / W, c[1] / H, c[2] / W, c[3] / H]; };
   const cells = faces.flatMap(f => [
     ...Object.values(FACE.layers.eyes.items[f.eyes]).filter((c): c is FaceCell => !!c),
@@ -330,7 +331,7 @@ describe("David's faces #20-25 (wardrobe batch 2, art/characters/v7/face_set_b2.
     expect(faces.map(f => f.id)).toEqual(["silly_cat", "silly", "silly_smile", "tired", "weirdcore_eyes", "vampire"]);
     const earlier = Object.entries(FACE.layers.eyes.items).filter(([id]) => !faces.some(f => f.eyes === id)).flatMap(([, it]) => Object.values(it))
       .concat(Object.entries(FACE.layers.mouth.items).filter(([id]) => !faces.some(f => f.mouth === id)).map(([, c]) => c))
-      .filter((c): c is FaceCell => !!c && c[6] === 1);
+      .filter((c): c is FaceCell => !!c && c[6] === 1 && c[0] < 2048);   // batch 3 sits in its own columns to the right
     const band = Math.max(...earlier.map(c => c[1] + c[3]));
     for (const c of cells) {
       expect(c[6]).toBe(1);
@@ -351,5 +352,35 @@ describe("David's faces #20-25 (wardrobe batch 2, art/characters/v7/face_set_b2.
     }
     const mixed = parseLook({ ...DEFAULT_LOOK, eyes: "caret_hash", mouth: "M1.1", extras: ["nose_shade", "blush"] });
     expect([mixed.eyes, mixed.mouth, mixed.extras]).toEqual(["caret_hash", "M1.1", ["nose_shade", "blush"]]);
+  });
+});
+
+describe("David's faces #26-32 (wardrobe batch 3, art/characters/v7/face_set_b3.py)", () => {
+  const faces = Object.entries(FACE.faces).filter(([key]) => Number(key.slice(5)) >= 26);
+  const page2 = (c: FaceCell) => { const [W, H] = FACE.atlas2_size; return [c[0] / W, c[1] / H, c[2] / W, c[3] / H]; };
+
+  it("are seven whole faces, unpriced, in their own columns right of the second page's earlier cells, static", () => {
+    expect(faces.map(([key, f]) => `${key} ${f.id}`)).toEqual(["face-26 squiggle", "face-27 zombie", "face-28 big_eyes", "face-29 crying", "face-30 moody", "face-31 dizzy", "face-32 wink"]);
+    for (const [key, f] of faces) {
+      expect(BATCH2_PRICES[key], key).toBeUndefined();            // David picks free or price on the shelf page
+      const cells = [...Object.values(FACE.layers.eyes.items[f.eyes]).filter((c): c is FaceCell => !!c),
+        ...(f.mouth ? [FACE.layers.mouth.items[f.mouth]] : []), ...f.extras.map(x => FACE.layers.extras.items[x].cell)];
+      for (const c of cells) {
+        expect(c[6], f.id).toBe(1);
+        expect(c[0], f.id).toBeGreaterThanOrEqual(2048);
+        expect(c[0] + c[2] <= FACE.atlas2_size[0] && c[1] + c[3] <= FACE.atlas2_size[1], f.id).toBe(true);
+      }
+      expect(canBlink(f.eyes), f.eyes).toBe(false);
+    }
+  });
+  it("draw each face's own cells at their anchors, from the second page", () => {
+    for (const [, f] of faces) {
+      const l = look({ eyes: f.eyes, mouth: f.mouth ?? "M1.1", extras: f.extras });
+      const s = faceSlots(l, restPose(l, "neutral"));
+      const [eyeR, , mouth] = s.slice(-3);
+      expect([eyeR.src, eyeR.page]).toEqual([page2(FACE.layers.eyes.items[f.eyes].open), 1]);
+      if (f.mouth) expect(mouth.src).toEqual(page2(FACE.layers.mouth.items[f.mouth]));
+      expect(parseLook(JSON.parse(JSON.stringify(l)))).toEqual(l);
+    }
   });
 });

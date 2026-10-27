@@ -162,7 +162,7 @@ describe("wardrobe batch 2 (David's modes and prices, specs/wardrobe/batch2-pric
   const priced = [
     ...PARTS.filter((p) => p.key).map((p) => ({ key: p.key!, ref: p.id, category: p.slot === "accessory" ? "accessory" : "hair" })),
     ...Object.entries(FACE.faces).map(([key, f]) => ({ key, ref: faceRef(f.id), category: "face" })),
-  ];
+  ].filter((x) => BATCH2_PRICES[x.key]);   // batch 3 (specs/lanes/wardrobe-b3.md): keyed, no price yet, so no row
   const rowOf = (ref: string) => seedItems().filter((i) => i.catalogue_ref === ref);
 
   it("sells each item exactly as priced: coins in price_coins, Gems in tc_price (price_gems); free and skipped ones unsold", () => {

@@ -49,11 +49,11 @@ describe("creator categories (read from the catalogue)", () => {
     expect(colourTarget(cat("accessories"), two, "acc_shoulder_bag")).toBe("acc_shoulder_bag");
     expect(colourTarget(cat("eyes"), two, null)).toBeNull();
   });
-  it("offer David's 22 whole hairstyles (wardrobe batch 2 added five; #22 is its hat alone; #14, #8, #9 and #24 removed) as Hair's only row, recolourable (head-roblox)", () => {
+  it("offer David's 37 whole hairstyles (wardrobe batch 2 added five; #22 is its hat alone; #14, #8, #9 and #24 removed; batch 3 added 15) as Hair's only row, recolourable (head-roblox)", () => {
     const hair = cat("hair");
     expect(hair.sections.map(s => s.id)).toEqual(["hairstyles"]);
     expect(hair.sections[0].options).toEqual(PARTS.filter(p => p.full).map(p => p.id));
-    expect(hair.sections[0].options).toHaveLength(22);
+    expect(hair.sections[0].options).toHaveLength(37);
     expect(hair.swatch).toBe("hair");
     const full = hair.sections[0];
     const l = choose(DEFAULT_LOOK, full, full.options[0]);
@@ -97,7 +97,7 @@ describe("wardrobe batch 2 in the creator and the closet (David's prices, specs/
   const offered = (mode: "create" | "wardrobe", owned: ReadonlySet<string>) => new Set(CATEGORIES.flatMap(c => c.sections.flatMap(s =>
     shownOptions(s, mode, id => { const ref = id && unlockRef(id); return !ref || owned.has(ref); }))));
   const b2 = PARTS.filter(p => p.key);
-  const free = (key: string) => BATCH2_PRICES[key].mode === "free";
+  const free = (key: string) => (BATCH2_PRICES[key]?.mode ?? "free") === "free";   // batch 3: free until David prices it
   const faceParts = (key: string) => { const f = FACE.faces[key]; return [f.eyes, f.mouth, ...f.extras].filter((x): x is string => !!x); };
 
   it("gives the accessories their Roblox slots: Glasses, Hats, Neck and the new Front, beside the earlier ones", () => {

@@ -1572,6 +1572,7 @@
    "roblox": {
     "provisional": false
    },
+   "key": "hair-28",
    "covers": [
     "top"
    ],
@@ -1584,8 +1585,7 @@
       0.0
      ]
     }
-   },
-   "key": "hair-28"
+   }
   },
   {
    "id": "hair_messy_boy",
@@ -1801,7 +1801,7 @@
     "provisional": true
    },
    "map": {
-    "cell": 9,
+    "cell": 8,
     "natural": {
      "a": [
       0.1638,
@@ -1833,7 +1833,7 @@
     "provisional": false
    },
    "map": {
-    "cell": 10,
+    "cell": 9,
     "natural": {
      "a": [
       0.4857,
@@ -1864,8 +1864,9 @@
    "roblox": {
     "provisional": true
    },
+   "key": "hair-29",
    "map": {
-    "cell": 11,
+    "cell": 10,
     "natural": {
      "a": [
       0.3932,
@@ -1873,8 +1874,7 @@
       262.57
      ]
     }
-   },
-   "key": "hair-29"
+   }
   },
   {
    "id": "hair_anime_spikes",
@@ -1898,7 +1898,7 @@
     "provisional": true
    },
    "map": {
-    "cell": 12,
+    "cell": 11,
     "natural": {
      "a": [
       0.2837,
@@ -1929,8 +1929,9 @@
    "roblox": {
     "provisional": true
    },
+   "key": "hair-31",
    "map": {
-    "cell": 14,
+    "cell": 13,
     "natural": {
      "a": [
       1.0,
@@ -1938,8 +1939,7 @@
       89.88
      ]
     }
-   },
-   "key": "hair-31"
+   }
   },
   {
    "id": "hair_swept_fringe",
@@ -1962,8 +1962,9 @@
    "roblox": {
     "provisional": true
    },
+   "key": "hair-30",
    "map": {
-    "cell": 15,
+    "cell": 14,
     "natural": {
      "a": [
       0.9219,
@@ -1971,8 +1972,7 @@
       89.88
      ]
     }
-   },
-   "key": "hair-30"
+   }
   },
   {
    "id": "hair_bob_pigtail",
@@ -1996,7 +1996,7 @@
     "provisional": true
    },
    "map": {
-    "cell": 16,
+    "cell": 15,
     "natural": {
      "a": [
       0.3369,
@@ -2028,7 +2028,7 @@
     "provisional": true
    },
    "map": {
-    "cell": 17,
+    "cell": 16,
     "natural": {
      "a": [
       0.2046,
@@ -2060,7 +2060,7 @@
     "provisional": true
    },
    "map": {
-    "cell": 18,
+    "cell": 17,
     "natural": {
      "a": [
       0.2507,
@@ -2101,7 +2101,7 @@
     "provisional": true
    },
    "map": {
-    "cell": 19,
+    "cell": 18,
     "natural": {
      "a": [
       0.2176,
@@ -2133,7 +2133,7 @@
     "provisional": true
    },
    "map": {
-    "cell": 20,
+    "cell": 19,
     "natural": {
      "a": [
       0.1908,
@@ -2163,7 +2163,7 @@
    "skull": "v10",
    "source": "hair/source/david/08-McDonalds-106903086636118.glb (split from hair_visor_messy)",
    "map": {
-    "cell": 21,
+    "cell": 20,
     "natural": {},
     "fixed": true
    }
@@ -2191,7 +2191,7 @@
    },
    "key": "hair-23",
    "map": {
-    "cell": 22,
+    "cell": 21,
     "natural": {
      "a": [
       0.3094,
@@ -2232,7 +2232,7 @@
    },
    "key": "hair-25",
    "map": {
-    "cell": 24,
+    "cell": 23,
     "natural": {
      "a": [
       0.2002,
@@ -2273,7 +2273,7 @@
    },
    "key": "hair-26",
    "map": {
-    "cell": 25,
+    "cell": 24,
     "natural": {
      "a": [
       0.6104,
@@ -2306,7 +2306,7 @@
    },
    "key": "hair-27",
    "map": {
-    "cell": 26,
+    "cell": 25,
     "natural": {
      "a": [
       0.4162,
@@ -2339,6 +2339,505 @@
    "key": "hair-22",
    "coversHair": true,
    "hatCut": 5
+  },
+  {
+   "id": "hair_spiky_messy",
+   "slot": "back",
+   "name": "Spiky messy",
+   "glb": "hair/full/hair_spiky_messy.glb",
+   "tris": 3482,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v10",
+   "source": "hair/source/david-b3/28-Ichigo-Black-103136287139771.glb",
+   "roblox": {
+    "provisional": true
+   },
+   "key": "hair-32",
+   "map": {
+    "cell": 26,
+    "natural": {
+     "a": [
+      0.1591,
+      0.0,
+      89.88
+     ]
+    }
+   }
+  },
+  {
+   "id": "hair_fluffy_crop",
+   "slot": "back",
+   "name": "Fluffy crop",
+   "glb": "hair/full/hair_fluffy_crop.glb",
+   "tris": 2309,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v10",
+   "source": "hair/source/david-b3/29-Black-Messy-Short-Fringe-V2-15563758601.glb",
+   "roblox": {
+    "provisional": true
+   },
+   "key": "hair-33",
+   "map": {
+    "cell": 27,
+    "natural": {
+     "a": [
+      0.1149,
+      0.0,
+      89.88
+     ]
+    }
+   }
+  },
+  {
+   "id": "hair_straight_layers",
+   "slot": "back",
+   "name": "Straight layers",
+   "glb": "hair/full/hair_straight_layers.glb",
+   "tris": 3712,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v10",
+   "source": "hair/source/david-b3/30-Nagumo-119570271189500.glb",
+   "roblox": {
+    "provisional": true
+   },
+   "key": "hair-34",
+   "map": {
+    "cell": 28,
+    "natural": {
+     "a": [
+      0.1149,
+      0.0,
+      89.88
+     ]
+    }
+   }
+  },
+  {
+   "id": "hair_long_windswept",
+   "slot": "back",
+   "name": "Long windswept",
+   "glb": "hair/full/hair_long_windswept.glb",
+   "tris": 3847,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v10",
+   "source": "hair/source/david-b3/31-White-Long-Japanese-Windy-Messy-Hair-86707394443389.glb",
+   "roblox": {
+    "provisional": true
+   },
+   "key": "hair-35",
+   "map": {
+    "cell": 29,
+    "natural": {
+     "a": [
+      0.7794,
+      0.0,
+      89.88
+     ]
+    }
+   }
+  },
+  {
+   "id": "hair_rolled_mask",
+   "slot": "back",
+   "name": "Rolled-up mask",
+   "glb": "hair/full/hair_rolled_mask.glb",
+   "tris": 3802,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v10",
+   "source": "hair/source/david-b3/32-Spider-Man-105325349471584.glb",
+   "roblox": {
+    "provisional": true
+   },
+   "key": "hair-36",
+   "map": {
+    "cell": 30,
+    "natural": {
+     "a": [
+      0.1496,
+      0.0,
+      89.88
+     ]
+    }
+   }
+  },
+  {
+   "id": "hair_tousled_spikes",
+   "slot": "back",
+   "name": "Tousled spikes",
+   "glb": "hair/full/hair_tousled_spikes.glb",
+   "tris": 4104,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v10",
+   "source": "hair/source/david-b3/33-Black-Gojo-Anime-Resting-Messy-Hair-17379327411.glb",
+   "roblox": {
+    "provisional": true
+   },
+   "key": "hair-37",
+   "map": {
+    "cell": 31,
+    "natural": {
+     "a": [
+      0.1591,
+      0.0,
+      89.88
+     ]
+    }
+   }
+  },
+  {
+   "id": "hair_ski_mask_dreads",
+   "slot": "back",
+   "name": "Ski mask and dreads",
+   "glb": "hair/full/hair_ski_mask_dreads.glb",
+   "tris": 3826,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v10",
+   "source": "hair/source/david-b3/34-UA-Rolled-Up-Ski-Mask-w-Messy-Dreads-119266145525998.glb",
+   "roblox": {
+    "provisional": true
+   },
+   "key": "hair-38",
+   "map": {
+    "cell": 32,
+    "natural": {
+     "a": [
+      0.1531,
+      0.0063,
+      107.12
+     ]
+    },
+    "fixed": true
+   }
+  },
+  {
+   "id": "hair_braided_pigtails",
+   "slot": "back",
+   "name": "Braided pigtails",
+   "glb": "hair/full/hair_braided_pigtails.glb",
+   "tris": 3563,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v10",
+   "source": "hair/source/david-b3/35-Pretty-Girl-Braided-Pigtails-in-Black-18523347427.glb",
+   "roblox": {
+    "provisional": true
+   },
+   "key": "hair-39",
+   "map": {
+    "cell": 33,
+    "natural": {
+     "a": [
+      0.2393,
+      0.0,
+      89.88
+     ]
+    }
+   }
+  },
+  {
+   "id": "hair_space_buns",
+   "slot": "back",
+   "name": "Space buns with fluffy edges",
+   "glb": "hair/full/hair_space_buns.glb",
+   "tris": 4109,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v10",
+   "source": "hair/source/david-b3/36-Black-Space-Buns-W-Fluffy-Edges-77782189856723.glb",
+   "roblox": {
+    "provisional": true
+   },
+   "key": "hair-40",
+   "map": {
+    "cell": 34,
+    "natural": {
+     "a": [
+      0.2357,
+      0.0022,
+      65.8
+     ]
+    },
+    "fixed": true
+   }
+  },
+  {
+   "id": "hair_buns_braid",
+   "slot": "back",
+   "name": "Messy buns with a braid",
+   "glb": "hair/full/hair_buns_braid.glb",
+   "tris": 3900,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v10",
+   "source": "hair/source/david-b3/37-Double-Messy-Buns-with-Braid-Yellow-Beige-110168955712985.glb",
+   "roblox": {
+    "provisional": true
+   },
+   "key": "hair-41",
+   "map": {
+    "cell": 35,
+    "natural": {
+     "a": [
+      0.9618,
+      0.0306,
+      81.77
+     ]
+    }
+   }
+  },
+  {
+   "id": "hair_messy_braid",
+   "slot": "back",
+   "name": "Messy with a braid",
+   "glb": "hair/full/hair_messy_braid.glb",
+   "tris": 3703,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v10",
+   "source": "hair/source/david-b3/38-Black-Messy-Hair-w-a-Braid-82798715506608.glb",
+   "roblox": {
+    "provisional": true
+   },
+   "key": "hair-42",
+   "map": {
+    "cell": 36,
+    "natural": {
+     "a": [
+      0.0,
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  {
+   "id": "hair_freeform_afro",
+   "slot": "back",
+   "name": "Freeform afro",
+   "glb": "hair/full/hair_freeform_afro.glb",
+   "tris": 2636,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v10",
+   "source": "hair/source/david-b3/39-Freeform-Afro-73155099277090.glb",
+   "roblox": {
+    "provisional": true
+   },
+   "key": "hair-43",
+   "map": {
+    "cell": 37,
+    "natural": {
+     "a": [
+      0.1067,
+      0.0,
+      89.88
+     ]
+    },
+    "fixed": true
+   }
+  },
+  {
+   "id": "hair_sponge_twists",
+   "slot": "back",
+   "name": "Sponge twists",
+   "glb": "hair/full/hair_sponge_twists.glb",
+   "tris": 3733,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v10",
+   "source": "hair/source/david-b3/40-Blonde-Over-Sponged-Sharp-Short-Afro-123620270798051.glb",
+   "roblox": {
+    "provisional": true
+   },
+   "key": "hair-44",
+   "map": {
+    "cell": 38,
+    "natural": {
+     "a": [
+      0.9147,
+      0.0564,
+      73.93
+     ]
+    },
+    "fixed": true
+   }
+  },
+  {
+   "id": "hair_middle_part",
+   "slot": "back",
+   "name": "Middle part",
+   "glb": "hair/full/hair_middle_part.glb",
+   "tris": 3512,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v10",
+   "source": "hair/source/david-b3/41-White-Middle-Part-14876610196.glb",
+   "roblox": {
+    "provisional": true
+   },
+   "key": "hair-45",
+   "map": {
+    "cell": 39,
+    "natural": {
+     "a": [
+      0.7858,
+      0.0,
+      89.88
+     ]
+    }
+   }
+  },
+  {
+   "id": "hair_mod_cut",
+   "slot": "back",
+   "name": "Mod cut",
+   "glb": "hair/full/hair_mod_cut.glb",
+   "tris": 748,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v10",
+   "source": "hair/source/david-b3/42-low-poly-mod-cut-red-122091889431230.glb",
+   "roblox": {
+    "provisional": true
+   },
+   "key": "hair-46",
+   "map": {
+    "cell": 40,
+    "natural": {
+     "a": [
+      0.332,
+      0.069,
+      23.51
+     ]
+    }
+   }
   }
  ],
  "verbs": {
@@ -4279,7 +4778,7 @@
   "atlas_world": "hair/hair_colour_world.png",
   "cells": [
    6,
-   5
+   7
   ],
   "cell": 512,
   "note": "Round 2 (David, 2026-10-17): each hairstyle's own source texture, one cell a piece (hair/import_hair.py natural_map): RGB as drawn in Roblox (sRGB), alpha its recolour channel (1 the hair's colour, 2/3 its second colour, 1/3 fixed). A part's map names its cell and each channel's median [L, C, h] (OKLCh); a picked colour turns and scales the texels' chroma so the median lands on it, every texel keeping its lightness (look.ts hairShift, Character.tsx). u < 0 (the under-cap) takes the colour of the hair's median, darkened by its COLOR_0."
@@ -4868,6 +5367,84 @@
    "colourAtlas": true,
    "coversHair": true,
    "hatCut": 4
+  },
+  {
+   "id": "acc_kitty_bow_glasses",
+   "slot": "accessory",
+   "name": "Droopy glasses with a bow",
+   "glb": "accessories/roblox/acc_kitty_bow_glasses.glb",
+   "tris": 323,
+   "materials": [
+    {
+     "name": "M_Acc",
+     "tint": null,
+     "color": "#FFFFFF"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "face",
+   "skull": "v10",
+   "key": "acc-25",
+   "source": "accessories/source/david-b3/face/25-Low-Droopy-Kitty-Glasses-w-Pink-Bow-in-Black-14365048863.glb",
+   "roblox": {
+    "provisional": true,
+    "attachment": "FaceFrontAttachment"
+   },
+   "colourAtlas": true
+  },
+  {
+   "id": "acc_cross_bandage",
+   "slot": "accessory",
+   "name": "Cross bandage",
+   "glb": "accessories/roblox/acc_cross_bandage.glb",
+   "tris": 293,
+   "materials": [
+    {
+     "name": "M_Acc",
+     "tint": null,
+     "color": "#FFFFFF"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "face",
+   "skull": "v10",
+   "key": "acc-26",
+   "source": "accessories/source/david-b3/face/26-White-Bandages-5972888848.glb",
+   "roblox": {
+    "provisional": true,
+    "attachment": "FaceCenterAttachment"
+   },
+   "colourAtlas": true
+  },
+  {
+   "id": "acc_face_bandaids",
+   "slot": "accessory",
+   "name": "Face bandaids",
+   "glb": "accessories/roblox/acc_face_bandaids.glb",
+   "tris": 342,
+   "materials": [
+    {
+     "name": "M_Acc",
+     "tint": null,
+     "color": "#FFFFFF"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "face",
+   "skull": "v10",
+   "key": "acc-27",
+   "source": "accessories/source/david-b3/face/27-Face-Bandaid-Bandages-118576934068135.glb",
+   "roblox": {
+    "provisional": true,
+    "attachment": "FaceCenterAttachment"
+   },
+   "colourAtlas": true
   }
  ],
  "staff": {

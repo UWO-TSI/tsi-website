@@ -800,6 +800,100 @@
     ],
     "why": "David, 2026-10-17: sized to cover the hair; round 2: smaller and higher; round 3: slightly back"
    }
+  },
+  {
+   "n": 25,
+   "key": "acc-25",
+   "id": "acc_kitty_bow_glasses",
+   "name": "Droopy glasses with a bow",
+   "asset_id": 14365048863,
+   "title": "glasses with a bow",
+   "set": "david-b3",
+   "file": "face/25-Low-Droopy-Kitty-Glasses-w-Pink-Bow-in-Black-14365048863.glb",
+   "attachment": "FaceFrontAttachment",
+   "group": "face",
+   "fit": "eyes",
+   "hidesBackHair": false,
+   "position": [
+    -0.4548,
+    0.17346,
+    0.01586
+   ],
+   "orientation": [
+    0,
+    90,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (the lenses, the side a bandage faces) to the front, read off the raw mesh (wardrobe batch 3)"
+  },
+  {
+   "n": 26,
+   "key": "acc-26",
+   "id": "acc_cross_bandage",
+   "name": "Cross bandage",
+   "asset_id": 5972888848,
+   "title": "white bandages",
+   "set": "david-b3",
+   "file": "face/26-White-Bandages-5972888848.glb",
+   "attachment": "FaceCenterAttachment",
+   "group": "face",
+   "fit": "face_on",
+   "side": "right",
+   "hidesBackHair": false,
+   "position": [
+    -0.29881,
+    0.37122,
+    0.6001
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (the lenses, the side a bandage faces) to the front, read off the raw mesh (wardrobe batch 3)"
+  },
+  {
+   "n": 27,
+   "key": "acc-27",
+   "id": "acc_face_bandaids",
+   "name": "Face bandaids",
+   "asset_id": 118576934068135,
+   "title": "face bandaids",
+   "set": "david-b3",
+   "file": "face/27-Face-Bandaid-Bandages-118576934068135.glb",
+   "attachment": "FaceCenterAttachment",
+   "group": "face",
+   "fit": "face_on",
+   "hidesBackHair": false,
+   "position": [
+    -0.0,
+    0.37196,
+    0.46745
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (the lenses, the side a bandage faces) to the front, read off the raw mesh (wardrobe batch 3)"
   }
  ]
 }

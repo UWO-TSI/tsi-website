@@ -451,7 +451,7 @@ export function partRef(id: string): string | null {
   const p = PART_BY_ID.get(id);
   if (!p) return null;
   if (p.grantedBy) return partRef(p.grantedBy);           // row 314: #22's hat comes with the hair
-  if (priceOf(p.key)) return sold(p.key) ? p.variantOf ?? p.id : null;
+  if (p.key) return sold(p.key) ? p.variantOf ?? p.id : null;   // batch 3: a keyed item David hasn't priced yet is free until he does
   return p.slot === "bangs" || p.slot === "back" ? null : p.variantOf ?? p.id;
 }
 /** Inventory ref of a whole face (wardrobe batch 2): the shop row's catalogue_ref. */

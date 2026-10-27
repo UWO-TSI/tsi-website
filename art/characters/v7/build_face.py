@@ -412,14 +412,16 @@ ATLAS_W = 2048
 placements = {}
 
 
-def pack(keys, y):
-    """Shelf-pack `keys` (tallest first) from row `y`; returns the 64-px-rounded bottom of the band."""
-    x, row_h = GUTTER, 0
+def pack(keys, y, x0=0, width=None):
+    """Shelf-pack `keys` (tallest first) from row `y`, in the columns from x0 (`width` px, default the page's); returns
+    the 64-px-rounded bottom of the band."""
+    width = width or ATLAS_W
+    x, row_h = x0 + GUTTER, 0
     for key in sorted(keys, key=lambda k: -cells[k][0].shape[0]):
         h, w = cells[key][0].shape[:2]
-        if x + w + GUTTER > ATLAS_W:
+        if x + w + GUTTER > x0 + width:
             y += row_h
-            x, row_h = GUTTER, 0
+            x, row_h = x0 + GUTTER, 0
         placements[key] = (x, y, w, h)
         x += w + 2 * GUTTER
         x = (x + 1) // 2 * 2                      # even offsets: cells stay on whole pixels at half size
@@ -509,9 +511,13 @@ P2_EYES = [e for c in SETS2 for e in dict.fromkeys(k[1] for k in c if k[0] == "e
 P2_MOUTHS = [k[1] for c in SETS2 for k in c if k[0] == "mouth"]
 P2_EXTRAS = [k[1] for c in SETS2 for k in c if k[0] == "extras"]
 ATLAS2_H = 0
-for c in SETS2:                     # one band per set, so a later set never moves an earlier one's rects
+for c in SETS2[:2]:                 # one band per set, so a later set never moves an earlier one's rects
     ATLAS2_H = pack(sorted(set(c), key=str), ATLAS2_H + GUTTER)
-atlas2 = np.zeros((ATLAS2_H, ATLAS_W, 4), np.float32)
+# batch 3 in its own columns to the right of the page (the page would run past 4,096 px down): every earlier rect stays
+B3_W = 1216                         # px: at least one face canvas (a blush across both cheeks), and wide enough that the band fits the page height
+ATLAS2_W = ATLAS_W + B3_W
+assert pack(sorted(set(B3_CELLS), key=str), GUTTER, ATLAS_W, B3_W) <= ATLAS2_H, "batch 3's columns run below the page"
+atlas2 = np.zeros((ATLAS2_H, ATLAS2_W, 4), np.float32)
 for key in P2_KEYS:
     px_, py_, w, h = placements[key]
     atlas2[py_:py_ + h, px_:px_ + w] = cells[key][0]
@@ -544,7 +550,7 @@ face = {
             "is a pair drawn as one cell at eye_pair, drawn once.",
     "density": PX, "canvas_m": round(2 * FH, 4),
     "atlas": "v7_face_atlas.png", "atlas_world": "v7_face_atlas_512.png", "atlas_size": [ATLAS_W, ATLAS_H],
-    "atlas2": "v7_face_atlas_2.png", "atlas2_world": "v7_face_atlas_2_512.png", "atlas2_size": [ATLAS_W, ATLAS2_H],
+    "atlas2": "v7_face_atlas_2.png", "atlas2_world": "v7_face_atlas_2_512.png", "atlas2_size": [ATLAS2_W, ATLAS2_H],
     "anchors": {k: [round(v[0], 4), round(v[1], 4)] for k, v in ANCHOR.items()},
     "layers": {
         "extras": {"default": None, "multi": True, "tint": None, "items": {
@@ -628,4 +634,4 @@ if COMPOSE_DIR:
         save_png(f"blink_{f}", compose(eye_frame=f), os.path.join(COMPOSE_DIR, f"blink_{f}.png"))
     for m in ["M1.1"] + TALK["frames"]:
         save_png(f"talk_{m}", compose(mouth=m), os.path.join(COMPOSE_DIR, f"talk_{m}.png"))
-print("FACE_OK", len(cells), "cells", ATLAS_W, "x", ATLAS_H, "page 2", ATLAS_W, "x", ATLAS2_H, json.dumps(P2_INFO), json.dumps(B2_INFO), json.dumps(B3_INFO))
+print("FACE_OK", len(cells), "cells", ATLAS_W, "x", ATLAS_H, "page 2", ATLAS2_W, "x", ATLAS2_H, json.dumps(P2_INFO), json.dumps(B2_INFO), json.dumps(B3_INFO))
