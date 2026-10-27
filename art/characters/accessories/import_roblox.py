@@ -51,7 +51,9 @@ RENDER = ARGS[ARGS.index("--render") + 1] if "--render" in ARGS else None
 DATA_PATH = os.path.join(HERE, "roblox_attachments.json")
 DATA = json.load(open(DATA_PATH))
 PRICING = json.load(open(os.path.join(ROOT, "specs", "wardrobe", "batch2-pricing.json")))["items"]
-SRC = os.path.join(HERE, "source", "roblox-b2")
+SRC = os.path.join(HERE, "source")
+SET = "roblox-b2"         # an entry's `set`: its folder under source/ (batch 3: david-b3)
+SKIN_CLEAR = 0.0015       # m: a bandage (fit face_on) rests this far off the skin
 SECTION = "robloxAccessories"
 
 FULL_MAX = 1200          # budget.ts ASSET_CATEGORIES "accessory": an accessory's Full mesh
@@ -220,6 +222,14 @@ def fit_shift(vb, e):
         eye = head_point(EYE_LAT, EYE_LON)
         c = np.array([(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2])
         return (np.array([CLASSIC_C.x, CLASSIC_C.y, eye.z]) - (A + k * c)) / k
+    if rule == "face_on":                            # batch 3: a bandage on the face, its middle at (lat, lon) (default: the
+        lat = (EYE_LAT + MOUTH_LAT) / 2                # nose, between the eye line and the mouth; side right: under the
+        p = head_point(lat, -EYE_LON if e.get("side") == "right" else 0.0)   # right eye), resting SKIN_CLEAR on the skin
+        cx, cz = (W[:, 0].min() + W[:, 0].max()) / 2, (W[:, 2].min() + W[:, 2].max()) / 2
+        Q = W + np.array([p.x - cx, 0.0, p.z - cz])
+        gaps = [hit.y - SKIN_CLEAR - q[1] for q in Q
+                for hit in [HEAD_TREE.ray_cast(Vector((q[0], -0.6, q[2])), Vector((0, 1, 0)), 1.2)[0]] if hit is not None]
+        return np.array([p.x - cx, min(gaps) if gaps else 0.0, p.z - cz]) / k
     if rule == "neck":                               # a scarf: round the neck axis, its top just under the chin
         top = vb[:, 2] > hi[2] - 0.3 * (hi[2] - lo[2])
         cx, cy = (vb[top, 0].min() + vb[top, 0].max()) / 2, (vb[top, 1].min() + vb[top, 1].max()) / 2
@@ -478,7 +488,7 @@ def main():
             continue
         if ONLY and e["id"] not in ONLY:
             continue
-        ob, img = import_raw(os.path.join(SRC, e["file"]))
+        ob, img = import_raw(os.path.join(SRC, e.get("set", SET), e["file"]))
         src_tris = kit.ntris(ob)
         if e.get("drop_outline"):
             drop_outline(ob, e["drop_outline"])
@@ -511,7 +521,7 @@ def main():
             "id": e["id"], "slot": "accessory", "name": e["name"], "glb": rel, "tris": kit.ntris(ob),
             "materials": [{"name": "M_Acc", "tint": None, "color": "#FFFFFF"}], "decalSlot": None,
             "hidesBackHair": bool(e["hidesBackHair"]), "hides": [], "group": e["group"], "skull": SK.VERSION,
-            "key": e["key"], "source": f"accessories/source/roblox-b2/{e['file']}",
+            "key": e["key"], "source": f"accessories/source/{e.get('set', SET)}/{e['file']}",
             "roblox": {"provisional": bool(e["provisional"]), "attachment": e["attachment"]}, "colourAtlas": True,
             **({"coversHair": True, "hatCut": [x["key"] for x in DATA["items"] if x.get("coversHair")].index(e["key"])} if e.get("coversHair") else {}),
             **({"hatCut": e["hatCut"]} if e.get("hatCut") is not None and not e.get("coversHair") else {}),   # a band (#04's visor)

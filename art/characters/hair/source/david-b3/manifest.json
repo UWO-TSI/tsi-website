@@ -1,0 +1,114 @@
+{
+ "note": "David's third hair set (wardrobe batch 3, hairs #28-42; his own Roblox items; specs/lanes/wardrobe-b3.md). Same pipeline and options as source/david/manifest.json and source/david-b2/manifest.json, plus: cap rule light (#34's white ski mask, its dark logo painted out: logos dark) and skin_tone (the scalp and edges drawn in a skin colour: #36, #39, #40), both drawn as they are, never recoloured. Our own names, never the file names. key: hair-32 to hair-46 (hair-28 to hair-31 were already given to four earlier hairs); no price yet (David picks on the shelf page), so none is in specs/wardrobe/batch2-pricing.json.",
+ "source": "art/characters/hair/source/david-b3",
+ "hairs": [
+  {
+   "file": "28-Ichigo-Black-103136287139771.glb",
+   "id": "hair_spiky_messy",
+   "name": "Spiky messy",
+   "key": "hair-32"
+  },
+  {
+   "file": "29-Black-Messy-Short-Fringe-V2-15563758601.glb",
+   "id": "hair_fluffy_crop",
+   "name": "Fluffy crop",
+   "key": "hair-33"
+  },
+  {
+   "file": "30-Nagumo-119570271189500.glb",
+   "id": "hair_straight_layers",
+   "name": "Straight layers",
+   "key": "hair-34"
+  },
+  {
+   "file": "31-White-Long-Japanese-Windy-Messy-Hair-86707394443389.glb",
+   "id": "hair_long_windswept",
+   "name": "Long windswept",
+   "key": "hair-35"
+  },
+  {
+   "file": "32-Spider-Man-105325349471584.glb",
+   "id": "hair_rolled_mask",
+   "name": "Rolled-up mask",
+   "key": "hair-36"
+  },
+  {
+   "file": "33-Black-Gojo-Anime-Resting-Messy-Hair-17379327411.glb",
+   "id": "hair_tousled_spikes",
+   "name": "Tousled spikes",
+   "key": "hair-37"
+  },
+  {
+   "file": "34-UA-Rolled-Up-Ski-Mask-w-Messy-Dreads-119266145525998.glb",
+   "id": "hair_ski_mask_dreads",
+   "name": "Ski mask and dreads",
+   "key": "hair-38",
+   "cap": {
+    "rule": "light",
+    "color": "#E8E8EA",
+    "logos": "dark",
+    "islands": true
+   }
+  },
+  {
+   "file": "35-Pretty-Girl-Braided-Pigtails-in-Black-18523347427.glb",
+   "id": "hair_braided_pigtails",
+   "name": "Braided pigtails",
+   "key": "hair-39"
+  },
+  {
+   "file": "36-Black-Space-Buns-W-Fluffy-Edges-77782189856723.glb",
+   "id": "hair_space_buns",
+   "name": "Space buns with fluffy edges",
+   "key": "hair-40",
+   "cap": {
+    "rule": "skin_tone",
+    "color": "#C89A78"
+   }
+  },
+  {
+   "file": "37-Double-Messy-Buns-with-Braid-Yellow-Beige-110168955712985.glb",
+   "id": "hair_buns_braid",
+   "name": "Messy buns with a braid",
+   "key": "hair-41"
+  },
+  {
+   "file": "38-Black-Messy-Hair-w-a-Braid-82798715506608.glb",
+   "id": "hair_messy_braid",
+   "name": "Messy with a braid",
+   "key": "hair-42"
+  },
+  {
+   "file": "39-Freeform-Afro-73155099277090.glb",
+   "id": "hair_freeform_afro",
+   "name": "Freeform afro",
+   "key": "hair-43",
+   "cap": {
+    "rule": "skin_tone",
+    "color": "#7A5A44"
+   }
+  },
+  {
+   "file": "40-Blonde-Over-Sponged-Sharp-Short-Afro-123620270798051.glb",
+   "id": "hair_sponge_twists",
+   "name": "Sponge twists",
+   "key": "hair-44",
+   "cap": {
+    "rule": "skin_tone",
+    "color": "#7A5A44"
+   }
+  },
+  {
+   "file": "41-White-Middle-Part-14876610196.glb",
+   "id": "hair_middle_part",
+   "name": "Middle part",
+   "key": "hair-45"
+  },
+  {
+   "file": "42-low-poly-mod-cut-red-122091889431230.glb",
+   "id": "hair_mod_cut",
+   "name": "Mod cut",
+   "key": "hair-46"
+  }
+ ]
+}
