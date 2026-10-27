@@ -15,7 +15,8 @@
  * = any. `rainAnyHour`: also out in the rain outside its hours.
  */
 export type Category = "fish" | "sea" | "bug" | "fruit" | "nature" | "mineral";
-export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
+import type { Rarity } from "@/lib/rarity";
+export type { Rarity } from "@/lib/rarity";
 export type Biome = "river" | "pond" | "cliff_pool" | "sea" | "beach" | "flowers" | "trees" | "ground" | "water_edge" | "bush" | "woods" | "rocks";
 export type Tool = "rod" | "net" | "hand" | "shovel";
 export type Wing = "aquarium" | "insect_hall" | "nature_room";
@@ -270,5 +271,5 @@ export const REEL_FISH: Species[] = make("fish", "rod", "aquarium", [
 export const ROSTER: Species[] = [...LAUNCH_ROSTER, ...EVENT_SPECIES, ...REEL_FISH];
 
 export const CATEGORIES: Category[] = ["fish", "sea", "bug", "fruit", "nature", "mineral"];
-export const RARITY_RANK: Record<Rarity, number> = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 };
+export { RARITY_RANK } from "@/lib/rarity";
 export const WING_OF: Record<Category, Wing | null> = { fish: "aquarium", sea: "aquarium", bug: "insect_hall", fruit: null, nature: "nature_room", mineral: null };

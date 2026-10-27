@@ -32,7 +32,8 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 ## Status
 
-(none yet)
+- **Rarity ladder done** (step 1), committed on its own. `web/lib/rarity.ts` is the one ladder (`RARITIES`, `RARITY_RANK`, `RARITY_LABEL`, `isRarity`, the Contraband gate `mayHoldContraband` behind `NEXT_PUBLIC_CONTRABAND=1`). Roster, fishing, the GUI kit, content types, rewards and the admin shop editor all import it. Sea King became Divine (holographic badge and tile edge in the kit, `--gui-holo`); Contraband is dark (`--gui-rarity-contraband`, cream text) and never rolls (weight 0). Fish roll weight: Divine 0.4 vs legendary 2.5. Sell prices: Divine 2.5x legendary, Contraband none. Migrations for the coordinator: `20261027140000_rarity_ladder.sql` (widens the rarity checks) then `20261027183120_catalogue_seed.sql` (Divine sell prices, generated). Gates: tsc, full vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, eslint on changed files.
+- Next up: steps 2 to 5 (rods, add-ons, rod shop, hollow items).
 
 ## Rules
 

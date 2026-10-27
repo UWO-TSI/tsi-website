@@ -5,7 +5,7 @@
  * adds a small rare-catch bonus. Legendary fish need tier 4+. Tiers 2–3 are
  * shop rods (lib/wallet/catalogue.ts); 4–5 are crafted (crafting UI later).
  */
-import type { Rarity } from "./fishing";
+import { RARITY_RANK, type Rarity } from "@/lib/rarity";
 
 export interface RodTier {
   tier: 1 | 2 | 3 | 4 | 5;
@@ -42,7 +42,7 @@ export function biteWindowMs(baseMs: number, rod: RodTier): number {
 export function castLuck(luck: number, rod: RodTier): number {
   return luck + rod.rarityBonus;
 }
-/** Legendary (and sea-king) species only bite for top rods. */
+/** Legendary and up only bite for top rods. */
 export function canHook(rarity: Rarity, rod: RodTier): boolean {
-  return (rarity !== "legendary" && rarity !== "seaking") || rod.tier >= LEGENDARY_ROD_TIER;
+  return RARITY_RANK[rarity] < RARITY_RANK.legendary || rod.tier >= LEGENDARY_ROD_TIER;
 }

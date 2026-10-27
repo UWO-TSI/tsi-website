@@ -17,7 +17,7 @@ describe("fish pools", () => {
     expect(fishPoolFor("sea", 0, rodByTier(1), noon).every(e => (e.fish.zone ?? "river") === "sea")).toBe(true);
   });
   it("only lets top rods hook legendaries and rolls deterministically with a fixed random", () => {
-    const has = (tier: number) => fishPoolFor("sea", 0, rodByTier(tier), noon).some(e => e.fish.rarity === "legendary" || e.fish.rarity === "seaking");
+    const has = (tier: number) => fishPoolFor("sea", 0, rodByTier(tier), noon).some(e => e.fish.rarity === "legendary" || e.fish.rarity === "divine");
     expect(has(1)).toBe(false);
     expect(has(5)).toBe(true);
     expect(rollFishFor("river", 0, rodByTier(2), noon, () => 0).key).toBe(fishPoolFor("river", 0, rodByTier(2), noon)[0].fish.key);

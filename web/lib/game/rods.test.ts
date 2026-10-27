@@ -19,7 +19,7 @@ describe("rod tiers", () => {
     expect(castLuck(0.3, rodByTier(3))).toBeCloseTo(0.4);
     expect(canHook("legendary", rodByTier(3))).toBe(false);
     expect(canHook("legendary", rodByTier(4))).toBe(true);
-    expect(canHook("seaking", rodByTier(1))).toBe(false);
+    expect(canHook("divine", rodByTier(1))).toBe(false);
     expect(canHook("rare", rodByTier(1))).toBe(true);
     expect(rodByTier(9).tier).toBe(5);
     expect(bestOwnedRod([]).tier).toBe(1);

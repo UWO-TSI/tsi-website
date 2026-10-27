@@ -80,7 +80,7 @@ export function nodeAvailable(harvestedHour: string | null | undefined, now: Dat
   return !harvestedHour || harvestedHour !== hourKey(now);
 }
 
-const RARITY_WEIGHT: Record<Rarity, number> = { common: 60, uncommon: 25, rare: 10, epic: 4, legendary: 1 };
+const RARITY_WEIGHT: Record<Rarity, number> = { common: 60, uncommon: 25, rare: 10, epic: 4, legendary: 1, divine: 0.25, contraband: 0 };
 
 /**
  * What a node holds this hour for this member: a random-rarity pick among the

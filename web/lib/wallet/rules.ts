@@ -80,7 +80,7 @@ export function speciesClass(itemKey: string, fishRarity: (key: string) => strin
   if (sp) return { category: sp.category, rarity: sp.rarity };
   const r = fishRarity(itemKey);
   if (!r) return null;
-  return { category: "fish", rarity: r === "seaking" ? "legendary" : r };
+  return { category: "fish", rarity: r };
 }
 
 export function sellPrice(category: string, rarity: string, table: Record<string, Record<string, number>> = SELL_PRICES): number | null {

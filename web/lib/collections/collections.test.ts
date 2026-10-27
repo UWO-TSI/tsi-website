@@ -28,7 +28,7 @@ describe("roster", () => {
       const f = fish.get(s.key);
       expect(f, s.key).toBeDefined();
       expect(s.size, s.key).toEqual(f!.sizeCm);
-      expect(s.rarity, s.key).toBe(f!.rarity === "seaking" ? "legendary" : f!.rarity);
+      expect(s.rarity, s.key).toBe(f!.rarity);
       // Plain windows must agree with the reel's own availability gate.
       if (!f!.when) expect(s.hours, s.key).toBeNull();
       for (const weather of ["clear", "rain"] as const) {
