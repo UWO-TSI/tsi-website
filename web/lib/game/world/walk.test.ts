@@ -5,14 +5,14 @@
  */
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { barDecks, inRect, landmarkHalf, villageIsland, wharfDock, wharfDecks, type LandmarkId } from "../defaultIsland";
+import { DECK_SQUARE_HALF, barDecks, inFootprint, inRect, landmarkHalf, villageIsland, wharfDock, wharfDecks, type LandmarkId } from "../defaultIsland";
 import { BAR_Y, ENTRY, STOOLS, STOOL_Z, barOf, barPoint } from "../sushiBar";
 import { EDGE_SHOPS, JETTY, dockToWorld } from "../wharf";
 import { campfireSite } from "../campfireSite";
 import { MOVE_TUNING, NO_INPUT, createMoveState, stepMove, STEP, type MoveWorld } from "../movement/sim";
 import { navGrid, planResidents } from "../residentRoutine";
 import { PROPOSALS, acceptProposed } from "../proposals";
-import { villageSpawnPoint } from "../villageMap";
+import { objectsOf, villageSpawnPoint } from "../villageMap";
 import { loadWorldFromDisk } from "./disk";
 import { MAX_CLIMB, terrainHeight, terrainSteepness, sampleX, sampleZ } from "./terrain";
 import { villageOfWorld } from "./village";
@@ -87,6 +87,45 @@ describe("walking the smooth world", () => {
     for (const lx of [-4.3, ...STOOLS, 4.3]) for (const lz of [STOOL_Z, 3.2, 4.1]) expect(island.standable(...at(lx, lz)), `${lx}, ${lz}`).toBe(false);
   });
 
+  it("holds you on every deck right up to its drawn edge over the water: the wharf's boards, the jetty and the sushi bar's", () => {
+    // Each deck's edges as points every 0.5 with their outward normal and the deck's height there: the wharf's board squares
+    // (turned their own way), the jetty's and the bar's rects. From 0.8 inside, sprint (every other one dashing) out across the edge for a second:
+    // never into the water (David, 2026-10-26: "wharf the deck near the ledge i just fall in the water"); off onto dry land is fine.
+    const edges: [number, number, number, number, number][] = [], H = DECK_SQUARE_HALF, at = { x: 0, z: 0 };
+    for (const o of objectsOf("deck", v)) {
+      const d = { x: o.x, z: o.z, yaw: o.yaw ?? 0 }, y = island.ground(o.x, o.z);
+      for (let s = -H + 0.25; s < H; s += 0.5) for (const [lx, lz, nx, nz] of [[s, -H, 0, -1], [s, H, 0, 1], [-H, s, -1, 0], [H, s, 1, 0]]) {
+        dockToWorld(d, lx, lz, at);
+        const [wx, wz] = [at.x, at.z];
+        dockToWorld({ ...d, x: 0, z: 0 }, nx, nz, at);
+        edges.push([wx, wz, at.x, at.z, y]);
+      }
+    }
+    for (const r of [...wharfDecks(v), ...barDecks(v)]) {
+      for (let x = r.x0 + 0.25; x < r.x1; x += 0.5) edges.push([x, r.z0, 0, -1, r.y(x, r.z0 + 0.01)], [x, r.z1, 0, 1, r.y(x, r.z1 - 0.01)]);
+      for (let z = r.z0 + 0.25; z < r.z1; z += 0.5) edges.push([r.x0, z, -1, 0, r.y(r.x0 + 0.01, z)], [r.x1, z, 1, 0, r.y(r.x1 - 0.01, z)]);
+    }
+    const inWater = (x: number, z: number) => terrainHeight(t, x, z) < t.seaLevel && island.ground(x, z) <= terrainHeight(t, x, z) + 1e-6;
+    const fell: string[] = [], short: string[] = [];
+    let runs = 0;
+    for (const [ex, ez, nx, nz, y] of edges) {
+      const sx = ex - nx * 0.8, sz = ez - nz * 0.8;
+      if (Math.abs(island.top(sx, sz) - y) > 0.05 || [[0, 0], [0.2, 0], [-0.2, 0], [0, 0.2], [0, -0.2]].some(([a, b]) => !island.standable(sx + a, sz + b))) continue;
+      let s = createMoveState(sx, sz, island), off = false;
+      runs++;
+      for (let i = 0; i < 60; i++) {
+        s = stepMove(s, { ...NO_INPUT, x: nx, z: nz, sprint: true, dashPressed: i === 0 && runs % 2 === 0 }, STEP * 2, island, MOVE_TUNING);
+        if (s.mode === "ground" && island.ground(s.x, s.z) <= terrainHeight(t, s.x, s.z) + 1e-6 && terrainHeight(t, s.x, s.z) >= t.seaLevel) { off = true; break; } // off it onto dry land
+        if (inWater(s.x, s.z)) { fell.push(`${ex.toFixed(1)},${ez.toFixed(1)} out ${nx.toFixed(2)},${nz.toFixed(2)}`); off = true; break; }
+      }
+      // Held at the edge, not short of it: the body (0.2 round) stands at the drawn edge.
+      if (!off && (s.x - ex) * nx + (s.z - ez) * nz < -0.3) short.push(`${ex.toFixed(1)},${ez.toFixed(1)} stopped ${((s.x - ex) * nx + (s.z - ez) * nz).toFixed(2)}`);
+    }
+    expect(runs).toBeGreaterThan(400);
+    expect(fell, fell.slice(0, 12).join("; ")).toEqual([]);
+    expect(short, short.slice(0, 12).join("; ")).toEqual([]);
+  });
+
   it("blocks walking up a slope too steep to climb, and lets you walk down it", () => {
     const { low, high } = steepFace();
     // The walker's own step rule.
@@ -119,14 +158,17 @@ describe("walking the smooth world", () => {
   });
 
   it("keeps every object and the campfire on the surface, on dry land", () => {
+    const squares = objectsOf("deck", v);
     for (const o of objects) {
       if (o.kind === "landmark" && o.id === "wharf") continue; // the jetty's origin stands at the water's edge
       if (o.kind === "barrier" && o.model === "border") continue; // the invisible border runs out into the water at its ends
       if (/^(coral|reeds|river-stones|lily-pads)-/.test(o.model ?? "")) continue; // the coral, reeds and stones stand in the shallows, the lily pads float
       if (EDGE_SHOPS.includes(o.model!)) continue; // a wharf shop straddles the deck's water edge, its back on piles in the sea
-      // On the ground, or on the jetty's decks (its lanterns stand on its platform) or the sushi bar's (it stands on its stilts).
+      // On the ground, or on the jetty's decks (its lanterns stand on its platform) or the sushi bar's (it stands on its stilts),
+      // or on a wharf board square (level at the ground under its middle).
       const deck = [...wharfDecks(v), ...barDecks(v)].find(d => inRect(o.x, o.z, d)), h = island.ground(o.x, o.z);
-      expect(h, `${o.kind}:${o.id}`).toBeCloseTo(deck ? deck.y(o.x, o.z) : terrainHeight(t, o.x, o.z), 6);
+      const square = squares.find(q => inFootprint(o.x, o.z, q, q.yaw ?? 0, DECK_SQUARE_HALF, DECK_SQUARE_HALF)), here = terrainHeight(t, o.x, o.z);
+      expect(h, `${o.kind}:${o.id}`).toBeCloseTo(deck ? deck.y(o.x, o.z) : square ? Math.max(here, terrainHeight(t, square.x, square.z)) : here, 6);
       expect(h, `${o.kind}:${o.id} above the sea`).toBeGreaterThan(t.seaLevel);
     }
     const fire = campfireSite(v);

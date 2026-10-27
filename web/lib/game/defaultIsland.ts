@@ -223,6 +223,8 @@ function localDecks(d: Dock, rects: readonly { x0: number; x1: number; z0: numbe
     return { ...turnedRect(d.x, d.z, r, d.yaw), y: rise ? (x: number, z: number) => r.y + rise * Math.min(1, Math.max(0, (worldToDock(d, x, z, local).z - r.z0) / (r.z1 - r.z0))) : () => r.y };
   });
 }
+/** Half the side of a wharf board square (the `deck` kind, lib/game/wharf.ts deckPieces: the 4 x 4 `deck-tile`, turned its own way). */
+export const DECK_SQUARE_HALF = 2;
 /** The wharf's main walkable deck in world XZ (the pier, or the jetty's landing), or null without a wharf. */
 export const wharfDeck = (v: Village = village()): Deck | null => wharfDecks(v)[0] ?? null;
 
@@ -368,16 +370,31 @@ export const DECK_Y = 0;
 
 /** How deep the smooth world's shallows are waded (David, R2b: "can dip toes in"): a step or two out from any shore, never across a river. */
 export const WADE = 0.25;
+/** The shallows this near a deck are under or beside its raised boards: water, never waded (no stepping off a deck's edge into them). */
+const DECK_SHALLOWS = 1.5;
 
 /** Walking on a village: ground height, solids and the stepping rule, from its map and objects. */
 export function islandOf(v: Village): VillageIsland {
   const { map, field, terrain } = v;
   const decks: Deck[] = [...wharfDecks(v), ...barDecks(v), ...bridgeDecks(v).map(r => ({ ...r, y: () => DECK_Y }))];
   // The smooth world walks its heightfield (the drawn ground); a deck over its water is walked at the deck's height.
+  // The wharf's board squares, each level at the ground under its middle (as deckPieces lays its tile), walked to their drawn edge.
+  const squares = terrain ? objectsOf("deck", v).map(o => ({ x: o.x, z: o.z, yaw: o.yaw ?? 0, y: terrainHeight(terrain, o.x, o.z) })) : [];
+  // Their bound, padded by a square's corner and the shallows, so a point far from the wharf skips them.
+  const reach = DECK_SQUARE_HALF * Math.SQRT2 + DECK_SHALLOWS, xs = squares.map(q => q.x), zs = squares.map(q => q.z);
+  const box = { x0: Math.min(...xs) - reach, x1: Math.max(...xs) + reach, z0: Math.min(...zs) - reach, z1: Math.max(...zs) + reach };
+  const near = (x: number, z: number, pad: number) => decks.some(r => x >= r.x0 - pad && x <= r.x1 + pad && z >= r.z0 - pad && z <= r.z1 + pad)
+    || (inRect(x, z, box) && squares.some(q => inFootprint(x, z, q, q.yaw, DECK_SQUARE_HALF + pad, DECK_SQUARE_HALF + pad)));
+  const deckY = (x: number, z: number) => {
+    const d = decks.find(r => inRect(x, z, r));
+    if (d) return d.y(x, z);
+    const q = squares.find(q => inFootprint(x, z, q, q.yaw, DECK_SQUARE_HALF, DECK_SQUARE_HALF));
+    return q ? q.y : null;
+  };
   const ground = terrain
     ? (x: number, z: number) => {
-      const h = terrainHeight(terrain, x, z), d = decks.find(r => inRect(x, z, r));
-      return d ? Math.max(h, d.y(x, z)) : h;
+      const h = terrainHeight(terrain, x, z), d = deckY(x, z);
+      return d === null ? h : Math.max(h, d);
     }
     : (x: number, z: number) => sampleGroundHeight(map, field, x, z);
   const surface = terrain ? (x: number, z: number) => terrainSurface(terrain, x, z) : (x: number, z: number) => drawnSurfaceAt(map, x, z);
@@ -400,9 +417,13 @@ export function islandOf(v: Village): VillageIsland {
     return grid;
   };
   const propGrid = buckets(props), treeGrid = buckets(objectsOf("tree", v));
-  const onDeck = (x: number, z: number) => decks.some(d => inRect(x, z, d));
+  const onDeck = (x: number, z: number) => near(x, z, 0);
   const wet = terrain
-    ? (x: number, z: number) => !onDeck(x, z) && terrainHeight(terrain, x, z) <= terrain.seaLevel - WADE
+    ? (x: number, z: number) => {
+      if (onDeck(x, z)) return false;
+      const h = terrainHeight(terrain, x, z);
+      return h <= terrain.seaLevel - WADE || (h < terrain.seaLevel && near(x, z, DECK_SHALLOWS));
+    }
     : (x: number, z: number) => !onDeck(x, z) && !isGroundAtWorld(map, x, z);
   /** The smooth world's slope rule: no step up onto ground too steep to climb. */
   const steep = terrain ? (x: number, z: number) => !onDeck(x, z) && terrainSteepness(terrain, x, z) > MAX_CLIMB : undefined;
@@ -421,7 +442,8 @@ export function islandOf(v: Village): VillageIsland {
     if (top === Infinity || studySolid("village", x, z, 0, v)) return Infinity;
     return trunk ? Infinity : top;
   };
-  const standable = (x: number, z: number) => onDeck(x, z) || (!wet(x, z) && solidTop(x, z) === -Infinity);
+  // A solid on a deck stands in the way too (the fish market on the wharf's boards); the village's cells keep their old rule.
+  const standable = (x: number, z: number) => (!terrain && onDeck(x, z)) || (!wet(x, z) && solidTop(x, z) === -Infinity);
   /** How much of the body (5 probe points) stands on free ground; 5 = fits. */
   const clearance = (x: number, z: number) => {
     let n = 0;
