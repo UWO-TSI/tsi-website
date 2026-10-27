@@ -30,6 +30,12 @@ David, verbatim, with his photo: "make this hoodie design". The photo and a writ
 
 Round 1's review is still out with David, so keep this on top of round 1, on this branch.
 
+## Round 2 (David approved round 1 and the TSI zip hoodie, 2026-10-27)
+
+Round 1 (https://claude.ai/artifact/G5RvBxgazEZwSirknQaBDt): tops, bottoms, shoes, in-game and "shape" all approved. "Shape" approved means: keep these silhouettes and roll the same treatment to the rest. The TSI zip hoodie (https://claude.ai/artifact/TiHe1w3zCSdHEtQkt3F89M) is approved on every item; it gets a price on the shelf page later and stays hidden until then (wardrobe-b3's offered() rule).
+
+Round 2: put every remaining outfit in `art/characters/outfits/` (cardigan, collared shirt, sweater vest, TSI crewneck, raincoat, silk sweater, the skirts, overall shorts, the one-pieces, boots, loafers, rain boots, sandals) on universal models the same way: one mesh per garment type, designs as paint (the TSI crewneck as a design on the sweater or crew model, and so on), the body cut, at or under today's triangles. The design atlas needs room, so grow it to 2048, or use smaller cells where the design is simple. Merge main first. Review shots like round 1, in `specs/evidence/clothing-v2/round2/`.
+
 ## Status
 
 Round 1 built, in review (not merged). The TSI zip hoodie built on top of it, shots ready for David (2026-10-27). Head: see
