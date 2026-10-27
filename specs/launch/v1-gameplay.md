@@ -109,3 +109,14 @@ His notes are verbatim below, each followed by my reading. "Launch" means the ne
 | `fishing-depth` | f-pond, f-requests, f-records, d-now, f-sushi |
 | `daily-social` | d-streak, d-friends, d-monument, s-campfire, s-fishtogether, x-moves |
 | Later | m7 ships, f-tourney, the museum opening |
+
+## Fish tiers and fights (David, 2026-10-27 evening)
+
+Verbatim: "i want you to reedit the fish so that epic is considered like the current legendary, and i want legendary fish to be really crazy and you might need to fight it and divine is like you need a team to fight it. give all them exlimation mark when hooked, for legendary use a golden one with effects, for dinive even crazier effects, and fish bite has a distinct sound too"
+
+- **Re-tier:** today's legendary fish become epic (epic is the new "very rare").
+- **Legendary is a fight:** a hooked legendary fights back. It's a boss-style reel with phases, thrashing, runs and jumps, and you can lose it.
+- **Divine is a team fight:** a divine fish needs several players reeling together to land it (a shared fight over the realtime server).
+- **The hook "!":** every fish shows an exclamation mark over you when it bites. Legendary gets a golden one with effects; divine an even bigger one with stronger effects.
+- **The bite sound:** a distinct sound when a fish bites, scaled up for legendary and divine. Make it ourselves; never fetch sound or music.
+- **Which fish:** David sets rarities in the Catalogue editor (https://claude.ai/artifact/5XzAaR5Wipoe2ZN2Hby3FG). It needs the Divine tier from lane `rod-gear`'s rarity ladder.
