@@ -1,16 +1,19 @@
 /**
  * The HQ visit and the tool quests on this client (row 312): whether this account's tools are taught (the arrival
  * flag says so, app/api/world/arrival), where the visit with Alice is (visit.ts), and each tool's little quest
- * (teachers.ts). The visit and the quests are kept on this device, like the moves a Keeper teaches
- * (lib/game/moveUnlocks.ts); a tool's ownership is the server's (POST /api/world/tools puts it in the inventory).
- * React reads one snapshot (useHq); everything that changes it goes through here.
+ * (teachers.ts). Their progress is the account's (t-hq: /api/world/onboarding, accountProgress.ts), with a copy on
+ * this device so the room reacts at once; `syncHq` merges the two on load, the further along winning. A tool's
+ * ownership is the server's (POST /api/world/tools puts it in the inventory). React reads one snapshot (useHq);
+ * everything that changes it goes through here.
  */
 import { useSyncExternalStore } from "react";
 import { newVisit, parseVisit, visitEvent, type HqState } from "./visit";
 import { parseQuests, type TaughtTool, type ToolQuests } from "./teachers";
 import type { HqEvent } from "./script";
+import { mergeProgress, type AccountProgress } from "./accountProgress";
 
-const VISIT_KEY = "tsi.hq.v1";
+/** v2: t-hq's script (v1 saves were beats of the old one). */
+const VISIT_KEY = "tsi.hq.v2";
 const QUESTS_KEY = "tsi.toolQuests.v1";
 type Store = Pick<Storage, "getItem" | "setItem" | "removeItem"> | null;
 const local = (): Store => { try { return typeof window === "undefined" ? null : window.localStorage; } catch { return null; } };
@@ -39,7 +42,29 @@ function set(next: Partial<HqSnapshot>) {
   snap = { ...was, ...next };
   if (next.visit !== undefined && next.visit !== was.visit) write(local(), VISIT_KEY, next.visit && { beat: next.visit.beat, done: next.visit.done });
   if (next.quests !== undefined && next.quests !== was.quests) write(local(), QUESTS_KEY, next.quests);
+  if ((next.visit !== undefined && next.visit !== was.visit) || (next.quests !== undefined && next.quests !== was.quests)) void saveProgress(progressOf(snap));
   listeners.forEach(l => l());
+}
+const progressOf = (s: HqSnapshot): AccountProgress => ({ hq: s.visit && { beat: s.visit.beat, done: s.visit.done }, tools: s.quests });
+
+/** Progress made: onto the account (signed out, or offline, it stays on this device). */
+async function saveProgress(p: AccountProgress) {
+  try { await fetch("/api/world/onboarding", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p) }); } catch { /* this device's copy */ }
+}
+let synced = false;
+/** Once a session: the account's progress and this device's, merged (the further along winning) and kept on both. */
+export async function syncHq() {
+  if (synced) return;
+  synced = true;
+  try {
+    const r = await fetch("/api/world/onboarding");
+    if (!r.ok) return;
+    const d = (await r.json()) as { progress?: AccountProgress };
+    if (!d.progress) return;
+    const mine = progressOf(current()), merged = mergeProgress(mine, d.progress);
+    const visit = merged.hq === mine.hq ? current().visit : parseVisit(merged.hq);
+    if (visit !== current().visit || JSON.stringify(merged.tools) !== JSON.stringify(mine.tools)) set({ visit, quests: merged.tools });
+  } catch { /* this device's copy */ }
 }
 export const hqSnapshot = () => current();
 export function subscribeHq(l: () => void) { listeners.add(l); return () => { listeners.delete(l); }; }

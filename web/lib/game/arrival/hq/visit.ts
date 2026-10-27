@@ -1,8 +1,8 @@
 /**
  * The HQ visit's state (row 312): which beat of script.ts you're on and whether Alice is saying its lines or it's
- * waiting for you. Pure: the island feeds it events (her lines said, the desk, the register signed, Esc, the map, the
- * board) and acts on what `visitCue` asks for (say these lines, open this card). Kept on this device between visits
- * (store.ts), so a reload picks up at the beat you were on (her lines again, then the wait).
+ * waiting for you. Pure: the island feeds it events (her lines said, the desk, a card closed, the tour, Esc) and acts
+ * on what `visitCue` asks for (say these lines, open this card). Kept on the account between visits (store.ts), so a
+ * reload, or another device, picks up at the beat you were on (her lines again, then the wait).
  */
 import { HQ_END, HQ_SCRIPT, type HqBeat, type HqCard, type HqEvent } from "./script";
 import { HQ_TITLE, HQ_TRACKER } from "./lines";
@@ -21,10 +21,10 @@ const opening = (beat: number, script: readonly HqBeat[]): HqState["stage"] => (
 export const newVisit = (script: readonly HqBeat[] = HQ_SCRIPT): HqState => ({ beat: 0, stage: opening(0, script), done: false });
 
 export type HqCue = { kind: "say"; keys: readonly string[] } | { kind: "card"; card: HqCard };
-/** What the visit wants now: her lines said, or a card open (null: nothing, it's waiting on you, or it's over). */
-export function visitCue(s: HqState, script: readonly HqBeat[] = HQ_SCRIPT): HqCue | null {
+/** What the visit wants now: her lines said, or a card open (null: nothing, it's waiting on you, or it's over). `end`: the farewell's lines. */
+export function visitCue(s: HqState, script: readonly HqBeat[] = HQ_SCRIPT, end: readonly string[] = HQ_END): HqCue | null {
   if (s.done) return null;
-  if (s.stage === "say") return { kind: "say", keys: s.beat >= script.length ? HQ_END : script[s.beat].say ?? [] };
+  if (s.stage === "say") return { kind: "say", keys: s.beat >= script.length ? end : script[s.beat].say ?? [] };
   const card = script[s.beat]?.card;
   return card ? { kind: "card", card } : null;
 }

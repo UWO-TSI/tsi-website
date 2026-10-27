@@ -4,13 +4,15 @@
  * The HQ visit's cards (row 312, specs/hq-onboarding.md), paper sheets from the GUI kit over the room: the island
  * register at the front desk (your world name to sign with, then the friend code and the mailbox it issued, real data
  * where there is some), where a real event's check-in code goes (the existing flow: the QR at the door), and the
- * Founder's plaque, blank until David writes it. Copy: lib/game/arrival/hq/lines.ts (drafts).
+ * Founder's plaque, blank until David writes it; and t-hq's lore overlay (Tethos, a page at a time, over a dimmed room)
+ * and the coins-and-merch card. Copy: lib/game/arrival/hq/lines.ts (drafts).
  */
 import { useState } from "react";
-import { BookUser, CalendarCheck, Landmark, Mail, QrCode, UserPlus } from "lucide-react";
+import { BookUser, CalendarCheck, Landmark, Mail, QrCode, Shirt, Sparkles, UserPlus } from "lucide-react";
 import { Button, Sheet } from "@/components/gui";
+import { CurrencyIcon } from "@/components/economy/Amount";
 import { AudioManager } from "@/lib/game/audio";
-import { CHECKIN_CARD, FOUNDER_PLAQUE, PLAQUE_CARD, REGISTER_CARD } from "@/lib/game/arrival/hq/lines";
+import { CHECKIN_CARD, FOUNDER_PLAQUE, LORE_CARD, MERCH_CARD, PLAQUE_CARD, REGISTER_CARD } from "@/lib/game/arrival/hq/lines";
 import { CHECK_IN_ORIGIN } from "@/lib/portal/checkIn";
 import s from "./HqCards.module.css";
 
@@ -62,5 +64,34 @@ export function PlaqueCard({ open, onClose }: { open: boolean; onClose: () => vo
       {FOUNDER_PLAQUE && <p>{FOUNDER_PLAQUE}</p>}
     </div>
     {FOUNDER_PLAQUE === null && <p className={s.caption}>{PLAQUE_CARD.blank}</p>}
+  </Sheet>;
+}
+
+/** The lore overlay (t-hq): Tethos and the island, a page at a time, full screen over the dimmed room. `onDone` after the last. */
+export function LoreOverlay({ open, onDone }: { open: boolean; onDone: () => void }) {
+  const [page, setPage] = useState(0);
+  if (!open) return null;
+  const pages = LORE_CARD.pages, p = pages[page], last = page === pages.length - 1;
+  const next = () => { AudioManager.playSFX("blip2", { rate: 1.2, gain: 0.35 }); if (last) { setPage(0); onDone(); } else setPage(page + 1); };
+  return <div className={`${s.lore} gui`} role="dialog" aria-modal="true" aria-labelledby="hq-lore-title" data-gui-overlay data-testid="hq-lore">
+    <div key={page} className={s.lorePage}>
+      <p className={s.loreCount} aria-hidden="true">{page + 1} / {pages.length}</p>
+      <h2 id="hq-lore-title">{p.title}</h2>
+      <p>{p.text}</p>
+    </div>
+    <div className={s.loreDots} aria-hidden="true">{pages.map((_, i) => <i key={i} data-on={i === page || undefined} />)}</div>
+    <Button onClick={next} autoFocus data-testid="hq-lore-next">{last ? LORE_CARD.done : LORE_CARD.next}</Button>
+  </div>;
+}
+
+const MERCH_ICONS: Record<string, React.ReactNode> = { coins: <CurrencyIcon size={22} />, gems: <CurrencyIcon currency="gems" size={22} />, xp: <Sparkles size={20} aria-hidden /> };
+/** Coins, gems and experience, and that they trade for real merch (t-hq). Never a rate to real money. */
+export function MerchCard({ open, onDone }: { open: boolean; onDone: () => void }) {
+  return <Sheet open={open} onClose={onDone} title={MERCH_CARD.title} eyebrow={MERCH_CARD.eyebrow} icon={<Shirt size={20} />} size="sm" tone="butter" testId="hq-merch"
+    footer={<Button onClick={onDone} data-testid="hq-merch-done">{MERCH_CARD.done}</Button>}>
+    <ul className={s.issued}>
+      {MERCH_CARD.rows.map((r, i) => <li key={r.icon} className={s.currency} style={{ animationDelay: `${120 + i * 160}ms` }}>{MERCH_ICONS[r.icon]}<span>{r.name}</span><b>{r.text}</b></li>)}
+    </ul>
+    <p className={s.note}>{MERCH_CARD.note}</p>
   </Sheet>;
 }

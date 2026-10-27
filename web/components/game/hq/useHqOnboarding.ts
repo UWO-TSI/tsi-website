@@ -15,11 +15,11 @@ import { beginTalk, onTalkScript, startTalk, talkStore } from "@/lib/game/reside
 import { fillName, parseTalkLine } from "@/lib/content/talk";
 import { itemIcon } from "@/lib/game/toolWheel";
 import type { TrackedQuest } from "@/lib/game/questTracker";
-import { finishToolQuest, giveTool, hqEvent, hqSnapshot, setToolsTaught, startVisit, useHq } from "@/lib/game/arrival/hq/store";
+import { finishToolQuest, giveTool, hqEvent, hqSnapshot, setToolsTaught, startVisit, syncHq, useHq } from "@/lib/game/arrival/hq/store";
 import { hqQuest, visitCue, waitingFor } from "@/lib/game/arrival/hq/visit";
 import { givenKeys, handOver, isTaughtTool, questFinished, teacherOf, teacherTalk, toolQuest, type CatchKind } from "@/lib/game/arrival/hq/teachers";
 import { TOOL_LINES, WREN, WREN_LINES, escPhrase, trackerEsc } from "@/lib/game/arrival/hq/lines";
-import type { HqCard, HqEvent } from "@/lib/game/arrival/hq/script";
+import { HQ_END, HQ_END_TOUR, HQ_SCRIPT, type HqCard, type HqEvent } from "@/lib/game/arrival/hq/script";
 
 const WREN_TALKER = { id: "hq:wren", slug: WREN.slug, name: WREN.name, post: WREN.post, seed: 3 };
 /** Her lines wait this long after the room fades in (or a sheet closes): a breath, not a jump. */
@@ -31,7 +31,6 @@ export interface HqWorld {
   free: boolean;
   /** The Esc layer is open (the UI view). */
   menuOpen: boolean;
-  mapOpen: boolean;
   touch: boolean;
   /** Your world name. */
   name: string | null;
@@ -46,6 +45,8 @@ export interface HqWorld {
 export function useHqOnboarding(w: HqWorld, dev: URLSearchParams | null) {
   const hq = useHq();
   const visit = hq.visit;
+  // Where the account is in all this (another device's progress, a reload's).
+  useEffect(() => { void syncHq(); }, []);
   // Dev previews: ?hqvisit=1 starts the visit (this account's tools taught; with ?hq=inside, at HQ); ?tools=taught
   // teaches the tools alone. And the evidence scripts' view of it (window.__hq).
   useEffect(() => {
@@ -93,12 +94,12 @@ export function useHqOnboarding(w: HqWorld, dev: URLSearchParams | null) {
     return () => window.removeEventListener("tsi:peaceful-got", got);
   }, []);
 
-  // The Esc menu and the map, wherever you open them.
+  // The Esc menu, wherever you open it.
   useEffect(() => { if (w.menuOpen) hqEvent("esc"); }, [w.menuOpen]);
-  useEffect(() => { if (w.mapOpen) hqEvent("map"); }, [w.mapOpen]);
 
   // Alice says the beat's lines once you're at HQ with nothing over the room.
-  const cue = visit ? visitCue(visit) : null;
+  // Bram's tour still on (HQ first): she sends you back out to him.
+  const cue = visit ? visitCue(visit, HQ_SCRIPT, w.arriving ? HQ_END_TOUR : HQ_END) : null;
   const sayKeys = cue?.kind === "say" ? cue.keys.join("+") : null;
   const atHq = w.inside === "hq";
   const { free, name, touch, closeMenu } = w;

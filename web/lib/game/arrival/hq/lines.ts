@@ -15,10 +15,14 @@ export const WREN = { slug: "wren", name: "Alice", post: "hq_lead" } as const;
 
 /** Her lines by key (script.ts says which beat says which). */
 export const WREN_LINES: Readonly<Record<string, readonly string[]>> = {
-  // Registering.
+  // The lore overlay opens after these.
   welcome: [
     "[happy] There you are! Bram said you'd be up. I'm Alice. I keep HQ running, more or less.",
-    "First things first: the island register. Everyone who stays signs it.",
+    "Before anything else, let me show you where you've washed up.",
+  ],
+  // Registering.
+  register: [
+    "[happy] Right. First things first: the island register. Everyone who stays signs it.",
     "Just your world name. That's the one everybody here knows you by.",
   ],
   registered: [
@@ -29,38 +33,34 @@ export const WREN_LINES: Readonly<Record<string, readonly string[]>> = {
   // The real club and its check-ins.
   club: [
     "Here's the part people miss. You're not only on the island's register. You're in the real club.",
-    "Every real TSI event has a check-in code at the door. Scan it and you're checked in.",
-    "That's what levels you up. Not fishing, not chores. Showing up.",
+    "The best way to earn coins, gems and experience is being part of TSI and coming to our events.",
+    "Every event has a check-in code at the door. Scan it and it all lands in your account.",
   ],
-  // Lore: real life counts, then the Founder's desk.
-  realLife: [
-    "The island measures you by what you do out there, not in here.",
-    "Come and see something. The desk by the notice board.",
+  // Coins and gems for real merch.
+  merch: [
+    "[happy] And here's the good bit. What you earn isn't stuck on the island.",
+    "Save it up and trade it for real TSI merch at the shop. Shirts, stickers, the lot.",
   ],
-  founder: [
-    "That's the Founder's desk. Nobody sits there.",
-    "The Founder left it for whoever came next.",
+  // The UI tour overlay opens after this.
+  tour: [
+    "Now, the practical bit. Let me show you where everything is.",
   ],
-  // The Esc menu and the map. `{esc}`: the key, or the menu button on a touch screen.
+  // Esc for real. `{esc}`: the key, or the menu button on a touch screen.
   menu: [
-    "Right. Practical things. {esc}",
-    "That's your menu: the map, your quests and journal, your bag, friends and mail. Open the map for me.",
+    "Last thing, then you're free. {esc}",
   ],
-  map: [
-    "[happy] That's the whole island. The village is open. The rest opens as the island gets to know you.",
-  ],
-  // The notice board and the club goals.
-  board: [
-    "Last thing. The notice board on the back wall. Have a read.",
-  ],
-  goals: [
-    "Those are the club goals. The café and the museum are the club's to fund.",
-    "Deliveries at the monument count, and so does showing up to real events. Everyone's bit goes in the same pot.",
-  ],
+  // The visit's end, Bram's tour already done (the village's order): off to the museum with your first find.
   farewell: [
+    "That's your menu: the map, your quests, your bag and collection, friends and mail.",
     "That's you registered. Bring your first find to the museum shell, then come back and tell me.",
     "Oh, and you'll want more than a rod. Odile has a spare net and Pim always has a shovel. Ask them.",
     "[happy] Welcome to Tethos Island, {name}.",
+  ],
+  // The visit's end with Bram's tour still on (HQ first): he's waiting outside.
+  farewellTour: [
+    "That's your menu: the map, your quests, your bag and collection, friends and mail.",
+    "[happy] That's you registered, {name}. Welcome to Tethos Island.",
+    "Bram's waiting for you outside. He'll show you the rest of the village.",
   ],
 };
 
@@ -71,14 +71,38 @@ export const escPhrase = (touch: boolean) => (touch ? "Tap the menu button." : "
 export const HQ_TITLE = "Register at HQ";
 export const HQ_TRACKER: Readonly<Record<string, string>> = {
   report: "Report to Alice at HQ",
+  lore: "Hear about Tethos",
   register: "Sign the island register",
   checkin: "Find out about check-ins",
-  founder: "Look at the Founder's desk",
+  merch: "Find out about real merch",
+  tour: "Learn the buttons",
   esc: "Open the menu ({esc})",
-  map: "Open the map",
-  board: "Read the notice board",
 };
 export const trackerEsc = (label: string, touch: boolean) => (touch ? label.replace(" ({esc})", "") : label.replaceAll("{esc}", "Esc"));
+
+/** The lore overlay (t-hq): a page at a time, over the room. DRAFTS. Tethos as it really is; the island's own lore stays light. */
+export const LORE_CARD = {
+  pages: [
+    { title: "Tethos", text: "Tethos is a tech nonprofit: people who build real things together, and look out for each other while they do it." },
+    { title: "The island", text: "Between events, this island is how its members stay connected. Fish, dig, decorate, study at the café, and find each other again." },
+    { title: "What counts", text: "The island measures you by what you do out there, not in here. Real events, real projects, real people." },
+  ],
+  next: "Next",
+  done: "Got it",
+} as const;
+
+/** The coins-and-merch card (t-hq): what each currency is for and how it's earned. Never a rate to real money. DRAFTS. */
+export const MERCH_CARD = {
+  eyebrow: "The real club",
+  title: "Earn it, wear it",
+  rows: [
+    { icon: "coins", name: "Coins", text: "From events, and from what you catch and sell. Spend them at the shop." },
+    { icon: "gems", name: "Gems", text: "Rarer. From events and club goals. They reserve real TSI merch." },
+    { icon: "xp", name: "Experience", text: "Only from real events. It's what levels you up." },
+  ],
+  note: "Reserve merch in the shop, and the club hands it to you in person.",
+  done: "Nice",
+} as const;
 
 /** The register's card (the front desk): your world name to sign with, then what signing issued. */
 export const REGISTER_CARD = {

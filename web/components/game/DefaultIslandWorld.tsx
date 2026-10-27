@@ -132,7 +132,8 @@ import { postArrival, useArrivalFlag } from "@/lib/game/arrival/arrivalFlag";
 import { BRAM, TUTORIAL_REWARD, type HintKeys } from "@/lib/game/arrival/lines";
 import { useMoveUnlocks } from "@/lib/game/moveUnlocks";
 import { useHqOnboarding } from "./hq/useHqOnboarding";
-import { CheckInCard, PlaqueCard, RegisterCard } from "./hq/HqCards";
+import { CheckInCard, LoreOverlay, MerchCard, PlaqueCard, RegisterCard } from "./hq/HqCards";
+import UiTour from "./hq/UiTour";
 import HqInterior from "./hq/HqInterior";
 import { HQ_LINES } from "@/lib/game/hqLayout";
 import { hqEvent } from "@/lib/game/arrival/hq/store";
@@ -835,7 +836,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const touch = useCoarsePointer() || devHome.get("touch") === "1";
   // Row 312: the HQ visit with Alice after Bram's tour, and the tools residents hand over (components/game/hq).
   const closeMenu = useCallback(() => setLayer(null), []);
-  const hq = useHqOnboarding({ inside, free: ready && !fading && !sheet && !mapOpen && !bagOpen && !donateOpen && !talking, menuOpen: layer === "ui", mapOpen,
+  const hq = useHqOnboarding({ inside, free: ready && !fading && !sheet && !mapOpen && !bagOpen && !donateOpen && !talking, menuOpen: layer === "ui",
     touch, name: identity.signedIn ? identity.display_name : null, owned: peaceful.owned, arriving: arrivalPhase !== null, closeMenu }, DEV ? devHome : null);
   const hqArrived = hq.arrived;
   // Mouse-look (specs/camera-orbit.md): the hint while the mouse is free, the crosshair while it looks in the ruins.
@@ -864,6 +865,10 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // Bram's hints name your own keys (or say it for a touch screen).
   const hintKeys = useMemo<HintKeys>(() => ({ move: [moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(keyName).join(" "), jump: keyName(moveKeys.jump),
     wheel: keyName(wheelKeys.wheel), bag: keyName(identity.settings.key_bindings.openJournal), touch }), [moveKeys, wheelKeys.wheel, identity.settings.key_bindings.openJournal, touch]);
+  // Alice's UI tour names your own keys too (t-hq).
+  const binds = identity.settings.key_bindings;
+  const tourKeys = useMemo(() => ({ move: hintKeys.move, jump: hintKeys.jump, wheel: hintKeys.wheel, hud: keyName(wheelKeys.hud), map: keyName(binds.openMap),
+    mail: keyName(binds.openMail), collection: keyName(binds.openJournal), bag: keyName(binds.openBag) }), [hintKeys, wheelKeys.hud, binds]);
   const armed = useCombatValue(() => combat.rt.player.armed);
   const weaponList = useCombatValue(() => combat.rt.player.owned.join(","));
   const runtimeWeapon = useCombatValue(() => combat.rt.player.weapon);
@@ -963,7 +968,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     if ((!DROPS.homeIsland && (action === "home" || action === "claim")) || (!DROPS.combat && (action === "ruins" || action === "missions"))
       || (!DROPS.oracle && action === "oracle_enter") || (!DROPS.cafe && (action === "cafe" || action === "cafe_enter"))) return;
     // The plaza's board and HQ's own (the visit with Alice waits for you to read it there).
-    if (action === "notice" || action === "board") { setSheet("notice"); if (action === "board") hqEvent("board"); return; }
+    if (action === "notice" || action === "board") { setSheet("notice"); return; }
     if (action === "founder") { setSheet("plaque"); return; }
     // HQ's coffee bar, aquarium and locked admin doors: a line each, nothing more (principle 3: no reward for visiting).
     if (action === "coffee" || action === "aquarium" || action === "admin") { toast(HQ_LINES[action], action === "coffee" ? iconUrl("lounge-tea") : undefined); return; }
@@ -1283,7 +1288,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <AudioController phase={ambientPhase} weather={weather} season={season.season} />
       {/* Top right (playtest round 1, decision 3): while you play, the quest line left of the minimap, the time under it;
           the UI view (Esc 1) grows the minimap and adds coins, the level and the gear left of the quest line. */}
-      <div className={styles.hudRight} data-hidden={hudCinematic || undefined}>
+      <div className={styles.hudRight} data-hud-right="" data-hidden={hudCinematic || undefined}>
         <div className={styles.hudLead} data-new={objectiveNew || undefined}>
           <TopCluster className={styles.rightCluster} full={full} buttons={uiView} hidden={hudCinematic}
             onWallet={() => setSheet(value => (value === "wallet" ? null : "wallet"))} walletKey={keyName(identity.settings.key_bindings.openWallet)}>
@@ -1371,7 +1376,10 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       {/* The HQ visit's cards (row 312): the register, where the check-in code goes, the Founder's plaque. */}
       <RegisterCard open={hq.card === "register"} name={identity.signedIn ? identity.display_name : null} friendCode={friends.view?.code ?? null} letters={progression.unreadLetters ?? null} onDone={() => hqEvent("signed")} />
       <CheckInCard open={hq.card === "checkin"} onDone={() => hqEvent("checkin")} />
-      <PlaqueCard open={sheet === "plaque"} onClose={() => { setSheet(null); hqEvent("founder"); }} />
+      <PlaqueCard open={sheet === "plaque"} onClose={() => setSheet(null)} />
+      <LoreOverlay open={hq.card === "lore"} onDone={() => hqEvent("lore")} />
+      <MerchCard open={hq.card === "merch"} onDone={() => hqEvent("merch")} />
+      <UiTour open={hq.card === "tour"} keys={tourKeys} touch={touch} onDone={() => hqEvent("tour")} />
       <ShopkeeperChoice open={sheet === "shopkeeper"} onClose={() => setSheet(null)} onChoose={section => {
         setShopSection(section);
         if (section === "merch") window.dispatchEvent(new CustomEvent("tsi:shopkeeper-say", { detail: { line: MERCH_LINE, clip: "Chat" } }));
