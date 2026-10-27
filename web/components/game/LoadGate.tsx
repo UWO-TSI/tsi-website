@@ -46,27 +46,24 @@ function uploadTextures(gl: THREE.WebGLRenderer, scene: THREE.Scene) {
 /**
  * Lights that come and go with the time of day (IslandAtmosphere's rim, at dawn and dusk): a light count changing
  * relinks every lit material. Each material keeps the programs it has had, so compiling it once more for the other
- * light count makes the switch free later, at no cost to any frame. The live scene is never touched: the other count
- * is a stand-in set of lights (copies on their own layer, the rim added or left out) that the compile reads instead.
+ * light count makes the switch free later, at no cost to any frame. The toggle and its compile happen in one go, with
+ * no frame drawn between (`compile` only issues the links; they finish in parallel, long before dawn).
  */
 const TRANSIENT_LIGHTS = ["rim"];
-const STAND_IN = 30;
 
-function otherLights(scene: THREE.Scene, name: string): THREE.Scene {
-  const stand = new THREE.Scene(), there = scene.getObjectByName(name);
-  stand.fog = scene.fog; stand.environment = scene.environment;
-  scene.traverseVisible(o => { if ((o as THREE.Light).isLight && o !== there) { const c = o.clone(false); c.layers.set(STAND_IN); stand.add(c); } });
-  if (!there) { const c = new THREE.DirectionalLight(0x000000, 0); c.layers.set(STAND_IN); stand.add(c); }
-  return stand;
+function compileOtherLights(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) {
+  if (!scene.getObjectByProperty("type", "HemisphereLight")) return; // not a lit island scene
+  for (const name of TRANSIENT_LIGHTS) {
+    const there = scene.getObjectByName(name), stand = there ? null : Object.assign(new THREE.DirectionalLight(0x000000, 0), { name });
+    if (there) there.visible = false; else scene.add(stand!);
+    try { gl.compile(scene, camera); } finally { if (there) there.visible = true; else scene.remove(stand!); }
+  }
 }
 
-export async function warmHidden(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) {
+export function warmHidden(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) {
   uploadTextures(gl, scene);
-  await gl.compileAsync(scene, camera);
-  if (!scene.getObjectByProperty("type", "HemisphereLight")) return; // not a lit island scene
-  const eye = camera.clone();
-  eye.layers.set(STAND_IN);
-  for (const name of TRANSIENT_LIGHTS) await gl.compileAsync(scene, eye, otherLights(scene, name));
+  compileOtherLights(gl, scene, camera);
+  return gl.compileAsync(scene, camera);
 }
 
 export function WarmupProbe({ onReady }: { onReady: () => void }) {
