@@ -316,9 +316,10 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     setFish(hooked);
     const tier = HOOK_TIER[hooked.rarity];
     let mode = bossOf(hooked.rarity);
-    // A divine opens the shard's raid (protocol.ts note 11) for the roll on your line; with no room to raid in, it's yours alone.
-    const at = spotRef.current, roll = landRef.current?.roll;
-    if (mode === "shared" && !(roll && at && sendRaid({ op: "open", fish: hooked.key, roll, x: at.x, z: at.z }))) mode = "solo";
+    // A divine opens the shard's raid (protocol.ts note 11) for the roll on your line (the web checks it before any credit;
+    // a dev room without one names a stand-in); with no room to raid in, it's yours alone.
+    const at = spotRef.current, roll = landRef.current?.roll ?? crypto.randomUUID();
+    if (mode === "shared" && !(at && sendRaid({ op: "open", fish: hooked.key, roll, x: at.x, z: at.z }))) mode = "solo";
     setBossMode(mode);
     if (!mode) changePhase("reeling");
     else {
