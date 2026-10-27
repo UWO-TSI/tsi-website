@@ -31,7 +31,7 @@ for (const time of ["day", "evening", "night"]) {
   await page.goto(`http://localhost:${PORT}/student/dashboard?time=${time}&weather=clear&season=summer`);
   // Signed out with no look saved, the character creator opens first: skip it.
   await page.getByRole("button", { name: "Skip", exact: true }).click({ timeout: 120000 }).catch(() => {});
-  await page.waitForFunction(() => document.querySelector("canvas") && ![...document.querySelectorAll("[role=status]")].some(e => e.textContent.includes("Preparing the island")), null, { timeout: 120000, polling: 250 })
+  await page.waitForFunction(() => document.querySelector("canvas") && ![...document.querySelectorAll("[role=status]")].some(e => /Preparing the island|Tethos Island/.test(e.textContent) && !e.hasAttribute("data-leaving")), null, { timeout: 120000, polling: 250 })
     .catch(async e => { await page.screenshot({ path: `${OUT}/${PREFIX}-${time}-stuck.png` }); console.log(await page.evaluate(() => document.body.innerText.slice(0, 300))); throw e; });
   await page.waitForTimeout(4000);
   await page.screenshot({ path: `${OUT}/${PREFIX}-${time}.png` });

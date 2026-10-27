@@ -81,7 +81,7 @@ await ctx.addInitScript(() => {
   setInterval(() => {
     if (document.querySelector("main[data-ready]")) mark("title ready");
     if (document.querySelector("canvas")) mark("first canvas");
-    const loading = [...document.querySelectorAll("[role=status]")].find(e => e.textContent.includes("Preparing the island"));
+    const loading = [...document.querySelectorAll("[role=status]")].find(e => /Preparing the island|Tethos Island/.test(e.textContent));
     if (loading) { mark("loading screen"); mark(`loading: ${loading.querySelector("p")?.textContent}`); if (loading.hasAttribute("data-leaving")) mark("world ready"); }
     else if (seen.has("loading screen")) mark("world ready");
     const s = window.__arrival?.state?.();
@@ -255,7 +255,8 @@ writeFileSync(`${OUT}/${LABEL}.json`, JSON.stringify({ title, world }));
 // MANIFEST=1: the island's own static files, in the order it asked for them, for the title page to prefetch
 // (web/lib/game/preloadAssets.ts). Built files (/_next) are left to the title, which reads them from the build itself.
 if (process.env.MANIFEST === "1") {
-  const seen = new Set(), list = [];
+  const seen = new Set(), list = [], ready = world.marks.find(m => m[1] === "world ready")?.[0] ?? Infinity;
+  const readyFiles = world.res.filter(r => r.t0 < ready && /\.(glb|gltf|png|jpe?g|webp|ktx2)$/.test(new URL(r.url).pathname) && !r.url.includes("/_next/")).length;
   for (const r of [...world.res].sort((a, b) => a.t0 - b.t0)) {
     const u = new URL(r.url);
     if (u.origin !== BASE || !/\.(glb|gltf|bin|png|jpe?g|webp|ktx2|ogg|mp3|wav|m4a)$/.test(u.pathname) || u.pathname.startsWith("/_next/") || seen.has(u.pathname)) continue;
@@ -269,6 +270,9 @@ if (process.env.MANIFEST === "1") {
 export const GAME_ASSETS: readonly string[] = [
 ${list.map(p => `  ${JSON.stringify(p)},`).join("\n")}
 ];
+
+/** How many models and textures the island had asked for when its loading screen lifted: the loading screen's floor for "of how many". */
+export const READY_FILES = ${readyFiles};
 `);
   console.log(`wrote web/lib/game/preloadAssets.ts: ${list.length} files`);
 }

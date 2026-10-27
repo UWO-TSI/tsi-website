@@ -349,3 +349,6 @@ export const GAME_ASSETS: readonly string[] = [
   "/audio/sfx/blip4.ogg",
   "/audio/sfx/footstep.ogg",
 ];
+
+/** How many models and textures the island had asked for when its loading screen lifted: the loading screen's floor for "of how many". */
+export const READY_FILES = 336;

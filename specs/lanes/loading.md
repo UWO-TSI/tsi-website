@@ -37,11 +37,14 @@ Head: see `git log` (2026-10-27). Main f9f4dc5d merged. Nothing approved or merg
   - the new world's `terrainOf` and `terrainShoreField` run in a worker (`lib/game/world/derive.ts`,
     `deriveWorker.ts`, seeded by `load.ts`; `derive.test.ts` proves identical bytes; coordinator asked for this);
   - `AudioManager.prepare()` behind the loading screen.
-- Gates: running (tsc, vitest with and without NEXT_PUBLIC_GAME_WORLD=new, eslint on changed files).
-- **Step 5 (the new loading screen) in progress:** `lib/game/loadProgress.ts` (+test, the real progress store: code,
-  world, files, warm-up) is written but not wired; the component draft is in the session scratchpad (`step5/`). Idea:
-  our island's map plate (the minimap's plot) coming out of the arrival's mist, Bram's boat rowing a sea line to the
-  dock as the real progress, percent under it, cream kit. Shots to the coordinator for David before it ships.
+- Coordinator merged d9a48a35 (steps 2 to 4) into main locally and runs the full vitest and build on it.
+- Crossing warm-up (coordinator's spare-time item): ArrivalWorld mounts Bram aboard and the crates from "aboard" (the
+  island is paused under the creator) and compiles the scene (`WarmCrossing`); verified: crossing 1 long frame (76 ms),
+  the remaining links there are small (fireflies, dig spots, the env map's PMREM).
+- **Step 5 built, waiting for David's review:** `specs/evidence/loading/loading-screen.md`, `screen-sequence-1280.png`,
+  `screen-1920.png`. `IslandLoading.tsx/.module.css` rewritten, progress store `lib/game/loadProgress.ts` (+test),
+  wired in DefaultIslandWorld (code, world, files of max(total, READY_FILES)) and WarmupProbe (warm frames).
+  Not to ship before David approves.
 - perf:check (`SCENES=village,v2`) still to run once at the end.
 
 ## Tools and gotchas

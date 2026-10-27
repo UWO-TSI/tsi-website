@@ -117,6 +117,7 @@ import ShopCounter from "./ShopCounter";
 import ShopkeeperChoice, { MERCH_LINE, type ShopSection } from "./ShopkeeperChoice";
 import IslandLoading from "./IslandLoading";
 import { setLoadPart } from "@/lib/game/loadProgress";
+import { READY_FILES } from "@/lib/game/preloadAssets";
 import { loadGameWorld } from "@/lib/game/world/load";
 import { GAME_WORLD } from "@/lib/game/world/active";
 import TalkBox from "./TalkBox";
@@ -696,10 +697,11 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
 
 /** The cream loading screen until the first warm-up (`ready`), then a fade; an asset that fails to load gets a reload card. */
 function LoadingStatus({ ready, plot }: { ready: boolean; plot: MiniMapPlot }) {
-  const { active, progress, errors } = useProgress();
+  const { active, progress, loaded, total, errors } = useProgress();
   const [gone, setGone] = useState(false);
   useEffect(() => { if (!ready) return; const t = window.setTimeout(() => setGone(true), 700); return () => window.clearTimeout(t); }, [ready]);
-  useEffect(() => { if (!ready) setLoadPart("files", progress / 100); }, [progress, ready]);
+  // Of how many: the loader's count so far, or what a whole first load asks for, whichever is more (no stall at a wave's end).
+  useEffect(() => { if (!ready) setLoadPart("files", loaded / Math.max(total, READY_FILES)); }, [loaded, total, ready]);
   return <>
     {!gone && <IslandLoading stage={active ? "loading" : progress >= 100 ? "warming" : "start"} leaving={ready} plot={plot} />}
     {errors.length > 0 && <div className={styles.loading} role="alert">An island asset could not load.<button className={styles.return} onClick={() => window.location.reload()}>Reload island</button></div>}
