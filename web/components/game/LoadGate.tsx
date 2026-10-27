@@ -44,10 +44,22 @@ function uploadTextures(gl: THREE.WebGLRenderer, scene: THREE.Scene) {
 }
 
 /**
+ * Every material in the scene compiled for its lights, object by object: three's `compile` stops at the first object
+ * that throws, which left most of the island to compile on first sight (57 of 156 programs, measured). `compile` only
+ * issues the links; `settle` waits for them, in parallel (KHR_parallel_shader_compile).
+ */
+function compileEach(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) {
+  scene.traverse(o => { if ((o as THREE.Mesh).material) try { gl.compile(o, camera, scene); } catch { /* drawn and compiled when first seen */ } });
+}
+async function settle(gl: THREE.WebGLRenderer) {
+  for (let i = 0; i < 1500 && gl.info.programs?.some(p => !(p as unknown as { isReady: () => boolean }).isReady()); i++) await new Promise(r => setTimeout(r, 10));
+}
+
+/**
  * Lights that come and go with the time of day (IslandAtmosphere's rim, at dawn and dusk): a light count changing
  * relinks every lit material. Each material keeps the programs it has had, so compiling it once more for the other
  * light count makes the switch free later, at no cost to any frame. The toggle and its compile happen in one go, with
- * no frame drawn between (`compile` only issues the links; they finish in parallel, long before dawn).
+ * no frame drawn between.
  */
 const TRANSIENT_LIGHTS = ["rim"];
 
@@ -56,14 +68,15 @@ function compileOtherLights(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera:
   for (const name of TRANSIENT_LIGHTS) {
     const there = scene.getObjectByName(name), stand = there ? null : Object.assign(new THREE.DirectionalLight(0x000000, 0), { name });
     if (there) there.visible = false; else scene.add(stand!);
-    try { gl.compile(scene, camera); } finally { if (there) there.visible = true; else scene.remove(stand!); }
+    try { compileEach(gl, scene, camera); } finally { if (there) there.visible = true; else scene.remove(stand!); }
   }
 }
 
-export function warmHidden(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) {
+export async function warmHidden(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) {
   uploadTextures(gl, scene);
+  compileEach(gl, scene, camera);
   compileOtherLights(gl, scene, camera);
-  return gl.compileAsync(scene, camera);
+  await settle(gl);
 }
 
 export function WarmupProbe({ onReady }: { onReady: () => void }) {
