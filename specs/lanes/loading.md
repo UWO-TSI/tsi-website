@@ -23,26 +23,18 @@ Steps 2 to 4 are fixes and can ship once verified; step 5 is visual and waits fo
 
 ## Status
 
-Head: see `git log` (2026-10-27). Main f9f4dc5d merged. Nothing approved or merged yet.
+Head: see `git log` (2026-10-27). Main has steps 2 to 4 and the crossing warm-up (pushed: d9a48a35 + e65df2df).
 
-- **Step 1 done:** `specs/evidence/loading/baseline.md`.
-- **Steps 2 to 4 done and verified in the browser:** `specs/evidence/loading/after.md` (fast cold 20.0 -> 7.6 to 9.0 s,
-  slow warm 18.7 -> 8.0 s; crossing 155 to 226 long frames -> 0 or 1; landing, walk-along, first minute -> 0) and the
-  rim look check `rim-{day,evening,night}-before-after.png`. What changed:
-  - title prefetch: `components/title/preloadGame.ts` (called from TitleScene's Ready), list `lib/game/preloadAssets.ts`
-    (generated, 345 files, test `preloadAssets.test.ts`), plus the island's code chunks read from `/student/dashboard`;
-  - rim light always mounted (`IslandAtmosphere.tsx`);
-  - `WarmupProbe` compiles the whole scene (compileAsync) and uploads textures at COMPILE_AT and waits
-    (`sceneGate.ts` holds the count); UltWarmup deleted (folded in);
-  - the new world's `terrainOf` and `terrainShoreField` run in a worker (`lib/game/world/derive.ts`,
-    `deriveWorker.ts`, seeded by `load.ts`; `derive.test.ts` proves identical bytes; coordinator asked for this);
-  - `AudioManager.prepare()` behind the loading screen.
-- Gates: running (tsc, vitest with and without NEXT_PUBLIC_GAME_WORLD=new, eslint on changed files).
-- **Step 5 (the new loading screen) in progress:** `lib/game/loadProgress.ts` (+test, the real progress store: code,
-  world, files, warm-up) is written but not wired; the component draft is in the session scratchpad (`step5/`). Idea:
-  our island's map plate (the minimap's plot) coming out of the arrival's mist, Bram's boat rowing a sea line to the
-  dock as the real progress, percent under it, cream kit. Shots to the coordinator for David before it ships.
-- perf:check (`SCENES=village,v2`) still to run once at the end.
+- Step 1: `specs/evidence/loading/baseline.md`. Steps 2 to 4: `specs/evidence/loading/after.md` (fast cold 20.0 -> 7.4
+  to 9.0 s, slow warm 18.7 -> 8.0 s; crossing 155 to 226 long frames -> 1).
+- **Rim re-verify done, not yet merged (coordinator cherry-picks after the report):** a3f1ef69..14699fd2. The rim is
+  per phase again (always on cost v2 +4%); the warm-up compiles the other light count; it compiles for the PostFX
+  target's linear output (it had been compiling sRGB programs the frame never used); object by object; the golden
+  island starts aboard. Numbers in `after.md` "Re-verify". tsc clean after it.
+- **Step 5 built, waiting for David's review:** `specs/evidence/loading/loading-screen.md`, `screen-sequence-1280.png`,
+  `screen-1920.png`; commits 614d8616, ff626290. Not to ship before David approves.
+- perf baseline: left to the coordinator's combined check (asked).
+- Then stop, unless David's review comes back.
 
 ## Tools and gotchas
 
@@ -61,6 +53,9 @@ Head: see `git log` (2026-10-27). Main f9f4dc5d merged. Nothing approved or merg
 - Noise: the Metal shader cache survives fresh browser profiles, so "cold" runs after the first compile faster; machine
   load moves world-ready by seconds. Compare program links and long-frame counts, not single timings.
 - Playwright clicks on the creator's Yes fail (animated): click through `$eval(..., b => b.click())`.
+- To see three's program cache in a page: an init script setting `window.__THREE_DEVTOOLS__ = new EventTarget()` that
+  collects `observe` events gets every renderer and scene (`renderer.info.programs[i].cacheKey`, `renderer.properties`).
+- `load-trace.mjs` takes `TIME=night|day|evening`; each linked program is recorded with its defines.
 
 ## Rules
 
