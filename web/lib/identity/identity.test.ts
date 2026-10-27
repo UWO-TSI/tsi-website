@@ -26,6 +26,7 @@ describe("name filter", () => {
     ["Admin", false],
     ["TSI Official", false],
     ["Keeper", false],
+    ["You", false],
     ["shit head", false],
     ["sh1thead", false],
     ["xXfuckXx", false],

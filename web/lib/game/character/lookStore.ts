@@ -7,6 +7,7 @@
  */
 import { useSyncExternalStore } from "react";
 import { DEFAULT_LOOK, parseLook, type CharacterLook } from "./look";
+import { refreshCard } from "@/lib/net/netStore";
 
 const KEY = "tsi.look.v1";
 export interface MyLook { look: CharacterLook; saved: boolean; loaded: boolean; signedIn: boolean }
@@ -23,6 +24,7 @@ async function pushRemote(look: CharacterLook): Promise<string | null> {
     const res = await fetch("/api/profile", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ avatar_config: { ...avatarConfig, look } }) });
     if (!res.ok) return "Saved on this device; your account didn't take it.";
     avatarConfig = { ...avatarConfig, look };
+    refreshCard(); // the others see it once the server re-reads your card
     return null;
   } catch { return "Saved on this device; your account didn't take it."; }
 }

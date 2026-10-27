@@ -162,7 +162,7 @@ export default function RemoteAvatars({ source, area, player }: { source: NetSou
     const at = { x: 0, y: 0, depth: 0 };
     Object.assign(window, { __net: {
       remotes: () => driver.store.list.map(r => ({
-        sid: r.sid, name: r.entry.player.name, x: r.sample.x, y: r.sample.y, z: r.sample.z, tier: (["full", "reduced", "hidden"] as const)[r.lod.tier],
+        sid: r.sid, name: r.entry.player.name, look: r.entry.player.look, x: r.sample.x, y: r.sample.y, z: r.sample.z, tier: (["full", "reduced", "hidden"] as const)[r.lod.tier],
         dist: r.lod.dist, inView: r.lod.inView, plate: r.lod.plate, aura: r.lod.aura, seated: r.seated, pose: r.motion.pose ?? null, move: r.motion.move ?? null,
         speed: r.motion.speed, mobile: r.entry.player.mobile, held: r.entry.player.held, weapon: r.entry.player.weapon,
       })),

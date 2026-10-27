@@ -13,7 +13,9 @@ export const NAME_MIN = 3;
 export const NAME_MAX = 16;
 export const NAME_CHANGE_COOLDOWN_DAYS = 30;
 
-const RESERVED = ["admin", "administrator", "moderator", "mod", "staff", "tsi", "tethos", "oracle", "keeper", "system", "support", "official", "villagehall", "president", "exec", "null", "undefined", "anonymous", "member", "guest"];
+const RESERVED = ["admin", "administrator", "moderator", "mod", "staff", "tsi", "tethos", "oracle", "keeper", "system", "support", "official", "villagehall", "president", "exec", "null", "undefined", "anonymous", "member", "guest",
+  // your nameplate before you have a name (lib/game/identity.ts); "Islander" stays the moderators' reset name
+  "you"];
 const LEET: Record<string, string> = { "0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "8": "b", "@": "a", $: "s" };
 
 /** Collapse spaces and trim; keep the member's casing for display. */
