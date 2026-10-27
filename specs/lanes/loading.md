@@ -23,22 +23,26 @@ Steps 2 to 4 are fixes and can ship once verified; step 5 is visual and waits fo
 
 ## Status
 
-Head e75bc22a (2026-10-27). Nothing approved or merged yet.
+Head: see `git log` (2026-10-27). Main f9f4dc5d merged. Nothing approved or merged yet.
 
-- **Step 1 done:** `specs/evidence/loading/baseline.md` (fast/slow x cold/warm, plus a profiled run). World ready 7.6 to
-  20 s after Let's Play on an M4 (the network is not the limit: slow and fast cold are alike); the crossing and the
-  landing relink 61 programs because the rim light only exists at dawn/dusk (2.6 to 4.2 s of stutter); first-sight
-  shader compiles; ~100 ms GPU-process frames through aboard, the creator and the walk-along on a cold GPU cache; terrain
-  derivation ~1.6 s of main thread (grid.ts `deriveShape`/`blurCells`, the shore SDF: terrain lanes' code, not touched);
-  a 195 ms `new AudioContext()` at the first campfire.
-- **Steps 2 to 4 committed, not yet verified in the browser:**
-  - title prefetch: `components/title/preloadGame.ts` (called from TitleScene's Ready), list in `lib/game/preloadAssets.ts`
-    (generated, 345 files) plus the island's code chunks read from `/student/dashboard`'s HTML and page chunk;
+- **Step 1 done:** `specs/evidence/loading/baseline.md`.
+- **Steps 2 to 4 done and verified in the browser:** `specs/evidence/loading/after.md` (fast cold 20.0 -> 7.6 to 9.0 s,
+  slow warm 18.7 -> 8.0 s; crossing 155 to 226 long frames -> 0 or 1; landing, walk-along, first minute -> 0) and the
+  rim look check `rim-{day,evening,night}-before-after.png`. What changed:
+  - title prefetch: `components/title/preloadGame.ts` (called from TitleScene's Ready), list `lib/game/preloadAssets.ts`
+    (generated, 345 files, test `preloadAssets.test.ts`), plus the island's code chunks read from `/student/dashboard`;
   - rim light always mounted (`IslandAtmosphere.tsx`);
-  - `WarmupProbe` compiles the whole scene (compileAsync) and uploads its textures at COMPILE_AT and waits; UltWarmup
-    deleted (folded in);
+  - `WarmupProbe` compiles the whole scene (compileAsync) and uploads textures at COMPILE_AT and waits
+    (`sceneGate.ts` holds the count); UltWarmup deleted (folded in);
+  - the new world's `terrainOf` and `terrainShoreField` run in a worker (`lib/game/world/derive.ts`,
+    `deriveWorker.ts`, seeded by `load.ts`; `derive.test.ts` proves identical bytes; coordinator asked for this);
   - `AudioManager.prepare()` behind the loading screen.
-- Step 5 (the new loading screen) not started.
+- Gates: running (tsc, vitest with and without NEXT_PUBLIC_GAME_WORLD=new, eslint on changed files).
+- **Step 5 (the new loading screen) in progress:** `lib/game/loadProgress.ts` (+test, the real progress store: code,
+  world, files, warm-up) is written but not wired; the component draft is in the session scratchpad (`step5/`). Idea:
+  our island's map plate (the minimap's plot) coming out of the arrival's mist, Bram's boat rowing a sea line to the
+  dock as the real progress, percent under it, cream kit. Shots to the coordinator for David before it ships.
+- perf:check (`SCENES=village,v2`) still to run once at the end.
 
 ## Tools and gotchas
 
