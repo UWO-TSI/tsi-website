@@ -3,8 +3,8 @@ import {
   checkDonation, clampSize, journalPage, museumWings, trophyFor, validateShowcase, weekStart, weeklyTrophies,
   type Exhibit, type JournalPage, type MuseumWing, type Trophy, type WorldMoment,
 } from "./logic";
-import { castWater, fishRoll, forageSize, nodeAt, nodeRoll } from "./rolls";
-import { CATEGORIES, ROSTER, type Category } from "./roster";
+import { castWater, closedBiomes, fishRoll, forageSize, nodeAt, nodeRoll } from "./rolls";
+import { CATEGORIES, ROSTER, type Biome, type Category } from "./roster";
 import { TREATS } from "./treats";
 import { toFailure, type Result } from "@/lib/result";
 import { hourKey } from "@/lib/game/peaceful";
@@ -93,8 +93,8 @@ export async function catchAction(
     if (!water) return { ok: false, status: 422, code: "wrong_place", error: "No water in reach." };
     const held = checkHeld(req.tool, "rod", await store.ownedGear(memberId));
     if (!held.ok) return held;
-    const [sky, active] = await Promise.all([weather(), goals()]);
-    const { fish, size } = fishRoll(water, req.power, rodByTier(held.tool.tier), now, sky, random, eventCatches(active, now));
+    const [sky, active, buff] = await Promise.all([weather(), goals(), store.buff(memberId, now)]);
+    const { fish, size } = fishRoll(water, req.power, rodByTier(held.tool.tier), now, sky, random, eventCatches(active, now), buff ?? undefined);
     const sp = ROSTER.find((s) => s.key === fish.key);
     const kept = clampSize(sp, size);
     const roll = await store.cast(memberId, fish.key, kept, trophyFor(sp, kept));
@@ -119,11 +119,11 @@ export async function eat(store: CollectionsStore, memberId: string, body: unkno
   }
 }
 
-export async function journal(store: CollectionsStore, memberId: string, category: string, moment: WorldMoment): Promise<Result<JournalPage & { categories: { category: Category; total: number; discovered: number }[] }>> {
+export async function journal(store: CollectionsStore, memberId: string, category: string, moment: WorldMoment, closed: ReadonlySet<Biome> = closedBiomes()): Promise<Result<JournalPage & { categories: { category: Category; total: number; discovered: number }[] }>> {
   if (!(CATEGORIES as string[]).includes(category)) return { ok: false, status: 400, error: "Unknown category.", code: "invalid" };
   try {
     const [roster, mine, donations] = await Promise.all([store.roster(), store.memberItems(memberId), store.donations()]);
-    const page = journalPage(roster, category as Category, mine, donations, memberId, moment);
+    const page = journalPage(roster, category as Category, mine, donations, memberId, moment, closed);
     const owned = new Set(mine.map((r) => r.item_key));
     const categories = CATEGORIES.map((c) => {
       const list = roster.filter((s) => s.category === c);

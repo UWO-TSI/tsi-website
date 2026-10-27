@@ -22,6 +22,7 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
   const rolls = new Map<string, { member: string; key: string; size: number | null; trophy: boolean; at: number; landed: boolean }>();
   const harvests = new Set<string>(); // `${member}:${node}:${hourKey}`
   const gear = new Map<string, string[]>();
+  const buffs = new Map<string, { luck: number; size: number; until: Date }>(); // member_buffs
   const taught = new Set<string>(); // members who arrived under row 312
   const locks = new Set<string>(); // `${member}:${key}`
   const chest = new Map<string, number>(); // `${member}:${key}`
@@ -147,6 +148,10 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
     async tourneyEntries(goalId, cycle) {
       return [...entries.values()].filter((e) => e.goal === `${goalId}:${cycle}`).map(({ goal: _g, ...e }) => (void _g, { ...e, member_name: names.get(e.member_id) ?? "Member" }));
     },
+    async buff(m, at) {
+      const b = buffs.get(m);
+      return b && b.until > at ? b : null;
+    },
     async showcase(m) {
       return showcases.get(m) ?? [null, null, null];
     },
@@ -204,6 +209,8 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
   };
   return {
     store, name: (id: string, n: string) => names.set(id, n),
+    /** A meal at the sushi bar (tests, the dev demo): its buff until `until`. */
+    feed: (m: string, luck: number, size: number, until: Date) => buffs.set(m, { luck, size, until }),
     /** A catch recorded directly (tests, the dev demo): the species' size clamp and trophy rule, then the capped record. */
     record: (m: string, key: string, sizeCm: number | null) => {
       const sp = ROSTER.find((s) => s.key === key), size = clampSize(sp, sizeCm);

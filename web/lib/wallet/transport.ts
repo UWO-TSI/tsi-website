@@ -1,6 +1,7 @@
 /** Economy transport: /api/economy/* by default; in-memory for the dev harness. */
 import { apiCall } from "@/lib/apiClient";
-import type { FishRequestsView, InventoryView, ShopView, SellEntry, WalletView } from "./service";
+import type { FishRequestsView, InventoryView, ShopView, SellEntry, SushiView, WalletView } from "./service";
+import type { ActiveBuff } from "./store";
 import type { Reservation } from "./store";
 
 export interface MerchView {
@@ -15,7 +16,9 @@ export interface EconomyTransport {
   sellable(): Promise<SellEntry[]>;
   sell(itemKey: string, qty: number, key: string): Promise<{ balance: number; remaining: number; paid: number; replayed: boolean }>;
   requests(): Promise<FishRequestsView>;
-  fillRequest(itemKey: string, key: string): Promise<{ balance: number; remaining: number; paid: number; replayed: boolean }>;
+  fillRequest(itemKey: string, key: string, board?: "market" | "chef"): Promise<{ balance: number; remaining: number; paid: number; replayed: boolean }>;
+  sushi(): Promise<SushiView>;
+  order(dish: string, key: string, fish?: string): Promise<{ balance: number; paid: number; buff: ActiveBuff; replayed: boolean }>;
   inventory(): Promise<InventoryView>;
   equip(itemId: string, equipped: boolean): Promise<InventoryView>;
   dailyGift(): Promise<{ coins: number; balance: number; claimed: boolean; day: string }>;
@@ -34,7 +37,9 @@ export const httpEconomyTransport: EconomyTransport = {
   sellable: () => call("sell", "sellable"),
   sell: (item_key, qty, idempotency_key) => call("sell", "sale", { item_key, qty, idempotency_key }),
   requests: () => call("requests", "requests"),
-  fillRequest: (item_key, idempotency_key) => call("requests", "fill", { item_key, idempotency_key }),
+  fillRequest: (item_key, idempotency_key, board) => call("requests", "fill", { item_key, board, idempotency_key }),
+  sushi: () => call("sushi", "sushi"),
+  order: (dish, idempotency_key, fish) => call("sushi", "order", { dish, fish, idempotency_key }),
   inventory: () => call("inventory", "inventory"),
   equip: (item_id, equipped) => call("equip", "inventory", { item_id, equipped }),
   dailyGift: () => call("daily-gift", "gift", {}),

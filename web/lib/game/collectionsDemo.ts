@@ -9,7 +9,9 @@
 import { memoryCollectionsStore } from "@/lib/collections/memoryStore";
 import { torontoParts } from "@/lib/time";
 import { bagAction, bagView, catchAction, donate, getShowcase, journal, museum, records, setShowcase, tourney, trophies } from "@/lib/collections/service";
-import { fishRequests, sellPrice, speciesClass, torontoDay } from "@/lib/wallet/rules";
+import { chefOrder, fishRequests, sellPrice, speciesClass, torontoDay } from "@/lib/wallet/rules";
+import { SUSHI_MENU } from "@/lib/wallet/catalogue";
+import type { ActiveBuff } from "@/lib/wallet/store";
 import { memoryEconomyStore } from "@/lib/wallet/memoryStore";
 import { buy, getShop } from "@/lib/wallet/service";
 import { ROSTER } from "@/lib/collections/roster";
@@ -44,7 +46,9 @@ export function installCollectionsDemo(): void {
     // The fish market's requests (f-requests) as the server would pick them on a world with sea and river; `?requests=1`
     // puts one of each of today's first two in the pockets, so the board has something to hand over.
     const filled = new Set<string>(), requestsToday = () => fishRequests(torontoDay(new Date()), ["sea", "river"]);
-    if (query.get("requests")) for (const r of requestsToday().slice(0, 2)) m.give(ME, r.item_key, 1);
+    const chefToday = () => chefOrder(torontoDay(new Date()), ["sea", "river"]);
+    let meal: ActiveBuff | null = null;
+    if (query.get("requests")) for (const r of [...requestsToday().slice(0, 2), chefToday()]) if (r) m.give(ME, r.item_key, 1);
     [...OTHERS, ...ANGLERS].forEach(([id, name]) => m.name(id, name));
     const ready = (async () => {
       const seed: [string, string, number | null][] = [
@@ -111,17 +115,37 @@ export function installCollectionsDemo(): void {
           return reply({ ok: true, data: { balance: eco.coinsOf(ME), remaining: row.count - body.qty, paid: price * body.qty, replayed: false } }, "sale");
         }
         case "/api/economy/requests": {
-          if (method !== "POST") return reply({ ok: true, data: { day: torontoDay(now), requests: requestsToday().map(r => ({ ...r, filled: filled.has(r.item_key) })) } }, "requests");
-          const req = requestsToday().find(r => r.item_key === body.item_key), row = (await m.store.bag(ME)).items.find(r => r.item_key === body.item_key);
+          const chef = chefToday();
+          if (method !== "POST") return reply({ ok: true, data: { day: torontoDay(now), requests: requestsToday().map(r => ({ ...r, filled: filled.has(r.item_key) })), chef: chef && { ...chef, filled: filled.has(`chef:${chef.item_key}`) } } }, "requests");
+          const req = body.board === "chef" ? (chef?.item_key === body.item_key ? chef : null) : requestsToday().find(r => r.item_key === body.item_key);
+          const row = (await m.store.bag(ME)).items.find(r => r.item_key === body.item_key), tag = body.board === "chef" ? `chef:${body.item_key}` : body.item_key;
           if (!req) return reply({ ok: false, status: 409, code: "not_requested", error: "The fish market isn't asking for that today." }, "fill");
-          if (filled.has(req.item_key)) return reply({ ok: false, status: 409, code: "already_filled", error: "You've already brought that one in today." }, "fill");
+          if (filled.has(tag)) return reply({ ok: false, status: 409, code: "already_filled", error: "You've already brought that one in today." }, "fill");
           if (!row || row.count < 1) return reply({ ok: false, status: 409, code: "insufficient_items", error: "You don't have that many." }, "fill");
           m.give(ME, req.item_key, -1);
-          filled.add(req.item_key);
+          filled.add(tag);
+          if (chef && req === chef) meal = { source: "staff_meal", luck: chef.meal.luck, size: chef.meal.size, until: new Date(now.getTime() + chef.meal.minutes * 60_000).toISOString() };
           eco.fund(ME, eco.coinsOf(ME) + req.reward);
           return reply({ ok: true, data: { balance: eco.coinsOf(ME), remaining: row.count - 1, paid: req.reward, replayed: false } }, "fill");
         }
         case "/api/collections/records": return reply(await records(m.store, ME, now), "records");
+        case "/api/economy/sushi": {
+          if (meal && new Date(meal.until) <= now) meal = null;
+          if (method !== "POST") return reply({ ok: true, data: { menu: SUSHI_MENU, buff: meal } }, "sushi");
+          // The bar's order over the demo's pockets and till (sushi_order's rules: coins, or one epic or legendary fish for the feast).
+          const dish = SUSHI_MENU.find(d => d.id === body.dish);
+          if (!dish) return reply({ ok: false, status: 404, code: "not_found", error: "That isn't on the menu." }, "order");
+          if (dish.price === null) {
+            const row = (await m.store.bag(ME)).items.find(r => r.item_key === body.fish);
+            if (!row || row.count < 1) return reply({ ok: false, status: 409, code: "insufficient_items", error: "You don't have that many." }, "order");
+            m.give(ME, body.fish, -1);
+          } else {
+            if (eco.coinsOf(ME) < dish.price) return reply({ ok: false, status: 409, code: "insufficient", error: "Not enough in your wallet for that." }, "order");
+            eco.fund(ME, eco.coinsOf(ME) - dish.price);
+          }
+          meal = { source: dish.id, luck: dish.buff.luck, size: dish.buff.size, until: new Date(now.getTime() + dish.buff.minutes * 60_000).toISOString() };
+          return reply({ ok: true, data: { balance: eco.coinsOf(ME), paid: dish.price ?? 0, buff: meal, replayed: false } }, "order");
+        }
         case "/api/economy/shop": return reply(await getShop(eco.store, ME, now), "shop");
         case "/api/economy/buy": return reply(await buy(eco.store, ME, body, now), "purchase");
         case "/api/economy/wallet": return reply({ ok: true, data: { coins: eco.coinsOf(ME), gems: eco.gemsOf(ME), daily_claimed: true, day: "", recent: [] } }, "wallet");

@@ -74,15 +74,30 @@ export function supabaseEconomyStore(db: SupabaseClient): EconomyStore {
       return { balance: Number(r.balance), remaining: Number(r.remaining), paid: Number(r.paid), replayed: r.replayed === true };
     },
     async requestFills(m, day) {
-      const { data, error } = await db.from("fish_request_fills").select("item_key").eq("member_id", m).eq("day", day);
+      const { data, error } = await db.from("fish_request_fills").select("board, item_key").eq("member_id", m).eq("day", day);
       if (error) raise(error);
-      return ((data ?? []) as Row[]).map((r) => String(r.item_key));
+      return ((data ?? []) as Row[]).map((r) => ({ board: r.board === "chef" ? "chef" : "market", item_key: String(r.item_key) }));
     },
-    async fillRequest(m, day, itemKey, reward, idem) {
-      const { data, error } = await db.rpc("fish_request_fill", { p_member_id: m, p_day: day, p_item_key: itemKey, p_reward: reward, p_idempotency_key: idem });
+    async fillRequest(m, day, board, itemKey, reward, idem, meal) {
+      const { data, error } = await db.rpc("fish_request_fill", {
+        p_member_id: m, p_day: day, p_board: board, p_item_key: itemKey, p_reward: reward, p_idempotency_key: idem,
+        p_luck: meal?.luck ?? 0, p_size: meal?.size ?? 0, p_until: meal?.until ?? null,
+      });
       if (error) raise(error);
       const r = first(data);
       return { balance: Number(r.balance), remaining: Number(r.remaining), paid: Number(r.paid), replayed: r.replayed === true };
+    },
+    async order(m, dish, price, fishKey, buff, idem) {
+      const { data, error } = await db.rpc("sushi_order", { p_member_id: m, p_dish: dish, p_price: price, p_fish_key: fishKey, p_luck: buff.luck, p_size: buff.size, p_until: buff.until, p_idempotency_key: idem });
+      if (error) raise(error);
+      const r = first(data);
+      return { balance: Number(r.balance), paid: Number(r.paid), buff: { source: String(r.source), luck: Number(r.luck), size: Number(r.size), until: String(r.until) }, replayed: r.replayed === true };
+    },
+    async buff(m, now) {
+      const { data, error } = await db.from("member_buffs").select("source, luck, size, until").eq("member_id", m).gt("until", now.toISOString()).maybeSingle();
+      if (error) raise(error);
+      const r = data as Row | null;
+      return r ? { source: String(r.source), luck: Number(r.luck), size: Number(r.size), until: String(r.until) } : null;
     },
     async setEquipped(m, itemId, equipped) {
       const { data: row, error } = await db.from("member_inventory").select("slot").eq("member_id", m).eq("item_id", itemId).maybeSingle();

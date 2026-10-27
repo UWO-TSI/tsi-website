@@ -1,12 +1,12 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { CATALOGUE, FISH_REQUEST_PAY } from "./catalogue";
+import { CATALOGUE, FISH_REQUEST_PAY, STAFF_MEAL, SUSHI_MENU } from "./catalogue";
 import { fishOutToday } from "@/lib/game/peaceful";
 import { ROSTER } from "@/lib/collections/roster";
 import { memoryEconomyStore } from "./memoryStore";
-import { dailySpecials, fishRequests, seedItems, sellPrice, speciesClass, torontoDay } from "./rules";
-import { buy, claimDailyGift, equip, fillFishRequest, fishRequestsView, getShop, getWallet, pickupCode, reserveMerch, resolveMerch, sell, sellList } from "./service";
+import { chefOrder, dailySpecials, fishRequests, seedItems, sellPrice, speciesClass, torontoDay } from "./rules";
+import { buy, claimDailyGift, equip, fillFishRequest, fishRequestsView, orderDish, getShop, getWallet, pickupCode, reserveMerch, resolveMerch, sell, sellList } from "./service";
 
 const A = "00000000-0000-4000-8000-0000000000aa";
 const B = "00000000-0000-4000-8000-0000000000bb";
@@ -132,6 +132,14 @@ describe("the fish market's daily requests (f-requests)", () => {
       expect(fishRequests(day, ["sea"]).every((r) => ROSTER.find((s) => s.key === r.item_key)?.biome !== "pond")).toBe(true);
     }
   });
+  it("never asks for a pond fish on the new world, where the pond is the closed mountain's (David: \"pond only in mountain\")", () => {
+    const pond = new Set(ROSTER.filter((s) => s.biome === "pond").map((s) => s.key));
+    for (let d = 0; d < 365; d += 3) {
+      const day = new Date(Date.UTC(2026, 0, 1 + d)).toISOString().slice(0, 10);
+      expect(fishRequests(day, waters).some((r) => pond.has(r.item_key))).toBe(false);
+      expect(pond.has(chefOrder(day, waters)?.item_key ?? "")).toBe(false);
+    }
+  });
   it("takes one of a requested fish once a day per member, pays the reward, and checks everything on the server", async () => {
     const m = memoryEconomyStore();
     const view = await fishRequestsView(m.store, A, noon, waters);
@@ -154,6 +162,48 @@ describe("the fish market's daily requests (f-requests)", () => {
     const next = new Date(noon.getTime() + 86_400_000);
     const tomorrow = await fishRequestsView(m.store, A, next, waters);
     expect(tomorrow.ok && tomorrow.data.requests.some((r) => r.filled)).toBe(false);
+  });
+});
+
+describe("the sushi bar's menu, the big dish and the chef's order (f-sushi phase B)", () => {
+  const waters = ["sea", "river"] as const;
+  it("orders a dish for coins: its buff runs from now for its minutes, and a new meal replaces the last", async () => {
+    const m = memoryEconomyStore();
+    m.fund(A, 100);
+    const nigiri = SUSHI_MENU.find((d) => d.id === "salmon_nigiri")!;
+    const r = await orderDish(m.store, A, { dish: "salmon_nigiri", idempotency_key: "sushi-0001" }, noon);
+    expect(r).toMatchObject({ ok: true, data: { paid: nigiri.price, buff: { luck: nigiri.buff.luck, size: nigiri.buff.size, until: new Date(noon.getTime() + nigiri.buff.minutes * 60_000).toISOString() } } });
+    expect(await orderDish(m.store, A, { dish: "salmon_nigiri", idempotency_key: "sushi-0001" }, noon)).toMatchObject({ ok: true, data: { replayed: true } });
+    expect(m.coinsOf(A)).toBe(100 - nigiri.price!);
+    expect(await orderDish(m.store, A, { dish: "omakase", idempotency_key: "sushi-0002" }, noon)).toMatchObject({ ok: false, code: "insufficient" });
+    await orderDish(m.store, A, { dish: "miso_soup", idempotency_key: "sushi-0003" }, noon);
+    expect(await m.store.buff(A, noon)).toMatchObject({ luck: SUSHI_MENU.find((d) => d.id === "miso_soup")!.buff.luck });
+    expect(await m.store.buff(A, new Date(noon.getTime() + 3_600_000))).toBeNull();
+    expect(await orderDish(m.store, A, { dish: "fugu", idempotency_key: "sushi-0004" }, noon)).toMatchObject({ ok: false, code: "not_found" });
+  });
+  it("cooks the big dish only from one of your own epic or legendary fish, for no coins", async () => {
+    const m = memoryEconomyStore();
+    const feast = (fish: string, key: string) => orderDish(m.store, A, { dish: "feast", fish, idempotency_key: key }, noon);
+    expect(await feast("fish_dace", "feast-0001")).toMatchObject({ ok: false, code: "not_rare_enough" });
+    expect(await feast("fish_coelacanth", "feast-0002")).toMatchObject({ ok: false, code: "insufficient_items" });
+    m.give(A, "fish_coelacanth", 1);
+    expect(await feast("fish_coelacanth", "feast-0003")).toMatchObject({ ok: true, data: { paid: 0, buff: { luck: SUSHI_MENU.find((d) => d.id === "feast")!.buff.luck } } });
+    expect(await m.store.collections(A)).toEqual([]);
+    expect(await orderDish(m.store, A, { dish: "salmon_nigiri", fish: "fish_coelacanth", idempotency_key: "feast-0004" }, noon)).toMatchObject({ ok: false, code: "invalid" });
+  });
+  it("posts one chef's order a day, rare or epic and none of the market's, that pays coins and a staff meal", async () => {
+    for (const day of ["2026-10-25", "2026-10-26", "2026-10-27"]) {
+      const o = chefOrder(day, waters)!;
+      expect(["rare", "epic"]).toContain(o.rarity);
+      expect(fishRequests(day, waters).some((r) => r.item_key === o.item_key)).toBe(false);
+    }
+    const m = memoryEconomyStore();
+    const o = chefOrder(torontoDay(noon), waters)!;
+    m.give(A, o.item_key, 1);
+    expect(await fillFishRequest(m.store, A, { item_key: o.item_key, board: "chef", idempotency_key: "chef-0001" }, noon, waters)).toMatchObject({ ok: true, data: { paid: o.reward } });
+    expect(await m.store.buff(A, noon)).toMatchObject({ luck: STAFF_MEAL.luck, size: STAFF_MEAL.size });
+    const view = await fishRequestsView(m.store, A, noon, waters);
+    expect(view.ok && view.data.chef).toMatchObject({ item_key: o.item_key, filled: true });
   });
 });
 

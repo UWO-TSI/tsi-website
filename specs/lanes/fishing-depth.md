@@ -31,12 +31,28 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 ## Status
 
-- **f-pond: blocked on a painted area (asked the coordinator, 2026-10-27).** Measured on the new world (`web/data/world`, NEXT_PUBLIC_GAME_WORLD=new):
-  - the only pond is the annotation "Pond (dry until elevated water)", 47 cells, all inside the closed Mountain zone, at mountain layer 1 (generate.ts: `H.m1 - 1.3`, painted rock); the nearest point a player can reach from the spawn is 34 u away (reach.ts);
-  - from every reachable point, casts find only sea and river (the wharf's narrow channels); no pond water exists in the open zones (wharf, west beach, village);
-  - so watering the mountain pond (elevated water, terrain-v3's post-launch mountain work) would not make pond fish catchable at launch.
-  - No code is needed for a painted pond: any water body in an open zone that doesn't reach the map edge already fishes as pond (fishingSpots.ts classifyWater), and the server's cells.json is rewritten on save.
-- Next items (f-requests, f-records, d-now, f-sushi) go ahead meanwhile.
+- **f-pond: closed by David, 2026-10-27: "pond only in mountain".** No pond on the open map; pond fish stay with the mountain and open with it. Nothing offers one while it's closed: `closedBiomes()` (rolls.ts, pond while the island has no pond water) makes the journal's pond species `closed` (never out, in season or coming; the book says "In the mountain, closed for now"); requests and the chef's order only draw from the island's waters (tests over a year); the catch board lists pond fish only under "In the mountain pond: closed" (`closedNow`) and its chalk says "Pond fish: mountain, closed". `rolls.test.ts` pins the new world's waters at ["sea", "river"].
+- **f-requests: built (cb920164).** `fishRequests` (lib/wallet/rules.ts): 3 a Toronto day, common, uncommon, rare, biting that day in fair weather in the island's waters (`activeWaters`, `watersOf`), paying `FISH_REQUEST_PAY` (3) times sell price. `/api/economy/requests`; `fish_request_fill` in the migration.
+- **f-records: built (cb920164).** `records` (lib/collections/service.ts) and `/api/collections/records`: the weekly board (every species' biggest, uncapped `weeklyTrophies`) and your size records. Fish market sheet's Records tab; portal leaderboard's Catch board. In-game names (museum plaques, trophy case, boards) now come from `member_identity.world_name`, not `profiles.display_name` (it showed real names).
+- **d-now: built (4d65e381).** `CatchBoard` chalkboard on the tackle shop porch (wharf.ts `catchBoardOf`, `CATCH_BOARD`), E opens `OutNowSheet`; collection book seasonal filter (journal entries carry `in_season`, `leaving`, `arriving`).
+- **f-sushi phase B: built, uncommitted at time of writing.** Menu (`SUSHI_MENU`, `STAFF_MEAL` in lib/wallet/catalogue.ts), `orderDish`, `/api/economy/sushi`, feast from an epic or legendary fish, chef's daily order (`chefOrder`, board "chef") by day outside the closed bar, meal buffs in `member_buffs` read by the server's cast (`fishRoll` buff: luck and size). UI: `components/game/peaceful/SushiSheets.tsx`, the Menu button while seated (`tsi:bar-seated`).
+- **Migration (not applied):** `web/supabase/migrations/20261027181000_fish_requests_sushi.sql` (fish_request_fills, member_buffs, sushi_orders, collections_take_one, fish_request_fill, sushi_order). Smoke: `web/supabase/tests/fish_requests_sushi_smoke.sql`, passed on a local throwaway Postgres 16.
+- **No new food models:** the bar's existing geta and nigiri serve loop stands in; good-looking dish models need art.
+
+## David's decisions
+
+- 2026-10-27, on f-pond: "pond only in mountain".
+
+## Next
+
+1. Headless evidence (specs/evidence/fishing-depth/shoot.mjs, dev server :3147, `NEXT_PUBLIC_GAME_WORLD=new`): market tabs, catch board in world and sheet, collection book season filter, chef order, bar menu.
+2. Full gates (tsc, vitest both worlds, eslint), perf:check v2 once (the board renders), report.
+
+## Tools and gotchas
+
+- Throwaway Postgres: `initdb` in the scratchpad, start with `-k ''` (the socket path is too long) on port 54329, load `supabase/tests/supabase_stub.sql`, then every migration in order (`020_player_persistence` fails in the stub, as before), then the smoke.
+- Demo data: `?collections=demo&requests=1` puts today's first two requests and the chef's order in the pockets; the demo answers /api/economy/requests, /api/economy/sushi and /api/collections/records.
+- Places (new world): sell barrel (71.74, 26.8); catch board in front at about (70.8, 61.8); sushi bar (-47, 119.5), its entrance about (-47, 114.5), the chef outside by day at about (-45.25, 114.45).
 
 ## Rules
 

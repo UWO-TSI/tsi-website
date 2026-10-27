@@ -87,3 +87,18 @@ describe("the member island's waters", () => {
     expect(activeWaters()).toEqual(GAME_WORLD === "new" ? ["sea", "river"] : ["sea", "river", "pond"]);
   });
 });
+
+describe("a meal's buff in the server's roll (f-sushi)", () => {
+  it("brings rarer fish with luck and bigger ones with size, within each species' range", () => {
+    const run = (buff?: { luck: number; size: number }) => {
+      const random = seededRandom(7);
+      return Array.from({ length: 4000 }, () => fishRoll("sea", 0, rodByTier(1), NOON, "clear", random, undefined, buff));
+    };
+    const plain = run(), fed = run({ luck: 0.35, size: 0.6 });
+    const rare = (rs: typeof plain) => rs.filter(r => r.fish.rarity !== "common" && r.fish.rarity !== "uncommon").length;
+    const ratio = (rs: typeof plain) => rs.reduce((s, { fish, size }) => s + (size - fish.sizeCm[0]) / Math.max(1, fish.sizeCm[1] - fish.sizeCm[0]), 0) / rs.length;
+    expect(rare(fed)).toBeGreaterThan(rare(plain) * 1.15);
+    expect(ratio(fed)).toBeGreaterThan(ratio(plain) + 0.1);
+    expect(fed.every(({ fish, size }) => size >= fish.sizeCm[0] && size <= fish.sizeCm[1])).toBe(true);
+  });
+});

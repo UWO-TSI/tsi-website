@@ -9,7 +9,7 @@ import { fnv1a, seededRandom } from "@/lib/game/weatherSystem";
 import { torontoParts } from "@/lib/time";
 import { fishOutToday } from "@/lib/game/peaceful";
 import type { WaterType } from "@/lib/game/fishingSpots";
-import { CATALOGUE, EVENT_ITEMS, FISH_REQUEST_PAY, OWNERSHIP_ITEMS, onSale, SELL_PRICES, SETTINGS, type ShopCategory, type Slot, type Tier } from "./catalogue";
+import { CATALOGUE, EVENT_ITEMS, FISH_REQUEST_PAY, STAFF_MEAL, type MealBuff, OWNERSHIP_ITEMS, onSale, SELL_PRICES, SETTINGS, type ShopCategory, type Slot, type Tier } from "./catalogue";
 import type { InventoryRow } from "./store";
 
 export interface ShopItem {
@@ -102,16 +102,30 @@ const REQUEST_RARITIES = ["common", "uncommon", "rare"];
  * rare (or the nearest left), each a fish that bites that day in fair weather in `waters`, the waters the world has.
  */
 export function fishRequests(day: string, waters: readonly WaterType[]): FishRequest[] {
-  const pool = fishOutToday(waters, Number(day.slice(5, 7))).flatMap(({ fish }) => {
-    const cls = speciesClass(fish.key), price = cls && sellPrice(cls.category, cls.rarity);
-    return cls && price && REQUEST_RARITIES.includes(cls.rarity) ? [{ item_key: fish.key, name: fish.name, rarity: cls.rarity, reward: price * FISH_REQUEST_PAY }] : [];
-  }).sort((a, b) => a.item_key.localeCompare(b.item_key));
+  const pool = requestable(day, waters, REQUEST_RARITIES);
   const r = seededRandom(fnv1a(`fish-requests:${day}`)), out: FishRequest[] = [];
   for (const rarity of REQUEST_RARITIES) {
     const left = pool.filter((f) => !out.includes(f)), same = left.filter((f) => f.rarity === rarity), from = same.length ? same : left;
     if (from.length) out.push(from[Math.floor(r() * from.length)]);
   }
   return out;
+}
+
+/** The fish of these rarities biting that day in `waters`, priced as a request, in key order. */
+function requestable(day: string, waters: readonly WaterType[], rarities: readonly string[]): FishRequest[] {
+  return fishOutToday(waters, Number(day.slice(5, 7))).flatMap(({ fish }) => {
+    const cls = speciesClass(fish.key), price = cls && sellPrice(cls.category, cls.rarity);
+    return cls && price && rarities.includes(cls.rarity) ? [{ item_key: fish.key, name: fish.name, rarity: cls.rarity, reward: price * FISH_REQUEST_PAY }] : [];
+  }).sort((a, b) => a.item_key.localeCompare(b.item_key));
+}
+/**
+ * The sushi chef's order for a Toronto day (f-sushi, David: "chef will give orders for you to fish"): one rare or epic
+ * fish none of the fish market's requests asks for, paying as a request does plus a staff meal. Null when none bites.
+ */
+export function chefOrder(day: string, waters: readonly WaterType[]): (FishRequest & { meal: MealBuff }) | null {
+  const market = new Set(fishRequests(day, waters).map((f) => f.item_key));
+  const pool = requestable(day, waters, ["rare", "epic"]).filter((f) => !market.has(f.item_key));
+  return pool.length ? { ...pool[Math.floor(seededRandom(fnv1a(`chef-order:${day}`))() * pool.length)], meal: STAFF_MEAL } : null;
 }
 
 /** Catalogue rows as the memory store / previews see them (033's seed, then the ownership migration's). */

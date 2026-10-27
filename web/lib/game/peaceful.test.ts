@@ -32,6 +32,7 @@ describe("what's out", () => {
     expect(out.some(o => o.water === "sea") && out.some(o => o.water === "river")).toBe(true);
     expect(out.every(o => o.water !== "pond")).toBe(true);
     expect(fishOut([], { ...noon, month: 9 })).toEqual([]);
+    expect(fishOut(["pond"], { ...noon, month: 9 }).every(o => ROSTER.find(s => s.key === o.fish.key)?.biome === "pond")).toBe(true);
   });
   it("by day: everything out at some hour or weather of the day, more than at noon", () => {
     const day = fishOutToday(["sea", "river"], 9).map(o => o.fish.key);

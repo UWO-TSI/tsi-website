@@ -59,8 +59,8 @@ interface Entry {
 
 function fromJournal(p: Page): Entry[] {
   return p.entries.map(e => {
-    const when = e.available_now ? "Out right now" : e.later_today ? "Out later today" : "Not out right now";
-    const season: [string, string] = ["Season", e.leaving ? "Its last month this year" : e.arriving ? "Back next month" : e.in_season ? "In season" : "Out of season"];
+    const when = e.closed ? "In the mountain, closed for now" : e.available_now ? "Out right now" : e.later_today ? "Out later today" : "Not out right now";
+    const season: [string, string] = ["Season", e.closed ? "Opens with the mountain" : e.leaving ? "Its last month this year" : e.arriving ? "Back next month" : e.in_season ? "In season" : "Out of season"];
     if (!e.discovered) return { id: `${p.category}-${e.slot}`, key: null, found: false, name: "???", picture: e.silhouette, rarity: null, kind: LABEL[p.category],
       text: e.clue, quote: null, outNow: e.available_now, donated: false, donatable: false, notes: [["Where and when", e.clue], ["Now", when], season] };
     const k = e as JournalEntryKnown;

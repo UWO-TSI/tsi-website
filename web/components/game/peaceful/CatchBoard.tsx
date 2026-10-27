@@ -8,7 +8,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import * as THREE from "three";
-import { Fish } from "lucide-react";
+import { Fish, Lock } from "lucide-react";
 import { RARITY_RANK } from "@/lib/collections/roster";
 import { fishOut } from "@/lib/game/peaceful";
 import { reelWeather, type IslandWeather } from "@/lib/game/islandWeather";
@@ -22,6 +22,14 @@ import p from "@/components/progression/progression.module.css";
 
 const WHERE: Record<WaterType, string> = { sea: "Off the pier and the beach", river: "In the river", pond: "In the pond" };
 const SHORT: Record<WaterType, string> = { sea: "sea", river: "river", pond: "pond" };
+
+/**
+ * The pond fish that would bite now in the mountain's pond, on an island with no pond open (David: "pond only in
+ * mountain"): listed as closed, never as catchable, until the mountain opens.
+ */
+export function closedNow(waters: readonly WaterType[], hour: number, month: number, weather: IslandWeather) {
+  return waters.includes("pond") ? [] : outNow(["pond"], hour, month, weather);
+}
 
 /** What bites now, rarest first (the board's order). */
 export function outNow(waters: readonly WaterType[], hour: number, month: number, weather: IslandWeather): { fish: FishDef; water: WaterType }[] {
@@ -38,7 +46,7 @@ function newChalk() {
   texture.colorSpace = THREE.SRGBColorSpace;
   return { canvas, texture };
 }
-function drawBoard({ canvas, texture }: ReturnType<typeof newChalk>, out: { fish: FishDef; water: WaterType }[], hour: number) {
+function drawBoard({ canvas, texture }: ReturnType<typeof newChalk>, out: { fish: FishDef; water: WaterType }[], hour: number, pondClosed: boolean) {
   texture.needsUpdate = true;
   const g = canvas.getContext("2d")!;
   g.fillStyle = "#2f3b36";
@@ -61,11 +69,10 @@ function drawBoard({ canvas, texture }: ReturnType<typeof newChalk>, out: { fish
     g.font = `600 12px ${FONT}`;
     g.fillText(SHORT[water], 196, y + 2);
   });
-  if (out.length > ROWS) {
-    g.fillStyle = "#c9d4c6";
-    g.font = `600 12px ${FONT}`;
-    g.fillText(`and ${out.length - ROWS} more inside`, 14, 44 + ROWS * 19);
-  }
+  g.fillStyle = "#c9d4c6";
+  g.font = `600 12px ${FONT}`;
+  const foot = [out.length > ROWS ? `and ${out.length - ROWS} more` : "", pondClosed ? "Pond fish: mountain, closed" : ""].filter(Boolean).join(" · ");
+  if (foot) g.fillText(foot, 14, 44 + ROWS * 19, W - 28);
 }
 
 const WOOD = new THREE.MeshStandardMaterial({ color: "#8a5a36", roughness: 0.9, metalness: 0 });
@@ -77,8 +84,9 @@ export function CatchBoard({ shop, y, waters, hour, month, weather }: {
 }) {
   const hourNow = Math.floor(hour);
   const out = useMemo(() => outNow(waters, hourNow + 0.5, month, weather), [waters, hourNow, month, weather]);
+  const pondClosed = useMemo(() => closedNow(waters, hourNow + 0.5, month, weather).length > 0, [waters, hourNow, month, weather]);
   const [chalk] = useState(newChalk);
-  useEffect(() => drawBoard(chalk, out, hourNow), [chalk, out, hourNow]);
+  useEffect(() => drawBoard(chalk, out, hourNow, pondClosed), [chalk, out, hourNow, pondClosed]);
   useEffect(() => () => chalk.texture.dispose(), [chalk]);
   const { x, z, w, h, legs } = CATCH_BOARD;
   return (
@@ -101,6 +109,7 @@ export function OutNowSheet({ open, onClose, keys, waters, hour, month, weather 
   open: boolean; onClose: () => void; keys?: string; waters: readonly WaterType[]; hour: number; month: number; weather: IslandWeather;
 }) {
   const out = useMemo(() => (open ? outNow(waters, Math.floor(hour) + 0.5, month, weather) : []), [open, waters, hour, month, weather]);
+  const shut = useMemo(() => (open ? closedNow(waters, Math.floor(hour) + 0.5, month, weather) : []), [open, waters, hour, month, weather]);
   return (
     <ProgressionPanel open={open} onClose={onClose} title="Catch board" keys={keys}>
       <p className={p.muted} style={{ marginBottom: 10 }}>What&apos;s biting this hour, in this weather. It changes with the hour, the weather and the season; the collection book has the year.</p>
@@ -112,6 +121,10 @@ export function OutNowSheet({ open, onClose, keys, waters, hour, month, weather 
           <List label={WHERE[w]}>{here.map(({ fish }) => <ListRow key={fish.key} icon={iconUrl(fish.key)} title={fish.name} detail={fish.whenLabel ? `${fish.rarity} · ${fish.whenLabel}` : fish.rarity} />)}</List>
         </section> : null;
       })}
+      {shut.length ? <section style={{ marginBottom: 12, opacity: 0.7 }}>
+        <h3 className={p.muted} style={{ margin: "8px 0" }}>In the mountain pond: closed until the mountain opens</h3>
+        <List label="In the mountain pond, closed">{shut.map(({ fish }) => <ListRow key={fish.key} icon={<Lock size={20} />} title={fish.name} detail={`${fish.rarity} · not catchable yet`} />)}</List>
+      </section> : null}
     </ProgressionPanel>
   );
 }

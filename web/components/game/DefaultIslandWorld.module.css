@@ -460,3 +460,5 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .world[data-photo] > :not(:has(canvas[data-engine])):not([data-photo-ui]) { visibility: hidden !important; }
 .world[data-photo] canvas[data-engine] ~ * { visibility: hidden !important; }
 .world[data-photo] canvas[data-engine] { filter: var(--photo-filter, none); }
+/* The sushi bar's menu on the counter while you sit (f-sushi): over the toolbar, centred. */
+.barMenu { position: fixed; left: 50%; bottom: 112px; transform: translateX(-50%); z-index: 30; }

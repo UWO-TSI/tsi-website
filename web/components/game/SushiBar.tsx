@@ -160,6 +160,11 @@ export default function SushiBar({ bar, y, player, phase, viewRef, onNear }: {
     viewRef.current = i < 0 ? null : st.seat;
   });
   useEffect(() => () => onNear(false), [onNear]);
+  // Seated: the world shows the menu on the counter (f-sushi; DefaultIslandWorld listens).
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("tsi:bar-seated", { detail: seated }));
+    return () => { window.dispatchEvent(new CustomEvent("tsi:bar-seated", { detail: false })); };
+  }, [seated]);
   return <group position={[bar.x, y, bar.z]} rotation={[0, bar.yaw ?? 0, 0]}>
     <primitive object={glow.model} />
     <primitive object={hours.model} />

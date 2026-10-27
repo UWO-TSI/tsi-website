@@ -6,10 +6,11 @@
 import { ROSTER } from "@/lib/collections/roster";
 import { FISH } from "@/lib/game/fishing";
 import { fnv1a } from "@/lib/game/weatherSystem";
-import { dailySpecials, effectivePrice, fishRequests, isOnSale, ownedCounts, sellPrice, speciesClass, TAB_OF, torontoDay, type FishRequest, type ShopItem, type Special } from "./rules";
+import { chefOrder, dailySpecials, effectivePrice, fishRequests, isOnSale, ownedCounts, sellPrice, speciesClass, TAB_OF, torontoDay, type FishRequest, type ShopItem, type Special } from "./rules";
 import type { WaterType } from "@/lib/game/fishingSpots";
 import { toFailure, type Result } from "@/lib/result";
-import { EconomyError, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation } from "./store";
+import { SUSHI_MENU, type Dish, type MealBuff } from "./catalogue";
+import { EconomyError, type ActiveBuff, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation } from "./store";
 
 const ERR: Record<string, [number, string]> = {
   unavailable: [503, "The shop is closed for now."],
@@ -30,6 +31,7 @@ const ERR: Record<string, [number, string]> = {
   locked: [409, "That's locked in your bag. Unlock it to sell it."],
   not_requested: [409, "The fish market isn't asking for that today."],
   already_filled: [409, "You've already brought that one in today."],
+  not_rare_enough: [422, "Bancha only cooks an epic or legendary fish into a feast."],
   failed: [500, "Something went wrong. Try again."],
 };
 const fail = <T>(err: unknown): Result<T> => toFailure(ERR, err);
@@ -151,20 +153,49 @@ export const sell = (store: EconomyStore, m: string, input: { item_key: string; 
 export interface FishRequestsView {
   day: string;
   requests: (FishRequest & { filled: boolean })[];
+  /** The sushi chef's order today (f-sushi), or null when nothing rare bites. */
+  chef: (FishRequest & { meal: MealBuff; filled: boolean }) | null;
 }
-/** The fish market's requests today (f-requests) and which this member filled; `waters`: the world's (rolls.ts activeWaters). */
+/** Today's requests (f-requests) and the chef's order, and which this member filled; `waters`: the world's (rolls.ts activeWaters). */
 export const fishRequestsView = (store: EconomyStore, m: string, now: Date, waters: readonly WaterType[]) =>
   run<FishRequestsView>(async () => {
-    const day = torontoDay(now), filled = new Set(await store.requestFills(m, day));
-    return { day, requests: fishRequests(day, waters).map((r) => ({ ...r, filled: filled.has(r.item_key) })) };
+    const day = torontoDay(now), fills = await store.requestFills(m, day), chef = chefOrder(day, waters);
+    const filled = (board: string, key: string) => fills.some((f) => f.board === board && f.item_key === key);
+    return { day, requests: fishRequests(day, waters).map((r) => ({ ...r, filled: filled("market", r.item_key) })), chef: chef && { ...chef, filled: filled("chef", chef.item_key) } };
   });
+const until = (now: Date, minutes: number) => new Date(now.getTime() + minutes * 60_000).toISOString();
 /** Hand one requested fish over: the server picks today's requests and the reward; the store takes the fish once. */
-export const fillFishRequest = (store: EconomyStore, m: string, input: { item_key: string; idempotency_key: string }, now: Date, waters: readonly WaterType[]) =>
+export const fillFishRequest = (store: EconomyStore, m: string, input: { item_key: string; board?: "market" | "chef"; idempotency_key: string }, now: Date, waters: readonly WaterType[]) =>
   run(async () => {
-    const day = torontoDay(now), req = fishRequests(day, waters).find((r) => r.item_key === input.item_key);
-    if (!req) throw new EconomyError("not_requested");
-    return store.fillRequest(m, day, req.item_key, req.reward, input.idempotency_key);
+    const day = torontoDay(now), board = input.board ?? "market";
+    const req = board === "chef" ? chefOrder(day, waters) : fishRequests(day, waters).find((r) => r.item_key === input.item_key);
+    if (!req || req.item_key !== input.item_key) throw new EconomyError("not_requested");
+    const meal = "meal" in req ? { source: "staff_meal", luck: req.meal.luck, size: req.meal.size, until: until(now, req.meal.minutes) } : undefined;
+    return store.fillRequest(m, day, board, req.item_key, req.reward, input.idempotency_key, meal);
   });
+
+export interface SushiView {
+  menu: readonly Dish[];
+  /** Your meal's buff while it lasts, or null. */
+  buff: ActiveBuff | null;
+}
+export const sushiView = (store: EconomyStore, m: string, now: Date) => run<SushiView>(async () => ({ menu: SUSHI_MENU, buff: await store.buff(m, now) }));
+
+/**
+ * Order at the sushi bar (f-sushi): a dish off the menu for its coins, or the feast for one of your own epic or
+ * legendary fish (`fish`). Eating it sets your meal buff from now for its minutes, replacing the last one.
+ */
+export async function orderDish(store: EconomyStore, m: string, input: { dish: string; fish?: string; idempotency_key: string }, now: Date): Promise<Result<{ balance: number; paid: number; buff: ActiveBuff; replayed: boolean }>> {
+  const dish = SUSHI_MENU.find((d) => d.id === input.dish);
+  if (!dish) return fail(new EconomyError("not_found"));
+  if ((dish.price === null) !== !!input.fish) return { ok: false, status: 400, code: "invalid", error: "Invalid request" };
+  if (input.fish) {
+    const cls = speciesClass(input.fish);
+    if (!cls || (cls.category !== "fish" && cls.category !== "sea") || !["epic", "legendary"].includes(cls.rarity)) return fail(new EconomyError("not_rare_enough"));
+  }
+  const buff = { source: dish.id, luck: dish.buff.luck, size: dish.buff.size, until: until(now, dish.buff.minutes) };
+  return run(() => store.order(m, dish.id, dish.price ?? 0, input.fish ?? null, buff, input.idempotency_key));
+}
 
 export interface InventoryView {
   groups: Record<string, InventoryRow[]>;

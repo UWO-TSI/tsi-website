@@ -73,6 +73,8 @@ export interface CollectionsStore {
   toolsTaught(memberId: string): Promise<boolean>;
   /** Every entry of one tourney cycle, with names (service role: the route applies the board's privacy). */
   tourneyEntries(goalId: string, cycle: number): Promise<TourneyEntry[]>;
+  /** The member's meal buff from the sushi bar while it lasts (member_buffs), which their casts roll with; null when none. */
+  buff(memberId: string, now: Date): Promise<{ luck: number; size: number } | null>;
   showcase(memberId: string): Promise<(string | null)[]>;
   setShowcase(memberId: string, keys: (string | null)[]): Promise<void>;
   // ── The backpack and the home storage chest (20261003054110_backpack) ──

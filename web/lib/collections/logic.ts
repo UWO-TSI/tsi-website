@@ -114,6 +114,8 @@ export interface JournalEntryKnown {
   in_season: boolean;
   leaving: boolean;
   arriving: boolean;
+  /** Its habitat is shut for now (the mountain's pond): never out until it opens. */
+  closed: boolean;
   donatable: boolean;
   museum: { donated: boolean; donor_name: string | null; by_me: boolean };
 }
@@ -127,6 +129,7 @@ export interface JournalEntryUnknown {
   in_season: boolean;
   leaving: boolean;
   arriving: boolean;
+  closed: boolean;
 }
 export interface JournalPage {
   category: Category;
@@ -139,14 +142,18 @@ export function speciesInCategory(roster: Species[], category: Category): Specie
   return roster.filter((s) => s.category === category).sort((a, b) => a.position - b.position);
 }
 
-export function journalPage(roster: Species[], category: Category, mine: MemberItem[], donations: Donation[], memberId: string, m: WorldMoment): JournalPage {
+/**
+ * `closed`: habitats the island has but keeps shut for now (the new world's pond is the mountain's, David: "pond only in
+ * mountain"): their species are never out, in season or coming, and say so (`closed`), until the zone opens.
+ */
+export function journalPage(roster: Species[], category: Category, mine: MemberItem[], donations: Donation[], memberId: string, m: WorldMoment, closed: ReadonlySet<Biome> = new Set()): JournalPage {
   const owned = new Map(mine.map((r) => [r.item_key, r]));
   const donated = new Map(donations.map((d) => [d.species_key, d]));
   const list = speciesInCategory(roster, category);
   const entries = list.map((sp, i): JournalEntryKnown | JournalEntryUnknown => {
     const row = owned.get(sp.key);
-    const now = inSeason(sp, m.month), next = inSeason(sp, (m.month % 12) + 1);
-    const base = { slot: i + 1, clue: clueFor(sp), available_now: availableAt(sp, m), later_today: laterToday(sp, m), in_season: now, leaving: now && !next, arriving: !now && next };
+    const shut = closed.has(sp.biome), now = !shut && inSeason(sp, m.month), next = !shut && inSeason(sp, (m.month % 12) + 1);
+    const base = { slot: i + 1, clue: clueFor(sp), available_now: !shut && availableAt(sp, m), later_today: !shut && laterToday(sp, m), in_season: now, leaving: now && !next, arriving: !now && next, closed: shut };
     if (!row) return { ...base, discovered: false, silhouette: `/api/collections/silhouette/${category}/${i + 1}` };
     const d = donated.get(sp.key);
     return {

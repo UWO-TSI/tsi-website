@@ -123,6 +123,13 @@ export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
       const n = await names(db, [...new Set(rows.map((r) => String(r.member_id)))]);
       return rows.map((r) => ({ member_id: String(r.member_id), member_name: n.get(String(r.member_id)) ?? "Member", category: r.category as "fish" | "sea", item_key: String(r.item_key), size_cm: Number(r.size_cm), caught_at: String(r.caught_at) }));
     },
+    async buff(memberId, now) {
+      const { data, error } = await db.from("member_buffs").select("luck, size").eq("member_id", memberId).gt("until", now.toISOString()).maybeSingle();
+      // Before the meal buffs' migration (or any read failure) a cast rolls plain rather than failing.
+      if (error || !data) return null;
+      const r = data as Row;
+      return { luck: Number(r.luck), size: Number(r.size) };
+    },
     async showcase(memberId) {
       const { data, error } = await db.from("member_showcase").select("slot, item_key").eq("member_id", memberId);
       if (error) raise(error);

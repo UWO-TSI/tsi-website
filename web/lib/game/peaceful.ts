@@ -38,7 +38,12 @@ export function rollFishFor(water: WaterType, luck: number, rod: RodTier, contex
  */
 export function fishOut(waters: readonly WaterType[], context: FishingContext): { fish: FishDef; water: WaterType }[] {
   const seen = new Set<string>(), out: { fish: FishDef; water: WaterType }[] = [];
-  for (const water of waters) for (const { fish } of fishPoolFor(water, 0, RODS[RODS.length - 1], context)) if (!seen.has(fish.key)) { seen.add(fish.key); out.push({ fish, water }); }
+  for (const water of waters) for (const { fish } of fishPoolFor(water, 0, RODS[RODS.length - 1], context)) {
+    // A pond with nothing of its own biting falls back to the river's pool when cast in; listed, it shows only pond fish.
+    if (seen.has(fish.key) || (water === "pond" && ROSTER_BIOME.get(fish.key) !== "pond")) continue;
+    seen.add(fish.key);
+    out.push({ fish, water });
+  }
   return out;
 }
 /** Everything out at some hour of a fair-weather day in `month` (the fish market's daily requests: none waits on rain). */
