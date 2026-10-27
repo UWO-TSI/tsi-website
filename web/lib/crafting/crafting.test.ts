@@ -113,10 +113,10 @@ describe("crafting", () => {
     expect((await rodOf()).tier).toBe(5);
   });
 
-  it("turns gliding on only by crafting the leaf glider: never sold, learned like rods 4-5 (row 245)", async () => {
+  it("turns gliding on only by crafting the leaf glider: never sold, learned only from its quest (row 245, x-moves)", async () => {
     const m = setup();
     const glider = RECIPES.find(r => r.id === "glider-leaf")!;
-    expect(glider.sources).toEqual(ROD4.sources);
+    expect(glider.sources).toEqual(["quest"]);
     expect(CATALOGUE.some(c => c.catalogue_ref === "glider_leaf")).toBe(false);
     const glides = async () => ownsGlider((await data(getInventory(m.eco.store, A))).groups.tools?.flatMap(r => r.item.catalogue_ref ?? []) ?? []);
     expect(await glides()).toBe(false);

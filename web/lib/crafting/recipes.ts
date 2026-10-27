@@ -107,8 +107,9 @@ export const RECIPES: Recipe[] = [
   r("bow-yew", { wood_branch: 6, bug_bagworm: 2 }, ["bottle"], "weapon"),
   r("revolver-brass", { rock_iron_nugget: 3, rock_gold_nugget: 1 }, ["quest", "bottle"], "weapon"),
   r("staff-rune", { wood_branch: 4, rock_crystal: 2, fish_football_fish: 1 }, ["quest", "bottle"], "weapon"),
-  // The leaf glider (row 245), learned the way rods 4-5 are: a resident's quest or the message bottle. Last, so the seeded recipes keep their positions.
-  r("glider-leaf", { wood_branch: 6, flower_windflower: 2, bug_red_dragonfly: 1 }, ["quest", "bottle"]),
+  // The leaf glider (row 245): hidden until the mountain expansion (specs/launch/v1-gameplay.md x-moves), so only its quest
+  // will teach it, never the bottle. Last, so the seeded recipes keep their positions.
+  r("glider-leaf", { wood_branch: 6, flower_windflower: 2, bug_red_dragonfly: 1 }, ["quest"]),
   // The backpack's upgrades (specs/game-ui-questions.md 23): 30 slots, known by everyone (or bought, 1,500 coins); 40, from the bottle.
   r("bag-30", { bug_bagworm: 4, wood_branch: 6 }, ["starter"]),
   r("bag-40", { bug_bagworm: 6, rock_gold_nugget: 1, flower_windflower: 2 }, ["bottle"]),
