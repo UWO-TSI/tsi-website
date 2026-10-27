@@ -14,7 +14,7 @@ import { Button, Slider } from "@/components/gui";
 import { useGuiVariant } from "@/components/gui/variant";
 import { IconRail, NUDGE_GRID, useNudge } from "@/components/gui/flat";
 import { iconUrl } from "@/lib/icons/keys";
-import { customHairUnlocked, dyeRef, FACE, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, FREE_HAIR, HAIR_THUMB_URL, hairAccentHex, hairHex, NATURAL_HAIR, naturalHex, PALETTE, PART_BY_ID, PLACE_PARTS, PLACE_STEPS, partColor, unlockRef,
+import { customHairUnlocked, dyeRef, FACE, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, FREE_HAIR, HAIR_THUMB_URL, hairAccentHex, hairHex, NATURAL_HAIR, naturalHex, PALETTE, PART_BY_ID, PLACE_PARTS, PLACE_STEPS, partColor, SKIN_PICKS, unlockRef,
   type CatalogPart, type CharacterLook, type FaceCell, type Placement } from "@/lib/game/character/look";
 import { choose, colourTarget, isOn, optionName, shownOptions, type Category, type Section } from "@/lib/game/character/creatorCategories";
 import { PLACE_RANGE } from "@/lib/game/character/face";
@@ -116,7 +116,7 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
     if (now - wheelAt.current > WHEEL_MS) { wheelAt.current = now; onChange?.("colour"); }
   };
   // [palette index, colour]: the creator offers the free hair colours only (FREE_HAIR), the wardrobe every one
-  const swatches = !cat.swatch ? [] : (cat.swatch === "hair" && mode === "create" ? FREE_HAIR : PALETTE[cat.swatch].map((_, i) => i)).map(i => [i, PALETTE[cat.swatch!][i]] as const);
+  const swatches = !cat.swatch ? [] : (cat.swatch === "hair" && mode === "create" ? FREE_HAIR : PALETTE[cat.swatch].map((_, i) => i).slice(0, cat.swatch === "skin" ? SKIN_PICKS : undefined)).map(i => [i, PALETTE[cat.swatch!][i]] as const);
   // head fit: a two-tone hairstyle's second colour (the accent mask of its shading map), picked from the same hair colours
   const backPart = look.back ? PART_BY_ID.get(look.back) : undefined;
   const accentPart = cat.id === "hair" && backPart?.full && (backPart.accent || backPart.map?.natural.b) ? backPart : null;

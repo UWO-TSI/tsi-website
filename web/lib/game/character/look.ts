@@ -107,6 +107,9 @@ export const VERB_BY_NAME = new Map(VERB_CLIPS.map(c => [c.name, c]));
 /** The sushi bar staff's clips (build_clips.py `-- staff`): the rig and its actions, loaded by the bar's chef and server (Character `clips`). */
 export const STAFF_URL = `${CHARACTER_ROOT}${catalog.staff.glb}`;
 export const PALETTE = { skin: palette.skin, hair: palette.hair, outfit: palette.outfit };
+/** Skins a player can pick: the first 10. The two darkest (10, 11) left (David, 2026-10-27); their indices stay and a
+ * saved look with one loads as 9. */
+export const SKIN_PICKS = 10;
 /** An atlas cell: rect [x, y, w, h] (px, top-left origin) and the point (ax, ay) in it that sits on its anchor; a 7th
  * value 1 puts it on the second atlas page. */
 export type FaceCell = [number, number, number, number, number, number, (0 | 1)?];
@@ -242,7 +245,7 @@ export function parseLook(raw: unknown): CharacterLook {
   const colors: Record<string, number> = {};
   if (r.colors && typeof r.colors === "object") for (const [id, v] of Object.entries(r.colors)) if (PART_BY_ID.has(id)) colors[id] = index(v, PALETTE.outfit.length, 0);
   const look: CharacterLook = {
-    skin: index(r.skin, PALETTE.skin.length, d.skin), hair: r.hair === NATURAL_HAIR ? NATURAL_HAIR : index(r.hair, PALETTE.hair.length, d.hair),
+    skin: Math.min(index(r.skin, PALETTE.skin.length, d.skin), SKIN_PICKS - 1), hair: r.hair === NATURAL_HAIR ? NATURAL_HAIR : index(r.hair, PALETTE.hair.length, d.hair),
     // A saved look's `brows` (and its brows placement) is dropped: eyebrows were removed.
     eyes: faceItem("eyes", r.eyes, d.eyes), mouth: faceItem("mouth", r.mouth, d.mouth),
     extras: Array.isArray(r.extras) ? [...new Set(r.extras.filter((e): e is string => typeof e === "string" && e in FACE.layers.extras.items))] : [],
@@ -501,7 +504,7 @@ export function randomLook(rand: () => number = Math.random, owned?: ReadonlySet
   const ids = (slot: PartSlot) => partsIn(slot).filter(p => !p.variantOf && !p.key && !p.grantedBy && (!owned || !partRef(p.id) || owned.has(p.id))).map(p => p.id);
   let look: CharacterLook = {
     ...DEFAULT_LOOK,
-    skin: Math.floor(rand() * PALETTE.skin.length), hair: owned ? FREE_HAIR[Math.floor(rand() * FREE_HAIR.length)] : Math.floor(rand() * PALETTE.hair.length),
+    skin: Math.floor(rand() * SKIN_PICKS), hair: owned ? FREE_HAIR[Math.floor(rand() * FREE_HAIR.length)] : Math.floor(rand() * PALETTE.hair.length),
     // sheet-coded styles only (F eyes, M mouths, what the wardrobe cut kept of them): later sets stay creator picks
     eyes: pick(Object.keys(FACE.layers.eyes.items).filter(e => /^[EF]\d/.test(e))), mouth: pick(Object.keys(FACE.layers.mouth.items).filter(m => m.startsWith("M"))),
     extras: rand() < 0.3 ? ["blush"] : [], bangs: "", back: pick(ids("back")), shoes: pick(ids("shoes")), acc: {}, colors: {},
