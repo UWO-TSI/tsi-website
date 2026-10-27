@@ -31,10 +31,6 @@
   "tris": 4385,
   "lod2": 1180
  },
- "hair/full/hair_fluffy_boy.glb": {
-  "tris": 1614,
-  "lod2": 770
- },
  "hair/full/hair_hime_short.glb": {
   "tris": 4385,
   "lod2": 1180
@@ -75,10 +71,6 @@
   "tris": 4363,
   "lod2": 1180
  },
- "hair/full/hair_visor_messy.glb": {
-  "tris": 2223,
-  "lod2": 1044
- },
  "hair/full/hair_vkei.glb": {
   "tris": 3828,
   "lod2": 1180
@@ -86,10 +78,6 @@
  "hair/full/hair_waves.glb": {
   "tris": 1328,
   "lod2": 640
- },
- "hair/full/hair_wavy_half_up.glb": {
-  "tris": 4403,
-  "lod2": 1180
  },
  "hair/full/hair_windy_bob.glb": {
   "tris": 4403,
