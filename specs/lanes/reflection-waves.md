@@ -46,6 +46,13 @@ Approved: the sweep (r2-sweep), the first wave in the mist (r2-first-wave), the 
 
 **Evidence:** the water before and after (no lines); every free colour plus two dyes on 4 hairstyles (the default bob, a mid-brown style, the white style, a two-tone style) on 3 skins, today and after; the under-hair close up; every face's eyes on all 12 skins, before and after. Run the full gates, and one `perf:check` (SCENES=cafe, characters changed). Then message "main".
 
+## Round 4 (David's round 3 review, 2026-10-27): everything approved, one change
+
+Every round 3 item is approved: the water, the hair colour on all four styles, the under-hair, and the eyes. His note on the eye sheets, verbatim: "skin color dont include the last 2 shade" / "remove last 2 shade".
+1. **The two darkest skin tones go:** palette skins 10 and 11 are no longer offered anywhere a player picks skin (the first creator, the wardrobe, random looks, residents' generated looks). Keep the palette indices; don't shift them. A saved look with skin 10 or 11 loads as skin 9 (one prod look uses 10). Test it. Residents authored with 10 or 11 move to 9. The eye glow still works on 9.
+2. **Settle the perf question:** round 3's one perf:check failed on cafe frame time (7.7 ms against 2.1) on a loaded machine. Run an interleaved A/B (specs/perf/ab.sh or perf-bench, 3 rounds, cafe and v2, High and Lite), main against this branch. Report the numbers. If the branch is slower, find what costs it (the eye glow taps, the hair shader) and fix it.
+Merge main first. Gates as before. Then message "main" with the head SHA and the A/B table; the coordinator merges and ships.
+
 ## Status
 
 Round 3 built 2026-10-27 on `game/reflection-waves` (main merged at 139d3b1e first), awaiting David's review. Rounds 1 and 2 approved (the sweep, the first wave, the swatches, the panel).
