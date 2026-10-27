@@ -160,20 +160,21 @@ export const partsIn = (slot: PartSlot) => PARTS.filter(p => p.slot === slot);
 
 /**
  * David's own fit (the fit editor, specs/lanes/fit-editor.md), the catalogue's `fit` map by item id: a hairstyle's or
- * accessory's `y`, metres along the head's up axis (rig.ts mergeLook); a whole face's (FACE.faces, by its `id`) `eyes`
- * and `mouth`, face canvas units up (face.ts faceSlots: every frame, blink, expression and talk cell moves with them).
+ * accessory's `x`, `y`, `z`, metres along the head's own axes (x its left, y up, z forward: rig.ts mergeLook); a whole
+ * face's (FACE.faces, by its `id`) `eyes` and `mouth`, face canvas units up, and `eyesApart`, face canvas units each eye
+ * moves away from the centre line (face.ts faceSlots: every frame, blink, expression and talk cell moves with them).
  * Absent is 0. A top-level map, so an importer that rebuilds an entry keeps it. The editor writes into it live.
  */
-export interface Fit { y?: number; eyes?: number; mouth?: number }
+export interface Fit { x?: number; y?: number; z?: number; eyes?: number; mouth?: number; eyesApart?: number }
 export const FIT: Record<string, Fit> = (catalog as { fit?: Record<string, Fit> }).fit ?? {};
-/** A worn eye style's or mouth's lift: from the whole face it belongs to. */
-export function faceLift(look: Pick<CharacterLook, "eyes" | "mouth">): { eyes: number; mouth: number } {
-  let eyes = 0, mouth = 0;
+/** A worn eye style's and mouth's fit: from the whole face it belongs to. */
+export function faceLift(look: Pick<CharacterLook, "eyes" | "mouth">): { eyes: number; mouth: number; eyesApart: number } {
+  let eyes = 0, mouth = 0, eyesApart = 0;
   for (const f of Object.values(FACE.faces ?? {})) {
-    if (f.eyes === look.eyes) eyes = FIT[f.id]?.eyes ?? 0;
+    if (f.eyes === look.eyes) { eyes = FIT[f.id]?.eyes ?? 0; eyesApart = FIT[f.id]?.eyesApart ?? 0; }
     if (f.mouth === look.mouth) mouth = FIT[f.id]?.mouth ?? 0;
   }
-  return { eyes, mouth };
+  return { eyes, mouth, eyesApart };
 }
 
 /**
@@ -369,8 +370,8 @@ export interface ResolvedPart { id: string; url: string; /** Its LOD 1 GLB. */ l
   colour: boolean;
   /** A mapped hairstyle: its texture's shift for each recolour channel (hairColour.ts; identity: drawn as it is). */
   map: { a: HairShift; b: HairShift } | null;
-  /** David's lift (FIT `y`): metres along the head's up axis, 0 for none. */
-  lift: number }
+  /** David's fit (FIT `x`, `y`, `z`): metres along the head's own axes, zeros for none. */
+  fit: readonly [number, number, number] }
 /** The colour a look picks for its hair (sRGB hex): the colour wheel's, else the palette colour; null: the style's own. */
 export const hairHex = (look: CharacterLook): string | null => look.hairColor ?? PALETTE.hair[look.hair] ?? null;
 /** A hairstyle without a texture worn in its own colours (NATURAL_HAIR): the palette's default hair colour. */
@@ -410,7 +411,7 @@ export function resolveParts(look: CharacterLook): ResolvedPart[] {
       } else if (m.color) tints[m.name] = m.color;
     }
     const map = part.map ? hairShifts(look, part) : null;
-    return { id: part.id, url: CHARACTER_ROOT + part.glb, lod: LOD_ROOT + part.glb, lod2: (part.full ? LOD2_ROOT : LOD_ROOT) + part.glb, tints, decal, map, colour: !!part.colourAtlas, lift: FIT[part.id]?.y ?? 0 };
+    return { id: part.id, url: CHARACTER_ROOT + part.glb, lod: LOD_ROOT + part.glb, lod2: (part.full ? LOD2_ROOT : LOD_ROOT) + part.glb, tints, decal, map, colour: !!part.colourAtlas, fit: [FIT[part.id]?.x ?? 0, FIT[part.id]?.y ?? 0, FIT[part.id]?.z ?? 0] };
   });
 }
 
@@ -421,7 +422,7 @@ export function partColor(look: CharacterLook, id: string): number | null {
 }
 
 /** Cache key for the merged body mesh (face and pose excluded). */
-export const bodyKey = (look: CharacterLook) => JSON.stringify([look.skin, look.hair, resolveParts(look).map(p => [p.id, p.tints, p.decal, p.map ?? null, p.lift])]);
+export const bodyKey = (look: CharacterLook) => JSON.stringify([look.skin, look.hair, resolveParts(look).map(p => [p.id, p.tints, p.decal, p.map ?? null, p.fit])]);
 
 /** Small seeded PRNG (mulberry32) so residents get the same random look every visit. */
 export function seeded(seed: number): () => number {

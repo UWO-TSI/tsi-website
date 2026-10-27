@@ -38,6 +38,12 @@ Face Fit (https://claude.ai/artifact/D1gkmSBHBGspFPH5to9yA8, published by the co
 
 ## Status
 
+**Round 2 built (2026-10-27).** David also asked, via the coordinator: "for the hair fit, also provide x and z shifts, also make the viewer draggable so i can seea ll agnes".
+- Runtime: the catalogue's `fit` is `{ x, y, z }` (metres along the head's own axes: x its left, which is screen right in the front view; y up; z forward) for a hairstyle or accessory, and `{ eyes, mouth, eyesApart }` (face canvas units: up, up, and each eye away from the centre line) for a whole face. Every missing value is 0. look.ts `Fit`, `ResolvedPart.fit` (a triple, in `bodyKey`), and `faceLift` (now also returns `eyesApart`); rig.ts `adoptPrimitive`/piece `fit` (the old `lift`, replaced) adds the triple to the bind-space positions; face.ts `moved` (the old `raised`, replaced) shifts an anchor up and away from u = 0.5 on its own side, so mirrored eyes and eye_left pairs spread symmetrically, and eye_pair and the mouth have no apart.
+- Tests: rig.test (every head piece binds the head with all three axes on the bind axes; real GLBs move exactly each axis's value along the head's own axis, at rest and with the head turned on all three axes; resolves from the catalogue), face.test (eyesApart over every face and three poses, the closed blink among them: both eyes move by exactly the value, outward, height and mouth unchanged; one-cell pairs unchanged), apply-fit.test (the new fields, round 1 `{y}` docs still read, limits on each).
+- Editor: per axis a slider, ▼▲/Back Fwd/◀▶ buttons in 0.5 mm steps (face parts in 0.001 canvas, about 0.45 mm), a reset, and Reset all, values in mm. Faces: an Eyes/Mouth choice for what dragging and arrows move. A big "Look around" view (OrbitControls: drag orbits all the way round, above and below too; wheel or pinch zooms; Reset view remounts it; a Move toggle or Shift-drag moves the item there along the camera's screen axes). The fixed Front, 3/4 and Side rows on light and dark skin stay beside and below it. Dragging the Front view moves x/y and dragging the Side view moves z/y, following the cursor (a pixel is the camera's metres-per-pixel at the head). Arrow keys on a focused Front or Side view move the item (left is forward in the Side view, where the face looks left), Shift-arrow moves 10 steps. A drag saves once, when it ends; keys and buttons save through the 300 ms debounce. One hint line explains all of it.
+- check.mjs PASS: everything below, plus `{x,y,z}` saved once after a burst, a Front drag moves by the drag on the 0.5 mm grid and saves once, a look-around drag turns the view and saves nothing, a look-around Shift-drag saves once, Reset view saves nothing, the Side view arrows move forward and up, Shift-arrow moves 10 steps, an axis reset saves 0, Reset all saves zeros, a face saves `{eyes, eyesApart, mouth}`, a Front drag on the right half spreads the eyes, and with Mouth chosen the arrow moves the mouth.
+
 **Blank-page fix (2026-10-27, before round 2):** on claude.ai the page was blank. The frame's CSP lets the page fetch only its own files: no data:/blob: fetches, no WebAssembly. Now: build.mjs decodes each GLB's meshopt compression (gltf-transform, separate vertex attributes as the game's files; interleaved ones break rig.ts's merge), moves every embedded image to its own file beside the model (`<model>.glb.<i>.png`), and writes the whole GLB as base64 in `<model>.glb.json`; Editor.tsx shims `THREE.FileLoader` for `.glb.json` (fetch, decode, hand the GLB bytes to the loader); the bundle turns off drei's meshopt and Draco decoders (build plugin on drei `core/Gltf.js`; the game's code is untouched). Error boundaries around each 3D view (message in its cell), the list, the views, the canvas and the app; uncaught errors and rejections show on a line at the top (`#fault`). check.mjs serves dist with the frame's CSP (in the file) inside `<iframe sandbox="allow-scripts allow-same-origin">` from a second origin, fails on any CSP violation, blank root or shown error, and runs once with localStorage refused. PASS. dist: 236 files, 29.7 MB.
 
 **Runtime field in** (commit after 08aecf1a; see `git log`). The catalogue's top-level `fit` map (`web/data/characters/character_catalog.json` and its art source, both), by item id:
@@ -59,11 +65,15 @@ Items listed: hairstyles (catalogue hair, slot `back`), whole faces (`FACE.faces
 
 ## Next
 
+0. Round 2 is waiting for the coordinator to publish it (report sent with the head SHA). After that, David sets values and the coordinator runs apply-fit.
+
 1. When the coordinator says wardrobe-b3 landed: merge main, `node specs/tools/fit-editor/build.mjs`, take the browser lock, `node specs/tools/fit-editor/check.mjs`, report the new size. The list reads the catalogue and `FACE.faces`, so new items need no code.
 2. After David sets values: the coordinator exports the db and runs `node web/scripts/apply-fit.mjs <export.json>` from `web/`.
 
 ## Tools and gotchas
 
+- The artifact frame: check.mjs's CSP refuses data:/blob: fetches and WebAssembly; never reintroduce either in the bundle (a meshopt GLB, an embedded image, or a data: buffer would blank a view).
+- 1 px in a fixed view is about 3 mm at the head (0.7 m of view height): drag tests use a few pixels, or the 40 mm reach clamps.
 - Playwright is global: `createRequire("/opt/homebrew/lib/node_modules/")`.
 - withlock.sh gives up after 20 min with exit 75 (silently if output is filtered): retry on 75.
 - Typecheck the editor: a tsconfig extending `web/tsconfig.json` with `files: [Editor.tsx]`, `typeRoots` and `paths` `"*": [web/node_modules/@types/*, web/node_modules/*]` (types first).

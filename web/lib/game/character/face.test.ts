@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { CLIP_EXPRESSION, EXPRESSIONS, FACE_SLOT_COUNT, FaceAnimator, blinkFrame, canBlink, faceSlots, restPose } from "./face";
+import { CLIP_EXPRESSION, EXPRESSIONS, FACE_SLOT_COUNT, FaceAnimator, blinkFrame, canBlink, faceSlots, restPose, type FaceSlot } from "./face";
 import { DANCE_RING, EMOTE_RING } from "../emoteWheel";
 import { BATCH2_PRICES, DEFAULT_LOOK, FACE, FACE_ATLAS_URLS, FIT, PALETTE, parseLook, randomLook, seeded, usesFacePage2, type CharacterLook, type FaceCell } from "./look";
 
@@ -389,6 +389,30 @@ describe("David's face fit (the fit editor: catalogue `fit`, eyes and mouth lift
     const placed = look({ ...l, place: { mouth: [2, 0, 0, 0] } });
     const [b, a] = [slots(restPose(placed, "neutral"), placed), lifted(0, 0.01, () => slots(restPose(placed, "neutral"), placed))];
     expect(+(b[2].dst[1] - a[2].dst[1]).toFixed(9)).toBe(0.01);
+  });
+  it("moves every face's eyes apart symmetrically by eyesApart each, every frame, and leaves their height and the mouth", () => {
+    // each eye's drawn box (the second of a mirrored pair is drawn mirrored) and its centre
+    const box = (s: FaceSlot) => (s.mirror === 2 ? [1 - s.dst[2], s.dst[1], 1 - s.dst[0], s.dst[3]] : s.dst);
+    const centre = (s: FaceSlot) => (box(s)[0] + box(s)[2]) / 2;
+    let pairs = 0;
+    for (const face of Object.values(FACE.faces)) {
+      const x = look({ eyes: face.eyes, mouth: face.mouth ?? DEFAULT_LOOK.mouth, extras: face.extras });
+      const at = (pose: ReturnType<typeof restPose>) => faceSlots(x, pose).slice(-3);
+      const apart = (pose: ReturnType<typeof restPose>) => { FIT[face.id] = { eyesApart: 0.02 }; try { return at(pose); } finally { delete FIT[face.id]; } };
+      for (const pose of [restPose(x, "neutral"), restPose(x, "happy"), { ...restPose(x, "neutral"), eyeFrame: "closed" as const }]) {
+        const [b, a] = [at(pose), apart(pose)];
+        if (!b[1].src) { expect(a).toEqual(b); continue; }                 // one cell across the centre line: no apart
+        pairs++;
+        const sides = [0, 1].map(i => Math.sign(centre(b[i]) - 0.5));
+        expect(sides[0] * sides[1], face.id).toBe(-1);
+        for (const i of [0, 1]) {
+          expect(+((centre(a[i]) - centre(b[i])) * sides[i]).toFixed(9), face.id).toBe(0.02);
+          expect(+(a[i].dst[1] - b[i].dst[1]).toFixed(9), face.id).toBe(0);
+        }
+        expect(a[2]).toEqual(b[2]);
+      }
+    }
+    expect(pairs).toBeGreaterThan(10);
   });
   it("leaves every other face exactly as it was, and a face without a lift unchanged", () => {
     const other = look();

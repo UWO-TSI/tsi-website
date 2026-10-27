@@ -10,17 +10,21 @@ const face = Object.values(faces.faces)[0].id, hair = catalog.hair[0].id, acc = 
 
 describe("apply-fit (the fit editor's export into the catalogue's `fit`)", () => {
   it("takes the db's docs in any of its shapes, rounds, and drops zeros", () => {
-    const want = { [acc]: { y: -0.0035 }, [face]: { eyes: 0.012, mouth: -0.006 }, [hair]: { y: 0.0123 } };
-    const docs = [{ id: hair, data: { y: 0.012345 } }, { doc_id: face, data: { eyes: 0.012, mouth: -0.006 } }, { id: acc, y: -0.0035 }, { id: catalog.hair[1].id, data: { y: 0 } }];
+    const want = { [acc]: { y: -0.0035, z: 0.002 }, [face]: { eyes: 0.012, mouth: -0.006, eyesApart: 0.004 }, [hair]: { x: -0.001, y: 0.0123 } };
+    const docs = [{ id: hair, data: { x: -0.001, y: 0.012345, z: 0 } }, { doc_id: face, data: { eyes: 0.012, mouth: -0.006, eyesApart: 0.004 } },
+      { id: acc, y: -0.0035, z: 0.002 }, { id: catalog.hair[1].id, data: { x: 0, y: 0, z: 0 } }];
     const fit = fitFrom(docs, catalog, faces);
     expect(fit).toEqual(want);
     expect(Object.keys(fit)).toEqual(Object.keys(fit).sort());
-    expect(fitFrom({ [hair]: { y: 0.012345 }, [face]: { eyes: 0.012, mouth: -0.006 }, [acc]: { y: -0.0035 } }, catalog, faces)).toEqual(want);
+    expect(fitFrom({ [hair]: { x: -0.001, y: 0.012345 }, [face]: { eyes: 0.012, mouth: -0.006, eyesApart: 0.004 }, [acc]: { y: -0.0035, z: 0.002 } }, catalog, faces)).toEqual(want);
+    // round 1's docs (height only) still read
+    expect(fitFrom([{ id: hair, data: { y: 0.01 } }, { id: face, data: { eyes: 0.01, mouth: 0 } }], catalog, faces)).toEqual({ [face]: { eyes: 0.01 }, [hair]: { y: 0.01 } });
   });
   it("refuses unknown ids, wrong fields and wild values, writing nothing", () => {
     expect(() => fitFrom([{ id: "hair_nope", data: { y: 0.01 } }], catalog, faces)).toThrow(/hair_nope/);
-    expect(() => fitFrom([{ id: hair, data: { eyes: 0.01 } }], catalog, faces)).toThrow(/eyes is not one of y/);
-    expect(() => fitFrom([{ id: face, data: { y: 0.01 } }], catalog, faces)).toThrow(/y is not one of eyes, mouth/);
+    expect(() => fitFrom([{ id: hair, data: { eyes: 0.01 } }], catalog, faces)).toThrow(/eyes is not one of x, y, z/);
+    expect(() => fitFrom([{ id: face, data: { y: 0.01 } }], catalog, faces)).toThrow(/y is not one of eyes, mouth, eyesApart/);
+    expect(() => fitFrom([{ id: hair, data: { z: -0.5 } }], catalog, faces)).toThrow(/z -0.5 is not a number within 0.1/);
     expect(() => fitFrom([{ id: hair, data: { y: 3 } }], catalog, faces)).toThrow(/within/);
     expect(() => fitFrom([{ id: hair, data: { y: "0.01" } }], catalog, faces)).toThrow(/not a number/);
   });
@@ -39,10 +43,10 @@ describe("apply-fit (the fit editor's export into the catalogue's `fit`)", () =>
     const dir = mkdtempSync(join(tmpdir(), "apply-fit-"));
     const cats = [join(dir, "art.json"), join(dir, "web.json")];
     for (const c of cats) copyFileSync(CATALOGUES[1], c);
-    writeFileSync(join(dir, "export.json"), JSON.stringify([{ id: hair, data: { y: 0.004 } }, { id: face, data: { eyes: -0.01, mouth: 0.005 } }]));
+    writeFileSync(join(dir, "export.json"), JSON.stringify([{ id: hair, data: { x: 0.001, y: 0.004, z: -0.002 } }, { id: face, data: { eyes: -0.01, mouth: 0.005, eyesApart: -0.003 } }]));
     applyFit(join(dir, "export.json"), cats, join(__dirname, "../data/characters/face_v7.json"));
     const [a, b] = cats.map(c => readFileSync(c, "utf8"));
     expect(a).toBe(b);
-    expect(JSON.parse(a).fit).toEqual({ [face]: { eyes: -0.01, mouth: 0.005 }, [hair]: { y: 0.004 } });
+    expect(JSON.parse(a).fit).toEqual({ [face]: { eyes: -0.01, mouth: 0.005, eyesApart: -0.003 }, [hair]: { x: 0.001, y: 0.004, z: -0.002 } });
   });
 });

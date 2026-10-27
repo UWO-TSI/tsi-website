@@ -23,6 +23,7 @@ export const materialName = (mesh: THREE.Mesh) => (Array.isArray(mesh.material) 
 /** A mapped hairstyle's shift for each recolour channel of its texture (hairColour.ts). */
 export interface HairMapUse { a: HairShift; b: HairShift }
 
+const NO_FIT = [0, 0, 0] as const;
 /**
  * A primitive's geometry re-expressed for the target skeleton: joint indices
  * remapped by bone name, colour = COLOR_0 (linear) x tint, a uv channel, and
@@ -34,11 +35,11 @@ export interface HairMapUse { a: HairShift; b: HairShift }
  * with u < 0 (the under-cap) to its COLOR_0 and tint alone.
  */
 export function adoptPrimitive(mesh: THREE.SkinnedMesh, boneIndex: ReadonlyMap<string, number>, tint: THREE.Color | null, map: HairMapUse | null = null,
-  cut: PieceCut | null = null, lift = 0): THREE.BufferGeometry {
+  cut: PieceCut | null = null, fit: readonly number[] = NO_FIT): THREE.BufferGeometry {
   const src = mesh.geometry, n = src.getAttribute("position").count;
   const g = new THREE.BufferGeometry();
   if (src.index) g.setIndex(cutIndex(src, cut));
-  g.setAttribute("position", lift ? lifted(src.getAttribute("position"), lift) : src.getAttribute("position"));
+  g.setAttribute("position", fit.some(v => v) ? moved(src.getAttribute("position"), fit) : src.getAttribute("position"));
   g.setAttribute("normal", src.getAttribute("normal"));
   const uv = src.getAttribute("uv");
   g.setAttribute("uv", uv ?? new THREE.BufferAttribute(new Float32Array(n * 2), 2));
@@ -78,12 +79,13 @@ export function adoptPrimitive(mesh: THREE.SkinnedMesh, boneIndex: ReadonlyMap<s
 }
 
 /**
- * A head piece's positions moved `lift` metres up (David's fit, look.ts FIT). Every part binds the head with its Y axis
- * straight up (rig.test.ts), and head pieces are skinned 100% to it, so this is a lift along the head's up axis in any pose.
+ * A head piece's positions moved by `fit` (David's fit, look.ts FIT: metres along x, y, z). Every head piece binds the
+ * head with its axes on the bind axes (rig.test.ts), and head pieces are skinned 100% to it, so this is a move along
+ * the head's own axes in any pose.
  */
-function lifted(pos: THREE.BufferAttribute | THREE.InterleavedBufferAttribute, lift: number): THREE.BufferAttribute {
+function moved(pos: THREE.BufferAttribute | THREE.InterleavedBufferAttribute, [x, y, z]: readonly number[]): THREE.BufferAttribute {
   const out = new Float32Array(pos.count * 3);
-  for (let i = 0; i < pos.count; i++) { out[i * 3] = pos.getX(i); out[i * 3 + 1] = pos.getY(i) + lift; out[i * 3 + 2] = pos.getZ(i); }
+  for (let i = 0; i < pos.count; i++) { out[i * 3] = pos.getX(i) + x; out[i * 3 + 1] = pos.getY(i) + y; out[i * 3 + 2] = pos.getZ(i) + z; }
   return new THREE.BufferAttribute(out, 3);
 }
 
@@ -117,8 +119,8 @@ export interface PieceSource { root: THREE.Object3D; tints: Record<string, strin
   cut?: PieceCut | null;
   /** A mapped hairstyle (head fit): its hair primitive draws its texture from the hair atlas, shifted. */
   map?: HairMapUse | null;
-  /** David's fit: metres along the head's up axis (look.ts FIT `y`). */
-  lift?: number }
+  /** David's fit: metres along the head's own axes (look.ts FIT `x`, `y`, `z`). */
+  fit?: readonly number[] }
 /**
  * Merge the untextured primitives of every piece into one geometry for
  * `bones`. A primitive is tinted by its material name when the piece lists a
@@ -134,7 +136,7 @@ export function mergeLook(pieces: PieceSource[], bones: readonly THREE.Bone[]): 
     const hex = piece.tints[name];
     const own = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as THREE.MeshStandardMaterial;
     const m = piece.map && name === "M_Hair" ? piece.map : null;
-    parts.push(adoptPrimitive(mesh, boneIndex, hex ? new THREE.Color(hex) : own.color ?? null, m, piece.cut ?? null, piece.lift ?? 0));
+    parts.push(adoptPrimitive(mesh, boneIndex, hex ? new THREE.Color(hex) : own.color ?? null, m, piece.cut ?? null, piece.fit));
   }
   // The intermediate pieces share attributes with the loaded GLBs and were never uploaded: no dispose, the GC takes them.
   const merged = mergeGeometries(parts, false);

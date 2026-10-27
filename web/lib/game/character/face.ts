@@ -146,8 +146,8 @@ function slot(cell: FaceCell, anchor: [number, number], mirror: 0 | 1 | 2, tint:
  * symmetrically, rotation mirrored, the same size), clamped by their union so the pair never goes lopsided.
  */
 const flip = (t: FaceSlot): FaceSlot => ({ ...t, dst: [1 - t.dst[2], t.dst[1], 1 - t.dst[0], t.dst[3]], pose: [1 - t.pose[0], t.pose[1], t.pose[2], -t.pose[3]] });
-function slotPair(right: FaceCell, left: FaceCell, place: Placement | undefined, lift: number): [FaceSlot, FaceSlot] {
-  const A = FACE.anchors, r = slot(right, raised(A.eye, lift), 0), l = slot(left, raised(A.eye_left, lift), 0);
+function slotPair(right: FaceCell, left: FaceCell, place: Placement | undefined, fit: Moved): [FaceSlot, FaceSlot] {
+  const A = FACE.anchors, r = slot(right, moved(A.eye, fit), 0), l = slot(left, moved(A.eye_left, fit), 0);
   if (!place || !place.some(v => v !== 0)) return [r, l];
   const [x, y, w, h, ax, ay, page] = left;
   const [rp, lp] = placedTogether([[r, right], [flip(l), [x, y, w, h, w - ax, ay, page]]], place, true);
@@ -219,14 +219,20 @@ function placedTogether(parts: [FaceSlot, FaceCell][], [up, apart, rotate, size]
  * drawn as one cell (left: null, marks across the centre line) sits at eye_pair on the centre line, and the second
  * slot is off (its spacing slider has nothing to spread).
  */
-function eyeSlots(eye: ReturnType<typeof eyeCells>, cell: FaceCell, place: Placement | undefined, lift: number): [FaceSlot, FaceSlot] {
+function eyeSlots(eye: ReturnType<typeof eyeCells>, cell: FaceCell, place: Placement | undefined, fit: Moved): [FaceSlot, FaceSlot] {
   const A = FACE.anchors;
-  if (eye.left === null) return [slot(cell, raised(A.eye_pair, lift), 0, null, place, false), OFF];
-  if (eye.left) return slotPair(cell, eye.left, place, lift);
-  return [slot(cell, raised(A.eye, lift), 0, null, place), slot(cell, raised(A.eye, lift), 2, null, place)];
+  if (eye.left === null) return [slot(cell, moved(A.eye_pair, fit), 0, null, place, false), OFF];
+  if (eye.left) return slotPair(cell, eye.left, place, fit);
+  return [slot(cell, moved(A.eye, fit), 0, null, place), slot(cell, moved(A.eye, fit), 2, null, place)];
 }
-/** An anchor moved up the face canvas by David's fit (look.ts FIT, faceLift): before placement, so the sliders and their clamp start there. */
-const raised = ([u, w]: [number, number], lift: number): [number, number] => [u, w - lift];
+/** David's fit for a part: `up` canvas units up, `apart` canvas units away from the centre line (look.ts FIT, faceLift). */
+type Moved = { up: number; apart: number };
+/**
+ * An anchor moved by David's fit: before placement, so the sliders and their clamp start there. Away from the centre
+ * line on its own side, so a mirrored eye and an eye_left pair spread symmetrically; one on the line (eye_pair, the
+ * mouth) has no apart.
+ */
+const moved = ([u, w]: [number, number], { up, apart }: Moved): [number, number] => [u + Math.sign(u - 0.5) * apart, w - up];
 
 /** The slots (each extra, right eye, left eye, mouth) for a look showing `pose`. */
 export function faceSlots(look: CharacterLook, pose: FacePose): FaceSlot[] {
@@ -238,8 +244,8 @@ export function faceSlots(look: CharacterLook, pose: FacePose): FaceSlot[] {
   const eye = eyeCells(pose.eyes), eyeCell = eye[pose.eyeFrame] ?? eye.open, lift = faceLift(look);
   return [
     ...EXTRA_ORDER.map(extra),
-    ...eyeSlots(eye, eyeCell, P?.eyes, lift.eyes),
-    slot(mouth.items[pose.mouth] ?? FACE.layers.talk.items[pose.mouth] ?? mouth.items[mouth.default], raised(A.mouth, lift.mouth), 0, null, P?.mouth),
+    ...eyeSlots(eye, eyeCell, P?.eyes, { up: lift.eyes, apart: lift.eyesApart }),
+    slot(mouth.items[pose.mouth] ?? FACE.layers.talk.items[pose.mouth] ?? mouth.items[mouth.default], moved(A.mouth, { up: lift.mouth, apart: 0 }), 0, null, P?.mouth),
   ];
 }
 

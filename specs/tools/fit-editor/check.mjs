@@ -83,27 +83,91 @@ try {
   const { page, shot, context } = await open({ width: 1280, height: 900 }, { hair_baby_sprout: { y: 0.01 } });
   expect((await page.locator(".status").textContent()) === "All changes saved", "db connected: All changes saved");
   await page.getByRole("button", { name: /Baby sprout/ }).click();
-  expect((await height(page)) === "+10.0 mm", `starts from the saved doc (${await height(page)})`);
+  expect((await height(page)) === "+10.0 mm", `starts from a saved round 1 doc ({ y }) (${await height(page)})`);
   expect(await page.getByRole("button", { name: /Baby sprout/ }).locator(".badge").isVisible(), "a saved item is marked set");
-  for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "Height up" }).click();
-  await page.waitForTimeout(900);
+  const sets = () => page.evaluate(() => window.__sets);
+  const lastSet = async () => (await sets()).at(-1);
+  const settle = () => page.waitForTimeout(900);
+  const onGrid = (v, step) => Math.abs(Math.round(v / step) * step - v) < 1e-9;
+  for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "Up / down: up" }).click();
+  await settle();
   expect((await height(page)) === "+11.5 mm", `three steps up: ${await height(page)}`);
-  const sets = await page.evaluate(() => window.__sets);
-  expect(JSON.stringify(sets.at(-1)) === JSON.stringify(["fit", "hair_baby_sprout", { y: 0.0115 }]), `saved once after the burst: ${JSON.stringify(sets)}`);
+  expect(JSON.stringify(await sets()) === JSON.stringify([["fit", "hair_baby_sprout", { y: 0.0115, z: 0, x: 0 }]]), `saved once after the burst, as { x, y, z }: ${JSON.stringify(await sets())}`);
+  // dragging the Front view: right and up, saved once when it ends
+  const front = page.locator(".row .cell.move").nth(0), side = page.locator(".row .cell.move").nth(1), orbit = page.locator(".cell.orbit");
+  /** A mouse drag from the centre of a view (fraction `fx` across), in `n` moves of (dx, dy) pixels. */
+  const dragIn = async (cell, dx, dy, { n = 3, fx = 0.5, shift = false } = {}) => {
+    const b = await cell.locator(".view").boundingBox(), x = b.x + b.width * fx, y = b.y + b.height / 2;
+    if (shift) await shot.keyboard.down("Shift");
+    await shot.mouse.move(x, y); await shot.mouse.down();
+    for (let i = 1; i <= n; i++) await shot.mouse.move(x + dx * i, y + dy * i);
+    await shot.mouse.up();
+    if (shift) await shot.keyboard.up("Shift");
+    await settle();
+    return b;
+  };
+  const n0 = (await sets()).length, box = await dragIn(front, 1, -1, { n: 3 });
+  const drag = await sets();
+  const d = drag.at(-1)[2], perPx = 2 * Math.hypot(0.06, 1.3) * Math.tan(Math.PI / 12) / box.height;
+  expect(drag.length === n0 + 1, `a drag saves once: ${drag.length - n0} saves`);
+  expect(Math.abs(d.x - 3 * perPx) <= 0.0003 && Math.abs(d.y - 0.0115 - 3 * perPx) <= 0.0003 && d.z === 0 && onGrid(d.x, 0.0005) && onGrid(d.y, 0.0005),
+    `the Front drag moves right and up by the drag, on the 0.5 mm grid: ${JSON.stringify(d)} (${(3 * perPx * 1000).toFixed(2)} mm each way)`);
+  // the look-around view: a plain drag turns the camera and saves nothing; Shift-drag moves the item, saved once
+  const before = await orbit.locator(".view").screenshot(), n1 = (await sets()).length;
+  await dragIn(orbit, 25, 6, { n: 4 });
+  await page.waitForTimeout(500);
+  expect((await sets()).length === n1, `a look-around drag saves nothing: ${(await sets()).length - n1} saves`);
+  expect(!before.equals(await orbit.locator(".view").screenshot()), "a look-around drag turns the view");
+  const o0 = await lastSet();
+  await dragIn(orbit, 0, -1, { n: 3, shift: true });
+  const o = await sets(), od = o.at(-1)[2];
+  expect(o.length === n1 + 1 && od.y > o0[2].y && onGrid(od.y, 0.0005), `a Shift-drag in the look-around view moves it up, saved once: ${o.length - n1} saves, ${JSON.stringify(o0[2])} -> ${JSON.stringify(od)}`);
+  await page.getByRole("button", { name: "Reset view" }).click();
+  await page.waitForTimeout(800);
+  expect((await sets()).length === o.length, "reset view saves nothing");
+  // the arrows on the focused Side view: left is forward (the face looks left there), up is up
+  await side.focus();
+  await shot.keyboard.press("ArrowLeft"); await shot.keyboard.press("ArrowLeft"); await shot.keyboard.press("ArrowUp");
+  await settle();
+  const k = await lastSet();
+  expect(Math.abs(k[2].z - od.z - 0.001) < 1e-9 && Math.abs(k[2].y - od.y - 0.0005) < 1e-9 && k[2].x === od.x, `Side view arrows: forward 1 mm, up 0.5 mm: ${JSON.stringify(k)}`);
+  await front.focus();
+  await shot.keyboard.press("Shift+ArrowRight");
+  await settle();
+  expect(Math.abs((await lastSet())[2].x - od.x - 0.005) < 1e-9, `Front view Shift+arrow: 10 steps right: ${JSON.stringify(await lastSet())}`);
   await shot.screenshot({ path: join(evidence, "desktop-hair.png") });
-  // a face: two lifts, saved as { eyes, mouth }
-  const face = page.locator("nav section").nth(1).locator("button").first();
-  await face.click();
-  await page.getByRole("button", { name: "Eyes height up" }).click();
-  await page.getByRole("button", { name: "Mouth height down" }).click();
-  await page.waitForTimeout(900);
-  const last = (await page.evaluate(() => window.__sets)).at(-1);
-  expect(last[2].eyes === 0.001 && last[2].mouth === -0.001, `a face saves { eyes, mouth }: ${JSON.stringify(last)}`);
+  await page.getByRole("button", { name: "Reset Forward / back" }).click();
+  await settle();
+  expect((await lastSet())[2].z === 0, "an axis's reset saves 0");
+  await page.getByRole("button", { name: "Reset all" }).click();
+  await settle();
+  expect(JSON.stringify((await lastSet())[2]) === JSON.stringify({ y: 0, z: 0, x: 0 }), `reset all saves zeros: ${JSON.stringify(await lastSet())}`);
+  // a face with eyes that spread: three fields, saved as { eyes, eyesApart, mouth }
+  const faces = page.locator("nav section").nth(1).locator("button");
+  for (let i = 0; i < await faces.count(); i++) {
+    await faces.nth(i).click();
+    if (await page.getByRole("button", { name: "Eyes apart: apart" }).isEnabled() && await page.getByRole("button", { name: "Mouth up / down: down" }).isEnabled()) break;
+  }
+  await page.getByRole("button", { name: "Eyes up / down: up" }).click();
+  await page.getByRole("button", { name: "Eyes apart: apart" }).click();
+  await page.getByRole("button", { name: "Mouth up / down: down" }).click();
+  await settle();
+  const last = await lastSet();
+  expect(last[2].eyes === 0.001 && last[2].eyesApart === 0.001 && last[2].mouth === -0.001, `a face saves { eyes, eyesApart, mouth }: ${JSON.stringify(last)}`);
+  // dragging the Front view right on its right half spreads the eyes; with Mouth chosen, up moves the mouth
+  await dragIn(front, 1, 0, { n: 3, fx: 0.7 });
+  const spread = await lastSet();
+  expect(spread[2].eyesApart > 0.001 && spread[2].eyes === 0.001 && spread[2].mouth === -0.001, `a Front drag to the right on the right half spreads the eyes: ${JSON.stringify(spread)}`);
+  await page.getByLabel("Mouth", { exact: true }).check();
+  await front.focus();
+  await shot.keyboard.press("ArrowUp");
+  await settle();
+  expect((await lastSet())[2].mouth === 0 && (await lastSet())[2].eyes === 0.001, `with Mouth chosen, the arrow moves the mouth: ${JSON.stringify(await lastSet())}`);
   await page.waitForTimeout(1500);
   await shot.screenshot({ path: join(evidence, "desktop-face.png") });
-  await page.getByRole("button", { name: "Reset" }).first().click();
-  await page.waitForTimeout(900);
-  expect((await page.evaluate(() => window.__sets)).at(-1)[2].eyes === 0, "reset saves 0");
+  await page.getByRole("button", { name: "Reset Eyes up / down" }).click();
+  await settle();
+  expect((await lastSet())[2].eyes === 0, "reset saves 0");
   // a face accessory
   await page.locator("nav section").nth(2).locator("button").first().click();
   await page.waitForTimeout(2500);

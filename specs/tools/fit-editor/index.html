@@ -43,7 +43,12 @@ nav li button[aria-current="true"] { background: var(--chip); color: var(--chip-
 .thumb.none { display: grid; place-items: center; color: var(--muted); font-weight: 600; }
 .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .badge { font-size: 11px; padding: 1px 7px; border-radius: 99px; background: var(--accent); color: var(--accent-ink); font-weight: 600; }
-main { padding: 12px 16px 32px; min-width: 0; }
+main { padding: 12px 16px 32px; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+main > .row { grid-column: 1 / -1; }
+.around { display: grid; gap: 6px; max-width: 520px; }
+.around .cell.orbit .view { cursor: grab; }
+.around-tools { display: flex; gap: 12px; align-items: center; justify-content: flex-end; font-size: 13px; }
+.around-tools button { height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; font: inherit; }
 .controls { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; gap: 12px; max-width: 640px; }
 .controls h2 { margin: 0; font-size: 17px; }
 .lift-head { display: flex; justify-content: space-between; gap: 8px; }
@@ -51,9 +56,16 @@ main { padding: 12px 16px 32px; min-width: 0; }
 output { font-variant-numeric: tabular-nums; color: var(--muted); }
 .lift-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
 .lift-row input { flex: 1; min-width: 0; accent-color: var(--accent); }
-.lift-row button { min-width: 40px; height: 36px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); cursor: pointer; }
-.lift-row button:disabled { opacity: .45; cursor: default; }
-.lift-row .reset { padding: 0 12px; }
+.lift-row button, .hint button { min-width: 40px; height: 36px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; font: inherit; font-size: 13px; }
+.lift-row button:disabled, .hint button:disabled { opacity: .45; cursor: default; }
+.lift-row .reset, .hint .reset { padding: 0 12px; }
+.target { display: flex; flex-wrap: wrap; gap: 4px 16px; border: 0; margin: 0; padding: 0; }
+.target legend { float: left; margin-right: 12px; font-weight: 600; }
+.hint { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.hint p { margin: 0; color: var(--muted); font-size: 13px; flex: 1 1 260px; }
+.cell.move .view { cursor: grab; touch-action: none; }
+.cell.move:focus-visible { outline: none; }
+.cell.move:focus-visible .view { outline: 2px solid var(--focus); outline-offset: -2px; }
 .row h3 { font-size: 13px; color: var(--muted); font-weight: 600; margin: 16px 0 6px; }
 .cells { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .cell { margin: 0; position: relative; }
@@ -68,6 +80,7 @@ figcaption { font-size: 12px; color: var(--muted); text-align: center; padding-t
   .body { grid-template-columns: minmax(0, 1fr); }
   nav { position: static; height: auto; max-height: 38vh; border-right: 0; border-bottom: 1px solid var(--line); }
   .cells { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  main { grid-template-columns: minmax(0, 1fr); }
 }
 </style>
 </head>

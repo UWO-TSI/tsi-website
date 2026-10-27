@@ -1,8 +1,9 @@
 /**
  * Writes David's fit from the fit editor (specs/lanes/fit-editor.md) into the character catalogue's `fit` map (look.ts
  * FIT): `node scripts/apply-fit.mjs <export.json>`. The export is the editor page's db collection `fit`: one doc per
- * item id, `{ y }` for a hairstyle or accessory (metres up the head), `{ eyes, mouth }` for a whole face (face canvas
- * units up). It may be an array of docs (`{ id | doc_id, data }`, or the fields beside the id) or an `{ id: fields }`
+ * item id, `{ x, y, z }` for a hairstyle or accessory (metres along the head's own axes: its left, up, forward),
+ * `{ eyes, mouth, eyesApart }` for a whole face (face canvas units up, and each eye away from the centre line); an
+ * older doc with fewer fields reads the same. It may be an array of docs (`{ id | doc_id, data }`, or the fields beside the id) or an `{ id: fields }`
  * map. Every id and value is checked before anything is written; zeros are dropped. Both copies are written, the art
  * source and the web copy (look.test.ts checks they match), changing only the `fit` key's text.
  */
@@ -13,8 +14,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const web = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const CATALOGUES = [join(web, "../art/characters/character_catalog.json"), join(web, "data/characters/character_catalog.json")];
 const FACES = join(web, "data/characters/face_v7.json");
-/** The furthest a lift may go: a head piece's in metres, a face part's in face canvas units. */
-export const LIMIT = { y: 0.1, eyes: 0.2, mouth: 0.2 };
+/** The furthest a move may go: a head piece's in metres, a face part's in face canvas units. */
+export const LIMIT = { x: 0.1, y: 0.1, z: 0.1, eyes: 0.2, mouth: 0.2, eyesApart: 0.2 };
 
 /** The export's docs as [id, fields] pairs. */
 function docs(raw) {
@@ -31,7 +32,7 @@ export function fitFrom(raw, catalog, faces) {
   const faceIds = new Set(Object.values(faces.faces ?? {}).map(f => f.id));
   const out = {}, errors = [];
   for (const [id, fields] of docs(raw)) {
-    const keys = parts.has(id) ? ["y"] : faceIds.has(id) ? ["eyes", "mouth"] : null;
+    const keys = parts.has(id) ? ["x", "y", "z"] : faceIds.has(id) ? ["eyes", "mouth", "eyesApart"] : null;
     if (!keys) { errors.push(`${id}: not a catalogue part or a whole face`); continue; }
     const fit = {};
     for (const [k, v] of Object.entries(fields ?? {})) {
