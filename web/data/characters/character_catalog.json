@@ -2440,39 +2440,6 @@
    }
   },
   {
-   "id": "hair_tousled_spikes",
-   "slot": "back",
-   "name": "Tousled spikes",
-   "glb": "hair/full/hair_tousled_spikes.glb",
-   "tris": 4161,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "full": true,
-   "skull": "v10",
-   "source": "hair/source/david-b3/33-Black-Gojo-Anime-Resting-Messy-Hair-17379327411.glb",
-   "roblox": {
-    "provisional": true
-   },
-   "key": "hair-37",
-   "map": {
-    "cell": 31,
-    "natural": {
-     "a": [
-      0.1591,
-      0.0,
-      89.88
-     ]
-    }
-   }
-  },
-  {
    "id": "hair_ski_mask_dreads",
    "slot": "back",
    "name": "Ski mask and dreads",

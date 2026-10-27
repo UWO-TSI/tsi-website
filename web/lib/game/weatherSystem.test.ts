@@ -196,12 +196,12 @@ describe("seeded hashes stay identical across callers", () => {
   it("specials, Oracle item order, pickup codes and node rolls", () => {
     // the pool lost the wardrobe cut's four retired rows and gained the visor (2026-10-14), then wardrobe batch 2's coin
     // rows (2026-10-16; #12 deleted 2026-10-17, and main retired the tier-1 net and shovel; round 2 added #07 in silver; the hair shelf, 2026-10-27: four more
-    // coin hairstyles), so the day's shuffle moved
+    // coin hairstyles; wardrobe batch 3 priced, 2026-10-27: three coin hairs, two coin faces, one coin accessory), so the day's shuffle moved
     expect(dailySpecials(seedItems(), "2026-09-26").map((i) => i.slug)).toMatchInlineSnapshot(`
       [
-        "furn-study-desk",
-        "wear-acc-gold-monocle",
-        "furn-stone-lantern",
+        "furn-fence-country-a",
+        "furn-bookshelf",
+        "furn-home-bed",
       ]
     `);
     expect(itemOrder("x").slice(0, 8)).toMatchInlineSnapshot(`

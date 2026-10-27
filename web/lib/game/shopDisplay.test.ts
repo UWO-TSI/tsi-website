@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CATALOGUE, OWNERSHIP_ITEMS, onSale } from "@/lib/wallet/catalogue";
 import { SHOP_PICKS, SPECIALS_SLOTS, nearestDisplay, shopDisplay, todaysSpecials } from "./shopDisplay";
+import { itemSpec } from "@/lib/icons/itemModel";
 import { SHOP_SLOTS, SHOP_TAG_RANGE, type ItemKind } from "./shopLayout";
 
 const ON_SALE = new Map([...CATALOGUE, ...OWNERSHIP_ITEMS].filter(onSale).map(e => [e.slug, e]));
@@ -27,6 +28,8 @@ describe("what the shop shows (specs/interiors/shop.md, phase 2)", () => {
     const bySlot = new Map(shown.map(d => [d.slot, d]));
     for (const s of SHOP_SLOTS.filter(x => x.level === 0)) {
       const d = bySlot.get(s.id);
+      // a special that is a hairstyle or a whole face has no model to put on a plinth (its icon is a flat tile): that plinth stays empty
+      if (!d && (SPECIALS_SLOTS as readonly string[]).includes(s.id)) continue;
       expect(d, s.id).toBeDefined();
       expect(d!.name.length).toBeGreaterThan(1);
       expect(d!.icon).toMatch(/^\/assets\/icons\/.+\.webp$/);
@@ -45,7 +48,7 @@ describe("what the shop shows (specs/interiors/shop.md, phase 2)", () => {
     expect(a).toHaveLength(SPECIALS_SLOTS.length);
     expect(a.map(e => e.slug)).not.toEqual(c.map(e => e.slug));
     const shown = shopDisplay(new Date("2026-10-17T15:00:00Z")).filter(d => d.special);
-    expect(shown.map(d => d.slug)).toEqual(a.map(e => e.slug));
+    expect(shown.map(d => d.slug)).toEqual(a.filter(e => itemSpec(e)).map(e => e.slug));   // a hairstyle or face special has no plinth model
   });
 
   it("tags the nearest item on your floor within range, and nothing from the stair", () => {

@@ -49,11 +49,11 @@ describe("creator categories (read from the catalogue)", () => {
     expect(colourTarget(cat("accessories"), two, "acc_shoulder_bag")).toBe("acc_shoulder_bag");
     expect(colourTarget(cat("eyes"), two, null)).toBeNull();
   });
-  it("offer David's 33 whole hairstyles (wardrobe batch 2 added five; #22 is its hat alone; #14, #8, #9 and #24 removed; batch 3 added 15, less #29, #31, #36 and #38) as Hair's only row, recolourable (head-roblox)", () => {
+  it("offer David's 32 whole hairstyles (wardrobe batch 2 added five; #22 is its hat alone; #14, #8, #9 and #24 removed; batch 3 added 15, less #29, #31, #33, #36 and #38) as Hair's only row, recolourable (head-roblox)", () => {
     const hair = cat("hair");
     expect(hair.sections.map(s => s.id)).toEqual(["hairstyles"]);
     expect(hair.sections[0].options).toEqual(PARTS.filter(p => p.full).map(p => p.id));
-    expect(hair.sections[0].options).toHaveLength(33);
+    expect(hair.sections[0].options).toHaveLength(32);
     expect(hair.swatch).toBe("hair");
     const full = hair.sections[0];
     const l = choose(DEFAULT_LOOK, full, full.options[0]);
@@ -133,22 +133,25 @@ describe("wardrobe batch 2 in the creator and the closet (David's prices, specs/
 
 describe("a part David hasn't priced is not offered (coordinator, 2026-10-27; look.ts offered)", () => {
   const every = (mode: "create" | "wardrobe") => new Set(CATEGORIES.flatMap(c => c.sections.flatMap(s => shownOptions(s, mode, () => true))));
-  const unpriced = PARTS.filter(p => p.key && !priceOf(p.key));
-  const unpricedFaceParts = Object.entries(FACE.faces).filter(([key]) => !priceOf(key)).flatMap(([, f]) => [f.eyes, f.mouth, ...f.extras].filter((x): x is string => !!x));
+  /** Runs `fn` with these pricing keys unlisted (every batch 3 item is priced now), then restores them. */
+  const without = (keys: string[], fn: () => void) => {
+    const saved = keys.map(k => [k, BATCH2_PRICES[k]] as const);
+    try { for (const k of keys) delete BATCH2_PRICES[k]; fn(); } finally { for (const [k, v] of saved) BATCH2_PRICES[k] = v; }
+  };
 
-  it("leaves batch 3's keyed hair, glasses and whole-face parts out of the creator and the closet, owned or not", () => {
-    expect(unpriced.length).toBeGreaterThan(0);
-    expect(unpricedFaceParts.length).toBeGreaterThan(0);
-    for (const mode of ["create", "wardrobe"] as const) {
-      const shown = every(mode);
-      for (const id of [...unpriced.map(p => p.id), ...unpricedFaceParts]) expect(shown.has(id), `${mode} ${id}`).toBe(false);
-    }
+  it("holds back a keyed hair, a keyed accessory and a whole face's parts until they are priced, owned or not", () => {
+    const hair = PARTS.find(p => p.key === "hair-34")!, glasses = PARTS.find(p => p.key === "acc-25")!, f = FACE.faces["face-26"];
+    const faceIds = [f.eyes, f.mouth, ...f.extras].filter((x): x is string => !!x);
+    for (const mode of ["create", "wardrobe"] as const) for (const id of [hair.id, glasses.id, ...faceIds]) expect(every(mode).has(id), `${mode} ${id} priced`).toBe(true);
+    without(["hair-34", "acc-25", "face-26"], () => {
+      for (const mode of ["create", "wardrobe"] as const) for (const id of [hair.id, glasses.id, ...faceIds]) expect(every(mode).has(id), `${mode} ${id}`).toBe(false);
+      expect(PART_BY_ID.has(hair.id) && PART_BY_ID.has(glasses.id)).toBe(true);        // the catalogue (Face Fit, /lab) still lists them
+      expect([offered(hair.id), offered(f.eyes), offered("top_tee")]).toEqual([false, false, true]);
+    });
+    expect(offered(hair.id)).toBe(true);
   });
-  it("still offers every priced item, free or sold, and the catalogue (Face Fit, /lab) lists all of it", () => {
+  it("offers every keyed item once it is priced, free or sold", () => {
     const shown = every("wardrobe");
-    for (const p of PARTS.filter(q => q.key && priceOf(q.key) && !q.event)) expect(shown.has(p.id), p.id).toBe(true);
-    for (const id of unpriced.map(p => p.id)) expect(PART_BY_ID.has(id), id).toBe(true);
-    expect(offered("hair_tousled_spikes")).toBe(false);
-    expect(offered("top_tee")).toBe(true);
+    for (const p of PARTS.filter(q => q.key && !q.event)) expect([p.id, priceOf(p.key) !== null, shown.has(p.id)]).toEqual([p.id, true, true]);
   });
 });

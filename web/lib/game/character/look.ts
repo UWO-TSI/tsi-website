@@ -449,10 +449,9 @@ export const priceOf = (key: string | undefined): Batch2Price | null => (key ? B
  */
 export const offered = (id: string): boolean => {
   const p = PART_BY_ID.get(id);
-  return p ? !p.key || priceOf(p.key) !== null : !UNPRICED_FACE_PARTS.has(id);
+  if (p) return !p.key || priceOf(p.key) !== null;
+  return !Object.entries(FACE.faces ?? {}).some(([key, f]) => priceOf(key) === null && (f.eyes === id || f.mouth === id || f.extras.includes(id)));
 };
-const UNPRICED_FACE_PARTS: ReadonlySet<string> = new Set(Object.entries(FACE.faces ?? {}).filter(([key]) => priceOf(key) === null)
-  .flatMap(([, f]) => [f.eyes, f.mouth, ...f.extras].filter((x): x is string => !!x)));
 const sold = (key: string | undefined) => { const m = priceOf(key)?.mode; return m === "coins" || m === "gems"; };
 /**
  * Inventory ref that unlocks a part (a variant counts as its base part); null for free hair styles and face items.

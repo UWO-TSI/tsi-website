@@ -359,10 +359,10 @@ describe("David's faces #26-32 (wardrobe batch 3, art/characters/v7/face_set_b3.
   const faces = Object.entries(FACE.faces).filter(([key]) => Number(key.slice(5)) >= 26);
   const page2 = (c: FaceCell) => { const [W, H] = FACE.atlas2_size; return [c[0] / W, c[1] / H, c[2] / W, c[3] / H]; };
 
-  it("are six whole faces (#30 moody removed, David 2026-10-27), unpriced, in their own columns right of the second page's earlier cells, static", () => {
+  it("are six whole faces (#30 moody removed, David 2026-10-27), priced, in their own columns right of the second page's earlier cells, static", () => {
     expect(faces.map(([key, f]) => `${key} ${f.id}`)).toEqual(["face-26 squiggle", "face-27 zombie", "face-28 big_eyes", "face-29 crying", "face-31 dizzy", "face-32 wink"]);
     for (const [key, f] of faces) {
-      expect(BATCH2_PRICES[key], key).toBeUndefined();            // David picks free or price on the shelf page
+      expect(BATCH2_PRICES[key], key).toBeDefined();               // David priced them on the shelf page, 2026-10-27
       const cells = [...Object.values(FACE.layers.eyes.items[f.eyes]).filter((c): c is FaceCell => !!c),
         ...(f.mouth ? [FACE.layers.mouth.items[f.mouth]] : []), ...f.extras.map(x => FACE.layers.extras.items[x].cell)];
       for (const c of cells) {
