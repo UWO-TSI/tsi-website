@@ -422,6 +422,10 @@ def cap_face(rule, px, uvc):
         return not (uvc[0] > 0.68 and uvc[1] < 0.67)
     if rule == "not_green":            # #22: the grey ushanka and silver goggles round the green hair
         return not (0.2 < h < 0.55 and s > 0.15 and v > 0.12)
+    if rule == "light":                # batch 3 #34: the white ski mask over black dreads
+        return v > 0.45 and s < 0.2
+    if rule == "skin_tone":            # batch 3 #36, #39, #40: the scalp and edges drawn in a skin colour
+        return 0.02 < h < 0.11 and s > 0.3 and v > 0.25
     return False
 
 
@@ -892,6 +896,8 @@ def paint_out(px, region, logos):
     h, s, v = np.vectorize(lambda r, g, b: colorsys.rgb_to_hsv(r, g, b), otypes=[float, float, float])(px[..., 0], px[..., 1], px[..., 2])
     if logos == "yellow":
         bad = (h > 0.08) & (h < 0.2) & (s > 0.45) & (v > 0.35)
+    elif logos == "dark":       # batch 3 #34: a black logo on a white mask
+        bad = v < 0.25
     else:   # light_or_vivid: white or grey letters, and any vivid red or blue patch, on a dark cap
         bad = ((v > 0.3) & (s < 0.25)) | ((s > 0.4) & ((h < 0.03) | (h > 0.9) | ((h > 0.5) & (h < 0.72))))
     bad &= region

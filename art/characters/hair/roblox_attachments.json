@@ -711,6 +711,366 @@
    ],
    "provisional": true,
    "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the fringe and face opening are on the raw mesh's +Z side, checked on the classic head (wardrobe batch 2)"
+  },
+  {
+   "n": 28,
+   "id": "hair_spiky_messy",
+   "asset_id": 103136287139771,
+   "name": "Spiky messy",
+   "file": "28-Ichigo-Black-103136287139771.glb",
+   "position": [
+    -0.03375,
+    0.4961,
+    0.02
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the face opening's side of the raw mesh, read off four renders of it (wardrobe batch 3)"
+  },
+  {
+   "n": 29,
+   "id": "hair_fluffy_crop",
+   "asset_id": 15563758601,
+   "name": "Fluffy crop",
+   "file": "29-Black-Messy-Short-Fringe-V2-15563758601.glb",
+   "position": [
+    0.0125,
+    0.23276,
+    -0.01
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the face opening's side of the raw mesh, read off four renders of it (wardrobe batch 3)"
+  },
+  {
+   "n": 30,
+   "id": "hair_straight_layers",
+   "asset_id": 119570271189500,
+   "name": "Straight layers",
+   "file": "30-Nagumo-119570271189500.glb",
+   "position": [
+    -0.0375,
+    0.53291,
+    0.04
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the face opening's side of the raw mesh, read off four renders of it (wardrobe batch 3)"
+  },
+  {
+   "n": 31,
+   "id": "hair_long_windswept",
+   "asset_id": 86707394443389,
+   "name": "Long windswept",
+   "file": "31-White-Long-Japanese-Windy-Messy-Hair-86707394443389.glb",
+   "position": [
+    0.16,
+    0.91329,
+    0.025
+   ],
+   "orientation": [
+    0,
+    -90,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the face opening's side of the raw mesh, read off four renders of it (wardrobe batch 3)"
+  },
+  {
+   "n": 32,
+   "id": "hair_rolled_mask",
+   "asset_id": 105325349471584,
+   "name": "Rolled-up mask",
+   "file": "32-Spider-Man-105325349471584.glb",
+   "position": [
+    0.02625,
+    0.51223,
+    -0.0025
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the face opening's side of the raw mesh, read off four renders of it (wardrobe batch 3)"
+  },
+  {
+   "n": 33,
+   "id": "hair_tousled_spikes",
+   "asset_id": 17379327411,
+   "name": "Tousled spikes",
+   "file": "33-Black-Gojo-Anime-Resting-Messy-Hair-17379327411.glb",
+   "position": [
+    0.0025,
+    0.31493,
+    0.25
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the face opening's side of the raw mesh, read off four renders of it (wardrobe batch 3)"
+  },
+  {
+   "n": 34,
+   "id": "hair_ski_mask_dreads",
+   "asset_id": 119266145525998,
+   "name": "Ski mask and dreads",
+   "file": "34-UA-Rolled-Up-Ski-Mask-w-Messy-Dreads-119266145525998.glb",
+   "position": [
+    0.02125,
+    0.58023,
+    -0.01
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the face opening's side of the raw mesh, read off four renders of it (wardrobe batch 3)"
+  },
+  {
+   "n": 35,
+   "id": "hair_braided_pigtails",
+   "asset_id": 18523347427,
+   "name": "Braided pigtails",
+   "file": "35-Pretty-Girl-Braided-Pigtails-in-Black-18523347427.glb",
+   "position": [
+    -0.0125,
+    1.25715,
+    0.015
+   ],
+   "orientation": [
+    0,
+    180,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the face opening's side of the raw mesh, read off four renders of it (wardrobe batch 3)"
+  },
+  {
+   "n": 36,
+   "id": "hair_space_buns",
+   "asset_id": 77782189856723,
+   "name": "Space buns with fluffy edges",
+   "file": "36-Black-Space-Buns-W-Fluffy-Edges-77782189856723.glb",
+   "position": [
+    0.0025,
+    0.08281,
+    -0.0175
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the face opening's side of the raw mesh, read off four renders of it (wardrobe batch 3)"
+  },
+  {
+   "n": 37,
+   "id": "hair_buns_braid",
+   "asset_id": 110168955712985,
+   "name": "Messy buns with a braid",
+   "file": "37-Double-Messy-Buns-with-Braid-Yellow-Beige-110168955712985.glb",
+   "position": [
+    0.085,
+    0.64474,
+    0.005
+   ],
+   "orientation": [
+    0,
+    -90,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the face opening's side of the raw mesh, read off four renders of it (wardrobe batch 3)"
+  },
+  {
+   "n": 38,
+   "id": "hair_messy_braid",
+   "asset_id": 82798715506608,
+   "name": "Messy with a braid",
+   "file": "38-Black-Messy-Hair-w-a-Braid-82798715506608.glb",
+   "position": [
+    -0.025,
+    1.2282,
+    0.14
+   ],
+   "orientation": [
+    0,
+    180,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the face opening's side of the raw mesh, read off four renders of it (wardrobe batch 3)"
+  },
+  {
+   "n": 39,
+   "id": "hair_freeform_afro",
+   "asset_id": 73155099277090,
+   "name": "Freeform afro",
+   "file": "39-Freeform-Afro-73155099277090.glb",
+   "position": [
+    -0.035,
+    0.10764,
+    0.24
+   ],
+   "orientation": [
+    0,
+    180,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the face opening's side of the raw mesh, read off four renders of it (wardrobe batch 3)"
+  },
+  {
+   "n": 40,
+   "id": "hair_sponge_twists",
+   "asset_id": 123620270798051,
+   "name": "Sponge twists",
+   "file": "40-Blonde-Over-Sponged-Sharp-Short-Afro-123620270798051.glb",
+   "position": [
+    0.01,
+    0.06427,
+    -0.085
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the face opening's side of the raw mesh, read off four renders of it (wardrobe batch 3)"
+  },
+  {
+   "n": 41,
+   "id": "hair_middle_part",
+   "asset_id": 14876610196,
+   "name": "Middle part",
+   "file": "41-White-Middle-Part-14876610196.glb",
+   "position": [
+    0.0075,
+    0.1013,
+    -0.21
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the face opening's side of the raw mesh, read off four renders of it (wardrobe batch 3)"
+  },
+  {
+   "n": 42,
+   "id": "hair_mod_cut",
+   "asset_id": 122091889431230,
+   "name": "Mod cut",
+   "file": "42-low-poly-mod-cut-red-122091889431230.glb",
+   "position": [
+    0.01,
+    0.52046,
+    0.05375
+   ],
+   "orientation": [
+    0,
+    -90,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the face opening's side of the raw mesh, read off four renders of it (wardrobe batch 3)"
   }
  ]
 }
