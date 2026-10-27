@@ -15,7 +15,7 @@ This bible was written before the 2026-03-29 product pivot to a **2.5D MMO RPG g
 | §2 Architecture | Next.js + Supabase | + **React Three Fiber + Drei + PS1 shader**; Colyseus deferred for multiplayer |
 | §4 RBAC | 4-tier (T1-T4) | **5-tier (T1-T5)** — T1 David / T2 chapter presidents / T3 PMs+VPs / T4 directors+devs / T5 volunteers+general |
 | §6 Class System | Position-based (`ARCHITECT`, `ORACLE`, etc.) | **MBTI-based** — 4 main classes (Analyst/Diplomat/Sentinel/Explorer) + 16 subclasses, determined via Oracle Temple quiz |
-| §7 Coin Economy | Explicit `100 TC ≈ $1 CAD` reveal | **Economy v2 (2026-07-25, David-ruled):** the money-equivalent wallet is now **Gems 💎** (the legacy `tc_*` DB columns, display-renamed only); **TC 🪙 is the in-game PLAY currency** — earned by selling catches at the Wharf Shack, spent on gear. Coins NEVER convert to Gems or CAD; no rate anywhere. See `specs/economy-v2-currencies.md` |
+| §7 Coin Economy | Explicit TC ≈ CAD rate reveal | **Economy v2 (2026-07-25, David-ruled):** the money-equivalent wallet is now **Gems 💎** (the legacy `tc_*` DB columns, display-renamed only); **TC 🪙 is the in-game PLAY currency** — earned by selling catches at the Wharf Shack, spent on gear. Coins NEVER convert to Gems or CAD; no rate anywhere. See `specs/economy-v2-currencies.md` |
 | §5 Onboarding | Terminal hacker theme | Theme retained; **adds Oracle Temple MBTI step + game-world tutorial** |
 
 **Additions since 2026-05-21 (shipped, not yet reflected in sections below):**
@@ -1797,7 +1797,7 @@ All decisions confirmed during the specification Q&A session:
 | 8 | Member count? | 50–150 per term |
 | 9 | Who posts bounties? | Anyone posts, admin approves |
 | 10 | Bounty payment? | Both CAD and TC options |
-| 11 | Team structure? | Both project and ops teams, term-based. $1 ≈ 100 TC |
+| 11 | Team structure? | Both project and ops teams, term-based. |
 | 12 | Calendar sync? | TSI events only, export to Google Calendar as feed |
 | 13 | Marketplace fulfillment? | In-person pickup |
 | 14 | Job Board moderation? | Light approval |
