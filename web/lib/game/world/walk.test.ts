@@ -5,11 +5,12 @@
  */
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { BUILDING_SOLID, DECK_SQUARE_HALF, PROP_TOP, ROUND_PROPS, barDecks, inFootprint, inRect, landmarkHalf, landmarkPoint, landmarks, propFootprint, propsOf, turn, villageIsland, wharfDock, wharfDecks, type LandmarkId } from "../defaultIsland";
+import { BUILDING_SOLID, DECK_SQUARE_HALF, FIRE_PIT_RING, PROP_TOP, ROUND_PROPS, barDecks, inFootprint, inRect, landmarkHalf, landmarkPoint, landmarks, propFootprint, propsOf, turn, villageIsland, wharfDock, wharfDecks, type LandmarkId } from "../defaultIsland";
 import { BAR_Y, ENTRY, STOOLS, STOOL_Z, barOf, barPoint } from "../sushiBar";
 import { EDGE_SHOPS, JETTY, dockToWorld } from "../wharf";
 import { barrierBoxes, barrierPlacements, inBarrier } from "../barriers";
 import { campfireSite } from "../campfireSite";
+import { FIRE } from "../campfire";
 import { MOVE_TUNING, NO_INPUT, createMoveState, stepMove, STEP, type MoveWorld } from "../movement/sim";
 import { navGrid, planResidents } from "../residentRoutine";
 import { PROPOSALS, acceptProposed } from "../proposals";
@@ -185,6 +186,33 @@ describe("walking the smooth world", () => {
       if (propsOf(v).some(p => { const f = propFootprint(p), [dx, dz] = f ? turn(f[2], f[3], p.yaw) : [0, 0]; return p !== o && f && inFootprint(o.x, o.z, { x: p.x + dx, z: p.z + dz }, p.yaw ?? 0, f[0] + 0.3, f[1] + 0.3); })) continue;
       expect(island.top(o.x, o.z), `${o.kind}:${o.id}`).toBe(island.ground(o.x, o.z));
     }
+  });
+
+  it("walls the campfire's pit at its stone ring, and leaves its sit and dance rings open", () => {
+    const fire = objects.find(o => o.kind === "campfire")!, ring = FIRE_PIT_RING * (fire.scale ?? 1);
+    // Run at the fire from every side: stopped at the ring, never in the pit.
+    for (let a = 0; a < 16; a++) {
+      const ux = Math.cos((a * Math.PI) / 8), uz = Math.sin((a * Math.PI) / 8);
+      let s = createMoveState(fire.x + ux * 1.6, fire.z + uz * 1.6, island), near = Infinity;
+      for (let i = 0; i < 90; i++) { s = stepMove(s, { ...NO_INPUT, x: -ux, z: -uz }, STEP * 2, island, MOVE_TUNING); near = Math.min(near, Math.hypot(s.x - fire.x, s.z - fire.z)); }
+      expect(near, `from ${a}`).toBeGreaterThan(ring);
+      expect(near, `from ${a}: held at the ring, no wider`).toBeLessThan(ring + 0.35);
+    }
+    // The dance circle is open all the way round (and the sit ring inside it): walk it.
+    for (const r of [FIRE.danceRadius, FIRE.sitRadius]) {
+      const blocked: number[] = [];
+      for (let a = 0; a < 64; a++) { const x = fire.x + r * Math.cos((a * Math.PI) / 32), z = fire.z + r * Math.sin((a * Math.PI) / 32); if (!island.standable(x, z)) blocked.push(a); }
+      expect(blocked, `ring ${r}`).toEqual([]);
+    }
+    let s = createMoveState(fire.x + FIRE.danceRadius, fire.z, island), swept = 0;
+    for (let i = 0; i < 400; i++) {
+      const a = Math.atan2(s.z - fire.z, s.x - fire.x), tx = -Math.sin(a), tz = Math.cos(a), out = (FIRE.danceRadius - Math.hypot(s.x - fire.x, s.z - fire.z)) * 2;
+      s = stepMove(s, { ...NO_INPUT, x: tx + out * Math.cos(a), z: tz + out * Math.sin(a) }, STEP * 2, island, MOVE_TUNING);
+      const b = Math.atan2(s.z - fire.z, s.x - fire.x);
+      swept += Math.atan2(Math.sin(b - a), Math.cos(b - a));
+    }
+    expect(swept, "danced once round").toBeGreaterThan(2 * Math.PI);
+    expect(Math.abs(Math.hypot(s.x - fire.x, s.z - fire.z) - FIRE.danceRadius)).toBeLessThan(0.4);
   });
 
   it("blocks walking up a slope too steep to climb, and lets you walk down it", () => {

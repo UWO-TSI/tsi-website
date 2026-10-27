@@ -45,6 +45,10 @@ leaves). Tan: a deck over lower ground. Blue: water (dark: water you can't wade)
    fish market (centre offset), the fruit stall, the lifeguard tower's ladder, the leaning palm, the alders, the net
    heaps, the cloth crates, the path rocks and fences, the sandcastle, the surfboards, the dock hoist's post. The
    fountain is round now (its basin).
+6. **The campfire's pit (follow-up, coordinator's ask).** The scene walled the fire with a 0.83 square (Campfire.tsx
+   `eventSolids`, its corners past the stone ring). On the smooth world the walker now walls it round at the stone
+   ring's top edge (`FIRE_PIT_RING` 0.72 x its scale 1.15 = 0.83); the sit (2.1) and dance (2.9) rings stay open. The
+   village keeps the scene's square.
 
 ## Left as is, on purpose
 
@@ -65,7 +69,6 @@ leaves). Tan: a deck over lower ground. Blue: water (dark: water you can't wade)
 - **The market cart model is broken:** `web/public/assets/acnh/props/market-cart.glb` has two of its four meshes with
   no triangles (index count 0) and the fourth with 648 indices for 2605 vertices, so only about a third of the cart
   draws (the red bars on the wharf render). Its blocker covers the whole cart as built. Fix the model (art), not the box.
-- **The campfire is walked through.** Not on the lane's list either way; a fire you sit round. David's call.
 - **Four plaza benches** (`bench-0` to `bench-3`, no model) and the four `study` markers draw nothing and block nothing,
   but `benchSeat` still seats you at the invisible benches.
 - **The village has the same building offsets** (the shop's box reaches 1.8 in front of its walls, the HQ's 2 behind
@@ -86,7 +89,7 @@ prop's top was read as a height over the sea (fix 2).
 | barrier:rockslide | 1 | solid | 6.24 x 4.76 @ -0.05, 0.40 | barrier box | 99% / 16.63 | barrier box | 99% / 16.63 |
 | barrier:unbuilt-bridge | 2 | solid | 2.90 x 2.11 @ 0.04, 0.12 | barrier box | 100% / 6.15 | barrier box | 100% / 6.15 |
 | bench:log-bench | 3 | solid | 1.90 x 0.48 | 0.95 x 0.24, top from 0 | 0% / 0 | 0.95 x 0.24 | 97% / 0.02 |
-| campfire: | 1 | solid | 1.23 x 1.18 @ -0.07, -0.13 | none | 0% / 0 | none | 0% / 0 |
+| campfire: | 1 | solid | 1.23 x 1.18 @ -0.07, -0.13 | 0.83 square from the scene (not seen by this audit) | 0% / 0 | round r 0.72 | 100% / 1.21 (the low stone ring) |
 | house:chalet-brown | 3 | solid | 4.70 x 2.67 @ 0.00, 1.19 | 2.5 x 2.1, unturned bound | 100% / 26.82 | turned 2.35 x 1.34 @ 0, 1.2 | 98% / 11.25 |
 | house:chalet-red | 3 | solid | 4.70 x 2.67 @ 0.00, 1.19 | 2.5 x 2.1, unturned bound | 92% / 26.89 | turned 2.35 x 1.34 @ 0, 1.2 | 98% / 11.18 |
 | house:chalet-yellow | 2 | solid | 4.70 x 2.67 @ 0.00, 1.19 | 2.5 x 2.1, unturned bound | 100% / 29.73 | turned 2.35 x 1.34 @ 0, 1.2 | 98% / 11.03 |
