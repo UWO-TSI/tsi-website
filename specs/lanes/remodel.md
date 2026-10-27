@@ -20,6 +20,23 @@ David, 2026-10-27 (night), verbatim: "I want you to go ahead and remodel some ol
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, and one `perf:check` at the end (`SCENES=village,v2`). Message "main" with the inventory as soon as it's done, then at the end with the head SHA, the before and after list, triangles before and after, the gates and perf, and anything you couldn't do.
 
+## Round 2 (David's review of round 1, 2026-10-27; https://claude.ai/artifact/4uk78WkbWRFyBRc3HD4WTL)
+
+**Approved:** market cart, lighthouse, monument rope fence, the fish (all 81) and the fish close-up. Fish note, verbatim: "looks good i want all fishes remodeled like this". All 81 already have the tweak. Also re-render the fish icons (the catch card, the collection book) from the tweaked fish, so they match.
+
+**Step 1, ship the approved ones first:** cut the wiring down to just the approved models (cart, lighthouse, rope fence, fish), with the redo items back on the old models for now. Run the gates, commit, and message the coordinator with that SHA so it can merge to main before you go on. One merge, then keep working on top.
+
+**Redos, verbatim, with my reading:**
+- **Crabs:** "the after sucks so bad if its similar triangles than i want you to keep the old ones". Drop our crabs and keep the dump's, with their wiring reverted. Delete the crab build script and GLBs.
+- **Gather rocks:** "no i like the old one, it actuallyu looks like real rocks with texture and not random smooth shape, redo tp make it more liek the before". Rebuild them closer to the old ones: faceted, rocky, with the stone texture or a similar small stone texture that reads as real rock. No smooth blobs. Keep them at or under the old triangles.
+- **Market barrel:** "i want shape to be more round, stay closer to reference". A rounder barrel with a clear belly bulge, closer to the old barrel and the references.
+- **Butterflies, dragonflies, the four crawlers** (the same note on each): "i think they should be small less triangesl in game cuz theyre small but the close up model of the butter flies need to be the before. the after can be even less traiangles, but the zoom in should be the before".
+  - In the world, where they're tiny and flying, use an even cheaper version of ours, fewer triangles than round 1.
+  - Wherever the game shows one close up, keep the old (before) model: the catch reveal, the collection book, any zoomed view.
+  - Find every close-up path and wire it to the old model, and the world path to the cheap one.
+
+**Evidence** for round 2: the barrel, the rocks (in game and in Blender, old next to new), a bug in the world (new cheap) beside its close-up (old), and the fish icons before and after, in `specs/evidence/remodel/round2/`. Same gates; one `perf:check` at the end.
+
 ## Status
 
 Built and wired, awaiting David's review (nothing approved). Head: `git log -1` on game/remodel. Main merged at f9f4dc5d.
