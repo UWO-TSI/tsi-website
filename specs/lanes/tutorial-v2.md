@@ -37,7 +37,7 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 ## Status
 
-All four items are built and run end to end headless on the new world. Not yet reviewed by David. The final evidence batch is still to shoot (Next).
+All four items are built and run end to end headless on the new world. The evidence is shot: `specs/evidence/tutorial-v2/v2/01..11`. Waiting on David's review. The coordinator took the defaults on the four open notes (selling, the cut beats, the HQ door, drafts).
 
 - **The guide arrow (shared), merged into main-quest at 203f8603.** `web/lib/game/guideArrow.ts` holds the API (tested). `web/components/game/GuideArrow.tsx` draws a faint chevron a step ahead of your feet: one mesh, in `IslandScene`, so outdoors only.
   - `const clear = showGuide(owner, { x, z } | () => XZ | null, { near })`. The newest guide wins; clearing it brings back the one under it. Also `clearGuide(owner)` and `guideNow()`. Dev hook: `window.__guide`.
@@ -64,13 +64,9 @@ All four items are built and run end to end headless on the new world. Not yet r
 
 ## Next
 
-1. Shoot the evidence batch in one short devserver hold, with the dev server on 3172 and `NEXT_PUBLIC_GAME_WORLD=new` (see Tools): `first10` (part a: the HQ visit and the sights), `first10b` (part b: the wharf, the catch, the barrel) and `hq-phone`. Make webp sheets in `specs/evidence/tutorial-v2/v2/`.
-2. Report to the coordinator for David's review page.
-3. Open for David:
-   - Bram explains selling but doesn't make you sell the first fish (m1 donates it). The task is only to open the barrel.
-   - Every line is a draft.
-   - The cut HQ beats (founder, map, board).
-   - During any arrival, HQ's door is always "enter".
+1. Act on David's review notes, once the coordinator relays them.
+2. Known and not fixed: the arrow is a ground decal, so tall props in its spot (a fountain's rim) can hide part of it. The evidence's 01 shows this by the plaza fountain.
+3. The final batch's part b stopped at the barrel conversation (a talk-box wait timed out). Sheet 10 (the barrel and the end) is from the earlier part b run, on the same code for that stretch.
 
 ## Tools and gotchas
 
