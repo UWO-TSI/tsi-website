@@ -34,9 +34,25 @@ David, 2026-10-27, verbatim: "i want you to make a editor for the face parts so 
 
 **Apply script:** `node web/scripts/apply-fit.mjs <export.json>` (from `web/`): takes the db export (array of `{id|doc_id, data}` or fields beside the id, or an `{id: fields}` map), checks every id and value (unknown id, wrong field, |y| > 0.1, |eyes|/|mouth| > 0.2 refuse the whole export), rounds to 1e-4, drops zeros, writes only the `fit` key's text in both catalogue copies.
 
-**Editor bundle:** `specs/tools/fit-editor/` (`Editor.tsx`, `index.html`, `build.mjs`, `check.mjs`); `node specs/tools/fit-editor/build.mjs` writes `dist/` (gitignored): 170 files, 15.9 MB, editor.js 1.4 MB. Headless check pending (browser lock queue).
+**Editor bundle: ready to publish.** `specs/tools/fit-editor/` holds `Editor.tsx` (the page: the game's own Character, face painter and catalogue; the item list, front, 3/4 and side on skins 1 and 10, the default look beside them, height controls with fine steps and a reset, a "set" badge, saving to the db), `index.html` (`<title>Face Fit</title>`, light and dark tokens, phone layout under 760 px), `build.mjs` and `check.mjs`.
+- Build: `node specs/tools/fit-editor/build.mjs` writes `dist/` (gitignored): 171 files, 16.0 MB, `editor.js` 1.4 MB. Every root-relative `"/assets/` in the bundled web sources becomes relative (the fishing rig preloads its bobber); assets are v6 minus the LOD folders and the unused clip libraries, the hair/accessory/face icons, and the bobber. `__THUMBS__` lists the thumbnails that exist, so missing ones (silly, silly_smile have no icon) show a letter and are never requested.
+- Publish (coordinator): `dist/index.html` as the page with every other file under `dist/` in `files` at the same relative path, `capabilities: {"db": {}}`. Saves to collection `fit`, one doc per item id; reads them on load; db null shows "Can't save here".
+- Check: `node specs/tools/fit-editor/check.mjs [port]` with the browser lock: local static server, headless Chromium (muted, swiftshader), a stand-in db. PASS: no console errors, page errors or failed requests; starts from a saved doc; a burst of 3 steps saves once (`{y: 0.0115}`); a face saves `{eyes, mouth}`; reset saves 0; no db says it can't save; no horizontal scroll at 1280 and 390. Evidence: `specs/evidence/fit-editor/desktop-{hair,face,accessory}.png`, `phone-{top,views}.png`.
+- Gates: tsc clean (web, and Editor.tsx with a scratch tsconfig over web's), eslint clean on changed web files (it ignores `specs/`), vitest 3461 passed with and without `NEXT_PUBLIC_GAME_WORLD=new`.
+- Not verified: the real claude.ai db (the stand-in follows the 0.2.91 db types: `collection().get()`, `doc().set()`); the page inside the artifact frame.
 
-Items listed: hairstyles (catalogue hair, slot `back`), whole faces (`FACE.faces`), face accessories (group `face`). Hats are not listed (not in the spec).
+Items listed: hairstyles (catalogue hair, slot `back`), whole faces (`FACE.faces`), face accessories (group `face`). Hats are not listed (not in the spec); the field works for any part id if David wants them.
+
+## Next
+
+1. When the coordinator says wardrobe-b3 landed: merge main, `node specs/tools/fit-editor/build.mjs`, take the browser lock, `node specs/tools/fit-editor/check.mjs`, report the new size. The list reads the catalogue and `FACE.faces`, so new items need no code.
+2. After David sets values: the coordinator exports the db and runs `node web/scripts/apply-fit.mjs <export.json>` from `web/`.
+
+## Tools and gotchas
+
+- Playwright is global: `createRequire("/opt/homebrew/lib/node_modules/")`.
+- withlock.sh gives up after 20 min with exit 75 (silently if output is filtered): retry on 75.
+- Typecheck the editor: a tsconfig extending `web/tsconfig.json` with `files: [Editor.tsx]`, `typeRoots` and `paths` `"*": [web/node_modules/@types/*, web/node_modules/*]` (types first).
 
 ## Rules
 

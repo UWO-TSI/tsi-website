@@ -90,7 +90,11 @@ try {
   const phone = await open({ width: 390, height: 844 });
   expect((await phone.page.locator(".status").textContent()).startsWith("Can't save here"), "without a db it says it can't save");
   expect(await phone.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "no horizontal scroll at phone width");
-  await phone.page.screenshot({ path: join(evidence, "phone.png"), fullPage: true });
+  // viewport captures: the views draw on one fixed canvas, so a full-page capture leaves the cells below the fold empty
+  await phone.page.screenshot({ path: join(evidence, "phone-top.png") });
+  await phone.page.locator(".row").first().scrollIntoViewIfNeeded();
+  await phone.page.waitForTimeout(1500);
+  await phone.page.screenshot({ path: join(evidence, "phone-views.png") });
   await phone.context.close();
 } finally {
   await browser.close();

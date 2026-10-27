@@ -17,6 +17,9 @@ interface Item { id: string; name: string; kind: Kind; look: (skin: number) => C
 type Field = "y" | "eyes" | "mouth";
 
 const ROOT = "assets/characters/v6/", ICONS = "assets/icons/";
+/** The thumbnail files the bundle carries (build.mjs). */
+declare const __THUMBS__: string[];
+const THUMBS = new Set(__THUMBS__);
 const ITEMS: Item[] = [
   ...PARTS.filter(p => p.slot === "back").map((p): Item => ({ id: p.id, name: p.name, kind: "hair", thumbs: [`${ROOT}hair/thumbs/${p.id}.webp`, `${ICONS}${p.id}.webp`],
     look: skin => ({ ...DEFAULT_LOOK, skin, bangs: "", back: p.id }) })),
@@ -125,8 +128,9 @@ function Lift({ field, value, disabled, onChange }: { field: Field; value: numbe
 
 function Thumb({ item }: { item: Item }) {
   const [at, setAt] = useState(0);
-  if (at >= item.thumbs.length) return <span className="thumb none" aria-hidden>{item.name.slice(0, 1)}</span>;
-  return <img className="thumb" src={item.thumbs[at]} alt="" width={40} height={40} onError={() => setAt(at + 1)} />;
+  const thumbs = item.thumbs.filter(t => THUMBS.has(t));
+  if (at >= thumbs.length) return <span className="thumb none" aria-hidden>{item.name.slice(0, 1)}</span>;
+  return <img className="thumb" src={thumbs[at]} alt="" width={40} height={40} onError={() => setAt(at + 1)} />;
 }
 
 const STATUS: Record<Status["state"], string> = { connecting: "Connecting…", offline: "Can't save here: changes last until you close the page", saved: "All changes saved", saving: "Saving…", error: "" };
