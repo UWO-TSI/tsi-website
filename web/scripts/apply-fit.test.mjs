@@ -37,15 +37,18 @@ describe("apply-fit (the fit editor's export into the catalogue's `fit`)", () =>
     expect(() => fitFrom([{ id: hair, data: { y: "0.01" } }], catalog, faces)).toThrow(/not a number/);
   });
   it("changes only the `fit` key's text, replaces it on a second run, and removes it when empty", () => {
-    const once = withFit(text, { [hair]: { y: 0.01 } });
-    expect(JSON.parse(once)).toEqual({ ...catalog, fit: { [hair]: { y: 0.01 } } });
-    expect(once.startsWith(text.slice(0, text.lastIndexOf("\n}")))).toBe(true);
+    // from the catalogue without its own fit
+    const bare = withFit(text, {}), cat = JSON.parse(bare);
+    expect(cat.fit).toBeUndefined();
+    const once = withFit(bare, { [hair]: { y: 0.01 } });
+    expect(JSON.parse(once)).toEqual({ ...cat, fit: { [hair]: { y: 0.01 } } });
+    expect(once.startsWith(bare.slice(0, bare.lastIndexOf("\n}")))).toBe(true);
     const twice = withFit(once, { [face]: { eyes: 0.02 } });
     expect(JSON.parse(twice).fit).toEqual({ [face]: { eyes: 0.02 } });
-    expect(withFit(twice, {})).toBe(text);
+    expect(withFit(twice, {})).toBe(bare);
     // not last (an importer added a key after it): still found and replaced in place of nothing else
     const middle = once.replace(/\n}\s*$/, ',\n "zz": 1\n}\n');
-    expect(JSON.parse(withFit(middle, {}))).toEqual({ ...catalog, zz: 1 });
+    expect(JSON.parse(withFit(middle, {}))).toEqual({ ...cat, zz: 1 });
   });
   it("writes both copies the same from a sample export", () => {
     const dir = mkdtempSync(join(tmpdir(), "apply-fit-"));

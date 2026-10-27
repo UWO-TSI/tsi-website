@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as THREE from "three";
@@ -131,6 +131,10 @@ describe("character rig assembly", () => {
 });
 
 describe("David's fit (the fit editor: catalogue `fit`, a head piece's `x`, `y`, `z` in metres along the head's axes)", () => {
+  // the tests set their own fits: each starts from none, and the catalogue's go back after
+  const saved = { ...FIT };
+  beforeEach(() => { for (const k in FIT) delete FIT[k]; });
+  afterEach(() => { for (const k in FIT) delete FIT[k]; Object.assign(FIT, saved); });
   const head = (bones: readonly THREE.Bone[]) => bones.find(b => b.name === "mixamorigHead")!;
   it("binds every head piece's head with its axes on the bind axes, so a move is along the head's own axes", async () => {
     for (const p of PARTS.filter(x => x.slot === "back" || x.group === "face" || x.group === "head")) {

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -356,6 +356,10 @@ describe("David's faces #20-25 (wardrobe batch 2, art/characters/v7/face_set_b2.
 });
 
 describe("David's face fit (the fit editor: catalogue `fit`, eyes and mouth lifts in face canvas units)", () => {
+  // the tests set their own fits: each starts from none, and the catalogue's go back after
+  const saved = { ...FIT };
+  beforeEach(() => { for (const k in FIT) delete FIT[k]; });
+  afterEach(() => { for (const k in FIT) delete FIT[k]; Object.assign(FIT, saved); });
   const f = Object.values(FACE.faces).find(x => x.mouth)!;
   const l = look({ eyes: f.eyes, mouth: f.mouth!, extras: f.extras });
   const slots = (pose = restPose(l, "neutral"), x = l) => faceSlots(x, pose).slice(-3);
