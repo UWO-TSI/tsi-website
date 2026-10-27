@@ -25,6 +25,17 @@ All in `~/.claude/jobs/62203045/tmp/`, which survives reboots.
 - `prod-dump.sh <label>`, `prod-query.sh <sql>` and `verify.sql` are for prod migrations. The procedure is in `STATE.md` and the memory files.
 - `withlock.sh heavy|blender|devserver <cmd>` (set `LANE=game/<lane>`): takes a lock, waiting while swap is high and another lock is held. It lives in `~/.claude/jobs/62203045/tmp/`, the same folder as the helpers above, and is referenced from `specs/lane-rules.md`.
 
+## David's fit values (2026-10-27 afternoon)
+
+David finished Face Fit ("face and hair scales done"). I exported 53 docs from the `fit` collection and saved 47 to `game/fit-editor`: `specs/evidence/fit-editor/export/fit-export-2026-10-27.json`.
+- **Dropped because removed:** hair_fluffy_crop, hair_long_windswept, hair_space_buns, hair_messy_braid, acc_cross_bandage. The moody face had no doc.
+- **Dropped to reset:** hair_tousled_spikes, which wardrobe-b3 is re-placing at import. Any other hair whose placement that fix moves must be dropped too, and David re-fits it.
+- **To ship:**
+  1. wardrobe-b3 finishes: the Tousled spikes placement, the removals (4 hairs, moody, cross bandage), the monocle re-import and the under-cap cut.
+  2. Merge it into game/fit-editor and run `node web/scripts/apply-fit.mjs <export>` there.
+  3. David prices batch 3 on the shelf page; unpriced items count as free.
+  4. Merge fit-editor (which carries b3) to main with the seed migration for the new prices.
+
 ## Batch 3, clothes, loading screen (2026-10-27, morning)
 
 - **wardrobe-b3** done (head 7aa2cd79): hair-32 to hair-46, face-26 to face-32, acc-25 to acc-27; review https://claude.ai/artifact/K6PaZcMX5AbUntBhzUZAaJ. An item with a key and no price counts as free, so merge b3 only after its prices are applied.
