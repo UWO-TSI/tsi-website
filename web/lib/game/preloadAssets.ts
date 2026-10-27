@@ -346,6 +346,7 @@ export const GAME_ASSETS: readonly string[] = [
   "/assets/game/tools/broom.glb",
   "/assets/icons/rod_flimsy.webp",
   "/audio/sfx/confirm.ogg",
+  "/audio/sfx/bite.ogg",
   "/audio/sfx/blip4.ogg",
   "/audio/sfx/footstep.ogg",
 ];

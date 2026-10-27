@@ -6,6 +6,7 @@ import { CLIP_BY_NAME } from "@/lib/game/character/look";
 import { getPeacefulTarget } from "@/lib/game/peacefulNear";
 import { HOME_S, castBeat, live, newCast, throwCast, type FishingState } from "@/lib/game/fishingRig";
 import { readHoldUpCatch } from "@/lib/game/fishingPrefs";
+import type { HookTier } from "@/lib/game/fishing";
 import { SEAT_CLIPS, isLoop, type CharacterMotion, type ClipName } from "@/lib/game/character/clips";
 
 /**
@@ -54,7 +55,10 @@ export function useWorldClips(motion: RefObject<CharacterMotion>, face: (x: numb
         set({ play: "CastSwing", playRate: f?.rate ?? 1, pose: "FishHold" });
       },
       "tsi:fish-nibble": () => { const f = cast(); if (f) f.nibbleAt = performance.now(); },
-      "tsi:fish-bite": () => { const f = cast(); if (f) castBeat(f, "bite", performance.now()); },
+      "tsi:fish-bite": e => {
+        const f = cast();
+        if (f) { castBeat(f, "bite", performance.now()); f.hook = (e as CustomEvent<{ tier?: HookTier }>).detail?.tier ?? "common"; }
+      },
       "tsi:fish-hooked": e => {
         const d = (e as CustomEvent<{ model?: string; raw?: boolean }>).detail, f = cast();
         if (f) { castBeat(f, "reel", performance.now()); f.catchModel = d?.model ?? null; f.catchRaw = !!d?.raw; }

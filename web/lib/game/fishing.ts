@@ -250,6 +250,21 @@ export const REVEAL: Record<Rarity, { develop: number; hold: number; confetti: n
   seaking: { develop: 1200, hold: 5200, confetti: 4, shake: 0.07 },
 };
 
+/**
+ * The hook's beat by tier (specs/launch/v1-gameplay.md, "Fish tiers and fights"): every bite pops a "!" over the
+ * angler; a legendary's is golden with sparks, a divine's bigger still with a beam and a burst. Each has its own bite
+ * sound (art/audio/synth_bite.py) and a harder shake (world units, cameraJuice shakeCamera) and micro-zoom (degrees).
+ */
+export type HookTier = "common" | "legendary" | "divine";
+export const HOOK_TIER: Record<Rarity, HookTier> = {
+  common: "common", uncommon: "common", rare: "common", epic: "common", legendary: "legendary", seaking: "divine",
+};
+export const HOOK: Record<HookTier, { sfx: "bite" | "bite-legendary" | "bite-divine"; shake: number; punch: number }> = {
+  common: { sfx: "bite", shake: 0.065, punch: 3 },
+  legendary: { sfx: "bite-legendary", shake: 0.12, punch: 4.5 },
+  divine: { sfx: "bite-divine", shake: 0.2, punch: 6 },
+};
+
 /** "1 in N" odds for a species under the current hour/weather pool. */
 export function fishOdds(fish: FishDef): number {
   const context = currentFishingContext(), { weather } = context;

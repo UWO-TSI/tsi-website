@@ -9,6 +9,7 @@
 import { CLIP_BY_NAME } from "./character/look";
 import { castLanding, thrash } from "./fishingCast";
 import { seedAt } from "./fx/particles";
+import type { HookTier } from "./fishing";
 
 /**
  * The cast's beats: charging (the wind-up), swing (the rod whips; the bobber leaves its tip at the release, flies,
@@ -33,6 +34,8 @@ export interface FishingState {
   rate: number;
   /** The cast's seed, from its landing spot: its thrash and its splashes are the same on every client. */
   seed: number;
+  /** The bite's tier (its "!": FishingRig popBang), from the fish that bit. */
+  hook: HookTier;
   /** The last nibble (ms; -Infinity: none yet). */
   nibbleAt: number;
   /** While reeling: where the fish pulls across the throw (-1..1), the line's tension (0..1), the reel held, how far in (0..1). */
@@ -59,7 +62,7 @@ export const live = { power: 0, pull: 0, tension: 0, reeling: false, reeled: 0 }
 export function newCast(local: boolean, fromX: number, fromZ: number, spotX: number, spotZ: number, now: number): FishingState {
   return {
     local, phase: "charging", since: now, power: 0, fromX, fromZ, spotX, spotZ,
-    landX: spotX, landZ: spotZ, waterY: 0, dirX: 0, dirZ: 1, rate: 1, seed: 0, nibbleAt: Number.NEGATIVE_INFINITY,
+    landX: spotX, landZ: spotZ, waterY: 0, dirX: 0, dirZ: 1, rate: 1, seed: 0, hook: "common", nibbleAt: Number.NEGATIVE_INFINITY,
     pull: 0, tension: 0, reeling: false, reeled: 0, snapped: false, catchModel: null, catchRaw: false, catchCm: null, showOff: true,
   };
 }

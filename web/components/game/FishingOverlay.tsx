@@ -39,6 +39,8 @@ import { punchZoom, setAimZoom, setTensionZoom, shakeCamera } from "@/lib/game/c
 import {
   CAST,
   FISH,
+  HOOK,
+  HOOK_TIER,
   RARITY_META,
   START_PROGRESS,
   catchShake,
@@ -106,6 +108,8 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
   const rollRef = useRef<Promise<CatchAnswer | null> | null>(null);
   const landRef = useRef<{ roll: string; size: number | null } | null>(null);
   const hookedRef = useRef(false);
+  /** The fish on the bite (rolled as it bites), hooked into the reel. */
+  const bitingRef = useRef<FishDef | null>(null);
   /** A landed catch goes into the bag as its card closes (the HUD's fly-in then, from where it was held up). */
   const pendingBagRef = useRef<string | null>(null);
   useEffect(() => {
@@ -164,6 +168,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     rollRef.current = null;
     landRef.current = null;
     hookedRef.current = false;
+    bitingRef.current = null;
     setTensionZoom(0);
     setAimZoom(0);
     window.dispatchEvent(new CustomEvent("tsi:fish-end"));
@@ -204,28 +209,46 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         );
       }
     }
-    timersRef.current.push(
-      window.setTimeout(() => {
-        changePhase("bite");
-        punchZoom(3); // micro-zoom: the strike
-        window.dispatchEvent(new CustomEvent("tsi:fish-bite")); // the bobber pulled under in a crown of water, the "!"
-        // The bite lands on the camera (the world's shake, the Screen shake setting), never the page.
-        shakeCamera(0.065);
-        // The "!" alert: the kit's chime, the one cue a bite has until its splash sound exists (specs/polish/fishing-questions.md).
-        AudioManager.playSFX("confirm");
-        // Cast power widens the hook window (max cast: 1.4s → 2.2s).
-        const windowMs = BITE_WINDOW_MS + CAST.biteBonusMs * powerRef.current + rod.biteWindowMs;
-        biteDeadlineRef.current = performance.now() + windowMs;
-        // Auto-miss if the window lapses: the fish lets go and the bobber bobs back up.
-        timersRef.current.push(
-          window.setTimeout(() => {
-            changePhase("missed");
-            window.dispatchEvent(new CustomEvent("tsi:fish-escaped", { detail: { hooked: false } }));
-            timersRef.current.push(window.setTimeout(cancel, 1800));
-          }, windowMs)
-        );
-      }, wait)
-    );
+    timersRef.current.push(window.setTimeout(bite, wait));
+  };
+
+  /** What bites is known before its "!" (its tier picks the "!", the sound and the shake): the cast's server roll, or one here. */
+  const bite = () => {
+    const roll = rollRef.current;
+    void (roll ?? Promise.resolve(null)).then(answer => {
+      // A refusal already ended the cast (castNow); a cancelled or newer cast isn't this one.
+      if (phaseRef.current !== "waiting" || rollRef.current !== roll || (answer && !answer.ok)) return;
+      const rolled = answer && FISH.find(f => f.key === answer.catch.item_key);
+      landRef.current = rolled && answer.catch.roll ? { roll: answer.catch.roll, size: answer.catch.size_cm } : null;
+      const biting = rolled || rollHere();
+      bitingRef.current = biting;
+      const tier = HOOK_TIER[biting.rarity], hookBeat = HOOK[tier];
+      changePhase("bite");
+      punchZoom(hookBeat.punch); // micro-zoom: the strike
+      window.dispatchEvent(new CustomEvent("tsi:fish-bite", { detail: { tier } })); // the bobber pulled under in a crown of water, the "!"
+      // The bite lands on the camera (the world's shake, the Screen shake setting), never the page.
+      shakeCamera(hookBeat.shake);
+      AudioManager.playSFX(hookBeat.sfx);
+      // Cast power widens the hook window (max cast: 1.4s → 2.2s).
+      const windowMs = BITE_WINDOW_MS + CAST.biteBonusMs * powerRef.current + rod.biteWindowMs;
+      biteDeadlineRef.current = performance.now() + windowMs;
+      // Auto-miss if the window lapses: the fish lets go and the bobber bobs back up.
+      timersRef.current.push(
+        window.setTimeout(() => {
+          changePhase("missed");
+          window.dispatchEvent(new CustomEvent("tsi:fish-escaped", { detail: { hooked: false } }));
+          timersRef.current.push(window.setTimeout(cancel, 1800));
+        }, windowMs)
+      );
+    });
+  };
+
+  /** The local roll (signed out, the applicant island, no server answer): rod- and water-aware where the spot says its water. */
+  const rollHere = () => {
+    const luck = powerRef.current + (powerRef.current >= CAST.maxZone ? CAST.maxBonus : 0);
+    // Every world cast names its water (tsi:fish-start); the applicant's shore casts roll the sea.
+    const zone: "river" | "sea" = zoneOverride ?? "river";
+    return waterRef.current ? rollFishFor(waterRef.current, luck, rod, currentFishingContext()) : rollFish(luck + rod.rarityBonus, zone);
   };
 
   /** Meter released → actually cast, with power locked in. */
@@ -266,7 +289,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
-  /** Bite hooked (E or click) → the server's roll (or a local one), open the reel. */
+  /** Bite hooked (E or click) → the fish that bit, into the reel. */
   const hook = (input: KeyboardEvent | PointerEvent) => {
     if (phaseRef.current !== "bite" || hookedRef.current) return;
     if (performance.now() > biteDeadlineRef.current) return;
@@ -275,24 +298,12 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     reelInputRef.current.keys.clear(); reelInputRef.current.pointers.clear();
     if ("key" in input) reelInputRef.current.keys.add(input.key.toLowerCase());
     else reelInputRef.current.pointers.add(input.pointerId);
-    const local = () => {
-      const luck = powerRef.current + (powerRef.current >= CAST.maxZone ? CAST.maxBonus : 0);
-      // Every world cast names its water (tsi:fish-start); the applicant's shore casts roll the sea.
-      const zone: "river" | "sea" = zoneOverride ?? "river";
-      // Spots that report their water type (pond/river/sea) use the rod-aware pool.
-      return waterRef.current ? rollFishFor(waterRef.current, luck, rod, currentFishingContext()) : rollFish(luck + rod.rarityBonus, zone);
-    };
-    void (rollRef.current ?? Promise.resolve(null)).then(answer => {
-      if (phaseRef.current !== "bite") return;
-      if (answer && !answer.ok) { bagFull(answer); miss(answer.error); return; }
-      const rolled = answer && FISH.find(f => f.key === answer.catch.item_key);
-      landRef.current = rolled && answer.catch.roll ? { roll: answer.catch.roll, size: answer.catch.size_cm } : null;
-      const hooked = rolled || local();
-      setFish(hooked);
-      changePhase("reeling");
-      // The yank, the line taut, the reel; the species' model rides along so the world has it ready when it comes out.
-      window.dispatchEvent(new CustomEvent("tsi:fish-hooked", { detail: { model: hooked.model, raw: hooked.raw } }));
-    });
+    const hooked = bitingRef.current;
+    if (!hooked) return;
+    setFish(hooked);
+    changePhase("reeling");
+    // The yank, the line taut, the reel; the species' model rides along so the world has it ready when it comes out.
+    window.dispatchEvent(new CustomEvent("tsi:fish-hooked", { detail: { model: hooked.model, raw: hooked.raw } }));
   };
 
   /** Into the bag: as the catch's card closes if it is still up (cancel), else now. */
