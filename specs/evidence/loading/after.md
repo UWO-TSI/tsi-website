@@ -65,3 +65,33 @@ cost is in the perf:check at the end of the lane.
   is in view); it is behind the card, but a JS-driven loading screen would freeze on it.
 - 9 to 12 programs still link in the crossing (the boat and the crates are only mounted then).
 - The title's own 17 MB on a slow line.
+
+## Re-verify: the rim light without a frame cost (2026-10-27, head 14699fd2)
+
+The always-mounted rim (step 3 as first shipped, d9a48a35) cost frames: A/B of 3 interleaved perf-bench rounds, High,
+rim always on vs mounted only at dawn and dusk: village 5.5 vs 5.5 ms, v2 7.3 -> 7.6 ms (+4%). It is mounted only at
+dawn and dusk again, and the warm-up compiles the island for the other light count too, so the switch costs nothing
+later. Getting that to work turned up three more things, all fixed in `components/game/LoadGate.tsx` and the arrival:
+
+1. **The warm-up compiled programs the frame never used.** Programs are keyed by output colour space; the frame draws
+   the scene into PostFX's render target (linear) and `compile` with nothing bound keyed every program for the canvas
+   (sRGB). Found with three's devtools hook: every program new at the crossing differed from a warmed one only in that
+   field or the light count. The warm-up now binds a 1 px linear target while compiling when the drawn programs say
+   linear. Programs linked while loading went from 287 to 223 (no wasted ones).
+2. **The other light count** is compiled by hiding or adding the rim, compiling object by object and restoring, all in
+   one task (no frame is drawn without it); toggling the live scene across async frames had made a mid-crossing scene
+   gate blink and relink for 1.1 s.
+3. **The golden island** (the crossing's dawn light, clear sky and dawn content) now starts aboard, unseen under the
+   reflection, and the crossing's cast compiles once its loads settle (ArrivalWorld `WarmCrossing`).
+
+Night start (the rim comes for the golden crossing and goes at the landing), fast line, cold:
+
+| | Before (main, rim per phase) | Rim always on (d9a48a35) | Now |
+|---|---|---|---|
+| Programs linked at the clearing / crossing / landing | 75 in the crossing (61 for the rim) / 6 to 63 at the landing | 9 to 12 in the crossing | **5 / 4 / 4** (small things first drawn there) |
+| Long frames at the clearing / crossing / landing | 19 / 155 (worst 2822 ms) / 3 (worst 1905 ms) | 1 / 1 (worst 320) / 0 | **2 (worst 83) / 1 (57) / 1 (76)** |
+| World ready | 20.0 s | 7.6 to 9.0 s | 7.4 s |
+
+Day start: clearing 1 link (1 frame, 76 ms), crossing 9 links (2 frames, worst 138 ms). Evening start (the rim there
+at load): clearing 5 links, crossing 7 links (3 frames, worst 180 ms). No frame cost: outside dawn and dusk the scene
+has the same lights as on main.
