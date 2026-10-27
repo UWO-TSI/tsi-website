@@ -123,6 +123,7 @@ import { emptyTalkView, requestTalk, subscribeTalk, talkStore, talkView } from "
 import DailyGift from "./DailyGift";
 import { markWelcomed, welcomeStep } from "@/lib/game/welcome";
 import Arrival from "./arrival/Arrival";
+import GuideArrow from "./GuideArrow";
 import ArrivalWorld, { crateSpots, placeWorld, withCrates } from "./arrival/ArrivalWorld";
 import { arrivalEvent, bramNear, bramPrompt, useArrivalPhase, useArrivalTools, useTutorialQuest } from "@/lib/game/arrival/arrivalStore";
 import { routeFor } from "@/lib/game/arrival/routes";
@@ -587,6 +588,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
         world={walkOn} groundHeight={island.ground} groundSurface={island.surface} camTarget={focus} glider={peaceful.glider} dash={dash} held={held} />
       <CharacterCrowd player={player} ground={island.ground} stepWorld={island} />
       {dock && <ArrivalWorld v={v} island={island} player={player} dock={dock} held={held} keys={hintKeys} />}
+      <GuideArrow player={player} ground={island.ground} />
     </>
   );
 }
