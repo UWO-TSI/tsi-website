@@ -24,6 +24,8 @@ import { HQ_END, HQ_END_TOUR, HQ_SCRIPT, type HqCard, type HqEvent } from "@/lib
 const WREN_TALKER = { id: "hq:wren", slug: WREN.slug, name: WREN.name, post: WREN.post, seed: 3 };
 /** Her lines wait this long after the room fades in (or a sheet closes): a breath, not a jump. */
 const SAY_DELAY_MS = 450;
+/** After Esc (the visit's last beat) the menu you opened stays up this long, to be seen, before her farewell closes it. */
+const MENU_LOOK_MS = 2600;
 
 export interface HqWorld {
   inside: string | null;
@@ -103,6 +105,7 @@ export function useHqOnboarding(w: HqWorld, dev: URLSearchParams | null) {
   const sayKeys = cue?.kind === "say" ? cue.keys.join("+") : null;
   const atHq = w.inside === "hq";
   const { free, name, touch, closeMenu } = w;
+  const farewell = !!visit && visit.beat >= HQ_SCRIPT.length;
   useEffect(() => {
     if (!sayKeys || !atHq || !free) return;
     const t = window.setTimeout(() => {
@@ -111,9 +114,9 @@ export function useHqOnboarding(w: HqWorld, dev: URLSearchParams | null) {
         .map(raw => parseTalkLine(fillName(raw.replaceAll("{esc}", escPhrase(touch)), name)));
       closeMenu();
       startTalk(beginTalk(WREN_TALKER, lines, performance.now() / 1000, "hq"));
-    }, SAY_DELAY_MS);
+    }, farewell ? MENU_LOOK_MS : SAY_DELAY_MS);
     return () => window.clearTimeout(t);
-  }, [sayKeys, atHq, free, name, touch, closeMenu]);
+  }, [sayKeys, atHq, free, name, touch, closeMenu, farewell]);
 
   /** The card due now (the register, the check-in card): at HQ with nothing else over the room. */
   const card: HqCard | null = cue?.kind === "card" && atHq && free ? cue.card : null;
