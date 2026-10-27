@@ -24,7 +24,7 @@ describe("apply-fit (the fit editor's export into the catalogue's `fit`)", () =>
     expect(() => fitFrom([{ id: "hair_nope", data: { y: 0.01 } }], catalog, faces)).toThrow(/hair_nope/);
     expect(() => fitFrom([{ id: hair, data: { eyes: 0.01 } }], catalog, faces)).toThrow(/eyes is not one of x, y, z/);
     expect(() => fitFrom([{ id: face, data: { y: 0.01 } }], catalog, faces)).toThrow(/y is not one of eyes, mouth, eyesApart/);
-    expect(() => fitFrom([{ id: hair, data: { z: -0.5 } }], catalog, faces)).toThrow(/z -0.5 is not a number within 0.1/);
+    expect(() => fitFrom([{ id: hair, data: { z: -0.5 } }], catalog, faces)).toThrow(/z -0.5 is not a number within 0.15/);
     expect(() => fitFrom([{ id: hair, data: { y: 3 } }], catalog, faces)).toThrow(/within/);
     expect(() => fitFrom([{ id: hair, data: { y: "0.01" } }], catalog, faces)).toThrow(/not a number/);
   });

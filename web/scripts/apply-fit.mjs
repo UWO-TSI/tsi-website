@@ -15,7 +15,7 @@ const web = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const CATALOGUES = [join(web, "../art/characters/character_catalog.json"), join(web, "data/characters/character_catalog.json")];
 const FACES = join(web, "data/characters/face_v7.json");
 /** The furthest a move may go: a head piece's in metres, a face part's in face canvas units. */
-export const LIMIT = { x: 0.1, y: 0.1, z: 0.1, eyes: 0.2, mouth: 0.2, eyesApart: 0.2 };
+export const LIMIT = { x: 0.15, y: 0.15, z: 0.15, eyes: 0.2, mouth: 0.2, eyesApart: 0.2 };
 
 /** The export's docs as [id, fields] pairs. */
 function docs(raw) {

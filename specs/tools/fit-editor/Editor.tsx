@@ -74,7 +74,7 @@ const DIRS: Record<Field, [string, string, string, string]> = {
 };
 /** Each step and the reach either way: a head piece in metres, a face part in face canvas units (FACE.canvas_m wide). */
 const STEP: Record<Field, number> = { x: 0.0005, y: 0.0005, z: 0.0005, eyes: 0.001, mouth: 0.001, eyesApart: 0.001 };
-const REACH: Record<Field, number> = { x: 0.04, y: 0.04, z: 0.04, eyes: 0.08, mouth: 0.08, eyesApart: 0.08 };
+const REACH: Record<Field, number> = { x: 0.15, y: 0.15, z: 0.15, eyes: 0.08, mouth: 0.08, eyesApart: 0.08 };
 const CANVAS_M = (FACE as unknown as { canvas_m: number }).canvas_m ?? 0.449;
 const isFace = (f: Field) => f === "eyes" || f === "mouth" || f === "eyesApart";
 /** Metres per unit: a face part's units are face canvas widths. */
