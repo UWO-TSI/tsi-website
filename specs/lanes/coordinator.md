@@ -25,6 +25,17 @@ All in `~/.claude/jobs/62203045/tmp/`, which survives reboots.
 - `prod-dump.sh <label>`, `prod-query.sh <sql>` and `verify.sql` are for prod migrations. The procedure is in `STATE.md` and the memory files.
 - `withlock.sh heavy|blender|devserver <cmd>` (set `LANE=game/<lane>`): takes a lock, waiting while swap is high and another lock is held. It lives in `~/.claude/jobs/62203045/tmp/`, the same folder as the helpers above, and is referenced from `specs/lane-rules.md`.
 
+## Review pages and state (2026-10-27, early morning)
+
+- **Waiting for David:**
+  - reflection-waves round 2: https://claude.ai/artifact/Sc2JrcPsEPotE4VA2zHizU (items `r2-*`; `r2-lightness` is his call on lifting hair lightness, which would change every hair);
+  - grass-wind: https://claude.ai/artifact/3e5WRNPQaogvYPqq1pW2K2 (head d79889da);
+  - remodel round 1: https://claude.ai/artifact/4uk78WkbWRFyBRc3HD4WTL (head 2349d362; each model can be dropped from the REMODELLED list in `lib/game/world/active.ts`).
+- **Face Fit editor:** https://claude.ai/artifact/D1gkmSBHBGspFPH5to9yA8 (db collection `fit`), built from game/fit-editor eedf4d89 (GLBs as `.glb.json`). Apply: export `fit`, then `node web/scripts/apply-fit.mjs <export.json>` in web/. The runtime field isn't on main yet: merge game/fit-editor with the first applied values. Rebuild it with batch 3 when wardrobe-b3 lands.
+- **Merged and live:** collision (plus the campfire), hair-shelf (seed 20261027054753 applied), hq-alice (20261027063439 applied), net-identity, launch-check run 3 (all final checks passed). The loading steps 2 to 4 are merged locally (74d00e9a) and wait on the full vitest before pushing.
+- **Asked David:** the four invisible plaza benches (bench-0 to 3): real benches or remove the seats? And the first wave in the mist (redo with no note).
+- **Perf baseline:** the Oct 14 perf:check baseline predates terrain v3, so every check fails against it. Refresh it in one combined run after the merges.
+
 ## Later the same night (2026-10-27)
 
 - **reflection-waves round 1 reviewed** (https://claude.ai/artifact/Sc2JrcPsEPotE4VA2zHizU): desktop, phone and small waves approved; the wave approved with a note (the look changes along the wave's path, not in one frame); the first wave in the mist redo with no note (asked David why); the hair colours redo (blond less like skin, add ginger, keep the dyes' indices). Round 2 running on the same lane.
