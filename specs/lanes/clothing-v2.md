@@ -18,6 +18,18 @@ What that means:
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint; one `perf:check` at the end (`SCENES=village,v2,cafe`, characters changed). Message "main" when round 1's renders are ready, with the head SHA, gates and evidence paths, then stop.
 
+## The TSI zip hoodie (David, 2026-10-27, before his round 1 review)
+
+David, verbatim, with his photo: "make this hoodie design". The photo and a written reading are in `specs/references/clothing/` (`2026-10-27-tsi-zip-hoodie.png`, `README.md`). Read both.
+
+- Make it a design on the universal hoodie, the round 1 path: the navy washed colour, the darker ribbing, the silver zip line with its pull tab, the slanted pocket welts and the TSI chest logo (cream letters, dark outline, "EST." and "24"), all painted into the design atlas.
+- If the pullover's drawstrings or its kangaroo pocket are geometry, make a zip variant of the universal hoodie without them, the smallest change, sharing its fit, weights and body cut. Don't build a new garment from scratch.
+- Keep the logo crisp enough to read at the creator's close-up, and blocky enough at game distance. Paint it from primitives and type in your build script. Use only David's photo as the reference.
+- Catalogue: a new part, "TSI zip hoodie", with no price yet (David prices it on the shelf page). Don't change the existing hoodie.
+- Evidence for David's page: the photo beside our hoodie, front, back and 3/4 in the creator's light, plus a close-up of the logo and a run/jump/sit strip, in `specs/evidence/clothing-v2/tsi-zip-hoodie/`.
+
+Round 1's review is still out with David, so keep this on top of round 1, on this branch.
+
 ## Status
 
 Round 1 built, in review (not merged). Head: see `git log -1` on `game/clothing-v2`.
