@@ -48,7 +48,28 @@ function uploadTextures(gl: THREE.WebGLRenderer, scene: THREE.Scene) {
  * issues the links; `settle` waits for them, in parallel (KHR_parallel_shader_compile).
  */
 function compileEach(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) {
-  scene.traverse(o => { if ((o as THREE.Mesh).material) try { gl.compile(o, camera, scene); } catch { /* drawn and compiled when first seen */ } });
+  asDrawn(gl, scene, () => scene.traverse(o => { if ((o as THREE.Mesh).material) try { gl.compile(o, camera, scene); } catch { /* drawn and compiled when first seen */ } }));
+}
+
+/**
+ * Compile for the output the frame really draws to. A program is keyed by it: the post-processing chain draws the
+ * scene into a render target (linear output), and `compile` with nothing bound keys for the canvas (sRGB), so every
+ * program it made was one the frame never used (measured: the crossing still linked the island's whole rim set).
+ * Read off a program already drawn; bind a 1 px target while compiling when it says linear.
+ */
+let linearTarget: THREE.WebGLRenderTarget | null = null;
+function asDrawn(gl: THREE.WebGLRenderer, scene: THREE.Scene, run: () => void) {
+  let linear: boolean | null = null;
+  scene.traverse(o => {
+    const m = (o as THREE.Mesh).material;
+    if (linear !== null || !m || Array.isArray(m)) return;
+    const key = (gl.properties.get(m) as { currentProgram?: { cacheKey?: string } }).currentProgram?.cacheKey?.split(",");
+    const at = key ? key.findIndex(k => k === "highp" || k === "mediump" || k === "lowp") : -1;
+    if (at >= 0) linear = key![at + 1] === THREE.LinearSRGBColorSpace;
+  });
+  const before = gl.getRenderTarget();
+  if (linear) gl.setRenderTarget(linearTarget ??= new THREE.WebGLRenderTarget(1, 1));
+  try { run(); } finally { gl.setRenderTarget(before); }
 }
 async function settle(gl: THREE.WebGLRenderer) {
   for (let i = 0; i < 1500 && gl.info.programs?.some(p => !(p as unknown as { isReady: () => boolean }).isReady()); i++) await new Promise(r => setTimeout(r, 10));
