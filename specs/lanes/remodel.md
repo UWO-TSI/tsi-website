@@ -39,14 +39,9 @@ David, 2026-10-27 (night), verbatim: "I want you to go ahead and remodel some ol
 
 ## Status
 
-Built and wired, awaiting David's review (nothing approved). Head: `git log -1` on game/remodel. Main merged at f9f4dc5d.
-- Inventory: `specs/evidence/remodel/inventory.md` (sent to main). Fruit kept (David, Oct 17). Buildings, the arrival boat, the firefly and the seagull not done.
-- Models (art/remodel/build_*.py; GLBs in web/public/assets/game/): market barrel, market cart (the old drew a third of itself), lighthouse in game/props/ (new world only, SCENERY_URLS); six butterflies, two dragonflies, ladybug, cicada, grasshopper, mantis in game/remodel/critters/; crabs, gather rocks a/b/c, monument rope fence in game/remodel/props/; all 81 fish tweaked in game/remodel/fish/.
-- Wiring: `worldModel` in `lib/game/world/active.ts` swaps /assets/acnh/<path> for /assets/game/remodel/<path> when NEXT_PUBLIC_GAME_WORLD=new (propUrl, fishing.ts FISH, ambientFauna, Critters.tsx, the monument). The village keeps the dump's. Test: `lib/game/world/active.test.ts`.
-- Evidence: `specs/evidence/remodel/<name>-{before,after}.webp` and `notes.md` (one line and triangles each). In-game frames for barrel, cart, lighthouse, crabs, rocks, rope fence; Blender only for the flyers, crawlers and fish (too small or under water to frame).
-- Not deleted: the dump files stay (the village, interiors, homes, seasonal events and /lab still use them).
-- Not done: icons (lib/icons/manifest.ts still renders bug and fish icons from the dump models).
-- Gates: tsc clean; vitest 3460 passed with and without NEXT_PUBLIC_GAME_WORLD=new after the cart's PROP_TOP fix (propModels.test.ts measured 2.8); eslint clean on changed files. perf:check (SCENES=village,v2, GAME_WORLD=new) fails against the Oct 14 baseline, which predates terrain v3: `specs/evidence/remodel/perf-check.txt`. This lane lowers triangles per model and adds at most about ten draws (barrel +1, lighthouse +2, butterflies +1 each, rope fence +1).
+Round 2 in progress. Main (feat/game-default-island 139d3b1e) merged.
+- **Step 1 (ship-ready, sent to main):** the wiring cut to the approved models: the market cart and the lighthouse (SCENERY_URLS), the monument rope fence and all 81 fish (worldModel's REMODELLED in `lib/game/world/active.ts`). The barrel, the gather rocks and every critter back on the dump's. Deleted: the crabs (art/remodel/build_shore.py and its GLBs: David keeps the old crabs), and the round-1 barrel, rock and critter GLBs (rebuilt in step 2 from their scripts).
+- **Step 2 (in progress):** rounder barrel, rocks like the old (faceted, granite texture), cheaper world bugs with the old ones in every close-up, fish icons from the tweaked fish.
 
 ## David's decisions
 

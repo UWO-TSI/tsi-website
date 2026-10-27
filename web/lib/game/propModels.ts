@@ -91,8 +91,8 @@ export const SUSHI_BAR_GETA_URL = "/assets/game/buildings/sushi-bar-geta.glb";
 export const SUSHI_KNIFE_URL = "/assets/game/tools/sushi-knife.glb";
 /** The `prop` kind's scenery outside the dump's props folder, by model name (terrain v3: the market, the beach, the lighthouse). */
 export const SCENERY_URLS: Readonly<Record<string, string>> = {
-  // game/remodel (art/remodel/build_market.py, build_lighthouse.py): ours in the dump pieces' frames (the map's scales hold).
-  barrel: `${P}market-barrel.glb`, lighthouse: `${P}lighthouse.glb`, "market-cart": `${P}market-cart.glb`, crate: CRATE_URL,
+  // game/remodel (art/remodel/build_market.py, build_lighthouse.py): ours in the dump pieces' frames (the map's scales hold); the barrel is being redone.
+  barrel: "/assets/acnh/furniture/barrel.glb", lighthouse: `${P}lighthouse.glb`, "market-cart": `${P}market-cart.glb`, crate: CRATE_URL,
   "shop-cart": SHOP_CART_URL, "beach-parasol": BEACH_PARASOL_URL, "palm-a": "/assets/acnh/plants/tree-palm-a.glb", "palm-b": "/assets/acnh/plants/tree-palm-b.glb",
   // The new world's wharf kit (art/wharf/build_wharf_kit.py, game units at scale 1; the deck's top at y 0, the sea 1.08 under):
   // a `deck` square and its "steps" (4 x 4, local +z inland), a pile to stand just outside the deck's edge, a ladder off
