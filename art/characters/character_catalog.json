@@ -4912,7 +4912,7 @@
    "slot": "accessory",
    "name": "Gold monocle",
    "glb": "accessories/roblox/acc_gold_monocle.glb",
-   "tris": 129,
+   "tris": 307,
    "materials": [
     {
      "name": "M_Acc",
