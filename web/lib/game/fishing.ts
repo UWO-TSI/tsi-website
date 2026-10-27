@@ -254,15 +254,16 @@ export const REVEAL: Record<Rarity, { develop: number; hold: number; confetti: n
  * The hook's beat by tier (specs/launch/v1-gameplay.md, "Fish tiers and fights"): every bite pops a "!" over the
  * angler; a legendary's is golden with sparks, a divine's bigger still with a beam and a burst. Each has its own bite
  * sound (art/audio/synth_bite.py) and a harder shake (world units, cameraJuice shakeCamera) and micro-zoom (degrees).
+ * Hooked, a legendary or divine catch surfaces in a cutscene (`surfaceMs`, fishing/BossCreature.tsx) before its fight.
  */
 export type HookTier = "common" | "legendary" | "divine";
 export const HOOK_TIER: Record<Rarity, HookTier> = {
   common: "common", uncommon: "common", rare: "common", epic: "common", legendary: "legendary", seaking: "divine",
 };
-export const HOOK: Record<HookTier, { sfx: "bite" | "bite-legendary" | "bite-divine"; shake: number; punch: number }> = {
-  common: { sfx: "bite", shake: 0.065, punch: 3 },
-  legendary: { sfx: "bite-legendary", shake: 0.12, punch: 4.5 },
-  divine: { sfx: "bite-divine", shake: 0.2, punch: 6 },
+export const HOOK: Record<HookTier, { sfx: "bite" | "bite-legendary" | "bite-divine"; shake: number; punch: number; surfaceMs: number }> = {
+  common: { sfx: "bite", shake: 0.065, punch: 3, surfaceMs: 0 },
+  legendary: { sfx: "bite-legendary", shake: 0.12, punch: 4.5, surfaceMs: 2800 },
+  divine: { sfx: "bite-divine", shake: 0.2, punch: 6, surfaceMs: 3800 },
 };
 
 /** "1 in N" odds for a species under the current hour/weather pool. */

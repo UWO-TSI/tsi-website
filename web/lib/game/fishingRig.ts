@@ -10,6 +10,7 @@ import { CLIP_BY_NAME } from "./character/look";
 import { castLanding, thrash } from "./fishingCast";
 import { seedAt } from "./fx/particles";
 import type { HookTier } from "./fishing";
+import type { BossMove } from "./fishingReel";
 
 /**
  * The cast's beats: charging (the wind-up), swing (the rod whips; the bobber leaves its tip at the release, flies,
@@ -56,7 +57,13 @@ export function setSceneWater(isWater: (x: number, z: number) => boolean, height
 }
 
 /** The local overlay's live numbers (its loops write them; the local avatar's state reads them each frame). */
-export const live = { power: 0, pull: 0, tension: 0, reeling: false, reeled: 0 };
+export const live = {
+  power: 0, pull: 0, tension: 0, reeling: false, reeled: 0,
+  /** A boss fight (fishingReel.ts BossReel): its stamina (0..1), the move warned of or under way, and its stage; the world's creature reads it. */
+  boss: null as { stamina: number; move: BossMove | null; stage: "warn" | "live" | null } | null,
+  /** This client's own cast (useWorldClips): where a boss catch surfaces. */
+  cast: null as FishingState | null,
+};
 
 /** A cast starting: the avatar at (fromX, fromZ) winds up toward the water spot. */
 export function newCast(local: boolean, fromX: number, fromZ: number, spotX: number, spotZ: number, now: number): FishingState {

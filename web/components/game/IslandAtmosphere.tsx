@@ -30,6 +30,7 @@ import { WORLD_BEND } from "@/lib/game/curvedWorld";
 import { worldTime } from "@/lib/game/worldClock";
 import { sheddingTrees, worldWind } from "@/lib/game/worldFx";
 import { juiceShake } from "@/lib/game/cameraJuice";
+import { bossCam } from "@/lib/game/bossCam";
 import { treeParts } from "./NatureModels";
 import AmbientFauna, { type FaunaProps } from "./AmbientFauna";
 import WeatherGround from "./WeatherGround";
@@ -275,6 +276,13 @@ export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: num
       camera.position.lerp(far.at, b.overview);
       look.lerp(far.look, b.overview);
     }
+    // A boss catch's shot (lib/game/bossCam.ts): eased in as it surfaces, out when the fight ends.
+    bossCam.w = THREE.MathUtils.damp(bossCam.w, bossCam.want, 2.2, dt);
+    if (bossCam.w > 1e-3) {
+      const w = THREE.MathUtils.smootherstep(bossCam.w, 0, 1), a = bossCam.at, l = bossCam.look;
+      camera.position.lerp(rig.side.set(a.x + cy * shake.x * 3, a.y + shake.y * 3, a.z - sy * shake.x * 3), w);
+      look.lerp(rig.head.set(l.x, l.y, l.z), w);
+    } else bossCam.w = 0;
     camera.lookAt(look);
     rig.lastCam.copy(camera.position); rig.lastLook.copy(look);
     camera.updateMatrixWorld();

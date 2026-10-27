@@ -46,7 +46,8 @@ export function useWorldClips(motion: RefObject<CharacterMotion>, face: (x: numb
         face(d.x, d.z);
         const [fx, fz] = d.from ?? [d.x, d.z - 1];
         live.power = 0;
-        set({ fishing: newCast(true, fx, fz, d.x, d.z, performance.now()), pose: "CastWindup", scrub: 0 });
+        live.cast = newCast(true, fx, fz, d.x, d.z, performance.now());
+        set({ fishing: live.cast, pose: "CastWindup", scrub: 0 });
       },
       "tsi:fish-cast": e => {
         const d = (e as CustomEvent<{ x: number; z: number; power: number }>).detail, f = cast();
@@ -65,11 +66,12 @@ export function useWorldClips(motion: RefObject<CharacterMotion>, face: (x: numb
         set({ play: "HookYank", pose: "Reel" });
       },
       "tsi:fish-caught": e => {
-        const d = (e as CustomEvent<{ model?: string; raw?: boolean; sizeCm?: number | null }>).detail, f = cast();
-        const showOff = readHoldUpCatch();
+        const d = (e as CustomEvent<{ model?: string; raw?: boolean; sizeCm?: number | null; boss?: boolean }>).detail, f = cast();
+        // A boss catch (legendary, divine) is far too big to hold: it crashes down in the water (BossCreature) and you cheer.
+        const showOff = readHoldUpCatch() && !d?.boss;
         if (f) {
           castBeat(f, "landed", performance.now());
-          f.catchModel = d?.model ?? f.catchModel; f.catchRaw = d?.raw ?? f.catchRaw; f.catchCm = d?.sizeCm ?? null; f.showOff = showOff;
+          f.catchModel = d?.boss ? null : d?.model ?? f.catchModel; f.catchRaw = d?.raw ?? f.catchRaw; f.catchCm = d?.sizeCm ?? null; f.showOff = showOff;
           // Animal Crossing's beat: turn to the camera to show it off (it comes out of the water into your hands).
           if (showOff) turn.current = { from: motion.current.yaw, to: Math.atan2(camera.position.x - f.fromX, camera.position.z - f.fromZ), at: performance.now() };
         }
