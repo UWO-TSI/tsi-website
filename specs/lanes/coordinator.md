@@ -313,3 +313,9 @@ The full set is in `CLAUDE.md`, `specs/lane-rules.md` and the memory files.
 - Never edit applied migrations.
 - Stop for anything destructive, costing money or irreversible. Otherwise merge and deploy verified, approved work without asking.
 - No idle polling.
+
+## Locks (2026-10-27, learned the hard way)
+
+- `withlock.sh` is the only lock mechanism. There is no devserver queue: a queue file some lanes waited on (and withlock never read) starved them for two hours, so it was deleted. Never recreate one.
+- `push-main.sh` takes the heavy lock itself. Run it bare, never inside `withlock.sh heavy`, or it waits on its own lock forever (that held the heavy lock for 40 minutes).
+- Retry loops over withlock must check the exit code (75 means it gave up); a `| tail` hides it.
