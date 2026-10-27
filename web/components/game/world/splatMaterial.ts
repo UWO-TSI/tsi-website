@@ -74,7 +74,12 @@ export function writePaint(t: WorldTerrain, data: Uint8Array, k0: number, k1: nu
   }
 }
 
-const HEAD = /* glsl */ `
+/**
+ * The ground's colour at a world point as GLSL (`splatGround(world, normal)`), with the uniforms it reads: the ground
+ * material draws it per pixel, and the new world's grass (components/game/grid/GrassField.tsx) reads it at each blade's
+ * root, so the blades grow out of the floor's own colour through the seasons. Declare uSnow and uWet before it.
+ */
+export const SPLAT_GROUND_GLSL = /* glsl */ `
 uniform sampler2D uPaintMap;
 uniform vec4 uPaintXform; // x0, z0, samples per unit, unused
 uniform vec2 uPaintSize;  // cols, rows
@@ -84,49 +89,54 @@ uniform sampler2D uPathTex;
 uniform vec3 uRockC;
 uniform sampler2D uBrickTex;
 uniform float uSeaY;
-uniform float uSnow;
-uniform float uWet;
-varying vec3 vTerrainWorld;
-varying vec3 vTerrainNormal;
 float splatHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float splatNoise(vec2 p) {
   vec2 i = floor(p), f = fract(p), u = f * f * (3.0 - 2.0 * f);
   return mix(mix(splatHash(i), splatHash(i + vec2(1.0, 0.0)), u.x), mix(splatHash(i + vec2(0.0, 1.0)), splatHash(i + vec2(1.0, 1.0)), u.x), u.y);
 }
-`;
-
-const BODY = /* glsl */ `
+vec3 splatGround(vec3 world, vec3 normal) {
   // Four bilinear reads half a sample apart: a 2 × 2 box over the bilinear weights, so a paint's outline is a smooth
   // curve rather than the sample grid's staircase.
-  vec2 paintUv = ((vTerrainWorld.xz - uPaintXform.xy) * uPaintXform.z + 0.5) / uPaintSize, paintH = 0.5 / uPaintSize;
+  vec2 paintUv = ((world.xz - uPaintXform.xy) * uPaintXform.z + 0.5) / uPaintSize, paintH = 0.5 / uPaintSize;
   vec4 paintW = 0.25 * (texture2D(uPaintMap, paintUv + vec2(-paintH.x, -paintH.y)) + texture2D(uPaintMap, paintUv + vec2(paintH.x, -paintH.y))
     + texture2D(uPaintMap, paintUv + vec2(-paintH.x, paintH.y)) + texture2D(uPaintMap, paintUv + vec2(paintH.x, paintH.y)));
-  float edgeN = splatNoise(vTerrainWorld.xz * 1.7) * 0.65 + splatNoise(vTerrainWorld.xz * 4.3) * 0.35;
+  float edgeN = splatNoise(world.xz * 1.7) * 0.65 + splatNoise(world.xz * 4.3) * 0.35;
   // The brick's edge is laid, so crisper than the worn ones.
   float brickW = smoothstep(0.45, 0.55, paintW.a + (edgeN - 0.5) * 0.08);
   // A worn edge: the soft weights pushed past a noisy threshold.
   paintW = smoothstep(vec4(0.3), vec4(0.7), paintW + (edgeN - 0.5) * 0.35);
-  float broad = splatNoise(vTerrainWorld.xz * 0.11);
+  float broad = splatNoise(world.xz * 0.11);
   // The lawn a shade deeper, the blades' own mid-tone, so blades and ground read as one even grass (David, R2d).
   vec3 ground = uGrassC * (0.8 + 0.12 * broad + 0.03 * edgeN);
   ground = mix(ground, uSandC * (0.95 + 0.08 * edgeN), paintW.r);
-  vec2 pathUv = vTerrainWorld.xz / ${PATH_TILE.toFixed(1)};
+  vec2 pathUv = world.xz / ${PATH_TILE.toFixed(1)};
   vec3 pathDirt = mix(texture2D(uPathTex, pathUv).rgb, texture2D(uPathTex, mat2(0.8, -0.6, 0.6, 0.8) * pathUv * 0.77 + 0.37).rgb,
-    smoothstep(0.35, 0.65, splatNoise(vTerrainWorld.xz * 0.09)));
+    smoothstep(0.35, 0.65, splatNoise(world.xz * 0.09)));
   ground = mix(ground, pathDirt * (0.95 + 0.1 * edgeN), paintW.g);
-  ground = mix(ground, texture2D(uBrickTex, vTerrainWorld.xz / ${BRICK_TILE.toFixed(1)}).rgb * (0.88 + 0.24 * broad), brickW);
+  ground = mix(ground, texture2D(uBrickTex, world.xz / ${BRICK_TILE.toFixed(1)}).rgb * (0.88 + 0.24 * broad), brickW);
   // Rock by slope (rise over run of the ground's own normal) or painted.
-  vec3 tn = normalize(vTerrainNormal);
+  vec3 tn = normalize(normal);
   float rise = sqrt(max(0.0, 1.0 - tn.y * tn.y)) / max(tn.y, 0.001);
   float rockW = max(paintW.b, smoothstep(${ROCK_SLOPE.from.toFixed(2)}, ${ROCK_SLOPE.to.toFixed(2)}, rise + (edgeN - 0.5) * 0.12));
-  ground = mix(ground, uRockC * (0.85 + 0.3 * splatNoise(vTerrainWorld.xz * 2.1 + vTerrainWorld.y * 1.3)), rockW);
+  ground = mix(ground, uRockC * (0.85 + 0.3 * splatNoise(world.xz * 2.1 + world.y * 1.3)), rockW);
   // Wet where the water reaches (just above the sea), dark under it.
-  float wetBand = 1.0 - smoothstep(uSeaY, uSeaY + 0.16, vTerrainWorld.y);
+  float wetBand = 1.0 - smoothstep(uSeaY, uSeaY + 0.16, world.y);
   ground *= 1.0 - 0.22 * wetBand;
   ground *= 1.0 - uWet * 0.18 * (1.0 - wetBand);
   // Snow lies on what is not steep.
-  ground = mix(ground, vec3(0.9, 0.93, 0.97), uSnow * (1.0 - rockW) * (1.0 - wetBand) * 0.92);
-  diffuseColor.rgb = ground;
+  return mix(ground, vec3(0.9, 0.93, 0.97), uSnow * (1.0 - rockW) * (1.0 - wetBand) * 0.92);
+}
+`;
+
+const HEAD = /* glsl */ `
+uniform float uSnow;
+uniform float uWet;
+varying vec3 vTerrainWorld;
+varying vec3 vTerrainNormal;
+${SPLAT_GROUND_GLSL}`;
+
+const BODY = /* glsl */ `
+  diffuseColor.rgb = splatGround(vTerrainWorld, vTerrainNormal);
 `;
 
 /** The ground material for a terrain. `grass`: the season palette's grass (else the placeholder's). */

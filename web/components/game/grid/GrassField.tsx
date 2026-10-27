@@ -18,6 +18,11 @@
  * - **Distance fading**, dithered (4×4 Bayer), from the camera's own distance to the focus outward; on High a dense
  *   near layer hands over (dithered) to a sparser, broader far one, so the lawn thins with distance.
  * - **Lite** is one sparse layer, one card a clump, with the fade pulled in.
+ * - **The new world's meadow** (`ground`, the GRASS_GROUND program; David, 2026-10-26: "longer blades of grass ... sway
+ *   like how waves sway from wind, color should match the floor color"): the same cards and instances stood taller and
+ *   narrower with long tapered blades (`bladeTexture(true)`), each coloured from the floor under its root by the ground
+ *   material's own `splatGround`, and gusts as bands of world noise carried downwind so neighbours bend together and
+ *   the pattern travels. The village's program is unchanged.
  *
  * THE COST. One draw call a layer (no shadow pass), a fixed number of instances whatever the island's size: the clumps
  * live on a world-anchored grid recycled around the view focus (slot i holds the world column nearest the focus with
@@ -42,6 +47,7 @@ import { worldTime } from "@/lib/game/worldClock";
 import { WIND_DIR, viewFocus } from "@/lib/game/worldFx";
 import { addCutout } from "@/lib/game/occluders";
 import { TERRAIN_GRASS, TERRAIN_SNOW, TERRAIN_WET } from "./GridTerrain";
+import { SPLAT_GROUND_GLSL } from "../world/splatMaterial";
 
 /**
  * A layer of the field: its grid spacing and window half size (world units), cards per clump, card width and height
@@ -61,6 +67,12 @@ export const GRASS_TIERS: Record<"high" | "lite", { layers: readonly GrassLayer[
   },
   lite: { layers: [{ spacing: 0.44, half: 14, cards: 1, width: 0.48, height: 1, until: null }], fadeIn: 2, fadeOut: 8, data: 64, focus: 8 },
 };
+/**
+ * The new world's blades against the village's lawn: how much taller and narrower a card stands, and the root's shade
+ * against the ground's colour (the blade texture's grey runs a little under 1, so the root meets the floor).
+ */
+const GROUND_BLADE = { height: 1.7, width: 0.9, root: 1.06 };
+type GroundUniforms = Record<string, THREE.IUniform>;
 /** The handover between two layers is dithered across this many units of camera distance. */
 const HANDOVER = 1.5;
 const DATA_TEXEL = 0.5;
@@ -72,10 +84,11 @@ const FOOT_RADIUS = 0.42, FOOT_LIFT = 0.3;
 const PATCH_UV = 0.5 * 0.85;
 
 // ─── The blades' texture and card ───────────────────────────────────────
-let blades: THREE.DataTexture | null = null;
-function bladeMap(): THREE.DataTexture {
-  if (blades) return blades;
-  const t = new THREE.DataTexture(bladeTexture(), BLADE_SIZE * BLADE_VARIANTS, BLADE_SIZE, THREE.RGBAFormat);
+const blades: { tufts?: THREE.DataTexture; long?: THREE.DataTexture } = {};
+function bladeMap(long: boolean): THREE.DataTexture {
+  const kind = long ? "long" : "tufts", have = blades[kind];
+  if (have) return have;
+  const t = new THREE.DataTexture(bladeTexture(long), BLADE_SIZE * BLADE_VARIANTS, BLADE_SIZE, THREE.RGBAFormat);
   t.colorSpace = THREE.NoColorSpace;
   t.wrapS = THREE.ClampToEdgeWrapping;
   t.wrapT = THREE.ClampToEdgeWrapping;
@@ -83,7 +96,7 @@ function bladeMap(): THREE.DataTexture {
   t.minFilter = THREE.LinearMipmapLinearFilter;
   t.generateMipmaps = true;
   t.needsUpdate = true;
-  return (blades = t);
+  return (blades[kind] = t);
 }
 
 /**
@@ -122,7 +135,9 @@ uniform vec2 uGrassLook;
 uniform float uSnow;
 uniform float uWet;
 uniform float uLean;
-uniform float uLush;     // 1: the smooth world's lawn, one even, lush green (0: the village's, as it was)
+#ifdef GRASS_GROUND
+${SPLAT_GROUND_GLSL}
+#endif
 varying vec3 vGrass;
 varying float vFade;
 varying vec2 vBladeUv;
@@ -167,7 +182,10 @@ const VERTEX_BODY = /* glsl */ `
   // Patches: the lawn grows thicker and taller in places (world noise), thinner where it meets a path.
   float gPatch = grassNoise(gRoot * 0.21);
   float gH = uWind.w * uLayerH * (0.62 + 0.6 * gr.w) * mix(0.72, 1.22, gPatch) * mix(0.4, 1.0, smoothstep(0.05, 0.7, gDensity));
-  gH *= (1.0 - 0.85 * uSnow) * mix(0.5, 1.0, gFade) * (1.0 + 0.2 * uLush);
+  gH *= (1.0 - 0.85 * uSnow) * mix(0.5, 1.0, gFade);
+#ifdef GRASS_GROUND
+  gH *= ${GROUND_BLADE.height.toFixed(2)};
+#endif
   // Face the camera (with a twist per clump and per card) and lean away from it as the view looks down.
   float gCard = position.z;
   vec2 gToCamH = normalize(gToCam.xz + vec2(1e-4, 0.0));
@@ -176,10 +194,22 @@ const VERTEX_BODY = /* glsl */ `
   vec2 gSide = vec2(-gFace.y, gFace.x);
   float gElev = clamp(gToCam.y / max(gCamDist, 1e-3), 0.0, 1.0);
   float gUp = position.y, gBend = gUp * gUp;
+#ifdef GRASS_GROUND
+  // Wind as gusts rolling over the meadow (David, 2026-10-26: "sway like how waves sway from wind"): broad bands of world
+  // noise carried downwind at the swell's speed, uneven along their length, over a slow swell, and a ripple that
+  // travels with them. Every term is a function of the root's place, so neighbours bend together and the pattern moves.
+  vec2 gAcrossDir = vec2(-uWindDir.y, uWindDir.x);
+  float gAlong = dot(gRoot, uWindDir) - uTime * uWind.y * 2.4 * uWind.z / 6.2832;
+  float gBand = grassNoise(vec2(gAlong / uWind.z * 1.7, dot(gRoot, gAcrossDir) / uWind.z * 0.6));
+  float gGust = smoothstep(0.38, 0.78, gBand) * 0.8 + (sin(gAlong / uWind.z * 6.2832) * 0.5 + 0.5) * 0.2;
+  float gFlutter = sin(gAlong * 2.1 - uTime * uWind.y * 1.6) * (0.3 + 0.7 * gGust);
+  vec2 gWind = (uWindDir * (0.12 + 1.15 * gGust + 0.12 * gFlutter) + gAcrossDir * (gr2.z - 0.5) * 0.12) * uWind.x;
+#else
   // Wind: a gust wave travelling along the world wind, and each clump's own flutter across it.
   float gGust = sin(dot(gRoot, uWindDir) / uWind.z * 6.2832 - uTime * uWind.y * 2.4) * 0.5 + 0.5;
   float gFlutter = sin(uTime * uWind.y * 3.3 + gr2.z * 6.2832 + gRoot.x * 0.7);
   vec2 gWind = (uWindDir * (0.2 + gGust) + gSide * gFlutter * 0.3) * uWind.x;
+#endif
   // Characters: the press, inside the bend window only (its storage wraps beyond it).
   vec2 gBendSample = texture2D(uBend, (gRoot / uBendN.y + 0.5) / uBendN.x).rg * 255.0;
   vec2 gOff2 = abs(gRoot - uFocus);
@@ -188,19 +218,32 @@ const VERTEX_BODY = /* glsl */ `
   float gPressed = clamp(length(gPush), 0.0, 1.0);
   vec2 gOff = (gWind * (1.0 - gPressed) + gPush * 1.15) * gBend * gH;
   float gWidth = uGrid.w * (0.8 + 0.4 * gr2.y);
+#ifdef GRASS_GROUND
+  gWidth *= ${GROUND_BLADE.width.toFixed(2)};
+#endif
   gP = vec3(gRoot.x, gGround, gRoot.y) + vec3(gSide.x, 0.0, gSide.y) * (position.x * gWidth);
   gP.y += gUp * gH * (1.0 - 0.62 * gPressed) * (1.0 - 0.3 * min(1.0, length(gOff) / max(gH, 1e-3)));
   gP.xz += gOff - gFace * (uLean * gElev * gUp * gH);
   if (gAlive < 0.5) gP = vec3(gRoot.x, gGround - 60.0, gRoot.y);
+#ifdef GRASS_GROUND
+  // Colour: the floor's own, read at the root from the ground's colour source (splatGround: the season's grass, the
+  // paint's edges, wet and snow), so the blade grows out of the ground; lighter and a touch warmer toward the tip.
+  // The gust's crest catches the light, the sheen that shows the wave crossing the field.
+  vec3 gBase = splatGround(vec3(gRoot.x, gGround, gRoot.y), vec3(0.0, 1.0, 0.0)) * (${GROUND_BLADE.root.toFixed(2)} + 0.06 * (gr2.w - 0.5));
+  vec3 gC = mix(gBase, gBase * vec3(1.12, 1.15, 1.03), smoothstep(0.0, 1.0, gUp));
+  gC *= 1.0 + (0.42 * gGust - 0.07) * (0.3 + 0.7 * gUp) * min(1.0, uWind.x / 0.3);
+  gC *= 1.0 - 0.24 * gPressed;
+#else
   // Colour: the ground's own grass and hue patches, a dark root to a light warm tip, a little variety.
   vec2 gq = gRoot * ${PATCH_UV.toFixed(4)} * 0.9;
   float gHue = sin(gq.x * 1.3 + sin(gq.y * 1.1) * 1.6) * sin(gq.y * 1.5 + sin(gq.x * 0.9) * 1.8);
   vec3 gShift = mix(vec3(1.0), gHue > 0.0 ? vec3(1.08, 1.02, 0.82) : vec3(0.9, 1.0, 1.06), abs(gHue) * uGrassLook.y);
-  vec3 gBase = uGrassColor * gShift * (0.98 + mix(0.16, 0.05, uLush) * (gr2.w - 0.5) + mix(0.14, 0.06, uLush) * (gPatch - 0.5));
-  vec3 gC = mix(gBase * mix(0.52, 0.72, uLush), gBase * mix(vec3(1.14, 1.2, 0.9), vec3(1.06, 1.12, 0.96), uLush) + vec3(0.02, 0.03, 0.0) * (1.0 - uLush), smoothstep(0.0, 1.0, gUp));
+  vec3 gBase = uGrassColor * gShift * (0.98 + 0.16 * (gr2.w - 0.5) + 0.14 * (gPatch - 0.5));
+  vec3 gC = mix(gBase * 0.52, gBase * vec3(1.14, 1.2, 0.9) + vec3(0.02, 0.03, 0.0), smoothstep(0.0, 1.0, gUp));
   gC *= 1.0 + 0.16 * gGust * gUp * min(1.0, uWind.x / 0.3);
   gC *= 1.0 - 0.24 * gPressed;
   gC *= 1.0 - 0.14 * uWet;
+#endif
   gC = mix(gC, vec3(0.9, 0.93, 0.97), uSnow * gUp * 0.85);
   vGrass = gC;
   vFade = gFade;
@@ -223,20 +266,23 @@ const FRAGMENT_MAP = /* glsl */ `
 `;
 
 /** The uniforms every layer shares (one object each, so a frame writes them once). */
-function sharedUniforms(dataTex: THREE.DataTexture, bendTex: THREE.DataTexture, data: number, lush: boolean) {
+function sharedUniforms(dataTex: THREE.DataTexture, bendTex: THREE.DataTexture, data: number, ground?: GroundUniforms) {
   return {
     uTime: { value: 0 }, uWind: { value: new THREE.Vector4() }, uWindDir: { value: new THREE.Vector2(WIND_DIR.x, WIND_DIR.z) },
     uFocus: { value: new THREE.Vector2() }, uFade: { value: new THREE.Vector2(20, 30) },
     uData: { value: dataTex }, uDataN: { value: new THREE.Vector2(data, DATA_TEXEL) },
     uBend: { value: bendTex }, uBendN: { value: new THREE.Vector3(BEND_N, BEND_TEXEL, 1) },
-    uGrassColor: { value: new THREE.Color() }, uGrassLook: TERRAIN_GRASS, uSnow: TERRAIN_SNOW, uWet: TERRAIN_WET, uLean: { value: 0.6 }, uLush: { value: lush ? 1 : 0 },
-    uBlade: { value: bladeMap() },
+    uGrassColor: { value: new THREE.Color() }, uGrassLook: TERRAIN_GRASS, uSnow: TERRAIN_SNOW, uWet: TERRAIN_WET, uLean: { value: 0.6 },
+    uBlade: { value: bladeMap(!!ground) },
+    // The ground's colour source, the same uniform objects the ground material reads (its season, its paint).
+    ...ground,
   };
 }
 
 /** The material: three's standard lit one (shadows, fog, the curved world, the look's patches) with the field's vertex stage. */
-function grassMaterial(uniforms: Record<string, THREE.IUniform>): THREE.MeshStandardMaterial {
+function grassMaterial(uniforms: Record<string, THREE.IUniform>, ground: boolean): THREE.MeshStandardMaterial {
   const m = new THREE.MeshStandardMaterial({ name: "terrain:grass-field", roughness: 0.92, metalness: 0, side: THREE.DoubleSide });
+  if (ground) m.defines = { ...m.defines, GRASS_GROUND: "" };
   m.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = shader.vertexShader
@@ -253,7 +299,7 @@ function grassMaterial(uniforms: Record<string, THREE.IUniform>): THREE.MeshStan
     addCutout(shader);
     shader.vertexShader = shader.vertexShader.replace("vCutY = (modelMatrix * vec4(transformed, 1.0)).y;", "vCutY = gGround;");
   };
-  m.customProgramCacheKey = () => "grass-field-v1";
+  m.customProgramCacheKey = () => (ground ? "grass-field-ground-v1" : "grass-field-v1");
   return m;
 }
 
@@ -283,14 +329,17 @@ const _dir = new THREE.Vector3(), _at = new THREE.Vector3(), _focus = { x: 0, z:
  * `color`: the island's grass (the seasonal palette's). `windScale` multiplies the sway (0 holds it still). `clear`:
  * false where a solid stands (buildings, trunks, rocks), so no blades grow through it.
  */
-export default function GrassField({ map, field: suppliedField, color, windScale = 1, lite = false, clear, sampler, revision = 0, lush = false }: {
+export default function GrassField({ map, field: suppliedField, color, windScale = 1, lite = false, clear, sampler, revision = 0, ground }: {
   map?: IslandMap; field?: Float32Array; color: string; windScale?: number; lite?: boolean; clear?: (x: number, z: number) => boolean;
   /** Where grass grows and the ground under it, when the world is not a cell map (the smooth world: lib/game/world/terrain.ts). */
   sampler?: GrassSampler;
   /** Bump after editing the ground in place (the world editor): every texel in view is resampled. */
   revision?: number;
-  /** One even, lush green instead of the speckled lawn (the smooth world; David, R2d: "i want grass for feel like fass and not feel like a mess"). */
-  lush?: boolean;
+  /**
+   * The new world's meadow: the ground material's colour uniforms (splatMaterial's `userData.splat`). Long tapered
+   * blades coloured from the floor under each root, and gusts rolling across them; the village (none) keeps its lawn.
+   */
+  ground?: GroundUniforms;
 }) {
   const t = useTuning();
   const tier = lite ? GRASS_TIERS.lite : GRASS_TIERS.high;
@@ -307,14 +356,14 @@ export default function GrassField({ map, field: suppliedField, color, windScale
       tex.colorSpace = THREE.NoColorSpace;
       tex.needsUpdate = true;
     }
-    const shared = sharedUniforms(dataTex, bendTex, tier.data, lush);
+    const shared = sharedUniforms(dataTex, bendTex, tier.data, ground);
     const layers = tier.layers.map(layer => {
       const n = Math.ceil((layer.half * 2) / layer.spacing);
       const grid = { value: new THREE.Vector4(n, layer.spacing, 1, layer.width) }, ring = { value: new THREE.Vector4(-2, -1, 1e5, 1e5 + 1) };
-      return { layer, grid, ring, material: grassMaterial({ ...shared, uGrid: grid, uRing: ring, uLayerH: { value: layer.height } }), geometry: grassCard(layer.cards, n * n) };
+      return { layer, grid, ring, material: grassMaterial({ ...shared, uGrid: grid, uRing: ring, uLayerH: { value: layer.height } }, !!ground), geometry: grassCard(layer.cards, n * n) };
     });
     return { data, dataTex, bend, bendTex, uniforms: shared, layers };
-  }, [map, field, clear, tier, sampler, lush]);
+  }, [map, field, clear, tier, sampler, ground]);
   useEffect(() => { if (revision) refill(state); }, [state, revision]);
   useEffect(() => () => {
     state.dataTex.dispose(); state.bendTex.dispose();
