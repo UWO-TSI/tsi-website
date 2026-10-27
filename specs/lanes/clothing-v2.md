@@ -41,6 +41,11 @@ Round 1 built, in review (not merged). Head: see `git log -1` on `game/clothing-
   after; run/jump/sit x front/side/back, no hair so the back shows), `game_starter_set.png` (the runtime Character on
   /lab/avatar ?sheet=fit, design paint and body cut live), `game_cut_off_for_comparison.png` (`&cut=0`),
   `fit_report.txt` (hidden_cut.py bodycut output).
+- **Gates (2026-10-27):** tsc clean; vitest 3453 passed / 3 skipped, with and without `NEXT_PUBLIC_GAME_WORLD=new`;
+  eslint clean on changed files. perf:check (village, v2, cafe) FAILED against its 2026-10-14 baseline in every scene
+  and tier (frame +7 to +44%, cafe lite included) with machine load 5 and swap over 10 GB; v2's +70% draw calls and
+  +54% triangles are the v2 world's growth since that baseline. This lane adds no draw call (designs share the body
+  material) and lowers garment triangles; the coordinator's combined check should judge it.
 - **Evidence tools:** `outfits/render_fit.py` (+ `FIT_ROOT` for the last commit's assets), `outfits/fit_sheet.py`
   (`BEFORE=`), `/lab/avatar?sheet=fit` + `web/scripts/fit-shots.mjs` (in-game, `&cut=0` shows the cut skin).
 
