@@ -6,7 +6,7 @@
  */
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
-import { mkdirSync, readFileSync, statSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -24,6 +24,10 @@ const server = createServer((req, res) => {
   } catch { res.writeHead(404).end(); }
 }).listen(PORT);
 mkdirSync(evidence, { recursive: true });
+/** What a claude.ai artifact serves, by extension: anything else in dist/ can't be published. */
+const SERVED = new Set([".html", ".css", ".js", ".mjs", ".wasm", ".json", ".map", ".txt", ".md", ".csv", ".xml", ".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".avif", ".ico", ".woff", ".woff2", ".ttf", ".otf", ".mp3", ".wav", ".ogg", ".mp4", ".webm", ".pdf"]);
+const walk = dir => readdirSync(dir).flatMap(f => (statSync(join(dir, f)).isDirectory() ? walk(join(dir, f)) : [join(dir, f)]));
+const unserved = walk(dist).filter(f => !SERVED.has(extname(f)) || statSync(f).size > 16e6);
 
 /** The artifact runtime's db, in the page: a seeded `fit` collection; every set is recorded on window.__sets. */
 const FAKE_DB = seed => `
@@ -35,7 +39,7 @@ const FAKE_DB = seed => `
   }) };
   window.claude = { use: async n => (n === "db" ? db : null) };`;
 
-const problems = [], log = [];
+const problems = unserved.map(f => `not publishable (type or over 16 MB): ${f}`), log = [];
 const browser = await chromium.launch({ headless: true, args: ["--mute-audio", "--enable-unsafe-swiftshader", "--use-angle=swiftshader"] });
 async function open(viewport, seed) {
   const context = await browser.newContext({ viewport, deviceScaleFactor: 1 });
@@ -44,7 +48,10 @@ async function open(viewport, seed) {
   page.on("console", m => { if (m.type() === "error") problems.push(`console: ${m.text()}`); });
   page.on("pageerror", e => problems.push(`pageerror: ${e.message}`));
   page.on("requestfailed", r => problems.push(`requestfailed: ${r.url()} ${r.failure()?.errorText}`));
-  page.on("response", r => { if (r.status() >= 400) problems.push(`http ${r.status()}: ${r.url()}`); });
+  page.on("response", r => {
+    if (r.status() >= 400) problems.push(`http ${r.status()}: ${r.url()}`);
+    if (r.url().startsWith("http") && !SERVED.has(extname(new URL(r.url()).pathname))) problems.push(`asks for a type artifacts don't serve: ${r.url()}`);
+  });
   await page.goto(`http://localhost:${PORT}/index.html`);
   await page.waitForLoadState("networkidle");
   await page.waitForTimeout(2500);
