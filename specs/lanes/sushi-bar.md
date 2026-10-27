@@ -26,6 +26,28 @@ Then go straight on. At the end, update Status here, send the full list, and sto
 
 ## Status
 
+**Ship-readiness done, 2026-10-26** (head: the commit after 39cfad42 that updates this file; main 1877dcb5 merged at ac6abd64). The review's seven items:
+
+1. **Merge:** origin/main merged; `generate.ts` merged clean (main's `gatherSpots` with its SUSHI 7 m keep-out, the bar's new SUSHI); `world.json` regenerated with `scripts/generate-world.ts` (gather spots identical to main's). Every gather node is on dry ground and reachable (reach lattice, 44 to 49 points within 1.5 m each); the nearest to the bar, gather-shell-0 and gather-bottle-0, are 17.9 m and 17.7 m from it. walk, sealed, cells, generate, world and `app/api/collections/route.test.ts` pass with and without the switch.
+2. **Stool clashes:** `barSeat(..., taken, outranked)`: on a stool another's claim outranks (active.ts `remoteSeatOutranks`: a remote in view holding your key whose uid sorts before yours, `chatStore().selfUid`), it returns the next free stool with `clash: true`, or your own stool (which gets you up) when none is free; DefaultIslandWorld dispatches it at once. Tests in sushiBar.test and active.test.
+3. **Seat claim leak:** sender.ts clears `sitKey` on `tsi:sit-here` and `tsi:stand` (benches share it). Test in sender.test (fails without the fix).
+4. **Loads from afar:** the isles are their own component (`Isles`), mounted in their own Suspense only while seated; the staff mount only within 40 m (unmount past 44), and the carried geta is cleared when the server unmounts.
+5. **Allocations:** `barSeat` returns null beyond `BAR_REACH` 8 before anything else; `stoolAt`, the entrance check and `servedAt` are loops on a reused local point; SushiBar's frame has no closures: the geta instances are written only when the served set changes or one is carried, the prep counts only on change, the seated view only when the stool changes, the pools' gain without traverse.
+6. **Sunk seated guests:** PlayerAvatar's seat lift is from the floor the avatar is drawn at (`WATER_DROP` under the ground over water: measured at a stool, ground = top = -1.375, wet). No puff and no sit note for a hidden avatar. Also: a remote stool sitter's nameplate hung at the sea floor (Nameplates `plateY` seated used groundY alone): a seat lift above a bench's (SIT_DROP 0.34) now raises it; bench plates unchanged.
+7. **Overview while seated:** IslandAtmosphere blends the overview after the seat's view, so it wins.
+
+Dev only, for the evidence: `?bots=N&botbar=1` sits the first two bots side by side at the bar (botBrain `sitBar`, the same lift as PlayerAvatar; loopback `bar`, netStore). shoot.mjs views `pair-outside`, `pair-seat` (bots; you take the next stool beside them), `seat-overview`, option `bots`, `overview`; it logs `window.__net.remotes()` for bot views.
+
+Shots `specs/evidence/sushi-bar/ship/`: bar-night, seat-night, pair-outside (two bots seated side by side, plates over their heads), pair-seat (seated beside them, the isles out the window), seat-overview.
+
+**Gates (39cfad42):** tsc clean; eslint clean on all 29 TS files changed against main; vitest 3450 pass with and without `NEXT_PUBLIC_GAME_WORLD=new` (budget.test included). Perf A/B against main 1877dcb5, `specs/perf/ab.sh` 2 interleaved rounds, v2: high 5.0 to 5.1 ms median vs 4.9 to 5.0, 428 to 431 draws vs 418, 1.405M tris vs 1.389M; lite 3.3 to 3.4 ms vs 3.2 to 3.3, 358 to 360 draws vs 349 to 351, 1.189M vs 1.175M. That is the whole lane against main (main has only round 1's bar).
+
+**Open after ship:**
+- A remote stool sitter's click target (RemoteAvatar's hit capsule, on the anchor at the sea floor) stays below the deck: clicking them for their card misses.
+- The local avatar's own nameplate and head anchor when seated still use the ground (hidden on stools, so unseen).
+- The server's name; the chef's head hides some of his hands from the middle stools; served geta in a fixed stool order; phase B.
+
+
 **Phase A round 3 built, 2026-10-26** (branch game/sushi-bar; game/terrain-v3 be72c7e1 merged in first at 605b0d5c, then c463da70 and b9f9ead9). Shots `specs/evidence/sushi-bar/phase-a3/`: bar-day, bar-night and approach-night (both with `?tradition=none`), entrance (the roof's corners and their lanterns), seat-evening with -left and -right, seat-night with -left and -right (traditions off), food (seated, a served geta before you); Blender renders model-corner (a roof corner close up), model-food (the served geta close up), model-case, model-isles, model-front; the staff's clips staff-slice-shape and staff-serve (the knife in hand while slicing), and staff-at-work (24 seated frames 1.6 s apart).
 
 1. **The roof** (`roof_pt`, `corner`): the corners turn up further and sooner (SORI 0.62 from SORI_FROM 2.4, kicked out a little), the tile bed finer toward the ends; the ridge sweeps up at its ends (RIDGE_CURL) under a golden shachihoko each (`shachihoko`, P_Metal: head down on the ridge facing out, arched body, tail fanned high, crest, fins, eyes, barbels); a red lantern hangs under each of the four roof corners on an iron hook (glow model, `CORNERS`).
@@ -62,36 +84,7 @@ The coordinator read "fov" as: see more (wider). terrain-v3 removes the tall sea
 
 ## Next
 
-**Ship-readiness: a review of 2dd046db before production** (2026-10-26). Production now runs the new world (`NEXT_PUBLIC_GAME_WORLD=new`, the member world open; David is testing multiplayer). Main is at 1877dcb5 or later. The review found:
-
-1. **The merge clashes with main.**
-   - Since you branched, main added gatherSpots: rocks, shell dig spots and bottle spots, kept 7 m from SUSHI. You moved SUSHI and changed the terrain.
-   - Merge origin/main, resolve `generate.ts` so both changes stand, then rerun `scripts/generate-world.ts`. The world data comes from the generator, never from picking a side.
-   - Then run walk.test, sealed.test, cells.test (`--testTimeout=30000`) and `app/api/collections/route.test.ts`, with and without the switch.
-   - Check that the gather nodes, which now sit by the bar's new spot, are still on dry sand and reachable.
-2. **Two players who press E together get the same stool** (`sushiBar.ts:191`: first free in a fixed SEAT_ORDER, and the other's claim arrives late). After sitting, if a remote holds the same key, the later claim (the higher sid) moves to the next free stool. Or start the order at an offset hashed from the uid. Test it.
-3. **A stool claim leaks** after a wheel sit or sleep: `PlayerAvatar.tsx:307` swaps the stool for a ground sit in one handler, so `sender.ts:251` keeps sending `sushi:...#i`. Clear `sitKey` on `tsi:sit-here` and `tsi:stand` in sender.ts. Benches share the path, so check them too.
-4. **Loads when nobody is at the bar:**
-   - mount the islands (`SushiBar.tsx:93`) in their own Suspense, only once seated;
-   - beyond about 40 m, skip the staff's per-frame work and their rendering (`:152-153`).
-5. **Per-frame allocations for every new-world player:**
-   - `DefaultIslandWorld.tsx:503` calls `barSeat` every frame; skip it when the player is more than 8 from the bar;
-   - `stoolAt` and `barPoint` allocate arrays and closures;
-   - `SushiBar.tsx:130-138` makes closures and sets `instanceMatrix.needsUpdate` every frame.
-
-   Write the loops without per-frame allocation, and set `needsUpdate` only when the served set changes.
-6. **Seated guests look sunk about 8 cm to others:** `drive.ts:96` applies WATER_DROP over water, but the lift is measured from ground height. Add WATER_DROP to the lift for over-water seats. Show the sit note (♪) only when the avatar isn't hidden (`PlayerAvatar.tsx:297`).
-7. **The overview zoom-out does nothing while seated** (`IslandAtmosphere.tsx:265` overwrites the overview blend). Let the overview win.
-
-Gates:
-- the full vitest suite with and without the switch;
-- tsc and eslint;
-- budget.test;
-- a quick A/B perf check against main.
-
-Take a few shots: the bar at night; two players seated side by side, if you can simulate it with a bot or a second client.
-
-Commit, update Status, SendMessage "main" with the commit and gates, and stop. Don't push. The coordinator merges and deploys.
+Nothing until the coordinator's merge and David's review. Then the open items above, or phase B when David starts it.
 
 ## Tools and gotchas
 
@@ -112,4 +105,6 @@ Commit, update Status, SendMessage "main" with the commit and gates, and stop. D
 - **Staff clips:** `Blender -b --factory-startup -P art/characters/base/build_clips.py -- staff` writes art/characters/base/v8_staff.glb and the catalogue's `staff` section; then `node web/scripts/sync-character-assets.mjs` (it also rewrites decal_tsi_mark.png and hair_colour_world.png byte-wise: check them out again). `render_sushi_staff.py -- <dir>` solves the knife's grip (GRIPS) and renders the clips. Their names are in clips.ts VillageClip and FAMILY; cafe.ts OwnerClip; loops held as poses.
 - **The builder and the food:** `art/buildings/sushi_food.py` (nigiri, maki, geta, saku, tableware); a nigiri's pieces on a prep geta must all be one kind (setOut's draw range assumes equal pieces). The builder writes seven GLBs now (sushi-bar-geta too). Don't reuse SHELF_Y (the bottle shelf): the serving shelf is SERVE_*.
 - **perf:check:** deletes web/.next when it ends, so each run needs its own measure-build; TOLERANCE=10 skips the reruns; PORT other than 3158 if another lane's `next start` holds it.
+- **Stool sitters to test against:** `?bots=2&botbar=1` (dev) seats two bots at the bar; `window.__net.remotes()` lists them with their tier and y.
+- **perf A/B:** build HEAD with measure-build.sh, move web/.next to `.perf-builds/.next-after`, `git checkout --detach origin/main`, build again to `.next-before`, check the branch out again, then `PORT=3177 TIER=high sh specs/perf/ab.sh 2 v2 .perf-builds/high` under the devserver lock (OUT is relative to the worktree root). Delete `.perf-builds` after.
 - **Big props and the walker's buckets:** `islandOf` buckets props by their centre (4 u buckets, +-1 searched), so a footprint half over 4 is missed at its ends: keep the core at hw 4.
