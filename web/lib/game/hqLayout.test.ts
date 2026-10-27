@@ -303,7 +303,7 @@ describe("HQ's room (the gallery, two tall storeys)", () => {
     expect(F + HQ_CAMERA.up).toBeGreaterThan(2 * F);
   });
 
-  it("puts Wren behind her desk, out of the walker's way, facing the door, seen over its counter", () => {
+  it("puts Alice behind her desk, out of the walker's way, facing the door, seen over its counter", () => {
     const counter = o.fixtures.find(f => f.id === "front-desk")!.blocks[0], ledgeZ = counter.at[2] + counter.size[2] / 2, ledge = counter.size[1];
     const desk = o.stations.find(s => s.id === "desk")!;
     // The walking camera: HQ_CAMERA.up over you and HQ_CAMERA.back behind you at the desk's station.

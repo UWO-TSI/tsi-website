@@ -7,6 +7,8 @@
 //   node two-account.mjs setup                 create the three throwaway accounts (ids to $IDS)
 //   node two-account.mjs day                   tags, chat, friends, emotes, dance sync, report and the live mute, flow 3
 //   node two-account.mjs night                 the campfire with two dancers (after real nightfall)
+//   node two-account.mjs identity              run 3: names and looks (A's first creator, B's wardrobe, C joins later), the hair shop, Alice
+//   node two-account.mjs collide               run 3: the wharf deck's edges, the hitboxes, the fire's stone ring, the doors
 //
 // Env: BASE (default https://play.tethos.ca; a Preview's URL also works), SHARE (a Preview's `_vercel_share` token;
 // production has none), GAME_WORLD (the world the deployment plays, default new), IDS (a JSON file outside the repo with
@@ -47,8 +49,34 @@ function mgmtToken() {
 const MGMT = mgmtToken();
 
 /** The active world's places, as the server judges them (spots.ts, run in web/ under the deployment's world switch). */
+const PREV = `${IDS}.prev.bin`;
 const SPOTS = JSON.parse(execFileSync("npx", ["vite-node", "-c", "vitest.config.ts", new URL("spots.ts", import.meta.url).pathname], {
-  cwd: WEB, env: { ...process.env, NEXT_PUBLIC_GAME_WORLD: process.env.GAME_WORLD ?? "new" }, encoding: "utf8" }).trim().split("\n").pop());
+  cwd: WEB, env: { ...process.env, NEXT_PUBLIC_GAME_WORLD: process.env.GAME_WORLD ?? "new", PREV_OUT: PREV }, encoding: "utf8" }).trim().split("\n").pop());
+/** The walk tree from the spawn (spots.ts): a route between any two walkable places, through their nearest common step. */
+const TREE = (() => { const b = readFileSync(PREV); return new Int32Array(b.buffer, b.byteOffset, b.byteLength / 4); })();
+function treePath(x, z) {
+  const { x0, z0, nx, nz, S } = SPOTS.grid, i0 = Math.round((x - x0) / S), k0 = Math.round((z - z0) / S);
+  let c = -1;
+  for (let r = 0; r <= 6 && c < 0; r++) for (let dk = -r; dk <= r && c < 0; dk++) for (let di = -r; di <= r && c < 0; di++) {
+    const i = i0 + di, k = k0 + dk;
+    if (i >= 0 && k >= 0 && i < nx && k < nz && TREE[k * nx + i] !== -2) c = k * nx + i;
+  }
+  const out = [];
+  for (let j = c; j >= 0; j = TREE[j]) out.push(j);
+  return out;
+}
+function routeBetween(from, to) {
+  const a = treePath(from.x, from.z), b = treePath(to.x, to.z), inB = new Map(b.map((j, i) => [j, i]));
+  const i = a.findIndex(j => inB.has(j)), cells = i < 0 ? b.slice().reverse() : [...a.slice(0, i + 1), ...b.slice(0, inB.get(a[i])).reverse()];
+  const { x0, z0, nx, S } = SPOTS.grid;
+  return cells.map(j => ({ x: x0 + (j % nx) * S, z: z0 + Math.floor(j / nx) * S })).filter((_, n, all) => n % 8 === 0 || n === all.length - 1);
+}
+/** Walk from wherever p stands to (x, z) over walkable ground. */
+async function go(p, target, within = 0.8) {
+  const here = await where(p);
+  if (here) for (const q of routeBetween(here, target).slice(1, -1)) { const r = await walkTo(p, q, 1.5, 30000); if (!r.ok) return r; }
+  return walkTo(p, target, within, 45000);
+}
 
 // ── Results ─────────────────────────────────────────────────────────
 const results = [];
@@ -77,6 +105,7 @@ const WHO = {
   a: { email: "probe-a@launch.tethos.invalid", display: "Launch Probe A", world: "Probe Alder" },
   b: { email: "probe-b@launch.tethos.invalid", display: "Launch Probe B", world: "Probe Birch" },
   m: { email: "probe-m@launch.tethos.invalid", display: "Launch Probe M", world: "Probe Cedar" },
+  d: { email: "probe-d@launch.tethos.invalid", display: "Launch Probe D", world: "Probe Rowan" },
 };
 
 async function setup() {
@@ -89,7 +118,7 @@ async function setup() {
     saveIds();
     log("created", k, j.id);
   }
-  const rows = await sql(`select id, tier, membership, display_name from profiles where id in (${["a", "b", "m"].map(k => `'${ids[k].id}'`).join(",")})`);
+  const rows = await sql(`select id, tier, membership, display_name from profiles where id in (${Object.keys(WHO).map(k => `'${ids[k].id}'`).join(",")})`);
   log("profiles", JSON.stringify(rows));
 }
 
@@ -116,8 +145,10 @@ async function signIn(k) {
 // ── Browser helpers ─────────────────────────────────────────────────
 let browser;
 const LOOKS = {
-  a: { skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [], bangs: "bangs_straight", back: "back_bob", top: "top_cardigan", bottom: "bottom_trousers", onepiece: null, shoes: "shoes_sneakers", acc: {}, colors: { top_cardigan: 2 } },
-  b: { skin: 5, hair: 4, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [], bangs: "bangs_straight", back: "back_bob", top: "top_cardigan", bottom: "bottom_trousers", onepiece: null, shoes: "shoes_sneakers", acc: {}, colors: { top_cardigan: 5 } },
+  // A fresh account's own clothes (a cardigan on the device was refused at the save: not_owned).
+  a: { skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", extras: [], bangs: "", back: "hair_bob_pigtail", top: "top_tee", bottom: "bottom_shorts", onepiece: null, shoes: "shoes_slipon", acc: {}, colors: {} },
+  b: { skin: 5, hair: 4, eyes: "F1.1", mouth: "M1.1", extras: [], bangs: "", back: "hair_bob_pigtail", top: "top_tee", bottom: "bottom_shorts", onepiece: null, shoes: "shoes_slipon", acc: {}, colors: {} },
+  d: { skin: 4, hair: 3, eyes: "F1.1", mouth: "M1.1", extras: [], bangs: "", back: "hair_bob_pigtail", top: "top_tee", bottom: "bottom_shorts", onepiece: null, shoes: "shoes_slipon", acc: {}, colors: {} },
 };
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -125,20 +156,70 @@ const today = () => new Date().toISOString().slice(0, 10);
 async function player(k, { size = { width: 1280, height: 800 } } = {}) {
   const s = await signIn(k);
   const ctx = await browser.newContext({ viewport: size, deviceScaleFactor: 1 });
+  await ctx.addInitScript(probe);
   const page = await ctx.newPage();
   page.on("pageerror", e => log(k, "pageerror", e.message.slice(0, 200)));
   page.on("console", m => { if (m.type() === "error" && !/Failed to load resource|favicon/i.test(m.text())) log(k, "console", m.text().slice(0, 200)); });
-  const frames = [], closes = [];
+  page.on("response", r => { if (/\/api\/(profile|identity\/name)(\?|$)/.test(r.url()) && r.request().method() !== "GET") r.text().then(t => log(k, r.request().method(), r.url().replace(/^https:\/\/[^/]+/, ""), r.status(), t.slice(0, 160))).catch(() => {}); });
+  const frames = [], closes = [], sockets = [];
   page.on("websocket", ws => {
     if (!/fly\.dev/.test(ws.url())) return;
+    sockets.push(Date.now());
     log(k, "socket", ws.url().replace(/\?.*$/, ""));
     ws.on("framereceived", f => frames.push({ t: Date.now(), p: typeof f.payload === "string" ? Buffer.from(f.payload) : f.payload }));
     ws.on("close", () => { closes.push(Date.now()); log(k, "socket closed"); });
   });
   await page.goto(`${PREVIEW}/api/weather${SHARE}`, { waitUntil: "domcontentloaded" });
   await ctx.addCookies(s.cookies);
-  return { k, uid: s.uid, ctx, page, frames, closes, name: WHO[k].world };
+  return { k, uid: s.uid, ctx, page, frames, closes, sockets, name: WHO[k].world };
 }
+/**
+ * React's devtools hook, installed before the page loads (production React reports its roots to it as well): where the
+ * player stands (its position ref, outdoors and in a building) and the other players the page draws (their card's name
+ * and look, and the look their Character is drawn with). Read only; production has no dev hooks.
+ */
+function probe() {
+  const roots = new Set();
+  window.__REACT_DEVTOOLS_GLOBAL_HOOK__ = { supportsFiber: true, isDisabled: false, renderers: new Map(),
+    inject(r) { const id = this.renderers.size + 1; this.renderers.set(id, r); return id; },
+    onCommitFiberRoot(_id, root) { roots.add(root); }, onCommitFiberUnmount() {}, onPostCommitFiberRoot() {}, onScheduleFiberRoot() {}, checkDCE() {}, setStrictMode() {} };
+  const find = (test, max = 1) => {
+    const out = [];
+    for (const root of roots) {
+      const stack = [root.current];
+      while (stack.length && out.length < max) {
+        const f = stack.pop(), q = f.memoizedProps;
+        if (q && typeof q === "object" && test(q)) out.push(q);
+        if (f.sibling) stack.push(f.sibling);
+        if (f.child) stack.push(f.child);
+      }
+    }
+    return out;
+  };
+  window.__probe = {
+    pos() {
+      const refs = find(q => q.playerPosRef && !("open" in q), 20), r = (refs.find(q => q.bounds) ?? refs[0])?.playerPosRef?.current;
+      return r && Number.isFinite(r.x) ? { x: r.x, z: r.z } : null;
+    },
+    players() { return find(q => q.rig && q.player && typeof q.player.name === "string", 50).map(q => ({ uid: q.player.uid, name: q.player.name, look: q.player.look })); },
+    drawn() { return find(q => q.remote === true && q.look && typeof q.id === "string", 50).map(q => ({ id: q.id, look: q.look })); },
+  };
+}
+const remotes = p => p.page.evaluate(() => ({ players: window.__probe?.players() ?? [], drawn: window.__probe?.drawn() ?? [] }));
+/** The hair and skin parts of a look (the ones a name check and a glance compare). */
+const LOOK_KEYS = ["skin", "hair", "back", "bangs"];
+const lookOf = l => (l ? Object.fromEntries(LOOK_KEYS.map(k => [k, l[k] ?? null])) : null);
+/** Does p draw `uid` with this name and these parts (its card's look and its Character's)? */
+async function seesAs(p, uid, name, want) {
+  const r = await remotes(p);
+  const card = r.players.find(q => q.uid === uid), drawn = r.drawn.find(q => q.id === uid);
+  let cardLook = null; try { cardLook = card?.look ? JSON.parse(card.look) : null; } catch {}
+  const same = l => !!l && LOOK_KEYS.every(k => (l[k] ?? null) === (want[k] ?? null));
+  return { present: !!card, name: card?.name ?? null, card: lookOf(cardLook), drawn: lookOf(drawn?.look), ok: card?.name === name && same(cardLook) && same(drawn?.look) };
+}
+const savedLook = async uid => (await sql(`select avatar_config->'look' as look from profiles where id = '${uid}'`))[0]?.look ?? null;
+const savedName = async uid => (await sql(`select world_name from member_identity where member_id = '${uid}'`))[0]?.world_name ?? null;
+
 /** Same-origin JSON from the page (its cookies). */
 const api = (p, path, method = "GET", body) => p.page.evaluate(async ([path, method, body]) => {
   const r = await fetch(path, { method, headers: { "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -221,15 +302,22 @@ async function emote(p, name, dance = false) {
 }
 
 /** Into the island: look saved (no creator), world name set, then the arrival (UI for `arrivalUi`, else the route). */
-async function enter(p, { arrivalUi = false } = {}) {
-  await p.page.evaluate(([look, day]) => {
+async function enter(p, { arrivalUi = false, extra = {}, name: naming = true } = {}) {
+  await p.page.evaluate(([look, day, extra]) => {
+    for (const [k, v] of Object.entries(extra)) localStorage.setItem(k, v);
     localStorage.setItem("tsi.look.v1", look);
     localStorage.setItem("tsi.welcomed.v1", "1");
     localStorage.setItem("tsi.gift.later", day);
     localStorage.setItem("tsi.camera.v1", JSON.stringify({ yaw: 0, pitch: 0.55, zoom: 1, sensitivity: 1, invertY: false, mouseLook: false, autoFollow: false }));
-  }, [JSON.stringify(LOOKS[p.k] ?? LOOKS.a), today()]);
-  const name = await api(p, "/api/identity/name", "POST", { name: p.name });
-  log(p.k, "name", name.status, JSON.stringify(name.json).slice(0, 160));
+  }, [JSON.stringify(LOOKS[p.k] ?? LOOKS.a), today(), extra]);
+  // The world name: kept if set (run 3 sets A's in the creator and changes B's in the wardrobe), else this run's.
+  const me = await api(p, "/api/identity/me");
+  if (me.json?.identity?.world_name) p.name = me.json.identity.world_name;
+  else if (!naming) p.name = "Islander";
+  else {
+    const name = await api(p, "/api/identity/name", "POST", { name: p.name });
+    log(p.k, "name", name.status, JSON.stringify(name.json).slice(0, 160));
+  }
   const arrival = await api(p, "/api/world/arrival");
   log(p.k, "arrival GET", arrival.status, JSON.stringify(arrival.json).slice(0, 160));
   if (!arrivalUi && arrival.json && arrival.json.arrived === false) {
@@ -263,7 +351,10 @@ async function enter(p, { arrivalUi = false } = {}) {
 
 /** Where you stand (world x, z), from the minimap's dot (production has no dev hooks). The village plot is mirrored
  * (DefaultIslandMap: +x drawn left) and draws z negated, so the dot is (-x, -z). */
+const outdoors = p => p.page.evaluate(() => !!document.querySelector('[aria-label="Minimap"]'));
 const where = p => p.page.evaluate(() => {
+  const at = window.__probe?.pos();
+  if (at) return at;
   const dot = document.querySelector('[aria-label="Minimap"] circle[fill="#FFDD57"]');
   return dot ? { x: -Number(dot.getAttribute("cx")), z: -Number(dot.getAttribute("cy")) } : null;
 });
@@ -273,6 +364,9 @@ async function day() {
   browser = await chromium.launch({ headless: true, args: ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist", "--enable-gpu"] });
   try {
     const A = await player("a"), B = await player("b");
+    // After a night run (it ends with B blocking A): unblocked first.
+    const unblock = await api(B, `/api/world/blocks?member_id=${A.uid}`, "DELETE");
+    log("B unblocks A before the run", unblock.status, unblock.json?.realtime ?? "");
     await enter(A);
     await enter(B);
     await shot(A, "01-a-in-island");
@@ -446,7 +540,7 @@ async function flow4(A) {
   const donate = await api(A, "/api/progression/chapters/advance", "POST", { chapter_slug: "settle-in", action: "donate_catch" });
   record("flow 4: donate the catch (chapter step)", donate.status === 200, `HTTP ${donate.status} ${donate.json?.error ?? ""}`);
   const report = await api(A, "/api/progression/chapters/advance", "POST", { chapter_slug: "settle-in", action: "report_hq" });
-  record("flow 4: report to Wren (no plot step in v1)", report.status === 200, `HTTP ${report.status} ${report.json?.error ?? ""}`);
+  record("flow 4: report to Alice (no plot step in v1)", report.status === 200, `HTTP ${report.status} ${report.json?.error ?? ""}`);
   const again = await api(A, "/api/progression/chapters/advance", "POST", { chapter_slug: "settle-in", action: "report_hq" });
   record("flow 4: a second report is refused", again.status === 409, `HTTP ${again.status}`);
   const after = await ledger();
@@ -591,28 +685,148 @@ async function walkRoute(p, target, path = SPOTS.route, within = 2.5) {
 async function walkTo(p, target, within = 2.5, ms = 90000) {
   // Calibrate W and D from the dot once (the camera stays put: autoFollow off, yaw 0).
   const at = () => where(p);
-  const nudge = async key => { const a = await at(); await p.page.keyboard.down(key); await p.page.waitForTimeout(450); await p.page.keyboard.up(key); await p.page.waitForTimeout(350); const b = await at(); return a && b ? { x: b.x - a.x, z: b.z - a.z } : null; };
+  const nudge = async key => { const a = await at(); await p.page.keyboard.down(key); await p.page.waitForTimeout(p.nudgeMs ?? 450); await p.page.keyboard.up(key); await p.page.waitForTimeout(350); const b = await at(); return a && b ? { x: b.x - a.x, z: b.z - a.z } : null; };
   await focusWorld(p);
   if (!p.dirs) {
-    const w = await nudge("w"), d = await nudge("d");
+    // Against a wall a key barely moves you: then the opposite key, turned round.
+    // The first key after a load can go unheard: tried again until both ways moved you.
+    const moved = v => v && Math.hypot(v.x, v.z) > 0.05;
+    const way = async (k, o) => { for (let i = 0; i < 3; i++) { const v = await nudge(k); if (moved(v)) return v; const u = await nudge(o); if (moved(u)) return { x: -u.x, z: -u.z }; } return null; };
+    const w = await way("w", "s"), d = await way("d", "a");
     p.dirs = { w, d, s: w && { x: -w.x, z: -w.z }, a: d && { x: -d.x, z: -d.z } };
     log(p.k, "calibrated", JSON.stringify(p.dirs));
   }
   const dirs = p.dirs;
   const end = Date.now() + ms;
+  let best = Infinity, since = Date.now(), side = 0;
   while (Date.now() < end) {
     const here = await at();
     if (!here) break;
     const dx = target.x - here.x, dz = target.z - here.z, dist = Math.hypot(dx, dz);
     if (dist <= within) return { ok: true, here, dist };
+    // Caught on a corner (no headway for 2.5 s): a step to one side, then the other.
+    if (dist < best - 0.2) { best = dist; since = Date.now(); }
+    else if (Date.now() - since > 2500) {
+      const k = keysFor(p, side++ % 2 ? [-dz / dist, dx / dist] : [dz / dist, -dx / dist]);
+      for (const key of k) await p.page.keyboard.down(key);
+      await p.page.waitForTimeout(300);
+      for (const key of k) await p.page.keyboard.up(key);
+      since = Date.now();
+    }
     const keys = Object.entries(dirs).filter(([, v]) => v).map(([k, v]) => [k, (v.x * dx + v.z * dz) / (Math.hypot(v.x, v.z) * dist || 1)]).sort((a, b) => b[1] - a[1]);
     const pick = keys.filter(([, c]) => c > 0.35).slice(0, 2).map(([k]) => k);
     for (const k of pick) await p.page.keyboard.down(k);
-    await p.page.waitForTimeout(Math.min(600, 120 + dist * 60));
+    await p.page.waitForTimeout(Math.min(600, Math.max(40, dist * 90)));
     for (const k of pick) await p.page.keyboard.up(k);
   }
   const here = await at();
   return { ok: false, here, dist: here ? Math.hypot(target.x - here.x, target.z - here.z) : null };
+}
+
+// ── Run 3: what's drawn stops you (specs/lanes/collision.md; spots.ts `hits` and `edges`) ─────────
+/** The keys (one, or two at 45 degrees) whose calibrated way best matches (ux, uz). */
+function keysFor(p, [ux, uz]) {
+  const unit = v => { const n = Math.hypot(v.x, v.z) || 1; return { x: v.x / n, z: v.z / n }; };
+  const d = Object.fromEntries(Object.entries(p.dirs).filter(([, v]) => v).map(([k, v]) => [k, unit(v)]));
+  const combos = [["w"], ["s"], ["a"], ["d"], ["w", "a"], ["w", "d"], ["s", "a"], ["s", "d"]].filter(c => c.every(k => d[k]));
+  return combos.map(c => { const x = c.reduce((t, k) => t + d[k].x, 0), z = c.reduce((t, k) => t + d[k].z, 0); return [c, (x * ux + z * uz) / (Math.hypot(x, z) || 1)]; })
+    .sort((a, b) => b[1] - a[1])[0][0];
+}
+const settle = p => p.page.waitForTimeout(450); // the minimap's dot polls at 5 Hz
+/** Taps sideways until the line through `through` along `way` runs through p (within `tol`). */
+async function lineUp(p, through, way, tol = 0.12) {
+  const perp = [-way[1], way[0]];
+  let e = Infinity;
+  for (let i = 0; i < 12; i++) {
+    await settle(p);
+    const h = await where(p);
+    if (!h) break;
+    e = (h.x - through[0]) * perp[0] + (h.z - through[1]) * perp[1];
+    if (Math.abs(e) <= tol) break;
+    const keys = keysFor(p, e > 0 ? [-perp[0], -perp[1]] : perp);
+    for (const k of keys) await p.page.keyboard.down(k);
+    await p.page.waitForTimeout(Math.max(35, Math.min(260, Math.abs(e) * 160)));
+    for (const k of keys) await p.page.keyboard.up(k);
+  }
+  return e;
+}
+/** Holds the way (sprinting, a dash at the start) for `ms`, tracking the dot; then where p came to rest. */
+async function run(p, way, { sprint = false, dash = false, ms = 2200 } = {}) {
+  const keys = keysFor(p, way);
+  await focusWorld(p);
+  if (sprint) await p.page.keyboard.down("Shift");
+  for (const k of keys) await p.page.keyboard.down(k);
+  if (dash) await p.page.keyboard.press("q");
+  const track = [], end = Date.now() + ms;
+  while (Date.now() < end) { const h = await where(p); if (h) track.push(h); await p.page.waitForTimeout(80); }
+  for (const k of keys) await p.page.keyboard.up(k);
+  if (sprint) await p.page.keyboard.up("Shift");
+  await settle(p);
+  const last = await where(p);
+  if (last) track.push(last);
+  return { keys: keys.join("+"), track, last };
+}
+/** How far outside the drawn shape (x, z) stands: a round's radius, a turned box's faces. */
+const outside = (s, h) => { const dx = h.x - s.x, dz = h.z - s.z;
+  return s.kind === "round" ? Math.hypot(dx, dz) - s.r : Math.max(Math.abs(dx * s.a[0] + dz * s.a[1]) - s.hw, Math.abs(dx * s.b[0] + dz * s.b[1]) - s.hd); };
+const f2 = n => (n == null ? "?" : n.toFixed(2));
+
+/**
+ * The wharf deck's edge (three edges over the sea, north, middle and south): from the deck 2 inside, walk, sprint, and
+ * sprint with a dash out across the edge; held at it (the body's 0.2 at the drawn edge), never out over the water.
+ */
+async function deckEdges(A) {
+  record("deck: the active world has deck edges over the sea", SPOTS.edges.length === 3, `${SPOTS.deckEdgeCandidates} candidates`);
+  for (const [i, e] of SPOTS.edges.entries()) {
+    const back = await go(A, { x: e.start[0], z: e.start[1] }, 0.6);
+    if (!back.ok) { record(`deck ${e.square}: A walks onto the deck`, false, JSON.stringify(back)); continue; }
+    await lineUp(A, e.edge, e.normal, 0.3);
+    for (const mode of [{ name: "walk" }, { name: "sprint", sprint: true }, { name: "sprint and dash", sprint: true, dash: true }]) {
+      await walkTo(A, { x: e.start[0], z: e.start[1] }, 0.6, 30000);
+      const r = await run(A, e.normal, { ...mode, ms: mode.sprint ? 1800 : 2600 });
+      const past = r.track.map(h => (h.x - e.edge[0]) * e.normal[0] + (h.z - e.edge[1]) * e.normal[1]);
+      const most = Math.max(...past), rest = past.at(-1);
+      record(`deck ${e.square} (${["north", "middle", "south"][i]}): ${mode.name} at the edge holds you on the deck`, most <= 0.3 && rest >= -0.6,
+        `${r.keys}; furthest ${f2(most)} past the edge, rests ${f2(rest)} (0 = the drawn edge)`);
+    }
+    await shot(A, `40-deck-edge-${e.square}`);
+  }
+}
+
+/** The fountain, a plaza bench, a lamp post, the shop's wall and the fire's stone ring: run straight at each, stopped at what's drawn. */
+async function hitboxes(A) {
+  for (const t of SPOTS.hits) {
+    if (!t.start) { record(`hitbox: ${t.id} has open ground beside it`, false); continue; }
+    const w = await go(A, { x: t.start[0], z: t.start[1] }, 0.6);
+    if (!w.ok) { record(`hitbox: A reaches ${t.id}`, false, JSON.stringify(w)); continue; }
+    for (const mode of [{ name: "walk" }, { name: "sprint", sprint: true }]) {
+      await walkTo(A, { x: t.start[0], z: t.start[1] }, 0.6, 30000);
+      const off = await lineUp(A, [t.shape.x, t.shape.z], t.way, t.shape.kind === "box" && t.shape.hw < 0.2 ? 0.08 : 0.25);
+      const r = await run(A, t.way, { ...mode, ms: mode.sprint ? 1600 : 2400 });
+      const d = r.track.map(h => outside(t.shape, h)), near = Math.min(...d);
+      // Stopped short of its middle, at its drawn side (the body is 0.2 round), never inside it nor through it.
+      const ahead = r.last ? (r.last.x - t.shape.x) * t.way[0] + (r.last.z - t.shape.z) * t.way[1] : 0;
+      record(`hitbox: ${mode.name} into ${t.id} stops at what's drawn`, near >= -0.05 && d.at(-1) <= 0.6 && ahead < 0,
+        `${r.keys}, lined up ${f2(off)} off its middle; closest ${f2(near)} outside it, rests ${f2(d.at(-1))} outside, on the near side: ${ahead < 0}`);
+    }
+    await shot(A, `41-hit-${t.id.replace(/[^a-z0-9]+/gi, "-").replace(/-$/, "")}`);
+  }
+  // The dance circle round the fire stays open: four points on it walked to.
+  const F = SPOTS.fire, ring = [];
+  for (const [ux, uz] of [[1, 0], [0, 1], [-1, 0], [0, -1]]) {
+    const r = await walkTo(A, { x: F.x + ux * 2.9, z: F.z + uz * 2.9 }, 0.35, 30000);
+    ring.push(`${ux},${uz}: ${r.ok ? "on it" : `stuck ${f2(r.dist)} off`} (${f2(r.here && Math.hypot(r.here.x - F.x, r.here.z - F.z))} from the fire)`);
+  }
+  record("campfire: the dance circle (2.9 round) stays open", ring.every(l => l.includes("on it")), ring.join("; "));
+  // A building's door prompt still shows: the shop's and HQ's.
+  for (const [id, label] of [["shop", /shop/i], ["hq", /HQ|Alice/i]]) {
+    const d = SPOTS.doors[id];
+    if (!d) { record(`door: the ${id}'s door`, false, "not placed"); continue; }
+    const w = await go(A, { x: d[0], z: d[1] }, 0.8);
+    const shown = await waitFor(A, async () => label.test(await prompt(A)), 6000);
+    record(`door: the ${id}'s door prompt shows`, w.ok && shown, `${w.ok ? "at the door" : JSON.stringify(w)}, prompt "${await prompt(A)}"`);
+    await shot(A, `42-door-${id}`);
+  }
 }
 
 async function night() {
@@ -772,6 +986,319 @@ async function arrival() {
   }
 }
 
+// ── Run 3: names and looks between players (specs/lanes/net-identity.md), Alice, the hair shop ──────────
+const launch = () => chromium.launch({ headless: true, args: ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist", "--enable-gpu"] });
+const finish = () => {
+  writeFileSync(`${OUT}/results-${PHASE}.txt`, JSON.stringify({ at: new Date().toISOString(), preview: HOST, results }, null, 2));
+  const fails = results.filter(r => !r.ok).length;
+  log(`done: ${results.length - fails} pass, ${fails} fail`);
+};
+/** Polls `fn` (an object with `ok`) for up to `ms`; the last answer and when it first held. */
+async function until(p, fn, ms, gap = 500) {
+  const end = Date.now() + ms;
+  let last;
+  while (Date.now() < end) { last = await fn(); if (last?.ok) return { ...last, at: Date.now() }; await p.page.waitForTimeout(gap); }
+  return { ...last, at: null };
+}
+/** Clicks the `n`th unpressed, enabled button in `scope` that `keep` allows; its label, pressed after. */
+async function pickUnpressed(scope, n, keep = () => true) {
+  const all = scope.locator('button[aria-pressed="false"]:not([disabled])');
+  const labels = await all.evaluateAll(els => els.map(e => e.getAttribute("aria-label") ?? e.textContent ?? ""));
+  const i = labels.map((l, j) => [l, j]).filter(([l]) => keep(l)).map(([, j]) => j)[n];
+  if (i === undefined) return null;
+  await all.nth(i).click();
+  await scope.page().waitForTimeout(300);
+  return labels[i];
+}
+const nameIn = scope => scope.getByLabel("Your name on the island");
+
+/**
+ * The first creator and the wardrobe carry the world name and the look to everyone: A, new, makes a character in the
+ * arrival's reflection (a refused empty name first), B sees A's name and hair and skin without a rejoin; B changes name
+ * and hair in the shop's fitting room and A, beside B, sees both; C (the third account) joins later and sees both at join.
+ * Then A's HQ visit with Alice, and the hair shelf.
+ */
+async function identity() {
+  browser = await launch();
+  try {
+    const A = await player("a"), B = await player("b");
+    await enter(B);
+    // A: a fresh device and a fresh account: no look, no world name; the arrival plays from its reflection.
+    record("identity: A starts with no look and no world name", !(await savedLook(A.uid)) && !(await savedName(A.uid)));
+    await A.page.evaluate(([day]) => {
+      localStorage.setItem("tsi.welcomed.v1", "1");
+      localStorage.setItem("tsi.gift.later", day);
+      localStorage.setItem("tsi.camera.v1", JSON.stringify({ yaw: 0, pitch: 0.55, zoom: 1, sensitivity: 1, invertY: false, mouseLook: false, autoFollow: false }));
+    }, [today()]);
+    await A.page.goto(`${PREVIEW}/student/dashboard`, { waitUntil: "domcontentloaded" });
+    await A.page.waitForSelector("canvas", { timeout: 300000 });
+    const yes = A.page.locator("[data-testid=reflection-yes]");
+    const shown = await yes.waitFor({ timeout: 180000 }).then(() => true, () => false);
+    record("identity: A's first creator (the reflection) shows", shown);
+    if (!shown) { await shot(A, "50-a-no-creator"); return; }
+    await A.page.waitForTimeout(1500);
+    const creator = A.page.locator("[data-testid=reflection-creator]");
+    await yes.click({ force: true });
+    const asked = await A.page.getByText("The island needs a name for you.").waitFor({ timeout: 5000 }).then(() => true, () => false);
+    await A.page.waitForTimeout(1500);
+    const early = { look: await savedLook(A.uid), name: await savedName(A.uid) };
+    record("identity: Yes with the name empty says \"The island needs a name for you.\" and saves nothing", asked && !early.look && !early.name, JSON.stringify(early));
+    await shot(A, "50-a-name-needed");
+    // A look of A's own: another skin, hairstyle and hair colour.
+    await creator.getByRole("tab", { name: "Head & skin" }).click();
+    const skin = await pickUnpressed(creator.getByRole("group", { name: "skin colours" }), 2);
+    await creator.getByRole("tab", { name: "Hair" }).click();
+    await A.page.waitForTimeout(400);
+    const style = await pickUnpressed(creator, 1, l => !/colour|Own|dye|shop/i.test(l) && l.trim().length > 0);
+    const colour = await pickUnpressed(creator.getByRole("group", { name: "hair colours" }), 1, l => !/dye/.test(l));
+    record("identity: A picks another skin, hairstyle and hair colour", !!(skin && style && colour), `${skin} | ${style} | ${colour}`);
+    await nameIn(creator).fill(A.name);
+    const free = await A.page.getByText("That name is free.").waitFor({ timeout: 8000 }).then(() => true, () => false);
+    record("identity: the name check says the name is free", free, A.name);
+    await shot(A, "51-a-creator-look-and-name");
+    await yes.click({ force: true });
+    const savedAt = Date.now();
+    const saved = await until(A, async () => { const look = await savedLook(A.uid), name = await savedName(A.uid); return { ok: !!look && name === A.name, look, name }; }, 20000, 1000);
+    record("identity: Yes saves A's look and world name", saved.ok, `${saved.at ? `${((saved.at - savedAt) / 1000).toFixed(1)} s` : "not saved"}; ${saved.name}; ${JSON.stringify(lookOf(saved.look))}`);
+    const wantA = saved.look ?? {};
+    // The rest of the arrival: skip the skippable beats to Bram's walk-along, then its way out.
+    const end = Date.now() + 240000;
+    let leave = null;
+    while (Date.now() < end && !leave) {
+      leave = await A.page.$("[data-testid=arrival-leave-tour]");
+      if (!leave) { await A.page.keyboard.press("Space"); await A.page.waitForTimeout(1500); }
+    }
+    record("identity: A's arrival reaches Bram's walk-along", !!leave);
+    if (leave) await leave.click({ force: true });
+    await A.page.waitForSelector('[role="application"][aria-label="Island walking area"]', { timeout: 120000 }).catch(() => {});
+    await A.page.waitForTimeout(3000);
+    A.name = (await savedName(A.uid)) ?? A.name;
+    await identityRest(A, B, wantA, savedAt);
+  } finally {
+    await browser.close();
+    finish();
+  }
+}
+
+/** Run 3, a second sitting (A already made in the creator): A comes back (its HQ visit as it stood after the arrival). */
+async function identity2() {
+  browser = await launch();
+  try {
+    const A = await player("a"), B = await player("b");
+    log("B unblocks A", (await api(B, `/api/world/blocks?member_id=${A.uid}`, "DELETE")).status);
+    await enter(B);
+    await enter(A, { extra: { "tsi.hq.v1": JSON.stringify({ beat: 0, done: false }) } });
+    A.name = (await savedName(A.uid)) ?? A.name;
+    await identityRest(A, B, (await savedLook(A.uid)) ?? {}, Date.now());
+  } finally {
+    await browser.close();
+    finish();
+  }
+}
+
+/** Into a building: in through the door, wait for the room, then the keys found again (the room's camera is its own). */
+async function stepIn(p, label) {
+  const offer = await waitFor(p, async () => label.test(await prompt(p)), 8000);
+  const text = await prompt(p);
+  await pressE(p);
+  const ok = await waitFor(p, async () => !(await outdoors(p)), 10000);
+  await p.page.waitForTimeout(1500);
+  // The position ref follows the room once you move: a tap there and back first.
+  await focusWorld(p);
+  for (const k of ["w", "s"]) { await p.page.keyboard.down(k); await p.page.waitForTimeout(90); await p.page.keyboard.up(k); await p.page.waitForTimeout(300); }
+  p.dirs = null; p.nudgeMs = 140;
+  return { ok: offer && ok, text };
+}
+/** In a room: along its path (spots.ts `rooms`), cut into half-unit legs so the keys keep you on the line. */
+async function walkPath(p, pts) {
+  let r = { ok: true };
+  for (let i = 0; i < pts.length; i++) {
+    const [x1, z1] = pts[i], [x0, z0] = pts[Math.max(0, i - 1)], k = Math.max(1, Math.ceil(Math.hypot(x1 - x0, z1 - z0) / 0.5));
+    for (let j = i ? 1 : k; j <= k; j++) {
+      r = await walkTo(p, { x: x0 + ((x1 - x0) * j) / k, z: z0 + ((z1 - z0) * j) / k }, j === k ? 0.15 : 0.25, 15000);
+      if (!r.ok) return r;
+    }
+  }
+  return r;
+}
+async function stepOut(p) {
+  await waitFor(p, async () => (await prompt(p)) !== "", 5000);
+  const text = await prompt(p);
+  await pressE(p);
+  const ok = await waitFor(p, () => outdoors(p), 10000);
+  await p.page.waitForTimeout(1500);
+  p.dirs = null; p.nudgeMs = undefined;
+  return { ok, text };
+}
+
+async function identityRest(A, B, wantA, savedAt) {
+  {
+    // B sees A's name and look (the card's and the drawn Character's), without A rejoining.
+    const inView = await until(B, async () => ({ ok: (await seesAs(B, A.uid, A.name, wantA)).present }), 20000);
+    if (!inView.at) { log("A out of B's view after the arrival: A walks over", JSON.stringify(await where(A))); await go(A, { x: SPOTS.spawn[0] + 1.5, z: SPOTS.spawn[1] }, 1.5); }
+    const seen = await until(B, () => seesAs(B, A.uid, A.name, wantA), 60000);
+    const fromView = inView.at ?? Date.now();
+    record("identity: B sees A's world name and hair and skin (card and drawn) without A rejoining", seen.ok && A.sockets.length === 1,
+      `${seen.at ? `${((seen.at - savedAt) / 1000).toFixed(1)} s after the save, ${((seen.at - fromView) / 1000).toFixed(1)} s after A came into B's view` : JSON.stringify(seen)}; A's sockets ${A.sockets.length}`);
+    record("identity: B's socket carried A's name", heard(B, A.name, savedAt));
+    await go(A, { x: SPOTS.spawn[0] + 2, z: SPOTS.spawn[1] }, 1.2);
+    const tagA = await waitFor(B, () => tagShown(B, A.name), 20000, 500);
+    record("identity: A's tag on B's screen reads A's world name", tagA, A.name);
+    await shot(B, "52-b-sees-a-name-and-look");
+
+    await wardrobeAndJoin(A, B, wantA);
+    await hairShop(B);
+    await alice(A);
+    await Promise.all([A.ctx.close(), B.ctx.close()]);
+  }
+}
+
+/**
+ * B (here the wardrobe's player: a world name not yet set, as the 30-day rename rule allows only one change) sets a name
+ * and changes hair in the shop's fitting room; A by the door sees both once B steps out; C joins later and sees A and B.
+ */
+async function wardrobeAndJoin(A, B, wantA) {
+    // B, mid-session, changes name and hair in the shop's fitting room. The shop has no multiplayer area (offline inside,
+    // DefaultIslandWorld), so A waits outside its door and sees the change once B steps out (B's card refresh on rejoin).
+    const shopDoor = { x: SPOTS.doors.shop[0], z: SPOTS.doors.shop[1] };
+    const [wb, wa] = await Promise.all([go(B, shopDoor, 0.8), go(A, { x: shopDoor.x, z: shopDoor.z - 3 }, 1)]);
+    record("wardrobe: A waits by the shop's door", wa.ok, JSON.stringify(wa.here));
+    const inShop = wb.ok ? await stepIn(B, /^Enter the shop$/) : { ok: false, text: await prompt(B) };
+    record("wardrobe: B enters the shop (Enter the shop)", inShop.ok, `${inShop.text} ${JSON.stringify(wb.here)}`);
+    // To a changing room on the shop floor's own walkable ground (spots.ts rooms.shop).
+    if (inShop.ok) { const r = await walkPath(B, SPOTS.rooms.shop.toBooth); if (!r.ok) log("b stuck in the shop", JSON.stringify(r)); }
+    const booth = await waitFor(B, async () => (await prompt(B)) === "Try on outfits", 6000);
+    record("wardrobe: B at a changing room (Try on outfits)", booth, `${await prompt(B)} at ${JSON.stringify(await where(B))}`);
+    await pressE(B);
+    const wear = B.page.getByRole("button", { name: "Wear this" });
+    const opened = await wear.waitFor({ timeout: 15000 }).then(() => true, () => false);
+    const panel = B.page.locator('[role="dialog"]').filter({ has: wear });
+    record("wardrobe: the fitting room opens with the name field", opened && await nameIn(panel).isVisible().catch(() => false));
+    const newName = "Probe Rowan";
+    if (opened) {
+      await nameIn(panel).fill(newName);
+      const free2 = await B.page.getByText("That name is free.").waitFor({ timeout: 8000 }).then(() => true, () => false);
+      await panel.getByRole("tab", { name: "Hair" }).click();
+      await B.page.waitForTimeout(400);
+      const bStyle = await pickUnpressed(panel, 2, l => !/colour|Own|dye|shop/i.test(l) && l.trim().length > 0);
+      const bColour = await pickUnpressed(panel.getByRole("group", { name: "hair colours" }), 2, l => !/dye/.test(l));
+      record("wardrobe: B picks a new name, hairstyle and hair colour", free2 && !!bStyle && !!bColour, `${newName} (free: ${free2}) | ${bStyle} | ${bColour}`);
+      await shot(B, "53-b-wardrobe-name-and-hair");
+      await wear.click();
+      await B.page.waitForTimeout(1500);
+      await shot(B, "53b-b-after-wear-this");
+    }
+    const bSavedAt = Date.now();
+    const bSaved = await until(B, async () => { const look = await savedLook(B.uid), name = await savedName(B.uid); return { ok: !!look && name === newName, look, name }; }, 20000, 1000);
+    record("wardrobe: Wear this saves B's look and new name", bSaved.ok, `${bSaved.name}; ${JSON.stringify(lookOf(bSaved.look))}`);
+    B.name = bSaved.name ?? B.name;
+    const wantB = bSaved.look ?? {};
+    await closeSheets(B);
+    if (inShop.ok) await walkPath(B, SPOTS.rooms.shop.toExit);
+    const left = await stepOut(B);
+    const outAt = Date.now();
+    record("wardrobe: B leaves the shop (Return to the island)", left.ok, left.text);
+    const seenB = await until(A, () => seesAs(A, B.uid, newName, wantB), 45000);
+    record("wardrobe: A sees B's new name and hair within about 15 s of B stepping out, no rejoin on A's side", seenB.ok && !!seenB.at && seenB.at - outAt <= 20000 && A.sockets.length === 1,
+      `${seenB.at ? `${((seenB.at - outAt) / 1000).toFixed(1)} s after B stepped out, ${((seenB.at - bSavedAt) / 1000).toFixed(1)} s after the save` : JSON.stringify(seenB)}; A's sockets ${A.sockets.length}`);
+    const tagB = await waitFor(A, () => tagShown(A, newName), 15000, 500);
+    record("wardrobe: B's tag on A's screen reads the new name", tagB);
+    await shot(A, "54-a-sees-b-new-name-and-hair");
+
+    await Promise.all([go(A, { x: SPOTS.spawn[0] + 2, z: SPOTS.spawn[1] }, 1.2), go(B, { x: SPOTS.spawn[0] - 2, z: SPOTS.spawn[1] }, 1.2)]);
+
+    // C (the third account) joins now and sees both, names and looks, at join.
+    const C = await player("m");
+    await enter(C);
+    const joined = Date.now();
+    const cA = await until(C, () => seesAs(C, A.uid, A.name, wantA), 30000), cB = await until(C, () => seesAs(C, B.uid, B.name, wantB), 15000);
+    record("identity: C, joining later, sees A's name and look at join", cA.ok, cA.at ? `${((cA.at - joined) / 1000).toFixed(1)} s after C's island loaded` : JSON.stringify(cA));
+    record("identity: C, joining later, sees B's new name and look at join", cB.ok, cB.at ? `${((cB.at - joined) / 1000).toFixed(1)} s after` : JSON.stringify(cB));
+    const tags = await waitFor(C, async () => (await tagShown(C, A.name)) && (await tagShown(C, B.name)), 20000, 500);
+    record("identity: both tags on C's screen", tags, `${A.name}: ${await tagShown(C, A.name)}, ${B.name}: ${await tagShown(C, B.name)}`);
+    await shot(C, "55-c-sees-both-at-join");
+    await C.ctx.close();
+
+}
+
+/** Run 3, a third sitting: the wardrobe with D (no world name yet; B's was set, and renames wait 30 days). */
+async function identity3() {
+  browser = await launch();
+  try {
+    const A = await player("a"), D = await player("d");
+    await enter(D, { name: false });
+    await enter(A, { extra: { "tsi.hq.v1": JSON.stringify({ beat: 0, done: false }) } });
+    A.name = (await savedName(A.uid)) ?? A.name;
+    record("wardrobe: D starts with no world name (shown as Islander)", !(await savedName(D.uid)), `A sees: ${(await seesAs(A, D.uid, "Islander", {})).name}`);
+    await wardrobeAndJoin(A, D, (await savedLook(A.uid)) ?? {});
+    await Promise.all([A.ctx.close(), D.ctx.close()]);
+  } finally {
+    await browser.close();
+    finish();
+  }
+}
+
+/** The hair shelf (David's picks, seed 20261027054753): four styles on sale at 350 coins, Wavy half-up gone. */
+async function hairShop(p) {
+  const r = await api(p, "/api/economy/shop");
+  const items = Object.values(r.json?.shop?.tabs ?? {}).flat();
+  record("hair shop: the shop answers", r.status === 200 && items.length > 0, `HTTP ${r.status}, ${items.length} items`);
+  for (const [slug, name] of [["wear-hair-baby-sprout", "Baby sprout"], ["wear-hair-layered-shag", "Layered shag"], ["wear-hair-swept-fringe", "Swept fringe"], ["wear-hair-vkei", "V-kei layers"]]) {
+    const it = items.find(i => i.slug === slug);
+    record(`hair shop: ${name} on sale at 350 coins`, !!it && it.name === name && Number(it.price) === 350 && /coin/i.test(String(it.currency)), it ? `${it.name} ${it.price} ${it.currency}` : "not listed");
+  }
+  const wavy = items.filter(i => i.slug === "wear-hair-wavy-half-up" || /wavy half-up/i.test(i.name ?? ""));
+  record("hair shop: Wavy half-up isn't sold", wavy.length === 0, wavy.map(i => i.slug).join(", "));
+}
+
+/**
+ * Alice at HQ (row 312, the visit after Bram's walk-along; lane hq-alice): the chapter's step reads "Report back to Alice at
+ * HQ"; at HQ's door the prompt shows; inside, at the front desk, E talks to her: the talk and her name tag say Alice.
+ */
+async function alice(A) {
+  const st = await api(A, "/api/progression/state");
+  const chapters = st.json?.state?.chapters ?? st.json?.chapters ?? [];
+  const step = chapters.find(c => c.slug === "settle-in")?.steps?.find(x => x.key === "report_hq");
+  record("alice: the settle-in step reads \"Report back to Alice at HQ\"", step?.label === "Report back to Alice at HQ", step?.label ?? `HTTP ${st.status}`);
+  const door = SPOTS.doors.hq;
+  const w = await go(A, { x: door[0], z: door[1] }, 0.8);
+  const offer = await waitFor(A, async () => /HQ|Alice/.test(await prompt(A)), 8000);
+  const tracker = await A.page.locator("[data-testid=quest-tracker]").innerText().catch(() => "");
+  record("alice: at HQ's door the prompt shows", w.ok && offer, `prompt "${await prompt(A)}"; tracker "${tracker.replace(/\s+/g, " ").slice(0, 80)}"`);
+  await shot(A, "56-a-hq-door");
+  const inside = (await stepIn(A, /HQ|Alice/)).ok;
+  await walkPath(A, SPOTS.rooms.hq.toDesk);
+  const talkOffer = await waitFor(A, async () => (await prompt(A)) === "Talk to Alice", 6000);
+  record("alice: inside HQ, the front desk offers Talk to Alice", inside && talkOffer, `prompt "${await prompt(A)}" at ${JSON.stringify(await where(A))}`);
+  const tag = await waitFor(A, () => A.page.evaluate(() => [...document.querySelectorAll("[data-resident] span")].some(e => e.textContent?.trim() === "Alice" && !e.closest("[hidden]"))), 6000);
+  record("alice: her name tag reads Alice", tag);
+  if (talkOffer) await pressE(A);
+  const box = await A.page.locator("[data-testid=talk-box]").waitFor({ timeout: 10000 }).then(() => true, () => false);
+  const label = box ? await A.page.locator("[data-testid=talk-box]").getAttribute("aria-label") : null;
+  const who = box ? await A.page.locator("[data-testid=talk-box] h2").first().innerText().catch(() => "") : "";
+  const line = box ? await A.page.locator("[data-testid=talk-box]").innerText().catch(() => "") : "";
+  record("alice: the talk is with Alice (Talking with Alice, Alice · HQ lead)", label === "Talking with Alice" && /^Alice\b/.test(who) && !/Wren/.test(line), `${label} | ${who} | ${line.replace(/\s+/g, " ").slice(0, 120)}`);
+  await A.page.waitForTimeout(800);
+  await shot(A, "57-a-talks-with-alice");
+}
+
+/** The collision checks on their own (A alone): the wharf deck's edges, the hitboxes, the fire's ring, the doors. */
+async function collide() {
+  browser = await launch();
+  try {
+    const A = await player("a");
+    await enter(A);
+    const probeAt = await A.page.evaluate(() => window.__probe?.pos() ?? null);
+    record("probe: the page reports where A stands", !!probeAt, JSON.stringify(probeAt));
+    await deckEdges(A);
+    await hitboxes(A);
+    await A.ctx.close();
+  } finally {
+    await browser.close();
+    finish();
+  }
+}
+
 // M is tier 2 only for the moderation step: a stopped run puts it back.
 let mRaised = false;
 process.on("SIGTERM", async () => { if (mRaised) await sql(`update profiles set tier = 5 where id = '${ids.m.id}'`, { write: true }).catch(() => {}); process.exit(143); });
@@ -813,6 +1340,30 @@ else if (PHASE === "bench") {
   finally { await browser.close(); writeFileSync(`${OUT}/results-${PHASE}.txt`, JSON.stringify({ at: new Date().toISOString(), preview: HOST, results }, null, 2)); }
 }
 else if (PHASE === "routes") await routes();
+else if (PHASE === "identity") await identity();
+else if (PHASE === "identity2") await identity2();
+else if (PHASE === "identity3") await identity3();
+else if (PHASE === "joinlag") {
+  // Why C took about 28 s to show A and D at join: second by second, what C's page holds for them.
+  browser = await launch();
+  try {
+    const A = await player("a"), D = await player("d");
+    await enter(A); await enter(D);
+    await Promise.all([go(A, { x: SPOTS.spawn[0] + 2, z: SPOTS.spawn[1] }, 1.2), go(D, { x: SPOTS.spawn[0] - 2, z: SPOTS.spawn[1] }, 1.2)]);
+    const C = await player("m");
+    const t = Date.now();
+    await enter(C);
+    log("C entered", Date.now() - t, "ms; first frame naming A at", C.frames.find(f => f.p.includes(Buffer.from(A.name)))?.t - t, "ms");
+    const wantA = await savedLook(A.uid), wantD = await savedLook(D.uid);
+    for (let i = 0; i < 40; i++) {
+      const [a, d] = [await seesAs(C, A.uid, A.name, wantA), await seesAs(C, D.uid, D.name, wantD)];
+      log(`+${((Date.now() - t) / 1000).toFixed(0)}s`, JSON.stringify({ a: [a.present, a.name, !!a.card, !!a.drawn, a.ok], d: [d.present, d.name, !!d.card, !!d.drawn, d.ok] }));
+      if (a.ok && d.ok) break;
+      await C.page.waitForTimeout(1000);
+    }
+  } finally { await browser.close(); }
+}
+else if (PHASE === "collide") await collide();
 else if (PHASE === "day") await day();
 else if (PHASE === "night") await night();
-else throw new Error("phase: setup | day | night");
+else throw new Error("phase: setup | identity | day | collide | night");

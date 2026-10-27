@@ -8,12 +8,18 @@ export const WARMUP_FRAMES = 14;
 /** A stuck or failing loader never traps you outside: after this the fade lifts anyway. */
 export const WARMUP_TIMEOUT_MS = 15000;
 
+/** The frame of the count the whole scene is compiled at: the first frames mount what mounts late (pools, lights). */
+export const COMPILE_AT = 3;
+
 /**
  * One frame of the warm-up count: frames rendered since everything finished loading. A loader starting again (a model
- * that suspends late) sends the count back to zero; past the time-out it counts regardless.
+ * that suspends late) sends the count back to zero; it holds at COMPILE_AT while the scene's programs compile; past the
+ * time-out it counts regardless.
  */
-export function warmupFrame(frames: number, loaded: boolean, timedOut: boolean): number {
-  return loaded || timedOut ? frames + 1 : 0;
+export function warmupFrame(frames: number, loaded: boolean, timedOut: boolean, compiling = false): number {
+  if (timedOut) return frames + 1;
+  if (!loaded) return 0;
+  return compiling && frames >= COMPILE_AT ? frames : frames + 1;
 }
 export const warmedUp = (frames: number) => frames >= WARMUP_FRAMES;
 

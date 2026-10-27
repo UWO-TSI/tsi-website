@@ -32,7 +32,6 @@ import { BOSS_CENTER, ESCORT_PATHS, EXIT_SPOT, FETCH_SPOTS, GATE_PLAZA, RUINS_BR
 import { combat, createField, publishCombat, takeMissionQueue, V2_SLOT_IDS, type AbilityId, type CombatRuntime, type CueKind } from "@/lib/game/combat/runtime";
 import { wallHeight } from "@/lib/game/combat/primitives";
 import ClassRender from "./ClassRender";
-import UltWarmup from "./UltWarmup";
 import { classKey, classReload, equipClassKit, pressUlt, stepClass } from "@/lib/game/combat/classRuntime";
 import { createLive } from "@/lib/game/combat/classFire";
 import { unlocksAt } from "@/lib/combat/classes";
@@ -490,8 +489,6 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     <AimReticle player={player} ground={ruins.ground} />
     <FloaterProjector />
     <EnemyBars ground={ruins.ground} />
-    {/* Behind the gate's fade: every hidden effect, beast and ult model compiled and uploaded before the first cast. */}
-    <UltWarmup />
     <Html position={[EXIT_SPOT.x, 2.2, EXIT_SPOT.z]} center distanceFactor={10} zIndexRange={[3, 0]}><div className={styles.cue}>Gate · safe zone</div></Html>
     <PlayerAvatar spawnPosition={spawn} playerName="You" playerLevel={level} player={player}
       world={world} groundHeight={ruins.ground} groundSurface={ruins.surface} camTarget={focus} combat respawn={respawn} glider={glider} />

@@ -15,6 +15,7 @@ import type { WaterType } from "./fishingSpots";
 import type { Season } from "./season";
 import type { IslandWeather } from "./islandWeather";
 import { hash01, type Point3 } from "./worldFx";
+import { worldModel } from "./world/active";
 
 const TAU = Math.PI * 2;
 const smooth = (x: number) => { const t = Math.min(1, Math.max(0, x)); return t * t * (3 - 2 * t); };
@@ -309,7 +310,7 @@ export function seaAt(site: FaunaSite, x: number, z: number): boolean {
 }
 /** A world grid of sea squares; each may have a fish leap in each slot, at a seeded moment and spot. */
 const FISH_CELL = 10, FISH_SLOT = 11, FISH_CHANCE = 0.22, LEAP = 0.95;
-export const FISH_MODELS = ["/assets/acnh/fish/horse-mackerel.glb", "/assets/acnh/fish/anchovy.glb", "/assets/acnh/fish/sea-bass.glb"];
+export const FISH_MODELS = ["/assets/acnh/fish/horse-mackerel.glb", "/assets/acnh/fish/anchovy.glb", "/assets/acnh/fish/sea-bass.glb"].map(u => worldModel(u));
 export interface Leap { x: number; z: number; yaw: number; u: number; model: number; t0: number; id: number }
 
 /**

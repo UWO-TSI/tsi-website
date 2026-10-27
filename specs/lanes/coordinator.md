@@ -25,6 +25,36 @@ All in `~/.claude/jobs/62203045/tmp/`, which survives reboots.
 - `prod-dump.sh <label>`, `prod-query.sh <sql>` and `verify.sql` are for prod migrations. The procedure is in `STATE.md` and the memory files.
 - `withlock.sh heavy|blender|devserver <cmd>` (set `LANE=game/<lane>`): takes a lock, waiting while swap is high and another lock is held. It lives in `~/.claude/jobs/62203045/tmp/`, the same folder as the helpers above, and is referenced from `specs/lane-rules.md`.
 
+## David's fit values (2026-10-27 afternoon)
+
+David finished Face Fit ("face and hair scales done"). I exported 53 docs from the `fit` collection and saved 47 to `game/fit-editor`: `specs/evidence/fit-editor/export/fit-export-2026-10-27.json`.
+- **Dropped because removed:** hair_fluffy_crop, hair_long_windswept, hair_space_buns, hair_messy_braid, acc_cross_bandage. The moody face had no doc.
+- **Dropped to reset:** hair_tousled_spikes, which wardrobe-b3 is re-placing at import. Any other hair whose placement that fix moves must be dropped too, and David re-fits it.
+- **To ship:**
+  1. wardrobe-b3 finishes: the Tousled spikes placement, the removals (4 hairs, moody, cross bandage), the monocle re-import and the under-cap cut.
+  2. Merge it into game/fit-editor and run `node web/scripts/apply-fit.mjs <export>` there.
+  3. David prices batch 3 on the shelf page; unpriced items count as free.
+  4. Merge fit-editor (which carries b3) to main with the seed migration for the new prices.
+
+## Batch 3, clothes, loading screen (2026-10-27, morning)
+
+- **wardrobe-b3** done (head 7aa2cd79): hair-32 to hair-46, face-26 to face-32, acc-25 to acc-27; review https://claude.ai/artifact/K6PaZcMX5AbUntBhzUZAaJ. An item with a key and no price counts as free, so merge b3 only after its prices are applied.
+- **Shelf page** republished as "Wardrobe Shelf" on the same URL https://claude.ai/artifact/EyLDXZLTsdRVTYZeABzy3h: collections `hairs` (batch 3), `faces`, `accessories` (32 on sale, plus the three new ones), note `notes/david-b3`. Defaults when he picks a price: hair 350 coins or 200 Gems, faces 250 or 100, accessories 150 or 100.
+- **Face Fit** v2 includes batch 3: game/fit-editor merged game/wardrobe-b3 (face.test.ts conflict resolved: both describes kept), rebuilt, check.mjs PASS, published on the same URL.
+- **clothing-v2** round 1 review: https://claude.ai/artifact/G5RvBxgazEZwSirknQaBDt (head 459ce35a). Item `shape` asks whether to restyle the silhouettes.
+- **loading** screen review: https://claude.ai/artifact/9QsGi2EJnicwiskGHsUygx (game/loading 614d8616 and ff626290; everything else from the lane is on main at 50e949e1).
+
+## Review pages and state (2026-10-27, early morning)
+
+- **Waiting for David:**
+  - reflection-waves round 2: https://claude.ai/artifact/Sc2JrcPsEPotE4VA2zHizU (items `r2-*`; `r2-lightness` is his call on lifting hair lightness, which would change every hair);
+  - grass-wind: https://claude.ai/artifact/3e5WRNPQaogvYPqq1pW2K2 (head d79889da);
+  - remodel round 1: https://claude.ai/artifact/4uk78WkbWRFyBRc3HD4WTL (head 2349d362; each model can be dropped from the REMODELLED list in `lib/game/world/active.ts`).
+- **Face Fit editor:** https://claude.ai/artifact/D1gkmSBHBGspFPH5to9yA8 (db collection `fit`), built from game/fit-editor eedf4d89 (GLBs as `.glb.json`). Apply: export `fit`, then `node web/scripts/apply-fit.mjs <export.json>` in web/. The runtime field isn't on main yet: merge game/fit-editor with the first applied values. Rebuild it with batch 3 when wardrobe-b3 lands.
+- **Merged and live:** collision (plus the campfire), hair-shelf (seed 20261027054753 applied), hq-alice (20261027063439 applied), net-identity, launch-check run 3 (all final checks passed). The loading steps 2 to 4 are merged locally (74d00e9a) and wait on the full vitest before pushing.
+- **Asked David:** the four invisible plaza benches (bench-0 to 3): real benches or remove the seats? And the first wave in the mist (redo with no note).
+- **Perf baseline:** the Oct 14 perf:check baseline predates terrain v3, so every check fails against it. Refresh it in one combined run after the merges.
+
 ## Later the same night (2026-10-27)
 
 - **reflection-waves round 1 reviewed** (https://claude.ai/artifact/Sc2JrcPsEPotE4VA2zHizU): desktop, phone and small waves approved; the wave approved with a note (the look changes along the wave's path, not in one frame); the first wave in the mist redo with no note (asked David why); the hair colours redo (blond less like skin, add ginger, keep the dyes' indices). Round 2 running on the same lane.

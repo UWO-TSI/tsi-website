@@ -53,7 +53,7 @@ export default function ReflectionCreator({ phase, initial, askName, onYes }: {
   const [shown, setShown] = useState(initial);
   const [catId, setCatId] = useState(CATEGORIES[0].id);
   const cat = CATEGORIES.find(c => c.id === catId)!;
-  const naming = useNameCheck(askName);
+  const naming = useNameCheck(askName, true);
   const ripples = useRef<Ripple[]>([]);
   const clock = useRef(0);
   const lastChoice = useRef(0);
@@ -123,7 +123,7 @@ export default function ReflectionCreator({ phase, initial, askName, onYes }: {
   }, [root]);
 
   const confirm = () => {
-    if (yes) return;
+    if (yes || naming.missing()) return;
     setYes(true);
     setShown(look);
     AudioManager.playSFX("confirm");
@@ -147,7 +147,7 @@ export default function ReflectionCreator({ phase, initial, askName, onYes }: {
         <CreatorOptions cat={cat} look={look} setLook={setLook} mode="create" owned={STARTERS} onChange={change} />
       </div>
       {askName && <footer className={cc.foot}>
-        <Field label="Your name on the island" hint="Letters and numbers; everyone in the world sees it." value={naming.name} maxLength={24}
+        <Field id={naming.id} label="Your name on the island" hint="Letters and numbers; everyone in the world sees it." value={naming.name} maxLength={24}
           onChange={e => naming.type(e.target.value)} error={naming.nameNote && !naming.nameNote.ok && !mentionsSignIn(naming.nameNote.text) ? naming.nameNote.text : undefined} className={cc.name} />
         {naming.nameNote?.ok && <p className={cc.nameOk} role="status">{naming.nameNote.text}</p>}
         {naming.nameNote && !naming.nameNote.ok && mentionsSignIn(naming.nameNote.text) && <p className={cc.nameOk} role="status"><SignInText text={naming.nameNote.text} /></p>}

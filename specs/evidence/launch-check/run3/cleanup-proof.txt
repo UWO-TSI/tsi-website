@@ -1,0 +1,12 @@
+Cleanup of the third launch-check run's four throwaway accounts (Probe Alder, Probe Birch, Probe Cedar, Probe Rowan), 2026-10-27 ~05:45 Toronto.
+Ids and recorded row ids are in the session scratchpad only.
+
+Before (node cleanup.mjs scan; every public uuid column plus auth.users and profiles): rows in 162 columns named the four
+ids, among them world_friends.b_id=1, world_reports.reporter_id=2, world_reports.resolved_by=2, world_reports.target_id=2,
+auth.users.id=4, public.profiles.id=4 (only the tail of the scan was kept in the log this time).
+
+Collected by id (rows a user delete only sets to NULL): world_chat_messages 6, world_reports 2, moderation_log 4, letters 1, identity_name_log 4.
+Deleted: those rows by id (5 tables, one transaction), A's mute cleared, the 4 users (admin API: 200, 200, 200, 200; the rest cascades).
+
+After (node cleanup.mjs verify):
+{"scannedColumns":162,"nonzero":[],"recordedRowsLeft":{"world_chat_messages":0,"world_reports":0,"moderation_log":0,"letters":0,"identity_name_log":0}}

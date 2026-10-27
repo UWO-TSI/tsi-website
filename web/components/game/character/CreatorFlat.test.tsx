@@ -1,9 +1,10 @@
-import { createElement as h } from "react";
+import { act, createElement as h } from "react";
+import { reconciler } from "@react-three/fiber";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { GuiVariantContext } from "@/components/gui/variant";
 import { CATEGORIES } from "@/lib/game/character/creatorCategories";
-import { CategoryRail } from "./CreatorControls";
+import { CategoryRail, NAME_NEEDED, useNameCheck } from "./CreatorControls";
 import CharacterCreator from "./CharacterCreator";
 import { DEFAULT_LOOK } from "@/lib/game/character/look";
 
@@ -42,5 +43,69 @@ describe("the creator's two looks", () => {
     expect(out).not.toMatch(/data-flat|data-gui-flat|data-swap|data-tab/);
     expect(out).toMatch(/<h1 id="creator-title"[^>]*>Your closet<\/h1><div/);
     expect(out.match(/aria-label="Close"/g)).toHaveLength(1);
+  });
+});
+
+describe("the world name in the first creator (net-identity: never saved nameless by accident)", () => {
+  type Naming = ReturnType<typeof useNameCheck>;
+  /** The hook on R3F's reconciler (no DOM), as lib/net/netStore.test.ts mounts its hooks. */
+  async function naming(askName: { current: string } | undefined, required: boolean) {
+    (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+    const seen: Naming[] = [];
+    const Probe = () => { seen.push(useNameCheck(askName, required)); return null; };
+    const create = reconciler.createContainer as (...a: unknown[]) => ReturnType<typeof reconciler.createContainer>;
+    const root = create({}, 1, null, false, null, "", () => {}, () => {}, () => {}, null);
+    await act(async () => { reconciler.updateContainer(h(Probe), root, null, null); });
+    const focused: string[] = [];
+    // The name check's wait runs at once; its fetch answers as GET /api/identity/name does (jsonResult(r, "name")).
+    (globalThis as { window?: unknown }).window = { setTimeout: (fn: () => void) => { fn(); return 0; }, clearTimeout: () => {} };
+    (globalThis as { fetch?: unknown }).fetch = async (url: string) => {
+      const name = new URL(url, "http://x").searchParams.get("check");
+      return { status: 200, json: async () => ({ ok: true, name: { name, available: name !== "Taken" } }) };
+    };
+    (globalThis as { document?: unknown }).document = { getElementById: (id: string) => ({ scrollIntoView() {}, focus() { focused.push(id); } }) };
+    return { get: () => seen[seen.length - 1], focused, run: (fn: () => void) => act(async () => { fn(); }) };
+  }
+  const realFetch = globalThis.fetch;
+  afterEach(() => {
+    delete (globalThis as { document?: unknown }).document;
+    delete (globalThis as { window?: unknown }).window;
+    globalThis.fetch = realFetch;
+  });
+  const settle = () => act(async () => { for (let i = 0; i < 5; i++) await Promise.resolve(); });
+
+  it("asks for the name instead of confirming with an empty field, then lets a typed one through", async () => {
+    const n = await naming({ current: "You" }, true);
+    let stop = false;
+    await n.run(() => { stop = n.get().missing(); });
+    expect(stop).toBe(true);
+    expect(n.get().nameNote).toEqual({ ok: false, text: NAME_NEEDED });
+    expect(n.focused).toEqual([n.get().id]);
+    await n.run(() => n.get().type("  "));
+    await n.run(() => { stop = n.get().missing(); });
+    expect(stop).toBe(true);
+    await n.run(() => n.get().type("Pebble"));
+    await settle();
+    expect(n.get().nameNote).toEqual({ ok: true, text: "That name is free." }); // the route's answer, read right
+    expect(n.get().missing()).toBe(false);
+    expect(n.get().wanted).toBe("Pebble");
+  });
+
+  it("a name the check refuses is never dropped silently: confirming asks again", async () => {
+    const n = await naming({ current: "You" }, true);
+    await n.run(() => n.get().type("Taken"));
+    await settle();
+    expect(n.get().nameNote).toEqual({ ok: false, text: "Someone already has that name." });
+    expect(n.get().wanted).toBeNull();
+    let stop = false;
+    await n.run(() => { stop = n.get().missing(); });
+    expect(stop).toBe(true);
+    expect(n.focused).toEqual([n.get().id]);
+  });
+
+  it("the wardrobe, a player who already has a name, and signed out never block", async () => {
+    expect((await naming({ current: "You" }, false)).get().missing()).toBe(false);
+    expect((await naming({ current: "Pebble" }, true)).get().missing()).toBe(false); // the field starts with their name
+    expect((await naming(undefined, true)).get().missing()).toBe(false);
   });
 });

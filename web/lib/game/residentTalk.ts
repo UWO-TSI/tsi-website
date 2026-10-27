@@ -75,7 +75,7 @@ export function voiceBlip(seed: number, text: string, i: number): { sfx: SFXName
 export interface Talker { id: string; slug: string; name: string; post: string | null; seed: number }
 export type TalkPhase = "turning" | "speaking" | "closing" | "ended";
 export interface Talk extends Talker {
-  /** A scripted conversation (a tool's resident, Wren at HQ; lib/game/arrival/hq): its id, told to `onTalkScript` as it ends. */
+  /** A scripted conversation (a tool's resident, Alice at HQ; lib/game/arrival/hq): its id, told to `onTalkScript` as it ends. */
   script?: string;
   lines: readonly TalkLine[];
   index: number;

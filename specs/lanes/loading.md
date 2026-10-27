@@ -23,7 +23,39 @@ Steps 2 to 4 are fixes and can ship once verified; step 5 is visual and waits fo
 
 ## Status
 
-(none yet)
+Head: see `git log` (2026-10-27). Main has steps 2 to 4 and the crossing warm-up (pushed: d9a48a35 + e65df2df).
+
+- Step 1: `specs/evidence/loading/baseline.md`. Steps 2 to 4: `specs/evidence/loading/after.md` (fast cold 20.0 -> 7.4
+  to 9.0 s, slow warm 18.7 -> 8.0 s; crossing 155 to 226 long frames -> 1).
+- **Rim re-verify done, not yet merged (coordinator cherry-picks after the report):** a3f1ef69..14699fd2. The rim is
+  per phase again (always on cost v2 +4%); the warm-up compiles the other light count; it compiles for the PostFX
+  target's linear output (it had been compiling sRGB programs the frame never used); object by object; the golden
+  island starts aboard. Numbers in `after.md` "Re-verify". tsc clean after it.
+- **Step 5 built, waiting for David's review:** `specs/evidence/loading/loading-screen.md`, `screen-sequence-1280.png`,
+  `screen-1920.png`; commits 614d8616, ff626290. Not to ship before David approves.
+- perf baseline: left to the coordinator's combined check (asked).
+- Then stop, unless David's review comes back.
+
+## Tools and gotchas
+
+- `specs/perf/load-trace.mjs <label>` with `PORT NET=fast|slow|none CACHE=cold|warm DWELL PLAY PROFILE=1 MANIFEST=1 OUT`:
+  the trace; writes `<label>.md` and `.json` (JSON is gitignored; runs kept in the session scratchpad). `MANIFEST=1`
+  regenerates `web/lib/game/preloadAssets.ts` from a cold run.
+- Build: `LANE=game/loading withlock.sh heavy env NEXT_PUBLIC_GAME_WORLD=new NEXT_PUBLIC_MEMBER_WORLD=open sh
+  specs/perf/measure-build.sh [--no-mangling]` (takes 3 to 5 min once the lock is free; the lock waits can be 20+ min).
+  Don't edit `components/game`, `lib/game` while it runs: it rewrites and restores those files.
+- Signed-out dashboard: the measurement build inlines a dead Supabase URL, so the middleware redirects
+  `/student/dashboard` to the title. After each build drop the dashboard matcher from
+  `web/.next/server/middleware-manifest.json` (node one-liner filtering `originalSource` starting `/student/dashboard`).
+- Serve: `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:9 NEXT_PUBLIC_SUPABASE_ANON_KEY=perf-bench SUPABASE_SERVICE_ROLE_KEY=
+  NEXT_PUBLIC_GAME_WORLD=new NEXT_PUBLIC_MEMBER_WORLD=open npx next start -p 3151` under the devserver lock (taken by
+  hand: queue line, mkdir, owner file).
+- Noise: the Metal shader cache survives fresh browser profiles, so "cold" runs after the first compile faster; machine
+  load moves world-ready by seconds. Compare program links and long-frame counts, not single timings.
+- Playwright clicks on the creator's Yes fail (animated): click through `$eval(..., b => b.click())`.
+- To see three's program cache in a page: an init script setting `window.__THREE_DEVTOOLS__ = new EventTarget()` that
+  collects `observe` events gets every renderer and scene (`renderer.info.programs[i].cacheKey`, `renderer.properties`).
+- `load-trace.mjs` takes `TIME=night|day|evening`; each linked program is recorded with its defines.
 
 ## Rules
 

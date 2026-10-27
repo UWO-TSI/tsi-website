@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { WARMUP_FRAMES, escapeAction, warmedUp, warmupFrame } from "./sceneGate";
+import { COMPILE_AT, WARMUP_FRAMES, escapeAction, warmedUp, warmupFrame } from "./sceneGate";
 
 describe("doors wait for the room (interiors deliverable 5)", () => {
   it("lifts the fade only after the room has loaded and rendered a few frames", () => {
@@ -19,6 +19,15 @@ describe("doors wait for the room (interiors deliverable 5)", () => {
     expect(frames).toBe(0);
     for (let i = 0; i < WARMUP_FRAMES; i++) frames = warmupFrame(frames, false, true);
     expect(warmedUp(frames)).toBe(true);
+  });
+
+  it("holds the count while the scene's programs compile, and not past the time-out", () => {
+    let frames = 0;
+    for (let i = 0; i < 40; i++) frames = warmupFrame(frames, true, false, true);
+    expect(frames).toBe(COMPILE_AT);
+    frames = warmupFrame(frames, true, false, false);
+    expect(frames).toBe(COMPILE_AT + 1);
+    expect(warmupFrame(COMPILE_AT, true, true, true)).toBe(COMPILE_AT + 1);
   });
 });
 

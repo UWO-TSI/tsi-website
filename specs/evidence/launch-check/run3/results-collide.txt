@@ -1,0 +1,126 @@
+{
+  "at": "2026-10-27T09:43:21.513Z",
+  "preview": "play.tethos.ca",
+  "results": [
+    {
+      "step": "probe: the page reports where A stands",
+      "ok": true,
+      "detail": "{\"x\":68,\"z\":46}"
+    },
+    {
+      "step": "deck: the active world has deck edges over the sea",
+      "ok": true,
+      "detail": "9 candidates"
+    },
+    {
+      "step": "deck deck-0 (north): walk at the edge holds you on the deck",
+      "ok": true,
+      "detail": "a; furthest -0.20 past the edge, rests -0.20 (0 = the drawn edge)"
+    },
+    {
+      "step": "deck deck-0 (north): sprint at the edge holds you on the deck",
+      "ok": true,
+      "detail": "a; furthest -0.20 past the edge, rests -0.20 (0 = the drawn edge)"
+    },
+    {
+      "step": "deck deck-0 (north): sprint and dash at the edge holds you on the deck",
+      "ok": true,
+      "detail": "a; furthest -0.20 past the edge, rests -0.20 (0 = the drawn edge)"
+    },
+    {
+      "step": "deck deck-18 (middle): walk at the edge holds you on the deck",
+      "ok": true,
+      "detail": "a; furthest -0.21 past the edge, rests -0.21 (0 = the drawn edge)"
+    },
+    {
+      "step": "deck deck-18 (middle): sprint at the edge holds you on the deck",
+      "ok": true,
+      "detail": "a; furthest -0.20 past the edge, rests -0.20 (0 = the drawn edge)"
+    },
+    {
+      "step": "deck deck-18 (middle): sprint and dash at the edge holds you on the deck",
+      "ok": true,
+      "detail": "a; furthest -0.20 past the edge, rests -0.20 (0 = the drawn edge)"
+    },
+    {
+      "step": "deck deck-32 (south): walk at the edge holds you on the deck",
+      "ok": true,
+      "detail": "a; furthest -0.20 past the edge, rests -0.20 (0 = the drawn edge)"
+    },
+    {
+      "step": "deck deck-32 (south): sprint at the edge holds you on the deck",
+      "ok": true,
+      "detail": "a; furthest -0.20 past the edge, rests -0.20 (0 = the drawn edge)"
+    },
+    {
+      "step": "deck deck-32 (south): sprint and dash at the edge holds you on the deck",
+      "ok": true,
+      "detail": "a; furthest -0.19 past the edge, rests -0.19 (0 = the drawn edge)"
+    },
+    {
+      "step": "hitbox: walk into the plaza fountain stops at what's drawn",
+      "ok": true,
+      "detail": "s+d, lined up -0.18 off its middle; closest 0.19 outside it, rests 0.20 outside, on the near side: true"
+    },
+    {
+      "step": "hitbox: sprint into the plaza fountain stops at what's drawn",
+      "ok": true,
+      "detail": "s+d, lined up -0.23 off its middle; closest 0.19 outside it, rests 0.19 outside, on the near side: true"
+    },
+    {
+      "step": "hitbox: walk into a plaza bench (plaza-bench-0) stops at what's drawn",
+      "ok": true,
+      "detail": "s+d, lined up -0.18 off its middle; closest 0.20 outside it, rests 0.20 outside, on the near side: true"
+    },
+    {
+      "step": "hitbox: sprint into a plaza bench (plaza-bench-0) stops at what's drawn",
+      "ok": true,
+      "detail": "s+d, lined up 0.19 off its middle; closest 0.20 outside it, rests 0.20 outside, on the near side: true"
+    },
+    {
+      "step": "hitbox: walk into a lamp post (lamp-plaza-0) stops at what's drawn",
+      "ok": true,
+      "detail": "d, lined up -0.24 off its middle; closest 0.20 outside it, rests 0.20 outside, on the near side: true"
+    },
+    {
+      "step": "hitbox: sprint into a lamp post (lamp-plaza-0) stops at what's drawn",
+      "ok": true,
+      "detail": "d, lined up 0.06 off its middle; closest 0.20 outside it, rests 0.20 outside, on the near side: true"
+    },
+    {
+      "step": "hitbox: walk into the shop's wall stops at what's drawn",
+      "ok": true,
+      "detail": "d, lined up 0.21 off its middle; closest 0.20 outside it, rests 0.20 outside, on the near side: true"
+    },
+    {
+      "step": "hitbox: sprint into the shop's wall stops at what's drawn",
+      "ok": true,
+      "detail": "d, lined up 0.22 off its middle; closest 0.20 outside it, rests 0.20 outside, on the near side: true"
+    },
+    {
+      "step": "hitbox: walk into the campfire's stone ring stops at what's drawn",
+      "ok": true,
+      "detail": "d, lined up -0.21 off its middle; closest 0.20 outside it, rests 0.20 outside, on the near side: true"
+    },
+    {
+      "step": "hitbox: sprint into the campfire's stone ring stops at what's drawn",
+      "ok": true,
+      "detail": "d, lined up -0.21 off its middle; closest 0.20 outside it, rests 0.20 outside, on the near side: true"
+    },
+    {
+      "step": "campfire: the dance circle (2.9 round) stays open",
+      "ok": true,
+      "detail": "1,0: on it (2.84 from the fire); 0,1: on it (2.96 from the fire); -1,0: on it (3.05 from the fire); 0,-1: on it (3.05 from the fire)"
+    },
+    {
+      "step": "door: the shop's door prompt shows",
+      "ok": true,
+      "detail": "at the door, prompt \"Enter the shop\""
+    },
+    {
+      "step": "door: the hq's door prompt shows",
+      "ok": true,
+      "detail": "at the door, prompt \"Enter HQ\""
+    }
+  ]
+}

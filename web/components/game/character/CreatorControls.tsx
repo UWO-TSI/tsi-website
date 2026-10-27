@@ -8,7 +8,7 @@
  * atlas cells, clothes their item icons, hair its static thumbnail (baked at build time, head-v10: a colour change never
  * redraws them). The name field's availability check too.
  */
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Lock } from "lucide-react";
 import { Button, Slider } from "@/components/gui";
 import { useGuiVariant } from "@/components/gui/variant";
@@ -224,18 +224,24 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
   </>;
 }
 
+/** What the first creator says when it's confirmed without a name. */
+export const NAME_NEEDED = "The island needs a name for you.";
+
 /**
  * The world name's availability (row 222), checked through /api/identity/name 400 ms after typing stops. Signed out
  * the route says "Unauthorized": said as a sign-in instead, whose words link back here (reachability §3).
  */
-export function useNameCheck(askName: { current: string } | undefined) {
+export function useNameCheck(askName: { current: string } | undefined, required = false) {
+  const id = useId();
   const [name, setName] = useState(askName?.current === "You" ? "" : askName?.current ?? "");
   const [nameNote, setNameNote] = useState<{ ok: boolean; text: string } | null>(null);
   useEffect(() => {
     if (!askName || !name.trim() || name.trim() === askName.current) return;
     const timer = window.setTimeout(() => {
       void fetch(`/api/identity/name?check=${encodeURIComponent(name.trim())}`).then(r => (r.status === 401 ? { ok: false, error: "Sign in to pick a name." } : r.json())).then(b => {
-        setNameNote(b?.ok ? { ok: b.data.available, text: b.data.available ? "That name is free." : "Someone already has that name." } : { ok: false, text: b?.error ?? "Sign in to pick a name." });
+        // the route's answer is { ok, name: { name, available } } (jsonResult's key); reading it as `data` threw, so every name
+        // read as refused and was dropped from the save (net-identity, 2026-10-27)
+        setNameNote(b?.ok ? { ok: b.name.available, text: b.name.available ? "That name is free." : "Someone already has that name." } : { ok: false, text: b?.error ?? "Sign in to pick a name." });
       }).catch(() => setNameNote({ ok: false, text: "Couldn't check the name right now." }));
     }, 400);
     return () => window.clearTimeout(timer);
@@ -243,7 +249,19 @@ export function useNameCheck(askName: { current: string } | undefined) {
   // The typed name goes with the look unless the check already said it's taken: confirming inside the check's 400 ms,
   // or pressing Skip, used to drop it. The server checks again; a failure is surfaced (PlayerCharacterUI).
   const wanted = askName && name.trim() && name.trim() !== askName.current && nameNote?.ok !== false ? name.trim() : null;
-  return useMemo(() => ({ name, nameNote, wanted, type: (v: string) => { setName(v); setNameNote(null); } }), [name, nameNote, wanted]);
+  // `required` (the first creator): confirming with no name, or one the check refused, shows the field instead of saving
+  // the look nameless. The caller stops when `missing()` is true.
+  return useMemo(() => ({
+    id, name, nameNote, wanted, type: (v: string) => { setName(v); setNameNote(null); },
+    missing: () => {
+      if (!required || !askName || (name.trim() && nameNote?.ok !== false)) return false;
+      if (!name.trim()) setNameNote({ ok: false, text: NAME_NEEDED });
+      const field = document.getElementById(id);
+      field?.scrollIntoView({ block: "nearest" });
+      field?.focus();
+      return true;
+    },
+  }), [id, name, nameNote, wanted, required, askName]);
 }
 
 /** A whole hairstyle's tile is its static thumbnail (head-v10: baked at build time, in a neutral colour). */

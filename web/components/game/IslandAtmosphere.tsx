@@ -147,7 +147,9 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
       shadow-camera-top={shadowHalf} shadow-camera-bottom={-shadowHalf} shadow-camera-near={1} shadow-camera-far={75 + Math.max(0, shadowExtent - 26) * 2}
       onUpdate={key => key.shadow.camera.updateProjectionMatrix()}
       shadow-radius={shadow.radius} shadow-intensity={shadow.intensity} shadow-normalBias={0.02} shadow-bias={-0.0002} />
-    {light.rim && <directionalLight position={RIM_POSITION} color={light.rim.color} intensity={light.rim.intensity} />}
+    {/* Only when the phase has one (a light always there costs every lit pixel). The warm-up compiles the island both
+        with and without it (LoadGate warmHidden, by name), so dawn, dusk and the golden crossing never relink. */}
+    {light.rim && <directionalLight name="rim" position={RIM_POSITION} color={light.rim.color} intensity={light.rim.intensity} />}
     {!liteMode && <CloudShadows phase={phase} size={cloudSize} bounded />}
     {(weather === "rain" || weather === "snow") && <RainFX kind={weather} wind={wind} groundHeight={ground} />}
     <ContactShadows tint={shadow.tint} intensity={shadow.intensity} sunMap={castShadows} />
