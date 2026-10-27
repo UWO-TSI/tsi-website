@@ -21,7 +21,13 @@ David picked them on the hair shelf page (https://claude.ai/artifact/EyLDXZLTsdR
 
 ## Status
 
-(none yet)
+Built, gates in progress (head SHA in the report). Done:
+- Prices: `hair-28` Baby sprout, `hair-29` Layered shag, `hair-30` Swept fringe, `hair-31` V-kei layers at 350 coins in both copies of the pricing (`specs/wardrobe/batch2-pricing.json` and `web/data/characters/batch2-pricing.json`, kept identical); `hair-24` removed. Keys added to both catalogues (`art/characters/character_catalog.json`, `web/data/characters/character_catalog.json`).
+- Removed: the three hairs from both catalogues, their GLBs (full, lod1, lod2, art and web), creator thumbs, `hair_wavy_half_up` icon, and their lod.json entries. `acc_visor` has its own GLB and stays. `OLD_HAIR` `bangs_wavy` now `hair_messy_boy`; Jayden and the chef (`hair_fluffy_boy`) now `hair_messy_boy`.
+- Icons: the four new shop icons are copies of their creator thumbs, which is exactly what `bake-hair-thumbs.mjs` writes (the ribbon bob's icon is byte-identical to its thumb); no re-bake.
+- Seed: `REMOVED_HAIR` in `lib/wallet/catalogue.ts` feeds `RETIRED`, so the new migration `web/supabase/migrations/20261027054753_catalogue_seed.sql` sets `wear-hair-wavy-half-up` inactive and upserts the four new rows (and shifts the positions of the later batch-2 rows, since positions come from catalogue order). Added to `sql-smoke.sh`; `wardrobe_b2_smoke.sql` updated (35 rows, 8 hairstyles on sale); the full chain passes.
+- Tests: new "hair shelf" test in `look.test.ts`.
+- Not done on purpose: atlas cells 7, 8 and 23 of `hair_colour.png` are left as empty cells (no re-bake); the importer manifests (`art/characters/hair/source/*/manifest.json`, `roblox_attachments.json`) and David's source GLBs still list the three, so re-running `import_hair.py` would bring them back (and `acc_visor` is split from `hair_visor_messy` in the manifest): remove them from the manifests first if the importer is ever re-run.
 
 ## Rules
 
