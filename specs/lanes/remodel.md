@@ -49,15 +49,11 @@ David, 2026-10-27 (night), verbatim: "I want you to go ahead and remodel some ol
 
 ## Status
 
-Round 2 done, awaiting David's review of the redos. Head: `git log -1` on game/remodel. Main (139d3b1e) merged.
-- **Shipped (step 1, 11461c48, the coordinator merged it):** the market cart and lighthouse (SCENERY_URLS), the monument rope fence and all 81 fish (worldModel REMODELLED). Our crabs deleted (David keeps the old).
-- **Redos built and wired on this branch (new world only), not approved yet:**
-  - market barrel (`build_market.py -- barrel`): a sine belly, ends at 0.8 of it, 1196 -> 924 triangles.
-  - gather rocks (`build_rocks.py`): faceted boulders with steep shoulders under a 128 px granite texture (numpy), 214/198/146 -> 192/168/120.
-  - world bugs (`build_critters.py`, `build_crawlers.py`): butterflies 116, dragonflies 128, ladybug 230, cicada 176, grasshopper 182, mantis 202. The world paths go through worldModel (ambientFauna FLYERS, VillageLife MODEL_OF/FLOCK_OF, the Critters preload, the title's preload list). Close-ups keep the dump's: TrophyCase draws Critters.SPECIES (dump paths), icons render from acnh/critters.
-  - fish icons: all 81 re-rendered from the tweaked fish into the shared set (the coordinator: overwrite, no second set). The change is small (the icon renderer is matte and already ignored normal maps).
-- Evidence: `specs/evidence/remodel/round2/` (notes.md, one line and triangles each).
-- Gates: tsc clean; vitest 3474 passed with and without NEXT_PUBLIC_GAME_WORLD=new; eslint clean on changed files. perf:check (SCENES=village,v2, GAME_WORLD=new) fails against the Oct 14 baseline, which predates terrain v3, as in round 1: village high 7.2 ms, 425 draws, 1.37 M triangles (round 1: 7.1, 421, 1.37 M); `specs/evidence/remodel/round2/perf-check.txt`.
+Round 3. Main (635577f6) merged. Head: `git log -1` on game/remodel.
+- **Step 1 (ship), done:** the butterflies and dragonflies are back on the dump's in the world (worldModel's REMODELLED drops them; their round 2 GLBs deleted). The fish orientation is fixed in the new world: all 81 baked into the game's frame by `build_fish.py` (head up, back -z, game scale; the trophy arowana's pillar dropped; the counter-shade back to belly), no fish raw in the new world (`fishing.ts`), the leaping fish laid level from it (`AmbientFauna` fishBody), the icons drawn from `levelFish` nose left and back up (ray, dab, olive flounder, mitten crab from above), all 81 re-rendered. Evidence and the cause: `specs/evidence/remodel/round3/notes.md`. The village keeps the dump's raw calibration, which leaves its raw fish (and the 10 sea creatures, both worlds) upside down in the hold, tank and trophy case: a one-sign fix, not made (village unchanged); the icon stage rights raw models itself.
+- Approved and shipped in round 2: market barrel, gather rocks, crawlers (cheap in the world, old up close), the bug close-ups.
+- **Step 2 (next):** the flyers' world models with each species' old wing outline (`build_critters.py`, being rewritten to trace the old wings).
+- Gates at step 1: tsc clean; vitest 3484 passed in both worlds (the one new test fixed after the full run, rerun alone in both); eslint clean on changed files.
 
 ## David's decisions
 
@@ -65,11 +61,13 @@ Round 2 done, awaiting David's review of the redos. Head: `git log -1` on game/r
 
 ## Next
 
-1. David reviews `specs/evidence/remodel/round2/*.webp`. Per redo: approve, redo, or keep the dump's (drop its part from worldModel's REMODELLED, or the barrel's SCENERY_URLS entry back to `/assets/acnh/furniture/barrel.glb`).
-2. Rocks knobs: `build_rocks.py` ROCKS (planes and their depth make the facets), GREY, the top-light line `s = (0.6 + 0.45 * t ** 0.6)`.
-3. Not done: the firefly, the village buildings, the arrival boat, the seagull.
+1. Step 2: run `build_critters.py -- debug <json>` to check the traced outlines, then the build; side-by-side shots old and new wings (top view and 3/4) into `specs/evidence/remodel/round3/`; wire the eight flyers back into REMODELLED (`lib/game/world/active.ts`, its test).
+2. Not done: the firefly, the village buildings, the arrival boat, the seagull.
 
 ## Tools and gotchas
+
+- Fish orientation check: `Blender -b --factory-startup -P art/remodel/fish_orient.py -- x <out> remodel|acnh [names|all] [3]` renders each fish as the tank levels it (nose left, back up when right); `3` adds views from above and below. Judge back and belly by colour, not brightness (the sun lights whatever faces up).
+- Icon runner: `/private/tmp/claude-501/remodel-work/r3/icons.sh <keys>` (dev server on 3191, new world, stops it after); run it under the devserver lock. In zsh pass keys through `bash -c '... $(cat keys.txt)'` (zsh doesn't split a variable).
 
 - Census: `PORT=3191 node ../specs/evidence/remodel/tools/census.mjs <all-stats.json> <out.json>` from web/, dev server with `NEXT_PUBLIC_GAME_WORLD=new`.
 - Stats: `node ../specs/evidence/remodel/tools/glb-stats.mjs <out.json> <dirs>` (signatures for census and ingame).

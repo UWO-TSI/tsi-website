@@ -180,11 +180,15 @@ function fishBody(scene: THREE.Object3D): THREE.Mesh | null {
   scene.traverse(o => { if (!found && (o as THREE.Mesh).isMesh) found = o as THREE.Mesh; });
   if (!found) return null;
   const src = found as THREE.Mesh;
-  // The rest pose as a plain mesh: a leap is too quick to see the tail bend.
-  const mesh = new THREE.Mesh(src.geometry, (src.material as THREE.Material).clone());
-  // About half a unit nose to tail.
+  // The rest pose as a plain mesh: a leap is too quick to see the tail bend. The nose along +z, the back up: the dump's
+  // raw exports lie that way; our fish (the new world) hang in the game's frame, head up and the back toward -z.
   src.geometry.computeBoundingBox();
-  const len = src.geometry.boundingBox!.max.z - src.geometry.boundingBox!.min.z;
+  const box = src.geometry.boundingBox!, hanging = box.max.y - box.min.y > box.max.z - box.min.z;
+  const geometry = hanging ? src.geometry.clone().rotateX(Math.PI / 2) : src.geometry;
+  const mesh = new THREE.Mesh(geometry, (src.material as THREE.Material).clone());
+  // About half a unit nose to tail.
+  geometry.computeBoundingBox();
+  const len = geometry.boundingBox!.max.z - geometry.boundingBox!.min.z;
   mesh.scale.setScalar(0.55 / Math.max(0.01, len));
   mesh.visible = false;
   mesh.castShadow = false;
