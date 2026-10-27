@@ -36,7 +36,8 @@ Don't move or rearrange anything (David paints the layout; `specs/terrain-law.md
   props were walked through); buildings block their measured wall box, turned with them (`BUILDING_SOLID`); lamp posts
   are solid (`NEW_LAMPS[kind].post`); new-world footprints fitted (centre offsets in `PROP_FOOTPRINT`, the round
   fountain `ROUND_PROPS`). Tests in `walk.test.ts` and `propModels.test.ts`.
-- **Campfire pit: done** (follow-up after main merged at f9f4dc5d): round at its stone ring on the smooth world
+- **Campfire pit: done, cbfcd0cb** (follow-up after main merged at f9f4dc5d; vitest 361 files / 3459 tests green with
+  and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc and eslint clean): round at its stone ring on the smooth world
   (`FIRE_PIT_RING`), the scene's square kept for the village (`Campfire walled`). Test in walk.test. Plaza benches
   bench-0 to bench-3 left for David.
 - Not approved by David yet. Flagged to the coordinator: the broken market-cart GLB, the
