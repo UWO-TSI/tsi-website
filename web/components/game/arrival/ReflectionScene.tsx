@@ -111,13 +111,6 @@ vec2 sea(vec2 p, float t) {
   g += vec2(-0.25, 0.7) * cos(dot(p, vec2(-0.25, 0.7)) * 3.3 + t * 1.3) * 0.035;
   return g + chopSlope(p, t) * 0.13;
 }
-// Light on the small waves: thin soft lines along the wavelets' crests, drifting and breaking up in patches.
-float glints(vec2 p, float t) {
-  float a = sin(dot(p, vec2(0.8, 0.6)) * 17.0 - t * 2.3 + 1.4 * sin(dot(p, vec2(-0.5, 0.9)) * 7.0 + t * 0.9));
-  float b = sin(dot(p, vec2(-0.3, 0.95)) * 23.0 - t * 2.8 + 1.2 * sin(dot(p, vec2(0.9, 0.2)) * 9.0 - t * 0.7));
-  float lines = max(smoothstep(0.9, 0.98, a), smoothstep(0.92, 0.99, b) * 0.7);
-  return lines * smoothstep(0.5, 0.75, noise(p * 4.5 + vec2(t * 0.2, -t * 0.15)));
-}
 // The rolling waves: each a crest across the water, steep in front and long behind, rolling along uWaveDir, a white
 // foam cap along its top and foam left lying behind it that breaks up and melts. uWaveRun: speed, lead (how far
 // behind your face's reflection it sets off), height, how far past it it runs before it is gone. "swept": how far the
@@ -174,10 +167,10 @@ void main() {
   float face = dot(g, vec2(1.6, 1.0));
   vec3 water = mix(uDeep, uShallow, clamp(0.45 + face * 3.0, 0.0, 1.0));
   vec3 col = mix(water, refl, 0.8 + 0.15 * fres) * (1.0 + clamp(face, -0.12, 0.12));
-  // The crest's back catching the sun, the shade under its lip, the light on the small waves, and sparkles off the
-  // chop once the world is clearing.
+  // The crest's back catching the sun, the shade under its lip, and sparkles off the chop once the world is clearing
+  // (round 3, David: no light lines on the small waves, "it looks like if it were a pool").
   col *= 1.0 - shade * 0.22;
-  col += uSun * (lift * 0.1 + glints(p, uTime) * 0.12 + smoothstep(0.07, 0.1, length(g)) * 0.25 * uClarity);
+  col += uSun * (lift * 0.1 + smoothstep(0.07, 0.1, length(g)) * 0.25 * uClarity);
   // The foam, soft cream.
   col = mix(col, vec3(0.98, 0.97, 0.93), foam);
   // Alpha marks the waves for the composite, which keeps them clear through the mist.
