@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { CLIP_EXPRESSION, EXPRESSIONS, FACE_SLOT_COUNT, FaceAnimator, blinkFrame, canBlink, faceSlots, restPose } from "./face";
+import { CLIP_EXPRESSION, EXPRESSIONS, FACE_SLOT_COUNT, FaceAnimator, blinkFrame, canBlink, faceSlots, restPose, type FaceSlot } from "./face";
 import { DANCE_RING, EMOTE_RING } from "../emoteWheel";
-import { BATCH2_PRICES, DEFAULT_LOOK, FACE, FACE_ATLAS_URLS, PALETTE, parseLook, randomLook, seeded, usesFacePage2, type CharacterLook, type FaceCell } from "./look";
+import { BATCH2_PRICES, DEFAULT_LOOK, FACE, FACE_ATLAS_URLS, FIT, PALETTE, parseLook, randomLook, seeded, usesFacePage2, type CharacterLook, type FaceCell } from "./look";
 
 const look = (x: Partial<CharacterLook> = {}): CharacterLook => ({ ...DEFAULT_LOOK, ...x });
 
@@ -352,6 +352,109 @@ describe("David's faces #20-25 (wardrobe batch 2, art/characters/v7/face_set_b2.
     }
     const mixed = parseLook({ ...DEFAULT_LOOK, eyes: "caret_hash", mouth: "M1.1", extras: ["nose_shade", "blush"] });
     expect([mixed.eyes, mixed.mouth, mixed.extras]).toEqual(["caret_hash", "M1.1", ["nose_shade", "blush"]]);
+  });
+});
+
+describe("David's face fit (the fit editor: catalogue `fit`, eyes and mouth lifts in face canvas units)", () => {
+  const f = Object.values(FACE.faces).find(x => x.mouth)!;
+  const l = look({ eyes: f.eyes, mouth: f.mouth!, extras: f.extras });
+  const slots = (pose = restPose(l, "neutral"), x = l) => faceSlots(x, pose).slice(-3);
+  const shift = (a: number[], b: number[]) => [a[1] - b[1], a[3] - b[3]];
+  const lifted = <T,>(eyes: number, mouth: number, run: () => T): T => {
+    FIT[f.id] = { eyes, mouth };
+    try { return run(); } finally { delete FIT[f.id]; }
+  };
+
+  it("moves the face's eyes and mouth up the canvas by exactly their lifts, each on its own", () => {
+    const before = slots();
+    const after = lifted(0.03, -0.02, () => slots());
+    for (const i of [0, 1]) if (before[i].src) {
+      expect(shift(before[i].dst, after[i].dst).map(v => +v.toFixed(9))).toEqual([0.03, 0.03]);
+      expect(+(before[i].pose[1] - after[i].pose[1]).toFixed(9)).toBe(0.03);
+    }
+    expect(shift(before[2].dst, after[2].dst).map(v => +v.toFixed(9))).toEqual([-0.02, -0.02]);
+    expect(after.map(s => s.src)).toEqual(before.map(s => s.src));
+  });
+  it("moves every frame with them: an expression's eyes and mouth, and the talking mouths", () => {
+    const happy = restPose(l, "happy");
+    const [b, a] = [slots(happy), lifted(0.02, 0.01, () => slots(happy))];
+    expect(+(b[0].dst[1] - a[0].dst[1]).toFixed(9)).toBe(0.02);
+    expect(+(b[2].dst[1] - a[2].dst[1]).toFixed(9)).toBe(0.01);
+    for (const talk of FACE.talk.frames) {
+      const pose = { ...restPose(l, "neutral"), mouth: talk };
+      expect(+(slots(pose)[2].dst[1] - lifted(0, 0.01, () => slots(pose))[2].dst[1]).toFixed(9)).toBe(0.01);
+    }
+  });
+  it("starts the creator's sliders from the lifted place", () => {
+    const placed = look({ ...l, place: { mouth: [2, 0, 0, 0] } });
+    const [b, a] = [slots(restPose(placed, "neutral"), placed), lifted(0, 0.01, () => slots(restPose(placed, "neutral"), placed))];
+    expect(+(b[2].dst[1] - a[2].dst[1]).toFixed(9)).toBe(0.01);
+  });
+  it("moves every face's eyes apart symmetrically by eyesApart each, every frame, and leaves their height and the mouth", () => {
+    // each eye's drawn box (the second of a mirrored pair is drawn mirrored) and its centre
+    const box = (s: FaceSlot) => (s.mirror === 2 ? [1 - s.dst[2], s.dst[1], 1 - s.dst[0], s.dst[3]] : s.dst);
+    const centre = (s: FaceSlot) => (box(s)[0] + box(s)[2]) / 2;
+    let pairs = 0;
+    for (const face of Object.values(FACE.faces)) {
+      const x = look({ eyes: face.eyes, mouth: face.mouth ?? DEFAULT_LOOK.mouth, extras: face.extras });
+      const at = (pose: ReturnType<typeof restPose>) => faceSlots(x, pose).slice(-3);
+      const apart = (pose: ReturnType<typeof restPose>) => { FIT[face.id] = { eyesApart: 0.02 }; try { return at(pose); } finally { delete FIT[face.id]; } };
+      for (const pose of [restPose(x, "neutral"), restPose(x, "happy"), { ...restPose(x, "neutral"), eyeFrame: "closed" as const }]) {
+        const [b, a] = [at(pose), apart(pose)];
+        if (!b[1].src) { expect(a).toEqual(b); continue; }                 // one cell across the centre line: no apart
+        pairs++;
+        const sides = [0, 1].map(i => Math.sign(centre(b[i]) - 0.5));
+        expect(sides[0] * sides[1], face.id).toBe(-1);
+        for (const i of [0, 1]) {
+          expect(+((centre(a[i]) - centre(b[i])) * sides[i]).toFixed(9), face.id).toBe(0.02);
+          expect(+(a[i].dst[1] - b[i].dst[1]).toFixed(9), face.id).toBe(0);
+        }
+        expect(a[2]).toEqual(b[2]);
+      }
+    }
+    expect(pairs).toBeGreaterThan(10);
+  });
+  it("scales every face's eyes and mouth about their anchors by exactly eyesSize and mouthSize, every frame, each on its own", () => {
+    // a slot's rect from its pivot, which a size leaves where it was
+    const rel = (s: FaceSlot) => [s.dst[0] - s.pose[0], s.dst[1] - s.pose[1], s.dst[2] - s.pose[0], s.dst[3] - s.pose[1]];
+    const scaled = (b: FaceSlot, a: FaceSlot, k: number, id: string) => {
+      expect(a.pose.map(v => +v.toFixed(9)), id).toEqual(b.pose.map(v => +v.toFixed(9)));
+      expect(Math.max(...rel(a).map((v, i) => Math.abs(v - rel(b)[i] * k))), id).toBeLessThan(1e-12);
+      expect(a.src, id).toEqual(b.src);
+    };
+    let eyes = 0, mouths = 0;
+    for (const face of Object.values(FACE.faces)) {
+      const x = look({ eyes: face.eyes, mouth: face.mouth ?? DEFAULT_LOOK.mouth, extras: face.extras });
+      const at = (pose: ReturnType<typeof restPose>, fit = {}) => { FIT[face.id] = fit; try { return faceSlots(x, pose).slice(-3); } finally { delete FIT[face.id]; } };
+      for (const pose of [restPose(x, "neutral"), restPose(x, "happy"), { ...restPose(x, "neutral"), eyeFrame: "closed" as const }]) {
+        // after the lifts and the spacing: about the moved anchor
+        const moved = { eyes: 0.01, eyesApart: 0.01, mouth: -0.01 }, b = at(pose, moved);
+        const e = at(pose, { ...moved, eyesSize: 1.3 });
+        for (const i of [0, 1]) if (b[i].src) { scaled(b[i], e[i], 1.3, face.id); eyes++; }
+        expect(e[2], face.id).toEqual(b[2]);
+        if (!face.mouth) continue;
+        const m = at(pose, { ...moved, mouthSize: 0.6 });
+        scaled(b[2], m[2], 0.6, face.id);
+        expect(m.slice(0, 2), face.id).toEqual(b.slice(0, 2));
+        mouths++;
+      }
+    }
+    expect(eyes).toBeGreaterThan(40);
+    expect(mouths).toBeGreaterThan(20);
+  });
+  it("sizes before the creator's sliders: their size multiplies it", () => {
+    const sized = look({ ...l, place: { mouth: [0, 0, 0, 1] } }), pose = restPose(sized, "neutral");
+    const width = (s: FaceSlot) => s.dst[2] - s.dst[0];
+    const [b, a] = [slots(pose, sized), (() => { FIT[f.id] = { mouthSize: 1.1 }; try { return slots(pose, sized); } finally { delete FIT[f.id]; } })()];
+    expect(width(b[2])).toBeGreaterThan(width(slots(restPose(l, "neutral"))[2]));
+    expect(+(width(a[2]) / width(b[2])).toFixed(9)).toBe(1.1);
+  });
+  it("leaves every other face exactly as it was, and a face without a lift unchanged", () => {
+    const other = look();
+    expect(lifted(0.03, 0.03, () => slots(restPose(other, "neutral"), other))).toEqual(slots(restPose(other, "neutral"), other));
+    FIT[f.id] = { eyesSize: 1.4, mouthSize: 0.7 };
+    try { expect(slots(restPose(other, "neutral"), other)).toEqual(lifted(0, 0, () => slots(restPose(other, "neutral"), other))); } finally { delete FIT[f.id]; }
+    expect(lifted(0, 0, () => slots())).toEqual(slots());
   });
 });
 
