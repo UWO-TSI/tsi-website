@@ -59,10 +59,10 @@ def pickaxe():
         pc.tube([(0, 0, 0.05), (0, 0, -0.05)], [0.0135, 0.0135], sides=6, tip=False)
         pc.mat = "Head"
         # the head: a curved bar across the end of the handle, a point to the front and a flat chisel to the back
-        rbox(pc, (0, 0, -0.355), (0.03, 0.04, 0.036), ch=0.3)
-        pc.tube([(0, -0.015, -0.355), (0, -0.07, -0.35), (0, -0.115, -0.325), (0, -0.15, -0.29)], [0.016, 0.014, 0.01, 0.003], sides=6, tip=True)
-        pc.tube([(0, 0.015, -0.355), (0, 0.065, -0.352), (0, 0.105, -0.335)], [0.016, 0.014, 0.012], sides=6, tip=False)
-        rbox(pc, (0, 0.112, -0.332), (0.026, 0.012, 0.022), ch=0.25)
+        rbox(pc, (0, 0, -0.355), (0.036, 0.046, 0.042), ch=0.3)
+        pc.tube([(0, -0.015, -0.355), (0, -0.085, -0.35), (0, -0.14, -0.325), (0, -0.185, -0.28)], [0.019, 0.016, 0.011, 0.003], sides=6, tip=True)
+        pc.tube([(0, 0.015, -0.355), (0, 0.08, -0.352), (0, 0.125, -0.335)], [0.019, 0.016, 0.014], sides=6, tip=False)
+        rbox(pc, (0, 0.133, -0.332), (0.03, 0.014, 0.026), ch=0.25)
         pc.mat = "Wedge"                                     # the wedge through the eye, and a band of wear on the point
         rbox(pc, (0, 0, -0.33), (0.016, 0.022, 0.012), ch=0.2)
     return model("pickaxe-1", {"Handle": "#A97B4F", "Wrap": "#6B4A32", "Head": "#7E8388", "Wedge": "#B98F5E"}, b, grad=(0.8, 1.0), sharp=50)
@@ -110,12 +110,12 @@ def iron():
         rock(pc, 3)
         pc.mat = "Rust"
         pc.blob((0.02, -0.15, 0.16), (0.15, 0.025, 0.05), segs=8, rings=3)
-        for c, r in (((0.05, -0.16, 0.17), (0.055, 0.04, 0.045)), ((-0.08, -0.15, 0.13), (0.045, 0.035, 0.038)), ((0.13, -0.12, 0.12), (0.036, 0.03, 0.03))):
+        for c, r in (((0.05, -0.165, 0.18), (0.075, 0.05, 0.062)), ((-0.09, -0.155, 0.13), (0.062, 0.045, 0.052)), ((0.15, -0.12, 0.12), (0.05, 0.04, 0.042)), ((-0.02, -0.17, 0.25), (0.04, 0.03, 0.034))):
             pc.mat = "Iron"
             pc.blob(c, r, segs=7, rings=4)
             pc.mat = "Shine"
             pc.blob((c[0] - r[0] * 0.25, c[1] - r[1] * 0.55, c[2] + r[2] * 0.35), (r[0] * 0.35, r[1] * 0.25, r[2] * 0.3), segs=5, rings=3)
-    ob = model("outcrop-rock_iron_nugget", {**ROCK_MATS, "Rust": "#8E6A55", "Iron": "#6E7175", "Shine": "#B3B9BE"}, b)
+    ob = model("outcrop-rock_iron_nugget", {**ROCK_MATS, "Rust": "#7A6152", "Iron": "#6E7175", "Shine": "#B3B9BE"}, b)
     jitter(ob, 0.009, seed=23)
     return ob
 
@@ -178,9 +178,9 @@ def pottery_shard():
         pc.mat = "Clay"
         rbox(pc, (0, 0, 0.008), (0.06, 0.045, 0.008), ch=0.35)
         pc.mat = "Glaze"                                    # a painted stripe on the outside
-        rbox(pc, (0, -0.006, 0.0165), (0.058, 0.009, 0.0015), ch=0.4)
+        rbox(pc, (0, -0.006, 0.0158), (0.054, 0.008, 0.0012), ch=0.4)
     ob = model("find_pottery_shard", {"Clay": "#C2703F", "Glaze": "#EFE0C4"}, b)
-    jitter(ob, 0.006, seed=34)
+    jitter(ob, 0.0015, seed=34)
     return ob
 
 
@@ -228,9 +228,9 @@ def trilobite():
             pc.blob((0, y, 0.017), (w, 0.004, 0.005), segs=6, rings=3)
         pc.blob((0, 0.04, 0.015), (0.01, 0.008, 0.004), segs=6, rings=3)
         pc.mat = "Ridge"
-        pc.blob((0, 0.006, 0.022), (0.006, 0.04, 0.004), segs=5, rings=3)
+        pc.blob((0, 0.004, 0.02), (0.005, 0.034, 0.003), segs=5, rings=3)
     ob = model("find_trilobite", {"Slab": "#B5AA98", "Fossil": "#7E7366", "Ridge": "#5F564B"}, b)
-    jitter(ob, 0.002, seed=37)
+    jitter(ob, 0.0008, seed=37)
     return ob
 
 

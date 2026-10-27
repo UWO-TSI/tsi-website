@@ -226,8 +226,10 @@ describe("a schedule's places", () => {
     expect(objectsOf("anchor", nw)).toEqual([]);
     for (const id of ["hq", "shop", "cafe", "museum", "wharf"] as const) expect(placeAt(id, nw, dropFlags(1))).toEqual(landmarkPoint(id, "exit", nw));
     for (const id of ["plaza", "beach"] as const) { const l = landmark(id, nw)!; expect(placeAt(id, nw, dropFlags(1))).toEqual([l.x, l.z]); }
-    expect(placeAt("pond", nw)).toBeNull();
-    expect(placeAt("path", nw)).toBeNull();
+    // No pond or path on the new world ("pond only in mountain"): their stops are spent on the beach and the plaza.
+    expect(placeAt("pond", nw)).toEqual(placeAt("beach", nw));
+    expect(placeAt("path", nw)).toEqual(placeAt("plaza", nw));
+    expect(placeAt("nowhere", nw)).toBeNull();
   });
   it("on the new world: the temple only once it opens", () => {
     expect(placeAt("oracle", nw, dropFlags(1))).toBeNull();
@@ -235,7 +237,7 @@ describe("a schedule's places", () => {
   });
   it("on the new world: a day round the buildings resolves to a stop at each, near the place", () => {
     const plan = planResident({ slug: "t", post: "villager", schedule: { day: ["hq", "pond", "shop", "beach", "wharf", "plaza"] } }, 0, nw, villageIsland(nw));
-    expect(plan.phases.day.map(s => s.id)).toEqual(["anchor:hq", "anchor:shop", "anchor:beach", "anchor:wharf", "anchor:plaza"]);
+    expect(plan.phases.day.map(s => s.id)).toEqual(["anchor:hq", "anchor:pond", "anchor:shop", "anchor:beach", "anchor:wharf", "anchor:plaza"]);
     for (const s of plan.phases.day) {
       const at = placeAt(s.id.slice(7), nw)!;
       expect(Math.hypot(s.at[0] - at[0], s.at[1] - at[1])).toBeLessThan(6);

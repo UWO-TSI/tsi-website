@@ -387,10 +387,18 @@ export function placeAt(key: string, v: Village, flags: DropFlags = DROPS): [num
   const a = objectById("anchor", key, v);
   if (a) return [a.x, a.z];
   if (!v.terrain) return key === "plaza" ? villageSpawnPoint(v) : null;
-  if (!Object.hasOwn(LANDMARK_INFO, key) || (key === "oracle" && !flags.oracle)) return null;
-  const l = landmark(key as LandmarkId, v);
-  return l && (landmarkPoint(key as LandmarkId, "exit", v) ?? [l.x, l.z]);
+  if (!Object.hasOwn(LANDMARK_INFO, key) && !Object.hasOwn(STAND_IN, key)) return null;
+  if (key === "oracle" && !flags.oracle) return null;
+  const l = Object.hasOwn(LANDMARK_INFO, key) ? landmark(key as LandmarkId, v) : null;
+  if (!l) return STAND_IN[key] ? placeAt(STAND_IN[key], v, flags) : null;
+  return landmarkPoint(key as LandmarkId, "exit", v) ?? [l.x, l.z];
 }
+/**
+ * The new world's stand-ins for stops it has no place for (David, 2026-10-27: "pond only in mountain"): a resident's
+ * pond time is spent by the water on the beach, and the path's on the plaza, rather than skipped or walked toward the
+ * closed mountain. The schedules themselves are unchanged; the village has both places.
+ */
+const STAND_IN: Readonly<Record<string, string>> = { pond: "beach", path: "plaza" };
 
 /** A spot at an anchor for this resident: its ring slot (or the next free one), facing the place's point of interest. */
 function anchorStop(key: string, v: Village, nav: NavGrid, slot: number, work: boolean, night: boolean, slug: string, res: Reservations): Stop | null {

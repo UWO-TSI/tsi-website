@@ -7,19 +7,35 @@
 -- The club-goal and Oracle chapters move after them (7, 8, 9), so the personal chain runs first.
 --
 -- Also: the requirement types, a chapter's reward_item (a shop item slug, given once on completion), and the pickaxe
--- as a tool (collection_species.tool, shop_items.slot) for rocks. Copy changes only touch rows still as seeded, so an
+-- as a tool (collection_species.tool, shop_items.slot) for rocks, and the museum guide's post (npc_personas.post). Copy changes only touch rows still as seeded, so an
 -- admin's own wording stays. Idempotent. Apply BEFORE the catalogue seed that follows it (the pickaxe item and the
 -- rocks' tool need these constraints).
 
-ALTER TABLE quest_chapters DROP CONSTRAINT IF EXISTS quest_chapters_requirement_check;
+-- The CHECKs the new values meet, widened. Each was declared inline, so Postgres named it; any CHECK on the column whose
+-- list holds the old values is dropped by its catalog name, then the widened one is added under a fixed name.
+CREATE OR REPLACE FUNCTION pg_temp.drop_list_check(tbl regclass, col text, member text) RETURNS void LANGUAGE plpgsql AS $$
+DECLARE c record;
+BEGIN
+  FOR c IN SELECT conname FROM pg_constraint
+            WHERE conrelid = tbl AND contype = 'c' AND pg_get_constraintdef(oid) LIKE '%' || col || '%' AND pg_get_constraintdef(oid) LIKE '%''' || member || '''%'
+  LOOP
+    EXECUTE format('ALTER TABLE %s DROP CONSTRAINT %I', tbl, c.conname);
+  END LOOP;
+END $$;
+
+SELECT pg_temp.drop_list_check('quest_chapters', 'requirement', 'oracle_trial');
 ALTER TABLE quest_chapters ADD CONSTRAINT quest_chapters_requirement_check
   CHECK (requirement IN ('settle_in', 'bug_net', 'dig', 'rod_challenge', 'museum_collab', 'pickaxe', 'club_goal', 'oracle_trial'));
 ALTER TABLE quest_chapters ADD COLUMN IF NOT EXISTS reward_item TEXT CHECK (reward_item IS NULL OR reward_item ~ '^[a-z0-9-]{1,64}$');
 
-ALTER TABLE collection_species DROP CONSTRAINT IF EXISTS collection_species_tool_check;
+SELECT pg_temp.drop_list_check('collection_species', 'tool', 'shovel');
 ALTER TABLE collection_species ADD CONSTRAINT collection_species_tool_check CHECK (tool IN ('rod', 'net', 'hand', 'shovel', 'pickaxe'));
-ALTER TABLE shop_items DROP CONSTRAINT IF EXISTS shop_items_slot_check;
+SELECT pg_temp.drop_list_check('shop_items', 'slot', 'shovel');
 ALTER TABLE shop_items ADD CONSTRAINT shop_items_slot_check CHECK (slot IS NULL OR slot IN ('rod', 'net', 'shovel', 'pickaxe', 'outfit', 'hair', 'accessory'));
+-- Juno, the museum's guide (the catalogue seed after this one adds her).
+SELECT pg_temp.drop_list_check('npc_personas', 'post', 'museum_curator');
+ALTER TABLE npc_personas ADD CONSTRAINT npc_personas_post_check
+  CHECK (post IS NULL OR post IN ('hq_lead', 'shopkeeper', 'cafe_owner', 'museum_curator', 'museum_guide', 'wharf_keeper', 'oracle_keeper', 'workshop_crafter', 'villager'));
 
 -- Chapter 1 (m1): the donation to Juno finishes it; the report to Alice is gone.
 UPDATE quest_chapters
