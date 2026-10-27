@@ -32,7 +32,17 @@ const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, d
 // the long-animation-frame entries with their scripts, the heap, and when each milestone showed.
 await ctx.addInitScript(() => {
   performance.setResourceTimingBufferSize(10000);
-  const lt = window.__lt = { frames: [], loaf: [], marks: [], heap: [], gl: { sh: 0, shN: 0, tex: 0, texN: 0, buf: 0, bufN: 0 } };
+  const lt = window.__lt = { frames: [], loaf: [], marks: [], heap: [], links: [], programs: [], gl: { sh: 0, shN: 0, tex: 0, texN: 0, buf: 0, bufN: 0 } };
+  // Each program linked: its material (three's SHADER_NAME) and the scene state baked into it (lights, shadows, fog),
+  // so a burst of links can be told apart: new materials, or the same ones again for a changed light or shadow count.
+  const KEYS = ["USE_SHADOWMAP", "USE_FOG", "SHADOWMAP_TYPE_PCF", "SHADOWMAP_TYPE_PCF_SOFT", "SHADOWMAP_TYPE_VSM"];
+  const linkOf = (gl, prog) => {
+    const src = (gl.getAttachedShaders(prog) ?? []).map(sh => gl.getShaderSource(sh) ?? "").join("\n");
+    const name = /#define SHADER_NAME (\S+)/.exec(src)?.[1] ?? "?";
+    const sig = [...KEYS.map(k => (src.includes(`#define ${k}\n`) ? k.replace(/^USE_|^SHADOWMAP_TYPE_/, "") : "")),
+      ...[...src.matchAll(/uniform \w+ (\w+)\[ (\d+) \]/g)].filter(m => /Light|Shadow/.test(m[1])).map(m => `${m[1].replace(/Lights?$|s$/, "")}${m[2]}`)].filter(Boolean).join(",");
+    return [Math.round(performance.now()), name, sig];
+  };
   const SH = ["compileShader", "linkProgram", "getProgramParameter", "getShaderParameter", "getProgramInfoLog", "getShaderInfoLog", "getUniformLocation", "getAttribLocation", "getActiveUniform", "getActiveAttrib", "getUniformBlockIndex"];
   const TEX = ["texImage2D", "texSubImage2D", "texImage3D", "texSubImage3D", "texStorage2D", "texStorage3D", "compressedTexImage2D", "compressedTexSubImage2D", "generateMipmap"];
   const BUF = ["bufferData", "bufferSubData"];
@@ -41,7 +51,10 @@ await ctx.addInitScript(() => {
     for (const [names, key] of [[SH, "sh"], [TEX, "tex"], [BUF, "buf"]]) for (const n of names) {
       const f = C.prototype[n];
       if (!f) continue;
-      C.prototype[n] = function (...a) { const t = performance.now(); try { return f.apply(this, a); } finally { lt.gl[key] += performance.now() - t; lt.gl[key + "N"]++; } };
+      C.prototype[n] = function (...a) {
+        if (n === "linkProgram" && lt.links.length < 20000) try { lt.links.push(linkOf(this, a[0])); } catch {}
+        const t = performance.now(); try { return f.apply(this, a); } finally { lt.gl[key] += performance.now() - t; lt.gl[key + "N"]++; }
+      };
     }
   }
   let last = performance.now();
@@ -72,6 +85,8 @@ await ctx.addInitScript(() => {
     if (s && s.phase !== phase) { phase = s.phase; mark(`arrival: ${phase}`); }
     if (s?.trip && s.trip.phase !== trip) { trip = s.trip.phase; mark(`boat: ${trip}`); }
     lt.phase = phase;
+    const sc = window.__perf?.scene?.();
+    if (sc && sc.programs !== lt.programs.at(-1)?.[1]) lt.programs.push([Math.round(performance.now()), sc.programs]);
     if (performance.memory) lt.heap.push([Math.round(performance.now()), Math.round(performance.memory.usedJSHeapSize / 1e6)]);
   }, 50);
 });
@@ -99,7 +114,7 @@ async function pageData() {
   const d = await page.evaluate(() => ({
     nav: performance.getEntriesByType("navigation")[0]?.toJSON(),
     res: performance.getEntriesByType("resource").map(r => ({ url: r.name, t0: Math.round(r.startTime), t1: Math.round(r.responseEnd), wire: r.transferSize, size: r.encodedBodySize, type: r.initiatorType })),
-    frames: window.__lt.frames, loaf: window.__lt.loaf, marks: window.__lt.marks, heap: window.__lt.heap,
+    frames: window.__lt.frames, links: window.__lt.links, programs: window.__lt.programs, loaf: window.__lt.loaf, marks: window.__lt.marks, heap: window.__lt.heap,
     gpu: (() => { const gl = document.createElement("canvas").getContext("webgl2"); const e = gl?.getExtension("WEBGL_debug_renderer_info"); return e ? gl.getParameter(e.UNMASKED_RENDERER_WEBGL) : "?"; })(),
   }));
   const kinds = {};
@@ -111,7 +126,11 @@ async function pageData() {
 }
 
 async function waitMark(name, ms) {
-  await page.waitForFunction(n => window.__lt?.marks.some(m => m[1] === n), name, { timeout: ms, polling: 100 });
+  await page.waitForFunction(n => window.__lt?.marks.some(m => m[1] === n), name, { timeout: ms, polling: 100 }).catch(async e => {
+    console.error(`no "${name}": marks`, JSON.stringify(await page.evaluate(() => window.__lt?.marks)), await page.evaluate(() => document.body.innerText.slice(0, 400)));
+    await page.screenshot({ path: `${OUT}/${LABEL}-stuck.png`, scale: "css" }).catch(() => {});
+    throw e;
+  });
   return page.evaluate(n => window.__lt.marks.find(m => m[1] === n)[0], name);
 }
 
@@ -120,11 +139,15 @@ async function play(record) {
   await waitMark("world ready", 240000);
   await page.waitForSelector("[data-testid=reflection-yes]", { timeout: 60000 });
   await page.waitForTimeout(record ? 3000 : 300);
-  await page.click("[data-testid=reflection-yes]");
+  await page.$eval("[data-testid=reflection-yes]", b => b.click());
   if (!record) return;
-  await page.waitForSelector("[data-testid=arrival-leave-tour]", { timeout: 90000 });
+  await page.waitForSelector("[data-testid=arrival-leave-tour]", { timeout: 120000 }).catch(async e => {
+    console.error("no tutorial: marks", JSON.stringify(await page.evaluate(() => window.__lt.marks)), JSON.stringify(await page.evaluate(() => window.__arrival?.state?.())));
+    await page.screenshot({ path: `${OUT}/${LABEL}-stuck.png`, scale: "css" }).catch(() => {});
+    throw e;
+  });
   await page.waitForTimeout(4000);
-  await page.click("[data-testid=arrival-leave-tour]");
+  await page.$eval("[data-testid=arrival-leave-tour]", b => b.click());
   await page.evaluate(() => window.__lt.mark("play"));
   const walk = [["w", 5000], ["d", 1200], ["w", 6000], ["a", 2400], ["w", 6000], ["d", 1200], ["w", 6000]];
   const end = Date.now() + PLAY_S * 1000;
@@ -184,6 +207,11 @@ for (const [name, d] of [["title", title], ["world", world]]) {
   for (const f of L) { const p = byPhase[f.phase] ??= { n: 0, worst: 0, sh: 0, tex: 0, buf: 0 }; p.n++; p.worst = Math.max(p.worst, f.dt); p.sh += f.sh; p.tex += f.tex; p.buf += f.buf; }
   out(`| phase | long frames | worst ms | in shader compile/link ms | in texture upload ms | in buffer upload ms |\n|---|---|---|---|---|---|`);
   for (const [p, v] of Object.entries(byPhase)) out(`| ${p} | ${v.n} | ${Math.round(v.worst)} | ${Math.round(v.sh)} | ${Math.round(v.tex)} | ${Math.round(v.buf)} |`);
+  const lk = {};
+  for (const [t, name, sig] of d.links) { const p = lk[phaseAt(d.marks, t)] ??= { n: 0, sigs: new Map(), names: new Set() }; p.n++; p.names.add(name); p.sigs.set(sig, (p.sigs.get(sig) ?? 0) + 1); }
+  out(`\nprograms linked, by phase (count, distinct materials, the light and shadow state they were built for):`);
+  for (const [p, v] of Object.entries(lk)) out(`- ${p}: ${v.n} links, ${v.names.size} materials; ${[...v.sigs].map(([k, n]) => `${n} x [${k}]`).join("; ")}`);
+  out(`programs alive (three's cache), over time: ${d.programs.map(([t, n]) => `${t}:${n}`).join(" ")}`);
   out(`\nlong frames: t, ms, phase, shader ms (calls), texture ms (calls), buffer ms (calls), scripts`);
   for (const f of L) out(`- ${f.t} ${f.dt} ${f.phase} sh ${f.sh} (${f.shN}) tex ${f.tex} (${f.texN}) buf ${f.buf} (${f.bufN}) ${f.scripts}`);
 }
