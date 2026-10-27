@@ -13,18 +13,20 @@ export const STREETLAMP_URL = `${P}streetlamp.glb`;
 /**
  * The new world's lamps (art/props/build_new_lamps.py), each with its light point in the model (its arm reaches +x):
  * draw them with AmbientProps Lanterns' `lamp` (and `yaws` to turn the arms). The street lamp keeps the old one's top.
+ * `post`: the half side of the square its post fills at body height round its foot, solid to the walker
+ * (lib/game/defaultIsland.ts); the hand lantern's is 0 (a small thing at your feet, not in the way).
  */
 export const NEW_LAMPS = {
-  village: { url: `${P}village-lamp.glb`, light: [0.52, 2.08, 0] },
-  wharf: { url: `${P}lantern-post.glb`, light: [0.56, 1.78, 0] },
+  village: { url: `${P}village-lamp.glb`, light: [0.52, 2.08, 0], post: 0.08 },
+  wharf: { url: `${P}lantern-post.glb`, light: [0.56, 1.78, 0], post: 0.15 },
   /** The campfire's lantern on a crooked branch (art/props/build_campfire_set.py). */
-  camp: { url: `${P}camp-lantern.glb`, light: [0.3, 1.18, 0] },
+  camp: { url: `${P}camp-lantern.glb`, light: [0.3, 1.18, 0], post: 0.08 },
   // game/village-art (art/props/build_path_lamps.py): the path's lamps, one iron lantern on a timber post with an angled
   // brace, or on a crooked branch post on a stone plinth; and the hand lantern alone, standing on its foot (to hang it
   // from a hook, its foot HAND_LANTERN_RING under the hook).
-  woodPost: { url: `${P}wood-post-lamp.glb`, light: [0.8, 1.886, 0] },
-  branchPost: { url: `${P}branch-post-lamp.glb`, light: [0.5, 1.731, 0] },
-  hand: { url: `${P}hand-lantern.glb`, light: [0, 0.143, 0] },
+  woodPost: { url: `${P}wood-post-lamp.glb`, light: [0.8, 1.886, 0], post: 0.14 },
+  branchPost: { url: `${P}branch-post-lamp.glb`, light: [0.5, 1.731, 0], post: 0.18 },
+  hand: { url: `${P}hand-lantern.glb`, light: [0, 0.143, 0], post: 0 },
 } as const;
 /** The hand lantern's ring top over its foot. */
 export const HAND_LANTERN_RING = 0.542;
