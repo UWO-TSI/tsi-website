@@ -574,6 +574,12 @@ face = {
     # face is one shop item whose ownership unlocks these parts (look.ts faceRef); batch 3 is unpriced until he picks
     "faces": {**face_set_b2.faces(), **face_set_b3.faces()},
 }
+for _e, _m, _x in face_set_b3.removed_parts():          # David's removed faces: their parts leave the creator, their atlas cells stay
+    face["layers"]["eyes"]["items"].pop(_e, None)
+    face["layers"]["mouth"]["items"].pop(_m, None)
+    face["layers"]["extras"]["items"].pop(_x, None)
+    for _k in (_e, _m, _x):
+        face["names"].pop(_k, None)
 json.dump(face, open(os.path.join(OUT, "face_v7.json"), "w"), indent=1)
 
 

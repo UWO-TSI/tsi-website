@@ -39,10 +39,6 @@
   "tris": 4385,
   "lod2": 1180
  },
- "hair/full/hair_fluffy_crop.glb": {
-  "tris": 4010,
-  "lod2": 1179
- },
  "hair/full/hair_freeform_afro.glb": {
   "tris": 4304,
   "lod2": 1179
@@ -63,17 +59,9 @@
   "tris": 4350,
   "lod2": 1180
  },
- "hair/full/hair_long_windswept.glb": {
-  "tris": 4348,
-  "lod2": 1178
- },
  "hair/full/hair_messy_boy.glb": {
   "tris": 1021,
   "lod2": 502
- },
- "hair/full/hair_messy_braid.glb": {
-  "tris": 4207,
-  "lod2": 1180
  },
  "hair/full/hair_messy_dreads.glb": {
   "tris": 4340,
@@ -105,10 +93,6 @@
  },
  "hair/full/hair_ski_mask_dreads.glb": {
   "tris": 4398,
-  "lod2": 1180
- },
- "hair/full/hair_space_buns.glb": {
-  "tris": 4324,
   "lod2": 1180
  },
  "hair/full/hair_spiky_messy.glb": {

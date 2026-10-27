@@ -484,7 +484,7 @@ def main():
           f"{tuple(round(c, 3) for c in ATT['FaceFrontAttachment'][0])} eye {tuple(round(c, 3) for c in head_point(EYE_LAT, EYE_LON))}")
     entries, report = {}, []
     for e in DATA["items"]:
-        if PRICING.get(e["key"], {}).get("mode") == "skip":
+        if PRICING.get(e["key"], {}).get("mode") == "skip" or e.get("removed"):   # removed: David took it out of the game (attachments entry `removed`)
             continue
         if ONLY and e["id"] not in ONLY:
             continue
@@ -538,7 +538,7 @@ def main():
     cat_path = os.path.join(ART, "character_catalog.json")
     cat = json.load(open(cat_path))
     old = {p["id"]: p for p in cat.get(SECTION, [])}
-    order = [e["id"] for e in DATA["items"] if PRICING.get(e["key"], {}).get("mode") != "skip"]
+    order = [e["id"] for e in DATA["items"] if PRICING.get(e["key"], {}).get("mode") != "skip" and not e.get("removed")]
     cat[SECTION] = [entries.get(k) or old[k] for k in order if k in entries or k in old]
     json.dump(cat, open(cat_path, "w"), indent=1)
     print("IMPORT_ROBLOX_OK", len(entries))

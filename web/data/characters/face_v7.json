@@ -212,19 +212,6 @@
       1
      ]
     },
-    "eye_shadow": {
-     "anchor": "eye_shadow",
-     "mirror": false,
-     "cell": [
-      2064,
-      486,
-      860,
-      436,
-      430.0,
-      218.5,
-      1
-     ]
-    },
     "rosy_cheeks": {
      "anchor": "rosy_cheeks",
      "mirror": false,
@@ -869,26 +856,6 @@
       1
      ]
     },
-    "spiky_side": {
-     "open": [
-      2804,
-      1354,
-      391,
-      331,
-      182.4,
-      152.15,
-      1
-     ],
-     "left": [
-      2566,
-      954,
-      402,
-      350,
-      219.6,
-      163.15,
-      1
-     ]
-    },
     "spiral": {
      "open": [
       2436,
@@ -1237,15 +1204,6 @@
      -33.3,
      1
     ],
-    "dark_lips": [
-     2886,
-     2866,
-     295,
-     117,
-     147.0,
-     18.7,
-     1
-    ],
     "small_open": [
      2666,
      2866,
@@ -1482,15 +1440,12 @@
   "tiny_caret": "Tiny caret",
   "teary_closed": "Tearful closed eyes",
   "wobbly": "Wobbly mouth",
-  "spiky_side": "Spiky side eye",
-  "dark_lips": "Dark lips",
   "spiral": "Spiral eyes",
   "small_open": "Small open mouth",
   "retro_wink": "Retro wink",
   "curl_smile": "Curl smile",
   "soft_blush": "Soft blush",
   "pink_nose": "Pink nose",
-  "eye_shadow": "Eye shadow",
   "rosy_cheeks": "Rosy cheeks"
  },
  "faces": {
@@ -1570,15 +1525,6 @@
    "mouth": "wobbly",
    "extras": [
     "pink_nose"
-   ]
-  },
-  "face-30": {
-   "id": "moody",
-   "name": "Moody face",
-   "eyes": "spiky_side",
-   "mouth": "dark_lips",
-   "extras": [
-    "eye_shadow"
    ]
   },
   "face-31": {

@@ -12,7 +12,9 @@
    "file": "29-Black-Messy-Short-Fringe-V2-15563758601.glb",
    "id": "hair_fluffy_crop",
    "name": "Fluffy crop",
-   "key": "hair-33"
+   "key": "hair-33",
+   "removed": true,
+   "removed_why": "David, 2026-10-27 (lane wardrobe-b3): removed from the catalogue, creator and shop; it keeps its atlas cell, key hair-33 stays unused. His source GLB stays."
   },
   {
    "file": "30-Nagumo-119570271189500.glb",
@@ -24,7 +26,9 @@
    "file": "31-White-Long-Japanese-Windy-Messy-Hair-86707394443389.glb",
    "id": "hair_long_windswept",
    "name": "Long windswept",
-   "key": "hair-35"
+   "key": "hair-35",
+   "removed": true,
+   "removed_why": "David, 2026-10-27 (lane wardrobe-b3): removed from the catalogue, creator and shop; it keeps its atlas cell, key hair-35 stays unused. His source GLB stays."
   },
   {
    "file": "32-Spider-Man-105325349471584.glb",
@@ -64,7 +68,9 @@
    "cap": {
     "rule": "skin_tone",
     "color": "#C89A78"
-   }
+   },
+   "removed": true,
+   "removed_why": "David, 2026-10-27 (lane wardrobe-b3): removed from the catalogue, creator and shop; it keeps its atlas cell, key hair-40 stays unused. His source GLB stays."
   },
   {
    "file": "37-Double-Messy-Buns-with-Braid-Yellow-Beige-110168955712985.glb",
@@ -76,7 +82,9 @@
    "file": "38-Black-Messy-Hair-w-a-Braid-82798715506608.glb",
    "id": "hair_messy_braid",
    "name": "Messy with a braid",
-   "key": "hair-42"
+   "key": "hair-42",
+   "removed": true,
+   "removed_why": "David, 2026-10-27 (lane wardrobe-b3): removed from the catalogue, creator and shop; it keeps its atlas cell, key hair-42 stays unused. His source GLB stays."
   },
   {
    "file": "39-Freeform-Afro-73155099277090.glb",
