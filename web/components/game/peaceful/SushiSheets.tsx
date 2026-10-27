@@ -60,7 +60,8 @@ export function SushiMenuBody({ transport = httpEconomyTransport }: { transport?
           <li key={d.id} className={s.row}>
             <span>
               <b>{d.name}</b>
-              <span className={p.muted} style={{ display: "block" }}>{d.blurb} {mealText(d.buff, d.buff.minutes)}.</span>
+              <span className={p.muted} style={{ display: "block" }}>{d.blurb}</span>
+              <span style={{ display: "block", fontSize: "0.9em" }}><Soup size={12} aria-hidden /> {mealText(d.buff, d.buff.minutes)}</span>
               {d.price === null ? <span className={s.rowActions} style={{ marginTop: 6 }}>
                 {rare.length === 0 ? <span className={p.muted}>No epic or legendary fish in your bag yet.</span>
                   : rare.map((f) => f.locked ? <Badge key={f.item_key} tone="warn"><Lock size={12} aria-hidden /> {f.name} is locked</Badge>

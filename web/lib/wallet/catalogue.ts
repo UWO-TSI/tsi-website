@@ -223,9 +223,9 @@ export interface MealBuff { luck: number; size: number; minutes: number }
 export interface Dish { id: string; name: string; blurb: string; price: number | null; buff: MealBuff }
 export const SUSHI_MENU: readonly Dish[] = [
   { id: "miso_soup", name: "Miso soup", blurb: "Warm and simple.", price: 20, buff: { luck: 0.05, size: 0, minutes: 15 } },
-  { id: "salmon_nigiri", name: "Salmon nigiri", blurb: "Rarer fish bite for a while.", price: 40, buff: { luck: 0.1, size: 0, minutes: 20 } },
-  { id: "tuna_roll", name: "Tuna roll", blurb: "Bigger fish bite for a while.", price: 40, buff: { luck: 0, size: 0.3, minutes: 20 } },
-  { id: "omakase", name: "Omakase", blurb: "Whatever Bancha picks today. Rarer and bigger.", price: 150, buff: { luck: 0.15, size: 0.3, minutes: 30 } },
+  { id: "salmon_nigiri", name: "Salmon nigiri", blurb: "Fresh off the morning boats.", price: 40, buff: { luck: 0.1, size: 0, minutes: 20 } },
+  { id: "tuna_roll", name: "Tuna roll", blurb: "Thick cut and generous.", price: 40, buff: { luck: 0, size: 0.3, minutes: 20 } },
+  { id: "omakase", name: "Omakase", blurb: "Whatever Bancha picks today.", price: 150, buff: { luck: 0.15, size: 0.3, minutes: 30 } },
   { id: "feast", name: "Bancha's feast", blurb: "Bring one of your epic or legendary fish and he cooks it into a feast.", price: null, buff: { luck: 0.35, size: 0.6, minutes: 60 } },
 ];
 /** The chef's order pays its coins and this meal (David: "side quest for special fish for money and food"). */

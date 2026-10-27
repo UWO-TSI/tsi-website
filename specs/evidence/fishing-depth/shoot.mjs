@@ -15,6 +15,11 @@ const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, d
 const page = await ctx.newPage();
 page.on("pageerror", e => console.log("pageerror", e.message.slice(0, 300)));
 page.on("console", m => { if (m.type() === "error" && !/Failed to load resource|supabase|401|503/i.test(m.text())) console.log("console", m.text().slice(0, 300)); });
+// A saved look, so the character creator doesn't open first (as specs/evidence/polish-interiors/shoot.mjs does).
+const LOOK = { skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [], bangs: "bangs_straight", back: "back_bob",
+  top: "top_cardigan", bottom: "bottom_trousers", onepiece: null, shoes: "shoes_sneakers", acc: {}, colors: { top_cardigan: 2 } };
+await page.goto(`${HOST}/lab/island`, { waitUntil: "domcontentloaded" });
+await page.evaluate(l => { localStorage.clear(); localStorage.setItem("tsi.look.v1", l); localStorage.setItem("tsi.pixelated.v1", "false"); }, JSON.stringify(LOOK));
 for (const spec of SHOTS) {
   const [name, query = ""] = spec.split(/=(.*)/s);
   const q = new URLSearchParams(query);
