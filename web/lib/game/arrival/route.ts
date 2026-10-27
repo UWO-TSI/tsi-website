@@ -3,9 +3,11 @@
  * the way. One route file per world (routes/), so moving the tutorial to the new map is a data change only: new
  * places for the same stops, or new stops (their lines and tracker labels are lib/game/arrival/lines.ts, by stop id).
  *
- * A stop: Bram walks to `stand` (after any fixed `via` waypoints: the pier, a crate's hop) with a "!" over his head and
- * waits. You talk to him (E); he says the stop's lines; if the stop `gives` something he hands it over; then its `task`
- * if it has one (hop the crate, catch a fish, open your collection), then on to the next stop.
+ * A stop: Bram walks to `stand` (after any fixed `via` waypoints: the pier, a crate's hop, a building he points out in
+ * passing) with a "!" over his head and waits. You talk to him (E); he says the stop's lines (in his bubble, or with
+ * the route's `talk: "box"` in the dialogue box, the camera conversation, each line maybe framing a place: `shots`);
+ * if the stop `gives` something he hands it over; then its `task` if it has one (hop the crate, Alice's visit at HQ,
+ * catch a fish, open the sell barrel, open your collection), then on to the next stop.
  */
 import type { LandmarkId } from "@/lib/game/defaultIsland";
 
@@ -17,9 +19,15 @@ export type XZ = { x: number; z: number };
 export type Place =
   | { dock: readonly [number, number] }
   | { landmark: LandmarkId; point?: "door" | "exit"; offset?: readonly [number, number] }
+  /** A map prop by id (the sell barrel, the tackle shop), then an offset in world axes. */
+  | { prop: string; offset?: readonly [number, number] }
   | { world: readonly [number, number] };
-/** A waypoint on Bram's way; `hop`: the leg to it is a jump (over a crate). */
-export type Waypoint = Place & { hop?: boolean };
+/**
+ * A waypoint on Bram's way; `hop`: the leg to it is a jump (over a crate); `pause`: he stops there that long (s),
+ * facing `face` and saying `say` (lines.ts PASSING_LINES), then walks on (t-sell: a building pointed out in passing).
+ */
+export type Waypoint = Place & { hop?: boolean; pause?: number; face?: Place; say?: string };
+type Way = XZ & { hop?: boolean; pause?: number; face?: XZ; say?: string };
 
 export type TutorialTask =
   /** Get to `at` (within `radius`): the dock's crate hop. Bram waits at the end of `wait` (his way over it). */
@@ -27,7 +35,11 @@ export type TutorialTask =
   /** Land a fish (the rod is out of the bag by now). */
   | { kind: "catch"; id: string }
   /** Open your collection (B). */
-  | { kind: "bag"; id: string };
+  | { kind: "bag"; id: string }
+  /** Go into HQ and do Alice's visit; Bram waits outside (t-short: HQ first). */
+  | { kind: "hq"; id: string }
+  /** Open the sell barrel (t-sell). */
+  | { kind: "sell"; id: string };
 
 export interface TutorialStop {
   /** Its lines (lines.ts STOP_LINES) and its tracker label (TRACKER) go by this id. */
@@ -39,6 +51,8 @@ export interface TutorialStop {
   /** What he hands over at the end of the talk (the wheel holds only what he has given until the walk is done). */
   gives?: "rod";
   task?: TutorialTask;
+  /** With `talk: "box"`: the place each line frames (by line index; none: the two of you). */
+  shots?: readonly (Place | null)[];
 }
 
 export interface TutorialRoute {
@@ -47,6 +61,13 @@ export interface TutorialRoute {
   /** Where the first login's crossing starts, far out at sea in the dock's frame, heading in (lib/game/boatTrip.ts). */
   crossFrom: { x: number; z: number; yaw: number };
   stops: readonly TutorialStop[];
+  /**
+   * How he talks at a stop: "bubble" (the default), his lines over his head, a line at a time; "box", one E opens the
+   * camera conversation (the dialogue box, t-short) and the box moves his lines on.
+   */
+  talk?: "bubble" | "box";
+  /** His last word as the walk ends (lines.ts END_LINES); the default END_LINE. */
+  end?: string;
   /** Crates on the way (the dock's movement bit): each solid, its lid a hop high, turned `yaw`. */
   crates: readonly { at: Place; yaw?: number }[];
 }
@@ -55,11 +76,13 @@ export interface TutorialRoute {
 export interface PlaceWorld {
   dock: { x: number; z: number; yaw: number } | null;
   landmark: (id: LandmarkId, point?: "door" | "exit") => XZ | null;
+  prop?: (id: string) => XZ | null;
 }
 
 /** A place in world XZ (null when the world hasn't got it: no wharf, the landmark isn't placed). */
 export function resolvePlace(p: Place, w: PlaceWorld): XZ | null {
   if ("world" in p) return { x: p.world[0], z: p.world[1] };
+  if ("prop" in p) { const at = w.prop?.(p.prop); return at ? { x: at.x + (p.offset?.[0] ?? 0), z: at.z + (p.offset?.[1] ?? 0) } : null; }
   if ("dock" in p) {
     if (!w.dock) return null;
     const c = Math.cos(w.dock.yaw), s = Math.sin(w.dock.yaw), [x, z] = p.dock;
@@ -71,21 +94,28 @@ export function resolvePlace(p: Place, w: PlaceWorld): XZ | null {
 
 /** A stop with its places resolved (what the tutorial's pure state machine reads). */
 export interface ResolvedStop {
-  id: string; stand: XZ; via: (XZ & { hop?: boolean })[]; gives?: "rod";
-  task?: { kind: "reach"; id: string; at: XZ; radius: number; wait: (XZ & { hop?: boolean })[]; hint: "jump" | "follow" } | { kind: "catch"; id: string } | { kind: "bag"; id: string };
+  id: string; stand: XZ; via: Way[]; gives?: "rod";
+  task?: { kind: "reach"; id: string; at: XZ; radius: number; wait: Way[]; hint: "jump" | "follow" } | { kind: "catch" | "bag" | "hq" | "sell"; id: string };
+  /** The camera conversation (the route's `talk: "box"`): his lines go in the dialogue box, a line framing `shots[i]`. */
+  box?: boolean; shots?: (XZ | null)[];
 }
 
 /** The route in world XZ. A stop or waypoint its world can't place falls back to the last place before it. */
 export function resolveRoute(route: TutorialRoute, w: PlaceWorld, origin: XZ): ResolvedStop[] {
   let last = origin;
   const at = (p: Place) => { const r = resolvePlace(p, w) ?? last; last = r; return r; };
-  const way = (ws: readonly Waypoint[] = []) => ws.map(p => ({ ...at(p), ...(p.hop ? { hop: true } : {}) }));
+  const way = (ws: readonly Waypoint[] = []) => ws.map((p): Way => {
+    const here = at(p), face = p.face && resolvePlace(p.face, w);
+    return { ...here, ...(p.hop ? { hop: true } : {}), ...(p.pause ? { pause: p.pause } : {}), ...(face ? { face } : {}), ...(p.say ? { say: p.say } : {}) };
+  });
   return route.stops.map(s => {
     const via = way(s.via), stand = at(s.stand);
     const t = s.task;
     const task: ResolvedStop["task"] = !t ? undefined
       : t.kind === "reach" ? { kind: "reach", id: t.id, wait: way(t.wait), at: at(t.at), radius: t.radius, hint: t.hint }
       : { kind: t.kind, id: t.id };
-    return { id: s.id, stand, via, ...(s.gives ? { gives: s.gives } : {}), ...(task ? { task } : {}) };
+    const box = route.talk === "box";
+    return { id: s.id, stand, via, ...(s.gives ? { gives: s.gives } : {}), ...(task ? { task } : {}),
+      ...(box ? { box, ...(s.shots ? { shots: s.shots.map(p => (p ? resolvePlace(p, w) : null)) } : {}) } : {}) };
   });
 }

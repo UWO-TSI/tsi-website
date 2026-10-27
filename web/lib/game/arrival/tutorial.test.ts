@@ -250,3 +250,38 @@ describe("Bram's pace (t-short)", () => {
     expect(BRAM_PACE.brisk).toBeGreaterThan(BRAM_PACE.walk);
   });
 });
+
+describe("the new world's walk (t-short, t-sell): HQ first, the camera conversation, the barrel", () => {
+  const at = { x: 0, z: 0 };
+  const stops: ResolvedStop[] = [
+    { id: "hqFirst", stand: at, via: [], task: { kind: "hq", id: "alice" }, box: true },
+    { id: "sights", stand: at, via: [], box: true, shots: [null, { x: 5, z: 5 }] },
+    { id: "barrel", stand: at, via: [], task: { kind: "sell", id: "sell" }, box: true },
+  ];
+  const step = (s: TutorialState, now: number, events: TutorialEvent[] = []) => stepTutorial(s, { now, player: at, bram: at, stops, events, end: "bye" });
+  it("one E opens the conversation with all his lines; the box closing moves it on; HQ waits for Alice's visit", () => {
+    const s = newTutorial(0);
+    const open = step(s, 1, ["talked"]);
+    expect(open).toEqual([{ kind: "converse", lines: STOP_LINES.hqFirst, stop: "hqFirst" }]);
+    // E again changes nothing while the box is up; no hints mid-talk.
+    expect(step(s, 40, ["talked"])).toEqual([]);
+    expect(step(s, 41, ["talkEnded"])).toEqual([{ kind: "visit" }]);
+    expect(s.stage).toBe("task");
+    expect(step(s, 42, ["caught", "sellOpened"]).some(c => c.kind === "converse")).toBe(false);
+    step(s, 43, ["hqDone"]);
+    expect([s.stop, s.stage]).toEqual([1, "await"]);
+    expect(step(s, 44, ["talked"])[0]).toMatchObject({ kind: "converse", stop: "sights" });
+    step(s, 45, ["talkEnded"]);
+    expect([s.stop, s.stage]).toEqual([2, "await"]);
+    step(s, 46, ["talked"]); step(s, 47, ["talkEnded"]);
+    const end = step(s, 48, ["sellOpened"]);
+    expect(end).toEqual([{ kind: "say", line: "bye", stop: "barrel" }, { kind: "reward" }, { kind: "done" }]);
+  });
+  it("hints the way into HQ, and at the barrel, on a stall", () => {
+    const s = newTutorial(0);
+    step(s, 1, ["talked"]); step(s, 2, ["talkEnded"]);
+    expect(step(s, 2 + HINT_AFTER_S)).toEqual([{ kind: "hint", hint: "hq" }]);
+    expect(hintLine({ kind: "hint", hint: "hq" }, KEYS)).toMatch(/Alice/);
+    expect(hintLine({ kind: "hint", hint: "sell" }, KEYS)).toMatch(/barrel/);
+  });
+});

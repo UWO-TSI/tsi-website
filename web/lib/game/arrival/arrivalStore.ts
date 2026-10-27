@@ -81,6 +81,9 @@ export function useTutorialQuest(keys: { bag: string; touch: boolean }): Tracked
   const phase = key.split("|")[0];
   return useMemo(() => {
     if (phase !== "tutorial" || !arrivalRun.stops) return null;
+    // In with Alice (HQ first): the tracker is her visit's.
+    const t = arrivalRun.tutorial;
+    if (t && t.stage === "task" && arrivalRun.stops[t.stop]?.task?.kind === "hq") return null;
     return tutorialQuest(arrivalRun.stops, arrivalRun.tutorial, t => fillKeys(t, keys));
   // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by the arrival's snapshot: the quest changes when it does.
   }, [key, phase, keys.bag, keys.touch]);

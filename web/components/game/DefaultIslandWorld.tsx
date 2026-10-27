@@ -491,7 +491,8 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     // later drop opens (lib/game/drops.ts) offer nothing yet: the boat home, the Oracle temple, the café, the mission board.
     // Before the café's drop Rosa sweeps out front: the café's prompt is hers.
     const sweeper: [number, number] | null = !DROPS.cafe && cafeSweeper.on ? [cafeSweeper.x, cafeSweeper.z] : null;
-    const door: [Near, [number, number] | null] = within(doors.hq, 2) ? [chapter.claim ? "claim" : chapter.report ? "report" : "enter", doors.hq]
+    // While Bram walks you round, HQ's door is only ever the way in (HQ first on the new world: Alice signs you in).
+    const door: [Near, [number, number] | null] = within(doors.hq, 2) ? [arrivalPhase ? "enter" : chapter.claim ? "claim" : chapter.report ? "report" : "enter", doors.hq]
       // Not while Bram brings you in and walks you round (the arrival): the boat home waits for after.
       : DROPS.homeIsland && within(doors.boat, 1.6) && !arrivalPhase ? ["home", doors.boat]
       : within(layout.fitting, 1.5) ? ["fitting", layout.fitting]
@@ -1071,6 +1072,10 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   }, [arrivalFlag, hqArrived, devHome]);
   // The walk-along waits for the bag (the Collection, B) to be opened once.
   useEffect(() => { if (bagOpen) arrivalEvent("bagOpened"); }, [bagOpen]);
+  // HQ first (the new world's walk): Alice's visit done and you back out; the sell barrel opened.
+  const hqDone = !!hq.visit?.done;
+  useEffect(() => { if (hqDone && !inside && arrivalPhase === "tutorial") arrivalEvent("hqDone"); }, [hqDone, inside, arrivalPhase]);
+  useEffect(() => { if (sheet === "sell") arrivalEvent("sellOpened"); }, [sheet]);
   useEffect(() => {
     if (!objectiveNew) return;
     const t = window.setTimeout(() => setObjectiveNew(false), 2600);

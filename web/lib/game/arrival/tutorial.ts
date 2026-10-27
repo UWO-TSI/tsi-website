@@ -13,7 +13,8 @@ import { END_LINE, STOP_LINES, TASK_DONE_LINES, TRACKER, TRACKER_TITLE, type Hin
 import type { ResolvedStop, XZ } from "./route";
 import type { TrackedQuest } from "@/lib/game/questTracker";
 
-export type TutorialEvent = "rodHeld" | "cast" | "caught" | "bagOpened" | "talked";
+/** `talkEnded`: the camera conversation closed; `hqDone`: Alice's visit done and you're back out; `sellOpened`: the sell barrel opened. */
+export type TutorialEvent = "rodHeld" | "cast" | "caught" | "bagOpened" | "talked" | "talkEnded" | "hqDone" | "sellOpened";
 /** At a stop: waiting to be talked to (the "!"), talking, then its task. */
 export type TutorialStage = "await" | "talk" | "task";
 
@@ -35,6 +36,10 @@ export const lineSeconds = (line: string) => Math.max(3.2, 1.4 + line.length * 0
 
 export type TutorialCue =
   | { kind: "say"; line: string; stop: string }
+  /** The camera conversation opens with these lines (a `box` stop): the dialogue box moves them on, `talkEnded` closes it. */
+  | { kind: "converse"; lines: readonly string[]; stop: string }
+  /** Alice's visit starts (an `hq` task): you go in, Bram waits outside. */
+  | { kind: "visit" }
   | HintCue
   | { kind: "give"; item: "rod" }
   | { kind: "glyph"; glyph: "wheel" | "bag" }
@@ -68,6 +73,8 @@ export interface TutorialFrame {
   bram: XZ;
   stops: readonly ResolvedStop[];
   events: readonly TutorialEvent[];
+  /** His last word (the route's; END_LINE by default). */
+  end?: string;
 }
 
 const dist = (a: XZ, b: XZ) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -88,7 +95,7 @@ export function stepTutorial(s: TutorialState, f: TutorialFrame): TutorialCue[] 
     s.stop++; s.stage = "await"; s.line = 0;
     restart(s, f.now);
     if (s.stop >= f.stops.length) {
-      cues.push({ kind: "say", line: END_LINE, stop: stop.id }, { kind: "reward" }, { kind: "done" });
+      cues.push({ kind: "say", line: f.end ?? END_LINE, stop: stop.id }, { kind: "reward" }, { kind: "done" });
       s.done = true;
     }
   };
@@ -101,6 +108,7 @@ export function stepTutorial(s: TutorialState, f: TutorialFrame): TutorialCue[] 
     }
     // Opening your collection is the task: its keycap pulses once as it starts.
     if (stop.task?.kind === "bag" && !s.glyphs.bag) { s.glyphs.bag = true; cues.push({ kind: "glyph", glyph: "bag" }); }
+    if (stop.task?.kind === "hq") cues.push({ kind: "visit" });
     if (stop.task) { s.stage = "task"; restart(s, f.now); }
     else next();
   };
@@ -110,6 +118,7 @@ export function stepTutorial(s: TutorialState, f: TutorialFrame): TutorialCue[] 
     if (talked) {
       s.stage = "talk"; s.line = 0;
       if (!lines.length) { endTalk(); return cues; }
+      if (stop.box) { cues.push({ kind: "converse", lines, stop: stop.id }); return cues; }
       s.lineUntil = f.now + lineSeconds(lines[0]);
       cues.push({ kind: "say", line: lines[0], stop: stop.id });
       return cues;
@@ -120,6 +129,8 @@ export function stepTutorial(s: TutorialState, f: TutorialFrame): TutorialCue[] 
   }
 
   if (s.stage === "talk") {
+    // The camera conversation: the dialogue box has his lines; it closing ends the talk.
+    if (stop.box) { if (f.events.includes("talkEnded")) endTalk(); return cues; }
     if (!talked && f.now < s.lineUntil) return cues;
     s.line++;
     if (s.line < lines.length) {
@@ -140,6 +151,8 @@ export function stepTutorial(s: TutorialState, f: TutorialFrame): TutorialCue[] 
     reached = d <= t.radius;
     want = t.hint;
   } else if (t.kind === "catch") { reached = f.events.includes("caught"); want = s.rod ? "cast" : "rod"; }
+  else if (t.kind === "hq") { reached = f.events.includes("hqDone"); want = "hq"; }
+  else if (t.kind === "sell") { reached = f.events.includes("sellOpened"); want = "sell"; }
   else { reached = f.events.includes("bagOpened"); want = "bag"; }
   if (reached) {
     const said = TASK_DONE_LINES[t.id];

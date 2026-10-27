@@ -121,8 +121,9 @@ export function useHqOnboarding(w: HqWorld, dev: URLSearchParams | null) {
 
   // The tracker: the visit while it runs, else a tool's quest.
   const quest: TrackedQuest | null = useMemo(() => {
-    if (w.arriving) return null;
+    // Alice's visit while it runs (mid-walk too: HQ first), else nothing while Bram walks you round, else a tool's quest.
     if (visit && !visit.done) return hqQuest(visit, t => trackerEsc(t, touch));
+    if (w.arriving) return null;
     return hq.taught ? toolQuest(hq.quests) : null;
   }, [w.arriving, visit, hq.taught, hq.quests, touch]);
 
@@ -130,8 +131,9 @@ export function useHqOnboarding(w: HqWorld, dev: URLSearchParams | null) {
   const arrived = useCallback((taught: boolean) => {
     if (!taught) return;
     setToolsTaught(true);
-    startVisit();
+    // Not again if it ran mid-walk (HQ first) or the account already has it.
+    if (!hqSnapshot().visit) startVisit();
   }, []);
 
-  return { taught: hq.taught, owned, quest, card, waiting, arrived };
+  return { taught: hq.taught, visit, owned, quest, card, waiting, arrived };
 }
