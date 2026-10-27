@@ -1,7 +1,8 @@
 /**
  * Builds the Face Fit page (specs/lanes/fit-editor.md) into dist/: index.html, editor.js (Editor.tsx with the game's
  * own character code, React and three bundled by esbuild) and the character assets it loads, at relative paths.
- * `node specs/tools/fit-editor/build.mjs` from the repo root (or anywhere).
+ * `node specs/tools/fit-editor/build.mjs` from the repo root (or anywhere). `build.mjs npc-editor` builds the Residents page
+ * (specs/tools/npc-editor/: its own Editor.tsx and index.html, the same loader and assets) into its own dist/.
  */
 import { build } from "../../../web/node_modules/esbuild/lib/main.js";
 import { NodeIO, VertexLayout } from "../../../web/node_modules/@gltf-transform/core/dist/index.js";
@@ -11,7 +12,8 @@ import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFi
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const here = dirname(fileURLToPath(import.meta.url)), web = join(here, "../../../web"), out = join(here, "dist");
+const tool = process.argv[2] ?? "fit-editor", here = join(dirname(fileURLToPath(import.meta.url)), "..", tool);
+const web = join(here, "../../../web"), out = join(here, "dist");
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
 
@@ -90,5 +92,5 @@ if (big.length) throw new Error(`over 16 MB: ${big.join(", ")}`);
 const size = dir => readdirSync(dir).reduce((n, f) => { const p = join(dir, f), s = statSync(p); return n + (s.isDirectory() ? size(p) : s.size); }, 0);
 const files = dir => readdirSync(dir).reduce((n, f) => n + (statSync(join(dir, f)).isDirectory() ? files(join(dir, f)) : 1), 0);
 const mb = size(out) / 1e6;
-console.log(`fit-editor: ${files(out)} files, ${mb.toFixed(1)} MB, editor.js ${(statSync(join(out, "editor.js")).size / 1e6).toFixed(2)} MB`);
+console.log(`${tool}: ${files(out)} files, ${mb.toFixed(1)} MB, editor.js ${(statSync(join(out, "editor.js")).size / 1e6).toFixed(2)} MB`);
 if (mb > 60) throw new Error("over the 60 MB budget");
