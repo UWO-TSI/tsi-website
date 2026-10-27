@@ -1455,6 +1455,11 @@ export function terrainOf(map: IslandMap): Terrain {
   return t;
 }
 
+/** Hand a map the shapes derived for an identical map elsewhere (a worker: lib/game/world/derive.ts). */
+export function seedTerrain(map: IslandMap, t: Terrain): void {
+  TERRAIN.set(map, t);
+}
+
 /** Drop the derived shapes after editing cells in place. `setCell` does this itself. */
 export function forgetTerrain(map: IslandMap): void {
   TERRAIN.delete(map);

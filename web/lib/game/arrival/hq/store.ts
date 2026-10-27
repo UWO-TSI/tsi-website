@@ -1,6 +1,6 @@
 /**
  * The HQ visit and the tool quests on this client (row 312): whether this account's tools are taught (the arrival
- * flag says so, app/api/world/arrival), where the visit with Wren is (visit.ts), and each tool's little quest
+ * flag says so, app/api/world/arrival), where the visit with Alice is (visit.ts), and each tool's little quest
  * (teachers.ts). The visit and the quests are kept on this device, like the moves a Keeper teaches
  * (lib/game/moveUnlocks.ts); a tool's ownership is the server's (POST /api/world/tools puts it in the inventory).
  * React reads one snapshot (useHq); everything that changes it goes through here.
@@ -20,7 +20,7 @@ const write = (s: Store, key: string, v: unknown) => { try { if (v === null) s?.
 export interface HqSnapshot {
   /** This account's tools are taught by people (it arrived under row 312), or a dev preview says so. */
   taught: boolean;
-  /** The visit with Wren: null when there's none (never started, or an account from before row 312). */
+  /** The visit with Alice: null when there's none (never started, or an account from before row 312). */
   visit: HqState | null;
   quests: ToolQuests;
 }
@@ -48,7 +48,7 @@ export function useHq(): HqSnapshot { return useSyncExternalStore(subscribeHq, h
 /** The arrival flag said (or a dev preview): this account's tools are taught, or not. */
 export function setToolsTaught(taught: boolean) { if (current().taught !== taught) set({ taught }); }
 
-/** Bram's tour is over for a new arrival: the visit with Wren starts (its first step: report to her at HQ). */
+/** Bram's tour is over for a new arrival: the visit with Alice starts (its first step: report to her at HQ). */
 export function startVisit() { set({ visit: newVisit() }); }
 
 /** Something the visit waits for happened (or her lines were said). Nothing changes unless the beat moves on. */

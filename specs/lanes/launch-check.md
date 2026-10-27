@@ -28,6 +28,32 @@ Worktree `.claude/worktrees/launch-check`, branch `game/launch-check`, cut from 
   - Cleanup: 5 tables' set-null rows by id, the 3 users (200 each); verify 0 rows left (`run2/cleanup-proof.txt`).
   - New in the script: `bench` (a phase of its own too) and `sushiBar` steps; spots.ts gives the bar's entrance, exit, stools and the fire's benches with routes.
 
+- **Run 3 done (2026-10-27, 04:45 to 05:45 Toronto, night), production main 5e599116, under the browser lock:** evidence `specs/evidence/launch-check/run3/`. Totals: identity 11 of 17 (first sitting), identity2 22 of 26, identity3 13 of 13, night 22 of 22, day 51 of 51, collide 24 of 24. Every fail was the test's and was fixed and rerun; no game fault found.
+  - **Names and looks:** A, fresh, in the arrival's reflection: Yes with the name empty says "The island needs a name for you." and saves nothing (look and name both null in the database); another skin, hairstyle and hair colour, "Probe Alder" (free), Yes saves both in 3.4 s. B sees A's name and hair and skin (the card's look and the look the Character is drawn with) 10.6 to 15.7 s after the save, A on one socket; A's tag reads Probe Alder. D (a fourth account, see below) sets "Probe Rowan" and new hair in the shop's fitting room: saved, A by the shop's door sees both 10.6 s after D steps out (21.6 s after the save), tag too. C joins later and has A and D with names and looks within 1 s of its socket opening (its join came about 29 s after its page loaded: three headless pages on one machine).
+  - **Wharf deck edge, 9 of 9:** deck-0 (north), deck-18 (middle), deck-32 (south): walk, sprint, sprint with a dash out across the edge over the sea: held 0.19 to 0.20 inside the drawn edge every time (the body's radius), never past it.
+  - **Hitboxes, 10 of 10, plus the dance circle and the doors:** walk and sprint into the plaza fountain, plaza-bench-0, lamp-plaza-0's post, the shop's wall and the campfire's stone ring: stopped 0.19 to 0.20 outside what's drawn every time. The dance circle (2.9) walked to on four sides. Doors: "Enter the shop", "Enter HQ".
+  - **Alice, 5 of 5:** the settle-in step reads "Report back to Alice at HQ" (the tracker during the visit: "Report to Alice at HQ"); HQ's door "Enter HQ"; inside, the front desk "Talk to Alice"; her tag "Alice"; the talk "Talking with Alice", "Alice · HQ lead", "There you are! Bram said you'd be up. I'm Alice."
+  - **Hair shop, 6 of 6:** Baby sprout, Layered shag, Swept fringe, V-kei layers listed at 350 coins (GET /api/economy/shop); Wavy half-up not listed.
+  - **The fails, all the test's:** (1) the first sitting hit its 590 s limit after the creator steps: the room walker in the shop had no position source and the plaza bench caught the route. (2) The shop has no multiplayer area (offline inside, by design: DefaultIslandWorld), so the wardrobe check now has A wait outside and measures from stepping out. (3) The script's device look had a cardigan a new account doesn't own: the save was refused (403 not_owned), so the looks are now the starter tee, shorts and slip-ons. (4) A world name changes once every 30 days (409 too_soon), and B's was set when B came in, so the wardrobe's name went to a fourth account D with no name yet (identity3, all passed). (5) The fountain's walk ran into lamp-fountain-0's post in its lane (rightly solid): lanes are now checked clear. (6) One collide attempt's first key went unheard (calibration read 0): calibration now retries.
+  - **Script (run 3):** a React devtools hook in each page (`probe`) reads the player's position (outdoors and in rooms) and the other players' cards and drawn looks, with no dev hooks; `go` routes between any two places over the spawn's walk tree (spots.ts writes it; half a unit clear of props); rooms walk their own floor paths (spots.ts `rooms`); phases `identity` (needs a fresh A), `identity2`, `identity3`, `collide`, `joinlag`; `cleanup.mjs` takes the fourth account.
+  - **Cleanup:** 5 tables' set-null rows by id, A's mute cleared, the 4 users deleted (200 each); verify: 162 columns plus auth.users and profiles hold 0 rows for the four ids, 0 recorded rows left (`run3/cleanup-proof.txt`).
+
+## Run 3 (2026-10-27, night): production main 5e599116 (names, looks, collision, Alice, the hair shop)
+
+The coordinator merged and deployed David's production fixes. Run the two-account check again on play.tethos.ca, with the third account where it's needed. Same script, same throwaway accounts, the same cleanup with proof by counts (keys never printed or logged), under the browser lock. Add steps for:
+
+1. **Names and looks** (net-identity, `specs/lanes/net-identity.md`; its harness `realtime/scripts/cardHarness.ts` and `specs/evidence/net-identity/shoot.mjs` show the flow):
+   - A makes a character in the first creator with a non-default look (hairstyle, hair colour and skin) and a world name. Confirming with the name field empty must say "The island needs a name for you." and not save.
+   - B must see A's world name on A's tag, and A's hair and skin, within about 15 s without rejoining. Check the remote's look through the dev hook if it's there; in production, compare screenshots and the name tag.
+   - B changes name and look in the wardrobe (its new name field); A sees both within about 15 s.
+   - C joins later and sees both at join.
+2. **The wharf deck's edge:** walk and sprint at three deck edges over the sea; you stop at the edge and never drop into the water.
+3. **Hitboxes:** run into the plaza fountain, a plaza bench, a lamp post and a plaza building's wall; you're stopped at what's drawn. A building's door prompt still shows. The campfire stops you at its stone ring, and the dance circle round it stays open.
+4. **Alice:** the HQ resident's name tag and dialogue say Alice. The settle-in chapter's step reads "Report back to Alice at HQ".
+5. **Hair shop:** Baby sprout, Layered shag, Swept fringe and V-kei layers are on sale at 350 coins; Wavy half-up isn't sold.
+
+Everything from runs 1 and 2 stays in the script; run it all. Evidence in `specs/evidence/launch-check/run3/`. Report the counts per phase, every fail with its reason, and the cleanup proof.
+
 ## Next
 
 1. **Fix `web/app/api/collections/route.test.ts` for the new world.** With `NEXT_PUBLIC_GAME_WORLD=new`, 21 tests fail with 422, because they cast at village coordinates. The server rightly refuses a spot that isn't water in the active world.

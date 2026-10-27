@@ -169,9 +169,9 @@ describe("looks", () => {
     expect(resolveParts(DEFAULT_LOOK).find(p => p.id === "top_tee")!.decal).toBeNull();
     expect(resolveParts(DEFAULT_LOOK).find(p => p.id === "shoes_slipon")!.tints.M_Sole).toBe("#C9A63A");
   });
-  it("wears the hair as one of David's 25 whole hairstyles (21 less #14, then wardrobe batch 2's five: #22 is its hat alone), hidden under a hat or hood (head-roblox)", () => {
+  it("wears the hair as one of David's 22 whole hairstyles (21 less #14, wardrobe batch 2's five, less #24 and the hair shelf's three: #8 and #9 removed, #22 is its hat alone), hidden under a hat or hood (head-roblox)", () => {
     const hair = PARTS.filter(p => p.slot === "bangs" || p.slot === "back");
-    expect(hair).toHaveLength(25);
+    expect(hair).toHaveLength(22);
     expect(hair.every(p => p.slot === "back" && p.full && p.roblox)).toBe(true);
     expect(DEFAULT_LOOK.bangs).toBe("");
     expect(PART_BY_ID.get(DEFAULT_LOOK.back)?.full).toBe(true);
@@ -225,12 +225,12 @@ describe("looks", () => {
     expect(PARTS.filter(p => p.map?.fixed).map(p => p.id).sort()).toEqual(["acc_visor", "hair_dreads_cap"]);
   });
   it("splits #8's visor off its hair into a hat drawn as it is (head-roblox, David)", () => {
-    const hair = PART_BY_ID.get("hair_visor_messy")!, visor = PART_BY_ID.get("acc_visor")!;
+    const hair = PART_BY_ID.get("hair_messy_boy")!, visor = PART_BY_ID.get("acc_visor")!;
     expect(hair.map?.fixed).toBeUndefined();
     expect([visor.slot, visor.group, visor.hidesBackHair, !!visor.full]).toEqual(["accessory", "head", false, false]);
-    const look = { ...wear(wear(DEFAULT_LOOK, "back", "hair_visor_messy"), "accessory", "acc_visor"), hair: 3, hairAccent: 3 };
+    const look = { ...wear(wear(DEFAULT_LOOK, "back", "hair_messy_boy"), "accessory", "acc_visor"), hair: 3, hairAccent: 3 };
     const parts = resolveParts(look);
-    expect(parts.map(p => p.id)).toEqual(expect.arrayContaining(["hair_visor_messy", "acc_visor"]));   // worn over the hair, not instead
+    expect(parts.map(p => p.id)).toEqual(expect.arrayContaining(["hair_messy_boy", "acc_visor"]));   // worn over the hair, not instead
     const v = parts.find(p => p.id === "acc_visor")!;
     expect(v.tints).toEqual({ M_Hair: "#2B2B33" });                 // no hair colour
     expect(v.map).toEqual({ a: NO_SHIFT, b: NO_SHIFT });            // the look's colours never recolour it
@@ -341,9 +341,9 @@ describe("wardrobe batch 2 (specs/playtest-round1.md \"New wardrobe batch\"; Dav
     return Array.from(new Float32Array(Uint8Array.from(bin!.subarray(at, at + acc.count * 8)).buffer));   // a copy: Buffer.slice is a view
   }
 
-  it("imports every item David didn't skip, by its pricing key: hairs #23-27 and #22's hat, accessories #01-24 but #16 (and #12 and #13, deleted) and #07 in silver, faces #20-25", () => {
+  it("imports every item David didn't skip, by its pricing key: hairs #23, #25-31 and #22's hat, accessories #01-24 but #16 (and #12 and #13, deleted) and #07 in silver, faces #20-25", () => {
     const keys = Object.keys(BATCH2_PRICES);
-    expect(keys).toHaveLength(35);
+    expect(keys).toHaveLength(38);
     expect(keys.some(k => k === "acc-12" || k === "acc-13")).toBe(false);           // row 314: duplicates of #10 and #07
     expect(PART_BY_ID.has("acc_wheat_sprig") || PART_BY_ID.has("acc_round_wire_glasses")).toBe(false);
     expect(keys.filter(k => BATCH2_PRICES[k].mode === "skip")).toEqual(["acc-16"]);
@@ -441,6 +441,25 @@ describe("wardrobe batch 2 (specs/playtest-round1.md \"New wardrobe batch\"; Dav
     expect(silver).toMatchObject({ slot: "accessory", group: "face", key: "acc-07s", colourAtlas: true, tris: gold.tris });
     expect(priceOf("acc-07s")).toEqual(priceOf("acc-07"));
     expect(partRef(silver.id)).toBe(silver.id);
+  });
+  it("hair shelf (David, 2026-10-27): 14 free hairstyles and 8 in the shop; three removed", () => {
+    const hairs = PARTS.filter(p => p.slot === "back");
+    const shop = hairs.filter(p => partRef(p.id)).map(p => p.id).sort();
+    expect(hairs).toHaveLength(22);
+    expect(shop).toEqual(["hair_baby_sprout", "hair_curly_pigtails", "hair_double_buns", "hair_emo_layers", "hair_layered_shag", "hair_ribbon_bob", "hair_swept_fringe", "hair_vkei"]);
+    for (const id of ["hair_baby_sprout", "hair_layered_shag", "hair_swept_fringe", "hair_vkei", "hair_ribbon_bob", "hair_double_buns"]) expect(priceOf(PART_BY_ID.get(id)!.key), id).toEqual({ mode: "coins", price: 350 });
+    for (const id of ["hair_curly_pigtails", "hair_emo_layers"]) expect(priceOf(PART_BY_ID.get(id)!.key), id).toEqual({ mode: "gems", price: 200 });
+    // removed: gone from the catalogue, and a look wearing one (or the old wavy fringe) loads as a free hairstyle
+    for (const id of ["hair_visor_messy", "hair_fluffy_boy", "hair_wavy_half_up"]) {
+      expect(PART_BY_ID.has(id), id).toBe(false);
+      expect(parseLook({ back: id }).back, id).toBe(DEFAULT_LOOK.back);
+    }
+    expect(partRef(parseLook({ bangs: "bangs_wavy" }).back)).toBeNull();
+    // random looks and the starter creator offer only the free ones
+    for (let i = 0; i < 300; i++) {
+      expect(partRef(randomLook(seeded(i)).back), String(i)).toBeNull();
+      expect(partRef(randomLook(seeded(i), new Set(STARTER_PARTS)).back), String(i)).toBeNull();
+    }
   });
   it("never dresses residents or bots in it: random looks keep the parts they had", () => {
     const b2 = new Set([...keyed.map(p => p.id), "acc_ushanka_goggles", ...Object.values(FACE.faces).flatMap(f => [f.eyes, f.mouth, ...f.extras])]);

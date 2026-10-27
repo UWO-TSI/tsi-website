@@ -1,12 +1,12 @@
 "use client";
 
 /**
- * Row 312 on the island (specs/hq-onboarding.md): the HQ visit with Wren after Bram's tour, and the tools residents
+ * Row 312 on the island (specs/hq-onboarding.md): the HQ visit with Alice after Bram's tour, and the tools residents
  * hand over. The island hands this what it knows (where you are, what's open) and gets back what to show: the
- * tracker's quest, the HQ card that's due, what the wheel may hold, whether E at the desk talks to Wren.
+ * tracker's quest, the HQ card that's due, what the wheel may hold, whether E at the desk talks to Alice.
  *
- * Wren's lines go through the residents' dialogue box (TalkBox) as a scripted talk; a tool's resident is talked to as
- * usual, their lines swapped for the teacher's (talkStore.script). Their talks' ends move things on: Wren's lines said,
+ * Alice's lines go through the residents' dialogue box (TalkBox) as a scripted talk; a tool's resident is talked to as
+ * usual, their lines swapped for the teacher's (talkStore.script). Their talks' ends move things on: Alice's lines said,
  * a tool handed over. A catch (tsi:peaceful-got) finishes a tool's quest.
  */
 import { useCallback, useEffect, useMemo } from "react";
@@ -39,7 +39,7 @@ export interface HqWorld {
   owned: readonly string[];
   /** The arrival is playing (the walk-along's tracker is Bram's). */
   arriving: boolean;
-  /** Close the Esc layer as Wren starts talking (her talk takes the screen). */
+  /** Close the Esc layer as Alice starts talking (her talk takes the screen). */
   closeMenu: () => void;
 }
 
@@ -67,7 +67,7 @@ export function useHqOnboarding(w: HqWorld, dev: URLSearchParams | null) {
     return () => { talkStore.script = null; };
   }, [hq.taught, hq.quests, owned]);
 
-  // Talks ending: Wren's lines said; a tool handed over (its offer), or asked for again (its nudge: the grant retried).
+  // Talks ending: Alice's lines said; a tool handed over (its offer), or asked for again (its nudge: the grant retried).
   useEffect(() => onTalkScript(script => {
     if (script === "hq") { hqEvent("said"); return; }
     const m = /^tool:(\w+):(offer|during)$/.exec(script);
@@ -97,7 +97,7 @@ export function useHqOnboarding(w: HqWorld, dev: URLSearchParams | null) {
   useEffect(() => { if (w.menuOpen) hqEvent("esc"); }, [w.menuOpen]);
   useEffect(() => { if (w.mapOpen) hqEvent("map"); }, [w.mapOpen]);
 
-  // Wren says the beat's lines once you're at HQ with nothing over the room.
+  // Alice says the beat's lines once you're at HQ with nothing over the room.
   const cue = visit ? visitCue(visit) : null;
   const sayKeys = cue?.kind === "say" ? cue.keys.join("+") : null;
   const atHq = w.inside === "hq";
@@ -125,7 +125,7 @@ export function useHqOnboarding(w: HqWorld, dev: URLSearchParams | null) {
     return hq.taught ? toolQuest(hq.quests) : null;
   }, [w.arriving, visit, hq.taught, hq.quests, touch]);
 
-  /** Bram's tour is over: a new arrival's tools are taught and the visit with Wren starts. */
+  /** Bram's tour is over: a new arrival's tools are taught and the visit with Alice starts. */
   const arrived = useCallback((taught: boolean) => {
     if (!taught) return;
     setToolsTaught(true);

@@ -1,12 +1,12 @@
 /**
- * The HQ visit with Wren as data (row 312, specs/hq-onboarding.md): after Bram's walk-along hands you off, you report
- * to Wren at HQ and she runs the visit. A beat at a time: she says its lines (by key, lines.ts WREN_LINES) in the
+ * The HQ visit with Alice as data (row 312, specs/hq-onboarding.md): after Bram's walk-along hands you off, you report
+ * to Alice at HQ and she runs the visit. A beat at a time: she says its lines (by key, lines.ts WREN_LINES) in the
  * dialogue box, a card may open (the register, the check-in card), then the beat waits for what you do. Order:
  * register, the real club and its check-ins, the two lore beats (real life counts; the Founder's desk), the Esc menu
  * and the map, the notice board and the club goals. Moving it, cutting a beat or adding one is a change here only.
  *
  * Beats wait for one thing each (HqEvent):
- *   wren     E at the front desk (Wren behind it)
+ *   wren     E at the front desk (Alice behind it)
  *   signed   the register signed and its card closed
  *   checkin  the check-in card closed
  *   founder  the Founder's desk looked at (its plaque card closed)
@@ -20,7 +20,7 @@ export type HqCard = "register" | "checkin";
 export interface HqBeat {
   /** Its tracker step (lines.ts HQ_TRACKER). */
   id: string;
-  /** Wren's lines (WREN_LINES keys) said as the beat starts, in order. */
+  /** Alice's lines (WREN_LINES keys) said as the beat starts, in order. */
   say?: readonly string[];
   /** A card that opens once she has said them. */
   card?: HqCard;

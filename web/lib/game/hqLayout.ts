@@ -5,7 +5,7 @@
  * 4.6 apart, the ceiling at 9.2), the door in the middle of the front wall, the aquarium filling the back wall straight
  * ahead, the full height of the room. The upper floor wraps the double-height hall in a U: a bridge over the entrance
  * holds the big lounge under the walnut oval ceiling, facing the tank head on; an arm runs down each side, the yearly
- * banners hanging off their rails one after another toward the tank. Downstairs: the entry under the bridge (Wren's
+ * banners hanging off their rails one after another toward the tank. Downstairs: the entry under the bridge (Alice's
  * desk, the coffee bar, the work lounge, a window nook), the big lounge before the tank (a sectional, beanbags, a big
  * rug), the library and co-working under the left arm, the notice board, the stair and the one admin door (under the
  * stair) under the right. Upstairs: the study on the left arm (a long table with monitors, shelves, a whiteboard), a
@@ -109,9 +109,9 @@ const floorLamp = (id: string, level: Level, x: number, z: number, pool = 2.0, p
 const sconce = (id: string, level: Level, x: number, y: number, z: number, wall: WallFace, part?: number): Lamp =>
   ({ id, kind: "sconce", level, light: [x, y, z], on: 0, pool: 1.3, wall, ...(part === undefined ? {} : { part }) });
 
-/** Wren's front desk facing the door (its counter towards −z), the register on its ledge, her post behind it. */
+/** Alice's front desk facing the door (its counter towards −z), the register on its ledge, her post behind it. */
 export const HQ_DESK = { x: 4.6, z: -6.4 } as const;
-/** Where Wren stands and moves behind the desk (lib/game/keepers.ts reads these). */
+/** Where Alice stands and moves behind the desk (lib/game/keepers.ts reads these). */
 export const HQ_WREN: { at: [number, number]; clip: "Idle" | "Trace" | "Forage"; stay: number }[] = [
   { at: [HQ_DESK.x - 0.15, HQ_DESK.z + 1.4], clip: "Idle", stay: 7 },
   { at: [HQ_DESK.x + 0.65, HQ_DESK.z + 1.4], clip: "Trace", stay: 6.5 },    // the register
@@ -193,7 +193,7 @@ export const HQ: HqOption = {
   tracks: [
     // The hall's ceiling: spots on the lounge before the tank.
     { from: [-5.6, TOP - 0.06, 1.2], to: [5.6, TOP - 0.06, 1.2], spots: [{ at: -3.6, aim: [-2.4, 0.5, 3.4] }, { at: -1.2, aim: [-0.6, 0.4, 3.4] }, { at: 1.2, aim: [0.6, 0.4, 3.4] }, { at: 3.6, aim: [2.4, 0.5, 3.4] }] },
-    // Under the bridge: the nook, the coffee bar, Wren's desk, the work lounge.
+    // Under the bridge: the nook, the coffee bar, Alice's desk, the work lounge.
     { from: [-10.8, UNDER, -6.6], to: [10.8, UNDER, -6.6], spots: [{ at: -9.6, aim: [-10.2, 0.8, -5.4] }, { at: CX, aim: [CX, 1.1, CZ] }, { at: DX, aim: [DX, 1.1, DZ] }, { at: 9.8, aim: [9.8, 0.5, -6.6] }] },
     // Under the left arm: the library, the trophy case, the Founder's plaque.
     { from: [10.6, UNDER, -3.6], to: [10.6, UNDER, 8.4], spots: [{ at: -2.5, aim: [11.55, 1.9, -2.5] }, { at: -0.3, aim: [11.55, 1.9, -0.3] }, { at: 1.9, aim: [11.55, 1.9, 1.9] }, { at: 4.6, aim: [11.6, 1.4, 4.6] }, { at: 7.6, aim: [9.6, 2.0, 8.9] }] },
@@ -223,10 +223,10 @@ export const HQ: HqOption = {
     ...LAMPS_FIXTURES.map(([lamp]) => lamp),
   ],
   fixtures: [
-    // ── Ground floor, the entry under the bridge: Wren's desk left of the door, the coffee bar right, the work lounge
+    // ── Ground floor, the entry under the bridge: Alice's desk left of the door, the coffee bar right, the work lounge
     // in the left corner, the window nook and the workbench in the right. ──
-    // Its footprint takes in the space behind it, where Wren works: visitors stay on the door's side.
-    fx("front-desk", 0, "entry", "Wren's front desk", [b([DX, 0, DZ], [2.6, 1.05, 0.8], "walnut"), b([DX, 0, DZ + 0.65], [2.6, 0.76, 0.55], "walnut")], [[DX, DZ + 0.55, 1.4, 1.0]]),
+    // Its footprint takes in the space behind it, where Alice works: visitors stay on the door's side.
+    fx("front-desk", 0, "entry", "Alice's front desk", [b([DX, 0, DZ], [2.6, 1.05, 0.8], "walnut"), b([DX, 0, DZ + 0.65], [2.6, 0.76, 0.55], "walnut")], [[DX, DZ + 0.55, 1.4, 1.0]]),
     fx("register", 0, "entry", "The island register", [b([DX + 0.75, 1.05, DZ - 0.18], [0.55, 0.07, 0.38], "plaque")]),
     fx("coffee-bar", 0, "coffee", "Coffee bar (green marble)", [
       b([CX, 0, CZ], [2.6, 1.05, 0.95], "marble"), b([CX - 0.6, 0, CZ - 1.0], [0.42, 0.78, 0.42], "leather"), b([CX + 0.6, 0, CZ - 1.0], [0.42, 0.78, 0.42], "leather"),
@@ -332,7 +332,7 @@ export const HQ: HqOption = {
   ],
   paths: [
     { id: "aisle", level: 0, label: "From the door round the sectional to the aquarium", points: [HQ_SPAWN, [0, -3.4], [0, 0.5], [5.8, 0.5], [5.8, 6.95], [0, 6.95]] },
-    { id: "to-desk", level: 0, label: "To Wren's desk", points: [[0, -7.5], [DX, -7.5]] },
+    { id: "to-desk", level: 0, label: "To Alice's desk", points: [[0, -7.5], [DX, -7.5]] },
     { id: "to-coffee", level: 0, label: "To the coffee bar", points: [[0, -7.6], [CX, -7.6], [CX, CZ - 1.7]] },
     { id: "to-stair", level: 0, label: "To the board and the stair", points: [[0, -3.4], [-10.9, -3.4], [-10.9, 0.3]] },
     { id: "left-arm", level: 0, label: "Under the left arm", points: [[0, -3.4], [7.0, -3.4], [7.0, 6.4], [9.4, 6.5]] },
