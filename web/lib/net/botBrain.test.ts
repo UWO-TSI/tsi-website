@@ -195,6 +195,15 @@ describe("bots", () => {
     expect(seatLift("Sit", BENCH_SEAT_TOP, CHARACTER_SCALE)).toBeGreaterThan(0.3); // not sunk into the slats
   });
 
+  it("?botbar: the first two sit side by side at the sushi bar, each holding their stool's claim", () => {
+    const w = botWorld();
+    w.bar = { id: "sushi-bar", x: 40, z: 100, yaw: Math.PI / 2 };
+    const two = createBots(3, 1, 0, w);
+    expect(two.map(b => b.card.role)).toEqual(["barSit", "barSit", two[2].card.role]);
+    expect(two[2].card.role).not.toBe("barSit");
+    expect([...w.taken]).toEqual(["sushi:sushi-bar#2", "sushi:sushi-bar#3"]);
+  });
+
   it("carry only what the contract allows: seat keys, held items, emote and clip names, lengths in range", () => {
     for (const { patch } of slows) {
       if (patch.seat !== undefined) expect(patch.seat === "" || isSeatKey(patch.seat)).toBe(true);

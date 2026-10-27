@@ -33,7 +33,7 @@ import { juiceShake } from "@/lib/game/cameraJuice";
 import { treeParts } from "./NatureModels";
 import AmbientFauna, { type FaunaProps } from "./AmbientFauna";
 import WeatherGround from "./WeatherGround";
-import { autoFollow, capture, orbit, ORBIT_DISTANCE, orbitOffset, stepOrbit, turnOffset } from "@/lib/game/orbitCamera";
+import { autoFollow, capture, DEFAULT_PITCH, orbit, ORBIT_DISTANCE, orbitOffset, stepOrbit, turnOffset, wrapAngle } from "@/lib/game/orbitCamera";
 import { CROWN_REACH, CUT_FLOOR, CUT_RADIUS, CUTOUT, CUTOUT_CROWN, CUTOUT_VIEW, canopyAround, groundBlocks, lineBlocked, type Occluder } from "@/lib/game/occluders";
 import { bendViewPoint } from "@/lib/game/worldProjection";
 import { orbitKeys, useOrbitInput } from "./useOrbitInput";
@@ -168,11 +168,23 @@ export interface FollowScene {
   ground: (x: number, z: number) => number; player: React.RefObject<THREE.Vector3>; occluders: readonly Occluder[];
   /** A weapon is out (the ruins): while mouse-look holds the crosshair, the view looks further ahead so it sits past you. */
   aim?: boolean;
+  /** A seat's own view while you sit there (the sushi bar's stools, components/game/SushiBar.tsx): the camera eases to it. */
+  seat?: { current: { eye: { x: number; y: number; z: number }; look: { x: number; y: number; z: number } } | null };
 }
 /** How far ahead of the focus the camera looks: walking, and aiming with the crosshair (the crosshair clears your head and its ground point lands about 3 ahead; further, you would sink behind the combat HUD). */
 const LOOK_AHEAD = 1.5, AIM_AHEAD = 2.2;
 /** The top of the head over the feet (a character stands 1.36): the cut also follows the line of sight to it. */
 const HEAD = 1.3;
+/** How long the glide into a seat's own view takes (and back out), in seconds. */
+const SEAT_GLIDE = 1.8;
+/** How much sooner the glide's height arrives than the rest of it. */
+const SEAT_DROP = 1.5;
+/**
+ * Looking round from a seat (David, sushi bar round 2: "can look around"): the mouse, the arrows or two fingers turn
+ * the view up to SEAT_YAW either side and tilt it SEAT_TILT times the orbit's tilt from the middle (about 20 degrees up
+ * or down); left alone SEAT_SETTLE seconds it eases back to the middle.
+ */
+const SEAT_YAW = Math.PI / 3, SEAT_TILT = 1.4, SEAT_SETTLE = 1.5, UP = new THREE.Vector3(0, 1, 0);
 /** The least height the camera keeps over the ground under it (a hill or cliff behind you lifts it, never through). */
 const CLEARANCE = 0.8;
 /**
@@ -188,7 +200,9 @@ const CLEARANCE = 0.8;
 export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: number, overview: Overview | null, scene?: FollowScene) {
   const { camera } = useThree();
   useOrbitInput(!scene?.aim);
-  const rig = useMemo(() => ({ ahead: LOOK_AHEAD, cut: 0, chest: new THREE.Vector3(), head: new THREE.Vector3(), last: new THREE.Vector3(NaN, 0, 0), vx: 0, vz: 0 }), []);
+  const rig = useMemo(() => ({ ahead: LOOK_AHEAD, cut: 0, chest: new THREE.Vector3(), head: new THREE.Vector3(), last: new THREE.Vector3(NaN, 0, 0), vx: 0, vz: 0,
+    seat: 0, seatEye: new THREE.Vector3(), seatLook: new THREE.Vector3(), from: new THREE.Vector3(), fromLook: new THREE.Vector3(), lastCam: new THREE.Vector3(), lastLook: new THREE.Vector3(),
+    sat: false, yaw0: 0, pitchBack: 0, side: new THREE.Vector3() }), []);
   useEffect(() => () => { CUTOUT.value.w = 0; CUTOUT_CROWN.value.x = 0; }, []);
   const baseFar = useRef<number | null>(null);
   const blend = useRef({ zoom, overview: overview ? 1 : 0, last: overview });
@@ -224,6 +238,32 @@ export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: num
     const [ox, oy, oz] = orbitOffset(v.yaw, v.pitch, ORBIT_DISTANCE * b.zoom * v.zoom);
     camera.position.set(look.x + ox, look.y + oy, look.z + oz);
     if (scene) camera.position.y = Math.max(camera.position.y, scene.ground(camera.position.x, camera.position.z) + CLEARANCE);
+    // A seat's view (the sushi bar's stools; David: "a camera angle switch transition", never a black screen): a glide
+    // over SEAT_GLIDE s, slow out and slow in, as you sit, and back as you get up, from the last one held.
+    // Gliding in it starts from the view as it was (sitting moved you to the seat at once); gliding out it ends on the
+    // follow view where you got up.
+    // Seated, the orbit's turn and tilt look round from the seat (its tilt starts from the middle, the one you had comes
+    // back as you get up).
+    const sv = scene?.seat?.current, t = orbit.target;
+    if (sv) {
+      if (rig.seat === 0) { rig.from.copy(rig.lastCam); rig.fromLook.copy(rig.lastLook); }
+      if (!rig.sat) { rig.sat = true; rig.yaw0 = t.yaw; rig.pitchBack = t.pitch; t.pitch = DEFAULT_PITCH; }
+      t.yaw = rig.yaw0 + THREE.MathUtils.clamp(wrapAngle(t.yaw - rig.yaw0), -SEAT_YAW, SEAT_YAW);
+      if (orbit.idle > SEAT_SETTLE) { t.yaw = THREE.MathUtils.damp(t.yaw, rig.yaw0, 2, dt); t.pitch = THREE.MathUtils.damp(t.pitch, DEFAULT_PITCH, 2, dt); }
+      rig.seatEye.set(sv.eye.x, sv.eye.y, sv.eye.z);
+      rig.seatLook.set(sv.look.x, sv.look.y, sv.look.z).sub(rig.seatEye).applyAxisAngle(UP, v.yaw - rig.yaw0);
+      rig.seatLook.applyAxisAngle(rig.side.crossVectors(rig.seatLook, UP).normalize(), (DEFAULT_PITCH - v.pitch) * SEAT_TILT).add(rig.seatEye);
+      camera.position.copy(rig.from); look.copy(rig.fromLook);
+    } else if (rig.sat) { rig.sat = false; t.pitch = rig.pitchBack; }
+    rig.seat = THREE.MathUtils.clamp(rig.seat + (sv ? dt : -dt) / SEAT_GLIDE, 0, 1);
+    const glide = THREE.MathUtils.smootherstep(rig.seat, 0, 1);
+    if (glide > 1e-3) {
+      // Down first, then in under the eaves (through the sushi bar's noren, never its roof): the height keeps ahead.
+      const y0 = camera.position.y;
+      camera.position.lerp(rig.seatEye, glide); look.lerp(rig.seatLook, glide);
+      camera.position.y = THREE.MathUtils.lerp(y0, rig.seatEye.y, THREE.MathUtils.smootherstep(Math.min(1, rig.seat * SEAT_DROP), 0, 1));
+    }
+    // The overview after the seat's view, so zooming out works seated too.
     const o = b.last;
     if (b.overview > 0 && o) {
       const [tx, tz] = turnOffset(o.offset[0], o.offset[2], v.yaw);
@@ -234,12 +274,13 @@ export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: num
       look.lerp(far.look, b.overview);
     }
     camera.lookAt(look);
+    rig.lastCam.copy(camera.position); rig.lastLook.copy(look);
     camera.updateMatrixWorld();
     // A building, tree or cliff on the line of sight to the player's chest or head eases the cut in; the circle sits where they are drawn.
     if (!p || !(camera instanceof THREE.PerspectiveCamera)) return;
     const c = rig.chest.set(p.x, p.y + 1, p.z), h = rig.head.set(p.x, p.y + HEAD, p.z), list = scene!.occluders;
     const crown = b.overview === 0 && canopyAround(h, list);
-    const blocked = b.overview === 0 && (crown || lineBlocked(camera.position, c, list) || lineBlocked(camera.position, h, list) || groundBlocks(camera.position, c, scene!.ground));
+    const blocked = b.overview === 0 && rig.seat < 0.5 && (crown || lineBlocked(camera.position, c, list) || lineBlocked(camera.position, h, list) || groundBlocks(camera.position, c, scene!.ground));
     rig.cut = THREE.MathUtils.damp(rig.cut, blocked ? 1 : 0, 8, dt);
     c.applyMatrix4(camera.matrixWorldInverse);
     const depth = -c.z;

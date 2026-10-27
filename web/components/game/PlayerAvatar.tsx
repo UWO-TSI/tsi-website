@@ -40,7 +40,7 @@ import { crouchKey, useKeyboardLocked, useMoveKeys } from "@/lib/game/movement/k
 import { easeFacing } from "@/lib/game/locomotion";
 import { routePilot, type RouteStep } from "@/lib/game/movement/course";
 import type { AvatarRide } from "@/lib/game/movement/ride";
-import { BASE_FOV, EVENT_CLIP, MOVE_JUICE, TAKEOFF, applyFov, liveWind, momentumOf, screenOf, touchStick, useMoveParticles, type MoveJuice, type MoveTelemetry } from "./movement/moveFx";
+import { BASE_FOV, EVENT_CLIP, SEAT_FOV, MOVE_JUICE, TAKEOFF, applyFov, liveWind, momentumOf, screenOf, touchStick, useMoveParticles, type MoveJuice, type MoveTelemetry } from "./movement/moveFx";
 import { SPLASH, cooldownWisp, dashBurst, dashReady as dashBack, footprint, footstep, glideFurl, glideOpen, glideRibbon, glideSetDown, groundUnder, landKind, landing, mantleGrab, mantleStep, puffRing, rollTumble, scuff, settle, skidKick, skidPush, slideBurst, slidePop, slideTrail, splash, springStep, streak, takeoff, trail, type GroundKind } from "@/lib/game/movement/juice";
 
 /**
@@ -179,7 +179,9 @@ const AIR_TAP = 0.18;
  * Where you sit (or lie, or dance round the campfire): `ground` is a spot on the ground rather than furniture (getting
  * up leaves you standing there); `drive` moves it each frame (the campfire's stomp ring carries you round the fire).
  */
-type Seat = { x: number; z: number; clip: ClipName; lift: number; yaw: number; ground?: boolean; drive?: SeatDrive };
+/** `hide`: seen first person, your own avatar unseen (the sushi bar's stools); `exit`: where getting up puts you, facing `yaw`. */
+type SeatExit = { x: number; z: number; yaw: number };
+type Seat = { x: number; z: number; clip: ClipName; lift: number; yaw: number; ground?: boolean; drive?: SeatDrive; hide?: boolean; exit?: SeatExit };
 
 export default function PlayerAvatar({ spawnPosition, player, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = false, playerLevel, member = false, combat: inCombat = false, respawn = 0, glider = false, dash = true, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed, walkOnly = false, held = null, ride }: PlayerAvatarProps) {
   const anchor = useRef<THREE.Group>(null), body = useRef<THREE.Group>(null), head = useRef<THREE.Group>(null);
@@ -268,10 +270,11 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     if (!s) return;
     seat.current = null;
     motion.current.pose = null;
-    // Off the ground (a sit on the sand, the campfire's rings) you get up where you are; off furniture, beside it.
-    const [x, z] = s.ground ? [s.x, s.z] : clearSpot(world, s.x, s.z, groundHeight(s.x, s.z), s.yaw);
-    sim.current = createMoveSim(createMoveState(x, z, world, s.yaw));
-    fx.current.rise.set(s.x - x, s.z - z);
+    // Off the ground (a sit on the sand, the campfire's rings) you get up where you are; off furniture, beside it; from a
+    // seat with its own way out, there (no easing over: you're seen again only once you're out).
+    const [x, z] = s.exit ? [s.exit.x, s.exit.z] : s.ground ? [s.x, s.z] : clearSpot(world, s.x, s.z, groundHeight(s.x, s.z), s.yaw);
+    sim.current = createMoveSim(createMoveState(x, z, world, s.exit?.yaw ?? s.yaw));
+    if (!s.exit) fx.current.rise.set(s.x - x, s.z - z);
     fx.current.sqv += 3;
     setSitNote(false);
   }, [world, groundHeight]);
@@ -282,14 +285,18 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
   // faces the seat's front (default: the camera).
   useEffect(() => {
     const onSit = (e: Event) => {
-      const { x, z, clip, seatY, yaw = Math.PI, ground, drive } = (e as CustomEvent<{ x: number; z: number; clip?: ClipName; seatY?: number; yaw?: number; ground?: boolean; drive?: SeatDrive }>).detail;
+      const { x, z, clip, seatY, yaw = Math.PI, ground, drive, hide, exit } = (e as CustomEvent<{ x: number; z: number; clip?: ClipName; seatY?: number; yaw?: number; ground?: boolean; drive?: SeatDrive; hide?: boolean; exit?: SeatExit }>).detail;
       const cur = seat.current, same = !!cur && cur.x === x && cur.z === z;
-      const at = (c: ClipName): Seat => ({ x, z, clip: c, yaw, lift: seatY === undefined ? 0 : seatLift(c, seatY - groundHeight(x, z), CHARACTER_SCALE), ground, drive });
+      // Over water the avatar is drawn at the water's line, WATER_DROP under the ground there (here and on others' screens, drive.ts floorUnder): the lift is from it.
+      const floor = groundHeight(x, z) - (world.wet(x, z) ? WATER_DROP : 0);
+      const at = (c: ClipName): Seat => ({ x, z, clip: c, yaw, lift: seatY === undefined ? 0 : seatLift(c, seatY - floor, CHARACTER_SCALE), ground, drive, hide, exit });
       if (same && clip) { seat.current = at(clip); return; }
       if (same) { leaveSeat(); return; }
       seat.current = at(clip ?? "Sit");
       motion.current.pose = seat.current.clip;
       target.current = null;
+      // Hidden (first person on a stool): no puff and no note over an avatar nobody here sees.
+      if (hide) return;
       puffRing(particles.pool, groundAt(groundSurface, world, x, z), x, groundHeight(x, z), z);
       setSitNote(true);
       if (sitNoteTimer.current) window.clearTimeout(sitNoteTimer.current);
@@ -412,6 +419,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     if (seat.current && !frozen && (keyed || tilt > 0.2 || target.current || jumpPressed || dashPressed)) leaveSeat();
 
     const s = sim.current!, sitting = seat.current, push = inCombat ? combatPush(p) : undefined;
+    // First person on a seat (the sushi bar's stools): your own avatar unseen.
+    if (body.current && !inCombat) body.current.visible = !sitting?.hide;
     // A seat that moves (the campfire's stomp ring) places you before you're drawn.
     sitting?.drive?.(sitting);
     let events: MoveEvent[] = [];
@@ -747,7 +756,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     camTarget?.current.copy(f.focus);
     f.punch *= Math.exp(-6 * dt);
     const fast = THREE.MathUtils.clamp((speed - t.walkSpeed) / Math.max(0.1, topSpeed(t) - t.walkSpeed), 0, 1);
-    applyFov(camera, BASE_FOV + j.fovKick * fast + f.punch, Math.min(rawDelta, 0.1));
+    // First person on a seat (the sushi bar's stools) sees wider; the camera eases to it with the glide in.
+    applyFov(camera, sitting?.hide ? SEAT_FOV : BASE_FOV + j.fovKick * fast + f.punch, Math.min(rawDelta, 0.1));
 
     if (telemetry) Object.assign(telemetry.current, { x, y, z, speed, mode: state.mode, hops: state.hops, dashReady, long: state.long, momentum: momentumOf(state, speed, t.walkSpeed, t.sprintSpeed), slideJump: state.slideJump });
     const last = reported.current;

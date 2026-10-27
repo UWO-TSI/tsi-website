@@ -11,6 +11,7 @@
  * default priority reads it), in preallocated arrays.
  */
 import { useSyncExternalStore } from "react";
+import { chatStore } from "@/lib/net/chat";
 import { AREAS, type Area, type RosterEntry } from "@/lib/net/protocol";
 import type { NetSource } from "@/lib/net/types";
 
@@ -86,6 +87,17 @@ export function remoteSeatTaken(key: string): boolean {
   const reg = live.source?.remotes;
   if (!reg) return false;
   for (let i = 0; i < reg.size; i++) if (reg.at(i).player.seat === key) return true;
+  return false;
+}
+
+/**
+ * A seat a remote in view holds whose uid sorts before yours: of two who claimed it together (neither saw the other's
+ * claim yet), they keep it and you yield (sushiBar.ts barSeat). Off, or before the roster names you, nobody outranks you.
+ */
+export function remoteSeatOutranks(key: string): boolean {
+  const reg = live.source?.remotes, self = chatStore().selfUid;
+  if (!reg || !self) return false;
+  for (let i = 0; i < reg.size; i++) { const p = reg.at(i).player; if (p.seat === key && p.uid < self) return true; }
   return false;
 }
 

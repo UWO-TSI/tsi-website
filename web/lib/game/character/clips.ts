@@ -26,7 +26,10 @@ type VillageClip = "Idle" | "Walk" | "Run" | "Sit" | "Study" | "Sleep" | "Fish" 
   | "Pickup" | "Shake" | "Strike" | "Craft"
   // The v1 emote wheel (specs/v1-drop.md §3): the ring's new one-shots, sitting on the ground (by the campfire, the hands
   // to the fire), and the eight dances and the campfire's stomp, each looping on whole bars of the shared beat.
-  | "Clap" | "Bow" | "Shrug" | "SitGround" | "SitWarm" | DanceClip;
+  | "Clap" | "Bow" | "Shrug" | "SitGround" | "SitWarm" | DanceClip
+  // The sushi bar's staff at work (build_clips.py `-- staff`, their own clip file: Character `clips`): slicing, making
+  // nigiri, reaching across the counter.
+  | "SushiSlice" | "SushiShape" | "SushiServe";
 /** The dances (build_clips.py, v1 emotes and dances): loops on whole bars of 120 BPM, so the world clock's beat lines them up. */
 export const DANCE_CLIPS = ["DanceBounce", "DanceSpin", "DanceShuffle", "DanceSway", "DanceWiggle", "DanceFlail", "DanceRobot", "DanceSprinkler", "DanceStomp", "Dance"] as const;
 export type DanceClip = (typeof DANCE_CLIPS)[number];
@@ -109,7 +112,7 @@ const FAMILY: Record<VillageClip, Family> = {
   LookAround: "act", StretchUp: "act", Chat: "act", Eat: "act", Pickup: "act", Shake: "act", Strike: "act", Craft: "act",
   CastWindup: "act", CastSwing: "act", HookYank: "act", Reel: "act", HoldUp: "act",
   Clap: "act", Bow: "act", Shrug: "act", DanceBounce: "act", DanceSpin: "act", DanceShuffle: "act", DanceSway: "act", DanceWiggle: "act",
-  DanceFlail: "act", DanceRobot: "act", DanceSprinkler: "act", DanceStomp: "act",
+  DanceFlail: "act", DanceRobot: "act", DanceSprinkler: "act", DanceStomp: "act", SushiSlice: "act", SushiShape: "act", SushiServe: "act",
   HoldRod: "loco", HoldTool: "loco", HoldFront: "loco",
   AttackMelee: "combat", AttackBow: "combat", AttackCast: "combat", Hit: "combat", Defeat: "combat",
 };

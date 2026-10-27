@@ -57,4 +57,5 @@ David planned it on 2026-10-26 (https://claude.ai/artifact/QddVeVSPgcEZRZEBgYJAj
 - Food gives temporary fishing buffs.
 - A super-rare or legendary fish can be cooked into a big dish with big buffs: a use for repeat legendaries besides selling.
 - The chef gives fishing orders, so the bar becomes one of the places that hand out fishing missions, plus side quests for special fish that pay money and food.
+- TODO (David, round 3, on the closed bar: "taklking to him gives you fishing quests"): by day the chef stands outside (sushiBar.ts CHEF_OUTSIDE); talking to him there is where his fishing quests start.
 - Photos.

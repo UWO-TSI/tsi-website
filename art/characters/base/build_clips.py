@@ -3292,6 +3292,106 @@ def render_v1_clips(out, names=V1_CLIPS):
     print("wrote", out)
 
 
+# ================================================================ the sushi bar's staff (game/sushi-bar round 3)
+# The chef and the server at work behind the counter (David: "refine sushi cooking movements"; web/lib/game/sushiBar.ts
+# CHEF_STATIONS, SERVER_STATIONS): `-- staff` bakes only these into base/v8_staff.glb, the rig and its actions like the
+# verb library, which the bar's staff load beside the village set (Character `clips`). All loops, held as poses.
+# Where things are, from the staff's feet on their raised floor (rig units, the character facing -y): the board's fish
+# straight ahead at about 0.3 out and 0.47 up, the rice tub to the right, the geta to the left; the serving shelf ahead
+# over the fish case.
+STAFF_MODE = "staff" in ARGS
+STAFF_CLIPS = []
+
+
+def staff_clip(name, seconds):
+    def deco(fn):
+        STAFF_CLIPS.append(dict(name=name, frames=round(seconds * FPS), loop=True, fn=fn, ground=None, meta={}))
+        return fn
+    return deco
+
+
+def at_board(lean=13.0, nod=5.0, twist=0.0, side=0.0):
+    return body(lean=lean, nod=nod, twist=twist, side=side, crouch=0.018)
+
+
+def slice_keys():
+    """One slice of the fish (a yanagiba's pull, never a chop): the left hand's fingertips steady the block, the knife
+    set with its heel on the far edge and drawn back toward him the blade's whole length in one long stroke, sinking
+    through; lifted clear; the slice laid aside by the left hand; the knife back to the far edge."""
+    def pose(r, l, wrist=0.0, **kw):
+        P = at_board(**kw)
+        hand(P, "Right", V(*r), V(-0.6, 0.2, -1))
+        hand(P, "Left", V(*l))
+        P.rot("RightHand", rx(wrist))
+        P.rot("LeftHand", rx(-20))
+        return P
+    steady = (0.06, -0.26, 0.455)
+    start = pose((-0.03, -0.3, 0.505), steady, 8)
+    mid = pose((-0.08, -0.23, 0.48), steady, 2, lean=14)
+    end = pose((-0.14, -0.15, 0.46), steady, -4, lean=12, twist=-4)
+    lift = pose((-0.14, -0.16, 0.5), steady, 6, lean=11, twist=-4)
+    aside = pose((-0.13, -0.16, 0.495), (-0.02, -0.26, 0.45), 6, lean=12, twist=-6)
+    return [(0, start, "lin"), (0.1, start, "lin"), (0.3, mid, "in"), (0.48, end, "out"), (0.56, lift, "io"), (0.68, aside, "io"),
+            (0.78, lift, "io"), (0.92, start, "io"), (1.0, start, "lin")]
+
+
+SLICE = slice_keys()
+
+
+@staff_clip("SushiSlice", 2.0)
+def sushi_slice(p):
+    return plant(keys(p, SLICE))
+
+
+def shape_keys():
+    """One nigiri: a pinch of rice from the tub at his right into his cupped left hand, pressed twice; a slice from
+    the board laid over it, pressed with two fingers; set on the geta at his left; back."""
+    def pose(r, l, **kw):
+        P = at_board(**kw)
+        hand(P, "Right", V(*r), V(-0.6, 0.2, -1))
+        hand(P, "Left", V(*l))
+        P.rot("LeftHand", ry(25) @ rx(-10))
+        return P
+    cup = (0.035, -0.22, 0.455)
+    ready = pose((-0.05, -0.22, 0.5), cup)
+    tub = pose((-0.22, -0.24, 0.44), cup, twist=-14, side=-4, lean=15)
+    over = pose((0.0, -0.225, 0.5), cup)
+    press = pose((0.0, -0.225, 0.472), cup, nod=8)
+    board = pose((-0.04, -0.29, 0.46), cup, lean=16)
+    lay = pose((0.005, -0.23, 0.49), cup, nod=8)
+    pinch = pose((0.005, -0.23, 0.472), cup, nod=9)
+    geta = pose((-0.02, -0.21, 0.49), (0.22, -0.25, 0.44), twist=14, side=4, lean=15)
+    return [(0, ready, "lin"), (0.12, tub, "io"), (0.22, over, "io"), (0.28, press, "in"), (0.34, over, "out"), (0.4, press, "in"),
+            (0.46, over, "out"), (0.56, board, "io"), (0.64, lay, "io"), (0.7, pinch, "in"), (0.76, lay, "out"), (0.88, geta, "io"),
+            (1.0, ready, "io")]
+
+
+SHAPE = shape_keys()
+
+
+@staff_clip("SushiShape", 2.0)
+def sushi_shape(p):
+    return plant(keys(p, SHAPE))
+
+
+def serve_keys():
+    """The server's reach across the counter with both hands: leaning in, the hands out low to take up a geta or to
+    slide one onto the shelf, and back upright."""
+    out = body(lean=22, nod=10, crouch=0.02)
+    two_hands(out, (-0.05, -0.27, 0.45), (0.05, -0.27, 0.45))
+    back = body(lean=4, nod=2)
+    two_hands(back, (-0.042, -0.17, 0.42), (0.042, -0.17, 0.42))
+    return [(0, back, "lin"), (0.3, out, "io"), (0.55, out, "lin"), (0.85, back, "io"), (1.0, back, "lin")]
+
+
+SERVE = serve_keys()
+
+
+@staff_clip("SushiServe", 1.4)
+def sushi_serve(p):
+    return plant(keys(p, SERVE))
+
+
 if "v1-preview" in ARGS:
     only = ARGS[ARGS.index("v1-preview") + 1].split(",") if len(ARGS) > ARGS.index("v1-preview") + 1 else list(V1_CLIPS)
     for c in CLIPS:
@@ -3302,7 +3402,31 @@ if "v1-preview" in ARGS:
     render_v1_clips(os.environ.get("V1_PREVIEW_OUT", "/tmp/v1-clips.webp"), [n for n in V1_CLIPS if n in only])
     raise SystemExit(0)
 
-if VERBS_MODE:
+if STAFF_MODE:
+    cat = []
+    for c in STAFF_CLIPS:
+        bake(c)
+        worst, lowest = check(c["name"], c["frames"])
+        cat.append({"name": c["name"], "length": round(c["frames"] / FPS, 3), "loop": True, "frames": c["frames"]})
+        print(f"STAFF {c['name']:12s} {c['frames'] / FPS:4.2f}s head_intrusion={worst:5.3f} min_z={lowest:+.3f}")
+    keep = {c["name"] for c in STAFF_CLIPS}
+    for a in list(bpy.data.actions):
+        if a.name not in keep:
+            bpy.data.actions.remove(a)
+    rig.animation_data.action = bpy.data.actions[STAFF_CLIPS[0]["name"]]
+    sc.frame_set(0)
+    bpy.ops.object.select_all(action="DESELECT")
+    rig.select_set(True)
+    bpy.context.view_layer.objects.active = rig
+    bpy.ops.export_scene.gltf(
+        filepath=os.path.join(HERE, "v8_staff.glb"), export_format="GLB", use_selection=True, export_yup=True,
+        export_skins=True, export_animations=True, export_animation_mode="ACTIONS", export_force_sampling=True,
+        export_leaf_bone=False, export_optimize_animation_size=True)
+    kit.update_catalog("staff", {"glb": "base/v8_staff.glb", "fps": FPS,
+                                 "note": "The sushi bar's staff at work (game/sushi-bar): the rig and its actions only, loaded by the bar's chef and server.",
+                                 "clips": cat})
+    print("STAFF_OK", len(cat))
+elif VERBS_MODE:
     verbs = verb_clips()
     cat = []
     for c in verbs:

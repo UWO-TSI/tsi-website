@@ -74,8 +74,17 @@ export const SHOP_CART_URL = `${P}shop-cart.glb`;
 export const REMODELLED_PROPS: Readonly<Record<string, string>> = { "bench-wood": LOG_BENCH_URL };
 /** The fish crate (art/wharf/build_crate.py): the market's, and the arrival's on the pier. */
 export const CRATE_URL = "/assets/game/wharf/crate.glb";
-/** The sushi bar (game/sushi-bar). */
+/**
+ * The sushi bar (game/sushi-bar), and what lives with it: its paper lanterns, neon and tank water, which glow at night
+ * like a lamp's glass; its hours (the blinds down while it's closed, the noren up and the nigiri set out while it's
+ * open); the islands out to sea seen from its stools; the chef's knife.
+ */
 export const SUSHI_BAR_URL = "/assets/game/buildings/sushi-bar.glb";
+export const SUSHI_BAR_GLOW_URL = "/assets/game/buildings/sushi-bar-glow.glb";
+export const SUSHI_BAR_HOURS_URL = "/assets/game/buildings/sushi-bar-hours.glb";
+export const SUSHI_BAR_ISLES_URL = "/assets/game/buildings/sushi-bar-isles.glb";
+export const SUSHI_BAR_GETA_URL = "/assets/game/buildings/sushi-bar-geta.glb";
+export const SUSHI_KNIFE_URL = "/assets/game/tools/sushi-knife.glb";
 /** The `prop` kind's scenery outside the dump's props folder, by model name (terrain v3: the market, the beach, the lighthouse). */
 export const SCENERY_URLS: Readonly<Record<string, string>> = {
   barrel: "/assets/acnh/furniture/barrel.glb", lighthouse: "/assets/acnh/furniture/lighthouse.glb", crate: CRATE_URL,
@@ -116,8 +125,10 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   "lifeguard-tower": `${P}lifeguard-tower.glb`,
   // game/sushi-bar: the sushi bar (art/buildings/build_sushi_bar.py), a long open bar about 9.2 by 6.1, the origin at the
   // middle of its solid kitchen core (x ±4, z ±1.5), the guests' deck and six stools toward +z, the open window onto the
-  // sea toward -z.
+  // sea toward -z. What glows is its own model (SUSHI_BAR_GLOW_URL), drawn by components/game/SushiBar.tsx. Its pier (the
+  // stilts under it, the landing, the entrance and the boardwalk to the sand toward +z) is placed with it, the same origin.
   "sushi-bar": SUSHI_BAR_URL,
+  "sushi-bar-pier": "/assets/game/buildings/sushi-bar-pier.glb",
   ...Object.fromEntries(["a", "b", "c"].map(m => [`surfboard-${m}`, `${P}surfboard-${m}.glb`])),
   ...Object.fromEntries(["a", "b", "c", "d"].map(m => [`coral-${m}`, `/assets/game/water/coral-${m}.glb`])),
   // game/village-art2 (David, R2c): big mossy stones (art/props/build_stones.py), sunk a little under their origin: a

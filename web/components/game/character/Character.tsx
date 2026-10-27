@@ -796,6 +796,8 @@ const USE_GRIPS: Partial<Record<ClipName, Partial<Record<HoldKind, [number, numb
   // A rock struck: the blade swung forward and down onto the rock in front (render_forage_clips.py); the hammer's blows
   // face down onto the bench.
   Strike: { shovel: [-1.458, -0.293, -1.846] }, Craft: { hammer: [1.403, 0.0, 1.691] },
+  // The sushi chef's knife held as the hammer is, its blade along his slicing stroke, edge down (render_sushi_staff.py).
+  SushiSlice: { hammer: [1.471, 0.529, 1.086] },
 };
 /** Clips a hold lays over (the arms carry the item); in any other the item's own clip poses them. */
 const HOLD_OVER = new Set<ClipName>(["Idle", "Walk", "Run", "CrouchIdle", "CrouchWalk", "Jump", "Air", "Fall", "Land", "LandHeavy", "Skid", "Dash", "LookAround"]);
@@ -865,6 +867,8 @@ export interface CharacterProps {
   leaf?: boolean;
   /** Loads the verb library (the ruins' player): its clips join this character's, never suspending the scene. */
   verbs?: boolean;
+  /** Another clip file to load the same way (the sushi bar's staff: look.ts STAFF_URL). */
+  clips?: string;
   /** Face atlas density: 512 px per face canvas in the world (sharp at village distance), 1024 in the creator. */
   faceSize?: number;
   scale?: number;
@@ -885,7 +889,7 @@ export interface CharacterProps {
   keepFace?: boolean;
 }
 
-export default function Character({ look, motion, walkSpeed = MOVE_TUNING.walkSpeed, weapon = null, held = null, leaf = false, verbs = false, faceSize = 512, scale = CHARACTER_SCALE, lod = true, remote = false, keepFace = false, id }: CharacterProps) {
+export default function Character({ look, motion, walkSpeed = MOVE_TUNING.walkSpeed, weapon = null, held = null, leaf = false, verbs = false, clips, faceSize = 512, scale = CHARACTER_SCALE, lod = true, remote = false, keepFace = false, id }: CharacterProps) {
   // While a newly chosen part loads, keep showing the previous look instead of suspending.
   const shown = useDeferredValue(look);
   const parts = useMemo(() => resolveParts(shown), [shown]);
@@ -945,14 +949,14 @@ export default function Character({ look, motion, walkSpeed = MOVE_TUNING.walkSp
     {lod && <Suspense fallback={null}><LodMesh puppet={puppet} look={shown} parts={parts} /></Suspense>}
     {lod && <Suspense fallback={null}><LodMesh2 puppet={puppet} look={shown} parts={parts} /></Suspense>}
     {/* Its own boundary: the ruins never wait for the verb library; a verb asked for meanwhile plays the attack clip. */}
-    {verbs && <Suspense fallback={null}><VerbClips puppet={puppet} /></Suspense>}
+    {verbs && <Suspense fallback={null}><MoreClips puppet={puppet} url={VERBS_URL} /></Suspense>}
+    {clips && <Suspense fallback={null}><MoreClips puppet={puppet} url={clips} /></Suspense>}
     {/* Its own boundary: taking out a tool never suspends the scene while its model loads. */}
     {held && <Suspense fallback={null}><HeldItem key={`${held.hold}:${held.url}`} puppet={puppet} motion={motion} view={held} remote={remote} /></Suspense>}
     {/* Its own boundary: crafting the glider mid-session must not suspend the scene while the leaf loads. */}
     {leaf && <Suspense fallback={null}><HeldLeaf puppet={puppet} motion={motion} scale={scale} remote={remote} /></Suspense>}
   </group>;
 }
-/** The verb library's actions (build_clips.py `-- verbs`): the same rig's tracks, merged into the puppet's clips. */
 /** The look's LOD 1 parts (art/characters/build_lod.py), merged once per look and shared like the full one. */
 function LodMesh({ puppet, look, parts }: { puppet: Puppet; look: CharacterLook; parts: ResolvedPart[] }) {
   const loaded = useGLTF([LOD_SKIN_URL, ...parts.map(p => p.lod)]) as unknown as Gltf[];
@@ -993,8 +997,9 @@ function viewCharacter(puppet: Puppet, g: THREE.Object3D, camera: THREE.Camera, 
   const at = detailSituation({ photo: readPhoto().open, focused: isDetailFocus(puppet.id), zoom: orbit.view.zoom });
   puppet.view(d, drawnHeight(height, d, fov, viewportPx) / quality.knobs.lodBias, view.intersectsSphere(body), at);
 }
-function VerbClips({ puppet }: { puppet: Puppet }) {
-  const { animations } = useGLTF(VERBS_URL) as unknown as Gltf;
+/** A clip file's actions (build_clips.py `-- verbs`, `-- staff`): the same rig's tracks, merged into the puppet's clips. */
+function MoreClips({ puppet, url }: { puppet: Puppet; url: string }) {
+  const { animations } = useGLTF(url) as unknown as Gltf;
   useEffect(() => puppet.addClips(animations), [puppet, animations]);
   return null;
 }

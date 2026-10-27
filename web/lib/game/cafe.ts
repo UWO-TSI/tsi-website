@@ -54,7 +54,7 @@ export const CAFE_OWNER = {
   ],
 };
 
-export type OwnerClip = "Idle" | "Walk" | "Forage" | "Trace" | "Sweep";
+export type OwnerClip = "Idle" | "Walk" | "Forage" | "Trace" | "Sweep" | "Craft" | "SushiSlice" | "SushiShape" | "SushiServe";
 /** Where the owner works behind the bar, in walking order: x, z, the way she faces while there, how long she stays, and what she does. */
 export interface OwnerStation { at: [number, number]; yaw: number; stay: number; clip: OwnerClip }
 export const OWNER_STATIONS: OwnerStation[] = [
@@ -74,7 +74,7 @@ function pose(out: OwnerPose, x: number, z: number, yaw: number, clip: OwnerClip
   return out;
 }
 /** Seconds from station i to the next, at the owner's pace. */
-function walkOf(stations: readonly OwnerStation[], i: number): number {
+export function walkOf(stations: readonly OwnerStation[], i: number): number {
   const a = stations[i].at, b = stations[(i + 1) % stations.length].at;
   return Math.hypot(b[0] - a[0], b[1] - a[1]) / OWNER_WALK;
 }

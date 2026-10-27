@@ -104,6 +104,8 @@ export interface VerbInfo { name: string; verb: string; grip: string; length: nu
 export const VERBS_URL = `${CHARACTER_ROOT}${catalog.verbs.glb}`;
 export const VERB_CLIPS = catalog.verbs.clips as VerbInfo[];
 export const VERB_BY_NAME = new Map(VERB_CLIPS.map(c => [c.name, c]));
+/** The sushi bar staff's clips (build_clips.py `-- staff`): the rig and its actions, loaded by the bar's chef and server (Character `clips`). */
+export const STAFF_URL = `${CHARACTER_ROOT}${catalog.staff.glb}`;
 export const PALETTE = { skin: palette.skin, hair: palette.hair, outfit: palette.outfit };
 /** An atlas cell: rect [x, y, w, h] (px, top-left origin) and the point (ax, ay) in it that sits on its anchor; a 7th
  * value 1 puts it on the second atlas page. */
