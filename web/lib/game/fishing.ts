@@ -3,8 +3,8 @@
  * /lab/fishing bench and the game share ONE source of truth).
  *
  * Refinement rulings (David, 2026-07-22 playtest; rerank 2026-07-24):
- *  - 6 rarity tiers: common / uncommon / rare / epic / legendary / sea king.
- *    SEA KING sits VACANT (rerank ruling): none of the current roster earns
+ *  - the rarity ladder (lib/rarity.ts): common / uncommon / rare / epic / legendary / divine / contraband.
+ *    DIVINE (the old Sea King crown) sits VACANT (rerank ruling): none of the current roster earns
  *    it — David is supplying dedicated marquee models for the tier.
  *    Legendary is deliberately tight (7): the three goldens + Stringfish +
  *    Coelacanth / Hammerhead / Sturgeon.
@@ -27,27 +27,22 @@ import { SEASONAL_GOALS } from "@/lib/progression/defaults";
 import { ROSTER } from "@/lib/collections/roster";
 import { availableAt, type WorldMoment } from "@/lib/collections/logic";
 
-export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary" | "seaking";
-
-/**
- * Sea King is HOLOGRAPHIC (David ruling 2026-07-23): chips render this
- * animated iridescent gradient instead of the flat tier color. Pair with
- * the `tsi-holo-shift` keyframes (defined wherever chips render).
- */
-export const HOLO_GRADIENT =
-  "linear-gradient(115deg, #5EE7F7 0%, #6EA8FF 18%, #B57AFF 38%, #FF7AD9 58%, #7DFFC4 78%, #5EE7F7 100%)";
+import { RARITY_LABEL, type Rarity } from "@/lib/rarity";
+export type { Rarity } from "@/lib/rarity";
 
 export const RARITY_META: Record<
   Rarity,
   { label: string; color: string; weight: number; barW: number }
 > = {
   // `color` is the GUI sheet's --gui-rarity-* token (styles/game-tokens.css): one palette for the card, the journal and the book.
-  common: { label: "Common", color: "#c9bd9f", weight: 100, barW: 0.3 },
-  uncommon: { label: "Uncommon", color: "#8ac68a", weight: 48, barW: 0.27 },
-  rare: { label: "Rare", color: "#889df0", weight: 18, barW: 0.24 },
-  epic: { label: "Epic", color: "#b77dee", weight: 7, barW: 0.21 },
-  legendary: { label: "Legendary", color: "#f7cd67", weight: 2.5, barW: 0.19 },
-  seaking: { label: "Sea King", color: "#7fd6dc", weight: 1, barW: 0.17 },
+  common: { label: RARITY_LABEL.common, color: "#c9bd9f", weight: 100, barW: 0.3 },
+  uncommon: { label: RARITY_LABEL.uncommon, color: "#8ac68a", weight: 48, barW: 0.27 },
+  rare: { label: RARITY_LABEL.rare, color: "#889df0", weight: 18, barW: 0.24 },
+  epic: { label: RARITY_LABEL.epic, color: "#b77dee", weight: 7, barW: 0.21 },
+  legendary: { label: RARITY_LABEL.legendary, color: "#f7cd67", weight: 2.5, barW: 0.19 },
+  divine: { label: RARITY_LABEL.divine, color: "#7fd6dc", weight: 0.4, barW: 0.17 },
+  // Shut until its earning path is decided (lib/rarity.ts): never rolled.
+  contraband: { label: RARITY_LABEL.contraband, color: "#3b2436", weight: 0, barW: 0.15 },
 };
 
 /** Per-species reel behavior — track space is 0..1, speeds in track/s. */
@@ -91,7 +86,7 @@ export function iconFor(f: FishDef): string {
 // ACNH revamp 2026-07: species-true river catches (models shown in-world by
 // FishCatchFX). New species are one row here + one in CollectionBook once
 // their model/icon ships (the dump's Creatures/ set has more to extract;
-// the next marquee fish takes the Sea King crown).
+// the next marquee fish takes the Divine crown).
 const CORE_FISH: FishRow[] = [
   { key: "fish_dace", label: "a Dace", name: "Dace", model: "/assets/acnh/fish/dace.glb", move: { speed: 0.2, accel: 0.9, jitter: 0.004, dartChance: 0.08, dartMul: 1.8, retargetMs: 1900 } },
   { key: "fish_pale_chub", label: "a Pale Chub", name: "Pale Chub", model: "/assets/acnh/fish/pale-chub.glb", move: { speed: 0.22, accel: 0.9, jitter: 0.006, dartChance: 0.1, dartMul: 1.9, retargetMs: 1800 } },
@@ -116,7 +111,7 @@ const CORE_FISH: FishRow[] = [
   // Golden Arowana (2026-07-24): the last unconverted species model in the
   // dump (ArowanaGold recolor) — closes the fish roster at 81.
   { key: "fish_golden_arowana", label: "a Golden Arowana", name: "Golden Arowana", model: "/assets/acnh/fish/golden-arowana.glb", raw: true, move: { speed: 0.42, accel: 2.1, jitter: 0.01, dartChance: 0.32, dartMul: 2.4, retargetMs: 980 } },
-  // Rarity rerank (David ruling 2026-07-24): SEA KING IS VACANT — David is
+  // Rarity rerank (David ruling 2026-07-24): DIVINE (was Sea King) IS VACANT — David is
   // supplying new marquee models for the tier; the arapaima drops to epic
   // (keeping its king-sized fight). Legendary is deliberately tight: the
   // three goldens + Stringfish + Coelacanth/Hammerhead/Sturgeon.
@@ -265,7 +260,8 @@ export const REVEAL: Record<Rarity, { develop: number; hold: number; confetti: n
   rare: { develop: 700, hold: 3600, confetti: 1, shake: 0.04 },
   epic: { develop: 850, hold: 4000, confetti: 2, shake: 0.05 },
   legendary: { develop: 1000, hold: 4600, confetti: 3, shake: 0.06 },
-  seaking: { develop: 1200, hold: 5200, confetti: 4, shake: 0.07 },
+  divine: { develop: 1200, hold: 5200, confetti: 4, shake: 0.07 },
+  contraband: { develop: 1300, hold: 5400, confetti: 4, shake: 0.075 },
 };
 
 /** "1 in N" odds for a species under the current hour/weather pool. */

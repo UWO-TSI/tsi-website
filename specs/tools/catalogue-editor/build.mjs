@@ -12,11 +12,11 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url)), web = join(here, "../../../web"), out = join(here, "dist");
 const { createJiti } = createRequire(join(web, "package.json"))("jiti");
 const jiti = createJiti(join(web, "lib"), { alias: { "@": web } });
-const { ROSTER, WATER_BIOMES, LAND_BIOMES, WEATHERS, RARITY_RANK } = await jiti.import(join(web, "lib/collections/roster.ts"));
+const { ROSTER, WATER_BIOMES, LAND_BIOMES, WEATHERS, PLAYER_RARITIES } = await jiti.import(join(web, "lib/collections/roster.ts"));
 const { SELL_PRICES } = await jiti.import(join(web, "lib/wallet/catalogue.ts"));
 // The GUI sheet's rarity palette (styles/game-tokens.css), the colours the game's cards use.
 const tokens = readFileSync(join(web, "styles/game-tokens.css"), "utf8");
-const colors = Object.fromEntries(Object.keys(RARITY_RANK).map(r => [r, tokens.match(new RegExp(`--gui-rarity-${r}:\\s*(#[0-9a-f]{6})`, "i"))[1]]));
+const colors = Object.fromEntries(PLAYER_RARITIES.map(r => [r, tokens.match(new RegExp(`--gui-rarity-${r}:\\s*(#[0-9a-f]{6})`, "i"))[1]]));
 
 rmSync(out, { recursive: true, force: true });
 mkdirSync(join(out, "icons"), { recursive: true });
@@ -25,7 +25,7 @@ const species = ROSTER.map(({ key, category, sub, name, biome, tool, rarity, siz
   return { key, category, sub, name, biome, tool, rarity, size, hours, rainAnyHour, weather, months, oneLiner, price: price ?? null };
 });
 const sha = execSync("git rev-parse --short HEAD", { cwd: here }).toString().trim();
-const data = { species, sellPrices: SELL_PRICES, rarities: Object.keys(RARITY_RANK), colors, waterBiomes: WATER_BIOMES, landBiomes: LAND_BIOMES, weathers: WEATHERS, built: `${new Date().toISOString().slice(0, 10)} at ${sha}` };
+const data = { species, sellPrices: SELL_PRICES, rarities: PLAYER_RARITIES, colors, waterBiomes: WATER_BIOMES, landBiomes: LAND_BIOMES, weathers: WEATHERS, built: `${new Date().toISOString().slice(0, 10)} at ${sha}` };
 writeFileSync(join(out, "data.js"), `window.CATALOGUE = ${JSON.stringify(data)};\n`);
 copyFileSync(join(here, "index.html"), join(out, "index.html"));
 copyFileSync(join(here, "app.js"), join(out, "app.js"));

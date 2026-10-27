@@ -37,14 +37,14 @@ const unique = (a) => new Set(a).size === a.length;
 
 /** Every problem with the edits, as "key.field: why"; empty when all are good. */
 export function check(edits, game) {
-  const { ROSTER, RARITY_RANK, WATER_BIOMES, LAND_BIOMES, WEATHERS } = game, by = new Map(ROSTER.map((s) => [s.key, s])), bad = [];
+  const { ROSTER, PLAYER_RARITIES, WATER_BIOMES, LAND_BIOMES, WEATHERS } = game, by = new Map(ROSTER.map((s) => [s.key, s])), bad = [];
   for (const [key, e] of edits) {
     const s = by.get(key);
     if (!s) { bad.push(`${key}: not a species in the roster`); continue; }
     if (!e || typeof e !== "object" || Array.isArray(e)) { bad.push(`${key}: not an object of fields`); continue; }
     for (const [f, v] of Object.entries(e)) {
       const why = {
-        rarity: () => (v in RARITY_RANK ? null : `one of ${Object.keys(RARITY_RANK).join(", ")}`),
+        rarity: () => (PLAYER_RARITIES.includes(v) ? null : `one of ${PLAYER_RARITIES.join(", ")}`),
         price: () => (v === null || isInt(v, 1, 1e6) ? null : "a whole number of coins above 0, or null for the rarity table"),
         hours: () => (v === null || (Array.isArray(v) && v.length === 2 && isInt(v[0], 0, 23) && isInt(v[1], 1, 24) && v[0] !== v[1] % 24) ? null : "null (all day) or [start 0-23, end 1-24], start and end different"),
         months: () => (Array.isArray(v) && v.every((m) => isInt(m, 1, 12)) && unique(v) ? null : "months 1 to 12, each once ([] for all year)"),

@@ -40,7 +40,18 @@ David, verbatim: "you need to redo the legendary i shouldnt see any legendary ye
 
 ## Status
 
-Head: see `git log -1` on game/catalogue-editor (the lane file commit after 0c9c9495). Ready to publish; reported to main.
+Head: see `git log -1` on game/catalogue-editor. Round 2 in progress (merge of cb7bed43 done, re-tier done, gates running); round 1 was published.
+
+Round 2 done:
+- Merged cb7bed43 (rarity ladder with Divine). Conflicts in roster.ts and fishing.ts resolved by keeping the roster-derived reel rows and the ladder's type.
+- Re-tier: the seven legendary fish (golden koi, golden trout, stringfish, coelacanth, sturgeon, golden arowana, hammerhead) are epic in roster.ts; no species is legendary. New seed `20261027185416_catalogue_seed.sql` (added with the ladder, sell-price and 183120 migrations to sql-smoke.sh GAME).
+- The rod gate now applies to epic and up (`canHook`, `TOP_FISH_ROD_TIER` replaces LEGENDARY_ROD_TIER). Note: the old epics (catfish, gar, king salmon, arapaima ...) are gated too.
+- Epic hourly cap is 6 (was legendary 3) for the ex-legendaries; recipe drop chance for them is the epic 0.05 (was legendary 0.15). The `legendary` tier stays in the tables for later.
+- Sell price of the ex-legendaries is the epic table price (180) until David sets one: unit tests and SQL smokes updated (033, backpack, catch_rolls, recipe_drops, game_security, species_sell_price).
+- Page: the picker offers common to Divine (`PLAYER_RARITIES` in roster.ts, Contraband out); apply-species.mjs refuses Contraband.
+- Known, not mine: SQL `collections_record_catch` caps an unknown tier (divine) at 60 per hour (ELSE), TS says 3.
+
+Round 1 (below) is unchanged.
 
 Done:
 - **The page:** `specs/tools/catalogue-editor/{index.html,app.js,build.mjs,check.mjs}`. `node specs/tools/catalogue-editor/build.mjs` writes `dist/` (gitignored): index.html, app.js, data.js (the roster, SELL_PRICES, biome/weather lists, the GUI rarity colours), icons/<key>.webp (141 species, all with the game's icons). 144 files, 0.76 MB. Tabs per kind with changed counts, search across every kind, per species: rarity, sell price (own price or the rarity table, "Use the rarity table" clears it), 24-hour bar (handles, paint across, keyboard arrows, all day, wraps midnight), months + all year, biome (water biomes for rod catches, land for the rest), weather + any, rain any hour, size (where it has one), one-liner; "was ..." beside each change, per-species reset. db: collection `species`, one doc per key holding only changed fields; deleted on reset; read on load (unknown keys and fields equal to the game dropped). db null: an alert says it can't save.

@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { glbStats, readGlb } from "@/lib/game/perf/glbStats";
 import { CHARACTER_BUDGET } from "@/lib/game/perf/budget";
-import { BASE_URL, BATCH2_PRICES, COLOUR_ATLAS_URL, CUSTOM_HAIR_REF, HAIR_MAPS_URLS, HAIR_THUMB_URL, NATURAL_HAIR, naturalHex, OLD_HAIR, LOD_SKIN_URL, CLIPS, DEFAULT_LOOK, FACE, FACE_ATLAS2_URLS, FACE_ATLAS_URLS, PALETTE, PARTS, PART_BY_ID, bodyKey, faceRef, facePartRef, hairHex, lookBytes, lookRefs, parseLook, partRef, priceOf, randomLook, resolveParts, seeded, STARTER_PARTS, unlockRef, wear, wornParts } from "./look";
+import { BASE_URL, BATCH2_PRICES, COLOUR_ATLAS_URL, CUSTOM_HAIR_REF, HAIR_MAPS_URLS, HAIR_THUMB_URL, NATURAL_HAIR, naturalHex, OLD_HAIR, LOD_SKIN_URL, CLIPS, DEFAULT_LOOK, FACE, FACE_ATLAS2_URLS, FACE_ATLAS_URLS, PALETTE, PARTS, PART_BY_ID, bodyKey, faceRef, facePartRef, hairHex, lookBytes, lookRefs, parseLook, partRef, priceOf, randomLook, resolveParts, seeded, SKIN_PICKS, STARTER_PARTS, unlockRef, wear, wornParts } from "./look";
 import { LOOK_MAX_BYTES } from "@/lib/net/protocol";
 import { hairShift, NO_SHIFT, shiftedMedian } from "./hairColour";
 
@@ -71,7 +71,9 @@ describe("character catalogue", () => {
       if (p.variantOf) expect(PART_BY_ID.has(p.variantOf)).toBe(true);
       for (const m of p.materials) if (m.tint === "outfit") expect(m.default as number).toBeLessThan(PALETTE.outfit.length);
     }
-    expect([PALETTE.skin.length, PALETTE.hair.length, PALETTE.outfit.length]).toEqual([12, 12, 16]);
+    expect([PALETTE.skin.length, PALETTE.hair.length, PALETTE.outfit.length]).toEqual([12, 13, 16]);
+    // Hair colours are saved and sold by index: the dyes (6-11, the shop's hair:6..hair:11) never move; ginger was appended.
+    expect(PALETTE.hair.slice(6, 12)).toEqual(["#EBCB8B", "#C25B3A", "#9E3B2E", "#8A8F99", "#F0A3B5", "#6F8FC9"]);
     expect(CLIPS.map(c => c.name)).toEqual(expect.arrayContaining(["Idle", "Walk", "Run", "Sit", "Study", "Sleep", "Fish", "FishHold", "Forage", "Dig", "Net", "Wave", "Cheer", "Laugh", "Sad", "Dance", "AttackMelee", "AttackBow", "AttackCast", "DodgeRoll", "Hit", "Defeat", "Trace", "Stretch"]));
     const A = FACE.anchors;
     const cells: [string, number[], [number, number]][] = [
@@ -131,6 +133,12 @@ describe("looks", () => {
     expect(parseLook(null)).toEqual(DEFAULT_LOOK);
     const look = parseLook({ skin: 5, hair: 99, eyes: "F1.2", mouth: "nope", bangs: "back_bob", top: "top_hoodie", acc: { head: "acc_cap", face: "acc_cap" }, colors: { top_hoodie: 3, bogus: 1 } });
     expect(look).toMatchObject({ skin: 5, hair: DEFAULT_LOOK.hair, eyes: "F1.2", mouth: "M1.1", bangs: DEFAULT_LOOK.bangs, top: "top_hoodie", acc: { head: "acc_cap" }, colors: { top_hoodie: 3 } });
+  });
+  it("the two darkest skins (10, 11) are no longer offered: a saved one loads as 9, random looks never pick them", () => {
+    expect(SKIN_PICKS).toBe(10);
+    expect([parseLook({ skin: 10 }).skin, parseLook({ skin: 11 }).skin, parseLook({ skin: 9 }).skin]).toEqual([9, 9, 9]);
+    const skins = new Set(Array.from({ length: 400 }, (_, i) => randomLook(seeded(i)).skin));
+    expect([...skins].sort((a, b) => a - b)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
   });
   it("a one-piece replaces top and bottom, and a top brings the pair back", () => {
     const dress = wear(DEFAULT_LOOK, "onepiece", "onepiece_sundress");
@@ -270,6 +278,7 @@ describe("a custom hair colour from the colour wheel (head-v10, row 311)", () =>
     expect(lookRefs({ ...DEFAULT_LOOK, hairColor: "#123456" })).toEqual([...lookRefs(DEFAULT_LOOK), CUSTOM_HAIR_REF]);
     expect(CUSTOM_HAIR_REF).toBe("colour-wheel");
     expect(lookRefs({ ...DEFAULT_LOOK, hair: 10 })).toEqual([...lookRefs(DEFAULT_LOOK), "hair:10"]);   // a preset dye: that dye
+    expect(lookRefs({ ...DEFAULT_LOOK, hair: 12 })).toEqual(lookRefs(DEFAULT_LOOK));   // ginger: free, after the dyes
     const heavy = randomLook(seeded(7));
     expect(lookBytes({ ...heavy, hairColor: "#ABCDEF" })).toBeLessThan(LOOK_MAX_BYTES);
   });

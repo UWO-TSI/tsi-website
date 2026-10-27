@@ -49,6 +49,12 @@ describe("apply-species", () => {
     ]);
   });
 
+  it("takes common to Divine and refuses Contraband", async () => {
+    const game = await loadGame();
+    expect(check(editsOf({ fish_dace: { rarity: "divine" }, bug_ladybug: { rarity: "legendary" } }), game)).toEqual([]);
+    expect(check(editsOf({ fish_dace: { rarity: "contraband" } }), game).map((b: string) => b.slice(0, b.indexOf(":")))).toEqual(["fish_dace.rarity"]);
+  });
+
   it("reads the export as a map or a list", () => {
     expect([...editsOf({ fish_dace: { rarity: "rare" } })]).toEqual([["fish_dace", { rarity: "rare" }]]);
     expect([...editsOf({ docs: [{ id: "fish_dace", rarity: "rare" }] })]).toEqual([["fish_dace", { rarity: "rare" }]]);

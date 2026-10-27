@@ -8,7 +8,8 @@
  * The pickup's fly-in into the Bag (BagButton) is the bag's; the card sits beside it and says what it was.
  */
 import type { SFXName } from "./audio";
-import { ROSTER, type Rarity } from "@/lib/collections/roster";
+import { ROSTER } from "@/lib/collections/roster";
+import { RARITY_RANK as RANK, isRarity, type Rarity } from "@/lib/rarity";
 import { CRAFTED_ITEMS, MATERIALS, RECIPES } from "@/lib/crafting/recipes";
 import { TREATS } from "@/lib/collections/treats";
 import { CATALOGUE } from "@/lib/wallet/catalogue";
@@ -41,7 +42,6 @@ const ICON = new Map<string, string>([...CATALOGUE, ...CRAFTED_ITEMS].map(c => [
 for (const w of WEAPONS) ICON.set(w.key, iconUrl(w.key));
 /** A made thing's art: its shop row's icon (furniture, tools, clothes) or the weapon's. */
 export const madeIcon = (key: string) => ICON.get(key) ?? iconUrl(key);
-const RARITIES: readonly Rarity[] = ["common", "uncommon", "rare", "epic", "legendary"];
 
 const str = (v: unknown, max = 120) => (typeof v === "string" && v.trim() && v.length <= max ? v : null);
 const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
@@ -61,7 +61,7 @@ export function rewardOf(type: string, detail: unknown): Reward | null {
     const key = str(d.key, 64), name = str(d.name);
     if (!key || !name) return null;
     const kind: RewardKind = d.bug === true || d.kind === "bug" ? "bug" : d.kind === "dig" ? "dig" : "forage";
-    const rarity = RARITIES.includes(d.rarity as Rarity) ? (d.rarity as Rarity) : SPECIES.get(key)?.rarity ?? null;
+    const rarity = isRarity(d.rarity) ? d.rarity : SPECIES.get(key)?.rarity ?? null;
     const isNew = d.isNew === true;
     return { kind, key, name, icon: iconUrl(key), rarity, size: num(d.size), isNew,
       title: isNew ? "New!" : kind === "bug" ? "Caught" : kind === "dig" ? "Dug up" : "Found",
@@ -90,7 +90,6 @@ export function rewardOf(type: string, detail: unknown): Reward | null {
   return null;
 }
 
-const RANK: Record<Rarity, number> = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 };
 /** The card's chime: the success sound, a little lower and fuller the rarer the find (never a dialogue blip or a door). */
 export function rewardSound(r: Reward): { name: SFXName; rate: number; gain: number } {
   const k = r.rarity ? RANK[r.rarity] : r.kind === "craft" || r.kind === "bottle" ? 1 : 0;

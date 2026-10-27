@@ -93,6 +93,8 @@ try {
   await field("Rarity").getByRole("button", { name: "Epic" }).click();
   await settle();
   expect(JSON.stringify(await writes()) === JSON.stringify([["species", "fish_dace", { rarity: "epic" }]]), `a rarity click saves the doc: ${JSON.stringify(await writes())}`);
+  expect(JSON.stringify(await field("Rarity").getByRole("button").allTextContents()) === JSON.stringify(["Common", "Uncommon", "Rare", "Epic", "Legendary", "Divine"]), "the picker offers common to Divine, no Contraband");
+  expect(!JSON.parse(readFileSync(join(dist, "data.js"), "utf8").slice("window.CATALOGUE = ".length, -2)).species.some(s => s.rarity === "legendary"), "no species is legendary");
   expect((await field("Sell price").locator("input").inputValue()) === "180", "the price follows the rarity table (epic fish 180)");
   await field("Sell price").locator("input").fill("77");
   await field("Sell price").locator("input").press("Enter");

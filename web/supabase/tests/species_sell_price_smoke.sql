@@ -10,7 +10,7 @@ DECLARE M uuid := '00000000-0000-4000-8000-0000000005a1';
 BEGIN
   INSERT INTO member_collections (user_id, item_key, count) VALUES (M, 'fish_golden_koi', 3);
   ASSERT (SELECT sell_price FROM collection_species WHERE key = 'fish_golden_koi') IS NULL, 'no own price: the seed sets none';
-  ASSERT (SELECT paid FROM economy_sell(M, 'fish_golden_koi', 1, 'smoke-price-01')) = 600, 'no own price: legendary fish, 600';
+  ASSERT (SELECT paid FROM economy_sell(M, 'fish_golden_koi', 1, 'smoke-price-01')) = 180, 'no own price: epic fish, 180';
   UPDATE collection_species SET sell_price = 777 WHERE key = 'fish_golden_koi';
   ASSERT (SELECT paid FROM economy_sell(M, 'fish_golden_koi', 2, 'smoke-price-02')) = 1554, 'its own price, per item';
   ASSERT (SELECT paid FROM economy_sell(M, 'fish_golden_koi', 2, 'smoke-price-02')) = 1554, 'a replay pays nothing new';

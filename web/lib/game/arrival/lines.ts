@@ -17,12 +17,12 @@ export const BOAT_LINES = {
   reflection: "Have a look in the water. Who's that, then?",
   /** A few choices in. */
   coming: "There. Coming back to you, is it?",
-  /** At Yes. */
+  /** At "That's me". */
   yes: "That's you. Hold on, we're going in.",
 } as const;
 
-/** The "Yes" pill on the water. */
-export const YES_LABEL = "Yes";
+/** The confirm pill on the water. */
+export const YES_LABEL = "That's me";
 
 /**
  * The walk-along v2 (playtest round 1, David's walk-along note), by stop id (routes/): what Bram says when you talk to

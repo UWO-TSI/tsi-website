@@ -19,7 +19,7 @@ describe("roster", () => {
     expect([count("fish"), count("bug"), count("fruit"), count("nature"), count("mineral")]).toEqual([40, 20, 8, 15, 5]);
     expect(new Set(ROSTER.map((s) => s.key)).size).toBe(ROSTER.length);
     expect(new Set(ROSTER.filter((s) => s.category === "fish").map((s) => s.biome))).toEqual(new Set(["river", "pond", "cliff_pool", "sea"]));
-    expect(new Set(ROSTER.filter((s) => s.category === "fish").map((s) => s.rarity)).size).toBe(5);
+    expect(new Set(ROSTER.filter((s) => s.category === "fish").map((s) => s.rarity))).toEqual(new Set(["common", "uncommon", "rare", "epic"])); // no legendary yet (David, 2026-10-27)
   });
   it("gives the reel the roster's rarity, size and hours, and every fish the reel lands is on it (row 260)", () => {
     expect(FISH.filter((f) => !ROSTER.some((s) => s.key === f.key)).map((f) => f.key)).toEqual([]);
@@ -28,7 +28,7 @@ describe("roster", () => {
       const f = fish.get(s.key);
       expect(f, s.key).toBeDefined();
       expect(s.size, s.key).toEqual(f!.sizeCm);
-      expect(s.rarity, s.key).toBe(f!.rarity === "seaking" ? "legendary" : f!.rarity);
+      expect(s.rarity, s.key).toBe(f!.rarity);
       // Plain windows must agree with the reel's own availability gate.
       if (!f!.when) expect(s.hours, s.key).toBeNull();
       for (const weather of ["clear", "rain"] as const) {
@@ -139,17 +139,17 @@ describe("weekly trophy case (row 204)", () => {
     const C = "c";
     const t = weeklyTrophies(ROSTER, [
       best(A, "fish_dace", 12), best(B, "fish_dace", 17), // Jordan's bigger dace wins the species
-      best(A, "fish_coelacanth", 130), // legendary first
+      best(A, "fish_coelacanth", 130), // epic, ranked by size-to-max with the other epics
       best(A, "fish_tuna", 240), best(A, "fish_catfish", 60), // Maya capped at 2
       best(C, "fish_catfish", 100), // Priya's catfish beats Maya's
       best(C, "fish_salmon", 80), best(B, "fish_pike", 50),
       best(A, "flower_rose", 9), // not a catch
     ]);
     expect(t.map((x) => [x.key, x.member_name])).toEqual([
-      ["fish_coelacanth", "Maya"], ["fish_tuna", "Maya"], ["fish_catfish", "Priya"], ["fish_pike", "Jordan"], ["fish_salmon", "Priya"], ["fish_dace", "Jordan"],
+      ["fish_tuna", "Maya"], ["fish_catfish", "Priya"], ["fish_coelacanth", "Maya"], ["fish_pike", "Jordan"], ["fish_salmon", "Priya"], ["fish_dace", "Jordan"],
     ]);
     expect(t.filter((x) => x.member_name === "Maya")).toHaveLength(2);
-    expect(t[0]).toMatchObject({ rank: 1, rarity: "legendary", size_ratio: 0.17 });
+    expect(t[2]).toMatchObject({ rank: 3, rarity: "epic", size_ratio: 0.17 });
   });
   it("breaks equal sizes by who caught it first and caps the wall at six", () => {
     const t = weeklyTrophies(ROSTER, [best(B, "fish_dace", 15, "2026-09-23T10:00:00Z"), best(A, "fish_dace", 15, "2026-09-22T10:00:00Z")]);

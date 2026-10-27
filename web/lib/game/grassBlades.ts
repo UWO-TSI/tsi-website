@@ -17,15 +17,24 @@ function rng(seed: number) {
 
 interface Blade { x: number; lean: number; curl: number; height: number; width: number; tone: number }
 
-/** The four clumps: tall and fine, broad and leafy, a short dense tuft, a loose fan with a long blade through it. */
-function clump(variant: number): Blade[] {
-  const r = rng(9173 + variant * 7919);
-  const shapes = [
+/**
+ * The four clumps: tall and fine, broad and leafy, a short dense tuft, a loose fan with a long blade through it. `long`
+ * (the new world's meadow; David, 2026-10-26: "longer blades of grass"): a few long, thin blades a clump, tapering to
+ * a point, the card stretched tall in the shader so they read as single blades rather than a tuft.
+ */
+function clump(variant: number, long: boolean): Blade[] {
+  const r = rng(9173 + variant * 7919 + (long ? 104729 : 0));
+  const shapes = (long ? [
+    { count: 3, height: [0.8, 1], width: [0.17, 0.21], spread: 0.22, lean: 0.12 },
+    { count: 4, height: [0.66, 1], width: [0.15, 0.19], spread: 0.28, lean: 0.14 },
+    { count: 2, height: [0.86, 1], width: [0.19, 0.23], spread: 0.16, lean: 0.1 },
+    { count: 3, height: [0.55, 0.95], width: [0.16, 0.2], spread: 0.3, lean: 0.16 },
+  ] : [
     { count: 6, height: [0.72, 1], width: [0.09, 0.12], spread: 0.3, lean: 0.1 },
     { count: 4, height: [0.62, 0.92], width: [0.15, 0.19], spread: 0.26, lean: 0.14 },
     { count: 7, height: [0.42, 0.66], width: [0.1, 0.13], spread: 0.32, lean: 0.16 },
     { count: 5, height: [0.5, 0.95], width: [0.1, 0.13], spread: 0.3, lean: 0.18 },
-  ][variant];
+  ])[variant];
   const out: Blade[] = [];
   for (let i = 0; i < shapes.count; i++) {
     const t = shapes.count > 1 ? i / (shapes.count - 1) : 0.5;
@@ -37,28 +46,31 @@ function clump(variant: number): Blade[] {
       curl: (r() - 0.5) * 0.18,
       height: shapes.height[0] + r() * (shapes.height[1] - shapes.height[0]),
       width: shapes.width[0] + r() * (shapes.width[1] - shapes.width[0]),
-      tone: 0.82 + r() * 0.22,
+      // The long blades keep one even tone: their colour is the ground's (GrassField), so only a little separation.
+      tone: long ? 0.92 + r() * 0.1 : 0.82 + r() * 0.22,
     });
   }
   // The long blade through the loose fan.
-  if (variant === 3) out.push({ x: 0.52, lean: 0.06, curl: 0.08, height: 1, width: 0.11, tone: 1.02 });
+  if (variant === 3 && !long) out.push({ x: 0.52, lean: 0.06, curl: 0.08, height: 1, width: 0.11, tone: 1.02 });
   return out;
 }
 
 /**
  * RGBA bytes, BLADE_VARIANTS × BLADE_SIZE wide and BLADE_SIZE tall, row 0 at the blades' roots (v = 0 in the shader).
  */
-export function bladeTexture(): Uint8Array {
+export function bladeTexture(long = false): Uint8Array {
   const W = BLADE_SIZE * BLADE_VARIANTS, H = BLADE_SIZE, out = new Uint8Array(W * H * 4);
   /** Signed distance band (in texels) the alpha ramps over. */
   const EDGE = 3;
   const STEPS = 24;
   for (let v = 0; v < BLADE_VARIANTS; v++) {
-    const blades = clump(v);
+    const blades = clump(v, long);
+    // A long blade tapers all the way to a point; the tufts' stay blunt.
+    const taper = long ? 1.15 : 0.75;
     // Each blade's spine, sampled: (x, y) in 0..1 of the cell, and the half width there.
     const spines = blades.map(b => Array.from({ length: STEPS + 1 }, (_, i) => {
       const t = i / STEPS;
-      return { x: b.x + b.lean * t * t + b.curl * Math.sin(t * Math.PI), y: b.height * t, half: (b.width / 2) * Math.pow(1 - t, 0.75) + 0.002 };
+      return { x: b.x + b.lean * t * t + b.curl * Math.sin(t * Math.PI), y: b.height * t, half: (b.width / 2) * Math.pow(1 - t, taper) + 0.002 };
     }));
     for (let py = 0; py < H; py++) for (let px = 0; px < BLADE_SIZE; px++) {
       const x = (px + 0.5) / BLADE_SIZE, y = (py + 0.5) / BLADE_SIZE;
