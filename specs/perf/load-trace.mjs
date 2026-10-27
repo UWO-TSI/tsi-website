@@ -166,7 +166,7 @@ async function play(record) {
 if (CACHE === "warm") {
   await page.goto(`${BASE}/student`);
   await waitMark("title ready", 120000);
-  await page.goto(`${BASE}/student/dashboard?arrival=1`);
+  await page.goto(`${BASE}/student/dashboard?arrival=1${process.env.TIME ? `&time=${process.env.TIME}` : ""}`);
   await play(false);
   await page.goto("about:blank");
 }
@@ -180,7 +180,7 @@ const title = await pageData();
 
 // Signed in: the island (as /student/go sends a member), with the arrival.
 if (PROFILE) { await cdp.send("Profiler.enable"); await cdp.send("Profiler.setSamplingInterval", { interval: 500 }); await cdp.send("Profiler.start"); }
-await page.goto(`${BASE}/student/dashboard?arrival=1`, { waitUntil: "commit" });
+await page.goto(`${BASE}/student/dashboard?arrival=1${process.env.TIME ? `&time=${process.env.TIME}` : ""}`, { waitUntil: "commit" });
 await play(true);
 const world = await pageData();
 let profile = null, endPage = 0;

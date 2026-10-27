@@ -44,21 +44,28 @@ function uploadTextures(gl: THREE.WebGLRenderer, scene: THREE.Scene) {
 
 /**
  * Lights that come and go with the time of day (IslandAtmosphere's rim, at dawn and dusk): a light count changing
- * relinks every lit material. Each material keeps the programs it has had, so compiling once more with it toggled
- * makes the switch free later, at no cost to any frame.
+ * relinks every lit material. Each material keeps the programs it has had, so compiling it once more for the other
+ * light count makes the switch free later, at no cost to any frame. The live scene is never touched: the other count
+ * is a stand-in set of lights (copies on their own layer, the rim added or left out) that the compile reads instead.
  */
 const TRANSIENT_LIGHTS = ["rim"];
+const STAND_IN = 30;
+
+function otherLights(scene: THREE.Scene, name: string): THREE.Scene {
+  const stand = new THREE.Scene(), there = scene.getObjectByName(name);
+  stand.fog = scene.fog; stand.environment = scene.environment;
+  scene.traverseVisible(o => { if ((o as THREE.Light).isLight && o !== there) { const c = o.clone(false); c.layers.set(STAND_IN); stand.add(c); } });
+  if (!there) { const c = new THREE.DirectionalLight(0x000000, 0); c.layers.set(STAND_IN); stand.add(c); }
+  return stand;
+}
 
 export async function warmHidden(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) {
   uploadTextures(gl, scene);
   await gl.compileAsync(scene, camera);
-  for (const name of TRANSIENT_LIGHTS) {
-    const there = scene.getObjectByName(name);
-    if (!there && !scene.getObjectByProperty("type", "HemisphereLight")) continue; // not a lit island scene
-    const stand = there ? null : Object.assign(new THREE.DirectionalLight(0x000000, 0), { name });
-    if (there) there.visible = false; else scene.add(stand!);
-    try { await gl.compileAsync(scene, camera); } finally { if (there) there.visible = true; else scene.remove(stand!); }
-  }
+  if (!scene.getObjectByProperty("type", "HemisphereLight")) return; // not a lit island scene
+  const eye = camera.clone();
+  eye.layers.set(STAND_IN);
+  for (const name of TRANSIENT_LIGHTS) await gl.compileAsync(scene, eye, otherLights(scene, name));
 }
 
 export function WarmupProbe({ onReady }: { onReady: () => void }) {
