@@ -28,6 +28,22 @@ Worktree `.claude/worktrees/launch-check`, branch `game/launch-check`, cut from 
   - Cleanup: 5 tables' set-null rows by id, the 3 users (200 each); verify 0 rows left (`run2/cleanup-proof.txt`).
   - New in the script: `bench` (a phase of its own too) and `sushiBar` steps; spots.ts gives the bar's entrance, exit, stools and the fire's benches with routes.
 
+## Run 3 (2026-10-27, night): production main 5e599116 (names, looks, collision, Alice, the hair shop)
+
+The coordinator merged and deployed David's production fixes. Run the two-account check again on play.tethos.ca, with the third account where it's needed. Same script, same throwaway accounts, the same cleanup with proof by counts (keys never printed or logged), under the browser lock. Add steps for:
+
+1. **Names and looks** (net-identity, `specs/lanes/net-identity.md`; its harness `realtime/scripts/cardHarness.ts` and `specs/evidence/net-identity/shoot.mjs` show the flow):
+   - A makes a character in the first creator with a non-default look (hairstyle, hair colour and skin) and a world name. Confirming with the name field empty must say "The island needs a name for you." and not save.
+   - B must see A's world name on A's tag, and A's hair and skin, within about 15 s without rejoining. Check the remote's look through the dev hook if it's there; in production, compare screenshots and the name tag.
+   - B changes name and look in the wardrobe (its new name field); A sees both within about 15 s.
+   - C joins later and sees both at join.
+2. **The wharf deck's edge:** walk and sprint at three deck edges over the sea; you stop at the edge and never drop into the water.
+3. **Hitboxes:** run into the plaza fountain, a plaza bench, a lamp post and a plaza building's wall; you're stopped at what's drawn. A building's door prompt still shows. The campfire stops you at its stone ring, and the dance circle round it stays open.
+4. **Alice:** the HQ resident's name tag and dialogue say Alice. The settle-in chapter's step reads "Report back to Alice at HQ".
+5. **Hair shop:** Baby sprout, Layered shag, Swept fringe and V-kei layers are on sale at 350 coins; Wavy half-up isn't sold.
+
+Everything from runs 1 and 2 stays in the script; run it all. Evidence in `specs/evidence/launch-check/run3/`. Report the counts per phase, every fail with its reason, and the cleanup proof.
+
 ## Next
 
 1. **Fix `web/app/api/collections/route.test.ts` for the new world.** With `NEXT_PUBLIC_GAME_WORLD=new`, 21 tests fail with 422, because they cast at village coordinates. The server rightly refuses a spot that isn't water in the active world.
