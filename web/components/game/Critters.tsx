@@ -7,6 +7,7 @@
  */
 
 import { useGLTF } from "@react-three/drei";
+import { worldModel } from "@/lib/game/world/active";
 
 type Motion = "flutter" | "dart" | "perch" | "drift" | "crawl";
 
@@ -44,4 +45,5 @@ export const SPECIES: Species[] = [
   { key: "shore_gazami_crab", label: "a Gazami Crab", model: "/assets/acnh/props/crab-gazami.glb", motion: "crawl", scale: 1, baseY: 0.03, phases: ["day"], weight: 2, zone: "beach" },
   { key: "shore_hermit_crab", label: "a Hermit Crab", model: "/assets/acnh/props/crab-hermit.glb", motion: "crawl", scale: 1, baseY: 0.03, phases: ["day", "night"], weight: 2, zone: "beach" },
 ];
-SPECIES.forEach((s) => useGLTF.preload(s.model));
+// The world draws our cheap ones in the new world (VillageLife); these, the old, are for the close-ups (the trophy case).
+SPECIES.forEach((s) => useGLTF.preload(worldModel(s.model)));

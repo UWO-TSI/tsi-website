@@ -1,7 +1,9 @@
-"""The island's flying critters, remodelled as ours (game/remodel; David, 2026-10-27): the six butterflies and two
-dragonflies that fly in the ambient life (lib/game/ambientFauna.ts) and that players catch (components/game/Critters.tsx),
-in place of the dump's (acnh/critters/). Our own shapes: a soft round body, big simple wings drawn as one polar shape a
-side, every species told apart by its wing shape and a few bold marks (no fine scales, no copied patterns).
+"""The island's flying critters as ours, the cheap world versions (game/remodel; David, 2026-10-27, round 2: "i think they
+should be small less triangles in game cuz theyre small but the close up model of the butter flies need to be the
+before"): the six butterflies and two dragonflies that fly in the ambient life (lib/game/ambientFauna.ts) and the
+catchable ones in the grass (components/game/peaceful/VillageLife.tsx), in the new world only. Every close-up (the trophy
+case, the item icons) keeps the dump's (acnh/critters/). A soft round body, big simple wings drawn as one polar shape a
+side, every species told apart by its wing shape and a few bold marks; about 130 triangles a butterfly, 120 a dragonfly.
 
   /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P art/remodel/build_critters.py
 
@@ -176,7 +178,7 @@ def tile_uv(name, u, v, rows):
     return ((c + u) / COLS, 1 - (r + 1 - v) / rows)
 
 
-def wing_pair(k, M, name, half, R, root, rows, droop=0.0, n=16, rings=(0.0, 0.4, 0.75, 1.0)):
+def wing_pair(k, M, name, half, R, root, rows, droop=0.0, n=9, rings=(0.0, 0.55, 1.0)):
     """Both wings of one side drawn as one polar shape: rings out from the root (rho) across phi; mirrored to -x."""
     phis = np.linspace(PHI0, PHI1, n)
     for side in (1, -1):
@@ -201,23 +203,19 @@ def wing_pair(k, M, name, half, R, root, rows, droop=0.0, n=16, rings=(0.0, 0.4,
                 k.face([k.vert(p) for p in quad], quv, M["wings"])
 
 
-def body(k, M, col, length, r, head=0.55, eyes=None):
+def body(k, M, col, length, r, head=0.55):
     """A soft body along z: abdomen behind, a round thorax, the head toward +z; two antennae with clubs."""
     L = length
-    prof = [(0.0, -L * 0.62), (r * 0.45, -L * 0.58), (r * 0.7, -L * 0.42), (r * 0.82, -L * 0.18), (r * 1.0, 0.0), (r * 1.08, L * 0.12),
-            (r * 0.85, L * 0.22), (r * 0.8 * head / 0.55, L * 0.3), (r * 0.62, L * 0.38), (0.0, L * 0.42)]
-    k.lathe((0, 0, 0), prof, M["paint"], col, d=(0, 0, 1), n=8)
-    if eyes:
-        for s in (-1, 1):
-            k.blob((s * r * 0.5, r * 0.15, L * 0.33), (r * 0.42, r * 0.42, r * 0.42), M["paint"], eyes, segs=6, rings=4)
+    prof = [(0.0, -L * 0.62), (r * 0.7, -L * 0.42), (r * 1.0, 0.0), (r * 0.85, L * 0.22), (r * 0.7 * head / 0.55, L * 0.34), (0.0, L * 0.42)]
+    k.lathe((0, 0, 0), prof, M["paint"], col, d=(0, 0, 1), n=5)
 
 
 def antennae(k, M, col, L, r, club=True):
     for s in (-1, 1):
-        path = [(s * r * 0.3, r * 0.4, L * 0.38), (s * r * 1.4, r * 2.2, L * 0.62), (s * r * 2.4, r * 3.4, L * 0.86)]
-        k.tube(path, r * 0.09, M["paint"], col, n=4, v_len=1.0)
+        path = [(s * r * 0.3, r * 0.4, L * 0.38), (s * r * 2.4, r * 3.4, L * 0.86)]
+        k.tube(path, r * 0.12, M["paint"], col, n=3, v_len=1.0)
         if club:
-            k.blob(path[-1], (r * 0.24, r * 0.24, r * 0.32), M["paint"], col, segs=5, rings=3)
+            k.blob(path[-1], (r * 0.26, r * 0.26, r * 0.34), M["paint"], col, segs=4, rings=2)
 
 
 def mats(img):
@@ -250,26 +248,24 @@ def dragonfly(name, img, rows):
     M = mats(img)
     k = K.Kit(name)
     r = half * 0.075
-    # The long abdomen toward -z in segments, the thorax, the head with two big eyes.
-    segs = 6
-    for i in range(segs):
-        z0 = -L * 0.12 - i * L * 0.11
-        k.lathe((0, 0, 0), [(r * 0.62, z0 + 0.002), (r * 0.7, z0 - L * 0.055), (r * 0.62, z0 - L * 0.11 + 0.002)], M["paint"], (abd, ring)[i % 2], d=(0, 0, 1), n=5)
-    k.lathe((0, 0, 0), [(0.0, -L * 0.8), (r * 0.5, -L * 0.79), (r * 0.55, -L * 0.77)], M["paint"], ring, d=(0, 0, 1), n=5)
-    k.blob((0, 0, 0.0), (r * 1.15, r * 1.2, L * 0.13), M["paint"], thorax, segs=6, rings=4)
+    # The long abdomen toward -z, banded, the thorax, the head with two big eyes.
+    tail = [(0.0, -L * 0.8), (r * 0.5, -L * 0.78)] + [(r * (0.62 if i % 2 else 0.7), -L * 0.12 - i * L * 0.11) for i in range(5, -1, -1)]
+    bands = k.lathe((0, 0, 0), tail, M["paint"], abd, d=(0, 0, 1), n=4, phase=math.pi / 4)
+    PS.recolor(k, bands, lambda x, y, z: (abd, ring)[int((-z - L * 0.12) / (L * 0.11)) % 2] if z > -L * 0.78 else ring)
+    k.blob((0, 0, 0.0), (r * 1.15, r * 1.2, L * 0.13), M["paint"], thorax, segs=5, rings=3)
     for s in (-1, 1):
-        k.blob((s * r * 0.75, r * 0.3, L * 0.17), (r * 0.95, r * 0.95, r * 0.9), M["paint"], eye, segs=6, rings=4)
+        k.blob((s * r * 0.75, r * 0.3, L * 0.17), (r * 0.95, r * 0.95, r * 0.9), M["paint"], eye, segs=4, rings=3)
     # Four long wings, a pair a side, straight out and a little swept, from the thorax.
     for zc, sweep, length in ((L * 0.05, 8, 1.0), (-L * 0.04, -6, 0.94)):
         for side in (1, -1):
-            n = 7
+            n = 4
             ts = np.linspace(0, 1, n)
             w = half * 0.2
             top, bot = [], []
             for t in ts:
                 x = r * 0.8 + t * half * length
                 z = zc + math.tan(sweep * D2R) * (x - r)
-                ww = w * math.sin(math.pi * min(1.0, 0.12 + t * 0.95)) ** 0.6
+                ww = w * math.sin(math.pi * min(0.97, 0.2 + t * 0.8)) ** 0.6
                 top.append((side * x, 0.0, z + ww * 0.35))
                 bot.append((side * x, 0.0, z - ww * 0.65))
             for j in range(n - 1):
