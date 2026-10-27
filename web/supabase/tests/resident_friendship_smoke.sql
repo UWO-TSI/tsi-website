@@ -3,10 +3,11 @@
 -- rolled back: a new day is made by moving last_day back a day.
 \set ON_ERROR_STOP 1
 BEGIN;
-INSERT INTO auth.users (id, email) VALUES ('00000000-0000-4000-8000-0000000000d1', 'friend-1@x') ON CONFLICT DO NOTHING;
+INSERT INTO auth.users (id, email) VALUES ('00000000-0000-4000-8000-000000077d01', 'friend-1@x') ON CONFLICT DO NOTHING;
 DO $$
-DECLARE r record; M uuid := '00000000-0000-4000-8000-0000000000d1'; refused boolean := false;
+DECLARE r record; M uuid := '00000000-0000-4000-8000-000000077d01'; refused boolean := false;
 BEGIN
+  ASSERT NOT EXISTS (SELECT 1 FROM wallets WHERE member_id = M AND coins <> 0), 'a fresh member (77d01 is used by no other smoke)';
   SELECT * INTO r FROM resident_friend_talk(M, 'curator');
   ASSERT r.level = 1 AND r.leveled AND r.coins = 0, 'first talk: level 1, a letter level';
   SELECT * INTO r FROM resident_friend_talk(M, 'curator');
