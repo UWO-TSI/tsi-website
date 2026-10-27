@@ -22,7 +22,7 @@ const browser = await chromium.launch({ headless: true, args: ["--mute-audio", "
 const page = await browser.newPage({ viewport: { width: 1800, height: 300 }, deviceScaleFactor: 1 });
 page.on("pageerror", e => console.log("pageerror", e.message.slice(0, 200)));
 for (const id of ids.length ? ids : STARTER) {
-  await page.goto(`http://localhost:${process.env.PORT ?? 3181}/lab/avatar?sheet=fit&framing=body&zoom=1.25&look=0.45&ids=${id}${cut}`, { waitUntil: "networkidle", timeout: 180000 });
+  await page.goto(`http://localhost:${process.env.PORT ?? 3181}/lab/avatar?sheet=fit&framing=body&zoom=0.9&look=0.36&ids=${id}${cut}`, { waitUntil: "networkidle", timeout: 180000 });
   await page.waitForTimeout(6000);
   await page.screenshot({ path: join(out, `${id}.png`), fullPage: true });
   console.log("SHOT", id);

@@ -24,10 +24,12 @@ Round 1 built, in review (not merged). Head: see `git log -1` on `game/clothing-
 - **Universal models** (`art/characters/outfits/build_outfits.py`, section "clothing-v2"): tee, long-sleeve, hoodie,
   shorts, trousers, joggers, slip-ons, sneakers. One mesh per type (`model=`); the striped long-sleeve is
   `outfits/top/top_longsleeve.glb` + the stripe design (the old `top_stripe_ls.glb` is deleted). Part ids unchanged, so
-  saved looks keep working. Triangles at or under the old ones (144/248/271/114/178/198/216/156).
+  saved looks keep working. Triangles at or under the old ones: tee 144 (was 152), long-sleeve 248 (256), hoodie 271 (279), shorts 98
+  (114), trousers 162 (178), joggers 214 (234), slip-ons 216 (216), sneakers 156 (156).
 - **Fit:** each model's rings sit where the skin has its own, none between two across a joint; weights transferred
-  from the clip base's skin (nearest point on the same side); the seat under the hips takes body_shape's skirt weights
-  so it follows the thighs into a sit.
+  from the clip base's skin (nearest point on the same side); bottoms' leg tubes are closed at the top inside the seat
+  (a raised thigh showed the tube's open end, and the skin through it, from behind in a sit). Tried and dropped: skirt
+  weights on the seat (opened a gap mid-back).
 - **Body cut:** `hidden_cut.py bodycut` marks `_BODYCUT` on the base skin (clip base and LOD 1 skin): bit `bodyCut` per
   model = skin hidden from every view (normal + rings at 40/70/87 degrees) in rest and every 3rd frame of all 73 clips.
   Engine: `rig.ts` cuts a list of `PieceCut`s; `Character.tsx lookPieces` adds one per worn garment.
@@ -35,6 +37,10 @@ Round 1 built, in review (not merged). Head: see `git log -1` on `game/clothing-
   Shared layout per family (`design_uv`): tops torso + sleeves, bottoms hips + legs, shoes feet. Engine: uv moved into
   the cell + `DESIGN_U` (4); the body material paints the texel over the tint by its alpha, the vertex's COLOR_0 shade
   in `hairMap.y`.
+- **Evidence** (`specs/evidence/clothing-v2/`): `blender_{tops,bottoms,shoes}.png` (before = last commit's models,
+  after; run/jump/sit x front/side/back, no hair so the back shows), `game_starter_set.png` (the runtime Character on
+  /lab/avatar ?sheet=fit, design paint and body cut live), `game_cut_off_for_comparison.png` (`&cut=0`),
+  `fit_report.txt` (hidden_cut.py bodycut output).
 - **Evidence tools:** `outfits/render_fit.py` (+ `FIT_ROOT` for the last commit's assets), `outfits/fit_sheet.py`
   (`BEFORE=`), `/lab/avatar?sheet=fit` + `web/scripts/fit-shots.mjs` (in-game, `&cut=0` shows the cut skin).
 
