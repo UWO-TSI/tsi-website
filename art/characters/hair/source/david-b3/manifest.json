@@ -46,7 +46,8 @@
    "cap": {
     "rule": "light",
     "color": "#E8E8EA",
-    "logos": "dark"
+    "logos": "dark",
+    "islands": true
    }
   },
   {

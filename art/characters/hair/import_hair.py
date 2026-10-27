@@ -455,7 +455,9 @@ def clean(ob, spec, img_px):
             uvc = face_uv_centroid(bm, uvl, f)
             if cap_face(rule, texel(img_px, uvc), uvc):
                 caps.add(f.index)
-        if spec.get("split"):           # a part split off goes whole: every island mostly of its faces (a brim's dark rim)
+        if spec.get("split") or (spec.get("cap") or {}).get("islands"):
+            # a part split off goes whole: every island mostly of its faces (a brim's dark rim); so does a cap with
+            # `islands` (batch 3 #34: the logo's dark faces on the white mask, then painted out)
             bm.faces.index_update()
             for isl in islands(bm):
                 ids = {f.index for f in isl}
