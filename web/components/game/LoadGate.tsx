@@ -6,23 +6,54 @@
  *
  * WarmupProbe (inside the Canvas): watches drei's useProgress store until
  *   every tracked asset resolves, then lets WARMUP_FRAMES real frames render
- *   behind the overlay before firing onReady. Those frames are where three
- *   compiles shaders and uploads textures — the classic first-second jank.
- *   The player never sees it. A hard TIMEOUT_MS fallback guarantees a stuck
- *   or 404ing loader can never trap the player outside the world.
+ *   behind the overlay before firing onReady. A few frames in (COMPILE_AT,
+ *   once the late pools and lights have mounted) every material in the scene,
+ *   in view or not, is compiled for the scene's lights and every texture it
+ *   uses is uploaded (`warmHidden`: `compileAsync` has the GPU link them in
+ *   parallel), and the count waits for it: nothing compiles on first sight
+ *   later, in a cutscene or round a corner (2026-10-26, David: "the cut scenes
+ *   needs to be smooth and pre loaded before entering"). A hard TIMEOUT_MS
+ *   fallback guarantees a stuck or 404ing loader can never trap the player
+ *   outside the world.
  */
 
 import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useProgress } from "@react-three/drei";
-import { WARMUP_TIMEOUT_MS, warmedUp, warmupFrame } from "@/lib/game/sceneGate";
+import * as THREE from "three";
+import { COMPILE_AT, WARMUP_TIMEOUT_MS, warmedUp, warmupFrame } from "@/lib/game/sceneGate";
+
+const TEXTURE_KEYS = ["map", "emissiveMap", "alphaMap", "normalMap", "roughnessMap", "metalnessMap", "aoMap"] as const;
+
+/** Upload every texture the scene's materials use (module scope: hook values are never written in a component). */
+function uploadTextures(gl: THREE.WebGLRenderer, scene: THREE.Scene) {
+  const seen = new Set<THREE.Texture>();
+  const take = (t: unknown) => { if (t && (t as THREE.Texture).isTexture) seen.add(t as THREE.Texture); };
+  scene.traverse(o => {
+    const m = (o as THREE.Mesh).material;
+    if (!m) return;
+    for (const mat of Array.isArray(m) ? m : [m]) {
+      const rec = mat as unknown as Record<string, unknown>;
+      for (const k of TEXTURE_KEYS) take(rec[k]);
+      const uniforms = (mat as THREE.ShaderMaterial).uniforms;
+      if (uniforms) for (const u of Object.values(uniforms)) take(u?.value);
+    }
+  });
+  for (const t of seen) if ((t as THREE.Texture & { image?: unknown }).image) gl.initTexture(t);
+}
+
+export function warmHidden(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) {
+  uploadTextures(gl, scene);
+  return gl.compileAsync(scene, camera);
+}
 
 export function WarmupProbe({ onReady }: { onReady: () => void }) {
   const framesRef = useRef(0);
   const firedRef = useRef(false);
   const startRef = useRef<number | null>(null);
+  const compile = useRef<{ done: boolean } | null>(null);
 
-  useFrame(() => {
+  useFrame(({ gl, scene, camera }) => {
     if (firedRef.current) return;
     if (startRef.current === null) startRef.current = performance.now();
     const timedOut = performance.now() - startRef.current > WARMUP_TIMEOUT_MS;
@@ -32,7 +63,13 @@ export function WarmupProbe({ onReady }: { onReady: () => void }) {
     // "cannot update while rendering" warning. getState() has no such tie.
     const { active, progress } = useProgress.getState();
     const loaded = !active && progress >= 100;
-    framesRef.current = warmupFrame(framesRef.current, loaded, timedOut); // a late loader sends it back to 0
+    if (!loaded) compile.current = null; // a late loader: compile again once it settles
+    else if (framesRef.current === COMPILE_AT && !compile.current) {
+      const job = { done: false };
+      compile.current = job;
+      void warmHidden(gl, scene, camera).catch(() => {}).finally(() => { job.done = true; });
+    }
+    framesRef.current = warmupFrame(framesRef.current, loaded, timedOut, !!compile.current && !compile.current.done);
     if (warmedUp(framesRef.current)) {
       firedRef.current = true;
       // Defer out of the R3F frame loop: firing setState synchronously here

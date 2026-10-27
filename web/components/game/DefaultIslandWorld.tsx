@@ -800,6 +800,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const [atBar, setAtBar] = useState(false);
   const musicOverride = inside === "cafe" ? "cafe" : inside ? "interior" : atBar ? (phase === "night" ? "bar-night" : "bar-evening") : null;
   useMusicDirector({ season: season.season, override: musicOverride });
+  useEffect(() => AudioManager.prepare(), []); // behind the loading screen, not mid-walk
   const ambientPhase: AmbientPhase = phase === "evening" ? "dusk" : phase;
   const [fishing, setFishing] = useState(false);
   const [bagOpen, setBagOpen] = useState(() => devHome.get("sheet") === "bag");
