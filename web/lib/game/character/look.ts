@@ -429,8 +429,13 @@ export function eventPartOpen(id: string, open: ReadonlySet<string> = EVENTS_OPE
 export const openEventParts = (open: ReadonlySet<string> = EVENTS_OPEN): string[] => PARTS.filter(p => p.event && open.has(p.event)).map(p => p.id);
 
 // ── Ownership (coordinator ruling on audit item 22) ─────────────────────────
-/** Identity is free: skin, face, every hair style and the first six hair colours. The other six are shop dyes. */
-export const FREE_HAIR_COLOURS = 6;
+/**
+ * Identity is free: skin, face, every hair style and these hair colours (palette indices). `DYE_HAIR` are the shop's
+ * dyes (`hair:6`..`hair:11`). Ginger (12) joined the free ones after the dyes (David, 2026-10-27), so no colour's index
+ * moved: saved looks and the shop's rows keep their meaning.
+ */
+export const FREE_HAIR: readonly number[] = [0, 1, 2, 3, 4, 5, 12];
+export const DYE_HAIR: readonly number[] = [6, 7, 8, 9, 10, 11];
 /** Clothes every account starts with, granted once through the inventory (20260926180000_ownership.sql; the rain-cape
  * left with David's wardrobe cut). */
 export const STARTER_PARTS: readonly string[] = ["top_tee", "top_hoodie", "top_stripe_ls", "bottom_shorts", "bottom_trousers", "bottom_joggers", "shoes_slipon", "shoes_sneakers"];
@@ -482,7 +487,7 @@ export const ownsRef = (owned: Owned, ref: string) => (ref === CUSTOM_HAIR_REF ?
 export function lookRefs(look: CharacterLook): string[] {
   const refs = [...new Set([look.top, look.bottom, look.onepiece, look.shoes, look.back, ...Object.values(look.acc)].flatMap(id => (id && partRef(id)) || [])
     .concat([look.eyes, look.mouth, ...look.extras].flatMap(id => facePartRef(id) ?? [])))];
-  const dyes = [look.hair, ...(look.hairAccent !== undefined ? [look.hairAccent] : [])].filter(i => i >= FREE_HAIR_COLOURS);
+  const dyes = [look.hair, ...(look.hairAccent !== undefined ? [look.hairAccent] : [])].filter(i => DYE_HAIR.includes(i));
   return [...refs, ...[...new Set(dyes)].map(dyeRef), ...(look.hairColor && !CUSTOM_HAIR_FREE ? [CUSTOM_HAIR_REF] : [])];
 }
 
@@ -496,7 +501,7 @@ export function randomLook(rand: () => number = Math.random, owned?: ReadonlySet
   const ids = (slot: PartSlot) => partsIn(slot).filter(p => !p.variantOf && !p.key && !p.grantedBy && (!owned || !partRef(p.id) || owned.has(p.id))).map(p => p.id);
   let look: CharacterLook = {
     ...DEFAULT_LOOK,
-    skin: Math.floor(rand() * PALETTE.skin.length), hair: Math.floor(rand() * (owned ? FREE_HAIR_COLOURS : PALETTE.hair.length)),
+    skin: Math.floor(rand() * PALETTE.skin.length), hair: owned ? FREE_HAIR[Math.floor(rand() * FREE_HAIR.length)] : Math.floor(rand() * PALETTE.hair.length),
     // sheet-coded styles only (F eyes, M mouths, what the wardrobe cut kept of them): later sets stay creator picks
     eyes: pick(Object.keys(FACE.layers.eyes.items).filter(e => /^[EF]\d/.test(e))), mouth: pick(Object.keys(FACE.layers.mouth.items).filter(m => m.startsWith("M"))),
     extras: rand() < 0.3 ? ["blush"] : [], bangs: "", back: pick(ids("back")), shoes: pick(ids("shoes")), acc: {}, colors: {},

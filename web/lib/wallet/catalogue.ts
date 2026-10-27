@@ -5,7 +5,7 @@
  * (lib/seedMigrations.ts, scripts/gen-seeds.mjs). Prices are play coins
  * (or Gems for merch). No real-money value appears anywhere.
  */
-import { CUSTOM_HAIR_REF, dyeRef, FACE, faceRef, FREE_HAIR_COLOURS, PARTS, priceOf, STARTER_PARTS, type Batch2Price, type PartSlot } from "@/lib/game/character/look";
+import { CUSTOM_HAIR_REF, dyeRef, DYE_HAIR, FACE, faceRef, PARTS, priceOf, STARTER_PARTS, type Batch2Price, type PartSlot } from "@/lib/game/character/look";
 import { CATALOGUE as PIECES, EVENT_PIECE_IDS } from "@/lib/homes/catalogue";
 import { shopIcon } from "@/lib/icons/keys";
 
@@ -108,7 +108,7 @@ export const STARTER_FURNITURE: Record<string, number> = {
 };
 /** Everything granted once per account (economy_grant_starters), catalogue_ref → qty. */
 export const STARTER_REFS: ReadonlyMap<string, number> = new Map([...STARTER_PARTS.map((id): [string, number] => [id, 1]), ...Object.entries(STARTER_FURNITURE)]);
-/** Shop dyes for hair colours FREE_HAIR_COLOURS.. (palette order). */
+/** Shop dyes for hair colours DYE_HAIR (palette order). */
 const DYES = ["Wheat blonde", "Copper", "Rust red", "Silver", "Blossom pink", "Sea blue"];
 const WEAR_PRICE: Record<string, number> = { top: 150, bottom: 140, onepiece: 180, shoes: 110, accessory: 80 };
 const HAS_FURNITURE = new Set(CATALOGUE.map((c) => c.catalogue_ref));
@@ -173,7 +173,7 @@ export const COLOUR_WHEEL_ITEM: CatalogueEntry = withIcon({
 export const OWNERSHIP_ITEMS: CatalogueEntry[] = [
   ...WEARABLES.map((p) =>
     e(wearSlug(p.id), p.name.replace(/ \(#\d+\)$/, ""), p.slot === "accessory" ? "accessory" : "outfit", WEAR_PRICE[p.slot], { catalogue_ref: p.id, special_pool: !p.cut && !STARTER_REFS.has(p.id) })),
-  ...DYES.map((name, i) => e(`dye-${name.toLowerCase().replace(/ /g, "-")}`, `${name} hair dye`, "hair", 140, { catalogue_ref: dyeRef(FREE_HAIR_COLOURS + i), special_pool: true })),
+  ...DYES.map((name, i) => e(`dye-${name.toLowerCase().replace(/ /g, "-")}`, `${name} hair dye`, "hair", 140, { catalogue_ref: dyeRef(DYE_HAIR[i]), special_pool: true })),
   ...PIECES.filter((p) => !HAS_FURNITURE.has(p.id) && !EVENT_PIECE_IDS.has(p.id)).map((p) => furniture(p.id, p.label, pieceValue(p))),
   ...WARDROBE_B2_ITEMS,
   COLOUR_WHEEL_ITEM,

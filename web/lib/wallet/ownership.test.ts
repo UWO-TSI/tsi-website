@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { BATCH2_PRICES, CUSTOM_HAIR_REF, DEFAULT_LOOK, FACE, FREE_HAIR_COLOURS, PALETTE, PARTS, STARTER_PARTS, customHairUnlocked, dyeRef, faceRef, randomLook, seeded, wear } from "@/lib/game/character/look";
+import { BATCH2_PRICES, CUSTOM_HAIR_REF, DEFAULT_LOOK, DYE_HAIR, FACE, FREE_HAIR, PARTS, STARTER_PARTS, customHairUnlocked, dyeRef, faceRef, randomLook, seeded, wear } from "@/lib/game/character/look";
 import { CATALOGUE as PIECES, EVENT_PIECE_IDS } from "@/lib/homes/catalogue";
 import { CRAFTED_ITEMS, RECIPES } from "@/lib/crafting/recipes";
 import { memoryCraftingStore } from "@/lib/crafting/memoryStore";
@@ -77,7 +77,8 @@ describe("ownership catalogue", () => {
     // every crafted outfit or accessory has a wearable part
     const crafted = [...CATALOGUE, ...CRAFTED_ITEMS].filter((c) => (c.category === "outfit" || c.category === "accessory") && RECIPES.some((r) => r.output.key === c.slug));
     expect(crafted.map((c) => c.slug).sort()).toEqual(PARTS.flatMap((p) => p.item ?? []).sort());
-    for (let h = FREE_HAIR_COLOURS; h < PALETTE.hair.length; h++) expect(byRef(`hair:${h}`)[0]?.active, `dye ${h}`).toBe(true);
+    for (const h of DYE_HAIR) expect(byRef(`hair:${h}`)[0]?.active, `dye ${h}`).toBe(true);
+    for (const h of FREE_HAIR) expect(byRef(`hair:${h}`), `free ${h}`).toHaveLength(0);
     expect(items.filter((i) => i.category === "hair" && i.active && i.catalogue_ref?.startsWith("hair:"))).toHaveLength(6);
     // Seasonal event furniture is only given by its event, never sold.
     for (const p of PIECES) expect(byRef(p.id).filter((i) => i.category === "furniture" && i.active), p.id).toHaveLength(EVENT_PIECE_IDS.has(p.id) ? 0 : 1);
@@ -92,7 +93,7 @@ describe("ownership catalogue", () => {
     const starters = new Set(STARTER_PARTS);
     for (let i = 0; i < 100; i++) {
       const look = randomLook(seeded(i), starters);
-      expect(look.hair).toBeLessThan(FREE_HAIR_COLOURS);
+      expect(FREE_HAIR).toContain(look.hair);
       for (const id of [look.top, look.bottom, look.onepiece, look.shoes, ...Object.values(look.acc)]) if (id) expect(starters.has(id.replace(/_hood$/, "")), id).toBe(true);
     }
   });
@@ -245,8 +246,8 @@ describe("the hair colour wheel (head-v10; David, 2026-10-17: a one-time 250-Gem
   });
   it("is unlocked by owning the wheel, never by a dye or the free presets", () => {
     expect(customHairUnlocked(new Set(STARTER_PARTS))).toBe(false);
-    expect(customHairUnlocked(new Set(Array.from({ length: FREE_HAIR_COLOURS }, (_, i) => dyeRef(i))))).toBe(false);
-    for (let h = FREE_HAIR_COLOURS; h < PALETTE.hair.length; h++) expect(customHairUnlocked(new Set([dyeRef(h)])), `dye ${h}`).toBe(false);
+    expect(customHairUnlocked(new Set(FREE_HAIR.map(dyeRef)))).toBe(false);
+    for (const h of DYE_HAIR) expect(customHairUnlocked(new Set([dyeRef(h)])), `dye ${h}`).toBe(false);
     expect(customHairUnlocked(new Set([CUSTOM_HAIR_REF]))).toBe(true);
   });
   it("refuses a custom colour in a saved look without a dye, server-side", async () => {

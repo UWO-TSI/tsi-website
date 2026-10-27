@@ -71,7 +71,9 @@ describe("character catalogue", () => {
       if (p.variantOf) expect(PART_BY_ID.has(p.variantOf)).toBe(true);
       for (const m of p.materials) if (m.tint === "outfit") expect(m.default as number).toBeLessThan(PALETTE.outfit.length);
     }
-    expect([PALETTE.skin.length, PALETTE.hair.length, PALETTE.outfit.length]).toEqual([12, 12, 16]);
+    expect([PALETTE.skin.length, PALETTE.hair.length, PALETTE.outfit.length]).toEqual([12, 13, 16]);
+    // Hair colours are saved and sold by index: the dyes (6-11, the shop's hair:6..hair:11) never move; ginger was appended.
+    expect(PALETTE.hair.slice(6, 12)).toEqual(["#EBCB8B", "#C25B3A", "#9E3B2E", "#8A8F99", "#F0A3B5", "#6F8FC9"]);
     expect(CLIPS.map(c => c.name)).toEqual(expect.arrayContaining(["Idle", "Walk", "Run", "Sit", "Study", "Sleep", "Fish", "FishHold", "Forage", "Dig", "Net", "Wave", "Cheer", "Laugh", "Sad", "Dance", "AttackMelee", "AttackBow", "AttackCast", "DodgeRoll", "Hit", "Defeat", "Trace", "Stretch"]));
     const A = FACE.anchors;
     const cells: [string, number[], [number, number]][] = [
@@ -270,6 +272,7 @@ describe("a custom hair colour from the colour wheel (head-v10, row 311)", () =>
     expect(lookRefs({ ...DEFAULT_LOOK, hairColor: "#123456" })).toEqual([...lookRefs(DEFAULT_LOOK), CUSTOM_HAIR_REF]);
     expect(CUSTOM_HAIR_REF).toBe("colour-wheel");
     expect(lookRefs({ ...DEFAULT_LOOK, hair: 10 })).toEqual([...lookRefs(DEFAULT_LOOK), "hair:10"]);   // a preset dye: that dye
+    expect(lookRefs({ ...DEFAULT_LOOK, hair: 12 })).toEqual(lookRefs(DEFAULT_LOOK));   // ginger: free, after the dyes
     const heavy = randomLook(seeded(7));
     expect(lookBytes({ ...heavy, hairColor: "#ABCDEF" })).toBeLessThan(LOOK_MAX_BYTES);
   });

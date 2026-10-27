@@ -9,8 +9,8 @@
  *
  * The creator's data and controls are the Li'l Lads creator's (CreatorControls: the catalogue's categories, tiles,
  * swatches and face sliders; no colour wheel here, David 2026-10-26: it is a shop unlock in the wardrobe). Each change
- * sends a small foam-capped wave rolling past that rewrites that feature (the scene's look catches up as its crest
- * crosses your face), and counts as a choice: each sharpens the world a little (the sequence's clarity), "That's me"
+ * sends a small foam-capped wave rolling past that sweeps the new look across your reflection with its crest (the old
+ * one still ahead of it), and counts as a choice: each sharpens the world a little (the sequence's clarity), "That's me"
  * clears it. The same canvas shows the aboard beat before it, the panels out of the way.
  */
 import { useEffect, useRef, useState } from "react";
@@ -29,7 +29,7 @@ import type { ArrivalPhase } from "@/lib/game/arrival/sequence";
 import { AudioManager } from "@/lib/game/audio";
 import { tierDpr } from "@/lib/game/qualityTier";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
-import ReflectionScene, { WAVE_MAX, waveReach } from "./ReflectionScene";
+import ReflectionScene, { WAVE_MAX, waveBeats } from "./ReflectionScene";
 import cc from "@/components/game/character/CharacterCreator.module.css";
 import s from "./ReflectionCreator.module.css";
 
@@ -48,8 +48,9 @@ export default function ReflectionCreator({ phase, initial, askName, onYes }: {
   const [graphics] = useGraphicsSettings();
   const root = useWorldDialog<HTMLElement>(true, () => {}, undefined, true);
   const [look, setLook] = useState(initial);
-  // What the water shows: it follows the panel's look as each wave's crest crosses your face.
-  const [shown, setShown] = useState(initial);
+  // What the water shows: the look behind the latest wave's crest, and while it sweeps across you the look ahead of it.
+  const [water, setWater] = useState<{ shown: CharacterLook; before: CharacterLook | null }>({ shown: initial, before: null });
+  const queued = useRef(0), drop = useRef(0);
   const [catId, setCatId] = useState(CATEGORIES[0].id);
   const cat = CATEGORIES.find(c => c.id === catId)!;
   const naming = useNameCheck(askName);
@@ -89,8 +90,25 @@ export default function ReflectionCreator({ phase, initial, askName, onYes }: {
     return () => blips.forEach(window.clearTimeout);
   }, [said]);
 
-  // A change: a small wave rolls past and the water rewrites you as its crest crosses your face. A wave still on its way
-  // to your face carries the change too; once it is past, the next change sets a new one off behind it.
+  // A change: a small wave rolls past and the new look sweeps across your reflection with its crest. A wave still on its
+  // way to you carries the change too; one crossing you finishes first, and the next wave sets off behind it with
+  // the latest look.
+  const edit = (update: (l: CharacterLook) => CharacterLook) => {
+    const next = update(look);
+    setLook(next);
+    const last = waves.current.at(-1), age = last === undefined ? Infinity : clock.current - last, { ride, done } = waveBeats();
+    window.clearTimeout(queued.current);
+    if (age < ride) { setWater(w => ({ ...w, shown: next })); return; }
+    const go = () => {
+      waves.current.push(clock.current);
+      if (waves.current.length > WAVE_MAX) waves.current.shift();
+      setWater(w => ({ shown: next, before: w.shown }));
+      window.clearTimeout(drop.current);
+      drop.current = window.setTimeout(() => setWater(w => ({ ...w, before: null })), done * 1000);
+    };
+    if (age >= done) go();
+    else queued.current = window.setTimeout(go, (done - age) * 1000);
+  };
   const change = () => {
     const a = arrivalRun.current, nowMs = performance.now();
     if (a && nowMs - lastChoice.current > CHOICE_EVERY_MS) {
@@ -98,19 +116,8 @@ export default function ReflectionCreator({ phase, initial, askName, onYes }: {
       a.choices++;
       if (a.choices === 3) setComing(true);
     }
-    const last = waves.current.at(-1);
-    if (last === undefined || clock.current - last >= waveReach()) {
-      waves.current.push(clock.current);
-      if (waves.current.length > WAVE_MAX) waves.current.shift();
-    }
     AudioManager.playSFX("blip2", { rate: 0.55 + Math.random() * 0.1, gain: 0.35 });
   };
-  useEffect(() => {
-    if (look === shown) return;
-    const last = waves.current.at(-1) ?? -Infinity;
-    const t = window.setTimeout(() => setShown(look), Math.max(0, (last + waveReach() - clock.current) * 1000));
-    return () => window.clearTimeout(t);
-  }, [look, shown]);
 
   const openCat = (c: Category, focus = false) => {
     setCatId(c.id);
@@ -128,7 +135,8 @@ export default function ReflectionCreator({ phase, initial, askName, onYes }: {
   const confirm = () => {
     if (yes) return;
     setYes(true);
-    setShown(look);
+    window.clearTimeout(queued.current); window.clearTimeout(drop.current);
+    setWater({ shown: look, before: null });
     AudioManager.playSFX("confirm");
     onYes(look, naming.wanted);
   };
@@ -138,7 +146,7 @@ export default function ReflectionCreator({ phase, initial, askName, onYes }: {
         gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace;
         if (process.env.NODE_ENV !== "production") (window as unknown as { __reflectGl?: THREE.WebGLRenderer }).__reflectGl = gl;
       }}>
-      <ReflectionScene look={shown} waves={waves} clock={clock} view={view} />
+      <ReflectionScene look={water.shown} before={water.before} waves={waves} clock={clock} view={view} />
     </Canvas>
     <div ref={sceneRef} className={s.scene}>
       {said && <p key={said} className={s.bubble} role="status"><b>{BRAM.name}</b><span>{said}</span></p>}
@@ -147,7 +155,7 @@ export default function ReflectionCreator({ phase, initial, askName, onYes }: {
     <div className={`${cc.panel} ${s.panel}`} role="tabpanel" id="creator-panel" aria-labelledby={`creator-tab-${cat.id}`} aria-hidden={!creating} inert={!creating}>
       <header className={cc.panelHead}><h2 className={cc.title}>{cat.label}</h2></header>
       <div className={cc.body}>
-        <CreatorOptions cat={cat} look={look} setLook={setLook} mode="create" owned={STARTERS} onChange={change} wheel={false} />
+        <CreatorOptions cat={cat} look={look} setLook={edit} mode="create" owned={STARTERS} onChange={change} wheel={false} />
       </div>
       {askName && <footer className={cc.foot}>
         <Field label="Your name on the island" hint="Letters and numbers; everyone in the world sees it." value={naming.name} maxLength={24}

@@ -19,28 +19,34 @@ Reuse what exists before writing new water: `web/lib/game/waterShader.ts` (swell
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint on changed files. Message "main" with the head SHA, gates and evidence paths, then stop.
 
+## David's decisions
+
+Round 1 review (2026-10-27, relayed by the coordinator): approved desktop, phone, small waves.
+- wave, APPROVE with a note: "make the wave change hair and stuff look natural so when its like mid wave the top of the wave change but bottom hasnt and isntead of a frame change it changes with the wave path if it makes sense". Coordinator's reading: no single-frame swap; the new look sweeps across the reflection along the crest, the seam under the foam; the second look only exists while a wave is crossing; rapid changes still ride the same wave.
+- wave-first: REDO, no note (coordinator asking). Until then: the first wave must read clearly through the mist and use the sweep.
+- no-wheel: REDO: "change hair color options, the black brow looks good but blond sound be less skin color, and a ginger color too". Wheel stays removed; blond clearly golden, not skin; add a free ginger; never shift palette indices (dyes `hair:6`..`hair:11` are shop rows); a shop row change means a new migration and a stop for the coordinator.
+
 ## Status
 
-Built 2026-10-27, awaiting David's review (visual work: not merged before he approves). Head: see the last commit on `game/reflection-waves`.
+Round 2 built 2026-10-27, awaiting David's review. Head: the last commit on `game/reflection-waves`. Round 1 (the wave, small waves, "That's me", no wheel) is approved for desktop, phone and small waves.
 
-- **Rolling wave:** `ReflectionScene.tsx` WATER_FRAG `waves()`: a bowed crest rolling along `SET.wave.heading`, steep front, long back, a scalloped white foam cap, a shade under the lip, foam blobs left lying behind that melt. It runs past where the camera's ray to your face's reflection crosses the sea (computed per frame), sets off `SET.wave.lead` before it, crosses your face after `waveReach()` (0.61 s), and the look is rewritten then (`ReflectionCreator` effect). The ring ripple (`Ripple`, `uRip`, `REWRITE_MS`, `faceOverWater`) is deleted.
-- **No stacking:** a change while a wave is still on its way to your face rides that wave; once it has passed, the next change sets a new one off behind it. At most `WAVE_MAX` (3) in the shader.
-- **Small waves always:** the old swell plus the game's `WATER_CHOP` (reused from `waterShader.ts`) as the reflection's wobble, soft light and shade bands, and thin drifting `glints()` on the wavelets.
-- **No colour wheel:** `CreatorOptions` takes `wheel={false}` from the arrival only; the wardrobe and fitting room keep it.
-- **"That's me":** `YES_LABEL`; the pill has `white-space: nowrap`. The code's `yes`/`onYes` names are unchanged (net-identity edits the naming code in `ReflectionCreator`: don't restructure it).
-- **Gates:** tsc clean; eslint clean on changed files; vitest 361 files / 3450 tests passed, with and without `NEXT_PUBLIC_GAME_WORLD=new`.
-- **Evidence:** `specs/evidence/reflection-waves/01-desktop.webp`, `02-phone.webp`, `03-wave-sequence.webp`, `04-wave-sequence-clearer.webp`, `05-small-waves.webp`, `06-hair-colours-no-wheel.webp` (scripts `shoot.mjs`, `sheets.py` there).
-- **Not run:** `perf:check` (the scene is the creator's own canvas; the cost is one fragment pass with up to 3 short loops and three value-noise taps, no new draw calls).
+- **The sweep (round 2.1):** a change no longer swaps the look in one frame. The new look's reflection shows behind the latest wave's crest and the old one's ahead of it, the seam along the middle of the foam cap (`WATER_FRAG` `swept`, `uSweepT`, `tReflOld`). While a wave sweeps, a second Character in the old look is mounted (`before`) and drawn into its own mirror target (`reflectionPasses.ts` `renderReflection(..., { now, old })`, made the first time it is needed); over the side you keep the old look until the crest has crossed you. `ReflectionCreator` `edit()` wraps the panel's setLook: a change before the crest reaches you rides that wave (`waveBeats().ride`); one crossing you finishes first and the next wave sets off at `done` with the latest look; the old layer is dropped at `done`. `SET.wave.ahead/behind` tune those beats.
+- **The first wave in the mist (round 2.2):** the water writes its waves (foam and crest) into the frame's alpha and the composite keeps them sharp and unwashed through the blur, so the crest and the sweep read clearly while the world is still hazy.
+- **Hair colours (round 2.3):** wheel still removed. Blond changed in place to golden `#E8BE48` (was `#D6A866`), ginger `#DA6E2A` appended as index 12; `FREE_HAIR = [0..5, 12]` and `DYE_HAIR = [6..11]` replace `FREE_HAIR_COLOURS` (`look.ts`, `catalogue.ts`, `CreatorControls`, tests). No palette index moved, no shop row changed, no migration. `art/characters/palette.json` and its web copy both changed.
+- **Open for David:** hair colour keeps each style's lightness (his 2026-10-17 ruling, `hairColour.ts`, unchanged), so blond and ginger barely show on dark or white styles in the reflection. `12-hair-lightness-choice.webp` shows today against a thrown-away lightness-lift experiment; the coordinator puts it to him as a choice.
+- **Gates:** tsc clean, eslint clean on changed files, vitest 361 files / 3451 tests passed with and without `NEXT_PUBLIC_GAME_WORLD=new`.
+- **Evidence (round 2):** `specs/evidence/reflection-waves/07-sweep.webp`, `08-sweep-mid.webp`, `09-first-wave-mist.webp`, `10-hair-swatches-on-skin.webp`, `11-hair-on-skins-style12.webp`, `11-hair-on-skins-style13.webp`, `12-hair-lightness-choice.webp`, `06-hair-colours-no-wheel.webp` (redone). Scripts: `shoot.mjs` (`sweep mist skins`), `sheets2.py`.
 
 ## Next
 
-1. David reviews the evidence; apply his notes (the look is all in `WATER_FRAG` and `SET.wave`).
+1. David reviews round 2, and decides on the hair lightness (`12-hair-lightness-choice.webp`); apply his notes.
 
 ## Tools and gotchas
 
 - `?arrival=1` on `/lab/island` now opens straight on the reflection (phase `creator`): don't wait for `underwater`.
 - Shots: hold the browser lock, dev server on 3171 (Supabase env blanked), then `node specs/evidence/reflection-waves/shoot.mjs <dir> desktop phone [clear] [colours]` (`MID_MS=620` times the crest-at-face shot), then `python3 specs/evidence/reflection-waves/sheets.py <dir> <clear_dir> <colours_dir> specs/evidence/reflection-waves`.
-- Tune the wave live in dev: `window.__reflect.wave` (heading, speed, lead, exit, height).
+- Tune the wave live in dev: `window.__reflect.wave` (heading, speed, lead, exit, height, ahead, behind).
+- Hair colour only turns hue (lightness kept), so colour evidence needs a mid-lightness style; hairstyle tiles by index in `section[aria-label="Hairstyles"]` (12 mid-brown spiky, 13 white, 15 the default bob). Swatch buttons in `[aria-label="hair colours"]`: 0 is "Own", then FREE_HAIR in order.
 
 ## Rules
 
