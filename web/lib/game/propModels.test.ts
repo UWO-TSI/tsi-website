@@ -9,7 +9,7 @@ import { readGlb } from "./perf/glbStats";
 import * as Props from "./propModels";
 import { ROWBOAT, ROWBOAT_URL } from "./wharf";
 import { FURNITURE } from "../study/seats";
-import { BRIDGE_DECK_HALF, BRIDGE_RAIL_OUT, PROP_FOOTPRINT, PROP_TOP } from "./defaultIsland";
+import { BRIDGE_DECK_HALF, BRIDGE_RAIL_OUT, BUILDING_SOLID, PROP_FOOTPRINT, PROP_TOP } from "./defaultIsland";
 
 const pub = join(__dirname, "../../public");
 const fileOf = (url: string) => join(pub, url);
@@ -25,6 +25,43 @@ function bounds(url: string) {
   }
   return { min, max };
 }
+
+/** The XZ bounds of a model's vertices between heights y0 and y1 (model units; our models carry no node transforms). */
+function slice(url: string, y0: number, y1: number) {
+  const { json, bin } = readGlb(new Uint8Array(readFileSync(fileOf(url))));
+  const j = json as unknown as { meshes: { primitives: { attributes: Record<string, number> }[] }[]; accessors: { bufferView: number; byteOffset?: number; count: number }[]; bufferViews: { byteOffset?: number; byteStride?: number }[] };
+  const b = { x0: Infinity, x1: -Infinity, z0: Infinity, z1: -Infinity };
+  for (const m of j.meshes) for (const p of m.primitives) {
+    const a = j.accessors[p.attributes.POSITION], view = j.bufferViews[a.bufferView], stride = view.byteStride ?? 12;
+    const data = new DataView(bin!.buffer, bin!.byteOffset + (view.byteOffset ?? 0) + (a.byteOffset ?? 0));
+    for (let i = 0; i < a.count; i++) {
+      const x = data.getFloat32(i * stride, true), y = data.getFloat32(i * stride + 4, true), z = data.getFloat32(i * stride + 8, true);
+      if (y < y0 || y > y1) continue;
+      b.x0 = Math.min(b.x0, x); b.x1 = Math.max(b.x1, x); b.z0 = Math.min(b.z0, z); b.z1 = Math.max(b.z1, z);
+    }
+  }
+  return b;
+}
+
+describe("the smooth world's building walls (defaultIsland BUILDING_SOLID)", () => {
+  // As DefaultIslandWorld draws them: the ACNH parts at 0.1, turned a half turn (x and z flip), the clubhouse's origin
+  // 2.35 in front of its middle; what stands at body height (0.3 to 1.8 over the ground) is the wall box.
+  const B = "/assets/acnh/buildings", CHALET = [`${B}/chalet-wall-c.glb`, `${B}/chalet-roof-g.glb`, `${B}/chalet-door.glb`];
+  const drawn: Record<string, [string[], number]> = { hq: [[`${B}/hq-office.glb`, `${B}/hq-office-door.glb`], -2.35], shop: [[`${B}/shop-market.glb`, `${B}/shop-market-door.glb`], 0],
+    oracle: [[`${B}/oracle-museum.glb`], 0], museum: [CHALET, 0], house: [CHALET, 0] };
+  it.each(Object.entries(drawn))("%s: its box is its walls", (id, [parts, front]) => {
+    const b = parts.map(u => slice(u, 3, 18)).reduce((a, c) => ({ x0: Math.min(a.x0, c.x0), x1: Math.max(a.x1, c.x1), z0: Math.min(a.z0, c.z0), z1: Math.max(a.z1, c.z1) }));
+    const [cx, cz, hw, hd] = BUILDING_SOLID[id as keyof typeof BUILDING_SOLID]!;
+    // Turned a half turn: model x0..x1 draws at -x1..-x0.
+    const x0 = -b.x1 * 0.1, x1 = -b.x0 * 0.1, z0 = -b.z1 * 0.1 + front, z1 = -b.z0 * 0.1 + front;
+    // The box holds the walls (to a hair) and reaches past them by no more than a wall's height of slope (tall quads
+    // whose corners stand outside the band; the audit measured triangles, this the vertices).
+    for (const [wall, side, sign] of [[x0, cx - hw, -1], [x1, cx + hw, 1], [z0, cz - hd, -1], [z1, cz + hd, 1]]) {
+      expect(sign * (side - wall), `${id} holds its walls`).toBeGreaterThan(-0.1);
+      expect(sign * (side - wall), `${id} no wider than its walls`).toBeLessThan(0.4);
+    }
+  });
+});
 
 describe("remodelled props (propModels.ts)", () => {
   const urls = [Props.CAMPFIRE_URL, Props.MAILBOX_URL, Props.STREETLAMP_URL, Props.BUOY_URL,
