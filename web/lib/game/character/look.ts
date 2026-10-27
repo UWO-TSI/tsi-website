@@ -441,6 +441,18 @@ export interface Batch2Price { mode: "free" | "coins" | "gems" | "skip"; price: 
 export const BATCH2_PRICES = batch2Pricing.items as Record<string, Batch2Price>;
 /** A batch-2 item's mode and price by its key ("hair-22", "acc-01", "face-20"); null for anything else. */
 export const priceOf = (key: string | undefined): Batch2Price | null => (key ? BATCH2_PRICES[key] ?? null : null);
+/**
+ * Offered to players (the creator, the wardrobe, the shop; never random looks or residents): everything except a keyed
+ * part, or a face part of a keyed whole face, that specs/wardrobe/batch2-pricing.json doesn't list yet. David hasn't
+ * priced it, so it isn't free, it isn't offered at all (coordinator, 2026-10-27). Face Fit and the /lab sheets read the
+ * catalogue directly and still list every part. This is the one place the rule lives.
+ */
+export const offered = (id: string): boolean => {
+  const p = PART_BY_ID.get(id);
+  return p ? !p.key || priceOf(p.key) !== null : !UNPRICED_FACE_PARTS.has(id);
+};
+const UNPRICED_FACE_PARTS: ReadonlySet<string> = new Set(Object.entries(FACE.faces ?? {}).filter(([key]) => priceOf(key) === null)
+  .flatMap(([, f]) => [f.eyes, f.mouth, ...f.extras].filter((x): x is string => !!x)));
 const sold = (key: string | undefined) => { const m = priceOf(key)?.mode; return m === "coins" || m === "gems"; };
 /**
  * Inventory ref that unlocks a part (a variant counts as its base part); null for free hair styles and face items.
@@ -451,7 +463,7 @@ export function partRef(id: string): string | null {
   const p = PART_BY_ID.get(id);
   if (!p) return null;
   if (p.grantedBy) return partRef(p.grantedBy);           // row 314: #22's hat comes with the hair
-  if (p.key) return sold(p.key) ? p.variantOf ?? p.id : null;   // batch 3: a keyed item David hasn't priced yet is free until he does
+  if (p.key) return sold(p.key) ? p.variantOf ?? p.id : null;   // a keyed item priced "free" is free; one David hasn't priced isn't offered at all (offered)
   return p.slot === "bangs" || p.slot === "back" ? null : p.variantOf ?? p.id;
 }
 /** Inventory ref of a whole face (wardrobe batch 2): the shop row's catalogue_ref. */

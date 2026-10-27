@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CATEGORIES, choose, colourTarget, isOn, shownOptions } from "./creatorCategories";
-import { BATCH2_PRICES, DEFAULT_LOOK, FACE, PARTS, STARTER_PARTS, faceRef, openEventParts, partRef, setEventsOpen, unlockRef, wear } from "./look";
+import { BATCH2_PRICES, DEFAULT_LOOK, FACE, PART_BY_ID, PARTS, offered, priceOf, STARTER_PARTS, faceRef, openEventParts, partRef, setEventsOpen, unlockRef, wear } from "./look";
 
 const cat = (id: string) => CATEGORIES.find(c => c.id === id)!;
 
@@ -94,10 +94,10 @@ describe("the starting creator after the wardrobe cut (playtest round 1)", () =>
 });
 
 describe("wardrobe batch 2 in the creator and the closet (David's prices, specs/wardrobe/batch2-pricing.json)", () => {
-  const offered = (mode: "create" | "wardrobe", owned: ReadonlySet<string>) => new Set(CATEGORIES.flatMap(c => c.sections.flatMap(s =>
+  const shownIn = (mode: "create" | "wardrobe", owned: ReadonlySet<string>) => new Set(CATEGORIES.flatMap(c => c.sections.flatMap(s =>
     shownOptions(s, mode, id => { const ref = id && unlockRef(id); return !ref || owned.has(ref); }))));
-  const b2 = PARTS.filter(p => p.key);
-  const free = (key: string) => (BATCH2_PRICES[key]?.mode ?? "free") === "free";   // batch 3: free until David prices it
+  const b2 = PARTS.filter(p => p.key && priceOf(p.key));          // batch 3's unpriced items are not offered at all (below)
+  const free = (key: string) => BATCH2_PRICES[key]?.mode === "free";
   const faceParts = (key: string) => { const f = FACE.faces[key]; return [f.eyes, f.mouth, ...f.extras].filter((x): x is string => !!x); };
 
   it("gives the accessories their Roblox slots: Glasses, Hats, Neck and the new Front, beside the earlier ones", () => {
@@ -109,17 +109,17 @@ describe("wardrobe batch 2 in the creator and the closet (David's prices, specs/
     expect(of("Glasses")).toContain("acc_half_rim_glasses");          // #07: a hat in Roblox, a pair of glasses here
   });
   it("offers the free items in the starting creator, and a priced one only once it is owned", () => {
-    const start = offered("create", new Set(STARTER_PARTS));
+    const start = shownIn("create", new Set(STARTER_PARTS));
     for (const p of b2) expect(start.has(p.id), p.id).toBe(free(p.key!));
-    for (const key of Object.keys(FACE.faces)) for (const id of faceParts(key)) expect(start.has(id), id).toBe(free(key));
-    const bought = offered("create", new Set([...STARTER_PARTS, "hair_curly_pigtails", "acc_cowboy_hat", faceRef("vampire")]));
+    for (const key of Object.keys(FACE.faces).filter(k => priceOf(k))) for (const id of faceParts(key)) expect(start.has(id), id).toBe(free(key));
+    const bought = shownIn("create", new Set([...STARTER_PARTS, "hair_curly_pigtails", "acc_cowboy_hat", faceRef("vampire")]));
     for (const id of ["hair_curly_pigtails", "acc_cowboy_hat", ...faceParts("face-25")]) expect(bought.has(id), id).toBe(true);
     expect(bought.has("cat_wide")).toBe(false);
   });
   it("shows everything in the closet, the priced ones locked behind their shop row", () => {
-    const closet = offered("wardrobe", new Set(STARTER_PARTS));
+    const closet = shownIn("wardrobe", new Set(STARTER_PARTS));
     for (const p of b2) expect(closet.has(p.id), p.id).toBe(true);
-    for (const key of Object.keys(FACE.faces)) for (const id of faceParts(key)) expect(closet.has(id), id).toBe(true);
+    for (const key of Object.keys(FACE.faces).filter(k => priceOf(k))) for (const id of faceParts(key)) expect(closet.has(id), id).toBe(true);
     for (const p of b2) expect(unlockRef(p.id), p.id).toBe(free(p.key!) ? null : partRef(p.id));
   });
   it("chooses a whole face's parts like any other: eyes, a mouth and a toggled accent", () => {
@@ -128,5 +128,27 @@ describe("wardrobe batch 2 in the creator and the closet (David's prices, specs/
     l = choose(l, cat("mouth").sections[0], f.mouth!);
     l = choose(l, cat("extras").sections[0], f.extras[0]);
     expect([l.eyes, l.mouth, l.extras]).toEqual([f.eyes, f.mouth, f.extras]);
+  });
+});
+
+describe("a part David hasn't priced is not offered (coordinator, 2026-10-27; look.ts offered)", () => {
+  const every = (mode: "create" | "wardrobe") => new Set(CATEGORIES.flatMap(c => c.sections.flatMap(s => shownOptions(s, mode, () => true))));
+  const unpriced = PARTS.filter(p => p.key && !priceOf(p.key));
+  const unpricedFaceParts = Object.entries(FACE.faces).filter(([key]) => !priceOf(key)).flatMap(([, f]) => [f.eyes, f.mouth, ...f.extras].filter((x): x is string => !!x));
+
+  it("leaves batch 3's keyed hair, glasses and whole-face parts out of the creator and the closet, owned or not", () => {
+    expect(unpriced.length).toBeGreaterThan(0);
+    expect(unpricedFaceParts.length).toBeGreaterThan(0);
+    for (const mode of ["create", "wardrobe"] as const) {
+      const shown = every(mode);
+      for (const id of [...unpriced.map(p => p.id), ...unpricedFaceParts]) expect(shown.has(id), `${mode} ${id}`).toBe(false);
+    }
+  });
+  it("still offers every priced item, free or sold, and the catalogue (Face Fit, /lab) lists all of it", () => {
+    const shown = every("wardrobe");
+    for (const p of PARTS.filter(q => q.key && priceOf(q.key) && !q.event)) expect(shown.has(p.id), p.id).toBe(true);
+    for (const id of unpriced.map(p => p.id)) expect(PART_BY_ID.has(id), id).toBe(true);
+    expect(offered("hair_tousled_spikes")).toBe(false);
+    expect(offered("top_tee")).toBe(true);
   });
 });
