@@ -115,11 +115,14 @@ export const SWEEP_STATIONS: OwnerStation[] = [
 ];
 /** How close you stand to talk to her out front. */
 export const SWEEPER_TALK = 1.7;
-/** Her lines out front (drafts for David): the café is built, not open, and she is glad of the company. */
+/**
+ * Her lines out front (drafts for David): she's glad of the company and points you at what's open now, never at the
+ * café's door (x-lines, specs/launch/v1-gameplay.md: lines about closed things are swapped).
+ */
 export const SWEEPER_LINES = [
-  "Morning! Not open yet. Soon, I promise.",
+  "Morning! Just sweeping. Have you been down to the museum? Juno's always glad of a visitor.",
   "Every board in there is new. I just keep sweeping the same three leaves.",
-  "When we open, the window stools are yours. The light's best there.",
+  "Bram says the fish bite best at dawn. I wouldn't know. I'm always sweeping at dawn.",
   "[happy] The chalkboard? I wrote it myself. Took three tries.",
 ];
 

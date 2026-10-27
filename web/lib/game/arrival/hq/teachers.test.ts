@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TOOL_TEACHERS, givenKeys, handOver, parseQuests, questFinished, teacherTalk, toolQuest, type TeachContext } from "./teachers";
+import { TOOL_TEACHERS, givenKeys, handOver, parseQuests, questFinished, teacherTalk, type TeachContext } from "./teachers";
 import { TOOL_LINES } from "./lines";
 import { PROPOSED_RESIDENTS } from "@/lib/content/residentRoster";
 import { toolByKey, TAUGHT_KINDS } from "@/lib/game/tools";
@@ -12,17 +12,16 @@ const wheelKinds = (c: TeachContext) => wheelContents({ site: "village", owned: 
 describe("tools unlocked by people (row 312)", () => {
   it("pairs each taught tool with a resident on the roster, and leaves rows for the later tools", () => {
     const live = TOOL_TEACHERS.filter(t => t.live);
-    expect(live.map(t => [t.tool, t.npc])).toEqual([["net", "curator"], ["shovel", "crafter"]]);
-    expect(live.map(t => t.tool).sort()).toEqual([...TAUGHT_KINDS].sort());
+    expect(live.map(t => [t.tool, t.npc])).toEqual([["net", "curator"], ["shovel", "crafter"], ["pickaxe", "mayor"]]);
+    expect(live.map(t => t.tool).filter(k => k !== "pickaxe").sort()).toEqual([...TAUGHT_KINDS].sort());
     for (const t of TOOL_TEACHERS) if (t.npc) expect(PROPOSED_RESIDENTS.some(r => r.slug === t.npc), t.npc).toBe(true);
     for (const t of live) expect(toolByKey(t.key)?.tier).toBe(1);
-    expect(TOOL_TEACHERS.filter(t => !t.live).map(t => t.tool)).toEqual(["axe", "dash", "glider"]);
+    expect(TOOL_TEACHERS.filter(t => !t.live).map(t => t.tool)).toEqual(["dash", "glider"]);
   });
 
-  it("walks one tool from start to finish: offer, hand-over, the quest in the tracker, the catch, yours", () => {
+  it("walks one tool from start to finish: offer, hand-over, the catch, yours", () => {
     let c = fresh;
     expect(wheelKinds(c)).toEqual(["rod"]);
-    expect(toolQuest(c.quests)).toBeNull();
     // Odile offers her net.
     const talk = teacherTalk("curator", c)!;
     expect(talk).toMatchObject({ script: "tool:net:offer", tool: "net", lines: TOOL_LINES.net.offer });
@@ -31,7 +30,6 @@ describe("tools unlocked by people (row 312)", () => {
     expect(given).toBe("net");
     c = { ...c, quests: { ...c.quests, net: "given" } };
     expect(wheelKinds(c)).toEqual(["rod", "net"]);
-    expect(toolQuest(c.quests)).toEqual({ id: "tool:net", title: "Odile's bug net", kind: "quest", steps: [{ id: "tool:net:bug", label: "Catch any bug", done: false }] });
     // Talking again while it runs: her nudge, and nothing handed over twice.
     expect(teacherTalk("curator", c)).toMatchObject({ script: "tool:net:during" });
     expect(handOver("tool:net:offer", c.quests)).toBeNull();
@@ -40,7 +38,6 @@ describe("tools unlocked by people (row 312)", () => {
     expect(questFinished("forage", c.quests)).toBeNull();
     expect(questFinished("bug", c.quests)).toBe("net");
     c = { ...c, quests: { ...c.quests, net: "done" } };
-    expect(toolQuest(c.quests)).toBeNull();
     expect(wheelKinds(c)).toEqual(["rod", "net"]);
     // Done: Odile talks as she always does.
     expect(teacherTalk("curator", c)).toBeNull();
@@ -58,13 +55,16 @@ describe("tools unlocked by people (row 312)", () => {
     expect(teacherTalk("curator", old)).toBeNull();
     expect(teacherTalk("crafter", old)).toBeNull();
     expect(wheelKinds(old)).toEqual(["rod", "net", "shovel"]);
+    // The pickaxe is nobody's starter: Eliza offers it to everyone.
+    expect(teacherTalk("mayor", old)?.script).toBe("tool:pickaxe:offer");
   });
 
   it("knows a tool already owned (given on another device, or bought): no offer for it", () => {
     expect(teacherTalk("curator", { ...fresh, owned: ["net-basic"] })).toBeNull();
     expect(teacherTalk("crafter", { ...fresh, owned: ["net-basic"] })?.tool).toBe("shovel");
     expect(teacherTalk("wren", fresh)).toBeNull();
-    expect(teacherTalk("mayor", fresh)).toBeNull(); // the axe row is a placeholder
+    expect(teacherTalk("mayor", fresh)?.tool).toBe("pickaxe");
+    expect(questFinished("mine", { pickaxe: "given" })).toBe("pickaxe");
   });
 
   it("keeps the taught tools off the shop's shelves (David, 2026-10-17), the better tiers on them", () => {

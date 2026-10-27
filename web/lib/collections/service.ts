@@ -80,7 +80,7 @@ export async function catchAction(
       if (!node) return { ok: false, status: 422, code: "wrong_place", error: "Nothing to gather from here." };
       const sp = nodeRoll(memberId, node, now, await weather());
       if (!sp) return { ok: false, status: 409, code: "nothing_here", error: "Nothing's out here right now." };
-      if (sp.tool === "net" || sp.tool === "shovel") {
+      if (sp.tool === "net" || sp.tool === "shovel" || sp.tool === "pickaxe") {
         // Row 312: a member whose tools are taught holds the starter net or shovel only once a resident has given it.
         const [owned, taught] = await Promise.all([store.ownedGear(memberId), store.toolsTaught(memberId)]);
         const held = checkHeld(req.tool, sp.tool, owned, taught);

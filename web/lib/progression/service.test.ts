@@ -131,14 +131,24 @@ describe("real activity sync", () => {
 describe("chapters through the service", () => {
   it("advances settle-in, letters on completion, and opens chapter 2", async () => {
     const m = setup();
-    m.setFacts(A, { firstCatchKey: "fish_dace" });
+    m.setFacts(A, { firstCatchKey: "fish_dace", counts: { fish: 1 } });
     expect(await advanceChapter(m.store, A, { chapter_slug: "settle-in", action: "claim_plot" }, now)).toMatchObject({ ok: true });
     expect(await advanceChapter(m.store, A, { chapter_slug: "reopen-cafe", action: "complete" }, now)).toMatchObject({ ok: false, status: 409 });
-    await advanceChapter(m.store, A, { chapter_slug: "settle-in", action: "donate_catch" }, now);
-    const done = await advanceChapter(m.store, A, { chapter_slug: "settle-in", action: "report_hq" }, now);
-    expect(done.ok && done.data.chapters.map((c) => c.status)).toEqual(["completed", "active", "locked", "locked"]);
-    expect(done.ok && done.data.objective).toMatchObject({ chapter_slug: "reopen-cafe", anchor: "monument" });
+    const done = await advanceChapter(m.store, A, { chapter_slug: "settle-in", action: "donate_catch" }, now);
+    expect(done.ok && done.data.chapters.slice(0, 3).map((c) => c.status)).toEqual(["completed", "active", "locked"]);
+    expect(done.ok && done.data.objective).toMatchObject({ chapter_slug: "odiles-net", step_key: "get_net", anchor: "museum" });
     expect(done.ok && done.data.unread_letters).toBe(1);
+  });
+  it("gives a chapter's reward item once, on completion (Bram's Cedar rod)", async () => {
+    const m = setup();
+    for (const c of m.chapters.filter((x) => x.position < 4)) await advanceChapter(m.store, A, { chapter_slug: c.slug, action: "skip" }, now);
+    m.setFacts(A, { counts: { fish_kinds: 5 }, lastFishAt: "2026-09-24T22:59:00Z" });
+    const dusk = new Date("2026-09-24T23:00:00Z");
+    expect(await advanceChapter(m.store, A, { chapter_slug: "brams-challenge", action: "complete" }, dusk)).toMatchObject({ ok: false, status: 409 });
+    expect(await advanceChapter(m.store, A, { chapter_slug: "brams-challenge", action: "twilight_catch" }, dusk)).toMatchObject({ ok: true });
+    expect(m.itemsOf(A, "rod-cedar")).toBe(0);
+    expect(await advanceChapter(m.store, A, { chapter_slug: "brams-challenge", action: "complete" }, dusk)).toMatchObject({ ok: true });
+    expect(m.itemsOf(A, "rod-cedar")).toBe(1);
   });
   it("loads state with the caller's private share", async () => {
     const m = setup();
@@ -151,9 +161,9 @@ describe("chapters through the service", () => {
 describe("chapter rewards (row 200, single wallet)", () => {
   it("pays the chapter reward once on completion and nothing for a skip", async () => {
     const m = setup();
-    m.setFacts(A, { firstCatchKey: "fish_dace" });
+    m.setFacts(A, { firstCatchKey: "fish_dace", counts: { fish: 1 } });
     const before = m.coinsOf(A);
-    for (const action of ["claim_plot", "donate_catch", "report_hq"] as const) await advanceChapter(m.store, A, { chapter_slug: "settle-in", action }, now);
+    for (const action of ["claim_plot", "donate_catch"] as const) await advanceChapter(m.store, A, { chapter_slug: "settle-in", action }, now);
     expect(m.coinsOf(A)).toBe(before + 100);
     expect(await m.store.creditCoins(A, 100, "chapter", "settle-in", "chapter:settle-in")).toMatchObject({ replayed: true });
     const skipBefore = m.coinsOf(B);
@@ -163,14 +173,14 @@ describe("chapter rewards (row 200, single wallet)", () => {
   it("a failure while finishing a chapter leaves it retryable and the retry pays once (ruling 8)", async () => {
     for (const failing of ["sendSystemLetter", "creditCoins"] as const) {
       const m = setup();
-      m.setFacts(A, { firstCatchKey: "fish_dace" });
+      m.setFacts(A, { firstCatchKey: "fish_dace", counts: { fish: 1 } });
       const before = m.coinsOf(A);
-      for (const action of ["claim_plot", "donate_catch"] as const) await advanceChapter(m.store, A, { chapter_slug: "settle-in", action }, now);
+      for (const action of ["claim_plot"] as const) await advanceChapter(m.store, A, { chapter_slug: "settle-in", action }, now);
       const real = m.store[failing] as (...a: unknown[]) => Promise<unknown>;
       let calls = 0;
       (m.store as unknown as Record<string, unknown>)[failing] = (...a: unknown[]) => (calls++ === 0 ? Promise.reject(new Error("boom")) : real(...a));
-      expect(await advanceChapter(m.store, A, { chapter_slug: "settle-in", action: "report_hq" }, now)).toMatchObject({ ok: false, status: 500 });
-      const retry = await advanceChapter(m.store, A, { chapter_slug: "settle-in", action: "report_hq" }, now);
+      expect(await advanceChapter(m.store, A, { chapter_slug: "settle-in", action: "donate_catch" }, now)).toMatchObject({ ok: false, status: 500 });
+      const retry = await advanceChapter(m.store, A, { chapter_slug: "settle-in", action: "donate_catch" }, now);
       expect(retry.ok && retry.data.chapters[0].status).toBe("completed");
       expect(retry.ok && retry.data.unread_letters).toBe(1);
       expect(m.coinsOf(A)).toBe(before + 100);

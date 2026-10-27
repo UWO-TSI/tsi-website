@@ -1,9 +1,9 @@
 /**
  * The smooth world as the server checks it (lib/collections/rolls.ts): the server can't decode the world's PNGs, so the
  * cell view its catch checks need ships beside them as `web/data/world/cells.json`, written with every save
- * (world/disk.ts writeWorldFiles). Each cell is water `~`, built ground `#` (stone, which squares the coast) or land `.`,
- * run-length coded per row. That is all the coast (grid.ts terrainOf), the water classes (fishingSpots.ts) and the node
- * ids (islandNodes.ts) read, so the server's village gives exactly the client's casts and nodes.
+ * (world/disk.ts writeWorldFiles). Each cell is water `~`, built ground `#` (stone, which squares the coast), sand `s`,
+ * soil `d` (where things are buried: islandNodes.ts digSpots) or other land `.`, run-length coded per row. That is all
+ * the coast (grid.ts terrainOf), the water classes (fishingSpots.ts) and the node ids (islandNodes.ts) read, so the server's village gives exactly the client's casts and nodes.
  */
 import { Surface, createMap, isWater, type IslandMap, type MapAnnotation } from "../grid";
 import { villageOf, type MapObject, type Village } from "../villageMap";
@@ -11,8 +11,8 @@ import { villageOf, type MapObject, type Village } from "../villageMap";
 export interface WorldCells { width: number; depth: number; originX: number; originZ: number; rows: string[] }
 
 const BUILT = new Set<number>([Surface.Stone, Surface.Wood, Surface.Brick]);
-const cellChar = (s: number) => (isWater(s) ? "~" : BUILT.has(s) ? "#" : ".");
-const SURFACE: Record<string, number> = { "~": Surface.River, "#": Surface.Stone, ".": Surface.Grass };
+const cellChar = (s: number) => (isWater(s) ? "~" : BUILT.has(s) ? "#" : s === Surface.Sand ? "s" : s === Surface.Soil ? "d" : ".");
+const SURFACE: Record<string, number> = { "~": Surface.River, "#": Surface.Stone, s: Surface.Sand, d: Surface.Soil, ".": Surface.Grass };
 
 /** A world's cells (its derived cell map, terrain.ts cellMapOf), coded. */
 export function worldCells(map: IslandMap): WorldCells {
@@ -39,7 +39,7 @@ export function cellsMap(c: WorldCells): IslandMap {
   const map = createMap(c.width, c.depth, c.originX, c.originZ);
   c.rows.forEach((row, cz) => {
     let cx = 0;
-    for (const [, ch, n] of row.matchAll(/([~#.])(\d+)/g)) for (let k = 0; k < Number(n); k++) map.surfaces[cz * c.width + cx++] = SURFACE[ch];
+    for (const [, ch, n] of row.matchAll(/([~#.sd])(\d+)/g)) for (let k = 0; k < Number(n); k++) map.surfaces[cz * c.width + cx++] = SURFACE[ch];
   });
   return map;
 }

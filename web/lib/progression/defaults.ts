@@ -93,34 +93,65 @@ export const DEFAULT_GOALS: ClubGoal[] = [
   ...SEASONAL_GOALS,
 ];
 
+/** A personal chapter (m1 to m6): an errand with a person and a place, skippable for everyone (principle 7). */
+const errand = (n: number, slug: string, title: string, requirement: QuestChapter["requirement"], summary: string, step_copy: QuestChapter["step_copy"], reward_coins: number, extra: Partial<QuestChapter> = {}): QuestChapter => ({
+  id: `00000000-0000-4000-8000-0000000000b${n}`, slug, position: n, title, summary, requirement, goal_slug: null, step_copy,
+  unlocks_regions: [], completion_letter: "", skippable_max_tier: 5, reward_coins, reward_item: null, active: true, ...extra,
+});
+
 export const DEFAULT_CHAPTERS: QuestChapter[] = [
   {
     id: "00000000-0000-4000-8000-0000000000a1",
     slug: "settle-in",
     position: 1,
     title: "Settle in",
-    // Claiming your plot is the home island's drop (lib/game/drops.ts STEP_FEATURE): the summary leaves it out until then.
-    // Alice is HQ's host after Bram's tour (row 312, 20261017010000_hq_onboarding_copy).
-    summary: "Make your first catch and donate it to the museum, then report back to Alice at HQ.",
+    // m1 (David, 2026-10-27): first catch, donated to the museum's guide, who explains the museum and pays 100 coins and
+    // a thank-you letter. No report to Alice. Claiming your plot is the home island's drop (lib/game/drops.ts STEP_FEATURE).
+    summary: "Make your first catch and bring it to Juno at the museum.",
     requirement: "settle_in",
     goal_slug: null,
     step_copy: {
       claim_plot: { label: "Claim your plot at HQ" },
-      first_catch: { label: "Make your first catch", hint: "Any fish counts. Try the pier." },
-      donate_catch: { label: "Donate your catch to the museum shell" },
-      report_hq: { label: "Report back to Alice at HQ" },
+      first_catch: { label: "Make your first catch", hint: "Any fish counts. Try the end of the pier." },
+      donate_catch: { label: "Bring your catch to Juno at the museum", hint: "She's the museum's guide. Talk to her by the door." },
     },
     unlocks_regions: ["village_core"],
-    completion_letter: "Welcome to the island. The village is yours to explore.",
+    completion_letter: "Thank you for the museum's first find from you! I've written its label myself. Every fish, bug and buried treasure you bring in helps the whole club fill the halls. Come and see me any time. Juno, the museum",
     // Design principle 7: onboarding is opt-in and skippable in one click for everyone.
     skippable_max_tier: 5,
     reward_coins: 100,
+    reward_item: null,
     active: true,
   },
+  errand(2, "odiles-net", "Odile's net", "bug_net", "Odile at the museum has a spare net. Catch a few bugs with it and show her.", {
+    get_net: { label: "Ask Odile at the museum for a net" },
+    catch_bugs: { label: "Catch 3 bugs", hint: "Bugs sit on flowers and trees. Walk up slowly (hold C) and swing when the net says so." },
+    show_odile: { label: "Show Odile your bugs at the museum" },
+  }, 150),
+  errand(3, "pims-shovel", "Pim's shovel", "dig", "Pim on the beach always has a shovel. Things are buried all over the island: find the marks and dig.", {
+    get_shovel: { label: "Ask Pim on the beach for a shovel" },
+    dig_up: { label: "Dig up 3 buried things", hint: "Look for little star-shaped cracks in the sand and on dirt. Rare things turn up too." },
+    show_pim: { label: "Show Pim your finds on the beach" },
+  }, 150),
+  errand(4, "brams-challenge", "Bram's challenge", "rod_challenge", "Bram bets you can't catch five kinds of fish, one of them at dawn or dusk. Win and his Cedar rod is yours.", {
+    fish_kinds: { label: "Catch 5 different fish", hint: "The pier, the river and the pond all have their own." },
+    twilight_catch: { label: "Catch a fish at dawn or dusk", hint: "Island time follows the real sun: fish around sunrise or sunset." },
+    show_bram: { label: "Show Bram at the wharf" },
+  }, 0, { reward_item: "rod-cedar" }),
+  errand(5, "the-museum", "The club's museum", "museum_collab", "The museum opens when the club has filled it: 10 kinds of fish, 5 bugs and 3 buried finds. Do your part.", {
+    donate_new: { label: "Donate 3 new finds to the museum", hint: "Talk to Odile inside. Only finds nobody has donated yet go on show." },
+    tell_odile: { label: "Tell Odile at the museum" },
+  }, 200),
+  errand(6, "elizas-pickaxe", "Eliza's pickaxe", "pickaxe", "Mayor Eliza still has the pickaxe that dug the HQ's foundations. Break some rocks with it.", {
+    get_pickaxe: { label: "Ask Mayor Eliza at the plaza for her pickaxe" },
+    mine_stone: { label: "Break rocks for 3 stone", hint: "Swing the pickaxe at the big rocks. Each one gives a stone or so an hour." },
+    mine_iron: { label: "Find a lump of iron", hint: "Iron turns up in rocks now and then." },
+    show_eliza: { label: "Bring your stone to Mayor Eliza" },
+  }, 200),
   {
     id: "00000000-0000-4000-8000-0000000000a2",
     slug: "reopen-cafe",
-    position: 2,
+    position: 7,
     title: "Reopen the cafe",
     summary: "The whole club is reopening the cafe. Chip in at the monument and come to events.",
     requirement: "club_goal",
@@ -133,12 +164,13 @@ export const DEFAULT_CHAPTERS: QuestChapter[] = [
     completion_letter: "",
     skippable_max_tier: 0,
     reward_coins: 0,
+    reward_item: null,
     active: true,
   },
   {
     id: "00000000-0000-4000-8000-0000000000a3",
     slug: "fund-museum",
-    position: 3,
+    position: 8,
     title: "Fund the museum",
     summary: "The club is funding the museum. Specimens and coins count.",
     requirement: "club_goal",
@@ -151,12 +183,13 @@ export const DEFAULT_CHAPTERS: QuestChapter[] = [
     completion_letter: "",
     skippable_max_tier: 0,
     reward_coins: 0,
+    reward_item: null,
     active: true,
   },
   {
     id: "00000000-0000-4000-8000-0000000000a4",
     slug: "ruins-gate",
-    position: 4,
+    position: 9,
     title: "Reach the ruins gate",
     summary: "Take the Oracle quiz, reach level 10 and choose your subclass to open the ruins gate.",
     requirement: "oracle_trial",
@@ -170,6 +203,13 @@ export const DEFAULT_CHAPTERS: QuestChapter[] = [
     completion_letter: "The ruins gate is open to you. Tread carefully.",
     skippable_max_tier: 0,
     reward_coins: 300,
+    reward_item: null,
     active: true,
   },
 ];
+
+/**
+ * m5: what the club fills before the museum opens (next launch), counted in distinct species donated
+ * (museum_donations), and each kind's museum category.
+ */
+export const MUSEUM_TARGETS = { fish: 10, bugs: 5, finds: 3 } as const;

@@ -2,10 +2,10 @@
  * Server side of a resident handing you a tool (row 312, teachers.ts): the tool goes into the member's inventory, which
  * is what the catch routes check (lib/game/tools.ts checkHeld, lib/collections/service.ts). Once per member, whatever
  * is asked again. A member whose tools aren't taught (they arrived before row 312) already has the starter: nothing is
- * written. Route: POST /api/world/tools.
+ * written, unless it's a tool nobody starts with (the pickaxe). Route: POST /api/world/tools.
  */
 import { z } from "zod";
-import { isTaughtTool, teacherOf, type TaughtTool } from "./teachers";
+import { isTaughtTool, needsTeacher, teacherOf, type TaughtTool } from "./teachers";
 
 export interface ToolGrantStore {
   /** This member's tools are taught (lib/game/arrival/arrivalService.ts ARRIVAL_TAUGHT_KEY). */
@@ -21,7 +21,7 @@ export async function giveTool(store: ToolGrantStore, memberId: string, body: un
   const parsed = Body.safeParse(body);
   if (!parsed.success || !isTaughtTool(parsed.data.tool)) return { ok: false, status: 400, error: "Invalid request", code: "invalid" };
   const t = teacherOf(parsed.data.tool)!;
-  if (!(await store.taught(memberId))) return { ok: true, data: { tool: t.tool, key: t.key, granted: false } };
+  if (!needsTeacher(t.key) && !(await store.taught(memberId))) return { ok: true, data: { tool: t.tool, key: t.key, granted: false } };
   await store.grant(memberId, t.key);
   return { ok: true, data: { tool: t.tool, key: t.key, granted: true } };
 }

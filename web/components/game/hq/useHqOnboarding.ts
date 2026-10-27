@@ -17,7 +17,7 @@ import { itemIcon } from "@/lib/game/toolWheel";
 import type { TrackedQuest } from "@/lib/game/questTracker";
 import { finishToolQuest, giveTool, hqEvent, hqSnapshot, setToolsTaught, startVisit, useHq } from "@/lib/game/arrival/hq/store";
 import { hqQuest, visitCue, waitingFor } from "@/lib/game/arrival/hq/visit";
-import { givenKeys, handOver, isTaughtTool, questFinished, teacherOf, teacherTalk, toolQuest, type CatchKind } from "@/lib/game/arrival/hq/teachers";
+import { givenKeys, handOver, isTaughtTool, questFinished, teacherOf, teacherTalk, type CatchKind } from "@/lib/game/arrival/hq/teachers";
 import { TOOL_LINES, WREN, WREN_LINES, escPhrase, trackerEsc } from "@/lib/game/arrival/hq/lines";
 import type { HqCard, HqEvent } from "@/lib/game/arrival/hq/script";
 
@@ -79,11 +79,11 @@ export function useHqOnboarding(w: HqWorld, dev: URLSearchParams | null) {
     toast(TOOL_LINES[tool].given, itemIcon(teacherOf(tool)!.key));
   }), []);
 
-  // A catch: the running tool quest it finishes (a bug for the net, a dig for the shovel). The tool is yours.
+  // A catch: the running tool quest it finishes (a bug for the net, a dig for the shovel, a rock for the pickaxe).
   useEffect(() => {
     const got = (e: Event) => {
       const d = (e as CustomEvent<{ kind?: string; bug?: boolean }>).detail;
-      const kind: CatchKind = d?.bug || d?.kind === "bug" ? "bug" : d?.kind === "dig" ? "dig" : "forage";
+      const kind: CatchKind = d?.bug || d?.kind === "bug" ? "bug" : d?.kind === "dig" ? "dig" : d?.kind === "mine" ? "mine" : "forage";
       const tool = questFinished(kind, hqSnapshot().quests);
       if (!tool) return;
       finishToolQuest(tool);
@@ -118,12 +118,8 @@ export function useHqOnboarding(w: HqWorld, dev: URLSearchParams | null) {
   const card: HqCard | null = cue?.kind === "card" && atHq && free ? cue.card : null;
   const waiting: HqEvent | null = waitingFor(visit);
 
-  // The tracker: the visit while it runs, else a tool's quest.
-  const quest: TrackedQuest | null = useMemo(() => {
-    if (w.arriving) return null;
-    if (visit && !visit.done) return hqQuest(visit, t => trackerEsc(t, touch));
-    return hq.taught ? toolQuest(hq.quests) : null;
-  }, [w.arriving, visit, hq.taught, hq.quests, touch]);
+  // The tracker: the visit while it runs (then the main quest's chapter, lib/game/mainQuest.ts).
+  const quest: TrackedQuest | null = useMemo(() => (!w.arriving && visit && !visit.done ? hqQuest(visit, t => trackerEsc(t, touch)) : null), [w.arriving, visit, touch]);
 
   /** Bram's tour is over: a new arrival's tools are taught and the visit with Alice starts. */
   const arrived = useCallback((taught: boolean) => {

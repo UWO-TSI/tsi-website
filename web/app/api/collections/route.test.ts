@@ -52,7 +52,7 @@ const cells = Array.from({ length: v.map.width * v.map.depth }, (_, i) => [v.map
 const SHORE = cells.find(([x, z]) => fishingSpot(v.map, classify, x, z))!;
 const INLAND = cells.find(([x, z]) => isGroundAtWorld(v.map, x, z) && !fishingSpot(v.map, classify, x, z))!;
 /** Everyone's tier-1 tools (lib/game/tools.ts), held for a cast, a bug or a dig. */
-const ROD = "rod_flimsy", NET = "net-basic", SHOVEL = "shovel-basic";
+const ROD = "rod_flimsy", NET = "net-basic", SHOVEL = "shovel-basic", PICK = "pickaxe-basic";
 const nodes = villageNodes(v);
 const node = (prefix: string) => [...nodes.forage, ...nodes.bugs].find((n) => n.id.startsWith(prefix))!;
 
@@ -62,14 +62,16 @@ beforeEach(() => {
   mock.weather = "clear";
   mock.goals = [];
   as(A);
+  // Mayor Eliza's pickaxe is nobody's starter (m6): A has been given it.
+  m.own(A, [PICK]);
 });
 
 describe("POST /api/collections: the server rolls every catch", () => {
   it("has the fixtures it needs", () => {
     expect(SHORE).toBeDefined();
     expect(INLAND).toBeDefined();
-    // Every world has rocks to strike and shells to dig (the shovel's quest, lib/game/arrival/hq/teachers.ts).
-    for (const prefix of ["rock-", "shell-", "mush-", "bug-flower-"]) expect(node(prefix), prefix).toBeDefined();
+    // Every world has rocks to break, shells, and things buried in the sand and the dirt (m3, m6).
+    for (const prefix of ["rock-", "shell-", "dig-sand-", "dig-soil-", "mush-", "bug-flower-"]) expect(node(prefix), prefix).toBeDefined();
   });
 
   it("refuses a client-reported species and size", async () => {
@@ -109,8 +111,8 @@ describe("POST /api/collections: the server rolls every catch", () => {
     expect((await post({ action: "cast", site: "village", at: INLAND, power: 1, tool: ROD })).status).toBe(422);
     expect((await post({ action: "harvest", node: "no-such-node", at: [0, 0] })).status).toBe(422);
     const rock = node("rock-");
-    expect((await post({ action: "harvest", node: rock.id, at: [rock.x + 20, rock.z], tool: SHOVEL })).status).toBe(422);
-    expect((await post({ action: "harvest", node: rock.id, at: [rock.x + 1, rock.z], tool: SHOVEL })).status).toBe(200);
+    expect((await post({ action: "harvest", node: rock.id, at: [rock.x + 20, rock.z], tool: PICK })).status).toBe(422);
+    expect((await post({ action: "harvest", node: rock.id, at: [rock.x + 1, rock.z], tool: PICK })).status).toBe(200);
   });
 
   it("refuses the wrong season or time", async () => {
@@ -131,10 +133,10 @@ describe("POST /api/collections: the server rolls every catch", () => {
     expect((await post({ action: "cast", site: "village", at: SHORE, power: 1, tool: ROD })).status).toBe(429);
     const rock = node("rock-");
     const at = [rock.x, rock.z];
-    expect((await post({ action: "harvest", node: rock.id, at, tool: SHOVEL })).status).toBe(200);
-    expect((await post({ action: "harvest", node: rock.id, at, tool: SHOVEL })).status).toBe(409);
+    expect((await post({ action: "harvest", node: rock.id, at, tool: PICK })).status).toBe(200);
+    expect((await post({ action: "harvest", node: rock.id, at, tool: PICK })).status).toBe(409);
     later(3_600_000);
-    expect((await post({ action: "harvest", node: rock.id, at, tool: SHOVEL })).status).toBe(200);
+    expect((await post({ action: "harvest", node: rock.id, at, tool: PICK })).status).toBe(200);
   });
 
   it("keeps the hourly caps (legendary: 3 per species per hour)", async () => {
@@ -235,13 +237,14 @@ describe("POST /api/collections: rare catches can teach a recipe (rows 199, 258)
     c = memoryCraftingStore(undefined, () => clock, () => dice());
     m = memoryCollectionsStore(() => clock, c.catchDrop);
     as(A);
+    m.own(A, [PICK]);
   });
 
   it("never takes a recipe from the client", async () => {
     const forged = { recipe_id: "rod-tidewarden", recipe: { id: "rod-tidewarden" }, learn: "rod-tidewarden" };
     expect((await post({ action: "learn", ...forged })).status).toBe(400);
     const rock = node("rock-");
-    const harvest = await post({ action: "harvest", node: rock.id, at: [rock.x, rock.z], tool: SHOVEL, ...forged });
+    const harvest = await post({ action: "harvest", node: rock.id, at: [rock.x, rock.z], tool: PICK, ...forged });
     expect(harvest.status).toBe(200);
     const land = await fish("fish_black_bass");
     const landed = await post({ action: "land", roll: crypto.randomUUID(), ...forged });
@@ -364,12 +367,21 @@ describe("POST /api/collections: the held tool (row 279, specs/game-ui.md)", () 
     expect((await post({ action: "harvest", node: bug.id, at, tool: "net-emperor" })).status).toBe(200);
   });
 
-  it("digs and strikes rocks only with a shovel; picking by hand needs none", async () => {
+  it("breaks rocks only with the pickaxe and digs only with a shovel; picking by hand needs none", async () => {
     const rock = node("rock-"), at = [rock.x, rock.z];
     expect(await post({ action: "harvest", node: rock.id, at })).toMatchObject({ status: 422, body: { code: "no_tool" } });
-    expect(await post({ action: "harvest", node: rock.id, at, tool: ROD })).toMatchObject({ status: 422, body: { code: "wrong_tool" } });
-    expect(await post({ action: "harvest", node: rock.id, at, tool: "shovel-gold" })).toMatchObject({ status: 403, body: { code: "tool_not_owned" } });
-    expect((await post({ action: "harvest", node: rock.id, at, tool: SHOVEL })).status).toBe(200);
+    expect(await post({ action: "harvest", node: rock.id, at, tool: SHOVEL })).toMatchObject({ status: 422, body: { code: "wrong_tool" } });
+    expect((await post({ action: "harvest", node: rock.id, at, tool: PICK })).status).toBe(200);
+    // Nobody starts with the pickaxe: B hasn't been given one.
+    as(B);
+    expect(await post({ action: "harvest", node: rock.id, at, tool: PICK })).toMatchObject({ status: 403, body: { code: "tool_not_owned" } });
+    as(A);
+    const spot = node("dig-soil-"), there = [spot.x, spot.z];
+    expect(await post({ action: "harvest", node: spot.id, at: there, tool: PICK })).toMatchObject({ status: 422, body: { code: "wrong_tool" } });
+    expect(await post({ action: "harvest", node: spot.id, at: there, tool: "shovel-gold" })).toMatchObject({ status: 403, body: { code: "tool_not_owned" } });
+    const dug = await post({ action: "harvest", node: spot.id, at: there, tool: SHOVEL });
+    expect(dug.status).toBe(200);
+    expect(ROSTER.find((x) => x.key === dug.body.catch.item_key)?.biome).toBe("dig_soil");
     // A mushroom is picked by hand: whatever is held (or nothing), the tool never refuses it.
     const mush = node("mush-");
     for (const tool of [undefined, ROD, "shovel-gold"]) {
@@ -380,9 +392,9 @@ describe("POST /api/collections: the held tool (row 279, specs/game-ui.md)", () 
 });
 
 describe("POST /api/collections: tools come from people after the tour (row 312, specs/hq-onboarding.md)", () => {
-  const bug = () => node("bug-flower-"), rock = () => node("rock-");
+  const bug = () => node("bug-flower-"), spot = () => node("dig-sand-");
   const net = () => post({ action: "harvest", node: bug().id, at: [bug().x, bug().z], tool: NET });
-  const dig = () => post({ action: "harvest", node: rock().id, at: [rock().x, rock().z], tool: SHOVEL });
+  const dig = () => post({ action: "harvest", node: spot().id, at: [spot().x, spot().z], tool: SHOVEL });
   beforeEach(() => { clock = new Date("2026-01-16T03:00:00Z"); }); // 22:00: the night butterflies are out
 
   it("refuses a new arrival's starter net and shovel until a resident has handed them over", async () => {
@@ -424,12 +436,12 @@ describe("POST /api/collections: a full backpack refuses the pickup (rows 279–
 
   it("refuses a harvest that needs a new slot, and leaves it in the world for later", async () => {
     fill();
-    expect(await harvest("rock-", SHOVEL)).toMatchObject({ status: 409, body: { code: "bag_full", error: "Your backpack is full." } });
+    expect(await harvest("rock-", PICK)).toMatchObject({ status: 409, body: { code: "bag_full", error: "Your backpack is full." } });
     expect(m.countOf(A, "wood_branch")).toBe(29);
     expect((await m.store.memberItems(A)).length).toBe(20);
     // Room again (one fish fewer): the same rock, the same hour, is still there to strike.
     m.give(A, FISH19[0], -1);
-    expect((await harvest("rock-", SHOVEL)).status).toBe(200);
+    expect((await harvest("rock-", PICK)).status).toBe(200);
   });
 
   it("still tops up a partial stack at a full bag, but not past it", async () => {
@@ -466,8 +478,8 @@ describe("POST /api/collections: a full backpack refuses the pickup (rows 279–
 
   it("takes more once the member owns a bigger pocket", async () => {
     fill();
-    m.own(A, ["bag:30"]);
-    expect((await harvest("rock-", SHOVEL)).status).toBe(200);
+    m.own(A, ["bag:30", PICK]);
+    expect((await harvest("rock-", PICK)).status).toBe(200);
     expect((await cast()).status).toBe(200);
   });
 });

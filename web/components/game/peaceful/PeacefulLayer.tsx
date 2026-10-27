@@ -16,14 +16,14 @@ import { setSceneWater } from "@/lib/game/fishingRig";
 import { isGroundAtWorld, type IslandMap } from "@/lib/game/grid";
 import type { WorldMoment } from "@/lib/collections/logic";
 
-export type PeacefulNear = "forage" | "net" | "dig" | "fish" | null;
+export type PeacefulNear = "forage" | "net" | "dig" | "mine" | "fish" | null;
 
 /** The spot the per-frame check writes (one scene runs it at a time): read at the click, copied into the cast's event. */
 const SPOT: FishingSpot = { target: [0, 0], water: "river" };
 /** Lowest-priority prompt: a forage node (by hand), a catchable bug (the net's) or a dig (the shovel's) in reach, else water in casting reach (the rod's). */
 export function peacefulNear(map: IslandMap, classify: (x: number, z: number) => WaterType, x: number, z: number, spotOut: { current: FishingSpot | null }): PeacefulNear {
   const target = getPeacefulTarget();
-  if (target) return target.kind === "bug" ? "net" : target.kind === "dig" ? "dig" : "forage";
+  if (target) return target.kind === "bug" ? "net" : target.kind === "forage" ? "forage" : target.kind;
   spotOut.current = fishingSpot(map, classify, x, z, SPOT);
   return spotOut.current ? "fish" : null;
 }

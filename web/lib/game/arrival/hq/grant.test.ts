@@ -27,6 +27,9 @@ describe("a resident hands you a tool (POST /api/world/tools)", () => {
     const s = store([]);
     expect(await giveTool(s, "old", { tool: "net" })).toEqual({ ok: true, data: { tool: "net", key: "net-basic", granted: false } });
     expect(s.inv.size).toBe(0);
+    // The pickaxe is nobody's starter: Eliza's gift is written for everyone.
+    expect(await giveTool(s, "old", { tool: "pickaxe" })).toEqual({ ok: true, data: { tool: "pickaxe", key: "pickaxe-basic", granted: true } });
+    expect(s.inv.get("old")).toEqual(["pickaxe-basic"]);
   });
 
   it("hands over only a tool a resident teaches", async () => {

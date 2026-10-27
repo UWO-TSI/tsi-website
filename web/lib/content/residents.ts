@@ -10,11 +10,11 @@ import { HOME_LANDMARKS, ROUTINE_SPECIAL } from "@/lib/game/residentRoutine";
 import type { LandmarkId } from "@/lib/game/defaultIsland";
 import { validateTalk } from "./talk";
 
-export const RESIDENT_POSTS = ["hq_lead", "shopkeeper", "cafe_owner", "museum_curator", "wharf_keeper", "oracle_keeper", "workshop_crafter", "villager"] as const;
+export const RESIDENT_POSTS = ["hq_lead", "shopkeeper", "cafe_owner", "museum_curator", "museum_guide", "wharf_keeper", "oracle_keeper", "workshop_crafter", "villager"] as const;
 export type ResidentPost = (typeof RESIDENT_POSTS)[number];
 /** Each post's title (the Residents editor, the dialogue box's name tag). */
 export const POST_TITLES: Record<ResidentPost, string> = {
-  hq_lead: "HQ lead", shopkeeper: "Shopkeeper", cafe_owner: "Café owner", museum_curator: "Museum curator",
+  hq_lead: "HQ lead", shopkeeper: "Shopkeeper", cafe_owner: "Café owner", museum_curator: "Museum curator", museum_guide: "Museum guide",
   wharf_keeper: "Wharf keeper", oracle_keeper: "Oracle keeper", workshop_crafter: "Workshop crafter", villager: "Villager",
 };
 

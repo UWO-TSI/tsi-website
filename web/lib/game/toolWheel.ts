@@ -71,7 +71,7 @@ export function wheelWeapons(weapons: readonly string[], defaultWeapon: string |
 export function wheelContents(ctx: WheelContext): WheelItem[] {
   const pins = ctx.pins.filter(k => (ctx.stock[k] ?? 0) > 0).slice(0, MAX_PINS).map(pinItem);
   if (ctx.site === "ruins") return wheelWeapons(ctx.weapons, ctx.defaultWeapon, true).slice(0, WHEEL_SLOTS).map(weaponItem);
-  const tools = (["rod", "net", "shovel"] as const).flatMap(k => { const t = wheelTool(k, ctx.owned, ctx.chosen?.[k], ctx.taught); return t ? [toolItem(t)] : []; });
+  const tools = (["rod", "net", "shovel", "pickaxe"] as const).flatMap(k => { const t = wheelTool(k, ctx.owned, ctx.chosen?.[k], ctx.taught); return t ? [toolItem(t)] : []; });
   if (ctx.owned.includes(GLIDER_REF)) tools.push(GLIDER);
   const room = WHEEL_SLOTS - tools.length - pins.length;
   const weapons = ctx.armed ? wheelWeapons(ctx.weapons, ctx.defaultWeapon, false).slice(0, room).map(weaponItem) : [];
@@ -123,8 +123,8 @@ export function flick(v: [number, number], dx: number, dy: number, max: number):
 
 // ── Left click ───────────────────────────────────────────────────────
 /** What's in reach for a tool (the world's nearest): water to fish, a catchable bug, something to dig or strike. */
-export interface Reach { water: boolean; bug: string | null; dig: string | null }
-export type ClickVerb = "cast" | "swing" | "dig" | "attack" | "eat";
+export interface Reach { water: boolean; bug: string | null; dig: string | null; mine?: string | null }
+export type ClickVerb = "cast" | "swing" | "dig" | "mine" | "attack" | "eat";
 export interface ClickAction { verb: ClickVerb; label: string; /** Something in reach takes it (a catch, a dig); otherwise it's the motion alone. */ target: boolean }
 const EDIBLE = new Set([...ROSTER, ...TREATS].filter(s => s.category === "fruit").map(s => s.key));
 export const edible = (key: string) => EDIBLE.has(key);
@@ -135,6 +135,7 @@ export function clickAction(item: WheelItem | null, reach: Reach, site: WheelSit
     case "rod": return reach.water ? { verb: "cast", label: "Cast", target: true } : null;
     case "net": return reach.bug ? { verb: "swing", label: `Swing the net (${reach.bug})`, target: true } : { verb: "swing", label: "Swing the net", target: false };
     case "shovel": return reach.dig ? { verb: "dig", label: reach.dig, target: true } : { verb: "dig", label: "Dig", target: false };
+    case "pickaxe": return reach.mine ? { verb: "mine", label: reach.mine, target: true } : { verb: "mine", label: "Swing the pickaxe", target: false };
     case "weapon": return { verb: "attack", label: site === "ruins" ? "Attack" : "Practice swing", target: site === "ruins" };
     case "pin": return edible(item.key) ? { verb: "eat", label: `Eat the ${item.name.toLowerCase()}`, target: true } : null;
     default: return null;
@@ -142,6 +143,6 @@ export function clickAction(item: WheelItem | null, reach: Reach, site: WheelSit
 }
 /** Something in reach wants a tool you aren't holding: the hint names it (null when the held one fits or nothing waits). */
 export function toolNeeded(item: WheelItem | null, reach: Reach): ToolKind | null {
-  const want: ToolKind | null = reach.bug ? "net" : reach.dig ? "shovel" : reach.water ? "rod" : null;
+  const want: ToolKind | null = reach.bug ? "net" : reach.dig ? "shovel" : reach.mine ? "pickaxe" : reach.water ? "rod" : null;
   return want && item?.kind !== want ? want : null;
 }

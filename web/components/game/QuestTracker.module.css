@@ -1,5 +1,5 @@
-/* The quest tracker (QuestTracker.tsx): one paper line, the current task's name, top right. A host moves it with
-   --quest-top / --quest-right or its own class (the island puts it left of the minimap). */
+/* The quest tracker (QuestTracker.tsx): one paper line, the current task's name, top right, that drops your quests down.
+   A host moves it with --quest-top / --quest-right or its own class (the island puts it left of the minimap). */
 .tracker { position: absolute; top: var(--quest-top, calc(var(--island-top, 40px) + max(12px, env(safe-area-inset-top)) + 58px)); right: var(--quest-right, max(14px, env(safe-area-inset-right)));
   z-index: 24; max-width: min(260px, calc(100vw - 28px)); box-sizing: border-box; border-radius: var(--gui-r-pill);
   background: rgb(255 251 231 / 0.94); color: var(--gui-ink-strong); box-shadow: var(--gui-shadow-sm), inset 0 0 0 1.5px var(--gui-paper-edge);
@@ -24,9 +24,42 @@ button.line:focus-visible { outline: 3px solid var(--gui-focus, #3e7fa6); outlin
 @keyframes tick { 0% { transform: scale(0.4); } 60% { transform: scale(1.35); } 100% { transform: scale(1); } }
 @keyframes ticked { 0% { background: rgb(214 245 240 / 0.96); } 100% { background: rgb(255 251 231 / 0.94); } }
 
+.chevron { flex: none; margin-left: auto; color: var(--gui-taupe); transition: transform 0.2s var(--gui-ease); }
+.tracker[data-open] .chevron { transform: rotate(180deg); }
+
+/* The dropdown: your quests on paper, under the line, right-aligned with it. */
+.list { position: absolute; top: calc(100% + 6px); right: 0; width: min(300px, calc(100vw - 28px)); max-height: min(60vh, 460px); overflow: auto;
+  box-sizing: border-box; padding: 6px; border-radius: var(--gui-r-md, 14px); background: rgb(255 251 231 / 0.97);
+  box-shadow: var(--gui-shadow-md, var(--gui-shadow-sm)), inset 0 0 0 1.5px var(--gui-paper-edge); animation: listIn 0.22s var(--gui-ease) both; }
+@keyframes listIn { from { opacity: 0; transform: translateY(-6px); } }
+.quest { padding: 2px 0 6px; }
+.quest + .quest { border-top: 1.5px dashed var(--gui-paper-edge); padding-top: 6px; }
+.head { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 0 8px; width: 100%; box-sizing: border-box; margin: 0; padding: 6px 8px;
+  border: 0; border-radius: 10px; background: none; color: inherit; font: inherit; text-align: left; }
+button.head { cursor: pointer; }
+button.head:hover { background: var(--gui-paper-hi); }
+button.head:focus-visible { outline: 3px solid var(--gui-focus, #3e7fa6); outline-offset: 1px; }
+.kind { grid-column: 1; font-size: var(--gui-text-xs); font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gui-taupe); }
+.title { grid-column: 1; font-weight: 900; }
+.way { grid-column: 2; grid-row: 1 / span 2; display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px; border-radius: var(--gui-r-pill);
+  background: var(--gui-paper-hi); color: var(--gui-ink-strong); font-size: var(--gui-text-xs); font-weight: 800; white-space: nowrap; }
+.way[data-on] { background: var(--gui-teal); color: #fffbe7; }
+.steps { margin: 2px 0 0; padding: 0 8px; list-style: none; display: grid; gap: 5px; }
+.step { display: grid; grid-template-columns: 16px 1fr; gap: 7px; align-items: start; font-weight: 700; color: var(--gui-ink); }
+.step[data-done] { color: var(--gui-taupe); text-decoration: line-through; text-decoration-color: rgb(138 123 102 / 0.5); }
+.step[data-now] { color: var(--gui-ink-strong); font-weight: 900; }
+.check { display: grid; place-items: center; width: 15px; height: 15px; margin-top: 1px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--gui-paper-edge); }
+.step[data-done] .check { background: var(--gui-teal); color: #fffbe7; box-shadow: none; }
+.step[data-now] .check { box-shadow: inset 0 0 0 2px var(--gui-amber); }
+.hint { display: block; margin-top: 2px; font-weight: 700; color: var(--gui-taupe); font-size: var(--gui-text-xs); line-height: 1.3; }
+.journal { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin-top: 4px; padding: 8px; border: 0; border-radius: 10px;
+  background: none; color: var(--gui-taupe); font: inherit; font-size: var(--gui-text-xs); cursor: pointer; }
+.journal:hover { background: var(--gui-paper-hi); color: var(--gui-ink-strong); }
+.journal:focus-visible { outline: 3px solid var(--gui-focus, #3e7fa6); outline-offset: 1px; }
+
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
-:global(html[data-contrast="high"]) .tracker { background: #ffffff; color: #000000; box-shadow: inset 0 0 0 2px #000000; }
+:global(html[data-contrast="high"]) .tracker, :global(html[data-contrast="high"]) .list { background: #ffffff; color: #000000; box-shadow: inset 0 0 0 2px #000000; }
 
 /* A phone: smaller type, and a long name wraps to a second line rather than losing its end. */
 @media (max-width: 700px) {
@@ -35,5 +68,5 @@ button.line:focus-visible { outline: 3px solid var(--gui-focus, #3e7fa6); outlin
   .label { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .tracker, .label, .tracker[data-ticked], .tracker[data-ticked] .mark { animation: none; transition: opacity 0.2s ease; }
+  .tracker, .label, .list, .tracker[data-ticked], .tracker[data-ticked] .mark { animation: none; transition: opacity 0.2s ease; }
 }

@@ -7,10 +7,11 @@
  */
 import type { NodeSpec } from "@/components/game/peaceful/VillageLife";
 import { HOME_FLOWERS, HOME_RADII, HOME_TREES, HOME_TREE_SEEDS, createHomeIsland } from "./homeIsland";
-import { isGroundAtWorld } from "./grid";
+import { Surface, cellToWorldX, cellToWorldZ, isGroundAtWorld, surfaceAt } from "./grid";
 import { MATERIALS } from "@/lib/crafting/recipes";
 import { objectsOf, village, type Village } from "./villageMap";
-import { isCedar } from "./defaultIsland";
+import { isCedar, landmarks } from "./defaultIsland";
+import { fnv1a } from "./weatherSystem";
 import type { TreeSpot } from "./treeFruit";
 
 /**
@@ -25,6 +26,40 @@ const fruitNode = (id: string, tree: TreeSpot): NodeSpec => ({ id, x: tree.x, z:
 const beachRing = (radii: { x: number; z: number }, count: number, r = 0.92, phase = 0.4): [number, number][] =>
   Array.from({ length: count }, (_, i) => { const a = phase + (i / count) * Math.PI * 2; return [Math.cos(a) * radii.x * r, Math.sin(a) * radii.z * r]; });
 const xz = (o: { x: number; z: number }): [number, number] => [o.x, o.z];
+
+/** Buried finds (m3): how far apart, and how many on each of sand and soil. */
+const DIG_GAP = 7, DIG_EACH = 8;
+const digCache = new WeakMap<Village, { x: number; z: number; soil: boolean }[]>();
+/**
+ * Where things are buried (m3): spots on sand and on soil (dirt), read off the painted map (never authored), spread at
+ * least DIG_GAP apart, in from each surface's edge and clear of buildings and props. Deterministic, so the client and
+ * the server (lib/collections/rolls.ts) agree. Each is a node whose roll is a buried find; its mark is the DigSpot.
+ */
+export function digSpots(v: Village = village()): { x: number; z: number; soil: boolean }[] {
+  const cached = digCache.get(v);
+  if (cached) return cached;
+  const m = v.map, out: { x: number; z: number; soil: boolean }[] = [];
+  const blocked = (x: number, z: number) => v.objects.some(o => Math.hypot(o.x - x, o.z - z) < 1.8)
+    || landmarks(v).some(l => Math.abs(x - l.x) < (l.half?.[0] ?? 0) + 1.5 && Math.abs(z - l.z) < (l.half?.[1] ?? 0) + 1.5);
+  for (const soil of [false, true]) {
+    const want = soil ? Surface.Soil : Surface.Sand, cells: [number, number][] = [];
+    for (let cz = 1; cz < m.depth - 1; cz++) for (let cx = 1; cx < m.width - 1; cx++) {
+      let inside = true;
+      for (let dz = -1; dz <= 1 && inside; dz++) for (let dx = -1; dx <= 1; dx++) if (surfaceAt(m, cx + dx, cz + dz) !== want) { inside = false; break; }
+      if (inside) cells.push([cx, cz]);
+    }
+    cells.sort((a, b) => fnv1a(`dig:${a[0]},${a[1]}`) - fnv1a(`dig:${b[0]},${b[1]}`));
+    let n = 0;
+    for (const [cx, cz] of cells) {
+      const x = cellToWorldX(m, cx), z = cellToWorldZ(m, cz);
+      if (!isGroundAtWorld(m, x, z) || blocked(x, z) || out.some(o => Math.hypot(o.x - x, o.z - z) < DIG_GAP)) continue;
+      out.push({ x, z, soil });
+      if (++n >= DIG_EACH) break;
+    }
+  }
+  digCache.set(v, out);
+  return out;
+}
 
 export function villageNodes(v: Village = village()): { forage: NodeSpec[]; bugs: NodeSpec[] } {
   const trees = objectsOf("tree", v).map(({ x, z, seed = 0 }): TreeSpot => ({ x, z, seed })), flowers = objectsOf("flower", v).map(xz);
@@ -43,8 +78,9 @@ export function villageNodes(v: Village = village()): { forage: NodeSpec[]; bugs
     // Bug spots among blooms (the new world's lamps: its night butterflies come to the light).
     ...spots("flowers").map(({ x, z }, i): NodeSpec => ({ id: `bug-bloom-${i}`, x, z, biomes: ["flowers"], categories: ["bug"] })),
   ];
+  const digs = digSpots(v).map(({ x, z, soil }, i): NodeSpec => ({ id: `dig-${soil ? "soil" : "sand"}-${i}`, x, z, biomes: [soil ? "dig_soil" : "dig_sand"], categories: ["nature"] }));
   const onLand = (n: NodeSpec) => isGroundAtWorld(v.map, n.x, n.z);
-  return { forage: [...fruit, ...shells, ...rocks, ...woods, ...blooms, ...branchNodes(trees, "")].filter(onLand), bugs: bugs.filter(onLand) };
+  return { forage: [...fruit, ...shells, ...rocks, ...woods, ...blooms, ...digs, ...branchNodes(trees, "")].filter(onLand), bugs: bugs.filter(onLand) };
 }
 
 /** Where today's message bottle washes up (crafting): one of the map's bottle spots, by Toronto day. */

@@ -28,8 +28,9 @@ import { AudioManager } from "@/lib/game/audio";
 import { collect, harvestNode, localCollections, localRecord } from "@/lib/game/collections";
 import { bagRoom } from "@/lib/game/bagStore";
 import { ROSTER } from "@/lib/collections/roster";
+import { isBuried } from "@/lib/progression/facts";
 import { forageSize } from "@/lib/collections/rolls";
-import { bugReaction, hasClue, hourKey, nodeAvailable, rollNode } from "@/lib/game/peaceful";
+import { bugReaction, fleeRadius, hasClue, hourKey, nodeAvailable, rollNode } from "@/lib/game/peaceful";
 import { setPeacefulTarget, type PeacefulTarget } from "@/lib/game/peacefulNear";
 import type { Biome, Species } from "@/lib/collections/roster";
 import type { WorldMoment } from "@/lib/collections/logic";
@@ -144,7 +145,7 @@ function LiftedPiece({ piece, lifts }: { piece: Piece; lifts: ReadonlyMap<string
   return <group ref={group} visible={false}><primitive object={model} /></group>;
 }
 
-const buried = (sp: Species) => sp.tool === "shovel" && sp.category !== "mineral";
+const buried = isBuried;
 /** Just over a tree's crown (where a rare tree's sparkle shows): its highest fruit, sized with the tree. */
 function crownTop(n: NodeSpec, models?: readonly string[]): number {
   const tree = n.tree && fruitTree(n.tree, 0, models);
@@ -320,6 +321,13 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
       target: { id: n.id, kind: "bug" as const, label: sp.name, distance: 0, clip: "Net" as const } }];
   }), [bugNodes, harvested, now, member, hour, moment]);
   const bugState = useRef<Map<string, LiveBug>>(new Map());
+  // The last net swing that caught nothing (world seconds): it startles bugs near it (the frame loop).
+  const whiff = useRef<{ x: number; z: number; t: number } | null>(null);
+  useEffect(() => {
+    const on = (e: Event) => { const d = (e as CustomEvent<{ x: number; z: number }>).detail; whiff.current = { x: d.x, z: d.z, t: worldTime() }; };
+    window.addEventListener("tsi:net-whiff", on);
+    return () => window.removeEventListener("tsi:net-whiff", on);
+  }, []);
   // Carried by slot and species, so a harvest anywhere never resets a bug that fled (lib/game/bugFlee carryBugs).
   useEffect(() => { bugState.current = carryBugs(bugState.current, bugs.map(b => ({ ...b, target: { ...b.target } }))); }, [bugs]);
   // What's lying on the ground, shaken down this hour and not picked up yet.
@@ -330,11 +338,11 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
   const forageTargets = useMemo(() => new Map(forage.map(({ n, sp }) => {
     const drop = lyingByNode.get(n.id);
     const label = drop ? `Pick up the ${drop.kind === "branch" ? "branch" : sp!.name.toLowerCase()}`
-      : n.canopy ? "Shake the tree" : sp!.category === "mineral" ? "Strike the rock" : buried(sp!) ? "Dig it up"
+      : n.canopy ? "Shake the tree" : sp!.category === "mineral" ? "Break the rock" : buried(sp!) ? "Dig it up"
       : sp!.sub === "shell" ? "Pick up the shell" : sp!.category === "fruit" ? `Pick up the ${sp!.name.toLowerCase()}` : "Pick it";
     const clip: ClipName = drop ? "Pickup" : n.canopy ? "Shake" : sp!.category === "mineral" ? "Strike" : buried(sp!) ? "Dig"
       : sp!.sub === "flower" || sp!.sub === "mushroom" ? "Forage" : "Pickup";
-    return [n.id, { id: n.id, kind: sp!.tool === "shovel" ? "dig" : "forage", distance: 0, at: drop ? [drop.rest.x, drop.rest.z] : [n.x, n.z], label, clip } satisfies PeacefulTarget];
+    return [n.id, { id: n.id, kind: sp!.tool === "shovel" ? "dig" : sp!.tool === "pickaxe" ? "mine" : "forage", distance: 0, at: drop ? [drop.rest.x, drop.rest.z] : [n.x, n.z], label, clip } satisfies PeacefulTarget];
   })), [forage, lyingByNode]);
   // The fruit in the trees: every fruiting crown this hour, less the one that fell (lying there, or taken).
   const hanging = useMemo<HangingFruit[]>(() => rolled.flatMap(({ n, sp, out }) => {
@@ -460,6 +468,11 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
           later(LIFT.ms + 140 + (dig ? DIG_RISE.ms : 0), () => finish(act));
         } else {
           setLift(lifts, act.nodeId, { t0, from: { ...act.at }, to: hand, ms: LIFT.ms });
+          // Netted: a little burst of sparkle where it was (m2: the catch should feel like one).
+          if (act.kind === "net") for (let k = 0; k < 5; k++) {
+            const a = (k / 5) * Math.PI * 2;
+            glow.pool.burst(GLINT, x + Math.cos(a) * 0.25, y + 0.15 + (k % 2) * 0.12, z + Math.sin(a) * 0.25, y, 0, 0, 1, GLINT_TINT, seedAt(x, z, 70 + k));
+          }
           // A flower comes away in a puff of its own petals; a shell or a fruit off the ground in a little sand.
           if (act.kind === "pick" && FLOWER_TINT[act.sp.key]) {
             fx.pool.burst(PETALS, x, y + 0.2, z, y, 0, 0, 1, FLOWER_TINT[act.sp.key], seedAt(x, z, 63));
@@ -477,7 +490,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
         localRecord(got.key, size);
         // The shared reward card says what it was, with its art and its chime (RewardCard); the token flies into the Bag.
         window.dispatchEvent(new CustomEvent("tsi:peaceful-got", { detail: { key: got.key, name: got.name, rarity: got.rarity, one_liner: got.oneLiner, size, isNew,
-          kind: act.kind === "net" ? "bug" : act.kind === "dig" ? "dig" : "forage" } }));
+          kind: act.kind === "net" ? "bug" : act.kind === "dig" ? "dig" : act.kind === "strike" ? "mine" : "forage" } }));
         window.dispatchEvent(new CustomEvent("tsi:bag-got", { detail: { key: got.key } }));
         // A rare find that taught a recipe: its card follows the catch's.
         if (recipe) window.dispatchEvent(new CustomEvent("tsi:recipe-learned", { detail: recipe }));
@@ -537,7 +550,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
     };
     window.addEventListener("tsi:peaceful-act", onAct);
     return () => window.removeEventListener("tsi:peaceful-act", onAct);
-  }, [forage, lyingByNode, forageTargets, ground, treeModels, hour, fx, struck, lifts, player, markHarvested]);
+  }, [forage, lyingByNode, forageTargets, ground, treeModels, hour, fx, glow, struck, lifts, player, markHarvested]);
 
   const flocks = useMemo(() => new Map<string, Flock>(), []);
   const flockSizes = useMemo(() => {
@@ -614,13 +627,16 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
       const act = acts.current.get(bug.id);
       if (act) { act.at.x = g.position.x; act.at.y = g.position.y; act.at.z = g.position.z; continue; }
       const d = Math.hypot(bx - p.x, bz - p.z);
-      const reaction = active ? bugReaction(d, speed, bug.sp.rarity) : "idle";
+      // A swing that missed startles any bug near where it went (m2: aim, then swing).
+      const w = whiff.current, startled = !!w && t - w.t < 0.4 && Math.hypot(bx - w.x, bz - w.z) < fleeRadius(bug.sp.rarity) * 0.75;
+      const reaction = startled ? "flee" : active ? bugReaction(d, speed, bug.sp.rarity) : "idle";
       if (reaction === "flee") {
         // Away from you, curving off to a side seeded by the bug, from where it was.
         bug.fled = true; bug.fleeT = 0; bug.fx = g.position.x; bug.fy = g.position.y; bug.fz = g.position.z;
         bug.dir = Math.atan2(bx - p.x, bz - p.z); bug.side = bug.x * 7.3 + bug.z * 3.1 - Math.floor(bug.x * 7.3 + bug.z * 3.1) < 0.5 ? 1 : -1;
-        // Its wings brushing off (a quick, high brush), never the door sound.
+        // Its wings brushing off (a quick, high brush), never the door sound; and a word over where it was.
         AudioManager.playSFX("footstep", { rate: 1.7, gain: 0.45 });
+        window.dispatchEvent(new CustomEvent("tsi:bug-fled", { detail: { x: bug.fx, z: bug.fz } }));
         continue;
       }
       const wary = reaction === "wary" || reaction === "catchable";

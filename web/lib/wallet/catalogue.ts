@@ -11,7 +11,7 @@ import { shopIcon } from "@/lib/icons/keys";
 
 export type ShopCategory ="tool" | "outfit" | "hair" | "accessory" | "face" | "furniture" | "wallpaper" | "flooring" | "merch";
 export type Tier = "basic" | "mid" | "premium";
-export type Slot = "rod" | "net" | "shovel" | "outfit" | "hair" | "accessory";
+export type Slot = "rod" | "net" | "shovel" | "pickaxe" | "outfit" | "hair" | "accessory";
 
 export interface CatalogueEntry {
   slug: string;
@@ -177,12 +177,16 @@ export const OWNERSHIP_ITEMS: CatalogueEntry[] = [
   ...PIECES.filter((p) => !HAS_FURNITURE.has(p.id) && !EVENT_PIECE_IDS.has(p.id)).map((p) => furniture(p.id, p.label, pieceValue(p))),
   ...WARDROBE_B2_ITEMS,
   COLOUR_WHEEL_ITEM,
+  // m6: Mayor Eliza hands it over (lib/game/arrival/hq/teachers.ts); off sale like the other taught tools. Not through
+  // e(): its own position, so no other row's moves.
+  withIcon({ slug: "pickaxe-basic", display_name: "Pickaxe", category: "tool", description: "Breaks rocks: stone, and iron now and then.", price_coins: 100, price_gems: null,
+    tier: "basic", slot: "pickaxe", special_pool: false, stackable: false, stock: null, catalogue_ref: null, sprite_url: null, position: 1000 }),
 ];
 /**
  * The tier-1 bug net and shovel: a resident hands them over (row 312, lib/game/arrival/hq/teachers.ts; David
  * 2026-10-17, "take them off sale"). Off sale; owners keep them, and the better tiers stay on the shelf.
  */
-export const TAUGHT_TOOL_SLUGS = ["net-basic", "shovel-basic"];
+export const TAUGHT_TOOL_SLUGS = ["net-basic", "shovel-basic", "pickaxe-basic"];
 /** The placeholder tote and sticker pack, which aren't real merch (David, 2026-10-22: "Take both off sale"). */
 export const PLACEHOLDER_MERCH = ["merch-sticker-pack", "merch-tote"];
 /** Hairstyles David removed from the game (2026-10-27: Messy with headset, Fluffy boy, Wavy half-up): their shop rows go off sale. */

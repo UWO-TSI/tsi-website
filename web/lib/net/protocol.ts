@@ -238,7 +238,7 @@ export const isItemKey = (s: unknown): s is string => typeof s === "string" && K
 /** A seat claim: a bench slot or study seat key. */
 export const isSeatKey = (s: unknown): s is string => typeof s === "string" && SEAT_RE.test(s);
 /** `held` (§4.1): "" (empty hands), "glider", or `<kind>:<key>`. */
-export const HELD_KINDS = ["rod", "net", "shovel", "pin", "weapon"] as const;
+export const HELD_KINDS = ["rod", "net", "shovel", "pin", "weapon", "pickaxe"] as const;
 export type HeldKind = (typeof HELD_KINDS)[number];
 /** A tool wheel item (WheelItem kind and key) as `held`; "" when it can't be one. */
 export function heldOf(kind: string, key: string): string {

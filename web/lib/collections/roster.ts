@@ -16,8 +16,8 @@
  */
 export type Category = "fish" | "sea" | "bug" | "fruit" | "nature" | "mineral";
 export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
-export type Biome = "river" | "pond" | "cliff_pool" | "sea" | "beach" | "flowers" | "trees" | "ground" | "water_edge" | "bush" | "woods" | "rocks";
-export type Tool = "rod" | "net" | "hand" | "shovel";
+export type Biome = "river" | "pond" | "cliff_pool" | "sea" | "beach" | "flowers" | "trees" | "ground" | "water_edge" | "bush" | "woods" | "rocks" | "dig_sand" | "dig_soil" | "mountain";
+export type Tool = "rod" | "net" | "hand" | "shovel" | "pickaxe";
 export type Wing = "aquarium" | "insect_hall" | "nature_room";
 
 export interface Species {
@@ -174,7 +174,7 @@ const NATURE_ROWS: Row[] = [
   ["flower_tulip", "Orange Tulip", "flowers", "common", null, null, { sub: "flower", months: [4, 5] }],
   ["flower_pansy", "Purple Pansy", "flowers", "common", null, null, { sub: "flower", months: [3, 4, 5, 9, 10] }],
   ["flower_windflower", "Windflower", "flowers", "rare", null, null, { sub: "flower", months: [3, 4, 10, 11] }],
-  ["shell_asari", "Asari Clam", "beach", "common", [3, 6], null, { sub: "shell", tool: "shovel", model: "/assets/game/forage/shell-asari.glb" }],
+  ["shell_asari", "Asari Clam", "dig_sand", "common", [3, 6], null, { sub: "shell", tool: "shovel", model: "/assets/game/forage/shell-asari.glb" }],
   ["shell_scallop", "Scallop Shell", "beach", "common", [6, 12], null, { sub: "shell", model: "/assets/game/forage/shell-scallop.glb" }],
   ["shell_turban", "Turban Shell", "beach", "uncommon", [5, 10], null, { sub: "shell", model: "/assets/game/forage/shell-turban.glb" }],
   ["shell_whelk", "Whelk Shell", "beach", "rare", [8, 16], null, { sub: "shell", model: "/assets/game/forage/shell-whelk.glb" }],
@@ -183,13 +183,14 @@ const NATURE_ROWS: Row[] = [
   ["mushroom_skinny", "Skinny Mushroom", "woods", "rare", null, null, { sub: "mushroom", months: [11], assetReady: false }],
 ];
 
-// ── Rocks and ore (5): crafting materials, struck with a tool; not donatable ──
+// ── Rocks and ore (5): crafting materials, broken with the pickaxe (m6); not donatable ──
 const MINERAL_ROWS: Row[] = [
   ["rock_stone", "Stone", "rocks", "common", null, null],
-  ["rock_clay", "Clay", "rocks", "common", null, null],
+  // m6: the island's rocks give only stone and sometimes iron; the rest wait for the mountain (and combat's rewards).
+  ["rock_clay", "Clay", "mountain", "common", null, null],
   ["rock_iron_nugget", "Iron Nugget", "rocks", "uncommon", null, null],
-  ["rock_gold_nugget", "Gold Nugget", "rocks", "epic", null, null],
-  ["rock_crystal", "Crystal", "rocks", "rare", null, null],
+  ["rock_gold_nugget", "Gold Nugget", "mountain", "epic", null, null],
+  ["rock_crystal", "Crystal", "mountain", "rare", null, null],
 ];
 
 /** The launch roster, seeded by 20260926150400_collections.sql. */
@@ -199,7 +200,7 @@ export const LAUNCH_ROSTER: Species[] = [
   ...make("bug", "net", "insect_hall", BUG_ROWS).map((s) => (BUG_MODELLED.has(s.key) ? s : { ...s, assetReady: false })),
   ...make("fruit", "hand", null, FRUIT_ROWS).map((s) => (s.key === "apple" || s.key === "peach" ? s : { ...s, assetReady: false })),
   ...make("nature", "hand", "nature_room", NATURE_ROWS),
-  ...make("mineral", "shovel", null, MINERAL_ROWS, { assetReady: false }),
+  ...make("mineral", "pickaxe", null, MINERAL_ROWS, { assetReady: false }),
 ];
 
 /**
@@ -267,7 +268,24 @@ export const REEL_FISH: Species[] = make("fish", "rod", "aquarium", [
   ["fish_hammerhead_shark", "Hammerhead Shark", "sea", "legendary", [180, 350], null, { months: SUMMER, oneLiner: "Sees both sides of every argument." }],
 ], { model: null });
 
-export const ROSTER: Species[] = [...LAUNCH_ROSTER, ...EVENT_SPECIES, ...REEL_FISH];
+/**
+ * Buried finds (m3, specs/launch/v1-gameplay.md: "dirt will have some type of marking and sand as well and you can dig
+ * up rare stuff"): dug up with the shovel at the marked spots on sand and on dirt (lib/game/islandNodes.ts digSpots),
+ * shown in the museum's nature room. Seeded after the reel's fish so no earlier position moves.
+ */
+const find = (key: string, name: string, biome: Biome, rarity: Rarity, size: [number, number], oneLiner: string): Row =>
+  [key, name, biome, rarity, size, null, { oneLiner, sub: "buried", model: `/assets/game/forage/${key}.glb` }];
+export const BURIED_FINDS: Species[] = make("nature", "shovel", "nature_room", [
+  find("find_sea_glass", "Sea Glass", "dig_sand", "common", [2, 4], "Worn smooth by a hundred tides."),
+  find("find_old_coin", "Old Coin", "dig_sand", "uncommon", [2, 3], "Nobody remembers who dropped it. Everybody wishes it was them."),
+  find("find_ammonite", "Ammonite", "dig_sand", "rare", [5, 15], "A spiral that was alive long before the island was."),
+  find("find_pottery_shard", "Pottery Shard", "dig_soil", "common", [4, 9], "Somebody's favourite bowl, once."),
+  find("find_geode", "Geode", "dig_soil", "uncommon", [6, 12], "Plain on the outside. Wait till you see the inside."),
+  find("find_amber", "Amber", "dig_soil", "epic", [3, 6], "Sunlight from a very long time ago."),
+  find("find_trilobite", "Trilobite", "dig_soil", "legendary", [4, 10], "Older than the dinosaurs, and it still looks surprised."),
+]);
+
+export const ROSTER: Species[] = [...LAUNCH_ROSTER, ...EVENT_SPECIES, ...REEL_FISH, ...BURIED_FINDS];
 
 export const CATEGORIES: Category[] = ["fish", "sea", "bug", "fruit", "nature", "mineral"];
 export const RARITY_RANK: Record<Rarity, number> = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 };

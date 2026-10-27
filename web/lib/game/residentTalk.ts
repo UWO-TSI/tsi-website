@@ -211,6 +211,8 @@ export const talkStore = {
    * or a null answer: their own. The island sets it (lib/game/arrival/hq/teachers.ts teacherTalk).
    */
   script: null as ((slug: string) => { script: string; lines: readonly TalkLine[] } | null) | null,
+  /** The main quest's word first (lib/game/mainQuest.ts questTalk: a chapter's finish or nudge), set by the island. */
+  quest: null as ((slug: string) => { script: string; lines: readonly TalkLine[] } | null) | null,
   /** The camera's heading, tilt and zoom before the talk turned it, put back after. */
   cameraYaw: null as number | null,
   cameraPitch: null as number | null,

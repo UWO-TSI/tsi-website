@@ -40,7 +40,7 @@ describe("progression routes", () => {
     expect(m.contributions[0]).toMatchObject({ weight: 1, idempotencyKey: "delivery:abcdefgh1" });
   });
   it("rejects a chapter action the server conditions don't allow", async () => {
-    const res = await advanceRoute(req({ chapter_slug: "settle-in", action: "report_hq" }));
+    const res = await advanceRoute(req({ chapter_slug: "settle-in", action: "donate_catch" }));
     expect(res.status).toBe(409);
   });
   it("keeps admin credit to T1/T2", async () => {

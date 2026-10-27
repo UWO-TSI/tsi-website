@@ -58,7 +58,8 @@ export interface ClubGoal {
   created_at?: string;
 }
 
-export type ChapterRequirement = "settle_in" | "club_goal" | "oracle_trial";
+/** What finishes a chapter (lib/progression/chapters.ts STEP_RULES): the personal errands m1 to m6, a club goal, or the Oracle. */
+export type ChapterRequirement = "settle_in" | "bug_net" | "dig" | "rod_challenge" | "museum_collab" | "pickaxe" | "club_goal" | "oracle_trial";
 
 export interface StepCopy {
   label: string;
@@ -79,6 +80,8 @@ export interface QuestChapter {
   skippable_max_tier: number;
   /** Play coins paid once when the chapter is completed (not skipped). 20260926150600_economy.sql. */
   reward_coins: number;
+  /** A shop item (slug) given once on completion, like Bram's Cedar rod. */
+  reward_item?: string | null;
   active: boolean;
   /** Steps this drop can't take yet (lib/game/drops.ts releasedChapters): not shown, and done as far as finishing goes. */
   hidden_steps?: string[];
@@ -98,7 +101,7 @@ export interface MemberChapterProgress {
  * Where an objective points. The island agent maps each anchor to world
  * coordinates (MiniMap marker); this layer never knows world positions.
  */
-export type ObjectiveAnchor = "hq" | "monument" | "fishing_spot" | "museum" | "oracle" | "ruins_gate";
+export type ObjectiveAnchor = "hq" | "monument" | "fishing_spot" | "museum" | "oracle" | "ruins_gate" | "wharf" | "beach" | "plaza" | "bugs" | "dig_spots" | "rocks";
 
 export interface GoalProgressView {
   slug: string;
@@ -139,6 +142,10 @@ export interface ChapterStepView {
   hint?: string;
   done: boolean;
   anchor: ObjectiveAnchor;
+  /** The resident the step sends you to (roster slug). */
+  npc?: string;
+  /** A tally's progress ("Catch 3 bugs 1/3"). */
+  count?: { have: number; need: number };
 }
 
 export interface ChapterView {
@@ -184,6 +191,8 @@ export interface ProgressionState {
   hud_muted: boolean;
   unlocked_regions: string[];
   unread_letters: number;
+  /** m5: kinds the whole club has donated to the museum (it opens when MUSEUM_TARGETS are met). */
+  museum: { fish: number; bugs: number; finds: number };
   /** "live" = database; "defaults" = migration not applied / offline preview. */
   source: "live" | "defaults";
 }

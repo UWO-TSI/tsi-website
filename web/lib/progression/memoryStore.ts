@@ -25,6 +25,9 @@ export interface MemoryLetter {
   reported: boolean;
 }
 
+/** A new member's facts: tier 4, nothing caught, no gear beyond the starters. */
+export const blankFacts = (): MemberFacts => ({ tier: 4, hudMuted: false, firstCatchKey: null, lastFishAt: null, counts: {}, museum: { fish: 0, bugs: 0, finds: 0 } });
+
 export function memoryStore(seed?: { goals?: ClubGoal[]; chapters?: QuestChapter[] }) {
   const goals: ClubGoal[] = structuredClone(seed?.goals ?? DEFAULT_GOALS);
   const chapters: QuestChapter[] = structuredClone(seed?.chapters ?? DEFAULT_CHAPTERS);
@@ -58,7 +61,7 @@ export function memoryStore(seed?: { goals?: ClubGoal[]; chapters?: QuestChapter
       progress.set(`${memberId}:${chapterId}`, { chapter_id: chapterId, ...structuredClone(next), completed_at: completedAt });
     },
     async memberFacts(memberId) {
-      return facts.get(memberId) ?? { tier: 4, oracleDone: false, trialDone: false, firstCatchKey: null, hudMuted: false };
+      return facts.get(memberId) ?? blankFacts();
     },
     async setHudMuted(memberId, muted) {
       const f = await store.memberFacts(memberId);
@@ -161,6 +164,9 @@ export function memoryStore(seed?: { goals?: ClubGoal[]; chapters?: QuestChapter
       coins.set(memberId, (coins.get(memberId) ?? 0) + amount);
       return { balance: coins.get(memberId)!, replayed: false };
     },
+    async grantItem(memberId, slug) {
+      if (!items.has(`${memberId}:${slug}`)) items.set(`${memberId}:${slug}`, 1);
+    },
     async reportLetter(memberId, id) {
       const l = letters.find((x) => x.id === id && x.recipient_id === memberId && x.kind === "note");
       if (!l) return false;
@@ -178,11 +184,11 @@ export function memoryStore(seed?: { goals?: ClubGoal[]; chapters?: QuestChapter
     activity,
     addMember(id: string, f: Partial<MemberFacts> = {}, wallet = 0) {
       members.add(id);
-      facts.set(id, { tier: 4, oracleDone: false, trialDone: false, firstCatchKey: null, hudMuted: false, ...f });
+      facts.set(id, { ...blankFacts(), ...f });
       coins.set(id, wallet);
     },
     setFacts(id: string, f: Partial<MemberFacts>) {
-      facts.set(id, { ...(facts.get(id) ?? { tier: 4, oracleDone: false, trialDone: false, firstCatchKey: null, hudMuted: false }), ...f });
+      facts.set(id, { ...(facts.get(id) ?? blankFacts()), ...f });
     },
     giveItem(member: string, item: string, n: number) {
       items.set(`${member}:${item}`, (items.get(`${member}:${item}`) ?? 0) + n);

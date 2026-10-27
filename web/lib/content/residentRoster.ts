@@ -52,6 +52,10 @@ export const RESIDENT_LOOKS: Record<string, Look> = {
   // Workshop crafter: a tinkerer with a cap on backwards. Wood-brown overalls over a cream tee, backpack of tools.
   crafter: look({ skin: 4, hair: 7, extras: ["blush"], back: "hair_anime_spikes", top: "top_tee", bottom: "bottom_overall_shorts", shoes: "shoes_boots",
     acc: { head: "acc_cap", bag: "acc_backpack" }, colors: { bottom_overall_shorts: 4, shoes_boots: 5, acc_cap: 7 } }),
+  // The museum's guide (m1): takes your first catch and shows you round. Warm and quick; a sea-green collar shirt, a long
+  // navy skirt, a shell necklace from the beach.
+  docent: look({ skin: 7, hair: 4, eyes: "mochi", mouth: "open_smile", back: "hair_swept_fringe", top: "top_collar_shirt", bottom: "bottom_long_skirt", shoes: "shoes_loafers",
+    acc: { neck: "acc_shell_necklace" }, colors: { top_collar_shirt: 15, bottom_long_skirt: 12, shoes_loafers: 5 } }),
   // Flavour: an early riser who runs the beach at dawn. High ponytail, teal tee, joggers.
   juniper: look({ skin: 3, hair: 8, back: "hair_long_pigtails", top: "top_tee", bottom: "bottom_joggers", shoes: "shoes_sneakers",
     colors: { top_tee: 15, bottom_joggers: 14, shoes_sneakers: 1 } }),
@@ -92,18 +96,22 @@ export const RESIDENT_TALK: Record<string, string[][]> = {
   ],
   "wharf-keeper": [
     ["Tide's turning. You can hear it if you listen.", "[happy] And the gulls are flying low. Rain by supper, mark my words."],
-    ["Boat's ready whenever you want to go home.", "Your island's out past the pier. Small, but the sunsets are all yours."],
+    ["The barrel on the dock buys whatever you catch. Fair prices. I check the scales myself.", "[happy] Want a better rod one day? I might have a challenge for you."],
     ["[surprised] Caught anything big yet?", "Best fishing's off the end of the wharf at dawn. Don't tell anyone I told you."],
   ],
   "oracle-keeper": [
     ["The crystal is quiet today. It's listening.", "What would you ask it, if you knew it would answer?"],
-    ["Which way will you grow, {name}? The temple can help you see it.", "[happy] Not decide. Only see. The deciding is yours."],
+    ["Which way will you grow, {name}? Nobody can tell you yet. Not even me.", "[happy] Keep doing what you love here. It shows, in time."],
     ["Stars are just old light. So are good friends.", "[sleepy] I was up late on the temple steps again. Clear skies."],
   ],
   crafter: [
     ["[happy] Found a perfectly good plank on the beach. Perfectly good!", "Bring me some wood and I'll show you a trick at the workbench."],
     ["Measure twice, glue once. That's the whole secret.", "[surprised] Well. Most of it. The rest is snacks."],
     ["Bottles wash up on the beach sometimes.", "Some have notes in them. Some have recipes. Keep your eyes open."],
+  ],
+  docent: [
+    ["[happy] Welcome to the museum! Fish in the aquarium, bugs in the insect hall, buried finds in the nature room.", "The first of each kind anyone brings goes on show. Odile writes the labels."],
+    ["The club's filling the halls together. When they're full, the doors open properly.", "[happy] I'll be here. I'm always here. I like it here."],
   ],
   juniper: [
     ["@morning [happy] Morning laps! Want to race to the pier?", "Kidding. Mostly. Stretch first, trust me."],
@@ -157,14 +165,18 @@ export const PROPOSED_RESIDENTS: NPCPersona[] = [
     bio: "The museum's curator, labelling the empty cases until the club fills them. Knows the Latin name of every bug and says it anyway.",
     schedule: { home: "museum", dawn: ["pond"], day: ["museum", "pond", "beach"], evening: ["museum", "plaza"], night: ["museum", "home"] },
     canned_dialogue: ["Every case in there is waiting for something you'll find.", "Did you see the dragonflies by the pond? Odonata. Lovely.", "Bring me anything with wings. Or fins. Or a shell."] }),
+  row({ slug: "docent", display_name: "Juno", post: "museum_guide", tone: "warm",
+    bio: "The museum's guide. Keeps the door, shows everyone round, and takes each new member's first catch for the halls.",
+    schedule: { home: "museum", dawn: ["museum"], day: ["museum"], evening: ["museum"], night: ["museum", "home"] },
+    canned_dialogue: ["Welcome to the museum!", "The first of each kind goes on show.", "Bring me your first catch!"] }),
   row({ slug: "wharf-keeper", display_name: "Bram", post: "wharf_keeper", tone: "playful",
     bio: "Minds the wharf and the boats, reads the tides off the posts and the weather off the gulls. Has a story for every knot.",
     schedule: { home: "hq", dawn: ["wharf"], day: ["wharf", "beach", "wharf", "plaza"], evening: ["wharf", "bench"], night: ["wharf", "beach", "wharf"] },
-    canned_dialogue: ["Tide's turning. You can hear it if you listen.", "The gulls are low today. Rain by supper, mark my words.", "Boat's ready whenever you want to go home."] }),
+    canned_dialogue: ["Tide's turning. You can hear it if you listen.", "The gulls are low today. Rain by supper, mark my words.", "The barrel on the dock pays fair. I check the scales myself."] }),
   row({ slug: "oracle-keeper", display_name: "Sable", post: "oracle_keeper", tone: "earnest",
     bio: "Keeps the Oracle temple and its crystal. Answers questions with better questions, and stays up to watch the stars from the temple steps.",
     schedule: { home: "oracle", dawn: ["oracle"], day: ["oracle", "pond", "oracle"], evening: ["oracle", "pond"], night: ["oracle", "home"] },
-    canned_dialogue: ["The crystal is quiet today. It's listening.", "Which way will you grow? Ask the temple.", "Stars are just old light. So are good friends."] }),
+    canned_dialogue: ["The crystal is quiet today. It's listening.", "Which way will you grow? Time will show it.", "Stars are just old light. So are good friends."] }),
   row({ slug: "crafter", display_name: "Pim", post: "workshop_crafter", tone: "playful",
     bio: "Tinkers at the HQ workbench and combs the beach for driftwood and bottles. Never without a pencil behind one ear.",
     schedule: { home: "hq", dawn: ["home"], day: ["hq", "beach", "path", "plaza"], evening: ["plaza", "hq"], night: ["hq", "plaza", "home"] },

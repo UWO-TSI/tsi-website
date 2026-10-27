@@ -63,7 +63,8 @@ export function laterToday(sp: Species, m: WorldMoment): boolean {
 const BIOME_LABEL: Record<Biome, string> = {
   river: "In the river", pond: "In the pond", cliff_pool: "In the cliff pools", sea: "Out at sea, off the pier",
   beach: "On the beach", flowers: "Around flowers", trees: "On or under trees", ground: "On the ground",
-  water_edge: "Near water", bush: "On bushes", woods: "In the woods", rocks: "Struck from rocks",
+  water_edge: "Near water", bush: "On bushes", woods: "In the woods", rocks: "Broken out of rocks",
+  dig_sand: "Buried in the sand", dig_soil: "Buried in the dirt", mountain: "Up the mountain",
 };
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const hh = (h: number) => `${String(h % 24).padStart(2, "0")}:00`;
