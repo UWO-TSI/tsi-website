@@ -32,7 +32,14 @@ David, 2026-10-27, verbatim: "I want you to do artifat for all foraging model re
 
 ## Status
 
-(none yet)
+Head: see `git log -1` on game/catalogue-editor (the lane file commit after 0c9c9495). Ready to publish; reported to main.
+
+Done:
+- **The page:** `specs/tools/catalogue-editor/{index.html,app.js,build.mjs,check.mjs}`. `node specs/tools/catalogue-editor/build.mjs` writes `dist/` (gitignored): index.html, app.js, data.js (the roster, SELL_PRICES, biome/weather lists, the GUI rarity colours), icons/<key>.webp (141 species, all with the game's icons). 144 files, 0.76 MB. Tabs per kind with changed counts, search across every kind, per species: rarity, sell price (own price or the rarity table, "Use the rarity table" clears it), 24-hour bar (handles, paint across, keyboard arrows, all day, wraps midnight), months + all year, biome (water biomes for rod catches, land for the rest), weather + any, rain any hour, size (where it has one), one-liner; "was ..." beside each change, per-species reset. db: collection `species`, one doc per key holding only changed fields; deleted on reset; read on load (unknown keys and fields equal to the game dropped). db null: an alert says it can't save.
+- **The apply script:** `web/scripts/apply-species.mjs <export.json> [--dry]` (from web/). Takes `{ key: fields }` or a list of `{ id, data }` / `{ id, ...fields }`. Checks every value (known keys and fields, tiers, biome per tool, hours [0-23, 1-24] start != end, months 1-12 once, weather list, sizes, prices whole and > 0 or null, one-liner <= 200 chars and no em dash), rewrites each species' row in roster.ts (other fields' source text kept), imports the result and compares every species and field, then runs gen-seeds. Tested in `scripts/apply-species.test.ts` and end to end on a sample (reverted).
+- **One source for the game:** the reel's rarity, size, zone and hours (`when`, `whenLabel`) now derive from the roster in `lib/game/fishing.ts` (the duplicates deleted from fishing.ts and fishCatalog.ts rows; `FishRow` type). Forage and bug rolls already read the roster.
+- **Per-species sell price:** roster `price?` overrides SELL_PRICES (category x rarity). TS: `speciesSellPrice(key)` in `lib/wallet/rules.ts`, used by the service's sell list, the memory store, the bag and the demo. Server: migration `20261027180000_species_sell_price.sql` adds `collection_species.sell_price` and replaces `economy_sell` to pay it first; seed `species-prices` (lib/seedMigrations.ts, `speciesPricesSql` in lib/collections/seed.ts) keeps it equal to the roster. Smoke `web/supabase/tests/species_sell_price_smoke.sql`, in sql-smoke.sh.
+- Gates: tsc 0, vitest 3479 passed in both worlds, eslint clean on changed files, sql-smoke chain clean, `check.mjs` ok.
 
 ## Rules
 
@@ -43,3 +50,16 @@ David, 2026-10-27, verbatim: "I want you to do artifat for all foraging model re
 - **Text:** no em dashes; real names never show in game; never write the gem-to-money rate anywhere (the repo is public).
 - **Art:** David supplies every reference; never fetch art, textures or music; no asset libraries or generators.
 - **Code:** ponytail (`specs/lane-rules.md`): search first, smallest change at the root cause, delete what you replace.
+
+## Next
+
+1. Coordinator publishes `specs/tools/catalogue-editor/dist/` with `capabilities: {db: {}}`, and applies `20261027180000_species_sell_price.sql` to prod with the merge.
+2. When David has edited: export the db's `species` collection to JSON, `cd web && node scripts/apply-species.mjs <export.json> --dry`, then without `--dry`; it writes roster.ts and a new `_catalogue_seed.sql` (add it to sql-smoke.sh GAME); run vitest both worlds; rebuild the page.
+
+## Tools and gotchas
+
+- Build: `node specs/tools/catalogue-editor/build.mjs`. Check (browser lock): `node specs/tools/catalogue-editor/check.mjs [port]` (ports 3483/3484). Evidence: `specs/evidence/catalogue-editor/`.
+- The sql-smoke chain re-runs older migrations in earlier smokes, so the species price smoke re-applies its migration with `\ir` first.
+- Seasonal event fish (yellow perch, sturgeon, giant trevally) bite only while their event runs, whatever their months say.
+- Names are not editable on purpose: fishing.ts rows carry their own name and "a Dace" label.
+- New migrations from gen-seeds are stamped after 20261027180000 (it is later than the clock today).

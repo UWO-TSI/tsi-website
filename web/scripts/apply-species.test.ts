@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-// @ts-expect-error: a plain .mjs script, no types
 import { check, editsOf, loadGame, rewrite, verify } from "./apply-species.mjs";
 
 const SRC = readFileSync(join(__dirname, "../lib/collections/roster.ts"), "utf8");
@@ -22,7 +21,7 @@ describe("apply-species", () => {
     expect(check(edits, game)).toEqual([]);
     const src = rewrite(SRC, edits, game);
     expect(await verify(src, edits, game)).toEqual([]);
-    const row = (key: string) => src.split("\n").find((l) => l.includes(`["${key}", `))!.trim();
+    const row = (key: string) => src.split("\n").find((l: string) => l.includes(`["${key}", `))!.trim();
     expect(row("fish_dace")).toBe('["fish_dace", "Dace", "river", "rare", [10, 18], [20, 4], { oneLiner: "Moved \\"house\\": nights only.", months: [9, 10, 11], price: 99 }],');
     expect(row("fish_salmon")).toBe('["fish_salmon", "Salmon", "pond", "uncommon", [50, 80], null, { oneLiner: "Headed upstream, like the rest of us in October." }],');
     expect(row("fish_catfish")).toBe('["fish_catfish", "Catfish", "river", "epic", [55.5, 120], null, { oneLiner: "Whiskers the size of a bookmark." }],');
