@@ -5,10 +5,14 @@ import { PROPOSED_RESIDENTS } from "@/lib/content/residentRoster";
 import { DEFAULT_NPC_PERSONAS } from "@/data/content-defaults";
 import { CLIP_BY_NAME } from "./character/look";
 import {
-  MIN_STAY, RESIDENT_WALK, ResidentDay, buildDay, daySpan, idleAt, navGrid, newPose, phaseOn, planResident, planResidents, residentHome, routineKeys, walkDistance, type Leg,
+  MIN_STAY, RESIDENT_WALK, ResidentDay, buildDay, daySpan, idleAt, navGrid, newPose, phaseOn, planResident, planResidents, placeAt, residentHome, routineKeys, walkDistance, type Leg,
 } from "./residentRoutine";
 import { dropFlags } from "./drops";
 import type { WorldTerrain } from "./world/terrain";
+import { fileURLToPath } from "node:url";
+import { landmark, landmarkPoint } from "./defaultIsland";
+import { loadWorldFromDisk } from "./world/disk";
+import { villageOfWorld } from "./world/village";
 
 const v = village(), island = villageIsland(v), nav = navGrid(island, v);
 const SORTED = [...PROPOSED_RESIDENTS].sort((a, b) => a.slug.localeCompare(b.slug));
@@ -209,5 +213,32 @@ describe("a resident's home", () => {
     expect(residentHome(sable, v, dropFlags(1))).toBe("oracle");
     expect(residentHome({ post: "shopkeeper" }, newWorld, dropFlags(1))).toBe("shop");
     expect(residentHome({ post: "villager", schedule: { home: "museum" } }, newWorld, dropFlags(1))).toBe("museum");
+  });
+});
+
+describe("a schedule's places", () => {
+  const nw = villageOfWorld(loadWorldFromDisk(fileURLToPath(new URL("../../data/world/", import.meta.url))));
+  it("on the village: each anchor object, the plaza's spawn without one, nothing else (unchanged)", () => {
+    for (const a of objectsOf("anchor", v)) expect(placeAt(a.id, v)).toEqual([a.x, a.z]);
+    expect(placeAt("nowhere", v)).toBeNull();
+  });
+  it("on the new world (no anchors): the landmark of the same name, out front of a building, the plaza's middle", () => {
+    expect(objectsOf("anchor", nw)).toEqual([]);
+    for (const id of ["hq", "shop", "cafe", "museum", "wharf"] as const) expect(placeAt(id, nw, dropFlags(1))).toEqual(landmarkPoint(id, "exit", nw));
+    for (const id of ["plaza", "beach"] as const) { const l = landmark(id, nw)!; expect(placeAt(id, nw, dropFlags(1))).toEqual([l.x, l.z]); }
+    expect(placeAt("pond", nw)).toBeNull();
+    expect(placeAt("path", nw)).toBeNull();
+  });
+  it("on the new world: the temple only once it opens", () => {
+    expect(placeAt("oracle", nw, dropFlags(1))).toBeNull();
+    expect(placeAt("oracle", nw, dropFlags(2))).toEqual(landmarkPoint("oracle", "exit", nw));
+  });
+  it("on the new world: a day round the buildings resolves to a stop at each, near the place", () => {
+    const plan = planResident({ slug: "t", post: "villager", schedule: { day: ["hq", "pond", "shop", "beach", "wharf", "plaza"] } }, 0, nw, villageIsland(nw));
+    expect(plan.phases.day.map(s => s.id)).toEqual(["anchor:hq", "anchor:shop", "anchor:beach", "anchor:wharf", "anchor:plaza"]);
+    for (const s of plan.phases.day) {
+      const at = placeAt(s.id.slice(7), nw)!;
+      expect(Math.hypot(s.at[0] - at[0], s.at[1] - at[1])).toBeLessThan(6);
+    }
   });
 });
