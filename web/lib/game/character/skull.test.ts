@@ -81,7 +81,7 @@ describe("the shared skull", () => {
     type Entry = { id: string; key: string; attachment: string; position: number[]; orientation: number[]; mesh_scale: number[]; provisional: boolean; override?: { scale?: number }; coversHair?: boolean };
     const data = JSON.parse(readFileSync(join(web, "../art/characters/accessories/roblox_attachments.json"), "utf8")) as { items: Entry[] };
     const roblox = PARTS.filter(p => p.roblox?.attachment);
-    expect(roblox.length).toBe(25);   // round 2: #07 in silver too; batch 3's three face items
+    expect(roblox.length).toBe(24);   // round 2: #07 in silver too; batch 3's three face items less the cross bandage (removed)
     const byId = new Map(data.items.map(e => [e.id, e]));
     for (const p of roblox) {
       const e = byId.get(p.id)!;
