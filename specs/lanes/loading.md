@@ -23,7 +23,40 @@ Steps 2 to 4 are fixes and can ship once verified; step 5 is visual and waits fo
 
 ## Status
 
-(none yet)
+Head e75bc22a (2026-10-27). Nothing approved or merged yet.
+
+- **Step 1 done:** `specs/evidence/loading/baseline.md` (fast/slow x cold/warm, plus a profiled run). World ready 7.6 to
+  20 s after Let's Play on an M4 (the network is not the limit: slow and fast cold are alike); the crossing and the
+  landing relink 61 programs because the rim light only exists at dawn/dusk (2.6 to 4.2 s of stutter); first-sight
+  shader compiles; ~100 ms GPU-process frames through aboard, the creator and the walk-along on a cold GPU cache; terrain
+  derivation ~1.6 s of main thread (grid.ts `deriveShape`/`blurCells`, the shore SDF: terrain lanes' code, not touched);
+  a 195 ms `new AudioContext()` at the first campfire.
+- **Steps 2 to 4 committed, not yet verified in the browser:**
+  - title prefetch: `components/title/preloadGame.ts` (called from TitleScene's Ready), list in `lib/game/preloadAssets.ts`
+    (generated, 345 files) plus the island's code chunks read from `/student/dashboard`'s HTML and page chunk;
+  - rim light always mounted (`IslandAtmosphere.tsx`);
+  - `WarmupProbe` compiles the whole scene (compileAsync) and uploads its textures at COMPILE_AT and waits; UltWarmup
+    deleted (folded in);
+  - `AudioManager.prepare()` behind the loading screen.
+- Step 5 (the new loading screen) not started.
+
+## Tools and gotchas
+
+- `specs/perf/load-trace.mjs <label>` with `PORT NET=fast|slow|none CACHE=cold|warm DWELL PLAY PROFILE=1 MANIFEST=1 OUT`:
+  the trace; writes `<label>.md` and `.json` (JSON is gitignored; runs kept in the session scratchpad). `MANIFEST=1`
+  regenerates `web/lib/game/preloadAssets.ts` from a cold run.
+- Build: `LANE=game/loading withlock.sh heavy env NEXT_PUBLIC_GAME_WORLD=new NEXT_PUBLIC_MEMBER_WORLD=open sh
+  specs/perf/measure-build.sh [--no-mangling]` (takes 3 to 5 min once the lock is free; the lock waits can be 20+ min).
+  Don't edit `components/game`, `lib/game` while it runs: it rewrites and restores those files.
+- Signed-out dashboard: the measurement build inlines a dead Supabase URL, so the middleware redirects
+  `/student/dashboard` to the title. After each build drop the dashboard matcher from
+  `web/.next/server/middleware-manifest.json` (node one-liner filtering `originalSource` starting `/student/dashboard`).
+- Serve: `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:9 NEXT_PUBLIC_SUPABASE_ANON_KEY=perf-bench SUPABASE_SERVICE_ROLE_KEY=
+  NEXT_PUBLIC_GAME_WORLD=new NEXT_PUBLIC_MEMBER_WORLD=open npx next start -p 3151` under the devserver lock (taken by
+  hand: queue line, mkdir, owner file).
+- Noise: the Metal shader cache survives fresh browser profiles, so "cold" runs after the first compile faster; machine
+  load moves world-ready by seconds. Compare program links and long-frame counts, not single timings.
+- Playwright clicks on the creator's Yes fail (animated): click through `$eval(..., b => b.click())`.
 
 ## Rules
 
