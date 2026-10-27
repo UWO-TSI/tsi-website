@@ -55,7 +55,13 @@ Merge main first. Gates as before. Then message "main" with the head SHA and the
 
 ## Status
 
-Round 3 built 2026-10-27 on `game/reflection-waves` (main merged at 139d3b1e first), awaiting David's review. Rounds 1 and 2 approved (the sweep, the first wave, the swatches, the panel).
+Round 4 built 2026-10-27 on `game/reflection-waves` (main merged at 406ac13e). Rounds 1, 2 and 3 approved; round 4 is David's one change plus the perf answer, ready for the coordinator to merge.
+
+- **Two darkest skins gone (round 4):** `look.ts` `SKIN_PICKS = 10`: the creator and wardrobe skin swatches (`CreatorControls.tsx`) offer skins 0 to 9, `randomLook` (surprise me, skip, bots, cafe patrons, residents without an authored look) picks from 0 to 9, and `parseLook` loads a saved skin 10 or 11 as 9 (every saved look, the profile API and resident looks route through it). Palette indices unchanged (12 skins in `palette.json`). Authored skin 10 moved to 9: the oracle keeper (`residentRoster.ts`) and the sushi chef (`sushiBar.ts`). The lab sheet `?sheet=eyeskins` shows the 10 pickable skins. The eye glow still works on 9 (linear luminance 0.096 inside the 0.03 to 0.2 fade: about two thirds strength). Seeded random looks now spread over 10 skins, so some generated characters' skins changed; nothing else in them did (same random draws). Test: `look.test.ts` "the two darkest skins". Evidence: `17-skins-creator.png` (the creator's 10 swatches, from the branch build).
+- **Perf settled (round 4):** interleaved A/B, main (406ac13e) against this branch, measurement builds, headless, cafe and v2. High 5 rounds (3, then 2 re-runs as the README asks for a scene that looks regressed), Lite 3. Means, main then branch: High cafe median 2.8 / 2.9 ms, frame CPU 1.9 / 2.2, draws 134 / 135; High v2 median 7.7 / 8.1 (one round at load 8.1 gave the branch 9.5; the other four 7.75 / 7.73), draws 407 / 407; Lite cafe 1.5 / 1.5, CPU 1.0 / 1.1; Lite v2 4.9 / 5.0, CPU 4.4 / 4.4. In rounds 4 and 5 both builds drew the identical cafe (64751 triangles) and measured the same (2.9/2.8, 3.0/3.0 ms); the round 1 to 3 CPU gaps track which bots were LOD'd (triangles, skeletons differed). Verdict: no real cost; nothing to fix. Round 3's 7.7 ms failure was the loaded machine against a quiet baseline. Runs: `specs/perf/runs/ab-rw4-{high,lite}-{before,after}.jsonl`, table `node specs/perf/ab-table.mjs specs/perf/runs/ab-rw4-high`.
+- **Gates (round 4):** tsc clean; eslint clean on changed files; vitest 364 files / 3477 tests passed, with and without `NEXT_PUBLIC_GAME_WORLD=new`.
+
+Round 3 (approved 2026-10-27):
 
 - **No pool lines (r2-sweep-mid):** the crossing light lines on the small waves (`glints` in `ReflectionScene.tsx` `WATER_FRAG`) are gone; swell, chop, the reflection's wobble, the crest light and the clearing-world sparkles stay.
 - **Hair colour sets lightness too (r2-lightness, whole game):** `hairColour.ts` `hairShift` now lands the texture's median exactly on the picked colour (OKLab L, hue, chroma). Texels keep their light and dark around it: `L' = s L + d`, s the range squeezed only as far as it must to fit in [0, 1], never below 0.5. The chroma cap of 3 is gone, so a near-grey source also reaches the full picked chroma. `tent` now centres on the picked lightness. New `shiftTexel` (the shader's maths in TS; tests use it), `HairShift.L`. `rig.ts` carries a 4th hair attribute `hairL` (sA, dA, sB, dB); `Character.tsx` `shiftHair` takes it (program key v8). "Own" (NO_SHIFT) still draws each style as drawn. Two-tone channel b shifts the same way.
@@ -67,7 +73,7 @@ Round 3 built 2026-10-27 on `game/reflection-waves` (main merged at 139d3b1e fir
 
 ## Next
 
-1. David reviews round 3 (water, hair lightness on 4 styles, under-hair, eyes on 12 skins); apply his notes.
+1. The coordinator merges round 4 (no review needed: David asked for the change).
 2. Once wardrobe-b3 lands (David's batch 3 faces, the 7-row hair atlas), reshoot `?sheet=eyeskins` and `?sheet=haircolours` on it.
 
 ## Tools and gotchas
@@ -76,6 +82,7 @@ Round 3 built 2026-10-27 on `game/reflection-waves` (main merged at 139d3b1e fir
 - Shots: hold the browser lock, dev server on 3171 (Supabase env blanked), then `node specs/evidence/reflection-waves/shoot.mjs <dir> desktop phone [clear] [colours]` (`MID_MS=620` times the crest-at-face shot), then `python3 specs/evidence/reflection-waves/sheets.py <dir> <clear_dir> <colours_dir> specs/evidence/reflection-waves`.
 - Tune the wave live in dev: `window.__reflect.wave` (heading, speed, lead, exit, height, ahead, behind).
 - Round 3: hair colour sets lightness too, so any style shows a colour. Lab sheets (dev server, browser lock): `node specs/evidence/reflection-waves/shoot3.mjs <dir> sheet <name> "sheet=haircolours&ids=hair_bob_pigtail&face=512"` (W= viewport width; it grows the viewport to the grid, since drei Views draw into one fixed canvas), `shoot3.mjs <dir> water`, then `python3 specs/evidence/reflection-waves/sheets3.py <before> <after> specs/evidence/reflection-waves`. Eyes framing: `sheet=eyeskins&zoom=1.7&look=0.73&face=512`.
+- A/B without `ab.sh`'s broad `pkill`: build each side with `measure-build.sh` under the heavy lock (main by `git checkout --detach feat/game-default-island` in this worktree, then back), keep them in `.perf-builds/.next-{before,after}` at the worktree root, then per round serve with `node node_modules/next/dist/bin/next start -p 3149 &` and kill that PID and its children only. One round (both builds, cafe and v2) is about 4 minutes. Playwright resolves from `/opt/homebrew/lib/node_modules/`.
 - zsh does not word-split `$VAR` in `for x in $VAR`: loop over an array, or pass one comma list (round 3 lost two id pairs that way).
 - Hairstyle tiles by index in `section[aria-label="Hairstyles"]` (12 mid-brown spiky, 13 white, 15 the default bob). Swatch buttons in `[aria-label="hair colours"]`: 0 is "Own", then FREE_HAIR in order.
 
