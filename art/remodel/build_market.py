@@ -150,7 +150,7 @@ def fruit_heap(k, M, c, rx, rz, h, cols, n, seed, r=0.075):
     for i in range(n):
         a, t = rng.uniform(0, TAU), math.sqrt(rng.uniform(0, 0.75))
         k.blob((x + math.cos(a) * rx * t, y + h * math.sqrt(max(0.0, 1 - t * t)) + r * 0.3, z + math.sin(a) * rz * t), (r, r * 0.92, r),
-               M["paint"], cols[i % len(cols)], segs=5, rings=3, seed=seed + i)
+               M["paint"], cols[i % len(cols)], segs=6, rings=4, seed=seed + i)
 
 
 if __name__ == "__main__":
