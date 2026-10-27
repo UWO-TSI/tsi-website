@@ -25,6 +25,16 @@ All in `~/.claude/jobs/62203045/tmp/`, which survives reboots.
 - `prod-dump.sh <label>`, `prod-query.sh <sql>` and `verify.sql` are for prod migrations. The procedure is in `STATE.md` and the memory files.
 - `withlock.sh heavy|blender|devserver <cmd>` (set `LANE=game/<lane>`): takes a lock, waiting while swap is high and another lock is held. It lives in `~/.claude/jobs/62203045/tmp/`, the same folder as the helpers above, and is referenced from `specs/lane-rules.md`.
 
+## Later the same night (2026-10-27)
+
+- **reflection-waves round 1 reviewed** (https://claude.ai/artifact/Sc2JrcPsEPotE4VA2zHizU): desktop, phone and small waves approved; the wave approved with a note (the look changes along the wave's path, not in one frame); the first wave in the mist redo with no note (asked David why); the hair colours redo (blond less like skin, add ginger, keep the dyes' indices). Round 2 running on the same lane.
+- **hair-shelf** (light): David's picks: Baby sprout, Layered shag, Swept fringe and V-kei to 350 coins; Messy with headset, Fluffy boy and Wavy half-up removed. Nobody owns or wears them in prod. It writes a catalogue seed migration for me to apply.
+- **wardrobe-b3**: David's batch 3 (hair #28 to #42, faces #26 to #32, face accessories #25 to #27, unpacked from his zips into the worktree's `art/.../source/david-b3/`). Our own names, no prices yet.
+- **fit-editor**: a per-item height field in the catalogue and an editor page bundled from the game's own character code, published by me as an artifact with `db` (collection `fit`), plus `web/scripts/apply-fit.mjs`. Rebuild it with b3 when that lands.
+- **After b3:** extend the hair shelf page (https://claude.ai/artifact/EyLDXZLTsdRVTYZeABzy3h) with the new hairstyles, the faces and all the accessories.
+- **hq-alice** (light): the HQ lead Wren is renamed Alice wherever players see it; ids stay `wren`; a migration for the prod rows.
+- **remodel** (overnight): ACNH-dump and old models remodelled in Blender, the fish tweaked, before and after shots for a review page in the morning. David allowed Pinterest references for this pass only (headless; images kept out of the repo).
+
 ## David's production notes (2026-10-26 night) and the six lanes
 
 David played production from another computer and sent eight notes (verbatim in each lane file). Lanes cut from 1d9a951e, all `uwotsi-lane`:
