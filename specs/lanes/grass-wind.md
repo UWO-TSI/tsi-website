@@ -21,7 +21,18 @@ Find the new world's grass first (`CODEMAP.md` row "Nature, grass, FX": `web/lib
 
 ## Status
 
-(none yet)
+Built at 845e5f36 (game/grass-wind), not yet approved by David.
+- `GrassField` takes `ground` (the smooth terrain material's `userData.splat` uniforms, passed by `SmoothTerrain`; replaces the old `lush` flag). With it the program compiles with `GRASS_GROUND`: cards stood 1.7x taller and 0.9x narrower, the long tapered blade texture (`bladeTexture(true)`), each blade's root coloured by `splatGround` at the root (the ground material's own colour function, moved into `SPLAT_GROUND_GLSL` in `splatMaterial.ts`, so season, paint edges, wet and snow follow), lighter toward the tip; wind as noise bands carried downwind at the swell's speed plus a travelling ripple, and a light sheen on the gust's crest.
+- Village unchanged: its branch of the shader is the old expressions with `uLush = 0` folded in, its blade texture checksum is pinned in `grassBlades.test.ts`.
+- Same layers and instances: no added triangles or draws.
+- Before shots taken (scratchpad); after shots, gates and perf pending.
+
+## Tools and gotchas
+
+- Shots: `PORT=<p> node specs/evidence/grass-wind/shoot.mjs <dir> <label> [views]` against a dev server (Supabase blanked) under the browser lock. Views: meadow, plaza-edge, riverbank (day and evening), close-day, lite-meadow-day, gust (6 frames, strip and close crop). `KEEP=1` keeps the gust frames.
+- Gust bands are subtle in single frames: blur the frames (`magick ... -colorspace gray -blur 0x8 -level 35%,60%`) to see them travel.
+- With swap over 9 GB, holding the browser lock blocks `withlock.sh heavy` (it waits for the other locks): stop the dev server and release first.
+- Tuning lives in `GROUND_BLADE` (height, width, root shade) and the GRASS_GROUND blocks of `GrassField.tsx`.
 
 ## Rules
 
