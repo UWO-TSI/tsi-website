@@ -117,6 +117,12 @@ export const PROP_FOOTPRINT: Record<string, readonly [number, number, number?, n
   // game/trees-art: the riverbank trees' trunks at the ground.
   "river-tree-willow": [0.7, 0.7], "river-tree-alder": [0.46, 0.6, -0.15, 0.08], "river-tree-oak": [0.75, 0.75], "river-tree-lean": [0.6, 0.6],
 };
+/**
+ * The campfire's stone ring, its radius before the fire's scale: the stones' outer edge at their tops (art/props/
+ * build_campfire.py, measured 0.69 to 0.72). The smooth world walls the pit round it; the sit (2.1) and dance (2.9)
+ * rings stay open (lib/game/campfire.ts FIRE). The village's fire is walled by its scene (Campfire.tsx).
+ */
+export const FIRE_PIT_RING = 0.72;
 /** Props whose footprint is round, `hw` its radius: the plaza fountain's basin (a square would stand out past its rim). */
 export const ROUND_PROPS: ReadonlySet<string> = new Set(["plaza-fountain"]);
 /** Prop tops before scale, measured from the GLB bounds: what a jump clears or lands on (lib/game/movement). */
@@ -440,6 +446,8 @@ export function islandOf(v: Village): VillageIsland {
     const [dx, dz] = turn(f[2], f[3], o.yaw);
     return [{ x: o.x + dx, z: o.z + dz, yaw: o.yaw ?? 0, hw: f[0], hd: f[1], top: base + (PROP_TOP[o.model!] ?? Infinity) * (o.scale ?? 1), round: ROUND_PROPS.has(o.model!) }];
   }), ...fenceSolids(objectsOf("fence", v).filter(isJoinedFence)),
+    // The smooth world's campfire: its stone ring, round, never climbed.
+    ...(terrain ? objectsOf("campfire", v).map(o => { const r = FIRE_PIT_RING * (o.scale ?? 1); return { x: o.x, z: o.z, yaw: 0, hw: r, hd: r, top: Infinity, round: true }; }) : []),
     // The lamps' posts (the hand lantern has none): never climbed.
     ...objectsOf("lamp", v).flatMap(o => { const post = NEW_LAMPS[o.model as keyof typeof NEW_LAMPS]?.post; return post ? [{ x: o.x, z: o.z, yaw: 0, hw: post, hd: post, top: Infinity }] : []; })];
   // Trees and props by 4-unit bucket (numeric keys), so a painted island with hundreds of them walks as cheaply as a small one.

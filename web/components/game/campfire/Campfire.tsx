@@ -132,8 +132,10 @@ function burn(b: Burn, sys: FireSystem, light: THREE.PointLight | null, embers: 
   for (let i = 0; i < DRUM_LAYERS.length; i++) AudioManager.setLoop(DRUM_LAYERS[i].src, i < layers ? DRUM_LAYERS[i].gain * near : 0);
 }
 
-export default function Campfire({ site, ground, phase, player }: {
+export default function Campfire({ site, ground, phase, player, walled = false }: {
   site: Spot;
+  /** The walker already walls the pit (the smooth world: defaultIsland FIRE_PIT_RING); else the scene adds its square. */
+  walled?: boolean;
   ground: (x: number, z: number) => number;
   phase: IslandPhase;
   player: RefObject<THREE.Vector3>;
@@ -157,10 +159,11 @@ export default function Campfire({ site, ground, phase, player }: {
   useContactShadow(stack.model, useMemo(() => modelContact(stack.model, STACK_URL, shadowClassFor(STACK_URL)), [stack]));
   // The stack is solid: you walk round it.
   useEffect(() => {
+    if (walled) return;
     const h = SOLID_HALF * (site.scale ?? 1), r = { x0: at.x - h, x1: at.x + h, z0: at.z - h, z1: at.z + h };
     eventSolids.push(r);
     return () => { const i = eventSolids.indexOf(r); if (i >= 0) eventSolids.splice(i, 1); };
-  }, [at, site.scale]);
+  }, [at, site.scale, walled]);
   // Where it is and whether it burns, for the emote wheel (sit and dance by it).
   useEffect(() => {
     campfireLive.site = { x: at.x, z: at.z };
