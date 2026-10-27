@@ -319,6 +319,15 @@ export class AudioManagerImpl {
     }
   }
 
+  /**
+   * Open the loop layers' audio context ahead of their first use: opening the device took ~0.2 s of one frame, mid-walk,
+   * the first time a campfire or a dance came in range. Call it behind a loading screen; it stays suspended until the
+   * first gesture resumes it.
+   */
+  prepare(): void {
+    if (typeof window !== "undefined") this.loopContext();
+  }
+
   private loopContext(): AudioContext | null {
     if (this.ctx) {
       if (this.ctx.state === "suspended") void this.ctx.resume().catch(() => {});

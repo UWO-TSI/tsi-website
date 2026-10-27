@@ -23,7 +23,44 @@ Steps 2 to 4 are fixes and can ship once verified; step 5 is visual and waits fo
 
 ## Status
 
-(none yet)
+Head: see `git log` (2026-10-27). Main f9f4dc5d merged. Nothing approved or merged yet.
+
+- **Step 1 done:** `specs/evidence/loading/baseline.md`.
+- **Steps 2 to 4 done and verified in the browser:** `specs/evidence/loading/after.md` (fast cold 20.0 -> 7.6 to 9.0 s,
+  slow warm 18.7 -> 8.0 s; crossing 155 to 226 long frames -> 0 or 1; landing, walk-along, first minute -> 0) and the
+  rim look check `rim-{day,evening,night}-before-after.png`. What changed:
+  - title prefetch: `components/title/preloadGame.ts` (called from TitleScene's Ready), list `lib/game/preloadAssets.ts`
+    (generated, 345 files, test `preloadAssets.test.ts`), plus the island's code chunks read from `/student/dashboard`;
+  - rim light always mounted (`IslandAtmosphere.tsx`);
+  - `WarmupProbe` compiles the whole scene (compileAsync) and uploads textures at COMPILE_AT and waits
+    (`sceneGate.ts` holds the count); UltWarmup deleted (folded in);
+  - the new world's `terrainOf` and `terrainShoreField` run in a worker (`lib/game/world/derive.ts`,
+    `deriveWorker.ts`, seeded by `load.ts`; `derive.test.ts` proves identical bytes; coordinator asked for this);
+  - `AudioManager.prepare()` behind the loading screen.
+- Gates: running (tsc, vitest with and without NEXT_PUBLIC_GAME_WORLD=new, eslint on changed files).
+- **Step 5 (the new loading screen) in progress:** `lib/game/loadProgress.ts` (+test, the real progress store: code,
+  world, files, warm-up) is written but not wired; the component draft is in the session scratchpad (`step5/`). Idea:
+  our island's map plate (the minimap's plot) coming out of the arrival's mist, Bram's boat rowing a sea line to the
+  dock as the real progress, percent under it, cream kit. Shots to the coordinator for David before it ships.
+- perf:check (`SCENES=village,v2`) still to run once at the end.
+
+## Tools and gotchas
+
+- `specs/perf/load-trace.mjs <label>` with `PORT NET=fast|slow|none CACHE=cold|warm DWELL PLAY PROFILE=1 MANIFEST=1 OUT`:
+  the trace; writes `<label>.md` and `.json` (JSON is gitignored; runs kept in the session scratchpad). `MANIFEST=1`
+  regenerates `web/lib/game/preloadAssets.ts` from a cold run.
+- Build: `LANE=game/loading withlock.sh heavy env NEXT_PUBLIC_GAME_WORLD=new NEXT_PUBLIC_MEMBER_WORLD=open sh
+  specs/perf/measure-build.sh [--no-mangling]` (takes 3 to 5 min once the lock is free; the lock waits can be 20+ min).
+  Don't edit `components/game`, `lib/game` while it runs: it rewrites and restores those files.
+- Signed-out dashboard: the measurement build inlines a dead Supabase URL, so the middleware redirects
+  `/student/dashboard` to the title. After each build drop the dashboard matcher from
+  `web/.next/server/middleware-manifest.json` (node one-liner filtering `originalSource` starting `/student/dashboard`).
+- Serve: `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:9 NEXT_PUBLIC_SUPABASE_ANON_KEY=perf-bench SUPABASE_SERVICE_ROLE_KEY=
+  NEXT_PUBLIC_GAME_WORLD=new NEXT_PUBLIC_MEMBER_WORLD=open npx next start -p 3151` under the devserver lock (taken by
+  hand: queue line, mkdir, owner file).
+- Noise: the Metal shader cache survives fresh browser profiles, so "cold" runs after the first compile faster; machine
+  load moves world-ready by seconds. Compare program links and long-frame counts, not single timings.
+- Playwright clicks on the creator's Yes fail (animated): click through `$eval(..., b => b.click())`.
 
 ## Rules
 
