@@ -54,6 +54,8 @@ cpSync(v6, join(out, "assets/characters/v6"), { recursive: true, filter: src => 
 mkdirSync(join(out, "assets/icons"), { recursive: true });
 for (const f of readdirSync(icons)) if (ICON.test(f)) cpSync(join(icons, f), join(out, "assets/icons", f));
 cpSync(join(web, "public/assets/game/tools/bobber.glb"), join(out, "assets/game/tools/bobber.glb"));
+// The Residents page draws the new world's map: its two images, fetched beside the page (the document is bundled).
+if (tool === "npc-editor") for (const f of ["height.png", "surface.png"]) cpSync(join(web, "data/world", f), join(out, "data/world", f));
 
 // Each GLB as a .glb.json: the whole GLB in base64, as a JSON string. The artifact frame's CSP lets the page fetch its
 // own files but not data: or blob: URLs, nor compile WebAssembly, so the meshopt compression is decoded here and every

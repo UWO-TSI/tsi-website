@@ -25,7 +25,27 @@ David, 2026-10-27, verbatim: "make a artifact for me to customize all the npc, w
 
 ## Status
 
-(none yet)
+**Page built, waiting on gates (2026-10-27).** Branch head: see `git log`; main merged at 71a43b41 (Alice).
+- **Place fix (own commit 2f772f42, coordinator: "fix the root cause for the new world only"):** world.json has no `anchor` objects, so every schedule place but plaza (the spawn), home and bench was skipped. `residentRoutine.ts placeAt(key, v)`: the anchor object; on a terrain world the landmark of the same name (a building's exit step, the wharf's landing, the plaza's or beach's middle, the temple only once DROPS.oracle opens); the village unchanged. pond and path have no landmark: skipped until David places anchors in /lab/map. Tests in residentRoutine.test.ts on the shipped world.
+- **Sources (web/scripts/residentSources.ts, shared by the page and the script):** the roster (`residentRoster.ts` PROPOSED_RESIDENTS: name, post, bio, tone, schedule, idle lines; RESIDENT_TALK; RESIDENT_LOOKS), Rosa (`cafe.ts` CAFE_OWNER name, look, lines; SWEEPER_LINES), the sushi chef and server (`sushiBar.ts` CHEF_LOOK, SERVER_LOOK, look only). Names also live in `welcome.ts` HQ_LEAD (and its copy of the HQ lead's look), `arrival/hq/lines.ts` WREN, `arrival/lines.ts` BRAM: the apply script keeps them in step. Prod: names, posts, bios, tones, schedules, lines and talk come from npc_personas rows (seeded); looks only from RESIDENT_LOOKS. Jayden (applicant island, recruitment code) is off the page (coordinator).
+- **Page:** `specs/tools/npc-editor/` (Editor.tsx, index.html `<title>Residents</title>`, check.mjs). Built by `node specs/tools/fit-editor/build.mjs npc-editor` (build.mjs now takes the tool folder; Face Fit's frame code moved to `specs/tools/fit-editor/frame.tsx`, imported by both). dist: `specs/tools/npc-editor/dist/` (gitignored), about 223 files, 29 MB, editor.js 1.9 MB, plus `data/world/{height,surface}.png` for the map. Publish with `capabilities: {"db": {}}`; collection `residents`, one doc per slug, only the changed fields (a doc reset to the source is deleted).
+- **Apply:** `node scripts/apply-residents.mjs <export.json>` from web/: checks every doc (unknown slug, field, place, building, time of day, part, empty name, talk limits refuse the whole export), writes only the changed values into the TS sources with the TypeScript AST (comments and layout elsewhere stay), runs gen-seeds (a new migration; tried on two samples and reverted), then lists every string in lib/ and components/ that still says an old name, to reword by hand (story lines like "I'm Alice").
+- check.mjs PASS (frame CSP, sandboxed second origin, stand-in db, storage refused): 13 residents, Alice listed, a saved doc read, a name burst saves once alone, reset deletes the doc, an empty name flagged, a hairstyle redraws the 3D view and saves the look, a colour saves, the pond marked skipped, a place adds a pin, a conversation saves, search, the chef look-only, Rosa's out-front lines and no schedule, no db says it can't save, no sideways scroll at 1280 and 390. Evidence: `specs/evidence/npc-editor/`.
+
+## David's decisions
+
+- 2026-10-27 (via the coordinator): the HQ lead is Alice (slug `wren`), no surname; Jayden stays off; Rosa, the chef and the server are in, chef and server look only; fix new-world places for the new world only.
+
+## Next
+
+1. Gates: full tsc, vitest with and without NEXT_PUBLIC_GAME_WORLD=new (heavy lock).
+2. Report to the coordinator. After David edits: the coordinator exports collection `residents` and runs `node scripts/apply-residents.mjs <export.json>` from web/, rewords the listed old-name lines, ships the new migration.
+
+## Tools and gotchas
+
+- Build and check are separate calls, each under `withlock.sh devserver` (never chained).
+- Typecheck the pages: scratch tsconfig extending web/tsconfig.json with `files` [both Editor.tsx], `typeRoots` and `paths` (`@/*` to web, `*` to web/node_modules/@types then web/node_modules).
+- Never run a sample apply and then `git checkout lib/` blindly: it reverts your own edits in lib/ too.
 
 ## Rules
 
