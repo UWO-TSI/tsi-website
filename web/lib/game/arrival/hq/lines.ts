@@ -49,10 +49,10 @@ export const WREN_LINES: Readonly<Record<string, readonly string[]>> = {
   menu: [
     "Last thing, then you're free. {esc}",
   ],
-  // The visit's end, Bram's tour already done (the village's order): off to the museum with your first find.
+  // The visit's end, Bram's tour already done (the village's order): your first catch to Juno at the museum (m1).
   farewell: [
     "That's your menu: the map, your quests, your bag and collection, friends and mail.",
-    "That's you registered. Bring your first find to the museum shell, then come back and tell me.",
+    "That's you registered. Bring your first catch to Juno at the museum. She'll show you round.",
     "Oh, and you'll want more than a rod. Odile has a spare net and Pim always has a shovel. Ask them.",
     "[happy] Welcome to Tethos Island, {name}.",
   ],
@@ -61,6 +61,7 @@ export const WREN_LINES: Readonly<Record<string, readonly string[]>> = {
     "That's your menu: the map, your quests, your bag and collection, friends and mail.",
     "[happy] That's you registered, {name}. Welcome to Tethos Island.",
     "Bram's waiting for you outside. He'll show you the rest of the village.",
+    "And once you've a first catch, bring it to Juno at the museum. She'll show you round.",
   ],
 };
 

@@ -11,14 +11,14 @@ import * as THREE from "three";
 import { clearGuide, guideNow, guideView, showGuide } from "@/lib/game/guideArrow";
 
 /** How far ahead of you it sits (m), how far it drifts, how faint it is at full. */
-const AHEAD = 1.5, DRIFT = 0.18, OPACITY = 0.42, LIFT = 0.06;
+const AHEAD = 1.6, DRIFT = 0.18, OPACITY = 0.5, LIFT = 0.06, SIZE = 1.3;
 
 function chevron() {
   const s = new THREE.Shape();
   // Pointing +z (toward the target), flat on the ground once turned.
   s.moveTo(0, 0.42); s.lineTo(0.42, -0.06); s.lineTo(0.27, -0.2); s.lineTo(0, 0.1); s.lineTo(-0.27, -0.2); s.lineTo(-0.42, -0.06); s.closePath();
   const g = new THREE.ShapeGeometry(s);
-  g.rotateX(-Math.PI / 2).rotateY(Math.PI);
+  g.scale(SIZE, SIZE, 1).rotateX(-Math.PI / 2).rotateY(Math.PI);
   return g;
 }
 

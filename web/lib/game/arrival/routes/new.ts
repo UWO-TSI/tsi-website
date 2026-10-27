@@ -11,8 +11,10 @@ import { VILLAGE_ROUTE } from "./village";
 
 /** Where he waits by HQ's door: in, and out again. */
 const HQ_DOOR = { landmark: "hq", point: "exit", offset: [1.2, -0.6] } as const;
-/** Beside the sell barrel on the wharf's deck, the water in front. */
-const BARREL = { prop: "sell-barrel", offset: [-1.4, 1.4] } as const;
+/** Beside the sell barrel along the quay, at the deck's water edge (the sea is +x there: the quay's barrel sits a step in from it). */
+const BARREL = { prop: "sell-barrel", offset: [0.3, 2.0] } as const;
+/** A little further along the quay for the first cast: out of the barrel's reach (its E is Sell), the water in reach. */
+const CAST = { prop: "sell-barrel", offset: [0.3, 3.6] } as const;
 
 export const NEW_ROUTE: TutorialRoute = {
   world: "new",
@@ -25,7 +27,7 @@ export const NEW_ROUTE: TutorialRoute = {
     VILLAGE_ROUTE.stops[0],
     { id: "hqFirst", stand: HQ_DOOR, task: { kind: "hq", id: "alice" } },
     { id: "sights", stand: HQ_DOOR, shots: [null, { landmark: "museum" }, { landmark: "cafe" }, { landmark: "shop" }, null] },
-    { id: "wharf", stand: BARREL, gives: "rod", task: { kind: "catch", id: "catch" },
+    { id: "wharf", stand: CAST, gives: "rod", task: { kind: "catch", id: "catch" },
       via: [
         { prop: "shipwright-ship", offset: [-4.2, -0.5], pause: 1.8, face: { prop: "shipwright-ship" }, say: "shipwright" },
         { prop: "tackle-shop", offset: [-4, 0], pause: 1.8, face: { prop: "tackle-shop" }, say: "tackle" },

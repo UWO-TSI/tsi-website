@@ -290,6 +290,8 @@ function converseCamera(f: GuideFrame, stop: ResolvedStop | undefined, dt: numbe
     g.cam.saved = { yaw: orbit.target.yaw, pitch: orbit.target.pitch, zoom: orbit.target.zoom };
     orbit.target.yaw = talkCameraYaw(p.x, p.z, g.x, g.z, orbit.target.yaw);
     orbit.target.pitch = Math.min(orbit.target.pitch, TALK_PITCH);
+    // You turn to him, as to any resident (PlayerAvatar's tsi:face).
+    window.dispatchEvent(new CustomEvent("tsi:face", { detail: { x: g.x, z: g.z } }));
   }
   const shot = mine ? stop!.shots?.[t!.index] ?? null : null;
   if (mine && !shot) steerTalkShot(dt, now, p.x, p.z, g.x, g.z, t!.index);
@@ -310,6 +312,7 @@ function converseCamera(f: GuideFrame, stop: ResolvedStop | undefined, dt: numbe
   if (!mine && g.cam.saved) {
     orbit.target.yaw = g.cam.saved.yaw; orbit.target.pitch = g.cam.saved.pitch; orbit.target.zoom = g.cam.saved.zoom;
     g.cam.saved = null;
+    window.dispatchEvent(new CustomEvent("tsi:face", { detail: null }));
   }
   // His mouth and hands while a line types out.
   if (mine) { const typing = talkTyping(t); f.m.pose = typing ? "Chat" : null; if (typing) f.m.talk = Math.max(f.m.talk ?? 0, 0.15); }
@@ -436,7 +439,7 @@ function BramGuide({ v, island, player, dock, keys, route, places }: {
   // Dev (evidence scripts): the resolved stops, where Bram is, the tutorial's state.
   useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
-    Object.assign(window, { __arrivalStops: () => stops, __bram: () => ({ ...arrivalRun.bram }), __tutorial: () => (arrivalRun.tutorial ? { ...arrivalRun.tutorial } : null) });
+    Object.assign(window, { __arrivalStops: () => stops, __bram: () => ({ ...arrivalRun.bram, yaw: motion.current.yaw }), __tutorial: () => (arrivalRun.tutorial ? { ...arrivalRun.tutorial } : null) });
   }, [stops]);
   // Back out of HQ (the island remounts him), he's where the walk is: its stop's stand.
   const g = useMemo<Guide>(() => {

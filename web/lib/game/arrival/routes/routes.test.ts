@@ -53,6 +53,13 @@ describe.each(["village", "new"] as const)("the arrival on the %s world", (world
       for (let k = 1; k < way.length; k++) expect(nav.path(way[k - 1].x, way[k - 1].z, way[k].x, way[k].z), `${stops[i - 1].id} to ${stops[i].id}, leg ${k}`).not.toBeNull();
     }
     // Every place the route names is in this world (none fell back to the place before it).
+    // The new world: the first catch's stand has water in a cast's reach and is out of the sell barrel's reach, whose E is Sell.
+    const spots = await import("@/lib/game/fishingSpots");
+    for (const st of world === "new" ? stops.filter(x => x.task?.kind === "catch") : []) {
+      expect(spots.fishingSpot(walker.map, () => "sea", st.stand.x, st.stand.z), `${st.id}: water in reach`).not.toBeNull();
+      const barrel = arrival.placeWorld(dock, v).prop?.("sell-barrel");
+      if (barrel) expect(Math.hypot(barrel.x - st.stand.x, barrel.z - st.stand.z), `${st.id}: clear of the barrel`).toBeGreaterThan(2.6);
+    }
     if (world === "new") {
       const pw = arrival.placeWorld(dock, v);
       for (const st of route.stops) for (const p of [st.stand, ...(st.via ?? []), ...(st.shots ?? []).filter(x => x !== null)]) expect(R.resolvePlace(p, pw), JSON.stringify(p)).not.toBeNull();

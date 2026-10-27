@@ -37,11 +37,50 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 ## Status
 
-- **The guide arrow (shared), committed.** `web/lib/game/guideArrow.ts` (API, tested) and `web/components/game/GuideArrow.tsx` (a faint chevron a step ahead of your feet, one mesh, mounted in `IslandScene`). Other lanes call:
-  - `const clear = showGuide(owner, { x, z } | () => XZ | null, { near })`; the newest guide wins, clearing it brings back the one under it; `clearGuide(owner)`; `guideNow()`.
-  - Dev hook: `window.__guide.{show, clear, now}`.
-  - Bram uses it during the tour (owner `bram`, near 7 m). He walks brisker with you on his heels (`bramPace` in `lib/game/arrival/tutorial.ts`).
-- Next up: the new tour order (below).
+All four items are built and run end to end headless on the new world. Not yet reviewed by David. The final evidence batch is still to shoot (Next).
+
+- **The guide arrow (shared), merged into main-quest at 203f8603.** `web/lib/game/guideArrow.ts` holds the API (tested). `web/components/game/GuideArrow.tsx` draws a faint chevron a step ahead of your feet: one mesh, in `IslandScene`, so outdoors only.
+  - `const clear = showGuide(owner, { x, z } | () => XZ | null, { near })`. The newest guide wins; clearing it brings back the one under it. Also `clearGuide(owner)` and `guideNow()`. Dev hook: `window.__guide`.
+  - Bram uses owner `bram` (shows from 7 m). main-quest uses owner `quest`.
+- **t-short and t-sell: the new world's walk** (`lib/game/arrival/routes/new.ts`, data only). The village keeps today's walk.
+  - The order:
+    1. The dock and the crate, as before.
+    2. Bram walks you to HQ's door and waits (stop `hqFirst`, task `hq`). Alice's visit runs inside, and he moves on when it's done and you're back out.
+    3. One E opens the camera conversation (stop `sights`). He points out the museum, the café and the shop, one line and one building shot each (`shots`).
+    4. Down the wharf, he pauses by the shipwright and the tackle shop, a passing line each (waypoints `pause`, `face`, `say`).
+    5. His rod and a first catch off the quay (stop `wharf`; its stand is out of the sell barrel's E range).
+    6. Open the sell barrel (stop `barrel`, task `sell`), then the end line and the reward.
+  - New route data: `talk: "box"` (Bram's talks go in the TalkBox), `end` (`END_LINES.free`), prop places, passing waypoints, and the `hq` and `sell` tasks.
+  - The tutorial events `talkEnded`, `hqDone` and `sellOpened`.
+  - The camera conversation lives in `converseCamera` in `ArrivalWorld.tsx`: the residents' two-shot (`steerTalkShot`), then a blended cut to a building shot, then the camera is put back. You turn to face Bram (`tsi:face`).
+  - Bram walks brisker with you on his heels (`bramPace`).
+- **t-hq: Alice's visit reworked** (`lib/game/arrival/hq/script.ts`, `lines.ts`, `uiTour.ts`; the components `HqCards.tsx` LoreOverlay and MerchCard, and `UiTour.tsx`). Applies on both worlds.
+  - The beats: report, lore overlay, register, club (events earn coins, gems and XP; the check-in QR), merch card, UI tour (press and hold keycaps, a ring around HUD parts), Esc, farewell.
+  - The farewell has two versions: `farewell` (the village order) and `farewellTour` (Bram waiting outside). Both keep main-quest's Juno line.
+  - The founder, map and board beats are cut. The desk and the board still work on E.
+  - Progress is on the account: `profiles.preferences.onboarding` through `GET/POST /api/world/onboarding` (`accountProgress.ts`). It merges with the device copy `tsi.hq.v2`, the further along wins, and it pays nothing. Coordinator approved (d).
+- **t-catch, both worlds.** The walk-along's catch shows a teaching card on the first reel (`REEL_TEACH`, the keys drawn held). The reel waits for a fresh hold, the bite window is longer, and a progress floor means the fish can't get away (`createFishingReel(fish, floor)`). Every catch is already a fish: no junk exists.
+- Gates: full vitest passes with and without `NEXT_PUBLIC_GAME_WORLD=new` (3498 tests); tsc and eslint pass on the changed files.
+
+## Next
+
+1. Shoot the evidence batch in one short devserver hold, with the dev server on 3172 and `NEXT_PUBLIC_GAME_WORLD=new` (see Tools): `first10` (part a: the HQ visit and the sights), `first10b` (part b: the wharf, the catch, the barrel) and `hq-phone`. Make webp sheets in `specs/evidence/tutorial-v2/v2/`.
+2. Report to the coordinator for David's review page.
+3. Open for David:
+   - Bram explains selling but doesn't make you sell the first fish (m1 donates it). The task is only to open the barrel.
+   - Every line is a draft.
+   - The cut HQ beats (founder, map, board).
+   - During any arrival, HQ's door is always "enter".
+
+## Tools and gotchas
+
+- `specs/evidence/tutorial-v2/shoot.mjs` scenes: `first10` (part a, about 7 min), `first10b` (part b: the HQ visit is pre-done through `tsi.hq.v2`, about 5 min), `hq-phone` (`?hq=inside&hqvisit=1`, touch), and `arrow`.
+  - Run each as its own foreground call: `HOST=http://localhost:3172 node specs/evidence/tutorial-v2/shoot.mjs <out> <scene>`.
+  - Dev server: `NEXT_PUBLIC_GAME_WORLD=new NEXT_PUBLIC_SUPABASE_URL= NEXT_PUBLIC_SUPABASE_ANON_KEY= npx next dev -p 3172`, under the devserver lock. Keep the hold short: the coordinator asked, because swap runs at 13 GB.
+- HQ room coordinates (lib/game/hqLayout.ts): the desk station is (4.6, -7.5) and the exit is (0, -8.2). Walk there with `tsi:interior-move`.
+- The sell barrel's E ("sell") outranks fishing within 2.2 m. The cast stand has to stay outside that (routes.test checks it).
+- `stage()` waits miss instant stages: a pre-done HQ task passes in a frame.
+- A browser with no saved look shows the plain creator first (click Skip).
 
 ## Rules
 
