@@ -1,7 +1,7 @@
-// Cleanup of the launch test's three throwaway accounts (specs/lanes/launch-check.md, as specs/lanes/launch-v1.md), exact and proven:
-//   node cleanup.mjs scan      every public uuid column (and auth.users) counted for the three ids, read-only
+// Cleanup of the launch test's throwaway accounts (three, and run 3's fourth, D) (specs/lanes/launch-check.md, as specs/lanes/launch-v1.md), exact and proven:
+//   node cleanup.mjs scan      every public uuid column (and auth.users) counted for the test's ids, read-only
 //   node cleanup.mjs collect   the rows that only go to NULL on a delete, recorded by id in $IDS
-//   node cleanup.mjs delete    A's mute undone, those rows deleted by id, then the three users (their rows cascade)
+//   node cleanup.mjs delete    A's mute undone, those rows deleted by id, then the test's users (their rows cascade)
 //   node cleanup.mjs verify    zero rows left for the ids, the recorded row ids and the users (counts only)
 // Env: IDS (the scratch JSON with the account ids, outside the repo). The service key comes from web/.env.local and
 // the management token from the Supabase CLI keychain entry, both into memory only; nothing secret is printed.
@@ -13,8 +13,9 @@ const REF = "rtbkrngsdbptbjhfbcud";
 const IDS = process.env.IDS;
 if (!IDS) throw new Error("IDS is required");
 const ids = JSON.parse(readFileSync(IDS, "utf8"));
-const users = ["a", "b", "m"].map(k => ids[k]?.id).filter(Boolean);
-if (users.length !== 3 || users.some(u => !/^[0-9a-f-]{36}$/.test(u))) throw new Error("expected three account ids");
+const KEYS = ["a", "b", "m", "d"].filter(k => ids[k]?.id);
+const users = KEYS.map(k => ids[k].id);
+if (users.length < 3 || users.some(u => !/^[0-9a-f-]{36}$/.test(u))) throw new Error("expected the test's account ids");
 const list = users.map(u => `'${u}'`).join(",");
 
 const env = Object.fromEntries(readFileSync(WEB + ".env.local", "utf8").split("\n").filter(l => /^[A-Z_]+=/.test(l))
@@ -33,7 +34,7 @@ async function sql(query, write = false) {
   return j;
 }
 
-/** Every public uuid column (but `id`) and the auth users: how many rows name one of the three. Nonzero ones only. */
+/** Every public uuid column (but `id`) and the auth users: how many rows name one of the test's ids. Nonzero ones only. */
 async function scan() {
   const cols = await sql(`select c.table_name t, c.column_name c from information_schema.columns c join information_schema.tables t
     on t.table_schema = c.table_schema and t.table_name = c.table_name and t.table_type = 'BASE TABLE'
@@ -85,7 +86,7 @@ async function remove() {
     .map(([t, v]) => `delete from public."${t}" where id in (${v.map(x => `'${x}'`).join(",")});`);
   if (stmts.length) await sql(`begin;\n${stmts.join("\n")}\ncommit;`, true);
   const out = {};
-  for (const k of ["a", "b", "m"]) {
+  for (const k of KEYS) {
     const r = await fetch(`${env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/admin/users/${ids[k].id}`, { method: "DELETE", headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY } });
     out[k] = r.status;
   }

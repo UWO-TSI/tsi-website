@@ -1,0 +1,136 @@
+{
+  "at": "2026-10-27T09:21:38.228Z",
+  "preview": "play.tethos.ca",
+  "results": [
+    {
+      "step": "identity: B sees A's world name and hair and skin (card and drawn) without A rejoining",
+      "ok": true,
+      "detail": "10.6 s after the save, 0.5 s after A came into B's view; A's sockets 1"
+    },
+    {
+      "step": "identity: B's socket carried A's name",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "identity: A's tag on B's screen reads A's world name",
+      "ok": true,
+      "detail": "Probe Alder"
+    },
+    {
+      "step": "wardrobe: A waits by the shop's door",
+      "ok": true,
+      "detail": "{\"x\":32.26689274504308,\"z\":59.750445240550654}"
+    },
+    {
+      "step": "wardrobe: B enters the shop (Enter the shop)",
+      "ok": true,
+      "detail": "Enter the shop {\"x\":32.506581118199826,\"z\":62.6437819541875}"
+    },
+    {
+      "step": "wardrobe: B at a changing room (Try on outfits)",
+      "ok": true,
+      "detail": "Try on outfits at {\"x\":-5.193502982013541,\"z\":3.2483829834392868}"
+    },
+    {
+      "step": "wardrobe: the fitting room opens with the name field",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "wardrobe: B picks a new name, hairstyle and hair colour",
+      "ok": true,
+      "detail": "Probe Rowan (free: true) | Short with tufts | hair colour 2"
+    },
+    {
+      "step": "wardrobe: Wear this saves B's look and new name",
+      "ok": false,
+      "detail": "Probe Birch; null"
+    },
+    {
+      "step": "wardrobe: B leaves the shop (Return to the island)",
+      "ok": true,
+      "detail": "Return to the island"
+    },
+    {
+      "step": "wardrobe: A sees B's new name and hair within about 15 s of B stepping out, no rejoin on A's side",
+      "ok": false,
+      "detail": "{\"present\":true,\"name\":\"Probe Birch\",\"card\":null,\"drawn\":{\"skin\":3,\"hair\":-1,\"back\":\"hair_bob_pigtail\",\"bangs\":\"\"},\"ok\":false,\"at\":null}; A's sockets 1"
+    },
+    {
+      "step": "wardrobe: B's tag on A's screen reads the new name",
+      "ok": false,
+      "detail": ""
+    },
+    {
+      "step": "identity: C, joining later, sees A's name and look at join",
+      "ok": true,
+      "detail": "29.3 s after C's island loaded"
+    },
+    {
+      "step": "identity: C, joining later, sees B's new name and look at join",
+      "ok": false,
+      "detail": "{\"present\":true,\"name\":\"Probe Birch\",\"card\":null,\"drawn\":{\"skin\":3,\"hair\":-1,\"back\":\"hair_bob_pigtail\",\"bangs\":\"\"},\"ok\":false,\"at\":null}"
+    },
+    {
+      "step": "identity: both tags on C's screen",
+      "ok": true,
+      "detail": "Probe Alder: true, Probe Birch: true"
+    },
+    {
+      "step": "hair shop: the shop answers",
+      "ok": true,
+      "detail": "HTTP 200, 128 items"
+    },
+    {
+      "step": "hair shop: Baby sprout on sale at 350 coins",
+      "ok": true,
+      "detail": "Baby sprout 350 coins"
+    },
+    {
+      "step": "hair shop: Layered shag on sale at 350 coins",
+      "ok": true,
+      "detail": "Layered shag 350 coins"
+    },
+    {
+      "step": "hair shop: Swept fringe on sale at 350 coins",
+      "ok": true,
+      "detail": "Swept fringe 350 coins"
+    },
+    {
+      "step": "hair shop: V-kei layers on sale at 350 coins",
+      "ok": true,
+      "detail": "V-kei layers 350 coins"
+    },
+    {
+      "step": "hair shop: Wavy half-up isn't sold",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "alice: the settle-in step reads \"Report back to Alice at HQ\"",
+      "ok": true,
+      "detail": "Report back to Alice at HQ"
+    },
+    {
+      "step": "alice: at HQ's door the prompt shows",
+      "ok": true,
+      "detail": "prompt \"Enter HQ\"; tracker \"◆ Report to Alice at HQ (Register at HQ, 0 of 7 done) Next: Report to Alice at H\""
+    },
+    {
+      "step": "alice: inside HQ, the front desk offers Talk to Alice",
+      "ok": true,
+      "detail": "prompt \"Talk to Alice\" at {\"x\":4.603297047049715,\"z\":-7.607970363876246}"
+    },
+    {
+      "step": "alice: her name tag reads Alice",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "alice: the talk is with Alice (Talking with Alice, Alice · HQ lead)",
+      "ok": true,
+      "detail": "Talking with Alice | Alice · HQ lead | Alice · HQ lead There you are! There you are! Bram said you'd be up. I'm Alice. I keep HQ running, more or less. Next ▾"
+    }
+  ]
+}
