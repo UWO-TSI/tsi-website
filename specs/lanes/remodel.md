@@ -39,9 +39,15 @@ David, 2026-10-27 (night), verbatim: "I want you to go ahead and remodel some ol
 
 ## Status
 
-Round 2 in progress. Main (feat/game-default-island 139d3b1e) merged.
-- **Step 1 (ship-ready, sent to main):** the wiring cut to the approved models: the market cart and the lighthouse (SCENERY_URLS), the monument rope fence and all 81 fish (worldModel's REMODELLED in `lib/game/world/active.ts`). The barrel, the gather rocks and every critter back on the dump's. Deleted: the crabs (art/remodel/build_shore.py and its GLBs: David keeps the old crabs), and the round-1 barrel, rock and critter GLBs (rebuilt in step 2 from their scripts).
-- **Step 2 (in progress):** rounder barrel, rocks like the old (faceted, granite texture), cheaper world bugs with the old ones in every close-up, fish icons from the tweaked fish.
+Round 2 done, awaiting David's review of the redos. Head: `git log -1` on game/remodel. Main (139d3b1e) merged.
+- **Shipped (step 1, 11461c48, the coordinator merged it):** the market cart and lighthouse (SCENERY_URLS), the monument rope fence and all 81 fish (worldModel REMODELLED). Our crabs deleted (David keeps the old).
+- **Redos built and wired on this branch (new world only), not approved yet:**
+  - market barrel (`build_market.py -- barrel`): a sine belly, ends at 0.8 of it, 1196 -> 924 triangles.
+  - gather rocks (`build_rocks.py`): faceted boulders with steep shoulders under a 128 px granite texture (numpy), 214/198/146 -> 192/168/120.
+  - world bugs (`build_critters.py`, `build_crawlers.py`): butterflies 116, dragonflies 128, ladybug 230, cicada 176, grasshopper 182, mantis 202. The world paths go through worldModel (ambientFauna FLYERS, VillageLife MODEL_OF/FLOCK_OF, the Critters preload, the title's preload list). Close-ups keep the dump's: TrophyCase draws Critters.SPECIES (dump paths), icons render from acnh/critters.
+  - fish icons: all 81 re-rendered from the tweaked fish into the shared set (the coordinator: overwrite, no second set). The change is small (the icon renderer is matte and already ignored normal maps).
+- Evidence: `specs/evidence/remodel/round2/` (notes.md, one line and triangles each).
+- Gates: tsc clean; vitest 3474 passed with and without NEXT_PUBLIC_GAME_WORLD=new; eslint clean on changed files. perf:check (SCENES=village,v2, GAME_WORLD=new) fails against the Oct 14 baseline, which predates terrain v3, as in round 1: village high 7.2 ms, 425 draws, 1.37 M triangles (round 1: 7.1, 421, 1.37 M); `specs/evidence/remodel/round2/perf-check.txt`.
 
 ## David's decisions
 
@@ -49,9 +55,9 @@ Round 2 in progress. Main (feat/game-default-island 139d3b1e) merged.
 
 ## Next
 
-1. David reviews `specs/evidence/remodel/*.webp` (notes.md). Per model: approve, redo, or keep the dump's (drop its line from worldModel's REMODELLED, or its SCENERY_URLS entry).
-2. If the fish tweak reads too subtle, `art/remodel/build_fish.py` grade() and BACK are the knobs.
-3. Not done: the firefly, the village buildings, the arrival boat, the seagull, re-rendering bug and fish icons (lib/icons/manifest.ts) from our models.
+1. David reviews `specs/evidence/remodel/round2/*.webp`. Per redo: approve, redo, or keep the dump's (drop its part from worldModel's REMODELLED, or the barrel's SCENERY_URLS entry back to `/assets/acnh/furniture/barrel.glb`).
+2. Rocks knobs: `build_rocks.py` ROCKS (planes and their depth make the facets), GREY, the top-light line `s = (0.6 + 0.45 * t ** 0.6)`.
+3. Not done: the firefly, the village buildings, the arrival boat, the seagull.
 
 ## Tools and gotchas
 
@@ -60,6 +66,8 @@ Round 2 in progress. Main (feat/game-default-island 139d3b1e) merged.
 - Renders: `Blender -b --factory-startup -P art/remodel/review.py -- <spec.json> <out-dir> [ids]` (spec in the script's docstring; the night's spec is /private/tmp/claude-501/remodel-work/spec.json).
 - In-game: `PORT=3191 node ../specs/evidence/remodel/tools/ingame.mjs <stats.json> <out-dir> before|after [ids]`. `?time=10` renders dusk; use `time=day`. Crabs and fish are hard to catch in frame (they move or sit under water).
 - Pinterest signed out gives images but no pin links: the README records image URLs and the search page.
+- In-game before frames on the current map: put the step-1 wiring back for the run (`git show 11461c48:web/lib/game/world/active.ts`, same for propModels.ts), shoot `before`, `git checkout --` them, shoot `after`. Round 2's cameras: /private/tmp/claude-501/remodel-work/ig2/cams.json.
+- Icons: `BASE=http://localhost:3191 node scripts/render-icons.mjs <keys>` from web/ with the dev server in the new world.
 - withlock.sh waits for every other lock while swap is over 9 GB: run Blender batches with run_in_background, never under a 10 minute foreground timeout.
 
 ## Rules
