@@ -23,7 +23,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from rkit import ARGS, K  # noqa: E402
 
 TEX = 128
-GREY = "#d4dbd0"
+GREY = "#bcc3b8"
 
 # name: (old bounds half x, top, half z), sphere segs and rings, seed, pressed planes (game normal, depth as a share of
 # the radius along it), lean of the top (x, z)
@@ -38,7 +38,7 @@ def granite(seed):
     """A tileable small grey stone: soft mottling, darker and paler grains, a faint warm and cool drift."""
     h = w = TEX
     base = 0.86 + 0.14 * (K.fbm(h, w, 4, seed, 3) - 0.5) * 2
-    dark = K.smooth(0.74, 0.82, K.noise(h, w, 40, seed + 1)) * 0.13
+    dark = K.smooth(0.74, 0.82, K.noise(h, w, 40, seed + 1)) * 0.17
     pale = K.smooth(0.76, 0.84, K.noise(h, w, 34, seed + 2)) * 0.1
     fine = (K.noise(h, w, 64, seed + 3) - 0.5) * 0.06
     v = np.clip(base - dark + pale + fine, 0, 1)
@@ -83,16 +83,16 @@ def rock(name):
     for f in k.bm.faces:
         n = f.normal
         ax = max(range(3), key=lambda i: abs(n[i]))
-        tone = 1.0 + rng.uniform(-0.05, 0.05)
+        tone = 1.0 + rng.uniform(-0.08, 0.08)
         for lp in f.loops:
             x, y, z = lp.vert.co
             u, w = ((y, z), (x, z), (x, y))[ax]
             lp[k.uv].uv = (u / 0.55 + 0.37 * ax, w / 0.55 + 0.21 * ax)
             t = min(1.0, max(0.0, z / top))
-            s = (0.72 + 0.34 * t ** 0.6) * tone
+            s = (0.6 + 0.45 * t ** 0.6) * tone
             c = lp[k.col]
             lp[k.col] = (min(1.0, c[0] * s), min(1.0, c[1] * s), min(1.0, c[2] * s), 1.0)
-    ob = k.finish(smooth_deg=42)
+    ob = k.finish(smooth_deg=34)
     K.export([ob], f"game/remodel/props/rock-{name}.glb")
 
 
