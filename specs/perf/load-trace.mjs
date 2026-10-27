@@ -36,12 +36,15 @@ await ctx.addInitScript(() => {
   // Each program linked: its material (three's SHADER_NAME) and the scene state baked into it (lights, shadows, fog),
   // so a burst of links can be told apart: new materials, or the same ones again for a changed light or shadow count.
   const KEYS = ["USE_SHADOWMAP", "USE_FOG", "SHADOWMAP_TYPE_PCF", "SHADOWMAP_TYPE_PCF_SOFT", "SHADOWMAP_TYPE_VSM"];
+  // What kind of thing the program draws: told apart from the scene state, for "first drawn here" links.
+  const KINDS = ["USE_INSTANCING", "USE_SKINNING", "USE_MAP", "USE_ALPHAMAP", "USE_COLOR", "USE_BATCHING", "USE_MORPHTARGETS", "DOUBLE_SIDED", "FLAT_SHADED", "USE_EMISSIVEMAP", "USE_NORMALMAP"];
   const linkOf = (gl, prog) => {
     const src = (gl.getAttachedShaders(prog) ?? []).map(sh => gl.getShaderSource(sh) ?? "").join("\n");
     const name = /#define SHADER_NAME (\S+)/.exec(src)?.[1] ?? "?";
     const sig = [...KEYS.map(k => (src.includes(`#define ${k}\n`) ? k.replace(/^USE_|^SHADOWMAP_TYPE_/, "") : "")),
       ...[...src.matchAll(/uniform \w+ (\w+)\[ (\d+) \]/g)].filter(m => /Light|Shadow/.test(m[1])).map(m => `${m[1].replace(/Lights?$|s$/, "")}${m[2]}`)].filter(Boolean).join(",");
-    return [Math.round(performance.now()), name, sig];
+    const kind = KINDS.filter(k => src.includes(`#define ${k}\n`)).map(k => k.replace(/^USE_/, "").toLowerCase()).join("+");
+    return [Math.round(performance.now()), `${name}${kind ? `(${kind})` : ""}`, sig];
   };
   const SH = ["compileShader", "linkProgram", "getProgramParameter", "getShaderParameter", "getProgramInfoLog", "getShaderInfoLog", "getUniformLocation", "getAttribLocation", "getActiveUniform", "getActiveAttrib", "getUniformBlockIndex"];
   const TEX = ["texImage2D", "texSubImage2D", "texImage3D", "texSubImage3D", "texStorage2D", "texStorage3D", "compressedTexImage2D", "compressedTexSubImage2D", "generateMipmap"];
@@ -210,7 +213,7 @@ for (const [name, d] of [["title", title], ["world", world]]) {
   const lk = {};
   for (const [t, name, sig] of d.links) { const p = lk[phaseAt(d.marks, t)] ??= { n: 0, sigs: new Map(), names: new Set() }; p.n++; p.names.add(name); p.sigs.set(sig, (p.sigs.get(sig) ?? 0) + 1); }
   out(`\nprograms linked, by phase (count, distinct materials, the light and shadow state they were built for):`);
-  for (const [p, v] of Object.entries(lk)) out(`- ${p}: ${v.n} links, ${v.names.size} materials; ${[...v.sigs].map(([k, n]) => `${n} x [${k}]`).join("; ")}`);
+  for (const [p, v] of Object.entries(lk)) out(`- ${p}: ${v.n} links, ${v.names.size} materials; ${[...v.sigs].map(([k, n]) => `${n} x [${k}]`).join("; ")}${v.n <= 30 ? `\n  drawing: ${[...v.names].join(", ")}` : ""}`);
   out(`programs alive (three's cache), over time: ${d.programs.map(([t, n]) => `${t}:${n}`).join(" ")}`);
   out(`\nlong frames: t, ms, phase, shader ms (calls), texture ms (calls), buffer ms (calls), scripts`);
   for (const f of L) out(`- ${f.t} ${f.dt} ${f.phase} sh ${f.sh} (${f.shN}) tex ${f.tex} (${f.texN}) buf ${f.buf} (${f.bufN}) ${f.scripts}`);
