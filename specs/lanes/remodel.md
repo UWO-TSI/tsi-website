@@ -22,13 +22,13 @@ David, 2026-10-27 (night), verbatim: "I want you to go ahead and remodel some ol
 
 ## Status
 
-In progress (2026-10-27 night). Head: see `git log -1` on game/remodel. Main merged at f9f4dc5d (the collision fixes).
-- Inventory done: `specs/evidence/remodel/inventory.md` (sent to main). Fruit kept (David, Oct 17). Buildings and the arrival boat not tonight.
-- Built (art/remodel/, GLBs in web/public/assets/game/): market barrel, market cart (the old one was broken: two of four meshes empty), lighthouse (game/props/), six butterflies and two dragonflies (game/remodel/critters/), crabs and gather rocks and the monument rope fence (game/remodel/props/), all 81 fish tweaked (game/remodel/fish/).
-- Wiring: barrel, cart, lighthouse straight in `lib/game/propModels.ts` SCENERY_URLS (new world only). Everything shared with the village goes through `worldModel` in `lib/game/world/active.ts` (the dump's url -> /assets/game/remodel/<same path> when NEXT_PUBLIC_GAME_WORLD=new), applied in propUrl, fishing.ts FISH, ambientFauna, Critters.tsx and the monument.
-- Evidence: before in-game shots taken (cams in /private/tmp/claude-501/remodel-work/ig/cams.json); Blender before/after renders via art/remodel/review.py; webps to compose into specs/evidence/remodel/.
-- Nothing approved yet.
-
+Built and wired, awaiting David's review (nothing approved). Head: `git log -1` on game/remodel. Main merged at f9f4dc5d.
+- Inventory: `specs/evidence/remodel/inventory.md` (sent to main). Fruit kept (David, Oct 17). Buildings, the arrival boat, the firefly and the seagull not done.
+- Models (art/remodel/build_*.py; GLBs in web/public/assets/game/): market barrel, market cart (the old drew a third of itself), lighthouse in game/props/ (new world only, SCENERY_URLS); six butterflies, two dragonflies, ladybug, cicada, grasshopper, mantis in game/remodel/critters/; crabs, gather rocks a/b/c, monument rope fence in game/remodel/props/; all 81 fish tweaked in game/remodel/fish/.
+- Wiring: `worldModel` in `lib/game/world/active.ts` swaps /assets/acnh/<path> for /assets/game/remodel/<path> when NEXT_PUBLIC_GAME_WORLD=new (propUrl, fishing.ts FISH, ambientFauna, Critters.tsx, the monument). The village keeps the dump's. Test: `lib/game/world/active.test.ts`.
+- Evidence: `specs/evidence/remodel/<name>-{before,after}.webp` and `notes.md` (one line and triangles each). In-game frames for barrel, cart, lighthouse, crabs, rocks, rope fence; Blender only for the flyers, crawlers and fish (too small or under water to frame).
+- Not deleted: the dump files stay (the village, interiors, homes, seasonal events and /lab still use them).
+- Not done: icons (lib/icons/manifest.ts still renders bug and fish icons from the dump models).
 ## Tools and gotchas
 
 - Census: `PORT=3191 node ../specs/evidence/remodel/tools/census.mjs <all-stats.json> <out.json>` from web/, dev server with `NEXT_PUBLIC_GAME_WORLD=new`.

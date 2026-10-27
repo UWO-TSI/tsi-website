@@ -11,7 +11,7 @@ in `art/remodel/build_*.py`; references in `specs/references/remodel-2026-10-27/
 | market-cart | The market's four carts: the old countdown stall drew only a third of itself (two of four meshes empty); ours fills the footprint its blocker already covered: two big wheels, a planked bed, fish on ice and fruit, a striped awning. | 1506 -> about 1470 |
 | lighthouse | Cream with coral bands instead of flat red, a stone footing and steps, a timber door, a gallery rail, warm lantern glass. | 4735 -> 2260 |
 | butterflies | Six species, one shared 256 x 128 wing atlas: soft round body, big polar wings with a few bold marks per species (in-game: too small and quick to frame). | 770 to 824 -> 350 each |
-| dragonflies | Darner and red: big eyes, a banded tail, pale wings with a dark tip mark. | 778 and 360 -> under each |
+| dragonflies | Darner and red: big eyes, a banded tail, pale wings with a dark tip mark. | 778 and 360 -> 287 each |
 | crabs | The swimming crab (soft carapace, big blue claws with orange tips) and the hermit crab (a striped cone shell, a red crab with one big claw). | 926 and 802 -> 924 and 796 |
 | gather-rocks | The five rocks a player strikes: the new world's organic stone, cooler grey, a touch of moss. | 214, 198, 146 -> 128, 152, 100 |
 | rope-fence | The monument's rope lengths: two timber posts and a thick sagging rope instead of metal stanchions. | 696 -> 414 |

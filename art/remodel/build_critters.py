@@ -254,16 +254,15 @@ def dragonfly(name, img, rows):
     segs = 6
     for i in range(segs):
         z0 = -L * 0.12 - i * L * 0.11
-        k.lathe((0, 0, 0), [(r * 0.62, z0 + 0.002), (r * 0.7, z0 - L * 0.055), (r * 0.62, z0 - L * 0.11 + 0.002)], M["paint"], abd if i % 2 == 0 else PS.shade(abd, 0.9), d=(0, 0, 1), n=6)
-        k.lathe((0, 0, 0), [(r * 0.66, z0 - L * 0.1), (r * 0.66, z0 - L * 0.115)], M["paint"], ring, d=(0, 0, 1), n=6)
-    k.lathe((0, 0, 0), [(0.0, -L * 0.8), (r * 0.5, -L * 0.79), (r * 0.55, -L * 0.77)], M["paint"], ring, d=(0, 0, 1), n=6)
-    k.blob((0, 0, 0.0), (r * 1.15, r * 1.2, L * 0.13), M["paint"], thorax, segs=8, rings=5)
+        k.lathe((0, 0, 0), [(r * 0.62, z0 + 0.002), (r * 0.7, z0 - L * 0.055), (r * 0.62, z0 - L * 0.11 + 0.002)], M["paint"], (abd, ring)[i % 2], d=(0, 0, 1), n=5)
+    k.lathe((0, 0, 0), [(0.0, -L * 0.8), (r * 0.5, -L * 0.79), (r * 0.55, -L * 0.77)], M["paint"], ring, d=(0, 0, 1), n=5)
+    k.blob((0, 0, 0.0), (r * 1.15, r * 1.2, L * 0.13), M["paint"], thorax, segs=6, rings=4)
     for s in (-1, 1):
-        k.blob((s * r * 0.75, r * 0.3, L * 0.17), (r * 0.95, r * 0.95, r * 0.9), M["paint"], eye, segs=8, rings=5)
+        k.blob((s * r * 0.75, r * 0.3, L * 0.17), (r * 0.95, r * 0.95, r * 0.9), M["paint"], eye, segs=6, rings=4)
     # Four long wings, a pair a side, straight out and a little swept, from the thorax.
     for zc, sweep, length in ((L * 0.05, 8, 1.0), (-L * 0.04, -6, 0.94)):
         for side in (1, -1):
-            n = 10
+            n = 7
             ts = np.linspace(0, 1, n)
             w = half * 0.2
             top, bot = [], []
