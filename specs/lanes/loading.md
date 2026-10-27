@@ -21,6 +21,15 @@ Steps 2 to 4 are fixes and can ship once verified; step 5 is visual and waits fo
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, the production build passing. Message "main" after the baseline, after each step and at the end with the head SHA, gates, numbers and evidence.
 
+## Loading screen round 2 (David's review, 2026-10-27; https://claude.ai/artifact/9QsGi2EJnicwiskGHsUygx)
+
+Every item was a redo. His note, verbatim: "looks ugly i dont want to show our map because it looks bad, i want it to be simple maybe show our logo loading or the fishing boat thing, idk the loading screen needs to be aesthetic with taste. maybe like a idle shot of the island or smth idk, or like we need a proper tethos island design thing. just keep it simpel for now"
+- **No map and no sea chart.**
+- **Simple and tasteful:** the Tethos logo while loading, or Bram's boat, or a calm idle shot of the island (a pre-rendered still from the game's own camera at golden hour, small and fast to load), with the real progress as a thin, quiet line.
+- **Build 2 or 3 simple options** as shots so he can pick one, all in the cream kit's type and colours, with plenty of space and no clutter.
+- The logo is the one the site already uses (find it in the repo; don't draw a new one).
+Merge main first (steps 2 to 4 are on main). Message the coordinator with the shots.
+
 ## Status
 
 Head: see `git log` (2026-10-27). Main has steps 2 to 4 and the crossing warm-up (pushed: d9a48a35 + e65df2df).
