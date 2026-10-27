@@ -19,6 +19,8 @@ import { ENTRY, STOOLS, STOOL_Z, SUSHI_BAR, barPoint } from "@/lib/game/sushiBar
 import { objectById, objectsOf } from "@/lib/game/villageMap";
 import { BUILDING_SOLID, DECK_SQUARE_HALF, FIRE_PIT_RING, barDecks, islandOf, landmark, landmarkPoint, propFootprint, turn, wharfDecks } from "@/lib/game/defaultIsland";
 import { NEW_LAMPS } from "@/lib/game/propModels";
+import { SHOP_BOOTH_LIST, SHOP_EXIT, SHOP_SPAWN, shopWalkable } from "@/lib/game/shopLayout";
+import { HQ, HQ_DESK, HQ_SPAWN, walkable as hqWalkable } from "@/lib/game/hqLayout";
 import { dockToWorld } from "@/lib/game/wharf";
 import { terrainHeight } from "@/lib/game/world/terrain";
 import { village, villageSpawnPoint } from "@/lib/game/villageMap";
@@ -41,7 +43,7 @@ for (let q = 0; q < queue.length; q++) {
   const j = queue[q], i = j % nx, k = (j - i) / nx, h = island.ground(px(i), pz(k));
   for (const [di, dk] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
     const c = (k + dk) * nx + i + di, x = px(i + di), z = pz(k + dk);
-    if (i + di < 0 || k + dk < 0 || i + di >= nx || k + dk >= nz || prev[c] !== -2 || !island.standable(x, z) || island.ground(x, z) - h > 0.4) continue;
+    if (i + di < 0 || k + dk < 0 || i + di >= nx || k + dk >= nz || prev[c] !== -2 || !island.standable(x, z) || island.ground(x, z) - h > 0.4 || [[0, 0], [0.5, 0], [-0.5, 0], [0, 0.5], [0, -0.5]].some(([a, b]) => island.top(x + a, z + b) - island.ground(x + a, z + b) > 0.3)) continue; // half a unit clear of props
     prev[c] = j; queue.push(c);
   }
 }
@@ -85,7 +87,8 @@ function target(id: string, s: Shape, avoid?: [number, number]) {
     const e = reachOf(s, ux, uz), start: [number, number] = [s.x + ux * (e + 2.5), s.z + uz * (e + 2.5)];
     if (avoid && Math.hypot(start[0] - avoid[0], start[1] - avoid[1]) < 3) continue;
     let ok = reached(...start);
-    for (let d = e + 0.35; ok && d <= e + 2.5; d += 0.25) ok = clear(s.x + ux * d, s.z + uz * d);
+    // The lane clear the body's width and more (a lamp's 0.08 post beside the fountain stood in one).
+    for (let d = e + 0.35; ok && d <= e + 2.5; d += 0.1) for (const w of [-0.4, 0, 0.4]) ok = ok && clear(s.x + ux * d - uz * w, s.z + uz * d + ux * w);
     if (ok) return { id, shape: s, start, way: [-ux, -uz], route: routeTo(...start, 0.6) };
   }
   return { id, shape: s, start: null };
@@ -126,9 +129,35 @@ const edges = (byZ.length ? [...new Set([byZ[0], byZ[byZ.length >> 1], byZ[byZ.l
 const doors = { hq: landmarkPoint("hq", "door", v), shop: shopDoor };
 const doorRoutes = Object.fromEntries(Object.entries(doors).map(([k, d]) => [k, d ? routeTo(d[0], d[1], 1.2) : []]));
 
+// In a room: the shortest way on its floor (a 0.1 grid), cut to the corners you can't see past.
+function roomPath(ok: (x: number, z: number) => boolean, from: readonly [number, number], to: readonly [number, number]): [number, number][] {
+  const R = 0.1, H = 12, n = Math.round((2 * H) / R) + 1, at = (x: number, z: number) => Math.round((z + H) / R) * n + Math.round((x + H) / R);
+  const xy = (j: number): [number, number] => [-H + (j % n) * R, -H + Math.floor(j / n) * R];
+  const back = new Int32Array(n * n).fill(-2), q = [at(...from)], goal = at(...to);
+  back[q[0]] = -1;
+  for (let h = 0; h < q.length && back[goal] === -2; h++) for (const d of [1, -1, n, -n]) {
+    const c = q[h] + d, [x, z] = xy(c);
+    if (c < 0 || c >= n * n || back[c] !== -2 || !ok(x, z)) continue;
+    back[c] = q[h]; q.push(c);
+  }
+  if (back[goal] === -2) return [];
+  const cells: [number, number][] = [];
+  for (let j = goal; j >= 0; j = back[j]) cells.unshift(xy(j));
+  const seen = (a: [number, number], b: [number, number]) => { const k = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 0.05); for (let i = 0; i <= k; i++) if (!ok(a[0] + ((b[0] - a[0]) * i) / k, a[1] + ((b[1] - a[1]) * i) / k)) return false; return true; };
+  const out: [number, number][] = [cells[0]];
+  for (let i = 0; i < cells.length - 1;) { let j = cells.length - 1; while (j > i + 1 && !seen(cells[i], cells[j])) j--; out.push(cells[j]); i = j; }
+  return out.map(([x, z]) => [+x.toFixed(2), +z.toFixed(2)]);
+}
+const shopOk = (x: number, z: number) => shopWalkable(0, x, z), hqOk = (x: number, z: number) => hqWalkable(HQ, 0, x, z);
+const booth = SHOP_BOOTH_LIST.find(b => roomPath(shopOk, SHOP_SPAWN, b.spot).length) ?? SHOP_BOOTH_LIST[0];
+const rooms = {
+  shop: { toBooth: roomPath(shopOk, SHOP_SPAWN, booth.spot), toExit: roomPath(shopOk, booth.spot, [SHOP_EXIT[0], SHOP_EXIT[1] + 0.2]) },
+  hq: { toDesk: roomPath(hqOk, HQ_SPAWN, [HQ_DESK.x, HQ_DESK.z - 1.1]) },
+};
+
 // The walk tree itself (each reached cell's step back toward the spawn), for routes between any two places (PREV_OUT).
 if (process.env.PREV_OUT) writeFileSync(process.env.PREV_OUT, Buffer.from(prev.buffer));
 const grid = { x0, z0, nx, nz, S };
 
-console.log(JSON.stringify({ grid, hits, edges, deckEdgeCandidates: cands.length, doors, doorRoutes, world: GAME_WORLD, spawn: [sx, sz], fire: { x: fire.x, z: fire.z }, cast, riverFish, rocks: pick("rock-"), shells: pick("shell-"), route,
+console.log(JSON.stringify({ rooms, grid, hits, edges, deckEdgeCandidates: cands.length, doors, doorRoutes, world: GAME_WORLD, spawn: [sx, sz], fire: { x: fire.x, z: fire.z }, cast, riverFish, rocks: pick("rock-"), shells: pick("shell-"), route,
   sushi: sushi && { ...sushi, route: routeTo(...sushi.entrance, 0.6) }, benches: benches.map(b => ({ id: b.id, x: b.x, z: b.z, route: routeTo(b.x, b.z, 1.4) })) }));

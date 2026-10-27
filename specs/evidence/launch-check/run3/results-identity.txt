@@ -1,0 +1,92 @@
+{
+  "at": "2026-10-27T08:55:00Z",
+  "preview": "play.tethos.ca",
+  "note": "From the run log: the phase was stopped by its 590 s timeout before it wrote this file. Its first creator steps stand; its wardrobe steps failed on the test (the shop is offline, a device look with an unowned cardigan, the 30-day rename) and were rerun as identity2 and identity3.",
+  "results": [
+    {
+      "step": "identity: A starts with no look and no world name ",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "identity: A's first creator (the reflection) shows ",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "identity: Yes with the name empty says \"The island needs a name for you.\" and saves nothing {\"look\":null,\"name\":null}",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "identity: A picks another skin, hairstyle and hair colour skin colour 3 | Long scruffy | hair colour 2",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "identity: the name check says the name is free Probe Alder",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "identity: Yes saves A's look and world name 3.4 s; Probe Alder; {\"skin\":2,\"hair\":1,\"back\":\"hair_long_scruffy\",\"bangs\":\"\"}",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "identity: A's arrival reaches Bram's walk-along ",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "identity: B sees A's world name and hair and skin (card and drawn) without A rejoining 15.0 s after the save, 0.0 s after A came into B's view; A's sockets 1",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "identity: B's socket carried A's name ",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "identity: A's tag on B's screen reads A's world name Probe Alder",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "wardrobe: B at the shop's door (Enter the shop) Enter the shop {\"x\":32.893978075320426,\"z\":62.64687866891859}",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "wardrobe: A at the shop's door (Enter the shop)  {\"x\":34.72781771714021,\"z\":44.98287900301675}",
+      "ok": false,
+      "detail": ""
+    },
+    {
+      "step": "wardrobe: B at a changing room (Try on outfits)  at {\"x\":-1.9283957551917923,\"z\":-4.2}",
+      "ok": false,
+      "detail": ""
+    },
+    {
+      "step": "wardrobe: the fitting room opens with the name field ",
+      "ok": false,
+      "detail": ""
+    },
+    {
+      "step": "wardrobe: Wear this saves B's look and new name Probe Birch; null",
+      "ok": false,
+      "detail": ""
+    },
+    {
+      "step": "wardrobe: A sees B's new name and hair within about 15 s, no rejoin {\"present\":false,\"name\":null,\"card\":null,\"drawn\":null,\"ok\":false,\"at\":null}; B's sockets 1",
+      "ok": false,
+      "detail": ""
+    },
+    {
+      "step": "wardrobe: B's tag on A's screen reads the new name ",
+      "ok": false,
+      "detail": ""
+    }
+  ]
+}
