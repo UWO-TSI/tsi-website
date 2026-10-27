@@ -36,6 +36,17 @@ Face Fit (https://claude.ai/artifact/D1gkmSBHBGspFPH5to9yA8, published by the co
 4. **Runtime:** extend the catalogue's `fit` map: `{ x, y, z }` in metres along the head's own axes for a hair or accessory, and `{ eyes, mouth, eyesApart }` for a face, with every missing value 0. The game applies them exactly as the editor draws them (the editor keeps using the game's own code). Extend `apply-fit.mjs` and its test. Add tests that each axis moves the item by exactly its value with the head turned, and that `eyesApart` moves the eyes symmetrically.
 5. Rebuild `dist/`, run `check.mjs` (extend it to the new controls and doc shapes: a drag saves once, the arrows save, reset saves 0), keep every file a served type, and message the coordinator to publish.
 
+## Round 3 (2026-10-27): eye and mouth size
+
+David, verbatim: "make eyes and mouth size customizable" (in Face Fit, while fitting the faces).
+
+- Faces get two more controls: **Eyes size** and **Mouth size**, each a scale around its own anchor (1 = as drawn), from 0.5 to 1.6 in steps of 0.02, with a reset. Shown as a percentage. Both eyes scale together, mirrored. Every expression frame, blink and talking mouth scales with them.
+- Runtime: the face's `fit` doc gains `eyesSize` and `mouthSize` (missing = 1), applied in `face.ts` where the slots are placed (after the lifts and the spacing, before the creator's sliders), so the game draws exactly what the editor shows.
+- `apply-fit.mjs` takes the new fields (limits 0.5 to 1.6) and still reads every older doc. Tests: each size scales its slots' rects about the anchor by exactly the value, in three poses including a blink; other faces unchanged.
+- check.mjs: a size change saves once, and reset saves 1.
+- Batch 3 is changing on game/wardrobe-b3 (four hairstyles and the moody face removed, an import fix for Tousled spikes, the under-cap cut). Don't merge it yourself; the coordinator merges it and rebuilds when it lands.
+Rebuild `dist/`, pass check.mjs in the emulated frame, commit, and message the coordinator to publish (editor.js plus any changed files).
+
 ## Status
 
 **Round 2 built (2026-10-27).** David also asked, via the coordinator: "for the hair fit, also provide x and z shifts, also make the viewer draggable so i can seea ll agnes".
