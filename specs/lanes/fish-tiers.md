@@ -63,6 +63,8 @@ Branch head: see `git log -1` (this file is committed with it). Main has not mer
 - Gates: tsc clean; vitest with NEXT_PUBLIC_GAME_WORLD=new 3535 passed; eslint clean on changed files; no hex in the new CSS.
 - First attempt (cream, hex colours): side branch game/fish-tiers-ui-r1. Reference only.
 
+**In-world evidence round (after the main merge f26f7763):** merged origin/main de87c07f (two trivial conflicts, .gitignore and a comment in fishing.ts, both taken from main). tsc clean; vitest with NEXT_PUBLIC_GAME_WORLD=new 3535 passed. Shots of the flat fishing UI on the new world's wharf jetty (88,46 from /lab/island?fixture=v2, daylight 12:30, the normal game camera), main vs branch, and the applicant island check, are in `specs/evidence/fish-tiers/ui-world/` (scripts: shoot.mjs, run.sh, cut.py, compose.py, applicant.mjs, compare-applicant.py). The cast meter panel sits over the character in the world (lane at bottom 120px): open question for David.
+
 ## David's decisions
 
 - 2026-10-28, tutorial review of the catch beat, verbatim: "looks good and like i think its time we update the ui for fishing to look nicer and also do ! with sound effect when fish hooked, and add small micro animation and juice to make it more dopamine while keeping the aestetic, and redo the fishing bar a little bit to make it look nicer". The "!" and sound are the approved step 1; the rest is this lane's: restyle the fishing bar a little, make the fishing UI nicer, micro-animations and juice (catch progress, the fish slipping, the landing), both worlds, keeping the aesthetic. Visual: before/after shots and frame strips to the coordinator; don't merge.
