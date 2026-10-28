@@ -47,9 +47,14 @@ David, 2026-10-27 (night), verbatim: "I want you to go ahead and remodel some ol
 
 **Step 1, ship first:** merge main; put the butterflies and dragonflies back on the old models; fix the fish orientation; run the gates; commit and message the coordinator with that SHA. Then step 2: redo the flyers, and make shots of old and new wings side by side for his review.
 
+## Round 3 finish (David's review of round 3, 2026-10-28)
+
+**Approved:** the flyers (before, after, side by side), the sea icons, plaza-bench-before. **Redo:** plaza-bench-after, verbatim: "make sure the bench location and orientation is fitting". Fix every plaza bench in the new world so it sits beside the path or plaza edge, never across a path, facing the plaza, the fountain or the view; sitting must still work. Only the benches move. Coordinator, 2026-10-28: the old village is retired (lane game/village-archive removes it): new-world shots only, vitest with `NEXT_PUBLIC_GAME_WORLD=new` only, keep the diff off `lib/game/world/active.ts`.
+
 ## Status
 
-Round 3 done, awaiting David's review. Head: `git log -1` on game/remodel. Main (635577f6) merged; step 1 (e5b68758) merged and live.
+Round 3 finish done, awaiting David's review: the four plaza benches moved to the plaza's edge, along the rim, facing the fountain (`generate.ts` LAYOUT rimBench, world.json regenerated: only the bench lines changed; test in `world/world.test.ts`). Evidence `specs/evidence/remodel/r3-benches/` (notes.md has each bench's old and new spot). Earlier:
+Round 3 done. Head: `git log -1` on game/remodel. Main (635577f6) merged; step 1 (e5b68758) merged and live.
 - **Step 1 (shipped):** the flyers back on the old models, the fish orientation fixed in the new world (81 baked into the game's frame, none raw there, icons nose left and back up). `specs/evidence/remodel/round3/notes.md`.
 - **Step 2, the wings (8f9306a4):** `build_critters.py` traces each species' wing outline from the old model (raster, opening, Moore trace, Douglas-Peucker, ear-clip), our body and paint; butterflies 100 to 104 triangles, dragonflies 114 and 116. The dump's butterflies face -z (they flew tail first); ours face +z with the traced wings turned end for end. Wired back in REMODELLED (new world).
 - **Sea creatures (coordinator):** `fishing.ts` RAW_TURN_X: the new world turns raw exports the right way (-90 degrees); the village keeps +90. The 10 sea icons re-rendered (scallop, sea star, abalone, pearl oyster from above).
@@ -63,10 +68,12 @@ Round 3 done, awaiting David's review. Head: `git log -1` on game/remodel. Main 
 
 ## Next
 
-1. David reviews round 3 (flyers, sea icons, plaza bench). Knobs: `build_critters.py` BUDGET (outline points a side), RES/OPEN (the trace); `build_bench.py` IRON, the slats.
+1. David reviews the bench redo (r3-benches). Knob: `rimBench` radius 11 and the angles (+-28, +-152) in `generate.ts`. Knobs: `build_critters.py` BUDGET (outline points a side), RES/OPEN (the trace); `build_bench.py` IRON, the slats.
 2. Not done: the firefly, the village buildings, the arrival boat, the seagull.
 
 ## Tools and gotchas
+
+- Bench shots: `PORT=3191 node ../specs/evidence/remodel/tools/benches.mjs <out> after`, then put `git show HEAD:web/data/world/world.json` in place and run `before`, then restore. The world regenerates with `npx vite-node -c vitest.config.ts scripts/generate-world.ts` (about 15 s); check that only the lines you meant changed.
 
 - Fish orientation check: `Blender -b --factory-startup -P art/remodel/fish_orient.py -- x <out> remodel|acnh [names|all] [3]` renders each fish as the tank levels it (nose left, back up when right); `3` adds views from above and below. Judge back and belly by colour, not brightness (the sun lights whatever faces up).
 - In-game shots: the new world merges still props (`/assets/game/props/...`, DefaultIslandWorld STILL) so they have no signature to find; ingame.mjs takes a `fixed` box for those (the plaza bench).
