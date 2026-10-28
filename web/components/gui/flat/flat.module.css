@@ -250,3 +250,63 @@ div.card:hover { box-shadow: none; }
 .withIcon { display: inline-flex; align-items: center; gap: 6px; }
 .retry { all: unset; margin-left: 6px; text-decoration: underline; cursor: pointer; }
 .rarity { display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 50%; vertical-align: 0.05em; box-shadow: inset 0 0 0 1px rgb(var(--ui-shade) / 0.12); }
+
+/* ── Rewards and moments (specs/design-bible.md UI 4, 7, 9): juicy, a spring with ~12% overshoot, transform only ── */
+.pop { --edge: var(--ui-line-strong); position: relative; display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 14px; align-items: center;
+  padding: 14px 18px 14px 14px; border-radius: 18px; background: var(--ui-card); color: var(--ui-ink); font-family: var(--gui-font);
+  box-shadow: 0 0 0 2px var(--edge), 0 14px 36px rgb(var(--ui-shade) / 0.18); pointer-events: auto; cursor: pointer;
+  animation: popIn 0.5s cubic-bezier(0.34, 1.4, 0.64, 1) both; }
+.pop[data-leaving] { animation: popOut 0.26s ease-in forwards; }
+.pop[data-rarity="common"] { --edge: var(--ui-rarity-common); }
+.pop[data-rarity="uncommon"] { --edge: var(--ui-rarity-uncommon); }
+.pop[data-rarity="rare"] { --edge: var(--ui-rarity-rare); }
+.pop[data-rarity="epic"] { --edge: var(--ui-rarity-epic); }
+.pop[data-rarity="legendary"] { --edge: var(--ui-rarity-legendary); }
+/* Divine: the holo, moving round the edge (a border painted from the gradient, the card white inside it). */
+.pop[data-rarity="divine"] { border: 2px solid transparent; box-shadow: 0 14px 36px rgb(var(--ui-shade) / 0.2);
+  background: linear-gradient(var(--ui-card), var(--ui-card)) padding-box, var(--ui-holo) border-box; background-size: 100% 100%, 300% 100%;
+  animation: popIn 0.5s cubic-bezier(0.34, 1.4, 0.64, 1) both, holo 3s linear infinite; }
+.popArt { display: grid; place-items: center; width: 84px; height: 84px; border-radius: 14px; background: var(--ui-card-dim);
+  animation: artPop 0.62s 0.08s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.popArt img, .popArt canvas { width: 72px; height: 72px; object-fit: contain; }
+.popText { display: grid; gap: 2px; min-width: 0; }
+.popTitle { display: inline-flex; align-items: center; gap: 5px; color: var(--ui-muted); font: 600 12px/1.2 var(--gui-font); letter-spacing: 0.06em; text-transform: uppercase; }
+.pop[data-new] .popTitle { color: var(--ui-ink); }
+.popName { font: 700 20px/1.15 var(--gui-font); overflow-wrap: anywhere; }
+.popFacts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--ui-ink-2); font: 500 13px/1.3 var(--gui-font); font-variant-numeric: tabular-nums; }
+.popRarity { display: inline-flex; align-items: center; gap: 5px; color: var(--ui-ink); font-weight: 600; }
+.popRarity::before { content: ""; width: 8px; height: 8px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--edge); }
+.pop[data-rarity="divine"] .popRarity::before { background: var(--ui-holo); box-shadow: none; }
+.popNote { color: var(--ui-muted); font: 500 13px/1.35 var(--gui-font); }
+@keyframes popIn { 0% { opacity: 0; transform: translateX(-16px) scale(0.84); } 60% { opacity: 1; } 100% { opacity: 1; transform: none; } }
+@keyframes popOut { to { opacity: 0; transform: translateY(-10px) scale(0.96); } }
+@keyframes artPop { 0% { opacity: 0; transform: scale(0.4) rotate(-12deg); } 100% { opacity: 1; transform: none; } }
+@keyframes holo { to { background-position: 0 0, 300% 0; } }
+
+.momentLayer { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 16px; background: var(--ui-scrim);
+  font-family: var(--gui-font); color: var(--ui-ink); animation: fade 0.2s ease-out both; }
+.moment { position: relative; display: grid; justify-items: center; gap: 6px; width: min(360px, 100%); box-sizing: border-box; padding: 26px 22px 20px;
+  border-radius: 22px; background: var(--ui-card); text-align: center; box-shadow: 0 24px 80px rgb(var(--ui-shade) / 0.3);
+  animation: momentIn 0.6s cubic-bezier(0.34, 1.4, 0.64, 1) both; }
+.momentKicker { display: inline-flex; align-items: center; gap: 6px; color: var(--ui-muted); font: 600 12px/1 var(--gui-font); letter-spacing: 0.1em; text-transform: uppercase; }
+.momentBig { position: relative; font: 800 56px/1 var(--gui-font); animation: bigIn 0.7s 0.12s cubic-bezier(0.34, 1.7, 0.64, 1) both; }
+.momentTitle { color: var(--ui-ink-2); font: 500 14px/1.3 var(--gui-font); }
+/* The burst: ten dots fly out from behind the number and fade. */
+.momentBurst { position: absolute; left: 50%; top: 74px; width: 0; height: 0; pointer-events: none; }
+.momentBurst i { position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; border-radius: 50%; background: var(--ui-rarity-legendary);
+  transform: rotate(calc(var(--k) * 36deg)) translateY(0); animation: burst 0.9s 0.15s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+.momentBurst i:nth-child(even) { background: var(--ui-rarity-rare); width: 6px; height: 6px; }
+.momentList { display: grid; gap: 8px; width: 100%; margin: 12px 0 14px; padding: 0; list-style: none; text-align: left; }
+.momentList li { display: grid; grid-template-columns: 36px 1fr; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 14px; background: var(--ui-card-dim);
+  animation: rowIn 0.45s calc(0.35s + var(--i) * 0.09s) cubic-bezier(0.34, 1.4, 0.64, 1) both; }
+.momentList b { display: block; font: 700 14px/1.25 var(--gui-font); }
+.momentList small { display: block; margin-top: 1px; color: var(--ui-muted); font: 500 12px/1.3 var(--gui-font); }
+.momentIcon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--ui-accent); color: var(--ui-accent-ink); }
+@keyframes momentIn { 0% { opacity: 0; transform: translateY(18px) scale(0.86); } 100% { opacity: 1; transform: none; } }
+@keyframes bigIn { 0% { opacity: 0; transform: scale(0.3); } 100% { opacity: 1; transform: none; } }
+@keyframes burst { 0% { opacity: 1; transform: rotate(calc(var(--k) * 36deg)) translateY(0) scale(1); } 100% { opacity: 0; transform: rotate(calc(var(--k) * 36deg)) translateY(-70px) scale(0.4); } }
+@keyframes rowIn { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .pop, .pop[data-rarity="divine"], .popArt, .moment, .momentBig, .momentList li { animation: none; }
+  .momentBurst { display: none; }
+}

@@ -15,8 +15,9 @@ import { CATALOGUE } from "@/lib/wallet/catalogue";
 import { WEAPONS } from "@/lib/combat/weapons";
 import { iconUrl, shopIcon } from "@/lib/icons/keys";
 
-export const REWARD_EVENTS = ["tsi:peaceful-got", "tsi:crafted", "tsi:recipe-learned", "tsi:gift"] as const;
-export type RewardKind = "bug" | "forage" | "dig" | "craft" | "bottle";
+export const REWARD_EVENTS = ["tsi:peaceful-got", "tsi:crafted", "tsi:recipe-learned", "tsi:gift", "tsi:dig-purse"] as const;
+/** `purse`: a dig that turned up coins or a gem (lib/collections/digLoot.ts), paid into the wallet. */
+export type RewardKind = "bug" | "forage" | "dig" | "purse" | "craft" | "bottle";
 export interface RewardIngredient { key: string; name: string; icon: string; count: number }
 export interface Reward {
   kind: RewardKind;
@@ -66,6 +67,13 @@ export function rewardOf(type: string, detail: unknown): Reward | null {
     return { kind, key, name, icon: iconUrl(key), rarity, size: num(d.size), isNew,
       title: isNew ? "New!" : kind === "bug" ? "Caught" : kind === "dig" ? "Dug up" : "Found",
       note: str(d.one_liner, 200) ?? SPECIES.get(key)?.oneLiner ?? "" };
+  }
+  if (type === "tsi:dig-purse") {
+    const gem = d.currency === "gems", amount = num(d.amount);
+    if (!amount || amount < 1 || (!gem && d.currency !== "coins")) return null;
+    // A gem is the premium currency: very rare from a dig, so it pops as the rarest thing it is.
+    return { kind: "purse", key: gem ? "gem" : "coin", name: gem ? (amount === 1 ? "A gem" : `${amount} gems`) : `${amount} coins`, icon: iconUrl(gem ? "gem" : "coin"),
+      rarity: gem ? "legendary" : null, size: null, isNew: false, title: "Dug up", note: gem ? "Buried treasure, the real kind." : "Someone's old purse. Finders keepers." };
   }
   if (type === "tsi:crafted") {
     const id = str(d.id, 64), name = str(d.name);

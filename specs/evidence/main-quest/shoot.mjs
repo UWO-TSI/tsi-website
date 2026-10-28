@@ -161,6 +161,32 @@ for (const scene of SCENES) {
     if (handIn) { await handIn.click(); await sleep(1500); await shot(page, "r2-13-handed-in"); } else console.log("no hand-in row");
     await ctx.close();
   }
+  if (scene === "pops") {
+    // The reward pop for a bug, a forage find and a dig (and a dig's purse), fired as the world fires them. POPS=before|after.
+    const { ctx, page } = await open("");
+    await hudIn(page);
+    const pops = [
+      ["bug", { key: "bug_common_butterfly", name: "Common Butterfly", rarity: "common", size: 6.2, isNew: false, kind: "bug" }],
+      ["forage", { key: "shell_asari", name: "Asari Clam", rarity: "common", size: 4.1, isNew: true, kind: "forage" }],
+      ["dig", { key: "find_ammonite", name: "Ammonite", rarity: "rare", size: 11.2, isNew: true, kind: "dig" }],
+      ["dig-sudo", { key: "find_broken_sudo", name: "Broken Sudo", rarity: "legendary", size: 10.5, isNew: true, kind: "dig" }],
+    ];
+    for (const [name, detail] of pops) {
+      await page.evaluate(d => window.dispatchEvent(new CustomEvent("tsi:peaceful-got", { detail: d })), detail);
+      await sleep(900);
+      const box = await page.$eval("[data-testid=reward-card]", el => { const b = el.getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height }; }).catch(() => null);
+      await shot(page, `pop-${process.env.POPS ?? "now"}-${name}`, box ? { x: Math.max(0, box.x - 40), y: Math.max(0, box.y - 40), width: Math.min(1440, box.w + 80), height: Math.min(900, box.h + 80) } : undefined);
+      await page.mouse.click(10, 880);
+      await sleep(700);
+    }
+    if (process.env.POPS === "after") {
+      await page.evaluate(() => window.dispatchEvent(new CustomEvent("tsi:dig-purse", { detail: { currency: "gems", amount: 1 } })));
+      await sleep(900);
+      const box = await page.$eval("[data-testid=reward-card]", el => { const b = el.getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height }; }).catch(() => null);
+      await shot(page, "pop-after-dig-gem", box ? { x: Math.max(0, box.x - 40), y: Math.max(0, box.y - 40), width: box.w + 80, height: box.h + 80 } : undefined);
+    }
+    await ctx.close();
+  }
   if (scene === "r2dig") {
     const { ctx, page } = await open("collections=demo&time=day", { "tsi.held.v1": JSON.stringify({ held: "shovel:shovel-basic" }) });
     await hudIn(page);

@@ -21,7 +21,16 @@ import { Badge, Banner, Button, Card, ConfirmDialog, Counter, Dialogue, Empty, E
 import { FISH } from "@/lib/game/fishing";
 import { iconUrl } from "@/lib/icons/keys";
 import { useSearch } from "@/lib/game/useMediaQuery";
+import { BigMoment, RewardPop, type LadderRarity } from "@/components/gui/flat";
 import s from "./showroom.module.css";
+
+/** The reward pop at each rung of the ladder, and a dig's purse (no rarity). */
+const POPS: readonly (readonly [LadderRarity | null, string, string, string, string | null])[] = [
+  ["common", "bug_common_butterfly", "Common Butterfly", "Caught", "6.2 cm"], ["uncommon", "find_old_coin", "Old Coin", "Dug up", "2.4 cm"],
+  ["rare", "find_ammonite", "Ammonite", "New!", "11.2 cm"], ["epic", "find_amber", "Amber", "Dug up", "4.8 cm"],
+  ["legendary", "find_broken_sudo", "Broken Sudo", "Dug up", "10.5 cm"], ["divine", "find_trilobite", "Trilobite (divine)", "Dug up", "7.1 cm"],
+  [null, "coin", "32 coins", "Dug up", null],
+];
 
 /** Re-mounts its child every `ms` (an overlay that finishes and closes itself stays on show). */
 function Loop({ ms, children }: { ms: number; children: (done: () => void) => ReactNode }) {
@@ -90,13 +99,14 @@ export default function GuiShowroom() {
   const [volume, setVolume] = useState(70);
   const [sheet, setSheet] = useState<null | "sm" | "md" | "lg" | "butter" | "oracle">(only === "sheet" ? "md" : null);
   const [confirm, setConfirm] = useState(false);
+  const [moment, setMoment] = useState(only === "moment");
   if (overlay) return <Stage tall>{overlay.render()}</Stage>;
 
   return <main className={`gui ${s.page}`}>
     <header className={s.top}>
       <h1>Our GUI sheet</h1>
       <p>The member game, portal and companion, drawn from David’s Animal Crossing UI kit: warm paper, sage, wood and Tethos accents. Tokens in <code>styles/game-tokens.css</code>, pieces in <code>components/gui</code>.</p>
-      <nav className={s.toc} aria-label="Sections">{["colour", "type", "paper", "buttons", "tabs", "lists", "tiles", "controls", "dialogue", "badges", "progress", "tooltips", "banners", "cards", "sheets", "states", "toasts", "overlays"].map(id => <a key={id} href={`#${id}`}>{id}</a>)}</nav>
+      <nav className={s.toc} aria-label="Sections">{["colour", "type", "paper", "buttons", "tabs", "lists", "tiles", "controls", "dialogue", "badges", "progress", "tooltips", "banners", "cards", "sheets", "states", "toasts", "rewards", "overlays"].map(id => <a key={id} href={`#${id}`}>{id}</a>)}</nav>
     </header>
 
     <Section id="colour" title="Colour" kit={["palette"]} note="The kit’s creams and inks, with our sage, wood and the Tethos accents. Every text pair is AA (lib/gui/contrast.test.ts).">
@@ -236,6 +246,16 @@ export default function GuiShowroom() {
         <Button size="sm" variant="quiet" onClick={() => toast("A new room is ready. 1,240 TC left.", iconUrl("home-bed"))}>Room toast</Button>
         <Button size="sm" variant="quiet" onClick={() => toast("Your backpack is full.")}>Plain toast</Button></Row>
       <div className={s.toastStage}><ToastHub /></div>
+    </Section>
+
+    <Section id="rewards" title="Rewards and moments (flat kit)" note="specs/design-bible.md UI 4 and 7: a reward pops with its rarity as the outline (divine: the holo); a level up is the big moment. components/gui/flat RewardPop and BigMoment.">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 18 }}>
+        {POPS.map(([rarity, key, name, title, facts]) => <RewardPop key={rarity ?? key} picture={iconUrl(key)} title={title} name={name} rarity={rarity}
+          rarityLabel={rarity ? rarity[0].toUpperCase() + rarity.slice(1) : null} facts={facts} isNew={rarity === "rare"} note="The one-liner, quiet." testId={`pop-${rarity ?? key}`} />)}
+      </div>
+      <Row><Button size="sm" onClick={() => setMoment(true)}>Show the level up</Button></Row>
+      {moment && <BigMoment kicker="Level up" big={2} title="You're level 2" onClose={() => setMoment(false)} testId="showroom-moment"
+        items={[{ key: "quest", icon: <BookOpen size={18} />, title: "New quest: Odile's net", line: "Odile at the museum has a spare net." }]} />}
     </Section>
 
     <section id="overlays" className={s.section}>

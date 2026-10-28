@@ -523,9 +523,8 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
     const finish = (act: Act) => {
       if (act.result?.purse) {
         const { currency, amount } = act.result.purse;
-        window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: currency === "coins" ? `You dug up ${amount} coins!` : amount === 1 ? "You dug up a gem!" : `You dug up ${amount} gems!` } }));
-        window.dispatchEvent(new CustomEvent("tsi:dig-purse", { detail: act.result.purse }));
-        AudioManager.playSFX("confirm", { rate: currency === "gems" ? 1.6 : 1.2, gain: 0.5 });
+        // The reward pop says what it was (RewardCard: "tsi:dig-purse"); the purse's coins show in the HUD.
+        window.dispatchEvent(new CustomEvent("tsi:dig-purse", { detail: { currency, amount } }));
         void refreshHudWallet();
       } else if (act.result) {
         const { got, size, isNew, recipe } = act.result;

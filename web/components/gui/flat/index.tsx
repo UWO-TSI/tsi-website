@@ -368,3 +368,55 @@ export function Quiet({ children }: { children: ReactNode }) {
 export function StatusLine({ error, children }: { error?: boolean; children: ReactNode }) {
   return <p className={error ? f.error : f.note} role="status">{children}</p>;
 }
+
+// ── Rewards and moments ─────────────────────────────────────────────────────────────────────────────────────────────
+
+/** The rarity ladder (specs/design-bible.md UI 7): each shows as a thin outline in its colour; divine as the holo. */
+export type LadderRarity = "common" | "uncommon" | "rare" | "epic" | "legendary" | "divine";
+
+/**
+ * A reward pop (the bible's "big moments are juicy"): a white card that springs in beside the middle of the screen with
+ * the real item picture (pixel finish), what happened (`title`: "Caught", "Dug up", "New!"), the name, a quiet line of
+ * facts and the one-liner. The edge is the rarity's outline (divine: the moving holo), never a fill. A click puts it away.
+ */
+export function RewardPop({ picture, title, name, rarity, rarityLabel, facts, note, isNew, leaving, onClose, testId = "reward-card", kind, children }: {
+  picture: string; title: ReactNode; name: ReactNode; rarity?: LadderRarity | null; rarityLabel?: ReactNode; facts?: ReactNode; note?: ReactNode;
+  isNew?: boolean; leaving?: boolean; onClose?: () => void; testId?: string; kind?: string; children?: ReactNode;
+}) {
+  return <article className={f.pop} data-rarity={rarity ?? undefined} data-new={isNew || undefined} data-leaving={leaving || undefined} data-kind={kind}
+    onClick={onClose} data-testid={testId}>
+    <span className={f.popArt} aria-hidden><PixelImage src={picture} px={72} /></span>
+    <span className={f.popText}>
+      <span className={f.popTitle}>{isNew && <Sparkles size={13} aria-hidden />}{title}</span>
+      <strong className={f.popName}>{name}</strong>
+      {(rarityLabel || facts) && <span className={f.popFacts}>{rarityLabel && <span className={f.popRarity}>{rarityLabel}</span>}{facts}</span>}
+      {note && <span className={f.popNote}>{note}</span>}
+      {children}
+    </span>
+  </article>;
+}
+
+export interface MomentItem { key: string; icon: ReactNode; title: ReactNode; line?: ReactNode }
+
+/**
+ * A big moment over the world (a level up): a scrim, one white card that springs in, the kicker, the big number or word
+ * with a burst behind it, what it brings (icon rows) and one dark button. Escape, Enter or E, a click on the scrim or
+ * the button put it away.
+ */
+export function BigMoment({ kicker, big, title, items, action = "Nice!", onClose, testId }: {
+  kicker: ReactNode; big: ReactNode; title?: ReactNode; items?: readonly MomentItem[]; action?: ReactNode; onClose: () => void; testId?: string;
+}) {
+  return <div className={f.momentLayer} onClick={onClose} data-testid={testId}>
+    <section className={f.moment} role="dialog" aria-modal="true" aria-labelledby="moment-big" onClick={e => e.stopPropagation()}>
+      <span className={f.momentBurst} aria-hidden>{Array.from({ length: 10 }, (_, i) => <i key={i} style={{ "--k": i } as CSSProperties} />)}</span>
+      <span className={f.momentKicker}><Sparkles size={14} aria-hidden />{kicker}</span>
+      <strong id="moment-big" className={f.momentBig}>{big}</strong>
+      {title && <span className={f.momentTitle}>{title}</span>}
+      {items && items.length > 0 && <ul className={f.momentList}>{items.map((it, i) => <li key={it.key} style={{ "--i": i } as CSSProperties}>
+        <span className={f.momentIcon} aria-hidden>{it.icon}</span>
+        <span><b>{it.title}</b>{it.line && <small>{it.line}</small>}</span>
+      </li>)}</ul>}
+      <DarkButton onClick={onClose} autoFocus>{action}</DarkButton>
+    </section>
+  </div>;
+}

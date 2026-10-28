@@ -32,4 +32,13 @@
   --ui-shade: 114 92 78;
   --ui-stage: radial-gradient(ellipse 24% 4.5% at 50% 87%, rgb(114 92 78 / 0.2), rgb(114 92 78 / 0.08) 55%, transparent 100%),
     linear-gradient(180deg, #fffff7 0%, #fffff7 60%, #f8f4e8 84%, #eee9ca 100%);
+  /* The rarity ladder (specs/design-bible.md UI 7): a thin outline or edge, never a fill. Divine is the holo. */
+  --ui-rarity-common: #b3a88f;
+  --ui-rarity-uncommon: #5fa86a;
+  --ui-rarity-rare: #4f84d6;
+  --ui-rarity-epic: #9a66d8;
+  --ui-rarity-legendary: #e3ad1f;
+  --ui-rarity-divine: #b26bff;
+  --ui-holo: linear-gradient(115deg, #b26bff 0%, #ff7ad9 20%, #ffd36b 38%, #7dffb2 56%, #6bc8ff 74%, #b26bff 100%);
+  --ui-on-divine: #ffffff;
 }

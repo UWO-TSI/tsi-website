@@ -12,10 +12,12 @@ describe("one rarity palette across the catch card, the reward card, the journal
     expect(token(`rarity-${r}`)).toBeDefined();
     expect(RARITY_META[r].color.toLowerCase()).toBe(token(`rarity-${r}`));
   });
-  it("the cards, the journal and the book draw rarity with the kit's rarity badge, not colours of their own", () => {
-    for (const file of ["../../components/game/FishReveal.tsx", "../../components/game/RewardCard.tsx", "../../components/game/FlatCollection.tsx", "../../components/game/CollectionBook.tsx"]) {
+  it("the cards, the journal and the book draw rarity with the kit's rarity badge or outline, not colours of their own", () => {
+    // The reward card is the flat kit's RewardPop (specs/design-bible.md UI 7: the rarity as an outline from --ui-rarity-*).
+    for (const [file, kit] of [["../../components/game/FishReveal.tsx", /RarityBadge/], ["../../components/game/RewardCard.tsx", /RewardPop/],
+      ["../../components/game/FlatCollection.tsx", /RarityBadge/], ["../../components/game/CollectionBook.tsx", /RarityBadge/]] as const) {
       const src = source(file);
-      expect(src, file).toMatch(/RarityBadge/);
+      expect(src, file).toMatch(kit);
       expect(src, file).not.toMatch(/RARITY_TONE|RARITY_META\[[^\]]+\]\.color/);
     }
   });

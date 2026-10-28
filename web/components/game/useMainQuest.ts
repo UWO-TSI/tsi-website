@@ -49,7 +49,8 @@ export function useMainQuest(player: RefObject<THREE.Vector3>, on: boolean) {
     if (!a) return;
     const title = titleOf(viewsRef.current, a.chapter);
     advance(a.chapter, a.action)
-      .then(next => { setProgressionState(next); toast(`Chapter complete: ${title}`); })
+      // The chapter's check-mark moment is tutorial-v2's QuestCheck ("tsi:quest-complete"); a level up follows it (LevelUpCard).
+      .then(next => { setProgressionState(next); window.dispatchEvent(new CustomEvent("tsi:quest-complete", { detail: { title } })); })
       .catch(e => toast(e instanceof Error ? e.message : "That didn't go through. Try again."));
   }), [on]);
 
