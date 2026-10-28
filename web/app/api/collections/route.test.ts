@@ -14,7 +14,8 @@ import { memoryCraftingStore } from "@/lib/crafting/memoryStore";
 import { RECIPE_DROPS, RECIPE_DROP_CHANCE } from "@/lib/crafting/recipes";
 import { seededRandom } from "@/lib/game/weatherSystem";
 import { ROSTER } from "@/lib/collections/roster";
-import { activeVillage, fishRoll } from "@/lib/collections/rolls";
+import { fishRoll } from "@/lib/collections/rolls";
+import { village } from "@/lib/game/villageMap";
 
 const mock = vi.hoisted(() => ({ ctx: null as unknown, weather: "clear", goals: [] as unknown[] }));
 vi.mock("@/lib/server/memberContext", async (original) => ({
@@ -45,8 +46,8 @@ const post = async (body: unknown) => {
 const later = (ms: number) => (clock = new Date(clock.getTime() + ms));
 
 // A shore point with water in casting reach, and one in the middle of the land with none, on the island the server
-// checks (the active world, lib/game/world/active.ts).
-const v = activeVillage();
+// checks (the new world's cell view, lib/game/villageMap.ts village()).
+const v = village();
 const classify = villageWater(v).classify;
 const cells = Array.from({ length: v.map.width * v.map.depth }, (_, i) => [v.map.originX + (i % v.map.width) + 0.5, v.map.originZ + Math.floor(i / v.map.width) + 0.5] as [number, number]);
 const SHORE = cells.find(([x, z]) => fishingSpot(v.map, classify, x, z))!;

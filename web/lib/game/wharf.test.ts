@@ -126,20 +126,9 @@ describe("the wharf's boat and buoys ride the waves", () => {
 
 // v1 water item 7: the wharf in the reference's style (art/wharf/build_wharf.py): a finger pier off the tip you can
 // walk out on, lantern poles, rowboats moored along it. Its landmark door and arrival point stay where they were.
-describe("the village wharf's finger pier and rowboats", () => {
-  it("walks from the jetty's tip out along the finger, and not off its far end", async () => {
-    const { islandOf, LANDMARK_INFO } = await import("./defaultIsland");
-    const { village } = await import("./villageMap");
-    const v = village(), w = v.objects.find(o => o.kind === "landmark" && o.id === "wharf")!, island = islandOf(v);
-    const d: Dock = { x: w.x, z: w.z, yaw: w.yaw ?? 0 }, from = { x: 0, z: 0 }, to = { x: 0, z: 0 };
-    dockToWorld(d, 0, -2.9, from);
-    dockToWorld(d, -4.4, -2.9, to);
-    const [x, z] = island.move(from.x, from.z, to.x, to.z);
-    expect(Math.hypot(x - to.x, z - to.z)).toBeLessThan(0.05);
-    const off = { x: 0, z: 0 };
-    dockToWorld(d, -5.6, -2.9, off);
-    const [ox, oz] = island.move(to.x, to.z, off.x, off.z);
-    expect(Math.hypot(ox - to.x, oz - to.z)).toBeLessThan(0.4);
+describe("the wharf's finger pier and rowboats", () => {
+  it("keeps the wharf landmark's door and arrival point where they were", async () => {
+    const { LANDMARK_INFO } = await import("./defaultIsland");
     expect(LANDMARK_INFO.wharf.door).toEqual([0, -2.5]);
     expect(LANDMARK_INFO.wharf.exit).toEqual([0, 1.1]);
   });

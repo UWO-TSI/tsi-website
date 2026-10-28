@@ -13,7 +13,6 @@ import { campfireSite } from "../campfireSite";
 import { FIRE } from "../campfire";
 import { MOVE_TUNING, NO_INPUT, createMoveState, stepMove, STEP, type MoveWorld } from "../movement/sim";
 import { navGrid, planResidents } from "../residentRoutine";
-import { PROPOSALS, acceptProposed } from "../proposals";
 import { objectsOf, villageSpawnPoint } from "../villageMap";
 import { loadWorldFromDisk } from "./disk";
 import { MAX_CLIMB, terrainHeight, terrainSteepness, sampleX, sampleZ } from "./terrain";
@@ -21,9 +20,7 @@ import { villageOfWorld } from "./village";
 
 const world = loadWorldFromDisk(join(__dirname, "../../../data/world"));
 const t = world.terrain;
-// The v1 barrier proposal is drawn for the v2 world (world-map.json, barriers.test.ts); the new world's closures are its
-// own border and terrain v3 R2's bridges and rockfall, so only the other proposals (the campfire) apply here.
-const objects = acceptProposed(world.objects, PROPOSALS.filter(p => p.target === "world-map").flatMap(p => p.objects).filter(o => o.kind !== "barrier"));
+const objects = world.objects;
 const v = villageOfWorld({ terrain: t, objects });
 const island = villageIsland(v);
 

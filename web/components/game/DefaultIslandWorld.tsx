@@ -117,7 +117,7 @@ import ShopCounter from "./ShopCounter";
 import ShopkeeperChoice, { MERCH_LINE, type ShopSection } from "./ShopkeeperChoice";
 import IslandLoading from "./IslandLoading";
 import { loadGameWorld } from "@/lib/game/world/load";
-import { GAME_WORLD, worldModel } from "@/lib/game/world/active";
+import { worldModel } from "@/lib/game/world/active";
 import TalkBox from "./TalkBox";
 import { emptyTalkView, requestTalk, subscribeTalk, talkStore, talkView } from "@/lib/game/residentTalk";
 import DailyGift from "./DailyGift";
@@ -125,7 +125,7 @@ import { markWelcomed, welcomeStep } from "@/lib/game/welcome";
 import Arrival from "./arrival/Arrival";
 import ArrivalWorld, { crateSpots, placeWorld, withCrates } from "./arrival/ArrivalWorld";
 import { arrivalEvent, bramNear, bramPrompt, useArrivalPhase, useArrivalTools, useTutorialQuest } from "@/lib/game/arrival/arrivalStore";
-import { routeFor } from "@/lib/game/arrival/routes";
+import { NEW_ROUTE } from "@/lib/game/arrival/routes/new";
 import { gateWheel } from "@/lib/game/arrival/tools";
 import { postArrival, useArrivalFlag } from "@/lib/game/arrival/arrivalFlag";
 import { BRAM, TUTORIAL_REWARD, type HintKeys } from "@/lib/game/arrival/lines";
@@ -472,7 +472,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   // The arrival (components/game/arrival): Bram walks you through, the fish crate on the pier until the tour is over.
   const arrivalPhase = useArrivalPhase();
   const dock = layout.dock;
-  const crated = useMemo(() => (dock ? withCrates(island, crateSpots(routeFor(GAME_WORLD), placeWorld(dock, v))) : null), [island, dock, v]);
+  const crated = useMemo(() => (dock ? withCrates(island, crateSpots(NEW_ROUTE, placeWorld(dock, v))) : null), [island, dock, v]);
   const walkOn = crated && (arrivalPhase === "crossing" || arrivalPhase === "landing" || arrivalPhase === "tutorial") ? crated : island;
   const spots = useMemo(() => eventSpots(event?.decor ?? null), [event]);
   const cafeAt = useMemo(() => { const c = layout.landmarks.find(l => l.id === "cafe"); return c ? { x: c.x, z: c.z, yaw: c.yaw ?? 0, scale: c.scale ?? 1 } : null; }, [layout]);
@@ -706,11 +706,12 @@ function LoadingStatus({ ready }: { ready: boolean }) {
 
 /** `preset` (default: the game look, CURRENT) and `children` (mounted inside the Canvas) are for /lab/look only. */
 export default function DefaultIslandWorld({ preset, children }: { preset?: LookPreset; children?: ReactNode }) {
-  // The member island's world (NEXT_PUBLIC_GAME_WORLD): the new world loads into the village's place before anything mounts.
+  // The member island's world: the new world loads before anything mounts.
   const [loading] = useState(loadGameWorld);
-  const [worldReady, setWorldReady] = useState(!loading);
-  useEffect(() => { void loading?.then(() => setWorldReady(true)); }, [loading]);
-  if (!worldReady) return <IslandLoading />;
+  const [world, setWorld] = useState<"loading" | "ready" | "failed">(loading ? "loading" : "ready");
+  useEffect(() => { void loading?.then(() => setWorld("ready"), () => setWorld("failed")); }, [loading]);
+  if (world === "failed") return <div className={styles.loading} role="alert">The island could not load.<button className={styles.return} onClick={() => window.location.reload()}>Reload island</button></div>;
+  if (world === "loading") return <IslandLoading />;
   return <GameSceneBoundary><DefaultIslandWorldContent preset={preset}>{children}</DefaultIslandWorldContent></GameSceneBoundary>;
 }
 

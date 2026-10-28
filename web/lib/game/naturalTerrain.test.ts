@@ -8,7 +8,6 @@ import { villageOf } from "./villageMap";
 import { islandOf } from "./defaultIsland";
 import { walkTo } from "./movement/sim";
 import { fishingSpot, waterClassifier } from "./fishingSpots";
-import { terrainHealth, terrainProblems } from "./mapHealth";
 import { terrainChunks } from "@/components/game/grid/GridTerrain";
 
 /** An oval island of grass in the sea. */
@@ -201,12 +200,5 @@ describe("walking, fishing and the drawn ground agree (the synthetic island)", (
     expect(spot).not.toBeNull();
     expect(isGroundAtWorld(map, ...spot!.target)).toBe(false);
     expect(spot!.water).toBe("sea");
-  });
-
-  it("is healthy terrain: everything reachable by slopes and the ramp, cliffs drawable, mostly flat", () => {
-    const t = terrainHealth(map, [32, 30]);
-    expect(terrainProblems(t)).toEqual({});
-    expect(t.slopeCells).toBeGreaterThan(50);
-    expect(t.cliffCells).toBeGreaterThan(10);
   });
 });

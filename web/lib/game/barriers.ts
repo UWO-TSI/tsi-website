@@ -10,10 +10,9 @@
  * | ruins-rubble | fallen stones and roots across the ruins entrance | `ruins` (v3) |
  * | rockslide | boulders over the mountain trail | `mountain` (v2) |
  *
- * Placements are map objects of kind "barrier" (`model` names which), placed by David in /lab/map from the proposal
- * (web/data/proposals/v1-barriers.json). The village's ruins gate is the one barrier the map doesn't place: until the
- * ruins open, the gate landmark is drawn as rubble (`GATE_RUBBLE`). Pure: the walker (defaultIsland islandOf), the
- * scenery (NatureModels sceneryOf), the painter and the tests share it.
+ * Placements are map objects of kind "barrier" (`model` names which), placed by David in the world editor. A `ruins`
+ * gate landmark is the one barrier the map doesn't place: until the ruins open, it is drawn as rubble (`GATE_RUBBLE`).
+ * Pure: the walker (defaultIsland islandOf), the scenery (NatureModels sceneryOf), the editor and the tests share it.
  */
 import { DROPS, type DropFeature, type DropFlags } from "./drops";
 import type { MapObject, Village } from "./villageMap";

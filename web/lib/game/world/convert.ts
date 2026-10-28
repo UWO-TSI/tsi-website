@@ -1,67 +1,28 @@
 /**
- * The conversion (specs/world-editor.md v0 step 2): the cell world (`web/data/world-map.json`: levels in 0.75 u steps,
- * every step a wall) into the smooth heightfield, once, so David sculpts from there. Pure; `web/scripts/convert-world.ts`
- * runs it and writes `web/data/world/`. The old file stays.
- *
- * WHAT IT KEEPS. The coast is the old organic coast (the grid's own `shoreSdf`: the painted cells blurred, noised,
- * every cell centre held on its side), so the shore, the rivers, the bays and the islets sit where David drew them.
- * Paths, sand and the plaza's stone come from the grid's organic overlay fields. Objects and annotations are copied
- * unchanged (same cells, same world coordinates); the proposals stay proposals (web/data/proposals).
- *
- * THE HEIGHTS. A level map is a stack of tiers (tier L: the cells at level ≥ L). Each tier's outline is rounded in
- * plan (a narrow Gaussian of its cells, every cell centre held on its own side, so a one-cell trail step survives), and
- * the tier rises 0.75 u across its outline over a width that depends on what the old map drew there:
- * - a ONE-level step (a walkable slope in the old rules) rises over ±W_SLOPE: a natural rolling slope, under 0.4 grade;
- * - a TWO-or-more-level step (an old kit cliff) rises over ±W_CLIFF: a steep rock face (over 2 grade), unwalkable,
- *   read as rock by slope; so the mountain keeps its cliffs and nothing else gains one.
- * The mix follows the boundary (the share of cliff edges near each point), so a cliff tapers into a slope where the
- * old map did. Then the cliff bands are naturalized (CONVERT.natural): their outlines wander, their faces vary in
- * steepness, their tops and feet round over, and steep ground gets rock relief, so a mountain reads as rock and slopes
- * rather than walls.
- *
- * THE COAST. Land falls to the still sea exactly on the organic shoreline at a grade set by what meets the water:
- * a beach (old sand) shelves at G_SAND, a grass bank at G_BANK, a cliff coast (old level ≥ 2 at the water) at G_CLIFF.
- * Under water the seabed shelves gently (`shelf`) and drops to the open sea's floor (the old deepest seabed).
- *
- * PADS. Every building (a landmark with a footprint) stands on ground levelled to its centre over its footprint and a
- * cell round it, easing back to the land over PAD_EASE.
+ * The terrain shaping the world generator shares (lib/game/world/generate.ts): the seabed's shelf, a soft minimum, a
+ * contour's signed distance, rock relief on steep land, the steepness limit, the wharf's quay and the building pads.
+ * They began as the one-off conversion of the v2 cell world into the smooth heightfield (specs/world-editor.md v0
+ * step 2), retired with the cell worlds (row 321; the cell document is in archive/village/).
  *
  * THE WHARF (David, 2026-10-14). Beaches meet the water at sea level and ease in; at the wharf the land stands at the
  * jetty deck's height to the water's edge and drops straight to water deep enough for boats (`wharfQuay`).
- *
- * Elevated water (the peak waterfall's channel) has no water in v0 (water is at sea level): its cells become rock at
- * their level; its pond drops to a sea-level pond. Open question in the spec.
  */
-import {
-  LEVEL_STEP, MAX_LEVEL, Surface, isWater, overlayAt, sampleShore, sdfFromMask, shoreSdf, smoothstep, valueNoise, type IslandMap, type ShoreSdf,
-} from "../grid";
+import { sampleShore, sdfFromMask, smoothstep, valueNoise, type ShoreSdf } from "../grid";
 import { landmarkHalf, turn, type LandmarkId } from "../defaultIsland";
 import { TUNING_DEFAULTS } from "../tuning";
 import { SHOAL, bedDepth } from "../waterShader";
-import { BERTH, berthWeight } from "../wharf";
-import { parseVillage, type VillageDoc } from "../villageMap";
+import { berthWeight } from "../wharf";
 import type { World } from "./format";
-import { Paint, createTerrain, sampleX, sampleZ, type WorldTerrain } from "./terrain";
+import { sampleX, sampleZ, type WorldTerrain } from "./terrain";
 
 /** The tuning, world units unless named. */
 export const CONVERT = {
-  /** Plan rounding of each tier's outline (Gaussian sigma, cells) and how far each cell centre is held inside its side. */
-  planSigma: 0.75,
-  core: 0.12,
-  /** Half-width of a one-level slope and of a cliff face. */
-  slopeWidth: 1.6,
-  cliffWidth: 0.35,
-  /** How far along a tier's outline the cliff/slope character blends (sigma, cells). */
-  characterSigma: 1.25,
-  /** Grades (rise over run) of land meeting the sea: a beach, a grass bank, a cliff coast; blended along the coast (sigma, cells). */
-  sand: 0.12,
+  /** The grade (rise over run) of a grass bank meeting the sea. */
   bank: 0.35,
-  cliff: 2.5,
-  coastSigma: 1.5,
   /** Pads: the rim round a footprint and the ease back to the land. */
   padRim: 1,
   padEase: 2.5,
-  /** The steepest any face may be (rise over run): where old tiers stack into one tall cliff, it leans back to this. */
+  /** The steepest any face may be (rise over run). */
   maxGrade: 3,
   /**
    * The wharf's quay (David, 2026-10-14): round the jetty the land stands at the deck's walk height (the pier model's
@@ -69,31 +30,18 @@ export const CONVERT = {
    * round the pier's line (its land end to past the moorings, in the dock's frame), easing out over `ease`.
    */
   quay: { bank: 0, depth: 1.4, run: 0.6, from: 2, to: -5, reach: 5.5, ease: 4 },
+  /** Rock relief on steep ground: `rock` units deep, `rockScale` units across. */
+  natural: { rock: 0.16, rockScale: 1.6 },
   /**
-   * The berth (lib/game/wharf.ts BERTH, the dock's frame): the water the jetty's tip, the finger pier, the moored boat
-   * and the rowboats need, dug to the quay's depth wherever the old map had land there (a grass ridge stood under two
-   * of the rowboats), its edge a quay face `edge` wide.
-   */
-  berth: BERTH,
-  /**
-   * The naturalize pass (coordinator, 2026-10-14: the mountain read as long straight flat-topped walls): on the cliff
-   * bands only (a one-level slope is left as it is), the outline wanders `wander` units either way along its length
-   * (noise `wanderScale` units long), each face's width varies by `vary` either way (some steeper, some gentler, never
-   * walkable), a share `shoulder` of every cliff step rounds over three times its width at its top and foot, and steep
-   * ground gets rock relief `rock` units deep (`rockScale` units across). Layout and band heights stay.
-   */
-  natural: { wander: 2.2, wanderScale: 11, vary: 0.55, varyScale: 6, shoulder: 0.4, rock: 0.16, rockScale: 1.6 },
-  /**
-   * Under the sea (playtest round 1, 2026-10-14): the village's wide shallows (lib/game/waterShader.ts SHOAL), sand in
-   * sight to 4 units out; the open sea here has room, so its drop-off runs on through the teal and deep blue to the
-   * navy at 16, as the shelf before it did.
+   * Under the sea (playtest round 1, 2026-10-14): the wide shallows (lib/game/waterShader.ts SHOAL), sand in sight to 4
+   * units out; the open sea here has room, so its drop-off runs on through the teal and deep blue to the navy at 16.
    */
   shoal: { ...SHOAL, to: 16 },
 } as const;
 
 /**
- * The seabed's depth under the still sea `d` units out from the shore: the open sea's wide shallows (CONVERT.shoal, the
- * village's), then the drop to the open sea's floor (4.2, the water's own deepest).
+ * The seabed's depth under the still sea `d` units out from the shore: the open sea's wide shallows (CONVERT.shoal),
+ * then the drop to the open sea's floor (4.2, the water's own deepest).
  */
 export function shelf(d: number): number {
   return bedDepth(d, TUNING_DEFAULTS.water, 1, CONVERT.shoal);
@@ -104,71 +52,6 @@ export function shelf(d: number): number {
  * The higher `power`, the closer to a hard minimum (the softness also lowers a plateau a little where its coast is far).
  */
 export const softMin = (a: number, b: number, power = 4) => (a <= 0 || b <= 0 ? Math.min(a, b, 0) : Math.pow(Math.pow(a, -power) + Math.pow(b, -power), -1 / power));
-
-/** Standard normal CDF (Abramowitz & Stegun 7.1.26). */
-function phi(x: number): number {
-  const z = Math.abs(x) * Math.SQRT1_2, t = 1 / (1 + 0.3275911 * z);
-  const erf = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-z * z);
-  return x < 0 ? 0.5 * (1 - erf) : 0.5 * (1 + erf);
-}
-
-/**
- * A per-cell value blurred onto the sample grid: each sample takes the Gaussian (sigma, cells) of the cells round it,
- * each cell counted over its whole width (a box-Gaussian, as the grid's own fields do). Off the map the cells are 0.
- */
-export function blurToSamples(vals: Float32Array, W: number, D: number, res: number, sigma: number): Float32Array {
-  const cols = W * res + 1, rows = D * res + 1, r = Math.ceil(3 * sigma) + 1;
-  // Kernel per sample phase j (sample u = c0 + j / res): weight of cell c0 + o.
-  const kern: Float64Array[] = [];
-  for (let j = 0; j < res; j++) {
-    const k = new Float64Array(2 * r + 1);
-    for (let o = -r; o <= r; o++) { const u = j / res - o; k[o + r] = phi(u / sigma) - phi((u - 1) / sigma); }
-    kern.push(k);
-  }
-  const tmp = new Float32Array(D * cols);
-  for (let cz = 0; cz < D; cz++) for (let i = 0; i < cols; i++) {
-    const c0 = Math.floor(i / res), k = kern[i - c0 * res];
-    let s = 0;
-    for (let o = -r; o <= r; o++) { const c = c0 + o; if (c >= 0 && c < W) s += k[o + r] * vals[cz * W + c]; }
-    tmp[cz * cols + i] = s;
-  }
-  const out = new Float32Array(rows * cols);
-  for (let kk = 0; kk < rows; kk++) {
-    const c0 = Math.floor(kk / res), k = kern[kk - c0 * res];
-    for (let i = 0; i < cols; i++) {
-      let s = 0;
-      for (let o = -r; o <= r; o++) { const c = c0 + o; if (c >= 0 && c < D) s += k[o + r] * tmp[c * cols + i]; }
-      out[kk * cols + i] = s;
-    }
-  }
-  return out;
-}
-
-/** A per-cell value at sample (i, k), eased between cell centres (0 off the map). */
-function cellEase(vals: Float32Array, W: number, D: number, res: number, i: number, k: number): number {
-  const fx = i / res - 0.5, fz = k / res - 0.5, ax = Math.floor(fx), az = Math.floor(fz);
-  const ease = (t: number) => t * t * (3 - 2 * t), tx = ease(fx - ax), tz = ease(fz - az);
-  const at = (cx: number, cz: number) => (cx < 0 || cz < 0 || cx >= W || cz >= D ? 0 : vals[cz * W + cx]);
-  return (at(ax, az) * (1 - tx) + at(ax + 1, az) * tx) * (1 - tz) + (at(ax, az + 1) * (1 - tx) + at(ax + 1, az + 1) * tx) * tz;
-}
-
-/**
- * A tier's signed distance from its rounded outline at every sample, units, positive inside: the cells blurred
- * (planSigma), each centre held `core` inside its side, the 0.5 contour the outline; a distance transform further out,
- * the field's own value over its slope near it (sub-sample exact).
- */
-export function tierDistance(inside: Uint8Array, W: number, D: number, res: number, sigma = CONVERT.planSigma, core = CONVERT.core): Float32Array {
-  const cols = W * res + 1, rows = D * res + 1;
-  const f = blurToSamples(Float32Array.from(inside), W, D, res, sigma);
-  // Hold each cell centre on its side.
-  const corr = new Float32Array(W * D);
-  for (let cz = 0; cz < D; cz++) for (let cx = 0; cx < W; cx++) {
-    const v = centreValue(f, cols, res, cx, cz), c = cz * W + cx;
-    corr[c] = inside[c] ? Math.max(0, 0.5 + core - v) : Math.min(0, 0.5 - core - v);
-  }
-  for (let k = 0; k < rows; k++) for (let i = 0; i < cols; i++) f[k * cols + i] += cellEase(corr, W, D, res, i, k);
-  return contourDistance(f, cols, rows, res, 0.5);
-}
 
 /**
  * The signed distance (units, positive where `f` is above `level`) from a sampled field's `level` contour: a distance
@@ -187,72 +70,6 @@ export function contourDistance(f: Float32Array, cols: number, rows: number, res
     out[p] = ((f[p] - level) / Math.max(Math.hypot(gx, gz), 0.05)) * (1 - w) + d * w;
   }
   return out;
-}
-
-/** The blurred field at a cell's centre (bilinear between the samples round it). */
-function centreValue(f: Float32Array, cols: number, res: number, cx: number, cz: number): number {
-  const u = (cx + 0.5) * res, v = (cz + 0.5) * res, i = Math.floor(u), k = Math.floor(v), tu = u - i, tv = v - k;
-  const at = (a: number, b: number) => f[b * cols + a];
-  return tu === 0 && tv === 0 ? at(i, k) : (at(i, k) * (1 - tu) + at(i + 1, k) * tu) * (1 - tv) + (at(i, k + 1) * (1 - tu) + at(i + 1, k + 1) * tu) * tv;
-}
-
-const ORTHO = [[1, 0], [0, 1]] as const;
-
-/** The terrain heights from a cell map (see the header): the tiers, the coast and the seabed. `shore` is the map's organic shore field. */
-export function heightsFromCells(map: IslandMap, t: WorldTerrain, levels: Uint8Array, shore = shoreSdf(map)): void {
-  const W = map.width, D = map.depth, res = t.res, cols = t.cols, rows = t.rows;
-  const land = new Float32Array(cols * rows);
-  for (let L = 1; L <= MAX_LEVEL; L++) {
-    const inside = new Uint8Array(W * D);
-    let any = false;
-    for (let c = 0; c < W * D; c++) if (levels[c] >= L) { inside[c] = 1; any = true; }
-    if (!any) continue;
-    // The tier's character along its outline: the share of its boundary edges near a point that are old kit cliffs.
-    const cliffs = new Float32Array(W * D), edges = new Float32Array(W * D);
-    for (let cz = 0; cz < D; cz++) for (let cx = 0; cx < W; cx++) for (const [dx, dz] of ORTHO) {
-      const nx = cx + dx, nz = cz + dz;
-      if (nx >= W || nz >= D) continue;
-      const a = cz * W + cx, b = nz * W + nx;
-      if (inside[a] === inside[b]) continue;
-      const step = Math.abs(levels[a] - levels[b]), cliff = step >= 2 ? 1 : 0;
-      edges[a]++; edges[b]++;
-      cliffs[a] += cliff; cliffs[b] += cliff;
-    }
-    const cb = blurToSamples(cliffs, W, D, res, CONVERT.characterSigma), eb = blurToSamples(edges, W, D, res, CONVERT.characterSigma);
-    const d = tierDistance(inside, W, D, res), nat = CONVERT.natural;
-    for (let p = 0; p < land.length; p++) {
-      const share = eb[p] > 1e-3 ? Math.min(1, cb[p] / eb[p]) : 0;
-      const w = CONVERT.slopeWidth + (CONVERT.cliffWidth - CONVERT.slopeWidth) * share;
-      if (share <= 0) { land[p] += LEVEL_STEP * smoothstep(-1, 1, d[p] / w); continue; }
-      // A cliff band, naturalized: its outline wanders, its face's steepness varies, its top and foot round over.
-      const x = sampleX(t, p % cols), z = sampleZ(t, Math.floor(p / cols));
-      const wander = (valueNoise(x / nat.wanderScale, z / nat.wanderScale, 40 + L) - 0.5) + 0.4 * (valueNoise(x / (nat.wanderScale * 0.33), z / (nat.wanderScale * 0.33), 50 + L) - 0.5);
-      const dd = d[p] + share * nat.wander * 2 * wander;
-      const ww = w * (1 + share * nat.vary * 2 * (valueNoise(x / nat.varyScale, z / nat.varyScale, 60 + L) - 0.5));
-      const face = smoothstep(-1, 1, dd / ww), round = smoothstep(-1, 1, dd / (3 * ww));
-      land[p] += LEVEL_STEP * (face + share * nat.shoulder * (round - face));
-    }
-  }
-  // How steeply land meets the sea, per land cell, blurred along the coast over the land cells only.
-  const grade = new Float32Array(W * D), isLandCell = new Float32Array(W * D);
-  for (let cz = 0; cz < D; cz++) for (let cx = 0; cx < W; cx++) {
-    const c = cz * W + cx;
-    if (isWater(map.surfaces[c])) continue;
-    isLandCell[c] = 1;
-    let byWater = false;
-    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
-      const nx = cx + dx, nz = cz + dz;
-      if (nx < 0 || nz < 0 || nx >= W || nz >= D || isWater(map.surfaces[nz * W + nx])) byWater = true;
-    }
-    grade[c] = map.surfaces[c] === Surface.Sand ? CONVERT.sand : byWater && levels[c] >= 2 ? CONVERT.cliff : CONVERT.bank;
-  }
-  const gNum = blurToSamples(grade, W, D, res, CONVERT.coastSigma), gDen = blurToSamples(isLandCell, W, D, res, CONVERT.coastSigma);
-  for (let k = 0; k < rows; k++) for (let i = 0; i < cols; i++) {
-    const p = k * cols + i, x = sampleX(t, i), z = sampleZ(t, k), toShore = -sampleShore(shore, x, z);
-    if (toShore <= 0) { t.heights[p] = t.seaLevel - shelf(-toShore); continue; }
-    const g = gDen[p] > 1e-3 ? gNum[p] / gDen[p] : CONVERT.bank;
-    t.heights[p] = t.seaLevel + softMin(land[p] - t.seaLevel, g * toShore);
-  }
 }
 
 /**
@@ -337,8 +154,6 @@ export function wharfQuay(t: WorldTerrain, objects: World["objects"], shore: Sho
   return n;
 }
 
-export { berthWeight };
-
 /** Level the ground under every building: its footprint and a rim, at its centre's height, easing back over padEase. */
 export function padBuildings(t: WorldTerrain, objects: World["objects"]): number {
   let n = 0;
@@ -358,54 +173,4 @@ export function padBuildings(t: WorldTerrain, objects: World["objects"]): number
     }
   }
   return n;
-}
-
-export interface ConvertReport {
-  /** Cells of elevated water turned to rock (the waterfall's channel) and dropped to a sea-level pond. */
-  driedWater: number;
-  pondCells: number;
-  pads: number;
-  /** Wharves given a quay. */
-  quays: number;
-  objects: number;
-  annotations: number;
-}
-
-/** The whole conversion: a cell document in, a smooth world out (heights not yet quantised; the writer does that). */
-export function convertCells(doc: VillageDoc, opts: { res?: number } = {}): { world: World; report: ConvertReport } {
-  const { map, objects, annotations } = parseVillage(doc);
-  const W = map.width, D = map.depth;
-  // Elevated water (water is at sea level in v0): a pond (a body at level 1 with no lower water in it) drops to the sea's
-  // level; the fall's channel above it becomes rock at its level.
-  const levels = map.levels.slice(), rock = new Uint8Array(W * D);
-  let driedWater = 0, pondCells = 0;
-  for (let c = 0; c < W * D; c++) {
-    if (!isWater(map.surfaces[c]) || map.levels[c] === 0) continue;
-    if (map.levels[c] === 1) { map.levels[c] = 0; levels[c] = 0; pondCells++; continue; }
-    map.surfaces[c] = Surface.Grass; rock[c] = 1; driedWater++;
-  }
-  for (let c = 0; c < W * D; c++) if (isWater(map.surfaces[c])) levels[c] = 0;
-  const t = createTerrain(W, D, map.originX, map.originZ, { res: opts.res ?? 2 });
-  if (t.res % 2) throw new Error("the conversion needs an even resolution (cell centres on samples)");
-  const shore = shoreSdf(map);
-  heightsFromCells(map, t, levels, shore);
-  rockRelief(t);
-  const quays = wharfQuay(t, objects, shore);
-  const pads = padBuildings(t, objects);
-  limitSteepness(t);
-  // Paint: the grid's organic overlays (built stone, worn paths, the beach), sand under the water, rock where water dried.
-  for (let k = 0; k < t.rows; k++) for (let i = 0; i < t.cols; i++) {
-    const p = k * t.cols + i, x = sampleX(t, i), z = sampleZ(t, k);
-    const cx = Math.min(W - 1, Math.max(0, Math.round(x - map.originX))), cz = Math.min(D - 1, Math.max(0, Math.round(z - map.originZ)));
-    t.paint[p] = t.heights[p] <= t.seaLevel ? Paint.Sand
-      : rock[cz * W + cx] ? Paint.Rock
-      : overlayAt(map, Surface.Stone, x, z) > 0.5 ? Paint.Stone
-      : overlayAt(map, Surface.Soil, x, z) > 0.5 ? Paint.Path
-      : overlayAt(map, Surface.Sand, x, z) > 0.5 ? Paint.Sand
-      : Paint.Grass;
-  }
-  return {
-    world: { terrain: t, objects, annotations, source: "converted from web/data/world-map.json (scripts/convert-world.ts)" },
-    report: { driedWater, pondCells, pads, quays, objects: objects.length, annotations: annotations.length },
-  };
 }

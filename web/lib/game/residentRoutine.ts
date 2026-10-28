@@ -81,14 +81,13 @@ export const POST_HOME: Record<string, LandmarkId> = {
 export const HOME_LANDMARKS: readonly LandmarkId[] = ["hq", "shop", "cafe", "oracle", "museum", "wharf"];
 
 /**
- * The building a resident lives in: their schedule's `home`, else their post's. On the new world the temple stands on
- * the sealed summit, so while it's closed (DROPS.oracle) its keeper lodges at HQ. The village's temple stands in the
- * village, and there the keeper keeps it.
+ * The building a resident lives in: their schedule's `home`, else their post's. The temple stands on the sealed summit,
+ * so while it's closed (DROPS.oracle) its keeper lodges at HQ.
  */
-export function residentHome(r: Pick<ResidentSource, "post" | "schedule">, v: Pick<Village, "terrain">, flags: DropFlags = DROPS): LandmarkId {
+export function residentHome(r: Pick<ResidentSource, "post" | "schedule">, flags: DropFlags = DROPS): LandmarkId {
   const own = r.schedule?.home;
   const id = (typeof own === "string" && (HOME_LANDMARKS as readonly string[]).includes(own) ? own : POST_HOME[r.post ?? "villager"] ?? "hq") as LandmarkId;
-  return id === "oracle" && v.terrain && !flags.oracle ? "hq" : id;
+  return id === "oracle" && !flags.oracle ? "hq" : id;
 }
 
 /** What a resident's data says (npc_personas: slug, post, schedule). */
@@ -378,15 +377,13 @@ export function seatChoice(stop: Stop, held: (key: string, x: number, z: number)
 }
 
 /**
- * Where a schedule's place is: its `anchor` object, placed in /lab/map. The new world (a terrain world) has none, so
- * there a place is the landmark of the same name: a building's exit step (out front), the wharf's landing, the plaza's
- * or the beach's middle; the temple not while it's sealed (DROPS.oracle). The village's plaza without one: the spawn.
- * Null when the place isn't on this map (the resident skips it).
+ * Where a schedule's place is: its `anchor` object, placed in the world editor, else the landmark of the same name: a
+ * building's exit step (out front), the wharf's landing, the plaza's or the beach's middle; the temple not while it's
+ * sealed (DROPS.oracle). Null when the place isn't on this map (the resident skips it).
  */
 export function placeAt(key: string, v: Village, flags: DropFlags = DROPS): [number, number] | null {
   const a = objectById("anchor", key, v);
   if (a) return [a.x, a.z];
-  if (!v.terrain) return key === "plaza" ? villageSpawnPoint(v) : null;
   if (!Object.hasOwn(LANDMARK_INFO, key) || (key === "oracle" && !flags.oracle)) return null;
   const l = landmark(key as LandmarkId, v);
   return l && (landmarkPoint(key as LandmarkId, "exit", v) ?? [l.x, l.z]);
@@ -454,7 +451,7 @@ const POST_ANCHOR: Record<string, string> = { hq_lead: "hq", shopkeeper: "shop",
  */
 export function planResident(r: ResidentSource, slot: number, v: Village, island: VillageIsland, res: Reservations = newReservations()): ResidentPlan {
   const nav = navGrid(island, v), seed = hashStr(r.slug);
-  const home = homeStop(residentHome(r, v), v, r.slug, nav) ?? homeStop("hq", v, r.slug, nav);
+  const home = homeStop(residentHome(r), v, r.slug, nav) ?? homeStop("hq", v, r.slug, nav);
   const work = r.post ? POST_ANCHOR[r.post] : undefined;
   const phases = {} as Record<IslandPhase, Stop[]>;
   for (const phase of ISLAND_PHASES) {
