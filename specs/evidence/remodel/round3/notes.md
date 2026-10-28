@@ -22,3 +22,37 @@ David: "make sure the orientation of these fish models are correct".
 Not changed: the village. The dump's raw fish there are still upside down in the hold, the tank and the trophy case. The fix there would be one sign in four places (`rotation.x = Math.PI / 2` for raw in FishingRig `prepareFish`, TankFish `levelFish`, FishCatchFX and FishPreview).
 
 Not orientation: the betta's fins render as a pale square (the dump's own texture, the same in the old model).
+
+## Step 2: the flyers keep their old wing outline
+
+David: "shape should still replicate the before like gneral overall shape of wings".
+
+`art/remodel/build_critters.py` traces each species' wings from the old model. It takes the wing triangles seen flat (unfolded about the body's axis), rasters them, opens away the antennae and legs, follows the outline round, simplifies it to about 20 points a side (4 per dragonfly wing) and cuts that polygon into triangles. The forewing and hindwing lobes, the proportions and the tiger and peacock tails are the old ones'. Our body, our paint per species (mapped onto the traced outline), one shared 256 x 128 atlas.
+
+The dump's butterflies face -z, so they flew tail first. Ours face +z, where the game flies them, and the traced wings are turned end for end to match. The old ones in these shots are turned the same way, so the outlines compare.
+
+| File | What |
+|---|---|
+| `flyers-before.webp` / `flyers-after.webp` | The 8 flyers, each from above and at three-quarters: the old one (the close-ups keep it) and ours (the world's). |
+| `flyers-side-by-side.webp` | Each species with old and new next to each other. |
+
+Triangles, old -> new: butterflies 770 to 824 -> 100 to 104; darner 778 -> 114; red dragonfly 360 -> 116 (round 2: 116 and 128).
+
+## The sea creatures facing right (new world)
+
+The 10 sea creatures are raw dump exports in both worlds. `lib/game/fishing.ts` RAW_TURN_X now gives the new world the right quarter turn (-90 degrees: head up, back toward -z). The hold, the tank, the trophy case and FishCatchFX all take it from there. The village keeps its +90. The icons are re-rendered nose left and back up; the scallop, sea star, abalone and pearl oyster are seen from above.
+
+| File | What |
+|---|---|
+| `sea-icons-before.webp` / `sea-icons-after.webp` | The 10 icons. |
+
+## The plaza benches (new world)
+
+David via the coordinator: "sitable remodel". The four plaza benches, bench-0 to bench-3, had no model, so they drew nothing and had no collision.
+
+Ours (`art/remodel/build_bench.py`, `game/props/plaza-bench.glb`, 900 triangles, no textures) is a backless park bench: three soft wooden slats on two painted green iron ends. It is backless because a bench seats you facing the side you walk up from. The seat top is at 0.5 (BENCH_SEAT_TOP, the sit height), the seat runs along x across the two sit slots (+-0.42), and it fits inside the log bench's footprint. A bench the map gives no model (only the new world has them) draws this one (`lib/game/defaultIsland.ts` propsOf), with its footprint and top in `defaultIsland.ts` (PROP_FOOTPRINT, PROP_TOP), so it is solid. `data/world/world.json` is untouched.
+
+| File | What |
+|---|---|
+| `plaza-bench-before.webp` | bench-0 in game before: nothing there. |
+| `plaza-bench-after.webp` | The same camera after, and the Blender views. |
