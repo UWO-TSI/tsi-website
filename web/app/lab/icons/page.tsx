@@ -16,6 +16,7 @@ import { iconSpecs, type IconSpec } from "@/lib/icons/manifest";
 import { CATALOGUE, EVENT_ITEMS, OWNERSHIP_ITEMS } from "@/lib/wallet/catalogue";
 import { CRAFTED_ITEMS, RECIPE_CARDS } from "@/lib/crafting/recipes";
 import { levelFish } from "@/components/game/peaceful/TankFish";
+import { RAW_TURN_X } from "@/lib/game/fishing";
 import { prepareModel } from "@/lib/game/modelMaterials";
 
 const SIZE = 256, PAD = 0.08;
@@ -138,9 +139,9 @@ async function subjectFor(spec: IconSpec): Promise<THREE.Object3D> {
     // The fish level as the tank and the trophy case show it (levelFish: head along +z, back up), turned nose left.
     const g = new THREE.Group();
     const level = levelFish(scene, { model: spec.url, raw: spec.raw }, 1.6);
-    // A raw dump export (the village's fish, the sea creatures) comes out of levelFish belly up and tail first (its
-    // calibration turns it the wrong way): righted for the picture. Ours (the new world's fish) are in frame.
-    if (spec.raw) level.rotation.x = Math.PI;
+    // In the village a raw dump export comes out of levelFish belly up and tail first (its calibration, RAW_TURN_X,
+    // turns it the wrong way there): righted for the picture.
+    if (spec.raw && RAW_TURN_X > 0) level.rotation.x = Math.PI;
     g.add(level);
     g.rotation.y = -Math.PI / 2;
     return matte(g);
