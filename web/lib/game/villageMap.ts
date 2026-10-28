@@ -1,5 +1,5 @@
 /**
- * The member island's map model (specs/island-painter.md, rows 241, 246, 321): the terrain grid in the
+ * The member island's map model (archive/village/island-painter.md, rows 241, 246, 321): the terrain grid in the
  * `island-map.json` document format plus an object layer. Every building, tree, prop, table, resident anchor, spawn,
  * puddle and bug spot is an object, in world coordinates; what an object IS (its model, footprint, door) stays in code,
  * keyed by its kind and id. The member island is the new world (web/data/world, specs/world-editor.md); the cell

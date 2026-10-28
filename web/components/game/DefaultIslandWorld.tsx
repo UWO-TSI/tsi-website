@@ -282,7 +282,7 @@ function gullPerchSpots(v: Village, ground: (x: number, z: number) => number): [
 }
 
 /**
- * The village as this scene uses it, all from the map file (specs/island-painter.md):
+ * The village as this scene uses it, all from the map file (archive/village/island-painter.md):
  * walking, objects, doors, spawns, nodes, water and the size-dependent settings.
  * Built once per loaded map; nothing here is placed relative to the local player.
  */
@@ -687,7 +687,7 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {notice && <GLBProp url={NOTICE_BOARD_URL} position={at(notice)} rotation={[0, Math.PI + (notice.yaw ?? 0), 0]} />}
     {board && <GLBProp url={CATCH_BOARD_URL} position={at(board)} rotation={[0, Math.PI + (board.yaw ?? 0), 0]} />}
     {missions && DROPS.combat && <GLBProp url={NOTICE_BOARD_URL} position={[missions.at[0], ground(...missions.at), missions.at[1] + 0.3]} rotation={[0, missions.yaw, 0]} />}
-    {layout.dock && <Wharf dock={layout.dock} light={light} place="village" dressed={!layout.dock.y} />}
+    {layout.dock && <Wharf dock={layout.dock} light={light} place="village" />}
     {layout.landmarks.filter(l => SIGNS[l.id] && !opened.includes(l.id as WorldGoalId)).map(l => <LandmarkTag key={l.id} position={[l.x, ground(l.x, l.z) + (l.half && l.half[0] > 1 ? 3.6 : 2.3), l.z - (l.half?.[1] ?? 0)]} closed={!l.open}>
       {SIGNS[l.id]}
     </LandmarkTag>)}

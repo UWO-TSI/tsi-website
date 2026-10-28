@@ -6,7 +6,26 @@ Read first: `web/lib/game/world/active.ts`, `web/lib/game/villageMap.ts`, `web/l
 
 ## Status
 
-Started 2026-10-28. Step 1 (the map) in progress.
+Head: see `git log` (milestone 1 `bebe67a4`, main de87c07f merged `1e40fd1f`). Done:
+- `village()` starts on the new world's cell view (cells.json + world.json; lib/game/villageMap.ts), the server (rolls.ts) judges it unconditionally, `loadGameWorld` always loads (a failed load shows "Reload island", no fallback). `active.ts` is `worldModel(url)` only. One arrival route (`routes/new.ts`).
+- The title loads the member world (`loadGameWorld`, reused after Let's Play); its shots are staged in the HQ's frame (`components/title/shots.ts atHq`).
+- Retired and moved to `archive/village/` (README): village-map.json, island-map.json, world-map.json, the v1 proposals, the four specs, the wharf dressing and rowboat GLBs. Deleted: /lab/map, mapBudget, mapHealth, map-budget, author-elevation, preview-map, coast, islandMap.test, proposals (+ editor hooks), terrainV2Draft, convert chain + convert-world, api/lab/world-map, draft_from_png, propose_v1, the wharf's `dressed` dressing (finger pier, lanterns, rowboats), residentSpots/anchorAt/SHARED_SPACING, villageJson, turnQuarter, PAINTER_DRAFT_KEY, RAW_TURN_X's village turn. /lab/island = the member island + `?fixture=terrain`.
+- Schedules: pond → beach, path → plaza (residentRoster, content-defaults); test that every schedule place resolves on the new world. residentHome and placeAt lost their village branches.
+- perf: the village and v2cells scenes are gone (perf-bench, perf-check, budget.ts); v2 is the member island.
+- Ledger row 321.
+
+### Skipped tests: new-world gaps for a follow-up lane (coordinator, 2026-10-28)
+
+Each is `it.skip` with a `// new world: ...` note.
+- lib/game/halloween.test.ts: pumpkins stand by only 7 of 59 lamps.
+- lib/game/residentRoutine.test.ts: 7 walks pass through a solid; the night owl's bench isn't under a lamp (20.6 u off).
+- lib/game/ambientFauna.test.ts: a butterfly's patch check; no leaping-fish spots in open sea (0); gull circles fail the camera-reach check.
+- lib/game/defaultIsland.test.ts: bench-0 has no propFootprint (still after remodel round 3).
+- lib/net/botBrain.test.ts: the dev bots' world check (places/benches/shores); bots break the room's bounds checks; bench seat lift 0.359 vs 0.344.
+- lib/net/loopback.test.ts: loopback positions fail the area check.
+- components/game/net/drive.loopback.test.ts: no bot ends up seated (0).
+
+Kept: `web/lib/game/fixtures/village-2026-09-28.json`, a frozen cell-map test fixture that 7 cell-mechanics tests use (seabed, glints, decorative fish, casting); the game never loads it. The plain pier (`PIER_URL`, `WHARF_DECK_LOCAL`) stays for the home island and cell fixtures.
 
 ## David's decisions
 
@@ -23,15 +42,15 @@ Started 2026-10-28. Step 1 (the map) in progress.
 
 ## Next
 
-1. Map every world branch and every test that pins the village; send main the list before deleting anything.
-2. `village()` and the server judge the new world unconditionally; drop `NEXT_PUBLIC_GAME_WORLD` and the village branches.
-3. Village-only data to `archive/village/` with a README; delete village-only tests, rewrite fixture-only ones on the new world.
-4. Docs: lane rules, lanes README, CODEMAP, STATE, lane files, ledger row, CLAUDE.md lines naming the village as live or fallback.
-5. perf: drop the village scenes from `specs/perf/perf-check.mjs` and `baseline.json`; one perf:check at the end, the new world as the baseline.
-6. Gates: tsc, one vitest run, eslint on changed files, `npm run build` (flag unset), one headless smoke + screenshot in `specs/evidence/village-archive/`.
+1. Title vantage on the new world: before/after shots to `specs/evidence/village-archive/title-*.webp` (David reviews before merge).
+2. One full vitest run, `npm run build` with no flag (bundle: title / island / applicant chunks against the before numbers), one headless smoke shot of the member island.
+3. One perf:check `SCENES=v2`; write v2's rows into `specs/perf/baseline.json` by hand (keep cafe and ruins rows; drop village).
+4. Merge origin/main, commit, report.
 
 ## Tools and gotchas
 
-- Lock helper: `LANE=game/village-archive /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh heavy|devserver <cmd>`.
+- Lock helper: `LANE=game/village-archive /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh heavy|devserver <cmd>` (waits by itself; retry on exit 75; there is no queue file).
+- Tests that need the member island as the game plays it: `villageOfWorld(loadWorldFromDisk(<web>/data/world))`, or `setVillage(...)` of it at the top of the file. Bare `village()` is the cell view (no heightfield).
+- Builds need placeholder Supabase env (`NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder`) or /admin/recruit's prerender fails.
 - "village" is also the member island's area name (net protocol, `Site`, `Area`, `TripPlace`, the collections API): that's a name, not the old island. Leave it.
 - `v.terrain` branches tell a heightfield world from a cell world (labs, fixtures, the server's cell view, the title, the applicant island): not world-switch branches.

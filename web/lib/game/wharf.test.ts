@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BUOYS, FINGER, MOORED, ROWBOAT, ROWBOATS, SEA_Y, deckPieces, dockToWorld, fitPlane, floatBoat, floatBuoy, floatRowboat, mooredPose, newBoatPose, newFloat, newRide, worldToDock, type Dock } from "./wharf";
+import { BUOYS, MOORED, SEA_Y, deckPieces, dockToWorld, fitPlane, floatBoat, floatBuoy, mooredPose, newBoatPose, newFloat, newRide, worldToDock, type Dock } from "./wharf";
 import { TRAINS, waterWaveAt, waveState } from "./waves";
 import { mirrorWaterField } from "./waterField";
 import { TUNING_DEFAULTS } from "./tuning";
@@ -124,34 +124,11 @@ describe("the wharf's boat and buoys ride the waves", () => {
   });
 });
 
-// v1 water item 7: the wharf in the reference's style (art/wharf/build_wharf.py): a finger pier off the tip you can
-// walk out on, lantern poles, rowboats moored along it. Its landmark door and arrival point stay where they were.
-describe("the wharf's finger pier and rowboats", () => {
+describe("the wharf landmark", () => {
   it("keeps the wharf landmark's door and arrival point where they were", async () => {
     const { LANDMARK_INFO } = await import("./defaultIsland");
     expect(LANDMARK_INFO.wharf.door).toEqual([0, -2.5]);
     expect(LANDMARK_INFO.wharf.exit).toEqual([0, 1.1]);
-  });
-  it("moors the rowboats clear of the finger, the boat's berth and its lane", () => {
-    for (const rb of ROWBOATS) {
-      const halfLen = ROWBOAT.length / 2, halfBeam = ROWBOAT.beam / 2;
-      // Lying along the finger (bow along ±x), beside it, not on it.
-      expect(Math.abs(Math.sin(rb.yaw))).toBeGreaterThan(0.95);
-      expect(rb.z + halfBeam < FINGER.z0 || rb.z - halfBeam > FINGER.z1).toBe(true);
-      expect(rb.x + halfLen).toBeLessThan(FINGER.x1);
-      expect(Math.hypot(rb.x - MOORED.x, rb.z - MOORED.z)).toBeGreaterThan(4);
-      for (const [bx, bz] of BUOYS) expect(Math.hypot(rb.x - bx, rb.z - bz)).toBeGreaterThan(4);
-      // Its line to a post on the finger that stands on its side.
-      expect(FINGER.postX).toContain(rb.post[0]);
-    }
-  });
-  it("floats the rowboats on the same waves as everything else, gently", () => {
-    const f = newFloat();
-    for (const rb of ROWBOATS) for (let t = 0; t < 30; t += 0.5) {
-      floatRowboat(VILLAGE, rb, waveState(SEA, t), f);
-      expect(Math.abs(f.y - SEA_Y)).toBeLessThanOrEqual(RANGE + 1e-9);
-      expect(Math.abs(f.pitch) + Math.abs(f.roll)).toBeLessThan(0.15);
-    }
   });
 });
 

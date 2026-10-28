@@ -49,8 +49,6 @@ export const GAME_ASSETS: readonly string[] = [
   "/assets/acnh/props/boat.glb",
   "/assets/game/props/buoy.glb",
   "/assets/game/wharf/pier.glb",
-  "/assets/game/wharf/wharf-dressing.glb",
-  "/assets/game/wharf/rowboat.glb",
   "/assets/fauna/seagull.glb",
   "/assets/acnh/critters/common-butterfly.glb",
   "/assets/acnh/critters/agrias-butterfly.glb",
