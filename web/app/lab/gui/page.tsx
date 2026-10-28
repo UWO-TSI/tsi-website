@@ -47,7 +47,7 @@ function PrintedShow() {
   useEffect(() => { const i = window.setInterval(() => setT(v => (v + 1) % 6), 1000); return () => window.clearInterval(i); }, []);
   return <div style={{ display: "grid", placeItems: "center", minHeight: "100%", padding: 24 }}>
     <PrintedCard key={t === 0 ? "a" : "b"} band="Tethos Island" kind="Resident" picture="M" printing={t < 2} stamp={t >= 2 ? { top: "Tethos Island", word: "Resident" } : null}
-      rows={[["World name", "Marlowe"], ["Birthday", "March 14"], ["Spirit animal", "Sea otter"], ["Resident since", "October 28, 2026"], ["Friend code", "TSI-4KQ7"]]} />
+      rows={[["World name", "Marlowe"], ["Birthday", "March 14"], ["Spirit animal", "Sea otter"], ["Resident since", "October 28, 2026"], ["Friend code", "K7QM-4R2X"]]} />
   </div>;
 }
 

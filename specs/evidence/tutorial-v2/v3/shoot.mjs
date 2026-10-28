@@ -68,13 +68,15 @@ async function walk(page, P, part) {
     for (let k = 1; k < 14 && await talking(); k++) {
       said.push(await T(() => document.querySelector("[data-testid=talk-box] [aria-live]")?.textContent ?? ""));
       await page.keyboard.press("e"); await sleep(200);
-      const ready = await page.waitForSelector("[data-testid=talk-box][data-phase=speaking][data-ready]", { timeout: 6000 }).then(() => true, () => false);
+      // The next line typed out, or the box gone (a card may open straight after it: don't miss it).
+      const ready = await page.waitForFunction(() => !document.querySelector("[data-testid=talk-box]") || !!document.querySelector("[data-testid=talk-box][data-phase=speaking][data-ready]"), null, { timeout: 6000, polling: 30 })
+        .then(() => page.$("[data-testid=talk-box]").then(Boolean), () => false);
       if (!ready) break;
       if (every || names[k]) { await sleep(names[k] ? 1300 : 250); await shot(page, `${P}-${names[k] ?? `${name}-${k + 1}`}`); }
     }
     log.push({ talk: name, said });
     await page.waitForFunction(() => !document.querySelector("[data-testid=talk-box]"), null, { timeout: 15000 }).catch(() => {});
-    await sleep(500);
+    await sleep(150);
   };
 
   // In: the creator's Yes, the crossing skipped, ashore.
@@ -98,17 +100,19 @@ async function walk(page, P, part) {
   await page.keyboard.press("e");
   await talkThrough("01-dock-talk", true);
   await stage("dockNew", "task");
-  await sleep(1200);
-  await shot(page, `${P}-02-dock-jump-chip`);
-  // A real hop: in front of the box, facing it, walk on and jump.
+  // A real hop: in front of the box, walk on toward it and jump (the camera's way round tried both ways).
   const box = dock.task.at, before = dock.task.wait[0], yaw = Math.atan2(box.x - before.x, box.z - before.z);
-  await go(before.x, before.z, yaw + Math.PI);
-  await T(y => { window.__move.sim.current.state.yaw = y; }, yaw).catch(() => {});
-  await sleep(500);
-  await page.keyboard.down("w"); await sleep(120); await page.keyboard.press(" "); await sleep(160);
-  await page.screenshot({ path: `${OUT}/${P}-03-dock-hop.png` });
-  await sleep(500); await page.keyboard.up("w");
-  const hopped = await page.waitForFunction(() => { const t = window.__tutorial?.(), s = window.__arrivalStops?.(); return t && s?.[t.stop]?.id !== "dockNew"; }, null, { timeout: 4000, polling: 50 }).then(() => true, () => false);
+  let hopped = false;
+  for (const [k, y] of [yaw + Math.PI, yaw].entries()) {
+    await go(before.x, before.z, y);
+    await sleep(1200);
+    if (k === 0) await shot(page, `${P}-02-dock-jump-chip`);
+    await page.keyboard.down("w"); await sleep(140); await page.keyboard.press(" ");
+    await strip(page, `${P}-03-dock-hop`, 4, 110);
+    await sleep(300); await page.keyboard.up("w");
+    hopped = await page.waitForFunction(() => { const t = window.__tutorial?.(), s = window.__arrivalStops?.(); return t && s?.[t.stop]?.id !== "dockNew"; }, null, { timeout: 3000, polling: 50 }).then(() => true, () => false);
+    if (hopped) break;
+  }
   if (!hopped) { log.push({ hop: "teleported over the box" }); await go(box.x, box.z, yaw); }
   log.push({ hopped });
   await stage("dash", "task");
@@ -318,8 +322,9 @@ if (SCENES.includes("kit")) {
   for (const [id, n, every] of [["key-board", 8, 400], ["fly-in", 10, 300], ["quest-check", 8, 220], ["printed-card", 8, 350]]) {
     const ctx = await browser.newContext({ viewport: { width: 1200, height: 760 } });
     const page = await ctx.newPage();
-    await page.goto(`${HOST}/lab/gui?only=${id}`, { waitUntil: "networkidle" }).catch(() => {});
-    await sleep(800);
+    await page.goto(`${HOST}/lab/gui?only=${id}`, { waitUntil: "domcontentloaded" }).catch(() => {});
+    // The stand-in world behind the overlays loads first.
+    await sleep(9000);
     await strip(page, `k-${id}`, n, every);
     await ctx.close();
   }
