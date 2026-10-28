@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { FISH } from "../fishing";
+import { FISH, RAW_TURN_X } from "../fishing";
 import { GAME_WORLD, worldModel } from "./active";
 
 describe("worldModel", () => {
@@ -25,5 +25,11 @@ describe("worldModel", () => {
     const ours = FISH.filter(f => f.model.startsWith("/assets/game/remodel/"));
     expect(ours.length).toBe(GAME_WORLD === "new" ? 81 : 0);
     expect(ours.filter(f => f.raw)).toEqual([]);
+  });
+  it("hangs a raw export (head +z, back +y) head up with its back toward -z in the new world (the sea creatures)", () => {
+    const turn = ([x, y, z]: number[]) => [x, y * Math.cos(RAW_TURN_X) - z * Math.sin(RAW_TURN_X), y * Math.sin(RAW_TURN_X) + z * Math.cos(RAW_TURN_X)].map(v => Math.round(v));
+    const [head, back] = [turn([0, 0, 1]), turn([0, 1, 0])];
+    if (GAME_WORLD === "new") expect([head, back]).toEqual([[0, 1, 0], [0, 0, -1]]);
+    else expect(head).toEqual([0, -1, 0]); // the village as it shipped: head down
   });
 });
