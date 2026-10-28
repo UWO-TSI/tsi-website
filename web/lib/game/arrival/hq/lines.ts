@@ -142,7 +142,7 @@ export const TOOL_LINES: Readonly<Record<string, { title: string; step: string; 
       "No? You'll want a net. Here, my spare. It has seen a few summers.",
       "Catch any bug you like. Then have a proper look at it before you decide what it's for.",
     ],
-    during: ["Any bug at all. The flowers by the pond are busy this time of day."],
+    during: ["Any bug at all. The meadow flowers are busy this time of day."],
     given: "Odile handed you her spare bug net.",
     done: "The bug net is yours now. Odile says keep it.",
   },
