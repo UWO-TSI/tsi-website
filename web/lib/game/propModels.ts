@@ -113,6 +113,8 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // x by the span / 4; the wall banner's origin is its bracket's plate on a wall in the x-y plane, the banner out along +z.
   ...Object.fromEntries(["plaza-fountain", "bunting-string", "banner-pole", "flag-pole", "wall-banner", "fruit-stall", "fruit-barrel", "fruit-crate",
     "flower-planter", "flower-pot", "round-planter", "planter-bench", "market-sign"].map(m => [m, `${P}${m}.glb`])),
+  // game/remodel (art/remodel/build_bench.py): the plaza's backless park bench, the seat top at 0.5 (BENCH_SEAT_TOP).
+  "plaza-bench": `${P}plaza-bench.glb`,
   // game/wharf-art: the dock decor (art/wharf/build_dock_decor.py), on the deck's top at y 0: a roped pile standing 0.9 over
   // the deck (down into the sea, like wharf-piling), a rope net with floats between posts at x -1 and +1, a life ring upright
   // in x-y (its foot at the origin: lean it or hang it), a net heap, crates under a net and under a cloth, a crate of fish

@@ -349,6 +349,15 @@ const lamp = (model: keyof typeof NEW_LAMPS, x: number, z: number, tx: number, t
 const BUILDING_SCALE = 1.32, HOUSE_SCALE = 1.15;
 /** The fountain in the plaza's middle (David's plaza-fountain reference), 7.2 across. */
 const FOUNTAIN_SCALE = 0.75;
+/**
+ * A sittable bench on the plaza's edge at `deg` round it (David, round 3: "make sure the bench location and orientation
+ * is fitting"): on the stone just inside the rim, running along it, its back to the grass and its front (benchSeat's
+ * local +z) at the fountain. Either side of the way in from the jetty and of the way to HQ, a flag pole behind each.
+ */
+const rimBench = (deg: number) => {
+  const a = (deg * Math.PI) / 180, x = +(PX + 11 * Math.cos(a)).toFixed(2), z = +(PZ + 11 * Math.sin(a)).toFixed(2);
+  return { x, z, yaw: +Math.atan2(PX - x, PZ - z).toFixed(4) };
+};
 const LAYOUT: Record<string, { x: number; z: number; yaw?: number; scale?: number; model?: string }> = {
   wharf: { ...DOCK, model: "jetty" }, default: { x: SHORE_X - 6, z: DOCK.z },
   plaza: { x: PX, z: PZ }, monument: { x: PX - 8.5, z: PZ },
@@ -359,7 +368,7 @@ const LAYOUT: Record<string, { x: number; z: number; yaw?: number; scale?: numbe
   oracle: { x: +mt(-2, -152)[0].toFixed(2), z: +mt(-2, -152)[1].toFixed(2), yaw: Math.PI },
   beach: { x: -8, z: 106 },
   "study-0": { x: PX - 5, z: PZ - 10 }, "study-1": { x: PX + 11, z: PZ - 10 }, "study-2": { x: PX - 5, z: PZ + 10 }, "study-3": { x: PX + 11, z: PZ + 10 },
-  "bench-0": { x: PX - 9, z: PZ - 4 }, "bench-1": { x: PX - 9, z: PZ + 4 }, "bench-2": { x: PX + 13.5, z: PZ - 6 }, "bench-3": { x: PX + 13.5, z: PZ + 6 },
+  "bench-0": rimBench(-152), "bench-1": rimBench(152), "bench-2": rimBench(-28), "bench-3": rimBench(28),
 };
 
 type Obj = World["objects"][number];
