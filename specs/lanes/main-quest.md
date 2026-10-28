@@ -33,8 +33,10 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 ## Status
 
-Branch game/main-quest (head: see git log). Merged tutorial-v2's guide arrow (203f8603). Gates at 311b5b5c: tsc clean,
-vitest 3498 passed on both worlds (village and NEXT_PUBLIC_GAME_WORLD=new), the SQL launch chain clean.
+Branch game/main-quest (head: see git log). Merged tutorial-v2's guide arrow (203f8603). Gates: at 311b5b5c tsc clean and
+vitest 3498 passed on both worlds; at b495f4dc tsc clean, vitest 366 of 368 files on each world with only load
+timeouts (loopback, worldFx leaves, cells node ids, walk decks: 5 s limits at load average 6 to 12), the SQL launch
+chain clean. Ready for review; waiting on David.
 
 - **Chapter engine** (`web/lib/progression/chapters.ts` STEP_RULES): steps are counted from server facts
   (`lib/progression/facts.ts`), stored by an action, or the finish. Personal chapters 1 to 6 come before the club's
@@ -51,7 +53,8 @@ vitest 3498 passed on both worlds (village and NEXT_PUBLIC_GAME_WORLD=new), the 
   iron (clay, gold, crystal moved to biome `mountain`). Held kind `pickaxe` in the net protocol.
 - **Dig spots** (`digSpots()` in `lib/game/islandNodes.ts`), 8 on sand and 8 on soil read off the painted map; seven
   buried finds (`BURIED_FINDS`); the server's cell view carries sand and soil (`data/world/cells.json` regenerated).
-  The marks and holes were invisible (the pack sprites never drew): now plain geometry (a crack star, a fading disc).
+  The marks are a seeded crack star and a dug hole a fading disc (plain geometry, lib/game/digMark.ts). The server's
+  cell view keeps sand and soil for the dig spots only (`Village.digSurface`); its coast stays on plain land.
 - **Bug catching**: a missed swing startles nearby bugs, an escape says "It got away!", a catch sparkles.
 - **x-teachers**: a chapter's people stay at its place all day (`questPosts`). New world stand-ins (David: "pond only
   in mountain"): a pond stop is spent on the **beach**, a path stop on the **plaza** (`placeAt` STAND_IN).
@@ -63,8 +66,8 @@ vitest 3498 passed on both worlds (village and NEXT_PUBLIC_GAME_WORLD=new), the 
 
 ## Next
 
-1. Check the dig marks and the pickaxe in the hand in a short browser batch; commit; report.
-2. After review: David's notes.
+1. David's review notes (the coordinator relays them).
+2. Unverified: the pickaxe in the hand reads from the side shots only as a held tool, not clearly; check on review.
 
 ## Tools and gotchas
 
@@ -75,6 +78,7 @@ vitest 3498 passed on both worlds (village and NEXT_PUBLIC_GAME_WORLD=new), the 
 - `scripts/world-cells.ts` regenerates `web/data/world/cells.json`; `node scripts/gen-seeds.mjs` writes a NEW seed.
 - `talkStore.quest` (main quest) is consulted before `talkStore.script` (tool teachers) in `NPC.tsx`.
 - Juno stands by a tree in the village: approached from the front, "Shake the tree" takes E; from the side it's her.
+- Evidence shots: never put the thing to show straight ahead of the player; the camera sits behind and the body hides it.
 
 ## Rules
 
