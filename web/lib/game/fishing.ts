@@ -153,11 +153,7 @@ const SPECIES = new Map(ROSTER.map((s) => [s.key, s]));
 const hoursLabel = ({ hours: [a, b], rainAnyHour, weather }: { hours: [number, number]; rainAnyHour: boolean; weather: string[] }) =>
   `${a}-${b}h${rainAnyHour ? " or rain" : ""}${weather.length ? `, ${weather.join(" or ")} only` : ""}`;
 
-/**
- * Every species, with the roster's rarity, size, habitat and hours. In the new world the fish are our tweaked models
- * (worldModel, art/remodel/build_fish.py), already in the game's frame (head up, back toward -z, game scale), so none
- * of them is raw there.
- */
+/** Every species, with the roster's rarity, size, habitat and hours; in the new world the fish are our tweaked models (worldModel, art/remodel/build_fish.py), already in the game's frame, so none of them is raw there. */
 export const FISH: FishDef[] = [...CORE_FISH, ...EXTRA_FISH, ...SEA_CREATURES].map(f => {
   const s = SPECIES.get(f.key);
   if (!s?.size) throw new Error(`${f.key}: a reel fish needs a roster row with a size`);

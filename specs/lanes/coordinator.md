@@ -401,3 +401,31 @@ David: "why are we using the old island for some of these artifcats, it should n
 - Dead-code review: the archive lane also takes every retired map (/lab/map whole, island-map.json, world-map.json and the v2 convert chain, the proposals) and re-points four tests at the live world. Dash and glider were locked forever (no caller of unlockMove): the tutorial dock beat and daily-social's "dash for everyone" fix dash.
 - QuestCheck (the quest-complete check-mark moment, `tsi:quest-complete`) belongs to tutorial-v2. main-quest fires the event on chapter completion; check the sequence after both merge.
 - Open question for David: HQ has no job board or past-projects display, though his farewell note assumes both. Add them as HQ stations? Until he answers, Alice names the notice board, the trophy case and the Founder's desk.
+
+## 2026-10-28 codebase review: cleanup plan
+
+The four reports (assets, dead code, UI, docs) are summarised here; the full text is in this session's transcript.
+
+1. **game/village-archive (running):** the village plus every retired map (/lab/map, island-map.json, world-map.json and the v2 convert chain, proposals), the title moved to the new world, four tests re-pointed, and the perf baseline set on the new world.
+2. **cleanup lane (after village-archive merges, light):**
+   - Code safe to delete, about 2,950 lines:
+     - author-elevation.mjs, preview-map, coast.ts, /lab/icon and _render-icons, WharfShackInterior, npc chatClient, mobilePresence, convert-world.ts;
+     - preview-sky and preview-variants, extract-fantasy-sky, the three fbx-to-glb copies, /dev/playground;
+     - the dead helpers isTreat, SHOP_FLOORS, swellFade, PER_PLAYER and ?rain=1.
+   - art/characters/base v3, v4, v5, ref_girl, base_body and turntable builders and outputs, plus v7 locks.py and hair_styles.py: 4,324 lines, 15.1 MB.
+   - Unreferenced game assets, 15.9 MB: acnh/fall, acnh/river, acnh road glbs, unused terrain/road pngs, cliff 5-a-0 and 6-a-0, 7 unused acnh buildings, 9 furniture, 22 props, 4 plants, 113 dump icons (check prod rows first), public/assets/buildings, nature except grass-tufts, the prototype and npc pngs, v7_clips.glb, the old sky webps and layers, kunai, road-brick-normal, 3 cut-part icons.
+   - After the archive: point the fish catalogues at /assets/game/remodel/fish, then delete acnh/fish (16 MB), the stranded village assets, and the preloaded-but-never-drawn fountain, fence-log-a, stump and lighthouse.
+   - About 140 docs to archive/: the 45 already marked superseded in INDEX, 61 answered *-questions.md files, done plans, and 31 lane files of finished lanes. Fix the CODEMAP, terrain-law and lore links.
+   - Out of scope (marketing): public/cards (10.2 MB), webcons2.png, globe.glb, components/ui/Lanyard and PixelLogoCarousel.
+3. **ui-unify lane (Opus, after the current UI-touching lanes merge):** move the ~14 cream menus and the HUD onto the flat kit per the bible's UI chapter. That covers:
+   - moving Button, Keycap and Dialogue from components/recruit/ui into components/gui (recruitment keeps re-exports);
+   - one /lab/gui showroom with the flat kit;
+   - the 484 hex values and 138 rgb() calls onto `--ui-*` tokens (worst: DefaultIslandWorld.module.css 219, FishingOverlay inline);
+   - deleting the old sage-HUD rules and the dead ThemeToggle;
+   - one name tag, one bubble, one progress and one keycap component.
+4. **David's calls, asked 2026-10-28:** the dump rule (dump is interim, never the close-up copy); whether the re-finished dump fish count as ours; combat parked or archived; delete the NPC AI chat; delete 7 sky variants and 3 look presets; HQ job board and projects wall; references for the bobber, bait and five dishes.
+- main-quest r2 code is at 4bb98992 (shots pending):
+  - migrations 20261028153805_main_quest_r2, then 20261028194150_catalogue_seed (regenerate on the combined tree at merge);
+  - flat kit pieces RewardPop (RewardCard renders it) and BigMoment (the level-up card);
+  - pickaxe parked behind the drop flag `cave`.
+  At merge, fold BigMoment and tutorial-v2's moments.tsx (QuestCheck) into one file in components/gui/flat.
