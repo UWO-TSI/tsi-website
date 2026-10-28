@@ -360,3 +360,6 @@ David: "why are we using the old island for some of these artifcats, it should n
   - Merge game/npc-editor (apply-residents.mjs is only there). Then apply David's Residents editor look edits (marlo, mayor, sushi-chef, wren; export the `residents` collection) on the combined tree, before the final gen-seeds.
   - daily-social's 20261028112843 seed now has a residents block with the new curator and marlo lines, guarded by their old seeded values. Prod still matched the old seed on 2026-10-28, checked read-only.
   - The archive lane owns the pond-to-beach and path-to-plaza schedule remap. Main only had the same-name landmark fallback, so pond stops were being skipped.
+- Remodel benches: game/remodel b8939161. Review https://claude.ai/artifact/4kbPArCyyejQoEfdR3nxsc (ids r3b-*). Once approved, all of round 3 merges.
+- daily-social 02617517: gen-seeds supports `guarded` seeds, and the residents seed is one. resident_lines_smoke.sql includes `20261028112843_catalogue_seed.sql` by name; if the final regenerate renames that seed, update that one line.
+- 2026-10-28 codebase review (David asked, ponytail): four read-only agents (assets, dead code, UI, docs). Their findings go into the design bible's UI and Art chapters and a cleanup plan. specs/design-bible.md is new: Models chapter, ledger row 319, pointer in CLAUDE.md. The archive lane uses row 320.
