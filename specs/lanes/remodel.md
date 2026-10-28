@@ -37,11 +37,23 @@ David, 2026-10-27 (night), verbatim: "I want you to go ahead and remodel some ol
 
 **Evidence** for round 2: the barrel, the rocks (in game and in Blender, old next to new), a bug in the world (new cheap) beside its close-up (old), and the fish icons before and after, in `specs/evidence/remodel/round2/`. Same gates; one `perf:check` at the end.
 
+## Round 3 (David's review of round 2, 2026-10-27; https://claude.ai/artifact/5yR9MapBKhCw5SvmpHnoxp)
+
+**Approved:** the market barrel, the gather rocks, the crawlers (cheap in the world, old up close) and the bug close-ups.
+
+**Fish icons:** approved, with a note, verbatim: "make sure the orientation of these fish models are correct". Check every one of the 81 icons, and the 3D fish too, for facing and upright: all facing the same way, belly down, none mirrored or upside down. Fix any that aren't.
+
+**Butterflies and dragonflies:** redo, verbatim: "shape should still replicate the before like gneral overall shape of wings". Keep them cheap in the world, but trace each species' wing outline from the old model: the overall shape, the proportions, the forewing and hindwing lobes, the tails where they have them. Cheap means fewer triangles, not a different silhouette.
+
+**Step 1, ship first:** merge main; put the butterflies and dragonflies back on the old models; fix the fish orientation; run the gates; commit and message the coordinator with that SHA. Then step 2: redo the flyers, and make shots of old and new wings side by side for his review.
+
 ## Status
 
-Round 2 in progress. Main (feat/game-default-island 139d3b1e) merged.
-- **Step 1 (ship-ready, sent to main):** the wiring cut to the approved models: the market cart and the lighthouse (SCENERY_URLS), the monument rope fence and all 81 fish (worldModel's REMODELLED in `lib/game/world/active.ts`). The barrel, the gather rocks and every critter back on the dump's. Deleted: the crabs (art/remodel/build_shore.py and its GLBs: David keeps the old crabs), and the round-1 barrel, rock and critter GLBs (rebuilt in step 2 from their scripts).
-- **Step 2 (in progress):** rounder barrel, rocks like the old (faceted, granite texture), cheaper world bugs with the old ones in every close-up, fish icons from the tweaked fish.
+Round 3. Main (635577f6) merged. Head: `git log -1` on game/remodel.
+- **Step 1 (ship), done:** the butterflies and dragonflies are back on the dump's in the world (worldModel's REMODELLED drops them; their round 2 GLBs deleted). The fish orientation is fixed in the new world: all 81 baked into the game's frame by `build_fish.py` (head up, back -z, game scale; the trophy arowana's pillar dropped; the counter-shade back to belly), no fish raw in the new world (`fishing.ts`), the leaping fish laid level from it (`AmbientFauna` fishBody), the icons drawn from `levelFish` nose left and back up (ray, dab, olive flounder, mitten crab from above), all 81 re-rendered. Evidence and the cause: `specs/evidence/remodel/round3/notes.md`. The village keeps the dump's raw calibration, which leaves its raw fish (and the 10 sea creatures, both worlds) upside down in the hold, tank and trophy case: a one-sign fix, not made (village unchanged); the icon stage rights raw models itself.
+- Approved and shipped in round 2: market barrel, gather rocks, crawlers (cheap in the world, old up close), the bug close-ups.
+- **Step 2 (next):** the flyers' world models with each species' old wing outline (`build_critters.py`, being rewritten to trace the old wings).
+- Gates at step 1: tsc clean; vitest 3484 passed in both worlds (the one new test fixed after the full run, rerun alone in both); eslint clean on changed files.
 
 ## David's decisions
 
@@ -49,17 +61,21 @@ Round 2 in progress. Main (feat/game-default-island 139d3b1e) merged.
 
 ## Next
 
-1. David reviews `specs/evidence/remodel/*.webp` (notes.md). Per model: approve, redo, or keep the dump's (drop its line from worldModel's REMODELLED, or its SCENERY_URLS entry).
-2. If the fish tweak reads too subtle, `art/remodel/build_fish.py` grade() and BACK are the knobs.
-3. Not done: the firefly, the village buildings, the arrival boat, the seagull, re-rendering bug and fish icons (lib/icons/manifest.ts) from our models.
+1. Step 2: run `build_critters.py -- debug <json>` to check the traced outlines, then the build; side-by-side shots old and new wings (top view and 3/4) into `specs/evidence/remodel/round3/`; wire the eight flyers back into REMODELLED (`lib/game/world/active.ts`, its test).
+2. Not done: the firefly, the village buildings, the arrival boat, the seagull.
 
 ## Tools and gotchas
+
+- Fish orientation check: `Blender -b --factory-startup -P art/remodel/fish_orient.py -- x <out> remodel|acnh [names|all] [3]` renders each fish as the tank levels it (nose left, back up when right); `3` adds views from above and below. Judge back and belly by colour, not brightness (the sun lights whatever faces up).
+- Icon runner: `/private/tmp/claude-501/remodel-work/r3/icons.sh <keys>` (dev server on 3191, new world, stops it after); run it under the devserver lock. In zsh pass keys through `bash -c '... $(cat keys.txt)'` (zsh doesn't split a variable).
 
 - Census: `PORT=3191 node ../specs/evidence/remodel/tools/census.mjs <all-stats.json> <out.json>` from web/, dev server with `NEXT_PUBLIC_GAME_WORLD=new`.
 - Stats: `node ../specs/evidence/remodel/tools/glb-stats.mjs <out.json> <dirs>` (signatures for census and ingame).
 - Renders: `Blender -b --factory-startup -P art/remodel/review.py -- <spec.json> <out-dir> [ids]` (spec in the script's docstring; the night's spec is /private/tmp/claude-501/remodel-work/spec.json).
 - In-game: `PORT=3191 node ../specs/evidence/remodel/tools/ingame.mjs <stats.json> <out-dir> before|after [ids]`. `?time=10` renders dusk; use `time=day`. Crabs and fish are hard to catch in frame (they move or sit under water).
 - Pinterest signed out gives images but no pin links: the README records image URLs and the search page.
+- In-game before frames on the current map: put the step-1 wiring back for the run (`git show 11461c48:web/lib/game/world/active.ts`, same for propModels.ts), shoot `before`, `git checkout --` them, shoot `after`. Round 2's cameras: /private/tmp/claude-501/remodel-work/ig2/cams.json.
+- Icons: `BASE=http://localhost:3191 node scripts/render-icons.mjs <keys>` from web/ with the dev server in the new world.
 - withlock.sh waits for every other lock while swap is over 9 GB: run Blender batches with run_in_background, never under a 10 minute foreground timeout.
 
 ## Rules

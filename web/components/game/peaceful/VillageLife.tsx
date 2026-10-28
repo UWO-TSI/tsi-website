@@ -22,6 +22,7 @@ import * as THREE from "three";
 import { GLBProp, NatureMushroom } from "../NatureModels";
 import { ModelFlock, addToFlock, endFlock, showOwn, startFlock, type Flock } from "../InstancedNature";
 import { SPECIES as CRITTERS } from "../Critters";
+import { worldModel } from "@/lib/game/world/active";
 import { packMap, spriteQuad, useMoveParticles } from "../movement/moveFx";
 import { useGlowParticles } from "../GlowFx";
 import { AudioManager } from "@/lib/game/audio";
@@ -57,9 +58,11 @@ const HARVEST_KEY = "tsi.forage.harvested.v1";
 function readHarvested(): Record<string, string> {
   try { return JSON.parse(localStorage.getItem(HARVEST_KEY) ?? "{}") as Record<string, string>; } catch { return {}; }
 }
-const MODEL_OF = new Map(CRITTERS.map(c => [c.key, c]));
+/** Each bug as the world draws it: in the new world our cheap model (worldModel; David, 2026-10-27: small in the world,
+ * the old one in every close-up, so the trophy case and the icons keep Critters' own). */
+const MODEL_OF = new Map(CRITTERS.map(c => [c.key, { ...c, model: worldModel(c.model) }]));
 /** A bug model at its scale: the bugs that draw together (ModelFlock). */
-const FLOCK_OF = new Map(CRITTERS.map(c => [c.key, `${c.model}|${c.scale}`]));
+const FLOCK_OF = new Map([...MODEL_OF.values()].map(c => [c.key, `${c.model}|${c.scale}`]));
 /** How near you stand to pick by hand, to shake a tree (its trunk blocks at 0.65), and to pick up what fell. */
 const REACH = 1.7, TREE_REACH = 1.25, DROP_REACH = 1.35;
 const BRANCH_URL = "/assets/game/props/branch.glb";

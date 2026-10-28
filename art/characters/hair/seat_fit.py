@@ -30,7 +30,7 @@ from head_shape import CLASSIC  # noqa: E402
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 DATA = os.path.join(HERE, "roblox_attachments.json")
-SETS = ("david", "david-b2")              # David's hair sets (wardrobe batch 2 added david-b2)
+SETS = ("david", "david-b2", "david-b3")  # David's hair sets (wardrobe batches 2 and 3 added david-b2, david-b3)
 MANIFEST = {h["id"]: dict(h, _dir=os.path.join(HERE, "source", who)) for who in SETS
             for h in json.load(open(os.path.join(HERE, "source", who, "manifest.json")))["hairs"]}
 ONLY = set(ARGS[ARGS.index("--only") + 1].split(",")) if "--only" in ARGS else None

@@ -93,7 +93,7 @@ describe("goal cycles and monument", () => {
 
 describe("seed content", () => {
   it("defaults.ts mirrors the goals and chapters seeded by 20260926150200_progression.sql (chapter 4's copy: 20260929100200; chapter 1's v1 summary: 20261013200000, its HQ copy: 20261017010000, renamed Alice: 20261027063439; the main quest: 20261027150000)", () => {
-    const sql = ["20260926150200_progression", "20260929100200_chapter4_subclass_copy", "20261013200000_v1_drop_copy", "20261017010000_hq_onboarding_copy", "20261027063439_catalogue_seed", "20261027150000_main_quest"].map((f) => readFileSync(join(__dirname, `../../supabase/migrations/${f}.sql`), "utf8")).join("\n");
+    const sql = ["20260926150200_progression", "20260929100200_chapter4_subclass_copy", "20261013200000_v1_drop_copy", "20261017010000_hq_onboarding_copy", "20261027063439_catalogue_seed", "20261028144337_main_quest"].map((f) => readFileSync(join(__dirname, `../../supabase/migrations/${f}.sql`), "utf8")).join("\n");
     const story = DEFAULT_GOALS.filter((g) => g.goal_type === "story");
     const texts = [...story.flatMap((g) => [g.slug, g.title, g.summary, g.completion_letter_subject, g.completion_letter_body]), ...DEFAULT_CHAPTERS.flatMap((c) => [c.slug, c.title, c.summary])];
     for (const t of texts) if (t) expect(sql).toContain(t.replace(/'/g, "''"));

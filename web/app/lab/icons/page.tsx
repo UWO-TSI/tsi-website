@@ -15,7 +15,7 @@ import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js
 import { iconSpecs, type IconSpec } from "@/lib/icons/manifest";
 import { CATALOGUE, EVENT_ITEMS, OWNERSHIP_ITEMS } from "@/lib/wallet/catalogue";
 import { CRAFTED_ITEMS, RECIPE_CARDS } from "@/lib/crafting/recipes";
-import { buildFishStage } from "@/components/lab/FishPreview";
+import { levelFish } from "@/components/game/peaceful/TankFish";
 import { prepareModel } from "@/lib/game/modelMaterials";
 
 const SIZE = 256, PAD = 0.08;
@@ -23,7 +23,7 @@ const SPECS = iconSpecs([...CATALOGUE, ...OWNERSHIP_ITEMS, ...EVENT_ITEMS, ...CR
 const deg = THREE.MathUtils.degToRad;
 /** From the subject toward the camera, per view (three.js: the models' fronts face +Z). */
 const VIEW: Record<IconSpec["view"], { az: number; el: number }> = {
-  "three-quarter": { az: 30, el: 24 }, profile: { az: 0, el: 4 }, above: { az: 20, el: 55 }, side: { az: 68, el: 26 }, diagonal: { az: 14, el: 16 },
+  "three-quarter": { az: 30, el: 24 }, profile: { az: 0, el: 4 }, flat: { az: 0, el: 62 }, above: { az: 20, el: 55 }, side: { az: 68, el: 26 }, diagonal: { az: 14, el: 16 },
   front: { az: 18, el: 8 }, roll: { az: 30, el: 26 }, tile: { az: 30, el: 32 },
 };
 
@@ -134,11 +134,15 @@ const textures = new THREE.TextureLoader();
 async function subjectFor(spec: IconSpec): Promise<THREE.Object3D> {
   if (spec.view === "roll" || spec.view === "tile") return finish(await textures.loadAsync(spec.url), spec.view);
   const { scene } = await loader.loadAsync(spec.url);
-  if (spec.view === "profile") {
-    // The fish stage (FishPreview): calibrated, normalised, side-on; the old dump's fish come out nose-down.
+  if (spec.view === "profile" || spec.view === "flat") {
+    // The fish level as the tank and the trophy case show it (levelFish: head along +z, back up), turned nose left.
     const g = new THREE.Group();
-    g.add(buildFishStage(scene, !!spec.raw, 1.6));
-    g.rotation.z = spec.raw ? Math.PI : 0;
+    const level = levelFish(scene, { model: spec.url, raw: spec.raw }, 1.6);
+    // A raw dump export (the village's fish, the sea creatures) comes out of levelFish belly up and tail first (its
+    // calibration turns it the wrong way): righted for the picture. Ours (the new world's fish) are in frame.
+    if (spec.raw) level.rotation.x = Math.PI;
+    g.add(level);
+    g.rotation.y = -Math.PI / 2;
     return matte(g);
   }
   const model = spec.skinned ? cloneSkinned(scene) : prepareModel(scene, spec.url);

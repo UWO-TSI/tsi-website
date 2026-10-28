@@ -18,7 +18,7 @@ const out = join(web, "public/assets/characters/v6/hair/thumbs");
 // Wardrobe batch 2: a hairstyle David priced is a shop row whose icon (lib/icons/keys.ts iconKey) is its creator tile.
 const prices = JSON.parse(readFileSync(join(web, "data/characters/batch2-pricing.json"), "utf8")).items;
 const sold = new Set(JSON.parse(readFileSync(join(web, "data/characters/character_catalog.json"), "utf8")).hair
-  .filter(p => p.full && ["coins", "gems"].includes(prices[p.key]?.mode)).map(p => p.id));   // round 2: #22's hat is an accessory icon
+  .filter(p => p.full && p.key && !["free", "skip"].includes(prices[p.key]?.mode)).map(p => p.id));   // round 2: #22's hat is an accessory icon; batch 3: unpriced ones too, ready for David's prices
 mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ headless: true, args: ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist", "--enable-gpu"] });
 const page = await browser.newPage({ viewport: { width: 1000, height: 800 }, deviceScaleFactor: 1 });
