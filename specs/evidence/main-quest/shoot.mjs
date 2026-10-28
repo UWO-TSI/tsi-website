@@ -4,7 +4,10 @@
 // `?progression=demo` (the real progression service on an in-memory store; `&chapter=` and `&tally=` set where the
 // member is). Headless Chromium, muted, under the shared browser lock.
 //   HOST=http://localhost:3147 node specs/evidence/main-quest/shoot.mjs <out_dir> <scene> [<scene> ...]
-// Scenes: flow, chapters, dig, pickaxe.
+// Scenes: flow, chapters, dig, pickaxe (the new world: run the dev server with NEXT_PUBLIC_GAME_WORLD=new); village (the
+// default world, no env: the village's one tracker line, unchanged).
+// Places are the new world's (lib/collections/rolls.ts activeVillage("new"): museum 4,70.5; dig-sand-0 -17,102;
+// dig-soil-8 67,16; rock-1 38,25.1).
 import { createRequire } from "node:module";
 import { mkdirSync, writeFileSync } from "node:fs";
 const require = createRequire("/opt/homebrew/lib/node_modules/");
@@ -81,7 +84,7 @@ async function talkTo(page, slug, name) {
 for (const scene of SCENES) {
   if (scene === "flow") {
     const { ctx, page } = await open("");
-    await go(page, -14, -8, Math.PI);
+    await go(page, 30, 46, Math.PI);
     await shot(page, "01-line", { x: 760, y: 0, width: 680, height: 200 });
     await openList(page);
     await sleep(500);
@@ -91,7 +94,7 @@ for (const scene of SCENES) {
     await shot(page, "03-arrow-to-museum");
     // To the museum: Juno takes the first catch, and chapter 1 ends with her (no report to Alice).
     await page.click("[data-testid=quest-tracker] button[aria-expanded]");
-    await go(page, 11, 4.5, 0);
+    await go(page, 4, 66, 0);
     await sleep(3000);
     await besides(page, "docent");
     await sleep(1500);
@@ -116,23 +119,30 @@ for (const scene of SCENES) {
   if (scene === "dig") {
     const { ctx, page } = await open("collections=demo&time=day", { "tsi.held.v1": JSON.stringify({ held: "shovel:shovel-basic" }) });
     // Beside the spot, the camera behind: your own body would hide a mark straight ahead.
-    await go(page, -0.4, -19, 0);
+    await go(page, -15.8, 99.5, 0);
     await sleep(2500);
     await shot(page, "20-dig-mark-sand");
-    await go(page, 2.4, -3.2, 0);
+    await go(page, 68.2, 13.5, 0);
     await sleep(2500);
     await shot(page, "21-dig-mark-dirt");
     await ctx.close();
   }
   if (scene === "pickaxe") {
     const { ctx, page } = await open("collections=demo&time=day", { "tsi.toolQuests.v1": JSON.stringify({ pickaxe: "given" }), "tsi.held.v1": JSON.stringify({ held: "pickaxe:pickaxe-basic" }) });
-    await go(page, -14.1, 2.4, Math.PI / 2);
+    await go(page, 36.6, 25.1, Math.PI / 2);
     await sleep(3000);
     await shot(page, "30-pickaxe-at-a-rock");
     // From the side: the pickaxe in the hand and the ore rock in front.
     await page.evaluate(() => { window.__orbit.orbit.target.yaw = 0.2; window.__orbit.orbit.view.yaw = 0.2; });
     await sleep(1500);
     await shot(page, "31-pickaxe-from-the-side");
+    await ctx.close();
+  }
+  if (scene === "village") {
+    // The default world: the village's line, which opens the journal (no dropdown, no chevron).
+    const { ctx, page } = await open("");
+    await shot(page, "50-village-line", { x: 760, y: 0, width: 680, height: 200 });
+    log.push({ name: "50-village-line", dropdown: !!(await page.$("[data-testid=quest-tracker] button[aria-expanded]")), label: await page.$eval("[data-testid=quest-tracker]", el => el.getAttribute("aria-label")) });
     await ctx.close();
   }
 }
