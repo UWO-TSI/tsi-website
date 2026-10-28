@@ -34,6 +34,7 @@ import { applyModelTextures, disposeModelMaterials, prepareModel } from "@/lib/g
 import { shadowClassFor } from "@/lib/game/shadows";
 import { lodOf, updateNear } from "@/lib/game/natureLod";
 import { CurvedCull, cullMeshes } from "@/lib/game/curvedCull";
+import { fxOn } from "@/lib/game/perf/fxBench";
 import { hash01 } from "@/lib/game/worldFx";
 import { addContact, modelContact } from "./ContactShadows";
 
@@ -216,9 +217,11 @@ function culledState(matrices: readonly THREE.Matrix4[], model: THREE.Object3D, 
 function frameCulled(c: Culled, matrices: readonly THREE.Matrix4[], cull: CurvedCull, camera: THREE.Camera) {
   const p = camera.position, levels = c.levels.length > 1 && updateNear(c.near, c.xyz, p.x, p.y, p.z);
   cull.update(camera);
+  // The bench's switch (lib/game/perf/fxBench.ts `viewCull`): every placement shown, as before the cull.
+  const all = !fxOn("viewCull");
   let shown = false;
   for (let i = 0; i < c.spheres.length; i++) {
-    const on = cull.visible(c.spheres[i]) ? 1 : 0;
+    const on = all || cull.visible(c.spheres[i]) ? 1 : 0;
     if (on !== c.shown[i]) { c.shown[i] = on; shown = true; }
   }
   if (levels || shown) packCulled(c, matrices, levels);
@@ -324,6 +327,12 @@ export function mergeByLook(placed: readonly (readonly [THREE.Object3D, THREE.Ma
   });
 }
 
+/** Module scope (frame loops write no hook values): each view block shown while the bent view can see it, or all of them with the bench's `viewCull` off. */
+function cullView(cull: CurvedCull, camera: THREE.Camera, view: readonly THREE.Mesh[]) {
+  if (!view.length) return;
+  if (fxOn("viewCull")) cullMeshes(cull.update(camera), view);
+  else for (const m of view) m.visible = true;
+}
 /** The blocks (world units) MergedModels `cull` joins the view by: a look's parts in a block draw as one mesh. */
 const CULL_BLOCK = 32;
 /**
@@ -351,7 +360,7 @@ export function MergedModels({ items, emissiveIntensity, cull }: { items: readon
   }, [models, urls, items, images, cull]);
   useEffect(() => () => meshes.forEach(m => m.geometry.dispose()), [meshes]);
   const curved = useMemo(() => new CurvedCull(), []);
-  useFrame(({ camera }) => { if (view.length) cullMeshes(curved.update(camera), view); });
+  useFrame(({ camera }) => cullView(curved, camera, view));
   const world = useThree(s => s.scene);
   const owner = useMemo(() => new THREE.Group(), []);
   useEffect(() => {
