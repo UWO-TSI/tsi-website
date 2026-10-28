@@ -30,6 +30,11 @@
   --ui-focus: #a8722f;
   --ui-scrim: rgb(64 52 36 / 0.3);
   --ui-shade: 114 92 78;
+  /* Paper, the material (the design bible's rule 2: only for things that are paper in the world: a printed card, a letter). */
+  --ui-paper: #fffaf0;
+  --ui-paper-edge: #e8dcc0;
+  --ui-paper-ink: #3a3025;
+  --ui-stamp: #c4513d;
   --ui-stage: radial-gradient(ellipse 24% 4.5% at 50% 87%, rgb(114 92 78 / 0.2), rgb(114 92 78 / 0.08) 55%, transparent 100%),
     linear-gradient(180deg, #fffff7 0%, #fffff7 60%, #f8f4e8 84%, #eee9ca 100%);
 }

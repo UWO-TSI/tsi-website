@@ -56,14 +56,4 @@ export function tourTick(p: TourProgress, now: number): TourProgress {
   return p.holdFrom !== null && now - p.holdFrom >= HOLD_MS ? { step: p.step + 1, holdFrom: null } : p;
 }
 
-/** The keyboard as drawn: the rows of a US QWERTY board, each key its `KeyboardEvent.key` and its width in key units. */
-export type BoardKey = { key: string; label: string; w?: number };
-export const KEYBOARD: readonly (readonly BoardKey[])[] = [
-  [{ key: "escape", label: "Esc", w: 1.25 }, ..."1234567890".split("").map(c => ({ key: c, label: c })), { key: "-", label: "-" }, { key: "=", label: "=" }, { key: "backspace", label: "Delete", w: 1.75 }],
-  [{ key: "tab", label: "Tab", w: 1.5 }, ..."qwertyuiop".split("").map(c => ({ key: c, label: c.toUpperCase() })), { key: "[", label: "[" }, { key: "]", label: "]" }, { key: "\\", label: "\\", w: 1.5 }],
-  [{ key: "capslock", label: "Caps", w: 1.75 }, ..."asdfghjkl".split("").map(c => ({ key: c, label: c.toUpperCase() })), { key: ";", label: ";" }, { key: "'", label: "'" }, { key: "enter", label: "Enter", w: 2.25 }],
-  [{ key: "shift", label: "Shift", w: 2.25 }, ..."zxcvbnm".split("").map(c => ({ key: c, label: c.toUpperCase() })), { key: ",", label: "," }, { key: ".", label: "." }, { key: "/", label: "/" }, { key: "shift-r", label: "Shift", w: 2.75 }],
-  [{ key: "control", label: "Ctrl", w: 1.5 }, { key: "alt", label: "Alt", w: 1.25 }, { key: "meta", label: "Cmd", w: 1.5 }, { key: " ", label: "", w: 6.25 }, { key: "meta-r", label: "Cmd", w: 1.5 }, { key: "alt-r", label: "Alt", w: 1.25 }, { key: "arrowleft", label: "←" }, { key: "arrowright", label: "→" }],
-];
-
-export const UI_TOUR = { eyebrow: "Alice's keys", press: "Press", hold: "Hold", skip: "Skip", done: "All done" } as const;
+export const UI_TOUR = { eyebrow: "Alice's keys", press: "Press", hold: "Hold", skip: "Skip", nice: "Nice", done: "All done" } as const;

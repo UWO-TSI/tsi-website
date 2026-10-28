@@ -21,6 +21,7 @@ import { Badge, Banner, Button, Card, ConfirmDialog, Counter, Dialogue, Empty, E
 import { FISH } from "@/lib/game/fishing";
 import { iconUrl } from "@/lib/icons/keys";
 import { useSearch } from "@/lib/game/useMediaQuery";
+import { FlyIn, GhostButton, KeyBoard, PrintedCard, QuestCheck, Spotlight } from "@/components/gui/flat";
 import s from "./showroom.module.css";
 
 /** Re-mounts its child every `ms` (an overlay that finishes and closes itself stays on show). */
@@ -30,7 +31,32 @@ function Loop({ ms, children }: { ms: number; children: (done: () => void) => Re
   return <div key={n} style={{ display: "contents" }}>{children(() => {})}</div>;
 }
 
+/** The kit's moments (components/gui/flat/moments.tsx), each looping through its states. */
+function KeyBoardShow() {
+  const [t, setT] = useState(0);
+  useEffect(() => { const i = window.setInterval(() => setT(v => v + 1), 120); return () => window.clearInterval(i); }, []);
+  const k = t % 40, hold = k < 20;
+  return <Spotlight open label="Keys" eyebrow="Alice's keys · 1 / 9" title={hold ? "Your tools" : "Your bag"} lead={hold ? <>Hold <Keycap>Tab</Keycap></> : <>Press <Keycap>I</Keycap></>}
+    text={hold ? "Hold for your tool wheel." : "Everything you're carrying."} steps={{ count: 9, at: hold ? 0 : 4 }} footer={<GhostButton>Skip</GhostButton>}>
+    <KeyBoard lit={hold ? "tab" : "i"} hold={hold} fill={hold ? Math.min(1, Math.max(0, (k - 4) / 12)) : 0} won={hold ? k >= 16 : k >= 34}
+      done={hold ? [] : ["tab", "g", "h", "enter"]} down={new Set(hold ? (k >= 4 && k < 16 ? ["tab"] : []) : (k >= 32 && k < 34 ? ["i"] : []))} />
+  </Spotlight>;
+}
+function PrintedShow() {
+  const [t, setT] = useState(0);
+  useEffect(() => { const i = window.setInterval(() => setT(v => (v + 1) % 6), 1000); return () => window.clearInterval(i); }, []);
+  return <div style={{ display: "grid", placeItems: "center", minHeight: "100%", padding: 24 }}>
+    <PrintedCard key={t === 0 ? "a" : "b"} band="Tethos Island" kind="Resident" picture="M" printing={t < 2} stamp={t >= 2 ? { top: "Tethos Island", word: "Resident" } : null}
+      rows={[["World name", "Marlowe"], ["Birthday", "March 14"], ["Spirit animal", "Sea otter"], ["Resident since", "October 28, 2026"], ["Friend code", "TSI-4KQ7"]]} />
+  </div>;
+}
+
 const OVERLAYS: { id: string; title: string; render: () => ReactNode }[] = [
+  { id: "key-board", title: "Keyboard (Spotlight and KeyBoard)", render: () => <KeyBoardShow /> },
+  { id: "fly-in", title: "Fly-in", render: () => <Loop ms={3600}>{done => <><span data-demo-slot style={{ position: "absolute", top: 16, right: 16, padding: "6px 12px", borderRadius: 999, background: "var(--ui-card)" }}><Coins size={16} /> 1,240</span>
+    <FlyIn icon={<Coins size={52} />} name="Coins" text="For things on the island" to={["[data-demo-slot]"]} onDone={done} /></>}</Loop> },
+  { id: "quest-check", title: "Quest complete", render: () => <Loop ms={3000}>{() => <QuestCheck eyebrow="Quest complete" title="Walk with Bram" />}</Loop> },
+  { id: "printed-card", title: "Printed card", render: () => <PrintedShow /> },
   { id: "fish-reveal", title: "Fish reveal", render: () => <Loop ms={9000}>{done => <FishReveal fish={FISH.find(f => f.rarity === "rare") ?? FISH[0]} sizeCm={42} onDone={done} />}</Loop> },
   { id: "oracle-reveal", title: "Oracle reveal card", render: () => <FamilyReveal family="Warden" type="INFP" onContinue={() => {}} /> },
   { id: "rune", title: "Rune overlay", render: () => <Loop ms={30000}>{done => <IncantationOverlay runeId="cross" title="Cross" effect="A warding cross" onDone={done} onCancel={done} />}</Loop> },

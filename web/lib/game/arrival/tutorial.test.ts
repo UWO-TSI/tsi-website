@@ -54,8 +54,9 @@ describe("the walk-along v2's route (data per world)", () => {
 
   it("has every stop's lines and tracker labels, so a new map's route needs no code", () => {
     for (const r of Object.values(ROUTES)) for (const stop of r.stops) {
-      expect(STOP_LINES[stop.id]?.length, stop.id).toBeGreaterThan(0);
-      expect(TRACKER[stop.id], stop.id).toBeTruthy();
+      // An `auto` stop (straight on, no E) needs no tracker step, and lines only if it talks.
+      if (!stop.auto) expect(STOP_LINES[stop.id]?.length, stop.id).toBeGreaterThan(0);
+      if (!stop.auto) expect(TRACKER[stop.id], stop.id).toBeTruthy();
       if (stop.task) expect(TRACKER[stop.task.id], stop.task.id).toBeTruthy();
     }
   });

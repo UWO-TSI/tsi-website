@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { HOLD_MS, KEYBOARD, tourInput, tourSteps, tourTick, type TourProgress } from "./uiTour";
+import { HOLD_MS, tourInput, tourSteps, tourTick, type TourProgress } from "./uiTour";
+import { KEYBOARD } from "@/components/gui/flat/moments";
 import { DEFAULT_WHEEL_KEYS } from "@/lib/game/movement/keys";
 import { DEFAULT_KEYS } from "@/lib/identity/settings";
 

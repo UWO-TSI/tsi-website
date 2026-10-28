@@ -9,14 +9,12 @@
  * Signed out (a preview) nothing is saved. Copy: lib/game/arrival/hq/lines.ts ID_CARD.
  */
 import { useEffect, useState, type FormEvent } from "react";
-import { IdCard as IdIcon } from "lucide-react";
-import { Button, Field } from "@/components/gui";
+import { Field } from "@/components/gui";
+import { DarkButton, GhostButton, PrintedCard, Spotlight, StatusLine } from "@/components/gui/flat";
 import { AudioManager } from "@/lib/game/audio";
-import { useWorldDialog } from "@/lib/game/useWorldDialog";
 import { ID_CARD } from "@/lib/game/arrival/hq/lines";
 import { refreshIdentity } from "@/lib/game/identity";
 import { refreshCard } from "@/lib/net/netStore";
-import s from "./IdCard.module.css";
 
 /** The print's beats (ms): out of the slot, then the stamp, then Edit and Done. */
 const PRINT_MS = 1500, STAMP_MS = 650;
@@ -56,7 +54,6 @@ export default function IdCard({ open, name, signedIn, friendCode, onDone }: {
   const [a, setA] = useState<Answers>({ name: name ?? "", birthday: "", spirit: "" });
   const [was, setWas] = useState<Answers>(a);
   const [saved, setSaved] = useState(true);
-  const ref = useWorldDialog<HTMLDivElement>(open, () => {}, [], true);
   // What the account already has (another device, an earlier visit).
   useEffect(() => {
     if (!open || !signedIn) return;
@@ -79,40 +76,26 @@ export default function IdCard({ open, name, signedIn, friendCode, onDone }: {
     window.setTimeout(() => { setPhase("card"); AudioManager.playSFX("confirm", { gain: 0.5 }); }, PRINT_MS + STAMP_MS);
   };
   const shownName = a.name.trim() || name || ID_CARD.noName;
-  return <div ref={ref} tabIndex={-1} className={`${s.layer} gui`} role="dialog" aria-modal="true" aria-labelledby="hq-id-title" data-gui-overlay data-testid="hq-id" data-phase={phase}>
-    {phase === "form" ? <form className={s.form} onSubmit={print}>
-      <p className={s.eyebrow}>{ID_CARD.eyebrow}</p>
-      <h2 id="hq-id-title"><IdIcon size={22} aria-hidden /> {ID_CARD.title}</h2>
-      <Field label={ID_CARD.name} hint={ID_CARD.nameHint} value={a.name} placeholder={ID_CARD.noName} maxLength={24} disabled={!signedIn}
+  const form = phase === "form", stamped = phase === "stamp" || phase === "card";
+  return <Spotlight open={open} label={ID_CARD.title} eyebrow={ID_CARD.eyebrow} title={ID_CARD.title} testId="hq-id" dataset={{ "data-phase": phase }}
+    footer={form ? <DarkButton form="hq-id-form" type="submit" data-testid="hq-id-print">{ID_CARD.print}</DarkButton>
+      : phase === "card" ? <>
+        <GhostButton onClick={() => setPhase("form")} data-testid="hq-id-edit">{ID_CARD.edit}</GhostButton>
+        <DarkButton onClick={() => { setPhase("form"); onDone(); }} autoFocus data-testid="hq-id-done">{ID_CARD.done}</DarkButton>
+      </> : null}>
+    {form ? <form id="hq-id-form" onSubmit={print} style={{ display: "grid", gap: 12, width: "min(340px, calc(100vw - 80px))" }}>
+      <Field label={ID_CARD.name} hint={ID_CARD.nameHint} value={a.name} placeholder={ID_CARD.noName} maxLength={24} disabled={!signedIn} autoFocus={signedIn}
         onChange={e => setA({ ...a, name: e.target.value })} data-testid="hq-id-name" />
       <Field label={ID_CARD.birthday} hint={ID_CARD.birthdayHint} type="date" value={a.birthday} max={new Date().toISOString().slice(0, 10)} min="1900-01-01"
         onChange={e => setA({ ...a, birthday: e.target.value })} data-testid="hq-id-birthday" />
       <Field label={ID_CARD.spirit} hint={ID_CARD.spiritHint} value={a.spirit} maxLength={40} placeholder="Sea otter"
         onChange={e => setA({ ...a, spirit: e.target.value })} data-testid="hq-id-spirit" />
-      <Button type="submit" autoFocus data-testid="hq-id-print">{ID_CARD.print}</Button>
-    </form> : <div className={s.stage}>
-      <h2 id="hq-id-title" className={s.sr}>{ID_CARD.title}</h2>
-      <div className={s.printer} aria-hidden="true"><i /></div>
-      <article className={s.card} data-testid="hq-id-card">
-        <header className={s.band}><span>{ID_CARD.island}</span><small>{ID_CARD.kind}</small></header>
-        <div className={s.body}>
-          <div className={s.photo} aria-hidden="true">{shownName.slice(0, 1).toUpperCase()}</div>
-          <dl className={s.fields}>
-            <div className={s.nameRow}><dt>{ID_CARD.name}</dt><dd>{shownName}</dd></div>
-            <div><dt>{ID_CARD.birthday}</dt><dd>{birthdayLabel(a.birthday) || "·"}</dd></div>
-            <div><dt>{ID_CARD.spirit}</dt><dd>{a.spirit.trim() || ID_CARD.spiritNone}</dd></div>
-            <div><dt>{ID_CARD.since}</dt><dd>{today()}</dd></div>
-            <div><dt>{ID_CARD.code}</dt><dd data-testid="hq-friend-code">{friendCode ?? ID_CARD.codeLater}</dd></div>
-          </dl>
-        </div>
-        <i className={s.waves} aria-hidden="true" />
-        {(phase === "stamp" || phase === "card") && <span className={s.stamp} aria-hidden="true"><b>{ID_CARD.island}</b><small>{ID_CARD.stamp}</small></span>}
-      </article>
-      {phase === "card" && <div className={s.actions}>
-        {!saved && <p className={s.unsaved} role="status">{ID_CARD.unsaved}</p>}
-        <Button variant="secondary" onClick={() => setPhase("form")} data-testid="hq-id-edit">{ID_CARD.edit}</Button>
-        <Button onClick={() => { setPhase("form"); onDone(); }} autoFocus data-testid="hq-id-done">{ID_CARD.done}</Button>
-      </div>}
-    </div>}
-  </div>;
+    </form> : <>
+      <PrintedCard band={ID_CARD.island} kind={ID_CARD.kind} picture={shownName.slice(0, 1).toUpperCase()} printing={phase === "print"} testId="hq-id-card"
+        stamp={stamped ? { top: ID_CARD.island, word: ID_CARD.stamp } : null}
+        rows={[[ID_CARD.name, shownName], [ID_CARD.birthday, birthdayLabel(a.birthday) || "·"], [ID_CARD.spirit, a.spirit.trim() || ID_CARD.spiritNone],
+          [ID_CARD.since, today()], [ID_CARD.code, <span key="code" data-testid="hq-friend-code">{friendCode ?? ID_CARD.codeLater}</span>]]} />
+      {phase === "card" && !saved && <StatusLine error>{ID_CARD.unsaved}</StatusLine>}
+    </>}
+  </Spotlight>;
 }
