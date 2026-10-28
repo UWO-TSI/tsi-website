@@ -31,8 +31,10 @@
  * &cut=0 (draw what a hat or hood hides: hidden_cut.py's marks ignored)
  * In ?sheet=roblox an id may carry a head accessory worn with it: &ids=hair_messy_boy+acc_visor (encode the + as %2B in a URL)
  * ?sheet=b2acc    wardrobe batch 2: David's Roblox accessories, each worn over a hairstyle (&style=, default the ribbon bob),
- *                  front and 3/4; &groups=head,face (default all) &framing=body for the neck and front ones
- * ?sheet=b2faces  wardrobe batch 2: David's whole faces #20-25 on the head, front and 3/4 (&skins=, default 3), then a mix row
+ *                  front and 3/4; &groups=head,face (default all) &framing=body for the neck and front ones; &keys=acc-25,...
+ *                  just those, &views=front,34,side,back (wardrobe batch 3)
+ * ?sheet=b2faces  wardrobe batches 2 and 3: David's whole faces #20-32 on the head, front and 3/4 (&skins=, default 3), then
+ *                  a mix row; &keys=face-26,... just those (no mix row), &views=front,34,side,back
  * ?sheet=haircolours  reflection-waves round 3: each style in &ids= on each of &skins= (default 1,6,11), a row of the hair colours in
  *                  &hairs= (default own, the free ones, two dyes; own is the style's own colours), &yaw= one view
  * ?sheet=eyeskins  reflection-waves round 3: every eye style in &ids= (default all) on every skin a player can pick (SKIN_PICKS), front, eyes open
@@ -155,9 +157,10 @@ function AvatarBench() {
     if (sheet === "b2acc") {
       const groups = (q.get("groups") ?? "head,face,neck,front").split(",");
       const hair = { ...base, back: q.get("style") ?? "hair_ribbon_bob" };
-      return partsIn("accessory").filter(p => p.key && groups.includes(p.group!)).flatMap(p => [
-        { label: `${p.key} ${p.name}`, look: { ...hair, acc: { [p.group!]: p.id } }, yaw: 0, face: OPEN },
-        { label: `${p.key} 3/4`, look: { ...hair, acc: { [p.group!]: p.id } }, yaw: -0.6, face: OPEN }]);
+      const keys = q.get("keys")?.split(",");                // wardrobe batch 3: just these items, at &views=
+      const views = (q.get("views") ?? "front,34").split(",");
+      return partsIn("accessory").filter(p => p.key && groups.includes(p.group!) && (!keys || keys.includes(p.key))).flatMap(p => views.map(v => (
+        { label: `${p.key} ${v === "front" ? p.name : v}`, look: { ...hair, acc: { [p.group!]: p.id } }, yaw: VIEWS[v] ?? 0, face: OPEN })));
     }
     if (sheet === "hatcut") {
       const hairs = q.get("ids")?.split(",") ?? ["hair_ribbon_bob", "hair_windy_bob", "hair_messy_wolf", "hair_waves", "hair_double_buns", "hair_goggle_ushanka"];
@@ -166,10 +169,12 @@ function AvatarBench() {
     }
     if (sheet === "b2faces") {
       const hair = { ...base, back: q.get("style") ?? "hair_waves" };
-      const faces = Object.entries(FACE.faces);
-      return (q.get("skins") ?? "3").split(",").map(Number).flatMap(skin => faces.flatMap(([key, f]) => [0, -0.6].map(y => ({
-        label: `${skin}: ${key} ${f.name}${y ? " 3/4" : ""}`, look: { ...hair, skin, eyes: f.eyes, mouth: f.mouth ?? "M1.1", extras: f.extras }, yaw: y, face: OPEN }))))
-        .concat(([["cat_wide", "fangs", ["stitches"]], ["caret_hash", "cat_fang", []], ["weird_eyes", "wide_w", ["nose_shade"]], ["squint_blush", "M1.1", ["blush"]],
+      const keys = q.get("keys")?.split(",");                // wardrobe batch 3: just these faces, at &views=
+      const faces = Object.entries(FACE.faces).filter(([key]) => !keys || keys.includes(key));
+      const views = (q.get("views") ?? "front,34").split(",");
+      return (q.get("skins") ?? "3").split(",").map(Number).flatMap(skin => faces.flatMap(([key, f]) => views.map(v => ({
+        label: `${skin}: ${key} ${v === "front" ? f.name : v}`, look: { ...hair, skin, eyes: f.eyes, mouth: f.mouth ?? "M1.1", extras: f.extras }, yaw: VIEWS[v] ?? 0, face: OPEN }))))
+        .concat((keys ? [] : [["cat_wide", "fangs", ["stitches"]], ["caret_hash", "cat_fang", []], ["weird_eyes", "wide_w", ["nose_shade"]], ["squint_blush", "M1.1", ["blush"]],
           ["F1.1", "tongue_out", []], ["tired_lines", "kitty", ["sweat_drop"]]] as [string, string, string[]][]).map(([eyes, mouth, extras]) => ({
           label: `mix: ${FACE.names[eyes] ?? eyes} / ${FACE.names[mouth] ?? mouth}${extras.length ? ` + ${FACE.names[extras[0]] ?? extras[0]}` : ""}`,
           look: { ...hair, eyes, mouth, extras }, yaw: 0, face: OPEN })));

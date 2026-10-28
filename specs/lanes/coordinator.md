@@ -25,6 +25,12 @@ All in `~/.claude/jobs/62203045/tmp/`, which survives reboots.
 - `prod-dump.sh <label>`, `prod-query.sh <sql>` and `verify.sql` are for prod migrations. The procedure is in `STATE.md` and the memory files.
 - `withlock.sh heavy|blender|devserver <cmd>` (set `LANE=game/<lane>`): takes a lock, waiting while swap is high and another lock is held. It lives in `~/.claude/jobs/62203045/tmp/`, the same folder as the helpers above, and is referenced from `specs/lane-rules.md`.
 
+## Editors published (2026-10-27 evening)
+
+- **Residents:** https://claude.ai/artifact/QtZYAgMFEbFg4YNpVcBYwU (game/npc-editor cd1c64eb, collection `residents`). Apply: `cd web && node scripts/apply-residents.mjs <export.json>`. It writes the TS, runs gen-seeds (a new migration for npc_personas) and lists old-name strings to reword by hand. Looks come only from `RESIDENT_LOOKS` in code.
+- **Catalogue:** https://claude.ai/artifact/5XzAaR5Wipoe2ZN2Hby3FG (game/catalogue-editor 49d0a386, collection `species`). Apply: `cd web && node scripts/apply-species.mjs <export.json> [--dry]`. It needs migration `20261027180000_species_sell_price.sql` on prod (sell_price column plus economy_sell) when the branch merges. The branch also makes fishing read the roster (the duplicate fish data is deleted).
+- Face Fit's check showed burst-save count flakes under swap after npc-editor moved its frame code (frame.tsx). Rerun when the machine is quiet, before republishing Face Fit from that branch.
+
 ## V1 gameplay lanes (2026-10-27, from David's picks)
 
 David picked almost everything for the next launch and moved the date off Oct 31 (new date unknown; asked). His notes verbatim, my readings and the workstreams are in `specs/launch/v1-gameplay.md`. Five lanes, cut from local main 10b5a7b1 or later:
@@ -307,3 +313,27 @@ The full set is in `CLAUDE.md`, `specs/lane-rules.md` and the memory files.
 - Never edit applied migrations.
 - Stop for anything destructive, costing money or irreversible. Otherwise merge and deploy verified, approved work without asking.
 - No idle polling.
+
+## Locks (2026-10-27, learned the hard way)
+
+- `withlock.sh` is the only lock mechanism. There is no devserver queue: a queue file some lanes waited on (and withlock never read) starved them for two hours, so it was deleted. Never recreate one.
+- `push-main.sh` takes the heavy lock itself. Run it bare, never inside `withlock.sh heavy`, or it waits on its own lock forever (that held the heavy lock for 40 minutes).
+- Retry loops over withlock must check the exit code (75 means it gave up); a `| tail` hides it.
+
+## 2026-10-28 morning: reviews open for David (collection `approvals` unless noted)
+
+| Review | URL | Lane head | Merge needs |
+|---|---|---|---|
+| Tutorial v2 | https://claude.ai/artifact/NTJjmvqTjX6aHRj9MBJkwD | game/tutorial-v2 fb5991d9 | lines.ts conflict with main-quest (keep Juno's farewell line) |
+| Loading pick (approve one of logo, boat, island) | https://claude.ai/artifact/NMFDnVSQxLHpyAQgaz1YDg | game/loading 14a42936 | lane deletes the two unpicked looks and the ?loading switch |
+| Rods and gear | https://claude.ai/artifact/NAXEqzpmfNnEASvNPoWCgS | game/rod-gear e35dd842 | migrations 20261027140000, 183120, 183200, 183713 in order |
+| Fishing depth | https://claude.ai/artifact/2t3rTrcf8YC4GGENxfW3kJ | game/fishing-depth 3f2a49a9 | migration 20261027181000 |
+| Wardrobe fixes (under-cap, monocle) | https://claude.ai/artifact/WqPLxThgbBjhKEecgogW92 | game/wardrobe-b3 d9e8298c | none; asks whether to cut Sponge twists and Freeform afro skin-tone edges |
+| Catalogue editor v2 (collection `species`) | https://claude.ai/artifact/5XzAaR5Wipoe2ZN2Hby3FG | game/catalogue-editor f5186814 | migration 20261027185416 after the rod-gear ones; apply-species.mjs for his edits |
+| Daily and social | https://claude.ai/artifact/68SEdjVRvruZzvgDmHTFVG | game/daily-social 6f3b4ac7 | migrations 20261027182444, 190000, 190100, 20261028112843 in order |
+| Clothing round 2 + TSI zip hoodie gate | https://claude.ai/artifact/VhBnp5Ua6w82U8ervpzxiG | game/clothing-v2 da63d1d3 | round 1 and the hoodie (aafbe9fe) already approved; merge all together |
+| Remodel round 3 (wings, sea creatures, benches) | https://claude.ai/artifact/9ffhKczMau3xoH8KkxMiwp | game/remodel 1453dd9c | none; benches keep the map's yaw (bench-0 across the path) |
+| Main quest (STALE: shots are the village; republish after the fresh agent reshoots) | https://claude.ai/artifact/6DLtytETjRJVtM1HzXytPf | game/main-quest e6bdff6f [wip], fresh agent finishing village gating | migrations reworked; do not merge until reported green |
+| Residents editor (collection `residents`) | https://claude.ai/artifact/QtZYAgMFEbFg4YNpVcBYwU | npc-editor 2a67bfb0 (main merged) | republish once main-quest (Juno) merges |
+
+Shipped 2026-10-27/28: batch 3 wardrobe (seed 20261027165850 applied), remodel round 3 step 1 (2e7bd27f). perf: v2 on main is 405/340 draws and 1.37M/1.17M triangles (over budget); lane perf-tris is on it. perf-check's lock owner must not need a space (fixed in fce65d21).

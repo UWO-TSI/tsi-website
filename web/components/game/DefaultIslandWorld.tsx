@@ -576,8 +576,8 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       {bar && <Suspense fallback={null}><SushiBar bar={bar} y={barY} player={player} phase={phase} viewRef={barView} onNear={onBar} /></Suspense>}
       {layout.campfire && <Campfire site={layout.campfire} ground={island.ground} phase={phase} player={player} walled={!!v.terrain} />}
       {/* Nature and props from the map, instanced: one draw per model sub-mesh however many the island has. */}
-      <InstancedModels items={sceneryMoving} />
-      {sceneryStill.length > 0 && <Suspense fallback={null}><MergedModels items={sceneryStill} /></Suspense>}
+      <InstancedModels items={sceneryMoving} cull={!!v.terrain} />
+      {sceneryStill.length > 0 && <Suspense fallback={null}><MergedModels items={sceneryStill} cull /></Suspense>}
       {/* Residents walk their routines on the world clock (residentRoutine.ts); during a ceremony they gather at the monument and cheer.
           While Bram brings a new arrival in and walks them round, his walking self stays out of sight: one Bram. */}
       <Residents personas={personas} phase={phase} ceremony={ceremony} player={player} island={island} v={v} away={arrivalPhase ? BRAM.slug : null}
