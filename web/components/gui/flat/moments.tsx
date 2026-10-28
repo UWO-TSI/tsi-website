@@ -19,10 +19,12 @@ import { useWorldDialog } from "@/lib/game/useWorldDialog";
 import m from "./moments.module.css";
 
 /** A step that wants your whole attention: a flat panel in the middle over a light scrim. Holds the world's keys. */
-export function Spotlight({ open, label, eyebrow, title, lead, text, steps, children, footer, testId, dataset }: {
+export function Spotlight({ open, label, eyebrow, title, lead, text, story, steps, children, footer, testId, dataset }: {
   open: boolean; label: string; eyebrow?: ReactNode; title?: ReactNode;
   /** Under the title: what to do now, in a word or two (it changes with a little rise); then a quiet line about it. */
   lead?: ReactNode; text?: ReactNode;
+  /** A page of story: the text larger, in ink, the panel a little wider (the lore). */
+  story?: boolean;
   /** A dot per step, `at` the one showing, the ones before it done. */
   steps?: { count: number; at: number };
   children?: ReactNode; footer?: ReactNode; testId?: string;
@@ -33,12 +35,12 @@ export function Spotlight({ open, label, eyebrow, title, lead, text, steps, chil
   if (!open) return null;
   return <div className={`${m.layer} gui`} data-gui-flat="">
     <div className={m.scrim} aria-hidden="true" />
-    <section ref={ref} role="dialog" aria-modal aria-label={label} tabIndex={-1} data-gui-overlay className={m.spotlight} data-testid={testId} {...dataset}>
+    <section ref={ref} role="dialog" aria-modal aria-label={label} tabIndex={-1} data-gui-overlay className={m.spotlight} data-story={story || undefined} data-testid={testId} {...dataset}>
       {(eyebrow || title || lead || text) && <header className={m.head}>
         {eyebrow && <p className={m.eyebrow}>{eyebrow}</p>}
         {title && <h2 className={m.title}>{title}</h2>}
         {lead && <p key={String(title)} className={m.lead} aria-live="polite">{lead}</p>}
-        {text && <p className={m.text}>{text}</p>}
+        {text && <p key={story ? String(title) : undefined} className={m.text}>{text}</p>}
       </header>}
       {children}
       {(footer || steps) && <footer className={m.foot}>

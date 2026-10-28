@@ -14,6 +14,9 @@
 .title { margin: 0; font: 800 22px/1.2 var(--gui-font); color: var(--ui-ink); }
 .lead { display: flex; align-items: center; gap: 8px; min-height: 36px; margin: 4px 0 0; font: 800 17px/1.2 var(--gui-font); color: var(--ui-ink); animation: rise 0.26s ease both; }
 .text { margin: 0; max-width: 460px; font: 600 14px/1.5 var(--gui-font); color: var(--ui-ink-2); }
+.spotlight[data-story] { width: min(560px, calc(100vw - 32px)); padding: 30px 32px 20px; box-sizing: border-box; }
+.spotlight[data-story] .title { font-size: 30px; }
+.spotlight[data-story] .text { font: 600 18px/1.6 var(--gui-font); color: var(--ui-ink); animation: rise 0.3s ease both; }
 .foot { display: flex; align-items: center; justify-content: flex-end; gap: 10px; width: 100%; }
 .dots { display: flex; gap: 6px; margin-right: auto; }
 .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--ui-line-strong); transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }

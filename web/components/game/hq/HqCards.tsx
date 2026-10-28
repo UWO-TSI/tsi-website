@@ -9,7 +9,7 @@
 import { useState } from "react";
 import { CalendarCheck, Landmark, Mail, Map as MapIcon, Menu, QrCode } from "lucide-react";
 import { Button, Sheet } from "@/components/gui";
-import { FlyIn } from "@/components/gui/flat";
+import { DarkButton, FlyIn, Spotlight } from "@/components/gui/flat";
 import { CurrencyIcon } from "@/components/economy/Amount";
 import { AudioManager } from "@/lib/game/audio";
 import { CHECKIN_CARD, FLY_CARDS, FOUNDER_PLAQUE, LORE_CARD, PLAQUE_CARD, type FlyTarget } from "@/lib/game/arrival/hq/lines";
@@ -39,21 +39,14 @@ export function PlaqueCard({ open, onClose }: { open: boolean; onClose: () => vo
   </Sheet>;
 }
 
-/** The lore overlay (t-hq): Tethos and the island, a page at a time, full screen over the dimmed room. `onDone` after the last. */
+/** The lore (David's v2 review: the island first), a page at a time in the kit's Spotlight. `onDone` after the last. */
 export function LoreOverlay({ open, onDone }: { open: boolean; onDone: () => void }) {
   const [page, setPage] = useState(0);
-  if (!open) return null;
   const pages = LORE_CARD.pages, p = pages[page], last = page === pages.length - 1;
   const next = () => { AudioManager.playSFX("blip2", { rate: 1.2, gain: 0.35 }); if (last) { setPage(0); onDone(); } else setPage(page + 1); };
-  return <div className={`${s.lore} gui`} role="dialog" aria-modal="true" aria-labelledby="hq-lore-title" data-gui-overlay data-testid="hq-lore">
-    <div key={page} className={s.lorePage}>
-      <p className={s.loreCount} aria-hidden="true">{page + 1} / {pages.length}</p>
-      <h2 id="hq-lore-title">{p.title}</h2>
-      <p>{p.text}</p>
-    </div>
-    <div className={s.loreDots} aria-hidden="true">{pages.map((_, i) => <i key={i} data-on={i === page || undefined} />)}</div>
-    <Button onClick={next} autoFocus data-testid="hq-lore-next">{last ? LORE_CARD.done : LORE_CARD.next}</Button>
-  </div>;
+  return <Spotlight open={open} label={p.title} eyebrow={`${page + 1} / ${pages.length}`} title={p.title} text={p.text} story
+    steps={{ count: pages.length, at: page }} testId="hq-lore"
+    footer={<DarkButton onClick={next} autoFocus data-testid="hq-lore-next">{last ? LORE_CARD.done : LORE_CARD.next}</DarkButton>} />;
 }
 
 const FLY_ICON: Record<FlyTarget, React.ReactNode> = {

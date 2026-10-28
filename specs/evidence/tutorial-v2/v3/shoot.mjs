@@ -293,6 +293,8 @@ async function walk(page, P, part) {
   await page.keyboard.press("e");
   await talkThrough("53-barrel-talk", true);
   await stage("barrel", "task");
+  // Up to the barrel (its E is Sell within reach).
+  await go(barrelStop.stand.x + 1.0, barrelStop.stand.z - 0.6);
   await page.waitForFunction(() => [...document.querySelectorAll("main button")].some(b => /Sell/.test(b.textContent ?? "")), null, { timeout: 20000, polling: 50 }).catch(() => log.push({ sell: "no prompt" }));
   await shot(page, `${P}-54-sell-prompt`);
   await page.keyboard.press("e"); await sleep(1200);
