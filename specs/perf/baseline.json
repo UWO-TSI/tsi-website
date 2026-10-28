@@ -3,30 +3,18 @@
   "date": "2026-10-14",
   "machine": "Apple M4, 10 cores",
   "runs": 3,
-  "note": "medians of perf-check runs; refresh with npm run perf:check -- --update (specs/perf/README.md)",
+  "note": "medians of perf-check runs; refresh with npm run perf:check -- --update (specs/perf/README.md); v2 (the member island, the new world) re-measured 2026-10-28 on game/village-archive (perf:check SCENES=v2, headless), the village scene dropped (row 321); cafe and ruins rows from 8809c517",
   "load": 4.3,
   "scenes": {
-    "village|high": {
-      "frameMs": 3.9,
-      "p95Ms": 4.9,
-      "cpuMs": 3.4,
-      "draws": 382,
-      "triangles": 537560,
-      "fps": 245.1,
-      "runs": 3,
-      "load": 3.8,
-      "spread": 0.03
-    },
     "v2|high": {
-      "frameMs": 5.4,
-      "p95Ms": 6.8,
-      "cpuMs": 5,
-      "draws": 254,
-      "triangles": 912237,
-      "fps": 178.4,
-      "runs": 3,
-      "load": 3,
-      "spread": 0.02
+      "frameMs": 4.8,
+      "p95Ms": 7.0,
+      "cpuMs": 4.2,
+      "draws": 359,
+      "triangles": 757188,
+      "runs": 5,
+      "load": 4.1,
+      "spread": 0.04
     },
     "cafe|high": {
       "frameMs": 2.1,
@@ -50,26 +38,14 @@
       "load": 3.9,
       "spread": 0
     },
-    "village|lite": {
-      "frameMs": 2.3,
-      "p95Ms": 3.4,
-      "cpuMs": 2,
-      "draws": 288,
-      "triangles": 353865,
-      "fps": 416.2,
-      "runs": 3,
-      "load": 4.2,
-      "spread": 0
-    },
     "v2|lite": {
-      "frameMs": 3,
-      "p95Ms": 3.7,
-      "cpuMs": 2.8,
-      "draws": 172,
-      "triangles": 629051,
-      "fps": 369.8,
-      "runs": 3,
-      "load": 3.5,
+      "frameMs": 2.9,
+      "p95Ms": 5.2,
+      "cpuMs": 2.6,
+      "draws": 289,
+      "triangles": 567459,
+      "runs": 5,
+      "load": 4.2,
       "spread": 0.03
     },
     "cafe|lite": {
