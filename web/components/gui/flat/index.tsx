@@ -8,7 +8,7 @@
  * small parts (`Pill`, `DarkButton`, `GhostButton`, `RoundButton`, `HairlineRow`). Colours: the theme's --ui-* tokens
  * (styles/themes). Nothing here knows about the shop: every piece takes plain props.
  */
-import { Fragment, useMemo, useRef, type ButtonHTMLAttributes, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type ReactNode, type Ref } from "react";
+import { Fragment, useEffect, useMemo, useRef, type ButtonHTMLAttributes, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Sparkles, X } from "lucide-react";
 import { usePresence, useWorldDialog } from "@/lib/game/useWorldDialog";
 import { CurrencyIcon } from "@/components/economy/Amount";
@@ -406,6 +406,16 @@ export interface MomentItem { key: string; icon: ReactNode; title: ReactNode; li
 export function BigMoment({ kicker, big, title, items, action = "Nice!", onClose, testId }: {
   kicker: ReactNode; big: ReactNode; title?: ReactNode; items?: readonly MomentItem[]; action?: ReactNode; onClose: () => void; testId?: string;
 }) {
+  const close = useRef(onClose);
+  useEffect(() => { close.current = onClose; });
+  useEffect(() => {
+    const key = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== "Escape" && e.key !== "Enter" && e.key.toLowerCase() !== "e") return;
+      e.stopPropagation(); e.preventDefault(); close.current();
+    };
+    window.addEventListener("keydown", key, true);
+    return () => window.removeEventListener("keydown", key, true);
+  }, []);
   return <div className={f.momentLayer} onClick={onClose} data-testid={testId}>
     <section className={f.moment} role="dialog" aria-modal="true" aria-labelledby="moment-big" onClick={e => e.stopPropagation()}>
       <span className={f.momentBurst} aria-hidden>{Array.from({ length: 10 }, (_, i) => <i key={i} style={{ "--k": i } as CSSProperties} />)}</span>

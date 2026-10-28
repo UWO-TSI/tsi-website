@@ -59,7 +59,7 @@ export default function MuseumDrive({ open, onClose, onGiven }: { open: boolean;
     {items === null ? <StatusLine>Looking through your bag…</StatusLine>
       : items.length === 0 ? <StatusLine>Nothing for the drive yet: catch a fish or a bug, or dig something up.</StatusLine>
       : <CardGrid label="What you can give" min={170}>{items.map(item => <ItemCard key={item.key} data-key={item.key} size="md" picture={item.icon ?? ""} name={item.name}
-        line={item.museum.donated ? "On display: hand it in" : "New for the museum"} pill={`×${item.count}`} arrow={false} disabled={busy !== null}
+        line={item.museum.donated ? "Hand in" : "Donate"} pill={`×${item.count}`} arrow={false} disabled={busy !== null}
         label={`${item.museum.donated ? "Hand in" : "Donate"} ${item.name}`} onClick={() => void give(item)} />)}</CardGrid>}
   </FlatPanel>;
 }

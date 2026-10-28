@@ -98,9 +98,13 @@ Done in round 2:
 
 ## Next
 
-1. Shoot round 2 (scratchpad mqrun/qrun.sh: before pops with main's RewardCard via before.sh, then r2flow, r2museum,
-   r2dig, pops with POPS=after), copy to specs/evidence/main-quest/r2/, review the shots, fix, reshoot.
-2. Gates (vitest new, tsc, eslint on changed files, SQL chain), one perf:check (dig marks), report to main.
+1. Wait for David's review of round 2 (evidence in specs/evidence/main-quest/r2/); the coordinator merges and applies
+   the migrations in order.
+
+Evidence (round 2, new world, shoot.mjs scenes r2flow, r2museum, r2dig, pops, strips): r2-01 line, r2-02 dropdown,
+r2-03 arrow (pressed, and to the museum), r2-06 level up (+ frames), r2-07 next chapter, r2-10 the museum, r2-12/13 the
+drive and a hand-in, r2-20/21 dig marks (full, close, x3 zoom round the mark), r2-30 pops before/after, r2-31 pop
+frames, r2-40 the broken sudo model, r2-41 the showroom's pops (every rung and the holo).
 
 ## Tools and gotchas
 
@@ -115,6 +119,9 @@ Done in round 2:
   call again), then runs `run3.sh` under the lock (new world; ICONS="key ..." renders icons first; POPS passes through).
 - zsh doesn't word-split `$F`: use `${=F}` for a list of test files.
 - Evidence shots: never put the thing to show straight ahead of the player; the camera sits behind and the body hides it.
+- `window.__orbit.three()` (dev) is the r3f state: shoot.mjs markClip projects the DigSpot meshes through the camera.
+- "Before" shots of a shared component: before.sh swaps main's file in for one batch and restores this lane's.
+- The HUD needs ~9 s after the tracker appears (the arrival's fade): shoot.mjs `hudIn`.
 
 ## Rules
 

@@ -4,7 +4,7 @@
 // `?progression=demo` (the real progression service on an in-memory store; `&chapter=` and `&tally=` set where the
 // member is). Headless Chromium, muted, under the shared browser lock.
 //   HOST=http://localhost:3147 node specs/evidence/main-quest/shoot.mjs <out_dir> <scene> [<scene> ...]
-// Scenes: r2flow, r2museum, r2dig (round 2); flow, chapters, dig, pickaxe (round 1; the new world: run the dev server with NEXT_PUBLIC_GAME_WORLD=new); village (the
+// Scenes: r2flow, r2museum, r2dig, pops, strips (round 2); flow, chapters, dig, pickaxe (round 1; the new world: run the dev server with NEXT_PUBLIC_GAME_WORLD=new); village (the
 // default world, no env: the village's one tracker line, unchanged).
 // Places are the new world's (lib/collections/rolls.ts activeVillage("new"): museum 4,70.5; dig-sand-0 -17,102;
 // dig-soil-15 35,84; rock-1 38,25.1).
@@ -95,6 +95,24 @@ async function lineClip(page) {
   const r = await page.$eval("[data-testid=quest-tracker]", el => { const b = el.getBoundingClientRect(); return { x: b.left, y: b.top, b: b.bottom }; });
   return { x: Math.max(0, r.x - 40), y: 40, width: 1440 - Math.max(0, r.x - 40), height: 210 };
 }
+/** A tight crop round the dig mark nearest the middle of the screen (its mesh projected through the camera). */
+async function markClip(page) {
+  const at = await page.evaluate(() => {
+    const { camera, scene, size } = window.__orbit.three();
+    let best = null;
+    scene.traverse(o => {
+      if (!o.isMesh || o.material?.name !== "DigSpot") return;
+      const v = o.getWorldPosition(o.position.clone()).project(camera);
+      if (v.z > 1) return;
+      const x = (v.x + 1) / 2 * size.width, y = (1 - v.y) / 2 * size.height, d = Math.hypot(x - size.width / 2, y - size.height / 2);
+      if (!best || d < best.d) best = { x, y, d };
+    });
+    const r = document.querySelector("canvas").getBoundingClientRect();
+    return best && { x: best.x + r.left, y: best.y + r.top };
+  });
+  console.log("mark", JSON.stringify(at));
+  return at ? { x: Math.max(0, at.x - 90), y: Math.max(0, at.y - 60), width: 180, height: 120 } : { x: 620, y: 380, width: 200, height: 140 };
+}
 const widths = page => page.evaluate(() => {
   const t = document.querySelector("[data-testid=quest-tracker]"), l = document.querySelector("#quest-list");
   return { bar: t?.getBoundingClientRect().width ?? null, list: l?.getBoundingClientRect().width ?? null, barLeft: t?.getBoundingClientRect().left ?? null, listLeft: l?.getBoundingClientRect().left ?? null };
@@ -152,12 +170,12 @@ for (const scene of SCENES) {
     await sleep(1000);
     await shot(page, "r2-11-odile-drive-talk");
     for (let k = 0; k < 14 && await page.$("[data-testid=talk-box]"); k++) { await page.keyboard.press("e"); await sleep(700); }
-    await page.waitForSelector("[data-testid=donate-sheet]", { timeout: 20000 }).catch(() => console.log("no drive sheet"));
+    await page.waitForSelector("[data-testid=museum-drive]", { timeout: 20000 }).catch(() => console.log("no drive panel"));
     await sleep(2500);
     await shot(page, "r2-12-museum-drive");
-    const rows = await page.$$eval("[data-testid=donate-sheet] [data-key]", els => els.map(e => e.textContent));
+    const rows = await page.$$eval("[data-testid=museum-drive] [data-key]", els => els.map(e => e.getAttribute("aria-label")));
     log.push({ name: "r2-12-museum-drive", rows: rows.slice(0, 12) });
-    const handIn = await page.$("[data-testid=donate-sheet] [data-key]:has-text('Hand in')");
+    const handIn = await page.$("[data-testid=museum-drive] [data-key][aria-label^='Hand in']");
     if (handIn) { await handIn.click(); await sleep(1500); await shot(page, "r2-13-handed-in"); } else console.log("no hand-in row");
     await ctx.close();
   }
@@ -187,6 +205,41 @@ for (const scene of SCENES) {
     }
     await ctx.close();
   }
+  if (scene === "strips") {
+    // Frame strips of what's animated: the level up (the kit's BigMoment on /lab/gui) and a reward pop on the island.
+    // The showroom's pops (every rung of the ladder and the holo), the level-up closed first.
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await ctx.newPage();
+    await page.goto(`${HOST}/lab/gui`, { waitUntil: "domcontentloaded" });
+    await page.waitForSelector("#rewards [data-testid=pop-divine]", { timeout: 300000 });
+    await sleep(6000);
+    await page.$eval("#rewards", el => el.scrollIntoView());
+    await sleep(800);
+    const box = await page.$eval("#rewards", el => { const b = el.getBoundingClientRect(); return { x: b.left, y: Math.max(0, b.top), width: b.width, height: Math.min(860, b.height) }; });
+    await page.screenshot({ path: `${OUT}/r2-41-showroom-pops.png`, clip: box });
+    await ctx.close();
+    const isl = await open("");
+    await hudIn(isl.page);
+    await isl.page.evaluate(() => window.dispatchEvent(new CustomEvent("tsi:peaceful-got", { detail: { key: "find_broken_sudo", name: "Broken Sudo", rarity: "legendary", size: 10.5, isNew: true, kind: "dig" } })));
+    let last = 0;
+    for (const ms of [30, 120, 220, 360, 600]) {
+      await sleep(ms - last); last = ms;
+      await isl.page.screenshot({ path: `${OUT}/strip-pop-${String(ms).padStart(3, "0")}.png`, clip: { x: 760, y: 280, width: 440, height: 240 } });
+    }
+    // The level up: the advance's answer as the island hears it (API_WRITE); the card follows the quest-complete beat.
+    await isl.page.mouse.click(10, 880);
+    await sleep(600);
+    await isl.page.evaluate(() => window.dispatchEvent(new CustomEvent("tsi:api-write", { detail: { path: "/api/progression/chapters/advance", data: {
+      chapters: [{ slug: "odiles-net", title: "Odile's net", summary: "Odile at the museum has a spare net. Catch a few bugs with it and show her.", requirement: "bug_net", status: "active", steps: [] }],
+      xp_gain: { amount: 125, total: 125, level: 2, levelled_up: true } } } })));
+    await isl.page.waitForSelector("[data-testid=level-up]", { timeout: 10000 });
+    last = 0;
+    for (const ms of [0, 90, 180, 300, 450, 900]) {
+      await sleep(ms - last); last = ms;
+      await isl.page.screenshot({ path: `${OUT}/strip-level-${String(ms).padStart(3, "0")}.png`, clip: { x: 520, y: 260, width: 400, height: 380 } });
+    }
+    await isl.ctx.close();
+  }
   if (scene === "r2dig") {
     const { ctx, page } = await open("collections=demo&time=day", { "tsi.held.v1": JSON.stringify({ held: "shovel:shovel-basic" }) });
     await hudIn(page);
@@ -194,10 +247,12 @@ for (const scene of SCENES) {
     await sleep(2500);
     await shot(page, "r2-20-dig-mark-sand");
     await shot(page, "r2-20-dig-mark-sand-close", { x: 420, y: 260, width: 600, height: 420 });
+    await shot(page, "r2-20-dig-mark-sand-zoom", await markClip(page));
     await go(page, 36.2, 81.5, 0);
     await sleep(2500);
     await shot(page, "r2-21-dig-mark-dirt");
     await shot(page, "r2-21-dig-mark-dirt-close", { x: 420, y: 260, width: 600, height: 420 });
+    await shot(page, "r2-21-dig-mark-dirt-zoom", await markClip(page));
     await ctx.close();
   }
   if (scene === "flow") {

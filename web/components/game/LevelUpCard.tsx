@@ -31,15 +31,6 @@ export default function LevelUpCard() {
     window.addEventListener(API_WRITE, on);
     return () => window.removeEventListener(API_WRITE, on);
   }, []);
-  useEffect(() => {
-    if (!shown) return;
-    const key = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" && e.key !== "Enter" && e.key.toLowerCase() !== "e") return;
-      e.stopPropagation(); e.preventDefault(); setShown(null);
-    };
-    window.addEventListener("keydown", key, true);
-    return () => window.removeEventListener("keydown", key, true);
-  }, [shown]);
   if (!shown) return null;
   return <BigMoment kicker="Level up" big={shown.level} title={`You're level ${shown.level}`} testId="level-up" onClose={() => setShown(null)}
     items={shown.unlocks.map(u => ({ key: u.kind, icon: u.kind === "quest" ? <BookOpen size={18} /> : <Sparkles size={18} />, title: u.title, line: u.detail }))} />;
