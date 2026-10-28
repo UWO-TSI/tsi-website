@@ -22,7 +22,7 @@ import * as THREE from "three";
 import { GLBProp, NatureMushroom } from "../NatureModels";
 import { ModelFlock, addToFlock, endFlock, showOwn, startFlock, type Flock } from "../InstancedNature";
 import { SPECIES as CRITTERS } from "../Critters";
-import { packMap, spriteQuad, useMoveParticles } from "../movement/moveFx";
+import { useMoveParticles } from "../movement/moveFx";
 import { useGlowParticles } from "../GlowFx";
 import { AudioManager } from "@/lib/game/audio";
 import { collect, harvestNode, localCollections, localRecord } from "@/lib/game/collections";
@@ -46,6 +46,7 @@ import { LIFT, handOf, liftPose, type Lift } from "@/lib/game/forageLift";
 import { FACE, seedAt, type Recipe } from "@/lib/game/fx/particles";
 import { CHIPS, CHIP_TINT, DIG_RISE, FLOWER_TINT, GLINT, GLINT_EVERY, GLINT_TINT, HOLE_TINT, LIFT_PUFF, PETALS, ROCK_DUST, SAND_BURST, SAND_GRAINS, SAND_TINT, STRIKE_PUFF } from "@/lib/game/forageFx";
 import { hash01 } from "@/lib/game/worldFx";
+import { crackStar } from "@/lib/game/digMark";
 import { TREE_WIND, WORLD_SNOW, leafTintHex, prepareModel } from "@/lib/game/modelMaterials";
 import TreeFruit, { FRUIT_REST_RADIUS, type HangingFruit } from "./TreeFruit";
 
@@ -92,39 +93,43 @@ function Outcrop({ sp, at, nodeId, struck, spent = false }: { sp: Species; at: [
 }
 
 /**
- * A dig spot (a buried find, m3): a star of cracks in the ground from our pack, each spot its own frame, big and dark
- * enough to spot from a few steps off: a dark umber on the sand, a near-black brown on the dirt (which is darker itself).
- * A cut-out (alpha-tested, depth-written) rather than a blended decal: blended, the island's passes lost it entirely.
+ * A dig spot (a buried find, m3; David: "dirt will have like some type of marking and sand as well"): a star of five
+ * cracks in the ground, built as flat wedges (lib/game/digMark.ts, bolder than the pack's thin crack sprite), each
+ * spot its own seeded star, big and dark enough to spot from a few steps off: a dark umber on the sand,
+ * a near-black brown on the dirt (which is darker itself). Opaque and shared, so the spots cost one material each.
  */
 const crackLooks = new Map<boolean, THREE.MeshStandardMaterial>();
 const crackLook = (soil: boolean) => {
   let m = crackLooks.get(soil);
-  if (!m) crackLooks.set(soil, m = new THREE.MeshStandardMaterial({ name: "DigSpot", map: packMap(), color: soil ? "#2e2117" : "#5a4128", roughness: 1, metalness: 0, alphaTest: 0.3,
+  if (!m) crackLooks.set(soil, m = new THREE.MeshStandardMaterial({ name: "DigSpot", color: soil ? "#2e2117" : "#5a4128", roughness: 1, metalness: 0, side: THREE.DoubleSide,
     polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
   return m;
 };
-const CRACKS = Array.from({ length: 8 }, (_, f) => spriteQuad("crack", f, 0.9).rotateX(-Math.PI / 2));
+const CRACKS = Array.from({ length: 8 }, (_, f) => crackStar(f * 7 + 3));
 function DigSpot({ at, seed, soil }: { at: [number, number, number]; seed: number; soil: boolean }) {
   return <mesh geometry={CRACKS[Math.floor(hash01(seed, 7) * 8) % 8]} material={crackLook(soil)} position={[at[0], at[1] + 0.02, at[2]]} rotation={[0, seed * 1.3, 0]} receiveShadow />;
 }
 
-/** A dug hole (our pack's hole, its 8 frames from fresh to filled), filling back in on the world clock (lib/game/forageWorld.ts). */
-const HOLES = Array.from({ length: 8 }, (_, f) => spriteQuad("hole", f, 1.0).rotateX(-Math.PI / 2));
+/**
+ * A dug hole, filling back in on the world clock (lib/game/forageWorld.ts): a dark disc of turned earth that shrinks and
+ * fades through its eight stages (holeFrame, holeOpacity). Plain geometry, as the dig spot's.
+ */
+const HOLE = new THREE.CircleGeometry(0.42, 14).rotateX(-Math.PI / 2);
 function fillHole(mesh: THREE.Mesh | null, material: THREE.MeshStandardMaterial, hole: Hole) {
   if (!mesh) return;
   const age = worldTime() - hole.t0, f = holeFrame(age);
   mesh.visible = f >= 0;
   if (f < 0) return;
-  if (mesh.geometry !== HOLES[f]) mesh.geometry = HOLES[f];
+  mesh.scale.setScalar(1 - f * 0.08);
   material.opacity = holeOpacity(age);
 }
 function HoleDecal({ hole }: { hole: Hole }) {
-  const material = useMemo(() => new THREE.MeshStandardMaterial({ name: "DugHole", map: packMap(), color: HOLE_TINT, roughness: 1, metalness: 0, transparent: true,
+  const material = useMemo(() => new THREE.MeshStandardMaterial({ name: "DugHole", color: HOLE_TINT, roughness: 1, metalness: 0, transparent: true,
     depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }), []);
   useEffect(() => () => material.dispose(), [material]);
   const mesh = useRef<THREE.Mesh>(null);
   useFrame(() => fillHole(mesh.current, material, hole));
-  return <mesh ref={mesh} geometry={HOLES[0]} material={material} position={[hole.x, hole.y + 0.018, hole.z]} rotation={[0, hole.x * 3.1 + hole.z * 1.7, 0]} renderOrder={2} receiveShadow />;
+  return <mesh ref={mesh} geometry={HOLE} material={material} position={[hole.x, hole.y + 0.02, hole.z]} renderOrder={2} receiveShadow />;
 }
 /** Every hole still filling; the filled ones are let go from a timer, never the frame loop. */
 function Holes() {

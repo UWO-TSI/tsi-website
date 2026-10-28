@@ -47,6 +47,14 @@ export function cellsMap(c: WorldCells): IslandMap {
 /** A world's river cells (its "River" annotation), which fish as river (lib/game/fishingSpots.ts classifyWater). */
 export const riverCells = (annotations: readonly MapAnnotation[] = []) => annotations.find(a => a.name === "River")?.cells;
 
-/** The server's village of the smooth world: its cells and the world document's objects and annotations (its river). */
-export const villageOfCells = (c: WorldCells, objects: readonly MapObject[], annotations?: readonly MapAnnotation[]): Village =>
-  ({ ...villageOf(cellsMap(c), objects), rivers: riverCells(annotations) });
+/**
+ * The server's village of the smooth world: its cells and the world document's objects and annotations (its river).
+ * Its sand and soil are read by the dig spots alone (`digSurface`, islandNodes.ts digSpots); the map takes them as plain
+ * land, as it always did: the natural shoreline would double the server's coast work and change nothing it checks.
+ */
+export function villageOfCells(c: WorldCells, objects: readonly MapObject[], annotations?: readonly MapAnnotation[]): Village {
+  const map = cellsMap(c), dig = Uint8Array.from(map.surfaces);
+  for (let i = 0; i < map.surfaces.length; i++) if (map.surfaces[i] === Surface.Sand || map.surfaces[i] === Surface.Soil) map.surfaces[i] = Surface.Grass;
+  const digSurface = (cx: number, cz: number) => (cx >= 0 && cz >= 0 && cx < c.width && cz < c.depth ? dig[cz * c.width + cx] : Surface.Grass);
+  return { ...villageOf(map, objects), rivers: riverCells(annotations), digSurface };
+}

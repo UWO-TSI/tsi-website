@@ -33,47 +33,48 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 ## Status
 
-Merged tutorial-v2's guide arrow (203f8603). Built so far (uncommitted work is committed as it lands; see git log):
+Branch game/main-quest (head: see git log). Merged tutorial-v2's guide arrow (203f8603). Gates at 311b5b5c: tsc clean,
+vitest 3498 passed on both worlds (village and NEXT_PUBLIC_GAME_WORLD=new), the SQL launch chain clean.
 
-- **Chapter engine** (`web/lib/progression/chapters.ts`): requirements are data (`STEP_RULES`): each step is counted from
-  server facts, stored by an action, or the finish. Personal chapters 1 to 6 run before the club ones (7 cafe, 8 museum
-  fund, 9 ruins). The dropdown shows `personalChapter` only, never a club goal. Facts: `web/lib/progression/facts.ts`
-  (member_collections totals, gear, museum_donations). `reward_item` gives a shop item on completion (Bram's `rod-cedar`).
-  - m1 `settle-in`: first catch, then talk to **Juno** (new resident, slug `docent`, post `museum_guide`, at the museum):
-    her talk sends `donate_catch`, which finishes the chapter (100 coins and her letter). No report to Alice.
-  - m2 `odiles-net`, m3 `pims-shovel`, m4 `brams-challenge` (5 kinds, one at dawn or dusk: `twilight_catch`, checked on
-    the server clock against the last fish's updated_at), m5 `the-museum` (donate 3 new; club tally 10 fish, 5 bugs,
-    3 finds), m6 `elizas-pickaxe` (3 stone, 1 iron). Each finishes by talking to its person (`lib/game/mainQuest.ts`).
-- **Quest dropdown** (`components/game/QuestTracker.tsx`): the line drops down your quests; clicking the main quest
-  points the guide arrow (owner "quest") at the step's place or the nearest bug, dig spot or rock.
-- **Pickaxe**: tool kind `pickaxe` (`pickaxe-basic`, nobody's starter, Mayor Eliza gives it to everyone), rocks need it
-  and give only stone or iron (clay, gold, crystal moved to biome `mountain`). Held kind added to the net protocol.
-- **Dig spots**: `digSpots()` in `lib/game/islandNodes.ts` picks sand and soil cells off the painted map (8 each);
-  buried finds `BURIED_FINDS` in the roster (7 new, rarities to legendary). The server's cell view now carries sand `s`
-  and soil `d` (`lib/game/world/cells.ts`; `web/data/world/cells.json` regenerated).
-- **x-teachers**: the chapter's people stay at its place all day (`questPosts`, NPC plans).
-- **Migrations (not applied):** `20261027150000_main_quest.sql` (hand-written: requirement CHECK, reward_item, the
-  pickaxe in tool/slot CHECKs, chapter 1 copy, chapters 2 to 6, club chapters to 7 to 9) then a generated
-  `*_catalogue_seed.sql` (roster finds, pickaxe item, Juno). Regenerate the seed (delete it, `node scripts/gen-seeds.mjs`)
-  after any catalogue change.
+- **Chapter engine** (`web/lib/progression/chapters.ts` STEP_RULES): steps are counted from server facts
+  (`lib/progression/facts.ts`), stored by an action, or the finish. Personal chapters 1 to 6 come before the club's
+  (7 cafe, 8 museum fund, 9 ruins). The dropdown shows `personalChapter` only, never a club goal. `reward_item`
+  (Bram's `rod-cedar`).
+  - m1 `settle-in`: first catch, then **Juno** (new resident `docent`, post `museum_guide`, at the museum; slug
+    confirmed by the coordinator) finishes it: 100 coins and her letter. No report to Alice.
+  - m2 `odiles-net`, m3 `pims-shovel`, m4 `brams-challenge` (5 kinds, one at dawn or dusk: `twilight_catch` on the
+    server clock), m5 `the-museum` (donate 3 new; club tally 10 fish, 5 bugs, 3 finds), m6 `elizas-pickaxe` (3 stone,
+    1 iron). Each finishes by talking to its person (`lib/game/mainQuest.ts`, `components/game/useMainQuest.ts`).
+- **Quest dropdown** (`components/game/QuestTracker.tsx`): the line drops down your quests; the main quest's
+  "Show the way" points the guide arrow (owner "quest").
+- **Pickaxe** (`pickaxe-basic`, nobody's starter, Mayor Eliza gives it to everyone); rocks need it and give stone or
+  iron (clay, gold, crystal moved to biome `mountain`). Held kind `pickaxe` in the net protocol.
+- **Dig spots** (`digSpots()` in `lib/game/islandNodes.ts`), 8 on sand and 8 on soil read off the painted map; seven
+  buried finds (`BURIED_FINDS`); the server's cell view carries sand and soil (`data/world/cells.json` regenerated).
+  The marks and holes were invisible (the pack sprites never drew): now plain geometry (a crack star, a fading disc).
+- **Bug catching**: a missed swing startles nearby bugs, an escape says "It got away!", a catch sparkles.
+- **x-teachers**: a chapter's people stay at its place all day (`questPosts`). New world stand-ins (David: "pond only
+  in mountain"): a pond stop is spent on the **beach**, a path stop on the **plaza** (`placeAt` STAND_IN).
+- **x-lines**: Bram's go-home line, Sable's temple line and Rosa's "not open yet" swapped for open things.
+- **Art** (`art/props-enemies/build_mining.py`): pickaxe, stone, iron and spent outcrops, seven finds; icons rendered.
+- **Migrations (not applied), in order:** `20261027150000_main_quest.sql`, then `20261027195451_catalogue_seed.sql`.
+  Smoke: `web/supabase/tests/main_quest_smoke.sql` in `specs/evidence/launch-fixes/sql-smoke.sh`.
+- Evidence: `specs/evidence/main-quest/` (shoot.mjs; dropdown, arrow, Juno, each chapter, models).
 
 ## Next
 
-1. Commit; tsc and the full vitest (both world envs).
-2. Bug catching fun (m2): approach, swing, flee, catch feedback.
-3. Dig marks clearer on sand and dirt (m3); models for the 7 finds, the pickaxe, new rock and ore outcrops (Blender,
-   headless); then set the finds' icon/model in the roster and regenerate the seed.
-4. x-lines: swap lines about closed things.
-5. Headless shots: the dropdown open with the arrow, Juno, a dig mark on sand and dirt, the pickaxe. Review page via
-   the coordinator.
-6. Ask the coordinator: Juno's slug `docent` with lane npc-editor; pond and path anchors for David (x-teachers).
+1. Check the dig marks and the pickaxe in the hand in a short browser batch; commit; report.
+2. After review: David's notes.
 
 ## Tools and gotchas
 
-- Single test files run without the lock: `npx vitest run <file>`. Full tsc and vitest under the heavy lock.
-- `scripts/world-cells.ts` regenerates `web/data/world/cells.json` (run without the heavy lock; it's light).
-- The seed test needs the generated catalogue seed in sync: `node scripts/gen-seeds.mjs` writes a NEW migration.
+- Browser batches: `LANE=game/main-quest /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh devserver <script>`,
+  retried while it exits 75 (no queue file). One short batch per hold. Runner pattern in the scratchpad `mqrun/`.
+- `?progression=demo&chapter=<slug>&tally=bugs:2,net:1` puts the demo member anywhere in the main quest.
+- Single test files run without the lock; full tsc and vitest under the heavy lock.
+- `scripts/world-cells.ts` regenerates `web/data/world/cells.json`; `node scripts/gen-seeds.mjs` writes a NEW seed.
 - `talkStore.quest` (main quest) is consulted before `talkStore.script` (tool teachers) in `NPC.tsx`.
+- Juno stands by a tree in the village: approached from the front, "Shake the tree" takes E; from the side it's her.
 
 ## Rules
 

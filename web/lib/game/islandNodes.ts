@@ -39,26 +39,28 @@ export function digSpots(v: Village = village()): { x: number; z: number; soil: 
   const cached = digCache.get(v);
   if (cached) return cached;
   const m = v.map, out: { x: number; z: number; soil: boolean }[] = [];
+  const surface = v.digSurface ?? ((cx: number, cz: number) => surfaceAt(m, cx, cz));
+  const marks = landmarks(v);
   const blocked = (x: number, z: number) => v.objects.some(o => Math.hypot(o.x - x, o.z - z) < 1.8)
-    || landmarks(v).some(l => Math.abs(x - l.x) < (l.half?.[0] ?? 0) + 1.5 && Math.abs(z - l.z) < (l.half?.[1] ?? 0) + 1.5);
+    || marks.some(l => Math.abs(x - l.x) < (l.half?.[0] ?? 0) + 1.5 && Math.abs(z - l.z) < (l.half?.[1] ?? 0) + 1.5);
   /** How many cells in from the surface's edge the cell is, up to 2 (surfaces only: the server's cell view has no levels). */
   const margin = (cx: number, cz: number, want: number) => {
     for (let r = 1; r <= 2; r++) for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++)
-      if (surfaceAt(m, cx + dx, cz + dz) !== want) return r - 1;
+      if (surface(cx + dx, cz + dz) !== want) return r - 1;
     return 2;
   };
   for (const soil of [false, true]) {
-    const want = soil ? Surface.Soil : Surface.Sand, cells: [number, number, number][] = [];
+    const want = soil ? Surface.Soil : Surface.Sand, cells: [number, number, number, number][] = [];
     for (let cz = 2; cz < m.depth - 2; cz++) for (let cx = 2; cx < m.width - 2; cx++) {
-      const k = surfaceAt(m, cx, cz) === want ? margin(cx, cz, want) : 0;
-      if (k > 0) cells.push([cx, cz, k]);
+      const k = surface(cx, cz) === want ? margin(cx, cz, want) : 0;
+      if (k > 0) cells.push([cx, cz, k, fnv1a(`dig:${cx},${cz}`)]);
     }
     // Open ground first (two cells in), then a narrower strip of it (a path, a thin beach) if that's all there is.
-    cells.sort((a, b) => b[2] - a[2] || fnv1a(`dig:${a[0]},${a[1]}`) - fnv1a(`dig:${b[0]},${b[1]}`));
+    cells.sort((a, b) => b[2] - a[2] || a[3] - b[3]);
     let n = 0;
     for (const [cx, cz] of cells) {
       const x = cellToWorldX(m, cx), z = cellToWorldZ(m, cz);
-      if (!isGroundAtWorld(m, x, z) || blocked(x, z) || out.some(o => Math.hypot(o.x - x, o.z - z) < DIG_GAP)) continue;
+      if (out.some(o => Math.hypot(o.x - x, o.z - z) < DIG_GAP) || !isGroundAtWorld(m, x, z) || blocked(x, z)) continue;
       out.push({ x, z, soil });
       if (++n >= DIG_EACH) break;
     }

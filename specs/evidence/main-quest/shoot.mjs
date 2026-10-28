@@ -114,20 +114,25 @@ for (const scene of SCENES) {
     }
   }
   if (scene === "dig") {
-    const { ctx, page } = await open("collections=demo", { "tsi.held.v1": JSON.stringify({ held: "shovel:shovel-basic" }) });
-    await go(page, -3, -15.8, Math.PI);
+    const { ctx, page } = await open("collections=demo&time=day", { "tsi.held.v1": JSON.stringify({ held: "shovel:shovel-basic" }) });
+    // Beside the spot, the camera behind: your own body would hide a mark straight ahead.
+    await go(page, -0.4, -19, 0);
     await sleep(2500);
     await shot(page, "20-dig-mark-sand");
-    await go(page, 0, -4.3, 0);
+    await go(page, 2.4, -3.2, 0);
     await sleep(2500);
     await shot(page, "21-dig-mark-dirt");
     await ctx.close();
   }
   if (scene === "pickaxe") {
-    const { ctx, page } = await open("collections=demo", { "tsi.toolQuests.v1": JSON.stringify({ pickaxe: "given" }), "tsi.held.v1": JSON.stringify({ held: "pickaxe:pickaxe-basic" }) });
+    const { ctx, page } = await open("collections=demo&time=day", { "tsi.toolQuests.v1": JSON.stringify({ pickaxe: "given" }), "tsi.held.v1": JSON.stringify({ held: "pickaxe:pickaxe-basic" }) });
     await go(page, -14.1, 2.4, Math.PI / 2);
     await sleep(3000);
     await shot(page, "30-pickaxe-at-a-rock");
+    // From the side: the pickaxe in the hand and the ore rock in front.
+    await page.evaluate(() => { window.__orbit.orbit.target.yaw = 0.2; window.__orbit.orbit.view.yaw = 0.2; });
+    await sleep(1500);
+    await shot(page, "31-pickaxe-from-the-side");
     await ctx.close();
   }
 }
