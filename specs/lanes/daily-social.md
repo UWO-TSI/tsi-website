@@ -45,6 +45,7 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
   - s-campfire: the hour's notice and the bonus are quiet toasts (`toast(text, icon, { quiet: true })`).
   - Kit (components/gui/flat/rewards.tsx): HeartMeter, RewardTrack, PrizeWheel, GoalMeter, CountUp; token `--ui-heart` in the three themes; /lab/gui?only=flat-rewards. main-quest owns the reward pop and the rarity tokens (`--ui-rarity-*`, the wheel already reads them with a fallback).
 - x-moves (approved): dash for everyone, glider locked.
+- Round done at 8dc5bfea (the lane-file commit sits on top). Gates: vitest with NEXT_PUBLIC_GAME_WORLD=new 3528 passed / 4 skipped (370 files), tsc clean, eslint clean on changed files, the SQL smoke chain passes (welcome_week, resident_friendship, resident_lines).
 
 ## David's decisions
 
