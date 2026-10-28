@@ -10,10 +10,11 @@ describe("worldModel", () => {
     expect(worldModel("/assets/acnh/props/fence-rope-a.glb", "new")).toBe("/assets/game/remodel/props/fence-rope-a.glb");
     expect(worldModel("/assets/acnh/props/rock-b.glb", "new")).toBe("/assets/game/remodel/props/rock-b.glb");
     expect(worldModel("/assets/acnh/critters/mantis.glb", "new")).toBe("/assets/game/remodel/critters/mantis.glb");
+    expect(worldModel("/assets/acnh/critters/monarch-butterfly.glb", "new")).toBe("/assets/game/remodel/critters/monarch-butterfly.glb");
     expect(worldModel("/assets/acnh/fish/carp.glb", "village")).toBe("/assets/acnh/fish/carp.glb");
   });
   it("leaves what isn't remodelled alone", () => {
-    for (const url of ["/assets/acnh/critters/firefly.glb", "/assets/acnh/critters/monarch-butterfly.glb", "/assets/acnh/critters/red-dragonfly.glb", "/assets/acnh/props/crab-hermit.glb", "/assets/acnh/props/crab-gazami.glb", "/assets/acnh/fruit/apple.glb", "/assets/acnh/sea/scallop.glb", "/assets/acnh/props/rock-d.glb"])
+    for (const url of ["/assets/acnh/critters/firefly.glb", "/assets/acnh/props/crab-hermit.glb", "/assets/acnh/props/crab-gazami.glb", "/assets/acnh/fruit/apple.glb", "/assets/acnh/sea/scallop.glb", "/assets/acnh/props/rock-d.glb"])
       expect(worldModel(url, "new")).toBe(url);
   });
   it("has our file for every fish the new world can catch", () => {
