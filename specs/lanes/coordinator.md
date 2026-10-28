@@ -399,3 +399,5 @@ David: "why are we using the old island for some of these artifcats, it should n
   - fish-tiers: the fishing bar and meter, plus a new member fishing overlay. FishingOverlay.tsx stays as is for the applicant island only.
 - fish-tiers: the approved SHA comes after its perf:check commit (80395fe4 plus the numbers). The cream UI attempt is parked on game/fish-tiers-ui-r1; never merge it.
 - Dead-code review: the archive lane also takes every retired map (/lab/map whole, island-map.json, world-map.json and the v2 convert chain, the proposals) and re-points four tests at the live world. Dash and glider were locked forever (no caller of unlockMove): the tutorial dock beat and daily-social's "dash for everyone" fix dash.
+- QuestCheck (the quest-complete check-mark moment, `tsi:quest-complete`) belongs to tutorial-v2. main-quest fires the event on chapter completion; check the sequence after both merge.
+- Open question for David: HQ has no job board or past-projects display, though his farewell note assumes both. Add them as HQ stations? Until he answers, Alice names the notice board, the trophy case and the Founder's desk.
