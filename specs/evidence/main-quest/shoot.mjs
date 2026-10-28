@@ -7,7 +7,7 @@
 // Scenes: flow, chapters, dig, pickaxe (the new world: run the dev server with NEXT_PUBLIC_GAME_WORLD=new); village (the
 // default world, no env: the village's one tracker line, unchanged).
 // Places are the new world's (lib/collections/rolls.ts activeVillage("new"): museum 4,70.5; dig-sand-0 -17,102;
-// dig-soil-8 67,16; rock-1 38,25.1).
+// dig-soil-15 35,84; rock-1 38,25.1).
 import { createRequire } from "node:module";
 import { mkdirSync, writeFileSync } from "node:fs";
 const require = createRequire("/opt/homebrew/lib/node_modules/");
@@ -48,11 +48,12 @@ const prompt = page => page.evaluate(() => [...document.querySelectorAll("main b
 async function besides(page, slug) {
   for (const [dx, dz, yaw] of [[0, -1, 0], [1, 0, -Math.PI / 2], [-1, 0, Math.PI / 2], [0, 1, Math.PI], [0.7, -0.7, -0.8], [-0.7, -0.7, 0.8]]) {
     const r = await page.evaluate(s => window.__residents?.().find(x => x.slug === s) ?? null, slug);
-    if (!r) return null;
+    if (!r) { console.log("residents", JSON.stringify(await page.evaluate(() => window.__residents?.().map(x => x.slug) ?? null))); return null; }
     await go(page, r.x + dx, r.z + dz, yaw);
     await sleep(400);
     const p = await prompt(page);
     if (p && /Talk|Juno|Odile/.test(p)) return r;
+    console.log("side", dx, dz, JSON.stringify(r).slice(0, 120), p);
   }
   return null;
 }
@@ -122,9 +123,27 @@ for (const scene of SCENES) {
     await go(page, -15.8, 99.5, 0);
     await sleep(2500);
     await shot(page, "20-dig-mark-sand");
-    await go(page, 68.2, 13.5, 0);
+    await shot(page, "20-dig-mark-sand-close", { x: 420, y: 260, width: 600, height: 420 });
+    await go(page, 36.2, 81.5, 0);
     await sleep(2500);
     await shot(page, "21-dig-mark-dirt");
+    await shot(page, "21-dig-mark-dirt-close", { x: 420, y: 260, width: 600, height: 420 });
+    await ctx.close();
+  }
+  if (scene === "juno") {
+    // Chapter 1 ready (a fish caught): Juno at the museum finishes it.
+    const { ctx, page } = await open("");
+    await go(page, 4, 66, 0);
+    await sleep(3000);
+    await besides(page, "docent");
+    await sleep(1500);
+    await shot(page, "04-juno-at-the-museum");
+    try { await talkTo(page, "docent", "05-juno-talk"); } catch (e) { console.log("no talk", e.message.slice(0, 120)); }
+    await sleep(2500);
+    await shot(page, "06-chapter-1-done");
+    await openList(page);
+    await sleep(500);
+    await shot(page, "07-next-chapter", await dropdownClip(page));
     await ctx.close();
   }
   if (scene === "pickaxe") {
@@ -141,7 +160,9 @@ for (const scene of SCENES) {
   if (scene === "village") {
     // The default world: the village's line, which opens the journal (no dropdown, no chevron).
     const { ctx, page } = await open("");
+    await sleep(8000); // the arrival's fade
     await shot(page, "50-village-line", { x: 760, y: 0, width: 680, height: 200 });
+    await shot(page, "51-village");
     log.push({ name: "50-village-line", dropdown: !!(await page.$("[data-testid=quest-tracker] button[aria-expanded]")), label: await page.$eval("[data-testid=quest-tracker]", el => el.getAttribute("aria-label")) });
     await ctx.close();
   }

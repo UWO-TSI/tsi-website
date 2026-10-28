@@ -532,8 +532,10 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     }
     // A resident in reach (the residents' frame wrote them just before this one): they take E unless a door, a seat or
     // a sign is nearer. Talking (or fishing, or at a study seat) offers nothing else.
+    // On the new world a closed building's sign never beats a resident in reach: Juno waits at the closed museum's door
+    // to take your first catch (m1). The village keeps its order.
     const tn = talkStore.near;
-    if (tn.id && !fishing && tn.d < nextD) next = "talk";
+    if (tn.id && !fishing && (tn.d < nextD || (NEW_WORLD && (next === "museum" || next === "cafe")))) next = "talk";
     if (studyHoldsPrompt() || talking) next = null;
     // Bram waiting at his stop on the walk-along (or talking): E is his.
     else if (!fishing && bramNear(px, pz)) next = "bram";
