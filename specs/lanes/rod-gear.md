@@ -32,8 +32,27 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 ## Status
 
-- **Rarity ladder done** (step 1), committed on its own. `web/lib/rarity.ts` is the one ladder (`RARITIES`, `RARITY_RANK`, `RARITY_LABEL`, `isRarity`, the Contraband gate `mayHoldContraband` behind `NEXT_PUBLIC_CONTRABAND=1`). Roster, fishing, the GUI kit, content types, rewards and the admin shop editor all import it. Sea King became Divine (holographic badge and tile edge in the kit, `--gui-holo`); Contraband is dark (`--gui-rarity-contraband`, cream text) and never rolls (weight 0). Fish roll weight: Divine 0.4 vs legendary 2.5. Sell prices: Divine 2.5x legendary, Contraband none. Migrations for the coordinator: `20261027140000_rarity_ladder.sql` (widens the rarity checks) then `20261027183120_catalogue_seed.sql` (Divine sell prices, generated). Gates: tsc, full vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, eslint on changed files.
-- Next up: steps 2 to 5 (rods, add-ons, rod shop, hollow items).
+- **Rarity ladder done** (step 1, cb7bed43, reported). `web/lib/rarity.ts` is the one ladder (`RARITIES`, `OBTAINABLE`, `RARITY_RANK`, `RARITY_LABEL`, `isRarity`, `mayHoldContraband`). Sea King became Divine (holographic in the GUI kit, `--gui-holo`); Contraband is dark. Fish weight Divine 0.4 vs legendary 2.5; Divine sells at 2.5x legendary; Contraband has no price.
+- **Contraband is staff tools** (David): never obtainable from any shop, drop, catch, quest, recipe or reward; only an admin grant to a staff account. `lib/rarity.test.ts` holds every obtainable source to `OBTAINABLE`; the admin shop editor offers only `OBTAINABLE`; the shop_items check leaves contraband out. Showing the tier stays behind `NEXT_PUBLIC_CONTRABAND=1`.
+- **Steps 2 to 5 built and committed** (gates: tsc clean, full vitest both worlds, eslint clean on changed files; shots in `specs/evidence/rod-gear/`):
+  - `lib/game/rods.ts`: six stats per rod on a 0-10 radar (`STAT_KEYS`, `STAT_INFO` says what each does), `effects()` maps them onto the loop (luck, bite window, line strength = drain, reel speed = fill, lure = wait, control = bar width), five rods from Flimsy to Tidewarden (top at 7 to 8 of 10: more rods later). Add-ons `TACKLE` (Sweet bait: +2 bite, +1 lure; Lucky bobber: +2 luck), `rig()`, `ownedRig()` (the server's roll: only owned add-ons count).
+  - Wiring: reel fill and bar width (`fishingReel.ts`), wait (`FishingOverlay`), the cast sends `tackle` (`castLine`), the server rolls with `ownedRig` (`collections/service.ts`), the client reads equipped add-ons (`usePeacefulContext`, event `tsi:gear-changed`).
+  - Equip: member_inventory.equipped with new slots `bait` and `bobber` (one per slot).
+  - Rod shop: the Tools shelf lists the five rods by tier (Flimsy "Yours", Lighthouse and Tidewarden "Made at the workbench", synthesized in `lib/wallet/service.ts rodShelf`), then the add-ons. Detail: the turning model, the hex radar (`components/gui/flat/HexRadar.tsx`, add-on gains in orange), the add-on slots, and the spec band says what each stat does (`components/economy/RodGear.tsx`). The new world's tackle-shop door says "Browse rods" and opens the same panel (`section="rods"`). The Bag's rod detail shows the radar and slots (no hollow Equip on rods).
+  - Hollow items: `rod-basic`, `net-mid`, `shovel-mid` off sale (`HOLLOW_TOOLS`); furniture, wallpaper and flooring off the shelves and out of the specials until homes open (`isOnSale`, `dailySpecials`, drop 4); empty shelves hide; the shop's plinths show specials that have a model, then fill up.
+  - Art: `bait-sweet.glb` (`art/props-enemies/build_items.py -- only bait-sweet`); its icon `public/assets/icons/bait-sweet.webp` (render-icons).
+- Migrations for the coordinator, in order: `20261027140000_rarity_ladder.sql`, `20261027183120_catalogue_seed.sql`, `20261027183200_rod_tackle_slots.sql`, `20261027183713_catalogue_seed.sql`.
+
+## Next
+
+1. The `/lab/gui` shots (badges, tiles, radar: `gui-*.png`) once the devserver lock frees; the showroom's fixed layers cover its sections, so the script hides them first (scratchpad `shots-gui.mjs`).
+2. David's review of the shots; perf:check not needed (UI and data only; the tackle shop door adds no rendering).
+
+## Tools and gotchas
+
+- Locks are contended: there is no queue file (the coordinator removed it); retry `withlock.sh heavy|devserver` in a loop while it exits 75, and keep each hold to one short batch.
+- `node scripts/gen-seeds.mjs` writes the catalogue seed migration after a catalogue change; a hand migration that widens a check must sort before it.
+- Dev harness: `/dev/economy?view=overlay&section=rods` (memory store, a cedar rod and an equipped lucky bobber).
 
 ## Rules
 

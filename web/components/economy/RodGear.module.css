@@ -1,0 +1,11 @@
+/* The rod's add-on slots (RodGear.tsx), in the flat kit's colours. */
+.slots { display: grid; gap: 8px; }
+.slot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.slotName { min-width: 56px; color: var(--ui-ink-2); font: 700 12px/1.2 var(--gui-font); letter-spacing: 0.06em; text-transform: uppercase; }
+.empty { color: var(--ui-quiet); font: 400 13px/1.3 var(--gui-font); }
+.chip { display: inline-grid; gap: 1px; padding: 6px 12px; border: 0; border-radius: 12px; background: var(--ui-pill); color: var(--ui-pill-ink, var(--ui-ink)); font: 700 13px/1.2 var(--gui-font); text-align: left; cursor: pointer; }
+.chip small { color: var(--ui-ink-2); font-weight: 600; font-size: 12px; }
+.chip[aria-pressed="true"] { background: var(--ui-accent); color: var(--ui-accent-ink, #fff); }
+.chip[aria-pressed="true"] small { color: inherit; opacity: 0.85; }
+.chip:disabled { opacity: 0.6; cursor: default; }
+.chip:focus-visible { outline: 2px solid var(--ui-accent-deep); outline-offset: 2px; }

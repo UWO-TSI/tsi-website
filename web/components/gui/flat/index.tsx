@@ -27,6 +27,7 @@ export const STAGE = { stage: f.stage, picture: f.stagePicture } as const;
  */
 export const NUDGE_GRID = f.nudge;
 export { useNudge };
+export { HexRadar, type RadarAxis } from "./HexRadar";
 
 const cx = (...names: (string | false | null | undefined)[]) => names.filter(Boolean).join(" ");
 

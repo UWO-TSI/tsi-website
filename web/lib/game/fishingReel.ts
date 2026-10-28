@@ -2,10 +2,11 @@ import { DAMPING, EDGE_BOUNCE, FILL_RATE, GRAVITY, HOLD_ACCEL, RARITY_META, STAR
 
 const STEP = 1 / 60;
 
-export function createFishingReel(fish: FishDef) {
+/** `barMul` (the rod's control, rods.ts) widens the catch bar. */
+export function createFishingReel(fish: FishDef, barMul = 1) {
   return {
     fish,
-    barWidth: RARITY_META[fish.rarity].barW,
+    barWidth: Math.min(0.5, RARITY_META[fish.rarity].barW * barMul),
     position: 0,
     velocity: 0,
     fishPosition: 0.15,
@@ -25,8 +26,8 @@ export function createFishingReel(fish: FishDef) {
 export type FishingReel = ReturnType<typeof createFishingReel>;
 
 /** Preserve the authored 60 Hz fight on every display; bound suspended-frame catch-up. */
-/** `tensionMul` (rod tier, rods.ts) scales how fast progress drains while the fish is outside the bar. */
-export function advanceFishingReel(state: FishingReel, delta: number, holding: boolean, dartChanceMultiplier: number, random = Math.random, tensionMul = 1) {
+/** The rod's stats (rods.ts): `tensionMul` scales the drain while the fish is outside the bar, `fillMul` the fill inside it. */
+export function advanceFishingReel(state: FishingReel, delta: number, holding: boolean, dartChanceMultiplier: number, random = Math.random, tensionMul = 1, fillMul = 1) {
   const events = { bounced: false, darted: false };
   if (state.result !== null) return events;
   state.remainder += Math.max(0, Math.min(delta, 0.1));
@@ -67,7 +68,7 @@ export function advanceFishingReel(state: FishingReel, delta: number, holding: b
     else if (state.fishPosition > 1) { state.fishPosition = 1; state.fishVelocity = 0; }
 
     state.inside = state.fishPosition >= state.position - 0.015 && state.fishPosition <= state.position + state.barWidth + 0.015;
-    state.progress = Math.max(0, Math.min(1, state.progress + (state.inside ? FILL_RATE : -drainRate) * STEP));
+    state.progress = Math.max(0, Math.min(1, state.progress + (state.inside ? FILL_RATE * fillMul : -drainRate) * STEP));
     state.tension = state.inside ? Math.min(1, state.tension + STEP / 1.2) : Math.max(0, state.tension - STEP / 0.5);
     if (state.progress === 1) state.result = true;
     else if (state.progress === 0) state.result = false;

@@ -21,6 +21,8 @@ import { Badge, Banner, Button, Card, ConfirmDialog, Counter, Dialogue, Empty, E
 import { FISH } from "@/lib/game/fishing";
 import { iconUrl } from "@/lib/icons/keys";
 import { RARITIES, RARITY_LABEL } from "@/lib/rarity";
+import { RODS } from "@/lib/game/rods";
+import { RodRadar } from "@/components/economy/RodGear";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import s from "./showroom.module.css";
 
@@ -174,6 +176,12 @@ export default function GuiShowroom() {
     <Section id="dialogue" title="Dialogue" kit={["dialogue", "menu", "tutorial"]} note="Our painted speech paper with the coral name tag and the amber continue chevron (the recruit kit’s NPCDialogue, in this sheet’s scope).">
       <Dialogue speaker="Alice · HQ lead" onContinue={() => {}} continueLabel="Next"><p>Welcome to Tethos Island, <strong>Juniper</strong>! Your plot is waiting past the café.</p></Dialogue>
       <Row label="Name tags"><NameTag>Alice</NameTag><NameTag tone="sage">Rosa · Café</NameTag><NameTag tone="paper">Sable</NameTag></Row>
+    </Section>
+
+    <Section id="radar" title="Rod radar" note="The rod shop's hex (lib/game/rods.ts): the rod's six stats, and its add-ons' gains on top in orange.">
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 24 }}>
+        {RODS.map(r => <div key={r.key} style={{ width: 300 }}><b>{r.name}</b><RodRadar rod={r} tackle={r.tier === 3 ? ["bobber_lucky", "bait_sweet"] : []} /></div>)}
+      </div>
     </Section>
 
     <Section id="badges" title="Badges and counters" kit={["recipe", "phone"]} note="Status tags and the red count on a shoulder (nothing at zero).">

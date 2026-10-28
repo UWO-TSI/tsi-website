@@ -250,3 +250,17 @@ div.card:hover { box-shadow: none; }
 .withIcon { display: inline-flex; align-items: center; gap: 6px; }
 .retry { all: unset; margin-left: 6px; text-decoration: underline; cursor: pointer; }
 .rarity { display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 50%; vertical-align: 0.05em; box-shadow: inset 0 0 0 1px rgb(var(--ui-shade) / 0.12); }
+
+/* The radar (HexRadar): the base in the theme's accent, the add-ons' gains on top in orange. */
+.radar { display: grid; justify-items: center; gap: 4px; margin: 0; }
+.radar svg { display: block; height: auto; overflow: visible; }
+.radarRing { fill: none; stroke: rgb(var(--ui-shade) / 0.14); stroke-width: 1; }
+.radarBase { fill: color-mix(in srgb, var(--ui-accent) 32%, transparent); stroke: var(--ui-accent); stroke-width: 2; stroke-linejoin: round; }
+.radarGain { fill: color-mix(in srgb, var(--gui-orange) 55%, transparent); stroke: var(--gui-orange); stroke-width: 2; stroke-linejoin: round; }
+.radarLabel { fill: var(--ui-ink-2); font: 700 15px/1 var(--gui-font); }
+.radarValue { fill: var(--ui-ink); font-weight: 900; }
+.radarPlus { fill: var(--gui-coral-ink, #b2522e); font-weight: 900; }
+.radarKey { display: flex; align-items: center; gap: 6px; color: var(--ui-ink-2); font: 700 12px/1 var(--gui-font); }
+.radarKey i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+.radarKeyBase { background: color-mix(in srgb, var(--ui-accent) 45%, transparent); box-shadow: inset 0 0 0 2px var(--ui-accent); }
+.radarKeyGain { margin-left: 8px; background: color-mix(in srgb, var(--gui-orange) 60%, transparent); box-shadow: inset 0 0 0 2px var(--gui-orange); }

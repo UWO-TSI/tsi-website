@@ -85,8 +85,9 @@ async function catchRequest(body: Record<string, unknown>): Promise<CatchAnswer 
 }
 /** A forage node or bug spot, from where the player stands, with the held tool's key (a net for a bug, a shovel to dig; none by hand). */
 export const harvestNode = (node: string, at: [number, number], tool?: string) => catchRequest({ action: "harvest", node, at, ...(tool ? { tool } : {}) });
-/** Roll the fish that will bite on the held rod (`tool`), from where the player stands; landed with landCatch when the reel is won. */
-export const castLine = (site: "village" | "home", at: [number, number], power: number, tool: string) => catchRequest({ action: "cast", site, at, power, tool });
+/** Roll the fish that will bite on the held rod (`tool`) with its add-ons (`tackle`, rods.ts), from where the player stands; landed with landCatch when the reel is won. */
+export const castLine = (site: "village" | "home", at: [number, number], power: number, tool: string, tackle: readonly string[] = []) =>
+  catchRequest({ action: "cast", site, at, power, tool, ...(tackle.length ? { tackle } : {}) });
 export const landCatch = (roll: string) => catchRequest({ action: "land", roll });
 
 export type EatAnswer = { ok: true; count: number } | { ok: false; error: string };

@@ -11,7 +11,7 @@ import { torontoParts } from "@/lib/time";
 import { bagAction, bagView, catchAction, donate, getShowcase, journal, museum, setShowcase, tourney, trophies } from "@/lib/collections/service";
 import { sellPrice, speciesClass } from "@/lib/wallet/rules";
 import { memoryEconomyStore } from "@/lib/wallet/memoryStore";
-import { buy, getShop } from "@/lib/wallet/service";
+import { buy, equip, getInventory, getShop } from "@/lib/wallet/service";
 import { ROSTER } from "@/lib/collections/roster";
 import { MATERIALS } from "@/lib/crafting/recipes";
 import { TREATS } from "@/lib/collections/treats";
@@ -43,6 +43,11 @@ export function installCollectionsDemo(): void {
     m.name(ME, "You");
     [...OTHERS, ...ANGLERS].forEach(([id, name]) => m.name(id, name));
     const ready = (async () => {
+      // A lucky bobber on the rod, so the rod shop's radar shows an add-on's gain (lib/game/rods.ts).
+      const bobber = eco.items.find((i) => i.slug === "bobber-lucky")!.id;
+      eco.fund(ME, 1800);
+      await buy(eco.store, ME, { item_id: bobber, qty: 1, idempotency_key: "demo-bobber" }, new Date());
+      await equip(eco.store, ME, { item_id: bobber, equipped: true });
       const seed: [string, string, number | null][] = [
         [ME, "fish_dace", 14], [ME, "fish_pale_chub", 11], [ME, "fish_loach", 16], [ME, "fish_black_bass", 42], [ME, "bug_common_butterfly", null],
         [ME, "bug_ladybug", null], [ME, "shell_scallop", 9], [ME, "apple", null], [ME, "flower_tulip", null],
@@ -108,6 +113,8 @@ export function installCollectionsDemo(): void {
         }
         case "/api/economy/shop": return reply(await getShop(eco.store, ME, now), "shop");
         case "/api/economy/buy": return reply(await buy(eco.store, ME, body, now), "purchase");
+        case "/api/economy/inventory": return reply(await getInventory(eco.store, ME), "inventory");
+        case "/api/economy/equip": return reply(await equip(eco.store, ME, body), "inventory");
         case "/api/economy/wallet": return reply({ ok: true, data: { coins: eco.coinsOf(ME), gems: eco.gemsOf(ME), daily_claimed: true, day: "", recent: [] } }, "wallet");
         default: return null;
       }

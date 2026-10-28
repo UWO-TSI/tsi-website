@@ -9,6 +9,8 @@
  * with it; the grid stays in view. The grid is shared with the storage chest (ChestSheet). The server owns the stock
  * and the sizes (lib/game/bagStore); the grid's arrangement and the New marks are this device's.
  */
+import { RodRadar, TackleSlots, bestRod, equippedTackle, rodOf } from "@/components/economy/RodGear";
+import { tackleByKey } from "@/lib/game/rods";
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { Apple, ArrowDownWideNarrow, Backpack, Bug, Fish, Gem, Lock, LockOpen, Pin, PinOff, Shirt, Sofa, Wrench, X } from "lucide-react";
 import { ConfirmDialog, SignInText } from "@/components/gui";
@@ -259,7 +261,7 @@ function Pins({ stock, onNote }: { stock: Record<string, number>; onNote: (n: { 
 
 const USE_HINT: Record<string, string> = { outfits: "Wear it from your closet", furniture: "Place it at home" };
 const SHELF_EMPTY: Record<string, string> = { tools: "No tools yet. The shop is by the plaza.", outfits: "No clothes yet. The shop is by the plaza.", furniture: "No furniture yet. The shop is by the plaza." };
-const SLOT_NAME: Record<string, string> = { rod: "Fishing rod", net: "Bug net", shovel: "Shovel", outfit: "Outfit", hair: "Hair dye", accessory: "Accessory" };
+const SLOT_NAME: Record<string, string> = { rod: "Fishing rod", net: "Bug net", shovel: "Shovel", outfit: "Outfit", hair: "Hair dye", accessory: "Accessory", bait: "Bait", bobber: "Bobber" };
 const rowPicture = (r: InventoryRow) => r.item.sprite_url ?? shopIcon(r.item);
 
 /** One shelf of what you own (tools, clothes, furniture and finishes): cards, and the picked one in the side panel. */
@@ -270,7 +272,7 @@ function Owned({ group }: { group: "tools" | "outfits" | "furniture" }) {
   const [busy, setBusy] = useState(false);
   const toggle = async (id: string, on: boolean) => {
     setBusy(true);
-    try { await transport.equip(id, on); await reload(); }
+    try { await transport.equip(id, on); await reload(); window.dispatchEvent(new CustomEvent("tsi:gear-changed")); }
     catch (e) { setError(errText(e)); }
     finally { setBusy(false); }
   };
@@ -279,11 +281,15 @@ function Owned({ group }: { group: "tools" | "outfits" | "furniture" }) {
   const row = rows.find(r => r.item.id === picked) ?? null;
   const title = SHELVES.find(x => x.id === group)!.label;
   const kind = (r: InventoryRow) => r.item.slot ? SLOT_NAME[r.item.slot] ?? cap(r.item.slot) : cap(String(r.item.category));
+  // A rod shows its radar and its add-on slots; an add-on its gains on your best rod (RodGear.tsx).
+  const rod = rodOf(row?.item.catalogue_ref), add = tackleByKey(row?.item.catalogue_ref), on = equippedTackle(rows);
   const side = row ? <SidePanel key={row.item.id} testId="bag-owned-item" onClose={() => setPicked(null)} picture={rowPicture(row)} title={row.item.display_name} kind={kind(row)}
-    facts={[["You own", row.qty.toLocaleString()], ["Status", row.item.slot ? (row.equipped ? "Equipped" : "In your closet") : USE_HINT[group] ?? "Yours"],
+    facts={[["You own", row.qty.toLocaleString()], ["Status", rod ? "Take it out from the tool wheel" : row.item.slot ? (row.equipped ? (add ? "On your rod" : "Equipped") : "In your closet") : USE_HINT[group] ?? "Yours"],
       ...(row.item.description ? [["About", row.item.description] as const] : [])]}
-    actions={row.item.slot ? <DarkButton disabled={busy} onClick={() => void toggle(row.item.id, !row.equipped)}>{busy ? "One moment…" : row.equipped ? "Unequip" : "Equip"}</DarkButton> : null}>
+    actions={row.item.slot && !rod ? <DarkButton disabled={busy} onClick={() => void toggle(row.item.id, !row.equipped)}>{busy ? "One moment…" : row.equipped ? "Unequip" : "Equip"}</DarkButton> : null}>
     {error && <StatusLine error><SignInText text={error} /></StatusLine>}
+    {(rod || add) && <RodRadar rod={rod ?? bestRod(rows)} tackle={add ? [...on.filter(k => tackleByKey(k)?.slot !== add.slot), add.key] : on} />}
+    {rod && <TackleSlots rows={rows} busy={busy} onEquip={(id, eq) => void toggle(id, eq)} />}
   </SidePanel> : null;
   return <>
     {!row && error && <StatusLine error><SignInText text={error} /></StatusLine>}

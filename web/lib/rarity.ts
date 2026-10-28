@@ -3,8 +3,10 @@
  * epic, legendary, Divine, Contraband. Colours are the GUI kit's --gui-rarity-* tokens (styles/game-tokens.css);
  * Divine is holographic (it took over the old Sea King crown), Contraband is dark.
  *
- * Contraband is only for mods and T0/T1, and how it's earned is still open, so it stays shut behind
- * NEXT_PUBLIC_CONTRABAND=1: nothing rolls it (weight 0 wherever rarity is rolled) and `mayHoldContraband` says no.
+ * Contraband is staff tools (David, 2026-10-27: "like mod tools normal ppl cant get it"): for mods and T0/T1 only. No
+ * shop, drop, catch, quest, recipe, roulette, mystery box or reward ever grants one; the only way in is an admin grant
+ * to a staff account (rarity.test.ts holds every obtainable source to OBTAINABLE). Showing the tier stays shut behind
+ * NEXT_PUBLIC_CONTRABAND=1, and `mayHoldContraband` says who may hold one.
  */
 export const RARITIES = ["common", "uncommon", "rare", "epic", "legendary", "divine", "contraband"] as const;
 export type Rarity = (typeof RARITIES)[number];
@@ -13,6 +15,9 @@ export const RARITY_RANK = Object.fromEntries(RARITIES.map((r, i) => [r, i])) as
 export const RARITY_LABEL: Record<Rarity, string> = {
   common: "Common", uncommon: "Uncommon", rare: "Rare", epic: "Epic", legendary: "Legendary", divine: "Divine", contraband: "Contraband",
 };
+
+/** Every tier a normal player can get from any source: all but Contraband. */
+export const OBTAINABLE: readonly Rarity[] = RARITIES.filter(r => r !== "contraband");
 
 export const isRarity = (v: unknown): v is Rarity => (RARITIES as readonly unknown[]).includes(v);
 

@@ -32,7 +32,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import FishReveal from "./FishReveal";
 import { AudioManager } from "@/lib/game/audio";
 import { castLine, collect, landCatch, localCollections, localRecord, mergeWithLocal, type CatchAnswer } from "@/lib/game/collections";
-import { rodByTier, type RodTier } from "@/lib/game/rods";
+import { rodByTier, type RodEffects, type RodTier } from "@/lib/game/rods";
 import { rollFishFor } from "@/lib/game/peaceful";
 import type { WaterType } from "@/lib/game/fishingSpots";
 import { punchZoom, setAimZoom, setTensionZoom, shakeCamera } from "@/lib/game/cameraJuice";
@@ -189,7 +189,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     changePhase("waiting");
     // Cast power shortens the wait (max cast halves it); rain days shorten
     // it further (weather perk).
-    const wait = (2000 + Math.random() * 4000) * (1 - CAST.waitScale * powerRef.current) * weatherMods(reelWeather(liveIslandWeather())).biteWaitMul;
+    const wait = (2000 + Math.random() * 4000) * (1 - CAST.waitScale * powerRef.current) * weatherMods(reelWeather(liveIslandWeather())).biteWaitMul * rod.waitMul;
     // Fake nibbles (refinement 2026-07-23): 1-2 false-alarm tugs, never in
     // the last 1.2s before the real bite. Bobber dips + ripple + soft blip.
     if (wait > 2600) {
@@ -246,7 +246,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     changePhase("casting");
     // Member island: the server rolls what will bite now; a refusal (too soon, no water here) ends the cast.
     const from = collectionScope ? null : castFromRef.current;
-    rollRef.current = from && castLine(from.site, from.from, power, rod.key);
+    rollRef.current = from && castLine(from.site, from.from, power, rod.key, rod.tackle);
     void rollRef.current?.then(answer => {
       if (answer && !answer.ok && (phaseRef.current === "casting" || phaseRef.current === "waiting")) { bagFull(answer); miss(answer.error); }
     });
@@ -442,7 +442,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
       {phase === "charging" ? (
         <CastMeter onRelease={castNow} releaseRequestedRef={releaseRequestedRef} hint={FISHING_HINTS[device].charge} />
       ) : phase === "reeling" && fish ? (
-        <ReelMinigame fish={fish} known={ownedRef.current.has(fish.key)} onDone={onReelDone} initialInput={reelInputRef.current} tensionMul={rod.tensionMul} help={FISHING_HINTS[device].reel} />
+        <ReelMinigame fish={fish} known={ownedRef.current.has(fish.key)} onDone={onReelDone} initialInput={reelInputRef.current} rig={rod} help={FISHING_HINTS[device].reel} />
       ) : (
         <div
           style={{
@@ -547,14 +547,15 @@ export function ReelMinigame({
   known,
   onDone,
   initialInput,
-  tensionMul = 1,
+  rig,
   help = FISHING_HINTS.mouse.reel,
 }: {
   fish: FishDef;
   known: boolean;
   onDone: (success: boolean) => void;
   initialInput?: FishingHeldInput;
-  tensionMul?: number;
+  /** The rod in hand with its add-ons (rods.ts): the drain, the fill and the bar's width. */
+  rig?: Pick<RodEffects, "tensionMul" | "fillMul" | "barMul">;
   /** How to reel on the device that started the cast (FISHING_HINTS). */
   help?: string;
 }) {
@@ -571,7 +572,8 @@ export function ReelMinigame({
   const doneRef = useRef(false);
   const lastThunkRef = useRef(0);
 
-  const barW = RARITY_META[fish.rarity].barW;
+  const barMul = rig?.barMul ?? 1, tensionMul = rig?.tensionMul ?? 1, fillMul = rig?.fillMul ?? 1;
+  const barW = Math.min(0.5, RARITY_META[fish.rarity].barW * barMul);
 
   useEffect(() => {
     let raf = 0;
@@ -579,7 +581,7 @@ export function ReelMinigame({
     const previouslyFocused = document.activeElement as HTMLElement | null;
     const reel = reelRef.current;
     reel?.focus({ preventScroll: true });
-    const simulation = createFishingReel(fish);
+    const simulation = createFishingReel(fish, barMul);
     doneRef.current = false;
     holdingRef.current = false;
 
@@ -597,7 +599,7 @@ export function ReelMinigame({
         raf = requestAnimationFrame(step);
         return;
       }
-      const events = advanceFishingReel(simulation, dt, holdingRef.current, weatherMods(reelWeather(liveIslandWeather())).dartChanceMul, Math.random, tensionMul);
+      const events = advanceFishingReel(simulation, dt, holdingRef.current, weatherMods(reelWeather(liveIslandWeather())).dartChanceMul, Math.random, tensionMul, fillMul);
       const { position: pos, fishPosition: fishPos, inside, progress, tension } = simulation;
       // The fight in the world: the fish pulls the bobber across, the line tightens, the reel cranks while held.
       live.pull = fishPos * 2 - 1; live.tension = tension; live.reeling = holdingRef.current; live.reeled = progress;
