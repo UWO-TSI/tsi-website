@@ -15,6 +15,7 @@ import { popBang } from "@/components/game/character/hookBang";
 import { AudioManager } from "@/lib/game/audio";
 import { ReelMinigame } from "@/components/game/FishingOverlay";
 import FishReveal from "@/components/game/FishReveal";
+import FishingOverlay from "@/components/game/FishingOverlay";
 import FishPreview from "@/components/lab/FishPreview";
 import {
   REVEAL,
@@ -279,6 +280,10 @@ export default function FishingBench() {
             <button onClick={() => setRevealOpen(true)} style={btn()}>
               Preview the catch card
             </button>
+            {/* The whole loop through the game's own overlay (cast meter, wait, bite, reel, card), rolled here. */}
+            <button data-loop-start onClick={() => window.dispatchEvent(new CustomEvent("tsi:fish-start", { detail: { x: 0, z: 0 } }))} style={btn()}>
+              Cast (the whole loop)
+            </button>
             <button
               onClick={() => celebrate(selected.rarity, RARITY_META[selected.rarity].color)}
               style={btn()}
@@ -300,7 +305,7 @@ export default function FishingBench() {
           </div>
 
           {/* Reel stage */}
-          <div style={{ minHeight: 150, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.12)", borderRadius: 12, padding: 16 }}>
+          <div data-reel-stage style={{ minHeight: 150, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.12)", borderRadius: 12, padding: 16 }}>
             {reelOpen ? (
               <ReelMinigame key={reelKey} fish={selected} known={!mystery} onDone={onReelDone} />
             ) : lastResult ? (
@@ -319,6 +324,7 @@ export default function FishingBench() {
       {revealOpen && (
         <FishReveal fish={selected} sizeCm={rollSize(selected.sizeCm)} isNew={mystery} onDone={() => setRevealOpen(false)} />
       )}
+      <FishingOverlay collectionScope="lab" />
     </div>
   );
 }

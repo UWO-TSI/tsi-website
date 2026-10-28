@@ -1,0 +1,112 @@
+/*
+ * The flat kit's fishing pieces (components/gui/flat/reel.tsx; specs/design-bible.md UI): the reel's water track with
+ * its catch window and the fish, a line gauge, the cast's power meter, the status chip and the catch card. Theme
+ * tokens only (--ui-*, the rarity edges' --gui-rarity-* and --gui-holo). Motion: a spring with about 12% overshoot,
+ * transform only, and the juice kept for the big moments (the hook, the catch, a rare fish).
+ */
+.panel { position: relative; padding: 14px 16px 14px; border-radius: 18px; background: var(--ui-card); color: var(--ui-ink); font-family: var(--gui-font);
+  box-shadow: 0 10px 30px rgb(var(--ui-shade) / 0.14); animation: arrive 0.32s var(--spring) both; }
+.panel, .chip, .card { --spring: cubic-bezier(0.34, 1.4, 0.64, 1); }
+@supports (transition-timing-function: linear(0, 1)) {
+  .panel, .chip, .card { --spring: linear(0, 0.045, 0.157, 0.308, 0.473, 0.634, 0.778, 0.898, 0.992, 1.059, 1.101, 1.122, 1.126, 1.119, 1.103, 1.084, 1.063, 1.043, 1.025,
+    1.01, 0.999, 0.991, 0.987, 0.984, 0.984, 0.985, 0.987, 0.99, 0.993, 0.995, 0.997, 0.999, 1); }
+}
+@keyframes arrive { from { opacity: 0; transform: translateY(10px) scale(0.97); } }
+
+/* ── The water track: the catch window rides it, the fish swims in it ───── */
+.track { position: relative; height: 46px; border-radius: 999px; overflow: hidden; background: var(--ui-water);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ui-water-line) 60%, transparent); }
+/* Still ripples: the water's lines, no motion (calm until something happens). */
+.track::before { content: ""; position: absolute; inset: 0; border-radius: inherit;
+  background: repeating-linear-gradient(90deg, transparent 0 38px, color-mix(in srgb, var(--ui-water-line) 35%, transparent) 38px 40px, transparent 40px 76px); }
+.window { position: absolute; top: 5px; bottom: 5px; left: 0; border-radius: 999px; background: color-mix(in srgb, var(--ui-card) 72%, transparent);
+  box-shadow: inset 0 0 0 2px var(--ui-line-strong); transition: box-shadow 0.2s ease-out; }
+.track[data-in="true"] .window { box-shadow: inset 0 0 0 2px var(--ui-ink), 0 2px 8px rgb(var(--ui-shade) / 0.12); }
+.track[data-slip="true"] .window { box-shadow: inset 0 0 0 2px var(--ui-error); }
+/* The window and the fish ride the track by transform: the window's own width per step, the fish on a rail as wide as
+   the track (so 100% is the track). */
+.window { will-change: transform; }
+.marker { position: absolute; inset: 0; pointer-events: none; will-change: transform; }
+.fish { position: absolute; left: -17px; top: 50%; display: block; width: 34px; height: 34px; margin-top: -17px; transition: transform 0.2s var(--spring, ease-out); }
+.marker[data-unknown="true"] .fish { filter: brightness(0) opacity(0.55); }
+.track[data-slip="true"] .fish { transform: rotate(-14deg) scale(0.92); }
+.marker[data-away="true"] { opacity: 0.25; }
+
+/* A boss's call: the move it warns of (a marker ring), then the move under way (red). */
+.call { visibility: hidden; padding: 3px 10px; border-radius: 999px; font: 600 12px/1.2 var(--gui-font); }
+.call[data-stage="warn"] { visibility: visible; box-shadow: inset 0 0 0 2px var(--ui-marker); }
+.call[data-stage="live"] { visibility: visible; background: var(--ui-error); color: var(--ui-accent-ink); }
+
+/* ── The line gauge: a thin fill, marks at its quarters ────────────────── */
+.gauge { position: relative; height: 8px; border-radius: 999px; background: var(--ui-well); }
+.fill { position: absolute; inset: 0; border-radius: inherit; background: var(--ui-ink); transform-origin: left center; will-change: transform; }
+.gauge[data-tone="low"] .fill { background: var(--ui-error); }
+/* Nearly in: the catch is close, and the gauge says so (the start of the catch's big moment). */
+.gauge[data-near="true"] { box-shadow: 0 0 0 3px var(--ui-marker); animation: near 0.7s ease-in-out infinite alternate; }
+@keyframes near { to { box-shadow: 0 0 0 5px var(--ui-marker); } }
+.mark { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--ui-card); }
+
+/* ── The power meter: the fill rises and falls, the gold tip at the top ── */
+.meter { display: flex; align-items: flex-end; gap: 14px; }
+.meterTrack { position: relative; width: 16px; height: 150px; border-radius: 999px; overflow: hidden; background: var(--ui-well); }
+/* The gold tip: a band over the top of the track, edged where it starts; the fill turns gold inside it. */
+.zone { position: absolute; inset: 0 0 auto 0; z-index: 1; background: var(--ui-marker); box-shadow: 0 2px 0 var(--ui-ink); }
+.meterFill { position: absolute; inset: 0; border-radius: inherit; background: var(--ui-ink); transform-origin: center bottom; will-change: transform; }
+.meter[data-tip="true"] .meterFill { background: var(--ui-marker); }
+.meter[data-tip="true"] .zone { box-shadow: 0 0 10px 2px var(--ui-marker); }
+.readout { font: 600 30px/1 var(--gui-font); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.meterText { display: grid; gap: 6px; padding-bottom: 2px; }
+.meterHint { max-width: 13ch; color: var(--ui-quiet); font: 400 13px/1.35 var(--gui-font); }
+
+/* ── The status chip: casting, the wait, the hook ──────────────────────── */
+.chip { display: inline-flex; align-items: center; gap: 10px; padding: 10px 18px 10px 12px; border-radius: 999px; background: var(--ui-card); color: var(--ui-ink);
+  font: 600 15px/1 var(--gui-font); white-space: nowrap; box-shadow: 0 8px 22px rgb(var(--ui-shade) / 0.14); animation: arrive 0.28s var(--spring) both; }
+.chipIcon { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--ui-panel); }
+.chipIcon > svg { width: 16px; height: 16px; }
+.chip[data-tone="gold"] { box-shadow: 0 0 0 3px var(--ui-marker), 0 8px 22px rgb(var(--ui-shade) / 0.14); }
+/* The hook: the big moment of the cast. Black, it springs in big and shakes until you strike. */
+.chip[data-tone="alert"] { background: var(--ui-ink); color: var(--ui-accent-ink); font-size: 17px; animation: strike 0.42s var(--spring) both, tug 0.5s ease-in-out 0.42s infinite; }
+.chip[data-tone="alert"] .chipIcon { background: var(--ui-accent-ink); color: var(--ui-ink); }
+@keyframes strike { 0% { opacity: 0; transform: scale(0.5) rotate(-6deg); } 100% { opacity: 1; transform: scale(1) rotate(0); } }
+@keyframes tug { 0%, 100% { transform: rotate(0) scale(1); } 30% { transform: rotate(-3deg) scale(1.04); } 70% { transform: rotate(3deg) scale(1.04); } }
+/* Waiting: the float bobs gently on the water (ambient, quiet). */
+.chip[data-tone="wait"] .chipIcon > svg { animation: bob 1.8s ease-in-out infinite; }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+
+/* ── The catch card: the fish on its white stage, edged in its rarity ──── */
+.card { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 16px; align-items: center; width: min(520px, 92vw); box-sizing: border-box;
+  padding: 14px 16px 14px 14px; border-radius: 20px; background: var(--ui-card); color: var(--ui-ink); font-family: var(--gui-font);
+  box-shadow: 0 16px 44px rgb(var(--ui-shade) / 0.18); animation: land 0.46s var(--spring) var(--arrive-delay, 0ms) both; }
+@keyframes land { from { opacity: 0; transform: translateY(28px) scale(0.92); } }
+.stage { position: relative; display: grid; place-items: center; width: 104px; height: 104px; border-radius: 16px; background: var(--ui-panel);
+  box-shadow: inset 0 0 0 2px var(--edge, var(--ui-line)); transition: box-shadow 0.3s ease-out; }
+.stage[data-rarity="divine"] { box-shadow: none; }
+.stage[data-rarity="divine"]::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 2px; background: var(--gui-holo);
+  -webkit-mask: linear-gradient(currentColor 0 0) content-box, linear-gradient(currentColor 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+.stagePicture { width: 80px; height: 80px; transition: transform 0.4s var(--spring, ease-out); }
+.stage[data-developed="false"] .stagePicture { filter: brightness(0) opacity(0.35); }
+.stage[data-developed="true"] .stagePicture { animation: develop 0.46s var(--spring) both; }
+@keyframes develop { from { transform: scale(0.7) rotate(-8deg); } }
+/* A rare fish (rare and up): its edge flares out once as it develops. */
+.stage[data-rare="true"][data-developed="true"]::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: 0 0 0 2px var(--edge, var(--ui-ink));
+  animation: flare 0.7s ease-out both; pointer-events: none; }
+@keyframes flare { from { transform: scale(1); opacity: 1; } to { transform: scale(1.35); opacity: 0; } }
+.cardText { display: grid; gap: 6px; min-width: 0; }
+.cardHead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cardName { margin: 0; font: 600 22px/1.15 var(--gui-font); letter-spacing: -0.01em; }
+.facts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--ui-ink-2); font: 500 13px/1.3 var(--gui-font); transition: opacity 0.3s ease-out; }
+.card[data-developed="false"] .facts, .card[data-developed="false"] .line { opacity: 0; }
+.rarity { padding: 3px 9px; border-radius: 999px; box-shadow: inset 0 0 0 1.5px var(--edge, var(--ui-line)); color: var(--ui-ink); font: 600 12px/1.2 var(--gui-font); }
+.rarity[data-rarity="divine"] { background: var(--gui-holo); box-shadow: none; color: var(--ui-accent-ink); }
+.quiet { color: var(--ui-quiet); }
+.line { margin: 0; color: var(--ui-ink-2); font: 400 13px/1.4 var(--gui-font); transition: opacity 0.3s ease-out 0.1s; }
+.tag { padding: 3px 8px; border-radius: 6px; background: color-mix(in srgb, var(--gui-tethos-blue) 12%, var(--ui-card)); color: var(--gui-tethos-blue); font: 600 12px/1.2 var(--gui-font); }
+.cardFoot { display: flex; justify-content: flex-end; margin-top: 2px; }
+
+/* The burst: sparks thrown from a point (a landed catch, a rare fish's card). */
+.spark { position: fixed; z-index: 70; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 2px; pointer-events: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .panel, .chip, .card, .chip[data-tone="alert"], .gauge[data-near="true"], .stage[data-developed="true"] .stagePicture, .stage::after, .chip[data-tone="wait"] .chipIcon > svg { animation: none !important; }
+  .fish, .stagePicture { transition: none; }
+}

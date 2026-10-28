@@ -22,6 +22,8 @@ import { FISH } from "@/lib/game/fishing";
 import { iconUrl } from "@/lib/icons/keys";
 import { RARITIES, RARITY_LABEL } from "@/lib/rarity";
 import { useSearch } from "@/lib/game/useMediaQuery";
+import { Waves } from "lucide-react";
+import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
 import s from "./showroom.module.css";
 
 /** Re-mounts its child every `ms` (an overlay that finishes and closes itself stays on show). */
@@ -97,7 +99,7 @@ export default function GuiShowroom() {
     <header className={s.top}>
       <h1>Our GUI sheet</h1>
       <p>The member game, portal and companion, drawn from David’s Animal Crossing UI kit: warm paper, sage, wood and Tethos accents. Tokens in <code>styles/game-tokens.css</code>, pieces in <code>components/gui</code>.</p>
-      <nav className={s.toc} aria-label="Sections">{["colour", "type", "paper", "buttons", "tabs", "lists", "tiles", "controls", "dialogue", "badges", "progress", "tooltips", "banners", "cards", "sheets", "states", "toasts", "overlays"].map(id => <a key={id} href={`#${id}`}>{id}</a>)}</nav>
+      <nav className={s.toc} aria-label="Sections">{["colour", "type", "paper", "buttons", "tabs", "lists", "tiles", "controls", "dialogue", "badges", "progress", "tooltips", "banners", "cards", "sheets", "states", "toasts", "overlays", "fishing"].map(id => <a key={id} href={`#${id}`}>{id}</a>)}</nav>
     </header>
 
     <Section id="colour" title="Colour" kit={["palette"]} note="The kit’s creams and inks, with our sage, wood and the Tethos accents. Every text pair is AA (lib/gui/contrast.test.ts).">
@@ -183,6 +185,10 @@ export default function GuiShowroom() {
       <Row label="Amounts"><Amount n={1240} /><Amount n={750} currency="gems" /></Row>
     </Section>
 
+    <Section id="fishing" title="Fishing (flat)" note="The member island's fishing pieces (components/gui/flat/reel), in the clean theme: the status chip (the hook is the black one), the cast meter, the reel's water track with its window and the fish, the line gauge, and the catch card edged in its rarity.">
+      <FishingPieces />
+    </Section>
+
     <Section id="progress" title="Progress" note="XP green, mastery gold, HP coral, energy lilac, and the ult as a ring round its icon that glows when full.">
       <div className={s.form}>
         <Progress kind="xp" value={1125} max={1925} label="Level 7" showLabel valueText="1,125 / 1,925 XP" />
@@ -261,4 +267,24 @@ export default function GuiShowroom() {
       <p>You’ll get <Amount n={720} />. Locked items are skipped.</p>
     </ConfirmDialog>
   </main>;
+}
+
+/** The flat fishing pieces at rest, in the clean theme (they're live in the game: the loops write them every frame). */
+function FishingPieces() {
+  const card = (key: string, rarity: string, label: string, developed = true) => (
+    <CatchCard picture={iconUrl(key)} name={developed ? label : "???"} developed={developed} rarity={rarity} rarityLabel={rarity[0].toUpperCase() + rarity.slice(1)}
+      rare={rarity !== "common" && rarity !== "uncommon"} label={label} tags={<CatchTag>New</CatchTag>} facts={<span>42 cm</span>} line="“A quiet catch from the river.”"
+      action={{ label: developed ? "Continue" : "Show me", onClick: () => {} }} />
+  );
+  return <div data-ui-theme="clean" style={{ display: "grid", gap: 18, padding: 22, borderRadius: 18, background: "var(--ui-panel)" }}>
+    <Row label="Status"><StatusChip icon={<Waves />}>Casting</StatusChip><StatusChip tone="wait" icon={<Fish />}>Waiting for a bite</StatusChip>
+      <StatusChip tone="gold" icon={<Waves />}>Max cast!</StatusChip><StatusChip tone="alert" icon={<Fish />}>Hook it!</StatusChip></Row>
+    <Row label="Cast meter"><ReelPanel><PowerMeter zone={0.08} value={0.55} hint="Hold, let go at the gold tip" /></ReelPanel><ReelPanel><PowerMeter zone={0.08} value={0.96} hint="Hold, let go at the gold tip" /></ReelPanel></Row>
+    <Row label="Reel"><div style={{ display: "grid", gap: 12, width: 560 }}>
+      <ReelPanel style={{ display: "grid", gap: 10 }}><ReelTrack picture={iconUrl("fish_dace")} windowWidth={0.3} windowAt={0.2} fishAt={0.32} /><LineGauge value={0.45} marks={[0.25, 0.5, 0.75]} label="Catch progress" /></ReelPanel>
+      <ReelPanel style={{ display: "grid", gap: 10 }}><ReelTrack picture={iconUrl("fish_dace")} windowWidth={0.3} windowAt={0.1} fishAt={0.62} state="slip" /><LineGauge value={0.18} low marks={[0.25, 0.5, 0.75]} label="Catch progress" /></ReelPanel>
+      <ReelPanel style={{ display: "grid", gap: 10 }}><ReelTrack picture={iconUrl("fish_carp")} unknown windowWidth={0.27} windowAt={0.55} fishAt={0.66} /><LineGauge value={0.86} near marks={[0.25, 0.5, 0.75]} label="Catch progress" /></ReelPanel>
+    </div></Row>
+    <Row label="Catch card"><div style={{ display: "grid", gap: 12 }}>{card("fish_dace", "common", "Dace")}{card("fish_carp", "rare", "Carp")}{card("fish_golden_koi", "divine", "Golden Koi")}{card("fish_catfish", "epic", "Catfish", false)}</div></Row>
+  </div>;
 }
