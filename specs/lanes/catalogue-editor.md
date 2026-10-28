@@ -40,7 +40,7 @@ David, verbatim: "you need to redo the legendary i shouldnt see any legendary ye
 
 ## Status
 
-Head: see `git log -1` on game/catalogue-editor. Round 2 in progress (merge of cb7bed43 done, re-tier done, gates running); round 1 was published.
+Head: see `git log -1` on game/catalogue-editor. Round 2 done and reported (dist rebuilt, check.mjs ok, tsc, eslint and vitest both worlds clean bar one load timeout in cells.test.ts). Round 1 was published.
 
 Round 2 done:
 - Merged cb7bed43 (rarity ladder with Divine). Conflicts in roster.ts and fishing.ts resolved by keeping the roster-derived reel rows and the ladder's type.
@@ -48,6 +48,7 @@ Round 2 done:
 - The rod gate now applies to epic and up (`canHook`, `TOP_FISH_ROD_TIER` replaces LEGENDARY_ROD_TIER). Note: the old epics (catfish, gar, king salmon, arapaima ...) are gated too.
 - Epic hourly cap is 6 (was legendary 3) for the ex-legendaries; recipe drop chance for them is the epic 0.05 (was legendary 0.15). The `legendary` tier stays in the tables for later.
 - Sell price of the ex-legendaries is the epic table price (180) until David sets one: unit tests and SQL smokes updated (033, backpack, catch_rolls, recipe_drops, game_security, species_sell_price).
+- dist: only data.js changed (rarities list, 7 tiers re-tiered); app.js, index.html and icons are the same. 144 files, 0.76 MB.
 - Page: the picker offers common to Divine (`PLAYER_RARITIES` in roster.ts, Contraband out); apply-species.mjs refuses Contraband.
 - Known, not mine: SQL `collections_record_catch` caps an unknown tier (divine) at 60 per hour (ELSE), TS says 3.
 
