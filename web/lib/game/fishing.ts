@@ -21,7 +21,7 @@ import { getLabHour } from "./devLab";
 import { liveIslandWeather, reelWeather } from "./islandWeather";
 import { torontoParts } from "@/lib/time";
 import { EXTRA_FISH } from "./fishCatalog";
-import { worldModel } from "./world/active";
+import { GAME_WORLD, worldModel } from "./world/active";
 import { weatherMods } from "./weatherPerks";
 import { SEASONAL_GOALS } from "@/lib/progression/defaults";
 import { ROSTER } from "@/lib/collections/roster";
@@ -142,6 +142,14 @@ const SEA_CREATURES: FishDef[] = [
   { key: "sea_pearl_oyster", label: "a Pearl Oyster", name: "Pearl Oyster", model: "/assets/acnh/sea/pearl-oyster.glb", rarity: "rare", zone: "sea", creature: true, sizeCm: [7, 12], raw: true, move: { speed: 0.2, accel: 0.9, jitter: 0.005, dartChance: 0.12, dartMul: 1.8, retargetMs: 1800 } },
   { key: "sea_giant_isopod", label: "a Giant Isopod", name: "Giant Isopod", model: "/assets/acnh/sea/giant-isopod.glb", rarity: "epic", zone: "sea", creature: true, sizeCm: [20, 40], raw: true, move: { speed: 0.3, accel: 1.4, jitter: 0.007, dartChance: 0.26, dartMul: 2.3, retargetMs: 1250 }, when: (h) => h >= 20 || h < 4, whenLabel: "night (20-4h)" },
 ];
+
+/**
+ * The quarter turn about x that hangs a raw dump export (10x, its head along +z, its back up) head up with its back
+ * toward -z, the frame the hold, the tank and the icons assume: -90 degrees. The village keeps the +90 it shipped with,
+ * which hangs them head down and belly out (the village stays as it is; game/remodel round 3). In the new world only the
+ * sea creatures are raw (the fish are ours, in frame).
+ */
+export const RAW_TURN_X = GAME_WORLD === "new" ? -Math.PI / 2 : Math.PI / 2;
 
 /**
  * Every species; in the new world the fish are our tweaked models (worldModel, art/remodel/build_fish.py), already in

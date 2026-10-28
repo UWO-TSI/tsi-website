@@ -47,13 +47,20 @@ David, 2026-10-27 (night), verbatim: "I want you to go ahead and remodel some ol
 
 **Step 1, ship first:** merge main; put the butterflies and dragonflies back on the old models; fix the fish orientation; run the gates; commit and message the coordinator with that SHA. Then step 2: redo the flyers, and make shots of old and new wings side by side for his review.
 
+## Round 3 finish (David's review of round 3, 2026-10-28)
+
+**Approved:** the flyers (before, after, side by side), the sea icons, plaza-bench-before. **Redo:** plaza-bench-after, verbatim: "make sure the bench location and orientation is fitting". Fix every plaza bench in the new world so it sits beside the path or plaza edge, never across a path, facing the plaza, the fountain or the view; sitting must still work. Only the benches move. Coordinator, 2026-10-28: the old village is retired (lane game/village-archive removes it): new-world shots only, vitest with `NEXT_PUBLIC_GAME_WORLD=new` only, keep the diff off `lib/game/world/active.ts`.
+
 ## Status
 
-Round 3. Main (635577f6) merged. Head: `git log -1` on game/remodel.
-- **Step 1 (ship), done:** the butterflies and dragonflies are back on the dump's in the world (worldModel's REMODELLED drops them; their round 2 GLBs deleted). The fish orientation is fixed in the new world: all 81 baked into the game's frame by `build_fish.py` (head up, back -z, game scale; the trophy arowana's pillar dropped; the counter-shade back to belly), no fish raw in the new world (`fishing.ts`), the leaping fish laid level from it (`AmbientFauna` fishBody), the icons drawn from `levelFish` nose left and back up (ray, dab, olive flounder, mitten crab from above), all 81 re-rendered. Evidence and the cause: `specs/evidence/remodel/round3/notes.md`. The village keeps the dump's raw calibration, which leaves its raw fish (and the 10 sea creatures, both worlds) upside down in the hold, tank and trophy case: a one-sign fix, not made (village unchanged); the icon stage rights raw models itself.
-- Approved and shipped in round 2: market barrel, gather rocks, crawlers (cheap in the world, old up close), the bug close-ups.
-- **Step 2 (next):** the flyers' world models with each species' old wing outline (`build_critters.py`, being rewritten to trace the old wings).
-- Gates at step 1: tsc clean; vitest 3484 passed in both worlds (the one new test fixed after the full run, rerun alone in both); eslint clean on changed files.
+Round 3 finish done, awaiting David's review: the four plaza benches moved to the plaza's edge, along the rim, facing the fountain (`generate.ts` LAYOUT rimBench, world.json regenerated: only the bench lines changed; test in `world/world.test.ts`). Evidence `specs/evidence/remodel/r3-benches/` (notes.md has each bench's old and new spot). Earlier:
+Round 3 done. Head: `git log -1` on game/remodel. Main (635577f6) merged; step 1 (e5b68758) merged and live.
+- **Step 1 (shipped):** the flyers back on the old models, the fish orientation fixed in the new world (81 baked into the game's frame, none raw there, icons nose left and back up). `specs/evidence/remodel/round3/notes.md`.
+- **Step 2, the wings (8f9306a4):** `build_critters.py` traces each species' wing outline from the old model (raster, opening, Moore trace, Douglas-Peucker, ear-clip), our body and paint; butterflies 100 to 104 triangles, dragonflies 114 and 116. The dump's butterflies face -z (they flew tail first); ours face +z with the traced wings turned end for end. Wired back in REMODELLED (new world).
+- **Sea creatures (coordinator):** `fishing.ts` RAW_TURN_X: the new world turns raw exports the right way (-90 degrees); the village keeps +90. The 10 sea icons re-rendered (scallop, sea star, abalone, pearl oyster from above).
+- **Plaza benches (David via coordinator, "sitable remodel"):** `build_bench.py`, `game/props/plaza-bench.glb` (900 triangles): a backless slatted bench, the seat top at 0.5, inside the 0.98 x 0.27 footprint. A model-less map bench in the new world draws it (`defaultIsland.ts` propsOf), solid (PROP_FOOTPRINT, PROP_TOP). world.json untouched.
+- Evidence: `specs/evidence/remodel/round3/` (notes.md: fish, flyers, sea icons, plaza bench).
+- Not changed: the village (its raw fish and sea creatures stay upside down in hold, tank and trophy case). The betta's fins render as a pale square (the dump's texture).
 
 ## David's decisions
 
@@ -61,12 +68,15 @@ Round 3. Main (635577f6) merged. Head: `git log -1` on game/remodel.
 
 ## Next
 
-1. Step 2: run `build_critters.py -- debug <json>` to check the traced outlines, then the build; side-by-side shots old and new wings (top view and 3/4) into `specs/evidence/remodel/round3/`; wire the eight flyers back into REMODELLED (`lib/game/world/active.ts`, its test).
+1. David reviews the bench redo (r3-benches). Knob: `rimBench` radius 11 and the angles (+-28, +-152) in `generate.ts`. Knobs: `build_critters.py` BUDGET (outline points a side), RES/OPEN (the trace); `build_bench.py` IRON, the slats.
 2. Not done: the firefly, the village buildings, the arrival boat, the seagull.
 
 ## Tools and gotchas
 
+- Bench shots: `PORT=3191 node ../specs/evidence/remodel/tools/benches.mjs <out> after`, then put `git show HEAD:web/data/world/world.json` in place and run `before`, then restore. The world regenerates with `npx vite-node -c vitest.config.ts scripts/generate-world.ts` (about 15 s); check that only the lines you meant changed.
+
 - Fish orientation check: `Blender -b --factory-startup -P art/remodel/fish_orient.py -- x <out> remodel|acnh [names|all] [3]` renders each fish as the tank levels it (nose left, back up when right); `3` adds views from above and below. Judge back and belly by colour, not brightness (the sun lights whatever faces up).
+- In-game shots: the new world merges still props (`/assets/game/props/...`, DefaultIslandWorld STILL) so they have no signature to find; ingame.mjs takes a `fixed` box for those (the plaza bench).
 - Icon runner: `/private/tmp/claude-501/remodel-work/r3/icons.sh <keys>` (dev server on 3191, new world, stops it after); run it under the devserver lock. In zsh pass keys through `bash -c '... $(cat keys.txt)'` (zsh doesn't split a variable).
 
 - Census: `PORT=3191 node ../specs/evidence/remodel/tools/census.mjs <all-stats.json> <out.json>` from web/, dev server with `NEXT_PUBLIC_GAME_WORLD=new`.
