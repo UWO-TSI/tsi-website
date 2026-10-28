@@ -64,10 +64,29 @@ chain clean. Ready for review; waiting on David.
   Smoke: `web/supabase/tests/main_quest_smoke.sql` in `specs/evidence/launch-fixes/sql-smoke.sh`.
 - Evidence: `specs/evidence/main-quest/` (shoot.mjs; dropdown, arrow, Juno, each chapter, models).
 
-## Next
+## Next: gate the village (coordinator, 2026-10-28; plan approved)
 
-1. David's review notes (the coordinator relays them).
-2. Unverified: the pickaxe in the hand reads from the side shots only as a held tool, not clearly; check on review.
+Prod runs the village by default and it must play exactly as today. Everything this lane changed for the village goes
+behind `NEXT_PUBLIC_GAME_WORLD=new` (`GAME_WORLD` in lib/game/world/active.ts) or becomes world-aware data. Base for
+"as today": 80816727 (copies of the originals were saved to /private/tmp/claude-501/mq-base/).
+
+1. Chapters: a `world` column on quest_chapters, DEFAULT NULL = both worlds (other lanes' rows keep working). The
+   existing `settle-in` row keeps its copy and the old settle_in rules (claim, catch, donate at the museum prompt,
+   report to Alice at HQ), marked world 'village'. The new world gets its own chapter 1 (`first-find`, requirement
+   `first_find`, finished by Juno) and chapters 2 to 6, world 'new'. Positions: first-find 2, the errands 3 to 7, the club
+   8 to 10. `releasedChapters` filters by world. Test: a village player's existing settle-in progress (done or in
+   progress) reads exactly as before.
+2. Rocks: species rows unchanged (minerals keep tool 'shovel', biome 'rocks'; clams stay 'beach'). In code, on the new
+   world only, minerals need the pickaxe (`toolOf`) and rock nodes roll only stone or iron (a node's `only` keys). The
+   new outcrop models get new file names; the village keeps outcrop-rock_stone/iron/spent as they were.
+3. Dig spots and buried finds: new world only (villageNodes, the roster, the book and museum filter finds out on the
+   village).
+4. Juno: new world only (NPC skips `docent`). The pickaxe teacher (Eliza): new world only.
+5. The village keeps the old tracker (click opens the journal, the chapter or tool quest line), the tool quests and
+   their lines, Alice's farewell, the old dig decal and hole, bug catching as it was, and residents' and Rosa's lines
+   (swaps applied in code on the new world only).
+6. Reworked migrations (unapplied, edited in place): 20261027150000_main_quest.sql, then the regenerated catalogue seed.
+7. Village-pinning tests for each, gates on both worlds, report with the SHA.
 
 ## Tools and gotchas
 
