@@ -100,6 +100,11 @@ export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
       const r = one(data);
       return { item_key: String(r.item_key), size_cm: num(r.size_cm), ...caught(r) };
     },
+    async rolled(memberId, rollId) {
+      const { data, error } = await db.from("catch_rolls").select("item_key").eq("id", rollId).eq("member_id", memberId).maybeSingle();
+      if (error) raise(error);
+      return data ? String((data as Row).item_key) : null;
+    },
     async harvest(memberId, nodeId, hourKey, key, size, trophy) {
       const { data, error } = await db.rpc("collections_harvest_drop", { p_member_id: memberId, p_node_id: nodeId, p_hour_key: hourKey, p_item_key: key, p_size: size, p_trophy: trophy });
       if (error) raise(error);

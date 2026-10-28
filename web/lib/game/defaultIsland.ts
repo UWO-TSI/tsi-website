@@ -13,9 +13,9 @@ import { NEW_LAMPS } from "./propModels";
 import { MAX_CLIMB, terrainHeight, terrainSteepness, terrainSurface } from "./world/terrain";
 
 /**
- * Default island: the village core (ledger rows 155, 156), loaded from the
- * painted map file (`web/data/village-map.json`, lib/game/villageMap.ts; rows
- * 241, 246). Compass (row 239): the follow camera looks +z, which is west
+ * Default island: the member island's core (ledger rows 155, 156), read from
+ * the member island's map (lib/game/villageMap.ts village(), the new world:
+ * web/data/world, row 321). Compass (row 239): the follow camera looks +z, which is west
  * (up-screen); +x, screen left, is south. A compass azimuth A (from north,
  * clockwise) is the world direction (x, z) = (−cos A, −sin A), so north is −x
  * and east is −z (toward the viewer).
@@ -89,7 +89,7 @@ export const BRIDGE_RAIL_OUT = 1.65;
  * palm by its trunk, a pole by its pole (the cloth and the leaves are soft).
  */
 export const PROP_FOOTPRINT: Record<string, readonly [number, number, number?, number?]> = {
-  "bench-wood": [0.98, 0.27], "rock-a": [0.48, 0.45], "rock-b": [0.46, 0.42], "rock-c": [0.5, 0.5],
+  "bench-wood": [0.98, 0.27], "plaza-bench": [0.98, 0.27], "rock-a": [0.48, 0.45], "rock-b": [0.46, 0.42], "rock-c": [0.5, 0.5],
   "fence-country-a": [0.5, 0.16], "fence-country-b": [0.5, 0.16],
   // The faceted boulders (lib/game/rocks.ts, art/rocks/build_rocks.py).
   ...Object.fromEntries(ROCK_MODELS.map(m => [m, ROCK_SIZE[m].half])),
@@ -127,7 +127,7 @@ export const FIRE_PIT_RING = 0.72;
 export const ROUND_PROPS: ReadonlySet<string> = new Set(["plaza-fountain"]);
 /** Prop tops before scale, measured from the GLB bounds: what a jump clears or lands on (lib/game/movement). */
 export const PROP_TOP: Record<string, number> = {
-  "bench-wood": 0.51, "rock-a": 0.61, "rock-b": 0.59, "rock-c": 0.52, "fence-country-a": 0.7, "fence-country-b": 0.69,
+  "bench-wood": 0.51, "plaza-bench": 0.5, "rock-a": 0.61, "rock-b": 0.59, "rock-c": 0.52, "fence-country-a": 0.7, "fence-country-b": 0.69,
   ...Object.fromEntries(ROCK_MODELS.map(m => [m, ROCK_SIZE[m].top])),
   barrel: 11.66, lighthouse: 38, crate: 0.52, "market-cart": 2.8, "shop-cart": 0.87, "beach-parasol": 2.33, "palm-a": 3.94, "palm-b": 2.7,
   "wharf-piling": 0.35, "rope-post": 0.87, "rope-span": 0.68, "palm-tall": 6.21, "palm-lean": 5.03, "palm-short": 3.46, "palm-small": 1.95,
@@ -276,8 +276,10 @@ export function villageSpawn(v: Village = village()): [number, number, number] {
   return [x, 0, z];
 }
 
-/** The benches, rocks, fences and scenery props: the props with a solid footprint. */
-export const propsOf = (v: Village = village()) => [...objectsOf("bench", v), ...objectsOf("rock", v), ...objectsOf("fence", v), ...objectsOf("prop", v)];
+/** The benches, rocks, fences and scenery props: the props with a solid footprint. A bench the map gives no model (the
+ * new world's plaza benches, lib/game/world/generate.ts) is our plaza bench (art/remodel/build_bench.py). */
+export const propsOf = (v: Village = village()) => [...objectsOf("bench", v).map(o => (o.model ? o : { ...o, model: "plaza-bench" })),
+  ...objectsOf("rock", v), ...objectsOf("fence", v), ...objectsOf("prop", v)];
 
 /** Solid footprint of a bench, rock or fence: half extents and centre offset × scale (before its yaw). */
 export function propFootprint(o: Pick<MapObject, "model" | "scale">): [number, number, number, number] | null {

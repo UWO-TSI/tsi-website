@@ -45,7 +45,7 @@ describe("server rolls match the tables", () => {
   });
 
   it("forage nodes: random rarity per member and hour by the rarity weights", () => {
-    const WEIGHT: Record<Rarity, number> = { common: 60, uncommon: 25, rare: 10, epic: 4, legendary: 1 };
+    const WEIGHT: Record<Rarity, number> = { common: 60, uncommon: 25, rare: 10, epic: 4, legendary: 1, divine: 0.25, contraband: 0 };
     const shell = villageNodes().forage.find((n) => n.id.startsWith("shell-"))!;
     const N = 20_000;
     const got = tally(Array.from({ length: N }, (_, i) => nodeRoll(`member-${i}`, shell, NOON, "clear")!.key));

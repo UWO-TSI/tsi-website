@@ -286,3 +286,41 @@ Rule going forward (David's standing preference): short-lived branch per task, P
 ## Onboarding order
 
 `CLAUDE.md` → **this file** → `AGENT_LOG.md` (role + latest entries) → `specs/ux-status.md` → the spec for your task. For the game world also read `specs/acnh-system-reference.md` on `feat/acnh-tile-grid`.
+
+
+# Moved from STATE.md on 2026-10-28 (superseded)
+
+## Now (2026-10-22): v1 launch run, freeze Oct 24, launch Oct 31
+
+- **Run sheet:** `specs/launch/v1-launch.md` (ledger row 317). Feature freeze on Oct 24; from Oct 25, only launch fixes.
+- **Coordinator handoff and lanes:** `specs/lanes/` (the `coordinator.md` file, plus one per lane). Lanes restart fresh from these files.
+- **Main:** `f66bafe6` and later. Merged since Oct 14:
+  - the shop interior and the flat shop UI;
+  - real merch (the keycap keychain, the lanyard, the GENESIS sticker), off sale until their catalogue rows land;
+  - flat UI steps 1 and 2;
+  - wardrobe batch 2.
+- **Prod migrations:** all applied, including `20261017172740_catalogue_seed` (Oct 22). The record is `~/tethos-launch-2026-09-29/migrations.log`. They're applied through the query API, so Supabase's own migration ledger doesn't list them.
+- **Realtime:** Fly `tethos-rt` v4 (Oct 14), current with the chat and friends code.
+- **Supabase:** Pro since Oct 14.
+- **Member world:** still closed in production (`NEXT_PUBLIC_MEMBER_WORLD` unset). It opens on Oct 31.
+- **Running lanes** (each finishes its batch for the freeze):
+  - `game/hq-interior`, layout B with taller ceilings;
+  - `game/flat-ui`, round 3 panels and motion, then the avatar creator;
+  - `game/wardrobe-followup`, the #04 visor logo, then the merch catalogue rows.
+- **Launch work:** the launch lane (Preview, two-account test, env vars, smoke flows, Halloween check) and the perf lane (a quiet-window bench, the village regression).
+
+## v1 "Arrival" (decided 2026-10-13)
+
+- **The plan is `specs/v1-drop.md`,** decided with David. All eight v1 lanes (perf, community, emotes, opening, world, water, land, head fit) merged to `main` on 2026-10-14 (`8809c517`). The perf baseline was reset at `0fd7d615`. Prod has the `v1_drop_copy` and `traditions` migrations.
+- **Waiting on David as of Oct 14:** accepting the proposals in `/lab/map` (`web/data/proposals/v1-barriers.json`, `v1-campfire.json`, the rock layer) and the draft lines (Bram, Rosa, Wren, the door answers). The current list is in `specs/lanes/coordinator.md`.
+- **Ownership (David, 2026-10-14, row 308):** the coordinator session on the Mac mini owns the world editor, `/lab/map` and the world map files (`web/data/*map*.json`, the v2 draft). No other session edits them.
+- **Story canon:** `specs/lore.md` (locked 2026-10-10) covers the Answer, the Keepers and their questions, the veil, the buried ship, the one-year arc, the never-resolved outside world, and the sudo pet system. Read it before writing any quest, NPC, monster, pet or cutscene content. The museum plaque is David's to write.
+- **Classes v2:** all 16 subclasses (`specs/classes/design-sheet.md`) are on `main` behind `economy_settings.classes_v2`, which is 0 in production. The 80 signature weapons are seeded; the 40 class cosmetics stay inactive while the flag is off. David playtests at `/lab/classes` (dev only). Wave 5 (backfill, cosmetics on sale, balance pass, flag on) waits for his notes.
+
+## Terrain v2: the world island (2026-10-10)
+
+- **`specs/terrain-v2.md` is the plan**, agreed with David. His drawing became a 384x552 world draft that will replace the live member island once village, residents and fishing pass gates. Merged to `main` (`0c0310e6`): the generator `art/terrain/draft_from_png.py`, the draft data and fixture, 7 guard tests, `MAX_LEVEL` 6 to 8, and residentRoutine crash guards.
+- Walk it at `/lab/island?fixture=v2`, paint it at `/lab/map?fixture=v2`. Frozen 2026-10-10: `web/data/world-map.json` is David's hand-edited source of truth (the painter's Save writes it; it's committed when he locks the layout). The generator no longer writes it.
+- Since row 308 (Oct 14) the new world is being rebuilt as smooth terrain in a 3D editor (`specs/world-editor.md`). v1 launches Oct 31 on the current village.
+- Still open: the village and wharf layout proposal (the Oracle Temple goes on the summit, the village is chill study, the wharf is the fishing-village entrance), and the combat home (north island or forest ruins, David deciding).
+

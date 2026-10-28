@@ -76,15 +76,15 @@ END $$;
 DO $$
 DECLARE C2 uuid := '00000000-0000-4000-8000-0000000000c2'; a uuid;
 BEGIN
-  PERFORM collections_harvest(C2, 'shell-' || i, '2026-09-29T12', 'fish_golden_koi', 70, true) FROM generate_series(1, 3) i;
-  BEGIN PERFORM collections_harvest(C2, 'shell-4', '2026-09-29T12', 'fish_golden_koi', 70, true); RAISE EXCEPTION 'x';
-  EXCEPTION WHEN raise_exception THEN ASSERT SQLERRM = 'rate_limited', 'legendary cap by harvest: ' || SQLERRM; END;
-  ASSERT NOT EXISTS (SELECT 1 FROM catch_rolls WHERE member_id = C2 AND node_id = 'shell-4'), 'a capped harvest leaves its node';
+  PERFORM collections_harvest(C2, 'shell-' || i, '2026-09-29T12', 'fish_golden_koi', 70, true) FROM generate_series(1, 6) i;
+  BEGIN PERFORM collections_harvest(C2, 'shell-7', '2026-09-29T12', 'fish_golden_koi', 70, true); RAISE EXCEPTION 'x';
+  EXCEPTION WHEN raise_exception THEN ASSERT SQLERRM = 'rate_limited', 'epic cap by harvest: ' || SQLERRM; END;
+  ASSERT NOT EXISTS (SELECT 1 FROM catch_rolls WHERE member_id = C2 AND node_id = 'shell-7'), 'a capped harvest leaves its node';
   a := collections_cast(C2, 'fish_golden_koi', 80, true);
   UPDATE catch_rolls SET rolled_at = rolled_at - INTERVAL '5 seconds' WHERE id = a;
   BEGIN PERFORM collections_land(C2, a); RAISE EXCEPTION 'x';
-  EXCEPTION WHEN raise_exception THEN ASSERT SQLERRM = 'rate_limited', 'legendary cap by landing: ' || SQLERRM; END;
+  EXCEPTION WHEN raise_exception THEN ASSERT SQLERRM = 'rate_limited', 'epic cap by landing: ' || SQLERRM; END;
   ASSERT (SELECT landed_at FROM catch_rolls WHERE id = a) IS NULL, 'a capped landing stays unlanded';
-  ASSERT (SELECT count FROM member_collections WHERE user_id = C2 AND item_key = 'fish_golden_koi') = 3, 'capped at 3';
+  ASSERT (SELECT count FROM member_collections WHERE user_id = C2 AND item_key = 'fish_golden_koi') = 6, 'capped at 6';
   RAISE NOTICE 'catch 4 caps ok';
 END $$;

@@ -15,7 +15,7 @@ import { availableAt, type WorldMoment } from "@/lib/collections/logic";
 
 const ROSTER_BIOME = new Map(ROSTER.map(s => [s.key, s.biome]));
 
-/** Weighted pool for a spot: water type picks the species, the rod gates legendaries and adds luck. */
+/** Weighted pool for a spot: water type picks the species, the rod gates epic and up and adds luck. */
 export function fishPoolFor(water: WaterType, luck: number, rod: RodTier, context: FishingContext) {
   const base = fishingPool(castLuck(luck, rod), water === "sea" ? "sea" : "river", context).filter(({ fish }) => canHook(fish.rarity, rod));
   if (water === "sea") return base;
@@ -80,7 +80,7 @@ export function nodeAvailable(harvestedHour: string | null | undefined, now: Dat
   return !harvestedHour || harvestedHour !== hourKey(now);
 }
 
-const RARITY_WEIGHT: Record<Rarity, number> = { common: 60, uncommon: 25, rare: 10, epic: 4, legendary: 1 };
+const RARITY_WEIGHT: Record<Rarity, number> = { common: 60, uncommon: 25, rare: 10, epic: 4, legendary: 1, divine: 0.25, contraband: 0 };
 
 /**
  * What a node holds this hour for this member: a random-rarity pick among the

@@ -11,7 +11,7 @@ import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
-import { FISH, type FishDef } from "@/lib/game/fishing";
+import { FISH, RAW_TURN_X, type FishDef } from "@/lib/game/fishing";
 import { tagLookClasses } from "@/lib/game/modelMaterials";
 import { hashSeed } from "@/lib/game/character/look";
 import { worldTime } from "@/lib/game/worldClock";
@@ -37,7 +37,7 @@ export function levelFish(scene: THREE.Object3D, def: Pick<FishDef, "model" | "r
   const model = tagLookClasses(cloneSkeleton(scene), def.model);
   // Raw dump exports (×10, lying along z) first get the catalogue's calibration so they hang head up like the rest.
   const hang = new THREE.Group();
-  if (def.raw) { hang.scale.setScalar(0.1); hang.rotation.x = Math.PI / 2; }
+  if (def.raw) { hang.scale.setScalar(0.1); hang.rotation.x = RAW_TURN_X; }
   hang.add(model);
   // Hanging head up (+y), back toward -z: a quarter turn about x lays it level, head first (+z), back up.
   const level = new THREE.Group();
