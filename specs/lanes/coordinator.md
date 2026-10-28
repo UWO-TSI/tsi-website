@@ -363,3 +363,32 @@ David: "why are we using the old island for some of these artifcats, it should n
 - Remodel benches: game/remodel b8939161. Review https://claude.ai/artifact/4kbPArCyyejQoEfdR3nxsc (ids r3b-*). Once approved, all of round 3 merges.
 - daily-social 02617517: gen-seeds supports `guarded` seeds, and the residents seed is one. resident_lines_smoke.sql includes `20261028112843_catalogue_seed.sql` by name; if the final regenerate renames that seed, update that one line.
 - 2026-10-28 codebase review (David asked, ponytail): four read-only agents (assets, dead code, UI, docs). Their findings go into the design bible's UI and Art chapters and a cleanup plan. specs/design-bible.md is new: Models chapter, ledger row 319, pointer in CLAUDE.md. The archive lane uses row 320.
+
+## 2026-10-28 ~16:00: David's decisions on the open pages (verbatim notes are in each page's `approvals` collection)
+
+- **Merged locally:** game/remodel b8939161 (all of round 3 approved, benches included) is merge d3af4f3d; gates and push pending.
+- **Loading:** island approved ("this one is good"); logo and boat redo, meaning not picked. Next round: keep the island, delete the logo and boat looks and the ?loading switch, rebuild the island backdrop on the new world (it showed the village HQ), and drop the "Unpacking the village..." copy. Coordinate with village-archive, which is moving TitleScene to the new world.
+- **Rods and gear (redo round 2, queued):**
+  - shelf: tier is shown as a rarity outline on the shop tabs (common grey, uncommon green, rare blue, epic purple, legendary yellow, divine holo);
+  - sell rods up to rare only for now;
+  - hook caps: a rare rod hooks up to epic, an epic rod up to legendary, a legendary rod up to divine;
+  - flimsy is common and lighthouse is rare;
+  - the radar is redone: bigger, minimal, lighter, less bold, icons at the corners with hover names and plain explanations, graded out of 100, linear shift animation when parts are added, the current build's main and base colours at low opacity behind;
+  - bait and bobber slots sit bottom right of the rod square, on your own rods only (not in the shop), and they appear on the rod model;
+  - the bobber and bait are remodelled in Blender, HD for the shop and LP on the rod, with a base bobber built for variants and the lucky bobber as a four-leaf clover; the bobber's radar shows only the bobber;
+  - divine badge text is white; GUI tiles approved; the phone layout card is a redo.
+- **Fishing depth (redo round 2, queued):**
+  - the bar menu is a paper restaurant menu with detailed food models: pick it up in first person, hover a dish to see what it does;
+  - the board UI is fully redone as a time graphic of what's available, icons with hover;
+  - the tackle shop goes near the fish shop as a gacha: one coin roll and one gem roll, 1 to 10 pulls, seasonal crazy bait and rods;
+  - chef's order UI redone;
+  - the market: one place to quick-sell, one to enter fish for a monthly leaderboard, and a separate board for daily and weekly fishing tasks that you claim when done (no hand-over);
+  - collection-season approved.
+- **Clothing round 2:**
+  - approved: tops (reweighted), shoes, all in-game views, the TSI crew close-up;
+  - redo: the long dresses clip through the body and two skirts flicker when sitting; the one-pieces are remodelled properly in Blender, with references found online and shown to David first;
+  - new ask: "start worrying and developing clothing model for classes and armour related soon for differnt class".
+- **Daily and social:** notes relayed to the running lane (half hearts, monument UI, a visible streak reward track of about 1500 coins and 25 gems plus a wheel box, a gentle campfire notice, dash approved).
+- **Wardrobe fixes:** no decision yet.
+- **Bible:** UI chapter written (row 320). Clean flat is the one base; paper only for paper things; tokens only; one kit; one showroom. Every lane brief points to it. The village-archive row is 321.
+- **Queued lanes, held while swap is about 10.8 of 11.3 GB:** rod-gear r2, fishing-depth r2, clothing r3, loading r2. Later: bug-catching minigame, class and armour clothing (needs David's class direction).
