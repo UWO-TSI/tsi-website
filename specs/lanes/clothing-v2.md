@@ -69,11 +69,13 @@ the TSI zip hoodie were approved (their notes are in git history of this file, c
   test, lib/identity/service.ts badgeFor), read by lookStore from GET /api/profile (`MyLook.member`) and checked again
   on the server in PATCH /api/profile (403 `members_only`). Creators: PlayerCharacterUI, WardrobeSheet and the arrival's
   ReflectionCreator pass `member`; the applicant island passes nothing (hidden there). Remote players: `remoteLook(json,
-  player.member)`. Note for wardrobe-b3's offered() rule: let `members` parts through for members.
-- **Gates (round 2, 2026-10-28):** tsc clean; vitest 3491 passed / 4 skipped; with `NEXT_PUBLIC_GAME_WORLD=new` one
-  barriers.test.ts case failed on time under machine load (907 s; a rerun failed a different case of that file at 6 s),
-  a file this branch doesn't touch; eslint clean on changed files. No perf:check (the machine was saturated; the lane
-  removes the decal's draw call and adds none, the atlas grew 1024 -> 2048).
+  player.member)`. Merged main again (2026-10-28) for wardrobe-b3's `offered()`: it lets a `members` part through (never
+  priced, offered free, to members alone); creatorCategories.test runs `shownOptions(member)` with `offered()` in the
+  creator and the closet, member and non-member.
+- **Gates (after the second main merge, 2026-10-28):** tsc clean; vitest with `NEXT_PUBLIC_GAME_WORLD=new` 3512 passed /
+  4 skipped; without it 3504 passed, one lib/game/world/cells.test.ts case timed out at 908 s under machine load (a file
+  this branch doesn't touch; before the merge it was a barriers.test.ts case the same way); eslint clean on changed
+  files. No perf:check (machine saturated; the lane removes the decal's draw call, adds none; atlas 1024 -> 2048).
 - **Evidence** (`specs/evidence/clothing-v2/round2/`): `blender_{tops,bottoms,onepieces,shoes}.png` (before / after, run,
   jump, sit x front, side, back), `blender_round1_tops_reweighted.png`, `fit_report.txt`, in game (the runtime Character on /lab/avatar ?sheet=fit,
   design paint and body cut live) `game_tops.png`, `game_bottoms_onepieces.png`, `game_shoes.png`, and
