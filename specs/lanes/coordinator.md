@@ -333,7 +333,7 @@ The full set is in `CLAUDE.md`, `specs/lane-rules.md` and the memory files.
 | Daily and social | https://claude.ai/artifact/68SEdjVRvruZzvgDmHTFVG | game/daily-social 6f3b4ac7 | migrations 20261027182444, 190000, 190100, 20261028112843 in order |
 | Clothing round 2 + TSI zip hoodie gate | https://claude.ai/artifact/VhBnp5Ua6w82U8ervpzxiG | game/clothing-v2 da63d1d3 | round 1 and the hoodie (aafbe9fe) already approved; merge all together |
 | Remodel round 3 (wings, sea creatures, benches) | https://claude.ai/artifact/9ffhKczMau3xoH8KkxMiwp | game/remodel 1453dd9c | none; benches keep the map's yaw (bench-0 across the path) |
-| Main quest (STALE: shots are the village; republish after the fresh agent reshoots) | https://claude.ai/artifact/6DLtytETjRJVtM1HzXytPf | game/main-quest e6bdff6f [wip], fresh agent finishing village gating | migrations reworked; do not merge until reported green |
+| Main quest (new-world shots; village pinned unchanged) | https://claude.ai/artifact/6DLtytETjRJVtM1HzXytPf | game/main-quest 907873f4 | migrations 20261028144337_main_quest then a regenerated catalogue seed; settle-in gets world village; npc-editor republish for Juno after merge |
 | Residents editor (collection `residents`) | https://claude.ai/artifact/QtZYAgMFEbFg4YNpVcBYwU | npc-editor 2a67bfb0 (main merged) | republish once main-quest (Juno) merges |
 
 Shipped 2026-10-27/28: batch 3 wardrobe (seed 20261027165850 applied), remodel round 3 step 1 (2e7bd27f). perf: v2 on main is 405/340 draws and 1.37M/1.17M triangles (over budget); lane perf-tris is on it. perf-check's lock owner must not need a space (fixed in fce65d21).
