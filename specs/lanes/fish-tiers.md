@@ -51,6 +51,9 @@ Branch head: see `git log -1` (this file is committed with it). Main has not mer
 
 ## David's decisions
 
+- 2026-10-28, tutorial review of the catch beat, verbatim: "looks good and like i think its time we update the ui for fishing to look nicer and also do ! with sound effect when fish hooked, and add small micro animation and juice to make it more dopamine while keeping the aestetic, and redo the fishing bar a little bit to make it look nicer". The "!" and sound are the approved step 1; the rest is this lane's: restyle the fishing bar a little, make the fishing UI nicer, micro-animations and juice (catch progress, the fish slipping, the landing), both worlds, keeping the aesthetic. Visual: before/after shots and frame strips to the coordinator; don't merge.
+- 2026-10-28: approved all three bite tiers (common, legendary, divine) with no notes. Keep HOOK_TIER as it is (epic keeps the common "!").
+
 - 2026-10-27 (via the coordinator): creature list is drafts for a later launch ("dont model any of these yet, later launch in game"); keep the fights behind a flag. Full record in `specs/launch/v1-gameplay.md` (8fd228bf).
 - 2026-10-27: the "Addition" (cutscene, building-size legendaries, server-wide divine raid), verbatim in `specs/launch/v1-gameplay.md`.
 
