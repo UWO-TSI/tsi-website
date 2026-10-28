@@ -31,13 +31,13 @@ async function lock(name) {
   const dir = join(LOCKS, `uwotsi-${name}.lock`);
   for (;;) {
     try { mkdirSync(dir); writeFileSync(join(dir, "owner"), `${OWNER} ${new Date().toISOString()}\n`); break; } catch {
-      const who = existsSync(join(dir, "owner")) ? readFileSync(join(dir, "owner"), "utf8").split(" ")[0] : "";
-      if (who === OWNER) break;
+      const who = existsSync(join(dir, "owner")) ? readFileSync(join(dir, "owner"), "utf8") : "";
+      if (who.startsWith(`${OWNER} `)) break;
       console.log(`waiting for the ${name} lock (${who || "?"})`);
       await sleep(15000);
     }
   }
-  return () => { try { if (readFileSync(join(dir, "owner"), "utf8").split(" ")[0] === OWNER) rmSync(dir, { recursive: true }); } catch {} };
+  return () => { try { if (readFileSync(join(dir, "owner"), "utf8").startsWith(`${OWNER} `)) rmSync(dir, { recursive: true }); } catch {} };
 }
 
 const env = { ...process.env, NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:9", NEXT_PUBLIC_SUPABASE_ANON_KEY: "perf-bench", SUPABASE_SERVICE_ROLE_KEY: "" };
