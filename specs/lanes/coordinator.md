@@ -432,3 +432,10 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
 - **Shipped 2026-10-28 afternoon:**
   - remodel round 3: deploy uwotsi-9lz2udslo, Ready.
   - fish-tiers e6ab258e, with catalogue-editor round 2 and the rarity ladder: merge 9d825100, main = de87c07f. Prod dump prod-before-fish-tiers-20261028-1610.dump. Applied 20261027140000, 180000, 183120, 185416 and 20261028150000, logged in migrations.log. Checked: sell_price column, ladder through contraband, 0 legendary species, divine cap; verify shows 0 tables without RLS and the usual definers. Deploy uwotsi-3jtxoql5m was queued at push; confirm Ready.
+- **New-world fixes lane (queued, after village-archive merges).** These are tests the archive lane re-pointed at the live world, now skipped with `new world:` notes:
+  - Halloween: pumpkins stand by only 7 of 59 lamps. Halloween is Oct 31, so this goes first.
+  - residentRoutine: 7 walks pass through a solid, and the night owl's bench isn't under a lamp.
+  - ambientFauna: no leaping fish in open sea, a butterfly patch check fails, gull circles fail camera reach.
+  - The ?bots loopback breaks the room bounds; the bench seat lift is 0.359 vs 0.344; seated count is 0.
+  - Outdoor study tables (study:plaza-picnic, study:pier-bench) don't exist on the new world: study-0..3 have no model, so no outdoor seats. **A production gap.**
+- Merge hazard: game/main-quest's residentRoster uses `GAME_WORLD` and `residentsHere(personas, world = GAME_WORLD)`. After the archive it is always newWorldPersona, and the NEW_WORLD_ONLY village filter is dead. daily-social touches residentRoster lines next to the archive's schedule edits.
