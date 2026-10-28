@@ -43,7 +43,11 @@ Branch head: see `git log -1` (this file is committed with it). Main has not mer
 2. Step 3 (behind the flag): boss reel in `lib/game/fishingReel.ts` (BOSS, BossReel, stamina, the line, phases by stamina, telegraphed run/jump/dive/slack), its UI in ReelMinigame (stamina bar with phase notches, the move call), tuned by `lib/game/fishingBoss.test.ts` (a bot that heeds warnings lands it about half the time in about 40 s; one that ignores them mostly loses). Surfacing cutscene: overlay phase "surfacing" (HOOK.surfaceMs), `lib/game/bossCam.ts` blended in IslandAtmosphere useFollowCamera, `components/game/fishing/BossCreature.tsx` (generic placeholder shapes, parked below the world so LoadGate's warm-up compiles them). Creature data model `lib/game/bossCreatures.ts` (id, name, tier, scale, phases; two placeholders).
 3. Step 4 (behind the flag): the divine raid. Protocol note 11 in `web/lib/net/protocol.ts` (`raid` both ways, no PROTOCOL bump: the server sends every joiner a view and the client sends only after hearing one), RAID constants. Server `realtime/src/rooms/raid.ts` + IslandRoom (one raid per shard, capped wear, regen, 180 s, signed helper credits with REALTIME_INTERNAL_SECRET), tests `realtime/test/raid.test.ts` (rules + 4 real clients). Client `lib/net/raid.ts` (fed by netStore), `components/game/fishing/RaidCall.tsx` (join from anywhere), overlay opener/helper flow, reel shared stamina. Web credit: catch route action `raid` (`lib/collections/raidCredit.ts`, store.rolled checks the opener's roll is that divine; recorded once per member per roll through harvest with node `raid:<roll>`: no migration). Realtime needs a Fly deploy before the flag is turned on (the coordinator).
 
-**Gates so far:** tsc clean; vitest default world 3498 passed; eslint clean on changed files; realtime raid tests and typecheck pass. Pending: vitest with NEXT_PUBLIC_GAME_WORLD=new, full realtime `npm test`, evidence strips, perf:check.
+4. Merged catalogue-editor f5186814 (958f958c): HOOK_TIER maps `divine` (contraband gets the common hook); the divine "!" reads `--gui-holo` (the same gradient). No real fish is legendary or divine now, so the gold and holo "!" never show in play until David sets some; he's asked on the review page whether epic should get the gold one: keep HOOK_TIER until he answers.
+5. SQL cap fix (0dd36b28): migration `20261028150000_catch_caps_divine.sql` (divine and contraband capped at 3 an hour like the code; they fell to 60), smoke `web/supabase/tests/catch_caps_divine_smoke.sql` in `specs/evidence/launch-fixes/sql-smoke.sh` (it re-applies the migration, since backpack_smoke re-runs the old definition). Not applied to prod: the coordinator applies it.
+6. Evidence: `specs/evidence/fish-tiers/hook-strips.png` (+ per tier), sounds in `sounds/`, `boss-reel-flagged.png`. Review page up for David (hook-common, hook-legendary, hook-divine): don't change the "!" or the sounds until he decides.
+
+**Gates at 0dd36b28:** tsc clean; vitest 3509 passed with and without NEXT_PUBLIC_GAME_WORLD=new; eslint clean on changed files; realtime npm test 233 passed and typecheck (at dccf8035, unchanged since); SQL smoke chain green with the new smoke. Pending: the two-client raid run in a browser, perf:check.
 
 ## David's decisions
 
@@ -52,15 +56,13 @@ Branch head: see `git log -1` (this file is committed with it). Main has not mer
 
 ## Next
 
-1. Evidence: frame strips of each "!" and the boss reel from `/lab/fishing` (script `web/scripts/_fish-tiers-strip.mjs`, uncommitted, run in one devserver batch); stitch to `specs/evidence/fish-tiers/`.
-2. Report step 1 to the coordinator (SHA 7e82ecb8 is step 1 alone).
-3. When the coordinator sends catalogue-editor's SHA: merge it, map `HOOK_TIER` to the new `divine` rarity (it maps `seaking` now), drop the `seaking` cases.
-4. Two-client run of a divine raid in the browser (needs a divine species: none exists until David picks; a dev-only stand-in or `/lab`), then the propose-list for David (step 5).
-5. One perf:check at the end.
+1. Two-client run of a divine raid in the browser (needs a divine species: none exists until David picks; a dev-only stand-in or `/lab`), then the propose-list for David (step 5).
+2. One perf:check at the end.
 
 ## Tools and gotchas
 
 - Locks: `withlock.sh devserver|heavy`, retried in a background loop while it exits 75; no queue file.
+- Headless shots: playwright is global (`createRequire("/opt/homebrew/lib/node_modules/")("playwright")`, `channel: "chromium"`). The site's loading screen covers /lab pages for about 3 s after load (components/ui/LoadingScreen.tsx): wait before shooting. A fresh dev player on /student/dashboard lands in "Make your character" first: press Skip.
 - The fish is rolled at the bite now (FishingOverlay `bite`), not at the hook.
 - `fishBosses()` reads `process.env.NEXT_PUBLIC_FISH_BOSSES` at call time (tests stub it with `vi.stubEnv`).
 - The placeholders are parked at y = -1000, not hidden: three's compile skips invisible objects.
