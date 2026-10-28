@@ -33,14 +33,14 @@ export interface FlyerSpecies {
  * every wingspan about a quarter of a unit (half a unit read as birds from the follow camera, row 284).
  */
 export const FLYERS: readonly FlyerSpecies[] = [
-  { key: "common", model: "/assets/acnh/critters/common-butterfly.glb", kind: "butterfly", scale: 0.065, seasons: ["spring", "summer", "autumn"], hours: [7, 17.5] },
-  { key: "tiger", model: "/assets/acnh/critters/tiger-butterfly.glb", kind: "butterfly", scale: 0.0375, seasons: ["spring", "summer"], hours: [7.5, 17] },
-  { key: "agrias", model: "/assets/acnh/critters/agrias-butterfly.glb", kind: "butterfly", scale: 0.0375, seasons: ["summer"], hours: [8, 17] },
-  { key: "monarch", model: "/assets/acnh/critters/monarch-butterfly.glb", kind: "butterfly", scale: 0.0375, seasons: ["summer", "autumn"], hours: [8, 17] },
-  { key: "peacock", model: "/assets/acnh/critters/peacock-butterfly.glb", kind: "butterfly", scale: 0.0375, seasons: ["spring", "summer", "autumn"], hours: [5, 19] },
-  { key: "emperor", model: "/assets/acnh/critters/emperor-butterfly.glb", kind: "butterfly", scale: 0.035, seasons: ["summer", "autumn"], hours: [17, 21] },
-  { key: "darner", model: "/assets/acnh/critters/darner-dragonfly.glb", kind: "dragonfly", scale: 0.0375, seasons: ["spring", "summer"], hours: [8, 17] },
-  { key: "red", model: "/assets/acnh/critters/red-dragonfly.glb", kind: "dragonfly", scale: 0.05, seasons: ["summer", "autumn"], hours: [8, 18.5] },
+  { key: "common", model: worldModel("/assets/acnh/critters/common-butterfly.glb"), kind: "butterfly", scale: 0.065, seasons: ["spring", "summer", "autumn"], hours: [7, 17.5] },
+  { key: "tiger", model: worldModel("/assets/acnh/critters/tiger-butterfly.glb"), kind: "butterfly", scale: 0.0375, seasons: ["spring", "summer"], hours: [7.5, 17] },
+  { key: "agrias", model: worldModel("/assets/acnh/critters/agrias-butterfly.glb"), kind: "butterfly", scale: 0.0375, seasons: ["summer"], hours: [8, 17] },
+  { key: "monarch", model: worldModel("/assets/acnh/critters/monarch-butterfly.glb"), kind: "butterfly", scale: 0.0375, seasons: ["summer", "autumn"], hours: [8, 17] },
+  { key: "peacock", model: worldModel("/assets/acnh/critters/peacock-butterfly.glb"), kind: "butterfly", scale: 0.0375, seasons: ["spring", "summer", "autumn"], hours: [5, 19] },
+  { key: "emperor", model: worldModel("/assets/acnh/critters/emperor-butterfly.glb"), kind: "butterfly", scale: 0.035, seasons: ["summer", "autumn"], hours: [17, 21] },
+  { key: "darner", model: worldModel("/assets/acnh/critters/darner-dragonfly.glb"), kind: "dragonfly", scale: 0.0375, seasons: ["spring", "summer"], hours: [8, 17] },
+  { key: "red", model: worldModel("/assets/acnh/critters/red-dragonfly.glb"), kind: "dragonfly", scale: 0.05, seasons: ["summer", "autumn"], hours: [8, 18.5] },
 ];
 
 /** Flyers hide from rain and snow, and from a gale. */

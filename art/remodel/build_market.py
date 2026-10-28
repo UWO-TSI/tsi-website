@@ -5,9 +5,9 @@ market (web/data/world: ten barrels at scale about 0.07, four carts at 0.55).
   /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P art/remodel/build_market.py
 
 Writes, in the old models' frames (rkit.export_in_frame), so the map's scales, PROP_FOOTPRINT and PROP_TOP still hold:
-  game/props/market-barrel.glb  a lidded barrel of warm staves in three tones, two pairs of dark iron hoops, a planked
-                                lid with a rim and a bung on its side; 0.82 tall, 0.34 round at the belly as drawn (the
-                                old: 11.66 by 4.85 in its units, drawn at 0.07).
+  game/props/market-barrel.glb  a round-bellied lidded barrel of warm staves in tones, four dark iron hoops riding the
+                                curve, a planked lid and a bung on its side; 0.82 tall, 0.34 round at the belly and 0.27
+                                at the ends as drawn (the old: 11.66 by 4.85 in its units, drawn at 0.07).
   game/props/market-cart.glb    a long timber market cart on two big spoked wheels and two legs, a planked bed, crates of
                                 fish on ice and of fruit, a striped awning (4.0 by 1.1, 1.56 tall as drawn; the old:
                                 7.54 by 2.06, 2.84 tall in its units, drawn at 0.55).
@@ -17,35 +17,36 @@ import math, os, sys
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from rkit import K, PS, export_in_frame  # noqa: E402
+from rkit import ARGS, K, PS, export_in_frame  # noqa: E402
 
 TAU = math.tau
 BARREL_DRAWN = 0.07
 
 
 def market_barrel():
+    """Round 2 (David: "i want shape to be more round, stay closer to reference"): a full belly that swells smoothly
+    from narrow ends (the ends 0.8 of the belly, a sine curve over nine rings and twenty staves), the hoops riding it."""
     K.reset()
     M = PS.presets("wood", "metal", "paint")
     k = K.Kit("market-barrel")
-    h, r, bulge = 0.816, 0.298, 0.042
-    prof = [(r, 0.0), (r + bulge * 0.62, h * 0.2), (r + bulge, h * 0.5), (r + bulge * 0.62, h * 0.8), (r, h)]
-    n = 16
+    h, R, end, n = 0.816, 0.335, 0.268, 20
+    rad = lambda y: end + (R - end) * math.sin(math.pi * min(1.0, max(0.0, y / h)))
+    prof = [(rad(h * i / 8), h * i / 8) for i in range(9)]
     staves = k.lathe((0, 0, 0), prof, M["wood"], PS.WOOD, n=n, phase=0.0)
-    tones = (PS.WOOD, PS.shade(PS.WOOD, 0.86), PS.shade(PS.WOOD, 1.07), PS.shade(PS.WOOD, 0.95))
+    tones = (PS.WOOD, PS.shade(PS.WOOD, 0.92), PS.shade(PS.WOOD, 1.04), PS.shade(PS.WOOD, 0.96))
     PS.recolor(k, staves, lambda x, y, z: tones[int((math.atan2(z, x) / TAU + 1) * n) % 4])
-    # The lid: a disc sunk a little inside the chime, its three planks told apart by tone.
+    # The lid: sunk a little inside the chime (the staves' rim), its three planks told apart by tone.
     lid_y = h - 0.03
-    k.lathe((0, 0, 0), [(r - 0.004, h), (r - 0.026, h - 0.004), (r - 0.028, lid_y)], M["wood"], PS.DARKW, n=n)
-    lid = k.lathe((0, 0, 0), [(r - 0.028, lid_y), (0.0, lid_y)], M["wood"], PS.LIGHTW, n=n)
-    PS.recolor(k, lid, lambda x, y, z: (PS.shade(PS.LIGHTW, 0.9), PS.LIGHTW, PS.shade(PS.LIGHTW, 0.95))[min(2, int((x + r) / (2 * r) * 3))])
-    # Hoops: a pair near each end, proud of the staves, a dark iron.
-    for y0 in (0.07, 0.15, h - 0.2, h - 0.12):
-        t = y0 / h
-        rr = r + bulge * (1 - (2 * (t + 0.025) - 1) ** 2)
-        k.lathe((0, 0, 0), [(rr - 0.006, y0), (rr + 0.008, y0 + 0.01), (rr + 0.008, y0 + 0.036), (rr - 0.006, y0 + 0.046)], M["metal"], "#3f3a36", n=n)
+    k.lathe((0, 0, 0), [(end - 0.004, h), (end - 0.024, h - 0.004), (end - 0.026, lid_y)], M["wood"], PS.DARKW, n=n)
+    lid = k.lathe((0, 0, 0), [(end - 0.026, lid_y), (0.0, lid_y)], M["wood"], PS.LIGHTW, n=n)
+    PS.recolor(k, lid, lambda x, y, z: (PS.shade(PS.LIGHTW, 0.9), PS.LIGHTW, PS.shade(PS.LIGHTW, 0.95))[min(2, int((x + end) / (2 * end) * 3))])
+    # Four dark iron hoops riding the curve: one at each chime and one each side of the belly.
+    for y0, w in ((0.03, 0.05), (h * 0.27, 0.042), (h * 0.73 - 0.042, 0.042), (h - 0.08, 0.05)):
+        r0, r1 = rad(y0), rad(y0 + w)
+        k.lathe((0, 0, 0), [(r0 - 0.004, y0), (r0 + 0.009, y0 + 0.008), (r1 + 0.009, y0 + w - 0.008), (r1 - 0.004, y0 + w)], M["metal"], "#5a5650", n=n)
     # A bung on the belly, toward +z.
-    k.lathe((0, h * 0.5, r + bulge - 0.004), [(0.034, 0.0), (0.03, 0.02), (0.0, 0.022)], M["wood"], PS.DARKW, d=(0, 0, 1), n=8)
-    k.tint_gradient(0.82, 1.0, 0.0, h)
+    k.lathe((0, h * 0.5, R - 0.004), [(0.034, 0.0), (0.03, 0.02), (0.0, 0.022)], M["wood"], PS.DARKW, d=(0, 0, 1), n=8)
+    k.tint_gradient(0.8, 1.0, 0.0, h)
     ob = k.finish(smooth_deg=40)
     export_in_frame(ob, BARREL_DRAWN, "game/props/market-barrel.glb")
 
@@ -154,5 +155,6 @@ def fruit_heap(k, M, c, rx, rz, h, cols, n, seed, r=0.075):
 
 
 if __name__ == "__main__":
-    market_barrel()
-    market_cart()
+    # `-- barrel` or `-- cart` builds one (the cart is approved: rebuild it only on purpose).
+    for part in ARGS or ("barrel", "cart"):
+        {"barrel": market_barrel, "cart": market_cart}[part]()

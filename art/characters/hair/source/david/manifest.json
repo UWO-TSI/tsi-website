@@ -8,7 +8,8 @@
    "name": "Baby sprout",
    "covers": [
     "top"
-   ]
+   ],
+   "key": "hair-28"
   },
   {
    "file": "02-Low-Poly-Messy-Boy-Hair-Black-128971224541817.glb",
@@ -50,12 +51,16 @@
     "rule": "flat_grey",
     "color": "#2B2B33",
     "flip_logo": "vertical"
-   }
+   },
+   "accessory_only": true,
+   "accessory_only_why": "David, 2026-10-27 (hair shelf, lane hair-shelf): removed from the catalogue, creator and seed; its split-off visor (acc_visor) stays"
   },
   {
    "file": "09-Low-Poly-Fluffy-Messy-Boy-Hair-Brown-86495776285585.glb",
    "id": "hair_fluffy_boy",
-   "name": "Fluffy boy"
+   "name": "Fluffy boy",
+   "removed": true,
+   "removed_why": "David, 2026-10-27 (hair shelf, lane hair-shelf): removed from the catalogue, creator and seed; it keeps its atlas cell"
   },
   {
    "file": "10-Black-Messy-Wolfcut-98528599025378.glb",
@@ -70,7 +75,8 @@
   {
    "file": "12-Ryo-137412726411371.glb",
    "id": "hair_layered_shag",
-   "name": "Layered shag"
+   "name": "Layered shag",
+   "key": "hair-29"
   },
   {
    "file": "13-Ben-10-Anime-Hair-125540259305979.glb",
@@ -91,12 +97,14 @@
    "file": "15-Vkei-Moe-Boy-Face-Hair-137700402637392.glb",
    "id": "hair_vkei",
    "name": "V-kei layers",
-   "drop": "face_plate"
+   "drop": "face_plate",
+   "key": "hair-31"
   },
   {
    "file": "16-Isagi-17727987910.glb",
    "id": "hair_swept_fringe",
-   "name": "Swept fringe"
+   "name": "Swept fringe",
+   "key": "hair-30"
   },
   {
    "file": "17-cutesy-bob-with-adorable-pigtail-in-brown-118937471732434.glb",
