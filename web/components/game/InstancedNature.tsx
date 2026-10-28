@@ -33,6 +33,7 @@ import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { applyModelTextures, disposeModelMaterials, prepareModel } from "@/lib/game/modelMaterials";
 import { shadowClassFor } from "@/lib/game/shadows";
 import { lodOf, updateNear } from "@/lib/game/natureLod";
+import { CurvedCull, cullMeshes } from "@/lib/game/curvedCull";
 import { hash01 } from "@/lib/game/worldFx";
 import { addContact, modelContact } from "./ContactShadows";
 
@@ -155,11 +156,111 @@ function InstancedLodGLB({ url, far, placements }: { url: string; far: string; p
   return <primitive object={owner}>{[...hi.meshes, ...lo.meshes].map((m, i) => <primitive key={i} object={m} />)}</primitive>;
 }
 
+/**
+ * Culled placements (perf-tris, the new world): each placement drawn only while the bent view can see it
+ * (lib/game/curvedCull.ts), at its level where the model has a far one (as InstancedLodGLB). A sub-mesh that casts hands
+ * its casting to a twin that holds every placement and draws in the shadow passes alone (SunShadows casterOnly), as the
+ * caster hulls already do, so a culled placement keeps its shadow. Every placement shows on the first frame, so every
+ * program compiles while the scene loads.
+ */
+interface Culled { xyz: Float32Array; spheres: THREE.Sphere[]; near: Uint8Array; shown: Uint8Array; levels: THREE.InstancedMesh[][]; twins: THREE.InstancedMesh[] }
+
+/** Module scope (the react compiler forbids writing through hook values): each casting sub-mesh's twin, the sub-mesh no longer casting. */
+function casterTwins(meshes: readonly THREE.InstancedMesh[]): THREE.InstancedMesh[] {
+  return meshes.flatMap(m => {
+    if (!m.castShadow || m.userData.levelVisible === false) return [];
+    const twin = new THREE.InstancedMesh(m.geometry, m.material, m.instanceMatrix.count);
+    Object.assign(twin, { name: m.name, castShadow: true, receiveShadow: false, visible: false, frustumCulled: false, customDepthMaterial: m.customDepthMaterial });
+    twin.userData = { ...m.userData, casterOnly: true, levelVisible: false };
+    m.castShadow = false;
+    return [twin];
+  });
+}
+
+/** Pack each level's meshes from index 0: the casters (hidden, levelVisible false) every placement at their level, the rest only those shown. */
+function packCulled(c: Culled, matrices: readonly THREE.Matrix4[], casters: boolean) {
+  c.levels.forEach((meshes, level) => {
+    for (const m of meshes) {
+      const caster = m.userData.levelVisible === false;
+      if (caster && !casters) continue;
+      let n = 0;
+      for (let i = 0; i < matrices.length; i++) {
+        if ((c.levels.length > 1 && c.near[i] !== (level === 0 ? 1 : 0)) || (!caster && !c.shown[i])) continue;
+        m.setMatrixAt(n, matrices[i]);
+        if (m.instanceColor) m.setColorAt(n, crownTint(matrices[i], _tint));
+        n++;
+      }
+      m.count = n;
+      m.visible = n > 0 && !caster;
+      m.instanceMatrix.needsUpdate = true;
+      if (m.instanceColor) m.instanceColor.needsUpdate = true;
+    }
+  });
+}
+
+function culledState(matrices: readonly THREE.Matrix4[], model: THREE.Object3D, meshes: readonly (readonly THREE.InstancedMesh[])[]): Culled {
+  const sphere = new THREE.Box3().setFromObject(model).getBoundingSphere(new THREE.Sphere()), n = matrices.length;
+  const twins = meshes.map(casterTwins);
+  const c: Culled = {
+    xyz: new Float32Array(matrices.flatMap(m => [m.elements[12], m.elements[13], m.elements[14]])),
+    spheres: matrices.map(m => sphere.clone().applyMatrix4(m)),
+    // Every placement starts far and shown: the first frame brings the near ones in and culls the rest.
+    near: new Uint8Array(n), shown: new Uint8Array(n).fill(1),
+    levels: meshes.map((ms, i) => [...ms, ...twins[i]]), twins: twins.flat(),
+  };
+  for (const m of c.levels.flat()) m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  packCulled(c, matrices, true);
+  return c;
+}
+
+function frameCulled(c: Culled, matrices: readonly THREE.Matrix4[], cull: CurvedCull, camera: THREE.Camera) {
+  const p = camera.position, levels = c.levels.length > 1 && updateNear(c.near, c.xyz, p.x, p.y, p.z);
+  cull.update(camera);
+  let shown = false;
+  for (let i = 0; i < c.spheres.length; i++) {
+    const on = cull.visible(c.spheres[i]) ? 1 : 0;
+    if (on !== c.shown[i]) { c.shown[i] = on; shown = true; }
+  }
+  if (levels || shown) packCulled(c, matrices, levels);
+}
+
+function useCulled(matrices: readonly THREE.Matrix4[], model: THREE.Object3D, meshes: readonly (readonly THREE.InstancedMesh[])[]) {
+  const cull = useMemo(() => new CurvedCull(), []);
+  const c = useMemo(() => culledState(matrices, model, meshes), [matrices, model, meshes]);
+  useEffect(() => () => c.twins.forEach(m => m.dispose()), [c]);
+  useFrame(({ camera }) => frameCulled(c, matrices, cull, camera));
+  return c.levels.flat();
+}
+
+function CulledOne({ url, placements }: { url: string; placements: readonly NaturePlacement[] }) {
+  const matrices = useMemo(() => placements.map((p) => matrixOf(p, 1)), [placements]);
+  const one = useInstanced(url, matrices);
+  const owner = useContacts(one.model, url, one.cls, matrices);
+  const levels = useMemo(() => [one.meshes], [one.meshes]);
+  const meshes = useCulled(matrices, one.model, levels);
+  return <primitive object={owner}>{meshes.map((m, i) => <primitive key={i} object={m} />)}</primitive>;
+}
+
+function CulledLod({ url, far, placements }: { url: string; far: string; placements: readonly NaturePlacement[] }) {
+  const matrices = useMemo(() => placements.map((p) => matrixOf(p, 1)), [placements]);
+  const hi = useInstanced(url, matrices), lo = useInstanced(far, matrices);
+  const owner = useContacts(hi.model, url, hi.cls, matrices);
+  const levels = useMemo(() => [hi.meshes, lo.meshes], [hi.meshes, lo.meshes]);
+  const meshes = useCulled(matrices, hi.model, levels);
+  return <primitive object={owner}>{meshes.map((m, i) => <primitive key={i} object={m} />)}</primitive>;
+}
+
+const CulledGLB = ({ url, far, placements }: { url: string; far: string | null; placements: readonly NaturePlacement[] }) =>
+  far ? <CulledLod url={url} far={far} placements={placements} /> : <CulledOne url={url} placements={placements} />;
+
 /** One placed model: its url and world transform. */
 export interface ModelPlacement extends NaturePlacement { url: string }
 
-/** Many models at once, grouped by url into one InstancedGLB each (each loads on its own). */
-export function InstancedModels({ items }: { items: readonly ModelPlacement[] }) {
+/**
+ * Many models at once, grouped by url into one InstancedGLB each (each loads on its own). `cull` (the new world,
+ * perf-tris): each model draws only the placements the bent view can see (CulledGLB).
+ */
+export function InstancedModels({ items, cull }: { items: readonly ModelPlacement[]; cull?: boolean }) {
   const groups = useMemo(() => {
     const byUrl = new Map<string, NaturePlacement[]>();
     for (const { url, ...p } of items) { const group = byUrl.get(url); if (group) group.push(p); else byUrl.set(url, [p]); }
@@ -167,7 +268,7 @@ export function InstancedModels({ items }: { items: readonly ModelPlacement[] })
   }, [items]);
   return <>{groups.map(([url, placements]) => {
     const far = lodOf(url);
-    return <Suspense key={url} fallback={null}>{far ? <InstancedLodGLB url={url} far={far} placements={placements} /> : <InstancedGLB url={url} placements={placements} />}</Suspense>;
+    return <Suspense key={url} fallback={null}>{cull ? <CulledGLB url={url} far={far} placements={placements} /> : far ? <InstancedLodGLB url={url} far={far} placements={placements} /> : <InstancedGLB url={url} placements={placements} />}</Suspense>;
   })}</>;
 }
 
@@ -194,18 +295,22 @@ export const layoutKey = (g: THREE.BufferGeometry) => Object.entries(g.attribute
 /**
  * Each prepared model baked in at each of its placements and joined into one mesh per look across them all, casting as
  * its class says (prepareModel) and receiving (still props and buildings). `images` merges looks whose textures share an image (imageKeys).
+ * `part` (MergedModels `cull`): "view" joins what draws per block of `block` units, none of it casting; "caster" joins
+ * only what casts, across the whole world, drawn in the shadow passes alone (SunShadows casterOnly).
  */
-export function mergeByLook(placed: readonly (readonly [THREE.Object3D, THREE.Matrix4])[], images?: ReadonlyMap<THREE.Texture, string>) {
+export function mergeByLook(placed: readonly (readonly [THREE.Object3D, THREE.Matrix4])[], images?: ReadonlyMap<THREE.Texture, string>, part?: { view: number } | "caster") {
   const groups = new Map<string, { material: THREE.Material; cast: boolean; geometries: THREE.BufferGeometry[] }>();
   for (const [model, place] of placed) {
     model.updateMatrixWorld(true);
     model.traverse(o => {
       const mesh = o as THREE.Mesh;
-      if (!mesh.isMesh || !mesh.visible || Array.isArray(mesh.material)) return;
+      if (!mesh.isMesh || !mesh.visible || Array.isArray(mesh.material) || (part === "caster" && !mesh.castShadow)) return;
       const g = mesh.geometry.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(place, mesh.matrixWorld));
       if (!g.index) g.setIndex([...Array(g.attributes.position.count).keys()]);
-      const key = `${lookKey(mesh.material, images)}#${layoutKey(g)}#${mesh.castShadow}`;
-      const group = groups.get(key) ?? { material: mesh.material, cast: mesh.castShadow, geometries: [] };
+      const cast = part ? part === "caster" : mesh.castShadow, e = place.elements;
+      const block = part && part !== "caster" ? `#${Math.floor(e[12] / part.view)}:${Math.floor(e[14] / part.view)}` : "";
+      const key = `${lookKey(mesh.material, images)}#${layoutKey(g)}#${cast}${block}`;
+      const group = groups.get(key) ?? { material: mesh.material, cast, geometries: [] };
       group.geometries.push(g);
       groups.set(key, group);
     });
@@ -214,17 +319,20 @@ export function mergeByLook(placed: readonly (readonly [THREE.Object3D, THREE.Ma
     const mesh = new THREE.Mesh(geometries.length === 1 ? geometries[0] : mergeGeometries(geometries, false) ?? geometries[0], material);
     // The curved world bends far things down into view (modelMaterials prepareModel): never culled by their own bounds.
     mesh.castShadow = cast; mesh.receiveShadow = true; mesh.frustumCulled = false;
+    if (part === "caster") { mesh.userData.casterOnly = true; mesh.visible = false; }
     return mesh;
   });
 }
 
+/** The blocks (world units) MergedModels `cull` joins the view by: a look's parts in a block draw as one mesh. */
+const CULL_BLOCK = 32;
 /**
  * Still props merged (the new world's dressing, R2c perf): every placement of every model baked into place and joined
  * into one mesh per look across all the models (the art lanes share their material presets so parts merge: David,
  * 2026-10-17), so dozens of small props draw in a handful of calls. Each placement keeps its contact shadow. For models
  * that never move, sway or glow on their own.
  */
-export function MergedModels({ items, emissiveIntensity }: { items: readonly ModelPlacement[]; emissiveIntensity?: number }) {
+export function MergedModels({ items, emissiveIntensity, cull }: { items: readonly ModelPlacement[]; emissiveIntensity?: number; cull?: boolean }) {
   const urls = useMemo(() => [...new Set(items.map(i => i.url))], [items]);
   const gltfs = useGLTF(urls) as unknown as GLTF[];
   const images = useMemo(() => gltfs.reduce((out, gltf) => imageKeys(gltf, out), new Map<THREE.Texture, string>()), [gltfs]);
@@ -233,8 +341,17 @@ export function MergedModels({ items, emissiveIntensity }: { items: readonly Mod
     models.forEach((model, i) => applyModelTextures(model, urls[i]));
     return () => models.forEach(model => disposeModelMaterials(model));
   }, [models, urls]);
-  const meshes = useMemo(() => mergeByLook(items.map(({ url, ...p }) => [models[urls.indexOf(url)], matrixOf(p, 1)] as const), images), [models, urls, items, images]);
+  const [meshes, view] = useMemo(() => {
+    const placed = items.map(({ url, ...p }) => [models[urls.indexOf(url)], matrixOf(p, 1)] as const);
+    if (!cull) return [mergeByLook(placed, images), []];
+    // `cull` (perf-tris, the new world): the view joined per block and each block drawn only while the bent view can
+    // see it; the shadows from a whole-world caster copy, so a culled block keeps its shadow.
+    const view = mergeByLook(placed, images, { view: CULL_BLOCK });
+    return [[...view, ...mergeByLook(placed, images, "caster")], view];
+  }, [models, urls, items, images, cull]);
   useEffect(() => () => meshes.forEach(m => m.geometry.dispose()), [meshes]);
+  const curved = useMemo(() => new CurvedCull(), []);
+  useFrame(({ camera }) => { if (view.length) cullMeshes(curved.update(camera), view); });
   const world = useThree(s => s.scene);
   const owner = useMemo(() => new THREE.Group(), []);
   useEffect(() => {
