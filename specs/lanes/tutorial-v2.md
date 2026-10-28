@@ -51,40 +51,29 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 ## Status
 
-All four items are built and run end to end headless on the new world. The evidence is shot: `specs/evidence/tutorial-v2/v2/01..11`. Waiting on David's review. The coordinator took the defaults on the four open notes (selling, the cut beats, the HQ door, drafts).
+Round 3 (David's v2 review) built on the new world, waiting on its evidence and David's review. Round 2's status is in git history (fb5991d9).
 
-- **The guide arrow (shared), merged into main-quest at 203f8603.** `web/lib/game/guideArrow.ts` holds the API (tested). `web/components/game/GuideArrow.tsx` draws a faint chevron a step ahead of your feet: one mesh, in `IslandScene`, so outdoors only.
-  - `const clear = showGuide(owner, { x, z } | () => XZ | null, { near })`. The newest guide wins; clearing it brings back the one under it. Also `clearGuide(owner)` and `guideNow()`. Dev hook: `window.__guide`.
-  - Bram uses owner `bram` (shows from 7 m). main-quest uses owner `quest`.
-- **t-short and t-sell: the new world's walk** (`lib/game/arrival/routes/new.ts`, data only). The village keeps today's walk.
-  - The order:
-    1. The dock and the crate, as before.
-    2. Bram walks you to HQ's door and waits (stop `hqFirst`, task `hq`). Alice's visit runs inside, and he moves on when it's done and you're back out.
-    3. One E opens the camera conversation (stop `sights`). He points out the museum, the café and the shop, one line and one building shot each (`shots`).
-    4. Down the wharf, he pauses by the shipwright and the tackle shop, a passing line each (waypoints `pause`, `face`, `say`).
-    5. His rod and a first catch off the quay (stop `wharf`; its stand is out of the sell barrel's E range).
-    6. Open the sell barrel (stop `barrel`, task `sell`), then the end line and the reward.
-  - New route data: `talk: "box"` (Bram's talks go in the TalkBox), `end` (`END_LINES.free`), prop places, passing waypoints, and the `hq` and `sell` tasks.
-  - The tutorial events `talkEnded`, `hqDone` and `sellOpened`.
-  - The camera conversation lives in `converseCamera` in `ArrivalWorld.tsx`: the residents' two-shot (`steerTalkShot`), then a blended cut to a building shot, then the camera is put back. You turn to face Bram (`tsi:face`).
-  - Bram walks brisker with you on his heels (`bramPace`).
-- **t-hq: Alice's visit reworked** (`lib/game/arrival/hq/script.ts`, `lines.ts`, `uiTour.ts`; the components `HqCards.tsx` LoreOverlay and MerchCard, and `UiTour.tsx`). Applies on both worlds.
-  - The beats: report, lore overlay, register, club (events earn coins, gems and XP; the check-in QR), merch card, UI tour (press and hold keycaps, a ring around HUD parts), Esc, farewell.
-  - The farewell has two versions: `farewell` (the village order) and `farewellTour` (Bram waiting outside). Both keep main-quest's Juno line.
-  - The founder, map and board beats are cut. The desk and the board still work on E.
-  - Progress is on the account: `profiles.preferences.onboarding` through `GET/POST /api/world/onboarding` (`accountProgress.ts`). It merges with the device copy `tsi.hq.v2`, the further along wins, and it pays nothing. Coordinator approved (d).
-- **t-catch, both worlds.** The walk-along's catch shows a teaching card on the first reel (`REEL_TEACH`, the keys drawn held). The reel waits for a fresh hold, the bite window is longer, and a progress floor means the fish can't get away (`createFishingReel(fish, floor)`). Every catch is already a fish: no junk exists.
-- Gates: full vitest passes with and without `NEXT_PUBLIC_GAME_WORLD=new` (3498 tests); tsc and eslint pass on the changed files.
+- **arrow:** smaller (0.85) and nearer your feet (1.15 m ahead), `GuideArrow.tsx`.
+- **dock (hq-first):** the new world's own dock stop in `routes/new.ts` (no longer borrowed from the village): Bram's talk teaches the box hop (`{jump}`), then an `auto` stop (no E) teaches the dash: `unlockMove("dash")` (a no-op when dash is already open; daily-social may open dash for all) and a `dash` task waiting for `tsi:dash` (PlayerAvatar announces a dash). While the box or the dash is the task, its key stays up in a chip (`Arrival.tsx` `teach`). The box is the route's tutorial-only crate.
+- **sights:** the pan kept, the lines rewritten short in Bram's voice (`lines.ts` STOP_LINES.sights).
+- **wharf:** a camera-conversation stop by the tackle shop panning to the tackle shop and the shipwright's (the sights' `shots`, on props), then `cast` at the quay's edge (his rod lent, the catch), then `barrel`. The passing-pause waypoints are deleted.
+- **barrel:** the task waits for a real sale (`tsi:sold` from SellBody, reported when the sheet closes). Straight on, the `keep` stop (`auto`, `holds: "rod"`): Bram holds his rod through the talk and holds it out on the last line with the camera close on him (`"bram"` shot). The walk ends with no last word (`end: "none"`): `tsi:quest-complete` (QuestCheck), then RewardCard's From Bram (`tsi:gift`) and the rod into the bag (`tsi:bag-got`), in `finishArrival`.
+- **HQ (club, lore, tour, farewell):** `hq/script.ts` v3: report, lore (the island, the Founder, the gatherings, GENESIS), the ID (IdCard: world name, birthday, spirit animal, existing profile fields; PATCH /api/profile now takes `birthday`), coins and gems (fly cards), check-ins, menu, mail, minimap (fly cards; the island shows the dock and the minimap while they fly), the keyboard tour (press or hold the lit key; Tab, G, H held; Enter, I, B, J, M, L pressed), Esc, the farewell naming the notice board, the trophy case and the Founder's desk, Juno's line kept. Saved visits moved to `tsi.hq.v3`.
+- **Kit (design bible UI):** new flat kit pieces in `components/gui/flat/moments.tsx`: Spotlight, KeyBoard, FlyIn, QuestCheck, PrintedCard, on /lab/gui (`?only=key-board|fly-in|quest-check|printed-card`). Paper tokens `--ui-paper`, `--ui-paper-edge`, `--ui-paper-ink`, `--ui-stamp` in every theme. RegisterCard, MerchCard and the old UiTour are deleted. QuestCheck is ours (fired by `tsi:quest-complete`; main-quest fires it too); RewardCard is main-quest's.
+- **catch:** untouched; the fishing UI redo is fish-tiers'.
+- **phone (held):** a touch screen skips the keyboard tour (its say and its wait pass at once); round 2's touch tour copy is gone with the old tour.
 
 ## Next
 
-1. Act on David's review notes, once the coordinator relays them.
-2. Known and not fixed: the arrow is a ground decal, so tall props in its spot (a fountain's rim) can hide part of it. The evidence's 01 shows this by the plaza fountain.
-3. The final batch's part b stopped at the barrel conversation (a talk-box wait timed out). Sheet 10 (the barrel and the end) is from the earlier part b run, on the same code for that stretch.
+1. Shoot v3 on the new world (`v3/shoot.mjs walk-a`, `walk-b`, `kit`), lay out with `v3/strips.py`, send main the item list.
+2. Later, after David approves the desktop tutorial: the phone pass (the tour on touch, the ID and fly cards at phone size).
+3. Open for David: a job board or past-projects display in HQ (the farewell names only what exists); his name in the lore (the Founder for now).
+4. Known: the arrow is a ground decal, so tall props in its spot can hide part of it.
 
 ## Tools and gotchas
 
-- `specs/evidence/tutorial-v2/shoot.mjs` scenes: `first10` (part a, about 7 min), `first10b` (part b: the HQ visit is pre-done through `tsi.hq.v2`, about 5 min), `hq-phone` (`?hq=inside&hqvisit=1`, touch), and `arrow`.
+- Round 3: `HOST=http://localhost:3172 node specs/evidence/tutorial-v2/v3/shoot.mjs <out> walk-a|walk-b|kit`, each its own call; then `python3 specs/evidence/tutorial-v2/v3/strips.py <out> specs/evidence/tutorial-v2/v3`. Signed out: coins through `window.__hudCoins`, the sale by sending `tsi:sold`.
+- Round 2's `specs/evidence/tutorial-v2/shoot.mjs` scenes (old script, before round 3): `first10` (part a, about 7 min), `first10b` (part b: the HQ visit is pre-done through `tsi.hq.v2`, about 5 min), `hq-phone` (`?hq=inside&hqvisit=1`, touch), and `arrow`.
   - Run each as its own foreground call: `HOST=http://localhost:3172 node specs/evidence/tutorial-v2/shoot.mjs <out> <scene>`.
   - Dev server: `NEXT_PUBLIC_GAME_WORLD=new NEXT_PUBLIC_SUPABASE_URL= NEXT_PUBLIC_SUPABASE_ANON_KEY= npx next dev -p 3172`, under the devserver lock. Keep the hold short: the coordinator asked, because swap runs at 13 GB.
 - HQ room coordinates (lib/game/hqLayout.ts): the desk station is (4.6, -7.5) and the exit is (0, -8.2). Walk there with `tsi:interior-move`.
@@ -96,7 +85,8 @@ All four items are built and run end to end headless on the new world. The evide
 
 - **Headless only:** never open a window, tab, app or audio on David's screen; never `open`; never the Playwright MCP, the claude-in-chrome tools or the `blender` MCP tools. Blender only as `/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P <script>`. Never port 3000.
 - **Locks:** `LANE=game/tutorial-v2 /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh heavy|blender|devserver <cmd>` (`specs/lane-rules.md`).
-- **The default village world stays unchanged** (the launch fallback). New-world changes sit behind `NEXT_PUBLIC_GAME_WORLD=new`; run vitest with and without it.
+- **The village is retired (David, 2026-10-28):** every shot and run is on the new world; gates are vitest with `NEXT_PUBLIC_GAME_WORLD=new` only; no village-only code; keep off `web/lib/game/world/active.ts`.
+- **UI (design bible, specs/design-bible.md UI):** one flat look, paper only for paper things, `--ui-*` tokens only, kit pieces from `web/components/gui/flat` (new ones go in the kit and /lab/gui first).
 - **Git:** commit with the `[build]` prefix. Never push. Never bare `git stash`. Work only in this worktree. Never touch prod; ask the coordinator for any read-only prod query.
 - **Text:** no em dashes; real names never show in game; never write the gem-to-money rate anywhere (the repo is public).
 - **Art:** David supplies every reference; never fetch art, textures or music; no asset libraries or generators.
