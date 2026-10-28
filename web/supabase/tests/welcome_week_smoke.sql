@@ -7,7 +7,8 @@
 BEGIN;
 INSERT INTO auth.users (id, email) VALUES
   ('00000000-0000-4000-8000-000000077001', 'welcome-1@x'), ('00000000-0000-4000-8000-000000077007', 'welcome-7@x'),
-  ('00000000-0000-4000-8000-000000077008', 'welcome-8@x'), ('00000000-0000-4000-8000-000000077009', 'welcome-none@x')
+  ('00000000-0000-4000-8000-000000077008', 'welcome-8@x'), ('00000000-0000-4000-8000-000000077009', 'welcome-none@x'),
+  ('00000000-0000-4000-8000-000000077010', 'welcome-homes@x')
 ON CONFLICT DO NOTHING;
 -- Past gift days: six for f7 and f9 (today is their seventh), seven for f8 (today is the eighth).
 INSERT INTO daily_login_claims (member_id, day, coins)
@@ -18,6 +19,7 @@ DO $$
 DECLARE r record; d int := CASE WHEN EXTRACT(ISODOW FROM (NOW() AT TIME ZONE 'America/Toronto')::DATE) = 5 THEN 20 ELSE 10 END;
   F1 uuid := '00000000-0000-4000-8000-000000077001'; F7 uuid := '00000000-0000-4000-8000-000000077007';
   F8 uuid := '00000000-0000-4000-8000-000000077008'; F9 uuid := '00000000-0000-4000-8000-000000077009';
+  F10 uuid := '00000000-0000-4000-8000-000000077010';
 BEGIN
   -- Day 1: the gift and the day-1 bonus, credited exactly once.
   ASSERT NOT EXISTS (SELECT 1 FROM wallets WHERE member_id = F1 AND coins <> 0) AND NOT EXISTS (SELECT 1 FROM daily_login_claims WHERE member_id = F1), 'a fresh member';
@@ -34,18 +36,28 @@ BEGIN
   ASSERT r.claimed AND r.welcome_day = 7 AND r.welcome_coins = 0 AND r.welcome_item IS NOT NULL, 'welcome day 7 box';
   ASSERT EXISTS (SELECT 1 FROM member_inventory i JOIN shop_items s ON s.id = i.item_id
                  WHERE i.member_id = F7 AND s.slug = r.welcome_item AND s.special_pool AND s.active AND s.price_coins <= 300
-                   AND s.category IN ('outfit', 'hair', 'face', 'accessory', 'furniture')), 'the box item is given, starter loot only';
+                   AND s.category IN ('outfit', 'hair', 'face', 'accessory')), 'the box item is given, starter loot only, no furniture while homes are closed';
 
   -- Day 8: the week is over.
   SELECT * INTO r FROM daily_gift_claim(F8);
   ASSERT r.claimed AND r.coins = d AND r.welcome_day IS NULL AND r.welcome_coins = 0, 'after the week, just the gift';
 
-  -- Day 7 with nothing left to win: coins instead (furniture never runs out, so it leaves the box here; rolled back).
-  UPDATE shop_items SET special_pool = FALSE WHERE stackable;
+  -- Day 7 with nothing left to win: coins instead (homes closed, so furniture isn't in the box: owning the rest empties it).
+  ASSERT COALESCE((SELECT value FROM economy_settings WHERE key = 'welcome_box_furniture'), 0) = 0, 'furniture is out of the box by default';
   INSERT INTO member_inventory (member_id, item_id, qty, slot)
-    SELECT F9, id, 1, slot FROM shop_items WHERE special_pool AND active AND price_coins IS NOT NULL;
+    SELECT F9, id, 1, slot FROM shop_items WHERE special_pool AND active AND price_coins IS NOT NULL AND category <> 'furniture'
+  ON CONFLICT DO NOTHING;
   SELECT * INTO r FROM daily_gift_claim(F9);
   ASSERT r.welcome_day = 7 AND r.welcome_item IS NULL AND r.welcome_coins = 300, 'an empty box pays coins';
+  -- Homes open: one switch puts furniture back in the box (furniture is all that's left for F10).
+  INSERT INTO economy_settings (key, value) VALUES ('welcome_box_furniture', 1) ON CONFLICT (key) DO UPDATE SET value = 1;
+  INSERT INTO daily_login_claims (member_id, day, coins)
+    SELECT F10, (NOW() AT TIME ZONE 'America/Toronto')::DATE - g, 10 FROM generate_series(1, 6) AS g;
+  INSERT INTO member_inventory (member_id, item_id, qty, slot)
+    SELECT F10, id, 1, slot FROM shop_items WHERE special_pool AND active AND price_coins IS NOT NULL AND category <> 'furniture'
+  ON CONFLICT DO NOTHING;
+  SELECT * INTO r FROM daily_gift_claim(F10);
+  ASSERT r.welcome_day = 7 AND (SELECT category FROM shop_items WHERE slug = r.welcome_item) = 'furniture', 'with homes open, the box can hold furniture';
   RAISE NOTICE 'welcome week ok';
 END $$;
 ROLLBACK;

@@ -1,9 +1,9 @@
 -- d-streak (specs/launch/v1-gameplay.md): a new member's welcome week rides the daily gift. The member's first seven
 -- gift days (log-in days, not necessarily in a row) each add a bonus: days 1 to 6 bring welcome_day_coins x the day,
--- day 7 opens a mystery box, one random piece of starter loot (an active special_pool outfit, dye, face, accessory or piece of
--- furniture priced in coins at no more than welcome_box_coins, that the member doesn't own yet; welcome_box_coins
--- itself when there's none left). Never Contraband (staff-only) or tools, merch or gem items (lib/wallet/catalogue.ts
--- boxPool mirrors this). Rolled here, once: the daily claim row makes it once a day, the ledger
+-- day 7 opens a mystery box, one random piece of starter loot (an active special_pool outfit, dye, face or accessory
+-- priced in coins at no more than welcome_box_coins, that the member doesn't own yet; welcome_box_coins itself when
+-- there's none left). Furniture joins only when welcome_box_furniture is 1 (homes are closed: flip it when they open).
+-- Never Contraband (staff-only), tools, merch, wallpaper, flooring or gem items (lib/wallet/catalogue.ts boxPool mirrors this). Rolled here, once: the daily claim row makes it once a day, the ledger
 -- key once per welcome day. The settings rows come with the economy seed (lib/wallet/catalogue.ts SETTINGS).
 -- The return type grows, so the function is dropped and made again.
 
@@ -38,7 +38,8 @@ BEGIN
   ELSE
     SELECT i.* INTO v_item FROM shop_items i
     WHERE i.special_pool AND i.active AND i.price_coins IS NOT NULL AND i.retired_at IS NULL
-      AND i.category IN ('outfit', 'hair', 'face', 'accessory', 'furniture')
+      AND (i.category IN ('outfit', 'hair', 'face', 'accessory')
+           OR (i.category = 'furniture' AND COALESCE((SELECT value FROM economy_settings WHERE key = 'welcome_box_furniture'), 0) = 1))
       AND i.price_coins <= COALESCE((SELECT value FROM economy_settings WHERE key = 'welcome_box_coins'), 300)
       AND (i.stackable OR NOT EXISTS (SELECT 1 FROM member_inventory m WHERE m.member_id = p_member_id AND m.item_id = i.id))
     ORDER BY random() LIMIT 1;

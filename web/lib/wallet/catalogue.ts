@@ -216,7 +216,7 @@ export function dailyGiftAmount(day: string, base: number = SETTINGS.daily_gift_
   return new Date(Date.UTC(y, m - 1, d)).getUTCDay() === 5 ? base * 2 : base;
 }
 
-export const SETTINGS = { daily_gift_coins: 10, event_attendance_coins: 50, special_count: 3, special_discount_pct: 20, max_open_merch: 3, welcome_day_coins: 10, welcome_box_coins: 300, friend_gift_coins: 50, campfire_coins: 25 } as const;
+export const SETTINGS = { daily_gift_coins: 10, event_attendance_coins: 50, special_count: 3, special_discount_pct: 20, max_open_merch: 3, welcome_day_coins: 10, welcome_box_coins: 300, friend_gift_coins: 50, campfire_coins: 25, welcome_box_furniture: 0 } as const;
 
 /**
  * The welcome week (d-streak, 20261027190000_welcome_week.sql): a member's first seven gift days each add a bonus.
@@ -227,12 +227,14 @@ export const WELCOME_DAYS = 7;
 export const welcomeDay = (days: number): number | null => (days >= 1 && days <= WELCOME_DAYS ? days : null);
 export const welcomeCoins = (day: number, perDay: number = SETTINGS.welcome_day_coins) => (day < WELCOME_DAYS ? perDay * day : 0);
 /**
- * The mystery box's pool, starter loot only: active special_pool clothes, dyes, faces, accessories and furniture, priced in
- * coins at no more than the box's coin prize (welcome_box_coins), that the member doesn't own yet. Never Contraband
- * (staff-only, David 2026-10-27), never merch, tools or anything in gems. Mirrored in 20261027190000_welcome_week.sql.
+ * The mystery box's pool, starter loot only: active special_pool clothes, dyes, faces and accessories, priced in coins at
+ * no more than the box's coin prize (welcome_box_coins), that the member doesn't own yet. Furniture joins only once homes
+ * open (welcome_box_furniture = 1; homes are closed, so a sofa would be a prize nobody can use). Never Contraband
+ * (staff-only, David 2026-10-27), never merch, tools, wallpaper, flooring or anything in gems. Mirrored in
+ * 20261027190000_welcome_week.sql.
  */
-export const BOX_CATEGORIES = ["outfit", "hair", "face", "accessory", "furniture"] as const;
+export const BOX_CATEGORIES = ["outfit", "hair", "face", "accessory"] as const;
 export const boxPool = <T extends { id: string; special_pool: boolean; active: boolean; price_coins: number | null; stackable: boolean; category: string; rarity?: string | null }>(
-  items: readonly T[], owned: ReadonlySet<string>, cap: number = SETTINGS.welcome_box_coins,
+  items: readonly T[], owned: ReadonlySet<string>, cap: number = SETTINGS.welcome_box_coins, furniture: boolean = (SETTINGS.welcome_box_furniture as number) === 1,
 ) => items.filter((i) => i.special_pool && i.active && i.price_coins !== null && i.price_coins <= cap && i.rarity !== "contraband"
-  && (BOX_CATEGORIES as readonly string[]).includes(i.category) && (i.stackable || !owned.has(i.id)));
+  && ((BOX_CATEGORIES as readonly string[]).includes(i.category) || (furniture && i.category === "furniture")) && (i.stackable || !owned.has(i.id)));

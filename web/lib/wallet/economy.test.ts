@@ -160,8 +160,16 @@ describe("the welcome week (d-streak)", () => {
       expect(i.price_coins).not.toBeNull();
       expect(i.price_coins!).toBeLessThanOrEqual(SETTINGS.welcome_box_coins);
     }
-    // No tools, no merch, nothing in gems.
-    expect(pool.some(i => i.category === "tool" || i.category === "merch" || i.price_gems !== null)).toBe(false);
+    // No tools, no merch, nothing in gems, and no furniture, wallpaper or flooring while homes are closed.
+    expect(pool.some(i => ["tool", "merch", "furniture", "wallpaper", "flooring"].includes(i.category) || i.price_gems !== null)).toBe(false);
+  });
+  it("adds furniture only when homes open (welcome_box_furniture, off by default)", () => {
+    const items = memoryEconomyStore().items;
+    expect(SETTINGS.welcome_box_furniture).toBe(0);
+    expect(boxPool(items, new Set()).some(i => i.category === "furniture")).toBe(false);
+    const open = boxPool(items, new Set(), SETTINGS.welcome_box_coins, true);
+    expect(open.some(i => i.category === "furniture")).toBe(true);
+    expect(open.some(i => i.category === "wallpaper" || i.category === "flooring")).toBe(false);
   });
   it("pays coins when the member already owns everything the box could hold", async () => {
     let now = day(0);
