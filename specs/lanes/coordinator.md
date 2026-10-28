@@ -444,3 +444,8 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - The lab-page evidence wasn't good enough for David. A fresh light agent (af33246c7568c65a4) is shooting in the world, before and after against main, plus an applicant-unchanged check, after merging origin/main.
   - Its rarity edges use `--gui-rarity-*` and `--gui-holo`. At merge, switch them to main-quest's `--ui-rarity-*` and `--ui-holo`.
 - perf note: fish-tiers' perf:check "fail" (1.38M triangles, 413 draws) ran on a branch without perf-tris, against the 10-14 baseline. Main has perf-tris (774k, 345). The archive lane resets the baseline on the new world.
+- daily-social redo built (after 55a95486), shots partly done. Its migrations changed (all unapplied):
+  - welcome_week: welcome_gems column; the track pays 200/300/0/400/0/600/0 coins and 0/0/5/0/10/0/10 gems through wallet_apply earn_streak; the day-7 pool adds rod-cedar, net-mid and shovel-mid.
+  - resident_friendship: level 0..10 in half hearts, last_gift_day, resident_friend_talk recreated (+½ once a day), resident_friend_move (internal), resident_friend_gift (deltas -2/0/1/2, one gift a day).
+  - The 112843 seed drops welcome_day_coins.
+  - Kit: HeartMeter, RewardTrack, PrizeWheel, GoalMeter and CountUp in flat/rewards.tsx; --ui-heart; quiet toasts with `{ quiet: true }`.
