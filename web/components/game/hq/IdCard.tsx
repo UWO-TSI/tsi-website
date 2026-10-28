@@ -84,7 +84,7 @@ export default function IdCard({ open, name, signedIn, friendCode, onDone }: {
         <DarkButton onClick={() => { setPhase("form"); onDone(); }} autoFocus data-testid="hq-id-done">{ID_CARD.done}</DarkButton>
       </> : null}>
     {form ? <form id="hq-id-form" onSubmit={print} style={{ display: "grid", gap: 12, width: "min(340px, calc(100vw - 80px))" }}>
-      <Field label={ID_CARD.name} hint={ID_CARD.nameHint} value={a.name} placeholder={ID_CARD.noName} maxLength={24} disabled={!signedIn} autoFocus={signedIn}
+      <Field label={ID_CARD.name} hint={ID_CARD.nameHint} value={a.name} placeholder={ID_CARD.noName} maxLength={24} autoFocus
         onChange={e => setA({ ...a, name: e.target.value })} data-testid="hq-id-name" />
       <Field label={ID_CARD.birthday} hint={ID_CARD.birthdayHint} type="date" value={a.birthday} max={new Date().toISOString().slice(0, 10)} min="1900-01-01"
         onChange={e => setA({ ...a, birthday: e.target.value })} data-testid="hq-id-birthday" />
