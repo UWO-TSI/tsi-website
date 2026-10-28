@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { BOX_CATEGORIES, boxPool, CATALOGUE, SETTINGS } from "./catalogue";
+import { BOX_CATEGORIES, BOX_GEAR, boxPool, CATALOGUE, SETTINGS, WELCOME_TRACK } from "./catalogue";
 import { memoryEconomyStore } from "./memoryStore";
 import { dailySpecials, seedItems, sellPrice, speciesClass, torontoDay } from "./rules";
 import { buy, claimDailyGift, equip, getShop, getWallet, pickupCode, reserveMerch, resolveMerch, sell, sellList, type GiftView } from "./service";
@@ -119,14 +119,14 @@ describe("daily gift", () => {
     expect(await claimDailyGift(m.store, A)).toMatchObject({ ok: true, data: { claimed: false, coins: 0 } });
     now = new Date("2026-09-25T04:01:00Z"); // midnight in Toronto: Friday
     expect(await claimDailyGift(m.store, A)).toMatchObject({ ok: true, data: { claimed: true, coins: 20, day: "2026-09-25" } });
-    expect(m.coinsOf(A)).toBe(30 + 10 + 20); // the gifts, and welcome days 1 and 2
+    expect(m.coinsOf(A)).toBe(30 + 200 + 300); // the gifts, and welcome days 1 and 2
     expect((await getWallet(m.store, A, now)).ok).toBe(true);
   });
 });
 
 describe("the welcome week (d-streak)", () => {
   const day = (n: number) => new Date(Date.UTC(2026, 10, 2 + n, 17)); // Nov 3 onwards, noon in Toronto
-  it("adds a bonus on the first seven gift days and a mystery box on the seventh, then stops", async () => {
+  it("pays the track on the first seven gift days and a mystery box on the seventh, then stops", async () => {
     let now = day(0);
     const m = memoryEconomyStore(() => now, () => 0.99);
     const got: (GiftView["welcome"])[] = [];
@@ -138,30 +138,40 @@ describe("the welcome week (d-streak)", () => {
       if (!r.ok) throw new Error(r.error);
       got.push(r.data.welcome);
     }
-    expect(got.slice(0, 6).map(w => w?.coins)).toEqual([10, 20, 30, 40, 50, 60]);
-    expect(got[6]).toMatchObject({ day: 7, coins: 0, item: { slug: expect.any(String), name: expect.any(String), icon: expect.stringMatching(/\.webp$/) } });
+    expect(got.slice(0, 6).map(w => w?.coins)).toEqual([200, 300, 0, 400, 0, 600]);
+    expect(got.map(w => w?.gems ?? 0)).toEqual([0, 0, 5, 0, 10, 0, 10, 0]);
+    expect(m.gemsOf(A)).toBe(25);
+    expect(got[6]).toMatchObject({ day: 7, coins: 0, gems: 10, item: { slug: expect.any(String), name: expect.any(String), icon: expect.stringMatching(/\.webp$/) } });
     expect(got[6]!.reel.length).toBeGreaterThan(3);
     expect(got[6]!.reel.map(p => p.slug)).toContain(got[6]!.item!.slug);
     expect(got[7]).toBeNull();
     const box = m.items.find(i => i.slug === got[6]!.item!.slug)!;
-    expect(box.special_pool && box.active && box.price_coins !== null).toBe(true);
+    expect(box.active && box.price_coins !== null && (box.special_pool || (BOX_GEAR as readonly string[]).includes(box.slug))).toBe(true);
     expect((await m.store.inventory(A)).some(r => r.item.slug === box.slug)).toBe(true);
     // Once a day: the same day again pays nothing and opens no box.
     expect(await claimDailyGift(m.store, A)).toMatchObject({ ok: true, data: { claimed: false, welcome: null } });
   });
-  it("holds only starter loot and never Contraband (staff-only, David 2026-10-27)", () => {
+  it("totals 1500 coins and 25 Gems over the week, the box on day 7 (David 2026-10-28)", () => {
+    expect(WELCOME_TRACK.reduce((n, d) => n + d.coins, 0)).toBe(1500);
+    expect(WELCOME_TRACK.reduce((n, d) => n + d.gems, 0)).toBe(25);
+    expect(WELCOME_TRACK.map(d => d.box)).toEqual([false, false, false, false, false, false, true]);
+    expect(WELCOME_TRACK[4].gems).toBe(10);
+  });
+  it("holds clothing and gear only, never Contraband (staff-only, David 2026-10-27)", () => {
     const items = memoryEconomyStore().items;
     const contraband = { ...items.find(i => i.special_pool && i.active && i.category === "accessory")!, id: "x-contraband", slug: "acc-contraband", rarity: "contraband" };
     const pool = boxPool([...items, contraband], new Set());
     expect(pool.length).toBeGreaterThan(10);
     expect(pool.some(i => i.id === "x-contraband")).toBe(false);
-    for (const i of pool) {
+    const gear = pool.filter(i => i.category === "tool");
+    expect(gear.map(i => i.slug).sort()).toEqual([...BOX_GEAR].sort());
+    for (const i of pool.filter(i => i.category !== "tool")) {
       expect(BOX_CATEGORIES as readonly string[]).toContain(i.category);
       expect(i.price_coins).not.toBeNull();
       expect(i.price_coins!).toBeLessThanOrEqual(SETTINGS.welcome_box_coins);
     }
-    // No tools, no merch, nothing in gems, and no furniture, wallpaper or flooring while homes are closed.
-    expect(pool.some(i => ["tool", "merch", "furniture", "wallpaper", "flooring"].includes(i.category) || i.price_gems !== null)).toBe(false);
+    // No merch, nothing in gems, and no furniture, wallpaper or flooring while homes are closed.
+    expect(pool.some(i => ["merch", "furniture", "wallpaper", "flooring"].includes(i.category) || i.price_gems !== null)).toBe(false);
   });
   it("adds furniture only when homes open (welcome_box_furniture, off by default)", () => {
     const items = memoryEconomyStore().items;
@@ -175,7 +185,7 @@ describe("the welcome week (d-streak)", () => {
     let now = day(0);
     const m = memoryEconomyStore(() => now);
     for (const it of m.items) if (it.stackable) it.special_pool = false; // furniture never runs out: take it out of the box
-    const pool = m.items.filter(i => i.special_pool && i.active && i.price_coins !== null);
+    const pool = m.items.filter(i => (i.special_pool && i.active && i.price_coins !== null) || (BOX_GEAR as readonly string[]).includes(i.slug));
     for (const it of pool) m.inventory.set(`${A}:${it.id}`, { item: it, qty: 1, equipped: false, acquired_at: "" });
     for (let n = 0; n < 7; n++) { now = day(n); await claimDailyGift(m.store, A); }
     expect((await getWallet(m.store, A, now)).ok).toBe(true);

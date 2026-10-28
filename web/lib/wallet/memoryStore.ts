@@ -1,5 +1,5 @@
 /** In-memory EconomyStore mirroring 20260926150600_economy.sql (tests, dev harness). */
-import { boxPool, dailyGiftAmount, SELL_PRICES, SETTINGS, STARTER_REFS, WELCOME_DAYS, welcomeCoins, welcomeDay } from "./catalogue";
+import { boxPool, dailyGiftAmount, SELL_PRICES, SETTINGS, STARTER_REFS, WELCOME_TRACK, welcomeDay } from "./catalogue";
 import { seedItems, sellPrice, speciesClass, torontoDay, type ShopItem } from "./rules";
 import { EconomyError, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation } from "./store";
 
@@ -106,8 +106,9 @@ export function memoryEconomyStore(clock: () => Date = () => new Date(), random:
       let balance = apply(m, "coins", amount, "daily_gift", day, `daily:${day}`).balance;
       const n = welcomeDay(await store.giftDays(m));
       if (n === null) return { coins: amount, balance, claimed: true, day, welcome: null };
-      let bonus = welcomeCoins(n), item: ShopItem | null = null;
-      if (n === WELCOME_DAYS) {
+      const track = WELCOME_TRACK[n - 1];
+      let bonus = track.coins, item: ShopItem | null = null;
+      if (track.box) {
         const owned = new Set([...inventory.keys()].filter((k) => k.startsWith(`${m}:`)).map((k) => k.slice(m.length + 1)));
         const pool = boxPool(items, owned);
         item = pool.length ? pool[Math.floor(random() * pool.length)] : null;
@@ -118,7 +119,8 @@ export function memoryEconomyStore(clock: () => Date = () => new Date(), random:
         } else bonus = SETTINGS.welcome_box_coins;
       }
       if (bonus > 0) balance = apply(m, "coins", bonus, "daily_gift", `welcome:${n}`, `welcome:${n}`).balance;
-      return { coins: amount, balance, claimed: true, day, welcome: { day: n, coins: bonus, item: item?.slug ?? null } };
+      if (track.gems > 0) apply(m, "gems", track.gems, "earn_streak", `Welcome week, day ${n}`, `welcome-gems:${n}`);
+      return { coins: amount, balance, claimed: true, day, welcome: { day: n, coins: bonus, gems: track.gems, item: item?.slug ?? null } };
     },
     async dailyClaimed(m, day) {
       return claims.has(`${m}:${day}`);

@@ -90,7 +90,7 @@ export function supabaseEconomyStore(db: SupabaseClient): EconomyStore {
       const { data, error } = await db.rpc("daily_gift_claim", { p_member_id: m });
       if (error) raise(error);
       const r = first(data);
-      const welcome = r.welcome_day == null ? null : { day: Number(r.welcome_day), coins: Number(r.welcome_coins), item: r.welcome_item == null ? null : String(r.welcome_item) };
+      const welcome = r.welcome_day == null ? null : { day: Number(r.welcome_day), coins: Number(r.welcome_coins), gems: Number(r.welcome_gems ?? 0), item: r.welcome_item == null ? null : String(r.welcome_item) };
       return { coins: Number(r.coins), balance: Number(r.balance), claimed: r.claimed === true, day: String(r.day), welcome };
     },
     async giftDays(m) {

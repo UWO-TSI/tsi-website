@@ -40,8 +40,8 @@ export interface Sellable {
   locked?: boolean;
 }
 
-/** The welcome week's part of a gift: the day (1 to 7), the bonus coins, and the box's item slug on day 7. */
-export interface WelcomeGift { day: number; coins: number; item: string | null }
+/** The welcome week's part of a gift: the day (1 to 7), its coins and Gems, and the box's item slug on day 7. */
+export interface WelcomeGift { day: number; coins: number; gems: number; item: string | null }
 export interface DailyGift { coins: number; balance: number; claimed: boolean; day: string; welcome: WelcomeGift | null }
 
 export interface EconomyStore {

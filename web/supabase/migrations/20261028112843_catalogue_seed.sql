@@ -84,7 +84,6 @@ INSERT INTO economy_settings (key, value) VALUES
   ('daily_gift_coins', 10),
   ('event_attendance_coins', 50),
   ('max_open_merch', 3),
-  ('welcome_day_coins', 10),
   ('welcome_box_coins', 300),
   ('friend_gift_coins', 50),
   ('campfire_coins', 25),
@@ -93,7 +92,6 @@ ON CONFLICT (key) DO NOTHING;
 -- END GENERATED ECONOMY SEED
 -- The rows this change adds or edits, so they land where the insert above does nothing.
 INSERT INTO economy_settings (key, value) VALUES
-  ('welcome_day_coins', 10),
   ('welcome_box_coins', 300),
   ('friend_gift_coins', 50),
   ('campfire_coins', 25),
