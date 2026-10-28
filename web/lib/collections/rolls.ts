@@ -15,6 +15,7 @@ import { reelWeather, type IslandWeather } from "@/lib/game/islandWeather";
 import { hourKey, rollFishFor, rollNode } from "@/lib/game/peaceful";
 import type { RodTier } from "@/lib/game/rods";
 import { village } from "@/lib/game/villageMap";
+import "@/lib/game/world/member";
 import { torontoParts } from "@/lib/time";
 import { momentAt } from "./logic";
 import type { Species } from "./roster";

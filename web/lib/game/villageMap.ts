@@ -15,15 +15,12 @@
  * the island is not rebuilt per component. `/lab/island?fixture=terrain` swaps the document with `setVillageDoc`
  * before the world mounts.
  */
-import worldCells from "@/data/world/cells.json";
-import worldDoc from "@/data/world/world.json";
 import {
   heightField, isVoid, isWater, parseIslandMap, serialiseIslandMap, surfaceAt, Surface,
   type IslandMap, type IslandMapDoc, type MapAnnotation, type PlacedProp,
 } from "./grid";
 import type { WorldTerrain } from "./world/terrain";
 import { setShoal } from "./seabed";
-import { villageOfCells, type WorldCells } from "./world/cells";
 
 /** Object vocabulary. Append only: kinds are persisted in the map file. */
 export const OBJECT_KINDS = [
@@ -152,19 +149,18 @@ export function villageOf(map: IslandMap, objects: readonly MapObject[]): Villag
   return { map, field: heightField(map), objects, bounds: landBounds(map) };
 }
 
-/**
- * The member island before the full world loads (lib/game/world/load.ts swaps it in) and on the server: the new world's
- * cell view (web/data/world/cells.json, since the server can't decode the PNGs) with its document's objects and river.
- */
-const memberVillage = (): Village =>
-  villageOfCells(worldCells as WorldCells, parseObjects(worldDoc.objects as VillageDoc["objects"]), worldDoc.annotations as MapAnnotation[]);
-
 let current: Village | null = null;
 let swapped = false;
+let member: (() => Village) | null = null;
+
+/** `village()`'s default, the new world's cell view: lib/game/world/member.ts registers it when imported. */
+export const setMemberVillage = (make: () => Village) => { member = make; };
 
 /** The member island every system reads: the new world, or a lab's swap. */
 export function village(): Village {
-  return (current ??= memberVillage());
+  if (current) return current;
+  if (!member) throw new Error("village(): the member world isn't loaded (import lib/game/world/member)");
+  return (current = member());
 }
 
 /** Replace the document (lab drafts and fixtures). Call before the world mounts. */

@@ -7,6 +7,7 @@ import doc from "@/data/world/world.json";
 import { seedTerrain } from "../grid";
 import { setVillage, villageSwapped } from "../villageMap";
 import { decodeWorld, type World, type WorldDoc } from "./format";
+import "./member";
 import type { DerivedWorld } from "./derive";
 import { villageOfWorld } from "./village";
 
