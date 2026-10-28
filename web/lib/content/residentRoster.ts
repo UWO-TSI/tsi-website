@@ -96,12 +96,12 @@ export const RESIDENT_TALK: Record<string, string[][]> = {
   ],
   "wharf-keeper": [
     ["Tide's turning. You can hear it if you listen.", "[happy] And the gulls are flying low. Rain by supper, mark my words."],
-    ["The barrel on the dock buys whatever you catch. Fair prices. I check the scales myself.", "[happy] Want a better rod one day? I might have a challenge for you."],
+    ["Boat's ready whenever you want to go home.", "Your island's out past the pier. Small, but the sunsets are all yours."],
     ["[surprised] Caught anything big yet?", "Best fishing's off the end of the wharf at dawn. Don't tell anyone I told you."],
   ],
   "oracle-keeper": [
     ["The crystal is quiet today. It's listening.", "What would you ask it, if you knew it would answer?"],
-    ["Which way will you grow, {name}? Nobody can tell you yet. Not even me.", "[happy] Keep doing what you love here. It shows, in time."],
+    ["Which way will you grow, {name}? The temple can help you see it.", "[happy] Not decide. Only see. The deciding is yours."],
     ["Stars are just old light. So are good friends.", "[sleepy] I was up late on the temple steps again. Clear skies."],
   ],
   crafter: [
@@ -172,11 +172,11 @@ export const PROPOSED_RESIDENTS: NPCPersona[] = [
   row({ slug: "wharf-keeper", display_name: "Bram", post: "wharf_keeper", tone: "playful",
     bio: "Minds the wharf and the boats, reads the tides off the posts and the weather off the gulls. Has a story for every knot.",
     schedule: { home: "hq", dawn: ["wharf"], day: ["wharf", "beach", "wharf", "plaza"], evening: ["wharf", "bench"], night: ["wharf", "beach", "wharf"] },
-    canned_dialogue: ["Tide's turning. You can hear it if you listen.", "The gulls are low today. Rain by supper, mark my words.", "The barrel on the dock pays fair. I check the scales myself."] }),
+    canned_dialogue: ["Tide's turning. You can hear it if you listen.", "The gulls are low today. Rain by supper, mark my words.", "Boat's ready whenever you want to go home."] }),
   row({ slug: "oracle-keeper", display_name: "Sable", post: "oracle_keeper", tone: "earnest",
     bio: "Keeps the Oracle temple and its crystal. Answers questions with better questions, and stays up to watch the stars from the temple steps.",
     schedule: { home: "oracle", dawn: ["oracle"], day: ["oracle", "pond", "oracle"], evening: ["oracle", "pond"], night: ["oracle", "home"] },
-    canned_dialogue: ["The crystal is quiet today. It's listening.", "Which way will you grow? Time will show it.", "Stars are just old light. So are good friends."] }),
+    canned_dialogue: ["The crystal is quiet today. It's listening.", "Which way will you grow? Ask the temple.", "Stars are just old light. So are good friends."] }),
   row({ slug: "crafter", display_name: "Pim", post: "workshop_crafter", tone: "playful",
     bio: "Tinkers at the HQ workbench and combs the beach for driftwood and bottles. Never without a pencil behind one ear.",
     schedule: { home: "hq", dawn: ["home"], day: ["hq", "beach", "path", "plaza"], evening: ["plaza", "hq"], night: ["hq", "plaza", "home"] },
@@ -199,4 +199,25 @@ export const PROPOSED_RESIDENTS: NPCPersona[] = [
 export function withProposed(seeded: readonly NPCPersona[]): NPCPersona[] {
   const proposed = new Map(PROPOSED_RESIDENTS.map(r => [r.slug, r]));
   return [...seeded.map(r => proposed.get(r.slug) ? { ...r, ...proposed.get(r.slug)!, id: r.id } : r), ...PROPOSED_RESIDENTS.filter(r => !seeded.some(s => s.slug === r.slug))];
+}
+
+/** Residents only the new world has (the village plays as it always did): Juno, its museum guide (m1). */
+export const NEW_WORLD_ONLY: ReadonlySet<string> = new Set(["docent"]);
+
+/**
+ * x-lines (specs/launch/v1-gameplay.md): on the new world, lines that send you to something closed (the boat home, the
+ * temple) say something about what's open instead. Swapped in code, line by line, so the village's (and anything an
+ * admin rewrote) stay as they are.
+ */
+export const NEW_WORLD_LINE_SWAPS: Readonly<Record<string, string>> = {
+  "Boat's ready whenever you want to go home.": "The barrel on the dock buys whatever you catch. Fair prices. I check the scales myself.",
+  "Your island's out past the pier. Small, but the sunsets are all yours.": "[happy] Want a better rod one day? I might have a challenge for you.",
+  "Which way will you grow, {name}? The temple can help you see it.": "Which way will you grow, {name}? Nobody can tell you yet. Not even me.",
+  "[happy] Not decide. Only see. The deciding is yours.": "[happy] Keep doing what you love here. It shows, in time.",
+  "Which way will you grow? Ask the temple.": "Which way will you grow? Time will show it.",
+};
+/** A resident as the new world has them: their lines with NEW_WORLD_LINE_SWAPS applied. */
+export function newWorldPersona<P extends Pick<NPCPersona, "talk" | "canned_dialogue">>(p: P): P {
+  const swap = (line: string) => NEW_WORLD_LINE_SWAPS[line] ?? line;
+  return { ...p, canned_dialogue: p.canned_dialogue?.map(swap) ?? p.canned_dialogue, talk: p.talk?.map(c => c.map(swap)) ?? p.talk };
 }

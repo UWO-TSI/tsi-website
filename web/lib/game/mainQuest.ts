@@ -51,7 +51,7 @@ export function questPosts(views: readonly ChapterView[]): Readonly<Record<strin
 type Lines = readonly string[];
 /** By chapter requirement: what its person says while you're on it (`nudge`) and as it ends (`finish`). */
 export const QUEST_LINES: Readonly<Record<string, { nudge: Lines; finish: Lines }>> = {
-  settle_in: {
+  first_find: {
     nudge: [
       "[happy] Hello! I'm Juno. I show people round the museum.",
       "Bring me your first catch, any fish at all, and I'll show you what it's for. The end of the pier is a good place to start.",

@@ -118,6 +118,8 @@ import ShopkeeperChoice, { MERCH_LINE, type ShopSection } from "./ShopkeeperChoi
 import IslandLoading from "./IslandLoading";
 import { loadGameWorld } from "@/lib/game/world/load";
 import { GAME_WORLD, worldModel } from "@/lib/game/world/active";
+/** The main quest (m1 to m6, t-next) and its feel are the new world's; the village plays as it always did. */
+const NEW_WORLD = GAME_WORLD === "new";
 import TalkBox from "./TalkBox";
 import { emptyTalkView, requestTalk, subscribeTalk, talkStore, talkView } from "@/lib/game/residentTalk";
 import DailyGift from "./DailyGift";
@@ -162,6 +164,7 @@ import { nextLayer, subscribePause, type EscLayer } from "@/lib/game/escMenu";
 import { MenuDock, SystemMenu } from "./EscLayers";
 import QuestTracker from "./QuestTracker";
 import { useMainQuest } from "./useMainQuest";
+import { chapterQuest } from "@/lib/game/questTracker";
 import { setNetSheet } from "./net/sheets";
 import { useNetStatus, useRoster } from "@/lib/net/netStore";
 import { useFriends } from "./net/friendActions";
@@ -220,7 +223,7 @@ import { roomHeading } from "@/lib/game/roomHeading";
 import { DevUiTheme } from "@/components/gui/DevUiTheme";
 import styles from "./DefaultIslandWorld.module.css";
 
-type Near = "knock" | "shop_enter" | "counter" | "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "fish" | "forage" | "net" | "dig" | "mine" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "stool" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | "bram" | "founder" | "coffee" | "aquarium" | "admin" | "sell" | null;
+type Near = "knock" | "shop_enter" | "counter" | "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "mine" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "stool" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | "bram" | "founder" | "coffee" | "aquarium" | "admin" | "sell" | null;
 type Sheet = "counter" | "shopkeeper" | "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | "bag" | "wallet" | "chest" | "plaque" | "sell" | null;
 const DEV = process.env.NODE_ENV !== "production";
 const DEV_SHEETS: readonly Sheet[] = ["counter", "shopkeeper", "notice", "letters", "journal", "trophies", "showcase", "closet", "fitting", "oracle", "path", "settings", "missions", "tourney", "posters", "cafe", "wallet", "chest"];
@@ -232,7 +235,7 @@ const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   display: "Look at the trophy case", desk: "Front desk · profile showcase", shelf: "Browse the library", clock: "Check the clock",
   notice: "Read the notice board", catch: "Check the catch board", mailbox: "Check the mailbox", monument: "Club monument",
   museum_enter: "Enter the museum", cafe_enter: "Enter the café", curator: "Talk to the curator", closet: "Open the closet", fitting: "Try on outfits", oracle_enter: "Enter the Oracle temple", altar: "Consult the crystal",
-  home: "Take the boat home", fish: "Cast your line", forage: "Gather", net: "Swing the net", dig: "Dig", mine: "Break the rock", claim: "Claim your plot", donate: "Donate", house: "Enter your house", village: "Take the boat to the village",
+  home: "Take the boat home", fish: "Cast your line", forage: "Gather", net: "Swing the net", dig: "Dig", mine: "Break the rock", claim: "Claim your plot", donate: "Donate your first catch to the museum", report: "Report back to Alice", house: "Enter your house", village: "Take the boat to the village",
   buy: `Add a room · ${ROOM_PRICE.coins} TC + ${ROOM_PRICE.materials}`,
   cafe: "Boarded up · help reopen it at the monument", museum: "Museum · Closed for now", ruins: "Enter the ruins", missions: "Read the mission board", ruins_exit: "Back to the village", lantern: "Pick it up",
   bench: "Sit on the bench", stool: "Enter the sushi bar", bed: "Sleep in your bed", chest: "Open your storage chest",
@@ -430,7 +433,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   hintKeys: HintKeys;
   /** The dash is yours (a Keeper teaches it, lib/game/moveUnlocks.ts). */
   dash: boolean;
-  chapter: { claim: boolean };
+  chapter: { claim: boolean; donate: boolean; report: boolean };
   /** Where the main quest keeps its people (useMainQuest). */
   questPosts: Readonly<Record<string, string>>;
   peaceful: { moment: WorldMoment; member: string; glider: boolean }; fishSpot: { current: FishingSpot | null }; fishing: boolean; exitFrom: "museum" | "oracle" | "ruins" | "cafe" | "shop" | null; devAt: [number, number, number] | null; identity: WorldIdentity; level?: number;
@@ -488,11 +491,11 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     const px = player.current.x, pz = player.current.z;
     const gap = (p: [number, number] | null) => (p ? Math.hypot(px - p[0], pz - p[1]) : Infinity);
     const within = (p: [number, number] | null, r: number) => gap(p) < r;
-    // Chapter 1 at the clubhouse door: claim the plot first, otherwise enter. Doors to what a
+    // Chapter 1 at the clubhouse door: claim the plot first, report back when ready, otherwise enter. Doors to what a
     // later drop opens (lib/game/drops.ts) offer nothing yet: the boat home, the Oracle temple, the café, the mission board.
     // Before the café's drop Rosa sweeps out front: the café's prompt is hers.
     const sweeper: [number, number] | null = !DROPS.cafe && cafeSweeper.on ? [cafeSweeper.x, cafeSweeper.z] : null;
-    const door: [Near, [number, number] | null] = within(doors.hq, 2) ? [chapter.claim ? "claim" : "enter", doors.hq]
+    const door: [Near, [number, number] | null] = within(doors.hq, 2) ? [chapter.claim ? "claim" : chapter.report ? "report" : "enter", doors.hq]
       // Not while Bram brings you in and walks you round (the arrival): the boat home waits for after.
       : DROPS.homeIsland && within(doors.boat, 1.6) && !arrivalPhase ? ["home", doors.boat]
       : within(layout.fitting, 1.5) ? ["fitting", layout.fitting]
@@ -523,7 +526,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
         if (opened && l.id !== "museum") continue;
         const d = footprintDistance(l, px, pz);
         if (opened && d < best) { best = d; next = "museum_enter"; continue; }
-        if (d < best) { best = d; next = l.id as Near; }
+        if (d < best) { best = d; next = l.id === "museum" && chapter.donate ? "donate" : l.id as Near; }
       }
       if (next) nextD = best;
     }
@@ -788,10 +791,11 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // First login (row 211; specs/v1-drop.md §1): the arrival, once per account (Bram's boat, the reflection
   // creator, the crossing, the walk-along), then the chapter 1 objective. Dev: ?arrival=1 replays it.
   const mine = useMyLook();
-  const { loaded: progressionLoaded } = useProgression();
+  const { loaded: progressionLoaded, state: progressionState } = useProgression();
   const [arrived, setArrived] = useState(false);
   const [objectiveNew, setObjectiveNew] = useState(false);
-  const chapterFlags = useMemo(() => ({ claim: chapterActions.claim }), [chapterActions.claim]);
+  const chapterFlags = useMemo(() => ({ claim: chapterActions.claim, donate: chapterActions.donate, report: chapterActions.report }),
+    [chapterActions.claim, chapterActions.donate, chapterActions.report]);
   useEffect(() => { if (inside === "museum" && !loadMuseumRef.current) { loadMuseumRef.current = true; loadMuseum(); } if (inside !== "museum") loadMuseumRef.current = false; }, [inside, loadMuseum]);
   // The dash and the glider wait for a Keeper to teach them (lib/game/moveUnlocks.ts).
   const unlocks = useMoveUnlocks();
@@ -1017,8 +1021,14 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       if (bed) window.dispatchEvent(new CustomEvent("tsi:sit", { detail: bed }));
       return;
     }
-    if (action === "claim") {
-      void chapterActions.run("claim_plot").then(error => toast(error ?? "Plot claimed. Your island is waiting at the end of the pier."));
+    if (action === "claim" || action === "donate" || action === "report") {
+      const step = action === "claim" ? "claim_plot" : action === "donate" ? "donate_catch" : "report_hq";
+      void chapterActions.run(step).then(error => {
+        if (error) toast(error);
+        else if (action === "claim") toast("Plot claimed. Your island is waiting at the end of the pier.");
+        else if (action === "donate") toast("Donated. The museum shell has its first exhibit.");
+        else toast("Chapter complete: welcome to the island.");
+      });
       return;
     }
     if (action === "home" || action === "village") { if (!fading) { setNear(null); startTrip(atHome ? "home" : "village", action); } return; }
@@ -1105,7 +1115,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     }
     // The net through the air: the footstep quickened as the whoosh (the combat swing's stand-in), never a dialogue blip.
     // A swing at nothing startles any bug near it (VillageLife): sneak up until the net says so.
-    if (toolAction.verb === "swing") { clip("Net"); AudioManager.playSFX("footstep", { rate: 1.5, gain: 0.45 }); window.dispatchEvent(new CustomEvent("tsi:net-whiff", { detail: { x: at[0], z: at[1] } })); return; }
+    if (toolAction.verb === "swing") { clip("Net"); AudioManager.playSFX("footstep", { rate: 1.5, gain: 0.45 }); if (NEW_WORLD) window.dispatchEvent(new CustomEvent("tsi:net-whiff", { detail: { x: at[0], z: at[1] } })); return; }
     if (toolAction.verb === "dig") { clip("Dig"); window.setTimeout(() => AudioManager.playSFX("footstep", { rate: 0.6, gain: 0.7 }), 540); return; }
     if (toolAction.verb === "mine") { clip("Strike"); return; }
     if (toolAction.verb === "attack") {
@@ -1179,8 +1189,12 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // worked on (none while the member mutes the HUD's quests: the objective is empty then).
   const tutorialQuest = useTutorialQuest({ bag: keyName(identity.settings.key_bindings.openJournal), touch });
   // The main quest (t-next, m1 to m6): the member's chapter, its people's words, and the dropdown's guide arrow.
-  const main = useMainQuest(player);
-  const quests = useMemo(() => [tutorialQuest ?? hq.quest, main.quest].filter((q): q is NonNullable<typeof q> => !!q), [tutorialQuest, hq.quest, main.quest]);
+  // The new world's (useMainQuest is inert in the village); the village keeps its one line: the walk-along, the HQ
+  // visit or a tool's quest, else the chapter being worked on, which opens the journal.
+  const main = useMainQuest(player, NEW_WORLD);
+  const trackedChapter = useMemo(() => chapterQuest(progressionState.chapters, !!progression.objective.text), [progressionState.chapters, progression.objective.text]);
+  const quests = useMemo(() => (NEW_WORLD ? [tutorialQuest ?? hq.quest, main.quest] : [tutorialQuest ?? hq.quest ?? trackedChapter]).filter((q): q is NonNullable<typeof q> => !!q),
+    [tutorialQuest, hq.quest, main.quest, trackedChapter]);
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
       // Arriving, the keys are the arrival's (components/game/arrival: a press skips the beat showing).
@@ -1290,7 +1304,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           </TopCluster>
           {/* Bram's walk-along, then the HQ visit with Alice and a tool's little quest (row 312), then the chapter. */}
           <QuestTracker className={styles.questSlot} quests={quests} hidden={tutorialQuest || hq.quest ? false : holdObjective} onOpen={() => setSheet("journal")}
-            guidable={main.quest && !inside ? [main.quest.id] : []} guided={main.guided} onGuide={main.guide} />
+            dropdown={NEW_WORLD} guidable={main.quest && !inside ? [main.quest.id] : []} guided={main.guided} onGuide={main.guide} />
         </div>
         <div className={styles.hudColumn} data-minimap data-new={objectiveNew || undefined}>
           {mapHere && !holdObjective && <MiniMap playerPosRef={player} plot={objectivePlot} big={uiView} onOpen={() => setMapOpen(true)} />}

@@ -22,44 +22,48 @@ import { refreshProgression, setProgressionState, useProgression } from "@/lib/p
 /** A catch is recorded by the server a moment after the reward card: the tallies are read back after this. */
 const READ_BACK_MS = 1500;
 
-export function useMainQuest(player: RefObject<THREE.Vector3>) {
+/** `on`: the new world's; in the village it does nothing (no quest, no words, no arrow), as the village always played. */
+export function useMainQuest(player: RefObject<THREE.Vector3>, on: boolean) {
   const { state } = useProgression();
   const views = state.chapters;
-  const quest = useMemo(() => mainQuest(views, !state.hud_muted), [views, state.hud_muted]);
+  const quest = useMemo(() => (on ? mainQuest(views, !state.hud_muted) : null), [on, views, state.hud_muted]);
   const viewsRef = useRef(views);
   useEffect(() => { viewsRef.current = views; }, [views]);
 
   // Its people say the quest's lines first (a finish when it's ready, a nudge while it runs).
   const museum = state.museum;
   useEffect(() => {
+    if (!on) return;
     talkStore.quest = slug => {
       const t = questTalk(views, slug, museum);
       return t && { script: t.script, lines: t.lines.map(parseTalkLine) };
     };
     return () => { talkStore.quest = null; };
-  }, [views, museum]);
+  }, [on, views, museum]);
 
   // A finish said through: the chapter's action. The server checks it, pays the reward and posts the letter.
   useEffect(() => onTalkScript(script => {
-    const a = scriptAction(script);
+    const a = on ? scriptAction(script) : null;
     if (!a) return;
     const title = titleOf(viewsRef.current, a.chapter);
     advance(a.chapter, a.action)
       .then(next => { setProgressionState(next); toast(`Chapter complete: ${title}`); })
       .catch(e => toast(e instanceof Error ? e.message : "That didn't go through. Try again."));
-  }), []);
+  }), [on]);
 
   // Catches, finds, donations and tools change the tallies: read them back once the server has them.
   useEffect(() => {
+    if (!on) return;
     let t = 0;
     const again = () => { window.clearTimeout(t); t = window.setTimeout(() => void refreshProgression(), READ_BACK_MS); };
     const events = ["tsi:peaceful-got", "tsi:fish-caught", "tsi:curator-say", "tsi:tools-changed"];
     events.forEach(e => window.addEventListener(e, again));
     return () => { window.clearTimeout(t); events.forEach(e => window.removeEventListener(e, again)); };
-  }, []);
+  }, [on]);
 
   // Bram's challenge: a fish landed at dawn or dusk. The server checks the island's time and that the catch is fresh.
   useEffect(() => {
+    if (!on) return;
     const caught = () => {
       const c = personalChapter(viewsRef.current);
       if (c?.requirement !== "rod_challenge" || c.steps.find(s => s.key === "twilight_catch")?.done) return;
@@ -71,10 +75,10 @@ export function useMainQuest(player: RefObject<THREE.Vector3>) {
     };
     window.addEventListener("tsi:fish-caught", caught);
     return () => window.removeEventListener("tsi:fish-caught", caught);
-  }, []);
+  }, [on]);
 
   // Where its people stand meanwhile (x-teachers), kept as one object while they don't change.
-  const postsKey = JSON.stringify(questPosts(views));
+  const postsKey = JSON.stringify(on ? questPosts(views) : {});
   const posts = useMemo(() => JSON.parse(postsKey) as Record<string, string>, [postsKey]);
 
   // The dropdown's pick: the guide arrow to the step being worked on (its place, or the nearest bug, dig spot or rock),

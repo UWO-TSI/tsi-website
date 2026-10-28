@@ -6,8 +6,7 @@
 DO $$
 DECLARE was text := (SELECT summary FROM quest_chapters WHERE slug = 'settle-in');
 BEGIN
-  -- (The main quest, 20261027150000, rewords it again, still without the plot.)
-  ASSERT was LIKE 'Make your first catch and donate it to the museum, then report%HQ.' OR was = 'Make your first catch and bring it to Juno at the museum.', 'the settle-in summary leaves the plot out';
+  ASSERT was LIKE 'Make your first catch and donate it to the museum, then report%HQ.', 'the settle-in summary leaves the plot out';
   -- The steps keep their copy (the claim step is hidden in code until the home island's drop, not deleted).
   ASSERT (SELECT step_copy->'claim_plot'->>'label' FROM quest_chapters WHERE slug = 'settle-in') = 'Claim your plot at HQ', 'claim step copy kept';
   -- Idempotent, and an admin's own summary is never overwritten.

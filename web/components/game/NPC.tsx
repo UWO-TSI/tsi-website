@@ -20,7 +20,8 @@ import { RESIDENT_STRIDE, RESIDENT_WALK, ResidentDay, daySpan, idleAt, navGrid, 
 import { KEEP, inCorridor, roomFor } from "@/lib/game/residentSpace";
 import { torontoHour } from "@/lib/game/islandTime";
 import { hash01 } from "@/lib/game/worldFx";
-import { RESIDENT_LOOKS } from "@/lib/content/residentRoster";
+import { NEW_WORLD_ONLY, RESIDENT_LOOKS, newWorldPersona } from "@/lib/content/residentRoster";
+import { GAME_WORLD } from "@/lib/game/world/active";
 import { dropWalker, setWalker } from "@/lib/game/footprintWalkers";
 import { orbit } from "@/lib/game/orbitCamera";
 import { TALK_CLICK_RANGE, TALK_PITCH, TALK_RANGE, beginTalk, endTalk, leaveTalk, nearestTalker, requestTalk, routineLag, setTalkNear, startTalk, steerTalkShot, talkCameraYaw, talkChanged, talkStore, talkTyping } from "@/lib/game/residentTalk";
@@ -461,7 +462,9 @@ export default function Residents({ personas, phase, ceremony, player, island, v
   // Dev only: `?residents=N` keeps the first N (by slug), for performance checks like CharacterCrowd's `?crowd=N`.
   const [cap] = useState(() => (process.env.NODE_ENV !== "production" && typeof window !== "undefined" ? Number(new URLSearchParams(window.location.search).get("residents") ?? Infinity) : Infinity));
   const residents = useMemo(() => {
-    const sorted = [...personas].sort((a, b) => a.slug.localeCompare(b.slug)).slice(0, cap).map(p => {
+    // The new world has Juno and its swapped lines (x-lines); the village's residents are as they always were.
+    const here = GAME_WORLD === "new" ? personas.map(newWorldPersona) : personas.filter(p => !NEW_WORLD_ONLY.has(p.slug));
+    const sorted = [...here].sort((a, b) => a.slug.localeCompare(b.slug)).slice(0, cap).map(p => {
       const at = posts?.[p.slug];
       return at ? { ...p, schedule: { ...p.schedule, dawn: [at], day: [at], evening: [at], night: [at] } } : p;
     });

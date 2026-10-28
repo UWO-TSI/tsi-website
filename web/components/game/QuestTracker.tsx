@@ -30,16 +30,18 @@ export interface QuestTrackerProps {
   /** The quest the arrow points for now, if any. */
   guided?: string | null;
   onGuide?: (id: string | null) => void;
-  /** Opens the Esc menu's Quests and journal. */
+  /** Opens the Esc menu's Quests and journal (from the list; without the dropdown, the line itself does). */
   onOpen?: () => void;
+  /** The line drops the quests down (the new world, t-next); false: the village's one line, which opens the journal. */
+  dropdown?: boolean;
   className?: string;
 }
 
-export default function QuestTracker({ quests, hidden = false, guidable = [], guided = null, onGuide, onOpen, className }: QuestTrackerProps) {
+export default function QuestTracker({ quests, hidden = false, guidable = [], guided = null, onGuide, onOpen, dropdown = true, className }: QuestTrackerProps) {
   const quest = quests[0] ?? null;
   const [picked, setOpen] = useState(false);
   // The HUD going away (a cinematic, a sheet) takes the list with it.
-  const open = picked && !hidden;
+  const open = dropdown && picked && !hidden;
   const root = useRef<HTMLElement>(null);
   // Steps that have just been ticked (the line shows the last one done for a moment): the done ids seen last render, per quest.
   const seen = useRef<{ quest: string; done: Set<string> } | null>(null);
@@ -73,14 +75,20 @@ export default function QuestTracker({ quests, hidden = false, guidable = [], gu
   const shown = justDone ?? step;
   const label = shown?.label ?? quest.title;
   const isDone = !!justDone || complete;
+  const face = <>
+    <span className={s.mark} aria-hidden="true">{isDone ? <Check size={12} strokeWidth={3.5} /> : "◆"}</span>
+    <span key={shown?.id ?? "complete"} className={s.label}>{label}</span>
+    <span className={s.sr}>{complete ? ", all done" : justDone ? ", done" : ""} ({quest.title}, {done} of {of} done)</span>
+  </>;
   return <aside ref={root} className={`${s.tracker} ${className ?? ""}`} data-hidden={hidden || undefined} data-done={isDone || undefined} data-ticked={justDone ? "" : undefined}
     data-open={open || undefined} data-kind={quest.kind} aria-label={`${KIND_NAME[quest.kind]}: ${quest.title}`} data-testid="quest-tracker">
-    <button type="button" className={s.line} onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="quest-list" title={`${quest.title} · ${done}/${of}`}>
-      <span className={s.mark} aria-hidden="true">{isDone ? <Check size={12} strokeWidth={3.5} /> : "◆"}</span>
-      <span key={shown?.id ?? "complete"} className={s.label}>{label}</span>
-      <ChevronDown className={s.chevron} size={15} strokeWidth={3} aria-hidden="true" />
-      <span className={s.sr}>{complete ? ", all done" : justDone ? ", done" : ""} ({quest.title}, {done} of {of} done). Show your quests</span>
-    </button>
+    {dropdown
+      ? <button type="button" className={s.line} onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="quest-list" title={`${quest.title} · ${done}/${of}`}>
+        {face}<ChevronDown className={s.chevron} size={15} strokeWidth={3} aria-hidden="true" /><span className={s.sr}>. Show your quests</span>
+      </button>
+      : onOpen
+        ? <button type="button" className={s.line} onClick={onOpen} title={`${quest.title} · ${done}/${of}. Open Quests and journal`}>{face}</button>
+        : <div className={s.line} title={`${quest.title} · ${done}/${of}`}>{face}</div>}
     {open && <div id="quest-list" className={s.list} role="region" aria-label="Your quests">
       {quests.map(q => {
         const now = currentStep(q).step, leads = guidable.includes(q.id), on = guided === q.id;

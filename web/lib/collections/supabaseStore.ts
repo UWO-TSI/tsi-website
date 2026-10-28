@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Donation, MemberItem, WeeklyBest } from "./logic";
-import { ROSTER, type Species } from "./roster";
+import { inWorld, ROSTER, type Species } from "./roster";
 import { raisePg } from "@/lib/result";
 import type { CollectionsStore } from "./store";
 import { ledgerToolsTaught } from "@/lib/game/arrival/arrivalLedger";
@@ -44,7 +44,8 @@ export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
       const { data, error } = await db.from("collection_species").select("*").eq("active", true).order("position");
       // Pre-031 databases: the code roster is the same content.
       if (error) return (rosterCache = ROSTER);
-      return (rosterCache = ((data ?? []) as Row[]).map(toSpecies));
+      // Every world's species are rows; this world's are listed (the new world's buried finds aren't the village's).
+      return (rosterCache = ((data ?? []) as Row[]).map(toSpecies).filter((sp) => inWorld(sp)));
     },
     async memberItems(memberId) {
       const full = await db.from("member_collections").select("item_key, count, total_collected, best_size_cm, first_collected_at").eq("user_id", memberId);

@@ -12,6 +12,8 @@ import { MATERIALS } from "@/lib/crafting/recipes";
 import { objectsOf, village, type Village } from "./villageMap";
 import { isCedar, landmarks } from "./defaultIsland";
 import { fnv1a } from "./weatherSystem";
+import { GAME_WORLD, type GameWorld } from "./world/active";
+import { NEW_WORLD_ROCKS } from "@/lib/collections/roster";
 import type { TreeSpot } from "./treeFruit";
 
 /**
@@ -69,12 +71,14 @@ export function digSpots(v: Village = village()): { x: number; z: number; soil: 
   return out;
 }
 
-export function villageNodes(v: Village = village()): { forage: NodeSpec[]; bugs: NodeSpec[] } {
+/** `world`: the new world adds the main quest's dig spots and its stone-or-iron rocks (m3, m6); the village is as it was. */
+export function villageNodes(v: Village = village(), world: GameWorld = GAME_WORLD): { forage: NodeSpec[]; bugs: NodeSpec[] } {
   const trees = objectsOf("tree", v).map(({ x, z, seed = 0 }): TreeSpot => ({ x, z, seed })), flowers = objectsOf("flower", v).map(xz);
   // A cedar bears no fruit.
   const fruit = trees.filter(t => !isCedar(t.seed)).map((t, i) => fruitNode(`fruit-${i}`, t));
   const shells = objectsOf("shell", v).map(({ x, z }, i): NodeSpec => ({ id: `shell-${i}`, x, z, biomes: ["beach"], categories: ["nature", "fruit"] }));
-  const rocks = objectsOf("rock", v).map((p, i): NodeSpec => ({ id: `rock-${i}`, x: p.x, z: p.z - 0.9, biomes: ["rocks"], categories: ["mineral"] }));
+  const newWorld = world === "new";
+  const rocks = objectsOf("rock", v).map((p, i): NodeSpec => ({ id: `rock-${i}`, x: p.x, z: p.z - 0.9, biomes: ["rocks"], categories: ["mineral"], ...(newWorld ? { only: NEW_WORLD_ROCKS } : {}) }));
   const woods = trees.slice(0, 4).map(({ x, z }, i): NodeSpec => ({ id: `mush-${i}`, x: x + 0.9, z: z - 0.4, biomes: ["woods"], categories: ["nature"] }));
   const blooms = flowers.slice(0, 6).map(([x, z], i): NodeSpec => ({ id: `flower-${i}`, x: x + 0.7, z: z - 0.6, biomes: ["flowers"], categories: ["nature"] }));
   const spots = (biome: string) => objectsOf("bug", v).filter(b => b.model === biome);
@@ -86,7 +90,7 @@ export function villageNodes(v: Village = village()): { forage: NodeSpec[]; bugs
     // Bug spots among blooms (the new world's lamps: its night butterflies come to the light).
     ...spots("flowers").map(({ x, z }, i): NodeSpec => ({ id: `bug-bloom-${i}`, x, z, biomes: ["flowers"], categories: ["bug"] })),
   ];
-  const digs = digSpots(v).map(({ x, z, soil }, i): NodeSpec => ({ id: `dig-${soil ? "soil" : "sand"}-${i}`, x, z, biomes: [soil ? "dig_soil" : "dig_sand"], categories: ["nature"] }));
+  const digs = !newWorld ? [] : digSpots(v).map(({ x, z, soil }, i): NodeSpec => ({ id: `dig-${soil ? "soil" : "sand"}-${i}`, x, z, biomes: [soil ? "dig_soil" : "dig_sand"], categories: ["nature"] }));
   const onLand = (n: NodeSpec) => isGroundAtWorld(v.map, n.x, n.z);
   return { forage: [...fruit, ...shells, ...rocks, ...woods, ...blooms, ...digs, ...branchNodes(trees, "")].filter(onLand), bugs: bugs.filter(onLand) };
 }

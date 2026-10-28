@@ -96,27 +96,33 @@ export function useProgressionWorld(): WorldProgressionView {
 }
 
 /**
- * Chapter 1 (Settle in) world actions (row 101): claiming your plot at HQ, when the drop has it (lib/game/drops.ts).
- * The donation is the museum guide's talk (m1, lib/game/mainQuest.ts). `fresh`: chapter 1 is open with neither the plot
+ * Chapter 1 (Settle in) world actions (row 101): which prompts to show and how to run them. A step the drop hides
+ * (claiming your plot before the home island's: lib/game/drops.ts) isn't in the chapter, so it is never offered and
+ * never waited on. The village donates at the museum's door and reports at HQ's; the new world's chapter 1 (first-find)
+ * ends with Juno's talk (lib/game/mainQuest.ts), so it offers neither. `fresh`: chapter 1 is open with neither the plot
  * claimed nor a catch donated (a new member: the first-login greeting).
  */
-export interface ChapterActions { claim: boolean; fresh: boolean; run: (action: "claim_plot") => Promise<string | null> }
+export interface ChapterActions { claim: boolean; donate: boolean; report: boolean; fresh: boolean; run: (action: "claim_plot" | "donate_catch" | "report_hq") => Promise<string | null> }
 export function chapterOneActions(chapters: readonly { slug: string; status: string; steps: readonly { key: string; done: boolean }[] }[]) {
-  const settle = chapters.find(c => c.slug === "settle-in");
+  const settle = chapters.find(c => c.slug === "settle-in" || c.slug === "first-find");
+  const village = settle?.slug === "settle-in";
   const open = settle && (settle.status === "active" || settle.status === "ready");
   const has = (key: string) => !!settle?.steps.some(s => s.key === key);
   const done = (key: string) => !!settle?.steps.find(s => s.key === key)?.done;
   return {
     claim: !!open && has("claim_plot") && !done("claim_plot"),
+    donate: village && !!open && (!has("claim_plot") || done("claim_plot")) && !done("donate_catch"),
+    report: village && settle.status === "ready",
     fresh: !!open && settle.status === "active" && !done("claim_plot") && !done("donate_catch"),
   };
 }
 export function useChapterActions(): ChapterActions {
   const { state } = useProgression();
-  const run = useCallback(async (action: "claim_plot") => {
-    try { setProgressionState(await advance("settle-in", action)); return null; }
+  const run = useCallback(async (action: "claim_plot" | "donate_catch" | "report_hq") => {
+    const slug = state.chapters.find(c => c.slug === "settle-in" || c.slug === "first-find")?.slug ?? "settle-in";
+    try { setProgressionState(await advance(slug, action)); return null; }
     catch (error) { return error instanceof Error ? error.message : "That didn't go through. Try again."; }
-  }, []);
+  }, [state.chapters]);
   return { ...chapterOneActions(state.chapters), run };
 }
 

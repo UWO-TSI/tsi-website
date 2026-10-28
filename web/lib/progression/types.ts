@@ -59,7 +59,7 @@ export interface ClubGoal {
 }
 
 /** What finishes a chapter (lib/progression/chapters.ts STEP_RULES): the personal errands m1 to m6, a club goal, or the Oracle. */
-export type ChapterRequirement = "settle_in" | "bug_net" | "dig" | "rod_challenge" | "museum_collab" | "pickaxe" | "club_goal" | "oracle_trial";
+export type ChapterRequirement = "settle_in" | "first_find" | "bug_net" | "dig" | "rod_challenge" | "museum_collab" | "pickaxe" | "club_goal" | "oracle_trial";
 
 export interface StepCopy {
   label: string;
@@ -82,6 +82,8 @@ export interface QuestChapter {
   reward_coins: number;
   /** A shop item (slug) given once on completion, like Bram's Cedar rod. */
   reward_item?: string | null;
+  /** The world the chapter plays in (lib/game/world/active.ts); null: both. */
+  world?: "village" | "new" | null;
   active: boolean;
   /** Steps this drop can't take yet (lib/game/drops.ts releasedChapters): not shown, and done as far as finishing goes. */
   hidden_steps?: string[];

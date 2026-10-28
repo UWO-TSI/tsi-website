@@ -4,9 +4,10 @@
 
 Writes, from primitives (no references, no libraries):
   web/public/assets/game/tools/pickaxe-1.glb          Mayor Eliza's pickaxe (web/lib/game/tools.ts `pickaxe-basic`)
-  web/public/assets/game/forage/outcrop-rock_stone.glb the rock a pickaxe breaks for stone (VillageLife's Outcrop)
-  web/public/assets/game/forage/outcrop-rock_iron_nugget.glb  the same rock with an iron seam: it gives iron
-  web/public/assets/game/forage/outcrop-spent.glb      the rock once it's given its stone for the hour
+  web/public/assets/game/forage/rock-stone.glb  the new world's rock a pickaxe breaks for stone (VillageLife's Outcrop)
+  web/public/assets/game/forage/rock-iron.glb   the same rock with an iron seam: it gives iron
+  web/public/assets/game/forage/rock-spent.glb  the rock once it's given its stone for the hour
+The village keeps build_forage.py's outcrops (outcrop-rock_*.glb), as before.
   web/public/assets/game/forage/find_<key>.glb        the seven buried finds (web/lib/collections/roster.ts BURIED_FINDS)
 
 Conventions as build_tools.py and build_forage.py: rig units (the engine scales by 1.3), Blender Z up, the face toward -Y.
@@ -96,14 +97,14 @@ def rock(pc, seed, spent=False):
 ROCK_MATS = {"Rock": ROCK, "Strata": STRATA, "Crack": CRACK, "Dark": ROCK_DARK, "Loose": "#9A968D"}
 
 
-@prop("forage/outcrop-rock_stone")
+@prop("forage/rock-stone")
 def stone():
     ob = model("outcrop-rock_stone", ROCK_MATS, lambda pc: rock(pc, 1))
     jitter(ob, 0.012, seed=21)
     return ob
 
 
-@prop("forage/outcrop-rock_iron_nugget")
+@prop("forage/rock-iron")
 def iron():
     """The same rock with a rusty seam of iron across its face: knobs of ore with a metal glint."""
     def b(pc):
@@ -120,7 +121,7 @@ def iron():
     return ob
 
 
-@prop("forage/outcrop-spent")
+@prop("forage/rock-spent")
 def spent():
     ob = model("outcrop-spent", {**ROCK_MATS, "Chip": CHIP}, lambda pc: rock(pc, 6, spent=True))
     jitter(ob, 0.011, seed=26)

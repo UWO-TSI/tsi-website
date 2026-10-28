@@ -14,9 +14,10 @@
  * day. Months 1-12 (northern hemisphere, Ontario); [] = all year. `weather` []
  * = any. `rainAnyHour`: also out in the rain outside its hours.
  */
+import { GAME_WORLD, type GameWorld } from "@/lib/game/world/active";
 export type Category = "fish" | "sea" | "bug" | "fruit" | "nature" | "mineral";
 export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
-export type Biome = "river" | "pond" | "cliff_pool" | "sea" | "beach" | "flowers" | "trees" | "ground" | "water_edge" | "bush" | "woods" | "rocks" | "dig_sand" | "dig_soil" | "mountain";
+export type Biome = "river" | "pond" | "cliff_pool" | "sea" | "beach" | "flowers" | "trees" | "ground" | "water_edge" | "bush" | "woods" | "rocks" | "dig_sand" | "dig_soil";
 export type Tool = "rod" | "net" | "hand" | "shovel" | "pickaxe";
 export type Wing = "aquarium" | "insect_hall" | "nature_room";
 
@@ -174,7 +175,7 @@ const NATURE_ROWS: Row[] = [
   ["flower_tulip", "Orange Tulip", "flowers", "common", null, null, { sub: "flower", months: [4, 5] }],
   ["flower_pansy", "Purple Pansy", "flowers", "common", null, null, { sub: "flower", months: [3, 4, 5, 9, 10] }],
   ["flower_windflower", "Windflower", "flowers", "rare", null, null, { sub: "flower", months: [3, 4, 10, 11] }],
-  ["shell_asari", "Asari Clam", "dig_sand", "common", [3, 6], null, { sub: "shell", tool: "shovel", model: "/assets/game/forage/shell-asari.glb" }],
+  ["shell_asari", "Asari Clam", "beach", "common", [3, 6], null, { sub: "shell", tool: "shovel", model: "/assets/game/forage/shell-asari.glb" }],
   ["shell_scallop", "Scallop Shell", "beach", "common", [6, 12], null, { sub: "shell", model: "/assets/game/forage/shell-scallop.glb" }],
   ["shell_turban", "Turban Shell", "beach", "uncommon", [5, 10], null, { sub: "shell", model: "/assets/game/forage/shell-turban.glb" }],
   ["shell_whelk", "Whelk Shell", "beach", "rare", [8, 16], null, { sub: "shell", model: "/assets/game/forage/shell-whelk.glb" }],
@@ -183,14 +184,13 @@ const NATURE_ROWS: Row[] = [
   ["mushroom_skinny", "Skinny Mushroom", "woods", "rare", null, null, { sub: "mushroom", months: [11], assetReady: false }],
 ];
 
-// ── Rocks and ore (5): crafting materials, broken with the pickaxe (m6); not donatable ──
+// ── Rocks and ore (5): crafting materials, struck with a tool; not donatable ──
 const MINERAL_ROWS: Row[] = [
   ["rock_stone", "Stone", "rocks", "common", null, null],
-  // m6: the island's rocks give only stone and sometimes iron; the rest wait for the mountain (and combat's rewards).
-  ["rock_clay", "Clay", "mountain", "common", null, null],
+  ["rock_clay", "Clay", "rocks", "common", null, null],
   ["rock_iron_nugget", "Iron Nugget", "rocks", "uncommon", null, null],
-  ["rock_gold_nugget", "Gold Nugget", "mountain", "epic", null, null],
-  ["rock_crystal", "Crystal", "mountain", "rare", null, null],
+  ["rock_gold_nugget", "Gold Nugget", "rocks", "epic", null, null],
+  ["rock_crystal", "Crystal", "rocks", "rare", null, null],
 ];
 
 /** The launch roster, seeded by 20260926150400_collections.sql. */
@@ -200,7 +200,7 @@ export const LAUNCH_ROSTER: Species[] = [
   ...make("bug", "net", "insect_hall", BUG_ROWS).map((s) => (BUG_MODELLED.has(s.key) ? s : { ...s, assetReady: false })),
   ...make("fruit", "hand", null, FRUIT_ROWS).map((s) => (s.key === "apple" || s.key === "peach" ? s : { ...s, assetReady: false })),
   ...make("nature", "hand", "nature_room", NATURE_ROWS),
-  ...make("mineral", "pickaxe", null, MINERAL_ROWS, { assetReady: false }),
+  ...make("mineral", "shovel", null, MINERAL_ROWS, { assetReady: false }),
 ];
 
 /**
@@ -285,7 +285,18 @@ export const BURIED_FINDS: Species[] = make("nature", "shovel", "nature_room", [
   find("find_trilobite", "Trilobite", "dig_soil", "legendary", [4, 10], "Older than the dinosaurs, and it still looks surprised."),
 ]);
 
-export const ROSTER: Species[] = [...LAUNCH_ROSTER, ...EVENT_SPECIES, ...REEL_FISH, ...BURIED_FINDS];
+/** The species of this world: the buried finds are the new world's (m3); the village's roster is as it was. */
+export const ROSTER: Species[] = [...LAUNCH_ROSTER, ...EVENT_SPECIES, ...REEL_FISH, ...(GAME_WORLD === "new" ? BURIED_FINDS : [])];
+/** A species row of this world (the database lists every world's: the book and the museum show this one's). */
+export const inWorld = (sp: Pick<Species, "biome">, world: GameWorld = GAME_WORLD) => world === "new" || (sp.biome !== "dig_sand" && sp.biome !== "dig_soil");
+
+/**
+ * The tool a species is taken with in this world: on the new world a rock is broken with the pickaxe (m6, Mayor
+ * Eliza's); in the village it's struck with the shovel, as it always was.
+ */
+export const toolOf = (sp: Pick<Species, "tool" | "category">, world: GameWorld = GAME_WORLD): Tool => (sp.category === "mineral" && world === "new" ? "pickaxe" : sp.tool);
+/** The rocks' yield on the new world (m6, David: "currently just stone and occasionally iron"); the village's rocks roll every mineral. */
+export const NEW_WORLD_ROCKS = ["rock_stone", "rock_iron_nugget"] as const;
 
 export const CATEGORIES: Category[] = ["fish", "sea", "bug", "fruit", "nature", "mineral"];
 export const RARITY_RANK: Record<Rarity, number> = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 };

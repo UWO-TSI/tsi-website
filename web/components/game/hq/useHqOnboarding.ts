@@ -17,9 +17,10 @@ import { itemIcon } from "@/lib/game/toolWheel";
 import type { TrackedQuest } from "@/lib/game/questTracker";
 import { finishToolQuest, giveTool, hqEvent, hqSnapshot, setToolsTaught, startVisit, useHq } from "@/lib/game/arrival/hq/store";
 import { hqQuest, visitCue, waitingFor } from "@/lib/game/arrival/hq/visit";
-import { givenKeys, handOver, isTaughtTool, questFinished, teacherOf, teacherTalk, type CatchKind } from "@/lib/game/arrival/hq/teachers";
+import { givenKeys, handOver, isTaughtTool, questFinished, teacherOf, teacherTalk, toolQuest, type CatchKind } from "@/lib/game/arrival/hq/teachers";
 import { TOOL_LINES, WREN, WREN_LINES, escPhrase, trackerEsc } from "@/lib/game/arrival/hq/lines";
 import type { HqCard, HqEvent } from "@/lib/game/arrival/hq/script";
+import { GAME_WORLD } from "@/lib/game/world/active";
 
 const WREN_TALKER = { id: "hq:wren", slug: WREN.slug, name: WREN.name, post: WREN.post, seed: 3 };
 /** Her lines wait this long after the room fades in (or a sheet closes): a breath, not a jump. */
@@ -118,8 +119,13 @@ export function useHqOnboarding(w: HqWorld, dev: URLSearchParams | null) {
   const card: HqCard | null = cue?.kind === "card" && atHq && free ? cue.card : null;
   const waiting: HqEvent | null = waitingFor(visit);
 
-  // The tracker: the visit while it runs (then the main quest's chapter, lib/game/mainQuest.ts).
-  const quest: TrackedQuest | null = useMemo(() => (!w.arriving && visit && !visit.done ? hqQuest(visit, t => trackerEsc(t, touch)) : null), [w.arriving, visit, touch]);
+  // The tracker: the visit while it runs, else (the village) a tool's quest; the new world's chapters carry on from the
+  // hand-over (lib/game/mainQuest.ts).
+  const quest: TrackedQuest | null = useMemo(() => {
+    if (w.arriving) return null;
+    if (visit && !visit.done) return hqQuest(visit, t => trackerEsc(t, touch));
+    return hq.taught && GAME_WORLD !== "new" ? toolQuest(hq.quests) : null;
+  }, [w.arriving, visit, hq.taught, hq.quests, touch]);
 
   /** Bram's tour is over: a new arrival's tools are taught and the visit with Alice starts. */
   const arrived = useCallback((taught: boolean) => {

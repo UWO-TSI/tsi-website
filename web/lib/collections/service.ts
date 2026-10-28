@@ -4,7 +4,7 @@ import {
   type Exhibit, type JournalPage, type MuseumWing, type Trophy, type WorldMoment,
 } from "./logic";
 import { castWater, fishRoll, forageSize, nodeAt, nodeRoll } from "./rolls";
-import { CATEGORIES, ROSTER, type Category } from "./roster";
+import { CATEGORIES, ROSTER, toolOf, type Category } from "./roster";
 import { TREATS } from "./treats";
 import { toFailure, type Result } from "@/lib/result";
 import { hourKey } from "@/lib/game/peaceful";
@@ -80,10 +80,12 @@ export async function catchAction(
       if (!node) return { ok: false, status: 422, code: "wrong_place", error: "Nothing to gather from here." };
       const sp = nodeRoll(memberId, node, now, await weather());
       if (!sp) return { ok: false, status: 409, code: "nothing_here", error: "Nothing's out here right now." };
-      if (sp.tool === "net" || sp.tool === "shovel" || sp.tool === "pickaxe") {
+      // On the new world rocks need the pickaxe (m6, toolOf); the village's take the shovel, as always.
+      const tool = toolOf(sp);
+      if (tool === "net" || tool === "shovel" || tool === "pickaxe") {
         // Row 312: a member whose tools are taught holds the starter net or shovel only once a resident has given it.
         const [owned, taught] = await Promise.all([store.ownedGear(memberId), store.toolsTaught(memberId)]);
-        const held = checkHeld(req.tool, sp.tool, owned, taught);
+        const held = checkHeld(req.tool, tool, owned, taught);
         if (!held.ok) return held;
       }
       const size = clampSize(ROSTER.find((s) => s.key === sp.key), forageSize(sp, random));

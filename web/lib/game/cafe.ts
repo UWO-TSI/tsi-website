@@ -3,6 +3,7 @@
  * prompts and the tests. Room space: walls at x ±halfW and z ±halfD, the door
  * in the near (−z) wall, +x on screen left. Seats live in lib/study/seats.ts.
  */
+import { GAME_WORLD } from "./world/active";
 import { studySolid } from "@/lib/study/seats";
 
 export const CAFE_ROOM = { halfW: 8.5, halfD: 6, ceiling: 4 };
@@ -115,16 +116,23 @@ export const SWEEP_STATIONS: OwnerStation[] = [
 ];
 /** How close you stand to talk to her out front. */
 export const SWEEPER_TALK = 1.7;
+/** Her lines out front (drafts for David): the café is built, not open, and she is glad of the company. */
+const VILLAGE_SWEEPER_LINES = [
+  "Morning! Not open yet. Soon, I promise.",
+  "Every board in there is new. I just keep sweeping the same three leaves.",
+  "When we open, the window stools are yours. The light's best there.",
+  "[happy] The chalkboard? I wrote it myself. Took three tries.",
+];
 /**
- * Her lines out front (drafts for David): she's glad of the company and points you at what's open now, never at the
- * café's door (x-lines, specs/launch/v1-gameplay.md: lines about closed things are swapped).
+ * On the new world (x-lines, specs/launch/v1-gameplay.md: lines about closed things are swapped) she points you at
+ * what's open, never at the café's door.
  */
-export const SWEEPER_LINES = [
+export const SWEEPER_LINES = GAME_WORLD === "new" ? [
   "Morning! Just sweeping. Have you been down to the museum? Juno's always glad of a visitor.",
   "Every board in there is new. I just keep sweeping the same three leaves.",
   "Bram says the fish bite best at dawn. I wouldn't know. I'm always sweeping at dawn.",
   "[happy] The chalkboard? I wrote it myself. Took three tries.",
-];
+] : VILLAGE_SWEEPER_LINES;
 
 /** Where you can stand in the café: inside the walls, clear of the room's furniture and the study tables. */
 export function cafeWalkable(x: number, z: number, pad = 0): boolean {

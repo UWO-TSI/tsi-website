@@ -64,29 +64,60 @@ chain clean. Ready for review; waiting on David.
   Smoke: `web/supabase/tests/main_quest_smoke.sql` in `specs/evidence/launch-fixes/sql-smoke.sh`.
 - Evidence: `specs/evidence/main-quest/` (shoot.mjs; dropdown, arrow, Juno, each chapter, models).
 
-## Next: gate the village (coordinator, 2026-10-28; plan approved)
+## Next: gate the village (coordinator, 2026-10-28; plan approved). A [wip] is on top: review it, then finish
 
-Prod runs the village by default and it must play exactly as today. Everything this lane changed for the village goes
-behind `NEXT_PUBLIC_GAME_WORLD=new` (`GAME_WORLD` in lib/game/world/active.ts) or becomes world-aware data. Base for
-"as today": 80816727 (copies of the originals were saved to /private/tmp/claude-501/mq-base/).
+Prod runs the village by default and it must play exactly as today; everything the main quest changes is the new world's
+(`GAME_WORLD === "new"`, lib/game/world/active.ts) or world-aware data. Base for "as today": 80816727.
 
-1. Chapters: a `world` column on quest_chapters, DEFAULT NULL = both worlds (other lanes' rows keep working). The
-   existing `settle-in` row keeps its copy and the old settle_in rules (claim, catch, donate at the museum prompt,
-   report to Alice at HQ), marked world 'village'. The new world gets its own chapter 1 (`first-find`, requirement
-   `first_find`, finished by Juno) and chapters 2 to 6, world 'new'. Positions: first-find 2, the errands 3 to 7, the club
-   8 to 10. `releasedChapters` filters by world. Test: a village player's existing settle-in progress (done or in
-   progress) reads exactly as before.
-2. Rocks: species rows unchanged (minerals keep tool 'shovel', biome 'rocks'; clams stay 'beach'). In code, on the new
-   world only, minerals need the pickaxe (`toolOf`) and rock nodes roll only stone or iron (a node's `only` keys). The
-   new outcrop models get new file names; the village keeps outcrop-rock_stone/iron/spent as they were.
-3. Dig spots and buried finds: new world only (villageNodes, the roster, the book and museum filter finds out on the
-   village).
-4. Juno: new world only (NPC skips `docent`). The pickaxe teacher (Eliza): new world only.
-5. The village keeps the old tracker (click opens the journal, the chapter or tool quest line), the tool quests and
-   their lines, Alice's farewell, the old dig decal and hole, bug catching as it was, and residents' and Rosa's lines
-   (swaps applied in code on the new world only).
-6. Reworked migrations (unapplied, edited in place): 20261027150000_main_quest.sql, then the regenerated catalogue seed.
-7. Village-pinning tests for each, gates on both worlds, report with the SHA.
+**Done in the [wip] (code, not yet green):**
+- Chapters: `world` on QuestChapter (null = both); `releasedChapters(chapters, flags, world = GAME_WORLD)` filters by it
+  (lib/game/drops.ts). STEP_RULES has the village's `settle_in` back exactly (claim, catch, donate as a step, report_hq
+  finishes) and the new world's `first_find` (claim, catch, donate to Juno finishes). ADVANCE_ACTIONS has report_hq again.
+  DEFAULT_CHAPTERS: settle-in (1, world village, base copy), first-find (2, new), errands 3 to 7 (new), club 8 to 10 (both).
+- Migration 20261027150000_main_quest.sql regenerated: requirement CHECK (+first_find), reward_item, `world TEXT DEFAULT
+  NULL` with its CHECK, settle-in marked 'village' (copy untouched), club to 8 to 10, first-find and the errands inserted
+  as 'new'. No collection_species.tool change any more. Smokes: hq_onboarding_copy, alice_rename, v1_drop_copy restored
+  to base; main_quest_smoke.sql reworked (village rows unchanged, rocks and clams unchanged, world default NULL).
+- Roster: minerals back to tool shovel, biome rocks; shell_asari back to beach; `ROSTER` includes BURIED_FINDS only on the
+  new world; `inWorld()` filters the DB roster (lib/collections/supabaseStore.ts); `toolOf()` makes minerals need the
+  pickaxe on the new world (used in lib/collections/service.ts and VillageLife); NEW_WORLD_ROCKS + NodeSpec `only` +
+  rollNode `only` (rocks roll stone or iron on the new world). villageNodes(v, world) adds dig spots only on the new world.
+- Models: village outcrops restored (outcrop-rock_stone/iron_nugget/spent.glb from base, build_forage.py from base); the
+  new ones are forage/rock-stone|iron|spent.glb (build_mining.py). VillageLife picks by world; the village keeps the
+  sprite dig decal and hole, labels ("Strike the rock") and bug feel; the new world's are behind NEW_WORLD.
+- HUD: QuestTracker `dropdown` prop (false: the village's one line that opens the journal); chapterQuest restored in
+  lib/game/questTracker.ts (+ base test); useMainQuest(player, on) is inert in the village; DefaultIslandWorld restores
+  the village's donate/report prompts and handlers; chapterOneActions handles settle-in (village) and first-find (new).
+- Journal: settle_in actions restored; first_find only claim.
+- Teachers: toolQuest restored (village tracker); the pickaxe teacher is live only on the new world; TOOL_LINES =
+  village (base) or new-world set; Alice's farewell by world.
+- Residents: Bram's and Sable's lines back to base in the roster; NEW_WORLD_LINE_SWAPS + newWorldPersona applied in
+  NPC.tsx on the new world only; Juno (`docent`) filtered out of the village (NEW_WORLD_ONLY). Rosa's lines by world.
+
+**Remaining, in order:**
+1. `cd web && npx tsc --noEmit` (under the heavy lock) and fix.
+2. Fix the failing tests (run under both envs: `npx vitest run <files>` and `NEXT_PUBLIC_GAME_WORLD=new npx vitest run ...`).
+   Failing at the [wip]: app/api/collections/route.test.ts (9: rocks need the pickaxe and dig spots exist only on the
+   new world; on the village rocks take the SHOVEL as before), lib/collections/collections.test.ts (museum wing counts:
+   15 nature room on the village, 22 on the new world), lib/collections/rolls.test.ts (1), lib/game/drops.test.ts (2:
+   the village's chapters are settle-in, fund-museum; the new world's first-find, the errands, fund-museum),
+   lib/game/mainQuest.test.ts (4: use the new world's chapters, chapter 1 is first-find), lib/progression/chapters.test.ts
+   (2) and service.test.ts (4) (write village tests from the base versions at 80816727 and new-world tests from HEAD;
+   pick chapters with `DEFAULT_CHAPTERS.filter(c => !c.world || c.world === w)`; consider making memoryStore's default
+   chapters this world's), lib/game/arrival/hq/teachers.test.ts (4) and grant.test.ts (1) (pickaxe live only on the new
+   world: branch on GAME_WORLD), lib/progression/seasonal.test.ts (1) and lib/game/arrival/routes/routes.test.ts (1)
+   (check: maybe load timeouts). Use `describe.runIf(GAME_WORLD === "new")` / `skipIf` where a module-level constant decides.
+3. Village-pinning tests (the coordinator asked for these by name): a village player's existing settle-in progress (done,
+   or in progress with donate_catch stored) evaluates exactly as before after the migration (rows from 80816727's
+   defaults plus world 'village'); village rocks roll every mineral and take the shovel; no dig spots, no finds in the
+   village ROSTER or DB roster; no Juno in the village residents; the village tracker has no dropdown; the village's
+   TOOL_LINES, farewell, Rosa's and residents' lines are the base ones.
+4. `node scripts/gen-seeds.mjs` after deleting 20261027195451_catalogue_seed.sql (minerals and clams revert in the seed),
+   keep the new file's name in sql-smoke.sh GAME and main_quest_smoke.sql; run `zsh specs/evidence/launch-fixes/sql-smoke.sh`.
+5. Full gates on both worlds (heavy lock, background loop retrying exit 75), eslint on changed files.
+6. Reshoot new-world evidence with `NEXT_PUBLIC_GAME_WORLD=new` in the dev server env (the scratchpad runner
+   `mqrun/run.sh` starts `next dev` without it: add it), plus one village shot showing the old tracker line.
+7. Report to the coordinator: SHA, gates on both worlds, migrations in order, the village-pinning tests.
 
 ## Tools and gotchas
 

@@ -93,10 +93,10 @@ export const DEFAULT_GOALS: ClubGoal[] = [
   ...SEASONAL_GOALS,
 ];
 
-/** A personal chapter (m1 to m6): an errand with a person and a place, skippable for everyone (principle 7). */
+/** A new-world chapter (m2 to m6): an errand with a person and a place, skippable for everyone (principle 7). */
 const errand = (n: number, slug: string, title: string, requirement: QuestChapter["requirement"], summary: string, step_copy: QuestChapter["step_copy"], reward_coins: number, extra: Partial<QuestChapter> = {}): QuestChapter => ({
-  id: `00000000-0000-4000-8000-0000000000b${n}`, slug, position: n, title, summary, requirement, goal_slug: null, step_copy,
-  unlocks_regions: [], completion_letter: "", skippable_max_tier: 5, reward_coins, reward_item: null, active: true, ...extra,
+  id: `00000000-0000-4000-8000-0000000000b${n}`, slug, position: n + 1, title, summary, requirement, goal_slug: null, step_copy,
+  unlocks_regions: [], completion_letter: "", skippable_max_tier: 5, reward_coins, reward_item: null, world: "new", active: true, ...extra,
 });
 
 export const DEFAULT_CHAPTERS: QuestChapter[] = [
@@ -105,10 +105,36 @@ export const DEFAULT_CHAPTERS: QuestChapter[] = [
     slug: "settle-in",
     position: 1,
     title: "Settle in",
-    // m1 (David, 2026-10-27): first catch, donated to the museum's guide, who explains the museum and pays 100 coins and
-    // a thank-you letter. No report to Alice. Claiming your plot is the home island's drop (lib/game/drops.ts STEP_FEATURE).
-    summary: "Make your first catch and bring it to Juno at the museum.",
+    // The village's chapter 1, as it has always played (the new world has its own: first-find).
+    // Claiming your plot is the home island's drop (lib/game/drops.ts STEP_FEATURE): the summary leaves it out until then.
+    // Alice is HQ's host after Bram's tour (row 312, 20261017010000_hq_onboarding_copy).
+    summary: "Make your first catch and donate it to the museum, then report back to Alice at HQ.",
     requirement: "settle_in",
+    goal_slug: null,
+    step_copy: {
+      claim_plot: { label: "Claim your plot at HQ" },
+      first_catch: { label: "Make your first catch", hint: "Any fish counts. Try the pier." },
+      donate_catch: { label: "Donate your catch to the museum shell" },
+      report_hq: { label: "Report back to Alice at HQ" },
+    },
+    unlocks_regions: ["village_core"],
+    completion_letter: "Welcome to the island. The village is yours to explore.",
+    // Design principle 7: onboarding is opt-in and skippable in one click for everyone.
+    skippable_max_tier: 5,
+    reward_coins: 100,
+    reward_item: null,
+    world: "village",
+    active: true,
+  },
+  {
+    id: "00000000-0000-4000-8000-0000000000b1",
+    slug: "first-find",
+    position: 2,
+    title: "Settle in",
+    // m1 (David, 2026-10-27), the new world's chapter 1: first catch, donated to the museum's guide, who explains the
+    // museum and pays 100 coins and a thank-you letter. No report to Alice.
+    summary: "Make your first catch and bring it to Juno at the museum.",
+    requirement: "first_find",
     goal_slug: null,
     step_copy: {
       claim_plot: { label: "Claim your plot at HQ" },
@@ -117,10 +143,10 @@ export const DEFAULT_CHAPTERS: QuestChapter[] = [
     },
     unlocks_regions: ["village_core"],
     completion_letter: "Thank you for the museum's first find from you! I've written its label myself. Every fish, bug and buried treasure you bring in helps the whole club fill the halls. Come and see me any time. Juno, the museum",
-    // Design principle 7: onboarding is opt-in and skippable in one click for everyone.
     skippable_max_tier: 5,
     reward_coins: 100,
     reward_item: null,
+    world: "new",
     active: true,
   },
   errand(2, "odiles-net", "Odile's net", "bug_net", "Odile at the museum has a spare net. Catch a few bugs with it and show her.", {
@@ -151,7 +177,7 @@ export const DEFAULT_CHAPTERS: QuestChapter[] = [
   {
     id: "00000000-0000-4000-8000-0000000000a2",
     slug: "reopen-cafe",
-    position: 7,
+    position: 8,
     title: "Reopen the cafe",
     summary: "The whole club is reopening the cafe. Chip in at the monument and come to events.",
     requirement: "club_goal",
@@ -170,7 +196,7 @@ export const DEFAULT_CHAPTERS: QuestChapter[] = [
   {
     id: "00000000-0000-4000-8000-0000000000a3",
     slug: "fund-museum",
-    position: 8,
+    position: 9,
     title: "Fund the museum",
     summary: "The club is funding the museum. Specimens and coins count.",
     requirement: "club_goal",
@@ -189,7 +215,7 @@ export const DEFAULT_CHAPTERS: QuestChapter[] = [
   {
     id: "00000000-0000-4000-8000-0000000000a4",
     slug: "ruins-gate",
-    position: 9,
+    position: 10,
     title: "Reach the ruins gate",
     summary: "Take the Oracle quiz, reach level 10 and choose your subclass to open the ruins gate.",
     requirement: "oracle_trial",

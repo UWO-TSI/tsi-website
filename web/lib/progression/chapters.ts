@@ -39,8 +39,15 @@ interface StepRule {
 const MUSEUM_GUIDE = "docent";
 
 export const STEP_RULES: Record<ChapterRequirement, readonly StepRule[]> = {
-  // m1: first catch, donated to the museum's guide, who pays and writes (no report to Alice).
+  // The village's chapter 1 (row 101), as it has always played: claim, catch, donate at the museum, report to Alice.
   settle_in: [
+    { key: "claim_plot", anchor: "hq", action: true },
+    { key: "first_catch", anchor: "fishing_spot", count: ["fish", 1] },
+    { key: "donate_catch", anchor: "museum", action: true },
+    { key: "report_hq", anchor: "hq", finish: true },
+  ],
+  // m1, the new world's chapter 1: first catch, donated to the museum's guide, who pays and writes (no report to Alice).
+  first_find: [
     { key: "claim_plot", anchor: "hq", action: true },
     { key: "first_catch", anchor: "fishing_spot", count: ["fish", 1] },
     { key: "donate_catch", anchor: "museum", npc: MUSEUM_GUIDE, finish: true },
@@ -91,7 +98,8 @@ export const STEP_KEYS = Object.fromEntries(REQUIREMENTS.map((r) => [r, STEP_RUL
 const FALLBACK_COPY: Record<string, StepCopy> = {
   claim_plot: { label: "Claim your plot at HQ" },
   first_catch: { label: "Make your first catch" },
-  donate_catch: { label: "Donate your catch at the museum" },
+  donate_catch: { label: "Donate your catch" },
+  report_hq: { label: "Report back to Alice at HQ" },
   get_net: { label: "Ask Odile at the museum for a net" },
   catch_bugs: { label: "Catch 3 bugs" },
   show_odile: { label: "Show Odile your bugs" },
@@ -114,7 +122,7 @@ const FALLBACK_COPY: Record<string, StepCopy> = {
   enter_gate: { label: "Open the ruins gate" },
 };
 
-export const ADVANCE_ACTIONS = ["claim_plot", "donate_catch", "twilight_catch", "complete", "skip"] as const;
+export const ADVANCE_ACTIONS = ["claim_plot", "donate_catch", "report_hq", "twilight_catch", "complete", "skip"] as const;
 export type AdvanceAction = (typeof ADVANCE_ACTIONS)[number];
 
 /** A catch counts for the dawn-or-dusk step when it was landed this recently and the island is at dawn or dusk now. */
@@ -137,7 +145,9 @@ function stepDone(rule: StepRule, chapter: QuestChapter, progress: MemberChapter
   if (progress?.status === "completed") return true;
   if (rule.finish) return false;
   if (rule.action) return !!progress?.steps_done?.[rule.key];
-  if (rule.count) return (facts.counts[rule.count[0]] ?? 0) >= rule.count[1] || (rule.key === "first_catch" && facts.firstCatchKey !== null);
+  // The first catch also counts once a catch was donated (row 101: a fish sold since still shows the step done).
+  if (rule.key === "first_catch" && (facts.firstCatchKey !== null || !!progress?.steps_done?.first_catch || !!progress?.steps_done?.donate_catch)) return true;
+  if (rule.count) return (facts.counts[rule.count[0]] ?? 0) >= rule.count[1];
   if (rule.key === "contribute") return (chapter.goal_slug ? (facts.goals[chapter.goal_slug]?.myPoints ?? 0) : 0) > 0;
   if (rule.key === "goal_complete") return !!(chapter.goal_slug && facts.goals[chapter.goal_slug]?.completed);
   return false;
@@ -226,7 +236,7 @@ export function validateAdvance(
   const at = now.toISOString();
   const steps = { ...(progress?.steps_done ?? {}) };
   const donated = progress?.donated_item_key ?? null;
-  const settle = chapter.requirement === "settle_in";
+  const settle = chapter.requirement === "settle_in", first = chapter.requirement === "first_find";
   const done = (next: Record<string, string>, item = donated): AdvanceResult => ({ ok: true, next: { status: "completed", steps_done: next, donated_item_key: item }, completedChapter: true });
 
   switch (action) {
@@ -234,19 +244,32 @@ export function validateAdvance(
       if (!view.can_skip) return { ok: false, status: 403, error: "This chapter can't be skipped." };
       return { ok: true, next: { status: "skipped", steps_done: steps, donated_item_key: donated }, completedChapter: true };
     case "claim_plot":
-      if (!settle) return { ok: false, status: 422, error: "Not a step of this chapter." };
+      if (!settle && !first) return { ok: false, status: 422, error: "Not a step of this chapter." };
       if (chapter.hidden_steps?.includes("claim_plot")) return { ok: false, status: 422, error: "That isn't open yet." };
       if (steps.claim_plot) return { ok: false, status: 409, error: "Plot already claimed." };
       steps.claim_plot = at;
       return { ok: true, next: { status: "active", steps_done: steps, donated_item_key: donated }, completedChapter: false };
     case "donate_catch":
+      if (!settle && !first) return { ok: false, status: 422, error: "Not a step of this chapter." };
+      if (settle) {
+        // The village: the donation is a step; reporting to Alice at HQ finishes the chapter.
+        if (steps.donate_catch) return { ok: false, status: 409, error: "Already donated." };
+        if (!facts.firstCatchKey) return { ok: false, status: 409, error: "Catch a fish first." };
+        steps.first_catch = steps.first_catch ?? at;
+        steps.donate_catch = at;
+        return { ok: true, next: { status: "active", steps_done: steps, donated_item_key: facts.firstCatchKey }, completedChapter: false };
+      }
       // m1: handing the museum's guide your first catch finishes the chapter (her reward and letter come with it).
-      if (!settle) return { ok: false, status: 422, error: "Not a step of this chapter." };
       if (!facts.firstCatchKey) return { ok: false, status: 409, error: "Catch a fish first." };
       if (view.status !== "ready") return { ok: false, status: 409, error: waitingOn(view) };
       steps.first_catch = steps.first_catch ?? at;
       steps.donate_catch = at;
       return done(steps, facts.firstCatchKey);
+    case "report_hq":
+      if (!settle) return { ok: false, status: 422, error: "Not a step of this chapter." };
+      if (view.status !== "ready") return { ok: false, status: 409, error: chapter.hidden_steps?.includes("claim_plot") ? "Donate a catch first." : "Claim your plot and donate a catch first." };
+      steps.report_hq = at;
+      return done(steps);
     case "twilight_catch": {
       if (chapter.requirement !== "rod_challenge") return { ok: false, status: 422, error: "Not a step of this chapter." };
       if (steps.twilight_catch) return { ok: false, status: 409, error: "Already done." };
@@ -257,7 +280,8 @@ export function validateAdvance(
       return { ok: true, next: { status: "active", steps_done: steps, donated_item_key: donated }, completedChapter: false };
     }
     case "complete":
-      if (settle) return { ok: false, status: 422, error: "Donate your catch at the museum to finish this chapter." };
+      if (settle) return { ok: false, status: 422, error: "Report to HQ to finish this chapter." };
+      if (first) return { ok: false, status: 422, error: "Donate your catch at the museum to finish this chapter." };
       if (view.status !== "ready") {
         if (chapter.requirement === "club_goal") return { ok: false, status: 409, error: "The club goal isn't complete yet." };
         if (chapter.requirement === "oracle_trial") return { ok: false, status: 409, error: "The Oracle quiz, level 10 and your subclass come first." };
@@ -293,7 +317,7 @@ export function finishWith(views: readonly ChapterView[], npc: string): { chapte
   if (!c || c.status !== "ready") return null;
   const rule = STEP_RULES[c.requirement].find((r) => r.finish);
   if (!rule || rule.npc !== npc) return null;
-  return { chapter: c.slug, action: c.requirement === "settle_in" ? "donate_catch" : "complete" };
+  return { chapter: c.slug, action: c.requirement === "first_find" ? "donate_catch" : "complete" };
 }
 
 /**
@@ -335,6 +359,7 @@ export function normalizeChapter(row: Record<string, unknown>): QuestChapter {
     skippable_max_tier: Number.isInteger(row.skippable_max_tier) ? (row.skippable_max_tier as number) : 0,
     reward_coins: Number.isInteger(row.reward_coins) ? Math.max(0, row.reward_coins as number) : 0,
     reward_item: typeof row.reward_item === "string" && row.reward_item ? row.reward_item : null,
+    world: row.world === "village" || row.world === "new" ? row.world : null,
     active: row.active !== false,
   };
 }
@@ -350,6 +375,7 @@ export function validateChapterDraft(d: Record<string, unknown>): string[] {
   if (typeof d.skippable_max_tier !== "number" || d.skippable_max_tier < 0 || d.skippable_max_tier > 5) errors.push("skippable_max_tier: 0-5");
   if (req === "club_goal" && d.skippable_max_tier !== 0) errors.push("club_goal chapters can't be skippable");
   if (d.reward_coins !== undefined && (typeof d.reward_coins !== "number" || !Number.isInteger(d.reward_coins) || d.reward_coins < 0 || d.reward_coins > 5000)) errors.push("reward_coins: 0-5000");
+  if (d.world !== undefined && d.world !== null && d.world !== "village" && d.world !== "new") errors.push("world: village, new or both (empty)");
   if (d.reward_item !== undefined && d.reward_item !== null && (typeof d.reward_item !== "string" || !/^[a-z0-9-]{1,64}$/.test(d.reward_item))) errors.push("reward_item: a shop item slug");
   if (!Array.isArray(d.unlocks_regions)) errors.push("unlocks_regions: list");
   const copy = d.step_copy as Record<string, unknown> | undefined;

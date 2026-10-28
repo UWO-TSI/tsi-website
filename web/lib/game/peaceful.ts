@@ -87,8 +87,8 @@ const RARITY_WEIGHT: Record<Rarity, number> = { common: 60, uncommon: 25, rare: 
  * roster species of its habitats that are in season and hour, deterministic
  * per (member, node, hour) so a refresh never rerolls it.
  */
-export function rollNode(member: string, nodeId: string, hour: string, biomes: readonly Biome[], moment: WorldMoment, categories?: readonly Species["category"][]): Species | null {
-  const pool = ROSTER.filter(s => biomes.includes(s.biome) && s.tool !== "rod" && (!categories || categories.includes(s.category)) && availableAt(s, moment));
+export function rollNode(member: string, nodeId: string, hour: string, biomes: readonly Biome[], moment: WorldMoment, categories?: readonly Species["category"][], only?: readonly string[]): Species | null {
+  const pool = ROSTER.filter(s => biomes.includes(s.biome) && s.tool !== "rod" && (!categories || categories.includes(s.category)) && (!only || only.includes(s.key)) && availableAt(s, moment));
   if (!pool.length) return null;
   const total = pool.reduce((s, sp) => s + RARITY_WEIGHT[sp.rarity], 0);
   let r = (fnv1a(`${member}:${nodeId}:${hour}`) / 4294967296) * total;

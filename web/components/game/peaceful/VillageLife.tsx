@@ -22,12 +22,12 @@ import * as THREE from "three";
 import { GLBProp, NatureMushroom } from "../NatureModels";
 import { ModelFlock, addToFlock, endFlock, showOwn, startFlock, type Flock } from "../InstancedNature";
 import { SPECIES as CRITTERS } from "../Critters";
-import { useMoveParticles } from "../movement/moveFx";
+import { packMap, spriteQuad, useMoveParticles } from "../movement/moveFx";
 import { useGlowParticles } from "../GlowFx";
 import { AudioManager } from "@/lib/game/audio";
 import { collect, harvestNode, localCollections, localRecord } from "@/lib/game/collections";
 import { bagRoom } from "@/lib/game/bagStore";
-import { ROSTER } from "@/lib/collections/roster";
+import { ROSTER, toolOf } from "@/lib/collections/roster";
 import { isBuried } from "@/lib/progression/facts";
 import { forageSize } from "@/lib/collections/rolls";
 import { bugReaction, fleeRadius, hasClue, hourKey, nodeAvailable, rollNode } from "@/lib/game/peaceful";
@@ -44,13 +44,14 @@ import { contactDelay, hitDelays, landAt } from "@/lib/game/actTiming";
 import { addDrop, addHole, dropsFor, dropsVersion, fallenOf, holeFrame, holeOpacity, holesNow, pruneHoles, removeDrop, setFallen, subscribeDrops, type Drop, type Hole } from "@/lib/game/forageWorld";
 import { LIFT, handOf, liftPose, type Lift } from "@/lib/game/forageLift";
 import { FACE, seedAt, type Recipe } from "@/lib/game/fx/particles";
-import { CHIPS, CHIP_TINT, DIG_RISE, FLOWER_TINT, GLINT, GLINT_EVERY, GLINT_TINT, HOLE_TINT, LIFT_PUFF, PETALS, ROCK_DUST, SAND_BURST, SAND_GRAINS, SAND_TINT, STRIKE_PUFF } from "@/lib/game/forageFx";
+import { CHIPS, CHIP_TINT, DIG_RISE, FLOWER_TINT, GLINT, GLINT_EVERY, GLINT_TINT, HOLE_TINT, LIFT_PUFF, NEW_HOLE_TINT, PETALS, ROCK_DUST, SAND_BURST, SAND_GRAINS, SAND_TINT, STRIKE_PUFF } from "@/lib/game/forageFx";
 import { hash01 } from "@/lib/game/worldFx";
 import { crackStar } from "@/lib/game/digMark";
+import { GAME_WORLD } from "@/lib/game/world/active";
 import { TREE_WIND, WORLD_SNOW, leafTintHex, prepareModel } from "@/lib/game/modelMaterials";
 import TreeFruit, { FRUIT_REST_RADIUS, type HangingFruit } from "./TreeFruit";
 
-export interface NodeSpec { id: string; x: number; z: number; biomes: Biome[]; categories: Species["category"][]; /** Tree canopy (fruit hangs up here). */ canopy?: boolean; /** Always this species (a tree's branch) instead of a roster roll. */ drop?: Species; /** The tree a canopy node belongs to: its fruit hangs in this tree's crown. */ tree?: TreeSpot }
+export interface NodeSpec { id: string; x: number; z: number; biomes: Biome[]; categories: Species["category"][]; /** Tree canopy (fruit hangs up here). */ canopy?: boolean; /** Always this species (a tree's branch) instead of a roster roll. */ drop?: Species; /** Only these species (keys) can roll here (the new world's rocks: stone or iron). */ only?: readonly string[]; /** The tree a canopy node belongs to: its fruit hangs in this tree's crown. */ tree?: TreeSpot }
 
 const HARVEST_KEY = "tsi.forage.harvested.v1";
 function readHarvested(): Record<string, string> {
@@ -66,8 +67,12 @@ const BRANCH_URL = "/assets/game/props/branch.glb";
 const BRANCH_SCALE = 1.3, BRANCH_RADIUS = 0.05;
 
 /** The rock outcrops a shovel strikes (art/props-enemies/build_forage.py): one per material, and the bare one it leaves. */
-const OUTCROP = (key: string) => `/assets/game/forage/outcrop-${key}.glb`;
-const SPENT_OUTCROP = "/assets/game/forage/outcrop-spent.glb";
+/** The main quest's look and feel (m2, m3, m6) is the new world's; the village plays as it always did. */
+const NEW_WORLD = GAME_WORLD === "new";
+/** The new world's rocks are build_mining.py's (stone, iron, spent); the village keeps build_forage.py's outcrops. */
+const NEW_ROCKS: Readonly<Record<string, string>> = { rock_stone: "rock-stone", rock_iron_nugget: "rock-iron" };
+const OUTCROP = (key: string) => `/assets/game/forage/${NEW_WORLD && NEW_ROCKS[key] ? NEW_ROCKS[key] : `outcrop-${key}`}.glb`;
+const SPENT_OUTCROP = NEW_WORLD ? "/assets/game/forage/rock-spent.glb" : "/assets/game/forage/outcrop-spent.glb";
 /** Their face is authored toward Blender's -Y (glTF +Z): turned to face the way you come at them (the node stands in front of its boulder, -z). */
 const OUTCROP_YAW = Math.PI;
 /** What a struck rock is doing: performance.now() of its last hit (the flinch) and whether its material has come out. */
@@ -92,8 +97,14 @@ function Outcrop({ sp, at, nodeId, struck, spent = false }: { sp: Species; at: [
   </group>;
 }
 
+/** The village's dig spot (a buried find): a little star of cracks in the ground from our pack, each spot its own frame. */
+let crackMaterial: THREE.MeshStandardMaterial | null = null;
+const spriteCrackLook = () => (crackMaterial ??= new THREE.MeshStandardMaterial({ name: "DigSpot", map: packMap(), color: "#6f5a40", roughness: 1, metalness: 0, transparent: true,
+  depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+const SPRITE_CRACKS = Array.from({ length: 8 }, (_, f) => spriteQuad("crack", f, 0.62).rotateX(-Math.PI / 2));
+
 /**
- * A dig spot (a buried find, m3; David: "dirt will have like some type of marking and sand as well"): a star of five
+ * The new world's dig spot (a buried find, m3; David: "dirt will have like some type of marking and sand as well"): a star of five
  * cracks in the ground, built as flat wedges (lib/game/digMark.ts, bolder than the pack's thin crack sprite), each
  * spot its own seeded star, big and dark enough to spot from a few steps off: a dark umber on the sand,
  * a near-black brown on the dirt (which is darker itself). Opaque and shared, so the spots cost one material each.
@@ -107,29 +118,33 @@ const crackLook = (soil: boolean) => {
 };
 const CRACKS = Array.from({ length: 8 }, (_, f) => crackStar(f * 7 + 3));
 function DigSpot({ at, seed, soil }: { at: [number, number, number]; seed: number; soil: boolean }) {
+  if (!NEW_WORLD) return <mesh geometry={SPRITE_CRACKS[Math.floor(hash01(seed, 7) * 8) % 8]} material={spriteCrackLook()} position={[at[0], at[1] + 0.015, at[2]]} rotation={[0, seed * 1.3, 0]} renderOrder={2} receiveShadow />;
   return <mesh geometry={CRACKS[Math.floor(hash01(seed, 7) * 8) % 8]} material={crackLook(soil)} position={[at[0], at[1] + 0.02, at[2]]} rotation={[0, seed * 1.3, 0]} receiveShadow />;
 }
 
 /**
- * A dug hole, filling back in on the world clock (lib/game/forageWorld.ts): a dark disc of turned earth that shrinks and
- * fades through its eight stages (holeFrame, holeOpacity). Plain geometry, as the dig spot's.
+ * A dug hole, filling back in on the world clock (lib/game/forageWorld.ts). The village's is our pack's hole, its 8
+ * frames from fresh to filled; the new world's a dark disc of turned earth that shrinks and fades through the same
+ * stages (holeFrame, holeOpacity), plain geometry like its dig spot.
  */
+const HOLES = Array.from({ length: 8 }, (_, f) => spriteQuad("hole", f, 1.0).rotateX(-Math.PI / 2));
 const HOLE = new THREE.CircleGeometry(0.42, 14).rotateX(-Math.PI / 2);
 function fillHole(mesh: THREE.Mesh | null, material: THREE.MeshStandardMaterial, hole: Hole) {
   if (!mesh) return;
   const age = worldTime() - hole.t0, f = holeFrame(age);
   mesh.visible = f >= 0;
   if (f < 0) return;
-  mesh.scale.setScalar(1 - f * 0.08);
+  if (NEW_WORLD) mesh.scale.setScalar(1 - f * 0.08);
+  else if (mesh.geometry !== HOLES[f]) mesh.geometry = HOLES[f];
   material.opacity = holeOpacity(age);
 }
 function HoleDecal({ hole }: { hole: Hole }) {
-  const material = useMemo(() => new THREE.MeshStandardMaterial({ name: "DugHole", color: HOLE_TINT, roughness: 1, metalness: 0, transparent: true,
+  const material = useMemo(() => new THREE.MeshStandardMaterial({ name: "DugHole", ...(NEW_WORLD ? { color: NEW_HOLE_TINT } : { map: packMap(), color: HOLE_TINT }), roughness: 1, metalness: 0, transparent: true,
     depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }), []);
   useEffect(() => () => material.dispose(), [material]);
   const mesh = useRef<THREE.Mesh>(null);
   useFrame(() => fillHole(mesh.current, material, hole));
-  return <mesh ref={mesh} geometry={HOLE} material={material} position={[hole.x, hole.y + 0.02, hole.z]} renderOrder={2} receiveShadow />;
+  return <mesh ref={mesh} geometry={NEW_WORLD ? HOLE : HOLES[0]} material={material} position={[hole.x, hole.y + (NEW_WORLD ? 0.02 : 0.018), hole.z]} rotation={[0, NEW_WORLD ? 0 : hole.x * 3.1 + hole.z * 1.7, 0]} renderOrder={2} receiveShadow />;
 }
 /** Every hole still filling; the filled ones are let go from a timer, never the frame loop. */
 function Holes() {
@@ -323,7 +338,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
   useEffect(() => { const t = window.setInterval(() => setHour(hourKey(new Date())), 30_000); return () => window.clearInterval(t); }, []);
   const now = useMemo(() => new Date(), [hour]); // eslint-disable-line react-hooks/exhaustive-deps -- re-evaluated each real hour
   // Every node's roll this hour (a taken one too: a picked tree still carries the rest of its fruit), then what's out.
-  const rolled = useMemo(() => nodes.map(n => ({ n, sp: n.drop ?? rollNode(member, n.id, hour, n.biomes, moment, n.categories), out: nodeAvailable(harvested[n.id], now) })),
+  const rolled = useMemo(() => nodes.map(n => ({ n, sp: n.drop ?? rollNode(member, n.id, hour, n.biomes, moment, n.categories, n.only), out: nodeAvailable(harvested[n.id], now) })),
     [nodes, harvested, now, member, hour, moment]);
   const forage = useMemo(() => rolled.filter(e => e.out && e.sp), [rolled]);
   const bugs = useMemo<LiveBug[]>(() => bugNodes.flatMap(n => {
@@ -351,11 +366,11 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
   const forageTargets = useMemo(() => new Map(forage.map(({ n, sp }) => {
     const drop = lyingByNode.get(n.id);
     const label = drop ? `Pick up the ${drop.kind === "branch" ? "branch" : sp!.name.toLowerCase()}`
-      : n.canopy ? "Shake the tree" : sp!.category === "mineral" ? "Break the rock" : buried(sp!) ? "Dig it up"
+      : n.canopy ? "Shake the tree" : sp!.category === "mineral" ? (NEW_WORLD ? "Break the rock" : "Strike the rock") : buried(sp!) ? "Dig it up"
       : sp!.sub === "shell" ? "Pick up the shell" : sp!.category === "fruit" ? `Pick up the ${sp!.name.toLowerCase()}` : "Pick it";
     const clip: ClipName = drop ? "Pickup" : n.canopy ? "Shake" : sp!.category === "mineral" ? "Strike" : buried(sp!) ? "Dig"
       : sp!.sub === "flower" || sp!.sub === "mushroom" ? "Forage" : "Pickup";
-    return [n.id, { id: n.id, kind: sp!.tool === "shovel" ? "dig" : sp!.tool === "pickaxe" ? "mine" : "forage", distance: 0, at: drop ? [drop.rest.x, drop.rest.z] : [n.x, n.z], label, clip } satisfies PeacefulTarget];
+    return [n.id, { id: n.id, kind: toolOf(sp!) === "shovel" ? "dig" : toolOf(sp!) === "pickaxe" ? "mine" : "forage", distance: 0, at: drop ? [drop.rest.x, drop.rest.z] : [n.x, n.z], label, clip } satisfies PeacefulTarget];
   })), [forage, lyingByNode]);
   // The fruit in the trees: every fruiting crown this hour, less the one that fell (lying there, or taken).
   const hanging = useMemo<HangingFruit[]>(() => rolled.flatMap(({ n, sp, out }) => {
@@ -482,7 +497,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
         } else {
           setLift(lifts, act.nodeId, { t0, from: { ...act.at }, to: hand, ms: LIFT.ms });
           // Netted: a little burst of sparkle where it was (m2: the catch should feel like one).
-          if (act.kind === "net") for (let k = 0; k < 5; k++) {
+          if (NEW_WORLD && act.kind === "net") for (let k = 0; k < 5; k++) {
             const a = (k / 5) * Math.PI * 2;
             glow.pool.burst(GLINT, x + Math.cos(a) * 0.25, y + 0.15 + (k % 2) * 0.12, z + Math.sin(a) * 0.25, y, 0, 0, 1, GLINT_TINT, seedAt(x, z, 70 + k));
           }
@@ -503,7 +518,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
         localRecord(got.key, size);
         // The shared reward card says what it was, with its art and its chime (RewardCard); the token flies into the Bag.
         window.dispatchEvent(new CustomEvent("tsi:peaceful-got", { detail: { key: got.key, name: got.name, rarity: got.rarity, one_liner: got.oneLiner, size, isNew,
-          kind: act.kind === "net" ? "bug" : act.kind === "dig" ? "dig" : act.kind === "strike" ? "mine" : "forage" } }));
+          kind: act.kind === "net" ? "bug" : act.kind === "dig" ? "dig" : NEW_WORLD && act.kind === "strike" ? "mine" : "forage" } }));
         window.dispatchEvent(new CustomEvent("tsi:bag-got", { detail: { key: got.key } }));
         // A rare find that taught a recipe: its card follows the catch's.
         if (recipe) window.dispatchEvent(new CustomEvent("tsi:recipe-learned", { detail: recipe }));
@@ -649,7 +664,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
         bug.dir = Math.atan2(bx - p.x, bz - p.z); bug.side = bug.x * 7.3 + bug.z * 3.1 - Math.floor(bug.x * 7.3 + bug.z * 3.1) < 0.5 ? 1 : -1;
         // Its wings brushing off (a quick, high brush), never the door sound; and a word over where it was.
         AudioManager.playSFX("footstep", { rate: 1.7, gain: 0.45 });
-        window.dispatchEvent(new CustomEvent("tsi:bug-fled", { detail: { x: bug.fx, z: bug.fz } }));
+        if (NEW_WORLD) window.dispatchEvent(new CustomEvent("tsi:bug-fled", { detail: { x: bug.fx, z: bug.fz } }));
         continue;
       }
       const wary = reaction === "wary" || reaction === "catchable";
