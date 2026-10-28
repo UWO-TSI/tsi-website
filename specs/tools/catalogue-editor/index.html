@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Catalogue Editor</title>
+<style>
+:root {
+  --bg: #f6f2e9; --panel: #fffdf8; --ink: #2d2a24; --ink-2: #6b6457; --line: #e3dccd; --accent: #3f7d6e; --accent-ink: #fff;
+  --on: #3f7d6e; --off: #ece6d8; --warn: #b5482f; --changed: #d98b2b; --focus: #2f6fd6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1b1d1f; --panel: #24272a; --ink: #ece8df; --ink-2: #a9a397; --line: #383c40; --accent: #6cb8a5; --accent-ink: #10201c;
+    --on: #6cb8a5; --off: #33373b; --warn: #ef8a70; --changed: #f0a94a; --focus: #7aa7ff;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1b1d1f; --panel: #24272a; --ink: #ece8df; --ink-2: #a9a397; --line: #383c40; --accent: #6cb8a5; --accent-ink: #10201c;
+  --on: #6cb8a5; --off: #33373b; --warn: #ef8a70; --changed: #f0a94a; --focus: #7aa7ff;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; overflow-x: hidden; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+#root { max-width: 980px; margin: 0 auto; padding: 16px; }
+header h1 { margin: 0 0 2px; font-size: 22px; }
+header p { margin: 0; color: var(--ink-2); font-size: 13px; }
+.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; }
+.status { font-size: 13px; color: var(--ink-2); }
+.status.bad { color: var(--warn); }
+input[type=search] { flex: 1 1 220px; min-width: 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+nav[role=tablist] { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+nav[role=tablist] button { flex: none; border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+nav[role=tablist] button[aria-selected=true] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.count { font-size: 12px; opacity: .8; margin-left: 4px; }
+.count b { color: var(--changed); }
+nav[role=tablist] button[aria-selected=true] .count b { color: inherit; }
+ul.list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+details { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+details.changed { border-color: var(--changed); }
+summary { display: grid; grid-template-columns: 48px 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; cursor: pointer; list-style: none; }
+summary::-webkit-details-marker { display: none; }
+summary img { width: 48px; height: 48px; object-fit: contain; }
+.name { font-weight: 600; }
+.kind { font-size: 11px; color: var(--ink-2); text-transform: uppercase; letter-spacing: .04em; margin-left: 6px; font-weight: 500; }
+.line { font-size: 13px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.chip { font-size: 12px; padding: 1px 7px; border-radius: 999px; background: var(--off); }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; vertical-align: 0; }
+.badge { font-size: 11px; font-weight: 700; color: var(--bg); background: var(--changed); padding: 2px 7px; border-radius: 999px; }
+.badge[hidden] { display: none; }
+.edit { border-top: 1px solid var(--line); padding: 12px; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 14px 18px; }
+.field { min-width: 0; }
+.field.wide { grid-column: 1 / -1; }
+.label { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 600; color: var(--ink-2); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+.was { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--changed); }
+.seg { display: flex; flex-wrap: wrap; gap: 4px; }
+.seg button { border: 1px solid var(--line); background: var(--off); border-radius: 8px; padding: 5px 9px; cursor: pointer; min-height: 32px; }
+.seg button[aria-pressed=true] { background: var(--on); color: var(--accent-ink); border-color: var(--on); }
+.months { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.months button { padding: 5px 0; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+input[type=number], input[type=text], select { padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); min-width: 0; }
+input[type=number] { width: 90px; }
+input[type=text] { width: 100%; }
+.hint { font-size: 12px; color: var(--ink-2); }
+.err { font-size: 12px; color: var(--warn); }
+.hours { position: relative; height: 40px; margin: 6px 12px 2px; touch-action: none; user-select: none; -webkit-user-select: none; }
+.hours .cells { position: absolute; inset: 8px 0; display: grid; grid-template-columns: repeat(24, 1fr); border-radius: 6px; overflow: hidden; background: var(--off); cursor: crosshair; }
+.hours .cells i { border-left: 1px solid var(--line); }
+.hours .cells i:first-child { border-left: 0; }
+.hours .cells i.on { background: var(--on); }
+.hours.off { opacity: .45; }
+.hours .h { position: absolute; top: 2px; width: 22px; height: 36px; margin-left: -11px; border-radius: 6px; border: 2px solid var(--ink); background: var(--panel); cursor: ew-resize; padding: 0; touch-action: none; }
+.hours .h::after { content: ""; position: absolute; inset: 8px 8px; border-left: 2px solid var(--ink-2); }
+.ticks { display: flex; justify-content: space-between; margin: 0 12px; font-size: 11px; color: var(--ink-2); }
+.reset { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+.empty { color: var(--ink-2); padding: 20px 0; text-align: center; }
+@media (max-width: 480px) { summary { grid-template-columns: 40px 1fr auto; } summary img { width: 40px; height: 40px; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

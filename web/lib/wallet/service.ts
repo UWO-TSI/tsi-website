@@ -6,7 +6,7 @@
 import { ROSTER } from "@/lib/collections/roster";
 import { FISH } from "@/lib/game/fishing";
 import { fnv1a } from "@/lib/game/weatherSystem";
-import { dailySpecials, effectivePrice, isOnSale, ownedCounts, sellPrice, speciesClass, TAB_OF, torontoDay, type ShopItem, type Special } from "./rules";
+import { dailySpecials, effectivePrice, isOnSale, ownedCounts, speciesClass, speciesSellPrice, TAB_OF, torontoDay, type ShopItem, type Special } from "./rules";
 import { toFailure, type Result } from "@/lib/result";
 import { EconomyError, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation } from "./store";
 
@@ -134,7 +134,7 @@ export const sellList = (store: EconomyStore, m: string) =>
     return rows
       .flatMap((r) => {
         const cls = speciesClass(r.item_key);
-        const price = cls ? sellPrice(cls.category, cls.rarity) : null;
+        const price = speciesSellPrice(r.item_key);
         if (!cls || !price) return [];
         const name = ROSTER.find((s) => s.key === r.item_key)?.name ?? FISH_NAME.get(r.item_key) ?? r.item_key;
         return [{ item_key: r.item_key, name, category: cls.category, rarity: cls.rarity, count: r.count, price_each: price, locked: r.locked === true }];
