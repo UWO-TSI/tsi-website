@@ -429,3 +429,6 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - flat kit pieces RewardPop (RewardCard renders it) and BigMoment (the level-up card);
   - pickaxe parked behind the drop flag `cave`.
   At merge, fold BigMoment and tutorial-v2's moments.tsx (QuestCheck) into one file in components/gui/flat.
+- **Shipped 2026-10-28 afternoon:**
+  - remodel round 3: deploy uwotsi-9lz2udslo, Ready.
+  - fish-tiers e6ab258e, with catalogue-editor round 2 and the rarity ladder: merge 9d825100, main = de87c07f. Prod dump prod-before-fish-tiers-20261028-1610.dump. Applied 20261027140000, 180000, 183120, 185416 and 20261028150000, logged in migrations.log. Checked: sell_price column, ladder through contraband, 0 legendary species, divine cap; verify shows 0 tables without RLS and the usual definers. Deploy uwotsi-3jtxoql5m was queued at push; confirm Ready.
