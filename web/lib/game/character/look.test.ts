@@ -176,9 +176,9 @@ describe("looks", () => {
     expect(resolveParts(wear(DEFAULT_LOOK, "top", "top_tsi_crew")).find(p => p.id === "top_tsi_crew")!.design).toBe(DESIGNS.cells.tsi_crew);
     expect(resolveParts(DEFAULT_LOOK).find(p => p.id === "shoes_slipon")!.tints.M_Sole).toBe("#C9A63A");
   });
-  it("wears the hair as one of David's 22 whole hairstyles (21 less #14, wardrobe batch 2's five, less #24 and the hair shelf's three: #8 and #9 removed, #22 is its hat alone), hidden under a hat or hood (head-roblox)", () => {
+  it("wears the hair as one of David's 32 whole hairstyles (21 less #14, wardrobe batch 2's five, less #24 and the hair shelf's three: #8 and #9 removed, #22 is its hat alone; batch 3's 15 less #29, #31, #33, #36 and #38), hidden under a hat or hood (head-roblox)", () => {
     const hair = PARTS.filter(p => p.slot === "bangs" || p.slot === "back");
-    expect(hair).toHaveLength(22);
+    expect(hair).toHaveLength(32);
     expect(hair.every(p => p.slot === "back" && p.full && p.roblox)).toBe(true);
     expect(DEFAULT_LOOK.bangs).toBe("");
     expect(PART_BY_ID.get(DEFAULT_LOOK.back)?.full).toBe(true);
@@ -229,7 +229,8 @@ describe("looks", () => {
   });
   it("draws every hairstyle as one primitive in one material; a cap or visor is drawn as it is (never recoloured)", () => {
     for (const p of PARTS.filter(p => p.slot === "bangs" || p.slot === "back")) expect(p.materials.map(m => m.name), p.id).toEqual(["M_Hair"]);
-    expect(PARTS.filter(p => p.map?.fixed).map(p => p.id).sort()).toEqual(["acc_visor", "hair_dreads_cap"]);
+    // batch 3: #34's ski mask, and the scalp and edges drawn in a skin colour (#36, #39, #40)
+    expect(PARTS.filter(p => p.map?.fixed).map(p => p.id).sort()).toEqual(["acc_visor", "hair_dreads_cap", "hair_freeform_afro", "hair_ski_mask_dreads", "hair_sponge_twists"]);
   });
   it("splits #8's visor off its hair into a hat drawn as it is (head-roblox, David)", () => {
     const hair = PART_BY_ID.get("hair_messy_boy")!, visor = PART_BY_ID.get("acc_visor")!;
@@ -247,7 +248,7 @@ describe("looks", () => {
     for (const url of Object.values(HAIR_MAPS_URLS)) expect(existsSync(join(web, "public", url)), url).toBe(true);
     const cells = PARTS.filter(p => p.map).map(p => p.map!.cell);
     expect(new Set(cells).size).toBe(cells.length);
-    expect(cells.every(c => Number.isInteger(c) && c >= 0 && c < 30)).toBe(true);
+    expect(cells.every(c => Number.isInteger(c) && c >= 0 && c < 6 * 7)).toBe(true);   // hair_colour.png: 6 x 7 cells (batch 3 added two rows)
   });
   it("random looks are always valid and seeded ones repeat", () => {
     for (let i = 0; i < 200; i++) { const look = randomLook(seeded(i)); expect(parseLook(JSON.parse(JSON.stringify(look)))).toEqual(look); }
@@ -313,8 +314,9 @@ describe("David's wardrobe cut (playtest round 1, 2026-10-14)", () => {
       }
     }
     for (const id of CRAFT_ONLY) expect(PART_BY_ID.get(id)?.item, id).toBeTruthy();
-    // 23 eyes and 25 mouths after the cut, then wardrobe batch 2's faces #20-25: six eyes and five mouths (#24 has none)
-    expect([Object.keys(FACE.layers.eyes.items).length, Object.keys(FACE.layers.mouth.items).length]).toEqual([23 + 6, 25 + 5]);
+    // 23 eyes and 25 mouths after the cut, then wardrobe batch 2's faces #20-25: six eyes and five mouths (#24 has none);
+    // then batch 3's #26-32 less #30 (removed): six of each
+    expect([Object.keys(FACE.layers.eyes.items).length, Object.keys(FACE.layers.mouth.items).length]).toEqual([23 + 6 + 6, 25 + 5 + 6]);
   });
 
   it("loads a saved look wearing several removed parts with each slot's default, keeping the rest", () => {
@@ -349,18 +351,21 @@ describe("wardrobe batch 2 (specs/playtest-round1.md \"New wardrobe batch\"; Dav
     return Array.from(new Float32Array(Uint8Array.from(bin!.subarray(at, at + acc.count * 8)).buffer));   // a copy: Buffer.slice is a view
   }
 
-  it("imports every item David didn't skip, by its pricing key: hairs #23, #25-31 and #22's hat, accessories #01-24 but #16 (and #12 and #13, deleted) and #07 in silver, faces #20-25", () => {
+  // wardrobe batch 3 (specs/lanes/wardrobe-b3.md): David priced what's left on the shelf page, 2026-10-27
+  const B3_REMOVED = ["hair-33", "hair-35", "hair-37", "hair-40", "hair-42", "acc-26", "face-30"];   // David: fluffy crop, long windswept, tousled spikes, space buns, messy with a braid, cross bandage, moody face (keys stay unused)
+  it("imports every item David didn't skip, by its pricing key: hairs #23, #25-31 and #22's hat, accessories #01-24 but #16 (and #12 and #13, deleted) and #07 in silver, faces #20-25, and batch 3's priced ones", () => {
     const keys = Object.keys(BATCH2_PRICES);
-    expect(keys).toHaveLength(38);
+    expect(keys).toHaveLength(38 + 18);                                              // batch 3: 18 priced
     expect(keys.some(k => k === "acc-12" || k === "acc-13")).toBe(false);           // row 314: duplicates of #10 and #07
     expect(PART_BY_ID.has("acc_wheat_sprig") || PART_BY_ID.has("acc_round_wire_glasses")).toBe(false);
     expect(keys.filter(k => BATCH2_PRICES[k].mode === "skip")).toEqual(["acc-16"]);
     const imported = [...keyed.map(p => p.key!), ...Object.keys(FACE.faces)].sort();
     expect(imported).toEqual(keys.filter(k => k !== "acc-16").sort());
+    for (const k of B3_REMOVED) expect(priceOf(k), k).toBeNull();            // a removed item is never priced
     expect(new Set(imported).size).toBe(imported.length);
     // round 2: hair-22 is #22's ushanka and goggles alone (its hair is gone)
     expect(keyed.filter(p => p.key!.startsWith("hair-")).every(p => (p.slot === "back" && p.full) || p.id === "acc_ushanka_goggles")).toBe(true);
-    expect(keyed.filter(p => p.key!.startsWith("acc-"))).toHaveLength(22);
+    expect(keyed.filter(p => p.key!.startsWith("acc-"))).toHaveLength(24);   // batch 3's two, less nothing: the cross bandage (acc-26) is removed
     for (const k of keys) expect(priceOf(k), k).toEqual(BATCH2_PRICES[k]);
     expect(priceOf(undefined)).toBeNull();
   });
@@ -450,11 +455,11 @@ describe("wardrobe batch 2 (specs/playtest-round1.md \"New wardrobe batch\"; Dav
     expect(priceOf("acc-07s")).toEqual(priceOf("acc-07"));
     expect(partRef(silver.id)).toBe(silver.id);
   });
-  it("hair shelf (David, 2026-10-27): 14 free hairstyles and 8 in the shop; three removed", () => {
+  it("hair shelf (David, 2026-10-27): 14 free hairstyles and 8 in the shop; three removed (and batch 3's 10: 5 free, 5 in the shop)", () => {
     const hairs = PARTS.filter(p => p.slot === "back");
     const shop = hairs.filter(p => partRef(p.id)).map(p => p.id).sort();
-    expect(hairs).toHaveLength(22);
-    expect(shop).toEqual(["hair_baby_sprout", "hair_curly_pigtails", "hair_double_buns", "hair_emo_layers", "hair_layered_shag", "hair_ribbon_bob", "hair_swept_fringe", "hair_vkei"]);
+    expect(hairs).toHaveLength(22 + 10);
+    expect(shop).toEqual(["hair_baby_sprout", "hair_buns_braid", "hair_curly_pigtails", "hair_double_buns", "hair_emo_layers", "hair_layered_shag", "hair_ribbon_bob", "hair_ski_mask_dreads", "hair_rolled_mask", "hair_spiky_messy", "hair_sponge_twists", "hair_swept_fringe", "hair_vkei"].sort());
     for (const id of ["hair_baby_sprout", "hair_layered_shag", "hair_swept_fringe", "hair_vkei", "hair_ribbon_bob", "hair_double_buns"]) expect(priceOf(PART_BY_ID.get(id)!.key), id).toEqual({ mode: "coins", price: 350 });
     for (const id of ["hair_curly_pigtails", "hair_emo_layers"]) expect(priceOf(PART_BY_ID.get(id)!.key), id).toEqual({ mode: "gems", price: 200 });
     // removed: gone from the catalogue, and a look wearing one (or the old wavy fringe) loads as a free hairstyle

@@ -80,12 +80,14 @@ LIMITS = {
     # 62.8 away, the mouths 58.5); the default parts keep the flat face's limit (face_default_facing_max_deg). Renders
     # of those parts on v10: specs/evidence/head-v10/ (extreme faces). Wardrobe batch 2 (2026-10-16): David's faces #20-25,
     # placed as set 305 is (the same Roblox head), reach further round: his wide cat eyes (#20) to 63.6 deg and facing
-    # 66.6 away; the limits follow his widest parts again, a little over (renders: specs/evidence/wardrobe-b2/).
+    # 66.6 away; the limits follow his widest parts again, a little over (renders: specs/evidence/wardrobe-b2/). Wardrobe
+    # batch 3 (2026-10-27): #28's big shiny eyes reach 65.2 deg round and #29's tears run down the cheeks to face 81.6
+    # away; the limits follow them again, a little over (renders: specs/evidence/wardrobe-b3/, for David's review).
     "face_stretch_max": 1.7,       # texture stretch where features are painted
     "face_aniso_max": 2.5,     # round 2 (2026-10-17): the halfway jaw David approved; the worst is an eye cell's corner at the
                                # canvas's bottom edge (W 0.97, under the chin), 2.27 before the fuller jaw
-    "eye_reach_lon_max_deg": 64.5,  # how far round the head (azimuth) any eye pixel sits (v8 55: ref 18's lid ends ~51)
-    "face_facing_max_deg": 67.5,   # no painted pixel of any eye or mouth faces more than this away from straight ahead
+    "eye_reach_lon_max_deg": 66.0,  # how far round the head (azimuth) any eye pixel sits (v8 55: ref 18's lid ends ~51)
+    "face_facing_max_deg": 82.5,   # no painted pixel of any eye or mouth faces more than this away from straight ahead
     "face_default_facing_max_deg": 52.0,   # the default eyes and mouth (FACEV defaults): the flat face's limit, kept
     "lock_roots_exposed": 0,       # lock root-ring vertices not buried in the head or other hair
     "lock_dive_max": 0.002,        # m: how deep a lock's outward-facing surface goes under the skin past its root zone
@@ -429,14 +431,15 @@ for layer, mask in LAYER_MASK.items():
     per_layer[layer] = {"stretch": round(ls, 3), "aniso": round(la, 3)}
 
 
-eye_reach, eye_lon, eye_centres, eye_lon_id = 0.0, 0.0, {}, None
+eye_reach, eye_lon, eye_centres, eye_lon_id, eye_reach_id = 0.0, 0.0, {}, None, None
 for fid in FACEV["layers"]["eyes"]["items"]:
     a = item_alpha("eyes", fid, RES)
     ys, xs = np.nonzero(a > 0.5)
     for k in range(0, len(xs), 3):
         p = locate((xs[k] + 0.5) / RES, (ys[k] + 0.5) / RES)
         if p is not None:
-            eye_reach = max(eye_reach, facing(p))
+            if facing(p) > eye_reach:
+                eye_reach, eye_reach_id = facing(p), fid
             if abs(lon_of(p)) > eye_lon:
                 eye_lon, eye_lon_id = abs(lon_of(p)), fid
     cen = {}
@@ -481,7 +484,7 @@ def PAGE2_EYE(fid):
     cell = it["open"] if isinstance(it, dict) else it
     return len(cell) > 6 and cell[6] == 1
 face = {"feature_tris": n_feat, "stretch_max": round(worst_stretch, 3), "aniso_max": round(worst_aniso, 3), "per_layer": per_layer,
-        "stretch_worst_at": worst_at, "aniso_worst_at": aniso_at, "eye_reach_deg": round(eye_reach, 1), "eye_reach_lon_deg": round(eye_lon, 1), "eye_reach_lon_item": eye_lon_id, "facing_max_deg": facing_max,
+        "stretch_worst_at": worst_at, "aniso_worst_at": aniso_at, "eye_reach_deg": round(eye_reach, 1), "eye_reach_item": eye_reach_id, "eye_reach_lon_deg": round(eye_lon, 1), "eye_reach_lon_item": eye_lon_id, "facing_max_deg": facing_max,
         "default_facing_deg": default_facing,
         "default_eye_centre_lon_deg": round(abs(lon_of(dflt["L"])), 1) if dflt.get("L") else None,
         "default_eye_centre_z": round(dflt["L"].z, 4) if dflt.get("L") else None}

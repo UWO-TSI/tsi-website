@@ -33,7 +33,7 @@ function place(group: THREE.Group | null, body: THREE.Object3D, p: SwimPose) {
  * A fish's model laid level (head first along +z, back up), centred, `length` long: the museum's tank and the HQ's
  * trophy case both show it this way.
  */
-export function levelFish(scene: THREE.Object3D, def: FishDef, length: number): THREE.Group {
+export function levelFish(scene: THREE.Object3D, def: Pick<FishDef, "model" | "raw">, length: number): THREE.Group {
   const model = tagLookClasses(cloneSkeleton(scene), def.model);
   // Raw dump exports (×10, lying along z) first get the catalogue's calibration so they hang head up like the rest.
   const hang = new THREE.Group();

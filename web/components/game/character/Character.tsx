@@ -228,7 +228,7 @@ function lookPieces(look: CharacterLook, parts: ResolvedPart[], base: THREE.Obje
   const skinCuts: PieceCut[] = hooded ? [{ name: "_HOODCUT", bit: 0 }] : [];
   for (const p of parts) { const bit = PART_BY_ID.get(p.id)?.bodyCut; if (bit !== undefined) skinCuts.push({ name: "_BODYCUT", bit }); }
   return [{ root: base, tints: { M_Skin: PALETTE.skin[look.skin] }, keep: (m: string) => m === "M_Skin", cuts: skinCuts },
-    ...parts.map((p, i) => ({ root: scenes[i], tints: p.tints, map: p.map,
+    ...parts.map((p, i) => ({ root: scenes[i], tints: p.tints, map: p.map, fit: p.fit,
       cuts: hat && PART_BY_ID.get(p.id)?.full ? [{ name: "_HATCUT", bit: hat.hatCut! }] : [],
       design: p.design === null ? null : { use: designUse(p.design), materials: DESIGNS.materials } }))];
 }

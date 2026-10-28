@@ -12,17 +12,18 @@ DO $$
 BEGIN
   -- Every priced item is one row at David's price: 5 hairstyles, 22 accessories (#22's ushanka and goggles, #07 in silver),
   -- 4 whole faces (#12 and #13 deleted, #22's hair removed). Hair shelf (David, 2026-10-27): four more hairstyles on sale at
-  -- 350 coins, and Wavy half-up removed (its row stays, off sale).
-  ASSERT (SELECT count(*) FROM shop_items WHERE position BETWEEN 600 AND 799) = 35, 'thirty-five batch-2 rows (the wavy half-up row kept, off sale)';
-  ASSERT (SELECT count(*) FROM shop_items WHERE position BETWEEN 600 AND 799 AND category = 'hair' AND slug LIKE 'wear-hair-%' AND active) = 8, 'eight hairstyles on sale';
+  -- 350 coins, and Wavy half-up removed (its row stays, off sale). Wardrobe batch 3 (David, 2026-10-27): five more hairstyles, two
+  -- accessories and six whole faces on sale.
+  ASSERT (SELECT count(*) FROM shop_items WHERE position BETWEEN 600 AND 799) = 48, 'forty-eight batch 2 and 3 rows (the wavy half-up row kept, off sale)';
+  ASSERT (SELECT count(*) FROM shop_items WHERE position BETWEEN 600 AND 799 AND category = 'hair' AND slug LIKE 'wear-hair-%' AND active) = 13, 'thirteen hairstyles on sale';
   ASSERT NOT (SELECT active FROM shop_items WHERE slug = 'wear-hair-wavy-half-up'), 'wavy half-up is off sale';
   ASSERT (SELECT count(*) FROM shop_items WHERE slug IN ('wear-hair-baby-sprout', 'wear-hair-layered-shag', 'wear-hair-swept-fringe', 'wear-hair-vkei') AND price_coins = 350 AND active) = 4, 'four more hairstyles at 350 coins';
-  ASSERT (SELECT count(*) FROM shop_items WHERE position BETWEEN 600 AND 799 AND category = 'accessory') = 22, 'twenty-two accessories';
-  ASSERT (SELECT count(*) FROM shop_items WHERE position BETWEEN 600 AND 799 AND category = 'face' AND catalogue_ref LIKE 'face:%') = 4, 'four whole faces';
+  ASSERT (SELECT count(*) FROM shop_items WHERE position BETWEEN 600 AND 799 AND category = 'accessory') = 24, 'twenty-four accessories';
+  ASSERT (SELECT count(*) FROM shop_items WHERE position BETWEEN 600 AND 799 AND category = 'face' AND catalogue_ref LIKE 'face:%') = 10, 'ten whole faces';
   ASSERT NOT EXISTS (SELECT 1 FROM shop_items WHERE position BETWEEN 600 AND 799 AND slug <> 'wear-hair-wavy-half-up' AND (NOT active OR coalesce(starter_qty, 0) > 0)), 'all sold but the removed wavy half-up, none a starter';
   -- One price each: coins in price_coins, Gems in tc_price (shop_items_one_price).
   ASSERT NOT EXISTS (SELECT 1 FROM shop_items WHERE position BETWEEN 600 AND 799 AND (price_coins IS NULL) = (tc_price IS NULL)), 'one currency each';
-  ASSERT (SELECT count(*) FROM shop_items WHERE position BETWEEN 600 AND 799 AND tc_price IS NOT NULL) = 12, 'twelve in Gems (2 hairstyles, 10 accessories)';
+  ASSERT (SELECT count(*) FROM shop_items WHERE position BETWEEN 600 AND 799 AND tc_price IS NOT NULL) = 19, 'nineteen in Gems (4 hairstyles, 11 accessories, 4 faces)';
   ASSERT (SELECT tc_price = 200 AND price_coins IS NULL AND category = 'accessory' AND catalogue_ref = 'acc_ushanka_goggles' FROM shop_items WHERE slug = 'wear-acc-ushanka-goggles'), '#22 is its ushanka and goggles, 200 Gems';
   ASSERT NOT EXISTS (SELECT 1 FROM shop_items WHERE slug = 'wear-hair-goggle-ushanka' OR catalogue_ref = 'hair_goggle_ushanka'), '#22''s hair is gone';
   ASSERT (SELECT price_coins = 350 FROM shop_items WHERE slug = 'wear-hair-ribbon-bob'), '#23 is 350 coins';
@@ -40,7 +41,7 @@ BEGIN
   ASSERT (SELECT display_name FROM shop_items WHERE slug = 'wear-acc-ushanka-goggles') = 'Ushanka and goggles', '#22 named for its hat';
   ASSERT NOT (SELECT active FROM shop_items WHERE slug = 'net-basic') AND NOT (SELECT active FROM shop_items WHERE slug = 'shovel-basic'), 'the tier-1 net and shovel stay retired';
   ASSERT NOT EXISTS (SELECT 1 FROM shop_items WHERE slug LIKE '%visor-blue%' OR slug LIKE '%sci-fi%'), 'the sci-fi visor skipped';
-  ASSERT NOT EXISTS (SELECT 1 FROM shop_items WHERE position BETWEEN 600 AND 799 AND special_pool <> (price_coins IS NOT NULL)), 'specials: coin rows only';
+  ASSERT NOT EXISTS (SELECT 1 FROM shop_items WHERE position BETWEEN 600 AND 799 AND slug <> 'wear-hair-wavy-half-up' AND special_pool <> (price_coins IS NOT NULL AND category = 'accessory')), 'specials: coin accessories only (a hairstyle or face has no plinth model)';
   -- Every row has its icon; earlier rows did not move.
   ASSERT NOT EXISTS (SELECT 1 FROM shop_items WHERE position BETWEEN 600 AND 799 AND sprite_url NOT LIKE '/assets/icons/%'), 'icons set';
   ASSERT (SELECT position FROM shop_items WHERE slug = 'wear-acc-visor') = 232 AND (SELECT position FROM shop_items WHERE slug = 'dye-wheat-blonde') = 233, 'earlier rows in place';
@@ -90,7 +91,7 @@ END $$;
 \ir ../migrations/20261017172740_catalogue_seed.sql
 DO $$
 BEGIN
-  ASSERT (SELECT count(*) FROM shop_items WHERE position BETWEEN 600 AND 799) = 35, 'still thirty-five rows';
+  ASSERT (SELECT count(*) FROM shop_items WHERE position BETWEEN 600 AND 799) = 48, 'still forty-eight rows';
   ASSERT EXISTS (SELECT 1 FROM member_inventory i JOIN shop_items s ON s.id = i.item_id WHERE s.slug = 'face-silly-cat'), 'the buyer keeps the face';
   ASSERT (SELECT tc_price FROM shop_items WHERE slug = 'glitch-aura') = 250, 'still 250 Gems';
   RAISE NOTICE 'wardrobe b2 ok';

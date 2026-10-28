@@ -79,6 +79,10 @@
   "tris": 864,
   "lod1": 380
  },
+ "accessories/roblox/acc_face_bandaids.glb": {
+  "tris": 422,
+  "lod1": 250
+ },
  "accessories/roblox/acc_gold_monocle.glb": {
   "tris": 909,
   "lod1": 326
@@ -98,6 +102,10 @@
  "accessories/roblox/acc_half_rim_glasses_silver.glb": {
   "tris": 422,
   "lod1": 250
+ },
+ "accessories/roblox/acc_kitty_bow_glasses.glb": {
+  "tris": 422,
+  "lod1": 302
  },
  "accessories/roblox/acc_monkey_ears.glb": {
   "tris": 844,
@@ -163,6 +171,14 @@
   "tris": 2640,
   "lod1": 1360
  },
+ "hair/full/hair_braided_pigtails.glb": {
+  "tris": 3694,
+  "lod1": 1886
+ },
+ "hair/full/hair_buns_braid.glb": {
+  "tris": 4391,
+  "lod1": 2234
+ },
  "hair/full/hair_curly_pigtails.glb": {
   "tris": 4208,
   "lod1": 2143
@@ -178,6 +194,10 @@
  "hair/full/hair_emo_layers.glb": {
   "tris": 4385,
   "lod1": 2232
+ },
+ "hair/full/hair_freeform_afro.glb": {
+  "tris": 4304,
+  "lod1": 2192
  },
  "hair/full/hair_hime_short.glb": {
   "tris": 4385,
@@ -207,13 +227,41 @@
   "tris": 4381,
   "lod1": 2230
  },
+ "hair/full/hair_middle_part.glb": {
+  "tris": 3994,
+  "lod1": 2037
+ },
+ "hair/full/hair_mod_cut.glb": {
+  "tris": 851,
+  "lod1": 851
+ },
  "hair/full/hair_ribbon_bob.glb": {
   "tris": 4291,
   "lod1": 2184
  },
+ "hair/full/hair_rolled_mask.glb": {
+  "tris": 4016,
+  "lod1": 2047
+ },
  "hair/full/hair_short_tufts.glb": {
   "tris": 4370,
   "lod1": 2224
+ },
+ "hair/full/hair_ski_mask_dreads.glb": {
+  "tris": 4398,
+  "lod1": 2239
+ },
+ "hair/full/hair_spiky_messy.glb": {
+  "tris": 4255,
+  "lod1": 2166
+ },
+ "hair/full/hair_sponge_twists.glb": {
+  "tris": 4160,
+  "lod1": 2120
+ },
+ "hair/full/hair_straight_layers.glb": {
+  "tris": 4048,
+  "lod1": 2063
  },
  "hair/full/hair_swept_fringe.glb": {
   "tris": 4363,

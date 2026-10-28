@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as THREE from "three";
@@ -6,7 +6,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { adoptPrimitive, CUTS, DESIGN_U, hasBit, mergeLook, refCache, skinnedPrimitives } from "./rig";
 import { NO_SHIFT } from "./hairColour";
-import { DESIGNS, designUse, PART_BY_ID, PARTS } from "./look";
+import { DESIGNS, designUse, FIT, PART_BY_ID, PARTS, resolveParts, DEFAULT_LOOK, bodyKey } from "./look";
 
 function skinned(boneNames: string[], joints: number[], color?: number[]) {
   const bones = boneNames.map(n => Object.assign(new THREE.Bone(), { name: n }));
@@ -194,5 +194,60 @@ describe("character rig assembly", () => {
     expect(cache.acquire("a", make)).toBe(cache.acquire("a", make));
     cache.release("a"); expect(disposed).toBe(0);
     cache.release("a"); expect([disposed, cache.size()]).toEqual([1, 0]);
+  });
+});
+
+describe("David's fit (the fit editor: catalogue `fit`, a head piece's `x`, `y`, `z` in metres along the head's axes)", () => {
+  // the tests set their own fits: each starts from none, and the catalogue's go back after
+  const saved = { ...FIT };
+  beforeEach(() => { for (const k in FIT) delete FIT[k]; });
+  afterEach(() => { for (const k in FIT) delete FIT[k]; Object.assign(FIT, saved); });
+  const head = (bones: readonly THREE.Bone[]) => bones.find(b => b.name === "mixamorigHead")!;
+  it("binds every head piece's head with its axes on the bind axes, so a move is along the head's own axes", async () => {
+    for (const p of PARTS.filter(x => x.slot === "back" || x.group === "face" || x.group === "head")) {
+      const m = skinnedPrimitives(await load(p.glb))[0], i = m.skeleton.bones.findIndex(b => b.name === "mixamorigHead");
+      const bind = m.skeleton.boneInverses[i].clone().invert();
+      for (const [c, axis] of [[0, [1, 0, 0]], [1, [0, 1, 0]], [2, [0, 0, 1]]] as const)
+        expect(new THREE.Vector3().setFromMatrixColumn(bind, c).distanceTo(new THREE.Vector3(...axis)), `${p.id} axis ${c}`).toBeLessThan(1e-5);
+      expect(m.bindMatrix.equals(new THREE.Matrix4()), p.id).toBe(true);
+    }
+  });
+  it("moves the piece in the game's scene by exactly each axis's value along the head's own axis, at rest and with the head turned", async () => {
+    for (const file of ["hair/full/hair_bowl_cut.glb", "accessories/roblox/acc_thin_glasses.glb"]) {
+      const root = await load(file), src = skinnedPrimitives(root)[0], bones = src.skeleton.bones;
+      const draw = (fit: readonly number[]) => {
+        const m = new THREE.SkinnedMesh(mergeLook([{ root, tints: {}, fit }], bones));
+        m.bind(src.skeleton, src.bindMatrix);
+        return m;
+      };
+      const plain = draw([0, 0, 0]);
+      const moved = [0, 1, 2].map(c => [c, [0.025, -0.012, 0.007][c]] as const).map(([c, v]) => [c, v, draw([0, 1, 2].map(k => (k === c ? v : 0)))] as const);
+      const check = () => {
+        root.updateMatrixWorld(true);
+        const a = new THREE.Vector3(), b = new THREE.Vector3(), n = plain.geometry.getAttribute("position").count;
+        for (const [c, v, m] of moved) {
+          const axis = new THREE.Vector3().setFromMatrixColumn(head(bones).matrixWorld, c).normalize();
+          for (let i = 0; i < n; i += 97) {
+            plain.getVertexPosition(i, a); m.getVertexPosition(i, b);
+            const d = b.sub(a);
+            expect(d.length()).toBeCloseTo(Math.abs(v), 6);
+            expect(d.normalize().dot(axis)).toBeCloseTo(Math.sign(v), 6);
+          }
+        }
+      };
+      check();
+      head(bones).rotation.x += 0.5; head(bones).rotation.y += 0.4; head(bones).rotation.z -= 0.3;
+      check();
+    }
+  });
+  it("comes from the catalogue: a part's fit resolves, changes the body's cache key, and is zeros when unset", () => {
+    const look = { ...DEFAULT_LOOK };
+    expect(resolveParts(look).every(p => p.fit.every(v => v === 0))).toBe(true);
+    const key = bodyKey(look);
+    FIT[look.back] = { x: 0.002, y: 0.01 };
+    try {
+      expect(resolveParts(look).find(p => p.id === look.back)!.fit).toEqual([0.002, 0.01, 0]);
+      expect(bodyKey(look)).not.toBe(key);
+    } finally { delete FIT[look.back]; }
   });
 });

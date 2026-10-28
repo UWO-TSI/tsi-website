@@ -313,3 +313,23 @@ The full set is in `CLAUDE.md`, `specs/lane-rules.md` and the memory files.
 - Never edit applied migrations.
 - Stop for anything destructive, costing money or irreversible. Otherwise merge and deploy verified, approved work without asking.
 - No idle polling.
+
+## Locks (2026-10-27, learned the hard way)
+
+- `withlock.sh` is the only lock mechanism. There is no devserver queue: a queue file some lanes waited on (and withlock never read) starved them for two hours, so it was deleted. Never recreate one.
+- `push-main.sh` takes the heavy lock itself. Run it bare, never inside `withlock.sh heavy`, or it waits on its own lock forever (that held the heavy lock for 40 minutes).
+- Retry loops over withlock must check the exit code (75 means it gave up); a `| tail` hides it.
+
+## 2026-10-28 morning: reviews open for David (collection `approvals` unless noted)
+
+| Review | URL | Lane head | Merge needs |
+|---|---|---|---|
+| Tutorial v2 | https://claude.ai/artifact/NTJjmvqTjX6aHRj9MBJkwD | game/tutorial-v2 fb5991d9 | lines.ts conflict with main-quest (keep Juno's farewell line) |
+| Loading pick (approve one of logo, boat, island) | https://claude.ai/artifact/NMFDnVSQxLHpyAQgaz1YDg | game/loading 14a42936 | lane deletes the two unpicked looks and the ?loading switch |
+| Rods and gear | https://claude.ai/artifact/NAXEqzpmfNnEASvNPoWCgS | game/rod-gear e35dd842 | migrations 20261027140000, 183120, 183200, 183713 in order |
+| Fishing depth | https://claude.ai/artifact/2t3rTrcf8YC4GGENxfW3kJ | game/fishing-depth 3f2a49a9 | migration 20261027181000 |
+| Wardrobe fixes (under-cap, monocle) | https://claude.ai/artifact/WqPLxThgbBjhKEecgogW92 | game/wardrobe-b3 d9e8298c | none; asks whether to cut Sponge twists and Freeform afro skin-tone edges |
+| Catalogue editor v2 (collection `species`) | https://claude.ai/artifact/5XzAaR5Wipoe2ZN2Hby3FG | game/catalogue-editor f5186814 | migration 20261027185416 after the rod-gear ones; apply-species.mjs for his edits |
+| Residents editor (collection `residents`) | https://claude.ai/artifact/QtZYAgMFEbFg4YNpVcBYwU | npc-editor 2a67bfb0 (main merged) | republish once main-quest (Juno) merges |
+
+Shipped 2026-10-27/28: batch 3 wardrobe (seed 20261027165850 applied), remodel round 3 step 1 (2e7bd27f). perf: v2 on main is 405/340 draws and 1.37M/1.17M triangles (over budget); lane perf-tris is on it. perf-check's lock owner must not need a space (fixed in fce65d21).

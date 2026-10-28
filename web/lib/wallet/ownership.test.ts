@@ -185,18 +185,18 @@ describe("wardrobe batch 2 (David's modes and prices, specs/wardrobe/batch2-pric
   const priced = [
     ...PARTS.filter((p) => p.key && p.key in BATCH2_PRICES).map((p) => ({ key: p.key!, ref: p.id, category: p.slot === "accessory" ? "accessory" : "hair" })),
     ...Object.entries(FACE.faces).map(([key, f]) => ({ key, ref: faceRef(f.id), category: "face" })),
-  ];
+  ].filter((x) => BATCH2_PRICES[x.key]);   // a keyed item with no price has no row
   const rowOf = (ref: string) => seedItems().filter((i) => i.catalogue_ref === ref);
 
   it("sells each item exactly as priced: coins in price_coins, Gems in tc_price (price_gems); free and skipped ones unsold", () => {
     expect(priced).toHaveLength(Object.values(BATCH2_PRICES).filter((x) => x.mode !== "skip").length);
-    expect(priced).toHaveLength(37);
+    expect(priced).toHaveLength(37 + 18);   // batch 3 priced 18 more, 2026-10-27
     for (const { key, ref, category } of priced) {
       const { mode, price } = BATCH2_PRICES[key];
       const rows = rowOf(ref);
       if (mode === "free") { expect(rows, key).toHaveLength(0); continue; }
       expect(rows, key).toHaveLength(1);
-      expect(rows[0], key).toMatchObject({ category, active: true, price_coins: mode === "coins" ? price : null, price_gems: mode === "gems" ? price : null, special_pool: mode === "coins", sprite_url: expect.stringMatching(/^\/assets\/icons\/.+\.webp$/) });
+      expect(rows[0], key).toMatchObject({ category, active: true, price_coins: mode === "coins" ? price : null, price_gems: mode === "gems" ? price : null, special_pool: mode === "coins" && category === "accessory",   /* a hairstyle or face is never a daily special */ sprite_url: expect.stringMatching(/^\/assets\/icons\/.+\.webp$/) });
     }
     expect(WARDROBE_B2_ITEMS).toHaveLength(priced.filter((x) => BATCH2_PRICES[x.key].mode !== "free").length);
     expect(WARDROBE_B2_ITEMS.filter((r) => r.price_gems !== null)).toHaveLength(Object.values(BATCH2_PRICES).filter((x) => x.mode === "gems").length);
