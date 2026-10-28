@@ -3,7 +3,8 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CATALOGUE } from "./catalogue";
 import { memoryEconomyStore } from "./memoryStore";
-import { dailySpecials, seedItems, sellPrice, speciesClass, torontoDay } from "./rules";
+import { dailySpecials, isOnSale, seedItems, sellPrice, speciesClass, torontoDay } from "./rules";
+import { DROPS } from "@/lib/game/drops";
 import { buy, claimDailyGift, equip, getShop, getWallet, pickupCode, reserveMerch, resolveMerch, sell, sellList } from "./service";
 
 const A = "00000000-0000-4000-8000-0000000000aa";
@@ -212,6 +213,14 @@ describe("the rod shop (v1-gameplay m4): the tools shelf", () => {
       ["rod_flimsy", "starter", false, 1], ["rod_lighthouse", "workbench", false, 0], ["rod_tidewarden", "workbench", false, 0]]);
     for (const s of ["rod-basic", "net-mid", "shovel-mid"]) expect(tools.some((e) => e.slug === s), s).toBe(false);
     expect(await buy(m.store, A, { item_id: slug(m, "rod-basic"), qty: 1, idempotency_key: "buy-0020" }, noon)).toMatchObject({ ok: false, code: "not_for_sale" });
+  });
+  it("hides home things on the one switch that opens homes in every world: the home island's drop, as the boat home and Claim your plot", () => {
+    // The village and the new world alike: homes open with drop 4 (lib/game/drops.ts), whatever NEXT_PUBLIC_GAME_WORLD is.
+    const sofa = seedItems().find((i) => i.slug === "furn-lounge-sofa")!, rod = seedItems().find((i) => i.slug === "rod-cedar")!;
+    expect(isOnSale(sofa, noon, true)).toBe(true);
+    expect(isOnSale(sofa, noon, false)).toBe(false);
+    expect(isOnSale(sofa, noon)).toBe(DROPS.homeIsland);
+    expect(isOnSale(rod, noon, false)).toBe(true);
   });
   it("keeps home things off the shelves until homes open", async () => {
     const m = memoryEconomyStore(() => noon);
