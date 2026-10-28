@@ -173,7 +173,7 @@ export default function DailyGift({ ready }: { ready: boolean }) {
     {box && stopped && welcome && <p className={styles.extra}><span className={styles.plus}>+</span><Paid n={welcome.gems} gems size={16} /><span className={styles.plus}>+</span><Paid n={shown.at === "opened" ? shown.coins : 0} size={16} /></p>}
     <div className={styles.actions}>
       {(shown.at === "offer" || shown.at === "opening") && <>
-        <DarkButton onClick={() => void claim()} disabled={shown.at === "opening"}>{shown.at === "opening" ? "Opening…" : <><Keycap aria-hidden="true" className={styles.key}>E</Keycap>Open</>}</DarkButton>
+        <DarkButton onClick={() => void claim()} disabled={shown.at === "opening"}>{shown.at === "opening" ? "Opening…" : <span className={styles.open}><Keycap aria-hidden="true" className={styles.key}>E</Keycap>Open</span>}</DarkButton>
         <GhostButton onClick={later} disabled={shown.at === "opening"}>Later</GhostButton>
       </>}
       {(opened || shown.at === "error") && <DarkButton disabled={!!box && !stopped} onClick={() => setPhase({ at: "done" })}>{opened ? "Thanks!" : "Close"}</DarkButton>}
