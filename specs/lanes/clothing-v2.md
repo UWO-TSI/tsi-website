@@ -38,69 +38,64 @@ Round 2: put every remaining outfit in `art/characters/outfits/` (cardigan, coll
 
 ## Status
 
-Round 1 built, in review (not merged). The TSI zip hoodie built on top of it, shots ready for David (2026-10-27). Head: see
-`git log -1` on `game/clothing-v2`.
-- **TSI zip hoodie** (part `top_tsi_zip_hoodie`, "TSI zip hoodie"): model `top/top_hoodie_zip.glb` = the universal hoodie
-  less the pullover's drawstrings (`hoodie_shell` shared by both; 263 tris, the pullover 271), same rings and weights,
-  its own body-cut bit 8 (one bit per model, rig.test; the same 24 skin triangles as bit 2). M_Main fixed `#2A4680`
-  (no colour pick). Design `tsi_zip` (cell 1): opaque wash (dusty top, deep navy hem), darker ribbed hem and cuffs,
-  silver zip with slider, stop and blue pull tab, slanted welt pockets, the patch (arched varsity TSI, cream on a navy
-  outline, "EST." and "24" in a 3 x 5 type), all primitives and type in `build_outfits.py` placed by arc length round
-  the hoodie. Unpriced: `key: "tsi-zip-hoodie"`, not in `specs/wardrobe/batch2-pricing.json` (coordinator: a keyed part
-  missing from the pricing JSON is hidden everywhere until David prices it; lane wardrobe-b3 adds that helper to look.ts.
-  On this branch alone it shows locked in the closet). The batch-2 tests now count only keys in the pricing JSON.
-- **Design atlas now 2 x 2 cells of 512 px** (still 1024 px; was 4 x 4 of 256): the logo needs ~570 texels a metre round
-  the torso to read at the creator's close-up. Room for 4 designs; round 2 needs grid 4 (2048) or smaller cells.
-- **design_uv seam fix:** a face across a family's seam with no corner on it (the hood's middle column) swept the whole
-  design row (the zip and logo showed on the hood). Its far corners now go onto the seam. UV-only change to the
-  hoodie, shorts, trousers, joggers, slip-ons and sneakers GLBs (no design on them, so nothing visible changed).
-- **Evidence** (`specs/evidence/clothing-v2/tsi-zip-hoodie/`): `photo_vs_ours.png` (photo, then front, 3/4 and back in the
-  creator's lights), `logo_closeup.png`, `run_jump_sit.png` (in game, the pullover below it), `fit_report.txt`.
-- **Gates (TSI zip hoodie):** tsc clean; vitest 3453 passed / 3 skipped, with and without `NEXT_PUBLIC_GAME_WORLD=new`;
-  eslint clean on changed files. No perf:check (no new draw call, same atlas size).
-- **Universal models** (`art/characters/outfits/build_outfits.py`, section "clothing-v2"): tee, long-sleeve, hoodie,
-  shorts, trousers, joggers, slip-ons, sneakers. One mesh per type (`model=`); the striped long-sleeve is
-  `outfits/top/top_longsleeve.glb` + the stripe design (the old `top_stripe_ls.glb` is deleted). Part ids unchanged, so
-  saved looks keep working. Triangles at or under the old ones: tee 144 (was 152), long-sleeve 248 (256), hoodie 271 (279), shorts 98
-  (114), trousers 162 (178), joggers 214 (234), slip-ons 216 (216), sneakers 156 (156).
-- **Fit:** each model's rings sit where the skin has its own, none between two across a joint; weights transferred
-  from the clip base's skin (nearest point on the same side); bottoms' leg tubes are closed at the top inside the seat
-  (a raised thigh showed the tube's open end, and the skin through it, from behind in a sit). Tried and dropped: skirt
-  weights on the seat (opened a gap mid-back).
-- **Body cut:** `hidden_cut.py bodycut` marks `_BODYCUT` on the base skin (clip base and LOD 1 skin): bit `bodyCut` per
-  model = skin hidden from every view (normal + rings at 40/70/87 degrees) in rest and every 3rd frame of all 73 clips.
-  Engine: `rig.ts` cuts a list of `PieceCut`s; `Character.tsx lookPieces` adds one per worn garment.
-- **Designs:** `outfits/designs.png` (4x4 cells of 256 px, 8 px gutters), catalogue `designs` + part `design` (cell).
-  Shared layout per family (`design_uv`): tops torso + sleeves, bottoms hips + legs, shoes feet. Engine: uv moved into
-  the cell + `DESIGN_U` (4); the body material paints the texel over the tint by its alpha, the vertex's COLOR_0 shade
-  in `hairMap.y`.
-- **Evidence** (`specs/evidence/clothing-v2/`): `blender_{tops,bottoms,shoes}.png` (before = last commit's models,
-  after; run/jump/sit x front/side/back, no hair so the back shows), `game_starter_set.png` (the runtime Character on
-  /lab/avatar ?sheet=fit, design paint and body cut live), `game_cut_off_for_comparison.png` (`&cut=0`),
-  `fit_report.txt` (hidden_cut.py bodycut output).
-- **Gates (2026-10-27):** tsc clean; vitest 3453 passed / 3 skipped, with and without `NEXT_PUBLIC_GAME_WORLD=new`;
-  eslint clean on changed files. perf:check (village, v2, cafe) FAILED against its 2026-10-14 baseline in every scene
-  and tier (frame +7 to +44%, cafe lite included) with machine load 5 and swap over 10 GB; v2's +70% draw calls and
-  +54% triangles are the v2 world's growth since that baseline. This lane adds no draw call (designs share the body
-  material) and lowers garment triangles; the coordinator's combined check should judge it.
-- **Evidence tools (zip hoodie):** `/lab/avatar?sheet=look&look=<json>&views=front,34,back&light=creator&framing=body`
-  (`&zoom=3.2&at=0.44` for the logo; on this sheet the height looked at is `&at=`, since `&look=` is the JSON).
-- **Evidence tools:** `outfits/render_fit.py` (+ `FIT_ROOT` for the last commit's assets), `outfits/fit_sheet.py`
-  (`BEFORE=`), `/lab/avatar?sheet=fit` + `web/scripts/fit-shots.mjs` (in-game, `&cut=0` shows the cut skin).
+Round 2 built, shots ready for David (2026-10-28), not merged. Head: see `git log -1` on `game/clothing-v2`. Round 1 and
+the TSI zip hoodie were approved (their notes are in git history of this file, commit 5886cdbc).
+- **Every outfit on a universal model** (`build_outfits.py`), part ids unchanged (saved looks keep working). Model ->
+  parts (tris now / old): tee -> base tee, sweater vest (144 / 152, 188); tee_collar (the tee + a white collar, the zip
+  hoodie's way) -> collared shirt (160 / 176); longsleeve -> striped; hoodie / hoodie_zip; sweater (the hoodie's body and
+  sleeves, a crew collar) -> TSI crewneck, cardigan, silk sweater (216 / 256, 262, 236); coat -> raincoat (216 / 218);
+  shorts; overalls (the shorts + bib, straps, two gold studs) -> overall shorts (146 / 162); skirt -> pleated (120 / 120,
+  pleats are paint); skirt_long -> long skirt (160 / 160); trousers; joggers; dress -> sundress (188 / 208); kimono (260 /
+  277, koi and collar paint, obi and bow geometry); cape -> monarch cape (228 / 252, veins, border, spots paint); slipon;
+  sneakers -> sneakers, loafers (156 / 156, 172); boots -> boots, rain boots (216 / 248, 248); sandals (152 / 152).
+  Body cut bits 0-19, one per model (`fit_report.txt`).
+- **Design atlas** 2048 px of 256 px units: a design takes 1 unit or 2 x 2 (tsi_zip, tsi_crew, kimono); 16 designs, 25 of
+  64 units used. Catalogue `designs`: `cells` (name -> index) and `rects` ([u0, v0, size] in the atlas), no more `grid`.
+  Engine: look.ts `designUse` reads `rects`. Designs paint fixed colours; black or white at a low alpha shades the tint
+  (ribbing, seams, folds follow the picked colour). Family layouts: one-pieces = tops' with the torso down to the sole;
+  shoes: foot v 0..0.65, a boot's shaft below it (slip-on and sneaker GLBs changed UVs only).
+- **Weights:** a skirt-region vertex (skirts, dress, kimono hem, coat flare, cape) keeps its region weights (`vreg`
+  stashed on the object by kit.finish); a torso vertex takes the nearest body point among triangles not mostly on an
+  arm (a roomy back over the shoulder blade took arm weights and bared the back in a run). This re-weighted the round 1
+  tops (tee, long-sleeve, hoodie, zip hoodie): `blender_round1_tops_reweighted.png` shows them unchanged to the eye.
+- **The decal is gone:** the crewneck's TSI mark (public/logo.svg, rasterised by build_outfits with rsvg-convert) is in
+  its design. Deleted: the decal mesh, material and loader in Character.tsx, `TSI_DECAL_URL`, `ResolvedPart.decal`,
+  `PartMaterial.decal`, the sync script's raster step, both `decal_tsi_mark.png`, kit's decal material kind and
+  `decalSlot` on new entries, and 14 old garment GLBs (+ their LOD 1). preloadAssets.ts edited by hand to the new GLBs.
+- **TSI zip hoodie, members only** (David, 2026-10-27: "its free in the default character creation but only for tsi
+  members, unobtainable for non"): catalogue `members: true`; `partRef` null (nothing to own, no shop row, so no
+  special, gift or reward); `shownOptions(..., member)` hides it from non-members in every creator; `forMember(look,
+  member)` puts the default top back. Membership: `profiles.membership === 'member' && is_active` (the member badge's
+  test, lib/identity/service.ts badgeFor), read by lookStore from GET /api/profile (`MyLook.member`) and checked again
+  on the server in PATCH /api/profile (403 `members_only`). Creators: PlayerCharacterUI, WardrobeSheet and the arrival's
+  ReflectionCreator pass `member`; the applicant island passes nothing (hidden there). Remote players: `remoteLook(json,
+  player.member)`. Note for wardrobe-b3's offered() rule: let `members` parts through for members.
+- **Gates (round 2, 2026-10-28):** tsc clean; vitest 3491 passed / 4 skipped; with `NEXT_PUBLIC_GAME_WORLD=new` one
+  barriers.test.ts case failed on time under machine load (907 s; a rerun failed a different case of that file at 6 s),
+  a file this branch doesn't touch; eslint clean on changed files. No perf:check (the machine was saturated; the lane
+  removes the decal's draw call and adds none, the atlas grew 1024 -> 2048).
+- **Evidence** (`specs/evidence/clothing-v2/round2/`): `blender_{tops,bottoms,onepieces,shoes}.png` (before / after, run,
+  jump, sit x front, side, back), `blender_round1_tops_reweighted.png`, `fit_report.txt`, in game (the runtime Character on /lab/avatar ?sheet=fit,
+  design paint and body cut live) `game_tops.png`, `game_bottoms_onepieces.png`, `game_shoes.png`, and
+  `tsi_crew_closeup.png` (the crewneck's mark at the creator's close-up, creator light).
 
 ## Next
 
-1. David reviews round 1 (`specs/evidence/clothing-v2/`) and the TSI zip hoodie (`.../tsi-zip-hoodie/`). Apply his notes;
-   he prices the hoodie by adding `tsi-zip-hoodie` to `specs/wardrobe/batch2-pricing.json`.
-2. Round 2: the rest of `art/characters/outfits/` on the same models (TSI crew = sweater + a TSI design, so the decal
-   mesh can go), plus new models for skirts, boots, sandals, loafers, rain boots and the one-pieces.
+1. David reviews round 2 (`specs/evidence/clothing-v2/round2/`); apply his notes.
+2. Known: the long skirt folds oddly in a side sit (as before); the rain boots share the boot's shaft (shorter than
+   the old rain boots); the overall shorts' bib sits over every top (by design, LAYER report).
 
 ## Tools and gotchas
 
+- Evidence: `outfits/render_fit.py` (`FIT_ROOT=<an older art/characters tree>` for "before"; tints each part from its
+  catalogue colours) and `outfits/fit_sheet.py` (`BEFORE=`); in game `/lab/avatar?sheet=fit&ids=` + `web/scripts/fit-shots.mjs`
+  (`&cut=0` shows the cut skin); a close-up: `/lab/avatar?sheet=look&look=<json>&views=front,34,back&light=creator&framing=body&zoom=3.2&at=0.44`.
+- zsh doesn't split `$IDS`: write the ids out (or `${=IDS}`) when passing them to Blender.
+- The session scratchpad is shared with other agents: use your own subfolder.
 - Order after any garment change: `build_outfits.py -- <ids>` → `build_lod.py -- <ids>` (not `base`: that rebuilds
   the LOD skin and drops its marks) → `hidden_cut.py -- bodycut` (prints the FIT/LAYER report; `-- bodycut fit step=15`
   for a quick look without marking) → `node web/scripts/sync-character-assets.mjs` (then `git checkout` the
-  regenerated `decal_tsi_mark.png` and `hair_colour_world.png`: tool noise).
+  regenerated `hair_colour_world.png`: tool noise).
 - The FIT `poke` count includes a forearm resting into the belly in Sit and a shoe collar sinking into the shin in a
   crouch (the garment inside the skin, not skin through the garment); judge by the renders.
 - A ring between two skin rings across a joint (the old knee ring at 0.13) sinks into the back of the knee as it

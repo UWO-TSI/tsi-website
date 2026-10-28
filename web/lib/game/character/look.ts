@@ -42,7 +42,7 @@ export const COLOUR_ATLAS_URL = `${CHARACTER_ROOT}colour_atlas.png`;
  * per garment type, a design is paint on it. Every design is one cell of this atlas (art/characters/outfits/
  * build_outfits.py), drawn over the garment's tint by its alpha (Character.tsx); a part names its cell (`design`).
  */
-export const DESIGNS = catalog.designs as { atlas: string; materials: string[]; cells: Record<string, number>; rects: [number, number, number][] };
+export const DESIGNS = catalog.designs as { atlas: string; materials: string[]; cells: Record<string, number>; rects: number[][] };
 export const DESIGN_ATLAS_URL = `${CHARACTER_ROOT}${DESIGNS.atlas}`;
 /** Where a design cell sits in the atlas (its `rects` entry, inside its gutter): a garment's uv (0..1) maps to
  * (u0 + u s, v0 + v s) (rig.ts DesignUse). */
