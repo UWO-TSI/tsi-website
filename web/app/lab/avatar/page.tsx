@@ -79,7 +79,8 @@ interface Cell { label: string; look: CharacterLook; yaw: number; face?: FaceOve
 const FIT_POSES: [string, ClipName, number][] = [["run", "Run", 0.3], ["jump", "Jump", 0.5], ["sit", "Sit", 0.5]];
 const FIT_VIEWS: [string, number][] = [["front", 0], ["side", -Math.PI / 2], ["back", Math.PI]];
 const FIT_WITH: Record<string, Partial<CharacterLook>> = { top: { bottom: "bottom_shorts", shoes: "shoes_slipon" },
-  bottom: { top: "top_tee", shoes: "shoes_slipon" }, shoes: { top: "top_tee", bottom: "bottom_shorts" } };
+  bottom: { top: "top_tee", shoes: "shoes_slipon" }, shoes: { top: "top_tee", bottom: "bottom_shorts" },
+  onepiece: { top: null, bottom: null, shoes: "shoes_slipon" } };
 
 /** The camera by framing: the head, the head with room above it for a hat (wardrobe batch 2), the whole body. */
 const FRAMING = { head: { at: [0, 0.86, 1.3], look: 0.8 }, hat: { at: [0, 0.98, 1.7], look: 0.9 }, body: { at: [0.15, 0.6, 2.05], look: 0.5 } } as const;

@@ -42,20 +42,19 @@ export const COLOUR_ATLAS_URL = `${CHARACTER_ROOT}colour_atlas.png`;
  * per garment type, a design is paint on it. Every design is one cell of this atlas (art/characters/outfits/
  * build_outfits.py), drawn over the garment's tint by its alpha (Character.tsx); a part names its cell (`design`).
  */
-export const DESIGNS = catalog.designs as { atlas: string; grid: number; gutter: number; materials: string[]; cells: Record<string, number> };
+export const DESIGNS = catalog.designs as { atlas: string; materials: string[]; cells: Record<string, number>; rects: [number, number, number][] };
 export const DESIGN_ATLAS_URL = `${CHARACTER_ROOT}${DESIGNS.atlas}`;
-/** Where a design cell sits in the atlas: a garment's uv (0..1) maps to (u0 + u s, v0 + v s) (rig.ts DesignUse). */
+/** Where a design cell sits in the atlas (its `rects` entry, inside its gutter): a garment's uv (0..1) maps to
+ * (u0 + u s, v0 + v s) (rig.ts DesignUse). */
 export function designUse(cell: number): DesignUse {
-  const g = DESIGNS.grid, s = (1 - 2 * DESIGNS.gutter) / g;
-  return { u0: (cell % g + DESIGNS.gutter) / g, v0: (Math.floor(cell / g) + DESIGNS.gutter) / g, s };
+  const [u0, v0, s] = DESIGNS.rects[cell];
+  return { u0, v0, s };
 }
-/** Ruling 24: the crewneck carries the site's own TSI mark (public/logo.svg, rasterised by the sync script). */
-export const TSI_DECAL_URL = `${CHARACTER_ROOT}decal_tsi_mark.png`;
 
 export type PartSlot = "bangs" | "back" | "top" | "bottom" | "onepiece" | "shoes" | "accessory";
 /** Accessory sub-slots, one item each (ruling 21); `front` (a tie on the chest) came with wardrobe batch 2. */
 export type AccGroup = "face" | "head" | "bag" | "neck" | "front";
-export interface PartMaterial { name: string; tint?: "outfit" | "hair" | null; default?: number | string | null; decal?: boolean; color?: string }
+export interface PartMaterial { name: string; tint?: "outfit" | "hair" | null; default?: number | string | null; color?: string }
 export interface CatalogPart {
   id: string; slot: PartSlot; name: string; glb: string; tris: number; materials: PartMaterial[];
   hidesBackHair: boolean; hides: string[]; variantOf?: string; group?: AccGroup;
@@ -87,6 +86,10 @@ export interface CatalogPart {
   /** A garment (clothing-v2): its bit in the body skin's `_BODYCUT` marks: a look wearing it draws none of the skin it
    * covers in every clip (art/characters/hidden_cut.py bodycut). Every design on one universal mesh shares it. */
   bodyCut?: number;
+  /** TSI members only (David, 2026-10-27, the TSI zip hoodie: "free in the default character creation but only for tsi
+   * members, unobtainable for non"): free to a member, never priced, sold or given; a non-member never sees or wears it
+   * (membersOnly, forMember; the server refuses to save it on a non-member's look, app/api/profile). */
+  members?: boolean;
   /** Owned with that part, never sold alone (row 314: #22's ushanka and goggles come with hair #22). */
   grantedBy?: string;
   /** The economy item (crafted) that unlocks this part; its catalogue_ref is this part's id. Such parts are never sold. */
@@ -367,7 +370,7 @@ export function wornParts(look: CharacterLook): CatalogPart[] {
   return parts.some(p => p.hidesBackHair) ? parts.filter(p => p.slot !== "back") : parts;
 }
 
-export interface ResolvedPart { id: string; url: string; /** Its LOD 1 GLB. */ lod: string; /** Its LOD 2 GLB (a whole hairstyle's own; else its LOD 1). */ lod2: string; tints: Record<string, string>; decal: string | null;
+export interface ResolvedPart { id: string; url: string; /** Its LOD 1 GLB. */ lod: string; /** Its LOD 2 GLB (a whole hairstyle's own; else its LOD 1). */ lod2: string; tints: Record<string, string>;
   /** It draws texels from the fixed-colour atlas (COLOUR_ATLAS_URL). */
   colour: boolean;
   /** Its design's cell in the design atlas (DESIGN_ATLAS_URL), or null: plain. */
@@ -397,14 +400,12 @@ function hairShifts(look: CharacterLook, part: CatalogPart): { a: HairShift; b: 
   const { a, b } = part.map!.natural, hex = hairHex(look);
   return { a: a && hex ? hairShift(a, hex) : NO_SHIFT, b: b && look.hairAccent !== undefined ? hairShift(b, PALETTE.hair[look.hairAccent]) : NO_SHIFT };
 }
-/** Parts with their GLB URL and one sRGB hex per tinted material; decal materials without art are dropped. */
+/** Parts with their GLB URL and one sRGB hex per tinted material. */
 export function resolveParts(look: CharacterLook): ResolvedPart[] {
   return wornParts(look).map(part => {
     const tints: Record<string, string> = {};
-    let decal: string | null = null;
     let first = true;
     for (const m of part.materials) {
-      if (m.decal) { if (m.default) decal = TSI_DECAL_URL; continue; }
       // a mapped hairstyle's under-cap (u < 0, no texture) takes its texture's median, shifted as the texture is
       if (m.tint === "hair") tints[m.name] = part.map?.natural.a ? shiftedMedian(part.map.natural.a, hairShifts(look, part).a) : hairHex(look) ?? PLAIN_HAIR;
       else if (m.tint === "outfit") {
@@ -413,7 +414,7 @@ export function resolveParts(look: CharacterLook): ResolvedPart[] {
       } else if (m.color) tints[m.name] = m.color;
     }
     const map = part.map ? hairShifts(look, part) : null;
-    return { id: part.id, url: CHARACTER_ROOT + part.glb, lod: LOD_ROOT + part.glb, lod2: (part.full ? LOD2_ROOT : LOD_ROOT) + part.glb, tints, decal, map, colour: !!part.colourAtlas,
+    return { id: part.id, url: CHARACTER_ROOT + part.glb, lod: LOD_ROOT + part.glb, lod2: (part.full ? LOD2_ROOT : LOD_ROOT) + part.glb, tints, map, colour: !!part.colourAtlas,
       design: part.design ?? null };
   });
 }
@@ -425,7 +426,7 @@ export function partColor(look: CharacterLook, id: string): number | null {
 }
 
 /** Cache key for the merged body mesh (face and pose excluded). */
-export const bodyKey = (look: CharacterLook) => JSON.stringify([look.skin, look.hair, resolveParts(look).map(p => [p.id, p.tints, p.decal, p.map ?? null])]);
+export const bodyKey = (look: CharacterLook) => JSON.stringify([look.skin, look.hair, resolveParts(look).map(p => [p.id, p.tints, p.map ?? null])]);
 
 /** Small seeded PRNG (mulberry32) so residents get the same random look every visit. */
 export function seeded(seed: number): () => number {
@@ -479,9 +480,19 @@ const sold = (key: string | undefined) => { const m = priceOf(key)?.mode; return
 export function partRef(id: string): string | null {
   const p = PART_BY_ID.get(id);
   if (!p) return null;
+  if (p.members) return null;                              // a member's for free; never owned or sold (forMember)
   if (p.grantedBy) return partRef(p.grantedBy);           // row 314: #22's hat comes with the hair
   if (priceOf(p.key)) return sold(p.key) ? p.variantOf ?? p.id : null;
   return p.slot === "bangs" || p.slot === "back" ? null : p.variantOf ?? p.id;
+}
+/** Whether a part is for TSI members only (CatalogPart.members). */
+export const membersOnly = (id: string | null | undefined): boolean => !!(id && PART_BY_ID.get(id)?.members);
+/** The look a non-member may wear: each members-only garment worn (the TSI zip hoodie) back to the default look's. */
+export function forMember(look: CharacterLook, member: boolean): CharacterLook {
+  if (member) return look;
+  const out = { ...look };
+  for (const slot of ["top", "bottom", "onepiece", "shoes"] as const) if (membersOnly(out[slot])) out[slot] = DEFAULT_LOOK[slot];
+  return out;
 }
 /** Inventory ref of a whole face (wardrobe batch 2): the shop row's catalogue_ref. */
 export const faceRef = (faceId: string) => `face:${faceId}`;

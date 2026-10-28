@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { BATCH2_PRICES, CUSTOM_HAIR_REF, DEFAULT_LOOK, DYE_HAIR, FACE, FREE_HAIR, PARTS, STARTER_PARTS, customHairUnlocked, dyeRef, faceRef, randomLook, seeded, wear } from "@/lib/game/character/look";
+import { BATCH2_PRICES, CUSTOM_HAIR_REF, DEFAULT_LOOK, DYE_HAIR, FACE, FREE_HAIR, PARTS, STARTER_PARTS, customHairUnlocked, dyeRef, faceRef, lookRefs, randomLook, seeded, wear } from "@/lib/game/character/look";
 import { CATALOGUE as PIECES, EVENT_PIECE_IDS } from "@/lib/homes/catalogue";
 import { CRAFTED_ITEMS, RECIPES } from "@/lib/crafting/recipes";
 import { memoryCraftingStore } from "@/lib/crafting/memoryStore";
@@ -15,7 +15,8 @@ import { buy, getInventory, ownedRefs } from "./service";
 
 const A = "00000000-0000-4000-8000-0000000000aa";
 const noon = new Date("2026-09-24T16:00:00Z");
-const mock = vi.hoisted(() => ({ eco: null as unknown, ctx: null as unknown, userWrites: [] as unknown[], adminWrites: [] as unknown[] }));
+const mock = vi.hoisted(() => ({ eco: null as unknown, ctx: null as unknown, userWrites: [] as unknown[], adminWrites: [] as unknown[],
+  profile: { membership: "member", is_active: true } as { membership: string; is_active: boolean } }));
 vi.mock("@/lib/wallet/supabaseStore", () => ({ supabaseEconomyStore: () => mock.eco }));
 vi.mock("@/lib/server/memberContext", async (original) => ({ ...(await original<typeof import("@/lib/server/memberContext")>()), withStore: async () => mock.ctx }));
 vi.mock("@/lib/supabase/server", () => ({
@@ -28,7 +29,7 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
     from: () => ({
       update: (u: unknown) => ({ eq: async () => (mock.adminWrites.push(u), { error: null }) }),
-      select: () => ({ eq: () => ({ single: async () => ({ data: { id: A }, error: null }) }) }),
+      select: () => ({ eq: () => ({ single: async () => ({ data: { id: A }, error: null }), maybeSingle: async () => ({ data: mock.profile, error: null }) }) }),
     }),
   }),
 }));
@@ -53,6 +54,7 @@ beforeEach(() => {
   mock.ctx = { userId: A, tier: 4, now: noon, store: { homes: homes.store, economy: eco.store } };
   mock.userWrites.length = 0;
   mock.adminWrites.length = 0;
+  mock.profile = { membership: "member", is_active: true };
 });
 
 describe("ownership catalogue", () => {
@@ -155,6 +157,26 @@ describe("look save (PATCH /api/profile)", () => {
     expect(mock.adminWrites).toHaveLength(2);
     expect(mock.adminWrites[1]).toMatchObject({ avatar_config: { look: { top: "top_cardigan", hair: 10 } } });
     expect(mock.userWrites.every((u) => !("avatar_config" in (u as object)))).toBe(true);
+  });
+});
+describe("the TSI zip hoodie (David, 2026-10-27: free in the creator, TSI members only, unobtainable for anyone else)", () => {
+  const hoodie = wear(DEFAULT_LOOK, "top", "top_tsi_zip_hoodie");
+  it("has no price and no shop row (so no special, gift or reward), and nothing to own", () => {
+    expect(seedItems().filter((i) => i.catalogue_ref === "top_tsi_zip_hoodie")).toEqual([]);
+    expect(CATALOGUE.some((i) => i.catalogue_ref === "top_tsi_zip_hoodie")).toBe(false);
+    expect(BATCH2_PRICES["tsi-zip-hoodie"]).toBeUndefined();
+    expect(lookRefs(hoodie)).not.toContain("top_tsi_zip_hoodie");
+  });
+  it("saves on an active member's look with nothing owned, and refuses it for a public or inactive account, server-side", async () => {
+    expect((await saveLook(hoodie)).status).toBe(200);
+    for (const profile of [{ membership: "public", is_active: true }, { membership: "member", is_active: false }]) {
+      mock.profile = profile;
+      const res = await saveLook(hoodie);
+      expect(res.status).toBe(403);
+      expect(await res.json()).toMatchObject({ code: "members_only" });
+    }
+    expect(mock.adminWrites).toHaveLength(1);
+    expect((await saveLook(DEFAULT_LOOK)).status).toBe(200);           // a non-member's look without it still saves
   });
 });
 

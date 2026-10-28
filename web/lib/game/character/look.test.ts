@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { glbStats, readGlb } from "@/lib/game/perf/glbStats";
 import { CHARACTER_BUDGET } from "@/lib/game/perf/budget";
-import { BASE_URL, BATCH2_PRICES, COLOUR_ATLAS_URL, CUSTOM_HAIR_REF, HAIR_MAPS_URLS, HAIR_THUMB_URL, NATURAL_HAIR, naturalHex, OLD_HAIR, LOD_SKIN_URL, CLIPS, DEFAULT_LOOK, FACE, FACE_ATLAS2_URLS, FACE_ATLAS_URLS, PALETTE, PARTS, PART_BY_ID, bodyKey, faceRef, facePartRef, hairHex, lookBytes, lookRefs, parseLook, partRef, priceOf, randomLook, resolveParts, seeded, SKIN_PICKS, STARTER_PARTS, unlockRef, wear, wornParts } from "./look";
+import { BASE_URL, BATCH2_PRICES, COLOUR_ATLAS_URL, DESIGNS, CUSTOM_HAIR_REF, HAIR_MAPS_URLS, HAIR_THUMB_URL, NATURAL_HAIR, naturalHex, OLD_HAIR, LOD_SKIN_URL, CLIPS, DEFAULT_LOOK, FACE, FACE_ATLAS2_URLS, FACE_ATLAS_URLS, PALETTE, PARTS, PART_BY_ID, bodyKey, faceRef, facePartRef, hairHex, lookBytes, lookRefs, parseLook, partRef, priceOf, randomLook, resolveParts, seeded, SKIN_PICKS, STARTER_PARTS, unlockRef, wear, wornParts } from "./look";
 import { LOOK_MAX_BYTES } from "@/lib/net/protocol";
 import { hairShift, NO_SHIFT, shiftedMedian } from "./hairColour";
 
@@ -25,7 +25,7 @@ describe("character catalogue", () => {
   it("ships every part GLB, the clip base and the face atlases", () => {
     for (const p of PARTS) expect(existsSync(join(web, "public/assets/characters/v6", p.glb)), p.glb).toBe(true);
     for (const f of [BASE_URL, FACE_ATLAS_URLS.creator, FACE_ATLAS_URLS.world, FACE_ATLAS2_URLS.creator, FACE_ATLAS2_URLS.world]) expect(existsSync(join(web, "public", f)), f).toBe(true);
-    expect(existsSync(join(web, "public/assets/characters/v6/decal_tsi_mark.png"))).toBe(true);
+    expect(existsSync(join(web, "public/assets/characters/v6", DESIGNS.atlas))).toBe(true);
     expect(BASE_URL).toMatch(/v8_clips\.glb$/); // the v8 head on the shared skull (head fit, row 304)
   });
   it("ships a LOD 1 for every part and the base skin, lighter than the full (art/characters/build_lod.py)", () => {
@@ -172,9 +172,8 @@ describe("looks", () => {
     const unhatted = { ...DEFAULT_LOOK, hair: 4 };
     const bob = PART_BY_ID.get(DEFAULT_LOOK.back)!.map!.natural.a!;      // round 2: the under-cap takes the texture's median, shifted
     expect(resolveParts(unhatted).find(p => p.id === DEFAULT_LOOK.back)!.tints).toEqual({ M_Hair: shiftedMedian(bob, hairShift(bob, PALETTE.hair[4])) });
-    const crew = resolveParts(wear(DEFAULT_LOOK, "top", "top_tsi_crew")).find(p => p.id === "top_tsi_crew")!;
-    expect(crew.decal).toMatch(/decal_tsi_mark\.png$/);
-    expect(resolveParts(DEFAULT_LOOK).find(p => p.id === "top_tee")!.decal).toBeNull();
+    // clothing-v2 round 2: the crewneck's TSI mark is its design (paint), not a decal
+    expect(resolveParts(wear(DEFAULT_LOOK, "top", "top_tsi_crew")).find(p => p.id === "top_tsi_crew")!.design).toBe(DESIGNS.cells.tsi_crew);
     expect(resolveParts(DEFAULT_LOOK).find(p => p.id === "shoes_slipon")!.tints.M_Sole).toBe("#C9A63A");
   });
   it("wears the hair as one of David's 22 whole hairstyles (21 less #14, wardrobe batch 2's five, less #24 and the hair shelf's three: #8 and #9 removed, #22 is its hat alone), hidden under a hat or hood (head-roblox)", () => {

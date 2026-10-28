@@ -26,7 +26,9 @@ os.makedirs(OUT, exist_ok=True)
 CAT = json.load(open(os.path.join(ROOT, "character_catalog.json")))
 PARTS = {p["id"]: p for p in CAT["outfits"]}
 DESIGNS = CAT.get("designs")
-COMPANION = {"top": ["bottom_shorts", "shoes_slipon"], "bottom": ["top_tee", "shoes_slipon"], "shoes": ["top_tee", "bottom_shorts"]}
+PAL = json.load(open(os.path.join(ROOT, "palette.json")))
+COMPANION = {"top": ["bottom_shorts", "shoes_slipon"], "bottom": ["top_tee", "shoes_slipon"], "shoes": ["top_tee", "bottom_shorts"],
+             "onepiece": ["shoes_slipon"]}
 POSES = [("run", "Run", 0.3), ("jump", "Jump", 0.5), ("sit", "Sit", 0.5)]
 VIEWS = [("front", 0), ("side", -90), ("back", 180)]
 
@@ -81,14 +83,30 @@ def design_image():
     return bpy.data.images.load(os.path.join(ROOT, DESIGNS["atlas"]), check_existing=True)
 
 
+def tint(objs, part):
+    """Each material in the part's own catalogue colour (parts on one model share a GLB, built in one part's colours)."""
+    cols = {m["name"]: PAL["outfit"][m["default"]] if m.get("tint") == "outfit" else m.get("color") for m in part["materials"]}
+    for o in objs:
+        for m in o.data.materials:
+            c = m and cols.get(m.name.split(".")[0])
+            if not c:
+                continue
+            # the glTF importer feeds Base Color from its factor times COLOR_0: set the factor, wherever it sits
+            for n in m.node_tree.nodes:
+                for i in n.inputs:
+                    if i.type == "RGBA" and not i.is_linked and (n.type == "BSDF_PRINCIPLED" and i.name == "Base Color" or n.type != "BSDF_PRINCIPLED"):
+                        i.default_value = (*kit.lin(c), 1)
+
+
 def paint(objs, part):
     """The engine's design path in Blender: the design cell's texel over the tint, by its alpha (Character.tsx)."""
     cell = part.get("design")
     if cell is None:
         return
     img = design_image()
-    g = DESIGNS["grid"]
-    gut = DESIGNS["gutter"]
+    u0, v0, s = DESIGNS["rects"][cell] if "rects" in DESIGNS else (     # the round 1 atlas (FIT_ROOT): a grid
+        ((cell % DESIGNS["grid"] + DESIGNS["gutter"]) / DESIGNS["grid"], (cell // DESIGNS["grid"] + DESIGNS["gutter"]) / DESIGNS["grid"],
+         (1 - 2 * DESIGNS["gutter"]) / DESIGNS["grid"]))
     for o in objs:
         for m in o.data.materials:
             if not m or m.name.split(".")[0] not in DESIGNS["materials"]:
@@ -96,13 +114,10 @@ def paint(objs, part):
             nt = m.node_tree
             bs = next(n for n in nt.nodes if n.type == "BSDF_PRINCIPLED")
             uv = nt.nodes.new("ShaderNodeUVMap")
-            # uv' = (cell + gutter + uv (1 - 2 gutter)) / grid; Blender's v runs up, glTF's down: v_b = 1 - v_gltf
-            col, row = cell % g, cell // g
+            # glTF uv (u, v) -> atlas (u0 + u s, v0 + v s), flipped to Blender's v (1 - v)
             mp = nt.nodes.new("ShaderNodeMapping")
-            s = (1 - 2 * gut) / g
-            # glTF uv (u, v) -> atlas (col + gut + u s', row + gut + v s'), flipped to Blender's v (1 - v)
             mp.inputs["Scale"].default_value = (s, s, 1)
-            mp.inputs["Location"].default_value = ((col + gut) / g, 1 - (row + gut) / g - s, 0)
+            mp.inputs["Location"].default_value = (u0, 1 - v0 - s, 0)
             tex = nt.nodes.new("ShaderNodeTexImage")
             tex.image = img
             tex.interpolation = "Closest"
@@ -147,6 +162,7 @@ def wear(ids):
         got = kit.bind_glb(os.path.join(ROOT, p["glb"]), rig)
         for o in got:
             o.parent = rig
+        tint(got, p)
         paint(got, p)
         objs += got
         if p.get("bodyCut") is not None:

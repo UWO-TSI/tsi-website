@@ -1,0 +1,105 @@
+BODYCUT 920 poses, 20 garment models
+LBS_CHECK Run@0: worst 0.000 mm from Blender's skinning
+BODYCUT full top_tee          bit 0: 0 of 520 skin triangles cut
+BODYCUT full top_hoodie       bit 2: 28 of 520 skin triangles cut
+BODYCUT full top_cardigan     bit 9: 24 of 520 skin triangles cut
+BODYCUT full top_stripe_ls    bit 1: 18 of 520 skin triangles cut
+BODYCUT full top_collar_shirt bit 10: 0 of 520 skin triangles cut
+BODYCUT full top_raincoat     bit 11: 0 of 520 skin triangles cut
+BODYCUT full bottom_shorts    bit 3: 30 of 520 skin triangles cut
+BODYCUT full bottom_trousers  bit 4: 30 of 520 skin triangles cut
+BODYCUT full bottom_pleated_skirt bit 12: 0 of 520 skin triangles cut
+BODYCUT full bottom_overall_shorts bit 14: 30 of 520 skin triangles cut
+BODYCUT full bottom_joggers   bit 5: 34 of 520 skin triangles cut
+BODYCUT full bottom_long_skirt bit 13: 0 of 520 skin triangles cut
+BODYCUT full onepiece_sundress bit 15: 0 of 520 skin triangles cut
+BODYCUT full outfit_monarch_cape bit 17: 6 of 520 skin triangles cut
+BODYCUT full outfit_koi_kimono bit 16: 1 of 520 skin triangles cut
+BODYCUT full shoes_slipon     bit 6: 66 of 520 skin triangles cut
+BODYCUT full shoes_sneakers   bit 7: 56 of 520 skin triangles cut
+BODYCUT full shoes_boots      bit 18: 62 of 520 skin triangles cut
+BODYCUT full shoes_sandals    bit 19: 8 of 520 skin triangles cut
+BODYCUT full top_tsi_zip_hoodie bit 8: 28 of 520 skin triangles cut
+FIT top_tee          poke  28 skin vertices (worst Sit@3, 19.9 mm under the skin)   float +0.9 mm off the body at worst (DanceSprinkler@33) over the rest pose
+FIT top_hoodie       poke  24 skin vertices (worst Sit@0, 14.6 mm under the skin)   float +31.3 mm off the body at worst (DodgeRoll@6) over the rest pose
+FIT top_cardigan     poke  26 skin vertices (worst Sit@0, 19.2 mm under the skin)   float +6.4 mm off the body at worst (LookAround@48) over the rest pose
+FIT top_stripe_ls    poke  28 skin vertices (worst Sit@3, 19.9 mm under the skin)   float +7.8 mm off the body at worst (CastSwing@0) over the rest pose
+FIT top_collar_shirt poke  28 skin vertices (worst Sit@3, 19.9 mm under the skin)   float +13.5 mm off the body at worst (Slide@18) over the rest pose
+FIT top_raincoat     poke  28 skin vertices (worst Sit@6, 19.5 mm under the skin)   float +21.1 mm off the body at worst (Skid@0) over the rest pose
+FIT bottom_shorts    poke  11 skin vertices (worst CrouchWalk@6, 18.4 mm under the skin)   float +0.6 mm off the body at worst (Run@12) over the rest pose
+FIT bottom_trousers  poke  36 skin vertices (worst CrouchWalk@15, 19.9 mm under the skin)   float +3.4 mm off the body at worst (CrouchIdle@3) over the rest pose
+FIT bottom_pleated_skirt poke  17 skin vertices (worst DanceRobot@0, 14.9 mm under the skin)   float +25.1 mm off the body at worst (DodgeRoll@12) over the rest pose
+FIT bottom_overall_shorts poke  13 skin vertices (worst Sit@0, 17.9 mm under the skin)   float +13.3 mm off the body at worst (Dig@27) over the rest pose
+FIT bottom_joggers   poke  34 skin vertices (worst CrouchWalk@15, 19.9 mm under the skin)   float +7.0 mm off the body at worst (CrouchWalk@0) over the rest pose
+FIT bottom_long_skirt poke  15 skin vertices (worst SitGround@45, 14.5 mm under the skin)   float +46.4 mm off the body at worst (SlideInDash@3) over the rest pose
+FIT onepiece_sundress poke  25 skin vertices (worst DanceRobot@0, 18.7 mm under the skin)   float +22.4 mm off the body at worst (Skid@0) over the rest pose
+FIT outfit_monarch_cape poke  37 skin vertices (worst Bow@36, 16.8 mm under the skin)   float +21.5 mm off the body at worst (Sleep@42) over the rest pose
+FIT outfit_koi_kimono poke  56 skin vertices (worst Sit@30, 19.8 mm under the skin)   float +54.5 mm off the body at worst (SlideIn@3) over the rest pose
+FIT shoes_slipon     poke  18 skin vertices (worst CrouchIdle@30, 17.0 mm under the skin)   float +10.3 mm off the body at worst (CrouchWalk@0) over the rest pose
+FIT shoes_sneakers   poke  15 skin vertices (worst CrouchWalk@15, 19.2 mm under the skin)   float +10.1 mm off the body at worst (CrouchWalk@0) over the rest pose
+FIT shoes_boots      poke  21 skin vertices (worst CrouchWalk@6, 19.6 mm under the skin)   float +28.6 mm off the body at worst (Slide@0) over the rest pose
+FIT shoes_sandals    poke  13 skin vertices (worst CrouchWalk@3, 17.2 mm under the skin)   float +6.2 mm off the body at worst (CrouchWalk@12) over the rest pose
+FIT top_tsi_zip_hoodie poke  24 skin vertices (worst Sit@0, 14.6 mm under the skin)   float +31.3 mm off the body at worst (DodgeRoll@6) over the rest pose
+LAYER top_tee          over bottom_shorts      0 bottom vertices through it (worst )
+LAYER top_tee          over bottom_trousers    2 bottom vertices through it (worst Defeat@21)
+LAYER top_tee          over bottom_pleated_skirt   2 bottom vertices through it (worst Defeat@21)
+LAYER top_tee          over bottom_overall_shorts  36 bottom vertices through it (worst DodgeRoll@3)
+LAYER top_tee          over bottom_joggers     2 bottom vertices through it (worst Defeat@21)
+LAYER top_tee          over bottom_long_skirt   0 bottom vertices through it (worst )
+LAYER top_hoodie       over bottom_shorts      0 bottom vertices through it (worst )
+LAYER top_hoodie       over bottom_trousers    1 bottom vertices through it (worst Sit@0)
+LAYER top_hoodie       over bottom_pleated_skirt   4 bottom vertices through it (worst SitGround@0)
+LAYER top_hoodie       over bottom_overall_shorts  37 bottom vertices through it (worst Dance@0)
+LAYER top_hoodie       over bottom_joggers     1 bottom vertices through it (worst Sit@0)
+LAYER top_hoodie       over bottom_long_skirt   5 bottom vertices through it (worst Defeat@9)
+LAYER top_cardigan     over bottom_shorts      0 bottom vertices through it (worst )
+LAYER top_cardigan     over bottom_trousers    1 bottom vertices through it (worst CrouchWalk@0)
+LAYER top_cardigan     over bottom_pleated_skirt   4 bottom vertices through it (worst SitGround@0)
+LAYER top_cardigan     over bottom_overall_shorts  44 bottom vertices through it (worst Air@3)
+LAYER top_cardigan     over bottom_joggers     1 bottom vertices through it (worst CrouchWalk@0)
+LAYER top_cardigan     over bottom_long_skirt   5 bottom vertices through it (worst Defeat@9)
+LAYER top_stripe_ls    over bottom_shorts      2 bottom vertices through it (worst Sit@0)
+LAYER top_stripe_ls    over bottom_trousers    2 bottom vertices through it (worst Defeat@21)
+LAYER top_stripe_ls    over bottom_pleated_skirt   2 bottom vertices through it (worst Defeat@21)
+LAYER top_stripe_ls    over bottom_overall_shorts  33 bottom vertices through it (worst AttackBow@9)
+LAYER top_stripe_ls    over bottom_joggers     2 bottom vertices through it (worst Defeat@21)
+LAYER top_stripe_ls    over bottom_long_skirt   2 bottom vertices through it (worst Sit@0)
+LAYER top_collar_shirt over bottom_shorts      0 bottom vertices through it (worst )
+LAYER top_collar_shirt over bottom_trousers    2 bottom vertices through it (worst Defeat@21)
+LAYER top_collar_shirt over bottom_pleated_skirt   2 bottom vertices through it (worst Defeat@21)
+LAYER top_collar_shirt over bottom_overall_shorts  34 bottom vertices through it (worst DodgeRoll@6)
+LAYER top_collar_shirt over bottom_joggers     2 bottom vertices through it (worst Defeat@21)
+LAYER top_collar_shirt over bottom_long_skirt   0 bottom vertices through it (worst )
+LAYER top_raincoat     over bottom_shorts      4 bottom vertices through it (worst Defeat@21)
+LAYER top_raincoat     over bottom_trousers    2 bottom vertices through it (worst CrouchIdle@3)
+LAYER top_raincoat     over bottom_pleated_skirt   7 bottom vertices through it (worst DodgeRoll@6)
+LAYER top_raincoat     over bottom_overall_shorts  41 bottom vertices through it (worst Defeat@3)
+LAYER top_raincoat     over bottom_joggers     8 bottom vertices through it (worst Defeat@24)
+LAYER top_raincoat     over bottom_long_skirt   9 bottom vertices through it (worst Defeat@21)
+LAYER top_tsi_zip_hoodie over bottom_shorts      0 bottom vertices through it (worst )
+LAYER top_tsi_zip_hoodie over bottom_trousers    1 bottom vertices through it (worst Sit@0)
+LAYER top_tsi_zip_hoodie over bottom_pleated_skirt   4 bottom vertices through it (worst SitGround@0)
+LAYER top_tsi_zip_hoodie over bottom_overall_shorts  37 bottom vertices through it (worst Dance@0)
+LAYER top_tsi_zip_hoodie over bottom_joggers     1 bottom vertices through it (worst Sit@0)
+LAYER top_tsi_zip_hoodie over bottom_long_skirt   5 bottom vertices through it (worst Defeat@9)
+BODYCUT lod1 top_tee          bit 0: 4 of 416 skin triangles cut
+BODYCUT lod1 top_hoodie       bit 2: 16 of 416 skin triangles cut
+BODYCUT lod1 top_cardigan     bit 9: 16 of 416 skin triangles cut
+BODYCUT lod1 top_stripe_ls    bit 1: 12 of 416 skin triangles cut
+BODYCUT lod1 top_collar_shirt bit 10: 4 of 416 skin triangles cut
+BODYCUT lod1 top_raincoat     bit 11: 4 of 416 skin triangles cut
+BODYCUT lod1 bottom_shorts    bit 3: 36 of 416 skin triangles cut
+BODYCUT lod1 bottom_trousers  bit 4: 41 of 416 skin triangles cut
+BODYCUT lod1 bottom_pleated_skirt bit 12: 4 of 416 skin triangles cut
+BODYCUT lod1 bottom_overall_shorts bit 14: 36 of 416 skin triangles cut
+BODYCUT lod1 bottom_joggers   bit 5: 41 of 416 skin triangles cut
+BODYCUT lod1 bottom_long_skirt bit 13: 4 of 416 skin triangles cut
+BODYCUT lod1 onepiece_sundress bit 15: 4 of 416 skin triangles cut
+BODYCUT lod1 outfit_monarch_cape bit 17: 10 of 416 skin triangles cut
+BODYCUT lod1 outfit_koi_kimono bit 16: 5 of 416 skin triangles cut
+BODYCUT lod1 shoes_slipon     bit 6: 58 of 416 skin triangles cut
+BODYCUT lod1 shoes_sneakers   bit 7: 60 of 416 skin triangles cut
+BODYCUT lod1 shoes_boots      bit 18: 68 of 416 skin triangles cut
+BODYCUT lod1 shoes_sandals    bit 19: 8 of 416 skin triangles cut
+BODYCUT lod1 top_tsi_zip_hoodie bit 8: 16 of 416 skin triangles cut
+BODYCUT_OK

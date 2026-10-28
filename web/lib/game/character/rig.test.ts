@@ -120,19 +120,30 @@ describe("designs (clothing-v2: one universal mesh per garment, a design is pain
     // without a design: the uv as it is
     expect(Array.from(adoptPrimitive(part, new Map([["mixamorigHips", 0]]), null).getAttribute("uv").array)).toEqual([0, 0, 1, 0, 0.5, 1]);
   });
-  it("the cells sit inside the atlas, inside their own gutters, one per design", () => {
+  it("the cells sit inside the atlas, apart, one per design, every part's design among them", () => {
     const cells = Object.values(DESIGNS.cells);
     expect(new Set(cells).size).toBe(cells.length);
-    for (const c of cells) {
-      const { u0, v0, s } = designUse(c);
-      const g = DESIGNS.grid, col = c % g, row = Math.floor(c / g);
-      expect(u0).toBeGreaterThan(col / g);
-      expect(u0 + s).toBeLessThan((col + 1) / g);
-      expect(v0).toBeGreaterThan(row / g);
-      expect(v0 + s).toBeLessThan((row + 1) / g);
+    expect(cells.sort((x, y) => x - y)).toEqual(DESIGNS.rects.map((_, i) => i));
+    const rects = cells.map(designUse);
+    for (const r of rects) {
+      expect(Math.min(r.u0, r.v0)).toBeGreaterThan(0);
+      expect(Math.max(r.u0, r.v0) + r.s).toBeLessThan(1);
     }
-    // the striped long-sleeve is the long-sleeve with the stripe design on it
+    // no two overlap, gutters and all: each gutter is a 32nd of its cell
+    const grown = rects.map(r => ({ x0: r.u0 - r.s / 30, x1: r.u0 + r.s * 31 / 30, y0: r.v0 - r.s / 30, y1: r.v0 + r.s * 31 / 30 }));
+    grown.forEach((a, i) => grown.slice(i + 1).forEach(b => expect(a.x1 <= b.x0 + 1e-9 || b.x1 <= a.x0 + 1e-9 || a.y1 <= b.y0 + 1e-9 || b.y1 <= a.y0 + 1e-9).toBe(true)));
+    for (const p of PARTS) if (p.design !== undefined) expect(DESIGNS.rects[p.design], p.id).toBeDefined();
+    // the striped long-sleeve is the long-sleeve with the stripe design on it; round 2: the crewneck is the sweater with the TSI design
     expect(PART_BY_ID.get("top_stripe_ls")).toMatchObject({ glb: "outfits/top/top_longsleeve.glb", design: DESIGNS.cells.stripe });
+    expect(PART_BY_ID.get("top_tsi_crew")).toMatchObject({ glb: "outfits/top/top_sweater.glb", design: DESIGNS.cells.tsi_crew });
+  });
+  it("puts every outfit on a universal model (clothing-v2 round 2): a body cut each, designs sharing a mesh", () => {
+    const outfits = PARTS.filter(p => ["top", "bottom", "onepiece", "shoes"].includes(p.slot));
+    expect(outfits.filter(p => p.bodyCut === undefined).map(p => p.id)).toEqual([]);
+    const byGlb = new Map<string, string[]>();
+    for (const p of outfits) byGlb.set(p.glb, [...(byGlb.get(p.glb) ?? []), p.id]);
+    expect(byGlb.get("outfits/top/top_sweater.glb")!.sort()).toEqual(["outfit_silk_sweater", "top_cardigan", "top_tsi_crew"]);
+    expect(byGlb.get("outfits/shoes/shoes_boots.glb")!.sort()).toEqual(["shoes_boots", "shoes_rainboots"]);
   });
 });
 

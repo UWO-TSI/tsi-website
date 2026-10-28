@@ -4,7 +4,7 @@
  * untextured primitives of a look (skin, hair, clothes, accessories) are
  * merged into ONE skinned geometry whose vertex colour is COLOR_0 x the
  * palette tint, drawn with one shared material: a character costs one draw
- * for the body, one for the face, and one more only for a top with a decal.
+ * for the body and one for the face (a garment's print is paint in the design atlas).
  * Mapped hairstyles (head fit) add no draw: their shading comes from one
  * shared atlas the body material samples.
  */

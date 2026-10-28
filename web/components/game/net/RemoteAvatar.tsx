@@ -20,7 +20,7 @@ import { openCard } from "./cards";
 import Character, { type CharacterMotion, type HeldView, type WeaponView } from "../character/Character";
 import { heldView } from "../PlayerAvatar";
 import { RESIDENT_STEPS, useStepDust, type StepWorld } from "../movement/moveFx";
-import { DEFAULT_LOOK, parseLook, type CharacterLook } from "@/lib/game/character/look";
+import { DEFAULT_LOOK, forMember, parseLook, type CharacterLook } from "@/lib/game/character/look";
 import { WEAPONS } from "@/lib/game/combat/data";
 import { parseHeld } from "@/lib/net/protocol";
 import type { RemotePlayer } from "@/lib/net/types";
@@ -28,10 +28,11 @@ import type { RemoteRig } from "./drive";
 import { FX_BENCH, useFxBench } from "@/lib/game/perf/fxBench";
 import { benchBack, benchHeld } from "./benchFx";
 
-/** The card's look JSON ("" the default look; anything unreadable falls back to it too). */
-export function remoteLook(json: string): CharacterLook {
+/** The card's look JSON ("" the default look; anything unreadable falls back to it too), without the members-only parts
+ * on a non-member (the card's badge; look.ts forMember). */
+export function remoteLook(json: string, member = false): CharacterLook {
   if (!json) return DEFAULT_LOOK;
-  try { return parseLook(JSON.parse(json)); } catch { return DEFAULT_LOOK; }
+  try { return forMember(parseLook(JSON.parse(json)), member); } catch { return DEFAULT_LOOK; }
 }
 /** What `held` draws in the hand (a tool, the furled leaf, a snack); weapons are `remoteWeapon`'s. */
 export function remoteHeld(held: string): HeldView | null {
@@ -75,7 +76,7 @@ export const RemoteAvatar = memo(function RemoteAvatar({ rig, player, walkSpeed,
   dust: boolean; ground?: StepWorld;
 }) {
   const anchor = useCallback((g: THREE.Group | null) => attachAnchor(rig, g), [rig]);
-  const look = useMemo(() => remoteLook(player.look), [player.look]);
+  const look = useMemo(() => remoteLook(player.look, player.member), [player.look, player.member]);
   // Development (the effect bench): forced or switched-off items stand in for theirs.
   const fx = useFxBench();
   const heldKey = FX_BENCH ? benchHeld(fx, rig.sid, player.held) : player.held, back = player.armed ? (FX_BENCH ? benchBack(fx, player.weapon) : player.weapon) : "";

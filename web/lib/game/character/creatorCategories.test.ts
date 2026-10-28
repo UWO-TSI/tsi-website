@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CATEGORIES, choose, colourTarget, isOn, shownOptions } from "./creatorCategories";
-import { BATCH2_PRICES, DEFAULT_LOOK, FACE, PARTS, STARTER_PARTS, faceRef, openEventParts, partRef, setEventsOpen, unlockRef, wear } from "./look";
+import { BATCH2_PRICES, DEFAULT_LOOK, FACE, PARTS, STARTER_PARTS, faceRef, forMember, openEventParts, partRef, setEventsOpen, unlockRef, wear } from "./look";
 
 const cat = (id: string) => CATEGORIES.find(c => c.id === id)!;
 
@@ -128,5 +128,23 @@ describe("wardrobe batch 2 in the creator and the closet (David's prices, specs/
     l = choose(l, cat("mouth").sections[0], f.mouth!);
     l = choose(l, cat("extras").sections[0], f.extras[0]);
     expect([l.eyes, l.mouth, l.extras]).toEqual([f.eyes, f.mouth, f.extras]);
+  });
+});
+
+describe("the TSI zip hoodie (David, 2026-10-27: free in the creator, TSI members only)", () => {
+  const shown = (mode: "create" | "wardrobe", member: boolean) => new Set(CATEGORIES.flatMap(c => c.sections.flatMap(s =>
+    shownOptions(s, mode, id => { const ref = id && partRef(id); return !ref || STARTER_PARTS.includes(ref); }, member))));
+  it("shows a member it free in the starting creator and the wardrobe; a non-member never sees it", () => {
+    for (const mode of ["create", "wardrobe"] as const) {
+      expect(shown(mode, true).has("top_tsi_zip_hoodie"), mode).toBe(true);
+      expect(shown(mode, false).has("top_tsi_zip_hoodie"), mode).toBe(false);
+    }
+    expect(partRef("top_tsi_zip_hoodie")).toBeNull();
+  });
+  it("falls back to the default top on a non-member's saved look, the rest of it kept", () => {
+    const look = { ...wear(DEFAULT_LOOK, "top", "top_tsi_zip_hoodie"), bottom: "bottom_joggers" };
+    expect(forMember(look, true)).toBe(look);
+    expect(forMember(look, false)).toEqual({ ...look, top: DEFAULT_LOOK.top });
+    expect(forMember(DEFAULT_LOOK, false)).toEqual(DEFAULT_LOOK);
   });
 });
