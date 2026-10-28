@@ -9,6 +9,13 @@ Modes (each rewrites the GLBs in place: the triangles and vertex arrays it keeps
            (Full, LOD 1) that no view from outside can reach is dropped: from each of SAMPLES points on it, no ray in any
            of DIRS directions (the whole sphere: the body draws both sides) gets out past the head, the base body and the
            asset itself. The rest are kept as they are; unused vertices go.
+  undercap A whole hairstyle's matte under-cap (the triangles whose u < 0) that shows outside the hair (David, 2026-10-27: "gotta
+           remove that under layer thing": flat stepped blocks at the temples and the nape, below the hair line). From each of
+           four points on a cap triangle, the share of the outward directions (within 70 deg of its normal, of the DIRS
+           sphere) that get out past the head, the base body and the hair's own strands (the cap itself doesn't block);
+           a triangle with more than UNDERCAP_T (0.1; UNDERCAP_T_HAIR for a hair whose fit needs more cap) of them out is dropped. What stays is the cap behind the hair, filling
+           the gaps between strands. Run after hidden, before hatcut; each tier on its own mesh. UNDERCAP_T=<n> in the
+           environment tunes it; --dry prints the numbers and writes nothing.
   hatcut   The hair a hat wins over (round 5, David: the cut well up inside the hat). For each head item with a `hatCut`
            bit (the covering hats: the propeller cap, the drawn top hat, the cowboy, woven and straw hats, #22's ushanka;
            the band: #04's visor), a whole hairstyle's vertex that no view reaches with the hat on, well up inside it, or
@@ -30,7 +37,7 @@ from mathutils.bvhtree import BVHTree
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-MODE, ONLY = (ARGS[0] if ARGS else "measure"), set(ARGS[1:])
+MODE, ONLY = (ARGS[0] if ARGS else "measure"), set(a for a in ARGS[1:] if not a.startswith("--"))
 CAT_PATH = os.path.join(HERE, "character_catalog.json")
 CAT = json.load(open(CAT_PATH))
 HC = np.array([0.0, 0.7755, 0.0])          # the head centre (head_shape.HC) in glTF axes (y up, the face toward +z)
@@ -277,6 +284,57 @@ def hidden():
         print(f"HIDDEN {pid:24s} {os.path.relpath(path, HERE):48s} {before} -> {after} ({before - after} hidden)")
     print("HIDDEN_OK", total[0], "->", total[1])
     tris()
+
+
+UNDERCAP_T = float(os.environ.get("UNDERCAP_T", "0.1"))
+# a hairstyle whose cap the fit check needs more of (at 0.1, hair_dreads_cap's gap_max stood 11 mm at the nape: the smallest cap that
+# passes keeps all but the clearly exposed triangles)
+UNDERCAP_T_HAIR = {"hair_dreads_cap": 0.35}
+
+
+def undercap():
+    """Drop the under-cap triangles that show outside the hair (see the module doc)."""
+    base = bvh(BASE)
+    w = np.array([[1 / 3, 1 / 3, 1 / 3], [0.6, 0.2, 0.2], [0.2, 0.6, 0.2], [0.2, 0.2, 0.6]])
+    dry = "--dry" in ARGS
+    total = [0, 0]
+    for p in selected([h for h in CAT["hair"] if h.get("full")]):
+        for path in hair_paths(p):
+            j, arrays = load_all(path)
+            for prim in primitives(j):
+                pos = arrays[prim["attributes"]["POSITION"]].astype(float)
+                uv = arrays[prim["attributes"]["TEXCOORD_0"]]
+                idx = arrays[prim["indices"]].reshape(-1, 3).astype(int)
+                cap = (uv[idx][:, :, 0] < 0).all(1)
+                if not cap.any():
+                    continue
+                strands = bvh(pos[idx[~cap]])
+                t = pos[idx[cap]]
+                nrm = np.cross(t[:, 1] - t[:, 0], t[:, 2] - t[:, 0])
+                nrm /= np.maximum(np.linalg.norm(nrm, axis=1, keepdims=True), 1e-12)
+                nrm *= np.where(((t.mean(1) - HC) * nrm).sum(1) < 0, -1.0, 1.0)[:, None]          # outward, away from the head
+                expo = np.zeros(len(t))
+                for i in range(len(t)):
+                    dirs = DIRS[DIRS @ nrm[i] > 0.34]
+                    pts = w @ t[i]
+                    n_out = sum(all(tr.ray_cast(Vector(pt + d * SAMPLES_EPS), Vector(d), 4.0)[0] is None for tr in (base, strands)) for pt in pts for d in dirs)
+                    expo[i] = n_out / (len(pts) * len(dirs))
+                shown = expo > UNDERCAP_T_HAIR.get(p["id"], UNDERCAP_T)
+                if dry:
+                    print(f"UNDERCAP {p['id']:24s} {os.path.basename(os.path.dirname(os.path.dirname(path)))} cap {len(t)} shown {int(shown.sum())} "
+                          f"expo pct 10/25/50/75/90 {np.round(np.percentile(expo, [10, 25, 50, 75, 90]), 2).tolist()}")
+                    continue
+                keep = np.ones(len(idx), bool)
+                keep[np.nonzero(cap)[0][shown]] = False
+                total[0] += int(cap.sum())
+                total[1] += int(shown.sum())
+                keep_triangles(j, arrays, prim, keep)
+                print(f"UNDERCAP {p['id']:24s} {os.path.relpath(path, HERE):48s} cap {len(t)} cut {int(shown.sum())}")
+            if not dry:
+                save(path, j, arrays)
+    print("UNDERCAP_OK cap triangles", total[0], "cut", total[1])
+    if not dry:
+        tris()
 
 
 def cut_items():
@@ -785,6 +843,6 @@ def roundtrip():
     print("ROUNDTRIP_OK", dst)
 
 
-if MODE in ("hidden", "hatcut", "hoodcut"):
+if MODE in ("hidden", "hatcut", "hoodcut", "undercap"):
     BASE = base_tris()
-{"hidden": hidden, "hatcut": hatcut, "hoodcut": hoodcut, "measure": measure, "tris": tris, "roundtrip": roundtrip}[MODE]()
+{"hidden": hidden, "hatcut": hatcut, "hoodcut": hoodcut, "undercap": undercap, "measure": measure, "tris": tris, "roundtrip": roundtrip}[MODE]()
