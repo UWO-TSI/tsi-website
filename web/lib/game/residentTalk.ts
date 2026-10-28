@@ -245,11 +245,15 @@ export function endTalk(): void {
   const t = talkStore.active;
   talkStore.active = null; talkStore.request = null; talkChanged();
   if (t?.script) scriptListeners.forEach(l => l(t.script!, t.slug));
-  if (t) endListeners.forEach(l => l(t.slug));
 }
-const endListeners = new Set<(slug: string) => void>();
-/** Any talk ended (said through, or left with Escape): who it was with (resident friendship, lib/game/friendship.ts). */
-export function onTalkEnd(l: (slug: string) => void) { endListeners.add(l); return () => { endListeners.delete(l); }; }
+/** Say more in the talk going on (their answer to a gift): the lines come after the current one, and it moves on to them. */
+export function sayMore(lines: readonly TalkLine[], now: number): void {
+  const t = talkStore.active;
+  if (!t || t.phase === "ended" || !lines.length) return;
+  t.lines = [...t.lines.slice(0, t.index + 1), ...lines];
+  t.index = Math.min(t.index + 1, t.lines.length - 1); t.typed = 0; t.lineAt = now; t.phase = "speaking"; t.since = now;
+  talkChanged();
+}
 const scriptListeners = new Set<(script: string, slug: string) => void>();
 /** A scripted conversation ended (said through, or left with Escape): its id and who said it. */
 export function onTalkScript(l: (script: string, slug: string) => void) { scriptListeners.add(l); return () => { scriptListeners.delete(l); }; }

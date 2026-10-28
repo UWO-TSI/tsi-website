@@ -27,6 +27,7 @@ body, [data-ui-theme="clean"] {
   --ui-disabled: #c9c9c9;
   --ui-round: #2e3a63;
   --ui-error: #c4513d;
+  --ui-heart: #ef6f86;
   --ui-focus: #151515;
   --ui-scrim: rgb(18 18 18 / 0.42);
   --ui-shade: 0 0 0;

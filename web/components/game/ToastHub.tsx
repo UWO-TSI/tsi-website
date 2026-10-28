@@ -6,9 +6,9 @@ import { SignInText } from "@/components/gui/SignIn";
 import styles from "./ToastHub.module.css";
 
 /** `icon`: an image path, or a single emoji. */
-export function toast(text: string, icon?: string) {
+export function toast(text: string, icon?: string, opts?: { quiet?: boolean }) {
   if (typeof window === "undefined") return;
-  window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text, icon } }));
+  window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text, icon, ...opts } }));
 }
 
 function ToastIcon({ src }: { src: string }) {
@@ -31,7 +31,7 @@ export default function ToastHub() {
   return (
     <div className={styles.hub} aria-live="polite" aria-relevant="additions" aria-atomic="false">
       {entries.map((entry) => (
-        <div key={entry.id} className={styles.toast} data-action={entry.signIn || undefined} style={{ "--toast-ms": `${entry.duration}ms` } as CSSProperties}>
+        <div key={entry.id} className={styles.toast} data-action={entry.signIn || undefined} data-quiet={entry.quiet || undefined} style={{ "--toast-ms": `${entry.duration}ms` } as CSSProperties}>
           {entry.icon && <ToastIcon src={entry.icon} />}
           {/* A note asking you to sign in links its words back here (reachability §3). */}
           <span className={styles.text}>{entry.signIn ? <SignInText text={entry.text} /> : entry.text}</span>

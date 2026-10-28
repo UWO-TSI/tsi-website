@@ -64,6 +64,26 @@ export const RESIDENT_LOOKS: Record<string, Look> = {
 };
 
 /**
+ * What each resident thinks of a gift from your bag (d-friends, lib/npc/friendship.ts giftTaste; David 2026-10-28):
+ * loved +1 heart, liked +1/2, hated -1, anything else nothing. Entries are a collection category (fish, sea, bug, fruit,
+ * nature: flowers, shells and mushrooms, mineral: wood, stone and ore) or one item's key, which wins over its category.
+ * In their own character; proposals for David's review.
+ */
+export interface GiftTastes { loves: readonly string[]; likes: readonly string[]; hates: readonly string[] }
+export const RESIDENT_GIFTS: Readonly<Record<string, GiftTastes>> = {
+  wren: { loves: ["fruit"], likes: ["nature"], hates: ["bug"] },
+  mayor: { loves: ["nature"], likes: ["fruit", "mineral"], hates: ["sea"] },
+  shopkeeper: { loves: ["mineral"], likes: ["fish"], hates: ["nature"] },
+  curator: { loves: ["bug"], likes: ["fish", "sea"], hates: ["fruit"] },
+  "wharf-keeper": { loves: ["fish"], likes: ["sea"], hates: ["bug"] },
+  "oracle-keeper": { loves: ["nature"], likes: ["mineral"], hates: ["fish"] },
+  crafter: { loves: ["mineral"], likes: ["sea"], hates: ["nature"] },
+  juniper: { loves: ["fruit"], likes: ["sea"], hates: ["mineral"] },
+  marlo: { loves: ["bug"], likes: ["nature"], hates: ["sea"] },
+  nell: { loves: ["nature"], likes: ["bug"], hates: ["fish"] },
+};
+
+/**
  * What each one says when you walk up and talk to them (specs/polish/reachability.md deliverable 1, row 123): two or
  * three conversations each, a box per line, "[happy]" and the like for the face they make (lib/content/talk.ts). In
  * their own tone (row 218); proposals for David's review (row 217, specs/polish/reachability-questions.md). The two

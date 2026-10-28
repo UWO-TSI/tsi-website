@@ -180,7 +180,7 @@ export const equip = (store: EconomyStore, m: string, input: { item_id: string; 
 export interface BoxPrize { slug: string; name: string; icon: string }
 /** Today's gift; on welcome day 7 the box's prize and `reel`, everything the box can hold (the roulette strip). */
 export interface GiftView extends Omit<DailyGift, "welcome"> {
-  welcome: { day: number; coins: number; item: BoxPrize | null; reel: BoxPrize[] } | null;
+  welcome: { day: number; coins: number; gems: number; item: BoxPrize | null; reel: BoxPrize[] } | null;
 }
 const prize = (i: ShopItem): BoxPrize => ({ slug: i.slug, name: i.display_name, icon: i.sprite_url ?? shopIcon(i) });
 export const claimDailyGift = (store: EconomyStore, m: string) =>

@@ -205,3 +205,18 @@ describe("talking to residents: the routine holds and resumes where it left off"
     expect(frames * dt).toBeCloseTo(6 / CATCH_UP, 0);
   });
 });
+
+describe("talking to residents: their answer to a gift", () => {
+  it("says it after the current line, even as they were saying goodbye", async () => {
+    const { beginTalk, startTalk, endTalk, sayMore, talkStore, pressTalk } = await import("./residentTalk");
+    const t = beginTalk({ id: "r1", slug: "curator", name: "Odile", post: null, seed: 1 }, [{ text: "Hi.", face: null }, { text: "Bye.", face: null }], 0);
+    startTalk(t);
+    t.phase = "speaking"; t.typed = 3;
+    pressTalk(t, 1); t.typed = 4; pressTalk(t, 2);
+    expect(t.phase).toBe("closing");
+    sayMore([{ text: "I love it!", face: "happy" }], 3);
+    expect(talkStore.active!.lines.map(l => l.text)).toEqual(["Hi.", "Bye.", "I love it!"]);
+    expect(talkStore.active).toMatchObject({ index: 2, typed: 0, phase: "speaking", lineAt: 3 });
+    endTalk();
+  });
+});

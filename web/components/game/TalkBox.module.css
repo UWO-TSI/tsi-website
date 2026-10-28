@@ -11,13 +11,19 @@
 .rest { visibility: hidden; }
 .sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 /* The amber continue chevron bobs once a line is down (the kit's "press to go on"); still while it types. */
-.talk button > span { display: inline-block; transition: opacity 0.15s; }
-.talk:not([data-ready]) button > span { opacity: 0.35; }
-.talk[data-ready] button > span { animation: chevron 0.9s ease-in-out infinite; }
+.talk > :first-child button > span { display: inline-block; transition: opacity 0.15s; }
+.talk:not([data-ready]) > :first-child button > span { opacity: 0.35; }
+.talk[data-ready] > :first-child button > span { animation: chevron 0.9s ease-in-out infinite; }
 @keyframes chevron { 50% { transform: translateY(4px); } }
-@media (prefers-reduced-motion: reduce) { .talk[data-phase] { animation: none; } .talk[data-ready] button > span { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .talk[data-phase] { animation: none; } .talk[data-ready] > :first-child button > span { animation: none; } }
 @media (max-width: 560px) { .talk { bottom: calc(18px + env(safe-area-inset-bottom)); } }
-/* Your friendship with them (d-friends): five hearts on the box's top edge, the earned ones filled. */
-.hearts { position: absolute; top: -12px; right: 34px; display: flex; gap: 3px; padding: 5px 9px; border-radius: 999px; background: var(--gui-paper); box-shadow: var(--gui-shadow-sm); color: var(--gui-coral-ink); pointer-events: none; }
-.hearts svg { fill: none; opacity: 0.45; }
-.hearts svg[data-on] { fill: currentColor; opacity: 1; }
+/* Your friendship with them (d-friends): half hearts on a white pill on the box's top edge, and the gift button beside it. */
+.friend { position: absolute; top: -18px; right: 30px; display: flex; align-items: center; gap: 8px; cursor: default; }
+.hearts { display: inline-flex; padding: 7px 11px; border-radius: 999px; background: var(--ui-card); box-shadow: 0 2px 8px rgb(var(--ui-shade) / 0.12); }
+.give { width: 36px; height: 36px; box-shadow: 0 2px 8px rgb(var(--ui-shade) / 0.16); }
+/* The gift picker: your bag in small white cards, above the box. */
+.gifts { position: absolute; left: 0; right: 0; bottom: calc(100% + 26px); padding: 12px; border-radius: 18px; background: var(--ui-panel); box-shadow: 0 14px 40px rgb(var(--ui-shade) / 0.2);
+  cursor: default; animation: giftsIn 0.24s cubic-bezier(0.34, 1.4, 0.64, 1) both; }
+.giftRow { display: grid; grid-auto-flow: column; grid-auto-columns: 112px; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
+@keyframes giftsIn { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
+@media (prefers-reduced-motion: reduce) { .gifts { animation: none; } }

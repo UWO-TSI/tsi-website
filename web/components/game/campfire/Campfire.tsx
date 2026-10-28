@@ -30,6 +30,7 @@ import { FIRE_PACK, FIRE_PACK_ROWS, FIRE_PACK_URL, createCombatParticleMaterial,
 import { CAMPFIRE_SIT_S, DRUM_LAYERS, FIRE, drumDistanceGain, drumLayers, fireLit, fireScale, type Spot } from "@/lib/game/campfire";
 import { apiCall } from "@/lib/apiClient";
 import { toast } from "../ToastHub";
+import { iconUrl } from "@/lib/icons/keys";
 import { campfireLive, countPosed } from "@/lib/game/danceField";
 import { eventSolids } from "@/lib/game/defaultIsland";
 import { worldTime } from "@/lib/game/worldClock";
@@ -114,7 +115,7 @@ interface Burn { size: number; light: number; dancers: number; sat: number; aske
 /** Campfire hour's bonus: asked for once a visit after sitting long enough; the server pays once a day, in the hour. */
 function claimBonus() {
   apiCall<{ coins: number; paid: boolean }>("/api/world/campfire", "campfire", {})
-    .then(r => { if (r.paid) toast(`+${r.coins} coins for sitting by the campfire. Cozy!`); }, () => {});
+    .then(r => { if (r.paid) toast(`+${r.coins} coins, warm by the fire.`, iconUrl("coin"), { quiet: true }); }, () => {});
 }
 
 /** The frame (module scope: the react compiler forbids writing through hook values). */

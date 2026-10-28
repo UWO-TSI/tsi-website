@@ -27,6 +27,8 @@ export const STAGE = { stage: f.stage, picture: f.stagePicture } as const;
  */
 export const NUDGE_GRID = f.nudge;
 export { useNudge };
+/** The reward pieces: hearts in halves, the reward track, the prize wheel (rewards.tsx). */
+export { HeartMeter, RewardTrack, PrizeWheel, WHEEL_SPIN_MS, type TrackStep, type WheelPrize } from "./rewards";
 
 const cx = (...names: (string | false | null | undefined)[]) => names.filter(Boolean).join(" ");
 

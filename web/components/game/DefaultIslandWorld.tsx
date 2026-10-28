@@ -119,7 +119,7 @@ import IslandLoading from "./IslandLoading";
 import { loadGameWorld } from "@/lib/game/world/load";
 import { GAME_WORLD, worldModel } from "@/lib/game/world/active";
 import TalkBox from "./TalkBox";
-import { emptyTalkView, onTalkEnd, requestTalk, subscribeTalk, talkStore, talkView } from "@/lib/game/residentTalk";
+import { emptyTalkView, requestTalk, subscribeTalk, talkStore, talkView } from "@/lib/game/residentTalk";
 import DailyGift from "./DailyGift";
 import { markWelcomed, welcomeStep } from "@/lib/game/welcome";
 import Arrival from "./arrival/Arrival";
@@ -130,9 +130,8 @@ import { gateWheel } from "@/lib/game/arrival/tools";
 import { postArrival, useArrivalFlag } from "@/lib/game/arrival/arrivalFlag";
 import { BRAM, TUTORIAL_REWARD, type HintKeys } from "@/lib/game/arrival/lines";
 import { useMoveUnlocks } from "@/lib/game/moveUnlocks";
-import { loadFriends, talkedTo } from "@/lib/game/friendship";
+import { loadFriends } from "@/lib/game/friendship";
 import { isCampfireHour } from "@/lib/game/campfire";
-import { friendNote } from "@/lib/npc/friendship";
 import { useHqOnboarding } from "./hq/useHqOnboarding";
 import { CheckInCard, PlaqueCard, RegisterCard } from "./hq/HqCards";
 import HqInterior from "./hq/HqInterior";
@@ -771,7 +770,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // Campfire hour (s-campfire): the HUD says so as it starts, or as you arrive during it.
   const campfireHour = isCampfireHour(torontoHour(new Date(conditions.now)));
   const campfireCall = ready && campfireHour;
-  useEffect(() => { if (campfireCall) toast("Campfire hour! The drums are going by the campfire. Sit by the fire a while for a little bonus."); }, [campfireCall]);
+  useEffect(() => { if (campfireCall) toast("Campfire hour. Drums by the fire on the beach.", undefined, { quiet: true }); }, [campfireCall]);
   const [sceneShown, setSceneShown] = useState(0);
   const onSceneReady = useCallback(() => { setReady(true); setFading(false); tripSceneReady(); }, []);
   const [near, setNear] = useState<Near>(null);
@@ -801,7 +800,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // The glider waits for the mountain expansion (lib/game/moveUnlocks.ts); the dash is everyone's from the start.
   const unlocks = useMoveUnlocks();
   // Resident friendship (d-friends): the day's first talk with a resident raises it; a level's letter or gift is told.
-  useEffect(() => { loadFriends(); return onTalkEnd(slug => void talkedTo(slug).then(f => { if (f?.leveled) toast(friendNote(f, f.name)); })); }, []);
+  useEffect(loadFriends, []);
   const peacefulRaw = usePeacefulContext(weather, conditions.now);
   const peaceful = useMemo(() => ({ ...peacefulRaw, glider: peacefulRaw.glider && unlocks.glider }), [peacefulRaw, unlocks.glider]);
   // Audio pass (row 169 / polish-ownership item 9): the hourly music player
