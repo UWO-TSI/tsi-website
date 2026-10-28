@@ -1,0 +1,15 @@
+MEASURE full: 7757 (base 1264, hair+head 4980, outfit 513, shoes 248, face/bag/neck/front [343, 148, 181, 80], heaviest uncut hair 4216, non-covering head 764, covering hat 770)
+  lod1: uncut hair + non-covering head 2543; hatted hair + its hat at most 2161 (hair_dreads_cap under acc_woven_hat: 1919 -> 1863, the hat 298)
+  lod1 head: [(884, 'acc_witch_hat'), (800, 'acc_sunhat'), (800, 'acc_straw_hat'), (723, 'acc_ushanka_goggles'), (684, 'acc_cap'), (438, 'acc_visor')]
+  lod1 face: [(222, 'acc_wheat_stalk'), (222, 'acc_thin_glasses'), (222, 'acc_gold_rimless_shades'), (221, 'acc_bandage_blindfold'), (213, 'acc_kitty_bow_glasses'), (208, 'acc_glasses_round')]
+  lod1 neck: [(154, 'acc_shell_necklace'), (128, 'acc_plaid_scarf'), (82, 'acc_paper_bowtie')]
+  lod1 front: [(80, 'acc_paper_tie')]
+  lod1 bag: [(148, 'acc_backpack'), (86, 'acc_shoulder_bag')]
+MEASURE lod1: 4981 (base 1160, hair+head 2543, outfit 426, shoes 248, face/bag/neck/front [222, 148, 154, 80], heaviest uncut hair 2105, non-covering head 438, covering hat 723)
+  lod2: uncut hair + non-covering head 1532; hatted hair + its hat at most 1487 (hair_braided_pigtails under acc_ushanka_goggles: 1084 -> 764, the hat 723)
+  lod2 head: [(884, 'acc_witch_hat'), (800, 'acc_sunhat'), (800, 'acc_straw_hat'), (723, 'acc_ushanka_goggles'), (684, 'acc_cap'), (438, 'acc_visor')]
+  lod2 face: [(222, 'acc_wheat_stalk'), (222, 'acc_thin_glasses'), (222, 'acc_gold_rimless_shades'), (221, 'acc_bandage_blindfold'), (213, 'acc_kitty_bow_glasses'), (208, 'acc_glasses_round')]
+  lod2 neck: [(154, 'acc_shell_necklace'), (128, 'acc_plaid_scarf'), (82, 'acc_paper_bowtie')]
+  lod2 front: [(80, 'acc_paper_tie')]
+  lod2 bag: [(148, 'acc_backpack'), (86, 'acc_shoulder_bag')]
+MEASURE lod2: 3970 (base 1160, hair+head 1532, outfit 426, shoes 248, face/bag/neck/front [222, 148, 154, 80], heaviest uncut hair 1094, non-covering head 438, covering hat 723)

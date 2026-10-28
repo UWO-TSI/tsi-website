@@ -1,0 +1,95 @@
+HAIR hair_baby_sprout     open=224 gap max=None at=None med=None on_scalp=None outer=None
+HAIR hair_messy_boy       open=137 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0729
+HAIR hair_long_scruffy    open=104 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0573
+HAIR hair_short_tufts     open=255 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0671
+HAIR hair_hime_short      open=324 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.076
+HAIR hair_windy_bob       open=885 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0752
+HAIR hair_wispy_ponytail  open=697 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.088
+HAIR hair_messy_wolf      open=843 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.008 outer=0.1023
+HAIR hair_bowl_cut        open=132 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0605
+HAIR hair_layered_shag    open=304 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0878
+HAIR hair_anime_spikes    open=120 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0854
+HAIR hair_vkei            open=1128 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.008 outer=0.0696
+HAIR hair_swept_fringe    open=971 gap max=0.003 at=[-8, -126] med=0.0025 on_scalp=0.003 outer=0.0816
+HAIR hair_bob_pigtail     open=207 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0607
+HAIR hair_long_pigtails   open=451 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0555
+HAIR hair_dreads_cap      open=392 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.003 outer=0.0591
+HAIR hair_waves           open=  0 gap max=0.0 at=[-20, -132] med=0.0 on_scalp=0.998 outer=0.02
+HAIR hair_messy_dreads    open=605 gap max=0.003 at=[-10, -105] med=0.0025 on_scalp=0.002 outer=0.0886
+HAIR hair_ribbon_bob      open=577 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.07
+HAIR hair_curly_pigtails  open=1443 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0704
+HAIR hair_emo_layers      open=708 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.001 outer=0.0567
+HAIR hair_double_buns     open=1330 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0594
+HAIR hair_spiky_messy     open=875 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.003 outer=0.0964
+HAIR hair_fluffy_crop     open=1298 gap max=0.003 at=[-8, 138] med=0.0025 on_scalp=0.005 outer=0.1031
+HAIR hair_straight_layers open=384 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.001 outer=0.0645
+HAIR hair_long_windswept  open=386 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.001 outer=0.0973
+HAIR hair_rolled_mask     open=156 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0528
+HAIR hair_tousled_spikes  open=280 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.002 outer=0.0816
+HAIR hair_ski_mask_dreads open=770 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.001 outer=0.0642
+HAIR hair_braided_pigtails open=357 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0604
+HAIR hair_space_buns      open=3429 gap max=0.003 at=[6, -111] med=0.0025 on_scalp=0.001 outer=0.0738
+HAIR hair_buns_braid      open=1086 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0773
+HAIR hair_messy_braid     open=882 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.002 outer=0.0729
+HAIR hair_freeform_afro   open=1994 gap max=0.003 at=[4, 102] med=0.0025 on_scalp=0.012 outer=0.1343
+HAIR hair_sponge_twists   open=207 gap max=0.003 at=[6, -111] med=0.0025 on_scalp=0.005 outer=0.1275
+HAIR hair_middle_part     open=566 gap max=0.003 at=[6, -129] med=0.0025 on_scalp=0.001 outer=0.1365
+HAIR hair_mod_cut         open= 66 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.001 outer=0.0631
+GLASSES acc_glasses_round    offset max=0.0053 default=0.0037
+GLASSES acc_glasses_square   offset max=0.0053 default=0.0037
+HEADWEAR acc_sunhat           open=  0 gap max=0.0 med=0.0 rise max=0.0125 poke=0.0
+HEADWEAR acc_cap              open=  0 gap max=0.0 med=0.0 rise max=0.0184 poke=0.0017
+HEADWEAR acc_straw_hat        open=  0 gap max=0.0 med=0.0 rise max=0.0137 poke=0.0
+HEADWEAR acc_flower_crown     open=  0 gap max=0.0082 med=0.0006 rise max=0.0131 poke=0.0
+HEADWEAR acc_crystal_circlet  open=  0 gap max=0.0072 med=0.0 rise max=0.0257 poke=0.0007
+HEADWEAR acc_witch_hat        open=  0 gap max=0.0 med=0.0 rise max=0.1129 poke=0.0
+HEADWEAR acc_cat_ears         open=  0 gap max=0.0038 med=0.0009 rise max=0.0751 poke=0.0
+HEADWEAR acc_visor            open= 19 gap max=0.111 med=0.0198 rise max=0.1897 poke=0.0307
+HEADWEAR acc_ushanka_goggles  open=437 gap max=0.0977 med=0.0244 rise max=0.1598 poke=0.1512
+SKULL hair_baby_sprout     full  clip=0.0 float={'top': 0.0038} uncovered=[] reach_out=0.0
+SKULL hair_messy_boy       full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_long_scruffy    full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_short_tufts     full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_hime_short      full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_windy_bob       full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_wispy_ponytail  full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_messy_wolf      full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_bowl_cut        full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_layered_shag    full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_anime_spikes    full  clip=0.0016 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_vkei            full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_swept_fringe    full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_bob_pigtail     full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_long_pigtails   full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_dreads_cap      full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_waves           full  clip=0.0 float={'crown': 0.0, 'top': 0.0} uncovered=[] reach_out=0.0
+SKULL hair_messy_dreads    full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_ribbon_bob      full  clip=0.0017 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_curly_pigtails  full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_emo_layers      full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_double_buns     full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_spiky_messy     full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_fluffy_crop     full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_straight_layers full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_long_windswept  full  clip=0.0015 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_rolled_mask     full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_tousled_spikes  full  clip=0.0002 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_ski_mask_dreads full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_braided_pigtails full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_space_buns      full  clip=0.0007 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_buns_braid      full  clip=0.0005 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_messy_braid     full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_freeform_afro   full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_sponge_twists   full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_middle_part     full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_mod_cut         full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL acc_sunhat           hat   clip=0.0 float={'top': 0.0, 'crown': 0.0} uncovered=[] reach_out=0.0 ear_rim=0.0
+SKULL acc_cap              hat   clip=0.0 float={'top': 0.0, 'crown': 0.0} uncovered=[] reach_out=0.0 ear_rim=0.0
+SKULL acc_straw_hat        hat   clip=0.0 float={'top': 0.0, 'crown': 0.0} uncovered=[] reach_out=0.0 ear_rim=0.0
+SKULL acc_witch_hat        hat   clip=0.0 float={'top': 0.0, 'crown': 0.0} uncovered=[] reach_out=0.0 ear_rim=0.0
+FACE {"feature_tris": 304, "stretch_max": 1.672, "aniso_max": 2.451, "per_layer": {"eyes": {"stretch": 1.672, "aniso": 2.451}, "mouth": {"stretch": 1.379, "aniso": 1.861}}, "stretch_worst_at": ["eyes", -59, 0.58], "aniso_worst_at": ["eyes", [0.134, 0.97]], "eye_reach_deg": 81.6, "eye_reach_item": "teary_closed", "eye_reach_lon_deg": 65.2, "eye_reach_lon_item": "big_shiny", "facing_max_deg": {"eyes": 81.6, "mouth": 60.8}, "default_facing_deg": {"eyes": 46.1, "mouth": 46.2}, "default_eye_centre_lon_deg": 33.8, "default_eye_centre_z": 0.7276}
+SEAM {"ledge_max": 0.0, "worst_pair": null, "worst_at": null, "pairs": 0, "median_over_pairs": 0.0, "over": {}}
+FIT_CHECK PASS (0 over the limits)
+  FLAG hair_waves: skin_through 0.005 at [-20, 159] (the head's skin out through the hairstyle's shell below the hair zone, where our head is not Roblox's)
+  FLAG hair_fluffy_crop: skin_through 0.0049 at [-10, -168] (the head's skin out through the hairstyle's shell below the hair zone, where our head is not Roblox's)
+  FLAG hair_sponge_twists: skin_through 0.0004 at [4, -84] (the head's skin out through the hairstyle's shell below the hair zone, where our head is not Roblox's)

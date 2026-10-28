@@ -38,6 +38,7 @@ import { readFishingLine } from "@/lib/game/fishingPrefs";
 import { bobberBobs, bobberLands, bobberNibbled, fishBites, fishFlees, fishLeaps, reelWake } from "@/lib/game/fx/fishingFx";
 import type { ParticlePool } from "@/lib/game/fx/particles";
 import { tagLookClasses } from "@/lib/game/modelMaterials";
+import { RAW_TURN_X } from "@/lib/game/fishing";
 import { heldTemplate } from "@/lib/game/character/heldMesh";
 import { LABEL_PRIORITY, worldLabels } from "@/lib/game/labelLayout";
 import { liveWind, useMoveParticles } from "../movement/moveFx";
@@ -102,7 +103,7 @@ function loadFish(url: string): Promise<THREE.Object3D> {
 function prepareFish(scene: THREE.Object3D, url: string, raw: boolean): { root: THREE.Object3D; length: number } {
   const inner = tagLookClasses(cloneSkeleton(scene), url), calib = new THREE.Group(), root = new THREE.Group();
   calib.add(inner);
-  if (raw) calib.rotation.x = Math.PI / 2; // the dump's raw exports: the game calibration (they come in 10x, z forward)
+  if (raw) calib.rotation.x = RAW_TURN_X; // the dump's raw exports: the game calibration (they come in 10x, z forward)
   calib.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(calib), size = box.getSize(new THREE.Vector3());
   calib.position.copy(box.getCenter(new THREE.Vector3())).negate();

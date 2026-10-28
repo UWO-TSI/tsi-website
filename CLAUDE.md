@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Entry point for every agent. It is already in your context: don't read it again. Last updated 2026-10-22.
+Entry point for every agent. It is already in your context: don't read it again. Last updated 2026-10-28.
 
 ## The repo
 
@@ -10,7 +10,7 @@ Tethos (UWO-TSI): the club website plus the member game. **The repo is public:**
 |---|---|---|
 | Marketing site | `web/app/(site)/`, `web/app/student/page.tsx`, `web/components/sections/` | Stable. Don't touch unless tasked. |
 | Recruitment portal | `web/app/student/apply/`, `web/components/recruit/`, `web/components/admin/` | Live in production. Don't touch unless tasked. |
-| Member game | `web/components/game/`, `web/lib/game/`, `realtime/`; portal overlays in `web/app/student/dashboard/`, `web/components/portal/` | Cozy 3D island game (React Three Fiber, Supabase, Colyseus on Fly.io), served at play.tethos.ca. Closed in production until `NEXT_PUBLIC_MEMBER_WORLD=open`. v1 "Arrival" launches Oct 31; feature freeze Oct 24 (`specs/launch/v1-launch.md`, `specs/v1-drop.md`). |
+| Member game | `web/components/game/`, `web/lib/game/`, `realtime/`; portal overlays in `web/app/student/dashboard/`, `web/components/portal/` | Cozy 3D island game (React Three Fiber, Supabase, Colyseus on Fly.io), live at play.tethos.ca on the new world (`web/data/world/`). The old village island is retired. There is no launch date: David keeps building until he's content (`specs/launch/v1-gameplay.md`). |
 
 The applicant island (`/student/apply/portal`) and the member island share one implementation of the game components (`avatarMode`, `collectionScope`, `islandLighting`, `clubhouse`). A change to one changes both.
 
@@ -19,14 +19,15 @@ The applicant island (`/student/apply/portal`) and the member island share one i
 - **`CODEMAP.md`**: where every system lives, the commands, and line ranges for the big files. Read the section for your task instead of grepping around.
 - **`specs/INDEX.md`**: every live spec, by area.
 - **`STATE.md`**: what's in production, migrations, branches.
-- **Decisions:** the ledger `specs/game-world-development-plan.md` (numbered rows) wins over every other doc. `specs/development-roadmap.md` is the build order. `specs/lore.md` is the story canon.
-- **Vision, the 5 member tiers (T1 to T5), MBTI classes and the design principles:** `specs/design-principles.md`.
+- **Decisions:** the ledger `specs/game-world-development-plan.md` (numbered rows) wins over every other doc. `specs/launch/v1-gameplay.md` is the plan; running lanes and open reviews are in `specs/lanes/coordinator.md`. `specs/lore.md` is the story canon.
+- **How the game looks (UI, art, models):** `specs/design-bible.md`. It wins over every other spec on those topics.
+- **The 5 member tiers (T1 to T5) and the design principles:** `specs/design-principles.md`. Classes: `specs/classes/design-sheet.md`.
 - **Portal feature mechanics** (bounty, calendar, kanban, marketplace, job board, directory): `web/app/student/STUDENT_SYSTEM_BIBLE.md`.
 - `archive/` is history. Don't read it unless told to.
 
 ## How work runs
 
-- A coordinator session runs lanes (background agents), one worktree each under `.claude/worktrees/`, on branches `game/<lane>`, and merges approved work to `main`. `main` equals `feat/game-default-island` and auto-deploys on every push.
+- A coordinator session runs lanes (background agents), one worktree each under `.claude/worktrees/`, on branches `game/<lane>`, and merges approved work to `main`. `origin/main` equals `feat/game-default-island` and auto-deploys on every push. Merge `origin/main`, never the local `main` ref (it is far behind).
 - **Lane agents start at `specs/lanes/README.md`.** The rules in `specs/lane-rules.md` are hard.
 
 ## Hard rules
@@ -34,9 +35,11 @@ The applicant island (`/student/apply/portal`) and the member island share one i
 - Never edit an applied migration. New ones go in `web/supabase/migrations/` as `YYYYMMDDHHMMSS_name.sql`, timestamped after the newest file there.
 - Real names never show in game.
 - Never open windows, apps, tabs or audio on David's screen. Headless browsers only, never the Playwright MCP.
-- Never fetch art references or textures yourself. David supplies them.
+- Never fetch art references or textures yourself. David supplies or approves them, and no model starts without his direction and references (`specs/design-bible.md`).
+- Blender runs headless only (`-b --factory-startup -P <script>`), never through the blender MCP.
+- The new world is the only member world. No village shots, gates or edits.
 - Search before building: find the existing implementation (other branches and worktrees too) and reuse it. Don't build a simplified duplicate.
-- David paints the islands himself in `/lab/map`. Agents don't author, paint or rearrange island layouts. The world model is in `specs/terrain-law.md` (the measured ACNH rules behind it: `specs/acnh-system-reference.md`): read it before touching terrain, water, cliffs, roads or placement.
+- David decides the island's layout. The member world is a smooth heightfield generated by `web/lib/game/world/generate.ts` and edited at `/lab/world` (`specs/world-editor.md`). Agents change its layout only where David asks for a specific change. `specs/terrain-law.md` (grid law) covers only the grid islands: the home island, the ruins and the applicant island.
 - Don't add features the spec doesn't list. When scope is unclear, ask the coordinator.
 
 ## Gotchas

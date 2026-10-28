@@ -4,31 +4,34 @@ Paths are relative to `specs/` (current locations; a folder regroup is proposed,
 
 ## Overrides everything, then process
 `game-world-development-plan.md` | Decision ledger; overrides every other spec | live
-`development-roadmap.md` | Build order and milestone sequence | live
+`launch/v1-gameplay.md` | The current plan: gameplay items, David's answers, lanes (no launch date) | live
+`launch/terrain-v3.md` | The new world's zones, review rounds and post-launch list | live
+`development-roadmap.md` | Old build order (status board from 09-29) | stale
 `known-defects-2026-07.md` | Measured foundational defects, re-measure before acting | reference
 `david-decisions.md` | Open decisions waiting on David (Oct 3) | reference
 `lane-rules.md` | Rules for every coordinator lane | live
 `terrain-law.md` | ACNH grid law for terrain, water, cliffs, placement | live
+`design-bible.md` | The one canon for UI, art and models (UI and Models set 2026-10-28; Art in progress) | canon
 `design-principles.md` | Project vision and design principles, partly superseded | reference
-`launch/v1-launch.md` | v1 launch run sheet: freeze Oct 24, launch Oct 31 (row 317) | live
-`v1-drop.md` | v1 Arrival (Halloween) plan, scope, lane split | live
+`launch/v1-launch.md` | v1 launch run sheet: freeze Oct 24, launch Oct 31 (row 317) | stale: no launch date (2026-10-27)
+`v1-drop.md` | v1 Arrival (Halloween) plan, scope, lane split | stale: superseded by row 318 and v1-gameplay
 
 ## Lanes and process (stay in place)
 `lanes/coordinator.md` | Coordinator handoff state | live
-`lanes/flat-ui.md` | Flat UI lane brief | live
-`lanes/hq-interior.md` | HQ interior lane brief | live
+`lanes/flat-ui.md` | Flat UI lane brief | done
+`lanes/hq-interior.md` | HQ interior lane brief | done
 `lanes/README.md` | Lane handoff index | live
-`lanes/wardrobe-b2.md` | Wardrobe batch 2 lane brief | live
-`lanes/wardrobe-followup.md` | Wardrobe follow-up lane brief (visor logo, merch catalogue rows) | live
+`lanes/wardrobe-b2.md` | Wardrobe batch 2 lane brief | done
+`lanes/wardrobe-followup.md` | Wardrobe follow-up lane brief (visor logo, merch catalogue rows) | done
 
 ## World, terrain, lore
 `island-core.md` | Milestone 1 island core, look transfer | reference
-`island-painter.md` | Hand-painted village map tool and data | live
+`island-painter.md` | Hand-painted village map tool and data | retired with the village
 `lore.md` | Tethos Island lore canon | live
 `seasonal-events.md` | Four repeating club-goal seasonal events | reference
 `seasonal-palettes.md` | Monthly palette and content cadence | reference
 `terrain-blending.md` | Natural terrain blending inside the grid | reference
-`terrain-v2.md` | World island terrain v2 | live
+`terrain-v2.md` | World island terrain v2 | stale: superseded by rows 308 and 318
 `world-editor.md` | 3D smooth terrain editor | live
 
 ## Look and rendering
@@ -102,9 +105,9 @@ Paths are relative to `specs/` (current locations; a folder regroup is proposed,
 
 ## Game UI and polish
 `game-ui.md` | Tool wheel, held items, backpack, rows 279-281 | live
-`polish/flat-ui.md` | Flat UI: shop style across menus | live
-`polish/ui-themes.md` | UI themes: one colour sheet per theme, how to add one | live
-`polish/gui-sheet.md` | Own GUI sheet from AC UI kit, row 285 | reference
+`polish/flat-ui.md` | Flat UI: shop style across menus | history; the design bible's UI chapter wins
+`polish/ui-themes.md` | UI themes: one colour sheet per theme, how to add one | reference for theme files; the design bible's UI chapter wins
+`polish/gui-sheet.md` | Own GUI sheet from AC UI kit, row 285 | superseded by the design bible (row 320)
 `polish/menus.md` | Menus and sheets polish | reference
 `polish/README.md` | Polish plan index, rows 268, 273 | reference
 `polish/world-refinement.md` | Birds, trees, flowers, HUD stack, row 284 | reference

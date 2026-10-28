@@ -53,3 +53,4 @@ web/supabase/.temp/
 node_modules/
 !art/characters/lod1/lod.json
 specs/tools/catalogue-editor/dist/
+specs/tools/fit-editor/dist/

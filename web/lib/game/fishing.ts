@@ -21,7 +21,7 @@ import { getLabHour } from "./devLab";
 import { liveIslandWeather, reelWeather } from "./islandWeather";
 import { torontoParts } from "@/lib/time";
 import { EXTRA_FISH } from "./fishCatalog";
-import { worldModel } from "./world/active";
+import { GAME_WORLD, worldModel } from "./world/active";
 import { weatherMods } from "./weatherPerks";
 import { SEASONAL_GOALS } from "@/lib/progression/defaults";
 import { ROSTER } from "@/lib/collections/roster";
@@ -139,19 +139,32 @@ const SEA_CREATURES: FishRow[] = [
   { key: "sea_giant_isopod", label: "a Giant Isopod", name: "Giant Isopod", model: "/assets/acnh/sea/giant-isopod.glb", creature: true, raw: true, move: { speed: 0.3, accel: 1.4, jitter: 0.007, dartChance: 0.26, dartMul: 2.3, retargetMs: 1250 } },
 ];
 
+/**
+ * The quarter turn about x that hangs a raw dump export (10x, its head along +z, its back up) head up with its back
+ * toward -z, the frame the hold, the tank and the icons assume: -90 degrees. The village keeps the +90 it shipped with,
+ * which hangs them head down and belly out (the village stays as it is; game/remodel round 3). In the new world only the
+ * sea creatures are raw (the fish are ours, in frame).
+ */
+export const RAW_TURN_X = GAME_WORLD === "new" ? -Math.PI / 2 : Math.PI / 2;
+
 /** A reel row: its rarity, size, habitat and hours are the roster's (lib/collections/roster.ts), the one place they're set. */
 export type FishRow = Omit<FishDef, "rarity" | "sizeCm" | "zone" | "when" | "whenLabel">;
 const SPECIES = new Map(ROSTER.map((s) => [s.key, s]));
 const hoursLabel = ({ hours: [a, b], rainAnyHour, weather }: { hours: [number, number]; rainAnyHour: boolean; weather: string[] }) =>
   `${a}-${b}h${rainAnyHour ? " or rain" : ""}${weather.length ? `, ${weather.join(" or ")} only` : ""}`;
 
-/** Every species, with the roster's rarity, size, habitat and hours; in the new world the fish are our tweaked models (worldModel, art/remodel/build_fish.py). */
+/**
+ * Every species, with the roster's rarity, size, habitat and hours. In the new world the fish are our tweaked models
+ * (worldModel, art/remodel/build_fish.py), already in the game's frame (head up, back toward -z, game scale), so none
+ * of them is raw there.
+ */
 export const FISH: FishDef[] = [...CORE_FISH, ...EXTRA_FISH, ...SEA_CREATURES].map(f => {
   const s = SPECIES.get(f.key);
   if (!s?.size) throw new Error(`${f.key}: a reel fish needs a roster row with a size`);
   const gated = s.hours || s.weather.length ? { ...s, months: [] } : null;
+  const model = worldModel(f.model);
   return {
-    ...f, model: worldModel(f.model), rarity: s.rarity, sizeCm: s.size, zone: s.biome === "sea" ? "sea" : "river",
+    ...f, model, raw: f.raw && model === f.model, rarity: s.rarity, sizeCm: s.size, zone: s.biome === "sea" ? "sea" : "river",
     ...(gated && {
       when: (hour: number, weather: string) => availableAt(gated, { hour, month: 1, weather: weather as WorldMoment["weather"] }),
       whenLabel: gated.hours ? hoursLabel({ ...gated, hours: gated.hours }) : `${gated.weather.join(" or ")} only`,

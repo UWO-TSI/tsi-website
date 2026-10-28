@@ -11,16 +11,23 @@ finished, the same way for all 81 so they read as one family with the rest of ou
     share the props' top-light gradient (propkit tint_gradient);
   - one material response: a soft wet sheen (roughness 0.5, no metal) on every species.
 
-Not changed: the geometry's shape and frame (the game's "raw" calibration and catchLength sizing still apply), the
-triangles (never more), the UVs. The rig is baked to its rest pose (the game never animates the bones).
+Not changed: the geometry's shape, the triangles (never more), the UVs. The rig is baked to its rest pose (the game never
+animates the bones).
+
+One frame for all 81 (round 3; David: "make sure the orientation of these fish models are correct"): the game's own,
+the head up (+y) and the back toward -z at game scale, the frame every catch, tank and icon assumes. The dump's raw
+exports (10x, the head along +z, the back up +y) used to get a quarter turn the wrong way at render, which left them
+head down and belly out; here they get scale 0.1 and the right quarter turn, so the new world draws every fish with
+raw off (lib/game/fishing.ts). The golden arowana was the dump's trophy (the fish over a pillar): the pillar goes.
 
   /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P art/remodel/build_fish.py [-- only a,b] [-- review <dir>]
 
 Reads web/public/assets/acnh/fish/<name>.glb (or the git copy, art/props/dumpkit.py), writes
 web/public/assets/game/remodel/fish/<name>.glb (the dump's name: lib/game/world/active.ts worldModel swaps the folder in the new world).
 """
-import math, os, sys
+import math, os, re, sys
 import bpy, bmesh
+from mathutils import Matrix
 import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "props"))
@@ -30,6 +37,16 @@ ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 SRC = os.path.join(D.ROOT, "web", "public", "assets", "acnh", "fish")
 OUT = "game/remodel/fish"
 ROUGH, BACK, BELLY = 0.5, 0.76, 1.0
+CATALOGUE = "".join(open(os.path.join(D.ROOT, "web", "lib", "game", f)).read() for f in ("fishing.ts", "fishCatalog.ts"))
+RAW = {m.group(1) for m in re.finditer(r'model: "/assets/acnh/fish/([\w-]+)\.glb"[^\n]*raw: true', CATALOGUE)}
+# Game axes -> Blender's (the glTF importer's): x -> x, y -> z, z -> -y.
+C = Matrix(((1, 0, 0), (0, 0, -1), (0, 1, 0)))
+# Into the game's fish frame (head +y, back -z), in game axes: the raw exports (head +z, back +y) and the trophy arowana
+# (head -x, back +y). Each at 0.1, the raw calibration's scale.
+TO_FRAME = {
+    "raw": Matrix(((1, 0, 0), (0, 0, 1), (0, -1, 0))) * 0.1,
+    "golden-arowana": Matrix(((0, 0, 1), (-1, 0, 0), (0, -1, 0))) * 0.1,
+}
 
 
 def blur(a, passes):
@@ -83,9 +100,28 @@ def bake_rig():
     return obs
 
 
+def to_frame(name, obs):
+    """The fish in the game's frame (TO_FRAME), centred; the trophy's pillar dropped."""
+    if name == "golden-arowana":
+        for o in [o for o in obs if "Piller" in o.name]:
+            obs.remove(o)
+            bpy.data.objects.remove(o, do_unlink=True)
+    key = name if name in TO_FRAME else "raw" if name in RAW else None
+    if key:
+        B = (C @ TO_FRAME[key] @ C.inverted()).to_4x4()
+        for o in obs:
+            o.data.transform(B)
+    if key == "golden-arowana":
+        pts = [v.co for o in obs for v in o.data.vertices]
+        mid = [(min(p[i] for p in pts) + max(p[i] for p in pts)) / 2 for i in range(3)]
+        for o in obs:
+            o.data.transform(Matrix.Translation([-c for c in mid]))
+    return obs
+
+
 def counter_shade(obs):
-    """COLOR_0: the back BACK, the belly BELLY, over the fish's height (Blender z: the glTF's y, the dump's up)."""
-    zs = [v.co.z for o in obs for v in o.data.vertices]
+    """COLOR_0: the back BACK, the belly BELLY, across the fish (the game frame's back is -z: Blender's +y)."""
+    zs = [v.co.y for o in obs for v in o.data.vertices]
     lo, hi = min(zs), max(zs)
     for o in obs:
         me = o.data
@@ -93,7 +129,7 @@ def counter_shade(obs):
             me.color_attributes.remove(me.color_attributes[0])
         col = me.color_attributes.new("Color", "FLOAT_COLOR", "CORNER")
         for lp in me.loops:
-            t = (me.vertices[lp.vertex_index].co.z - lo) / max(hi - lo, 1e-6)
+            t = (me.vertices[lp.vertex_index].co.y - lo) / max(hi - lo, 1e-6)
             s = BELLY + (BACK - BELLY) * (t * t * (3 - 2 * t))
             col.data[lp.index].color = (s, s, s, 1.0)
         me.color_attributes.active_color = col
@@ -141,7 +177,7 @@ def restyle_materials(obs):
 def build(name):
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.gltf(filepath=os.path.join(SRC, f"{name}.glb"))
-    obs = bake_rig()
+    obs = to_frame(name, bake_rig())
     before = sum(len(p.vertices) - 2 for o in obs for p in o.data.polygons)
     soften(obs)
     restyle_materials(obs)

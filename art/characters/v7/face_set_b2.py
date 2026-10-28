@@ -33,12 +33,12 @@ ACCENTS = {22: ("nose_shade", "Nose shade"), 25: ("stitches", "Stitches")}
 NAMES = {20: "Silly cat face", 21: "Silly face", 22: "Silly smile face", 23: "Tired face", 24: "Weirdcore eyes", 25: "Vampire face"}
 
 
-def faces():
-    """{"face-NN": {id, name, eyes, mouth, extras}}: the whole faces, by their pricing key."""
+def faces(faces=FACES, accents=ACCENTS, names=NAMES):
+    """{"face-NN": {id, name, eyes, mouth, extras}}: the whole faces, by their pricing key (face_set_b3.py passes its own)."""
     out = {}
-    for n, (eid, _, mid, _) in FACES.items():
-        extras = [ACCENTS[n][0]] if n in ACCENTS else []
-        out[f"face-{n}"] = {"id": NAMES[n].lower().replace(" face", "").replace(" ", "_"), "name": NAMES[n], "eyes": eid,
+    for n, (eid, _, mid, _) in faces.items():
+        extras = [accents[n][0]] if n in accents else []
+        out[f"face-{n}"] = {"id": names[n].lower().replace(" face", "").replace(" ", "_"), "name": names[n], "eyes": eid,
                             "mouth": mid, "extras": extras}
     return out
 
