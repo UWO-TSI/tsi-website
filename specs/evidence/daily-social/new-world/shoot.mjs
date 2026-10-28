@@ -61,7 +61,7 @@ async function open(query, day = null, toastText = null, toastShot = null) {
   for (let i = 0, ok = 0; i < 300 && (ok < 8 || (!caught && i < 120)); i++) {
     await page.waitForTimeout(caught ? 1000 : 250);
     ok = (await page.evaluate(() => !!window.__move?.sim?.current && !!window.__residents)) ? ok + 1 : 0;
-    if (!caught && await page.getByText(toastText).first().isVisible().catch(() => false)) { caught = true; await page.waitForTimeout(300); await shot(page, toastShot); }
+    if (!caught && await page.getByText(toastText).first().isVisible().catch(() => false)) { caught = true; await page.waitForTimeout(1200); await shot(page, toastShot); } // a quiet toast eases in over 0.9 s
   }
   await page.waitForTimeout(2000);
   return { ctx, page };
@@ -94,7 +94,7 @@ if (run("streak")) {
 
 // d-friends: walk up to Odile, talk (hearts on the box), leave (the level's toast).
 if (run("friends")) {
-  const { ctx, page } = await open(process.env.FRIENDS_Q ?? "at=14:00&progression=demo");
+  const { ctx, page } = await open(process.env.FRIENDS_Q ?? "at=15:40&progression=demo");
   let talked = false, spot = null;
   for (let tries = 0; tries < 12 && !talked; tries++) {
     const list = (await page.evaluate(() => window.__residents())).filter(r => !r.hidden);
@@ -102,7 +102,7 @@ if (run("friends")) {
     if (!who) { await page.waitForTimeout(1000); continue; }
     // Approach from the first side (or SIDE) where her Talk prompt shows: buildings and nets stand on some sides.
     let side = null;
-    for (const sd of process.env.SIDE ? [process.env.SIDE] : ["x-", "x+", "z-", "z+"]) {
+    for (const sd of process.env.SIDE ? [process.env.SIDE] : ["x+", "x-", "z+", "z-"]) {
       const d = sd[1] === "+" ? 1.2 : -1.2, [ax, az] = sd[0] === "x" ? [who.x + d, who.z + 0.3] : [who.x + 0.3, who.z + d];
       await page.evaluate(([x, z, y]) => window.__move.teleport(x, z, y), [ax, az, Math.atan2(who.x - ax, who.z - az)]);
       await page.waitForTimeout(800);
@@ -139,7 +139,9 @@ if (run("monument")) {
   // Some progress to see: the demo member chips in coins and their dace (the demo's in-page routes, lib/game/progressionDemo.ts).
   console.log("chipped in", await page.evaluate(async () => {
     const post = body => fetch("/api/progression/contribute", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(r => r.json()).then(j => j.contribution?.goal?.points ?? j.error);
-    return [await post({ goal_slug: "reopen-cafe", kind: "coins", amount: 1500, item_key: null, idempotency_key: "shot-coins-1" })];
+    const done = [await post({ goal_slug: "reopen-cafe", kind: "coins", amount: 1500, item_key: null, idempotency_key: "shot-coins-1" })];
+    window.dispatchEvent(new CustomEvent("tsi:progression-changed"));
+    return done;
   }));
   const { x: mx, z: mz } = MONUMENT;
   let found = "";
@@ -175,11 +177,13 @@ if (run("campfire")) {
     }, [site.x, site.z]);
     let paid = false;
     for (let i = 0; i < 45 && !paid; i++) { await page.waitForTimeout(1000); paid = await page.getByText(/warm by the fire/).first().isVisible().catch(() => false); }
+    await page.waitForTimeout(1200);
     console.log("bonus toast", paid, await page.evaluate(() => ({ lit: window.__campfire.lit(), light: window.__campfire.light() })));
     await shot(page, "campfire-sat");
   }
   await ctx.close();
-  montage("nw-s-campfire", ["campfire-toast", "campfire-sat"], "2x", "550x338+4+4");
+  execFileSync("magick", [`${TMP}/campfire-sat.png`, "-crop", "460x90+320+482", "-resize", "200%", `${TMP}/campfire-note.png`]);
+  montage("nw-s-campfire", ["campfire-toast", "campfire-sat", "campfire-note"], "3x", "550x338+4+4");
 }
 
 // x-moves: with the shipped locks on (?moves=locked), Q dashes from the start; the glider stays locked.
