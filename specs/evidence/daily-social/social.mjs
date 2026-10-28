@@ -26,7 +26,7 @@ async function open(query, toastText = null, toastShot = null) {
     : r.fulfill({ json: { ok: true, friend: { resident: JSON.parse(r.request().postData()).resident, name: "Odile", level: 3, leveled: true, coins: 0, letter: true } } }));
   const page = await ctx.newPage();
   page.on("pageerror", e => console.log("pageerror", e.message.slice(0, 200)));
-  await page.goto(`${BASE}?weather=clear&${query}`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${BASE}?weather=clear&${query}`, { waitUntil: "domcontentloaded", timeout: 300000 });
   let caught = false;
   for (let i = 0, ok = 0; i < 240 && (ok < 8 || (toastText && !caught && i < 90)); i++) {
     await page.waitForTimeout(1000);
