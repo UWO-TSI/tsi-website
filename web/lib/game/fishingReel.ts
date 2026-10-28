@@ -35,6 +35,14 @@ export const BOSS = {
   length: { run: 1.8, jump: 1.1, dive: 1.7, slack: 1.3 } as Record<BossMove, number>,
 };
 
+/** A boss's call: the warning, then the move under way, each saying what to do. */
+export const BOSS_CALL: Record<BossMove, { warn: string; live: string }> = {
+  run: { warn: "It's about to run!", live: "Running! Chase it" },
+  jump: { warn: "It's going to jump!", live: "Jumping! Let go" },
+  dive: { warn: "It's going to dive!", live: "Diving! Heavy line" },
+  slack: { warn: "It's turning on you!", live: "Slack! Keep reeling" },
+};
+
 /** The boss reel's own state (null for an ordinary fish). */
 export interface BossReel {
   stamina: number;
