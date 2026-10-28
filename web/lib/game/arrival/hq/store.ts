@@ -12,8 +12,8 @@ import { parseQuests, type TaughtTool, type ToolQuests } from "./teachers";
 import type { HqEvent } from "./script";
 import { mergeProgress, type AccountProgress } from "./accountProgress";
 
-/** v2: t-hq's script (v1 saves were beats of the old one). */
-const VISIT_KEY = "tsi.hq.v2";
+/** v3: the v2 review's script (v1 and v2 saves were beats of older ones). */
+const VISIT_KEY = "tsi.hq.v3";
 const QUESTS_KEY = "tsi.toolQuests.v1";
 type Store = Pick<Storage, "getItem" | "setItem" | "removeItem"> | null;
 const local = (): Store => { try { return typeof window === "undefined" ? null : window.localStorage; } catch { return null; } };

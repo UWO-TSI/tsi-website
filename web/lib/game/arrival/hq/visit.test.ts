@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { HQ_END, HQ_END_TOUR, HQ_SCRIPT, type HqEvent } from "./script";
 import { hqQuest, newVisit, parseVisit, visitCue, visitEvent, waitingFor, type HqState } from "./visit";
-import { FOUNDER_PLAQUE, HQ_TRACKER, LORE_CARD, MERCH_CARD, TOOL_LINES, WREN_LINES, trackerEsc } from "./lines";
+import { CHECKIN_CARD, FLY_CARDS, FOUNDER_PLAQUE, HQ_TRACKER, ID_CARD, LORE_CARD, TOOL_LINES, WREN_LINES, trackerEsc } from "./lines";
 import { tourSteps } from "./uiTour";
 import { END_LINE } from "../lines";
 
@@ -21,13 +21,17 @@ function playThrough() {
 }
 
 describe("the HQ visit with Alice (row 312)", () => {
-  it("runs in t-hq's order: report, the lore overlay, register, the real club, real merch, the UI tour, Esc, goodbye", () => {
+  it("runs in the v2 review's order: report, the lore, your ID, coins and gems, check-ins, menu, mail, minimap, the keys, Esc, goodbye", () => {
     expect(playThrough().seen).toEqual([
       "wait:wren",
       "say:welcome", "card:lore", "wait:lore",
-      "say:register", "card:register", "wait:signed",
-      "say:registered+club", "card:checkin", "wait:checkin",
-      "say:merch", "card:merch", "wait:merch",
+      "say:idAsk", "card:id", "wait:signed",
+      "say:idDone+coins", "card:fly:coins", "wait:flown",
+      "say:gems", "card:fly:gems", "wait:flown",
+      "say:events", "card:checkin", "wait:checkin",
+      "say:menuFly", "card:fly:menu", "wait:flown",
+      "say:mail", "card:fly:mail", "wait:flown",
+      "say:minimap", "card:fly:minimap", "wait:flown",
       "say:tour", "card:tour", "wait:tour",
       "say:menu", "wait:esc",
       "say:farewell",
@@ -50,7 +54,7 @@ describe("the HQ visit with Alice (row 312)", () => {
     let s: HqState = visitEvent(newVisit(), "wren");
     expect(visitCue(s)).toEqual({ kind: "say", keys: ["welcome"] });
     // The lore closed before she's asked (or anything else) changes nothing.
-    for (const e of ["lore", "signed", "esc", "tour", "merch"] as HqEvent[]) expect(visitEvent(s, e)).toEqual(s);
+    for (const e of ["lore", "signed", "esc", "tour", "flown"] as HqEvent[]) expect(visitEvent(s, e)).toEqual(s);
     s = visitEvent(s, "said");
     expect(visitCue(s)).toEqual({ kind: "card", card: "lore" });
     // Esc pressed early isn't the lore read.
@@ -94,13 +98,33 @@ describe("the HQ visit with Alice (row 312)", () => {
     expect(WREN_LINES.farewellTour.join(" ")).toMatch(/Bram's waiting for you outside/);
   });
 
+  it("points you at what's in HQ to look at, and keeps main-quest's Juno line in both farewells", () => {
+    for (const k of ["farewell", "farewellTour"]) {
+      const said = WREN_LINES[k].join(" ");
+      expect(said, k).toMatch(/notice board/);
+      expect(said, k).toMatch(/trophy case/);
+      expect(said, k).toMatch(/bring it to Juno at the museum|Bring your first catch to Juno at the museum/);
+    }
+  });
+
+  it("tells the island first (the Founder, the gatherings, GENESIS), and the money without a rate", () => {
+    const lore = LORE_CARD.pages.map(p => p.text).join(" ");
+    expect(lore).toMatch(/the Founder/);
+    expect(lore).toMatch(/GENESIS/);
+    expect(WREN_LINES.gems.join(" ")).toMatch(/real merch/);
+    expect(WREN_LINES.gems.join(" ")).toMatch(/shipped/);
+  });
+
   it("keeps to the lore: no Founder words written for David, no school words, no em dashes", () => {
     expect(FOUNDER_PLAQUE).toBeNull();
-    const tour = tourSteps({ move: "W A S D", jump: "Space", wheel: "Tab", hud: "H", map: "M", mail: "L", collection: "B", bag: "I" });
+    const tour = tourSteps({ wheel: "tab", emote: "g", hud: "h", bag: "i", collection: "b", quests: "j", map: "m", mail: "l" });
     const all = [...Object.values(WREN_LINES).flat(), ...Object.values(HQ_TRACKER), ...LORE_CARD.pages.flatMap(p => [p.title, p.text]),
-      ...MERCH_CARD.rows.flatMap(r => [r.name, r.text]), MERCH_CARD.note, ...tour.flatMap(t => [t.title, t.text, t.touch]), ...Object.values(TOOL_LINES).flatMap(t => [t.title, t.step, t.given, t.done, ...t.offer, ...t.during])];
+      ...Object.values(FLY_CARDS).flatMap(c => [c.name, c.text]), ...Object.values(ID_CARD), ...CHECKIN_CARD.steps, CHECKIN_CARD.note,
+      ...tour.flatMap(t => [t.title, t.text]), ...Object.values(TOOL_LINES).flatMap(t => [t.title, t.step, t.given, t.done, ...t.offer, ...t.during])];
     for (const line of all) {
       expect(line, line).not.toMatch(/—/);
+      // Real names never show in game: the island's founder is "the Founder".
+      expect(line, line).not.toMatch(/\bDavid\b/);
       // Never a rate between the game's money and real money (the repo is public).
       expect(line, line).not.toMatch(/\$|\bCAD\b|dollar|\bcents?\b/i);
       expect(line, line).not.toMatch(/\b(school|campus|class(es)?|lesson|teacher|student|course|homework|curriculum|semester|robot|human|machine|android)\b/i);

@@ -11,7 +11,8 @@ import * as THREE from "three";
 import { clearGuide, guideNow, guideView, showGuide } from "@/lib/game/guideArrow";
 
 /** How far ahead of you it sits (m), how far it drifts, how faint it is at full. */
-const AHEAD = 1.6, DRIFT = 0.18, OPACITY = 0.5, LIFT = 0.06, SIZE = 1.3;
+/** David, v2 review: "make arrow smaller slightly closer to you". */
+const AHEAD = 1.15, DRIFT = 0.12, OPACITY = 0.5, LIFT = 0.06, SIZE = 0.85;
 
 function chevron() {
   const s = new THREE.Shape();

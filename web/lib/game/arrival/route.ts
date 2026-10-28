@@ -22,12 +22,9 @@ export type Place =
   /** A map prop by id (the sell barrel, the tackle shop), then an offset in world axes. */
   | { prop: string; offset?: readonly [number, number] }
   | { world: readonly [number, number] };
-/**
- * A waypoint on Bram's way; `hop`: the leg to it is a jump (over a crate); `pause`: he stops there that long (s),
- * facing `face` and saying `say` (lines.ts PASSING_LINES), then walks on (t-sell: a building pointed out in passing).
- */
-export type Waypoint = Place & { hop?: boolean; pause?: number; face?: Place; say?: string };
-type Way = XZ & { hop?: boolean; pause?: number; face?: XZ; say?: string };
+/** A waypoint on Bram's way; `hop`: the leg to it is a jump (over a crate). */
+export type Waypoint = Place & { hop?: boolean };
+type Way = XZ & { hop?: boolean };
 
 export type TutorialTask =
   /** Get to `at` (within `radius`): the dock's crate hop. Bram waits at the end of `wait` (his way over it). */
@@ -38,7 +35,9 @@ export type TutorialTask =
   | { kind: "bag"; id: string }
   /** Go into HQ and do Alice's visit; Bram waits outside (t-short: HQ first). */
   | { kind: "hq"; id: string }
-  /** Open the sell barrel (t-sell). */
+  /** Dash once (Q; David's v2 review: the dock teaches the dash too). */
+  | { kind: "dash"; id: string }
+  /** Sell something at the sell barrel (t-sell; David's v2 review: the first fish is sold). */
   | { kind: "sell"; id: string };
 
 export interface TutorialStop {
@@ -51,8 +50,12 @@ export interface TutorialStop {
   /** What he hands over at the end of the talk (the wheel holds only what he has given until the walk is done). */
   gives?: "rod";
   task?: TutorialTask;
-  /** With `talk: "box"`: the place each line frames (by line index; none: the two of you). */
-  shots?: readonly (Place | null)[];
+  /** With `talk: "box"`: the place each line frames (by line index; none: the two of you; "bram": close on him). */
+  shots?: readonly (Place | null | "bram")[];
+  /** He starts it himself once he's there: no E (a beat that follows straight on from the last, the hand-over cutscene). */
+  auto?: boolean;
+  /** He has this in his hands through the talk and holds it out while the camera's close on him (a `"bram"` shot: the hand-over of his rod). */
+  holds?: "rod";
 }
 
 export interface TutorialRoute {
@@ -95,19 +98,17 @@ export function resolvePlace(p: Place, w: PlaceWorld): XZ | null {
 /** A stop with its places resolved (what the tutorial's pure state machine reads). */
 export interface ResolvedStop {
   id: string; stand: XZ; via: Way[]; gives?: "rod";
-  task?: { kind: "reach"; id: string; at: XZ; radius: number; wait: Way[]; hint: "jump" | "follow" } | { kind: "catch" | "bag" | "hq" | "sell"; id: string };
+  task?: { kind: "reach"; id: string; at: XZ; radius: number; wait: Way[]; hint: "jump" | "follow" } | { kind: "catch" | "bag" | "hq" | "dash" | "sell"; id: string };
   /** The camera conversation (the route's `talk: "box"`): his lines go in the dialogue box, a line framing `shots[i]`. */
-  box?: boolean; shots?: (XZ | null)[];
+  box?: boolean; shots?: (XZ | null | "bram")[];
+  auto?: boolean; holds?: "rod";
 }
 
 /** The route in world XZ. A stop or waypoint its world can't place falls back to the last place before it. */
 export function resolveRoute(route: TutorialRoute, w: PlaceWorld, origin: XZ): ResolvedStop[] {
   let last = origin;
   const at = (p: Place) => { const r = resolvePlace(p, w) ?? last; last = r; return r; };
-  const way = (ws: readonly Waypoint[] = []) => ws.map((p): Way => {
-    const here = at(p), face = p.face && resolvePlace(p.face, w);
-    return { ...here, ...(p.hop ? { hop: true } : {}), ...(p.pause ? { pause: p.pause } : {}), ...(face ? { face } : {}), ...(p.say ? { say: p.say } : {}) };
-  });
+  const way = (ws: readonly Waypoint[] = []) => ws.map((p): Way => ({ ...at(p), ...(p.hop ? { hop: true } : {}) }));
   return route.stops.map(s => {
     const via = way(s.via), stand = at(s.stand);
     const t = s.task;
@@ -115,7 +116,7 @@ export function resolveRoute(route: TutorialRoute, w: PlaceWorld, origin: XZ): R
       : t.kind === "reach" ? { kind: "reach", id: t.id, wait: way(t.wait), at: at(t.at), radius: t.radius, hint: t.hint }
       : { kind: t.kind, id: t.id };
     const box = route.talk === "box";
-    return { id: s.id, stand, via, ...(s.gives ? { gives: s.gives } : {}), ...(task ? { task } : {}),
-      ...(box ? { box, ...(s.shots ? { shots: s.shots.map(p => (p ? resolvePlace(p, w) : null)) } : {}) } : {}) };
+    return { id: s.id, stand, via, ...(s.gives ? { gives: s.gives } : {}), ...(task ? { task } : {}), ...(s.auto ? { auto: true } : {}), ...(s.holds ? { holds: s.holds } : {}),
+      ...(box ? { box, ...(s.shots ? { shots: s.shots.map(p => (p === "bram" ? p : p ? resolvePlace(p, w) : null)) } : {}) } : {}) };
   });
 }

@@ -15,6 +15,8 @@ import { beginTalk, onTalkScript, startTalk, talkStore } from "@/lib/game/reside
 import { fillName, parseTalkLine } from "@/lib/content/talk";
 import { itemIcon } from "@/lib/game/toolWheel";
 import type { TrackedQuest } from "@/lib/game/questTracker";
+import { setHudCoins } from "@/lib/game/hudStore";
+import type { FlyTarget } from "@/lib/game/arrival/hq/lines";
 import { finishToolQuest, giveTool, hqEvent, hqSnapshot, setToolsTaught, startVisit, syncHq, useHq } from "@/lib/game/arrival/hq/store";
 import { hqQuest, visitCue, waitingFor } from "@/lib/game/arrival/hq/visit";
 import { givenKeys, handOver, isTaughtTool, questFinished, teacherOf, teacherTalk, toolQuest, type CatchKind } from "@/lib/game/arrival/hq/teachers";
@@ -55,7 +57,7 @@ export function useHqOnboarding(w: HqWorld, dev: URLSearchParams | null) {
     if (!dev) return;
     if (dev.get("hqvisit") === "1") { setToolsTaught(true); startVisit(); }
     else if (dev.get("tools") === "taught") setToolsTaught(true);
-    Object.assign(window, { __hq: () => ({ ...hqSnapshot(), cue: hqSnapshot().visit && visitCue(hqSnapshot().visit!), waiting: waitingFor(hqSnapshot().visit) }) });
+    Object.assign(window, { __hudCoins: setHudCoins, __hq: () => ({ ...hqSnapshot(), cue: hqSnapshot().visit && visitCue(hqSnapshot().visit!), waiting: waitingFor(hqSnapshot().visit) }) });
   }, [dev]);
 
   // What the wheel may hold: the inventory plus what a resident has handed over here (before it reads back).
@@ -118,9 +120,14 @@ export function useHqOnboarding(w: HqWorld, dev: URLSearchParams | null) {
     return () => window.clearTimeout(t);
   }, [sayKeys, atHq, free, name, touch, closeMenu, farewell]);
 
-  /** The card due now (the register, the check-in card): at HQ with nothing else over the room. */
+  /** The card due now (the ID, the check-in card, a fly): at HQ with nothing else over the room. */
   const card: HqCard | null = cue?.kind === "card" && atHq && free ? cue.card : null;
   const waiting: HqEvent | null = waitingFor(visit);
+  /** What's flying to its place on screen now: the island shows it there meanwhile (the minimap indoors, the menu's dock). */
+  const fly = card?.startsWith("fly:") ? (card.slice(4) as FlyTarget) : null;
+  // The keyboard tour is for a keyboard: a touch screen goes straight past it (phones get their own pass later).
+  const tourBeat = !!visit && !visit.done && HQ_SCRIPT[visit.beat]?.id === "tour";
+  useEffect(() => { if (touch && tourBeat && atHq) hqEvent(visit!.stage === "say" ? "said" : "tour"); }, [touch, tourBeat, atHq, visit]);
 
   // The tracker: the visit while it runs, else a tool's quest.
   const quest: TrackedQuest | null = useMemo(() => {
@@ -138,5 +145,5 @@ export function useHqOnboarding(w: HqWorld, dev: URLSearchParams | null) {
     if (!hqSnapshot().visit) startVisit();
   }, []);
 
-  return { taught: hq.taught, visit, owned, quest, card, waiting, arrived };
+  return { taught: hq.taught, visit, owned, quest, card, fly, waiting, arrived };
 }

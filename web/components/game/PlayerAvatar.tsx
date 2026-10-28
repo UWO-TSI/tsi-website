@@ -472,6 +472,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
         f.stuck = Math.hypot(s.state.vx, s.state.vz) < 0.3 ? f.stuck + dt : 0;
         if (f.stuck > STUCK_TIME) target.current = null;
       }
+      // A dash, for whoever is teaching it (the arrival's dock, lib/game/arrival/tutorial.ts).
+      if (!inCombat && events.some(e => e.kind === "dash")) window.dispatchEvent(new Event("tsi:dash"));
       if (inCombat && events.some(e => e.kind === "dash")) dashDodge(combat.rt, { x: s.state.dashX, z: s.state.dashZ }, s.state.airDashes > 0); // an air dash: no i-frames
       if (inCombat && combat.rt.v2) for (const e of events) {
         const on = e.kind === "dash" ? "dash" : e.kind === "slide" || e.kind === "dashslide" || e.kind === "landslide" ? "slide" : e.kind === "land" ? "land" : null;

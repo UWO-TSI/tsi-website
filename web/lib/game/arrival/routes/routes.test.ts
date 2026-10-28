@@ -46,7 +46,7 @@ describe.each(["village", "new"] as const)("the arrival on the %s world", (world
     const stops = R.resolveRoute(route, arrival.placeWorld(dock, v), { x: dock.x, z: dock.z }), nav = N.navGrid(walker, v);
     expect(stops.map(s => s.id)).toEqual(route.stops.map(s => s.id));
     for (const s of stops) expect(walker.standable(s.stand.x, s.stand.z), `${s.id} at (${s.stand.x.toFixed(1)}, ${s.stand.z.toFixed(1)})`).toBe(true);
-    // His way: each stop's waypoints (a building he pauses by) then its stand, on ground he can walk.
+    // His way: each stop's waypoints then its stand, on ground he can walk.
     for (let i = 1; i < stops.length; i++) {
       const way = [stops[i - 1].stand, ...stops[i].via.filter(w => !w.hop), stops[i].stand];
       for (const w of way) expect(walker.standable(w.x, w.z), `${stops[i].id} way at (${w.x.toFixed(1)}, ${w.z.toFixed(1)})`).toBe(true);
@@ -62,7 +62,7 @@ describe.each(["village", "new"] as const)("the arrival on the %s world", (world
     }
     if (world === "new") {
       const pw = arrival.placeWorld(dock, v);
-      for (const st of route.stops) for (const p of [st.stand, ...(st.via ?? []), ...(st.shots ?? []).filter(x => x !== null)]) expect(R.resolvePlace(p, pw), JSON.stringify(p)).not.toBeNull();
+      for (const st of route.stops) for (const p of [st.stand, ...(st.via ?? []), ...(st.shots ?? []).filter(x => x !== null && x !== "bram")]) expect(R.resolvePlace(p, pw), JSON.stringify(p)).not.toBeNull();
     }
   }, 60_000);
 });

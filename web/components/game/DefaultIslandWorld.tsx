@@ -109,6 +109,7 @@ import type { MuseumWing } from "@/lib/collections/logic";
 import FishingOverlay from "./FishingOverlay";
 import ToastHub, { toast } from "./ToastHub";
 import RewardCard from "./RewardCard";
+import QuestComplete, { QUEST_COMPLETE_MS } from "./QuestComplete";
 import GlideGuide, { GlideGuideHint } from "./GlideGuide";
 import BorderNotice from "./BorderNotice";
 import ShopInterior from "./ShopInterior";
@@ -129,11 +130,12 @@ import { arrivalEvent, bramNear, bramPrompt, useArrivalPhase, useArrivalTools, u
 import { routeFor } from "@/lib/game/arrival/routes";
 import { gateWheel } from "@/lib/game/arrival/tools";
 import { postArrival, useArrivalFlag } from "@/lib/game/arrival/arrivalFlag";
-import { BRAM, TUTORIAL_REWARD, type HintKeys } from "@/lib/game/arrival/lines";
+import { BRAM, TRACKER_TITLE, TUTORIAL_REWARD, type HintKeys } from "@/lib/game/arrival/lines";
 import { useMoveUnlocks } from "@/lib/game/moveUnlocks";
 import { useHqOnboarding } from "./hq/useHqOnboarding";
-import { CheckInCard, LoreOverlay, MerchCard, PlaqueCard, RegisterCard } from "./hq/HqCards";
-import UiTour from "./hq/UiTour";
+import { CheckInCard, FlyCard, LoreOverlay, PlaqueCard } from "./hq/HqCards";
+import IdCard from "./hq/IdCard";
+import KeyboardTour from "./hq/KeyboardTour";
 import HqInterior from "./hq/HqInterior";
 import { HQ_LINES } from "@/lib/game/hqLayout";
 import { hqEvent } from "@/lib/game/arrival/hq/store";
@@ -864,12 +866,12 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const heldState = useHeld();
   const wheelKeys = useWheelKeys();
   // Bram's hints name your own keys (or say it for a touch screen).
-  const hintKeys = useMemo<HintKeys>(() => ({ move: [moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(keyName).join(" "), jump: keyName(moveKeys.jump),
+  const hintKeys = useMemo<HintKeys>(() => ({ move: [moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(keyName).join(" "), jump: keyName(moveKeys.jump), dash: keyName(moveKeys.dash),
     wheel: keyName(wheelKeys.wheel), bag: keyName(identity.settings.key_bindings.openJournal), touch }), [moveKeys, wheelKeys.wheel, identity.settings.key_bindings.openJournal, touch]);
   // Alice's UI tour names your own keys too (t-hq).
   const binds = identity.settings.key_bindings;
-  const tourKeys = useMemo(() => ({ move: hintKeys.move, jump: hintKeys.jump, wheel: hintKeys.wheel, hud: keyName(wheelKeys.hud), map: keyName(binds.openMap),
-    mail: keyName(binds.openMail), collection: keyName(binds.openJournal), bag: keyName(binds.openBag) }), [hintKeys, wheelKeys.hud, binds]);
+  const tourKeys = useMemo(() => ({ wheel: wheelKeys.wheel, emote: wheelKeys.emote, hud: wheelKeys.hud, bag: binds.openBag, collection: binds.openJournal,
+    quests: "j", map: binds.openMap, mail: binds.openMail }), [wheelKeys, binds]);
   const armed = useCombatValue(() => combat.rt.player.armed);
   const weaponList = useCombatValue(() => combat.rt.player.owned.join(","));
   const runtimeWeapon = useCombatValue(() => combat.rt.player.weapon);
@@ -1063,10 +1065,15 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const keepLook = useCallback((look: Parameters<typeof saveMyLook>[0], name: string | null) => {
     void saveMyLook(look).then(() => (name ? saveName(name) : undefined));
   }, []);
-  // Arrived: the account's flag and Bram's reward (once), his old rod's card, the chapter 1 objective.
+  // Arrived: the account's flag and Bram's reward (once), the chapter 1 objective; the walk's check mark, then his old
+  // rod's card ("From Bram") as the rod flies into your bag (David's v2 review).
   const finishArrival = useCallback(() => {
     markWelcomed(); setArrived(true); arrivalFlag.markArrived(); setObjectiveNew(true);
-    window.dispatchEvent(new CustomEvent("tsi:gift", { detail: { key: TUTORIAL_REWARD.rod, name: TUTORIAL_REWARD.name, title: TUTORIAL_REWARD.title, note: TUTORIAL_REWARD.note } }));
+    window.dispatchEvent(new CustomEvent("tsi:quest-complete", { detail: { title: TRACKER_TITLE } }));
+    window.setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("tsi:gift", { detail: { key: TUTORIAL_REWARD.rod, name: TUTORIAL_REWARD.name, title: TUTORIAL_REWARD.title, note: TUTORIAL_REWARD.note } }));
+      window.dispatchEvent(new CustomEvent("tsi:bag-got", { detail: { key: TUTORIAL_REWARD.rod } }));
+    }, QUEST_COMPLETE_MS - 300);
     // A new arrival (row 312): its tools are taught and the visit with Alice starts. A dev replay signed out counts as one.
     void postArrival().then(r => { if (r?.granted) setHudCoins(r.balance); hqArrived(r ? r.taught : DEV && devHome.get("arrival") === "1"); });
   }, [arrivalFlag, hqArrived, devHome]);
@@ -1075,7 +1082,14 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // HQ first (the new world's walk): Alice's visit done and you back out; the sell barrel opened.
   const hqDone = !!hq.visit?.done;
   useEffect(() => { if (hqDone && !inside && arrivalPhase === "tutorial") arrivalEvent("hqDone"); }, [hqDone, inside, arrivalPhase]);
-  useEffect(() => { if (sheet === "sell") arrivalEvent("sellOpened"); }, [sheet]);
+  // A sale at the barrel moves Bram's walk on once its sheet is closed (his hand-over follows straight on).
+  const sold = useRef(false);
+  useEffect(() => {
+    const on = () => { sold.current = true; };
+    window.addEventListener("tsi:sold", on);
+    return () => window.removeEventListener("tsi:sold", on);
+  }, []);
+  useEffect(() => { if (sheet === null && sold.current) { sold.current = false; arrivalEvent("sold"); } }, [sheet]);
   useEffect(() => {
     if (!objectiveNew) return;
     const t = window.setTimeout(() => setObjectiveNew(false), 2600);
@@ -1157,7 +1171,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const photoAllowed = ready && !fading && !hudCinematic && !fishing && !sheet && !bagOpen && !donateOpen && !decor.decorating && !trip.active;
   // The UI view (Esc 1): the fuller HUD over the live game; it stands back for a cinematic.
   const uiView = layer !== null && !hudCinematic;
-  const full = isFullHud({ always: alwaysFullHud, keyHeld: hudKey, uiView, cinematic: hudCinematic });
+  // Alice's fly cards (row 312, the v2 review): what's flying to its place shows meanwhile (the coins, the dock, the minimap).
+  const showcase = hq.fly;
+  const full = isFullHud({ always: alwaysFullHud, keyHeld: hudKey, uiView, cinematic: hudCinematic }) || showcase === "coins" || showcase === "gems";
   // On a phone the menu button opens the UI view; the heading and touch hint flash (world audit item 11).
   const compact = compactTouchHud({ touch, always: alwaysFullHud });
   // Mouse-look ending on its own (Esc, the window losing focus) opens the UI view; capturing again closes the layers.
@@ -1190,7 +1206,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const holdObjective = step === "creator" || step === "arrival" || arrivalPhase !== null || trip.active;
   // The quest tracker (playtest round 1): the walk-along's steps while Bram shows you round, otherwise the chapter being
   // worked on (none while the member mutes the HUD's quests: the objective is empty then).
-  const tutorialQuest = useTutorialQuest({ bag: keyName(identity.settings.key_bindings.openJournal), touch });
+  const tutorialQuest = useTutorialQuest(hintKeys);
   const trackedChapter = useMemo(() => chapterQuest(progressionState.chapters, !!progression.objective.text), [progressionState.chapters, progression.objective.text]);
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
@@ -1303,7 +1319,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           <QuestTracker className={styles.questSlot} quest={tutorialQuest ?? hq.quest ?? trackedChapter} hidden={tutorialQuest || hq.quest ? false : holdObjective} onOpen={() => setSheet("journal")} />
         </div>
         <div className={styles.hudColumn} data-minimap data-new={objectiveNew || undefined}>
-          {mapHere && !holdObjective && <MiniMap playerPosRef={player} plot={objectivePlot} big={uiView} onOpen={() => setMapOpen(true)} />}
+          {((mapHere && !holdObjective) || showcase === "minimap") && <MiniMap playerPosRef={player} plot={objectivePlot} big={uiView} onOpen={() => setMapOpen(true)} />}
           <HudClock weather={weather} phase={phase} />
           {/* Kept for a mini health bar when combat drops (playtest round 1); nothing drawn yet. */}
           <div className={styles.healthSlot} data-slot="health" aria-hidden="true" />
@@ -1348,6 +1364,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <ToastHub />
       {/* What a catch, a find, a craft or a bottle gave you: one card with its art, beside the Bag's fly-in. */}
       <RewardCard />
+      <QuestComplete />
       <GlideGuideHint show={ready && !fading && !inside && site === "village" && !sheet && !cinematic && !talking} />
       {/* Today's gift once the island is showing and nothing else holds the player (first login, a fade, a sheet, a fight). */}
       <DailyGift ready={ready && !fading && !holdObjective && !sheet && !talking && site !== "ruins"} />
@@ -1363,7 +1380,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         <BagButton full={false} keyLabel={keyName(identity.settings.key_bindings.openBag)} onOpen={() => setSheet("bag")} />
       </div>
       {/* The UI view's dock (Esc 1): the menu entries over the live game. Their sheets close back to it. */}
-      {uiView && <MenuDock touch={touch} unread={progression.unreadLetters} asking={friends.asking} people={netStatus.kind === "joined" ? roster.length : null}
+      {(uiView || showcase === "menu" || showcase === "mail") && <MenuDock touch={touch} unread={progression.unreadLetters} asking={friends.asking} people={netStatus.kind === "joined" ? roster.length : null}
         keys={{ map: keyName(identity.settings.key_bindings.openMap), journal: "J", bag: keyName(identity.settings.key_bindings.openBag), collection: keyName(identity.settings.key_bindings.openJournal), mail: keyName(identity.settings.key_bindings.openMail) }}
         onMap={mapOpenable ? () => setMapOpen(true) : null} onJournal={() => setSheet("journal")} onBag={() => setSheet("bag")} onCollection={() => setBagOpen(true)}
         onFriends={() => setNetSheet("friends")} onPeople={() => setNetSheet("people")} onMail={() => setSheet("letters")} />}
@@ -1378,13 +1395,13 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         onChoose={decor.choose} onRotate={decor.rotateSelected} onPutAway={decor.putAway} onDone={decor.toggle}
         onFinish={(key, value) => decor.setRoomFinish(roomAt(player.current.x, layout.rooms.length), key, value)} onShop={() => toShop("More furniture")} />}
       <NoticeSheet open={sheet === "notice"} onClose={() => setSheet(null)} keys={STATION_KEY} />
-      {/* The HQ visit's cards (row 312): the register, where the check-in code goes, the Founder's plaque. */}
-      <RegisterCard open={hq.card === "register"} name={identity.signedIn ? identity.display_name : null} friendCode={friends.view?.code ?? null} letters={progression.unreadLetters ?? null} onDone={() => hqEvent("signed")} />
+      {/* The HQ visit's cards (row 312): your island ID, where the check-in code goes, the Founder's plaque, the fly cards. */}
+      <IdCard open={hq.card === "id"} name={identity.signedIn ? identity.display_name : null} signedIn={identity.signedIn} friendCode={friends.view?.code ?? null} onDone={() => hqEvent("signed")} />
+      <FlyCard target={hq.fly} onDone={() => hqEvent("flown")} />
       <CheckInCard open={hq.card === "checkin"} onDone={() => hqEvent("checkin")} />
       <PlaqueCard open={sheet === "plaque"} onClose={() => setSheet(null)} />
       <LoreOverlay open={hq.card === "lore"} onDone={() => hqEvent("lore")} />
-      <MerchCard open={hq.card === "merch"} onDone={() => hqEvent("merch")} />
-      <UiTour open={hq.card === "tour"} keys={tourKeys} touch={touch} onDone={() => hqEvent("tour")} />
+      <KeyboardTour open={hq.card === "tour" && !touch} keys={tourKeys} onDone={() => hqEvent("tour")} />
       <ShopkeeperChoice open={sheet === "shopkeeper"} onClose={() => setSheet(null)} onChoose={section => {
         setShopSection(section);
         if (section === "merch") window.dispatchEvent(new CustomEvent("tsi:shopkeeper-say", { detail: { line: MERCH_LINE, clip: "Chat" } }));
@@ -1422,7 +1439,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       {trip.active && !trip.crossing && <TripVeil phase={trip.phase} to={trip.to} firstLogin={trip.firstLogin} quick={trip.quick} haze={light.fogColor} touch={touch} onSkip={trip.skip} />}
       {/* The arrival (specs/v1-drop.md §1): over everything while it plays, its glyphs and way out during the walk-along. */}
       <Arrival play={arrivalPlays} look={mine.look} askName={identity.signedIn ? { current: identity.display_name } : undefined} touch={touch}
-        keys={{ wheel: keyName(wheelKeys.wheel), bag: keyName(identity.settings.key_bindings.openJournal) }} onCross={startCrossing} onSaveLook={keepLook} onDone={finishArrival} />
+        keys={hintKeys} onCross={startCrossing} onSaveLook={keepLook} onDone={finishArrival} />
       <div className={styles.netHud} data-hidden={hudCinematic || undefined}><NetHud area={area} hidden={hudCinematic || photo.open} expanded={uiView} /></div>
       <PhotoMode allowed={photoAllowed} />
       <LoadingStatus ready={ready} />

@@ -13,8 +13,8 @@ import { END_LINE, STOP_LINES, TASK_DONE_LINES, TRACKER, TRACKER_TITLE, type Hin
 import type { ResolvedStop, XZ } from "./route";
 import type { TrackedQuest } from "@/lib/game/questTracker";
 
-/** `talkEnded`: the camera conversation closed; `hqDone`: Alice's visit done and you're back out; `sellOpened`: the sell barrel opened. */
-export type TutorialEvent = "rodHeld" | "cast" | "caught" | "bagOpened" | "talked" | "talkEnded" | "hqDone" | "sellOpened";
+/** `talkEnded`: the camera conversation closed; `hqDone`: Alice's visit done and you're back out; `dashed`: a dash; `sold`: something sold at the barrel (and its sheet closed). */
+export type TutorialEvent = "rodHeld" | "cast" | "caught" | "bagOpened" | "talked" | "talkEnded" | "hqDone" | "dashed" | "sold";
 /** At a stop: waiting to be talked to (the "!"), talking, then its task. */
 export type TutorialStage = "await" | "talk" | "task";
 
@@ -22,6 +22,8 @@ export const HINT_AFTER_S = 10;
 export const HINT_AGAIN_S = 20;
 /** Within this of Bram, E talks to him. */
 export const TALK_R = 2.4;
+/** An `auto` stop starts once he's this close to its stand. */
+const AUTO_R = 0.6;
 /** Getting this much closer to a stop's place is progress (the stall clock starts again). */
 const CLOSER = 0.75;
 /** Bram's pace (m/s) as he leads: an amble, a brisk walk while you're on his heels (t-short), a jog when you're ahead. */
@@ -42,6 +44,8 @@ export type TutorialCue =
   | { kind: "visit" }
   | HintCue
   | { kind: "give"; item: "rod" }
+  /** A move he teaches is yours from now (lib/game/moveUnlocks.ts; a no-op when it already is). */
+  | { kind: "unlock"; move: "dash" }
   | { kind: "glyph"; glyph: "wheel" | "bag" }
   | { kind: "reward" }
   | { kind: "done" };
@@ -95,7 +99,10 @@ export function stepTutorial(s: TutorialState, f: TutorialFrame): TutorialCue[] 
     s.stop++; s.stage = "await"; s.line = 0;
     restart(s, f.now);
     if (s.stop >= f.stops.length) {
-      cues.push({ kind: "say", line: f.end ?? END_LINE, stop: stop.id }, { kind: "reward" }, { kind: "done" });
+      // An empty last word: the last stop's talk said it (the hand-over cutscene).
+      const end = f.end ?? END_LINE;
+      if (end) cues.push({ kind: "say", line: end, stop: stop.id });
+      cues.push({ kind: "reward" }, { kind: "done" });
       s.done = true;
     }
   };
@@ -109,13 +116,14 @@ export function stepTutorial(s: TutorialState, f: TutorialFrame): TutorialCue[] 
     // Opening your collection is the task: its keycap pulses once as it starts.
     if (stop.task?.kind === "bag" && !s.glyphs.bag) { s.glyphs.bag = true; cues.push({ kind: "glyph", glyph: "bag" }); }
     if (stop.task?.kind === "hq") cues.push({ kind: "visit" });
+    if (stop.task?.kind === "dash") cues.push({ kind: "unlock", move: "dash" });
     if (stop.task) { s.stage = "task"; restart(s, f.now); }
     else next();
   };
 
   if (s.stage === "await") {
-    // You come to him; nothing moves on until you talk.
-    if (talked) {
+    // You come to him; nothing moves on until you talk (or, an `auto` stop, until he's there).
+    if (talked || (stop.auto && dist(f.bram, stop.stand) <= AUTO_R)) {
       s.stage = "talk"; s.line = 0;
       if (!lines.length) { endTalk(); return cues; }
       if (stop.box) { cues.push({ kind: "converse", lines, stop: stop.id }); return cues; }
@@ -152,7 +160,8 @@ export function stepTutorial(s: TutorialState, f: TutorialFrame): TutorialCue[] 
     want = t.hint;
   } else if (t.kind === "catch") { reached = f.events.includes("caught"); want = s.rod ? "cast" : "rod"; }
   else if (t.kind === "hq") { reached = f.events.includes("hqDone"); want = "hq"; }
-  else if (t.kind === "sell") { reached = f.events.includes("sellOpened"); want = "sell"; }
+  else if (t.kind === "sell") { reached = f.events.includes("sold"); want = "sell"; }
+  else if (t.kind === "dash") { reached = f.events.includes("dashed"); want = "dash"; }
   else { reached = f.events.includes("bagOpened"); want = "bag"; }
   if (reached) {
     const said = TASK_DONE_LINES[t.id];
@@ -181,7 +190,8 @@ export function tutorialQuest(stops: readonly ResolvedStop[], s: TutorialState |
   const steps = stops.flatMap((stop, i) => {
     const here = s ? (s.done || i < s.stop ? "past" : i === s.stop ? s.stage : "ahead") : "ahead";
     const talkDone = here === "past" || here === "task";
-    const out = [{ id: stop.id, label: label(TRACKER[stop.id] ?? stop.id), done: talkDone }];
+    // An `auto` stop has no talk to go to: only its task, if any.
+    const out = stop.auto ? [] : [{ id: stop.id, label: label(TRACKER[stop.id] ?? stop.id), done: talkDone }];
     if (stop.task) out.push({ id: stop.task.id, label: label(TRACKER[stop.task.id] ?? stop.task.id), done: here === "past" });
     return out;
   });

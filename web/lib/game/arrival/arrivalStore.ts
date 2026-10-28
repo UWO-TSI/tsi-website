@@ -76,7 +76,7 @@ export function useArrivalTools(): ArrivalTools {
 }
 
 /** The walk-along as the quest tracker shows it (null outside it); `keys` fills the labels' keys. */
-export function useTutorialQuest(keys: { bag: string; touch: boolean }): TrackedQuest | null {
+export function useTutorialQuest(keys: { bag: string; jump: string; dash: string; touch: boolean }): TrackedQuest | null {
   const key = useSyncExternalStore(subscribeArrival, readArrival, () => "");
   const phase = key.split("|")[0];
   return useMemo(() => {
@@ -86,7 +86,7 @@ export function useTutorialQuest(keys: { bag: string; touch: boolean }): Tracked
     if (t && t.stage === "task" && arrivalRun.stops[t.stop]?.task?.kind === "hq") return null;
     return tutorialQuest(arrivalRun.stops, arrivalRun.tutorial, t => fillKeys(t, keys));
   // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by the arrival's snapshot: the quest changes when it does.
-  }, [key, phase, keys.bag, keys.touch]);
+  }, [key, phase, keys.bag, keys.jump, keys.dash, keys.touch]);
 }
 
 /** The walk-along's catch is on: the first reel pauses to teach the hold, and the fish can't get away (t-catch). */

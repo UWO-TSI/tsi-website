@@ -131,9 +131,9 @@ export default function TopCluster({ onWallet, walletKey, full = true, buttons =
             {coinGain && <em key={coinGain.id} className={styles.gain} aria-hidden="true">+{coinGain.amount.toLocaleString()}</em>}
           </>;
           return onWallet
-            ? <button type="button" className={styles.chip} data-flash={coins.at} data-ping={coinGain ? "" : undefined} data-wallet="" onClick={onWallet}
+            ? <button type="button" className={styles.chip} data-flash={coins.at} data-ping={coinGain ? "" : undefined} data-wallet="" data-hud-slot="coins" onClick={onWallet}
               aria-label={`${label}. Open your wallet`} title={walletKey ? `Wallet (${walletKey})` : "Wallet"}>{face}</button>
-            : <span className={styles.chip} data-flash={coins.at} data-ping={coinGain ? "" : undefined} aria-label={label} title="Play coins">{face}</span>;
+            : <span className={styles.chip} data-flash={coins.at} data-ping={coinGain ? "" : undefined} data-hud-slot="coins" aria-label={label} title="Play coins">{face}</span>;
         })()}
         {progress && xp.show && <span className={styles.chip} data-flash={xp.at} data-ping={xpGain ? "" : undefined} data-levelup={levelUp ? "" : undefined}
           aria-label={`Level ${progress.level}, ${progress.needed ? `${progress.into.toLocaleString()} of ${progress.needed.toLocaleString()} XP to the next level` : "top level"}`}>

@@ -5,7 +5,7 @@ import { resolvePlace, resolveRoute, type PlaceWorld, type ResolvedStop, type Tu
 import { VILLAGE_ROUTE } from "./routes/village";
 import { ROUTES, routeFor } from "./routes";
 
-const KEYS: HintKeys = { move: "W A S D", jump: "Space", wheel: "Tab", bag: "B", touch: false };
+const KEYS: HintKeys = { move: "W A S D", jump: "Space", dash: "Q", wheel: "Tab", bag: "B", touch: false };
 /** A small world: the dock at the origin facing +z, four fronts and a beach. */
 const WORLD: PlaceWorld = {
   dock: { x: 0, z: 0, yaw: 0 },
@@ -267,15 +267,41 @@ describe("the new world's walk (t-short, t-sell): HQ first, the camera conversat
     expect(step(s, 40, ["talked"])).toEqual([]);
     expect(step(s, 41, ["talkEnded"])).toEqual([{ kind: "visit" }]);
     expect(s.stage).toBe("task");
-    expect(step(s, 42, ["caught", "sellOpened"]).some(c => c.kind === "converse")).toBe(false);
+    expect(step(s, 42, ["caught", "sold"]).some(c => c.kind === "converse")).toBe(false);
     step(s, 43, ["hqDone"]);
     expect([s.stop, s.stage]).toEqual([1, "await"]);
     expect(step(s, 44, ["talked"])[0]).toMatchObject({ kind: "converse", stop: "sights" });
     step(s, 45, ["talkEnded"]);
     expect([s.stop, s.stage]).toEqual([2, "await"]);
     step(s, 46, ["talked"]); step(s, 47, ["talkEnded"]);
-    const end = step(s, 48, ["sellOpened"]);
+    // Opening the barrel isn't selling: the sale moves it on.
+    expect(step(s, 48, ["talked"])).toEqual([]);
+    const end = step(s, 49, ["sold"]);
     expect(end).toEqual([{ kind: "say", line: "bye", stop: "barrel" }, { kind: "reward" }, { kind: "done" }]);
+  });
+  it("teaches the dash straight after the box (no E): the move unlocked, then a dash moves it on", () => {
+    const far = { x: 9, z: 0 };
+    const dock: ResolvedStop[] = [{ id: "dash", stand: at, via: [], auto: true, task: { kind: "dash", id: "dash" }, box: true }, stops[0]];
+    const s = newTutorial(0), go = (now: number, bram: XZ, events: TutorialEvent[] = []) => stepTutorial(s, { now, player: at, bram, stops: dock, events });
+    expect(go(1, far)).toEqual([]);                                    // not there yet
+    expect(go(2, at)).toEqual([{ kind: "unlock", move: "dash" }]);     // there: no lines, straight to the task
+    expect(s.stage).toBe("task");
+    expect(go(2 + HINT_AFTER_S, at)).toEqual([{ kind: "hint", hint: "dash" }]);
+    expect(hintLine({ kind: "hint", hint: "dash" }, KEYS)).toMatch(/^Q to dash/);
+    go(30, at, ["dashed"]);
+    expect([s.stop, s.stage]).toEqual([1, "await"]);
+  });
+  it("the hand-over starts itself after the sale, and with no last word the walk ends as its box closes", () => {
+    const keep: ResolvedStop[] = [{ id: "keep", stand: at, via: [], auto: true, holds: "rod", box: true, shots: [null, null, "bram"] }];
+    const s = newTutorial(0), go = (now: number, events: TutorialEvent[] = []) => stepTutorial(s, { now, player: at, bram: at, stops: keep, events, end: "" });
+    expect(go(1)).toEqual([{ kind: "converse", lines: STOP_LINES.keep, stop: "keep" }]);
+    expect(go(2, ["talkEnded"])).toEqual([{ kind: "reward" }, { kind: "done" }]);
+  });
+  it("fills the jump and dash keys in his lines and the tracker (touch: no keys)", () => {
+    expect(fillKeys(STOP_LINES.dockNew[1], KEYS)).toMatch(/Space to jump\.$/);
+    expect(fillKeys(TASK_DONE_LINES.box, KEYS)).toMatch(/Q to dash\.$/);
+    expect(fillKeys(TRACKER.dash, { ...KEYS, touch: true })).toBe("Dash");
+    expect(fillKeys(STOP_LINES.dockNew[1], { ...KEYS, touch: true })).not.toMatch(/\{/);
   });
   it("hints the way into HQ, and at the barrel, on a stall", () => {
     const s = newTutorial(0);

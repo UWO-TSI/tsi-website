@@ -45,6 +45,9 @@ function mistNow(phase: ArrivalPhase, since: number, skipAt: number | null): num
   return m;
 }
 
+/** The dock's moves, as their chip says them. */
+const TEACH = { jump: "Jump over the box", dash: "Dash" } as const;
+
 export default function Arrival({ play, look, askName, touch, keys, onCross, onSaveLook, onDone }: {
   /** Start it (once) when this turns true: the island is up and this account hasn't arrived. */
   play: boolean;
@@ -52,7 +55,7 @@ export default function Arrival({ play, look, askName, touch, keys, onCross, onS
   askName?: { current: string };
   touch: boolean;
   /** The keys the glyphs show (the player's own bindings). */
-  keys: { wheel: string; bag: string };
+  keys: { wheel: string; bag: string; jump: string; dash: string };
   /** The crossing begins: the boat in from far out (useTripControl's arrival with `crossing`). */
   onCross: () => void;
   onSaveLook: (look: CharacterLook, name: string | null) => void;
@@ -65,6 +68,9 @@ export default function Arrival({ play, look, askName, touch, keys, onCross, onS
   const skipAt = useRef<number | null>(null);
   const crossed = useRef(false);
   const [glyph, setGlyph] = useState<{ key: "wheel" | "bag"; at: number } | null>(null);
+  // The dock's moves (David's v2 review): while the task is the box or the dash, its key stays up until you do it.
+  const [at, stage] = (key.split("|")[1] ?? "").split(":"), task = stage === "task" ? arrivalRun.stops?.[Number(at)]?.task : undefined;
+  const teach = task?.kind === "dash" ? "dash" : task?.kind === "reach" && task.hint === "jump" ? "jump" : null;
   const onDoneRef = useRef(onDone), onCrossRef = useRef(onCross);
   useEffect(() => { onDoneRef.current = onDone; onCrossRef.current = onCross; }, [onDone, onCross]);
 
@@ -172,6 +178,10 @@ export default function Arrival({ play, look, askName, touch, keys, onCross, onS
       {touch ? null : <Keycap>{glyph.key === "wheel" ? keys.wheel : keys.bag}</Keycap>}
       {glyph.key === "wheel" ? <Fish size={18} aria-hidden /> : <BookOpen size={18} aria-hidden />}
       <span>{glyph.key === "wheel" ? (touch ? "Your tools: pick the rod" : "Hold for your tools") : "What you've collected"}</span>
+    </div>}
+    {phase === "tutorial" && teach && <div key={teach} className={s.teach} role="status" data-teach={teach} data-testid="arrival-teach">
+      {!touch && <Keycap className={s.teachCap}>{teach === "jump" ? keys.jump : keys.dash}</Keycap>}
+      <span>{TEACH[teach]}</span>
     </div>}
     {phase === "tutorial" && <button type="button" className={s.leave} onClick={() => { arrivalRun.signals.toured = true; }} data-testid="arrival-leave-tour">Skip the walk</button>}
   </div>;

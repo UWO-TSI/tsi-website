@@ -1,50 +1,21 @@
 "use client";
 
 /**
- * The HQ visit's cards (row 312, specs/hq-onboarding.md), paper sheets from the GUI kit over the room: the island
- * register at the front desk (your world name to sign with, then the friend code and the mailbox it issued, real data
- * where there is some), where a real event's check-in code goes (the existing flow: the QR at the door), and the
- * Founder's plaque, blank until David writes it; and t-hq's lore overlay (Tethos, a page at a time, over a dimmed room)
- * and the coins-and-merch card. Copy: lib/game/arrival/hq/lines.ts (drafts).
+ * The HQ visit's cards (row 312, specs/hq-onboarding.md), from the GUI kit over the room: where a gathering's check-in
+ * code goes (the existing flow: the QR at the door), the Founder's plaque (blank until David writes it), the lore
+ * overlay (the island, a page at a time, over a dimmed room) and the fly card (an icon up in the middle, then off to
+ * its place on screen; David's v2 review). Your island ID is IdCard.tsx. Copy: lib/game/arrival/hq/lines.ts (drafts).
  */
-import { useState } from "react";
-import { BookUser, CalendarCheck, Landmark, Mail, QrCode, Shirt, Sparkles, UserPlus } from "lucide-react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { CalendarCheck, Landmark, Mail, Map as MapIcon, Menu, QrCode } from "lucide-react";
 import { Button, Sheet } from "@/components/gui";
 import { CurrencyIcon } from "@/components/economy/Amount";
 import { AudioManager } from "@/lib/game/audio";
-import { CHECKIN_CARD, FOUNDER_PLAQUE, LORE_CARD, MERCH_CARD, PLAQUE_CARD, REGISTER_CARD } from "@/lib/game/arrival/hq/lines";
+import { CHECKIN_CARD, FLY_CARDS, FOUNDER_PLAQUE, LORE_CARD, PLAQUE_CARD, type FlyTarget } from "@/lib/game/arrival/hq/lines";
 import { CHECK_IN_ORIGIN } from "@/lib/portal/checkIn";
 import s from "./HqCards.module.css";
 
-/** The register: sign as your world name; then what signing issued, a line each. `onDone` once it's signed and closed. */
-export function RegisterCard({ open, name, friendCode, letters, onDone }: {
-  /** Your world name (null signed out: a preview has none). */
-  open: boolean; name: string | null;
-  /** Your friend code (null: no account to issue one for). */
-  friendCode: string | null;
-  /** Letters waiting in your mailbox (null: not known). */
-  letters: number | null;
-  onDone: () => void;
-}) {
-  const [signed, setSigned] = useState(false);
-  const close = () => { if (signed) { setSigned(false); onDone(); } };
-  return <Sheet open={open} onClose={close} title={REGISTER_CARD.title} eyebrow={REGISTER_CARD.eyebrow} icon={<BookUser size={20} />} size="sm" tone="butter" testId="hq-register"
-    footer={signed
-      ? <Button onClick={close} data-testid="hq-register-done">{REGISTER_CARD.done}</Button>
-      : <Button onClick={() => { setSigned(true); AudioManager.playSFX("confirm", { rate: 1.1, gain: 0.4 }); }} data-testid="hq-register-sign">{REGISTER_CARD.sign}</Button>}>
-    <div className={s.register}>
-      <p className={s.label}>{signed ? REGISTER_CARD.signed : REGISTER_CARD.signAs}</p>
-      <p className={s.signature} data-signed={signed || undefined} data-none={name ? undefined : ""}>{name ?? REGISTER_CARD.noName}</p>
-      {!signed && <p className={s.note}>{REGISTER_CARD.note}</p>}
-      {signed && <ul className={s.issued}>
-        <li style={{ animationDelay: "120ms" }}><UserPlus size={17} aria-hidden /><span>{REGISTER_CARD.friendCode}</span><b data-testid="hq-friend-code">{friendCode ?? REGISTER_CARD.friendCodeLater}</b></li>
-        <li style={{ animationDelay: "520ms" }}><Mail size={17} aria-hidden /><span>{REGISTER_CARD.mailbox}</span><b>{REGISTER_CARD.mailboxAt}{letters ? ` · ${REGISTER_CARD.letters(letters)}` : ""}</b></li>
-      </ul>}
-    </div>
-  </Sheet>;
-}
-
-/** Where a real event's check-in code goes: the QR at the door, which opens the check-in page. */
+/** Where a gathering's check-in code goes: the QR at the door, which opens the check-in page. */
 export function CheckInCard({ open, onDone }: { open: boolean; onDone: () => void }) {
   const host = CHECK_IN_ORIGIN.replace(/^https?:\/\//, "");
   return <Sheet open={open} onClose={onDone} title={CHECKIN_CARD.title} eyebrow={CHECKIN_CARD.eyebrow} icon={<CalendarCheck size={20} />} size="sm" tone="sage" testId="hq-checkin"
@@ -84,14 +55,52 @@ export function LoreOverlay({ open, onDone }: { open: boolean; onDone: () => voi
   </div>;
 }
 
-const MERCH_ICONS: Record<string, React.ReactNode> = { coins: <CurrencyIcon size={22} />, gems: <CurrencyIcon currency="gems" size={22} />, xp: <Sparkles size={20} aria-hidden /> };
-/** Coins, gems and experience, and that they trade for real merch (t-hq). Never a rate to real money. */
-export function MerchCard({ open, onDone }: { open: boolean; onDone: () => void }) {
-  return <Sheet open={open} onClose={onDone} title={MERCH_CARD.title} eyebrow={MERCH_CARD.eyebrow} icon={<Shirt size={20} />} size="sm" tone="butter" testId="hq-merch"
-    footer={<Button onClick={onDone} data-testid="hq-merch-done">{MERCH_CARD.done}</Button>}>
-    <ul className={s.issued}>
-      {MERCH_CARD.rows.map((r, i) => <li key={r.icon} className={s.currency} style={{ animationDelay: `${120 + i * 160}ms` }}>{MERCH_ICONS[r.icon]}<span>{r.name}</span><b>{r.text}</b></li>)}
-    </ul>
-    <p className={s.note}>{MERCH_CARD.note}</p>
-  </Sheet>;
+const FLY_ICON: Record<FlyTarget, React.ReactNode> = {
+  coins: <CurrencyIcon size={64} />, gems: <CurrencyIcon currency="gems" size={64} />,
+  menu: <Menu size={52} aria-hidden />, mail: <Mail size={52} aria-hidden />, minimap: <MapIcon size={52} aria-hidden />,
+};
+/** Where each lives on screen (forced on while it flies there: DefaultIslandWorld), then anywhere in the top right. */
+const FLY_TO: Record<FlyTarget, string> = {
+  coins: '[data-hud-slot="coins"]', gems: '[data-hud-slot="coins"]', menu: '[data-testid="menu-dock"]',
+  mail: '[data-testid="menu-dock"] [aria-label^="Mail"]', minimap: '[aria-label="Minimap"]',
+};
+/** The fly's beats (ms): up in the middle with its name, then off to its place, then a ring where it lands. */
+const FLY = { pop: 1500, fly: 750, land: 650 } as const;
+type Flight = { phase: "pop" | "fly" | "land"; dx: number; dy: number; k: number; ring: { x: number; y: number; w: number; h: number } | null };
+
+/**
+ * David's v2 review: "the coin icon pops in screen and screen darkens a lil and the coin moves to the coin slot and
+ * same with gems ... same for things like menu, mailbox, and minimap". The icon pops up in the middle over a slightly
+ * darker room, its name and what it's for under it; then it flies to its place on your screen, which rings once.
+ */
+export function FlyCard({ target, onDone }: { target: FlyTarget | null; onDone: () => void }) {
+  const [f, setF] = useState<Flight>({ phase: "pop", dx: 0, dy: 0, k: 1, ring: null });
+  const done = useRef(onDone);
+  useEffect(() => { done.current = onDone; }, [onDone]);
+  useEffect(() => {
+    if (!target) return;
+    setF({ phase: "pop", dx: 0, dy: 0, k: 1, ring: null });
+    AudioManager.playSFX("blip3", { rate: 1.3, gain: 0.5 });
+    const ts = [
+      window.setTimeout(() => {
+        const el = document.querySelector(FLY_TO[target]) ?? document.querySelector("[data-hud-right]"), r = el?.getBoundingClientRect();
+        const cx = window.innerWidth / 2, cy = window.innerHeight * 0.42;
+        const ring = r && r.width > 0 ? { x: r.left - 6, y: r.top - 6, w: r.width + 12, h: r.height + 12 } : null;
+        const tx = r ? r.left + r.width / 2 : window.innerWidth - 80, ty = r ? r.top + r.height / 2 : 60;
+        setF({ phase: "fly", dx: tx - cx, dy: ty - cy, k: Math.max(0.28, Math.min(0.6, (r ? Math.min(r.width, r.height) : 40) / 96)), ring });
+        AudioManager.playSFX("blip2", { rate: 1.5, gain: 0.4 });
+      }, FLY.pop),
+      window.setTimeout(() => { setF(x => ({ ...x, phase: "land" })); AudioManager.playSFX("blip4", { rate: 1.4, gain: 0.45 }); }, FLY.pop + FLY.fly),
+      window.setTimeout(() => done.current(), FLY.pop + FLY.fly + FLY.land),
+    ];
+    return () => ts.forEach(t => window.clearTimeout(t));
+  }, [target]);
+  if (!target) return null;
+  const card = FLY_CARDS[target];
+  return <div className={`${s.fly} gui`} data-phase={f.phase} data-testid="hq-fly" data-target={target} aria-live="polite">
+    <div className={s.flyDim} aria-hidden="true" />
+    <div className={s.flyIcon} style={{ "--dx": `${f.dx}px`, "--dy": `${f.dy}px`, "--k": f.k } as CSSProperties} aria-hidden="true"><span>{FLY_ICON[target]}</span></div>
+    <p className={s.flyName}><b>{card.name}</b><span>{card.text}</span></p>
+    {f.phase === "land" && f.ring && <i className={s.flyRing} style={{ left: f.ring.x, top: f.ring.y, width: f.ring.w, height: f.ring.h }} aria-hidden="true" />}
+  </div>;
 }
