@@ -42,10 +42,10 @@ Kept: `web/lib/game/fixtures/village-2026-09-28.json`, a frozen cell-map test fi
 
 ## Next
 
-1. Title vantage on the new world: before/after shots to `specs/evidence/village-archive/title-*.webp` (David reviews before merge).
-2. One full vitest run, `npm run build` with no flag (bundle: title / island / applicant chunks against the before numbers), one headless smoke shot of the member island.
-3. One perf:check `SCENES=v2`; write v2's rows into `specs/perf/baseline.json` by hand (keep cafe and ruins rows; drop village).
-4. Merge origin/main, commit, report.
+Done; reported 2026-10-28. Waiting on David's review of the title (specs/evidence/village-archive/title-*.webp) before merge.
+Gates at the head: tsc 0 errors; one full vitest run (no flag) 3469 passed, 16 skipped, 2 failed: lib/seedMigrations.test.ts, because the roster's schedules changed and the catalogue seed isn't regenerated (the coordinator does that at merge). eslint clean on changed files. `npm run build` with no flag: ok.
+Bundle (all JS a route can load, gzip; main de87c07f → branch): title 870 → 984 KB (the world document, which the title now renders), island 1772 → 1767 KB, applicant 1150 → 1147 KB (no world data, no village data).
+perf:check SCENES=v2 (headless, 5 runs): High 4.8 ms median, p95 7.0, 359 draws, 757k tris; Lite 2.9 ms, p95 5.2, 289 draws, 567k tris. Against the 2026-10-14 v2 row the draws were over 10% (that row predates terrain v3 and the remodels); now the baseline. Within budget.
 
 ## Tools and gotchas
 
