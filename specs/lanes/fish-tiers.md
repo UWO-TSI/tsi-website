@@ -51,6 +51,18 @@ Branch head: see `git log -1` (this file is committed with it). Main has not mer
 
 **perf:check (SCENES=v2, new world, at 80395fe4): FAILED against the 2026-10-14 baseline (8809c517).** v2 high: 6.90 ms median (baseline 5.40), 413 draws (254), 1.38M triangles (0.91M). v2 lite: 4.50 ms (3.00), 348 draws (172), 1.17M triangles (0.63M). These numbers are from the world content main has added since the baseline (the grass, the remodels, the 81 fish, and so on), not from this lane. With the boss flag off, this lane adds nothing to the bench scene: no fishing happens in it, the "!" is a DOM label, and the creature isn't mounted. Priced in `specs/perf/effects-cost.md`. The baseline needs a refresh from main (the coordinator's combined check).
 
+**Merged to main:** up to e6ab258e (the "!" tiers, the sounds, the divine cap migration, now applied to prod; the boss fights and the raid behind the flag). Main is now de87c07f, and that isn't merged into this branch yet.
+
+**Fishing UI redo (after e6ab258e; visual, not merged, for David's review):**
+- Design bible UI chapter (`git show feat/game-default-island:specs/design-bible.md`): flat, `--ui-*` tokens only, kit pieces first. The applicant island is a hard no-touch.
+- Merged main 0a8a9514 for the kit (e71f0a3b).
+- 6fb627f5: the rules moved out of `components/game/FishingOverlay.tsx` into lib: `useFishingSession`, `useReelLoop` and `useCastMeter`, plus `BOSS_CALL` in fishingReel.ts. FishingOverlay keeps its look and is now used only by ApplicantIsland.
+- cb18d5cc: the kit pieces in `components/gui/flat/reel.tsx` (ReelPanel, ReelTrack, LineGauge, PowerMeter, StatusChip, CatchCard, CatchTag, sparkBurst). New tokens `--ui-water` and `--ui-water-line` in every theme. The pieces are shown in the `/lab/gui#fishing` section.
+- 67248e35: `components/game/fishing/MemberFishing.tsx` is the member island's overlay (DefaultIslandWorld mounts it). It's calm while you fish, with the juice at the hook (the black chip springs in and tugs), the catch (the fish leaps out of the track in a burst, the card lands on a spring) and a rare fish (the card's rarity edge flares and throws sparks). The catch card's beats are in `lib/game/useCatchCard.ts`, which FishReveal uses too. `/lab/fishing?look=member` runs the member loop; no `look` param runs the applicant overlay.
+- Evidence: `specs/evidence/fish-tiers/ui/` (before-after, hook-strip, slip-strip, landing-strip, card-strip, rare-card-strip, showroom-fishing). The shots were taken in the lab, on its dark page, not in the world.
+- Gates: tsc clean; vitest with NEXT_PUBLIC_GAME_WORLD=new 3535 passed; eslint clean on changed files; no hex in the new CSS.
+- First attempt (cream, hex colours): side branch game/fish-tiers-ui-r1. Reference only.
+
 ## David's decisions
 
 - 2026-10-28, tutorial review of the catch beat, verbatim: "looks good and like i think its time we update the ui for fishing to look nicer and also do ! with sound effect when fish hooked, and add small micro animation and juice to make it more dopamine while keeping the aestetic, and redo the fishing bar a little bit to make it look nicer". The "!" and sound are the approved step 1; the rest is this lane's: restyle the fishing bar a little, make the fishing UI nicer, micro-animations and juice (catch progress, the fish slipping, the landing), both worlds, keeping the aesthetic. Visual: before/after shots and frame strips to the coordinator; don't merge.
@@ -61,7 +73,8 @@ Branch head: see `git log -1` (this file is committed with it). Main has not mer
 
 ## Next
 
-1. Two-client run of a divine raid in the browser (needs a divine species: none exists until David picks; a dev-only stand-in or `/lab`), then the propose-list for David (step 5).
+0. David's review of the flat fishing UI; then merge main (de87c07f) if the coordinator asks.
+1. (Done) Two-client run of a divine raid in the browser (needs a divine species: none exists until David picks; a dev-only stand-in or `/lab`), then the propose-list for David (step 5).
 2. One perf:check at the end.
 
 ## Tools and gotchas
