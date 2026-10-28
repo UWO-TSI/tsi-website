@@ -35,7 +35,7 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 - **f-requests: built (cb920164).** `fishRequests` (lib/wallet/rules.ts): 3 a Toronto day, common, uncommon, rare, biting that day in fair weather in the island's waters (`activeWaters`, `watersOf`), paying `FISH_REQUEST_PAY` (3) times sell price. `/api/economy/requests`; `fish_request_fill` in the migration.
 - **f-records: built (cb920164).** `records` (lib/collections/service.ts) and `/api/collections/records`: the weekly board (every species' biggest, uncapped `weeklyTrophies`) and your size records. Fish market sheet's Records tab; portal leaderboard's Catch board. In-game names (museum plaques, trophy case, boards) now come from `member_identity.world_name`, not `profiles.display_name` (it showed real names).
 - **d-now: built (4d65e381).** `CatchBoard` chalkboard on the tackle shop porch (wharf.ts `catchBoardOf`, `CATCH_BOARD`), E opens `OutNowSheet`; collection book seasonal filter (journal entries carry `in_season`, `leaving`, `arriving`).
-- **f-sushi phase B: built, uncommitted at time of writing.** Menu (`SUSHI_MENU`, `STAFF_MEAL` in lib/wallet/catalogue.ts), `orderDish`, `/api/economy/sushi`, feast from an epic or legendary fish, chef's daily order (`chefOrder`, board "chef") by day outside the closed bar, meal buffs in `member_buffs` read by the server's cast (`fishRoll` buff: luck and size). UI: `components/game/peaceful/SushiSheets.tsx`, the Menu button while seated (`tsi:bar-seated`).
+- **f-sushi phase B: built (85ea2c18, 16b030db).** Menu (`SUSHI_MENU`, `STAFF_MEAL` in lib/wallet/catalogue.ts), `orderDish`, `/api/economy/sushi`, feast from an epic or legendary fish, chef's daily order (`chefOrder`, board "chef") by day outside the closed bar, meal buffs in `member_buffs` read by the server's cast (`fishRoll` buff: luck and size). UI: `components/game/peaceful/SushiSheets.tsx`, the Menu button while seated (`tsi:bar-seated`).
 - **Migration (not applied):** `web/supabase/migrations/20261027181000_fish_requests_sushi.sql` (fish_request_fills, member_buffs, sushi_orders, collections_take_one, fish_request_fill, sushi_order). Smoke: `web/supabase/tests/fish_requests_sushi_smoke.sql`, passed on a local throwaway Postgres 16.
 - **No new food models:** the bar's existing geta and nigiri serve loop stands in; good-looking dish models need art.
 
@@ -45,8 +45,11 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 ## Next
 
-1. Headless evidence (specs/evidence/fishing-depth/shoot.mjs, dev server :3147, `NEXT_PUBLIC_GAME_WORLD=new`): market tabs, catch board in world and sheet, collection book season filter, chef order, bar menu.
-2. Full gates (tsc, vitest both worlds, eslint), perf:check v2 once (the board renders), report.
+1. David reviews the evidence in `specs/evidence/fishing-depth/`: market-requests, market-records, board-sheet, board-world-left (the chalkboard on the porch, left of the door), chef-order, bar-menu, collection-season. Act on his notes.
+2. The coordinator applies `20261027181000_fish_requests_sushi.sql`.
+3. Later, with art: real dish models for the menu and the feast (the bar's geta and nigiri stand in).
+
+**Gates at 16b030db:** tsc clean; vitest 3500 passed, 4 skipped, in both worlds; eslint clean on every file this lane changed. perf:check v2 (one run, headless, 1-minute load 7.5 to 8.5) failed against the 2026-10-14 baseline: high 25.4 ms, 409 draws; lite 9.3 ms, 345 draws. That baseline predates the terrain v3 world. The board adds 5 meshes (2 legs, frame, slate, chalk), about 60 triangles and one 256 x 184 canvas texture, so it can't account for the gap. Not rerun, per the rules.
 
 ## Tools and gotchas
 
