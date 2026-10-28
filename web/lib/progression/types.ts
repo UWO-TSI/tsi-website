@@ -82,6 +82,8 @@ export interface QuestChapter {
   reward_coins: number;
   /** A shop item (slug) given once on completion, like Bram's Cedar rod. */
   reward_item?: string | null;
+  /** XP given once on completion (the level's XP, lib/combat/progression.ts): the new world's chapter 1 takes you to level 2. */
+  reward_xp?: number;
   /** The world the chapter plays in (lib/game/world/active.ts); null: both. */
   world?: "village" | "new" | null;
   active: boolean;
@@ -197,4 +199,9 @@ export interface ProgressionState {
   museum: { fish: number; bugs: number; finds: number };
   /** "live" = database; "defaults" = migration not applied / offline preview. */
   source: "live" | "defaults";
+  /** An advance's answer only: the XP its chapter paid (the HUD's level and the level-up card). */
+  xp_gain?: XpGain;
 }
+
+/** XP paid by a chapter: how much, the member's total and level after, and whether that was a level up. */
+export interface XpGain { amount: number; total: number; level: number; levelled_up: boolean }

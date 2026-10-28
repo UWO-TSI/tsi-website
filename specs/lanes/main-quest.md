@@ -31,6 +31,24 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 2: David's review (2026-10-28, verbatim, with what each means)
+
+Approved, no change: 04-juno-at-the-museum, 05-juno-talk, 07-next-chapter, 10-brams-challenge, 10-pims-shovel.
+
+Approved, with a note:
+- 06-chapter-1-done: "chapter 1 done get enough exp to level up to level 2, should have overlay of what unlocks". Finishing chapter 1 grants enough XP to reach level 2; a level-up overlay shows what level 2 unlocks (reuse the existing XP/level system; only unlocks that really exist).
+- 10-odiles-net: "bug catching should have bug catching mini game". Not this lane (its own lane). Net chapter stays as is.
+
+Redo:
+- 01-line: "i dont see in this screenshot". Find whether the line doesn't render or the shot missed it; fix and reshoot plainly.
+- 02-dropdown: "the bar and main quest drop down should horizontally be the same length". Same width.
+- 03-arrow-to-museum: "dont write show the way, just an arrow icon you can press on". Pressable arrow icon with an aria-label.
+- 10-elizas-pickaxe, 30-pickaxe-at-a-rock, 31-pickaxe-from-the-side: "dont do pickaxe yet, release thiswith the cave update" / "pickaxe in cave update". Park the pickaxe chapter and mining: keep the code, nothing reachable, no chapter gap.
+- 10-the-museum: "this might get impossible if people donate all the stuff". The club goal must always be completable; state the rule in one sentence on the review page.
+- 20-dig-mark-sand(-close), 21-dig-mark-dirt(-close): "should be way more subtle and small and lower opacity" / "should look natural and hard to find usually". Much smaller and fainter; on dirt a natural patch you'd usually miss.
+- 40-models: "burried find should drop like relics for museum, coins, ores, very rarely gems and veryveryvery rare is a broken sudo. and you can upgrade shovel for differnt loot chances". Buried finds roll a loot table (relics, coins, ores, very rarely gems, very very rarely a broken sudo, lore per specs/lore.md "sudo canon"); shovel tiers change the odds (reuse the rod-tier pattern); every tier's odds in a table on the review page; never the gem-to-money rate; server-authoritative rolls; new timestamped migration.
+- 50-village-line, 51-village: "why are you still editing the old world". Proof shots only; drop them from the review, keep villagePinned.test.tsx green, change nothing in the village.
+
 ## Status
 
 Head: see git log (game/main-quest). Merged origin/main 2e7bd27f (coordinator OK, 2026-10-28). Village gated and pinned;

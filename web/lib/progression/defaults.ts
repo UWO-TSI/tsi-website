@@ -146,6 +146,8 @@ export const DEFAULT_CHAPTERS: QuestChapter[] = [
     skippable_max_tier: 5,
     reward_coins: 100,
     reward_item: null,
+    // David 2026-10-28: "chapter 1 done get enough exp to level up to level 2" (lib/combat/progression.ts xpForLevel(2)).
+    reward_xp: 125,
     world: "new",
     active: true,
   },
@@ -156,7 +158,7 @@ export const DEFAULT_CHAPTERS: QuestChapter[] = [
   }, 150),
   errand(3, "pims-shovel", "Pim's shovel", "dig", "Pim on the beach always has a shovel. Things are buried all over the island: find the marks and dig.", {
     get_shovel: { label: "Ask Pim on the beach for a shovel" },
-    dig_up: { label: "Dig up 3 buried things", hint: "Look for little star-shaped cracks in the sand and on dirt. Rare things turn up too." },
+    dig_up: { label: "Dig up 3 buried things", hint: "Look closely: hairline cracks in the sand, a scuffed patch of dirt. Relics, coins, ore, and now and then something rare." },
     show_pim: { label: "Show Pim your finds on the beach" },
   }, 150),
   errand(4, "brams-challenge", "Bram's challenge", "rod_challenge", "Bram bets you can't catch five kinds of fish, one of them at dawn or dusk. Win and his Cedar rod is yours.", {
@@ -164,8 +166,9 @@ export const DEFAULT_CHAPTERS: QuestChapter[] = [
     twilight_catch: { label: "Catch a fish at dawn or dusk", hint: "Island time follows the real sun: fish around sunrise or sunset." },
     show_bram: { label: "Show Bram at the wharf" },
   }, 0, { reward_item: "rod-cedar" }),
-  errand(5, "the-museum", "The club's museum", "museum_collab", "The museum opens when the club has filled it: 10 kinds of fish, 5 bugs and 3 buried finds. Do your part.", {
-    donate_new: { label: "Donate 3 new finds to the museum", hint: "Talk to Odile inside. Only finds nobody has donated yet go on show." },
+  // David 2026-10-28 ("this might get impossible if people donate all the stuff"): anything handed in counts, duplicates too.
+  errand(5, "the-museum", "The club's museum", "museum_collab", "The museum opens when the club has brought it 10 fish, 5 bugs and 3 buried finds. Do your part.", {
+    donate_new: { label: "Bring Odile 3 things for the museum", hint: "Any fish, bug or buried find counts, even a kind the museum already has. Odile waits by the museum." },
     tell_odile: { label: "Tell Odile at the museum" },
   }, 200),
   errand(6, "elizas-pickaxe", "Eliza's pickaxe", "pickaxe", "Mayor Eliza still has the pickaxe that dug the HQ's foundations. Break some rocks with it.", {
@@ -235,7 +238,8 @@ export const DEFAULT_CHAPTERS: QuestChapter[] = [
 ];
 
 /**
- * m5: what the club fills before the museum opens (next launch), counted in distinct species donated
- * (museum_donations), and each kind's museum category.
+ * m5: what the club brings the museum before it opens (next launch), by kind: every fish, bug and buried find given to
+ * it counts, a first donation (museum_donations) or a hand-in (museum_handins), duplicates included, so the drive can
+ * always be finished (David 2026-10-28).
  */
 export const MUSEUM_TARGETS = { fish: 10, bugs: 5, finds: 3 } as const;

@@ -1,6 +1,6 @@
 """The main quest's pickaxe, the rocks it breaks and the things dug up (specs/launch/v1-gameplay.md m3, m6).
 
-  /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P art/props-enemies/build_mining.py [-- render <dir>]
+  /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P art/props-enemies/build_mining.py [-- [only <name> ...] [render <dir>]]
 
 Writes, from primitives (no references, no libraries):
   web/public/assets/game/tools/pickaxe-1.glb          Mayor Eliza's pickaxe (web/lib/game/tools.ts `pickaxe-basic`)
@@ -8,7 +8,7 @@ Writes, from primitives (no references, no libraries):
   web/public/assets/game/forage/rock-iron.glb   the same rock with an iron seam: it gives iron
   web/public/assets/game/forage/rock-spent.glb  the rock once it's given its stone for the hour
 The village keeps build_forage.py's outcrops (outcrop-rock_*.glb), as before.
-  web/public/assets/game/forage/find_<key>.glb        the seven buried finds (web/lib/collections/roster.ts BURIED_FINDS)
+  web/public/assets/game/forage/find_<key>.glb        the buried finds (web/lib/collections/roster.ts BURIED_FINDS), the broken sudo too
 
 Conventions as build_tools.py and build_forage.py: rig units (the engine scales by 1.3), Blender Z up, the face toward -Y.
 The pickaxe is held like the shovel (the grip at the origin, the handle down -Z to the head, one pick toward the front),
@@ -18,7 +18,7 @@ small hand-held things, centred on the origin, lying flat. Matte palette colours
 the material look classes (web/lib/game/modelMaterials.ts) give stone, metal and glass their light response.
 """
 import bpy, math, os, random, sys
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
@@ -235,6 +235,38 @@ def trilobite():
     return ob
 
 
+@prop("forage/find_broken_sudo")
+def broken_sudo():
+    """The very, very rare lore find (web/lib/collections/digLoot.ts; specs/lore.md "sudo canon": robot-cute,
+    screen-faced, hardware-honest). A little TV-shaped chassis that was never finished: the screen cracked and dark,
+    the antenna bent over, a ribbon cable loose at the side, and the heart socket on its back empty."""
+    def b(pc):
+        pc.mat = "Shell"                                     # the chassis, scuffed off-white plastic
+        rbox(pc, (0, 0, 0.027), (0.062, 0.04, 0.05), ch=0.35)
+        pc.mat = "Screen"                                    # the face: dark, never booted
+        rbox(pc, (0, -0.0205, 0.029), (0.046, 0.004, 0.032), ch=0.2)
+        pc.mat = "Crack"                                     # a star of cracks across the screen
+        for a, l in ((0.25, 0.017), (1.35, 0.011), (2.5, 0.019), (3.7, 0.013), (4.9, 0.016)):   # from where it was hit
+            rbox(pc, (0.009 + math.cos(a) * l / 2, -0.0228, 0.035 + math.sin(a) * l / 2), (l, 0.0012, 0.001), ch=0,
+                 rot=Matrix.Rotation(-a, 3, "Y"))
+        pc.mat = "Metal"                                     # the antenna, bent over, and the standoff feet
+        pc.tube([(0.012, 0, 0.051), (0.016, 0, 0.064), (0.027, 0, 0.071), (0.036, 0, 0.068)], [0.0024, 0.0022, 0.002, 0.0018], sides=6, tip=False)
+        for x in (-0.02, 0.02):
+            pc.blob((x, 0, 0.003), (0.006, 0.006, 0.004), segs=6, rings=3)
+        pc.mat = "Tip"
+        pc.blob((0.037, 0, 0.067), (0.0045, 0.0045, 0.0045), segs=6, rings=4)
+        pc.mat = "Board"                                     # the empty heart socket on its back (bare board)
+        rbox(pc, (0, 0.0205, 0.027), (0.02, 0.003, 0.02), ch=0.2)
+        pc.mat = "Socket"
+        rbox(pc, (0, 0.0222, 0.027), (0.009, 0.0016, 0.009), ch=0)
+        pc.mat = "Ribbon"                                    # a ribbon cable come loose at the side
+        pc.tube([(0.031, 0.006, 0.02), (0.039, 0.005, 0.011), (0.044, -0.004, 0.003)], [(0.0055, 0.0009)] * 3, sides=4, tip=False)
+    ob = model("find_broken_sudo", {"Shell": "#D9CFBF", "Screen": "#2B3138", "Crack": "#9FB3B8", "Metal": "#8C8F93", "Tip": "#C2703F",
+                                     "Board": "#3A6B4A", "Socket": "#1F2A22", "Ribbon": "#C9A44A"}, b, sharp=50)
+    jitter(ob, 0.0006, seed=38)
+    return ob
+
+
 def export(ob, path):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     bpy.ops.object.select_all(action="DESELECT")
@@ -245,7 +277,13 @@ def export(ob, path):
 
 
 built = []
+# `-- only <name> [<name> ...]`: build just those (a model's file name, e.g. find_broken_sudo); the rest stay as they are.
+ONLY = ARGS[ARGS.index("only") + 1:] if "only" in ARGS else None
+if ONLY and "render" in ONLY:
+    ONLY = ONLY[:ONLY.index("render")]
 for path, fn in MODELS:
+    if ONLY and os.path.basename(path) not in ONLY:
+        continue
     ob = fn()
     export(ob, os.path.join(ASSETS, f"{path}.glb"))
     print(f"MODEL {path} tris={kit.ntris(ob)}")

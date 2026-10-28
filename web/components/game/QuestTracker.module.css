@@ -27,23 +27,25 @@ button.line:focus-visible { outline: 3px solid var(--gui-focus, #3e7fa6); outlin
 .chevron { flex: none; margin-left: auto; color: var(--gui-taupe); transition: transform 0.2s var(--gui-ease); }
 .tracker[data-open] .chevron { transform: rotate(180deg); }
 
-/* The dropdown: your quests on paper, under the line, right-aligned with it. */
-.list { position: absolute; top: calc(100% + 6px); right: 0; width: min(300px, calc(100vw - 28px)); max-height: min(60vh, 460px); overflow: auto;
+/* The dropdown: your quests on paper, under the line, exactly as wide as it (David: "the bar and main quest drop down
+   should horizontally be the same length"): the line keeps one width whatever its label, and the list fills it. */
+.tracker[data-dropdown] { width: min(300px, calc(100vw - 28px)); max-width: none; }
+.list { position: absolute; top: calc(100% + 6px); left: 0; right: 0; max-height: min(60vh, 460px); overflow: auto;
   box-sizing: border-box; padding: 6px; border-radius: var(--gui-r-md, 14px); background: rgb(255 251 231 / 0.97);
   box-shadow: var(--gui-shadow-md, var(--gui-shadow-sm)), inset 0 0 0 1.5px var(--gui-paper-edge); animation: listIn 0.22s var(--gui-ease) both; }
 @keyframes listIn { from { opacity: 0; transform: translateY(-6px); } }
 .quest { padding: 2px 0 6px; }
 .quest + .quest { border-top: 1.5px dashed var(--gui-paper-edge); padding-top: 6px; }
-.head { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 0 8px; width: 100%; box-sizing: border-box; margin: 0; padding: 6px 8px;
-  border: 0; border-radius: 10px; background: none; color: inherit; font: inherit; text-align: left; }
-button.head { cursor: pointer; }
-button.head:hover { background: var(--gui-paper-hi); }
-button.head:focus-visible { outline: 3px solid var(--gui-focus, #3e7fa6); outline-offset: 1px; }
+.head { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 0 8px; width: 100%; box-sizing: border-box; margin: 0; padding: 6px 8px; }
 .kind { grid-column: 1; font-size: var(--gui-text-xs); font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gui-taupe); }
 .title { grid-column: 1; font-weight: 900; }
-.way { grid-column: 2; grid-row: 1 / span 2; display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px; border-radius: var(--gui-r-pill);
-  background: var(--gui-paper-hi); color: var(--gui-ink-strong); font-size: var(--gui-text-xs); font-weight: 800; white-space: nowrap; }
-.way[data-on] { background: var(--gui-teal); color: #fffbe7; }
+/* The guide arrow: a round icon button (no words); pressed, teal. */
+.way { grid-column: 2; grid-row: 1 / span 2; display: grid; place-items: center; width: 34px; height: 34px; margin: 0; padding: 0; border: 0; border-radius: 50%;
+  background: var(--gui-paper-hi); color: var(--gui-ink-strong); box-shadow: inset 0 0 0 1.5px var(--gui-paper-edge); cursor: pointer;
+  transition: background-color var(--gui-t-fast, 0.12s), transform 0.15s var(--gui-ease); }
+.way:hover { transform: scale(1.06); }
+.way:focus-visible { outline: 3px solid var(--gui-focus, #3e7fa6); outline-offset: 2px; }
+.way[aria-pressed="true"] { background: var(--gui-teal); color: #fffbe7; box-shadow: none; }
 .steps { margin: 2px 0 0; padding: 0 8px; list-style: none; display: grid; gap: 5px; }
 .step { display: grid; grid-template-columns: 16px 1fr; gap: 7px; align-items: start; font-weight: 700; color: var(--gui-ink); }
 .step[data-done] { color: var(--gui-taupe); text-decoration: line-through; text-decoration-color: rgb(138 123 102 / 0.5); }

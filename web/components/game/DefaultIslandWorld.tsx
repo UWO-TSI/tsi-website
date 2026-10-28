@@ -109,6 +109,8 @@ import type { MuseumWing } from "@/lib/collections/logic";
 import FishingOverlay from "./FishingOverlay";
 import ToastHub, { toast } from "./ToastHub";
 import RewardCard from "./RewardCard";
+import LevelUpCard from "./LevelUpCard";
+import { MUSEUM_DRIVE } from "@/lib/game/mainQuest";
 import GlideGuide, { GlideGuideHint } from "./GlideGuide";
 import BorderNotice from "./BorderNotice";
 import ShopInterior from "./ShopInterior";
@@ -767,6 +769,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // Follow-camera distance scale for close-up captures (dev only, e.g. ?zoom=0.45).
   const [devZoom] = useState(() => Number(devHome.get("zoom")) || 1);
   const [donateOpen, setDonateOpen] = useState(() => devHome.get("sheet") === "donate");
+  // The museum's drive (m5): Odile's talk outside the museum opens the hand-in sheet (lib/game/mainQuest.ts MUSEUM_DRIVE).
+  useEffect(() => { const open = () => setDonateOpen(true); window.addEventListener(MUSEUM_DRIVE, open); return () => window.removeEventListener(MUSEUM_DRIVE, open); }, []);
   const [museumWings, setMuseumWings] = useState<MuseumWing[] | null>(null);
   const loadMuseumRef = useRef(false);
   const loadMuseum = useCallback(() => { apiCall<MuseumWing[]>("/api/collections/museum", "wings").then(setMuseumWings, () => {}); }, []);
@@ -1350,10 +1354,11 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         enabled={ready && !inside && !fishing && !sheet && !bagOpen && !cinematic && !talking && !fading && !decor.decorating && !(touch && uiView)} />
       <EmoteWheel emoteKey={wheelKeys.emote} touch={touch} onPlay={entry => playWheelEntry(entry, player.current)}
         enabled={ready && site !== "ruins" && !fishing && !sheet && !bagOpen && !cinematic && !talking && !fading && !decor.decorating && !(touch && uiView)} />
-      <DonateSheet open={donateOpen} onClose={() => setDonateOpen(false)} onDonated={loadMuseum} />
+      <DonateSheet open={donateOpen} onClose={() => setDonateOpen(false)} onDonated={loadMuseum} drive={NEW_WORLD} />
       <ToastHub />
       {/* What a catch, a find, a craft or a bottle gave you: one card with its art, beside the Bag's fly-in. */}
       <RewardCard />
+      <LevelUpCard />
       <GlideGuideHint show={ready && !fading && !inside && site === "village" && !sheet && !cinematic && !talking} />
       {/* Today's gift once the island is showing and nothing else holds the player (first login, a fade, a sheet, a fight). */}
       <DailyGift ready={ready && !fading && !holdObjective && !sheet && !talking && site !== "ruins"} />

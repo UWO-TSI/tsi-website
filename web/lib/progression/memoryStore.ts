@@ -6,6 +6,7 @@
  */
 import { DEFAULT_CHAPTERS, DEFAULT_GOALS } from "./defaults";
 import { GAME_WORLD } from "@/lib/game/world/active";
+import { levelForXp } from "@/lib/combat/progression";
 import { StoreError, type CommitInput, type MemberFacts, type ProgressionStore, type RealActivity } from "./store";
 import type { ClubGoal, LetterView, MemberChapterProgress, QuestChapter } from "./types";
 
@@ -36,6 +37,7 @@ export function memoryStore(seed?: { goals?: ClubGoal[]; chapters?: QuestChapter
   const progress = new Map<string, MemberChapterProgress>();
   const facts = new Map<string, MemberFacts>();
   const coins = new Map<string, number>();
+  const xp = new Map<string, number>();
   const items = new Map<string, number>(); // `${member}:${item}`
   const contributions: MemoryContribution[] = [];
   const totals = new Map<string, { credited_points: number; delivery_points: number }>();
@@ -165,6 +167,13 @@ export function memoryStore(seed?: { goals?: ClubGoal[]; chapters?: QuestChapter
       credits.add(k);
       coins.set(memberId, (coins.get(memberId) ?? 0) + amount);
       return { balance: coins.get(memberId)!, replayed: false };
+    },
+    async grantXp(memberId, amount, _ref, key) {
+      const k = `${memberId}:${key}`, before = xp.get(memberId) ?? 0;
+      if (credits.has(k)) return { total: before, level: levelForXp(before), levelled_up: false, replayed: true };
+      credits.add(k);
+      xp.set(memberId, before + amount);
+      return { total: before + amount, level: levelForXp(before + amount), levelled_up: levelForXp(before + amount) > levelForXp(before), replayed: false };
     },
     async grantItem(memberId, slug) {
       if (!items.has(`${memberId}:${slug}`)) items.set(`${memberId}:${slug}`, 1);

@@ -32,9 +32,13 @@ describe("chapter facts from the database", () => {
       ],
       member_inventory: [{ shop_items: { slug: "net-basic", catalogue_ref: null } }],
       museum_donations: [{ species_key: "fish_dace", donor_id: A }, { species_key: "bug_common_butterfly", donor_id: "someone" }, { species_key: "shell_asari", donor_id: A }],
+      // The museum's drive (m5): hand-ins count too, duplicates included (a second dace).
+      museum_handins: [{ species_key: "fish_dace", member_id: A }, { species_key: "fish_carp", member_id: "someone" }],
+      member_digs: [{ digs: 5 }],
     })).memberFacts(A);
-    expect(f).toMatchObject({ firstCatchKey: "fish_dace", lastFishAt: "2026-10-27T11:00:00Z", museum: { fish: 1, bugs: 1, finds: 1 } });
-    // Not taught (no ledger row): the starter net and shovel are everyone's; the pickaxe only from Eliza.
-    expect(f.counts).toMatchObject({ fish: 3, fish_kinds: 2, bugs: 3, digs: 2, stone: 6, iron: 0, donations: 2, net: 1, shovel: 1, pickaxe: 0 });
+    expect(f).toMatchObject({ firstCatchKey: "fish_dace", lastFishAt: "2026-10-27T11:00:00Z", museum: { fish: 3, bugs: 1, finds: 1 } });
+    // Not taught (no ledger row): the starter net and shovel are everyone's; the pickaxe only from Eliza. Digs: the
+    // member's dig tally (whatever came up), not their finds.
+    expect(f.counts).toMatchObject({ fish: 3, fish_kinds: 2, bugs: 3, digs: 5, stone: 6, iron: 0, donations: 3, net: 1, shovel: 1, pickaxe: 0 });
   });
 });

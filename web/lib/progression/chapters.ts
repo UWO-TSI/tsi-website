@@ -70,7 +70,7 @@ export const STEP_RULES: Record<ChapterRequirement, readonly StepRule[]> = {
     { key: "twilight_catch", anchor: "fishing_spot", action: true },
     { key: "show_bram", anchor: "wharf", npc: "wharf-keeper", finish: true },
   ],
-  // m5: the museum as a club collaboration (your part; the club's tally is museumCollab()).
+  // m5: the museum as a club collaboration (your part: anything handed in counts, duplicates too; facts.ts).
   museum_collab: [
     { key: "donate_new", anchor: "museum", npc: "curator", count: ["donations", 3] },
     { key: "tell_odile", anchor: "museum", npc: "curator", finish: true },
@@ -109,7 +109,7 @@ const FALLBACK_COPY: Record<string, StepCopy> = {
   fish_kinds: { label: "Catch 5 different fish" },
   twilight_catch: { label: "Catch a fish at dawn or dusk" },
   show_bram: { label: "Show Bram at the wharf" },
-  donate_new: { label: "Donate 3 new finds to the museum" },
+  donate_new: { label: "Bring Odile 3 things for the museum" },
   tell_odile: { label: "Tell Odile at the museum" },
   get_pickaxe: { label: "Ask Mayor Eliza at the plaza for a pickaxe" },
   mine_stone: { label: "Break rocks for 3 stone" },
@@ -360,6 +360,7 @@ export function normalizeChapter(row: Record<string, unknown>): QuestChapter {
     skippable_max_tier: Number.isInteger(row.skippable_max_tier) ? (row.skippable_max_tier as number) : 0,
     reward_coins: Number.isInteger(row.reward_coins) ? Math.max(0, row.reward_coins as number) : 0,
     reward_item: typeof row.reward_item === "string" && row.reward_item ? row.reward_item : null,
+    reward_xp: Number.isInteger(row.reward_xp) ? Math.max(0, row.reward_xp as number) : 0,
     world: row.world === "village" || row.world === "new" ? row.world : null,
     active: row.active !== false,
   };
@@ -376,6 +377,7 @@ export function validateChapterDraft(d: Record<string, unknown>): string[] {
   if (typeof d.skippable_max_tier !== "number" || d.skippable_max_tier < 0 || d.skippable_max_tier > 5) errors.push("skippable_max_tier: 0-5");
   if (req === "club_goal" && d.skippable_max_tier !== 0) errors.push("club_goal chapters can't be skippable");
   if (d.reward_coins !== undefined && (typeof d.reward_coins !== "number" || !Number.isInteger(d.reward_coins) || d.reward_coins < 0 || d.reward_coins > 5000)) errors.push("reward_coins: 0-5000");
+  if (d.reward_xp !== undefined && (typeof d.reward_xp !== "number" || !Number.isInteger(d.reward_xp) || d.reward_xp < 0 || d.reward_xp > 20000)) errors.push("reward_xp: 0-20000");
   if (d.world !== undefined && d.world !== null && d.world !== "village" && d.world !== "new") errors.push("world: village, new or both (empty)");
   if (d.reward_item !== undefined && d.reward_item !== null && (typeof d.reward_item !== "string" || !/^[a-z0-9-]{1,64}$/.test(d.reward_item))) errors.push("reward_item: a shop item slug");
   if (!Array.isArray(d.unlocks_regions)) errors.push("unlocks_regions: list");

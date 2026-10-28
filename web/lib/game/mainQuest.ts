@@ -72,7 +72,7 @@ export const QUEST_LINES: Readonly<Record<string, { nudge: Lines; finish: Lines 
     ],
   },
   dig: {
-    nudge: ["{count} so far. Look for the little star of cracks, on sand or on dirt. Perfectly good things under there!"],
+    nudge: ["{count} so far. Look closely: hairline cracks in the sand, a scuffed patch of dirt. Perfectly good things under there!"],
     finish: [
       "[happy] Look at that haul! Perfectly good, every one of them.",
       "Some days the ground gives up something rare. Keep digging and you'll see.",
@@ -90,9 +90,9 @@ export const QUEST_LINES: Readonly<Record<string, { nudge: Lines; finish: Lines 
     ],
   },
   museum_collab: {
-    nudge: ["{museum}", "Bring me something nobody's donated yet and it goes on show. {count} from you so far."],
+    nudge: ["{museum}", "Any fish, bug or buried find helps, even a kind we have already: it all goes in the drive. {count} from you so far."],
     finish: [
-      "[happy] Three new cases filled, and every label with your name on it.",
+      "[happy] Three for the drive, and every one logged with your name.",
       "{museum}",
       "The whole club's doing this together. Thank you, {name}.",
     ],
@@ -131,6 +131,14 @@ export function questTalk(views: readonly ChapterView[], slug: string, museum: P
   // Asking for the tool is the teacher's own offer.
   if (!lines || finisher !== slug || !open || (open.npc === slug && open.key.startsWith("get_"))) return null;
   return { script: `quest:${c.slug}:nudge`, lines: fill(lines.nudge, c, museum) };
+}
+
+/** Fired on window when Odile's museum-drive talk ends: the island opens the hand-in sheet (DonateSheet `drive`). */
+export const MUSEUM_DRIVE = "tsi:museum-drive";
+/** A nudge talk that opens the museum's drive after it: the chapter's slug when it's the museum's (m5). */
+export function opensDrive(views: readonly ChapterView[], script: string): boolean {
+  const m = /^quest:([a-z0-9-]+):nudge$/.exec(script);
+  return !!m && views.find(v => v.slug === m[1])?.requirement === "museum_collab";
 }
 
 /** A finished quest talk's script: the chapter and the action to send (null: a nudge, nothing to send). */

@@ -57,7 +57,11 @@ describe("drops (specs/v1-drop.md, the roadmap)", () => {
     // Each world's chapters: the village keeps its settle-in, the new world has the main quest (a chapter's world).
     expect(releasedChapters(DEFAULT_CHAPTERS, dropFlags(1), "village").map(c => c.slug)).toEqual(["settle-in", "fund-museum"]);
     expect(releasedChapters(DEFAULT_CHAPTERS, dropFlags(3), "village").map(c => c.slug)).toEqual(["settle-in", "reopen-cafe", "fund-museum", "ruins-gate"]);
-    const errands = ["first-find", "odiles-net", "pims-shovel", "brams-challenge", "the-museum", "elizas-pickaxe"];
+    // Mayor Eliza's pickaxe is parked for the cave update (David 2026-10-28): no drop offers it yet.
+    const errands = ["first-find", "odiles-net", "pims-shovel", "brams-challenge", "the-museum"];
+    expect(DROP_FEATURES.cave).toBeNull();
+    expect(releasedChapters(DEFAULT_CHAPTERS, dropFlags(4), "new").map(c => c.slug)).not.toContain("elizas-pickaxe");
+    expect(releasedChapters(DEFAULT_CHAPTERS, { ...dropFlags(1), cave: true }, "new").map(c => c.slug)).toContain("elizas-pickaxe");
     expect(releasedChapters(DEFAULT_CHAPTERS, dropFlags(1), "new").map(c => c.slug)).toEqual([...errands, "fund-museum"]);
     expect(releasedChapters(DEFAULT_CHAPTERS, dropFlags(3), "new").map(c => c.slug)).toEqual([...errands, "reopen-cafe", "fund-museum", "ruins-gate"]);
     expect(releasedChapters(DEFAULT_CHAPTERS, dropFlags(1))).toEqual(releasedChapters(DEFAULT_CHAPTERS, dropFlags(1), GAME_WORLD));

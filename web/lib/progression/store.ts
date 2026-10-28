@@ -85,6 +85,8 @@ export interface ProgressionStore {
   reportLetter(memberId: string, letterId: string, reason: string, at: string): Promise<boolean>;
   /** Single wallet path (033 wallet_apply); idempotent per key. */
   creditCoins(memberId: string, amount: number, source: "chapter" | "quest", ref: string, key: string): Promise<{ balance: number; replayed: boolean }>;
+  /** XP for a chapter (combat_grant_xp, source 'chapter'); idempotent per key. */
+  grantXp(memberId: string, amount: number, ref: string, key: string): Promise<{ total: number; level: number; levelled_up: boolean; replayed: boolean }>;
   /** One of a shop item (by slug) into the member's inventory, unless it's there already (a chapter's reward_item). */
   grantItem(memberId: string, slug: string): Promise<void>;
 }

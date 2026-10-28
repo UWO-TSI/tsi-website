@@ -1,14 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { TOOL_TEACHERS, givenKeys, handOver, parseQuests, questFinished, teacherTalk, toolQuest, type TeachContext } from "./teachers";
-import { GAME_WORLD } from "@/lib/game/world/active";
 import { TOOL_LINES } from "./lines";
 import { PROPOSED_RESIDENTS } from "@/lib/content/residentRoster";
 import { toolByKey, TAUGHT_KINDS } from "@/lib/game/tools";
 import { wheelContents } from "@/lib/game/toolWheel";
 import { CATALOGUE, TAUGHT_TOOL_SLUGS, onSale } from "@/lib/wallet/catalogue";
+import { MINING } from "@/lib/collections/roster";
+import { GAME_WORLD } from "@/lib/game/world/active";
 
-/** Mayor Eliza teaches the pickaxe on the new world only (m6); in the village her row stays a placeholder, as before. */
-const NEW = GAME_WORLD === "new";
+/** Mayor Eliza teaches the pickaxe once mining is out (m6, the cave update: MINING); until then her row is a placeholder. */
+const NEW = MINING;
 const fresh: TeachContext = { taught: true, owned: [], quests: {} };
 const wheelKinds = (c: TeachContext) => wheelContents({ site: "village", owned: [...c.owned, ...givenKeys(c.quests)], weapons: [], armed: false, pins: [], stock: {}, taught: c.taught }).map(i => i.kind);
 
@@ -35,7 +36,7 @@ describe("tools unlocked by people (row 312)", () => {
     c = { ...c, quests: { ...c.quests, net: "given" } };
     expect(wheelKinds(c)).toEqual(["rod", "net"]);
     expect(toolQuest(c.quests)).toEqual({ id: "tool:net", title: TOOL_LINES.net.title, kind: "quest", steps: [{ id: "tool:net:bug", label: TOOL_LINES.net.step, done: false }] });
-    if (!NEW) expect(TOOL_LINES.net).toMatchObject({ title: "Odile's bug net", step: "Catch any bug" });
+    if (GAME_WORLD !== "new") expect(TOOL_LINES.net).toMatchObject({ title: "Odile's bug net", step: "Catch any bug" });
     // Talking again while it runs: her nudge, and nothing handed over twice.
     expect(teacherTalk("curator", c)).toMatchObject({ script: "tool:net:during" });
     expect(handOver("tool:net:offer", c.quests)).toBeNull();

@@ -14,6 +14,7 @@
  * day. Months 1-12 (northern hemisphere, Ontario); [] = all year. `weather` []
  * = any. `rainAnyHour`: also out in the rain outside its hours.
  */
+import { DROPS } from "@/lib/game/drops";
 import { GAME_WORLD, type GameWorld } from "@/lib/game/world/active";
 export type Category = "fish" | "sea" | "bug" | "fruit" | "nature" | "mineral";
 export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
@@ -283,6 +284,9 @@ export const BURIED_FINDS: Species[] = make("nature", "shovel", "nature_room", [
   find("find_geode", "Geode", "dig_soil", "uncommon", [6, 12], "Plain on the outside. Wait till you see the inside."),
   find("find_amber", "Amber", "dig_soil", "epic", [3, 6], "Sunlight from a very long time ago."),
   find("find_trilobite", "Trilobite", "dig_soil", "legendary", [4, 10], "Older than the dinosaurs, and it still looks surprised."),
+  // The very, very rare lore find (lib/collections/digLoot.ts; specs/lore.md "sudo canon": a sudo is built, never given).
+  // Never a dig spot's own roll (islandNodes.ts digs list their relics): only the server's dig loot turns it up.
+  find("find_broken_sudo", "Broken Sudo", "dig_soil", "legendary", [9, 12], "A little screen-faced chassis with an empty heart socket. Whoever built it never got to flash it."),
 ]);
 
 /** The species of this world: the buried finds are the new world's (m3); the village's roster is as it was. */
@@ -291,10 +295,12 @@ export const ROSTER: Species[] = [...LAUNCH_ROSTER, ...EVENT_SPECIES, ...REEL_FI
 export const inWorld = (sp: Pick<Species, "biome">, world: GameWorld = GAME_WORLD) => world === "new" || (sp.biome !== "dig_sand" && sp.biome !== "dig_soil");
 
 /**
- * The tool a species is taken with in this world: on the new world a rock is broken with the pickaxe (m6, Mayor
- * Eliza's); in the village it's struck with the shovel, as it always was.
+ * Mining (m6): on the new world a rock is broken with Mayor Eliza's pickaxe for stone or iron. Parked for the cave
+ * update (David 2026-10-28, lib/game/drops.ts `cave`): until it's released, rocks are struck with the shovel as before.
  */
-export const toolOf = (sp: Pick<Species, "tool" | "biome">, world: GameWorld = GAME_WORLD): Tool => (sp.biome === "rocks" && world === "new" ? "pickaxe" : sp.tool);
+export const MINING = GAME_WORLD === "new" && DROPS.cave;
+/** The tool a species is taken with in this world (the pickaxe for a rock once mining is out; else its own). */
+export const toolOf = (sp: Pick<Species, "tool" | "biome">, world: GameWorld = GAME_WORLD, mining: boolean = DROPS.cave): Tool => (sp.biome === "rocks" && world === "new" && mining ? "pickaxe" : sp.tool);
 /** The rocks' yield on the new world (m6, David: "currently just stone and occasionally iron"); the village's rocks roll every mineral. */
 export const NEW_WORLD_ROCKS = ["rock_stone", "rock_iron_nugget"] as const;
 

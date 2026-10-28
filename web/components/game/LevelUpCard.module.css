@@ -1,0 +1,20 @@
+/* The level-up card (LevelUpCard.tsx): matte paper over a soft scrim, the level big, what it opens below. */
+.scrim { position: absolute; inset: 0; z-index: 60; display: grid; place-items: center; padding: 16px; background: rgb(40 30 20 / 0.28);
+  pointer-events: auto; animation: fade 0.25s ease both; }
+.card { width: min(340px, 100%); box-sizing: border-box; padding: 18px 18px 14px; border-radius: var(--gui-r-md, 14px); background: rgb(255 251 231 / 0.98);
+  color: var(--gui-ink-strong); box-shadow: var(--gui-shadow-md, var(--gui-shadow-sm)), inset 0 0 0 1.5px var(--gui-paper-edge);
+  font: 700 var(--gui-text-sm)/1.35 var(--gui-font); text-align: center; zoom: var(--tsi-text-scale, 1); animation: pop 0.45s var(--gui-spring) both; }
+.eyebrow { display: inline-flex; align-items: center; gap: 5px; margin: 0; color: var(--gui-amber); font-size: var(--gui-text-xs); font-weight: 900;
+  letter-spacing: 0.08em; text-transform: uppercase; }
+.level { margin: 2px 0 10px; font-size: 34px; font-weight: 900; line-height: 1.1; }
+.what { margin: 0 0 6px; color: var(--gui-taupe); font-size: var(--gui-text-xs); font-weight: 800; text-align: left; }
+.list { display: grid; gap: 6px; margin: 0 0 12px; padding: 0; list-style: none; text-align: left; }
+.item { display: grid; grid-template-columns: 28px 1fr; gap: 8px; align-items: start; padding: 8px; border-radius: 10px; background: var(--gui-paper-hi); }
+.item b { display: block; font-weight: 900; }
+.item small { display: block; margin-top: 2px; color: var(--gui-taupe); font-size: var(--gui-text-xs); font-weight: 700; }
+.icon { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--gui-teal); color: #fffbe7; }
+.ok { min-width: 120px; padding: 9px 16px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-teal); color: #fffbe7; font: inherit; font-weight: 900; cursor: pointer; }
+.ok:focus-visible { outline: 3px solid var(--gui-focus, #3e7fa6); outline-offset: 2px; }
+@keyframes fade { from { opacity: 0; } }
+@keyframes pop { from { opacity: 0; transform: translateY(8px) scale(0.94); } }
+@media (prefers-reduced-motion: reduce) { .scrim, .card { animation: none; } }

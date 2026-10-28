@@ -186,9 +186,9 @@ const NEW_WORLD_TOOL_LINES: Readonly<Record<string, ToolLines>> = {
     offer: [
       "[happy] A new face! Do you dig? Everybody should dig.",
       "Half this island is under the sand, and most of it is perfectly good. Perfectly good!",
-      "Look for a little star of cracks, on the sand or on dirt. Dig up three things and show me.",
+      "Look closely, they're easy to miss: a few hairline cracks in the sand, a scuffed patch of dirt. Dig up three things and show me.",
     ],
-    during: ["Look for the little cracks in the ground. There's always something under there."],
+    during: ["Walk slowly and look down. A few hairline cracks in the sand, or a scuffed patch of dirt, and there's something under there."],
     given: "Pim handed you a shovel.",
     done: "Your first find! Pim's shovel is yours to keep.",
   },

@@ -30,14 +30,21 @@ export interface QuestFacts {
 
 /**
  * `rows`: the member's member_collections rows (total ever collected); `owned`/`taught`: their gear as checkHeld
- * reads it (lib/game/tools.ts); `donations`: every museum donation (one per species, club-wide).
+ * reads it (lib/game/tools.ts); `donations`: every museum donation (one per species, club-wide); `handIns`: every
+ * hand-in to the museum's drive (museum_handins: duplicates too); `digs`: the member's dig tally (member_digs), or
+ * null to count their buried finds.
+ *
+ * The museum's drive (m5; David 2026-10-28: "this might get impossible if people donate all the stuff"): every fish,
+ * bug or buried find given to the museum counts, a donation or a hand-in, even a kind it already has. So the club's
+ * tally and your own part can always be finished.
  */
-export function questFacts(memberId: string, rows: readonly CollectionRow[], owned: readonly string[], taught: boolean, donations: readonly { species_key: string; donor_id: string | null }[]): QuestFacts {
+export function questFacts(memberId: string, rows: readonly CollectionRow[], owned: readonly string[], taught: boolean, donations: readonly { species_key: string; donor_id: string | null }[],
+  handIns: readonly { species_key: string; member_id: string }[] = [], digs: number | null = null): QuestFacts {
   const fish = rows.filter((r) => r.item_key.startsWith("fish_") && r.total > 0);
   const sum = (pick: (key: string) => boolean) => rows.reduce((n, r) => n + (pick(r.item_key) ? r.total : 0), 0);
   const has = (kind: ToolKind) => (bestTool(kind, owned, taught) ? 1 : 0);
   const museum: MuseumTally = { fish: 0, bugs: 0, finds: 0 };
-  for (const d of donations) {
+  for (const d of [...donations, ...handIns]) {
     const k = museumKind(d.species_key);
     if (k) museum[k]++;
   }
@@ -48,10 +55,10 @@ export function questFacts(memberId: string, rows: readonly CollectionRow[], own
       fish: sum((k) => k.startsWith("fish_")),
       fish_kinds: fish.length,
       bugs: sum((k) => k.startsWith("bug_")),
-      digs: sum((k) => { const sp = BY_KEY.get(k); return !!sp && isBuried(sp); }),
+      digs: digs ?? sum((k) => { const sp = BY_KEY.get(k); return !!sp && isBuried(sp); }),
       stone: sum((k) => k === "rock_stone"),
       iron: sum((k) => k === "rock_iron_nugget"),
-      donations: donations.filter((d) => d.donor_id === memberId).length,
+      donations: donations.filter((d) => d.donor_id === memberId).length + handIns.filter((h) => h.member_id === memberId).length,
       net: has("net"),
       shovel: has("shovel"),
       pickaxe: has("pickaxe"),

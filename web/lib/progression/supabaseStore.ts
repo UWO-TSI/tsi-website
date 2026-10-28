@@ -56,7 +56,7 @@ export function supabaseProgressionStore(db: SupabaseClient, flags: DropFlags = 
       if (error) raise(error);
     },
     async memberFacts(memberId) {
-      const [profile, prefs, catches, combat, gear, taught, donations] = await Promise.all([
+      const [profile, prefs, catches, combat, gear, taught, donations, handIns, digs] = await Promise.all([
         db.from("profiles").select("tier, class").eq("id", memberId).maybeSingle(),
         db.from("member_quest_prefs").select("hud_muted, family_trial_completed_at").eq("member_id", memberId).maybeSingle(),
         db.from("member_collections").select("item_key, count, total_collected, updated_at").eq("user_id", memberId),
@@ -64,16 +64,19 @@ export function supabaseProgressionStore(db: SupabaseClient, flags: DropFlags = 
         db.from("member_inventory").select("shop_items(slug, catalogue_ref)").eq("member_id", memberId),
         ledgerToolsTaught(db, memberId),
         db.from("museum_donations").select("species_key, donor_id"),
+        db.from("museum_handins").select("species_key, member_id"),
+        db.from("member_digs").select("digs").eq("member_id", memberId).maybeSingle(),
       ]);
       if (profile.error) raise(profile.error);
       if (prefs.error) raise(prefs.error);
       // The main quest's tallies: a failed read fails the request rather than showing steps undone.
-      for (const r of [catches, gear, donations]) if (r.error) raise(r.error);
+      for (const r of [catches, gear, donations, handIns, digs]) if (r.error) raise(r.error);
       const p = (profile.data ?? {}) as Row;
       const pr = (prefs.data ?? {}) as Row;
       const rows = ((catches.data ?? []) as Row[]).map((r) => ({ item_key: String(r.item_key), total: Math.max(Number(r.count) || 0, Number(r.total_collected) || 0), updated_at: typeof r.updated_at === "string" ? r.updated_at : null }));
       const owned = ((gear.data ?? []) as Row[]).flatMap((r) => { const item = r.shop_items as Row | null; return [item?.slug, item?.catalogue_ref].filter((k): k is string => typeof k === "string"); });
-      const quest = questFacts(memberId, rows, owned, taught, ((donations.data ?? []) as Row[]).map((d) => ({ species_key: String(d.species_key), donor_id: typeof d.donor_id === "string" ? d.donor_id : null })));
+      const quest = questFacts(memberId, rows, owned, taught, ((donations.data ?? []) as Row[]).map((d) => ({ species_key: String(d.species_key), donor_id: typeof d.donor_id === "string" ? d.donor_id : null })),
+        ((handIns.data ?? []) as Row[]).map((h) => ({ species_key: String(h.species_key), member_id: String(h.member_id) })), Number((digs.data as Row | null)?.digs ?? 0));
       // Row 207: no family trial; the level-10 moment is the subclass choice (what opens the ruins gate).
       // The flag stays for a manual grant. Before the combat migration: not done.
       const trial = typeof pr.family_trial_completed_at === "string" || typeof (combat.data as Row | null)?.subclass === "string";
@@ -274,6 +277,12 @@ export function supabaseProgressionStore(db: SupabaseClient, flags: DropFlags = 
       if (!item) throw new StoreError("not_found", `no shop item ${slug}`);
       const { error: insert } = await db.from("member_inventory").upsert({ member_id: memberId, item_id: (item as Row).id, qty: 1, slot: (item as Row).slot }, { onConflict: "member_id,item_id", ignoreDuplicates: true });
       if (insert) raise(insert);
+    },
+    async grantXp(memberId, amount, ref, key) {
+      const { data, error } = await db.rpc("combat_grant_xp", { p_member_id: memberId, p_amount: amount, p_source: "chapter", p_ref: ref, p_key: key });
+      if (error) raise(error);
+      const r = (Array.isArray(data) ? data[0] : data) as Row;
+      return { total: Number(r.xp), level: Number(r.level), levelled_up: r.levelled_up === true, replayed: r.replayed === true };
     },
     async creditCoins(memberId, amount, source, ref, key) {
       const { data, error } = await db.rpc("wallet_apply", { p_member_id: memberId, p_currency: "coins", p_amount: amount, p_source: source, p_ref: ref, p_idempotency_key: key });

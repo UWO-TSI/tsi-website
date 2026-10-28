@@ -30,6 +30,9 @@ export const markGiftClaimed = (coins: number, day: string) => publish({ coins, 
 export function onApiWrite(detail: { path?: string; data?: unknown } | null | undefined): void {
   const data = (detail?.data ?? null) as Record<string, unknown> | null;
   if (detail?.path === "/api/combat/kill" && typeof data?.xp === "number") publish({ xp: data.xp });
+  // A chapter's XP (the new world's chapter 1 takes you to level 2): the advance carries the new total.
+  const gain = detail?.path === "/api/progression/chapters/advance" ? (data?.xp_gain as { total?: unknown } | undefined) : undefined;
+  if (typeof gain?.total === "number") publish({ xp: gain.total });
   if (detail?.path === "/api/combat/missions/complete" && typeof data?.xp_awarded === "number" && !data.replayed && state.xp !== null) publish({ xp: state.xp + data.xp_awarded });
   clearTimeout(timer);
   timer = setTimeout(() => void refreshHudWallet(), 1500);

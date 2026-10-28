@@ -83,7 +83,7 @@ export default function QuestTracker({ quests, hidden = false, guidable = [], gu
     <span className={s.sr}>{complete ? ", all done" : justDone ? ", done" : ""} ({quest.title}, {done} of {of} done)</span>
   </>;
   return <aside ref={root} className={`${s.tracker} ${className ?? ""}`} data-hidden={hidden || undefined} data-done={isDone || undefined} data-ticked={justDone ? "" : undefined}
-    data-open={open || undefined} data-kind={quest.kind} aria-label={`${kindName(quest.kind, dropdown)}: ${quest.title}`} data-testid="quest-tracker">
+    data-open={open || undefined} data-dropdown={dropdown || undefined} data-kind={quest.kind} aria-label={`${kindName(quest.kind, dropdown)}: ${quest.title}`} data-testid="quest-tracker">
     {dropdown
       ? <button type="button" className={s.line} onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="quest-list" title={`${quest.title} · ${done}/${of}`}>
         {face}<ChevronDown className={s.chevron} size={15} strokeWidth={3} aria-hidden="true" /><span className={s.sr}>. Show your quests</span>
@@ -94,15 +94,14 @@ export default function QuestTracker({ quests, hidden = false, guidable = [], gu
     {open && <div id="quest-list" className={s.list} role="region" aria-label="Your quests">
       {quests.map(q => {
         const now = currentStep(q).step, leads = guidable.includes(q.id), on = guided === q.id;
-        const head = <>
-          <span className={s.kind}>{kindName(q.kind, true)}</span>
-          <span className={s.title}>{q.title}</span>
-          {leads && <span className={s.way} data-on={on || undefined}><Navigation size={13} strokeWidth={2.75} aria-hidden="true" />{on ? "Showing the way" : "Show the way"}</span>}
-        </>;
         return <section key={q.id} className={s.quest} data-guided={on || undefined}>
-          {leads
-            ? <button type="button" className={s.head} aria-pressed={on} onClick={() => onGuide?.(on ? null : q.id)}>{head}</button>
-            : <div className={s.head}>{head}</div>}
+          <div className={s.head}>
+            <span className={s.kind}>{kindName(q.kind, true)}</span>
+            <span className={s.title}>{q.title}</span>
+            {/* The guide arrow (David: "just an arrow icon you can press on"): pressed, it points the way; again, it's put away. */}
+            {leads && <button type="button" className={s.way} aria-pressed={on} aria-label={on ? `Hide the arrow to ${q.title}` : `Show the way to ${q.title}`}
+              title={on ? "Hide the arrow" : "Show the way"} onClick={() => onGuide?.(on ? null : q.id)}><Navigation size={16} strokeWidth={2.75} aria-hidden="true" /></button>}
+          </div>
           <ul className={s.steps}>
             {q.steps.map(x => <li key={x.id} className={s.step} data-done={x.done || undefined} data-now={x.id === now?.id || undefined}>
               <span className={s.check} aria-hidden="true">{x.done ? <Check size={11} strokeWidth={3.5} /> : null}</span>

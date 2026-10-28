@@ -25,6 +25,9 @@ export interface LearnedRecipe {
   name: string;
 }
 
+/** What a dig records: a find (into the bag) or a purse (into the wallet). */
+export type DigRecord = { item_key: string; size_cm: number | null; trophy: boolean } | { currency: "coins" | "gems"; amount: number };
+
 export interface CatchResult {
   count: number;
   total_collected: number;
@@ -54,6 +57,13 @@ export interface CollectionsStore {
   findDonation(memberId: string, idempotencyKey: string): Promise<Donation | null>;
   /** Atomic: refuse duplicates, consume one specimen, record the donor. */
   donate(memberId: string, speciesKey: string, idempotencyKey: string, sizeCm: number | null): Promise<{ replayed: boolean }>;
+  /**
+   * Atomic (museum_hand_in, m5): hand one of a species in to the museum's drive, whether or not it's on display yet
+   * (a duplicate counts: the drive can always be finished). Consumes one; a replayed key returns replayed.
+   */
+  handIn(memberId: string, speciesKey: string, idempotencyKey: string): Promise<{ replayed: boolean }>;
+  /** Every hand-in (the club's museum drive). */
+  handIns(): Promise<{ member_id: string; species_key: string }[]>;
   weeklyBests(weekStart: string): Promise<WeeklyBest[]>;
   /** Atomic: a server-rolled cast waiting to be landed (too_fast within CAST_GAP_MS of the last). Returns its id. */
   cast(memberId: string, itemKey: string, sizeCm: number | null, trophyEligible: boolean): Promise<string>;
@@ -65,6 +75,11 @@ export interface CollectionsStore {
   land(memberId: string, rollId: string, seasonal?: LandSeason): Promise<CatchResult & { item_key: string; size_cm: number | null }>;
   /** Atomic: one harvest per node per hour, recorded with collections_record_catch's caps (a capped one leaves the node unharvested); a rare one may teach a recipe. */
   harvest(memberId: string, nodeId: string, hourKey: string, itemKey: string, sizeCm: number | null, trophyEligible: boolean): Promise<CatchResult>;
+  /**
+   * Atomic (collections_dig): one dig per spot per hour; the member's dig tally +1 (returned as `digs`). A find is recorded
+   * like a harvest (caps, bag, recipe); a purse is paid into the wallet once.
+   */
+  dig(memberId: string, nodeId: string, hourKey: string, loot: DigRecord): Promise<Partial<CatchResult> & { digs: number }>;
   /** Atomic: eat one of a fruit the member has (collections_eat); none_left when they have none. Returns how many are left. */
   eat(memberId: string, itemKey: string): Promise<{ count: number }>;
   /** The member's owned gear keys: catalogue refs and shop slugs (lib/game/tools.ts: rods by ref, nets and shovels by slug). */

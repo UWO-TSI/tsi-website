@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { giveTool, type ToolGrantStore } from "./grant";
 import { checkHeld } from "@/lib/game/tools";
-import { GAME_WORLD } from "@/lib/game/world/active";
+import { MINING } from "@/lib/collections/roster";
 
 function store(taught: string[]): ToolGrantStore & { inv: Map<string, string[]> } {
   const inv = new Map<string, string[]>();
@@ -28,8 +28,8 @@ describe("a resident hands you a tool (POST /api/world/tools)", () => {
     const s = store([]);
     expect(await giveTool(s, "old", { tool: "net" })).toEqual({ ok: true, data: { tool: "net", key: "net-basic", granted: false } });
     expect(s.inv.size).toBe(0);
-    // The pickaxe is nobody's starter: on the new world Eliza's gift is written for everyone; the village has no such gift.
-    if (GAME_WORLD === "new") {
+    // The pickaxe is nobody's starter: once mining is out (the cave update) Eliza's gift is written for everyone; until then nobody gives it.
+    if (MINING) {
       expect(await giveTool(s, "old", { tool: "pickaxe" })).toEqual({ ok: true, data: { tool: "pickaxe", key: "pickaxe-basic", granted: true } });
       expect(s.inv.get("old")).toEqual(["pickaxe-basic"]);
     } else expect(await giveTool(s, "old", { tool: "pickaxe" })).toMatchObject({ ok: false, status: 400 });

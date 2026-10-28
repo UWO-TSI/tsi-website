@@ -327,11 +327,13 @@ export async function advanceChapter(
       await store.creditCoins(memberId, chapter.reward_coins, "chapter", chapter.slug, `chapter:${chapter.slug}`);
     }
     if (result.next.status === "completed" && chapter.reward_item) await store.grantItem(memberId, chapter.reward_item);
+    const xp = result.next.status === "completed" && chapter.reward_xp ? await store.grantXp(memberId, chapter.reward_xp, chapter.slug, `chapter_xp:${chapter.slug}`) : null;
     if (result.next.status === "completed" && chapter.completion_letter) {
       await store.sendSystemLetter(memberId, `chapter:${chapter.slug}`, chapter.title, chapter.completion_letter);
     }
     await store.saveMemberProgress(memberId, chapter.id, result.next, result.completedChapter ? now.toISOString() : null);
-    return loadState(store, memberId, now);
+    const state = await loadState(store, memberId, now);
+    return xp && !xp.replayed && state.ok ? { ok: true, data: { ...state.data, xp_gain: { amount: chapter.reward_xp!, total: xp.total, level: xp.level, levelled_up: xp.levelled_up } } } : state;
   } catch (err) {
     return storeFailure(err);
   }

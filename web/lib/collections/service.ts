@@ -4,7 +4,8 @@ import {
   type Exhibit, type JournalPage, type MuseumWing, type Trophy, type WorldMoment,
 } from "./logic";
 import { castWater, fishRoll, forageSize, nodeAt, nodeRoll } from "./rolls";
-import { CATEGORIES, ROSTER, toolOf, type Category } from "./roster";
+import { BURIED_FINDS, CATEGORIES, ROSTER, toolOf, type Category } from "./roster";
+import { digRoll } from "./digLoot";
 import { TREATS } from "./treats";
 import { toFailure, type Result } from "@/lib/result";
 import { hourKey } from "@/lib/game/peaceful";
@@ -46,7 +47,8 @@ const CatchRequest = z.discriminatedUnion("action", [
   z.object({ action: z.literal("land"), roll: z.string().uuid() }),
 ]);
 /** A recorded catch (harvest, land: its counts, record and any recipe taught), or a cast's `roll` waiting to be landed. */
-export type CatchReply = { item_key: string; size_cm: number | null; roll?: string } & Partial<CatchResult>;
+/** `purse`: a dig that turned up coins or a gem (lib/collections/digLoot.ts); its item_key is the currency. */
+export type CatchReply = { item_key: string; size_cm: number | null; roll?: string; purse?: { currency: "coins" | "gems"; amount: number } } & Partial<CatchResult>;
 
 /**
  * A catch from the world (roadmap "Server-authoritative catch rolls"). The
@@ -78,6 +80,7 @@ export async function catchAction(
     if (req.action === "harvest") {
       const node = nodeAt(req.node, req.at);
       if (!node) return { ok: false, status: 422, code: "wrong_place", error: "Nothing to gather from here." };
+      if (node.biomes.includes("dig_sand") || node.biomes.includes("dig_soil")) return await digAt(store, memberId, req.tool, node.id, node.biomes.includes("dig_soil"), now, random);
       const sp = nodeRoll(memberId, node, now, await weather());
       if (!sp) return { ok: false, status: 409, code: "nothing_here", error: "Nothing's out here right now." };
       // On the new world rocks need the pickaxe (m6, toolOf); the village's take the shovel, as always.
@@ -105,6 +108,25 @@ export async function catchAction(
   } catch (err) {
     return fail(err);
   }
+}
+
+/**
+ * A dig spot (m3): the server rolls the loot (lib/collections/digLoot.ts) with the held shovel's tier, the way a cast
+ * rolls with the held rod's, and records it once per spot per hour (collections_dig): a relic, ore or the broken sudo
+ * into the bag, or a purse of coins or a gem into the wallet. Every dig counts for Pim's chapter.
+ */
+async function digAt(store: CollectionsStore, memberId: string, tool: unknown, nodeId: string, soil: boolean, now: Date, random: () => number): Promise<Result<CatchReply>> {
+  const [owned, taught] = await Promise.all([store.ownedGear(memberId), store.toolsTaught(memberId)]);
+  const held = checkHeld(tool, "shovel", owned, taught);
+  if (!held.ok) return held;
+  const loot = digRoll(BURIED_FINDS, soil, held.tool.tier, random);
+  if (loot.kind === "coins" || loot.kind === "gem") {
+    const purse = { currency: loot.kind === "coins" ? "coins" as const : "gems" as const, amount: loot.amount };
+    return { ok: true, data: { item_key: purse.currency, size_cm: null, purse, ...(await store.dig(memberId, nodeId, hourKey(now), purse)) } };
+  }
+  const sp = ROSTER.find((s) => s.key === loot.key)!;
+  const size = clampSize(sp, forageSize(sp, random));
+  return { ok: true, data: { item_key: sp.key, size_cm: size, ...(await store.dig(memberId, nodeId, hourKey(now), { item_key: sp.key, size_cm: size, trophy: trophyFor(sp, size) })) } };
 }
 
 const EatRequest = z.object({ item: z.string().max(64) });
@@ -162,6 +184,21 @@ export async function donate(store: CollectionsStore, memberId: string, speciesK
     const best = mine.find((r) => r.item_key === speciesKey)?.best_size_cm ?? null;
     const res = await store.donate(memberId, speciesKey, idempotencyKey, best);
     return { ok: true, data: { replayed: res.replayed, exhibit: await exhibitFor() } };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+/**
+ * The museum's drive (m5, David 2026-10-28: "this might get impossible if people donate all the stuff"): any fish, bug
+ * or buried find handed in counts, even a kind already on display, so the drive can always be finished.
+ */
+export async function handIn(store: CollectionsStore, memberId: string, speciesKey: string, idempotencyKey: string): Promise<Result<{ replayed: boolean }>> {
+  try {
+    const sp = ROSTER.find((s) => s.key === speciesKey);
+    if (!sp) return { ok: false, status: 404, code: "unknown_species", error: "The museum doesn't know that one." };
+    if (!sp.donatable) return { ok: false, status: 422, code: "not_donatable", error: "The museum doesn't collect that." };
+    return { ok: true, data: await store.handIn(memberId, speciesKey, idempotencyKey) };
   } catch (err) {
     return fail(err);
   }

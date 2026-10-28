@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { evaluateChapters, type ChapterFacts } from "@/lib/progression/chapters";
 import { DEFAULT_CHAPTERS } from "@/lib/progression/defaults";
 import type { MemberChapterProgress } from "@/lib/progression/types";
-import { mainQuest, museumLine, questPosts, questTalk, scriptAction } from "./mainQuest";
+import { mainQuest, museumLine, opensDrive, questPosts, questTalk, scriptAction } from "./mainQuest";
+import { dropFlags, releasedChapters } from "./drops";
 import { currentStep } from "./questTracker";
 
 const facts = (counts: ChapterFacts["counts"] = {}, firstCatchKey: string | null = null): ChapterFacts => ({ tier: 4, firstCatchKey, lastFishAt: null, counts, goals: {} });
@@ -44,6 +45,21 @@ describe("the main quest on the island", () => {
     // Asking for the net is Odile's teacher talk, not the quest's; once you have it she nudges.
     expect(questTalk(evaluateChapters(CH, finished(2), facts()), "curator", museum)).toBeNull();
     expect(questTalk(evaluateChapters(CH, finished(2), facts({ net: 1, bugs: 2 })), "curator", museum)?.lines[0]).toMatch(/^2 of 3 so far/);
+  });
+  it("opens the museum's drive after Odile's museum talk, and nothing else's (m5)", () => {
+    const views = evaluateChapters(CH, finished(5), facts({ donations: 1 }));
+    const t = questTalk(views, "curator", museum)!;
+    expect(t.script).toBe("quest:the-museum:nudge");
+    expect(t.lines.join(" ")).toContain("even a kind we have already");
+    expect(opensDrive(views, t.script)).toBe(true);
+    expect(opensDrive(views, "quest:odiles-net:nudge")).toBe(false);
+    expect(opensDrive(views, "quest:the-museum:complete")).toBe(false);
+  });
+  it("ends with the museum while Mayor Eliza's pickaxe waits for the cave update: no gap, nothing after it", () => {
+    const released = releasedChapters(CH, dropFlags(1), "new");
+    expect(released.filter(c => c.world === "new").map(c => c.slug)).toEqual(["first-find", "odiles-net", "pims-shovel", "brams-challenge", "the-museum"]);
+    expect(mainQuest(evaluateChapters(released, finished(5), facts()), true)?.id).toBe("chapter:the-museum");
+    expect(mainQuest(evaluateChapters(released, finished(6), facts()), true)).toBeNull();
   });
   it("words the club's museum", () => {
     expect(museumLine(museum)).toBe("The club's museum so far: 4 of 10 fish, 2 of 5 bugs, 0 of 3 buried finds. It opens once it's full.");

@@ -14,7 +14,7 @@ import { onTalkScript, talkStore } from "@/lib/game/residentTalk";
 import { clearGuide, showGuide } from "@/lib/game/guideArrow";
 import { islandPhase } from "@/lib/game/islandTime";
 import { resolveAnchor } from "@/lib/game/progressionBridge";
-import { mainQuest, questPosts, questTalk, questTarget, scriptAction } from "@/lib/game/mainQuest";
+import { MUSEUM_DRIVE, mainQuest, opensDrive, questPosts, questTalk, questTarget, scriptAction } from "@/lib/game/mainQuest";
 import { personalChapter } from "@/lib/progression/chapters";
 import { advance } from "@/lib/progression/client";
 import { refreshProgression, setProgressionState, useProgression } from "@/lib/progression/useProgression";
@@ -43,6 +43,8 @@ export function useMainQuest(player: RefObject<THREE.Vector3>, on: boolean) {
 
   // A finish said through: the chapter's action. The server checks it, pays the reward and posts the letter.
   useEffect(() => onTalkScript(script => {
+    // Odile's drive talk (m5): the hand-in sheet follows it.
+    if (on && opensDrive(viewsRef.current, script)) { window.dispatchEvent(new CustomEvent(MUSEUM_DRIVE)); return; }
     const a = on ? scriptAction(script) : null;
     if (!a) return;
     const title = titleOf(viewsRef.current, a.chapter);
@@ -56,7 +58,7 @@ export function useMainQuest(player: RefObject<THREE.Vector3>, on: boolean) {
     if (!on) return;
     let t = 0;
     const again = () => { window.clearTimeout(t); t = window.setTimeout(() => void refreshProgression(), READ_BACK_MS); };
-    const events = ["tsi:peaceful-got", "tsi:fish-caught", "tsi:curator-say", "tsi:tools-changed"];
+    const events = ["tsi:peaceful-got", "tsi:dig-purse", "tsi:fish-caught", "tsi:curator-say", "tsi:tools-changed"];
     events.forEach(e => window.addEventListener(e, again));
     return () => { window.clearTimeout(t); events.forEach(e => window.removeEventListener(e, again)); };
   }, [on]);

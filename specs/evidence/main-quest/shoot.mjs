@@ -4,7 +4,7 @@
 // `?progression=demo` (the real progression service on an in-memory store; `&chapter=` and `&tally=` set where the
 // member is). Headless Chromium, muted, under the shared browser lock.
 //   HOST=http://localhost:3147 node specs/evidence/main-quest/shoot.mjs <out_dir> <scene> [<scene> ...]
-// Scenes: flow, chapters, dig, pickaxe (the new world: run the dev server with NEXT_PUBLIC_GAME_WORLD=new); village (the
+// Scenes: r2flow, r2museum, r2dig (round 2); flow, chapters, dig, pickaxe (round 1; the new world: run the dev server with NEXT_PUBLIC_GAME_WORLD=new); village (the
 // default world, no env: the village's one tracker line, unchanged).
 // Places are the new world's (lib/collections/rolls.ts activeVillage("new"): museum 4,70.5; dig-sand-0 -17,102;
 // dig-soil-15 35,84; rock-1 38,25.1).
@@ -82,7 +82,98 @@ async function talkTo(page, slug, name) {
   for (let k = 0; k < 14 && await page.$("[data-testid=talk-box]"); k++) { await page.keyboard.press("e"); await sleep(700); }
 }
 
+/** The HUD in: the arrival's fade over and the tracker shown (round 1's line shot was taken under the fade, David: "i dont see"). */
+async function hudIn(page) {
+  await page.waitForFunction(() => {
+    const t = document.querySelector("[data-testid=quest-tracker]");
+    return !!t && !t.hasAttribute("data-hidden") && getComputedStyle(t).opacity === "1" && t.getBoundingClientRect().width > 0;
+  }, null, { timeout: 120000 });
+  await sleep(9000); // the arrival's fade
+}
+/** The line and the minimap beside it (top right). */
+async function lineClip(page) {
+  const r = await page.$eval("[data-testid=quest-tracker]", el => { const b = el.getBoundingClientRect(); return { x: b.left, y: b.top, b: b.bottom }; });
+  return { x: Math.max(0, r.x - 40), y: 40, width: 1440 - Math.max(0, r.x - 40), height: 210 };
+}
+const widths = page => page.evaluate(() => {
+  const t = document.querySelector("[data-testid=quest-tracker]"), l = document.querySelector("#quest-list");
+  return { bar: t?.getBoundingClientRect().width ?? null, list: l?.getBoundingClientRect().width ?? null, barLeft: t?.getBoundingClientRect().left ?? null, listLeft: l?.getBoundingClientRect().left ?? null };
+});
+
 for (const scene of SCENES) {
+  if (scene === "r2flow") {
+    const { ctx, page } = await open("");
+    await go(page, 30, 46, Math.PI);
+    await hudIn(page);
+    await shot(page, "r2-01-line", await lineClip(page));
+    await openList(page);
+    await sleep(600);
+    log.push({ name: "r2-02-dropdown", widths: await widths(page) });
+    await shot(page, "r2-02-dropdown", await dropdownClip(page));
+    const arrow = await page.$eval("#quest-list button[aria-pressed]", b => ({ label: b.getAttribute("aria-label"), text: b.textContent }));
+    log.push({ name: "r2-03-arrow-button", arrow });
+    await page.click("#quest-list button[aria-pressed]");
+    await sleep(600);
+    await shot(page, "r2-03-arrow-pressed", await dropdownClip(page));
+    log.push({ name: "r2-03-arrow-pressed", pressed: await page.$eval("#quest-list button[aria-pressed]", b => [b.getAttribute("aria-pressed"), b.getAttribute("aria-label")]) });
+    await page.click("[data-testid=quest-tracker] button[aria-expanded]");
+    await sleep(1500);
+    await shot(page, "r2-03-arrow-to-museum");
+    // To the museum: Juno takes the first catch; chapter 1's XP takes you to level 2 and the card says what's new.
+    await go(page, 4, 66, 0);
+    await sleep(3000);
+    await besides(page, "docent");
+    await sleep(1200);
+    try { await talkTo(page, "docent", "r2-05-juno-talk"); } catch (e) { console.log("no talk", e.message.slice(0, 120)); }
+    await page.waitForSelector("[data-testid=level-up]", { timeout: 20000 }).catch(() => console.log("no level-up card"));
+    await sleep(900);
+    await shot(page, "r2-06-level-up");
+    log.push({ name: "r2-06-level-up", card: await page.$eval("[data-testid=level-up]", el => el.textContent).catch(() => null) });
+    await page.keyboard.press("Escape");
+    await sleep(800);
+    await openList(page);
+    await sleep(600);
+    await shot(page, "r2-07-next-chapter", await dropdownClip(page));
+    await ctx.close();
+  }
+  if (scene === "r2museum") {
+    const { ctx, page } = await open("collections=demo&chapter=the-museum&tally=donations:1");
+    await hudIn(page);
+    await openList(page);
+    await sleep(600);
+    await shot(page, "r2-10-the-museum", await dropdownClip(page));
+    await page.click("[data-testid=quest-tracker] button[aria-expanded]");
+    await sleep(400);
+    await go(page, 4, 66, 0);
+    await sleep(3000);
+    console.log("near", JSON.stringify(await besides(page, "curator")));
+    await page.keyboard.press("e");
+    await page.waitForSelector("[data-testid=talk-box]", { timeout: 20000 }).catch(() => console.log("no talk box"));
+    await sleep(1000);
+    await shot(page, "r2-11-odile-drive-talk");
+    for (let k = 0; k < 14 && await page.$("[data-testid=talk-box]"); k++) { await page.keyboard.press("e"); await sleep(700); }
+    await page.waitForSelector("[data-testid=donate-sheet]", { timeout: 20000 }).catch(() => console.log("no drive sheet"));
+    await sleep(2500);
+    await shot(page, "r2-12-museum-drive");
+    const rows = await page.$$eval("[data-testid=donate-sheet] [data-key]", els => els.map(e => e.textContent));
+    log.push({ name: "r2-12-museum-drive", rows: rows.slice(0, 12) });
+    const handIn = await page.$("[data-testid=donate-sheet] [data-key]:has-text('Hand in')");
+    if (handIn) { await handIn.click(); await sleep(1500); await shot(page, "r2-13-handed-in"); } else console.log("no hand-in row");
+    await ctx.close();
+  }
+  if (scene === "r2dig") {
+    const { ctx, page } = await open("collections=demo&time=day", { "tsi.held.v1": JSON.stringify({ held: "shovel:shovel-basic" }) });
+    await hudIn(page);
+    await go(page, -15.8, 99.5, 0);
+    await sleep(2500);
+    await shot(page, "r2-20-dig-mark-sand");
+    await shot(page, "r2-20-dig-mark-sand-close", { x: 420, y: 260, width: 600, height: 420 });
+    await go(page, 36.2, 81.5, 0);
+    await sleep(2500);
+    await shot(page, "r2-21-dig-mark-dirt");
+    await shot(page, "r2-21-dig-mark-dirt-close", { x: 420, y: 260, width: 600, height: 420 });
+    await ctx.close();
+  }
   if (scene === "flow") {
     const { ctx, page } = await open("");
     await go(page, 30, 46, Math.PI);

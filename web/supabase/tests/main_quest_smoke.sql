@@ -65,6 +65,6 @@ DO $$ BEGIN
   -- The village's rocks and clams play as before: the pickaxe and the dig spots are the new world's, in code.
   ASSERT (SELECT string_agg(key || ':' || tool || ':' || biome, ',' ORDER BY key) FROM collection_species WHERE key IN ('rock_stone', 'rock_iron_nugget', 'rock_clay', 'shell_asari')) =
     'rock_clay:shovel:rocks,rock_iron_nugget:shovel:rocks,rock_stone:shovel:rocks,shell_asari:shovel:beach', 'rocks and clams unchanged';
-  ASSERT (SELECT count(*) FROM collection_species WHERE key LIKE 'find\_%' AND tool = 'shovel' AND wing = 'nature_room' AND donatable) = 7, 'seven buried finds for the new world''s museum';
+  ASSERT (SELECT count(*) FROM collection_species WHERE key LIKE 'find\_%' AND tool = 'shovel' AND wing = 'nature_room' AND donatable) = 8, 'seven buried finds and the broken sudo for the new world''s museum';
   RAISE NOTICE 'main quest 5 catalogue ok';
 END $$;

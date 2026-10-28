@@ -156,6 +156,19 @@ describe("chapters through the service", () => {
     expect(done.ok && done.data.chapters.slice(0, 3).map((c) => c.status)).toEqual(["completed", "active", "locked"]);
     expect(done.ok && done.data.objective).toMatchObject({ chapter_slug: "odiles-net", step_key: "get_net", anchor: "museum" });
     expect(done.ok && done.data.unread_letters).toBe(1);
+    // David 2026-10-28: "chapter 1 done get enough exp to level up to level 2" (the level-up card reads xp_gain).
+    expect(done.ok && done.data.xp_gain).toEqual({ amount: 125, total: 125, level: 2, levelled_up: true });
+  });
+  it.runIf(!VILLAGE)("new world: chapter 1's XP is paid once, never for a skip", async () => {
+    const m = setup();
+    m.setFacts(A, { firstCatchKey: "fish_dace", counts: { fish: 1 } });
+    expect(await m.store.grantXp(A, 125, "first-find", "chapter_xp:first-find")).toMatchObject({ replayed: false });
+    await advanceChapter(m.store, A, { chapter_slug: "first-find", action: "claim_plot" }, now);
+    const done = await advanceChapter(m.store, A, { chapter_slug: "first-find", action: "donate_catch" }, now);
+    expect(done.ok && done.data.xp_gain).toBeUndefined();
+    const b = setup();
+    const skipped = await advanceChapter(b.store, A, { chapter_slug: "first-find", action: "skip" }, now);
+    expect(skipped.ok && skipped.data.xp_gain).toBeUndefined();
   });
   it.runIf(!VILLAGE)("new world: gives a chapter's reward item once, on completion (Bram's Cedar rod)", async () => {
     const m = setup();

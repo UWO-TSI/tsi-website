@@ -27,8 +27,9 @@ import { packMap, spriteQuad, useMoveParticles } from "../movement/moveFx";
 import { useGlowParticles } from "../GlowFx";
 import { AudioManager } from "@/lib/game/audio";
 import { collect, harvestNode, localCollections, localRecord } from "@/lib/game/collections";
+import { refreshHudWallet } from "@/lib/game/hudStore";
 import { bagRoom } from "@/lib/game/bagStore";
-import { ROSTER, toolOf } from "@/lib/collections/roster";
+import { MINING, ROSTER, toolOf } from "@/lib/collections/roster";
 import { isBuried } from "@/lib/progression/facts";
 import { forageSize } from "@/lib/collections/rolls";
 import { bugReaction, fleeRadius, hasClue, hourKey, nodeAvailable, rollNode } from "@/lib/game/peaceful";
@@ -47,7 +48,7 @@ import { LIFT, handOf, liftPose, type Lift } from "@/lib/game/forageLift";
 import { FACE, seedAt, type Recipe } from "@/lib/game/fx/particles";
 import { CHIPS, CHIP_TINT, DIG_RISE, FLOWER_TINT, GLINT, GLINT_EVERY, GLINT_TINT, HOLE_TINT, LIFT_PUFF, NEW_HOLE_TINT, PETALS, ROCK_DUST, SAND_BURST, SAND_GRAINS, SAND_TINT, STRIKE_PUFF } from "@/lib/game/forageFx";
 import { hash01 } from "@/lib/game/worldFx";
-import { crackStar } from "@/lib/game/digMark";
+import { crackStar, soilScuff } from "@/lib/game/digMark";
 import { GAME_WORLD } from "@/lib/game/world/active";
 import { TREE_WIND, WORLD_SNOW, leafTintHex, prepareModel } from "@/lib/game/modelMaterials";
 import TreeFruit, { FRUIT_REST_RADIUS, type HangingFruit } from "./TreeFruit";
@@ -72,10 +73,10 @@ const BRANCH_SCALE = 1.3, BRANCH_RADIUS = 0.05;
 /** The rock outcrops a shovel strikes (art/props-enemies/build_forage.py): one per material, and the bare one it leaves. */
 /** The main quest's look and feel (m2, m3, m6) is the new world's; the village plays as it always did. */
 const NEW_WORLD = GAME_WORLD === "new";
-/** The new world's rocks are build_mining.py's (stone, iron, spent); the village keeps build_forage.py's outcrops. */
+/** Mining's rocks (the cave update, MINING) are build_mining.py's (stone, iron, spent); until then build_forage.py's outcrops. */
 const NEW_ROCKS: Readonly<Record<string, string>> = { rock_stone: "rock-stone", rock_iron_nugget: "rock-iron" };
-const OUTCROP = (key: string) => `/assets/game/forage/${NEW_WORLD && NEW_ROCKS[key] ? NEW_ROCKS[key] : `outcrop-${key}`}.glb`;
-const SPENT_OUTCROP = NEW_WORLD ? "/assets/game/forage/rock-spent.glb" : "/assets/game/forage/outcrop-spent.glb";
+const OUTCROP = (key: string) => `/assets/game/forage/${MINING && NEW_ROCKS[key] ? NEW_ROCKS[key] : `outcrop-${key}`}.glb`;
+const SPENT_OUTCROP = MINING ? "/assets/game/forage/rock-spent.glb" : "/assets/game/forage/outcrop-spent.glb";
 /** Their face is authored toward Blender's -Y (glTF +Z): turned to face the way you come at them (the node stands in front of its boulder, -z). */
 const OUTCROP_YAW = Math.PI;
 /** What a struck rock is doing: performance.now() of its last hit (the flinch) and whether its material has come out. */
@@ -107,22 +108,22 @@ const spriteCrackLook = () => (crackMaterial ??= new THREE.MeshStandardMaterial(
 const SPRITE_CRACKS = Array.from({ length: 8 }, (_, f) => spriteQuad("crack", f, 0.62).rotateX(-Math.PI / 2));
 
 /**
- * The new world's dig spot (a buried find, m3; David: "dirt will have like some type of marking and sand as well"): a star of five
- * cracks in the ground, built as flat wedges (lib/game/digMark.ts, bolder than the pack's thin crack sprite), each
- * spot its own seeded star, big and dark enough to spot from a few steps off: a dark umber on the sand,
- * a near-black brown on the dirt (which is darker itself). Opaque and shared, so the spots cost one material each.
+ * The new world's dig spot (a buried find, m3), lib/game/digMark.ts: on sand a small star of hairline cracks, on dirt a
+ * scuff of turned earth (David 2026-10-28: "way more subtle and small and lower opacity", "should look natural and hard
+ * to find usually"). Faint and see-through, a shade darker than the ground. Shared, so the spots cost one material each.
  */
 const crackLooks = new Map<boolean, THREE.MeshStandardMaterial>();
 const crackLook = (soil: boolean) => {
   let m = crackLooks.get(soil);
-  if (!m) crackLooks.set(soil, m = new THREE.MeshStandardMaterial({ name: "DigSpot", color: soil ? "#2e2117" : "#5a4128", roughness: 1, metalness: 0, side: THREE.DoubleSide,
-    polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+  if (!m) crackLooks.set(soil, m = new THREE.MeshStandardMaterial({ name: "DigSpot", color: soil ? "#3d2c1d" : "#7a5c3b", roughness: 1, metalness: 0, side: THREE.DoubleSide,
+    transparent: true, opacity: soil ? 0.28 : 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
   return m;
 };
 const CRACKS = Array.from({ length: 8 }, (_, f) => crackStar(f * 7 + 3));
+const SCUFFS = Array.from({ length: 8 }, (_, f) => soilScuff(f * 7 + 3));
 function DigSpot({ at, seed, soil }: { at: [number, number, number]; seed: number; soil: boolean }) {
   if (!NEW_WORLD) return <mesh geometry={SPRITE_CRACKS[Math.floor(hash01(seed, 7) * 8) % 8]} material={spriteCrackLook()} position={[at[0], at[1] + 0.015, at[2]]} rotation={[0, seed * 1.3, 0]} renderOrder={2} receiveShadow />;
-  return <mesh geometry={CRACKS[Math.floor(hash01(seed, 7) * 8) % 8]} material={crackLook(soil)} position={[at[0], at[1] + 0.02, at[2]]} rotation={[0, seed * 1.3, 0]} receiveShadow />;
+  return <mesh geometry={(soil ? SCUFFS : CRACKS)[Math.floor(hash01(seed, 7) * 8) % 8]} material={crackLook(soil)} position={[at[0], at[1] + 0.02, at[2]]} rotation={[0, seed * 1.3, 0]} renderOrder={2} receiveShadow />;
 }
 
 /**
@@ -314,7 +315,9 @@ interface Act {
   /** Where the thing lies (its lift starts here). */
   at: Point;
   /** What the server said it was (or this browser's roll, signed out), once it has answered yes. */
-  result?: { got: Species; size: number | null; isNew: boolean; recipe: { id: string; name: string } | null };
+  result?: { got: Species; size: number | null; isNew: boolean; recipe: { id: string; name: string } | null;
+    /** A dig that turned up coins or a gem (lib/collections/digLoot.ts): it goes to the wallet, not the bag. */
+    purse?: { currency: "coins" | "gems"; amount: number } };
 }
 
 // ── Effects (our particle pack, on the object they belong to) ──────────────────────────────────────────────────────
@@ -369,7 +372,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
   const forageTargets = useMemo(() => new Map(forage.map(({ n, sp }) => {
     const drop = lyingByNode.get(n.id);
     const label = drop ? `Pick up the ${drop.kind === "branch" ? "branch" : sp!.name.toLowerCase()}`
-      : n.canopy ? "Shake the tree" : sp!.category === "mineral" ? (NEW_WORLD ? "Break the rock" : "Strike the rock") : buried(sp!) ? "Dig it up"
+      : n.canopy ? "Shake the tree" : sp!.category === "mineral" ? (MINING ? "Break the rock" : "Strike the rock") : buried(sp!) ? "Dig it up"
       : sp!.sub === "shell" ? "Pick up the shell" : sp!.category === "fruit" ? `Pick up the ${sp!.name.toLowerCase()}` : "Pick it";
     const clip: ClipName = drop ? "Pickup" : n.canopy ? "Shake" : sp!.category === "mineral" ? "Strike" : buried(sp!) ? "Dig"
       : sp!.sub === "flower" || sp!.sub === "mushroom" ? "Forage" : "Pickup";
@@ -494,8 +497,11 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
           const dig = act.kind === "dig";
           setLift(lifts, key, { t0, from, to: hand, ms: LIFT.ms + 140, ...(dig ? { rise: DIG_RISE.ms, riseBy: DIG_RISE.by } : {}) });
           if (act.kind === "strike") takeOre(struck, act.nodeId);
-          setPieces(list => [...list, { key, url: act.sp.category === "mineral" ? `/assets/game/items/${act.sp.key}.glb` : act.sp.model ?? `/assets/game/items/${act.sp.key}.glb`,
-            scale: act.sp.category === "mineral" ? 2.4 : 1.1 }]);
+          // What the server said came up (a dig rolls its own loot): the find, the ore, or a coin or gem for a purse.
+          const purse = act.result?.purse, got = act.result?.got ?? act.sp;
+          setPieces(list => [...list, { key, url: purse ? `/assets/game/items/${purse.currency === "coins" ? "coin" : "gem"}.glb`
+            : got.category === "mineral" ? `/assets/game/items/${got.key}.glb` : got.model ?? `/assets/game/items/${got.key}.glb`,
+            scale: purse ? 1.6 : got.category === "mineral" ? 2.4 : 1.1 }]);
           later(LIFT.ms + 140 + (dig ? DIG_RISE.ms : 0), () => finish(act));
         } else {
           setLift(lifts, act.nodeId, { t0, from: { ...act.at }, to: hand, ms: LIFT.ms });
@@ -515,13 +521,19 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
       });
     };
     const finish = (act: Act) => {
-      if (act.result) {
+      if (act.result?.purse) {
+        const { currency, amount } = act.result.purse;
+        window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: currency === "coins" ? `You dug up ${amount} coins!` : amount === 1 ? "You dug up a gem!" : `You dug up ${amount} gems!` } }));
+        window.dispatchEvent(new CustomEvent("tsi:dig-purse", { detail: act.result.purse }));
+        AudioManager.playSFX("confirm", { rate: currency === "gems" ? 1.6 : 1.2, gain: 0.5 });
+        void refreshHudWallet();
+      } else if (act.result) {
         const { got, size, isNew, recipe } = act.result;
         collect(got.key);
         localRecord(got.key, size);
         // The shared reward card says what it was, with its art and its chime (RewardCard); the token flies into the Bag.
         window.dispatchEvent(new CustomEvent("tsi:peaceful-got", { detail: { key: got.key, name: got.name, rarity: got.rarity, one_liner: got.oneLiner, size, isNew,
-          kind: act.kind === "net" ? "bug" : act.kind === "dig" ? "dig" : NEW_WORLD && act.kind === "strike" ? "mine" : "forage" } }));
+          kind: act.kind === "net" ? "bug" : act.kind === "dig" ? "dig" : MINING && act.kind === "strike" ? "mine" : "forage" } }));
         window.dispatchEvent(new CustomEvent("tsi:bag-got", { detail: { key: got.key } }));
         // A rare find that taught a recipe: its card follows the catch's.
         if (recipe) window.dispatchEvent(new CustomEvent("tsi:recipe-learned", { detail: recipe }));
@@ -571,7 +583,14 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
           window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: answer.error } }));
           return;
         }
-        // The server's roll is the catch (normally the same species this node showed).
+        // A dig that turned up a purse: coins or a gem, into the wallet.
+        if (answer?.catch.purse) {
+          act.result = { got: sp, size: null, isNew: false, recipe: null, purse: answer.catch.purse };
+          act.answer = { ok: true, at: t };
+          tryLand(act);
+          return;
+        }
+        // The server's roll is the catch (a dig's is its own loot; anything else normally the species this node showed).
         const got = answer ? ROSTER.find(s => s.key === answer.catch.item_key) ?? sp : sp;
         act.result = { got, size: answer ? answer.catch.size_cm : forageSize(got), isNew: answer ? answer.catch.total_collected === 1 : !(got.key in localCollections()),
           recipe: answer?.catch.recipe ? { id: answer.catch.recipe.id, name: answer.catch.recipe.name } : null };
