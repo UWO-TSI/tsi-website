@@ -424,3 +424,8 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
    - deleting the old sage-HUD rules and the dead ThemeToggle;
    - one name tag, one bubble, one progress and one keycap component.
 4. **David's calls, asked 2026-10-28:** the dump rule (dump is interim, never the close-up copy); whether the re-finished dump fish count as ours; combat parked or archived; delete the NPC AI chat; delete 7 sky variants and 3 look presets; HQ job board and projects wall; references for the bobber, bait and five dishes.
+- main-quest r2 code is at 4bb98992 (shots pending):
+  - migrations 20261028153805_main_quest_r2, then 20261028194150_catalogue_seed (regenerate on the combined tree at merge);
+  - flat kit pieces RewardPop (RewardCard renders it) and BigMoment (the level-up card);
+  - pickaxe parked behind the drop flag `cave`.
+  At merge, fold BigMoment and tutorial-v2's moments.tsx (QuestCheck) into one file in components/gui/flat.
