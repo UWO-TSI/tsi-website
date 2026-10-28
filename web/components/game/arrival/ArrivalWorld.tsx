@@ -308,10 +308,10 @@ function converseCamera(f: GuideFrame, stop: ResolvedStop | undefined, dt: numbe
     g.cam.look.set(g.x, g.y + CLOSE.at, g.z);
   } else if (shot) {
     // From the building toward you, back and up, looking at it.
-    // A place close by (the wharf's) is framed from just behind him, not from 15 m back through whatever's there.
+    // A place close by (the wharf's) is framed from just behind him and lower, not from 15 m back through whatever's there.
     const dx = g.x - shot.x, dz = g.z - shot.z, d = Math.hypot(dx, dz) || 1, back = Math.min(SHOT.back, d + SHOT.behind);
     const cx = shot.x + dx / d * back, cz = shot.z + dz / d * back;
-    g.cam.pos.set(cx, island.ground(cx, cz) + SHOT.up, cz);
+    g.cam.pos.set(cx, island.ground(cx, cz) + SHOT.up * Math.min(1, back / SHOT.back), cz);
     g.cam.look.set(shot.x, island.ground(shot.x, shot.z) + SHOT.at, shot.z);
   }
   g.cam.k = Math.min(1, Math.max(0, g.cam.k + (shot ? 1 : -1) * SHOT.rate * dt));
