@@ -47,7 +47,9 @@ Branch head: see `git log -1` (this file is committed with it). Main has not mer
 5. SQL cap fix (0dd36b28): migration `20261028150000_catch_caps_divine.sql` (divine and contraband capped at 3 an hour like the code; they fell to 60), smoke `web/supabase/tests/catch_caps_divine_smoke.sql` in `specs/evidence/launch-fixes/sql-smoke.sh` (it re-applies the migration, since backpack_smoke re-runs the old definition). Not applied to prod: the coordinator applies it.
 6. Evidence: `specs/evidence/fish-tiers/hook-strips.png` (+ per tier), sounds in `sounds/`, `boss-reel-flagged.png`. Review page up for David (hook-common, hook-legendary, hook-divine): don't change the "!" or the sounds until he decides.
 
-**Gates at 0dd36b28:** tsc clean; vitest 3509 passed with and without NEXT_PUBLIC_GAME_WORLD=new; eslint clean on changed files; realtime npm test 233 passed and typecheck (at dccf8035, unchanged since); SQL smoke chain green with the new smoke. Pending: the two-client raid run in a browser, perf:check.
+**Gates at 0dd36b28:** tsc clean; vitest 3509 passed with and without NEXT_PUBLIC_GAME_WORLD=new; eslint clean on changed files; realtime npm test 233 passed and typecheck (at dccf8035, unchanged since); SQL smoke chain green with the new smoke. Two-client raid run done (evidence `raid-alice-strip.png`, `raid-bob-strip.png`).
+
+**perf:check (SCENES=v2, new world, at 80395fe4): FAILED against the 2026-10-14 baseline (8809c517).** v2 high: 6.90 ms median (baseline 5.40), 413 draws (254), 1.38M triangles (0.91M). v2 lite: 4.50 ms (3.00), 348 draws (172), 1.17M triangles (0.63M). These numbers are from the world content main has added since the baseline (the grass, the remodels, the 81 fish, and so on), not from this lane. With the boss flag off, this lane adds nothing to the bench scene: no fishing happens in it, the "!" is a DOM label, and the creature isn't mounted. Priced in `specs/perf/effects-cost.md`. The baseline needs a refresh from main (the coordinator's combined check).
 
 ## David's decisions
 
