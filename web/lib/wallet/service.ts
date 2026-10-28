@@ -168,9 +168,10 @@ const until = (now: Date, minutes: number) => new Date(now.getTime() + minutes *
 export const fillFishRequest = (store: EconomyStore, m: string, input: { item_key: string; board?: "market" | "chef"; idempotency_key: string }, now: Date, waters: readonly WaterType[]) =>
   run(async () => {
     const day = torontoDay(now), board = input.board ?? "market";
-    const req = board === "chef" ? chefOrder(day, waters) : fishRequests(day, waters).find((r) => r.item_key === input.item_key);
+    const chef = board === "chef" ? chefOrder(day, waters) : null;
+    const req = board === "chef" ? chef : fishRequests(day, waters).find((r) => r.item_key === input.item_key);
     if (!req || req.item_key !== input.item_key) throw new EconomyError("not_requested");
-    const meal = "meal" in req ? { source: "staff_meal", luck: req.meal.luck, size: req.meal.size, until: until(now, req.meal.minutes) } : undefined;
+    const meal = chef ? { source: "staff_meal", luck: chef.meal.luck, size: chef.meal.size, until: until(now, chef.meal.minutes) } : undefined;
     return store.fillRequest(m, day, board, req.item_key, req.reward, input.idempotency_key, meal);
   });
 
