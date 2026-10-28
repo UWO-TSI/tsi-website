@@ -96,6 +96,12 @@ Done in round 2:
   member_digs, collections_dig, museum_handins, museum_hand_in, copy), 20261028194150_catalogue_seed (generated:
   the broken sudo). Smokes: main_quest_smoke.sql, main_quest_r2_smoke.sql in sql-smoke.sh.
 
+**Gates at the report (round 2):** tsc 0 errors; vitest (NEXT_PUBLIC_GAME_WORLD=new) 3553 passed, 8 skipped, 0 failed;
+eslint clean on the changed files; SQL chain clean (main quest 1 to 5, r2 1 to 6). perf:check once (SCENES=village built
+with NEXT_PUBLIC_GAME_WORLD=new): draw calls 375 high / 297 lite (baseline 382 / 288); it "fails" on frame time and
+triangles because the baseline (8809c517, 2026-10-14) is the old village, not the new world: the dig marks are 16
+meshes of 45 to 57 triangles either way.
+
 ## Next
 
 1. Wait for David's review of round 2 (evidence in specs/evidence/main-quest/r2/); the coordinator merges and applies
