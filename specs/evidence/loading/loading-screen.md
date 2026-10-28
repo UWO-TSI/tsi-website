@@ -1,24 +1,25 @@
-# The new loading screen (step 5), for David's review
+# The loading screen, round 2: three simple looks for David to pick
 
-David, 2026-10-26: "logging in there should be a new improved prettier loading screen for after signing in".
+David, 2026-10-27, on round 1 (the sea chart): "looks ugly i dont want to show our map because it looks bad, i want it
+to be simple maybe show our logo loading or the fishing boat thing... maybe like a idle shot of the island... just keep
+it simpel for now".
 
-**Shots:** `screen-sequence-1280.png` (1280 x 800 on a 12 Mbps line, Let's Play onward: top left at once, top right
-after 5 s, then the island in, near the end), `screen-1920.png` (1920 x 1080, cropped to the middle).
+All three: the cream paper and grain, Nunito, no map, nothing fetched. Under each, the real progress as one 2 px
+hairline (`lib/game/loadProgress.ts`: the code running, the world in, the models and textures, the shader warm-up;
+weighted, never backwards; a `progressbar` for screen readers) and the stage it waits on in small muted type ("Rowing
+out…", "Unpacking the village…", "Lighting the lamps…"). The line moves by transform, so it keeps going while the main
+thread compiles. Reduced motion stills everything.
 
-**What it is**, all from the game's own pieces, nothing fetched:
+| Look | Shot (1280 x 800, at 77%) | What it is |
+|---|---|---|
+| `logo` | `screen-logo-1280.png` | The site's own Tethos mark (`public/logo-light.svg`, tinted the ink), breathing slowly, "TETHOS ISLAND" under it. Nothing to download. |
+| `boat` | `screen-boat-1280.png` | Bram's boat at the wharf at golden hour, as a print on the paper (tilted a touch). 23 KB still. |
+| `island` | `screen-island-1280.png` | The HQ at golden hour, full bleed, drifting in very slowly (40 s), the mark and line on a warm haze at the foot. 38 KB still. |
 
-- The cream kit: the GUI sheet's paper, grain, sage-teal, wood and Nunito (`styles/game-tokens.css`).
-- **Our island on a sea chart:** the island map's own drawing (the minimap's plot of the real world: sand, grass,
-  paths, the wharf, the landmarks), on a paper plate tilted a degree. Until the world's map is in (about a second) the
-  plate holds the arrival's golden veil mist; it lifts as the island comes in.
-- **Bram's boat rowing to the dock:** a small rowboat with two passengers rides a sea line toward the wharf post; its
-  wake fills behind it. Where it is is the real progress, never backwards (`lib/game/loadProgress.ts`): the island's
-  code running (10%), its world in (15%), the models and textures (55%, of at least the 336 a first load asks for), the
-  warm-up frames while every shader compiles (20%). The percent sits under it.
-- The stage line under the title as before: "Rowing out…", "Unpacking the village…", "Lighting the lamps…".
-- The boat and its wake move with transforms, so they keep gliding on the compositor while the main thread is busy;
-  reduced motion stills the bobbing and the transitions.
+The stills are frames of the title page's own camera on the island (`?time=evening&shot=...`, the title's depth of
+field and pixel finish), made by `specs/perf/loading-stills.mjs still` and saved small as `public/assets/loading/*.webp`
+(the island at the title's 0.65 pixel scale, drawn pixelated). Boat: `4.5,-15.5,140,2.0,-7,32`; island: the staged
+evening shot.
 
-**Options for David** (not built): the chart could show the whole island's outline instead of the open village area
-the minimap shows (it would reveal the parts not yet open); the passengers could be drawn from the player's own look
-once it is known.
+To see one live (dev or preview): `/student/dashboard?arrival=1&loading=logo|boat|island` (logo when absent). Once
+David picks, the other two and the `?loading=` switch go.

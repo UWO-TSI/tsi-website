@@ -40,10 +40,15 @@ Head: see `git log` (2026-10-27). Main has steps 2 to 4 and the crossing warm-up
   per phase again (always on cost v2 +4%); the warm-up compiles the other light count; it compiles for the PostFX
   target's linear output (it had been compiling sRGB programs the frame never used); object by object; the golden
   island starts aboard. Numbers in `after.md` "Re-verify". tsc clean after it.
-- **Step 5 built, waiting for David's review:** `specs/evidence/loading/loading-screen.md`, `screen-sequence-1280.png`,
-  `screen-1920.png`; commits 614d8616, ff626290. Not to ship before David approves.
+- **Step 5, round 2 built, waiting for David's pick (not to ship before he picks):** three simple looks, no map
+  (`specs/evidence/loading/loading-screen.md`; shots `screen-logo-1280.png`, `screen-boat-1280.png`,
+  `screen-island-1280.png`). `?loading=logo|boat|island` switches them (logo default). Round 1's chart, mist and boat
+  SVG are deleted, and so are its shots. Stills: `web/public/assets/loading/{boat,island}.webp` (23 KB, 38 KB).
+- Also fixed: the title backdrop never faded in under `next dev` (Strict Mode's remount ran `Ready`'s cleanup first, so
+  `onReady` and the title's game prefetch never fired in dev). Production was unaffected.
+- **Next, when David picks:** keep his look, delete the other two, the `?loading=` switch and the unused still; add
+  the kept still (if any) to the title's prefetch list (`web/lib/game/preloadAssets.ts`).
 - perf baseline: left to the coordinator's combined check (asked).
-- Then stop, unless David's review comes back.
 
 ## Tools and gotchas
 
@@ -65,6 +70,10 @@ Head: see `git log` (2026-10-27). Main has steps 2 to 4 and the crossing warm-up
 - To see three's program cache in a page: an init script setting `window.__THREE_DEVTOOLS__ = new EventTarget()` that
   collects `observe` events gets every renderer and scene (`renderer.info.programs[i].cacheKey`, `renderer.properties`).
 - `load-trace.mjs` takes `TIME=night|day|evening`; each linked program is recorded with its defines.
+- `specs/perf/loading-stills.mjs`: `still <name>=<x,z,yaw,eye,pitch,fov> ...` takes title-camera frames at 1920 x 1080 with
+  no UI; `screen <look>` shoots the loading screen at 40%+ (through `?arrival=1`, otherwise the character creator
+  covers it). Works on `next dev`. Hold the devserver lock only through `withlock.sh devserver` (the old queue file
+  is gone); for several steps, run a holder script in the background that keeps the dev server up until a done file.
 
 ## Rules
 

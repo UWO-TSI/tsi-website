@@ -34,7 +34,7 @@ import type { TripPlace } from "@/lib/game/boatTrip";
 import { HOME_PIER } from "@/lib/game/homeIsland";
 import FittingRoom, { FITTING_STEP_MS } from "./FittingRoom";
 import { BASE_FOV } from "./movement/moveFx";
-import MiniMap, { MapSheet, type MiniMapPlot } from "./MiniMap";
+import MiniMap, { MapSheet } from "./MiniMap";
 import { useDefaultIslandPlot } from "./DefaultIslandMap";
 import LettersSheet from "@/components/progression/LettersSheet";
 import NoticeSheet from "@/components/progression/NoticeSheet";
@@ -696,14 +696,14 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
 
 
 /** The cream loading screen until the first warm-up (`ready`), then a fade; an asset that fails to load gets a reload card. */
-function LoadingStatus({ ready, plot }: { ready: boolean; plot: MiniMapPlot }) {
+function LoadingStatus({ ready }: { ready: boolean }) {
   const { active, progress, loaded, total, errors } = useProgress();
   const [gone, setGone] = useState(false);
   useEffect(() => { if (!ready) return; const t = window.setTimeout(() => setGone(true), 700); return () => window.clearTimeout(t); }, [ready]);
   // Of how many: the loader's count so far, or what a whole first load asks for, whichever is more (no stall at a wave's end).
   useEffect(() => { if (!ready) setLoadPart("files", loaded / Math.max(total, READY_FILES)); }, [loaded, total, ready]);
   return <>
-    {!gone && <IslandLoading stage={active ? "loading" : progress >= 100 ? "warming" : "start"} leaving={ready} plot={plot} />}
+    {!gone && <IslandLoading stage={active ? "loading" : progress >= 100 ? "warming" : "start"} leaving={ready} />}
     {errors.length > 0 && <div className={styles.loading} role="alert">An island asset could not load.<button className={styles.return} onClick={() => window.location.reload()}>Reload island</button></div>}
   </>;
 }
@@ -1417,7 +1417,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         keys={{ wheel: keyName(wheelKeys.wheel), bag: keyName(identity.settings.key_bindings.openJournal) }} onCross={startCrossing} onSaveLook={keepLook} onDone={finishArrival} />
       <div className={styles.netHud} data-hidden={hudCinematic || undefined}><NetHud area={area} hidden={hudCinematic || photo.open} expanded={uiView} /></div>
       <PhotoMode allowed={photoAllowed} />
-      <LoadingStatus ready={ready} plot={plot} />
+      <LoadingStatus ready={ready} />
     </main>
   );
 }

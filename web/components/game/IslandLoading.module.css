@@ -1,36 +1,40 @@
-/* The island loading screen (IslandLoading.tsx): the cream kit's paper and grain, our island on a sea chart coming out
-   of the mist, and Bram's boat rowing the sea line to the dock as the island loads. Under the character creator (z 70). */
-.screen { position: absolute; inset: 0; z-index: 69; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 28px; box-sizing: border-box;
-  text-align: center; color: var(--gui-ink-strong); font-family: var(--gui-font);
-  background: var(--gui-grain), radial-gradient(ellipse at 50% 34%, #fffbe7 0%, transparent 60%), linear-gradient(#d7ece6, #f6f1df 62%, #efe6cc);
+/* The island loading screen (IslandLoading.tsx): the cream paper, one quiet thing to look at, the progress as a thin
+   line. Three looks for David to pick (data-look). Under the character creator (z 70). */
+.screen { position: absolute; inset: 0; z-index: 69; overflow: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center;
+  padding: 32px; box-sizing: border-box; text-align: center; color: var(--gui-ink-strong); font-family: var(--gui-font);
+  background: var(--gui-grain), radial-gradient(ellipse at 50% 42%, var(--gui-paper-hi) 0%, var(--gui-paper) 70%);
   opacity: 1; transition: opacity 0.6s ease; }
 .screen[data-leaving] { opacity: 0; pointer-events: none; }
-.eyebrow { font-size: var(--gui-text-xs); font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gui-muted); }
 
-/* The chart: a paper plate of sea, the island drawn as the island map draws it. */
-.chart { position: relative; margin: 18px 0 0; width: min(440px, 78vw); aspect-ratio: 10 / 7; max-height: 42vh; padding: 14px; box-sizing: border-box;
-  border-radius: var(--gui-r-paper); background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-lg); overflow: hidden; transform: rotate(-1.2deg); }
-.plot { display: block; width: 100%; height: 100%; border-radius: var(--gui-r-card); background: radial-gradient(ellipse at 50% 45%, #9fd6d9 0%, #7fbfcf 55%, #66a9c2 100%);
-  opacity: 0.9; transition: opacity 1.2s ease; }
-.plot:not([data-shown]) { opacity: 0.75; }
-/* The veil mist the arrival comes out of: thick until the island's map is in, then lifting. */
-.mist { position: absolute; inset: 14px; border-radius: var(--gui-r-card); pointer-events: none;
-  background: radial-gradient(ellipse 80% 70% at 50% 48%, #fff8e6 0%, rgb(248 231 196 / 0.92) 45%, rgb(232 215 185 / 0.75) 100%);
-  transition: opacity 1.6s ease; }
-.mist[data-lifted] { opacity: 0.08; }
+.foot { display: flex; flex-direction: column; align-items: center; }
+/* The site's Tethos mark (public/logo-light.svg), in the ink, breathing slowly. */
+.mark { width: 72px; aspect-ratio: 1410 / 1352; background: var(--gui-ink-strong);
+  mask: url("/logo-light.svg") center / contain no-repeat; -webkit-mask: url("/logo-light.svg") center / contain no-repeat;
+  animation: breathe 3.2s ease-in-out infinite; }
+@keyframes breathe { 0%, 100% { opacity: 0.88; } 50% { opacity: 0.62; } }
+.screen h1 { margin: 22px 0 0; font: 800 var(--gui-text-md)/1.2 var(--gui-font); letter-spacing: 0.14em; text-transform: uppercase; }
+/* The progress: a hairline that fills; transforms only, so it keeps moving while the main thread compiles. */
+.line { width: min(200px, 46vw); height: 2px; margin-top: 18px; border-radius: 2px; overflow: hidden; background: rgb(114 92 78 / 0.16); }
+.line i { display: block; height: 100%; background: var(--gui-teal-ink); transform-origin: left; transform: scaleX(var(--p)); transition: transform 0.6s var(--gui-ease); }
+.screen p { margin: 12px 0 0; min-height: 1.5em; font-size: var(--gui-text-xs); font-weight: 700; line-height: 1.5; color: var(--gui-muted); }
 
-.screen h1 { margin: 22px 0 6px; font: 900 clamp(28px, 4.4vw, 44px)/1.1 var(--gui-font); letter-spacing: -0.01em; }
-.screen p { margin: 0; font-size: var(--gui-text-md); font-weight: 700; line-height: 1.6; color: var(--gui-ink-2); min-height: 1.6em; }
+/* The stills fade in once decoded; the paper shows until then. */
+.still { opacity: 0; transition: opacity 0.9s ease; }
+.still[data-shown] { opacity: 1; }
 
-/* The voyage: a sea line from the left to the dock on the right; the boat sits where the loading really is. */
-.voyage { --w: min(340px, 72vw); position: relative; width: var(--w); height: 40px; margin-top: 18px; }
-.sea { position: absolute; left: 0; right: 14px; bottom: 6px; height: 10px; border-radius: 99px; overflow: hidden; background: #cfe5e1; box-shadow: inset 0 1px 2px rgb(36 72 85 / 0.18); }
-/* Transforms only, so the boat and its wake keep moving on the compositor while the main thread compiles. */
-.wake { position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(90deg, #8ccfc4, var(--gui-teal)); transform-origin: left; transform: scaleX(var(--p)); transition: transform 0.6s var(--gui-ease); }
-.boat { position: absolute; bottom: 9px; left: -20px; width: 40px; height: 28px; transform: translateX(calc(var(--p) * (var(--w) - 14px))); transition: transform 0.6s var(--gui-ease); }
-.boat svg { display: block; width: 100%; height: 100%; animation: bob 2.4s ease-in-out infinite; }
-.dock { position: absolute; right: 0; bottom: 2px; width: 14px; height: 20px; border-radius: 3px 3px 2px 2px; background: linear-gradient(var(--gui-wood-light), var(--gui-wood)); box-shadow: var(--gui-shadow-sm); }
-@keyframes bob { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-2px) rotate(2deg); } }
-.pct { margin-top: 6px; font-size: var(--gui-text-sm); font-weight: 800; color: var(--gui-muted); font-variant-numeric: tabular-nums; }
+/* Boat: a print of Bram's boat at the wharf on the paper, the words under it. */
+.screen[data-look="boat"] .still { display: block; width: min(560px, 84vw); max-height: 56vh; aspect-ratio: 16 / 10; object-fit: cover; box-sizing: border-box;
+  border: 10px solid var(--gui-paper-hi); border-bottom-width: 14px; border-radius: 6px; box-shadow: var(--gui-shadow-md); transform: rotate(-0.8deg); }
+.screen[data-look="boat"] h1 { margin-top: 34px; }
 
-@media (prefers-reduced-motion: reduce) { .screen, .plot, .mist, .wake, .boat { transition: none; } .boat svg { animation: none; } }
+/* Island: the island at golden hour, full bleed, drifting in very slowly; the words on a warm haze at the foot. */
+.screen[data-look="island"] { justify-content: flex-end; padding-bottom: clamp(36px, 9vh, 88px); }
+.screen[data-look="island"] .still { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; animation: drift 40s ease-out both; }
+.screen[data-look="island"]::after { content: ""; position: absolute; inset: 55% 0 0; pointer-events: none;
+  background: linear-gradient(rgb(255 251 231 / 0), rgb(255 251 231 / 0.72) 58%, rgb(255 251 231 / 0.86)); }
+.screen[data-look="island"] .foot { position: relative; z-index: 1; }
+.screen[data-look="island"] .mark { width: 44px; }
+.screen[data-look="island"] h1 { margin-top: 14px; }
+@keyframes drift { from { transform: scale(1.01); } to { transform: scale(1.07); } }
+
+@media (prefers-reduced-motion: reduce) { .screen, .still, .line i { transition: none; } .mark, .screen[data-look="island"] .still { animation: none; } }

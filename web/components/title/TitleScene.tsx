@@ -154,6 +154,7 @@ function Ready({ onReady }: { onReady?: () => void }) {
     onReady?.();
     preloadGame(); // the title has drawn: the island's files load behind it
   });
-  useEffect(() => () => { done.current = true; }, []);
+  // Re-armed on mount: Strict Mode's dev remount runs the cleanup once first, which left the title hidden in dev.
+  useEffect(() => { done.current = false; return () => { done.current = true; }; }, []);
   return null;
 }
