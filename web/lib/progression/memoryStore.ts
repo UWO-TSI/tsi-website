@@ -5,6 +5,7 @@
  * or collection items, never below zero.
  */
 import { DEFAULT_CHAPTERS, DEFAULT_GOALS } from "./defaults";
+import { GAME_WORLD } from "@/lib/game/world/active";
 import { StoreError, type CommitInput, type MemberFacts, type ProgressionStore, type RealActivity } from "./store";
 import type { ClubGoal, LetterView, MemberChapterProgress, QuestChapter } from "./types";
 
@@ -30,7 +31,8 @@ export const blankFacts = (): MemberFacts => ({ tier: 4, hudMuted: false, firstC
 
 export function memoryStore(seed?: { goals?: ClubGoal[]; chapters?: QuestChapter[] }) {
   const goals: ClubGoal[] = structuredClone(seed?.goals ?? DEFAULT_GOALS);
-  const chapters: QuestChapter[] = structuredClone(seed?.chapters ?? DEFAULT_CHAPTERS);
+  // By default, this world's chapters (a chapter's world, null for both), as the server lists them (drops.ts releasedChapters).
+  const chapters: QuestChapter[] = structuredClone(seed?.chapters ?? DEFAULT_CHAPTERS.filter((c) => !c.world || c.world === GAME_WORLD));
   const progress = new Map<string, MemberChapterProgress>();
   const facts = new Map<string, MemberFacts>();
   const coins = new Map<string, number>();

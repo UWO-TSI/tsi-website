@@ -167,7 +167,8 @@ export function evaluateChapters(
   facts: ChapterFacts,
 ): ChapterView[] {
   const byChapter = new Map(progressRows.map((p) => [p.chapter_id, p]));
-  const ordered = chapters.filter((c) => c.active).sort((a, b) => a.position - b.position);
+  // Personal chapters come before the club's (the new world's errands sit after the club rows' positions, 2 to 4).
+  const ordered = chapters.filter((c) => c.active).sort((a, b) => Number(isPersonal(b.requirement)) - Number(isPersonal(a.requirement)) || a.position - b.position);
   let previousDone = true;
   return ordered.map((chapter) => {
     const progress = byChapter.get(chapter.id);

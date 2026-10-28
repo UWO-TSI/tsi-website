@@ -18,7 +18,9 @@ import { currentStep, questProgress, type TrackedQuest } from "@/lib/game/questT
 import s from "./QuestTracker.module.css";
 
 const TICK_MS = 1100;
-const KIND_NAME = { tutorial: "Tutorial", quest: "Quest", chapter: "Main quest" } as const;
+const KIND_NAME = { tutorial: "Tutorial", quest: "Quest", chapter: "Chapter" } as const;
+/** The dropdown (the new world) calls the chapter the main quest; the village's line keeps "Chapter". */
+const kindName = (k: TrackedQuest["kind"], dropdown: boolean) => (dropdown && k === "chapter" ? "Main quest" : KIND_NAME[k]);
 
 export interface QuestTrackerProps {
   /** Your quests, the one being worked on first (its step is the line); empty shows nothing. */
@@ -81,7 +83,7 @@ export default function QuestTracker({ quests, hidden = false, guidable = [], gu
     <span className={s.sr}>{complete ? ", all done" : justDone ? ", done" : ""} ({quest.title}, {done} of {of} done)</span>
   </>;
   return <aside ref={root} className={`${s.tracker} ${className ?? ""}`} data-hidden={hidden || undefined} data-done={isDone || undefined} data-ticked={justDone ? "" : undefined}
-    data-open={open || undefined} data-kind={quest.kind} aria-label={`${KIND_NAME[quest.kind]}: ${quest.title}`} data-testid="quest-tracker">
+    data-open={open || undefined} data-kind={quest.kind} aria-label={`${kindName(quest.kind, dropdown)}: ${quest.title}`} data-testid="quest-tracker">
     {dropdown
       ? <button type="button" className={s.line} onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="quest-list" title={`${quest.title} · ${done}/${of}`}>
         {face}<ChevronDown className={s.chevron} size={15} strokeWidth={3} aria-hidden="true" /><span className={s.sr}>. Show your quests</span>
@@ -93,7 +95,7 @@ export default function QuestTracker({ quests, hidden = false, guidable = [], gu
       {quests.map(q => {
         const now = currentStep(q).step, leads = guidable.includes(q.id), on = guided === q.id;
         const head = <>
-          <span className={s.kind}>{KIND_NAME[q.kind]}</span>
+          <span className={s.kind}>{kindName(q.kind, true)}</span>
           <span className={s.title}>{q.title}</span>
           {leads && <span className={s.way} data-on={on || undefined}><Navigation size={13} strokeWidth={2.75} aria-hidden="true" />{on ? "Showing the way" : "Show the way"}</span>}
         </>;

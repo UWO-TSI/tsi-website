@@ -294,7 +294,7 @@ export const inWorld = (sp: Pick<Species, "biome">, world: GameWorld = GAME_WORL
  * The tool a species is taken with in this world: on the new world a rock is broken with the pickaxe (m6, Mayor
  * Eliza's); in the village it's struck with the shovel, as it always was.
  */
-export const toolOf = (sp: Pick<Species, "tool" | "category">, world: GameWorld = GAME_WORLD): Tool => (sp.category === "mineral" && world === "new" ? "pickaxe" : sp.tool);
+export const toolOf = (sp: Pick<Species, "tool" | "biome">, world: GameWorld = GAME_WORLD): Tool => (sp.biome === "rocks" && world === "new" ? "pickaxe" : sp.tool);
 /** The rocks' yield on the new world (m6, David: "currently just stone and occasionally iron"); the village's rocks roll every mineral. */
 export const NEW_WORLD_ROCKS = ["rock_stone", "rock_iron_nugget"] as const;
 

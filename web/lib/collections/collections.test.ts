@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { GAME_WORLD } from "@/lib/game/world/active";
 import { describe, expect, it } from "vitest";
 import { FISH } from "@/lib/game/fishing";
 import { availableAt, clueFor, journalPage, laterToday, museumWings, validateShowcase, weekStart, weeklyTrophies, type WeeklyBest } from "./logic";
@@ -121,7 +122,7 @@ describe("museum donations (rows 67, 202)", () => {
   });
   it("lists wings without naming empty cases", () => {
     const wings = museumWings(ROSTER, [{ species_key: "bug_firefly", donor_id: A, donor_name: "Maya", donated_at: "2026-09-24T00:00:00Z", size_cm: null }]);
-    expect(wings.map((w) => [w.wing, w.total, w.donated])).toEqual([["aquarium", 93, 0], ["insect_hall", 20, 1], ["nature_room", 22, 0]]);
+    expect(wings.map((w) => [w.wing, w.total, w.donated])).toEqual([["aquarium", 93, 0], ["insect_hall", 20, 1], ["nature_room", GAME_WORLD === "new" ? 22 : 15, 0]]); // the new world adds seven buried finds
     expect(wings[1].exhibits.filter((e) => !e.donated).every((e) => e.key === null && e.name === null)).toBe(true);
   });
   it("keeps discovery records separate from donated stock", async () => {

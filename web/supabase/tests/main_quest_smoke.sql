@@ -4,8 +4,11 @@
 DO $$
 BEGIN
   ASSERT (SELECT string_agg(slug || ':' || requirement || ':' || coalesce(world, 'both'), ',' ORDER BY position) FROM quest_chapters) =
-    'settle-in:settle_in:village,first-find:first_find:new,odiles-net:bug_net:new,pims-shovel:dig:new,brams-challenge:rod_challenge:new,the-museum:museum_collab:new,elizas-pickaxe:pickaxe:new,reopen-cafe:club_goal:both,fund-museum:club_goal:both,ruins-gate:oracle_trial:both',
-    'the village keeps settle-in, the new world gets the main quest, the club''s chapters are both worlds'' and last';
+    'settle-in:settle_in:village,reopen-cafe:club_goal:both,fund-museum:club_goal:both,ruins-gate:oracle_trial:both,first-find:first_find:new,odiles-net:bug_net:new,pims-shovel:dig:new,brams-challenge:rod_challenge:new,the-museum:museum_collab:new,elizas-pickaxe:pickaxe:new',
+    'the village keeps settle-in, the new world gets the main quest, the club''s chapters are both worlds''';
+  -- The village's rows keep their positions (its journal numbers chapters by position: 1, then 3 for the museum fund).
+  ASSERT (SELECT string_agg(slug || '@' || position, ',' ORDER BY position) FROM quest_chapters WHERE world IS DISTINCT FROM 'new') =
+    'settle-in@1,reopen-cafe@2,fund-museum@3,ruins-gate@4', 'village positions unchanged';
   -- The village's chapter 1, exactly as it was.
   ASSERT (SELECT summary FROM quest_chapters WHERE slug = 'settle-in') = 'Make your first catch and donate it to the museum, then report back to Alice at HQ.', 'village summary unchanged';
   ASSERT (SELECT step_copy #>> '{report_hq,label}' FROM quest_chapters WHERE slug = 'settle-in') = 'Report back to Alice at HQ', 'village report step unchanged';
@@ -55,7 +58,7 @@ DO $$ BEGIN
   ASSERT (SELECT count(*) FROM pg_constraint WHERE conrelid = 'shop_items'::regclass AND contype = 'c' AND pg_get_constraintdef(oid) LIKE '%shovel%') = 1, 'idempotent: one slot CHECK';
   RAISE NOTICE 'main quest 4 idempotent ok';
 END $$;
--- The catalogue seed after it (20261027195451_catalogue_seed): Juno, the pickaxe, rocks that need it, the buried finds.
+-- The catalogue seed after it (20261028144209_catalogue_seed): Juno, the pickaxe, rocks that need it, the buried finds.
 DO $$ BEGIN
   ASSERT (SELECT display_name || '|' || post || '|' || (schedule->>'home') FROM npc_personas WHERE slug = 'docent') = 'Juno|museum_guide|museum', 'Juno, the museum''s guide';
   ASSERT (SELECT slot || '|' || active::text FROM shop_items WHERE slug = 'pickaxe-basic') = 'pickaxe|false', 'the pickaxe: a tool, off sale (Eliza gives it)';

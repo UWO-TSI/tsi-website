@@ -23,6 +23,7 @@
  * is said only at its time of day.
  */
 import type { NPCPersona } from "./types";
+import { GAME_WORLD, type GameWorld } from "@/lib/game/world/active";
 
 type Look = Record<string, unknown>;
 const look = (l: { skin: number; hair: number; eyes?: string; mouth?: string; extras?: string[]; bangs?: string; back: string; top?: string | null; bottom?: string | null; onepiece?: string | null; shoes: string; acc?: Record<string, string>; colors?: Record<string, number> }): Look =>
@@ -221,3 +222,6 @@ export function newWorldPersona<P extends Pick<NPCPersona, "talk" | "canned_dial
   const swap = (line: string) => NEW_WORLD_LINE_SWAPS[line] ?? line;
   return { ...p, canned_dialogue: p.canned_dialogue?.map(swap) ?? p.canned_dialogue, talk: p.talk?.map(c => c.map(swap)) ?? p.talk };
 }
+/** The residents this world has (lib/content/loader.ts useNPCPersonas): the new world's with Juno and its swapped lines; the village's as they always were. */
+export const residentsHere = <P extends Pick<NPCPersona, "slug" | "talk" | "canned_dialogue">>(personas: readonly P[], world: GameWorld = GAME_WORLD): P[] =>
+  world === "new" ? personas.map(newWorldPersona) : personas.filter(p => !NEW_WORLD_ONLY.has(p.slug));

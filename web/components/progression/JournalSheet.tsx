@@ -7,6 +7,7 @@ import type { AdvanceAction } from "@/lib/progression/chapters";
 import { refreshProgression, setProgressionState, useProgression } from "@/lib/progression/useProgression";
 import type { ChapterView, GoalProgressView, ProgressionState } from "@/lib/progression/types";
 import { museumLine } from "@/lib/game/mainQuest";
+import { GAME_WORLD } from "@/lib/game/world/active";
 import { onBoard } from "@/lib/progression/seasonal";
 import ClubGoal, { UpNextGoal, isUpNext } from "./ClubGoal";
 import ContributeSheet from "./ContributeSheet";
@@ -86,12 +87,14 @@ export function JournalBody({ initialTab = "quests" }: { initialTab?: Tab }) {
       <TabPanel id={tab}>
         {tab === "quests" ? <>
           <Folds label="Chapters">
-            {state.chapters.map((c) => {
+            {state.chapters.map((c, i) => {
               const locked = c.status === "locked", done = c.status === "completed" || c.status === "skipped";
-              return <Fold key={c.slug} testId="chapter" label={`Chapter ${c.position}: ${c.title}, ${STATUS_LABEL[c.status]}`}
+              // The village numbers by position as always; the new world's errands sit after the club rows', so it counts.
+              const n = GAME_WORLD === "new" ? i + 1 : c.position;
+              return <Fold key={c.slug} testId="chapter" label={`Chapter ${n}: ${c.title}, ${STATUS_LABEL[c.status]}`}
                 state={done ? "done" : locked ? "locked" : "now"}
-                lead={done ? <Check size={18} strokeWidth={3} /> : locked ? <Lock size={15} /> : c.position}
-                title={c.title} line={`Chapter ${c.position}`}
+                lead={done ? <Check size={18} strokeWidth={3} /> : locked ? <Lock size={15} /> : n}
+                title={c.title} line={`Chapter ${n}`}
                 meta={locked ? null : <span className={m.status} data-s={c.status}>{STATUS_LABEL[c.status]}</span>}
                 open={openSlug === c.slug} onToggle={locked ? undefined : () => setPicked(openSlug === c.slug ? null : c.slug)}>
                 <ChapterPage c={c} museum={state.museum} goal={c.goal_slug ? state.goals.find((g) => g.slug === c.goal_slug) ?? null : null}

@@ -6,18 +6,57 @@ import type { MemberChapterProgress, QuestChapter } from "./types";
 const now = new Date("2026-09-24T12:00:00Z");
 const base: ChapterFacts = { tier: 4, firstCatchKey: null, lastFishAt: null, counts: {}, goals: { "reopen-cafe": { completed: false, myPoints: 0 }, "fund-museum": { completed: false, myPoints: 0 } } };
 const bySlug = (slug: string) => DEFAULT_CHAPTERS.find((c) => c.slug === slug)!;
-const settle = bySlug("settle-in"), net = bySlug("odiles-net"), rod = bySlug("brams-challenge"), cafe = bySlug("reopen-cafe"), ruins = bySlug("ruins-gate");
+/** Each world's chapters, as the server lists them (drops.ts releasedChapters: a chapter's world, null for both). */
+const VILLAGE = DEFAULT_CHAPTERS.filter((c) => c.world !== "new");
+const NEW = DEFAULT_CHAPTERS.filter((c) => c.world !== "village");
+const settle = bySlug("settle-in"), first = bySlug("first-find"), net = bySlug("odiles-net"), rod = bySlug("brams-challenge"), cafe = bySlug("reopen-cafe"), ruins = bySlug("ruins-gate");
 const done = (chapter_id: string, status: "completed" | "skipped" = "completed"): MemberChapterProgress => ({ chapter_id, status, steps_done: {}, donated_item_key: null, completed_at: now.toISOString() });
-/** Every chapter before `slug` finished. */
-const before = (slug: string) => DEFAULT_CHAPTERS.filter((c) => c.position < bySlug(slug).position).map((c) => done(c.id));
-const view = (c: QuestChapter, progress: MemberChapterProgress[], facts: ChapterFacts) => evaluateChapters(DEFAULT_CHAPTERS, progress, facts).find((v) => v.slug === c.slug)!;
+/** Every chapter before `slug` in that world's order, finished. */
+const before = (slug: string, list = NEW) => {
+  const order = evaluateChapters(list, [], base).map((v) => v.slug);
+  return order.slice(0, order.indexOf(slug)).map((s) => done(bySlug(s).id));
+};
+const view = (c: QuestChapter, progress: MemberChapterProgress[], facts: ChapterFacts, list = NEW) => evaluateChapters(list, progress, facts).find((v) => v.slug === c.slug)!;
 
-describe("chapter gating", () => {
-  it("opens only chapter 1 for a new member, the personal chapters in order before the club's", () => {
-    const views = evaluateChapters(DEFAULT_CHAPTERS, [], base);
-    expect(views.map((v) => v.status)).toEqual(["active", ...Array(8).fill("locked")]);
-    expect(views.map((v) => v.requirement)).toEqual(["settle_in", "bug_net", "dig", "rod_challenge", "museum_collab", "pickaxe", "club_goal", "club_goal", "oracle_trial"]);
+describe("chapter gating, the village (as it has always played)", () => {
+  it("opens only chapter 1 for a new member", () => {
+    const views = evaluateChapters(VILLAGE, [], base);
+    expect(views.map((v) => [v.slug, v.position, v.status])).toEqual([["settle-in", 1, "active"], ["reopen-cafe", 2, "locked"], ["fund-museum", 3, "locked"], ["ruins-gate", 4, "locked"]]);
     expect(currentObjective(views, false)).toMatchObject({ chapter_slug: "settle-in", step_key: "claim_plot", anchor: "hq" });
+  });
+  it("walks settle-in in order: claim, catch, donate, report", () => {
+    let progress: MemberChapterProgress[] = [];
+    const step = (action: AdvanceAction, facts: ChapterFacts) => {
+      const r = validateAdvance(action, settle, view(settle, progress, facts, VILLAGE), progress[0], facts, now);
+      if (r.ok) progress = [{ chapter_id: settle.id, ...r.next, completed_at: r.completedChapter ? now.toISOString() : null }];
+      return r;
+    };
+    expect(step("report_hq", base)).toMatchObject({ ok: false, status: 409 });
+    expect(step("claim_plot", base)).toMatchObject({ ok: true });
+    expect(step("claim_plot", base)).toMatchObject({ ok: false, status: 409 });
+    expect(step("donate_catch", base)).toMatchObject({ ok: false, error: "Catch a fish first." });
+    const caught = { ...base, firstCatchKey: "fish_dace", counts: { fish: 1 } };
+    expect(view(settle, progress, caught, VILLAGE).status).toBe("active");
+    expect(step("complete", caught)).toMatchObject({ ok: false, status: 422, error: "Report to HQ to finish this chapter." });
+    expect(step("donate_catch", caught)).toMatchObject({ ok: true, completedChapter: false, next: { donated_item_key: "fish_dace" } });
+    expect(view(settle, progress, caught, VILLAGE).status).toBe("ready");
+    expect(finishWith(evaluateChapters(VILLAGE, progress, caught), "docent")).toBeNull();
+    expect(step("report_hq", caught)).toMatchObject({ ok: true, completedChapter: true, next: { status: "completed" } });
+    const views = evaluateChapters(VILLAGE, progress, caught);
+    expect(views[1].status).toBe("active");
+    expect(unlockedRegions(views, new Set())).toEqual(["village_core"]);
+  });
+  it("never offers the new world's chapters", () => {
+    expect(VILLAGE.map((c) => c.slug)).toEqual(["settle-in", "reopen-cafe", "fund-museum", "ruins-gate"]);
+  });
+});
+
+describe("chapter gating, the new world", () => {
+  it("opens only chapter 1 for a new member, the personal chapters in order before the club's", () => {
+    const views = evaluateChapters(NEW, [], base);
+    expect(views.map((v) => v.status)).toEqual(["active", ...Array(8).fill("locked")]);
+    expect(views.map((v) => v.requirement)).toEqual(["first_find", "bug_net", "dig", "rod_challenge", "museum_collab", "pickaxe", "club_goal", "club_goal", "oracle_trial"]);
+    expect(currentObjective(views, false)).toMatchObject({ chapter_slug: "first-find", step_key: "claim_plot", anchor: "hq" });
   });
   it("rejects actions on a locked chapter", () => {
     const facts = { ...base, counts: { oracle: 1, trial: 1 } };
@@ -26,19 +65,20 @@ describe("chapter gating", () => {
   it("m1: catch, then hand it to the museum's guide, which finishes the chapter (no report to Alice)", () => {
     let progress: MemberChapterProgress[] = [];
     const step = (action: AdvanceAction, facts: ChapterFacts) => {
-      const r = validateAdvance(action, settle, view(settle, progress, facts), progress[0], facts, now);
-      if (r.ok) progress = [{ chapter_id: settle.id, ...r.next, completed_at: r.completedChapter ? now.toISOString() : null }];
+      const r = validateAdvance(action, first, view(first, progress, facts), progress[0], facts, now);
+      if (r.ok) progress = [{ chapter_id: first.id, ...r.next, completed_at: r.completedChapter ? now.toISOString() : null }];
       return r;
     };
     expect(step("claim_plot", base)).toMatchObject({ ok: true });
     expect(step("claim_plot", base)).toMatchObject({ ok: false, status: 409 });
     expect(step("donate_catch", base)).toMatchObject({ ok: false, error: "Catch a fish first." });
+    expect(step("report_hq", base)).toMatchObject({ ok: false, status: 422 });
     const caught = { ...base, firstCatchKey: "fish_dace", counts: { fish: 1 } };
-    expect(view(settle, progress, caught).status).toBe("ready");
-    expect(finishWith(evaluateChapters(DEFAULT_CHAPTERS, progress, caught), "docent")).toEqual({ chapter: "settle-in", action: "donate_catch" });
-    expect(finishWith(evaluateChapters(DEFAULT_CHAPTERS, progress, caught), "wren")).toBeNull();
+    expect(view(first, progress, caught).status).toBe("ready");
+    expect(finishWith(evaluateChapters(NEW, progress, caught), "docent")).toEqual({ chapter: "first-find", action: "donate_catch" });
+    expect(finishWith(evaluateChapters(NEW, progress, caught), "wren")).toBeNull();
     expect(step("donate_catch", caught)).toMatchObject({ ok: true, completedChapter: true, next: { status: "completed", donated_item_key: "fish_dace" } });
-    const views = evaluateChapters(DEFAULT_CHAPTERS, progress, caught);
+    const views = evaluateChapters(NEW, progress, caught);
     expect(views[1].status).toBe("active");
     expect(unlockedRegions(views, new Set())).toEqual(["village_core"]);
   });
@@ -53,7 +93,7 @@ describe("chapter gating", () => {
     const three = { ...base, counts: { net: 1, bugs: 5 } };
     const ready = view(net, progress, three);
     expect(ready.status).toBe("ready");
-    expect(finishWith(evaluateChapters(DEFAULT_CHAPTERS, progress, three), "curator")).toEqual({ chapter: "odiles-net", action: "complete" });
+    expect(finishWith(evaluateChapters(NEW, progress, three), "curator")).toEqual({ chapter: "odiles-net", action: "complete" });
     expect(validateAdvance("complete", net, ready, undefined, three, now)).toMatchObject({ ok: true, completedChapter: true, next: { steps_done: { show_odile: now.toISOString() } } });
   });
   it("m4: the dawn-or-dusk catch counts only fresh, and only at dawn or dusk on the island", () => {
@@ -70,17 +110,18 @@ describe("chapter gating", () => {
     expect(validateAdvance("twilight_catch", net, view(net, before("odiles-net"), base), undefined, facts, dusk)).toMatchObject({ ok: false, status: 422 });
     const stored: MemberChapterProgress[] = [...progress, { ...(r.ok ? r.next : done(rod.id)), chapter_id: rod.id, completed_at: null }];
     expect(view(rod, stored, facts).status).toBe("ready");
-    expect(finishWith(evaluateChapters(DEFAULT_CHAPTERS, stored, facts), "wharf-keeper")).toEqual({ chapter: "brams-challenge", action: "complete" });
+    expect(finishWith(evaluateChapters(NEW, stored, facts), "wharf-keeper")).toEqual({ chapter: "brams-challenge", action: "complete" });
   });
   it("the dropdown's chapter is the personal one, never a club goal", () => {
-    const views = evaluateChapters(DEFAULT_CHAPTERS, before("reopen-cafe"), base);
+    const views = evaluateChapters(NEW, before("reopen-cafe"), base);
     expect(views.find((v) => v.slug === "reopen-cafe")!.status).toBe("active");
     expect(personalChapter(views)).toBeNull();
-    expect(personalChapter(evaluateChapters(DEFAULT_CHAPTERS, [], base))!.slug).toBe("settle-in");
+    expect(personalChapter(evaluateChapters(NEW, [], base))!.slug).toBe("first-find");
   });
   it("lets every member skip a personal chapter in one click (principle 7), honouring the admin flag", () => {
     const t5 = { ...base, tier: 5 };
-    const v = view(settle, [], t5);
+    const v = view(settle, [], t5, VILLAGE);
+    expect(view(first, [], t5).can_skip).toBe(true);
     expect(v.can_skip).toBe(true);
     expect(validateAdvance("skip", settle, v, undefined, t5, now)).toMatchObject({ ok: true, next: { status: "skipped" } });
     const locked = { ...settle, skippable_max_tier: 3 };
@@ -98,7 +139,7 @@ describe("chapter gating", () => {
     expect(validateAdvance("complete", cafe, ready, undefined, facts, now)).toMatchObject({ ok: true, completedChapter: true });
   });
   it("opens goal regions for everyone once the goal completes, even with chapter 1 unfinished", () => {
-    expect(unlockedRegions(evaluateChapters(DEFAULT_CHAPTERS, [], base), new Set(["reopen-cafe"]))).toEqual(["cafe", "study_tables"]);
+    expect(unlockedRegions(evaluateChapters(NEW, [], base), new Set(["reopen-cafe"]))).toEqual(["cafe", "study_tables"]);
   });
   it("gates the ruins on the Oracle quiz and the subclass", () => {
     const progress = before("ruins-gate");
@@ -110,10 +151,11 @@ describe("chapter gating", () => {
     expect(validateAdvance("complete", ruins, view(ruins, progress, both), undefined, both, now)).toMatchObject({ ok: true });
   });
   it("hides the objective line when muted", () => {
-    expect(currentObjective(evaluateChapters(DEFAULT_CHAPTERS, [], base), true)).toBeNull();
+    expect(currentObjective(evaluateChapters(VILLAGE, [], base), true)).toBeNull();
   });
   it("validates chapter drafts against the step keys of their requirement", () => {
     expect(validateChapterDraft({ ...settle })).toEqual([]);
+    expect(validateChapterDraft({ ...first })).toEqual([]);
     expect(validateChapterDraft({ ...rod })).toEqual([]);
     expect(validateChapterDraft({ ...settle, step_copy: { enter_gate: { label: "x" } } })).toContain("step_copy.enter_gate: not a step of settle_in");
     expect(validateChapterDraft({ ...rod, reward_item: "Cedar Rod!" })).toContain("reward_item: a shop item slug");

@@ -95,7 +95,7 @@ export const DEFAULT_GOALS: ClubGoal[] = [
 
 /** A new-world chapter (m2 to m6): an errand with a person and a place, skippable for everyone (principle 7). */
 const errand = (n: number, slug: string, title: string, requirement: QuestChapter["requirement"], summary: string, step_copy: QuestChapter["step_copy"], reward_coins: number, extra: Partial<QuestChapter> = {}): QuestChapter => ({
-  id: `00000000-0000-4000-8000-0000000000b${n}`, slug, position: n + 1, title, summary, requirement, goal_slug: null, step_copy,
+  id: `00000000-0000-4000-8000-0000000000b${n}`, slug, position: n + 4, title, summary, requirement, goal_slug: null, step_copy,
   unlocks_regions: [], completion_letter: "", skippable_max_tier: 5, reward_coins, reward_item: null, world: "new", active: true, ...extra,
 });
 
@@ -129,7 +129,7 @@ export const DEFAULT_CHAPTERS: QuestChapter[] = [
   {
     id: "00000000-0000-4000-8000-0000000000b1",
     slug: "first-find",
-    position: 2,
+    position: 5,
     title: "Settle in",
     // m1 (David, 2026-10-27), the new world's chapter 1: first catch, donated to the museum's guide, who explains the
     // museum and pays 100 coins and a thank-you letter. No report to Alice.
@@ -177,7 +177,7 @@ export const DEFAULT_CHAPTERS: QuestChapter[] = [
   {
     id: "00000000-0000-4000-8000-0000000000a2",
     slug: "reopen-cafe",
-    position: 8,
+    position: 2,
     title: "Reopen the cafe",
     summary: "The whole club is reopening the cafe. Chip in at the monument and come to events.",
     requirement: "club_goal",
@@ -196,7 +196,7 @@ export const DEFAULT_CHAPTERS: QuestChapter[] = [
   {
     id: "00000000-0000-4000-8000-0000000000a3",
     slug: "fund-museum",
-    position: 9,
+    position: 3,
     title: "Fund the museum",
     summary: "The club is funding the museum. Specimens and coins count.",
     requirement: "club_goal",
@@ -215,7 +215,7 @@ export const DEFAULT_CHAPTERS: QuestChapter[] = [
   {
     id: "00000000-0000-4000-8000-0000000000a4",
     slug: "ruins-gate",
-    position: 10,
+    position: 4,
     title: "Reach the ruins gate",
     summary: "Take the Oracle quiz, reach level 10 and choose your subclass to open the ruins gate.",
     requirement: "oracle_trial",
