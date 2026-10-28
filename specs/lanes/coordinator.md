@@ -348,3 +348,11 @@ Shipped 2026-10-27/28: batch 3 wardrobe (seed 20261027165850 applied), remodel r
 - Bug-catching minigame (David's note on Odile's net): queued as its own lane after these.
 - Open question to David: the lore line "the island was found by David" vs the no-real-names rule; the lane writes "the Founder" (lore canon) until he answers.
 - Removed the play worktree and feat/play-subdomain (local and origin): merged 2026-10-03, nothing left on it.
+
+## 2026-10-28: the village is retired
+
+David: "why are we using the old island for some of these artifcats, it should not be used or archived". The rule "the default village world stays unchanged" is gone: new world only, one vitest run with NEXT_PUBLIC_GAME_WORLD=new, and no village shots on any review page. Production already sets NEXT_PUBLIC_GAME_WORLD and NEXT_PUBLIC_MEMBER_WORLD (since 2026-10-26; STATE.md was stale).
+- game/village-archive (agent abf7673402b328ef0): makes the new world the only member world and moves the village to archive/village/. It also drops the flag and the village gates, fixes the docs and rules, and resets the perf baseline to the new world. It sends a file map before deleting anything.
+- game/daily-social reshoot (agent a90eef0da524e761a): its review page was all village. It's making every feature work in the new world and reshooting with new ids (nw-...). The old page https://claude.ai/artifact/68SEdjVRvruZzvgDmHTFVG is superseded.
+- Loading pick: the "island" look renders the village HQ with "Unpacking the village...". If David picks it, it gets rebuilt on the new world.
+- Merge plan: settle the main-quest `world` column (village side) with the archive lane at merge.
