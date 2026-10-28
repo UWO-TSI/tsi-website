@@ -439,3 +439,8 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - The ?bots loopback breaks the room bounds; the bench seat lift is 0.359 vs 0.344; seated count is 0.
   - Outdoor study tables (study:plaza-picnic, study:pier-bench) don't exist on the new world: study-0..3 have no model, so no outdoor seats. **A production gap.**
 - Merge hazard: game/main-quest's residentRoster uses `GAME_WORLD` and `residentsHere(personas, world = GAME_WORLD)`. After the archive it is always newWorldPersona, and the NEW_WORLD_ONLY village filter is dead. daily-social touches residentRoster lines next to the archive's schedule edits.
+- fish-tiers UI redo: head 908b5218, not merged.
+  - Built: the flat MemberFishing overlay, kit reel.tsx, and the shared hooks in lib. The applicant FishingOverlay is refactored onto those hooks and must look the same.
+  - The lab-page evidence wasn't good enough for David. A fresh light agent (af33246c7568c65a4) is shooting in the world, before and after against main, plus an applicant-unchanged check, after merging origin/main.
+  - Its rarity edges use `--gui-rarity-*` and `--gui-holo`. At merge, switch them to main-quest's `--ui-rarity-*` and `--ui-holo`.
+- perf note: fish-tiers' perf:check "fail" (1.38M triangles, 413 draws) ran on a branch without perf-tris, against the 10-14 baseline. Main has perf-tris (774k, 345). The archive lane resets the baseline on the new world.
