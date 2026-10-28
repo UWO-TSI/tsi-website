@@ -392,3 +392,10 @@ David: "why are we using the old island for some of these artifcats, it should n
 - **Wardrobe fixes:** no decision yet.
 - **Bible:** UI chapter written (row 320). Clean flat is the one base; paper only for paper things; tokens only; one kit; one showroom. Every lane brief points to it. The village-archive row is 321.
 - **Queued lanes, held while swap is about 10.8 of 11.3 GB:** rod-gear r2, fishing-depth r2, clothing r3, loading r2. Later: bug-catching minigame, class and armour clothing (needs David's class direction).
+- **Kit piece owners (one owner per piece across lanes):**
+  - main-quest: the flat reward pop (RewardCard converted) and the rarity tokens (`--ui-rarity-*`, `--ui-holo` in the theme files). Rod-gear's `--gui-rarity-divine` folds into them at merge.
+  - daily-social: HeartMeter, RewardTrack, PrizeWheel.
+  - tutorial: the keyboard overlay, the icon fly-in and the ID card.
+  - fish-tiers: the fishing bar and meter, plus a new member fishing overlay. FishingOverlay.tsx stays as is for the applicant island only.
+- fish-tiers: the approved SHA comes after its perf:check commit (80395fe4 plus the numbers). The cream UI attempt is parked on game/fish-tiers-ui-r1; never merge it.
+- Dead-code review: the archive lane also takes every retired map (/lab/map whole, island-map.json, world-map.json and the v2 convert chain, the proposals) and re-points four tests at the live world. Dash and glider were locked forever (no caller of unlockMove): the tutorial dock beat and daily-social's "dash for everyone" fix dash.
