@@ -20,6 +20,7 @@ The applicant island (`/student/apply/portal`) and the member island share one i
 - **`specs/INDEX.md`**: every live spec, by area.
 - **`STATE.md`**: what's in production, migrations, branches.
 - **Decisions:** the ledger `specs/game-world-development-plan.md` (numbered rows) wins over every other doc. `specs/development-roadmap.md` is the build order. `specs/lore.md` is the story canon.
+- **How the game looks (UI, art, models):** `specs/design-bible.md`. It wins over every other spec on those topics.
 - **Vision, the 5 member tiers (T1 to T5), MBTI classes and the design principles:** `specs/design-principles.md`.
 - **Portal feature mechanics** (bounty, calendar, kanban, marketplace, job board, directory): `web/app/student/STUDENT_SYSTEM_BIBLE.md`.
 - `archive/` is history. Don't read it unless told to.

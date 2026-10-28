@@ -333,7 +333,62 @@ The full set is in `CLAUDE.md`, `specs/lane-rules.md` and the memory files.
 | Daily and social | https://claude.ai/artifact/68SEdjVRvruZzvgDmHTFVG | game/daily-social 6f3b4ac7 | migrations 20261027182444, 190000, 190100, 20261028112843 in order |
 | Clothing round 2 + TSI zip hoodie gate | https://claude.ai/artifact/VhBnp5Ua6w82U8ervpzxiG | game/clothing-v2 da63d1d3 | round 1 and the hoodie (aafbe9fe) already approved; merge all together |
 | Remodel round 3 (wings, sea creatures, benches) | https://claude.ai/artifact/9ffhKczMau3xoH8KkxMiwp | game/remodel 1453dd9c | none; benches keep the map's yaw (bench-0 across the path) |
-| Main quest (STALE: shots are the village; republish after the fresh agent reshoots) | https://claude.ai/artifact/6DLtytETjRJVtM1HzXytPf | game/main-quest e6bdff6f [wip], fresh agent finishing village gating | migrations reworked; do not merge until reported green |
+| Main quest (new-world shots; village pinned unchanged) | https://claude.ai/artifact/6DLtytETjRJVtM1HzXytPf | game/main-quest 907873f4 | migrations 20261028144337_main_quest then a regenerated catalogue seed; settle-in gets world village; npc-editor republish for Juno after merge |
+| Fish bite tiers (the "!" and sound per tier) | https://claude.ai/artifact/PVrjtdUz6pwD7TWp9pyQDo | game/fish-tiers 1f75ee3e (catalogue-editor merged; lane still on the two-client raid run and perf:check) | migration 20261028150000_catch_caps_divine (cap CASE only, checked against backpack's body; smoke in the chain); no fish is legendary or divine after the catalogue pass; page asks if epic gets the gold "!"; realtime needs a Fly deploy before NEXT_PUBLIC_FISH_BOSSES is ever on |
 | Residents editor (collection `residents`) | https://claude.ai/artifact/QtZYAgMFEbFg4YNpVcBYwU | npc-editor 2a67bfb0 (main merged) | republish once main-quest (Juno) merges |
 
-Shipped 2026-10-27/28: batch 3 wardrobe (seed 20261027165850 applied), remodel round 3 step 1 (2e7bd27f). perf: v2 on main is 405/340 draws and 1.37M/1.17M triangles (over budget); lane perf-tris is on it. perf-check's lock owner must not need a space (fixed in fce65d21).
+Shipped 2026-10-27/28: batch 3 wardrobe (seed 20261027165850 applied), remodel round 3 step 1 (2e7bd27f). perf-tris (a017efae): new world High 774k triangles / 345 draws, Lite 582k / 281, under budget; `?fxoff=viewCull` turns the cull off. perf-check's lock owner must not need a space (fixed in fce65d21).
+
+## 2026-10-28 afternoon: David's decisions read back
+
+- Fish bite tiers: all three approved, no notes; HOOK_TIER unchanged. Merge game/fish-tiers after its raid run and perf:check. Its next item is the fishing UI/bar redo plus juice (David's tutorial "catch" note).
+- Remodel round 3: all approved except plaza-bench-after ("make sure the bench location and orientation is fitting"). The remodel lane is fixing only the benches, then merge.
+- Main quest: round 2 running (agent a0d703c666d998bba). Pickaxe parked for the cave update; the museum drive must always be completable; dig marks fainter; buried loot table (relics, coins, ores, rare gems, very rare broken sudo) with shovel tiers; chapter 1 levels you to 2 with an unlocks overlay; quest bar/dropdown same width; arrow icon instead of "Show the way". The village cards were proof shots: drop them.
+- Tutorial v2: David's 2026-10-27 notes were never relayed; round 3 is running now (agent a868e7cdc49823714). Selling is back (Bram gives his rod after the sale); keyboard tour; coin/gem fly-ins; ID-card register using profiles.birthday; lore before TSI; phone changes held.
+- Bug-catching minigame (David's note on Odile's net): queued as its own lane after these.
+- Open question to David: the lore line "the island was found by David" vs the no-real-names rule; the lane writes "the Founder" (lore canon) until he answers.
+- Removed the play worktree and feat/play-subdomain (local and origin): merged 2026-10-03, nothing left on it.
+
+## 2026-10-28: the village is retired
+
+David: "why are we using the old island for some of these artifcats, it should not be used or archived". The rule "the default village world stays unchanged" is gone: new world only, one vitest run with NEXT_PUBLIC_GAME_WORLD=new, and no village shots on any review page. Production already sets NEXT_PUBLIC_GAME_WORLD and NEXT_PUBLIC_MEMBER_WORLD (since 2026-10-26; STATE.md was stale).
+- game/village-archive (agent abf7673402b328ef0): makes the new world the only member world and moves the village to archive/village/. It also drops the flag and the village gates, fixes the docs and rules, and resets the perf baseline to the new world. It sends a file map before deleting anything.
+- game/daily-social reshoot (agent a90eef0da524e761a): its review page was all village. It's making every feature work in the new world and reshooting with new ids (nw-...). The old page https://claude.ai/artifact/68SEdjVRvruZzvgDmHTFVG is superseded.
+- Loading pick: the "island" look renders the village HQ with "Unpacking the village...". If David picks it, it gets rebuilt on the new world.
+- Merge plan: settle the main-quest `world` column (village side) with the archive lane at merge.
+- Merge plan additions:
+  - Merge game/npc-editor (apply-residents.mjs is only there). Then apply David's Residents editor look edits (marlo, mayor, sushi-chef, wren; export the `residents` collection) on the combined tree, before the final gen-seeds.
+  - daily-social's 20261028112843 seed now has a residents block with the new curator and marlo lines, guarded by their old seeded values. Prod still matched the old seed on 2026-10-28, checked read-only.
+  - The archive lane owns the pond-to-beach and path-to-plaza schedule remap. Main only had the same-name landmark fallback, so pond stops were being skipped.
+- Remodel benches: game/remodel b8939161. Review https://claude.ai/artifact/4kbPArCyyejQoEfdR3nxsc (ids r3b-*). Once approved, all of round 3 merges.
+- daily-social 02617517: gen-seeds supports `guarded` seeds, and the residents seed is one. resident_lines_smoke.sql includes `20261028112843_catalogue_seed.sql` by name; if the final regenerate renames that seed, update that one line.
+- 2026-10-28 codebase review (David asked, ponytail): four read-only agents (assets, dead code, UI, docs). Their findings go into the design bible's UI and Art chapters and a cleanup plan. specs/design-bible.md is new: Models chapter, ledger row 319, pointer in CLAUDE.md. The archive lane uses row 320.
+
+## 2026-10-28 ~16:00: David's decisions on the open pages (verbatim notes are in each page's `approvals` collection)
+
+- **Merged locally:** game/remodel b8939161 (all of round 3 approved, benches included) is merge d3af4f3d; gates and push pending.
+- **Loading:** island approved ("this one is good"); logo and boat redo, meaning not picked. Next round: keep the island, delete the logo and boat looks and the ?loading switch, rebuild the island backdrop on the new world (it showed the village HQ), and drop the "Unpacking the village..." copy. Coordinate with village-archive, which is moving TitleScene to the new world.
+- **Rods and gear (redo round 2, queued):**
+  - shelf: tier is shown as a rarity outline on the shop tabs (common grey, uncommon green, rare blue, epic purple, legendary yellow, divine holo);
+  - sell rods up to rare only for now;
+  - hook caps: a rare rod hooks up to epic, an epic rod up to legendary, a legendary rod up to divine;
+  - flimsy is common and lighthouse is rare;
+  - the radar is redone: bigger, minimal, lighter, less bold, icons at the corners with hover names and plain explanations, graded out of 100, linear shift animation when parts are added, the current build's main and base colours at low opacity behind;
+  - bait and bobber slots sit bottom right of the rod square, on your own rods only (not in the shop), and they appear on the rod model;
+  - the bobber and bait are remodelled in Blender, HD for the shop and LP on the rod, with a base bobber built for variants and the lucky bobber as a four-leaf clover; the bobber's radar shows only the bobber;
+  - divine badge text is white; GUI tiles approved; the phone layout card is a redo.
+- **Fishing depth (redo round 2, queued):**
+  - the bar menu is a paper restaurant menu with detailed food models: pick it up in first person, hover a dish to see what it does;
+  - the board UI is fully redone as a time graphic of what's available, icons with hover;
+  - the tackle shop goes near the fish shop as a gacha: one coin roll and one gem roll, 1 to 10 pulls, seasonal crazy bait and rods;
+  - chef's order UI redone;
+  - the market: one place to quick-sell, one to enter fish for a monthly leaderboard, and a separate board for daily and weekly fishing tasks that you claim when done (no hand-over);
+  - collection-season approved.
+- **Clothing round 2:**
+  - approved: tops (reweighted), shoes, all in-game views, the TSI crew close-up;
+  - redo: the long dresses clip through the body and two skirts flicker when sitting; the one-pieces are remodelled properly in Blender, with references found online and shown to David first;
+  - new ask: "start worrying and developing clothing model for classes and armour related soon for differnt class".
+- **Daily and social:** notes relayed to the running lane (half hearts, monument UI, a visible streak reward track of about 1500 coins and 25 gems plus a wheel box, a gentle campfire notice, dash approved).
+- **Wardrobe fixes:** no decision yet.
+- **Bible:** UI chapter written (row 320). Clean flat is the one base; paper only for paper things; tokens only; one kit; one showroom. Every lane brief points to it. The village-archive row is 321.
+- **Queued lanes, held while swap is about 10.8 of 11.3 GB:** rod-gear r2, fishing-depth r2, clothing r3, loading r2. Later: bug-catching minigame, class and armour clothing (needs David's class direction).
