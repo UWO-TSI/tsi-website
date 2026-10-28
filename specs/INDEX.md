@@ -9,6 +9,7 @@ Paths are relative to `specs/` (current locations; a folder regroup is proposed,
 `david-decisions.md` | Open decisions waiting on David (Oct 3) | reference
 `lane-rules.md` | Rules for every coordinator lane | live
 `terrain-law.md` | ACNH grid law for terrain, water, cliffs, placement | live
+`design-bible.md` | The one canon for UI, art and models (Models set 2026-10-28; UI and Art chapters in progress) | canon
 `design-principles.md` | Project vision and design principles, partly superseded | reference
 `launch/v1-launch.md` | v1 launch run sheet: freeze Oct 24, launch Oct 31 (row 317) | live
 `v1-drop.md` | v1 Arrival (Halloween) plan, scope, lane split | live
