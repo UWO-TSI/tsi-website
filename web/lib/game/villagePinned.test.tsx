@@ -45,7 +45,7 @@ describe("the village's chapters, read from the migrated rows", () => {
     // Today's defaults are those rows, plus the new world's (which the village never lists).
     const village = DEFAULT_CHAPTERS.filter((c) => c.world !== "new");
     expect(village.map((c) => c.reward_item)).toEqual([null, null, null, null]);
-    expect(village.map(({ world: _w, reward_item: _r, ...c }) => c)).toEqual(VILLAGE_BASE.CHAPTERS);
+    expect(village.map((c) => { const { world, reward_item, ...rest } = c; void world; void reward_item; return rest; })).toEqual(VILLAGE_BASE.CHAPTERS);
     expect(releasedChapters(DEFAULT_CHAPTERS, dropFlags(3), "village").map((c) => c.slug)).toEqual(["settle-in", "reopen-cafe", "fund-museum", "ruins-gate"]);
   });
 
@@ -112,8 +112,7 @@ describe("the village's people", () => {
     expect(residentsHere(PROPOSED_RESIDENTS, "new").some((r) => r.slug === "docent")).toBe(true);
     const lines = Object.fromEntries(here.map((r) => [r.slug, { talk: r.talk ?? null, canned_dialogue: r.canned_dialogue ?? null }]));
     expect(lines).toEqual(VILLAGE_BASE.RESIDENT_LINES);
-    const { docent: _juno, ...talk } = RESIDENT_TALK;
-    expect(talk).toEqual(VILLAGE_BASE.RESIDENT_TALK);
+    expect(Object.fromEntries(Object.entries(RESIDENT_TALK).filter(([slug]) => slug !== "docent"))).toEqual(VILLAGE_BASE.RESIDENT_TALK);
   });
   it.runIf(VILLAGE)("says the village's words: the tool teachers, Alice (her farewell too), Rosa out front", () => {
     expect(TOOL_LINES).toEqual(VILLAGE_BASE.TOOL_LINES);

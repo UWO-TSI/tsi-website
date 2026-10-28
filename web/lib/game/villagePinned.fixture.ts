@@ -2,7 +2,6 @@
  * The village as it played at 80816727, before the main quest (generated from that commit's modules; lane main-quest).
  * villagePinned.test.ts holds today's village to it: its chapters' rows and every line its people say.
  */
-/* eslint-disable */
 export const VILLAGE_BASE = {
   "WREN_LINES": {
     "welcome": [
