@@ -10,18 +10,20 @@
  * It never takes focus (audit-2026-10-ui item 13): you keep walking and jumping while it shows. E opens it, Escape is
  * "Later" (or closes it once opened), a click works as ever; and it fades out instead of vanishing (item 4).
  *
- * A new member's welcome week (d-streak, lib/wallet/catalogue.ts welcomeDay): on their first seven gift days the card
- * shows the week's seven days and the day's bonus; day 7's gift is a mystery box, a roulette of starter loot that
- * spins to what the server already rolled.
+ * A new member's welcome week (d-streak, lib/wallet/catalogue.ts WELCOME_TRACK; David 2026-10-28: "see the reward for
+ * logging in each day"): on their first seven gift days the card is the week's reward track, every day's reward shown
+ * ahead, today's lifted; day 7's is the mystery box, a prize wheel that spins to what the server already rolled. Flat,
+ * few words (specs/design-bible.md, UI).
  */
 import { Gift } from "lucide-react";
 import { CurrencyIcon } from "@/components/economy/Amount";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Keycap } from "@/components/recruit/ui";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Keycap } from "@/components/gui";
+import { DarkButton, GhostButton, PrizeWheel, RewardTrack, WHEEL_SPIN_MS, type TrackStep } from "@/components/gui/flat";
 import { ApiError } from "@/lib/apiClient";
-import { COINS } from "@/lib/economy";
+import { COINS, GEMS } from "@/lib/economy";
 import { httpEconomyTransport } from "@/lib/wallet/transport";
-import { WELCOME_DAYS } from "@/lib/wallet/catalogue";
+import { WELCOME_DAYS, WELCOME_TRACK } from "@/lib/wallet/catalogue";
 import type { BoxPrize, GiftView } from "@/lib/wallet/service";
 import { AudioManager } from "@/lib/game/audio";
 import { giftDue, markGiftClaimed, putOffGift, readGiftPutOff, useHud } from "@/lib/game/hudStore";
@@ -44,50 +46,48 @@ export function giftKey(at: Phase["at"], e: KeyLike & { repeat?: boolean }, { ty
 }
 
 const GIFT_EXIT_MS = 220;
+const sr = (text: string) => <span className={styles.sr}>{text}</span>;
+/** An amount with its currency's icon (and its name for screen readers). */
+const Paid = ({ n, gems, size = 18 }: { n: number; gems?: boolean; size?: number }) =>
+  <span className={styles.paid}>{n.toLocaleString()}<CurrencyIcon currency={gems ? "gems" : "coins"} size={size} />{sr(gems ? GEMS.name : COINS.name)}</span>;
 
-/** The welcome week's seven days: the ones opened, today, and the box on day 7. */
-function Week({ today, opened }: { today: number; opened: boolean }) {
-  return <ol className={styles.week} aria-label={`Welcome week, day ${today} of ${WELCOME_DAYS}`}>
-    {Array.from({ length: WELCOME_DAYS }, (_, i) => i + 1).map(d =>
-      <li key={d} data-day={d < today || (d === today && opened) ? "done" : d === today ? "today" : "next"} aria-hidden="true">
-        {d === WELCOME_DAYS ? <Gift size={16} strokeWidth={2} /> : d}
-      </li>)}
-  </ol>;
+/** The welcome week as a reward track: each day's reward, the days taken checked, today's lifted (taken once opened). */
+export function welcomeSteps(today: number, opened: boolean): TrackStep[] {
+  return WELCOME_TRACK.map((r, i) => {
+    const d = i + 1;
+    return {
+      key: `d${d}`, label: `Day ${d}`, big: r.box,
+      state: d < today || (d === today && opened) ? "done" : d === today ? "today" : "ahead",
+      picture: r.box ? <Gift size={38} strokeWidth={1.7} aria-label="Mystery box" /> : <CurrencyIcon currency={r.gems ? "gems" : "coins"} size={36} />,
+      amount: r.box ? <span className={styles.paid}>+{r.gems}<CurrencyIcon currency="gems" size={12} />{sr(GEMS.name)}</span> : (r.gems || r.coins).toLocaleString(),
+    };
+  });
 }
 
-/** A tile is 56px wide with a 6px gap (DailyGift.module.css .tile). */
-const TILE = 62, STOP = 26;
-/**
- * The mystery box's roulette: a strip of everything the box can hold slides under the marker and slows to a stop on
- * the prize (rolled by the server before the spin starts), ticking as it passes tiles.
- */
-function Roulette({ reel, prize, onStop }: { reel: BoxPrize[]; prize: BoxPrize; onStop: () => void }) {
-  const tiles = useMemo(() => {
-    const from = reel.length ? reel : [prize];
-    const strip = Array.from({ length: STOP + 4 }, (_, i) => from[(i * 5 + prize.slug.length) % from.length]);
-    strip[STOP] = prize;
-    return strip;
-  }, [reel, prize]);
-  const [spun, setSpun] = useState(false);
+/** The box's wheel: the prize and up to seven others from what the box can hold, the prize somewhere round it. */
+function wheelOf(reel: readonly BoxPrize[], prize: BoxPrize): { prizes: BoxPrize[]; at: number } {
+  const others = reel.filter(p => p.slug !== prize.slug);
+  const seed = [...prize.slug].reduce((n, c) => n + c.charCodeAt(0), 0);
+  const picked = Array.from({ length: Math.min(7, others.length) }, (_, i) => others[(seed + i * 5) % others.length]).filter((p, i, a) => a.indexOf(p) === i);
+  const at = seed % (picked.length + 1);
+  return { prizes: [...picked.slice(0, at), prize, ...picked.slice(at)], at };
+}
+
+function BoxWheel({ reel, prize, onStop }: { reel: BoxPrize[]; prize: BoxPrize; onStop: () => void }) {
+  const { prizes, at } = useMemo(() => wheelOf(reel, prize), [reel, prize]);
   const stop = useRef(onStop);
   useEffect(() => { stop.current = onStop; });
+  const [land, setLand] = useState<number | null>(null);
   useEffect(() => {
-    const still = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches; // no slide (the CSS): straight to the prize
-    const raf = requestAnimationFrame(() => requestAnimationFrame(() => setSpun(true)));
-    // Ticks as tiles pass, slowing with the strip (its ease-out), then the stop.
-    const ticks = still ? [] : Array.from({ length: 14 }, (_, i) => window.setTimeout(() => AudioManager.playSFX("blip3", { rate: 1.6, gain: 0.35 }), 3400 * (1 - Math.sqrt(1 - (i + 1) / 15))));
-    const end = window.setTimeout(() => stop.current(), still ? 100 : 3500);
-    return () => { cancelAnimationFrame(raf); ticks.forEach(t => window.clearTimeout(t)); window.clearTimeout(end); };
-  }, []);
-  return <div className={styles.reel} aria-hidden="true">
-    <div className={styles.strip} data-spun={spun || undefined} style={{ "--x": `${-28 - (spun ? STOP * TILE : 0)}px` } as React.CSSProperties}>
-      {tiles.map((t, i) => <span key={i} className={styles.tile} data-won={(spun && i === STOP) || undefined}>
-        {/* eslint-disable-next-line @next/next/no-img-element -- item icons are small static webps */}
-        <img src={t.icon} alt="" width={44} height={44} />
-      </span>)}
-    </div>
-    <span className={styles.marker} />
-  </div>;
+    const still = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const go = window.setTimeout(() => setLand(at), 250);
+    // Ticks as segments pass the pointer, slowing with the wheel.
+    const ticks = still ? [] : Array.from({ length: 16 }, (_, i) => window.setTimeout(() => AudioManager.playSFX("blip3", { rate: 1.6, gain: 0.3 }), 250 + WHEEL_SPIN_MS * (1 - Math.sqrt(1 - (i + 1) / 17))));
+    return () => { window.clearTimeout(go); ticks.forEach(t => window.clearTimeout(t)); };
+  }, [at]);
+  // eslint-disable-next-line @next/next/no-img-element -- item icons are small static webps
+  const pictures = prizes.map(p => ({ key: p.slug, label: p.name, picture: <img src={p.icon} alt="" /> }));
+  return <PrizeWheel prizes={pictures} land={land} onLanded={() => stop.current()} size={250} label="The mystery box" />;
 }
 
 /** `ready`: the world is showing and nothing else holds the player (first login, a fade, a sheet). */
@@ -154,32 +154,29 @@ export default function DailyGift({ ready }: { ready: boolean }) {
   const welcome = shown.at === "opened" ? shown.welcome : null;
   const week = welcome?.day ?? hud.welcomeDay;
   const box = welcome?.item ?? null;
-  const coinsLine = shown.at === "opened" && <>+{shown.coins.toLocaleString()} <CurrencyIcon size={22} /> <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>{COINS.name}</span></>;
-  return <section className={styles.card} role="dialog" aria-modal="false" aria-labelledby="daily-gift-title" data-phase={shown.at} data-state={state} data-box={box ? "" : undefined}>
-    {week && <Week today={week} opened={shown.at === "opened"} />}
-    {box && welcome
-      ? <Roulette reel={welcome.reel} prize={box} onStop={() => { setStopped(true); AudioManager.playSFX("confirm"); }} />
-      : <div className={styles.box} aria-hidden="true">
-        <span className={styles.gift}><Gift size={44} strokeWidth={1.6} /></span>
-        {shown.at === "opened" && <>
-          {[0, 1, 2, 3, 4, 5].map(i => <span key={i} className={styles.coin} style={{ "--i": i } as React.CSSProperties}><CurrencyIcon size={22} /></span>)}
-          <span className={styles.prize}><CurrencyIcon size={40} /></span>
-        </>}
-      </div>}
-    <h2 id="daily-gift-title" aria-live="polite">{box ? (stopped ? `${box.name}!` : "Mystery box…") : shown.at === "opened" ? coinsLine
-      : week === WELCOME_DAYS ? "Day 7: the mystery box" : week ? `Welcome week, day ${week}` : "A little something for today"}</h2>
-    <p>{box ? (stopped ? <>It&apos;s yours. Welcome to the island! Today&apos;s gift: {coinsLine}</> : "Round and round it goes…")
-      : shown.at === "opened" ? (welcome ? `Today's gift and your day ${welcome.day} bonus. Day ${WELCOME_DAYS} opens a mystery box!` : "Added to your coins. See you tomorrow!")
-      : shown.at === "error" ? <SignInText text={shown.text} />
-      : week === WELCOME_DAYS ? "Your seventh day on the island. Open it to spin for some starter loot."
-      : week ? `New here? A bonus on each of your first ${WELCOME_DAYS} days, and day ${WELCOME_DAYS} opens a mystery box.`
-      : "Everyone on the island gets a small gift each day."}</p>
+  const opened = shown.at === "opened";
+  let head: ReactNode, body: ReactNode = null;
+  if (box && welcome) {
+    head = stopped ? box.name : "Mystery box";
+    body = <div className={styles.wheel}><BoxWheel reel={welcome.reel} prize={box} onStop={() => { setStopped(true); AudioManager.playSFX("confirm"); }} /></div>;
+  } else if (opened) {
+    head = <span className={styles.won}><Paid n={shown.coins} size={26} />{!!welcome?.gems && <Paid n={welcome.gems} gems size={26} />}</span>;
+  } else if (shown.at === "error") {
+    head = "Today's gift";
+    body = <p className={styles.note}><SignInText text={shown.text} /></p>;
+  } else head = week ? (week === WELCOME_DAYS ? "Day 7" : `Day ${week}`) : "Today's gift";
+  return <section className={styles.card} role="dialog" aria-modal="false" aria-labelledby="daily-gift-title" data-phase={shown.at} data-state={state} data-box={box ? "" : undefined} data-week={week ? "" : undefined}>
+    {week && !box && <RewardTrack steps={welcomeSteps(week, opened)} label={`Welcome week, day ${week} of ${WELCOME_DAYS}`} />}
+    {!week && shown.at !== "error" && <div className={styles.box} aria-hidden="true"><span className={styles.gift}>{opened ? <CurrencyIcon size={44} /> : <Gift size={46} strokeWidth={1.6} />}</span></div>}
+    <h2 id="daily-gift-title" aria-live="polite">{head}</h2>
+    {body}
+    {box && stopped && welcome && <p className={styles.extra}><span className={styles.plus}>+</span><Paid n={welcome.gems} gems size={16} /><span className={styles.plus}>+</span><Paid n={shown.at === "opened" ? shown.coins : 0} size={16} /></p>}
     <div className={styles.actions}>
       {(shown.at === "offer" || shown.at === "opening") && <>
-        <button className={styles.primary} onClick={() => void claim()} disabled={shown.at === "opening"}>{shown.at === "opening" ? "Opening…" : <><Keycap aria-hidden="true" className={styles.key}>E</Keycap>Open it</>}</button>
-        <button className={styles.quiet} onClick={later} disabled={shown.at === "opening"}>Later</button>
+        <DarkButton onClick={() => void claim()} disabled={shown.at === "opening"}>{shown.at === "opening" ? "Opening…" : <><Keycap aria-hidden="true" className={styles.key}>E</Keycap>Open</>}</DarkButton>
+        <GhostButton onClick={later} disabled={shown.at === "opening"}>Later</GhostButton>
       </>}
-      {(shown.at === "opened" || shown.at === "error") && <button className={styles.primary} disabled={!!box && !stopped} onClick={() => setPhase({ at: "done" })}>{shown.at === "opened" ? "Thanks!" : "Close"}</button>}
+      {(opened || shown.at === "error") && <DarkButton disabled={!!box && !stopped} onClick={() => setPhase({ at: "done" })}>{opened ? "Thanks!" : "Close"}</DarkButton>}
     </div>
   </section>;
 }

@@ -80,6 +80,8 @@ function frame(seen: { line: number; typed: number; blip: number }, shown: HTMLS
 
 /** A move that reached a whole heart says so (its letter, its coins). */
 const noteMove = (f: FriendMove | null) => { const n = f && friendNote(f, f.name); if (n) toast(n); };
+/** They answer in the talk going on ("[face] words"). */
+const answer = (raw: string) => sayMore([parseTalkLine(raw)], performance.now() / 1000);
 
 /**
  * Give them something from your bag (d-friends): your bag's items as small white cards; one, and they answer in the
@@ -96,11 +98,11 @@ function GiftPicker({ slug, onDone }: { slug: string; onDone: () => void }) {
     try {
       const f = await giveGift(slug, key);
       AudioManager.playSFX(f.taste === "hate" ? "click" : "confirm");
-      sayMore([parseTalkLine(tasteLine(f.taste ?? "meh"))], performance.now() / 1000);
+      answer(tasteLine(f.taste ?? "meh"));
       noteMove(f);
       onDone();
     } catch (e) {
-      if (e instanceof ApiError && e.code === "gift_done") { sayMore([parseTalkLine("[happy] You already gave me something today. Tomorrow, maybe?")], performance.now() / 1000); onDone(); return; }
+      if (e instanceof ApiError && e.code === "gift_done") { answer("[happy] You already gave me something today. Tomorrow, maybe?"); onDone(); return; }
       setError(e instanceof ApiError ? e.message : "Couldn't reach the island. Try again.");
       setBusy(false);
     }

@@ -22,6 +22,7 @@ import { FISH } from "@/lib/game/fishing";
 import { iconUrl } from "@/lib/icons/keys";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import s from "./showroom.module.css";
+import FlatRewards from "./FlatRewards";
 
 /** Re-mounts its child every `ms` (an overlay that finishes and closes itself stays on show). */
 function Loop({ ms, children }: { ms: number; children: (done: () => void) => ReactNode }) {
@@ -35,6 +36,7 @@ const OVERLAYS: { id: string; title: string; render: () => ReactNode }[] = [
   { id: "oracle-reveal", title: "Oracle reveal card", render: () => <FamilyReveal family="Warden" type="INFP" onContinue={() => {}} /> },
   { id: "rune", title: "Rune overlay", render: () => <Loop ms={30000}>{done => <IncantationOverlay runeId="cross" title="Cross" effect="A warding cross" onDone={done} onCancel={done} />}</Loop> },
   { id: "emotes", title: "Emote wheel", render: () => <EmoteWheelShow /> },
+  { id: "flat-rewards", title: "Flat reward pieces (hearts, reward track, prize wheel, goal meter, quiet toast)", render: () => <div style={{ position: "absolute", inset: 0, overflow: "auto", padding: 24 }}><FlatRewards /><ToastHub /></div> },
 ];
 
 /** The emote wheel open (specs/v1-drop.md §3): the emotes with Clap chosen, then the dances, flipping every few seconds. */

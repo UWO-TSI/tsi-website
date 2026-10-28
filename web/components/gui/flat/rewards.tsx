@@ -2,10 +2,11 @@
 
 /**
  * The flat kit's reward pieces (specs/design-bible.md, UI): `HeartMeter` (a friendship in half hearts), `RewardTrack`
- * (a run of days, each one's reward shown ahead) and `PrizeWheel` (a wheel of prizes that spins to the one already won).
+ * (a run of days, each one's reward shown ahead), `PrizeWheel` (a wheel of prizes that spins to the one already won),
+ * `GoalMeter` (a thick bar filling to its value, with marks along it) and `CountUp` (a number that counts to its value).
  * Plain props, --ui-* tokens only; nothing here knows about residents or the welcome week. Shown in /lab/gui.
  */
-import { useEffect, useId, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Check } from "lucide-react";
 import r from "./rewards.module.css";
 
@@ -111,5 +112,39 @@ export function PrizeWheel({ prizes, land, onLanded, size = 280, label }: { priz
       <span className={r.hub} aria-hidden="true" />
     </div>
     <span className={r.pointer} aria-hidden="true" />
+  </div>;
+}
+
+/** A number that counts up (or down) to `n` when it shows and whenever it changes, never jumping (UI 9). */
+export function CountUp({ n, ms = 700 }: { n: number; ms?: number }) {
+  const [shown, setShown] = useState(0);
+  const from = useRef(0);
+  useEffect(() => {
+    const still = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const a = from.current, t0 = performance.now();
+    let raf = 0;
+    const step = (t: number) => {
+      const k = still ? 1 : Math.min(1, (t - t0) / ms), v = Math.round(a + (n - a) * (1 - (1 - k) ** 3));
+      setShown(v); from.current = v;
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [n, ms]);
+  return <span className={r.count}>{shown.toLocaleString()}</span>;
+}
+
+/**
+ * A thick bar filling to `value` (0 to 1) as it shows, with `marks` (pictures) at even steps along it, each lit once
+ * the fill passes it.
+ */
+export function GoalMeter({ value, marks = [], label }: { value: number; marks?: readonly ReactNode[]; label: string }) {
+  const v = Math.max(0, Math.min(1, value));
+  return <div className={r.meter} role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(v * 100)}>
+    <span className={r.meterFill} style={{ "--v": v } as CSSProperties} />
+    {marks.map((m, i) => {
+      const at = (i + 1) / marks.length;
+      return <span key={i} className={r.mark} data-lit={v >= at || undefined} style={{ "--at": at, "--i": i } as CSSProperties}>{m}</span>;
+    })}
   </div>;
 }
