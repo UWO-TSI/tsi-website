@@ -43,6 +43,6 @@ await browser.close();
 const names = ["streak-day3-offer", "streak-day3-opened", "streak-day7-offer", "streak-day7-spin", "streak-day7-won"];
 const args = ["montage"];
 names.forEach(n => args.push("-label", n.replace("streak-", ""), `${TMP}/${n}.png`));
-args.push("-tile", "3x", "-geometry", "440x330+4+4", "-background", "#0b0e14", "-fill", "#f1ffff", "-pointsize", "13", "-quality", "75", `${OUT}/d-streak.webp`);
+args.push("-tile", "3x", "-geometry", "440x330+4+4", "-background", "#0b0e14", "-fill", "#f1ffff", "-font", "/System/Library/Fonts/Monaco.ttf", "-pointsize", "13", "-quality", "75", `${OUT}/d-streak.webp`);
 execFileSync("magick", args);
 console.log("wrote", `${OUT}/d-streak.webp`);

@@ -168,7 +168,7 @@ export default function DailyGift({ ready }: { ready: boolean }) {
       </div>}
     <h2 id="daily-gift-title" aria-live="polite">{box ? (stopped ? `${box.name}!` : "Mystery box…") : shown.at === "opened" ? coinsLine
       : week === WELCOME_DAYS ? "Day 7: the mystery box" : week ? `Welcome week, day ${week}` : "A little something for today"}</h2>
-    <p>{box ? (stopped ? <>It&apos;s yours, with today&apos;s {coinsLine}. Welcome to the island!</> : "Round and round it goes…")
+    <p>{box ? (stopped ? <>It&apos;s yours. Welcome to the island! Today&apos;s gift: {coinsLine}</> : "Round and round it goes…")
       : shown.at === "opened" ? (welcome ? `Today's gift and your day ${welcome.day} bonus. Day ${WELCOME_DAYS} opens a mystery box!` : "Added to your coins. See you tomorrow!")
       : shown.at === "error" ? <SignInText text={shown.text} />
       : week === WELCOME_DAYS ? "Your seventh day on the island. Open it to spin for some starter loot."
