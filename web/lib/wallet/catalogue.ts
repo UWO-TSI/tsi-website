@@ -200,14 +200,14 @@ export const onSale = (c: CatalogueEntry) => !RETIRED.includes(c.slug) && !(c.ca
  */
 export const EVENT_ITEMS: CatalogueEntry[] = PIECES.filter((p) => EVENT_PIECE_IDS.has(p.id)).map((p) => ({ ...furniture(p.id, p.label, pieceValue(p)), special_pool: false }));
 
-/** Sell prices by category and rarity (row 91), in play coins per item. */
+/** Sell prices by category and rarity (row 91), in play coins per item. Divine is 2.5 times legendary; Contraband has none (the shop won't buy it). */
 export const SELL_PRICES: Record<string, Record<string, number>> = {
-  fish: { common: 8, uncommon: 20, rare: 60, epic: 180, legendary: 600 },
-  sea: { common: 8, uncommon: 20, rare: 60, epic: 180, legendary: 600 },
-  bug: { common: 6, uncommon: 16, rare: 50, epic: 150, legendary: 500 },
-  fruit: { common: 10, uncommon: 25, rare: 60, epic: 150, legendary: 400 },
-  nature: { common: 4, uncommon: 12, rare: 40, epic: 120, legendary: 400 },
-  mineral: { common: 5, uncommon: 15, rare: 45, epic: 135, legendary: 450 },
+  fish: { common: 8, uncommon: 20, rare: 60, epic: 180, legendary: 600, divine: 1500 },
+  sea: { common: 8, uncommon: 20, rare: 60, epic: 180, legendary: 600, divine: 1500 },
+  bug: { common: 6, uncommon: 16, rare: 50, epic: 150, legendary: 500, divine: 1250 },
+  fruit: { common: 10, uncommon: 25, rare: 60, epic: 150, legendary: 400, divine: 1000 },
+  nature: { common: 4, uncommon: 12, rare: 40, epic: 120, legendary: 400, divine: 1000 },
+  mineral: { common: 5, uncommon: 15, rare: 45, epic: 135, legendary: 450, divine: 1125 },
 };
 
 /** Daily gift (row 225): 10 coins, doubled on Fridays (Toronto day). */

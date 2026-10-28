@@ -19,7 +19,6 @@ import FishPreview from "@/components/lab/FishPreview";
 import {
   REVEAL,
   FISH,
-  HOLO_GRADIENT,
   HOOK,
   HOOK_TIER,
   RARITY_META,
@@ -35,10 +34,10 @@ import { setLabHour, useLabState } from "@/lib/game/devLab";
 
 const WEATHERS = ["sunny", "cloudy", "rain"] as const;
 
-// Sea King renders holographic (David 2026-07-23) — pairs with the
+// Divine renders holographic (David 2026-07-23) — pairs with the
 // tsi-holo-shift keyframes in this page's <style> block.
 const HOLO_TEXT: React.CSSProperties = {
-  backgroundImage: HOLO_GRADIENT,
+  backgroundImage: "var(--gui-holo)",
   backgroundSize: "300% 100%",
   WebkitBackgroundClip: "text",
   backgroundClip: "text",
@@ -46,7 +45,7 @@ const HOLO_TEXT: React.CSSProperties = {
   animation: "tsi-holo-shift 2.2s linear infinite",
 };
 const HOLO_BG: React.CSSProperties = {
-  background: HOLO_GRADIENT,
+  background: "var(--gui-holo)",
   backgroundSize: "300% 100%",
   animation: "tsi-holo-shift 2.2s linear infinite",
   boxShadow: "0 0 12px rgba(122, 231, 255, 0.75)",
@@ -206,7 +205,7 @@ export default function FishingBench() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={iconFor(f)} alt="" width={22} height={22} />
                 <span style={{ flex: 1, textAlign: "left" }}>{f.name}</span>
-                <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", ...(f.rarity === "seaking" ? HOLO_TEXT : { color: meta.color }) }}>{meta.label}</span>
+                <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", ...(f.rarity === "divine" ? HOLO_TEXT : { color: meta.color }) }}>{meta.label}</span>
                 <span style={{ fontSize: 9, color: "#8a939a", width: 42, textAlign: "right" }}>
                   {pct ? `${pct}%` : "off"}
                 </span>
@@ -221,7 +220,7 @@ export default function FishingBench() {
               {simRows.map((r) => (
                 <div key={r.key} style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
                   <span>{r.name}</span>
-                  <span style={r.rarity === "seaking" ? HOLO_TEXT : { color: RARITY_META[r.rarity as keyof typeof RARITY_META].color }}>
+                  <span style={r.rarity === "divine" ? HOLO_TEXT : { color: RARITY_META[r.rarity as keyof typeof RARITY_META].color }}>
                     {r.n === 0 ? "—" : `${(r.n / 10).toFixed(1)}%`}
                   </span>
                 </div>
@@ -243,7 +242,7 @@ export default function FishingBench() {
                 textTransform: "uppercase",
                 borderRadius: 999,
                 padding: "2px 8px",
-                ...(selected.rarity === "seaking"
+                ...(selected.rarity === "divine"
                   ? { ...HOLO_BG, color: "#FFFDF5", textShadow: "0 1px 2px rgba(20,40,60,0.45)" }
                   : { color: "#0b0e14", background: RARITY_META[selected.rarity].color }),
               }}

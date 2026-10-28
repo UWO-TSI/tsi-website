@@ -6,8 +6,8 @@ import { HOOK, HOOK_TIER, RARITY_META, type Rarity } from "./fishing";
 describe("the hook's beat by tier", () => {
   it("gives legendary its golden hook, the top tier the divine one and everything else the common one", () => {
     expect(HOOK_TIER.legendary).toBe("legendary");
-    expect(HOOK_TIER.seaking).toBe("divine");
-    for (const r of Object.keys(RARITY_META) as Rarity[]) if (r !== "legendary" && r !== "seaking") expect(HOOK_TIER[r]).toBe("common");
+    expect(HOOK_TIER.divine).toBe("divine");
+    for (const r of Object.keys(RARITY_META) as Rarity[]) if (r !== "legendary" && r !== "divine") expect(HOOK_TIER[r]).toBe("common");
   });
 
   it("hits harder up the tiers, each with its own bite sound on disk", () => {

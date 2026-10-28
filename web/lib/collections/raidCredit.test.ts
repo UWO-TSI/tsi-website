@@ -18,8 +18,8 @@ const sign = (c: RaidCredit, secret = SECRET) => {
 
 // No divine species ships yet (David picks them): a stand-in for the test only.
 const base = ROSTER.find((s) => s.category === "fish" && s.size)!;
-const divine = { ...base, key: "fish_test_divine", rarity: "legendary" } as Species;
-const divineFish = { ...FISH[0], key: divine.key, rarity: "seaking", sizeCm: base.size! } as FishDef;
+const divine: Species = { ...base, key: "fish_test_divine", rarity: "divine" };
+const divineFish = { ...FISH[0], key: divine.key, rarity: "divine", sizeCm: base.size! } as FishDef;
 beforeAll(() => { ROSTER.push(divine); FISH.push(divineFish); vi.stubEnv("NEXT_PUBLIC_FISH_BOSSES", "1"); });
 afterAll(() => { ROSTER.splice(ROSTER.indexOf(divine), 1); FISH.splice(FISH.indexOf(divineFish), 1); vi.unstubAllEnvs(); });
 

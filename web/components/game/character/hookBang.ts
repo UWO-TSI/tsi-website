@@ -6,7 +6,7 @@
  *   divine     bigger still, holographic, with a beam of light through it, rays turning behind it and bursting rings.
  * Every animation is finite (it ends with the bite's window). Reduced motion keeps the look and drops the effects.
  */
-import { HOLO_GRADIENT, type HookTier } from "@/lib/game/fishing";
+import type { HookTier } from "@/lib/game/fishing";
 
 /** The paper bubble's look (the GUI sheet's tokens, plain values outside its scope). */
 const PAPER = "var(--gui-paper-hi, #fffff7)";
@@ -24,7 +24,7 @@ const LOOK: Record<HookTier, { size: number; font: number; ink: string; backgrou
     shadow: "0 3px 0 rgb(122 70 6 / 0.35), 0 0 22px 6px rgb(255 205 80 / 0.75)",
   },
   divine: {
-    size: 70, font: 52, ink: "#fffef6", background: HOLO_GRADIENT, ring: "#ffffff",
+    size: 70, font: 52, ink: "#fffef6", background: "var(--gui-holo, linear-gradient(115deg, #5EE7F7, #B57AFF, #FF7AD9, #7DFFC4))", ring: "#ffffff",
     shadow: "0 3px 0 rgb(60 40 110 / 0.35), 0 0 30px 10px rgb(190 160 255 / 0.8), 0 0 60px 20px rgb(120 230 255 / 0.45)",
   },
 };

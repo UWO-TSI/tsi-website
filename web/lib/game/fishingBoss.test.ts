@@ -37,14 +37,14 @@ describe("the boss reel", () => {
   it("stays off unless the build turns the fights on (a later launch)", () => {
     vi.stubEnv("NEXT_PUBLIC_FISH_BOSSES", "");
     expect(createFishingReel(boss).boss).toBeNull();
-    expect(createFishingReel({ ...boss, rarity: "seaking" }).boss).toBeNull();
+    expect(createFishingReel({ ...boss, rarity: "divine" }).boss).toBeNull();
     vi.stubEnv("NEXT_PUBLIC_FISH_BOSSES", "1");
   });
 
   it("is only for legendary and divine fish, and a divine fish's stamina is the room's", () => {
     expect(createFishingReel({ ...boss, rarity: "epic" }).boss).toBeNull();
     expect(createFishingReel(boss).boss?.shared).toBe(false);
-    expect(createFishingReel({ ...boss, rarity: "seaking" }).boss?.shared).toBe(true);
+    expect(createFishingReel({ ...boss, rarity: "divine" }).boss?.shared).toBe(true);
   });
 
   it("goes through its phases as stamina falls", () => {
@@ -88,7 +88,7 @@ describe("the boss reel", () => {
   });
 
   it("leaves a shared (divine) fish's stamina to the room and reports the damage dealt", () => {
-    const s = createFishingReel({ ...boss, rarity: "seaking" }), random = seeded(5);
+    const s = createFishingReel({ ...boss, rarity: "divine" }), random = seeded(5);
     for (let i = 0; i < 600; i++) advanceFishingReel(s, 1 / 60, player(true)(s), 1, random);
     expect(s.boss!.stamina).toBe(1);
     expect(s.boss!.dealt).toBeGreaterThan(0);

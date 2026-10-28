@@ -52,3 +52,4 @@ web/supabase/.temp/
 # Root node_modules was tracked by accident until 2026-09-02; web/ owns its own deps
 node_modules/
 !art/characters/lod1/lod.json
+specs/tools/catalogue-editor/dist/

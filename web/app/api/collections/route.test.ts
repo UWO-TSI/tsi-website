@@ -137,14 +137,14 @@ describe("POST /api/collections: the server rolls every catch", () => {
     expect((await post({ action: "harvest", node: rock.id, at, tool: SHOVEL })).status).toBe(200);
   });
 
-  it("keeps the hourly caps (legendary: 3 per species per hour)", async () => {
-    for (let i = 0; i < 3; i++) await m.store.harvest(A, `n${i}`, "2026-09-24T12", "fish_golden_koi", 70, true);
-    await expect(m.store.harvest(A, "n3", "2026-09-24T12", "fish_golden_koi", 70, true)).rejects.toMatchObject({ code: "rate_limited" });
-    expect(m.countOf(A, "fish_golden_koi")).toBe(3);
+  it("keeps the hourly caps (epic: 6 per species per hour)", async () => {
+    for (let i = 0; i < 6; i++) await m.store.harvest(A, `n${i}`, "2026-09-24T12", "fish_golden_koi", 70, true);
+    await expect(m.store.harvest(A, "n6", "2026-09-24T12", "fish_golden_koi", 70, true)).rejects.toMatchObject({ code: "rate_limited" });
+    expect(m.countOf(A, "fish_golden_koi")).toBe(6);
     // The refused harvest didn't use up its node.
     later(3_600_000);
-    await m.store.harvest(A, "n3", "2026-09-24T12", "fish_golden_koi", 70, true);
-    expect(m.countOf(A, "fish_golden_koi")).toBe(4);
+    await m.store.harvest(A, "n6", "2026-09-24T12", "fish_golden_koi", 70, true);
+    expect(m.countOf(A, "fish_golden_koi")).toBe(7);
   });
 
   it("tells the catch card the size it records: every catch is a roster fish with a size (row 260)", async () => {
@@ -313,7 +313,7 @@ describe("POST /api/collections: rare catches can teach a recipe (rows 199, 258)
     c = memoryCraftingStore(undefined, () => clock, random);
     const N = 10_000;
     const close = (observed: number, p: number) => Math.abs(observed - p) <= 4 * Math.sqrt((p * (1 - p)) / N) + 0.002;
-    for (const [key, rarity] of [["bug_mantis", "rare"], ["rock_gold_nugget", "epic"], ["fish_golden_koi", "legendary"]] as const) {
+    for (const [key, rarity] of [["bug_mantis", "rare"], ["rock_gold_nugget", "epic"], ["fish_golden_koi", "epic"]] as const) {
       let hits = 0;
       for (let i = 0; i < N; i++) if (c.catchDrop(`${rarity}-${i}`, key)) hits++;
       expect(close(hits / N, RECIPE_DROP_CHANCE[rarity]), `${rarity}: ${hits}/${N}`).toBe(true);
