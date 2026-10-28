@@ -42,7 +42,8 @@ Head: see `git log` (2026-10-27). Main has steps 2 to 4 and the crossing warm-up
   island starts aboard. Numbers in `after.md` "Re-verify". tsc clean after it.
 - **Step 5, round 2 built, waiting for David's pick (not to ship before he picks):** three simple looks, no map
   (`specs/evidence/loading/loading-screen.md`; shots `screen-logo-1280.png`, `screen-boat-1280.png`,
-  `screen-island-1280.png`). `?loading=logo|boat|island` switches them (logo default). Round 1's chart, mist and boat
+  `screen-island-1280.png`; all three side by side in `screen-options-sheet.webp`). Gates: tsc clean, vitest
+  (loadProgress, title) with and without `NEXT_PUBLIC_GAME_WORLD=new`, eslint clean. `?loading=logo|boat|island` switches them (logo default). Round 1's chart, mist and boat
   SVG are deleted, and so are its shots. Stills: `web/public/assets/loading/{boat,island}.webp` (23 KB, 38 KB).
 - Also fixed: the title backdrop never faded in under `next dev` (Strict Mode's remount ran `Ready`'s cleanup first, so
   `onReady` and the title's game prefetch never fired in dev). Production was unaffected.

@@ -10,6 +10,8 @@ weighted, never backwards; a `progressbar` for screen readers) and the stage it 
 out…", "Unpacking the village…", "Lighting the lamps…"). The line moves by transform, so it keeps going while the main
 thread compiles. Reduced motion stills everything.
 
+All three side by side: `screen-options-sheet.webp` (logo, boat, island).
+
 | Look | Shot (1280 x 800, at 77%) | What it is |
 |---|---|---|
 | `logo` | `screen-logo-1280.png` | The site's own Tethos mark (`public/logo-light.svg`, tinted the ink), breathing slowly, "TETHOS ISLAND" under it. Nothing to download. |
