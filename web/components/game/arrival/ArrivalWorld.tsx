@@ -280,9 +280,9 @@ function wayTo(g: Guide, nav: ReturnType<typeof navGrid>, via: readonly Way[], t
 /** Bram in the dialogue box (the camera conversation): his roster look and post. */
 const BRAM_TALKER = { id: "arrival:bram", slug: BRAM.slug, name: BRAM.name, post: "wharf_keeper", seed: 7 };
 /** The building shot: this far from it toward where you stand (m), this high, looking this high up it; the blend's rate (/s). */
-const SHOT = { back: 15, up: 6.5, at: 3, rate: 2.2 } as const;
+const SHOT = { back: 15, behind: 3, up: 6.5, at: 3, rate: 2.2 } as const;
 /** The close-up on him (a `"bram"` shot): this far out toward you, this high, looking at his hands. */
-const CLOSE = { back: 2.3, up: 1.35, at: 1.05 } as const;
+const CLOSE = { back: 2.6, up: 1.35, at: 1.05, turn: 1.0 } as const;
 const _look = new THREE.Quaternion(), _m = new THREE.Matrix4(), _up = new THREE.Vector3(0, 1, 0);
 /**
  * The camera conversation each frame (module scope, the react compiler): the two-shot past your shoulder while he
@@ -300,14 +300,17 @@ function converseCamera(f: GuideFrame, stop: ResolvedStop | undefined, dt: numbe
   const shot = mine ? stop!.shots?.[t!.index] ?? null : null;
   if (mine && !shot) steerTalkShot(dt, now, p.x, p.z, g.x, g.z, t!.index);
   if (shot === "bram") {
-    // Close on him from your side, a little below his eyes, as he holds it out (the hand-over cutscene).
-    const dx = p.x - g.x, dz = p.z - g.z, d = Math.hypot(dx, dz) || 1, side = 0.55;
-    const cx = g.x + (dx / d) * CLOSE.back - (dz / d) * side, cz = g.z + (dz / d) * CLOSE.back + (dx / d) * side;
+    // Close on him, a little below his eyes, as he holds it out to you (the hand-over cutscene): from off your
+    // shoulder, turned CLOSE.turn round him from the line to you, so you're at the frame's edge and not in the way.
+    const a = Math.atan2(p.x - g.x, p.z - g.z) + CLOSE.turn;
+    const cx = g.x + Math.sin(a) * CLOSE.back, cz = g.z + Math.cos(a) * CLOSE.back;
     g.cam.pos.set(cx, g.y + CLOSE.up, cz);
     g.cam.look.set(g.x, g.y + CLOSE.at, g.z);
   } else if (shot) {
     // From the building toward you, back and up, looking at it.
-    const dx = g.x - shot.x, dz = g.z - shot.z, d = Math.hypot(dx, dz) || 1, cx = shot.x + dx / d * SHOT.back, cz = shot.z + dz / d * SHOT.back;
+    // A place close by (the wharf's) is framed from just behind him, not from 15 m back through whatever's there.
+    const dx = g.x - shot.x, dz = g.z - shot.z, d = Math.hypot(dx, dz) || 1, back = Math.min(SHOT.back, d + SHOT.behind);
+    const cx = shot.x + dx / d * back, cz = shot.z + dz / d * back;
     g.cam.pos.set(cx, island.ground(cx, cz) + SHOT.up, cz);
     g.cam.look.set(shot.x, island.ground(shot.x, shot.z) + SHOT.at, shot.z);
   }
