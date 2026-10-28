@@ -8,7 +8,7 @@
  *               (`markerRef`: translateX in the track's width); `data-in` / `data-slip` on the track (`trackRef`) say
  *               whether the fish is in the window or slipping out, `data-away` on the rail that it's out of the water;
  *   LineGauge   a thin fill (`fillRef`, scaleX) with marks; `data-near` and `data-tone="low"` on it;
- *   PowerMeter  the cast's vertical meter with its gold tip zone (`fillRef` scaleY, `readoutRef`, `data-tip`);
+ *   PowerMeter  the cast's meter with its gold tip zone, standing up or `horizontal` (`fillRef` scaleY / scaleX, `readoutRef`, `data-tip`);
  *   StatusChip  a white pill with an icon: plain, `wait` (a gentle bob), `gold` (a max cast), `alert` (the hook, the
  *               big moment: black, springs in and tugs until you strike);
  *   CatchCard   the catch on its white stage, edged in its rarity (divine holographic), developing from a silhouette;
@@ -57,18 +57,20 @@ export function LineGauge({ fillRef, gaugeRef, value, marks = [], label, near, l
   </div>;
 }
 
-export function PowerMeter({ meterRef, fillRef, readoutRef, zone, hint, value = 0 }: {
+export function PowerMeter({ meterRef, fillRef, readoutRef, zone, hint, value = 0, horizontal }: {
   meterRef?: Ref<HTMLDivElement>; fillRef?: Ref<HTMLDivElement>; readoutRef?: Ref<HTMLDivElement>;
-  /** The gold tip: the top fraction of the meter. */
+  /** The gold tip: the top (the right end, horizontal) fraction of the meter. */
   zone: number; hint: ReactNode;
   /** The power before the loop takes over (0..1). */
   value?: number;
+  /** Laid along the lane (the fill scales on x) instead of standing up: it stays under the character. */
+  horizontal?: boolean;
 }) {
   const tip = value >= 1 - zone;
-  return <div ref={meterRef} className={r.meter} data-tip={tip ? "true" : undefined}>
+  return <div ref={meterRef} className={r.meter} data-tip={tip ? "true" : undefined} data-axis={horizontal ? "x" : undefined}>
     <div className={r.meterTrack}>
-      <div className={r.zone} style={{ height: `${zone * 100}%` }} />
-      <div ref={fillRef} className={r.meterFill} style={{ transform: `scaleY(${value})` }} />
+      <div className={r.zone} style={horizontal ? { width: `${zone * 100}%` } : { height: `${zone * 100}%` }} />
+      <div ref={fillRef} className={r.meterFill} style={{ transform: horizontal ? `scaleX(${value})` : `scaleY(${value})` }} />
     </div>
     <div className={r.meterText}>
       <div ref={readoutRef} className={r.readout}>{tip ? "Max" : `${Math.round(value * 100)}%`}</div>

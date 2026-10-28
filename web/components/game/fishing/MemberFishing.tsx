@@ -44,7 +44,7 @@ export default function MemberFishing({ onActiveChange, rod }: { onActiveChange?
         : phase === "bite" ? ["alert", "Hook it!", <Fish key="i" />]
           : phase === "surfacing" ? ["gold", "Something huge is coming up", <Waves key="i" />]
             : ["plain", s.missNote ?? "It got away", <FishOff key="i" />];
-  const hint = phase === "charging" ? FISHING_HINTS[device].tip
+  const hint = phase === "charging" ? null // the meter carries its own hint
     : phase === "bite" ? FISHING_HINTS[device].hook
       : phase === "waiting" || phase === "casting" ? (s.rod.tier > 1 ? `${s.rod.name} · watch the float` : "Watch the float") : null;
   return (
@@ -52,19 +52,19 @@ export default function MemberFishing({ onActiveChange, rod }: { onActiveChange?
       {phase === "charging" ? <MemberMeter onRelease={s.castNow} releaseRequestedRef={s.releaseRequestedRef} hint={FISHING_HINTS[device].charge} />
         : phase === "reeling" && fish ? <MemberReel key={fish.key} fish={fish} known={s.owned.has(fish.key)} onDone={s.onReelDone} initialInput={s.reelInput}
           tensionMul={s.rod.tensionMul} help={FISHING_HINTS[device].reel} boss={s.bossMode} raidId={s.raidId} />
-          : <StatusChip key={phase} tone={chip[0]} icon={chip[2]}>{chip[1]}</StatusChip>}
+          : <StatusChip tone={chip[0]} icon={chip[2]}>{chip[1]}</StatusChip>}
       {hint && <Pill>{hint}</Pill>}
       {phase !== "reeling" && <GhostButton className={m.cancel} onClick={s.cancel}>{phase === "missed" ? "Close" : "Cancel (Esc)"}</GhostButton>}
     </div>
   );
 }
 
-/** The cast meter: the power rises and falls; in the gold tip the readout pops. */
+/** The cast meter: the power rises and falls along the lane, under the character; in the gold tip the readout pops. */
 function MemberMeter({ onRelease, releaseRequestedRef, hint }: { onRelease: (power: number) => void; releaseRequestedRef: React.RefObject<boolean>; hint: string }) {
   const meterRef = useRef<HTMLDivElement>(null), fillRef = useRef<HTMLDivElement>(null), readoutRef = useRef<HTMLDivElement>(null);
   const tip = useRef(false);
   useCastMeter({ releaseRequestedRef, onRelease, onFrame: (p, inTip) => {
-    if (fillRef.current) fillRef.current.style.transform = `scaleY(${p})`;
+    if (fillRef.current) fillRef.current.style.transform = `scaleX(${p})`;
     if (readoutRef.current) readoutRef.current.textContent = inTip ? "Max" : `${Math.round(p * 100)}%`;
     if (inTip !== tip.current) {
       tip.current = inTip;
@@ -72,7 +72,7 @@ function MemberMeter({ onRelease, releaseRequestedRef, hint }: { onRelease: (pow
       if (inTip) readoutRef.current?.animate([{ transform: "scale(1.35)" }, { transform: "scale(1)" }], { duration: 260, easing: "cubic-bezier(0.34, 1.4, 0.64, 1)" });
     }
   } });
-  return <ReelPanel className={m.meter}><PowerMeter meterRef={meterRef} fillRef={fillRef} readoutRef={readoutRef} zone={1 - CAST.maxZone} hint={hint} /></ReelPanel>;
+  return <ReelPanel className={m.meter}><PowerMeter horizontal meterRef={meterRef} fillRef={fillRef} readoutRef={readoutRef} zone={1 - CAST.maxZone} hint={hint} /></ReelPanel>;
 }
 
 /**

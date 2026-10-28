@@ -279,7 +279,7 @@ function FishingPieces() {
   return <div data-ui-theme="clean" style={{ display: "grid", gap: 18, padding: 22, borderRadius: 18, background: "var(--ui-panel)" }}>
     <Row label="Status"><StatusChip icon={<Waves />}>Casting</StatusChip><StatusChip tone="wait" icon={<Fish />}>Waiting for a bite</StatusChip>
       <StatusChip tone="gold" icon={<Waves />}>Max cast!</StatusChip><StatusChip tone="alert" icon={<Fish />}>Hook it!</StatusChip></Row>
-    <Row label="Cast meter"><ReelPanel><PowerMeter zone={0.08} value={0.55} hint="Hold, let go at the gold tip" /></ReelPanel><ReelPanel><PowerMeter zone={0.08} value={0.96} hint="Hold, let go at the gold tip" /></ReelPanel></Row>
+    <Row label="Cast meter"><ReelPanel><PowerMeter zone={0.08} value={0.55} hint="Hold, let go at the gold tip" /></ReelPanel><ReelPanel><PowerMeter zone={0.08} value={0.96} hint="Hold, let go at the gold tip" /></ReelPanel><ReelPanel><PowerMeter horizontal zone={0.08} value={0.55} hint="Hold, let go at the gold tip" /></ReelPanel><ReelPanel><PowerMeter horizontal zone={0.08} value={0.96} hint="Hold, let go at the gold tip" /></ReelPanel></Row>
     <Row label="Reel"><div style={{ display: "grid", gap: 12, width: 560 }}>
       <ReelPanel style={{ display: "grid", gap: 10 }}><ReelTrack picture={iconUrl("fish_dace")} windowWidth={0.3} windowAt={0.2} fishAt={0.32} /><LineGauge value={0.45} marks={[0.25, 0.5, 0.75]} label="Catch progress" /></ReelPanel>
       <ReelPanel style={{ display: "grid", gap: 10 }}><ReelTrack picture={iconUrl("fish_dace")} windowWidth={0.3} windowAt={0.1} fishAt={0.62} state="slip" /><LineGauge value={0.18} low marks={[0.25, 0.5, 0.75]} label="Catch progress" /></ReelPanel>
