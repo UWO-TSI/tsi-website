@@ -106,7 +106,7 @@ import { useMusicDirector } from "@/lib/game/useAudio";
 import DonateSheet from "./peaceful/DonateSheet";
 import { ShowcaseSheet, TrophySheet } from "./peaceful/ShowcaseSheets";
 import type { MuseumWing } from "@/lib/collections/logic";
-import FishingOverlay from "./FishingOverlay";
+import MemberFishing from "./fishing/MemberFishing";
 import RaidCall from "./fishing/RaidCall";
 import { fishBosses } from "@/lib/game/fishing";
 import ToastHub, { toast } from "./ToastHub";
@@ -1099,7 +1099,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       const spot = fishSpot.current;
       // A full bag has no slot for a fish (the server refuses it too): the note over the water, no cast.
       if (spot && !bagRoom()) { window.dispatchEvent(new CustomEvent("tsi:bag-full", { detail: { x: spot.target[0], z: spot.target[1] } })); return; }
-      // Hold to charge, let go to cast (FishingOverlay); the server rolls on the held rod (its tier) from where you stand.
+      // Hold to charge, let go to cast (fishing/MemberFishing); the server rolls on the held rod (its tier) from where you stand.
       if (spot) window.dispatchEvent(new CustomEvent("tsi:fish-start", { detail: { x: spot.target[0], z: spot.target[1], water: spot.water, site: atHome ? "home" : "village", from: at } }));
       return;
     }
@@ -1329,7 +1329,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       {!sheet && !cinematic && !talking && !fishing && !inside && site !== "ruins" && (toolAction && (toolAction.target && (toolNear || toolAction.verb === "eat"))
         ? <button className={styles.interact} data-use onPointerDown={e => { if (e.pointerType !== "mouse" || capture.state !== "captured") applyTool(); }}><kbd>{touch ? "Tap" : "Click"}</kbd>{toolAction.label}</button>
         : needTool && <p className={styles.interact} data-closed="true" role="status"><kbd>{touch ? "Wheel" : keyName(wheelKeys.wheel)}</kbd>Take out your {needTool === "rod" ? "fishing rod" : needTool}</p>)}
-      <FishingOverlay rod={held?.kind === "rod" && held.tier ? rodByTier(held.tier) : peaceful.rod} onActiveChange={setFishing} />
+      <MemberFishing rod={held?.kind === "rod" && held.tier ? rodByTier(held.tier) : peaceful.rod} onActiveChange={setFishing} />
       {fishBosses() && !fishing && !inside && <RaidCall />}
       <ToolWheel items={wheelItems} held={heldState.held} wheelKey={wheelKeys.wheel} touch={touch} onEquip={holdItem} onSwap={() => swapHeld(wheelItems)}
         enabled={ready && !inside && !fishing && !sheet && !bagOpen && !cinematic && !talking && !fading && !decor.decorating && !(touch && uiView)} />

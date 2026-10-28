@@ -16,6 +16,8 @@ import { AudioManager } from "@/lib/game/audio";
 import { ReelMinigame } from "@/components/game/FishingOverlay";
 import FishReveal from "@/components/game/FishReveal";
 import FishingOverlay from "@/components/game/FishingOverlay";
+import MemberFishing, { MemberCatchCard } from "@/components/game/fishing/MemberFishing";
+import { useSearch } from "@/lib/game/useMediaQuery";
 import FishPreview from "@/components/lab/FishPreview";
 import {
   REVEAL,
@@ -64,6 +66,8 @@ export default function FishingBench() {
   const [selected, setSelected] = useState<FishDef>(FISH[0]);
   const [mystery, setMystery] = useState(true);
   const bangRef = useRef<HTMLDivElement>(null);
+  const search = useSearch();
+  const look = search === null ? null : new URLSearchParams(search).get("look") ?? "";
   const [reelKey, setReelKey] = useState(0); // remount per run
   const [reelOpen, setReelOpen] = useState(false);
   const [lastResult, setLastResult] = useState<string | null>(null);
@@ -322,9 +326,12 @@ export default function FishingBench() {
         </div>
       </div>
       {revealOpen && (
-        <FishReveal fish={selected} sizeCm={rollSize(selected.sizeCm)} isNew={mystery} onDone={() => setRevealOpen(false)} />
+        look === "member"
+          ? <div style={{ position: "fixed", left: "50%", bottom: 36, transform: "translateX(-50%)", zIndex: 60 }}><MemberCatchCard fish={selected} sizeCm={rollSize(selected.sizeCm)} recipe={null} isNew={mystery} newRecord={false} delay={0} onDone={() => setRevealOpen(false)} /></div>
+          : <FishReveal fish={selected} sizeCm={rollSize(selected.sizeCm)} isNew={mystery} onDone={() => setRevealOpen(false)} />
       )}
-      <FishingOverlay collectionScope="lab" />
+      {/* ?look=member: the member island's flat overlay; otherwise the applicant island's. */}
+      {look === "member" ? <MemberFishing /> : look !== null && <FishingOverlay collectionScope="lab" />}
     </div>
   );
 }
