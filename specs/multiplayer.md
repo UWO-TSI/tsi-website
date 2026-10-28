@@ -41,7 +41,7 @@ All paths are under the repo root `/Users/DavidLiu/Developer/uwotsi/.claude/work
 - The existing server code never verifies a JWT itself. Every route calls `supabase.auth.getUser()` through the cookie client (`web/lib/server/memberContext.ts:23`).
 - `@supabase/supabase-js` 2.103 in `web/` already has `auth.getClaims(jwt)`.
 
-**Play subdomain (another session's branch).** `feat/play-subdomain` moves the game to `https://play.tethos.ca` and shares the session cookie `sb-tethos-auth` across `.tethos.ca` (`web/lib/supabase/cookie.ts` on that branch).
+**Play subdomain (merged 2026-10-03; branch removed 2026-10-28).** `feat/play-subdomain` moved the game to `https://play.tethos.ca` and shares the session cookie `sb-tethos-auth` across `.tethos.ca` (`web/lib/supabase/cookie.ts` on that branch).
 
 **Repo gotcha.** `.gitignore` has blanket `*.json` and `.env*` rules. `git check-ignore` confirms `realtime/package.json` and `realtime/tsconfig.json` would be ignored. This lost the island map once.
 

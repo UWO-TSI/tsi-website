@@ -338,3 +338,13 @@ The full set is in `CLAUDE.md`, `specs/lane-rules.md` and the memory files.
 | Residents editor (collection `residents`) | https://claude.ai/artifact/QtZYAgMFEbFg4YNpVcBYwU | npc-editor 2a67bfb0 (main merged) | republish once main-quest (Juno) merges |
 
 Shipped 2026-10-27/28: batch 3 wardrobe (seed 20261027165850 applied), remodel round 3 step 1 (2e7bd27f). perf-tris (a017efae): new world High 774k triangles / 345 draws, Lite 582k / 281, under budget; `?fxoff=viewCull` turns the cull off. perf-check's lock owner must not need a space (fixed in fce65d21).
+
+## 2026-10-28 afternoon: David's decisions read back
+
+- Fish bite tiers: all three approved, no notes; HOOK_TIER unchanged. Merge game/fish-tiers after its raid run and perf:check. Its next item is the fishing UI/bar redo plus juice (David's tutorial "catch" note).
+- Remodel round 3: all approved except plaza-bench-after ("make sure the bench location and orientation is fitting"). The remodel lane is fixing only the benches, then merge.
+- Main quest: round 2 running (agent a0d703c666d998bba). Pickaxe parked for the cave update; the museum drive must always be completable; dig marks fainter; buried loot table (relics, coins, ores, rare gems, very rare broken sudo) with shovel tiers; chapter 1 levels you to 2 with an unlocks overlay; quest bar/dropdown same width; arrow icon instead of "Show the way". The village cards were proof shots: drop them.
+- Tutorial v2: David's 2026-10-27 notes were never relayed; round 3 is running now (agent a868e7cdc49823714). Selling is back (Bram gives his rod after the sale); keyboard tour; coin/gem fly-ins; ID-card register using profiles.birthday; lore before TSI; phone changes held.
+- Bug-catching minigame (David's note on Odile's net): queued as its own lane after these.
+- Open question to David: the lore line "the island was found by David" vs the no-real-names rule; the lane writes "the Founder" (lore canon) until he answers.
+- Removed the play worktree and feat/play-subdomain (local and origin): merged 2026-10-03, nothing left on it.
