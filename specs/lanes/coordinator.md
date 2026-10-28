@@ -330,6 +330,8 @@ The full set is in `CLAUDE.md`, `specs/lane-rules.md` and the memory files.
 | Fishing depth | https://claude.ai/artifact/2t3rTrcf8YC4GGENxfW3kJ | game/fishing-depth 3f2a49a9 | migration 20261027181000 |
 | Wardrobe fixes (under-cap, monocle) | https://claude.ai/artifact/WqPLxThgbBjhKEecgogW92 | game/wardrobe-b3 d9e8298c | none; asks whether to cut Sponge twists and Freeform afro skin-tone edges |
 | Catalogue editor v2 (collection `species`) | https://claude.ai/artifact/5XzAaR5Wipoe2ZN2Hby3FG | game/catalogue-editor f5186814 | migration 20261027185416 after the rod-gear ones; apply-species.mjs for his edits |
+| Daily and social | https://claude.ai/artifact/68SEdjVRvruZzvgDmHTFVG | game/daily-social (after 86d524ec, furniture-switch fix) | migrations 20261027182444, 190000, 190100, 20261028112843 in order |
+| Clothing round 2 + TSI zip hoodie gate | https://claude.ai/artifact/VhBnp5Ua6w82U8ervpzxiG | game/clothing-v2 bbb46256 (+ offered() check) | round 1 and the hoodie (aafbe9fe) already approved; merge all together |
 | Residents editor (collection `residents`) | https://claude.ai/artifact/QtZYAgMFEbFg4YNpVcBYwU | npc-editor 2a67bfb0 (main merged) | republish once main-quest (Juno) merges |
 
 Shipped 2026-10-27/28: batch 3 wardrobe (seed 20261027165850 applied), remodel round 3 step 1 (2e7bd27f). perf: v2 on main is 405/340 draws and 1.37M/1.17M triangles (over budget); lane perf-tris is on it. perf-check's lock owner must not need a space (fixed in fce65d21).
