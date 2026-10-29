@@ -482,3 +482,8 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - New APIs /api/economy/{tasks,chef,tackle} and /api/collections/monthly replace requests and records.
   - Before merging, check that the gacha RNG runs in the API route (service role), never taken from the client.
 - **New-world fixes review:** https://claude.ai/artifact/K38ZoQPTqe9HBFwbcRDLw3 (ids nf-*), game/newworld-fixes 7cfc3230; the sea fall is verified with strips. It merges right after village-archive.
+- **Rods round 2 review:** https://claude.ai/artifact/2SriizfPH8naxzxb1SdFmn (ids r2-*; the old page NAXEqzpmfNnEASvNPoWCgS is superseded), game/rod-gear 10f7cdd4.
+  - Migrations: 20261028155000_rod_tackle_slots, then a seed (regenerate on the combined tree).
+  - Hook rule: rod rarity +1, on the page as a table.
+  - Gaps: the world float still uses the generic bobber; a Flimsy-only member has no rod view with slots.
+  - Themes carry main-quest's rarity block byte for byte, plus `--ui-chart`.
