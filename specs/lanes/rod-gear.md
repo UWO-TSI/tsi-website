@@ -48,7 +48,7 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
   - An add-on's detail shows only the add-on (its HD model) and its own radar (`TackleRadar`).
   - HD/LP split: `Tackle.model` is the HD file; `worldModel` maps it to `/assets/game/items/lp/` (lib/game/world/active.ts). Until the real models land, both lp files are copies of the HD ones.
   - Kit: divine badge text is white (`--ui-on-divine`). `--gui-holo` is replaced by `--ui-holo`, and `--gui-rarity-divine` is now main-quest's purple. The themes carry main-quest's exact rarity block, so that merge is trivial. The other `--gui-rarity-*` tokens (the badges and tiles David approved) stay.
-  - Migrations: `20261028160000_rod_tackle_slots` (re-timestamped, unapplied) and `20261029020457_catalogue_seed` (regenerated, unapplied). Both are in the chain in specs/evidence/launch-fixes/sql-smoke.sh, with the new `rod_tackle_slots_smoke.sql`. 033 and taught_tools smokes now follow the hollow tools.
+  - Migrations: `20261028155000_rod_tackle_slots` (re-timestamped, unapplied) and `20261029020457_catalogue_seed` (regenerated, unapplied). Both are in the chain in specs/evidence/launch-fixes/sql-smoke.sh, with the new `rod_tackle_slots_smoke.sql`. 033 and taught_tools smokes now follow the hollow tools.
   - Evidence: `specs/evidence/rod-gear/r2/` (shots.mjs makes them). The round-1 shots in `specs/evidence/rod-gear/` are the "before" set.
 
 ## David's decisions
