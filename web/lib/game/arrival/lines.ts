@@ -43,10 +43,11 @@ export const STOP_LINES: Readonly<Record<string, readonly string[]>> = {
   // Keys: `{jump}`, `{dash}`, `{bag}`.
   dockNew: ["Easy now. That's solid ground under you.", "Legs still work? Let's see. Hop that box for me: {jump} to jump."],
   hqFirst: ["This is HQ. Alice runs the place.", "She'll sign you in and show you the ropes. Go on in, I'll wait out here."],
+  // *word*: a keyword, drawn with its little icon in the dialogue box (the kit's Keyword).
   sights: [
     "All signed in? Good. Let me show you round.",
-    "That's the museum. Bring Odile a fish or a bug she hasn't got, and she'll put it on show.",
-    "That's the café. Sit down with a book and a friend. Time spent there earns you coins.",
+    "That's the museum. Bring Odile a *fish* or a *bug* she hasn't got, and she'll put it on show.",
+    "That's the café. Sit down with a book and a friend. Time spent there earns you *coins*.",
     "And that's the shop. Tools, clothes, things for your house.",
     "Right. Down to the water. Follow me.",
   ],

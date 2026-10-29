@@ -13,6 +13,7 @@
  */
 import { useCallback, useEffect, useRef, useSyncExternalStore, type MouseEvent } from "react";
 import { Dialogue } from "@/components/gui";
+import { Keyword, keywordParts, plainLine } from "@/components/gui/flat";
 import { AudioManager } from "@/lib/game/audio";
 import { useWorldDialog } from "@/lib/game/useWorldDialog";
 import { POST_TITLES, type ResidentPost } from "@/lib/content/residents";
@@ -42,9 +43,11 @@ function leave() {
 
 /**
  * One frame of the talk: step it, write the letters that are showing (the rest stay in place, unseen, so the box never
- * reflows as a line grows), and say them. `seen` remembers the line and letters last drawn.
+ * reflows as a line grows), and say them. A line's parts (its *keywords*, the kit's Keyword) are each a shown and a
+ * rest span under `box`; a keyword's icon comes in as the typing reaches it. `seen` remembers the line, letters and
+ * spans last drawn.
  */
-function frame(seen: { line: number; typed: number; blip: number }, shown: HTMLSpanElement | null, rest: HTMLSpanElement | null, reduced: boolean) {
+function frame(seen: { line: number; typed: number; blip: number; parts: Element | null }, box: HTMLElement | null, reduced: boolean) {
   const t = talkStore.active;
   if (!t) return;
   const now = performance.now() / 1000;
@@ -56,6 +59,8 @@ function frame(seen: { line: number; typed: number; blip: number }, shown: HTMLS
   if (t.phase !== "speaking" && t.phase !== "closing") return;
   const text = t.lines[t.index].text;
   if (t.index !== seen.line) { seen.line = t.index; seen.typed = -1; }
+  // A new line's spans (React mounts them a frame late): draw them afresh.
+  if (box && box.firstElementChild !== seen.parts) { seen.parts = box.firstElementChild; seen.typed = -1; }
   if (t.typed === seen.typed) return;
   for (let i = Math.max(0, seen.typed); i < t.typed; i++) {
     if (!blipAt(text, i) || now - seen.blip < BLIP_GAP) continue;
@@ -64,21 +69,27 @@ function frame(seen: { line: number; typed: number; blip: number }, shown: HTMLS
     seen.blip = now;
   }
   seen.typed = t.typed;
-  if (shown) shown.textContent = text.slice(0, t.typed);
-  if (rest) rest.textContent = text.slice(t.typed);
+  box?.querySelectorAll<HTMLElement>("[data-at]").forEach(part => {
+    const at = Number(part.dataset.at), words = part.dataset.text ?? "", n = Math.max(0, Math.min(words.length, t.typed - at));
+    const [shown, rest] = part.querySelectorAll<HTMLElement>("[data-shown], [data-rest]");
+    if (shown) shown.textContent = words.slice(0, n);
+    if (rest) rest.textContent = words.slice(n);
+    const word = part.closest("[data-kind]") ?? part.querySelector("[data-kind]");
+    if (word) word.toggleAttribute("data-off", n === 0);
+  });
 }
 
 export default function TalkBox() {
   const view = useSyncExternalStore(subscribeTalk, talkView, emptyTalkView);
   const open = view.activeId !== null;
   const panel = useWorldDialog<HTMLDivElement>(open, leave, [], true);
-  const shown = useRef<HTMLSpanElement>(null), rest = useRef<HTMLSpanElement>(null);
+  const lineRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
     if (!open) return;
-    const seen = { line: -1, typed: -1, blip: 0 }, reduced = reducedMotion();
+    const seen = { line: -1, typed: -1, blip: 0, parts: null as Element | null }, reduced = reducedMotion();
     let raf = 0;
-    const loop = () => { raf = requestAnimationFrame(loop); frame(seen, shown.current, rest.current, reduced); };
+    const loop = () => { raf = requestAnimationFrame(loop); frame(seen, lineRef.current, reduced); };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
   }, [open]);
@@ -109,8 +120,14 @@ export default function TalkBox() {
   return <div ref={panel} tabIndex={-1} role="dialog" aria-label={`Talking with ${view.name}`} data-gui-dialog className={styles.talk} data-phase={view.phase}
     data-ready={view.complete || undefined} data-testid="talk-box" onClick={onBox}>
     <Dialogue speaker={title ? `${view.name} · ${title}` : view.name} onContinue={press} continueLabel={last && view.complete ? "Bye" : "Next"}>
-      <p className={styles.line} aria-hidden="true"><span ref={shown} /><span ref={rest} className={styles.rest} /></p>
-      <p className={styles.sr} aria-live="polite">{view.phase === "speaking" ? line : ""}</p>
+      <p ref={lineRef} className={styles.line} aria-hidden="true">
+        {/* Keyed by the line: its spans are new for each, the typing fills them (frame). */}
+        <span key={view.index}>{keywordParts(line).map(p => {
+          const typed = <span data-at={p.at} data-text={p.text}><span data-shown="" /><span data-rest="" className={styles.rest}>{p.text}</span></span>;
+          return p.kind ? <Keyword key={p.at} kind={p.kind} off>{typed}</Keyword> : <span key={p.at}>{typed}</span>;
+        })}</span>
+      </p>
+      <p className={styles.sr} aria-live="polite">{view.phase === "speaking" ? plainLine(line) : ""}</p>
     </Dialogue>
   </div>;
 }

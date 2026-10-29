@@ -35,6 +35,10 @@ body, [data-ui-theme="clean"] {
   --ui-paper-edge: #e9dfc9;
   --ui-paper-ink: #2f2a22;
   --ui-stamp: #c4513d;
+  /* A keyword in a line (the kit's Keyword): its word and its little icon. */
+  --ui-word-fish: #2f74c0;
+  --ui-word-bug: #3f8f3a;
+  --ui-word-coin: #b07a0c;
   --ui-stage: radial-gradient(ellipse 24% 4.5% at 50% 87%, rgb(0 0 0 / 0.17), rgb(0 0 0 / 0.07) 55%, transparent 100%),
     linear-gradient(180deg, #ffffff 0%, #ffffff 60%, #f5f5f5 84%, #eeeeee 100%);
 }

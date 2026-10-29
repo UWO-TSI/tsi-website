@@ -3,8 +3,8 @@
  * David's v2 review): you report to Alice at HQ and she runs the visit. A beat at a time: she says its lines (by key,
  * lines.ts WREN_LINES) in the dialogue box, a card or overlay may open, then the beat waits for what you do. Order: the
  * lore (an overlay: the island, the Founder, the gatherings), your island ID (she asks, prints and stamps it), coins and
- * gems (each icon flies to its place on screen), the gatherings' check-in, the menu, mail and minimap (the same), the
- * keyboard tour (press along), then Esc for real. Moving it, cutting a beat or adding one is a change here only.
+ * gems (each icon flies to its place on screen), the gatherings' check-in, the keyboard tour (press along; each key
+ * brings its part of the screen in), then Esc for real. Moving it, cutting a beat or adding one is a change here only.
  *
  * Beats wait for one thing each (HqEvent):
  *   wren     E at the front desk (Alice behind it)
@@ -43,11 +43,8 @@ export const HQ_SCRIPT: readonly HqBeat[] = [
   { id: "gems", say: ["gems"], card: "fly:gems", wait: "flown" },
   // The gatherings' check-in code.
   { id: "events", say: ["events"], card: "checkin", wait: "checkin" },
-  // The menu, mail and the minimap, each flying to its place.
-  { id: "menuFly", say: ["menuFly"], card: "fly:menu", wait: "flown" },
-  { id: "mail", say: ["mail"], card: "fly:mail", wait: "flown" },
-  { id: "minimap", say: ["minimap"], card: "fly:minimap", wait: "flown" },
-  // The keys, on a keyboard you press along on.
+  // The keys, on a keyboard you press along on: each press brings its part of your screen in (the minimap, the bag, the
+  // menu's mail...), so the menu, mail and minimap no longer fly in beats of their own (David's v3 review).
   { id: "tour", say: ["tour"], card: "tour", wait: "tour" },
   // Esc for real.
   { id: "esc", say: ["menu"], wait: "esc" },

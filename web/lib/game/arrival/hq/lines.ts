@@ -44,21 +44,17 @@ export const WREN_LINES: Readonly<Record<string, readonly string[]>> = {
     "Remember those gatherings out in the world? Each one has a check-in code at the door.",
     "Scan it, and the awards and experience land on your account.",
   ],
-  // A few things on your screen, each flying to its place.
-  menuFly: ["A few things you'll use every day. Your menu: the map, your quests, your bag, your friends. It's all in there."],
-  mail: ["Your mail. Letters from HQ and your friends. Mostly from me, sorry in advance."],
-  minimap: ["And your minimap, up in the corner. It shows what's around you."],
-  // The keyboard tour opens after this.
-  tour: ["Now your keys. I'll show you on the keyboard, and you press along."],
+  // The keyboard tour opens after this: each key you press brings its part of your screen in.
+  tour: ["Now your keys. Press each one as it lights up, and watch your screen fill in."],
   // Esc for real. `{esc}`: the key, or the menu button on a touch screen.
   menu: [
     "Last thing, then you're free. {esc}",
   ],
   // The visit's end, Bram's tour already done: your first catch to Juno at the museum (m1). Things in HQ to look at.
+  // Her look-round-HQ line (the notice board, the trophy case, the Founder's desk) is out until later (David's playtest).
   farewell: [
     "That's your menu. It's there whenever you need it.",
     "That's you registered. Bring your first catch to Juno at the museum. She'll show you round.",
-    "Before you go, have a look round HQ. The notice board has what the island's working on, the trophy case has the week's biggest catches, and the Founder's desk is in the back corner.",
     "Oh, and you'll want more than a rod. Odile has a spare net and Pim always has a shovel. Ask them.",
     "[happy] Welcome to Tethos Island, {name}.",
   ],
@@ -66,7 +62,6 @@ export const WREN_LINES: Readonly<Record<string, readonly string[]>> = {
   farewellTour: [
     "That's your menu. It's there whenever you need it.",
     "[happy] That's you sorted, {name}. Welcome to Tethos Island.",
-    "Have a look round HQ before you go. The notice board has what the island's working on, the trophy case has the week's biggest catches, and the Founder's desk is in the back corner.",
     "Bram's waiting for you outside. He'll show you the rest of the island.",
     "And once you've a first catch, bring it to Juno at the museum. She'll show you round.",
   ],
@@ -84,9 +79,6 @@ export const HQ_TRACKER: Readonly<Record<string, string>> = {
   coins: "Find out about coins",
   gems: "Find out about gems",
   events: "Find out about check-ins",
-  menuFly: "Find your menu",
-  mail: "Find your mail",
-  minimap: "Find your minimap",
   tour: "Learn the keys",
   esc: "Open the menu ({esc})",
 };
@@ -97,7 +89,7 @@ export const LORE_CARD = {
   pages: [
     { title: "Tethos Island", text: "Far out past the veil, where no map reaches, the Founder found this island." },
     { title: "Open to everyone", text: "The Founder didn't keep it. The island was opened to anyone who washes ashore: to fish, dig, build a home, and find each other." },
-    { title: "The gatherings", text: "Tethos also holds gatherings in person, out in the world, like GENESIS. Go to one and you bring back limited awards, and the experience that levels you up." },
+    { title: "The gatherings", text: "Tethos also holds gatherings in person, out in the world, like GENESIS. Go to one and you bring back limited awards, and plenty of experience: they're a great way to level up." },
   ],
   next: "Next",
   done: "Got it",
@@ -107,13 +99,14 @@ export const LORE_CARD = {
 export const FLY_CARDS = {
   coins: { name: "Coins", text: "For things on the island" },
   gems: { name: "Gems", text: "For rare items and real merch" },
-  menu: { name: "Menu", text: "Everything, in one place" },
-  mail: { name: "Mail", text: "Letters from HQ and friends" },
-  minimap: { name: "Minimap", text: "What's around you" },
 } as const;
 export type FlyTarget = keyof typeof FLY_CARDS;
 
-/** Your island ID (the front desk): Alice asks, prints it and stamps it. Only existing profile fields; your world name only. */
+/**
+ * Your island ID (the front desk): Alice asks, prints it and stamps it. Only existing profile fields, ones that mean
+ * something to anyone, in the club or not (David's playtest: "ask for stuff that matters"): your world name, your
+ * birthday (private), where you're from (`hometown`) and a line about you (`bio`). Your world name only.
+ */
 export const ID_CARD = {
   eyebrow: "HQ front desk",
   title: "Your island ID",
@@ -125,20 +118,23 @@ export const ID_CARD = {
   nameHint: "The only name anyone sees here.",
   birthday: "Birthday",
   birthdayHint: "Optional. Only HQ sees it.",
-  spirit: "Spirit animal",
-  spiritHint: "Optional. Anything goes.",
-  spiritNone: "Still deciding",
-  since: "Resident since",
+  from: "From",
+  fromHint: "Optional. Where you call home.",
+  fromSample: "Your hometown",
+  about: "About you",
+  aboutHint: "Optional. One line about you, on your profile.",
+  aboutSample: "Say hi in a line",
+  /** An empty row on the printed card. */
+  blank: "·",
   code: "Friend code",
   /** No account to issue one for (signed out, a preview). */
   codeLater: "Issued once you're signed in",
   print: "Print my ID",
   printing: "Printing…",
   stamp: "Resident",
-  edit: "Edit",
   done: "Done",
-  /** The save didn't take: said on the card, and Done still works. */
-  unsaved: "HQ couldn't save that just now. Edit to try again.",
+  /** The save didn't take: said under the card, and Done still works. */
+  unsaved: "HQ couldn't save that just now. Your card's still yours.",
 } as const;
 
 /** The check-in card: where a gathering's check-in code goes (the existing flow: the door's QR, lib/portal/checkIn.ts). */
@@ -151,7 +147,7 @@ export const CHECKIN_CARD = {
     "Scan it with your phone. It opens {host}/student/check-in.",
     "You're checked in. Your awards and experience land on your account.",
   ],
-  note: "Only real gatherings level you up.",
+  note: "Gatherings in person are a great way to level up.",
   done: "Got it",
 } as const;
 

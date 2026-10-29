@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useMemo } from "react";
 import { toast } from "@/components/gui";
 import { beginTalk, onTalkScript, startTalk, talkStore } from "@/lib/game/residentTalk";
+import { pauseGame } from "@/lib/game/escMenu";
 import { fillName, parseTalkLine } from "@/lib/content/talk";
 import { itemIcon } from "@/lib/game/toolWheel";
 import type { TrackedQuest } from "@/lib/game/questTracker";
@@ -98,8 +99,17 @@ export function useHqOnboarding(w: HqWorld, dev: URLSearchParams | null) {
     return () => window.removeEventListener("tsi:peaceful-got", got);
   }, []);
 
-  // The Esc menu, wherever you open it.
-  useEffect(() => { if (w.menuOpen) hqEvent("esc"); }, [w.menuOpen]);
+  // The Esc menu, wherever you open it; open already as the beat comes round counts too.
+  const escBeat = !!visit && !visit.done && HQ_SCRIPT[visit.beat]?.wait === "esc";
+  useEffect(() => { if (w.menuOpen && escBeat) hqEvent("esc"); }, [w.menuOpen, escBeat]);
+  // Esc pressed while she's still saying "Press Esc": the dialogue box takes Esc to close itself, so the menu opens too
+  // (David's playtest: the press didn't register).
+  useEffect(() => {
+    if (!escBeat) return;
+    const down = (e: KeyboardEvent) => { if (e.key === "Escape" && talkStore.active?.script === "hq") window.setTimeout(pauseGame, 0); };
+    window.addEventListener("keydown", down, true);
+    return () => window.removeEventListener("keydown", down, true);
+  }, [escBeat]);
 
   // Alice says the beat's lines once you're at HQ with nothing over the room.
   // Bram's tour still on (HQ first): she sends you back out to him.

@@ -29,10 +29,16 @@ export function visitCue(s: HqState, script: readonly HqBeat[] = HQ_SCRIPT, end:
   return card ? { kind: "card", card } : null;
 }
 
-/** What moves it: her lines said ("said"), or what a beat waits for. Anything else changes nothing. A new state. */
+/**
+ * What moves it: her lines said ("said"), or what a beat waits for. Anything else changes nothing. A new state. A beat
+ * with no card takes its event early, while she's still saying it: "Press Esc" pressed before her line is done counts
+ * (David's playtest: the press was lost, and you had to press it again).
+ */
 export function visitEvent(s: HqState, e: HqEvent | "said", script: readonly HqBeat[] = HQ_SCRIPT): HqState {
   if (s.done) return s;
   if (s.stage === "say") {
+    const b = script[s.beat];
+    if (b && !b.card && e === b.wait) { const beat = s.beat + 1; return { beat, stage: opening(beat, script), done: false }; }
     if (e !== "said") return s;
     return s.beat >= script.length ? { ...s, done: true } : { ...s, stage: "wait" };
   }

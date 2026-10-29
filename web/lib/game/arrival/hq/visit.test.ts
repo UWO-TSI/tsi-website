@@ -21,7 +21,7 @@ function playThrough() {
 }
 
 describe("the HQ visit with Alice (row 312)", () => {
-  it("runs in the v2 review's order: report, the lore, your ID, coins and gems, check-ins, menu, mail, minimap, the keys, Esc, goodbye", () => {
+  it("runs in the v3 review's order: report, the lore, your ID, coins and gems, check-ins, the keys (each bringing in its part of the screen), Esc, goodbye", () => {
     expect(playThrough().seen).toEqual([
       "wait:wren",
       "say:welcome", "card:lore", "wait:lore",
@@ -29,14 +29,20 @@ describe("the HQ visit with Alice (row 312)", () => {
       "say:idDone+coins", "card:fly:coins", "wait:flown",
       "say:gems", "card:fly:gems", "wait:flown",
       "say:events", "card:checkin", "wait:checkin",
-      "say:menuFly", "card:fly:menu", "wait:flown",
-      "say:mail", "card:fly:mail", "wait:flown",
-      "say:minimap", "card:fly:minimap", "wait:flown",
       "say:tour", "card:tour", "wait:tour",
       "say:menu", "wait:esc",
       "say:farewell",
     ]);
     expect(playThrough().s.done).toBe(true);
+  });
+
+  it("takes Esc pressed while she's still saying \"Press Esc\" (David's playtest: it was lost), but never a card's event early", () => {
+    const esc = HQ_SCRIPT.findIndex(b => b.wait === "esc");
+    const saying = { beat: esc, stage: "say" as const, done: false };
+    expect(visitEvent(saying, "esc")).toEqual({ beat: esc + 1, stage: "say", done: false });
+    const lore = HQ_SCRIPT.findIndex(b => b.wait === "lore");
+    const loreSaying = { beat: lore, stage: "say" as const, done: false };
+    expect(visitEvent(loreSaying, "lore")).toBe(loreSaying);
   });
 
   it("is where Bram's tour hands you off: his last line sends you to Alice at HQ", () => {
@@ -98,11 +104,10 @@ describe("the HQ visit with Alice (row 312)", () => {
     expect(WREN_LINES.farewellTour.join(" ")).toMatch(/Bram's waiting for you outside/);
   });
 
-  it("points you at what's in HQ to look at, and keeps main-quest's Juno line in both farewells", () => {
+  it("keeps main-quest's Juno line in both farewells, and leaves the look round HQ for later (David's playtest)", () => {
     for (const k of ["farewell", "farewellTour"]) {
       const said = WREN_LINES[k].join(" ");
-      expect(said, k).toMatch(/notice board/);
-      expect(said, k).toMatch(/trophy case/);
+      expect(said, k).not.toMatch(/notice board|trophy case/);
       expect(said, k).toMatch(/bring it to Juno at the museum|Bring your first catch to Juno at the museum/);
     }
   });

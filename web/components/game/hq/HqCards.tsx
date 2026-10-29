@@ -4,10 +4,10 @@
  * The HQ visit's cards (row 312, specs/hq-onboarding.md), from the GUI kit over the room: where a gathering's check-in
  * code goes (the existing flow: the QR at the door), the Founder's plaque (blank until David writes it), the lore
  * overlay (the island, a page at a time, over a dimmed room) and the fly card (an icon up in the middle, then off to
- * its place on screen; David's v2 review). Your island ID is IdCard.tsx. Copy: lib/game/arrival/hq/lines.ts (drafts).
+ * its place on screen; David's v2 review: coins and gems). Your island ID is IdCard.tsx. Copy: lib/game/arrival/hq/lines.ts (drafts).
  */
 import { useState } from "react";
-import { CalendarCheck, Landmark, Mail, Map as MapIcon, Menu, QrCode } from "lucide-react";
+import { CalendarCheck, Landmark, QrCode } from "lucide-react";
 import { Button, Sheet } from "@/components/gui";
 import { DarkButton, FlyIn, Spotlight } from "@/components/gui/flat";
 import { CurrencyIcon } from "@/components/economy/Amount";
@@ -49,21 +49,16 @@ export function LoreOverlay({ open, onDone }: { open: boolean; onDone: () => voi
     footer={<DarkButton onClick={next} autoFocus data-testid="hq-lore-next">{last ? LORE_CARD.done : LORE_CARD.next}</DarkButton>} />;
 }
 
-const FLY_ICON: Record<FlyTarget, React.ReactNode> = {
-  coins: <CurrencyIcon size={64} />, gems: <CurrencyIcon currency="gems" size={64} />,
-  menu: <Menu size={52} aria-hidden />, mail: <Mail size={52} aria-hidden />, minimap: <MapIcon size={52} aria-hidden />,
-};
+const FLY_ICON: Record<FlyTarget, React.ReactNode> = { coins: <CurrencyIcon size={64} />, gems: <CurrencyIcon currency="gems" size={64} /> };
 /** Where each lives on screen (forced on while it flies there: DefaultIslandWorld). */
-const FLY_TO: Record<FlyTarget, readonly string[]> = {
-  coins: ['[data-hud-slot="coins"]', "[data-hud-right]"], gems: ['[data-hud-slot="coins"]', "[data-hud-right]"], menu: ['[data-testid="menu-dock"]'],
-  mail: ['[data-testid="menu-dock"] [aria-label^="Mail"]', '[data-testid="menu-dock"]'], minimap: ['[aria-label="Minimap"]', "[data-hud-right]"],
-};
+const FLY_TO: Record<FlyTarget, readonly string[]> = { coins: ['[data-hud-slot="coins"]', "[data-hud-right]"], gems: ['[data-hud-slot="gems"]', "[data-hud-right]"] };
 const FLY_SOUND = { pop: ["blip3", 1.3], fly: ["blip2", 1.5], land: ["blip4", 1.4] } as const;
 
 /**
  * David's v2 review: "the coin icon pops in screen and screen darkens a lil and the coin moves to the coin slot and
  * same with gems ... same for things like menu, mailbox, and minimap". The kit's FlyIn: up in the middle with its name
- * and what it's for, then off to its place on your screen, which rings once.
+ * and what it's for, then off to its place on your screen, which rings once. The menu, mail and minimap come in with
+ * their keys in the keyboard tour now (KeyboardTour, the v3 review).
  */
 export function FlyCard({ target, onDone }: { target: FlyTarget | null; onDone: () => void }) {
   if (!target) return null;

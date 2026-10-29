@@ -35,6 +35,31 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 4: David's v3 review and his playtest (2026-10-29, verbatim)
+
+Review of round 3. Approved: v3-arrow, v3-wharf, v3-barrel, v3-currency, v3-hudfly, v3-lore, v3-farewell.
+- v3-sights (approved, note): "i want you to use simple 2d icon for fish bug word and make it color and shake a lil"
+- v3-checkin (approved, note; the coordinator answers it): "yeah and is it possible to make them each a unique qr that they keep themselves that we can scan as well, and they can easilty connect to their apple wallet from their c omputer, check if feasible first"
+- v3-dock (redo): "ok so for tutorial, when you just land, the dock will look slightly differnt because youre doing tutorial and you have to learn to jump over box, and need to learn how to jump dash as well, but once you walk into hq, the game auto clears up tutorial dock and resets it with the proper dock after"
+- v3-id (redo): "the id overlay needs to be redesigned, the card looks bad, should show character head shot. like the card itself is the overlay and you can hover and it tilts and button bottom that confirms it"
+- v3-keys (redo): "i dont like that white card, just keep the keys there, and whever they press the keys they go to the next one and i want it so that its smaller keyboard ui but pressing it the mini map, the back pack stuff like that begins popping in the ui one by one"
+- v3-kit (redo, no note).
+
+His playtest of round 3 (signed out, dev server):
+1. "alice the printing of id still horrible, the spirit animal is useless ask for stuff that matters"
+2. "when coins and gems go to top right it doesnt show on ui and the quest ui is there, quest ui should dissapear for this part, the coins and gems should go up there and click into place for the ui and gently fade away"
+3. "dont say only real gatherings level you up, these in person events are a great way to level up"
+4. "when bram does the hop over box, i did but it doesnt register so i have to do it again"
+5. "alice when ask to press esc it glitches sometimes and doesnt register"
+6. "The part where she says look around should be edited for later" (taken out for now; bring Alice's look-around-HQ line back later; Juno's line stays)
+7. "make showing off the 3 main building make it so theres camera movement between them" and "same wit hrod shop and stuff at wharf"
+8. "also when engaging in convo with npc and you happen to be like in their face it should auto take a step back on your character just minor detail things"
+9. Double prompt: "Tab Hold for your tools" and "Tab Take out your fishing rod" at once (one prompt only; the tutorial's chip wins).
+10. "this tutorial should show up when the fish bar pops up and should be less words"
+11. "these barral and crate infront of the sell fish shop should be removed"
+12. "sell for fish doesnt work" (signed out, no database: make the dev path sell against the in-memory store; production unchanged).
+Not ours: the creator's water and hair; casting toward the cursor; the reel panel's how-to text.
+
 ## Round 3: David's v2 review (2026-10-27, verbatim)
 
 1. arrow (approved): "make arrow smaller slightly closer to you"

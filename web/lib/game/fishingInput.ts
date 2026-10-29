@@ -31,16 +31,8 @@ export const FISHING_HINTS: Record<CastDevice, { charge: string; tip: string; ho
   touch: { charge: "Keep holding, lift at the gold tip", tip: "Lift your finger at the tip for a max cast", hook: "Tap to hook it", reel: "Hold to reel →, lift to ease ←" },
 };
 
-/** The first reel's card (t-catch): what to hold, on the device that cast. DRAFTS for David. */
-export const REEL_TEACH = {
-  title: "Hold to reel",
-  body: {
-    key: "Hold Space and the green bar slides right. Let go and it drifts back. Keep the fish inside the bar to fill the line.",
-    mouse: "Hold the mouse button and the green bar slides right. Let go and it drifts back. Keep the fish inside the bar to fill the line.",
-    touch: "Hold your finger down and the green bar slides right. Lift it and the bar drifts back. Keep the fish inside the bar to fill the line.",
-  } satisfies Record<CastDevice, string>,
-  start: "This one won't get away. Hold to start.",
-} as const;
+/** The first reel's chip (t-catch): three words, the key or the press drawn beside them (David's playtest: "less words"). */
+export const REEL_TEACH = "Hold to reel";
 
 /** Track each input independently so releasing Space cannot release a held pointer. */
 export function bindFishingInput({ onHold, onCancel, onPause, onPointerFocus, initialInput, windowTarget = window, documentTarget = document }: {

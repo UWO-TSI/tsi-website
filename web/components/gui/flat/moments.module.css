@@ -23,13 +23,29 @@
 .dots i[data-done] { background: var(--ui-quiet); }
 .dots i[data-on] { background: var(--ui-ink); transform: scale(1.3); }
 
-/* The keyboard: white keys on the well, a hairline foot for depth; the lit key ink with the marker's glow. */
-.board { --u: min(44px, calc((100vw - 104px) / 15.5)); display: grid; gap: calc(var(--u) * 0.12); padding: calc(var(--u) * 0.22); border-radius: 16px; background: var(--ui-well); }
-.row { display: flex; gap: calc(var(--u) * 0.12); }
+/* KeyPrompt: no panel; low in the middle above the menu's dock, a small dark cue over bare keys, a quiet Skip. */
+.keysLayer { position: fixed; left: 0; right: 0; bottom: calc(var(--hud-floor, 16px) + 96px); z-index: 60; display: grid; justify-items: center; padding: 0 16px;
+  pointer-events: none; font-family: var(--gui-font); color: var(--ui-ink); }
+.keys { display: grid; justify-items: center; gap: 10px; outline: none; pointer-events: auto; animation: rise 0.26s cubic-bezier(0.2, 0.9, 0.3, 1.12) both; }
+.cue { display: flex; align-items: center; gap: 10px; margin: 0; padding: 7px 8px 7px 14px; border-radius: 999px; background: var(--ui-ink); color: var(--ui-accent-ink);
+  box-shadow: 0 8px 22px rgb(var(--ui-shade) / 0.22); }
+.cueMain { display: flex; align-items: center; gap: 7px; font: 800 14px/1.2 var(--gui-font); animation: rise 0.24s ease both; }
+.cueNote { font: 600 13px/1.2 var(--gui-font); color: var(--ui-hint); }
+.cueMain kbd { display: inline-grid; place-items: center; min-width: 26px; height: 24px; padding: 0 7px; box-sizing: border-box; border-radius: 6px; background: var(--ui-card); color: var(--ui-ink);
+  box-shadow: inset 0 -2px 0 var(--ui-line-strong); font: 800 12px/1 var(--gui-font); }
+.cue .dots { margin: 0 4px 0 2px; }
+.cue .dots i { width: 6px; height: 6px; background: var(--ui-ink-2); }
+.cue .dots i[data-done] { background: var(--ui-quiet); }
+.cue .dots i[data-on] { background: var(--ui-accent-ink); }
+.keys > button { padding: 4px 12px; min-height: 0; background: var(--ui-card); box-shadow: 0 4px 12px rgb(var(--ui-shade) / 0.16); }
+
+/* The keyboard: small bare white keys (no case), a hairline foot and a soft shadow so they read over the game; the lit key ink with the marker's glow. */
+.board { --u: min(30px, calc((100vw - 48px) / 15.5)); display: grid; gap: calc(var(--u) * 0.14); }
+.row { display: flex; gap: calc(var(--u) * 0.14); }
 .key {
   position: relative; overflow: hidden; box-sizing: border-box; display: grid; place-items: center; height: var(--u);
-  width: calc(var(--u) * var(--w, 1) + var(--u) * 0.12 * (var(--w, 1) - 1)); border-radius: 9px; background: var(--ui-card);
-  box-shadow: inset 0 -3px 0 var(--ui-line-strong); color: var(--ui-ink-2); font: 600 calc(var(--u) * 0.3)/1 var(--gui-font);
+  width: calc(var(--u) * var(--w, 1) + var(--u) * 0.14 * (var(--w, 1) - 1)); border-radius: 7px; background: var(--ui-card);
+  box-shadow: inset 0 -3px 0 var(--ui-line-strong), 0 3px 8px rgb(var(--ui-shade) / 0.2); color: var(--ui-ink-2); font: 700 calc(var(--u) * 0.34)/1 var(--gui-font);
   transition: transform 0.09s ease-out, background 0.2s ease-out, color 0.2s ease-out;
 }
 .key > b { position: relative; font-weight: inherit; }
@@ -39,7 +55,7 @@
 .key[data-lit][data-down] { box-shadow: inset 0 -1px 0 var(--ui-accent-deep); }
 .key[data-won] { z-index: 1; background: var(--ui-ink); color: var(--ui-accent-ink); animation: won 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
 .fill { position: absolute; inset: 0; transform-origin: left; background: var(--ui-marker); }
-@keyframes lit { 0%, 100% { outline: 3px solid var(--ui-marker); outline-offset: 1px; } 50% { outline: 6px solid var(--ui-marker); outline-offset: 2px; } }
+@keyframes lit { 0%, 100% { outline: 2px solid var(--ui-marker); outline-offset: 1px; } 50% { outline: 5px solid var(--ui-marker); outline-offset: 1px; } }
 @keyframes won { 0% { transform: scale(1); } 45% { transform: scale(1.2); } 100% { transform: scale(1); } }
 
 /* FlyIn: the icon on a white disc, its name under it; off to its slot, the slot rings. */
@@ -88,14 +104,51 @@
 /* PrintedCard: paper, the one paper thing here; a slot above it, the card sliding out, the stamp coming down. */
 .printed { position: relative; display: grid; justify-items: center; width: min(372px, calc(100vw - 48px)); }
 .slot { position: relative; z-index: 2; width: 100%; height: 30px; border-radius: 14px; background: var(--ui-ink); box-shadow: 0 6px 18px rgb(var(--ui-shade) / 0.2); }
+.slot::after { content: ""; position: absolute; right: 16px; top: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--ui-ink-2); }
+.printed[data-printing] .slot::after { background: var(--ui-marker); animation: blink 0.5s steps(2, jump-none) infinite; }
 .slot i { position: absolute; left: 7%; right: 7%; bottom: 9px; height: 5px; border-radius: 3px; background: var(--ui-ink-2); }
 .printed[data-printing] .slot { animation: whirr 0.16s linear infinite; }
+/* The printer's slot shows while it prints; then the card is just the card. */
+.printed:not([data-printing]) .slot { opacity: 0; transition: opacity 0.4s ease 0.3s; }
+.paperWrap { position: relative; z-index: 1; margin-top: -10px; }
 .paper {
   --w: min(352px, calc(100vw - 64px));
-  position: relative; z-index: 1; margin-top: -10px; width: var(--w); aspect-ratio: 1.586; overflow: hidden; border-radius: 14px;
+  position: relative; z-index: 1; width: var(--w); aspect-ratio: 1.586; overflow: hidden; border-radius: 14px;
   background: var(--ui-paper); color: var(--ui-paper-ink); box-shadow: 0 1px 0 var(--ui-paper-edge), 0 18px 40px rgb(var(--ui-shade) / 0.3);
 }
 .printed[data-printing] .paper { animation: printOut 1.5s cubic-bezier(0.3, 0.1, 0.3, 1) both; }
+/* Held up as the overlay: larger, its type with it. */
+.printed[data-large] { width: min(540px, calc(100vw - 32px)); }
+.printed[data-large] .paper { --w: min(520px, calc(100vw - 48px)); border-radius: 20px; }
+.printed[data-large] .band { padding: 12px 20px; }
+.printed[data-large] .band span { font-size: 17px; }
+.printed[data-large] .band small { font-size: 13px; }
+.printed[data-large] .paperBody { gap: 18px; padding: 18px 20px; }
+.printed[data-large] .rows { gap: 9px; }
+.printed[data-large] .rows dt { font-size: 11px; }
+.printed[data-large] .rows dd { font-size: 17px; }
+.printed[data-large] .rows [data-lead] dd { font-size: 30px; }
+.printed[data-large] .picture { border-radius: 14px; overflow: hidden; }
+.printed[data-large] .slot { height: 40px; border-radius: 18px; }
+.printed[data-large] .slot::after { top: 12px; right: 22px; width: 9px; height: 9px; }
+.printed[data-large] .paperBody { grid-template-columns: 32% 1fr; }
+.printed[data-large] .stamp, .printed[data-large] .stamper { left: auto; right: 5%; bottom: 7%; width: 22%; }
+.printed[data-large] .stamp b { font-size: 10px; }
+.printed[data-large] .stamp small { font-size: 15px; }
+/* Tilt: it leans toward the pointer (CSS vars from PrintedCard), a soft sheen where the light catches it. */
+.paper[data-tilt] { transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.12); will-change: transform; }
+.paper[data-tilt][data-lean] { transition: transform 0.12s ease-out; }
+.sheen { position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: 0; transition: opacity 0.3s ease;
+  background: radial-gradient(circle at var(--sx, 50%) var(--sy, 50%), color-mix(in srgb, var(--ui-card) 60%, transparent), transparent 55%); mix-blend-mode: soft-light; }
+.paper[data-lean] .sheen { opacity: 1; }
+/* A field written on paper: the paper's ink on a dashed write-in line. */
+.paperField { width: 100%; min-width: 0; box-sizing: border-box; padding: 1px 2px 3px; border: 0; border-bottom: 2px dashed var(--ui-paper-edge); border-radius: 0; background: transparent;
+  color: var(--ui-paper-ink); font: inherit; outline: none; }
+.paperField::placeholder { color: var(--ui-paper-ink); opacity: 0.35; }
+.paperField:focus { border-bottom-style: solid; border-bottom-color: var(--ui-paper-ink); }
+/* CardOverlay: no panel; the thing, then its one button. */
+.held { position: relative; display: grid; justify-items: center; gap: 18px; outline: none; animation: rise 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.12) both; }
+.heldAction { display: grid; justify-items: center; gap: 8px; }
 .band { display: flex; align-items: baseline; justify-content: space-between; padding: 9px 14px; background: var(--ui-paper-ink); color: var(--ui-paper); }
 .band span { font: 800 14px/1.2 var(--gui-font); letter-spacing: 0.08em; text-transform: uppercase; }
 .band small { font: 700 11px/1.2 var(--gui-font); letter-spacing: 0.14em; text-transform: uppercase; }
@@ -117,13 +170,32 @@
 .stamp small { font: 800 12px/1.2 var(--gui-font); letter-spacing: 0.1em; text-transform: uppercase; }
 @keyframes printOut { 0% { clip-path: inset(0 0 100% 0); transform: translateY(-62%); } 100% { clip-path: inset(0 0 0 0); transform: none; } }
 @keyframes whirr { 50% { transform: translateY(1px); } }
-@keyframes stamp { 0% { opacity: 0; scale: 2.4; rotate: -26deg; } 60% { opacity: 0.95; scale: 0.92; rotate: -12deg; } 100% { opacity: 0.88; scale: 1; rotate: -14deg; } }
+@keyframes stamp { 0% { opacity: 0; scale: 1.25; } 40% { opacity: 1; scale: 0.96; } 100% { opacity: 0.88; scale: 1; } }
+/* The stamper: a handle on an inked pad; down onto the card, a squash as it hits (at 0.3 s: the mark and the card's
+   give land then), up and away. The new card's gleam after it. */
+.stamp { animation-delay: 0.3s; }
+.stamper { position: absolute; z-index: 4; left: 9%; bottom: 5%; width: 24%; aspect-ratio: 1; pointer-events: none; transform-origin: 50% 100%;
+  animation: stamper 0.95s cubic-bezier(0.45, 0, 0.3, 1) both; }
+.stamper::before { content: ""; position: absolute; left: 36%; right: 36%; bottom: 40%; height: 85%; border-radius: 999px 999px 8px 8px; background: var(--ui-ink);
+  box-shadow: inset -5px 0 0 var(--ui-ink-2); }
+.stamper b { position: absolute; left: 6%; right: 6%; bottom: 10%; height: 32%; border-radius: 12px; background: var(--ui-ink); box-shadow: inset 0 -7px 0 var(--ui-stamp), 0 10px 24px rgb(var(--ui-shade) / 0.3); }
+.paper[data-stamped] { animation: give 0.34s ease-out 0.3s both; }
+.paper[data-stamped]::after { content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none; translate: -110% 0;
+  background: linear-gradient(105deg, transparent 30%, color-mix(in srgb, var(--ui-card) 75%, transparent) 50%, transparent 70%); animation: gleam 0.9s ease-in-out 0.8s both; }
+@keyframes stamper { 0% { translate: 0 -170%; rotate: -10deg; opacity: 0; } 18% { opacity: 1; } 32% { translate: 0 0; rotate: -14deg; scale: 1 1; }
+  40% { translate: 0 2%; scale: 1.04 0.9; rotate: -14deg; } 58% { translate: 0 0; scale: 1 1; opacity: 1; } 100% { translate: 0 -210%; rotate: -4deg; opacity: 0; } }
+@keyframes give { 30% { scale: 0.975; } 100% { scale: 1; } }
+@keyframes gleam { from { translate: -110% 0; } to { translate: 110% 0; } }
+@keyframes blink { 50% { opacity: 0.25; } }
 
 @keyframes pop { 0% { opacity: 0; transform: scale(0.2) rotate(-20deg); } 70% { opacity: 1; transform: scale(1.12) rotate(3deg); } 100% { transform: none; } }
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes fade { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
-  .scrim, .spotlight, .lead, .key, .key[data-lit], .key[data-won], .flyDim, .flyIcon, .flyIcon > span, .flyName, .flyRing, .pop, .disc, .ring, .spark,
-  .popEyebrow, .popTitle, .printed[data-printing] .slot, .printed[data-printing] .paper, .stamp { animation: none; transition: none; }
+  .scrim, .spotlight, .lead, .keys, .cueMain, .key, .key[data-lit], .key[data-won], .flyDim, .flyIcon, .flyIcon > span, .flyName, .flyRing, .pop, .disc, .ring, .spark,
+  .popEyebrow, .popTitle, .printed[data-printing] .slot, .printed[data-printing] .paper, .stamp, .held { animation: none; transition: none; }
+  .paper[data-tilt] { transform: none; }
+  .stamper { display: none; }
+  .paper[data-stamped], .paper[data-stamped]::after, .printed[data-printing] .slot::after { animation: none; }
   .check path { animation: none; stroke-dashoffset: 0; }
 }

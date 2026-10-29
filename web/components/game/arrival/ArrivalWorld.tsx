@@ -35,7 +35,7 @@ import { objectsOf, type Village } from "@/lib/game/villageMap";
 import { navGrid } from "@/lib/game/residentRoutine";
 import { disposeModelMaterials, prepareModel } from "@/lib/game/modelMaterials";
 import { FACE as PFACE, type ParticlePool, type Recipe } from "@/lib/game/fx/particles";
-import { arrivalChanged, arrivalEvent, arrivalRun, readArrival, subscribeArrival, useArrivalPhase } from "@/lib/game/arrival/arrivalStore";
+import { arrivalChanged, arrivalEvent, arrivalRun, dockCleared, readArrival, subscribeArrival, useArrivalPhase, useDockCleared } from "@/lib/game/arrival/arrivalStore";
 import { crossingShot } from "@/lib/game/arrival/sequence";
 import { crossingCamera, type CameraOut, type CrossingPoints } from "@/lib/game/arrival/crossing";
 import { ACTIVE_WORLD_BEND } from "@/lib/game/curvedWorld";
@@ -131,6 +131,8 @@ export default function ArrivalWorld({ v, island, player, dock, held, keys, worl
   const route = routeFor(world);
   const pw = useMemo(() => placeWorld(dock, v), [dock, v]);
   const crates = useMemo(() => crateSpots(route, pw), [route, pw]);
+  // The tutorial dock's box: gone for good once you've walked into HQ.
+  const dressed = !useDockCleared();
   if (!phase) return null;
   const crossing = phase === "clearing" || phase === "crossing";
   const ashore = phase === "landing" || phase === "tutorial";
@@ -140,7 +142,7 @@ export default function ArrivalWorld({ v, island, player, dock, held, keys, worl
   return <>
     {crossing && <CrossingDirector dock={dock} player={player} />}
     {(crossing || early) && <BramAboard dock={dock} />}
-    {(crossing || ashore || early) && <Suspense fallback={null}><Crates spots={crates} /></Suspense>}
+    {(crossing || ashore || early) && dressed && <Suspense fallback={null}><Crates spots={crates} /></Suspense>}
     {early && <WarmCrossing />}
     {ashore && <BramGuide v={v} island={island} player={player} dock={dock} keys={keys} route={route} places={pw} />}
   </>;
@@ -252,7 +254,9 @@ interface Guide {
   /** The walk is over: his last word waits for your collection to close, then he waves and it ends. */
   ending: boolean; waved: boolean;
   /** The camera conversation (a `box` stop): the camera's angles before it, and the building shot's blend (0 none, 1 the shot), where it looks from and at. */
-  cam: { saved: { yaw: number; pitch: number; zoom: number } | null; k: number; pos: THREE.Vector3; look: THREE.Vector3 };
+  cam: { saved: { yaw: number; pitch: number; zoom: number } | null; k: number; pos: THREE.Vector3; look: THREE.Vector3;
+    /** A move between two buildings' shots: where it set off from, when, and which line's shot it's going to. */
+    move: { pos: THREE.Vector3; look: THREE.Vector3; at: number; line: number } };
 }
 const HOP_S = 0.6;
 /** At his stand (or past the last leg): within this he's there and can be talked to. */
@@ -280,10 +284,11 @@ function wayTo(g: Guide, nav: ReturnType<typeof navGrid>, via: readonly Way[], t
 /** Bram in the dialogue box (the camera conversation): his roster look and post. */
 const BRAM_TALKER = { id: "arrival:bram", slug: BRAM.slug, name: BRAM.name, post: "wharf_keeper", seed: 7 };
 /** The building shot: this far from it toward where you stand (m), this high, looking this high up it; the blend's rate (/s). */
-const SHOT = { back: 15, behind: 3, up: 6.5, at: 3, rate: 2.2 } as const;
+/** `glide`: from one building's shot to the next the camera travels this long (s, eased in and out), never cuts (David's playtest). */
+const SHOT = { back: 15, behind: 3, up: 6.5, at: 3, rate: 2.2, glide: 1.8 } as const;
 /** The close-up on him (a `"bram"` shot): this far out toward you, this high, looking at his hands. */
 const CLOSE = { back: 2.6, up: 1.35, at: 1.05, turn: 1.0 } as const;
-const _look = new THREE.Quaternion(), _m = new THREE.Matrix4(), _up = new THREE.Vector3(0, 1, 0);
+const _look = new THREE.Quaternion(), _m = new THREE.Matrix4(), _up = new THREE.Vector3(0, 1, 0), _goal = new THREE.Vector3(), _goalLook = new THREE.Vector3();
 /**
  * The camera conversation each frame (module scope, the react compiler): the two-shot past your shoulder while he
  * talks of himself, the camera out to the building a line names (`shots`), and back where it was when the box closes.
@@ -311,8 +316,14 @@ function converseCamera(f: GuideFrame, stop: ResolvedStop | undefined, dt: numbe
     // A place close by (the wharf's) is framed from just behind him and lower, not from 15 m back through whatever's there.
     const dx = g.x - shot.x, dz = g.z - shot.z, d = Math.hypot(dx, dz) || 1, back = Math.min(SHOT.back, d + SHOT.behind);
     const cx = shot.x + dx / d * back, cz = shot.z + dz / d * back;
-    g.cam.pos.set(cx, island.ground(cx, cz) + SHOT.up * Math.min(1, back / SHOT.back), cz);
-    g.cam.look.set(shot.x, island.ground(shot.x, shot.z) + SHOT.at, shot.z);
+    _goal.set(cx, island.ground(cx, cz) + SHOT.up * Math.min(1, back / SHOT.back), cz);
+    _goalLook.set(shot.x, island.ground(shot.x, shot.z) + SHOT.at, shot.z);
+    // Coming out of the two-shot it frames the building at once (k eases the camera there); from one building to the
+    // next, the frame itself travels: a continuous move, museum to café to shop.
+    const mv = g.cam.move;
+    if (mv.line !== t!.index) { mv.line = t!.index; mv.at = g.cam.k > 0 ? now : -Infinity; mv.pos.copy(g.cam.pos); mv.look.copy(g.cam.look); }
+    const u = Math.min(1, (now - mv.at) / SHOT.glide), e = u * u * (3 - 2 * u);
+    g.cam.pos.lerpVectors(mv.pos, _goal, e); g.cam.look.lerpVectors(mv.look, _goalLook, e);
   }
   g.cam.k = Math.min(1, Math.max(0, g.cam.k + (shot ? 1 : -1) * SHOT.rate * dt));
   if (g.cam.k > 0) {
@@ -354,7 +365,7 @@ function guideFrame(f: GuideFrame, dt: number) {
     if (!arrivalRun.tutorial) arrivalRun.tutorial = newTutorial(now);
     const s = arrivalRun.tutorial;
     const before = `${s.stop}:${s.stage}`;
-    for (const cue of stepTutorial(s, { now, player: { x: p.x, z: p.z }, bram: g, stops, events: arrivalRun.events.splice(0), end: f.end })) {
+    for (const cue of stepTutorial(s, { now, player: { x: p.x, z: p.z }, bram: g, stops, events: arrivalRun.events.splice(0), end: f.end, dockCleared: dockCleared() })) {
       if (cue.kind === "say") say(cue.line);
       else if (cue.kind === "converse") startTalk(beginTalk(BRAM_TALKER, cue.lines.map(l => parseTalkLine(fillKeys(l, f.keys))), now, `bram:${cue.stop}`));
       else if (cue.kind === "visit") {
@@ -458,7 +469,7 @@ function BramGuide({ v, island, player, dock, keys, route, places }: {
   const g = useMemo<Guide>(() => {
     const here = stops[Math.min(arrivalRun.tutorial?.stop ?? 0, stops.length - 1)]?.stand;
     return { x: here?.x ?? dock.x, z: here?.z ?? dock.z, y: 0, path: [], leg: 0, goal: "", hop: null, from: { x: 0, z: 0 }, line: "", until: 0, shown: "", mark: false, ending: false, waved: false,
-      cam: { saved: null, k: 0, pos: new THREE.Vector3(), look: new THREE.Vector3() } };
+      cam: { saved: null, k: 0, pos: new THREE.Vector3(), look: new THREE.Vector3(), move: { pos: new THREE.Vector3(), look: new THREE.Vector3(), at: -Infinity, line: -1 } } };
   }, [stops, dock]);
   const end = route.end ? END_LINES[route.end] : undefined;
   // His rod in his hands at the stop that hands it over (`holds`), until the talk's done and it's yours.

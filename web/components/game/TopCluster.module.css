@@ -44,3 +44,7 @@
 @keyframes hudIn { from { opacity: 0; transform: translateY(-14px) scale(0.96); } }
 @keyframes hudOut { to { opacity: 0; transform: translateY(-10px); } }
 @media (prefers-reduced-motion: reduce) { .cluster[data-clean] [data-flash], .cluster[data-clean] [data-flash="out"] { animation-duration: 0.01s; } }
+/* Alice's currency showcase: the slot comes in empty, the icon clicks into it (FlyIn's data-landed), then it fades away. */
+.chip[data-slot]:not([data-landed]) .coin { opacity: 0; transform: scale(0.4); }
+.chip[data-slot] .coin { display: inline-grid; transition: opacity 0.12s ease, transform 0.36s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.chip[data-slot][data-landed] { animation: chipPing 0.9s ease-out; }

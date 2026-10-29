@@ -205,3 +205,23 @@ describe("talking to residents: the routine holds and resumes where it left off"
     expect(frames * dt).toBeCloseTo(6 / CATCH_UP, 0);
   });
 });
+
+describe("a step back as a talk opens, in their face (David's playtest)", () => {
+  it("only when too close, straight away from them, to a comfortable distance", async () => {
+    const { TALK_COMFORT, stepBack } = await import("./residentTalk");
+    const them = { x: 10, z: 5 };
+    expect(stepBack({ x: 10 + TALK_COMFORT, z: 5 }, them)).toBeNull();
+    expect(stepBack({ x: 10, z: 5 + 1.5 }, them)).toBeNull();
+    const to = stepBack({ x: 10.3, z: 5.4 }, them)!;
+    expect(Math.hypot(to.x - them.x, to.z - them.z)).toBeCloseTo(TALK_COMFORT, 5);
+    // The same way as you stood from them.
+    expect(Math.atan2(to.x - them.x, to.z - them.z)).toBeCloseTo(Math.atan2(0.3, 0.4), 5);
+  });
+  it("half a step where the full one doesn't fit, none where neither does", async () => {
+    const { TALK_COMFORT, stepBack } = await import("./residentTalk");
+    const them = { x: 0, z: 0 }, me = { x: 0, z: 0.5 };
+    const half = stepBack(me, them, (_x, z) => z < 1)!;
+    expect(half.z).toBeCloseTo((TALK_COMFORT + 0.5) / 2, 5);
+    expect(stepBack(me, them, () => false)).toBeNull();
+  });
+});

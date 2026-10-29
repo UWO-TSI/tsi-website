@@ -829,8 +829,8 @@ export function ReelMinigame({
           100% { transform: scale(1); opacity: 1; }
         }
         @keyframes reel-hold {
-          0%, 30%, 100% { transform: translateY(0); box-shadow: 0 3px 0 rgba(74, 64, 52, 0.35); }
-          45%, 85% { transform: translateY(3px); box-shadow: 0 0 0 rgba(74, 64, 52, 0.35); }
+          0%, 30%, 100% { transform: translateY(0); }
+          45%, 85% { transform: translateY(3px); }
         }
         @keyframes reel-heartbeat {
           0%, 100% { box-shadow: 0 0 0 0 rgba(255, 209, 102, 0); }
@@ -850,22 +850,20 @@ export function ReelMinigame({
           </div>
         </div>
       )}
-      {/* The first catch's card (t-catch): what to hold, the press itself drawn held and let go, until you hold. */}
+      {/* The first catch (t-catch): a chip over the bar as it pops up, the key and three words (David's playtest: "less
+          words"), until you hold; the bar waits under it. */}
       {teach && <div ref={teachRef} role="status" data-testid="reel-teach" style={{
-        position: "absolute", inset: 0, zIndex: 2, borderRadius: 12, padding: "10px 16px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6,
-        background: "var(--app-surface, #FFFDF5)", color: "var(--app-ink, #4A4034)", textAlign: "center",
+        position: "absolute", left: "50%", bottom: "calc(100% + 10px)", translate: "-50% 0", zIndex: 2, display: "flex", alignItems: "center", gap: 8, padding: "6px 14px 6px 8px",
+        borderRadius: 999, background: "var(--ui-ink)", color: "var(--ui-accent-ink)", whiteSpace: "nowrap", fontSize: 14, fontWeight: 800,
+        boxShadow: "0 8px 22px rgb(var(--ui-shade) / 0.22)", animation: "reel-slap-in 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)",
       }}>
-        <strong style={{ fontSize: 15 }}>{REEL_TEACH.title}</strong>
-        <span style={{ fontSize: "max(12px, var(--gui-min-text, 0px))", maxWidth: 440, lineHeight: 1.35 }}>{REEL_TEACH.body[teach]}</span>
-        <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 700 }}>
-          {teach === "touch"
-            ? <Hand size={22} aria-hidden style={{ animation: "reel-hold 1.6s ease-in-out infinite", borderRadius: 8 }} />
-            : <>
-              <Keycap aria-hidden="true" style={{ animation: "reel-hold 1.6s ease-in-out infinite" }}>Space</Keycap>
-              <MousePointerClick size={22} aria-hidden style={{ animation: "reel-hold 1.6s ease-in-out infinite 0.2s", borderRadius: 6 }} />
-            </>}
-          <span style={{ color: "var(--app-muted, #635745)", fontWeight: 600 }}>{REEL_TEACH.start}</span>
-        </span>
+        {teach === "touch"
+          ? <Hand size={20} aria-hidden style={{ animation: "reel-hold 1.6s ease-in-out infinite" }} />
+          : <>
+            <Keycap aria-hidden="true" style={{ animation: "reel-hold 1.6s ease-in-out infinite" }}>Space</Keycap>
+            <MousePointerClick size={20} aria-hidden style={{ animation: "reel-hold 1.6s ease-in-out infinite 0.2s" }} />
+          </>}
+        {REEL_TEACH}
       </div>}
       {/* Header: species (or ??? for unknowns — rarity is never shown here).
           Zone chip is always safe to show — you know where you cast. */}

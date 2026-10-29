@@ -79,9 +79,17 @@ export interface TutorialFrame {
   events: readonly TutorialEvent[];
   /** His last word (the route's; END_LINE by default). */
   end?: string;
+  /** The tutorial dock is cleared (arrivalStore dockCleared): its lessons (`dock` stops) are passed over. */
+  dockCleared?: boolean;
 }
 
 const dist = (a: XZ, b: XZ) => Math.hypot(a.x - b.x, a.z - b.z);
+/** `p` is past `at` going the way from `from` to it, and within `across` of that line. */
+export function pastLine(p: XZ, from: XZ, at: XZ, across: number): boolean {
+  const dx = at.x - from.x, dz = at.z - from.z, len = Math.hypot(dx, dz) || 1, ux = dx / len, uz = dz / len;
+  const rx = p.x - at.x, rz = p.z - at.z;
+  return rx * ux + rz * uz >= 0 && Math.abs(rx * uz - rz * ux) <= across;
+}
 function restart(s: TutorialState, now: number) { s.progressAt = now; s.hintAt = -Infinity; s.best = Infinity; }
 
 /** One frame of the walk-along: the cues to draw (lines, a hint, a hand-over, a glyph, the reward, the end), in order. */
@@ -90,6 +98,7 @@ export function stepTutorial(s: TutorialState, f: TutorialFrame): TutorialCue[] 
   const cues: TutorialCue[] = [];
   const talked = f.events.includes("talked");
   for (const e of f.events) if (e === "rodHeld" || e === "cast") { s.rod = true; s.progressAt = f.now; }
+  while (f.dockCleared && s.stage === "await" && f.stops[s.stop]?.dock) s.stop++;
   const stop = f.stops[s.stop];
   if (!stop) { s.done = true; return [{ kind: "reward" }, { kind: "done" }]; }
   const lines = STOP_LINES[stop.id] ?? [];
@@ -156,7 +165,7 @@ export function stepTutorial(s: TutorialState, f: TutorialFrame): TutorialCue[] 
   if (t.kind === "reach") {
     const d = dist(f.player, t.at);
     if (d < s.best - CLOSER * 0.5) { s.best = d; s.progressAt = f.now; }
-    reached = d <= t.radius;
+    reached = t.from ? pastLine(f.player, t.from, t.at, t.radius) : d <= t.radius;
     want = t.hint;
   } else if (t.kind === "catch") { reached = f.events.includes("caught"); want = s.rod ? "cast" : "rod"; }
   else if (t.kind === "hq") { reached = f.events.includes("hqDone"); want = "hq"; }

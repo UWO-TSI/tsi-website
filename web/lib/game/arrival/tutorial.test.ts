@@ -292,6 +292,33 @@ describe("the new world's walk (t-short, t-sell): HQ first, the camera conversat
     go(30, at, ["dashed"]);
     expect([s.stop, s.stage]).toEqual([1, "await"]);
   });
+  it("counts a hop over the box wherever on the dock you land past it (David's playtest: a real hop didn't register)", () => {
+    const stops = resolveRoute(routeFor("new"), { ...WORLD, prop: () => ({ x: 30, z: 30 }) }, { x: 0, z: 0 });
+    const box = stops[0].task;
+    if (box?.kind !== "reach" || !box.from) throw new Error("the new dock's box is a reach past it");
+    // The dock faces +z here: the box at z -0.95, its far side from z -0.33 on.
+    const s = newTutorial(0), go = (p: XZ) => stepTutorial(s, { now: 1, player: p, bram: stops[0].stand, stops, events: [] });
+    s.stage = "task";
+    go({ x: 0.05, z: -1.5 });                    // before the box
+    expect(s.stop).toBe(0);
+    go({ x: 0.7, z: 0.4 });                      // landed beside Bram, well off the old spot's half-metre circle
+    expect([s.stop, s.stage]).toEqual([1, "await"]);
+  });
+  it("passes over the dock's lessons once the dock is cleared (you've been into HQ), and not before", () => {
+    const dock: ResolvedStop[] = [
+      { id: "dockNew", stand: at, via: [], dock: true, box: true },
+      { id: "dash", stand: at, via: [], auto: true, dock: true, task: { kind: "dash", id: "dash" }, box: true }, stops[0],
+    ];
+    const go = (s: TutorialState, dockCleared: boolean) => stepTutorial(s, { now: 1, player: at, bram: at, stops: dock, events: [], dockCleared });
+    const fresh = newTutorial(0);
+    go(fresh, false);
+    expect(fresh.stop).toBe(0);
+    const replay = newTutorial(0);
+    go(replay, true);
+    expect([dock[replay.stop].id, replay.stage]).toEqual(["hqFirst", "await"]);
+    // The real route marks the box and the dash, and nothing after them.
+    expect(routeFor("new").stops.filter(x => x.dock).map(x => x.id)).toEqual(["dockNew", "dash"]);
+  });
   it("the hand-over starts itself after the sale, and with no last word the walk ends as its box closes", () => {
     const keep: ResolvedStop[] = [{ id: "keep", stand: at, via: [], auto: true, holds: "rod", box: true, shots: [null, null, "bram"] }];
     const s = newTutorial(0), go = (now: number, events: TutorialEvent[] = []) => stepTutorial(s, { now, player: at, bram: at, stops: keep, events, end: "" });

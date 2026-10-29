@@ -115,13 +115,20 @@ export default function Arrival({ play, look, askName, touch, keys, onCross, onS
   }, [phase]);
 
   // The tutorial's glyphs (arrivalStore), each once.
+  const glyphSeen = useRef<number | null>(null);
   useEffect(() => {
     const g = arrivalRun.glyph;
-    if (!g || (glyph && glyph.at === g.at)) return;
+    if (!g || g.at === glyphSeen.current) return;
+    glyphSeen.current = g.at;
     setGlyph(g);
+  }, [key]);
+  // Up for its time; meanwhile the island's own prompt for it stands back (David's playtest: two prompts at once).
+  useEffect(() => {
+    if (!glyph) return;
+    arrivalRun.chipUp = true; arrivalChanged();
     const t = window.setTimeout(() => setGlyph(null), GLYPH_MS);
-    return () => window.clearTimeout(t);
-  }, [key, glyph]);
+    return () => { window.clearTimeout(t); arrivalRun.chipUp = false; arrivalChanged(); };
+  }, [glyph]);
 
   const skip = () => {
     const a = arrivalRun.current;

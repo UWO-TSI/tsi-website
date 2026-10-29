@@ -13,6 +13,9 @@ describe("Alice's keyboard tour (the v2 review)", () => {
     expect(steps.map(s => `${s.hold ? "hold" : "press"} ${s.key}`)).toEqual(
       ["hold tab", "hold g", "hold h", "press enter", "press i", "press b", "press j", "press m", "press l"]);
   });
+  it("brings in a part of the screen with every key but the wheels' (the v3 review), each its own", () => {
+    expect(steps.map(s => s.piece ?? "-")).toEqual(["-", "-", "hud", "chat", "bag", "collection", "quests", "map", "mail"]);
+  });
   it("draws every key it asks for on the keyboard", () => {
     const board = new Set(KEYBOARD.flat().map(k => k.key));
     for (const s of steps) expect(board.has(s.key), s.key).toBe(true);

@@ -1,6 +1,7 @@
 /** Economy transport: /api/economy/* by default; in-memory for the dev harness. */
 import { apiCall } from "@/lib/apiClient";
 import type { InventoryView, ShopView, SellEntry, WalletView } from "./service";
+import { localSell, localSellable, offline } from "./localEconomy";
 import type { Reservation } from "./store";
 
 export interface MerchView {
@@ -29,8 +30,10 @@ export const httpEconomyTransport: EconomyTransport = {
   wallet: () => call("wallet", "wallet"),
   shop: () => call("shop", "shop"),
   buy: (item_id, qty, idempotency_key) => call("buy", "purchase", { item_id, qty, idempotency_key }),
-  sellable: () => call("sell", "sellable"),
-  sell: (item_key, qty, idempotency_key) => call("sell", "sale", { item_key, qty, idempotency_key }),
+  // A dev server with no Supabase sells from this browser's record (localEconomy.ts); production never does.
+  sellable: () => call<SellEntry[]>("sell", "sellable").catch(e => (offline(e) ? localSellable() : Promise.reject(e))),
+  sell: (item_key, qty, idempotency_key) => call<{ balance: number; remaining: number; paid: number; replayed: boolean }>("sell", "sale", { item_key, qty, idempotency_key })
+    .catch(e => (offline(e) ? localSell(item_key, qty, idempotency_key) : Promise.reject(e))),
   inventory: () => call("inventory", "inventory"),
   equip: (item_id, equipped) => call("equip", "inventory", { item_id, equipped }),
   dailyGift: () => call("daily-gift", "gift", {}),

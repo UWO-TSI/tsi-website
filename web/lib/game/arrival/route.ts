@@ -28,7 +28,10 @@ type Way = XZ & { hop?: boolean };
 
 export type TutorialTask =
   /** Get to `at` (within `radius`): the dock's crate hop. Bram waits at the end of `wait` (his way over it). */
-  | { kind: "reach"; id: string; at: Place; radius: number; wait?: readonly Waypoint[]; hint: "jump" | "follow" }
+  | { kind: "reach"; id: string; at: Place; radius: number; wait?: readonly Waypoint[]; hint: "jump" | "follow";
+    /** Reached once you're past `at` (the way from the first `wait` point to it), anywhere within `radius` across: a hop
+     *  over the box counts wherever on the dock you land (a spot to stand on missed real hops, David's playtest). */
+    past?: boolean }
   /** Land a fish (the rod is out of the bag by now). */
   | { kind: "catch"; id: string }
   /** Open your collection (B). */
@@ -56,6 +59,8 @@ export interface TutorialStop {
   auto?: boolean;
   /** He has this in his hands through the talk and holds it out while the camera's close on him (a `"bram"` shot: the hand-over of his rod). */
   holds?: "rod";
+  /** A lesson on the tutorial dock's dressing (the box, the dash run): passed over once the dock is cleared (you've been into HQ). */
+  dock?: boolean;
 }
 
 export interface TutorialRoute {
@@ -98,10 +103,10 @@ export function resolvePlace(p: Place, w: PlaceWorld): XZ | null {
 /** A stop with its places resolved (what the tutorial's pure state machine reads). */
 export interface ResolvedStop {
   id: string; stand: XZ; via: Way[]; gives?: "rod";
-  task?: { kind: "reach"; id: string; at: XZ; radius: number; wait: Way[]; hint: "jump" | "follow" } | { kind: "catch" | "bag" | "hq" | "dash" | "sell"; id: string };
+  task?: { kind: "reach"; id: string; at: XZ; radius: number; wait: Way[]; hint: "jump" | "follow"; from?: XZ } | { kind: "catch" | "bag" | "hq" | "dash" | "sell"; id: string };
   /** The camera conversation (the route's `talk: "box"`): his lines go in the dialogue box, a line framing `shots[i]`. */
   box?: boolean; shots?: (XZ | null | "bram")[];
-  auto?: boolean; holds?: "rod";
+  auto?: boolean; holds?: "rod"; dock?: boolean;
 }
 
 /** The route in world XZ. A stop or waypoint its world can't place falls back to the last place before it. */
@@ -113,10 +118,13 @@ export function resolveRoute(route: TutorialRoute, w: PlaceWorld, origin: XZ): R
     const via = way(s.via), stand = at(s.stand);
     const t = s.task;
     const task: ResolvedStop["task"] = !t ? undefined
-      : t.kind === "reach" ? { kind: "reach", id: t.id, wait: way(t.wait), at: at(t.at), radius: t.radius, hint: t.hint }
+      : t.kind === "reach" ? (() => {
+        const wait = way(t.wait), to = at(t.at);
+        return { kind: "reach" as const, id: t.id, wait, at: to, radius: t.radius, hint: t.hint, ...(t.past && wait[0] ? { from: { x: wait[0].x, z: wait[0].z } } : {}) };
+      })()
       : { kind: t.kind, id: t.id };
     const box = route.talk === "box";
-    return { id: s.id, stand, via, ...(s.gives ? { gives: s.gives } : {}), ...(task ? { task } : {}), ...(s.auto ? { auto: true } : {}), ...(s.holds ? { holds: s.holds } : {}),
+    return { id: s.id, stand, via, ...(s.gives ? { gives: s.gives } : {}), ...(task ? { task } : {}), ...(s.auto ? { auto: true } : {}), ...(s.holds ? { holds: s.holds } : {}), ...(s.dock ? { dock: true } : {}),
       ...(box ? { box, ...(s.shots ? { shots: s.shots.map(p => (p === "bram" ? p : p ? resolvePlace(p, w) : null)) } : {}) } : {}) };
   });
 }

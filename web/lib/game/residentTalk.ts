@@ -22,6 +22,25 @@ import { hash01 } from "./worldFx";
 export const TALK_RANGE = 1.9;
 /** A click or tap on a resident this close talks to them (farther, they wave back). */
 export const TALK_CLICK_RANGE = 4.5;
+/**
+ * Talking this close is in their face (David's playtest): as a talk opens you take a short step back to a comfortable
+ * distance, still facing them (PlayerAvatar, on `tsi:face`). Any resident, Bram and Alice too.
+ */
+export const TALK_COMFORT = 1.3;
+/**
+ * Where to step back to from `them` (null: far enough already, or nowhere to step): straight away from them to
+ * TALK_COMFORT, or half that step if the full one doesn't `fit` (a wall, a drop, the water).
+ */
+export function stepBack(me: { x: number; z: number }, them: { x: number; z: number }, fits: (x: number, z: number) => boolean = () => true): { x: number; z: number } | null {
+  const dx = me.x - them.x, dz = me.z - them.z, d = Math.hypot(dx, dz);
+  if (d >= TALK_COMFORT * 0.85) return null;
+  const ux = d > 1e-3 ? dx / d : 0, uz = d > 1e-3 ? dz / d : 1;
+  for (const r of [TALK_COMFORT, (TALK_COMFORT + d) / 2]) {
+    const x = them.x + ux * r, z = them.z + uz * r;
+    if (fits(x, z)) return { x, z };
+  }
+  return null;
+}
 /** They stop and turn to you before the box opens. */
 export const TALK_TURN_S = 0.4;
 /** The box goes and they wave goodbye before walking on. */

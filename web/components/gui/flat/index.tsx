@@ -19,7 +19,8 @@ import f from "./flat.module.css";
 
 /** The kit's class names, for the odd surface that lays out its own content in the flat style. */
 export { f as flatStyles };
-export { FLY_MS, FlyIn, KEYBOARD, KeyBoard, PrintedCard, QUEST_CHECK_MS, QuestCheck, Spotlight, boardLabel, type BoardKey } from "./moments";
+export { CardOverlay, FLY_MS, FlyIn, KEYBOARD, KeyBoard, KeyPrompt, PaperField, PrintedCard, QUEST_CHECK_MS, QuestCheck, SlotPop, Spotlight, boardLabel, type BoardKey } from "./moments";
+export { Keyword, KeywordLine, keywordParts, plainLine, type KeywordKind, type LinePart } from "./keyword";
 /** The detail stage's classes: a viewer (TurnStage, ItemViewer, the keychain's stage) fills `stage`; a picture `picture`. */
 export const STAGE = { stage: f.stage, picture: f.stagePicture } as const;
 /**

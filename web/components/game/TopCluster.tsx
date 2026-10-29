@@ -17,7 +17,7 @@
  */
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { CloudFog, CloudRain, Moon, Snowflake, Sun, Sunrise, Sunset, Wind } from "lucide-react";
-import { COINS } from "@/lib/economy";
+import { COINS, GEMS } from "@/lib/economy";
 import { levelProgress } from "@/lib/combat/progression";
 import { useHud } from "@/lib/game/hudStore";
 import { worldNow } from "@/lib/game/worldClock";
@@ -105,8 +105,11 @@ export function HudClock({ weather, phase, className }: { weather: IslandWeather
   </p>;
 }
 
-export default function TopCluster({ onWallet, walletKey, full = true, buttons = full, hidden = false, className, children }: {
+export default function TopCluster({ onWallet, walletKey, full = true, buttons = full, hidden = false, showcase = null, className, children }: {
   full?: boolean; buttons?: boolean; hidden?: boolean; className?: string; children?: ReactNode;
+  /** Alice shows you a currency (the HQ visit's fly cards): its slot comes in empty, its icon clicks into it (the
+   *  FlyIn marks it `data-landed`), and it fades away again after (David's playtest). */
+  showcase?: "coins" | "gems" | null;
   /** The coins open the wallet (reachability §2), its key shown on the tooltip. */
   onWallet?: () => void; walletKey?: string;
 }) {
@@ -121,10 +124,22 @@ export default function TopCluster({ onWallet, walletKey, full = true, buttons =
   /** In the minimal HUD a part shows only while its change is (its flash state for the slide in and out). */
   const shows = (f: "in" | "out" | null) => (full ? { show: true, at: undefined } : { show: f !== null, at: f ?? undefined });
   const coins = shows(flash.coins), xp = shows(flash.xp);
+  // The showcase's slot stays a moment after it, fading out.
+  const [slot, setSlot] = useState<{ kind: "coins" | "gems"; out: boolean } | null>(null);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- the slot follows the showcase in, then lingers to fade
+    if (showcase) { setSlot({ kind: showcase, out: false }); return; }
+    setSlot(s => (s ? { ...s, out: true } : s));
+    const t = window.setTimeout(() => setSlot(null), 700);
+    return () => window.clearTimeout(t);
+  }, [showcase]);
 
   return (
     <div className={className ? `${styles.cluster} ${className}` : styles.cluster} data-clean={full ? undefined : ""} data-hidden={hidden || undefined} aria-hidden={hidden || undefined}>
       <div className={styles.chips}>
+        {slot && <span key={slot.kind} className={styles.chip} data-slot="" data-flash={slot.out ? "out" : "in"} data-hud-slot={slot.kind} aria-hidden="true">
+          <span className={styles.coin}><CurrencyIcon currency={slot.kind} size={22} /></span><small>{slot.kind === "gems" ? GEMS.name : COINS.name}</small>
+        </span>}
         {hud.coins !== null && coins.show && (() => {
           const label = `${hud.coins.toLocaleString()} ${COINS.name}`, face = <>
             <span className={styles.coin} aria-hidden="true"><CurrencyIcon size={22} /></span><b aria-hidden="true"><CountUp value={hud.coins} /></b><small aria-hidden="true">{COINS.name}</small>

@@ -4,13 +4,18 @@
  * next"). A step at a time, the key lights up on a drawn keyboard and you press it, or hold it, to go on. Only what
  * the rest of the tutorial doesn't teach (walking, jump, dash and E are Bram's on the dock; Esc is Alice's last beat).
  * The keys are the player's own bindings (lib/game/movement/keys.ts, lib/identity/settings.ts), as KeyboardEvent keys
- * in lower case. DRAFTS for David.
+ * in lower case. Each press also brings in its part of your screen, in its real place (David's v3 review: "pressing it
+ * the mini map, the back pack stuff like that begins popping in the ui one by one"): `piece`. DRAFTS for David.
  */
 
 /** The bindings the tour teaches, as `KeyboardEvent.key` in lower case ("tab", "g", "enter"). */
 export interface TourKeys { wheel: string; emote: string; hud: string; bag: string; collection: string; quests: string; map: string; mail: string }
+/** A part of your screen a key brings in (DefaultIslandWorld shows it from that press until the tour ends). */
+export type HudPiece = "hud" | "chat" | "bag" | "collection" | "quests" | "map" | "mail";
 export interface TourStep {
   id: string;
+  /** What pressing it brings onto your screen (the wheels open only out in the world: none). */
+  piece?: HudPiece;
   /** The key to press (`KeyboardEvent.key`, lower case). */
   key: string;
   /** Held (the wheels, the HUD) rather than pressed. */
@@ -26,13 +31,13 @@ export function tourSteps(k: TourKeys): TourStep[] {
   return [
     { id: "wheel", key: k.wheel, hold: true, title: "Your tools", text: "Hold for your tool wheel. Point at a tool and let go to take it out." },
     { id: "emote", key: k.emote, hold: true, title: "Emotes", text: "Hold for your emote wheel. Wave, dance, sit down." },
-    { id: "hud", key: k.hud, hold: true, title: "At a glance", text: "Hold to see your coins, level and gear." },
-    { id: "chat", key: "enter", hold: false, title: "Chat", text: "Talk to everyone on the island. Type, then Enter again to send." },
-    { id: "bag", key: k.bag, hold: false, title: "Your bag", text: "Everything you're carrying." },
-    { id: "collection", key: k.collection, hold: false, title: "Your collection", text: "Every fish and bug you've found." },
-    { id: "quests", key: k.quests, hold: false, title: "Quests", text: "Your quests and your journal." },
-    { id: "map", key: k.map, hold: false, title: "The map", text: "The whole island, and where you are on it." },
-    { id: "mail", key: k.mail, hold: false, title: "Mail", text: "Letters from HQ and your friends." },
+    { id: "hud", piece: "hud", key: k.hud, hold: true, title: "At a glance", text: "Hold to see your coins, level and gear." },
+    { id: "chat", piece: "chat", key: "enter", hold: false, title: "Chat", text: "Talk to everyone on the island. Type, then Enter again to send." },
+    { id: "bag", piece: "bag", key: k.bag, hold: false, title: "Your bag", text: "Everything you're carrying." },
+    { id: "collection", piece: "collection", key: k.collection, hold: false, title: "Your collection", text: "Every fish and bug you've found." },
+    { id: "quests", piece: "quests", key: k.quests, hold: false, title: "Quests", text: "Your quests and your journal." },
+    { id: "map", piece: "map", key: k.map, hold: false, title: "The map", text: "The whole island. Your minimap keeps the corner." },
+    { id: "mail", piece: "mail", key: k.mail, hold: false, title: "Mail", text: "Letters from HQ and your friends." },
   ];
 }
 
@@ -56,4 +61,4 @@ export function tourTick(p: TourProgress, now: number): TourProgress {
   return p.holdFrom !== null && now - p.holdFrom >= HOLD_MS ? { step: p.step + 1, holdFrom: null } : p;
 }
 
-export const UI_TOUR = { eyebrow: "Alice's keys", press: "Press", hold: "Hold", skip: "Skip", nice: "Nice", done: "All done" } as const;
+export const UI_TOUR = { eyebrow: "Alice's keys", press: "Press", hold: "Hold", skip: "Skip", done: "All done" } as const;
