@@ -591,3 +591,8 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - prod dump prod-before-archive-stack-20261029-0206.dump; applied 20261029055353_catalogue_seed (guarded schedules, no pond or path left); verify clean;
   - deploy uwotsi-n346qmvqg queued at push; confirm Ready.
   Next in this stack: newworld-fixes plus river-softlock (Halloween), after the river agent's study items.
+- **Tutorial round 4 review:** https://claude.ai/artifact/VwAEKpT7DJAERc2yACCb3z (ids v4-*), game/tutorial-v2 1fc48ea3.
+  - The full vitest wasn't rerun after the integration regex fix, so run it at merge.
+  - David's test server (3300, worktree tutorial-test) is moved to 1fc48ea3; HQ saves are tsi.hq.v4.
+  - MemberFishing must dispatch tsi:fish-hooked, tsi:fish-caught, tsi:fish-escaped and tsi:fish-end, label its reel panel [aria-label="Fishing reel"], and build its reel with createFishingReel (reelAssist.floor). Wire this at merge, or have the fish-tiers agent do it.
+  - The deploy from 3074f1e0 (uwotsi-n346qmvqg) is still to be confirmed Ready.
