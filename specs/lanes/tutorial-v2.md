@@ -51,7 +51,7 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 ## Status
 
-Round 3 (David's v2 review) built on the new world, waiting on its evidence and David's review. Round 2's status is in git history (fb5991d9).
+Round 3 (David's v2 review) built on the new world and shot headless: `specs/evidence/tutorial-v2/v3/` (a-* the dock and Alice's visit, b-* the sights to the hand-over, k-* the kit pieces on /lab/gui, `-strip` for the animated beats). Waiting on David's review. Round 2's status is in git history (fb5991d9).
 
 - **arrow:** smaller (0.85) and nearer your feet (1.15 m ahead), `GuideArrow.tsx`.
 - **dock (hq-first):** the new world's own dock stop in `routes/new.ts` (no longer borrowed from the village): Bram's talk teaches the box hop (`{jump}`), then an `auto` stop (no E) teaches the dash: `unlockMove("dash")` (a no-op when dash is already open; daily-social may open dash for all) and a `dash` task waiting for `tsi:dash` (PlayerAvatar announces a dash). While the box or the dash is the task, its key stays up in a chip (`Arrival.tsx` `teach`). The box is the route's tutorial-only crate.
@@ -65,10 +65,11 @@ Round 3 (David's v2 review) built on the new world, waiting on its evidence and 
 
 ## Next
 
-1. Shoot v3 on the new world (`v3/shoot.mjs walk-a`, `walk-b`, `kit`), lay out with `v3/strips.py`, send main the item list.
+1. Act on David's round 3 review once main relays it.
 2. Later, after David approves the desktop tutorial: the phone pass (the tour on touch, the ID and fly cards at phone size).
 3. Open for David: a job board or past-projects display in HQ (the farewell names only what exists); his name in the lore (the Founder for now).
-4. Known: the arrow is a ground decal, so tall props in its spot can hide part of it.
+4. Known: the arrow is a ground decal, so tall props in its spot can hide part of it. The hand-over close-up can have a stall post at its edge (it turns 1 rad off your line round Bram; no raycast).
+5. Not run: perf:check (the 3D changes are the arrow's size and Bram's rod in his hands for the hand-over talk; neither is in a benched scene).
 
 ## Tools and gotchas
 
