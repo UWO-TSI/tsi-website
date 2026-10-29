@@ -487,3 +487,9 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - Hook rule: rod rarity +1, on the page as a table.
   - Gaps: the world float still uses the generic bobber; a Flimsy-only member has no rod view with slots.
   - Themes carry main-quest's rarity block byte for byte, plus `--ui-chart`.
+- **Fishing round 2 review:** https://claude.ai/artifact/NrKj4D61QuTHsCNccw2j34 (ids r2-*; the old page 2t3rTrcf8YC4GGENxfW3kJ is superseded), game/fishing-depth c7ed2b70.
+  - Migrations: 20261028160000_fishing_tasks_sushi, then 20261028161000_tackle_rolls.
+  - Gacha RNG checked: the client sends counter, pulls and key; the server uses secureRandom; tackle_roll is service_role only and grants off-sale prize rows only.
+  - The full vitest wasn't rerun after the "Fish of the month" rename, so run it at merge.
+  - Prices and odds are the lane's placeholders; David sets them.
+- **Lanes:** none running now (2026-10-28 late). Queued: loading r2, clothing r3, cleanup (after the archive merge), ui-unify, bug minigame, class and armour clothing.
