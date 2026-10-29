@@ -9,7 +9,7 @@
 import { memoryCollectionsStore } from "@/lib/collections/memoryStore";
 import { torontoParts } from "@/lib/time";
 import { bagAction, bagView, catchAction, donate, getShowcase, journal, museum, records, setShowcase, tourney, trophies } from "@/lib/collections/service";
-import { chefOrder, fishRequests, sellPrice, speciesClass, torontoDay } from "@/lib/wallet/rules";
+import { chefOrder, fishRequests, speciesClass, speciesSellPrice, torontoDay } from "@/lib/wallet/rules";
 import { SUSHI_MENU } from "@/lib/wallet/catalogue";
 import type { ActiveBuff } from "@/lib/wallet/store";
 import { memoryEconomyStore } from "@/lib/wallet/memoryStore";
@@ -96,18 +96,18 @@ export function installCollectionsDemo(): void {
         case "/api/collections/bag": return reply(method === "POST" ? await bagAction(m.store, ME, body) : await bagView(m.store, ME), "bag");
         case "/api/economy/sell": {
           if (method !== "POST") {
-            // What the counter will buy from the demo's pockets (the service's sellList over the bag: price by rarity, locks shown).
+            // What the counter will buy from the demo's pockets (the service's sellList over the bag: the species price, locks shown).
             const rows = (await m.store.bag(ME)).items.flatMap(r => {
-              const cls = speciesClass(r.item_key), price = cls ? sellPrice(cls.category, cls.rarity) : null;
+              const cls = speciesClass(r.item_key), price = speciesSellPrice(r.item_key);
               if (!cls || !price || r.count < 1) return [];
               const name = [...ROSTER, ...MATERIALS, ...TREATS].find(sp => sp.key === r.item_key)?.name ?? r.item_key;
               return [{ item_key: r.item_key, name, category: cls.category, rarity: cls.rarity, count: r.count, price_each: price, locked: r.locked === true }];
             }).sort((a, b) => b.price_each - a.price_each || a.name.localeCompare(b.name));
             return reply({ ok: true, data: rows }, "sellable");
           }
-          // The shop's sale over the demo's pockets (economy_sell's rules: the price by rarity, a locked one refused).
+          // The shop's sale over the demo's pockets (economy_sell's rules: the species price, a locked one refused).
           const row = (await m.store.bag(ME)).items.find(r => r.item_key === body.item_key);
-          const cls = speciesClass(body.item_key), price = cls && sellPrice(cls.category, cls.rarity);
+          const price = speciesSellPrice(body.item_key);
           if (!row || !price || row.count < body.qty) return reply({ ok: false, status: 409, code: "insufficient_items", error: "You don't have that many." }, "sale");
           if (row.locked) return reply({ ok: false, status: 409, code: "locked", error: "That's locked in your bag. Unlock it to sell it." }, "sale");
           m.give(ME, body.item_key, -body.qty);

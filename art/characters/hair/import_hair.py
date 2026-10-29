@@ -50,9 +50,9 @@ from head_shape import HC, skull_radius, classic_radius, HAIR_ATT, STUD, _ss  # 
 import skull as SK  # noqa: E402
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-# David's sets, in order (wardrobe batch 2 added david-b2): each manifest's hairs (and their split-off pieces) take the
+# David's sets, in order (wardrobe batches 2 and 3 added david-b2 and david-b3): each manifest's hairs (and their split-off pieces) take the
 # atlas cells after the sets before it, so a new set never moves an existing hair's cell.
-WHO = ARGS[ARGS.index("--who") + 1].split(",") if "--who" in ARGS else ["david", "david-b2"]
+WHO = ARGS[ARGS.index("--who") + 1].split(",") if "--who" in ARGS else ["david", "david-b2", "david-b3"]
 ONLY = set(ARGS[ARGS.index("--only") + 1].split(",")) if "--only" in ARGS else None
 RENDER = ARGS[ARGS.index("--render") + 1] if "--render" in ARGS else None
 SETS = [(who, json.load(open(os.path.join(HERE, "source", who, "manifest.json")))) for who in WHO]
@@ -87,7 +87,7 @@ PAD = 8                  # px of each cell kept clear round the map (mip bleed)
 # 2/3 its second colour (a two-colour hair: the accent rule), 1/3 fixed (a cap or visor, never recoloured). Never 0: a
 # browser may premultiply a decoded image, which loses the colour under a transparent texel.
 NAT_A, NAT_B, NAT_FIXED = 1.0, 2 / 3, 1 / 3
-NAT_CELL, NAT_COLS, NAT_ROWS = 512, 6, 5
+NAT_CELL, NAT_COLS, NAT_ROWS = 512, 6, 7          # batch 3: two rows more (42 cells); the UVs are in atlas space, so every hair is rebuilt
 NAT_ATLAS = os.path.join(HERE, "hair_colour.png")
 ACC_FULL_MAX = 780       # a split-off hat's Full mesh (#22's ushanka; accessories/import_roblox.py full_cap: a head item)
 ACCENT_SPECK = 3         # px (source texture): accent-mask blobs narrower than 2 x this + 1 are noise, not a second colour
@@ -422,6 +422,10 @@ def cap_face(rule, px, uvc):
         return not (uvc[0] > 0.68 and uvc[1] < 0.67)
     if rule == "not_green":            # #22: the grey ushanka and silver goggles round the green hair
         return not (0.2 < h < 0.55 and s > 0.15 and v > 0.12)
+    if rule == "light":                # batch 3 #34: the white ski mask over black dreads
+        return v > 0.45 and s < 0.2
+    if rule == "skin_tone":            # batch 3 #36, #39, #40: the scalp and edges drawn in a skin colour
+        return 0.02 < h < 0.11 and s > 0.3 and v > 0.25
     return False
 
 
@@ -451,7 +455,9 @@ def clean(ob, spec, img_px):
             uvc = face_uv_centroid(bm, uvl, f)
             if cap_face(rule, texel(img_px, uvc), uvc):
                 caps.add(f.index)
-        if spec.get("split"):           # a part split off goes whole: every island mostly of its faces (a brim's dark rim)
+        if spec.get("split") or (spec.get("cap") or {}).get("islands"):
+            # a part split off goes whole: every island mostly of its faces (a brim's dark rim); so does a cap with
+            # `islands` (batch 3 #34: the logo's dark faces on the white mask, then painted out)
             bm.faces.index_update()
             for isl in islands(bm):
                 ids = {f.index for f in isl}
@@ -892,6 +898,8 @@ def paint_out(px, region, logos):
     h, s, v = np.vectorize(lambda r, g, b: colorsys.rgb_to_hsv(r, g, b), otypes=[float, float, float])(px[..., 0], px[..., 1], px[..., 2])
     if logos == "yellow":
         bad = (h > 0.08) & (h < 0.2) & (s > 0.45) & (v > 0.35)
+    elif logos == "dark":       # batch 3 #34: a black logo on a white mask
+        bad = v < 0.25
     else:   # light_or_vivid: white or grey letters, and any vivid red or blue patch, on a dark cap
         bad = ((v > 0.3) & (s < 0.25)) | ((s > 0.4) & ((h < 0.03) | (h > 0.9) | ((h > 0.5) & (h < 0.72))))
     bad &= region
@@ -1070,8 +1078,8 @@ def main():
         im = bpy.data.images.load(NAT_ATLAS)
         im.colorspace_settings.name = "Non-Color"                   # the stored values, as written
         w, h = im.size
-        if (w, h) == (NAT_COLS * NAT_CELL, NAT_ROWS * NAT_CELL):
-            atlas[:] = np.array(im.pixels[:], np.float32).reshape(h, w, 4)[::-1]
+        if w == NAT_COLS * NAT_CELL and h <= NAT_ROWS * NAT_CELL:   # a grown atlas keeps the old cells in its top rows
+            atlas[:h] = np.array(im.pixels[:], np.float32).reshape(h, w, 4)[::-1]
         bpy.data.images.remove(im)
     # one cell a piece, in the manifests' order: the hairstyles, then the pieces split off them (a visor)
     cells = {k: i for i, k in enumerate(k for _w, m in SETS for k in [h["id"] for h in m["hairs"] if not h.get("accessory_only")]

@@ -9,6 +9,8 @@ import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import VillageLife, { type NodeSpec } from "./VillageLife";
 import BagFullNote from "./BagFullNote";
+import BossCreature from "../fishing/BossCreature";
+import { fishBosses } from "@/lib/game/fishing";
 import { gridFishingWaterHeight } from "@/lib/game/fishingWater";
 import { fishingSpot, type FishingSpot, type WaterType } from "@/lib/game/fishingSpots";
 import { getPeacefulTarget } from "@/lib/game/peacefulNear";
@@ -41,5 +43,6 @@ export default function PeacefulLayer({ map, nodes, moment, member, player, grou
   return <>
     <VillageLife nodes={nodes.forage} bugNodes={nodes.bugs} moment={moment} member={member} player={player} ground={ground} highTier={highTier} active={active} treeModels={treeModels} />
     <BagFullNote ground={ground} />
+    {fishBosses() && <BossCreature player={player} />}
   </>;
 }

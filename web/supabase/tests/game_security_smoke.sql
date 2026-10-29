@@ -39,14 +39,14 @@ EXCEPTION WHEN raise_exception THEN ASSERT SQLERRM = 'insufficient_items', 'secu
 END $$;
 ROLLBACK;
 
--- Catches are capped per species per hour (legendary: 3).
+-- Catches are capped per species per hour (epic: 6).
 DO $$
 DECLARE F uuid := '00000000-0000-4000-8000-0000000000f2';
 BEGIN
-  PERFORM collections_record_catch(F, 'fish_stringfish', NULL, false) FROM generate_series(1, 3);
+  PERFORM collections_record_catch(F, 'fish_stringfish', NULL, false) FROM generate_series(1, 6);
   BEGIN PERFORM collections_record_catch(F, 'fish_stringfish', NULL, false); RAISE EXCEPTION 'x';
   EXCEPTION WHEN raise_exception THEN ASSERT SQLERRM = 'rate_limited', 'security catch cap: ' || SQLERRM; END;
-  ASSERT (SELECT count FROM member_collections WHERE user_id = F AND item_key = 'fish_stringfish') = 3, 'security capped count';
+  ASSERT (SELECT count FROM member_collections WHERE user_id = F AND item_key = 'fish_stringfish') = 6, 'security capped count';
   PERFORM collections_record_catch(F, 'fish_dace', NULL, false);  -- other species unaffected
   RAISE NOTICE 'security 1 collections ok';
 END $$;

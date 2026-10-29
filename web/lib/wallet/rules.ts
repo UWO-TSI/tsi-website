@@ -82,7 +82,7 @@ export function speciesClass(itemKey: string, fishRarity: (key: string) => strin
   if (sp) return { category: sp.category, rarity: sp.rarity };
   const r = fishRarity(itemKey);
   if (!r) return null;
-  return { category: "fish", rarity: r === "seaking" ? "legendary" : r };
+  return { category: "fish", rarity: r };
 }
 
 export function sellPrice(category: string, rarity: string, table: Record<string, Record<string, number>> = SELL_PRICES): number | null {
@@ -114,7 +114,7 @@ export function fishRequests(day: string, waters: readonly WaterType[]): FishReq
 /** The fish of these rarities biting that day in `waters`, priced as a request, in key order. */
 function requestable(day: string, waters: readonly WaterType[], rarities: readonly string[]): FishRequest[] {
   return fishOutToday(waters, Number(day.slice(5, 7))).flatMap(({ fish }) => {
-    const cls = speciesClass(fish.key), price = cls && sellPrice(cls.category, cls.rarity);
+    const cls = speciesClass(fish.key), price = cls && speciesSellPrice(fish.key);
     return cls && price && rarities.includes(cls.rarity) ? [{ item_key: fish.key, name: fish.name, rarity: cls.rarity, reward: price * FISH_REQUEST_PAY }] : [];
   }).sort((a, b) => a.item_key.localeCompare(b.item_key));
 }
@@ -126,6 +126,12 @@ export function chefOrder(day: string, waters: readonly WaterType[]): (FishReque
   const market = new Set(fishRequests(day, waters).map((f) => f.item_key));
   const pool = requestable(day, waters, ["rare", "epic"]).filter((f) => !market.has(f.item_key));
   return pool.length ? { ...pool[Math.floor(seededRandom(fnv1a(`chef-order:${day}`))() * pool.length)], meal: STAFF_MEAL } : null;
+}
+
+/** What one of this item sells for: its roster price when set, else its category and rarity's (economy_sell, 20261027180000_species_sell_price.sql). */
+export function speciesSellPrice(itemKey: string): number | null {
+  const cls = speciesClass(itemKey);
+  return cls ? (ROSTER.find((s) => s.key === itemKey)?.price ?? sellPrice(cls.category, cls.rarity)) : null;
 }
 
 /** Catalogue rows as the memory store / previews see them (033's seed, then the ownership migration's). */

@@ -137,12 +137,12 @@ for (const c of CUT_WEARABLES) WEARABLES.splice(WEARABLES.findIndex((w) => w.id 
  * every hairstyle, accessory and whole face he priced is a shop row at its price, in play coins (price_coins) or Gems
  * (tc_price); a free one has no row (the starting creator offers it to everyone: look.ts partRef, facePartRef) and a
  * skipped one is not imported. A face's row unlocks its eyes, mouth and accent (catalogue_ref face:<id>). Positions from
- * B2_POS, after every earlier row, so no earlier row moves; coin rows can be a daily special like the other wearables.
+ * B2_POS, after every earlier row, so no earlier row moves; coin accessories can be a daily special like the other wearables; hairstyles and faces never are (no plinth model).
  */
 const B2_POS = 600;
 const b2Row = (slug: string, name: string, category: ShopCategory, price: Batch2Price, ref: string, i: number): CatalogueEntry => withIcon({
   slug, display_name: name, category, description: "", price_coins: price.mode === "coins" ? price.price : null, price_gems: price.mode === "gems" ? price.price : null,
-  tier: null, slot: null, special_pool: price.mode === "coins", stackable: false, stock: null, catalogue_ref: ref, sprite_url: null, position: B2_POS + i,
+  tier: null, slot: null, special_pool: price.mode === "coins" && category !== "hair" && category !== "face", stackable: false, stock: null, catalogue_ref: ref, sprite_url: null, position: B2_POS + i,
 });
 const isSold = (p: Batch2Price | null): p is Batch2Price => p?.mode === "coins" || p?.mode === "gems";
 /** A row's name, with what owning it grants (row 314: hair #22 and its ushanka and goggles). */
@@ -200,14 +200,14 @@ export const onSale = (c: CatalogueEntry) => !RETIRED.includes(c.slug) && !(c.ca
  */
 export const EVENT_ITEMS: CatalogueEntry[] = PIECES.filter((p) => EVENT_PIECE_IDS.has(p.id)).map((p) => ({ ...furniture(p.id, p.label, pieceValue(p)), special_pool: false }));
 
-/** Sell prices by category and rarity (row 91), in play coins per item. */
+/** Sell prices by category and rarity (row 91), in play coins per item. Divine is 2.5 times legendary; Contraband has none (the shop won't buy it). */
 export const SELL_PRICES: Record<string, Record<string, number>> = {
-  fish: { common: 8, uncommon: 20, rare: 60, epic: 180, legendary: 600 },
-  sea: { common: 8, uncommon: 20, rare: 60, epic: 180, legendary: 600 },
-  bug: { common: 6, uncommon: 16, rare: 50, epic: 150, legendary: 500 },
-  fruit: { common: 10, uncommon: 25, rare: 60, epic: 150, legendary: 400 },
-  nature: { common: 4, uncommon: 12, rare: 40, epic: 120, legendary: 400 },
-  mineral: { common: 5, uncommon: 15, rare: 45, epic: 135, legendary: 450 },
+  fish: { common: 8, uncommon: 20, rare: 60, epic: 180, legendary: 600, divine: 1500 },
+  sea: { common: 8, uncommon: 20, rare: 60, epic: 180, legendary: 600, divine: 1500 },
+  bug: { common: 6, uncommon: 16, rare: 50, epic: 150, legendary: 500, divine: 1250 },
+  fruit: { common: 10, uncommon: 25, rare: 60, epic: 150, legendary: 400, divine: 1000 },
+  nature: { common: 4, uncommon: 12, rare: 40, epic: 120, legendary: 400, divine: 1000 },
+  mineral: { common: 5, uncommon: 15, rare: 45, epic: 135, legendary: 450, divine: 1125 },
 };
 
 /** The fish market's daily requests (f-requests, lib/wallet/rules.ts fishRequests) pay this many times the fish's sell price. */
