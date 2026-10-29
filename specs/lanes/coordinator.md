@@ -608,3 +608,8 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
 - **daily-social r3:** f1db3589. The friends-talk and streak redos are done and the rope poles removed.
   - Migrations re-timestamped: 20261029062500_welcome_week, 20261029062600_resident_friendship, 20261029062659_catalogue_seed (regenerate the seed at merge).
   - The monument model waits for David's go on the Lantern Cairn direction; the agent has stopped. The review page comes once the monument exists, or earlier with the r3 items if David wants it.
+- **Beach volleyball lane started** (game/volleyball from main f0be2c5e).
+  - David's design is verbatim in the lane prompt and in specs/minigames/beach-volleyball.md once written. It's 2v2, with ranking and a leaderboard.
+  - Phase 1: a solo-playable 2v2 against bots in its own arena at /lab/volleyball. Phase 2: multiplayer rooms (needs a Fly deploy). Phase 3: ranked play, the leaderboard, and the Beach ball rod for 5 ranked wins in a row.
+  - Right click on the ground defaults to "Call it" (Mine!), with a tip as the alternative, for David to pick.
+  - The court's island spot is for David to pick from 2 or 3 proposals.
