@@ -22,6 +22,7 @@ Head: see git log. Done:
 - 1 Halloween: `pumpkinLamp` (lib/game/halloween.ts) picks every lantern post on land and the quay (not hand lanterns, the jetty or the fountain ring: David's R2c "less pumpkins"), and each pumpkin stands at its post's foot on the lit side (the arm's direction), facing out; it steps round the post if the ground there isn't standable. 21 lamp pumpkins + door pairs on the new world. Test rewritten and un-skipped. Shots: `specs/evidence/newworld-fixes/halloween-*.webp` (evening, `?tradition=halloween`). Sent to main.
 - 2 Study seats: the world's four model-less `study-0..3` (inert: no furniture, so no seats) became the backend's two outdoor anchors: `study:plaza-picnic` (picnic, 4 seats) at study-0's spot on the plaza rim by the café, turned along the rim; `study:pier-bench` (pier, 2 seats + parasol) on the quay at (71, 43) between the jetty's north and middle gangways, seats to the sea. study-1..3 removed. Same in generate.ts LAYOUT. New test lib/study/seats.newworld.test.ts. Shots `study-{plaza,pier}-{before,after}.webp`.
   - Side fix: lib/game/world/walk.test.ts's deck-edge test dashes on every other run, so a new solid on the quay flipped the parity and exposed a dash off the sushi bar's ramp onto the beach's toe-deep shallows, which the test counted as falling in. Its water check is now `island.wet` (deep water or the band beside a deck); it passes with every run dashing and with none.
+- 3 Residents: NavGrid (lib/game/residentRoutine.ts) let walks cut through lamp posts (0.16 across): `clear` sampled every 0.2 and `body` probed only 4 axis points, so a post slipped between. Now it samples every 0.1 and probes the body's rim every 45°. A bench is "under a lamp" only by a lamp with a pool of light (not a hand lantern): the night owl moved from the campfire bench lit only by a hand lantern to the one by the campfire's lantern post. The night test now checks every night sitter against the lamp posts (it read `objectsOf("lamp")[0]`, a village-era single lamp). Shots `resident-night-owl-{before,after}.webp` (`&at=01:30&time=night`).
 
 ## David's decisions
 
@@ -29,11 +30,12 @@ Head: see git log. Done:
 
 ## Next
 
-3. Residents.
+4. bench-0 footprint.
 
 ## Tools and gotchas
 
 - Locks: `LANE=game/newworld-fixes /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh heavy|devserver|blender <cmd>`; retry on exit 75.
 - New-world village in tests: `villageOfWorld(loadWorldFromDisk(<web>/data/world))`.
 - Shots: scratchpad `nwf/run.sh <abs out> <views> "&tradition=halloween"` (dev server :3193 under the devserver lock, /lab/island, headless; `VIEWS` env JSON adds views; out path must be absolute, the script cd's into web).
+- Clock: `?at=HH:MM` sets the world clock (residents follow it); position then needs `at=x,z` too (both repeat). The shot script passes extras as its third arg.
 - Known gate failure: lib/seedMigrations.test.ts (catalogue seed not regenerated; coordinator does it at merge).
