@@ -48,6 +48,10 @@ David, 2026-10-28: "models should be considered to have a high def version and a
    - It uses the game's scale, pivot and facing.
    - The high-def is that shaped mesh. The low-poly is decimated or retopologised from it.
    - A visible stack of separate shapes or a lumpy maths blob is not a finished model.
+   - **Meshy is part of the pipeline** (David, 2026-10-29: "I NEED YOU TO CONNECT TO MESHY.AI and use meshy as part of your modeling pipeline"). A model can start as a Meshy generation (image-to-3D from David's reference, or text-to-3D from his direction). The API key is in the macOS keychain as "Meshy API"; never print it.
+     - Meshy output never ships raw. It goes through the same headless Blender cleanup: the game's scale, pivot and facing; merged parts; the high-def version; the low-poly version reduced from it; materials mapped to the game's look; and effects such as auras added in the game.
+     - Each generation spends David's Meshy credits. A lane logs the credits per model and asks the coordinator before going past 10 generations in a round.
+     - This is the one generator allowed. Other asset libraries and generators stay off.
 4. **Finished before review.** A model goes to David in both versions: the high-def in its close-up view, and the low-poly in the world from the game camera, beside the model it replaces.
 5. **One version in the repo.** When a model replaces another, the old file is deleted or moved to `archive/`, and every path that loaded it moves to the new one. No parallel old copies.
 6. **Budgets.** The low-poly fits the world's triangle budget (`specs/perf/`). The high-def is sized for one model on screen at a time.
