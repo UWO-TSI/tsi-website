@@ -605,3 +605,6 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - MemberFishing sends the tutorial's reel events; reelAssist is byte-identical to tutorial-v2.
   - At merge, run the full vitest (the last full run was 44eb2079) and switch --gui-rarity and --gui-holo to --ui-rarity and --ui-holo.
   - Not verified: a real pointer lock, and sound.
+- **daily-social r3:** f1db3589. The friends-talk and streak redos are done and the rope poles removed.
+  - Migrations re-timestamped: 20261029062500_welcome_week, 20261029062600_resident_friendship, 20261029062659_catalogue_seed (regenerate the seed at merge).
+  - The monument model waits for David's go on the Lantern Cairn direction; the agent has stopped. The review page comes once the monument exists, or earlier with the r3 items if David wants it.
