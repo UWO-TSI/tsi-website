@@ -2,8 +2,7 @@ import { describe, expect, it } from "vitest";
 import { HINT_AFTER_S, HINT_AGAIN_S, TALK_R, awaitsTalk, lineSeconds, newTutorial, stepTutorial, tutorialQuest, type TutorialCue, type TutorialEvent, type TutorialState } from "./tutorial";
 import { END_LINE, STOP_LINES, TASK_DONE_LINES, TRACKER, TRACKER_TITLE, fillKeys, hintLine, type HintKeys } from "./lines";
 import { resolvePlace, resolveRoute, type PlaceWorld, type ResolvedStop, type TutorialRoute, type XZ } from "./route";
-import { VILLAGE_ROUTE } from "./routes/village";
-import { ROUTES, routeFor } from "./routes";
+import { NEW_ROUTE } from "./routes/new";
 
 const KEYS: HintKeys = { move: "W A S D", jump: "Space", wheel: "Tab", bag: "B", touch: false };
 /** A small world: the dock at the origin facing +z, four fronts and a beach. */
@@ -15,7 +14,7 @@ const WORLD: PlaceWorld = {
     return p ? (point ? { x: p.x, z: p.z - 3 } : p) : null;
   },
 };
-const STOPS = resolveRoute(VILLAGE_ROUTE, WORLD, { x: 0, z: 0 });
+const STOPS = resolveRoute(NEW_ROUTE, WORLD, { x: 0, z: 0 });
 const stopAt = (id: string) => STOPS.find(s => s.id === id)!;
 
 /** A walk-along with Bram where the stop wants him; `frame` runs one step with the player at `at`. */
@@ -41,19 +40,17 @@ const at = (s: TutorialState) => `${STOPS[s.stop]?.id ?? "end"}:${s.stage}`;
 
 describe("the walk-along v2's route (data per world)", () => {
   it("is the stops David wrote, in order: the dock and its crate, four fronts, the beach (the rod, a catch), what you've collected", () => {
-    expect(VILLAGE_ROUTE.stops.map(s => s.id)).toEqual(["dock", "museum", "shop", "hq", "cafe", "beach", "collection"]);
-    expect(VILLAGE_ROUTE.stops.map(s => s.task?.kind ?? null)).toEqual(["reach", null, null, null, null, "catch", "bag"]);
-    expect(VILLAGE_ROUTE.stops.find(s => s.gives)?.id).toBe("beach");
+    expect(NEW_ROUTE.stops.map(s => s.id)).toEqual(["dock", "museum", "shop", "hq", "cafe", "beach", "collection"]);
+    expect(NEW_ROUTE.stops.map(s => s.task?.kind ?? null)).toEqual(["reach", null, null, null, null, "catch", "bag"]);
+    expect(NEW_ROUTE.stops.find(s => s.gives)?.id).toBe("beach");
     // The dock's movement bit stays: a crate on the pier, and the dock's task is getting past it after Bram's hop.
-    expect(VILLAGE_ROUTE.crates.length).toBeGreaterThan(0);
-    const dock = VILLAGE_ROUTE.stops[0].task!;
+    expect(NEW_ROUTE.crates.length).toBeGreaterThan(0);
+    const dock = NEW_ROUTE.stops[0].task!;
     expect(dock.kind === "reach" && dock.wait?.some(w => w.hop)).toBe(true);
-    expect(ROUTES.village).toBe(VILLAGE_ROUTE);
-    expect(routeFor("nowhere")).toBe(VILLAGE_ROUTE);
   });
 
   it("has every stop's lines and tracker labels, so a new map's route needs no code", () => {
-    for (const r of Object.values(ROUTES)) for (const stop of r.stops) {
+    for (const stop of NEW_ROUTE.stops) {
       expect(STOP_LINES[stop.id]?.length, stop.id).toBeGreaterThan(0);
       expect(TRACKER[stop.id], stop.id).toBeTruthy();
       if (stop.task) expect(TRACKER[stop.task.id], stop.task.id).toBeTruthy();
@@ -71,10 +68,10 @@ describe("the walk-along v2's route (data per world)", () => {
   });
 
   it("moves to another world as data only: the same stops at new places resolve and walk", () => {
-    const moved: TutorialRoute = { ...VILLAGE_ROUTE, world: "v2", crates: [{ at: { world: [40, 40] } }, { at: { world: [42, 41] }, yaw: 0.4 }],
-      stops: VILLAGE_ROUTE.stops.map((s, i) => ({ ...s, stand: { world: [i * 10, 5] }, via: undefined })) };
+    const moved: TutorialRoute = { ...NEW_ROUTE, crates: [{ at: { world: [40, 40] } }, { at: { world: [42, 41] }, yaw: 0.4 }],
+      stops: NEW_ROUTE.stops.map((s, i) => ({ ...s, stand: { world: [i * 10, 5] }, via: undefined })) };
     const stops = resolveRoute(moved, { dock: null, landmark: () => null }, { x: 0, z: 0 });
-    expect(stops.map(s => s.stand)).toEqual(VILLAGE_ROUTE.stops.map((_, i) => ({ x: i * 10, z: 5 })));
+    expect(stops.map(s => s.stand)).toEqual(NEW_ROUTE.stops.map((_, i) => ({ x: i * 10, z: 5 })));
     // A dock-frame place in a world without a wharf falls back to the place before it, never undefined.
     expect(stops[0].task?.kind === "reach" && stops[0].task.at).toEqual({ x: 0, z: 5 });
   });

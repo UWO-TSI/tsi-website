@@ -9,7 +9,6 @@ import { LEVEL_STEP } from "@/lib/game/grid";
 import { objectFootprint } from "@/lib/game/defaultIsland";
 import { isJoinedFence } from "@/lib/game/fences";
 import { snapPlacement } from "@/lib/game/painterTools";
-import { PROPOSALS, acceptProposed, pendingOf } from "@/lib/game/proposals";
 import type { MapObject } from "@/lib/game/villageMap";
 import {
   applyBrush, cellAt, cellHeight, cellSet, cellSquare, layRoad, nextLevel, padUnder, unionRect, CELL_EDGE, PAD, ROAD, type BrushTool, type Rect,
@@ -350,17 +349,6 @@ function endStrokeHistory() {
   const rect = ed.stroke?.rect ?? null;
   ed.history.end();
   settle(rect);
-}
-
-/** Accept a proposal's pending objects (or all proposals'), undoable. */
-export function acceptProposals(index?: number): void {
-  const items = PROPOSALS.filter(p => p.target === "world-map").filter((_, i) => index === undefined || i === index).flatMap(p => pendingOf(p, ed.objects));
-  if (!items.length) return;
-  ed.history.begin("Accept proposals");
-  ed.history.objects(ed.objects);
-  setObjects(acceptProposed(ed.objects, items));
-  ed.history.end();
-  say(`Accepted ${items.length} proposed object${items.length === 1 ? "" : "s"}`);
 }
 
 // ── Undo, redo, save ─────────────────────────────────────────────────

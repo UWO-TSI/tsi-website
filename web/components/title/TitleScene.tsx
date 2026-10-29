@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, use, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 // The game's atmospheric haze and aerial desaturation on the shared fog chunk (side effect, before materials compile).
@@ -16,7 +16,8 @@ import Residents from "@/components/game/NPC";
 import TitleVillage from "./TitleVillage";
 import { preloadGame } from "./preloadGame";
 import { stagedShot, type Shot } from "./shots";
-import { shippedVillage, objectsOf } from "@/lib/game/villageMap";
+import { village, objectsOf } from "@/lib/game/villageMap";
+import { loadGameWorld } from "@/lib/game/world/load";
 import { villageIsland, villageScale } from "@/lib/game/defaultIsland";
 import { villageWater } from "@/lib/game/fishingSpots";
 import { ISLAND_TERRAIN, islandLightAt, withSeason, withWeather } from "@/lib/game/islandLighting";
@@ -76,9 +77,12 @@ function CinematicCamera({ shot, ground }: { shot: Shot; ground: (x: number, z: 
   return null;
 }
 
+/** The member island's world, loaded once (lib/game/world/load.ts): the island reuses it after Let's Play. A failed load leaves its cell view. */
+let world: Promise<unknown> | null = null;
+
 function Scene() {
-  // The village file, even once the member island has loaded the new world (lib/game/world/active.ts).
-  const v = shippedVillage();
+  use(world ??= Promise.resolve(loadGameWorld()).catch(() => {}));
+  const v = village();
   const island = villageIsland(v);
   const scale = useMemo(() => villageScale(v), [v]);
   const conditions = useIslandConditions();
@@ -105,11 +109,11 @@ function Scene() {
     <>
       <CinematicCamera shot={shot} ground={island.ground} />
       <IslandAtmosphere phase={phase} light={light} look={look} weather={weather} liteMode={false} castShadows ground={island.ground}
-        puddles={objectsOf("puddle", v).map(o => [o.x, o.z] as [number, number])} cloudSize={scale.cloudSize} shadowExtent={scale.shadowExtent}
+        puddles={objectsOf("puddle", v).map(o => [o.x, o.z] as [number, number])} cloudSize={scale.cloudSize} shadowExtent={scale.shadowExtent} shadowFollow={v.terrain ? viewer : undefined}
         fireflyAnchors={objectsOf("bush", v).map(o => [o.x, o.z] as [number, number])} trees={trees} fauna={fauna} />
-      <GridWorld map={island.map} field={v.field} light={light} palette={terrain} windScale={weather === "wind" ? 2.2 : 1.4} clear={grassClear} waves ownGround />
+      <GridWorld map={island.map} field={v.field} light={light} palette={terrain} windScale={weather === "wind" ? 2.2 : 1.4} clear={grassClear} terrain={v.terrain} waves ownGround />
       <GridOcean map={island.map} lite={false} radius={scale.glintRadius} waves ownGround />
-      <InstancedModels items={scenery} />
+      <InstancedModels items={scenery} cull={!!v.terrain} />
       {/* Own boundaries: the base world draws (and the page fades in) while the buildings and residents stream in. */}
       <Suspense fallback={null}>
         <TitleVillage v={v} island={island} light={light} />

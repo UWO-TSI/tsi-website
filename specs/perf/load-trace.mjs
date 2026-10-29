@@ -1,7 +1,7 @@
 // Title page to walking in the world (specs/lanes/loading.md step 1): the time it takes, what it is made of, and the
 // long frames on the way (the title, the loading screen, the arrival's cutscenes, the first minute of play).
 // Headless Chromium, muted, 1280 x 800 at DPR 1, against the measurement build (`specs/perf/measure-build.sh`, built
-// with NEXT_PUBLIC_GAME_WORLD=new NEXT_PUBLIC_MEMBER_WORLD=open) on `next start -p $PORT`.
+// with NEXT_PUBLIC_MEMBER_WORLD=open) on `next start -p $PORT`.
 //
 //   PORT=3151 NET=fast|slow|none CACHE=cold|warm DWELL=10 PROFILE=1 OUT=<dir> node specs/perf/load-trace.mjs <label>
 //

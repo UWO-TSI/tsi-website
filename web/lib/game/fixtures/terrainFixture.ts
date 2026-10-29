@@ -1,5 +1,5 @@
 /**
- * A synthetic test island for natural terrain (specs/terrain-blending.md
+ * A synthetic test island for natural terrain (archive/village/terrain-blending.md
  * evidence): never shipped as the island. A cliff ring with a ramp, a gentle
  * hill and a steep mountain built of one-level slopes, a sand beach on the north
  * coast, a soil path and a stone plaza, a bay and a point. `/lab/island?fixture=terrain`

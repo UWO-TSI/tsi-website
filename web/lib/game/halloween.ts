@@ -78,7 +78,7 @@ export function knockDoors(v: Village, residents: readonly DoorResident[]): Knoc
   const doors = new Map<LandmarkId, KnockDoor>();
   for (const r of residents) {
     if (!routineKeys(r.schedule ?? null, "night").includes("home")) continue;
-    const home = residentHome(r, v), l = placed.get(home);
+    const home = residentHome(r), l = placed.get(home);
     if (!l || !DOOR_HOMES.includes(home)) continue;
     let d = doors.get(home);
     if (!d) { const [x, z] = besideDoor(l, KNOCK_SIDE, KNOCK_OUT); doors.set(home, d = { home, x, z, residents: [] }); }

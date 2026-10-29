@@ -13,9 +13,9 @@ import { NEW_LAMPS } from "./propModels";
 import { MAX_CLIMB, terrainHeight, terrainSteepness, terrainSurface } from "./world/terrain";
 
 /**
- * Default island: the village core (ledger rows 155, 156), loaded from the
- * painted map file (`web/data/village-map.json`, lib/game/villageMap.ts; rows
- * 241, 246). Compass (row 239): the follow camera looks +z, which is west
+ * Default island: the member island's core (ledger rows 155, 156), read from
+ * the member island's map (lib/game/villageMap.ts village(), the new world:
+ * web/data/world, row 321). Compass (row 239): the follow camera looks +z, which is west
  * (up-screen); +x, screen left, is south. A compass azimuth A (from north,
  * clockwise) is the world direction (x, z) = (−cos A, −sin A), so north is −x
  * and east is −z (toward the viewer).
@@ -73,8 +73,6 @@ export const LANDMARK_IDS = Object.keys(LANDMARK_INFO) as LandmarkId[];
 
 /** Wharf stub deck (walkable over the water), relative to the wharf before its yaw. */
 export const WHARF_DECK_LOCAL = { x0: -0.9, x1: 0.9, z0: -3.5, z1: 2 };
-/** The finger pier off the wharf's tip (v1 water, lib/game/wharf.ts FINGER), walkable inside its posts, relative before its yaw. */
-export const WHARF_FINGER_LOCAL = { x0: -4.62, x1: -0.85, z0: -3.4, z1: -2.35 };
 /**
  * Wooden bridge deck, relative, before its yaw: the model spans ±1.9 along x, its rails at ±1.45 across. The deck
  * stops 1.0 out so a body (0.2 probes, about 0.3 wide) walks clear of the rails.
@@ -230,11 +228,11 @@ export function wharfDock(v: Village = village()): Dock | null {
 }
 /** A walkable deck in world XZ and its height at a point (stairs climb). */
 export type Deck = { x0: number; x1: number; z0: number; z1: number; y: (x: number, z: number) => number };
-/** Every walkable deck of the wharf in world XZ: the pier and its finger pier at DECK_Y, or the jetty's landing, stairs, platform and gangways. */
+/** Every walkable deck of the wharf in world XZ: the plain pier at DECK_Y, or the jetty's landing, stairs, platform and gangways. */
 export function wharfDecks(v: Village = village()): Deck[] {
   const w = landmark("wharf", v);
   if (!w) return [];
-  if (!isJetty(v)) return [WHARF_DECK_LOCAL, WHARF_FINGER_LOCAL].map(r => ({ ...turnedRect(w.x, w.z, r, w.yaw), y: () => DECK_Y }));
+  if (!isJetty(v)) return [{ ...turnedRect(w.x, w.z, WHARF_DECK_LOCAL, w.yaw), y: () => DECK_Y }];
   return localDecks({ x: w.x, z: w.z, yaw: w.yaw ?? 0 }, JETTY.decks);
 }
 /** The sushi bar's decks in world XZ (lib/game/sushiBar.ts BAR_DECKS): its floor on the stilts, the landing and the boardwalk. */
@@ -537,7 +535,7 @@ export const SHADOW_FOLLOW_EXTENT = 48;
 const MAP_MARGIN = 14;
 
 /**
- * Everything that scales with the island (specs/island-painter.md §7), from the
+ * Everything that scales with the island (archive/village/island-painter.md §7), from the
  * map's land bounds. The shipped 47×39 island gives exactly the numbers these
  * replaced: shadow ±26, clouds 46×38, overview (12, 21, −27), glints to 90,
  * minimap "-26 -22 52 47". Shadows and clouds stay centred on the world origin

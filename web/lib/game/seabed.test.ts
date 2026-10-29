@@ -4,7 +4,7 @@ import frozen from "./fixtures/village-2026-09-28.json";
 import { coastDistance, isGroundAtWorld, sampleShore, shoreSdf } from "./grid";
 import { BERTH_EDGE, bakeWaterDepth, seabedDip } from "./seabed";
 import { SHOAL, bedDepth } from "./waterShader";
-import { MOORED, ROWBOATS, berthWeight } from "./wharf";
+import { MOORED, berthWeight } from "./wharf";
 import { TUNING_DEFAULTS } from "./tuning";
 
 // The water's colour reads the seabed's depth from a bake (v1 water item 1: "from the known seabed height, with no
@@ -94,7 +94,7 @@ describe("the main island's wide shallows", () => {
     expect(dip(5, 0.5)).toBeGreaterThan(0.6);
   });
   it("keeps the wharf's berth deep: the tip, the moored boat and the rowboats float over deep water", () => {
-    for (const [lx, lz] of [[0, -3.5], [MOORED.x, MOORED.z], ...ROWBOATS.map(r => [r.x, r.z])]) {
+    for (const [lx, lz] of [[0, -3.5], [MOORED.x, MOORED.z]]) {
       expect(dip(...inDock(lx, lz)), `berth at ${lx},${lz}`).toBeGreaterThan(1.2);
     }
   });
