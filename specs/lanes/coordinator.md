@@ -640,3 +640,7 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - David's test server is moved to d0346e6e.
   - Keyword icons are now the default for every talk line, through a dictionary; there's no *star* markup.
   - Merge conflicts with main-quest r3 (TopCluster, hudStore, hudPrefs, themes): keep both sides.
+- **Volleyball phase 1 review:** https://claude.ai/artifact/QfKHX4FBzbjH9pcBc9ZBdC (ids p1-*), game/volleyball c2669f17 (from main f0be2c5e; no migrations).
+  - The court is at (-7.5, 103.8), turned a quarter; the shells and gather-shell-2 moved off it.
+  - Six questions for David are on the page (the ball refs, animations, residents on the court, sharing the PowerMeter, the match length, casual rewards).
+  - perf:check passed (a passerby gets +0 ms; a player in a match gets +1.2 ms).
