@@ -4,15 +4,14 @@
  * app: every catalogue GLB plus the clip-bearing base body (the catalogue's
  * base.clips_glb: v7_clips.glb, the hand-modeled v7 head), the verb library (verbs.glb) and the sushi bar staff's clips (staff.glb) to
  * public/assets/characters/v6/, the v7 face layer atlases next to it, the
- * catalogue/palette/face JSON to data/characters/, and the official TSI mark
- * (public/logo.svg, ruling 24) as the crewneck decal PNG, and the LOD 1 GLBs (art/characters/lod1, build_lod.py) to lod1/.
+ * catalogue/palette/face JSON to data/characters/, and the LOD 1 GLBs (art/characters/lod1, build_lod.py) to lod1/.
  *
  *   node web/scripts/sync-character-assets.mjs
  *
  * Re-run after any character build. lib/game/character/look.test.ts fails
  * when the copies drift from art/characters.
  */
-import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync } from "node:fs";
 import { NodeIO } from "@gltf-transform/core";
 import { ALL_EXTENSIONS, EXTMeshoptCompression } from "@gltf-transform/extensions";
 import { reorder } from "@gltf-transform/functions";
@@ -69,14 +68,9 @@ if (catalog.hairMaps?.atlas_world) execFileSync("magick", [join(art, catalog.hai
 // wardrobe batch 2: the fixed-colour atlas (art/characters/colour_atlas.py: the Roblox accessories' and #22's hat's own
 // textures) and David's prices for the batch (specs/wardrobe/batch2-pricing.json)
 copy(join(art, "colour_atlas.png"), join(out, "colour_atlas.png"));
+// clothing-v2: the garment designs, one atlas cell each (art/characters/outfits/build_outfits.py)
+copy(join(art, catalog.designs.atlas), join(out, catalog.designs.atlas));
 copy(resolve(web, "../specs/wardrobe/batch2-pricing.json"), join(data, "batch2-pricing.json"));
 for (const name of ["character_catalog.json", "palette.json", "v7/face/face_v7.json", "skull/skull.json"]) copy(join(art, name), join(data, name.replace(/^.*\//, "")));
 
-// Crewneck decal: the site's own mark in cream on transparency, square with padding.
-const svg = readFileSync(join(web, "public/logo.svg"), "utf8").replaceAll("currentColor", "#F3E9D2");
-const tmp = join(out, "decal_tsi.svg");
-writeFileSync(tmp, svg.replace(/<svg ([^>]*)>/, '<svg $1 preserveAspectRatio="xMidYMid meet">'));
-execFileSync("rsvg-convert", ["-w", "192", "-h", "184", "-o", join(out, "decal_tsi_mark.png"), tmp]);
-execFileSync("magick", [join(out, "decal_tsi_mark.png"), "-background", "none", "-gravity", "center", "-extent", "256x256", join(out, "decal_tsi_mark.png")]);
-execFileSync("rm", [tmp]);
-console.log(`synced ${parts.length} parts (${hairGlbs.length} hairstyles meshopt-compressed in 3 tiers, ${accGlbs.length} Roblox accessories in 2), base, ${Object.keys(lod).length} LOD 1 and ${Object.keys(lod2).length} LOD 2 GLBs, 4 face atlases (2 pages), the hair and colour atlases, 5 JSON files, TSI decal`);
+console.log(`synced ${parts.length} parts (${hairGlbs.length} hairstyles meshopt-compressed in 3 tiers, ${accGlbs.length} Roblox accessories in 2), base, ${Object.keys(lod).length} LOD 1 and ${Object.keys(lod2).length} LOD 2 GLBs, 4 face atlases (2 pages), the hair, colour and design atlases, 5 JSON files`);

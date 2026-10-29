@@ -14,7 +14,7 @@ import { useGLTF } from "@react-three/drei";
 import type { WeaponPaint } from "@/lib/game/combat/primitives";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
-import { BASE_URL, COLOUR_ATLAS_URL, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, PART_BY_ID, LOD_SKIN_URL, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, VERBS_URL, bodyKey, resolveParts, usesFacePage2, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
+import { BASE_URL, COLOUR_ATLAS_URL, DESIGN_ATLAS_URL, DESIGNS, designUse, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, PART_BY_ID, LOD_SKIN_URL, PALETTE, CLIP_BY_NAME, VERBS_URL, bodyKey, resolveParts, usesFacePage2, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
 import { characterLod, createLodState, detailSituation, drawnHeight, mixerStep, type DetailSituation } from "@/lib/game/character/lod";
 import { isDetailFocus } from "@/lib/game/character/detailFocus";
 import { readPhoto } from "@/lib/game/photoMode";
@@ -24,7 +24,7 @@ import { quality } from "@/lib/game/perf/governor";
 import { FaceAnimator, faceSlots, poseKey } from "@/lib/game/character/face";
 import { createFaceMaterial, loadFacePage, MATTE, prepareFaceAtlas, type FaceMaterial } from "@/lib/game/character/faceMaterial";
 import { ATTACK_CLIP, WEAPON_HAND, contactCrossed, crossfade, holdLayer, isLoop, layerTrack, layerWeight, matchPhase, resolveClip, tempo, verbInfo, type CharacterMotion, type ClipName, type Layer } from "@/lib/game/character/clips";
-import { adoptPrimitive, materialName, mergeLook, refCache, skinnedPrimitives } from "@/lib/game/character/rig";
+import { DESIGN_U, materialName, mergeLook, refCache, skinnedPrimitives, type PieceCut } from "@/lib/game/character/rig";
 import type { WeaponGrip, WeaponKind } from "@/lib/game/combat/contract";
 import { tagLookClasses } from "@/lib/game/modelMaterials";
 import { heldTemplate } from "@/lib/game/character/heldMesh";
@@ -62,22 +62,32 @@ const HAIR_ATLAS = HAIR.uniform;
  * their own textures: a vertex whose u is 2 or more takes the texel at (u - 2, v), as drawn, never tinted. Loaded the
  * first time a look wears one (a white texel until then), sRGB, so it reads back linear.
  */
-const COLOUR_ATLAS: { value: THREE.Texture } = { value: new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1) };
-COLOUR_ATLAS.value.needsUpdate = true;
-let colourAtlasLoading = false;
-function ensureColourAtlas() {
-  if (colourAtlasLoading) return;
-  colourAtlasLoading = true;
-  new THREE.TextureLoader().load(COLOUR_ATLAS_URL, tex => {
-    tex.flipY = false;                       // glTF UVs (top-left origin)
-    tex.colorSpace = THREE.SRGBColorSpace;   // colour: decoded to linear on sampling
-    tex.generateMipmaps = true;
-    tex.minFilter = THREE.LinearMipmapLinearFilter;
-    tex.anisotropy = 4;
-    tex.needsUpdate = true;
-    COLOUR_ATLAS.value = tex;
-  });
+/** An atlas loaded the first time a look needs it (a texel that changes nothing until then), sRGB, so it reads back linear. */
+function lazyAtlas(url: string, blank: number[]) {
+  const uniform: { value: THREE.Texture } = { value: new THREE.DataTexture(new Uint8Array(blank), 1, 1) };
+  uniform.value.needsUpdate = true;
+  let loading = false;
+  return {
+    uniform,
+    ensure() {
+      if (loading) return;
+      loading = true;
+      new THREE.TextureLoader().load(url, tex => {
+        tex.flipY = false;                       // glTF UVs (top-left origin)
+        tex.colorSpace = THREE.SRGBColorSpace;   // colour: decoded to linear on sampling
+        tex.generateMipmaps = true;
+        tex.minFilter = THREE.LinearMipmapLinearFilter;
+        tex.anisotropy = 4;
+        tex.needsUpdate = true;
+        uniform.value = tex;
+      });
+    },
+  };
 }
+const COLOUR = lazyAtlas(COLOUR_ATLAS_URL, [255, 255, 255, 255]);
+/** clothing-v2: the design atlas (look.ts DESIGNS): a garment vertex whose u is DESIGN_U or more paints the texel at
+ * (u - DESIGN_U, v) over its tint by the texel's alpha; until it loads, a clear texel (the tint alone). */
+const DESIGN = lazyAtlas(DESIGN_ATLAS_URL, [0, 0, 0, 0]);
 /** Row 314: the hair's soft gloss (David: "matte with subtle gloss"): its roughness, F0 and grazing reflectance. Round 3
  * (David: "why does it fade off"): grazing reflectance 0.45 -> 0.2, which had washed a light hair's edge-on strands white. */
 const HAIR_GLOSS = { roughness: 0.5, f0: 0.035, f90: 0.2 };
@@ -107,18 +117,23 @@ vec3 shiftHair(vec3 c, vec4 s, float l, vec2 lift) {
 }`;
 BODY_MATERIAL.onBeforeCompile = shader => {
   shader.uniforms.uHairAtlas = HAIR_ATLAS;
-  shader.uniforms.uColourAtlas = COLOUR_ATLAS;
+  shader.uniforms.uColourAtlas = COLOUR.uniform;
+  shader.uniforms.uDesignAtlas = DESIGN.uniform;
   shader.vertexShader = shader.vertexShader
     .replace("#include <uv_pars_vertex>", "#include <uv_pars_vertex>\nattribute vec3 hairMap;\nattribute vec4 hairA;\nattribute vec4 hairB;\nvarying vec2 vHairUv;\nvarying vec3 vHairMap;\nvarying vec4 vHairA;\nvarying vec4 vHairB;\nattribute vec4 hairL;\nvarying vec4 vHairL;")
     .replace("#include <uv_vertex>", "#include <uv_vertex>\nvHairUv = uv;\nvHairMap = hairMap;\nvHairA = hairA;\nvHairB = hairB;\nvHairL = hairL;");
   shader.fragmentShader = shader.fragmentShader
-    .replace("#include <uv_pars_fragment>", `#include <uv_pars_fragment>\nuniform sampler2D uHairAtlas;\nuniform sampler2D uColourAtlas;\nvarying vec2 vHairUv;\nvarying vec3 vHairMap;\nvarying vec4 vHairA;\nvarying vec4 vHairB;\nvarying vec4 vHairL;\n${HAIR_SHIFT}`)
+    .replace("#include <uv_pars_fragment>", `#include <uv_pars_fragment>\nuniform sampler2D uHairAtlas;\nuniform sampler2D uColourAtlas;\nuniform sampler2D uDesignAtlas;\nvarying vec2 vHairUv;\nvarying vec3 vHairMap;\nvarying vec4 vHairA;\nvarying vec4 vHairB;\nvarying vec4 vHairL;\n${HAIR_SHIFT}`)
     // in place of the vertex colour's multiply: u < 0, the under-cap (no texture: its COLOR_0 and the tint, the texture's
     // median shifted as the texture is) and every other surface take the vertex colour; a mapped hairstyle takes its texel,
     // each channel shifted on its own (round 2), the fixed one as drawn.
     // wardrobe batch 2: u >= 2 is a texel of the fixed-colour atlas, drawn as it is (a Roblox accessory, #22's hat)
+    // clothing-v2: u >= DESIGN_U is a garment's design, painted over the tint (vColor) by its alpha, in the vertex's shade
     .replace("#include <color_fragment>", `#ifdef USE_COLOR
-    if (vHairUv.x > 1.5) {
+    if (vHairUv.x > ${(DESIGN_U - 0.5).toFixed(1)}) {
+      vec4 d = texture2D(uDesignAtlas, vec2(vHairUv.x - ${DESIGN_U.toFixed(1)}, vHairUv.y));
+      diffuseColor.rgb *= mix(vColor, d.rgb * vHairMap.y, d.a);
+    } else if (vHairUv.x > 1.5) {
       diffuseColor.rgb *= texture2D(uColourAtlas, vec2(vHairUv.x - 2.0, vHairUv.y)).rgb;
     } else if (vHairMap.x > 0.5 && vHairUv.x >= 0.0) {
       vec4 t = texture2D(uHairAtlas, vHairUv);
@@ -141,9 +156,7 @@ BODY_MATERIAL.onBeforeCompile = shader => {
     }`);
 };
 BODY_MATERIAL.customProgramCacheKey = () => "character-body-hairmap-v8";
-let decalMaterial: THREE.MeshPhysicalMaterial | null = null;
 const bodies = refCache<THREE.BufferGeometry>();
-const decals = new Map<string, THREE.BufferGeometry>();
 
 /** A dash's afterimage (specs/movement-feel.md): how long it lasts and how strong it starts. Faint, short, matte. */
 const GHOST = { life: 0.2, opacity: 0.17, rise: 0.04 };
@@ -206,14 +219,18 @@ function localBoneTransform(this: THREE.SkinnedMesh, index: number, target: THRE
 /**
  * What a look merges (rig.ts mergeLook): the base's skin in the look's skin colour, then each part but its print. A hat
  * leaves out the hair it wins over (round 2: a covering hat's crown, a visor's band), the hood the head it hides
- * (hidden_cut.py's marks, rig.ts cutIndex).
+ * (hidden_cut.py's marks, rig.ts cutIndex), each garment the body skin it covers (clothing-v2, hidden_cut.py bodycut's marks);
+ * a garment's design paints its main cloth.
  */
 function lookPieces(look: CharacterLook, parts: ResolvedPart[], base: THREE.Object3D, scenes: THREE.Object3D[]) {
   const hat = parts.map(p => PART_BY_ID.get(p.id)).find(p => p?.hatCut !== undefined);
   const hooded = parts.some(p => PART_BY_ID.get(p.id)?.coversHead);
-  return [{ root: base, tints: { M_Skin: PALETTE.skin[look.skin] }, keep: (m: string) => m === "M_Skin", cut: hooded ? { name: "_HOODCUT", bit: 0 } : null },
-    ...parts.map((p, i) => ({ root: scenes[i], tints: p.tints, keep: (m: string) => m !== "M_Decal", map: p.map, fit: p.fit,
-      cut: hat && PART_BY_ID.get(p.id)?.full ? { name: "_HATCUT", bit: hat.hatCut! } : null }))];
+  const skinCuts: PieceCut[] = hooded ? [{ name: "_HOODCUT", bit: 0 }] : [];
+  for (const p of parts) { const bit = PART_BY_ID.get(p.id)?.bodyCut; if (bit !== undefined) skinCuts.push({ name: "_BODYCUT", bit }); }
+  return [{ root: base, tints: { M_Skin: PALETTE.skin[look.skin] }, keep: (m: string) => m === "M_Skin", cuts: skinCuts },
+    ...parts.map((p, i) => ({ root: scenes[i], tints: p.tints, map: p.map, fit: p.fit,
+      cuts: hat && PART_BY_ID.get(p.id)?.full ? [{ name: "_HATCUT", bit: hat.hatCut! }] : [],
+      design: p.design === null ? null : { use: designUse(p.design), materials: DESIGNS.materials } }))];
 }
 
 /** One character instance: its own bones and mixer, shared geometry/materials. */
@@ -227,7 +244,6 @@ class Puppet {
   private readonly bones: THREE.Bone[];
   private readonly body: THREE.SkinnedMesh;
   private readonly face: THREE.SkinnedMesh;
-  private readonly decal: THREE.SkinnedMesh;
   private bodyKey = "";
   /** The look's full merged geometry, and its LOD 1 (lod.ts: drawn while the character is small) once its GLBs load. */
   private full: THREE.BufferGeometry | null = null;
@@ -261,8 +277,8 @@ class Puppet {
   private readonly ghostParent: THREE.Object3D;
   private readonly ghosts: Ghost[] = [];
   private ghostNext = 0;
-  /** While faded (motion.fade < 1): the body's and print's own translucent copies of the shared materials, and the materials they replaced. */
-  private faded: { body: THREE.MeshPhysicalMaterial; decal: THREE.MeshPhysicalMaterial | null; was: { body: THREE.Material; decal: THREE.Material } } | null = null;
+  /** While faded (motion.fade < 1): the body's own translucent copy of the shared material, and the material it replaced. */
+  private faded: { body: THREE.MeshPhysicalMaterial; was: THREE.Material } | null = null;
   /** The arm hold laid over locomotion (specs/game-ui.md §2): its clip (kept while it eases out) and weight. */
   private holdClip: ClipName | null = null;
   private holdShown: ClipName | null = null;
@@ -304,11 +320,10 @@ class Puppet {
     };
     this.body = make(new THREE.BufferGeometry(), BODY_MATERIAL);
     this.face = make(facePrim.geometry, BODY_MATERIAL);
-    this.decal = make(new THREE.BufferGeometry(), BODY_MATERIAL);
-    // A print on the shirt, inside the body's silhouette: not a caster. Nor the face, a shell over the head
-    // (art/characters/build_lod.py) whose shadow falls inside the head's (specs/perf/effects-cost.md).
-    for (const m of [this.decal, this.face]) { m.castShadow = false; delete m.userData.sunCaster; }
-    this.body.visible = this.face.visible = this.decal.visible = false; // until dress()
+    // The face is not a caster: a shell over the head (art/characters/build_lod.py) whose shadow falls inside the head's
+    // (specs/perf/effects-cost.md).
+    this.face.castShadow = false; delete this.face.userData.sunCaster;
+    this.body.visible = this.face.visible = false; // until dress()
     this.sockets = { R: this.root.getObjectByName("Socket_R_Hand")!, L: this.root.getObjectByName("Socket_L_Hand")!, Back: this.root.getObjectByName("Socket_Back")! };
     this.skeleton = skeleton;
     this.bind = first.bindMatrix.clone();
@@ -319,7 +334,7 @@ class Puppet {
     this.clips = new Map(base.animations.map(c => [c.name, c]));
   }
 
-  dress(look: CharacterLook, parts: ResolvedPart[], scenes: THREE.Object3D[], atlas: THREE.Texture, decalMap: THREE.Texture) {
+  dress(look: CharacterLook, parts: ResolvedPart[], scenes: THREE.Object3D[], atlas: THREE.Texture) {
     const key = bodyKey(look);
     if (key !== this.bodyKey) {
       this.full = bodies.acquire(key, () => mergeLook(lookPieces(look, parts, this.base.scene, scenes), this.bones));
@@ -327,16 +342,6 @@ class Puppet {
       if (this.bodyKey) bodies.release(this.bodyKey);
       this.bodyKey = key;
       this.body.visible = this.face.visible = true;
-      const decalPart = parts.findIndex(p => p.decal);
-      this.decal.visible = decalPart >= 0;
-      if (decalPart >= 0) {
-        const id = parts[decalPart].id;
-        const prim = skinnedPrimitives(scenes[decalPart]).find(m => materialName(m) === "M_Decal");
-        if (prim && !decals.has(id)) decals.set(id, adoptPrimitive(prim, new Map(this.bones.map((b, i) => [b.name, i])), null));
-        this.decal.geometry = decals.get(id) ?? this.decal.geometry;
-        decalMaterial ??= new THREE.MeshPhysicalMaterial({ name: "CharacterDecal", map: decalMap, alphaTest: 0.5, ...MATTE, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
-        this.decal.material = decalMaterial;
-      }
     }
     // The face is one material per character over the shared atlas; a new look or atlas only re-uploads uniforms.
     if (!this.faceMat) this.faceMat = createFaceMaterial(atlas);
@@ -516,28 +521,26 @@ class Puppet {
     if (this.ghosts.length) return;
     while (this.ghosts.length < 2) this.ghosts.push(new Ghost(this.skeleton, this.body.bindMatrix, this.ghostParent, this.ghostGeometries()));
     // The character that leaves afterimages draws after them (Ghost): over them where they overlap.
-    this.body.renderOrder = this.face.renderOrder = this.decal.renderOrder = GHOST_ORDER + 1;
+    this.body.renderOrder = this.face.renderOrder = GHOST_ORDER + 1;
   }
 
-  /** Translucent while `f` < 1 (classes v2: Escape Rabbits): the body and print draw from their own copies, the face's own material fades with them. */
+  /** Translucent while `f` < 1 (classes v2: Escape Rabbits): the body draws from its own copy, the face's own material fades with it. */
   private fade(f: number) {
     const face = this.face.material as THREE.Material;
     if (f >= 0.999) {
       if (!this.faded) return;
-      this.body.material = this.faded.was.body; this.decal.material = this.faded.was.decal;
-      this.faded.body.dispose(); this.faded.decal?.dispose(); this.faded = null;
+      this.body.material = this.faded.was;
+      this.faded.body.dispose(); this.faded = null;
       face.transparent = false; face.opacity = 1; face.depthWrite = true; face.needsUpdate = true;
       return;
     }
     if (!this.faded) {
       const glass = <M extends THREE.Material>(m: M) => Object.assign(m.clone(), { transparent: true, depthWrite: false }) as M;
-      this.faded = { body: glass(this.body.material as THREE.MeshPhysicalMaterial), decal: this.decal.visible ? glass(this.decal.material as THREE.MeshPhysicalMaterial) : null,
-        was: { body: this.body.material as THREE.Material, decal: this.decal.material as THREE.Material } };
+      this.faded = { body: glass(this.body.material as THREE.MeshPhysicalMaterial), was: this.body.material as THREE.Material };
       this.body.material = this.faded.body;
-      if (this.faded.decal) this.decal.material = this.faded.decal;
       face.transparent = true; face.depthWrite = false; face.needsUpdate = true;
     }
-    this.faded.body.opacity = f; if (this.faded.decal) this.faded.decal.opacity = f; face.opacity = f;
+    this.faded.body.opacity = f; face.opacity = f;
   }
 
   /**
@@ -577,6 +580,9 @@ class Puppet {
       // Posed by its phase (Air by vertical speed, CastWindup by the cast's power), not by the clock.
       action.setEffectiveTimeScale(0);
       action.time = Math.min(1, Math.max(0, (want === "Air" ? motion.air : motion.scrub) ?? 0)) * length * 0.999;
+    } else if (motion.freeze !== undefined && want === motion.pose) {
+      action.setEffectiveTimeScale(0);                 // the avatar bench: a pose held still at one phase
+      action.time = Math.min(1, Math.max(0, motion.freeze)) * length * 0.999;
     } else action.setEffectiveTimeScale(want === this.oneShot ? this.oneShotRate : want === motion.pose && motion.poseRate ? motion.poseRate : tempo(want, motion.speed, walkSpeed));
     // Dancing in a group: the loop eases onto the shared beat (each keeping their own move).
     if (motion.beat != null && want === motion.pose && !changed && isLoop(want)) action.setEffectiveTimeScale(beatRate(action.time, motion.beat, length, delta));
@@ -898,10 +904,12 @@ export default function Character({ look, motion, walkSpeed = MOVE_TUNING.walkSp
   const mapped = parts.some(p => p.map), creatorSized = faceSize >= 1024;
   useEffect(() => (creatorSized ? HAIR.creatorUp() : undefined), [creatorSized]);
   useEffect(() => (mapped ? HAIR.wear(creatorSized) : undefined), [mapped, creatorSized]);
-  useEffect(() => { if (parts.some(p => p.colour)) ensureColourAtlas(); }, [parts]);   // the first textured accessory loads the colour atlas
+  useEffect(() => {   // the first textured accessory loads the colour atlas, the first designed garment the design atlas
+    if (parts.some(p => p.colour)) COLOUR.ensure();
+    if (parts.some(p => p.design !== null)) DESIGN.ensure();
+  }, [parts]);
   const loaded = useGLTF([BASE_URL, ...parts.map(p => p.url)]) as unknown as Gltf[];
   const atlas = useLoader(THREE.TextureLoader, faceSize >= 1024 ? FACE_ATLAS_URLS.creator : FACE_ATLAS_URLS.world);
-  const decalMap = useLoader(THREE.TextureLoader, TSI_DECAL_URL);
   const base = loaded[0];
   const puppet = useMemo(() => new Puppet(base), [base]);
   useEffect(() => () => puppet.dispose(), [puppet]);
@@ -911,8 +919,8 @@ export default function Character({ look, motion, walkSpeed = MOVE_TUNING.walkSp
   useEffect(() => setKeepFace(puppet, keepFace), [puppet, keepFace]);
   useEffect(() => setId(puppet, id), [puppet, id]);
   useEffect(() => {
-    dressPuppet(puppet, shown, parts, loaded.slice(1).map(g => g.scene), atlas, decalMap);
-  }, [puppet, shown, parts, loaded, atlas, decalMap]);
+    dressPuppet(puppet, shown, parts, loaded.slice(1).map(g => g.scene), atlas);
+  }, [puppet, shown, parts, loaded, atlas]);
   // The face atlas's second page loads for a look that wears one of its parts, or while the expressions and emote
   // mouths use its cells (since the wardrobe cut, everyone; usesFacePage2), without suspending: until it arrives those
   // parts are transparent. One shared texture.
@@ -1008,9 +1016,7 @@ function setFallback(puppet: Puppet, kind: WeaponKind | undefined) { puppet.fall
 function setRemote(puppet: Puppet, remote: boolean) { puppet.remote = remote; }
 function setKeepFace(puppet: Puppet, keep: boolean) { puppet.keepFace = keep; }
 function setId(puppet: Puppet, id: string | undefined) { puppet.id = id; }
-function dressPuppet(puppet: Puppet, look: CharacterLook, parts: ResolvedPart[], scenes: THREE.Object3D[], atlas: THREE.Texture, decalMap: THREE.Texture) {
-  decalMap.flipY = false;
-  decalMap.colorSpace = THREE.SRGBColorSpace;
+function dressPuppet(puppet: Puppet, look: CharacterLook, parts: ResolvedPart[], scenes: THREE.Object3D[], atlas: THREE.Texture) {
   if (atlas.flipY) prepareFaceAtlas(atlas); // once per (shared) atlas texture
-  puppet.dress(look, parts, scenes, atlas, decalMap);
+  puppet.dress(look, parts, scenes, atlas);
 }

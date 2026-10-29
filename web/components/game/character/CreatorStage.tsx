@@ -36,8 +36,8 @@ export function frameDistance(f: (typeof FRAMES)[Framing], aspect: number) {
   return Math.max(f.h / 2 / t, f.w / 2 / (t * aspect));
 }
 
-/** The studio: key, fill and rim fixed to the camera's side of the set, a little warm sky, nothing shiny. */
-function Lights() {
+/** The studio: key, fill and rim fixed to the camera's side of the set, a little warm sky, nothing shiny (also the avatar bench's &light=creator). */
+export function Lights() {
   return <>
     <hemisphereLight args={["#fff4e2", "#cdb995", 0.62]} />
     <directionalLight position={[-1.5, 2.1, 2.5]} intensity={2.3} color="#fff0d9" />
