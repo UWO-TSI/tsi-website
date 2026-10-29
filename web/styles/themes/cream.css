@@ -30,6 +30,10 @@
   --ui-focus: #a8722f;
   --ui-scrim: rgb(64 52 36 / 0.3);
   --ui-shade: 114 92 78;
+  /* The fishing reel's water (components/gui/flat/reel): the track, and its ripples and edge. */
+  --ui-water: #d9eef4;
+  --ui-water-line: #9fcbdb;
+  --ui-water-deep: #2f8aa6;
   --ui-stage: radial-gradient(ellipse 24% 4.5% at 50% 87%, rgb(114 92 78 / 0.2), rgb(114 92 78 / 0.08) 55%, transparent 100%),
     linear-gradient(180deg, #fffff7 0%, #fffff7 60%, #f8f4e8 84%, #eee9ca 100%);
 }

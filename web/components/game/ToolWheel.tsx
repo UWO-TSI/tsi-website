@@ -5,23 +5,24 @@
  * the language of the Animal Crossing UI kit he supplied: cream circles for petals, the chosen one grows and turns
  * butter yellow, a teal check marks what's in hand, the name in a teal pill under the choice, round keycaps).
  * Hold the wheel key (Tab): after a beat the flower opens round the screen's centre, the world dims a little and
- * slows, and a flick of the mouse (added up under pointer lock, the cursor's direction otherwise) grows the petal it
- * points at, its name below; letting go takes it out, the centre puts things away. A quick tap swaps back to the
- * last thing held. On a touch screen the wheel button opens it and a tap chooses. Esc closes it unchanged.
- * Under pointer lock the wheel keeps the mouse (the camera holds still while it's open).
+ * slows, and a flick of the mouse (its movement added up, under pointer lock or with a free cursor alike:
+ * lib/game/useWheelFlick) grows the petal it points at, its name below; letting go takes it out, the centre puts things
+ * away. A quick tap swaps back to the last thing held. On a touch screen the wheel button opens it and a tap chooses.
+ * Esc closes it unchanged. Under pointer lock the wheel keeps the mouse (the camera holds still while it's open).
  */
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { Check, Hand } from "lucide-react";
 import { AudioManager } from "@/lib/game/audio";
-import { flick, slotAt, slotPosition, type WheelItem } from "@/lib/game/toolWheel";
+import { slotPosition, type WheelItem } from "@/lib/game/toolWheel";
+import { useWheelFlick } from "@/lib/game/useWheelFlick";
 import { keyName } from "@/lib/game/movement/keys";
 import { slowMotion } from "@/lib/game/slowMotion";
 import styles from "./ToolWheel.module.css";
 
 /** A press shorter than this (with no flick) is the quick tap; the flower opens after it. */
 const TAP_MS = 170;
-/** The petals' ring and the flick's reach (px); within DEAD of the centre is the centre. */
-const RING = 104, REACH = 120, DEAD = 34;
+/** The petals' ring and the flick's reach (px: short, so a new direction takes over quickly); within DEAD of the centre is the centre. */
+const RING = 104, REACH = 80, DEAD = 30;
 type Choice = number | null | "keep";
 
 const sfx = (name: Parameters<typeof AudioManager.playSFX>[0], rate: number, gain: number) => AudioManager.playSFX(name, { rate, gain });
@@ -33,7 +34,7 @@ export default function ToolWheel({ items, held, wheelKey, enabled, touch, onEqu
   const [open, setOpen] = useState<false | "key" | "touch">(false);
   const [shown, setShown] = useState(false);
   const [choice, setChoice] = useState<Choice>("keep");
-  const live = useRef({ open: false as false | "key" | "touch", at: 0, v: [0, 0] as [number, number], choice: "keep" as Choice, timer: 0, items, held, enabled });
+  const live = useRef({ open: false as false | "key" | "touch", at: 0, choice: "keep" as Choice, timer: 0, items, held, enabled });
   useEffect(() => { live.current.items = items; live.current.held = held; live.current.enabled = enabled; }, [items, held, enabled]);
 
   const choose = useCallback((next: Choice) => {
@@ -67,7 +68,7 @@ export default function ToolWheel({ items, held, wheelKey, enabled, touch, onEqu
   const begin = useCallback((how: "key" | "touch") => {
     const l = live.current;
     if (l.open || !l.enabled || !l.items.length) return;
-    l.open = how; l.at = performance.now(); l.v = [0, 0]; l.choice = "keep";
+    l.open = how; l.at = performance.now(); l.choice = "keep";
     setOpen(how); setChoice("keep");
     if (how === "touch") show();
     else l.timer = window.setTimeout(show, TAP_MS);
@@ -91,22 +92,8 @@ export default function ToolWheel({ items, held, wheelKey, enabled, touch, onEqu
     window.addEventListener("blur", blur);
     return () => { window.removeEventListener("keydown", down, true); window.removeEventListener("keyup", up, true); window.removeEventListener("blur", blur); };
   }, [wheelKey, begin, close]);
-  // The flick: under pointer lock the movement adds up (and the camera doesn't see it); with a cursor, its direction from the centre.
-  useEffect(() => {
-    if (open !== "key") return;
-    const move = (e: MouseEvent) => {
-      const l = live.current, n = l.items.length;
-      if (document.pointerLockElement) {
-        e.stopPropagation();
-        l.v = flick(l.v, e.movementX, e.movementY, REACH);
-      } else l.v = [e.clientX - window.innerWidth / 2, e.clientY - window.innerHeight / 2];
-      const d = Math.hypot(...l.v);
-      if (l.choice === "keep" && d < DEAD) return; // nothing chosen until the flick leaves the centre
-      choose(slotAt(l.v[0], l.v[1], n, DEAD));
-    };
-    window.addEventListener("mousemove", move, true);
-    return () => window.removeEventListener("mousemove", move, true);
-  }, [open, choose]);
+  // The flick picks while the key holds it open (nothing chosen until it leaves the centre).
+  useWheelFlick(open === "key", true, () => live.current.items.length, choose, REACH, DEAD);
   useEffect(() => () => { slowMotion(false); window.clearTimeout(live.current.timer); }, []);
 
   const n = items.length, picked = choice === "keep" ? items.findIndex(i => i.id === held) : choice;
@@ -125,7 +112,6 @@ export default function ToolWheel({ items, held, wheelKey, enabled, touch, onEqu
           const [x, y] = slotPosition(i, n, RING);
           return <button key={item.id} role="menuitem" className={styles.petal} data-chosen={picked === i || undefined} data-held={item.id === held || undefined}
             style={{ "--x": `${x}px`, "--y": `${y}px`, "--i": i } as CSSProperties}
-            onMouseEnter={() => open === "key" && !document.pointerLockElement && choose(i)}
             onClick={e => { e.stopPropagation(); live.current.choice = i; close(true); }} aria-label={item.name}>
             <ItemIcon item={item} />
             {item.id === held && <span className={styles.check} aria-hidden><Check size={13} strokeWidth={3.4} /></span>}
@@ -133,7 +119,6 @@ export default function ToolWheel({ items, held, wheelKey, enabled, touch, onEqu
           </button>;
         })}
         <button role="menuitem" className={styles.centre} data-chosen={picked === null || undefined} aria-label="Put away"
-          onMouseEnter={() => open === "key" && !document.pointerLockElement && choose(null)}
           onClick={e => { e.stopPropagation(); live.current.choice = null; close(true); }}><Hand size={22} aria-hidden /></button>
         {label && <p className={styles.name} aria-live="polite" data-above={ly < -1 || undefined} style={{ "--lx": `${lx}px`, "--ly": `${ly}px` } as CSSProperties}><b>{label}</b>{sub && <small>{sub}</small>}</p>}
       </div>

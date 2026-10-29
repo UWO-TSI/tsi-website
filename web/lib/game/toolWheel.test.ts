@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { STARTER_WEAPONS } from "@/lib/combat/weapons";
-import { EMPTY_HANDS, WHEEL_SLOTS, clickAction, equip, flick, heldItem, pinItem, quickSwap, reconcile, slotAt, slotPosition, toolNeeded, wheelContents, wheelWeapons, type WheelContext } from "./toolWheel";
+import { EMPTY_HANDS, WHEEL_SLOTS, clickAction, equip, flick, flickPick, heldItem, newFlick, pinItem, quickSwap, reconcile, slotAt, slotPosition, toolNeeded, wheelContents, wheelWeapons, type WheelContext } from "./toolWheel";
 import { TOOLS, bestTool } from "./tools";
 
 const base: WheelContext = { site: "village", owned: [], weapons: STARTER_WEAPONS, armed: false, pins: [], stock: {} };
@@ -113,6 +113,23 @@ describe("choosing with a flick", () => {
     v = flick(v, 300, 0, 120);
     expect(Math.hypot(...v)).toBeCloseTo(120);
     expect(slotAt(...v, 8, 30)).toBe(2);
+  });
+
+  it("picks by the direction the mouse moves, locked or not, past a dead zone (playtest 2026-10-29)", () => {
+    const f = newFlick(), pick = (dx: number, dy: number) => flickPick(f, dx, dy, 8, 80, 30);
+    // A small wobble picks nothing: the wheel keeps what it had.
+    expect(pick(4, -3)).toBeUndefined();
+    expect(pick(-6, 5)).toBeUndefined();
+    // Moving down in small steps: slot 4 (straight down) once the flick leaves the centre.
+    for (let i = 0; i < 4; i++) pick(0, 8);
+    expect(pick(0, 8)).toBe(4);
+    // Then right: the direction swings round to slot 2 without a long trip back through the middle.
+    let i: number | null | undefined;
+    for (let k = 0; k < 12; k++) i = pick(12, 0);
+    expect(i).toBe(2);
+    // Back to the centre is the centre (put away / flip), and out again picks again.
+    expect(pick(-80, 0)).toBeNull();
+    expect(pick(-60, -60)).toBe(7);
   });
 });
 

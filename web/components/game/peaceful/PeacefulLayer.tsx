@@ -12,7 +12,7 @@ import BagFullNote from "./BagFullNote";
 import BossCreature from "../fishing/BossCreature";
 import { fishBosses } from "@/lib/game/fishing";
 import { gridFishingWaterHeight } from "@/lib/game/fishingWater";
-import { fishingSpot, type FishingSpot, type WaterType } from "@/lib/game/fishingSpots";
+import { aimedSpot, fishingSpot, type FishingSpot, type WaterType } from "@/lib/game/fishingSpots";
 import { getPeacefulTarget } from "@/lib/game/peacefulNear";
 import { setSceneWater } from "@/lib/game/fishingRig";
 import { isGroundAtWorld, type IslandMap } from "@/lib/game/grid";
@@ -22,12 +22,17 @@ export type PeacefulNear = "forage" | "net" | "dig" | "fish" | null;
 
 /** The spot the per-frame check writes (one scene runs it at a time): read at the click, copied into the cast's event. */
 const SPOT: FishingSpot = { target: [0, 0], water: "river" };
-/** Lowest-priority prompt: a forage node (by hand), a catchable bug (the net's) or a dig (the shovel's) in reach, else water in casting reach (the rod's). */
-export function peacefulNear(map: IslandMap, classify: (x: number, z: number) => WaterType, x: number, z: number, spotOut: { current: FishingSpot | null }): PeacefulNear {
+/**
+ * Lowest-priority prompt: a forage node (by hand), a catchable bug (the net's) or a dig (the shovel's) in reach, else
+ * water in casting reach (the rod's). With `aim` (fishingSpots castAim) the spot is the water that way, or none when
+ * the aim points at land (the click then says to point at the water).
+ */
+export function peacefulNear(map: IslandMap, classify: (x: number, z: number) => WaterType, x: number, z: number, spotOut: { current: FishingSpot | null }, aim?: readonly [number, number]): PeacefulNear {
   const target = getPeacefulTarget();
   if (target) return target.kind === "bug" ? "net" : target.kind === "dig" ? "dig" : "forage";
-  spotOut.current = fishingSpot(map, classify, x, z, SPOT);
-  return spotOut.current ? "fish" : null;
+  const near = fishingSpot(map, classify, x, z, SPOT);
+  spotOut.current = near && aim ? aimedSpot(map, classify, x, z, aim[0], aim[1], SPOT) : near;
+  return near ? "fish" : null;
 }
 
 export default function PeacefulLayer({ map, nodes, moment, member, player, ground, highTier, active, treeModels }: {

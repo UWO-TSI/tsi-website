@@ -15,6 +15,9 @@ import { popBang } from "@/components/game/character/hookBang";
 import { AudioManager } from "@/lib/game/audio";
 import { ReelMinigame } from "@/components/game/FishingOverlay";
 import FishReveal from "@/components/game/FishReveal";
+import FishingOverlay from "@/components/game/FishingOverlay";
+import MemberFishing, { MemberCatchCard } from "@/components/game/fishing/MemberFishing";
+import { useSearch } from "@/lib/game/useMediaQuery";
 import FishPreview from "@/components/lab/FishPreview";
 import {
   REVEAL,
@@ -63,6 +66,8 @@ export default function FishingBench() {
   const [selected, setSelected] = useState<FishDef>(FISH[0]);
   const [mystery, setMystery] = useState(true);
   const bangRef = useRef<HTMLDivElement>(null);
+  const search = useSearch();
+  const look = search === null ? null : new URLSearchParams(search).get("look") ?? "";
   const [reelKey, setReelKey] = useState(0); // remount per run
   const [reelOpen, setReelOpen] = useState(false);
   const [lastResult, setLastResult] = useState<string | null>(null);
@@ -279,6 +284,10 @@ export default function FishingBench() {
             <button onClick={() => setRevealOpen(true)} style={btn()}>
               Preview the catch card
             </button>
+            {/* The whole loop through the game's own overlay (cast meter, wait, bite, reel, card), rolled here. */}
+            <button data-loop-start onClick={() => window.dispatchEvent(new CustomEvent("tsi:fish-start", { detail: { x: 0, z: 0 } }))} style={btn()}>
+              Cast (the whole loop)
+            </button>
             <button
               onClick={() => celebrate(selected.rarity, RARITY_META[selected.rarity].color)}
               style={btn()}
@@ -300,7 +309,7 @@ export default function FishingBench() {
           </div>
 
           {/* Reel stage */}
-          <div style={{ minHeight: 150, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.12)", borderRadius: 12, padding: 16 }}>
+          <div data-reel-stage style={{ minHeight: 150, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.12)", borderRadius: 12, padding: 16 }}>
             {reelOpen ? (
               <ReelMinigame key={reelKey} fish={selected} known={!mystery} onDone={onReelDone} />
             ) : lastResult ? (
@@ -317,8 +326,12 @@ export default function FishingBench() {
         </div>
       </div>
       {revealOpen && (
-        <FishReveal fish={selected} sizeCm={rollSize(selected.sizeCm)} isNew={mystery} onDone={() => setRevealOpen(false)} />
+        look === "member"
+          ? <div style={{ position: "fixed", left: "50%", bottom: 36, transform: "translateX(-50%)", zIndex: 60 }}><MemberCatchCard fish={selected} sizeCm={rollSize(selected.sizeCm)} recipe={null} isNew={mystery} newRecord={false} delay={0} onDone={() => setRevealOpen(false)} /></div>
+          : <FishReveal fish={selected} sizeCm={rollSize(selected.sizeCm)} isNew={mystery} onDone={() => setRevealOpen(false)} />
       )}
+      {/* ?look=member: the member island's flat overlay; otherwise the applicant island's. */}
+      {look === "member" ? <MemberFishing /> : look !== null && <FishingOverlay collectionScope="lab" />}
     </div>
   );
 }
