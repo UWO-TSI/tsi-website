@@ -49,8 +49,6 @@ export const GAME_ASSETS: readonly string[] = [
   "/assets/acnh/props/boat.glb",
   "/assets/game/props/buoy.glb",
   "/assets/game/wharf/pier.glb",
-  "/assets/game/wharf/wharf-dressing.glb",
-  "/assets/game/wharf/rowboat.glb",
   "/assets/fauna/seagull.glb",
   "/assets/acnh/critters/common-butterfly.glb",
   "/assets/acnh/critters/agrias-butterfly.glb",
@@ -352,3 +350,6 @@ export const GAME_ASSETS: readonly string[] = [
   "/audio/sfx/blip4.ogg",
   "/audio/sfx/footstep.ogg",
 ].map(u => worldModel(u));
+
+/** How many models and textures the island had asked for when its loading screen lifted: the loading screen's floor for "of how many". */
+export const READY_FILES = 336;

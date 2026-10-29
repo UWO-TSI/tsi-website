@@ -4,6 +4,16 @@ import { studyLayout, WALK_AWAY_RADIUS, localSeats, nearestSeat, seatAt, seatsOf
 import { STUDY_CLIP, poseOf, sitDetail, studyPose } from "./worldStore";
 import type { StudyHook } from "./useStudySession";
 import { CAFE_ROOM } from "@/lib/game/cafe";
+import { createCenteredMap, Surface } from "@/lib/game/grid";
+import { setVillage, villageOf } from "@/lib/game/villageMap";
+
+// The backend's two outdoor tables, placed on a flat grass island (the member island places its own study objects).
+const flat = createCenteredMap(48, 48);
+flat.surfaces.fill(Surface.Grass);
+setVillage(villageOf(flat, [
+  { id: "study:plaza-picnic", kind: "study", x: 2.4, z: 2.6, model: "picnic" },
+  { id: "study:pier-bench", kind: "study", x: 4.6, z: -17.6, model: "pier" },
+]));
 
 describe("seat anchors (study-world §1)", () => {
   it("maps every backend table anchor to exactly its seat count, and nothing else", () => {

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { fallbackShot, stagedShot } from "./shots";
-import { village } from "@/lib/game/villageMap";
+import { join } from "node:path";
+import * as THREE from "three";
+import { fallbackShot, stagedShot, titleView } from "./shots";
+import { loadWorldFromDisk } from "@/lib/game/world/disk";
+import { villageOfWorld } from "@/lib/game/world/village";
+import { objectById, objectsOf, village } from "@/lib/game/villageMap";
 import { villageIsland } from "@/lib/game/defaultIsland";
 import type { IslandPhase } from "@/lib/game/islandTime";
 import type { Season } from "@/lib/game/season";
@@ -28,5 +32,26 @@ describe("the title's staged shots", () => {
     for (const phase of PHASES) {
       expect(stagedShot(phase, "summer", v, drowned)).toEqual(fallbackShot(v, drowned));
     }
+  });
+});
+
+describe("what the title can see", () => {
+  const v = villageOfWorld(loadWorldFromDisk(join(__dirname, "../../data/world")));
+  const island = villageIsland(v);
+  const shot = stagedShot("day", "summer", v, island);
+  const seen = titleView(v, island, "summer", shot, new THREE.PerspectiveCamera(38, 1, 0.05, 140), 16 / 9);
+  const at = (x: number, z: number, r: number) => new THREE.Sphere(new THREE.Vector3(x, island.ground(x, z) + 1, z), r);
+
+  it("sees the HQ it is staged on, and nothing behind the camera", () => {
+    const hq = objectById("landmark", "hq", v)!;
+    expect(seen(at(hq.x, hq.z, 1))).toBe(true);
+    const yaw = THREE.MathUtils.degToRad(shot.yaw);
+    expect(seen(at(shot.x - Math.sin(yaw) * 20, shot.z - Math.cos(yaw) * 20, 5))).toBe(false);
+  });
+
+  it("lights only the plaza's lamps, not the island's", () => {
+    const lamps = objectsOf("lamp", v), lit = lamps.filter(l => seen(at(l.x, l.z, 5)));
+    expect(lit.length).toBeGreaterThan(0);
+    expect(lit.length).toBeLessThan(lamps.length / 3);
   });
 });

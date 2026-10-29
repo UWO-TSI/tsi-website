@@ -2,7 +2,7 @@
 
 /**
  * Instanced rendering for GLB scenery (perf 2026-06-01; the village's nature
- * and props since the island painter, specs/island-painter.md §10).
+ * and props since the island painter, archive/village/island-painter.md §10).
  *
  * Replaces per-position clones (one draw call per sub-mesh per instance) with
  * one `THREE.InstancedMesh` per sub-mesh shared across every placement of the

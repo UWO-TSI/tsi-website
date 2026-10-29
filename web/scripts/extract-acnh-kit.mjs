@@ -33,7 +33,7 @@
  * renderer, which will assign ONE shared material per surface type by material
  * name and ignore the per-piece materials entirely.
  *
- * See specs/acnh-system-reference.md for the kit vocabulary and constants.
+ * See archive/village/acnh-system-reference.md for the kit vocabulary and constants.
  */
 
 import fs from "fs";

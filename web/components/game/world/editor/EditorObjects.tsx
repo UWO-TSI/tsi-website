@@ -15,6 +15,7 @@ import { BRIDGE_URL } from "@/lib/game/propModels";
 import { Lanterns } from "../../AmbientProps";
 import CafeBuilding from "../../study/CafeBuilding";
 import Wharf from "../../wharf/Wharf";
+import { JETTY } from "@/lib/game/wharf";
 import { houseModel, objectFootprint } from "@/lib/game/defaultIsland";
 import type { IslandLight } from "@/lib/game/islandLighting";
 import type { MapObject, Village } from "@/lib/game/villageMap";
@@ -34,7 +35,8 @@ export function BuildingModel({ o, y, light }: { o: MapObject; y: number; light:
   if (o.id === "shop" || o.id === "oracle") return <group position={[o.x, y, o.z]} rotation={[0, yaw, 0]} scale={k}><ACNHBuilding id={o.id} lit={0} /></group>;
   if (o.id === "museum") return <group position={[o.x, y, o.z]} rotation={[0, yaw, 0]} scale={k}><ACNHParts parts={CHALET_VARIANTS.red} lit={0} /></group>;
   if (o.id === "cafe") return <group position={[o.x, y, o.z]} rotation={[0, yaw, 0]} scale={k}><CafeBuilding state="soon" light={light} /></group>;
-  if (o.id === "wharf") return <Wharf dock={{ x: o.x, z: o.z, yaw }} light={light} place="village" dressed />;
+  // The game's dock (defaultIsland wharfDock): the jetty, standing at its platform height.
+  if (o.id === "wharf") return <Wharf dock={{ x: o.x, z: o.z, yaw, ...(o.model === "jetty" ? { y: JETTY.top } : {}) }} light={light} place="village" />;
   return null;
 }
 

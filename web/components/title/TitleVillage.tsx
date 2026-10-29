@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
+import * as THREE from "three";
 import { ACNHBuilding, ACNHParts, CHALET_VARIANTS } from "@/components/game/ACNHBuilding";
 import CafeBuilding from "@/components/game/study/CafeBuilding";
 import { DROPS } from "@/lib/game/drops";
 import Wharf from "@/components/game/wharf/Wharf";
-import { FadeLight, Lanterns } from "@/components/game/AmbientProps";
+import { FadeLight, LANTERN_REACH, Lanterns } from "@/components/game/AmbientProps";
 import { landmarks, turn, type Landmark, type VillageIsland } from "@/lib/game/defaultIsland";
 import { objectsOf, type Village } from "@/lib/game/villageMap";
 import { windowLit, type IslandLight } from "@/lib/game/islandLighting";
@@ -15,7 +16,7 @@ import { windowLit, type IslandLight } from "@/lib/game/islandLighting";
  * the wharf, and the street lamps' night glow (the posts themselves ride in with the scenery props). The pieces the
  * game ties to progression (monument stages, boards, boarded doors) stay out; the title shows the village as lived-in.
  */
-export default function TitleVillage({ v, island, light }: { v: Village; island: VillageIsland; light: IslandLight }) {
+export default function TitleVillage({ v, island, light, seen }: { v: Village; island: VillageIsland; light: IslandLight; seen: (s: THREE.Sphere) => boolean }) {
   const marks = new Map(landmarks(v).map(l => [l.id, l]));
   const ground = island.ground;
   const at = (l: Landmark): [number, number, number] => [l.x, ground(l.x, l.z), l.z];
@@ -33,6 +34,7 @@ export default function TitleVillage({ v, island, light }: { v: Village; island:
     {cafe && <group position={at(cafe)} rotation={[0, cafe.yaw ?? 0, 0]} scale={cafe.scale ?? 1}><CafeBuilding state={DROPS.cafe ? "open" : "soon"} light={light} /></group>}
     {museum && <group position={at(museum)} rotation={[0, museum.yaw ?? 0, 0]} scale={museum.scale ?? 1}><ACNHParts parts={CHALET_VARIANTS.red} lit={windowLit(light)} /></group>}
     {wharf && <Wharf dock={{ x: wharf.x, z: wharf.z, yaw: wharf.yaw ?? 0 }} light={light} place="village" />}
-    <Lanterns positions={lamps} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} />
+    {/* A light only where it can reach the frame (the island's 59 lamps each looped in every fragment: 55 ms frames). */}
+    <Lanterns positions={lamps} lit={at => seen(new THREE.Sphere(new THREE.Vector3(...at), LANTERN_REACH))} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} />
   </>;
 }

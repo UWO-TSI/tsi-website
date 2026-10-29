@@ -1,11 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import worldDoc from "@/data/world/world.json";
 import { fishPoolFor } from "@/lib/game/peaceful";
 import { rodByTier } from "@/lib/game/rods";
 import { seededRandom } from "@/lib/game/weatherSystem";
 import { villageNodes } from "@/lib/game/islandNodes";
 import { ROSTER, type Rarity } from "./roster";
-import { fishRoll, nodeRoll } from "./rolls";
+import { castWater, fishRoll, nodeRoll } from "./rolls";
+import { village } from "@/lib/game/villageMap";
 
 const NOON = new Date("2026-09-24T16:00:00Z"); // 12:00 in Toronto
 const close = (observed: number, p: number, n: number) => Math.abs(observed - p) <= 4 * Math.sqrt((p * (1 - p)) / n) + 0.002;
@@ -61,21 +62,12 @@ describe("server rolls match the tables", () => {
   });
 });
 
-describe("catch checks follow the active world (lib/game/world/active.ts)", () => {
+describe("catch checks judge the new world (the member island's only world)", () => {
   const wharf = (worldDoc.objects as { id: string; x: number; z: number }[]).find(o => o.id === "wharf")!;
-  const load = async (world: string | undefined) => {
-    vi.stubEnv("NEXT_PUBLIC_GAME_WORLD", world);
-    vi.resetModules();
-    try { return await import("./rolls"); } finally { vi.unstubAllEnvs(); }
-  };
 
-  it("casts from the new world's wharf only when the new world is live; the village stays the default", async () => {
-    const live = await load("new");
-    expect(live.activeVillage().terrain).toBeUndefined(); // the server's cell view, never the heightfield
-    expect(live.activeVillage().map.width).toBe(worldDoc.width);
-    expect(live.castWater("village", [wharf.x, wharf.z])).not.toBeNull();
-    const fallback = await load(undefined);
-    expect(fallback.activeVillage().map.width).not.toBe(worldDoc.width);
-    expect(fallback.castWater("village", [wharf.x, wharf.z])).toBeNull();
+  it("casts from the new world's wharf, on the server's cell view", () => {
+    expect(village().terrain).toBeUndefined(); // the server's cell view, never the heightfield
+    expect(village().map.width).toBe(worldDoc.width);
+    expect(castWater("village", [wharf.x, wharf.z])).not.toBeNull();
   });
 });

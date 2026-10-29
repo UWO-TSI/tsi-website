@@ -11,7 +11,7 @@
  *   · cell <-> world conversion and height lookup
  *   · the autotile solver shared by the cliff, river and road kits
  *
- * See `specs/acnh-system-reference.md` for where the constants come from and
+ * See `archive/village/acnh-system-reference.md` for where the constants come from and
  * `CLAUDE.md` § "World model" for the rules that follow from them.
  */
 

@@ -28,21 +28,17 @@ export interface SceneBudget {
   /** Longest frame within 1.5 s of an ult (ms), at the display's pace; fights only. */
   ultHitchMs?: number;
 }
-export type SceneName = "village" | "v2" | "cafe" | "ruins";
+export type SceneName = "v2" | "cafe" | "ruins";
 export type Tier = "high" | "lite";
 
 /**
- * Village: 24 players (?bots=24) and the residents, at the spawn. v2: the terrain v2 world draft (?fixture=v2, 384 ×
- * 552) with the same 24. Café: inside with its patrons and 24 bots. Ruins: a pack of 17 hunting you, the kit on a loop
+ * v2: the member island, the new world (web/data/world, 384 × 552), with 24 players (?bots=24) and the residents, at
+ * the spawn. Café: inside with its patrons and 24 bots. Ruins: a pack of 17 hunting you, the kit on a loop
  * and Shadow Garden's ults. Today's medians are specs/perf/baseline.json; each budget leaves room for a full shard of
  * 40 (at most 3 more drawn players and 16 more interpolated ones: specs/perf/budget.md "Headroom") and for content,
  * under the floor machine's ceiling (frame ≤ 6 ms here on High, ≤ 4 ms on Lite).
  */
 export const SCENE_BUDGET: Record<SceneName, Record<Tier, SceneBudget>> = {
-  village: {
-    high: { frameMs: 6, p95Ms: 9, cpuMs: 5, draws: 560, triangles: 620_000 },
-    lite: { frameMs: 4, p95Ms: 6, cpuMs: 3.5, draws: 420, triangles: 420_000 },
-  },
   v2: {
     high: { frameMs: 6.5, p95Ms: 10, cpuMs: 6, draws: 760, triangles: 1_200_000 },
     lite: { frameMs: 4, p95Ms: 6, cpuMs: 3.5, draws: 560, triangles: 950_000 },

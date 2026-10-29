@@ -8,7 +8,7 @@
 //   cd web && npm run perf:check                   build, bench, compare (about 10 minutes)
 //   npm run perf:check -- --update                 the same, then write the medians as the new baseline
 //   Env: SKIP_BUILD=1 (bench the build already in web/.next), KEEP_BUILD=1 (leave web/.next; by default it is deleted:
-//   a measurement build must never be deployed), RUNS (default 3), SCENES (default village,v2,cafe,ruins-summoner),
+//   a measurement build must never be deployed), RUNS (default 3), SCENES (default v2,cafe,ruins-summoner),
 //   TIERS (default high,lite), PORT (default 3158), TOLERANCE (default 0.10), PERF_BUDGET=off (other machines: skip
 //   the reference-machine budget), LOCK_OWNER=<branch> (take the shared machine's heavy lock for the build and the
 //   devserver lock for the bench, as the agents' rules ask).
@@ -20,7 +20,7 @@ import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url)), root = join(here, "../.."), web = join(root, "web");
 const UPDATE = process.argv.includes("--update"), RUNS = Number(process.env.RUNS ?? 3), PORT = process.env.PORT ?? "3158";
-const SCENES = (process.env.SCENES ?? "village,v2,cafe,ruins-summoner").split(","), TIERS = (process.env.TIERS ?? "high,lite").split(",");
+const SCENES = (process.env.SCENES ?? "v2,cafe,ruins-summoner").split(","), TIERS = (process.env.TIERS ?? "high,lite").split(",");
 const TOLERANCE = Number(process.env.TOLERANCE ?? 0.1), BUDGET = process.env.PERF_BUDGET !== "off", OWNER = process.env.LOCK_OWNER ?? "";
 const BASELINE = join(here, "baseline.json"), LOCKS = "/private/tmp/claude-501";
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -80,7 +80,7 @@ const summarise = rows => ({
 const base = existsSync(BASELINE) ? JSON.parse(readFileSync(BASELINE, "utf8")) : null;
 const budget = BUDGET ? (await import(join(web, "lib/game/perf/budget.ts"))).SCENE_BUDGET : null;
 const regressed = (now, was) => now.frameMs > was.frameMs * (1 + TOLERANCE) || now.draws > was.draws * (1 + TOLERANCE);
-const sceneOf = s => (s.startsWith("ruins") ? "ruins" : s === "v2cells" ? "v2" : s);
+const sceneOf = s => (s.startsWith("ruins") ? "ruins" : s);
 
 // Re-run what looks regressed, twice, before judging it.
 if (base && !UPDATE) for (const [k, rows] of runs) {
