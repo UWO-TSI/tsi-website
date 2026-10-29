@@ -36,58 +36,58 @@ Round 1 (https://claude.ai/artifact/G5RvBxgazEZwSirknQaBDt): tops, bottoms, shoe
 
 Round 2: put every remaining outfit in `art/characters/outfits/` (cardigan, collared shirt, sweater vest, TSI crewneck, raincoat, silk sweater, the skirts, overall shorts, the one-pieces, boots, loafers, rain boots, sandals) on universal models the same way: one mesh per garment type, designs as paint (the TSI crewneck as a design on the sweater or crew model, and so on), the body cut, at or under today's triangles. The design atlas needs room, so grow it to 2048, or use smaller cells where the design is simple. Merge main first. Review shots like round 1, in `specs/evidence/clothing-v2/round2/`.
 
+## Round 3 (David's round 2 review, 2026-10-28)
+
+David, verbatim:
+- blender_tops: approved. "clothes look good, but you need start worrying and developing clothing model for classes and armour related soon for differnt class". (A later lane: no class or armour clothing here.)
+- blender_round1_tops_reweighted: approved ("looks good").
+- blender_shoes, game_tops, game_shoes, game_bottoms_onepieces, tsi_crew_closeup: approved.
+- blender_bottoms (redo): "long dress clothes going though body, the 2 skirts are flashing when sitting down".
+- blender_onepieces (redo): "include these but they look ugly, needs remodeling adn model them properly, use blender and online for refernce images".
+
 ## Status
 
-Round 2 built, shots ready for David (2026-10-28), not merged. Head: see `git log -1` on `game/clothing-v2`. Round 1 and
-the TSI zip hoodie were approved (their notes are in git history of this file, commit 5886cdbc).
-- **Every outfit on a universal model** (`build_outfits.py`), part ids unchanged (saved looks keep working). Model ->
-  parts (tris now / old): tee -> base tee, sweater vest (144 / 152, 188); tee_collar (the tee + a white collar, the zip
-  hoodie's way) -> collared shirt (160 / 176); longsleeve -> striped; hoodie / hoodie_zip; sweater (the hoodie's body and
-  sleeves, a crew collar) -> TSI crewneck, cardigan, silk sweater (216 / 256, 262, 236); coat -> raincoat (216 / 218);
-  shorts; overalls (the shorts + bib, straps, two gold studs) -> overall shorts (146 / 162); skirt -> pleated (120 / 120,
-  pleats are paint); skirt_long -> long skirt (160 / 160); trousers; joggers; dress -> sundress (188 / 208); kimono (260 /
-  277, koi and collar paint, obi and bow geometry); cape -> monarch cape (228 / 252, veins, border, spots paint); slipon;
-  sneakers -> sneakers, loafers (156 / 156, 172); boots -> boots, rain boots (216 / 248, 248); sandals (152 / 152).
-  Body cut bits 0-19, one per model (`fit_report.txt`).
-- **Design atlas** 2048 px of 256 px units: a design takes 1 unit or 2 x 2 (tsi_zip, tsi_crew, kimono); 16 designs, 25 of
-  64 units used. Catalogue `designs`: `cells` (name -> index) and `rects` ([u0, v0, size] in the atlas), no more `grid`.
-  Engine: look.ts `designUse` reads `rects`. Designs paint fixed colours; black or white at a low alpha shades the tint
-  (ribbing, seams, folds follow the picked colour). Family layouts: one-pieces = tops' with the torso down to the sole;
-  shoes: foot v 0..0.65, a boot's shaft below it (slip-on and sneaker GLBs changed UVs only).
-- **Weights:** a skirt-region vertex (skirts, dress, kimono hem, coat flare, cape) keeps its region weights (`vreg`
-  stashed on the object by kit.finish); a torso vertex takes the nearest body point among triangles not mostly on an
-  arm (a roomy back over the shoulder blade took arm weights and bared the back in a run). This re-weighted the round 1
-  tops (tee, long-sleeve, hoodie, zip hoodie): `blender_round1_tops_reweighted.png` shows them unchanged to the eye.
-- **The decal is gone:** the crewneck's TSI mark (public/logo.svg, rasterised by build_outfits with rsvg-convert) is in
-  its design. Deleted: the decal mesh, material and loader in Character.tsx, `TSI_DECAL_URL`, `ResolvedPart.decal`,
-  `PartMaterial.decal`, the sync script's raster step, both `decal_tsi_mark.png`, kit's decal material kind and
-  `decalSlot` on new entries, and 14 old garment GLBs (+ their LOD 1). preloadAssets.ts edited by hand to the new GLBs.
-- **TSI zip hoodie, members only** (David, 2026-10-27: "its free in the default character creation but only for tsi
-  members, unobtainable for non"): catalogue `members: true`; `partRef` null (nothing to own, no shop row, so no
-  special, gift or reward); `shownOptions(..., member)` hides it from non-members in every creator; `forMember(look,
-  member)` puts the default top back. Membership: `profiles.membership === 'member' && is_active` (the member badge's
-  test, lib/identity/service.ts badgeFor), read by lookStore from GET /api/profile (`MyLook.member`) and checked again
-  on the server in PATCH /api/profile (403 `members_only`). Creators: PlayerCharacterUI, WardrobeSheet and the arrival's
-  ReflectionCreator pass `member`; the applicant island passes nothing (hidden there). Remote players: `remoteLook(json,
-  player.member)`. Merged main again (2026-10-28) for wardrobe-b3's `offered()`: it lets a `members` part through (never
-  priced, offered free, to members alone); creatorCategories.test runs `shownOptions(member)` with `offered()` in the
-  creator and the closet, member and non-member.
-- **Gates (after the second main merge, 2026-10-28):** tsc clean; vitest with `NEXT_PUBLIC_GAME_WORLD=new` 3512 passed /
-  4 skipped; without it 3504 passed, one lib/game/world/cells.test.ts case timed out at 908 s under machine load (a file
-  this branch doesn't touch; before the merge it was a barriers.test.ts case the same way); eslint clean on changed
-  files. No perf:check (machine saturated; the lane removes the decal's draw call, adds none; atlas 1024 -> 2048).
-- **Evidence** (`specs/evidence/clothing-v2/round2/`): `blender_{tops,bottoms,onepieces,shoes}.png` (before / after, run,
-  jump, sit x front, side, back), `blender_round1_tops_reweighted.png`, `fit_report.txt`, in game (the runtime Character on /lab/avatar ?sheet=fit,
-  design paint and body cut live) `game_tops.png`, `game_bottoms_onepieces.png`, `game_shoes.png`, and
-  `tsi_crew_closeup.png` (the crewneck's mark at the creator's close-up, creator light).
+Round 3 skirts fix built, not merged (head: `git log -1` on `game/clothing-v2`). Rounds 1 and 2 notes: git history of this
+file (commits 5886cdbc, da63d1d3).
+- **Root cause (both skirts):** a skirt's hem kept fixed region weights (body_shape "skirt": hips blended into the
+  thighs, the front by SKIRT_FRONT). Seated, the lap (40 % hips, 60 % thigh) collapsed toward the hip joint, so the
+  thigh rose through it; the skin under a skirt is never cut (0 triangles: it is open below), so thigh and skirt sat
+  within millimetres and z-fought (the flashing). In a run the long skirt's back hung from the hips and the kicked heel
+  came through it.
+- **Fix: `drape_weights` (build_outfits.py, parts with `drape=True`: the two skirts).** Each skirt vertex below the
+  hips mixes hips / both thighs / both shins as (1 - u - s, u, s), a smooth field (a value per ring at 5 directions
+  front to back, eased, mirrored), fitted to the clips' poses (DRAPE_STEP; key clips weigh 1): the skirt's surface
+  (vertices and points across its triangles, posed as the engine skins) kept DRAPE_CLEAR (12 mm) off capsules on the
+  legs and shoes (body_shape.LEG rings, knee + 8 mm) and the torso, the hem not rising over its knee more than at rest
+  while upright, nothing under the soles while standing, least pull off the hips, close to the legs it rides on, no
+  fold or tear. Prints the field and the worst poses. The long skirt is fuller behind (oval `cy`, `back`) so a heel
+  kicked back in a run stays inside. Tris unchanged (120, 160). The coat, dress, kimono and cape keep the old region
+  weights (one-pieces get remodelled).
+- **Real-skin check** (`hidden_cut.py bodycut`, `round3/fit_report.txt`): the skirts' remaining "poke" vertices are
+  hands and forearms resting on the lap (Sit, SitGround, DanceRobot), no leg skin.
+- **Evidence** (`specs/evidence/clothing-v2/round3/`): `blender_skirts.png` (before / after, run, jump, sit x front,
+  side, back), `blender_skirts_more.png` (idle, run with the foot kicked back, sit on the ground), `game_skirts.png` (in
+  game, /lab/avatar sheet=fit), `fit_report.txt`.
+- **Gates (2026-10-29):** tsc clean; vitest 3544 passed / 4 skipped; eslint clean on changed files; fit_check PASS.
+  No perf:check (tris and draw calls unchanged).
+- **One-piece references:** pending (step 2 of Next).
 
 ## Next
 
-1. David reviews round 2 (`specs/evidence/clothing-v2/round2/`); apply his notes.
-2. Known: the long skirt folds oddly in a side sit (as before); the rain boots share the boot's shaft (shorter than
-   the old rain boots); the overall shorts' bib sits over every top (by design, LAYER report).
+1. The one-piece references (David 10-28: "use blender and online for refernce images"; design bible Models rule 1):
+   search headless only, 3 to 5 clean images per one-piece (sundress, koi kimono, monarch cape) in the chibi /
+   Animal Crossing style, into `specs/references/onepieces/<item>/` with `sources.md`; send main the list, then stop:
+   David picks before any modelling.
+2. Then remodel the one-pieces from his picks (properly in Blender, design bible Models), using `drape=True` for their
+   skirts.
+3. Known: the long skirt's front in a side sit drapes to a point past the toes; hands resting on a seated skirt sink
+   into its lap.
 
 ## Tools and gotchas
+
+- `render_fit.py`: `FIT_POSES=name:Clip:t,...` (e.g. `idle:Idle:0.5,run_kick:Run:0.43,sit_ground:SitGround:0.5`) and
+  `FIT_RES=2` for a closer look; `fit_sheet.py` follows the same `FIT_POSES` names.
+- `drape_weights` runs ~1 to 2 min per skirt inside build_outfits (all clips' poses).
 
 - Evidence: `outfits/render_fit.py` (`FIT_ROOT=<an older art/characters tree>` for "before"; tints each part from its
   catalogue colours) and `outfits/fit_sheet.py` (`BEFORE=`); in game `/lab/avatar?sheet=fit&ids=` + `web/scripts/fit-shots.mjs`

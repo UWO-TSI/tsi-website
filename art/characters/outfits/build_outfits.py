@@ -5,8 +5,8 @@ change the paint over it like design"): one mesh per garment type, every design 
   (ids: rebuild just these parts; the rest keep their GLBs and catalogue entries)
 
 Each model is a shell on base/body_shape.py (the locked v6 torso and limb rings) over the skin, fitted to the clip base's
-own skin (weights transferred from it; a skirt's hem keeps its own, the hips blended into both thighs) with the skin it
-covers cut away in the engine (hidden_cut.py bodycut). Each GLB is the 22-bone CharacterRig + one skinned mesh (bind by
+own skin (weights transferred from it; a skirt's hem keeps its region's, or for the skirts, drape_weights fits them to the
+clips) with the skin it covers cut away in the engine (hidden_cut.py bodycut). Each GLB is the 22-bone CharacterRig + one skinned mesh (bind by
 bone name, like the hair). Materials are flat palette slots (M_Main, M_Accent, M_Sole, M_Sock) tinted from palette.json
 at runtime; a part's design is painted over its M_Main. Parts on one model: tee (base tee, sweater vest), tee with a
 collar (collared shirt), long-sleeve (striped), hoodie (pullover; the zip hoodie less its drawstrings), sweater (TSI
@@ -46,6 +46,22 @@ def body_source():
             wts.append({names[g.group]: g.weight for g in v.groups if g.weight > 1e-4})
         o.data.calc_loop_triangles()
         tris += [tuple(n0 + i for i in t.vertices) for t in o.data.loop_triangles]
+    arm = next(o for o in bpy.data.objects if o not in before and o.type == "ARMATURE")
+    A, Ai = arm.matrix_world, arm.matrix_world.inverted()
+    inv = {b.name.replace(kit.BONE, ""): b.matrix_local.inverted() for b in arm.data.bones}
+    DRAPE["bones"] = {b.name.replace(kit.BONE, ""): (A @ b.head_local, A @ b.tail_local) for b in arm.data.bones}
+    ad = arm.animation_data or arm.animation_data_create()
+    for act in sorted(bpy.data.actions, key=lambda a: a.name):     # the clips' frames (DRAPE_STEP): skinning matrices
+        ad.action = act
+        if hasattr(ad, "action_slot") and len(getattr(act, "slots", [])):
+            ad.action_slot = act.slots[0]
+        f0, f1 = (int(round(x)) for x in act.frame_range)
+        for f in range(f0, f1 + 1, DRAPE_STEP[act.name not in DRAPE_KEY]):
+            scene.frame_set(f)
+            DRAPE["poses"].append((DRAPE_KEY.get(act.name, 0.15), f"{act.name}@{f}",
+                                   {n: np.array(A @ pb.matrix @ inv[n] @ Ai) for n, pb in
+                                    ((pb.name.replace(kit.BONE, ""), pb) for pb in arm.pose.bones)}))
+    scene.frame_set(0)
     for o in [o for o in bpy.data.objects if o not in before]:
         bpy.data.objects.remove(o, do_unlink=True)
     for coll in (bpy.data.actions, bpy.data.meshes, bpy.data.armatures, bpy.data.materials, bpy.data.images):
@@ -55,6 +71,10 @@ def body_source():
     return pos, tris, wts
 
 
+DRAPE_STEP = (2, 8)     # every 2nd frame of the DRAPE_KEY clips, every 8th of the rest
+DRAPE_KEY = {"Idle": 1.0, "Walk": 1.0, "Run": 1.0, "Jump": 1.0, "Air": 1.0, "Land": 1.0, "Fall": 1.0, "Sit": 1.0, "SitGround": 1.0,
+             "SitWarm": 1.0, "CrouchIdle": 0.4, "CrouchWalk": 0.4}     # each clip's weight in drape_weights (the rest 0.15)
+DRAPE = {"poses": []}       # the clips' poses for drape_weights: [(weight, label, {bone: 4x4 skinning matrix})], the rest bones
 BODY = body_source()
 rig = kit.load_rig(scene)
 
@@ -76,9 +96,10 @@ def trunk(pc, zs, offs, lons=R10, mat=None, caps=(None, None), region="torso"):
     return pc.band([[T(l, z, o) for l in lons] for z, o in zip(zs, offs)], mat=mat, caps=caps)
 
 
-def oval(lon, z, rx, ry, cy=0.0):
+def oval(lon, z, rx, ry, cy=0.0, back=0.0):
+    """A point on an ellipse round the body; back: more depth at the back centre, easing out by the sides."""
     a = math.radians(lon)
-    return Vector((math.sin(a) * rx, cy - math.cos(a) * ry, z))
+    return Vector((math.sin(a) * rx, cy - math.cos(a) * ry + back * max(0.0, -math.cos(a)) ** 2, z))
 
 
 def sleeves(pc, xs, offs, lons=R8, mat=None):
@@ -201,6 +222,171 @@ def transfer_weights(ob):
             groups[bn].add([vi], x, "REPLACE")
 
 
+DRAPE_HUG = 3.0         # the pull toward the legs a skirt rides on (drape_weights)
+DRAPE_CLEAR = 0.012     # m: the least a skirt keeps off a leg (a shoe, a boot's shaft) in any pose
+DRAPE_STEPS = np.round(np.linspace(0, 1, 11), 1)
+DRAPE_DIRS = (0, 0.25, 0.5, 0.75, 1)     # round the skirt (0 the front, 1 the back): where its (u, s) field takes values
+DRAPE_BARY = np.array([(1, 1, 1), (1, 1, 0), (0, 1, 1), (1, 0, 1), (4, 1, 1), (1, 4, 1), (1, 1, 4)], float)
+DRAPE_BARY /= DRAPE_BARY.sum(1, keepdims=True)
+
+
+def _drape_body():
+    """The legs as capsules on their bones, the skin's rings (body_shape.LEG), and round the foot the largest shoe's sole:
+    [(bone, a, b, r0, r1)] in the rest pose."""
+    (z1, r1) = B.LEG[0]
+    z0 = B.CROTCH - 0.01                    # above: the pelvis (the torso's)
+    r0 = float(np.interp(z0, [z for z, _ in B.LEG], [r for _, r in B.LEG]))
+    knee = DRAPE["bones"]["LeftLeg"][0].z
+    rk = float(np.interp(knee, [z for z, _ in B.LEG], [r for _, r in B.LEG])) + 0.008     # a bent knee bulges
+    caps = []
+    for sx, s in ((1, "Left"), (-1, "Right")):
+        x = sx * B.LEG_X
+        caps += [(f"{s}UpLeg", np.array((x, 0, z0)), np.array((x, 0, knee)), r0, rk),
+                 (f"{s}Leg", np.array((x, 0, knee)), np.array((x, 0, z1)), rk, r1),
+                 (f"{s}Foot", np.array((x, 0.03, 0.032)), np.array((x, -0.055, 0.032)), 0.045, 0.045)]
+    return caps
+
+
+def _drape_sdf(p, caps, hips):
+    """Signed distance less the clearance from points p (c, n, k, 3), n poses, to the posed body: capsules [(a (n, 3),
+    b (n, 3), r0, r1)], the torso (hips: the inverse of its skinning matrix per pose, back to its rest frame)."""
+    d = np.full(p.shape[:-1], np.inf)
+    for a, b, r0, r1 in caps:
+        a, ab = a[:, None, :], (b - a)[:, None, :]
+        t = np.clip(((p - a) * ab).sum(-1) / (ab * ab).sum(-1), 0, 1)
+        d = np.minimum(d, np.linalg.norm(p - a - t[..., None] * ab, axis=-1) - (r0 + (r1 - r0) * t) - DRAPE_CLEAR)
+    q = np.einsum("nij,cnkj->cnki", hips[:, :3, :3], p) + hips[None, :, None, :3, 3]
+    zs = [c.z for c, _, _ in B.TORSO]
+    z = np.clip(q[..., 2], zs[0], B.WAIST)
+    rx, ry, cy = (np.interp(z, zs, [r[k] for r in ((a, b, c.y) for c, a, b in B.TORSO)]) for k in range(3))
+    e = (np.hypot(q[..., 0] / rx, (q[..., 1] - cy) / ry) - 1) * np.minimum(rx, ry)
+    return np.where((q[..., 2] >= zs[0]) & (q[..., 2] <= B.WAIST - 0.03), np.minimum(d, e), d)
+
+
+def drape_weights(ob):
+    """A skirt's weights fitted to the clips (round 3, David: "long dress clothes going though body, the 2 skirts are
+    flashing when sitting down"). Below the hips each skirt vertex mixes three bases: the hips (the region's torso
+    weights), both thighs and both shins (split left and right by x), as (1 - u - s, u, s). (u, s) is a smooth field:
+    per ring of the skirt, a value at each of DRAPE_DIRS round it, eased between them, mirrored left and right.
+    Value by value, sweep after sweep, it takes the one on DRAPE_STEPS that best keeps the skirt's surface (its vertices
+    and points across its triangles, posed as the engine draws them) DRAPE_CLEAR off the legs, the feet and the torso in
+    the clips' poses, with the least pull off the hips, close to the legs it rides on, and no fold or tear."""
+    me = ob.data
+    region = ob["vreg"].split("|")
+    P = np.array([ob.matrix_world @ v.co for v in me.vertices])
+    free = np.array([i for i, r in enumerate(region) if r == "skirt" and P[i, 2] < B.CROTCH + 0.03])
+    poses = DRAPE["poses"]
+    pw = np.array([w for w, _, _ in poses])
+    caps = [(np.array([(m[bn] @ np.r_[a, 1])[:3] for _, _, m in poses]), np.array([(m[bn] @ np.r_[b, 1])[:3] for _, _, m in poses]),
+             r0, r1) for bn, a, b, r0, r1 in _drape_body()]
+    hips = np.array([np.linalg.inv(m["Hips"]) for _, _, m in poses])
+    names = [g.name.replace(kit.BONE, "") for g in ob.vertex_groups]
+
+    def posed(i, w):
+        ph = np.r_[P[i], 1.0]
+        return sum(x * np.array([m[b] @ ph for _, _, m in poses])[:, :3] for b, x in w.items())
+
+    X = np.zeros((len(P), len(poses), 3))          # every vertex posed; the free ones as (hips, thighs, shins) bases
+    bases = {}
+    for i in range(len(P)):
+        if i not in free:
+            X[i] = posed(i, {names[g.group]: g.weight for g in me.vertices[i].groups if g.weight > 1e-4})
+            continue
+        x, y, z = P[i]
+        sl = max(0.0, min(1.0, 0.5 + x / 0.12))
+        hip = B.weights("torso", Vector((x, y, max(z, B.CROTCH))))
+        bases[i] = (hip, {"LeftUpLeg": sl, "RightUpLeg": 1 - sl}, {"LeftLeg": sl, "RightLeg": 1 - sl})
+    HB = np.stack([np.stack([posed(i, w) for w in bases[i]]) for i in free])                  # (f, 3, n, 3)
+    # the hem may rise over its knee (the knee of the leg it leans on) no more than it stands over it at rest, + 2 cm:
+    # past that a leg comes out under it (a foot kicked back in a run, the shins of a seated long skirt)
+    hem = np.array([P[i, 2] == P[free, 2].min() for i in free])
+    sl = np.array([bases[i][1]["LeftUpLeg"] for i in free])
+    kz = {s: np.array([(m[f"{s}Leg"] @ np.r_[DRAPE["bones"][f"{s}Leg"][0], 1])[2] for _, _, m in poses]) for s in ("Left", "Right")}
+    knee_z = sl[:, None] * kz["Left"] + (1 - sl[:, None]) * kz["Right"]                         # (f, n)
+    lift_max = (P[free, 2] - DRAPE["bones"]["LeftLeg"][0].z)[:, None] + 0.02
+    sitting_up = pw * np.array([m["Hips"][2, 2] > 0.7 for _, _, m in poses])          # the torso upright (not lying)
+    upright = pw * np.array([(m["Hips"] @ np.r_[DRAPE["bones"]["Hips"][0], 1])[2] > 0.22 for _, _, m in poses])   # on its feet
+    rings = sorted({round(P[i, 2], 3) for i in free}, reverse=True)
+    ring = np.array([rings.index(round(P[i, 2], 3)) for i in free])
+    th = np.array([math.atan2(abs(P[i, 0]), -P[i, 1]) / math.pi for i in free])             # 0 front, 0.5 side, 1 back
+    ease = np.stack([np.clip(1 - abs(th - c) * 4, 0, 1) for c in DRAPE_DIRS], 1)            # (f, d): front ... back
+    ease = ease * ease * (3 - 2 * ease)
+    ease /= ease.sum(1, keepdims=True)
+    me.calc_loop_triangles()
+    tri = np.array([t.vertices for t in me.loop_triangles if set(t.vertices) & set(free.tolist())])
+    edges = np.array([e.vertices for e in me.edges if set(e.vertices) & set(free.tolist())])
+    rest_len = np.linalg.norm(P[edges[:, 0]] - P[edges[:, 1]], axis=1)
+    sample_w = (DRAPE_BARY[None] * np.isin(tri, free)[:, None, :]).sum(-1).reshape(-1)   # a point counts by its free share
+
+    def field(prm):                         # prm (rings, directions, 2) -> (f, 2)
+        return np.einsum("fd,fdk->fk", ease, prm[ring])
+
+    def cost(prm):
+        us = field(prm)
+        Xf = (1 - us.sum(1))[:, None, None] * HB[:, 0] + us[:, :1, None] * HB[:, 1] + us[:, 1:, None] * HB[:, 2]
+        Y = X.copy()
+        Y[free] = Xf
+        pts = np.einsum("sk,fknd->nfsd", DRAPE_BARY, Y[tri]).reshape(1, len(poses), -1, 3)
+        sd = _drape_sdf(pts, caps, hips)[0]                                                   # (n, points)
+        pen = 1e5 * ((np.maximum(0.0, -sd) ** 2) @ sample_w) @ pw
+        sdv = _drape_sdf(np.moveaxis(Xf, 0, 1)[None], caps, hips)[0]                          # (n, f)
+        hug = DRAPE_HUG * np.clip(sdv, 0, 0.1).sum(1) @ pw
+        pull = 2.0 * np.linalg.norm(Xf - HB[:, 0], axis=-1).sum(0) @ pw
+        r = np.linalg.norm(Y[edges[:, 0]] - Y[edges[:, 1]], axis=-1) / rest_len[:, None]      # (e, n)
+        fold = (np.maximum(0, 0.6 - r) ** 2 + 0.3 * np.maximum(0, r - 1.7) ** 2).sum(0) @ pw
+        lift = 1e5 * (np.maximum(0, Xf[hem, :, 2] - knee_z[hem] - lift_max[hem]) ** 2).sum(0) @ sitting_up
+        lift += 1e5 * (np.maximum(0, 0.01 - Xf[:, :, 2]) ** 2).sum(0) @ upright          # and nothing under the soles
+        return pen + hug + pull + fold + lift, (pen, hug, pull, fold, lift, sd)
+
+    knee = DRAPE["bones"]["LeftLeg"][0].z
+    prm = np.zeros((len(rings), len(DRAPE_DIRS), 2))
+    for k, z in enumerate(rings):             # start where no leg gets through (riding on the legs), then relax
+        leg = B._ss(B.CROTCH + 0.03, B.CROTCH - 0.05, z)
+        s = leg * B._ss(knee + 0.03, knee - 0.04, z)
+        prm[k, :] = np.round((leg - s, s), 1)
+    best = cost(prm)[0]
+    for sweep in range(6):
+        moved = 0
+        for k in range(len(rings)):
+            for d in range(len(DRAPE_DIRS)):
+                for c in range(2):
+                    for v in DRAPE_STEPS:
+                        if (v + prm[k, d, 1 - c]) > 1.0001 or v == prm[k, d, c]:
+                            continue
+                        old, prm[k, d, c] = prm[k, d, c], v
+                        e = cost(prm)[0]
+                        if e < best - 1e-6:
+                            best, moved = e, moved + 1
+                        else:
+                            prm[k, d, c] = old
+        print(f"DRAPE {ob.name} sweep {sweep}: {moved} moves, cost {best:.1f}")
+        if not moved:
+            break
+    _, (pen, hug, pull, fold, lift, sd) = cost(prm)
+    us = field(prm)
+    for k, z in enumerate(rings):
+        print("DRAPE_RING", z, "front to back (u, s):", [tuple(float(x) for x in prm[k, d]) for d in range(len(DRAPE_DIRS))])
+    groups = {}
+    for (i, (hip, up, leg)), (u, s) in zip(((i, bases[i]) for i in free), us):
+        w = {b: x * (1 - u - s) for b, x in hip.items()}
+        for dct, f in ((up, u), (leg, s)):
+            for b, x in dct.items():
+                w[b] = w.get(b, 0.0) + x * f
+        top = sorted(((b, x) for b, x in w.items() if x > 1e-3), key=lambda kv: -kv[1])[:4]
+        tot = sum(x for _, x in top)
+        for g in list(me.vertices[i].groups):
+            ob.vertex_groups[g.group].remove([int(i)])
+        for b, x in top:
+            if b not in groups:
+                groups[b] = ob.vertex_groups.get(kit.BONE + b) or ob.vertex_groups.new(name=kit.BONE + b)
+            groups[b].add([int(i)], x / tot, "REPLACE")
+    worst = np.maximum(0.0, -sd).max(1)
+    lab = [l for _, l, _ in poses]
+    print(f"DRAPE {ob.name}: pen {pen:.0f} lift {lift:.0f} hug {hug:.0f} pull {pull:.0f} fold {fold:.0f}; inside the clearance at worst: " +
+          ", ".join(f"{lab[k]} {worst[k] * 1000:.0f} mm" for k in np.argsort(-worst)[:6]) + "; key poses: " +
+          ", ".join(f"{l} {worst[lab.index(l)] * 1000:.0f}" for l in ("Idle@24", "Run@3", "Run@6", "Run@12", "Jump@0", "Sit@24", "SitGround@36", "Walk@12") if l in lab))
+
+
 def _bary(p, a, b_, c):
     v0, v1, v2 = b_ - a, c - a, p - a
     d00, d01, d11, d20, d21 = v0.dot(v0), v0.dot(v1), v1.dot(v1), v2.dot(v0), v2.dot(v1)
@@ -297,6 +483,8 @@ def fit(ob, spec):
     if spec["meta"].get("model"):
         design_uv(ob, spec["slot"])
         transfer_weights(ob)
+        if spec["meta"].get("drape"):
+            drape_weights(ob)
 
 
 # ---------------------------------------------------------------- the designs: one atlas, a cell per design
@@ -970,23 +1158,26 @@ def joggers(pc):
 
 
 def skirt_rings(profile):
-    """A skirt's waistband on the torso 10-gon (under any top's hem), then its ellipses: profile = [(z, rx, ry)]."""
+    """A skirt's waistband on the torso 10-gon (under any top's hem), then its ellipses: profile = [(z, rx, ry[, cy,
+    back])] (cy, back: the fullness a long skirt carries behind, room for a stride, oval())."""
     return ([r10_ring(B.WAIST + 0.006, 0.007), r10_ring(B.WAIST - 0.016, 0.009)] +
-            [[oval(l, z, rx, ry) for l in L20] for z, rx, ry in profile])
+            [[oval(l, *ring) for l in L20] for ring in profile])
 
 
-@part("bottom_pleated_skirt", "bottom", "Pleated skirt", {"M_Main": ("outfit", 11)}, **uni("bottom_skirt", 12, 120, "pleats"))
+@part("bottom_pleated_skirt", "bottom", "Pleated skirt", {"M_Main": ("outfit", 11)}, drape=True,
+      **uni("bottom_skirt", 12, 120, "pleats"))
 def skirt(pc):
     """The universal skirt: an A-line to above the knee, hanging from the hips into both thighs (the pleats are paint)."""
     pc.region = "skirt"
     pc.band(skirt_rings([(0.28, 0.148, 0.123), (0.19, 0.184, 0.162)]))
 
 
-@part("bottom_long_skirt", "bottom", "Long skirt", {"M_Main": ("outfit", 15)}, **uni("bottom_skirt_long", 13, 160))
+@part("bottom_long_skirt", "bottom", "Long skirt", {"M_Main": ("outfit", 15)}, drape=True,
+      **uni("bottom_skirt_long", 13, 160))
 def long_skirt(pc):
-    """The universal long skirt: A-line to the ankle."""
+    """The universal long skirt: A-line to the ankle, fuller behind (room for a stride)."""
     pc.region = "skirt"
-    pc.band(skirt_rings([(0.27, 0.15, 0.126), (0.16, 0.182, 0.157), (0.068, 0.202, 0.176)]))
+    pc.band(skirt_rings([(0.27, 0.15, 0.126), (0.16, 0.182, 0.165, 0.012, 0.035), (0.068, 0.202, 0.19, 0.03, 0.045)]))
 
 
 # ================================================================ one-pieces (hide the top and the bottom)

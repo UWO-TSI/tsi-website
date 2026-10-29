@@ -30,6 +30,9 @@ PAL = json.load(open(os.path.join(ROOT, "palette.json")))
 COMPANION = {"top": ["bottom_shorts", "shoes_slipon"], "bottom": ["top_tee", "shoes_slipon"], "shoes": ["top_tee", "bottom_shorts"],
              "onepiece": ["shoes_slipon"]}
 POSES = [("run", "Run", 0.3), ("jump", "Jump", 0.5), ("sit", "Sit", 0.5)]
+if os.environ.get("FIT_POSES"):      # e.g. FIT_POSES=idle:Idle:0.5,sitground:SitGround:0.5 (a closer look; FIT_RES=3 for 3x the pixels)
+    POSES = [(n, c, float(t)) for n, c, t in (p.split(":") for p in os.environ["FIT_POSES"].split(","))]
+RES = float(os.environ.get("FIT_RES", 1))
 VIEWS = [("front", 0), ("side", -90), ("back", 180)]
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -70,7 +73,7 @@ def use_action(name, t):
 def shot(path, yaw):
     cd.ortho_scale = 0.78
     cam.location, cam.rotation_euler = (0, -4.0, 0.33), (math.radians(90), 0, 0)
-    sc.render.resolution_x, sc.render.resolution_y = 300, 340
+    sc.render.resolution_x, sc.render.resolution_y = round(300 * RES), round(340 * RES)
     sc.render.film_transparent = False
     turn.rotation_euler = (0, 0, math.radians(yaw))
     sc.render.filepath = path
