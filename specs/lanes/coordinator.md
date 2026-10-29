@@ -510,3 +510,9 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - It supersedes the r2-menu card on the fishing round 2 page.
   - Kit: flat/paper.tsx (FoldedMenu, InkTitle, Hanko, InkArt, PanelSection, TrayDish); the washi texture is ours (art/ui/washi.py).
   - Question on the page (r3-font): add a display face for the menu only (mincho or brush, a vertical 寿司)? Nunito stays everywhere else.
+- **Tutorial r3 decisions (2026-10-29):**
+  - Approved: arrow, wharf, barrel, currency, hudfly, lore, farewell.
+  - Approved with notes: sights (inline 2D icons for words like fish and bug, coloured, with a wiggle); checkin (a unique personal QR plus Apple Wallet: answer feasibility first).
+  - Redo: dock (tutorial dressing, cleared for good after HQ), id (the card is the overlay, headshot, hover tilt, confirm below), keys (no card, a smaller bare keyboard, each press pops its HUD piece in), kit.
+  - Round 4 lane started.
+- **David's tutorial test server:** dev on port 3300, bound to 0.0.0.0, from worktree tutorial-test (detached at 4fee5d2b, frozen), Supabase blanked (signed out, nothing saves). PID in scratchpad/tutorial-test-dev.pid. URL: http://localhost:3300/lab/island?arrival=1, or http://10.0.0.251:3300/lab/island?arrival=1 on the LAN. Kill it when David is done.
