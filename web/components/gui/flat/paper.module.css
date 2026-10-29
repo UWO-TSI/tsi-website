@@ -1,0 +1,115 @@
+/* Paper (paper.tsx): a folded teahouse menu in washi and ink. The theme's --ui-* tokens only (--ui-paper and friends). */
+.book { --h: min(84dvh, 820px); --ease: cubic-bezier(0.45, 0.05, 0.25, 1); --spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  position: relative; width: min(96vw, calc(var(--h) * 1.3)); aspect-ratio: 1.3; outline: none; font-family: var(--gui-font); color: var(--ui-paper-ink); }
+.spread { position: relative; display: grid; grid-template-columns: 1fr 1fr; width: 100%; height: 100%; perspective: 2400px; transform-style: preserve-3d;
+  transition: transform 0.72s var(--ease); }
+/* Closed, only the cover shows: the book slides half a panel so the cover sits in the middle. */
+.book[data-closed] .spread { transform: translateX(-25%); }
+.page { position: relative; }
+
+/* A panel of washi: the paper colour under our fibre texture; the fold's shade on its inner edge. */
+.panel { all: unset; position: absolute; inset: 0; display: grid; align-content: start; gap: 4%; box-sizing: border-box; padding: 9% 8% 8%; overflow: hidden;
+  background-color: var(--ui-paper); background-image: var(--ui-paper-washi); background-size: 256px; color: var(--ui-paper-ink); font-family: var(--gui-font);
+  box-shadow: 0 1px 0 var(--ui-paper-edge), 0 26px 60px rgb(var(--ui-shade) / 0.3), 0 4px 10px rgb(var(--ui-shade) / 0.12); }
+.panel[data-side="left"] { border-radius: 4px 0 0 4px; }
+.panel[data-side="right"] { border-radius: 0 4px 4px 0; }
+.panel::after { content: ""; position: absolute; top: 0; bottom: 0; width: 9%; pointer-events: none; }
+.panel[data-side="left"]::after { right: 0; background: linear-gradient(to left, rgb(var(--ui-shade) / 0.13), transparent); }
+.panel[data-side="right"]::after { left: 0; background: linear-gradient(to right, rgb(var(--ui-shade) / 0.1), transparent); }
+/* The cover: a bound edge with its stitches, and a click opens it. */
+.cover { cursor: pointer; border-radius: 4px; justify-items: center; align-content: stretch; grid-template-rows: auto 1fr; padding-left: 13%; }
+.cover::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 5.5%; background: var(--ui-paper-tray);
+  background-image: radial-gradient(circle, var(--ui-paper-rule) 0 1.2px, transparent 1.6px); background-size: 100% 26px; background-position: 50% 10px; }
+.cover::after { display: none; }
+.cover:focus-visible, .book:focus-visible .cover { outline: 2px solid var(--ui-paper-ink); outline-offset: 3px; }
+
+/* The turning leaf: over the right half, hinged on the fold. */
+.leaf { position: absolute; top: 0; bottom: 0; left: 50%; width: 50%; transform-origin: 0 50%; transform-style: preserve-3d; animation: turnFwd var(--ease) both; z-index: 3; }
+.leaf[data-dir="back"] { animation-name: turnBack; }
+@keyframes turnFwd { from { transform: rotateY(0deg); } to { transform: rotateY(-180deg); } }
+@keyframes turnBack { from { transform: rotateY(-180deg); } to { transform: rotateY(0deg); } }
+.leafFace, .leafBack { position: absolute; inset: 0; backface-visibility: hidden; }
+.leafBack { transform: rotateY(180deg); }
+.leafFace::after, .leafBack::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to right, rgb(var(--ui-shade) / 0.18), transparent 60%); opacity: 0;
+  animation: leafShade 0.72s var(--ease) both; pointer-events: none; }
+@keyframes leafShade { 50% { opacity: 1; } }
+
+.turn { all: unset; position: absolute; bottom: 2.6%; z-index: 4; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; color: var(--ui-paper-quiet);
+  cursor: pointer; transition: background 0.2s ease-out, color 0.2s ease-out, transform 0.2s var(--spring); }
+.turn[data-side="left"] { left: 2%; }
+.turn[data-side="right"] { right: 2%; }
+.turn:hover { background: var(--ui-paper-hover); color: var(--ui-paper-ink); transform: scale(1.08); }
+.turn:focus-visible { outline: 2px solid var(--ui-paper-ink); outline-offset: 2px; }
+.folio { position: absolute; left: 50%; bottom: -26px; display: flex; gap: 6px; transform: translateX(-50%); }
+.folio i { width: 6px; height: 6px; border-radius: 50%; background: var(--ui-paper-rule); }
+.folio i[data-on] { background: var(--ui-paper); }
+
+/* Ink-wash art, fading into the paper. */
+.inkArt { display: block; pointer-events: none; }
+.inkArt[data-fade="bottom"] { mask-image: linear-gradient(to bottom, black 55%, transparent); }
+.inkArt[data-fade="top"] { mask-image: linear-gradient(to top, black 55%, transparent); }
+.inkArt[data-fade="left"] { mask-image: linear-gradient(to left, black 50%, transparent); }
+.inkArt[data-fade="right"] { mask-image: linear-gradient(to right, black 50%, transparent); }
+.art { display: block; width: 100%; height: 100%; overflow: visible; }
+.branch { fill: none; stroke: var(--ui-paper-ink); stroke-linecap: round; }
+.blossom circle { fill: var(--ui-paper-ink); fill-opacity: 0.07; stroke: var(--ui-paper-ink); stroke-opacity: 0.32; stroke-width: 0.6; }
+.blossom .heart { fill: var(--ui-paper-seal); fill-opacity: 0.45; stroke: none; }
+.bud { fill: var(--ui-paper-ink); opacity: 0.38; }
+.wash { fill: var(--ui-paper-ink); opacity: 0.2; }
+.line { stroke: var(--ui-paper-ink); }
+.mist ellipse { fill: var(--ui-paper); opacity: 0.95; }
+.haze ellipse { fill: var(--ui-paper-ink); opacity: 0.05; }
+
+/* The hanko: the one red. */
+.hanko { display: block; flex: none; }
+.sealInk { fill: var(--ui-paper-seal); }
+.sealCut { stroke: var(--ui-paper); }
+.sealFish { fill: var(--ui-paper); }
+
+/* The title: small horizontal words, a hairline, then the name top to bottom in brushed ink. */
+.title { display: grid; grid-auto-flow: column; align-items: start; justify-content: center; gap: 14px; }
+.titleInk { position: relative; margin: 0; writing-mode: vertical-rl; text-orientation: upright; color: var(--ui-paper-ink); font: 900 clamp(34px, 6.4vh, 60px)/1 var(--gui-font);
+  letter-spacing: 0.02em; text-transform: uppercase; }
+/* A pale brush stroke behind the name, as a big wash character sits behind a banner's words. */
+.swash { position: absolute; z-index: -1; top: -6%; left: 50%; width: 170%; height: 112%; transform: translateX(-50%) rotate(-4deg); pointer-events: none; }
+.swash path { fill: var(--ui-paper-ink); opacity: 0.1; }
+.titleWrap { position: relative; isolation: isolate; }
+.titleRule { width: 1px; height: clamp(90px, 16vh, 150px); background: var(--ui-paper-ink); opacity: 0.45; }
+.titleSide { margin: 0; max-width: 11ch; color: var(--ui-paper-quiet); font: 600 11px/1.6 var(--gui-font); letter-spacing: 0.14em; text-transform: uppercase; }
+
+/* A section: its heading small, top to bottom, at the top right; the dishes beside it. */
+.section { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7%; }
+.sectionTitle { grid-column: 2; grid-row: 1; align-self: start; position: relative; margin: 0; writing-mode: vertical-rl; color: var(--ui-paper-ink); font: 700 12px/1 var(--gui-font); letter-spacing: 0.34em; text-transform: uppercase; }
+.sectionTitle::after { content: ""; position: absolute; top: calc(100% + 10px); left: 50%; width: 1px; height: 36px; background: var(--ui-paper-ink); opacity: 0.35; }
+.sectionBody { grid-column: 1; grid-row: 1; display: grid; gap: clamp(10px, 2.4vh, 22px); align-content: start; min-width: 0; }
+
+/* A dish on its tray. */
+.dish { display: grid; gap: 6px; width: min(100%, 280px); }
+.dishPick { all: unset; display: grid; gap: 7px; cursor: pointer; }
+.dishPick:disabled { cursor: default; }
+.dishPick:focus-visible { outline: 2px solid var(--ui-paper-ink); outline-offset: 4px; border-radius: 6px; }
+.tray { position: relative; display: grid; place-items: center; width: 100%; aspect-ratio: 2.1; border-radius: 7px;
+  background: linear-gradient(170deg, var(--ui-paper-tray-hi), var(--ui-paper-tray) 45%); box-shadow: 0 6px 14px rgb(var(--ui-shade) / 0.16);
+  transition: transform 0.2s var(--spring), box-shadow 0.2s ease-out; }
+.tray::before { content: ""; position: absolute; inset: 5px; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--ui-paper-tray-hi); opacity: 0.8; }
+.plate { position: relative; display: grid; place-items: center; height: 82%; aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle at 50% 45%, var(--ui-paper-plate) 0 58%, var(--ui-paper-edge) 60% 63%, var(--ui-paper-plate) 65%); box-shadow: 0 3px 6px rgb(var(--ui-shade) / 0.3); }
+.plate canvas { width: 66%; height: 66%; }
+.chopsticks { position: absolute; top: 20%; bottom: 20%; right: 13%; width: 3px; border-radius: 2px; background: var(--ui-paper-edge); opacity: 0.75; transform: rotate(9deg);
+  box-shadow: 7px 1px 0 var(--ui-paper-edge); }
+.standIn { position: absolute; left: 8px; bottom: 7px; padding: 2px 6px; border-radius: 4px; background: var(--ui-paper); color: var(--ui-paper-ink); opacity: 0.85;
+  font: 700 8.5px/1.2 var(--gui-font); letter-spacing: 0.1em; text-transform: uppercase; }
+.dishPick:hover .tray, .dishPick:focus-visible .tray, .dish[data-open] .tray { transform: translateY(-2px); box-shadow: 0 10px 22px rgb(var(--ui-shade) / 0.22); }
+.dishLine { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--ui-paper-rule); }
+.dishLine b { font: 600 clamp(13px, 1.9vh, 16px)/1.25 var(--gui-font); letter-spacing: 0.02em; }
+.dishPrice { display: inline-flex; align-items: center; gap: 4px; color: var(--ui-paper-quiet); font: 600 12px/1 var(--gui-font); font-variant-numeric: tabular-nums; }
+.dishDoes { display: inline-flex; align-items: center; gap: 6px; max-height: 0; overflow: hidden; color: var(--ui-paper-quiet); font: 500 12px/1.35 var(--gui-font); opacity: 0;
+  transition: max-height 0.2s ease-out, opacity 0.2s ease-out; }
+.dishPick:hover .dishDoes, .dishPick:focus-visible .dishDoes, .dish[data-open] .dishDoes { max-height: 34px; opacity: 1; }
+.dishAction { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; animation: open 0.3s var(--spring) both; }
+@keyframes open { from { opacity: 0; transform: translateY(-4px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .spread, .turn, .tray, .dishDoes { transition: none; }
+  .leaf, .dishAction { animation: none; }
+}

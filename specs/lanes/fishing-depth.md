@@ -54,8 +54,18 @@ Round 2 (David's review 2026-10-28) built on top of round 1, work at ec62699d (m
 - **Evidence:** `specs/evidence/fishing-depth/r2/` (before shots in `r2/before/`), shot by `r2/shoot.mjs`. The gacha's best prize pops main's old cream RewardCard until game/main-quest's flat RewardPop merges.
 - **Gates (round 2):** tsc clean; one vitest run 3559 passed, 4 skipped, 1 failed (the portal leaderboard test forbids the word "Monthly"; the banner is now "Fish of the month" and that file passes); eslint clean on all 40 changed files; SQL smokes pass (game_security, catch_rolls, fishing_tasks_sushi, tackle_rolls) after every migration. No perf:check (UI, data and two small chalkboards moved; one board added, about 60 triangles and a 256 x 184 canvas).
 
+### Round 3: the menu (David's references, 2026-10-28)
+
+- References in `specs/references/sushi-menu/` (01-teahouse-menu.png, 02-tea-banners.png, README): studied, not copied.
+- The menu is now a folded teahouse menu: kit pieces in `components/gui/flat/paper.tsx` (FoldedMenu with a cover and two spreads that turn over the fold, InkTitle, Hanko, InkArt plum/bamboo/pagoda/mist as SVG, PanelSection, TrayDish, InkDefs/useInkId); the old PaperSheet, PaperHeading and MenuRow are deleted. `MenuPickup` (SushiSheets.tsx) keeps the first-person pickup and camera lean.
+- Washi: our texture `web/public/assets/ui/washi.png` (painted by `art/ui/washi.py`, seeded, tileable); tokens `--ui-paper*` reshaped and `--ui-paper-seal`, `--ui-paper-tray`, `--ui-paper-tray-hi`, `--ui-paper-plate`, `--ui-paper-washi` added in clean, cream and dark.
+- Type stays Nunito (the vertical title is upright capitals with a brushed ink filter and a pale wash stroke behind). A real brush or CJK face (a vertical 寿司) needs the coordinator's OK first.
+- `.hands` must not be `preserve-3d`: it broke the turn button's hit testing.
+- Evidence: `specs/evidence/fishing-depth/r3-menu/` (old-vs-new.png puts r2's menu beside the new cover and spread).
+
 ## David's decisions
 
+- 2026-10-28, on the menu: "heres the inspo i want for the sushi menu" (specs/references/sushi-menu/).
 - 2026-10-28 review: collection-season approved. bar-menu: "BAR MENU SHOULD BE PAPER MENU LIKE REAL RESTAURANCE, NOT THIS BULL SHIT. i need you to fuckign lock in on all the ui, looking at these makes me depressed, these food should have a detailed food model on the menu and you can pick it up first person and hover over dishes show what they do". chef-order: "REDO THE FUCKING UI". board-sheet: "the ui needs completely redone for this and have a time graphic with the things available. like it will be icon and you can hover to see what the fish is and etc". board-world-left: "that should be near the fish shop the tackle shop should be like a gatcha roll for parts thing one for coin one for gem, roll for 1 to 10, seasonal crazy bait and rod". market-records: "i dont like that these are 3 sepetate tables, i want a place to quick sell, a place to put your fish to monthly leaderboard and daily /weekly fishing task". market-requests: "ui needs to be updated. the daily tasks should be on a sperate board that shows the daily quest, and its not a hand one over, its if you did it you claim it".
 - 2026-10-27, on f-pond: "pond only in mountain".
 

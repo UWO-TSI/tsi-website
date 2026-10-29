@@ -41,12 +41,18 @@
   --ui-rarity-divine: #b26bff;
   --ui-holo: linear-gradient(115deg, #b26bff 0%, #ff7ad9 20%, #ffd36b 38%, #7dffb2 56%, #6bc8ff 74%, #b26bff 100%);
   --ui-on-divine: #ffffff;
-  /* Paper, the material (design bible UI 2): only for what is paper in the world (a restaurant's menu, a notice). It
-     stays paper-coloured in every theme. */
-  --ui-paper: #fbf5e4;
-  --ui-paper-edge: #e5d9bb;
-  --ui-paper-ink: #3a3024;
-  --ui-paper-quiet: #8e7f63;
-  --ui-paper-rule: #d8c9a6;
-  --ui-paper-hover: #f3ead2;
+  /* Paper, the material (design bible UI 2): only for what is paper in the world (the sushi bar's folded menu, a
+     notice). Washi: warm off-white with soft fibre (our texture, art/ui/washi.py), ink-black type, one red hanko seal; a
+     dish sits on a lacquer tray and a plate. It stays paper-coloured in every theme. */
+  --ui-paper: #f5efe1;
+  --ui-paper-edge: #e3d8bf;
+  --ui-paper-ink: #2a241c;
+  --ui-paper-quiet: #8e8268;
+  --ui-paper-rule: #d6caae;
+  --ui-paper-hover: #ece3cf;
+  --ui-paper-seal: #b4342b;
+  --ui-paper-tray: #2e2823;
+  --ui-paper-tray-hi: #4d443b;
+  --ui-paper-plate: #fbf8f1;
+  --ui-paper-washi: url("/assets/ui/washi.png");
 }

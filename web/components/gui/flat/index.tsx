@@ -369,5 +369,7 @@ export function StatusLine({ error, children }: { error?: boolean; children: Rea
   return <p className={error ? f.error : f.note} role="status">{children}</p>;
 }
 
-/** The day strip, the hover card, odds, the reveal, tasks, the small panel and paper (pieces.tsx). */
+/** The day strip, the hover card, odds, the reveal, tasks and the small panel (pieces.tsx). */
 export * from "./pieces";
+/** Paper for what is paper in the world: the folded menu, ink art, the hanko, a dish on its tray (paper.tsx). */
+export * from "./paper";

@@ -4,8 +4,8 @@
  * More flat kit pieces (specs/design-bible.md UI; shown at /lab/gui?only=flat-pieces): a picture tile with its rarity
  * edge (`Thumb`), a hover card that says what something is (`HoverTip`), a day strip of what's on when (`TimeStrip`),
  * the odds of a roll (`OddsTable`), the cards turning over after a roll (`GachaReveal`), a task with its progress and
- * one claim (`TaskCard`), a small panel for one action (`FlatDialog`), and paper for things that are paper in the world
- * (`PaperSheet`, `MenuRow`: a restaurant's menu). Colours: the theme's --ui-* tokens only.
+ * one claim (`TaskCard`) and a small panel for one action (`FlatDialog`). Paper, for what is paper in the world, is
+ * paper.tsx. Colours: the theme's --ui-* tokens only.
  */
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type FocusEvent, type PointerEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -249,39 +249,5 @@ export function FlatDialog({ open, onClose, title, keys, testId, children }: { o
         {children}
       </GuiVariantContext.Provider>
     </section>
-  </div>;
-}
-
-// ── Paper ───────────────────────────────────────────────────────────────────────────────────────────────────────────
-
-/** Paper, the material (design bible UI 2): only for what is paper in the world. A cream sheet with a fibre grain and a thin double rule inside its edge. */
-export function PaperSheet({ children, className, style }: { children: ReactNode; className?: string; style?: CSSProperties }) {
-  return <div className={cx(p.paper, className)} style={style}>{children}</div>;
-}
-/** A paper heading: small spaced capitals between two rules. */
-export function PaperHeading({ children }: { children: ReactNode }) {
-  return <h3 className={p.paperHeading}><span>{children}</span></h3>;
-}
-
-/**
- * A dish on a printed menu: its picture on a plate, the name, a dotted leader and the price; hovered or focused, the one
- * plain line of what it does slides in under the name (David: "hover over dishes show what they do"). The row is the
- * action (ordering it).
- */
-export function MenuRow({ picture, name, note, does, price, standIn, disabled, open, onPick, children }: {
-  picture: ReactNode; name: ReactNode; note?: ReactNode; does: ReactNode; price: ReactNode; standIn?: boolean; disabled?: boolean;
-  /** Picked: its line stays out and `children` (its action) shows under it. */
-  open?: boolean; onPick?: () => void; children?: ReactNode;
-}) {
-  return <div className={p.menuRow} data-disabled={disabled || undefined} data-open={open || undefined}>
-    <button type="button" className={p.menuPick} disabled={disabled} aria-expanded={open} onClick={onPick}>
-      <span className={p.plate} aria-hidden>{picture}{standIn ? <span className={p.standIn}>stand-in</span> : null}</span>
-      <span className={p.menuText}>
-        <span className={p.menuLine}><b>{name}</b><i className={p.leader} aria-hidden /><span className={p.menuPrice}>{price}</span></span>
-        {note ? <span className={p.menuNote}>{note}</span> : null}
-        <span className={p.menuDoes}>{does}</span>
-      </span>
-    </button>
-    {open ? children : null}
   </div>;
 }

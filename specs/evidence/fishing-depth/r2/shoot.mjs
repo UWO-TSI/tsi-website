@@ -104,25 +104,57 @@ const FLOW = {
     await world("at=-45.25,115.6&time=day");
     await shot("chef-order");
   },
+  async menudebug() {
+    await world("at=-47,114.4&time=19.5", { settle: 12000 });
+    await click("Menu", 1800);
+    const cover = await page.getByRole("button", { name: "Open the menu" }).boundingBox();
+    await page.mouse.click(cover.x + cover.width / 2, cover.y + cover.height / 2);
+    await wait(1500);
+    for (let k = 0; k < 3; k++) {
+      const info = await page.evaluate(() => {
+        const b = document.querySelector('[aria-label="Turn the page"]');
+        if (!b) return "no turn button";
+        const r = b.getBoundingClientRect(), top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+        return `turn ${Math.round(r.x)},${Math.round(r.y)} top=${top?.tagName}.${String(top?.className).slice(0, 40)} ${top?.getAttribute("aria-label")}`;
+      });
+      console.log(info);
+      const next = await page.getByRole("button", { name: "Turn the page" }).boundingBox().catch(() => null);
+      if (next) await page.mouse.click(next.x + next.width / 2, next.y + next.height / 2);
+      await wait(1300);
+      console.log("folio", await page.evaluate(() => [...document.querySelectorAll('[aria-roledescription="folded menu"] [data-on]')].length));
+    }
+  },
   async menu() {
     await world("at=-47,114.4&time=19.5", { settle: 12000 });
     await wait(3000);
-    await shot("menu-seated");
+    await shot("menu-1-seated");
     await click("Menu", 300);
-    await shot("menu-rising");
-    await wait(1400);
-    await shot("menu-up");
+    await shot("menu-2-rising");
+    await wait(1500);
+    await shot("menu-3-cover");
+    const cover = await page.getByRole("button", { name: "Open the menu" }).boundingBox();
+    if (cover) await page.mouse.click(cover.x + cover.width / 2, cover.y + cover.height / 2);
+    await wait(260); await shot("menu-4-opening-a");
+    await wait(220); await shot("menu-4-opening-b");
+    await wait(900);
+    await shot("menu-5-spread-1");
     const rows = testid("sushi-menu").locator("button[aria-expanded]");
-    const n = await rows.count();
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; i < await rows.count(); i++) {
       await rows.nth(i).hover({ force: true });
       await wait(450);
       const box = await rows.nth(i).boundingBox();
-      if (box) await shot(`menu-hover-${i}`, page, { clip: { x: box.x - 10, y: box.y - 8, width: box.width + 20, height: box.height + 16 } });
+      if (box) await shot(`menu-hover-${i}`, page, { clip: { x: box.x - 12, y: box.y - 10, width: box.width + 24, height: box.height + 20 } });
     }
-    await rows.nth(1).click({ force: true }).catch(() => {});
+    await page.mouse.move(4, 796);
+    const next = await page.getByRole("button", { name: "Turn the page" }).boundingBox();
+    if (next) await page.mouse.click(next.x + next.width / 2, next.y + next.height / 2); else console.log("no turn button");
+    await wait(240); await shot("menu-6-turning-a");
+    await wait(200); await shot("menu-6-turning-b");
+    await wait(900);
+    await shot("menu-7-spread-2");
+    await rows.first().click({ force: true }).catch(() => {});
     await wait(600);
-    await shot("menu-picked");
+    await shot("menu-8-picked");
   },
 };
 for (const f of FLOWS) {

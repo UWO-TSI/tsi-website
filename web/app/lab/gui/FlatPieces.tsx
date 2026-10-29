@@ -4,11 +4,11 @@
  * The flat kit's newer pieces in the showroom (components/gui/flat/pieces.tsx), each with real game data: the tiles and
  * their rarity edges, a hover card, the day strip, odds, the reveal, tasks, and paper with a menu row.
  */
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { Clock, MapPin, Ruler, Soup, Waves } from "lucide-react";
 import { CurrencyIcon } from "@/components/economy/Amount";
 import PixelImage from "@/components/economy/PixelImage";
-import { FlatDialog, DarkButton, GachaReveal, MenuRow, MonthDots, OddsTable, PaperHeading, PaperSheet, TaskCard, Thumb, TimeStrip, TipBody, type OddsRow } from "@/components/gui/flat";
+import { FlatDialog, DarkButton, FoldedMenu, GachaReveal, Hanko, InkArt, InkDefs, InkTitle, MonthDots, OddsTable, PanelSection, TaskCard, Thumb, TimeStrip, TipBody, TrayDish, useInkId, type OddsRow } from "@/components/gui/flat";
 import { catchLanes } from "@/components/game/peaceful/CatchBoard";
 import { iconUrl } from "@/lib/icons/keys";
 import { RARITY_LABEL, type Rarity } from "@/lib/rarity";
@@ -19,6 +19,7 @@ const SAMPLE = ["fish_dace", "fish_salmon", "fish_pike", "fish_catfish", "fish_c
 
 export default function FlatPieces() {
   const [dialog, setDialog] = useState(false), [roll, setRoll] = useState(0);
+  const ink = useInkId();
   const lanes = catchLanes(["sea", "river"], 10, "clear").map(l => ({ id: l.water, icon: <Waves />, label: l.water, bands: l.bands }));
   const table = odds("gems", "autumn"), rows: OddsRow[] = (["legendary", "epic", "rare", "uncommon"] as const).map(r => ({
     rarity: r, label: RARITY_LABEL[r], chance: table.filter(o => o.prize.rarity === r).reduce((s, o) => s + o.chance, 0),
@@ -48,13 +49,18 @@ export default function FlatPieces() {
       </div>
     </div>
     <GachaReveal key={roll} items={won} />
-    <PaperSheet style={{ maxWidth: 520 }}>
-      <PaperHeading>Nigiri and rolls</PaperHeading>
-      <MenuRow picture={<PixelImage src={iconUrl("fish_salmon")} px={40} />} standIn name="Salmon nigiri" note="Fresh off the morning boats." does={<><Soup size={13} />Rarer fish, 20 min</>} price={<>40<CurrencyIcon size={16} /></>} />
-      <MenuRow picture={<PixelImage src={iconUrl("fish_tuna")} px={40} />} standIn name="Tuna roll" note="Thick cut and generous." does={<><Soup size={13} />Bigger fish, 20 min</>} price={<>40<CurrencyIcon size={16} /></>} open>
-        <span style={{ padding: "0 10px 10px 102px" }}>Its action shows here when picked.</span>
-      </MenuRow>
-    </PaperSheet>
+    <div style={{ display: "grid", placeItems: "center", padding: "20px 0 40px", "--h": "560px" } as CSSProperties}>
+      <InkDefs id={ink} />
+      <FoldedMenu label="A folded menu" cover={<><InkTitle filter={ink} title="Bancha" side={<>Sushi<br />by the sea</>} />
+        <div style={{ position: "relative" }}><Hanko filter={ink} /><InkArt kind="plum" filter={ink} fade="none" /></div></>}
+        panels={[
+          <PanelSection key="a" title="Nigiri and rolls">
+            <TrayDish standIn picture={<PixelImage src={iconUrl("fish_salmon")} px={40} />} name="Salmon nigiri" price={<>40<CurrencyIcon size={12} /></>} does={<><Soup size={12} />Rarer fish, 20 min</>} />
+            <TrayDish standIn open picture={<PixelImage src={iconUrl("fish_tuna")} px={40} />} name="Tuna roll" price={<>40<CurrencyIcon size={12} /></>} does={<><Soup size={12} />Bigger fish, 20 min</>}>Its action, when picked.</TrayDish>
+          </PanelSection>,
+          <div key="b" style={{ display: "grid", gap: 12 }}><InkArt kind="bamboo" filter={ink} /><InkArt kind="pagoda" filter={ink} /></div>,
+        ]} />
+    </div>
     <FlatDialog open={dialog} onClose={() => setDialog(false)} title="A small panel"><p style={{ margin: 0 }}>One thing, one action.</p><DarkButton onClick={() => setDialog(false)}>Done</DarkButton></FlatDialog>
   </div>;
 }
