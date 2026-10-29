@@ -636,3 +636,7 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - Stamina is in MOVE_TUNING in movement/sim.ts. HudBars sit top left; the old level chip is removed from TopCluster.
   - Conflicts with tutorial r5 in TopCluster, hudStore and hudPrefs: keep both removals.
 - **Shipping:** fish-tiers 4b84c125 (the member fishing UI plus playtest fixes) merged. No migrations. Gates: vitest 3517, tsc clean, seeds up to date. Note: its rarity edges still use --gui-rarity-* until main-quest's --ui-rarity-* lands; switch them then.
+- **Tutorial r5 review:** https://claude.ai/artifact/GbbF8C1nVDqkyqcSP5UV2w (ids v5-*), game/tutorial-v2 d0346e6e (main and the archive merged).
+  - David's test server is moved to d0346e6e.
+  - Keyword icons are now the default for every talk line, through a dictionary; there's no *star* markup.
+  - Merge conflicts with main-quest r3 (TopCluster, hudStore, hudPrefs, themes): keep both sides.
