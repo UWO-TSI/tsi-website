@@ -475,3 +475,9 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - The six fixes: the Halloween posts (f2921d8f); study seats study:plaza-picnic and study:pier-bench (study-1..3 removed); resident nav sampling at 0.1 with rim probes, and only lamps that cast light count; the bench-0 model; butterfly radius 3.5; the island `top` over deep water is the sea surface.
   - That last one changes every player's fall into the sea, so I asked for sea-fall before and after strips before merging. The study seats and the night owl's shots are in the evidence for a review page.
   - Merge order: village-archive (after David's title pick), then newworld-fixes. Regenerate the seed once on the combined tree.
+- fishing-depth r2 at 8fef03e5 (shots pending).
+  - Migrations:
+    - 20261028160000_fishing_tasks_sushi (renamed from 181000; task claims, chef order fills, monthly entries);
+    - 20261028161000_tackle_rolls (17 off-sale prize rows plus tackle_roll). It widens shop_items_slot_check exactly as rod-gear's rod_tackle_slots does; at merge, check that the two constraint rewrites are identical, or keep one.
+  - New APIs /api/economy/{tasks,chef,tackle} and /api/collections/monthly replace requests and records.
+  - Before merging, check that the gacha RNG runs in the API route (service role), never taken from the client.
