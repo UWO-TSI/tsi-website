@@ -596,3 +596,4 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - David's test server (3300, worktree tutorial-test) is moved to 1fc48ea3; HQ saves are tsi.hq.v4.
   - MemberFishing must dispatch tsi:fish-hooked, tsi:fish-caught, tsi:fish-escaped and tsi:fish-end, label its reel panel [aria-label="Fishing reel"], and build its reel with createFishingReel (reelAssist.floor). Wire this at merge, or have the fish-tiers agent do it.
   - The deploy from 3074f1e0 (uwotsi-n346qmvqg) is still to be confirmed Ready.
+- **Started:** main-quest r3 (agent a9480728300cbc27c), daily-social r3 (agent aa9470efccfdc282e). David is playing tutorial r4 himself on 3300; his notes are pending.
