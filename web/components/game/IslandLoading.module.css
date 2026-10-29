@@ -1,40 +1,20 @@
-/* The island loading screen (IslandLoading.tsx): the cream paper, one quiet thing to look at, the progress as a thin
-   line. Three looks for David to pick (data-look). Under the character creator (z 70). */
-.screen { position: absolute; inset: 0; z-index: 69; overflow: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center;
-  padding: 32px; box-sizing: border-box; text-align: center; color: var(--gui-ink-strong); font-family: var(--gui-font);
-  background: var(--gui-grain), radial-gradient(ellipse at 50% 42%, var(--gui-paper-hi) 0%, var(--gui-paper) 70%);
-  opacity: 1; transition: opacity 0.6s ease; }
+/* The island loading screen (IslandLoading.tsx): the still full bleed, the flat progress card at its foot. Under the
+   character creator (z 70). Colours: the theme's --ui-* tokens only (specs/design-bible.md, UI). */
+.screen { position: absolute; inset: 0; z-index: 69; overflow: hidden; display: flex; justify-content: center; align-items: flex-end;
+  padding: 16px 16px clamp(28px, 8vh, 80px); box-sizing: border-box; background: var(--ui-bg); opacity: 1; transition: opacity 0.6s ease; }
 .screen[data-leaving] { opacity: 0; pointer-events: none; }
+.screen > :not(.still) { position: relative; }
 
-.foot { display: flex; flex-direction: column; align-items: center; }
-/* The site's Tethos mark (public/logo-light.svg), in the ink, breathing slowly. */
-.mark { width: 72px; aspect-ratio: 1410 / 1352; background: var(--gui-ink-strong);
-  mask: url("/logo-light.svg") center / contain no-repeat; -webkit-mask: url("/logo-light.svg") center / contain no-repeat;
-  animation: breathe 3.2s ease-in-out infinite; }
-@keyframes breathe { 0%, 100% { opacity: 0.88; } 50% { opacity: 0.62; } }
-.screen h1 { margin: 22px 0 0; font: 800 var(--gui-text-md)/1.2 var(--gui-font); letter-spacing: 0.14em; text-transform: uppercase; }
-/* The progress: a hairline that fills; transforms only, so it keeps moving while the main thread compiles. */
-.line { width: min(200px, 46vw); height: 2px; margin-top: 18px; border-radius: 2px; overflow: hidden; background: rgb(114 92 78 / 0.16); }
-.line i { display: block; height: 100%; background: var(--gui-teal-ink); transform-origin: left; transform: scaleX(var(--p)); transition: transform 0.6s var(--gui-ease); }
-.screen p { margin: 12px 0 0; min-height: 1.5em; font-size: var(--gui-text-xs); font-weight: 700; line-height: 1.5; color: var(--gui-muted); }
-
-/* The stills fade in once decoded; the paper shows until then. */
-.still { opacity: 0; transition: opacity 0.9s ease; }
+/* The still fades in once decoded and drifts in very slowly; the plain ground shows until then. */
+.still { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; opacity: 0;
+  transition: opacity 0.9s ease; animation: drift 40s ease-out both; }
 .still[data-shown] { opacity: 1; }
-
-/* Boat: a print of Bram's boat at the wharf on the paper, the words under it. */
-.screen[data-look="boat"] .still { display: block; width: min(560px, 84vw); max-height: 56vh; aspect-ratio: 16 / 10; object-fit: cover; box-sizing: border-box;
-  border: 10px solid var(--gui-paper-hi); border-bottom-width: 14px; border-radius: 6px; box-shadow: var(--gui-shadow-md); transform: rotate(-0.8deg); }
-.screen[data-look="boat"] h1 { margin-top: 34px; }
-
-/* Island: the island at golden hour, full bleed, drifting in very slowly; the words on a warm haze at the foot. */
-.screen[data-look="island"] { justify-content: flex-end; padding-bottom: clamp(36px, 9vh, 88px); }
-.screen[data-look="island"] .still { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; animation: drift 40s ease-out both; }
-.screen[data-look="island"]::after { content: ""; position: absolute; inset: 55% 0 0; pointer-events: none;
-  background: linear-gradient(rgb(255 251 231 / 0), rgb(255 251 231 / 0.72) 58%, rgb(255 251 231 / 0.86)); }
-.screen[data-look="island"] .foot { position: relative; z-index: 1; }
-.screen[data-look="island"] .mark { width: 44px; }
-.screen[data-look="island"] h1 { margin-top: 14px; }
 @keyframes drift { from { transform: scale(1.01); } to { transform: scale(1.07); } }
 
-@media (prefers-reduced-motion: reduce) { .screen, .still, .line i { transition: none; } .mark, .screen[data-look="island"] .still { animation: none; } }
+/* The site's Tethos mark (public/logo-light.svg), in the ink, breathing slowly. */
+.mark { display: block; width: 28px; aspect-ratio: 1410 / 1352; background: var(--ui-ink);
+  mask: url("/logo-light.svg") center / contain no-repeat; -webkit-mask: url("/logo-light.svg") center / contain no-repeat;
+  animation: breathe 3.2s ease-in-out infinite; }
+@keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+@media (prefers-reduced-motion: reduce) { .screen, .still { transition: none; } .still, .mark { animation: none; } }

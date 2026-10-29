@@ -1,27 +1,22 @@
-# The loading screen, round 2: three simple looks for David to pick
+# The loading screen (after sign-in)
 
-David, 2026-10-27, on round 1 (the sea chart): "looks ugly i dont want to show our map because it looks bad, i want it
-to be simple maybe show our logo loading or the fishing boat thing... maybe like a idle shot of the island... just keep
-it simpel for now".
+David, 2026-10-28, of round 2's island look: "this one is good". The logo and boat looks were not picked and are gone,
+with the `?loading=` switch and the boat still. The village is retired, so the backdrop is rebuilt on the new world.
 
-All three: the cream paper and grain, Nunito, no map, nothing fetched. Under each, the real progress as one 2 px
-hairline (`lib/game/loadProgress.ts`: the code running, the world in, the models and textures, the shader warm-up;
-weighted, never backwards; a `progressbar` for screen readers) and the stage it waits on in small muted type ("Rowing
-out…", "Unpacking the village…", "Lighting the lamps…"). The line moves by transform, so it keeps going while the main
-thread compiles. Reduced motion stills everything.
+**What it is** (`web/components/game/IslandLoading.tsx`): a still of the title's staged shot (`components/title/shots.ts`,
+the HQ in three-quarter view across the plaza, its flags, a lamp and a planter in front), full bleed and drifting in
+very slowly (40 s), in the phase the island opens in (`loadingStill` in `lib/game/loadProgress.ts`; `?time=` outside
+production). Over it one flat card, the kit's `ProgressCard` (`components/gui/flat/ProgressCard.tsx`, in `/lab/gui`):
+the Tethos mark, "Tethos Island", the stage ("Rowing out…", "Sweeping the plaza…", "Lighting the lamps…") and the real
+progress as a thin ink line (the code, the world, the files, the shader warm-up; never backwards; moved by transform, so
+it keeps going while the main thread compiles). `--ui-*` tokens only, no hex. Reduced motion stills everything.
 
-All three side by side: `screen-options-sheet.webp` (logo, boat, island).
+**The stills** (`web/public/assets/loading/island-{dawn,day,evening,night}.webp`, 25 to 31 KB each; the old village one was
+38 KB): `specs/perf/loading-stills.mjs still` frames of the title camera on the new world (`TIME=<phase>`, empty shot =
+the staged one, 1920 x 1080, no UI), point-resized to the title's 0.65 pixel scale (1248 x 702) and `cwebp -q 78 -m 6`.
+Only the current phase's still is fetched, and the title prefetches it first (`components/title/preloadGame.ts`).
 
-| Look | Shot (1280 x 800, at 77%) | What it is |
-|---|---|---|
-| `logo` | `screen-logo-1280.png` | The site's own Tethos mark (`public/logo-light.svg`, tinted the ink), breathing slowly, "TETHOS ISLAND" under it. Nothing to download. |
-| `boat` | `screen-boat-1280.png` | Bram's boat at the wharf at golden hour, as a print on the paper (tilted a touch). 23 KB still. |
-| `island` | `screen-island-1280.png` | The HQ at golden hour, full bleed, drifting in very slowly (40 s), the mark and line on a warm haze at the foot. 38 KB still. |
-
-The stills are frames of the title page's own camera on the island (`?time=evening&shot=...`, the title's depth of
-field and pixel finish), made by `specs/perf/loading-stills.mjs still` and saved small as `public/assets/loading/*.webp`
-(the island at the title's 0.65 pixel scale, drawn pixelated). Boat: `4.5,-15.5,140,2.0,-7,32`; island: the staged
-evening shot.
-
-To see one live (dev or preview): `/student/dashboard?arrival=1&loading=logo|boat|island` (logo when absent). Once
-David picks, the other two and the `?loading=` switch go.
+**Evidence** (`r2/`): `strip-day.webp`, `strip-evening.webp` (dev server, 12 Mbps line, `?arrival=1&time=<phase>`, from
+the first paint to the island: `loading-stills.mjs strip <phase>`); `before-after.webp` (round 2's village backdrop and
+cream card beside the new one); `before-village-1280.png` (the before at full size). No village house in any frame: the
+one house behind the flags is the new world's chalet, as in the title.

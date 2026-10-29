@@ -6,6 +6,8 @@
  * rendered behind the screen while every shader compiles (lib/game/sceneGate.ts), of the frames it waits for.
  */
 import { useSyncExternalStore } from "react";
+import { islandPhase, parseTimeOverride } from "./islandTime";
+import { worldNow } from "./worldClock";
 
 export type LoadPart = "code" | "world" | "files" | "warm";
 const WEIGHT: Record<LoadPart, number> = { code: 0.1, world: 0.15, files: 0.55, warm: 0.2 };
@@ -29,3 +31,13 @@ export function setLoadPart(part: LoadPart, value: number) {
 const subscribe = (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; };
 /** The progress shown (0..1), never backwards. */
 export const useLoadProgress = () => useSyncExternalStore(subscribe, () => shown, () => 0);
+
+/**
+ * The loading screen's backdrop for now: the title's staged shot (components/title/shots.ts) in the phase the island
+ * opens in, a still of the game's own camera (public/assets/loading, made by specs/perf/loading-stills.mjs).
+ * `?time=` picks the phase outside production, as on the island.
+ */
+export function loadingStill(search = typeof window === "undefined" ? "" : window.location.search): string {
+  const forced = process.env.NODE_ENV !== "production" ? parseTimeOverride(new URLSearchParams(search).get("time")) : null;
+  return `/assets/loading/island-${forced ?? islandPhase(new Date(worldNow()))}.webp`;
+}
