@@ -7,7 +7,7 @@
 import * as THREE from "three";
 import { LANDMARK_INFO, landmarks, turn, type Landmark, type LandmarkId } from "./defaultIsland";
 import { HOME_LANDMARKS, residentHome, routineKeys } from "./residentRoutine";
-import { objectsOf, type Village } from "./villageMap";
+import { objectsOf, type MapObject, type Village } from "./villageMap";
 import type { IslandLight } from "./islandLighting";
 
 export const PUMPKIN_URL = "/assets/game/props/pumpkin-lantern.glb";
@@ -42,23 +42,33 @@ export const DOOR_HOMES: readonly LandmarkId[] = HOME_LANDMARKS.filter(id => id 
 export const KNOCK_SIDE = 1.05, KNOCK_OUT = 0.35;
 
 /**
- * The pumpkins: one by each lamp post, a pair flanking each lived-in building's door (the lit pumpkin is the old sign
- * that a house hands out treats) and two at each resident anchor's edge. `standable` keeps them off water, walls and
- * props; each is turned a little and sized a little differently, the same every load.
+ * The lamps that get a pumpkin: every lantern post on the land and the quay. Not the hand lanterns, the jetty's posts or
+ * the fountain's ring (David, R2c: "less pumpkins ... so it feels less clutter"). A cell world's lamps carry no model:
+ * all of them.
+ */
+export const pumpkinLamp = (l: MapObject) => !l.model || (l.model !== "hand" && !/^lamp-(jetty|fountain)/.test(l.id));
+
+/**
+ * The pumpkins: one at the foot of each pumpkin lamp (pumpkinLamp) on the side its arm lights, looking out the way the
+ * light falls; a pair flanking each lived-in building's door (the lit pumpkin is the old sign that a house hands out
+ * treats) and two at each resident anchor's edge. `standable` keeps them off water, walls and props (a lamp's pumpkin
+ * steps round its post until it finds ground); each is turned and sized a little differently, the same every load.
  */
 export function pumpkinSpots(v: Village, standable: (x: number, z: number) => boolean): PumpkinSpot[] {
   const out: PumpkinSpot[] = [];
   const add = (x: number, z: number, faceYaw: number, by: string) => {
-    if (!standable(x, z) || out.some(p => Math.hypot(p.x - x, p.z - z) < PUMPKIN_R * 2.2)) return;
+    if (!standable(x, z) || out.some(p => Math.hypot(p.x - x, p.z - z) < PUMPKIN_R * 2.2)) return false;
     const u = hash01(`${by}:${x.toFixed(2)}:${z.toFixed(2)}`);
-    out.push({ x, z, yaw: faceYaw + (u - 0.5) * 0.7, scale: 0.85 + 0.3 * hash01(`${by}#s`), by });
+    out.push({ x, z, yaw: faceYaw + (u - 0.5) * 0.4, scale: 0.85 + 0.3 * hash01(`${by}#s`), by });
+    return true;
   };
-  for (const l of objectsOf("lamp", v)) {
-    // The new world's lamps (each with its model) keep a pumpkin at one in five posts, none at the hand lanterns (David,
-    // R2c: "less pumpkins").
-    if (l.model && (l.model === "hand" || hash01(`${l.id}#p`) > 0.2)) continue;
-    const a = hash01(l.id) * Math.PI * 2;
-    add(l.x + Math.cos(a) * 0.5, l.z + Math.sin(a) * 0.5, 0, `lamp:${l.id}`);
+  for (const l of objectsOf("lamp", v).filter(pumpkinLamp)) {
+    // A lamp's arm reaches along (cos yaw, −sin yaw) (lib/game/world/generate.ts lamp); try that side first, then round.
+    const arm = -(l.yaw ?? 0);
+    [0, 1, -1, 2, -2, 3, -3, 4].some(k => {
+      const a = arm + (k * Math.PI) / 4, dx = Math.cos(a), dz = Math.sin(a);
+      return add(l.x + dx * 0.55, l.z + dz * 0.55, Math.atan2(-dx, -dz), `lamp:${l.id}`);
+    });
   }
   for (const l of landmarks(v).filter(m => DOOR_HOMES.includes(m.id))) {
     const facing = l.yaw ?? 0; // the carved face (the model's −z) looks out the way the door does, the building's −z
