@@ -35,6 +35,15 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 5: David's v4 review (2026-10-29, verbatim)
+
+Approved: v4-dock, v4-esc, v4-glide, v4-hop, v4-props, v4-reel, v4-sell, v4-small.
+- v4-id (approved, note): "the pringin card animation is buggy and you can see it before the printer line"
+- v4-keys (redo): "i like the old UI better, remove this new keyboard ui, just tweak the old keyboard ui so that theres less uncessary text and make it more lightweight"
+- v4-currency (redo): "animation looks good but still isnt the natural spot for them in the ui, it goes to where the quests are. i think underlying issue is the layer 2 ui isnt finalized and there isnt a slot for the coins and gems" (design bible UI 8b: the wallet's slot top right under the time)
+- v4-sights (redo): "good, introduce the shop to sell ingame and real merch, include little icon movement thing too, for cafe explain study with friends and get rewarded for it. I want you to always add colored icon in text that makes sense and wiggle it a bit, for the fishing market rod, ships allat"
+- v4-kit (redo, no note).
+
 ## Round 4: David's v3 review and his playtest (2026-10-29, verbatim)
 
 Review of round 3. Approved: v3-arrow, v3-wharf, v3-barrel, v3-currency, v3-hudfly, v3-lore, v3-farewell.
@@ -76,37 +85,27 @@ Not ours: the creator's water and hair; casting toward the cursor; the reel pane
 
 ## Status
 
-Round 4 (David's v3 review and playtest) built on the new world and shot headless: `specs/evidence/tutorial-v2/v4/` (a-* the dock and Alice's visit, b-* the sights to the hand-over, k-* the kit on /lab/gui, `-strip` for the animated beats). Before shots are round 3's, `specs/evidence/tutorial-v2/v3/`. Waiting on David's review. Round 3's status is in git history (4fee5d2b).
+Round 5 built on the new world and shot headless: `specs/evidence/tutorial-v2/v5/` (a-* HQ, b-* the sights and wharf, k-* the kit, c-keys-r3-r4-r5 the comparison). Waiting on David's review. Main merged at 660eb79d (the village retired: `routes/index.ts` and GAME_WORLD gone, NEW_ROUTE everywhere; tutorial.test's walk-along mechanics run on a fixture route `WALK`, the old village stops). Round 4's status is in git history (1fc48ea3).
 
-- **dock (v3-dock):** the tutorial dock's dressing (its box) shows until you've walked into HQ, then never again (`arrivalStore` `dockCleared`/`clearDock`/`useDockCleared`: `tsi.dock.cleared` on this device, or the account's HQ visit past its first beat). A replay (signed out, a reload restarts the arrival) passes over the dock's lessons: route stops flagged `dock` (`dockNew`, `dash`) are skipped in `stepTutorial` (`dockCleared` in the frame). No world data changed.
-- **ID (v3-id, playtest 1):** no panel: the kit's `CardOverlay` holds a large `PrintedCard` (`large`, `tilt`: leans toward the pointer with a sheen). Your headshot is your real avatar through the creator's `Portrait` (`components/game/hq/IdHeadshot.tsx`, `framing="head"`, white studio). You write on the card itself (`PaperField`): world name, birthday (private), From (`hometown`), About you (`bio`); the spirit animal is gone. One button under it: Print my ID, then Done. Print: the card feeds out of a printer slot with a blinking light; a stamper (knob, handle, inked pad) comes down on the photo's corner, the card gives, the mark is left, a gleam runs across.
-- **keys (v3-keys):** no white card: the kit's `KeyPrompt` (a small dark cue pill, then a smaller bare `KeyBoard`, a quiet Skip) low in the middle. Each key done brings its part of the screen into its real place (`uiTour.ts` `piece`; `DefaultIslandWorld` `tourShown`): H the full HUD (coins, level), Enter the chat bar (only when multiplayer is on), I the Bag button, B/J/L the menu dock's Collection, Quests and Mail entries (`MenuDock` `only`), M the minimap. Each springs in and rings (kit `SlotPop`). They show until the tour closes.
-- **fly-in merge:** the menu, mail and minimap fly beats are gone (their keys bring them in); coins and gems keep their fly cards. HQ script is now 8 beats; saves moved to `tsi.hq.v4`.
-- **sights (v3-sights):** kit `Keyword` (`components/gui/flat/keyword.tsx`): a line marks keywords with stars (`*fish*`, `*bug*`, `*coins*`); the word is coloured (`--ui-word-*` tokens) with a little flat icon that pops in as the typing reaches it and wiggles. TalkBox types lines part by part. Bram's sights lines use it.
-- **playtest 2 (coins and gems):** the quest line hides while a currency flies; TopCluster `showcase` gives it an empty slot top right, the icon clicks into it (FlyIn sets `data-landed` on the slot), then the slot fades.
-- **playtest 3:** gatherings are "a great way to level up" (lore page 3 and the check-in card's note).
-- **playtest 4 (the hop):** root cause: the hop counted only inside a 0.45 m circle just past the box, so a real hop landing beside Bram missed it. Now `past: true`: past the box's line, anywhere within 1.4 m across (`tutorial.ts` `pastLine`; test).
-- **playtest 5 (Esc):** root cause: Esc while she was still saying "Press Esc" closed the dialogue box instead (the press was lost), and a menu already open when the beat came round never counted. Now an Esc during her line opens the menu too, a cardless beat takes its event early (`visit.ts` `early`; her lines ending then moves past the beat, the farewell still said), and the menu open counts whenever the beat is on (tests).
-- **playtest 6:** Alice's look-round-HQ line is out of both farewells for now (bring it back later); Juno's line kept.
-- **playtest 7:** the camera travels between building shots (sights and wharf): an eased arc round Bram, lifted a little mid-way (`ArrivalWorld` `converseCamera`, `SHOT.glide`, `SHOT.crane`).
-- **playtest 8:** every talk: too close to the resident, you step back to `TALK_COMFORT` (1.3 m) in a short walk (`residentTalk.ts` `stepBack`, PlayerAvatar's `tsi:face`; tests).
-- **playtest 9:** one prompt: while the tutorial's glyph chip is up (`arrivalRun.chipUp`, `useArrivalChip`), the island's "Take out your fishing rod" hides.
-- **playtest 10 (reel chip):** `components/game/arrival/FirstCatchTeach.tsx`, mounted by Arrival while the catch is the task, not by any overlay. Driven by events only: `tsi:fish-hooked` (the reel starts: the chip goes up over `[aria-label="Fishing reel"]`, or low in the middle without it), `tsi:fish-caught`, `tsi:fish-escaped`, `tsi:fish-end` (it goes), a pointer down or Space after 0.6 s (you're holding: it goes). The floor (the first fish can't get away) is the shared reel logic's `reelAssist.floor` (`lib/game/fishingReel.ts`, the default of `createFishingReel`), set by FirstCatchTeach. FishingOverlay is main's again (no tutorial code). Dropped with it: the longer first bite window and the reel pausing until you hold.
-- **playtest 11:** removed from the world layout (`generate.ts` MARKET, regenerated): `market-8` (barrel), `market-15`, `market-16` (crates) in front of the fish market. The sell barrel and its fish crate stay. Later market ids renumbered (nothing refers to them).
-- **playtest 12:** signed out on a dev server with Supabase blanked, selling runs on the in-memory economy over this browser's catch record (`lib/wallet/localEconomy.ts`, `transport.ts` falls back only after a 503/401, not in production, only with no Supabase URL; tests).
-- **Kit (v3-kit):** `components/gui/flat`: `KeyPrompt`, `SlotPop`, `CardOverlay`, `PaperField`, `PrintedCard` (`large`, `tilt`, the stamper), `KeyBoard` smaller and bare, `Keyword`/`KeywordLine`; tokens `--ui-word-fish|bug|coin` in all three themes. /lab/gui `?only=key-board|keyword|printed-card`.
+- **wallet (v4-currency, bible UI 8b):** kit `WalletSlot` (`components/gui/flat/wallet.tsx`: coins and gems in one white pill, each cell `data-hud-slot`; `at` in/out slides; `landing`: that cell's icon waits until a FlyIn marks it `data-landed`, then clicks in and its count ticks up from 0; `CountUp` moved here from TopCluster). `TopCluster.tsx` `HudWallet` is the HUD's wallet, under `HudClock` in the top-right column (DefaultIslandWorld): it rests there in the UI view (Esc 1, the HUD key, the setting, the keys tour's H), slides in at rest for `FLASH_MS.coins` (now 2000) when coins or gems change, and holds in for Alice's `showcase` (hq.fly), lingering 0.9 s after; a cinematic (Alice talking again) fades it with the rest of the top right (it isn't unmounted). TopCluster lost its coin chip and the old showcase slot; the quest line no longer hides for a fly. `hudStore` carries `gems` (from the wallet read) and `setHudGems`; dev hook `window.__hudGems` beside `__hudCoins`.
+- **keys (v4-keys):** round 3's card back as a light `Spotlight` (`light`: no scrim, a small white card on a hairline, only "Hold [H] At a glance", the keys on a light well, dots and Skip). `KeyPrompt` and its CSS deleted; `KeyBoard` back on its well (32 px keys, thin foot). Steps lost their `text` (uiTour.ts titles a word or two). Kept round 4's behaviour: each press moves on and its HUD piece springs in (SlotPop); H now points at the wallet.
+- **ID (v4-id):** printing, the card's wrapper is clipped at the slot's line (`clip-path` on `.paperWrap`, top edge only) and the card slides down out of it (`printOut` is a plain translate); nothing shows above the slot.
+- **keywords (v4-sights):** `keyword.tsx` is a dictionary (`KEYWORDS`: fish, bug, coin, gem, rod (a drawn rod), shovel, merch, ID, mail, map, study, ship/boat/shipwright, shop/tackle shop, market/fish market, café, museum, HQ, wharf, barrel, gathering), each with a lucide icon and a tone (`--ui-word-fish|bug|coin|gem|place|item`, all three themes). `keywordParts` finds them in any line (whole words, any case, longest phrase first); no stars any more (`plainLine` deleted), so every TalkBox line in the game gets them (TalkBox shows a keyword's icon as the typing reaches it through `[data-tone]`). Lines: the café "Study there with friends, and you'll earn coins for it.", the shop "Tools and clothes for the island, and real merch too.", the wharf "Here's the wharf and the fish market."
+- **Kit (v4-kit):** /lab/gui `?only=key-board` (the light card), `wallet`, `fly-in` (into the wallet's cell), `keyword` (every kind, then a line), `printed-card`.
 
 ## Next
 
-1. Act on David's round 4 review once main relays it.
-2. Bring Alice's look-round-HQ line back when David says (the notice board, the trophy case, the Founder's desk).
-3. Later, after David approves the desktop tutorial: the phone pass (the tour on touch, the ID at phone size).
-4. At the fish-tiers merge: MemberFishing must dispatch `tsi:fish-hooked` when its reel starts and `tsi:fish-caught` / `tsi:fish-escaped` / `tsi:fish-end` when it ends, have its reel panel answer `[aria-label="Fishing reel"]` (or change FirstCatchTeach's REEL_BAR), and build its reel with `createFishingReel` (the floor comes from `reelAssist`).
-5. Open for David: a job board or past-projects display in HQ; his name in the lore (the Founder for now).
-6. Not run: perf:check (the 3D changes are the ID headshot's own small canvas while the card is up, and the market props removed).
+1. Act on David's round 5 review once main relays it.
+2. At the main-quest r3 merge: TopCluster (their XP chip out, my coin chip out: keep both removals), hudStore (their `hudLive` and chapter XP, my `gems`), hudPrefs FLASH_MS (their `xp` gone, my `coins: 2000`), the theme files (their tokens at the end, mine after `--ui-word-coin`).
+3. Other coin and gem animations (rewards, sales) should fly to `[data-hud-slot="coins"|"gems"]` too (bible 8b); the sale already slides the wallet in through the coins change.
+4. Bring Alice's look-round-HQ line back when David says.
+5. Later, after David approves the desktop tutorial: the phone pass.
+6. At the fish-tiers merge: MemberFishing must dispatch `tsi:fish-hooked` / `tsi:fish-caught` / `tsi:fish-escaped` / `tsi:fish-end`, answer `[aria-label="Fishing reel"]`, and build its reel with `createFishingReel`.
+7. Open for David: a job board or past-projects display in HQ; his name in the lore (the Founder for now).
 
 ## Tools and gotchas
 
+- Round 5: `scratchpad/tv5-run.sh <out> hq|sights|kit` under `withlock.sh devserver` (starts `next dev -p 3172` new world, Supabase blanked, runs `specs/evidence/tutorial-v2/v5/shoot.mjs`, stops the server); then `python3 specs/evidence/tutorial-v2/v4/strips.py <out> <dir>`. The hq scene pre-sets `tsi.dock.cleared` (the dock's lessons skipped) and sets coins 1240 and gems 35 through the dev hooks inside HQ.
 - Round 4: `/private/.../scratchpad/run.sh <out> <scene>` style: start `NEXT_PUBLIC_GAME_WORLD=new NEXT_PUBLIC_SUPABASE_URL= NEXT_PUBLIC_SUPABASE_ANON_KEY= npx next dev -p 3172` under the devserver lock, then `HOST=http://localhost:3172 node specs/evidence/tutorial-v2/v4/shoot.mjs <out> walk-a|walk-b|kit`, one scene per call (walk-a about 7 min, walk-b about 6), then `python3 specs/evidence/tutorial-v2/v4/strips.py <out> specs/evidence/tutorial-v2/v4`.
 - walk-b pre-sets `tsi.hq.v4` (done) and `tsi.dock.cleared`, so the dock's lessons are passed over.
 - Signed out: no coins (the shoot sets `window.__hudCoins(1240)` before the keys), no chat (multiplayer off: Enter brings nothing in), the sale now works.
@@ -116,6 +115,7 @@ Round 4 (David's v3 review and playtest) built on the new world and shot headles
 
 ## Rules
 
+- **Gates round 5:** tsc clean; full vitest (new world) 376 files, 3543 passed, 4 skipped; eslint clean on every file changed since the merge. perf:check not run (UI only).
 - **Headless only:** never open a window, tab, app or audio on David's screen; never `open`; never the Playwright MCP, the claude-in-chrome tools or the `blender` MCP tools. Blender only as `/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P <script>`. Never port 3000.
 - **Locks:** `LANE=game/tutorial-v2 /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh heavy|blender|devserver <cmd>` (`specs/lane-rules.md`).
 - **The village is retired (David, 2026-10-28):** every shot and run is on the new world; gates are vitest with `NEXT_PUBLIC_GAME_WORLD=new` only; no village-only code; keep off `web/lib/game/world/active.ts`.

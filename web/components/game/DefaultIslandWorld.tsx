@@ -1345,7 +1345,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         <div className={styles.hudColumn} data-minimap data-new={objectiveNew || undefined}>
           {((mapHere && !holdObjective) || tourShown.has("map")) && <MiniMap playerPosRef={player} plot={objectivePlot} big={uiView} onOpen={() => setMapOpen(true)} />}
           <HudClock weather={weather} phase={phase} />
-          <HudWallet full={full} hidden={hudCinematic} showcase={showcase}
+          <HudWallet full={full} showcase={showcase}
             onWallet={() => setSheet(value => (value === "wallet" ? null : "wallet"))} walletKey={keyName(identity.settings.key_bindings.openWallet)} />
           {/* Kept for a mini health bar when combat drops (playtest round 1); nothing drawn yet. */}
           <div className={styles.healthSlot} data-slot="health" aria-hidden="true" />

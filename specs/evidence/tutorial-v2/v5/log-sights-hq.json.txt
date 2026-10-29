@@ -1,0 +1,258 @@
+[
+ {
+  "talk": "07-hq-door-talk",
+  "said": [
+   "This is HQ. Alice runs the place.",
+   "She'll sign you in and show you the ropes. Go on in, I'll wait out here."
+  ]
+ },
+ {
+  "wallet": "coins 1240 and gems 35 set through window.__hudCoins / __hudGems (signed out has none)"
+ },
+ {
+  "strip": "a-09-wallet-at-rest",
+  "n": 8,
+  "every": 400
+ },
+ {
+  "talk": "10-alice-welcome",
+  "said": [
+   "There you are! Bram said you'd be up. I'm Alice. I keep HQ running, more or less.",
+   "You've washed up somewhere special. Let me tell you where."
+  ]
+ },
+ {
+  "talk": "12-alice-id-ask",
+  "said": [
+   "Now, every islander gets an ID. Let's make yours.",
+   "A few questions, then I'll print it for you."
+  ]
+ },
+ {
+  "shot": "a-13-id-form",
+  "stop": 2,
+  "stage": "task"
+ },
+ {
+  "strip": "a-14-id-print",
+  "n": 12,
+  "every": 110
+ },
+ {
+  "strip": "a-14b-id-stamp",
+  "n": 6,
+  "every": 220
+ },
+ {
+  "shot": "a-15-id-card",
+  "stop": 2,
+  "stage": "task"
+ },
+ {
+  "shot": "a-18-alice-coins",
+  "stop": 2,
+  "stage": "task"
+ },
+ {
+  "shot": "a-18-alice-coins-2",
+  "stop": 2,
+  "stage": "task"
+ },
+ {
+  "shot": "a-18-alice-coins-3",
+  "stop": 2,
+  "stage": "task"
+ },
+ {
+  "shot": "a-18-alice-coins-4",
+  "stop": 2,
+  "stage": "task"
+ },
+ {
+  "talk": "18-alice-coins",
+  "said": [
+   "There. That's you. Official.",
+   "Your friend code's on it. Give it to anyone you want to find again.",
+   "Now, money. Coins first.",
+   "You earn coins fishing, selling, all sorts. Spend them on the island: tools, clothes, things for your house."
+  ]
+ },
+ {
+  "strip": "a-19-fly-coins",
+  "n": 16,
+  "every": 260
+ },
+ {
+  "shot": "a-20-alice-gems",
+  "stop": 2,
+  "stage": "task"
+ },
+ {
+  "shot": "a-20-alice-gems-2",
+  "stop": 2,
+  "stage": "task"
+ },
+ {
+  "talk": "20-alice-gems",
+  "said": [
+   "Gems are the rare ones. You get them at the gatherings and from club goals.",
+   "Trade them for rare items, or for real merch. Real shirts and stickers, shipped to your door."
+  ]
+ },
+ {
+  "strip": "a-21-fly-gems",
+  "n": 16,
+  "every": 260
+ },
+ {
+  "talk": "22-alice-events",
+  "said": [
+   "Remember those gatherings out in the world? Each one has a check-in code at the door.",
+   "Scan it, and the awards and experience land on your account."
+  ]
+ },
+ {
+  "talk": "28-alice-keys",
+  "said": [
+   "Now your keys. Press each one as it lights up, and watch your screen fill in."
+  ]
+ },
+ {
+  "shot": "a-29-keys-01-wheel",
+  "stop": 2,
+  "stage": "task"
+ },
+ {
+  "strip": "a-30-keys-hold",
+  "n": 5,
+  "every": 160
+ },
+ {
+  "shot": "a-29-keys-02-emote",
+  "stop": 2,
+  "stage": "task"
+ },
+ {
+  "shot": "a-29-keys-03-hud",
+  "stop": 2,
+  "stage": "task"
+ },
+ {
+  "strip": "a-31-keys-pop-hud",
+  "n": 3,
+  "every": 150
+ },
+ {
+  "shot": "a-29-keys-04-chat",
+  "stop": 2,
+  "stage": "task"
+ },
+ {
+  "shot": "a-29-keys-05-bag",
+  "stop": 2,
+  "stage": "task"
+ },
+ {
+  "strip": "a-31-keys-pop-bag",
+  "n": 3,
+  "every": 150
+ },
+ {
+  "shot": "a-29-keys-06-collection",
+  "stop": 2,
+  "stage": "task"
+ },
+ {
+  "shot": "a-29-keys-07-quests",
+  "stop": 2,
+  "stage": "task"
+ },
+ {
+  "shot": "a-29-keys-08-map",
+  "stop": 2,
+  "stage": "task"
+ },
+ {
+  "shot": "a-29-keys-09-mail",
+  "stop": 2,
+  "stage": "task"
+ },
+ {
+  "shot": "a-33-esc-ui-view-wallet",
+  "stop": 2,
+  "stage": "task"
+ },
+ {
+  "hq": {
+   "taught": true,
+   "visit": {
+    "beat": 8,
+    "stage": "say",
+    "done": false
+   },
+   "quests": {},
+   "cue": {
+    "kind": "say",
+    "keys": [
+     "farewell"
+    ]
+   },
+   "waiting": null
+  }
+ },
+ {
+  "talk": "07b-hq-door-talk",
+  "said": [
+   "This is HQ. Alice runs the place.",
+   "She'll sign you in and show you the ropes. Go on in, I'll wait out here."
+  ]
+ },
+ {
+  "shot": "b-40-sights-museum",
+  "stop": 3,
+  "stage": "talk"
+ },
+ {
+  "shot": "b-41-sights-cafe",
+  "stop": 3,
+  "stage": "talk"
+ },
+ {
+  "shot": "b-42-sights-shop",
+  "stop": 3,
+  "stage": "talk"
+ },
+ {
+  "talk": "41-sights",
+  "said": [
+   "That's the museum. Bring Odile a fish or a bug she hasn't got, and she'll put it on show.",
+   "That's the café. Study there with friends, and you'll earn coins for it.",
+   "And that's the shop. Tools and clothes for the island, and real merch too.",
+   "Right. Down to the water. Follow me."
+  ]
+ },
+ {
+  "shot": "b-44-wharf-market",
+  "stop": 4,
+  "stage": "talk"
+ },
+ {
+  "shot": "b-45-wharf-tackle-shop",
+  "stop": 4,
+  "stage": "talk"
+ },
+ {
+  "shot": "b-46-wharf-shipwright",
+  "stop": 4,
+  "stage": "talk"
+ },
+ {
+  "talk": "44-wharf",
+  "said": [
+   "Here's the wharf and the fish market. My end of the island.",
+   "That's the tackle shop. Rods and bait. You'll want a better rod one day.",
+   "And the shipwright's. Boats, one of these days.",
+   "Now, over to the edge. Let's see you fish."
+  ]
+ }
+]

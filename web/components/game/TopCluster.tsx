@@ -83,10 +83,10 @@ export function HudClock({ weather, phase, className }: { weather: IslandWeather
  * The wallet, coins and gems (design bible UI 8b): its slot top right directly under the time. In the UI view (`full`)
  * it rests there; at rest it slides in when coins or gems change, counts, and slides away after about 2 s. `showcase`:
  * a fly-in (Alice's coins and gems) is on its way to it: it slides in with that cell empty, the icon clicks in as the
- * FlyIn lands, the count ticks, and it slides away after.
+ * FlyIn lands, the count ticks, and it slides away after. A cinematic fades it with the rest of the top right.
  */
-export function HudWallet({ full, hidden, showcase = null, onWallet, walletKey }: {
-  full: boolean; hidden?: boolean; showcase?: "coins" | "gems" | null;
+export function HudWallet({ full, showcase = null, onWallet, walletKey }: {
+  full: boolean; showcase?: "coins" | "gems" | null;
   onWallet?: () => void; walletKey?: string;
 }) {
   const hud = useHud();
@@ -104,7 +104,7 @@ export function HudWallet({ full, hidden, showcase = null, onWallet, walletKey }
   }, [showcase]);
   const at = full && !shown ? undefined : shown ? (shown.out ? "out" : "in") : coins === "in" || gems === "in" ? "in" : coins ?? gems ?? null;
   // Signed out (a preview) there's no wallet to show, unless Alice is showing it to you.
-  if (hidden || at === null || (hud.coins === null && hud.gems === null && !shown)) return null;
+  if (at === null || (hud.coins === null && hud.gems === null && !shown)) return null;
   return <WalletSlot coins={hud.coins ?? 0} gems={hud.gems ?? 0} at={at} landing={shown?.kind ?? null}
     onOpen={onWallet} title={walletKey ? `Wallet (${walletKey})` : "Wallet"} />;
 }

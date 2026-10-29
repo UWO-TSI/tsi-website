@@ -74,7 +74,7 @@ function frame(seen: { line: number; typed: number; blip: number; parts: Element
     const [shown, rest] = part.querySelectorAll<HTMLElement>("[data-shown], [data-rest]");
     if (shown) shown.textContent = words.slice(0, n);
     if (rest) rest.textContent = words.slice(n);
-    const word = part.closest("[data-kind]") ?? part.querySelector("[data-kind]");
+    const word = part.closest("[data-tone]") ?? part.querySelector("[data-tone]");
     if (word) word.toggleAttribute("data-off", n === 0);
   });
 }
