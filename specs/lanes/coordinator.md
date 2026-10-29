@@ -464,3 +464,9 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - Kit: Spotlight, KeyBoard, FlyIn, QuestCheck and PrintedCard in flat/moments.tsx, plus the paper tokens --ui-paper, --ui-paper-edge, --ui-paper-ink and --ui-stamp. Fold main-quest's BigMoment in at merge.
   - It deleted RegisterCard, MerchCard and UiTour. hq/lines.ts conflicts with main-quest: keep both sides.
   - Questions for David on the page: the Founder vs his name, spirit animal as the ID's extra field, and the ID card's size.
+- **Running (2026-10-28 evening):**
+  - newworld-fixes (agent affc0c80e899a0fb5), branch from game/village-archive ef90c927. Halloween pumpkins first (its shots may ship alone), then study seats, resident routes, the bench-0 footprint, fauna and bots.
+  - rod-gear r2 (agent ac1556f3ada427b05): rarity outlines, sells up to rare, hook caps by rod rarity, a new radar, own-rod bait and bobber slots, the bobber-only detail. The bobber and bait models wait for David's references.
+  - fishing-depth r2 (agent a3ab7400befe17b10): the paper menu picked up in first person, the chef order, the board as a time graphic by the fish shop, the tackle gacha (coin and gem, 1 or 10 pulls, odds shown), the market's three places, the tasks board with claims. The food and prize models wait for references.
+  Both copy main-quest's `--ui-rarity-*` tokens verbatim.
+- **Still queued:** loading r2 (island picked; rebuild it on the new world; coordinate with the archive's TitleScene); clothing r3 (dress clipping and skirt flicker on sitting; one-piece remodel with online references, shown first); the cleanup lane after the archive merges; ui-unify after the current UI lanes merge; the bug minigame; class and armour clothing.
