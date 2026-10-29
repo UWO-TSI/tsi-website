@@ -580,3 +580,9 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
 - **Clothing r3:** David: "not even worth the effort... focus on the actual game aspect first". Merge clothing-v2 as is (rounds 1 and 2, the hoodie, the skirt fix); no more clothing work for now.
 - **Bible amended:** UI rule 1 (flat with warmth, the old vibe in the new palette) and rule 8 (health, stamina and XP bars in the HUD).
 - **Merge now:** village-archive, loading, title-perf, clothing-v2. Then newworld-fixes and river-softlock once the river agent finishes (Halloween before Oct 31).
+- **Rod references** (David, 2026-10-29), saved in the rod-gear worktree at specs/references/rods/ with a README: rare Frog, epic Tornado, legendary Celestial, divine Apollo (a flaming harp), divine Chang'e (moon and rabbit). The names are placeholders.
+- **Meshy:** David: "I NEED YOU TO CONNECT TO MESHY.AI and use meshy as part of your modeling pipeline". It's in the bible's Models rule 3 and lane-rules.
+  - API: POST https://api.meshy.ai/openapi/v1/image-to-3d (image_url as a data URI, target_formats glb), poll GET /openapi/v1/image-to-3d/:id. Multi-image, remesh and retexture endpoints exist.
+  - The key goes in the keychain as "Meshy API"; it isn't there yet, and David is adding it.
+  - Rods r3 waits on the key and a free lane.
+- **Creator polish review:** https://claude.ai/artifact/KkE3ppKZjP7o2yP6kxg8Rx (ids cp-*), game/creator-polish 3aa33c58 (from main de87c07f; no migrations).
