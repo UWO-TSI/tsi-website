@@ -613,3 +613,8 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - Phase 1: a solo-playable 2v2 against bots in its own arena at /lab/volleyball. Phase 2: multiplayer rooms (needs a Fly deploy). Phase 3: ranked play, the leaderboard, and the Beach ball rod for 5 ranked wins in a row.
   - Right click on the ground defaults to "Call it" (Mine!), with a tip as the alternative, for David to pick.
   - The court's island spot is for David to pick from 2 or 3 proposals.
+- **Fishing UI round 2 decisions:**
+  - Approved: aim, aim-sand, catch, catch-epic, juice, suspense, suspense-epic, wheel.
+  - Redo: before-after ("should still have the ??? and sea tag", given to a light agent); meter and before-after both raise "how to make this mini game more fun rather than repetitive" (ideas sent to David).
+  - Merge fish-tiers once the tag fix lands.
+- **Volleyball:** David confirmed right click on the ground is Call it (relayed).
