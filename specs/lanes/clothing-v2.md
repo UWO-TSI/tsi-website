@@ -70,14 +70,14 @@ file (commits 5886cdbc, da63d1d3).
   game, /lab/avatar sheet=fit), `fit_report.txt`.
 - **Gates (2026-10-29):** tsc clean; vitest 3544 passed / 4 skipped; eslint clean on changed files; fit_check PASS.
   No perf:check (tris and draw calls unchanged).
-- **One-piece references:** pending (step 2 of Next).
+- **One-piece references:** collected (headless Bing image search via Playwright, `search.mjs`-style script in the
+  session scratchpad), in `specs/references/onepieces/{sundress,koi_kimono,monarch_cape}/` with `sources.md` each:
+  sundress 4, koi kimono 4, monarch cape 3 (Animal Crossing item renders + clean real kids' garments). The images are
+  NOT committed (third-party images, public repo): the coordinator decides. Waiting for David's picks.
 
 ## Next
 
-1. The one-piece references (David 10-28: "use blender and online for refernce images"; design bible Models rule 1):
-   search headless only, 3 to 5 clean images per one-piece (sundress, koi kimono, monarch cape) in the chibi /
-   Animal Crossing style, into `specs/references/onepieces/<item>/` with `sources.md`; send main the list, then stop:
-   David picks before any modelling.
+1. Wait for David's picks from `specs/references/onepieces/` (design bible Models rule 1: no modelling before).
 2. Then remodel the one-pieces from his picks (properly in Blender, design bible Models), using `drape=True` for their
    skirts.
 3. Known: the long skirt's front in a side sit drapes to a point past the toes; hands resting on a seated skirt sink
