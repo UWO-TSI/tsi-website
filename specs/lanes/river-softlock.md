@@ -18,7 +18,7 @@ Gates: tsc, one vitest run (2 known `seedMigrations` failures expected), eslint 
 
 ## Status
 
-Head: see git log. The soft lock is fixed; next are the two study items (see Next).
+Head: see git log. Done: the soft lock (first commit) and the two study items (second commit). Reported to main.
 - **Root cause:** the border's far-bank wall (generate.ts FAR_BANK) stands 2 to 3 u west of the river's west waterline. That leaves a strip of land between the river and the wall that walking can't reach. A slide-jump or sprint-jump with an air dash off the near bank (z 12 to 19) landed on it, the sim recorded `safe` there, and every splash put the player back on the strip.
 - **Fix:** `releaseRegions` (lib/game/barriers.ts), built lazily in `islandOf` (smooth world only), fills a half-unit lattice of land from the spawn with the barriers as walls. Land walking reaches is released. Unreached land that meets a barrier is locked. Other land (the islets) is stranded.
   - The sim (movement/sim.ts) gains `MoveWorld.locked` (a wall in `inside`, the one collision test, so walk, dash, slide, jump, glide and push all respect it) and `released` (the only ground the safe tracker and the mantle record).
@@ -33,15 +33,21 @@ Head: see git log. The soft lock is fixed; next are the two study items (see Nex
 - 2026-10-29: "i can dash slide across the river but i get soft locked there cuz i cant dash back and i just drown and respawn where i was but i also cant go on the other side of the island cuz unreleased".
 - New-world fixes page (via the coordinator): nf-study-pier "shouldnt be study table should just be bench"; nf-study-plaza "not needed".
 
+- Study items (David on the new-world fixes page):
+  - The quay spot `study:pier-bench` (71, 43, yaw -π/2) is now study furniture `bench`: the plaza's backless bench (`SCENERY_URLS["plaza-bench"]`), its 2 seats on its slots, facing the sea (+x), solid as the prop. There is no table, no log benches and no parasol. Its anchor stays because the café is closed at drop 1, so this is the only study spot.
+  - The plaza picnic is gone from world.json, generate.ts LAYOUT and DEFAULT_TABLES (T(8)). The demo's closed scenario seats Maya on the bench.
+  - The migration `20261029010000_study_outdoor_bench.sql` retires the picnic row (active = false, so its sessions and chat stay) and relabels the pier to "Pier bench". The generated seed blocks need `node scripts/gen-seeds.mjs` (the coordinator).
+  - Evidence: `study-pier-{before,after}.webp`. Tests: seats.newworld.test.ts (one outdoor spot, facing the sea), seats.test.ts (the fixture is a bench).
+- Gates: tsc clean, eslint clean on changed files. One vitest run: 4 failures, all generated seed blocks (seedMigrations ×3 including study-tables, plus study.test's seed block). The regions measured 11 ms in the suite and 24 ms alone.
+
 ## Next
 
-1. The quay study spot (study:pier-bench at (71, 43)) becomes a plain plaza-style bench facing the sea, with no table and no parasol. Keep a backend anchor on its seats only if the study backend needs one.
-2. Remove study:plaza-picnic from world.json, from generate.ts LAYOUT and from the backend's outdoor list. Update lib/study/seats.newworld.test.ts.
-3. Shoot the quay bench in place, before and after. Run the gates, then report to main.
+Done. Waiting for review.
 
 ## Tools and gotchas
 
 - Locks: `LANE=game/river-softlock /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh heavy|devserver <cmd>`; retry on exit 75. Port 3300 is David's; never 3000.
 - New-world village in tests: `villageOfWorld(loadWorldFromDisk(<web>/data/world))`.
 - River shot: scratchpad `rsl/run.sh <abs out> <yaw> <zoom> <pitch>` (dev :3311, /lab/island, stepped with `__move.pause/run` and `autopilot`). Run it as `0 1.7 0.95`.
-- Known gate failures: lib/seedMigrations.test.ts (2; the coordinator regenerates the seed).
+- Known gate failures: the generated seed blocks (lib/seedMigrations.test.ts, lib/study/study.test.ts seed): the coordinator runs gen-seeds.
+- Quay shot: scratchpad `rsl/run2.sh` with `SHOT=quay.mjs` (two angles of (71, 43)).
