@@ -274,10 +274,8 @@ export function villageSpawn(v: Village = village()): [number, number, number] {
   return [x, 0, z];
 }
 
-/** The benches, rocks, fences and scenery props: the props with a solid footprint. A bench the map gives no model (the
- * new world's plaza benches, lib/game/world/generate.ts) is our plaza bench (art/remodel/build_bench.py). */
-export const propsOf = (v: Village = village()) => [...objectsOf("bench", v).map(o => (o.model ? o : { ...o, model: "plaza-bench" })),
-  ...objectsOf("rock", v), ...objectsOf("fence", v), ...objectsOf("prop", v)];
+/** The benches, rocks, fences and scenery props: the props with a solid footprint. */
+export const propsOf = (v: Village = village()) => [...objectsOf("bench", v), ...objectsOf("rock", v), ...objectsOf("fence", v), ...objectsOf("prop", v)];
 
 /** Solid footprint of a bench, rock or fence: half extents and centre offset × scale (before its yaw). */
 export function propFootprint(o: Pick<MapObject, "model" | "scale">): [number, number, number, number] | null {

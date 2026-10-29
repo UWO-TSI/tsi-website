@@ -153,8 +153,7 @@ describe("the member island (web/data/world)", () => {
     // A completed club goal opens its building (cafe-polish §3).
     expect(landmarks(undefined, ["cafe"]).filter(l => !l.open).map(l => l.id).sort()).toEqual(["museum"]);
   });
-  // new world: bench-0 has no propFootprint (still after remodel round 3) (follow-up lane; village-archive)
-  it.skip("keeps solid prop footprints on land and blocks entry from each side", () => {
+  it("keeps solid prop footprints on land and blocks entry from each side", () => {
     for (const prop of [...objectsOf("bench"), ...objectsOf("rock")]) {
       expect(propFootprint(prop), prop.id).not.toBeNull();
       expect(island.surface(prop.x, prop.z)).not.toBe(Surface.River);

@@ -356,7 +356,7 @@ const FOUNTAIN_SCALE = 0.75;
  */
 const rimBench = (deg: number) => {
   const a = (deg * Math.PI) / 180, x = +(PX + 11 * Math.cos(a)).toFixed(2), z = +(PZ + 11 * Math.sin(a)).toFixed(2);
-  return { x, z, yaw: +Math.atan2(PX - x, PZ - z).toFixed(4) };
+  return { x, z, yaw: +Math.atan2(PX - x, PZ - z).toFixed(4), model: "plaza-bench" };
 };
 const LAYOUT: Record<string, { x: number; z: number; yaw?: number; scale?: number; model?: string }> = {
   wharf: { ...DOCK, model: "jetty" }, default: { x: SHORE_X - 6, z: DOCK.z },
