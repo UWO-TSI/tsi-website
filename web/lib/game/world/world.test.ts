@@ -4,10 +4,11 @@
  */
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { landmarkHalf, type LandmarkId } from "../defaultIsland";
+import { PROP_FOOTPRINT, landmarkHalf, type LandmarkId } from "../defaultIsland";
 import { readWorldFiles } from "./disk";
 import { decodeWorld, encodeWorld } from "./format";
-import { terrainHeight } from "./terrain";
+import { PLAZA } from "./generate";
+import { Paint, paintAt, terrainHeight } from "./terrain";
 import { groundKind, villageOfWorld } from "./village";
 
 const DIR = join(__dirname, "../../../data/world");
@@ -32,6 +33,27 @@ describe("the committed world files", () => {
       expect(terrainHeight(t, o.x, o.z), `${o.kind}:${o.id}`).toBeGreaterThan(t.seaLevel + 0.02);
       const half = o.kind === "landmark" ? landmarkHalf(o.id as LandmarkId, o.yaw ?? 0, o.scale ?? 1) : null;
       if (half) expect(terrainHeight(t, o.x + half[0], o.z - half[1]), `${o.id} pad`).toBeCloseTo(terrainHeight(t, o.x, o.z), 1);
+    }
+  });
+
+  // David, round 3: "make sure the bench location and orientation is fitting" (bench-0 sat across the paving).
+  it("seat the plaza benches at the plaza's edge, along it, facing the fountain, never on a path", () => {
+    const [px, pz] = PLAZA.at, [hw, hd] = PROP_FOOTPRINT["plaza-bench"];
+    const benches = world.objects.filter(o => o.kind === "bench" && /^bench-\d$/.test(o.id));
+    expect(benches).toHaveLength(4);
+    for (const b of benches) {
+      const yaw = b.yaw ?? 0, dx = px - b.x, dz = pz - b.z, r = Math.hypot(dx, dz);
+      expect(r, b.id).toBeGreaterThan(PLAZA.r - 1.2);
+      expect(r, b.id).toBeLessThan(PLAZA.r - 0.4);
+      // Its front (local +z, where benchSeat faces you from the plaza) at the fountain, so it runs along the edge.
+      expect((Math.sin(yaw) * dx + Math.cos(yaw) * dz) / r, b.id).toBeGreaterThan(0.999);
+      // The whole seat, and a step in front of it and past its ends, on the plaza's stone: no path, no grass.
+      for (const [u, w] of [[-hw, -hd], [hw, -hd], [-hw - 0.5, hd + 0.5], [0, hd + 0.5], [hw + 0.5, hd + 0.5]]) {
+        const x = b.x + Math.cos(yaw) * u + Math.sin(yaw) * w, z = b.z - Math.sin(yaw) * u + Math.cos(yaw) * w;
+        expect(paintAt(world.terrain, x, z), `${b.id} ${u} ${w}`).toBe(Paint.Stone);
+      }
+      // Clear of everything stood round the plaza (a body's width past its ends).
+      for (const o of world.objects) if (o !== b && o.kind !== "landmark" && o.kind !== "bug") expect(Math.hypot(o.x - b.x, o.z - b.z), `${b.id} ${o.id}`).toBeGreaterThan(1.5);
     }
   });
 

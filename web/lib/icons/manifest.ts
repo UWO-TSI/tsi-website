@@ -63,7 +63,7 @@ const WEAPON_MODEL: Record<string, string> = {
 };
 
 /** The catches that lie flat, and the crab: their icon looks down on them (a profile shows an edge, or a crab end on). */
-const FLATFISH = new Set(["fish_ray", "fish_dab", "fish_olive_flounder", "fish_mitten_crab"]);
+const FLATFISH = new Set(["fish_ray", "fish_dab", "fish_olive_flounder", "fish_mitten_crab", "sea_sea_star", "sea_scallop", "sea_abalone", "sea_pearl_oyster"]);
 
 function speciesSpec(key: string, sp?: { category: string; model: string | null }): IconSpec | null {
   const fish = FISH_BY_KEY.get(key);

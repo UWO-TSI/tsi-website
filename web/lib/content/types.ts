@@ -23,7 +23,8 @@ export type ShopCategory =
   | "merch"
   | "profile-customization";
 
-export type Rarity = "common" | "rare" | "epic" | "legendary";
+import type { Rarity } from "@/lib/rarity";
+export type { Rarity };
 
 export interface NPCPersona {
   id: string;

@@ -84,6 +84,7 @@ export function createApp(options: AppOptions = {}): ConfigOptions {
     kickForMovement: kickForMovement ?? env.production,
     graceS: graceS ?? RECONNECT_GRACE_S,
     log: logFn,
+    raidSecret: env.internalSecret,
   });
   const internal = internalEndpoints({ world, secret: env.internalSecret, log: logFn });
 

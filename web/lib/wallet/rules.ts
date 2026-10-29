@@ -80,11 +80,17 @@ export function speciesClass(itemKey: string, fishRarity: (key: string) => strin
   if (sp) return { category: sp.category, rarity: sp.rarity };
   const r = fishRarity(itemKey);
   if (!r) return null;
-  return { category: "fish", rarity: r === "seaking" ? "legendary" : r };
+  return { category: "fish", rarity: r };
 }
 
 export function sellPrice(category: string, rarity: string, table: Record<string, Record<string, number>> = SELL_PRICES): number | null {
   return table[category]?.[rarity] ?? null;
+}
+
+/** What one of this item sells for: its roster price when set, else its category and rarity's (economy_sell, 20261027180000_species_sell_price.sql). */
+export function speciesSellPrice(itemKey: string): number | null {
+  const cls = speciesClass(itemKey);
+  return cls ? (ROSTER.find((s) => s.key === itemKey)?.price ?? sellPrice(cls.category, cls.rarity)) : null;
 }
 
 /** Catalogue rows as the memory store / previews see them (033's seed, then the ownership migration's). */
