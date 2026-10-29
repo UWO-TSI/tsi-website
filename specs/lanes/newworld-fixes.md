@@ -24,6 +24,7 @@ Head: see git log. Done:
   - Side fix: lib/game/world/walk.test.ts's deck-edge test dashes on every other run, so a new solid on the quay flipped the parity and exposed a dash off the sushi bar's ramp onto the beach's toe-deep shallows, which the test counted as falling in. Its water check is now `island.wet` (deep water or the band beside a deck); it passes with every run dashing and with none.
 - 3 Residents: NavGrid (lib/game/residentRoutine.ts) let walks cut through lamp posts (0.16 across): `clear` sampled every 0.2 and `body` probed only 4 axis points, so a post slipped between. Now it samples every 0.1 and probes the body's rim every 45°. A bench is "under a lamp" only by a lamp with a pool of light (not a hand lantern): the night owl moved from the campfire bench lit only by a hand lantern to the one by the campfire's lantern post. The night test now checks every night sitter against the lamp posts (it read `objectsOf("lamp")[0]`, a village-era single lamp). Shots `resident-night-owl-{before,after}.webp` (`&at=01:30&time=night`).
 - 4 bench-0: the plaza's rim benches carried no model, and only `propsOf` filled in "plaza-bench", so anything reading the bench objects (the test, the footprint) saw none. world.json and generate.ts's `rimBench` now give them `model: "plaza-bench"`; `propsOf`'s fallback is deleted. Nothing a player sees changes (propsOf already drew and blocked them).
+- 5 Fauna: butterflies: a patch was the flowers within 7 of home; the new world's 26 flowers stand scattered, so a flight crossed up to 10 u of open grass. `PATCH_R` = 3.5 (lib/game/ambientFauna.ts). Leaping fish and gulls were test-only: the test centred leaps on the village's sea (0, -25), now off the jetty (100, 46); the gull test's extra anchor was the village pond (-24, 12), now at sea (110, 46). The game's calls (camera focus, `gullAnchors(v.bounds)`) were right. No stills: the butterfly change shows only in motion.
 
 ## David's decisions
 
@@ -31,7 +32,7 @@ Head: see git log. Done:
 
 ## Next
 
-5. Ambient fauna.
+6. Dev bots and loopback.
 
 ## Tools and gotchas
 

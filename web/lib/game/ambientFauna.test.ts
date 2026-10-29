@@ -42,9 +42,7 @@ describe("ambient fauna", () => {
     expect(flyingWeather("clear")).toBe(true);
   });
 
-  // new world: a butterfly's patch check fails on the heightfield (follow-up lane; village-archive)
-
-  it.skip("flies a butterfly flower to flower as a function of world time, and lifts it away when it's not out", () => {
+  it("flies a butterfly flower to flower as a function of world time, and lifts it away when it's not out", () => {
     const [f] = flyersFor(site, "summer"), a = newFlyerPose(), b = newFlyerPose();
     butterflyAt(f, 5000, 1, island.ground, a);
     butterflyAt(f, 5000, 1, island.ground, b);
@@ -120,14 +118,14 @@ describe("ambient fauna", () => {
     expect(s.sink).toBeLessThan(0.05);
   });
 
-  // new world: no leaping-fish spots found in open sea (0) (follow-up lane; village-archive)
-
-  it.skip("leaps fish only in open sea, on the same seeded schedule for everyone", () => {
+  it("leaps fish only in open sea, on the same seeded schedule for everyone", () => {
+    // Round a view focus off the wharf's jetty, over open sea and the shore's shallows.
+    const [SEA_X, SEA_Z] = [100, 46];
     const buf = Array.from({ length: 8 }, (): Leap => ({ x: 0, z: 0, yaw: 0, u: 0, model: 0, t0: 0, id: 0 }));
     const isSea = (x: number, z: number) => seaAt(site, x, z);
     let seen = 0;
     for (let t = 0; t < 600; t += 0.5) {
-      const n = leapsAt(t, 0, -25, 30, isSea, buf);
+      const n = leapsAt(t, SEA_X, SEA_Z, 30, isSea, buf);
       for (let i = 0; i < n; i++) {
         seen++;
         const { x, z } = buf[i], cx = worldToCellX(v.map, x), cz = worldToCellZ(v.map, z);
@@ -136,17 +134,17 @@ describe("ambient fauna", () => {
       }
     }
     expect(seen).toBeGreaterThan(10);
-    const a = buf.map(l => ({ ...l })), n1 = leapsAt(321.5, 0, -25, 30, isSea, buf), first = buf.slice(0, n1).map(l => ({ ...l }));
+    const a = buf.map(l => ({ ...l })), n1 = leapsAt(321.5, SEA_X, SEA_Z, 30, isSea, buf), first = buf.slice(0, n1).map(l => ({ ...l }));
     void a;
-    expect(leapsAt(321.5, 0, -25, 30, isSea, buf)).toBe(n1);
+    expect(leapsAt(321.5, SEA_X, SEA_Z, 30, isSea, buf)).toBe(n1);
     expect(buf.slice(0, n1)).toEqual(first);
   });
 
-  // new world: gull circles fail the camera-reach check (follow-up lane; village-archive)
-
-  it.skip("circles gulls far enough off every side that no camera reaches a circle", () => {
-    const g = gullAnchors(v.bounds, [[-24, 12]]);
+  it("circles gulls far enough off every side that no camera reaches a circle, and over any extra spot", () => {
+    // The island's four (the member island passes no extras), and an extra one out at sea off the jetty.
+    const g = gullAnchors(v.bounds, [[110, 46]]);
     expect(g).toHaveLength(5);
+    expect(g[4]).toEqual([110, 46]);
     for (const [x, z] of g) expect(seaAt(site, x, z)).toBe(true);
     const b = v.bounds;
     // The nearest a circle comes to land, against how far the camera can stand off a spot you can reach (zoomed out with Z).
