@@ -499,3 +499,9 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
 - **Loading r2 review:** https://claude.ai/artifact/TU1hFR6cYz9jeA6ZyPCnAW (ids r2-*), game/loading 59ef45b9 (includes main de87c07f and village-archive ef90c927).
 - **title-perf (agent started):** game/title-perf, on game/loading. It fixes two regressions from the archive's title move: the title streams 503 models (113 long frames), and a 482 ms first-sight shader compile in play. No look change.
 - **Merge order for this stack:** village-archive (after the title pick), newworld-fixes, loading, title-perf. Regenerate the seed once at the end.
+- **title-perf done:** game/title-perf 0f470315 (the fix is 226ae4f4).
+  - The title lights 7 of 59 lamps (titleView plus the lit prop on Lanterns); the warm-up compiles the fading two-pass programs.
+  - Results: title long frames 143 → 6; median frame 6.9 ms; world ready fast 8.6 → 7.5 s; first-minute play spikes 0; perf:check passes.
+  - Pixel diff at most 2/255, so no review page needed.
+  - Play already caps lamps at 4 nearest (LampPool).
+  - Open: about 40 never-drawn module preloads on the title; PMREM relinks on phase change (under 50 ms).
