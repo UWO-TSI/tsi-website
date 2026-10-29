@@ -24,8 +24,8 @@ export const LOD_DISTANCE = [56, 112, 224] as const;
 export const LOD_HYSTERESIS = 8;
 /** Water is drawn over a cell whose ground anywhere dips below this far over the sea (the swell's reach and the swash up the sand: waterShader SWASH). */
 export const WATER_MARGIN = 0.45;
-/** Water quads merge in blocks of this many chunks a side. */
-export const WATER_BLOCK_CHUNKS = 4;
+/** Water quads merge in blocks of this many chunks a side (64 u: each block culled on its own, perf-tris). */
+export const WATER_BLOCK_CHUNKS = 2;
 
 export interface ChunkRef {
   cx: number;

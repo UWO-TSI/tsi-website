@@ -19,7 +19,7 @@ import { Amount } from "@/components/economy/Amount";
 import { arrange, itemInfo, slotCounts, stackSize, type Slot } from "@/lib/collections/bag";
 import type { BagView } from "@/lib/collections/service";
 import { RECIPES, outputName } from "@/lib/crafting/recipes";
-import { sellPrice, speciesClass } from "@/lib/wallet/rules";
+import { speciesSellPrice } from "@/lib/wallet/rules";
 import { iconUrl, shopIcon } from "@/lib/icons/keys";
 import { pinnable } from "@/lib/game/itemModels";
 import { MAX_PINS } from "@/lib/game/toolWheel";
@@ -39,7 +39,6 @@ const KIND: Record<string, string> = { fish: "Fish", sea: "Sea creature", bug: "
 export const nameOf = (key: string) => itemInfo(key)?.name ?? key.replace(/_/g, " ");
 const rarityOf = (key: string) => itemInfo(key)?.rarity ?? "common";
 const kindOf = (key: string) => { const sp = itemInfo(key); return (sp?.sub && KIND[sp.sub]) || (sp && KIND[sp.category]) || "Item"; };
-const priceOf = (key: string) => { const c = speciesClass(key); return c ? sellPrice(c.category, c.rarity) : null; };
 const usedIn = (key: string) => RECIPES.filter(r => key in r.ingredients).map(outputName);
 export const errText = (e: unknown) => (e instanceof ApiError ? e.message : "Couldn't reach the island. Try again.");
 const DRAG = "application/x-tsi-slot";
@@ -210,7 +209,7 @@ function Details({ itemKey, qty, total, view, locked, busy, note, onClose, onLoc
   onClose: () => void; onLock: () => void; onDrop: () => void;
 }) {
   const { pins } = useHeld();
-  const sp = itemInfo(itemKey), price = priceOf(itemKey), recipes = usedIn(itemKey), museum = view.museum[itemKey];
+  const sp = itemInfo(itemKey), price = speciesSellPrice(itemKey), recipes = usedIn(itemKey), museum = view.museum[itemKey];
   const best = view.items.find(r => r.item_key === itemKey)?.best_size_cm ?? null;
   const pinned = pins.includes(itemKey), stack = stackSize(itemKey);
   return <SidePanel testId="bag-item" onClose={onClose} picture={iconUrl(itemKey)} title={nameOf(itemKey)}

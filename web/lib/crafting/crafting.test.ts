@@ -92,11 +92,11 @@ describe("crafting", () => {
     expect(await m.stock("wood_branch")).toBe(12 - 4 - 4 - 3 + 3);
   });
 
-  it("unlocks the legendary fishing gate only by crafting rods 4-5", async () => {
+  it("unlocks the epic fishing gate only by crafting rods 4-5", async () => {
     const m = setup();
     const rodOf = async () => bestOwnedRod((await data(getInventory(m.eco.store, A))).groups.tools?.flatMap(r => r.item.catalogue_ref ?? []) ?? []);
     expect((await rodOf()).tier).toBe(1);
-    expect(canHook("legendary", await rodOf())).toBe(false);
+    expect(canHook("epic", await rodOf())).toBe(false);
     // Not for sale, whatever the price.
     m.eco.fund(A, 100_000);
     const id = m.eco.items.find(i => i.slug === "rod-lighthouse")!.id;
@@ -105,7 +105,7 @@ describe("crafting", () => {
     m.fill(ROD4);
     await craft(m.store, A, { recipe_id: ROD4.id, idempotency_key: "craft-0007" });
     expect((await rodOf()).tier).toBe(4);
-    expect(canHook("legendary", await rodOf())).toBe(true);
+    expect(canHook("epic", await rodOf())).toBe(true);
     const rod5 = RECIPES.find(r => r.id === "rod-tidewarden")!;
     await learnFromQuest(m.store, A, rod5.id);
     m.fill(rod5);

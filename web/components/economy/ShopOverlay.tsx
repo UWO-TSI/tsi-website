@@ -25,7 +25,7 @@ import { CardGrid, Code, ColourDots, DarkButton, DetailView, FlatPanel, GhostBut
   flatStyles as f } from "@/components/gui/flat";
 import ItemViewer from "./ItemViewer";
 import { RodRadar, STAT_SPECS, TackleSlots, bestRod, equippedTackle, gainsText, rodOf } from "./RodGear";
-import { LEGENDARY_ROD_TIER, tackleByKey } from "@/lib/game/rods";
+import { TOP_FISH_ROD_TIER, tackleByKey } from "@/lib/game/rods";
 import type { InventoryRow } from "@/lib/wallet/store";
 
 const SHELF_ICON: Record<string, ReactNode> = {
@@ -117,7 +117,7 @@ function Detail({ e, list, onPick, onBack, busy, onPay, viewer, gear }: {
     pay={e.made ? { action: { label: MADE_ACTION[e.made], disabled: true, onClick: () => {} } }
       : { price: { amount: e.price, currency: e.currency }, was: e.special ? e.base_price.toLocaleString() : null,
         action: { label: busy === e.id ? "One moment…" : e.stock === 0 ? "Sold out" : action, disabled: !e.can_buy || busy !== null || e.stock === 0, onClick: () => onPay(e) } }}
-    fine={e.made ? <>{MADE_FINE[e.made]}{rodOf(e.catalogue_ref)!.tier >= LEGENDARY_ROD_TIER ? " Legendary fish bite for it." : ""}</>
+    fine={e.made ? <>{MADE_FINE[e.made]}{rodOf(e.catalogue_ref)!.tier >= TOP_FISH_ROD_TIER ? " Epic fish bite for it." : ""}</>
       : <>{merch ? "Pay with Gems. Reserve it here, then pick it up at HQ on campus." : `Pay with ${e.currency === "gems" ? "Gems" : "coins"}.`}
       {e.owned > 0 ? ` You own ${e.owned}.` : ""}</>}
     specs={rodOf(e.catalogue_ref) || tackleByKey(e.catalogue_ref) ? STAT_SPECS : specsOf(e)} />;

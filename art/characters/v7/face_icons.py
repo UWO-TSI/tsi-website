@@ -5,7 +5,7 @@ round their anchors, a tile framed on the parts' bounds, on a soft skin blob), a
   python3 art/characters/v7/face_icons.py        (after build_face.py; reads web/data/characters/face_v7.json)
 
 Writes web/public/assets/icons/face-<id>.webp (256 px, transparent): the shop row's sprite_url (lib/icons/keys.ts
-iconKey). Free faces have no shop row and get none. Also the hair colour wheel's shop icon (colour-wheel.webp, David
+iconKey). Free faces have no shop row and get none; an unpriced one (batch 3) gets one, ready for David's price. Also the hair colour wheel's shop icon (colour-wheel.webp, David
 2026-10-17: a 250-Gem unlock): the creator's wheel, hue round and saturation out from a white centre.
 """
 import json, os
@@ -125,7 +125,7 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     n = 0
     for key, face in FACE["faces"].items():
-        if PRICES.get(key, {}).get("mode") not in ("coins", "gems"):
+        if PRICES.get(key, {}).get("mode") in ("free", "skip"):     # batch 3: unpriced faces too, ready for David's prices
             continue
         path = os.path.join(OUT, f"face-{face['id'].replace('_', '-')}.webp")
         icon(face, atlases).save(path, "WEBP", quality=90, method=6)

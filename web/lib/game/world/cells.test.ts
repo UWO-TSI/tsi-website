@@ -13,6 +13,7 @@ import { cellsMap, villageOfCells, worldCells, worldCellsJson, type WorldCells }
 import { loadWorldFromDisk } from "./disk";
 import { cellMapOf } from "./terrain";
 import { villageOfWorld } from "./village";
+import { BENCH_SEAT_TOP, PROP_FOOTPRINT, PROP_TOP, propsOf } from "../defaultIsland";
 
 const dir = fileURLToPath(new URL("../../../data/world/", import.meta.url));
 const world = loadWorldFromDisk(dir);
@@ -57,5 +58,16 @@ describe("the world's cell view for the server", () => {
     const bottles = new Set(["2026-09-24", "2026-09-25", "2026-09-26", "2026-09-27"].map(d => String(villageBottleSpot(d, v))));
     expect(bottles.size).toBeGreaterThanOrEqual(2);
     for (const b of bottles) expect(Number(b.split(",")[1])).toBeGreaterThan(100);
+  });
+});
+
+describe("the plaza benches", () => {
+  it("draw our plaza bench where the map gives a bench no model, solid, its seat at the sit height", () => {
+    const benches = propsOf(villageOfWorld(world)).filter(o => o.kind === "bench" && /^bench-\d$/.test(o.id));
+    expect(benches.length).toBe(4);
+    for (const b of benches) expect(b.model).toBe("plaza-bench");
+    expect(PROP_FOOTPRINT["plaza-bench"]).toBeDefined();
+    expect(PROP_TOP["plaza-bench"]).toBe(BENCH_SEAT_TOP);
+    expect(propsOf(villageOfWorld(world)).find(o => o.id === "fire-bench-0")?.model).toBe("log-bench");
   });
 });

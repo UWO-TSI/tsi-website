@@ -26,6 +26,7 @@ import { limiters, type Limiter, type RateSpec } from "./limits";
 import { addStrike, checkPose, newTrack, resetBaseline, SANITY, type MotionTrack } from "./sanity";
 import { IslandState, Player, RosterEntry } from "./state";
 import { planViews, type Seen, type ViewRules } from "./views";
+import { creditFor, hitRaid, joinRaid, openRaid, raidView, tickRaid, type Raid } from "./raid";
 
 /** Refusals decided in static onAuth (the matchmake POST) but sent as a close from onJoin. */
 type Deferred = "auth" | "removed" | "card" | "version";
@@ -39,7 +40,7 @@ const DEFERRED_CLOSE: Record<Deferred, number> = {
 /** client.auth: `id` is the verified sub, the key UniqueSessionPlugin and the session index use. */
 export type IslandAuth = { id: string; identity: Identity; card?: PlayerCard; blocks?: Blocks; friends?: string[]; refusal?: Deferred };
 
-type LimitKind = "p" | "s" | "area" | "events" | "emotes" | "refresh" | "ping" | "chat" | "follow";
+type LimitKind = "p" | "s" | "area" | "events" | "emotes" | "refresh" | "ping" | "chat" | "follow" | "raid";
 const RATES: Record<LimitKind, RateSpec> = {
   p: N.RATE_LIMITS.p,
   s: N.RATE_LIMITS.s,
@@ -51,6 +52,8 @@ const RATES: Record<LimitKind, RateSpec> = {
   // Raw chat messages, before the CHAT checks (which answer each with a line or a refusal): a flood is dropped unanswered.
   chat: { perSecond: 2, burst: 3 },
   follow: { perSecond: 1000 / N.RATE_LIMITS.follow.everyMs, burst: 1 },
+  // Raid reports come every RAID.hitEveryMs; joins and leaves are rare.
+  raid: { perSecond: 2 * (1000 / N.RAID.hitEveryMs), burst: 10 },
 };
 
 /** Per session, kept across a reconnection (Colyseus carries userData over). */
@@ -80,6 +83,8 @@ type Session = {
   /** v1: their friends (member ids), and the card they joined with (a follow carries it to the next shard). */
   friends: Set<string>;
   card: PlayerCard;
+  /** When this player last opened a raid (RAID.openEveryMs). */
+  raidOpened?: number;
 };
 
 /** Chat lines and emotes don't pass between a blocked pair, whichever of them blocked. */
@@ -113,6 +118,8 @@ export type IslandRoomOptions = {
   kickForMovement: boolean;
   graceS: { desktop: number; phone: number };
   log: (event: string, fields: Record<string, unknown>) => void;
+  /** Signs a landed raid's credits (REALTIME_INTERNAL_SECRET, which the web checks them with). Unset: raids land without credit. */
+  raidSecret?: string;
 };
 
 const lookJson = (look: PlayerCard["look"]) => {
@@ -160,6 +167,8 @@ export function createIslandRoom(o: IslandRoomOptions) {
     private sids = new Set<number>();
     private capLocked = false;
     private shuttingDown = false;
+    /** A divine catch's raid, the shard's one at a time (./raid). */
+    private raid: Raid | null = null;
 
     /** The matchmake POST, before any seat exists: the page and the token (HTTP 403/401), then the rest. */
     static async onAuth(token: string | undefined, options: unknown, ctx: AuthContext): Promise<IslandAuth> {
@@ -218,8 +227,10 @@ export function createIslandRoom(o: IslandRoomOptions) {
       this.onMessage(N.MSG.follow, (client: Client, message: unknown) => {
         this.onFollow(client, message).catch((e) => this.report(N.MSG.follow, e));
       });
+      this.onMessage(N.MSG.raid, this.guard(N.MSG.raid, (client: Client, message: unknown) => this.onRaid(client, message)));
       o.world.register(this);
       this.clock.setInterval(this.guard("views", () => this.rebuildViews()), N.INTEREST.rebuildMs);
+      this.clock.setInterval(this.guard("raid", () => this.stepRaid()), N.RAID.viewEveryMs);
     }
 
     /**
@@ -297,7 +308,12 @@ export function createIslandRoom(o: IslandRoomOptions) {
       this.applyShardCap();
       // Their friends hear they're here; their own list once their handlers are in (the next tick).
       o.world.moved(session.uid);
-      this.clock.setTimeout(this.guard("friends", () => { if (this.sessions.get(session.key) === session) this.sendFriends(session); }), 0);
+      this.clock.setTimeout(this.guard("friends", () => {
+        if (this.sessions.get(session.key) !== session) return;
+        this.sendFriends(session);
+        // The raid under way, or none: also how the client learns this server takes `raid` (protocol.ts note 11).
+        client.send(N.MSG.raid, raidView(this.raid, session.key, this.state.epoch));
+      }), 0);
     }
 
     onDrop(client: Client): void {
@@ -627,6 +643,52 @@ export function createIslandRoom(o: IslandRoomOptions) {
     }
 
     /** `friends`: their friends on the island now, in any shard, never one who blocked them (nor one they blocked). */
+    // ── Raids (./raid, protocol.ts note 11) ─────────────────────────
+
+    private onRaid(client: Client, message: unknown): void {
+      const s = this.sessions.get(client.sessionId);
+      const now = Date.now();
+      if (!s || !s.limit.raid.take(now)) return;
+      const up = N.parseRaidUp(message);
+      if (!up) return;
+      const raid = this.raid;
+      if (up.op === "open") {
+        if ((raid && !raid.result) || now - (s.raidOpened ?? -Infinity) < N.RAID.openEveryMs) return;
+        s.raidOpened = now;
+        const area = this.state.players.get(s.key)?.area ?? 0;
+        this.raid = openRaid(up, { key: s.key, uid: s.uid }, area, now);
+        o.log("raid_open", { shard: this.metadata.shard, raid: this.raid.id, fish: up.fish });
+        this.sendRaid();
+        return;
+      }
+      if (!raid || raid.id !== up.id) return;
+      if (up.op === "join") { joinRaid(raid, s.key, s.uid, now); this.sendRaid(); }
+      else if (up.op === "hit") hitRaid(raid, s.key, up.dealt, now);
+      else raid.helpers.delete(s.key);
+    }
+
+    /** The raid's tick: the fish recovers, everyone sees it; at its end each helper gets their credit and it's over. */
+    private stepRaid(): void {
+      const raid = this.raid;
+      if (!raid) return;
+      tickRaid(raid, Date.now());
+      this.sendRaid();
+      if (raid.result) {
+        o.log("raid_end", { shard: this.metadata.shard, raid: raid.id, result: raid.result, helpers: raid.helpers.size });
+        this.raid = null;
+      }
+    }
+
+    private sendRaid(): void {
+      const raid = this.raid, now = Date.now();
+      for (const s of this.sessions.values()) {
+        const client = this.clients.getById(s.key);
+        if (!client || s.final !== undefined) continue;
+        const credit = raid && o.raidSecret ? creditFor(raid, s.key, o.raidSecret, now) : undefined;
+        client.send(N.MSG.raid, raidView(raid, s.key, this.state.epoch, credit));
+      }
+    }
+
     private sendFriends(s: Session): void {
       const client = this.clients.getById(s.key);
       if (!client || s.final !== undefined) return;

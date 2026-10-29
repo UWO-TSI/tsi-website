@@ -72,7 +72,8 @@ export const RODS: readonly RodTier[] = [
   rod(4, "rod_lighthouse", "Lighthouse rod", "crafted", stats(5, 6, 5, 5, 5, 4)),
   rod(5, "rod_tidewarden", "Tidewarden rod", "crafted", stats(7, 8, 7, 6, 6, 6)),
 ];
-export const LEGENDARY_ROD_TIER = 4;
+/** Epic and up (the old legendary tier, now epic) bite only for rod tier 4 and 5. */
+export const TOP_FISH_ROD_TIER = 4;
 
 /** Add-on slots on every rod (more kinds later). */
 export const SLOTS = ["bait", "bobber"] as const;
@@ -110,7 +111,7 @@ export function biteWindowMs(baseMs: number, r: RodEffects): number {
 export function castLuck(luck: number, r: RodEffects): number {
   return luck + r.rarityBonus;
 }
-/** Legendary and up only bite for top rods. */
+/** Epic and up only bite for top rods. */
 export function canHook(rarity: Rarity, r: Pick<RodTier, "tier">): boolean {
-  return RARITY_RANK[rarity] < RARITY_RANK.legendary || r.tier >= LEGENDARY_ROD_TIER;
+  return RARITY_RANK[rarity] < RARITY_RANK.epic || r.tier >= TOP_FISH_ROD_TIER;
 }

@@ -92,6 +92,12 @@ export function sellPrice(category: string, rarity: string, table: Record<string
   return table[category]?.[rarity] ?? null;
 }
 
+/** What one of this item sells for: its roster price when set, else its category and rarity's (economy_sell, 20261027180000_species_sell_price.sql). */
+export function speciesSellPrice(itemKey: string): number | null {
+  const cls = speciesClass(itemKey);
+  return cls ? (ROSTER.find((s) => s.key === itemKey)?.price ?? sellPrice(cls.category, cls.rarity)) : null;
+}
+
 /** Catalogue rows as the memory store / previews see them (033's seed, then the ownership migration's). */
 export function seedItems(): ShopItem[] {
   return [...CATALOGUE, ...OWNERSHIP_ITEMS, ...EVENT_ITEMS].map((c, i) => ({

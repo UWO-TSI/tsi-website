@@ -10,13 +10,17 @@
  * (lib/game/fishing.ts) — zero drift.
  */
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { popBang } from "@/components/game/character/hookBang";
+import { AudioManager } from "@/lib/game/audio";
 import { ReelMinigame } from "@/components/game/FishingOverlay";
 import FishReveal from "@/components/game/FishReveal";
 import FishPreview from "@/components/lab/FishPreview";
 import {
   REVEAL,
   FISH,
+  HOOK,
+  HOOK_TIER,
   RARITY_META,
   celebrate,
   currentFishingContext,
@@ -58,6 +62,7 @@ export default function FishingBench() {
   const lab = useLabState();
   const [selected, setSelected] = useState<FishDef>(FISH[0]);
   const [mystery, setMystery] = useState(true);
+  const bangRef = useRef<HTMLDivElement>(null);
   const [reelKey, setReelKey] = useState(0); // remount per run
   const [reelOpen, setReelOpen] = useState(false);
   const [lastResult, setLastResult] = useState<string | null>(null);
@@ -280,6 +285,18 @@ export default function FishingBench() {
             >
               Catch confetti ({REVEAL[selected.rarity].confetti} bursts)
             </button>
+          </div>
+
+          {/* The bite's "!" by hook tier (hookBang.ts), with its bite sound */}
+          <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
+            {(["common", "legendary", "divine"] as const).map((tier) => (
+              <button key={tier} data-hook-preview={tier} onClick={() => { if (bangRef.current) popBang(bangRef.current, tier); AudioManager.playSFX(HOOK[tier].sfx); }} style={btn(HOOK_TIER[selected.rarity] === tier)}>
+                ! {tier}
+              </button>
+            ))}
+            <div data-hook-stage style={{ position: "relative", width: 260, height: 200, borderRadius: 12, overflow: "hidden", background: "linear-gradient(#9fd6e8, #6fb3c9 60%, #4f8fa6)" }}>
+              <div ref={bangRef} style={{ position: "absolute", left: "50%", top: "50%", width: 0, height: 0 }} />
+            </div>
           </div>
 
           {/* Reel stage */}

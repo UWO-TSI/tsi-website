@@ -429,7 +429,13 @@
    ],
    "provisional": true,
    "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
-   "fit_why": "David, 2026-10-17: on the eye (the ring is the largest piece; its top part took the chain's clip and stood 27 cm off)"
+   "fit_why": "David, 2026-10-17: on the eye (the ring is the largest piece; its top part took the chain's clip and stood 27 cm off)",
+   "piece_budget": {
+    "main": 220,
+    "rest": 130,
+    "keep_every": 3,
+    "why": "David, 2026-10-27 (the monocle looked torn at 129 triangles): the ring and lens keep 220 alone, every third chain link shares 130, within the 350 face cap"
+   }
   },
   {
    "n": 14,
@@ -800,6 +806,102 @@
     ],
     "why": "David, 2026-10-17: sized to cover the hair; round 2: smaller and higher; round 3: slightly back"
    }
+  },
+  {
+   "n": 25,
+   "key": "acc-25",
+   "id": "acc_kitty_bow_glasses",
+   "name": "Droopy glasses with a bow",
+   "asset_id": 14365048863,
+   "title": "glasses with a bow",
+   "set": "david-b3",
+   "file": "face/25-Low-Droopy-Kitty-Glasses-w-Pink-Bow-in-Black-14365048863.glb",
+   "attachment": "FaceFrontAttachment",
+   "group": "face",
+   "fit": "eyes",
+   "hidesBackHair": false,
+   "position": [
+    -0.4548,
+    0.17346,
+    0.01586
+   ],
+   "orientation": [
+    0,
+    90,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (the lenses, the side a bandage faces) to the front, read off the raw mesh (wardrobe batch 3)"
+  },
+  {
+   "n": 26,
+   "key": "acc-26",
+   "id": "acc_cross_bandage",
+   "name": "Cross bandage",
+   "asset_id": 5972888848,
+   "title": "white bandages",
+   "set": "david-b3",
+   "file": "face/26-White-Bandages-5972888848.glb",
+   "attachment": "FaceCenterAttachment",
+   "group": "face",
+   "fit": "face_on",
+   "side": "right",
+   "hidesBackHair": false,
+   "position": [
+    -0.29881,
+    0.37122,
+    0.6001
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (the lenses, the side a bandage faces) to the front, read off the raw mesh (wardrobe batch 3)",
+   "removed": true,
+   "removed_why": "David, 2026-10-27 (lane wardrobe-b3): removed from the catalogue, creator and shop; key acc-26 stays unused. His source GLB stays."
+  },
+  {
+   "n": 27,
+   "key": "acc-27",
+   "id": "acc_face_bandaids",
+   "name": "Face bandaids",
+   "asset_id": 118576934068135,
+   "title": "face bandaids",
+   "set": "david-b3",
+   "file": "face/27-Face-Bandaid-Bandages-118576934068135.glb",
+   "attachment": "FaceCenterAttachment",
+   "group": "face",
+   "fit": "face_on",
+   "hidesBackHair": false,
+   "position": [
+    -0.0,
+    0.37196,
+    0.46745
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (the lenses, the side a bandage faces) to the front, read off the raw mesh (wardrobe batch 3)"
   }
  ]
 }

@@ -139,12 +139,12 @@ for (const c of CUT_WEARABLES) WEARABLES.splice(WEARABLES.findIndex((w) => w.id 
  * every hairstyle, accessory and whole face he priced is a shop row at its price, in play coins (price_coins) or Gems
  * (tc_price); a free one has no row (the starting creator offers it to everyone: look.ts partRef, facePartRef) and a
  * skipped one is not imported. A face's row unlocks its eyes, mouth and accent (catalogue_ref face:<id>). Positions from
- * B2_POS, after every earlier row, so no earlier row moves; coin rows can be a daily special like the other wearables.
+ * B2_POS, after every earlier row, so no earlier row moves; coin accessories can be a daily special like the other wearables; hairstyles and faces never are (no plinth model).
  */
 const B2_POS = 600;
 const b2Row = (slug: string, name: string, category: ShopCategory, price: Batch2Price, ref: string, i: number): CatalogueEntry => withIcon({
   slug, display_name: name, category, description: "", price_coins: price.mode === "coins" ? price.price : null, price_gems: price.mode === "gems" ? price.price : null,
-  tier: null, slot: null, special_pool: price.mode === "coins", stackable: false, stock: null, catalogue_ref: ref, sprite_url: null, position: B2_POS + i,
+  tier: null, slot: null, special_pool: price.mode === "coins" && category !== "hair" && category !== "face", stackable: false, stock: null, catalogue_ref: ref, sprite_url: null, position: B2_POS + i,
 });
 const isSold = (p: Batch2Price | null): p is Batch2Price => p?.mode === "coins" || p?.mode === "gems";
 /** A row's name, with what owning it grants (row 314: hair #22 and its ushanka and goggles). */

@@ -25,3 +25,18 @@ export function seedSql(roster: Species[]): string {
     SEED_END,
   ].join("\n");
 }
+
+/** The species' own sell prices (collection_species.sell_price, 20261027180000_species_sell_price.sql): set from the roster's `price`, cleared where it has none. */
+export function speciesPricesSql(roster: Species[]): string {
+  const priced = roster.filter((s) => s.price !== undefined);
+  return [
+    "-- BEGIN GENERATED SPECIES PRICES (web/scripts/gen-seeds.mjs)",
+    "UPDATE collection_species SET sell_price = NULL WHERE sell_price IS NOT NULL;",
+    ...(priced.length ? [
+      "UPDATE collection_species s SET sell_price = v.price FROM (VALUES",
+      priced.map((s) => `  (${q(s.key)}, ${n(s.price!)})`).join(",\n"),
+      ") AS v(key, price) WHERE s.key = v.key;",
+    ] : []),
+    "-- END GENERATED SPECIES PRICES",
+  ].join("\n");
+}

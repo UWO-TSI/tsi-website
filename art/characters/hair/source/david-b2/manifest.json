@@ -40,7 +40,9 @@
    "file": "24-Messy-Wavy-IT-Girl-Hair-100884389158278.glb",
    "id": "hair_wavy_half_up",
    "name": "Wavy half-up",
-   "key": "hair-24"
+   "key": "hair-24",
+   "removed": true,
+   "removed_why": "David, 2026-10-27 (hair shelf, lane hair-shelf): removed from the catalogue, creator and seed; it keeps its atlas cell"
   },
   {
    "file": "25-Cute-Igaru-Girl-w-Curly-Hair-Blue-n-Black-87890777934843.glb",

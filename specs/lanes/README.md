@@ -6,9 +6,9 @@ One file per active lane. A lane agent is restarted fresh from its file whenever
 
 1. `CLAUDE.md` is already in your context. Don't read it again.
 2. Read `specs/lane-rules.md`. The rules there are hard.
-3. Read your lane file here, then the specs it names, then only the `CODEMAP.md` sections for your area. For a file over 40 KB, read the line range `CODEMAP.md` gives instead of the whole file.
+3. Read your lane file here, then `specs/design-bible.md` if you touch UI, art or models, then the specs your lane file names, then only the `CODEMAP.md` sections for your area. For a file over 40 KB, read the line range `CODEMAP.md` gives instead of the whole file.
 4. In your worktree, run `git status` and `git log --oneline -8`. A `[wip]` commit on top is unfinished work from the previous agent. Review it, then finish it or revert it; never build blindly on it.
-5. Merge main into your branch if your lane file says main moved.
+5. Merge `origin/main` (after `git fetch`) into your branch if your lane file says main moved. Never the local `main` ref.
 
 Don't read `STATE.md`, `archive/`, other lanes' files or old evidence unless your lane file says to. Every file you read stays in your context and is paid for again on every later call.
 

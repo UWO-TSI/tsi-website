@@ -31,6 +31,9 @@ const SHOTS = [
   { id: "crabs", old: [`${A}props/crab-gazami.glb`, `${A}props/crab-hermit.glb`], new: [`${G}remodel/props/crab-gazami.glb`, `${G}remodel/props/crab-hermit.glb`], stop: [-8, 100], az: 20, el: 35, k: 1.4, moving: true },
   { id: "gather-rocks", old: [`${A}props/rock-a.glb`], new: [`${G}remodel/props/rock-a.glb`], stop: [55.8, 63], az: 160, el: 30, k: 2.4 },
   { id: "rope-fence", old: [`${A}props/fence-rope-a.glb`], new: [`${G}remodel/props/fence-rope-a.glb`], stop: [21.5, 52], az: 150, el: 28, k: 2.2 },
+  // Round 3: the plaza bench had no model before, and the new world merges its still props (no signature to find), so
+  // its camera is aimed at the spot: bench-0, the ground at 3 (lib/game/world/generate.ts).
+  { id: "plaza-bench", old: [], new: [], stop: [21, 46], az: 200, el: 22, k: 1.5, fixed: { box: [20.04, 3, 45.73, 21.96, 0.55 + 3, 46.27] } },
   { id: "fish", old: [`${A}fish/sea-bass.glb`, `${A}fish/horse-mackerel.glb`], new: [`${G}remodel/fish/sea-bass.glb`, `${G}remodel/fish/horse-mackerel.glb`], stop: [68, 46], az: 20, el: 50, k: 2, moving: true },
 ].filter(s => !only || only.split(",").includes(s.id));
 
@@ -121,11 +124,12 @@ const clip = { x: rect.x + (rect.w - side) / 2, y: rect.y + (rect.h - side) / 2,
 for (const s of SHOTS) {
   const files = mode === "before" ? s.old : s.new;
   let cam = cams[s.id];
-  if (mode === "before" || s.moving || !cam) {
+  const framing = mode === "before";
+  if (framing || s.moving || !cam) {
     await page.evaluate(([x, z]) => window.__move.teleport(x, z, 0), s.stop);
     await page.waitForTimeout(6000);
     const sigs = files.flatMap(f => SIGS[f] ?? []);
-    let boxes = [];
+    let boxes = s.fixed ? [s.fixed.box] : [];
     for (let tries = 0; tries < 6 && !boxes.length; tries++) { boxes = await page.evaluate(FIND, sigs); if (!boxes.length) await page.waitForTimeout(3000); }
     if (!boxes.length) { console.log("NOT FOUND", s.id, mode); continue; }
     boxes.sort((p, q) => Math.hypot(centre(p)[0] - s.stop[0], centre(p)[2] - s.stop[1]) - Math.hypot(centre(q)[0] - s.stop[0], centre(q)[2] - s.stop[1]));
@@ -134,7 +138,7 @@ for (const s of SHOTS) {
     const pos = [c[0] + Math.sin(a) * Math.cos(e) * d, c[1] + Math.sin(e) * d, c[2] - Math.cos(a) * Math.cos(e) * d];
     const right = [-Math.cos(a), -Math.sin(a)], off = r + 1.2;
     cam = { pos, target: c, fov, teleport: [c[0] + right[0] * off, c[2] + right[1] * off] };
-    if (mode === "before") cams[s.id] = cam;
+    if (framing) cams[s.id] = cam;
   }
   // A moving critter shies from the player: leave the player at the stop and shoot it where it is now.
   if (!s.moving) { await page.evaluate(([x, z]) => window.__move.teleport(x, z, 0), cam.teleport); await page.waitForTimeout(2500); }
@@ -146,4 +150,4 @@ for (const s of SHOTS) {
   console.log("shot", s.id, mode);
 }
 await browser.close();
-if (mode === "before") writeFileSync(camsFile, JSON.stringify(cams, null, 1));
+writeFileSync(camsFile, JSON.stringify(cams, null, 1));

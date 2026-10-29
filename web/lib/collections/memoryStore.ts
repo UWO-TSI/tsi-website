@@ -132,6 +132,10 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
       if (seasonal?.tourney) enter(seasonal.tourney.goal_id, seasonal.tourney.cycle, m, r.key, r.size);
       return { item_key: r.key, size_cm: r.size, ...res, recipe: drop(m, r.key) };
     },
+    async rolled(m, id) {
+      const r = rolls.get(id);
+      return r && r.member === m ? r.key : null;
+    },
     async harvest(m, node, hourKey, key, size, trophy) {
       if (harvests.has(`${m}:${node}:${hourKey}`)) throw new CollectionsError("already_harvested");
       const res = recordCatch(m, key, size, trophy);
