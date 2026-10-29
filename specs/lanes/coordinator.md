@@ -586,3 +586,8 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - The key goes in the keychain as "Meshy API"; it isn't there yet, and David is adding it.
   - Rods r3 waits on the key and a free lane.
 - **Creator polish review:** https://claude.ai/artifact/KkE3ppKZjP7o2yP6kxg8Rx (ids cp-*), game/creator-polish 3aa33c58 (from main de87c07f; no migrations).
+- **Shipped 2026-10-29 ~02:10:**
+  - the village archive stack (village-archive ef90c927, loading 59ef45b9, title-perf 0f470315), plus clothing-v2 ef4e29cd and the guarded residents seed;
+  - prod dump prod-before-archive-stack-20261029-0206.dump; applied 20261029055353_catalogue_seed (guarded schedules, no pond or path left); verify clean;
+  - deploy uwotsi-n346qmvqg queued at push; confirm Ready.
+  Next in this stack: newworld-fixes plus river-softlock (Halloween), after the river agent's study items.
