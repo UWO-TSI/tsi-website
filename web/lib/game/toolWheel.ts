@@ -115,10 +115,24 @@ export function slotPosition(i: number, n: number, r: number): [number, number] 
   const a = (i / n) * 2 * Math.PI;
   return [Math.sin(a) * r, -Math.cos(a) * r];
 }
-/** A flick under pointer lock: the mouse's movement added up, kept within `max` of the centre. */
+/** A flick: the mouse's movement added up, kept within `max` of the centre. */
 export function flick(v: [number, number], dx: number, dy: number, max: number): [number, number] {
   const x = v[0] + dx, y = v[1] + dy, d = Math.hypot(x, y);
   return d > max ? [x / d * max, y / d * max] : [x, y];
+}
+/** A hold-to-pick wheel's flick so far (the tool and emote wheels, lib/game/useWheelFlick): where it points, and whether it has left the centre yet. */
+export interface Flick { v: [number, number]; out: boolean }
+export const newFlick = (): Flick => ({ v: [0, 0], out: false });
+/**
+ * One mouse step on a wheel, under pointer lock or with a free cursor alike (David's playtest 2026-10-29: in mouse-look
+ * the wheel couldn't pick): the slot the movement so far points at (null back at the centre), or undefined while it
+ * hasn't left the `dead` zone yet (nothing chosen: the wheel keeps what it had). `f` is updated.
+ */
+export function flickPick(f: Flick, dx: number, dy: number, n: number, reach: number, dead: number): number | null | undefined {
+  f.v = flick(f.v, dx, dy, reach);
+  if (!f.out && Math.hypot(f.v[0], f.v[1]) < dead) return undefined;
+  f.out = true;
+  return slotAt(f.v[0], f.v[1], n, dead);
 }
 
 // ── Left click ───────────────────────────────────────────────────────

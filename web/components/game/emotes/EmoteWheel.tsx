@@ -4,8 +4,8 @@
  * The emote wheel (specs/v1-drop.md §3), in the tool wheel's language (row 283, David's Animal Crossing UI kit: cream
  * circles for petals, the chosen one grows and turns butter yellow, its name in a teal pill, round keycaps).
  * Hold the emote key (G, rebindable in Settings): after a beat the ring opens round the screen's centre; a flick of the
- * mouse (added up under pointer lock, the cursor's direction otherwise) grows the petal it points at, and letting go
- * plays it. A quick tap plays the last emote again (with nothing to repeat it opens the ring for a click). The centre
+ * mouse (its movement added up, under pointer lock or with a free cursor alike: lib/game/useWheelFlick) grows the petal
+ * it points at, and letting go plays it. A quick tap plays the last emote again (with nothing to repeat it opens the ring for a click). The centre
  * flips the ring between the eight emotes and the eight dances (click it, or turn the mouse wheel, while the ring is
  * up). Esc closes it. On a phone, the emote button opens it and a tap chooses. The world keeps going: the wheel never
  * slows it (other people are there).
@@ -14,7 +14,8 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { Armchair, Bot, CircleHelp, Droplets, Footprints, Hand, HandHeart, Laugh, Moon, Music, PartyPopper, PersonStanding, RotateCw, Smile, Sparkle, Waves, Zap, type LucideIcon } from "lucide-react";
 import { AudioManager } from "@/lib/game/audio";
-import { flick, slotAt, slotPosition } from "@/lib/game/toolWheel";
+import { slotPosition } from "@/lib/game/toolWheel";
+import { useWheelFlick } from "@/lib/game/useWheelFlick";
 import { keyName } from "@/lib/game/movement/keys";
 import {
   TAP_MS, closeWheel, createWheel, flipRing, openForClick, pickAt, playChoice, pressWheel, releaseWheel, ringOf,
@@ -27,8 +28,8 @@ const ICON: Record<string, LucideIcon> = {
   wave: Hand, cheer: PartyPopper, clap: HandHeart, laugh: Laugh, sit: Armchair, sleep: Moon, bow: PersonStanding, shrug: CircleHelp,
   bounce: Music, spin: RotateCw, shuffle: Footprints, sway: Waves, wiggle: Sparkle, flail: Zap, robot: Bot, sprinkler: Droplets,
 };
-/** The petals' ring and the flick's reach (px); within DEAD of the centre is the centre. */
-const RING = 112, REACH = 128, DEAD = 34;
+/** The petals' ring and the flick's reach (px: short, so a new direction takes over quickly); within DEAD of the centre is the centre. */
+const RING = 112, REACH = 80, DEAD = 30;
 
 const sfx = (name: Parameters<typeof AudioManager.playSFX>[0], rate: number, gain: number) => AudioManager.playSFX(name, { rate, gain });
 
@@ -68,7 +69,7 @@ export default function EmoteWheel({ emoteKey, enabled, touch, onPlay }: {
 }) {
   const [view, setView] = useState<WheelState>(createWheel);
   const [shown, setShown] = useState(false);
-  const live = useRef({ s: createWheel(), v: [0, 0] as [number, number], timer: 0, enabled, onPlay });
+  const live = useRef({ s: createWheel(), timer: 0, enabled, onPlay });
   useEffect(() => { live.current.enabled = enabled; live.current.onPlay = onPlay; }, [enabled, onPlay]);
 
   /** Every change goes through here: the live copy for the handlers, React's for the view, and the act if any. */
@@ -93,7 +94,6 @@ export default function EmoteWheel({ emoteKey, enabled, touch, onPlay }: {
       e.preventDefault();
       if (e.repeat) return;
       const next = pressWheel(l.s, performance.now());
-      l.v = [0, 0];
       commit(next);
       if (next.open === "hold") { window.clearTimeout(l.timer); l.timer = window.setTimeout(show, TAP_MS); }
     };
@@ -114,45 +114,39 @@ export default function EmoteWheel({ emoteKey, enabled, touch, onPlay }: {
   // Closed when the world takes the player away (a sheet, a cutscene).
   useEffect(() => { if (!enabled && live.current.s.open) commit(closeWheel(live.current.s)); }, [enabled, commit]);
 
-  // While it's up: the flick picks (under pointer lock the movement adds up; with a cursor, its direction from the
-  // centre), the wheel or a click on the middle flips the ring, a click on a petal plays it.
+  // While it's up: the flick picks (held open by the key; open for a click, only under pointer lock, where the cursor
+  // can't reach the petals), the wheel or a click on the middle flips the ring, a click on a petal plays it.
   const open = view.open;
+  const resetFlick = useWheelFlick(!!open, open === "hold", () => ringOf(live.current.s).length,
+    i => { if (i !== live.current.s.choice) commit(pickAt(live.current.s, i)); }, REACH, DEAD);
   useEffect(() => {
     if (!open) return;
-    const move = (e: MouseEvent) => {
-      const l = live.current, n = ringOf(l.s).length;
-      if (document.pointerLockElement) { e.stopPropagation(); l.v = flick(l.v, e.movementX, e.movementY, REACH); }
-      else l.v = [e.clientX - window.innerWidth / 2, e.clientY - window.innerHeight / 2];
-      if (Math.hypot(...l.v) < DEAD && l.s.choice === null) return;
-      const i = slotAt(l.v[0], l.v[1], n, DEAD);
-      if (i !== l.s.choice) commit(pickAt(l.s, i));
-    };
-    const wheel = (e: WheelEvent) => { e.preventDefault(); e.stopPropagation(); live.current.v = [0, 0]; commit(flipRing(live.current.s)); sfx("click", 1.1, 0.3); };
+    const wheel = (e: WheelEvent) => { e.preventDefault(); e.stopPropagation(); resetFlick(); commit(flipRing(live.current.s)); sfx("click", 1.1, 0.3); };
     // Under pointer lock the cursor never reaches the petals: a click acts on what the flick points at.
     const click = (e: MouseEvent) => {
       if (!document.pointerLockElement || e.button !== 0) return;
       e.preventDefault(); e.stopPropagation();
       const l = live.current;
-      if (l.s.choice === null) { l.v = [0, 0]; commit(flipRing(l.s)); sfx("click", 1.1, 0.3); return; }
+      if (l.s.choice === null) { resetFlick(); commit(flipRing(l.s)); sfx("click", 1.1, 0.3); return; }
       const r = playChoice(l.s);
       commit(r.state, r.act);
     };
     // The world's own click (the held tool's use) never sees a click meant for the wheel.
     const swallow = (e: PointerEvent) => { if (document.pointerLockElement && e.button === 0) e.stopPropagation(); };
-    window.addEventListener("mousemove", move, true);
     window.addEventListener("wheel", wheel, { capture: true, passive: false });
     window.addEventListener("mousedown", click, true);
     window.addEventListener("pointerdown", swallow, true);
     return () => {
-      window.removeEventListener("mousemove", move, true); window.removeEventListener("wheel", wheel, true);
+      window.removeEventListener("wheel", wheel, true);
       window.removeEventListener("mousedown", click, true); window.removeEventListener("pointerdown", swallow, true);
     };
-  }, [open, commit]);
+  }, [open, commit, resetFlick]);
   useEffect(() => () => window.clearTimeout(live.current.timer), []);
 
-  const choose = useCallback((i: number | null) => { if (live.current.s.open && !document.pointerLockElement) commit(pickAt(live.current.s, i)); }, [commit]);
+  // The cursor's hover picks only when the ring is open for a click (held open by the key, the flick picks).
+  const choose = useCallback((i: number | null) => { if (live.current.s.open === "click" && !document.pointerLockElement) commit(pickAt(live.current.s, i)); }, [commit]);
   const pick = useCallback((i: number) => { const r = playChoice(pickAt(live.current.s, i)); commit(r.state, r.act); }, [commit]);
-  const flip = useCallback(() => { live.current.v = [0, 0]; commit(flipRing(live.current.s)); sfx("click", 1.1, 0.3); }, [commit]);
+  const flip = useCallback(() => { resetFlick(); commit(flipRing(live.current.s)); sfx("click", 1.1, 0.3); }, [commit, resetFlick]);
   const visible = open && (shown || open === "click");
 
   return <>

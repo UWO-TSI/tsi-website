@@ -14,23 +14,34 @@
 @keyframes arrive { from { opacity: 0; transform: translateY(10px) scale(0.97); } }
 
 /* ── The water track: the catch window rides it, the fish swims in it ───── */
-.track { position: relative; height: 46px; border-radius: 999px; overflow: hidden; background: var(--ui-water);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ui-water-line) 60%, transparent); }
-/* Still ripples: the water's lines, no motion (calm until something happens). */
-.track::before { content: ""; position: absolute; inset: 0; border-radius: inherit;
-  background: repeating-linear-gradient(90deg, transparent 0 38px, color-mix(in srgb, var(--ui-water-line) 35%, transparent) 38px 40px, transparent 40px 76px); }
-.window { position: absolute; top: 5px; bottom: 5px; left: 0; border-radius: 999px; background: color-mix(in srgb, var(--ui-card) 72%, transparent);
-  box-shadow: inset 0 0 0 2px var(--ui-line-strong); transition: box-shadow 0.2s ease-out; }
-.track[data-in="true"] .window { box-shadow: inset 0 0 0 2px var(--ui-ink), 0 2px 8px rgb(var(--ui-shade) / 0.12); }
+/* Calm water and its accent (--ui-water-deep), never yellow or black (David 2026-10-29: "the colors are not right"). */
+.track { position: relative; height: 34px; border-radius: 999px; overflow: hidden; background: var(--ui-water); }
+/* The water's lines drift slowly under the fish. */
+.track::before { content: ""; position: absolute; inset: 0 -80px 0 0; border-radius: inherit; animation: drift 5s linear infinite;
+  background: repeating-linear-gradient(90deg, transparent 0 38px, color-mix(in srgb, var(--ui-water-line) 40%, transparent) 38px 40px); }
+@keyframes drift { to { transform: translateX(-40px); } }
+.window { position: absolute; top: 3px; bottom: 3px; left: 0; border-radius: 999px; will-change: transform;
+  background: color-mix(in srgb, var(--ui-water-deep) 18%, transparent); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--ui-water-deep) 45%, transparent); }
+/* In the window: it glows and breathes; slipping out, its edge goes red. */
+.window::after { content: ""; position: absolute; inset: -2px; border-radius: inherit; opacity: 0; pointer-events: none;
+  box-shadow: 0 0 0 2px var(--ui-water-deep), 0 0 14px 3px color-mix(in srgb, var(--ui-water-deep) 55%, transparent); transition: opacity 0.2s ease-out; }
+.track[data-in="true"] .window::after { opacity: 1; animation: breathe 1.1s ease-in-out infinite alternate; }
+@keyframes breathe { from { transform: scale(1); opacity: 0.6; } to { transform: scale(1.04, 1.16); opacity: 1; } }
 .track[data-slip="true"] .window { box-shadow: inset 0 0 0 2px var(--ui-error); }
+/* The slip's warning: one soft red flash over the water. */
+.track::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0;
+  background: color-mix(in srgb, var(--ui-error) 14%, transparent); box-shadow: inset 0 0 0 2px var(--ui-error); }
+.track[data-slip="true"]::after { animation: flash 0.55s ease-out both; }
+@keyframes flash { from { opacity: 1; } to { opacity: 0; } }
 /* The window and the fish ride the track by transform: the window's own width per step, the fish on a rail as wide as
    the track (so 100% is the track). */
-.window { will-change: transform; }
 .marker { position: absolute; inset: 0; pointer-events: none; will-change: transform; }
-.fish { position: absolute; left: -17px; top: 50%; display: block; width: 34px; height: 34px; margin-top: -17px; transition: transform 0.2s var(--spring, ease-out); }
+.fish { position: absolute; left: -15px; top: 50%; display: block; width: 30px; height: 30px; margin-top: -15px; transition: transform 0.2s var(--spring, ease-out); }
 .marker[data-unknown="true"] .fish { filter: brightness(0) opacity(0.55); }
 .track[data-slip="true"] .fish { transform: rotate(-14deg) scale(0.92); }
 .marker[data-away="true"] { opacity: 0.25; }
+/* The fight's droplets, thrown off the fish (splash in reel.tsx). */
+.drop { position: fixed; z-index: 70; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%; background: var(--ui-water-deep); pointer-events: none; }
 
 /* A boss's call: the move it warns of (a marker ring), then the move under way (red). */
 .call { visibility: hidden; padding: 3px 10px; border-radius: 999px; font: 600 12px/1.2 var(--gui-font); }
@@ -38,13 +49,20 @@
 .call[data-stage="live"] { visibility: visible; background: var(--ui-error); color: var(--ui-accent-ink); }
 
 /* ── The line gauge: a thin fill, marks at its quarters ────────────────── */
-.gauge { position: relative; height: 8px; border-radius: 999px; background: var(--ui-well); }
-.fill { position: absolute; inset: 0; border-radius: inherit; background: var(--ui-ink); transform-origin: left center; will-change: transform; }
+.gauge { position: relative; height: 6px; border-radius: 999px; background: var(--ui-well); transform-origin: left center; }
+.fill { position: absolute; inset: 0; border-radius: inherit; background: var(--ui-water-deep); transform-origin: left center; will-change: transform; }
 .gauge[data-tone="low"] .fill { background: var(--ui-error); }
-/* Nearly in: the catch is close, and the gauge says so (the start of the catch's big moment). */
-.gauge[data-near="true"] { box-shadow: 0 0 0 3px var(--ui-marker); animation: near 0.7s ease-in-out infinite alternate; }
-@keyframes near { to { box-shadow: 0 0 0 5px var(--ui-marker); } }
+/* Nearly in: the gauge glows, brighter as it gets there (the build-up of the catch's big moment). */
+.gauge::after { content: ""; position: absolute; inset: -3px; border-radius: inherit; opacity: 0; pointer-events: none;
+  box-shadow: 0 0 10px 2px color-mix(in srgb, var(--ui-water-deep) 60%, transparent); transition: opacity 0.25s ease-out; }
+.gauge[data-near="true"]::after { opacity: 1; animation: breathe 0.6s ease-in-out infinite alternate; }
 .mark { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--ui-card); }
+/* The line's tension near the end: the reel trembles, then shakes for the last stretch ("almost!"). */
+.panel[data-tension="near"] { animation: tremble 0.16s linear infinite; }
+.panel[data-tension="almost"] { animation: tremble-hard 0.1s linear infinite; }
+.panel[data-tension="almost"] .gauge::after { animation-duration: 0.3s; }
+@keyframes tremble { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(-0.6px, 0.4px) rotate(-0.15deg); } 75% { transform: translate(0.6px, -0.4px) rotate(0.15deg); } }
+@keyframes tremble-hard { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(-1.4px, 0.8px) rotate(-0.35deg); } 75% { transform: translate(1.4px, -0.8px) rotate(0.35deg); } }
 
 /* ── The power meter: the fill rises and falls, the gold tip at the top ── */
 .meter { display: flex; align-items: flex-end; gap: 14px; }
@@ -100,6 +118,14 @@
 .stage[data-rare="true"][data-developed="true"]::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: 0 0 0 2px var(--edge, var(--ui-ink));
   animation: flare 0.7s ease-out both; pointer-events: none; }
 @keyframes flare { from { transform: scale(1); opacity: 1; } to { transform: scale(1.35); opacity: 0; } }
+/* A new species' suspense (`--build` ms, longer for the rarer): the stage swells while the silhouette trembles, and a
+   rare one's edge charges up in its colour; then it develops and the confetti flies. */
+.stage[data-build] { animation: swell var(--build, 900ms) ease-in var(--arrive-delay, 0ms) both; }
+@keyframes swell { to { transform: scale(1.08); } }
+.stage[data-build] .stagePicture { animation: tremble-hard 0.12s linear var(--arrive-delay, 0ms) infinite; }
+.stage[data-build][data-rare="true"]::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  box-shadow: 0 0 0 2px var(--build-edge), 0 0 18px 4px var(--build-edge); animation: charge var(--build, 900ms) ease-in var(--arrive-delay, 0ms) both; }
+@keyframes charge { from { opacity: 0; } to { opacity: 1; } }
 .cardText { display: grid; gap: 6px; min-width: 0; }
 .cardHead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .cardName { margin: 0; font: 600 22px/1.15 var(--gui-font); letter-spacing: -0.01em; }
@@ -116,6 +142,7 @@
 .spark { position: fixed; z-index: 70; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 2px; pointer-events: none; }
 
 @media (prefers-reduced-motion: reduce) {
-  .panel, .chip, .card, .chip[data-tone="alert"], .gauge[data-near="true"], .stage[data-developed="true"] .stagePicture, .stage::after, .chip[data-tone="wait"] .chipIcon > svg { animation: none !important; }
+  .panel, .panel[data-tension], .track::before, .track[data-in="true"] .window::after, .gauge[data-near="true"]::after, .card .stage[data-build],
+  .chip, .card, .chip[data-tone="alert"], .stage[data-developed="true"] .stagePicture, .stage::after, .chip[data-tone="wait"] .chipIcon > svg { animation: none !important; }
   .fish, .stagePicture { transition: none; }
 }

@@ -62,9 +62,17 @@ export interface BossReel {
 
 export const bossPhase = (stamina: number): 1 | 2 | 3 => (stamina > 2 / 3 ? 1 : stamina > 1 / 3 ? 2 : 3);
 
-export function createFishingReel(fish: FishDef, boss = bossOf(fish.rarity)) {
+/**
+ * A help on the next reels, whatever overlay draws them: `floor`, progress never drains below it, so the fish can't get
+ * away. The tutorial sets it for the first catch (t-catch: components/game/arrival/FirstCatchTeach.tsx) and clears it.
+ */
+export const reelAssist = { floor: 0 };
+
+/** `floor`: progress never drains below it (by default the reel assist's). */
+export function createFishingReel(fish: FishDef, boss = bossOf(fish.rarity), floor = reelAssist.floor) {
   return {
     fish,
+    floor,
     barWidth: RARITY_META[fish.rarity].barW * (boss ? BOSS.barMul[0] : 1),
     position: 0,
     velocity: 0,
@@ -147,7 +155,7 @@ export function advanceFishingReel(state: FishingReel, delta: number, holding: b
       else if (state.progress === 0) state.result = false;
       continue;
     }
-    state.progress = Math.max(0, Math.min(1, state.progress + (state.inside ? FILL_RATE : -drainRate) * STEP));
+    state.progress = Math.max(state.floor, Math.min(1, state.progress + (state.inside ? FILL_RATE : -drainRate) * STEP));
     if (state.progress === 1) state.result = true;
     else if (state.progress === 0) state.result = false;
   }

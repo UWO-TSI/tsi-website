@@ -13,8 +13,10 @@
  *               big moment: black, springs in and tugs until you strike);
  *   CatchCard   the catch on its white stage, edged in its rarity (divine holographic), developing from a silhouette;
  *               a rare one's edge flares as it develops.
- * And `sparkBurst`, the catch's sparks thrown from a point.
+ * And the bursts thrown from a point: `sparkBurst` (the catch's sparks), `splash` (the fight's droplets) and
+ * `confettiBurst` (a new species).
  */
+import confetti from "canvas-confetti";
 import type { ComponentProps, ReactNode, Ref } from "react";
 import PixelImage from "@/components/economy/PixelImage";
 import { DarkButton } from ".";
@@ -90,9 +92,11 @@ export function StatusChip({ icon, tone = "plain", children }: { icon?: ReactNod
 /** The rarity's edge colour (the GUI sheet's one palette). */
 const edge = (rarity: string) => `var(--gui-rarity-${rarity})`;
 
-export function CatchCard({ cardRef, picture, name, developed, rarity, rarityLabel, rare, facts, tags, line, note, action, label }: {
+export function CatchCard({ cardRef, picture, name, developed, build, rarity, rarityLabel, rare, facts, tags, line, note, action, label }: {
   cardRef?: Ref<HTMLDivElement>;
   picture: string; name: ReactNode; developed: boolean;
+  /** A new species' suspense before it develops (ms): the stage swells and trembles (a rare one's edge charges up). */
+  build?: number;
   rarity: string; rarityLabel: ReactNode;
   /** Rare and up: its edge flares as it develops. */
   rare?: boolean;
@@ -102,7 +106,8 @@ export function CatchCard({ cardRef, picture, name, developed, rarity, rarityLab
   label: string;
 }) {
   return <div ref={cardRef} className={r.card} data-developed={developed} role="dialog" aria-modal="false" aria-live="polite" aria-label={label} style={{ ["--edge" as string]: developed ? edge(rarity) : undefined }}>
-    <div className={r.stage} data-developed={developed} data-rarity={developed ? rarity : undefined} data-rare={rare ? "true" : undefined}>
+    <div className={r.stage} data-developed={developed} data-rarity={developed ? rarity : undefined} data-rare={rare ? "true" : undefined}
+      data-build={!developed && build ? "true" : undefined} style={!developed && build ? { ["--build" as string]: `${build}ms`, ["--build-edge" as string]: edge(rarity) } : undefined}>
       <PixelImage src={picture} px={64} className={r.stagePicture} />
     </div>
     <div className={r.cardText}>
@@ -136,5 +141,38 @@ export function sparkBurst(x: number, y: number, colors: readonly string[], coun
       { transform: `translate(${Math.cos(a) * d}px, ${Math.sin(a) * d}px) scale(1) rotate(160deg)`, opacity: 1, offset: 0.6 },
       { transform: `translate(${Math.cos(a) * d * 1.2}px, ${Math.sin(a) * d * 1.2 + 16}px) scale(0.5) rotate(240deg)`, opacity: 0 },
     ], { duration: 560, easing: "cubic-bezier(0.15, 0.8, 0.4, 1)" }).onfinish = () => s.remove();
+  }
+}
+
+const calm = () => typeof window === "undefined" || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+/** A few droplets thrown up off the fighting fish at a point on the screen (px), falling back. Nothing under reduced motion. */
+export function splash(x: number, y: number, count = 3) {
+  if (calm()) return;
+  for (let i = 0; i < count; i++) {
+    const d = document.createElement("span"), dx = (Math.random() - 0.5) * 34, up = 14 + Math.random() * 14;
+    d.className = r.drop;
+    Object.assign(d.style, { left: `${x}px`, top: `${y}px` });
+    document.body.appendChild(d);
+    d.animate([
+      { transform: "translate(0, 0) scale(0.6)", opacity: 0.9 },
+      { transform: `translate(${dx * 0.6}px, ${-up}px) scale(1)`, opacity: 0.9, offset: 0.45 },
+      { transform: `translate(${dx}px, ${6}px) scale(0.5)`, opacity: 0 },
+    ], { duration: 420 + Math.random() * 120, easing: "cubic-bezier(0.25, 0.7, 0.5, 1)" }).onfinish = () => d.remove();
+  }
+}
+
+/** A token's colour now (canvas-confetti draws on a canvas, so it needs the value, not the var). */
+const tokenColor = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || undefined;
+/**
+ * Confetti from a point on the screen (px) in the given colour tokens (`--name`), `power` (1 a light pop, 5 the
+ * grandest) bursts of it. Nothing under reduced motion.
+ */
+export function confettiBurst(x: number, y: number, tokens: readonly string[], power = 1) {
+  if (calm()) return;
+  const colors = tokens.map(tokenColor).filter((c): c is string => !!c);
+  const origin = { x: x / window.innerWidth, y: y / window.innerHeight };
+  for (let i = 0; i < power; i++) {
+    window.setTimeout(() => confetti({ particleCount: 34 + i * 12, spread: 70 + i * 14, startVelocity: 24 + i * 4, gravity: 0.75, decay: 0.92, scalar: 0.85,
+      ticks: 200, shapes: ["circle", "square"], origin, colors, zIndex: 80, disableForReducedMotion: true }), i * 180);
   }
 }

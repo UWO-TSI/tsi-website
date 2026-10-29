@@ -29,7 +29,8 @@ import { catalogueItem } from "@/lib/homes/catalogue";
 import { footprint, type PlacedItem, type Rotation } from "@/lib/homes/layout";
 import PeacefulLayer, { peacefulNear } from "../peaceful/PeacefulLayer";
 import { homeNodes } from "@/lib/game/islandNodes";
-import type { FishingSpot } from "@/lib/game/fishingSpots";
+import { castAim, type FishingSpot } from "@/lib/game/fishingSpots";
+import { capture } from "@/lib/game/orbitCamera";
 import type { WorldMoment } from "@/lib/collections/logic";
 import { gullAnchors } from "@/lib/game/ambientFauna";
 import { boxOccluder, treeOccluder } from "@/lib/game/occluders";
@@ -39,6 +40,8 @@ import styles from "../DefaultIslandWorld.module.css";
 
 const HOME_NODES = homeNodes();
 const SEA = () => "sea" as const;
+/** The cast's aim, written each frame (fishingSpots castAim). */
+const AIM: [number, number] = [0, 1];
 
 export type HomeNear = "house" | "village" | "mailbox" | "fish" | "forage" | "net" | "dig" | null;
 const TREES: TreeSpot[] = HOME_TREES.map(([x, z], i) => ({ x, z, seed: HOME_TREE_SEEDS[i] }));
@@ -68,12 +71,13 @@ export default function HomeIslandScene({ held = null, identity, level, peaceful
   const focus = useRef(new THREE.Vector3(...spawn));
   const follow = useMemo(() => ({ ground: home.ground, player, occluders: [boxOccluder(HOUSE.x, HOUSE.z, HOUSE.halfW, HOUSE.halfD, 0, 5), ...TREES.map(t => treeOccluder(t.x, t.z, home.ground(t.x, t.z)))] }), [home, player]);
   useFollowCamera(focus, zoom, overview ? { focus: [0, 0, 0], offset: [6, 13, -16] } : null, follow);
-  useFrame(() => {
+  useFrame(state => {
     const p = player.current;
     const next: HomeNear = Math.hypot(p.x - HOUSE.door[0], p.z - HOUSE.door[1]) < 1.3 ? "house"
       : homeBoatPrompt(p.x, p.z) ? "village"
       : Math.hypot(p.x - HOME_MAILBOX[0], p.z - HOME_MAILBOX[1]) < 1.3 ? "mailbox"
-      : decorating || fishing ? null : peacefulNear(home.map, SEA, p.x, p.z, fishSpot);
+      : decorating || fishing ? null : peacefulNear(home.map, SEA, p.x, p.z, fishSpot,
+        castAim(state.camera, state.pointer, capture.state !== "captured" && state.gl.domElement.matches(":hover"), p.x, p.y, p.z, AIM));
     if (near.current !== next) { near.current = next; onNear(next); }
   });
   // Outdoor grid: cells are whole world units; +x is screen left, so no mirroring is needed.

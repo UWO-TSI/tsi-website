@@ -169,7 +169,7 @@ import { useFriends } from "./net/friendActions";
 import { useFlash } from "./useFlash";
 
 import { villageNodes } from "@/lib/game/islandNodes";
-import { villageWater, type FishingSpot } from "@/lib/game/fishingSpots";
+import { castAim, villageWater, type FishingSpot } from "@/lib/game/fishingSpots";
 import { gullAnchors } from "@/lib/game/ambientFauna";
 import { getPeacefulTarget, peacefulLabel, subscribePeacefulLabel } from "@/lib/game/peacefulNear";
 import type { WorldMoment } from "@/lib/collections/logic";
@@ -261,6 +261,8 @@ const footprintDistance = (l: Landmark, x: number, z: number) => Math.hypot(Math
 const PROMPT_IDS: readonly Landmark["id"][] = ["notice", "catch", "museum", "ruins", "mailbox", "monument"];
 /** The tool that acts on each peaceful target (a resident in reach takes the prompt from the target otherwise). */
 const TOOL_FOR: Record<"fish" | "net" | "dig", string> = { fish: "rod", net: "net", dig: "shovel" };
+/** The cast's aim, written each frame (fishingSpots castAim). */
+const AIM: [number, number] = [0, 1];
 /** The café's prompt is its door's, open or boarded up (cafe-polish §2). */
 const CAFE_DOOR_RANGE = 1.4;
 type Spot = [number, number, number];
@@ -483,7 +485,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   const focus = useRef(new THREE.Vector3(...spawn));
   const follow = useMemo(() => ({ ground: island.ground, player, occluders: layout.occluders, seat: barView }), [island, player, layout]);
   useFollowCamera(focus, zoom, overview ? layout.scale.overview : null, follow);
-  useFrame(() => {
+  useFrame(state => {
     const px = player.current.x, pz = player.current.z;
     const gap = (p: [number, number] | null) => (p ? Math.hypot(px - p[0], pz - p[1]) : Infinity);
     const within = (p: [number, number] | null, r: number) => gap(p) < r;
@@ -534,7 +536,9 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     // Bram waiting at his stop on the walk-along (or talking): E is his.
     else if (!fishing && bramNear(px, pz)) next = "bram";
     else if (!fishing && (next === null || next === "talk")) {
-      const peace = peacefulNear(island.map, layout.water, px, pz, fishSpot);
+      // The cast aims where the cursor points (or the camera looks, in mouse-look): fishingSpots castAim.
+      const aim = castAim(state.camera, state.pointer, capture.state !== "captured" && state.gl.domElement.matches(":hover"), px, player.current.y, pz, AIM);
+      const peace = peacefulNear(island.map, layout.water, px, pz, fishSpot, aim);
       // A flower or shell nearer than the resident is picked up first. Water, a bug or a dig spot keep the prompt only
       // with the tool for it in hand (its click; E there still talks to the resident, the key handler); empty-handed,
       // the resident's "Talk to" beats "Take out your rod".
@@ -1101,6 +1105,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       if (spot && !bagRoom()) { window.dispatchEvent(new CustomEvent("tsi:bag-full", { detail: { x: spot.target[0], z: spot.target[1] } })); return; }
       // Hold to charge, let go to cast (fishing/MemberFishing); the server rolls on the held rod (its tier) from where you stand.
       if (spot) window.dispatchEvent(new CustomEvent("tsi:fish-start", { detail: { x: spot.target[0], z: spot.target[1], water: spot.water, site: atHome ? "home" : "village", from: at } }));
+      // Aimed at land: never a throw onto the sand, a note over you instead (peaceful/BagFullNote).
+      else window.dispatchEvent(new CustomEvent("tsi:fish-aim", { detail: { x: at[0], z: at[1] } }));
       return;
     }
     if ((toolAction.verb === "swing" || toolAction.verb === "dig") && toolAction.target) {

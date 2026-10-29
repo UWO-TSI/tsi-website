@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classifyWater, fishingSpot, nearestWater, waterClassifier, villageWater, WATER_CLASS } from "./fishingSpots";
+import { aimedSpot, classifyWater, fishingSpot, nearestWater, waterClassifier, villageWater, WATER_CLASS } from "./fishingSpots";
 import { islandOf, landmark, villageIsland } from "./defaultIsland";
 import { createHomeIsland } from "./homeIsland";
 import { createCenteredMap, isGroundAtWorld, setCell, Surface } from "./grid";
@@ -22,6 +22,30 @@ describe("fishing spots (frozen 2026-09-28 village)", () => {
   it("treats every edge of the home island as sea", () => {
     const home = createHomeIsland();
     expect(fishingSpot(home.map, () => "sea", 0, -8.3)?.water).toBe("sea");
+  });
+});
+
+describe("the cast goes where you aim, never onto land (playtest 2026-10-29)", () => {
+  // Land west of world x = 1.5 (cell 12's edge), water east of it; the player stands on the shore at x = 1.2.
+  const map = createCenteredMap(20, 20);
+  for (let z = 0; z < 20; z++) for (let x = 0; x < 20; x++) setCell(map, x, z, 0, x >= 12 ? Surface.River : Surface.Grass);
+  const sea = () => "sea" as const;
+  it("aimed at the water, the spot is out that way, past the edge", () => {
+    expect(fishingSpot(map, sea, 1.2, 0)).not.toBeNull();
+    const spot = aimedSpot(map, sea, 1.2, 0, 1, 0)!;
+    expect(spot.target[0]).toBeGreaterThan(2.4); // 0.9 past the edge
+    expect(spot.target[1]).toBeCloseTo(0);
+    expect(isGroundAtWorld(map, spot.target[0], spot.target[1])).toBe(false);
+  });
+  it("aimed inland (the body facing the sand), there is no spot: no throw onto the sand", () => {
+    expect(aimedSpot(map, sea, 1.2, 0, -1, 0)).toBeNull();
+    expect(aimedSpot(map, sea, 1.2, 0, -0.6, 0.8)).toBeNull();
+  });
+  it("aimed along the shore, it still finds the water beside the line", () => {
+    const spot = aimedSpot(map, sea, 1.2, 0, 0, 1)!;
+    expect(spot.target[0]).toBeGreaterThan(1.5);
+    expect(spot.target[1]).toBeGreaterThan(0);
+    expect(isGroundAtWorld(map, spot.target[0], spot.target[1])).toBe(false);
   });
 });
 

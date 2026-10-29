@@ -3,6 +3,8 @@
  * water within reach decides the spot, and its water type decides the pool.
  * Water type is read from the island's own layout, not placed shadows.
  */
+import * as THREE from "three";
+import { getCameraForwardXZ } from "./cameraBasis";
 import { objectsOf, village, type Village } from "./villageMap";
 import { ORTHOGONAL, Surface, inBounds, isGroundAtWorld, isWater, surfaceAt, worldToCellX, worldToCellZ, type IslandMap } from "./grid";
 
@@ -45,6 +47,52 @@ export function fishingSpot(map: IslandMap, classify: (x: number, z: number) => 
   spot.target[1] = past ? oz : nearest[1];
   spot.water = classify(spot.target[0], spot.target[1]);
   return spot;
+}
+
+/** The cast's water test at a point: a water cell where the ground doesn't stand (the drawn coast). */
+const waterAt = (map: IslandMap, x: number, z: number) => surfaceAt(map, worldToCellX(map, x), worldToCellZ(map, z)) === Surface.River && !isGroundAtWorld(map, x, z);
+/** How far either side of the aim a cast still looks for water (radians), nearest the aim first: along a jetty it still finds the water beside it. */
+const AIM_FAN = [0, 0.3, -0.3, 0.6, -0.6];
+/**
+ * A spot in the direction the player aims, (ax, az) a unit vector on the ground (David's playtest 2026-10-29: the cast
+ * goes where the cursor points, not where the body faces): the first water along it within CAST_REACH (a little to
+ * either side when the line itself misses), carried 0.9 further while that's still water. Null when there's no water
+ * that way: a cast never goes onto the sand.
+ */
+export function aimedSpot(map: IslandMap, classify: (x: number, z: number) => WaterType, x: number, z: number, ax: number, az: number, out?: FishingSpot): FishingSpot | null {
+  for (const a of AIM_FAN) {
+    const c = Math.cos(a), sn = Math.sin(a), dx = ax * c - az * sn, dz = ax * sn + az * c;
+    for (let d = 0.3; d <= CAST_REACH + 1e-9; d += 0.1) {
+      const px = x + dx * d, pz = z + dz * d;
+      if (!waterAt(map, px, pz)) continue;
+      const spot = out ?? { target: [0, 0], water: "river" };
+      const past = waterAt(map, px + dx * 0.9, pz + dz * 0.9);
+      spot.target[0] = past ? px + dx * 0.9 : px;
+      spot.target[1] = past ? pz + dz * 0.9 : pz;
+      spot.water = classify(spot.target[0], spot.target[1]);
+      return spot;
+    }
+  }
+  return null;
+}
+
+const ray = new THREE.Raycaster(), level = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hit = new THREE.Vector3();
+/**
+ * Where the player at (x, y, z) aims a cast, as a unit direction on the ground written into `out`: toward the ground
+ * point under the cursor (`cursor`: free and over the world; `pointer` in device coordinates), else straight ahead of
+ * the camera (mouse-look's screen centre, a touch, the prompt's button). Allocates nothing (the scene runs it per frame).
+ */
+export function castAim(camera: THREE.Camera, pointer: THREE.Vector2, cursor: boolean, x: number, y: number, z: number, out: [number, number]): [number, number] {
+  if (cursor) {
+    ray.setFromCamera(pointer, camera);
+    level.constant = -y;
+    const at = ray.ray.intersectPlane(level, hit);
+    const dx = at ? at.x - x : ray.ray.direction.x, dz = at ? at.z - z : ray.ray.direction.z, l = Math.hypot(dx, dz);
+    if (l > 0.25) { out[0] = dx / l; out[1] = dz / l; return out; }
+  }
+  const f = getCameraForwardXZ(camera);
+  out[0] = f.fx; out[1] = f.fz;
+  return out;
 }
 
 /** Water class per cell: 0 land, 1 sea, 2 river, 3 pond. */

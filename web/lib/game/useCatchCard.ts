@@ -9,8 +9,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AudioManager } from "./audio";
 import { REVEAL, type FishDef } from "./fishing";
 
-export function useCatchCard({ fish, isNew, delay, onDevelop, onDone }: {
+export function useCatchCard({ fish, isNew, delay, suspense, onDevelop, onDone }: {
   fish: FishDef; isNew: boolean; delay: number;
+  /** A first catch's beat before it develops (ms), in place of REVEAL's (the member card's suspense). */
+  suspense?: number;
   onDevelop?: () => void; onDone: () => void;
 }) {
   const cfg = REVEAL[fish.rarity];
@@ -35,7 +37,7 @@ export function useCatchCard({ fish, isNew, delay, onDevelop, onDone }: {
   useEffect(() => {
     const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     // A repeat develops as it arrives; a first catch keeps its silhouette a beat.
-    timers.current.push(window.setTimeout(develop, delay + (isNew && !calm ? cfg.develop : 120)));
+    timers.current.push(window.setTimeout(develop, delay + (isNew && !calm ? suspense ?? cfg.develop : 120)));
     const list = timers.current;
     return () => list.forEach(t => window.clearTimeout(t));
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -226,7 +226,7 @@ export function requestResume() { resume.at = performance.now(); }
 /** How long after Resume the lock is still asked for (the closing sheets' exit animation, well inside Chrome's 5 s of user activation). */
 export const RESUME_MS = 1500;
 
-/** A drawn shape under mouse-look (classes v2): while set, the locked mouse's movement traces the shape instead of turning the camera. */
+/** Something else takes the locked mouse (a drawn shape, classes v2; an open tool or emote wheel, lib/game/useWheelFlick): while set, its movement goes here instead of turning the camera. */
 export const pen: { move: ((dx: number, dy: number) => void) | null } = { move: null };
 
 /** Reasons the game wants the cursor right now besides the dialogs the input sees (decorating, a greeting). */
