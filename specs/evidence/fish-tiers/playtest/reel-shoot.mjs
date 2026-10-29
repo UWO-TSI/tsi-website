@@ -33,7 +33,7 @@ page.on("pageerror", e => log("pageerror", e.message.slice(0, 300)));
 page.on("console", m => { if (m.type() === "error" && !/Failed to load resource|supabase|401|503|404|WebGL|THREE/i.test(m.text())) log("console", m.text().slice(0, 240)); });
 await page.route("**/api/collections", async route => {
   const req = route.request();
-  if (req.method() === "GET") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ collections: [] }) });
+  if (req.method() === "GET") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ collections: process.env.OWNED === "1" ? [{ item_key: FISH, count: 1 }] : [] }) });
   const body = JSON.parse(req.postData() ?? "{}");
   if (body.action === "cast") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true, catch: { item_key: FISH, size_cm: SIZE, roll: "evidence-roll" } }) });
   if (body.action === "land") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true, catch: { item_key: FISH, size_cm: SIZE, total_collected: 1, new_record: false } }) });
