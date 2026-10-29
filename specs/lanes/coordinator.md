@@ -530,3 +530,10 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - The kid photos are deleted (ef4e29cd), and the page now carries only the skirt fix.
   - New direction for clothing: reuse and replicate the ACNH clothing models and logic. Our ACNH dump has no character or clothing models (only buildings, furniture, props, fish, plants and terrain), so this needs David to supply them; asked.
   - Merge plan: game/clothing-v2 merges with rounds 1 and 2 plus the skirt fix (the one-pieces as they are) once David approves the skirt page.
+- **Fishing UI review decisions (2026-10-29):**
+  - Approved: hook, landing, epic card.
+  - Redo, relayed to the fish-tiers playtest agent:
+    - waiting state with one chip only;
+    - the reel bar's colours not yellow or black, sleeker, no text, and juicy while reeling;
+    - new-species cards get suspense by rarity plus confetti; repeats get none;
+    - the slip state, same notes.
