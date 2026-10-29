@@ -33,7 +33,7 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 ## Status
 
 - Round 1 (94eade9f, e35dd842): rarity ladder (cb7bed43, on main), five rods with six stats, bait and bobber slots, the rod shop, hollow items hidden. David reviewed it 2026-10-28 (below).
-- **Round 2 built** on `game/rod-gear` (main merged at 581dd5b3; the build f7adcb6a, then evidence and fixes):
+- **Round 2 built** on `game/rod-gear` (main merged at 581dd5b3; the build f7adcb6a, evidence and fixes 064c59ce; gates: tsc clean, vitest 3551 passed in the new world, eslint clean on changed files, SQL smoke chain clean):
   - Rod rarity: Flimsy common, Cedar uncommon, Glass rare, Lighthouse rare, Tidewarden epic (`RodTier.rarity`, lib/game/rods.ts).
   - Hook rule: a rod hooks one rung above its own rarity (`hookCap`, `canHook`). David's three examples were rare to epic, epic to legendary and legendary to divine; the coordinator applied the same pattern down the ladder. The server rolls with the same `canHook` (peaceful.ts via lib/collections/rolls.ts), so no SQL. Nothing can hook divine until a legendary rod exists.
   - The shop shelf sells rods up to rare (`onShopShelf`, `SHOP_ROD_MAX`). Tidewarden is off the shelf; its workbench recipe stays.
