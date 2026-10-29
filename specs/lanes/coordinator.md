@@ -496,3 +496,6 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
 - **Started (late 2026-10-28):**
   - loading r2 (agent adc0836dc7276280b): merges game/village-archive, keeps only the island look, rebuilds its backdrop on the new world, moves to the flat kit. Merge after the archive.
   - clothing r3 (agent abde6917a32fb9fcd): fixes the long dresses clipping and the two skirts flickering on sit. It then finds online references for the one-pieces (David asked) and stops for David's pick before modelling.
+- **Loading r2 review:** https://claude.ai/artifact/TU1hFR6cYz9jeA6ZyPCnAW (ids r2-*), game/loading 59ef45b9 (includes main de87c07f and village-archive ef90c927).
+- **title-perf (agent started):** game/title-perf, on game/loading. It fixes two regressions from the archive's title move: the title streams 503 models (113 long frames), and a 482 ms first-sight shader compile in play. No look change.
+- **Merge order for this stack:** village-archive (after the title pick), newworld-fixes, loading, title-perf. Regenerate the seed once at the end.
