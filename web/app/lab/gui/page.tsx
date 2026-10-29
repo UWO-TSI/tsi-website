@@ -258,7 +258,8 @@ export default function GuiShowroom() {
 
     <Section id="hud-bars" title="The HUD's bars (flat kit)" note="specs/design-bible.md UI 8: health and XP always on, stamina on its own pill while it's used (warm and shaking once when it runs out). components/gui/flat StatBar and StatBars; the island's are components/game/HudBars.tsx.">
       <Row>
-        <StatBars><StatBar kind="health" value={1} label="Health 100 of 100" /><StatBar kind="xp" value={0.42} lead="Lv 3" label="Level 3" /></StatBars>
+        <StatBars><StatBar kind="health" value={1} label="Health 100 of 100" /><StatBar kind="xp" value={0.42} label="Level 3" /></StatBars>
+        <StatBars><StatBar kind="health" value={0.7} label="Health 70 of 100" /><StatBar kind="xp" value={0.42} badge="Lv 3" label="Level 3" /></StatBars>
         <StatBar kind="stamina" value={0.55} alone label="Stamina" />
         <StatBar kind="stamina" value={0} alone low label="Stamina run out" />
       </Row>

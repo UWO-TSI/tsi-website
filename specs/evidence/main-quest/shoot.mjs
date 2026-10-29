@@ -119,6 +119,110 @@ const widths = page => page.evaluate(() => {
 });
 
 for (const scene of SCENES) {
+  if (scene === "r3bars") {
+    // The HUD's bars: at rest; stamina spent sprinting and on dashes, then refilling; XP filling into a level up.
+    const { ctx, page } = await open("");
+    await go(page, 30, 46, Math.PI);
+    await hudIn(page);
+    const bars = { x: 0, y: 100, width: 420, height: 96 };
+    const stamina = () => page.evaluate(() => { const el = document.querySelector("[data-kind=stamina]"); return el ? [getComputedStyle(el).getPropertyValue("--v"), el.hasAttribute("data-shown"), el.hasAttribute("data-low")] : null; });
+    await shot(page, "r3-50-bars-rest");
+    await shot(page, "r3-50-bars-rest-close", bars);
+    log.push({ name: "r3-50-bars-rest", stamina: await stamina() });
+    const st = () => page.evaluate(() => { const s = window.__move.sim.current.state; return [+s.x.toFixed(1), +s.z.toFixed(1), +Math.hypot(s.vx, s.vz).toFixed(1), s.mode, +s.stamina.toFixed(2)]; });
+    // Open ground to run on: the first spot and heading where a sprint goes on (there and back) without hitting anything.
+    let spot = null;
+    for (const [x, z] of [[36, 82], [20, 60], [-10, 80], [45, 40], [0, 50], [-17, 102]]) {
+      for (const yaw of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
+        await go(page, x, z, yaw); await sleep(400);
+        await page.keyboard.down("Shift"); await page.keyboard.down("w"); await sleep(1600);
+        const a = await st(); await page.keyboard.up("w"); await page.keyboard.down("s"); await sleep(1800);
+        const b = await st(); await page.keyboard.up("s"); await page.keyboard.up("Shift");
+        log.push({ name: "probe", x, z, yaw, a, b });
+        if (a[2] > 10 && b[2] > 10) { spot = [x, z, yaw]; break; }
+      }
+      if (spot) break;
+    }
+    if (spot) await go(page, ...spot);
+    await sleep(4500);
+    const legs = async (seconds, stop) => { for (let t = 0, k = 0; t < seconds; k++) { const key = k % 2 ? "s" : "w"; await page.keyboard.down(key); for (let i = 0; i < 9 && t < seconds; i++, t += 0.2) { await sleep(200); if (stop && await stop()) { await page.keyboard.up(key); return; } } await page.keyboard.up(key); } };
+    await page.keyboard.down("Shift");
+    await legs(0.6);
+    await page.keyboard.down("w");
+    await page.keyboard.up("w");
+    for (const k of ["a", "b", "c"]) { await legs(k === "a" ? 0.6 : 2); await page.keyboard.down("w"); await page.screenshot({ path: `${OUT}/strip-stamina-${k}.png`, clip: bars }); await page.keyboard.up("w"); log.push({ name: `strip-stamina-${k}`, stamina: await stamina(), st: await st() }); }
+    await page.keyboard.down("w");
+    await page.keyboard.press("q"); await sleep(250);
+    await page.screenshot({ path: `${OUT}/strip-stamina-d.png`, clip: bars }); log.push({ name: "strip-stamina-d (a dash)", stamina: await stamina() });
+    await sleep(700); await page.keyboard.press("q"); await sleep(250);
+    await page.screenshot({ path: `${OUT}/strip-stamina-e.png`, clip: bars }); log.push({ name: "strip-stamina-e (a dash)", stamina: await stamina() });
+    await page.keyboard.up("w"); await page.keyboard.up("Shift");
+    for (const [k, ms] of [["f", 1200], ["g", 1500], ["h", 1500], ["i", 1800]]) { await sleep(ms); await page.screenshot({ path: `${OUT}/strip-stamina-${k}.png`, clip: bars }); log.push({ name: `strip-stamina-${k}`, stamina: await stamina() }); }
+    // Run out: sprint until it's empty (the warm pill), then the walk it drops to.
+    await page.keyboard.down("Shift");
+    await legs(30, async () => !!(await stamina())?.[2]);
+    await page.keyboard.down("w"); await sleep(300);
+    await page.screenshot({ path: `${OUT}/r3-52-stamina-out.png`, clip: bars }); log.push({ name: "r3-52-stamina-out", stamina: await stamina() });
+    await page.keyboard.up("w"); await page.keyboard.up("Shift");
+    await sleep(4500);
+    // XP: a gain inside the level, then a chapter's XP that fills the bar to its end, rolls over and plays the level-up card.
+    const xp = (total, levelled) => page.evaluate(([t, l]) => window.dispatchEvent(new CustomEvent("tsi:api-write", { detail: { path: "/api/progression/chapters/advance", data: { xp_gain: { amount: 0, total: t, level: l ? 2 : 1, levelled_up: l } } } })), [total, levelled]);
+    await xp(90, false); await sleep(1200);
+    await page.screenshot({ path: `${OUT}/strip-xp-a.png`, clip: bars });
+    await xp(160, true);
+    let last = 0;
+    for (const [k, ms] of [["b", 200], ["c", 450], ["d", 700], ["e", 900], ["f", 1300]]) { await sleep(ms - last); last = ms; await page.screenshot({ path: `${OUT}/strip-xp-${k}.png`, clip: bars }); }
+    await page.waitForSelector("[data-testid=level-up]", { timeout: 6000 }).catch(() => console.log("no level-up card"));
+    await sleep(700);
+    await shot(page, "r3-53-level-up-card");
+    log.push({ name: "r3-53-level-up-card", card: await page.$eval("[data-testid=level-up]", el => el.textContent).catch(() => null) });
+    await page.keyboard.press("Escape"); await sleep(1000);
+    await page.screenshot({ path: `${OUT}/strip-xp-g.png`, clip: bars });
+    // Layer 2 (Esc 1, the UI view; bible UI 8b): the level badge beside the XP bar.
+    await page.keyboard.press("Escape"); await sleep(1200);
+    await shot(page, "r3-51-bars-ui-view", bars);
+    await ctx.close();
+  }
+  if (scene === "r3pops") {
+    // The warm pop: the island's (bug, forage, dig, the broken sudo with no size, a purse), a strip of one coming in, and the showroom's ladder.
+    const { ctx, page } = await open("");
+    await hudIn(page);
+    const pops = [
+      ["bug", { key: "bug_common_butterfly", name: "Common Butterfly", rarity: "common", size: 6.2, isNew: false, kind: "bug" }],
+      ["forage", { key: "shell_asari", name: "Asari Clam", rarity: "common", size: 4.1, isNew: true, kind: "forage" }],
+      ["dig", { key: "find_ammonite", name: "Ammonite", rarity: "rare", size: 11.2, isNew: true, kind: "dig" }],
+      ["dig-sudo", { key: "find_broken_sudo", name: "Broken Sudo", rarity: "legendary", size: null, isNew: true, kind: "dig" }],
+    ];
+    const card = () => page.$eval("[data-testid=reward-card]", el => { const b = el.getBoundingClientRect(); return { x: Math.max(0, b.left - 40), y: Math.max(0, b.top - 40), width: b.width + 80, height: b.height + 80 }; }).catch(() => undefined);
+    for (const [name, detail] of pops) {
+      await page.evaluate(d => window.dispatchEvent(new CustomEvent("tsi:peaceful-got", { detail: d })), detail);
+      await sleep(1100);
+      await shot(page, `pop-r3-${name}`, await card());
+      await page.mouse.click(10, 880);
+      await sleep(700);
+    }
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent("tsi:dig-purse", { detail: { currency: "coins", amount: 32 } })));
+    await sleep(1100);
+    await shot(page, "pop-r3-purse", await card());
+    await page.mouse.click(10, 880);
+    await sleep(900);
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent("tsi:peaceful-got", { detail: { key: "find_ammonite", name: "Ammonite", rarity: "rare", size: 11.2, isNew: true, kind: "dig" } })));
+    let last = 0;
+    for (const ms of [40, 140, 260, 420, 700, 1600]) { await sleep(ms - last); last = ms; await page.screenshot({ path: `${OUT}/strip-pop-${String(ms).padStart(4, "0")}.png`, clip: { x: 700, y: 260, width: 520, height: 260 } }); }
+    await ctx.close();
+    const g = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const gp = await g.newPage();
+    await gp.goto(`${HOST}/lab/gui`, { waitUntil: "domcontentloaded" });
+    await gp.waitForSelector("#rewards [data-testid=pop-divine]", { timeout: 300000 });
+    await sleep(5000);
+    for (const id of ["rewards", "hud-bars"]) {
+      await gp.$eval(`#${id}`, el => el.scrollIntoView());
+      await sleep(800);
+      const box = await gp.$eval(`#${id}`, el => { const b = el.getBoundingClientRect(); return { x: b.left, y: Math.max(0, b.top), width: b.width, height: Math.min(860, b.height) }; });
+      await gp.screenshot({ path: `${OUT}/r3-showroom-${id}.png`, clip: box });
+    }
+    await g.close();
+  }
   if (scene === "r3arrow") {
     const { ctx, page } = await open("");
     await go(page, 30, 46, Math.PI);

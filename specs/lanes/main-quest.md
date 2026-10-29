@@ -29,7 +29,22 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Visual work** (UI, models, the tour) goes to David as screenshots on a review page before it merges. Pure fixes can merge once verified.
 
-**Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
+**Gates:** vitest (once), tsc, eslint, the SQL smoke chain, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
+
+## Round 3: David's review of round 2 (verbatim) and the coordinator's rulings
+
+- Approved: r2-01-line, r2-02-dropdown, r2-21-dig-mark-dirt ("looks good").
+- r2-03-arrow: "make the arrow centered and smaller".
+- r2-20-dig-mark-sand: "make it similar to the dirt".
+- r2-30-reward-pops: "the ui should be a combination, not so flat but also keep the old vibe but new color, dont need cm for sudo" (now bible UI rule 1).
+- r2-06-level-up (note): "the user shoud have a health, stamina, and exp bar, and everything should be when exp is filled" (bible UI 8).
+- The broken sudo stays legendary for now.
+- Coordinator: stamina is a real, gentle mechanic in movement/sim.ts (sprint about 10 s a bar, a dash 20%, glide slow; refill
+  about 3 s after a 0.6 s pause; emptied: walk, no dash or glide until above 20%); the bar shows only while below full and
+  fades 1.5 s after it fills. Health = combat hp/maxHp, XP = hudStore levelProgress, always on, top left above the Bag.
+- Coordinator (bible UI 8b, the two HUD layers): the level badge beside the XP bar only in the UI view (Esc 1); the wallet
+  (coins and gems) is TopCluster's slot, built by the tutorial lane: build no coin or gem display here.
+- Ownership: this lane owns RewardPop/RewardCard, BigMoment, the rarity tokens and the HUD bars (StatBar, StatBars, HudBars).
 
 ## Round 2: David's review (2026-10-28, verbatim, with what each means)
 
@@ -51,76 +66,49 @@ Redo:
 
 ## Status
 
-**Round 2** (head: see git log, game/main-quest; merged feat/game-default-island 0a8a9514). Coordinator rulings this
-round: the old village is retired (lane village-archive removes it and villagePinned.test.tsx; new world only, vitest
-with NEXT_PUBLIC_GAME_WORLD=new only; leave the world column and settle-in row as they are; keep off
-web/lib/game/world/active.ts). UI follows specs/design-bible.md's UI chapter (flat, --ui-* tokens only, kit pieces in
-components/gui/flat plus /lab/gui). tutorial-v2 owns the quest-complete check (QuestCheck on `tsi:quest-complete`).
-
-Done in round 2:
-- **01 line**: round 1's shot was taken under the arrival's fade (the line renders); shoot.mjs `hudIn` waits for it.
-- **02/03 tracker** (QuestTracker.tsx/.module.css): flat, tokens only; with the dropdown the bar and list are one width
-  (300 px); the guide arrow is a round icon button (aria-label "Show the way to <quest>", aria-pressed).
-- **06 level up**: chapters have `reward_xp` (paid once through combat_grant_xp, source 'chapter'); first-find pays
-  125 = xpForLevel(2). The advance answer carries `xp_gain`; hudStore takes the total; LevelUpCard shows the kit's
-  BigMoment 1.6 s after `tsi:quest-complete` (useMainQuest dispatches it with the chapter title instead of a toast).
-  Unlocks shown (lib/game/levelUp.ts, only what's real): the next main-quest chapter; stat points only when DROPS.classes.
-- **Pickaxe parked for the cave update**: `DROP_FEATURES.cave: null` (lib/game/drops.ts) and `REQUIREMENT_FEATURE
-  { pickaxe: "cave" }`: releasedChapters drops elizas-pickaxe (its row stays; it was the last chapter, so no gap);
-  `MINING` (lib/collections/roster.ts) gates Eliza's hand-over (teachers.ts live), rocks taking the pickaxe (toolOf),
-  the stone/iron-only rocks (islandNodes) and the mining rock models/labels (VillageLife). Parked, kept: the pickaxe
-  item (off sale), build_mining.py's pickaxe and rocks, QUEST_LINES.pickaxe, TOOL_LINES pickaxe, the chapter row and
-  STEP_RULES.pickaxe. The cave update releases it by giving `cave` a drop number.
-- **Museum drive** (m5): any fish, bug or buried find handed in counts, duplicates too (museum_handins,
-  museum_hand_in, /api/collections/museum/hand-in). facts.ts: your part = donations + hand-ins; the club tally counts
-  both. Odile's drive talk opens MuseumDrive (flat panel; DonateSheet untouched). Rule for the review page: "Every fish,
-  bug or buried find you hand in counts toward the drive, even a kind the museum already has."
-- **Dig marks**: sand a small faint hairline star, dirt a faint scuff with two crumbs (digMark.ts), transparent.
-- **Dig loot** (lib/collections/digLoot.ts, server-rolled in service.ts digAt with the held shovel's tier;
-  collections_dig records once per spot and hour, member_digs tallies digs for Pim's chapter):
-  | Shovel | Relic | Coins | Ore | Gem | Broken sudo |
-  |---|---|---|---|---|---|
-  | 1 Shovel | 50% | 34.68% | 15% | 0.3% | 0.02% |
-  | 2 Iron | 52% | 30.57% | 17% | 0.4% | 0.03% |
-  | 3 Sturdy | 54% | 26.46% | 19% | 0.5% | 0.04% |
-  | 4 Crystal | 56% | 22.24% | 21% | 0.7% | 0.06% |
-  | 5 Golden | 58% | 17.9% | 23% | 1.0% | 0.1% |
-  Coins 10 to 50; ore iron 85% / gold 15%; a gem is 1. Broken sudo (`find_broken_sudo`, legendary, nature room):
-  "A little screen-faced chassis with an empty heart socket. Whoever built it never got to flash it." Model in
-  build_mining.py (`-- only find_broken_sudo`). Flag for David: "divine once the ladder lands?".
-- **Loot UI**: the kit's RewardPop (rarity outline from --ui-rarity-*, divine the moving --ui-holo) is what RewardCard
-  renders for every pop (bug, forage, dig, purse, craft); a bottle's recipe stays the paper scroll. A purse pops via
-  `tsi:dig-purse`. Rarity tokens --ui-rarity-common..divine, --ui-holo, --ui-on-divine in clean/cream/dark.css.
-- **Migrations, in order, none applied**: 20261028144337_main_quest (unchanged), 20261028144350_catalogue_seed,
-  20261028153805_main_quest_r2 (reward_xp, XP source 'chapter', wallet source 'dig', gem type 'earn_dig',
-  member_digs, collections_dig, museum_handins, museum_hand_in, copy), 20261028194150_catalogue_seed (generated:
-  the broken sudo). Smokes: main_quest_smoke.sql, main_quest_r2_smoke.sql in sql-smoke.sh.
-
-**Gates at the report (round 2):** tsc 0 errors; vitest (NEXT_PUBLIC_GAME_WORLD=new) 3553 passed, 8 skipped, 0 failed;
-eslint clean on the changed files; SQL chain clean (main quest 1 to 5, r2 1 to 6). perf:check once (SCENES=village built
-with NEXT_PUBLIC_GAME_WORLD=new): draw calls 375 high / 297 lite (baseline 382 / 288); it "fails" on frame time and
-triangles because the baseline (8809c517, 2026-10-14) is the old village, not the new world: the dig marks are 16
-meshes of 45 to 57 triangles either way.
+**Round 3** (game/main-quest; merged origin/main f0be2c5e). Done:
+- Merge: the new world only. residentsHere always swaps the lines (no village filter); ROSTER always has BURIED_FINDS;
+  inWorld deleted; releasedChapters and villageNodes have no world param (chapters with world "village" are never offered);
+  useMainQuest has no `on`; QuestTracker has no `dropdown` prop; deleted chapterQuest, toolQuest, the village tool and
+  sweeper lines, VillageLife's sprite cracks and holes, HOLE_TINT, FLASH_MS.xp, villagePinned.test.tsx and its fixture.
+  Took main's residentRoutine (schedules renamed pond and path) and dropped STAND_IN.
+- Arrow: 28 px round button, the upright Navigation2 arrow centred in it (measured: icon offset 0, button on the row's middle).
+- Sand mark: the same scuff as the dirt (digMark.ts digScuff for both; crackStar deleted), sand tone at 0.25 opacity; the
+  copy says "a scuffed patch of sand or dirt" (lines.ts, mainQuest.ts, defaults.ts, the unapplied r2 migration).
+- Reward pop: the old card's shape in the flat palette: a soft rounded white card with grain (--ui-grain) and depth, the
+  picture on a round dish ringed in the rarity, a glint on rare and up (--ui-glint), facts as pills (the rarity pill
+  outlined), divine holo on the edge, the dish and the pill; contraband dark. RewardPop takes lib/rarity's Rarity
+  (LadderRarity deleted). The broken sudo has no size (roster size null), so no "cm".
+- HUD bars: kit StatBar/StatBars (flat), game HudBars.tsx top left above the Bag: health (combat hp/maxHp) and XP
+  (hudStore levelProgress) always on; the level badge only in the UI view; stamina on its own pill while below full,
+  out 1.5 s after full, warm and shaking once when run out. TopCluster's level/XP chip is deleted (the bars replace it).
+  The XP bar fills to its end on a level up, fires `tsi:level-filled`, rolls over; LevelUpCard shows on that (after a
+  chapter's check-mark, never over it) for any level up; a quest unlock is listed only for a chapter's level up.
+- Stamina (movement/sim.ts MOVE_TUNING stamina*): staminaSprint 0.1/s (10 s), staminaDash 0.2, staminaGlide 0.04/s
+  (25 s), staminaRefill 1/3 per s (3 s from empty) after staminaPause 0.6 s, staminaWinded 0.2. Emptied: sprint is a
+  walk, no dash, no glider (an open glide folds). Walking and talking cost nothing. The avatar writes hudLive each frame.
+  No new move event (the net protocol's event list is unchanged); bots run the same sim.
+- Migrations, in order, none applied: 20261028144337_main_quest, 20261028153805_main_quest_r2 (unapplied, so its dig hint
+  was edited), 20261029064914_catalogue_seed (generated after main's 20261029062423: the buried finds, the sudo without
+  a size, the docent). Smokes: main_quest_smoke.sql, main_quest_r2_smoke.sql.
 
 ## Next
 
-1. Wait for David's review of round 2 (evidence in specs/evidence/main-quest/r2/); the coordinator merges and applies
-   the migrations in order.
-
-Evidence (round 2, new world, shoot.mjs scenes r2flow, r2museum, r2dig, pops, strips): r2-01 line, r2-02 dropdown,
-r2-03 arrow (pressed, and to the museum), r2-06 level up (+ frames), r2-07 next chapter, r2-10 the museum, r2-12/13 the
-drive and a hand-in, r2-20/21 dig marks (full, close, x3 zoom round the mark), r2-30 pops before/after, r2-31 pop
-frames, r2-40 the broken sudo model, r2-41 the showroom's pops (every rung and the holo).
+1. Wait for David's review of round 3 (evidence in specs/evidence/main-quest/r3/); the coordinator merges and applies the
+   migrations in order.
 
 ## Tools and gotchas
 
 - Browser batches: `LANE=game/main-quest /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh devserver <script>`,
   retried while it exits 75 (no queue file). One short batch per hold. Runner pattern in the scratchpad `mqrun/`.
 - `?progression=demo&chapter=<slug>&tally=bugs:2,net:1` puts the demo member anywhere in the main quest.
-- Single test files run without the lock; full tsc and vitest under the heavy lock.
+- Single test files run without the lock; full tsc and vitest under the heavy lock. Under load a few slow tests (net
+  loopback, walk.test) time out at 5 s; they pass run alone.
+- r3bars probes for open ground (sprint there and back) before the stamina strip; `window.__move.sim.current.state` has stamina.
 - `scripts/world-cells.ts` regenerates `web/data/world/cells.json`; `node scripts/gen-seeds.mjs` writes a NEW seed.
 - `talkStore.quest` (main quest) is consulted before `talkStore.script` (tool teachers) in `NPC.tsx`.
 - The new world's places for shots (activeVillage("new")): museum 4,70.5 (Juno ~7,70), dig-sand-0 -17,102, dig-soil-15 35,84, rock-1 38,25.1.
+- Browser runner (round 3): scratchpad `mqrun/qrun4.sh <scenes>` (run4.sh, out to mq-r3; scenes r3arrow r3dig r3bars r3pops).
 - Browser runner (round 2): scratchpad `mqrun/qrun.sh <scenes>` joins the browser queue, waits up to 9 min (exit 75:
   call again), then runs `run3.sh` under the lock (new world; ICONS="key ..." renders icons first; POPS passes through).
 - zsh doesn't word-split `$F`: use `${=F}` for a list of test files.
@@ -133,7 +121,7 @@ frames, r2-40 the broken sudo model, r2-41 the showroom's pops (every rung and t
 
 - **Headless only:** never open a window, tab, app or audio on David's screen; never `open`; never the Playwright MCP, the claude-in-chrome tools or the `blender` MCP tools. Blender only as `/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P <script>`. Never port 3000.
 - **Locks:** `LANE=game/main-quest /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh heavy|blender|devserver <cmd>` (`specs/lane-rules.md`).
-- **The default village world stays unchanged** (the launch fallback). New-world changes sit behind `NEXT_PUBLIC_GAME_WORLD=new`; run vitest with and without it.
+- **New world only:** the village is retired; vitest runs once.
 - **Git:** commit with the `[build]` prefix. Never push. Never bare `git stash`. Work only in this worktree. Never touch prod; ask the coordinator for any read-only prod query.
 - **Text:** no em dashes; real names never show in game; never write the gem-to-money rate anywhere (the repo is public).
 - **Art:** David supplies every reference; never fetch art, textures or music; no asset libraries or generators.

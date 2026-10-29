@@ -4,7 +4,8 @@
  * The player's bars, top left (David 2026-10-28: "the user shoud have a health, stamina, and exp bar, and everything
  * should be when exp is filled"; specs/design-bible.md UI 8), on the flat kit's StatBar:
  * - health: the combat runtime's hp of maxHp (full on the island), always on;
- * - XP: the HUD's total as levels (lib/combat/progression.ts levelProgress), always on. A gain fills it; a level up fills
+ * - XP: the HUD's total as levels (lib/combat/progression.ts levelProgress), always on; the level badge beside it in the
+ *   UI view (`full`, Esc 1; bible UI 8b). A gain fills it; a level up fills
  *   it to the end, says so (LEVEL_FILLED: the level-up card plays then), and rolls it over to what's left;
  * - stamina: the movement sim's (lib/game/movement/sim.ts), written by the avatar each frame (hudLive), on its own pill
  *   while it's used and gone 1.5 s after it's full again; run out, it turns warm and shakes once.
@@ -42,7 +43,8 @@ function useXpBar(xp: number | null): XpView | null {
     }
     return () => timers.forEach(t => window.clearTimeout(t));
   }, [xp]);
-  return view;
+  // Not read yet (or signed out): level 1, empty; the first total read snaps in, never a level up.
+  return xp === null ? { level: 1, fill: 0, snap: true } : view;
 }
 
 /** Stamina's pill: written to its element every frame (no render), shown while it's below full. */
@@ -65,7 +67,7 @@ function useStamina(el: RefObject<HTMLDivElement | null>) {
   return { shown, low };
 }
 
-export default function HudBars({ hidden, className }: { hidden?: boolean; className?: string }) {
+export default function HudBars({ hidden, full, className }: { hidden?: boolean; full?: boolean; className?: string }) {
   const hud = useHud();
   const hp = useCombatValue(() => combat.rt.player.hp), maxHp = useCombatValue(() => combat.rt.player.maxHp);
   const xp = useXpBar(hud.xp);
@@ -75,7 +77,7 @@ export default function HudBars({ hidden, className }: { hidden?: boolean; class
   return <div className={className}>
     <StatBars hidden={hidden}>
       <StatBar kind="health" value={health} label={`Health ${Math.round(hp)} of ${Math.round(maxHp)}`} />
-      {xp && <StatBar kind="xp" value={xp.fill} snap={xp.snap} lead={`Lv ${xp.level}`} label={`Level ${xp.level}, ${Math.round(xp.fill * 100)}% of the way to the next`} />}
+      {xp && <StatBar kind="xp" value={xp.fill} snap={xp.snap} badge={full ? `Lv ${xp.level}` : null} label={`Level ${xp.level}, ${Math.round(xp.fill * 100)}% of the way to the next`} />}
     </StatBars>
     <StatBar ref={staminaEl} kind="stamina" value={1} live alone shown={stamina.shown && !hidden} low={stamina.low} label={stamina.low ? "Stamina run out" : "Stamina"} />
   </div>;
