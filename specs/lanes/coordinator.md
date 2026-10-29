@@ -459,3 +459,8 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - Bundle: title +114 KB (the world document), applicant -3 KB.
   - Perf baseline: new v2 rows on the new world (High 4.8 ms, 359 draws, 757k triangles; Lite 2.9 ms, 289 draws, 567k).
   - The code half is ready now. Merge it first in the batch, then rebase the others on it: main-quest's GAME_WORLD import breaks; daily-social conflicts in residentRoster; loading's TitleScene fix.
+- **Tutorial round 3 review:** https://claude.ai/artifact/XU4bt3kUVfuJSeDjLKjmB3 (ids v3-*), game/tutorial-v2 4fee5d2b. It supersedes NTJjmvqTjX6aHRj9MBJkwD.
+  - PATCH /api/profile now accepts birthday (validated, private; no new column). clothing-v2 also edits /api/profile (members_only), so expect a conflict.
+  - Kit: Spotlight, KeyBoard, FlyIn, QuestCheck and PrintedCard in flat/moments.tsx, plus the paper tokens --ui-paper, --ui-paper-edge, --ui-paper-ink and --ui-stamp. Fold main-quest's BigMoment in at merge.
+  - It deleted RegisterCard, MerchCard and UiTour. hq/lines.ts conflicts with main-quest: keep both sides.
+  - Questions for David on the page: the Founder vs his name, spirit animal as the ID's extra field, and the ID card's size.
