@@ -31,7 +31,7 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 ## Status
 
-Round 2 (David's review 2026-10-28) built on top of round 1; see "Round 2" below. Round 1 items stay as built unless round 2 replaced them.
+Round 2 (David's review 2026-10-28) built on top of round 1, work at ec62699d (merge of origin/main at e7747edd); see "Round 2" below. Round 1 items stay as built unless round 2 replaced them.
 
 - **f-pond: closed by David, 2026-10-27: "pond only in mountain".** No pond on the open map; pond fish stay with the mountain. `closedBiomes()` (rolls.ts) keeps them closed; tasks and the chef only draw from the island's waters; the catch board shows a locked "mountain pond" lane.
 - **collection-season: approved** (round 1).
