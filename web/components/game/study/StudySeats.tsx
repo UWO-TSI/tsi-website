@@ -12,7 +12,7 @@ import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import type * as THREE from "three";
 import { GLBProp } from "../NatureModels";
-import { BEACH_PARASOL_URL, LOG_BENCH_URL, STUDY_BOOK_URL, STUDY_TABLE_CLASSIC_LONG_URL, STUDY_TABLE_CLASSIC_URL, STUDY_TABLE_LONG_URL, STUDY_TABLE_URL } from "@/lib/game/propModels";
+import { BEACH_PARASOL_URL, LOG_BENCH_URL, SCENERY_URLS, STUDY_BOOK_URL, STUDY_TABLE_CLASSIC_LONG_URL, STUDY_TABLE_CLASSIC_URL, STUDY_TABLE_LONG_URL, STUDY_TABLE_URL } from "@/lib/game/propModels";
 import { CafeModel } from "./CafeModel";
 import type { ContactSize } from "@/lib/game/shadows";
 import Character, { CHARACTER_SCALE, type CharacterMotion } from "../character/Character";
@@ -57,6 +57,7 @@ export function TableFurniture({ t, ground }: { t: TableLayout; ground: (x: numb
   const y = ground(t.at[0], t.at[1]);
   const set = CAFE_SET[t.furniture];
   if (set) return <CafeModel name="cafe-kit" node={`set_${t.furniture}`} position={[t.at[0], y, t.at[1]]} yaw={t.yaw} contact={set} />;
+  if (t.furniture === "bench") return <GLBProp url={SCENERY_URLS["plaza-bench"]} position={[t.at[0], y, t.at[1]]} rotation={[0, t.yaw, 0]} />;
   return <group position={[t.at[0], y, t.at[1]]} rotation={[0, t.yaw, 0]}>
     {OUTDOOR_TABLE[t.furniture] && <GLBProp url={OUTDOOR_TABLE[t.furniture]!} />}
     {[...new Set(seats.map(([, z]) => z))].map(z => <GLBProp key={z} url={LOG_BENCH_URL} position={[0, 0, z]} />)}

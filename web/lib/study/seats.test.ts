@@ -7,12 +7,11 @@ import { CAFE_ROOM } from "@/lib/game/cafe";
 import { createCenteredMap, Surface } from "@/lib/game/grid";
 import { setVillage, villageOf } from "@/lib/game/villageMap";
 
-// The backend's two outdoor tables, placed on a flat grass island (the member island places its own study objects).
+// The backend's outdoor seats (the quay's bench), placed on a flat grass island (the member island places its own study objects).
 const flat = createCenteredMap(48, 48);
 flat.surfaces.fill(Surface.Grass);
 setVillage(villageOf(flat, [
-  { id: "study:plaza-picnic", kind: "study", x: 2.4, z: 2.6, model: "picnic" },
-  { id: "study:pier-bench", kind: "study", x: 4.6, z: -17.6, model: "pier" },
+  { id: "study:pier-bench", kind: "study", x: 4.6, z: -17.6, model: "bench" },
 ]));
 
 describe("seat anchors (study-world §1)", () => {
@@ -29,7 +28,8 @@ describe("seat anchors (study-world §1)", () => {
 
   it("keeps every seat standable, inside the room and apart from its neighbours", () => {
     for (const l of studyLayout()) for (const s of seatsOf(l.anchor)) {
-      expect(studySolid(l.area, s.x, s.z, 0.2), `${s.anchor}#${s.seat}`).toBe(false);
+      // A table's seats stand clear of it; a bench's are on the bench (you sit down from in front of it).
+      if (l.furniture !== "bench") expect(studySolid(l.area, s.x, s.z, 0.2), `${s.anchor}#${s.seat}`).toBe(false);
       if (l.area === "cafe") expect(Math.abs(s.x) < CAFE_ROOM.halfW - 0.3 && Math.abs(s.z) < CAFE_ROOM.halfD - 0.3, `${s.anchor}#${s.seat}`).toBe(true);
     }
     for (const area of ["cafe", "village"] as const) {
@@ -45,11 +45,11 @@ describe("seat anchors (study-world §1)", () => {
   });
 
   it("offers the nearest free seat in range, skipping taken ones", () => {
-    const [a, b] = seatsOf("study:plaza-picnic");
-    expect(nearestSeat("village", a.x + 0.1, a.z)).toMatchObject({ anchor: "study:plaza-picnic", seat: 1 });
+    const [a, b] = seatsOf("study:pier-bench");
+    expect(nearestSeat("village", a.x + 0.1, a.z)).toMatchObject({ anchor: "study:pier-bench", seat: 1 });
     const mid = [(a.x + b.x) / 2, a.z] as const;
     expect(nearestSeat("village", mid[0] + 0.05, mid[1], (_, seat) => seat === 1)).toMatchObject({ seat: 2 });
-    expect(nearestSeat("cafe", a.x, a.z)?.anchor).not.toBe("study:plaza-picnic");
+    expect(nearestSeat("cafe", a.x, a.z)?.anchor).not.toBe("study:pier-bench");
     expect(nearestSeat("village", b.x, b.z + 3)).toBeNull();
   });
 });
@@ -87,7 +87,7 @@ describe("seat heights and study clips (study × character)", () => {
     expect(seatAt("study:cafe-couch", 2)!.y).toBeCloseTo(0.4);
     expect(seatAt("study:cafe-window-1", 1)!.y).toBeCloseTo(0.6);
     const slope = (x: number, z: number) => 0.1 * x + 0.05 * z;
-    const s = seatAt("study:plaza-picnic", 3, slope)!;
+    const s = seatAt("study:pier-bench", 2, slope)!;
     expect(s.y).toBeCloseTo(slope(s.x, s.z) + 0.5);
     expect(nearestSeat("village", s.x, s.z, undefined, slope)?.y).toBeCloseTo(s.y);
   });

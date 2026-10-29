@@ -43,7 +43,7 @@ function violations(poses: Pose[], area: Area) {
   const flags: number[] = [];
   const reset = (p: Pose) => { base = p; hist = [{ T: 0, D: 0 }]; };
   for (const p of poses) {
-    if (!inAreaBounds(area, p.x, p.y, p.z)) { out.push(`bounds at ${p.t}`); continue; }
+    if (!inAreaBounds(area, p.x, p.y, p.z)) { out.push(`bounds at ${p.t} (${area} ${p.x.toFixed(1)},${p.y.toFixed(2)},${p.z.toFixed(1)})`); continue; }
     if (!base) { reset(p); continue; }
     const b: Pose = base;
     if (hasFlag(p.flags, PACKET_FLAG.teleport)) {
@@ -102,8 +102,7 @@ describe("cards", () => {
 });
 
 describe("the bots' village", () => {
-  // new world: the dev bots' world fails its places/benches/shores check (follow-up lane; village-archive)
-  it.skip("has places to go, two benches of two slots, glide spots at the shore and the café's seats", () => {
+  it("has places to go, two benches of two slots, glide spots at the shore and the café's seats", () => {
     const w = botWorld();
     expect(w.points.length).toBeGreaterThan(10);
     for (const [x, z] of w.points) expect(w.standable(x, z)).toBe(true);
@@ -132,9 +131,7 @@ describe("bots", () => {
     expect(JSON.stringify(other.poses)).not.toBe(JSON.stringify(first.poses));
   });
 
-  // new world: dev bots break the room's bounds checks (follow-up lane; village-archive)
-
-  it.skip("send honest traces: nothing the island room's sanity checks would strike", () => {
+  it("send honest traces: nothing the island room's sanity checks would strike", () => {
     for (let i = 0; i < bots.length; i++) {
       const mine = poses.filter(p => p.bot === i).map(p => p.pose);
       expect(mine.length).toBeGreaterThan(0);
@@ -191,18 +188,21 @@ describe("bots", () => {
     expect(slows.some(s => s.patch.seat === "" && s.patch.pose === "")).toBe(true);
   });
 
-  // new world: bench seat lift 0.359 vs 0.344 (follow-up lane; village-archive)
-
-  it.skip("sit at a real sitter's lift: seatLift(Sit, the bench's seat top, CHARACTER_SCALE), as PlayerAvatar takes it from tsi:sit", () => {
+  it("sit at a real sitter's lift: seatLift(Sit, the bench's seat top, CHARACTER_SCALE), as PlayerAvatar takes it from tsi:sit", () => {
     const w = botWorld();
     for (const b of w.benches) for (const slot of [0, 1] as const) {
       const [x, z] = benchSlot(b, slot), seatY = w.ground(b.x, b.z) + BENCH_SEAT_TOP; // IslandScene's tsi:sit detail
       expect(benchLift(w, b, x, z)).toBeCloseTo(seatLift("Sit", seatY - w.ground(x, z), CHARACTER_SCALE), 12);
     }
-    // And what goes on the wire with the snap onto a bench, to the millimetre the wire carries.
+    // And what goes on the wire with the snap onto a bench, to the millimetre the wire carries: the seat top over the
+    // ground at the slot (the plaza's stone slopes a little under its benches).
     const snaps = poses.filter(p => hasFlag(p.pose.flags, PACKET_FLAG.teleport) && bots[p.bot].card.area === "village" && p.pose.lift > 0);
     expect(snaps.length).toBeGreaterThan(0);
-    for (const { pose } of snaps) expect(pose.lift).toBeCloseTo(seatLift("Sit", BENCH_SEAT_TOP, CHARACTER_SCALE), 3);
+    for (const { pose } of snaps) {
+      const b = w.benches.find(b => [0, 1].some(s => Math.hypot(benchSlot(b, s as 0 | 1)[0] - pose.x, benchSlot(b, s as 0 | 1)[1] - pose.z) < 0.05))!;
+      expect(b).toBeDefined();
+      expect(pose.lift).toBeCloseTo(benchLift(w, b, pose.x, pose.z), 3);
+    }
     expect(seatLift("Sit", BENCH_SEAT_TOP, CHARACTER_SCALE)).toBeGreaterThan(0.3); // not sunk into the slats
   });
 

@@ -586,3 +586,14 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - The key goes in the keychain as "Meshy API"; it isn't there yet, and David is adding it.
   - Rods r3 waits on the key and a free lane.
 - **Creator polish review:** https://claude.ai/artifact/KkE3ppKZjP7o2yP6kxg8Rx (ids cp-*), game/creator-polish 3aa33c58 (from main de87c07f; no migrations).
+- **Shipped 2026-10-29 ~02:10:**
+  - the village archive stack (village-archive ef90c927, loading 59ef45b9, title-perf 0f470315), plus clothing-v2 ef4e29cd and the guarded residents seed;
+  - prod dump prod-before-archive-stack-20261029-0206.dump; applied 20261029055353_catalogue_seed (guarded schedules, no pond or path left); verify clean;
+  - deploy uwotsi-n346qmvqg queued at push; confirm Ready.
+  Next in this stack: newworld-fixes plus river-softlock (Halloween), after the river agent's study items.
+- **Tutorial round 4 review:** https://claude.ai/artifact/VwAEKpT7DJAERc2yACCb3z (ids v4-*), game/tutorial-v2 1fc48ea3.
+  - The full vitest wasn't rerun after the integration regex fix, so run it at merge.
+  - David's test server (3300, worktree tutorial-test) is moved to 1fc48ea3; HQ saves are tsi.hq.v4.
+  - MemberFishing must dispatch tsi:fish-hooked, tsi:fish-caught, tsi:fish-escaped and tsi:fish-end, label its reel panel [aria-label="Fishing reel"], and build its reel with createFishingReel (reelAssist.floor). Wire this at merge, or have the fish-tiers agent do it.
+  - The deploy from 3074f1e0 (uwotsi-n346qmvqg) is still to be confirmed Ready.
+- **Started:** main-quest r3 (agent a9480728300cbc27c), daily-social r3 (agent aa9470efccfdc282e). David is playing tutorial r4 himself on 3300; his notes are pending.

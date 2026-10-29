@@ -104,7 +104,9 @@ describe("walking the smooth world", () => {
       for (let x = r.x0 + 0.25; x < r.x1; x += 0.5) edges.push([x, r.z0, 0, -1, r.y(x, r.z0 + 0.01)], [x, r.z1, 0, 1, r.y(x, r.z1 - 0.01)]);
       for (let z = r.z0 + 0.25; z < r.z1; z += 0.5) edges.push([r.x0, z, -1, 0, r.y(r.x0 + 0.01, z)], [r.x1, z, 1, 0, r.y(r.x1 - 0.01, z)]);
     }
-    const inWater = (x: number, z: number) => terrainHeight(t, x, z) < t.seaLevel && island.ground(x, z) <= terrainHeight(t, x, z) + 1e-6;
+    // In the water: where the island says you can't stand for water (deep, or the shallows beside a deck), off the boards.
+    // A dash can carry you over the beside-the-deck band onto the toe-deep shallows a beach wades into (WADE): that's ground.
+    const inWater = (x: number, z: number) => island.wet(x, z) && island.ground(x, z) <= terrainHeight(t, x, z) + 1e-6;
     const fell: string[] = [], short: string[] = [];
     let runs = 0;
     for (const [ex, ez, nx, nz, y] of edges) {
@@ -220,7 +222,8 @@ describe("walking the smooth world", () => {
     const [dx, dz] = island.move(high[0], high[1], low[0], low[1]);
     expect(Math.hypot(dx - low[0], dz - low[1])).toBeLessThan(0.3);
     // The movement sim: run uphill at the face for two seconds and never get up it, and a held jump does not climb it either.
-    const world: MoveWorld = island;
+    // The slope rule on its own: the steep faces are on the mountain, past the border (lib/game/barriers.ts releaseRegions).
+    const world: MoveWorld = { ...island, locked: undefined, released: undefined };
     const dir = [high[0] - low[0], high[1] - low[1]], len = Math.hypot(dir[0], dir[1]);
     let s = createMoveState(low[0], low[1], world);
     const top = terrainHeight(t, high[0], high[1]);

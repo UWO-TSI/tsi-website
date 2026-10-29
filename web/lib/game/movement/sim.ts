@@ -36,6 +36,13 @@ export interface MoveWorld {
   climb?(x: number, z: number, nx: number, nz: number): boolean;
   /** The smooth world only: ground too steep to stand on, where a jump cannot start (no hopping up a cliff). */
   steep?(x: number, z: number): boolean;
+  /**
+   * The smooth world only (lib/game/barriers.ts releaseRegions): land behind a release barrier that walking from the
+   * spawn can't reach. A wall to every move, as the barrier is: a walk, a dash, a slide, a jump, the glider, a push.
+   */
+  locked?(x: number, z: number): boolean;
+  /** The smooth world only: land walking reaches from the spawn. The only ground recorded as `safe`, where a splash brings you back. */
+  released?(x: number, z: number): boolean;
 }
 
 /** Every feel value, in world units (1 tile) and seconds; /lab/move tunes them live. */
@@ -160,6 +167,8 @@ const R = 0.2, D = R * Math.SQRT1_2, SUBSTEP = 0.1, AIR_STEP = 0.2, SNAP_DOWN = 
 const PROBES: readonly (readonly [number, number])[] = [[0, 0], [R, 0], [-R, 0], [0, R], [0, -R], [D, D], [D, -D], [-D, D], [-D, -D]];
 
 export function createMoveState(x: number, z: number, world: MoveWorld, facing = 0): MoveState {
+  // Started off released land (a teleport, an old spot behind a barrier, out on an islet): from the nearest released spot.
+  if (world.released?.(x, z) === false) [x, z] = refuge(world, x, z);
   const y = world.top(x, z);
   return {
     x, y, z, vx: 0, vy: 0, vz: 0, mode: "ground", modeT: 0, facing, coyote: 0, buffer: 0, cut: false, long: false, slideJump: false,
@@ -179,7 +188,7 @@ function steer(s: MoveState, ix: number, iz: number, rate: number, dt: number, s
 
 /** Is a probe point in something at feet height `y`? On foot water is a wall too. */
 function inside(w: MoveWorld, x: number, z: number, y: number, foot: boolean, t: MoveTuning) {
-  return w.top(x, z) > y + (foot ? t.stepUp : AIR_STEP) || (foot && w.wet(x, z));
+  return w.top(x, z) > y + (foot ? t.stepUp : AIR_STEP) || (foot && w.wet(x, z)) || !!w.locked?.(x, z);
 }
 /** How many probes are in something, or `limit + 1` as soon as that many are. */
 function overlap(w: MoveWorld, x: number, z: number, y: number, foot: boolean, t: MoveTuning, limit = 9) {
@@ -414,7 +423,7 @@ export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveW
       const dl = hypot(tx - fx, tz - fz) || 1, out = Math.min(t.walkSpeed * 0.6, s.airMax);
       s.vx = ((tx - fx) / dl) * out; s.vz = ((tz - fz) / dl) * out;
       setMode(s, "ground");
-      s.safe = [tx, ty, tz];
+      if (w.released?.(tx, tz) !== false) s.safe = [tx, ty, tz];
       if (s.buffer > 0) jump(s, t, input, false);
     }
     return s;
@@ -422,11 +431,23 @@ export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveW
   if (s.mode === "splash") {
     s.y -= 0.6 * dt;
     if (s.modeT >= 0.55) {
+      // A spot kept from before it was closed off (a state made without the world's regions): the nearest released one.
+      if (w.released?.(s.safe[0], s.safe[2]) === false) { const [x, z] = refuge(w, s.safe[0], s.safe[2]); s.safe = [x, w.top(x, z), z]; }
       [s.x, s.y, s.z] = s.safe;
       s.vx = s.vy = s.vz = 0; s.hops = 0; s.buffer = 0; s.airDashes = 0;
       setMode(s, "ground");
       emit(s, "respawn");
     }
+    return s;
+  }
+
+  // ── Inside locked land (a state from before it was closed off): straight back to the nearest released spot ──
+  if (w.locked?.(s.x, s.z)) {
+    const [x, z] = refuge(w, s.x, s.z);
+    s.x = x; s.z = z; s.y = w.top(x, z); s.safe = [x, s.y, z];
+    s.vx = s.vy = s.vz = 0; s.hops = 0; s.buffer = 0; s.airDashes = 0; s.dashT = 0;
+    setMode(s, "ground");
+    emit(s, "respawn");
     return s;
   }
 
@@ -586,7 +607,7 @@ export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveW
     descend(s, w, t, input, y);
   }
   if ((s.mode as MoveMode) !== "splash") depenetrate(s, w, t, dt); // descend() may have splashed
-  if ((s.mode === "ground" || s.mode === "slide") && !w.wet(s.x, s.z) && overlap(w, s.x, s.z, s.y, true, t, 0) === 0) s.safe = [s.x, s.y, s.z];
+  if ((s.mode === "ground" || s.mode === "slide") && !w.wet(s.x, s.z) && w.released?.(s.x, s.z) !== false && overlap(w, s.x, s.z, s.y, true, t, 0) === 0) s.safe = [s.x, s.y, s.z];
   if (s.y < -8) { setMode(s, "splash"); s.modeT = 0.55; }
   if (s.mode === "ground" && s.keep <= 0) s.slid = false;
   s.crouch = s.mode === "ground" && input.sneak && s.dashT <= 0;
@@ -654,6 +675,15 @@ export function clearSpot(w: MoveWorld, x: number, z: number, y: number, facing:
   for (let r = 0; r <= 2; r += 0.1) for (let a = 0; a < 16; a++) {
     const ang = facing + (a % 2 ? -1 : 1) * Math.ceil(a / 2) * (Math.PI / 8), px = x + Math.sin(ang) * r, pz = z + Math.cos(ang) * r;
     if (overlap(w, px, pz, y, true, t, 0) === 0) return [px, pz];
+  }
+  return [x, z];
+}
+
+/** The nearest released, dry, level spot the body fits on, out from (x, z) in half-unit rings (as is, if there is none). */
+function refuge(w: MoveWorld, x: number, z: number): [number, number] {
+  for (let r = 0.5; r <= 400; r += 0.5) for (let a = 0, n = Math.ceil((2 * Math.PI * r) / 0.5); a < n; a++) {
+    const px = x + Math.sin((2 * Math.PI * a) / n) * r, pz = z + Math.cos((2 * Math.PI * a) / n) * r;
+    if (w.released!(px, pz) && !w.wet(px, pz) && !w.steep?.(px, pz) && overlap(w, px, pz, w.top(px, pz), true, MOVE_TUNING, 0) === 0) return [px, pz];
   }
   return [x, z];
 }

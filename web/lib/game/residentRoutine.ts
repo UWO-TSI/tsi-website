@@ -34,6 +34,8 @@ const RAMP = 0.35;
 const NAV_STEP = 0.5;
 /** How far a resident keeps from anything solid, water or a cliff edge. */
 const BODY = 0.3;
+/** The body's rim probes (NavGrid.body): every 45° at BODY. */
+const RIM = Array.from({ length: 8 }, (_, i) => [BODY * Math.cos((i * Math.PI) / 4), BODY * Math.sin((i * Math.PI) / 4)] as const);
 /** Bushes and flower clusters are walked round (this far from their middle), and through only when there's no other way. */
 const PLANT_CLEAR = { bush: 0.85, flower: 0.85 } as const;
 /** How much a step through a plant costs against one on open ground. */
@@ -129,10 +131,13 @@ export class NavGrid {
   cz(z: number) { return Math.floor((z - this.z0) / NAV_STEP); }
   wx(c: number) { return this.x0 + (c + 0.5) * NAV_STEP; }
   wz(c: number) { return this.z0 + (c + 0.5) * NAV_STEP; }
-  /** A point a resident's body fits on: free ground all round it (plants aside). */
+  /**
+   * A point a resident's body fits on: free ground all round it (plants aside), probed at its middle and round its rim
+   * every 45°, so a lamp post (0.16 across) can't slip between the probes.
+   */
   body(x: number, z: number): boolean {
     const s = this.island.standable;
-    return s(x, z) && s(x + BODY, z) && s(x - BODY, z) && s(x, z + BODY) && s(x, z - BODY);
+    return s(x, z) && RIM.every(([dx, dz]) => s(x + dx, z + dz));
   }
   /** A plant underfoot (a bush or a flower cluster): walked round when there's a way, through only when there isn't. */
   plant(x: number, z: number): boolean {
@@ -159,9 +164,9 @@ export class NavGrid {
     if (rampRun(map, a, b) || rampRun(map, c, d)) return Math.abs(ground(nx, nz) - ground(x, z)) < 0.5;
     return Math.abs(levelAt(map, c, d) - levelAt(map, a, b)) < CLIFF_LEVELS;
   }
-  /** Whether a straight walk from a to b stays on free ground (sampled every 0.2). */
+  /** Whether a straight walk from a to b stays on free ground (sampled every 0.1: under a lamp post's width). */
   clear(ax: number, az: number, bx: number, bz: number): boolean {
-    const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / 0.2));
+    const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / 0.1));
     let px = ax, pz = az;
     for (let i = 1; i <= n; i++) {
       const x = ax + (bx - ax) * i / n, z = az + (bz - az) * i / n;
@@ -333,7 +338,8 @@ function homeStop(id: LandmarkId, v: Village, slug: string, nav: NavGrid): Stop 
 function benchStop(v: Village, nav: NavGrid, near: readonly [number, number], night: boolean, dark: boolean, taken: Set<string>): Stop | null {
   const benches = objectsOf("bench", v);
   if (!benches.length) return null;
-  const lamps = objectsOf("lamp", v);
+  // A lamp that casts a pool of light: a hand lantern only glows (DefaultIslandWorld lampSets).
+  const lamps = objectsOf("lamp", v).filter(l => l.model !== "hand");
   const lit = (b: { x: number; z: number }) => lamps.some(l => Math.hypot(l.x - b.x, l.z - b.z) < 3.2);
   // After dark only a bench under a lamp will do (when the village has one): with those full, they skip the bench.
   const any = !dark || !lamps.length || !benches.some(lit);
