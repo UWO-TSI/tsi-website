@@ -356,7 +356,7 @@ const FOUNTAIN_SCALE = 0.75;
  */
 const rimBench = (deg: number) => {
   const a = (deg * Math.PI) / 180, x = +(PX + 11 * Math.cos(a)).toFixed(2), z = +(PZ + 11 * Math.sin(a)).toFixed(2);
-  return { x, z, yaw: +Math.atan2(PX - x, PZ - z).toFixed(4) };
+  return { x, z, yaw: +Math.atan2(PX - x, PZ - z).toFixed(4), model: "plaza-bench" };
 };
 const LAYOUT: Record<string, { x: number; z: number; yaw?: number; scale?: number; model?: string }> = {
   wharf: { ...DOCK, model: "jetty" }, default: { x: SHORE_X - 6, z: DOCK.z },
@@ -367,7 +367,9 @@ const LAYOUT: Record<string, { x: number; z: number; yaw?: number; scale?: numbe
   museum: { x: SPOT.museum[0], z: SPOT.museum[1], yaw: facing(26, -20.5), scale: BUILDING_SCALE },
   oracle: { x: +mt(-2, -152)[0].toFixed(2), z: +mt(-2, -152)[1].toFixed(2), yaw: Math.PI },
   beach: { x: -8, z: 106 },
-  "study-0": { x: PX - 5, z: PZ - 10 }, "study-1": { x: PX + 11, z: PZ - 10 }, "study-2": { x: PX - 5, z: PZ + 10 }, "study-3": { x: PX + 11, z: PZ + 10 },
+  // The backend's outdoor study seats (lib/study/tables.ts; id = its anchor): a plain bench on the quay between the
+  // jetty's north and middle gangways, facing the sea (David: "shouldnt be study table should just be bench").
+  "study:pier-bench": { x: 71, z: 43, yaw: -Math.PI / 2, model: "bench" },
   "bench-0": rimBench(-152), "bench-1": rimBench(152), "bench-2": rimBench(-28), "bench-3": rimBench(28),
 };
 

@@ -429,3 +429,202 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - flat kit pieces RewardPop (RewardCard renders it) and BigMoment (the level-up card);
   - pickaxe parked behind the drop flag `cave`.
   At merge, fold BigMoment and tutorial-v2's moments.tsx (QuestCheck) into one file in components/gui/flat.
+- **Shipped 2026-10-28 afternoon:**
+  - remodel round 3: deploy uwotsi-9lz2udslo, Ready.
+  - fish-tiers e6ab258e, with catalogue-editor round 2 and the rarity ladder: merge 9d825100, main = de87c07f. Prod dump prod-before-fish-tiers-20261028-1610.dump. Applied 20261027140000, 180000, 183120, 185416 and 20261028150000, logged in migrations.log. Checked: sell_price column, ladder through contraband, 0 legendary species, divine cap; verify shows 0 tables without RLS and the usual definers. Deploy uwotsi-3jtxoql5m was queued at push; confirm Ready.
+- **New-world fixes lane (queued, after village-archive merges).** These are tests the archive lane re-pointed at the live world, now skipped with `new world:` notes:
+  - Halloween: pumpkins stand by only 7 of 59 lamps. Halloween is Oct 31, so this goes first.
+  - residentRoutine: 7 walks pass through a solid, and the night owl's bench isn't under a lamp.
+  - ambientFauna: no leaping fish in open sea, a butterfly patch check fails, gull circles fail camera reach.
+  - The ?bots loopback breaks the room bounds; the bench seat lift is 0.359 vs 0.344; seated count is 0.
+  - Outdoor study tables (study:plaza-picnic, study:pier-bench) don't exist on the new world: study-0..3 have no model, so no outdoor seats. **A production gap.**
+- Merge hazard: game/main-quest's residentRoster uses `GAME_WORLD` and `residentsHere(personas, world = GAME_WORLD)`. After the archive it is always newWorldPersona, and the NEW_WORLD_ONLY village filter is dead. daily-social touches residentRoster lines next to the archive's schedule edits.
+- fish-tiers UI redo: head 908b5218, not merged.
+  - Built: the flat MemberFishing overlay, kit reel.tsx, and the shared hooks in lib. The applicant FishingOverlay is refactored onto those hooks and must look the same.
+  - The lab-page evidence wasn't good enough for David. A fresh light agent (af33246c7568c65a4) is shooting in the world, before and after against main, plus an applicant-unchanged check, after merging origin/main.
+  - Its rarity edges use `--gui-rarity-*` and `--gui-holo`. At merge, switch them to main-quest's `--ui-rarity-*` and `--ui-holo`.
+- perf note: fish-tiers' perf:check "fail" (1.38M triangles, 413 draws) ran on a branch without perf-tris, against the 10-14 baseline. Main has perf-tris (774k, 345). The archive lane resets the baseline on the new world.
+- daily-social redo built (after 55a95486), shots partly done. Its migrations changed (all unapplied):
+  - welcome_week: welcome_gems column; the track pays 200/300/0/400/0/600/0 coins and 0/0/5/0/10/0/10 gems through wallet_apply earn_streak; the day-7 pool adds rod-cedar, net-mid and shovel-mid.
+  - resident_friendship: level 0..10 in half hearts, last_gift_day, resident_friend_talk recreated (+½ once a day), resident_friend_move (internal), resident_friend_gift (deltas -2/0/1/2, one gift a day).
+  - The 112843 seed drops welcome_day_coins.
+  - Kit: HeartMeter, RewardTrack, PrizeWheel, GoalMeter and CountUp in flat/rewards.tsx; --ui-heart; quiet toasts with `{ quiet: true }`.
+- **Main quest round 2 review:** https://claude.ai/artifact/4f81ZjsmkJmoFty3FbHf2i (ids r2-*), game/main-quest cb43bd44. Migrations in order: 20261028144337_main_quest, 20261028144350_catalogue_seed, 20261028153805_main_quest_r2, 20261028194150_catalogue_seed (regenerate the seed on the combined tree). The old main-quest page (6DLtytETjRJVtM1HzXytPf) is superseded. Open questions on the page: the broken sudo as divine, the gem odds, and a bigger level-up card. The HUD coin chip, minimap and clock are still cream (UI pass).
+- perf baseline: every lane's perf:check compares against the 10-14 village baseline, so they all "fail". The archive lane resets it on the new world; ignore those fails until then.
+- **Fishing UI review:** https://claude.ai/artifact/QdLFdL5cMp5s8q7AUxVa8K (ids fui-*), game/fish-tiers d8f45b67 (main merged at f26f7763). The meter is horizontal and no longer covers the avatar; one chip morphs from waiting to the hook; the applicant island is checked unchanged (0 differing pixels with a fake clock). At merge, switch its `--gui-rarity-*` and `--gui-holo` to `--ui-rarity-*` and `--ui-holo`. No migrations.
+- **Daily and social (new world) review:** https://claude.ai/artifact/Prtn3zvCmWnx6zwufpArpY (ids nw-*), game/daily-social e4a75f28. It supersedes 68SEdjVRvruZzvgDmHTFVG. Migrations in order: 20261027182444_catalogue_seed, 20261027190000_welcome_week, 20261027190100_resident_friendship, 20261028112843_catalogue_seed. resident_lines_smoke includes 112843 by name.
+- **village-archive done:** game/village-archive ef90c927 (main de87c07f merged).
+  - Title pick: https://claude.ai/artifact/QER69PS5FSvw8LC6MFNM8n (ids title-a, title-b). A is in code. If David picks B, set the four SHOTS rows in components/title/shots.ts to { x: 5.26, z: -13.6, yaw: -16.6, eye: 1.3, pitch: -1, fov: 38 }, keeping night's drift 0.8.
+  - Gates: tsc 0; vitest 3469 passed, 2 failed (seedMigrations: regenerate the seed at merge); npm run build ok with no flag; the applicant island proven unchanged.
+  - Bundle: title +114 KB (the world document), applicant -3 KB.
+  - Perf baseline: new v2 rows on the new world (High 4.8 ms, 359 draws, 757k triangles; Lite 2.9 ms, 289 draws, 567k).
+  - The code half is ready now. Merge it first in the batch, then rebase the others on it: main-quest's GAME_WORLD import breaks; daily-social conflicts in residentRoster; loading's TitleScene fix.
+- **Tutorial round 3 review:** https://claude.ai/artifact/XU4bt3kUVfuJSeDjLKjmB3 (ids v3-*), game/tutorial-v2 4fee5d2b. It supersedes NTJjmvqTjX6aHRj9MBJkwD.
+  - PATCH /api/profile now accepts birthday (validated, private; no new column). clothing-v2 also edits /api/profile (members_only), so expect a conflict.
+  - Kit: Spotlight, KeyBoard, FlyIn, QuestCheck and PrintedCard in flat/moments.tsx, plus the paper tokens --ui-paper, --ui-paper-edge, --ui-paper-ink and --ui-stamp. Fold main-quest's BigMoment in at merge.
+  - It deleted RegisterCard, MerchCard and UiTour. hq/lines.ts conflicts with main-quest: keep both sides.
+  - Questions for David on the page: the Founder vs his name, spirit animal as the ID's extra field, and the ID card's size.
+- **Running (2026-10-28 evening):**
+  - newworld-fixes (agent affc0c80e899a0fb5), branch from game/village-archive ef90c927. Halloween pumpkins first (its shots may ship alone), then study seats, resident routes, the bench-0 footprint, fauna and bots.
+  - rod-gear r2 (agent ac1556f3ada427b05): rarity outlines, sells up to rare, hook caps by rod rarity, a new radar, own-rod bait and bobber slots, the bobber-only detail. The bobber and bait models wait for David's references.
+  - fishing-depth r2 (agent a3ab7400befe17b10): the paper menu picked up in first person, the chef order, the board as a time graphic by the fish shop, the tackle gacha (coin and gem, 1 or 10 pulls, odds shown), the market's three places, the tasks board with claims. The food and prize models wait for references.
+  Both copy main-quest's `--ui-rarity-*` tokens verbatim.
+- **Still queued:** loading r2 (island picked; rebuild it on the new world; coordinate with the archive's TitleScene); clothing r3 (dress clipping and skirt flicker on sitting; one-piece remodel with online references, shown first); the cleanup lane after the archive merges; ui-unify after the current UI lanes merge; the bug minigame; class and armour clothing.
+- **Halloween pumpkins review:** https://claude.ai/artifact/Jrsb19bGJouYHrHtmDwXZd (ids hw-*), game/newworld-fixes f2921d8f (only lib/game/halloween.ts and its test; on top of village-archive). To ship before Oct 31 without the archive: cherry-pick halloween.ts onto main. Its test assumes the new world as the default, so on main run it under the new world or ship it with the archive merge.
+- **newworld-fixes done:** game/newworld-fixes ed6064aa, 6 commits on village-archive ef90c927. All 12 `new world:` skips are green.
+  - The six fixes: the Halloween posts (f2921d8f); study seats study:plaza-picnic and study:pier-bench (study-1..3 removed); resident nav sampling at 0.1 with rim probes, and only lamps that cast light count; the bench-0 model; butterfly radius 3.5; the island `top` over deep water is the sea surface.
+  - That last one changes every player's fall into the sea, so I asked for sea-fall before and after strips before merging. The study seats and the night owl's shots are in the evidence for a review page.
+  - Merge order: village-archive (after David's title pick), then newworld-fixes. Regenerate the seed once on the combined tree.
+- fishing-depth r2 at 8fef03e5 (shots pending).
+  - Migrations:
+    - 20261028160000_fishing_tasks_sushi (renamed from 181000; task claims, chef order fills, monthly entries);
+    - 20261028161000_tackle_rolls (17 off-sale prize rows plus tackle_roll). It widens shop_items_slot_check exactly as rod-gear's rod_tackle_slots does; at merge, check that the two constraint rewrites are identical, or keep one.
+  - New APIs /api/economy/{tasks,chef,tackle} and /api/collections/monthly replace requests and records.
+  - Before merging, check that the gacha RNG runs in the API route (service role), never taken from the client.
+- **New-world fixes review:** https://claude.ai/artifact/K38ZoQPTqe9HBFwbcRDLw3 (ids nf-*), game/newworld-fixes 7cfc3230; the sea fall is verified with strips. It merges right after village-archive.
+- **Rods round 2 review:** https://claude.ai/artifact/2SriizfPH8naxzxb1SdFmn (ids r2-*; the old page NAXEqzpmfNnEASvNPoWCgS is superseded), game/rod-gear 10f7cdd4.
+  - Migrations: 20261028155000_rod_tackle_slots, then a seed (regenerate on the combined tree).
+  - Hook rule: rod rarity +1, on the page as a table.
+  - Gaps: the world float still uses the generic bobber; a Flimsy-only member has no rod view with slots.
+  - Themes carry main-quest's rarity block byte for byte, plus `--ui-chart`.
+- **Fishing round 2 review:** https://claude.ai/artifact/NrKj4D61QuTHsCNccw2j34 (ids r2-*; the old page 2t3rTrcf8YC4GGENxfW3kJ is superseded), game/fishing-depth c7ed2b70.
+  - Migrations: 20261028160000_fishing_tasks_sushi, then 20261028161000_tackle_rolls.
+  - Gacha RNG checked: the client sends counter, pulls and key; the server uses secureRandom; tackle_roll is service_role only and grants off-sale prize rows only.
+  - The full vitest wasn't rerun after the "Fish of the month" rename, so run it at merge.
+  - Prices and odds are the lane's placeholders; David sets them.
+- **Lanes:** none running now (2026-10-28 late). Queued: loading r2, clothing r3, cleanup (after the archive merge), ui-unify, bug minigame, class and armour clothing.
+- **Started (late 2026-10-28):**
+  - loading r2 (agent adc0836dc7276280b): merges game/village-archive, keeps only the island look, rebuilds its backdrop on the new world, moves to the flat kit. Merge after the archive.
+  - clothing r3 (agent abde6917a32fb9fcd): fixes the long dresses clipping and the two skirts flickering on sit. It then finds online references for the one-pieces (David asked) and stops for David's pick before modelling.
+- **Loading r2 review:** https://claude.ai/artifact/TU1hFR6cYz9jeA6ZyPCnAW (ids r2-*), game/loading 59ef45b9 (includes main de87c07f and village-archive ef90c927).
+- **title-perf (agent started):** game/title-perf, on game/loading. It fixes two regressions from the archive's title move: the title streams 503 models (113 long frames), and a 482 ms first-sight shader compile in play. No look change.
+- **Merge order for this stack:** village-archive (after the title pick), newworld-fixes, loading, title-perf. Regenerate the seed once at the end.
+- **title-perf done:** game/title-perf 0f470315 (the fix is 226ae4f4).
+  - The title lights 7 of 59 lamps (titleView plus the lit prop on Lanterns); the warm-up compiles the fading two-pass programs.
+  - Results: title long frames 143 → 6; median frame 6.9 ms; world ready fast 8.6 → 7.5 s; first-minute play spikes 0; perf:check passes.
+  - Pixel diff at most 2/255, so no review page needed.
+  - Play already caps lamps at 4 nearest (LampPool).
+  - Open: about 40 never-drawn module preloads on the title; PMREM relinks on phase change (under 50 ms).
+- **Sushi menu references** from David (2026-10-28, "heres the inspo i want for the sushi menu"): a folded teahouse menu and tea banners, saved at specs/references/sushi-menu/ in the fishing-depth worktree. The fishing-depth lane is redoing the menu to that look (r3-menu evidence). The dish models still need their own references.
+- **Sushi menu review:** https://claude.ai/artifact/TKM4GzggbcRfrMZD55hR7m (ids r3-*), game/fishing-depth bc1c7750.
+  - It supersedes the r2-menu card on the fishing round 2 page.
+  - Kit: flat/paper.tsx (FoldedMenu, InkTitle, Hanko, InkArt, PanelSection, TrayDish); the washi texture is ours (art/ui/washi.py).
+  - Question on the page (r3-font): add a display face for the menu only (mincho or brush, a vertical 寿司)? Nunito stays everywhere else.
+- **Tutorial r3 decisions (2026-10-29):**
+  - Approved: arrow, wharf, barrel, currency, hudfly, lore, farewell.
+  - Approved with notes: sights (inline 2D icons for words like fish and bug, coloured, with a wiggle); checkin (a unique personal QR plus Apple Wallet: answer feasibility first).
+  - Redo: dock (tutorial dressing, cleared for good after HQ), id (the card is the overlay, headshot, hover tilt, confirm below), keys (no card, a smaller bare keyboard, each press pops its HUD piece in), kit.
+  - Round 4 lane started.
+- **David's tutorial test server:** dev on port 3300, bound to 0.0.0.0, from worktree tutorial-test (detached at 4fee5d2b, frozen), Supabase blanked (signed out, nothing saves). PID in scratchpad/tutorial-test-dev.pid. URL: http://localhost:3300/lab/island?arrival=1, or http://10.0.0.251:3300/lab/island?arrival=1 on the LAN. Kill it when David is done.
+- **David's tutorial playtest notes (2026-10-29, about 1:15 AM), routed:**
+  - To tutorial r4: the ID asks things that matter (no spirit animal); the coin and gem slots show and fade with the quest line hidden; the "great way to level up" copy; the box-hop and Esc misses; the "look around" farewell cut for now; continuous camera moves between buildings; step back when too close to an NPC; one prompt only; the reel teaching card when the bar appears; the barrel and crates by the fish market removed; signed-out dev selling works.
+  - To fish-tiers (playtest round, fresh agent): cast toward the cursor (centre in a locked camera); no how-to text on the reel panel; the tool wheel in a locked camera picks by mouse direction (the emote wheel too).
+  - To creator-polish (new lane, branch from main de87c07f): a calmer reflection with live surface texture; hair and part changes dissolve with the wave.
+- **Clothing round 3 review:** https://claude.ai/artifact/MWutWWDXbjtnvhvq3SSoa9. It covers the skirt fix (ab54415e) and the 11 one-piece reference images for David to pick, with sources in specs/references/onepieces/*/sources.md. The images stay out of git (third-party; public repo). game/clothing-v2 is at 9da62224 and the lane has stopped.
+- **river-softlock (agent started):** game/river-softlock on newworld-fixes 7cfc3230.
+  - Bug: a dash-slide crosses the river into an unreleased region, then the player drowns and respawns there (soft lock).
+  - Fix: every movement mode respects the release barriers, and the respawn or last-safe point is always released and reachable.
+  - Merges after newworld-fixes.
+- Machine at about 01:30: swap at 11.6 of 12.3 GB with David playtesting (Dia) and the 3300 server up. No new lanes until something finishes.
+- **Clothing round 3 called off** (David, 2026-10-29): "i give up on clothing round 3 its not worth the time rn, try to reuse as much as acnh clothing model and logic and replicate as closely as possble, remove those random ass kid photos".
+  - The kid photos are deleted (ef4e29cd), and the page now carries only the skirt fix.
+  - New direction for clothing: reuse and replicate the ACNH clothing models and logic. Our ACNH dump has no character or clothing models (only buildings, furniture, props, fish, plants and terrain), so this needs David to supply them; asked.
+  - Merge plan: game/clothing-v2 merges with rounds 1 and 2 plus the skirt fix (the one-pieces as they are) once David approves the skirt page.
+- **Fishing UI review decisions (2026-10-29):**
+  - Approved: hook, landing, epic card.
+  - Redo, relayed to the fish-tiers playtest agent:
+    - waiting state with one chip only;
+    - the reel bar's colours not yellow or black, sleeker, no text, and juicy while reeling;
+    - new-species cards get suspense by rarity plus confetti; repeats get none;
+    - the slip state, same notes.
+
+## 2026-10-29 early: David's decisions, all pages except wardrobe fixes
+
+- **Halloween:** all approved; it ships with the newworld-fixes merge.
+- **Title:** A approved; B and the old title dropped. Follow-up: "the left side needs to be remade so that its more of a game title screen and less of a student portal screen".
+- **Loading:** all approved.
+- **New-world fixes:** night owl and sea fall approved. The quay study table becomes a plain bench; the plaza picnic is removed. Both sent to the river-softlock agent.
+- **Rods r2:**
+  - Approved: slot-open, bag strip, radar, radar hover and strip, badges, phone, flimsy.
+  - Approved with notes: shelf (outline slightly bigger); lighthouse (the model needs a light on top); bait and bobber (remodel).
+  - Redo:
+    - bag-rod: line not black, thinner and subtler, the overlay a slightly different colour; the bobber on the rod is too big.
+    - shop-glass: move the title, text and graph up to leave space above purchase.
+    - hook-rule (new roster): common Precision, Training (and Flimsy); uncommon Glass, Lighthouse; rare Tidewarden, Riptide, Titanium; epic Tempest. Models get cooler and more abstract with rarity; epic and legendary barely look like rods and have aura effects.
+- **Fishing r2:**
+  - Approved: chef, tasks, claim, showroom. The showroom note: refine for clarity, and asks about signs per water type; I recommended signs.
+  - Redo:
+    - board: add season and conditions.
+    - board-world: remodel the catch board bigger, somewhere sensible and easy to see.
+    - market: quick sell shows the price per fish and basic details, and must be instant.
+    - gacha: a big animation, as its own project. A hook pulls a chest from the deep, slow-mo bottom-up camera, splash; the coin roll is a wooden crate, the gem roll a treasure box, and a legendary makes the water sparkle gold. Built in its own environment. The UI shows the seasonal special rods.
+    - menu: superseded by the sushi page.
+- **Sushi menu:**
+  - Approved: the font (add a display face), lift, turning, spread 2, hover, picked.
+  - Redo:
+    - cover: another refinement pass, and poetic copy that doesn't sound like Claude.
+    - spread 1: dishes as a simple food photo with the price and stats beside it; start the HQ 3D dish models; propose a sushi game mechanic beyond vibes and buffs.
+- **Main quest r2:**
+  - Approved: line, dropdown, dirt mark.
+  - Redo:
+    - arrow: centred and smaller.
+    - sand mark: like the dirt one.
+    - reward pops: "combination, not so flat but keep the old vibe but new color"; no cm on the broken sudo.
+  - Level-up note, now in the bible: health, stamina and XP bars in the HUD; a level-up when XP fills.
+- **Daily and social:**
+  - Approved: friends, kit, campfire, dash.
+  - Redo:
+    - friends-talk: half a heart needs a full chat, not just the first talk; RAG LLM residents later.
+    - monument: needs a real model that makes sense, and the 4 guide fence poles removed.
+    - streak: the day-7 gift icon becomes a real rare-gear icon that shakes now and then.
+- **Clothing r3:** David: "not even worth the effort... focus on the actual game aspect first". Merge clothing-v2 as is (rounds 1 and 2, the hoodie, the skirt fix); no more clothing work for now.
+- **Bible amended:** UI rule 1 (flat with warmth, the old vibe in the new palette) and rule 8 (health, stamina and XP bars in the HUD).
+- **Merge now:** village-archive, loading, title-perf, clothing-v2. Then newworld-fixes and river-softlock once the river agent finishes (Halloween before Oct 31).
+- **Rod references** (David, 2026-10-29), saved in the rod-gear worktree at specs/references/rods/ with a README: rare Frog, epic Tornado, legendary Celestial, divine Apollo (a flaming harp), divine Chang'e (moon and rabbit). The names are placeholders.
+- **Meshy:** David: "I NEED YOU TO CONNECT TO MESHY.AI and use meshy as part of your modeling pipeline". It's in the bible's Models rule 3 and lane-rules.
+  - API: POST https://api.meshy.ai/openapi/v1/image-to-3d (image_url as a data URI, target_formats glb), poll GET /openapi/v1/image-to-3d/:id. Multi-image, remesh and retexture endpoints exist.
+  - The key goes in the keychain as "Meshy API"; it isn't there yet, and David is adding it.
+  - Rods r3 waits on the key and a free lane.
+- **Creator polish review:** https://claude.ai/artifact/KkE3ppKZjP7o2yP6kxg8Rx (ids cp-*), game/creator-polish 3aa33c58 (from main de87c07f; no migrations).
+- **Shipped 2026-10-29 ~02:10:**
+  - the village archive stack (village-archive ef90c927, loading 59ef45b9, title-perf 0f470315), plus clothing-v2 ef4e29cd and the guarded residents seed;
+  - prod dump prod-before-archive-stack-20261029-0206.dump; applied 20261029055353_catalogue_seed (guarded schedules, no pond or path left); verify clean;
+  - deploy uwotsi-n346qmvqg queued at push; confirm Ready.
+  Next in this stack: newworld-fixes plus river-softlock (Halloween), after the river agent's study items.
+- **Tutorial round 4 review:** https://claude.ai/artifact/VwAEKpT7DJAERc2yACCb3z (ids v4-*), game/tutorial-v2 1fc48ea3.
+  - The full vitest wasn't rerun after the integration regex fix, so run it at merge.
+  - David's test server (3300, worktree tutorial-test) is moved to 1fc48ea3; HQ saves are tsi.hq.v4.
+  - MemberFishing must dispatch tsi:fish-hooked, tsi:fish-caught, tsi:fish-escaped and tsi:fish-end, label its reel panel [aria-label="Fishing reel"], and build its reel with createFishingReel (reelAssist.floor). Wire this at merge, or have the fish-tiers agent do it.
+  - The deploy from 3074f1e0 (uwotsi-n346qmvqg) is still to be confirmed Ready.
+- **Started:** main-quest r3 (agent a9480728300cbc27c), daily-social r3 (agent aa9470efccfdc282e). David is playing tutorial r4 himself on 3300; his notes are pending.
+- **Shipped 2026-10-29 ~02:30:**
+  - the new-world fixes (Halloween, residents, fauna, bots, sea fall) and the river soft lock with the study bench (river-softlock 0a77c16a);
+  - prod dump prod-before-newworld-fixes-20261029-0227.dump; applied 20261029010000_study_outdoor_bench and 20261029062423_catalogue_seed; verify clean.
+- **More rod references** (David, 2026-10-29): Beach ball rod (uncommon; unlocked by winning the beach volleyball minigame 5 in a row, or ranked; the minigame doesn't exist yet) and a Halloween-exclusive limited legendary named "Lantern of the Hollow" (David picked it; this year or next year still to be decided). Both are in the rod-gear references README.
+- **Fishing UI round 2 review:** https://claude.ai/artifact/6BQnwE1Bp3uEzeQvrB53cM (ids fui2-*), game/fish-tiers 8a8312da.
+  - MemberFishing sends the tutorial's reel events; reelAssist is byte-identical to tutorial-v2.
+  - At merge, run the full vitest (the last full run was 44eb2079) and switch --gui-rarity and --gui-holo to --ui-rarity and --ui-holo.
+  - Not verified: a real pointer lock, and sound.
+- **daily-social r3:** f1db3589. The friends-talk and streak redos are done and the rope poles removed.
+  - Migrations re-timestamped: 20261029062500_welcome_week, 20261029062600_resident_friendship, 20261029062659_catalogue_seed (regenerate the seed at merge).
+  - The monument model waits for David's go on the Lantern Cairn direction; the agent has stopped. The review page comes once the monument exists, or earlier with the r3 items if David wants it.
+- **Beach volleyball lane started** (game/volleyball from main f0be2c5e).
+  - David's design is verbatim in the lane prompt and in specs/minigames/beach-volleyball.md once written. It's 2v2, with ranking and a leaderboard.
+  - Phase 1: a solo-playable 2v2 against bots in its own arena at /lab/volleyball. Phase 2: multiplayer rooms (needs a Fly deploy). Phase 3: ranked play, the leaderboard, and the Beach ball rod for 5 ranked wins in a row.
+  - Right click on the ground defaults to "Call it" (Mine!), with a tip as the alternative, for David to pick.
+  - The court's island spot is for David to pick from 2 or 3 proposals.
+- **Fishing UI round 2 decisions:**
+  - Approved: aim, aim-sand, catch, catch-epic, juice, suspense, suspense-epic, wheel.
+  - Redo: before-after ("should still have the ??? and sea tag", given to a light agent); meter and before-after both raise "how to make this mini game more fun rather than repetitive" (ideas sent to David).
+  - Merge fish-tiers once the tag fix lands.
+- **Volleyball:** David confirmed right click on the ground is Call it (relayed).
+- **Volleyball plan change** (David): the court sits at the island's existing volleyball-net (-4, 103.5). The net is remodelled bigger from the existing model, at real proportions. The match starts with E at the net. Players in the match get the full view; passersby get a light one (static court, synced avatars, a low-rate ball, no particles, HUD or AI), measured with perf:check. Relayed to the lane.
+- **Tutorial r4 decisions:**
+  - Approved: dock, esc, glide, hop, props, reel, sell, small; id with a note (the card shows before the printer line).
+  - Redo:
+    - keys: back to round 3's keyboard card with less text and a lighter look; drop the bare keyboard;
+    - currency: no wallet slot existed;
+    - sights: the shop sells in-game items and real merch; the cafe is "study with friends, get rewarded"; keyword icons on every line;
+    - kit.
+  - Bible rule 8b added: two HUD layers, and the wallet's one slot top right under the time in the Esc 1 view.
+  - Tutorial r5 lane started; main-quest told about 8b.

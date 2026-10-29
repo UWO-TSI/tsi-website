@@ -35,6 +35,9 @@
  *                  just those, &views=front,34,side,back (wardrobe batch 3)
  * ?sheet=b2faces  wardrobe batches 2 and 3: David's whole faces #20-32 on the head, front and 3/4 (&skins=, default 3), then
  *                  a mix row; &keys=face-26,... just those (no mix row), &views=front,34,side,back
+ * ?sheet=fit      clothing-v2: each garment in &ids= (default the starter set) worn with plain companions (a top over the
+ *                  shorts, a bottom under the tee, shoes under both), in a run, a jump and a sit (each frozen at one phase),
+ *                  front, side and back; with &cut=0 the body skin the garments cut is drawn too (&framing=body)
  * ?sheet=haircolours  reflection-waves round 3: each style in &ids= on each of &skins= (default 1,6,11), a row of the hair colours in
  *                  &hairs= (default own, the free ones, two dyes; own is the style's own colours), &yaw= one view
  * ?sheet=eyeskins  reflection-waves round 3: every eye style in &ids= (default all) on every skin a player can pick (SKIN_PICKS), front, eyes open
@@ -45,9 +48,10 @@ import { Suspense, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Canvas } from "@react-three/fiber";
 import { PerspectiveCamera, View } from "@react-three/drei";
-import Character, { type CharacterMotion } from "@/components/game/character/Character";
+import Character, { type CharacterMotion, type ClipName } from "@/components/game/character/Character";
+import { Lights as CreatorLights } from "@/components/game/character/CreatorStage";
 import { CUTS } from "@/lib/game/character/rig";
-import { DEFAULT_LOOK, FACE, NATURAL_HAIR, PARTS, parseLook, partsIn, SKIN_PICKS, type CharacterLook, type EyeFrame } from "@/lib/game/character/look";
+import { DEFAULT_LOOK, FACE, NATURAL_HAIR, PARTS, parseLook, partsIn, SKIN_PICKS, STARTER_PARTS, type CharacterLook, type EyeFrame } from "@/lib/game/character/look";
 import { RESIDENT_LOOKS } from "@/lib/content/residentRoster";
 import { HQ_LEAD } from "@/lib/game/welcome";
 import { CAFE_OWNER } from "@/lib/game/cafe";
@@ -66,9 +70,19 @@ const VIEW_PITCH: Record<string, number> = { high: 0.55, low: -0.3 };
 if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("cut") === "0") CUTS.on = false;
 /** `&charlod=1|2`: the cells load their LOD meshes and draw that tier (Character's SHOW_LOD). */
 const LOD_SHEET = typeof window !== "undefined" && !!new URLSearchParams(window.location.search).get("charlod");
+/** &light=creator: the creator's studio lights (CreatorStage) in place of the bench's (the TSI zip hoodie's review shots). */
+const CREATOR_LIGHT = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("light") === "creator";
 /** Kit sheets hold the eyes open (no blink lands mid-capture). */
 const OPEN: FaceOverride = { eyeFrame: "open" };
-interface Cell { label: string; look: CharacterLook; yaw: number; face?: FaceOverride | null; talk?: boolean; pitch?: number }
+interface Cell { label: string; look: CharacterLook; yaw: number; face?: FaceOverride | null; talk?: boolean; pitch?: number;
+  /** A clip held at a phase (?sheet=fit). */
+  clip?: [ClipName, number] }
+/** ?sheet=fit: the poses (clip, phase) and views, and each slot's plain companions (render_fit.py's). */
+const FIT_POSES: [string, ClipName, number][] = [["run", "Run", 0.3], ["jump", "Jump", 0.5], ["sit", "Sit", 0.5]];
+const FIT_VIEWS: [string, number][] = [["front", 0], ["side", -Math.PI / 2], ["back", Math.PI]];
+const FIT_WITH: Record<string, Partial<CharacterLook>> = { top: { bottom: "bottom_shorts", shoes: "shoes_slipon" },
+  bottom: { top: "top_tee", shoes: "shoes_slipon" }, shoes: { top: "top_tee", bottom: "bottom_shorts" },
+  onepiece: { top: null, bottom: null, shoes: "shoes_slipon" } };
 
 /** The camera by framing: the head, the head with room above it for a hat (wardrobe batch 2), the whole body. */
 const FRAMING = { head: { at: [0, 0.86, 1.3], look: 0.8 }, hat: { at: [0, 0.98, 1.7], look: 0.9 }, body: { at: [0.15, 0.6, 2.05], look: 0.5 } } as const;
@@ -78,7 +92,7 @@ const FRAMING = { head: { at: [0, 0.86, 1.3], look: 0.8 }, hat: { at: [0, 0.98, 
 interface Orbit { pitch: number; zoom: number; look: number | null }
 
 function Stage({ cell, framing, faceSize, orbit }: { cell: Cell; framing: keyof typeof FRAMING; faceSize: number; orbit: Orbit }) {
-  const motion = useRef<CharacterMotion>({ speed: 0, yaw: cell.yaw, lift: 0, pose: null, play: null, face: cell.face ?? null, talk: cell.talk ? 1e9 : 0 });
+  const motion = useRef<CharacterMotion>({ speed: 0, yaw: cell.yaw, lift: 0, pose: cell.clip?.[0] ?? null, freeze: cell.clip?.[1], play: null, face: cell.face ?? null, talk: cell.talk ? 1e9 : 0 });
   const f = FRAMING[framing] ?? FRAMING.head;
   const look = orbit.look ?? f.look;
   const [dy, dz] = [f.at[1] - f.look, f.at[2]];
@@ -86,9 +100,11 @@ function Stage({ cell, framing, faceSize, orbit }: { cell: Cell; framing: keyof 
   const at: [number, number, number] = [f.at[0] / orbit.zoom, look + (dy * cp + dz * sp) / orbit.zoom, (dz * cp - dy * sp) / orbit.zoom];
   return <>
     <PerspectiveCamera makeDefault fov={30} position={at} onUpdate={c => c.lookAt(0, look, 0)} />
-    <ambientLight intensity={1.1} color="#fff6e6" />
-    <hemisphereLight args={["#fff8ec", "#b7c7a8", 0.9]} />
-    <directionalLight position={[1.6, 2.6, 2.2]} intensity={1.7} color="#fff1d8" />
+    {CREATOR_LIGHT ? <CreatorLights /> : <>
+      <ambientLight intensity={1.1} color="#fff6e6" />
+      <hemisphereLight args={["#fff8ec", "#b7c7a8", 0.9]} />
+      <directionalLight position={[1.6, 2.6, 2.2]} intensity={1.7} color="#fff1d8" />
+    </>}
     <Suspense fallback={null}><Character look={cell.look} motion={motion} scale={1} faceSize={faceSize} lod={LOD_SHEET} /></Suspense>
   </>;
 }
@@ -107,7 +123,9 @@ function AvatarBench() {
     ...(q.get("color") ? { hairColor: `#${q.get("color")!.toUpperCase()}` } : {}), ...(q.get("accent") ? { hairAccent: Number(q.get("accent")) } : {}) };
   const style = (s: string) => ({ ...base, ...STYLES[s] });
   const yaw = Number(q.get("yaw") ?? -0.5);
-  const orbit: Orbit = { pitch: Number(q.get("pitch") ?? 0), zoom: Number(q.get("zoom") ?? 1), look: q.get("look") ? Number(q.get("look")) : null };
+  // the height looked at is &look=, or &at= on ?sheet=look, whose &look= is the look's JSON
+  const lookAt = q.get(sheet === "look" ? "at" : "look");
+  const orbit: Orbit = { pitch: Number(q.get("pitch") ?? 0), zoom: Number(q.get("zoom") ?? 1), look: lookAt ? Number(lookAt) : null };
   const view = VIEWS[q.get("view") ?? "34"] ?? VIEWS["34"];
   const cells = useMemo<Cell[]>(() => {
     const bob = style(q.get("style") ?? "bob");
@@ -120,8 +138,13 @@ function AvatarBench() {
       .map(([label, look]) => ({ label: label as string, look: parseLook(look), yaw: 0, face: OPEN }));
     if (sheet === "look") {
       const look = parseLook(JSON.parse(q.get("look") ?? "{}"));
-      return [{ label: `${q.get("label") ?? "look"} front`, look, yaw: 0, face: OPEN }, { label: `${q.get("label") ?? "look"} 3/4`, look, yaw: -0.6, face: OPEN }];
+      return (q.get("views") ?? "front,34").split(",").map(v => ({ label: `${q.get("label") ?? "look"} ${v}`, look, yaw: VIEWS[v] ?? 0, pitch: VIEW_PITCH[v], face: OPEN }));
     }
+    if (sheet === "fit") return (q.get("ids")?.split(",") ?? [...STARTER_PARTS]).flatMap(id => {
+      const slot = PARTS.find(p => p.id === id)!.slot;
+      const look = { ...base, ...FIT_WITH[slot], [slot]: id };
+      return FIT_POSES.flatMap(([pose, clip, t]) => FIT_VIEWS.map(([v, y]) => ({ label: `${id} ${pose} ${v}`, look, yaw: y, face: OPEN, clip: [clip, t] as [ClipName, number] })));
+    });
     if (sheet === "live") return [{ label: q.get("style") ?? "bob", look: bob, yaw, talk: q.get("talk") === "1" }];
     // head-roblox: the hair is David's whole hairstyles (no bangs or backs); every one, turned
     if (sheet === "backs") return partsIn("back").map(p => ({ label: p.id, look: { ...bob, back: p.id }, yaw: yaw - 0.9 }));
@@ -205,7 +228,7 @@ function AvatarBench() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sheet, yaw, q]);
   const root = useRef<HTMLDivElement>(null);
-  const cols = q.get("cols") ? Number(q.get("cols")) : sheet === "hatcut" ? 6 : sheet === "eyeskins" ? SKIN_PICKS : sheet === "haircolours" ? (q.get("hairs") ?? "own,0,1,2,3,4,5,12,10,11").split(",").length : sheet === "b2acc" ? 8 : sheet === "b2faces" ? 6 : sheet === "roblox" ? (q.get("views") ?? "front,34,side,back").split(",").length : sheet === "facekit" ? 13 : sheet === "hairkit" ? 10 : sheet === "fullkit" ? 7 : sheet === "styles" || sheet === "backs" || sheet === "faces" || sheet === "residents" || sheet === "emote" ? 6 : sheet === "hats" || sheet === "mix" ? 8 : sheet === "david" ? 10 : cells.length;
+  const cols = q.get("cols") ? Number(q.get("cols")) : sheet === "hatcut" ? 6 : sheet === "eyeskins" ? SKIN_PICKS : sheet === "haircolours" ? (q.get("hairs") ?? "own,0,1,2,3,4,5,12,10,11").split(",").length : sheet === "b2acc" ? 8 : sheet === "b2faces" ? 6 : sheet === "roblox" ? (q.get("views") ?? "front,34,side,back").split(",").length : sheet === "facekit" ? 13 : sheet === "fit" ? 9 : sheet === "hairkit" ? 10 : sheet === "fullkit" ? 7 : sheet === "styles" || sheet === "backs" || sheet === "faces" || sheet === "residents" || sheet === "emote" ? 6 : sheet === "hats" || sheet === "mix" ? 8 : sheet === "david" ? 10 : cells.length;
   return <div ref={root} style={{ position: "relative", paddingTop: 48, minHeight: "100vh", background: "#efe7d6" }}>
     <div data-sheet={sheet} style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, ${cols === 1 ? "420px" : "1fr"})`, gap: 8, padding: 8 }}>
       {cells.map(c => <figure key={c.label} style={{ margin: 0 }}>

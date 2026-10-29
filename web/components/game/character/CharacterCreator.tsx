@@ -25,7 +25,7 @@ import { DarkButton, GhostButton, RoundButton } from "@/components/gui/flat";
 import { SignInText } from "@/components/gui/SignIn";
 import { inTopDialog, useWorldDialog } from "@/lib/game/useWorldDialog";
 import { mentionsSignIn } from "@/lib/game/signIn";
-import { randomLook, STARTER_PARTS, type CharacterLook } from "@/lib/game/character/look";
+import { forMember, randomLook, STARTER_PARTS, type CharacterLook } from "@/lib/game/character/look";
 import { CATEGORIES, type Category } from "@/lib/game/character/creatorCategories";
 import { holdCreatorOpen } from "@/lib/game/character/creatorPresence";
 import { tierDpr } from "@/lib/game/qualityTier";
@@ -50,12 +50,14 @@ export interface CreatorProps {
   presence?: "open" | "closing";
   /** The flat UI's look (the member world's creator and wardrobe); the default is the cream studio (the applicant island's). */
   flat?: boolean;
+  /** A TSI member (lookStore's `member`): the members-only parts show, free; else they never show and a look loses them. */
+  member?: boolean;
 }
 
 const STARTERS: ReadonlySet<string> = new Set(STARTER_PARTS);
 const stay = () => {};
 
-export default function CharacterCreator({ initial, mode = "create", title, askName, owned = STARTERS, onShop, onDone, onClose, presence, flat = false }: CreatorProps) {
+export default function CharacterCreator({ initial, mode = "create", title, askName, owned = STARTERS, onShop, onDone, onClose, presence, flat = false, member = false }: CreatorProps) {
   const [graphics] = useGraphicsSettings();
   // A dialog (lib/game/useWorldDialog): the world's keys hold still under it (G no longer opens the emotes over it); Escape
   // closes the wardrobe, never the first-login creator. Closing, it lets go at once: focus goes back, the world moves.
@@ -63,7 +65,7 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
   // Full screen and opaque: the island under it stops drawing while it's up (DefaultIslandWorld).
   const covering = presence !== "closing";
   useEffect(() => (covering ? holdCreatorOpen() : undefined), [covering]);
-  const [look, setLook] = useState(initial);
+  const [look, setLook] = useState(() => forMember(initial, member));
   const cats = useMemo(() => CATEGORIES.filter(c => mode === "create" || c.wardrobe), [mode]);
   const [catId, setCatId] = useState(cats[0].id);
   const cat = cats.find(c => c.id === catId)!;
@@ -149,7 +151,7 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
       </header>
       {/* A new category's options fade in (flat): the two names restart the animation without remounting the options. */}
       <div className={styles.body} data-swap={flat ? (swap ? "b" : "a") : undefined}>
-        <CreatorOptions key={mode} cat={cat} look={look} setLook={setLook} mode={mode} owned={owned} onShop={onShop} />
+        <CreatorOptions key={mode} cat={cat} look={look} setLook={setLook} mode={mode} owned={owned} onShop={onShop} member={member} />
       </div>
       <footer className={styles.foot}>
         {askName && <Field id={naming.id} label="Your name on the island" hint="Letters and numbers; everyone in the world sees it." value={naming.name} maxLength={24}

@@ -44,7 +44,7 @@ function Wardrobe({ presence, onClose, place, onShop }: { presence: "open" | "cl
   // everyone's while it lasts (the costume closet, lib/content/traditions.ts).
   const events = useCostumeEventsOpen();
   const owned = useMemo(() => new Set([...(inventory ? inventory.keys() : STARTER_PARTS), ...openEventParts(events)]), [inventory, events]);
-  return <CharacterCreator flat mode="wardrobe" presence={presence} initial={mine.look} owned={owned} onShop={onShop} title={place === "closet" ? "Your closet" : "Fitting room"} onClose={onClose}
+  return <CharacterCreator flat mode="wardrobe" member={mine.member} presence={presence} initial={mine.look} owned={owned} onShop={onShop} title={place === "closet" ? "Your closet" : "Fitting room"} onClose={onClose}
     askName={identity.signedIn ? { current: identity.display_name } : undefined}
     onDone={async (look, name) => { await saveMyLook(look); if (name) await saveName(name); onClose(); }} />;
 }

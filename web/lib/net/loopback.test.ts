@@ -4,6 +4,12 @@ import { createRemoteSample, type RemoteChange } from "./types";
 import { createLoopback } from "./loopback";
 import { MAX_BOTS, botsFromSearch } from "./netStore";
 import { parseNetsim } from "./interp";
+import { fileURLToPath } from "node:url";
+import { setVillage } from "@/lib/game/villageMap";
+import { loadWorldFromDisk } from "@/lib/game/world/disk";
+import { villageOfWorld } from "@/lib/game/world/village";
+// The member island as the game plays it (the new world's heightfield, as lib/game/world/load.ts swaps it in).
+setVillage(villageOfWorld(loadWorldFromDisk(fileURLToPath(new URL("../../data/world/", import.meta.url)))));
 
 /** A loopback on a hand-driven clock. */
 function manual(bots: number, o: { seed?: number; netsim?: ReturnType<typeof parseNetsim> } = {}) {

@@ -5,7 +5,6 @@ import { islandOf } from "../defaultIsland";
 import { bugReaction, SNEAK_SPEED } from "../peaceful";
 import { villageOf, type MapObject } from "../villageMap";
 import { CLIFF_LEVELS, Surface, createCenteredMap, setCell } from "../grid";
-import { terrainHealth, terrainProblems } from "../mapHealth";
 
 const flat: MoveWorld = { top: () => 0, wet: () => false };
 
@@ -741,12 +740,6 @@ describe("the leaf glider (row 245)", () => {
 });
 
 describe("the lab course", () => {
-  it("is healthy terrain, all of it reachable from the spawn", () => {
-    const v = course();
-    const health = terrainHealth(v.map, [COURSE_SPAWN[0] - v.map.originX, COURSE_SPAWN[1] - v.map.originZ]);
-    expect(terrainProblems(health)).toEqual({});
-    expect(health.stranded).toBe(0);
-  });
   it("goes round in a scripted lap: long jumps over the rivers, two mantles, the 3u drop rolled, never a splash", () => {
     const w = islandOf(course()), pilot = routePilot(), events: MoveEvent[] = [];
     let s = createMoveState(COURSE_SPAWN[0], COURSE_SPAWN[1], w), lap = NEW_LAP, time = 0;

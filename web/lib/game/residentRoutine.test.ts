@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BENCH_SLOTS, benchSlotKey, villageIsland } from "./defaultIsland";
-import { objectsOf, village } from "./villageMap";
+import { objectsOf } from "./villageMap";
 import { PROPOSED_RESIDENTS } from "@/lib/content/residentRoster";
 import { DEFAULT_NPC_PERSONAS } from "@/data/content-defaults";
 import { CLIP_BY_NAME } from "./character/look";
@@ -8,13 +8,13 @@ import {
   MIN_STAY, RESIDENT_WALK, ResidentDay, buildDay, daySpan, idleAt, navGrid, newPose, phaseOn, planResident, planResidents, placeAt, residentHome, routineKeys, walkDistance, type Leg,
 } from "./residentRoutine";
 import { dropFlags } from "./drops";
-import type { WorldTerrain } from "./world/terrain";
 import { fileURLToPath } from "node:url";
 import { landmark, landmarkPoint } from "./defaultIsland";
 import { loadWorldFromDisk } from "./world/disk";
 import { villageOfWorld } from "./world/village";
 
-const v = village(), island = villageIsland(v), nav = navGrid(island, v);
+// The member island as the game plays it: the new world's heightfield.
+const v = villageOfWorld(loadWorldFromDisk(fileURLToPath(new URL("../../data/world/", import.meta.url)))), island = villageIsland(v), nav = navGrid(island, v);
 const SORTED = [...PROPOSED_RESIDENTS].sort((a, b) => a.slug.localeCompare(b.slug));
 const plans = planResidents(SORTED, v, island);
 // A day in October (sun times from the monthly table).
@@ -78,7 +78,7 @@ describe("resident routines", () => {
         }
       }
     }
-    expect(bad).toEqual([]);
+    expect(bad.length, bad.slice(0, 40).join("\n")).toBe(0);
   });
 
   it("stops at every waypoint: each walk ends in a stay of at least MIN_STAY at the same stop", () => {
@@ -134,8 +134,11 @@ describe("resident routines", () => {
     const sits = days.flatMap(({ plan, legs }) => legs.filter(l => !l.walk && l.stop.kind === "sit").map(l => ({ slug: plan.slug, seat: l.stop.at.join(), t0: l.t0, t1: l.t1 })));
     const clashes = sits.filter((a, i) => sits.some((b, j) => j > i && a.slug !== b.slug && a.seat === b.seat && a.t0 < b.t1 && b.t0 < a.t1));
     expect(clashes).toEqual([]);
-    const lamp = objectsOf("lamp", v)[0];
-    for (const { plan } of days) for (const s of plan.phases.night) if (s.kind === "sit") expect(Math.hypot(s.at[0] - lamp.x, s.at[1] - lamp.z), plan.slug).toBeLessThan(3.5);
+    // Under a lamp that casts light (a lamp post; a hand lantern only glows): on the new world, the campfire's lanterns.
+    const lamps = objectsOf("lamp", v).filter(l => l.model !== "hand");
+    const nightSits = days.flatMap(({ plan }) => plan.phases.night.filter(s => s.kind === "sit").map(s => ({ slug: plan.slug, s })));
+    expect(nightSits.some(n => n.slug === "nell")).toBe(true);
+    for (const { slug, s } of nightSits) expect(Math.min(...lamps.map(l => Math.hypot(s.at[0] - l.x, s.at[1] - l.z))), slug).toBeLessThan(3.5);
   });
 
   it("seats residents only on the players' two bench slots, under the slot's claim key", () => {
@@ -203,31 +206,32 @@ describe("resident routines", () => {
 
 describe("a resident's home", () => {
   const sable = PROPOSED_RESIDENTS.find(r => r.post === "oracle_keeper")!;
-  const newWorld = { terrain: {} as WorldTerrain };
   it("keeps the oracle's keeper off the new world's sealed summit until the temple opens, at HQ", () => {
-    expect(residentHome(sable, newWorld, dropFlags(1))).toBe("hq");
-    expect(residentHome({ post: "oracle_keeper" }, newWorld, dropFlags(1))).toBe("hq");
-    expect(residentHome(sable, newWorld, dropFlags(2))).toBe("oracle");
+    expect(residentHome(sable, dropFlags(1))).toBe("hq");
+    expect(residentHome({ post: "oracle_keeper" }, dropFlags(1))).toBe("hq");
+    expect(residentHome(sable, dropFlags(2))).toBe("oracle");
   });
-  it("leaves the village's keeper at the temple, which stands in the village, and everyone else where they live", () => {
-    expect(residentHome(sable, v, dropFlags(1))).toBe("oracle");
-    expect(residentHome({ post: "shopkeeper" }, newWorld, dropFlags(1))).toBe("shop");
-    expect(residentHome({ post: "villager", schedule: { home: "museum" } }, newWorld, dropFlags(1))).toBe("museum");
+  it("leaves everyone else where they live", () => {
+    expect(residentHome({ post: "shopkeeper" }, dropFlags(1))).toBe("shop");
+    expect(residentHome({ post: "villager", schedule: { home: "museum" } }, dropFlags(1))).toBe("museum");
   });
 });
 
 describe("a schedule's places", () => {
-  const nw = villageOfWorld(loadWorldFromDisk(fileURLToPath(new URL("../../data/world/", import.meta.url))));
-  it("on the village: each anchor object, the plaza's spawn without one, nothing else (unchanged)", () => {
-    for (const a of objectsOf("anchor", v)) expect(placeAt(a.id, v)).toEqual([a.x, a.z]);
-    expect(placeAt("nowhere", v)).toBeNull();
-  });
+  const nw = v;
   it("on the new world (no anchors): the landmark of the same name, out front of a building, the plaza's middle", () => {
     expect(objectsOf("anchor", nw)).toEqual([]);
     for (const id of ["hq", "shop", "cafe", "museum", "wharf"] as const) expect(placeAt(id, nw, dropFlags(1))).toEqual(landmarkPoint(id, "exit", nw));
     for (const id of ["plaza", "beach"] as const) { const l = landmark(id, nw)!; expect(placeAt(id, nw, dropFlags(1))).toEqual([l.x, l.z]); }
     expect(placeAt("pond", nw)).toBeNull();
     expect(placeAt("path", nw)).toBeNull();
+    expect(placeAt("nowhere", nw)).toBeNull();
+  });
+  it("resolves every place a resident's schedule names (pond and path became the beach and the plaza)", () => {
+    const missing = [...PROPOSED_RESIDENTS, ...DEFAULT_NPC_PERSONAS].flatMap(r => Object.entries(r.schedule ?? {}).filter(([k]) => k !== "home")
+      .flatMap(([, keys]) => (Array.isArray(keys) ? keys : [keys]) as string[])
+      .filter(k => k !== "home" && k !== "bench" && !placeAt(k, nw, dropFlags(2))).map(k => `${r.slug}: ${k}`));
+    expect(missing).toEqual([]);
   });
   it("on the new world: the temple only once it opens", () => {
     expect(placeAt("oracle", nw, dropFlags(1))).toBeNull();

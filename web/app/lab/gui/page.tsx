@@ -23,6 +23,7 @@ import { iconUrl } from "@/lib/icons/keys";
 import { RARITIES, RARITY_LABEL } from "@/lib/rarity";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import { CardOverlay, DarkButton, FlyIn, GhostButton, KeyBoard, KeyPrompt, KeywordLine, PaperField, PrintedCard, QuestCheck, SlotPop } from "@/components/gui/flat";
+import { ProgressCard } from "@/components/gui/flat";
 import s from "./showroom.module.css";
 
 /** Re-mounts its child every `ms` (an overlay that finishes and closes itself stays on show). */
@@ -238,6 +239,11 @@ export default function GuiShowroom() {
       </div>
       <Row label="Ult"><Progress kind="ult" value={0.3} label="Ultimate charging, 30%"><img src={iconUrl("staff-rune")} alt="" width={36} height={36} /></Progress>
         <Progress kind="ult" value={1} label="Ultimate ready"><img src={iconUrl("staff-rune")} alt="" width={36} height={36} /></Progress></Row>
+    </Section>
+
+    <Section id="progress-card" title="Progress card (flat)" note="The flat kit’s loading card: a white card, the stage in a quiet line, the real progress as a thin ink line.">
+      <Row><ProgressCard icon={<Sprout size={24} />} title="Tethos Island" status="Sweeping the plaza…" value={0.42} label="Loading the island" />
+        <ProgressCard title="Saving" status="Nearly there" value={0.9} label="Saving" /></Row>
     </Section>
 
     <Section id="tooltips" title="Tooltips" kit={["wheel"]} note="The teal name pill with a tail, on hover and on keyboard focus.">

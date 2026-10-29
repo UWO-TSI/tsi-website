@@ -112,6 +112,8 @@ function beachCells(site: FaunaSite): { at: [number, number]; sea: [number, numb
   return out;
 }
 
+/** A butterfly patch's radius round its home flower: two of its flowers are at most twice this apart. */
+const PATCH_R = 3.5;
 /**
  * The island's flyers for a season: butterflies over the flower patches (two or three per patch of nearby flowers,
  * about one per three clusters), dragonflies along the river and pond edges. Deterministic per map and season.
@@ -125,8 +127,9 @@ export function flyersFor(site: FaunaSite, season: Season, count = { butterflies
     const n = Math.min(count.butterflies, Math.max(2, Math.round(flowers.length * 0.7)));
     for (let i = 0; i < n; i++) {
       const home = flowers[Math.floor(hash01(i, 11) * flowers.length)];
-      // Its patch: the flowers within 7 units of home (at least home).
-      const patch = flowers.filter(f => Math.hypot(f[0] - home[0], f[1] - home[1]) < 7);
+      // Its patch: the flowers within PATCH_R of home (at least home), so no flight between two crosses open ground far
+      // from a flower (the new world's flowers stand scattered, up to 10 apart within 7 of each other).
+      const patch = flowers.filter(f => Math.hypot(f[0] - home[0], f[1] - home[1]) < PATCH_R);
       const sp = butterflies[Math.floor(hash01(i, 12) * butterflies.length)];
       out.push({ species: sp, seed: 1000 + i, jitter: (hash01(i, 13) - 0.5) * 0.8, patch: patch.length ? patch : [home] });
     }

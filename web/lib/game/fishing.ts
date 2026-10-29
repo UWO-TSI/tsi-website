@@ -21,7 +21,7 @@ import { getLabHour } from "./devLab";
 import { liveIslandWeather, reelWeather } from "./islandWeather";
 import { torontoParts } from "@/lib/time";
 import { EXTRA_FISH } from "./fishCatalog";
-import { GAME_WORLD, worldModel } from "./world/active";
+import { worldModel } from "./world/active";
 import { weatherMods } from "./weatherPerks";
 import { SEASONAL_GOALS } from "@/lib/progression/defaults";
 import { ROSTER } from "@/lib/collections/roster";
@@ -141,11 +141,10 @@ const SEA_CREATURES: FishRow[] = [
 
 /**
  * The quarter turn about x that hangs a raw dump export (10x, its head along +z, its back up) head up with its back
- * toward -z, the frame the hold, the tank and the icons assume: -90 degrees. The village keeps the +90 it shipped with,
- * which hangs them head down and belly out (the village stays as it is; game/remodel round 3). In the new world only the
- * sea creatures are raw (the fish are ours, in frame).
+ * toward -z, the frame the hold, the tank and the icons assume: -90 degrees (game/remodel round 3). Only the sea creatures
+ * are raw (the fish are ours, in frame).
  */
-export const RAW_TURN_X = GAME_WORLD === "new" ? -Math.PI / 2 : Math.PI / 2;
+export const RAW_TURN_X = -Math.PI / 2;
 
 /** A reel row: its rarity, size, habitat and hours are the roster's (lib/collections/roster.ts), the one place they're set. */
 export type FishRow = Omit<FishDef, "rarity" | "sizeCm" | "zone" | "when" | "whenLabel">;

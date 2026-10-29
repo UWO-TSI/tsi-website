@@ -656,7 +656,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
     {flockSizes.map(([key, n]) => { const [url, scale] = key.split("|"); return <Suspense key={key} fallback={null}><ModelFlock url={url} scale={+scale} cap={n} flocks={flocks} /></Suspense>; })}
     {bugs.map(b => {
       const model = MODEL_OF.get(b.sp.key)!;
-      return <group key={b.id} ref={g => { if (g) { g.userData.base = 1; groups.current.set(b.id, g); } else groups.current.delete(b.id); }}>
+      return <group key={b.id} ref={g => { if (g) { g.userData.base = 1; g.userData.fades = true; groups.current.set(b.id, g); } else groups.current.delete(b.id); }}>
         <Suspense fallback={null}><GLBProp url={model.model} scale={model.scale} /></Suspense>
       </group>;
     })}

@@ -1,7 +1,7 @@
 /**
  * The smooth world's gate (specs/world-editor.md v0 step 3): only a world loaded from the editor's files draws and walks
- * the heightfield. Every other world (the village, the applicant island, the ruins, the home island, the title, the
- * movement lab, the v2 cell draft) takes the cell path, exactly as on main.
+ * the heightfield. Every other world (the applicant island, the ruins, the home island, the movement lab, the v2 cell
+ * draft, the server's cell view) takes the cell path. The member island and the title draw the new world.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -26,19 +26,18 @@ describe("the ground gate", () => {
 
   it("keeps every other world's scene on the cells: no terrain passed", () => {
     for (const path of ["components/recruit/ApplicantWorld.tsx", "components/game/combat/RuinsScene.tsx", "components/game/home/HomeIslandScene.tsx",
-      "components/title/TitleScene.tsx", "components/game/movement/MoveLab.tsx"]) {
+      "components/game/movement/MoveLab.tsx"]) {
       const tags = gridWorlds(path);
       expect(tags.length, path).toBeGreaterThan(0);
       for (const tag of tags) expect(tag, path).not.toMatch(/\bterrain=/);
     }
-    // The village scene passes the village's own (absent for every village built from a cell document).
-    for (const tag of gridWorlds("components/game/DefaultIslandWorld.tsx")) expect(tag).toMatch(/\bterrain=\{v\.terrain\}/);
+    // The member island and the title pass the world's own (absent for every village built from a cell document).
+    for (const path of ["components/game/DefaultIslandWorld.tsx", "components/title/TitleScene.tsx"])
+      for (const tag of gridWorlds(path)) expect(tag, path).toMatch(/\bterrain=\{v\.terrain\}/);
   });
 
   it("builds every cell village without a heightfield, so it walks its levels as before", () => {
     const cellDocs: [string, VillageDoc][] = [
-      ["village-map.json", JSON.parse(readFileSync(join(web, "data/village-map.json"), "utf8"))],
-      ["world-map.json (the v2 cell draft)", JSON.parse(readFileSync(join(web, "data/world-map.json"), "utf8"))],
       ["the terrain fixture", terrainFixtureDoc()],
     ];
     for (const [name, doc] of cellDocs) {
@@ -46,7 +45,7 @@ describe("the ground gate", () => {
       expect(groundKind(v), name).toBe("cells");
       expect(villageIsland(v).climb, name).toBeUndefined();
     }
-    expect(groundKind(village())).toBe("cells");
+    expect(groundKind(village())).toBe("cells"); // the new world's cell view, until the full world loads
   });
 
   it("walks the smooth world by its slope", () => {
@@ -56,26 +55,23 @@ describe("the ground gate", () => {
   });
 });
 
-/** The member island's world switch (lib/game/world/active.ts, load.ts loadGameWorld), with the images read from disk. */
-describe("the world switch", () => {
+/** The member island's world load (lib/game/world/load.ts loadGameWorld), with the images read from disk. */
+describe("the world load", () => {
   afterEach(() => { vi.unstubAllGlobals(); });
-  const live = async (world: string | undefined) => {
-    vi.stubEnv("NEXT_PUBLIC_GAME_WORLD", world);
+  const fresh = async () => {
     vi.stubGlobal("fetch", async (url: string) => new Response(readFileSync(fileURLToPath(url))));
     vi.resetModules();
-    try {
-      return { load: await import("@/lib/game/world/load"), map: await import("@/lib/game/villageMap"), gate: await import("@/lib/game/world/village") };
-    } finally { vi.unstubAllEnvs(); }
+    return { load: await import("@/lib/game/world/load"), map: await import("@/lib/game/villageMap"), gate: await import("@/lib/game/world/village") };
   };
 
-  it("keeps the village by default: nothing loads and the island walks its cells", async () => {
-    const { load, map, gate } = await live(undefined);
-    expect(load.loadGameWorld()).toBeNull();
+  it("starts on the new world's cell view, the server's island", async () => {
+    const { map, gate } = await fresh();
     expect(gate.groundKind(map.village())).toBe("cells");
+    expect(map.objectById("landmark", "wharf", map.village())).not.toBeNull();
   });
 
-  it("loads the new world into the island before it mounts when NEXT_PUBLIC_GAME_WORLD=new", async () => {
-    const { load, map, gate } = await live("new");
+  it("loads the new world into the island before it mounts, once", async () => {
+    const { load, map, gate } = await fresh();
     await load.loadGameWorld();
     const v = map.village();
     expect(gate.groundKind(v)).toBe("heightfield");
@@ -84,18 +80,8 @@ describe("the world switch", () => {
     expect(load.loadGameWorld()).not.toBeNull(); // the same load, never a second one
   });
 
-  it("keeps the title on the village file once the new world has loaded", async () => {
-    const { load, map, gate } = await live("new");
-    await load.loadGameWorld();
-    const title = map.shippedVillage();
-    expect(gate.groundKind(map.village())).toBe("heightfield");
-    expect(gate.groundKind(title)).toBe("cells");
-    expect(title.map.width).toBe(buildVillage(JSON.parse(readFileSync(join(web, "data/village-map.json"), "utf8"))).map.width);
-    expect(readFileSync(join(web, "components/title/TitleScene.tsx"), "utf8")).toMatch(/const v = shippedVillage\(\)/);
-  });
-
-  it("leaves a lab's island alone (the painter's draft, a fixture), even with the new world live", async () => {
-    const { load, map, gate } = await live("new");
+  it("leaves a lab's island alone (the painter's draft, a fixture)", async () => {
+    const { load, map, gate } = await fresh();
     map.setVillageDoc(terrainFixtureDoc());
     expect(load.loadGameWorld()).toBeNull();
     expect(gate.groundKind(map.village())).toBe("cells");

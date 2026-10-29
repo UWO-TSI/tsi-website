@@ -21,7 +21,8 @@ import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useProgress } from "@react-three/drei";
 import * as THREE from "three";
-import { COMPILE_AT, WARMUP_TIMEOUT_MS, warmedUp, warmupFrame } from "@/lib/game/sceneGate";
+import { COMPILE_AT, WARMUP_FRAMES, WARMUP_TIMEOUT_MS, warmedUp, warmupFrame } from "@/lib/game/sceneGate";
+import { setLoadPart } from "@/lib/game/loadProgress";
 
 const TEXTURE_KEYS = ["map", "emissiveMap", "alphaMap", "normalMap", "roughnessMap", "metalnessMap", "aoMap"] as const;
 
@@ -47,8 +48,8 @@ function uploadTextures(gl: THREE.WebGLRenderer, scene: THREE.Scene) {
  * that throws, which left most of the island to compile on first sight (57 of 156 programs, measured). `compile` only
  * issues the links; `settle` waits for them, in parallel (KHR_parallel_shader_compile).
  */
-function compileEach(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) {
-  asDrawn(gl, scene, () => scene.traverse(o => { if ((o as THREE.Mesh).material) try { gl.compile(o, camera, scene); } catch { /* drawn and compiled when first seen */ } }));
+function compileEach(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera, root: THREE.Object3D = scene) {
+  asDrawn(gl, scene, () => root.traverse(o => { if ((o as THREE.Mesh).material) try { gl.compile(o, camera, scene); } catch { /* drawn and compiled when first seen */ } }));
 }
 
 /**
@@ -83,20 +84,52 @@ async function settle(gl: THREE.WebGLRenderer) {
  */
 const TRANSIENT_LIGHTS = ["rim"];
 
-function compileOtherLights(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) {
+function compileOtherLights(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera, roots: readonly THREE.Object3D[] = [scene]) {
   if (!scene.getObjectByProperty("type", "HemisphereLight")) return; // not a lit island scene
   for (const name of TRANSIENT_LIGHTS) {
     const there = scene.getObjectByName(name), stand = there ? null : Object.assign(new THREE.DirectionalLight(0x000000, 0), { name });
     if (there) there.visible = false; else scene.add(stand!);
-    try { compileEach(gl, scene, camera); } finally { if (there) there.visible = true; else scene.remove(stand!); }
+    try { for (const root of roots) compileEach(gl, scene, camera, root); } finally { if (there) there.visible = true; else scene.remove(stand!); }
   }
+}
+
+/**
+ * Things that fade out (`userData.fades`: a fleeing bug, VillageLife `fade`) draw blended while they do, and three
+ * draws a blended two-sided material in two passes, a program each: compiled here for both light counts, so the first
+ * bug you scare off doesn't stall the frame (measured: 482 ms, its wings and body). The materials go back to opaque;
+ * `needsUpdate` sends them back to the programs they had.
+ */
+function compileFading(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) {
+  const roots: THREE.Object3D[] = [], opaque = new Set<THREE.Material>();
+  scene.traverse(o => { if (o.userData.fades) roots.push(o); });
+  for (const root of roots) root.traverse(o => {
+    const m = (o as THREE.Mesh).material;
+    for (const mat of m ? (Array.isArray(m) ? m : [m]) : []) if (!mat.transparent) opaque.add(mat);
+  });
+  if (!opaque.size) return;
+  for (const m of opaque) m.transparent = true;
+  try {
+    for (const root of roots) compileEach(gl, scene, camera, root);
+    compileOtherLights(gl, scene, camera, roots);
+  } finally { for (const m of opaque) { m.transparent = false; m.needsUpdate = true; } }
 }
 
 export async function warmHidden(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) {
   uploadTextures(gl, scene);
   compileEach(gl, scene, camera);
   compileOtherLights(gl, scene, camera);
+  compileFading(gl, scene, camera);
   await settle(gl);
+  keepPrograms(gl);
+}
+
+/**
+ * Every program the island has now stays for the session. three deletes a program when the last material using it is
+ * disposed, so a thing remounted later (a picked flower's respawn, a node back in view) linked its program again on
+ * first sight (measured: 146 ms, a flower's petals, a minute into play).
+ */
+function keepPrograms(gl: THREE.WebGLRenderer) {
+  for (const p of gl.info.programs ?? []) (p as unknown as { usedTimes: number }).usedTimes++;
 }
 
 export function WarmupProbe({ onReady }: { onReady: () => void }) {
@@ -122,6 +155,7 @@ export function WarmupProbe({ onReady }: { onReady: () => void }) {
       void warmHidden(gl, scene, camera).catch(() => {}).finally(() => { job.done = true; });
     }
     framesRef.current = warmupFrame(framesRef.current, loaded, timedOut, !!compile.current && !compile.current.done);
+    setLoadPart("warm", framesRef.current / WARMUP_FRAMES); // the loading screen's last stretch
     if (warmedUp(framesRef.current)) {
       firedRef.current = true;
       // Defer out of the R3F frame loop: firing setState synchronously here

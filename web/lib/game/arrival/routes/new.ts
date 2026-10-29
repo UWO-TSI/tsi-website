@@ -24,7 +24,6 @@ const BARREL = { prop: "sell-barrel", offset: [0.3, 2.0] } as const;
 const CAST = { prop: "sell-barrel", offset: [0.3, 3.6] } as const;
 
 export const NEW_ROUTE: TutorialRoute = {
-  world: "new",
   // The boat side of the new wharf has an islet out to sea, so the boat comes in off the other side.
   crossFrom: { x: -14, z: -46, yaw: 0.24 },
   crates: [{ at: { dock: [0, BOX_Z] }, yaw: 0.03 }],

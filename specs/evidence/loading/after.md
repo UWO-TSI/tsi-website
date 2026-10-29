@@ -95,3 +95,21 @@ Night start (the rim comes for the golden crossing and goes at the landing), fas
 Day start: clearing 1 link (1 frame, 76 ms), crossing 9 links (2 frames, worst 138 ms). Evening start (the rim there
 at load): clearing 5 links, crossing 7 links (3 frames, worst 180 ms). No frame cost: outside dawn and dusk the scene
 has the same lights as on main.
+
+## Round 2: the island loading screen on the new world (2026-10-28, head 0daab371)
+
+Same method (measurement build, `load-trace.mjs`, 10 s on the title), after merging main de87c07f and village-archive
+ef90c927 (the title now stands on the new world). The screen paints at 0.35 s; its still (the title's staged shot,
+25 to 31 KB per phase) comes from the title's prefetch (300 B over the wire, shown by 0.42 s).
+
+| | Round 1 | Round 2 |
+|---|---|---|
+| Fast line, cold: world ready | 7.4 s | **7.4 s** |
+| Slow line, warm: world ready | 8.0 s | **9.2 s** (no bytes over the wire before it beyond round 1's; machine load, see the noise note in the lane file) |
+| Downloaded after Let's Play, fast cold | 4.7 to 4.8 MB | **4.1 MB** (0.3 MB before world ready: code 152 KB, models 104 KB, textures 29 KB; then 3.8 MB of audio from 48 s) |
+| Long frames, loading screen + first canvas, fast cold | 19, worst 1077 | 17, worst 1695 |
+| Long frames, crossing / landing, fast cold | 1 (320) / 0 | 2 (worst 146) / 0 |
+| Long frames, first minute of play, fast cold | 0 | 2 (worst 493, a 482 ms first-sight shader compile) |
+
+The play spike and the title's own frames (113 over 50 ms on the title, 503 models loaded by it) come with the new
+world's title and island from the merges, not the loading screen (a CSS and image change); left for the coordinator.

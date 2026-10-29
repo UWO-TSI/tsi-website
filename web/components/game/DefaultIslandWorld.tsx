@@ -119,8 +119,10 @@ import InteriorBackdrop from "./InteriorBackdrop";
 import ShopCounter from "./ShopCounter";
 import ShopkeeperChoice, { MERCH_LINE, type ShopSection } from "./ShopkeeperChoice";
 import IslandLoading from "./IslandLoading";
+import { setLoadPart } from "@/lib/game/loadProgress";
+import { READY_FILES } from "@/lib/game/preloadAssets";
 import { loadGameWorld } from "@/lib/game/world/load";
-import { GAME_WORLD, worldModel } from "@/lib/game/world/active";
+import { worldModel } from "@/lib/game/world/active";
 import TalkBox from "./TalkBox";
 import { emptyTalkView, requestTalk, subscribeTalk, talkStore, talkView } from "@/lib/game/residentTalk";
 import DailyGift from "./DailyGift";
@@ -129,7 +131,7 @@ import Arrival from "./arrival/Arrival";
 import GuideArrow from "./GuideArrow";
 import ArrivalWorld, { crateSpots, placeWorld, withCrates } from "./arrival/ArrivalWorld";
 import { arrivalEvent, bramNear, bramPrompt, clearDock, useArrivalChip, useArrivalPhase, useArrivalTools, useDockCleared, useTutorialQuest } from "@/lib/game/arrival/arrivalStore";
-import { routeFor } from "@/lib/game/arrival/routes";
+import { NEW_ROUTE } from "@/lib/game/arrival/routes/new";
 import { gateWheel } from "@/lib/game/arrival/tools";
 import { postArrival, useArrivalFlag } from "@/lib/game/arrival/arrivalFlag";
 import { BRAM, TRACKER_TITLE, TUTORIAL_REWARD, type HintKeys } from "@/lib/game/arrival/lines";
@@ -287,7 +289,7 @@ function gullPerchSpots(v: Village, ground: (x: number, z: number) => number): [
 }
 
 /**
- * The village as this scene uses it, all from the map file (specs/island-painter.md):
+ * The village as this scene uses it, all from the map file (archive/village/island-painter.md):
  * walking, objects, doors, spawns, nodes, water and the size-dependent settings.
  * Built once per loaded map; nothing here is placed relative to the local player.
  */
@@ -479,7 +481,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   // The arrival (components/game/arrival): Bram walks you through, the fish crate on the pier until the tour is over.
   const arrivalPhase = useArrivalPhase();
   const dock = layout.dock;
-  const crated = useMemo(() => (dock ? withCrates(island, crateSpots(routeFor(GAME_WORLD), placeWorld(dock, v))) : null), [island, dock, v]);
+  const crated = useMemo(() => (dock ? withCrates(island, crateSpots(NEW_ROUTE, placeWorld(dock, v))) : null), [island, dock, v]);
   // The tutorial dock's box stands until you've walked into HQ (David's v3 review), then it's the island's own dock.
   const dockDressed = !useDockCleared();
   const walkOn = crated && dockDressed && (arrivalPhase === "crossing" || arrivalPhase === "landing" || arrivalPhase === "tutorial") ? crated : island;
@@ -696,7 +698,7 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {notice && <GLBProp url={NOTICE_BOARD_URL} position={at(notice)} rotation={[0, Math.PI + (notice.yaw ?? 0), 0]} />}
     {board && <GLBProp url={CATCH_BOARD_URL} position={at(board)} rotation={[0, Math.PI + (board.yaw ?? 0), 0]} />}
     {missions && DROPS.combat && <GLBProp url={NOTICE_BOARD_URL} position={[missions.at[0], ground(...missions.at), missions.at[1] + 0.3]} rotation={[0, missions.yaw, 0]} />}
-    {layout.dock && <Wharf dock={layout.dock} light={light} place="village" dressed={!layout.dock.y} />}
+    {layout.dock && <Wharf dock={layout.dock} light={light} place="village" />}
     {layout.landmarks.filter(l => SIGNS[l.id] && !opened.includes(l.id as WorldGoalId)).map(l => <LandmarkTag key={l.id} position={[l.x, ground(l.x, l.z) + (l.half && l.half[0] > 1 ? 3.6 : 2.3), l.z - (l.half?.[1] ?? 0)]} closed={!l.open}>
       {SIGNS[l.id]}
     </LandmarkTag>)}
@@ -706,9 +708,11 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
 
 /** The cream loading screen until the first warm-up (`ready`), then a fade; an asset that fails to load gets a reload card. */
 function LoadingStatus({ ready }: { ready: boolean }) {
-  const { active, progress, errors } = useProgress();
+  const { active, progress, loaded, total, errors } = useProgress();
   const [gone, setGone] = useState(false);
   useEffect(() => { if (!ready) return; const t = window.setTimeout(() => setGone(true), 700); return () => window.clearTimeout(t); }, [ready]);
+  // Of how many: the loader's count so far, or what a whole first load asks for, whichever is more (no stall at a wave's end).
+  useEffect(() => { if (!ready) setLoadPart("files", loaded / Math.max(total, READY_FILES)); }, [loaded, total, ready]);
   return <>
     {!gone && <IslandLoading stage={active ? "loading" : progress >= 100 ? "warming" : "start"} leaving={ready} />}
     {errors.length > 0 && <div className={styles.loading} role="alert">An island asset could not load.<button className={styles.return} onClick={() => window.location.reload()}>Reload island</button></div>}
@@ -717,11 +721,15 @@ function LoadingStatus({ ready }: { ready: boolean }) {
 
 /** `preset` (default: the game look, CURRENT) and `children` (mounted inside the Canvas) are for /lab/look only. */
 export default function DefaultIslandWorld({ preset, children }: { preset?: LookPreset; children?: ReactNode }) {
-  // The member island's world (NEXT_PUBLIC_GAME_WORLD): the new world loads into the village's place before anything mounts.
+  // The member island's world: the new world loads before anything mounts.
   const [loading] = useState(loadGameWorld);
-  const [worldReady, setWorldReady] = useState(!loading);
-  useEffect(() => { void loading?.then(() => setWorldReady(true)); }, [loading]);
-  if (!worldReady) return <IslandLoading />;
+  const [world, setWorld] = useState<"loading" | "ready" | "failed">(loading ? "loading" : "ready");
+  useEffect(() => { void loading?.then(() => setWorld("ready"), () => setWorld("failed")); }, [loading]);
+  // The loading screen's progress (lib/game/loadProgress.ts): the island's code is running; then its world is in.
+  useEffect(() => setLoadPart("code", 1), []);
+  useEffect(() => { if (world === "ready") setLoadPart("world", 1); }, [world]);
+  if (world === "failed") return <div className={styles.loading} role="alert">The island could not load.<button className={styles.return} onClick={() => window.location.reload()}>Reload island</button></div>;
+  if (world === "loading") return <IslandLoading />;
   return <GameSceneBoundary><DefaultIslandWorldContent preset={preset}>{children}</DefaultIslandWorldContent></GameSceneBoundary>;
 }
 

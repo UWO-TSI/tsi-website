@@ -21,6 +21,7 @@ import f from "./flat.module.css";
 export { f as flatStyles };
 export { CardOverlay, FLY_MS, FlyIn, KEYBOARD, KeyBoard, KeyPrompt, PaperField, PrintedCard, QUEST_CHECK_MS, QuestCheck, SlotPop, Spotlight, boardLabel, type BoardKey } from "./moments";
 export { Keyword, KeywordLine, keywordParts, plainLine, type KeywordKind, type LinePart } from "./keyword";
+export { ProgressCard } from "./ProgressCard";
 /** The detail stage's classes: a viewer (TurnStage, ItemViewer, the keychain's stage) fills `stage`; a picture `picture`. */
 export const STAGE = { stage: f.stage, picture: f.stagePicture } as const;
 /**

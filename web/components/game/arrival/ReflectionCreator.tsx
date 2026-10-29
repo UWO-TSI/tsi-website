@@ -21,6 +21,7 @@ import { SignInText } from "@/components/gui/SignIn";
 import { mentionsSignIn } from "@/lib/game/signIn";
 import { inTopDialog, useWorldDialog } from "@/lib/game/useWorldDialog";
 import { STARTER_PARTS, type CharacterLook } from "@/lib/game/character/look";
+import { useMyLook } from "@/lib/game/character/lookStore";
 import { CATEGORIES, type Category } from "@/lib/game/character/creatorCategories";
 import { CategoryRail, CreatorOptions, useNameCheck } from "@/components/game/character/CreatorControls";
 import { arrivalRun } from "@/lib/game/arrival/arrivalStore";
@@ -47,6 +48,7 @@ export default function ReflectionCreator({ phase, initial, askName, onYes }: {
   const creating = phase === "creator";
   const [graphics] = useGraphicsSettings();
   const root = useWorldDialog<HTMLElement>(true, () => {}, undefined, true);
+  const { member } = useMyLook();      // a TSI member: the members-only parts (the TSI zip hoodie) are free to them
   const [look, setLook] = useState(initial);
   // What the water shows: the look behind the latest wave's crest, and while it sweeps across you the look ahead of it.
   const [water, setWater] = useState<{ shown: CharacterLook; before: CharacterLook | null }>({ shown: initial, before: null });
@@ -155,7 +157,7 @@ export default function ReflectionCreator({ phase, initial, askName, onYes }: {
     <div className={`${cc.panel} ${s.panel}`} role="tabpanel" id="creator-panel" aria-labelledby={`creator-tab-${cat.id}`} aria-hidden={!creating} inert={!creating}>
       <header className={cc.panelHead}><h2 className={cc.title}>{cat.label}</h2></header>
       <div className={cc.body}>
-        <CreatorOptions cat={cat} look={look} setLook={edit} mode="create" owned={STARTERS} onChange={change} wheel={false} />
+        <CreatorOptions cat={cat} look={look} setLook={edit} mode="create" owned={STARTERS} onChange={change} wheel={false} member={member} />
       </div>
       {askName && <footer className={cc.foot}>
         <Field id={naming.id} label="Your name on the island" hint="Letters and numbers; everyone in the world sees it." value={naming.name} maxLength={24}

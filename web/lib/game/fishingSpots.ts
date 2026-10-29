@@ -52,7 +52,7 @@ export const WATER_CLASS = { land: 0, sea: 1, river: 2, pond: 3 } as const;
 
 /**
  * Sea, river and pond from water connectivity, not from the island's shape
- * (specs/island-painter.md §3). Water that cannot reach the map edge is a pond.
+ * (archive/village/island-painter.md §3). Water that cannot reach the map edge is a pond.
  * Water that can is the sea where it is open, at least `open + 1` cells from
  * any land and joined to the edge through such cells, grown back `open` cells
  * toward the shore; a narrower channel (a river, even one running out to sea)

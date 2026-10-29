@@ -1,14 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { ceremonyDue, chapterOneActions, markCeremonySeen, readSeenCeremonies, resolveAnchor } from "./progressionBridge";
+import { village } from "./villageMap";
 
 // The monument's build stage is the server's (goals.monumentStage, tested in lib/progression/goals.test.ts).
 describe("progression world bridge", () => {
-  it("resolves every objective anchor to village ground", () => {
-    for (const anchor of ["hq", "monument", "fishing_spot", "museum", "oracle", "ruins_gate"] as const) {
+  it("resolves every objective anchor to the member island's land (the new world has no ruins gate yet)", () => {
+    const { bounds: b } = village();
+    for (const anchor of ["hq", "monument", "fishing_spot", "museum", "oracle"] as const) {
       const xz = resolveAnchor(anchor);
       expect(xz, anchor).not.toBeNull();
-      expect(Math.hypot(xz![0] / 24, xz![1] / 20), anchor).toBeLessThan(1.05);
+      expect(xz![0] >= b.minX && xz![0] <= b.maxX && xz![1] >= b.minZ && xz![1] <= b.maxZ, anchor).toBe(true);
     }
+    expect(resolveAnchor("ruins_gate")).toBeNull();
   });
   it("offers chapter-1 prompts in order: claim, then donate, then report", () => {
     const chapter = (status: string, done: string[]) => [{ slug: "settle-in", status, steps: ["claim_plot", "first_catch", "donate_catch", "report_hq"].map(key => ({ key, done: done.includes(key) })) }];

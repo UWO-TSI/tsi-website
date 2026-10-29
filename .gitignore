@@ -13,9 +13,8 @@
 !web/data/globe-countries.json
 !web/lib/recruitment-round-drafts.json
 
-# The tile map IS the world. The blanket *.json above was silently keeping it
-# out of every commit, so the grid island existed only on one machine.
-!web/data/island-map.json
+# The retired islands' maps (archive/village/README.md).
+!archive/village/*.json
 # The smooth world's document (specs/world-editor.md); its two PNGs sit beside it.
 !web/data/world/world.json
 # The server's cell view of it (catch checks), written with every save.

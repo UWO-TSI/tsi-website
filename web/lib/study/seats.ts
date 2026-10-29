@@ -22,7 +22,7 @@ export type SeatArea = "cafe" | "village";
  * Café: window bar stools, tables for two and four, the booth, the communal table. Outdoors: picnic table, pier bench,
  * each in two looks (game/remodel-r2): ours with the striped runner, and the classic with the green cloth.
  */
-export type Furniture = "bar" | "two" | "four" | "booth" | "communal" | "picnic" | "pier" | "picnic-classic" | "pier-classic";
+export type Furniture = "bar" | "two" | "four" | "booth" | "communal" | "picnic" | "pier" | "picnic-classic" | "pier-classic" | "bench";
 export interface TableLayout { anchor: string; area: SeatArea; at: [number, number]; yaw: number; furniture: Furniture }
 /** `y` is the seat top in world y (floor height at the seat + the furniture's seatY). */
 export interface WorldSeat { anchor: string; seat: number; x: number; z: number; facing: number; y: number }
@@ -45,6 +45,9 @@ export const FURNITURE: Record<Furniture, { seats: [number, number, number][]; s
   pier: PIER,
   "picnic-classic": PICNIC,
   "pier-classic": PIER,
+  // The quay's plain bench (David: "shouldnt be study table should just be bench"): the plaza's backless bench, its two
+  // seats on its slots (defaultIsland BENCH_SLOTS), facing out of its front (local -z), solid as the prop (PROP_FOOTPRINT).
+  bench: { seats: [[0.42, 0, PI], [-0.42, 0, PI]], seatY: BENCH, solid: [[0, 0, 0.98, 0.27]] },
 };
 /** The outdoor tables' two looks: each kind and its classic (the same seats and footprint, another table on them). */
 export const OUTDOOR_LOOKS: Readonly<Record<"picnic" | "pier", readonly [Furniture, Furniture]>> = { picnic: ["picnic", "picnic-classic"], pier: ["pier", "pier-classic"] };

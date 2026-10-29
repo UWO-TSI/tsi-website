@@ -170,7 +170,6 @@ Blender -b -P art/characters/v7/build_face.py [-- compose <dir>]
 **Then:**
 ```
 node web/scripts/sync-character-assets.mjs
-git checkout web/public/assets/characters/v6/decal_tsi_mark.png   # the sync re-renders it byte-different
 ```
 
 For live modeling, split the working file into the review files with:

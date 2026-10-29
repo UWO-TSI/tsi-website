@@ -15,22 +15,24 @@ const PRIYA = "00000000-0000-4000-8000-000000000103";
 const LEO = "00000000-0000-4000-8000-000000000104";
 
 export async function studyDemo(scenario: string) {
-  // "closed": before the chapter 2 goal opens the café (row 177); the seat-mates sit outdoors.
+  // "closed": before the chapter 2 goal opens the café (row 177); one seat-mate sits outdoors, on the pier's bench (two seats).
   const closed = scenario === "closed";
   const m = memoryStudyStore(undefined, { cafeOpen: !closed });
   for (const [id, n] of [[DEMO_ME, "You"], [MAYA, "Maya Chen"], [JORDAN, "Jordan Park"], [PRIYA, "Priya Shah"], [LEO, "Leo Martin"]]) m.name(id, n);
   const real = Date.now();
   let t = real - 60 * 60_000;
   const clock = () => new Date(t);
-  const big = DEFAULT_TABLES.find((x) => x.slug === (closed ? "plaza-picnic" : "cafe-four-1"))!.id;
-  const window1 = DEFAULT_TABLES.find((x) => x.slug === (closed ? "pier-bench" : "cafe-window-1"))!.id;
+  const big = DEFAULT_TABLES.find((x) => x.slug === (closed ? "pier-bench" : "cafe-four-1"))!.id;
+  const window1 = DEFAULT_TABLES.find((x) => x.slug === "cafe-window-1")!.id;
   const at = (minAgo: number) => real - minAgo * 60_000;
   const events: [number, () => Promise<unknown>][] = [
+    [at(38), async () => { await S.sit(m.store, MAYA, { table_id: big, seat: 2 }, clock()); await S.startSession(m.store, MAYA, { focus_len: 50, break_len: 10, cycles: 2 }, clock()); }],
+  ];
+  if (!closed) events.push(
     [at(60), () => S.sit(m.store, PRIYA, { table_id: big, seat: 4 }, clock())],
     [at(60), () => S.sit(m.store, LEO, { table_id: window1, seat: 1 }, clock())],
-    [at(38), async () => { await S.sit(m.store, MAYA, { table_id: big, seat: 2 }, clock()); await S.startSession(m.store, MAYA, { focus_len: 50, break_len: 10, cycles: 2 }, clock()); }],
     [at(27), async () => { await S.sit(m.store, JORDAN, { table_id: big, seat: 3 }, clock()); await S.startSession(m.store, JORDAN, { focus_len: 25, break_len: 5, cycles: 4 }, clock()); }],
-  ];
+  );
   if (scenario === "ended") events.push([at(56), async () => { await S.sit(m.store, DEMO_ME, { table_id: big, seat: 1 }, clock()); await S.startSession(m.store, DEMO_ME, { focus_len: 25, break_len: 5, cycles: 1 }, clock()); }]);
   if (scenario === "focus" || scenario === "break") events.push([at(scenario === "break" ? 27 : 12), async () => { await S.sit(m.store, DEMO_ME, { table_id: big, seat: 1 }, clock()); await S.startSession(m.store, DEMO_ME, { focus_len: 25, break_len: 5, cycles: 4 }, clock()); }]);
   if (scenario === "setup") events.push([at(1), () => S.sit(m.store, DEMO_ME, { table_id: big, seat: 1 }, clock())]);

@@ -1,7 +1,7 @@
 /**
  * Bram's walk-along as data (playtest round 1, decision 5): where each stop is, what happens there, and the crates on
- * the way. One route file per world (routes/), so moving the tutorial to the new map is a data change only: new
- * places for the same stops, or new stops (their lines and tracker labels are lib/game/arrival/lines.ts, by stop id).
+ * the way (routes/new.ts), so moving it is a data change only: new places for the same stops, or new stops (their lines
+ * and tracker labels are lib/game/arrival/lines.ts, by stop id).
  *
  * A stop: Bram walks to `stand` (after any fixed `via` waypoints: the pier, a crate's hop, a building he points out in
  * passing) with a "!" over his head and waits. You talk to him (E); he says the stop's lines (in his bubble, or with
@@ -64,8 +64,6 @@ export interface TutorialStop {
 }
 
 export interface TutorialRoute {
-  /** The world it belongs to (lib/game/world/active.ts: the village, or the new world). */
-  world: string;
   /** Where the first login's crossing starts, far out at sea in the dock's frame, heading in (lib/game/boatTrip.ts). */
   crossFrom: { x: number; z: number; yaw: number };
   stops: readonly TutorialStop[];

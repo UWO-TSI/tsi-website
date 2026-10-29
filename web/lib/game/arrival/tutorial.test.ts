@@ -2,8 +2,7 @@ import { describe, expect, it } from "vitest";
 import { BRAM_PACE, HINT_AFTER_S, HINT_AGAIN_S, TALK_R, WAIT_GAP, awaitsTalk, bramPace, lineSeconds, newTutorial, stepTutorial, tutorialQuest, type TutorialCue, type TutorialEvent, type TutorialState } from "./tutorial";
 import { END_LINE, STOP_LINES, TASK_DONE_LINES, TRACKER, TRACKER_TITLE, fillKeys, hintLine, type HintKeys } from "./lines";
 import { resolvePlace, resolveRoute, type PlaceWorld, type ResolvedStop, type TutorialRoute, type XZ } from "./route";
-import { VILLAGE_ROUTE } from "./routes/village";
-import { ROUTES, routeFor } from "./routes";
+import { NEW_ROUTE } from "./routes/new";
 
 const KEYS: HintKeys = { move: "W A S D", jump: "Space", dash: "Q", wheel: "Tab", bag: "B", touch: false };
 /** A small world: the dock at the origin facing +z, four fronts and a beach. */
@@ -15,7 +14,24 @@ const WORLD: PlaceWorld = {
     return p ? (point ? { x: p.x, z: p.z - 3 } : p) : null;
   },
 };
-const STOPS = resolveRoute(VILLAGE_ROUTE, WORLD, { x: 0, z: 0 });
+/** The walk-along's mechanics on a plain fixture route (the village's old one): the dock and its crate, four fronts, the beach. */
+const CRATE_Z = -0.95;
+const WALK: TutorialRoute = {
+  crossFrom: { x: 14, z: -46, yaw: -0.24 },
+  crates: [{ at: { dock: [0, CRATE_Z] }, yaw: 0.03 }],
+  stops: [
+    { id: "dock", stand: { dock: [-0.5, -1.95] },
+      task: { kind: "reach", id: "crate", at: { dock: [0.05, CRATE_Z + 0.62] }, radius: 0.45, hint: "jump",
+        wait: [{ dock: [0.05, CRATE_Z - 0.6] }, { dock: [0.05, CRATE_Z + 0.55], hop: true }, { dock: [0.45, CRATE_Z + 1.3] }] } },
+    { id: "museum", stand: { landmark: "museum", point: "exit", offset: [1.2, -0.6] } },
+    { id: "shop", stand: { landmark: "shop", point: "exit", offset: [1.2, -0.6] } },
+    { id: "hq", stand: { landmark: "hq", point: "exit", offset: [1.2, -0.6] } },
+    { id: "cafe", stand: { landmark: "cafe", point: "exit", offset: [1.2, -0.6] } },
+    { id: "beach", stand: { landmark: "beach", offset: [-1.6, 0.3] }, gives: "rod", task: { kind: "catch", id: "catch" } },
+    { id: "collection", stand: { landmark: "beach", offset: [-1.6, 0.3] }, task: { kind: "bag", id: "bag" } },
+  ],
+};
+const STOPS = resolveRoute(WALK, WORLD, { x: 0, z: 0 });
 const stopAt = (id: string) => STOPS.find(s => s.id === id)!;
 
 /** A walk-along with Bram where the stop wants him; `frame` runs one step with the player at `at`. */
@@ -41,19 +57,17 @@ const at = (s: TutorialState) => `${STOPS[s.stop]?.id ?? "end"}:${s.stage}`;
 
 describe("the walk-along v2's route (data per world)", () => {
   it("is the stops David wrote, in order: the dock and its crate, four fronts, the beach (the rod, a catch), what you've collected", () => {
-    expect(VILLAGE_ROUTE.stops.map(s => s.id)).toEqual(["dock", "museum", "shop", "hq", "cafe", "beach", "collection"]);
-    expect(VILLAGE_ROUTE.stops.map(s => s.task?.kind ?? null)).toEqual(["reach", null, null, null, null, "catch", "bag"]);
-    expect(VILLAGE_ROUTE.stops.find(s => s.gives)?.id).toBe("beach");
+    expect(WALK.stops.map(s => s.id)).toEqual(["dock", "museum", "shop", "hq", "cafe", "beach", "collection"]);
+    expect(WALK.stops.map(s => s.task?.kind ?? null)).toEqual(["reach", null, null, null, null, "catch", "bag"]);
+    expect(WALK.stops.find(s => s.gives)?.id).toBe("beach");
     // The dock's movement bit stays: a crate on the pier, and the dock's task is getting past it after Bram's hop.
-    expect(VILLAGE_ROUTE.crates.length).toBeGreaterThan(0);
-    const dock = VILLAGE_ROUTE.stops[0].task!;
+    expect(WALK.crates.length).toBeGreaterThan(0);
+    const dock = WALK.stops[0].task!;
     expect(dock.kind === "reach" && dock.wait?.some(w => w.hop)).toBe(true);
-    expect(ROUTES.village).toBe(VILLAGE_ROUTE);
-    expect(routeFor("nowhere")).toBe(VILLAGE_ROUTE);
   });
 
   it("has every stop's lines and tracker labels, so a new map's route needs no code", () => {
-    for (const r of Object.values(ROUTES)) for (const stop of r.stops) {
+    for (const stop of NEW_ROUTE.stops) {
       // An `auto` stop (straight on, no E) needs no tracker step, and lines only if it talks.
       if (!stop.auto) expect(STOP_LINES[stop.id]?.length, stop.id).toBeGreaterThan(0);
       if (!stop.auto) expect(TRACKER[stop.id], stop.id).toBeTruthy();
@@ -72,10 +86,10 @@ describe("the walk-along v2's route (data per world)", () => {
   });
 
   it("moves to another world as data only: the same stops at new places resolve and walk", () => {
-    const moved: TutorialRoute = { ...VILLAGE_ROUTE, world: "v2", crates: [{ at: { world: [40, 40] } }, { at: { world: [42, 41] }, yaw: 0.4 }],
-      stops: VILLAGE_ROUTE.stops.map((s, i) => ({ ...s, stand: { world: [i * 10, 5] }, via: undefined })) };
+    const moved: TutorialRoute = { ...WALK, crates: [{ at: { world: [40, 40] } }, { at: { world: [42, 41] }, yaw: 0.4 }],
+      stops: WALK.stops.map((s, i) => ({ ...s, stand: { world: [i * 10, 5] }, via: undefined })) };
     const stops = resolveRoute(moved, { dock: null, landmark: () => null }, { x: 0, z: 0 });
-    expect(stops.map(s => s.stand)).toEqual(VILLAGE_ROUTE.stops.map((_, i) => ({ x: i * 10, z: 5 })));
+    expect(stops.map(s => s.stand)).toEqual(WALK.stops.map((_, i) => ({ x: i * 10, z: 5 })));
     // A dock-frame place in a world without a wharf falls back to the place before it, never undefined.
     expect(stops[0].task?.kind === "reach" && stops[0].task.at).toEqual({ x: 0, z: 5 });
   });
@@ -238,7 +252,7 @@ describe("the walk-along in the quest tracker", () => {
 });
 
 /** The resolved route the tests walk, sanity: every stop placed. */
-it("resolves the village route in a world that has its places", () => {
+it("resolves the fixture route in a world that has its places", () => {
   expect(STOPS.every((s: ResolvedStop) => Number.isFinite(s.stand.x) && Number.isFinite(s.stand.z))).toBe(true);
 });
 
@@ -293,7 +307,7 @@ describe("the new world's walk (t-short, t-sell): HQ first, the camera conversat
     expect([s.stop, s.stage]).toEqual([1, "await"]);
   });
   it("counts a hop over the box wherever on the dock you land past it (David's playtest: a real hop didn't register)", () => {
-    const stops = resolveRoute(routeFor("new"), { ...WORLD, prop: () => ({ x: 30, z: 30 }) }, { x: 0, z: 0 });
+    const stops = resolveRoute(NEW_ROUTE, { ...WORLD, prop: () => ({ x: 30, z: 30 }) }, { x: 0, z: 0 });
     const box = stops[0].task;
     if (box?.kind !== "reach" || !box.from) throw new Error("the new dock's box is a reach past it");
     // The dock faces +z here: the box at z -0.95, its far side from z -0.33 on.
@@ -317,7 +331,7 @@ describe("the new world's walk (t-short, t-sell): HQ first, the camera conversat
     go(replay, true);
     expect([dock[replay.stop].id, replay.stage]).toEqual(["hqFirst", "await"]);
     // The real route marks the box and the dash, and nothing after them.
-    expect(routeFor("new").stops.filter(x => x.dock).map(x => x.id)).toEqual(["dockNew", "dash"]);
+    expect(NEW_ROUTE.stops.filter(x => x.dock).map(x => x.id)).toEqual(["dockNew", "dash"]);
   });
   it("the hand-over starts itself after the sale, and with no last word the walk ends as its box closes", () => {
     const keep: ResolvedStop[] = [{ id: "keep", stand: at, via: [], auto: true, holds: "rod", box: true, shots: [null, null, "bram"] }];

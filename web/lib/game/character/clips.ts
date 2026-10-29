@@ -191,6 +191,8 @@ export interface CharacterMotion { speed: number; yaw: number; lift: number; pos
   air?: number;
   /** Any other clip posed by a phase (catalogue `scrub`), 0..1: CastWindup by the cast's power. */
   scrub?: number;
+  /** The avatar bench only (/lab/avatar ?sheet=fit): the held pose (`pose`) stands still at this phase, 0..1. */
+  freeze?: number;
   /** Timing scale for the held pose (`pose`), while set: the reel cranks faster while it's held. */
   poseRate?: number;
   /** This avatar's cast (lib/game/fishingRig.ts): its rod's bobber, line and catch draw from it, on this avatar. */
