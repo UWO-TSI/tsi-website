@@ -635,3 +635,4 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - Migrations: 20261028144337_main_quest, 20261028153805_main_quest_r2, 20261029064914_catalogue_seed (regenerate at merge).
   - Stamina is in MOVE_TUNING in movement/sim.ts. HudBars sit top left; the old level chip is removed from TopCluster.
   - Conflicts with tutorial r5 in TopCluster, hudStore and hudPrefs: keep both removals.
+- **Shipping:** fish-tiers 4b84c125 (the member fishing UI plus playtest fixes) merged. No migrations. Gates: vitest 3517, tsc clean, seeds up to date. Note: its rarity edges still use --gui-rarity-* until main-quest's --ui-rarity-* lands; switch them then.
