@@ -21,6 +21,7 @@ import { CONVERT, contourDistance, limitSteepness, padBuildings, rockRelief, she
 import type { World } from "./format";
 import { Paint, cellMapOf, createTerrain, paintAt, sampleX, sampleZ, terrainHeight, terrainSteepness } from "./terrain";
 import { hash01 } from "../worldFx";
+import { COURT } from "../volleyball/court";
 import { JETTY, SELL_BARREL, dockToWorld } from "../wharf";
 import type { ObjectKind } from "../villageMap";
 import type { NEW_LAMPS } from "../propModels";
@@ -178,6 +179,13 @@ function quayAt(z: number, d: number): { x: number; z: number; yaw: number } {
 const SANDCASTLE_Z = 112;
 /** The beach's palms, bigger than the wharf's (David, R2c: "bigger trees"). */
 const BEACH_PALM = 1.35;
+/**
+ * The volleyball court's middle (the net), turned a quarter so the court runs along the beach (game/volleyball): from
+ * wharf-art2's spot (-4, 103.5) 3.5 u west and 0.3 u seaward, clear of the lifeguard tower and the palms. `inCourtZone`:
+ * the court and its free zone, which the shells and gather spots keep off.
+ */
+export const VOLLEY: XZ = [-7.5, 103.8];
+const inCourtZone = (x: number, z: number) => Math.abs(x - VOLLEY[0]) <= COURT.halfLength + COURT.free && Math.abs(z - VOLLEY[1]) <= COURT.halfWidth + COURT.free;
 /** The beach's campfire. */
 const FIRE_AT = [14, 104] as const;
 /** The deck squares' middles run from z to z (every 4 u): their south end stops where the grassy band still stands at their level. */
@@ -538,7 +546,8 @@ function beachSet(): Obj[] {
     out.push(obj("prop", `beach-cooler-${i}`, x + 0.5, z - 1.2, h(5) * 6.28, 1, "beach-cooler"));
     out.push(obj("prop", `beach-ball-${i}`, x + 2.3, z + 1.5, h(6) * 6.28, 1, `beach-ball-${"abc"[i]}`));
   });
-  out.push(obj("prop", "volleyball-net", -4, 103.5, 0, 1, "volleyball-net"), obj("prop", "beach-ball-net", -2.2, 105.6, 1.3, 1, "beach-ball-b"));
+  // The volleyball court (game/volleyball): the net across a real-proportion court along the beach, a ball by the far post.
+  out.push(obj("prop", "volleyball-net", ...VOLLEY, Math.PI / 2, 1, "volleyball-net"), obj("prop", "beach-ball-net", VOLLEY[0] + 0.7, VOLLEY[1] + 4.3, 1.3, 1, "beach-ball-b"));
   out.push(obj("prop", "sandcastle", 8, SANDCASTLE_Z, 0.4, 1, "sandcastle"));
   return out;
 }
@@ -671,7 +680,7 @@ function shells(t: World["terrain"]): Obj[] {
   for (let x = -50; x < 58; x += 2) for (let z = 92; z < 122; z += 2) {
     const k = out.length + x * 31 + z, px = x + 1.6 * (hash01(x, z + 60) - 0.5), pz = z + 1.6 * (hash01(z, x + 61) - 0.5), y = terrainHeight(t, px, pz);
     const fire = Math.hypot(px - FIRE_AT[0], pz - FIRE_AT[1]);
-    if (y < t.seaLevel + 0.06 || y > H.beach + 0.35 || BEACH(px, pz) < -4 || fire < 7.2 || Math.hypot(px - SUSHI[0], pz - SUSHI[1]) < 7) continue;
+    if (y < t.seaLevel + 0.06 || y > H.beach + 0.35 || BEACH(px, pz) < -4 || fire < 7.2 || Math.hypot(px - SUSHI[0], pz - SUSHI[1]) < 7 || inCourtZone(px, pz)) continue;
     if (hash01(x + 200, z) > 0.08 + 0.45 * (1 - smoothstep(0.08, 0.35, y - t.seaLevel)) + 0.35 * (1 - smoothstep(8, 13, fire))) continue;
     out.push(obj("prop", `shell-${out.length}`, px, pz, hash01(k, 62) * 6.28, +(0.85 + 0.35 * hash01(k, 63)).toFixed(2), ["starfish", "sand-dollar", "conch"][Math.floor(hash01(k, 64) * 3)]));
   }
@@ -688,7 +697,7 @@ function gatherSpots(t: World["terrain"], objects: readonly Obj[]): Obj[] {
   const out: Obj[] = [], sea = t.seaLevel;
   const clear = (x: number, z: number, r: number) => [...objects, ...out].every(o => Math.hypot(o.x - x, o.z - z) >= r);
   const open = (x: number, z: number) => nearest(PATH, x, z).d > 3.5 && nearest(BEACH_WAY, x, z).d > 3 && Math.hypot(x - PX, z - PZ) > PLAZA.r + 2.5
-    && westOfQuay(x, z) > 8.5 && Math.hypot(x - FIRE_AT[0], z - FIRE_AT[1]) > 7.2 && Math.hypot(x - SUSHI[0], z - SUSHI[1]) > 7;
+    && westOfQuay(x, z) > 8.5 && Math.hypot(x - FIRE_AT[0], z - FIRE_AT[1]) > 7.2 && Math.hypot(x - SUSHI[0], z - SUSHI[1]) > 7 && !inCourtZone(x, z);
   const flat = (x: number, z: number) => terrainHeight(t, x, z) > sea + 0.35 && terrainSteepness(t, x, z) < 0.4;
   const near = ([ax, az]: XZ, ok: (x: number, z: number) => boolean): [number, number] | null => {
     for (let r = 0; r <= 8; r += 0.5) for (let a = 0; a < 12; a++) {

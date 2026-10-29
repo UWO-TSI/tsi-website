@@ -14,6 +14,11 @@ import { cliffBoulders, ROCK_SIZE } from "@/lib/game/rocks";
 import GlassWater from "./water/GlassWater";
 import DecorativeFish from "./water/DecorativeFish";
 import PlayerAvatar from "./PlayerAvatar";
+import Court from "./volleyball/Court";
+import VolleyMatch from "./volleyball/VolleyMatch";
+import VolleyHud from "./volleyball/VolleyHud";
+import { courtOf, startVolley, useVolley, volley } from "@/lib/game/volleyball/session";
+import { toLocal } from "@/lib/game/volleyball/court";
 import Residents from "./NPC";
 import GameSceneBoundary from "./GameSceneBoundary";
 import PostFX from "./PostFX";
@@ -223,7 +228,7 @@ import { roomHeading } from "@/lib/game/roomHeading";
 import { DevUiTheme } from "@/components/gui/DevUiTheme";
 import styles from "./DefaultIslandWorld.module.css";
 
-type Near = "knock" | "shop_enter" | "counter" | "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "stool" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | "bram" | "founder" | "coffee" | "aquarium" | "admin" | "sell" | null;
+type Near = "knock" | "shop_enter" | "counter" | "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "stool" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | "bram" | "founder" | "coffee" | "aquarium" | "admin" | "sell" | "volley" | null;
 type Sheet = "counter" | "shopkeeper" | "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | "bag" | "wallet" | "chest" | "plaque" | "sell" | null;
 const DEV = process.env.NODE_ENV !== "production";
 const DEV_SHEETS: readonly Sheet[] = ["counter", "shopkeeper", "notice", "letters", "journal", "trophies", "showcase", "closet", "fitting", "oracle", "path", "settings", "missions", "tourney", "posters", "cafe", "wallet", "chest"];
@@ -252,6 +257,7 @@ const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   coffee: "Get a coffee", aquarium: "Look at the aquarium", admin: "Try the door",
   // The new world's quick-sell barrel by the fish market.
   sell: "Quick sell your catch",
+  volley: "Play volleyball",
 };
 const CLOSED: Near[] = ["museum", "monument"];
 /** The door in reach for trick-or-treat (components/game/Halloween.tsx): IslandScene writes it each frame, E knocks. */
@@ -459,7 +465,19 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     const [x, y, z] = f.position, s = f.scale ?? 1;
     return { jet: [[x, y + 3.14 * s, z]] as const, water: () => y + 0.36 * s, light: [x, y + 0.9 * s, z] as const };
   }, [scenery]);
-  const [sceneryStill, sceneryMoving] = useMemo(() => (v.terrain ? [scenery.filter(p => STILL.test(p.url)), scenery.filter(p => !STILL.test(p.url))] : [[], scenery]), [v, scenery]);
+  // The volleyball court (game/volleyball): its net is drawn by Court (the world's net, or the close one in a match), not merged.
+  // Dev (the perf measure's "before"): ?vbcourt=0 leaves the court out and its net merged with the scenery, as before.
+  const court = useMemo(() => (DEV && new URLSearchParams(location.search).get("vbcourt") === "0" ? null : courtOf(v, island.ground)), [v, island]), playing = useVolley();
+  const [sceneryStill, sceneryMoving] = useMemo(() => {
+    const all = court ? scenery.filter(p => !p.url.endsWith("/volleyball-net.glb")) : scenery;
+    return v.terrain ? [all.filter(p => STILL.test(p.url)), all.filter(p => !STILL.test(p.url))] : [[], all];
+  }, [v, scenery, court]);
+  // E at the net starts a match on this court (the world's ground and walls, in the court's frame).
+  useEffect(() => {
+    const on = () => { if (court && !volley.match) startVolley(court, island.ground, island); };
+    window.addEventListener("tsi:volley", on);
+    return () => window.removeEventListener("tsi:volley", on);
+  }, [court, island]);
   // The lamps by model: the street lamp (none), or the new world's (propModels NEW_LAMPS), each turned by its yaw.
   const lampSets = useMemo(() => (["", ...Object.keys(NEW_LAMPS) as (keyof typeof NEW_LAMPS)[]] as const).map(kind => {
     const ls = layout.lamps.filter(l => (l.model ?? "") === kind);
@@ -532,7 +550,9 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     // a sign is nearer. Talking (or fishing, or at a study seat) offers nothing else.
     const tn = talkStore.near;
     if (tn.id && !fishing && tn.d < nextD) next = "talk";
-    if (studyHoldsPrompt() || talking) next = null;
+    // At the volleyball net, on either side of it: play.
+    if (court && !next) { const [lx, lz] = toLocal(court, px, pz); if (Math.abs(lx) < 4.2 && Math.abs(lz) < 1.8) next = "volley"; }
+    if (studyHoldsPrompt() || talking || volley.match) next = null;
     // Bram waiting at his stop on the walk-along (or talking): E is his.
     else if (!fishing && bramNear(px, pz)) next = "bram";
     else if (!fishing && (next === null || next === "talk")) {
@@ -589,6 +609,8 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       <PlayerAvatar key={`${reset}-${returned}-${fromBoat}-${exitFrom}`} spawnPosition={spawn} playerName={identity.display_name} playerLevel={level} member={identity.member} player={player} frozen={fishing || arriving || talking || photoOpen}
         ride={myTrip.ride}
         world={walkOn} groundHeight={island.ground} groundSurface={island.surface} camTarget={focus} glider={peaceful.glider} dash={dash} held={held} />
+      {court && <Court spot={court} ground={island.ground} close={playing} />}
+      {court && playing && <VolleyMatch spot={court} />}
       <CharacterCrowd player={player} ground={island.ground} stepWorld={island} />
       {dock && <ArrivalWorld v={v} island={island} player={player} dock={dock} held={held} keys={hintKeys} />}
     </>
@@ -1018,6 +1040,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       return;
     }
     // E again at the same bench or bed stands you up (tsi:sit toggles there).
+    if (action === "volley") { window.dispatchEvent(new Event("tsi:volley")); return; }
     if (action === "bench" || action === "stool") { if (benchSpot.current) window.dispatchEvent(new CustomEvent("tsi:sit", { detail: benchSpot.current })); return; }
     if (action === "bed") {
       const bed = nearestBed(layout, player.current.x, player.current.z);
@@ -1142,7 +1165,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   useEffect(() => {
     const el = canvasRef.current;
     if (!el) return;
-    const down = (e: PointerEvent) => { if (e.button === 0 && e.pointerType === "mouse" && (capture.state === "captured" || capture.state === "off") && readAimTarget() === null) applyTool(); };
+    const down = (e: PointerEvent) => { if (volley.match) return; if (e.button === 0 && e.pointerType === "mouse" && (capture.state === "captured" || capture.state === "off") && readAimTarget() === null) applyTool(); };
     el.addEventListener("pointerdown", down);
     return () => el.removeEventListener("pointerdown", down);
   }, [applyTool]);
@@ -1194,6 +1217,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     const key = (event: KeyboardEvent) => {
       // Arriving, the keys are the arrival's (components/game/arrival: a press skips the beat showing).
       if (welcoming) return;
+      // In a volleyball match the keys are the court's (VolleyMatch); Escape still lets the mouse go.
+      if (volley.match && event.key !== "Escape") return;
       // On a boat trip the keys are the trip's (a press skips it: useTripControl); nothing opens over it.
       if (myTrip.current) return;
       // Menus follow the account's key bindings (row 220); Escape is fixed.
@@ -1345,6 +1370,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         enabled={ready && site !== "ruins" && !fishing && !sheet && !bagOpen && !cinematic && !talking && !fading && !decor.decorating && !(touch && uiView)} />
       <DonateSheet open={donateOpen} onClose={() => setDonateOpen(false)} onDonated={loadMuseum} />
       <ToastHub />
+      <VolleyHud />
       {/* What a catch, a find, a craft or a bottle gave you: one card with its art, beside the Bag's fly-in. */}
       <RewardCard />
       <GlideGuideHint show={ready && !fading && !inside && site === "village" && !sheet && !cinematic && !talking} />

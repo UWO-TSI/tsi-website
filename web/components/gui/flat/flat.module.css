@@ -262,3 +262,11 @@ div.card:hover { box-shadow: none; }
 .progressLine { grid-column: 1 / -1; height: 3px; border-radius: 2px; overflow: hidden; background: var(--ui-well); }
 .progressLine > i { display: block; height: 100%; background: var(--ui-ink); transform-origin: left; transform: scaleX(var(--p)); transition: transform 0.6s cubic-bezier(0.2, 0.9, 0.3, 1); }
 @media (prefers-reduced-motion: reduce) { .progressLine > i { transition: none; } }
+
+/* The charge meter (PowerMeter.tsx): a white card, a soft well, the fill rising by a transform, the gold tip zone at the top. */
+.meter { display: inline-grid; justify-items: center; gap: 10px; padding: 12px 12px 10px; border-radius: 16px; background: var(--ui-card); color: var(--ui-ink);
+  font-family: var(--gui-font); box-shadow: 0 6px 18px rgb(var(--ui-shade) / 0.14); }
+.meterTrack { position: relative; width: 16px; height: 150px; border-radius: 8px; background: var(--ui-well); overflow: hidden; box-shadow: inset 0 1px 3px rgb(var(--ui-shade) / 0.16); }
+.meterTrack > b { position: absolute; inset: 0 0 auto; height: calc(var(--tip) * 100%); background: var(--ui-marker); }
+.meterTrack > i { position: absolute; inset: 0; border-radius: 8px; background: var(--ui-ink); transform-origin: bottom; transform: scaleY(var(--v)); }
+.meter[data-tip] .meterTrack > i { background: var(--ui-gold); }

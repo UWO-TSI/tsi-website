@@ -12,10 +12,9 @@ Writes, under web/public/assets/game/props/, each in game units at scale 1, the 
   sandcastle.glb          a sandcastle on its mound: a keep with crenels, two bucket-cast towers, walls, a gate, shells,
                           a little flag; a red bucket and a blue spade beside it.
   beach-cooler.glb        a blue cool box with a white lid and a carry handle.
-  volleyball-net.glb      a volleyball net along x between two posts at x -2.6 and 2.6, its white top band at 1.9, guy
-                          ropes to stakes in the sand.
+  (The volleyball net moved to build_volleyball_net.py, remodelled at real proportions for game/volleyball.)
 
-Wood is the wharf's grain (art/wharf/build_wharf_kit.py wood_mat) and its rope; the rest the shared plain presets
+Wood is the wharf's grain (art/wharf/build_wharf_kit.py wood_mat); the rest the shared plain presets
 (P_Paint for plastic and painted parts, P_Cloth, P_Stone for packed sand) with their colour in COLOR_0. Seeded.
 """
 import math, os, sys
@@ -26,7 +25,6 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "..", "wharf"))
 import propkit as K  # noqa: E402
 from build_wharf_kit import mix, report, wood_mat  # noqa: E402
-from build_dock_decor import ROPE  # noqa: E402
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 OUT = "game/props/"
@@ -162,37 +160,14 @@ def cooler(Mp, Mm):
     return k.finish(smooth_deg=50)
 
 
-def volleyball_net(Mw, Mr, Mc):
-    k = K.Kit("volleyball-net")
-    X, TOP, BOT = 2.6, 1.9, 1.15
-    for s in (-1, 1):
-        k.lathe((s * X, 0, 0), [(0.0, -0.3), (0.07, -0.3), (0.065, 2.1), (0.05, 2.14), (0.0, 2.14)], Mw, "#d9c3a0", n=10, v_len=1.2)
-        for y in (0.4, 1.0, 1.6):                       # painted rings
-            k.lathe((s * X, y, 0), [(0.067, 0.0), (0.067, 0.12)], Mc, "#e8553c", n=10)
-        stake = (s * (X + 0.9), 0.0, 0.0)
-        k.tube([(s * X, 2.1, 0), stake], 0.01, Mr, ROPE, n=4, v_len=0.12)
-        k.rbox((stake[0], 0.06, 0), (0.05, 0.14, 0.05), 0.01, Mw, "#9c7550", segs=1)
-    xs, ys = np.linspace(-X + 0.08, X - 0.08, 21), np.linspace(BOT, TOP - 0.06, 5)
-    sag = lambda x: 0.03 * (1 - (x / X) ** 2)
-    for x in xs:                                        # the net: cords, real holes between
-        k.rbox((x, (BOT + TOP - 0.06) / 2 - sag(x), 0), (0.014, TOP - 0.06 - BOT, 0.014), 0.0, Mc, "#2f3236", segs=1)
-    for y in ys[:-1]:
-        k.tube([(x, y - sag(x), 0) for x in np.linspace(-X + 0.08, X - 0.08, 9)], 0.008, Mc, "#2f3236", n=4)
-    k.tube([(x, TOP - 0.03 - sag(x), 0) for x in np.linspace(-X, X, 9)], 0.012, Mr, ROPE, n=4)            # the top cord
-    k.rbox((0, TOP - 0.04, 0), (2 * X - 0.16, 0.08, 0.025), 0.008, Mc, WHITE, segs=1)                    # the white band
-    k.tint_gradient(0.86, 1.0, 0.0, 2.1)
-    return k.finish(smooth_deg=50)
-
-
 def build():
     K.reset()
     wood = wood_mat("M_DecorWood", 2614)
-    rope = K.Mat("M_Rope", tex=K.image("rope", K.rope(64, 128, 2613, "#ffffff")), rough=1.0)
     paint, cloth, stone, metal = K.Mat("P_Paint", rough=0.45), K.Mat("P_Cloth", rough=1.0), K.Mat("P_Stone", rough=0.95), K.Mat("P_Metal", rough=0.4)
     jobs = [(f"beach-ball-{n}", (lambda n=n: beach_ball(n, paint))) for n in BALLS]
     jobs += [(f"beach-towel-{n}", (lambda n=n: beach_towel(n, cloth))) for n in "ab"]
     jobs += [("beach-lounger", lambda: lounger(wood, cloth)), ("sandcastle", lambda: sandcastle(stone, paint, cloth)),
-             ("beach-cooler", lambda: cooler(paint, metal)), ("volleyball-net", lambda: volleyball_net(wood, rope, cloth))]
+             ("beach-cooler", lambda: cooler(paint, metal))]
     obs = {}
     for name, fn in jobs:
         ob = fn()
@@ -205,7 +180,7 @@ def build():
 def scene(obs, out, views):
     import bpy
     shown = []
-    spots = {"volleyball-net": (0, -2.4, 0), "beach-ball-a": (-1.0, -1.2, 0), "beach-ball-b": (1.6, -0.6, 0), "beach-ball-c": (2.2, 1.6, 0),
+    spots = {"beach-ball-a": (-1.0, -1.2, 0), "beach-ball-b": (1.6, -0.6, 0), "beach-ball-c": (2.2, 1.6, 0),
              "beach-towel-a": (-2.3, 0.6, 0.15), "beach-towel-b": (-1.2, 0.8, -0.1), "beach-lounger": (0.3, 0.9, 0.0), "beach-cooler": (1.3, 0.9, 0.3),
              "sandcastle": (0.6, 2.6, 0.0)}
     for name, (x, z, yaw) in spots.items():

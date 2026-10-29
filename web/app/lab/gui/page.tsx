@@ -22,7 +22,7 @@ import { FISH } from "@/lib/game/fishing";
 import { iconUrl } from "@/lib/icons/keys";
 import { RARITIES, RARITY_LABEL } from "@/lib/rarity";
 import { useSearch } from "@/lib/game/useMediaQuery";
-import { ProgressCard } from "@/components/gui/flat";
+import { PowerMeter, ProgressCard } from "@/components/gui/flat";
 import s from "./showroom.module.css";
 
 /** Re-mounts its child every `ms` (an overlay that finishes and closes itself stays on show). */
@@ -199,6 +199,10 @@ export default function GuiShowroom() {
     <Section id="progress-card" title="Progress card (flat)" note="The flat kit’s loading card: a white card, the stage in a quiet line, the real progress as a thin ink line.">
       <Row><ProgressCard icon={<Sprout size={24} />} title="Tethos Island" status="Sweeping the plaza…" value={0.42} label="Loading the island" />
         <ProgressCard title="Saving" status="Nearly there" value={0.9} label="Saving" /></Row>
+    </Section>
+
+    <Section id="power-meter" title="Power meter (flat)" note="A charge meter: the volleyball serve’s power bar (hold, release), the fill turning gold in the tip zone.">
+      <Row><PowerMeter value={0.35} label="Serve power"><Keycap>Hold</Keycap></PowerMeter><PowerMeter value={0.7} label="Serve power" /><PowerMeter value={0.96} label="Serve power, max" /></Row>
     </Section>
 
     <Section id="tooltips" title="Tooltips" kit={["wheel"]} note="The teal name pill with a tail, on hover and on keyboard focus.">

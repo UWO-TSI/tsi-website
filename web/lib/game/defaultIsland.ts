@@ -106,7 +106,7 @@ export const PROP_FOOTPRINT: Record<string, readonly [number, number, number?, n
   "path-rock-slab": [0.2, 0.12], "path-rock-low": [0.22, 0.26, -0.07, 0.05], "path-rock-cluster": [0.2, 0.17, -0.15, 0.02], "rustic-fence-a": [1.29, 0.12, 0.01, 0.02],
   "rustic-fence-b": [0.93, 0.1, 0.06, 0.03], "rustic-post": [0.22, 0.11, 0.1, 0.05],
   "sushi-bar": [4.0, 1.5], "fish-market": [4.46, 3.05, 0.36, 0.75], "sell-barrel": [1.25, 0.6],
-  "beach-lounger": [0.34, 0.95], sandcastle: [0.55, 0.38, -0.06, 0.05], "beach-cooler": [0.33, 0.22], "volleyball-net": [3.51, 0.08], "lifeguard-tower": [1.02, 1.45, 0, 0.42],
+  "beach-lounger": [0.34, 0.95], sandcastle: [0.55, 0.38, -0.06, 0.05], "beach-cooler": [0.33, 0.22], "volleyball-net": [4.78, 0.1], "lifeguard-tower": [1.02, 1.45, 0, 0.42],
   "surfboard-a": [0.25, 0.14, -0.12, -0.1], "surfboard-b": [0.24, 0.14, 0.11, -0.09], "surfboard-c": [0.22, 0.16, -0.11, -0.07],
   // game/village-art2
   "moss-boulder-a": [0.65, 0.5], "moss-boulder-b": [1.05, 0.65], "river-stones-b": [0.55, 0.4],
@@ -136,7 +136,7 @@ export const PROP_TOP: Record<string, number> = {
   "dock-hoist": 2.645,
   "path-rock-slab": 0.538, "path-rock-low": 0.247, "path-rock-cluster": 0.294, "rustic-fence-a": 0.99, "rustic-fence-b": 0.91, "rustic-post": 0.931,
   "sushi-bar": 6.543, "fish-market": 11.97, "sell-barrel": 2.62,
-  "beach-lounger": 0.948, sandcastle: 0.78, "beach-cooler": 0.486, "volleyball-net": 2.14, "lifeguard-tower": 4.7, "surfboard-a": 1.755, "surfboard-b": 1.759, "surfboard-c": 1.763,
+  "beach-lounger": 0.948, sandcastle: 0.78, "beach-cooler": 0.486, "volleyball-net": 2.53, "lifeguard-tower": 4.7, "surfboard-a": 1.755, "surfboard-b": 1.759, "surfboard-c": 1.763,
   "moss-boulder-a": 0.855, "moss-boulder-b": 0.761, "river-stones-b": 0.475,
   "tackle-shop": 6.741,
 };

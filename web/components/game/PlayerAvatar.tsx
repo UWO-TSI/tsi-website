@@ -155,8 +155,10 @@ function rideFrame(r: AvatarRide, g: THREE.Group, bd: THREE.Group, hd: THREE.Gro
   bd.scale.set(1, 1, 1);
   bankAbout(bd, r.yaw, r.roll, r.seated ? RIDE_PIVOT.seated : RIDE_PIVOT.standing, r.pitch);
   hd.position.set(r.x, r.y, r.z);
-  Object.assign(m, { yaw: r.yaw, speed: r.seated ? 0 : r.speed, lift: r.seated ? r.lift : 0, pose: r.seated ? "Sit" : null, move: null, rate: 1 });
+  Object.assign(m, { yaw: r.yaw, speed: r.seated ? 0 : r.speed, lift: r.seated ? r.lift : 0, pose: r.seated ? "Sit" : null, move: r.move ?? null, air: r.air, rate: 1 });
   if (r.hop) { m.play = "Jump"; r.hop = false; }
+  if (r.play) { m.play = r.play; r.play = null; }
+  if (r.upper) { m.upper = r.upper; r.upper = null; }
   if (r.land) { m.stop = true; r.land = false; }
   // Footsteps from the feet on the boards: the sound, and what the boards throw (nothing but the sound, as on any wood).
   if (m.steps !== undefined && m.steps !== f.steps) {

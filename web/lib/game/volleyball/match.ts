@@ -205,7 +205,7 @@ function toss(m: Match, power: number) {
 export function serveHit(m: Match, aim: { x: number; z: number } | null) {
   const sv = serverOf(m), p = m.players[sv], side = sideOfPlayer(m, sv), opp = -side, b = m.ball;
   const err = serveError(b.y, b.vy, p.s.y + HAND.serve, GRAVITY), judge = judgeServe(err);
-  const target = clampTo(aim ?? { x: 0, z: opp * COURT.halfLength * 0.6 }, opp as Side, 0.3);
+  const target = aim ? aimOn(aim, opp as Side) : { x: 0, z: opp * COURT.halfLength * 0.6 };
   const jumped = p.s.mode === "air";
   let speed = (11 + 7 * m.botServe.power) * (jumped ? 1.15 : 1) * (judge === "perfect" ? 1.08 : 1);
   const from = { x: b.x, y: b.y, z: b.z };
@@ -222,10 +222,10 @@ export function serveHit(m: Match, aim: { x: number; z: number } | null) {
   m.events.push({ kind: "serve", who: sv, judge }, { kind: "contact", who: sv, how: "serve", quality: judge === "perfect" ? 1 : judge === "good" ? 0.7 : 0.2, x: b.x, y: b.y, z: b.z });
 }
 
-/** A point inside the court on `side`, `margin` in from the lines. */
-export function clampTo(p: { x: number; z: number }, side: Side, margin: number) {
-  const hw = COURT.halfWidth - margin, hl = COURT.halfLength - margin;
-  return { x: Math.max(-hw, Math.min(hw, p.x)), z: side * Math.max(margin + 0.3, Math.min(hl, Math.abs(p.z))) };
+/** Where a look sends the ball: on `side`, as far out as the free zone (a look past the lines lands out). */
+export function aimOn(p: { x: number; z: number }, side: Side) {
+  const x = Math.max(-(COURT.halfWidth + 1.5), Math.min(COURT.halfWidth + 1.5, p.x));
+  return { x, z: side * Math.max(0.8, Math.min(COURT.halfLength + 2, side * p.z > 0 ? Math.abs(p.z) : COURT.halfLength * 0.6)) };
 }
 
 // ── Contacts ────────────────────────────────────────────────────────────────
@@ -267,7 +267,7 @@ function touch(m: Match, i: number, how: ContactKind, q: number, aim: { x: numbe
   Object.assign(m, { lastTouch: i, lastTeam: p.team, lastBlock: false, serving: false });
   m.flight++;
   const from = { x: b.x, y: b.y, z: b.z }, scatter = (k: number) => ({ x: (rand(m) - 0.5) * 2 * k * (1 - q), z: (rand(m) - 0.5) * 2 * k * (1 - q) });
-  const over = aim ? clampTo(aim, opp, 0.5) : openSpot(m, opp);
+  const over = aim ? aimOn(aim, opp) : openSpot(m, opp);
   let v;
   if (how === "spike") {
     const e = scatter(1.5), to = { x: over.x + e.x, y: 0, z: over.z + e.z };

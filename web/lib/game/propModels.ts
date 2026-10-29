@@ -156,7 +156,7 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   ...Object.fromEntries(["river-stones-a", "river-stones-b", "driftwood-a", "driftwood-b"].map(m => [m, `${P}${m}.glb`])),
   // game/wharf-art2: more for the beach (art/props/build_beach_things.py), the origin on the sand: beach balls 0.56 across
   // (scenery: nothing kicks or throws them yet), towels laid along z (0.9 by 1.8), a lounger along z (backrest at -z, the
-  // sitter looks to +z), a sandcastle with its bucket and spade, a cool box, a volleyball net along x (posts at x +-2.6).
+  // sitter looks to +z), a sandcastle with its bucket and spade, a cool box, a volleyball net along x (real proportions, posts at x +-3.65; game/volleyball).
   ...Object.fromEntries(["beach-ball-a", "beach-ball-b", "beach-ball-c", "beach-towel-a", "beach-towel-b", "beach-lounger", "sandcastle", "beach-cooler",
     "volleyball-net"].map(m => [m, `${P}${m}.glb`])),
   // Single low-poly forest trees for the closed forest (art/trees/build_forest_trees.py, game/trees-art), 120 to 380
