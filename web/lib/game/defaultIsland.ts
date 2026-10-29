@@ -513,7 +513,12 @@ export function islandOf(v: Village): VillageIsland {
     }
     return [x, z];
   };
-  const top = (x: number, z: number) => Math.max(ground(x, z), solidTop(x, z));
+  // Over the smooth world's water its top is the water's surface, not the seabed: a fall into the sea splashes there
+  // (the splash shows on the water, and a body never sinks below the realtime room's floor, protocol AREA_BOUNDS).
+  const top = (x: number, z: number) => {
+    const g = ground(x, z);
+    return Math.max(terrain && g < terrain.seaLevel && wet(x, z) ? terrain.seaLevel : g, solidTop(x, z));
+  };
   return terrain ? { map, ground, surface, standable, move, wet, top, climb, steep } : { map, ground, surface, standable, move, wet, top };
 }
 

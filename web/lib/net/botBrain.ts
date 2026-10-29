@@ -151,6 +151,8 @@ export function botWorld(): BotWorld {
   return { ...shared, taken: new Set() };
 }
 
+/** Open water ahead of a shore spot: wet at every one of these distances along it (no sandbar or deck between). */
+const OPEN_WATER = Array.from({ length: 14 }, (_, i) => 1.6 + i * 0.5);
 /** Up to 16 spots at least 5 u apart, on the highest ground, with open water a step ahead. */
 function shoreSpots(b: { minX: number; maxX: number; minZ: number; maxZ: number }, w: { standable(x: number, z: number): boolean; wet(x: number, z: number): boolean; ground(x: number, z: number): number }): ShoreSpot[] {
   const found: (ShoreSpot & { y: number })[] = [];
@@ -158,7 +160,7 @@ function shoreSpots(b: { minX: number; maxX: number; minZ: number; maxZ: number 
     if (!clear(w.standable, x, z)) continue;
     for (let a = 0; a < 8; a++) {
       const dx = Math.sin((a * Math.PI) / 4), dz = Math.cos((a * Math.PI) / 4);
-      if (!w.wet(x + dx * 0.5, z + dz * 0.5) && w.wet(x + dx * 1.6, z + dz * 1.6) && w.wet(x + dx * 5, z + dz * 5) && w.wet(x + dx * 8, z + dz * 8)) {
+      if (!w.wet(x + dx * 0.5, z + dz * 0.5) && OPEN_WATER.every(d => w.wet(x + dx * d, z + dz * d))) {
         found.push({ x, z, dx, dz, y: w.ground(x, z) });
         break;
       }
