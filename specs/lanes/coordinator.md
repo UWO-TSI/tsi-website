@@ -618,3 +618,4 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - Redo: before-after ("should still have the ??? and sea tag", given to a light agent); meter and before-after both raise "how to make this mini game more fun rather than repetitive" (ideas sent to David).
   - Merge fish-tiers once the tag fix lands.
 - **Volleyball:** David confirmed right click on the ground is Call it (relayed).
+- **Volleyball plan change** (David): the court sits at the island's existing volleyball-net (-4, 103.5). The net is remodelled bigger from the existing model, at real proportions. The match starts with E at the net. Players in the match get the full view; passersby get a light one (static court, synced avatars, a low-rate ball, no particles, HUD or AI), measured with perf:check. Relayed to the lane.
