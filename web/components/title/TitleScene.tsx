@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, use, useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 // The game's atmospheric haze and aerial desaturation on the shared fog chunk (side effect, before materials compile).
 import "@/lib/game/aerialFog";
@@ -15,7 +15,7 @@ import { InstancedModels } from "@/components/game/InstancedNature";
 import Residents from "@/components/game/NPC";
 import TitleVillage from "./TitleVillage";
 import { preloadGame } from "./preloadGame";
-import { stagedShot, type Shot } from "./shots";
+import { DRIFT_DISTANCE, dollyPose, stagedShot, titleView, type Shot } from "./shots";
 import { village, objectsOf } from "@/lib/game/villageMap";
 import { loadGameWorld } from "@/lib/game/world/load";
 import { villageIsland, villageScale } from "@/lib/game/defaultIsland";
@@ -40,7 +40,6 @@ import { DEFAULT_NPC_PERSONAS } from "@/data/content-defaults";
  */
 
 const DRIFT_SECONDS = 56;
-const DRIFT_DISTANCE = 1.2;
 /** The title's depth of field (specs/v1-drop.md §8b): the foreground grass and the far trees soft, the village sharp. */
 const TITLE_DOF = { enabled: true, blur: 0.24, taper: 0.32, offset: -0.03 };
 
@@ -60,12 +59,9 @@ const _at = new THREE.Vector3(), _look = new THREE.Vector3();
 function aim(camera: THREE.Camera, shot: Shot, t: number, still: boolean, ground: (x: number, z: number) => number) {
   const phase = still ? 0.5 : 0.5 - 0.5 * Math.cos((t / DRIFT_SECONDS) * Math.PI * 2);
   const breath = still ? 0 : 1;
-  const yaw = THREE.MathUtils.degToRad(shot.yaw + breath * (0.28 * Math.sin(t * 0.37) + 0.12 * Math.sin(t * 0.83 + 1.3)));
-  const pitch = THREE.MathUtils.degToRad(shot.pitch + breath * 0.16 * Math.sin(t * 0.29 + 0.6));
   const side = (phase - 0.5) * (shot.drift ?? DRIFT_DISTANCE);
-  const x = shot.x + Math.cos(yaw) * side, z = shot.z - Math.sin(yaw) * side;
-  _at.set(x, ground(x, z) + shot.eye + breath * Math.sin(t * 0.45) * 0.012, z);
-  _look.set(x + Math.sin(yaw) * 10, _at.y + Math.tan(pitch) * 10, z + Math.cos(yaw) * 10);
+  dollyPose(shot, side, shot.yaw + breath * (0.28 * Math.sin(t * 0.37) + 0.12 * Math.sin(t * 0.83 + 1.3)), shot.pitch + breath * 0.16 * Math.sin(t * 0.29 + 0.6),
+    breath * Math.sin(t * 0.45) * 0.012, ground, _at, _look);
   camera.position.copy(_at);
   camera.lookAt(_look);
   if (camera instanceof THREE.PerspectiveCamera && camera.fov !== shot.fov) { camera.fov = shot.fov; camera.updateProjectionMatrix(); }
@@ -97,6 +93,9 @@ function Scene() {
   const grassClear = useMemo(() => (x: number, z: number) => island.top(x, z) <= island.ground(x, z) + 0.01, [island]);
   const shot = useMemo(() => ({ ...stagedShot(phase, look.season, v, island), ...parseShot(new URLSearchParams(window.location.search).get("shot")) }),
     [v, island, phase, look.season]);
+  // What the frame can show across the whole dolly, every phase: the title lights (and so pays for) only that.
+  const camera = useThree(s => s.camera) as THREE.PerspectiveCamera, aspect = useThree(s => s.size.width / s.size.height);
+  const seen = useMemo(() => titleView(v, island, look.season, shot, camera, aspect), [v, island, look.season, shot, camera, aspect]);
   const viewer = useRef(new THREE.Vector3(shot.x, 0, shot.z));
   // Residents never notice the title camera: the "player" stands far off the map, so no nameplates, no greetings.
   const nobody = useRef(new THREE.Vector3(500, 0, 500));
@@ -116,7 +115,7 @@ function Scene() {
       <InstancedModels items={scenery} cull={!!v.terrain} />
       {/* Own boundaries: the base world draws (and the page fades in) while the buildings and residents stream in. */}
       <Suspense fallback={null}>
-        <TitleVillage v={v} island={island} light={light} />
+        <TitleVillage v={v} island={island} light={light} seen={seen} />
       </Suspense>
       <Suspense fallback={null}>
         <Residents personas={DEFAULT_NPC_PERSONAS} phase={phase} ceremony={false} player={nobody} island={island} v={v} />

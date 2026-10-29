@@ -1,6 +1,8 @@
+import * as THREE from "three";
 import { objectById, type Village } from "@/lib/game/villageMap";
 import type { VillageIsland } from "@/lib/game/defaultIsland";
 import type { IslandPhase } from "@/lib/game/islandTime";
+import { CurvedCull } from "@/lib/game/curvedCull";
 import type { Season } from "@/lib/game/season";
 
 /** One framing: where the camera stands (ground + eye), where it looks (yaw/pitch in degrees) and its lens. */
@@ -58,4 +60,41 @@ export function fallbackShot(v: Village, island: VillageIsland): Shot {
     if (!island.wet(cx, z) && island.standable(cx, z)) { shore = z; break; }
   }
   return { x: cx, z: shore - 6, yaw: 0, eye: 1.35, pitch: -3, fov: 52 };
+}
+
+/** How far the slow dolly travels when a shot doesn't say (TitleScene). */
+export const DRIFT_DISTANCE = 1.2;
+
+/**
+ * The title camera `side` units along its dolly (across the view), aimed at yaw/pitch (degrees) and lifted `lift` off
+ * its eye height: where it stands (`at`) and a point it looks at (`look`).
+ */
+export function dollyPose(shot: Shot, side: number, yawDeg: number, pitchDeg: number, lift: number, ground: (x: number, z: number) => number,
+  at: THREE.Vector3, look: THREE.Vector3) {
+  const yaw = THREE.MathUtils.degToRad(yawDeg), pitch = THREE.MathUtils.degToRad(pitchDeg);
+  const x = shot.x + Math.cos(yaw) * side, z = shot.z - Math.sin(yaw) * side;
+  at.set(x, ground(x, z) + shot.eye + lift, z);
+  look.set(x + Math.sin(yaw) * 10, at.y + Math.tan(pitch) * 10, z + Math.cos(yaw) * 10);
+}
+
+const PHASES: readonly IslandPhase[] = ["dawn", "day", "evening", "night"];
+
+/**
+ * Whether a world-space sphere can show anywhere in the title's frame: the bent view (lib/game/curvedCull.ts) at nine
+ * stops along the dolly of every phase's staged shot and of `shot` (a `?shot=` override), through `camera` at
+ * `aspect`. The cull's own margin (1.5 u and about 3 degrees) covers the dolly between stops and the handheld breath.
+ */
+export function titleView(v: Village, island: VillageIsland, season: Season, shot: Shot, camera: THREE.PerspectiveCamera, aspect: number): (s: THREE.Sphere) => boolean {
+  const cam = Object.assign(camera.clone(), { aspect }), at = new THREE.Vector3(), look = new THREE.Vector3(), views: CurvedCull[] = [];
+  for (const s of [...PHASES.map(p => stagedShot(p, season, v, island)), shot]) {
+    cam.fov = s.fov;
+    cam.updateProjectionMatrix();
+    for (let k = 0; k <= 8; k++) {
+      dollyPose(s, (k / 8 - 0.5) * (s.drift ?? DRIFT_DISTANCE), s.yaw, s.pitch, 0, island.ground, at, look);
+      cam.position.copy(at);
+      cam.lookAt(look);
+      views.push(new CurvedCull().update(cam));
+    }
+  }
+  return sphere => views.some(c => c.visible(sphere));
 }
