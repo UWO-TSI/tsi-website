@@ -23,35 +23,27 @@
 .dots i[data-done] { background: var(--ui-quiet); }
 .dots i[data-on] { background: var(--ui-ink); transform: scale(1.3); }
 
-/* KeyPrompt: no panel; low in the middle above the menu's dock, a small dark cue over bare keys, a quiet Skip. */
-.keysLayer { position: fixed; left: 0; right: 0; bottom: calc(var(--hud-floor, 16px) + 96px); z-index: 60; display: grid; justify-items: center; padding: 0 16px;
-  pointer-events: none; font-family: var(--gui-font); color: var(--ui-ink); }
-.keys { display: grid; justify-items: center; gap: 10px; outline: none; pointer-events: auto; animation: rise 0.26s cubic-bezier(0.2, 0.9, 0.3, 1.12) both; }
-.cue { display: flex; align-items: center; gap: 10px; margin: 0; padding: 7px 8px 7px 14px; border-radius: 999px; background: var(--ui-ink); color: var(--ui-accent-ink);
-  box-shadow: 0 8px 22px rgb(var(--ui-shade) / 0.22); }
-.cueMain { display: flex; align-items: center; gap: 7px; font: 800 14px/1.2 var(--gui-font); animation: rise 0.24s ease both; }
-.cueNote { font: 600 13px/1.2 var(--gui-font); color: var(--ui-hint); }
-.cueMain kbd { display: inline-grid; place-items: center; min-width: 26px; height: 24px; padding: 0 7px; box-sizing: border-box; border-radius: 6px; background: var(--ui-card); color: var(--ui-ink);
-  box-shadow: inset 0 -2px 0 var(--ui-line-strong); font: 800 12px/1 var(--gui-font); }
-.cue .dots { margin: 0 4px 0 2px; }
-.cue .dots i { width: 6px; height: 6px; background: var(--ui-ink-2); }
-.cue .dots i[data-done] { background: var(--ui-quiet); }
-.cue .dots i[data-on] { background: var(--ui-accent-ink); }
-.keys > button { padding: 4px 12px; min-height: 0; background: var(--ui-card); box-shadow: 0 4px 12px rgb(var(--ui-shade) / 0.16); }
+/* A light Spotlight (the keyboard tour; David's v4 review: "less uncessary text and make it more lightweight"): no
+   scrim, a small white card on a hairline edge with a soft shadow, just the cue, the keys and a quiet foot. */
+.spotlight[data-light] { gap: 10px; padding: 12px 12px 8px; border-radius: 18px; background: var(--ui-card); box-shadow: 0 0 0 1px var(--ui-line), 0 12px 32px rgb(var(--ui-shade) / 0.16); }
+.spotlight[data-light] .lead { min-height: 0; margin: 2px 0 0; font-size: 15px; gap: 7px; }
+.spotlight[data-light] .foot { padding: 0 2px; }
+.spotlight[data-light] .foot button { padding: 2px 10px; min-height: 0; font-size: 13px; }
+.spotlight[data-light] .dots i { width: 6px; height: 6px; }
 
-/* The keyboard: small bare white keys (no case), a hairline foot and a soft shadow so they read over the game; the lit key ink with the marker's glow. */
-.board { --u: min(30px, calc((100vw - 48px) / 15.5)); display: grid; gap: calc(var(--u) * 0.14); }
-.row { display: flex; gap: calc(var(--u) * 0.14); }
+/* The keyboard: white keys on a light well, a thin foot for depth; the lit key ink with the marker's glow. */
+.board { --u: min(32px, calc((100vw - 72px) / 15.5)); display: grid; gap: calc(var(--u) * 0.12); padding: calc(var(--u) * 0.2); border-radius: 12px; background: var(--ui-card-dim); box-shadow: inset 0 0 0 1px var(--ui-line); }
+.row { display: flex; gap: calc(var(--u) * 0.12); }
 .key {
   position: relative; overflow: hidden; box-sizing: border-box; display: grid; place-items: center; height: var(--u);
-  width: calc(var(--u) * var(--w, 1) + var(--u) * 0.14 * (var(--w, 1) - 1)); border-radius: 7px; background: var(--ui-card);
-  box-shadow: inset 0 -3px 0 var(--ui-line-strong), 0 3px 8px rgb(var(--ui-shade) / 0.2); color: var(--ui-ink-2); font: 700 calc(var(--u) * 0.34)/1 var(--gui-font);
+  width: calc(var(--u) * var(--w, 1) + var(--u) * 0.12 * (var(--w, 1) - 1)); border-radius: 7px; background: var(--ui-card);
+  box-shadow: inset 0 0 0 1px var(--ui-line), inset 0 -2px 0 var(--ui-line-strong); color: var(--ui-ink-2); font: 600 calc(var(--u) * 0.32)/1 var(--gui-font);
   transition: transform 0.09s ease-out, background 0.2s ease-out, color 0.2s ease-out;
 }
 .key > b { position: relative; font-weight: inherit; }
 .key[data-down] { transform: translateY(2px); box-shadow: inset 0 -1px 0 var(--ui-line-strong); }
 .key[data-done] { background: var(--ui-pill); color: var(--ui-quiet); }
-.key[data-lit] { z-index: 1; background: var(--ui-ink); color: var(--ui-accent-ink); font-weight: 800; box-shadow: inset 0 -3px 0 var(--ui-accent-deep); animation: lit 1.4s ease-in-out infinite; }
+.key[data-lit] { z-index: 1; background: var(--ui-ink); color: var(--ui-accent-ink); font-weight: 800; box-shadow: inset 0 -2px 0 var(--ui-accent-deep); animation: lit 1.4s ease-in-out infinite; }
 .key[data-lit][data-down] { box-shadow: inset 0 -1px 0 var(--ui-accent-deep); }
 .key[data-won] { z-index: 1; background: var(--ui-ink); color: var(--ui-accent-ink); animation: won 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
 .fill { position: absolute; inset: 0; transform-origin: left; background: var(--ui-marker); }
@@ -116,6 +108,9 @@
   position: relative; z-index: 1; width: var(--w); aspect-ratio: 1.586; overflow: hidden; border-radius: 14px;
   background: var(--ui-paper); color: var(--ui-paper-ink); box-shadow: 0 1px 0 var(--ui-paper-edge), 0 18px 40px rgb(var(--ui-shade) / 0.3);
 }
+/* Printing: the card is clipped at the slot's line, so none of it shows until it comes out of the slot (David's v4
+   note: "you can see it before the printer line"); only the top edge clips, the shadow keeps its sides and foot. */
+.printed[data-printing] .paperWrap { clip-path: inset(0 -60px -80px -60px); }
 .printed[data-printing] .paper { animation: printOut 1.5s cubic-bezier(0.3, 0.1, 0.3, 1) both; }
 /* Held up as the overlay: larger, its type with it. */
 .printed[data-large] { width: min(620px, calc(100vw - 32px)); }
@@ -169,7 +164,7 @@
 }
 .stamp b { font: 800 9px/1.1 var(--gui-font); letter-spacing: 0.06em; text-transform: uppercase; }
 .stamp small { font: 800 12px/1.2 var(--gui-font); letter-spacing: 0.1em; text-transform: uppercase; }
-@keyframes printOut { 0% { clip-path: inset(0 0 100% 0); transform: translateY(-62%); } 100% { clip-path: inset(0 0 0 0); transform: none; } }
+@keyframes printOut { from { transform: translateY(-100%); } to { transform: none; } }
 @keyframes whirr { 50% { transform: translateY(1px); } }
 @keyframes stamp { 0% { opacity: 0; scale: 1.25; } 40% { opacity: 1; scale: 0.96; } 100% { opacity: 0.88; scale: 1; } }
 /* The stamper: a handle on an inked pad; down onto the card, a squash as it hits (at 0.3 s: the mark and the card's
@@ -196,7 +191,7 @@
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes fade { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
-  .scrim, .spotlight, .lead, .keys, .cueMain, .key, .key[data-lit], .key[data-won], .flyDim, .flyIcon, .flyIcon > span, .flyName, .flyRing, .pop, .disc, .ring, .spark,
+  .scrim, .spotlight, .lead, .key, .key[data-lit], .key[data-won], .flyDim, .flyIcon, .flyIcon > span, .flyName, .flyRing, .pop, .disc, .ring, .spark,
   .popEyebrow, .popTitle, .printed[data-printing] .slot, .printed[data-printing] .paper, .stamp, .held { animation: none; transition: none; }
   .paper[data-tilt] { transform: none; }
   .stamper { display: none; }

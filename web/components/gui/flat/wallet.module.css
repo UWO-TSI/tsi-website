@@ -1,0 +1,21 @@
+/* The kit's wallet (wallet.tsx; design bible UI 8b): coins and gems in one small white pill, its slot under the time. */
+.wallet { display: inline-flex; align-items: center; gap: 4px; margin: 0; padding: 3px 4px; border: 0; border-radius: 999px; background: var(--ui-card); color: var(--ui-ink);
+  box-shadow: 0 0 0 1px var(--ui-line), 0 6px 18px rgb(var(--ui-shade) / 0.14); font: 800 14px/1 var(--gui-font); font-variant-numeric: tabular-nums; }
+button.wallet { cursor: pointer; transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease; }
+button.wallet:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px var(--ui-line-strong), 0 8px 22px rgb(var(--ui-shade) / 0.18); }
+.cell { position: relative; display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px 4px 5px; border-radius: 999px; }
+.cell + .cell { box-shadow: -1px 0 0 var(--ui-line); border-radius: 0 999px 999px 0; }
+.icon { display: inline-grid; place-items: center; width: 22px; height: 22px; transition: opacity 0.12s ease, transform 0.36s cubic-bezier(0.34, 1.56, 0.64, 1); }
+/* A fly-in on its way: the cell's icon waits out of its place; it clicks in as the FlyIn lands, and the cell rings. */
+.cell[data-landing]:not([data-landed]) .icon { opacity: 0; transform: scale(0.4); }
+.cell[data-landing]:not([data-landed])::after { content: ""; position: absolute; left: 5px; top: 50%; width: 22px; height: 22px; margin-top: -11px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--ui-line-strong); }
+.cell[data-landed] { animation: ping 0.9s ease-out; }
+@keyframes ping { 0% { background: transparent; } 35% { background: var(--ui-marker); } 100% { background: transparent; } }
+/* At rest a change slides it in from the right edge, holds, then it slides away again. */
+.wallet[data-at="in"] { animation: slideIn 0.42s cubic-bezier(0.2, 1.2, 0.4, 1) both; }
+.wallet[data-at="out"] { animation: slideOut 0.32s ease-in forwards; }
+@keyframes slideIn { from { opacity: 0; transform: translateX(calc(100% + 24px)); } }
+@keyframes slideOut { to { opacity: 0; transform: translateX(calc(100% + 24px)); } }
+@media (prefers-reduced-motion: reduce) {
+  .wallet[data-at], .cell[data-landed], button.wallet, .icon { animation-duration: 0.01s; transition: none; }
+}

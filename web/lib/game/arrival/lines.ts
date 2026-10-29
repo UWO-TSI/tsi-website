@@ -43,16 +43,17 @@ export const STOP_LINES: Readonly<Record<string, readonly string[]>> = {
   // Keys: `{jump}`, `{dash}`, `{bag}`.
   dockNew: ["Easy now. That's solid ground under you.", "Legs still work? Let's see. Hop that box for me: {jump} to jump."],
   hqFirst: ["This is HQ. Alice runs the place.", "She'll sign you in and show you the ropes. Go on in, I'll wait out here."],
-  // *word*: a keyword, drawn with its little icon in the dialogue box (the kit's Keyword).
+  // A word that names a thing (fish, coins, the shop, merch, the café...) is drawn with its little icon in the dialogue
+  // box, as in every talk line (the kit's Keyword dictionary).
   sights: [
     "All signed in? Good. Let me show you round.",
-    "That's the museum. Bring Odile a *fish* or a *bug* she hasn't got, and she'll put it on show.",
-    "That's the café. Sit down with a book and a friend. Time spent there earns you *coins*.",
-    "And that's the shop. Tools, clothes, things for your house.",
+    "That's the museum. Bring Odile a fish or a bug she hasn't got, and she'll put it on show.",
+    "That's the café. Study there with friends, and you'll earn coins for it.",
+    "And that's the shop. Tools and clothes for the island, and real merch too.",
     "Right. Down to the water. Follow me.",
   ],
   wharf: [
-    "Here's the wharf. My end of the island.",
+    "Here's the wharf and the fish market. My end of the island.",
     "That's the tackle shop. Rods and bait. You'll want a better rod one day.",
     "And the shipwright's. Boats, one of these days.",
     "Now, over to the edge. Let's see you fish.",

@@ -1,19 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { keywordParts, plainLine } from "./keyword";
+import { keywordParts } from "./keyword";
 
-describe("a line's keywords (the kit's Keyword)", () => {
-  it("splits starred words out with their kind and where each part starts in the line as written", () => {
-    const line = "Bring Odile a *fish* or a *bug*, for *coins*.";
+describe("a line's keywords (the kit's Keyword, the default for every talk line)", () => {
+  it("finds the dictionary's words in a plain line, with their kind and where each part starts", () => {
+    const line = "Bring Odile a fish or a bug, for coins.";
     expect(keywordParts(line)).toEqual([
-      { text: "Bring Odile a ", at: 0 }, { text: "fish", at: 15, kind: "fish" }, { text: " or a ", at: 20 }, { text: "bug", at: 27, kind: "bug" },
-      { text: ", for ", at: 31 }, { text: "coins", at: 38, kind: "coin" }, { text: ".", at: 44 },
+      { text: "Bring Odile a ", at: 0 }, { text: "fish", at: 14, kind: "fish" }, { text: " or a ", at: 18 }, { text: "bug", at: 24, kind: "bug" },
+      { text: ", for ", at: 27 }, { text: "coins", at: 33, kind: "coin" }, { text: ".", at: 38 },
     ]);
-    // Each part's start is its first letter in the written line (what the typing counts).
     for (const p of keywordParts(line)) expect(line.slice(p.at, p.at + p.text.length)).toBe(p.text);
   });
-  it("keeps a starred word it has no icon for as plain text, and reads every line without its stars", () => {
-    expect(keywordParts("A *boat*.")).toEqual([{ text: "A ", at: 0 }, { text: "boat", at: 3 }, { text: ".", at: 8 }]);
-    expect(plainLine("A *fish* and *bugs*.")).toBe("A fish and bugs.");
-    expect(keywordParts("No marks.")).toEqual([{ text: "No marks.", at: 0 }]);
+  it("takes the longest phrase first, any case, and never a word inside another", () => {
+    const kinds = (line: string) => keywordParts(line).filter(p => p.kind).map(p => [p.text, p.kind]);
+    expect(kinds("Fish sell at the fish market. Borrow my fishing rod.")).toEqual([["Fish", "fish"], ["fish market", "market"], ["fishing rod", "rod"]]);
+    expect(kinds("The shipwright's boats, the Café, HQ's mail.")).toEqual([["shipwright", "ship"], ["boats", "ship"], ["Café", "cafe"], ["HQ", "hq"], ["mail", "mail"]]);
+    expect(kinds("Selfish shopping, a friendship, I'd say.")).toEqual([]);
+    expect(keywordParts("No keywords here.")).toEqual([{ text: "No keywords here.", at: 0 }]);
+  });
+  it("names the shop's real merch, the café's study and the gems", () => {
+    const kinds = (line: string) => keywordParts(line).filter(p => p.kind).map(p => p.kind);
+    expect(kinds("The shop sells real merch, for gems.")).toEqual(["shop", "merch", "gem"]);
+    expect(kinds("Study at the café with friends.")).toEqual(["study", "cafe"]);
   });
 });

@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Alice's keyboard tour (David's v2 and v3 reviews): the kit's small bare keyboard over the room, no panel (KeyPrompt).
- * A step at a time the key you need lights up and you press it, or hold it (a fill runs across the key), on your real
+ * Alice's keyboard tour (David's v2, v3 and v4 reviews): round 3's card with the kit's keyboard, made light (a light
+ * Spotlight: a small white card, no scrim; only the key and a word or two, "less uncessary text"). A step at a time the key you need lights up and you press it, or hold it (a fill runs across the key), on your real
  * keyboard; there's no Next. Every key you touch sinks on the drawing too. Each step done brings its part of your
  * screen in, in its real place (`onShow`: the HUD's coins, the chat, the bag, the menu's entries, the minimap), which
  * springs in and rings (SlotPop): the HUD builds up a piece at a time. While it's up it takes every key, so nothing
@@ -11,7 +11,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check } from "lucide-react";
 import { Keycap } from "@/components/gui";
-import { GhostButton, KeyBoard, KeyPrompt, SlotPop, boardLabel } from "@/components/gui/flat";
+import { GhostButton, KeyBoard, SlotPop, Spotlight, boardLabel } from "@/components/gui/flat";
 import { AudioManager } from "@/lib/game/audio";
 import { HOLD_MS, UI_TOUR, tourInput, tourSteps, tourTick, type HudPiece, type TourKeys, type TourProgress } from "@/lib/game/arrival/hq/uiTour";
 
@@ -20,7 +20,7 @@ const NEXT_MS = 650, END_MS = 1100;
 const START: TourProgress = { step: 0, holdFrom: null };
 /** Where each piece lands on screen (DefaultIslandWorld draws it there once shown). */
 const PIECE_AT: Record<HudPiece, readonly string[]> = {
-  hud: ['[data-hud-slot="coins"]', "[data-hud-right]"], chat: ['[data-testid="chat-dock"] button', '[data-testid="chat-dock"]'], bag: ['button[aria-label^="Open your bag"]'],
+  hud: ["[data-hud-wallet]", "[data-hud-right]"], chat: ['[data-testid="chat-dock"] button', '[data-testid="chat-dock"]'], bag: ['button[aria-label^="Open your bag"]'],
   collection: ['[data-testid="menu-dock"] [aria-label^="Collection"]'], quests: ['[data-testid="menu-dock"] [aria-label^="Quests"]'],
   map: ['[aria-label="Minimap"]', '[data-testid="menu-dock"] [aria-label^="Map"]'], mail: ['[data-testid="menu-dock"] [aria-label^="Mail"]'],
 };
@@ -92,14 +92,14 @@ export default function KeyboardTour({ open, keys, onShow, onDone }: {
   }, [open, p.holdFrom]);
 
   const shown = won ?? Math.min(p.step, steps.length - 1), step = steps[shown];
-  const cue = won !== null ? <><Check size={16} aria-hidden /> {won >= steps.length - 1 ? UI_TOUR.done : step.title}</>
+  const lead = won !== null ? <><Check size={16} aria-hidden /> {won >= steps.length - 1 ? UI_TOUR.done : step.title}</>
     : <>{step.hold ? UI_TOUR.hold : UI_TOUR.press} <Keycap>{boardLabel(step.key)}</Keycap> {step.title}</>;
   return <>
-    <KeyPrompt open={open} label={`${UI_TOUR.eyebrow}: ${step.title}`} cue={cue} note={step.text} steps={{ count: steps.length, at: shown }}
+    <Spotlight light open={open} label={`${UI_TOUR.eyebrow}: ${step.title}`} lead={lead} steps={{ count: steps.length, at: shown }}
       testId="ui-tour" dataset={{ "data-step": step.id, "data-won": won !== null ? "" : undefined }}
       footer={<GhostButton onClick={() => { setP(START); setWon(null); setPopped(null); onDone(); }} data-testid="ui-tour-skip">{UI_TOUR.skip}</GhostButton>}>
       <KeyBoard lit={step.key} hold={step.hold} fill={fill} won={won !== null} done={steps.slice(0, p.step).map(s => s.key)} down={down} />
-    </KeyPrompt>
+    </Spotlight>
     {open && popped && <SlotPop key={popped} to={PIECE_AT[popped]} />}
   </>;
 }

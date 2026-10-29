@@ -38,6 +38,9 @@
   --ui-word-fish: #7ab4f2;
   --ui-word-bug: #8fd27f;
   --ui-word-coin: #f0c45a;
+  --ui-word-gem: #c49af2;
+  --ui-word-place: #f0a07a;
+  --ui-word-item: #6fd1c2;
   --ui-stage: radial-gradient(ellipse 24% 4.5% at 50% 87%, rgb(0 0 0 / 0.45), rgb(0 0 0 / 0.18) 55%, transparent 100%),
     linear-gradient(180deg, #2c2c31 0%, #2c2c31 60%, #242428 84%, #1f1f22 100%);
 }

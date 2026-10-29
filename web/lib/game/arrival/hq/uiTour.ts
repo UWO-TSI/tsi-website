@@ -20,8 +20,8 @@ export interface TourStep {
   key: string;
   /** Held (the wheels, the HUD) rather than pressed. */
   hold: boolean;
+  /** What it's for, in a word or two (David's v4 review: "less uncessary text"). */
   title: string;
-  text: string;
 }
 
 /** How long a hold has to last (ms). */
@@ -29,15 +29,15 @@ export const HOLD_MS = 650;
 
 export function tourSteps(k: TourKeys): TourStep[] {
   return [
-    { id: "wheel", key: k.wheel, hold: true, title: "Your tools", text: "Hold for your tool wheel. Point at a tool and let go to take it out." },
-    { id: "emote", key: k.emote, hold: true, title: "Emotes", text: "Hold for your emote wheel. Wave, dance, sit down." },
-    { id: "hud", piece: "hud", key: k.hud, hold: true, title: "At a glance", text: "Hold to see your coins, level and gear." },
-    { id: "chat", piece: "chat", key: "enter", hold: false, title: "Chat", text: "Talk to everyone on the island. Type, then Enter again to send." },
-    { id: "bag", piece: "bag", key: k.bag, hold: false, title: "Your bag", text: "Everything you're carrying." },
-    { id: "collection", piece: "collection", key: k.collection, hold: false, title: "Your collection", text: "Every fish and bug you've found." },
-    { id: "quests", piece: "quests", key: k.quests, hold: false, title: "Quests", text: "Your quests and your journal." },
-    { id: "map", piece: "map", key: k.map, hold: false, title: "The map", text: "The whole island. Your minimap keeps the corner." },
-    { id: "mail", piece: "mail", key: k.mail, hold: false, title: "Mail", text: "Letters from HQ and your friends." },
+    { id: "wheel", key: k.wheel, hold: true, title: "Tools" },
+    { id: "emote", key: k.emote, hold: true, title: "Emotes" },
+    { id: "hud", piece: "hud", key: k.hud, hold: true, title: "At a glance" },
+    { id: "chat", piece: "chat", key: "enter", hold: false, title: "Chat" },
+    { id: "bag", piece: "bag", key: k.bag, hold: false, title: "Bag" },
+    { id: "collection", piece: "collection", key: k.collection, hold: false, title: "Collection" },
+    { id: "quests", piece: "quests", key: k.quests, hold: false, title: "Quests" },
+    { id: "map", piece: "map", key: k.map, hold: false, title: "Map" },
+    { id: "mail", piece: "mail", key: k.mail, hold: false, title: "Mail" },
   ];
 }
 

@@ -13,7 +13,7 @@
  */
 import { useCallback, useEffect, useRef, useSyncExternalStore, type MouseEvent } from "react";
 import { Dialogue } from "@/components/gui";
-import { Keyword, keywordParts, plainLine } from "@/components/gui/flat";
+import { Keyword, keywordParts } from "@/components/gui/flat";
 import { AudioManager } from "@/lib/game/audio";
 import { useWorldDialog } from "@/lib/game/useWorldDialog";
 import { POST_TITLES, type ResidentPost } from "@/lib/content/residents";
@@ -43,7 +43,7 @@ function leave() {
 
 /**
  * One frame of the talk: step it, write the letters that are showing (the rest stay in place, unseen, so the box never
- * reflows as a line grows), and say them. A line's parts (its *keywords*, the kit's Keyword) are each a shown and a
+ * reflows as a line grows), and say them. A line's parts (its keywords, the kit's Keyword) are each a shown and a
  * rest span under `box`; a keyword's icon comes in as the typing reaches it. `seen` remembers the line, letters and
  * spans last drawn.
  */
@@ -127,7 +127,7 @@ export default function TalkBox() {
           return p.kind ? <Keyword key={p.at} kind={p.kind} off>{typed}</Keyword> : <span key={p.at}>{typed}</span>;
         })}</span>
       </p>
-      <p className={styles.sr} aria-live="polite">{view.phase === "speaking" ? plainLine(line) : ""}</p>
+      <p className={styles.sr} aria-live="polite">{view.phase === "speaking" ? line : ""}</p>
     </Dialogue>
   </div>;
 }

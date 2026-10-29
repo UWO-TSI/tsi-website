@@ -128,7 +128,7 @@ describe("the HQ visit with Alice (row 312)", () => {
     const tour = tourSteps({ wheel: "tab", emote: "g", hud: "h", bag: "i", collection: "b", quests: "j", map: "m", mail: "l" });
     const all = [...Object.values(WREN_LINES).flat(), ...Object.values(HQ_TRACKER), ...LORE_CARD.pages.flatMap(p => [p.title, p.text]),
       ...Object.values(FLY_CARDS).flatMap(c => [c.name, c.text]), ...Object.values(ID_CARD), ...CHECKIN_CARD.steps.filter(x => !x.includes("{host}")), CHECKIN_CARD.note,
-      ...tour.flatMap(t => [t.title, t.text]), ...Object.values(TOOL_LINES).flatMap(t => [t.title, t.step, t.given, t.done, ...t.offer, ...t.during])];
+      ...tour.map(t => t.title), ...Object.values(TOOL_LINES).flatMap(t => [t.title, t.step, t.given, t.done, ...t.offer, ...t.during])];
     for (const line of all) {
       expect(line, line).not.toMatch(/—/);
       // Real names never show in game: the island's founder is "the Founder".

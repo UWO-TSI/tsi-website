@@ -3,10 +3,10 @@
 /**
  * The flat kit's big moments (specs/design-bible.md, UI rule 4: "big moments ... pop, spring and fly to their slot"),
  * first used by the first ten minutes (lane tutorial-v2, David's v2 review), shown on /lab/gui:
- *   Spotlight    one flat panel in the middle over a light scrim, for a step that wants your whole attention
- *   KeyBoard     a small drawn QWERTY keyboard, bare keys (no case): a key lit to press or hold (its fill runs as
- *                it's held), keys you've done, keys down now
- *   KeyPrompt    keys to press over the game with no panel: a small cue, the KeyBoard under it, low in the middle
+ *   Spotlight    one flat panel in the middle over a light scrim, for a step that wants your whole attention;
+ *                `light`: a small white card with no scrim (the keyboard tour)
+ *   KeyBoard     a small drawn QWERTY keyboard on a light well: a key lit to press or hold (its fill runs as it's
+ *                held), keys you've done, keys down now
  *   SlotPop      a part of the screen arriving in its place: it springs in and its place rings once
  *   FlyIn        an icon pops up in the middle over a slightly darker screen with its name, then flies to its slot
  *                on screen (a selector), which rings once
@@ -24,12 +24,14 @@ import { useWorldDialog } from "@/lib/game/useWorldDialog";
 import m from "./moments.module.css";
 
 /** A step that wants your whole attention: a flat panel in the middle over a light scrim. Holds the world's keys. */
-export function Spotlight({ open, label, eyebrow, title, lead, text, story, steps, children, footer, testId, dataset }: {
+export function Spotlight({ open, label, eyebrow, title, lead, text, story, light, steps, children, footer, testId, dataset }: {
   open: boolean; label: string; eyebrow?: ReactNode; title?: ReactNode;
   /** Under the title: what to do now, in a word or two (it changes with a little rise); then a quiet line about it. */
   lead?: ReactNode; text?: ReactNode;
   /** A page of story: the text larger, in ink, the panel a little wider (the lore). */
   story?: boolean;
+  /** Light (David's v4 review on the keyboard tour: "more lightweight"): a small white card, no scrim behind it. */
+  light?: boolean;
   /** A dot per step, `at` the one showing, the ones before it done. */
   steps?: { count: number; at: number };
   children?: ReactNode; footer?: ReactNode; testId?: string;
@@ -39,8 +41,8 @@ export function Spotlight({ open, label, eyebrow, title, lead, text, story, step
   const ref = useWorldDialog<HTMLElement>(open, noop, [], true);
   if (!open) return null;
   return <div className={`${m.layer} gui`} data-gui-flat="">
-    <div className={m.scrim} aria-hidden="true" />
-    <section ref={ref} role="dialog" aria-modal aria-label={label} tabIndex={-1} data-gui-overlay className={m.spotlight} data-story={story || undefined} data-testid={testId} {...dataset}>
+    {!light && <div className={m.scrim} aria-hidden="true" />}
+    <section ref={ref} role="dialog" aria-modal aria-label={label} tabIndex={-1} data-gui-overlay className={m.spotlight} data-story={story || undefined} data-light={light || undefined} data-testid={testId} {...dataset}>
       {(eyebrow || title || lead || text) && <header className={m.head}>
         {eyebrow && <p className={m.eyebrow}>{eyebrow}</p>}
         {title && <h2 className={m.title}>{title}</h2>}
@@ -56,30 +58,6 @@ export function Spotlight({ open, label, eyebrow, title, lead, text, story, step
   </div>;
 }
 const noop = () => {};
-
-/**
- * Keys to press over the game (David's v3 review: "i dont like that white card, just keep the keys there"): no panel,
- * low in the middle above the menu's dock. A small dark cue (what to press, and a quiet line about it; a dot per step)
- * over `children` (a KeyBoard), `footer` under it (a Skip). Holds the world's keys like a dialog.
- */
-export function KeyPrompt({ open, label, cue, note, steps, footer, children, testId, dataset }: {
-  open: boolean; label: string; cue: ReactNode; note?: ReactNode; steps?: { count: number; at: number };
-  footer?: ReactNode; children?: ReactNode; testId?: string; dataset?: Record<`data-${string}`, string | undefined>;
-}) {
-  const ref = useWorldDialog<HTMLElement>(open, noop, [], true);
-  if (!open) return null;
-  return <div className={`${m.keysLayer} gui`} data-gui-flat="">
-    <section ref={ref} role="dialog" aria-label={label} tabIndex={-1} data-gui-overlay className={m.keys} data-testid={testId} {...dataset}>
-      <p className={m.cue} aria-live="polite">
-        <span key={label} className={m.cueMain}>{cue}</span>
-        {note && <span className={m.cueNote}>{note}</span>}
-        {steps && <span className={m.dots} aria-hidden="true">{Array.from({ length: steps.count }, (_, i) => <i key={i} data-on={i === steps.at || undefined} data-done={i < steps.at || undefined} />)}</span>}
-      </p>
-      {children}
-      {footer}
-    </section>
-  </div>;
-}
 
 /**
  * A part of the screen arriving in its place (`to`: selectors, the first on screen): it springs in from small and its

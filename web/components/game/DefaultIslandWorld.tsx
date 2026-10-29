@@ -152,7 +152,7 @@ import { saveMyLook, useMyLook } from "@/lib/game/character/lookStore";
 import { useProgression } from "@/lib/progression/useProgression";
 import { WarmupProbe } from "./LoadGate";
 import { escapeAction } from "@/lib/game/sceneGate";
-import TopCluster, { HudClock, hudButton } from "./TopCluster";
+import TopCluster, { HudClock, HudWallet, hudButton } from "./TopCluster";
 import { setHudCoins, setHudXp } from "@/lib/game/hudStore";
 import CollectionBook from "./CollectionBook";
 import { usePeacefulContext } from "@/lib/game/usePeacefulContext";
@@ -1186,9 +1186,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const photoAllowed = ready && !fading && !hudCinematic && !fishing && !sheet && !bagOpen && !donateOpen && !decor.decorating && !trip.active;
   // The UI view (Esc 1): the fuller HUD over the live game; it stands back for a cinematic.
   const uiView = layer !== null && !hudCinematic;
-  // Alice's fly cards (row 312, the v2 review): coins and gems each get their slot top right to click into, which fades
-  // away after, and the quest line steps aside meanwhile (David's playtest). Her keyboard tour brings the rest in a key
-  // at a time (the v3 review): what it has brought shows until it closes.
+  // Alice's fly cards (row 312, the v2 review): coins and gems fly into the wallet's slot under the time (design bible
+  // UI 8b), which slides in for them and away after. Her keyboard tour brings the rest in a key at a time (the v3
+  // review): what it has brought shows until it closes.
   const showcase = hq.fly;
   const [tourShown, setTourShown] = useState<ReadonlySet<HudPiece>>(() => new Set());
   const touring = hq.card === "tour" && !touch;
@@ -1331,20 +1331,22 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         {heading.subtitle && <p>{heading.subtitle}</p>}
       </header>
       <AudioController phase={ambientPhase} weather={weather} season={season.season} />
-      {/* Top right (playtest round 1, decision 3): while you play, the quest line left of the minimap, the time under it;
-          the UI view (Esc 1) grows the minimap and adds coins, the level and the gear left of the quest line. */}
+      {/* Top right (playtest round 1, decision 3; design bible UI 8b): while you play, the quest line left of the minimap,
+          the time under it; the UI view (Esc 1) grows the minimap, adds the level and the gear left of the quest line and
+          the wallet (coins and gems) under the time, which also slides in at rest when they change. */}
       <div className={styles.hudRight} data-hud-right="" data-hidden={hudCinematic || undefined}>
         <div className={styles.hudLead} data-new={objectiveNew || undefined}>
-          <TopCluster className={styles.rightCluster} full={full} buttons={uiView} hidden={hudCinematic} showcase={showcase}
-            onWallet={() => setSheet(value => (value === "wallet" ? null : "wallet"))} walletKey={keyName(identity.settings.key_bindings.openWallet)}>
+          <TopCluster className={styles.rightCluster} full={full} buttons={uiView} hidden={hudCinematic}>
             <button className={hudButton} onClick={() => setSheet("settings")} aria-label="Settings" title="Settings"><Settings size={18} aria-hidden /></button>
           </TopCluster>
           {/* Bram's walk-along, then the HQ visit with Alice and a tool's little quest (row 312), then the chapter. */}
-          <QuestTracker className={styles.questSlot} quest={tutorialQuest ?? hq.quest ?? trackedChapter} hidden={showcase ? true : tutorialQuest || hq.quest ? false : holdObjective} onOpen={() => setSheet("journal")} />
+          <QuestTracker className={styles.questSlot} quest={tutorialQuest ?? hq.quest ?? trackedChapter} hidden={tutorialQuest || hq.quest ? false : holdObjective} onOpen={() => setSheet("journal")} />
         </div>
         <div className={styles.hudColumn} data-minimap data-new={objectiveNew || undefined}>
           {((mapHere && !holdObjective) || tourShown.has("map")) && <MiniMap playerPosRef={player} plot={objectivePlot} big={uiView} onOpen={() => setMapOpen(true)} />}
           <HudClock weather={weather} phase={phase} />
+          <HudWallet full={full} hidden={hudCinematic} showcase={showcase}
+            onWallet={() => setSheet(value => (value === "wallet" ? null : "wallet"))} walletKey={keyName(identity.settings.key_bindings.openWallet)} />
           {/* Kept for a mini health bar when combat drops (playtest round 1); nothing drawn yet. */}
           <div className={styles.healthSlot} data-slot="health" aria-hidden="true" />
         </div>

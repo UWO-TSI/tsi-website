@@ -16,7 +16,7 @@ import { pauseGame } from "@/lib/game/escMenu";
 import { fillName, parseTalkLine } from "@/lib/content/talk";
 import { itemIcon } from "@/lib/game/toolWheel";
 import type { TrackedQuest } from "@/lib/game/questTracker";
-import { setHudCoins } from "@/lib/game/hudStore";
+import { setHudCoins, setHudGems } from "@/lib/game/hudStore";
 import type { FlyTarget } from "@/lib/game/arrival/hq/lines";
 import { finishToolQuest, giveTool, hqEvent, hqSnapshot, setToolsTaught, startVisit, syncHq, useHq } from "@/lib/game/arrival/hq/store";
 import { hqQuest, visitCue, waitingFor } from "@/lib/game/arrival/hq/visit";
@@ -58,7 +58,7 @@ export function useHqOnboarding(w: HqWorld, dev: URLSearchParams | null) {
     if (!dev) return;
     if (dev.get("hqvisit") === "1") { setToolsTaught(true); startVisit(); }
     else if (dev.get("tools") === "taught") setToolsTaught(true);
-    Object.assign(window, { __hudCoins: setHudCoins, __hq: () => ({ ...hqSnapshot(), cue: hqSnapshot().visit && visitCue(hqSnapshot().visit!), waiting: waitingFor(hqSnapshot().visit) }) });
+    Object.assign(window, { __hudCoins: setHudCoins, __hudGems: setHudGems, __hq: () => ({ ...hqSnapshot(), cue: hqSnapshot().visit && visitCue(hqSnapshot().visit!), waiting: waitingFor(hqSnapshot().visit) }) });
   }, [dev]);
 
   // What the wheel may hold: the inventory plus what a resident has handed over here (before it reads back).

@@ -50,7 +50,7 @@ export function LoreOverlay({ open, onDone }: { open: boolean; onDone: () => voi
 }
 
 const FLY_ICON: Record<FlyTarget, React.ReactNode> = { coins: <CurrencyIcon size={64} />, gems: <CurrencyIcon currency="gems" size={64} /> };
-/** Where each lives on screen (forced on while it flies there: DefaultIslandWorld). */
+/** Where each lives on screen: its cell in the wallet, which slides in while it flies there (TopCluster HudWallet). */
 const FLY_TO: Record<FlyTarget, readonly string[]> = { coins: ['[data-hud-slot="coins"]', "[data-hud-right]"], gems: ['[data-hud-slot="gems"]', "[data-hud-right]"] };
 const FLY_SOUND = { pop: ["blip3", 1.3], fly: ["blip2", 1.5], land: ["blip4", 1.4] } as const;
 
