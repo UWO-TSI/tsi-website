@@ -21,6 +21,11 @@ Steps 2 to 4 are fixes and can ship once verified; step 5 is visual and waits fo
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, the production build passing. Message "main" after the baseline, after each step and at the end with the head SHA, gates, numbers and evidence.
 
+## David's pick (2026-10-28)
+
+The island look is approved ("this one is good"); logo and boat not picked. The old village is retired ("it should not be
+used or archived"), so the island look was rebuilt on the new world (done, see Status).
+
 ## Loading screen round 2 (David's review, 2026-10-27; https://claude.ai/artifact/9QsGi2EJnicwiskGHsUygx)
 
 Every item was a redo. His note, verbatim: "looks ugly i dont want to show our map because it looks bad, i want it to be simple maybe show our logo loading or the fishing boat thing, idk the loading screen needs to be aesthetic with taste. maybe like a idle shot of the island or smth idk, or like we need a proper tethos island design thing. just keep it simpel for now"
@@ -32,7 +37,7 @@ Merge main first (steps 2 to 4 are on main). Message the coordinator with the sh
 
 ## Status
 
-Head: see `git log` (2026-10-27). Main has steps 2 to 4 and the crossing warm-up (pushed: d9a48a35 + e65df2df).
+Head: see `git log` (2026-10-28). Main has steps 2 to 4 and the crossing warm-up (pushed: d9a48a35 + e65df2df).
 
 - Step 1: `specs/evidence/loading/baseline.md`. Steps 2 to 4: `specs/evidence/loading/after.md` (fast cold 20.0 -> 7.4
   to 9.0 s, slow warm 18.7 -> 8.0 s; crossing 155 to 226 long frames -> 1).
@@ -40,15 +45,20 @@ Head: see `git log` (2026-10-27). Main has steps 2 to 4 and the crossing warm-up
   per phase again (always on cost v2 +4%); the warm-up compiles the other light count; it compiles for the PostFX
   target's linear output (it had been compiling sRGB programs the frame never used); object by object; the golden
   island starts aboard. Numbers in `after.md` "Re-verify". tsc clean after it.
-- **Step 5, round 2 built, waiting for David's pick (not to ship before he picks):** three simple looks, no map
-  (`specs/evidence/loading/loading-screen.md`; shots `screen-logo-1280.png`, `screen-boat-1280.png`,
-  `screen-island-1280.png`; all three side by side in `screen-options-sheet.webp`). Gates: tsc clean, vitest
-  (loadProgress, title) with and without `NEXT_PUBLIC_GAME_WORLD=new`, eslint clean. `?loading=logo|boat|island` switches them (logo default). Round 1's chart, mist and boat
-  SVG are deleted, and so are its shots. Stills: `web/public/assets/loading/{boat,island}.webp` (23 KB, 38 KB).
+- **Step 5, round 2 done (2026-10-28), waiting for the coordinator's merge:** David picked the island look ("this one is
+  good"). Logo and boat looks, the `?loading=` switch and the boat still are deleted. The backdrop is the title's staged
+  shot on the new world (`components/title/shots.ts`), one still per phase (`web/public/assets/loading/island-<phase>.webp`,
+  25 to 31 KB; `loadingStill()` in `lib/game/loadProgress.ts`), prefetched first by the title. The card is the flat
+  kit's `ProgressCard` (`components/gui/flat/ProgressCard.tsx`, in `/lab/gui`), `--ui-*` tokens only. Copy: "Rowing
+  out…", "Sweeping the plaza…", "Lighting the lamps…". Evidence `specs/evidence/loading/r2/`, doc `loading-screen.md`,
+  numbers `after.md` "Round 2" (fast cold world ready 7.4 s, unchanged).
+- Gates at r2: tsc clean, eslint clean, `npm run build` passes (needs a dummy Supabase URL to prerender /admin), vitest
+  3471 pass, 2 fail in `lib/seedMigrations.test.ts` (resident roster; from village-archive's `residentRoutine.ts`, needs
+  `node scripts/gen-seeds.mjs` and a new migration; not this lane's).
 - Also fixed: the title backdrop never faded in under `next dev` (Strict Mode's remount ran `Ready`'s cleanup first, so
   `onReady` and the title's game prefetch never fired in dev). Production was unaffected.
-- **Next, when David picks:** keep his look, delete the other two, the `?loading=` switch and the unused still; add
-  the kept still (if any) to the title's prefetch list (`web/lib/game/preloadAssets.ts`).
+- Open, from the merges and outside the loading screen: a 482 ms first-sight shader compile in the first minute of play,
+  and the title's own frames on the new world (113 over 50 ms while it streams 503 models).
 - perf baseline: left to the coordinator's combined check (asked).
 
 ## Tools and gotchas
@@ -56,14 +66,14 @@ Head: see `git log` (2026-10-27). Main has steps 2 to 4 and the crossing warm-up
 - `specs/perf/load-trace.mjs <label>` with `PORT NET=fast|slow|none CACHE=cold|warm DWELL PLAY PROFILE=1 MANIFEST=1 OUT`:
   the trace; writes `<label>.md` and `.json` (JSON is gitignored; runs kept in the session scratchpad). `MANIFEST=1`
   regenerates `web/lib/game/preloadAssets.ts` from a cold run.
-- Build: `LANE=game/loading withlock.sh heavy env NEXT_PUBLIC_GAME_WORLD=new NEXT_PUBLIC_MEMBER_WORLD=open sh
+- Build: `LANE=game/loading withlock.sh heavy env NEXT_PUBLIC_MEMBER_WORLD=open sh
   specs/perf/measure-build.sh [--no-mangling]` (takes 3 to 5 min once the lock is free; the lock waits can be 20+ min).
   Don't edit `components/game`, `lib/game` while it runs: it rewrites and restores those files.
 - Signed-out dashboard: the measurement build inlines a dead Supabase URL, so the middleware redirects
   `/student/dashboard` to the title. After each build drop the dashboard matcher from
   `web/.next/server/middleware-manifest.json` (node one-liner filtering `originalSource` starting `/student/dashboard`).
 - Serve: `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:9 NEXT_PUBLIC_SUPABASE_ANON_KEY=perf-bench SUPABASE_SERVICE_ROLE_KEY=
-  NEXT_PUBLIC_GAME_WORLD=new NEXT_PUBLIC_MEMBER_WORLD=open npx next start -p 3151` under the devserver lock (taken by
+  NEXT_PUBLIC_MEMBER_WORLD=open npx next start -p 3151` under the devserver lock (taken by
   hand: queue line, mkdir, owner file).
 - Noise: the Metal shader cache survives fresh browser profiles, so "cold" runs after the first compile faster; machine
   load moves world-ready by seconds. Compare program links and long-frame counts, not single timings.
@@ -71,16 +81,17 @@ Head: see `git log` (2026-10-27). Main has steps 2 to 4 and the crossing warm-up
 - To see three's program cache in a page: an init script setting `window.__THREE_DEVTOOLS__ = new EventTarget()` that
   collects `observe` events gets every renderer and scene (`renderer.info.programs[i].cacheKey`, `renderer.properties`).
 - `load-trace.mjs` takes `TIME=night|day|evening`; each linked program is recorded with its defines.
-- `specs/perf/loading-stills.mjs`: `still <name>=<x,z,yaw,eye,pitch,fov> ...` takes title-camera frames at 1920 x 1080 with
-  no UI; `screen <look>` shoots the loading screen at 40%+ (through `?arrival=1`, otherwise the character creator
-  covers it). Works on `next dev`. Hold the devserver lock only through `withlock.sh devserver` (the old queue file
-  is gone); for several steps, run a holder script in the background that keeps the dev server up until a done file.
+- `specs/perf/loading-stills.mjs`: `TIME=<phase> ... still <name>=<x,z,yaw,eye,pitch,fov>` takes title-camera frames at
+  1920 x 1080 with no UI (empty shot: the staged one); `strip <phase>` shoots the loading screen every 1.5 s from first
+  paint to the island (through `?arrival=1&time=`, otherwise the character creator covers it). Needs `next dev`
+  (`?time=` is dev only). Stills to webp: `magick in.png -filter point -resize 1248x702`, `cwebp -q 78 -m 6`. Run the
+  dev server inside the same `withlock.sh devserver` call (a runner script that starts it, runs the command, kills it).
 
 ## Rules
 
 - **Headless only:** never open a window, tab, app or audio on David's screen; never `open`; never the Playwright MCP, the claude-in-chrome tools or the `blender` MCP tools. Blender only as `/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P <script>`. Never port 3000.
 - **Locks:** `LANE=game/loading /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh heavy|blender|devserver <cmd>` (`specs/lane-rules.md`).
-- **The default village world stays unchanged** (the launch fallback). New-world changes sit behind `NEXT_PUBLIC_GAME_WORLD=new`; run vitest with and without it.
+- **One world:** the village is retired (David, 2026-10-28). Shots and runs are new world only; vitest runs once.
 - **Git:** commit with the `[build]` prefix. Never push. Never bare `git stash`. Work only in this worktree. Never touch prod; ask the coordinator for any read-only prod query.
 - **Text:** no em dashes; real names never show in game; never write the gem-to-money rate anywhere (the repo is public).
 - **Art:** David supplies every reference; never fetch art, textures or music; no asset libraries or generators.
