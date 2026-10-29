@@ -506,3 +506,7 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - Play already caps lamps at 4 nearest (LampPool).
   - Open: about 40 never-drawn module preloads on the title; PMREM relinks on phase change (under 50 ms).
 - **Sushi menu references** from David (2026-10-28, "heres the inspo i want for the sushi menu"): a folded teahouse menu and tea banners, saved at specs/references/sushi-menu/ in the fishing-depth worktree. The fishing-depth lane is redoing the menu to that look (r3-menu evidence). The dish models still need their own references.
+- **Sushi menu review:** https://claude.ai/artifact/TKM4GzggbcRfrMZD55hR7m (ids r3-*), game/fishing-depth bc1c7750.
+  - It supersedes the r2-menu card on the fishing round 2 page.
+  - Kit: flat/paper.tsx (FoldedMenu, InkTitle, Hanko, InkArt, PanelSection, TrayDish); the washi texture is ours (art/ui/washi.py).
+  - Question on the page (r3-font): add a display face for the menu only (mincho or brush, a vertical 寿司)? Nunito stays everywhere else.
