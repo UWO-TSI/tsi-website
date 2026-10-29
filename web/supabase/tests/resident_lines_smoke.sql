@@ -1,4 +1,4 @@
--- Resident lines for the new world (20261028112843_catalogue_seed, residents block): Odile's dragonflies and Marlo's
+-- Resident lines for the new world (20261029062659_catalogue_seed, residents block): Odile's dragonflies and Marlo's
 -- sketching moved from the pond to the river, by guarded UPDATEs that change a resident only while its lines are still
 -- as the last seed left them. Throwaway local Postgres after every migration (supabase_stub.sql first). Never Supabase.
 -- Self-contained, rolled back: it puts both rows back as 20261027063439 seeded them, edits Marlo as an admin would,
@@ -16,7 +16,7 @@ END $$;
 UPDATE npc_personas SET canned_dialogue = array_replace(canned_dialogue, 'Did you see the dragonflies along the river? Odonata. Lovely.', 'Did you see the dragonflies by the pond? Odonata. Lovely.'),
   talk = replace(talk::text, 'Did you see the dragonflies along the river? Odonata. Lovely things.', 'Did you see the dragonflies by the pond? Odonata. Lovely things.')::jsonb WHERE slug = 'curator';
 UPDATE npc_personas SET canned_dialogue = ARRAY['An admin wrote this.'], talk = replace(talk::text, 'The river looks different every hour.', 'The pond looks different every hour.')::jsonb WHERE slug = 'marlo';
-\ir ../migrations/20261028112843_catalogue_seed.sql
+\ir ../migrations/20261029062659_catalogue_seed.sql
 DO $$
 BEGIN
   ASSERT (SELECT canned_dialogue[2] FROM npc_personas WHERE slug = 'curator') = 'Did you see the dragonflies along the river? Odonata. Lovely.', 'an unedited row gets the new line';

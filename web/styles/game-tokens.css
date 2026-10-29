@@ -48,7 +48,10 @@
   --gui-rarity-rare: #889df0;
   --gui-rarity-epic: #b77dee;
   --gui-rarity-legendary: #f7cd67;
-  --gui-rarity-seaking: #7fd6dc;      /* the fish's crown tier (vacant until its marquee fish ship); holographic on the card */
+  --gui-rarity-divine: #7fd6dc;       /* the crown tier (was Sea King); holographic on every badge and tile */
+  /* Divine is holographic (David ruling 2026-07-23): the badge and the tile edge run this gradient (tsi-holo-shift). */
+  --gui-holo: linear-gradient(115deg, #5EE7F7 0%, #6EA8FF 18%, #B57AFF 38%, #FF7AD9 58%, #7DFFC4 78%, #5EE7F7 100%);
+  --gui-rarity-contraband: #3b2436;   /* mods and T0/T1 only, shut behind a flag (lib/rarity.ts); cream text on it */
 
   /* ── Type: one rounded face, 12 px at the smallest ── */
   --gui-font: "Tethos Nunito", "Nunito", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;

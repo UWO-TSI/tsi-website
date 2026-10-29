@@ -61,7 +61,7 @@ describe("asset budgets (budget.ts ASSET_CATEGORIES)", () => {
     }
   });
   it("reads image sizes from PNG, JPEG and WebP headers", () => {
-    const png = readFileSync(join(web, "public/assets/characters/v6/decal_tsi_mark.png"));
+    const png = readFileSync(join(web, "public/assets/characters/v6/outfits/designs.png"));
     expect(imageSize(png)?.width).toBeGreaterThan(0);
   });
 });

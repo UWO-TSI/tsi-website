@@ -1,0 +1,36 @@
+BODYCUT 920 poses, 8 garment models
+LBS_CHECK Run@0: worst 0.000 mm from Blender's skinning
+BODYCUT full top_tee          bit 0: 0 of 520 skin triangles cut
+BODYCUT full top_hoodie       bit 2: 24 of 520 skin triangles cut
+BODYCUT full top_stripe_ls    bit 1: 18 of 520 skin triangles cut
+BODYCUT full bottom_shorts    bit 3: 30 of 520 skin triangles cut
+BODYCUT full bottom_trousers  bit 4: 30 of 520 skin triangles cut
+BODYCUT full bottom_joggers   bit 5: 34 of 520 skin triangles cut
+BODYCUT full shoes_slipon     bit 6: 66 of 520 skin triangles cut
+BODYCUT full shoes_sneakers   bit 7: 56 of 520 skin triangles cut
+FIT top_tee          poke  28 skin vertices (worst Sit@3, 19.9 mm under the skin)   float +0.9 mm off the body at worst (DanceSprinkler@33) over the rest pose
+FIT top_hoodie       poke  26 skin vertices (worst Sit@9, 19.6 mm under the skin)   float +16.6 mm off the body at worst (Net@6) over the rest pose
+FIT top_stripe_ls    poke  28 skin vertices (worst Sit@3, 19.9 mm under the skin)   float +7.8 mm off the body at worst (CastSwing@0) over the rest pose
+FIT bottom_shorts    poke  11 skin vertices (worst CrouchWalk@6, 18.4 mm under the skin)   float +0.6 mm off the body at worst (Run@12) over the rest pose
+FIT bottom_trousers  poke  36 skin vertices (worst CrouchWalk@15, 19.9 mm under the skin)   float +3.4 mm off the body at worst (CrouchIdle@3) over the rest pose
+FIT bottom_joggers   poke  34 skin vertices (worst CrouchWalk@15, 19.9 mm under the skin)   float +7.0 mm off the body at worst (CrouchWalk@0) over the rest pose
+FIT shoes_slipon     poke  18 skin vertices (worst CrouchIdle@30, 17.0 mm under the skin)   float +10.3 mm off the body at worst (CrouchWalk@0) over the rest pose
+FIT shoes_sneakers   poke  15 skin vertices (worst CrouchWalk@15, 19.2 mm under the skin)   float +10.1 mm off the body at worst (CrouchWalk@0) over the rest pose
+LAYER top_tee          over bottom_shorts      0 bottom vertices through it (worst )
+LAYER top_tee          over bottom_trousers    2 bottom vertices through it (worst Defeat@21)
+LAYER top_tee          over bottom_joggers     2 bottom vertices through it (worst Defeat@21)
+LAYER top_hoodie       over bottom_shorts      0 bottom vertices through it (worst )
+LAYER top_hoodie       over bottom_trousers    1 bottom vertices through it (worst Sit@0)
+LAYER top_hoodie       over bottom_joggers     1 bottom vertices through it (worst Sit@0)
+LAYER top_stripe_ls    over bottom_shorts      2 bottom vertices through it (worst Sit@0)
+LAYER top_stripe_ls    over bottom_trousers    2 bottom vertices through it (worst Defeat@21)
+LAYER top_stripe_ls    over bottom_joggers     2 bottom vertices through it (worst Defeat@21)
+BODYCUT lod1 top_tee          bit 0: 4 of 416 skin triangles cut
+BODYCUT lod1 top_hoodie       bit 2: 12 of 416 skin triangles cut
+BODYCUT lod1 top_stripe_ls    bit 1: 12 of 416 skin triangles cut
+BODYCUT lod1 bottom_shorts    bit 3: 36 of 416 skin triangles cut
+BODYCUT lod1 bottom_trousers  bit 4: 41 of 416 skin triangles cut
+BODYCUT lod1 bottom_joggers   bit 5: 41 of 416 skin triangles cut
+BODYCUT lod1 shoes_slipon     bit 6: 58 of 416 skin triangles cut
+BODYCUT lod1 shoes_sneakers   bit 7: 60 of 416 skin triangles cut
+BODYCUT_OK

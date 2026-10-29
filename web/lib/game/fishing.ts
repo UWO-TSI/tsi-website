@@ -3,8 +3,8 @@
  * /lab/fishing bench and the game share ONE source of truth).
  *
  * Refinement rulings (David, 2026-07-22 playtest; rerank 2026-07-24):
- *  - 6 rarity tiers: common / uncommon / rare / epic / legendary / sea king.
- *    SEA KING sits VACANT (rerank ruling): none of the current roster earns
+ *  - the rarity ladder (lib/rarity.ts): common / uncommon / rare / epic / legendary / divine / contraband.
+ *    DIVINE (the old Sea King crown) sits VACANT (rerank ruling): none of the current roster earns
  *    it — David is supplying dedicated marquee models for the tier.
  *    Legendary is deliberately tight (7): the three goldens + Stringfish +
  *    Coelacanth / Hammerhead / Sturgeon.
@@ -21,32 +21,28 @@ import { getLabHour } from "./devLab";
 import { liveIslandWeather, reelWeather } from "./islandWeather";
 import { torontoParts } from "@/lib/time";
 import { EXTRA_FISH } from "./fishCatalog";
-import { GAME_WORLD, worldModel } from "./world/active";
+import { worldModel } from "./world/active";
 import { weatherMods } from "./weatherPerks";
 import { SEASONAL_GOALS } from "@/lib/progression/defaults";
 import { ROSTER } from "@/lib/collections/roster";
+import { availableAt, type WorldMoment } from "@/lib/collections/logic";
 
-export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary" | "seaking";
-
-/**
- * Sea King is HOLOGRAPHIC (David ruling 2026-07-23): chips render this
- * animated iridescent gradient instead of the flat tier color. Pair with
- * the `tsi-holo-shift` keyframes (defined wherever chips render).
- */
-export const HOLO_GRADIENT =
-  "linear-gradient(115deg, #5EE7F7 0%, #6EA8FF 18%, #B57AFF 38%, #FF7AD9 58%, #7DFFC4 78%, #5EE7F7 100%)";
+import { RARITY_LABEL, type Rarity } from "@/lib/rarity";
+export type { Rarity } from "@/lib/rarity";
 
 export const RARITY_META: Record<
   Rarity,
   { label: string; color: string; weight: number; barW: number }
 > = {
   // `color` is the GUI sheet's --gui-rarity-* token (styles/game-tokens.css): one palette for the card, the journal and the book.
-  common: { label: "Common", color: "#c9bd9f", weight: 100, barW: 0.3 },
-  uncommon: { label: "Uncommon", color: "#8ac68a", weight: 48, barW: 0.27 },
-  rare: { label: "Rare", color: "#889df0", weight: 18, barW: 0.24 },
-  epic: { label: "Epic", color: "#b77dee", weight: 7, barW: 0.21 },
-  legendary: { label: "Legendary", color: "#f7cd67", weight: 2.5, barW: 0.19 },
-  seaking: { label: "Sea King", color: "#7fd6dc", weight: 1, barW: 0.17 },
+  common: { label: RARITY_LABEL.common, color: "#c9bd9f", weight: 100, barW: 0.3 },
+  uncommon: { label: RARITY_LABEL.uncommon, color: "#8ac68a", weight: 48, barW: 0.27 },
+  rare: { label: RARITY_LABEL.rare, color: "#889df0", weight: 18, barW: 0.24 },
+  epic: { label: RARITY_LABEL.epic, color: "#b77dee", weight: 7, barW: 0.21 },
+  legendary: { label: RARITY_LABEL.legendary, color: "#f7cd67", weight: 2.5, barW: 0.19 },
+  divine: { label: RARITY_LABEL.divine, color: "#7fd6dc", weight: 0.4, barW: 0.17 },
+  // Shut until its earning path is decided (lib/rarity.ts): never rolled.
+  contraband: { label: RARITY_LABEL.contraband, color: "#3b2436", weight: 0, barW: 0.15 },
 };
 
 /** Per-species reel behavior — track space is 0..1, speeds in track/s. */
@@ -69,13 +65,13 @@ export interface FishDef {
   move: FishMove;
   /** Availability gate; absent = always biting. Hour is 0-24 local. */
   when?: (hour: number, weather: string) => boolean;
-  /** Human copy for the availability window (lab bench + future almanac). */
+  /** Human copy for the availability window (lab bench, the book). */
   whenLabel?: string;
   /** Icon override; absent = the rendered per-key PNG via iconFor(). */
   icon?: string;
   /** Raw dump export: FishCatchFX applies GAME_CALIBRATION (0.1, +90°X). */
   raw?: boolean;
-  /** Habitat: river (default) or sea — spots roll their own zone. */
+  /** Habitat: river (default) or sea: spots roll their own zone. */
   zone?: "river" | "sea";
   /** Sea-floor creature (not a fish): pulled up at sea spots, grouped
    *  separately in the Collection Book. */
@@ -90,37 +86,37 @@ export function iconFor(f: FishDef): string {
 // ACNH revamp 2026-07: species-true river catches (models shown in-world by
 // FishCatchFX). New species are one row here + one in CollectionBook once
 // their model/icon ships (the dump's Creatures/ set has more to extract;
-// the next marquee fish takes the Sea King crown).
-const CORE_FISH: FishDef[] = [
-  { key: "fish_dace", label: "a Dace", name: "Dace", model: "/assets/acnh/fish/dace.glb", rarity: "common", sizeCm: [10, 18], move: { speed: 0.2, accel: 0.9, jitter: 0.004, dartChance: 0.08, dartMul: 1.8, retargetMs: 1900 } },
-  { key: "fish_pale_chub", label: "a Pale Chub", name: "Pale Chub", model: "/assets/acnh/fish/pale-chub.glb", rarity: "common", sizeCm: [8, 14], move: { speed: 0.22, accel: 0.9, jitter: 0.006, dartChance: 0.1, dartMul: 1.9, retargetMs: 1800 }, when: (h) => h >= 6 && h < 18, whenLabel: "day (6-18h)" },
-  { key: "fish_pond_smelt", label: "a Pond Smelt", name: "Pond Smelt", model: "/assets/acnh/fish/pond-smelt.glb", rarity: "common", sizeCm: [6, 10], move: { speed: 0.18, accel: 0.7, jitter: 0.005, dartChance: 0.08, dartMul: 1.7, retargetMs: 2000 } },
-  { key: "fish_crucian_carp", label: "a Crucian Carp", name: "Crucian Carp", model: "/assets/acnh/fish/crucian-carp.glb", rarity: "uncommon", sizeCm: [15, 30], move: { speed: 0.26, accel: 1.0, jitter: 0.005, dartChance: 0.14, dartMul: 1.9, retargetMs: 1600 } },
-  { key: "fish_bluegill", label: "a Bluegill", name: "Bluegill", model: "/assets/acnh/fish/bluegill.glb", rarity: "uncommon", sizeCm: [12, 22], move: { speed: 0.3, accel: 1.4, jitter: 0.012, dartChance: 0.18, dartMul: 2.0, retargetMs: 1300 }, when: (h) => h >= 9 && h < 16, whenLabel: "midday (9-16h)" },
-  { key: "fish_goldfish", label: "a Goldfish", name: "Goldfish", model: "/assets/acnh/fish/goldfish.glb", rarity: "uncommon", sizeCm: [8, 15], move: { speed: 0.27, accel: 1.1, jitter: 0.008, dartChance: 0.12, dartMul: 1.8, retargetMs: 1500 } },
-  { key: "fish_carp", label: "a Carp", name: "Carp", model: "/assets/acnh/fish/carp.glb", rarity: "uncommon", sizeCm: [35, 70], move: { speed: 0.3, accel: 1.2, jitter: 0.004, dartChance: 0.16, dartMul: 1.8, retargetMs: 1500 } },
-  { key: "fish_black_bass", label: "a Black Bass", name: "Black Bass", model: "/assets/acnh/fish/black-bass.glb", rarity: "rare", sizeCm: [30, 55], move: { speed: 0.36, accel: 1.8, jitter: 0.01, dartChance: 0.26, dartMul: 2.3, retargetMs: 1150 } },
-  { key: "fish_catfish", label: "a Catfish", name: "Catfish", model: "/assets/acnh/fish/catfish.glb", rarity: "epic", sizeCm: [50, 110], move: { speed: 0.32, accel: 1.5, jitter: 0.006, dartChance: 0.3, dartMul: 2.6, retargetMs: 1300 }, when: (h, w) => h >= 20 || h < 4 || w === "rain", whenLabel: "night (20-4h) or rain" },
+// the next marquee fish takes the Divine crown).
+const CORE_FISH: FishRow[] = [
+  { key: "fish_dace", label: "a Dace", name: "Dace", model: "/assets/acnh/fish/dace.glb", move: { speed: 0.2, accel: 0.9, jitter: 0.004, dartChance: 0.08, dartMul: 1.8, retargetMs: 1900 } },
+  { key: "fish_pale_chub", label: "a Pale Chub", name: "Pale Chub", model: "/assets/acnh/fish/pale-chub.glb", move: { speed: 0.22, accel: 0.9, jitter: 0.006, dartChance: 0.1, dartMul: 1.9, retargetMs: 1800 } },
+  { key: "fish_pond_smelt", label: "a Pond Smelt", name: "Pond Smelt", model: "/assets/acnh/fish/pond-smelt.glb", move: { speed: 0.18, accel: 0.7, jitter: 0.005, dartChance: 0.08, dartMul: 1.7, retargetMs: 2000 } },
+  { key: "fish_crucian_carp", label: "a Crucian Carp", name: "Crucian Carp", model: "/assets/acnh/fish/crucian-carp.glb", move: { speed: 0.26, accel: 1.0, jitter: 0.005, dartChance: 0.14, dartMul: 1.9, retargetMs: 1600 } },
+  { key: "fish_bluegill", label: "a Bluegill", name: "Bluegill", model: "/assets/acnh/fish/bluegill.glb", move: { speed: 0.3, accel: 1.4, jitter: 0.012, dartChance: 0.18, dartMul: 2.0, retargetMs: 1300 } },
+  { key: "fish_goldfish", label: "a Goldfish", name: "Goldfish", model: "/assets/acnh/fish/goldfish.glb", move: { speed: 0.27, accel: 1.1, jitter: 0.008, dartChance: 0.12, dartMul: 1.8, retargetMs: 1500 } },
+  { key: "fish_carp", label: "a Carp", name: "Carp", model: "/assets/acnh/fish/carp.glb", move: { speed: 0.3, accel: 1.2, jitter: 0.004, dartChance: 0.16, dartMul: 1.8, retargetMs: 1500 } },
+  { key: "fish_black_bass", label: "a Black Bass", name: "Black Bass", model: "/assets/acnh/fish/black-bass.glb", move: { speed: 0.36, accel: 1.8, jitter: 0.01, dartChance: 0.26, dartMul: 2.3, retargetMs: 1150 } },
+  { key: "fish_catfish", label: "a Catfish", name: "Catfish", model: "/assets/acnh/fish/catfish.glb", move: { speed: 0.32, accel: 1.5, jitter: 0.006, dartChance: 0.3, dartMul: 2.6, retargetMs: 1300 } },
   // ── Dump import batch 1 (2026-07-24, calibrated rip): 11 new species.
-  { key: "fish_killifish", label: "a Killifish", name: "Killifish", model: "/assets/acnh/fish/killifish.glb", rarity: "common", sizeCm: [3, 5], raw: true, move: { speed: 0.19, accel: 0.8, jitter: 0.007, dartChance: 0.09, dartMul: 1.7, retargetMs: 1900 }, when: (h) => h >= 6 && h < 20, whenLabel: "day (6-20h)" },
-  { key: "fish_loach", label: "a Loach", name: "Loach", model: "/assets/acnh/fish/loach.glb", rarity: "common", sizeCm: [12, 20], raw: true, move: { speed: 0.21, accel: 0.85, jitter: 0.005, dartChance: 0.1, dartMul: 1.8, retargetMs: 1850 } },
-  { key: "fish_sweetfish", label: "a Sweetfish", name: "Sweetfish", model: "/assets/acnh/fish/sweetfish.glb", rarity: "uncommon", sizeCm: [18, 30], raw: true, move: { speed: 0.28, accel: 1.2, jitter: 0.009, dartChance: 0.15, dartMul: 1.9, retargetMs: 1450 } },
-  { key: "fish_rainbow_trout", label: "a Rainbow Trout", name: "Rainbow Trout", model: "/assets/acnh/fish/rainbow-trout.glb", rarity: "uncommon", sizeCm: [30, 50], raw: true, move: { speed: 0.29, accel: 1.25, jitter: 0.007, dartChance: 0.16, dartMul: 2.0, retargetMs: 1400 }, when: (h) => h >= 5 && h < 19, whenLabel: "day (5-19h)" },
-  { key: "fish_salmon", label: "a Salmon", name: "Salmon", model: "/assets/acnh/fish/salmon.glb", rarity: "uncommon", sizeCm: [50, 80], raw: true, move: { speed: 0.33, accel: 1.4, jitter: 0.006, dartChance: 0.2, dartMul: 2.1, retargetMs: 1300 } },
-  { key: "fish_snakehead", label: "a Snakehead", name: "Snakehead", model: "/assets/acnh/fish/snakehead.glb", rarity: "rare", sizeCm: [40, 90], raw: true, move: { speed: 0.34, accel: 1.6, jitter: 0.008, dartChance: 0.24, dartMul: 2.2, retargetMs: 1250 }, when: (h) => h >= 9 && h < 16, whenLabel: "midday (9-16h)" },
-  { key: "fish_gar", label: "a Gar", name: "Gar", model: "/assets/acnh/fish/gar.glb", rarity: "epic", sizeCm: [90, 150], raw: true, move: { speed: 0.34, accel: 1.6, jitter: 0.005, dartChance: 0.28, dartMul: 2.5, retargetMs: 1250 }, when: (h, w) => h >= 16 || h < 9 || w === "rain", whenLabel: "evening/night or rain" },
-  { key: "fish_king_salmon", label: "a King Salmon", name: "King Salmon", model: "/assets/acnh/fish/king-salmon.glb", rarity: "epic", sizeCm: [70, 120], raw: true, move: { speed: 0.35, accel: 1.7, jitter: 0.006, dartChance: 0.3, dartMul: 2.4, retargetMs: 1200 } },
-  { key: "fish_stringfish", label: "a Stringfish", name: "Stringfish", model: "/assets/acnh/fish/stringfish.glb", rarity: "legendary", sizeCm: [80, 130], raw: true, move: { speed: 0.4, accel: 2.0, jitter: 0.01, dartChance: 0.32, dartMul: 2.4, retargetMs: 1050 }, when: (h, w) => h >= 21 || h < 4 || w === "rain", whenLabel: "late night or rain" },
-  { key: "fish_golden_trout", label: "a Golden Trout", name: "Golden Trout", model: "/assets/acnh/fish/golden-trout.glb", rarity: "legendary", sizeCm: [40, 60], raw: true, move: { speed: 0.41, accel: 2.1, jitter: 0.012, dartChance: 0.3, dartMul: 2.3, retargetMs: 1000 } },
+  { key: "fish_killifish", label: "a Killifish", name: "Killifish", model: "/assets/acnh/fish/killifish.glb", raw: true, move: { speed: 0.19, accel: 0.8, jitter: 0.007, dartChance: 0.09, dartMul: 1.7, retargetMs: 1900 } },
+  { key: "fish_loach", label: "a Loach", name: "Loach", model: "/assets/acnh/fish/loach.glb", raw: true, move: { speed: 0.21, accel: 0.85, jitter: 0.005, dartChance: 0.1, dartMul: 1.8, retargetMs: 1850 } },
+  { key: "fish_sweetfish", label: "a Sweetfish", name: "Sweetfish", model: "/assets/acnh/fish/sweetfish.glb", raw: true, move: { speed: 0.28, accel: 1.2, jitter: 0.009, dartChance: 0.15, dartMul: 1.9, retargetMs: 1450 } },
+  { key: "fish_rainbow_trout", label: "a Rainbow Trout", name: "Rainbow Trout", model: "/assets/acnh/fish/rainbow-trout.glb", raw: true, move: { speed: 0.29, accel: 1.25, jitter: 0.007, dartChance: 0.16, dartMul: 2.0, retargetMs: 1400 } },
+  { key: "fish_salmon", label: "a Salmon", name: "Salmon", model: "/assets/acnh/fish/salmon.glb", raw: true, move: { speed: 0.33, accel: 1.4, jitter: 0.006, dartChance: 0.2, dartMul: 2.1, retargetMs: 1300 } },
+  { key: "fish_snakehead", label: "a Snakehead", name: "Snakehead", model: "/assets/acnh/fish/snakehead.glb", raw: true, move: { speed: 0.34, accel: 1.6, jitter: 0.008, dartChance: 0.24, dartMul: 2.2, retargetMs: 1250 } },
+  { key: "fish_gar", label: "a Gar", name: "Gar", model: "/assets/acnh/fish/gar.glb", raw: true, move: { speed: 0.34, accel: 1.6, jitter: 0.005, dartChance: 0.28, dartMul: 2.5, retargetMs: 1250 } },
+  { key: "fish_king_salmon", label: "a King Salmon", name: "King Salmon", model: "/assets/acnh/fish/king-salmon.glb", raw: true, move: { speed: 0.35, accel: 1.7, jitter: 0.006, dartChance: 0.3, dartMul: 2.4, retargetMs: 1200 } },
+  { key: "fish_stringfish", label: "a Stringfish", name: "Stringfish", model: "/assets/acnh/fish/stringfish.glb", raw: true, move: { speed: 0.4, accel: 2.0, jitter: 0.01, dartChance: 0.32, dartMul: 2.4, retargetMs: 1050 } },
+  { key: "fish_golden_trout", label: "a Golden Trout", name: "Golden Trout", model: "/assets/acnh/fish/golden-trout.glb", raw: true, move: { speed: 0.41, accel: 2.1, jitter: 0.012, dartChance: 0.3, dartMul: 2.3, retargetMs: 1000 } },
   // Golden Arowana (2026-07-24): the last unconverted species model in the
   // dump (ArowanaGold recolor) — closes the fish roster at 81.
-  { key: "fish_golden_arowana", label: "a Golden Arowana", name: "Golden Arowana", model: "/assets/acnh/fish/golden-arowana.glb", rarity: "legendary", sizeCm: [70, 100], raw: true, move: { speed: 0.42, accel: 2.1, jitter: 0.01, dartChance: 0.32, dartMul: 2.4, retargetMs: 980 }, when: (h) => h >= 20 || h < 4, whenLabel: "night (20-4h)" },
-  // Rarity rerank (David ruling 2026-07-24): SEA KING IS VACANT — David is
+  { key: "fish_golden_arowana", label: "a Golden Arowana", name: "Golden Arowana", model: "/assets/acnh/fish/golden-arowana.glb", raw: true, move: { speed: 0.42, accel: 2.1, jitter: 0.01, dartChance: 0.32, dartMul: 2.4, retargetMs: 980 } },
+  // Rarity rerank (David ruling 2026-07-24): DIVINE (was Sea King) IS VACANT — David is
   // supplying new marquee models for the tier; the arapaima drops to epic
   // (keeping its king-sized fight). Legendary is deliberately tight: the
   // three goldens + Stringfish + Coelacanth/Hammerhead/Sturgeon.
-  { key: "fish_golden_koi", label: "a Golden Koi", name: "Golden Koi", model: "/assets/acnh/fish/koi.glb", rarity: "legendary", sizeCm: [60, 95], move: { speed: 0.44, accel: 2.2, jitter: 0.014, dartChance: 0.34, dartMul: 2.4, retargetMs: 950 } },
-  { key: "fish_arapaima", label: "an Arapaima", name: "Arapaima", model: "/assets/acnh/fish/arapaima.glb", rarity: "epic", sizeCm: [150, 300], raw: true, move: { speed: 0.46, accel: 2.3, jitter: 0.012, dartChance: 0.36, dartMul: 2.5, retargetMs: 900 }, when: (h, w) => h >= 16 || h < 9 || w === "rain", whenLabel: "evening/night or rain" },
+  { key: "fish_golden_koi", label: "a Golden Koi", name: "Golden Koi", model: "/assets/acnh/fish/koi.glb", move: { speed: 0.44, accel: 2.2, jitter: 0.014, dartChance: 0.34, dartMul: 2.4, retargetMs: 950 } },
+  { key: "fish_arapaima", label: "an Arapaima", name: "Arapaima", model: "/assets/acnh/fish/arapaima.glb", raw: true, move: { speed: 0.46, accel: 2.3, jitter: 0.012, dartChance: 0.36, dartMul: 2.5, retargetMs: 900 } },
 ];
 
 
@@ -130,34 +126,45 @@ const CORE_FISH: FishDef[] = [
 // reel personalities: bottom dwellers cling, they don't sprint. A future
 // pier/diving feature can move them to their own mechanic without touching
 // these defs.
-const SEA_CREATURES: FishDef[] = [
-  { key: "sea_scallop", label: "a Scallop", name: "Scallop", model: "/assets/acnh/sea/scallop.glb", rarity: "common", zone: "sea", creature: true, sizeCm: [8, 14], raw: true, move: { speed: 0.15, accel: 0.6, jitter: 0.004, dartChance: 0.06, dartMul: 1.6, retargetMs: 2200 } },
-  { key: "sea_sweet_shrimp", label: "a Sweet Shrimp", name: "Sweet Shrimp", model: "/assets/acnh/sea/sweet-shrimp.glb", rarity: "common", zone: "sea", creature: true, sizeCm: [5, 9], raw: true, move: { speed: 0.2, accel: 0.85, jitter: 0.008, dartChance: 0.14, dartMul: 2.0, retargetMs: 1700 }, when: (h) => h >= 16 || h < 9, whenLabel: "evening/night" },
-  { key: "sea_sea_star", label: "a Sea Star", name: "Sea Star", model: "/assets/acnh/sea/sea-star.glb", rarity: "common", zone: "sea", creature: true, sizeCm: [8, 15], raw: true, move: { speed: 0.12, accel: 0.5, jitter: 0.003, dartChance: 0.04, dartMul: 1.4, retargetMs: 2500 } },
-  { key: "sea_barnacle", label: "an Acorn Barnacle", name: "Acorn Barnacle", model: "/assets/acnh/sea/barnacle.glb", rarity: "common", zone: "sea", creature: true, sizeCm: [2, 4], raw: true, move: { speed: 0.1, accel: 0.45, jitter: 0.003, dartChance: 0.03, dartMul: 1.3, retargetMs: 2600 } },
-  { key: "sea_dungeness_crab", label: "a Dungeness Crab", name: "Dungeness Crab", model: "/assets/acnh/sea/dungeness-crab.glb", rarity: "uncommon", zone: "sea", creature: true, sizeCm: [15, 25], raw: true, move: { speed: 0.24, accel: 1.0, jitter: 0.007, dartChance: 0.16, dartMul: 1.9, retargetMs: 1500 } },
-  { key: "sea_garden_eel", label: "a Garden Eel", name: "Garden Eel", model: "/assets/acnh/sea/garden-eel.glb", rarity: "uncommon", zone: "sea", creature: true, sizeCm: [30, 40], raw: true, move: { speed: 0.26, accel: 1.1, jitter: 0.009, dartChance: 0.18, dartMul: 2.0, retargetMs: 1400 }, when: (h) => h >= 6 && h < 18, whenLabel: "day (6-18h)" },
-  { key: "sea_firefly_squid", label: "a Firefly Squid", name: "Firefly Squid", model: "/assets/acnh/sea/firefly-squid.glb", rarity: "uncommon", zone: "sea", creature: true, sizeCm: [5, 8], raw: true, move: { speed: 0.27, accel: 1.15, jitter: 0.01, dartChance: 0.2, dartMul: 2.1, retargetMs: 1350 }, when: (h) => h >= 21 || h < 4, whenLabel: "late night (21-4h)" },
-  { key: "sea_abalone", label: "an Abalone", name: "Abalone", model: "/assets/acnh/sea/abalone.glb", rarity: "rare", zone: "sea", creature: true, sizeCm: [12, 20], raw: true, move: { speed: 0.18, accel: 0.8, jitter: 0.004, dartChance: 0.1, dartMul: 1.7, retargetMs: 1900 }, when: (h) => h >= 16 || h < 9, whenLabel: "evening/night" },
-  { key: "sea_pearl_oyster", label: "a Pearl Oyster", name: "Pearl Oyster", model: "/assets/acnh/sea/pearl-oyster.glb", rarity: "rare", zone: "sea", creature: true, sizeCm: [7, 12], raw: true, move: { speed: 0.2, accel: 0.9, jitter: 0.005, dartChance: 0.12, dartMul: 1.8, retargetMs: 1800 } },
-  { key: "sea_giant_isopod", label: "a Giant Isopod", name: "Giant Isopod", model: "/assets/acnh/sea/giant-isopod.glb", rarity: "epic", zone: "sea", creature: true, sizeCm: [20, 40], raw: true, move: { speed: 0.3, accel: 1.4, jitter: 0.007, dartChance: 0.26, dartMul: 2.3, retargetMs: 1250 }, when: (h) => h >= 20 || h < 4, whenLabel: "night (20-4h)" },
+const SEA_CREATURES: FishRow[] = [
+  { key: "sea_scallop", label: "a Scallop", name: "Scallop", model: "/assets/acnh/sea/scallop.glb", creature: true, raw: true, move: { speed: 0.15, accel: 0.6, jitter: 0.004, dartChance: 0.06, dartMul: 1.6, retargetMs: 2200 } },
+  { key: "sea_sweet_shrimp", label: "a Sweet Shrimp", name: "Sweet Shrimp", model: "/assets/acnh/sea/sweet-shrimp.glb", creature: true, raw: true, move: { speed: 0.2, accel: 0.85, jitter: 0.008, dartChance: 0.14, dartMul: 2.0, retargetMs: 1700 } },
+  { key: "sea_sea_star", label: "a Sea Star", name: "Sea Star", model: "/assets/acnh/sea/sea-star.glb", creature: true, raw: true, move: { speed: 0.12, accel: 0.5, jitter: 0.003, dartChance: 0.04, dartMul: 1.4, retargetMs: 2500 } },
+  { key: "sea_barnacle", label: "an Acorn Barnacle", name: "Acorn Barnacle", model: "/assets/acnh/sea/barnacle.glb", creature: true, raw: true, move: { speed: 0.1, accel: 0.45, jitter: 0.003, dartChance: 0.03, dartMul: 1.3, retargetMs: 2600 } },
+  { key: "sea_dungeness_crab", label: "a Dungeness Crab", name: "Dungeness Crab", model: "/assets/acnh/sea/dungeness-crab.glb", creature: true, raw: true, move: { speed: 0.24, accel: 1.0, jitter: 0.007, dartChance: 0.16, dartMul: 1.9, retargetMs: 1500 } },
+  { key: "sea_garden_eel", label: "a Garden Eel", name: "Garden Eel", model: "/assets/acnh/sea/garden-eel.glb", creature: true, raw: true, move: { speed: 0.26, accel: 1.1, jitter: 0.009, dartChance: 0.18, dartMul: 2.0, retargetMs: 1400 } },
+  { key: "sea_firefly_squid", label: "a Firefly Squid", name: "Firefly Squid", model: "/assets/acnh/sea/firefly-squid.glb", creature: true, raw: true, move: { speed: 0.27, accel: 1.15, jitter: 0.01, dartChance: 0.2, dartMul: 2.1, retargetMs: 1350 } },
+  { key: "sea_abalone", label: "an Abalone", name: "Abalone", model: "/assets/acnh/sea/abalone.glb", creature: true, raw: true, move: { speed: 0.18, accel: 0.8, jitter: 0.004, dartChance: 0.1, dartMul: 1.7, retargetMs: 1900 } },
+  { key: "sea_pearl_oyster", label: "a Pearl Oyster", name: "Pearl Oyster", model: "/assets/acnh/sea/pearl-oyster.glb", creature: true, raw: true, move: { speed: 0.2, accel: 0.9, jitter: 0.005, dartChance: 0.12, dartMul: 1.8, retargetMs: 1800 } },
+  { key: "sea_giant_isopod", label: "a Giant Isopod", name: "Giant Isopod", model: "/assets/acnh/sea/giant-isopod.glb", creature: true, raw: true, move: { speed: 0.3, accel: 1.4, jitter: 0.007, dartChance: 0.26, dartMul: 2.3, retargetMs: 1250 } },
 ];
 
 /**
  * The quarter turn about x that hangs a raw dump export (10x, its head along +z, its back up) head up with its back
- * toward -z, the frame the hold, the tank and the icons assume: -90 degrees. The village keeps the +90 it shipped with,
- * which hangs them head down and belly out (the village stays as it is; game/remodel round 3). In the new world only the
- * sea creatures are raw (the fish are ours, in frame).
+ * toward -z, the frame the hold, the tank and the icons assume: -90 degrees (game/remodel round 3). Only the sea creatures
+ * are raw (the fish are ours, in frame).
  */
-export const RAW_TURN_X = GAME_WORLD === "new" ? -Math.PI / 2 : Math.PI / 2;
+export const RAW_TURN_X = -Math.PI / 2;
 
-/**
- * Every species; in the new world the fish are our tweaked models (worldModel, art/remodel/build_fish.py), already in
- * the game's frame (head up, back toward -z, game scale), so none of them is raw there.
- */
+/** A reel row: its rarity, size, habitat and hours are the roster's (lib/collections/roster.ts), the one place they're set. */
+export type FishRow = Omit<FishDef, "rarity" | "sizeCm" | "zone" | "when" | "whenLabel">;
+const SPECIES = new Map(ROSTER.map((s) => [s.key, s]));
+const hoursLabel = ({ hours: [a, b], rainAnyHour, weather }: { hours: [number, number]; rainAnyHour: boolean; weather: string[] }) =>
+  `${a}-${b}h${rainAnyHour ? " or rain" : ""}${weather.length ? `, ${weather.join(" or ")} only` : ""}`;
+
+/** Every species, with the roster's rarity, size, habitat and hours; in the new world the fish are our tweaked models (worldModel, art/remodel/build_fish.py), already in the game's frame, so none of them is raw there. */
 export const FISH: FishDef[] = [...CORE_FISH, ...EXTRA_FISH, ...SEA_CREATURES].map(f => {
+  const s = SPECIES.get(f.key);
+  if (!s?.size) throw new Error(`${f.key}: a reel fish needs a roster row with a size`);
+  const gated = s.hours || s.weather.length ? { ...s, months: [] } : null;
   const model = worldModel(f.model);
-  return { ...f, model, raw: f.raw && model === f.model };
+  return {
+    ...f, model, raw: f.raw && model === f.model, rarity: s.rarity, sizeCm: s.size, zone: s.biome === "sea" ? "sea" : "river",
+    ...(gated && {
+      when: (hour: number, weather: string) => availableAt(gated, { hour, month: 1, weather: weather as WorldMoment["weather"] }),
+      whenLabel: gated.hours ? hoursLabel({ ...gated, hours: gated.hours }) : `${gated.weather.join(" or ")} only`,
+    }),
+  };
 });
 
 /**
@@ -268,8 +275,38 @@ export const REVEAL: Record<Rarity, { develop: number; hold: number; confetti: n
   rare: { develop: 700, hold: 3600, confetti: 1, shake: 0.04 },
   epic: { develop: 850, hold: 4000, confetti: 2, shake: 0.05 },
   legendary: { develop: 1000, hold: 4600, confetti: 3, shake: 0.06 },
-  seaking: { develop: 1200, hold: 5200, confetti: 4, shake: 0.07 },
+  divine: { develop: 1200, hold: 5200, confetti: 4, shake: 0.07 },
+  contraband: { develop: 1300, hold: 5400, confetti: 4, shake: 0.075 },
 };
+
+/**
+ * The hook's beat by tier (specs/launch/v1-gameplay.md, "Fish tiers and fights"): every bite pops a "!" over the
+ * angler; a legendary's is golden with sparks, a divine's bigger still with a beam and a burst. Each has its own bite
+ * sound (art/audio/synth_bite.py) and a harder shake (world units, cameraJuice shakeCamera) and micro-zoom (degrees).
+ * Hooked, a legendary or divine catch surfaces in a cutscene (`surfaceMs`, fishing/BossCreature.tsx) before its fight.
+ */
+export type HookTier = "common" | "legendary" | "divine";
+export const HOOK_TIER: Record<Rarity, HookTier> = {
+  common: "common", uncommon: "common", rare: "common", epic: "common", legendary: "legendary", divine: "divine", contraband: "common",
+};
+export const HOOK: Record<HookTier, { sfx: "bite" | "bite-legendary" | "bite-divine"; shake: number; punch: number; surfaceMs: number }> = {
+  common: { sfx: "bite", shake: 0.065, punch: 3, surfaceMs: 0 },
+  legendary: { sfx: "bite-legendary", shake: 0.12, punch: 4.5, surfaceMs: 2800 },
+  divine: { sfx: "bite-divine", shake: 0.2, punch: 6, surfaceMs: 3800 },
+};
+
+/**
+ * The boss fights (a legendary's boss reel and surfacing cutscene, a divine's room raid) are for a later launch (David,
+ * 2026-10-27): off unless the build sets NEXT_PUBLIC_FISH_BOSSES=1. Off, every catch reels the ordinary way; the "!"
+ * and the bite sound still go by tier.
+ */
+export const fishBosses = () => process.env.NEXT_PUBLIC_FISH_BOSSES === "1";
+/** The fight a catch puts up: a boss reel of your own (legendary), the room's raid (divine), or none. */
+export function bossOf(rarity: Rarity): "solo" | "shared" | null {
+  if (!fishBosses()) return null;
+  const tier = HOOK_TIER[rarity];
+  return tier === "legendary" ? "solo" : tier === "divine" ? "shared" : null;
+}
 
 /** "1 in N" odds for a species under the current hour/weather pool. */
 export function fishOdds(fish: FishDef): number {

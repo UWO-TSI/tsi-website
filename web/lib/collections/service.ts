@@ -11,7 +11,9 @@ import { hourKey } from "@/lib/game/peaceful";
 import { rodByTier } from "@/lib/game/rods";
 import { checkHeld } from "@/lib/game/tools";
 import type { IslandWeather } from "@/lib/game/islandWeather";
-import type { BagItem, CatchResult, ChestItem, CollectionsStore } from "./store";
+import { CollectionsError, type BagItem, type CatchResult, type ChestItem, type CollectionsStore } from "./store";
+import { readRaidCredit } from "./raidCredit";
+import { FISH, HOOK_TIER, fishBosses, rollSize } from "@/lib/game/fishing";
 import { CHEST_SLOTS, bagCapacity, slotsUsed } from "./bag";
 import { eventCatches, landSeason, latestTourney, tourneyBoards, type TourneyBoard } from "@/lib/progression/seasonal";
 import type { ClubGoal } from "@/lib/progression/types";
@@ -24,6 +26,7 @@ const ERRORS: Record<string, [number, string]> = {
   rate_limited: [429, "That's plenty of those for this hour. Try again later."],
   too_fast: [429, "Too quick. Give it a moment."],
   no_roll: [404, "Nothing on the line."],
+  bad_credit: [403, "That raid's catch isn't yours to claim."],
   roll_expired: [410, "That one got away. Cast again."],
   already_landed: [409, "Already landed."],
   already_harvested: [409, "You've already gathered here this hour."],
@@ -44,6 +47,7 @@ const CatchRequest = z.discriminatedUnion("action", [
   z.object({ action: z.literal("harvest"), node: z.string().max(64), at: XZ, tool: z.string().max(64).optional() }),
   z.object({ action: z.literal("cast"), site: z.enum(["village", "home"]), at: XZ, power: z.number().min(0).max(1), tool: z.string().max(64).optional(), with: z.string().uuid().optional() }),
   z.object({ action: z.literal("land"), roll: z.string().uuid() }),
+  z.object({ action: z.literal("raid"), credit: z.string().max(1024) }),
 ]);
 /** A recorded catch (harvest, land: its counts, record and any recipe taught), or a cast's `roll` waiting to be landed. */
 /** `together`: the friend's world name when the cast was fishing together (s-fishtogether), for the card's stamp. */
@@ -56,6 +60,9 @@ export type CatchReply = { item_key: string; size_cm: number | null; roll?: stri
  *   harvest { node, at, tool }        a forage node or bug spot: one per node per hour
  *   cast    { site, at, power, tool } rolls the fish that will bite (roll id; recorded on land)
  *   land    { roll }            the reel was won: records that roll once
+ *   raid    { credit }          a divine raid was landed (behind NEXT_PUBLIC_FISH_BOSSES): the realtime server's signed
+ *                               credit for one helper (lib/collections/raidCredit.ts), for a divine fish the opener
+ *                               really had on the line; recorded once per member per roll
  * Seasonal events (`goals`, the active club goals): limited-time fish are in
  * the roll only while their event runs and never land outside it; a fish
  * landed while the fishing tourney runs enters it, in the same transaction.
@@ -73,12 +80,22 @@ export async function catchAction(
   store: CollectionsStore, memberId: string, body: unknown, now: Date,
   weather: () => Promise<IslandWeather>, goals: () => Promise<readonly ClubGoal[]> = async () => [], random = Math.random,
   friendName: (memberId: string) => Promise<string | null> = async () => null,
+  raidSecret = process.env.REALTIME_INTERNAL_SECRET,
 ): Promise<Result<CatchReply>> {
   const parsed = CatchRequest.safeParse(body);
   if (!parsed.success) return { ok: false, status: 400, code: "invalid", error: "Invalid request" };
   const req = parsed.data;
   try {
     if (req.action === "land") return { ok: true, data: await store.land(memberId, req.roll, landSeason(await goals(), now)) };
+    if (req.action === "raid") {
+      const credit = fishBosses() ? readRaidCredit(req.credit, raidSecret, now.getTime()) : null;
+      if (!credit || credit.m !== memberId) return fail(new CollectionsError("bad_credit"));
+      const sp = ROSTER.find((s) => s.key === credit.f), fish = FISH.find((f) => f.key === credit.f);
+      // Only a divine fish raids, and only one the opener's own cast rolled.
+      if (!sp || !fish || HOOK_TIER[fish.rarity] !== "divine" || (await store.rolled(credit.o, credit.r)) !== credit.f) return fail(new CollectionsError("no_roll"));
+      const size = clampSize(sp, rollSize(fish.sizeCm, random));
+      return { ok: true, data: { item_key: sp.key, size_cm: size, ...(await store.harvest(memberId, `raid:${credit.r}`, "raid", sp.key, size, trophyFor(sp, size))) } };
+    }
     if (req.action === "harvest") {
       const node = nodeAt(req.node, req.at);
       if (!node) return { ok: false, status: 422, code: "wrong_place", error: "Nothing to gather from here." };

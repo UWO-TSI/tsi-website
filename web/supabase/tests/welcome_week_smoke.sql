@@ -1,4 +1,4 @@
--- The welcome week (20261027190000_welcome_week, d-streak). Throwaway local Postgres after every migration through it
+-- The welcome week (20261029062500_welcome_week, d-streak). Throwaway local Postgres after every migration through it
 -- (supabase_stub.sql first). Never Supabase. Fails before it: daily_gift_claim has no welcome columns. Self-contained,
 -- rolled back: past log-in days are written straight into daily_login_claims. Its members (77001 to 77009) are used by no
 -- other smoke, so they start with no coins and no gift days (nothing credits coins at signup: 003_profile_trigger only

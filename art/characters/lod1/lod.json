@@ -284,52 +284,44 @@
   "lod1": 2159
  },
  "outfits/bottom/bottom_joggers.glb": {
-  "tris": 314,
-  "lod1": 250
+  "tris": 294,
+  "lod1": 294
  },
- "outfits/bottom/bottom_long_skirt.glb": {
+ "outfits/bottom/bottom_overalls.glb": {
+  "tris": 226,
+  "lod1": 226
+ },
+ "outfits/bottom/bottom_shorts.glb": {
+  "tris": 178,
+  "lod1": 178
+ },
+ "outfits/bottom/bottom_skirt.glb": {
+  "tris": 200,
+  "lod1": 176
+ },
+ "outfits/bottom/bottom_skirt_long.glb": {
   "tris": 240,
   "lod1": 184
  },
- "outfits/bottom/bottom_overall_shorts.glb": {
-  "tris": 242,
-  "lod1": 210
- },
- "outfits/bottom/bottom_pleated_skirt.glb": {
-  "tris": 200,
-  "lod1": 140
- },
- "outfits/bottom/bottom_shorts.glb": {
-  "tris": 194,
-  "lod1": 194
- },
  "outfits/bottom/bottom_trousers.glb": {
-  "tris": 258,
-  "lod1": 168
+  "tris": 242,
+  "lod1": 184
  },
- "outfits/onepiece/onepiece_sundress.glb": {
-  "tris": 288,
-  "lod1": 223
+ "outfits/onepiece/onepiece_cape.glb": {
+  "tris": 308,
+  "lod1": 308
  },
- "outfits/onepiece/outfit_koi_kimono.glb": {
-  "tris": 357,
-  "lod1": 357
+ "outfits/onepiece/onepiece_dress.glb": {
+  "tris": 268,
+  "lod1": 203
  },
- "outfits/onepiece/outfit_monarch_cape.glb": {
-  "tris": 332,
-  "lod1": 304
+ "outfits/onepiece/onepiece_kimono.glb": {
+  "tris": 340,
+  "lod1": 340
  },
  "outfits/shoes/shoes_boots.glb": {
-  "tris": 328,
-  "lod1": 294
- },
- "outfits/shoes/shoes_loafers.glb": {
-  "tris": 252,
-  "lod1": 252
- },
- "outfits/shoes/shoes_rainboots.glb": {
-  "tris": 328,
-  "lod1": 328
+  "tris": 296,
+  "lod1": 262
  },
  "outfits/shoes/shoes_sandals.glb": {
   "tris": 232,
@@ -343,40 +335,32 @@
   "tris": 236,
   "lod1": 236
  },
- "outfits/top/outfit_silk_sweater.glb": {
-  "tris": 316,
-  "lod1": 280
- },
- "outfits/top/top_cardigan.glb": {
-  "tris": 342,
-  "lod1": 238
- },
- "outfits/top/top_collar_shirt.glb": {
-  "tris": 256,
-  "lod1": 226
+ "outfits/top/top_coat.glb": {
+  "tris": 296,
+  "lod1": 220
  },
  "outfits/top/top_hoodie.glb": {
-  "tris": 359,
-  "lod1": 265
+  "tris": 351,
+  "lod1": 297
  },
- "outfits/top/top_raincoat.glb": {
-  "tris": 298,
-  "lod1": 196
+ "outfits/top/top_hoodie_zip.glb": {
+  "tris": 343,
+  "lod1": 289
  },
- "outfits/top/top_stripe_ls.glb": {
-  "tris": 336,
-  "lod1": 336
+ "outfits/top/top_longsleeve.glb": {
+  "tris": 328,
+  "lod1": 204
  },
- "outfits/top/top_sweater_vest.glb": {
-  "tris": 268,
-  "lod1": 268
+ "outfits/top/top_sweater.glb": {
+  "tris": 296,
+  "lod1": 252
  },
  "outfits/top/top_tee.glb": {
-  "tris": 232,
-  "lod1": 202
+  "tris": 224,
+  "lod1": 194
  },
- "outfits/top/top_tsi_crew.glb": {
-  "tris": 336,
-  "lod1": 274
+ "outfits/top/top_tee_collar.glb": {
+  "tris": 240,
+  "lod1": 210
  }
 }

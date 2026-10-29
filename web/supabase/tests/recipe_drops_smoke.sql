@@ -115,11 +115,11 @@ BEGIN
   rid := collections_cast(J, 'fish_black_bass', 40, true);
   BEGIN PERFORM collections_land_drop(J, rid, '{}', NULL, NULL); RAISE EXCEPTION 'x';
   EXCEPTION WHEN raise_exception THEN ASSERT SQLERRM = 'too_fast', 'reel minimum: ' || SQLERRM; END;
-  -- Over the hourly cap: three legendary koi this hour, the fourth is refused.
+  -- Over the hourly cap: six epic koi this hour, the seventh is refused.
   UPDATE recipe_drop_chances SET chance = 0;
-  PERFORM collections_harvest_drop(J, 'koi-' || i, 'h-koi', 'fish_golden_koi', 70, true) FROM generate_series(1, 3) i;
+  PERFORM collections_harvest_drop(J, 'koi-' || i, 'h-koi', 'fish_golden_koi', 70, true) FROM generate_series(1, 6) i;
   UPDATE recipe_drop_chances SET chance = 1;
-  BEGIN PERFORM collections_harvest_drop(J, 'koi-4', 'h-koi', 'fish_golden_koi', 70, true); RAISE EXCEPTION 'x';
+  BEGIN PERFORM collections_harvest_drop(J, 'koi-7', 'h-koi', 'fish_golden_koi', 70, true); RAISE EXCEPTION 'x';
   EXCEPTION WHEN raise_exception THEN ASSERT SQLERRM = 'rate_limited', 'cap: ' || SQLERRM; END;
   -- The same node twice in an hour.
   BEGIN PERFORM collections_harvest_drop(J, 'koi-1', 'h-koi', 'rock_crystal', NULL, false); RAISE EXCEPTION 'x';

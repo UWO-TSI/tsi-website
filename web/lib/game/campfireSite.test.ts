@@ -2,13 +2,17 @@ import { describe, expect, it } from "vitest";
 import { FIRE } from "./campfire";
 import { campfireSite } from "./campfireSite";
 import { villageIsland } from "./defaultIsland";
-import { buildVillage, objectsOf, village, type VillageDoc } from "./villageMap";
-import worldDoc from "@/data/world-map.json";
+import { join } from "node:path";
+import { objectsOf } from "./villageMap";
+import { loadWorldFromDisk } from "./world/disk";
+import { villageOfWorld } from "./world/village";
+
+const world = loadWorldFromDisk(join(__dirname, "../../data/world"));
 
 describe("where the beach campfire stands (specs/v1-drop.md §3)", () => {
-  for (const [name, v] of [["the shipped village", village()], ["the v2 world", buildVillage(worldDoc as VillageDoc)]] as const) {
-    it(`finds open sand by the beach on ${name}, with both rings dry and clear of furniture and trees`, () => {
-      const site = campfireSite(v)!, island = villageIsland(v);
+  {
+    it("finds open sand by the beach on the member island without its own campfire, both rings dry and clear of furniture and trees", () => {
+      const v = villageOfWorld({ ...world, objects: world.objects.filter(o => o.kind !== "campfire") }), site = campfireSite(v)!, island = villageIsland(v);
       expect(site).not.toBeNull();
       const beach = objectsOf("landmark", v).find(o => o.id === "beach")!;
       expect(Math.hypot(site.x - beach.x, site.z - beach.z)).toBeLessThan(14);
@@ -19,9 +23,8 @@ describe("where the beach campfire stands (specs/v1-drop.md §3)", () => {
       for (const kind of ["study", "tree", "bench"] as const) for (const o of objectsOf(kind, v)) expect(Math.hypot(o.x - site.x, o.z - site.z), `${kind} ${o.id}`).toBeGreaterThan(FIRE.danceRadius);
     });
   }
-  it("takes the map's own campfire when the painter has placed one", () => {
-    const doc = structuredClone(worldDoc) as VillageDoc;
-    doc.objects = [...(doc.objects ?? []), { id: "campfire", kind: "campfire", x: -12, z: 108 }];
-    expect(campfireSite(buildVillage(doc))).toEqual({ x: -12, z: 108 });
+  it("takes the map's own campfire when one is placed", () => {
+    const own = world.objects.find(o => o.kind === "campfire")!;
+    expect(campfireSite(villageOfWorld(world))).toMatchObject({ x: own.x, z: own.z });
   });
 });

@@ -11,12 +11,12 @@
  *   stay    — a few seconds by tier (REVEAL.hold), then it goes; Continue (click, E, Space, Enter) sooner, Esc closes.
  *
  * Rarity is the one palette (the GUI sheet's --gui-rarity-*: RarityBadge, the same in the journal and the book);
- * the Sea King's badge is holographic. prefers-reduced-motion develops at once without confetti or pops.
+ * Divine's badge is holographic (the kit draws it). prefers-reduced-motion develops at once without confetti or pops.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AudioManager } from "@/lib/game/audio";
-import { HOLO_GRADIENT, REVEAL, celebrate, fishOdds, iconFor, RARITY_META, type FishDef } from "@/lib/game/fishing";
+import { REVEAL, celebrate, fishOdds, iconFor, RARITY_META, type FishDef } from "@/lib/game/fishing";
 import { oneLinerFor } from "@/lib/game/peaceful";
 import { Badge, Button, RarityBadge } from "@/components/gui";
 
@@ -38,7 +38,6 @@ export default function FishReveal({ fish, sizeCm, recipe, together, isNew = tru
 }) {
   const cfg = REVEAL[fish.rarity];
   const meta = RARITY_META[fish.rarity];
-  const holo = fish.rarity === "seaking";
   const odds = isNew ? fishOdds(fish) : null;
   const [developed, setDeveloped] = useState(!isNew);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -124,7 +123,7 @@ export default function FishReveal({ fish, sizeCm, recipe, together, isNew = tru
             {!isNew && newRecord && <Badge tone="warn">New record</Badge>}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap", opacity: developed ? 1 : 0, transition: "opacity 300ms ease-out 80ms" }}>
-            <RarityBadge rarity={fish.rarity} style={holo ? { background: HOLO_GRADIENT, backgroundSize: "300% 100%", animation: "tsi-holo-shift 2.2s linear infinite" } : undefined}>{meta.label}</RarityBadge>
+            <RarityBadge rarity={fish.rarity}>{meta.label}</RarityBadge>
             {sizeCm !== null && <span style={{ fontSize: "var(--gui-text-sm, 13px)", fontWeight: 700, color: "var(--gui-ink-2, #6b5843)" }}>{sizeCm} cm</span>}
             {odds !== null && <span style={{ fontSize: "var(--gui-text-xs, 12px)", color: "var(--gui-muted, #726450)" }}>Base odds · 1 in {odds}</span>}
           </div>
@@ -149,10 +148,6 @@ export default function FishReveal({ fish, sizeCm, recipe, together, isNew = tru
         @keyframes tsi-catch-wiggle {
           0%, 100% { transform: rotate(-4deg) translateY(0); }
           50% { transform: rotate(4deg) translateY(-3px); }
-        }
-        @keyframes tsi-holo-shift {
-          0% { background-position: 0% 50%; }
-          100% { background-position: 300% 50%; }
         }
         /* At the foot of the screen under the catch you hold up (Animal Crossing's text box); on touch, the HUD's lane
            above the stick and buttons. */

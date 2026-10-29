@@ -153,7 +153,7 @@ BEGIN
   BEGIN PERFORM collections_set_lock(M, 'fish_coelacanth', true); RAISE EXCEPTION 'x';
   EXCEPTION WHEN raise_exception THEN ASSERT SQLERRM = 'not_owned', 'nothing to lock: ' || SQLERRM; END;
   PERFORM collections_set_lock(M, 'fish_golden_koi', false);
-  ASSERT (SELECT paid FROM economy_sell(M, 'fish_golden_koi', 1, 'smoke-sell-02')) = 600, 'unlocked, it sells';
+  ASSERT (SELECT paid FROM economy_sell(M, 'fish_golden_koi', 1, 'smoke-sell-02')) = 180, 'unlocked, it sells';
   -- A drop happens once per key.
   SELECT * INTO r FROM collections_drop(M, 'apple', 2, 'smoke-drop-02');
   ASSERT r.count = 3 AND NOT r.replayed, 'dropped two';

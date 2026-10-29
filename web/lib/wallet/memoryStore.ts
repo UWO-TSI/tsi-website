@@ -1,6 +1,6 @@
 /** In-memory EconomyStore mirroring 20260926150600_economy.sql (tests, dev harness). */
 import { boxPool, dailyGiftAmount, SELL_PRICES, SETTINGS, STARTER_REFS, WELCOME_TRACK, welcomeDay } from "./catalogue";
-import { seedItems, sellPrice, speciesClass, torontoDay, type ShopItem } from "./rules";
+import { seedItems, speciesSellPrice, torontoDay, type ShopItem } from "./rules";
 import { EconomyError, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation } from "./store";
 
 export function memoryEconomyStore(clock: () => Date = () => new Date(), random: () => number = Math.random) {
@@ -81,8 +81,7 @@ export function memoryEconomyStore(clock: () => Date = () => new Date(), random:
       const prior = ledger.find((l) => l.member === m && l.key === k);
       if (prior) return { balance: coins.get(m) ?? 0, remaining: collections.get(`${m}:${itemKey}`) ?? 0, paid: prior.amount, replayed: true };
       if (qty < 1 || qty > 200) throw new EconomyError("bad_qty");
-      const cls = speciesClass(itemKey);
-      const price = cls ? sellPrice(cls.category, cls.rarity) : null;
+      const price = speciesSellPrice(itemKey);
       if (!price) throw new EconomyError("not_sellable");
       if (locks.has(`${m}:${itemKey}`)) throw new EconomyError("locked");
       const have = collections.get(`${m}:${itemKey}`) ?? 0;

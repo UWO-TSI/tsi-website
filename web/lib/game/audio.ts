@@ -55,7 +55,11 @@ export type SFXName =
   | "blip4"
   | "blip5"
   /** The TSI keycap keychain's click: the press and the return in one file (a stand-in until David's recording). */
-  | "keyswitch";
+  | "keyswitch"
+  /** A fish bites, by hook tier (art/audio/synth_bite.py): louder and richer for legendary and divine. */
+  | "bite"
+  | "bite-legendary"
+  | "bite-divine";
 
 interface AudioManifest {
   ambient: Record<AmbientPhase, string>;
@@ -84,6 +88,9 @@ const MANIFEST: AudioManifest = {
     blip4: "/audio/sfx/blip4.ogg",
     blip5: "/audio/sfx/blip5.ogg",
     keyswitch: "/audio/sfx/keyswitch.ogg",
+    bite: "/audio/sfx/bite.ogg",
+    "bite-legendary": "/audio/sfx/bite-legendary.ogg",
+    "bite-divine": "/audio/sfx/bite-divine.ogg",
   },
 };
 

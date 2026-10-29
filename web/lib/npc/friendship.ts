@@ -1,5 +1,5 @@
 /**
- * Resident friendship (d-friends, specs/launch/v1-gameplay.md; 20261027190100_resident_friendship.sql), in half hearts
+ * Resident friendship (d-friends, specs/launch/v1-gameplay.md; 20261029062600_resident_friendship.sql), in half hearts
  * (David 2026-10-28: "make it half a heart and like giving them stuff ... gifts increase a heart, non like stuff no
  * increase, ok like half heart, and hate -1 heart"). The day's first talk with a resident adds half a heart; one gift a
  * day moves it by their taste (TASTE_HALVES). Each whole heart reached brings a reward once: odd hearts a letter from

@@ -33,7 +33,7 @@ import FishReveal from "./FishReveal";
 import { remoteNearest } from "./net/active";
 import { friendsStore } from "@/lib/net/friends";
 import { AudioManager } from "@/lib/game/audio";
-import { castLine, collect, landCatch, localCollections, localRecord, mergeWithLocal, type CatchAnswer } from "@/lib/game/collections";
+import { castLine, claimRaid, collect, landCatch, localCollections, localRecord, mergeWithLocal, type CatchAnswer } from "@/lib/game/collections";
 import { rodByTier, type RodTier } from "@/lib/game/rods";
 import { rollFishFor } from "@/lib/game/peaceful";
 import type { WaterType } from "@/lib/game/fishingSpots";
@@ -42,7 +42,10 @@ import {
   CAST,
   TOGETHER,
   FISH,
+  HOOK,
+  HOOK_TIER,
   RARITY_META,
+  bossOf,
   START_PROGRESS,
   catchShake,
   currentFishingContext,
@@ -53,16 +56,20 @@ import {
 } from "@/lib/game/fishing";
 import { weatherMods } from "@/lib/game/weatherPerks";
 import { liveIslandWeather, reelWeather } from "@/lib/game/islandWeather";
-import { advanceFishingReel, createFishingReel } from "@/lib/game/fishingReel";
+import { BOSS, advanceFishingReel, createFishingReel, type BossMove } from "@/lib/game/fishingReel";
+import { raidNow, sendRaid } from "@/lib/net/raid";
+import { RAID } from "@/lib/net/protocol";
 import { FISHING_HINTS, bindFishingCastLifecycle, bindFishingInput, castDevice, trackCastDevice, type CastDevice, type FishingHeldInput } from "@/lib/game/fishingInput";
 import { isGameControlTarget } from "@/lib/game/keyboardInput";
 import { live } from "@/lib/game/fishingRig";
 
-type Phase = "idle" | "charging" | "casting" | "waiting" | "bite" | "reeling" | "revealing" | "missed";
+type Phase = "idle" | "charging" | "casting" | "waiting" | "bite" | "surfacing" | "reeling" | "revealing" | "missed";
 
 const BITE_WINDOW_MS = 1400;
 /** The catch card arrives this long after the reel is won: the world's beat first (the fish out of the water and into your hands). */
 const REVEAL_DELAY_MS = 520;
+/** A boss catch's (legendary, divine) card waits for its landing in the world (fishing/BossCreature.tsx). */
+const BOSS_REVEAL_DELAY_MS = 1900;
 /** How far the camera leans in (degrees of field of view) on you and the catch while its card is up: a touch, so the
  *  catch held at your chin stays above the card. */
 const REVEAL_ZOOM = 4;
@@ -110,6 +117,13 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
   const rollRef = useRef<Promise<CatchAnswer | null> | null>(null);
   const landRef = useRef<{ roll: string; size: number | null } | null>(null);
   const hookedRef = useRef(false);
+  /** The fight a boss catch puts up (a divine with no raid to open fights solo), and the raid it's part of. */
+  const [bossMode, setBossMode] = useState<"solo" | "shared" | null>(null);
+  const [raidId, setRaidId] = useState<string | undefined>(undefined);
+  const raidIdRef = useRef<string | undefined>(undefined);
+  const joinRaidAs = (id: string | undefined) => { raidIdRef.current = id; setRaidId(id); };
+  /** The fish on the bite (rolled as it bites), hooked into the reel. */
+  const bitingRef = useRef<FishDef | null>(null);
   /** A landed catch goes into the bag as its card closes (the HUD's fly-in then, from where it was held up). */
   const pendingBagRef = useRef<string | null>(null);
   useEffect(() => {
@@ -168,6 +182,10 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     rollRef.current = null;
     landRef.current = null;
     hookedRef.current = false;
+    bitingRef.current = null;
+    if (raidIdRef.current) sendRaid({ op: "leave", id: raidIdRef.current });
+    joinRaidAs(undefined);
+    setBossMode(null);
     setTensionZoom(0);
     setAimZoom(0);
     window.dispatchEvent(new CustomEvent("tsi:fish-end"));
@@ -208,28 +226,47 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         );
       }
     }
-    timersRef.current.push(
-      window.setTimeout(() => {
-        changePhase("bite");
-        punchZoom(3); // micro-zoom: the strike
-        window.dispatchEvent(new CustomEvent("tsi:fish-bite")); // the bobber pulled under in a crown of water, the "!"
-        // The bite lands on the camera (the world's shake, the Screen shake setting), never the page.
-        shakeCamera(0.065);
-        // The "!" alert: the kit's chime, the one cue a bite has until its splash sound exists (specs/polish/fishing-questions.md).
-        AudioManager.playSFX("confirm");
-        // Cast power widens the hook window (max cast: 1.4s → 2.2s).
-        const windowMs = BITE_WINDOW_MS + CAST.biteBonusMs * powerRef.current + rod.biteWindowMs;
-        biteDeadlineRef.current = performance.now() + windowMs;
-        // Auto-miss if the window lapses: the fish lets go and the bobber bobs back up.
-        timersRef.current.push(
-          window.setTimeout(() => {
-            changePhase("missed");
-            window.dispatchEvent(new CustomEvent("tsi:fish-escaped", { detail: { hooked: false } }));
-            timersRef.current.push(window.setTimeout(cancel, 1800));
-          }, windowMs)
-        );
-      }, wait)
-    );
+    timersRef.current.push(window.setTimeout(bite, wait));
+  };
+
+  /** What bites is known before its "!" (its tier picks the "!", the sound and the shake): the cast's server roll, or one here. */
+  const bite = () => {
+    const roll = rollRef.current;
+    void (roll ?? Promise.resolve(null)).then(answer => {
+      // A refusal already ended the cast (castNow); a cancelled or newer cast isn't this one.
+      if (phaseRef.current !== "waiting" || rollRef.current !== roll || (answer && !answer.ok)) return;
+      const rolled = answer && FISH.find(f => f.key === answer.catch.item_key);
+      landRef.current = rolled && answer.catch.roll ? { roll: answer.catch.roll, size: answer.catch.size_cm } : null;
+      setBuddy(rolled ? answer.catch.together ?? null : null);
+      const biting = rolled || rollHere();
+      bitingRef.current = biting;
+      const tier = HOOK_TIER[biting.rarity], hookBeat = HOOK[tier];
+      changePhase("bite");
+      punchZoom(hookBeat.punch); // micro-zoom: the strike
+      window.dispatchEvent(new CustomEvent("tsi:fish-bite", { detail: { tier } })); // the bobber pulled under in a crown of water, the "!"
+      // The bite lands on the camera (the world's shake, the Screen shake setting), never the page.
+      shakeCamera(hookBeat.shake);
+      AudioManager.playSFX(hookBeat.sfx);
+      // Cast power widens the hook window (max cast: 1.4s → 2.2s).
+      const windowMs = BITE_WINDOW_MS + CAST.biteBonusMs * powerRef.current + rod.biteWindowMs;
+      biteDeadlineRef.current = performance.now() + windowMs;
+      // Auto-miss if the window lapses: the fish lets go and the bobber bobs back up.
+      timersRef.current.push(
+        window.setTimeout(() => {
+          changePhase("missed");
+          window.dispatchEvent(new CustomEvent("tsi:fish-escaped", { detail: { hooked: false } }));
+          timersRef.current.push(window.setTimeout(cancel, 1800));
+        }, windowMs)
+      );
+    });
+  };
+
+  /** The local roll (signed out, the applicant island, no server answer): rod- and water-aware where the spot says its water. */
+  const rollHere = () => {
+    const luck = powerRef.current + (powerRef.current >= CAST.maxZone ? CAST.maxBonus : 0);
+    // Every world cast names its water (tsi:fish-start); the applicant's shore casts roll the sea.
+    const zone: "river" | "sea" = zoneOverride ?? "river";
+    return waterRef.current ? rollFishFor(waterRef.current, luck, rod, currentFishingContext()) : rollFish(luck + rod.rarityBonus, zone);
   };
 
   /** Meter released → actually cast, with power locked in. */
@@ -271,7 +308,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
-  /** Bite hooked (E or click) → the server's roll (or a local one), open the reel. */
+  /** Bite hooked (E or click) → the fish that bit, into the reel. */
   const hook = (input: KeyboardEvent | PointerEvent) => {
     if (phaseRef.current !== "bite" || hookedRef.current) return;
     if (performance.now() > biteDeadlineRef.current) return;
@@ -280,26 +317,51 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     reelInputRef.current.keys.clear(); reelInputRef.current.pointers.clear();
     if ("key" in input) reelInputRef.current.keys.add(input.key.toLowerCase());
     else reelInputRef.current.pointers.add(input.pointerId);
-    const local = () => {
-      const luck = powerRef.current + (powerRef.current >= CAST.maxZone ? CAST.maxBonus : 0);
-      // Every world cast names its water (tsi:fish-start); the applicant's shore casts roll the sea.
-      const zone: "river" | "sea" = zoneOverride ?? "river";
-      // Spots that report their water type (pond/river/sea) use the rod-aware pool.
-      return waterRef.current ? rollFishFor(waterRef.current, luck, rod, currentFishingContext()) : rollFish(luck + rod.rarityBonus, zone);
-    };
-    void (rollRef.current ?? Promise.resolve(null)).then(answer => {
-      if (phaseRef.current !== "bite") return;
-      if (answer && !answer.ok) { bagFull(answer); miss(answer.error); return; }
-      const rolled = answer && FISH.find(f => f.key === answer.catch.item_key);
-      landRef.current = rolled && answer.catch.roll ? { roll: answer.catch.roll, size: answer.catch.size_cm } : null;
-      setBuddy(rolled ? answer.catch.together ?? null : null);
-      const hooked = rolled || local();
-      setFish(hooked);
-      changePhase("reeling");
-      // The yank, the line taut, the reel; the species' model rides along so the world has it ready when it comes out.
-      window.dispatchEvent(new CustomEvent("tsi:fish-hooked", { detail: { model: hooked.model, raw: hooked.raw } }));
-    });
+    const hooked = bitingRef.current;
+    if (!hooked) return;
+    setFish(hooked);
+    const tier = HOOK_TIER[hooked.rarity];
+    let mode = bossOf(hooked.rarity);
+    // A divine opens the shard's raid (protocol.ts note 11) for the roll on your line (the web checks it before any credit;
+    // a dev room without one names a stand-in); with no room to raid in, it's yours alone.
+    const at = spotRef.current, roll = landRef.current?.roll ?? crypto.randomUUID();
+    if (mode === "shared" && !(at && sendRaid({ op: "open", fish: hooked.key, roll, x: at.x, z: at.z }))) mode = "solo";
+    setBossMode(mode);
+    if (!mode) changePhase("reeling");
+    else {
+      // The cutscene: the camera pulls out and it surfaces; then the fight.
+      changePhase("surfacing");
+      window.dispatchEvent(new CustomEvent("tsi:boss-surface", { detail: { tier } }));
+      timersRef.current.push(window.setTimeout(() => {
+        if (phaseRef.current !== "surfacing") return;
+        if (mode === "shared") {
+          const raid = raidNow();
+          if (raid.joined && raid.fish === hooked.key && !raid.result) joinRaidAs(raid.id);
+          else setBossMode("solo");
+        }
+        changePhase("reeling");
+      }, HOOK[tier].surfaceMs));
+    }
+    // The yank, the line taut, the reel; the species' model rides along so the world has it ready when it comes out.
+    window.dispatchEvent(new CustomEvent("tsi:fish-hooked", { detail: { model: hooked.model, raw: hooked.raw } }));
   };
+
+  // Join the shard's raid from wherever you are (components/game/fishing/RaidCall.tsx): its creature surfaces, then the reel.
+  useEffect(() => {
+    const onJoin = () => {
+      const raid = raidNow(), raidFish = FISH.find(f => f.key === raid.fish);
+      if (phaseRef.current !== "idle" || !raid.id || raid.result || !raidFish || !sendRaid({ op: "join", id: raid.id })) return;
+      hookedRef.current = true;
+      setFish(raidFish);
+      setBossMode("shared");
+      joinRaidAs(raid.id);
+      changePhase("surfacing");
+      window.dispatchEvent(new CustomEvent("tsi:boss-surface", { detail: { tier: "divine", at: { x: raid.x, z: raid.z } } }));
+      timersRef.current.push(window.setTimeout(() => { if (phaseRef.current === "surfacing") changePhase("reeling"); }, HOOK.divine.surfaceMs));
+    };
+    window.addEventListener("tsi:raid-join", onJoin);
+    return () => window.removeEventListener("tsi:raid-join", onJoin);
+  }, [changePhase]);
 
   /** Into the bag: as the catch's card closes if it is still up (cancel), else now. */
   const intoBag = (key: string) => {
@@ -330,12 +392,15 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         // zone + spot coords ride along for world reactions (gull swoop).
         window.dispatchEvent(
           new CustomEvent("tsi:fish-caught", {
-            detail: { key: fish.key, model: fish.model, raw: fish.raw, sizeCm: size, zone: fish.zone ?? "river", x: spotRef.current?.x, z: spotRef.current?.z },
+            detail: { key: fish.key, model: fish.model, raw: fish.raw, sizeCm: size, zone: fish.zone ?? "river", x: spotRef.current?.x, z: spotRef.current?.z, boss: bossMode !== null },
           })
         );
+        // A raid's catch is claimed with the room's signed credit (none without a server: kept here); a cast's, by its roll.
+        const credit = raidIdRef.current ? raidNow().credit : undefined;
+        const claim = raidIdRef.current ? (credit ? claimRaid(credit) : null) : landing ? landCatch(landing.roll) : null;
         if (collectionScope) collect(fish.key, { scope: collectionScope });
-        else if (landing) {
-          void landCatch(landing.roll).then(answer => {
+        else if (claim) {
+          void claim.then(answer => {
             // Refused (the hourly cap, the bag filled since the cast): the card stands, the catch isn't kept.
             if (answer && !answer.ok) { bagFull(answer); window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: answer.error } })); return; }
             collect(fish.key);
@@ -356,7 +421,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [fish, collectionScope]
+    [fish, collectionScope, bossMode]
   );
 
   useEffect(() => bindFishingCastLifecycle({
@@ -411,7 +476,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
 
   // The catch card, for every catch: it replaces the bottom card.
   if (phase === "revealing" && fish) {
-    return <FishReveal fish={fish} sizeCm={caughtSize} recipe={learned} together={buddy} isNew={wasNew} newRecord={newRecord} delay={REVEAL_DELAY_MS} onDone={cancel} />;
+    return <FishReveal fish={fish} sizeCm={caughtSize} recipe={learned} together={buddy} isNew={wasNew} newRecord={newRecord} delay={bossMode ? BOSS_REVEAL_DELAY_MS : REVEAL_DELAY_MS} onDone={cancel} />;
   }
 
   const label =
@@ -423,7 +488,9 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         ? rod.tier > 1 ? `Waiting for a bite… · ${rod.name}` : "Waiting for a bite…"
         : phase === "bite"
           ? "!!  Hook it!"
-          : missNote ?? "It got away…";
+          : phase === "surfacing"
+            ? "Something huge is coming up…"
+            : missNote ?? "It got away…";
   const accent = phase === "bite" ? "#E5484D" : "var(--app-ink, #4A4034)";
 
   return (
@@ -448,7 +515,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
       {phase === "charging" ? (
         <CastMeter onRelease={castNow} releaseRequestedRef={releaseRequestedRef} hint={FISHING_HINTS[device].charge} />
       ) : phase === "reeling" && fish ? (
-        <ReelMinigame fish={fish} known={ownedRef.current.has(fish.key)} onDone={onReelDone} initialInput={reelInputRef.current} tensionMul={rod.tensionMul} help={FISHING_HINTS[device].reel} />
+        <ReelMinigame fish={fish} known={ownedRef.current.has(fish.key)} onDone={onReelDone} initialInput={reelInputRef.current} tensionMul={rod.tensionMul} help={FISHING_HINTS[device].reel} boss={bossMode} raidId={raidId} />
       ) : (
         <div
           style={{
@@ -555,6 +622,8 @@ export function ReelMinigame({
   initialInput,
   tensionMul = 1,
   help = FISHING_HINTS.mouse.reel,
+  boss: bossMode = bossOf(fish.rarity),
+  raidId,
 }: {
   fish: FishDef;
   known: boolean;
@@ -563,6 +632,10 @@ export function ReelMinigame({
   tensionMul?: number;
   /** How to reel on the device that started the cast (FISHING_HINTS). */
   help?: string;
+  /** The fight it puts up (fishingReel.ts): defaults to the fish's; a divine with no raid to join fights solo. */
+  boss?: "solo" | "shared" | null;
+  /** A shared fight's raid (lib/net/raid.ts): the room keeps the stamina, this reel reports its wear. */
+  raidId?: string;
 }) {
   const reelRef = useRef<HTMLDivElement>(null);
   const pausedLabelRef = useRef<HTMLDivElement>(null);
@@ -574,10 +647,16 @@ export function ReelMinigame({
   /** The splash a dart throws on the track: three drops made once and replayed (nothing is created in the loop). */
   const dropRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const holdingRef = useRef(false);
+  /** A boss fight's stamina fill and its call (the move warned of, then under way). */
+  const staminaRef = useRef<HTMLDivElement>(null);
+  const fightLabelRef = useRef<HTMLSpanElement>(null);
+  const callRef = useRef<HTMLDivElement>(null);
   const doneRef = useRef(false);
   const lastThunkRef = useRef(0);
 
-  const barW = RARITY_META[fish.rarity].barW;
+  // The boss reel narrows its bar by phase (fishingReel.ts BOSS); the bar's width is set from the simulation.
+  const boss = bossMode !== null;
+  const barW = RARITY_META[fish.rarity].barW * (boss ? BOSS.barMul[0] : 1);
 
   useEffect(() => {
     let raf = 0;
@@ -585,7 +664,8 @@ export function ReelMinigame({
     const previouslyFocused = document.activeElement as HTMLElement | null;
     const reel = reelRef.current;
     reel?.focus({ preventScroll: true });
-    const simulation = createFishingReel(fish);
+    const simulation = createFishingReel(fish, bossMode);
+    let reported = performance.now();
     doneRef.current = false;
     holdingRef.current = false;
 
@@ -606,7 +686,22 @@ export function ReelMinigame({
       const events = advanceFishingReel(simulation, dt, holdingRef.current, weatherMods(reelWeather(liveIslandWeather())).dartChanceMul, Math.random, tensionMul);
       const { position: pos, fishPosition: fishPos, inside, progress, tension } = simulation;
       // The fight in the world: the fish pulls the bobber across, the line tightens, the reel cranks while held.
-      live.pull = fishPos * 2 - 1; live.tension = tension; live.reeling = holdingRef.current; live.reeled = progress;
+      live.pull = fishPos * 2 - 1; live.tension = tension; live.reeling = holdingRef.current; live.reeled = simulation.boss ? 1 - simulation.boss.stamina : progress;
+      const boss = simulation.boss;
+      if (boss?.shared && raidId) {
+        // The room's fish: its stamina is the server's, the landing and the escape too; this reel reports its wear.
+        const raid = raidNow();
+        if (raid.id !== raidId) return finish(false);
+        boss.stamina = raid.stamina;
+        const who = `Raid: ${raid.helpers} reeling`;
+        if (fightLabelRef.current && fightLabelRef.current.textContent !== who) fightLabelRef.current.textContent = who;
+        if (raid.result) return finish(raid.result === "landed");
+        if (now - reported >= RAID.hitEveryMs) {
+          reported = now;
+          if (boss.dealt > 0) sendRaid({ op: "hit", id: raidId, dealt: Math.min(1, boss.dealt) });
+          boss.dealt = 0;
+        }
+      }
       if (simulation.result !== null) return finish(simulation.result);
 
       if (events.bounced && now - lastThunkRef.current > 250) {
@@ -619,10 +714,29 @@ export function ReelMinigame({
       }
       if (events.darted) splashDrops(dropRefs.current, fishPos);
       setTensionZoom(tension);
+      if (boss) {
+        live.boss = { stamina: boss.stamina, move: boss.move, stage: boss.stage };
+        // The warning lands as a jolt and a low chime; the move itself as a harder one; a new phase as the hardest.
+        if (events.warned) { AudioManager.playSFX("confirm", { rate: 0.62, gain: 0.7 }); shakeCamera(0.03); }
+        if (events.moved) shakeCamera(events.moved === "jump" ? 0.09 : 0.06);
+        if (events.phased) { shakeCamera(0.1); punchZoom(2.5); staminaRef.current?.animate([{ filter: "brightness(2)" }, { filter: "brightness(1)" }], { duration: 500 }); }
+        if (staminaRef.current) staminaRef.current.style.width = `${boss.stamina * 100}%`;
+        const call = boss.move && boss.stage ? MOVE_CALL[boss.move][boss.stage] : null;
+        if (callRef.current && callRef.current.dataset.call !== (call ?? "")) {
+          callRef.current.dataset.call = call ?? "";
+          callRef.current.textContent = call ?? "";
+          callRef.current.style.visibility = call ? "visible" : "hidden";
+          callRef.current.style.background = boss.stage === "warn" ? "#FFE8A3" : "#E5484D";
+          callRef.current.style.color = boss.stage === "warn" ? "#6B4A00" : "#FFFDF5";
+          if (call) callRef.current.animate([{ transform: "scale(1.3)" }, { transform: "scale(1)" }], { duration: 220, easing: "cubic-bezier(0.34, 1.56, 0.64, 1)" });
+        }
+        if (fishRef.current) fishRef.current.style.opacity = boss.stage === "live" && boss.move === "jump" ? "0.25" : "1";
+      }
 
       // DOM writes
       if (barRef.current) {
         barRef.current.style.left = `${pos * 100}%`;
+        barRef.current.style.width = `${simulation.barWidth * 100}%`;
         barRef.current.style.background = inside ? "rgba(61, 143, 82, 0.55)" : "rgba(61, 143, 82, 0.3)";
       }
       if (fishRef.current) {
@@ -636,7 +750,7 @@ export function ReelMinigame({
         progRef.current.style.background = progress < 0.25 ? "#E5484D" : "#FFD166";
         // Feedback kit: heartbeat pulse as the catch gets close — faster
         // the closer you are.
-        const beat = progress > 0.75 ? `reel-heartbeat ${(1.35 - progress).toFixed(2)}s ease-in-out infinite` : "";
+        const beat = !simulation.boss && progress > 0.75 ? `reel-heartbeat ${(1.35 - progress).toFixed(2)}s ease-in-out infinite` : "";
         if (progRef.current.style.animation !== beat) progRef.current.style.animation = beat;
       }
 
@@ -661,6 +775,7 @@ export function ReelMinigame({
       cancelAnimationFrame(raf);
       setTensionZoom(0);
       live.reeling = false;
+      live.boss = null;
       releaseInput();
       if (document.activeElement === reel && previouslyFocused?.isConnected) previouslyFocused.focus({ preventScroll: true });
     };
@@ -699,6 +814,19 @@ export function ReelMinigame({
           50% { box-shadow: 0 0 10px 2px rgba(255, 209, 102, 0.85); }
         }
       `}</style>
+      {/* A boss: its stamina (worn down while it's in the bar; the notches are its phases) and its call. */}
+      {boss && (
+        <div style={{ marginBottom: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <span ref={fightLabelRef} style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.6, color: "#8A5A00", textTransform: "uppercase" }}>{raidId ? "Raid" : "It fights back"}</span>
+            <div ref={callRef} aria-live="assertive" style={{ marginLeft: "auto", visibility: "hidden", padding: "2px 10px", borderRadius: 999, fontSize: 12, fontWeight: 800 }} />
+          </div>
+          <div aria-hidden style={{ position: "relative", height: 12, borderRadius: 999, background: "rgba(74, 64, 52, 0.18)", overflow: "hidden" }}>
+            <div ref={staminaRef} style={{ height: "100%", width: "100%", borderRadius: 999, background: "linear-gradient(90deg, #E5484D, #F2B53A 60%, #FFE27A)" }} />
+            {[1 / 3, 2 / 3].map((x) => <span key={x} style={{ position: "absolute", left: `${x * 100}%`, top: 0, bottom: 0, width: 2, background: "rgba(255, 253, 245, 0.85)" }} />)}
+          </div>
+        </div>
+      )}
       {/* Header: species (or ??? for unknowns — rarity is never shown here).
           Zone chip is always safe to show — you know where you cast. */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
@@ -718,7 +846,7 @@ export function ReelMinigame({
           {(fish.zone ?? "river") === "sea" ? "sea" : "river"}
         </span>
         <span style={{ marginLeft: "auto", fontSize: "max(10px, var(--gui-min-text, 0px))", color: "var(--app-muted, #8a7f6a)" }}>
-          keep the fish inside the green bar
+          {boss ? "keep it in the bar to tire it" : "keep the fish inside the green bar"}
         </span>
       </div>
 
@@ -797,13 +925,13 @@ export function ReelMinigame({
         <div
           ref={progRef}
           role="progressbar"
-          aria-label="Catch progress"
+          aria-label={boss ? "Line" : "Catch progress"}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-valuenow={START_PROGRESS * 100}
+          aria-valuenow={(boss ? BOSS.line : START_PROGRESS) * 100}
           style={{
             height: "100%",
-            width: `${START_PROGRESS * 100}%`,
+            width: `${(boss ? BOSS.line : START_PROGRESS) * 100}%`,
             borderRadius: 999,
             background: "#FFD166",
             transition: "background 0.2s",
@@ -813,6 +941,14 @@ export function ReelMinigame({
     </div>
   );
 }
+
+/** A boss's call: the warning, then the move under way, each saying what to do. */
+const MOVE_CALL: Record<BossMove, { warn: string; live: string }> = {
+  run: { warn: "It's about to run!", live: "Running! Chase it" },
+  jump: { warn: "It's going to jump!", live: "Jumping! Let go" },
+  dive: { warn: "It's going to dive!", live: "Diving! Heavy line" },
+  slack: { warn: "It's turning on you!", live: "Slack! Keep reeling" },
+};
 
 /** The dart's drops: each flies out its own way from the fish (px across) and fades. */
 const DROP_SPREAD = [-22, 4, 24];

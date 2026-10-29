@@ -10,10 +10,9 @@
  * | ruins-rubble | fallen stones and roots across the ruins entrance | `ruins` (v3) |
  * | rockslide | boulders over the mountain trail | `mountain` (v2) |
  *
- * Placements are map objects of kind "barrier" (`model` names which), placed by David in /lab/map from the proposal
- * (web/data/proposals/v1-barriers.json). The village's ruins gate is the one barrier the map doesn't place: until the
- * ruins open, the gate landmark is drawn as rubble (`GATE_RUBBLE`). Pure: the walker (defaultIsland islandOf), the
- * scenery (NatureModels sceneryOf), the painter and the tests share it.
+ * Placements are map objects of kind "barrier" (`model` names which), placed by David in the world editor. A `ruins`
+ * gate landmark is the one barrier the map doesn't place: until the ruins open, it is drawn as rubble (`GATE_RUBBLE`).
+ * Pure: the walker (defaultIsland islandOf), the scenery (NatureModels sceneryOf), the editor and the tests share it.
  */
 import { DROPS, type DropFeature, type DropFlags } from "./drops";
 import type { MapObject, Village } from "./villageMap";
@@ -90,4 +89,63 @@ export function barrierFootprint(model: string | undefined, scale = 1): { hw: nu
   const x0 = Math.min(...s.map(([cx, , hw]) => cx - hw)), x1 = Math.max(...s.map(([cx, , hw]) => cx + hw));
   const z0 = Math.min(...s.map(([, cz, , hd]) => cz - hd)), z1 = Math.max(...s.map(([, cz, , hd]) => cz + hd));
   return { hw: (x1 - x0) / 2 * scale, hd: (z1 - z0) / 2 * scale, cx: (x0 + x1) / 2 * scale, cz: (z0 + z1) / 2 * scale };
+}
+
+/**
+ * What the barriers close off (David, 2026-10-29: a dash-slide over the river left him on its far bank, behind the
+ * border, where every splash put him back). On a half-unit lattice over `bounds`, the land (dry, outside a barrier)
+ * walking reaches from the spawn is released; land walking can't reach that meets a barrier is locked, a wall to every
+ * move as the barrier itself is (movement/sim.ts `locked`); land that meets neither (an islet out at sea) is stranded:
+ * landed on, never a spot a splash brings you back to. Asked of a point, each answers for the four lattice points round
+ * it, so a released bank and a locked one, always a barrier or water apart, never share an answer.
+ * Only the released land and the locked land are filled (from the spawn, then from each barrier's sides), each lattice
+ * point asked once on the way, so the open sea costs nothing. Null when the spawn isn't on land (nothing to measure from).
+ */
+export const REGION_STEP = 0.5;
+export function releaseRegions(bounds: { x0: number; z0: number; width: number; depth: number }, wet: (x: number, z: number) => boolean,
+  boxes: readonly BarrierBox[], spawn: readonly [number, number]): { released(x: number, z: number): boolean; locked(x: number, z: number): boolean } | null {
+  const S = REGION_STEP, nx = Math.ceil(bounds.width / S), nz = Math.ceil(bounds.depth / S), n = nx * nz;
+  const ASK = 0, LAND = 1, WALL = 2, SEA = 3, RELEASED = 1, LOCKED = 2;
+  const kind = new Uint8Array(n), region = new Uint8Array(n), walls: number[] = [];
+  const px = (i: number) => bounds.x0 + (i + 0.5) * S, pz = (k: number) => bounds.z0 + (k + 0.5) * S;
+  // The barriers first, each over the cells of its reach.
+  for (const b of boxes) {
+    const i0 = Math.max(0, Math.floor((b.x - b.reach - bounds.x0) / S)), i1 = Math.min(nx - 1, Math.ceil((b.x + b.reach - bounds.x0) / S));
+    const k0 = Math.max(0, Math.floor((b.z - b.reach - bounds.z0) / S)), k1 = Math.min(nz - 1, Math.ceil((b.z + b.reach - bounds.z0) / S));
+    for (let k = k0; k <= k1; k++) for (let i = i0; i <= i1; i++) if (!kind[k * nx + i] && inBarrier([b], px(i), pz(k))) { kind[k * nx + i] = WALL; walls.push(k * nx + i); }
+  }
+  const land = (j: number) => {
+    if (kind[j] === ASK) kind[j] = wet(px(j % nx), pz((j - (j % nx)) / nx)) ? SEA : LAND;
+    return kind[j] === LAND;
+  };
+  /** Fill the land patch (8-connected) from `s` with `r`. */
+  const fill = (s: number, r: number) => {
+    const patch = [s];
+    region[s] = r;
+    for (let p = 0; p < patch.length; p++) {
+      const c = patch[p], ci = c % nx, ck = (c - ci) / nx;
+      for (let b = Math.max(0, ck - 1); b <= Math.min(nz - 1, ck + 1); b++) for (let a = Math.max(0, ci - 1); a <= Math.min(nx - 1, ci + 1); a++) {
+        const j = b * nx + a;
+        if (!region[j] && land(j)) { region[j] = r; patch.push(j); }
+      }
+    }
+  };
+  const si = Math.floor((spawn[0] - bounds.x0) / S), sk = Math.floor((spawn[1] - bounds.z0) / S);
+  if (si < 0 || sk < 0 || si >= nx || sk >= nz || !land(sk * nx + si)) return null;
+  fill(sk * nx + si, RELEASED);
+  for (const c of walls) {
+    const ci = c % nx, ck = (c - ci) / nx;
+    for (let b = Math.max(0, ck - 1); b <= Math.min(nz - 1, ck + 1); b++) for (let a = Math.max(0, ci - 1); a <= Math.min(nx - 1, ci + 1); a++) {
+      const j = b * nx + a;
+      if (!region[j] && land(j)) fill(j, LOCKED);
+    }
+  }
+  /** The regions of the four lattice points round (x, z), or'd. */
+  const round = (x: number, z: number) => {
+    const i = Math.floor((x - bounds.x0) / S - 0.5), k = Math.floor((z - bounds.z0) / S - 0.5);
+    let r = 0;
+    for (let b = k; b <= k + 1; b++) for (let a = i; a <= i + 1; a++) if (a >= 0 && b >= 0 && a < nx && b < nz) r |= region[b * nx + a];
+    return r;
+  };
+  return { released: (x, z) => (round(x, z) & RELEASED) !== 0, locked: (x, z) => (round(x, z) & LOCKED) !== 0 };
 }

@@ -5,7 +5,7 @@ Every lane has a handoff file in `specs/lanes/` (how it works: `specs/lanes/READ
 These rules are hard. The coordinator merges and pushes; lanes never push.
 
 ## Worktree and git
-- Work only in your own worktree and branch, `game/<lane>`, which comes from `feat/game-default-island` (== main).
+- Work only in your own worktree and branch, `game/<lane>`, which comes from `feat/game-default-island` (== `origin/main`).
   - node_modules are copied in, and `web/.env.local` is symlinked to the prod env.
   - Run dev servers with the Supabase env blanked, on your own port (never 3000, which is David's): `NEXT_PUBLIC_SUPABASE_URL= NEXT_PUBLIC_SUPABASE_ANON_KEY= npx next dev -p <port>`.
 - Commit messages:
@@ -13,7 +13,7 @@ These rules are hard. The coordinator merges and pushes; lanes never push.
   - end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - Never bare `git stash`. Never edit applied migrations. Never print keys or secrets.
 - Merging main:
-  - merge main when the coordinator says it moved;
+  - merge `origin/main` (after `git fetch`) when the coordinator says it moved. Never merge the local `main` ref: it is far behind;
   - never pick a side of a binary conflict: regenerate the file from the merged scripts.
 - Files you don't own:
   - other sessions own `next.config.ts`, `middleware.ts` and `web/lib/supabase/*`;
@@ -21,12 +21,9 @@ These rules are hard. The coordinator merges and pushes; lanes never push.
 
 ## Locks (shared machine)
 - **Heavy lock:** full tsc and vitest run under `/private/tmp/claude-501/uwotsi-heavy.lock`, via `/Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh (set LANE=game/<lane> for the owner file) heavy <cmd>`. Use `vitest --maxWorkers=2`.
-- **Browser lock:** dev servers, browsers and benches run only while you hold `/private/tmp/claude-501/uwotsi-devserver.lock`.
-  - To queue, append your branch name to `/private/tmp/claude-501/uwotsi-devserver.queue`.
-  - To take the lock, mkdir it and write the owner file as `game/<lane> <time>`. Take it only when it's free and you're the first line.
-  - To release, rmdir the lock and delete your queue line. Never force-create the lock.
+- **Browser lock:** dev servers, browsers and benches run only under `withlock.sh devserver <cmd>`. There is no queue file: never create one. The script exits 75 after 20 minutes of waiting, so retry and check the exit code (a `| tail` hides it).
 - **Memory:** no second browser. Don't build while a browser is open. Swap runs high on this machine.
-  - **Blender lock:** only one Blender at a time, machine-wide. Use `/private/tmp/claude-501/uwotsi-blender.lock`: mkdir it, write the owner file as `game/<lane> <time>`, and rmdir it when Blender exits. Close Blender after each export batch.
+  - **Blender lock:** only one Blender at a time, machine-wide: `withlock.sh blender <cmd>`. Blender runs headless only (`/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P <script>`), never through the blender MCP. Close it after each export batch.
   - **High swap:** while `sysctl -n vm.swapusage` shows more than 9 GB used, the heavy, browser and Blender locks are mutually exclusive. Hold at most one of them, and wait for the others to be free before taking yours.
 
 ## Commands
@@ -36,17 +33,20 @@ These rules are hard. The coordinator merges and pushes; lanes never push.
 - Kill only the PIDs you started. Never pkill broadly.
 
 ## Content
-- Never fetch or use art references or textures you found yourself. David supplies all references.
+- **One world:** the new world (`web/data/world/`) is the only member world. The old village is retired (David, 2026-10-28: "it should not be used or archived"). Shots, runs and gates are new world only, and vitest runs once.
+- **How it looks:** UI, art and models follow `specs/design-bible.md`. It wins over any older spec, and over this file if they disagree.
+- Never fetch or use art references or textures you found yourself. David supplies or approves every reference (design bible, Models).
+- No asset libraries or generators, except Meshy, which is part of the modelling pipeline (design bible, Models, rule 3).
   - The exception is official technical templates David has OK'd, such as Roblox's creator reference avatar and head for fitting.
 - Real names never show in game (world names only). Never reveal the TC to CAD rate.
 - **Performance checks (David, 2026-10-14: stop the pop-ups and the wasted runs):**
   - Every bench and screenshot script is headless by default, so no window ever opens on David's screen. Never pass `HEADED=1`.
   - Run `perf:check` only if your lane changes what renders, and only once, at the end. Never rerun it for noise.
-  - Bench only the scenes your change touches (`SCENES=village,v2` for world and look work). Add `cafe` or `ruins-summoner` only if you change characters or combat.
+  - Bench only the scenes your change touches: the new world's scene for world and look work (the village scenes are gone). Add `cafe` or `ruins-summoner` only if you change characters or combat.
   - UI-only and data-only lanes don't run `perf:check` at all.
   - The coordinator runs one combined check after each merge batch.
   - Price new effects in `specs/perf/effects-cost.md` from that one run.
-- **Textures only where they show (David, 2026-10-17).**
+- **Textures only where they show (David, 2026-10-17).** This governs the world (low-poly) copy of a model. High-def close-up copies follow the design bible.
   - Small, far-away or background objects get plain colour (vertex colour or flat materials) and share materials, so they can merge into fewer draw calls.
   - Textures are for things seen up close: the ground, big walls and floors, hero props, interiors, characters, hair and clothes.
   - The pixel finish hides fine texture anyway. Keep textures small (256 px or less unless it's seen up close).
@@ -82,4 +82,4 @@ These rules are hard. The coordinator merges and pushes; lanes never push.
   - gates and perf numbers;
   - evidence paths;
   - what you couldn't verify.
-- Then release locks, leave the queue and delete `web/.next`.
+- Then release locks and delete `web/.next`.

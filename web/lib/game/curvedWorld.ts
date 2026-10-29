@@ -46,7 +46,7 @@
  * Note also that ACNH bakes contact shadows into the assets as `mShadow`
  * meshes (see scripts/organize-dump.mjs). Restoring those removes the need
  * for the realtime shadow map entirely, which by the project's own
- * measurement costs ~7 FPS on M1. See specs/acnh-system-reference.md §4.
+ * measurement costs ~7 FPS on M1. See archive/village/acnh-system-reference.md §4.
  *
  * Import once (side effect) before the Canvas mounts — GameWorld does this.
  * Must run before the first material compiles; three caches programs per
