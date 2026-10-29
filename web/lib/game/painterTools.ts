@@ -1,6 +1,6 @@
 /**
- * The painter's organic tools and object helpers (specs/island-painter.md §4,
- * §5; natural shapes, specs/terrain-blending.md §5), pure so they are testable
+ * The painter's organic tools and object helpers (archive/village/island-painter.md §4,
+ * §5; natural shapes, archive/village/terrain-blending.md §5), pure so they are testable
  * and so /lab/map stays a UI.
  *
  * Brush ops read the map as it was when the stroke began (`before`) and change

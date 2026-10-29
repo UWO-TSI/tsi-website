@@ -4,8 +4,6 @@
  * Edited by T1/T2 in the Residents editor (draft → publish, versioned).
  */
 import { ISLAND_PHASES, type IslandPhase } from "@/lib/game/islandTime";
-import type { NPCPersona } from "./types";
-import { objectById, objectsOf, village, villageSpawnPoint, type Village } from "@/lib/game/villageMap";
 import { HOME_LANDMARKS, ROUTINE_SPECIAL } from "@/lib/game/residentRoutine";
 import type { LandmarkId } from "@/lib/game/defaultIsland";
 import { validateTalk } from "./talk";
@@ -19,9 +17,8 @@ export const POST_TITLES: Record<ResidentPost, string> = {
 };
 
 /**
- * Schedule anchors (keys are stable: saved schedules reference them). Where each
- * stands is its `anchor` object in the village map file, placed in /lab/map; the
- * painter's health panel checks every one is open ground for three residents.
+ * Schedule anchors (keys are stable: saved schedules reference them). Where each stands is its `anchor` object placed
+ * in the world editor, else the landmark of the same name (lib/game/residentRoutine.ts placeAt).
  */
 export const RESIDENT_ANCHORS = {
   plaza: { label: "Plaza" },
@@ -41,14 +38,6 @@ export type ResidentStop = ResidentAnchor | keyof typeof ROUTINE_SPECIAL;
 /** Per phase, one stop or a routine of up to MAX_STOPS walked in turn; `home` is the building they live in. */
 export type ResidentSchedule = Partial<Record<IslandPhase, ResidentStop | ResidentStop[]>> & { home?: LandmarkId };
 export const MAX_STOPS = 6;
-/** An anchor's spot on the village map, or null when it is not placed. */
-export function anchorAt(key: ResidentAnchor, v: Village = village()): [number, number] | null {
-  const o = objectById("anchor", key, v);
-  return o ? [o.x, o.z] : null;
-}
-/** Residents sharing an anchor stand this far apart along x. */
-export const SHARED_SPACING = 1.4;
-
 const isAnchor = (v: unknown): v is ResidentAnchor => typeof v === "string" && Object.hasOwn(RESIDENT_ANCHORS, v);
 const isStop = (v: unknown): v is ResidentStop => isAnchor(v) || (typeof v === "string" && Object.hasOwn(ROUTINE_SPECIAL, v));
 /** A phase's value: one stop, or a routine of 1–MAX_STOPS stops. */
@@ -72,23 +61,3 @@ export function validateResidentDraft(d: Record<string, unknown>): string[] {
   return errors;
 }
 
-type Spot = [number, number, number];
-/**
- * Where each resident stands this phase, and where they gather for a ceremony
- * (the map's `gather` spots, in slug order). No schedule for a phase = their day
- * spot, else the plaza.
- */
-export function residentSpots(personas: readonly NPCPersona[], phase: IslandPhase, v: Village = village()): { persona: NPCPersona; home: Spot; plaza: Spot }[] {
-  const shared = new Map<ResidentAnchor, number>();
-  const gather = objectsOf("gather", v);
-  const fallback = anchorAt("plaza", v) ?? villageSpawnPoint(v);
-  return [...personas].sort((a, b) => a.slug.localeCompare(b.slug)).map((persona, i) => {
-    const s = (persona.schedule ?? {}) as ResidentSchedule;
-    const anchor = [s[phase], s.day].find(isAnchor) ?? "plaza";
-    const k = shared.get(anchor) ?? 0;
-    shared.set(anchor, k + 1);
-    const [x, z] = anchorAt(anchor, v) ?? fallback;
-    const g = gather.length ? gather[i % gather.length] : { x: fallback[0], z: fallback[1] };
-    return { persona, home: [x + k * SHARED_SPACING, 0, z], plaza: [g.x, 0, g.z] };
-  });
-}

@@ -7,7 +7,6 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { readGlb } from "./perf/glbStats";
 import * as Props from "./propModels";
-import { ROWBOAT, ROWBOAT_URL } from "./wharf";
 import { FURNITURE } from "../study/seats";
 import { BRIDGE_DECK_HALF, BRIDGE_RAIL_OUT, BUILDING_SOLID, PROP_FOOTPRINT, PROP_TOP } from "./defaultIsland";
 
@@ -92,13 +91,6 @@ describe("remodelled props (propModels.ts)", () => {
     const b = bounds(Props.BUOY_URL);
     expect(b.min[1]).toBeLessThan(Props.BUOY_WATERLINE - 0.4);
     expect(b.max[1]).toBeGreaterThan(Props.BUOY_WATERLINE + 0.3);
-  });
-  it("keeps the rowboat's hull where the wharf ties it (length, beam, keel at 0, the bow ring inside the bow)", () => {
-    const b = bounds(ROWBOAT_URL);
-    expect(b.max[2] - b.min[2]).toBeCloseTo(ROWBOAT.length, 1);
-    expect(b.max[0] - b.min[0]).toBeLessThan(ROWBOAT.beam + 0.08);
-    expect(b.min[1]).toBeGreaterThan(-0.04);
-    expect(ROWBOAT.bowRing[2]).toBeLessThan(b.max[2]);
   });
   it("draws the map's bench from our log bench and leaves other dump props to the dump", () => {
     expect(Props.propUrl("bench-wood")).toBe(Props.LOG_BENCH_URL);

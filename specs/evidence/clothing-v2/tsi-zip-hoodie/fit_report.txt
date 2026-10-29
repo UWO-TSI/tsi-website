@@ -1,0 +1,12 @@
+BODYCUT full top_hoodie       bit 2: 24 of 520 skin triangles cut
+BODYCUT full top_tsi_zip_hoodie bit 8: 24 of 520 skin triangles cut
+FIT top_hoodie       poke  26 skin vertices (worst Sit@9, 19.6 mm under the skin)   float +16.6 mm off the body at worst (Net@6) over the rest pose
+FIT top_tsi_zip_hoodie poke  26 skin vertices (worst Sit@9, 19.6 mm under the skin)   float +16.6 mm off the body at worst (Net@6) over the rest pose
+LAYER top_hoodie       over bottom_shorts      0 bottom vertices through it (worst )
+LAYER top_hoodie       over bottom_trousers    1 bottom vertices through it (worst Sit@0)
+LAYER top_hoodie       over bottom_joggers     1 bottom vertices through it (worst Sit@0)
+LAYER top_tsi_zip_hoodie over bottom_shorts      0 bottom vertices through it (worst )
+LAYER top_tsi_zip_hoodie over bottom_trousers    1 bottom vertices through it (worst Sit@0)
+LAYER top_tsi_zip_hoodie over bottom_joggers     1 bottom vertices through it (worst Sit@0)
+BODYCUT lod1 top_hoodie       bit 2: 12 of 416 skin triangles cut
+BODYCUT lod1 top_tsi_zip_hoodie bit 8: 12 of 416 skin triangles cut

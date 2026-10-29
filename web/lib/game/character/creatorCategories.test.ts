@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CATEGORIES, choose, colourTarget, isOn, shownOptions } from "./creatorCategories";
-import { BATCH2_PRICES, DEFAULT_LOOK, FACE, PART_BY_ID, PARTS, offered, priceOf, STARTER_PARTS, faceRef, openEventParts, partRef, setEventsOpen, unlockRef, wear } from "./look";
+import { BATCH2_PRICES, DEFAULT_LOOK, FACE, PART_BY_ID, PARTS, offered, priceOf, STARTER_PARTS, faceRef, forMember, openEventParts, partRef, setEventsOpen, unlockRef, wear } from "./look";
 
 const cat = (id: string) => CATEGORIES.find(c => c.id === id)!;
 
@@ -131,6 +131,37 @@ describe("wardrobe batch 2 in the creator and the closet (David's prices, specs/
   });
 });
 
+describe("the TSI zip hoodie (David, 2026-10-27: free in the creator, TSI members only)", () => {
+  const shown = (mode: "create" | "wardrobe", member: boolean) => new Set(CATEGORIES.flatMap(c => c.sections.flatMap(s =>
+    shownOptions(s, mode, id => { const ref = id && partRef(id); return !ref || STARTER_PARTS.includes(ref); }, member))));
+  it("shows a member it free in the starting creator and the wardrobe; a non-member never sees it", () => {
+    for (const mode of ["create", "wardrobe"] as const) {
+      expect(shown(mode, true).has("top_tsi_zip_hoodie"), mode).toBe(true);
+      expect(shown(mode, false).has("top_tsi_zip_hoodie"), mode).toBe(false);
+    }
+    expect(partRef("top_tsi_zip_hoodie")).toBeNull();
+  });
+  it("falls back to the default top on a non-member's saved look, the rest of it kept", () => {
+    const look = { ...wear(DEFAULT_LOOK, "top", "top_tsi_zip_hoodie"), bottom: "bottom_joggers" };
+    expect(forMember(look, true)).toBe(look);
+    expect(forMember(look, false)).toEqual({ ...look, top: DEFAULT_LOOK.top });
+    expect(forMember(DEFAULT_LOOK, false)).toEqual(DEFAULT_LOOK);
+  });
+  it("with offered() in place: the creator and the closet show it to a member, never to anyone else", () => {
+    // it has no price (never sold), yet it is offered: free, to members (look.ts offered, shownOptions `member`)
+    expect([priceOf("tsi-zip-hoodie"), offered("top_tsi_zip_hoodie")]).toEqual([null, true]);
+    const every = (mode: "create" | "wardrobe", member: boolean) => new Set(CATEGORIES.flatMap(c => c.sections.flatMap(s =>
+      shownOptions(s, mode, id => { const ref = id && partRef(id); return !ref || STARTER_PARTS.includes(ref); }, member))));
+    for (const mode of ["create", "wardrobe"] as const) {
+      expect(every(mode, true).has("top_tsi_zip_hoodie"), `${mode} member`).toBe(true);
+      expect(every(mode, false).has("top_tsi_zip_hoodie"), `${mode} non-member`).toBe(false);
+    }
+    // a keyed part David hasn't priced stays held back from a member too: membership opens only members-only parts
+    const hair = PARTS.find(p => p.key === "hair-34")!, saved = BATCH2_PRICES["hair-34"];
+    try { delete BATCH2_PRICES["hair-34"]; expect(every("wardrobe", true).has(hair.id)).toBe(false); } finally { BATCH2_PRICES["hair-34"] = saved; }
+  });
+});
+
 describe("a part David hasn't priced is not offered (coordinator, 2026-10-27; look.ts offered)", () => {
   const every = (mode: "create" | "wardrobe") => new Set(CATEGORIES.flatMap(c => c.sections.flatMap(s => shownOptions(s, mode, () => true))));
   /** Runs `fn` with these pricing keys unlisted (every batch 3 item is priced now), then restores them. */
@@ -152,6 +183,6 @@ describe("a part David hasn't priced is not offered (coordinator, 2026-10-27; lo
   });
   it("offers every keyed item once it is priced, free or sold", () => {
     const shown = every("wardrobe");
-    for (const p of PARTS.filter(q => q.key && !q.event)) expect([p.id, priceOf(p.key) !== null, shown.has(p.id)]).toEqual([p.id, true, true]);
+    for (const p of PARTS.filter(q => q.key && !q.event && !q.members)) expect([p.id, priceOf(p.key) !== null, shown.has(p.id)]).toEqual([p.id, true, true]);
   });
 });

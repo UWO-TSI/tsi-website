@@ -1,9 +1,8 @@
 // The performance pass's bench (specs/perf/2026-10-baseline.md, 2026-10-results.md): the same scenes before and after.
 //   PORT=3149 node specs/perf/perf-bench.mjs [scenes] [outFile]
-//   scenes: comma list of village, cafe, shop (the shop from its door), hq (HQ from its door: the hall, the aquarium, the
-//   mezzanine showing), v2 (the v2 world as the world editor's smooth heightfield, 384 × 552, with 24
-//   bots), v2cells (the same world as its old cell draft: the terrain swap priced in one build), ruins-<kit>
-//   (default: village,cafe and the four heavy ults' kits).
+//   scenes: comma list of v2 (the member island: the new world, web/data/world, 384 × 552, with 24 bots), cafe, shop
+//   (the shop from its door), hq (HQ from its door: the hall, the aquarium, the mezzanine showing), ruins-<kit>
+//   (default: v2, cafe and the four heavy ults' kits).
 //   Env: TIER=high|lite (default high), SECONDS (default 8), PROFILE=1 (a CPU profile after each run, top self time),
 //   UNCAPPED=0 (keep the display's frame pacing; default off so the frame rate shows the real cost), SHOTS=dir (a
 //   close-up and a wide screenshot per scene), HEADED=1 (show the window; the default is headless, no window on David's screen: for machines whose agents may only run
@@ -19,7 +18,7 @@ import { appendFileSync, mkdirSync } from "node:fs";
 import { loadavg } from "node:os";
 const require = createRequire("/opt/homebrew/lib/node_modules/");
 const { chromium } = require("playwright");
-const [SCENES = "village,cafe,ruins-summoner,ruins-illusionist,ruins-elementalist,ruins-marksman", OUT = "/tmp/perf-bench.jsonl"] = process.argv.slice(2);
+const [SCENES = "v2,cafe,ruins-summoner,ruins-illusionist,ruins-elementalist,ruins-marksman", OUT = "/tmp/perf-bench.jsonl"] = process.argv.slice(2);
 const PORT = process.env.PORT ?? 3149, W = 1280, H = 800, SECONDS = Number(process.env.SECONDS ?? 8), TIER_NAME = process.env.TIER ?? "high";
 const UNCAPPED = process.env.UNCAPPED !== "0", PROFILE = process.env.PROFILE === "1", SHOTS = process.env.SHOTS ?? "", HITCH = process.env.HITCH === "1";
 const args = ["--mute-audio", "--window-position=2400,0", "--use-angle=metal", "--ignore-gpu-blocklist", "--enable-precise-memory-info"];
@@ -164,7 +163,7 @@ for (const scene of SCENES.split(",")) {
     await fresh();
     const fight = scene.startsWith("ruins-"), kit = fight ? scene.slice(6) : null;
     const url = fight ? `/lab/island?${BASE}&ruins=1&combat=demo&classes=v2&subclass=${kit}&mastery=20&traits=all&tamed=all`
-      : scene === "cafe" ? `/lab/island?${BASE}&cafe=inside&bots=24` : scene === "shop" ? `/lab/island?${BASE}&shop=inside` : scene === "hq" ? `/lab/island?${BASE}&hq=inside` : scene === "v2" ? `/lab/island?${BASE}&fixture=v2&bots=24` : scene === "v2cells" ? `/lab/island?${BASE}&fixture=v2-cells&bots=24` : `/lab/island?${BASE}&bots=24`;
+      : scene === "cafe" ? `/lab/island?${BASE}&cafe=inside&bots=24` : scene === "shop" ? `/lab/island?${BASE}&shop=inside` : scene === "hq" ? `/lab/island?${BASE}&hq=inside` : `/lab/island?${BASE}&bots=24`;
     await page.goto(`http://localhost:${PORT}${url}`, { waitUntil: "domcontentloaded" });
     await settle(fight ? ready.ruins : scene === "cafe" ? ready.world : scene === "shop" ? ready.shop : scene === "hq" ? ready.hq : ready.net);
     if (fight) await stage();

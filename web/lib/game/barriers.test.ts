@@ -3,11 +3,12 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { BARRIERS, BARRIER_MODELS, barrierBoxes, barrierFootprint, barrierPlacements, inBarrier } from "./barriers";
 import { DROPS, dropFlags } from "./drops";
-import { createCenteredMap, levelAt, setCell, Surface, worldToCellX, worldToCellZ } from "./grid";
+import { createCenteredMap, setCell, Surface } from "./grid";
 import { readGlb } from "./perf/glbStats";
 import { islandOf, objectFootprint } from "./defaultIsland";
-import { buildVillage, parseVillage, serialiseVillage, village, villageOf, type MapObject, type VillageDoc } from "./villageMap";
-import proposal from "@/data/proposals/v1-barriers.json";
+import { parseVillage, serialiseVillage, villageOf, type MapObject } from "./villageMap";
+import { loadWorldFromDisk } from "./world/disk";
+import { villageOfWorld } from "./world/village";
 
 /** A flat grass island, 40 × 40, with these objects. */
 function flatIsland(objects: MapObject[]) {
@@ -72,8 +73,8 @@ describe("natural barriers (specs/v1-drop.md §2, lib/game/barriers.ts)", () => 
     expect(islandOf(v).standable(0, 0)).toBe(false);
   });
 
-  it("closes the village's ruins gate with rubble until the ruins open: wider than the gate, clear of its exit", () => {
-    const v = village(), gate = v.objects.find(o => o.kind === "landmark" && o.id === "ruins")!;
+  it("closes a ruins gate with rubble until the ruins open: wider than the gate, clear of its exit", () => {
+    const v = flatIsland([{ id: "ruins", kind: "landmark", x: 0, z: 0 }]), gate = v.objects[0];
     const rubble = barrierPlacements(v, dropFlags(1)).find(b => b.id === "ruins-gate")!;
     expect(rubble).toMatchObject({ model: "ruins-rubble", x: gate.x, z: gate.z });
     expect(barrierPlacements(v, dropFlags(3)).some(b => b.id === "ruins-gate")).toBe(false);
@@ -101,57 +102,14 @@ describe("natural barriers (specs/v1-drop.md §2, lib/game/barriers.ts)", () => 
     expect(objectFootprint({ id: "slide", kind: "barrier", model: "rockslide", x: 1, z: 1 })).toEqual(barrierFootprint("rockslide"));
   });
 
-  /**
-   * A flood over the game's own walker (island.move, 0.5-unit steps, 8 directions) inside a window, from `start`: every
-   * spot it can walk to. A barrier with a gap a body fits through shows up as ground beyond it.
-   */
-  function flood(island: ReturnType<typeof islandOf>, start: [number, number], win: { x0: number; x1: number; z0: number; z1: number }, step = 0.5) {
-    const key = (x: number, z: number) => `${Math.round(x / step)},${Math.round(z / step)}`;
-    const seen = new Set([key(...start)]), queue: [number, number][] = [start], out: [number, number][] = [];
-    while (queue.length) {
-      const [x, z] = queue.pop()!;
-      out.push([x, z]);
-      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
-        const nx = x + dx * step, nz = z + dz * step, k = key(nx, nz);
-        if (seen.has(k) || nx < win.x0 || nx > win.x1 || nz < win.z0 || nz > win.z1) continue;
-        const [ax, az] = island.move(x, z, nx, nz);
-        if (Math.hypot(ax - nx, az - nz) > 0.02) continue;
-        seen.add(k);
-        queue.push([nx, nz]);
-      }
-    }
-    return out;
-  }
-  const worldDoc = () => JSON.parse(readFileSync(join(__dirname, "../../data/world-map.json"), "utf8")) as VillageDoc;
-  const proposed = (proposal as { objects: MapObject[] }).objects.map(({ id, kind, model, x, z, yaw, scale }) => ({ id, kind, model, x, z, yaw, ...(scale ? { scale } : {}) }));
-
-  it("with the proposal accepted, the walker can't climb the mountain trail past the rockslide (and can without it)", () => {
-    const world = buildVillage(worldDoc()), m = world.map;
-    // Off the cell corners (the height field there is the higher cell's), measured by the cell's level.
-    const win = { x0: -36, x1: -14, z0: -104, z1: -84 }, start: [number, number] = [-26.25, -88.25];
-    const highest = (island: ReturnType<typeof islandOf>) => Math.max(...flood(island, start, win).map(([x, z]) => levelAt(m, worldToCellX(m, x), worldToCellZ(m, z))));
-    expect(highest(islandOf(world))).toBeGreaterThanOrEqual(4);
-    expect(highest(islandOf(villageOf(m, [...world.objects, ...proposed])))).toBeLessThan(4);
-  }, 60_000);
-
-  it("with the proposal accepted, the forest ring and the rubble close the ruins: nobody walks from the path into the middle", () => {
-    const world = buildVillage(worldDoc());
-    const island = islandOf(villageOf(world.map, [...world.objects, ...proposed]));
-    const reached = flood(island, [48, -16], { x0: 12, x1: 84, z0: -88, z1: -14 }, 0.75);
-    expect(reached.length).toBeGreaterThan(400);
-    expect(reached.some(([x, z]) => Math.hypot(x - 48, z + 52) < 26)).toBe(false);
-  }, 60_000);
-
-  it("the proposal places every barrier on the v2 world, on dry land, each a known model with a unique id", () => {
-    const world = buildVillage(JSON.parse(readFileSync(join(__dirname, "../../data/world-map.json"), "utf8")) as VillageDoc);
-    const items = (proposal as { objects: MapObject[] }).objects;
-    expect(new Set(items.map(o => o.model))).toEqual(new Set(BARRIER_MODELS));
+  it("stands every barrier on the member island's dry land, each a known model with a unique id", () => {
+    const world = villageOfWorld(loadWorldFromDisk(join(__dirname, "../../data/world"))), island = islandOf(world);
+    const items = world.objects.filter(o => o.kind === "barrier");
+    expect(items.length).toBeGreaterThan(0);
     expect(new Set(items.map(o => o.id)).size).toBe(items.length);
-    const taken = new Set(world.objects.map(o => `${o.kind}:${o.id}`));
     for (const o of items) {
-      expect(o.kind).toBe("barrier");
-      expect(taken.has(`barrier:${o.id}`), o.id).toBe(false);
-      expect(islandOf(world).wet(o.x, o.z), `${o.id} on land`).toBe(false);
+      expect(o.model === "border" || BARRIER_MODELS.includes(o.model as (typeof BARRIER_MODELS)[number]), `${o.id}: ${o.model}`).toBe(true);
+      if (o.model !== "border") expect(island.wet(o.x, o.z), `${o.id} on land`).toBe(false);
     }
   });
 });

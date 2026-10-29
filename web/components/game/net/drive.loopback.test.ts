@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vitest";
 import * as THREE from "three";
 import { villageIsland } from "@/lib/game/defaultIsland";
-import { village } from "@/lib/game/villageMap";
+import { setVillage, village, villageSpawnPoint } from "@/lib/game/villageMap";
 import { createLoopback } from "@/lib/net/loopback";
 import type { RemoteEvent } from "@/lib/net/types";
 import { driveRig, gateMixer, knownClip, type RemoteRig } from "./drive";
 import { FULL, HIDDEN, LOD_CAPS, assignLod, createLodScratch, type LodEntry } from "./lod";
 import { RigStore } from "./rigs";
+import { fileURLToPath } from "node:url";
+import { loadWorldFromDisk } from "@/lib/game/world/disk";
+import { villageOfWorld } from "@/lib/game/world/village";
+// The member island as the game plays it (the new world's heightfield, as lib/game/world/load.ts swaps it in).
+setVillage(villageOfWorld(loadWorldFromDisk(fileURLToPath(new URL("../../../data/world/", import.meta.url)))));
 
 /**
  * The driver against the real thing: client core's `?bots=N` loopback (the bot brain on the movement sim, the
@@ -19,6 +24,8 @@ describe("24 loopback bots through the driver", () => {
     const lb = createLoopback({ bots: 24, seed: 7, clock: () => now, timer: false });
     lb.start("village");
     const store = new RigStore(lb.remotes), stop = store.attach(), world = villageIsland(village());
+    // The viewer stands at the island's spawn (the LOD tiers by distance from them).
+    const eye = villageSpawnPoint(village());
     const scratch = createLodScratch(64), entries: LodEntry[] = [], kinds = new Map<string, number>(), unknown: string[] = [];
     let seatedFrames = 0, maxShown = 0;
     const juice = (_r: RemoteRig, e: RemoteEvent) => { kinds.set(e.kind, (kinds.get(e.kind) ?? 0) + 1); };
@@ -35,7 +42,7 @@ describe("24 loopback bots through the driver", () => {
           const ev = s.events[k];
           if (ev.kind === "play" || ev.kind === "upper") { kinds.set(ev.kind, (kinds.get(ev.kind) ?? 0) + 1); if (!knownClip(ev.value)) unknown.push(String(ev.value)); }
         }
-        r.lod.dist = Math.hypot(s.x, s.z);
+        r.lod.dist = Math.hypot(s.x - eye[0], s.z - eye[1]);
         r.lod.inView = true;
         expect(Number.isFinite(s.x) && Number.isFinite(s.y) && Number.isFinite(s.z) && Number.isFinite(r.groundY), `bot ${e.sid}`).toBe(true);
         expect(r.groundY).toBeLessThanOrEqual(s.y + 1e-9);

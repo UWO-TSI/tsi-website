@@ -4,7 +4,7 @@ import {
 import { ROCK_MODELS, ROCK_SIZE } from "./rocks";
 import { FURNITURE, studySolid, type Furniture } from "@/lib/study/seats";
 import { objectsOf, village, villageSpawnPoint, type MapObject, type Village } from "./villageMap";
-import { barrierBoxes, barrierFootprint, barrierPlacements, inBarrier } from "./barriers";
+import { barrierBoxes, barrierFootprint, barrierPlacements, inBarrier, releaseRegions } from "./barriers";
 import { DROPS } from "./drops";
 import { JETTY, worldToDock, type Dock } from "./wharf";
 import { BAR_DECKS, barOf } from "./sushiBar";
@@ -13,9 +13,9 @@ import { NEW_LAMPS } from "./propModels";
 import { MAX_CLIMB, terrainHeight, terrainSteepness, terrainSurface } from "./world/terrain";
 
 /**
- * Default island: the village core (ledger rows 155, 156), loaded from the
- * painted map file (`web/data/village-map.json`, lib/game/villageMap.ts; rows
- * 241, 246). Compass (row 239): the follow camera looks +z, which is west
+ * Default island: the member island's core (ledger rows 155, 156), read from
+ * the member island's map (lib/game/villageMap.ts village(), the new world:
+ * web/data/world, row 321). Compass (row 239): the follow camera looks +z, which is west
  * (up-screen); +x, screen left, is south. A compass azimuth A (from north,
  * clockwise) is the world direction (x, z) = (−cos A, −sin A), so north is −x
  * and east is −z (toward the viewer).
@@ -73,8 +73,6 @@ export const LANDMARK_IDS = Object.keys(LANDMARK_INFO) as LandmarkId[];
 
 /** Wharf stub deck (walkable over the water), relative to the wharf before its yaw. */
 export const WHARF_DECK_LOCAL = { x0: -0.9, x1: 0.9, z0: -3.5, z1: 2 };
-/** The finger pier off the wharf's tip (v1 water, lib/game/wharf.ts FINGER), walkable inside its posts, relative before its yaw. */
-export const WHARF_FINGER_LOCAL = { x0: -4.62, x1: -0.85, z0: -3.4, z1: -2.35 };
 /**
  * Wooden bridge deck, relative, before its yaw: the model spans ±1.9 along x, its rails at ±1.45 across. The deck
  * stops 1.0 out so a body (0.2 probes, about 0.3 wide) walks clear of the rails.
@@ -230,11 +228,11 @@ export function wharfDock(v: Village = village()): Dock | null {
 }
 /** A walkable deck in world XZ and its height at a point (stairs climb). */
 export type Deck = { x0: number; x1: number; z0: number; z1: number; y: (x: number, z: number) => number };
-/** Every walkable deck of the wharf in world XZ: the pier and its finger pier at DECK_Y, or the jetty's landing, stairs, platform and gangways. */
+/** Every walkable deck of the wharf in world XZ: the plain pier at DECK_Y, or the jetty's landing, stairs, platform and gangways. */
 export function wharfDecks(v: Village = village()): Deck[] {
   const w = landmark("wharf", v);
   if (!w) return [];
-  if (!isJetty(v)) return [WHARF_DECK_LOCAL, WHARF_FINGER_LOCAL].map(r => ({ ...turnedRect(w.x, w.z, r, w.yaw), y: () => DECK_Y }));
+  if (!isJetty(v)) return [{ ...turnedRect(w.x, w.z, WHARF_DECK_LOCAL, w.yaw), y: () => DECK_Y }];
   return localDecks({ x: w.x, z: w.z, yaw: w.yaw ?? 0 }, JETTY.decks);
 }
 /** The sushi bar's decks in world XZ (lib/game/sushiBar.ts BAR_DECKS): its floor on the stilts, the landing and the boardwalk. */
@@ -276,10 +274,8 @@ export function villageSpawn(v: Village = village()): [number, number, number] {
   return [x, 0, z];
 }
 
-/** The benches, rocks, fences and scenery props: the props with a solid footprint. A bench the map gives no model (the
- * new world's plaza benches, lib/game/world/generate.ts) is our plaza bench (art/remodel/build_bench.py). */
-export const propsOf = (v: Village = village()) => [...objectsOf("bench", v).map(o => (o.model ? o : { ...o, model: "plaza-bench" })),
-  ...objectsOf("rock", v), ...objectsOf("fence", v), ...objectsOf("prop", v)];
+/** The benches, rocks, fences and scenery props: the props with a solid footprint. */
+export const propsOf = (v: Village = village()) => [...objectsOf("bench", v), ...objectsOf("rock", v), ...objectsOf("fence", v), ...objectsOf("prop", v)];
 
 /** Solid footprint of a bench, rock or fence: half extents and centre offset × scale (before its yaw). */
 export function propFootprint(o: Pick<MapObject, "model" | "scale">): [number, number, number, number] | null {
@@ -392,6 +388,13 @@ export interface VillageIsland {
    */
   climb?: (x: number, z: number, nx: number, nz: number) => boolean;
   steep?: (x: number, z: number) => boolean;
+  /**
+   * The smooth world only (lib/game/barriers.ts releaseRegions): land behind a barrier that walking from the spawn
+   * can't reach, a wall to every move (movement's `locked`); and land walking does reach, the only ground a splash
+   * brings you back to (movement's `released`).
+   */
+  locked?: (x: number, z: number) => boolean;
+  released?: (x: number, z: number) => boolean;
 }
 
 /** The jetty deck's walk height on the smooth world (the pier model's deck top): the quay stands at it (lib/game/world/convert.ts). */
@@ -517,8 +520,19 @@ export function islandOf(v: Village): VillageIsland {
     }
     return [x, z];
   };
-  const top = (x: number, z: number) => Math.max(ground(x, z), solidTop(x, z));
-  return terrain ? { map, ground, surface, standable, move, wet, top, climb, steep } : { map, ground, surface, standable, move, wet, top };
+  // Over the smooth world's water its top is the water's surface, not the seabed: a fall into the sea splashes there
+  // (the splash shows on the water, and a body never sinks below the realtime room's floor, protocol AREA_BOUNDS).
+  const top = (x: number, z: number) => {
+    const g = ground(x, z);
+    return Math.max(terrain && g < terrain.seaLevel && wet(x, z) ? terrain.seaLevel : g, solidTop(x, z));
+  };
+  if (!terrain) return { map, ground, surface, standable, move, wet, top };
+  // What the barriers close off, measured once, on the first ask (a few tens of ms: not for an island nobody walks).
+  let regions: ReturnType<typeof releaseRegions> | undefined;
+  const region = () => (regions === undefined ? (regions = releaseRegions(terrain, wet, barriers, villageSpawnPoint(v))) : regions);
+  const locked = (x: number, z: number) => region()?.locked(x, z) ?? false;
+  const released = (x: number, z: number) => region()?.released(x, z) ?? true;
+  return { map, ground, surface, standable, move, wet, top, climb, steep, locked, released };
 }
 
 const islands = new WeakMap<Village, VillageIsland>();
@@ -537,7 +551,7 @@ export const SHADOW_FOLLOW_EXTENT = 48;
 const MAP_MARGIN = 14;
 
 /**
- * Everything that scales with the island (specs/island-painter.md §7), from the
+ * Everything that scales with the island (archive/village/island-painter.md §7), from the
  * map's land bounds. The shipped 47×39 island gives exactly the numbers these
  * replaced: shadow ±26, clouds 46×38, overview (12, 21, −27), glints to 90,
  * minimap "-26 -22 52 47". Shadows and clouds stay centred on the world origin

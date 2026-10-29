@@ -83,7 +83,6 @@ function partTints(id: string): Record<string, string> {
   const part = PART_BY_ID.get(id);
   const tints: Record<string, string> = {};
   for (const m of part?.materials ?? []) {
-    if (m.decal) continue;
     if (m.tint === "outfit") tints[m.name] = PALETTE.outfit[(m.default as number) ?? 0];
     else if (m.tint === "hair") tints[m.name] = "none";
     else if (m.color) tints[m.name] = m.color;

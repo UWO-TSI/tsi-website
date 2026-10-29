@@ -47,7 +47,7 @@ import { execFileSync } from "child_process";
 // mismatch between the source .dae and the exported .glb instead of writing a
 // partial file (extract-acnh-kit.mjs does).
 //
-// ── ACNH kit constants (measured, canonical — see specs/acnh-system-reference.md) ──
+// ── ACNH kit constants (measured, canonical — see archive/village/acnh-system-reference.md) ──
 //
 //   tile pitch          10.0 raw = 1.0u   (every Cliff*/River* bboxes to 10x10)
 //   elevation step      15.0 raw = 1.5u   (Cliff0A_0: top grass y=0, lower grass y=-15.00)

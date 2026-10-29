@@ -11,6 +11,12 @@ import { BENCH_SLOT, Bot, benchKey, benchLift, benchSlot, botCard, botWorld, cre
 import { BENCH_SEAT_TOP } from "@/lib/game/defaultIsland";
 import { seatLift } from "@/lib/game/character/clips";
 import { CHARACTER_SCALE } from "@/components/game/character/Character";
+import { fileURLToPath } from "node:url";
+import { setVillage } from "@/lib/game/villageMap";
+import { loadWorldFromDisk } from "@/lib/game/world/disk";
+import { villageOfWorld } from "@/lib/game/world/village";
+// The member island as the game plays it (the new world's heightfield, as lib/game/world/load.ts swaps it in).
+setVillage(villageOfWorld(loadWorldFromDisk(fileURLToPath(new URL("../../data/world/", import.meta.url)))));
 
 const STEP_MS = STEP * 1000;
 
@@ -37,7 +43,7 @@ function violations(poses: Pose[], area: Area) {
   const flags: number[] = [];
   const reset = (p: Pose) => { base = p; hist = [{ T: 0, D: 0 }]; };
   for (const p of poses) {
-    if (!inAreaBounds(area, p.x, p.y, p.z)) { out.push(`bounds at ${p.t}`); continue; }
+    if (!inAreaBounds(area, p.x, p.y, p.z)) { out.push(`bounds at ${p.t} (${area} ${p.x.toFixed(1)},${p.y.toFixed(2)},${p.z.toFixed(1)})`); continue; }
     if (!base) { reset(p); continue; }
     const b: Pose = base;
     if (hasFlag(p.flags, PACKET_FLAG.teleport)) {
@@ -188,10 +194,15 @@ describe("bots", () => {
       const [x, z] = benchSlot(b, slot), seatY = w.ground(b.x, b.z) + BENCH_SEAT_TOP; // IslandScene's tsi:sit detail
       expect(benchLift(w, b, x, z)).toBeCloseTo(seatLift("Sit", seatY - w.ground(x, z), CHARACTER_SCALE), 12);
     }
-    // And what goes on the wire with the snap onto a bench, to the millimetre the wire carries.
+    // And what goes on the wire with the snap onto a bench, to the millimetre the wire carries: the seat top over the
+    // ground at the slot (the plaza's stone slopes a little under its benches).
     const snaps = poses.filter(p => hasFlag(p.pose.flags, PACKET_FLAG.teleport) && bots[p.bot].card.area === "village" && p.pose.lift > 0);
     expect(snaps.length).toBeGreaterThan(0);
-    for (const { pose } of snaps) expect(pose.lift).toBeCloseTo(seatLift("Sit", BENCH_SEAT_TOP, CHARACTER_SCALE), 3);
+    for (const { pose } of snaps) {
+      const b = w.benches.find(b => [0, 1].some(s => Math.hypot(benchSlot(b, s as 0 | 1)[0] - pose.x, benchSlot(b, s as 0 | 1)[1] - pose.z) < 0.05))!;
+      expect(b).toBeDefined();
+      expect(pose.lift).toBeCloseTo(benchLift(w, b, pose.x, pose.z), 3);
+    }
     expect(seatLift("Sit", BENCH_SEAT_TOP, CHARACTER_SCALE)).toBeGreaterThan(0.3); // not sunk into the slats
   });
 

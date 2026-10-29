@@ -75,7 +75,7 @@ describe("water classes come from connectivity, not a shape", () => {
   });
 });
 
-describe("fishing on the live village map", () => {
+describe("fishing on the member island", () => {
   const island = villageIsland(), { classify } = villageWater(), { bounds: b } = village();
   it("always lands the bobber on water", () => {
     let spots = 0;
@@ -91,13 +91,15 @@ describe("fishing on the live village map", () => {
 });
 
 describe("the per-frame spot check allocates nothing", () => {
-  const island = villageIsland(), { classify } = villageWater();
+  const island = villageIsland(), { classify } = villageWater(), { bounds: b } = village();
   it("writes the spot into the object it is given, and gives the same answer as a fresh one", () => {
+    let at: [number, number] | null = null;
+    for (let x = b.minX; x <= b.maxX && !at; x += 1.5) for (let z = b.minZ; z <= b.maxZ && !at; z += 1.5) if (fishingSpot(island.map, classify, x, z)) at = [x, z];
     const out = { target: [0, 0] as [number, number], water: "river" as const };
-    const fresh = fishingSpot(island.map, classify, 5, -1.2)!;
-    const reused = fishingSpot(island.map, classify, 5, -1.2, out);
+    const fresh = fishingSpot(island.map, classify, ...at!)!;
+    const reused = fishingSpot(island.map, classify, ...at!, out);
     expect(reused).toBe(out);
     expect(reused).toEqual(fresh);
-    expect(fishingSpot(island.map, classify, 0, -10, out)).toBeNull();
+    expect(fishingSpot(island.map, classify, b.cx + 1e4, b.cz, out)).toBeNull();
   });
 });
