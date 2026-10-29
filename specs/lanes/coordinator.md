@@ -597,3 +597,6 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - MemberFishing must dispatch tsi:fish-hooked, tsi:fish-caught, tsi:fish-escaped and tsi:fish-end, label its reel panel [aria-label="Fishing reel"], and build its reel with createFishingReel (reelAssist.floor). Wire this at merge, or have the fish-tiers agent do it.
   - The deploy from 3074f1e0 (uwotsi-n346qmvqg) is still to be confirmed Ready.
 - **Started:** main-quest r3 (agent a9480728300cbc27c), daily-social r3 (agent aa9470efccfdc282e). David is playing tutorial r4 himself on 3300; his notes are pending.
+- **Shipped 2026-10-29 ~02:30:**
+  - the new-world fixes (Halloween, residents, fauna, bots, sea fall) and the river soft lock with the study bench (river-softlock 0a77c16a);
+  - prod dump prod-before-newworld-fixes-20261029-0227.dump; applied 20261029010000_study_outdoor_bench and 20261029062423_catalogue_seed; verify clean.
