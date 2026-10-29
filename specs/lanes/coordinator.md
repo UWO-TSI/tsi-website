@@ -493,3 +493,6 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - The full vitest wasn't rerun after the "Fish of the month" rename, so run it at merge.
   - Prices and odds are the lane's placeholders; David sets them.
 - **Lanes:** none running now (2026-10-28 late). Queued: loading r2, clothing r3, cleanup (after the archive merge), ui-unify, bug minigame, class and armour clothing.
+- **Started (late 2026-10-28):**
+  - loading r2 (agent adc0836dc7276280b): merges game/village-archive, keeps only the island look, rebuilds its backdrop on the new world, moves to the flat kit. Merge after the archive.
+  - clothing r3 (agent abde6917a32fb9fcd): fixes the long dresses clipping and the two skirts flickering on sit. It then finds online references for the one-pieces (David asked) and stops for David's pick before modelling.
