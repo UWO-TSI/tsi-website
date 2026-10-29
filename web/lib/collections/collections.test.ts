@@ -5,7 +5,7 @@ import { FISH } from "@/lib/game/fishing";
 import { availableAt, clueFor, journalPage, laterToday, museumWings, validateShowcase, weekStart, weeklyTrophies, type WeeklyBest } from "./logic";
 import { memoryCollectionsStore } from "./memoryStore";
 import { LAUNCH_ROSTER, ROSTER, type Species } from "./roster";
-import { donate, journal, records, trophies } from "./service";
+import { donate, enterMonthly, journal, monthBoard, trophies } from "./service";
 
 const A = "00000000-0000-4000-8000-0000000000aa";
 const B = "00000000-0000-4000-8000-0000000000bb";
@@ -169,26 +169,33 @@ describe("weekly trophy case (row 204)", () => {
   });
 });
 
-describe("size records and the weekly catch board (f-records)", () => {
-  it("lists every species' biggest catch this week, marks yours, and keeps your personal best per species", async () => {
-    const m = memoryCollectionsStore();
+describe("the monthly board (David, 2026-10-28: \"a place to put your fish to monthly leaderboard\")", () => {
+  it("puts one of a fish you landed this month on the board at your biggest this month, and keeps each fish's biggest", async () => {
+    let at = new Date("2026-09-24T16:00:00Z");
+    const m = memoryCollectionsStore(() => at);
     m.name(A, "Maya");
     m.name(B, "Jordan");
     m.record(A, "fish_carp", 60);
+    m.record(A, "fish_carp", 55);
     m.record(B, "fish_carp", 70);
     m.record(A, "fish_dace", 12);
-    m.record(A, "fish_dace", 14);
-    m.record(A, "fish_dace", 13);
-    m.record(B, "fish_tuna", 200);
     m.record(A, "flower_rose", 9);
-    const r = await records(m.store, A, new Date("2026-09-24T16:00:00Z"));
+    const enter = (who: string, key: string, idem: string) => enterMonthly(m.store, who, { item_key: key, idempotency_key: idem });
+    expect(await enter(A, "fish_carp", "month-0001")).toEqual({ ok: true, data: { size_cm: 60, replayed: false } });
+    expect(await enter(A, "fish_carp", "month-0001")).toEqual({ ok: true, data: { size_cm: 60, replayed: true } });
+    expect(await enter(A, "fish_carp", "month-0002")).toMatchObject({ ok: false, code: "not_bigger" });
+    expect(await enter(A, "fish_koi", "month-0003")).toMatchObject({ ok: false, code: "not_this_month" });
+    expect(await enter(B, "fish_carp", "month-0004")).toMatchObject({ ok: true, data: { size_cm: 70 } });
+    const r = await monthBoard(m.store, A, at);
     if (!r.ok) throw new Error(r.error);
-    expect(r.data.week_start).toBe("2026-09-21");
-    const board = Object.fromEntries(r.data.board.map((t) => [t.key, [t.member_name, t.size_cm, t.mine]]));
-    expect(board).toEqual({ fish_carp: ["Jordan", 70, false], fish_dace: ["Maya", 14, true], fish_tuna: ["Jordan", 200, false] });
-    expect(r.data.board.map((t) => t.rank)).toEqual([1, 2, 3]);
-    expect(r.data.mine.map((x) => [x.key, x.best_size_cm])).toEqual(expect.arrayContaining([["fish_carp", 60], ["fish_dace", 14]]));
-    expect(r.data.mine).toHaveLength(2);
+    expect(r.data.month).toBe("2026-09-01");
+    expect(r.data.board.map((t) => [t.key, t.member_name, t.size_cm, t.mine])).toEqual([["fish_carp", "Jordan", 70, false]]);
+    expect(r.data.yours.map((y) => [y.key, y.size_cm, y.have, y.entered])).toEqual([["fish_carp", 60, 1, 60], ["fish_dace", 12, 1, null]]);
+    // A new month: a new board, and last month's catches don't count.
+    at = new Date("2026-10-02T16:00:00Z");
+    const next = await monthBoard(m.store, A, at);
+    expect(next.ok && [next.data.month, next.data.board, next.data.yours]).toEqual(["2026-10-01", [], []]);
+    expect(await enter(A, "fish_dace", "month-0005")).toMatchObject({ ok: false, code: "not_this_month" });
   });
 });
 

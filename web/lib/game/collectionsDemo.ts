@@ -8,8 +8,10 @@
  */
 import { memoryCollectionsStore } from "@/lib/collections/memoryStore";
 import { torontoParts } from "@/lib/time";
-import { bagAction, bagView, catchAction, donate, getShowcase, journal, museum, records, setShowcase, tourney, trophies } from "@/lib/collections/service";
-import { chefOrder, fishRequests, speciesClass, speciesSellPrice, torontoDay } from "@/lib/wallet/rules";
+import { bagAction, bagView, catchAction, donate, enterMonthly, getShowcase, journal, monthBoard, museum, setShowcase, tourney, trophies } from "@/lib/collections/service";
+import { chefOrder, fishingTasks, speciesClass, speciesSellPrice, torontoDay } from "@/lib/wallet/rules";
+import { claimFishingTask, fishingTasksView, rollAtTackle, tackleView } from "@/lib/wallet/service";
+import { weekStart } from "@/lib/collections/logic";
 import { SUSHI_MENU } from "@/lib/wallet/catalogue";
 import type { ActiveBuff } from "@/lib/wallet/store";
 import { memoryEconomyStore } from "@/lib/wallet/memoryStore";
@@ -41,14 +43,21 @@ export function installCollectionsDemo(): void {
     if (query.get("chest")) for (const [key, n] of [["wood_branch", 60], ["rock_stone", 34], ["rock_clay", 8], ["apple", 22], ["flower_tulip", 7], ["fish_dace", 1], ["bug_common_butterfly", 1]] as const) m.stash(ME, key, n);
     // The shop's till and shelves (the counter, ShopCounter): the economy service on its memory store, coins shared with sales.
     const eco = memoryEconomyStore();
-    eco.fund(ME, 1200);
+    eco.fund(ME, 1200, 60);
     m.name(ME, "You");
-    // The fish market's requests (f-requests) as the server would pick them on a world with sea and river; `?requests=1`
-    // puts one of each of today's first two in the pockets, so the board has something to hand over.
-    const filled = new Set<string>(), requestsToday = () => fishRequests(torontoDay(new Date()), ["sea", "river"]);
-    const chefToday = () => chefOrder(torontoDay(new Date()), ["sea", "river"]);
+    // The fishing tasks and the chef's order as the server would pick them on a world with sea and river. `?tasks=1`
+    // lands today's first two task fish and five different fish this week (so the board has something to claim) and
+    // puts the chef's fish in the pockets.
+    const WATERS = ["sea", "river"] as const, filled = new Set<string>();
+    const chefToday = () => chefOrder(torontoDay(new Date()), WATERS);
     let meal: ActiveBuff | null = null;
-    if (query.get("requests")) for (const r of [...requestsToday().slice(0, 2), chefToday()]) if (r) m.give(ME, r.item_key, 1);
+    if (query.get("tasks")) {
+      const now = new Date(), t = fishingTasks(torontoDay(now), weekStart(now), WATERS);
+      for (const task of t.day.slice(0, 2)) eco.land(ME, task.item_key!, now);
+      for (const key of ["fish_dace", "fish_pale_chub", "fish_loach", "fish_black_bass", "fish_sea_bass"]) eco.land(ME, key, now);
+      const chef = chefToday();
+      if (chef) m.give(ME, chef.item_key, 1);
+    }
     [...OTHERS, ...ANGLERS].forEach(([id, name]) => m.name(id, name));
     const ready = (async () => {
       const seed: [string, string, number | null][] = [
@@ -62,6 +71,8 @@ export function installCollectionsDemo(): void {
       await donate(m.store, OTHERS[0][0], "fish_dace", "demo-don-2");
       await donate(m.store, OTHERS[1][0], "bug_monarch_butterfly", "demo-don-3");
       await donate(m.store, OTHERS[2][0], "shell_whelk", "demo-don-4");
+      // The fish market's monthly board: a few fish put up already.
+      for (const [who, key] of [[OTHERS[1][0], "fish_pike"], [OTHERS[2][0], "fish_sea_bass"], [ME, "fish_loach"]] as const) await m.store.enterMonth(who, key, `demo-month-${key}`);
       // The tourney running now (or the last one): the board as landed catches would leave it.
       const t = latestTourney(DEFAULT_GOALS, new Date());
       const entries: [string, string, number][] = [
@@ -111,24 +122,29 @@ export function installCollectionsDemo(): void {
           if (!row || !price || row.count < body.qty) return reply({ ok: false, status: 409, code: "insufficient_items", error: "You don't have that many." }, "sale");
           if (row.locked) return reply({ ok: false, status: 409, code: "locked", error: "That's locked in your bag. Unlock it to sell it." }, "sale");
           m.give(ME, body.item_key, -body.qty);
-          eco.fund(ME, eco.coinsOf(ME) + price * body.qty);
+          eco.fund(ME, eco.coinsOf(ME) + price * body.qty, eco.gemsOf(ME));
           return reply({ ok: true, data: { balance: eco.coinsOf(ME), remaining: row.count - body.qty, paid: price * body.qty, replayed: false } }, "sale");
         }
-        case "/api/economy/requests": {
+        case "/api/economy/tasks":
+          return method === "POST" ? reply(await claimFishingTask(eco.store, ME, body, now, WATERS), "claim") : reply(await fishingTasksView(eco.store, ME, now, WATERS), "tasks");
+        case "/api/economy/chef": {
           const chef = chefToday();
-          if (method !== "POST") return reply({ ok: true, data: { day: torontoDay(now), requests: requestsToday().map(r => ({ ...r, filled: filled.has(r.item_key) })), chef: chef && { ...chef, filled: filled.has(`chef:${chef.item_key}`) } } }, "requests");
-          const req = body.board === "chef" ? (chef?.item_key === body.item_key ? chef : null) : requestsToday().find(r => r.item_key === body.item_key);
-          const row = (await m.store.bag(ME)).items.find(r => r.item_key === body.item_key), tag = body.board === "chef" ? `chef:${body.item_key}` : body.item_key;
-          if (!req) return reply({ ok: false, status: 409, code: "not_requested", error: "The fish market isn't asking for that today." }, "fill");
-          if (filled.has(tag)) return reply({ ok: false, status: 409, code: "already_filled", error: "You've already brought that one in today." }, "fill");
+          if (method !== "POST") return reply({ ok: true, data: { day: torontoDay(now), order: chef && { ...chef, filled: filled.has(chef.item_key) } } }, "chef");
+          // The chef takes the fish from the demo's pockets (chef_order_fill's rules).
+          const row = (await m.store.bag(ME)).items.find(r => r.item_key === body.item_key);
+          if (!chef || chef.item_key !== body.item_key) return reply({ ok: false, status: 409, code: "not_requested", error: "That isn't asked for today." }, "fill");
+          if (filled.has(chef.item_key)) return reply({ ok: false, status: 409, code: "already_filled", error: "You've already brought that one in today." }, "fill");
           if (!row || row.count < 1) return reply({ ok: false, status: 409, code: "insufficient_items", error: "You don't have that many." }, "fill");
-          m.give(ME, req.item_key, -1);
-          filled.add(tag);
-          if (chef && req === chef) meal = { source: "staff_meal", luck: chef.meal.luck, size: chef.meal.size, until: new Date(now.getTime() + chef.meal.minutes * 60_000).toISOString() };
-          eco.fund(ME, eco.coinsOf(ME) + req.reward);
-          return reply({ ok: true, data: { balance: eco.coinsOf(ME), remaining: row.count - 1, paid: req.reward, replayed: false } }, "fill");
+          m.give(ME, chef.item_key, -1);
+          filled.add(chef.item_key);
+          meal = { source: "staff_meal", luck: chef.meal.luck, size: chef.meal.size, until: new Date(now.getTime() + chef.meal.minutes * 60_000).toISOString() };
+          eco.fund(ME, eco.coinsOf(ME) + chef.reward, eco.gemsOf(ME));
+          return reply({ ok: true, data: { balance: eco.coinsOf(ME), remaining: row.count - 1, paid: chef.reward, replayed: false } }, "fill");
         }
-        case "/api/collections/records": return reply(await records(m.store, ME, now), "records");
+        case "/api/economy/tackle":
+          return method === "POST" ? reply(await rollAtTackle(eco.store, ME, body, now), "roll") : reply({ ok: true, data: tackleView(now) }, "tackle");
+        case "/api/collections/monthly":
+          return method === "POST" ? reply(await enterMonthly(m.store, ME, body), "entry") : reply(await monthBoard(m.store, ME, now), "monthly");
         case "/api/economy/sushi": {
           if (meal && new Date(meal.until) <= now) meal = null;
           if (method !== "POST") return reply({ ok: true, data: { menu: SUSHI_MENU, buff: meal } }, "sushi");
@@ -141,7 +157,7 @@ export function installCollectionsDemo(): void {
             m.give(ME, body.fish, -1);
           } else {
             if (eco.coinsOf(ME) < dish.price) return reply({ ok: false, status: 409, code: "insufficient", error: "Not enough in your wallet for that." }, "order");
-            eco.fund(ME, eco.coinsOf(ME) - dish.price);
+            eco.fund(ME, eco.coinsOf(ME) - dish.price, eco.gemsOf(ME));
           }
           meal = { source: dish.id, luck: dish.buff.luck, size: dish.buff.size, until: new Date(now.getTime() + dish.buff.minutes * 60_000).toISOString() };
           return reply({ ok: true, data: { balance: eco.coinsOf(ME), paid: dish.price ?? 0, buff: meal, replayed: false } }, "order");

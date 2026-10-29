@@ -2,12 +2,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Donation, MemberItem, WeeklyBest } from "./logic";
 import { ROSTER, type Species } from "./roster";
 import { raisePg } from "@/lib/result";
+import { torontoInstant } from "@/lib/time";
 import type { CollectionsStore } from "./store";
 import { ledgerToolsTaught } from "@/lib/game/arrival/arrivalLedger";
 
 type Row = Record<string, unknown>;
 const raise = (error: { code?: string; message?: string } | null): never =>
-  raisePg(error, ["already_donated", "not_owned", "not_donatable", "rate_limited", "too_fast", "no_roll", "roll_expired", "already_landed", "already_harvested", "out_of_season",
+  raisePg(error, ["already_donated", "not_owned", "not_donatable", "rate_limited", "too_fast", "no_roll", "roll_expired", "already_landed", "already_harvested", "out_of_season", "not_this_month", "not_bigger",
     "bag_full", "storage_full", "locked", "insufficient_items", "key_reused", "bad_qty"]);
 const one = (data: unknown) => (Array.isArray(data) ? data[0] : data) as Row;
 const caught = (r: Row) => ({
@@ -88,6 +89,26 @@ export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
       const rows = (data ?? []) as Row[];
       const n = await names(db, [...new Set(rows.map((r) => String(r.user_id)))]);
       return rows.map((r): WeeklyBest => ({ user_id: String(r.user_id), member_name: n.get(String(r.user_id)) ?? "Member", item_key: String(r.item_key), size_cm: Number(r.size_cm), caught_at: String(r.caught_at) }));
+    },
+    async monthEntries(month) {
+      const { data, error } = await db.from("monthly_fish_entries").select("member_id, item_key, size_cm, entered_at").eq("month", month);
+      if (error) raise(error);
+      const rows = (data ?? []) as Row[];
+      const n = await names(db, [...new Set(rows.map((r) => String(r.member_id)))]);
+      return rows.map((r): WeeklyBest => ({ user_id: String(r.member_id), member_name: n.get(String(r.member_id)) ?? "Member", item_key: String(r.item_key), size_cm: Number(r.size_cm), caught_at: String(r.entered_at) }));
+    },
+    async monthCatches(memberId, month) {
+      const { data, error } = await db.from("weekly_catch_bests").select("item_key, size_cm").eq("user_id", memberId).gte("caught_at", torontoInstant(month, 0).toISOString());
+      if (error) raise(error);
+      const best = new Map<string, number>();
+      for (const r of (data ?? []) as Row[]) best.set(String(r.item_key), Math.max(best.get(String(r.item_key)) ?? 0, Number(r.size_cm)));
+      return [...best].map(([item_key, size_cm]) => ({ item_key, size_cm }));
+    },
+    async enterMonth(memberId, key, idem) {
+      const { data, error } = await db.rpc("monthly_fish_enter", { p_member_id: memberId, p_item_key: key, p_idempotency_key: idem });
+      if (error) raise(error);
+      const r = (Array.isArray(data) ? data[0] : data) as Row;
+      return { size_cm: Number(r.size_cm), replayed: r.replayed === true };
     },
     async cast(memberId, key, size, trophy) {
       const { data, error } = await db.rpc("collections_cast", { p_member_id: memberId, p_item_key: key, p_size: size, p_trophy: trophy });

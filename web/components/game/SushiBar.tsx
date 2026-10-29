@@ -28,7 +28,7 @@ import { localAvatar } from "@/lib/net/localAvatar";
 import { isSeatedPose } from "@/lib/game/seatPrompt";
 import {
   BAR_MUSIC_IN, BAR_MUSIC_OUT, BAR_POOLS, CHEF_LOOK, CHEF_OUTSIDE, CHEF_STATIONS, HANDOFF, HOURS_TOP, PIECES, PREP_AT, SERVED_AT, SERVER, SERVER_LOOK,
-  SERVE_S, STAFF_Y, STOOLS, barOpen, barPoint, prepAt, seatView, servedAt, stoolAt, type Bar, type BarStation, type BarView,
+  SERVE_S, STAFF_Y, STOOLS, barOpen, barPoint, prepAt, readingView, seatView, servedAt, stoolAt, type Bar, type BarStation, type BarView,
 } from "@/lib/game/sushiBar";
 
 /** The glow's brightness (in the evening a little under the night's), how fast it comes up or goes out (the lamps' ease, AmbientProps LAMP_RATE), and how fast the blinds roll. */
@@ -131,7 +131,15 @@ export default function SushiBar({ bar, y, player, phase, viewRef, onNear }: {
   const s = useRef({
     on: 0, open: open ? 1 : 0, near: false, staff: false, stool: -1, prep: [NaN, NaN], getas: { served: -1, carried: false },
     seat: { eye: { x: 0, y: 0, z: 0 }, look: { x: 0, y: 0, z: 0 } } as BarView,
+    base: { eye: { x: 0, y: 0, z: 0 }, look: { x: 0, y: 0, z: 0 } } as BarView,
+    /** The menu in your hands (tsi:bar-menu): 0 down on the counter, 1 picked up; `read` its target. */
+    reading: 0, read: 0,
   });
+  useEffect(() => {
+    const on = (e: Event) => { s.current.read = (e as CustomEvent<boolean>).detail ? 1 : 0; };
+    window.addEventListener("tsi:bar-menu", on);
+    return () => window.removeEventListener("tsi:bar-menu", on);
+  }, []);
   useEffect(() => () => { viewRef.current = null; }, [viewRef]);
   useFrame((_, raw) => {
     const dt = Math.min(raw, 0.1), st = s.current, t = worldTime(), p = player.current, now = worldNow() / 1000;
@@ -153,10 +161,12 @@ export default function SushiBar({ bar, y, player, phase, viewRef, onNear }: {
     if ((i >= 0) !== (st.stool >= 0)) setSeated(i >= 0);
     if (i !== st.stool && i >= 0) {
       const { eye, look } = seatView(STOOLS[i]), [ex, ez] = barPoint(bar, eye[0], eye[2]), [lx, lz] = barPoint(bar, look[0], look[2]);
-      Object.assign(st.seat.eye, { x: ex, y: y + eye[1], z: ez });
-      Object.assign(st.seat.look, { x: lx, y: y + look[1], z: lz });
+      Object.assign(st.base.eye, { x: ex, y: y + eye[1], z: ez });
+      Object.assign(st.base.look, { x: lx, y: y + look[1], z: lz });
     }
     st.stool = i;
+    st.reading = THREE.MathUtils.damp(st.reading, i >= 0 ? st.read : 0, 6, dt);
+    readingView(st.base, st.reading, st.seat);
     viewRef.current = i < 0 ? null : st.seat;
   });
   useEffect(() => () => onNear(false), [onNear]);

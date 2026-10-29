@@ -1,6 +1,7 @@
 import { z } from "zod";
+import { RARITY_RANK, type Rarity } from "@/lib/rarity";
 import {
-  checkDonation, clampSize, journalPage, museumWings, trophyFor, validateShowcase, weekStart, weeklyTrophies,
+  checkDonation, clampSize, journalPage, monthStart, museumWings, trophyFor, validateShowcase, weekStart, weeklyTrophies,
   type Exhibit, type JournalPage, type MuseumWing, type Trophy, type WorldMoment,
 } from "./logic";
 import { castWater, closedBiomes, fishRoll, forageSize, nodeAt, nodeRoll } from "./rolls";
@@ -27,6 +28,8 @@ const ERRORS: Record<string, [number, string]> = {
   too_fast: [429, "Too quick. Give it a moment."],
   no_roll: [404, "Nothing on the line."],
   bad_credit: [403, "That raid's catch isn't yours to claim."],
+  not_this_month: [409, "Land one this month to put it up."],
+  not_bigger: [409, "Your entry for that fish is as big already."],
   roll_expired: [410, "That one got away. Cast again."],
   already_landed: [409, "Already landed."],
   already_harvested: [409, "You've already gathered here this hour."],
@@ -192,24 +195,37 @@ export async function trophies(store: CollectionsStore, now: Date): Promise<Resu
   }
 }
 
-export interface Records {
-  week_start: string;
-  /** The club's catch board: every species' biggest this week (the trophy case's ranking, uncapped). */
+export interface MonthBoard {
+  /** The month's first day, YYYY-MM-DD (Toronto). */
+  month: string;
+  /** The club's board: each fish's biggest entry this month, ranked by rarity, then how big for its kind (weeklyTrophies' order). */
   board: (Trophy & { mine: boolean })[];
-  /** Your size record per fish and sea species. */
-  mine: { key: string; name: string; icon: string | null; rarity: string; best_size_cm: number }[];
+  /** What you could put up: the biggest of each fish you landed this month and still have, and your entry for it. */
+  yours: { key: string; name: string; icon: string | null; rarity: string; size_cm: number; have: number; entered: number | null }[];
 }
-/** Size records and the weekly catch board (f-records): the fish market's Records tab and the portal leaderboard. */
-export async function records(store: CollectionsStore, memberId: string, now: Date): Promise<Result<Records>> {
+/**
+ * The fish market's monthly board (David, 2026-10-28: "a place to put your fish to monthly leaderboard"): you put a fish
+ * you landed this month on it (it leaves your bag), at the biggest size you caught it this month. The portal shows it too.
+ */
+export async function monthBoard(store: CollectionsStore, memberId: string, now: Date): Promise<Result<MonthBoard>> {
   try {
-    const week = weekStart(now);
-    const [roster, bests, items] = await Promise.all([store.roster(), store.weeklyBests(week), store.memberItems(memberId)]);
-    const board = weeklyTrophies(roster, bests, Infinity, Infinity).map((t) => ({ ...t, mine: t.member_id === memberId }));
-    const mine = items.flatMap((r) => {
-      const sp = roster.find((s) => s.key === r.item_key);
-      return sp && trophyFor(sp, r.best_size_cm) ? [{ key: sp.key, name: sp.name, icon: sp.icon, rarity: sp.rarity, best_size_cm: r.best_size_cm! }] : [];
-    });
-    return { ok: true, data: { week_start: week, board, mine } };
+    const month = monthStart(now);
+    const [roster, entries, caught, items] = await Promise.all([store.roster(), store.monthEntries(month), store.monthCatches(memberId, month), store.memberItems(memberId)]);
+    const board = weeklyTrophies(roster, entries, Infinity, Infinity).map((t) => ({ ...t, mine: t.member_id === memberId }));
+    const yours = caught.flatMap((c) => {
+      const sp = roster.find((s) => s.key === c.item_key), have = items.find((r) => r.item_key === c.item_key)?.count ?? 0;
+      const entered = entries.find((e) => e.user_id === memberId && e.item_key === c.item_key)?.size_cm ?? null;
+      return sp && trophyFor(sp, c.size_cm) && (have > 0 || entered !== null) ? [{ key: sp.key, name: sp.name, icon: sp.icon, rarity: sp.rarity, size_cm: c.size_cm, have, entered }] : [];
+    }).sort((a, b) => RARITY_RANK[b.rarity as Rarity] - RARITY_RANK[a.rarity as Rarity] || a.name.localeCompare(b.name));
+    return { ok: true, data: { month, board, yours } };
+  } catch (err) {
+    return fail(err);
+  }
+}
+/** Put one of a fish on this month's board (monthly_fish_enter checks it, takes it and keeps the bigger entry). */
+export async function enterMonthly(store: CollectionsStore, memberId: string, input: { item_key: string; idempotency_key: string }): Promise<Result<{ size_cm: number; replayed: boolean }>> {
+  try {
+    return { ok: true, data: await store.enterMonth(memberId, input.item_key, input.idempotency_key) };
   } catch (err) {
     return fail(err);
   }

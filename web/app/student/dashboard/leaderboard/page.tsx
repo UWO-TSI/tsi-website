@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Fish, Trophy } from "lucide-react";
-import { RecordsBody } from "@/components/game/peaceful/FishMarketSheet";
+import { MonthlyBoardBody } from "@/components/game/peaceful/FishingPlaces";
 import type { LeaderboardEntry, Tier } from "@/lib/supabase/types";
 import { useUser } from "@/components/portal/UserContext";
 import { Badge, Banner, Empty, Loading } from "@/components/gui";
@@ -224,10 +224,10 @@ export default function LeaderboardPage() {
           ) : null}
         </div>
 
-        {/* The fish market's catch board (f-records): the club's biggest of each fish this week, and your size records. */}
+        {/* The fish market's monthly board (f-records): the biggest of each fish put up this month, the same as the market's. */}
         <div style={{ marginTop: 28 }}>
-          <Banner title="Catch board" icon={<Fish size={26} />} tone="butter">The biggest of each fish caught this week, the same board as the fish market&apos;s.</Banner>
-          <RecordsBody />
+          <Banner title="Monthly board" icon={<Fish size={26} />} tone="butter">The biggest of each fish put up at the fish market this month.</Banner>
+          <MonthlyBoardBody />
         </div>
       </div>
     </div>

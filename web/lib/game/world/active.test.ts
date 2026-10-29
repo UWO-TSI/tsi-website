@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { FISH, RAW_TURN_X } from "../fishing";
 import { GAME_WORLD, worldModel } from "./active";
+import { DISH_ART, SUSHI_MENU } from "@/lib/wallet/catalogue";
 
 describe("worldModel", () => {
   it("swaps a remodelled dump model for ours in the new world only", () => {
@@ -12,6 +13,14 @@ describe("worldModel", () => {
     expect(worldModel("/assets/acnh/critters/mantis.glb", "new")).toBe("/assets/game/remodel/critters/mantis.glb");
     expect(worldModel("/assets/acnh/critters/monarch-butterfly.glb", "new")).toBe("/assets/game/remodel/critters/monarch-butterfly.glb");
     expect(worldModel("/assets/acnh/fish/carp.glb", "village")).toBe("/assets/acnh/fish/carp.glb");
+  });
+  it("serves the world the low-poly copy of a model with a high-def one (the sushi menu's dishes)", () => {
+    for (const { hd } of Object.values(DISH_ART)) {
+      expect(hd).toMatch(/^\/assets\/game\/food\/hd\/[\w-]+\.glb$/);
+      expect(worldModel(hd, "new")).toBe(hd.replace("/hd/", "/"));
+      expect(worldModel(hd, "village")).toBe(hd.replace("/hd/", "/"));
+    }
+    expect(Object.keys(DISH_ART).sort()).toEqual(SUSHI_MENU.map(d => d.id).sort());
   });
   it("leaves what isn't remodelled alone", () => {
     for (const url of ["/assets/acnh/critters/firefly.glb", "/assets/acnh/props/crab-hermit.glb", "/assets/acnh/props/crab-gazami.glb", "/assets/acnh/fruit/apple.glb", "/assets/acnh/sea/scallop.glb", "/assets/acnh/props/rock-d.glb"])

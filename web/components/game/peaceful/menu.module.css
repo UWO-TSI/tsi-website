@@ -1,0 +1,54 @@
+/* The sushi menu picked up (SushiSheets.tsx MenuPickup): paper in your hands, filling the view. The theme's --ui-*
+   tokens only; paper is the kit's PaperSheet. It rises from the counter (tilted flat, below the view) into your hands
+   (nearly upright) with the kit's spring, then sways a little as held paper does; it goes back down the same way. */
+.layer { position: fixed; inset: 0; z-index: 72; display: grid; place-items: end center; overflow: hidden; perspective: 1500px; perspective-origin: 50% 0%;
+  font-family: var(--gui-font); --spring: cubic-bezier(0.34, 1.4, 0.64, 1); }
+@supports (transition-timing-function: linear(0, 1)) {
+  .layer { --spring: linear(0, 0.045, 0.157, 0.308, 0.473, 0.634, 0.778, 0.898, 0.992, 1.059, 1.101, 1.122, 1.126, 1.119, 1.103, 1.084, 1.063, 1.043, 1.025,
+    1.01, 0.999, 0.991, 0.987, 0.984, 0.984, 0.985, 0.987, 0.99, 0.993, 0.995, 0.997, 0.999, 1); }
+}
+.layer[data-state="closing"], .layer[data-state="closing"] * { pointer-events: none !important; }
+/* No dimming (UI 8): only the edges darken a touch, as a close look does. */
+.vignette { position: absolute; inset: 0; background: radial-gradient(ellipse 75% 85% at 50% 60%, transparent 55%, rgb(var(--ui-shade) / 0.32)); animation: fade 0.3s ease-out both; }
+.layer[data-state="closing"] .vignette { animation: fade 0.25s ease-in reverse forwards; }
+@keyframes fade { from { opacity: 0; } }
+
+.hands { position: relative; width: min(640px, 92vw); height: min(94dvh, 980px); margin-bottom: -3dvh; outline: none; transform-origin: 50% 100%; transform-style: preserve-3d;
+  animation: pickUp 0.75s var(--spring) 0.12s both; }
+.layer[data-state="closing"] .hands { animation: putDown 0.36s cubic-bezier(0.5, 0, 0.75, 0) forwards; }
+@keyframes pickUp { from { transform: translateY(78dvh) rotateX(64deg) scale(0.9); } to { transform: translateY(0) rotateX(5deg) scale(1); } }
+@keyframes putDown { to { transform: translateY(80dvh) rotateX(60deg) scale(0.92); } }
+.menu { height: 100%; box-sizing: border-box; overflow-y: auto; scrollbar-width: none; padding-bottom: 70px; animation: held 5.5s ease-in-out 0.9s infinite; }
+.menu::-webkit-scrollbar { display: none; }
+@keyframes held { 0%, 100% { transform: rotate(-0.35deg) translateY(0); } 50% { transform: rotate(0.3deg) translateY(-3px); } }
+
+.head { display: grid; justify-items: center; gap: 4px; margin: 6px 0 4px; }
+.kicker { margin: 0; color: var(--ui-paper-quiet); font: 700 11px/1 var(--gui-font); letter-spacing: 0.3em; text-transform: uppercase; }
+.title { margin: 0; color: var(--ui-paper-ink); font: 800 46px/1.05 var(--gui-font); letter-spacing: 0.02em; }
+.orderLine { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; padding: 2px 10px 10px 102px; animation: open 0.3s var(--spring) both; }
+@keyframes open { from { opacity: 0; transform: translateY(-4px); } }
+.order { all: unset; display: inline-flex; align-items: center; gap: 12px; padding: 10px 18px; border-radius: 999px; background: var(--ui-paper-ink); color: var(--ui-paper);
+  font: 700 14px/1 var(--gui-font); cursor: pointer; transition: transform 0.2s var(--spring); }
+.order span { display: inline-flex; align-items: center; gap: 4px; opacity: 0.85; }
+.order:hover:not(:disabled) { transform: translateY(-1px) scale(1.03); }
+.order:active:not(:disabled) { transform: scale(0.96); }
+.order:disabled { opacity: 0.5; cursor: default; }
+.order:focus-visible { outline: 2px solid var(--ui-paper-ink); outline-offset: 2px; }
+.quiet { color: var(--ui-paper-quiet); font: 500 13px/1.3 var(--gui-font); }
+.error { margin: 8px 0; color: var(--ui-error); font: 600 13px/1.3 var(--gui-font); text-align: center; }
+.foot { position: sticky; bottom: -70px; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 22px -6px 0; padding: 12px 6px 0;
+  border-top: 1px solid var(--ui-paper-rule); }
+.meal { display: inline-flex; align-items: center; gap: 6px; color: var(--ui-paper-quiet); font: 600 13px/1 var(--gui-font); }
+.down { all: unset; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; color: var(--ui-paper-quiet); cursor: pointer; transition: background 0.15s ease-out; }
+.down:hover { background: var(--ui-paper-hover); color: var(--ui-paper-ink); }
+.down:focus-visible { outline: 2px solid var(--ui-paper-ink); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hands, .layer[data-state="closing"] .hands, .menu, .orderLine, .vignette { animation: none; }
+  .order { transition: none; }
+}
+@media (max-width: 760px) {
+  .hands { width: 100vw; height: 96dvh; margin-bottom: 0; }
+  .title { font-size: 36px; }
+  .orderLine { padding-left: 10px; }
+}

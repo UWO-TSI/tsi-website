@@ -6,7 +6,7 @@ import { DomainError } from "@/lib/result";
 export type CollectionsErrorCode =
   | "unavailable" | "already_donated" | "not_owned" | "not_donatable" | "rate_limited" | "failed"
   | "too_fast" | "no_roll" | "roll_expired" | "already_landed" | "already_harvested" | "out_of_season" | "none_left"
-  | "bag_full" | "storage_full" | "locked" | "insufficient_items" | "key_reused" | "bad_qty" | "bad_credit";
+  | "bag_full" | "storage_full" | "locked" | "insufficient_items" | "key_reused" | "bad_qty" | "bad_credit" | "not_this_month" | "not_bigger";
 export class CollectionsError extends DomainError<CollectionsErrorCode> {}
 
 export interface TourneyRef {
@@ -90,4 +90,13 @@ export interface CollectionsStore {
   move(memberId: string, itemKey: string, qty: number, to: "chest" | "bag", key: string): Promise<{ replayed: boolean }>;
   /** Atomic, once per key: every unlocked material in the bag into the chest. Returns how many moved. */
   storeMaterials(memberId: string, key: string): Promise<{ moved: number; replayed: boolean }>;
+  /** The monthly board's entries (monthly_fish_entries) for the month starting `month`, with world names; `caught_at` is when it was entered. */
+  monthEntries(month: string): Promise<WeeklyBest[]>;
+  /** The biggest of each fish and sea species this member landed since the Toronto `month` began (weekly_catch_bests). */
+  monthCatches(memberId: string, month: string): Promise<{ item_key: string; size_cm: number }[]>;
+  /**
+   * Atomic, once per key (monthly_fish_enter): put one unlocked `itemKey` from the bag on this month's board at the
+   * biggest size caught this month; not_this_month when none was, not_bigger when the entry there is as big already.
+   */
+  enterMonth(memberId: string, itemKey: string, key: string): Promise<{ size_cm: number; replayed: boolean }>;
 }

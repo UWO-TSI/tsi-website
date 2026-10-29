@@ -13,8 +13,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { BadgePercent, HandCoins, House, KeyRound, LayoutGrid, Lock, Shirt, Sofa, Sticker, Ticket, Wrench } from "lucide-react";
 import { ApiError, newKey } from "@/lib/apiClient";
-import { AudioManager } from "@/lib/game/audio";
-import { coinSteps, sellAtCounter } from "@/lib/game/shopCounter";
+import { countUp, sellAtCounter } from "@/lib/game/shopCounter";
 import { iconUrl, shopIcon } from "@/lib/icons/keys";
 import { itemModel } from "@/lib/icons/itemModel";
 import { httpEconomyTransport, type EconomyTransport, type MerchView } from "@/lib/wallet/transport";
@@ -49,17 +48,6 @@ export function specsOf(e: ShopEntry): [string, string][] {
   return [["Kind", CATEGORY_LABEL[e.category] ?? cap(e.category)], ["Set", set], stock];
 }
 
-/** The till: counting the readout from one balance to another in a few clinks (module scope: written to the DOM). */
-function countUp(el: HTMLElement | null, from: number, to: number, timers: number[]) {
-  if (!el) return;
-  timers.forEach(window.clearTimeout);
-  timers.length = 0;
-  el.textContent = from.toLocaleString();
-  coinSteps(from, to).forEach(({ value, at }, i, all) => timers.push(window.setTimeout(() => {
-    el.textContent = value.toLocaleString();
-    AudioManager.playSFX("click", { rate: 1.65 + i * 0.05, gain: i === all.length - 1 ? 0.5 : 0.3 });
-  }, at)));
-}
 
 function Card({ e, onOpen }: { e: ShopEntry; onOpen: () => void }) {
   // An unpriced item (merch waiting on its price): "Price to come" on its pill, and its action off.

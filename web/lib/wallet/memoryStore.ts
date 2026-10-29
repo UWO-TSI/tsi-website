@@ -1,16 +1,20 @@
 /** In-memory EconomyStore mirroring 20260926150600_economy.sql (tests, dev harness). */
 import { dailyGiftAmount, SELL_PRICES, SETTINGS, STARTER_REFS } from "./catalogue";
 import { seedItems, speciesClass, speciesSellPrice, torontoDay, type ShopItem } from "./rules";
+import { prizeItems } from "./tackle";
 import { EconomyError, type ActiveBuff, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation } from "./store";
 
 export function memoryEconomyStore(clock: () => Date = () => new Date()) {
-  const items: ShopItem[] = seedItems();
+  const items: ShopItem[] = [...seedItems(), ...prizeItems()];
   const coins = new Map<string, number>();
   const gems = new Map<string, number>();
   const ledger: (LedgerEntry & { member: string; key: string })[] = [];
   const inventory = new Map<string, InventoryRow>(); // `${member}:${itemId}`
   const collections = new Map<string, number>(); // `${member}:${key}`
-  const fills: { member: string; day: string; board: "market" | "chef"; item: string }[] = []; // fish_request_fills
+  const fills: { member: string; day: string; item: string }[] = []; // chef_order_fills
+  const landed: { member: string; key: string; at: Date }[] = []; // catch_rolls' landed casts and weekly_catch_bests
+  const taskClaims = new Set<string>(); // fishing_task_claims: `${member}:${start}:${period}:${id}`
+  const rolls = new Map<string, { balance: number; prizes: string[] }>(); // tackle_rolls, by member:key
   const buffs = new Map<string, ActiveBuff>(); // member_buffs
   const orders = new Map<string, { paid: number; buff: ActiveBuff }>(); // sushi_orders, by member:key
   const locks = new Set<string>(); // the bag's locked favourites (member_collections.locked)
@@ -101,19 +105,49 @@ export function memoryEconomyStore(clock: () => Date = () => new Date()) {
       const r = apply(m, "coins", price * qty, "sell", itemKey, k);
       return { balance: r.balance, remaining: have - qty, paid: price * qty, replayed: false };
     },
-    async requestFills(m, day) {
-      return fills.filter((f) => f.member === m && f.day === day).map((f) => ({ board: f.board, item_key: f.item }));
+    async taskState(m, day, week) {
+      const mine = landed.filter((l) => l.member === m), keys = (since: string) => [...new Set(mine.filter((l) => torontoDay(l.at) >= since).map((l) => l.key))];
+      return { today: keys(day), week: keys(week), claimed: [...taskClaims].filter((c) => c.startsWith(`${m}:`)).map((c) => c.split(":").slice(2).join(":")) };
     },
-    async fillRequest(m, day, board, itemKey, reward, key, meal) {
-      const k = `fish_request:${key}`;
+    async claimTask(m, task, start, key) {
+      const k = `fish_task:${key}`, prior = ledger.find((l) => l.member === m && l.key === k);
+      if (prior) return { balance: coins.get(m) ?? 0, paid: prior.amount, replayed: true };
+      const claim = `${m}:${start}:${task.period}:${task.id}`;
+      if (taskClaims.has(claim)) throw new EconomyError("already_claimed");
+      const since = landed.filter((l) => l.member === m && torontoDay(l.at) >= start && (task.period === "week" || torontoDay(l.at) === start));
+      const done = task.item_key ? since.some((l) => l.key === task.item_key) : new Set(since.filter((l) => speciesClass(l.key)?.category === "fish").map((l) => l.key)).size >= task.need;
+      if (!done) throw new EconomyError("not_done");
+      taskClaims.add(claim);
+      return { balance: apply(m, "coins", task.reward, "quest", `fish_task:${task.id}`, k).balance, paid: task.reward, replayed: false };
+    },
+    async chefFills(m, day) {
+      return fills.filter((f) => f.member === m && f.day === day).map((f) => f.item);
+    },
+    async chefFill(m, day, itemKey, reward, key, meal) {
+      const k = `chef_order:${key}`;
       const prior = ledger.find((l) => l.member === m && l.key === k);
       if (prior) return { balance: coins.get(m) ?? 0, remaining: collections.get(`${m}:${itemKey}`) ?? 0, paid: prior.amount, replayed: true };
-      if (fills.some((f) => f.member === m && f.day === day && f.board === board && f.item === itemKey)) throw new EconomyError("already_filled");
+      if (fills.some((f) => f.member === m && f.day === day && f.item === itemKey)) throw new EconomyError("already_filled");
       const have = take(m, itemKey);
-      fills.push({ member: m, day, board, item: itemKey });
-      if (meal) buffs.set(m, meal);
-      const r = apply(m, "coins", reward, "quest", `fish_request:${itemKey}`, k);
+      fills.push({ member: m, day, item: itemKey });
+      buffs.set(m, meal);
+      const r = apply(m, "coins", reward, "quest", `chef_order:${itemKey}`, k);
       return { balance: r.balance, remaining: have, paid: reward, replayed: false };
+    },
+    async tackleRoll(m, currency, cost, prizes, key) {
+      const prior = rolls.get(`${m}:${key}`);
+      if (prior) return { balance: (currency === "coins" ? coins : gems).get(m) ?? 0, prizes: prior.prizes, replayed: true };
+      if (cost < 1 || prizes.length < 1 || prizes.length > 10) throw new EconomyError("bad_qty");
+      const rows = prizes.map((slug) => items.find((i) => i.slug === slug));
+      if (rows.some((r) => !r)) throw new EconomyError("not_found");
+      const { balance } = apply(m, currency, -cost, "shop", `tackle:${prizes.length}`, `tackle:${key}`);
+      for (const it of rows as ShopItem[]) {
+        const row = inventory.get(`${m}:${it.id}`) ?? { item: it, qty: 0, equipped: false, acquired_at: clock().toISOString() };
+        row.qty += 1;
+        inventory.set(`${m}:${it.id}`, row);
+      }
+      rolls.set(`${m}:${key}`, { balance, prizes: [...prizes] });
+      return { balance, prizes: [...prizes], replayed: false };
     },
     async order(m, dish, price, fishKey, buff, key) {
       const prior = orders.get(`${m}:${key}`);
@@ -187,6 +221,8 @@ export function memoryEconomyStore(clock: () => Date = () => new Date()) {
     store, items, ledger, inventory,
     fund: (m: string, c: number, g = 0) => { coins.set(m, c); gems.set(m, g); },
     give: (m: string, key: string, n: number) => collections.set(`${m}:${key}`, (collections.get(`${m}:${key}`) ?? 0) + n),
+    /** A fish landed by rod at `at` (the tasks' catches). */
+    land: (m: string, key: string, at: Date = clock()) => landed.push({ member: m, key, at }),
     lock: (m: string, key: string, on: boolean) => (on ? locks.add(`${m}:${key}`) : locks.delete(`${m}:${key}`)),
     setTier: (m: string, t: number) => tiers.set(m, t),
     name: (m: string, n: string) => names.set(m, n),

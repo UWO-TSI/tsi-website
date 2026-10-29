@@ -9,7 +9,7 @@ import { fnv1a, seededRandom } from "@/lib/game/weatherSystem";
 import { torontoParts } from "@/lib/time";
 import { fishOutToday } from "@/lib/game/peaceful";
 import type { WaterType } from "@/lib/game/fishingSpots";
-import { CATALOGUE, EVENT_ITEMS, FISH_REQUEST_PAY, STAFF_MEAL, type MealBuff, OWNERSHIP_ITEMS, onSale, SELL_PRICES, SETTINGS, type ShopCategory, type Slot, type Tier } from "./catalogue";
+import { CATALOGUE, EVENT_ITEMS, FISH_CHEF_PAY, FISH_TASK_PAY, FISH_TASK_VARIETY, STAFF_MEAL, type MealBuff, OWNERSHIP_ITEMS, onSale, SELL_PRICES, SETTINGS, type ShopCategory, type Slot, type Tier } from "./catalogue";
 import type { InventoryRow } from "./store";
 
 export interface ShopItem {
@@ -93,38 +93,60 @@ export interface FishRequest {
   item_key: string;
   name: string;
   rarity: string;
-  /** Coins for handing one over: FISH_REQUEST_PAY times its sell price. */
+  /** Coins it pays: FISH_TASK_PAY (a task) or FISH_CHEF_PAY (the chef) times its sell price. */
   reward: number;
 }
-const REQUEST_RARITIES = ["common", "uncommon", "rare"];
 /**
- * The fish market's 3 requests for a Toronto day (f-requests): the same for everyone, one common, one uncommon and one
- * rare (or the nearest left), each a fish that bites that day in fair weather in `waters`, the waters the world has.
+ * A fishing task (David, 2026-10-28: "its not a hand one over, its if you did it you claim it"): catch a fish, or
+ * `need` different fish, within its Toronto day or week; done is checked on the server against your landed catches
+ * (fishing_task_claim), and you claim the coins. `id`: `catch:<item_key>` or `variety:<need>`, unique in its period.
  */
-export function fishRequests(day: string, waters: readonly WaterType[]): FishRequest[] {
-  const pool = requestable(day, waters, REQUEST_RARITIES);
-  const r = seededRandom(fnv1a(`fish-requests:${day}`)), out: FishRequest[] = [];
-  for (const rarity of REQUEST_RARITIES) {
-    const left = pool.filter((f) => !out.includes(f)), same = left.filter((f) => f.rarity === rarity), from = same.length ? same : left;
-    if (from.length) out.push(from[Math.floor(r() * from.length)]);
+export interface FishingTask {
+  id: string;
+  period: "day" | "week";
+  /** The fish to catch; null for the variety task. */
+  item_key: string | null;
+  name: string;
+  rarity: string | null;
+  need: number;
+  reward: number;
+}
+const DAILY_RARITIES = ["common", "uncommon", "rare"];
+/**
+ * The fishing tasks for a Toronto day (the same for everyone): three a day, one common, one uncommon and one rare (or the
+ * nearest left), each a fish that bites that day in fair weather in `waters`, the waters the world has; and two a week
+ * (from its Monday, `week`): one rare or epic fish biting that month, and FISH_TASK_VARIETY.need different fish.
+ */
+export function fishingTasks(day: string, week: string, waters: readonly WaterType[]): { day: FishingTask[]; week: FishingTask[] } {
+  const pool = requestable(day, waters, DAILY_RARITIES, FISH_TASK_PAY);
+  const r = seededRandom(fnv1a(`fish-requests:${day}`)), daily: FishRequest[] = [];
+  for (const rarity of DAILY_RARITIES) {
+    const left = pool.filter((f) => !daily.includes(f)), same = left.filter((f) => f.rarity === rarity), from = same.length ? same : left;
+    if (from.length) daily.push(from[Math.floor(r() * from.length)]);
   }
-  return out;
+  const big = requestable(week, waters, ["rare", "epic"], FISH_TASK_PAY * 2);
+  const weekly = big.length ? [big[Math.floor(seededRandom(fnv1a(`fish-task-week:${week}`))() * big.length)]] : [];
+  const task = (period: FishingTask["period"]) => (f: FishRequest): FishingTask => ({ id: `catch:${f.item_key}`, period, item_key: f.item_key, name: f.name, rarity: f.rarity, need: 1, reward: f.reward });
+  return {
+    day: daily.map(task("day")),
+    week: [...weekly.map(task("week")), { id: `variety:${FISH_TASK_VARIETY.need}`, period: "week", item_key: null, name: "Different fish", rarity: null, ...FISH_TASK_VARIETY }],
+  };
 }
 
-/** The fish of these rarities biting that day in `waters`, priced as a request, in key order. */
-function requestable(day: string, waters: readonly WaterType[], rarities: readonly string[]): FishRequest[] {
+/** The fish of these rarities biting that day in `waters`, paying `pay` times their price, in key order. */
+function requestable(day: string, waters: readonly WaterType[], rarities: readonly string[], pay: number): FishRequest[] {
   return fishOutToday(waters, Number(day.slice(5, 7))).flatMap(({ fish }) => {
     const cls = speciesClass(fish.key), price = cls && speciesSellPrice(fish.key);
-    return cls && price && rarities.includes(cls.rarity) ? [{ item_key: fish.key, name: fish.name, rarity: cls.rarity, reward: price * FISH_REQUEST_PAY }] : [];
+    return cls && price && rarities.includes(cls.rarity) ? [{ item_key: fish.key, name: fish.name, rarity: cls.rarity, reward: price * pay }] : [];
   }).sort((a, b) => a.item_key.localeCompare(b.item_key));
 }
 /**
  * The sushi chef's order for a Toronto day (f-sushi, David: "chef will give orders for you to fish"): one rare or epic
- * fish none of the fish market's requests asks for, paying as a request does plus a staff meal. Null when none bites.
+ * fish none of the day's tasks asks for, handed over for FISH_CHEF_PAY times its price and a staff meal. Null when none bites.
  */
 export function chefOrder(day: string, waters: readonly WaterType[]): (FishRequest & { meal: MealBuff }) | null {
-  const market = new Set(fishRequests(day, waters).map((f) => f.item_key));
-  const pool = requestable(day, waters, ["rare", "epic"]).filter((f) => !market.has(f.item_key));
+  const asked = new Set(fishingTasks(day, day, waters).day.map((f) => f.item_key));
+  const pool = requestable(day, waters, ["rare", "epic"], FISH_CHEF_PAY).filter((f) => !asked.has(f.item_key));
   return pool.length ? { ...pool[Math.floor(seededRandom(fnv1a(`chef-order:${day}`))() * pool.length)], meal: STAFF_MEAL } : null;
 }
 

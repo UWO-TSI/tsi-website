@@ -242,6 +242,12 @@ export function weekStart(now: Date): string {
   return new Date(Date.UTC(t.year, t.month - 1, t.day - t.weekday)).toISOString().slice(0, 10);
 }
 
+/** The first of the Toronto month, YYYY-MM-DD (the monthly board's). */
+export function monthStart(now: Date): string {
+  const t = torontoParts(now);
+  return `${t.year}-${String(t.month).padStart(2, "0")}-01`;
+}
+
 export interface WeeklyBest {
   user_id: string;
   member_name: string;

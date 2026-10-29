@@ -4,7 +4,7 @@ import { islandOf } from "./defaultIsland";
 import { objectsOf, type Village } from "./villageMap";
 import { loadWorldFromDisk } from "./world/disk";
 import { villageOfWorld } from "./world/village";
-import { BUOYS, CATCH_BOARD, FINGER, MOORED, catchBoardOf, ROWBOAT, ROWBOATS, SEA_Y, deckPieces, dockToWorld, fitPlane, floatBoat, floatBuoy, floatRowboat, mooredPose, newBoatPose, newFloat, newRide, worldToDock, type Dock } from "./wharf";
+import { BUOYS, FINGER, MOORED, marketBoardsOf, ROWBOAT, ROWBOATS, SEA_Y, deckPieces, dockToWorld, fitPlane, floatBoat, floatBuoy, floatRowboat, mooredPose, newBoatPose, newFloat, newRide, tackleCounterOf, worldToDock, type Dock } from "./wharf";
 import { TRAINS, waterWaveAt, waveState } from "./waves";
 import { mirrorWaterField } from "./waterField";
 import { TUNING_DEFAULTS } from "./tuning";
@@ -192,14 +192,21 @@ describe("the wharf kit on the deck squares", () => {
   });
 });
 
-describe("the tackle shop's catch board (d-now)", () => {
-  it("stands on the new world's tackle shop porch, with open deck in front to read it from", () => {
+describe("the fish market's boards and the tackle shop's counter (David, 2026-10-28)", () => {
+  it("stands the catch board and the task board on open ground before the fish market, clear of the stall, and the counter at the tackle shop's door", () => {
     const v = villageOfWorld(loadWorldFromDisk(fileURLToPath(new URL("../../data/world/", import.meta.url)))) as Village;
-    const b = catchBoardOf(objectsOf("prop", v))!;
-    expect(b).not.toBeNull();
-    expect(Math.hypot(b.x - b.shop.x, b.z - b.shop.z)).toBeCloseTo(Math.hypot(CATCH_BOARD.x, CATCH_BOARD.z), 5);
-    const front = dockToWorld({ x: b.shop.x, z: b.shop.z, yaw: b.yaw }, CATCH_BOARD.x, 3.3, { x: 0, z: 0 });
-    expect(islandOf(v).standable(front.x, front.z)).toBe(true);
-    expect(catchBoardOf([])).toBeNull();
+    const props = objectsOf("prop", v), boards = marketBoardsOf(props)!, island = islandOf(v);
+    const barrel = props.find(o => o.model === "sell-barrel")!, market = props.find(o => o.model === "fish-market")!;
+    for (const b of [boards.catch, boards.tasks]) {
+      const front = dockToWorld({ x: b.x, z: b.z, yaw: b.yaw }, 0, 1.2, { x: 0, z: 0 });
+      expect(island.standable(b.x, b.z) && island.standable(front.x, front.z)).toBe(true);
+      expect(Math.hypot(b.x - barrel.x, b.z - barrel.z)).toBeGreaterThan(3);
+      expect(worldToDock({ x: market.x, z: market.z, yaw: market.yaw ?? 0 }, b.x, b.z, { x: 0, z: 0 }).z).toBeGreaterThan(4.5);
+    }
+    expect(Math.hypot(boards.catch.x - boards.tasks.x, boards.catch.z - boards.tasks.z)).toBeGreaterThan(1.4);
+    const counter = tackleCounterOf(props)!;
+    expect(counter).not.toBeNull();
+    expect(marketBoardsOf([])).toBeNull();
+    expect(tackleCounterOf([])).toBeNull();
   }, 60_000);
 });

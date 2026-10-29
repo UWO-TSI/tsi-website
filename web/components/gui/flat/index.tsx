@@ -368,3 +368,6 @@ export function Quiet({ children }: { children: ReactNode }) {
 export function StatusLine({ error, children }: { error?: boolean; children: ReactNode }) {
   return <p className={error ? f.error : f.note} role="status">{children}</p>;
 }
+
+/** The day strip, the hover card, odds, the reveal, tasks, the small panel and paper (pieces.tsx). */
+export * from "./pieces";

@@ -5,6 +5,7 @@
  * went with it): locked favourites are never sold. Amounts are coins only; nothing is ever said as money.
  */
 import { ApiError, newKey } from "@/lib/apiClient";
+import { AudioManager } from "@/lib/game/audio";
 import type { SellEntry, ShopEntry } from "@/lib/wallet/service";
 import type { EconomyTransport } from "@/lib/wallet/transport";
 
@@ -45,4 +46,16 @@ export function coinSteps(from: number, to: number): { value: number; at: number
     out.push({ value, at: Math.round(80 + i * (420 / n) + i * i * 6) });
   }
   return out;
+}
+
+/** The till: counting the readout from one balance to another in a few clinks (module scope: written to the DOM). */
+export function countUp(el: HTMLElement | null, from: number, to: number, timers: number[]) {
+  if (!el) return;
+  timers.forEach(window.clearTimeout);
+  timers.length = 0;
+  el.textContent = from.toLocaleString();
+  coinSteps(from, to).forEach(({ value, at }, i, all) => timers.push(window.setTimeout(() => {
+    el.textContent = value.toLocaleString();
+    AudioManager.playSFX("click", { rate: 1.65 + i * 0.05, gain: i === all.length - 1 ? 0.5 : 0.3 });
+  }, at)));
 }

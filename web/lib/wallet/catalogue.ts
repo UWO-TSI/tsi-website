@@ -210,8 +210,12 @@ export const SELL_PRICES: Record<string, Record<string, number>> = {
   mineral: { common: 5, uncommon: 15, rare: 45, epic: 135, legendary: 450, divine: 1125 },
 };
 
-/** The fish market's daily requests (f-requests, lib/wallet/rules.ts fishRequests) pay this many times the fish's sell price. */
-export const FISH_REQUEST_PAY = 3;
+/** A fishing task (lib/wallet/rules.ts fishingTasks) pays this many times the fish's sell price (twice for the week's); you keep the fish. */
+export const FISH_TASK_PAY = 2;
+/** The weekly variety task: this many different fish landed in the week, for these coins. */
+export const FISH_TASK_VARIETY = { need: 8, reward: 250 } as const;
+/** The chef's order takes the fish, so it pays this many times its sell price, and a staff meal. */
+export const FISH_CHEF_PAY = 3;
 
 /**
  * The sushi bar's meals (f-sushi phase B, specs/launch/sushi-bar.md): each a fishing buff for a while, the last meal
@@ -221,6 +225,18 @@ export const FISH_REQUEST_PAY = 3;
  */
 export interface MealBuff { luck: number; size: number; minutes: number }
 export interface Dish { id: string; name: string; blurb: string; price: number | null; buff: MealBuff }
+/**
+ * Each dish's art (design bible Models): its high-def model for the menu (`hd`, and the icon rendered from it, `icon`),
+ * and the low-poly world copy `worldModel(hd)` serves at the bar. The models wait for David's references; until one is
+ * made (`ready`), the menu shows `standIn`, an existing icon, marked as a stand-in.
+ */
+export const DISH_ART: Record<string, { hd: string; icon: string; standIn: string; ready: boolean }> = {
+  miso_soup: { hd: "/assets/game/food/hd/miso-soup.glb", icon: "dish_miso_soup", standIn: "lounge-tea", ready: false },
+  salmon_nigiri: { hd: "/assets/game/food/hd/salmon-nigiri.glb", icon: "dish_salmon_nigiri", standIn: "fish_salmon", ready: false },
+  tuna_roll: { hd: "/assets/game/food/hd/tuna-roll.glb", icon: "dish_tuna_roll", standIn: "fish_tuna", ready: false },
+  omakase: { hd: "/assets/game/food/hd/omakase.glb", icon: "dish_omakase", standIn: "sea_sweet_shrimp", ready: false },
+  feast: { hd: "/assets/game/food/hd/banchas-feast.glb", icon: "dish_banchas_feast", standIn: "fish_king_salmon", ready: false },
+};
 export const SUSHI_MENU: readonly Dish[] = [
   { id: "miso_soup", name: "Miso soup", blurb: "Warm and simple.", price: 20, buff: { luck: 0.05, size: 0, minutes: 15 } },
   { id: "salmon_nigiri", name: "Salmon nigiri", blurb: "Fresh off the morning boats.", price: 40, buff: { luck: 0.1, size: 0, minutes: 20 } },
