@@ -39,7 +39,15 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 ## Status
 
-**Next:** David's review of the new-world round (ids nw-...); then the coordinator applies the four migrations in order (20261027182444, 20261029062500, 20261029062600, 20261029062659). Unverified: fishing together needs two signed-in friends online (route and roll tests only); the campfire bonus trusts the client that you sat for 30 s; gifts are verified by the SQL smoke and mocked shots (no signed-in run).
+**Round 3 (2026-10-29), head after d8cb0ded.** Merged main (local feat/game-default-island f0be2c5e: origin/main lacked seed 20261029062423) at 544e456c. Migrations, unapplied, in order: 20261029062500_welcome_week, 20261029062600_resident_friendship, 20261029062659_catalogue_seed (the stale 20261027182444 and 20261028112843 seeds were folded into it; residents lines as guarded UPDATEs). Gates at the merge: tsc clean, vitest (new world) 3526 passed / 4 skipped, SQL smoke chain clean.
+- Approved by David: nw-d-friends, nw-kit-rewards, nw-s-campfire, nw-x-moves-dash.
+- Redone, sent for review (evidence `specs/evidence/daily-social/r3/`, shoot.mjs there):
+  - d-friends-talk: +1/2 heart only once a whole talk is heard (last line read; TalkBox `credited` per talk), once a day server-side. r3-d-friends-talk.webp.
+  - d-streak: day 7 shows the net-mid icon (PixelImage) with the rare edge and a shake every 3.6 s (RewardTrack step `rarity`). r3-d-streak.webp, r3-d-streak-shake.webp.
+  - d-monument: the 4 rope poles removed (ClubMonument, collision audit, preload); `?monument=0..4` dev stage override. r3-d-monument-before.webp.
+- **Waiting:** David's go on the monument direction above. Then model the Lantern Cairn (headless Blender, high-def plus low-poly, stage parts named), wire ClubMonument to it (replacing the ACNH scaffold/rock/banner/lantern furniture and the sign), shoot `TAG=after STAGES=0,1,2,3,4 ONLY=monument`, gates, report.
+
+**Round 2 notes.**
 
 - **New world only (2026-10-28 round).** Every feature reads the world's own objects: the campfire is world.json `campfire` (14, 104) by the beach, the monument landmark (21.5, 50) by the plaza. Odile's and Marlo's pond lines now say the river, and the net quest says "the meadow flowers" (residents seed block in 20261029062659, guarded UPDATEs: `guarded` seeds in lib/seedMigrations.ts change a row only while it's still as seeded; resident_lines_smoke.sql). Evidence: `specs/evidence/daily-social/new-world/` (shoot.mjs, `*-before.webp` = the old UI on the new world).
 - **David's redo round, built:**
