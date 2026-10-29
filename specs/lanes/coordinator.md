@@ -537,3 +537,46 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
     - the reel bar's colours not yellow or black, sleeker, no text, and juicy while reeling;
     - new-species cards get suspense by rarity plus confetti; repeats get none;
     - the slip state, same notes.
+
+## 2026-10-29 early: David's decisions, all pages except wardrobe fixes
+
+- **Halloween:** all approved; it ships with the newworld-fixes merge.
+- **Title:** A approved; B and the old title dropped. Follow-up: "the left side needs to be remade so that its more of a game title screen and less of a student portal screen".
+- **Loading:** all approved.
+- **New-world fixes:** night owl and sea fall approved. The quay study table becomes a plain bench; the plaza picnic is removed. Both sent to the river-softlock agent.
+- **Rods r2:**
+  - Approved: slot-open, bag strip, radar, radar hover and strip, badges, phone, flimsy.
+  - Approved with notes: shelf (outline slightly bigger); lighthouse (the model needs a light on top); bait and bobber (remodel).
+  - Redo:
+    - bag-rod: line not black, thinner and subtler, the overlay a slightly different colour; the bobber on the rod is too big.
+    - shop-glass: move the title, text and graph up to leave space above purchase.
+    - hook-rule (new roster): common Precision, Training (and Flimsy); uncommon Glass, Lighthouse; rare Tidewarden, Riptide, Titanium; epic Tempest. Models get cooler and more abstract with rarity; epic and legendary barely look like rods and have aura effects.
+- **Fishing r2:**
+  - Approved: chef, tasks, claim, showroom. The showroom note: refine for clarity, and asks about signs per water type; I recommended signs.
+  - Redo:
+    - board: add season and conditions.
+    - board-world: remodel the catch board bigger, somewhere sensible and easy to see.
+    - market: quick sell shows the price per fish and basic details, and must be instant.
+    - gacha: a big animation, as its own project. A hook pulls a chest from the deep, slow-mo bottom-up camera, splash; the coin roll is a wooden crate, the gem roll a treasure box, and a legendary makes the water sparkle gold. Built in its own environment. The UI shows the seasonal special rods.
+    - menu: superseded by the sushi page.
+- **Sushi menu:**
+  - Approved: the font (add a display face), lift, turning, spread 2, hover, picked.
+  - Redo:
+    - cover: another refinement pass, and poetic copy that doesn't sound like Claude.
+    - spread 1: dishes as a simple food photo with the price and stats beside it; start the HQ 3D dish models; propose a sushi game mechanic beyond vibes and buffs.
+- **Main quest r2:**
+  - Approved: line, dropdown, dirt mark.
+  - Redo:
+    - arrow: centred and smaller.
+    - sand mark: like the dirt one.
+    - reward pops: "combination, not so flat but keep the old vibe but new color"; no cm on the broken sudo.
+  - Level-up note, now in the bible: health, stamina and XP bars in the HUD; a level-up when XP fills.
+- **Daily and social:**
+  - Approved: friends, kit, campfire, dash.
+  - Redo:
+    - friends-talk: half a heart needs a full chat, not just the first talk; RAG LLM residents later.
+    - monument: needs a real model that makes sense, and the 4 guide fence poles removed.
+    - streak: the day-7 gift icon becomes a real rare-gear icon that shakes now and then.
+- **Clothing r3:** David: "not even worth the effort... focus on the actual game aspect first". Merge clothing-v2 as is (rounds 1 and 2, the hoodie, the skirt fix); no more clothing work for now.
+- **Bible amended:** UI rule 1 (flat with warmth, the old vibe in the new palette) and rule 8 (health, stamina and XP bars in the HUD).
+- **Merge now:** village-archive, loading, title-perf, clothing-v2. Then newworld-fixes and river-softlock once the river agent finishes (Halloween before Oct 31).
