@@ -21,16 +21,18 @@ On the rods: the Beach ball rod (uncommon) is "unlocked when playing beach volle
 
 Decided through the coordinator, 2026-10-29: right click on the ground is **Call it** (the "Mine!" call).
 
+David, 2026-10-29, verbatim: "i need you to remodel the beach ball net on the beach to be bigger, i want you to incorperate this mini game in the game but watch out for performance, i want it so the people who are playing have a differeny view than ppl walking by so it doesnt affect their perforamnce." He picked the beach net's spot; phase 1 is in the game (E at the net), not only a lab.
+
 Reference: `specs/references/volleyball/camera-and-court.png` (another game; for the camera angle and the court's proportions only, never its art).
 
 ## Phases
 
 | Phase | What | State |
 |---|---|---|
-| 1 | The core match: 2v2, playable solo (you and a bot partner against two bots), client side, its own arena at `/lab/volleyball` | Building |
+| 1 | The core match: 2v2, playable solo (you and a bot partner against two bots), client side, on the beach's court (E at the net); `/lab/volleyball` for testing | Built, in review |
 | 2 | Multiplayer 2v2: a Colyseus room per match, server-authoritative ball, a lobby at the court, bots fill empty slots | Design below; build after David approves phase 1 |
 | 3 | Ranking and the leaderboard: a rating per player, tiers, a season board, win streaks, the Beach ball rod for 5 ranked wins in a row | Design below; build after phase 2 |
-| Placement | The court on the new world's beach | Phase 1 proposes 2 or 3 spots with shots; David picks; no world data changes until he does |
+| Placement | The court on the new world's beach, at the net David picked | Done (§1) |
 
 ## 1. The court
 
@@ -48,12 +50,14 @@ Real beach proportions, scaled to our characters. A character stands `CHARACTER_
 
 Axes: the net lies along x at z = 0; each team owns one half (z < 0 or z > 0). The ball touching a line is in.
 
-**Sand.** The court is sand with flat line tapes, on a sand arena with sky and sea at the edge. The arena is a dev scene in phase 1, so the island's layout and render budget don't change.
+**Where.** The beach's volleyball net (wharf-art2's spot, (-4, 103.5)), turned a quarter so the court runs along the beach: a 12.4 u court across the beach would run down its slope (1.5 u) and off the sand. The net moved 3.5 u west and 0.3 u seaward, to (-7.5, 103.8) (`generate.ts` VOLLEY), to clear the lifeguard tower. The court is all sand with nothing on it. Its sand falls 0.42 u across the court, and the ball and players follow it. The free zone's sea-side east corner has the lifeguard tower in it. Shells and gather spots keep off the court and its free zone.
+
+**Sand.** Flat white line tapes draped on the sand (one mesh), the net, nothing else.
 
 ## 2. Camera
 
 Third person over the right shoulder, as in the reference: close, the character a little left of centre and lower third, the net and the far court in the upper half.
-- Offset from the character: 0.55 u right, 1.15 u up, 2.6 u back; looks at a point 6 u ahead at 0.9 u up. FOV 60.
+- From the character's feet: 0.6 u right, 1.75 u up, 2.7 u back; it looks at a point 6 u ahead at 0.9 u up. FOV 60. While you toss your serve, the look lifts a little to keep the ball in view.
 - The camera's yaw follows the mouse (pointer lock while playing); its pitch is clamped to a narrow band so the court always reads. "Where you look" is this camera's aim.
 - Tunable in one table (`VB_CAMERA`), shown in the lab's panel.
 
@@ -72,7 +76,7 @@ Third person over the right shoulder, as in the reference: close, the character 
 | Hold left click (serving) | Fill the power bar; release to toss | — |
 | Esc | Pause and leave | |
 
-Ctrl is the movement system's crouch key on a Mac; inside the court it means dive. Ctrl with a click is a right click on a Mac, so the dive is Ctrl alone and the court reads `button === 2` from the mouse event, not the Ctrl state.
+Ctrl is the movement system's crouch key on a Mac; inside the court it means dive. Ctrl with a click is a right click on a Mac, so the dive is Ctrl alone and the court reads `button === 2` from the mouse event, not the Ctrl state. The first click in a match takes the mouse (pointer lock), as the island's mouse-look does; Esc lets it go, and the HUD's Leave ends the match.
 
 **Stamina hooks (spec only, until main-quest r3's stamina is on main):** the dash, the dive and the slide dive each cost a little stamina, refilled while walking or standing; an empty bar makes the dive shorter, never impossible.
 
@@ -84,7 +88,7 @@ Ctrl is the movement system's crouch key on a Mac; inside the court it means div
    - **On time** (within ±0.09 s of the ideal moment): a good serve. It aims where you look, its pace follows the toss's power. Within ±0.035 s it's a **perfect** serve: a little more pace and a gold flash.
    - **Late** (the ball has dropped below the ideal): the serve hits the net.
    - **Early** (the ball is still above the ideal): the serve goes long, out.
-   - No click before the ball falls past your waist: the ball drops, a fault.
+   - No click before the ball falls to your ankles: the ball drops, a fault. (A high toss falls fast, so the late window is short: about 0.09 to 0.15 s.)
    The ideal moment is when the ball's centre reaches your hand height (your standing reach, or higher in a jump). The ring's size is the time left to it.
 4. **The let.** A serve that clips the tape and goes over plays on (beach rules).
 
@@ -103,8 +107,8 @@ Serving order: the team that wins a rally serves the next. When a team wins the 
 | Jump set | 0.8 / in the air, above the head | As the set, quicker and flatter |
 | Spike | 0.75 / in the air, above the head | Hard and down toward the sand point under your aim on the far side. Timing sets the pace (perfect 100%, good 85%) and the scatter; an early or late press is a weak roll shot that may find the net |
 | Block | Arms over the net, 1 u wide, 0.9 u tall, for 0.35 s | A spike through it is stuffed straight down on the attacker's side (good timing) or popped up on your side (soft block, a touch) |
-| Dive | 1.5 / 0 to 0.7, along the lunge | A high, weak dig up on your side; then you're on the sand for 0.6 s |
-| Slide dive | 2.2 / 0 to 0.7 | A cleaner, higher dig toward the set spot; 0.45 s on the sand |
+| Dive | 1.0 from the body, all along a 2.5 u lunge / up to 0.75 | A high, weak dig up on your side; then you're on the sand for 0.6 s |
+| Slide dive | 1.3 from the body, all along a 4.7 u lunge / up to 0.75 | A cleaner, higher dig toward the set spot; 0.45 s on the sand |
 
 **Receiving.** Whenever the ball is coming down on your half, a **landing circle** sits on the sand where it will land and closes in as it falls; a second, inner ring marks the moment to press. Get there and bump or set as the rings meet.
 
@@ -123,9 +127,9 @@ Simple and believable; one skill value (0 to 1) drives every error.
 - **Positions.** Receiving a serve: both back, each covering half the width. On defence: one at the net in front of the attacker (the blocker), the other deep on the line the attacker faces. On offence: the passer, the setter at the set spot, the attacker approaching.
 - **Who takes the ball.** The player nearer the predicted landing point, unless their partner called it ("Mine!"). Your bot partner always respects your call, and calls its own balls with the same marker.
 - **Bump, set, spike.** The passer bumps to the set spot; the setter moves under the ball and sets to the attack spot in front of its partner; the attacker runs in and jumps so its reach meets the ball, and spikes at the open sand furthest from the defenders. Your partner sets you when you've passed, and passes to the set spot so you can set it.
-- **Blocking.** The opponent nearest the attacker's line moves to the net and jumps with the attacker.
+- **Blocking.** The opponent nearest the attacker's line moves to the net and jumps with the attacker. A bot blocks rather than pulling back to dig on 15% to 60% of attacks, by skill. Through the block, a centred, well-timed block stuffs the ball (quality 0.7 or more); anything less is a soft block.
 - **Serving.** A random spot in the far court, with a skill-weighted chance to miss long or into the net.
-- **Errors.** Each press time gets a gaussian error (σ 0.04 s at skill 1, 0.12 s at skill 0); each target gets a scatter. Seeded, so tests repeat. Defaults: partner 0.75, opponents 0.6.
+- **Errors.** A bot waits for a touch of a quality it draws from its skill, or hits as the ball starts to get worse; now and then (up to 12% at skill 0) it misjudges a ball and misses it; a serve's click gets a gaussian error (σ 0.025 s plus 0.07 s × (1 − skill)); each target gets a scatter. Seeded, so tests repeat. Defaults: partner 0.75, opponents 0.6. Bot against bot, a match runs about 9.5 s a point (serve and point pause included), about 7 touches a rally, most points from a ball landing in.
 
 ## 7. HUD (flat kit, minimal)
 
@@ -144,13 +148,40 @@ One prompt at a time; nothing on screen that isn't needed now.
 - The ball's trail while fast (a spike or a hard serve).
 - Sounds: placeholders only if the audio library has them (`lib/game/audio.ts`); new sounds need David's direction.
 
-## 9. Models (stand-ins until references)
+## 9. Models
 
-Needed: the ball, the net with its tapes and antennae, two posts, the court line tapes, a boundary rope (optional). Per the Models chapter, none of these starts in Blender until David gives a direction and references (asked through the coordinator 2026-10-29). Phase 1 uses plain in-code stand-ins, labelled as such in the review: a two-colour panelled sphere, cylinder posts, a grid net with a top tape, and flat line strips. The final models get HD (close-ups: a shop or trophy view of the ball) and LP (the court in the world).
+**The net (remodelled, David's direction: "remodel the beach ball net ... to be bigger").** `art/props/build_volleyball_net.py`, from wharf-art2's net: the same turned wooden posts with red rings, dark cord mesh, white top band and guy ropes. It now has real proportions: posts 0.7 m outside 8 m sidelines, the top tape at 2.43 m, 1 m of mesh, white side bands and a bottom band, and red and white antennae 0.8 m over the tape.
+- **HD**, `volleyball-net-hd.glb`, 2400 tris: round cords on a 0.12 u mesh. For the player in a match, who sees it close.
+- **LP**, `volleyball-net.glb`, 1600 tris: reduced from the HD, with its cords and posts decimated and the tapes, rings and antennae kept. For the world. The old net was 960 tris.
+- Review: `specs/evidence/volleyball/p1/models/`.
 
-**Animations.** There are no volleyball clips yet. Phase 1 maps contacts onto existing clips: bump `HoldFront`, set `CastUp`, spike `Slam`, block `Cheer` held in the air, dive `DodgeRoll`, slide dive `SlideInDash`, serve toss `Throw`. Proper clips (bump, set, spike, block, dive, a celebration) are an open question for the character-animation work.
+**Stand-ins until David's references** (asked through the coordinator 2026-10-29): the ball (a plain off-white sphere), the line tapes (a flat ribbon mesh in code), and the bots' team rings. The ball's final model gets HD (a close-up of the ball) and LP (in play).
 
-## 10. Code
+**Animations.** There are no volleyball clips yet. Phase 1 borrows existing village clips: bump `Pickup`, set and jump set `Cheer` (upper body), spike and serve `AttackMelee` (upper), block `Cheer` (upper), toss `CastSwing` (upper), a call `Wave` (upper), a point `Cheer`. A dive pitches the body forward over its knees in the `Glide` pose (arms reaching) and lies there until up. Proper clips (bump, set, spike, block, dive, a celebration) are an open question for the character-animation work.
+
+## 10. Two views (performance)
+
+David: "the people who are playing have a different view than people walking by so it doesn't affect their performance".
+
+**Phase 1 (built).**
+- **Passers-by** get the light view (`components/game/volleyball/Court.tsx`): the line tapes (one mesh, one draw) and the LP net, drawn on its own instead of merged with the beach props. The cost is 4 more draw calls and about 1,150 more triangles. No ball, bots, physics, HUD, rings or particles exist for them. The match is local to its player, so a passer-by sees only that player's avatar moving, synced like any walk through the avatar's ride (`myTrip.ride`).
+- **The player in a match** gets the full view (`VolleyMatch.tsx`, mounted only while playing): the HD net, the over-the-shoulder camera, the three bots, the ball at the sim's full 120 Hz, the rings, the calls, the flashes and sand puffs, and the HUD.
+
+Measured 2026-10-29 on the new world, headless, the island's top tier, over 6 s each (`specs/evidence/volleyball/shoot.mjs`, scene `island`):
+
+| View | Main-thread time a frame (median / p95) | Draw calls | Triangles |
+|---|---|---|---|
+| Passer-by 20 m off, before (the court left out, its net merged with the props) | 3.7 / 4.7 ms | 404 | 953k |
+| Passer-by 20 m off, after (the light view) | 3.7 / 4.3 ms | 408 | 954k |
+| The player in a match | 4.9 / 5.4 ms | 505 | 1.22M |
+
+**Phase 2 (design).**
+- **Who gets what.** The room streams the ball to its four players at 30 Hz with their contacts. The island room carries the match's summary to everyone else: who plays, the score, and the ball at 5 Hz (position only).
+- **Distance.** A passer-by within 30 m draws a plain low-poly ball (one draw), interpolated between those snapshots, with no shadow, trail or particles. Past 30 m, or with the lite tier, there is no ball at all, only the score over the court on the nameplate layer.
+- **Never for passers-by:** no HUD, rings, particles, physics, bot AI or HD net. The bots are avatars from the room's state, drawn with the remote avatars' LOD and thinning (`components/game/net/lod.ts`, `thinning.ts`), so four players on the court cost a passer-by what four walkers do.
+- **Watching on purpose.** A passer-by who stands at the court's edge for 2 s, or presses E on "Watch", gets the ball at 15 Hz and the score panel, still with no particles.
+
+## 11. Code
 
 All logic is pure TypeScript with no three.js or DOM, so phase 2's server can run the same code.
 
@@ -162,8 +193,12 @@ All logic is pure TypeScript with no three.js or DOM, so phase 2's server can ru
 | `web/lib/game/volleyball/rules.ts` | Score, rally outcome, side switch, serving rotation, touch rules |
 | `web/lib/game/volleyball/bot.ts` | Bot decisions |
 | `web/lib/game/volleyball/match.ts` | The match engine: `createMatch`, `stepMatch(match, inputs, dt)`; every player moves with the movement sim (`stepMove`, court tuning) driven by keys or by the bot |
-| `web/components/game/volleyball/` | The arena scene, the over-shoulder camera, the HUD |
-| `web/app/lab/volleyball/page.tsx` | The dev route |
+| `web/lib/game/volleyball/session.ts` | This player's match (start, stop, play again), the court from the world's net (`courtOf`), the HUD's change notices |
+| `web/components/game/volleyball/Court.tsx` | The light view: line tapes and the net (LP, or HD for the player in a match) |
+| `web/components/game/volleyball/VolleyMatch.tsx` | The full view: camera, input, the match stepped, bots, ball, rings, juice; you through `myTrip.ride` (`lib/game/movement/ride.ts` grew a move clip, its Air phase and one-shots) |
+| `web/components/game/volleyball/VolleyHud.tsx` | The HUD; `components/gui/flat/PowerMeter.tsx` the new kit piece (in `/lab/gui`) |
+| `web/components/game/DefaultIslandWorld.tsx` | The court on the island, the "Play volleyball" prompt at the net, the world's keys and clicks standing back in a match |
+| `web/app/lab/volleyball/page.tsx`, `VolleyLab.tsx` | The dev route: the match on flat sand (`?seed=N`, `?bots=1`) |
 
 ---
 
@@ -205,8 +240,9 @@ All logic is pure TypeScript with no three.js or DOM, so phase 2's server can ru
 
 ## Open questions for David
 
-1. **Models:** references for the ball, net, posts and court (or an OK to search headless and show picks). Stand-ins until then.
-2. **Animations:** volleyball clips (bump, set, spike, block, dive, a cheer) are new character work; phase 1 borrows existing clips.
-3. **The court's spot on the beach:** 2 or 3 proposals in the phase 1 review.
+1. **Models:** references for the ball (and the line tapes, if he wants more than flat tape). The net is remodelled from his direction.
+2. **Animations:** volleyball clips (bump, set, spike, block, dive, a cheer) are new character work; phase 1 borrows existing clips and leans the body for a dive.
+3. **Residents walk across the court**, during a match too (they don't touch the ball). Should their routes keep off the court?
 4. **The power bar:** should the fishing cast meter move to the new flat `PowerMeter` kit piece too (one look)?
 5. **Match length:** one set to 21 (as now), or best of three (21, 21, 15) for ranked?
+6. **A reward** for a casual win (coins, a stamp), or nothing until ranked?

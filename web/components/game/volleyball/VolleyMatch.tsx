@@ -48,7 +48,7 @@ type Dev = { input: Partial<CourtInput>; yaw: number | null; pitch: number | nul
 interface Rig {
   keys: Record<string, boolean>;
   presses: { jump: boolean; dash: boolean; left: boolean; leftUp: boolean; right: boolean; e: boolean; ctrl: boolean };
-  left: boolean; yaw: number; pitch: number; shake: number; stop: number; slow: number; airborne: boolean[];
+  left: boolean; yaw: number; pitch: number; lift: number; lean: number[]; shake: number; stop: number; slow: number; airborne: boolean[];
   dev: Dev; motions: CharacterMotion[]; motionRefs: { current: CharacterMotion }[];
   look: THREE.Vector3; ray: THREE.Raycaster; centre: THREE.Vector2; plane: THREE.Plane; hit: THREE.Vector3;
 }
@@ -56,18 +56,26 @@ function newRig(spot: CourtSpot): Rig {
   const motions = [0, 1, 2, 3].map(newMotion);
   return {
     keys: {}, presses: { jump: false, dash: false, left: false, leftUp: false, right: false, e: false, ctrl: false }, left: false,
-    yaw: 0, pitch: 0.08, shake: 0, stop: 0, slow: 0, airborne: [false, false, false, false],
+    yaw: 0, pitch: 0.08, lift: 0, lean: [0, 0, 0, 0], shake: 0, stop: 0, slow: 0, airborne: [false, false, false, false],
     dev: { input: {}, yaw: null, pitch: null, paused: false, steps: 0, log: [] }, motions, motionRefs: motions.map(current => ({ current })),
     look: new THREE.Vector3(), ray: new THREE.Raycaster(), centre: new THREE.Vector2(0, -0.1), plane: new THREE.Plane(new THREE.Vector3(0, 1, 0), -spot.y), hit: new THREE.Vector3(),
   };
 }
 type Ref<T> = { current: T };
 interface Parts {
-  bodies: Ref<(THREE.Group | null)[]>; calls: Ref<(HTMLDivElement | null)[]>; ball: Ref<THREE.Mesh | null>; shadow: Ref<THREE.Mesh | null>;
+  bodies: Ref<(THREE.Group | null)[]>; tilts: Ref<(THREE.Group | null)[]>; calls: Ref<(HTMLDivElement | null)[]>; ball: Ref<THREE.Mesh | null>; shadow: Ref<THREE.Mesh | null>;
   landRing: Ref<THREE.Group | null>; outer: Ref<THREE.Mesh | null>; serveRing: Ref<THREE.Group | null>; serveOuter: Ref<THREE.Mesh | null>;
   aimMark: Ref<THREE.Mesh | null>; flashes: Ref<THREE.Mesh[]>;
 }
 interface Env { spot: CourtSpot; camera: THREE.Camera; particles: ReturnType<typeof useMoveParticles>; bindings: ReturnType<typeof useMoveKeys>; selfLook?: CharacterLook }
+
+const leanAxis = new THREE.Vector3(), leanPivot = new THREE.Vector3();
+/** Pitch a body forward by `by` (radians) about its knees, the way it faces (PlayerAvatar's bankAbout, pitch only). */
+function lean(g: THREE.Group, facing: number, by: number) {
+  g.quaternion.setFromAxisAngle(leanAxis.set(Math.cos(facing), 0, -Math.sin(facing)), by);
+  leanPivot.set(0, 0.45, 0);
+  g.position.copy(leanPivot).sub(leanPivot.applyQuaternion(g.quaternion));
+}
 
 /** Face the net from your side as the match starts. */
 function faceNet(rig: Rig, m: Match, spot: CourtSpot) {
@@ -153,7 +161,12 @@ function frameStep(rig: Rig, P: Parts, E: Env, state: { clock: THREE.Clock }, ra
   for (let i = 0; i < 4; i++) {
     const pl = match.players[i], mo = rig.motions[i], g = P.bodies.current[i];
     const air = pl.s.mode === "air";
-    Object.assign(mo, { speed: pl.down > 0 || pl.dive ? 0 : Math.hypot(pl.s.vx, pl.s.vz), yaw: pl.s.facing, move: pl.dive?.strong || pl.down > 0 ? "Slide" : air ? "Air" : null, air: airPhase(pl.s.vy) });
+    // A dive: the body pitches forward over its knees, arms reaching (the Glide pose), and lies there until up.
+    const diving = !!pl.dive || pl.down > 0;
+    rig.lean[i] = THREE.MathUtils.damp(rig.lean[i], pl.dive ? 1.3 : pl.down > 0 ? 1.42 : 0, pl.dive ? 30 : 10, dt);
+    Object.assign(mo, { speed: diving ? 0 : Math.hypot(pl.s.vx, pl.s.vz), yaw: pl.s.facing, move: diving ? "Glide" : air ? "Air" : null, air: airPhase(pl.s.vy) });
+    const tg = P.tilts.current[i];
+    if (tg) lean(tg, pl.s.facing, rig.lean[i]);
     if (rig.airborne[i] !== air) {
       rig.airborne[i] = air;
       const [gx, gz] = toWorld(E.spot, pl.s.x, pl.s.z);
@@ -164,7 +177,7 @@ function frameStep(rig: Rig, P: Parts, E: Env, state: { clock: THREE.Clock }, ra
     if (call) call.style.opacity = pl.call > 0 ? "1" : "0";
     if (i === 0 && !E.selfLook) {
       const r = myTrip.ride, [rx, rz] = toWorld(E.spot, pl.s.x, pl.s.z);
-      Object.assign(r, { active: true, x: rx, y: E.spot.y + pl.s.y, z: rz, yaw: pl.s.facing + E.spot.yaw, speed: mo.speed, seated: false, lift: 0, roll: 0, pitch: 0,
+      Object.assign(r, { active: true, x: rx, y: E.spot.y + pl.s.y, z: rz, yaw: pl.s.facing + E.spot.yaw, speed: mo.speed, seated: false, lift: 0, roll: 0, pitch: rig.lean[i],
         ground: "sand", move: mo.move, air: mo.air });
       r.focus.x = rx; r.focus.y = E.spot.y + pl.s.y; r.focus.z = rz;
       if (mo.play) { r.play = mo.play; mo.play = null; }
@@ -215,7 +228,9 @@ function frameStep(rig: Rig, P: Parts, E: Env, state: { clock: THREE.Clock }, ra
   rig.shake = Math.max(0, rig.shake - dt * 2.5);
   const sh = rig.shake * rig.shake * 0.12, jx = (Math.random() - 0.5) * sh, jy = (Math.random() - 0.5) * sh;
   E.camera.position.set(px - fx * VB_CAMERA.back + rx * VB_CAMERA.right + jx, py + VB_CAMERA.up + jy, pz - fz * VB_CAMERA.back + rz * VB_CAMERA.right);
-  rig.look.set(px + fx * VB_CAMERA.ahead, py + VB_CAMERA.lookUp - rig.pitch * VB_CAMERA.ahead, pz + fz * VB_CAMERA.ahead);
+  // Your toss: the look lifts a little to keep the ball and its ring in view.
+  rig.lift = THREE.MathUtils.damp(rig.lift, serving ? 0.16 : 0, 6, dt);
+  rig.look.set(px + fx * VB_CAMERA.ahead, py + VB_CAMERA.lookUp - (rig.pitch - rig.lift) * VB_CAMERA.ahead, pz + fz * VB_CAMERA.ahead);
   E.camera.lookAt(rig.look);
   const cam = E.camera as THREE.PerspectiveCamera;
   if (cam.isPerspectiveCamera && cam.fov !== VB_CAMERA.fov) { cam.fov = VB_CAMERA.fov; cam.updateProjectionMatrix(); }
@@ -236,7 +251,6 @@ function juice(rig: Rig, P: Parts, E: Env, e: MatchEvent, match: Match) {
   else if (e.kind === "call") rig.motions[e.who].upper = "Wave";
   else if (e.kind === "dive") {
     const pl = match.players[e.who], [gx, gz] = toWorld(E.spot, pl.s.x, pl.s.z);
-    if (!e.strong) rig.motions[e.who].play = "DodgeRoll";
     slideBurst(pool, "sand", gx, E.spot.y + pl.s.y, gz, 0, 0, e.strong ? 1.4 : 1);
   } else if (e.kind === "land") {
     const [gx, gz] = toWorld(E.spot, e.x, e.z);
@@ -257,7 +271,7 @@ export default function VolleyMatch({ spot, selfLook }: {
   const bindings = useMoveKeys();
   const rig = useMemo(() => newRig(spot), [spot]);
   const looks = useMemo(() => { const r = seeded(Math.floor(spot.x * 31 + spot.z)); return [0, 1, 2, 3].map(() => randomLook(r)); }, [spot]);
-  const bodies = useRef<(THREE.Group | null)[]>([]);
+  const bodies = useRef<(THREE.Group | null)[]>([]), tilts = useRef<(THREE.Group | null)[]>([]);
   const calls = useRef<(HTMLDivElement | null)[]>([]);
   const ball = useRef<THREE.Mesh>(null), shadow = useRef<THREE.Mesh>(null);
   const landRing = useRef<THREE.Group>(null), outer = useRef<THREE.Mesh>(null);
@@ -269,7 +283,7 @@ export default function VolleyMatch({ spot, selfLook }: {
   useEffect(() => bindCourtInput(rig, bindings, gl.domElement), [rig, bindings, gl]);
   useEffect(() => leaveRide, []);
   useEffect(() => exposeDev(rig, spot), [rig, spot]);
-  useFrame((state, raw) => frameStep(rig, { bodies, calls, ball, shadow, landRing, outer, serveRing, serveOuter, aimMark, flashes }, { spot, camera, particles, bindings, selfLook }, state, raw));
+  useFrame((state, raw) => frameStep(rig, { bodies, tilts, calls, ball, shadow, landRing, outer, serveRing, serveOuter, aimMark, flashes }, { spot, camera, particles, bindings, selfLook }, state, raw));
 
   if (!m) return null;
   const drawn = selfLook ? [0, 1, 2, 3] : [1, 2, 3];
@@ -277,8 +291,8 @@ export default function VolleyMatch({ spot, selfLook }: {
     <group position={[spot.x, spot.y, spot.z]} rotation={[0, spot.yaw, 0]}>
       {drawn.map(i => (
         <group key={i} ref={g => { bodies.current[i] = g; }}>
-          <Suspense fallback={null}><Character look={i === 0 && selfLook ? selfLook : looks[i]} motion={rig.motionRefs[i]} walkSpeed={COURT_TUNING.walkSpeed} /></Suspense>
-          <mesh rotation-x={-Math.PI / 2} position-y={0.03}><ringGeometry args={[0.36, 0.42, 32]} /><meshBasicMaterial color={TEAM[m.players[i].team]} transparent opacity={0.85} depthWrite={false} /></mesh>
+          <group ref={g => { tilts.current[i] = g; }}><Suspense fallback={null}><Character look={i === 0 && selfLook ? selfLook : looks[i]} motion={rig.motionRefs[i]} walkSpeed={COURT_TUNING.walkSpeed} /></Suspense></group>
+          {i > 0 && <mesh rotation-x={-Math.PI / 2} position-y={0.03}><ringGeometry args={[0.36, 0.42, 32]} /><meshBasicMaterial color={TEAM[m.players[i].team]} transparent opacity={0.85} depthWrite={false} /></mesh>}
           <Html position={[0, 1.95, 0]} center zIndexRange={[20, 0]}><div ref={el => { calls.current[i] = el; }} className={styles.call} style={{ opacity: 0 }}>Mine!</div></Html>
         </group>
       ))}

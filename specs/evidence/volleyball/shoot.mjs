@@ -83,7 +83,7 @@ const SCENES = {
     const { ctx, page } = await open("/lab/volleyball?seed=7");
     await page.waitForTimeout(5000);
     const v = V(page), k = await v.logLen();
-    const e = await serveTo(page, 0.12);
+    const e = await serveTo(page, 0.11);
     for (let i = 0; i < 90 && !(await v.since(k)).some(x => x.kind === "net"); i++) await v.step(1);
     await v.step(4); await shot(page, "serve-late-net");
     await v.step(30);
@@ -102,25 +102,27 @@ const SCENES = {
     await ctx.close();
   },
   async receive() {
-    const { ctx, page } = await open("/lab/volleyball?seed=1");
+    const { ctx, page } = await open("/lab/volleyball?seed=2");
     await page.waitForTimeout(5000);
-    const v = V(page), k = await v.logLen();
-    await page.waitForFunction(() => { const m = window.__volley.match(); return m.phase === "rally" && m.landing && Math.sign(m.landing.z) === Math.sign(m.players[0].s.z); }, null, { timeout: 30000 });
+    const v = V(page);
+    await page.waitForFunction(() => window.__volley.match().phase === "rally", null, { timeout: 30000 });
     await v.pause();
-    await shot(page, "receive-1-circle");
-    // Walk to the landing circle, then bump as the rings meet.
-    for (let i = 0; i < 120; i++) {
-      const [dx, dz, t] = await v.m("m => { const p = m.players[0].s, l = m.landing; const b = m.ball, dy = b.y - (p.y + 0.55); const t = dy >= 0 ? (b.vy + Math.sqrt(b.vy * b.vy + 26 * dy)) / 13 : 0; return [l.x - p.x, l.z - p.z, t]; }");
-      const d = Math.hypot(dx, dz);
-      // The court's frame is the lab's world (yaw 0): turn the step into camera-relative keys by inputting x/z directly.
-      await v.input(d > 0.3 ? { x: dx / d, z: dz / d } : {});
-      if (t < 0.45 && i > 5) break;
+    // A ball from the far side dropping 2 u to your right and a little ahead: its landing circle, then you walk in and bump.
+    await v.m("m => { const p = m.players[0].s, side = p.z < 0 ? -1 : 1; Object.assign(m.ball, { x: p.x - 1.6, y: 7, z: p.z - side * 1.2, vx: 0, vy: 0, vz: 0 }); Object.assign(m, { touchTeam: null, touches: 0, lastTouch: 2, lastTeam: 1, lastBlock: false }); m.players[0].call = 1.5; m.flight++; }");
+    await v.step(1);
+    const k = await v.logLen();
+    await v.step(8); await shot(page, "receive-1-circle");
+    const where = "m => { const p = m.players[0].s, b = m.ball; return [b.x - p.x, b.z - p.z, b.y - (p.y + 0.55)]; }";
+    let two = false;
+    for (let i = 0; i < 200; i++) {
+      const [dx, dz, dy] = await v.m(where), d = Math.hypot(dx, dz);
+      await v.input(d > 0.2 ? { x: dx / d, z: dz / d } : {});
+      if (!two && dy < 1.6) { await shot(page, "receive-2-closing"); two = true; }
+      if (d < 0.7 && dy < 0.08) break;
       await v.step(1);
     }
-    await shot(page, "receive-2-closing");
-    for (let i = 0; i < 40; i++) { const t = await v.m("m => { const p = m.players[0].s, b = m.ball, dy = b.y - (p.y + 0.55); return dy >= 0 ? (b.vy + Math.sqrt(b.vy * b.vy + 26 * dy)) / 13 : 0; }"); if (t < 0.03) break; await v.step(1); }
     await v.press({ leftPressed: true });
-    await v.step(5); await shot(page, "receive-3-bump");
+    await v.step(6); await shot(page, "receive-3-bump");
     results.receive = (await v.since(k)).filter(x => ["contact", "whiff"].includes(x.kind));
     await ctx.close();
   },
@@ -147,29 +149,37 @@ const SCENES = {
     await ctx.close();
   },
   async dive() {
-    for (const [name, strong] of [["dive", false], ["slide-dive", true]]) {
-      const { ctx, page } = await open("/lab/volleyball?seed=1");
-      await page.waitForTimeout(5000);
-      const v = V(page), k = await v.logLen();
-      await page.waitForFunction(() => window.__volley.match().phase === "rally", null, { timeout: 30000 });
-      await v.pause();
-      if (strong) { await v.press({ x: 1, z: 0, dashPressed: true }); await v.input({ x: 1, z: 0 }); await v.step(5); }
-      await v.press({ x: 1, z: 0, ctrlPressed: true });
-      await v.input({ x: 1, z: 0 });
-      await v.step(strong ? 12 : 9); await shot(page, name);
-      await v.input({});
-      results[name] = (await v.since(k)).filter(x => x.kind === "dive");
-      await ctx.close();
-    }
+    const { ctx, page } = await open("/lab/volleyball?seed=2");
+    await page.waitForTimeout(5000);
+    const v = V(page), k = await v.logLen();
+    await page.waitForFunction(() => window.__volley.match().phase === "rally", null, { timeout: 30000 });
+    await v.pause();
+    // A low ball out to your right, too far to bump: dive for it (Ctrl), then a slide dive (Q then Ctrl) for the next.
+    const drop = (dx, h) => v.m(`m => { const p = m.players[0].s, side = p.z < 0 ? -1 : 1; Object.assign(m.ball, { x: p.x - ${dx}, y: ${h}, z: p.z, vx: 0, vy: 0, vz: 0 }); Object.assign(m, { touchTeam: null, touches: 0, lastTouch: 2, lastTeam: 1, lastBlock: false }); m.players[0].down = 0; m.players[0].dive = null; m.flight++; }`);
+    await v.look(-Math.PI / 2 + 0.6, 0.12);
+    await drop(2.2, 1.1);
+    await v.press({ x: -1, z: 0, ctrlPressed: true });
+    await v.input({ x: -1, z: 0 });
+    await v.step(8); await shot(page, "dive");
+    await v.input({}); await v.step(40);
+    await drop(4.2, 1.6);
+    await v.press({ x: -1, z: 0, dashPressed: true });
+    await v.input({ x: -1, z: 0 });
+    await v.step(4);
+    await v.press({ x: -1, z: 0, ctrlPressed: true });
+    await v.step(10); await shot(page, "slide-dive");
+    await v.input({});
+    results.dive = (await v.since(k)).filter(x => x.kind === "dive" || (x.kind === "contact" && x.how === "dig"));
+    await ctx.close();
   },
   async point() {
     const { ctx, page } = await open("/lab/volleyball?seed=7");
     await page.waitForTimeout(5000);
     const v = V(page);
     // A rally ball dropping into the far court: your point (then, from 20 to 17, the win).
-    const drop = pts => v.m(`m => { m.score.points = ${JSON.stringify(pts)}; m.phase = "rally"; const side = m.players[2].s.z < 0 ? -1 : 1; Object.assign(m.ball, { x: 0.5, y: 2.5, z: side * 3.5, vx: 0, vy: -3, vz: 0 }); m.lastTeam = 0; m.lastTouch = 0; m.touchTeam = 0; m.flight++; return side; }`);
+    const drop = pts => v.m(`m => { m.score.points = ${JSON.stringify(pts)}; m.phase = "rally"; const side = m.players[2].s.z < 0 ? -1 : 1; Object.assign(m.ball, { x: 2.4, y: 0.5, z: side * 1.2, vx: 0, vy: -3, vz: 0 }); m.lastTeam = 0; m.lastTouch = 0; m.touchTeam = 0; m.flight++; return side; }`);
     await drop([10, 8]);
-    await page.waitForTimeout(700); await shot(page, "point");
+    await page.waitForTimeout(450); await shot(page, "point");
     await page.waitForTimeout(2600);
     await drop([20, 17]);
     await page.waitForTimeout(900); await shot(page, "win-1");

@@ -423,7 +423,7 @@ export function stepMatch(m: Match, inp: CourtInput = NO_COURT_INPUT, dt = STEP)
   const z0 = m.ball.z, e = stepBall(m.ball, dt, m.ground);
   if (m.phase === "toss") {
     const p = m.players[sv].s;
-    if (e?.kind === "land" || m.ball.y < p.y + 0.25) fault(m, m.players[sv].team, "dropped");
+    if (e?.kind === "land" || m.ball.y < p.y + 0.1) fault(m, m.players[sv].team, "dropped");
     return;
   }
   if (Math.sign(m.ball.z) !== Math.sign(z0) && Math.sign(m.ball.z) !== 0) {
