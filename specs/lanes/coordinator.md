@@ -619,3 +619,12 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - Merge fish-tiers once the tag fix lands.
 - **Volleyball:** David confirmed right click on the ground is Call it (relayed).
 - **Volleyball plan change** (David): the court sits at the island's existing volleyball-net (-4, 103.5). The net is remodelled bigger from the existing model, at real proportions. The match starts with E at the net. Players in the match get the full view; passersby get a light one (static court, synced avatars, a low-rate ball, no particles, HUD or AI), measured with perf:check. Relayed to the lane.
+- **Tutorial r4 decisions:**
+  - Approved: dock, esc, glide, hop, props, reel, sell, small; id with a note (the card shows before the printer line).
+  - Redo:
+    - keys: back to round 3's keyboard card with less text and a lighter look; drop the bare keyboard;
+    - currency: no wallet slot existed;
+    - sights: the shop sells in-game items and real merch; the cafe is "study with friends, get rewarded"; keyword icons on every line;
+    - kit.
+  - Bible rule 8b added: two HUD layers, and the wallet's one slot top right under the time in the Esc 1 view.
+  - Tutorial r5 lane started; main-quest told about 8b.
