@@ -23,6 +23,7 @@ import { TRIP, skipCrossing } from "@/lib/game/boatTrip";
 import { ARRIVAL_TIMES, skipArrival, startArrival, stepArrival, type ArrivalPhase } from "@/lib/game/arrival/sequence";
 import { arrivalChanged, arrivalRun, readArrival, resetArrival, subscribeArrival } from "@/lib/game/arrival/arrivalStore";
 import ReflectionCreator from "./ReflectionCreator";
+import FirstCatchTeach from "./FirstCatchTeach";
 import s from "./Arrival.module.css";
 
 const SKIP_KEYS = [" ", "enter", "e", "escape"];
@@ -190,6 +191,7 @@ export default function Arrival({ play, look, askName, touch, keys, onCross, onS
       {!touch && <Keycap className={s.teachCap}>{teach === "jump" ? keys.jump : keys.dash}</Keycap>}
       <span>{TEACH[teach]}</span>
     </div>}
+    {phase === "tutorial" && task?.kind === "catch" && <FirstCatchTeach touch={touch} />}
     {phase === "tutorial" && <button type="button" className={s.leave} onClick={() => { arrivalRun.signals.toured = true; }} data-testid="arrival-leave-tour">Skip the walk</button>}
   </div>;
 }

@@ -143,3 +143,6 @@ export const TUTORIAL_REWARD = {
   name: "Bram's old rod",
   note: "It's yours now. And a few coins for the walk.",
 } as const;
+
+/** The first catch's chip over the reel's bar (FirstCatchTeach; David's playtest: "less words"). */
+export const REEL_TEACH = "Hold to reel";

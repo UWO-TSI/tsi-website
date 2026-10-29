@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { FISH, type FishDef } from "./fishing";
-import { advanceFishingReel, createFishingReel } from "./fishingReel";
+import { advanceFishingReel, createFishingReel, reelAssist } from "./fishingReel";
 
 function seededRandom() {
   let seed = 92381;
@@ -83,5 +83,10 @@ describe("the first catch (t-catch)", () => {
       advanceFishingReel(landed, 1 / 60, landed.fishPosition > landed.position + landed.barWidth / 2, 1, r2);
     }
     expect(landed.result).toBe(true);
+  });
+  it("takes its floor from the reel assist by default, so any overlay's reel gets the tutorial's help", () => {
+    reelAssist.floor = 0.08;
+    try { expect(createFishingReel(FISH[0], null).floor).toBe(0.08); } finally { reelAssist.floor = 0; }
+    expect(createFishingReel(FISH[0], null).floor).toBe(0);
   });
 });

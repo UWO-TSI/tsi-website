@@ -76,35 +76,42 @@ Not ours: the creator's water and hair; casting toward the cursor; the reel pane
 
 ## Status
 
-Round 3 (David's v2 review) built on the new world and shot headless: `specs/evidence/tutorial-v2/v3/` (a-* the dock and Alice's visit, b-* the sights to the hand-over, k-* the kit pieces on /lab/gui, `-strip` for the animated beats). Waiting on David's review. Round 2's status is in git history (fb5991d9).
+Round 4 (David's v3 review and playtest) built on the new world and shot headless: `specs/evidence/tutorial-v2/v4/` (a-* the dock and Alice's visit, b-* the sights to the hand-over, k-* the kit on /lab/gui, `-strip` for the animated beats). Before shots are round 3's, `specs/evidence/tutorial-v2/v3/`. Waiting on David's review. Round 3's status is in git history (4fee5d2b).
 
-- **arrow:** smaller (0.85) and nearer your feet (1.15 m ahead), `GuideArrow.tsx`.
-- **dock (hq-first):** the new world's own dock stop in `routes/new.ts` (no longer borrowed from the village): Bram's talk teaches the box hop (`{jump}`), then an `auto` stop (no E) teaches the dash: `unlockMove("dash")` (a no-op when dash is already open; daily-social may open dash for all) and a `dash` task waiting for `tsi:dash` (PlayerAvatar announces a dash). While the box or the dash is the task, its key stays up in a chip (`Arrival.tsx` `teach`). The box is the route's tutorial-only crate.
-- **sights:** the pan kept, the lines rewritten short in Bram's voice (`lines.ts` STOP_LINES.sights).
-- **wharf:** a camera-conversation stop by the tackle shop panning to the tackle shop and the shipwright's (the sights' `shots`, on props), then `cast` at the quay's edge (his rod lent, the catch), then `barrel`. The passing-pause waypoints are deleted.
-- **barrel:** the task waits for a real sale (`tsi:sold` from SellBody, reported when the sheet closes). Straight on, the `keep` stop (`auto`, `holds: "rod"`): Bram holds his rod through the talk and holds it out on the last line with the camera close on him (`"bram"` shot). The walk ends with no last word (`end: "none"`): `tsi:quest-complete` (QuestCheck), then RewardCard's From Bram (`tsi:gift`) and the rod into the bag (`tsi:bag-got`), in `finishArrival`.
-- **HQ (club, lore, tour, farewell):** `hq/script.ts` v3: report, lore (the island, the Founder, the gatherings, GENESIS), the ID (IdCard: world name, birthday, spirit animal, existing profile fields; PATCH /api/profile now takes `birthday`), coins and gems (fly cards), check-ins, menu, mail, minimap (fly cards; the island shows the dock and the minimap while they fly), the keyboard tour (press or hold the lit key; Tab, G, H held; Enter, I, B, J, M, L pressed), Esc, the farewell naming the notice board, the trophy case and the Founder's desk, Juno's line kept. Saved visits moved to `tsi.hq.v3`.
-- **Kit (design bible UI):** new flat kit pieces in `components/gui/flat/moments.tsx`: Spotlight, KeyBoard, FlyIn, QuestCheck, PrintedCard, on /lab/gui (`?only=key-board|fly-in|quest-check|printed-card`). Paper tokens `--ui-paper`, `--ui-paper-edge`, `--ui-paper-ink`, `--ui-stamp` in every theme. RegisterCard, MerchCard and the old UiTour are deleted. QuestCheck is ours (fired by `tsi:quest-complete`; main-quest fires it too); RewardCard is main-quest's.
-- **catch:** untouched; the fishing UI redo is fish-tiers'.
-- **phone (held):** a touch screen skips the keyboard tour (its say and its wait pass at once); round 2's touch tour copy is gone with the old tour.
+- **dock (v3-dock):** the tutorial dock's dressing (its box) shows until you've walked into HQ, then never again (`arrivalStore` `dockCleared`/`clearDock`/`useDockCleared`: `tsi.dock.cleared` on this device, or the account's HQ visit past its first beat). A replay (signed out, a reload restarts the arrival) passes over the dock's lessons: route stops flagged `dock` (`dockNew`, `dash`) are skipped in `stepTutorial` (`dockCleared` in the frame). No world data changed.
+- **ID (v3-id, playtest 1):** no panel: the kit's `CardOverlay` holds a large `PrintedCard` (`large`, `tilt`: leans toward the pointer with a sheen). Your headshot is your real avatar through the creator's `Portrait` (`components/game/hq/IdHeadshot.tsx`, `framing="head"`, white studio). You write on the card itself (`PaperField`): world name, birthday (private), From (`hometown`), About you (`bio`); the spirit animal is gone. One button under it: Print my ID, then Done. Print: the card feeds out of a printer slot with a blinking light; a stamper (knob, handle, inked pad) comes down on the photo's corner, the card gives, the mark is left, a gleam runs across.
+- **keys (v3-keys):** no white card: the kit's `KeyPrompt` (a small dark cue pill, then a smaller bare `KeyBoard`, a quiet Skip) low in the middle. Each key done brings its part of the screen into its real place (`uiTour.ts` `piece`; `DefaultIslandWorld` `tourShown`): H the full HUD (coins, level), Enter the chat bar (only when multiplayer is on), I the Bag button, B/J/L the menu dock's Collection, Quests and Mail entries (`MenuDock` `only`), M the minimap. Each springs in and rings (kit `SlotPop`). They show until the tour closes.
+- **fly-in merge:** the menu, mail and minimap fly beats are gone (their keys bring them in); coins and gems keep their fly cards. HQ script is now 8 beats; saves moved to `tsi.hq.v4`.
+- **sights (v3-sights):** kit `Keyword` (`components/gui/flat/keyword.tsx`): a line marks keywords with stars (`*fish*`, `*bug*`, `*coins*`); the word is coloured (`--ui-word-*` tokens) with a little flat icon that pops in as the typing reaches it and wiggles. TalkBox types lines part by part. Bram's sights lines use it.
+- **playtest 2 (coins and gems):** the quest line hides while a currency flies; TopCluster `showcase` gives it an empty slot top right, the icon clicks into it (FlyIn sets `data-landed` on the slot), then the slot fades.
+- **playtest 3:** gatherings are "a great way to level up" (lore page 3 and the check-in card's note).
+- **playtest 4 (the hop):** root cause: the hop counted only inside a 0.45 m circle just past the box, so a real hop landing beside Bram missed it. Now `past: true`: past the box's line, anywhere within 1.4 m across (`tutorial.ts` `pastLine`; test).
+- **playtest 5 (Esc):** root cause: Esc while she was still saying "Press Esc" closed the dialogue box instead (the press was lost), and a menu already open when the beat came round never counted. Now an Esc during her line opens the menu too, a cardless beat takes its event early (`visit.ts` `early`; her lines ending then moves past the beat, the farewell still said), and the menu open counts whenever the beat is on (tests).
+- **playtest 6:** Alice's look-round-HQ line is out of both farewells for now (bring it back later); Juno's line kept.
+- **playtest 7:** the camera travels between building shots (sights and wharf): an eased arc round Bram, lifted a little mid-way (`ArrivalWorld` `converseCamera`, `SHOT.glide`, `SHOT.crane`).
+- **playtest 8:** every talk: too close to the resident, you step back to `TALK_COMFORT` (1.3 m) in a short walk (`residentTalk.ts` `stepBack`, PlayerAvatar's `tsi:face`; tests).
+- **playtest 9:** one prompt: while the tutorial's glyph chip is up (`arrivalRun.chipUp`, `useArrivalChip`), the island's "Take out your fishing rod" hides.
+- **playtest 10 (reel chip):** `components/game/arrival/FirstCatchTeach.tsx`, mounted by Arrival while the catch is the task, not by any overlay. Driven by events only: `tsi:fish-hooked` (the reel starts: the chip goes up over `[aria-label="Fishing reel"]`, or low in the middle without it), `tsi:fish-caught`, `tsi:fish-escaped`, `tsi:fish-end` (it goes), a pointer down or Space after 0.6 s (you're holding: it goes). The floor (the first fish can't get away) is the shared reel logic's `reelAssist.floor` (`lib/game/fishingReel.ts`, the default of `createFishingReel`), set by FirstCatchTeach. FishingOverlay is main's again (no tutorial code). Dropped with it: the longer first bite window and the reel pausing until you hold.
+- **playtest 11:** removed from the world layout (`generate.ts` MARKET, regenerated): `market-8` (barrel), `market-15`, `market-16` (crates) in front of the fish market. The sell barrel and its fish crate stay. Later market ids renumbered (nothing refers to them).
+- **playtest 12:** signed out on a dev server with Supabase blanked, selling runs on the in-memory economy over this browser's catch record (`lib/wallet/localEconomy.ts`, `transport.ts` falls back only after a 503/401, not in production, only with no Supabase URL; tests).
+- **Kit (v3-kit):** `components/gui/flat`: `KeyPrompt`, `SlotPop`, `CardOverlay`, `PaperField`, `PrintedCard` (`large`, `tilt`, the stamper), `KeyBoard` smaller and bare, `Keyword`/`KeywordLine`; tokens `--ui-word-fish|bug|coin` in all three themes. /lab/gui `?only=key-board|keyword|printed-card`.
 
 ## Next
 
-1. Act on David's round 3 review once main relays it.
-2. Later, after David approves the desktop tutorial: the phone pass (the tour on touch, the ID and fly cards at phone size).
-3. Open for David: a job board or past-projects display in HQ (the farewell names only what exists); his name in the lore (the Founder for now).
-4. Known: the arrow is a ground decal, so tall props in its spot can hide part of it. The hand-over close-up can have a stall post at its edge (it turns 1 rad off your line round Bram; no raycast).
-5. Not run: perf:check (the 3D changes are the arrow's size and Bram's rod in his hands for the hand-over talk; neither is in a benched scene).
+1. Act on David's round 4 review once main relays it.
+2. Bring Alice's look-round-HQ line back when David says (the notice board, the trophy case, the Founder's desk).
+3. Later, after David approves the desktop tutorial: the phone pass (the tour on touch, the ID at phone size).
+4. At the fish-tiers merge: MemberFishing must dispatch `tsi:fish-hooked` when its reel starts and `tsi:fish-caught` / `tsi:fish-escaped` / `tsi:fish-end` when it ends, have its reel panel answer `[aria-label="Fishing reel"]` (or change FirstCatchTeach's REEL_BAR), and build its reel with `createFishingReel` (the floor comes from `reelAssist`).
+5. Open for David: a job board or past-projects display in HQ; his name in the lore (the Founder for now).
+6. Not run: perf:check (the 3D changes are the ID headshot's own small canvas while the card is up, and the market props removed).
 
 ## Tools and gotchas
 
-- Round 3: `HOST=http://localhost:3172 node specs/evidence/tutorial-v2/v3/shoot.mjs <out> walk-a|walk-b|kit`, each its own call; then `python3 specs/evidence/tutorial-v2/v3/strips.py <out> specs/evidence/tutorial-v2/v3`. Signed out: coins through `window.__hudCoins`, the sale by sending `tsi:sold`.
-- Round 2's `specs/evidence/tutorial-v2/shoot.mjs` scenes (old script, before round 3): `first10` (part a, about 7 min), `first10b` (part b: the HQ visit is pre-done through `tsi.hq.v2`, about 5 min), `hq-phone` (`?hq=inside&hqvisit=1`, touch), and `arrow`.
-  - Run each as its own foreground call: `HOST=http://localhost:3172 node specs/evidence/tutorial-v2/shoot.mjs <out> <scene>`.
-  - Dev server: `NEXT_PUBLIC_GAME_WORLD=new NEXT_PUBLIC_SUPABASE_URL= NEXT_PUBLIC_SUPABASE_ANON_KEY= npx next dev -p 3172`, under the devserver lock. Keep the hold short: the coordinator asked, because swap runs at 13 GB.
+- Round 4: `/private/.../scratchpad/run.sh <out> <scene>` style: start `NEXT_PUBLIC_GAME_WORLD=new NEXT_PUBLIC_SUPABASE_URL= NEXT_PUBLIC_SUPABASE_ANON_KEY= npx next dev -p 3172` under the devserver lock, then `HOST=http://localhost:3172 node specs/evidence/tutorial-v2/v4/shoot.mjs <out> walk-a|walk-b|kit`, one scene per call (walk-a about 7 min, walk-b about 6), then `python3 specs/evidence/tutorial-v2/v4/strips.py <out> specs/evidence/tutorial-v2/v4`.
+- walk-b pre-sets `tsi.hq.v4` (done) and `tsi.dock.cleared`, so the dock's lessons are passed over.
+- Signed out: no coins (the shoot sets `window.__hudCoins(1240)` before the keys), no chat (multiplayer off: Enter brings nothing in), the sale now works.
 - HQ room coordinates (lib/game/hqLayout.ts): the desk station is (4.6, -7.5) and the exit is (0, -8.2). Walk there with `tsi:interior-move`.
 - The sell barrel's E ("sell") outranks fishing within 2.2 m. The cast stand has to stay outside that (routes.test checks it).
-- `stage()` waits miss instant stages: a pre-done HQ task passes in a frame.
 - A browser with no saved look shows the plain creator first (click Skip).
 
 ## Rules

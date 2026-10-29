@@ -98,12 +98,6 @@ export function useArrivalChip(): boolean {
   return useSyncExternalStore(subscribeArrival, readArrival, () => "").endsWith("|1");
 }
 
-/** The walk-along's catch is on: the first reel pauses to teach the hold, and the fish can't get away (t-catch). */
-export function firstCatch(): boolean {
-  const t = arrivalRun.tutorial, stop = t ? arrivalRun.stops?.[t.stop] : null;
-  return arrivalRun.current?.phase === "tutorial" && !!t && !t.done && t.stage === "task" && stop?.task?.kind === "catch";
-}
-
 /**
  * The tutorial dock (David's v3 review): while you learn on it, it has its dressing (the box to hop, a clear run to dash
  * along); once you've walked into HQ it's cleared for good and the island's own dock shows, after a reload too. Kept

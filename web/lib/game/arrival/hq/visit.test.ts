@@ -39,7 +39,10 @@ describe("the HQ visit with Alice (row 312)", () => {
   it("takes Esc pressed while she's still saying \"Press Esc\" (David's playtest: it was lost), but never a card's event early", () => {
     const esc = HQ_SCRIPT.findIndex(b => b.wait === "esc");
     const saying = { beat: esc, stage: "say" as const, done: false };
-    expect(visitEvent(saying, "esc")).toEqual({ beat: esc + 1, stage: "say", done: false });
+    const early = visitEvent(saying, "esc");
+    // Her line ending (Esc closes the dialogue box too) moves past the beat, to the farewell, which is still said.
+    expect(visitEvent(early, "said")).toEqual({ beat: esc + 1, stage: "say", done: false });
+    expect(visitEvent(visitEvent(early, "said"), "said").done).toBe(true);
     const lore = HQ_SCRIPT.findIndex(b => b.wait === "lore");
     const loreSaying = { beat: lore, stage: "say" as const, done: false };
     expect(visitEvent(loreSaying, "lore")).toBe(loreSaying);

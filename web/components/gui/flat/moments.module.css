@@ -118,21 +118,22 @@
 }
 .printed[data-printing] .paper { animation: printOut 1.5s cubic-bezier(0.3, 0.1, 0.3, 1) both; }
 /* Held up as the overlay: larger, its type with it. */
-.printed[data-large] { width: min(540px, calc(100vw - 32px)); }
-.printed[data-large] .paper { --w: min(520px, calc(100vw - 48px)); border-radius: 20px; }
+.printed[data-large] { width: min(620px, calc(100vw - 32px)); }
+.printed[data-large] .paper { --w: min(600px, calc(100vw - 48px)); border-radius: 22px; }
 .printed[data-large] .band { padding: 12px 20px; }
 .printed[data-large] .band span { font-size: 17px; }
 .printed[data-large] .band small { font-size: 13px; }
 .printed[data-large] .paperBody { gap: 18px; padding: 18px 20px; }
 .printed[data-large] .rows { gap: 9px; }
-.printed[data-large] .rows dt { font-size: 11px; }
-.printed[data-large] .rows dd { font-size: 17px; }
-.printed[data-large] .rows [data-lead] dd { font-size: 30px; }
+.printed[data-large] .rows dt { font-size: 12px; }
+.printed[data-large] .rows dd { font-size: 19px; }
+.printed[data-large] .rows [data-lead] dd { font-size: 34px; }
 .printed[data-large] .picture { border-radius: 14px; overflow: hidden; }
 .printed[data-large] .slot { height: 40px; border-radius: 18px; }
 .printed[data-large] .slot::after { top: 12px; right: 22px; width: 9px; height: 9px; }
 .printed[data-large] .paperBody { grid-template-columns: 32% 1fr; }
-.printed[data-large] .stamp, .printed[data-large] .stamper { left: auto; right: 5%; bottom: 7%; width: 22%; }
+/* Over the photo's lower corner, as on an ID: the rows stay readable. */
+.printed[data-large] .stamp, .printed[data-large] .stamper { left: 15%; bottom: 10%; width: 20%; }
 .printed[data-large] .stamp b { font-size: 10px; }
 .printed[data-large] .stamp small { font-size: 15px; }
 /* Tilt: it leans toward the pointer (CSS vars from PrintedCard), a soft sheen where the light catches it. */
@@ -176,8 +177,11 @@
 .stamp { animation-delay: 0.3s; }
 .stamper { position: absolute; z-index: 4; left: 9%; bottom: 5%; width: 24%; aspect-ratio: 1; pointer-events: none; transform-origin: 50% 100%;
   animation: stamper 0.95s cubic-bezier(0.45, 0, 0.3, 1) both; }
-.stamper::before { content: ""; position: absolute; left: 36%; right: 36%; bottom: 40%; height: 85%; border-radius: 999px 999px 8px 8px; background: var(--ui-ink);
-  box-shadow: inset -5px 0 0 var(--ui-ink-2); }
+.stamper::before { content: ""; position: absolute; left: 40%; right: 40%; bottom: 40%; height: 62%; border-radius: 6px; background: var(--ui-ink);
+  box-shadow: inset -4px 0 0 var(--ui-ink-2); }
+/* Its round knob on top. */
+.stamper::after { content: ""; position: absolute; left: 27%; right: 27%; bottom: 96%; aspect-ratio: 1; border-radius: 50%; background: var(--ui-ink);
+  box-shadow: inset -6px -6px 0 var(--ui-ink-2); }
 .stamper b { position: absolute; left: 6%; right: 6%; bottom: 10%; height: 32%; border-radius: 12px; background: var(--ui-ink); box-shadow: inset 0 -7px 0 var(--ui-stamp), 0 10px 24px rgb(var(--ui-shade) / 0.3); }
 .paper[data-stamped] { animation: give 0.34s ease-out 0.3s both; }
 .paper[data-stamped]::after { content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none; translate: -110% 0;

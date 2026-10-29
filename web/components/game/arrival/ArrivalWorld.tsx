@@ -285,7 +285,7 @@ function wayTo(g: Guide, nav: ReturnType<typeof navGrid>, via: readonly Way[], t
 const BRAM_TALKER = { id: "arrival:bram", slug: BRAM.slug, name: BRAM.name, post: "wharf_keeper", seed: 7 };
 /** The building shot: this far from it toward where you stand (m), this high, looking this high up it; the blend's rate (/s). */
 /** `glide`: from one building's shot to the next the camera travels this long (s, eased in and out), never cuts (David's playtest). */
-const SHOT = { back: 15, behind: 3, up: 6.5, at: 3, rate: 2.2, glide: 1.8 } as const;
+const SHOT = { back: 15, behind: 3, up: 6.5, at: 3, rate: 2.2, glide: 1.8, crane: 2.5 } as const;
 /** The close-up on him (a `"bram"` shot): this far out toward you, this high, looking at his hands. */
 const CLOSE = { back: 2.6, up: 1.35, at: 1.05, turn: 1.0 } as const;
 const _look = new THREE.Quaternion(), _m = new THREE.Matrix4(), _up = new THREE.Vector3(0, 1, 0), _goal = new THREE.Vector3(), _goalLook = new THREE.Vector3();
@@ -323,7 +323,13 @@ function converseCamera(f: GuideFrame, stop: ResolvedStop | undefined, dt: numbe
     const mv = g.cam.move;
     if (mv.line !== t!.index) { mv.line = t!.index; mv.at = g.cam.k > 0 ? now : -Infinity; mv.pos.copy(g.cam.pos); mv.look.copy(g.cam.look); }
     const u = Math.min(1, (now - mv.at) / SHOT.glide), e = u * u * (3 - 2 * u);
-    g.cam.pos.lerpVectors(mv.pos, _goal, e); g.cam.look.lerpVectors(mv.look, _goalLook, e);
+    // Round him, not through him: the way round in angle and distance from Bram, lifted a little at the middle.
+    const a0 = Math.atan2(mv.pos.x - g.x, mv.pos.z - g.z), a1 = Math.atan2(_goal.x - g.x, _goal.z - g.z);
+    const da = Math.atan2(Math.sin(a1 - a0), Math.cos(a1 - a0)), a = a0 + da * e;
+    const r = THREE.MathUtils.lerp(Math.hypot(mv.pos.x - g.x, mv.pos.z - g.z), Math.hypot(_goal.x - g.x, _goal.z - g.z), e);
+    const x = g.x + Math.sin(a) * r, z = g.z + Math.cos(a) * r;
+    g.cam.pos.set(x, Math.max(island.ground(x, z) + 2, THREE.MathUtils.lerp(mv.pos.y, _goal.y, e) + Math.sin(Math.PI * e) * SHOT.crane), z);
+    g.cam.look.lerpVectors(mv.look, _goalLook, e);
   }
   g.cam.k = Math.min(1, Math.max(0, g.cam.k + (shot ? 1 : -1) * SHOT.rate * dt));
   if (g.cam.k > 0) {

@@ -14,6 +14,8 @@ export interface HqState {
   /** Alice is to say the beat's lines (or the farewell), or the beat waits for you. */
   stage: "say" | "wait";
   done: boolean;
+  /** The beat's event came while she was still saying it (a cardless beat): her lines ending moves past the beat. */
+  early?: boolean;
 }
 
 /** A beat's opening stage: her lines first if it has any. */
@@ -38,8 +40,9 @@ export function visitEvent(s: HqState, e: HqEvent | "said", script: readonly HqB
   if (s.done) return s;
   if (s.stage === "say") {
     const b = script[s.beat];
-    if (b && !b.card && e === b.wait) { const beat = s.beat + 1; return { beat, stage: opening(beat, script), done: false }; }
+    if (b && !b.card && e === b.wait) return s.early ? s : { ...s, early: true };
     if (e !== "said") return s;
+    if (s.early) { const beat = s.beat + 1; return { beat, stage: opening(beat, script), done: false }; }
     return s.beat >= script.length ? { ...s, done: true } : { ...s, stage: "wait" };
   }
   if (e !== script[s.beat]?.wait) return s;
