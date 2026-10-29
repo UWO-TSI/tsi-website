@@ -74,11 +74,11 @@ describe("fishing reel simulation", () => {
 describe("the first catch (t-catch)", () => {
   it("never gets away with a floor, however badly it's reeled, and can still be landed", () => {
     const fish = FISH.find(f => f.key === "fish_golden_koi")!;
-    const idle = createFishingReel(fish, 0.08), random = seededRandom();
+    const idle = createFishingReel(fish, null, 0.08), random = seededRandom();
     for (let i = 0; i < 60 * 30; i++) advanceFishingReel(idle, 1 / 60, false, 1, random);
     expect(idle.result).toBeNull();
     expect(idle.progress).toBeGreaterThanOrEqual(0.08);
-    const landed = createFishingReel(FISH[0], 0.08), r2 = seededRandom();
+    const landed = createFishingReel(FISH[0], null, 0.08), r2 = seededRandom();
     for (let i = 0; i < 60 * 120 && landed.result === null; i++) {
       advanceFishingReel(landed, 1 / 60, landed.fishPosition > landed.position + landed.barWidth / 2, 1, r2);
     }

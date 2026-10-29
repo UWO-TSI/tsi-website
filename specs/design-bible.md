@@ -42,11 +42,12 @@ David, 2026-10-28: "models should be considered to have a high def version and a
    - Both share one design: the same silhouette, colours and proportions. The low-poly is reduced from the high-def; it isn't drawn separately.
    - A model only ever seen one way gets one version.
    - The game picks by view. `worldModel` in `web/lib/game/world/active.ts` already serves the world copy while close-ups keep theirs. Grow that switch; don't add a second one.
-3. **Made properly in Blender.** Built headless (`/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P <script>`) as real modelling:
-   - a clean silhouette and sensible topology;
-   - proper UVs and named materials;
-   - the game's scale, pivot and facing. `art/remodel/` is the working pipeline: reuse its kit (`rkit.py`).
-   - No stacks of primitives or maths-generated blobs standing in for a model.
+3. **Made properly in Blender.** Built headless (`/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P <script>`). Agents model with scripts, so "properly" means the script does real modelling:
+   - Primitives (`art/props/propkit.py`, `art/remodel/rkit.py`) are a blockout only. The script joins and merges them into one mesh, then shapes it (bevels, loop cuts, subdivision, proportional moves) until it matches the references.
+   - The result has a clean silhouette, sensible topology with no hidden overlapping shells, proper UVs and named materials.
+   - It uses the game's scale, pivot and facing.
+   - The high-def is that shaped mesh. The low-poly is decimated or retopologised from it.
+   - A visible stack of separate shapes or a lumpy maths blob is not a finished model.
 4. **Finished before review.** A model goes to David in both versions: the high-def in its close-up view, and the low-poly in the world from the game camera, beside the model it replaces.
 5. **One version in the repo.** When a model replaces another, the old file is deleted or moved to `archive/`, and every path that loaded it moves to the new one. No parallel old copies.
 6. **Budgets.** The low-poly fits the world's triangle budget (`specs/perf/`). The high-def is sized for one model on screen at a time.

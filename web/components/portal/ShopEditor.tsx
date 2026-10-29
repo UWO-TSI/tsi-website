@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import type { ShopItem, ShopCategory, Rarity } from "@/lib/content/types";
+import type { ShopItem, ShopCategory } from "@/lib/content/types";
+import { RARITIES, type Rarity } from "@/lib/rarity";
 import type { ShopCategory as CatalogueCategory } from "@/lib/wallet/catalogue";
 import ImageUploadButton from "@/components/portal/ImageUploadButton";
 import { CurrencyIcon } from "@/components/economy/Amount";
@@ -42,7 +43,6 @@ const CATEGORIES: EditorCategory[] = [
 const TIERS = ["", "basic", "mid", "premium"] as const;
 const SLOTS = ["", "rod", "net", "shovel", "outfit", "hair", "accessory"] as const;
 type EconomyFields = { price_coins?: number | null; tier?: string | null; slot?: string | null; special_pool?: boolean; stackable?: boolean; catalogue_ref?: string | null };
-const RARITIES: Rarity[] = ["common", "rare", "epic", "legendary"];
 
 interface FormState {
   slug: string;

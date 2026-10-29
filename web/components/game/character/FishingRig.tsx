@@ -42,6 +42,7 @@ import { RAW_TURN_X } from "@/lib/game/fishing";
 import { heldTemplate } from "@/lib/game/character/heldMesh";
 import { LABEL_PRIORITY, worldLabels } from "@/lib/game/labelLayout";
 import { liveWind, useMoveParticles } from "../movement/moveFx";
+import { popBang } from "./hookBang";
 
 export const BOBBER_URL = "/assets/game/tools/bobber.glb";
 useGLTF.preload(BOBBER_URL);
@@ -200,8 +201,7 @@ function mountBang(r: Rig, box: HTMLElement, head: RefObject<THREE.Group | null>
   const at = document.createElement("div"), bang = document.createElement("div");
   at.setAttribute("aria-hidden", "true");
   Object.assign(at.style, { position: "absolute", left: "0", top: "0", pointerEvents: "none", display: "none", zIndex: "30" });
-  bang.style.cssText = `${cssText(BANG_STYLE)};display:block;margin:-22px 0 0 -22px`;
-  bang.textContent = "!";
+  bang.style.cssText = "position:relative;width:0;height:0";
   at.appendChild(bang);
   box.appendChild(at);
   r.bang = bang;
@@ -220,25 +220,12 @@ function mountBang(r: Rig, box: HTMLElement, head: RefObject<THREE.Group | null>
   return () => { off(); at.remove(); if (r.bang === bang) r.bang = null; };
 }
 
-/** React's style object as a style attribute (numbers in px, but for the unitless weight). */
-const cssText = (style: React.CSSProperties) => Object.entries(style)
-  .map(([k, v]) => `${k.replace(/[A-Z]/g, c => `-${c.toLowerCase()}`)}:${typeof v === "number" && k !== "fontWeight" ? `${v}px` : v}`).join(";");
-
-/** The bite's "!": a paper bubble with a coral mark (the GUI sheet's tokens, plain values outside its scope). */
-export const BANG_STYLE: React.CSSProperties = {
-  display: "none", width: 44, height: 44, lineHeight: "44px", textAlign: "center", borderRadius: "46% 50% 44% 48% / 54% 50% 46% 52%",
-  fontFamily: "var(--gui-font, var(--font-highlight, sans-serif))", fontSize: 30, fontWeight: 900, color: "var(--gui-coral-ink, #b4513a)",
-  background: "var(--gui-paper-hi, #fffff7)", boxShadow: "0 3px 0 rgb(114 92 78 / 0.18), 0 10px 22px rgb(79 63 49 / 0.18), inset 0 0 0 2.5px var(--gui-coral, #e2826a)",
-};
-export const BANG_POP: Keyframe[] = [{ transform: "translateY(10px) scale(0.2) rotate(-14deg)" }, { transform: "translateY(-6px) scale(1.25) rotate(6deg)", offset: 0.55 }, { transform: "translateY(0) scale(1) rotate(-3deg)" }];
-export const BANG_TIMING: KeyframeAnimationOptions = { duration: 380, easing: "cubic-bezier(0.34, 1.56, 0.64, 1)", fill: "forwards" };
-
 /** One frame of the rig (module scope: the react compiler freezes values reached through hooks). */
 function step(r: Rig, m: Readonly<CharacterMotion> | null, rod: THREE.Object3D, tipLocal: THREE.Vector3, bangEl: HTMLDivElement | null, pool: ParticlePool,
   camera: THREE.Camera, bufferHeight: number, dt: number, now: number) {
   const f = m?.fishing ?? null;
   const bang = f?.phase === "bite";
-  if (bang !== r.bangShown) { r.bangShown = bang; if (bang) bangEl?.animate(BANG_POP, BANG_TIMING); }
+  if (bang !== r.bangShown) { r.bangShown = bang; if (bang && bangEl) popBang(bangEl, f.hook); }
   if (!f) { r.bobber.visible = false; r.line.visible = false; r.cast = null; return; }
   const lineOn = readFishingLine();
   // This frame's tip: the puppet has stepped (Character's frame runs first); bring the rod's matrix up to date.
@@ -253,7 +240,10 @@ function step(r: Rig, m: Readonly<CharacterMotion> | null, rod: THREE.Object3D, 
   if (f.phase !== r.phase) {
     const prev = r.phase;
     r.phase = f.phase;
-    if (f.phase === "bite") fishBites(pool, r.at.x, f.waterY, r.at.z);
+    if (f.phase === "bite") {
+      fishBites(pool, r.at.x, f.waterY, r.at.z);
+      if (f.hook !== "common") fishLeaps(pool, r.at.x, f.waterY, r.at.z); // a legendary or divine bite: the bigger crown too
+    }
     if (f.phase === "reel") { r.wakeAt = 0; r.wakeFrom.copy(r.at); }
     if (f.phase === "landed" && r.landed) fishLeaps(pool, r.at.x, f.waterY, r.at.z);
     if (f.phase === "escaped" && r.landed) {
