@@ -20,6 +20,7 @@ export const DEFAULT_TABLES: StudyTable[] = [
   T(5, "cafe-four-1", "Table for four", "cafe", "four", 4),
   T(6, "cafe-four-2", "Communal table", "cafe", "four", 4),
   T(7, "cafe-couch", "Booth", "cafe", "couch", 4),
-  T(8, "plaza-picnic", "Plaza picnic table", "outdoor-plaza", "outdoor", 4),
-  T(9, "pier-bench", "Pier table", "outdoor-pier", "outdoor", 2),
+  // Outdoors: the bench on the quay, facing the sea (David: "shouldnt be study table should just be bench"; the plaza's
+  // picnic table, T(8), is gone: "not needed").
+  T(9, "pier-bench", "Pier bench", "outdoor-pier", "outdoor", 2),
 ];

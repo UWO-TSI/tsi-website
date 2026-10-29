@@ -58,9 +58,7 @@ describe("resident routines", () => {
     }
   });
 
-  // new world: 7 walks pass through a solid (follow-up lane; village-archive)
-
-  it.skip("never walks through a solid: every walk stays on free ground but for its last steps through a door or onto a seat", () => {
+  it("never walks through a solid: every walk stays on free ground but for its last steps through a door or onto a seat", () => {
     const bad: string[] = [];
     for (const { plan, legs } of days) {
       // Walks are cached per pair of stops: check each distinct one once.
@@ -80,7 +78,7 @@ describe("resident routines", () => {
         }
       }
     }
-    expect(bad).toEqual([]);
+    expect(bad.length, bad.slice(0, 40).join("\n")).toBe(0);
   });
 
   it("stops at every waypoint: each walk ends in a stay of at least MIN_STAY at the same stop", () => {
@@ -132,14 +130,15 @@ describe("resident routines", () => {
     expect(owl.plan.phases.night.map(s => s.kind)).toEqual(["sit", "stand", "sit"]);
   });
 
-  // new world: the night owl's bench isn't under a lamp (20.6 u off) (follow-up lane; village-archive)
-
-  it.skip("never seats two residents on one seat at once, and the night's sitters get the bench under the lamp", () => {
+  it("never seats two residents on one seat at once, and the night's sitters get the bench under the lamp", () => {
     const sits = days.flatMap(({ plan, legs }) => legs.filter(l => !l.walk && l.stop.kind === "sit").map(l => ({ slug: plan.slug, seat: l.stop.at.join(), t0: l.t0, t1: l.t1 })));
     const clashes = sits.filter((a, i) => sits.some((b, j) => j > i && a.slug !== b.slug && a.seat === b.seat && a.t0 < b.t1 && b.t0 < a.t1));
     expect(clashes).toEqual([]);
-    const lamp = objectsOf("lamp", v)[0];
-    for (const { plan } of days) for (const s of plan.phases.night) if (s.kind === "sit") expect(Math.hypot(s.at[0] - lamp.x, s.at[1] - lamp.z), plan.slug).toBeLessThan(3.5);
+    // Under a lamp that casts light (a lamp post; a hand lantern only glows): on the new world, the campfire's lanterns.
+    const lamps = objectsOf("lamp", v).filter(l => l.model !== "hand");
+    const nightSits = days.flatMap(({ plan }) => plan.phases.night.filter(s => s.kind === "sit").map(s => ({ slug: plan.slug, s })));
+    expect(nightSits.some(n => n.slug === "nell")).toBe(true);
+    for (const { slug, s } of nightSits) expect(Math.min(...lamps.map(l => Math.hypot(s.at[0] - l.x, s.at[1] - l.z))), slug).toBeLessThan(3.5);
   });
 
   it("seats residents only on the players' two bench slots, under the slot's claim key", () => {

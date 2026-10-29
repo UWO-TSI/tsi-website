@@ -153,8 +153,7 @@ describe("the member island (web/data/world)", () => {
     // A completed club goal opens its building (cafe-polish §3).
     expect(landmarks(undefined, ["cafe"]).filter(l => !l.open).map(l => l.id).sort()).toEqual(["museum"]);
   });
-  // new world: bench-0 has no propFootprint (still after remodel round 3) (follow-up lane; village-archive)
-  it.skip("keeps solid prop footprints on land and blocks entry from each side", () => {
+  it("keeps solid prop footprints on land and blocks entry from each side", () => {
     for (const prop of [...objectsOf("bench"), ...objectsOf("rock")]) {
       expect(propFootprint(prop), prop.id).not.toBeNull();
       expect(island.surface(prop.x, prop.z)).not.toBe(Surface.River);
@@ -187,7 +186,8 @@ describe("the member island (web/data/world)", () => {
     for (const id of ["hq", "oracle", "wharf", "cafe"] as const) {
       const door = landmarkPoint(id, "door"), exit = landmarkPoint(id, "exit");
       if (!door || !exit) continue;
-      const s = walkTo(island, exit[0], exit[1], door[0], door[1]);
+      // The temple stands past the border until its drop (lib/game/barriers.ts releaseRegions): its door on the ground alone.
+      const s = walkTo(id === "oracle" ? { ...island, locked: undefined, released: undefined } : island, exit[0], exit[1], door[0], door[1]);
       // The scene's prompt ranges: the clubhouse door 2, the temple and the boat 1.6, the café 1.4.
       expect(Math.hypot(s.x - door[0], s.z - door[1]), id).toBeLessThan(id === "cafe" ? 1.4 : 1.6);
     }

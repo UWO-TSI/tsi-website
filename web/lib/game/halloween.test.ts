@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FOG_NIGHT, KNOCK_SIDE, doorPoint, fogNightLight, knockDoors, nextAnswer, pumpkinSpots } from "./halloween";
+import { FOG_NIGHT, KNOCK_SIDE, doorPoint, fogNightLight, knockDoors, nextAnswer, pumpkinLamp, pumpkinSpots } from "./halloween";
 import { residentHome } from "./residentRoutine";
 import { islandOf, landmarks } from "./defaultIsland";
 import { join } from "node:path";
@@ -14,12 +14,17 @@ import { CURRENT } from "./lookPreset";
 describe("Halloween on the island (lib/game/halloween.ts)", () => {
   const v = villageOfWorld(loadWorldFromDisk(join(__dirname, "../../data/world"))), island = islandOf(v);
 
-  // new world: pumpkins stand by only 7 of 59 lamps (follow-up lane; village-archive)
-
-  it.skip("sets pumpkins by every lamp post and each lived-in door, on open ground and apart, the same every load", () => {
+  it("sets a pumpkin at the foot of every lantern post on the land and the quay, on its lit side, plus a pair at each lived-in door; none at hand lanterns, on the jetty or round the fountain; on open ground and apart, the same every load", () => {
     const spots = pumpkinSpots(v, island.standable);
-    const lamps = objectsOf("lamp", v).length;
-    expect(spots.filter(s => s.by.startsWith("lamp:")).length).toBe(lamps);
+    const posts = objectsOf("lamp", v).filter(pumpkinLamp);
+    expect(posts.length).toBeGreaterThanOrEqual(15);
+    expect(posts.some(l => l.model === "hand" || /^lamp-(jetty|fountain)/.test(l.id))).toBe(false);
+    for (const l of posts) {
+      const s = spots.find(p => p.by === `lamp:${l.id}`);
+      expect(s, l.id).toBeDefined();
+      expect(Math.hypot(s!.x - l.x, s!.z - l.z), l.id).toBeLessThan(0.9);
+    }
+    expect(spots.filter(s => s.by.startsWith("lamp:")).length).toBe(posts.length);
     expect(spots.filter(s => s.by.startsWith("door:")).length).toBeGreaterThanOrEqual(4);
     for (const s of spots) expect(island.standable(s.x, s.z), s.by).toBe(true);
     for (const a of spots) for (const b of spots) if (a !== b) expect(Math.hypot(a.x - b.x, a.z - b.z)).toBeGreaterThanOrEqual(0.6);

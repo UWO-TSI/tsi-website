@@ -4,7 +4,7 @@ import {
 import { ROCK_MODELS, ROCK_SIZE } from "./rocks";
 import { FURNITURE, studySolid, type Furniture } from "@/lib/study/seats";
 import { objectsOf, village, villageSpawnPoint, type MapObject, type Village } from "./villageMap";
-import { barrierBoxes, barrierFootprint, barrierPlacements, inBarrier } from "./barriers";
+import { barrierBoxes, barrierFootprint, barrierPlacements, inBarrier, releaseRegions } from "./barriers";
 import { DROPS } from "./drops";
 import { JETTY, worldToDock, type Dock } from "./wharf";
 import { BAR_DECKS, barOf } from "./sushiBar";
@@ -274,10 +274,8 @@ export function villageSpawn(v: Village = village()): [number, number, number] {
   return [x, 0, z];
 }
 
-/** The benches, rocks, fences and scenery props: the props with a solid footprint. A bench the map gives no model (the
- * new world's plaza benches, lib/game/world/generate.ts) is our plaza bench (art/remodel/build_bench.py). */
-export const propsOf = (v: Village = village()) => [...objectsOf("bench", v).map(o => (o.model ? o : { ...o, model: "plaza-bench" })),
-  ...objectsOf("rock", v), ...objectsOf("fence", v), ...objectsOf("prop", v)];
+/** The benches, rocks, fences and scenery props: the props with a solid footprint. */
+export const propsOf = (v: Village = village()) => [...objectsOf("bench", v), ...objectsOf("rock", v), ...objectsOf("fence", v), ...objectsOf("prop", v)];
 
 /** Solid footprint of a bench, rock or fence: half extents and centre offset × scale (before its yaw). */
 export function propFootprint(o: Pick<MapObject, "model" | "scale">): [number, number, number, number] | null {
@@ -390,6 +388,13 @@ export interface VillageIsland {
    */
   climb?: (x: number, z: number, nx: number, nz: number) => boolean;
   steep?: (x: number, z: number) => boolean;
+  /**
+   * The smooth world only (lib/game/barriers.ts releaseRegions): land behind a barrier that walking from the spawn
+   * can't reach, a wall to every move (movement's `locked`); and land walking does reach, the only ground a splash
+   * brings you back to (movement's `released`).
+   */
+  locked?: (x: number, z: number) => boolean;
+  released?: (x: number, z: number) => boolean;
 }
 
 /** The jetty deck's walk height on the smooth world (the pier model's deck top): the quay stands at it (lib/game/world/convert.ts). */
@@ -515,8 +520,19 @@ export function islandOf(v: Village): VillageIsland {
     }
     return [x, z];
   };
-  const top = (x: number, z: number) => Math.max(ground(x, z), solidTop(x, z));
-  return terrain ? { map, ground, surface, standable, move, wet, top, climb, steep } : { map, ground, surface, standable, move, wet, top };
+  // Over the smooth world's water its top is the water's surface, not the seabed: a fall into the sea splashes there
+  // (the splash shows on the water, and a body never sinks below the realtime room's floor, protocol AREA_BOUNDS).
+  const top = (x: number, z: number) => {
+    const g = ground(x, z);
+    return Math.max(terrain && g < terrain.seaLevel && wet(x, z) ? terrain.seaLevel : g, solidTop(x, z));
+  };
+  if (!terrain) return { map, ground, surface, standable, move, wet, top };
+  // What the barriers close off, measured once, on the first ask (a few tens of ms: not for an island nobody walks).
+  let regions: ReturnType<typeof releaseRegions> | undefined;
+  const region = () => (regions === undefined ? (regions = releaseRegions(terrain, wet, barriers, villageSpawnPoint(v))) : regions);
+  const locked = (x: number, z: number) => region()?.locked(x, z) ?? false;
+  const released = (x: number, z: number) => region()?.released(x, z) ?? true;
+  return { map, ground, surface, standable, move, wet, top, climb, steep, locked, released };
 }
 
 const islands = new WeakMap<Village, VillageIsland>();

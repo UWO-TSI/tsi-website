@@ -85,8 +85,7 @@ describe("the loopback NetSource", () => {
   });
 
   // The codec ring drive is the file's heavy one: give it room on a loaded machine.
-  // new world: loopback positions fail the area check (follow-up lane; village-archive)
-  it.skip("delivers motion through the codec and the interpolation ring: positions in the village, events, slow state", { timeout: 20_000 }, () => {
+  it("delivers motion through the codec and the interpolation ring: positions in the village, events, slow state", { timeout: 20_000 }, () => {
     const { lb, run, at } = manual(24, { seed: 3 });
     lb.start("village");
     const out = createRemoteSample();
