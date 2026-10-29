@@ -17,6 +17,17 @@ David, 2026-10-28, on the review pages: "i need you to fuckign lock in on all th
 6. **Real items, not text:** item pictures are the real model or its rendered icon, with the pixel filter. No emoji (row 281). Food on a menu is the food model (David 10-28).
 7. **Rarity colours:** common grey, uncommon green, rare blue, epic purple, legendary yellow, and divine a purple holographic rainbow (`--gui-holo`). Rarity shows as a thin outline or edge, not a fill (David 10-28). Text on divine is white.
 8. **HUD at rest:** the quest line, the minimap and the time with its sun, top right (row 309), plus the player's health, stamina and XP bars (David 10-28: "the user shoud have a health, stamina, and exp bar, and everything should be when exp is filled"; a level-up happens when the XP bar fills). No other movement UI. Esc 1 is a UI view with no dimming; Esc 2 is Settings and Log out.
+8b. **HUD layout, the two layers** (David 10-29: "the layer 2 ui isnt finalized and there isnt a slot for the coins and gems"):
+   - **Layer 1, at rest:**
+     - top right: the quest line, the minimap, the time with its sun;
+     - top left: the health and XP bars, plus stamina only while it's below full.
+     - Nothing else.
+   - **Layer 2, the UI view (Esc 1, no dimming):** everything in layer 1, plus:
+     - **the wallet:** coins and gems, the one home for both, in its own slot top right directly under the time;
+     - the level badge beside the XP bar;
+     - the menu dock along the bottom (bag, collection, quests, mail, map, settings).
+   - **When coins or gems change at rest:** the wallet slides into its layer-2 slot for about 2 s, counts, then slides away. Every coin and gem animation (rewards, the tutorial's fly-ins, sales) flies to that slot, never to the quest line.
+   - One owner: the HUD layout lives in one component tree (TopCluster and the dock), and features add pieces into named slots there, never their own corners.
 9. **Motion:** a spring with about 12% overshoot; hover about 200 ms, select about 400 ms; transform only; a slight drop shadow on hover; off under reduced motion. When a value changes (a stat, a count), animate the change; never jump.
 10. **Never show the coin or gem to CAD rate.**
 
