@@ -16,6 +16,7 @@ import PixelImage from "@/components/economy/PixelImage";
 import { GuiVariantContext } from "../variant";
 import { bothRefs, useMarker, useNudge } from "../motion";
 import f from "./flat.module.css";
+import type { Rarity } from "@/lib/rarity";
 
 /** The kit's class names, for the odd surface that lays out its own content in the flat style. */
 export { f as flatStyles };
@@ -28,6 +29,11 @@ export const STAGE = { stage: f.stage, picture: f.stagePicture } as const;
 export const NUDGE_GRID = f.nudge;
 export { useNudge };
 export { HexRadar, type RadarAxis } from "./HexRadar";
+export { GearSlot, type GearOption } from "./GearSlot";
+
+/** A rarity's thin outline (design bible UI 7) on a card or a stage: `data-rarity` and its colour as `--edge`. */
+export const rarityEdge = (rarity: Rarity | null | undefined) =>
+  rarity ? { "data-rarity": rarity, style: { "--edge": `var(--ui-rarity-${rarity})` } as CSSProperties } : {};
 
 const cx = (...names: (string | false | null | undefined)[]) => names.filter(Boolean).join(" ");
 
@@ -169,10 +175,12 @@ const COVER_TEXT: Record<Exclude<CardCover, "not-found">, string> = { "sold-out"
  * button; without, a picture. `size`: "lg" (the shop's), "md" or "sm" for many to a screen. `price`: the pill shows it
  * (its amount and currency's icon), or "Price to come" while it has none; `pill` is any other short value.
  */
-export function ItemCard({ picture, px = 44, name, line, price, pill: other, tag, arrow = true, cover, selected, size = "lg", label, testId, onClick, className, ...rest }:
+export function ItemCard({ picture, px = 44, name, line, price, pill: other, tag, arrow = true, cover, selected, size = "lg", label, testId, onClick, className, rarity, ...rest }:
   Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onClick" | "children"> & {
     picture: string | ReactNode; px?: number; name: ReactNode; line?: ReactNode; price?: Price | null; pill?: ReactNode; tag?: ReactNode; arrow?: boolean;
     cover?: CardCover | null; selected?: boolean; size?: "lg" | "md" | "sm"; label?: string; testId?: string; onClick?: () => void;
+    /** Its rung on the rarity ladder, as a thin outline round the card. */
+    rarity?: Rarity | null;
   }) {
   const pill = price ? (price.amount ? <>{price.amount.toLocaleString()}<CurrencyIcon currency={price.currency} size={14} /></> : PRICE_TO_COME) : other;
   const face = <>
@@ -189,7 +197,7 @@ export function ItemCard({ picture, px = 44, name, line, price, pill: other, tag
     {cover && cover !== "not-found" ? <span className={f.soldOut}>{COVER_TEXT[cover]}</span> : null}
   </>;
   const look = { className: cx(f.card, className), "data-testid": testId, "data-cover": cover || undefined,
-    "data-selected": selected || undefined, "data-size": size === "lg" ? undefined : size };
+    "data-selected": selected || undefined, "data-size": size === "lg" ? undefined : size, ...rarityEdge(rarity) };
   if (!onClick) return <div {...(rest as HTMLAttributes<HTMLDivElement>)} {...look} role="img" aria-label={label}>{face}</div>;
   // A card that is a radio or a tab (a finish to pick) says so by its role, not as a pressed button.
   return <button type="button" {...rest} {...look} onClick={onClick} aria-label={label} aria-pressed={selected === undefined || rest.role ? undefined : selected}>{face}</button>;
@@ -248,14 +256,19 @@ export type Action = { label: ReactNode; onClick: () => void; disabled?: boolean
  * action, `pay`, then the fine print, `fine`); the `SpecBand` along the bottom. A priced item with no price yet says
  * "Price to come" and its action is off.
  */
-export function DetailView({ stage, onBack, backLabel = "All", steps, hint = "Drag to turn", info, pay, fine, specs, testId }: {
+export function DetailView({ stage, onBack, backLabel = "All", steps, hint = "Drag to turn", info, pay, fine, specs, testId, rarity, corner }: {
   stage: ReactNode; onBack: () => void; backLabel?: string; steps?: { prev: Step; next: Step } | null; hint?: string | null;
   info: ReactNode; pay?: { price?: Price | null; was?: ReactNode; action?: Action } | null; fine?: ReactNode;
   specs?: readonly (readonly [string, ReactNode])[] | null; testId?: string;
+  /** The item's rung on the rarity ladder: a thin outline round the stage. */
+  rarity?: Rarity | null;
+  /** Small things in the stage's bottom-right corner (a rod's bait and bobber slots). */
+  corner?: ReactNode;
 }) {
   return <div className={f.detail} data-testid={testId}>
-    <div className={f.stageWrap}>
+    <div className={f.stageWrap} {...rarityEdge(rarity)}>
       {stage}
+      {corner ? <span className={f.stageCorner}>{corner}</span> : null}
       <button type="button" className={f.back} onClick={onBack}><ArrowLeft size={16} aria-hidden />{backLabel}</button>
       {steps && <span className={f.steps}>
         <RoundButton label={steps.prev.label} onClick={steps.prev.onClick}><ChevronLeft size={18} aria-hidden /></RoundButton>

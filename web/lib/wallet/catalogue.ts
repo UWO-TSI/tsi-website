@@ -44,7 +44,7 @@ export const CATALOGUE: CatalogueEntry[] = [
   e("rod-basic", "Basic rod", "tool", 100, { tier: "basic", slot: "rod", description: "A sturdy starter rod." }),
   e("rod-cedar", "Cedar rod", "tool", 400, { tier: "mid", slot: "rod", catalogue_ref: "rod_cedar", description: "Lighter, and a little lucky." }),
   e("rod-glass", "Glass rod", "tool", 1200, { tier: "premium", slot: "rod", catalogue_ref: "rod_glass", description: "The pier regulars' favourite." }),
-  e("bobber-lucky", "Lucky bobber", "tool", 600, { tier: "premium", slot: "bobber", catalogue_ref: "bobber_lucky", description: "A bobber for your rod: +2 luck, so rarer fish bite more often." }),
+  e("bobber-lucky", "Lucky bobber", "tool", 600, { tier: "premium", slot: "bobber", catalogue_ref: "bobber_lucky", description: "A bobber for your rod: +20 luck, so rarer fish bite more often." }),
   e("net-basic", "Bug net", "tool", 100, { tier: "basic", slot: "net" }),
   e("net-mid", "Wide net", "tool", 400, { tier: "mid", slot: "net" }),
   e("shovel-basic", "Shovel", "tool", 100, { tier: "basic", slot: "shovel" }),
@@ -96,7 +96,7 @@ export const CATALOGUE: CatalogueEntry[] = [
     description: "Holographic, in light or dark: the GENESIS ASCII art and GEN_26. Pick up at HQ on campus." }),
     sprite_url: "/assets/game/items/merch-genesis-sticker-light-sprite.webp" },
   // Bait for the rod's bait slot (lib/game/rods.ts TACKLE; David 2026-10-27 x-shop). Last, so no earlier row moves.
-  e("bait-sweet", "Sweet bait", "tool", 300, { tier: "mid", slot: "bait", catalogue_ref: "bait_sweet", description: "Bait for your rod: +2 bite window and +1 lure, so you get longer to hook and bites come sooner." }),
+  e("bait-sweet", "Sweet bait", "tool", 300, { tier: "mid", slot: "bait", catalogue_ref: "bait_sweet", description: "Bait for your rod: +20 bite window and +10 lure, so you get longer to hook and bites come sooner." }),
 ];
 
 // ── Ownership (coordinator ruling on audit item 22; 20260926180000_ownership.sql) ──

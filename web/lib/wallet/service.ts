@@ -6,9 +6,9 @@
 import { ROSTER } from "@/lib/collections/roster";
 import { FISH } from "@/lib/game/fishing";
 import { fnv1a } from "@/lib/game/weatherSystem";
-import { RODS, TACKLE } from "@/lib/game/rods";
+import { RODS, TACKLE, onShopShelf } from "@/lib/game/rods";
 import { CRAFTED_ITEMS } from "@/lib/crafting/recipes";
-import { dailySpecials, effectivePrice, isOnSale, ownedCounts, sellPrice, speciesClass, speciesSellPrice, TAB_OF, torontoDay, type ShopItem, type Special } from "./rules";
+import { dailySpecials, effectivePrice, isOnSale, ownedCounts, speciesClass, speciesSellPrice, TAB_OF, torontoDay, type ShopItem, type Special } from "./rules";
 import { toFailure, type Result } from "@/lib/result";
 import { EconomyError, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation } from "./store";
 
@@ -110,13 +110,13 @@ export const getShop = (store: EconomyStore, m: string, now: Date) =>
   });
 
 /**
- * The tools shelf as the rod shop (David 2026-10-27, v1-gameplay m4): all five rods by tier (the starter and the
- * workbench ones shown, not sold), then the add-ons, then the rest.
+ * The tools shelf as the rod shop (David 2026-10-27, v1-gameplay m4): the rods up to rare by tier (the starter and the
+ * workbench ones shown, not sold; rarer rods stay off the shelf, David 2026-10-28), then the add-ons, then the rest.
  */
 function rodShelf(tools: ShopEntry[], inv: InventoryRow[]): ShopEntry[] {
   const have = new Set(inv.map((r) => r.item.catalogue_ref));
   const crafted = new Map(CRAFTED_ITEMS.map((c) => [c.catalogue_ref, c]));
-  const rods = RODS.map((r): ShopEntry => tools.find((e) => e.catalogue_ref === r.key) ?? {
+  const rods = RODS.filter(onShopShelf).map((r): ShopEntry => tools.find((e) => e.catalogue_ref === r.key) ?? {
     id: `rod:${r.key}`, slug: crafted.get(r.key)?.slug ?? r.key, name: r.name, category: "tool", tier: crafted.get(r.key)?.tier ?? "basic",
     description: crafted.get(r.key)?.description ?? "Everyone's first rod. Light, forgiving and a little wobbly.",
     currency: "coins", price: 0, base_price: 0, special: false, stock: null, owned: r.source === "starter" || have.has(r.key) ? 1 : 0, can_buy: false,

@@ -8,7 +8,7 @@ INSERT INTO shop_items (slug, display_name, category, description, price_coins, 
   ('rod-basic', 'Basic rod', 'tool', 'A sturdy starter rod.', 100, NULL, 'basic', 'rod', FALSE, FALSE, NULL, NULL, 1),
   ('rod-cedar', 'Cedar rod', 'tool', 'Lighter, and a little lucky.', 400, NULL, 'mid', 'rod', FALSE, FALSE, NULL, 'rod_cedar', 2),
   ('rod-glass', 'Glass rod', 'tool', 'The pier regulars'' favourite.', 1200, NULL, 'premium', 'rod', FALSE, FALSE, NULL, 'rod_glass', 3),
-  ('bobber-lucky', 'Lucky bobber', 'tool', 'A bobber for your rod: +2 luck, so rarer fish bite more often.', 600, NULL, 'premium', 'bobber', FALSE, FALSE, NULL, 'bobber_lucky', 4),
+  ('bobber-lucky', 'Lucky bobber', 'tool', 'A bobber for your rod: +20 luck, so rarer fish bite more often.', 600, NULL, 'premium', 'bobber', FALSE, FALSE, NULL, 'bobber_lucky', 4),
   ('net-basic', 'Bug net', 'tool', '', 100, NULL, 'basic', 'net', FALSE, FALSE, NULL, NULL, 5),
   ('net-mid', 'Wide net', 'tool', '', 400, NULL, 'mid', 'net', FALSE, FALSE, NULL, NULL, 6),
   ('shovel-basic', 'Shovel', 'tool', '', 100, NULL, 'basic', 'shovel', FALSE, FALSE, NULL, NULL, 7),
@@ -47,7 +47,7 @@ INSERT INTO shop_items (slug, display_name, category, description, price_coins, 
   ('merch-tsi-keycap-keychain', 'TSI keycap keychain', 'merch', 'A Gateron Milky Yellow Pro switch in clear acrylic, under a navy TSI keycap with the Tethos mark. Press it: it clicks. Pick up at HQ on campus.', NULL, 800, NULL, NULL, FALSE, FALSE, NULL, NULL, 40),
   ('merch-tsi-lanyard', 'TSI lanyard', 'merch', 'Navy, printed both sides: GENESIS and TETHOS with the Tethos mark outside, the Steve Jobs quote inside. Silver D-ring and swivel snap hook. Pick up at HQ on campus.', NULL, 800, NULL, NULL, FALSE, FALSE, NULL, NULL, 41),
   ('merch-genesis-sticker', 'GENESIS sticker', 'merch', 'Holographic, in light or dark: the GENESIS ASCII art and GEN_26. Pick up at HQ on campus.', NULL, 200, NULL, NULL, FALSE, FALSE, NULL, NULL, 42),
-  ('bait-sweet', 'Sweet bait', 'tool', 'Bait for your rod: +2 bite window and +1 lure, so you get longer to hook and bites come sooner.', 300, NULL, 'mid', 'bait', FALSE, FALSE, NULL, 'bait_sweet', 43)
+  ('bait-sweet', 'Sweet bait', 'tool', 'Bait for your rod: +20 bite window and +10 lure, so you get longer to hook and bites come sooner.', 300, NULL, 'mid', 'bait', FALSE, FALSE, NULL, 'bait_sweet', 43)
 ON CONFLICT (slug) DO NOTHING;
 INSERT INTO sell_prices (category, rarity, price) VALUES
   ('fish', 'common', 8),
@@ -95,11 +95,11 @@ ON CONFLICT (key) DO NOTHING;
 -- END GENERATED ECONOMY SEED
 -- The rows this change adds or edits, so they land where the insert above does nothing.
 INSERT INTO shop_items (slug, display_name, category, description, price_coins, tc_price, tier, slot, special_pool, stackable, stock, catalogue_ref, position) VALUES
-  ('bobber-lucky', 'Lucky bobber', 'tool', 'A bobber for your rod: +2 luck, so rarer fish bite more often.', 600, NULL, 'premium', 'bobber', FALSE, FALSE, NULL, 'bobber_lucky', 4),
-  ('bait-sweet', 'Sweet bait', 'tool', 'Bait for your rod: +2 bite window and +1 lure, so you get longer to hook and bites come sooner.', 300, NULL, 'mid', 'bait', FALSE, FALSE, NULL, 'bait_sweet', 43)
+  ('bobber-lucky', 'Lucky bobber', 'tool', 'A bobber for your rod: +20 luck, so rarer fish bite more often.', 600, NULL, 'premium', 'bobber', FALSE, FALSE, NULL, 'bobber_lucky', 4),
+  ('bait-sweet', 'Sweet bait', 'tool', 'Bait for your rod: +20 bite window and +10 lure, so you get longer to hook and bites come sooner.', 300, NULL, 'mid', 'bait', FALSE, FALSE, NULL, 'bait_sweet', 43)
 ON CONFLICT (slug) DO UPDATE SET display_name = EXCLUDED.display_name, category = EXCLUDED.category, description = EXCLUDED.description, price_coins = EXCLUDED.price_coins, tc_price = EXCLUDED.tc_price, tier = EXCLUDED.tier, slot = EXCLUDED.slot, special_pool = EXCLUDED.special_pool, stackable = EXCLUDED.stackable, catalogue_ref = EXCLUDED.catalogue_ref, position = EXCLUDED.position;
 
--- previous block: 20261027054753_catalogue_seed.sql
+-- previous block: 20261027165850_catalogue_seed.sql
 -- seed: ownership
 -- BEGIN GENERATED OWNERSHIP SEED (web/scripts/gen-seeds.mjs)
 INSERT INTO shop_items (slug, display_name, category, description, price_coins, tc_price, tier, slot, special_pool, stackable, stock, catalogue_ref, position, active) VALUES
@@ -171,40 +171,53 @@ INSERT INTO shop_items (slug, display_name, category, description, price_coins, 
   ('furn-flower-tulip', 'Tulips', 'furniture', '', 100, NULL, NULL, NULL, TRUE, TRUE, NULL, 'flower-tulip', 265, TRUE),
   ('furn-flower-rose', 'Roses', 'furniture', '', 100, NULL, NULL, NULL, TRUE, TRUE, NULL, 'flower-rose', 266, TRUE),
   ('furn-tree-hardwood-a', 'Tree', 'furniture', '', 100, NULL, NULL, NULL, TRUE, TRUE, NULL, 'tree-hardwood-a', 267, TRUE),
-  ('wear-hair-baby-sprout', 'Baby sprout', 'hair', '', 350, NULL, NULL, NULL, TRUE, FALSE, NULL, 'hair_baby_sprout', 600, TRUE),
-  ('wear-hair-layered-shag', 'Layered shag', 'hair', '', 350, NULL, NULL, NULL, TRUE, FALSE, NULL, 'hair_layered_shag', 601, TRUE),
-  ('wear-hair-vkei', 'V-kei layers', 'hair', '', 350, NULL, NULL, NULL, TRUE, FALSE, NULL, 'hair_vkei', 602, TRUE),
-  ('wear-hair-swept-fringe', 'Swept fringe', 'hair', '', 350, NULL, NULL, NULL, TRUE, FALSE, NULL, 'hair_swept_fringe', 603, TRUE),
-  ('wear-hair-ribbon-bob', 'Ribbon bob', 'hair', '', 350, NULL, NULL, NULL, TRUE, FALSE, NULL, 'hair_ribbon_bob', 604, TRUE),
+  ('wear-hair-baby-sprout', 'Baby sprout', 'hair', '', 350, NULL, NULL, NULL, FALSE, FALSE, NULL, 'hair_baby_sprout', 600, TRUE),
+  ('wear-hair-layered-shag', 'Layered shag', 'hair', '', 350, NULL, NULL, NULL, FALSE, FALSE, NULL, 'hair_layered_shag', 601, TRUE),
+  ('wear-hair-vkei', 'V-kei layers', 'hair', '', 350, NULL, NULL, NULL, FALSE, FALSE, NULL, 'hair_vkei', 602, TRUE),
+  ('wear-hair-swept-fringe', 'Swept fringe', 'hair', '', 350, NULL, NULL, NULL, FALSE, FALSE, NULL, 'hair_swept_fringe', 603, TRUE),
+  ('wear-hair-ribbon-bob', 'Ribbon bob', 'hair', '', 350, NULL, NULL, NULL, FALSE, FALSE, NULL, 'hair_ribbon_bob', 604, TRUE),
   ('wear-hair-curly-pigtails', 'Curly pigtails', 'hair', '', NULL, 200, NULL, NULL, FALSE, FALSE, NULL, 'hair_curly_pigtails', 605, TRUE),
   ('wear-hair-emo-layers', 'Emo layers', 'hair', '', NULL, 200, NULL, NULL, FALSE, FALSE, NULL, 'hair_emo_layers', 606, TRUE),
-  ('wear-hair-double-buns', 'Double buns', 'hair', '', 350, NULL, NULL, NULL, TRUE, FALSE, NULL, 'hair_double_buns', 607, TRUE),
+  ('wear-hair-double-buns', 'Double buns', 'hair', '', 350, NULL, NULL, NULL, FALSE, FALSE, NULL, 'hair_double_buns', 607, TRUE),
   ('wear-acc-ushanka-goggles', 'Ushanka and goggles', 'accessory', '', NULL, 200, NULL, NULL, FALSE, FALSE, NULL, 'acc_ushanka_goggles', 608, TRUE),
-  ('wear-acc-propeller-cap', 'Propeller cap', 'accessory', '', 250, NULL, NULL, NULL, TRUE, FALSE, NULL, 'acc_propeller_cap', 609, TRUE),
-  ('wear-acc-green-sprout', 'Green sprout', 'accessory', '', 300, NULL, NULL, NULL, TRUE, FALSE, NULL, 'acc_green_sprout', 610, TRUE),
-  ('wear-acc-paper-tie', 'Paper tie', 'accessory', '', NULL, 50, NULL, NULL, FALSE, FALSE, NULL, 'acc_paper_tie', 611, TRUE),
-  ('wear-acc-crew-visor', 'Crew visor', 'accessory', '', 120, NULL, NULL, NULL, TRUE, FALSE, NULL, 'acc_crew_visor', 612, TRUE),
-  ('wear-acc-plaid-scarf', 'Plaid scarf', 'accessory', '', 100, NULL, NULL, NULL, TRUE, FALSE, NULL, 'acc_plaid_scarf', 613, TRUE),
-  ('wear-acc-half-rim-glasses', 'Half-rim glasses', 'accessory', '', 50, NULL, NULL, NULL, TRUE, FALSE, NULL, 'acc_half_rim_glasses', 614, TRUE),
-  ('wear-acc-half-rim-glasses-silver', 'Silver half-rim glasses', 'accessory', '', 50, NULL, NULL, NULL, TRUE, FALSE, NULL, 'acc_half_rim_glasses_silver', 615, TRUE),
-  ('wear-acc-paper-bowtie', 'Paper bow tie', 'accessory', '', NULL, 50, NULL, NULL, FALSE, FALSE, NULL, 'acc_paper_bowtie', 616, TRUE),
-  ('wear-acc-square-shades', 'Square shades', 'accessory', '', 150, NULL, NULL, NULL, TRUE, FALSE, NULL, 'acc_square_shades', 617, TRUE),
-  ('wear-acc-wheat-stalk', 'Wheat stalk', 'accessory', '', 100, NULL, NULL, NULL, TRUE, FALSE, NULL, 'acc_wheat_stalk', 618, TRUE),
-  ('wear-acc-gold-monocle', 'Gold monocle', 'accessory', '', 150, NULL, NULL, NULL, TRUE, FALSE, NULL, 'acc_gold_monocle', 619, TRUE),
-  ('wear-acc-bandage-blindfold', 'Bandage blindfold', 'accessory', '', NULL, 100, NULL, NULL, FALSE, FALSE, NULL, 'acc_bandage_blindfold', 620, TRUE),
-  ('wear-acc-gold-rimless-shades', 'Gold rimless shades', 'accessory', '', 200, NULL, NULL, NULL, TRUE, FALSE, NULL, 'acc_gold_rimless_shades', 621, TRUE),
-  ('wear-acc-apple-stem', 'Apple stem', 'accessory', '', NULL, 100, NULL, NULL, FALSE, FALSE, NULL, 'acc_apple_stem', 622, TRUE),
-  ('wear-acc-drawn-top-hat', 'Drawn top hat', 'accessory', '', NULL, 200, NULL, NULL, FALSE, FALSE, NULL, 'acc_drawn_top_hat', 623, TRUE),
-  ('wear-acc-paper-horns', 'Paper horns', 'accessory', '', NULL, 50, NULL, NULL, FALSE, FALSE, NULL, 'acc_paper_horns', 624, TRUE),
-  ('wear-acc-bear-hood', 'White bear hood', 'accessory', '', NULL, 100, NULL, NULL, FALSE, FALSE, NULL, 'acc_bear_hood', 625, TRUE),
-  ('wear-acc-cowboy-hat', 'Cowboy hat', 'accessory', '', 150, NULL, NULL, NULL, TRUE, FALSE, NULL, 'acc_cowboy_hat', 626, TRUE),
-  ('wear-acc-woven-hat', 'Woven tassel hat', 'accessory', '', NULL, 200, NULL, NULL, FALSE, FALSE, NULL, 'acc_woven_hat', 627, TRUE),
-  ('wear-acc-monkey-ears', 'Monkey ears', 'accessory', '', 250, NULL, NULL, NULL, TRUE, FALSE, NULL, 'acc_monkey_ears', 628, TRUE),
-  ('wear-acc-red-band-straw-hat', 'Red-band straw hat', 'accessory', '', NULL, 200, NULL, NULL, FALSE, FALSE, NULL, 'acc_red_band_straw_hat', 629, TRUE),
-  ('face-silly-cat', 'Silly cat face', 'face', '', 250, NULL, NULL, NULL, TRUE, FALSE, NULL, 'face:silly_cat', 700, TRUE),
-  ('face-tired', 'Tired face', 'face', '', 250, NULL, NULL, NULL, TRUE, FALSE, NULL, 'face:tired', 701, TRUE),
-  ('face-weirdcore-eyes', 'Weirdcore eyes', 'face', '', 250, NULL, NULL, NULL, TRUE, FALSE, NULL, 'face:weirdcore_eyes', 702, TRUE),
-  ('face-vampire', 'Vampire face', 'face', '', 250, NULL, NULL, NULL, TRUE, FALSE, NULL, 'face:vampire', 703, TRUE),
+  ('wear-hair-spiky-messy', 'Spiky messy', 'hair', '', 350, NULL, NULL, NULL, FALSE, FALSE, NULL, 'hair_spiky_messy', 609, TRUE),
+  ('wear-hair-rolled-mask', 'Rolled-up mask', 'hair', '', NULL, 200, NULL, NULL, FALSE, FALSE, NULL, 'hair_rolled_mask', 610, TRUE),
+  ('wear-hair-ski-mask-dreads', 'Ski mask and dreads', 'hair', '', NULL, 200, NULL, NULL, FALSE, FALSE, NULL, 'hair_ski_mask_dreads', 611, TRUE),
+  ('wear-hair-buns-braid', 'Messy buns with a braid', 'hair', '', 350, NULL, NULL, NULL, FALSE, FALSE, NULL, 'hair_buns_braid', 612, TRUE),
+  ('wear-hair-sponge-twists', 'Sponge twists', 'hair', '', 350, NULL, NULL, NULL, FALSE, FALSE, NULL, 'hair_sponge_twists', 613, TRUE),
+  ('wear-acc-propeller-cap', 'Propeller cap', 'accessory', '', 250, NULL, NULL, NULL, TRUE, FALSE, NULL, 'acc_propeller_cap', 614, TRUE),
+  ('wear-acc-green-sprout', 'Green sprout', 'accessory', '', 300, NULL, NULL, NULL, TRUE, FALSE, NULL, 'acc_green_sprout', 615, TRUE),
+  ('wear-acc-paper-tie', 'Paper tie', 'accessory', '', NULL, 50, NULL, NULL, FALSE, FALSE, NULL, 'acc_paper_tie', 616, TRUE),
+  ('wear-acc-crew-visor', 'Crew visor', 'accessory', '', 120, NULL, NULL, NULL, TRUE, FALSE, NULL, 'acc_crew_visor', 617, TRUE),
+  ('wear-acc-plaid-scarf', 'Plaid scarf', 'accessory', '', 100, NULL, NULL, NULL, TRUE, FALSE, NULL, 'acc_plaid_scarf', 618, TRUE),
+  ('wear-acc-half-rim-glasses', 'Half-rim glasses', 'accessory', '', 50, NULL, NULL, NULL, TRUE, FALSE, NULL, 'acc_half_rim_glasses', 619, TRUE),
+  ('wear-acc-half-rim-glasses-silver', 'Silver half-rim glasses', 'accessory', '', 50, NULL, NULL, NULL, TRUE, FALSE, NULL, 'acc_half_rim_glasses_silver', 620, TRUE),
+  ('wear-acc-paper-bowtie', 'Paper bow tie', 'accessory', '', NULL, 50, NULL, NULL, FALSE, FALSE, NULL, 'acc_paper_bowtie', 621, TRUE),
+  ('wear-acc-square-shades', 'Square shades', 'accessory', '', 150, NULL, NULL, NULL, TRUE, FALSE, NULL, 'acc_square_shades', 622, TRUE),
+  ('wear-acc-wheat-stalk', 'Wheat stalk', 'accessory', '', 100, NULL, NULL, NULL, TRUE, FALSE, NULL, 'acc_wheat_stalk', 623, TRUE),
+  ('wear-acc-gold-monocle', 'Gold monocle', 'accessory', '', 150, NULL, NULL, NULL, TRUE, FALSE, NULL, 'acc_gold_monocle', 624, TRUE),
+  ('wear-acc-bandage-blindfold', 'Bandage blindfold', 'accessory', '', NULL, 100, NULL, NULL, FALSE, FALSE, NULL, 'acc_bandage_blindfold', 625, TRUE),
+  ('wear-acc-gold-rimless-shades', 'Gold rimless shades', 'accessory', '', 200, NULL, NULL, NULL, TRUE, FALSE, NULL, 'acc_gold_rimless_shades', 626, TRUE),
+  ('wear-acc-apple-stem', 'Apple stem', 'accessory', '', NULL, 100, NULL, NULL, FALSE, FALSE, NULL, 'acc_apple_stem', 627, TRUE),
+  ('wear-acc-drawn-top-hat', 'Drawn top hat', 'accessory', '', NULL, 200, NULL, NULL, FALSE, FALSE, NULL, 'acc_drawn_top_hat', 628, TRUE),
+  ('wear-acc-paper-horns', 'Paper horns', 'accessory', '', NULL, 50, NULL, NULL, FALSE, FALSE, NULL, 'acc_paper_horns', 629, TRUE),
+  ('wear-acc-bear-hood', 'White bear hood', 'accessory', '', NULL, 100, NULL, NULL, FALSE, FALSE, NULL, 'acc_bear_hood', 630, TRUE),
+  ('wear-acc-cowboy-hat', 'Cowboy hat', 'accessory', '', 150, NULL, NULL, NULL, TRUE, FALSE, NULL, 'acc_cowboy_hat', 631, TRUE),
+  ('wear-acc-woven-hat', 'Woven tassel hat', 'accessory', '', NULL, 200, NULL, NULL, FALSE, FALSE, NULL, 'acc_woven_hat', 632, TRUE),
+  ('wear-acc-monkey-ears', 'Monkey ears', 'accessory', '', 250, NULL, NULL, NULL, TRUE, FALSE, NULL, 'acc_monkey_ears', 633, TRUE),
+  ('wear-acc-red-band-straw-hat', 'Red-band straw hat', 'accessory', '', NULL, 200, NULL, NULL, FALSE, FALSE, NULL, 'acc_red_band_straw_hat', 634, TRUE),
+  ('wear-acc-kitty-bow-glasses', 'Droopy glasses with a bow', 'accessory', '', NULL, 100, NULL, NULL, FALSE, FALSE, NULL, 'acc_kitty_bow_glasses', 635, TRUE),
+  ('wear-acc-face-bandaids', 'Face bandaids', 'accessory', '', 150, NULL, NULL, NULL, TRUE, FALSE, NULL, 'acc_face_bandaids', 636, TRUE),
+  ('face-silly-cat', 'Silly cat face', 'face', '', 250, NULL, NULL, NULL, FALSE, FALSE, NULL, 'face:silly_cat', 700, TRUE),
+  ('face-tired', 'Tired face', 'face', '', 250, NULL, NULL, NULL, FALSE, FALSE, NULL, 'face:tired', 701, TRUE),
+  ('face-weirdcore-eyes', 'Weirdcore eyes', 'face', '', 250, NULL, NULL, NULL, FALSE, FALSE, NULL, 'face:weirdcore_eyes', 702, TRUE),
+  ('face-vampire', 'Vampire face', 'face', '', 250, NULL, NULL, NULL, FALSE, FALSE, NULL, 'face:vampire', 703, TRUE),
+  ('face-squiggle', 'Squiggle face', 'face', '', NULL, 100, NULL, NULL, FALSE, FALSE, NULL, 'face:squiggle', 704, TRUE),
+  ('face-zombie', 'Zombie face', 'face', '', NULL, 100, NULL, NULL, FALSE, FALSE, NULL, 'face:zombie', 705, TRUE),
+  ('face-big-eyes', 'Big eyes face', 'face', '', NULL, 100, NULL, NULL, FALSE, FALSE, NULL, 'face:big_eyes', 706, TRUE),
+  ('face-crying', 'Crying face', 'face', '', 250, NULL, NULL, NULL, FALSE, FALSE, NULL, 'face:crying', 707, TRUE),
+  ('face-dizzy', 'Dizzy face', 'face', '', 250, NULL, NULL, NULL, FALSE, FALSE, NULL, 'face:dizzy', 708, TRUE),
+  ('face-wink', 'Wink face', 'face', '', NULL, 100, NULL, NULL, FALSE, FALSE, NULL, 'face:wink', 709, TRUE),
   ('hair-colour-wheel', 'Hair colour wheel', 'hair', '', NULL, 250, NULL, NULL, FALSE, FALSE, NULL, 'colour-wheel', 800, TRUE)
 ON CONFLICT (slug) DO NOTHING;
 UPDATE shop_items SET active = FALSE WHERE slug IN ('outfit-sage-overalls', 'outfit-cream-knit', 'outfit-wharf-raincoat', 'outfit-club-tee', 'hair-chestnut', 'hair-sea-glass', 'hair-sunset', 'acc-straw-hat', 'acc-round-glasses', 'acc-bandana', 'wear-onepiece-raincape', 'wear-onepiece-robe', 'wear-onepiece-jumpsuit', 'wear-acc-beanie', 'wear-acc-scarf', 'wear-hair-wavy-half-up', 'net-basic', 'shovel-basic', 'rod-basic', 'net-mid', 'shovel-mid', 'merch-sticker-pack', 'merch-tote');
@@ -234,7 +247,7 @@ UPDATE shop_items s SET starter_qty = v.qty FROM (VALUES
 ) AS v (slug, qty) WHERE s.slug = v.slug;
 -- END GENERATED OWNERSHIP SEED
 
--- previous block: 20261027054753_catalogue_seed.sql
+-- previous block: 20261027165850_catalogue_seed.sql
 -- seed: shop-icons
 -- BEGIN GENERATED SHOP ICONS (web/scripts/gen-seeds.mjs)
 UPDATE shop_items s SET sprite_url = v.url FROM (VALUES
@@ -358,6 +371,11 @@ UPDATE shop_items s SET sprite_url = v.url FROM (VALUES
   ('wear-hair-emo-layers', '/assets/icons/hair_emo_layers.webp'),
   ('wear-hair-double-buns', '/assets/icons/hair_double_buns.webp'),
   ('wear-acc-ushanka-goggles', '/assets/icons/acc_ushanka_goggles.webp'),
+  ('wear-hair-spiky-messy', '/assets/icons/hair_spiky_messy.webp'),
+  ('wear-hair-rolled-mask', '/assets/icons/hair_rolled_mask.webp'),
+  ('wear-hair-ski-mask-dreads', '/assets/icons/hair_ski_mask_dreads.webp'),
+  ('wear-hair-buns-braid', '/assets/icons/hair_buns_braid.webp'),
+  ('wear-hair-sponge-twists', '/assets/icons/hair_sponge_twists.webp'),
   ('wear-acc-propeller-cap', '/assets/icons/acc_propeller_cap.webp'),
   ('wear-acc-green-sprout', '/assets/icons/acc_green_sprout.webp'),
   ('wear-acc-paper-tie', '/assets/icons/acc_paper_tie.webp'),
@@ -379,10 +397,18 @@ UPDATE shop_items s SET sprite_url = v.url FROM (VALUES
   ('wear-acc-woven-hat', '/assets/icons/acc_woven_hat.webp'),
   ('wear-acc-monkey-ears', '/assets/icons/acc_monkey_ears.webp'),
   ('wear-acc-red-band-straw-hat', '/assets/icons/acc_red_band_straw_hat.webp'),
+  ('wear-acc-kitty-bow-glasses', '/assets/icons/acc_kitty_bow_glasses.webp'),
+  ('wear-acc-face-bandaids', '/assets/icons/acc_face_bandaids.webp'),
   ('face-silly-cat', '/assets/icons/face-silly-cat.webp'),
   ('face-tired', '/assets/icons/face-tired.webp'),
   ('face-weirdcore-eyes', '/assets/icons/face-weirdcore-eyes.webp'),
   ('face-vampire', '/assets/icons/face-vampire.webp'),
+  ('face-squiggle', '/assets/icons/face-squiggle.webp'),
+  ('face-zombie', '/assets/icons/face-zombie.webp'),
+  ('face-big-eyes', '/assets/icons/face-big-eyes.webp'),
+  ('face-crying', '/assets/icons/face-crying.webp'),
+  ('face-dizzy', '/assets/icons/face-dizzy.webp'),
+  ('face-wink', '/assets/icons/face-wink.webp'),
   ('hair-colour-wheel', '/assets/icons/colour-wheel.webp'),
   ('furn-silver-hha-trophy', '/assets/icons/silver-hha-trophy.webp'),
   ('furn-lounge-tea', '/assets/icons/lounge-tea.webp'),

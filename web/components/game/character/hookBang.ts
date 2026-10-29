@@ -24,7 +24,7 @@ const LOOK: Record<HookTier, { size: number; font: number; ink: string; backgrou
     shadow: "0 3px 0 rgb(122 70 6 / 0.35), 0 0 22px 6px rgb(255 205 80 / 0.75)",
   },
   divine: {
-    size: 70, font: 52, ink: "#fffef6", background: "var(--gui-holo, linear-gradient(115deg, #5EE7F7, #B57AFF, #FF7AD9, #7DFFC4))", ring: "#ffffff",
+    size: 70, font: 52, ink: "#fffef6", background: "var(--ui-holo, linear-gradient(115deg, #5EE7F7, #B57AFF, #FF7AD9, #7DFFC4))", ring: "#ffffff",
     shadow: "0 3px 0 rgb(60 40 110 / 0.35), 0 0 30px 10px rgb(190 160 255 / 0.8), 0 0 60px 20px rgb(120 230 255 / 0.45)",
   },
 };

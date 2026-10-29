@@ -22,6 +22,8 @@ BEGIN
   ASSERT (SELECT coins FROM wallets WHERE member_id = B) = v, '033 no partial debit';
 
   -- buy: price sanity, non-stackable once, replay
+  -- The basic rod is off sale (hollow, rod-gear 2026-10-27); the buy mechanics still run on it, put back on sale here.
+  UPDATE shop_items SET active = TRUE WHERE slug = 'rod-basic';
   SELECT id INTO rod FROM shop_items WHERE slug = 'rod-basic';
   BEGIN PERFORM economy_buy(C, rod, 1, 1, 'b-1'); RAISE EXCEPTION 'x';
   EXCEPTION WHEN raise_exception THEN ASSERT SQLERRM = 'bad_price', '033 bad price: ' || SQLERRM; END;
@@ -89,5 +91,6 @@ BEGIN
   ASSERT (SELECT coins FROM wallets WHERE member_id = B) = v + 50, '033 event credit once';
 
   ASSERT NOT EXISTS (SELECT 1 FROM wallets w WHERE w.coins <> (SELECT COALESCE(SUM(amount), 0) FROM wallet_ledger l WHERE l.member_id = w.member_id)), '033 ledger = wallet at end';
+  UPDATE shop_items SET active = FALSE WHERE slug = 'rod-basic';
   RAISE NOTICE '033 ok';
 END $$;

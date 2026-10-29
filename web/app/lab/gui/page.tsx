@@ -21,10 +21,37 @@ import { Badge, Banner, Button, Card, ConfirmDialog, Counter, Dialogue, Empty, E
 import { FISH } from "@/lib/game/fishing";
 import { iconUrl } from "@/lib/icons/keys";
 import { RARITIES, RARITY_LABEL } from "@/lib/rarity";
-import { RODS } from "@/lib/game/rods";
-import { RodRadar } from "@/components/economy/RodGear";
+import { RODS, TACKLE } from "@/lib/game/rods";
+import { RodRadar, TackleRadar } from "@/components/economy/RodGear";
+import { CircleDot, Worm } from "lucide-react";
+import { GearSlot, GhostButton, ItemCard } from "@/components/gui/flat";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import s from "./showroom.module.css";
+
+/** The rod radar and its pieces (flat kit): a rod's build sliding as the lucky bobber goes on, every rod alone, an
+ * add-on's own radar, the gear slots, and the rarity outline on a card for each rung. */
+function RodGearShow() {
+  const [on, setOn] = useState(false);
+  const bobber = TACKLE.find(t => t.slot === "bobber")!, bait = TACKLE.find(t => t.slot === "bait")!;
+  return <>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 24, alignItems: "end" }}>
+      <div data-testid="radar-live"><b>Glass rod, your build</b><RodRadar rod={RODS[2]} tackle={on ? [bobber.key, bait.key] : []} />
+        <GhostButton onClick={() => setOn(v => !v)} data-testid="radar-toggle">{on ? "Take the bobber and bait off" : "Put the lucky bobber and sweet bait on"}</GhostButton></div>
+      <div><b>{bobber.name} on its own</b><TackleRadar tackle={bobber} /></div>
+      <div style={{ display: "flex", gap: 8, alignSelf: "center" }}>
+        <GearSlot label="Bait" icon={<Worm />} options={[]} empty="None yet. Bait is on the shop's Tools shelf." onPick={() => {}} />
+        <GearSlot label="Bobber" icon={<CircleDot />} onPick={() => {}} empty=""
+          options={[{ id: "b", name: bobber.name, picture: "/assets/icons/bobber-lucky.webp", line: "+20 Luck", on: true }]} />
+      </div>
+    </div>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 24, marginTop: 24 }}>
+      {RODS.map(r => <div key={r.key}><b>{r.name}</b><RodRadar rod={r} /></div>)}
+    </div>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12, marginTop: 24 }} data-testid="rarity-cards">
+      {RARITIES.filter(r => r !== "contraband").map(r => <ItemCard key={r} size="md" arrow={false} rarity={r} picture={iconUrl("rod_glass")} name={RARITY_LABEL[r]} line="A rod at this rung" />)}
+    </div>
+  </>;
+}
 
 /** Re-mounts its child every `ms` (an overlay that finishes and closes itself stays on show). */
 function Loop({ ms, children }: { ms: number; children: (done: () => void) => ReactNode }) {
@@ -178,10 +205,8 @@ export default function GuiShowroom() {
       <Row label="Name tags"><NameTag>Alice</NameTag><NameTag tone="sage">Rosa · Café</NameTag><NameTag tone="paper">Sable</NameTag></Row>
     </Section>
 
-    <Section id="radar" title="Rod radar" note="The rod shop's hex (lib/game/rods.ts): the rod's six stats, and its add-ons' gains on top in orange.">
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 24 }}>
-        {RODS.map(r => <div key={r.key} style={{ width: 300 }}><b>{r.name}</b><RodRadar rod={r} tackle={r.tier === 3 ? ["bobber_lucky", "bait_sweet"] : []} /></div>)}
-      </div>
+    <Section id="radar" title="Rod radar (flat kit)" note="lib/game/rods.ts: six stats out of 100, a light hex with an icon at each corner (hover for what it does). Your build in the chart colour with the rod alone faint behind; an add-on slides it linearly. The gear slots sit in your rod's stage corner; rarity is a thin outline.">
+      <RodGearShow />
     </Section>
 
     <Section id="badges" title="Badges and counters" kit={["recipe", "phone"]} note="Status tags and the red count on a shoulder (nothing at zero).">

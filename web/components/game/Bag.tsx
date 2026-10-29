@@ -9,12 +9,12 @@
  * with it; the grid stays in view. The grid is shared with the storage chest (ChestSheet). The server owns the stock
  * and the sizes (lib/game/bagStore); the grid's arrangement and the New marks are this device's.
  */
-import { RodRadar, TackleSlots, bestRod, equippedTackle, rodOf } from "@/components/economy/RodGear";
+import { RodRadar, RodSlots, RodStage, TackleRadar, equippedTackle, rodLine, rodOf } from "@/components/economy/RodGear";
 import { tackleByKey } from "@/lib/game/rods";
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { Apple, ArrowDownWideNarrow, Backpack, Bug, Fish, Gem, Lock, LockOpen, Pin, PinOff, Shirt, Sofa, Wrench, X } from "lucide-react";
 import { ConfirmDialog, SignInText } from "@/components/gui";
-import { CardGrid, DarkButton, FlatPanel, GhostButton, IconRail, ItemCard, NUDGE_GRID, Quiet, SidePanel, StatusLine, WithSide, flatStyles as f, useNudge } from "@/components/gui/flat";
+import { CardGrid, DarkButton, DetailView, FlatPanel, GhostButton, IconRail, InfoHead, ItemCard, NUDGE_GRID, Quiet, STAGE, SidePanel, StatusLine, WithSide, flatStyles as f, useNudge } from "@/components/gui/flat";
 import { Amount } from "@/components/economy/Amount";
 import { arrange, itemInfo, slotCounts, stackSize, type Slot } from "@/lib/collections/bag";
 import type { BagView } from "@/lib/collections/service";
@@ -280,20 +280,27 @@ function Owned({ group }: { group: "tools" | "outfits" | "furniture" }) {
   const row = rows.find(r => r.item.id === picked) ?? null;
   const title = SHELVES.find(x => x.id === group)!.label;
   const kind = (r: InventoryRow) => r.item.slot ? SLOT_NAME[r.item.slot] ?? cap(r.item.slot) : cap(String(r.item.category));
-  // A rod shows its radar and its add-on slots; an add-on its gains on your best rod (RodGear.tsx).
+  // A rod opens large: the model with its add-ons hanging from the tip, the slots in the stage's corner, the radar of
+  // the build (RodGear.tsx). An add-on shows its own radar.
   const rod = rodOf(row?.item.catalogue_ref), add = tackleByKey(row?.item.catalogue_ref), on = equippedTackle(rows);
-  const side = row ? <SidePanel key={row.item.id} testId="bag-owned-item" onClose={() => setPicked(null)} picture={rowPicture(row)} title={row.item.display_name} kind={kind(row)}
-    facts={[["You own", row.qty.toLocaleString()], ["Status", rod ? "Take it out from the tool wheel" : row.item.slot ? (row.equipped ? (add ? "On your rod" : "Equipped") : "In your closet") : USE_HINT[group] ?? "Yours"],
-      ...(row.item.description ? [["About", row.item.description] as const] : [])]}
-    actions={row.item.slot && !rod ? <DarkButton disabled={busy} onClick={() => void toggle(row.item.id, !row.equipped)}>{busy ? "One moment…" : row.equipped ? "Unequip" : "Equip"}</DarkButton> : null}>
+  if (row && rod) return <>
     {error && <StatusLine error><SignInText text={error} /></StatusLine>}
-    {(rod || add) && <RodRadar rod={rod ?? bestRod(rows)} tackle={add ? [...on.filter(k => tackleByKey(k)?.slot !== add.slot), add.key] : on} />}
-    {rod && <TackleSlots rows={rows} busy={busy} onEquip={(id, eq) => void toggle(id, eq)} />}
+    <DetailView testId="bag-rod" rarity={rod.rarity} onBack={() => setPicked(null)} stage={<RodStage rod={rod} tackle={on} className={STAGE.stage} />}
+      corner={<RodSlots rows={rows} busy={busy} onEquip={(id, eq) => void toggle(id, eq)} />}
+      info={<><InfoHead kind={rodLine(rod)} title={row.item.display_name} text={row.item.description ?? undefined} /><RodRadar rod={rod} tackle={on} /></>}
+      fine="Take it out from the tool wheel." />
+  </>;
+  const side = row ? <SidePanel key={row.item.id} testId="bag-owned-item" onClose={() => setPicked(null)} picture={rowPicture(row)} title={row.item.display_name} kind={kind(row)}
+    facts={[["You own", row.qty.toLocaleString()], ["Status", row.item.slot ? (row.equipped ? (add ? "On your rod" : "Equipped") : "In your closet") : USE_HINT[group] ?? "Yours"],
+      ...(row.item.description ? [["About", row.item.description] as const] : [])]}
+    actions={row.item.slot ? <DarkButton disabled={busy} onClick={() => void toggle(row.item.id, !row.equipped)}>{busy ? "One moment…" : row.equipped ? "Unequip" : "Equip"}</DarkButton> : null}>
+    {error && <StatusLine error><SignInText text={error} /></StatusLine>}
+    {add && <TackleRadar tackle={add} />}
   </SidePanel> : null;
   return <>
     {!row && error && <StatusLine error><SignInText text={error} /></StatusLine>}
     {rows.length === 0 ? <Quiet>{SHELF_EMPTY[group]}</Quiet>
-      : <WithSide side={side}><CardGrid title={title} min={170} phoneMin={150}>{rows.map(r => <ItemCard key={r.item.id} size="md" arrow={false} picture={rowPicture(r)} name={r.item.display_name}
+      : <WithSide side={side}><CardGrid title={title} min={170} phoneMin={150}>{rows.map(r => <ItemCard key={r.item.id} size="md" arrow={false} rarity={rodOf(r.item.catalogue_ref)?.rarity} picture={rowPicture(r)} name={r.item.display_name}
         line={r.item.slot ? kind(r) : USE_HINT[group] ?? kind(r)} selected={r.item.id === picked}
         pill={r.equipped ? "Equipped" : r.qty > 1 ? `×${r.qty}` : null} onClick={() => setPicked(r.item.id === picked ? null : r.item.id)} label={`${r.item.display_name}${r.equipped ? ", equipped" : ""}`} />)}</CardGrid></WithSide>}
   </>;

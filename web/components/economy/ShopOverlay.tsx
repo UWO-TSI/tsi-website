@@ -24,9 +24,8 @@ import { SHELF_LABEL, itemLine, shelfItems, shopShelves, type ShopSection, type 
 import { CardGrid, Code, ColourDots, DarkButton, DetailView, FlatPanel, GhostButton, HairlineRow, HairlineRows, IconRail, InfoHead, ItemCard, Purse, Quiet, RowActions, STAGE, StatusLine,
   flatStyles as f } from "@/components/gui/flat";
 import ItemViewer from "./ItemViewer";
-import { RodRadar, STAT_SPECS, TackleSlots, bestRod, equippedTackle, gainsText, rodOf } from "./RodGear";
-import { TOP_FISH_ROD_TIER, tackleByKey } from "@/lib/game/rods";
-import type { InventoryRow } from "@/lib/wallet/store";
+import { RodRadar, TackleRadar, rodLine, rodOf } from "./RodGear";
+import { tackleByKey } from "@/lib/game/rods";
 
 const SHELF_ICON: Record<string, ReactNode> = {
   tools: <Wrench size={22} />, outfits: <Shirt size={22} />, furniture: <Sofa size={22} />, specials: <BadgePercent size={22} />, sell: <HandCoins size={22} />,
@@ -69,34 +68,23 @@ function Card({ e, onOpen }: { e: ShopEntry; onOpen: () => void }) {
   // doesn't sell (the starter, the workbench ones) says where it comes from instead.
   return <ItemCard picture={picture(e)} name={e.name} line={e.owned > 0 && !e.can_buy ? "Owned" : itemLine(e)} tag={tagOf(e)}
     price={e.made ? null : { amount: e.price, currency: e.currency }} pill={e.made ? MADE_PILL[e.made] : undefined} cover={e.stock === 0 ? "sold-out" : null}
-    onClick={onOpen} label={`${e.name}, ${e.price} ${e.currency}`} testId="shop-card" />;
+    rarity={rodOf(e.catalogue_ref)?.rarity} onClick={onOpen} label={`${e.name}, ${e.price} ${e.currency}`} testId="shop-card" />;
 }
 
 const MADE_PILL = { starter: "Yours", workbench: "Workbench" } as const;
 const MADE_ACTION = { starter: "Yours from the start", workbench: "Made at the workbench" } as const;
 const MADE_FINE = { starter: "Everyone fishes with it from day one.", workbench: "Craft it at a workbench." } as const;
 
-/** Your tools in the shop (the rods' add-on slots): the inventory's rows, and putting an add-on on or off. */
-interface Gear { rows: InventoryRow[]; busy: boolean; onEquip: (itemId: string, on: boolean) => void }
-
-/** A rod's or an add-on's radar and the add-on slots (RodGear.tsx); an add-on is shown on your best rod. */
-function GearInfo({ e, gear }: { e: ShopEntry; gear: Gear | null }) {
-  const rows = gear?.rows ?? [], on = equippedTackle(rows);
+/** A rod's radar (the rod alone: the shop has no slots, David 2026-10-28), or an add-on's own. */
+function GearInfo({ e }: { e: ShopEntry }) {
   const rod = rodOf(e.catalogue_ref), add = tackleByKey(e.catalogue_ref);
-  if (!rod && !add) return null;
-  const host = rod ?? bestRod(rows);
-  return <>
-    <RodRadar rod={host} tackle={add ? [...on.filter(k => tackleByKey(k)?.slot !== add.slot), add.key] : on} />
-    {add && <p className={f.description}>Shown on your {host.name.toLowerCase()}: {gainsText(add)}.</p>}
-    {gear && <TackleSlots rows={rows} busy={gear.busy} onEquip={gear.onEquip} />}
-  </>;
+  return rod ? <RodRadar rod={rod} /> : add ? <TackleRadar tackle={add} /> : null;
 }
 
-function Detail({ e, list, onPick, onBack, busy, onPay, viewer, gear }: {
+function Detail({ e, list, onPick, onBack, busy, onPay, viewer }: {
   e: ShopEntry; list: ShopEntry[]; onPick: (id: string) => void; onBack: () => void; busy: string | null; onPay: (e: ShopEntry) => void;
   /** A model of its own for the left pane (the keychain's), in place of the turning icon model. */
   viewer?: ReactNode | null;
-  gear: Gear | null;
 }) {
   const i = list.findIndex(x => x.id === e.id);
   const prev = list[(i - 1 + list.length) % list.length], next = list[(i + 1) % list.length];
@@ -104,23 +92,24 @@ function Detail({ e, list, onPick, onBack, busy, onPay, viewer, gear }: {
   const spec = useMemo(() => itemModel(e), [e]);
   // A hair dye's colour dots: the other dyes on the shelf.
   const dyes = e.category === "hair" ? list.filter(x => x.category === "hair") : [];
+  const rod = rodOf(e.catalogue_ref), gear = !!rod || !!tackleByKey(e.catalogue_ref);
   const action = merch ? "Redeem" : e.owned > 0 && e.can_buy ? "Buy another" : e.owned > 0 ? "Owned" : "Buy";
-  return <DetailView testId="shop-detail" onBack={onBack} hint={e.slug === "merch-tsi-lanyard" ? "Drag to slide along" : e.slug === "merch-genesis-sticker" ? "Drag to tilt" : undefined}
+  return <DetailView testId="shop-detail" rarity={rod?.rarity} onBack={onBack} hint={e.slug === "merch-tsi-lanyard" ? "Drag to slide along" : e.slug === "merch-genesis-sticker" ? "Drag to tilt" : undefined}
     stage={viewer ?? <ItemViewer key={e.id} spec={spec} picture={picture(e)} name={e.name} className={STAGE.stage} pictureClassName={STAGE.picture} />}
     steps={list.length > 1 ? { prev: { label: `Previous: ${prev.name}`, onClick: () => onPick(prev.id) }, next: { label: `Next: ${next.name}`, onClick: () => onPick(next.id) } } : null}
     info={<>
-      <InfoHead kind={kindOf(e)} title={e.name} text={itemLine(e)} />
+      <InfoHead kind={rod ? rodLine(rod) : kindOf(e)} title={e.name} text={itemLine(e)} />
       {dyes.length > 1 && <ColourDots value={e.id} onPick={onPick}
         items={dyes.map(d => ({ id: d.id, label: d.name, background: `url(${picture(d)}) center 62% / 260% no-repeat` }))} />}
-      <GearInfo e={e} gear={gear} />
+      <GearInfo e={e} />
     </>}
     pay={e.made ? { action: { label: MADE_ACTION[e.made], disabled: true, onClick: () => {} } }
       : { price: { amount: e.price, currency: e.currency }, was: e.special ? e.base_price.toLocaleString() : null,
         action: { label: busy === e.id ? "One moment…" : e.stock === 0 ? "Sold out" : action, disabled: !e.can_buy || busy !== null || e.stock === 0, onClick: () => onPay(e) } }}
-    fine={e.made ? <>{MADE_FINE[e.made]}{rodOf(e.catalogue_ref)!.tier >= TOP_FISH_ROD_TIER ? " Epic fish bite for it." : ""}</>
+    fine={e.made ? MADE_FINE[e.made]
       : <>{merch ? "Pay with Gems. Reserve it here, then pick it up at HQ on campus." : `Pay with ${e.currency === "gems" ? "Gems" : "coins"}.`}
       {e.owned > 0 ? ` You own ${e.owned}.` : ""}</>}
-    specs={rodOf(e.catalogue_ref) || tackleByKey(e.catalogue_ref) ? STAT_SPECS : specsOf(e)} />;
+    specs={gear ? null : specsOf(e)} />;
 }
 
 /** The counter's Sell: what's in your bag the shop buys, one or the stack. */
@@ -189,18 +178,6 @@ export default function ShopOverlay({ open, onClose, title, section, sell = fals
   const keysFor = useRef(new Map<string, string>());
   const load = useCallback(() => transport.shop().then(v => { setView(v); setError(null); return v; }, err => { setError(errText(err)); return null; }), [transport]);
   useEffect(() => { if (open) void load(); }, [open, load]);
-  // Your tools, for the rods' add-on slots (signed out: none, and the slots don't show).
-  const [tools, setTools] = useState<InventoryRow[] | null>(null);
-  const [equipping, setEquipping] = useState(false);
-  const loadTools = useCallback(() => transport.inventory().then(v => setTools(v.groups.tools ?? []), () => setTools(null)), [transport]);
-  useEffect(() => { if (open) void loadTools(); }, [open, loadTools]);
-  const equip = useCallback(async (itemId: string, on: boolean) => {
-    setEquipping(true);
-    try { setTools((await transport.equip(itemId, on)).groups.tools ?? []); window.dispatchEvent(new CustomEvent("tsi:gear-changed")); }
-    catch (err) { setError(errText(err)); }
-    finally { setEquipping(false); }
-  }, [transport]);
-  const gear: Gear | null = tools ? { rows: tools, busy: equipping, onEquip: (id, on) => void equip(id, on) } : null;
   useEffect(() => () => timers.current.forEach(window.clearTimeout), []);
 
   const shelves: (ShopShelf | "pickups")[] = useMemo(() => {
@@ -226,7 +203,7 @@ export default function ShopOverlay({ open, onClose, title, section, sell = fals
         setNote(`Bought ${e.name}.`);
         if (r.currency === "coins") countUp(coinsEl.current, r.balance + r.price_each, r.balance, timers.current);
         onBought?.(e, `The ${e.name.toLowerCase()}, all yours. Thanks for stopping by!`);
-        if (e.category === "tool") { void loadTools(); window.dispatchEvent(new CustomEvent("tsi:gear-changed")); }
+        if (e.category === "tool") window.dispatchEvent(new CustomEvent("tsi:gear-changed"));
       }
       keysFor.current.delete(e.id);
       await load();
@@ -245,7 +222,7 @@ export default function ShopOverlay({ open, onClose, title, section, sell = fals
     {!view ? <Quiet>{error ? "" : "Opening the shop…"}</Quiet>
       : current === "sell" ? <SellPane transport={transport} onSold={(from, to, line, ok) => { if (ok) countUp(coinsEl.current, from, to, timers.current); onSold?.(line, ok); }} />
       : current === "pickups" ? <Pickups transport={transport} />
-      : item ? <Detail e={item} list={items} onPick={setPicked} onBack={() => setPicked(null)} busy={busy} onPay={e => void pay(e)} viewer={viewerFor?.(item, STAGE.stage, STAGE.picture)} gear={gear} />
+      : item ? <Detail e={item} list={items} onPick={setPicked} onBack={() => setPicked(null)} busy={busy} onPay={e => void pay(e)} viewer={viewerFor?.(item, STAGE.stage, STAGE.picture)} />
       : items.length === 0 ? <Quiet>{current === "specials" ? "No specials today. New picks go up at midnight, Toronto time." : current?.startsWith("merch") ? "New club merch arrives with the next order." : "The shopkeeper restocks with each update."}</Quiet>
       : <CardGrid title={current ? SHELF_LABEL[current] : ""}>{items.map(e => <Card key={e.id} e={e} onOpen={() => { setPicked(e.id); setNote(null); }} />)}</CardGrid>}
   </FlatPanel>;

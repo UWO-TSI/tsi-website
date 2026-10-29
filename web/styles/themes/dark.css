@@ -21,6 +21,7 @@
   --ui-accent: #f2f2f2;
   --ui-accent-deep: #ffffff;
   --ui-accent-ink: #151515;
+  --ui-chart: #86acff;  /* a chart's line and its light fill (the rod radar): soft, never bold */
   --ui-pill: #34343a;
   --ui-pill-ink: #b6b6bc;
   --ui-disabled: #48484f;
@@ -31,4 +32,13 @@
   --ui-shade: 0 0 0;
   --ui-stage: radial-gradient(ellipse 24% 4.5% at 50% 87%, rgb(0 0 0 / 0.45), rgb(0 0 0 / 0.18) 55%, transparent 100%),
     linear-gradient(180deg, #2c2c31 0%, #2c2c31 60%, #242428 84%, #1f1f22 100%);
+  /* The rarity ladder (specs/design-bible.md UI 7): a thin outline or edge, never a fill. Divine is the holo. */
+  --ui-rarity-common: #8f8f96;
+  --ui-rarity-uncommon: #6cc979;
+  --ui-rarity-rare: #6aa2ff;
+  --ui-rarity-epic: #b98af5;
+  --ui-rarity-legendary: #ffcc33;
+  --ui-rarity-divine: #c792ff;
+  --ui-holo: linear-gradient(115deg, #c792ff 0%, #ff8fe0 20%, #ffdb80 38%, #8dffc0 56%, #80d2ff 74%, #c792ff 100%);
+  --ui-on-divine: #ffffff;
 }

@@ -204,14 +204,15 @@ describe("inventory", () => {
 });
 
 describe("the rod shop (v1-gameplay m4): the tools shelf", () => {
-  it("shows the five rods by tier (the starter and the workbench ones not for sale), then the add-ons, and nothing hollow", async () => {
+  it("shows the rods up to rare by tier (the starter and the workbench ones not for sale; the epic Tidewarden off the shelf), then the add-ons, and nothing hollow", async () => {
     const m = memoryEconomyStore(() => noon);
     m.fund(A, 5000);
     const shop = await getShop(m.store, A, noon);
     const tools = shop.ok ? shop.data.tabs.tools : [];
-    expect(tools.slice(0, 7).map((e) => e.catalogue_ref)).toEqual(["rod_flimsy", "rod_cedar", "rod_glass", "rod_lighthouse", "rod_tidewarden", "bait_sweet", "bobber_lucky"]);
+    expect(tools.slice(0, 6).map((e) => e.catalogue_ref)).toEqual(["rod_flimsy", "rod_cedar", "rod_glass", "rod_lighthouse", "bait_sweet", "bobber_lucky"]);
+    expect(tools.some((e) => e.catalogue_ref === "rod_tidewarden")).toBe(false);
     expect(tools.filter((e) => e.made).map((e) => [e.catalogue_ref, e.made, e.can_buy, e.owned])).toEqual([
-      ["rod_flimsy", "starter", false, 1], ["rod_lighthouse", "workbench", false, 0], ["rod_tidewarden", "workbench", false, 0]]);
+      ["rod_flimsy", "starter", false, 1], ["rod_lighthouse", "workbench", false, 0]]);
     for (const s of ["rod-basic", "net-mid", "shovel-mid"]) expect(tools.some((e) => e.slug === s), s).toBe(false);
     expect(await buy(m.store, A, { item_id: slug(m, "rod-basic"), qty: 1, idempotency_key: "buy-0020" }, noon)).toMatchObject({ ok: false, code: "not_for_sale" });
   });
