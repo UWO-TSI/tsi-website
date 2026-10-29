@@ -9,7 +9,7 @@
 -- 1: "Seed the full roster") the two, where still as seeded, walk the roster's routine and bio: their day still
 -- starts at their spot, so the first stop of the day is what's held here, in either shape.
 DO $$ BEGIN
-  ASSERT (SELECT coalesce(schedule -> 'day' ->> 0, schedule ->> 'day') FROM npc_personas WHERE slug = 'mayor') = 'path', 'mayor keeps the path';
+  ASSERT (SELECT coalesce(schedule -> 'day' ->> 0, schedule ->> 'day') FROM npc_personas WHERE slug = 'mayor') = 'plaza', 'mayor keeps her first stop (the plaza since path became plaza, 2026-10-28)';
   ASSERT (SELECT post || '/' || coalesce(schedule -> 'day' ->> 0, schedule ->> 'day') FROM npc_personas WHERE slug = 'shopkeeper') = 'shopkeeper/shop', 'shopkeeper keeps the shop';
   ASSERT (SELECT column_default || '|' || is_nullable FROM information_schema.columns
            WHERE table_schema = 'public' AND table_name = 'npc_personas' AND column_name = 'bio') = '''''::text|NO', 'bio defaults empty';
