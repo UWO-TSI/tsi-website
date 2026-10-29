@@ -20,14 +20,14 @@ import { CATALOGUE as PIECES } from "@/lib/homes/catalogue";
 import { FLOORINGS, WALLPAPERS } from "@/lib/homes/layout";
 import type { CatalogueEntry } from "@/lib/wallet/catalogue";
 
-/** How an icon looks at its subject: a three-quarter view, a fish's profile, a bug from above, a long thing on the diagonal, a garment from the front, a finish's swatch. */
-export type IconView = "three-quarter" | "profile" | "above" | "side" | "diagonal" | "front" | "roll" | "tile";
+/** How an icon looks at its subject: a three-quarter view, a fish's profile (a flatfish from above), a bug from above, a long thing on the diagonal, a garment from the front, a finish's swatch. */
+export type IconView = "three-quarter" | "profile" | "flat" | "above" | "side" | "diagonal" | "front" | "roll" | "tile";
 export interface IconSpec {
   key: string;
   view: IconView;
   /** The model (a GLB), or the texture for a finish. */
   url: string;
-  /** Fish from the old dump need the stage's calibration (FishPreview buildFishStage). */
+  /** A fish from the old dump in its raw export's frame (TankFish levelFish calibrates it). */
   raw?: boolean;
   /** A character part: its material tints (M_Main…; "none" hides one, the hair tucked under a hat). A dye: the colour of its liquid (M_Dye). */
   tints?: Record<string, string>;
@@ -62,9 +62,12 @@ const WEAPON_MODEL: Record<string, string> = {
   "staff-heartstone": `${W}staff-rune.glb`, "wraps-cloth": `${ITEMS}wraps-cloth.glb`, "shield-buckler": `${ITEMS}shield-buckler.glb`, "totem-cedar": "/assets/game/props/totem.glb",
 };
 
+/** The catches that lie flat, and the crab: their icon looks down on them (a profile shows an edge, or a crab end on). */
+const FLATFISH = new Set(["fish_ray", "fish_dab", "fish_olive_flounder", "fish_mitten_crab", "sea_sea_star", "sea_scallop", "sea_abalone", "sea_pearl_oyster"]);
+
 function speciesSpec(key: string, sp?: { category: string; model: string | null }): IconSpec | null {
   const fish = FISH_BY_KEY.get(key);
-  if (fish?.model) return { key, view: "profile", url: fish.model, raw: !!fish.raw };
+  if (fish?.model) return { key, view: FLATFISH.has(key) ? "flat" : "profile", url: fish.model, raw: !!fish.raw };
   if (CRITTER_MODELS[key]) return { key, view: "above", url: `/assets/acnh/critters/${CRITTER_MODELS[key]}.glb` };
   if (key === "shore_gazami_crab") return { key, view: "above", url: "/assets/acnh/props/crab-gazami.glb" };
   if (key === "shore_hermit_crab") return { key, view: "three-quarter", url: "/assets/acnh/props/crab-hermit.glb" };

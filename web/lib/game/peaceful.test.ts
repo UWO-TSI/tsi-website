@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { bugReaction, curatorLine, fishPoolFor, fleeRadius, hasClue, hourKey, nodeAvailable, oneLinerFor, rollFishFor, rollNode, NET_REACH, SNEAK_SPEED } from "./peaceful";
 import { rodByTier } from "./rods";
+import { RARITY_RANK } from "@/lib/rarity";
 import { ROSTER } from "@/lib/collections/roster";
 
 const noon = { hour: 12, weather: "clear" };
@@ -16,8 +17,8 @@ describe("fish pools", () => {
     expect(river.some(k => biome(k) === "pond")).toBe(false);
     expect(fishPoolFor("sea", 0, rodByTier(1), noon).every(e => (e.fish.zone ?? "river") === "sea")).toBe(true);
   });
-  it("only lets top rods hook legendaries and rolls deterministically with a fixed random", () => {
-    const has = (tier: number) => fishPoolFor("sea", 0, rodByTier(tier), noon).some(e => e.fish.rarity === "legendary" || e.fish.rarity === "seaking");
+  it("only lets top rods hook epics and rolls deterministically with a fixed random", () => {
+    const has = (tier: number) => fishPoolFor("sea", 0, rodByTier(tier), noon).some(e => RARITY_RANK[e.fish.rarity] >= RARITY_RANK.epic);
     expect(has(1)).toBe(false);
     expect(has(5)).toBe(true);
     expect(rollFishFor("river", 0, rodByTier(2), noon, () => 0).key).toBe(fishPoolFor("river", 0, rodByTier(2), noon)[0].fish.key);

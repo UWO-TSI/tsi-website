@@ -5,7 +5,7 @@
  * (lib/seedMigrations.ts, scripts/gen-seeds.mjs). Prices are play coins
  * (or Gems for merch). No real-money value appears anywhere.
  */
-import { CUSTOM_HAIR_REF, dyeRef, FACE, faceRef, FREE_HAIR_COLOURS, PARTS, priceOf, STARTER_PARTS, type Batch2Price, type PartSlot } from "@/lib/game/character/look";
+import { CUSTOM_HAIR_REF, dyeRef, DYE_HAIR, FACE, faceRef, PARTS, priceOf, STARTER_PARTS, type Batch2Price, type PartSlot } from "@/lib/game/character/look";
 import { CATALOGUE as PIECES, EVENT_PIECE_IDS } from "@/lib/homes/catalogue";
 import { shopIcon } from "@/lib/icons/keys";
 
@@ -108,7 +108,7 @@ export const STARTER_FURNITURE: Record<string, number> = {
 };
 /** Everything granted once per account (economy_grant_starters), catalogue_ref → qty. */
 export const STARTER_REFS: ReadonlyMap<string, number> = new Map([...STARTER_PARTS.map((id): [string, number] => [id, 1]), ...Object.entries(STARTER_FURNITURE)]);
-/** Shop dyes for hair colours FREE_HAIR_COLOURS.. (palette order). */
+/** Shop dyes for hair colours DYE_HAIR (palette order). */
 const DYES = ["Wheat blonde", "Copper", "Rust red", "Silver", "Blossom pink", "Sea blue"];
 const WEAR_PRICE: Record<string, number> = { top: 150, bottom: 140, onepiece: 180, shoes: 110, accessory: 80 };
 const HAS_FURNITURE = new Set(CATALOGUE.map((c) => c.catalogue_ref));
@@ -137,12 +137,12 @@ for (const c of CUT_WEARABLES) WEARABLES.splice(WEARABLES.findIndex((w) => w.id 
  * every hairstyle, accessory and whole face he priced is a shop row at its price, in play coins (price_coins) or Gems
  * (tc_price); a free one has no row (the starting creator offers it to everyone: look.ts partRef, facePartRef) and a
  * skipped one is not imported. A face's row unlocks its eyes, mouth and accent (catalogue_ref face:<id>). Positions from
- * B2_POS, after every earlier row, so no earlier row moves; coin rows can be a daily special like the other wearables.
+ * B2_POS, after every earlier row, so no earlier row moves; coin accessories can be a daily special like the other wearables; hairstyles and faces never are (no plinth model).
  */
 const B2_POS = 600;
 const b2Row = (slug: string, name: string, category: ShopCategory, price: Batch2Price, ref: string, i: number): CatalogueEntry => withIcon({
   slug, display_name: name, category, description: "", price_coins: price.mode === "coins" ? price.price : null, price_gems: price.mode === "gems" ? price.price : null,
-  tier: null, slot: null, special_pool: price.mode === "coins", stackable: false, stock: null, catalogue_ref: ref, sprite_url: null, position: B2_POS + i,
+  tier: null, slot: null, special_pool: price.mode === "coins" && category !== "hair" && category !== "face", stackable: false, stock: null, catalogue_ref: ref, sprite_url: null, position: B2_POS + i,
 });
 const isSold = (p: Batch2Price | null): p is Batch2Price => p?.mode === "coins" || p?.mode === "gems";
 /** A row's name, with what owning it grants (row 314: hair #22 and its ushanka and goggles). */
@@ -173,7 +173,7 @@ export const COLOUR_WHEEL_ITEM: CatalogueEntry = withIcon({
 export const OWNERSHIP_ITEMS: CatalogueEntry[] = [
   ...WEARABLES.map((p) =>
     e(wearSlug(p.id), p.name.replace(/ \(#\d+\)$/, ""), p.slot === "accessory" ? "accessory" : "outfit", WEAR_PRICE[p.slot], { catalogue_ref: p.id, special_pool: !p.cut && !STARTER_REFS.has(p.id) })),
-  ...DYES.map((name, i) => e(`dye-${name.toLowerCase().replace(/ /g, "-")}`, `${name} hair dye`, "hair", 140, { catalogue_ref: dyeRef(FREE_HAIR_COLOURS + i), special_pool: true })),
+  ...DYES.map((name, i) => e(`dye-${name.toLowerCase().replace(/ /g, "-")}`, `${name} hair dye`, "hair", 140, { catalogue_ref: dyeRef(DYE_HAIR[i]), special_pool: true })),
   ...PIECES.filter((p) => !HAS_FURNITURE.has(p.id) && !EVENT_PIECE_IDS.has(p.id)).map((p) => furniture(p.id, p.label, pieceValue(p))),
   ...WARDROBE_B2_ITEMS,
   COLOUR_WHEEL_ITEM,
@@ -185,9 +185,11 @@ export const OWNERSHIP_ITEMS: CatalogueEntry[] = [
 export const TAUGHT_TOOL_SLUGS = ["net-basic", "shovel-basic"];
 /** The placeholder tote and sticker pack, which aren't real merch (David, 2026-10-22: "Take both off sale"). */
 export const PLACEHOLDER_MERCH = ["merch-sticker-pack", "merch-tote"];
+/** Hairstyles David removed from the game (2026-10-27: Messy with headset, Fluffy boy, Wavy half-up): their shop rows go off sale. */
+export const REMOVED_HAIR = ["hair_wavy_half_up"];
 /** Shop rows with no character part: the pre-ownership outfits, the wardrobe cut's (CUT_WEARABLES), and the taught tools; and the placeholder merch. Off sale. */
 export const RETIRED = ["outfit-sage-overalls", "outfit-cream-knit", "outfit-wharf-raincoat", "outfit-club-tee", "hair-chestnut", "hair-sea-glass", "hair-sunset", "acc-straw-hat", "acc-round-glasses", "acc-bandana",
-  ...CUT_WEARABLES.map((c) => wearSlug(c.id)), ...TAUGHT_TOOL_SLUGS, ...PLACEHOLDER_MERCH];
+  ...CUT_WEARABLES.map((c) => wearSlug(c.id)), ...REMOVED_HAIR.map(wearSlug), ...TAUGHT_TOOL_SLUGS, ...PLACEHOLDER_MERCH];
 /** Sold, as opposed to only granted: starter clothes stay off sale. */
 export const onSale = (c: CatalogueEntry) => !RETIRED.includes(c.slug) && !(c.category !== "furniture" && c.catalogue_ref !== null && STARTER_REFS.has(c.catalogue_ref));
 
@@ -198,14 +200,14 @@ export const onSale = (c: CatalogueEntry) => !RETIRED.includes(c.slug) && !(c.ca
  */
 export const EVENT_ITEMS: CatalogueEntry[] = PIECES.filter((p) => EVENT_PIECE_IDS.has(p.id)).map((p) => ({ ...furniture(p.id, p.label, pieceValue(p)), special_pool: false }));
 
-/** Sell prices by category and rarity (row 91), in play coins per item. */
+/** Sell prices by category and rarity (row 91), in play coins per item. Divine is 2.5 times legendary; Contraband has none (the shop won't buy it). */
 export const SELL_PRICES: Record<string, Record<string, number>> = {
-  fish: { common: 8, uncommon: 20, rare: 60, epic: 180, legendary: 600 },
-  sea: { common: 8, uncommon: 20, rare: 60, epic: 180, legendary: 600 },
-  bug: { common: 6, uncommon: 16, rare: 50, epic: 150, legendary: 500 },
-  fruit: { common: 10, uncommon: 25, rare: 60, epic: 150, legendary: 400 },
-  nature: { common: 4, uncommon: 12, rare: 40, epic: 120, legendary: 400 },
-  mineral: { common: 5, uncommon: 15, rare: 45, epic: 135, legendary: 450 },
+  fish: { common: 8, uncommon: 20, rare: 60, epic: 180, legendary: 600, divine: 1500 },
+  sea: { common: 8, uncommon: 20, rare: 60, epic: 180, legendary: 600, divine: 1500 },
+  bug: { common: 6, uncommon: 16, rare: 50, epic: 150, legendary: 500, divine: 1250 },
+  fruit: { common: 10, uncommon: 25, rare: 60, epic: 150, legendary: 400, divine: 1000 },
+  nature: { common: 4, uncommon: 12, rare: 40, epic: 120, legendary: 400, divine: 1000 },
+  mineral: { common: 5, uncommon: 15, rare: 45, epic: 135, legendary: 450, divine: 1125 },
 };
 
 /** Daily gift (row 225): 10 coins, doubled on Fridays (Toronto day). */

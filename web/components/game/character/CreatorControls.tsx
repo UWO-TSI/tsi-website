@@ -8,13 +8,13 @@
  * atlas cells, clothes their item icons, hair its static thumbnail (baked at build time, head-v10: a colour change never
  * redraws them). The name field's availability check too.
  */
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Lock } from "lucide-react";
 import { Button, Slider } from "@/components/gui";
 import { useGuiVariant } from "@/components/gui/variant";
 import { IconRail, NUDGE_GRID, useNudge } from "@/components/gui/flat";
 import { iconUrl } from "@/lib/icons/keys";
-import { customHairUnlocked, dyeRef, FACE, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, FREE_HAIR_COLOURS, HAIR_THUMB_URL, hairAccentHex, hairHex, NATURAL_HAIR, naturalHex, PALETTE, PART_BY_ID, PLACE_PARTS, PLACE_STEPS, partColor, unlockRef,
+import { customHairUnlocked, dyeRef, FACE, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, FREE_HAIR, HAIR_THUMB_URL, hairAccentHex, hairHex, NATURAL_HAIR, naturalHex, PALETTE, PART_BY_ID, PLACE_PARTS, PLACE_STEPS, partColor, SKIN_PICKS, unlockRef,
   type CatalogPart, type CharacterLook, type FaceCell, type Placement } from "@/lib/game/character/look";
 import { choose, colourTarget, isOn, optionName, shownOptions, type Category, type Section } from "@/lib/game/character/creatorCategories";
 import { PLACE_RANGE } from "@/lib/game/character/face";
@@ -68,11 +68,12 @@ export type CreatorChange = "tile" | "colour" | "place";
 
 /**
  * One category's options. `mode="create"` offers only what is owned (the identity parts are always free); the
- * wardrobe shows the rest locked with a note (and `onShop`). `onChange` hears every change made here.
+ * wardrobe shows the rest locked with a note (and `onShop`). `onChange` hears every change made here. `wheel={false}`
+ * leaves out the hair colour wheel (the arrival's reflection creator keeps to the swatches, David 2026-10-26).
  */
-export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChange }: {
+export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChange, wheel: showWheel = true }: {
   cat: Category; look: CharacterLook; setLook: (update: (l: CharacterLook) => CharacterLook) => void; mode: "create" | "wardrobe";
-  owned: ReadonlySet<string>; onShop?: () => void; onChange?: (kind: CreatorChange) => void;
+  owned: ReadonlySet<string>; onShop?: () => void; onChange?: (kind: CreatorChange) => void; wheel?: boolean;
 }) {
   const [lastAccessory, setLastAccessory] = useState<string | null>(null);
   // The flat creator's tiles move as the kit's cards do (a hover grows one, the worn ones stay out).
@@ -84,7 +85,7 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
   // Identity (face, hair styles, the free colours) is free; clothes and dyes are owned (ruling on audit item 22), and so
   // are wardrobe batch 2's priced hairstyles, accessories and whole faces (a face's parts: unlockRef).
   const has = (id: string | null) => { const ref = id && unlockRef(id); return !ref || owned.has(ref); };
-  const hasHair = (i: number) => i < FREE_HAIR_COLOURS || owned.has(dyeRef(i));
+  const hasHair = (i: number) => FREE_HAIR.includes(i) || owned.has(dyeRef(i));
   const crafted = (id: string | null) => !!id && !!PART_BY_ID.get(id)?.item; // unlocked by a crafted item, never sold
   const target = colourTarget(cat, look, lastAccessory);
 
@@ -114,7 +115,8 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
     const now = performance.now();
     if (now - wheelAt.current > WHEEL_MS) { wheelAt.current = now; onChange?.("colour"); }
   };
-  const swatches = !cat.swatch ? [] : cat.swatch === "hair" && mode === "create" ? PALETTE.hair.slice(0, FREE_HAIR_COLOURS) : PALETTE[cat.swatch];
+  // [palette index, colour]: the creator offers the free hair colours only (FREE_HAIR), the wardrobe every one
+  const swatches = !cat.swatch ? [] : (cat.swatch === "hair" && mode === "create" ? FREE_HAIR : PALETTE[cat.swatch].map((_, i) => i).slice(0, cat.swatch === "skin" ? SKIN_PICKS : undefined)).map(i => [i, PALETTE[cat.swatch!][i]] as const);
   // head fit: a two-tone hairstyle's second colour (the accent mask of its shading map), picked from the same hair colours
   const backPart = look.back ? PART_BY_ID.get(look.back) : undefined;
   const accentPart = cat.id === "hair" && backPart?.full && (backPart.accent || backPart.map?.natural.b) ? backPart : null;
@@ -198,14 +200,14 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
       <div className={styles.swatches} role="group" aria-label={`${cat.swatch} colours`} data-kind={cat.swatch}>
         {cat.swatch === "hair" && <button type="button" data-own style={{ "--swatch": ownSwatch(backPart, "a") } as CSSProperties}
           aria-pressed={look.hair === NATURAL_HAIR && !look.hairColor} aria-label="The hairstyle's own colours" title="Own colours" onClick={ownHair}>Own</button>}
-        {swatches.map((hex, i) => {
+        {swatches.map(([i, hex]) => {
           const locked = cat.swatch === "hair" && !hasHair(i);
           return <button key={hex} type="button" style={{ "--swatch": hex } as CSSProperties} aria-pressed={swatchOn(i)}
             aria-label={`${cat.swatch} colour ${i + 1}${locked ? " (hair dye in the shop)" : ""}`} data-locked={locked || undefined}
             disabled={cat.swatch === "outfit" && !target} onClick={() => paint(i)} />;
         })}
       </div>
-      {cat.swatch === "hair" && <ColourWheel value={hairHex(look) ?? naturalHex(PART_BY_ID.get(look.back))} active={!!look.hairColor} locked={!customHairUnlocked(owned)} onShop={onShop} onChange={wheel} />}
+      {cat.swatch === "hair" && showWheel && <ColourWheel value={hairHex(look) ?? naturalHex(PART_BY_ID.get(look.back))} active={!!look.hairColor} locked={!customHairUnlocked(owned)} onShop={onShop} onChange={wheel} />}
       {cat.swatch === "outfit" && !target && <p className={styles.hint}>Wear something here to colour it.</p>}
     </div>}
     {accentPart && <div className={styles.swatchBlock}>
@@ -213,7 +215,7 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
       <div className={styles.swatches} role="group" aria-label="accent colours" data-kind="hair">
         <button type="button" data-own style={{ "--swatch": ownSwatch(accentPart, "b") } as CSSProperties} aria-pressed={look.hairAccent === undefined}
           aria-label="The hairstyle's own second colour" title="Own colour" onClick={ownAccent}>Own</button>
-        {swatches.map((hex, i) => {
+        {swatches.map(([i, hex]) => {
           const locked = !hasHair(i);
           return <button key={hex} type="button" style={{ "--swatch": hex } as CSSProperties} aria-pressed={look.hairAccent !== undefined && accentHex === hex}
             aria-label={`accent colour ${i + 1}${locked ? " (hair dye in the shop)" : ""}`} data-locked={locked || undefined} onClick={() => paintAccent(i)} />;
@@ -224,18 +226,24 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
   </>;
 }
 
+/** What the first creator says when it's confirmed without a name. */
+export const NAME_NEEDED = "The island needs a name for you.";
+
 /**
  * The world name's availability (row 222), checked through /api/identity/name 400 ms after typing stops. Signed out
  * the route says "Unauthorized": said as a sign-in instead, whose words link back here (reachability §3).
  */
-export function useNameCheck(askName: { current: string } | undefined) {
+export function useNameCheck(askName: { current: string } | undefined, required = false) {
+  const id = useId();
   const [name, setName] = useState(askName?.current === "You" ? "" : askName?.current ?? "");
   const [nameNote, setNameNote] = useState<{ ok: boolean; text: string } | null>(null);
   useEffect(() => {
     if (!askName || !name.trim() || name.trim() === askName.current) return;
     const timer = window.setTimeout(() => {
       void fetch(`/api/identity/name?check=${encodeURIComponent(name.trim())}`).then(r => (r.status === 401 ? { ok: false, error: "Sign in to pick a name." } : r.json())).then(b => {
-        setNameNote(b?.ok ? { ok: b.data.available, text: b.data.available ? "That name is free." : "Someone already has that name." } : { ok: false, text: b?.error ?? "Sign in to pick a name." });
+        // the route's answer is { ok, name: { name, available } } (jsonResult's key); reading it as `data` threw, so every name
+        // read as refused and was dropped from the save (net-identity, 2026-10-27)
+        setNameNote(b?.ok ? { ok: b.name.available, text: b.name.available ? "That name is free." : "Someone already has that name." } : { ok: false, text: b?.error ?? "Sign in to pick a name." });
       }).catch(() => setNameNote({ ok: false, text: "Couldn't check the name right now." }));
     }, 400);
     return () => window.clearTimeout(timer);
@@ -243,7 +251,19 @@ export function useNameCheck(askName: { current: string } | undefined) {
   // The typed name goes with the look unless the check already said it's taken: confirming inside the check's 400 ms,
   // or pressing Skip, used to drop it. The server checks again; a failure is surfaced (PlayerCharacterUI).
   const wanted = askName && name.trim() && name.trim() !== askName.current && nameNote?.ok !== false ? name.trim() : null;
-  return useMemo(() => ({ name, nameNote, wanted, type: (v: string) => { setName(v); setNameNote(null); } }), [name, nameNote, wanted]);
+  // `required` (the first creator): confirming with no name, or one the check refused, shows the field instead of saving
+  // the look nameless. The caller stops when `missing()` is true.
+  return useMemo(() => ({
+    id, name, nameNote, wanted, type: (v: string) => { setName(v); setNameNote(null); },
+    missing: () => {
+      if (!required || !askName || (name.trim() && nameNote?.ok !== false)) return false;
+      if (!name.trim()) setNameNote({ ok: false, text: NAME_NEEDED });
+      const field = document.getElementById(id);
+      field?.scrollIntoView({ block: "nearest" });
+      field?.focus();
+      return true;
+    },
+  }), [id, name, nameNote, wanted, required, askName]);
 }
 
 /** A whole hairstyle's tile is its static thumbnail (head-v10: baked at build time, in a neutral colour). */

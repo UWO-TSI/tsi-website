@@ -14,6 +14,7 @@ import { Keycap, NPCDialogue, VillageButton, VillageField, VillagePanel, Village
 import { GuiVariantContext, useGuiVariant, type GuiVariant } from "./variant";
 import { useMarker } from "./motion";
 import styles from "./gui.module.css";
+import type { Rarity } from "@/lib/rarity";
 
 export { Keycap, NPCDialogue as Dialogue, VillageButton as Button, VillageField as Field, VillageTextArea as TextArea, VillagePanel as Panel };
 /** Toasts: the island's one lane (components/game/ToastHub), paper slips inside a .gui scope. `toast(text, icon?)` from anywhere. */
@@ -207,7 +208,7 @@ export function List({ label, children, className }: { label?: string; children:
   return <ul className={cx(styles.list, className)} aria-label={label}>{Children.map(children, c => c && <li>{c}</li>)}</ul>;
 }
 
-export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
+export type { Rarity };
 /**
  * An item tile: the real icon on cream, its stack count, its rarity edge, a dot while it's new. `empty` is a free slot
  * (the kit's little dot, still choosable with `onClick`); `unknown` shows the icon as a silhouette (not found yet).
@@ -270,7 +271,7 @@ export type BadgeTone = "neutral" | "sage" | "success" | "warn" | "danger" | "in
 export function Badge({ tone = "neutral", children, className, ...rest }: HTMLAttributes<HTMLSpanElement> & { tone?: BadgeTone }) {
   return <span {...rest} className={cx(styles.badge, className)} data-tone={tone}>{children}</span>;
 }
-export type BadgeRarity = Rarity | "seaking";
+export type BadgeRarity = Rarity;
 /** A rarity tag in the one rarity palette (--gui-rarity-*, ink text): the catch card, the journal, the book. */
 export function RarityBadge({ rarity, children, className, style, ...rest }: HTMLAttributes<HTMLSpanElement> & { rarity: BadgeRarity }) {
   return <span {...rest} className={cx(styles.badge, className)} data-tone="rarity" data-rarity={rarity} style={{ ...style, "--rarity": `var(--gui-rarity-${rarity})` } as CSSProperties}>{children}</span>;

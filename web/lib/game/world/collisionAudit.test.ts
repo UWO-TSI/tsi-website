@@ -9,7 +9,7 @@ import { join } from "node:path";
 import { crc32, deflateSync } from "node:zlib";
 import * as THREE from "three";
 import { it } from "vitest";
-import { BUILDING_SOLID, LANDMARK_INFO, PROP_FOOTPRINT, ROUND_PROPS, TREE_TRUNK, propsOf, villageIsland, wharfDock, type LandmarkId } from "../defaultIsland";
+import { BUILDING_SOLID, FIRE_PIT_RING, LANDMARK_INFO, PROP_FOOTPRINT, ROUND_PROPS, TREE_TRUNK, propsOf, villageIsland, wharfDock, type LandmarkId } from "../defaultIsland";
 import { acceptProposed, PROPOSALS } from "../proposals";
 import { CAMPFIRE_URL, NEW_LAMPS, propUrl } from "../propModels";
 import { isRockModel, rockUrl } from "../rocks";
@@ -159,6 +159,7 @@ function blockerOf(it: Item): string {
   if (o.kind === "landmark") return LANDMARK_INFO[o.id as LandmarkId]?.half ? box(LANDMARK_INFO[o.id as LandmarkId].half!) : "none";
   if (o.kind === "lamp") { const post = NEW_LAMPS[o.model as keyof typeof NEW_LAMPS]?.post; return post ? `post ${post}` : "none"; }
   if (o.kind === "tree") return `trunk r ${TREE_TRUNK}`;
+  if (o.kind === "campfire") return `round r ${FIRE_PIT_RING}`;
   const f = o.model ? PROP_FOOTPRINT[o.model] : undefined;
   return f ? (ROUND_PROPS.has(o.model!) ? `round r ${f[0]}` : box(f)) : "none";
 }

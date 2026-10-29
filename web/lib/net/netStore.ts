@@ -30,11 +30,12 @@ import { useShowClass } from "@/lib/game/hudPrefs";
 import { setWorldClockOffset } from "@/lib/game/worldClock";
 import { parseClockOverride } from "@/lib/game/islandTime";
 import {
-  AREAS, CHAT, DEV_TOKEN_PREFIX, MSG, NET_PLAYER_FIELDS, PROTOCOL, RECONNECT_GRACE_S, REJOIN_BACKOFF_S, RESTART_JITTER_MS, ROOM_NAME, decodeEvent, isPrivateArea,
-  joinRefusal, parseChatLine, parseFollowAnswer, parseFriends, parsePong, parseSys, type Area, type FollowRefusal, type NetPlayer, type PosePacket, type RosterEntry,
+  AREAS, CHAT, DEV_TOKEN_PREFIX, MSG, NET_PLAYER_FIELDS, PROTOCOL, RATE_LIMITS, RECONNECT_GRACE_S, REJOIN_BACKOFF_S, RESTART_JITTER_MS, ROOM_NAME, decodeEvent, isPrivateArea,
+  joinRefusal, parseChatLine, parseFollowAnswer, parseFriends, parsePong, parseRaidView, parseSys, type Area, type FollowRefusal, type NetPlayer, type PosePacket, type RosterEntry,
   type SeatReservation, type SlowState, type SysMessage,
 } from "./protocol";
 import { chatStore, type ChatStore } from "./chat";
+import { raidLink } from "./raid";
 import { friendsStore, type FriendsStore } from "./friends";
 import { toRemotePlayer, type FollowResult, type KickReason, type NetSource, type NetStatus } from "./types";
 import { RemoteBuffer, Remotes, parseNetsim, type Netsim } from "./interp";
@@ -64,6 +65,8 @@ export interface NetStore {
   setShowClass?(on: boolean): void;
   /** Join again after a refusal that keeps you off ("Play here" after 4104). */
   rejoin?(): void;
+  /** Your look or world name was saved: have the server re-read your card, so everyone sees it. */
+  refreshCard?(): void;
 }
 
 /** At most this many bots. */
@@ -197,6 +200,11 @@ export interface RoomStoreOptions {
 }
 /** How long a `follow` waits for the room's answer before giving up (busy). */
 export const FOLLOW_WAIT_MS = 8000;
+/**
+ * A card refresh goes this long after the join or the last refresh: sooner, the server answers with the card it read
+ * then (its loader re-reads at most every 10 s) or drops the message (its limiter), and a save would never show.
+ */
+export const CARD_REFRESH_MS = RATE_LIMITS.refresh.everyMs + 1000;
 
 /** The room's NetSource, with the sender's hints (sender.ts SenderHints), the last restart notice and the chat. */
 export interface RoomSource extends NetSource {
@@ -244,6 +252,7 @@ export interface RoomStore extends NetStore {
   readonly source: RoomSource;
   setShowClass(on: boolean): void;
   rejoin(): void;
+  refreshCard(): void;
 }
 export function roomStore(o: RoomStoreOptions): RoomStore {
   const loadSdk = o.loadSdk ?? (() => import("@colyseus/sdk") as unknown as Promise<SdkModule>);
@@ -277,6 +286,8 @@ export function roomStore(o: RoomStoreOptions): RoomStore {
     later,
   });
   let lastSys: Exclude<SysMessage, { kind: "refused" }> | null = null;
+  /** A saved look or name waiting for its `refresh`; when the server last read the card (the join or a refresh). */
+  let cardWanted = false, cardAt = 0, cancelCard: (() => void) | null = null;
 
   const emit = () => { for (const l of listeners) l(); };
   const setStatus = (next: NetStatus) => { status = next; emit(); };
@@ -304,6 +315,8 @@ export function roomStore(o: RoomStoreOptions): RoomStore {
     // The area may have changed while the join was in flight: send the latest.
     sendArea();
     sendShowClass();
+    cardAt = wall();
+    sendCard();
   }
   function sendArea() {
     if (!room || status.kind !== "joined" || area === serverArea) return;
@@ -316,6 +329,18 @@ export function roomStore(o: RoomStoreOptions): RoomStore {
     if (!room || status.kind !== "joined" || showClass === serverShowClass) return;
     room.send(MSG.slow, { showClass } satisfies SlowState);
     serverShowClass = showClass;
+  }
+
+  /** One `refresh` for any number of saves, once the server would re-read; a dropped connection sends it after the rejoin. */
+  function sendCard() {
+    if (!cardWanted || cancelCard || !room || status.kind !== "joined") return;
+    cancelCard = later(() => {
+      cancelCard = null;
+      if (!room || status.kind !== "joined") return;
+      room.send(MSG.refresh);
+      cardAt = wall();
+      cardWanted = false;
+    }, Math.max(0, cardAt + CARD_REFRESH_MS - wall()));
   }
 
   function onPlayer(cb: SdkCallbacks, gen: number, state: StateLike, p: NetPlayer, key: string) {
@@ -357,6 +382,7 @@ export function roomStore(o: RoomStoreOptions): RoomStore {
   function attach(r: SdkRoom, sdk: SdkModule, joinedArea: Area, joinedShowClass: boolean) {
     const gen = ++generation;
     room = r;
+    raidLink.attach(up => r.send(MSG.raid, up));
     serverArea = joinedArea;
     serverShowClass = joinedShowClass;
     r.reconnection.maxRetries = RECONNECT_TRIES;
@@ -397,6 +423,7 @@ export function roomStore(o: RoomStoreOptions): RoomStore {
     });
     // A chat line (yours too: your copy is the acceptance) and a refused one go to the chat; a restart's notice stays here.
     r.onMessage(MSG.line, msg => { const l = parseChatLine(msg); if (l) chat.receive(l); });
+    r.onMessage(MSG.raid, msg => { const v = parseRaidView(msg); if (v && gen === generation) raidLink.receive(v); });
     r.onMessage(MSG.sys, msg => {
       const m = parseSys(msg);
       if (m?.kind === "refused") chat.refused(m.reason, m.text);
@@ -413,6 +440,7 @@ export function roomStore(o: RoomStoreOptions): RoomStore {
       setStatus({ kind: "joined", shard });
       sendArea();
       sendShowClass();
+      sendCard();
     });
     r.onLeave(code => { if (gen === generation) closed(code); });
     r.onError(() => {});
@@ -424,6 +452,9 @@ export function roomStore(o: RoomStoreOptions): RoomStore {
   function detach() {
     generation++;
     room = null;
+    raidLink.detach();
+    cancelCard?.();
+    cancelCard = null;
     clock.stop();
     friends.offline();
     for (const rec of players.values()) rec.off();
@@ -590,6 +621,7 @@ export function roomStore(o: RoomStoreOptions): RoomStore {
     release: life.release,
     setArea(next) { area = next; sendArea(); },
     setShowClass(on) { showClass = on; sendShowClass(); },
+    refreshCard() { cardWanted = true; sendCard(); },
     rejoin() {
       if (!wanted || room || connecting) return;
       cancelRetry?.();
@@ -674,6 +706,11 @@ export function useNetSource({ area, ready }: { area: Area; ready: boolean }): N
 /** "Play here" after another tab took your place (4104), or any refusal that keeps you off: join again. */
 export function rejoin(): void {
   holder().store?.rejoin?.();
+}
+
+/** Your look or world name was saved (lookStore, the name's save): the others see it after the next refresh. */
+export function refreshCard(): void {
+  holder().store?.refreshCard?.();
 }
 
 const OFF: NetStatus = { kind: "off" };

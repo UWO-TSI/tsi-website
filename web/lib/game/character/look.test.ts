@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { glbStats, readGlb } from "@/lib/game/perf/glbStats";
 import { CHARACTER_BUDGET } from "@/lib/game/perf/budget";
-import { BASE_URL, BATCH2_PRICES, COLOUR_ATLAS_URL, CUSTOM_HAIR_REF, HAIR_MAPS_URLS, HAIR_THUMB_URL, NATURAL_HAIR, naturalHex, OLD_HAIR, LOD_SKIN_URL, CLIPS, DEFAULT_LOOK, FACE, FACE_ATLAS2_URLS, FACE_ATLAS_URLS, PALETTE, PARTS, PART_BY_ID, bodyKey, faceRef, facePartRef, hairHex, lookBytes, lookRefs, parseLook, partRef, priceOf, randomLook, resolveParts, seeded, STARTER_PARTS, unlockRef, wear, wornParts } from "./look";
+import { BASE_URL, BATCH2_PRICES, COLOUR_ATLAS_URL, CUSTOM_HAIR_REF, HAIR_MAPS_URLS, HAIR_THUMB_URL, NATURAL_HAIR, naturalHex, OLD_HAIR, LOD_SKIN_URL, CLIPS, DEFAULT_LOOK, FACE, FACE_ATLAS2_URLS, FACE_ATLAS_URLS, PALETTE, PARTS, PART_BY_ID, bodyKey, faceRef, facePartRef, hairHex, lookBytes, lookRefs, parseLook, partRef, priceOf, randomLook, resolveParts, seeded, SKIN_PICKS, STARTER_PARTS, unlockRef, wear, wornParts } from "./look";
 import { LOOK_MAX_BYTES } from "@/lib/net/protocol";
 import { hairShift, NO_SHIFT, shiftedMedian } from "./hairColour";
 
@@ -71,7 +71,9 @@ describe("character catalogue", () => {
       if (p.variantOf) expect(PART_BY_ID.has(p.variantOf)).toBe(true);
       for (const m of p.materials) if (m.tint === "outfit") expect(m.default as number).toBeLessThan(PALETTE.outfit.length);
     }
-    expect([PALETTE.skin.length, PALETTE.hair.length, PALETTE.outfit.length]).toEqual([12, 12, 16]);
+    expect([PALETTE.skin.length, PALETTE.hair.length, PALETTE.outfit.length]).toEqual([12, 13, 16]);
+    // Hair colours are saved and sold by index: the dyes (6-11, the shop's hair:6..hair:11) never move; ginger was appended.
+    expect(PALETTE.hair.slice(6, 12)).toEqual(["#EBCB8B", "#C25B3A", "#9E3B2E", "#8A8F99", "#F0A3B5", "#6F8FC9"]);
     expect(CLIPS.map(c => c.name)).toEqual(expect.arrayContaining(["Idle", "Walk", "Run", "Sit", "Study", "Sleep", "Fish", "FishHold", "Forage", "Dig", "Net", "Wave", "Cheer", "Laugh", "Sad", "Dance", "AttackMelee", "AttackBow", "AttackCast", "DodgeRoll", "Hit", "Defeat", "Trace", "Stretch"]));
     const A = FACE.anchors;
     const cells: [string, number[], [number, number]][] = [
@@ -132,6 +134,12 @@ describe("looks", () => {
     const look = parseLook({ skin: 5, hair: 99, eyes: "F1.2", mouth: "nope", bangs: "back_bob", top: "top_hoodie", acc: { head: "acc_cap", face: "acc_cap" }, colors: { top_hoodie: 3, bogus: 1 } });
     expect(look).toMatchObject({ skin: 5, hair: DEFAULT_LOOK.hair, eyes: "F1.2", mouth: "M1.1", bangs: DEFAULT_LOOK.bangs, top: "top_hoodie", acc: { head: "acc_cap" }, colors: { top_hoodie: 3 } });
   });
+  it("the two darkest skins (10, 11) are no longer offered: a saved one loads as 9, random looks never pick them", () => {
+    expect(SKIN_PICKS).toBe(10);
+    expect([parseLook({ skin: 10 }).skin, parseLook({ skin: 11 }).skin, parseLook({ skin: 9 }).skin]).toEqual([9, 9, 9]);
+    const skins = new Set(Array.from({ length: 400 }, (_, i) => randomLook(seeded(i)).skin));
+    expect([...skins].sort((a, b) => a - b)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  });
   it("a one-piece replaces top and bottom, and a top brings the pair back", () => {
     const dress = wear(DEFAULT_LOOK, "onepiece", "onepiece_sundress");
     expect([dress.top, dress.bottom, dress.onepiece]).toEqual([null, null, "onepiece_sundress"]);
@@ -169,9 +177,9 @@ describe("looks", () => {
     expect(resolveParts(DEFAULT_LOOK).find(p => p.id === "top_tee")!.decal).toBeNull();
     expect(resolveParts(DEFAULT_LOOK).find(p => p.id === "shoes_slipon")!.tints.M_Sole).toBe("#C9A63A");
   });
-  it("wears the hair as one of David's 25 whole hairstyles (21 less #14, then wardrobe batch 2's five: #22 is its hat alone), hidden under a hat or hood (head-roblox)", () => {
+  it("wears the hair as one of David's 32 whole hairstyles (21 less #14, wardrobe batch 2's five, less #24 and the hair shelf's three: #8 and #9 removed, #22 is its hat alone; batch 3's 15 less #29, #31, #33, #36 and #38), hidden under a hat or hood (head-roblox)", () => {
     const hair = PARTS.filter(p => p.slot === "bangs" || p.slot === "back");
-    expect(hair).toHaveLength(25);
+    expect(hair).toHaveLength(32);
     expect(hair.every(p => p.slot === "back" && p.full && p.roblox)).toBe(true);
     expect(DEFAULT_LOOK.bangs).toBe("");
     expect(PART_BY_ID.get(DEFAULT_LOOK.back)?.full).toBe(true);
@@ -222,15 +230,16 @@ describe("looks", () => {
   });
   it("draws every hairstyle as one primitive in one material; a cap or visor is drawn as it is (never recoloured)", () => {
     for (const p of PARTS.filter(p => p.slot === "bangs" || p.slot === "back")) expect(p.materials.map(m => m.name), p.id).toEqual(["M_Hair"]);
-    expect(PARTS.filter(p => p.map?.fixed).map(p => p.id).sort()).toEqual(["acc_visor", "hair_dreads_cap"]);
+    // batch 3: #34's ski mask, and the scalp and edges drawn in a skin colour (#36, #39, #40)
+    expect(PARTS.filter(p => p.map?.fixed).map(p => p.id).sort()).toEqual(["acc_visor", "hair_dreads_cap", "hair_freeform_afro", "hair_ski_mask_dreads", "hair_sponge_twists"]);
   });
   it("splits #8's visor off its hair into a hat drawn as it is (head-roblox, David)", () => {
-    const hair = PART_BY_ID.get("hair_visor_messy")!, visor = PART_BY_ID.get("acc_visor")!;
+    const hair = PART_BY_ID.get("hair_messy_boy")!, visor = PART_BY_ID.get("acc_visor")!;
     expect(hair.map?.fixed).toBeUndefined();
     expect([visor.slot, visor.group, visor.hidesBackHair, !!visor.full]).toEqual(["accessory", "head", false, false]);
-    const look = { ...wear(wear(DEFAULT_LOOK, "back", "hair_visor_messy"), "accessory", "acc_visor"), hair: 3, hairAccent: 3 };
+    const look = { ...wear(wear(DEFAULT_LOOK, "back", "hair_messy_boy"), "accessory", "acc_visor"), hair: 3, hairAccent: 3 };
     const parts = resolveParts(look);
-    expect(parts.map(p => p.id)).toEqual(expect.arrayContaining(["hair_visor_messy", "acc_visor"]));   // worn over the hair, not instead
+    expect(parts.map(p => p.id)).toEqual(expect.arrayContaining(["hair_messy_boy", "acc_visor"]));   // worn over the hair, not instead
     const v = parts.find(p => p.id === "acc_visor")!;
     expect(v.tints).toEqual({ M_Hair: "#2B2B33" });                 // no hair colour
     expect(v.map).toEqual({ a: NO_SHIFT, b: NO_SHIFT });            // the look's colours never recolour it
@@ -240,7 +249,7 @@ describe("looks", () => {
     for (const url of Object.values(HAIR_MAPS_URLS)) expect(existsSync(join(web, "public", url)), url).toBe(true);
     const cells = PARTS.filter(p => p.map).map(p => p.map!.cell);
     expect(new Set(cells).size).toBe(cells.length);
-    expect(cells.every(c => Number.isInteger(c) && c >= 0 && c < 30)).toBe(true);
+    expect(cells.every(c => Number.isInteger(c) && c >= 0 && c < 6 * 7)).toBe(true);   // hair_colour.png: 6 x 7 cells (batch 3 added two rows)
   });
   it("random looks are always valid and seeded ones repeat", () => {
     for (let i = 0; i < 200; i++) { const look = randomLook(seeded(i)); expect(parseLook(JSON.parse(JSON.stringify(look)))).toEqual(look); }
@@ -270,6 +279,7 @@ describe("a custom hair colour from the colour wheel (head-v10, row 311)", () =>
     expect(lookRefs({ ...DEFAULT_LOOK, hairColor: "#123456" })).toEqual([...lookRefs(DEFAULT_LOOK), CUSTOM_HAIR_REF]);
     expect(CUSTOM_HAIR_REF).toBe("colour-wheel");
     expect(lookRefs({ ...DEFAULT_LOOK, hair: 10 })).toEqual([...lookRefs(DEFAULT_LOOK), "hair:10"]);   // a preset dye: that dye
+    expect(lookRefs({ ...DEFAULT_LOOK, hair: 12 })).toEqual(lookRefs(DEFAULT_LOOK));   // ginger: free, after the dyes
     const heavy = randomLook(seeded(7));
     expect(lookBytes({ ...heavy, hairColor: "#ABCDEF" })).toBeLessThan(LOOK_MAX_BYTES);
   });
@@ -305,8 +315,9 @@ describe("David's wardrobe cut (playtest round 1, 2026-10-14)", () => {
       }
     }
     for (const id of CRAFT_ONLY) expect(PART_BY_ID.get(id)?.item, id).toBeTruthy();
-    // 23 eyes and 25 mouths after the cut, then wardrobe batch 2's faces #20-25: six eyes and five mouths (#24 has none)
-    expect([Object.keys(FACE.layers.eyes.items).length, Object.keys(FACE.layers.mouth.items).length]).toEqual([23 + 6, 25 + 5]);
+    // 23 eyes and 25 mouths after the cut, then wardrobe batch 2's faces #20-25: six eyes and five mouths (#24 has none);
+    // then batch 3's #26-32 less #30 (removed): six of each
+    expect([Object.keys(FACE.layers.eyes.items).length, Object.keys(FACE.layers.mouth.items).length]).toEqual([23 + 6 + 6, 25 + 5 + 6]);
   });
 
   it("loads a saved look wearing several removed parts with each slot's default, keeping the rest", () => {
@@ -341,18 +352,21 @@ describe("wardrobe batch 2 (specs/playtest-round1.md \"New wardrobe batch\"; Dav
     return Array.from(new Float32Array(Uint8Array.from(bin!.subarray(at, at + acc.count * 8)).buffer));   // a copy: Buffer.slice is a view
   }
 
-  it("imports every item David didn't skip, by its pricing key: hairs #23-27 and #22's hat, accessories #01-24 but #16 (and #12 and #13, deleted) and #07 in silver, faces #20-25", () => {
+  // wardrobe batch 3 (specs/lanes/wardrobe-b3.md): David priced what's left on the shelf page, 2026-10-27
+  const B3_REMOVED = ["hair-33", "hair-35", "hair-37", "hair-40", "hair-42", "acc-26", "face-30"];   // David: fluffy crop, long windswept, tousled spikes, space buns, messy with a braid, cross bandage, moody face (keys stay unused)
+  it("imports every item David didn't skip, by its pricing key: hairs #23, #25-31 and #22's hat, accessories #01-24 but #16 (and #12 and #13, deleted) and #07 in silver, faces #20-25, and batch 3's priced ones", () => {
     const keys = Object.keys(BATCH2_PRICES);
-    expect(keys).toHaveLength(35);
+    expect(keys).toHaveLength(38 + 18);                                              // batch 3: 18 priced
     expect(keys.some(k => k === "acc-12" || k === "acc-13")).toBe(false);           // row 314: duplicates of #10 and #07
     expect(PART_BY_ID.has("acc_wheat_sprig") || PART_BY_ID.has("acc_round_wire_glasses")).toBe(false);
     expect(keys.filter(k => BATCH2_PRICES[k].mode === "skip")).toEqual(["acc-16"]);
     const imported = [...keyed.map(p => p.key!), ...Object.keys(FACE.faces)].sort();
     expect(imported).toEqual(keys.filter(k => k !== "acc-16").sort());
+    for (const k of B3_REMOVED) expect(priceOf(k), k).toBeNull();            // a removed item is never priced
     expect(new Set(imported).size).toBe(imported.length);
     // round 2: hair-22 is #22's ushanka and goggles alone (its hair is gone)
     expect(keyed.filter(p => p.key!.startsWith("hair-")).every(p => (p.slot === "back" && p.full) || p.id === "acc_ushanka_goggles")).toBe(true);
-    expect(keyed.filter(p => p.key!.startsWith("acc-"))).toHaveLength(22);
+    expect(keyed.filter(p => p.key!.startsWith("acc-"))).toHaveLength(24);   // batch 3's two, less nothing: the cross bandage (acc-26) is removed
     for (const k of keys) expect(priceOf(k), k).toEqual(BATCH2_PRICES[k]);
     expect(priceOf(undefined)).toBeNull();
   });
@@ -441,6 +455,25 @@ describe("wardrobe batch 2 (specs/playtest-round1.md \"New wardrobe batch\"; Dav
     expect(silver).toMatchObject({ slot: "accessory", group: "face", key: "acc-07s", colourAtlas: true, tris: gold.tris });
     expect(priceOf("acc-07s")).toEqual(priceOf("acc-07"));
     expect(partRef(silver.id)).toBe(silver.id);
+  });
+  it("hair shelf (David, 2026-10-27): 14 free hairstyles and 8 in the shop; three removed (and batch 3's 10: 5 free, 5 in the shop)", () => {
+    const hairs = PARTS.filter(p => p.slot === "back");
+    const shop = hairs.filter(p => partRef(p.id)).map(p => p.id).sort();
+    expect(hairs).toHaveLength(22 + 10);
+    expect(shop).toEqual(["hair_baby_sprout", "hair_buns_braid", "hair_curly_pigtails", "hair_double_buns", "hair_emo_layers", "hair_layered_shag", "hair_ribbon_bob", "hair_ski_mask_dreads", "hair_rolled_mask", "hair_spiky_messy", "hair_sponge_twists", "hair_swept_fringe", "hair_vkei"].sort());
+    for (const id of ["hair_baby_sprout", "hair_layered_shag", "hair_swept_fringe", "hair_vkei", "hair_ribbon_bob", "hair_double_buns"]) expect(priceOf(PART_BY_ID.get(id)!.key), id).toEqual({ mode: "coins", price: 350 });
+    for (const id of ["hair_curly_pigtails", "hair_emo_layers"]) expect(priceOf(PART_BY_ID.get(id)!.key), id).toEqual({ mode: "gems", price: 200 });
+    // removed: gone from the catalogue, and a look wearing one (or the old wavy fringe) loads as a free hairstyle
+    for (const id of ["hair_visor_messy", "hair_fluffy_boy", "hair_wavy_half_up"]) {
+      expect(PART_BY_ID.has(id), id).toBe(false);
+      expect(parseLook({ back: id }).back, id).toBe(DEFAULT_LOOK.back);
+    }
+    expect(partRef(parseLook({ bangs: "bangs_wavy" }).back)).toBeNull();
+    // random looks and the starter creator offer only the free ones
+    for (let i = 0; i < 300; i++) {
+      expect(partRef(randomLook(seeded(i)).back), String(i)).toBeNull();
+      expect(partRef(randomLook(seeded(i), new Set(STARTER_PARTS)).back), String(i)).toBeNull();
+    }
   });
   it("never dresses residents or bots in it: random looks keep the parts they had", () => {
     const b2 = new Set([...keyed.map(p => p.id), "acc_ushanka_goggles", ...Object.values(FACE.faces).flatMap(f => [f.eyes, f.mouth, ...f.extras])]);

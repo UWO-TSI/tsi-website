@@ -17,9 +17,10 @@ import { DANCE_RING } from "@/lib/game/emoteWheel";
 import ToastHub, { toast } from "@/components/game/ToastHub";
 import { Amount } from "@/components/economy/Amount";
 import { Badge, Banner, Button, Card, ConfirmDialog, Counter, Dialogue, Empty, ErrorNote, Field, IconButton, ItemTile, Keycap, List, ListRow, Loading, NameTag, Panel, Progress, Select,
-  Sheet, Slider, Tabs, TextArea, Toggle, Tooltip } from "@/components/gui";
+  RarityBadge, Sheet, Slider, Tabs, TextArea, Toggle, Tooltip } from "@/components/gui";
 import { FISH } from "@/lib/game/fishing";
 import { iconUrl } from "@/lib/icons/keys";
+import { RARITIES, RARITY_LABEL } from "@/lib/rarity";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import s from "./showroom.module.css";
 
@@ -149,8 +150,8 @@ export default function GuiShowroom() {
 
     <Section id="tiles" title="Item tiles" kit={["inventory", "wheel"]} note="The real item icons on cream, a rarity edge, the stack count; a dot while new, a silhouette until found, the kit’s little dot for a free slot.">
       <div className={s.tiles}>
-        {(["fish_dace", "fruit_pear", "fish_arowana", "bug_emperor_butterfly", "fish_coelacanth"] as const).map((k, i) => <ItemTile key={k} icon={iconUrl(k)} name={k.replace(/^[a-z]+_/, "").replace(/_/g, " ")}
-          rarity={(["common", "uncommon", "rare", "epic", "legendary"] as const)[i]} count={[1, 12, 2, 1, 1][i]} isNew={i === 4} selected={tile === k} onClick={() => setTile(k)} caption={(["Common", "Uncommon", "Rare", "Epic", "Legendary"])[i]} />)}
+        {(["fish_dace", "fruit_pear", "fish_arowana", "bug_emperor_butterfly", "fish_coelacanth", "fish_golden_koi", "fish_barreleye"] as const).map((k, i) => <ItemTile key={k} icon={iconUrl(k)} name={k.replace(/^[a-z]+_/, "").replace(/_/g, " ")}
+          rarity={RARITIES[i]} count={[1, 12, 2, 1, 1, 1, 1][i]} isNew={i === 4} selected={tile === k} onClick={() => setTile(k)} caption={RARITY_LABEL[RARITIES[i]]} />)}
         <ItemTile icon={iconUrl("fish_oarfish")} name="Oarfish" unknown caption="Not found" />
         <ItemTile name="" empty caption="Free slot" />
         <ItemTile icon={iconUrl("shovel-gold")} name="Golden shovel" size={56} caption="Small" />
@@ -171,12 +172,13 @@ export default function GuiShowroom() {
     </Section>
 
     <Section id="dialogue" title="Dialogue" kit={["dialogue", "menu", "tutorial"]} note="Our painted speech paper with the coral name tag and the amber continue chevron (the recruit kit’s NPCDialogue, in this sheet’s scope).">
-      <Dialogue speaker="Wren · HQ lead" onContinue={() => {}} continueLabel="Next"><p>Welcome to Tethos Island, <strong>Juniper</strong>! Your plot is waiting past the café.</p></Dialogue>
-      <Row label="Name tags"><NameTag>Wren</NameTag><NameTag tone="sage">Rosa · Café</NameTag><NameTag tone="paper">Sable</NameTag></Row>
+      <Dialogue speaker="Alice · HQ lead" onContinue={() => {}} continueLabel="Next"><p>Welcome to Tethos Island, <strong>Juniper</strong>! Your plot is waiting past the café.</p></Dialogue>
+      <Row label="Name tags"><NameTag>Alice</NameTag><NameTag tone="sage">Rosa · Café</NameTag><NameTag tone="paper">Sable</NameTag></Row>
     </Section>
 
     <Section id="badges" title="Badges and counters" kit={["recipe", "phone"]} note="Status tags and the red count on a shoulder (nothing at zero).">
       <Row label="Badges"><Badge>Basic</Badge><Badge tone="sage">Owned</Badge><Badge tone="success">Done</Badge><Badge tone="warn">Ready</Badge><Badge tone="danger">Sold out</Badge><Badge tone="info">Event</Badge><Badge tone="gold">Daily selection</Badge><Badge tone="new">New!</Badge></Row>
+      <Row label="Rarity">{RARITIES.map(r => <RarityBadge key={r} rarity={r}>{RARITY_LABEL[r]}</RarityBadge>)}</Row>
       <Row label="Counters"><Counter n={1} /><Counter n={4} /><Counter n={12} /><span className={s.note}>(0 shows nothing)</span><Counter n={0} /></Row>
       <Row label="Amounts"><Amount n={1240} /><Amount n={750} currency="gems" /></Row>
     </Section>

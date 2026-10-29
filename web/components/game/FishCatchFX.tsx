@@ -15,6 +15,7 @@ import { Component, Suspense, useEffect, useMemo, useRef, useState, type ReactNo
 import { useGLTF } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { RAW_TURN_X } from "@/lib/game/fishing";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 
 /** The longest a catch stays over the head (the card normally closes first: the longest card is about 6.5 s). */
@@ -27,7 +28,7 @@ function CaughtFish({ url, raw }: { url: string; raw?: boolean }) {
   const clone = useMemo(() => cloneSkeleton(scene), [scene]);
   // Dump imports ship raw (10× game scale, Z-forward): apply GAME_CALIBRATION.
   return (
-    <group scale={raw ? 0.1 : 1} rotation-x={raw ? Math.PI / 2 : 0}>
+    <group scale={raw ? 0.1 : 1} rotation-x={raw ? RAW_TURN_X : 0}>
       <primitive object={clone} />
     </group>
   );

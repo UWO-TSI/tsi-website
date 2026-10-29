@@ -107,6 +107,8 @@ import DonateSheet from "./peaceful/DonateSheet";
 import { ShowcaseSheet, TrophySheet } from "./peaceful/ShowcaseSheets";
 import type { MuseumWing } from "@/lib/collections/logic";
 import FishingOverlay from "./FishingOverlay";
+import RaidCall from "./fishing/RaidCall";
+import { fishBosses } from "@/lib/game/fishing";
 import ToastHub, { toast } from "./ToastHub";
 import RewardCard from "./RewardCard";
 import GlideGuide, { GlideGuideHint } from "./GlideGuide";
@@ -119,7 +121,7 @@ import IslandLoading from "./IslandLoading";
 import { setLoadPart } from "@/lib/game/loadProgress";
 import { READY_FILES } from "@/lib/game/preloadAssets";
 import { loadGameWorld } from "@/lib/game/world/load";
-import { GAME_WORLD } from "@/lib/game/world/active";
+import { GAME_WORLD, worldModel } from "@/lib/game/world/active";
 import TalkBox from "./TalkBox";
 import { emptyTalkView, requestTalk, subscribeTalk, talkStore, talkView } from "@/lib/game/residentTalk";
 import DailyGift from "./DailyGift";
@@ -233,7 +235,7 @@ const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   display: "Look at the trophy case", desk: "Front desk · profile showcase", shelf: "Browse the library", clock: "Check the clock",
   notice: "Read the notice board", catch: "Check the catch board", mailbox: "Check the mailbox", monument: "Club monument",
   museum_enter: "Enter the museum", cafe_enter: "Enter the café", curator: "Talk to the curator", closet: "Open the closet", fitting: "Try on outfits", oracle_enter: "Enter the Oracle temple", altar: "Consult the crystal",
-  home: "Take the boat home", fish: "Cast your line", forage: "Gather", net: "Swing the net", dig: "Dig", claim: "Claim your plot", donate: "Donate your first catch to the museum", report: "Report back to Wren", house: "Enter your house", village: "Take the boat to the village",
+  home: "Take the boat home", fish: "Cast your line", forage: "Gather", net: "Swing the net", dig: "Dig", claim: "Claim your plot", donate: "Donate your first catch to the museum", report: "Report back to Alice", house: "Enter your house", village: "Take the boat to the village",
   buy: `Add a room · ${ROOM_PRICE.coins} TC + ${ROOM_PRICE.materials}`,
   cafe: "Boarded up · help reopen it at the monument", museum: "Museum · Closed for now", ruins: "Enter the ruins", missions: "Read the mission board", ruins_exit: "Back to the village", lantern: "Pick it up",
   bench: "Sit on the bench", stool: "Enter the sushi bar", bed: "Sleep in your bed", chest: "Open your storage chest",
@@ -576,10 +578,10 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       {fountain && <LampGlow points={fountain.jet} ground={fountain.water} on={light.lampsOn} halo={2.4} pool={3} color="#a8e8ff" />}
       {fountain && <FadeLight position={fountain.light} color="#ffd59a" intensity={light.lampsOn ? light.lamp * 2 : 0} distance={12} />}
       {bar && <Suspense fallback={null}><SushiBar bar={bar} y={barY} player={player} phase={phase} viewRef={barView} onNear={onBar} /></Suspense>}
-      {layout.campfire && <Campfire site={layout.campfire} ground={island.ground} phase={phase} player={player} />}
+      {layout.campfire && <Campfire site={layout.campfire} ground={island.ground} phase={phase} player={player} walled={!!v.terrain} />}
       {/* Nature and props from the map, instanced: one draw per model sub-mesh however many the island has. */}
-      <InstancedModels items={sceneryMoving} />
-      {sceneryStill.length > 0 && <Suspense fallback={null}><MergedModels items={sceneryStill} /></Suspense>}
+      <InstancedModels items={sceneryMoving} cull={!!v.terrain} />
+      {sceneryStill.length > 0 && <Suspense fallback={null}><MergedModels items={sceneryStill} cull /></Suspense>}
       {/* Residents walk their routines on the world clock (residentRoutine.ts); during a ceremony they gather at the monument and cheer.
           While Bram brings a new arrival in and walks them round, his walking self stays out of sight: one Bram. */}
       <Residents personas={personas} phase={phase} ceremony={ceremony} player={player} island={island} v={v} away={arrivalPhase ? BRAM.slug : null}
@@ -606,7 +608,7 @@ function ClubMonument({ position, stage, ceremony }: { position: [number, number
     {!done && <>
       <GLBProp url={MONUMENT_SIGN_URL} position={[1.3, 0, -1.25]} rotation={[0, -0.3, 0]} />
       {[[-1.1, -1.1, 0], [1.1, -1.1, 0], [-1.1, 1.1, Math.PI], [1.1, 1.1, Math.PI]].map(([x, z, r], i) => (
-        <GLBProp key={i} url="/assets/acnh/props/fence-rope-a.glb" position={[x, 0, z]} rotation={[0, r, 0]} />
+        <GLBProp key={i} url={worldModel("/assets/acnh/props/fence-rope-a.glb")} position={[x, 0, z]} rotation={[0, r, 0]} />
       ))}
     </>}
     {stage >= 1 && !done && <>
@@ -838,7 +840,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const cinematic = welcoming || trip.active;
   const moveKeys = useMoveKeys(), abilityKeys = useAbilityKeys();
   const touch = useCoarsePointer() || devHome.get("touch") === "1";
-  // Row 312: the HQ visit with Wren after Bram's tour, and the tools residents hand over (components/game/hq).
+  // Row 312: the HQ visit with Alice after Bram's tour, and the tools residents hand over (components/game/hq).
   const closeMenu = useCallback(() => setLayer(null), []);
   const hq = useHqOnboarding({ inside, free: ready && !fading && !sheet && !mapOpen && !bagOpen && !donateOpen && !talking, menuOpen: layer === "ui", mapOpen,
     touch, name: identity.signedIn ? identity.display_name : null, owned: peaceful.owned, arriving: arrivalPhase !== null, closeMenu }, DEV ? devHome : null);
@@ -967,7 +969,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     // What a later drop opens never acts, whatever asks (lib/game/drops.ts).
     if ((!DROPS.homeIsland && (action === "home" || action === "claim")) || (!DROPS.combat && (action === "ruins" || action === "missions"))
       || (!DROPS.oracle && action === "oracle_enter") || (!DROPS.cafe && (action === "cafe" || action === "cafe_enter"))) return;
-    // The plaza's board and HQ's own (the visit with Wren waits for you to read it there).
+    // The plaza's board and HQ's own (the visit with Alice waits for you to read it there).
     if (action === "notice" || action === "board") { setSheet("notice"); if (action === "board") hqEvent("board"); return; }
     if (action === "founder") { setSheet("plaque"); return; }
     // HQ's coffee bar, aquarium and locked admin doors: a line each, nothing more (principle 3: no reward for visiting).
@@ -985,7 +987,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     if (action === "mailbox") { setSheet("letters"); return; }
     if (action === "curator") { setDonateOpen(true); return; }
     if (action === "display") { setSheet("trophies"); return; }
-    // Reporting to Wren (the visit's first step): the desk is hers to talk at; otherwise the profile showcase.
+    // Reporting to Alice (the visit's first step): the desk is hers to talk at; otherwise the profile showcase.
     if (action === "desk") { if (hq.waiting === "wren") hqEvent("wren"); else setSheet("showcase"); return; }
     // Stepping into the fitting room: its curtain sweeps across (FittingRoom), then the wardrobe opens.
     if (action === "fitting") { window.dispatchEvent(new CustomEvent("tsi:fitting")); window.setTimeout(() => setSheet("fitting"), FITTING_STEP_MS); return; }
@@ -1066,7 +1068,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const finishArrival = useCallback(() => {
     markWelcomed(); setArrived(true); arrivalFlag.markArrived(); setObjectiveNew(true);
     window.dispatchEvent(new CustomEvent("tsi:gift", { detail: { key: TUTORIAL_REWARD.rod, name: TUTORIAL_REWARD.name, title: TUTORIAL_REWARD.title, note: TUTORIAL_REWARD.note } }));
-    // A new arrival (row 312): its tools are taught and the visit with Wren starts. A dev replay signed out counts as one.
+    // A new arrival (row 312): its tools are taught and the visit with Alice starts. A dev replay signed out counts as one.
     void postArrival().then(r => { if (r?.granted) setHudCoins(r.balance); hqArrived(r ? r.taught : DEV && devHome.get("arrival") === "1"); });
   }, [arrivalFlag, hqArrived, devHome]);
   // The walk-along waits for the bag (the Collection, B) to be opened once.
@@ -1158,7 +1160,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // Mouse-look ending on its own (Esc, the window losing focus) opens the UI view; capturing again closes the layers.
   useEffect(() => subscribePause(() => setLayer(l => l ?? "ui")), []);
   useEffect(() => { if (captured === "captured") setLayer(null); }, [captured]);
-  // The island map is the village's (the minimap and M). At HQ (Wren shows you the map there, row 312) it opens with you
+  // The island map is the village's (the minimap and M). At HQ (Alice shows you the map there, row 312) it opens with you
   // at HQ's door; the minimap stays outdoors.
   const mapHere = !inside && !atHome && site !== "ruins";
   const mapOpenable = mapHere || (inside === "hq" && site === "village");
@@ -1294,7 +1296,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
             onWallet={() => setSheet(value => (value === "wallet" ? null : "wallet"))} walletKey={keyName(identity.settings.key_bindings.openWallet)}>
             <button className={hudButton} onClick={() => setSheet("settings")} aria-label="Settings" title="Settings"><Settings size={18} aria-hidden /></button>
           </TopCluster>
-          {/* Bram's walk-along, then the HQ visit with Wren and a tool's little quest (row 312), then the chapter. */}
+          {/* Bram's walk-along, then the HQ visit with Alice and a tool's little quest (row 312), then the chapter. */}
           <QuestTracker className={styles.questSlot} quest={tutorialQuest ?? hq.quest ?? trackedChapter} hidden={tutorialQuest || hq.quest ? false : holdObjective} onOpen={() => setSheet("journal")} />
         </div>
         <div className={styles.hudColumn} data-minimap data-new={objectiveNew || undefined}>
@@ -1335,6 +1337,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         ? <button className={styles.interact} data-use onPointerDown={e => { if (e.pointerType !== "mouse" || capture.state !== "captured") applyTool(); }}><kbd>{touch ? "Tap" : "Click"}</kbd>{toolAction.label}</button>
         : needTool && <p className={styles.interact} data-closed="true" role="status"><kbd>{touch ? "Wheel" : keyName(wheelKeys.wheel)}</kbd>Take out your {needTool === "rod" ? "fishing rod" : needTool}</p>)}
       <FishingOverlay rod={held?.kind === "rod" && held.tier ? rodByTier(held.tier) : peaceful.rod} onActiveChange={setFishing} />
+      {fishBosses() && !fishing && !inside && <RaidCall />}
       <ToolWheel items={wheelItems} held={heldState.held} wheelKey={wheelKeys.wheel} touch={touch} onEquip={holdItem} onSwap={() => swapHeld(wheelItems)}
         enabled={ready && !inside && !fishing && !sheet && !bagOpen && !cinematic && !talking && !fading && !decor.decorating && !(touch && uiView)} />
       <EmoteWheel emoteKey={wheelKeys.emote} touch={touch} onPlay={entry => playWheelEntry(entry, player.current)}

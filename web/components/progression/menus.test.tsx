@@ -52,9 +52,9 @@ describe("the journal's quests", () => {
 });
 
 describe("a letter's sender line", () => {
-  const letter = (over: Partial<LetterView>): LetterView => ({ id: "1", kind: "note", sender_id: "a", sender_name: "Wren", recipient_id: "b", recipient_name: "Bo", subject: "", body: "", created_at: "2026-10-18T00:00:00Z", read_at: null, reported: false, outgoing: false, ...over });
+  const letter = (over: Partial<LetterView>): LetterView => ({ id: "1", kind: "note", sender_id: "a", sender_name: "Alice", recipient_id: "b", recipient_name: "Bo", subject: "", body: "", created_at: "2026-10-18T00:00:00Z", read_at: null, reported: false, outgoing: false, ...over });
   it("is who wrote it, HQ for HQ's, and who you wrote to for yours", () => {
-    expect(fromLine(letter({}))).toBe("Wren");
+    expect(fromLine(letter({}))).toBe("Alice");
     expect(fromLine(letter({ kind: "system", sender_name: "Someone" }))).toBe("HQ");
     expect(fromLine(letter({ outgoing: true }))).toBe("To Bo");
   });

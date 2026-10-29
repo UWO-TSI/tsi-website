@@ -3,7 +3,8 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CATALOGUE } from "./catalogue";
 import { memoryEconomyStore } from "./memoryStore";
-import { dailySpecials, seedItems, sellPrice, speciesClass, torontoDay } from "./rules";
+import { dailySpecials, seedItems, sellPrice, speciesClass, speciesSellPrice, torontoDay } from "./rules";
+import { ROSTER } from "@/lib/collections/roster";
 import { buy, claimDailyGift, equip, getShop, getWallet, pickupCode, reserveMerch, resolveMerch, sell, sellList } from "./service";
 
 const A = "00000000-0000-4000-8000-0000000000aa";
@@ -79,16 +80,16 @@ describe("daily specials", () => {
 
 describe("selling by rarity (row 91)", () => {
   it("prices by category and rarity, including fish outside the launch roster", async () => {
-    expect(speciesClass("fish_coelacanth")).toEqual({ category: "fish", rarity: "legendary" });
+    expect(speciesClass("fish_coelacanth")).toEqual({ category: "fish", rarity: "epic" });
     expect(speciesClass("fish_guppy")).toEqual({ category: "fish", rarity: "common" }); // not in the roster, from FISH
     expect(speciesClass("bug_mantis")).toEqual({ category: "bug", rarity: "rare" });
-    expect([sellPrice("fish", "legendary"), sellPrice("bug", "rare"), sellPrice("nature", "common")]).toEqual([600, 50, 4]);
+    expect([sellPrice("fish", "epic"), sellPrice("bug", "rare"), sellPrice("nature", "common")]).toEqual([180, 50, 4]);
     const m = memoryEconomyStore();
     m.give(A, "fish_coelacanth", 2);
     m.give(A, "fish_guppy", 3);
     m.give(A, "acorn", 5);
     const list = await sellList(m.store, A);
-    expect(list.ok && list.data.map((x) => [x.item_key, x.price_each])).toEqual([["fish_coelacanth", 600], ["fish_guppy", 8]]);
+    expect(list.ok && list.data.map((x) => [x.item_key, x.price_each])).toEqual([["fish_coelacanth", 180], ["fish_guppy", 8]]);
     expect(await sell(m.store, A, { item_key: "fish_guppy", qty: 3, idempotency_key: "sell-0001" })).toMatchObject({ ok: true, data: { paid: 24, remaining: 0 } });
     expect(await sell(m.store, A, { item_key: "fish_guppy", qty: 3, idempotency_key: "sell-0001" })).toMatchObject({ ok: true, data: { replayed: true } });
     expect(await sell(m.store, A, { item_key: "fish_coelacanth", qty: 3, idempotency_key: "sell-0002" })).toMatchObject({ ok: false, code: "insufficient_items" });
@@ -106,7 +107,7 @@ describe("selling by rarity (row 91)", () => {
     expect(await sell(m.store, A, { item_key: "fish_golden_koi", qty: 1, idempotency_key: "sell-0101" })).toMatchObject({ ok: false, code: "locked" });
     expect(await sell(m.store, A, { item_key: "fish_dace", qty: 2, idempotency_key: "sell-0102" })).toMatchObject({ ok: true, data: { paid: 16 } });
     m.lock(A, "fish_golden_koi", false);
-    expect(await sell(m.store, A, { item_key: "fish_golden_koi", qty: 1, idempotency_key: "sell-0103" })).toMatchObject({ ok: true, data: { paid: 600 } });
+    expect(await sell(m.store, A, { item_key: "fish_golden_koi", qty: 1, idempotency_key: "sell-0103" })).toMatchObject({ ok: true, data: { paid: 180 } });
   });
 });
 
@@ -227,5 +228,19 @@ describe("Gems have one write path", () => {
       return /\.(update|insert|upsert)\(\s*\{[^}]*\btethos_coins\b/.test(src) || /from\("tc_transactions"\)\s*\.(insert|update|upsert|delete)/.test(src);
     });
     expect(writers).toEqual([]);
+  });
+});
+
+describe("species sell prices (the catalogue editor)", () => {
+  it("pays a species' own price when the roster sets one, else its category and rarity's", () => {
+    const apple = ROSTER.find((s) => s.key === "apple")!;
+    expect(speciesSellPrice("apple")).toBe(sellPrice("fruit", "common"));
+    apple.price = 33;
+    try {
+      expect(speciesSellPrice("apple")).toBe(33);
+    } finally {
+      delete apple.price;
+    }
+    expect(speciesSellPrice("not_a_thing")).toBeNull();
   });
 });

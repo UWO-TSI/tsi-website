@@ -88,6 +88,8 @@ export const harvestNode = (node: string, at: [number, number], tool?: string) =
 /** Roll the fish that will bite on the held rod (`tool`), from where the player stands; landed with landCatch when the reel is won. */
 export const castLine = (site: "village" | "home", at: [number, number], power: number, tool: string) => catchRequest({ action: "cast", site, at, power, tool });
 export const landCatch = (roll: string) => catchRequest({ action: "land", roll });
+/** A landed divine raid: claim this helper's catch with the realtime server's signed credit (lib/collections/raidCredit.ts). */
+export const claimRaid = (credit: string) => catchRequest({ action: "raid", credit });
 
 export type EatAnswer = { ok: true; count: number } | { ok: false; error: string };
 /** Eat one held fruit (POST /api/collections/eat, specs/game-ui.md §2). Signed out or without a server, from this browser's record. */

@@ -89,7 +89,7 @@ export const BRIDGE_RAIL_OUT = 1.65;
  * palm by its trunk, a pole by its pole (the cloth and the leaves are soft).
  */
 export const PROP_FOOTPRINT: Record<string, readonly [number, number, number?, number?]> = {
-  "bench-wood": [0.98, 0.27], "rock-a": [0.48, 0.45], "rock-b": [0.46, 0.42], "rock-c": [0.5, 0.5],
+  "bench-wood": [0.98, 0.27], "plaza-bench": [0.98, 0.27], "rock-a": [0.48, 0.45], "rock-b": [0.46, 0.42], "rock-c": [0.5, 0.5],
   "fence-country-a": [0.5, 0.16], "fence-country-b": [0.5, 0.16],
   // The faceted boulders (lib/game/rocks.ts, art/rocks/build_rocks.py).
   ...Object.fromEntries(ROCK_MODELS.map(m => [m, ROCK_SIZE[m].half])),
@@ -117,13 +117,19 @@ export const PROP_FOOTPRINT: Record<string, readonly [number, number, number?, n
   // game/trees-art: the riverbank trees' trunks at the ground.
   "river-tree-willow": [0.7, 0.7], "river-tree-alder": [0.46, 0.6, -0.15, 0.08], "river-tree-oak": [0.75, 0.75], "river-tree-lean": [0.6, 0.6],
 };
+/**
+ * The campfire's stone ring, its radius before the fire's scale: the stones' outer edge at their tops (art/props/
+ * build_campfire.py, measured 0.69 to 0.72). The smooth world walls the pit round it; the sit (2.1) and dance (2.9)
+ * rings stay open (lib/game/campfire.ts FIRE). The village's fire is walled by its scene (Campfire.tsx).
+ */
+export const FIRE_PIT_RING = 0.72;
 /** Props whose footprint is round, `hw` its radius: the plaza fountain's basin (a square would stand out past its rim). */
 export const ROUND_PROPS: ReadonlySet<string> = new Set(["plaza-fountain"]);
 /** Prop tops before scale, measured from the GLB bounds: what a jump clears or lands on (lib/game/movement). */
 export const PROP_TOP: Record<string, number> = {
-  "bench-wood": 0.51, "rock-a": 0.61, "rock-b": 0.59, "rock-c": 0.52, "fence-country-a": 0.7, "fence-country-b": 0.69,
+  "bench-wood": 0.51, "plaza-bench": 0.5, "rock-a": 0.61, "rock-b": 0.59, "rock-c": 0.52, "fence-country-a": 0.7, "fence-country-b": 0.69,
   ...Object.fromEntries(ROCK_MODELS.map(m => [m, ROCK_SIZE[m].top])),
-  barrel: 11.66, lighthouse: 38, crate: 0.52, "market-cart": 2.84, "shop-cart": 0.87, "beach-parasol": 2.33, "palm-a": 3.94, "palm-b": 2.7,
+  barrel: 11.66, lighthouse: 38, crate: 0.52, "market-cart": 2.8, "shop-cart": 0.87, "beach-parasol": 2.33, "palm-a": 3.94, "palm-b": 2.7,
   "wharf-piling": 0.35, "rope-post": 0.87, "rope-span": 0.68, "palm-tall": 6.21, "palm-lean": 5.03, "palm-short": 3.46, "palm-small": 1.95,
   "log-bench": 0.51, "stump-seat": 0.45, "firewood-stack": 0.86, "fish-rack": 1.43,
   "plaza-fountain": 3.21, "banner-pole": 3.3, "flag-pole": 4.13, "fruit-stall": 2.5, "fruit-barrel": 1.005, "fruit-crate": 0.495,
@@ -270,8 +276,10 @@ export function villageSpawn(v: Village = village()): [number, number, number] {
   return [x, 0, z];
 }
 
-/** The benches, rocks, fences and scenery props: the props with a solid footprint. */
-export const propsOf = (v: Village = village()) => [...objectsOf("bench", v), ...objectsOf("rock", v), ...objectsOf("fence", v), ...objectsOf("prop", v)];
+/** The benches, rocks, fences and scenery props: the props with a solid footprint. A bench the map gives no model (the
+ * new world's plaza benches, lib/game/world/generate.ts) is our plaza bench (art/remodel/build_bench.py). */
+export const propsOf = (v: Village = village()) => [...objectsOf("bench", v).map(o => (o.model ? o : { ...o, model: "plaza-bench" })),
+  ...objectsOf("rock", v), ...objectsOf("fence", v), ...objectsOf("prop", v)];
 
 /** Solid footprint of a bench, rock or fence: half extents and centre offset × scale (before its yaw). */
 export function propFootprint(o: Pick<MapObject, "model" | "scale">): [number, number, number, number] | null {
@@ -440,6 +448,8 @@ export function islandOf(v: Village): VillageIsland {
     const [dx, dz] = turn(f[2], f[3], o.yaw);
     return [{ x: o.x + dx, z: o.z + dz, yaw: o.yaw ?? 0, hw: f[0], hd: f[1], top: base + (PROP_TOP[o.model!] ?? Infinity) * (o.scale ?? 1), round: ROUND_PROPS.has(o.model!) }];
   }), ...fenceSolids(objectsOf("fence", v).filter(isJoinedFence)),
+    // The smooth world's campfire: its stone ring, round, never climbed.
+    ...(terrain ? objectsOf("campfire", v).map(o => { const r = FIRE_PIT_RING * (o.scale ?? 1); return { x: o.x, z: o.z, yaw: 0, hw: r, hd: r, top: Infinity, round: true }; }) : []),
     // The lamps' posts (the hand lantern has none): never climbed.
     ...objectsOf("lamp", v).flatMap(o => { const post = NEW_LAMPS[o.model as keyof typeof NEW_LAMPS]?.post; return post ? [{ x: o.x, z: o.z, yaw: 0, hw: post, hd: post, top: Infinity }] : []; })];
   // Trees and props by 4-unit bucket (numeric keys), so a painted island with hundreds of them walks as cheaply as a small one.

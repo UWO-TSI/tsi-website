@@ -1,0 +1,28 @@
+| Scene | Tier | Median frame ms | p95 ms | Frame CPU ms | Draw calls | Triangles | Runs | Spread | Load |
+| village | high | 7.20 (3.90, +84.6%) | 9.90 (4.90, +102.0%) | 6.10 (3.40, +79.4%) | 425 (382, +11.3%) | 1372957 (537560, +155.4%) | 5 | 6% | 5.1 |
+| v2 | high | 7.20 (5.40, +33.3%) | 9.90 (6.80, +45.6%) | 6.20 (5.00, +24.0%) | 427 (254, +68.1%) | 1375413 (912237, +50.8%) | 5 | 3% | 5.1 |
+| village | lite | 4.60 (2.30, +100.0%) | 6.90 (3.40, +102.9%) | 4.20 (2.00, +110.0%) | 357 (288, +24.0%) | 1166339 (353865, +229.6%) | 5 | 4% | 5.2 |
+| v2 | lite | 4.90 (3.00, +63.3%) | 7.10 (3.70, +91.9%) | 4.40 (2.80, +57.1%) | 359 (172, +108.7%) | 1167939 (629051, +85.7%) | 5 | 6% | 5.1 |
+perf:check FAILED
+- village|high: median frame 7.2 ms, +84.6% on the baseline's 3.9
+- village|high: 425 draw calls, +11.3% on the baseline's 382
+- village|high: frameMs 7.2 over the budget's 6 (web/lib/game/perf/budget.ts)
+- village|high: cpuMs 6.1 over the budget's 5 (web/lib/game/perf/budget.ts)
+- village|high: triangles 1372957 over the budget's 620000 (web/lib/game/perf/budget.ts)
+- v2|high: median frame 7.2 ms, +33.3% on the baseline's 5.4
+- v2|high: 427 draw calls, +68.1% on the baseline's 254
+- v2|high: frameMs 7.2 over the budget's 6.5 (web/lib/game/perf/budget.ts)
+- v2|high: cpuMs 6.2 over the budget's 6 (web/lib/game/perf/budget.ts)
+- v2|high: triangles 1375413 over the budget's 1200000 (web/lib/game/perf/budget.ts)
+- village|lite: median frame 4.6 ms, +100.0% on the baseline's 2.3
+- village|lite: 357 draw calls, +24.0% on the baseline's 288
+- village|lite: frameMs 4.6 over the budget's 4 (web/lib/game/perf/budget.ts)
+- village|lite: cpuMs 4.2 over the budget's 3.5 (web/lib/game/perf/budget.ts)
+- village|lite: triangles 1166339 over the budget's 420000 (web/lib/game/perf/budget.ts)
+- v2|lite: median frame 4.9 ms, +63.3% on the baseline's 3
+- v2|lite: 359 draw calls, +108.7% on the baseline's 172
+- v2|lite: frameMs 4.9 over the budget's 4 (web/lib/game/perf/budget.ts)
+- v2|lite: cpuMs 4.4 over the budget's 3.5 (web/lib/game/perf/budget.ts)
+- v2|lite: triangles 1167939 over the budget's 950000 (web/lib/game/perf/budget.ts)
+
+Run: SCENES=village,v2 NEXT_PUBLIC_GAME_WORLD=new, 2026-10-27, on main 139d3b1e + this lane. The baseline (Oct 14) predates terrain v3; round 1's run on the same baseline: village high 7.10 ms, 421 draws, 1368043 triangles. This lane lowers each redo's triangles against the dump's (barrel 1196 -> 924, rocks 558 -> 480 for the three, bugs 116 to 230 against 360 to 1006); the barrel adds one draw (wood and metal presets against the dump's one textured material).

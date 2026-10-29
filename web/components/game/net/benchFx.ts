@@ -84,7 +84,7 @@ function castFor(r: RemoteRig): FishingState {
   const s = r.sample, dx = Math.sin(s.yaw), dz = Math.cos(s.yaw), ms = performance.now();
   if (!c) {
     c = { local: false, phase: "float", since: ms - 2000, power: 0.6, fromX: s.x, fromZ: s.z, spotX: s.x + dx * 4, spotZ: s.z + dz * 4, landX: s.x + dx * 4, landZ: s.z + dz * 4,
-      waterY: r.groundY, dirX: dx, dirZ: dz, rate: 1, seed: r.sid, nibbleAt: -Infinity, pull: 0, tension: 0, reeling: false, reeled: 0, snapped: false,
+      waterY: r.groundY, dirX: dx, dirZ: dz, rate: 1, seed: r.sid, hook: "common", nibbleAt: -Infinity, pull: 0, tension: 0, reeling: false, reeled: 0, snapped: false,
       catchModel: null, catchRaw: false, catchCm: null, showOff: false };
     casts.set(r, c);
   }
