@@ -2,7 +2,7 @@ import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:f
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { MIGRATIONS, SEEDS, changedRowsUpsert, currentSeed, seedMigration } from "./seedMigrations";
+import { MIGRATIONS, SEEDS, changedRowsUpsert, currentSeed, guardedUpdates, seedMigration } from "./seedMigrations";
 
 describe("generated catalogue seeds", () => {
   it.each(SEEDS.map((s) => [s.name, s] as const))("%s: the TS matches its newest block (after a catalogue change: node scripts/gen-seeds.mjs)", (_, seed) => {
@@ -14,6 +14,13 @@ describe("generated catalogue seeds", () => {
     const next = "INSERT INTO t (k, a, b) VALUES\n  ('x', 1, 2),\n  ('y', 3, 5),\n  ('z', 6, 7)\nON CONFLICT (k) DO NOTHING;";
     expect(changedRowsUpsert(prev, next)).toBe("INSERT INTO t (k, a, b) VALUES\n  ('y', 3, 5),\n  ('z', 6, 7)\nON CONFLICT (k) DO UPDATE SET a = EXCLUDED.a, b = EXCLUDED.b;");
     expect(changedRowsUpsert(next, next)).toBe("");
+  });
+
+  it("an admin-editable seed's edited rows change only where they're still as the last seed left them", () => {
+    const prev = "INSERT INTO p (slug, lines, talk) VALUES\n  ('odile', ARRAY['by the pond', 'hi, you']::text[], '[1]'::jsonb),\n  ('bram', ARRAY['tides']::text[], '[]'::jsonb)\nON CONFLICT (slug) DO NOTHING;";
+    const next = "INSERT INTO p (slug, lines, talk) VALUES\n  ('odile', ARRAY['by the river', 'hi, you']::text[], '[1]'::jsonb),\n  ('bram', ARRAY['tides']::text[], '[]'::jsonb),\n  ('nell', ARRAY['stars']::text[], '[]'::jsonb)\nON CONFLICT (slug) DO NOTHING;";
+    expect(guardedUpdates(prev, next)).toBe("UPDATE p SET lines = ARRAY['by the river', 'hi, you']::text[] WHERE slug = 'odile' AND lines IS NOT DISTINCT FROM ARRAY['by the pond', 'hi, you']::text[];");
+    expect(guardedUpdates(next, next)).toBe("");
   });
 
   it("never resets live stock: a new row brings its stock, an edited one keeps what's left", () => {
