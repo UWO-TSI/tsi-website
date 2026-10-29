@@ -42,7 +42,10 @@ Kept: `web/lib/game/fixtures/village-2026-09-28.json`, a frozen cell-map test fi
 
 ## Next
 
-Done; reported 2026-10-28. Waiting on David's review of the title (specs/evidence/village-archive/title-*.webp) before merge.
+Done; reported 2026-10-28. The title vantage is with David: two options, each shot at day, evening, dawn and night through the whole dolly (nine frames, 7 s apart, nothing near the lens crossing an edge).
+- A (in code, `components/title/shots.ts` SHOTS): the plaza's south side, HQ-frame `{ x: -7.65, z: -13.58, yaw: 34.9, eye: 1.3, pitch: -1, fov: 38 }` (world 31, 41, yaw -58.5). `specs/evidence/village-archive/title-a-*.webp`.
+- B: the plaza's north side, HQ-frame `{ x: 5.26, z: -13.6, yaw: -16.6, eye: 1.3, pitch: -1, fov: 38 }` (world 30, 58, yaw -110). `title-b-*.webp`. If David picks B, put those numbers in all four SHOTS rows (night keeps `drift: 0.8`).
+Tuning: `?shot=x,z,yawDeg,eye,pitchDeg,fov` in world coordinates. In dev the title stays hidden without game/loading's Strict Mode fix (apply it temporarily). The plaza's lamp ring, flags and planter benches leave few clean lines onto the HQ: the scratch search was the HQ's core (±3.6 u) clear of tall things and nothing within 3.5 u in frame.
 Gates at the head: tsc 0 errors; one full vitest run (no flag) 3469 passed, 16 skipped, 2 failed: lib/seedMigrations.test.ts, because the roster's schedules changed and the catalogue seed isn't regenerated (the coordinator does that at merge). eslint clean on changed files. `npm run build` with no flag: ok.
 Bundle (all JS a route can load, gzip; main de87c07f → branch): title 870 → 984 KB (the world document, which the title now renders), island 1772 → 1767 KB, applicant 1150 → 1147 KB (no world data, no village data).
 perf:check SCENES=v2 (headless, 5 runs): High 4.8 ms median, p95 7.0, 359 draws, 757k tris; Lite 2.9 ms, p95 5.2, 289 draws, 567k tris. Against the 2026-10-14 v2 row the draws were over 10% (that row predates terrain v3 and the remodels); now the baseline. Within budget.
