@@ -631,3 +631,7 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
 - **tutorial r5** code at 20a6e3eb, shots pending.
   - WalletSlot and HudWallet in TopCluster under the time; the old coins chip removed; hudStore gains gems.
   - Merge with main-quest r3: TopCluster.tsx and its module.css, hudStore.ts and hudPrefs.ts (the FLASH_MS line) conflict lightly. Main-quest's XP chip removal and the tutorial's coin chip removal both apply.
+- **Main quest r3 review:** https://claude.ai/artifact/G6Zne7fKcCCaVBUfBcum6G (ids r3-*), game/main-quest 0bf9fa66.
+  - Migrations: 20261028144337_main_quest, 20261028153805_main_quest_r2, 20261029064914_catalogue_seed (regenerate at merge).
+  - Stamina is in MOVE_TUNING in movement/sim.ts. HudBars sit top left; the old level chip is removed from TopCluster.
+  - Conflicts with tutorial r5 in TopCluster, hudStore and hudPrefs: keep both removals.
