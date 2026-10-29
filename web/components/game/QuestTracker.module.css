@@ -37,13 +37,15 @@ button.line:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 
 .head { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 0 8px; width: 100%; box-sizing: border-box; margin: 0; padding: 6px 8px; }
 .kind { grid-column: 1; color: var(--ui-muted); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
 .title { grid-column: 1; font-size: 14px; font-weight: 700; }
-/* The guide arrow: a round icon button (David: "just an arrow icon you can press on"); pressed, ink. */
-.way { grid-column: 2; grid-row: 1 / span 2; display: grid; place-items: center; width: 36px; height: 36px; margin: 0; padding: 0; border: 0; border-radius: 50%;
+/* The guide arrow: a small round icon button (David: "just an arrow icon you can press on", r3: "make the arrow centered and
+   smaller"), its upright arrow centred in the circle; pressed, ink. */
+.way { grid-column: 2; grid-row: 1 / span 2; align-self: center; display: grid; place-items: center; width: 28px; height: 28px; margin: 0; padding: 0; border: 0; border-radius: 50%;
   background: var(--ui-well); color: var(--ui-ink); cursor: pointer;
   transition: background-color 0.2s ease-out, color 0.2s ease-out, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .way:hover { transform: scale(1.08); }
 .way:active { transform: scale(0.9); transition-duration: 0.08s; }
 .way:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+.way svg { display: block; }
 .way[aria-pressed="true"] { background: var(--ui-accent); color: var(--ui-accent-ink); }
 .steps { margin: 2px 0 0; padding: 0 8px; list-style: none; display: grid; gap: 6px; }
 .step { display: grid; grid-template-columns: 16px 1fr; gap: 8px; align-items: start; color: var(--ui-ink-2); font-weight: 500; }

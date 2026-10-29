@@ -37,7 +37,7 @@ export const DIG_ORES: readonly (readonly [string, number])[] = [["rock_iron_nug
 /** The very, very rare lore find (specs/lore.md "sudo canon": a sudo is built, never given; this one never got its heart flashed). */
 export const BROKEN_SUDO = "find_broken_sudo";
 /** A relic's chance by rarity, among the surface's relics (as a forage node weighs them, lib/game/peaceful.ts). */
-const RELIC_WEIGHT: Record<Rarity, number> = { common: 60, uncommon: 25, rare: 10, epic: 4, legendary: 1 };
+const RELIC_WEIGHT: Record<Rarity, number> = { common: 60, uncommon: 25, rare: 10, epic: 4, legendary: 1, divine: 0, contraband: 0 };
 
 /** The museum relics of a surface (sand or dirt): its buried finds, never the sudo. */
 export const relicsOf = (finds: readonly Species[], soil: boolean) =>

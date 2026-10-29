@@ -119,6 +119,33 @@ const widths = page => page.evaluate(() => {
 });
 
 for (const scene of SCENES) {
+  if (scene === "r3arrow") {
+    const { ctx, page } = await open("");
+    await go(page, 30, 46, Math.PI);
+    await hudIn(page);
+    await openList(page);
+    await sleep(600);
+    await shot(page, "r3-03-arrow", await dropdownClip(page));
+    await page.click("#quest-list button[aria-pressed]");
+    await sleep(600);
+    await shot(page, "r3-03-arrow-pressed", await dropdownClip(page));
+    log.push({ name: "r3-03-arrow", box: await page.$eval("#quest-list button[aria-pressed]", b => { const r = b.getBoundingClientRect(), h = b.closest("div").getBoundingClientRect(), i = b.querySelector("svg").getBoundingClientRect();
+      return { size: r.width, rowMid: h.top + h.height / 2, buttonMid: r.top + r.height / 2, iconDx: i.left + i.width / 2 - (r.left + r.width / 2), iconDy: i.top + i.height / 2 - (r.top + r.height / 2), label: b.getAttribute("aria-label") }; }) });
+    await ctx.close();
+  }
+  if (scene === "r3dig") {
+    const { ctx, page } = await open("collections=demo&time=day", { "tsi.held.v1": JSON.stringify({ held: "shovel:shovel-basic" }) });
+    await hudIn(page);
+    await go(page, -15.8, 99.5, 0);
+    await sleep(2500);
+    await shot(page, "r3-20-dig-mark-sand");
+    await shot(page, "r3-20-dig-mark-sand-close", { x: 420, y: 260, width: 600, height: 420 });
+    await shot(page, "r3-20-dig-mark-sand-zoom", await markClip(page));
+    await go(page, 36.2, 81.5, 0);
+    await sleep(2500);
+    await shot(page, "r3-21-dig-mark-dirt-zoom", await markClip(page));
+    await ctx.close();
+  }
   if (scene === "r2flow") {
     const { ctx, page } = await open("");
     await go(page, 30, 46, Math.PI);
@@ -187,7 +214,7 @@ for (const scene of SCENES) {
       ["bug", { key: "bug_common_butterfly", name: "Common Butterfly", rarity: "common", size: 6.2, isNew: false, kind: "bug" }],
       ["forage", { key: "shell_asari", name: "Asari Clam", rarity: "common", size: 4.1, isNew: true, kind: "forage" }],
       ["dig", { key: "find_ammonite", name: "Ammonite", rarity: "rare", size: 11.2, isNew: true, kind: "dig" }],
-      ["dig-sudo", { key: "find_broken_sudo", name: "Broken Sudo", rarity: "legendary", size: 10.5, isNew: true, kind: "dig" }],
+      ["dig-sudo", { key: "find_broken_sudo", name: "Broken Sudo", rarity: "legendary", size: process.env.POPS === "before" ? 10.5 : null, isNew: true, kind: "dig" }],
     ];
     for (const [name, detail] of pops) {
       await page.evaluate(d => window.dispatchEvent(new CustomEvent("tsi:peaceful-got", { detail: d })), detail);

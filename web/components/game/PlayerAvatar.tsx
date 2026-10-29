@@ -40,6 +40,7 @@ import { crouchKey, useKeyboardLocked, useMoveKeys } from "@/lib/game/movement/k
 import { easeFacing } from "@/lib/game/locomotion";
 import { routePilot, type RouteStep } from "@/lib/game/movement/course";
 import type { AvatarRide } from "@/lib/game/movement/ride";
+import { hudLive } from "@/lib/game/hudStore";
 import { BASE_FOV, EVENT_CLIP, SEAT_FOV, MOVE_JUICE, TAKEOFF, applyFov, liveWind, momentumOf, screenOf, touchStick, useMoveParticles, type MoveJuice, type MoveTelemetry } from "./movement/moveFx";
 import { SPLASH, cooldownWisp, dashBurst, dashReady as dashBack, footprint, footstep, glideFurl, glideOpen, glideRibbon, glideSetDown, groundUnder, landKind, landing, mantleGrab, mantleStep, puffRing, rollTumble, scuff, settle, skidKick, skidPush, slideBurst, slidePop, slideTrail, splash, springStep, streak, takeoff, trail, type GroundKind } from "@/lib/game/movement/juice";
 
@@ -467,6 +468,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       } : { ...NO_INPUT, dashPressed: !frozen && !down && !root && dashPressed });
       if (inCombat) { input.push = push; if (p.aimHold > 0 || Math.hypot(s.state.vx, s.state.vz) < 0.6) s.state.facing = p.facing; } // attacking or standing: the kit turns from your facing (a dash with no stick goes that way)
       events = advanceMove(s, input, dt, world, t);
+      hudLive.stamina = s.state.stamina; hudLive.winded = s.state.winded;
       if (faceGoal.current && frozen) easeTurn(s.state, faceGoal.current, dt);
       if (target.current) {
         f.stuck = Math.hypot(s.state.vx, s.state.vz) < 0.3 ? f.stuck + dt : 0;

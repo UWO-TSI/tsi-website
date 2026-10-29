@@ -56,7 +56,7 @@ describe("the main quest on the island", () => {
     expect(opensDrive(views, "quest:the-museum:complete")).toBe(false);
   });
   it("ends with the museum while Mayor Eliza's pickaxe waits for the cave update: no gap, nothing after it", () => {
-    const released = releasedChapters(CH, dropFlags(1), "new");
+    const released = releasedChapters(CH, dropFlags(1));
     expect(released.filter(c => c.world === "new").map(c => c.slug)).toEqual(["first-find", "odiles-net", "pims-shovel", "brams-challenge", "the-museum"]);
     expect(mainQuest(evaluateChapters(released, finished(5), facts()), true)?.id).toBe("chapter:the-museum");
     expect(mainQuest(evaluateChapters(released, finished(6), facts()), true)).toBeNull();

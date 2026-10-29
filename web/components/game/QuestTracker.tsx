@@ -13,7 +13,7 @@
  * GUI kit.
  */
 import { useEffect, useRef, useState } from "react";
-import { BookOpen, Check, ChevronDown, Navigation } from "lucide-react";
+import { BookOpen, Check, ChevronDown, Navigation2 } from "lucide-react";
 import { currentStep, questProgress, type TrackedQuest } from "@/lib/game/questTracker";
 import s from "./QuestTracker.module.css";
 
@@ -94,7 +94,7 @@ export default function QuestTracker({ quests, hidden = false, guidable = [], gu
             <span className={s.title}>{q.title}</span>
             {/* The guide arrow (David: "just an arrow icon you can press on"): pressed, it points the way; again, it's put away. */}
             {leads && <button type="button" className={s.way} aria-pressed={on} aria-label={on ? `Hide the arrow to ${q.title}` : `Show the way to ${q.title}`}
-              title={on ? "Hide the arrow" : "Show the way"} onClick={() => onGuide?.(on ? null : q.id)}><Navigation size={16} strokeWidth={2.75} aria-hidden="true" /></button>}
+              title={on ? "Hide the arrow" : "Show the way"} onClick={() => onGuide?.(on ? null : q.id)}><Navigation2 size={14} strokeWidth={2.75} aria-hidden="true" /></button>}
           </div>
           <ul className={s.steps}>
             {q.steps.map(x => <li key={x.id} className={s.step} data-done={x.done || undefined} data-now={x.id === now?.id || undefined}>

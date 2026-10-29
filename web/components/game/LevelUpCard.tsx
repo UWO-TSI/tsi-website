@@ -2,36 +2,43 @@
 
 /**
  * The level-up card (David 2026-10-28: "chapter 1 done get enough exp to level up to level 2, should have overlay of
- * what unlocks"): when a chapter's XP takes you up a level (the advance's `xp_gain`), a paper card over the island says
- * the new level and what it opens (lib/game/levelUp.ts: only what's real). A click, E, Enter or Escape puts it away.
+ * what unlocks"; "everything should be when exp is filled"): when the HUD's XP bar fills (HudBars' LEVEL_FILLED), the
+ * kit's big moment says the new level and what it opens (lib/game/levelUp.ts: only what's real). A finished chapter's
+ * check-mark (tutorial-v2's QuestCheck, on "tsi:quest-complete") plays first; the card waits for it. A click, E, Enter
+ * or Escape puts it away.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BookOpen, Sparkles } from "lucide-react";
-import { API_WRITE } from "@/lib/apiClient";
 import { AudioManager } from "@/lib/game/audio";
 import { DROPS } from "@/lib/game/drops";
-import { levelUnlocks, type LevelUnlock } from "@/lib/game/levelUp";
-import type { ProgressionState } from "@/lib/progression/types";
+import { levelUnlocks } from "@/lib/game/levelUp";
+import { useProgression } from "@/lib/progression/useProgression";
 import { BigMoment } from "@/components/gui/flat";
+import { LEVEL_FILLED } from "./HudBars";
 
-/** The quest-complete check plays first; the level up follows it. */
+/** The quest-complete check's length: the card shows no sooner after it. */
 const AFTER_CHECK_MS = 1600;
 
 export default function LevelUpCard() {
-  const [shown, setShown] = useState<{ level: number; unlocks: LevelUnlock[] } | null>(null);
+  const { state } = useProgression();
+  const [shown, setShown] = useState<{ level: number; chapter: boolean } | null>(null);
+  const checkAt = useRef(-Infinity);
   useEffect(() => {
-    const on = (e: Event) => {
-      const { path, data } = (e as CustomEvent<{ path?: string; data?: ProgressionState }>).detail ?? {};
-      const g = path === "/api/progression/chapters/advance" ? data?.xp_gain : undefined;
-      if (!g?.levelled_up || !data) return;
-      // After the chapter's own check-mark moment (tutorial-v2's QuestCheck, on "tsi:quest-complete"), not over it.
-      const next = { level: g.level, unlocks: levelUnlocks(data.chapters, DROPS.classes) };
-      window.setTimeout(() => { setShown(next); AudioManager.playSFX("confirm"); }, AFTER_CHECK_MS);
+    let t = 0;
+    const checked = () => { checkAt.current = performance.now(); };
+    const filled = (e: Event) => {
+      const next = (e as CustomEvent<{ level: number }>).detail.level;
+      window.clearTimeout(t);
+      // A chapter's level up (its check just played) opens its next quest; any other (a kill, a mission) only the level.
+      const chapter = performance.now() - checkAt.current < 5000;
+      t = window.setTimeout(() => { setShown({ level: next, chapter }); AudioManager.playSFX("confirm"); }, Math.max(0, checkAt.current + AFTER_CHECK_MS - performance.now()));
     };
-    window.addEventListener(API_WRITE, on);
-    return () => window.removeEventListener(API_WRITE, on);
+    window.addEventListener("tsi:quest-complete", checked);
+    window.addEventListener(LEVEL_FILLED, filled);
+    return () => { window.clearTimeout(t); window.removeEventListener("tsi:quest-complete", checked); window.removeEventListener(LEVEL_FILLED, filled); };
   }, []);
   if (!shown) return null;
+  const unlocks = levelUnlocks(state.chapters, DROPS.classes).filter(u => shown.chapter || u.kind !== "quest");
   return <BigMoment kicker="Level up" big={shown.level} title={`You're level ${shown.level}`} testId="level-up" onClose={() => setShown(null)}
-    items={shown.unlocks.map(u => ({ key: u.kind, icon: u.kind === "quest" ? <BookOpen size={18} /> : <Sparkles size={18} />, title: u.title, line: u.detail }))} />;
+    items={unlocks.map(u => ({ key: u.kind, icon: u.kind === "quest" ? <BookOpen size={18} /> : <Sparkles size={18} />, title: u.title, line: u.detail }))} />;
 }

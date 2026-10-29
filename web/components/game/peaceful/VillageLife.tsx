@@ -107,7 +107,7 @@ const crackLooks = new Map<boolean, THREE.MeshStandardMaterial>();
 const crackLook = (soil: boolean) => {
   let m = crackLooks.get(soil);
   if (!m) crackLooks.set(soil, m = new THREE.MeshStandardMaterial({ name: "DigSpot", color: soil ? "#3d2c1d" : "#7a5c3b", roughness: 1, metalness: 0, side: THREE.DoubleSide,
-    transparent: true, opacity: soil ? 0.28 : 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+    transparent: true, opacity: soil ? 0.28 : 0.25, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
   return m;
 };
 const SCUFFS = Array.from({ length: 8 }, (_, f) => digScuff(f * 7 + 3));

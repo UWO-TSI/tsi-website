@@ -41,4 +41,15 @@ body, [data-ui-theme="clean"] {
   --ui-rarity-divine: #b26bff;
   --ui-holo: linear-gradient(115deg, #b26bff 0%, #ff7ad9 20%, #ffd36b 38%, #7dffb2 56%, #6bc8ff 74%, #b26bff 100%);
   --ui-on-divine: #ffffff;
+  /* Contraband (lib/rarity.ts, shut behind a flag): dark, with light text on it. */
+  --ui-rarity-contraband: #3b2436;
+  /* A little texture where it helps (UI 1, "not so flat"): a fine grain over a card, and a glint across rare things. */
+  --ui-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.3 0 0 0 0 0.3 0 0 0 0 0.3 0 0 0 0.07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  --ui-glint: linear-gradient(115deg, transparent 38%, rgb(255 255 255 / 0.55) 48%, transparent 58%);
+  /* The HUD's bars (UI 8): health, stamina (and run out), XP. */
+  --ui-health: #ec6a5c;
+  --ui-stamina: #5dbb63;
+  --ui-stamina-low: #f08a4b;
+  --ui-xp: #f2b33d;
+  --ui-sheen: rgb(255 255 255 / 0.35);
 }

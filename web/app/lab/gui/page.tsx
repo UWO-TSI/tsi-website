@@ -22,14 +22,15 @@ import { FISH } from "@/lib/game/fishing";
 import { iconUrl } from "@/lib/icons/keys";
 import { RARITIES, RARITY_LABEL } from "@/lib/rarity";
 import { useSearch } from "@/lib/game/useMediaQuery";
-import { BigMoment, ProgressCard, RewardPop, type LadderRarity } from "@/components/gui/flat";
+import { BigMoment, ProgressCard, RewardPop, StatBar, StatBars } from "@/components/gui/flat";
+import type { Rarity } from "@/lib/rarity";
 import s from "./showroom.module.css";
 
 /** The reward pop at each rung of the ladder, and a dig's purse (no rarity). */
-const POPS: readonly (readonly [LadderRarity | null, string, string, string, string | null])[] = [
+const POPS: readonly (readonly [Rarity | null, string, string, string, string | null])[] = [
   ["common", "bug_common_butterfly", "Common Butterfly", "Caught", "6.2 cm"], ["uncommon", "find_old_coin", "Old Coin", "Dug up", "2.4 cm"],
   ["rare", "find_ammonite", "Ammonite", "New!", "11.2 cm"], ["epic", "find_amber", "Amber", "Dug up", "4.8 cm"],
-  ["legendary", "find_broken_sudo", "Broken Sudo", "Dug up", "10.5 cm"], ["divine", "find_trilobite", "Trilobite (divine)", "Dug up", "7.1 cm"],
+  ["legendary", "find_broken_sudo", "Broken Sudo", "Dug up", null], ["divine", "find_trilobite", "Trilobite (divine)", "Dug up", "7.1 cm"],
   [null, "coin", "32 coins", "Dug up", null],
 ];
 
@@ -255,10 +256,18 @@ export default function GuiShowroom() {
       <div className={s.toastStage}><ToastHub /></div>
     </Section>
 
+    <Section id="hud-bars" title="The HUD's bars (flat kit)" note="specs/design-bible.md UI 8: health and XP always on, stamina on its own pill while it's used (warm and shaking once when it runs out). components/gui/flat StatBar and StatBars; the island's are components/game/HudBars.tsx.">
+      <Row>
+        <StatBars><StatBar kind="health" value={1} label="Health 100 of 100" /><StatBar kind="xp" value={0.42} lead="Lv 3" label="Level 3" /></StatBars>
+        <StatBar kind="stamina" value={0.55} alone label="Stamina" />
+        <StatBar kind="stamina" value={0} alone low label="Stamina run out" />
+      </Row>
+    </Section>
+
     <Section id="rewards" title="Rewards and moments (flat kit)" note="specs/design-bible.md UI 4 and 7: a reward pops with its rarity as the outline (divine: the holo); a level up is the big moment. components/gui/flat RewardPop and BigMoment.">
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 18 }}>
         {POPS.map(([rarity, key, name, title, facts]) => <RewardPop key={rarity ?? key} picture={iconUrl(key)} title={title} name={name} rarity={rarity}
-          rarityLabel={rarity ? rarity[0].toUpperCase() + rarity.slice(1) : null} facts={facts} isNew={rarity === "rare"} note="The one-liner, quiet." testId={`pop-${rarity ?? key}`} />)}
+          rarityLabel={rarity ? rarity[0].toUpperCase() + rarity.slice(1) : null} facts={facts ? <span>{facts}</span> : null} isNew={rarity === "rare"} note="The one-liner, quiet." testId={`pop-${rarity ?? key}`} />)}
       </div>
       <Row><Button size="sm" onClick={() => setMoment(true)}>Show the level up</Button></Row>
       {moment && <BigMoment kicker="Level up" big={2} title="You're level 2" onClose={() => setMoment(false)} testId="showroom-moment"

@@ -22,6 +22,9 @@ const publish = (next: Partial<HudState>) => { state = { ...state, ...next }; li
 export function refreshHudWallet(): Promise<void> {
   return httpEconomyTransport.wallet().then(w => publish({ coins: w.coins, giftClaimed: w.daily_claimed, day: w.day }), () => {});
 }
+/** The player's stamina as the movement sim has it (lib/game/movement/sim.ts), written each frame by the avatar and read by
+ * the HUD's bar on its own frame loop (never a React render per frame). */
+export const hudLive = { stamina: 1, winded: false };
 export const setHudCoins = (coins: number) => publish({ coins });
 export const setHudXp = (xp: number) => publish({ xp });
 export const markGiftClaimed = (coins: number, day: string) => publish({ coins, giftClaimed: true, day });

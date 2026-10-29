@@ -283,7 +283,7 @@ export const REEL_FISH: Species[] = make("fish", "rod", "aquarium", [
  * up rare stuff"): dug up with the shovel at the marked spots on sand and on dirt (lib/game/islandNodes.ts digSpots),
  * shown in the museum's nature room. Seeded after the reel's fish so no earlier position moves.
  */
-const find = (key: string, name: string, biome: Biome, rarity: Rarity, size: [number, number], oneLiner: string): Row =>
+const find = (key: string, name: string, biome: Biome, rarity: Rarity, size: [number, number] | null, oneLiner: string): Row =>
   [key, name, biome, rarity, size, null, { oneLiner, sub: "buried", model: `/assets/game/forage/${key}.glb` }];
 export const BURIED_FINDS: Species[] = make("nature", "shovel", "nature_room", [
   find("find_sea_glass", "Sea Glass", "dig_sand", "common", [2, 4], "Worn smooth by a hundred tides."),
@@ -295,7 +295,7 @@ export const BURIED_FINDS: Species[] = make("nature", "shovel", "nature_room", [
   find("find_trilobite", "Trilobite", "dig_soil", "legendary", [4, 10], "Older than the dinosaurs, and it still looks surprised."),
   // The very, very rare lore find (lib/collections/digLoot.ts; specs/lore.md "sudo canon": a sudo is built, never given).
   // Never a dig spot's own roll (islandNodes.ts digs list their relics): only the server's dig loot turns it up.
-  find("find_broken_sudo", "Broken Sudo", "dig_soil", "legendary", [9, 12], "A little screen-faced chassis with an empty heart socket. Whoever built it never got to flash it."),
+  find("find_broken_sudo", "Broken Sudo", "dig_soil", "legendary", null, "A little screen-faced chassis with an empty heart socket. Whoever built it never got to flash it."),
 ]);
 
 /** Every species, with the buried finds (m3). */

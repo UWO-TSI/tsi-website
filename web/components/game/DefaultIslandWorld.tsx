@@ -112,6 +112,7 @@ import { fishBosses } from "@/lib/game/fishing";
 import ToastHub, { toast } from "./ToastHub";
 import RewardCard from "./RewardCard";
 import LevelUpCard from "./LevelUpCard";
+import HudBars from "./HudBars";
 import { MUSEUM_DRIVE } from "@/lib/game/mainQuest";
 import MuseumDrive from "./MuseumDrive";
 import GlideGuide, { GlideGuideHint } from "./GlideGuide";
@@ -806,7 +807,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // First login (row 211; specs/v1-drop.md §1): the arrival, once per account (Bram's boat, the reflection
   // creator, the crossing, the walk-along), then the chapter 1 objective. Dev: ?arrival=1 replays it.
   const mine = useMyLook();
-  const { loaded: progressionLoaded, state: progressionState } = useProgression();
+  const { loaded: progressionLoaded } = useProgression();
   const [arrived, setArrived] = useState(false);
   const [objectiveNew, setObjectiveNew] = useState(false);
   const chapterFlags = useMemo(() => ({ claim: chapterActions.claim, donate: chapterActions.donate, report: chapterActions.report }),
@@ -1321,8 +1322,6 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         <div className={styles.hudColumn} data-minimap data-new={objectiveNew || undefined}>
           {mapHere && !holdObjective && <MiniMap playerPosRef={player} plot={objectivePlot} big={uiView} onOpen={() => setMapOpen(true)} />}
           <HudClock weather={weather} phase={phase} />
-          {/* Kept for a mini health bar when combat drops (playtest round 1); nothing drawn yet. */}
-          <div className={styles.healthSlot} data-slot="health" aria-hidden="true" />
         </div>
       </div>
       {DEV && <section id="island-options" className={styles.panel} data-open={devPanel} aria-label="Developer view options" onKeyDown={(event) => {
@@ -1377,6 +1376,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <CraftingSheet />
       <CollectionBook open={bagOpen} onClose={() => setBagOpen(false)} keys={identity.settings.key_bindings.openJournal} />
       {/* The Bag shows only as a pickup flies into it; a touch screen's menu button opens the UI view (it has no Esc). */}
+      {/* The player's bars (specs/design-bible.md UI 8): health and XP always on, stamina while it's used. */}
+      <HudBars className={styles.hudBars} hidden={hudCinematic} />
       <div className={styles.bagButtons}>
         {touch && !hudCinematic && <button className={styles.menuButton} onClick={() => setLayer(l => (l ? null : "ui"))} aria-expanded={uiView} aria-label={uiView ? "Close the menu" : "Menu"}><Menu size={20} aria-hidden /></button>}
         <BagButton full={false} keyLabel={keyName(identity.settings.key_bindings.openBag)} onOpen={() => setSheet("bag")} />

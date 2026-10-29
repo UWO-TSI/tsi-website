@@ -25,7 +25,7 @@ DO $$
 DECLARE E1 uuid := '00000000-0000-4000-8000-0000000a2e01'; r record; v_gems INTEGER;
 BEGIN
   ASSERT (SELECT donatable AND wing = 'nature_room' AND rarity = 'legendary' FROM collection_species WHERE key = 'find_broken_sudo'), 'the broken sudo is a real buried find';
-  SELECT * INTO r FROM public.collections_dig(E1, 'dig-soil-9', '2026-10-28T15', 'find_broken_sudo', 10.5, false, NULL, NULL);
+  SELECT * INTO r FROM public.collections_dig(E1, 'dig-soil-9', '2026-10-28T15', 'find_broken_sudo', NULL, false, NULL, NULL);
   ASSERT r.count = 1 AND r.total_collected = 1 AND r.digs = 1, 'the sudo lands: ' || row_to_json(r)::text;
   ASSERT (SELECT count FROM member_collections WHERE user_id = E1 AND item_key = 'find_broken_sudo') = 1, 'in the bag';
   BEGIN PERFORM public.collections_dig(E1, 'dig-soil-9', '2026-10-28T15', 'find_amber', 4, false, NULL, NULL); RAISE EXCEPTION 'x';
@@ -85,7 +85,7 @@ BEGIN;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims = '{"sub":"00000000-0000-4000-8000-0000000a2e01","role":"authenticated"}';
 DO $$ BEGIN
-  BEGIN PERFORM collections_dig('00000000-0000-4000-8000-0000000a2e01', 'dig-soil-1', '2026-10-28T17', 'find_broken_sudo', 10, false, NULL, NULL); RAISE EXCEPTION 'member dug';
+  BEGIN PERFORM collections_dig('00000000-0000-4000-8000-0000000a2e01', 'dig-soil-1', '2026-10-28T17', 'find_broken_sudo', NULL, false, NULL, NULL); RAISE EXCEPTION 'member dug';
   EXCEPTION WHEN insufficient_privilege THEN NULL; END;
   BEGIN PERFORM museum_hand_in('00000000-0000-4000-8000-0000000a2e01', 'fish_dace', 'r2-x-0001'); RAISE EXCEPTION 'member handed in';
   EXCEPTION WHEN insufficient_privilege THEN NULL; END;

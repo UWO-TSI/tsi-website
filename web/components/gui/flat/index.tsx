@@ -8,8 +8,9 @@
  * small parts (`Pill`, `DarkButton`, `GhostButton`, `RoundButton`, `HairlineRow`). Colours: the theme's --ui-* tokens
  * (styles/themes). Nothing here knows about the shop: every piece takes plain props.
  */
+import type { Rarity } from "@/lib/rarity";
 import { Fragment, useEffect, useMemo, useRef, type ButtonHTMLAttributes, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type ReactNode, type Ref } from "react";
-import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Sparkles, X } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Heart, Sparkles, Star, X, Zap } from "lucide-react";
 import { usePresence, useWorldDialog } from "@/lib/game/useWorldDialog";
 import { CurrencyIcon } from "@/components/economy/Amount";
 import PixelImage from "@/components/economy/PixelImage";
@@ -372,16 +373,14 @@ export function StatusLine({ error, children }: { error?: boolean; children: Rea
 
 // ── Rewards and moments ─────────────────────────────────────────────────────────────────────────────────────────────
 
-/** The rarity ladder (specs/design-bible.md UI 7): each shows as a thin outline in its colour; divine as the holo. */
-export type LadderRarity = "common" | "uncommon" | "rare" | "epic" | "legendary" | "divine";
-
 /**
  * A reward pop (the bible's "big moments are juicy"): a white card that springs in beside the middle of the screen with
  * the real item picture (pixel finish), what happened (`title`: "Caught", "Dug up", "New!"), the name, a quiet line of
- * facts and the one-liner. The edge is the rarity's outline (divine: the moving holo), never a fill. A click puts it away.
+ * facts and the one-liner. The edge is the rarity's outline (lib/rarity.ts; divine the moving holo), never a fill. A click
+ * puts it away.
  */
 export function RewardPop({ picture, title, name, rarity, rarityLabel, facts, note, isNew, leaving, onClose, testId = "reward-card", kind, children }: {
-  picture: string; title: ReactNode; name: ReactNode; rarity?: LadderRarity | null; rarityLabel?: ReactNode; facts?: ReactNode; note?: ReactNode;
+  picture: string; title: ReactNode; name: ReactNode; rarity?: Rarity | null; rarityLabel?: ReactNode; facts?: ReactNode; note?: ReactNode;
   isNew?: boolean; leaving?: boolean; onClose?: () => void; testId?: string; kind?: string; children?: ReactNode;
 }) {
   return <article className={f.pop} data-rarity={rarity ?? undefined} data-new={isNew || undefined} data-leaving={leaving || undefined} data-kind={kind}
@@ -395,6 +394,34 @@ export function RewardPop({ picture, title, name, rarity, rarityLabel, facts, no
       {children}
     </span>
   </article>;
+}
+
+// ── The HUD's bars ──────────────────────────────────────────────────────────────────────────────────────────────────
+
+export type StatKind = "health" | "stamina" | "xp";
+const STAT_ICON = { health: Heart, stamina: Zap, xp: Star } as const;
+
+/**
+ * One of the player's bars (specs/design-bible.md UI 8: health, stamina and XP): its icon (or `lead`, the level on the
+ * XP bar) and a rounded track filled to `value` (0 to 1). The fill eases with a little spring; `snap` sets it without
+ * (an XP bar rolling over), `live` drops the ease for a value written every frame through the element's `--v`.
+ * `low`: a soft warning (stamina run out). `alone`: on its own little card (stamina, which shows only while it's used).
+ */
+export function StatBar({ kind, value, label, lead, low, snap, live, alone, shown = true, ref }: {
+  kind: StatKind; value: number; label: string; lead?: ReactNode; low?: boolean; snap?: boolean; live?: boolean; alone?: boolean; shown?: boolean; ref?: Ref<HTMLDivElement>;
+}) {
+  const Icon = STAT_ICON[kind];
+  return <div ref={ref} className={f.stat} data-kind={kind} data-low={low || undefined} data-snap={snap || undefined} data-live={live || undefined}
+    data-alone={alone || undefined} data-shown={shown || undefined} style={{ "--v": Math.max(0, Math.min(1, value)) } as CSSProperties}
+    role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(value * 100)} aria-hidden={!shown || undefined}>
+    <span className={f.statLead} aria-hidden>{lead ?? <Icon size={13} strokeWidth={2.75} />}</span>
+    <span className={f.statTrack} aria-hidden><i /></span>
+  </div>;
+}
+
+/** The bars' card, top left: one soft white card for the bars that are always on. */
+export function StatBars({ children, hidden, className }: { children: ReactNode; hidden?: boolean; className?: string }) {
+  return <div className={className ? `${f.stats} ${className}` : f.stats} data-hidden={hidden || undefined} data-testid="hud-bars">{children}</div>;
 }
 
 export interface MomentItem { key: string; icon: ReactNode; title: ReactNode; line?: ReactNode }

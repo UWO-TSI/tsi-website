@@ -7,7 +7,7 @@ import { releasedChapters, dropFlags } from "./drops";
 const facts = { tier: 5, firstCatchKey: "fish_dace", lastFishAt: null, counts: {}, goals: {} };
 
 describe("what a level up opens (only what's real)", () => {
-  const chapters = releasedChapters(DEFAULT_CHAPTERS, dropFlags(1), "new");
+  const chapters = releasedChapters(DEFAULT_CHAPTERS, dropFlags(1));
   const first = chapters.find(c => c.slug === "first-find")!;
   const views = evaluateChapters(chapters, [{ chapter_id: first.id, status: "completed", steps_done: {}, donated_item_key: "fish_dace", completed_at: "2026-10-28T00:00:00Z" } as never], facts);
 
