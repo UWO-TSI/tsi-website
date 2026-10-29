@@ -7,6 +7,7 @@
  *   ReelTrack   the water track: the catch window (`windowRef`: translateX in its own widths) and the fish on its rail
  *               (`markerRef`: translateX in the track's width); `data-in` / `data-slip` on the track (`trackRef`) say
  *               whether the fish is in the window or slipping out, `data-away` on the rail that it's out of the water;
+ *   ReelTags    the panel's top-left: two small chips, the fish's name ("???" until the species is known) and its water;
  *   LineGauge   a thin fill (`fillRef`, scaleX) with marks; `data-near` and `data-tone="low"` on it;
  *   PowerMeter  the cast's meter with its gold tip zone, standing up or `horizontal` (`fillRef` scaleY / scaleX, `readoutRef`, `data-tip`);
  *   StatusChip  a white pill with an icon: plain, `wait` (a gentle bob), `gold` (a max cast), `alert` (the hook, the
@@ -27,6 +28,11 @@ export { r as reelStyles };
 /** A white panel for a live piece (the reel, the meter). */
 export function ReelPanel({ className, ...rest }: ComponentProps<"div">) {
   return <div {...rest} className={`${r.panel} ${className ?? ""}`} />;
+}
+
+/** The panel's top-left: the fish's name ("???" until it's known) and the water it lives in ("sea", "river"), as small chips. */
+export function ReelTags({ name, water }: { name: string; water: string }) {
+  return <div className={r.tags}><span className={r.tag} data-kind="name">{name}</span><span className={r.tag} data-kind="water">{water}</span></div>;
 }
 
 export function ReelTrack({ trackRef, windowRef, markerRef, picture, unknown, windowWidth, windowAt = 0, fishAt = 0.15, state = "in" }: {

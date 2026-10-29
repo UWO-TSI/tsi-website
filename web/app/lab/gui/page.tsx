@@ -23,7 +23,7 @@ import { iconUrl } from "@/lib/icons/keys";
 import { RARITIES, RARITY_LABEL } from "@/lib/rarity";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import { Waves } from "lucide-react";
-import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
+import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
 import s from "./showroom.module.css";
 
 /** Re-mounts its child every `ms` (an overlay that finishes and closes itself stays on show). */
@@ -281,9 +281,9 @@ function FishingPieces() {
       <StatusChip tone="gold" icon={<Waves />}>Max cast!</StatusChip><StatusChip tone="alert" icon={<Fish />}>Hook it!</StatusChip></Row>
     <Row label="Cast meter"><ReelPanel><PowerMeter zone={0.08} value={0.55} hint="Hold, let go at the tip" /></ReelPanel><ReelPanel><PowerMeter zone={0.08} value={0.96} hint="Hold, let go at the tip" /></ReelPanel><ReelPanel><PowerMeter horizontal zone={0.08} value={0.55} hint="Hold, let go at the tip" /></ReelPanel><ReelPanel><PowerMeter horizontal zone={0.08} value={0.96} hint="Hold, let go at the tip" /></ReelPanel></Row>
     <Row label="Reel"><div style={{ display: "grid", gap: 12, width: 560 }}>
-      <ReelPanel style={{ display: "grid", gap: 10 }}><ReelTrack picture={iconUrl("fish_dace")} windowWidth={0.3} windowAt={0.2} fishAt={0.32} /><LineGauge value={0.45} marks={[0.25, 0.5, 0.75]} label="Catch progress" /></ReelPanel>
-      <ReelPanel style={{ display: "grid", gap: 10 }}><ReelTrack picture={iconUrl("fish_dace")} windowWidth={0.3} windowAt={0.1} fishAt={0.62} state="slip" /><LineGauge value={0.18} low marks={[0.25, 0.5, 0.75]} label="Catch progress" /></ReelPanel>
-      <ReelPanel style={{ display: "grid", gap: 10 }}><ReelTrack picture={iconUrl("fish_carp")} unknown windowWidth={0.27} windowAt={0.55} fishAt={0.66} /><LineGauge value={0.86} near marks={[0.25, 0.5, 0.75]} label="Catch progress" /></ReelPanel>
+      <ReelPanel style={{ display: "grid", gap: 10 }}><ReelTags name="Dace" water="river" /><ReelTrack picture={iconUrl("fish_dace")} windowWidth={0.3} windowAt={0.2} fishAt={0.32} /><LineGauge value={0.45} marks={[0.25, 0.5, 0.75]} label="Catch progress" /></ReelPanel>
+      <ReelPanel style={{ display: "grid", gap: 10 }}><ReelTags name="Dace" water="river" /><ReelTrack picture={iconUrl("fish_dace")} windowWidth={0.3} windowAt={0.1} fishAt={0.62} state="slip" /><LineGauge value={0.18} low marks={[0.25, 0.5, 0.75]} label="Catch progress" /></ReelPanel>
+      <ReelPanel style={{ display: "grid", gap: 10 }}><ReelTags name="???" water="sea" /><ReelTrack picture={iconUrl("fish_carp")} unknown windowWidth={0.27} windowAt={0.55} fishAt={0.66} /><LineGauge value={0.86} near marks={[0.25, 0.5, 0.75]} label="Catch progress" /></ReelPanel>
     </div></Row>
     <Row label="Catch card"><div style={{ display: "grid", gap: 12 }}>{card("fish_dace", "common", "Dace")}{card("fish_carp", "rare", "Carp")}{card("fish_golden_koi", "divine", "Golden Koi")}{card("fish_catfish", "epic", "Catfish", false)}{card("fish_king_salmon", "epic", "King Salmon", false, 2000)}</div></Row>
   </div>;

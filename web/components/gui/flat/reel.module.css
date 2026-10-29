@@ -13,6 +13,11 @@
 }
 @keyframes arrive { from { opacity: 0; transform: translateY(10px) scale(0.97); } }
 
+/* ── The tags: the fish's name and its water, small chips in the panel's top-left ───── */
+.tags { display: flex; align-items: center; gap: 6px; }
+.tag { padding: 4px 10px; border-radius: 999px; background: var(--ui-panel); color: var(--ui-ink); font: 700 12px/1 var(--gui-font); letter-spacing: 0.02em; }
+.tag[data-kind="water"] { background: var(--ui-water); color: var(--ui-ink-2); font-weight: 600; text-transform: capitalize; }
+
 /* ── The water track: the catch window rides it, the fish swims in it ───── */
 /* Calm water and its accent (--ui-water-deep), never yellow or black (David 2026-10-29: "the colors are not right"). */
 .track { position: relative; height: 34px; border-radius: 999px; overflow: hidden; background: var(--ui-water); }

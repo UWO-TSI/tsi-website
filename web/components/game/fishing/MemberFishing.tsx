@@ -12,7 +12,7 @@
  */
 import { useEffect, useRef } from "react";
 import { Fish, FishOff, Waves } from "lucide-react";
-import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTrack, StatusChip, confettiBurst, reelStyles, sparkBurst, splash, type ChipTone } from "@/components/gui/flat/reel";
+import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip, confettiBurst, reelStyles, sparkBurst, splash, type ChipTone } from "@/components/gui/flat/reel";
 import { AudioManager } from "@/lib/game/audio";
 import { BOSS, BOSS_CALL } from "@/lib/game/fishingReel";
 import { CAST, RARITY_META, START_PROGRESS, fishOdds, iconFor, type FishDef } from "@/lib/game/fishing";
@@ -186,6 +186,7 @@ function MemberReel({ fish, known, onDone, initialInput, tensionMul, help, boss,
         <div className={m.row}><span ref={whoRef} className={m.label}>{raidId ? "Raid" : "It fights back"}</span><span ref={callRef} className={reelStyles.call} aria-live="assertive" /></div>
         <LineGauge fillRef={staminaRef} value={1} marks={[1 / 3, 2 / 3]} label="Its stamina" />
       </div>}
+      <ReelTags name={known ? fish.name : "???"} water={fish.zone ?? "river"} />
       <ReelTrack trackRef={trackRef} windowRef={windowRef} markerRef={markerRef} picture={iconFor(fish)} unknown={!known} windowWidth={barW} />
       <LineGauge gaugeRef={gaugeRef} fillRef={fillRef} value={start} marks={boss ? [] : QUARTERS} label={boss ? "Line" : `Catch progress: ${known ? fish.name : "an unknown fish"}`} />
       <p id="member-reel-help" hidden>{help}</p>
