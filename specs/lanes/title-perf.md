@@ -28,7 +28,17 @@ heavy lock, one perf:check (SCENES=v2). Commit `[build]`, don't push.
 
 ## Status
 
-Started 2026-10-28. Head 59ef45b9 (nothing committed yet).
+Done 2026-10-28, reported. The code is 226ae4f4; the evidence commit is on top. Numbers, causes and the pixel proof
+are in `specs/evidence/title-perf/results.md`.
+- Title: 61 point lights (Lanterns, one per lamp) caused the 49 to 56 ms frames. It now lights only the lamps whose
+  5 u light reaches the frame (`titleView` in `components/title/shots.ts`; `Lanterns` `lit`): 7 of 59. Long frames
+  143 -> 6 (fast cold), median 55 -> 6.9 ms. The prefetch now runs (it had been starved of idle time): world ready
+  8.6 -> 7.5 s, 25 -> 4.6 MB after Let's Play.
+- Play: the warm-up compiles the blended programs of things that fade (`userData.fades`, VillageLife's bugs) and
+  keeps every program it made (`keepPrograms`). There were no links in play after.
+- The model cull was dropped (coordinator agreed): it needs per-model bounds, and saves about 3 MB.
+- Play on the new world is already capped (LampPool, point9).
+- Gates: tsc, eslint and the build are clean; vitest has only the 2 known seedMigrations failures; perf:check v2 passed.
 
 ## David's decisions
 
@@ -36,17 +46,22 @@ Started 2026-10-28. Head 59ef45b9 (nothing committed yet).
 
 ## Next
 
-1. Before numbers at 59ef45b9 (measurement build, load-trace fast cold / slow warm), and before stills (four phases,
-   dolly ends and middle).
-2. Title cull: mount only the placements the dolly's view can reach.
-3. Find the first-sight compile in play; add it to the loading screen's warm-up.
-4. After numbers, stills diff, gates, report.
+Nothing. Open, outside this lane:
+- `applyEnvironment` makes a new PMREMGenerator for each rebake (2 links in play when the phase turns; under 50 ms
+  here).
+- Module-scope `useGLTF.preload`s (NatureModels PRELOAD and others) load about 40 files on the title that it never
+  draws.
 
 ## Tools and gotchas
 
 - Locks: `LANE=game/title-perf /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh heavy|devserver <cmd>` (waits by
   itself; exit 75 after 20 min, retry). No queue file.
-- See `specs/lanes/loading.md` "Tools and gotchas" for the build, serve and trace commands.
+- See `specs/lanes/loading.md` "Tools and gotchas" for the build, serve and trace commands. After each measurement
+  build, drop the `/student/dashboard` matcher from `web/.next/server/middleware-manifest.json`.
+- `specs/perf/title-probe.mjs` (under `next dev`): `perf` gives title frame times, point lights, draws and models;
+  `still` gives deterministic stills (Playwright clock, the R3F clock pinned, seeded random) for pixel diffs.
+- Run perf:check as a measurement build (heavy lock), then `SKIP_BUILD=1 SCENES=v2 npm run perf:check` under the
+  devserver lock: the full command can run past 10 minutes.
 
 ## Rules
 
