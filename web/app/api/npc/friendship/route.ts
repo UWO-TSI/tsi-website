@@ -21,7 +21,7 @@ const REFUSED: Record<string, [number, string]> = {
 };
 
 /**
- * POST /api/npc/friendship { resident }: a talk began; the day's first adds half a heart (once a day, server-side).
+ * POST /api/npc/friendship { resident }: a whole talk heard (its last line read, TalkBox); the day's first adds half a heart (once a day, server-side).
  * POST /api/npc/friendship { resident, gift }: give one of an item from your bag (one gift a day per resident); its taste
  * (the roster's, judged here) moves the friendship. Each whole heart newly reached sends its letter (odd hearts) or pays
  * its coins (even hearts, in the database).

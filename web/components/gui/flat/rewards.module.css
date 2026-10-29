@@ -24,7 +24,7 @@
 .stepLabel { font: 600 11px/1 var(--gui-font); color: var(--ui-quiet); letter-spacing: 0.02em; }
 .stepPicture { display: grid; place-items: center; width: 40px; height: 40px; }
 .step[data-big] .stepPicture { width: 48px; height: 48px; }
-.stepPicture img, .stepPicture svg { max-width: 100%; max-height: 100%; }
+.stepPicture img, .stepPicture svg, .stepPicture canvas { max-width: 100%; max-height: 100%; }
 .stepAmount { font: 700 13px/1 var(--gui-font); font-variant-numeric: tabular-nums; color: var(--ui-ink); }
 .step[data-state="done"] { background: var(--ui-card-dim); }
 .step[data-state="done"] .stepPicture, .step[data-state="done"] .stepAmount { opacity: 0.4; }
@@ -33,6 +33,11 @@
 .step[data-state="today"] .stepPicture { animation: bob 1.6s ease-in-out infinite; }
 .stepCheck { position: absolute; top: -6px; right: -6px; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--ui-ink); color: var(--ui-accent-ink);
   animation: checkIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+/* A rare prize: its rarity's thin edge, and every few seconds its picture gives a small shake (a gift that wants opening). */
+.step[data-rarity] { box-shadow: 0 0 0 1.5px var(--edge), 0 1px 0 var(--ui-line); }
+.step[data-rarity][data-state="today"] { box-shadow: 0 0 0 2px var(--edge), 0 8px 18px rgb(var(--ui-shade) / 0.14); }
+.step[data-rarity]:not([data-state="done"]) .stepPicture > * { animation: shake 3.6s ease-in-out infinite; animation-delay: 1.2s; }
+@keyframes shake { 0%, 80%, 100% { transform: none; } 83% { transform: rotate(-9deg) scale(1.06); } 86% { transform: rotate(8deg) scale(1.06); } 89% { transform: rotate(-6deg); } 92% { transform: rotate(4deg); } 95% { transform: rotate(-2deg); } }
 @keyframes stepIn { from { opacity: 0; transform: translateY(8px) scale(0.92); } }
 @keyframes checkIn { from { transform: scale(0); } }
 @keyframes bob { 50% { transform: translateY(-3px); } }
@@ -70,7 +75,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .meterFill, .mark[data-lit] { animation: none; }
-  .heart[data-moved], .step, .stepCheck, .step[data-state="today"] .stepPicture, .wheelWrap[data-landed] .pointer { animation: none; }
+  .heart[data-moved], .step, .stepCheck, .step[data-state="today"] .stepPicture, .step[data-rarity] .stepPicture > *, .wheelWrap[data-landed] .pointer { animation: none; }
   .wheel[data-spinning] { transition-duration: 0.3s; }
   .track::after, .heartFill, .prize, .step { transition: none; }
 }

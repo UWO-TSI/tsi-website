@@ -2,7 +2,7 @@
 
 /**
  * Your friendship with each resident on this screen, in half hearts (d-friends, lib/npc/friendship.ts): loaded once,
- * moved when a talk begins (the server decides whether it is today's first) or a gift is given (POST
+ * moved when a whole talk is heard (the server decides whether it is today's first) or a gift is given (POST
  * /api/npc/friendship). Signed out it stays empty and nothing is sent.
  */
 import { useSyncExternalStore } from "react";
@@ -20,7 +20,7 @@ const moved = (f: FriendMove) => { if (f.level !== levels[f.resident]) set({ ...
 export function loadFriends(): void {
   apiCall<Record<string, number>>("/api/npc/friendship", "friends").then(set, () => { signedIn = false; });
 }
-/** A talk with `slug` began: the server's answer, or null (signed out, or not a resident it knows). */
+/** A whole talk with `slug` was heard, to its last line: the server's answer, or null (signed out, or not a resident it knows). */
 export async function talkedTo(slug: string): Promise<FriendMove | null> {
   if (!signedIn) return null;
   try { return moved(await apiCall<FriendMove>("/api/npc/friendship", "friend", { resident: slug })); } catch { return null; }

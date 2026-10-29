@@ -132,7 +132,6 @@ export const GAME_ASSETS: readonly string[] = [
   "/assets/acnh/buildings/chalet-wall-e.glb",
   "/assets/acnh/buildings/chalet-roof-e.glb",
   "/assets/game/props/monument-sign.glb",
-  "/assets/acnh/props/fence-rope-a.glb",
   "/assets/game/wharf/jetty.glb",
   "/assets/game/props/village-lamp.glb",
   "/assets/game/props/lantern-post.glb",

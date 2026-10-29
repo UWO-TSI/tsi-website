@@ -142,9 +142,16 @@ export default function TalkBox() {
     window.addEventListener("keydown", on);
     return () => window.removeEventListener("keydown", on);
   }, [open, giving]);
-  // The day's first talk with them adds half a heart, as the talk opens (the hearts fill while you chat).
-  const slug = view.slug, talkId = view.activeId;
-  useEffect(() => { if (talkId && slug) void talkedTo(slug).then(noteMove); }, [talkId, slug]);
+  // A whole conversation with them, its last line read, adds half a heart once a day (David 2026-10-28: "you actually have
+  // to have a full chat with them"); opening the talk and leaving early adds nothing.
+  const slug = view.slug, talkId = view.activeId, heard = view.complete && view.index + 1 >= view.count;
+  const credited = useRef<string | null>(null); // this talk's, until it closes
+  useEffect(() => {
+    if (!talkId) credited.current = null;
+    if (!talkId || !slug || !heard || credited.current === talkId) return;
+    credited.current = talkId;
+    void talkedTo(slug).then(noteMove);
+  }, [talkId, slug, heard]);
   if (!open && giving) setGiving(false);
   const onBox = useCallback((e: MouseEvent) => { if (!(e.target as Element).closest("button")) press(); }, []);
   // Focus comes into the box once it shows (it's hidden while they turn to you, when the dialog system first tries).

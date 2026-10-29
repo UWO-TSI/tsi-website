@@ -16,6 +16,8 @@
  * few words (specs/design-bible.md, UI).
  */
 import { Gift } from "lucide-react";
+import PixelImage from "@/components/economy/PixelImage";
+import { iconUrl } from "@/lib/icons/keys";
 import { CurrencyIcon } from "@/components/economy/Amount";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Keycap } from "@/components/gui";
@@ -31,6 +33,8 @@ import { escapeEndedCapture } from "@/lib/game/orbitCamera";
 import { isTyping, usePresence, worldKeysBlocked, type KeyLike } from "@/lib/game/useWorldDialog";
 import { SignInText } from "@/components/gui/SignIn";
 import styles from "./DailyGift.module.css";
+/** Day 7's picture: one of the box's real prizes, the wide net (BOX_GEAR net-mid; it reads best at this size), from the icon renderer (David 2026-10-28: "an actual icon for rare gear"). */
+const BOX_ICON = "net-mid";
 
 /** closed: not offered yet this visit; done: offered and finished (it never comes back until the next visit). */
 type Phase = { at: "closed" } | { at: "done" } | { at: "offer" } | { at: "opening" } | { at: "opened"; coins: number; welcome: GiftView["welcome"] } | { at: "error"; text: string };
@@ -56,9 +60,9 @@ export function welcomeSteps(today: number, opened: boolean): TrackStep[] {
   return WELCOME_TRACK.map((r, i) => {
     const d = i + 1;
     return {
-      key: `d${d}`, label: `Day ${d}`, big: r.box,
+      key: `d${d}`, label: `Day ${d}`, big: r.box, rarity: r.box ? "rare" : undefined,
       state: d < today || (d === today && opened) ? "done" : d === today ? "today" : "ahead",
-      picture: r.box ? <Gift size={38} strokeWidth={1.7} aria-label="Mystery box" /> : <CurrencyIcon currency={r.gems ? "gems" : "coins"} size={36} />,
+      picture: r.box ? <PixelImage src={iconUrl(BOX_ICON)} px={48} label="Mystery box: rare gear or clothing" /> : <CurrencyIcon currency={r.gems ? "gems" : "coins"} size={36} />,
       amount: r.box ? <span className={styles.paid}>+{r.gems}<CurrencyIcon currency="gems" size={12} />{sr(GEMS.name)}</span> : (r.gems || r.coins).toLocaleString(),
     };
   });

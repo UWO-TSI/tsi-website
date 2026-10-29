@@ -121,7 +121,6 @@ import IslandLoading from "./IslandLoading";
 import { setLoadPart } from "@/lib/game/loadProgress";
 import { READY_FILES } from "@/lib/game/preloadAssets";
 import { loadGameWorld } from "@/lib/game/world/load";
-import { worldModel } from "@/lib/game/world/active";
 import TalkBox from "./TalkBox";
 import { emptyTalkView, requestTalk, subscribeTalk, talkStore, talkView } from "@/lib/game/residentTalk";
 import DailyGift from "./DailyGift";
@@ -601,18 +600,15 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
 const F = "/assets/acnh/furniture/";
 /**
  * Club monument (row 182): five build stages from dump furniture and our
- * "coming soon" board. 0 roped-off plot + the board; 1 scaffold + materials;
+ * "coming soon" board. 0 the plot and the board; 1 scaffold + materials;
  * 2 rock monument rises inside the scaffold; 3 banners go up; 4 complete
- * (scaffold, sign and ropes gone, lanterns lit).
+ * (scaffold and sign gone, lanterns lit).
  */
 function ClubMonument({ position, stage, ceremony }: { position: [number, number, number]; stage: number; ceremony: boolean }) {
   const done = stage >= 4;
   return <group position={position}>
     {!done && <>
       <GLBProp url={MONUMENT_SIGN_URL} position={[1.3, 0, -1.25]} rotation={[0, -0.3, 0]} />
-      {[[-1.1, -1.1, 0], [1.1, -1.1, 0], [-1.1, 1.1, Math.PI], [1.1, 1.1, Math.PI]].map(([x, z, r], i) => (
-        <GLBProp key={i} url={worldModel("/assets/acnh/props/fence-rope-a.glb")} position={[x, 0, z]} rotation={[0, r, 0]} />
-      ))}
     </>}
     {stage >= 1 && !done && <>
       {/* The tarp comes down once the stone is going up (stage 2+). */}
@@ -917,7 +913,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const fishSpot = useRef<FishingSpot | null>(null);
   const { data: residentRows } = useNPCPersonas({ permanentOnly: true });
   useCheer(ceremony, residentRows.map(r => r.id));
-  const stage = progression.activeGoal?.stage ?? 0;
+  // Dev only: ?monument=0..4 shows that build stage.
+  const stage = devHome.has("monument") ? Number(devHome.get("monument")) : progression.activeGoal?.stage ?? 0;
   const progressionWorld = useMemo(() => ({ stage, opened: progression.completedGoals }), [stage, progression.completedGoals]);
   const target = progression.objective.target;
   // Objective marker drawn in the minimap's mirrored world coordinates (+x on the left).

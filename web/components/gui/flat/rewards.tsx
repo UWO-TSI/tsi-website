@@ -56,6 +56,8 @@ export type TrackStep = {
   state: "done" | "today" | "ahead";
   /** The track's last and biggest: a wider tile. */
   big?: boolean;
+  /** Its rarity's thin edge (design bible, UI 7), and its picture gives a small shake now and then. */
+  rarity?: string;
 };
 
 /** A run of rewards (the welcome week): every step's reward shown ahead, the taken ones checked, today's lifted. */
@@ -64,7 +66,8 @@ export function RewardTrack({ steps, label }: { steps: readonly TrackStep[]; lab
   const done = steps.filter(s => s.state === "done").length;
   const reached = at >= 0 ? at : done;
   return <ol className={r.track} aria-label={label} style={{ "--reached": steps.length > 1 ? reached / (steps.length - 1) : 0 } as CSSProperties}>
-    {steps.map((s, i) => <li key={s.key} className={r.step} data-state={s.state} data-big={s.big || undefined} style={{ "--i": i } as CSSProperties}>
+    {steps.map((s, i) => <li key={s.key} className={r.step} data-state={s.state} data-big={s.big || undefined} data-rarity={s.rarity}
+      style={{ "--i": i, ...(s.rarity ? { "--edge": `var(--ui-rarity-${s.rarity}, var(--gui-rarity-${s.rarity}))` } : {}) } as CSSProperties}>
       <span className={r.stepLabel}>{s.label}</span>
       <span className={r.stepPicture}>{s.picture}</span>
       {s.amount != null && <span className={r.stepAmount}>{s.amount}</span>}
