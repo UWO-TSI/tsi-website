@@ -17,11 +17,12 @@ import { DANCE_RING } from "@/lib/game/emoteWheel";
 import ToastHub, { toast } from "@/components/game/ToastHub";
 import { Amount } from "@/components/economy/Amount";
 import { Badge, Banner, Button, Card, ConfirmDialog, Counter, Dialogue, Empty, ErrorNote, Field, IconButton, ItemTile, Keycap, List, ListRow, Loading, NameTag, Panel, Progress, Select,
-  Sheet, Slider, Tabs, TextArea, Toggle, Tooltip } from "@/components/gui";
+  RarityBadge, Sheet, Slider, Tabs, TextArea, Toggle, Tooltip } from "@/components/gui";
 import { FISH } from "@/lib/game/fishing";
 import { iconUrl } from "@/lib/icons/keys";
+import { RARITIES, RARITY_LABEL } from "@/lib/rarity";
 import { useSearch } from "@/lib/game/useMediaQuery";
-import { BigMoment, RewardPop, type LadderRarity } from "@/components/gui/flat";
+import { BigMoment, ProgressCard, RewardPop, type LadderRarity } from "@/components/gui/flat";
 import s from "./showroom.module.css";
 
 /** The reward pop at each rung of the ladder, and a dig's purse (no rarity). */
@@ -159,8 +160,8 @@ export default function GuiShowroom() {
 
     <Section id="tiles" title="Item tiles" kit={["inventory", "wheel"]} note="The real item icons on cream, a rarity edge, the stack count; a dot while new, a silhouette until found, the kit’s little dot for a free slot.">
       <div className={s.tiles}>
-        {(["fish_dace", "fruit_pear", "fish_arowana", "bug_emperor_butterfly", "fish_coelacanth"] as const).map((k, i) => <ItemTile key={k} icon={iconUrl(k)} name={k.replace(/^[a-z]+_/, "").replace(/_/g, " ")}
-          rarity={(["common", "uncommon", "rare", "epic", "legendary"] as const)[i]} count={[1, 12, 2, 1, 1][i]} isNew={i === 4} selected={tile === k} onClick={() => setTile(k)} caption={(["Common", "Uncommon", "Rare", "Epic", "Legendary"])[i]} />)}
+        {(["fish_dace", "fruit_pear", "fish_arowana", "bug_emperor_butterfly", "fish_coelacanth", "fish_golden_koi", "fish_barreleye"] as const).map((k, i) => <ItemTile key={k} icon={iconUrl(k)} name={k.replace(/^[a-z]+_/, "").replace(/_/g, " ")}
+          rarity={RARITIES[i]} count={[1, 12, 2, 1, 1, 1, 1][i]} isNew={i === 4} selected={tile === k} onClick={() => setTile(k)} caption={RARITY_LABEL[RARITIES[i]]} />)}
         <ItemTile icon={iconUrl("fish_oarfish")} name="Oarfish" unknown caption="Not found" />
         <ItemTile name="" empty caption="Free slot" />
         <ItemTile icon={iconUrl("shovel-gold")} name="Golden shovel" size={56} caption="Small" />
@@ -187,6 +188,7 @@ export default function GuiShowroom() {
 
     <Section id="badges" title="Badges and counters" kit={["recipe", "phone"]} note="Status tags and the red count on a shoulder (nothing at zero).">
       <Row label="Badges"><Badge>Basic</Badge><Badge tone="sage">Owned</Badge><Badge tone="success">Done</Badge><Badge tone="warn">Ready</Badge><Badge tone="danger">Sold out</Badge><Badge tone="info">Event</Badge><Badge tone="gold">Daily selection</Badge><Badge tone="new">New!</Badge></Row>
+      <Row label="Rarity">{RARITIES.map(r => <RarityBadge key={r} rarity={r}>{RARITY_LABEL[r]}</RarityBadge>)}</Row>
       <Row label="Counters"><Counter n={1} /><Counter n={4} /><Counter n={12} /><span className={s.note}>(0 shows nothing)</span><Counter n={0} /></Row>
       <Row label="Amounts"><Amount n={1240} /><Amount n={750} currency="gems" /></Row>
     </Section>
@@ -201,6 +203,11 @@ export default function GuiShowroom() {
       </div>
       <Row label="Ult"><Progress kind="ult" value={0.3} label="Ultimate charging, 30%"><img src={iconUrl("staff-rune")} alt="" width={36} height={36} /></Progress>
         <Progress kind="ult" value={1} label="Ultimate ready"><img src={iconUrl("staff-rune")} alt="" width={36} height={36} /></Progress></Row>
+    </Section>
+
+    <Section id="progress-card" title="Progress card (flat)" note="The flat kit’s loading card: a white card, the stage in a quiet line, the real progress as a thin ink line.">
+      <Row><ProgressCard icon={<Sprout size={24} />} title="Tethos Island" status="Sweeping the plaza…" value={0.42} label="Loading the island" />
+        <ProgressCard title="Saving" status="Nearly there" value={0.9} label="Saving" /></Row>
     </Section>
 
     <Section id="tooltips" title="Tooltips" kit={["wheel"]} note="The teal name pill with a tail, on hover and on keyboard focus.">

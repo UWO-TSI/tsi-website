@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Donation, MemberItem, WeeklyBest } from "./logic";
-import { inWorld, ROSTER, type Species } from "./roster";
+import { ROSTER, type Species } from "./roster";
 import { raisePg } from "@/lib/result";
 import type { CollectionsStore } from "./store";
 import { ledgerToolsTaught } from "@/lib/game/arrival/arrivalLedger";
@@ -44,8 +44,7 @@ export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
       const { data, error } = await db.from("collection_species").select("*").eq("active", true).order("position");
       // Pre-031 databases: the code roster is the same content.
       if (error) return (rosterCache = ROSTER);
-      // Every world's species are rows; this world's are listed (the new world's buried finds aren't the village's).
-      return (rosterCache = ((data ?? []) as Row[]).map(toSpecies).filter((sp) => inWorld(sp)));
+      return (rosterCache = ((data ?? []) as Row[]).map(toSpecies));
     },
     async memberItems(memberId) {
       const full = await db.from("member_collections").select("item_key, count, total_collected, best_size_cm, first_collected_at").eq("user_id", memberId);
@@ -100,6 +99,11 @@ export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
       if (error) raise(error);
       const r = one(data);
       return { item_key: String(r.item_key), size_cm: num(r.size_cm), ...caught(r) };
+    },
+    async rolled(memberId, rollId) {
+      const { data, error } = await db.from("catch_rolls").select("item_key").eq("id", rollId).eq("member_id", memberId).maybeSingle();
+      if (error) raise(error);
+      return data ? String((data as Row).item_key) : null;
     },
     async harvest(memberId, nodeId, hourKey, key, size, trophy) {
       const { data, error } = await db.rpc("collections_harvest_drop", { p_member_id: memberId, p_node_id: nodeId, p_hour_key: hourKey, p_item_key: key, p_size: size, p_trophy: trophy });

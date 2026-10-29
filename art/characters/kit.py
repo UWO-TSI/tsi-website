@@ -391,6 +391,7 @@ class Piece:
         bpy.context.scene.collection.objects.link(ob)
         if rig is None:                          # static prop (art/props-enemies): no skin
             return ob
+        ob["vreg"] = "|".join(r if isinstance(r, str) else "" for r in vreg)   # each vertex's region (build_outfits.py)
         ob.parent = rig
         ob.modifiers.new("Armature", "ARMATURE").object = rig
         groups = {}
@@ -566,8 +567,8 @@ def export(ob, rig, path):
 
 def registry():
     """(parts, part): part(id, slot, name, mats, sharp=, grad=, **meta) decorates a builder fn(pc).
-    mats: material name -> ("outfit", palette index) | ("fixed", hex) | ("hair", None) | ("decal", image key).
-    meta: decal=True, hides=[slots], hidesBackHair=True, variantOf=id, group=str, item=economy slug (copied to the
+    mats: material name -> ("outfit", palette index) | ("fixed", hex) | ("hair", None).
+    meta: hides=[slots], hidesBackHair=True, variantOf=id, group=str, item=economy slug (copied to the
     catalogue; `item` = the crafted/economy item that unlocks the part, whose catalogue_ref is this part's id)."""
     parts = []
 
@@ -582,49 +583,66 @@ def registry():
 HEADWEAR_TRIS = 1150   # hats carry their own hair tuck (avatar v7: sculpted locks) and replace the back hair while worn
 
 
-def build_parts(parts, rig, section, subdir, images=None, max_tris=300):
+def build_parts(parts, rig, section, subdir, max_tris=300, post=None, only=()):
     """Build, export (<subdir>/<slot>/<id>.glb) and catalogue every part; one part in the scene at a time so
-    material names stay exact (M_Main, not M_Main.001)."""
+    material names stay exact (M_Main, not M_Main.001). meta model=<name>: the part is a design on a shared mesh
+    (clothing-v2), exported once as <subdir>/<slot>/<model>.glb. post(ob, spec) runs before the export. only: rebuild
+    just these ids; every other part keeps its catalogue entry and GLB as they are."""
+    old = {e["id"]: e for e in json.load(open(os.path.join(HERE, "character_catalog.json"))).get(section, [])}
     entries = []
+    built = {}
     hair_default = PAL["hair"][PAL["ref_girl_defaults"]["hair"]]
     for spec in parts:
+        if only and spec["id"] not in only:
+            entries.append(old[spec["id"]])
+            continue
+        m = spec["meta"]
+        rel = f"{subdir}/{spec['slot']}/{m.get('model', spec['id'])}.glb"
+        if rel in built:
+            tris, used = built[rel]
+            entries.append(entry(spec, rel, tris, used))
+            continue
         mats = {}
         for name, (kind, val) in spec["mats"].items():
-            if kind == "decal":
-                mats[name] = material(name, image=images[val][0], clip=True)
-            else:
-                mats[name] = material(name, {"outfit": lambda: PAL["outfit"][val], "hair": lambda: hair_default,
-                                             "fixed": lambda: val}[kind]())
+            mats[name] = material(name, {"outfit": lambda: PAL["outfit"][val], "hair": lambda: hair_default,
+                                         "fixed": lambda: val}[kind]())
         pc = Piece(region="torso", mat="M_Main")
         spec["build"](pc)
         ob = pc.finish(spec["id"], rig, mats, sharp=spec["sharp"], grad=spec["grad"])
+        if post:
+            post(ob, spec)
         tris = ntris(ob)
-        rel = f"{subdir}/{spec['slot']}/{spec['id']}.glb"
         export(ob, rig, os.path.join(HERE, rel))
         used = [m.name for m in ob.data.materials]
-        m = spec["meta"]
-        entries.append({
-            "id": spec["id"], "slot": spec["slot"], "name": spec["name"], "glb": rel, "tris": tris,
-            "materials": [{"name": n, "tint": "outfit", "default": v} if k == "outfit" else
-                          {"name": n, "tint": "hair"} if k == "hair" else
-                          {"name": n, "tint": None, "color": v} if k == "fixed" else
-                          {"name": n, "decal": True, "default": images[v][1]}
-                          for n, (k, v) in spec["mats"].items() if n in used],
-            "decalSlot": {"material": "M_Decal", "uv": [0, 0, 1, 1], "alphaMode": "MASK"} if m.get("decal") else None,
-            "hidesBackHair": m.get("hidesBackHair", False), "hides": list(m.get("hides", [])),
-            **{key: m[key] for key in ("group", "variantOf", "item", "event", "encloses") if key in m},
-            **({"skull": SKULL_VERSION} if m.get("group") in ("head", "face") else {}),
-        })
+        built[rel] = tris, used
+        entries.append(entry(spec, rel, tris, used))
         unused = set(spec["mats"]) - set(used)
-        limit = HEADWEAR_TRIS if m.get("group") == "head" else max_tris
+        limit = m.get("budget") or (HEADWEAR_TRIS if m.get("group") == "head" else max_tris)
         print(f"PART {spec['id']} tris={tris}" + ("  OVER BUDGET" if tris > limit else "") + (f"  UNUSED {unused}" if unused else ""))
         me = ob.data
         bpy.data.objects.remove(ob)
         bpy.data.meshes.remove(me)
         for mm in mats.values():
             bpy.data.materials.remove(mm)
+    order = list(old)                       # the catalogue keeps its order (the creator lists parts in it); new ones go last
+    entries.sort(key=lambda e: order.index(e["id"]) if e["id"] in order else len(order))
     update_catalog(section, entries)
     return entries
+
+
+def entry(spec, rel, tris, used):
+    """A part's catalogue entry."""
+    m = spec["meta"]
+    return {
+        "id": spec["id"], "slot": spec["slot"], "name": spec["name"], "glb": rel, "tris": tris,
+        "materials": [{"name": n, "tint": "outfit", "default": v} if k == "outfit" else
+                      {"name": n, "tint": "hair"} if k == "hair" else
+                      {"name": n, "tint": None, "color": v}
+                      for n, (k, v) in spec["mats"].items() if n in used],
+        "hidesBackHair": m.get("hidesBackHair", False), "hides": list(m.get("hides", [])),
+        **{key: m[key] for key in ("group", "variantOf", "item", "event", "encloses", "design", "bodyCut", "key", "members") if key in m},
+        **({"skull": SKULL_VERSION} if m.get("group") in ("head", "face") else {}),
+    }
 
 
 def update_catalog(section, value):

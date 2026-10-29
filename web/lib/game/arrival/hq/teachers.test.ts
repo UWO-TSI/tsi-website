@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { TOOL_TEACHERS, givenKeys, handOver, parseQuests, questFinished, teacherTalk, toolQuest, type TeachContext } from "./teachers";
+import { TOOL_TEACHERS, givenKeys, handOver, parseQuests, questFinished, teacherTalk, type TeachContext } from "./teachers";
 import { TOOL_LINES } from "./lines";
 import { PROPOSED_RESIDENTS } from "@/lib/content/residentRoster";
 import { toolByKey, TAUGHT_KINDS } from "@/lib/game/tools";
 import { wheelContents } from "@/lib/game/toolWheel";
 import { CATALOGUE, TAUGHT_TOOL_SLUGS, onSale } from "@/lib/wallet/catalogue";
 import { MINING } from "@/lib/collections/roster";
-import { GAME_WORLD } from "@/lib/game/world/active";
 
 /** Mayor Eliza teaches the pickaxe once mining is out (m6, the cave update: MINING); until then her row is a placeholder. */
 const NEW = MINING;
@@ -23,10 +22,9 @@ describe("tools unlocked by people (row 312)", () => {
     expect(TOOL_TEACHERS.filter(t => !t.live).map(t => t.tool)).toEqual(NEW ? ["dash", "glider"] : ["pickaxe", "dash", "glider"]);
   });
 
-  it("walks one tool from start to finish: offer, hand-over, the quest in the village's tracker, the catch, yours", () => {
+  it("walks one tool from start to finish: offer, hand-over, the catch, yours", () => {
     let c = fresh;
     expect(wheelKinds(c)).toEqual(["rod"]);
-    expect(toolQuest(c.quests)).toBeNull();
     // Odile offers her net.
     const talk = teacherTalk("curator", c)!;
     expect(talk).toMatchObject({ script: "tool:net:offer", tool: "net", lines: TOOL_LINES.net.offer });
@@ -35,8 +33,6 @@ describe("tools unlocked by people (row 312)", () => {
     expect(given).toBe("net");
     c = { ...c, quests: { ...c.quests, net: "given" } };
     expect(wheelKinds(c)).toEqual(["rod", "net"]);
-    expect(toolQuest(c.quests)).toEqual({ id: "tool:net", title: TOOL_LINES.net.title, kind: "quest", steps: [{ id: "tool:net:bug", label: TOOL_LINES.net.step, done: false }] });
-    if (GAME_WORLD !== "new") expect(TOOL_LINES.net).toMatchObject({ title: "Odile's bug net", step: "Catch any bug" });
     // Talking again while it runs: her nudge, and nothing handed over twice.
     expect(teacherTalk("curator", c)).toMatchObject({ script: "tool:net:during" });
     expect(handOver("tool:net:offer", c.quests)).toBeNull();
@@ -45,7 +41,6 @@ describe("tools unlocked by people (row 312)", () => {
     expect(questFinished("forage", c.quests)).toBeNull();
     expect(questFinished("bug", c.quests)).toBe("net");
     c = { ...c, quests: { ...c.quests, net: "done" } };
-    expect(toolQuest(c.quests)).toBeNull();
     expect(wheelKinds(c)).toEqual(["rod", "net"]);
     // Done: Odile talks as she always does.
     expect(teacherTalk("curator", c)).toBeNull();

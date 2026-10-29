@@ -129,7 +129,7 @@ END $$;
 
 -- ── 4. Copy (an admin's edit is kept: each only replaces the text 20261028144337 wrote) ──
 UPDATE quest_chapters
-   SET step_copy = jsonb_set(step_copy, '{dig_up,hint}', '"Look closely: hairline cracks in the sand, a scuffed patch of dirt. Relics, coins, ore, and now and then something rare."')
+   SET step_copy = jsonb_set(step_copy, '{dig_up,hint}', '"Look closely: a scuffed patch of sand or dirt. Relics, coins, ore, and now and then something rare."')
  WHERE slug = 'pims-shovel' AND step_copy->'dig_up'->>'hint' = 'Look for little star-shaped cracks in the sand and on dirt. Rare things turn up too.';
 UPDATE quest_chapters
    SET summary = 'The museum opens when the club has brought it 10 fish, 5 bugs and 3 buried finds. Do your part.',

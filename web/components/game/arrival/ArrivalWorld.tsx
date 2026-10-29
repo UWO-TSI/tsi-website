@@ -4,7 +4,7 @@
  * The arrival inside the island's canvas (specs/v1-drop.md §1.4-1.5): the crossing's director (the five golden-hour
  * shots on the boat as it comes in from far out, reusing the world, the wharf's boat and its trip), Bram at the tiller,
  * the drops running off you in the close-up; then on the pier the walk-along v2 (playtest round 1): Bram walks the
- * world's route (lib/game/arrival/routes) stop by stop with a "!" over his head and waits; you talk to him (E), he tells
+ * route (lib/game/arrival/routes/new.ts) stop by stop with a "!" over his head and waits; you talk to him (E), he tells
  * you about the place and walks on: the dock and its crate, the museum, the shop, HQ, the café, the beach (his rod, a
  * catch), then what you've collected. When you stall, a gentle hint in his speech bubble (lib/game/arrival/tutorial.ts).
  *
@@ -41,9 +41,8 @@ import { crossingCamera, type CameraOut, type CrossingPoints } from "@/lib/game/
 import { ACTIVE_WORLD_BEND } from "@/lib/game/curvedWorld";
 import { WAIT_GAP, awaitsTalk, bramPace, newTutorial, stepTutorial } from "@/lib/game/arrival/tutorial";
 import { resolvePlace, resolveRoute, type PlaceWorld, type ResolvedStop, type TutorialRoute, type XZ } from "@/lib/game/arrival/route";
-import { routeFor } from "@/lib/game/arrival/routes";
+import { NEW_ROUTE } from "@/lib/game/arrival/routes/new";
 import { showGuide } from "@/lib/game/guideArrow";
-import { GAME_WORLD } from "@/lib/game/world/active";
 import { BRAM, fillKeys, hintLine, type HintKeys } from "@/lib/game/arrival/lines";
 import type { WheelItem } from "@/lib/game/toolWheel";
 import { worldLabels } from "@/lib/game/labelLayout";
@@ -54,7 +53,7 @@ import aw from "./ArrivalWorld.module.css";
 
 useGLTF.preload(CRATE_URL);
 /**
- * A fish crate (art/wharf/build_crate.py) where the route puts one (lib/game/arrival/routes: the village's fills the
+ * A fish crate (art/wharf/build_crate.py) where the route puts one (lib/game/arrival/routes/new.ts: it fills the
  * pier's deck between the rails, so the way up the pier is over it). Its solid footprint, half extents across and
  * along, and its lid `h` up: over the step-up (0.3), under a jump (1.28).
  */
@@ -101,11 +100,9 @@ const labelPoint = (object: THREE.Object3D, camera: THREE.Camera, size: { width:
   return p;
 };
 
-export default function ArrivalWorld({ v, island, player, dock, held, keys, world = GAME_WORLD }: {
+export default function ArrivalWorld({ v, island, player, dock, held, keys }: {
   v: Village; island: VillageIsland; player: React.RefObject<THREE.Vector3>; dock: Dock;
   held: WheelItem | null; keys: HintKeys;
-  /** Whose route Bram walks (lib/game/arrival/routes). */
-  world?: string;
 }) {
   const phase = useArrivalPhase();
   // The rod out (the fishing step's hint changes), a cast, a catch: what the tutorial waits for.
@@ -117,7 +114,7 @@ export default function ArrivalWorld({ v, island, player, dock, held, keys, worl
     window.addEventListener("tsi:fish-caught", caught);
     return () => { window.removeEventListener("tsi:fish-cast", cast); window.removeEventListener("tsi:fish-caught", caught); };
   }, []);
-  const route = routeFor(world);
+  const route = NEW_ROUTE;
   const pw = useMemo(() => placeWorld(dock, v), [dock, v]);
   const crates = useMemo(() => crateSpots(route, pw), [route, pw]);
   if (!phase) return null;

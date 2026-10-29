@@ -24,7 +24,7 @@ describe("one rarity palette across the catch card, the reward card, the journal
 });
 
 describe("the catch card's beats by tier (REVEAL)", () => {
-  const tiers: Rarity[] = ["common", "uncommon", "rare", "epic", "legendary", "seaking"];
+  const tiers: Rarity[] = ["common", "uncommon", "rare", "epic", "legendary", "divine", "contraband"];
   it("keeps a rarer first catch's silhouette longer, holds its card longer and shakes the camera harder", () => {
     for (let i = 1; i < tiers.length; i++) {
       const a = REVEAL[tiers[i - 1]], b = REVEAL[tiers[i]];

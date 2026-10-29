@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { DROP_FEATURES, dropFlags, featureOn, parseDrop, releasedChapters, releasedGoals, resolveDrop } from "./drops";
 import { DEFAULT_CHAPTERS, DEFAULT_GOALS } from "@/lib/progression/defaults";
 import { currentObjective, evaluateChapters, validateAdvance } from "@/lib/progression/chapters";
-import { GAME_WORLD } from "./world/active";
 
 describe("drops (specs/v1-drop.md, the roadmap)", () => {
   it("v1 Arrival: the café is closed, the mountain sealed, combat and the home island hidden", () => {
@@ -54,39 +53,20 @@ describe("drops (specs/v1-drop.md, the roadmap)", () => {
     expect(releasedGoals(goals, dropFlags(2)).map(g => g.slug)).toEqual(["reopen-cafe", "fund-museum"]);
     // Seasonal goals open no region: always offered.
     expect(releasedGoals(DEFAULT_GOALS, dropFlags(1)).filter(g => g.goal_type === "seasonal")).toHaveLength(DEFAULT_GOALS.filter(g => g.goal_type === "seasonal").length);
-    // Each world's chapters: the village keeps its settle-in, the new world has the main quest (a chapter's world).
-    expect(releasedChapters(DEFAULT_CHAPTERS, dropFlags(1), "village").map(c => c.slug)).toEqual(["settle-in", "fund-museum"]);
-    expect(releasedChapters(DEFAULT_CHAPTERS, dropFlags(3), "village").map(c => c.slug)).toEqual(["settle-in", "reopen-cafe", "fund-museum", "ruins-gate"]);
     // Mayor Eliza's pickaxe is parked for the cave update (David 2026-10-28): no drop offers it yet.
     const errands = ["first-find", "odiles-net", "pims-shovel", "brams-challenge", "the-museum"];
     expect(DROP_FEATURES.cave).toBeNull();
-    expect(releasedChapters(DEFAULT_CHAPTERS, dropFlags(4), "new").map(c => c.slug)).not.toContain("elizas-pickaxe");
-    expect(releasedChapters(DEFAULT_CHAPTERS, { ...dropFlags(1), cave: true }, "new").map(c => c.slug)).toContain("elizas-pickaxe");
-    expect(releasedChapters(DEFAULT_CHAPTERS, dropFlags(1), "new").map(c => c.slug)).toEqual([...errands, "fund-museum"]);
-    expect(releasedChapters(DEFAULT_CHAPTERS, dropFlags(3), "new").map(c => c.slug)).toEqual([...errands, "reopen-cafe", "fund-museum", "ruins-gate"]);
-    expect(releasedChapters(DEFAULT_CHAPTERS, dropFlags(1))).toEqual(releasedChapters(DEFAULT_CHAPTERS, dropFlags(1), GAME_WORLD));
+    expect(releasedChapters(DEFAULT_CHAPTERS, dropFlags(4)).map(c => c.slug)).not.toContain("elizas-pickaxe");
+    expect(releasedChapters(DEFAULT_CHAPTERS, { ...dropFlags(1), cave: true }).map(c => c.slug)).toContain("elizas-pickaxe");
+    expect(releasedChapters(DEFAULT_CHAPTERS, dropFlags(1)).map(c => c.slug)).toEqual([...errands, "fund-museum"]);
+    expect(releasedChapters(DEFAULT_CHAPTERS, dropFlags(3)).map(c => c.slug)).toEqual([...errands, "reopen-cafe", "fund-museum", "ruins-gate"]);
   });
 
-  it("village: hides claiming your plot until the home island's drop, and the chapter can still finish", () => {
-    const [settle] = releasedChapters(DEFAULT_CHAPTERS, dropFlags(1), "village");
-    expect(settle.slug).toBe("settle-in");
-    expect(settle.hidden_steps).toEqual(["claim_plot"]);
-    expect(releasedChapters(DEFAULT_CHAPTERS, dropFlags(4), "village")[0].hidden_steps).toBeUndefined();
-    const facts = { tier: 5, firstCatchKey: "fish_bass", lastFishAt: null, counts: { fish: 1 }, goals: {} };
-    const [view] = evaluateChapters([settle], [{ chapter_id: settle.id, status: "active", steps_done: { donate_catch: "2026-10-30T00:00:00Z" }, donated_item_key: "fish_bass", completed_at: null }], facts);
-    expect(view.steps.map(s => s.key)).toEqual(["first_catch", "donate_catch", "report_hq"]);
-    expect(view.status).toBe("ready");
-    expect(currentObjective(evaluateChapters([settle], [], facts), false)?.step_key).toBe("donate_catch");
-    const fresh = evaluateChapters([settle], [], { ...facts, firstCatchKey: null, counts: {} });
-    expect(currentObjective(fresh, false)?.text).not.toMatch(/plot/i);
-    expect(validateAdvance("claim_plot", settle, fresh[0], undefined, facts, new Date()).ok).toBe(false);
-  });
-
-  it("new world: hides claiming your plot until the home island's drop, and the chapter can still finish", () => {
-    const [settle] = releasedChapters(DEFAULT_CHAPTERS, dropFlags(1), "new");
+  it("hides claiming your plot until the home island's drop, and the chapter can still finish", () => {
+    const [settle] = releasedChapters(DEFAULT_CHAPTERS, dropFlags(1));
     expect(settle.slug).toBe("first-find");
     expect(settle.hidden_steps).toEqual(["claim_plot"]);
-    expect(releasedChapters(DEFAULT_CHAPTERS, dropFlags(4), "new")[0].hidden_steps).toBeUndefined();
+    expect(releasedChapters(DEFAULT_CHAPTERS, dropFlags(4))[0].hidden_steps).toBeUndefined();
     const facts = { tier: 5, firstCatchKey: "fish_bass", lastFishAt: null, counts: { fish: 1 }, goals: {} };
     const [view] = evaluateChapters([settle], [], facts);
     expect(view.steps.map(s => s.key)).toEqual(["first_catch", "donate_catch"]);

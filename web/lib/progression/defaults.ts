@@ -158,7 +158,7 @@ export const DEFAULT_CHAPTERS: QuestChapter[] = [
   }, 150),
   errand(3, "pims-shovel", "Pim's shovel", "dig", "Pim on the beach always has a shovel. Things are buried all over the island: find the marks and dig.", {
     get_shovel: { label: "Ask Pim on the beach for a shovel" },
-    dig_up: { label: "Dig up 3 buried things", hint: "Look closely: hairline cracks in the sand, a scuffed patch of dirt. Relics, coins, ore, and now and then something rare." },
+    dig_up: { label: "Dig up 3 buried things", hint: "Look closely: a scuffed patch of sand or dirt. Relics, coins, ore, and now and then something rare." },
     show_pim: { label: "Show Pim your finds on the beach" },
   }, 150),
   errand(4, "brams-challenge", "Bram's challenge", "rod_challenge", "Bram bets you can't catch five kinds of fish, one of them at dawn or dusk. Win and his Cedar rod is yours.", {

@@ -9,6 +9,8 @@
 import { CLIP_BY_NAME } from "./character/look";
 import { castLanding, thrash } from "./fishingCast";
 import { seedAt } from "./fx/particles";
+import type { HookTier } from "./fishing";
+import type { BossMove } from "./fishingReel";
 
 /**
  * The cast's beats: charging (the wind-up), swing (the rod whips; the bobber leaves its tip at the release, flies,
@@ -33,6 +35,8 @@ export interface FishingState {
   rate: number;
   /** The cast's seed, from its landing spot: its thrash and its splashes are the same on every client. */
   seed: number;
+  /** The bite's tier (its "!": FishingRig popBang), from the fish that bit. */
+  hook: HookTier;
   /** The last nibble (ms; -Infinity: none yet). */
   nibbleAt: number;
   /** While reeling: where the fish pulls across the throw (-1..1), the line's tension (0..1), the reel held, how far in (0..1). */
@@ -53,13 +57,19 @@ export function setSceneWater(isWater: (x: number, z: number) => boolean, height
 }
 
 /** The local overlay's live numbers (its loops write them; the local avatar's state reads them each frame). */
-export const live = { power: 0, pull: 0, tension: 0, reeling: false, reeled: 0 };
+export const live = {
+  power: 0, pull: 0, tension: 0, reeling: false, reeled: 0,
+  /** A boss fight (fishingReel.ts BossReel): its stamina (0..1), the move warned of or under way, and its stage; the world's creature reads it. */
+  boss: null as { stamina: number; move: BossMove | null; stage: "warn" | "live" | null } | null,
+  /** This client's own cast (useWorldClips): where a boss catch surfaces. */
+  cast: null as FishingState | null,
+};
 
 /** A cast starting: the avatar at (fromX, fromZ) winds up toward the water spot. */
 export function newCast(local: boolean, fromX: number, fromZ: number, spotX: number, spotZ: number, now: number): FishingState {
   return {
     local, phase: "charging", since: now, power: 0, fromX, fromZ, spotX, spotZ,
-    landX: spotX, landZ: spotZ, waterY: 0, dirX: 0, dirZ: 1, rate: 1, seed: 0, nibbleAt: Number.NEGATIVE_INFINITY,
+    landX: spotX, landZ: spotZ, waterY: 0, dirX: 0, dirZ: 1, rate: 1, seed: 0, hook: "common", nibbleAt: Number.NEGATIVE_INFINITY,
     pull: 0, tension: 0, reeling: false, reeled: 0, snapped: false, catchModel: null, catchRaw: false, catchCm: null, showOff: true,
   };
 }

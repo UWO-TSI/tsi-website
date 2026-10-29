@@ -13,13 +13,14 @@ describe("rod tiers", () => {
     }
     expect(RODS.filter(r => r.source === "shop").map(r => r.key)).toEqual(["rod_cedar", "rod_glass"]);
   });
-  it("applies bite window, luck and legendary gating", () => {
+  it("applies bite window, luck and epic gating", () => {
     expect(biteWindowMs(1400, rodByTier(1))).toBe(1400);
     expect(biteWindowMs(1400, rodByTier(5))).toBe(2500);
     expect(castLuck(0.3, rodByTier(3))).toBeCloseTo(0.4);
+    expect(canHook("epic", rodByTier(3))).toBe(false);
     expect(canHook("legendary", rodByTier(3))).toBe(false);
-    expect(canHook("legendary", rodByTier(4))).toBe(true);
-    expect(canHook("seaking", rodByTier(1))).toBe(false);
+    expect(canHook("epic", rodByTier(4))).toBe(true);
+    expect(canHook("divine", rodByTier(1))).toBe(false);
     expect(canHook("rare", rodByTier(1))).toBe(true);
     expect(rodByTier(9).tier).toBe(5);
     expect(bestOwnedRod([]).tier).toBe(1);

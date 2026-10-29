@@ -8,7 +8,7 @@ import { CollectionsError, type CollectionsStore, type LearnedRecipe } from "./s
 import type { TourneyEntry } from "@/lib/progression/seasonal";
 
 /** collections_record_catch's hourly caps: per species by rarity, and 200 per member. */
-const CAP: Record<string, number> = { legendary: 3, seaking: 3, epic: 6, rare: 12, uncommon: 30 };
+const CAP: Record<string, number> = { legendary: 3, divine: 3, contraband: 3, epic: 6, rare: 12, uncommon: 30 };
 
 /** `drop`: crafting_catch_drop (memoryCraftingStore's catchDrop); without it catches teach nothing. */
 export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09-24T16:00:00Z"), drop: (member: string, itemKey: string) => LearnedRecipe | null = () => null) {
@@ -163,6 +163,10 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
     },
     async handIns() {
       return handIns.map(({ member, species_key }) => ({ member_id: member, species_key }));
+    },
+    async rolled(m, id) {
+      const r = rolls.get(id);
+      return r && r.member === m ? r.key : null;
     },
     async harvest(m, node, hourKey, key, size, trophy) {
       if (harvests.has(`${m}:${node}:${hourKey}`)) throw new CollectionsError("already_harvested");

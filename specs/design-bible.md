@@ -9,14 +9,14 @@ Chapters: **UI** and **Models** are set (2026-10-28, ledger rows 320 and 319). *
 David, 2026-10-28, on the review pages: "i need you to fuckign lock in on all the ui". The game had two live looks (flat in 11 menus, cream paper in about 14 plus the HUD), so every new screen copied whichever one its brief named. From now on there is one look.
 
 **The look**
-1. **Clean flat is the one base for the whole game UI:** menus, sheets, HUD chrome, toasts, prompts, dialogs. That means one flat light panel ("clean simple 1 box or 2 max"), white item cards, black and white type, an icon rail, and coins and gems top left. No boxes inside boxes, no beige and no glass. (Rows 315 and 285; David 10-22: "this is the basic clean color theme for ui".)
+1. **Clean flat is the one base for the whole game UI, with warmth:** menus, sheets, HUD chrome, toasts, prompts, dialogs. That means one flat light panel ("clean simple 1 box or 2 max"), white item cards, black and white type, an icon rail, and coins and gems top left. No boxes inside boxes, no beige and no glass. (Rows 315 and 285; David 10-22: "this is the basic clean color theme for ui".) It must not feel sterile. David 10-28, on the reward pops: "the ui should be a combination, not so flat but also keep the old vibe but new color". Keep the old kit's soft, rounded, friendly shapes and depth (gentle shadows, a little texture where it helps), in the new palette.
 2. **Paper only for things that are paper in the world:** letters, notices, the club goal, HQ notices, a restaurant's menu (David 10-28: "PAPER MENU LIKE REAL RESTAURANCE"). Paper is a material inside the flat system. It is not a second UI.
 3. **Minimal and visual.** Less text, more icons and pictures: you should understand a screen "just by looking at it". Show what something does on hover, in a line of plain words. Lighter colours, less bold (David 10-28 on the radar, the monument and the market).
 4. **Weight matches importance.** Big moments (a rare catch, a level-up, a reward) are juicy: they pop, spring and fly to their slot. Ambient notices (campfire hour, a resident's letter arriving) are gentle and quiet (David 10-28: "very gentle and not something so important").
 5. **One action per view and room to breathe** (David 10-18: "more space and cleaner more intuitive design").
 6. **Real items, not text:** item pictures are the real model or its rendered icon, with the pixel filter. No emoji (row 281). Food on a menu is the food model (David 10-28).
 7. **Rarity colours:** common grey, uncommon green, rare blue, epic purple, legendary yellow, and divine a purple holographic rainbow (`--gui-holo`). Rarity shows as a thin outline or edge, not a fill (David 10-28). Text on divine is white.
-8. **HUD at rest:** only the quest line, the minimap and the time with its sun, top right (row 309). No movement UI. Esc 1 is a UI view with no dimming; Esc 2 is Settings and Log out.
+8. **HUD at rest:** the quest line, the minimap and the time with its sun, top right (row 309), plus the player's health, stamina and XP bars (David 10-28: "the user shoud have a health, stamina, and exp bar, and everything should be when exp is filled"; a level-up happens when the XP bar fills). No other movement UI. Esc 1 is a UI view with no dimming; Esc 2 is Settings and Log out.
 9. **Motion:** a spring with about 12% overshoot; hover about 200 ms, select about 400 ms; transform only; a slight drop shadow on hover; off under reduced motion. When a value changes (a stat, a count), animate the change; never jump.
 10. **Never show the coin or gem to CAD rate.**
 
@@ -42,11 +42,16 @@ David, 2026-10-28: "models should be considered to have a high def version and a
    - Both share one design: the same silhouette, colours and proportions. The low-poly is reduced from the high-def; it isn't drawn separately.
    - A model only ever seen one way gets one version.
    - The game picks by view. `worldModel` in `web/lib/game/world/active.ts` already serves the world copy while close-ups keep theirs. Grow that switch; don't add a second one.
-3. **Made properly in Blender.** Built headless (`/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P <script>`) as real modelling:
-   - a clean silhouette and sensible topology;
-   - proper UVs and named materials;
-   - the game's scale, pivot and facing. `art/remodel/` is the working pipeline: reuse its kit (`rkit.py`).
-   - No stacks of primitives or maths-generated blobs standing in for a model.
+3. **Made properly in Blender.** Built headless (`/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P <script>`). Agents model with scripts, so "properly" means the script does real modelling:
+   - Primitives (`art/props/propkit.py`, `art/remodel/rkit.py`) are a blockout only. The script joins and merges them into one mesh, then shapes it (bevels, loop cuts, subdivision, proportional moves) until it matches the references.
+   - The result has a clean silhouette, sensible topology with no hidden overlapping shells, proper UVs and named materials.
+   - It uses the game's scale, pivot and facing.
+   - The high-def is that shaped mesh. The low-poly is decimated or retopologised from it.
+   - A visible stack of separate shapes or a lumpy maths blob is not a finished model.
+   - **Meshy is part of the pipeline** (David, 2026-10-29: "I NEED YOU TO CONNECT TO MESHY.AI and use meshy as part of your modeling pipeline"). A model can start as a Meshy generation (image-to-3D from David's reference, or text-to-3D from his direction). The API key is in the macOS keychain as "Meshy API"; never print it.
+     - Meshy output never ships raw. It goes through the same headless Blender cleanup: the game's scale, pivot and facing; merged parts; the high-def version; the low-poly version reduced from it; materials mapped to the game's look; and effects such as auras added in the game.
+     - Each generation spends David's Meshy credits. A lane logs the credits per model and asks the coordinator before going past 10 generations in a round.
+     - This is the one generator allowed. Other asset libraries and generators stay off.
 4. **Finished before review.** A model goes to David in both versions: the high-def in its close-up view, and the low-poly in the world from the game camera, beside the model it replaces.
 5. **One version in the repo.** When a model replaces another, the old file is deleted or moved to `archive/`, and every path that loaded it moves to the new one. No parallel old copies.
 6. **Budgets.** The low-poly fits the world's triangle budget (`specs/perf/`). The high-def is sized for one model on screen at a time.

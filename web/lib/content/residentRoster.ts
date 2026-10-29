@@ -23,7 +23,6 @@
  * is said only at its time of day.
  */
 import type { NPCPersona } from "./types";
-import { GAME_WORLD, type GameWorld } from "@/lib/game/world/active";
 
 type Look = Record<string, unknown>;
 const look = (l: { skin: number; hair: number; eyes?: string; mouth?: string; extras?: string[]; bangs?: string; back: string; top?: string | null; bottom?: string | null; onepiece?: string | null; shoes: string; acc?: Record<string, string>; colors?: Record<string, number> }): Look =>
@@ -139,12 +138,12 @@ const row = (r: Pick<NPCPersona, "slug" | "display_name" | "post" | "bio" | "ton
 
 /**
  * The proposal, as rows. The two seeded residents keep their names and lines and gain a post, a routine and a home;
- * the rest are new. Schedules use the map's anchors (plaza, path, hq, shop, cafe, oracle, museum, pond, beach, wharf).
+ * the rest are new. Schedules use the member island's places (plaza, hq, shop, cafe, oracle, museum, beach, wharf).
  */
 export const PROPOSED_RESIDENTS: NPCPersona[] = [
   row({ slug: "wren", display_name: "Alice", post: "hq_lead", tone: "warm",
     bio: "Keeps HQ running, more or less: club goals, the notice board, everyone's first day. Meets every new member on the wharf.",
-    schedule: { home: "hq", dawn: ["hq"], day: ["hq", "plaza", "path", "hq", "pond"], evening: ["plaza", "bench"], night: ["hq", "bench", "hq"] },
+    schedule: { home: "hq", dawn: ["hq"], day: ["hq", "plaza", "hq", "beach"], evening: ["plaza", "bench"], night: ["hq", "bench", "hq"] },
     canned_dialogue: [
       "@morning Morning! The notice board has something new, I think. Probably.",
       "Club goals are coming along. Every bit helps.",
@@ -152,7 +151,7 @@ export const PROPOSED_RESIDENTS: NPCPersona[] = [
     ] }),
   row({ slug: "mayor", display_name: "Mayor Eliza", post: "villager", tone: "warm",
     bio: "The island's first resident and its historian. Remembers everyone's first week and will tell the club's story to anyone who sits still.",
-    schedule: { home: "hq", dawn: ["home"], day: ["path", "plaza", "bench", "pond"], evening: ["plaza", "pond"], night: ["plaza", "home"] },
+    schedule: { home: "hq", dawn: ["home"], day: ["plaza", "bench", "beach"], evening: ["plaza", "beach"], night: ["plaza", "home"] },
     canned_dialogue: [
       "Welcome back. The light here changes with the season, have you noticed?",
       "Every board on that clubhouse was put up by someone who believed in this place.",
@@ -160,11 +159,11 @@ export const PROPOSED_RESIDENTS: NPCPersona[] = [
     ] }),
   row({ slug: "shopkeeper", display_name: "Toren", post: "shopkeeper", tone: "dry",
     bio: "Keeps the shop, counts everything twice and finds most prices too high. Secretly restocks the things people like.",
-    schedule: { home: "shop", dawn: ["shop"], day: ["shop", "plaza", "shop", "pond"], evening: ["shop", "pond"], night: ["home"] },
+    schedule: { home: "shop", dawn: ["shop"], day: ["shop", "plaza", "shop", "beach"], evening: ["shop", "beach"], night: ["home"] },
     canned_dialogue: ["Welcome. Browse if you must.", "Everything here is, technically, for sale.", "The hoodie is a hoodie. It will keep you warm. That is the entire pitch."] }),
   row({ slug: "curator", display_name: "Odile", post: "museum_curator", tone: "earnest",
     bio: "The museum's curator, labelling the empty cases until the club fills them. Knows the Latin name of every bug and says it anyway.",
-    schedule: { home: "museum", dawn: ["pond"], day: ["museum", "pond", "beach"], evening: ["museum", "plaza"], night: ["museum", "home"] },
+    schedule: { home: "museum", dawn: ["beach"], day: ["museum", "beach"], evening: ["museum", "plaza"], night: ["museum", "home"] },
     canned_dialogue: ["Every case in there is waiting for something you'll find.", "Did you see the dragonflies by the pond? Odonata. Lovely.", "Bring me anything with wings. Or fins. Or a shell."] }),
   row({ slug: "docent", display_name: "Juno", post: "museum_guide", tone: "warm",
     bio: "The museum's guide. Keeps the door, shows everyone round, and takes each new member's first catch for the halls.",
@@ -176,19 +175,19 @@ export const PROPOSED_RESIDENTS: NPCPersona[] = [
     canned_dialogue: ["Tide's turning. You can hear it if you listen.", "The gulls are low today. Rain by supper, mark my words.", "Boat's ready whenever you want to go home."] }),
   row({ slug: "oracle-keeper", display_name: "Sable", post: "oracle_keeper", tone: "earnest",
     bio: "Keeps the Oracle temple and its crystal. Answers questions with better questions, and stays up to watch the stars from the temple steps.",
-    schedule: { home: "oracle", dawn: ["oracle"], day: ["oracle", "pond", "oracle"], evening: ["oracle", "pond"], night: ["oracle", "home"] },
+    schedule: { home: "oracle", dawn: ["oracle"], day: ["oracle", "beach", "oracle"], evening: ["oracle", "beach"], night: ["oracle", "home"] },
     canned_dialogue: ["The crystal is quiet today. It's listening.", "Which way will you grow? Ask the temple.", "Stars are just old light. So are good friends."] }),
   row({ slug: "crafter", display_name: "Pim", post: "workshop_crafter", tone: "playful",
     bio: "Tinkers at the HQ workbench and combs the beach for driftwood and bottles. Never without a pencil behind one ear.",
-    schedule: { home: "hq", dawn: ["home"], day: ["hq", "beach", "path", "plaza"], evening: ["plaza", "hq"], night: ["hq", "plaza", "home"] },
+    schedule: { home: "hq", dawn: ["home"], day: ["hq", "beach", "plaza"], evening: ["plaza", "hq"], night: ["hq", "plaza", "home"] },
     canned_dialogue: ["Found a perfectly good plank on the beach. Perfectly good!", "Bring me wood and I'll show you a trick.", "Measure twice, glue once."] }),
   row({ slug: "juniper", display_name: "Juniper", post: "villager", tone: "playful",
     bio: "Up before the sun to run the beach and stretch on the sand. Knows every shortcut on the island.",
-    schedule: { home: "hq", dawn: ["beach", "path"], day: ["pond", "plaza", "beach"], evening: ["plaza", "beach"], night: ["beach", "home"] },
+    schedule: { home: "hq", dawn: ["beach", "plaza"], day: ["beach", "plaza", "beach"], evening: ["plaza", "beach"], night: ["beach", "home"] },
     canned_dialogue: ["@morning Morning laps! Want to race to the pier?", "Stretch first. Trust me.", "The sand's firmest right by the water."] }),
   row({ slug: "marlo", display_name: "Marlo", post: "villager", tone: "warm",
     bio: "Sketches the island from the benches, a page a day. Has drawn HQ forty times and isn't happy with any of them.",
-    schedule: { home: "hq", day: ["bench", "pond", "museum"], evening: ["beach", "bench"], night: ["pond", "plaza", "home"] },
+    schedule: { home: "hq", day: ["bench", "beach", "museum"], evening: ["beach", "bench"], night: ["beach", "plaza", "home"] },
     canned_dialogue: ["Hold still, you're in the shot. Kidding. Mostly.", "The pond looks different every hour.", "I'm out of the green pencil again."] }),
   row({ slug: "nell", display_name: "Nell", post: "villager", tone: "warm",
     bio: "A night owl who sleeps in, then watches the stars from the bench under the lamp. Names the constellations after club members.",
@@ -202,13 +201,10 @@ export function withProposed(seeded: readonly NPCPersona[]): NPCPersona[] {
   return [...seeded.map(r => proposed.get(r.slug) ? { ...r, ...proposed.get(r.slug)!, id: r.id } : r), ...PROPOSED_RESIDENTS.filter(r => !seeded.some(s => s.slug === r.slug))];
 }
 
-/** Residents only the new world has (the village plays as it always did): Juno, its museum guide (m1). */
-export const NEW_WORLD_ONLY: ReadonlySet<string> = new Set(["docent"]);
-
 /**
- * x-lines (specs/launch/v1-gameplay.md): on the new world, lines that send you to something closed (the boat home, the
- * temple) say something about what's open instead. Swapped in code, line by line, so the village's (and anything an
- * admin rewrote) stay as they are.
+ * x-lines (specs/launch/v1-gameplay.md): lines that send you to something closed (the boat home, the
+ * temple) say something about what's open instead. Swapped in code, line by line, so the seeded lines (and anything an
+ * admin rewrote) stay as they are in the database.
  */
 export const NEW_WORLD_LINE_SWAPS: Readonly<Record<string, string>> = {
   "Boat's ready whenever you want to go home.": "The barrel on the dock buys whatever you catch. Fair prices. I check the scales myself.",
@@ -222,6 +218,5 @@ export function newWorldPersona<P extends Pick<NPCPersona, "talk" | "canned_dial
   const swap = (line: string) => NEW_WORLD_LINE_SWAPS[line] ?? line;
   return { ...p, canned_dialogue: p.canned_dialogue?.map(swap) ?? p.canned_dialogue, talk: p.talk?.map(c => c.map(swap)) ?? p.talk };
 }
-/** The residents this world has (lib/content/loader.ts useNPCPersonas): the new world's with Juno and its swapped lines; the village's as they always were. */
-export const residentsHere = <P extends Pick<NPCPersona, "slug" | "talk" | "canned_dialogue">>(personas: readonly P[], world: GameWorld = GAME_WORLD): P[] =>
-  world === "new" ? personas.map(newWorldPersona) : personas.filter(p => !NEW_WORLD_ONLY.has(p.slug));
+/** The residents as the island has them (lib/content/loader.ts useNPCPersonas): with their swapped lines. */
+export const residentsHere = <P extends Pick<NPCPersona, "talk" | "canned_dialogue">>(personas: readonly P[]): P[] => personas.map(newWorldPersona);

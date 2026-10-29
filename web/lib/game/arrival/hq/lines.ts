@@ -11,10 +11,6 @@
  */
 
 /** Alice, the HQ lead (lib/game/welcome.ts HQ_LEAD, residentRoster `wren`). */
-import { GAME_WORLD } from "@/lib/game/world/active";
-
-const NEW_WORLD = GAME_WORLD === "new";
-
 export const WREN = { slug: "wren", name: "Alice", post: "hq_lead" } as const;
 
 /** Her lines by key (script.ts says which beat says which). */
@@ -62,7 +58,7 @@ export const WREN_LINES: Readonly<Record<string, readonly string[]>> = {
     "Deliveries at the monument count, and so does showing up to real events. Everyone's bit goes in the same pot.",
   ],
   farewell: [
-    NEW_WORLD ? "That's you registered. Bring your first catch to Juno at the museum. She'll show you round." : "That's you registered. Bring your first find to the museum shell, then come back and tell me.",
+    "That's you registered. Bring your first catch to Juno at the museum. She'll show you round.",
     "Oh, and you'll want more than a rod. Odile has a spare net and Pim always has a shovel. Ask them.",
     "[happy] Welcome to Tethos Island, {name}.",
   ],
@@ -135,42 +131,11 @@ export const PLAQUE_CARD = {
  * What each tool's resident says (lib/game/arrival/hq/teachers.ts TOOL_TEACHERS): `offer` the first time you talk to
  * them (they hand it over at the end, `given` a toast), `during` while its little quest runs, `done` as the quest
  * finishes (a toast).
- * The tracker shows `title` and the quest's one step.
  */
-type ToolLines = { title: string; step: string; offer: readonly string[]; during: readonly string[]; given: string; done: string };
-/** The village's, as they always were: each tool's own little quest (teachers.ts toolQuest). */
-const VILLAGE_TOOL_LINES: Readonly<Record<string, ToolLines>> = {
+type ToolLines = { offer: readonly string[]; during: readonly string[]; given: string; done: string };
+/** The main quest's chapters (m2, m3, m6) carry on from the hand-over, so the offers say what's next. */
+export const TOOL_LINES: Readonly<Record<string, ToolLines>> = {
   net: {
-    title: "Odile's bug net",
-    step: "Catch any bug",
-    offer: [
-      "[happy] {name}! You're the one Bram brought in. Found anything with wings yet?",
-      "No? You'll want a net. Here, my spare. It has seen a few summers.",
-      "Catch any bug you like. Then have a proper look at it before you decide what it's for.",
-    ],
-    during: ["Any bug at all. The flowers by the pond are busy this time of day."],
-    given: "Odile handed you her spare bug net.",
-    done: "The bug net is yours now. Odile says keep it.",
-  },
-  shovel: {
-    title: "Pim's shovel",
-    step: "Dig up one buried thing",
-    offer: [
-      "[happy] A new face! Do you dig? Everybody should dig.",
-      "Half this island is under the sand, and most of it is perfectly good. Perfectly good!",
-      "Here, take the shovel. Dig up one thing, anything, and it's yours to keep.",
-    ],
-    during: ["Look for the little cracks in the ground. There's always something under there."],
-    given: "Pim handed you a shovel.",
-    done: "The shovel is yours now. Pim says it's perfectly good.",
-  },
-};
-
-/** The new world's: the main quest's chapters (m2, m3, m6) carry on from the hand-over, so the offers say what's next. */
-const NEW_WORLD_TOOL_LINES: Readonly<Record<string, ToolLines>> = {
-  net: {
-    title: "Odile's bug net",
-    step: "Catch 3 bugs",
     offer: [
       "[happy] {name}! Found anything with wings yet?",
       "No? You'll want a net. Here, my spare. It has seen a few summers.",
@@ -181,20 +146,16 @@ const NEW_WORLD_TOOL_LINES: Readonly<Record<string, ToolLines>> = {
     done: "Your first bug! Odile's net is yours to keep.",
   },
   shovel: {
-    title: "Pim's shovel",
-    step: "Dig up 3 buried things",
     offer: [
       "[happy] A new face! Do you dig? Everybody should dig.",
       "Half this island is under the sand, and most of it is perfectly good. Perfectly good!",
-      "Look closely, they're easy to miss: a few hairline cracks in the sand, a scuffed patch of dirt. Dig up three things and show me.",
+      "Look closely, they're easy to miss: a scuffed patch of sand or dirt. Dig up three things and show me.",
     ],
-    during: ["Walk slowly and look down. A few hairline cracks in the sand, or a scuffed patch of dirt, and there's something under there."],
+    during: ["Walk slowly and look down. A scuffed patch of sand or dirt, and there's something under there."],
     given: "Pim handed you a shovel.",
     done: "Your first find! Pim's shovel is yours to keep.",
   },
   pickaxe: {
-    title: "Eliza's pickaxe",
-    step: "Break rocks for stone and iron",
     offer: [
       "[happy] {name}. Sit a moment. Did you know the HQ's first wall came out of these rocks?",
       "I dug its foundations with this very pickaxe. It's wasted on my wall now.",
@@ -206,4 +167,3 @@ const NEW_WORLD_TOOL_LINES: Readonly<Record<string, ToolLines>> = {
   },
 };
 
-export const TOOL_LINES = NEW_WORLD ? NEW_WORLD_TOOL_LINES : VILLAGE_TOOL_LINES;

@@ -1,16 +1,14 @@
 /* The quest tracker (QuestTracker.tsx): one white line, the current task's name, top right beside the minimap, that drops
    your quests down. The flat look (specs/design-bible.md UI): white card, ink type, the theme's --ui-* tokens only.
-   A host moves it with --quest-top / --quest-right or its own class (the island puts it left of the minimap). */
+   The bar and its list are one width (David 2026-10-28: "the bar and main quest drop down should horizontally be the
+   same length"). A host moves it with --quest-top / --quest-right or its own class (the island puts it left of the minimap). */
 .tracker { position: absolute; top: var(--quest-top, calc(var(--island-top, 40px) + max(12px, env(safe-area-inset-top)) + 58px)); right: var(--quest-right, max(14px, env(safe-area-inset-right)));
-  z-index: 24; max-width: min(260px, calc(100vw - 28px)); box-sizing: border-box; border-radius: 999px;
+  z-index: 24; width: min(300px, calc(100vw - 28px)); box-sizing: border-box; border-radius: 999px;
   background: var(--ui-card); color: var(--ui-ink); box-shadow: 0 4px 14px rgb(var(--ui-shade) / 0.14);
   font: 600 13px/1.25 var(--gui-font); zoom: var(--tsi-text-scale, 1); pointer-events: auto;
   transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.34, 1.4, 0.64, 1); animation: trackerIn 0.45s cubic-bezier(0.34, 1.4, 0.64, 1) both; }
 .tracker[data-hidden] { opacity: 0; transform: translateY(-6px); pointer-events: none; }
 @keyframes trackerIn { from { opacity: 0; transform: translateY(-8px) scale(0.97); } }
-/* The dropdown's bar and list are one width (David 2026-10-28: "the bar and main quest drop down should horizontally be
-   the same length"): the line keeps it whatever its label, and the list fills it. */
-.tracker[data-dropdown] { width: min(300px, calc(100vw - 28px)); max-width: none; }
 
 .line { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 38px; box-sizing: border-box; margin: 0; padding: 0 14px 0 12px; border: 0;
   border-radius: inherit; background: none; color: inherit; font: inherit; text-align: left; }

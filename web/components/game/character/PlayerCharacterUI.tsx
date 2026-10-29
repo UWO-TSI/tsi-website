@@ -28,7 +28,7 @@ export default function PlayerCharacterUI({ creator = true }: { creator?: boolea
   const mine = useMyLook();
   const identity = useWorldIdentity();
   return <>
-    {creator && mine.loaded && !mine.saved && <CharacterCreator flat initial={mine.look} askName={identity.signedIn ? { current: identity.display_name } : undefined}
+    {creator && mine.loaded && !mine.saved && <CharacterCreator flat member={mine.member} initial={mine.look} askName={identity.signedIn ? { current: identity.display_name } : undefined}
       onDone={async (look, name) => { await saveMyLook(look); if (name) await saveName(name); }} />}
   </>;
 }

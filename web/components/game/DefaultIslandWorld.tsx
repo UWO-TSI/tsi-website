@@ -107,6 +107,8 @@ import DonateSheet from "./peaceful/DonateSheet";
 import { ShowcaseSheet, TrophySheet } from "./peaceful/ShowcaseSheets";
 import type { MuseumWing } from "@/lib/collections/logic";
 import FishingOverlay from "./FishingOverlay";
+import RaidCall from "./fishing/RaidCall";
+import { fishBosses } from "@/lib/game/fishing";
 import ToastHub, { toast } from "./ToastHub";
 import RewardCard from "./RewardCard";
 import LevelUpCard from "./LevelUpCard";
@@ -119,10 +121,10 @@ import InteriorBackdrop from "./InteriorBackdrop";
 import ShopCounter from "./ShopCounter";
 import ShopkeeperChoice, { MERCH_LINE, type ShopSection } from "./ShopkeeperChoice";
 import IslandLoading from "./IslandLoading";
+import { setLoadPart } from "@/lib/game/loadProgress";
+import { READY_FILES } from "@/lib/game/preloadAssets";
 import { loadGameWorld } from "@/lib/game/world/load";
-import { GAME_WORLD, worldModel } from "@/lib/game/world/active";
-/** The main quest (m1 to m6, t-next) and its feel are the new world's; the village plays as it always did. */
-const NEW_WORLD = GAME_WORLD === "new";
+import { worldModel } from "@/lib/game/world/active";
 import TalkBox from "./TalkBox";
 import { emptyTalkView, requestTalk, subscribeTalk, talkStore, talkView } from "@/lib/game/residentTalk";
 import DailyGift from "./DailyGift";
@@ -131,7 +133,7 @@ import Arrival from "./arrival/Arrival";
 import GuideArrow from "./GuideArrow";
 import ArrivalWorld, { crateSpots, placeWorld, withCrates } from "./arrival/ArrivalWorld";
 import { arrivalEvent, bramNear, bramPrompt, useArrivalPhase, useArrivalTools, useTutorialQuest } from "@/lib/game/arrival/arrivalStore";
-import { routeFor } from "@/lib/game/arrival/routes";
+import { NEW_ROUTE } from "@/lib/game/arrival/routes/new";
 import { gateWheel } from "@/lib/game/arrival/tools";
 import { postArrival, useArrivalFlag } from "@/lib/game/arrival/arrivalFlag";
 import { BRAM, TUTORIAL_REWARD, type HintKeys } from "@/lib/game/arrival/lines";
@@ -167,7 +169,6 @@ import { nextLayer, subscribePause, type EscLayer } from "@/lib/game/escMenu";
 import { MenuDock, SystemMenu } from "./EscLayers";
 import QuestTracker from "./QuestTracker";
 import { useMainQuest } from "./useMainQuest";
-import { chapterQuest } from "@/lib/game/questTracker";
 import { setNetSheet } from "./net/sheets";
 import { useNetStatus, useRoster } from "@/lib/net/netStore";
 import { useFriends } from "./net/friendActions";
@@ -287,7 +288,7 @@ function gullPerchSpots(v: Village, ground: (x: number, z: number) => number): [
 }
 
 /**
- * The village as this scene uses it, all from the map file (specs/island-painter.md):
+ * The village as this scene uses it, all from the map file (archive/village/island-painter.md):
  * walking, objects, doors, spawns, nodes, water and the size-dependent settings.
  * Built once per loaded map; nothing here is placed relative to the local player.
  */
@@ -481,7 +482,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   // The arrival (components/game/arrival): Bram walks you through, the fish crate on the pier until the tour is over.
   const arrivalPhase = useArrivalPhase();
   const dock = layout.dock;
-  const crated = useMemo(() => (dock ? withCrates(island, crateSpots(routeFor(GAME_WORLD), placeWorld(dock, v))) : null), [island, dock, v]);
+  const crated = useMemo(() => (dock ? withCrates(island, crateSpots(NEW_ROUTE, placeWorld(dock, v))) : null), [island, dock, v]);
   const walkOn = crated && (arrivalPhase === "crossing" || arrivalPhase === "landing" || arrivalPhase === "tutorial") ? crated : island;
   const spots = useMemo(() => eventSpots(event?.decor ?? null), [event]);
   const cafeAt = useMemo(() => { const c = layout.landmarks.find(l => l.id === "cafe"); return c ? { x: c.x, z: c.z, yaw: c.yaw ?? 0, scale: c.scale ?? 1 } : null; }, [layout]);
@@ -538,7 +539,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     // On the new world a closed building's sign never beats a resident in reach: Juno waits at the closed museum's door
     // to take your first catch (m1). The village keeps its order.
     const tn = talkStore.near;
-    if (tn.id && !fishing && (tn.d < nextD || (NEW_WORLD && (next === "museum" || next === "cafe")))) next = "talk";
+    if (tn.id && !fishing && (tn.d < nextD || next === "museum" || next === "cafe")) next = "talk";
     if (studyHoldsPrompt() || talking) next = null;
     // Bram waiting at his stop on the walk-along (or talking): E is his.
     else if (!fishing && bramNear(px, pz)) next = "bram";
@@ -697,7 +698,7 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {notice && <GLBProp url={NOTICE_BOARD_URL} position={at(notice)} rotation={[0, Math.PI + (notice.yaw ?? 0), 0]} />}
     {board && <GLBProp url={CATCH_BOARD_URL} position={at(board)} rotation={[0, Math.PI + (board.yaw ?? 0), 0]} />}
     {missions && DROPS.combat && <GLBProp url={NOTICE_BOARD_URL} position={[missions.at[0], ground(...missions.at), missions.at[1] + 0.3]} rotation={[0, missions.yaw, 0]} />}
-    {layout.dock && <Wharf dock={layout.dock} light={light} place="village" dressed={!layout.dock.y} />}
+    {layout.dock && <Wharf dock={layout.dock} light={light} place="village" />}
     {layout.landmarks.filter(l => SIGNS[l.id] && !opened.includes(l.id as WorldGoalId)).map(l => <LandmarkTag key={l.id} position={[l.x, ground(l.x, l.z) + (l.half && l.half[0] > 1 ? 3.6 : 2.3), l.z - (l.half?.[1] ?? 0)]} closed={!l.open}>
       {SIGNS[l.id]}
     </LandmarkTag>)}
@@ -707,9 +708,11 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
 
 /** The cream loading screen until the first warm-up (`ready`), then a fade; an asset that fails to load gets a reload card. */
 function LoadingStatus({ ready }: { ready: boolean }) {
-  const { active, progress, errors } = useProgress();
+  const { active, progress, loaded, total, errors } = useProgress();
   const [gone, setGone] = useState(false);
   useEffect(() => { if (!ready) return; const t = window.setTimeout(() => setGone(true), 700); return () => window.clearTimeout(t); }, [ready]);
+  // Of how many: the loader's count so far, or what a whole first load asks for, whichever is more (no stall at a wave's end).
+  useEffect(() => { if (!ready) setLoadPart("files", loaded / Math.max(total, READY_FILES)); }, [loaded, total, ready]);
   return <>
     {!gone && <IslandLoading stage={active ? "loading" : progress >= 100 ? "warming" : "start"} leaving={ready} />}
     {errors.length > 0 && <div className={styles.loading} role="alert">An island asset could not load.<button className={styles.return} onClick={() => window.location.reload()}>Reload island</button></div>}
@@ -718,11 +721,15 @@ function LoadingStatus({ ready }: { ready: boolean }) {
 
 /** `preset` (default: the game look, CURRENT) and `children` (mounted inside the Canvas) are for /lab/look only. */
 export default function DefaultIslandWorld({ preset, children }: { preset?: LookPreset; children?: ReactNode }) {
-  // The member island's world (NEXT_PUBLIC_GAME_WORLD): the new world loads into the village's place before anything mounts.
+  // The member island's world: the new world loads before anything mounts.
   const [loading] = useState(loadGameWorld);
-  const [worldReady, setWorldReady] = useState(!loading);
-  useEffect(() => { void loading?.then(() => setWorldReady(true)); }, [loading]);
-  if (!worldReady) return <IslandLoading />;
+  const [world, setWorld] = useState<"loading" | "ready" | "failed">(loading ? "loading" : "ready");
+  useEffect(() => { void loading?.then(() => setWorld("ready"), () => setWorld("failed")); }, [loading]);
+  // The loading screen's progress (lib/game/loadProgress.ts): the island's code is running; then its world is in.
+  useEffect(() => setLoadPart("code", 1), []);
+  useEffect(() => { if (world === "ready") setLoadPart("world", 1); }, [world]);
+  if (world === "failed") return <div className={styles.loading} role="alert">The island could not load.<button className={styles.return} onClick={() => window.location.reload()}>Reload island</button></div>;
+  if (world === "loading") return <IslandLoading />;
   return <GameSceneBoundary><DefaultIslandWorldContent preset={preset}>{children}</DefaultIslandWorldContent></GameSceneBoundary>;
 }
 
@@ -1123,7 +1130,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     }
     // The net through the air: the footstep quickened as the whoosh (the combat swing's stand-in), never a dialogue blip.
     // A swing at nothing startles any bug near it (VillageLife): sneak up until the net says so.
-    if (toolAction.verb === "swing") { clip("Net"); AudioManager.playSFX("footstep", { rate: 1.5, gain: 0.45 }); if (NEW_WORLD) window.dispatchEvent(new CustomEvent("tsi:net-whiff", { detail: { x: at[0], z: at[1] } })); return; }
+    if (toolAction.verb === "swing") { clip("Net"); AudioManager.playSFX("footstep", { rate: 1.5, gain: 0.45 }); window.dispatchEvent(new CustomEvent("tsi:net-whiff", { detail: { x: at[0], z: at[1] } })); return; }
     if (toolAction.verb === "dig") { clip("Dig"); window.setTimeout(() => AudioManager.playSFX("footstep", { rate: 0.6, gain: 0.7 }), 540); return; }
     if (toolAction.verb === "mine") { clip("Strike"); return; }
     if (toolAction.verb === "attack") {
@@ -1197,12 +1204,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // worked on (none while the member mutes the HUD's quests: the objective is empty then).
   const tutorialQuest = useTutorialQuest({ bag: keyName(identity.settings.key_bindings.openJournal), touch });
   // The main quest (t-next, m1 to m6): the member's chapter, its people's words, and the dropdown's guide arrow.
-  // The new world's (useMainQuest is inert in the village); the village keeps its one line: the walk-along, the HQ
-  // visit or a tool's quest, else the chapter being worked on, which opens the journal.
-  const main = useMainQuest(player, NEW_WORLD);
-  const trackedChapter = useMemo(() => chapterQuest(progressionState.chapters, !!progression.objective.text), [progressionState.chapters, progression.objective.text]);
-  const quests = useMemo(() => (NEW_WORLD ? [tutorialQuest ?? hq.quest, main.quest] : [tutorialQuest ?? hq.quest ?? trackedChapter]).filter((q): q is NonNullable<typeof q> => !!q),
-    [tutorialQuest, hq.quest, main.quest, trackedChapter]);
+  const main = useMainQuest(player);
+  const quests = useMemo(() => [tutorialQuest ?? hq.quest, main.quest].filter((q): q is NonNullable<typeof q> => !!q),
+    [tutorialQuest, hq.quest, main.quest]);
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
       // Arriving, the keys are the arrival's (components/game/arrival: a press skips the beat showing).
@@ -1312,7 +1316,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           </TopCluster>
           {/* Bram's walk-along, then the HQ visit with Alice and a tool's little quest (row 312), then the chapter. */}
           <QuestTracker className={styles.questSlot} quests={quests} hidden={tutorialQuest || hq.quest ? false : holdObjective} onOpen={() => setSheet("journal")}
-            dropdown={NEW_WORLD} guidable={main.quest && !inside ? [main.quest.id] : []} guided={main.guided} onGuide={main.guide} />
+            guidable={main.quest && !inside ? [main.quest.id] : []} guided={main.guided} onGuide={main.guide} />
         </div>
         <div className={styles.hudColumn} data-minimap data-new={objectiveNew || undefined}>
           {mapHere && !holdObjective && <MiniMap playerPosRef={player} plot={objectivePlot} big={uiView} onOpen={() => setMapOpen(true)} />}
@@ -1352,12 +1356,13 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         ? <button className={styles.interact} data-use onPointerDown={e => { if (e.pointerType !== "mouse" || capture.state !== "captured") applyTool(); }}><kbd>{touch ? "Tap" : "Click"}</kbd>{toolAction.label}</button>
         : needTool && <p className={styles.interact} data-closed="true" role="status"><kbd>{touch ? "Wheel" : keyName(wheelKeys.wheel)}</kbd>Take out your {needTool === "rod" ? "fishing rod" : needTool}</p>)}
       <FishingOverlay rod={held?.kind === "rod" && held.tier ? rodByTier(held.tier) : peaceful.rod} onActiveChange={setFishing} />
+      {fishBosses() && !fishing && !inside && <RaidCall />}
       <ToolWheel items={wheelItems} held={heldState.held} wheelKey={wheelKeys.wheel} touch={touch} onEquip={holdItem} onSwap={() => swapHeld(wheelItems)}
         enabled={ready && !inside && !fishing && !sheet && !bagOpen && !cinematic && !talking && !fading && !decor.decorating && !(touch && uiView)} />
       <EmoteWheel emoteKey={wheelKeys.emote} touch={touch} onPlay={entry => playWheelEntry(entry, player.current)}
         enabled={ready && site !== "ruins" && !fishing && !sheet && !bagOpen && !cinematic && !talking && !fading && !decor.decorating && !(touch && uiView)} />
       <DonateSheet open={donateOpen} onClose={() => setDonateOpen(false)} onDonated={loadMuseum} />
-      {NEW_WORLD && <MuseumDrive open={driveOpen} onClose={() => setDriveOpen(false)} onGiven={loadMuseum} />}
+      <MuseumDrive open={driveOpen} onClose={() => setDriveOpen(false)} onGiven={loadMuseum} />
       <ToastHub />
       {/* What a catch, a find, a craft or a bottle gave you: one card with its art, beside the Bag's fly-in. */}
       <RewardCard />

@@ -1,12 +1,9 @@
 /**
- * The village map file (specs/island-painter.md, rows 241, 246).
- *
- * `web/data/village-map.json` is the member island: the terrain grid in the
- * `island-map.json` document format plus an object layer. `/lab/map` paints it
- * and the game loads exactly what is painted. Every building, tree, prop, table,
- * resident anchor, spawn, puddle and bug spot is an object here, in world
- * coordinates; what an object IS (its model, footprint, door) stays in code,
- * keyed by its kind and id.
+ * The member island's map model (archive/village/island-painter.md, rows 241, 246, 321): the terrain grid in the
+ * `island-map.json` document format plus an object layer. Every building, tree, prop, table, resident anchor, spawn,
+ * puddle and bug spot is an object, in world coordinates; what an object IS (its model, footprint, door) stays in code,
+ * keyed by its kind and id. The member island is the new world (web/data/world, specs/world-editor.md); the cell
+ * documents here are the labs', the fixtures' and the painter's.
  *
  * ONE SEA CONVENTION. The sea is River water at level 0, the same cells the
  * terrain, ocean, glints and fishing already treat as water. Legacy drafts
@@ -14,12 +11,10 @@
  * as a hole, so parsing turns Void into sea. Sea, river and pond are told apart
  * by water connectivity (`classifyWater` in fishingSpots.ts), never by a shape.
  *
- * Built once per document: the grid, its height field and its bounds are cached
- * here and shared by every caller (`village()`), so the island is not rebuilt per
- * component. `/lab/island?draft=1` swaps the document with `setVillageDoc`
+ * Built once: the grid, its height field and its bounds are cached here and shared by every caller (`village()`), so
+ * the island is not rebuilt per component. `/lab/island?fixture=terrain` swaps the document with `setVillageDoc`
  * before the world mounts.
  */
-import villageDoc from "@/data/village-map.json";
 import {
   heightField, isVoid, isWater, parseIslandMap, serialiseIslandMap, surfaceAt, Surface,
   type IslandMap, type IslandMapDoc, type MapAnnotation, type PlacedProp,
@@ -112,19 +107,6 @@ export function serialiseVillage(map: IslandMap, objects: readonly MapObject[], 
   return { ...terrain, objects: objects.map(o => ({ ...o })) };
 }
 
-/**
- * Pretty JSON for the repo: one grid row and one object per line, so a painted
- * change is a readable diff.
- */
-export function villageJson(doc: VillageDoc): string {
-  const rows = (a: readonly unknown[]) => `[\n${a.map(r => `    ${JSON.stringify(r)}`).join(",\n")}\n  ]`;
-  const head = (["width", "depth", "originX", "originZ", "tile", "levelStep"] as const).map(k => `  "${k}": ${JSON.stringify(doc[k])}`);
-  const tail = [`  "levels": ${rows(doc.levels)}`, `  "surfaces": ${rows(doc.surfaces)}`];
-  if (doc.annotations?.length) tail.push(`  "annotations": ${rows(doc.annotations)}`);
-  tail.push(`  "objects": ${rows(doc.objects ?? [])}`);
-  return `{\n${[...head, ...tail].join(",\n")}\n}\n`;
-}
-
 /** Land extent in world units (cell edges): what size-dependent systems scale with. */
 export interface Bounds { minX: number; maxX: number; minZ: number; maxZ: number; cx: number; cz: number; halfW: number; halfD: number }
 
@@ -170,22 +152,23 @@ export function villageOf(map: IslandMap, objects: readonly MapObject[]): Villag
   return { map, field: heightField(map), objects, bounds: landBounds(map) };
 }
 
-/** Where /lab/map autosaves its working draft, and where `/lab/island?draft=1` reads it. */
-export const PAINTER_DRAFT_KEY = "lab-map-village-draft-v1";
-
-let source: VillageDoc = villageDoc as VillageDoc;
 let current: Village | null = null;
 let swapped = false;
+let member: (() => Village) | null = null;
 
-/** The member island every system reads: the shipped file, or a lab draft. */
+/** `village()`'s default, the new world's cell view: lib/game/world/member.ts registers it when imported. */
+export const setMemberVillage = (make: () => Village) => { member = make; };
+
+/** The member island every system reads: the new world, or a lab's swap. */
 export function village(): Village {
-  return (current ??= buildVillage(source));
+  if (current) return current;
+  if (!member) throw new Error("village(): the member world isn't loaded (import lib/game/world/member)");
+  return (current = member());
 }
 
-/** Replace the document (lab drafts). Call before the world mounts. */
+/** Replace the document (lab drafts and fixtures). Call before the world mounts. */
 export function setVillageDoc(doc: VillageDoc): void {
-  source = doc;
-  current = null;
+  current = buildVillage(doc);
   swapped = true;
 }
 
@@ -193,12 +176,6 @@ export function setVillageDoc(doc: VillageDoc): void {
 export function setVillage(v: Village): void {
   current = v;
   swapped = true;
-}
-
-let shipped: Village | null = null;
-/** The village file itself, whatever the island was swapped to: the title stays on the village (row 318). */
-export function shippedVillage(): Village {
-  return swapped ? (shipped ??= buildVillage(villageDoc as VillageDoc)) : village();
 }
 
 /** Whether the island was already swapped (a lab, or the new world loaded: lib/game/world/load.ts), so nothing swaps it again. */

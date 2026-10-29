@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { memoryStore } from "./memoryStore";
-import { GAME_WORLD } from "@/lib/game/world/active";
 import { adminCredit, advanceChapter, contribute, loadState, sendNote, syncRealActivity } from "./service";
 
 const now = new Date("2026-09-24T12:00:00Z");
@@ -129,24 +128,12 @@ describe("real activity sync", () => {
   });
 });
 
-const VILLAGE = GAME_WORLD === "village";
-/** This world's chapter 1, and the actions that finish it: the village reports to Alice, the new world hands Juno the catch. */
-const ONE = VILLAGE ? "settle-in" : "first-find";
-const FINISH = VILLAGE ? (["claim_plot", "donate_catch", "report_hq"] as const) : (["claim_plot", "donate_catch"] as const);
+/** Chapter 1, and the actions that finish it: Juno takes the catch. */
+const ONE = "first-find";
+const FINISH = ["claim_plot", "donate_catch"] as const;
 
 describe("chapters through the service", () => {
-  it.runIf(VILLAGE)("village: advances settle-in, letters on completion, and opens chapter 2", async () => {
-    const m = setup();
-    m.setFacts(A, { firstCatchKey: "fish_dace", counts: { fish: 1 } });
-    expect(await advanceChapter(m.store, A, { chapter_slug: "settle-in", action: "claim_plot" }, now)).toMatchObject({ ok: true });
-    expect(await advanceChapter(m.store, A, { chapter_slug: "reopen-cafe", action: "complete" }, now)).toMatchObject({ ok: false, status: 409 });
-    await advanceChapter(m.store, A, { chapter_slug: "settle-in", action: "donate_catch" }, now);
-    const done = await advanceChapter(m.store, A, { chapter_slug: "settle-in", action: "report_hq" }, now);
-    expect(done.ok && done.data.chapters.map((c) => c.status)).toEqual(["completed", "active", "locked", "locked"]);
-    expect(done.ok && done.data.objective).toMatchObject({ chapter_slug: "reopen-cafe", anchor: "monument" });
-    expect(done.ok && done.data.unread_letters).toBe(1);
-  });
-  it.runIf(!VILLAGE)("new world: Juno's donation finishes chapter 1, letters, and opens Odile's net", async () => {
+  it("Juno's donation finishes chapter 1, letters, and opens Odile's net", async () => {
     const m = setup();
     m.setFacts(A, { firstCatchKey: "fish_dace", counts: { fish: 1 } });
     expect(await advanceChapter(m.store, A, { chapter_slug: "first-find", action: "claim_plot" }, now)).toMatchObject({ ok: true });
@@ -159,7 +146,7 @@ describe("chapters through the service", () => {
     // David 2026-10-28: "chapter 1 done get enough exp to level up to level 2" (the level-up card reads xp_gain).
     expect(done.ok && done.data.xp_gain).toEqual({ amount: 125, total: 125, level: 2, levelled_up: true });
   });
-  it.runIf(!VILLAGE)("new world: chapter 1's XP is paid once, never for a skip", async () => {
+  it("chapter 1's XP is paid once, never for a skip", async () => {
     const m = setup();
     m.setFacts(A, { firstCatchKey: "fish_dace", counts: { fish: 1 } });
     expect(await m.store.grantXp(A, 125, "first-find", "chapter_xp:first-find")).toMatchObject({ replayed: false });
@@ -170,7 +157,7 @@ describe("chapters through the service", () => {
     const skipped = await advanceChapter(b.store, A, { chapter_slug: "first-find", action: "skip" }, now);
     expect(skipped.ok && skipped.data.xp_gain).toBeUndefined();
   });
-  it.runIf(!VILLAGE)("new world: gives a chapter's reward item once, on completion (Bram's Cedar rod)", async () => {
+  it("gives a chapter's reward item once, on completion (Bram's Cedar rod)", async () => {
     const m = setup();
     for (const slug of ["first-find", "odiles-net", "pims-shovel"]) await advanceChapter(m.store, A, { chapter_slug: slug, action: "skip" }, now);
     m.setFacts(A, { counts: { fish_kinds: 5 }, lastFishAt: "2026-09-24T22:59:00Z" });

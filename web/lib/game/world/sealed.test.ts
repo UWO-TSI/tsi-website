@@ -5,14 +5,13 @@
  * barrier objects standing at this drop, and the ground is whatever web/data/world holds, so this runs on any world.
  * The reach (walk, jump, glide, grab) is `reach.ts`.
  *
- * With the new world live (NEXT_PUBLIC_GAME_WORLD=new) a leak fails the test. Until then it prints the leaks, so David
- * can close them in the editor: `cd web && npx vitest run lib/game/world/sealed.test.ts`.
+ * A leak fails the test and prints where, so David can close it in the editor:
+ * `cd web && npx vitest run lib/game/world/sealed.test.ts`.
  */
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { type MapObject, type Village } from "../villageMap";
 import type { MapAnnotation } from "../grid";
-import { GAME_WORLD } from "./active";
 import { loadWorldFromDisk } from "./disk";
 import { createTerrain, sampleX, sampleZ, type WorldTerrain } from "./terrain";
 import { villageOfWorld } from "./village";
@@ -107,6 +106,6 @@ describe("the new world's v1 seal", () => {
     const w = loadWorldFromDisk(fileURLToPath(new URL("../../../data/world/", import.meta.url)));
     const found = leaks(villageOfWorld(w) as Village & { terrain: WorldTerrain }, w.annotations);
     if (found.length) console.warn(`Leaks into the hidden zones (fix in /lab/world):\n${found.map(l => `- ${l.zone}: ${l.reached} points reached, first at ${l.at.map(([x, z]) => `(${x}, ${z})`).join(" ")}`).join("\n")}`);
-    if (GAME_WORLD === "new") expect(found).toEqual([]);
+    expect(found).toEqual([]);
   }, 120_000);
 });

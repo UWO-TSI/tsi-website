@@ -5,38 +5,24 @@
    "slot": "top",
    "name": "Base tee",
    "glb": "outfits/top/top_tee.glb",
-   "tris": 152,
+   "tris": 144,
    "materials": [
     {
      "name": "M_Main",
      "tint": "outfit",
      "default": 0
-    },
-    {
-     "name": "M_Decal",
-     "decal": true,
-     "default": null
     }
    ],
-   "decalSlot": {
-    "material": "M_Decal",
-    "uv": [
-     0,
-     0,
-     1,
-     1
-    ],
-    "alphaMode": "MASK"
-   },
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "bodyCut": 0
   },
   {
    "id": "top_hoodie",
    "slot": "top",
    "name": "Hoodie",
    "glb": "outfits/top/top_hoodie.glb",
-   "tris": 279,
+   "tris": 271,
    "materials": [
     {
      "name": "M_Main",
@@ -47,109 +33,54 @@
      "name": "M_Accent",
      "tint": "outfit",
      "default": 1
-    },
-    {
-     "name": "M_Decal",
-     "decal": true,
-     "default": null
     }
    ],
-   "decalSlot": {
-    "material": "M_Decal",
-    "uv": [
-     0,
-     0,
-     1,
-     1
-    ],
-    "alphaMode": "MASK"
-   },
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "bodyCut": 2
   },
   {
    "id": "top_cardigan",
    "slot": "top",
    "name": "Cardigan",
-   "glb": "outfits/top/top_cardigan.glb",
-   "tris": 262,
+   "glb": "outfits/top/top_sweater.glb",
+   "tris": 216,
    "materials": [
     {
      "name": "M_Main",
      "tint": "outfit",
      "default": 7
-    },
-    {
-     "name": "M_Accent",
-     "tint": "outfit",
-     "default": 0
-    },
-    {
-     "name": "M_Trim",
-     "tint": "outfit",
-     "default": 0
-    },
-    {
-     "name": "M_Decal",
-     "decal": true,
-     "default": null
     }
    ],
-   "decalSlot": {
-    "material": "M_Decal",
-    "uv": [
-     0,
-     0,
-     1,
-     1
-    ],
-    "alphaMode": "MASK"
-   },
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "design": 5,
+   "bodyCut": 9
   },
   {
    "id": "top_stripe_ls",
    "slot": "top",
    "name": "Striped long-sleeve",
-   "glb": "outfits/top/top_stripe_ls.glb",
-   "tris": 256,
+   "glb": "outfits/top/top_longsleeve.glb",
+   "tris": 248,
    "materials": [
     {
      "name": "M_Main",
      "tint": "outfit",
      "default": 1
-    },
-    {
-     "name": "M_Stripe",
-     "tint": "outfit",
-     "default": 12
-    },
-    {
-     "name": "M_Decal",
-     "decal": true,
-     "default": null
     }
    ],
-   "decalSlot": {
-    "material": "M_Decal",
-    "uv": [
-     0,
-     0,
-     1,
-     1
-    ],
-    "alphaMode": "MASK"
-   },
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "design": 0,
+   "bodyCut": 1
   },
   {
    "id": "top_collar_shirt",
    "slot": "top",
    "name": "Collared shirt",
-   "glb": "outfits/top/top_collar_shirt.glb",
-   "tris": 176,
+   "glb": "outfits/top/top_tee_collar.glb",
+   "tris": 160,
    "materials": [
     {
      "name": "M_Main",
@@ -160,177 +91,92 @@
      "name": "M_Accent",
      "tint": "outfit",
      "default": 1
-    },
-    {
-     "name": "M_Decal",
-     "decal": true,
-     "default": null
     }
    ],
-   "decalSlot": {
-    "material": "M_Decal",
-    "uv": [
-     0,
-     0,
-     1,
-     1
-    ],
-    "alphaMode": "MASK"
-   },
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "design": 7,
+   "bodyCut": 10
   },
   {
    "id": "top_sweater_vest",
    "slot": "top",
    "name": "Sweater vest over tee",
-   "glb": "outfits/top/top_sweater_vest.glb",
-   "tris": 188,
+   "glb": "outfits/top/top_tee.glb",
+   "tris": 144,
    "materials": [
     {
      "name": "M_Main",
      "tint": "outfit",
      "default": 3
-    },
-    {
-     "name": "M_Accent",
-     "tint": "outfit",
-     "default": 1
-    },
-    {
-     "name": "M_Decal",
-     "decal": true,
-     "default": null
     }
    ],
-   "decalSlot": {
-    "material": "M_Decal",
-    "uv": [
-     0,
-     0,
-     1,
-     1
-    ],
-    "alphaMode": "MASK"
-   },
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "design": 6,
+   "bodyCut": 0
   },
   {
    "id": "top_tsi_crew",
    "slot": "top",
    "name": "TSI crewneck",
-   "glb": "outfits/top/top_tsi_crew.glb",
-   "tris": 256,
+   "glb": "outfits/top/top_sweater.glb",
+   "tris": 216,
    "materials": [
     {
      "name": "M_Main",
      "tint": "outfit",
      "default": 2
-    },
-    {
-     "name": "M_Accent",
-     "tint": "outfit",
-     "default": 3
-    },
-    {
-     "name": "M_Decal",
-     "decal": true,
-     "default": "outfits/decal_tsi_mark.png"
     }
    ],
-   "decalSlot": {
-    "material": "M_Decal",
-    "uv": [
-     0,
-     0,
-     1,
-     1
-    ],
-    "alphaMode": "MASK"
-   },
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "design": 2,
+   "bodyCut": 9
   },
   {
    "id": "top_raincoat",
    "slot": "top",
    "name": "Raincoat",
-   "glb": "outfits/top/top_raincoat.glb",
-   "tris": 218,
+   "glb": "outfits/top/top_coat.glb",
+   "tris": 216,
    "materials": [
     {
      "name": "M_Main",
      "tint": "outfit",
      "default": 6
-    },
-    {
-     "name": "M_Trim",
-     "tint": "outfit",
-     "default": 14
-    },
-    {
-     "name": "M_Decal",
-     "decal": true,
-     "default": null
     }
    ],
-   "decalSlot": {
-    "material": "M_Decal",
-    "uv": [
-     0,
-     0,
-     1,
-     1
-    ],
-    "alphaMode": "MASK"
-   },
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "design": 8,
+   "bodyCut": 11
   },
   {
    "id": "outfit_silk_sweater",
    "slot": "top",
    "name": "Silk sweater",
-   "glb": "outfits/top/outfit_silk_sweater.glb",
-   "tris": 236,
+   "glb": "outfits/top/top_sweater.glb",
+   "tris": 216,
    "materials": [
     {
      "name": "M_Main",
      "tint": "outfit",
      "default": 13
-    },
-    {
-     "name": "M_Accent",
-     "tint": "outfit",
-     "default": 0
-    },
-    {
-     "name": "M_Decal",
-     "decal": true,
-     "default": null
     }
    ],
-   "decalSlot": {
-    "material": "M_Decal",
-    "uv": [
-     0,
-     0,
-     1,
-     1
-    ],
-    "alphaMode": "MASK"
-   },
    "hidesBackHair": false,
    "hides": [],
-   "item": "outfit-silk-sweater"
+   "item": "outfit-silk-sweater",
+   "design": 4,
+   "bodyCut": 9
   },
   {
    "id": "bottom_shorts",
    "slot": "bottom",
    "name": "Base shorts",
    "glb": "outfits/bottom/bottom_shorts.glb",
-   "tris": 114,
+   "tris": 98,
    "materials": [
     {
      "name": "M_Main",
@@ -340,14 +186,15 @@
    ],
    "decalSlot": null,
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "bodyCut": 3
   },
   {
    "id": "bottom_trousers",
    "slot": "bottom",
    "name": "Long trousers",
    "glb": "outfits/bottom/bottom_trousers.glb",
-   "tris": 178,
+   "tris": 162,
    "materials": [
     {
      "name": "M_Main",
@@ -357,13 +204,14 @@
    ],
    "decalSlot": null,
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "bodyCut": 4
   },
   {
    "id": "bottom_pleated_skirt",
    "slot": "bottom",
    "name": "Pleated skirt",
-   "glb": "outfits/bottom/bottom_pleated_skirt.glb",
+   "glb": "outfits/bottom/bottom_skirt.glb",
    "tris": 120,
    "materials": [
     {
@@ -372,16 +220,17 @@
      "default": 11
     }
    ],
-   "decalSlot": null,
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "design": 9,
+   "bodyCut": 12
   },
   {
    "id": "bottom_overall_shorts",
    "slot": "bottom",
    "name": "Overall shorts",
-   "glb": "outfits/bottom/bottom_overall_shorts.glb",
-   "tris": 162,
+   "glb": "outfits/bottom/bottom_overalls.glb",
+   "tris": 146,
    "materials": [
     {
      "name": "M_Main",
@@ -394,16 +243,17 @@
      "default": 6
     }
    ],
-   "decalSlot": null,
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "design": 10,
+   "bodyCut": 14
   },
   {
    "id": "bottom_joggers",
    "slot": "bottom",
    "name": "Jogger pants",
    "glb": "outfits/bottom/bottom_joggers.glb",
-   "tris": 234,
+   "tris": 214,
    "materials": [
     {
      "name": "M_Main",
@@ -418,13 +268,14 @@
    ],
    "decalSlot": null,
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "bodyCut": 5
   },
   {
    "id": "bottom_long_skirt",
    "slot": "bottom",
    "name": "Long skirt",
-   "glb": "outfits/bottom/bottom_long_skirt.glb",
+   "glb": "outfits/bottom/bottom_skirt_long.glb",
    "tris": 160,
    "materials": [
     {
@@ -433,16 +284,16 @@
      "default": 15
     }
    ],
-   "decalSlot": null,
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "bodyCut": 13
   },
   {
    "id": "onepiece_sundress",
    "slot": "onepiece",
    "name": "Sundress",
-   "glb": "outfits/onepiece/onepiece_sundress.glb",
-   "tris": 208,
+   "glb": "outfits/onepiece/onepiece_dress.glb",
+   "tris": 188,
    "materials": [
     {
      "name": "M_Main",
@@ -455,19 +306,20 @@
      "default": 1
     }
    ],
-   "decalSlot": null,
    "hidesBackHair": false,
    "hides": [
     "top",
     "bottom"
-   ]
+   ],
+   "design": 11,
+   "bodyCut": 15
   },
   {
    "id": "outfit_monarch_cape",
    "slot": "onepiece",
    "name": "Monarch cape",
-   "glb": "outfits/onepiece/outfit_monarch_cape.glb",
-   "tris": 252,
+   "glb": "outfits/onepiece/onepiece_cape.glb",
+   "tris": 228,
    "materials": [
     {
      "name": "M_Main",
@@ -478,27 +330,23 @@
      "name": "M_Accent",
      "tint": "outfit",
      "default": 14
-    },
-    {
-     "name": "M_Trim",
-     "tint": "outfit",
-     "default": 1
     }
    ],
-   "decalSlot": null,
    "hidesBackHair": false,
    "hides": [
     "top",
     "bottom"
    ],
-   "item": "outfit-monarch-cape"
+   "item": "outfit-monarch-cape",
+   "design": 12,
+   "bodyCut": 17
   },
   {
    "id": "outfit_koi_kimono",
    "slot": "onepiece",
    "name": "Koi kimono",
-   "glb": "outfits/onepiece/outfit_koi_kimono.glb",
-   "tris": 277,
+   "glb": "outfits/onepiece/onepiece_kimono.glb",
+   "tris": 260,
    "materials": [
     {
      "name": "M_Main",
@@ -509,25 +357,16 @@
      "name": "M_Accent",
      "tint": "outfit",
      "default": 0
-    },
-    {
-     "name": "M_Trim",
-     "tint": "outfit",
-     "default": 7
-    },
-    {
-     "name": "M_Gold",
-     "tint": "outfit",
-     "default": 6
     }
    ],
-   "decalSlot": null,
    "hidesBackHair": false,
    "hides": [
     "top",
     "bottom"
    ],
-   "item": "outfit-koi-kimono"
+   "item": "outfit-koi-kimono",
+   "design": 3,
+   "bodyCut": 16
   },
   {
    "id": "shoes_slipon",
@@ -552,9 +391,9 @@
      "default": 1
     }
    ],
-   "decalSlot": null,
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "bodyCut": 6
   },
   {
    "id": "shoes_sneakers",
@@ -579,16 +418,16 @@
      "default": 1
     }
    ],
-   "decalSlot": null,
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "bodyCut": 7
   },
   {
    "id": "shoes_boots",
    "slot": "shoes",
    "name": "Boots",
    "glb": "outfits/shoes/shoes_boots.glb",
-   "tris": 248,
+   "tris": 216,
    "materials": [
     {
      "name": "M_Main",
@@ -599,16 +438,12 @@
      "name": "M_Sole",
      "tint": "outfit",
      "default": 14
-    },
-    {
-     "name": "M_Accent",
-     "tint": "outfit",
-     "default": 4
     }
    ],
-   "decalSlot": null,
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "design": 13,
+   "bodyCut": 18
   },
   {
    "id": "shoes_sandals",
@@ -628,16 +463,16 @@
      "default": 5
     }
    ],
-   "decalSlot": null,
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "bodyCut": 19
   },
   {
    "id": "shoes_loafers",
    "slot": "shoes",
    "name": "Loafers",
-   "glb": "outfits/shoes/shoes_loafers.glb",
-   "tris": 172,
+   "glb": "outfits/shoes/shoes_sneakers.glb",
+   "tris": 156,
    "materials": [
     {
      "name": "M_Main",
@@ -655,16 +490,17 @@
      "default": 4
     }
    ],
-   "decalSlot": null,
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "design": 15,
+   "bodyCut": 7
   },
   {
    "id": "shoes_rainboots",
    "slot": "shoes",
    "name": "Rain boots",
-   "glb": "outfits/shoes/shoes_rainboots.glb",
-   "tris": 248,
+   "glb": "outfits/shoes/shoes_boots.glb",
+   "tris": 216,
    "materials": [
     {
      "name": "M_Main",
@@ -677,9 +513,30 @@
      "default": 14
     }
    ],
-   "decalSlot": null,
    "hidesBackHair": false,
-   "hides": []
+   "hides": [],
+   "design": 14,
+   "bodyCut": 18
+  },
+  {
+   "id": "top_tsi_zip_hoodie",
+   "slot": "top",
+   "name": "TSI zip hoodie",
+   "glb": "outfits/top/top_hoodie_zip.glb",
+   "tris": 263,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": null,
+     "color": "#33508A"
+    }
+   ],
+   "hidesBackHair": false,
+   "hides": [],
+   "design": 1,
+   "bodyCut": 8,
+   "key": "tsi-zip-hoodie",
+   "members": true
   }
  ],
  "accessories": [
@@ -5278,6 +5135,112 @@
     "loop": true,
     "frames": 42
    }
+  ]
+ },
+ "designs": {
+  "atlas": "outfits/designs.png",
+  "materials": [
+   "M_Main"
+  ],
+  "cells": {
+   "stripe": 0,
+   "tsi_zip": 1,
+   "tsi_crew": 2,
+   "kimono": 3,
+   "silk": 4,
+   "cardigan": 5,
+   "vest": 6,
+   "shirt": 7,
+   "raincoat": 8,
+   "pleats": 9,
+   "overalls": 10,
+   "sundress": 11,
+   "cape": 12,
+   "boots": 13,
+   "rainboots": 14,
+   "loafers": 15
+  },
+  "rects": [
+   [
+    0.00390625,
+    0.00390625,
+    0.1171875
+   ],
+   [
+    0.2578125,
+    0.0078125,
+    0.234375
+   ],
+   [
+    0.5078125,
+    0.0078125,
+    0.234375
+   ],
+   [
+    0.7578125,
+    0.0078125,
+    0.234375
+   ],
+   [
+    0.12890625,
+    0.00390625,
+    0.1171875
+   ],
+   [
+    0.00390625,
+    0.12890625,
+    0.1171875
+   ],
+   [
+    0.12890625,
+    0.12890625,
+    0.1171875
+   ],
+   [
+    0.00390625,
+    0.25390625,
+    0.1171875
+   ],
+   [
+    0.12890625,
+    0.25390625,
+    0.1171875
+   ],
+   [
+    0.25390625,
+    0.25390625,
+    0.1171875
+   ],
+   [
+    0.37890625,
+    0.25390625,
+    0.1171875
+   ],
+   [
+    0.50390625,
+    0.25390625,
+    0.1171875
+   ],
+   [
+    0.62890625,
+    0.25390625,
+    0.1171875
+   ],
+   [
+    0.75390625,
+    0.25390625,
+    0.1171875
+   ],
+   [
+    0.87890625,
+    0.25390625,
+    0.1171875
+   ],
+   [
+    0.00390625,
+    0.37890625,
+    0.1171875
+   ]
   ]
  },
  "fit": {

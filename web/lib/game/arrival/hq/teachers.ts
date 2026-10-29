@@ -12,7 +12,6 @@
  * Only for a member whose tools are taught (they arrived under row 312); everyone else keeps the starters and their
  * residents talk as they always did. Pure: the island keeps the quests' states (store.ts) and feeds them in.
  */
-import type { TrackedQuest } from "@/lib/game/questTracker";
 import { TOOL_LINES } from "./lines";
 import { toolByKey } from "@/lib/game/tools";
 import { MINING } from "@/lib/collections/roster";
@@ -98,14 +97,6 @@ export function questFinished(kind: CatchKind, quests: ToolQuests): TaughtTool |
 
 /** The tools handed over on this device (their inventory keys): on the wheel at once, before the inventory reads back. */
 export const givenKeys = (quests: ToolQuests) => LIVE.filter(t => quests[t.tool]).map(t => t.key);
-
-/** The first running quest as the tracker shows it (null: none running). */
-export function toolQuest(quests: ToolQuests): TrackedQuest | null {
-  const t = LIVE.find(x => quests[x.tool] === "given");
-  if (!t) return null;
-  const l = TOOL_LINES[t.tool];
-  return { id: `tool:${t.tool}`, title: l.title, kind: "quest", steps: [{ id: `tool:${t.tool}:${t.finish}`, label: l.step, done: false }] };
-}
 
 /** Saved quests read back: only known tools and states. */
 export function parseQuests(raw: unknown): ToolQuests {

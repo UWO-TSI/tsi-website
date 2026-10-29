@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { z } from "zod";
 import type { Profile } from "@/lib/supabase/types";
-import { PART_BY_ID, eventPartOpen, lookRefs, ownsRef, parseLook } from "@/lib/game/character/look";
+import { PART_BY_ID, eventPartOpen, lookRefs, membersOnly, ownsRef, parseLook } from "@/lib/game/character/look";
 import { DEFAULT_TRADITIONS, costumeEvents } from "@/lib/content/traditions";
 import { supabaseTraditionsStore } from "@/lib/traditions/supabaseStore";
 import { supabaseEconomyStore } from "@/lib/wallet/supabaseStore";
@@ -132,6 +132,13 @@ export async function PATCH(request: Request) {
     // A custom hair colour (the colour wheel, head-v10) needs the colour wheel bought (ownsRef; David, 2026-10-17).
     const missing = lookRefs(avatar_config.look).filter((ref) => !ownsRef(owned.data, ref) && !(PART_BY_ID.get(ref)?.event && eventPartOpen(ref, events)));
     if (missing.length) return NextResponse.json({ error: "You don't own everything in that look.", code: "not_owned", missing }, { status: 403 });
+    // A members-only part (the TSI zip hoodie, David 2026-10-27): free to an active TSI member, never anyone else's.
+    // The same test as the member badge (lib/identity/service.ts badgeFor): profiles.membership 'member' and is_active.
+    const look = avatar_config.look;
+    if ([look.top, look.bottom, look.onepiece, look.shoes].some(membersOnly)) {
+      const { data: me } = await admin.from("profiles").select("membership, is_active").eq("id", user.id).maybeSingle();
+      if (!(me?.membership === "member" && me.is_active)) return NextResponse.json({ error: "That's for TSI members.", code: "members_only" }, { status: 403 });
+    }
   }
 
   const updated_at = new Date().toISOString();

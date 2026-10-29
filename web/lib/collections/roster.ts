@@ -12,13 +12,21 @@
  *
  * Hours are local island time, [start, end) wrapping past midnight; null = all
  * day. Months 1-12 (northern hemisphere, Ontario); [] = all year. `weather` []
- * = any. `rainAnyHour`: also out in the rain outside its hours.
+ * = any. `rainAnyHour`: also out in the rain outside its hours. `price`: its
+ * sell price in coins when set, else lib/wallet/catalogue.ts SELL_PRICES by
+ * category and rarity. David edits these on the catalogue editor
+ * (specs/tools/catalogue-editor), applied by scripts/apply-species.mjs.
  */
 import { DROPS } from "@/lib/game/drops";
-import { GAME_WORLD, type GameWorld } from "@/lib/game/world/active";
 export type Category = "fish" | "sea" | "bug" | "fruit" | "nature" | "mineral";
-export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
-export type Biome = "river" | "pond" | "cliff_pool" | "sea" | "beach" | "flowers" | "trees" | "ground" | "water_edge" | "bush" | "woods" | "rocks" | "dig_sand" | "dig_soil";
+import { RARITIES, type Rarity } from "@/lib/rarity";
+export type { Rarity } from "@/lib/rarity";
+/** Where rod catches bite (the reel: sea, else river; pond fish only in ponds) and where land finds turn up (the island's nodes). */
+export const WATER_BIOMES = ["river", "pond", "cliff_pool", "sea"] as const;
+export const LAND_BIOMES = ["beach", "flowers", "trees", "ground", "water_edge", "bush", "woods", "rocks"] as const;
+/** Buried finds come up from dig spots (the main quest, m3). */
+export type Biome = (typeof WATER_BIOMES)[number] | (typeof LAND_BIOMES)[number] | "dig_sand" | "dig_soil";
+export const WEATHERS = ["clear", "cloudy", "rain", "snow"] as const;
 export type Tool = "rod" | "net" | "hand" | "shovel" | "pickaxe";
 export type Wing = "aquarium" | "insect_hall" | "nature_room";
 
@@ -33,7 +41,7 @@ export interface Species {
   size: [number, number] | null;
   hours: [number, number] | null;
   rainAnyHour: boolean;
-  weather: ("clear" | "cloudy" | "rain" | "snow")[];
+  weather: (typeof WEATHERS)[number][];
   months: number[];
   oneLiner: string;
   icon: string | null;
@@ -42,6 +50,7 @@ export interface Species {
   donatable: boolean;
   wing: Wing | null;
   position: number;
+  price?: number;
 }
 
 const DAY: [number, number] = [6, 18];
@@ -91,12 +100,12 @@ const FISH_ROWS: Row[] = [
   ["fish_carp", "Carp", "pond", "uncommon", [35, 70], null, { oneLiner: "Big, calm, unbothered." }],
   ["fish_bluegill", "Bluegill", "pond", "uncommon", [12, 22], MIDDAY, { oneLiner: "Blue cheeks, bright afternoons." }],
   ["fish_snapping_turtle", "Snapping Turtle", "pond", "rare", [20, 35], NIGHT, { months: [4, 5, 6, 7, 8, 9, 10], oneLiner: "Keep fingers clear." }],
-  ["fish_golden_koi", "Golden Koi", "pond", "legendary", [60, 95], null, { oneLiner: "The pond's quiet celebrity." }],
+  ["fish_golden_koi", "Golden Koi", "pond", "epic", [60, 95], null, { oneLiner: "The pond's quiet celebrity." }],
   // cliff pools
   ["fish_char", "Char", "cliff_pool", "rare", [40, 60], null, { months: SPRING_AUTUMN, oneLiner: "Cold water, clear head." }],
   ["fish_gar", "Gar", "cliff_pool", "epic", [90, 150], EVE_NIGHT, { rainAnyHour: true, months: [6, 7, 8, 9], oneLiner: "Older than the dinosaurs, and looks it." }],
-  ["fish_golden_trout", "Golden Trout", "cliff_pool", "legendary", [40, 60], null, { months: [3, 4, 5, 9, 10, 11], oneLiner: "Glows like the last hour of daylight." }],
-  ["fish_stringfish", "Stringfish", "cliff_pool", "legendary", [80, 130], LATE, { rainAnyHour: true, months: [12, 1, 2, 3], oneLiner: "Long, pale and very rare." }],
+  ["fish_golden_trout", "Golden Trout", "cliff_pool", "epic", [40, 60], null, { months: [3, 4, 5, 9, 10, 11], oneLiner: "Glows like the last hour of daylight." }],
+  ["fish_stringfish", "Stringfish", "cliff_pool", "epic", [80, 130], LATE, { rainAnyHour: true, months: [12, 1, 2, 3], oneLiner: "Long, pale and very rare." }],
   // sea (beach and pier)
   ["fish_anchovy", "Anchovy", "sea", "common", [10, 15], DAY, { oneLiner: "Comes in a crowd." }],
   ["fish_horse_mackerel", "Horse Mackerel", "sea", "common", [20, 40], null, { oneLiner: "The pier's bread and butter." }],
@@ -110,7 +119,7 @@ const FISH_ROWS: Row[] = [
   ["fish_mahi_mahi", "Mahi-mahi", "sea", "rare", [80, 140], null, { months: [6, 7, 8, 9], oneLiner: "So good they named it twice." }],
   ["fish_football_fish", "Football Fish", "sea", "rare", [30, 60], NIGHT, { months: [11, 12, 1, 2, 3], oneLiner: "Brings its own lamp." }],
   ["fish_tuna", "Tuna", "sea", "epic", [150, 250], null, { months: [11, 12, 1, 2, 3, 4], oneLiner: "Built like a torpedo." }],
-  ["fish_coelacanth", "Coelacanth", "sea", "legendary", [120, 180], NIGHT, { weather: ["rain"], oneLiner: "A living fossil that only shows up on rainy nights." }],
+  ["fish_coelacanth", "Coelacanth", "sea", "epic", [120, 180], NIGHT, { weather: ["rain"], oneLiner: "A living fossil that only shows up on rainy nights." }],
 ];
 
 // ── Sea and shore creatures (12): pulled up at sea spots / found on the beach ──
@@ -211,7 +220,7 @@ export const LAUNCH_ROSTER: Species[] = [
  */
 export const EVENT_SPECIES: Species[] = make("fish", "rod", "aquarium", [
   ["fish_yellow_perch", "Yellow Perch", "river", "common", [20, 30], null, { months: [9], oneLiner: "Tourney season's favourite. Striped like the leaves." }],
-  ["fish_sturgeon", "Sturgeon", "river", "legendary", [100, 200], null, { months: [9], oneLiner: "Older than the lake. Only surfaces for the tourney." }],
+  ["fish_sturgeon", "Sturgeon", "river", "epic", [100, 200], null, { months: [9], oneLiner: "Older than the lake. Only surfaces for the tourney." }],
   ["fish_giant_trevally", "Giant Trevally", "sea", "rare", [80, 150], null, { months: [9], oneLiner: "Hits the line like it has a grudge." }],
 ], { model: null });
 
@@ -241,7 +250,7 @@ export const REEL_FISH: Species[] = make("fish", "rod", "aquarium", [
   ["fish_arowana", "Arowana", "river", "epic", [60, 90], NIGHT, { months: SUMMER, oneLiner: "Leaps out of the water for bugs." }],
   ["fish_dorado", "Dorado", "river", "epic", [70, 100], DAY, { months: SUMMER, oneLiner: "A gold streak that pulls like the current." }],
   ["fish_arapaima", "Arapaima", "river", "epic", [150, 300], EVE_NIGHT, { rainAnyHour: true, months: SUMMER, oneLiner: "Longer than the canoe. Bring a friend." }],
-  ["fish_golden_arowana", "Golden Arowana", "river", "legendary", [70, 100], NIGHT, { months: SUMMER, oneLiner: "Gold scales, and it knows it." }],
+  ["fish_golden_arowana", "Golden Arowana", "river", "epic", [70, 100], NIGHT, { months: SUMMER, oneLiner: "Gold scales, and it knows it." }],
   // pond
   ["fish_crayfish", "Crayfish", "pond", "common", [5, 12], null, { months: WARM, oneLiner: "Backs away from you, claws up." }],
   ["fish_pop_eyed_goldfish", "Pop-eyed Goldfish", "pond", "uncommon", [8, 12], null, { oneLiner: "Sees everything and is startled by all of it." }],
@@ -266,7 +275,7 @@ export const REEL_FISH: Species[] = make("fish", "rod", "aquarium", [
   ["fish_oarfish", "Oarfish", "sea", "epic", [300, 500], null, { months: [12, 1, 2, 3, 4, 5], oneLiner: "Long enough to need its own postcode." }],
   ["fish_great_white_shark", "Great White Shark", "sea", "epic", [300, 500], null, { months: SUMMER, oneLiner: "You're going to need a bigger pier." }],
   ["fish_whale_shark", "Whale Shark", "sea", "epic", [400, 800], null, { months: SUMMER, oneLiner: "Gentle, spotted and longer than the pier." }],
-  ["fish_hammerhead_shark", "Hammerhead Shark", "sea", "legendary", [180, 350], null, { months: SUMMER, oneLiner: "Sees both sides of every argument." }],
+  ["fish_hammerhead_shark", "Hammerhead Shark", "sea", "epic", [180, 350], null, { months: SUMMER, oneLiner: "Sees both sides of every argument." }],
 ], { model: null });
 
 /**
@@ -289,21 +298,21 @@ export const BURIED_FINDS: Species[] = make("nature", "shovel", "nature_room", [
   find("find_broken_sudo", "Broken Sudo", "dig_soil", "legendary", [9, 12], "A little screen-faced chassis with an empty heart socket. Whoever built it never got to flash it."),
 ]);
 
-/** The species of this world: the buried finds are the new world's (m3); the village's roster is as it was. */
-export const ROSTER: Species[] = [...LAUNCH_ROSTER, ...EVENT_SPECIES, ...REEL_FISH, ...(GAME_WORLD === "new" ? BURIED_FINDS : [])];
-/** A species row of this world (the database lists every world's: the book and the museum show this one's). */
-export const inWorld = (sp: Pick<Species, "biome">, world: GameWorld = GAME_WORLD) => world === "new" || (sp.biome !== "dig_sand" && sp.biome !== "dig_soil");
+/** Every species, with the buried finds (m3). */
+export const ROSTER: Species[] = [...LAUNCH_ROSTER, ...EVENT_SPECIES, ...REEL_FISH, ...BURIED_FINDS];
 
 /**
- * Mining (m6): on the new world a rock is broken with Mayor Eliza's pickaxe for stone or iron. Parked for the cave
+ * Mining (m6): a rock is broken with Mayor Eliza's pickaxe for stone or iron. Parked for the cave
  * update (David 2026-10-28, lib/game/drops.ts `cave`): until it's released, rocks are struck with the shovel as before.
  */
-export const MINING = GAME_WORLD === "new" && DROPS.cave;
-/** The tool a species is taken with in this world (the pickaxe for a rock once mining is out; else its own). */
-export const toolOf = (sp: Pick<Species, "tool" | "biome">, world: GameWorld = GAME_WORLD, mining: boolean = DROPS.cave): Tool => (sp.biome === "rocks" && world === "new" && mining ? "pickaxe" : sp.tool);
-/** The rocks' yield on the new world (m6, David: "currently just stone and occasionally iron"); the village's rocks roll every mineral. */
+export const MINING = DROPS.cave;
+/** The tool a species is taken with (the pickaxe for a rock once mining is out; else its own). */
+export const toolOf = (sp: Pick<Species, "tool" | "biome">, mining: boolean = DROPS.cave): Tool => (sp.biome === "rocks" && mining ? "pickaxe" : sp.tool);
+/** The rocks' yield once mining is out (m6, David: "currently just stone and occasionally iron"). */
 export const NEW_WORLD_ROCKS = ["rock_stone", "rock_iron_nugget"] as const;
 
 export const CATEGORIES: Category[] = ["fish", "sea", "bug", "fruit", "nature", "mineral"];
-export const RARITY_RANK: Record<Rarity, number> = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 };
+export { RARITY_RANK } from "@/lib/rarity";
+/** The tiers a species can hold: common to Divine (Contraband stays shut, lib/rarity.ts). */
+export const PLAYER_RARITIES = RARITIES.filter(r => r !== "contraband");
 export const WING_OF: Record<Category, Wing | null> = { fish: "aquarium", sea: "aquarium", bug: "insect_hall", fruit: null, nature: "nature_room", mineral: null };

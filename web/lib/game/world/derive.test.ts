@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import doc from "@/data/world/world.json";
 import { seedTerrain, terrainOf, type Terrain } from "../grid";
 import { shoreFieldOf } from "../seabed";
-import { shippedVillage } from "../villageMap";
+import { village } from "../villageMap";
 import { deriveWorld, derivedBuffers } from "./derive";
 import { decodeWorld, type WorldDoc } from "./format";
 import { terrainShoreField } from "./terrain";
@@ -47,8 +47,8 @@ describe("the smooth world's derivation off the main thread (derive.ts)", () => 
     expect(shoreFieldOf(v.map)).toBe(made.shore);
   }, 30000);
 
-  it("leaves the village's own derivation as it was (a copy of its map derives the same bytes)", () => {
-    const map = shippedVillage().map;
+  it("leaves a cell world's own derivation as it was (a copy of its map derives the same bytes)", () => {
+    const map = village().map; // the new world's cell view
     sameTerrain(terrainOf(structuredClone(map)), terrainOf(map));
   });
 });

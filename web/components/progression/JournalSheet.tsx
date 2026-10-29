@@ -7,7 +7,6 @@ import type { AdvanceAction } from "@/lib/progression/chapters";
 import { refreshProgression, setProgressionState, useProgression } from "@/lib/progression/useProgression";
 import type { ChapterView, GoalProgressView, ProgressionState } from "@/lib/progression/types";
 import { museumLine } from "@/lib/game/mainQuest";
-import { GAME_WORLD } from "@/lib/game/world/active";
 import { onBoard } from "@/lib/progression/seasonal";
 import ClubGoal, { UpNextGoal, isUpNext } from "./ClubGoal";
 import ContributeSheet from "./ContributeSheet";
@@ -89,8 +88,8 @@ export function JournalBody({ initialTab = "quests" }: { initialTab?: Tab }) {
           <Folds label="Chapters">
             {state.chapters.map((c, i) => {
               const locked = c.status === "locked", done = c.status === "completed" || c.status === "skipped";
-              // The village numbers by position as always; the new world's errands sit after the club rows', so it counts.
-              const n = GAME_WORLD === "new" ? i + 1 : c.position;
+              // The errands sit after the club rows' positions, so it counts.
+              const n = i + 1;
               return <Fold key={c.slug} testId="chapter" label={`Chapter ${n}: ${c.title}, ${STATUS_LABEL[c.status]}`}
                 state={done ? "done" : locked ? "locked" : "now"}
                 lead={done ? <Check size={18} strokeWidth={3} /> : locked ? <Lock size={15} /> : n}

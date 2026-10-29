@@ -23,6 +23,7 @@ import {
   type CardFamily, type CardFrame, type ChatLine, type ChatRefusal, type ClockSample, type EvKind, type HeldKind, type MoveClip, type NetPlayer, type Pose,
   type PosePacket, type RosterEntry, type StudyState, type SysMessage,
 } from "./protocol";
+import * as N from "./protocol";
 
 /** mulberry32: a seeded generator, so the random cases are the same every run. */
 function rng(seed: number) {
@@ -89,7 +90,7 @@ describe("append-only tables (wire indexes: add at the end, never reorder, renam
   });
   it("message names (the server registers each client-to-server one; an unknown type closes with 4002)", () => {
     expect(MSG).toEqual({ pose: "p", slow: "s", ping: "ping", refresh: "refresh", chat: "chat", event: "e", pong: "pong", sys: "sys", line: "line",
-      follow: "follow", friends: "friends" });
+      follow: "follow", friends: "friends", raid: "raid" });
     expect(new Set(Object.values(MSG)).size).toBe(Object.keys(MSG).length);
   });
 });
@@ -644,5 +645,27 @@ describe("world clock offset (§4.7)", () => {
   it("skips broken samples; none gives null", () => {
     expect(estimateClockOffset([])).toBeNull();
     expect(estimateClockOffset([{ sent: 10, received: 5, server: 0 }, { sent: NaN, received: 1, server: 1 }])).toBeNull();
+  });
+});
+
+describe("raids (note 11)", () => {
+  const roll = "11111111-2222-4333-8444-555555555555";
+  it("parses the four ups and refuses the rest", () => {
+    expect(N.parseRaidUp({ op: "open", fish: "fish_x", roll, x: 1, z: 2 })).toEqual({ op: "open", fish: "fish_x", roll, x: 1, z: 2 });
+    expect(N.parseRaidUp({ op: "join", id: "abc" })).toEqual({ op: "join", id: "abc" });
+    expect(N.parseRaidUp({ op: "hit", id: "abc", dealt: 0.01 })).toEqual({ op: "hit", id: "abc", dealt: 0.01 });
+    expect(N.parseRaidUp({ op: "leave", id: "abc" })).toEqual({ op: "leave", id: "abc" });
+    for (const bad of [null, [], { op: "open", fish: "Bad Key", roll, x: 0, z: 0 }, { op: "open", fish: "f", roll: "nope", x: 0, z: 0 },
+      { op: "open", fish: "f", roll, x: 1e6, z: 0 }, { op: "hit", id: "abc", dealt: -1 }, { op: "hit", id: "abc", dealt: 2 }, { op: "join", id: "" }, { op: "x", id: "abc" }]) {
+      expect(N.parseRaidUp(bad)).toBeNull();
+    }
+  });
+  it("parses a view, none, and refuses a broken one", () => {
+    expect(N.parseRaidView({ id: "" })).toBe(N.NO_RAID);
+    const v = { id: "abc", fish: "fish_x", area: 0, x: 1, z: 2, stamina: 0.5, helpers: 3, endsAt: 1000, joined: true, result: "landed", credit: "p.s" };
+    expect(N.parseRaidView(v)).toEqual(v);
+    expect(N.parseRaidView({ ...v, stamina: 1.5 })).toBeNull();
+    expect(N.parseRaidView({ ...v, result: "won" })).toBeNull();
+    expect(N.parseRaidView({ ...v, area: 999 })).toBeNull();
   });
 });

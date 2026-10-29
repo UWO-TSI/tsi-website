@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { GAME_WORLD } from "@/lib/game/world/active";
 import { NextResponse } from "next/server";
 import { memoryStore } from "./memoryStore";
 
@@ -42,10 +41,10 @@ describe("progression routes", () => {
   });
   it("rejects a chapter action the server conditions don't allow", async () => {
     // This world's chapter 1 (the village's settle-in, the new world's first-find): nothing caught yet.
-    const res = await advanceRoute(req({ chapter_slug: GAME_WORLD === "new" ? "first-find" : "settle-in", action: "donate_catch" }));
+    const res = await advanceRoute(req({ chapter_slug: "first-find", action: "donate_catch" }));
     expect(res.status).toBe(409);
     // The other world's chapter 1 isn't listed here.
-    expect((await advanceRoute(req({ chapter_slug: GAME_WORLD === "new" ? "settle-in" : "first-find", action: "donate_catch" }))).status).toBe(404);
+    expect((await advanceRoute(req({ chapter_slug: "settle-in", action: "donate_catch" }))).status).toBe(404);
   });
   it("keeps admin credit to T1/T2", async () => {
     const body = { member_id: A, points: 100, idempotency_key: "abcdefgh" };

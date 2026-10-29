@@ -19,7 +19,6 @@
  * (`?cafe=inside`, `?ruins=1`, `?home=1`, `?temple=inside`) still open their scenes whatever the drop: they are how
  * the lab and the perf bench reach them.
  */
-import { GAME_WORLD, type GameWorld } from "./world/active";
 export type DropNumber = 1 | 2 | 3 | 4;
 
 /** The drop each feature opens in (null: not scheduled yet). */
@@ -113,12 +112,12 @@ export function releasedGoals<G extends { unlocks: readonly string[] }>(goals: r
 }
 
 /**
- * The quest chapters this drop offers in this world (a chapter's `world`, null for both: the village keeps its own
- * chapter 1, the new world has the main quest's), each with the steps it can't take yet listed in `hidden_steps`
+ * The quest chapters this drop offers (the retired village's own chapters, `world` "village", never), each with the
+ * steps it can't take yet listed in `hidden_steps`
  * (counted as done where they gate the chapter's end; lib/progression/chapters.ts evaluateChapters).
  */
-export function releasedChapters<C extends { unlocks_regions: readonly string[]; world?: GameWorld | null; requirement?: string }>(chapters: readonly C[], flags: DropFlags = DROPS, world: GameWorld = GAME_WORLD): (C & { hidden_steps?: string[] })[] {
+export function releasedChapters<C extends { unlocks_regions: readonly string[]; world?: string | null; requirement?: string }>(chapters: readonly C[], flags: DropFlags = DROPS): (C & { hidden_steps?: string[] })[] {
   const hidden = Object.entries(STEP_FEATURE).filter(([, f]) => !flags[f]).map(([k]) => k);
   const parked = (c: C) => !!c.requirement && !!REQUIREMENT_FEATURE[c.requirement] && !flags[REQUIREMENT_FEATURE[c.requirement]];
-  return chapters.filter(c => (!c.world || c.world === world) && !parked(c) && c.unlocks_regions.every(r => regionReleased(r, flags))).map(c => (hidden.length ? { ...c, hidden_steps: hidden } : c));
+  return chapters.filter(c => c.world !== "village" && !parked(c) && c.unlocks_regions.every(r => regionReleased(r, flags))).map(c => (hidden.length ? { ...c, hidden_steps: hidden } : c));
 }

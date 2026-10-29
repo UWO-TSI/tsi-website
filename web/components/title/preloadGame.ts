@@ -1,11 +1,11 @@
 /**
  * The title page loads the game (David, 2026-10-26: "I want title page to already start loading everything just so that
  * less time is spent loading the game"). Once the title has drawn, in idle time, the browser prefetches what the island
- * asks for after Let's Play into its cache: first the island's code (read from the build itself, so it never goes stale),
- * then its models, textures and sounds in the order the island loads them (lib/game/preloadAssets.ts). `rel=prefetch`
- * is the browser's lowest priority, off the main thread, so the title's own frames and files go first, and a prefetched
- * file is used without asking the server again for five minutes. A few at a time, fewer on a slow line; nothing on a
- * phone (it gets the companion, not the island) or with data saver on.
+ * asks for after Let's Play into its cache: first its loading screen's still, then the island's code (read from the build
+ * itself, so it never goes stale), then its models, textures and sounds in the order the island loads them
+ * (lib/game/preloadAssets.ts). `rel=prefetch` is the browser's lowest priority, off the main thread, so the title's own
+ * frames and files go first, and a prefetched file is used without asking the server again for five minutes. A few at
+ * a time, fewer on a slow line; nothing on a phone (it gets the companion, not the island) or with data saver on.
  */
 
 const CHUNK = /static\/chunks\/[\w.-]+\.js/g;
@@ -40,7 +40,7 @@ export function preloadGame() {
   const slow = line?.effectiveType === "3g";
   const idle = window.requestIdleCallback ?? ((f: () => void) => window.setTimeout(f, 200));
   idle(() => {
-    void Promise.all([islandCode().catch(() => []), import("@/lib/game/preloadAssets")])
-      .then(([code, { GAME_ASSETS }]) => prefetch([...code, ...GAME_ASSETS], slow ? 2 : 6));
+    void Promise.all([islandCode().catch(() => []), import("@/lib/game/preloadAssets"), import("@/lib/game/loadProgress")])
+      .then(([code, { GAME_ASSETS }, { loadingStill }]) => prefetch([loadingStill(), ...code, ...GAME_ASSETS], slow ? 2 : 6));
   });
 }

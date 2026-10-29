@@ -37,6 +37,12 @@
  *    SHARD.max) or `follow {uid, refused}`; and `friends [{uid, shard, area}]` lists your friends who are on the island,
  *    pushed whenever one comes, goes or moves. A v2 client never meets a v1 server: the bump closes that pair with
  *    CLOSE.version instead of an unknown message's 4002. Deploy order: the friends migration, the server, the web.
+ * 11. Raids (specs/launch/v1-gameplay.md, "Fish tiers and fights": a divine catch is the whole shard's fight) add
+ *    `raid` both ways without a PROTOCOL bump, so live clients and the live server keep talking. The server sends every
+ *    joiner `raid` (the raid under way, or `{id: ""}`), and a client sends `raid` only once it has had one: an older
+ *    server never gets a type it would close on (4002). An older client ignores `raid`. Raids are behind the
+ *    NEXT_PUBLIC_FISH_BOSSES build flag (a later launch). The server is authoritative: it keeps the fish's stamina,
+ *    takes each helper's reported wear only up to what a reel can deal, and signs each helper's credit (RAID_CREDIT).
  */
 
 // ── Version and connecting ────────────────────────────────────────
@@ -56,6 +62,7 @@ export const ROOM_NAME = "island";
  */
 export const MSG = {
   pose: "p", slow: "s", ping: "ping", refresh: "refresh", chat: "chat", event: "e", pong: "pong", sys: "sys", line: "line", follow: "follow", friends: "friends",
+  raid: "raid",
 } as const;
 /** Dev tokens (`DEV_AUTH=1`, refused in production): `dev:<name>`, as `?mp=dev&as=Alice` and the bots send. */
 export const DEV_TOKEN_PREFIX = "dev:";
@@ -688,6 +695,70 @@ export function decodeEvent(x: unknown, out?: NetEvent): NetEvent | null {
   e.sid = x[0]; e.t = x[1]; e.kind = x[2]; e.value = value;
   return e;
 }
+
+// ── Raids (note 11) ───────────────────────────────────────────────
+
+/**
+ * A divine catch's raid. Each helper's reel wears the fish at most `wear` a second (lib/game/fishingReel.ts BOSS.wear)
+ * and reports it every `hitEveryMs`; `share` of it counts against the fish, which recovers `regen` a second, so one
+ * angler alone can't land it and a few can. It escapes after `lengthMs`. One raid per shard at a time, and a member
+ * may open one every `openEveryMs`. The view goes to every client every `viewEveryMs` while a raid runs.
+ */
+export const RAID = {
+  wear: 0.06, share: 0.3, regen: 0.017, lengthMs: 180_000, hitEveryMs: 250, viewEveryMs: 250, openEveryMs: 60_000,
+  /** How long a helper's signed credit stays good (ms). */
+  creditTtlMs: 600_000,
+} as const;
+const FISH_KEY = /^[a-z0-9_]{1,64}$/;
+const RAID_ID = /^[A-Za-z0-9_-]{1,40}$/;
+
+/** `raid` up: open one for the divine on your line (its cast's roll), join the one under way, report your wear, leave. */
+export type RaidUp =
+  | { op: "open"; fish: string; roll: string; x: number; z: number }
+  | { op: "join"; id: string }
+  | { op: "hit"; id: string; dealt: number }
+  | { op: "leave"; id: string };
+export function parseRaidUp(x: unknown): RaidUp | null {
+  if (!isRecord(x)) return null;
+  if (x.op === "open") {
+    const { fish, roll, x: px, z } = x;
+    return typeof fish === "string" && FISH_KEY.test(fish) && isUuid(roll) && isFiniteNumber(px) && isFiniteNumber(z) && Math.abs(px) <= 500 && Math.abs(z) <= 500
+      ? { op: "open", fish, roll, x: px, z } : null;
+  }
+  if (typeof x.id !== "string" || !RAID_ID.test(x.id)) return null;
+  if (x.op === "join" || x.op === "leave") return { op: x.op, id: x.id };
+  if (x.op === "hit") return isFiniteNumber(x.dealt) && x.dealt >= 0 && x.dealt <= 1 ? { op: "hit", id: x.id, dealt: x.dealt } : null;
+  return null;
+}
+
+/**
+ * `raid` down, to each client: the raid under way (`id` "" for none), where it surfaced (AREAS index, x, z), its
+ * stamina (0..1), how many are helping, when it escapes (room timeline ms), whether you're in it, and at the end its
+ * result and, for each helper, `credit`: the signed token the web's catch route takes once (RAID_CREDIT).
+ */
+export interface RaidView {
+  id: string; fish: string; area: number; x: number; z: number; stamina: number; helpers: number; endsAt: number; joined: boolean;
+  result?: "landed" | "escaped"; credit?: string;
+}
+export const NO_RAID: RaidView = { id: "", fish: "", area: 0, x: 0, z: 0, stamina: 0, helpers: 0, endsAt: 0, joined: false };
+export function parseRaidView(x: unknown): RaidView | null {
+  if (!isRecord(x) || typeof x.id !== "string") return null;
+  if (x.id === "") return NO_RAID;
+  const { id, fish, area, x: px, z, stamina, helpers, endsAt, joined, result, credit } = x;
+  if (!RAID_ID.test(id) || typeof fish !== "string" || !FISH_KEY.test(fish) || !isIndex(area, AREAS.length) || !isFiniteNumber(px) || !isFiniteNumber(z)
+    || !isFiniteNumber(stamina) || stamina < 0 || stamina > 1 || !isUint(helpers, 0xffff) || !isInt(endsAt, 0, TIME_MAX) || typeof joined !== "boolean") return null;
+  if (result !== undefined && result !== "landed" && result !== "escaped") return null;
+  if (credit !== undefined && (typeof credit !== "string" || credit.length > 1024)) return null;
+  return { id, fish, area, x: px, z, stamina, helpers, endsAt, joined, ...(result ? { result } : {}), ...(credit ? { credit } : {}) };
+}
+
+/**
+ * A helper's credit: `<payload>.<signature>`, the payload base64url JSON {m: member uid, f: fish key, r: the opener's
+ * roll, o: the opener's uid, i: raid id, e: expiry ms}, the signature hex HMAC-SHA256 of the payload with the shared
+ * REALTIME_INTERNAL_SECRET (the same one the web signs /internal with). The web takes it once per member and roll.
+ */
+export interface RaidCredit { m: string; f: string; r: string; o: string; i: string; e: number }
+export const RAID_CREDIT = { maxBytes: 1024 } as const;
 
 // ── Rates and limits ──────────────────────────────────────────────
 

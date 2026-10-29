@@ -51,9 +51,7 @@ export const SAND_BURST: Recipe = { sprite: "sandBurst", count: [1, 1], life: [0
 export const SAND_GRAINS: Recipe = { sprite: "sand", count: [2, 3], life: [0.45, 0.6], size: [0.55, 0.7], grow: 1.2, speed: [1, 1.8], spread: 0.7, up: [1.2, 2],
   gravity: 6, drag: 1.5, wind: 0.2, alpha: 0.95, face: B, rise: [0.05, 0.12] };
 export const SAND_TINT = 0xd8bd85;
-/** The hole decal's colour (multiplied by the painted pit and rim): the sand's own, darker. */
-export const HOLE_TINT = "#a48a63";
-/** The new world's dug hole (a plain disc): turned earth, darker than the sand and the dirt round it. */
+/** The dug hole (a plain disc): turned earth, darker than the sand and the dirt round it. */
 export const NEW_HOLE_TINT = "#5b4632";
 /** How far a dug-up find rises out of its hole before it goes to the hand, and how long that takes (ms). */
 export const DIG_RISE = { by: 0.4, ms: 320 } as const;

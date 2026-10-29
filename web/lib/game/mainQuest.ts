@@ -72,7 +72,7 @@ export const QUEST_LINES: Readonly<Record<string, { nudge: Lines; finish: Lines 
     ],
   },
   dig: {
-    nudge: ["{count} so far. Look closely: hairline cracks in the sand, a scuffed patch of dirt. Perfectly good things under there!"],
+    nudge: ["{count} so far. Look closely: a scuffed patch of sand or dirt. Perfectly good things under there!"],
     finish: [
       "[happy] Look at that haul! Perfectly good, every one of them.",
       "Some days the ground gives up something rare. Keep digging and you'll see.",

@@ -15,8 +15,8 @@ import { RECIPE_DROPS, RECIPE_DROP_CHANCE } from "@/lib/crafting/recipes";
 import { seededRandom } from "@/lib/game/weatherSystem";
 import { MINING, ROSTER } from "@/lib/collections/roster";
 import { BROKEN_SUDO } from "@/lib/collections/digLoot";
-import { activeVillage, fishRoll } from "@/lib/collections/rolls";
-import { GAME_WORLD } from "@/lib/game/world/active";
+import { fishRoll } from "@/lib/collections/rolls";
+import { village } from "@/lib/game/villageMap";
 
 const mock = vi.hoisted(() => ({ ctx: null as unknown, weather: "clear", goals: [] as unknown[] }));
 vi.mock("@/lib/server/memberContext", async (original) => ({
@@ -47,8 +47,8 @@ const post = async (body: unknown) => {
 const later = (ms: number) => (clock = new Date(clock.getTime() + ms));
 
 // A shore point with water in casting reach, and one in the middle of the land with none, on the island the server
-// checks (the active world, lib/game/world/active.ts).
-const v = activeVillage();
+// checks (the new world's cell view, lib/game/villageMap.ts village()).
+const v = village();
 const classify = villageWater(v).classify;
 const cells = Array.from({ length: v.map.width * v.map.depth }, (_, i) => [v.map.originX + (i % v.map.width) + 0.5, v.map.originZ + Math.floor(i / v.map.width) + 0.5] as [number, number]);
 const SHORE = cells.find(([x, z]) => fishingSpot(v.map, classify, x, z))!;
@@ -56,7 +56,7 @@ const INLAND = cells.find(([x, z]) => isGroundAtWorld(v.map, x, z) && !fishingSp
 /** Everyone's tier-1 tools (lib/game/tools.ts), held for a cast, a bug or a dig. */
 const ROD = "rod_flimsy", NET = "net-basic", SHOVEL = "shovel-basic", PICK = "pickaxe-basic";
 /** Rocks take Mayor Eliza's pickaxe once mining is out (the cave update, MINING); until then the shovel, as always. */
-const NEW_WORLD = GAME_WORLD === "new", ROCK_TOOL = MINING ? PICK : SHOVEL;
+const ROCK_TOOL = MINING ? PICK : SHOVEL;
 const nodes = villageNodes(v);
 const node = (prefix: string) => [...nodes.forage, ...nodes.bugs].find((n) => n.id.startsWith(prefix))!;
 
@@ -77,7 +77,7 @@ describe("POST /api/collections: the server rolls every catch", () => {
     // Every world has rocks to strike and shells to dig (the shovel's quest, lib/game/arrival/hq/teachers.ts); only the
     // new world has things buried in the sand and the dirt (m3).
     for (const prefix of ["rock-", "shell-", "mush-", "bug-flower-"]) expect(node(prefix), prefix).toBeDefined();
-    for (const prefix of ["dig-sand-", "dig-soil-"]) expect(!!nodes.forage.find((n) => n.id.startsWith(prefix)), prefix).toBe(NEW_WORLD);
+    for (const prefix of ["dig-sand-", "dig-soil-"]) expect(!!nodes.forage.find((n) => n.id.startsWith(prefix)), prefix).toBe(true);
   });
 
   it("refuses a client-reported species and size", async () => {
@@ -133,7 +133,7 @@ describe("POST /api/collections: the server rolls every catch", () => {
   });
 
   // m3, David 2026-10-28: a dig rolls the server's loot (relics, coins, ore, a rare gem, a very rare broken sudo) with the held shovel's tier.
-  it.skipIf(!NEW_WORLD)("a dig spot gives the server's loot: a shovel needed, once an hour, a purse into the wallet, every dig counted", async () => {
+  it("a dig spot gives the server's loot: a shovel needed, once an hour, a purse into the wallet, every dig counted", async () => {
     const spot = node("dig-soil-");
     const at: [number, number] = [spot.x, spot.z];
     expect((await post({ action: "harvest", node: spot.id, at })).status).toBe(422); // no shovel in hand
@@ -168,14 +168,14 @@ describe("POST /api/collections: the server rolls every catch", () => {
     expect((await post({ action: "harvest", node: rock.id, at, tool: ROCK_TOOL })).status).toBe(200);
   });
 
-  it("keeps the hourly caps (legendary: 3 per species per hour)", async () => {
-    for (let i = 0; i < 3; i++) await m.store.harvest(A, `n${i}`, "2026-09-24T12", "fish_golden_koi", 70, true);
-    await expect(m.store.harvest(A, "n3", "2026-09-24T12", "fish_golden_koi", 70, true)).rejects.toMatchObject({ code: "rate_limited" });
-    expect(m.countOf(A, "fish_golden_koi")).toBe(3);
+  it("keeps the hourly caps (epic: 6 per species per hour)", async () => {
+    for (let i = 0; i < 6; i++) await m.store.harvest(A, `n${i}`, "2026-09-24T12", "fish_golden_koi", 70, true);
+    await expect(m.store.harvest(A, "n6", "2026-09-24T12", "fish_golden_koi", 70, true)).rejects.toMatchObject({ code: "rate_limited" });
+    expect(m.countOf(A, "fish_golden_koi")).toBe(6);
     // The refused harvest didn't use up its node.
     later(3_600_000);
-    await m.store.harvest(A, "n3", "2026-09-24T12", "fish_golden_koi", 70, true);
-    expect(m.countOf(A, "fish_golden_koi")).toBe(4);
+    await m.store.harvest(A, "n6", "2026-09-24T12", "fish_golden_koi", 70, true);
+    expect(m.countOf(A, "fish_golden_koi")).toBe(7);
   });
 
   it("tells the catch card the size it records: every catch is a roster fish with a size (row 260)", async () => {
@@ -345,7 +345,7 @@ describe("POST /api/collections: rare catches can teach a recipe (rows 199, 258)
     c = memoryCraftingStore(undefined, () => clock, random);
     const N = 10_000;
     const close = (observed: number, p: number) => Math.abs(observed - p) <= 4 * Math.sqrt((p * (1 - p)) / N) + 0.002;
-    for (const [key, rarity] of [["bug_mantis", "rare"], ["rock_gold_nugget", "epic"], ["fish_golden_koi", "legendary"]] as const) {
+    for (const [key, rarity] of [["bug_mantis", "rare"], ["rock_gold_nugget", "epic"], ["fish_golden_koi", "epic"]] as const) {
       let hits = 0;
       for (let i = 0; i < N; i++) if (c.catchDrop(`${rarity}-${i}`, key)) hits++;
       expect(close(hits / N, RECIPE_DROP_CHANCE[rarity]), `${rarity}: ${hits}/${N}`).toBe(true);
@@ -396,22 +396,7 @@ describe("POST /api/collections: the held tool (row 279, specs/game-ui.md)", () 
     expect((await post({ action: "harvest", node: bug.id, at, tool: "net-emperor" })).status).toBe(200);
   });
 
-  it.runIf(!NEW_WORLD)("village: digs and strikes rocks only with a shovel; picking by hand needs none", async () => {
-    const rock = node("rock-"), at = [rock.x, rock.z];
-    expect(await post({ action: "harvest", node: rock.id, at })).toMatchObject({ status: 422, body: { code: "no_tool" } });
-    expect(await post({ action: "harvest", node: rock.id, at, tool: ROD })).toMatchObject({ status: 422, body: { code: "wrong_tool" } });
-    expect(await post({ action: "harvest", node: rock.id, at, tool: PICK })).toMatchObject({ status: 422, body: { code: "wrong_tool" } });
-    expect(await post({ action: "harvest", node: rock.id, at, tool: "shovel-gold" })).toMatchObject({ status: 403, body: { code: "tool_not_owned" } });
-    expect((await post({ action: "harvest", node: rock.id, at, tool: SHOVEL })).status).toBe(200);
-    // A mushroom is picked by hand: whatever is held (or nothing), the tool never refuses it.
-    const mush = node("mush-");
-    for (const tool of [undefined, ROD, "shovel-gold"]) {
-      const r = await post({ action: "harvest", node: mush.id, at: [mush.x, mush.z], tool });
-      expect(r.status, String(tool)).not.toBe(422);
-    }
-  });
-
-  it.runIf(NEW_WORLD)("new world: rocks take the shovel while mining is parked, digs only a shovel; picking by hand needs none", async () => {
+  it("rocks take the shovel while mining is parked, digs only a shovel; picking by hand needs none", async () => {
     const rock = node("rock-"), at = [rock.x, rock.z];
     expect(await post({ action: "harvest", node: rock.id, at })).toMatchObject({ status: 422, body: { code: "no_tool" } });
     // Mayor Eliza's pickaxe is the cave update's (David 2026-10-28): until then a rock is struck with the shovel, as before.
@@ -438,7 +423,7 @@ describe("POST /api/collections: the held tool (row 279, specs/game-ui.md)", () 
 
 describe("POST /api/collections: tools come from people after the tour (row 312, specs/hq-onboarding.md)", () => {
   // What the shovel digs: the new world's buried things, the village's rocks.
-  const bug = () => node("bug-flower-"), spot = () => node(NEW_WORLD ? "dig-sand-" : "rock-");
+  const bug = () => node("bug-flower-"), spot = () => node("dig-sand-");
   const net = () => post({ action: "harvest", node: bug().id, at: [bug().x, bug().z], tool: NET });
   const dig = () => post({ action: "harvest", node: spot().id, at: [spot().x, spot().z], tool: SHOVEL });
   beforeEach(() => { clock = new Date("2026-01-16T03:00:00Z"); }); // 22:00: the night butterflies are out

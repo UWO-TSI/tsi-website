@@ -10,7 +10,7 @@
  *       power, never past the far bank: lib/game/fishingCast.ts), lands with drops and rings drawn as water, and
  *       announces it (tsi:fish-splash {x, y, z}, after the frame: the overlay starts the wait on it).
  *   tsi:fish-nibble — the fake-out: the bobber dips, a small ring.
- *   tsi:fish-bite — pulled under in a crown of water, thrashing (smooth seeded noise); the paper "!" pops over you.
+ *   tsi:fish-bite — pulled under in a crown of water, thrashing (smooth seeded noise); the "!" pops over you (golden for a legendary, bigger still for a divine: hookBang.ts).
  *   tsi:fish-end — it goes.
  *
  * Motion runs on refs in useFrame (no React state per frame, nothing allocated per frame); the "!" is the only
@@ -24,10 +24,12 @@ import * as THREE from "three";
 import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
 import { castLanding, thrash } from "@/lib/game/fishingCast";
 import { FLOAT } from "@/lib/game/fishingRig";
-import { bobberLands, bobberNibbled, fishBites } from "@/lib/game/fx/fishingFx";
+import { bobberLands, bobberNibbled, fishBites, fishLeaps } from "@/lib/game/fx/fishingFx";
 import { seedAt, type ParticlePool } from "@/lib/game/fx/particles";
 import { tagLookClasses } from "@/lib/game/modelMaterials";
-import { BANG_POP, BANG_STYLE, BANG_TIMING, BOBBER_URL } from "./character/FishingRig";
+import { BOBBER_URL } from "./character/FishingRig";
+import { popBang } from "./character/hookBang";
+import type { HookTier } from "@/lib/game/fishing";
 import { useMoveParticles } from "./movement/moveFx";
 
 interface CastDetail {
@@ -47,7 +49,7 @@ export default function FishingBobber({ playerPosRef, waterHeight, towardWater =
   const particles = useMoveParticles();
   const [active, setActive] = useState(false);
   const activeRef = useRef(false);
-  const [bite, setBite] = useState(false);
+  const [bite, setBite] = useState<HookTier | null>(null);
   const groupRef = useRef<THREE.Group>(null);
   const biteGroupRef = useRef<THREE.Group>(null);
   const fx = useRef<Fx>({
@@ -74,7 +76,7 @@ export default function FishingBobber({ playerPosRef, waterHeight, towardWater =
       f.seed = seedAt(f.aim.x, f.aim.z, 61);
       f.t = 0;
       f.phase = "arc";
-      setBite(false);
+      setBite(null);
       setActive(true);
     };
     const onNibble = () => {
@@ -82,17 +84,19 @@ export default function FishingBobber({ playerPosRef, waterHeight, towardWater =
       f.nibbleAt = performance.now();
       bobberNibbled(particles.pool, f.land.x, f.waterY, f.land.z, ++f.nibbles);
     };
-    const onBite = () => {
+    const onBite = (e: Event) => {
       if (!activeRef.current) return;
+      const tier = (e as CustomEvent<{ tier?: HookTier }>).detail?.tier ?? "common";
       f.phase = "bite";
       f.biteT = 0;
-      setBite(true);
+      setBite(tier);
       fishBites(particles.pool, f.land.x, f.waterY, f.land.z);
+      if (tier !== "common") fishLeaps(particles.pool, f.land.x, f.waterY, f.land.z);
     };
     const onEnd = () => {
       activeRef.current = false;
       setActive(false);
-      setBite(false);
+      setBite(null);
     };
     window.addEventListener("tsi:fish-cast", onCast);
     window.addEventListener("tsi:fish-nibble", onNibble);
@@ -119,7 +123,7 @@ export default function FishingBobber({ playerPosRef, waterHeight, towardWater =
       {bite && (
         <Billboard ref={biteGroupRef}>
           <Html center zIndexRange={[30, 0]} style={{ pointerEvents: "none" }}>
-            <div aria-hidden style={{ ...BANG_STYLE, display: "block" }} ref={el => { el?.animate(BANG_POP, BANG_TIMING); }}>!</div>
+            <div aria-hidden style={{ position: "relative", width: 0, height: 0 }} ref={el => { if (el && el.dataset.hook !== bite) popBang(el, bite); }} />
           </Html>
         </Billboard>
       )}

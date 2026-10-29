@@ -71,9 +71,11 @@ export type CreatorChange = "tile" | "colour" | "place";
  * wardrobe shows the rest locked with a note (and `onShop`). `onChange` hears every change made here. `wheel={false}`
  * leaves out the hair colour wheel (the arrival's reflection creator keeps to the swatches, David 2026-10-26).
  */
-export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChange, wheel: showWheel = true }: {
+export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChange, wheel: showWheel = true, member = false }: {
   cat: Category; look: CharacterLook; setLook: (update: (l: CharacterLook) => CharacterLook) => void; mode: "create" | "wardrobe";
   owned: ReadonlySet<string>; onShop?: () => void; onChange?: (kind: CreatorChange) => void; wheel?: boolean;
+  /** A TSI member: the members-only parts show, free (shownOptions). */
+  member?: boolean;
 }) {
   const [lastAccessory, setLastAccessory] = useState<string | null>(null);
   // The flat creator's tiles move as the kit's cards do (a hover grows one, the worn ones stay out).
@@ -157,7 +159,7 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
     onChange?.("place");
   };
   // The starting creator: owned and never crafted; an event costume only while its tradition runs (shownOptions).
-  const shownTiles = cat.sections.flatMap(s => shownOptions(s, mode, has));
+  const shownTiles = cat.sections.flatMap(s => shownOptions(s, mode, has, member));
   const thumbKeys = new Set(shownTiles.flatMap(id => (id && needsBake(id) ? [thumbJob(id, look).key] : [])));
   useEffect(() => { prioritiseThumbs(thumbKeys); });
 
@@ -174,7 +176,7 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
       }}>Reset</Button>
     </div>}
     {cat.sections.map(section => {
-      const options = shownOptions(section, mode, has);
+      const options = shownOptions(section, mode, has, member);
       if (!options.length) return null;
       return <section key={section.id} className={styles.section} aria-label={section.label}>
         {cat.sections.length > 1 && <h3>{section.label}</h3>}

@@ -6,7 +6,7 @@ import { DomainError } from "@/lib/result";
 export type CollectionsErrorCode =
   | "unavailable" | "already_donated" | "not_owned" | "not_donatable" | "rate_limited" | "failed"
   | "too_fast" | "no_roll" | "roll_expired" | "already_landed" | "already_harvested" | "out_of_season" | "none_left"
-  | "bag_full" | "storage_full" | "locked" | "insufficient_items" | "key_reused" | "bad_qty";
+  | "bag_full" | "storage_full" | "locked" | "insufficient_items" | "key_reused" | "bad_qty" | "bad_credit";
 export class CollectionsError extends DomainError<CollectionsErrorCode> {}
 
 export interface TourneyRef {
@@ -73,6 +73,8 @@ export interface CollectionsStore {
    * A rare catch may teach a recipe with it (20260930100000).
    */
   land(memberId: string, rollId: string, seasonal?: LandSeason): Promise<CatchResult & { item_key: string; size_cm: number | null }>;
+  /** The species of a member's cast roll (landed or not, while it's kept: a day), or null: a raid's opener really had it on the line. */
+  rolled(memberId: string, rollId: string): Promise<string | null>;
   /** Atomic: one harvest per node per hour, recorded with collections_record_catch's caps (a capped one leaves the node unharvested); a rare one may teach a recipe. */
   harvest(memberId: string, nodeId: string, hourKey: string, itemKey: string, sizeCm: number | null, trophyEligible: boolean): Promise<CatchResult>;
   /**

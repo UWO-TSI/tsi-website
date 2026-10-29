@@ -9,7 +9,6 @@
  */
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
-import { PROPOSALS, pendingOf } from "@/lib/game/proposals";
 import { setVillage } from "@/lib/game/villageMap";
 import { decodeWorld, fromBase64, type WorldDoc } from "@/lib/game/world/format";
 import { PALETTE, type EditorItem } from "@/lib/game/world/editorTools";
@@ -18,7 +17,7 @@ import { villageOfWorld } from "@/lib/game/world/village";
 import type { IslandMap } from "@/lib/game/grid";
 import EditorCanvas, { input, pose } from "./EditorScene";
 import {
-  acceptProposals, bakeShore, beginStroke, bump, deleteSelected, ed, endStroke, item, loadHotbar, rotate, save, say, scaleSelected, selectSlot,
+  bakeShore, beginStroke, bump, deleteSelected, ed, endStroke, item, loadHotbar, rotate, save, say, scaleSelected, selectSlot,
   selectedObject, setSlotItem, undo, useEditor,
 } from "./editorStore";
 
@@ -78,7 +77,6 @@ const CONTROLS: [string, string][] = [
 function Info({ onWalk, onSave }: { onWalk: () => void; onSave: () => void }) {
   useEditor();
   const it = item(), sel = selectedObject(), cell = ed.mode === "cell";
-  const pending = PROPOSALS.filter(p => p.target === "world-map").map((p, i) => ({ p, i, n: pendingOf(p, ed.objects).length })).filter(x => x.n);
   return <>
     <div style={{ position: "absolute", top: 8, left: 8, zIndex: 20, ...PANEL, maxWidth: 520 }}>
       <div><b style={{ color: "#ffd166" }}>WORLD EDITOR</b> · <b>{cell ? "Cell mode" : "Brush mode"}</b> (B) · {it.label}{ed.dirty ? <span style={{ color: "#ff8f6a" }}> · unsaved</span> : ""}</div>
@@ -97,10 +95,6 @@ function Info({ onWalk, onSave }: { onWalk: () => void; onSave: () => void }) {
       <button onClick={() => { ed.overhead = !ed.overhead; bump(); }} style={{ ...PANEL, cursor: "pointer" }}>{ed.overhead ? "Fly view (O)" : "Overhead (O)"}</button>
       <button onClick={() => { ed.help = !ed.help; bump(); }} style={{ ...PANEL, cursor: "pointer" }}>?</button>
     </div>
-    {pending.length > 0 && <div style={{ position: "absolute", top: 50, right: 8, zIndex: 20, ...PANEL, maxWidth: 300 }}>
-      <div style={{ color: "#7fd1c0" }}>Proposals waiting for you</div>
-      {pending.map(({ p, i, n }) => <div key={p.title}>{p.title}: {n} <button onClick={() => acceptProposals(i)} style={{ ...PANEL, padding: "1px 6px", cursor: "pointer" }}>Accept</button></div>)}
-    </div>}
     {ed.help && <div style={{ position: "absolute", bottom: 80, left: 8, zIndex: 20, ...PANEL, maxWidth: 420 }}>
       {CONTROLS.map(([k, v]) => <div key={k}><span style={{ color: "#ffd166", display: "inline-block", minWidth: 150 }}>{k}</span>{v}</div>)}
     </div>}
