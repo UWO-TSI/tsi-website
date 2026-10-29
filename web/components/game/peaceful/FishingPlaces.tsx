@@ -106,7 +106,7 @@ export function FishingTasks({ transport = httpEconomyTransport, onPaid }: { tra
 export function TaskBoardSheet({ open, onClose, keys, transport = httpEconomyTransport }: { open: boolean; onClose: () => void; keys?: string; transport?: EconomyTransport }) {
   const till = useTill(transport);
   return <FlatPanel open={open} onClose={onClose} title="Fishing tasks" keys={keys} purse={till.purse} testId="task-board">
-    <div className={s.narrow}>{open ? <FishingTasks transport={transport} onPaid={(a, b) => till.move("coins", a, b)} /> : null}</div>
+    {open ? <FishingTasks transport={transport} onPaid={(a, b) => till.move("coins", a, b)} /> : null}
   </FlatPanel>;
 }
 
@@ -218,7 +218,7 @@ export function FishMarketSheet({ open, onClose, keys, transport = httpEconomyTr
     rail={<IconRail items={PLACES} value={place} onChange={setPlace} label="Fish market" />}>
     {!open ? null : place === "sell" ? <QuickSell transport={transport} onSold={(a, b) => till.move("coins", a, b)} />
       : place === "board" ? <MonthlyBoard load={loadMonthly} />
-      : <div className={s.narrow}><FishingTasks transport={transport} onPaid={(a, b) => till.move("coins", a, b)} /></div>}
+      : <FishingTasks transport={transport} onPaid={(a, b) => till.move("coins", a, b)} />}
   </FlatPanel>;
 }
 
@@ -281,13 +281,15 @@ export function TackleCounterSheet({ open, onClose, keys, transport = httpEconom
   return <FlatPanel open={open} onClose={onClose} title="Tackle counter" keys={keys} purse={till.purse} contentKey={counter} testId="tackle-counter"
     rail={<IconRail items={COUNTERS} value={counter} onChange={k => { setCounter(k); setWon(null); }} label="Counters" />}>
     {!data || !c ? <Quiet>{error ?? "Opening the counter…"}</Quiet> : <div className={s.counter}>
-      <div className={s.stage} data-counter={counter}>
+      <div className={s.counterMain}>
         {error ? <StatusLine error>{error}</StatusLine> : null}
-        {won ? <GachaReveal items={won} onDone={popBest} /> : <div className={s.banner}>
-          <span className={s.season}>{data.season}</span>
-          <div className={s.crazy}>{crazy.map(it => <Thumb key={it.key} picture={it.picture} rarity="legendary" size={120} label={it.name} tip={it.tip} />)}</div>
-          <span className={s.standIn}>Pictures are stand-ins until the models are made</span>
-        </div>}
+        <div className={s.stage} data-counter={counter}>
+          {won ? <GachaReveal items={won} onDone={popBest} /> : <div className={s.banner}>
+            <span className={s.season}>{data.season}</span>
+            <div className={s.crazy}>{crazy.map(it => <Thumb key={it.key} picture={it.picture} rarity="legendary" size={120} label={it.name} tip={it.tip} />)}</div>
+            <span className={s.standIn}>Pictures are stand-ins until the models are made</span>
+          </div>}
+        </div>
         <div className={s.pulls}>
           {([1, 10] as const).map(n => {
             const cost = n === 10 ? c.ten : c.each;

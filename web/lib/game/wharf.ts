@@ -311,11 +311,12 @@ export const SELL_BARREL = "sell-barrel";
  * The fish market's two boards (David, 2026-10-28: the catch board "should be near the fish shop"; the fishing tasks "on
  * a sperate board"): chalkboards out front, left of the door, in the market's frame (propModels.ts "fish-market": the
  * front faces +z; the quick-sell stall stands front right, about (3, 7.2), barrels and a cart front left), so they move with the market wherever David
- * paints it. E in front reads one.
+ * paints it. E beside one reads it.
  */
 export const FISH_MARKET = "fish-market";
 export const BOARD = { w: 1.0, h: 0.72, legs: 0.55 } as const;
-export const MARKET_BOARDS = { catch: { x: -5.4, z: 7.6, turn: 0.3 }, tasks: { x: -7.2, z: 6.9, turn: 0.5 } } as const;
+/** Each turns its face (`turn` past half a turn) toward where the game camera looks in from, so the chalk reads on screen. */
+export const MARKET_BOARDS = { catch: { x: -5.4, z: 7.6, turn: Math.PI + 0.35 }, tasks: { x: -8.2, z: 6.5, turn: Math.PI + 0.55 } } as const;
 export interface BoardSpot { x: number; z: number; yaw: number }
 /** Where the market's boards stand in the world and which way they face; null on a world without the market. */
 export function marketBoardsOf(props: readonly { model?: string; x: number; z: number; yaw?: number }[]): { catch: BoardSpot; tasks: BoardSpot } | null {

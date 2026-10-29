@@ -226,7 +226,7 @@ export default function LeaderboardPage() {
 
         {/* The fish market's monthly board (f-records): the biggest of each fish put up this month, the same as the market's. */}
         <div style={{ marginTop: 28 }}>
-          <Banner title="Monthly board" icon={<Fish size={26} />} tone="butter">The biggest of each fish put up at the fish market this month.</Banner>
+          <Banner title="Fish of the month" icon={<Fish size={26} />} tone="butter">The biggest of each fish put up at the fish market this month.</Banner>
           <MonthlyBoardBody />
         </div>
       </div>

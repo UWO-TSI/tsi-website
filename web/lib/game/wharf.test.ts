@@ -203,7 +203,7 @@ describe("the fish market's boards and the tackle shop's counter (David, 2026-10
       expect(Math.hypot(b.x - barrel.x, b.z - barrel.z)).toBeGreaterThan(3);
       expect(worldToDock({ x: market.x, z: market.z, yaw: market.yaw ?? 0 }, b.x, b.z, { x: 0, z: 0 }).z).toBeGreaterThan(4.5);
     }
-    expect(Math.hypot(boards.catch.x - boards.tasks.x, boards.catch.z - boards.tasks.z)).toBeGreaterThan(1.4);
+    expect(Math.hypot(boards.catch.x - boards.tasks.x, boards.catch.z - boards.tasks.z)).toBeGreaterThan(2.6);
     const counter = tackleCounterOf(props)!;
     expect(counter).not.toBeNull();
     expect(marketBoardsOf([])).toBeNull();

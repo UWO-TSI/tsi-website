@@ -7,12 +7,12 @@
 }
 
 /* The rarity edge (UI 7): a thin outline in its colour, never a fill; divine the holo. */
-[data-rarity="common"] { --edge: var(--ui-rarity-common); }
-[data-rarity="uncommon"] { --edge: var(--ui-rarity-uncommon); }
-[data-rarity="rare"] { --edge: var(--ui-rarity-rare); }
-[data-rarity="epic"] { --edge: var(--ui-rarity-epic); }
-[data-rarity="legendary"] { --edge: var(--ui-rarity-legendary); }
-[data-rarity="divine"] { --edge: var(--ui-rarity-divine); }
+:is(.thumb, .tipArt, .tipName small, .oddsRow dt, .revealCard)[data-rarity="common"] { --edge: var(--ui-rarity-common); }
+:is(.thumb, .tipArt, .tipName small, .oddsRow dt, .revealCard)[data-rarity="uncommon"] { --edge: var(--ui-rarity-uncommon); }
+:is(.thumb, .tipArt, .tipName small, .oddsRow dt, .revealCard)[data-rarity="rare"] { --edge: var(--ui-rarity-rare); }
+:is(.thumb, .tipArt, .tipName small, .oddsRow dt, .revealCard)[data-rarity="epic"] { --edge: var(--ui-rarity-epic); }
+:is(.thumb, .tipArt, .tipName small, .oddsRow dt, .revealCard)[data-rarity="legendary"] { --edge: var(--ui-rarity-legendary); }
+:is(.thumb, .tipArt, .tipName small, .oddsRow dt, .revealCard)[data-rarity="divine"] { --edge: var(--ui-rarity-divine); }
 
 /* ── Thumb ── */
 .thumb { all: unset; position: relative; display: inline-grid; place-items: center; flex: none; width: var(--thumb); height: var(--thumb); border-radius: calc(var(--thumb) * 0.28);
@@ -29,7 +29,7 @@ button.thumb:hover, button.thumb:focus-visible { transform: translateY(-2px) sca
 .thumbArt canvas, canvas.thumbArt { width: 100%; height: 100%; }
 .thumbCount { position: absolute; right: -5px; top: -5px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--ui-ink); color: var(--ui-accent-ink);
   font: 700 11px/18px var(--gui-font); text-align: center; box-sizing: border-box; }
-.thumbMark { position: absolute; right: 3px; top: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--ui-error); box-shadow: 0 0 0 2px var(--ui-card); }
+.thumbMark { position: absolute; left: 4px; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--ui-error); box-shadow: 0 0 0 2px var(--ui-card); }
 
 /* ── Hover card ── */
 .tipHost { display: inline-flex; }
@@ -130,7 +130,7 @@ button.thumb:hover, button.thumb:focus-visible { transform: translateY(-2px) sca
 .claim:disabled { background: var(--ui-well); color: var(--ui-quiet); cursor: default; }
 .claim:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
 .task[data-done]:not([data-claimed]) .claim { animation: ready 1.8s ease-in-out infinite; }
-@keyframes ready { 50% { transform: scale(1.05); } }
+@keyframes ready { 50% { transform: scale(1.04); } }
 .taskDone { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--ui-well); color: var(--ui-rarity-uncommon); animation: pop 0.4s var(--spring) both; }
 @keyframes pop { from { transform: scale(0.4); opacity: 0; } }
 .task[data-claimed] { opacity: 0.72; }
