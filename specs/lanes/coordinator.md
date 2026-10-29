@@ -601,3 +601,7 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - the new-world fixes (Halloween, residents, fauna, bots, sea fall) and the river soft lock with the study bench (river-softlock 0a77c16a);
   - prod dump prod-before-newworld-fixes-20261029-0227.dump; applied 20261029010000_study_outdoor_bench and 20261029062423_catalogue_seed; verify clean.
 - **More rod references** (David, 2026-10-29): Beach ball rod (uncommon; unlocked by winning the beach volleyball minigame 5 in a row, or ranked; the minigame doesn't exist yet) and a Halloween-exclusive limited legendary named "Lantern of the Hollow" (David picked it; this year or next year still to be decided). Both are in the rod-gear references README.
+- **Fishing UI round 2 review:** https://claude.ai/artifact/6BQnwE1Bp3uEzeQvrB53cM (ids fui2-*), game/fish-tiers 8a8312da.
+  - MemberFishing sends the tutorial's reel events; reelAssist is byte-identical to tutorial-v2.
+  - At merge, run the full vitest (the last full run was 44eb2079) and switch --gui-rarity and --gui-holo to --ui-rarity and --ui-holo.
+  - Not verified: a real pointer lock, and sound.
