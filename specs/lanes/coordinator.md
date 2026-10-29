@@ -526,3 +526,7 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - Fix: every movement mode respects the release barriers, and the respawn or last-safe point is always released and reachable.
   - Merges after newworld-fixes.
 - Machine at about 01:30: swap at 11.6 of 12.3 GB with David playtesting (Dia) and the 3300 server up. No new lanes until something finishes.
+- **Clothing round 3 called off** (David, 2026-10-29): "i give up on clothing round 3 its not worth the time rn, try to reuse as much as acnh clothing model and logic and replicate as closely as possble, remove those random ass kid photos".
+  - The kid photos are deleted (ef4e29cd), and the page now carries only the skirt fix.
+  - New direction for clothing: reuse and replicate the ACNH clothing models and logic. Our ACNH dump has no character or clothing models (only buildings, furniture, props, fish, plants and terrain), so this needs David to supply them; asked.
+  - Merge plan: game/clothing-v2 merges with rounds 1 and 2 plus the skirt fix (the one-pieces as they are) once David approves the skirt page.
