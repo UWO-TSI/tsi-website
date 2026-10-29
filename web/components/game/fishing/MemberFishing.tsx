@@ -16,7 +16,7 @@ import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTrack, Statu
 import { AudioManager } from "@/lib/game/audio";
 import { BOSS, BOSS_CALL } from "@/lib/game/fishingReel";
 import { CAST, RARITY_META, START_PROGRESS, fishOdds, iconFor, type FishDef } from "@/lib/game/fishing";
-import { FISHING_HINTS, type FishingHeldInput } from "@/lib/game/fishingInput";
+import { FISHING_HINTS, type CastDevice, type FishingHeldInput } from "@/lib/game/fishingInput";
 import { oneLinerFor } from "@/lib/game/peaceful";
 import type { RodTier } from "@/lib/game/rods";
 import { useCastMeter } from "@/lib/game/useCastMeter";
@@ -28,6 +28,8 @@ import m from "./MemberFishing.module.css";
 /** Rare and up: a rare fish's card flares and throws sparks. */
 const RARE = new Set(["rare", "epic", "legendary", "divine"]);
 const QUARTERS = [0.25, 0.5, 0.75] as const;
+/** The meter's line: its tip is the water accent here, not gold (the applicant's overlay keeps FISHING_HINTS' gold tip). */
+const CHARGE: Record<CastDevice, string> = { key: "Hold E, let go at the tip", mouse: "Hold the click, let go at the tip", touch: "Keep holding, lift at the tip" };
 /**
  * A new species' card (David 2026-10-29: "if new, have slight suspense and confetti, and suspense based off rarity"):
  * how long the silhouette builds before it develops (ms), and how many bursts of confetti follow. A repeat has neither.
@@ -55,7 +57,7 @@ export default function MemberFishing({ onActiveChange, rod }: { onActiveChange?
   // One chip at a time, nothing else written (David 2026-10-29: "only have one"); Esc still cancels, it just isn't said.
   return (
     <div className={m.lane} data-member-fishing={phase}>
-      {phase === "charging" ? <MemberMeter onRelease={s.castNow} releaseRequestedRef={s.releaseRequestedRef} hint={FISHING_HINTS[device].charge} />
+      {phase === "charging" ? <MemberMeter onRelease={s.castNow} releaseRequestedRef={s.releaseRequestedRef} hint={CHARGE[device]} />
         : phase === "reeling" && fish ? <MemberReel key={fish.key} fish={fish} known={s.owned.has(fish.key)} onDone={s.onReelDone} initialInput={s.reelInput}
           tensionMul={s.rod.tensionMul} help={FISHING_HINTS[device].reel} boss={s.bossMode} raidId={s.raidId} />
           : <StatusChip tone={chip[0]} icon={chip[2]}>{chip[1]}</StatusChip>}

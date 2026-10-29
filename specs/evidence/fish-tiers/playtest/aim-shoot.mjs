@@ -1,9 +1,11 @@
 // The playtest round's cast aim and tool wheel, headless (muted) on the new world's beach (20, 109.5; the sea is +z).
-//   PORT=3317 node aim-shoot.mjs <out_dir> cast|wheel
+//   PORT=3317 [AT=x,z] node aim-shoot.mjs <out_dir> cast|wheel|meter
 // cast: the character faces inland (away from the water), the cursor on the water, a held click casts there; then the
 //       cursor on the sand: a click says "Point at the water" and nothing is thrown. Mouse-look off (a free cursor).
 // wheel: mouse-look on, the pointer lock emulated (headless Chromium refuses a real one: WrongDocumentError), Tab held,
 //        the locked mouse's movement (synthetic movementX/Y) picks the petal in its direction; the camera's yaw is logged.
+// meter: the cast meter held over the water (AT, default the wharf jetty for this scene): rising, at the tip (the max
+//        cast's glow and spring), and the "Max cast!" chip after the release.
 // A ring drawn where the mouse is stands in for the cursor (headless shows none).
 import { createRequire } from "node:module";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -27,7 +29,7 @@ await page.evaluate(({ look, ml }) => {
     "tsi.held.v1": JSON.stringify({ held: "rod:rod_flimsy", last: null, pins: [], chosen: {} }), "tsi.camera.v1": JSON.stringify({ mouseLook: ml }) };
   for (const [k, v] of Object.entries(base)) localStorage.setItem(k, v);
 }, { look: JSON.stringify(LOOK), ml: SCENE === "wheel" });
-await page.goto(`${HOST}/lab/island?fixture=v2&weather=clear&at=12:30&at=20,109.5`, { waitUntil: "domcontentloaded", timeout: 300000 });
+await page.goto(`${HOST}/lab/island?fixture=v2&weather=clear&at=12:30&at=${process.env.AT ?? (SCENE === "meter" ? "88,46" : "20,109.5")}`, { waitUntil: "domcontentloaded", timeout: 300000 });
 await page.waitForSelector("canvas", { timeout: 300000 });
 await page.waitForFunction(() => !document.body.innerText.includes("Preparing"), null, { timeout: 300000 }).catch(() => {});
 await sleep(6000);
@@ -69,6 +71,26 @@ if (SCENE === "cast") {
   await page.mouse.down(); await sleep(80); await page.mouse.up();
   for (const ms of [150, 600, 1500]) { await sleep(ms === 150 ? 70 : ms === 600 ? 450 : 900); await shot(`click +${ms} ms`, `sand${ms}`); }
   console.log("after sand click", await page.evaluate(() => document.querySelector("[data-member-fishing]")?.getAttribute("data-member-fishing") ?? "no cast"));
+} else if (SCENE === "meter") {
+  await page.mouse.move(200, 360); // the water left of the jetty
+  await sleep(300);
+  await page.mouse.down();
+  const t0 = Date.now();
+  await sleep(250); await shot("held +250 ms", "rise");
+  await sleep(350); await shot("held +600 ms", "rise2");
+  await page.waitForSelector('[data-member-fishing] [data-tip="true"]', { timeout: 8000 }).catch(() => console.log("no tip"));
+  await shot("at the tip: Max", "tip");
+  await page.mouse.up();
+  await sleep(300);
+  await page.keyboard.press("Escape");
+  await sleep(1500);
+  // Again, let go the moment it's in the tip (a screenshot takes longer than the tip lasts): the max cast.
+  await page.mouse.down();
+  await page.waitForSelector('[data-member-fishing] [data-tip="true"]', { timeout: 8000 }).catch(() => console.log("no tip"));
+  await page.mouse.up();
+  await sleep(120); await shot("let go in the tip: Max cast!", "max");
+  await sleep(500); await shot("Max cast! +0.6 s", "max2");
+  console.log("t0", t0);
 } else {
   // Mouse-look: the lock emulated on the canvas, as the browser would grant it after a click.
   await page.evaluate(() => {

@@ -64,23 +64,24 @@
 @keyframes tremble { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(-0.6px, 0.4px) rotate(-0.15deg); } 75% { transform: translate(0.6px, -0.4px) rotate(0.15deg); } }
 @keyframes tremble-hard { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(-1.4px, 0.8px) rotate(-0.35deg); } 75% { transform: translate(1.4px, -0.8px) rotate(0.35deg); } }
 
-/* ── The power meter: the fill rises and falls, the gold tip at the top ── */
+/* ── The power meter: the fill rises and falls, the tip zone at the top ── */
+/* The reel's water accent, not black and gold (David 2026-10-29); the max cast is the tip's glow and the readout's spring. */
 .meter { display: flex; align-items: flex-end; gap: 14px; }
 .meterTrack { position: relative; width: 16px; height: 150px; border-radius: 999px; overflow: hidden; background: var(--ui-well); }
-/* The gold tip: a band over the top of the track, edged where it starts; the fill turns gold inside it. */
-.zone { position: absolute; inset: 0 0 auto 0; z-index: 1; background: var(--ui-marker); box-shadow: 0 2px 0 var(--ui-ink); }
-.meterFill { position: absolute; inset: 0; border-radius: inherit; background: var(--ui-ink); transform-origin: center bottom; will-change: transform; }
-.meter[data-tip="true"] .meterFill { background: var(--ui-marker); }
-.meter[data-tip="true"] .zone { box-shadow: 0 0 10px 2px var(--ui-marker); }
+/* The tip: a pale band over the top of the track, edged where it starts; inside it the track lights up round the fill. */
+.zone { position: absolute; inset: 0 0 auto 0; z-index: 1; background: color-mix(in srgb, var(--ui-water-deep) 22%, transparent); box-shadow: 0 2px 0 var(--ui-water-deep); }
+.meterFill { position: absolute; inset: 0; border-radius: inherit; background: var(--ui-water-deep); transform-origin: center bottom; will-change: transform; }
+.meterTrack { transition: box-shadow 0.15s ease-out; }
+.meter[data-tip="true"] .meterTrack { box-shadow: 0 0 0 2px var(--ui-water-deep), 0 0 14px 3px color-mix(in srgb, var(--ui-water-deep) 55%, transparent); }
+.meter[data-tip="true"] .readout { color: var(--ui-water-deep); }
 .readout { font: 600 30px/1 var(--gui-font); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 .meterText { display: grid; gap: 6px; padding-bottom: 2px; }
 .meterHint { max-width: 13ch; color: var(--ui-quiet); font: 400 13px/1.35 var(--gui-font); }
 /* Laid along the lane: the readout, the track (the gold tip at its right end) and the hint under it. */
 .meter[data-axis="x"] { display: grid; grid-template-columns: 4ch 260px; align-items: center; gap: 6px 14px; }
 .meter[data-axis="x"] .meterTrack { grid-column: 2; grid-row: 1; width: 100%; height: 16px; }
-.meter[data-axis="x"] .zone { inset: 0 0 0 auto; box-shadow: -2px 0 0 var(--ui-ink); }
+.meter[data-axis="x"] .zone { inset: 0 0 0 auto; box-shadow: -2px 0 0 var(--ui-water-deep); }
 .meter[data-axis="x"] .meterFill { transform-origin: left center; }
-.meter[data-axis="x"][data-tip="true"] .zone { box-shadow: 0 0 10px 2px var(--ui-marker); }
 .meter[data-axis="x"] .meterText { display: contents; }
 .meter[data-axis="x"] .readout { grid-column: 1; grid-row: 1; font-size: 20px; }
 .meter[data-axis="x"] .meterHint { grid-column: 2; grid-row: 2; max-width: none; font-size: 12px; }
@@ -90,7 +91,8 @@
   font: 600 15px/1 var(--gui-font); white-space: nowrap; box-shadow: 0 8px 22px rgb(var(--ui-shade) / 0.14); animation: arrive 0.28s var(--spring) both; }
 .chipIcon { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--ui-panel); }
 .chipIcon > svg { width: 16px; height: 16px; }
-.chip[data-tone="gold"] { box-shadow: 0 0 0 3px var(--ui-marker), 0 8px 22px rgb(var(--ui-shade) / 0.14); }
+/* The max cast (and a boss coming up): the water accent's ring and glow, not gold. */
+.chip[data-tone="gold"] { box-shadow: 0 0 0 2px var(--ui-water-deep), 0 0 16px 2px color-mix(in srgb, var(--ui-water-deep) 45%, transparent), 0 8px 22px rgb(var(--ui-shade) / 0.14); }
 /* The hook: the big moment of the cast. Black, it springs in big and shakes until you strike. */
 .chip[data-tone="alert"] { background: var(--ui-ink); color: var(--ui-accent-ink); font-size: 17px; transition: background-color 0.12s, color 0.12s; animation: strike 0.42s var(--spring) both, tug 0.5s ease-in-out 0.42s infinite; }
 .chip[data-tone="alert"] .chipIcon { background: var(--ui-accent-ink); color: var(--ui-ink); }

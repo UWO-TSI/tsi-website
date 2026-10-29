@@ -73,6 +73,7 @@ Branch head: see `git log -1` (this file is committed with it). Main has not mer
 - The tutorial's first-catch chip (game/tutorial-v2 FirstCatchTeach): MemberFishing already sends tsi:fish-hooked, -caught, -escaped and -end through useFishingSession, with the same detail shapes as tutorial-v2's FishingOverlay, and its panel is `aria-label="Fishing reel"`. `reelAssist` and createFishingReel's `floor` were brought in byte-identical to tutorial-v2, and so was its fishingReel test, so that merge is clean. useReelLoop calls `createFishingReel(fish, boss)`, so the member reel honours the floor. Test: components/game/fishing/MemberFishing.events.test.tsx (the session on R3F's reconciler with a bare window: hooked, caught, end; hooked, escaped, end).
 - Evidence: `specs/evidence/fish-tiers/playtest/`: cast-aim-strip, cast-sand-strip, wheel-locked-strip, wait, before-after-reel, catch-strip (common: bite to card), catch-strip-epic, catch-before (the last round's strips of the same beats, stacked), reel-juice-strip, card-suspense-strip (common), card-suspense-strip-epic. Scripts: aim-shoot.mjs, reel-shoot.mjs, cut.py, strip.py, compose.py.
 - Gates: tsc clean; vitest with NEXT_PUBLIC_GAME_WORLD=new: 3544 passed; eslint clean on the changed files; FishingOverlay.tsx unchanged.
+- The cast meter recoloured too (the coordinator: David's "yellow and black" covers it): the fill, the tip zone and the "Max cast!" chip (StatusChip tone gold) use `--ui-water-deep`, with no black fill and no gold tip. The max cast shows as the track's ring and glow, the readout in the accent, and its spring. The member meter's line says "let go at the tip" (MemberFishing CHARGE; the applicant keeps FISHING_HINTS' gold tip). /lab/gui's catch cards now include one building suspense (King Salmon, epic, 2 s). Evidence: playtest/cast-meter-strip.png (rising, at the tip, let go in the tip: Max cast!), cast-meter.png; before-after-reel.png now starts with the meter row.
 
 ## David's decisions
 
@@ -87,7 +88,7 @@ Branch head: see `git log -1` (this file is committed with it). Main has not mer
 
 ## Next
 
-0. David's review of the playtest round (specs/evidence/fish-tiers/playtest/). Open question for him: the cast meter still has its black fill and gold tip (his colour note named the reel bar); say if it should go to the water accent too.
+0. David's review of the playtest round (specs/evidence/fish-tiers/playtest/).
 
 0. David's review of the flat fishing UI; then merge main (de87c07f) if the coordinator asks.
 1. (Done) Two-client run of a divine raid in the browser (needs a divine species: none exists until David picks; a dev-only stand-in or `/lab`), then the propose-list for David (step 5).

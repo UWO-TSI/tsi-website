@@ -185,7 +185,7 @@ export default function GuiShowroom() {
       <Row label="Amounts"><Amount n={1240} /><Amount n={750} currency="gems" /></Row>
     </Section>
 
-    <Section id="fishing" title="Fishing (flat)" note="The member island's fishing pieces (components/gui/flat/reel), in the clean theme: the status chip (the hook is the black one), the cast meter, the reel's water track with its window and the fish, the line gauge, and the catch card edged in its rarity.">
+    <Section id="fishing" title="Fishing (flat)" note="The member island's fishing pieces (components/gui/flat/reel), in the clean theme: the status chip (the hook is the black one), the cast meter, the reel's water track with its window and the fish, the line gauge, and the catch card edged in its rarity (the last one building suspense, as a new species does before it develops).">
       <FishingPieces />
     </Section>
 
@@ -271,20 +271,20 @@ export default function GuiShowroom() {
 
 /** The flat fishing pieces at rest, in the clean theme (they're live in the game: the loops write them every frame). */
 function FishingPieces() {
-  const card = (key: string, rarity: string, label: string, developed = true) => (
-    <CatchCard picture={iconUrl(key)} name={developed ? label : "???"} developed={developed} rarity={rarity} rarityLabel={rarity[0].toUpperCase() + rarity.slice(1)}
+  const card = (key: string, rarity: string, label: string, developed = true, build?: number) => (
+    <CatchCard picture={iconUrl(key)} name={developed ? label : "???"} developed={developed} build={build} rarity={rarity} rarityLabel={rarity[0].toUpperCase() + rarity.slice(1)}
       rare={rarity !== "common" && rarity !== "uncommon"} label={label} tags={<CatchTag>New</CatchTag>} facts={<span>42 cm</span>} line="“A quiet catch from the river.”"
       action={{ label: developed ? "Continue" : "Show me", onClick: () => {} }} />
   );
   return <div data-ui-theme="clean" style={{ display: "grid", gap: 18, padding: 22, borderRadius: 18, background: "var(--ui-panel)" }}>
     <Row label="Status"><StatusChip icon={<Waves />}>Casting</StatusChip><StatusChip tone="wait" icon={<Fish />}>Waiting for a bite</StatusChip>
       <StatusChip tone="gold" icon={<Waves />}>Max cast!</StatusChip><StatusChip tone="alert" icon={<Fish />}>Hook it!</StatusChip></Row>
-    <Row label="Cast meter"><ReelPanel><PowerMeter zone={0.08} value={0.55} hint="Hold, let go at the gold tip" /></ReelPanel><ReelPanel><PowerMeter zone={0.08} value={0.96} hint="Hold, let go at the gold tip" /></ReelPanel><ReelPanel><PowerMeter horizontal zone={0.08} value={0.55} hint="Hold, let go at the gold tip" /></ReelPanel><ReelPanel><PowerMeter horizontal zone={0.08} value={0.96} hint="Hold, let go at the gold tip" /></ReelPanel></Row>
+    <Row label="Cast meter"><ReelPanel><PowerMeter zone={0.08} value={0.55} hint="Hold, let go at the tip" /></ReelPanel><ReelPanel><PowerMeter zone={0.08} value={0.96} hint="Hold, let go at the tip" /></ReelPanel><ReelPanel><PowerMeter horizontal zone={0.08} value={0.55} hint="Hold, let go at the tip" /></ReelPanel><ReelPanel><PowerMeter horizontal zone={0.08} value={0.96} hint="Hold, let go at the tip" /></ReelPanel></Row>
     <Row label="Reel"><div style={{ display: "grid", gap: 12, width: 560 }}>
       <ReelPanel style={{ display: "grid", gap: 10 }}><ReelTrack picture={iconUrl("fish_dace")} windowWidth={0.3} windowAt={0.2} fishAt={0.32} /><LineGauge value={0.45} marks={[0.25, 0.5, 0.75]} label="Catch progress" /></ReelPanel>
       <ReelPanel style={{ display: "grid", gap: 10 }}><ReelTrack picture={iconUrl("fish_dace")} windowWidth={0.3} windowAt={0.1} fishAt={0.62} state="slip" /><LineGauge value={0.18} low marks={[0.25, 0.5, 0.75]} label="Catch progress" /></ReelPanel>
       <ReelPanel style={{ display: "grid", gap: 10 }}><ReelTrack picture={iconUrl("fish_carp")} unknown windowWidth={0.27} windowAt={0.55} fishAt={0.66} /><LineGauge value={0.86} near marks={[0.25, 0.5, 0.75]} label="Catch progress" /></ReelPanel>
     </div></Row>
-    <Row label="Catch card"><div style={{ display: "grid", gap: 12 }}>{card("fish_dace", "common", "Dace")}{card("fish_carp", "rare", "Carp")}{card("fish_golden_koi", "divine", "Golden Koi")}{card("fish_catfish", "epic", "Catfish", false)}</div></Row>
+    <Row label="Catch card"><div style={{ display: "grid", gap: 12 }}>{card("fish_dace", "common", "Dace")}{card("fish_carp", "rare", "Carp")}{card("fish_golden_koi", "divine", "Golden Koi")}{card("fish_catfish", "epic", "Catfish", false)}{card("fish_king_salmon", "epic", "King Salmon", false, 2000)}</div></Row>
   </div>;
 }
