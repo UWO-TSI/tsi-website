@@ -481,3 +481,4 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
     - 20261028161000_tackle_rolls (17 off-sale prize rows plus tackle_roll). It widens shop_items_slot_check exactly as rod-gear's rod_tackle_slots does; at merge, check that the two constraint rewrites are identical, or keep one.
   - New APIs /api/economy/{tasks,chef,tackle} and /api/collections/monthly replace requests and records.
   - Before merging, check that the gacha RNG runs in the API route (service role), never taken from the client.
+- **New-world fixes review:** https://claude.ai/artifact/K38ZoQPTqe9HBFwbcRDLw3 (ids nf-*), game/newworld-fixes 7cfc3230; the sea fall is verified with strips. It merges right after village-archive.
