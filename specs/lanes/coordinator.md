@@ -505,3 +505,4 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - Pixel diff at most 2/255, so no review page needed.
   - Play already caps lamps at 4 nearest (LampPool).
   - Open: about 40 never-drawn module preloads on the title; PMREM relinks on phase change (under 50 ms).
+- **Sushi menu references** from David (2026-10-28, "heres the inspo i want for the sushi menu"): a folded teahouse menu and tea banners, saved at specs/references/sushi-menu/ in the fishing-depth worktree. The fishing-depth lane is redoing the menu to that look (r3-menu evidence). The dish models still need their own references.
