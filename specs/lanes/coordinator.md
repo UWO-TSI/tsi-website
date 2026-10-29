@@ -453,3 +453,9 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
 - perf baseline: every lane's perf:check compares against the 10-14 village baseline, so they all "fail". The archive lane resets it on the new world; ignore those fails until then.
 - **Fishing UI review:** https://claude.ai/artifact/QdLFdL5cMp5s8q7AUxVa8K (ids fui-*), game/fish-tiers d8f45b67 (main merged at f26f7763). The meter is horizontal and no longer covers the avatar; one chip morphs from waiting to the hook; the applicant island is checked unchanged (0 differing pixels with a fake clock). At merge, switch its `--gui-rarity-*` and `--gui-holo` to `--ui-rarity-*` and `--ui-holo`. No migrations.
 - **Daily and social (new world) review:** https://claude.ai/artifact/Prtn3zvCmWnx6zwufpArpY (ids nw-*), game/daily-social e4a75f28. It supersedes 68SEdjVRvruZzvgDmHTFVG. Migrations in order: 20261027182444_catalogue_seed, 20261027190000_welcome_week, 20261027190100_resident_friendship, 20261028112843_catalogue_seed. resident_lines_smoke includes 112843 by name.
+- **village-archive done:** game/village-archive ef90c927 (main de87c07f merged).
+  - Title pick: https://claude.ai/artifact/QER69PS5FSvw8LC6MFNM8n (ids title-a, title-b). A is in code. If David picks B, set the four SHOTS rows in components/title/shots.ts to { x: 5.26, z: -13.6, yaw: -16.6, eye: 1.3, pitch: -1, fov: 38 }, keeping night's drift 0.8.
+  - Gates: tsc 0; vitest 3469 passed, 2 failed (seedMigrations: regenerate the seed at merge); npm run build ok with no flag; the applicant island proven unchanged.
+  - Bundle: title +114 KB (the world document), applicant -3 KB.
+  - Perf baseline: new v2 rows on the new world (High 4.8 ms, 359 draws, 757k triangles; Lite 2.9 ms, 289 draws, 567k).
+  - The code half is ready now. Merge it first in the batch, then rebase the others on it: main-quest's GAME_WORLD import breaks; daily-social conflicts in residentRoster; loading's TitleScene fix.
