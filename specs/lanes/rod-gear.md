@@ -32,26 +32,41 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 ## Status
 
-- **Rarity ladder done** (step 1, cb7bed43, reported). `web/lib/rarity.ts` is the one ladder (`RARITIES`, `OBTAINABLE`, `RARITY_RANK`, `RARITY_LABEL`, `isRarity`, `mayHoldContraband`). Sea King became Divine (holographic in the GUI kit, `--gui-holo`); Contraband is dark. Fish weight Divine 0.4 vs legendary 2.5; Divine sells at 2.5x legendary; Contraband has no price.
-- **Contraband is staff tools** (David): never obtainable from any shop, drop, catch, quest, recipe or reward; only an admin grant to a staff account. `lib/rarity.test.ts` holds every obtainable source to `OBTAINABLE`; the admin shop editor offers only `OBTAINABLE`; the shop_items check leaves contraband out. Showing the tier stays behind `NEXT_PUBLIC_CONTRABAND=1`.
-- **Steps 2 to 5 built and committed** (94eade9f; the homes switch pinned in 975355bd: home things leave the shelves on `DROPS.homeIsland` in every world, the same switch as the boat home) (gates: tsc clean, full vitest both worlds, eslint clean on changed files; shots in `specs/evidence/rod-gear/`):
-  - `lib/game/rods.ts`: six stats per rod on a 0-10 radar (`STAT_KEYS`, `STAT_INFO` says what each does), `effects()` maps them onto the loop (luck, bite window, line strength = drain, reel speed = fill, lure = wait, control = bar width), five rods from Flimsy to Tidewarden (top at 7 to 8 of 10: more rods later). Add-ons `TACKLE` (Sweet bait: +2 bite, +1 lure; Lucky bobber: +2 luck), `rig()`, `ownedRig()` (the server's roll: only owned add-ons count).
-  - Wiring: reel fill and bar width (`fishingReel.ts`), wait (`FishingOverlay`), the cast sends `tackle` (`castLine`), the server rolls with `ownedRig` (`collections/service.ts`), the client reads equipped add-ons (`usePeacefulContext`, event `tsi:gear-changed`).
-  - Equip: member_inventory.equipped with new slots `bait` and `bobber` (one per slot).
-  - Rod shop: the Tools shelf lists the five rods by tier (Flimsy "Yours", Lighthouse and Tidewarden "Made at the workbench", synthesized in `lib/wallet/service.ts rodShelf`), then the add-ons. Detail: the turning model, the hex radar (`components/gui/flat/HexRadar.tsx`, add-on gains in orange), the add-on slots, and the spec band says what each stat does (`components/economy/RodGear.tsx`). The new world's tackle-shop door says "Browse rods" and opens the same panel (`section="rods"`). The Bag's rod detail shows the radar and slots (no hollow Equip on rods).
-  - Hollow items: `rod-basic`, `net-mid`, `shovel-mid` off sale (`HOLLOW_TOOLS`); furniture, wallpaper and flooring off the shelves and out of the specials until homes open (`isOnSale`, `dailySpecials`, drop 4); empty shelves hide; the shop's plinths show specials that have a model, then fill up.
-  - Art: `bait-sweet.glb` (`art/props-enemies/build_items.py -- only bait-sweet`); its icon `public/assets/icons/bait-sweet.webp` (render-icons).
-- Migrations for the coordinator, in order: `20261027140000_rarity_ladder.sql`, `20261027183120_catalogue_seed.sql`, `20261027183200_rod_tackle_slots.sql`, `20261027183713_catalogue_seed.sql`.
+- Round 1 (94eade9f, e35dd842): rarity ladder (cb7bed43, on main), five rods with six stats, bait and bobber slots, the rod shop, hollow items hidden. David reviewed it 2026-10-28 (below).
+- **Round 2 built** on `game/rod-gear` (main merged at 581dd5b3; the build f7adcb6a, then evidence and fixes):
+  - Rod rarity: Flimsy common, Cedar uncommon, Glass rare, Lighthouse rare, Tidewarden epic (`RodTier.rarity`, lib/game/rods.ts).
+  - Hook rule: a rod hooks one rung above its own rarity (`hookCap`, `canHook`). David's three examples were rare to epic, epic to legendary and legendary to divine; the coordinator applied the same pattern down the ladder. The server rolls with the same `canHook` (peaceful.ts via lib/collections/rolls.ts), so no SQL. Nothing can hook divine until a legendary rod exists.
+  - The shop shelf sells rods up to rare (`onShopShelf`, `SHOP_ROD_MAX`). Tidewarden is off the shelf; its workbench recipe stays.
+  - Stats are graded out of 100 (`STAT_MAX` 100, rods x10, tackle gains x10; `effects` unchanged in effect).
+  - Rarity shows as a thin outline in `--ui-rarity-*` on the shop's and the bag's rod cards and on the detail stage (`rarityEdge`, the `ItemCard`/`DetailView` prop `rarity`). Divine runs `--ui-holo`.
+  - Radar rebuilt as a flat kit piece (`components/gui/flat/HexRadar.tsx`):
+    - big, light, thin rings in the new `--ui-chart` token;
+    - an icon and value at each corner, with the stat's name and one plain line on hover or focus;
+    - the build over the rod alone (faint, dashed), sliding linearly over 450 ms.
+  - Slots live only on your own rod: the bag's tools shelf opens a rod in `DetailView`, with `RodSlots` (kit `GearSlot`) in the stage's bottom-right corner (`DetailView corner`). The shop has no slots.
+  - What's fitted hangs from the rod tip and settles: `RodStage` in components/economy/RodGear.tsx, through `FittedModel hang`, using `rodTip` (moved to lib/game/rodTip.ts).
+  - An add-on's detail shows only the add-on (its HD model) and its own radar (`TackleRadar`).
+  - HD/LP split: `Tackle.model` is the HD file; `worldModel` maps it to `/assets/game/items/lp/` (lib/game/world/active.ts). Until the real models land, both lp files are copies of the HD ones.
+  - Kit: divine badge text is white (`--ui-on-divine`). `--gui-holo` is replaced by `--ui-holo`, and `--gui-rarity-divine` is now main-quest's purple. The themes carry main-quest's exact rarity block, so that merge is trivial. The other `--gui-rarity-*` tokens (the badges and tiles David approved) stay.
+  - Migrations: `20261028160000_rod_tackle_slots` (re-timestamped, unapplied) and `20261029020457_catalogue_seed` (regenerated, unapplied). Both are in the chain in specs/evidence/launch-fixes/sql-smoke.sh, with the new `rod_tackle_slots_smoke.sql`. 033 and taught_tools smokes now follow the hollow tools.
+  - Evidence: `specs/evidence/rod-gear/r2/` (shots.mjs makes them). The round-1 shots in `specs/evidence/rod-gear/` are the "before" set.
+
+## David's decisions
+
+- 2026-10-28 review (verbatim in the coordinator's round-2 prompt): rarity outline on shop cards (common grey, uncommon green, rare blue, epic purple, legendary yellow, divine purple holo); shop sells up to rare rods; hook caps by rod rarity; Flimsy common, Lighthouse rare; divine text white; gui-tiles approved; radar redone (bigger, minimal, lighter, icons with hover lines at the corners, out of 100, the base faint behind the build, linear slide); bait and bobber slots bottom-right of your own rod's square only, fitted ones show on the rod model with a settle; the bobber's detail shows only the bobber with its own radar; bobber and bait to be remodelled properly in Blender (HD for the shop, LP on the rod; the lucky bobber a four-leaf clover), **waiting on David's references** (coordinator asked him).
 
 ## Next
 
-1. David's review of the shots (`specs/evidence/rod-gear/`: the rod shop's eight, and `gui-badges.png`, `gui-tiles.png`, `gui-radar.png` from `/lab/gui`, whose fixed layers must be hidden before a section shot); perf:check not needed (UI and data only; the tackle shop door adds no rendering).
+1. David's review of round 2 (`specs/evidence/rod-gear/r2/`, the hook-rule table).
+2. When references arrive: model the base bobber (variants edit it), the lucky four-leaf-clover bobber and the bait in Blender (design bible Models), HD to `public/assets/game/items/`, LP to `items/lp/`.
 
 ## Tools and gotchas
 
 - Locks are contended: there is no queue file (the coordinator removed it); retry `withlock.sh heavy|devserver` in a loop while it exits 75, and keep each hold to one short batch.
 - `node scripts/gen-seeds.mjs` writes the catalogue seed migration after a catalogue change; a hand migration that widens a check must sort before it.
-- Dev harness: `/dev/economy?view=overlay&section=rods` (memory store, a cedar rod and an equipped lucky bobber).
+- Dev harness: `/dev/economy?view=overlay&section=rods` (the rod shop) and `/dev/economy?view=bag` (the bag's tools: Cedar and Glass rods, the lucky bobber on, sweet bait owned), memory store.
+- Shots: `specs/evidence/rod-gear/r2/shots.mjs` (PW=playwright index.mjs from ~/.npm/_npx, SHELL_BIN=the cached chromium_headless_shell-1217, BASE=dev server). The site's intro curtain (`.ld-overlay`) waits on window load and covers dev pages: the script hides it.
+- The vitest seed check fails until `node scripts/gen-seeds.mjs` runs after any catalogue text change; delete the lane's own unapplied seed first, and update the chain in launch-fixes/sql-smoke.sh.
 
 ## Rules
 

@@ -1,10 +1,11 @@
 "use client";
 
-/** /dev/economy?view=shop|overlay|sell|inventory|wallet|admin[&tab=specials][&section=items|merch|rods: the shop overlay's two answers, or the rod shop] */
+/** /dev/economy?view=shop|overlay|bag|sell|inventory|wallet|admin[&tab=specials][&section=items|merch|rods: the shop overlay's two answers, or the rod shop] */
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { InventorySheet, SellSheet, ShopBody, WalletSheet } from "@/components/economy/EconomySheets";
 import MerchFulfilment from "@/components/economy/MerchFulfilment";
 import ShopOverlay from "@/components/economy/ShopOverlay";
+import { BagSheet } from "@/components/game/Bag";
 import { merchViewer } from "@/components/game/ShopCounter";
 import { memoryEconomyStore } from "@/lib/wallet/memoryStore";
 import { memoryEconomyTransport } from "@/lib/wallet/memoryTransport";
@@ -32,6 +33,9 @@ async function seed(): Promise<EconomyTransport> {
   await S.buy(m.store, ME, { item_id: id("rod-cedar"), qty: 1, idempotency_key: "demo-buy-1" }, now);
   await S.buy(m.store, ME, { item_id: id("bobber-lucky"), qty: 1, idempotency_key: "demo-buy-4" }, now);
   await S.equip(m.store, ME, { item_id: id("bobber-lucky"), equipped: true });
+  await m.store.credit(ME, "coins", 1500, "event", "fishing derby", "demo-event-2");
+  await S.buy(m.store, ME, { item_id: id("rod-glass"), qty: 1, idempotency_key: "demo-buy-5" }, now);
+  await S.buy(m.store, ME, { item_id: id("bait-sweet"), qty: 1, idempotency_key: "demo-buy-6" }, now);
   await S.buy(m.store, ME, { item_id: id("acc-straw-hat"), qty: 1, idempotency_key: "demo-buy-2" }, now);
   await S.equip(m.store, ME, { item_id: id("acc-straw-hat"), equipped: true });
   await S.sell(m.store, ME, { item_key: "fish_dace", qty: 2, idempotency_key: "demo-sell-1" });
@@ -61,6 +65,8 @@ export default function EconomyHarness() {
       {/* The in-game shop overlay (ShopOverlay), as the counter opens it: ?view=overlay[&section=items|merch] */}
       {view === "overlay" ? <ShopOverlay open onClose={close} transport={t} title={q.get("section") === "merch" ? "Club merch" : q.get("section") === "rods" ? "Rod shop" : "The shop"}
         section={(q.get("section") as "items" | "merch" | "rods" | null) ?? undefined} sell={q.get("section") !== "merch"} viewerFor={merchViewer} /> : null}
+      {/* The bag's tools, your own rods with their slots: ?view=bag */}
+      {view === "bag" ? <BagSheet open onClose={close} transport={t} initialShelf="tools" /> : null}
       {view === "sell" ? <SellSheet open onClose={close} transport={t} /> : null}
       {view === "inventory" ? <InventorySheet open onClose={close} transport={t} /> : null}
       {view === "wallet" ? <WalletSheet open onClose={close} transport={t} /> : null}

@@ -18,7 +18,7 @@ import { worldModel } from "@/lib/game/world/active";
 import { keyModel } from "@/lib/icons/itemModel";
 import { shopIcon } from "@/lib/icons/keys";
 import { RARITY_LABEL } from "@/lib/rarity";
-import { RODS, SLOTS, STAT_INFO, STAT_KEYS, STAT_MAX, hookCap, rig, tackleByKey, type RodStat, type RodTier, type Tackle, type TackleSlot } from "@/lib/game/rods";
+import { RODS, SLOTS, STAT_INFO, TACKLE, STAT_KEYS, STAT_MAX, hookCap, rig, tackleByKey, type RodStat, type RodTier, type Tackle, type TackleSlot } from "@/lib/game/rods";
 import type { InventoryRow } from "@/lib/wallet/store";
 import { FittedModel } from "./ItemViewer";
 import TurnStage from "./TurnStage";
@@ -64,7 +64,9 @@ export function RodSlots({ rows, busy, onEquip }: { rows: readonly InventoryRow[
 /** How far the tackle hangs below the tip, and each piece's size (stage units: the rod spans 1.7). */
 const LINE = 0.34, LEADER = 0.1, SIZE: Record<TackleSlot, number> = { bobber: 0.2, bait: 0.12 };
 const lineMat = new THREE.MeshBasicMaterial({ color: 0x3a3a3a });
-const lineGeo = new THREE.CylinderGeometry(0.0035, 0.0035, 1, 5).translate(0, -0.5, 0);
+const lineGeo = new THREE.CylinderGeometry(0.006, 0.006, 1, 5).translate(0, -0.5, 0);
+// The low-poly tackle loads with the stage, so fitting one never blinks the rest out while it loads.
+for (const t of TACKLE) useGLTF.preload(worldModel(t.model));
 
 /** An add-on's low-poly copy, its top at the origin, `size` across. */
 function Piece({ url, size }: { url: string; size: number }) {

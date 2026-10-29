@@ -31,7 +31,7 @@ function useSlide(target: readonly number[]): readonly number[] {
 }
 
 /** The chart's frame (SVG units): the hex's radius and the ring its corner icons sit on. */
-const R = 92, ICON_R = 122, VIEW = { x: -150, y: -140, w: 300, h: 290 };
+const R = 100, ICON_R = 128, VIEW = { x: -150, y: -146, w: 300, h: 300 };
 
 /**
  * A radar of a few stats graded out of `max` (the rod's hex, David 2026-10-28): thin light rings, the current values as

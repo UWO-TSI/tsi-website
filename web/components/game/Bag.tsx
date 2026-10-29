@@ -29,7 +29,7 @@ import { ApiError } from "@/lib/apiClient";
 import { useLoad } from "@/components/economy/EconomySheets";
 import { cap } from "@/components/economy/ShopOverlay";
 import { bagWrite, loadBag, saveOrder, seeBag, sortBag, stockOf, swapSlots, useBag } from "@/lib/game/bagStore";
-import { httpEconomyTransport } from "@/lib/wallet/transport";
+import { httpEconomyTransport, type EconomyTransport } from "@/lib/wallet/transport";
 import type { InventoryRow } from "@/lib/wallet/store";
 import type { InventoryView } from "@/lib/wallet/service";
 import { DROPS } from "@/lib/game/drops";
@@ -133,8 +133,12 @@ const SHELVES: { id: Shelf; label: string; icon: ReactNode }[] = [
 const POCKET_FILTERS = new Set<Shelf>(["pockets", "fish", "bugs", "forage", "materials"]);
 
 /** The Bag (I): your pockets, filtered from the rail, and on its last shelves what you own that takes no pocket. */
-export function BagSheet({ open, onClose, keys }: { open: boolean; onClose: () => void; keys?: string }) {
-  const [shelf, setShelf] = useState<Shelf>("pockets");
+export function BagSheet({ open, onClose, keys, transport, initialShelf = "pockets" }: {
+  open: boolean; onClose: () => void; keys?: string;
+  /** What you own comes from here (the dev harness passes its memory store). */
+  transport?: EconomyTransport; initialShelf?: Shelf;
+}) {
+  const [shelf, setShelf] = useState<Shelf>(initialShelf);
   const bag = useBag();
   useEffect(() => { if (open) void loadBag(); }, [open]);
   // You looked: the New marks go as the bag closes.
@@ -148,7 +152,7 @@ export function BagSheet({ open, onClose, keys }: { open: boolean; onClose: () =
     purse={view ? <Readout used={view.used} capacity={view.capacity} label="Pockets" /> : undefined}
     rail={<IconRail label="Bag" value={shown} onChange={setShelf} items={shelves.map(x => ({ ...x, badge: x.id === "pockets" ? bag.fresh.length : undefined }))} />}>
     {POCKET_FILTERS.has(shown) ? <Pockets filter={shown === "pockets" ? null : shown as BagKind} title={SHELVES.find(x => x.id === shown)!.label} />
-      : <Owned group={shown as "tools" | "outfits" | "furniture"} />}
+      : <Owned group={shown as "tools" | "outfits" | "furniture"} transport={transport} />}
   </FlatPanel>;
 }
 
@@ -264,8 +268,7 @@ const SLOT_NAME: Record<string, string> = { rod: "Fishing rod", net: "Bug net", 
 const rowPicture = (r: InventoryRow) => r.item.sprite_url ?? shopIcon(r.item);
 
 /** One shelf of what you own (tools, clothes, furniture and finishes): cards, and the picked one in the side panel. */
-function Owned({ group }: { group: "tools" | "outfits" | "furniture" }) {
-  const transport = httpEconomyTransport;
+function Owned({ group, transport = httpEconomyTransport }: { group: "tools" | "outfits" | "furniture"; transport?: EconomyTransport }) {
   const { data, error, reload, setError } = useLoad<InventoryView>(useCallback(() => transport.inventory(), [transport]));
   const [picked, setPicked] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);

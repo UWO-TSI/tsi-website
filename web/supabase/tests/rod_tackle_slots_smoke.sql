@@ -1,4 +1,4 @@
--- Rod add-on slots (20261028160000_rod_tackle_slots) and the seed after it (20261029014607_catalogue_seed). Throwaway
+-- Rod add-on slots (20261028160000_rod_tackle_slots) and the seed after it (20261029020457_catalogue_seed). Throwaway
 -- local Postgres after every migration, with the pre_* seeds. Never Supabase. Fails before the migration: the shop's
 -- slot check refuses 'bobber' and 'bait'.
 \set ON_ERROR_STOP 1
