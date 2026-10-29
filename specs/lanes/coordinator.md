@@ -520,3 +520,9 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - To tutorial r4: the ID asks things that matter (no spirit animal); the coin and gem slots show and fade with the quest line hidden; the "great way to level up" copy; the box-hop and Esc misses; the "look around" farewell cut for now; continuous camera moves between buildings; step back when too close to an NPC; one prompt only; the reel teaching card when the bar appears; the barrel and crates by the fish market removed; signed-out dev selling works.
   - To fish-tiers (playtest round, fresh agent): cast toward the cursor (centre in a locked camera); no how-to text on the reel panel; the tool wheel in a locked camera picks by mouse direction (the emote wheel too).
   - To creator-polish (new lane, branch from main de87c07f): a calmer reflection with live surface texture; hair and part changes dissolve with the wave.
+- **Clothing round 3 review:** https://claude.ai/artifact/MWutWWDXbjtnvhvq3SSoa9. It covers the skirt fix (ab54415e) and the 11 one-piece reference images for David to pick, with sources in specs/references/onepieces/*/sources.md. The images stay out of git (third-party; public repo). game/clothing-v2 is at 9da62224 and the lane has stopped.
+- **river-softlock (agent started):** game/river-softlock on newworld-fixes 7cfc3230.
+  - Bug: a dash-slide crosses the river into an unreleased region, then the player drowns and respawns there (soft lock).
+  - Fix: every movement mode respects the release barriers, and the respawn or last-safe point is always released and reachable.
+  - Merges after newworld-fixes.
+- Machine at about 01:30: swap at 11.6 of 12.3 GB with David playtesting (Dia) and the 3300 server up. No new lanes until something finishes.
