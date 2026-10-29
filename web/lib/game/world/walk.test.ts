@@ -222,7 +222,8 @@ describe("walking the smooth world", () => {
     const [dx, dz] = island.move(high[0], high[1], low[0], low[1]);
     expect(Math.hypot(dx - low[0], dz - low[1])).toBeLessThan(0.3);
     // The movement sim: run uphill at the face for two seconds and never get up it, and a held jump does not climb it either.
-    const world: MoveWorld = island;
+    // The slope rule on its own: the steep faces are on the mountain, past the border (lib/game/barriers.ts releaseRegions).
+    const world: MoveWorld = { ...island, locked: undefined, released: undefined };
     const dir = [high[0] - low[0], high[1] - low[1]], len = Math.hypot(dir[0], dir[1]);
     let s = createMoveState(low[0], low[1], world);
     const top = terrainHeight(t, high[0], high[1]);
