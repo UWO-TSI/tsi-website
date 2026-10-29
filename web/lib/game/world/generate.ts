@@ -367,7 +367,9 @@ const LAYOUT: Record<string, { x: number; z: number; yaw?: number; scale?: numbe
   museum: { x: SPOT.museum[0], z: SPOT.museum[1], yaw: facing(26, -20.5), scale: BUILDING_SCALE },
   oracle: { x: +mt(-2, -152)[0].toFixed(2), z: +mt(-2, -152)[1].toFixed(2), yaw: Math.PI },
   beach: { x: -8, z: 106 },
-  "study-0": { x: PX - 5, z: PZ - 10 }, "study-1": { x: PX + 11, z: PZ - 10 }, "study-2": { x: PX - 5, z: PZ + 10 }, "study-3": { x: PX + 11, z: PZ + 10 },
+  // The backend's two outdoor study tables (lib/study/tables.ts; id = its anchor): the picnic table on the plaza's rim
+  // by the café, along the rim; the pier table on the quay between the jetty's north and middle gangways, its seats to the sea.
+  "study:plaza-picnic": { x: PX - 5, z: PZ - 10, yaw: 0.4636, model: "picnic" }, "study:pier-bench": { x: 71, z: 43, yaw: -Math.PI / 2, model: "pier" },
   "bench-0": rimBench(-152), "bench-1": rimBench(152), "bench-2": rimBench(-28), "bench-3": rimBench(28),
 };
 
