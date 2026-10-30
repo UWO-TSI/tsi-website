@@ -35,6 +35,9 @@
  *                  just those, &views=front,34,side,back (wardrobe batch 3)
  * ?sheet=b2faces  wardrobe batches 2 and 3: David's whole faces #20-32 on the head, front and 3/4 (&skins=, default 3), then
  *                  a mix row; &keys=face-26,... just those (no mix row), &views=front,34,side,back
+ * ?sheet=vb       the beach volleyball clips (lib/game/volleyball/clips.ts) on the real renderer: each clip in &ids= (default
+ *                  all) at &frames= (8) phases with its contact frame, from &view= (34); the air clips lifted on an
+ *                  illustrative arc (&jump= height, 0.45), so the jump reads; &framing=body &zoom=0.62 &look=0.7 fits a jump
  * ?sheet=fit      clothing-v2: each garment in &ids= (default the starter set) worn with plain companions (a top over the
  *                  shorts, a bottom under the tee, shoes under both), in a run, a jump and a sit (each frozen at one phase),
  *                  front, side and back; with &cut=0 the body skin the garments cut is drawn too (&framing=body)
@@ -52,6 +55,7 @@ import Character, { type CharacterMotion, type ClipName } from "@/components/gam
 import { Lights as CreatorLights } from "@/components/game/character/CreatorStage";
 import { CUTS } from "@/lib/game/character/rig";
 import { DEFAULT_LOOK, FACE, NATURAL_HAIR, PARTS, parseLook, partsIn, SKIN_PICKS, STARTER_PARTS, type CharacterLook, type EyeFrame } from "@/lib/game/character/look";
+import { isVbClip, VB_CLIPS, VB_CLIPS_URL, type VbClip, type VbClipInfo } from "@/lib/game/volleyball/clips";
 import { RESIDENT_LOOKS } from "@/lib/content/residentRoster";
 import { HQ_LEAD } from "@/lib/game/welcome";
 import { CAFE_OWNER } from "@/lib/game/cafe";
@@ -76,7 +80,9 @@ const CREATOR_LIGHT = typeof window !== "undefined" && new URLSearchParams(windo
 const OPEN: FaceOverride = { eyeFrame: "open" };
 interface Cell { label: string; look: CharacterLook; yaw: number; face?: FaceOverride | null; talk?: boolean; pitch?: number;
   /** A clip held at a phase (?sheet=fit). */
-  clip?: [ClipName, number] }
+  clip?: [ClipName, number];
+  /** The body lifted off the sand (?sheet=vb: a jump's arc). */
+  lift?: number }
 /** ?sheet=fit: the poses (clip, phase) and views, and each slot's plain companions (render_fit.py's). */
 const FIT_POSES: [string, ClipName, number][] = [["run", "Run", 0.3], ["jump", "Jump", 0.5], ["sit", "Sit", 0.5]];
 const FIT_VIEWS: [string, number][] = [["front", 0], ["side", -Math.PI / 2], ["back", Math.PI]];
@@ -92,7 +98,7 @@ const FRAMING = { head: { at: [0, 0.86, 1.3], look: 0.8 }, hat: { at: [0, 0.98, 
 interface Orbit { pitch: number; zoom: number; look: number | null }
 
 function Stage({ cell, framing, faceSize, orbit }: { cell: Cell; framing: keyof typeof FRAMING; faceSize: number; orbit: Orbit }) {
-  const motion = useRef<CharacterMotion>({ speed: 0, yaw: cell.yaw, lift: 0, pose: cell.clip?.[0] ?? null, freeze: cell.clip?.[1], play: null, face: cell.face ?? null, talk: cell.talk ? 1e9 : 0 });
+  const motion = useRef<CharacterMotion>({ speed: 0, yaw: cell.yaw, lift: cell.lift ?? 0, pose: cell.clip?.[0] ?? null, freeze: cell.clip?.[1], play: null, face: cell.face ?? null, talk: cell.talk ? 1e9 : 0 });
   const f = FRAMING[framing] ?? FRAMING.head;
   const look = orbit.look ?? f.look;
   const [dy, dz] = [f.at[1] - f.look, f.at[2]];
@@ -105,7 +111,8 @@ function Stage({ cell, framing, faceSize, orbit }: { cell: Cell; framing: keyof 
       <hemisphereLight args={["#fff8ec", "#b7c7a8", 0.9]} />
       <directionalLight position={[1.6, 2.6, 2.2]} intensity={1.7} color="#fff1d8" />
     </>}
-    <Suspense fallback={null}><Character look={cell.look} motion={motion} scale={1} faceSize={faceSize} lod={LOD_SHEET} /></Suspense>
+    <Suspense fallback={null}><Character look={cell.look} motion={motion} scale={1} faceSize={faceSize} lod={LOD_SHEET}
+      clips={cell.clip && isVbClip(cell.clip[0]) ? VB_CLIPS_URL : undefined} /></Suspense>
   </>;
 }
 
@@ -144,6 +151,17 @@ function AvatarBench() {
       const slot = PARTS.find(p => p.id === id)!.slot;
       const look = { ...base, ...FIT_WITH[slot], [slot]: id };
       return FIT_POSES.flatMap(([pose, clip, t]) => FIT_VIEWS.map(([v, y]) => ({ label: `${id} ${pose} ${v}`, look, yaw: y, face: OPEN, clip: [clip, t] as [ClipName, number] })));
+    });
+    if (sheet === "vb") return (q.get("ids")?.split(",") ?? Object.keys(VB_CLIPS)).flatMap(id => {
+      const c: VbClipInfo = VB_CLIPS[id as VbClip], n = Number(q.get("frames") ?? 8), h = Number(q.get("jump") ?? 0.45);
+      const times = Array.from({ length: n }, (_, i) => (i / (n - 1)) * c.duration);
+      if (c.contact !== undefined) times[times.reduce((k, t, i) => (Math.abs(t - c.contact!) < Math.abs(times[k] - c.contact!) ? i : k), 1)] = c.contact;
+      // the sim's jump, drawn: up from takeoff to the apex and down to land; the air clips start at the top
+      const from = c.startsOn === "vb_spike_jump" ? 0 : c.takeoff, apex = c.apex ?? 0, end = c.land;
+      const lift = (t: number) => from === undefined || end === undefined || t <= from || t >= end ? 0
+        : c.startsOn === "vb_spike_jump" ? h * (1 - (t / end) ** 2) : h * Math.max(0, 1 - ((t - apex) / (t < apex ? apex - from : end - apex)) ** 2);
+      return times.map(t => ({ label: `${id} ${t.toFixed(2)}s${t === c.contact ? " contact" : ""}`, look: base, yaw: view, face: OPEN,
+        clip: [id as VbClip, t / c.duration] as [ClipName, number], lift: lift(t) }));
     });
     if (sheet === "live") return [{ label: q.get("style") ?? "bob", look: bob, yaw, talk: q.get("talk") === "1" }];
     // head-roblox: the hair is David's whole hairstyles (no bangs or backs); every one, turned
@@ -228,7 +246,7 @@ function AvatarBench() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sheet, yaw, q]);
   const root = useRef<HTMLDivElement>(null);
-  const cols = q.get("cols") ? Number(q.get("cols")) : sheet === "hatcut" ? 6 : sheet === "eyeskins" ? SKIN_PICKS : sheet === "haircolours" ? (q.get("hairs") ?? "own,0,1,2,3,4,5,12,10,11").split(",").length : sheet === "b2acc" ? 8 : sheet === "b2faces" ? 6 : sheet === "roblox" ? (q.get("views") ?? "front,34,side,back").split(",").length : sheet === "facekit" ? 13 : sheet === "fit" ? 9 : sheet === "hairkit" ? 10 : sheet === "fullkit" ? 7 : sheet === "styles" || sheet === "backs" || sheet === "faces" || sheet === "residents" || sheet === "emote" ? 6 : sheet === "hats" || sheet === "mix" ? 8 : sheet === "david" ? 10 : cells.length;
+  const cols = q.get("cols") ? Number(q.get("cols")) : sheet === "hatcut" ? 6 : sheet === "eyeskins" ? SKIN_PICKS : sheet === "haircolours" ? (q.get("hairs") ?? "own,0,1,2,3,4,5,12,10,11").split(",").length : sheet === "b2acc" ? 8 : sheet === "b2faces" ? 6 : sheet === "roblox" ? (q.get("views") ?? "front,34,side,back").split(",").length : sheet === "facekit" ? 13 : sheet === "fit" ? 9 : sheet === "vb" ? Number(q.get("frames") ?? 8) : sheet === "hairkit" ? 10 : sheet === "fullkit" ? 7 : sheet === "styles" || sheet === "backs" || sheet === "faces" || sheet === "residents" || sheet === "emote" ? 6 : sheet === "hats" || sheet === "mix" ? 8 : sheet === "david" ? 10 : cells.length;
   return <div ref={root} style={{ position: "relative", paddingTop: 48, minHeight: "100vh", background: "#efe7d6" }}>
     <div data-sheet={sheet} style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, ${cols === 1 ? "420px" : "1fr"})`, gap: 8, padding: 8 }}>
       {cells.map(c => <figure key={c.label} style={{ margin: 0 }}>
