@@ -13,21 +13,22 @@
  * Applicant music by Stream Cafe has separate source/use terms in CREDITS.md.
  * The missing-file fallback stays: a deleted file just runs silent.
  *
- * Two independent crossfading beds share one cascading-candidate engine:
- *   - ambient: the existing time-of-day loop, now also able to try a
- *     weather- or season-specific variant before the guaranteed base file.
- *   - music: the new 12-block hourly player (`musicSchedule.ts` picks the
- *     block), with a seasonal-variant slot and interior/cafe overrides,
- *     always ending on a fallback that already exists on disk.
- * A candidate list of one item (the common case today — no weather/season
- * variant authored yet) behaves exactly like the old single-src load.
+ * Exactly one music bed is audible at a time (David, 2026-10-30: "theres liek
+ * 3 overlapping music"). Two crossfading channels share one cascading-candidate engine:
+ *   - music: the bed. The room override, else the 12-block hourly file
+ *     (`musicSchedule.ts`), else the CC0 time-of-day track, which is on disk.
+ *     A musical loop layer (the campfire's drums, the soft beat) ducks it while
+ *     it plays, so the drums replace the bed instead of stacking on it.
+ *   - ambient: real ambience only (a listed weather or season variant; none is
+ *     authored yet, so the member island's is silent). The applicant island's
+ *     Stream Cafe track plays here, as it always has: that island's bed.
  *
  * Public API:
  *   AudioManager.enable()                        — user gesture unlock
  *   AudioManager.setVolumes({ master, ambient, music, sfx })
  *   AudioManager.setMuted(bool)                   — silences all channels, keeps sliders
  *   AudioManager.setAmbience({ phase, weather, season }) — crossfade ambient, richer key
- *   AudioManager.setMusic({ block, season, override }) — crossfade the hourly music bed
+ *   AudioManager.setMusic({ block, phase, season, override }) — crossfade the music bed
  *   AudioManager.playSFX(name, { rate, gain })   — one-shot, overlapping safe; `rate` re-pitches it (the combat cues)
  *   AudioManager.playBlip()                      — random dialogue voice blip
  *   AudioManager.setLoop(src, gain)              — a looping layer on the world clock's bar (the campfire's drums, the
@@ -41,7 +42,9 @@ import { worldNow } from "./worldClock";
 import type { IslandWeather } from "./islandWeather";
 import type { Season } from "./season";
 
-export type AmbientPhase = "dawn" | "day" | "dusk" | "night" | "applicant-island" | "applicant-hq";
+/** The island's time of day as the bed hears it (the island's "evening" is "dusk"). */
+export type DayPhase = "dawn" | "day" | "dusk" | "night";
+export type AmbientPhase = DayPhase | "applicant-island" | "applicant-hq";
 export type SFXName =
   | "footstep"
   | "jump"
@@ -146,6 +149,8 @@ interface LoopLayer { buffer: AudioBuffer | null; loading: boolean; failed: bool
 const LOOP_FADE_S = 0.35;
 /** A layer silent this long stops its source (ms). */
 const LOOP_IDLE_MS = 4000;
+/** A playing loop layer this loud (or louder) silences the music bed; quieter, at the edge of its range, it dips it. */
+const DUCK_FULL = 0.15;
 
 function readStoredPrefs(): StoredPrefs {
   if (typeof window === "undefined") {
@@ -291,7 +296,7 @@ export class AudioManagerImpl {
   private applyChannelVolumes(): void {
     for (const name of ["ambient", "music"] as const) {
       const ch = this.channel(name);
-      const target = this.targetVolume(name);
+      const target = this.channelVolume(name);
       if (ch.current) ch.current.volume = target * (ch.next ? 1 - ch.fadeProgress : 1);
       if (ch.next) ch.next.volume = target * ch.fadeProgress;
     }
@@ -323,6 +328,7 @@ export class AudioManagerImpl {
     if (Math.abs(target - layer.target) > 0.005) {
       layer.target = target;
       layer.gain.gain.setTargetAtTime(target, ctx.currentTime, LOOP_FADE_S);
+      if (layer.source) this.applyChannelVolumes();
     }
     if (target > 0) {
       layer.idleAt = 0;
@@ -382,6 +388,7 @@ export class AudioManagerImpl {
     source.connect(layer.gain);
     source.start(ctx.currentTime + lead, loopOffset(worldNow() + lead * 1000, layer.buffer.duration));
     layer.source = source;
+    this.applyChannelVolumes();
   }
 
   private mutedGain(): number {
@@ -397,6 +404,14 @@ export class AudioManagerImpl {
     return this.volumes.master * this.volumes.music * this.mutedGain();
   }
 
+  /** A channel's volume: the music bed's share drops while a loop layer plays (the loudest one decides). */
+  private channelVolume(channel: ChannelName): number {
+    if (channel === "ambient") return this.targetVolume(channel);
+    let loudest = 0;
+    for (const layer of this.loops.values()) if (layer.source) loudest = Math.max(loudest, layer.target);
+    return this.targetVolume(channel) * (1 - Math.min(1, loudest / DUCK_FULL));
+  }
+
   private sfxTargetVolume(name: SFXName): number {
     const applicant = this.phase === "applicant-island" || this.phase === "applicant-hq";
     const sceneGain = applicant ? 0.25 : 1;
@@ -408,14 +423,16 @@ export class AudioManagerImpl {
   setAmbience(input: { phase: AmbientPhase; weather?: IslandWeather; season?: Season }): void {
     const candidates = ambientCandidates(input);
     const key = candidates.join("|");
+    const phaseMoved = this.phase !== input.phase;
+    this.phase = input.phase; // the member island's phases share one (silent) key, so this can move on its own
     if (this.ambientKey === key) {
       if (this.enabled && !this.ambientCh.current && !this.ambientCh.next) this.startChannel("ambient", candidates);
+      if (phaseMoved) this.notify();
       return;
     }
     const previousKey = this.ambientKey;
     this.ambientKey = key;
     this.ambientCandidates = candidates;
-    this.phase = input.phase;
     if (this.enabled) {
       if (previousKey === null) this.startChannel("ambient", candidates);
       else this.crossfadeChannel("ambient", candidates);
@@ -423,9 +440,9 @@ export class AudioManagerImpl {
     this.notify();
   }
 
-  /** The 12-block hourly music player (rows 106, 112-114), with interior/cafe overrides. */
-  setMusic(input: { block: MusicBlock; season?: Season | null; override?: MusicOverride }): void {
-    const candidates = buildMusicSrcList(input.block, { season: input.season, override: input.override ?? null });
+  /** The music bed: the room override, else the 12-block hourly file (rows 106, 112-114), else the time-of-day track. */
+  setMusic(input: { block: MusicBlock; phase: DayPhase; season?: Season | null; override?: MusicOverride }): void {
+    const candidates = [...buildMusicSrcList(input.block, { season: input.season, override: input.override ?? null }), MANIFEST.ambient[input.phase]];
     const key = candidates.join("|");
     if (this.musicKey === key) {
       if (this.enabled && !this.musicCh.current && !this.musicCh.next) this.startChannel("music", candidates);
@@ -491,10 +508,10 @@ export class AudioManagerImpl {
   }
 
   private startChannel(name: ChannelName, candidates: string[]): void {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !candidates.length) return;
     const el = this.newAudio(true);
     if (!el) return;
-    el.volume = this.targetVolume(name);
+    el.volume = this.channelVolume(name);
     this.channel(name).current = el;
     this.playCascading(el, candidates, 0);
   }
@@ -512,7 +529,7 @@ export class AudioManagerImpl {
       ch.next = null;
     }
 
-    const next = this.newAudio(true);
+    const next = candidates.length ? this.newAudio(true) : null;
     if (!next) {
       if (ch.current) {
         ch.current.pause();
@@ -608,13 +625,16 @@ export class AudioManagerImpl {
  */
 export const AMBIENT_VARIANTS: ReadonlySet<string> = new Set<string>([]);
 
-/** Ambient candidate list: a listed weather variant, then a listed season variant, then the base file (guaranteed to exist). */
+/**
+ * Ambient candidate list: a listed weather variant, then a listed season variant. The applicant island ends on its
+ * scene track (on disk); the member island's time-of-day track is the music bed's, so with no variant it stays silent.
+ */
 export function ambientCandidates(input: { phase: AmbientPhase; weather?: IslandWeather; season?: Season }, variants: ReadonlySet<string> = AMBIENT_VARIANTS): string[] {
   const { phase, weather, season } = input;
   const list: string[] = [];
   if (weather && weather !== "clear" && variants.has(`${phase}-${weather}`)) list.push(`/audio/ambient/${phase}-${weather}.ogg`);
   if (season && variants.has(`${phase}-${season}`)) list.push(`/audio/ambient/${phase}-${season}.ogg`);
-  list.push(MANIFEST.ambient[phase]);
+  if (phase === "applicant-island" || phase === "applicant-hq") list.push(MANIFEST.ambient[phase]);
   return list;
 }
 

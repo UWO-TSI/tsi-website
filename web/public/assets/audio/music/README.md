@@ -5,11 +5,12 @@ follows the real Toronto clock in twelve 2-hour blocks. `AudioManager`
 (`web/lib/game/audio.ts`, schedule in `web/lib/game/musicSchedule.ts`) loads
 `{block}.mp3` from this folder when it is listed in `MUSIC_FILES`
 (`musicSchedule.ts`), crossfading at the block
-boundary (~800ms fade, same engine as the day/night ambient bed). Until a
-file lands, that block silently falls back to one of the two existing
-applicant-island tracks (Ocean Railway for daytime blocks, Willow Tree for
-evening/night — see `web/public/audio/CREDITS.md`; **their licence for this
-reuse hasn't been verified**, flagged in `specs/audio-pass-questions.md`).
+boundary (~800ms fade). Until a file lands, that block plays the CC0
+time-of-day track (`/audio/ambient/{dawn,day,dusk,night}.ogg`, Ninja Adventure,
+`web/public/audio/CREDITS.md`). This is the member island's one music bed: the
+ambient channel carries only real ambience, and the campfire drums and the soft
+beat duck the bed while they play (`lib/game/audio.ts`). The Stream Cafe tracks
+are the applicant island's only.
 
 ## The 12 expected files
 
@@ -42,8 +43,7 @@ loop-trim locally after export.
   the cafe (any time of day).
 - `bar-evening.mp3` and `bar-night.mp3`: play instead of the hourly block near
   the sushi bar and on its stools while it's open (new world): dinner in the
-  evening, a bar at night. A slot without its file plays the other fallback
-  track from the one outside, so the song changes as you walk in.
+  evening, a bar at night. A slot without its file plays the time-of-day track.
   - `bar-evening.mp3`: "海辺の夕食" (Dinner by the Sea), Suno, made by David,
     2026-10-26. Prompt: "warm Japanese jazz-hop instrumental, seamless loop,
     steady head-nod groove from the first bar to the last, no intro, no outro,

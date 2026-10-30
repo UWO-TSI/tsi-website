@@ -112,7 +112,7 @@ import { useCoarsePointer } from "@/lib/game/useMediaQuery";
 import TouchControls from "./movement/TouchControls";
 import MuseumInterior from "./peaceful/MuseumInterior";
 import AudioController from "./AudioController";
-import { AudioManager, type AmbientPhase } from "@/lib/game/audio";
+import { AudioManager, type DayPhase } from "@/lib/game/audio";
 import { useMusicDirector } from "@/lib/game/useAudio";
 import DonateSheet from "./peaceful/DonateSheet";
 import { ShowcaseSheet, TrophySheet } from "./peaceful/ShowcaseSheets";
@@ -905,9 +905,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // interiors override the outdoor block with their own bed.
   const [atBar, setAtBar] = useState(false);
   const musicOverride = inside === "cafe" ? "cafe" : inside ? "interior" : atBar ? (phase === "night" ? "bar-night" : "bar-evening") : null;
-  useMusicDirector({ season: season.season, override: musicOverride });
+  const ambientPhase: DayPhase = phase === "evening" ? "dusk" : phase;
+  useMusicDirector({ phase: ambientPhase, season: season.season, override: musicOverride });
   useEffect(() => AudioManager.prepare(), []); // behind the loading screen, not mid-walk
-  const ambientPhase: AmbientPhase = phase === "evening" ? "dusk" : phase;
   const [fishing, setFishing] = useState(false);
   // In a volleyball match the court owns the keys and the mouse (VolleyMatch): the wheels stand back.
   const inMatch = useVolley();

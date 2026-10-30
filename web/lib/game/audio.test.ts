@@ -57,8 +57,8 @@ describe("world audio lifecycle", () => {
     expect(FakeAudio.all.at(-1)?.src).toBe("/audio/ambient/applicant-willow-tree.ogg");
     expect(FakeAudio.all.at(-1)?.volume).toBeCloseTo(0.7 * 0.6 * 0.18);
     expect(manager.getState().volumes).toEqual({ master: 0.7, ambient: 0.6, music: 0.55, sfx: 0.8 });
-    manager.setAmbience({ phase: "day" }); frame(1600);
-    expect(FakeAudio.all.at(-1)?.volume).toBeCloseTo(0.42);
+    manager.setAmbience({ phase: "day" }); // the member island's ambience: nothing to play, so the applicant track stops
+    expect(FakeAudio.all.every(track => track.paused)).toBe(true);
     manager.stop();
   });
   it("keeps the applicant soundtrack muted across HQ transitions", () => {
@@ -67,9 +67,9 @@ describe("world audio lifecycle", () => {
     expect(FakeAudio.all.every(track => track.volume === 0)).toBe(true);
     manager.stop();
   });
-  it("keeps both ambient tracks muted through the remainder of a crossfade", () => {
-    const manager = new AudioManagerImpl(); manager.setAmbience({ phase: "day" }); manager.enable(); manager.setAmbience({ phase: "night" }); frame(400);
-    expect(FakeAudio.all.map(a => a.volume)).toEqual([0.21, 0.21]);
+  it("keeps both bed tracks muted through the remainder of a crossfade", () => {
+    const manager = new AudioManagerImpl(); manager.setMusic({ block: "12", phase: "day" }); manager.enable(); manager.setMusic({ block: "12", phase: "night" }); frame(400);
+    expect(FakeAudio.all.map(a => a.volume)).toEqual([0.1925, 0.1925].map(v => expect.closeTo(v)));
     manager.setVolumes({ master: 0 }); expect(FakeAudio.all.map(a => a.volume)).toEqual([0, 0]);
     frame(600); frame(800);
     expect(FakeAudio.all.map(a => a.volume)).toEqual([0, 0]);
@@ -77,41 +77,41 @@ describe("world audio lifecycle", () => {
     manager.stop();
   });
   it("applies volume changes proportionally to both tracks mid-fade", () => {
-    const manager = new AudioManagerImpl(); manager.setAmbience({ phase: "day" }); manager.enable(); manager.setAmbience({ phase: "night" }); frame(200);
-    manager.setVolumes({ master: 1, ambient: 0.8 });
+    const manager = new AudioManagerImpl(); manager.setMusic({ block: "12", phase: "day" }); manager.enable(); manager.setMusic({ block: "12", phase: "night" }); frame(200);
+    manager.setVolumes({ master: 1, music: 0.8 });
     expect(FakeAudio.all[0].volume).toBeCloseTo(0.6); expect(FakeAudio.all[1].volume).toBeCloseTo(0.2);
     frame(800); expect(FakeAudio.all[1].volume).toBeCloseTo(0.8); manager.stop();
   });
   it("mutes already-playing one-shots and stops every sound and fade on exit", () => {
-    const manager = new AudioManagerImpl(); manager.setAmbience({ phase: "day" }); manager.enable(); manager.playSFX("confirm"); manager.setAmbience({ phase: "night" });
+    const manager = new AudioManagerImpl(); manager.setMusic({ block: "12", phase: "day" }); manager.enable(); manager.playSFX("confirm"); manager.setMusic({ block: "12", phase: "night" });
     manager.setVolumes({ master: 0 }); expect(FakeAudio.all.every(a => a.volume === 0)).toBe(true);
     manager.stop(); expect(FakeAudio.all.every(a => a.paused)).toBe(true); expect(frames.size).toBe(0);
     expect(manager.getState().enabled).toBe(true);
-    manager.setAmbience({ phase: "night" }); expect(FakeAudio.all.at(-1)?.paused).toBe(false);
+    manager.setMusic({ block: "12", phase: "night" }); expect(FakeAudio.all.at(-1)?.paused).toBe(false);
     expect(FakeAudio.all.at(-1)?.src).toBe("/audio/ambient/night.ogg"); manager.stop();
   });
   it("keeps only the newest fade when the phase changes rapidly", () => {
-    const manager = new AudioManagerImpl(); manager.setAmbience({ phase: "day" }); manager.enable(); manager.setAmbience({ phase: "dusk" }); frame(200); manager.setAmbience({ phase: "night" });
+    const manager = new AudioManagerImpl(); manager.setMusic({ block: "12", phase: "day" }); manager.enable(); manager.setMusic({ block: "12", phase: "dusk" }); frame(200); manager.setMusic({ block: "12", phase: "night" });
     expect(FakeAudio.all[1].paused).toBe(true); expect(frames.size).toBe(1);
     frame(1000); expect(FakeAudio.all.filter(a => !a.paused).map(a => a.src)).toEqual(["/audio/ambient/night.ogg"]); manager.stop();
   });
   it("allows retry after autoplay rejection instead of treating the file as missing", async () => {
     const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
     FakeAudio.failure = new DOMException("gesture required", "NotAllowedError");
-    const manager = new AudioManagerImpl(); manager.setAmbience({ phase: "day" }); manager.enable(); await Promise.resolve();
+    const manager = new AudioManagerImpl(); manager.setMusic({ block: "12", phase: "day" }); manager.enable(); await Promise.resolve();
     expect(manager.getState().enabled).toBe(false); expect(warning).not.toHaveBeenCalled();
     FakeAudio.failure = null; manager.enable(); await Promise.resolve();
     expect(manager.getState().enabled).toBe(true); expect(FakeAudio.all.at(-1)?.paused).toBe(false); manager.stop();
   });
   it("ignores a rejected playback promise after its track has been stopped", async () => {
     FakeAudio.failure = new DOMException("late", "NotAllowedError");
-    const manager = new AudioManagerImpl(); manager.setAmbience({ phase: "day" }); manager.enable(); manager.stop(); await Promise.resolve();
+    const manager = new AudioManagerImpl(); manager.setMusic({ block: "12", phase: "day" }); manager.enable(); manager.stop(); await Promise.resolve();
     expect(manager.getState().enabled).toBe(true); manager.stop();
   });
   it("does not blacklist a track when play is interrupted", async () => {
     FakeAudio.failure = new DOMException("interrupted", "AbortError");
-    const manager = new AudioManagerImpl(); manager.setAmbience({ phase: "day" }); manager.enable(); await Promise.resolve(); manager.stop();
-    FakeAudio.failure = null; manager.setAmbience({ phase: "day" }); expect(FakeAudio.all).toHaveLength(2); manager.stop();
+    const manager = new AudioManagerImpl(); manager.setMusic({ block: "12", phase: "day" }); manager.enable(); await Promise.resolve(); manager.stop();
+    FakeAudio.failure = null; manager.setMusic({ block: "12", phase: "day" }); expect(FakeAudio.all).toHaveLength(2); manager.stop();
   });
   it("rejects malformed saved volumes and keeps runtime values finite", () => {
     saved.set("tsi.audio.v1", JSON.stringify({ master: "loud", ambient: {}, sfx: -2 }));

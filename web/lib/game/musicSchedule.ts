@@ -5,9 +5,11 @@
  * `torontoHour` the island's day/night phase already uses, so the block
  * follows real time including the DST jump for free). Each block loads
  * `/assets/audio/music/{block}.mp3` when it is listed in `MUSIC_FILES`, tries
- * a listed seasonal variant first, and otherwise falls back to the two
- * existing applicant-island tracks (Ocean Railway / Willow Tree) until
+ * a listed seasonal variant first, and otherwise falls back to the CC0
+ * time-of-day track (Ninja Adventure, `public/audio/CREDITS.md`) until
  * David's Suno tracks land (see `web/public/assets/audio/music/README.md`).
+ * The music channel is the member island's one music bed (David, 2026-10-30:
+ * "theres liek 3 overlapping music"); the Stream Cafe tracks stay applicant-only.
  */
 import { torontoHour } from "./islandTime";
 import type { Season } from "./season";
@@ -18,7 +20,7 @@ export type MusicBlock = (typeof MUSIC_BLOCKS)[number];
 /**
  * Interior beds override the outdoor hourly block; cafe gets its own slot. The sushi bar's speakers (near the bar or on
  * its stools while it's open) play its own slots, dinner jazz in the evening ("bar-evening") and bar jazz at night
- * ("bar-night"; David's Suno tracks), or until they land the other of the two tracks, so walking in changes the song.
+ * ("bar-night"; David's Suno tracks). A slot without its file plays the time-of-day track.
  */
 export type MusicOverride = "cafe" | "interior" | "bar-evening" | "bar-night" | null;
 
@@ -43,26 +45,13 @@ export function musicBlockAt(date: Date = new Date()): MusicBlock {
   return blockForHour(torontoHour(date));
 }
 
-// Roughly sunrise-to-sunset blocks get the brighter Ocean Railway loop; the
-// rest get Willow Tree. Both are the applicant-island tracks named in
-// `web/public/audio/CREDITS.md` — non-CC0, licence unverified for this reuse
-// (see `specs/audio-pass-questions.md`).
-const DAY_BLOCKS = new Set<MusicBlock>(["06", "08", "10", "12", "14", "16", "18"]);
-
-export function fallbackTrackFor(block: MusicBlock): string {
-  return DAY_BLOCKS.has(block) ? "/audio/ambient/applicant-ocean-railway.ogg" : "/audio/ambient/applicant-willow-tree.ogg";
-}
-
 /**
- * Ordered source candidates for the music channel: cafe/interior override
- * first, else a seasonal variant, then the plain block file, then the
- * guaranteed-to-exist fallback track, each only when it is in `files`.
- * `AudioManager` tries each in turn and stays on the first one that decodes.
+ * The block's own files for the music bed, in order: the room override (cafe, interior, the bar's slots) first, else a
+ * seasonal variant, then the plain block file, each only when it is in `files`. `AudioManager.setMusic` ends the list
+ * on the time-of-day track, which is always on disk, and stays on the first one that decodes.
  */
 export function buildMusicSrcList(block: MusicBlock, opts: { season?: Season | null; override?: MusicOverride } = {}, files: ReadonlySet<string> = MUSIC_FILES): string[] {
   const { season, override } = opts;
   const names = override ? [`${override}.mp3`] : season ? [`${block}-${season}.mp3`, `${block}.mp3`] : [`${block}.mp3`];
-  const list = names.filter(name => files.has(name)).map(name => `${MUSIC_DIR}/${name}`);
-  list.push(override?.startsWith("bar-") ? fallbackTrackFor(DAY_BLOCKS.has(block) ? "20" : "12") : fallbackTrackFor(block));
-  return list;
+  return names.filter(name => files.has(name)).map(name => `${MUSIC_DIR}/${name}`);
 }
