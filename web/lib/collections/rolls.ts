@@ -8,7 +8,7 @@
 import type { NodeSpec } from "@/components/game/peaceful/VillageLife";
 import { CAST, TOGETHER, rollSize, type EventCatches, type FishDef } from "@/lib/game/fishing";
 import { fishingSpot, villageWater, watersOf, type WaterType } from "@/lib/game/fishingSpots";
-import { inBounds, worldToCellX, worldToCellZ, type MapAnnotation } from "@/lib/game/grid";
+import { inBounds, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { createHomeIsland } from "@/lib/game/homeIsland";
 import { homeNodes, villageNodes } from "@/lib/game/islandNodes";
 import { reelWeather, type IslandWeather } from "@/lib/game/islandWeather";

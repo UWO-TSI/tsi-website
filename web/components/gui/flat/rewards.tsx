@@ -6,7 +6,7 @@
  * `GoalMeter` (a thick bar filling to its value, with marks along it).
  * Plain props, --ui-* tokens only; nothing here knows about residents or the welcome week. Shown in /lab/gui.
  */
-import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useId, useState, type CSSProperties, type ReactNode } from "react";
 import { Check } from "lucide-react";
 import r from "./rewards.module.css";
 
