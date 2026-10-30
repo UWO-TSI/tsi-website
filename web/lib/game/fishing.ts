@@ -250,9 +250,9 @@ export function rollFish(luck = 0, zone: "river" | "sea" = "river", context: Fis
   return pool[pool.length - 1].fish;
 }
 
-/** Skewed size roll — most catches modest, big ones are the brag. */
-export function rollSize([min, max]: [number, number], random = Math.random): number {
-  return Math.round(min + (max - min) * Math.pow(random(), 1.7));
+/** Skewed size roll: most catches modest, big ones are the brag. `boost` (a meal's size buff, 0 to 1) eases the skew toward the top. */
+export function rollSize([min, max]: [number, number], random = Math.random, boost = 0): number {
+  return Math.round(min + (max - min) * Math.pow(random(), 1.7 * (1 - boost)));
 }
 
 // ─── Reel tuning (track space is 0..1; bar width comes from rarity) ─────────

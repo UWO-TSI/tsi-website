@@ -1,8 +1,9 @@
 /** In-memory CollectionsStore mirroring the 031, 036, catch-roll, seasonal-land, recipe-drop and backpack SQL functions (tests, dev harness). */
 import { FISH } from "@/lib/game/fishing";
 import { CHEST_SLOTS, bagCapacity, fits, isMaterial, slotsUsed, type Stock } from "./bag";
-import { clampSize, trophyFor, weekStart, type Donation, type MemberItem, type WeeklyBest } from "./logic";
+import { clampSize, monthStart, trophyFor, weekStart, type Donation, type MemberItem, type WeeklyBest } from "./logic";
 import { CAST_GAP_MS, MIN_REEL_MS, ROLL_TTL_MS } from "./rolls";
+import { torontoInstant } from "@/lib/time";
 import { ROSTER } from "./roster";
 import { CollectionsError, type CollectionsStore, type LearnedRecipe } from "./store";
 import type { TourneyEntry } from "@/lib/progression/seasonal";
@@ -16,6 +17,7 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
   const donations: (Donation & { key: string })[] = [];
   const bests = new Map<string, WeeklyBest & { week: string }>();
   const names = new Map<string, string>();
+  const monthly = new Map<string, WeeklyBest & { month: string; key: string }>(); // monthly_fish_entries: `${month}:${member}:${item}`
   const showcases = new Map<string, (string | null)[]>();
   const entries = new Map<string, TourneyEntry & { goal: string }>(); // `${goal}:${cycle}:${member}:${category}`
   const hourly = new Map<string, number>(); // `${member}:${hour}:${key}`
@@ -25,6 +27,7 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
   const purses = new Map<string, { coins: number; gems: number }>(); // what digs paid into the wallet
   const handIns: { member: string; species_key: string; key: string }[] = []; // museum_handins
   const gear = new Map<string, string[]>();
+  const buffs = new Map<string, { luck: number; size: number; until: Date }>(); // member_buffs
   const taught = new Set<string>(); // members who arrived under row 312
   const locks = new Set<string>(); // `${member}:${key}`
   const chest = new Map<string, number>(); // `${member}:${key}`
@@ -110,6 +113,27 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
       row.count -= 1;
       return { count: row.count };
     },
+    async monthEntries(month) {
+      return [...monthly.values()].filter((e) => e.month === month).map(({ month: _m, key: _k, ...e }) => (void _m, void _k, { ...e, member_name: names.get(e.user_id) ?? "Member" }));
+    },
+    async monthCatches(m, month) {
+      const since = torontoInstant(month, 0).toISOString(), best = new Map<string, number>();
+      for (const b of bests.values()) if (b.user_id === m && b.caught_at >= since) best.set(b.item_key, Math.max(best.get(b.item_key) ?? 0, b.size_cm));
+      return [...best].map(([item_key, size_cm]) => ({ item_key, size_cm }));
+    },
+    async enterMonth(m, itemKey, key) {
+      const month = monthStart(now()), ek = `${month}:${m}:${itemKey}`, cur = monthly.get(ek);
+      if (cur?.key === key) return { size_cm: cur.size_cm, replayed: true };
+      const size = (await store.monthCatches(m, month)).find((c) => c.item_key === itemKey)?.size_cm;
+      if (size === undefined) throw new CollectionsError("not_this_month");
+      if (cur && cur.size_cm >= size) throw new CollectionsError("not_bigger");
+      if (locks.has(`${m}:${itemKey}`)) throw new CollectionsError("locked");
+      const row = items.get(`${m}:${itemKey}`);
+      if (!row || row.count < 1) throw new CollectionsError("insufficient_items");
+      row.count -= 1;
+      monthly.set(ek, { month, key, user_id: m, member_name: "", item_key: itemKey, size_cm: size, caught_at: now().toISOString() });
+      return { size_cm: size, replayed: false };
+    },
     async weeklyBests(week) {
       return [...bests.values()].filter((b) => b.week === week).map(({ week: _w, ...b }) => (void _w, { ...b, member_name: names.get(b.user_id) ?? "Member" }));
     },
@@ -183,6 +207,10 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
     async tourneyEntries(goalId, cycle) {
       return [...entries.values()].filter((e) => e.goal === `${goalId}:${cycle}`).map(({ goal: _g, ...e }) => (void _g, { ...e, member_name: names.get(e.member_id) ?? "Member" }));
     },
+    async buff(m, at) {
+      const b = buffs.get(m);
+      return b && b.until > at ? b : null;
+    },
     async showcase(m) {
       return showcases.get(m) ?? [null, null, null];
     },
@@ -240,6 +268,8 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
   };
   return {
     store, name: (id: string, n: string) => names.set(id, n),
+    /** A meal at the sushi bar (tests, the dev demo): its buff until `until`. */
+    feed: (m: string, luck: number, size: number, until: Date) => buffs.set(m, { luck, size, until }),
     /** A catch recorded directly (tests, the dev demo): the species' size clamp and trophy rule, then the capped record. */
     record: (m: string, key: string, sizeCm: number | null) => {
       const sp = ROSTER.find((s) => s.key === key), size = clampSize(sp, sizeCm);

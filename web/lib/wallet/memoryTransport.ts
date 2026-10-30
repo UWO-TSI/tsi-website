@@ -4,6 +4,9 @@ import * as S from "./service";
 import { ApiError } from "@/lib/apiClient";
 import type { EconomyTransport } from "./transport";
 
+/** The dev harness asks for sea and river fish, the waters every world has (the server reads its own: rolls.ts activeWaters). */
+const DEMO_WATERS = ["sea", "river"] as const;
+
 export function memoryEconomyTransport(me: string, m = memoryEconomyStore(), clock: () => Date = () => new Date()): EconomyTransport {
   const u = async <T>(p: Promise<{ ok: true; data: T } | { ok: false; status: number; error: string; code: string }>): Promise<T> => {
     const r = await p;
@@ -16,6 +19,14 @@ export function memoryEconomyTransport(me: string, m = memoryEconomyStore(), clo
     buy: (id, qty, key) => u(S.buy(m.store, me, { item_id: id, qty, idempotency_key: key }, clock())),
     sellable: () => u(S.sellList(m.store, me)),
     sell: (k, qty, key) => u(S.sell(m.store, me, { item_key: k, qty, idempotency_key: key })),
+    tasks: () => u(S.fishingTasksView(m.store, me, clock(), DEMO_WATERS)),
+    claimTask: (task, period, key) => u(S.claimFishingTask(m.store, me, { task, period, idempotency_key: key }, clock(), DEMO_WATERS)),
+    chef: () => u(S.chefView(m.store, me, clock(), DEMO_WATERS)),
+    fillChef: (k, key) => u(S.fillChefOrder(m.store, me, { item_key: k, idempotency_key: key }, clock(), DEMO_WATERS)),
+    tackle: async () => S.tackleView(clock()),
+    roll: (counter, pulls, key) => u(S.rollAtTackle(m.store, me, { counter, pulls, idempotency_key: key }, clock())),
+    sushi: () => u(S.sushiView(m.store, me, clock())),
+    order: (dish, key, fish) => u(S.orderDish(m.store, me, { dish, fish, idempotency_key: key }, clock())),
     inventory: () => u(S.getInventory(m.store, me)),
     equip: (id, on) => u(S.equip(m.store, me, { item_id: id, equipped: on })),
     dailyGift: () => u(S.claimDailyGift(m.store, me)),

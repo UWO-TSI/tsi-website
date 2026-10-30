@@ -484,3 +484,7 @@ export function BigMoment({ kicker, big, title, items, action = "Nice!", onClose
     </section>
   </div>;
 }
+/** The day strip, the hover card, odds, the reveal, tasks and the small panel (pieces.tsx). */
+export * from "./pieces";
+/** Paper for what is paper in the world: the folded menu, ink art, the hanko, a dish on its tray (paper.tsx). */
+export * from "./paper";

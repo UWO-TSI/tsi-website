@@ -111,6 +111,12 @@ export interface JournalEntryKnown {
   clue: string;
   available_now: boolean;
   later_today: boolean;
+  /** The seasonal view (d-now): out this month, its last month, or back next month. */
+  in_season: boolean;
+  leaving: boolean;
+  arriving: boolean;
+  /** Its habitat is shut for now (the mountain's pond): never out until it opens. */
+  closed: boolean;
   donatable: boolean;
   museum: { donated: boolean; donor_name: string | null; by_me: boolean };
 }
@@ -121,6 +127,10 @@ export interface JournalEntryUnknown {
   clue: string;
   available_now: boolean;
   later_today: boolean;
+  in_season: boolean;
+  leaving: boolean;
+  arriving: boolean;
+  closed: boolean;
 }
 export interface JournalPage {
   category: Category;
@@ -133,13 +143,18 @@ export function speciesInCategory(roster: Species[], category: Category): Specie
   return roster.filter((s) => s.category === category).sort((a, b) => a.position - b.position);
 }
 
-export function journalPage(roster: Species[], category: Category, mine: MemberItem[], donations: Donation[], memberId: string, m: WorldMoment): JournalPage {
+/**
+ * `closed`: habitats the island has but keeps shut for now (the new world's pond is the mountain's, David: "pond only in
+ * mountain"): their species are never out, in season or coming, and say so (`closed`), until the zone opens.
+ */
+export function journalPage(roster: Species[], category: Category, mine: MemberItem[], donations: Donation[], memberId: string, m: WorldMoment, closed: ReadonlySet<Biome> = new Set()): JournalPage {
   const owned = new Map(mine.map((r) => [r.item_key, r]));
   const donated = new Map(donations.map((d) => [d.species_key, d]));
   const list = speciesInCategory(roster, category);
   const entries = list.map((sp, i): JournalEntryKnown | JournalEntryUnknown => {
     const row = owned.get(sp.key);
-    const base = { slot: i + 1, clue: clueFor(sp), available_now: availableAt(sp, m), later_today: laterToday(sp, m) };
+    const shut = closed.has(sp.biome), now = !shut && inSeason(sp, m.month), next = !shut && inSeason(sp, (m.month % 12) + 1);
+    const base = { slot: i + 1, clue: clueFor(sp), available_now: !shut && availableAt(sp, m), later_today: !shut && laterToday(sp, m), in_season: now, leaving: now && !next, arriving: !now && next, closed: shut };
     if (!row) return { ...base, discovered: false, silhouette: `/api/collections/silhouette/${category}/${i + 1}` };
     const d = donated.get(sp.key);
     return {
@@ -228,6 +243,12 @@ export function weekStart(now: Date): string {
   return new Date(Date.UTC(t.year, t.month - 1, t.day - t.weekday)).toISOString().slice(0, 10);
 }
 
+/** The first of the Toronto month, YYYY-MM-DD (the monthly board's). */
+export function monthStart(now: Date): string {
+  const t = torontoParts(now);
+  return `${t.year}-${String(t.month).padStart(2, "0")}-01`;
+}
+
 export interface WeeklyBest {
   user_id: string;
   member_name: string;
@@ -256,7 +277,7 @@ export const TROPHIES_PER_MEMBER = 2;
  * rarity, then how close to the species maximum it was, then who caught it
  * first. At most two cases per member so the wall shows the club.
  */
-export function weeklyTrophies(roster: Species[], bests: WeeklyBest[], slots = TROPHY_SLOTS): Trophy[] {
+export function weeklyTrophies(roster: Species[], bests: WeeklyBest[], slots = TROPHY_SLOTS, perMemberCap = TROPHIES_PER_MEMBER): Trophy[] {
   const bySpecies = new Map(roster.filter((s) => (s.category === "fish" || s.category === "sea") && s.size).map((s) => [s.key, s]));
   const top = new Map<string, WeeklyBest>();
   for (const b of bests) {
@@ -276,7 +297,7 @@ export function weeklyTrophies(roster: Species[], bests: WeeklyBest[], slots = T
   for (const { b, sp, ratio } of ranked) {
     if (out.length >= slots) break;
     const n = perMember.get(b.user_id) ?? 0;
-    if (n >= TROPHIES_PER_MEMBER) continue;
+    if (n >= perMemberCap) continue;
     perMember.set(b.user_id, n + 1);
     out.push({ rank: out.length + 1, key: sp.key, name: sp.name, icon: sp.icon, rarity: sp.rarity, size_cm: b.size_cm, size_ratio: Math.round(ratio * 100) / 100, member_id: b.user_id, member_name: b.member_name, caught_at: b.caught_at });
   }

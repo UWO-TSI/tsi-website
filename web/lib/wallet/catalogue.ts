@@ -219,6 +219,43 @@ export const SELL_PRICES: Record<string, Record<string, number>> = {
   mineral: { common: 5, uncommon: 15, rare: 45, epic: 135, legendary: 450, divine: 1125 },
 };
 
+/** A fishing task (lib/wallet/rules.ts fishingTasks) pays this many times the fish's sell price (twice for the week's); you keep the fish. */
+export const FISH_TASK_PAY = 2;
+/** The weekly variety task: this many different fish landed in the week, for these coins. */
+export const FISH_TASK_VARIETY = { need: 8, reward: 250 } as const;
+/** The chef's order takes the fish, so it pays this many times its sell price, and a staff meal. */
+export const FISH_CHEF_PAY = 3;
+
+/**
+ * The sushi bar's meals (f-sushi phase B, specs/launch/sushi-bar.md): each a fishing buff for a while, the last meal
+ * replacing the one before. `luck` adds to the cast's luck (rarer fish bite, as a better rod's does), `size` pulls the
+ * size roll toward the top (fishRoll). The feast is cooked from one of your own epic or legendary fish instead of coins
+ * (David: "good for repeated legendary fish they wanna use instead of sell").
+ */
+export interface MealBuff { luck: number; size: number; minutes: number }
+export interface Dish { id: string; name: string; blurb: string; price: number | null; buff: MealBuff }
+/**
+ * Each dish's art (design bible Models): its high-def model for the menu (`hd`, and the icon rendered from it, `icon`),
+ * and the low-poly world copy `worldModel(hd)` serves at the bar. The models wait for David's references; until one is
+ * made (`ready`), the menu shows `standIn`, an existing icon, marked as a stand-in.
+ */
+export const DISH_ART: Record<string, { hd: string; icon: string; standIn: string; ready: boolean }> = {
+  miso_soup: { hd: "/assets/game/food/hd/miso-soup.glb", icon: "dish_miso_soup", standIn: "lounge-tea", ready: false },
+  salmon_nigiri: { hd: "/assets/game/food/hd/salmon-nigiri.glb", icon: "dish_salmon_nigiri", standIn: "fish_salmon", ready: false },
+  tuna_roll: { hd: "/assets/game/food/hd/tuna-roll.glb", icon: "dish_tuna_roll", standIn: "fish_tuna", ready: false },
+  omakase: { hd: "/assets/game/food/hd/omakase.glb", icon: "dish_omakase", standIn: "sea_sweet_shrimp", ready: false },
+  feast: { hd: "/assets/game/food/hd/banchas-feast.glb", icon: "dish_banchas_feast", standIn: "fish_king_salmon", ready: false },
+};
+export const SUSHI_MENU: readonly Dish[] = [
+  { id: "miso_soup", name: "Miso soup", blurb: "Warm and simple.", price: 20, buff: { luck: 0.05, size: 0, minutes: 15 } },
+  { id: "salmon_nigiri", name: "Salmon nigiri", blurb: "Fresh off the morning boats.", price: 40, buff: { luck: 0.1, size: 0, minutes: 20 } },
+  { id: "tuna_roll", name: "Tuna roll", blurb: "Thick cut and generous.", price: 40, buff: { luck: 0, size: 0.3, minutes: 20 } },
+  { id: "omakase", name: "Omakase", blurb: "Whatever Bancha picks today.", price: 150, buff: { luck: 0.15, size: 0.3, minutes: 30 } },
+  { id: "feast", name: "Bancha's feast", blurb: "Bring one of your epic or legendary fish and he cooks it into a feast.", price: null, buff: { luck: 0.35, size: 0.6, minutes: 60 } },
+];
+/** The chef's order pays its coins and this meal (David: "side quest for special fish for money and food"). */
+export const STAFF_MEAL: MealBuff = { luck: 0.1, size: 0.2, minutes: 30 };
+
 /** Daily gift (row 225): 10 coins, doubled on Fridays (Toronto day). */
 export function dailyGiftAmount(day: string, base: number = SETTINGS.daily_gift_coins): number {
   const [y, m, d] = day.split("-").map(Number);

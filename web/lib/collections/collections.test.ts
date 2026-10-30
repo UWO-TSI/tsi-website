@@ -5,7 +5,7 @@ import { FISH } from "@/lib/game/fishing";
 import { availableAt, clueFor, journalPage, laterToday, museumWings, validateShowcase, weekStart, weeklyTrophies, type WeeklyBest } from "./logic";
 import { memoryCollectionsStore } from "./memoryStore";
 import { LAUNCH_ROSTER, ROSTER, type Species } from "./roster";
-import { donate, journal, trophies } from "./service";
+import { donate, enterMonthly, journal, monthBoard, trophies } from "./service";
 
 const A = "00000000-0000-4000-8000-0000000000aa";
 const B = "00000000-0000-4000-8000-0000000000bb";
@@ -169,6 +169,36 @@ describe("weekly trophy case (row 204)", () => {
   });
 });
 
+describe("the monthly board (David, 2026-10-28: \"a place to put your fish to monthly leaderboard\")", () => {
+  it("puts one of a fish you landed this month on the board at your biggest this month, and keeps each fish's biggest", async () => {
+    let at = new Date("2026-09-24T16:00:00Z");
+    const m = memoryCollectionsStore(() => at);
+    m.name(A, "Maya");
+    m.name(B, "Jordan");
+    m.record(A, "fish_carp", 60);
+    m.record(A, "fish_carp", 55);
+    m.record(B, "fish_carp", 70);
+    m.record(A, "fish_dace", 12);
+    m.record(A, "flower_rose", 9);
+    const enter = (who: string, key: string, idem: string) => enterMonthly(m.store, who, { item_key: key, idempotency_key: idem });
+    expect(await enter(A, "fish_carp", "month-0001")).toEqual({ ok: true, data: { size_cm: 60, replayed: false } });
+    expect(await enter(A, "fish_carp", "month-0001")).toEqual({ ok: true, data: { size_cm: 60, replayed: true } });
+    expect(await enter(A, "fish_carp", "month-0002")).toMatchObject({ ok: false, code: "not_bigger" });
+    expect(await enter(A, "fish_koi", "month-0003")).toMatchObject({ ok: false, code: "not_this_month" });
+    expect(await enter(B, "fish_carp", "month-0004")).toMatchObject({ ok: true, data: { size_cm: 70 } });
+    const r = await monthBoard(m.store, A, at);
+    if (!r.ok) throw new Error(r.error);
+    expect(r.data.month).toBe("2026-09-01");
+    expect(r.data.board.map((t) => [t.key, t.member_name, t.size_cm, t.mine])).toEqual([["fish_carp", "Jordan", 70, false]]);
+    expect(r.data.yours.map((y) => [y.key, y.size_cm, y.have, y.entered])).toEqual([["fish_carp", 60, 1, 60], ["fish_dace", 12, 1, null]]);
+    // A new month: a new board, and last month's catches don't count.
+    at = new Date("2026-10-02T16:00:00Z");
+    const next = await monthBoard(m.store, A, at);
+    expect(next.ok && [next.data.month, next.data.board, next.data.yours]).toEqual(["2026-10-01", [], []]);
+    expect(await enter(A, "fish_dace", "month-0005")).toMatchObject({ ok: false, code: "not_this_month" });
+  });
+});
+
 describe("showcase", () => {
   it("takes three slots of things you've found, no repeats", () => {
     const mine = [{ item_key: "fish_dace", count: 0, total_collected: 1, best_size_cm: 12, first_collected_at: "" }];
@@ -179,7 +209,51 @@ describe("showcase", () => {
   });
 });
 
+it("journal pages carry the seasonal view: in season this month, leaving after it, back next month", () => {
+  const autumn = ROSTER.find((s) => s.category === "fish" && s.months.join() === "9,10,11")!;
+  const entry = (month: number) => journalPage(ROSTER, "fish", [], [], A, { hour: 12, month, weather: "clear" }).entries.find((e) => e.clue === clueFor(autumn))!;
+  expect(entry(10)).toMatchObject({ in_season: true, leaving: false, arriving: false });
+  expect(entry(11)).toMatchObject({ in_season: true, leaving: true, arriving: false });
+  expect(entry(8)).toMatchObject({ in_season: false, leaving: false, arriving: true });
+  const allYear = journalPage(ROSTER, "fish", [], [], A, { hour: 12, month: 3, weather: "clear" }).entries.filter((e, i) => !ROSTER.filter((s) => s.category === "fish").sort((a, b) => a.position - b.position)[i].months.length);
+  expect(allYear.every((e) => e.in_season && !e.leaving && !e.arriving)).toBe(true);
+});
+
+it("keeps a closed habitat's species never out, in season or coming (the mountain's pond)", () => {
+  const pondKeys = new Set(ROSTER.filter((s) => s.category === "fish" && s.biome === "pond").map((s) => s.key));
+  const fish = ROSTER.filter((s) => s.category === "fish").sort((a, b) => a.position - b.position);
+  const mine = [...pondKeys].map((k) => ({ item_key: k, count: 1, total_collected: 1, best_size_cm: null, first_collected_at: "" }));
+  for (const month of [1, 4, 7, 10]) for (const hour of [3, 12, 21]) {
+    const page = journalPage(ROSTER, "fish", mine, [], A, { hour, month, weather: "clear" }, new Set(["pond"]));
+    page.entries.forEach((e, i) => {
+      if (!pondKeys.has(fish[i].key)) return expect(e.closed).toBe(false);
+      expect(e).toMatchObject({ closed: true, available_now: false, later_today: false, in_season: false, leaving: false, arriving: false });
+    });
+  }
+});
+
 it("journal page helper exposes clue + availability on known entries too", () => {
   const page = journalPage(ROSTER, "bug", [{ item_key: "bug_firefly", count: 1, total_collected: 1, best_size_cm: null, first_collected_at: "x" }], [], A, { hour: 21, month: 6, weather: "clear" });
   expect(page.entries.find((e) => e.discovered)).toMatchObject({ key: "bug_firefly", available_now: true });
+});
+
+describe("a meal's buff reaches the server's cast (f-sushi)", () => {
+  it("rolls the cast with the member's buff while it lasts", async () => {
+    const { catchAction } = await import("./service");
+    const { castWater } = await import("./rolls");
+    const at = new Date("2026-09-24T16:00:00Z");
+    // A spot on the shore of the active world: the first point on a coarse lattice with water in reach.
+    let spot: [number, number] = [0, 0];
+    find: for (let x = -150; x < 150; x += 2) for (let z = -150; z < 150; z += 2) if (castWater("village", [x, z])) { spot = [x, z]; break find; }
+    const sizes = async (fed: boolean) => {
+      const m = memoryCollectionsStore(() => at);
+      if (fed) m.feed(A, 0, 1, new Date(at.getTime() + 60_000));
+      const r = await catchAction(m.store, A, { action: "cast", site: "village", at: spot, power: 0.5, tool: "rod_flimsy" }, at, async () => "clear", async () => [], () => 0.3);
+      return r;
+    };
+    const [plain, fed] = await Promise.all([sizes(false), sizes(true)]);
+    if (!plain.ok || !fed.ok) throw new Error(`cast refused at ${spot}`);
+    expect(fed.data.item_key).toBe(plain.data.item_key);
+    expect(fed.data.size_cm!).toBeGreaterThan(plain.data.size_cm!);
+  });
 });

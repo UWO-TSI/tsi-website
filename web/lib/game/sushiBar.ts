@@ -237,3 +237,18 @@ export function stoolAt(bar: Bar, x: number, z: number): number {
 export function seatView(lx: number): { eye: [number, number, number]; look: [number, number, number] } {
   return { eye: [lx, STOOL_TOP + 1.1, STOOL_Z + 0.4], look: [lx * 0.85, STOOL_TOP + 0.45, -2.5] };
 }
+
+/**
+ * The seated view with the menu picked up (David, 2026-10-28: "you can pick it up first person"): at `k` 1 you lean in
+ * a little and look down at it in your hands; at 0, the stool's own view. Written into `out`.
+ */
+export function readingView(base: BarView, k: number, out: BarView): BarView {
+  const { eye, look } = base, lean = 0.22 * k;
+  out.eye.x = eye.x + (look.x - eye.x) * lean * 0.25;
+  out.eye.y = eye.y - 0.05 * k;
+  out.eye.z = eye.z + (look.z - eye.z) * lean * 0.25;
+  out.look.x = look.x + (eye.x - look.x) * 0.55 * k;
+  out.look.y = look.y - 0.55 * k;
+  out.look.z = look.z + (eye.z - look.z) * 0.55 * k;
+  return out;
+}

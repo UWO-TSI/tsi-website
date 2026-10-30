@@ -1,12 +1,15 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { BOX_CATEGORIES, BOX_GEAR, boxPool, CATALOGUE, SETTINGS, WELCOME_TRACK } from "./catalogue";
+import { BOX_CATEGORIES, BOX_GEAR, boxPool, CATALOGUE, SETTINGS, WELCOME_TRACK, FISH_CHEF_PAY, FISH_TASK_PAY, FISH_TASK_VARIETY, STAFF_MEAL, SUSHI_MENU } from "./catalogue";
 import { memoryEconomyStore } from "./memoryStore";
-import { dailySpecials, isOnSale, seedItems, sellPrice, speciesClass, speciesSellPrice, torontoDay } from "./rules";
+import { dailySpecials, isOnSale, seedItems, sellPrice, speciesClass, speciesSellPrice, torontoDay, chefOrder, fishingTasks } from "./rules";
 import { DROPS } from "@/lib/game/drops";
 import { ROSTER } from "@/lib/collections/roster";
-import { buy, claimDailyGift, equip, getShop, getWallet, pickupCode, reserveMerch, resolveMerch, sell, sellList, type GiftView } from "./service";
+import { buy, claimDailyGift, equip, getShop, getWallet, pickupCode, reserveMerch, resolveMerch, sell, sellList, type GiftView, chefView, claimFishingTask, fillChefOrder, fishingTasksView, orderDish, rollAtTackle } from "./service";
+import { odds, prizeItems, rollTackle, TACKLE_COUNTERS, TACKLE_PRIZES } from "./tackle";
+import { weekStart } from "@/lib/collections/logic";
+import { fishOutToday } from "@/lib/game/peaceful";
 
 const A = "00000000-0000-4000-8000-0000000000aa";
 const B = "00000000-0000-4000-8000-0000000000bb";
@@ -109,6 +112,165 @@ describe("selling by rarity (row 91)", () => {
     expect(await sell(m.store, A, { item_key: "fish_dace", qty: 2, idempotency_key: "sell-0102" })).toMatchObject({ ok: true, data: { paid: 16 } });
     m.lock(A, "fish_golden_koi", false);
     expect(await sell(m.store, A, { item_key: "fish_golden_koi", qty: 1, idempotency_key: "sell-0103" })).toMatchObject({ ok: true, data: { paid: 180 } });
+  });
+});
+
+describe("the fishing tasks (David, 2026-10-28: \"if you did it you claim it\")", () => {
+  const waters = ["sea", "river"] as const;
+  it("posts 3 different fish a day, common to rare, and 2 a week, the same for everyone, each paying a multiple of its sell price", () => {
+    const { day, week } = fishingTasks("2026-10-27", "2026-10-26", waters);
+    expect(day).toHaveLength(3);
+    expect(new Set(day.map((t) => t.item_key)).size).toBe(3);
+    expect(day.map((t) => t.rarity)).toEqual(["common", "uncommon", "rare"]);
+    expect(fishingTasks("2026-10-27", "2026-10-26", waters)).toEqual({ day, week });
+    for (const t of day) expect(t).toMatchObject({ period: "day", id: `catch:${t.item_key}`, need: 1, reward: speciesSellPrice(t.item_key!)! * FISH_TASK_PAY });
+    expect(week.map((t) => t.id)).toEqual([`catch:${week[0].item_key}`, `variety:${FISH_TASK_VARIETY.need}`]);
+    expect(["rare", "epic"]).toContain(week[0].rarity);
+    expect(week[1]).toMatchObject({ item_key: null, need: FISH_TASK_VARIETY.need, reward: FISH_TASK_VARIETY.reward });
+    const days = ["2026-10-21", "2026-10-22", "2026-10-23", "2026-10-24", "2026-10-25", "2026-10-26"].map((d) => fishingTasks(d, "2026-10-19", waters).day.map((t) => t.item_key).join());
+    expect(new Set(days).size).toBeGreaterThan(3);
+  });
+  it("only asks for fish that bite in the waters given, and never a pond fish while the pond is the closed mountain's", () => {
+    const pond = new Set(ROSTER.filter((s) => s.biome === "pond").map((s) => s.key));
+    for (let d = 0; d < 365; d += 3) {
+      const day = new Date(Date.UTC(2026, 0, 1 + d)).toISOString().slice(0, 10), month = Number(day.slice(5, 7));
+      const t = fishingTasks(day, day, waters), out = new Set(fishOutToday(waters, month).map((o) => o.fish.key));
+      expect([...t.day, ...t.week].every((x) => x.item_key === null || out.has(x.item_key))).toBe(true);
+      expect([...t.day, ...t.week].some((x) => pond.has(x.item_key ?? ""))).toBe(false);
+      expect(pond.has(chefOrder(day, waters)?.item_key ?? "")).toBe(false);
+    }
+  });
+  it("is done when you've landed the fish (no handing over), and pays once when you claim it", async () => {
+    const m = memoryEconomyStore();
+    const now = noon, { day } = fishingTasks(torontoDay(now), weekStart(now), waters), [want] = day;
+    const claim = (key: string, task = want.id) => claimFishingTask(m.store, A, { task, period: "day", idempotency_key: key }, now, waters);
+    expect(await claim("task-0001")).toMatchObject({ ok: false, code: "not_done" });
+    m.land(A, want.item_key!, new Date(now.getTime() - 86_400_000)); // yesterday's doesn't count
+    expect(await claim("task-0002")).toMatchObject({ ok: false, code: "not_done" });
+    m.land(A, want.item_key!, now);
+    const view = await fishingTasksView(m.store, A, now, waters);
+    expect(view.ok && view.data.daily.map((t) => [t.have, t.claimed])).toEqual([[1, false], [0, false], [0, false]]);
+    expect(await claim("task-0003")).toMatchObject({ ok: true, data: { paid: want.reward, replayed: false } });
+    expect(await claim("task-0003")).toMatchObject({ ok: true, data: { replayed: true } });
+    expect(await claim("task-0004")).toMatchObject({ ok: false, code: "already_claimed" });
+    expect(await claim("task-0005", "catch:fish_coelacanth")).toMatchObject({ ok: false, code: "not_requested" });
+    expect(m.coinsOf(A)).toBe(want.reward);
+    expect(await m.store.collections(A)).toEqual([]); // nothing taken
+    const after = await fishingTasksView(m.store, A, now, waters);
+    expect(after.ok && after.data.daily[0].claimed).toBe(true);
+    const tomorrow = await fishingTasksView(m.store, A, new Date(now.getTime() + 86_400_000), waters);
+    expect(tomorrow.ok && tomorrow.data.daily.some((t) => t.claimed || t.have)).toBe(false);
+  });
+  it("counts different fish landed this week for the variety task", async () => {
+    const m = memoryEconomyStore();
+    const keys = ROSTER.filter((s) => s.category === "fish").slice(0, FISH_TASK_VARIETY.need).map((s) => s.key);
+    const claim = (key: string) => claimFishingTask(m.store, A, { task: `variety:${FISH_TASK_VARIETY.need}`, period: "week", idempotency_key: key }, noon, waters);
+    for (const k of keys.slice(1)) m.land(A, k, noon);
+    m.land(A, keys[1], noon);
+    m.land(A, "bug_ladybug", noon);
+    expect(await claim("week-0001")).toMatchObject({ ok: false, code: "not_done" });
+    const view = await fishingTasksView(m.store, A, noon, waters);
+    expect(view.ok && view.data.weekly[1].have).toBe(FISH_TASK_VARIETY.need - 1);
+    m.land(A, keys[0], noon);
+    expect(await claim("week-0002")).toMatchObject({ ok: true, data: { paid: FISH_TASK_VARIETY.reward } });
+  });
+});
+
+describe("the tackle shop's rolls (David, 2026-10-28: \"one for coin one for gem, roll for 1 to 10\")", () => {
+  it("shows odds that add up to 100 at each counter, with only this season's crazy ones", () => {
+    for (const c of ["coins", "gems"] as const) for (const season of ["spring", "summer", "autumn", "winter"] as const) {
+      const table = odds(c, season);
+      expect(table.reduce((s, o) => s + o.chance, 0)).toBeCloseTo(100, 6);
+      expect(table.every((o) => !o.prize.season || o.prize.season === season)).toBe(true);
+      expect(table.some((o) => o.prize.season === season)).toBe(true);
+    }
+    expect(odds("gems", "autumn").some((o) => o.prize.rarity === "common")).toBe(false);
+  });
+  it("rolls by the shown odds", () => {
+    let seed = 7;
+    const random = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const n = 20000, got = new Map<string, number>();
+    for (let i = 0; i < n / 10; i++) for (const p of rollTackle("coins", "autumn", 10, random)) got.set(p.rarity, (got.get(p.rarity) ?? 0) + 1);
+    expect((got.get("common") ?? 0) / n).toBeCloseTo(TACKLE_COUNTERS.coins.chances.common! / 100, 1);
+    expect((got.get("rare") ?? 0) / n).toBeCloseTo(TACKLE_COUNTERS.coins.chances.rare! / 100, 1);
+  });
+  it("charges the counter's price, grants each prize into the bag, and replays a key without charging again", async () => {
+    const m = memoryEconomyStore();
+    m.fund(A, 2000, 50);
+    const top = () => 0.999999;
+    const one = await rollAtTackle(m.store, A, { counter: "coins", pulls: 1, idempotency_key: "roll-0001" }, noon, top);
+    expect(one).toMatchObject({ ok: true, data: { prizes: [expect.any(String)], replayed: false } });
+    expect(m.coinsOf(A)).toBe(2000 - TACKLE_COUNTERS.coins.each);
+    const ten = await rollAtTackle(m.store, A, { counter: "gems", pulls: 10, idempotency_key: "roll-0002" }, noon);
+    expect(ten.ok && ten.data.prizes).toHaveLength(10);
+    expect(m.gemsOf(A)).toBe(50 - TACKLE_COUNTERS.gems.ten);
+    expect(await rollAtTackle(m.store, A, { counter: "gems", pulls: 10, idempotency_key: "roll-0002" }, noon)).toMatchObject({ ok: true, data: { replayed: true } });
+    expect(m.gemsOf(A)).toBe(50 - TACKLE_COUNTERS.gems.ten);
+    expect(await rollAtTackle(m.store, A, { counter: "gems", pulls: 10, idempotency_key: "roll-0003" }, noon)).toMatchObject({ ok: false, code: "insufficient" });
+    const bag = await m.store.inventory(A);
+    expect(bag.reduce((s, r) => s + r.qty, 0)).toBe(11);
+    expect(bag.every((r) => !r.item.active && r.item.stackable)).toBe(true);
+  });
+  it("seeds every prize in its migration as the memory store has it", () => {
+    const sql = readFileSync(join(process.cwd(), "supabase/migrations/20261028161000_tackle_rolls.sql"), "utf8");
+    for (const it of prizeItems()) expect(sql).toContain(`('${it.slug}', '${it.display_name.replace(/'/g, "''")}', 'tool', '${it.description.replace(/'/g, "''")}', ${it.price_coins}, NULL, NULL, '${it.slot}'`);
+  });
+  it("never shows the shop's prizes on sale", async () => {
+    const m = memoryEconomyStore();
+    const shop = await getShop(m.store, A, noon);
+    const prizes = new Set(TACKLE_PRIZES.map((p) => p.key));
+    expect(shop.ok && Object.values(shop.data.tabs).flat().some((e) => prizes.has((e as { slug: string }).slug))).toBe(false);
+  });
+});
+
+describe("the sushi bar's menu, the big dish and the chef's order (f-sushi phase B)", () => {
+  const waters = ["sea", "river"] as const;
+  it("orders a dish for coins: its buff runs from now for its minutes, and a new meal replaces the last", async () => {
+    const m = memoryEconomyStore();
+    m.fund(A, 100);
+    const nigiri = SUSHI_MENU.find((d) => d.id === "salmon_nigiri")!;
+    const r = await orderDish(m.store, A, { dish: "salmon_nigiri", idempotency_key: "sushi-0001" }, noon);
+    expect(r).toMatchObject({ ok: true, data: { paid: nigiri.price, buff: { luck: nigiri.buff.luck, size: nigiri.buff.size, until: new Date(noon.getTime() + nigiri.buff.minutes * 60_000).toISOString() } } });
+    expect(await orderDish(m.store, A, { dish: "salmon_nigiri", idempotency_key: "sushi-0001" }, noon)).toMatchObject({ ok: true, data: { replayed: true } });
+    expect(m.coinsOf(A)).toBe(100 - nigiri.price!);
+    expect(await orderDish(m.store, A, { dish: "omakase", idempotency_key: "sushi-0002" }, noon)).toMatchObject({ ok: false, code: "insufficient" });
+    await orderDish(m.store, A, { dish: "miso_soup", idempotency_key: "sushi-0003" }, noon);
+    expect(await m.store.buff(A, noon)).toMatchObject({ luck: SUSHI_MENU.find((d) => d.id === "miso_soup")!.buff.luck });
+    expect(await m.store.buff(A, new Date(noon.getTime() + 3_600_000))).toBeNull();
+    expect(await orderDish(m.store, A, { dish: "fugu", idempotency_key: "sushi-0004" }, noon)).toMatchObject({ ok: false, code: "not_found" });
+  });
+  it("cooks the big dish only from one of your own epic or legendary fish, for no coins", async () => {
+    const m = memoryEconomyStore();
+    const feast = (fish: string, key: string) => orderDish(m.store, A, { dish: "feast", fish, idempotency_key: key }, noon);
+    expect(await feast("fish_dace", "feast-0001")).toMatchObject({ ok: false, code: "not_rare_enough" });
+    expect(await feast("fish_coelacanth", "feast-0002")).toMatchObject({ ok: false, code: "insufficient_items" });
+    m.give(A, "fish_coelacanth", 1);
+    expect(await feast("fish_coelacanth", "feast-0003")).toMatchObject({ ok: true, data: { paid: 0, buff: { luck: SUSHI_MENU.find((d) => d.id === "feast")!.buff.luck } } });
+    expect(await m.store.collections(A)).toEqual([]);
+    expect(await orderDish(m.store, A, { dish: "salmon_nigiri", fish: "fish_coelacanth", idempotency_key: "feast-0004" }, noon)).toMatchObject({ ok: false, code: "invalid" });
+  });
+  it("posts one chef's order a day, rare or epic and none of the day's tasks, that takes the fish for coins and a staff meal", async () => {
+    for (const day of ["2026-10-25", "2026-10-26", "2026-10-27"]) {
+      const o = chefOrder(day, waters)!;
+      expect(["rare", "epic"]).toContain(o.rarity);
+      expect(o.reward).toBe(speciesSellPrice(o.item_key)! * FISH_CHEF_PAY);
+      expect(fishingTasks(day, day, waters).day.some((t) => t.item_key === o.item_key)).toBe(false);
+    }
+    const m = memoryEconomyStore();
+    const o = chefOrder(torontoDay(noon), waters)!;
+    const fill = (key: string, item = o.item_key) => fillChefOrder(m.store, A, { item_key: item, idempotency_key: key }, noon, waters);
+    expect(await fill("chef-0001")).toMatchObject({ ok: false, code: "insufficient_items" });
+    m.give(A, o.item_key, 2);
+    m.lock(A, o.item_key, true);
+    expect(await fill("chef-0002")).toMatchObject({ ok: false, code: "locked" });
+    m.lock(A, o.item_key, false);
+    expect(await fill("chef-0003")).toMatchObject({ ok: true, data: { paid: o.reward, remaining: 1 } });
+    expect(await fill("chef-0003")).toMatchObject({ ok: true, data: { replayed: true } });
+    expect(await fill("chef-0004")).toMatchObject({ ok: false, code: "already_filled" });
+    expect(await fill("chef-0005", "fish_dace")).toMatchObject({ ok: false, code: "not_requested" });
+    expect(await m.store.buff(A, noon)).toMatchObject({ luck: STAFF_MEAL.luck, size: STAFF_MEAL.size });
+    const view = await chefView(m.store, A, noon, waters);
+    expect(view.ok && view.data.order).toMatchObject({ item_key: o.item_key, filled: true });
   });
 });
 

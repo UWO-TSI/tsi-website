@@ -7,8 +7,8 @@
  */
 import type { NodeSpec } from "@/components/game/peaceful/VillageLife";
 import { CAST, TOGETHER, rollSize, type EventCatches, type FishDef } from "@/lib/game/fishing";
-import { fishingSpot, villageWater, type WaterType } from "@/lib/game/fishingSpots";
-import { inBounds, worldToCellX, worldToCellZ } from "@/lib/game/grid";
+import { fishingSpot, villageWater, watersOf, type WaterType } from "@/lib/game/fishingSpots";
+import { inBounds, worldToCellX, worldToCellZ, type MapAnnotation } from "@/lib/game/grid";
 import { createHomeIsland } from "@/lib/game/homeIsland";
 import { homeNodes, villageNodes } from "@/lib/game/islandNodes";
 import { reelWeather, type IslandWeather } from "@/lib/game/islandWeather";
@@ -18,7 +18,7 @@ import { village } from "@/lib/game/villageMap";
 import "@/lib/game/world/member";
 import { torontoParts } from "@/lib/time";
 import { momentAt } from "./logic";
-import type { Species } from "./roster";
+import type { Biome, Species } from "./roster";
 
 export type Site = "village" | "home";
 
@@ -60,6 +60,12 @@ export function forageSize(sp: Species, random = Math.random): number | null {
   return sp.size ? Math.round((sp.size[0] + (sp.size[1] - sp.size[0]) * random()) * 10) / 10 : null;
 }
 
+/** The water types the member island has (fishingSpots.ts watersOf). */
+export const activeWaters = (): WaterType[] => watersOf(villageWater(islandNow()).classes);
+
+/** Habitats the member island keeps shut: the pond while it has none open (David: "pond only in mountain", closed at launch). */
+export const closedBiomes = (): ReadonlySet<Biome> => new Set<Biome>(activeWaters().includes("pond") ? [] : ["pond"]);
+
 /** The water a player standing at `at` casts into, or null when no water is in reach (PeacefulLayer's fishing prompt). */
 export function castWater(site: Site, [x, z]: [number, number]): WaterType | null {
   const { map, classify } = layouts()[site];
@@ -70,11 +76,12 @@ export function castWater(site: Site, [x, z]: [number, number]): WaterType | nul
 /**
  * The fish that bites: the reel's pool (FishingOverlay) for the water, rod and cast power, at the Toronto hour, month and real weather.
  * `catches`: the seasonal events' limited-time species and the ones biting now (lib/progression/seasonal.ts eventCatches);
- * without it the seeded events' catches are shut.
+ * without it the seeded events' catches are shut. `buff`: the member's meal at the sushi bar (member_buffs), its luck on
+ * the cast's and its size pulling the size toward the top.
  */
-export function fishRoll(water: WaterType, power: number, rod: RodTier, now: Date, weather: IslandWeather, random = Math.random, catches?: EventCatches, together = false): { fish: FishDef; size: number } {
+export function fishRoll(water: WaterType, power: number, rod: RodTier, now: Date, weather: IslandWeather, random = Math.random, catches?: EventCatches, buff?: { luck: number; size: number }, together = false): { fish: FishDef; size: number } {
   const { hour, minute, month } = torontoParts(now);
-  const luck = power + (power >= CAST.maxZone ? CAST.maxBonus : 0) + (together ? TOGETHER.luck : 0);
+  const luck = power + (power >= CAST.maxZone ? CAST.maxBonus : 0) + (buff?.luck ?? 0) + (together ? TOGETHER.luck : 0);
   const fish = rollFishFor(water, luck, rod, { hour: hour + minute / 60, weather: reelWeather(weather), month, catches }, random);
-  return { fish, size: rollSize(fish.sizeCm, random) };
+  return { fish, size: rollSize(fish.sizeCm, random, buff?.size) };
 }

@@ -1,7 +1,9 @@
 /** Economy transport: /api/economy/* by default; in-memory for the dev harness. */
 import { apiCall } from "@/lib/apiClient";
-import type { GiftView, InventoryView, ShopView, SellEntry, WalletView } from "./service";
+import type { GiftView, InventoryView, ShopView, SellEntry, WalletView, ChefView, FishingTasksView, SushiView, TackleView } from "./service";
 import { localSell, localSellable, offline } from "./localEconomy";
+import type { Counter, Pulls } from "./tackle";
+import type { ActiveBuff } from "./store";
 import type { Reservation } from "./store";
 
 export interface MerchView {
@@ -15,6 +17,14 @@ export interface EconomyTransport {
   buy(itemId: string, qty: number, key: string): Promise<{ balance: number; owned: number; replayed: boolean; price_each: number; currency: string }>;
   sellable(): Promise<SellEntry[]>;
   sell(itemKey: string, qty: number, key: string): Promise<{ balance: number; remaining: number; paid: number; replayed: boolean }>;
+  tasks(): Promise<FishingTasksView>;
+  claimTask(task: string, period: "day" | "week", key: string): Promise<{ balance: number; paid: number; replayed: boolean }>;
+  chef(): Promise<ChefView>;
+  fillChef(itemKey: string, key: string): Promise<{ balance: number; remaining: number; paid: number; replayed: boolean }>;
+  tackle(): Promise<TackleView>;
+  roll(counter: Counter, pulls: Pulls, key: string): Promise<{ balance: number; prizes: string[]; replayed: boolean }>;
+  sushi(): Promise<SushiView>;
+  order(dish: string, key: string, fish?: string): Promise<{ balance: number; paid: number; buff: ActiveBuff; replayed: boolean }>;
   inventory(): Promise<InventoryView>;
   equip(itemId: string, equipped: boolean): Promise<InventoryView>;
   dailyGift(): Promise<GiftView>;
@@ -34,6 +44,14 @@ export const httpEconomyTransport: EconomyTransport = {
   sellable: () => call<SellEntry[]>("sell", "sellable").catch(e => (offline(e) ? localSellable() : Promise.reject(e))),
   sell: (item_key, qty, idempotency_key) => call<{ balance: number; remaining: number; paid: number; replayed: boolean }>("sell", "sale", { item_key, qty, idempotency_key })
     .catch(e => (offline(e) ? localSell(item_key, qty, idempotency_key) : Promise.reject(e))),
+  tasks: () => call("tasks", "tasks"),
+  claimTask: (task, period, idempotency_key) => call("tasks", "claim", { task, period, idempotency_key }),
+  chef: () => call("chef", "chef"),
+  fillChef: (item_key, idempotency_key) => call("chef", "fill", { item_key, idempotency_key }),
+  tackle: () => call("tackle", "tackle"),
+  roll: (counter, pulls, idempotency_key) => call("tackle", "roll", { counter, pulls, idempotency_key }),
+  sushi: () => call("sushi", "sushi"),
+  order: (dish, idempotency_key, fish) => call("sushi", "order", { dish, fish, idempotency_key }),
   inventory: () => call("inventory", "inventory"),
   equip: (item_id, equipped) => call("equip", "inventory", { item_id, equipped }),
   dailyGift: () => call("daily-gift", "gift", {}),
