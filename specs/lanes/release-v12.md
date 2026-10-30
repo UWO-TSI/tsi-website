@@ -4,7 +4,9 @@ Worktree `.claude/worktrees/release-v12`, branch `game/release-v12`, from origin
 
 ## Status
 
-Started 2026-10-30. Merged 1 to 3 (main-quest, tutorial-v2, daily-social) with fixes; tsc clean after merge 2.
+All nine merges done (1 to 8, plus npc-editor), each its own merge commit, then fixes. Migrations renamed into one 20261030 sequence, rarity_ladder restored, one fresh seed (20261030231818) with David's resident looks, member fishing on --ui-rarity/--ui-holo. tsc clean, local SQL chain (specs/evidence/launch-fixes/sql-smoke.sh) green. Milestone 1 sent to the coordinator. Gates in progress: vitest, eslint, build, smoke, perf:check.
+
+Merge decisions worth knowing: TopCluster keeps only its buttons (both chips removed); one CountUp (the wallet's, `rise` for the rewards'); the dash is everyone's, so the tutorial's dash stop no longer unlocks it; fishing together lives in useFishingSession and shows as a "Fished with" tag on the member catch card; the rig (rod-gear) goes through useFishingSession, useReelLoop and MemberReel; createFishingReel(fish, boss, floor, barMul); fishRoll(..., catches, buff, together); castLine(site, at, power, tool, tackle, buddy); the tackle counter (fishing-depth) holds the tackle shop door and has a Browse rods button for rod-gear's rod shop; paper tokens are the tutorial's plus the menu's washi extras; pickaxe (mayor, MINING) and glider stay in TOOL_TEACHERS.
 
 ## David's decisions
 
@@ -68,10 +70,8 @@ Message the coordinator ("main") at two milestones: when all eight merges and th
 
 ## Next
 
-1. Read lane-rules, then the merge table above. Merge 1 to 8.
-2. Renames, the rarity_ladder restore, the seed regeneration.
-3. Token switch, fishing event check.
-4. Gates, smoke, perf:check. Fix and repeat.
+1. Gates: vitest, eslint on changed files, gen-seeds (nothing new), build, the headless smoke, perf:check. Fix and repeat.
+2. Message the coordinator at green, then the final report.
 
 ## Tools and gotchas
 
@@ -79,3 +79,5 @@ Message the coordinator ("main") at two milestones: when all eight merges and th
 - Swap is nearly full on this machine (14.6 of 15.3 GB). Run one heavy thing at a time, close every headless browser and dev server you start, and kill only PIDs you started.
 - Ports: never 3000, 3300 or 3301 (David's test servers). Use 3320.
 - Don't push. Don't touch prod.
+- The local SQL chain: `zsh specs/evidence/launch-fixes/sql-smoke.sh` (Postgres 16 from Homebrew, port 55451); every migration must be in its GAME list and every smoke in SMOKES.
+- David's resident export had sushi-chef at skin 10 (skins 10 and 11 left the picks); applied as 9 from a scratch copy.
