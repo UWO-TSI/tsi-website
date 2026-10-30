@@ -18,7 +18,9 @@ Head: the commit that updates this file. **Round 2 (the phase 1 redo after David
 - **Models:** beach ball HD 5,520 / LP 288 (island balls repointed, old a/b/c deleted); net remodelled from the approved concept, HD 9,436 / LP 2,378.
 - **Effects and sounds:** the 15 approved effects with four timing grades (`VolleyFx.tsx`, `VolleyStamps.tsx` via `fxBus.ts`); 29 synthesised CC0 sounds (`sfx.ts`, `web/public/audio/sfx/vb-*.ogg`, SOURCES.md).
 - **Rewards:** casual win 15 coins, 5 paid wins a day, server tickets (migration `20261030120000_volleyball_casual`, smoke in the chain). Ranked rewards wait for phase 3 (spec).
-- **Island:** leaderboard board (sample data, labelled), spectator bench, residents route round the court, others see a steady vb_spectate stand.
+- **Island:** leaderboard board (sample data, labelled), spectator bench, residents route round the court, others see a steady vb_spectate stand. Bram's arrival stops keep off the court too (the beach landmark sits on it).
+- **Gates (round 2, after 8439167b):** tsc clean; vitest one run 3586 passed with 2 failures, both fixed and their files rerun green (the HD copies listed as budget exceptions; Bram's beach stop moved off the court); eslint clean on every changed file; SQL smoke chain passed (volleyball casual smoke ok); perf:check v2 FAILED on frame time with the machine loaded (load average about 4): high 5.40 ms (+12.5% on 4.8), lite 3.40 ms (+17.2% on 2.9), draw calls 366 and 293 (+1.9% and +1.4%), triangles +2%. Not rerun (the rules); the coordinator's combined check decides.
+- **Evidence:** `specs/evidence/volleyball/p2/` (strips, `input-results.json`, `fx/` per effect, `sfx/` previews).
 
 ## David's decisions (newest first)
 
