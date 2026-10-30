@@ -3,7 +3,7 @@
 /**
  * The flat kit's reward pieces (specs/design-bible.md, UI): `HeartMeter` (a friendship in half hearts), `RewardTrack`
  * (a run of days, each one's reward shown ahead), `PrizeWheel` (a wheel of prizes that spins to the one already won),
- * `GoalMeter` (a thick bar filling to its value, with marks along it) and `CountUp` (a number that counts to its value).
+ * `GoalMeter` (a thick bar filling to its value, with marks along it).
  * Plain props, --ui-* tokens only; nothing here knows about residents or the welcome week. Shown in /lab/gui.
  */
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
@@ -116,25 +116,6 @@ export function PrizeWheel({ prizes, land, onLanded, size = 280, label }: { priz
     </div>
     <span className={r.pointer} aria-hidden="true" />
   </div>;
-}
-
-/** A number that counts up (or down) to `n` when it shows and whenever it changes, never jumping (UI 9). */
-export function CountUp({ n, ms = 700 }: { n: number; ms?: number }) {
-  const [shown, setShown] = useState(0);
-  const from = useRef(0);
-  useEffect(() => {
-    const still = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    const a = from.current, t0 = performance.now();
-    let raf = 0;
-    const step = (t: number) => {
-      const k = still ? 1 : Math.min(1, (t - t0) / ms), v = Math.round(a + (n - a) * (1 - (1 - k) ** 3));
-      setShown(v); from.current = v;
-      if (k < 1) raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [n, ms]);
-  return <span className={r.count}>{shown.toLocaleString()}</span>;
 }
 
 /**

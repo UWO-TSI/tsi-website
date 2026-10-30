@@ -294,12 +294,12 @@ describe("the new world's walk (t-short, t-sell): HQ first, the camera conversat
     const end = step(s, 49, ["sold"]);
     expect(end).toEqual([{ kind: "say", line: "bye", stop: "barrel" }, { kind: "reward" }, { kind: "done" }]);
   });
-  it("teaches the dash straight after the box (no E): the move unlocked, then a dash moves it on", () => {
+  it("teaches the dash straight after the box (no E; the dash is everyone's): a dash moves it on", () => {
     const far = { x: 9, z: 0 };
     const dock: ResolvedStop[] = [{ id: "dash", stand: at, via: [], auto: true, task: { kind: "dash", id: "dash" }, box: true }, stops[0]];
     const s = newTutorial(0), go = (now: number, bram: XZ, events: TutorialEvent[] = []) => stepTutorial(s, { now, player: at, bram, stops: dock, events });
     expect(go(1, far)).toEqual([]);                                    // not there yet
-    expect(go(2, at)).toEqual([{ kind: "unlock", move: "dash" }]);     // there: no lines, straight to the task
+    expect(go(2, at)).toEqual([]);                                     // there: no lines, straight to the task
     expect(s.stage).toBe("task");
     expect(go(2 + HINT_AFTER_S, at)).toEqual([{ kind: "hint", hint: "dash" }]);
     expect(hintLine({ kind: "hint", hint: "dash" }, KEYS)).toMatch(/^Q to dash/);

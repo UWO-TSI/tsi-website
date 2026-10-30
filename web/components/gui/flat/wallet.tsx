@@ -15,10 +15,11 @@ import { COINS, GEMS } from "@/lib/economy";
 import w from "./wallet.module.css";
 
 const reduced = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-/** The shown number eases to `value` (straight to the DOM, no re-render per frame); the first value just appears. */
-export function CountUp({ value }: { value: number }) {
+/** The shown number eases to `value` (straight to the DOM, no re-render per frame); the first value just appears, or with
+ * `rise` counts up from 0 as it shows (UI 9). */
+export function CountUp({ value, rise = false }: { value: number; rise?: boolean }) {
   const span = useRef<HTMLSpanElement>(null);
-  const shown = useRef<number | null>(null);
+  const shown = useRef<number | null>(rise ? 0 : null);
   useLayoutEffect(() => {
     const el = span.current, from = shown.current;
     if (!el) return;
@@ -34,7 +35,7 @@ export function CountUp({ value }: { value: number }) {
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
   }, [value]);
-  return <span ref={span} />;
+  return <span ref={span} style={{ fontVariantNumeric: "tabular-nums" }} />;
 }
 
 type Currency = "coins" | "gems";

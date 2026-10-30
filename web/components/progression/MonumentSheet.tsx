@@ -44,10 +44,10 @@ function Goal({ goal, onContribute }: { goal: GoalProgressView; onContribute: (s
       <h3 className={s.title}>{goal.title}</h3>
     </Card>
     <GoalMeter value={goal.percent / 100} label={`${goal.title}: ${goal.percent}%`} marks={STAGES.map(k => <Pic key={k} k={k} />)} />
-    <p className={s.points}><CountUp n={goal.points} /><span className={s.of}>/ {goal.target_points.toLocaleString()}</span></p>
+    <p className={s.points}><CountUp value={goal.points} rise /><span className={s.of}>/ {goal.target_points.toLocaleString()}</span></p>
     <div className={s.row}>
-      <span className={s.stat} title="Members who chipped in"><Users size={20} aria-label="Members" /><CountUp n={goal.contributors} /></span>
-      <span className={s.stat} data-mine="" title="Your share, in points"><User size={20} aria-label="Your share" /><CountUp n={goal.my_points} /></span>
+      <span className={s.stat} title="Members who chipped in"><Users size={20} aria-label="Members" /><CountUp value={goal.contributors} rise /></span>
+      <span className={s.stat} data-mine="" title="Your share, in points"><User size={20} aria-label="Your share" /><CountUp value={goal.my_points} rise /></span>
     </div>
     <div className={s.row}>
       {goal.accepts.map(k => <span key={k} className={s.bring} title={`${BRING[k].words}: ${goal.weights[k]} ${goal.weights[k] === 1 ? "point" : "points"} each`} aria-label={BRING[k].words}><Pic k={BRING[k].icon} size={34} /></span>)}

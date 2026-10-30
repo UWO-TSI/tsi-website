@@ -42,7 +42,7 @@ export default function FlatRewards() {
     </div>
     <div style={{ display: "grid", gap: 8, maxWidth: 460 }}>
       <GoalMeter key={goal} value={goal} label="Reopen the cafe" marks={["wood_branch", "rock_stone", "monument-banner", "stone-lantern"].map(k => <img key={k} src={iconUrl(k)} alt="" />)} />
-      <p style={{ margin: 0, font: "700 26px/1 var(--gui-font)" }}><CountUp n={Math.round(goal * 15000)} /></p>
+      <p style={{ margin: 0, font: "700 26px/1 var(--gui-font)" }}><CountUp value={Math.round(goal * 15000)} rise /></p>
       <div style={{ display: "flex", gap: 8 }}><GhostButton onClick={() => setGoal(g => (g >= 1 ? 0.1 : Math.min(1, g + 0.27)))}>Chip in</GhostButton>
         <GhostButton onClick={() => toast("Campfire hour. Drums by the fire on the beach.", undefined, { quiet: true })}>Quiet toast</GhostButton></div>
     </div>

@@ -45,7 +45,6 @@ export type TutorialCue =
   | HintCue
   | { kind: "give"; item: "rod" }
   /** A move he teaches is yours from now (lib/game/moveUnlocks.ts; a no-op when it already is). */
-  | { kind: "unlock"; move: "dash" }
   | { kind: "glyph"; glyph: "wheel" | "bag" }
   | { kind: "reward" }
   | { kind: "done" };
@@ -125,7 +124,6 @@ export function stepTutorial(s: TutorialState, f: TutorialFrame): TutorialCue[] 
     // Opening your collection is the task: its keycap pulses once as it starts.
     if (stop.task?.kind === "bag" && !s.glyphs.bag) { s.glyphs.bag = true; cues.push({ kind: "glyph", glyph: "bag" }); }
     if (stop.task?.kind === "hq") cues.push({ kind: "visit" });
-    if (stop.task?.kind === "dash") cues.push({ kind: "unlock", move: "dash" });
     if (stop.task) { s.stage = "task"; restart(s, f.now); }
     else next();
   };

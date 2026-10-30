@@ -44,7 +44,6 @@ import { resolvePlace, resolveRoute, type PlaceWorld, type ResolvedStop, type Tu
 import { NEW_ROUTE } from "@/lib/game/arrival/routes/new";
 import { showGuide } from "@/lib/game/guideArrow";
 import { BRAM, END_LINES, TUTORIAL_REWARD, fillKeys, hintLine, type HintKeys } from "@/lib/game/arrival/lines";
-import { unlockMove } from "@/lib/game/moveUnlocks";
 import { toolByKey } from "@/lib/game/tools";
 import type { HeldView } from "../character/Character";
 import { TALK_PITCH, beginTalk, onTalkScript, startTalk, steerTalkShot, talkCameraYaw, talkStore, talkTyping } from "@/lib/game/residentTalk";
@@ -379,7 +378,6 @@ function guideFrame(f: GuideFrame, dt: number) {
       }
       else if (cue.kind === "hint") say(hintLine(cue, f.keys));
       else if (cue.kind === "give") m.play = "HoldUp";
-      else if (cue.kind === "unlock") unlockMove(cue.move);
       else if (cue.kind === "glyph") arrivalRun.glyph = { key: cue.glyph, at: performance.now() };
       else if (cue.kind === "done") g.ending = true;
       if (cue.kind === "give" || cue.kind === "glyph") arrivalChanged();
