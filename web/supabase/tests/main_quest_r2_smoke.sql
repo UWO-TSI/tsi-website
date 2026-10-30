@@ -1,6 +1,6 @@
--- The main quest, round 2 (20261028153805_main_quest_r2, then the catalogue seed after it): chapter XP, dig loot and the
+-- The main quest, round 2 (20261030010100_main_quest_r2, then the catalogue seed after it): chapter XP, dig loot and the
 -- museum's drive. Throwaway local Postgres after every migration (supabase_stub.sql first). Never Supabase. Each
--- section fails before 20261028153805 (the column, tables and functions don't exist).
+-- section fails before 20261030010100 (the column, tables and functions don't exist).
 \set ON_ERROR_STOP 1
 INSERT INTO auth.users (id, email) VALUES ('00000000-0000-4000-8000-0000000a2e01', 'e1@x'), ('00000000-0000-4000-8000-0000000a2e02', 'e2@x');
 
@@ -98,7 +98,7 @@ DO $$ BEGIN
 END $$;
 ROLLBACK;
 
--- ─── 5. Copy: the new wording where 20261028144337's stood ───
+-- ─── 5. Copy: the new wording where 20261030010000's stood ───
 DO $$
 BEGIN
   ASSERT (SELECT step_copy #>> '{donate_new,label}' FROM quest_chapters WHERE slug = 'the-museum') = 'Bring Odile 3 things for the museum', 'museum step';
@@ -109,7 +109,7 @@ BEGIN
 END $$;
 
 -- ─── 6. Idempotent: applied again, nothing moves ───
-\ir ../migrations/20261028153805_main_quest_r2.sql
+\ir ../migrations/20261030010100_main_quest_r2.sql
 DO $$
 BEGIN
   ASSERT (SELECT count(*) FROM pg_constraint WHERE conrelid = 'wallet_ledger'::regclass AND contype = 'c' AND pg_get_constraintdef(oid) LIKE '%study%') = 1, 'one wallet source CHECK';

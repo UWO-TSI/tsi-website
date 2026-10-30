@@ -34,7 +34,7 @@ ALTER TABLE quest_chapters ADD COLUMN IF NOT EXISTS reward_item TEXT CHECK (rewa
 ALTER TABLE quest_chapters ADD COLUMN IF NOT EXISTS world TEXT DEFAULT NULL CHECK (world IS NULL OR world IN ('village', 'new'));
 
 SELECT pg_temp.drop_list_check('shop_items', 'slot', 'shovel');
-ALTER TABLE shop_items ADD CONSTRAINT shop_items_slot_check CHECK (slot IS NULL OR slot IN ('rod', 'net', 'shovel', 'pickaxe', 'outfit', 'hair', 'accessory'));
+ALTER TABLE shop_items ADD CONSTRAINT shop_items_slot_check CHECK (slot IS NULL OR slot IN ('rod', 'net', 'shovel', 'pickaxe', 'outfit', 'hair', 'accessory', 'bait', 'bobber'));
 -- Juno, the museum's guide (the catalogue seed after this one adds her).
 SELECT pg_temp.drop_list_check('npc_personas', 'post', 'museum_curator');
 ALTER TABLE npc_personas ADD CONSTRAINT npc_personas_post_check

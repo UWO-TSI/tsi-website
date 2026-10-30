@@ -212,7 +212,7 @@ describe("the tackle shop's rolls (David, 2026-10-28: \"one for coin one for gem
     expect(bag.every((r) => !r.item.active && r.item.stackable)).toBe(true);
   });
   it("seeds every prize in its migration as the memory store has it", () => {
-    const sql = readFileSync(join(process.cwd(), "supabase/migrations/20261028161000_tackle_rolls.sql"), "utf8");
+    const sql = readFileSync(join(process.cwd(), "supabase/migrations/20261030010800_tackle_rolls.sql"), "utf8");
     for (const it of prizeItems()) expect(sql).toContain(`('${it.slug}', '${it.display_name.replace(/'/g, "''")}', 'tool', '${it.description.replace(/'/g, "''")}', ${it.price_coins}, NULL, NULL, '${it.slot}'`);
   });
   it("never shows the shop's prizes on sale", async () => {

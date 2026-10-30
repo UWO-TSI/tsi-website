@@ -4,13 +4,13 @@
 -- grants each prize into the member's inventory and records the roll, once per idempotency key (a replay returns the
 -- first roll's prizes and charges nothing). Service role only.
 -- The prizes are shop rows off sale (active FALSE, so the shop never lists them), stacking, in rod-gear's add-on slots
--- (bait, bobber; game/rod-gear's 20261027183200_rod_tackle_slots.sql widens the same check the same way) or the rod
+-- (bait, bobber; 20261030010600_rod_tackle_slots.sql widens the same check the same way) or the rod
 -- slot, valued in coins by rarity (shop_items needs one price; nothing sells them). Their pictures are stand-ins until their models are made. Rows from lib/wallet/tackle.ts TACKLE_PRIZES.
 -- Idempotent.
 
 ALTER TABLE shop_items DROP CONSTRAINT IF EXISTS shop_items_slot_check;
 ALTER TABLE shop_items ADD CONSTRAINT shop_items_slot_check
-  CHECK (slot IS NULL OR slot IN ('rod', 'net', 'shovel', 'outfit', 'hair', 'accessory', 'bait', 'bobber'));
+  CHECK (slot IS NULL OR slot IN ('rod', 'net', 'shovel', 'pickaxe', 'outfit', 'hair', 'accessory', 'bait', 'bobber'));
 
 INSERT INTO shop_items (slug, display_name, category, description, price_coins, tc_price, tier, slot, special_pool, stackable, stock, catalogue_ref, sprite_url, rarity, position, active) VALUES
   ('bait_worm', 'Sea worm', 'tool', 'Fish bite a little sooner.', 50, NULL, NULL, 'bait', FALSE, TRUE, NULL, 'bait_worm', '/assets/icons/bug_bagworm.webp', 'common', 9001, FALSE),
@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS tackle_rolls (
   PRIMARY KEY (member_id, idempotency_key)
 );
 ALTER TABLE tackle_rolls ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Tackle rolls readable by owner" ON tackle_rolls;
 CREATE POLICY "Tackle rolls readable by owner" ON tackle_rolls FOR SELECT USING ((select auth.uid()) = member_id);
 REVOKE INSERT, UPDATE, DELETE ON tackle_rolls FROM anon, authenticated;
 

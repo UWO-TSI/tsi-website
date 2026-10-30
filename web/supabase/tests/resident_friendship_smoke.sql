@@ -1,4 +1,4 @@
--- Resident friendship (20261029062600_resident_friendship, d-friends), in half hearts (level 0 to 10). Throwaway local
+-- Resident friendship (20261030010300_resident_friendship, d-friends), in half hearts (level 0 to 10). Throwaway local
 -- Postgres after every migration through it (supabase_stub.sql first). Never Supabase. Fails before it: no
 -- resident_friend_gift. Self-contained, rolled back: a new day is made by moving last_day or last_gift_day back a day.
 \set ON_ERROR_STOP 1

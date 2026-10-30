@@ -31,12 +31,10 @@ const look = (l: { skin: number; hair: number; eyes?: string; mouth?: string; ex
 /** Authored looks by slug (character catalogue part ids, palette indices). */
 export const RESIDENT_LOOKS: Record<string, Look> = {
   // The HQ lead, as the first-login greeting proposes her (lib/game/welcome.ts HQ_LEAD on main): the club crew tee, a ponytail (head-roblox: one of David's whole hairstyles).
-  wren: look({ skin: 3, hair: 2, eyes: "mochi", mouth: "open_smile", extras: ["freckles"], back: "hair_wispy_ponytail", top: "top_tsi_crew", bottom: "bottom_trousers", shoes: "shoes_boots",
-    acc: { bag: "acc_shoulder_bag" }, colors: { bottom_trousers: 4, shoes_boots: 5, acc_shoulder_bag: 3 } }),
+  wren: look({ acc: { bag: "acc_shoulder_bag" }, back: "hair_emo_layers", bottom: "bottom_trousers", colors: { acc_shoulder_bag: 3, bottom_trousers: 4, shoes_boots: 5 }, eyes: "weird_eyes", hair: 0, mouth: "tired_drool", shoes: "shoes_boots", skin: 3, top: "top_tsi_crew" }),
   // The mayor: the club's warm historian. A grey ponytail (round 3: the low pony was removed), round glasses, a lavender
   // cardigan and a long brown skirt.
-  mayor: look({ skin: 2, hair: 9, eyes: "F1.2", back: "hair_wispy_ponytail", top: "top_cardigan", bottom: "bottom_long_skirt", shoes: "shoes_loafers",
-    acc: { face: "acc_glasses_round" }, colors: { top_cardigan: 13, bottom_long_skirt: 5, shoes_loafers: 5 } }),
+  mayor: look({ acc: { face: "acc_wheat_stalk", head: "acc_propeller_cap", neck: "acc_paper_bowtie" }, back: "hair_anime_spikes", bottom: "bottom_joggers", colors: { bottom_long_skirt: 5, shoes_loafers: 5, top_cardigan: 13, top_hoodie: 14 }, extras: ["blush"], eyes: "tiny_dots", hair: 0, mouth: "tongue_out", shoes: "shoes_loafers", skin: 2, top: "top_stripe_ls" }),
   // Shopkeeper: deadpan, tidy. Square glasses, a sage sweater vest, charcoal trousers, work boots.
   shopkeeper: look({ skin: 8, hair: 0, mouth: "tiny_smirk", back: "hair_messy_boy", top: "top_sweater_vest", bottom: "bottom_trousers", shoes: "shoes_boots",
     acc: { face: "acc_glasses_square" }, colors: { top_sweater_vest: 3, bottom_trousers: 14, shoes_boots: 5 } }),
@@ -60,8 +58,7 @@ export const RESIDENT_LOOKS: Record<string, Look> = {
   juniper: look({ skin: 3, hair: 8, back: "hair_long_pigtails", top: "top_tee", bottom: "bottom_joggers", shoes: "shoes_sneakers",
     colors: { top_tee: 15, bottom_joggers: 14, shoes_sneakers: 1 } }),
   // Flavour: sketches the island from the benches. Straw hat, pink hoodie, a shoulder bag of pencils.
-  marlo: look({ skin: 5, hair: 1, eyes: "chill", back: "hair_bowl_cut", top: "top_hoodie", bottom: "bottom_shorts", shoes: "shoes_slipon",
-    acc: { head: "acc_straw_hat", bag: "acc_shoulder_bag" }, colors: { top_hoodie: 9, bottom_shorts: 2 } }),
+  marlo: look({ acc: { bag: "acc_shoulder_bag", head: "acc_monkey_ears" }, back: "hair_bowl_cut", bottom: "bottom_shorts", colors: { bottom_shorts: 2, top_hoodie: 9 }, eyes: "chill", hair: 1, shoes: "shoes_slipon", skin: 5, top: "top_hoodie" }),
   // Flavour: the night owl who watches the stars from the lamp bench. Navy cardigan, a long lavender skirt.
   nell: look({ skin: 1, hair: 4, extras: ["freckles"], back: "hair_windy_bob", top: "top_cardigan", bottom: "bottom_long_skirt", shoes: "shoes_boots",
     colors: { top_cardigan: 12, bottom_long_skirt: 13 } }),

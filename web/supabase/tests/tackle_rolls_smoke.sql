@@ -1,8 +1,8 @@
--- Local smoke test for 20261028161000_tackle_rolls (after every migration, same throwaway cluster). Never run against Supabase.
+-- Local smoke test for 20261030010800_tackle_rolls (after every migration, same throwaway cluster). Never run against Supabase.
 \set ON_ERROR_STOP 1
-INSERT INTO auth.users (id, email) VALUES ('00000000-0000-4000-8000-0000000000e1', 'roller@x') ON CONFLICT DO NOTHING;
+INSERT INTO auth.users (id, email) VALUES ('00000000-0000-4000-8000-0000000071e1', 'roller@x') ON CONFLICT DO NOTHING;
 DO $$
-DECLARE M uuid := '00000000-0000-4000-8000-0000000000e1'; r record;
+DECLARE M uuid := '00000000-0000-4000-8000-0000000071e1'; r record;
 BEGIN
   ASSERT (SELECT count(*) FROM shop_items WHERE category = 'tool' AND NOT active AND stackable AND slot IN ('bait', 'bobber', 'rod') AND position > 9000) = 17, 'the prizes are seeded off sale';
   PERFORM wallet_apply(M, 'coins', 2000, 'admin', 'smoke', 'seed-coins-01');
@@ -36,14 +36,14 @@ END $$;
 
 BEGIN;
 SET LOCAL ROLE authenticated;
-SET LOCAL request.jwt.claims = '{"sub":"00000000-0000-4000-8000-0000000000e1","role":"authenticated"}';
+SET LOCAL request.jwt.claims = '{"sub":"00000000-0000-4000-8000-0000000071e1","role":"authenticated"}';
 DO $$ BEGIN
-  PERFORM tackle_roll('00000000-0000-4000-8000-0000000000e1', 'coins', 1, ARRAY['rod_pumpkin'], 'roll-0099');
+  PERFORM tackle_roll('00000000-0000-4000-8000-0000000071e1', 'coins', 1, ARRAY['rod_pumpkin'], 'roll-0099');
   RAISE EXCEPTION 'member called tackle_roll';
 EXCEPTION WHEN insufficient_privilege THEN NULL;
 END $$;
 DO $$ BEGIN
-  INSERT INTO tackle_rolls (member_id, idempotency_key, currency, cost, prizes) VALUES ('00000000-0000-4000-8000-0000000000e1', 'roll-0098', 'coins', 1, ARRAY['x']);
+  INSERT INTO tackle_rolls (member_id, idempotency_key, currency, cost, prizes) VALUES ('00000000-0000-4000-8000-0000000071e1', 'roll-0098', 'coins', 1, ARRAY['x']);
   RAISE EXCEPTION 'member wrote a roll';
 EXCEPTION WHEN insufficient_privilege THEN NULL;
 END $$;

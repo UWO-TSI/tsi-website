@@ -155,10 +155,7 @@ export const CHEF_OUTSIDE = { at: [-1.75, 5.05] as const, yaw: 0 };
  * Their looks (the shared rig's parts; palette.json outfit colours): the chef in a white shirt and indigo trousers,
  * gold shades, his hair full; the server in a navy diving suit, yellow boots for fins, all smiles. Our own designs.
  */
-export const CHEF_LOOK = {
-  skin: 9, hair: 0, back: "hair_messy_boy", eyes: "focused", mouth: "deadpan", acc: { face: "acc_gold_rimless_shades" },
-  top: "top_collar_shirt", bottom: "bottom_trousers", shoes: "shoes_slipon", colors: { top_collar_shirt: 1, bottom_trousers: 12, shoes_slipon: 14 },
-} as const;
+export const CHEF_LOOK = { acc: { face: "acc_gold_rimless_shades" }, back: "hair_freeform_afro", bottom: "bottom_trousers", colors: { bottom_trousers: 12, shoes_slipon: 14, top_collar_shirt: 1 }, eyes: "focused", hair: 0, mouth: "deadpan", skin: 9, top: "top_collar_shirt" } as const;
 export const SERVER_LOOK = {
   skin: 4, hair: 1, back: "hair_short_tufts", eyes: "F1.1", mouth: "open_smile", extras: ["blush"],
   top: "top_raincoat", bottom: "bottom_trousers", shoes: "shoes_rainboots", colors: { top_raincoat: 12, bottom_trousers: 12, shoes_rainboots: 6 },

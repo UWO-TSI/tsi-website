@@ -20,10 +20,18 @@ DROP POLICY IF EXISTS "Friendships readable by owner" ON resident_friendships;
 CREATE POLICY "Friendships readable by owner" ON resident_friendships FOR SELECT USING (member_id = (select auth.uid()));
 
 -- The ledger sources for the friend gift and campfire hour's bonus (s-campfire, POST /api/world/campfire).
-ALTER TABLE wallet_ledger DROP CONSTRAINT IF EXISTS wallet_ledger_source_check;
-ALTER TABLE wallet_ledger ADD CONSTRAINT wallet_ledger_source_check CHECK (source IN (
-  'study', 'sell', 'chapter', 'quest', 'daily_gift', 'event', 'admin', 'shop', 'room', 'goal', 'refund', 'migration', 'respec',
-  'mission', 'repair', 'stat_reset', 'friend', 'campfire'));
+-- The union of whatever the list holds now (other migrations widen it too) and these, so a re-run never narrows it.
+DO $$
+DECLARE v TEXT[];
+BEGIN
+  SELECT array_agg(DISTINCT m[1]) INTO v FROM pg_constraint k, regexp_matches(pg_get_constraintdef(k.oid), '''([^'']+)''', 'g') m
+  WHERE k.conrelid = 'public.wallet_ledger'::regclass AND k.contype = 'c' AND pg_get_constraintdef(k.oid) LIKE '%source%' AND pg_get_constraintdef(k.oid) LIKE '%''study''%';
+  v := ARRAY(SELECT DISTINCT x FROM unnest(COALESCE(v, '{}') || ARRAY[
+    'study', 'sell', 'chapter', 'quest', 'daily_gift', 'event', 'admin', 'shop', 'room', 'goal', 'refund', 'migration', 'respec',
+    'mission', 'repair', 'stat_reset', 'friend', 'campfire']) x ORDER BY x);
+  ALTER TABLE wallet_ledger DROP CONSTRAINT IF EXISTS wallet_ledger_source_check;
+  EXECUTE format('ALTER TABLE wallet_ledger ADD CONSTRAINT wallet_ledger_source_check CHECK (source IN (%s))', (SELECT string_agg(quote_literal(x), ', ') FROM unnest(v) x));
+END $$;
 
 -- Moves a friendship by p_delta half hearts (clamped to 0..10) and pays the even hearts it newly reaches. Internal.
 CREATE OR REPLACE FUNCTION public.resident_friend_move(p_member_id UUID, p_resident TEXT, p_delta INTEGER)

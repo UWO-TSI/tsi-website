@@ -1,7 +1,7 @@
 /**
  * A casual win's coins (specs/minigames/beach-volleyball.md, "Match and rewards"): the server opens a ticket when a
  * match starts on the island and decides the payout when it ends (/api/volleyball/start, /finish; the checks are in
- * the 20261030120000_volleyball_casual migration). Nothing here is trusted: the client only names its ticket and the
+ * the 20261030010400_volleyball_casual migration). Nothing here is trusted: the client only names its ticket and the
  * score. Signed out, in the lab, or offline, both are quiet no-ops.
  */
 import { apiCall } from "@/lib/apiClient";

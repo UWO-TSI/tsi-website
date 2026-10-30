@@ -5,7 +5,7 @@
 
 ALTER TABLE shop_items DROP CONSTRAINT IF EXISTS shop_items_slot_check;
 ALTER TABLE shop_items ADD CONSTRAINT shop_items_slot_check
-  CHECK (slot IS NULL OR slot IN ('rod', 'net', 'shovel', 'outfit', 'hair', 'accessory', 'bait', 'bobber'));
+  CHECK (slot IS NULL OR slot IN ('rod', 'net', 'shovel', 'pickaxe', 'outfit', 'hair', 'accessory', 'bait', 'bobber'));
 
 UPDATE member_inventory SET slot = 'bobber'
 WHERE slot IS NULL AND item_id IN (SELECT id FROM shop_items WHERE slug = 'bobber-lucky');

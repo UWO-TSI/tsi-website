@@ -1,4 +1,4 @@
--- Local smoke test for 20261028160000_fishing_tasks_sushi (after every migration, same throwaway cluster). Never run against Supabase.
+-- Local smoke test for 20261030010700_fishing_tasks_sushi (after every migration, same throwaway cluster). Never run against Supabase.
 \set ON_ERROR_STOP 1
 INSERT INTO auth.users (id, email) VALUES ('00000000-0000-4000-8000-0000000000f7', 'angler@x'), ('00000000-0000-4000-8000-0000000000f8', 'rival@x') ON CONFLICT DO NOTHING;
 

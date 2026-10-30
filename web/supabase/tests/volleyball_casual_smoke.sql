@@ -1,4 +1,4 @@
--- Beach volleyball casual wins (20261030120000_volleyball_casual). Throwaway local Postgres after every migration,
+-- Beach volleyball casual wins (20261030010400_volleyball_casual). Throwaway local Postgres after every migration,
 -- with the pre_* seeds. Never Supabase. Fails before the migration: no volleyball_casual_start.
 \set ON_ERROR_STOP 1
 INSERT INTO auth.users (id, email) VALUES ('00000000-0000-4000-8000-0000000007b1', 'vb-1@x'), ('00000000-0000-4000-8000-0000000007b2', 'vb-2@x')

@@ -265,7 +265,7 @@ export function dailyGiftAmount(day: string, base: number = SETTINGS.daily_gift_
 export const SETTINGS = { daily_gift_coins: 10, event_attendance_coins: 50, special_count: 3, special_discount_pct: 20, max_open_merch: 3, welcome_box_coins: 300, friend_gift_coins: 50, campfire_coins: 25, welcome_box_furniture: 0 } as const;
 
 /**
- * The welcome week (d-streak, 20261029062500_welcome_week.sql; David 2026-10-28: "see the reward for logging in each day
+ * The welcome week (d-streak, 20261030010200_welcome_week.sql; David 2026-10-28: "see the reward for logging in each day
  * ... a total of like 1500 coins, 25 gems, and mystery box with a wheel that spins for gear/clothing"): a member's first
  * seven gift days each bring the track's reward, shown ahead on the gift card. Day 7 opens the mystery box (one random
  * prize from the box pool, or welcome_box_coins when the member already owns it all) with its Gems. 1500 coins and 25
@@ -283,7 +283,7 @@ export const welcomeDay = (days: number): number | null => (days >= 1 && days <=
  * coins at no more than the box's coin prize, welcome_box_coins) or gear (BOX_GEAR, the second-tier tools), that the
  * member doesn't own yet. Furniture joins only once homes open (welcome_box_furniture = 1; homes are closed, so a sofa
  * would be a prize nobody can use). Never Contraband (staff-only, David 2026-10-27), merch, wallpaper, flooring or
- * anything in gems. Mirrored in 20261029062500_welcome_week.sql.
+ * anything in gems. Mirrored in 20261030010200_welcome_week.sql.
  */
 export const BOX_CATEGORIES = ["outfit", "hair", "face", "accessory"] as const;
 export const BOX_GEAR = ["rod-cedar", "net-mid", "shovel-mid"] as const;

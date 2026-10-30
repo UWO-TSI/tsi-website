@@ -1,6 +1,6 @@
 -- ─── The main quest, round 2 (David's review 2026-10-28; lane main-quest, specs/lanes/main-quest.md) ─────────────────
 --
--- Apply AFTER 20261028144337_main_quest (it widens what that one made) and before the catalogue seed that follows it
+-- Apply AFTER 20261030010000_main_quest (it widens what that one made) and before the catalogue seed that follows it
 -- (the broken sudo's species row). Idempotent.
 --
 -- 1. Chapter XP: quest_chapters.reward_xp, paid once on completion through combat_grant_xp with source 'chapter'.
@@ -34,10 +34,18 @@ SELECT pg_temp.drop_list_check('combat_xp_ledger', 'source', 'kill');
 ALTER TABLE combat_xp_ledger ADD CONSTRAINT combat_xp_ledger_source_check CHECK (source IN ('kill', 'mission', 'event', 'admin', 'chapter'));
 
 -- ── 2. Dig loot ──
-SELECT pg_temp.drop_list_check('wallet_ledger', 'source', 'study');
-ALTER TABLE wallet_ledger ADD CONSTRAINT wallet_ledger_source_check CHECK (source IN (
-  'study', 'sell', 'chapter', 'quest', 'daily_gift', 'event', 'admin', 'shop', 'room', 'goal', 'refund', 'migration', 'respec',
-  'mission', 'repair', 'stat_reset', 'dig'));
+-- The union of whatever the list holds now (other migrations widen it too) and these, so a re-run never narrows it.
+DO $$
+DECLARE v TEXT[];
+BEGIN
+  SELECT array_agg(DISTINCT m[1]) INTO v FROM pg_constraint k, regexp_matches(pg_get_constraintdef(k.oid), '''([^'']+)''', 'g') m
+  WHERE k.conrelid = 'public.wallet_ledger'::regclass AND k.contype = 'c' AND pg_get_constraintdef(k.oid) LIKE '%source%' AND pg_get_constraintdef(k.oid) LIKE '%''study''%';
+  v := ARRAY(SELECT DISTINCT x FROM unnest(COALESCE(v, '{}') || ARRAY[
+    'study', 'sell', 'chapter', 'quest', 'daily_gift', 'event', 'admin', 'shop', 'room', 'goal', 'refund', 'migration', 'respec',
+    'mission', 'repair', 'stat_reset', 'dig']) x ORDER BY x);
+  PERFORM pg_temp.drop_list_check('wallet_ledger', 'source', 'study');
+  EXECUTE format('ALTER TABLE wallet_ledger ADD CONSTRAINT wallet_ledger_source_check CHECK (source IN (%s))', (SELECT string_agg(quote_literal(x), ', ') FROM unnest(v) x));
+END $$;
 SELECT pg_temp.drop_list_check('tc_transactions', 'type', 'earn_quest');
 ALTER TABLE tc_transactions ADD CONSTRAINT tc_transactions_type_check CHECK (type IN (
   'earn_quest', 'earn_bounty', 'earn_event', 'earn_achievement', 'earn_birthday', 'earn_streak', 'earn_admin',
@@ -127,7 +135,7 @@ BEGIN
   END LOOP;
 END $$;
 
--- ── 4. Copy (an admin's edit is kept: each only replaces the text 20261028144337 wrote) ──
+-- ── 4. Copy (an admin's edit is kept: each only replaces the text 20261030010000 wrote) ──
 UPDATE quest_chapters
    SET step_copy = jsonb_set(step_copy, '{dig_up,hint}', '"Look closely: a scuffed patch of sand or dirt. Relics, coins, ore, and now and then something rare."')
  WHERE slug = 'pims-shovel' AND step_copy->'dig_up'->>'hint' = 'Look for little star-shaped cracks in the sand and on dirt. Rare things turn up too.';

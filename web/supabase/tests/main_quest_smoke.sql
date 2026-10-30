@@ -1,4 +1,4 @@
--- The main quest, chapters 1 to 6 (20261028144337_main_quest, then the catalogue seed after it). Throwaway local
+-- The main quest, chapters 1 to 6 (20261030010000_main_quest, then the catalogue seed after it). Throwaway local
 -- Postgres after every migration (supabase_stub.sql first). Never Supabase.
 \set ON_ERROR_STOP 1
 DO $$
@@ -46,13 +46,13 @@ END $$;
 -- Run again: nothing changes, nothing duplicates; an admin's own chapter 1 wording stays.
 BEGIN;
 UPDATE quest_chapters SET summary = 'Our words', world = NULL WHERE slug = 'settle-in';
-\ir ../migrations/20261028144337_main_quest.sql
+\ir ../migrations/20261030010000_main_quest.sql
 DO $$ BEGIN
   ASSERT (SELECT summary FROM quest_chapters WHERE slug = 'settle-in') = 'Our words', 'admin copy kept';
   RAISE NOTICE 'main quest 3 admin edits kept ok';
 END $$;
 ROLLBACK;
-\ir ../migrations/20261028144337_main_quest.sql
+\ir ../migrations/20261030010000_main_quest.sql
 DO $$ BEGIN
   ASSERT (SELECT count(*) FROM quest_chapters) = 10, 'idempotent: ten chapters';
   ASSERT (SELECT count(*) FROM pg_constraint WHERE conrelid = 'shop_items'::regclass AND contype = 'c' AND pg_get_constraintdef(oid) LIKE '%shovel%') = 1, 'idempotent: one slot CHECK';

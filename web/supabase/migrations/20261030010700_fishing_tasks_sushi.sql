@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS fishing_task_claims (
   PRIMARY KEY (member_id, period, period_start, task_id)
 );
 ALTER TABLE fishing_task_claims ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Fishing task claims readable by owner" ON fishing_task_claims;
 CREATE POLICY "Fishing task claims readable by owner" ON fishing_task_claims FOR SELECT USING ((select auth.uid()) = member_id);
 REVOKE INSERT, UPDATE, DELETE ON fishing_task_claims FROM anon, authenticated;
 
@@ -35,6 +36,7 @@ CREATE TABLE IF NOT EXISTS chef_order_fills (
   PRIMARY KEY (member_id, day)
 );
 ALTER TABLE chef_order_fills ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Chef order fills readable by owner" ON chef_order_fills;
 CREATE POLICY "Chef order fills readable by owner" ON chef_order_fills FOR SELECT USING ((select auth.uid()) = member_id);
 REVOKE INSERT, UPDATE, DELETE ON chef_order_fills FROM anon, authenticated;
 
@@ -49,6 +51,7 @@ CREATE TABLE IF NOT EXISTS monthly_fish_entries (
 );
 CREATE INDEX IF NOT EXISTS idx_monthly_fish_entries_month ON monthly_fish_entries (month);
 ALTER TABLE monthly_fish_entries ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Monthly fish entries readable by authenticated" ON monthly_fish_entries;
 CREATE POLICY "Monthly fish entries readable by authenticated" ON monthly_fish_entries FOR SELECT USING ((select auth.role()) = 'authenticated');
 REVOKE INSERT, UPDATE, DELETE ON monthly_fish_entries FROM anon, authenticated;
 
@@ -60,6 +63,7 @@ CREATE TABLE IF NOT EXISTS member_buffs (
   until TIMESTAMPTZ NOT NULL
 );
 ALTER TABLE member_buffs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Member buffs readable by owner" ON member_buffs;
 CREATE POLICY "Member buffs readable by owner" ON member_buffs FOR SELECT USING ((select auth.uid()) = member_id);
 REVOKE INSERT, UPDATE, DELETE ON member_buffs FROM anon, authenticated;
 
@@ -76,6 +80,7 @@ CREATE TABLE IF NOT EXISTS sushi_orders (
   PRIMARY KEY (member_id, idempotency_key)
 );
 ALTER TABLE sushi_orders ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Sushi orders readable by owner" ON sushi_orders;
 CREATE POLICY "Sushi orders readable by owner" ON sushi_orders FOR SELECT USING ((select auth.uid()) = member_id);
 REVOKE INSERT, UPDATE, DELETE ON sushi_orders FROM anon, authenticated;
 
