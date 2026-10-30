@@ -675,3 +675,10 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - Migration 20261030120000_volleyball_casual.
   - perf:check v2 failed under load (high 5.40 ms, lite 3.40 ms). Rerun it on a quiet machine before merging.
   - It changed the arrival routes (Bram's beach stop moved off the court), so expect a conflict with tutorial-v2's routes/new.ts at merge.
+- **v1.2 release (David, 2026-10-30):** "push all currents update and make sure everything works, v1.2, also ... make sure the performance to enter the game is good". Then: "fix the music, theres liek 3 overlapping music".
+  - Three lanes from origin/main 82a3c70b:
+    - release-v12 (game/release-v12, port 3320): merges main-quest, tutorial-v2, daily-social, volleyball, creator-polish, rod-gear, fishing-depth, wardrobe-b3 in that order; re-timestamps the unapplied migrations after 20261029062423; restores the applied rarity_ladder rod-gear edited and moves its change to a new migration; one fresh catalogue seed; gates, smoke, one perf:check.
+    - music-one (game/music-one, port 3321): one music bed at a time. The ambient channel plays CC0 Ninja Adventure music and the music channel falls back to the applicant's Stream Cafe tracks, both at once, plus the campfire loops.
+    - entry-perf (game/entry-perf, port 3322): measures entry on a production build, then fixes and re-measures on v1.2.
+  - Prod has no contraband shop rows (224 null, 1 rare, 1 epic, 1 legendary), so the shop_items rarity check without contraband applies cleanly.
+  - Then: merge music-one and entry-perf into release-v12, prod dump, apply the migrations in order, verify, push, tag v1.2, confirm Ready, smoke prod, kill 3300 and 3301.
