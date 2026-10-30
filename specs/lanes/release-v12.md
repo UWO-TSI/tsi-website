@@ -4,7 +4,7 @@ Worktree `.claude/worktrees/release-v12`, branch `game/release-v12`, from origin
 
 ## Status
 
-Started 2026-10-30. Nothing merged yet.
+Started 2026-10-30. Merged 1 to 3 (main-quest, tutorial-v2, daily-social) with fixes; tsc clean after merge 2.
 
 ## David's decisions
 
@@ -25,6 +25,7 @@ Merge these branches into `game/release-v12` in this order, one merge commit eac
 | 6 | game/rod-gear | 10f7cdd4 | rods r2, 118 behind |
 | 7 | game/fishing-depth | bc1c7750 | r3: tasks, sushi menu, tackle rolls (gacha, RNG server side), 118 behind. Likely overlaps rod-gear (tackle) and main's MemberFishing UI |
 | 8 | game/wardrobe-b3 | d9e8298c | 3 commits (under-cap cut, monocle re-import), 280 behind. Its before and after webp evidence stays out of web/public |
+| 9 | game/npc-editor | 2a67bfb0 | Added by the coordinator 2026-10-30: the Residents editor page, scripts/apply-residents.mjs and residentSources.ts, plus the new-world places fix |
 
 ### Migrations
 
@@ -35,6 +36,8 @@ The newest applied migration on prod and on main is `20261029062423_catalogue_se
 - volleyball: `20261030120000_volleyball_casual` (rename it into the sequence too)
 - rod-gear: `20261028155000_rod_tackle_slots`
 - fishing-depth: `20261028160000_fishing_tasks_sushi`, `20261028161000_tackle_rolls`
+
+**David's resident look edits (coordinator, 2026-10-30):** before the final gen-seeds, apply the Residents editor export (marlo, mayor, sushi-chef, wren) at `/private/tmp/claude-501/-Users-DavidLiu/62203045-4999-4738-af95-c4357660b05d/scratchpad/residents-export/residents-export.json` (shaped `{slug: {look: {...}}}`; reshape if apply-residents.mjs expects otherwise): from web/, `node scripts/apply-residents.mjs <export.json>`. It writes the TS, runs gen-seeds and lists old-name strings to reword. Still ONE final catalogue seed. `resident_lines_smoke.sql` includes a catalogue seed by name: update that line to the final seed's name.
 
 Catalogue seeds: delete each branch's own seed migration (`20261029064914_catalogue_seed` from main-quest, `20261029062659_catalogue_seed` from daily-social, `20261029020457_catalogue_seed` from rod-gear) and generate ONE fresh seed at the end with `cd web && node scripts/gen-seeds.mjs`, timestamped last.
 
