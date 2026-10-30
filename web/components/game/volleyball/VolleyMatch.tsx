@@ -223,6 +223,8 @@ function frameStep(rig: Rig, P: Parts, E: Env, raw: number) {
   // The serve's timing ring round the ball while you serve: the outer ring closes on the target ring; the cursor is
   // where your click will land in it (the serve's direction).
   const serving = match.phase === "toss" && serverOf(match) === 0;
+  // The camera now, so what faces it (the serve's ring here, the effects' billboards after) faces this frame's view.
+  camera(rig, E, match, dt, serving);
   if (P.serveRing.current) {
     P.serveRing.current.visible = serving;
     if (serving) {
@@ -241,8 +243,6 @@ function frameStep(rig: Rig, P: Parts, E: Env, raw: number) {
     P.aimMark.current.visible = show;
     if (show) P.aimMark.current.position.set(aimAt![0], match.ground(aimAt![0], aimAt![1]) + 0.04, aimAt![1]);
   }
-
-  camera(rig, E, match, dt, serving);
 }
 
 /** The ball: its place, its roll, its squash on a touch and its stretch in a fast flight, and its shadow. */
@@ -409,7 +409,9 @@ export default function VolleyMatch({ spot, selfLook, occluders = NONE }: {
   useEffect(() => bindCourtControls(rig.c, { el: gl.domElement, bindings, stance: () => (volley.match ? stanceOf(volley.match, 0) : "idle") }), [rig, bindings, gl]);
   useEffect(() => () => leave(rig), [rig]);
   useEffect(() => exposeDev(rig, spot), [rig, spot]);
-  useFrame((_, raw) => frameStep(rig, { bodies, calls, ball, spin, shadow, landRing, outer, serveRing, serveOuter, cursor, aimMark }, { spot, camera, scene, occluders, bindings, selfLook }, raw));
+  // Before the default frame callbacks (the effects', VolleyFx): the match places the camera for them. After the
+  // island's follow camera (IslandAtmosphere, -3), which this overrides in a match.
+  useFrame((_, raw) => frameStep(rig, { bodies, calls, ball, spin, shadow, landRing, outer, serveRing, serveOuter, cursor, aimMark }, { spot, camera, scene, occluders, bindings, selfLook }, raw), -2);
 
   if (!m) return null;
   const drawn = selfLook ? [0, 1, 2, 3] : [1, 2, 3];
