@@ -645,3 +645,18 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - Six questions for David are on the page (the ball refs, animations, residents on the court, sharing the PowerMeter, the match length, casual rewards).
   - perf:check passed (a passerby gets +0 ms; a player in a match gets +1.2 ms).
 - **David's volleyball test server:** port 3301, bound to 0.0.0.0, worktree volleyball-test (detached at c2669f17), Supabase blanked. PID in scratchpad/volleyball-test-dev.pid. URLs: /lab/island?at=-7.5,107 (walk to the net, press E) and /lab/volleyball. Kill it, and 3300, when David is done.
+- **Volleyball phase 1 decisions (David played it: "the controlsl dont even work properly"):**
+  - Approved: island-match.
+  - Redo, everything else:
+    - controls;
+    - feel: a slow-mo ball that speeds up, higher and floatier jumps, squish on every hit;
+    - the camera zoom-in and a bigger field;
+    - the serve: a triangle meter, rewarded max power, direction from where you click in the ring, a curve contact UI;
+    - an action bar with icons that switches in the air;
+    - VFX;
+    - net remodel; the beach ball from his reference;
+    - a leaderboard board and a spectator bench; spectators see a cheap default loop; residents off the court.
+  - Answers: one set to 21; a casual win pays chill coins; ranked later pays better rewards, gems and the limited rod.
+  - Two lanes:
+    - vb-anim (game/vb-anim): Blender clips in vb_clips.glb plus the clips.ts contract;
+    - volleyball r2 (game/volleyball): everything else, built against the clip names.
