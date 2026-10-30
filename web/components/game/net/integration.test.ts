@@ -23,7 +23,7 @@ describe("multiplayer's edits to the shared scene files", () => {
     expect(world).toMatch(/\{children\}\n\s*<NetWorld area=\{area\} player=\{player\} ready=\{ready && !fading( && netReady)?\} \/>/);
     // (inside the wrapper that hides it in a cinematic moment, world audit item 7; v1 chat steps away then too)
     // (the UI view, Esc 1, keeps the chat's last lines up: playtest round 1)
-    expect(world).toMatch(/<NetHud area=\{area\}( hidden=\{hudCinematic[^}]*\})?( expanded=\{uiView\})? \/>(<\/div>)?\n(\s*<PhotoMode [^\n]*\/>\n)?\s*<LoadingStatus ready=\{ready\} \/>/);
+    expect(world).toMatch(/<NetHud area=\{area\}( hidden=\{hudCinematic[^}]*\})?( expanded=\{uiView[^}]*\})? \/>(<\/div>)?\n(\s*<PhotoMode [^\n]*\/>\n)?\s*<LoadingStatus ready=\{ready\} \/>/);
     expect(world).toMatch(/benchSeat\(px, pz, 1\.3, v, layout\.benches, remoteSeatTaken\)/);
     // The bench's claim key rides the tsi:sit detail (the sender's `seat`), and the sushi bar's stool's (barSeat's key).
     expect(world).toMatch(/benchSpot\.current = b \? \{ \.\.\.b, seatY:[^\n]*: stool && \{ \.\.\.stool, seatY:/);

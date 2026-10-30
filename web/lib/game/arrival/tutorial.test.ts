@@ -4,7 +4,7 @@ import { END_LINE, STOP_LINES, TASK_DONE_LINES, TRACKER, TRACKER_TITLE, fillKeys
 import { resolvePlace, resolveRoute, type PlaceWorld, type ResolvedStop, type TutorialRoute, type XZ } from "./route";
 import { NEW_ROUTE } from "./routes/new";
 
-const KEYS: HintKeys = { move: "W A S D", jump: "Space", wheel: "Tab", bag: "B", touch: false };
+const KEYS: HintKeys = { move: "W A S D", jump: "Space", dash: "Q", wheel: "Tab", bag: "B", touch: false };
 /** A small world: the dock at the origin facing +z, four fronts and a beach. */
 const WORLD: PlaceWorld = {
   dock: { x: 0, z: 0, yaw: 0 },
@@ -14,7 +14,24 @@ const WORLD: PlaceWorld = {
     return p ? (point ? { x: p.x, z: p.z - 3 } : p) : null;
   },
 };
-const STOPS = resolveRoute(NEW_ROUTE, WORLD, { x: 0, z: 0 });
+/** The walk-along's mechanics on a plain fixture route (the village's old one): the dock and its crate, four fronts, the beach. */
+const CRATE_Z = -0.95;
+const WALK: TutorialRoute = {
+  crossFrom: { x: 14, z: -46, yaw: -0.24 },
+  crates: [{ at: { dock: [0, CRATE_Z] }, yaw: 0.03 }],
+  stops: [
+    { id: "dock", stand: { dock: [-0.5, -1.95] },
+      task: { kind: "reach", id: "crate", at: { dock: [0.05, CRATE_Z + 0.62] }, radius: 0.45, hint: "jump",
+        wait: [{ dock: [0.05, CRATE_Z - 0.6] }, { dock: [0.05, CRATE_Z + 0.55], hop: true }, { dock: [0.45, CRATE_Z + 1.3] }] } },
+    { id: "museum", stand: { landmark: "museum", point: "exit", offset: [1.2, -0.6] } },
+    { id: "shop", stand: { landmark: "shop", point: "exit", offset: [1.2, -0.6] } },
+    { id: "hq", stand: { landmark: "hq", point: "exit", offset: [1.2, -0.6] } },
+    { id: "cafe", stand: { landmark: "cafe", point: "exit", offset: [1.2, -0.6] } },
+    { id: "beach", stand: { landmark: "beach", offset: [-1.6, 0.3] }, gives: "rod", task: { kind: "catch", id: "catch" } },
+    { id: "collection", stand: { landmark: "beach", offset: [-1.6, 0.3] }, task: { kind: "bag", id: "bag" } },
+  ],
+};
+const STOPS = resolveRoute(WALK, WORLD, { x: 0, z: 0 });
 const stopAt = (id: string) => STOPS.find(s => s.id === id)!;
 
 /** A walk-along with Bram where the stop wants him; `frame` runs one step with the player at `at`. */
@@ -40,19 +57,20 @@ const at = (s: TutorialState) => `${STOPS[s.stop]?.id ?? "end"}:${s.stage}`;
 
 describe("the walk-along v2's route (data per world)", () => {
   it("is the stops David wrote, in order: the dock and its crate, four fronts, the beach (the rod, a catch), what you've collected", () => {
-    expect(NEW_ROUTE.stops.map(s => s.id)).toEqual(["dock", "museum", "shop", "hq", "cafe", "beach", "collection"]);
-    expect(NEW_ROUTE.stops.map(s => s.task?.kind ?? null)).toEqual(["reach", null, null, null, null, "catch", "bag"]);
-    expect(NEW_ROUTE.stops.find(s => s.gives)?.id).toBe("beach");
+    expect(WALK.stops.map(s => s.id)).toEqual(["dock", "museum", "shop", "hq", "cafe", "beach", "collection"]);
+    expect(WALK.stops.map(s => s.task?.kind ?? null)).toEqual(["reach", null, null, null, null, "catch", "bag"]);
+    expect(WALK.stops.find(s => s.gives)?.id).toBe("beach");
     // The dock's movement bit stays: a crate on the pier, and the dock's task is getting past it after Bram's hop.
-    expect(NEW_ROUTE.crates.length).toBeGreaterThan(0);
-    const dock = NEW_ROUTE.stops[0].task!;
+    expect(WALK.crates.length).toBeGreaterThan(0);
+    const dock = WALK.stops[0].task!;
     expect(dock.kind === "reach" && dock.wait?.some(w => w.hop)).toBe(true);
   });
 
   it("has every stop's lines and tracker labels, so a new map's route needs no code", () => {
     for (const stop of NEW_ROUTE.stops) {
-      expect(STOP_LINES[stop.id]?.length, stop.id).toBeGreaterThan(0);
-      expect(TRACKER[stop.id], stop.id).toBeTruthy();
+      // An `auto` stop (straight on, no E) needs no tracker step, and lines only if it talks.
+      if (!stop.auto) expect(STOP_LINES[stop.id]?.length, stop.id).toBeGreaterThan(0);
+      if (!stop.auto) expect(TRACKER[stop.id], stop.id).toBeTruthy();
       if (stop.task) expect(TRACKER[stop.task.id], stop.task.id).toBeTruthy();
     }
   });
@@ -68,10 +86,10 @@ describe("the walk-along v2's route (data per world)", () => {
   });
 
   it("moves to another world as data only: the same stops at new places resolve and walk", () => {
-    const moved: TutorialRoute = { ...NEW_ROUTE, crates: [{ at: { world: [40, 40] } }, { at: { world: [42, 41] }, yaw: 0.4 }],
-      stops: NEW_ROUTE.stops.map((s, i) => ({ ...s, stand: { world: [i * 10, 5] }, via: undefined })) };
+    const moved: TutorialRoute = { ...WALK, crates: [{ at: { world: [40, 40] } }, { at: { world: [42, 41] }, yaw: 0.4 }],
+      stops: WALK.stops.map((s, i) => ({ ...s, stand: { world: [i * 10, 5] }, via: undefined })) };
     const stops = resolveRoute(moved, { dock: null, landmark: () => null }, { x: 0, z: 0 });
-    expect(stops.map(s => s.stand)).toEqual(NEW_ROUTE.stops.map((_, i) => ({ x: i * 10, z: 5 })));
+    expect(stops.map(s => s.stand)).toEqual(WALK.stops.map((_, i) => ({ x: i * 10, z: 5 })));
     // A dock-frame place in a world without a wharf falls back to the place before it, never undefined.
     expect(stops[0].task?.kind === "reach" && stops[0].task.at).toEqual({ x: 0, z: 5 });
   });
@@ -234,7 +252,7 @@ describe("the walk-along in the quest tracker", () => {
 });
 
 /** The resolved route the tests walk, sanity: every stop placed. */
-it("resolves the village route in a world that has its places", () => {
+it("resolves the fixture route in a world that has its places", () => {
   expect(STOPS.every((s: ResolvedStop) => Number.isFinite(s.stand.x) && Number.isFinite(s.stand.z))).toBe(true);
 });
 
@@ -245,5 +263,93 @@ describe("Bram's pace (t-short)", () => {
     expect(bramPace(WAIT_GAP + 1, false)).toBe(0);
     expect(bramPace(5, true)).toBe(BRAM_PACE.jog);
     expect(BRAM_PACE.brisk).toBeGreaterThan(BRAM_PACE.walk);
+  });
+});
+
+describe("the new world's walk (t-short, t-sell): HQ first, the camera conversation, the barrel", () => {
+  const at = { x: 0, z: 0 };
+  const stops: ResolvedStop[] = [
+    { id: "hqFirst", stand: at, via: [], task: { kind: "hq", id: "alice" }, box: true },
+    { id: "sights", stand: at, via: [], box: true, shots: [null, { x: 5, z: 5 }] },
+    { id: "barrel", stand: at, via: [], task: { kind: "sell", id: "sell" }, box: true },
+  ];
+  const step = (s: TutorialState, now: number, events: TutorialEvent[] = []) => stepTutorial(s, { now, player: at, bram: at, stops, events, end: "bye" });
+  it("one E opens the conversation with all his lines; the box closing moves it on; HQ waits for Alice's visit", () => {
+    const s = newTutorial(0);
+    const open = step(s, 1, ["talked"]);
+    expect(open).toEqual([{ kind: "converse", lines: STOP_LINES.hqFirst, stop: "hqFirst" }]);
+    // E again changes nothing while the box is up; no hints mid-talk.
+    expect(step(s, 40, ["talked"])).toEqual([]);
+    expect(step(s, 41, ["talkEnded"])).toEqual([{ kind: "visit" }]);
+    expect(s.stage).toBe("task");
+    expect(step(s, 42, ["caught", "sold"]).some(c => c.kind === "converse")).toBe(false);
+    step(s, 43, ["hqDone"]);
+    expect([s.stop, s.stage]).toEqual([1, "await"]);
+    expect(step(s, 44, ["talked"])[0]).toMatchObject({ kind: "converse", stop: "sights" });
+    step(s, 45, ["talkEnded"]);
+    expect([s.stop, s.stage]).toEqual([2, "await"]);
+    step(s, 46, ["talked"]); step(s, 47, ["talkEnded"]);
+    // Opening the barrel isn't selling: the sale moves it on.
+    expect(step(s, 48, ["talked"])).toEqual([]);
+    const end = step(s, 49, ["sold"]);
+    expect(end).toEqual([{ kind: "say", line: "bye", stop: "barrel" }, { kind: "reward" }, { kind: "done" }]);
+  });
+  it("teaches the dash straight after the box (no E): the move unlocked, then a dash moves it on", () => {
+    const far = { x: 9, z: 0 };
+    const dock: ResolvedStop[] = [{ id: "dash", stand: at, via: [], auto: true, task: { kind: "dash", id: "dash" }, box: true }, stops[0]];
+    const s = newTutorial(0), go = (now: number, bram: XZ, events: TutorialEvent[] = []) => stepTutorial(s, { now, player: at, bram, stops: dock, events });
+    expect(go(1, far)).toEqual([]);                                    // not there yet
+    expect(go(2, at)).toEqual([{ kind: "unlock", move: "dash" }]);     // there: no lines, straight to the task
+    expect(s.stage).toBe("task");
+    expect(go(2 + HINT_AFTER_S, at)).toEqual([{ kind: "hint", hint: "dash" }]);
+    expect(hintLine({ kind: "hint", hint: "dash" }, KEYS)).toMatch(/^Q to dash/);
+    go(30, at, ["dashed"]);
+    expect([s.stop, s.stage]).toEqual([1, "await"]);
+  });
+  it("counts a hop over the box wherever on the dock you land past it (David's playtest: a real hop didn't register)", () => {
+    const stops = resolveRoute(NEW_ROUTE, { ...WORLD, prop: () => ({ x: 30, z: 30 }) }, { x: 0, z: 0 });
+    const box = stops[0].task;
+    if (box?.kind !== "reach" || !box.from) throw new Error("the new dock's box is a reach past it");
+    // The dock faces +z here: the box at z -0.95, its far side from z -0.33 on.
+    const s = newTutorial(0), go = (p: XZ) => stepTutorial(s, { now: 1, player: p, bram: stops[0].stand, stops, events: [] });
+    s.stage = "task";
+    go({ x: 0.05, z: -1.5 });                    // before the box
+    expect(s.stop).toBe(0);
+    go({ x: 0.7, z: 0.4 });                      // landed beside Bram, well off the old spot's half-metre circle
+    expect([s.stop, s.stage]).toEqual([1, "await"]);
+  });
+  it("passes over the dock's lessons once the dock is cleared (you've been into HQ), and not before", () => {
+    const dock: ResolvedStop[] = [
+      { id: "dockNew", stand: at, via: [], dock: true, box: true },
+      { id: "dash", stand: at, via: [], auto: true, dock: true, task: { kind: "dash", id: "dash" }, box: true }, stops[0],
+    ];
+    const go = (s: TutorialState, dockCleared: boolean) => stepTutorial(s, { now: 1, player: at, bram: at, stops: dock, events: [], dockCleared });
+    const fresh = newTutorial(0);
+    go(fresh, false);
+    expect(fresh.stop).toBe(0);
+    const replay = newTutorial(0);
+    go(replay, true);
+    expect([dock[replay.stop].id, replay.stage]).toEqual(["hqFirst", "await"]);
+    // The real route marks the box and the dash, and nothing after them.
+    expect(NEW_ROUTE.stops.filter(x => x.dock).map(x => x.id)).toEqual(["dockNew", "dash"]);
+  });
+  it("the hand-over starts itself after the sale, and with no last word the walk ends as its box closes", () => {
+    const keep: ResolvedStop[] = [{ id: "keep", stand: at, via: [], auto: true, holds: "rod", box: true, shots: [null, null, "bram"] }];
+    const s = newTutorial(0), go = (now: number, events: TutorialEvent[] = []) => stepTutorial(s, { now, player: at, bram: at, stops: keep, events, end: "" });
+    expect(go(1)).toEqual([{ kind: "converse", lines: STOP_LINES.keep, stop: "keep" }]);
+    expect(go(2, ["talkEnded"])).toEqual([{ kind: "reward" }, { kind: "done" }]);
+  });
+  it("fills the jump and dash keys in his lines and the tracker (touch: no keys)", () => {
+    expect(fillKeys(STOP_LINES.dockNew[1], KEYS)).toMatch(/Space to jump\.$/);
+    expect(fillKeys(TASK_DONE_LINES.box, KEYS)).toMatch(/Q to dash\.$/);
+    expect(fillKeys(TRACKER.dash, { ...KEYS, touch: true })).toBe("Dash");
+    expect(fillKeys(STOP_LINES.dockNew[1], { ...KEYS, touch: true })).not.toMatch(/\{/);
+  });
+  it("hints the way into HQ, and at the barrel, on a stall", () => {
+    const s = newTutorial(0);
+    step(s, 1, ["talked"]); step(s, 2, ["talkEnded"]);
+    expect(step(s, 2 + HINT_AFTER_S)).toEqual([{ kind: "hint", hint: "hq" }]);
+    expect(hintLine({ kind: "hint", hint: "hq" }, KEYS)).toMatch(/Alice/);
+    expect(hintLine({ kind: "hint", hint: "sell" }, KEYS)).toMatch(/barrel/);
   });
 });

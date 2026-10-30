@@ -1,18 +1,18 @@
 "use client";
 
 /**
- * The top HUD's numbers (hud-first-login §2): play coins, today's gift and XP.
- * Coins and the gift load from GET /api/economy/wallet and reload after any
+ * The top HUD's numbers (hud-first-login §2): play coins and gems, today's gift and XP.
+ * Coins, gems and the gift load from GET /api/economy/wallet and reload after any
  * game write (API_WRITE, debounced so a burst is one read); XP starts from the
  * island's progression read and follows kills and finished missions. Signed
- * out, coins stay null and the HUD shows no coin chip.
+ * out, coins and gems stay null and the HUD shows no wallet.
  */
 import { useSyncExternalStore } from "react";
 import { API_WRITE } from "@/lib/apiClient";
 import { httpEconomyTransport } from "@/lib/wallet/transport";
 
-export interface HudState { coins: number | null; xp: number | null; giftClaimed: boolean; day: string | null }
-const EMPTY: HudState = { coins: null, xp: null, giftClaimed: true, day: null };
+export interface HudState { coins: number | null; gems: number | null; xp: number | null; giftClaimed: boolean; day: string | null }
+const EMPTY: HudState = { coins: null, gems: null, xp: null, giftClaimed: true, day: null };
 let state = EMPTY;
 let started = false;
 let timer: ReturnType<typeof setTimeout> | undefined;
@@ -20,12 +20,13 @@ const listeners = new Set<() => void>();
 const publish = (next: Partial<HudState>) => { state = { ...state, ...next }; listeners.forEach(l => l()); };
 
 export function refreshHudWallet(): Promise<void> {
-  return httpEconomyTransport.wallet().then(w => publish({ coins: w.coins, giftClaimed: w.daily_claimed, day: w.day }), () => {});
+  return httpEconomyTransport.wallet().then(w => publish({ coins: w.coins, gems: w.gems, giftClaimed: w.daily_claimed, day: w.day }), () => {});
 }
 /** The player's stamina as the movement sim has it (lib/game/movement/sim.ts), written each frame by the avatar and read by
  * the HUD's bar on its own frame loop (never a React render per frame). */
 export const hudLive = { stamina: 1, winded: false };
 export const setHudCoins = (coins: number) => publish({ coins });
+export const setHudGems = (gems: number) => publish({ gems });
 export const setHudXp = (xp: number) => publish({ xp });
 export const markGiftClaimed = (coins: number, day: string) => publish({ coins, giftClaimed: true, day });
 

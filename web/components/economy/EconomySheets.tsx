@@ -81,6 +81,8 @@ export function SellBody({ transport = httpEconomyTransport }: { transport?: Eco
     try {
       const r = await transport.sell(e.item_key, qty, newKey());
       setEarned((x) => x + r.paid);
+      // A sale, for whoever waits on one (Bram's first fish, lib/game/arrival/tutorial.ts).
+      window.dispatchEvent(new CustomEvent("tsi:sold", { detail: { key: e.item_key, paid: r.paid } }));
       await reload();
     } catch (err) {
       setError(errText(err));

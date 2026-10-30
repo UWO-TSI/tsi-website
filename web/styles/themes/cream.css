@@ -34,6 +34,18 @@
   --ui-water: #d9eef4;
   --ui-water-line: #9fcbdb;
   --ui-water-deep: #2f8aa6;
+  /* Paper, the material (the design bible's rule 2: only for things that are paper in the world: a printed card, a letter). */
+  --ui-paper: #fffaf0;
+  --ui-paper-edge: #e8dcc0;
+  --ui-paper-ink: #3a3025;
+  --ui-stamp: #c4513d;
+  /* A keyword in a line (the kit's Keyword): its word and its little icon. */
+  --ui-word-fish: #2f74c0;
+  --ui-word-bug: #3f8f3a;
+  --ui-word-coin: #b07a0c;
+  --ui-word-gem: #8b4fc9;
+  --ui-word-place: #b4582e;
+  --ui-word-item: #1d8577;
   --ui-stage: radial-gradient(ellipse 24% 4.5% at 50% 87%, rgb(114 92 78 / 0.2), rgb(114 92 78 / 0.08) 55%, transparent 100%),
     linear-gradient(180deg, #fffff7 0%, #fffff7 60%, #f8f4e8 84%, #eee9ca 100%);
   /* The rarity ladder (specs/design-bible.md UI 7): a thin outline or edge, never a fill. Divine is the holo. */

@@ -11,6 +11,7 @@ import type { ResolvedStop } from "./route";
 import type { ArrivalTools } from "./tools";
 import { fillKeys, BRAM } from "./lines";
 import type { TrackedQuest } from "@/lib/game/questTracker";
+import { hqSnapshot, subscribeHq } from "./hq/store";
 
 export const arrivalRun = {
   current: null as Arrival | null,
@@ -20,6 +21,8 @@ export const arrivalRun = {
   events: [] as TutorialEvent[],
   /** A keycap glyph pulsing once (the wheel, the bag), and when it went up (performance.now ms). */
   glyph: null as { key: "wheel" | "bag"; at: number } | null,
+  /** The glyph is on screen now (Arrival's chip): the island's own prompt for the same thing stands back (one prompt). */
+  chipUp: false,
   /** The walk-along's route in world XZ (the guide resolves it for its world). */
   stops: null as ResolvedStop[] | null,
   /** Where Bram is, and whether E talks to him there (he's at his stop with the "!", or talking): the guide's, each frame. */
@@ -37,6 +40,7 @@ export function resetArrival() {
   arrivalRun.tutorial = null;
   arrivalRun.events = [];
   arrivalRun.glyph = null;
+  arrivalRun.chipUp = false;
   arrivalRun.stops = null;
   arrivalRun.bram = { x: 0, z: 0, talkable: false };
   arrivalChanged();
@@ -57,7 +61,7 @@ export function subscribeArrival(l: () => void) {
 /** What React shows of it: the phase, the walk-along's stop and stage, what Bram has given, the glyph ("" with none). */
 export function readArrival(): string {
   const a = arrivalRun.current, t = arrivalRun.tutorial;
-  return a ? `${a.phase}|${t ? `${t.stop}:${t.stage}:${t.done ? 1 : 0}` : "-"}|${t?.given.rod ? "rod" : ""}|${arrivalRun.stops?.length ?? 0}|${arrivalRun.glyph?.key ?? ""}${arrivalRun.glyph?.at ?? ""}` : "";
+  return a ? `${a.phase}|${t ? `${t.stop}:${t.stage}:${t.done ? 1 : 0}` : "-"}|${t?.given.rod ? "rod" : ""}|${arrivalRun.stops?.length ?? 0}|${arrivalRun.glyph?.key ?? ""}${arrivalRun.glyph?.at ?? ""}|${arrivalRun.chipUp ? 1 : 0}` : "";
 }
 /** The arrival's phase now, or null when none is running. */
 export function useArrivalPhase(): ArrivalPhase | null {
@@ -76,15 +80,46 @@ export function useArrivalTools(): ArrivalTools {
 }
 
 /** The walk-along as the quest tracker shows it (null outside it); `keys` fills the labels' keys. */
-export function useTutorialQuest(keys: { bag: string; touch: boolean }): TrackedQuest | null {
+export function useTutorialQuest(keys: { bag: string; jump: string; dash: string; touch: boolean }): TrackedQuest | null {
   const key = useSyncExternalStore(subscribeArrival, readArrival, () => "");
   const phase = key.split("|")[0];
   return useMemo(() => {
     if (phase !== "tutorial" || !arrivalRun.stops) return null;
+    // In with Alice (HQ first): the tracker is her visit's.
+    const t = arrivalRun.tutorial;
+    if (t && t.stage === "task" && arrivalRun.stops[t.stop]?.task?.kind === "hq") return null;
     return tutorialQuest(arrivalRun.stops, arrivalRun.tutorial, t => fillKeys(t, keys));
   // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by the arrival's snapshot: the quest changes when it does.
-  }, [key, phase, keys.bag, keys.touch]);
+  }, [key, phase, keys.bag, keys.jump, keys.dash, keys.touch]);
 }
+
+/** The tutorial's chip is up (its glyph): the island's own prompt for the same key hides, so there's one prompt. */
+export function useArrivalChip(): boolean {
+  return useSyncExternalStore(subscribeArrival, readArrival, () => "").endsWith("|1");
+}
+
+/**
+ * The tutorial dock (David's v3 review): while you learn on it, it has its dressing (the box to hop, a clear run to dash
+ * along); once you've walked into HQ it's cleared for good and the island's own dock shows, after a reload too. Kept
+ * on this device, and read from the account too: a visit with Alice under way means you've been in.
+ */
+const DOCK_KEY = "tsi.dock.cleared";
+let dockHere: boolean | null = null;
+export function dockCleared(): boolean {
+  const v = hqSnapshot().visit;
+  if (v && (v.beat > 0 || v.done)) return true;
+  if (dockHere === null) { try { dockHere = window.localStorage.getItem(DOCK_KEY) === "1"; } catch { dockHere = false; } }
+  return dockHere;
+}
+/** You've walked into HQ: the dock's dressing goes. */
+export function clearDock() {
+  if (dockCleared()) return;
+  dockHere = true;
+  try { window.localStorage.setItem(DOCK_KEY, "1"); } catch { /* this session only; the visit's account copy says so once it's begun */ }
+  arrivalChanged();
+}
+const subscribeDock = (l: () => void) => { const a = subscribeArrival(l), b = subscribeHq(l); return () => { a(); b(); }; };
+export const useDockCleared = () => useSyncExternalStore(subscribeDock, dockCleared, () => false);
 
 /** E talks to Bram here: he's waiting at his stop (or talking) and you're within reach. */
 export function bramNear(x: number, z: number): boolean {

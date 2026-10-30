@@ -12,18 +12,23 @@
 import { useCallback, useEffect, useMemo } from "react";
 import { toast } from "@/components/gui";
 import { beginTalk, onTalkScript, startTalk, talkStore } from "@/lib/game/residentTalk";
+import { pauseGame } from "@/lib/game/escMenu";
 import { fillName, parseTalkLine } from "@/lib/content/talk";
 import { itemIcon } from "@/lib/game/toolWheel";
 import type { TrackedQuest } from "@/lib/game/questTracker";
-import { finishToolQuest, giveTool, hqEvent, hqSnapshot, setToolsTaught, startVisit, useHq } from "@/lib/game/arrival/hq/store";
+import { setHudCoins, setHudGems } from "@/lib/game/hudStore";
+import type { FlyTarget } from "@/lib/game/arrival/hq/lines";
+import { finishToolQuest, giveTool, hqEvent, hqSnapshot, setToolsTaught, startVisit, syncHq, useHq } from "@/lib/game/arrival/hq/store";
 import { hqQuest, visitCue, waitingFor } from "@/lib/game/arrival/hq/visit";
 import { givenKeys, handOver, isTaughtTool, questFinished, teacherOf, teacherTalk, type CatchKind } from "@/lib/game/arrival/hq/teachers";
 import { TOOL_LINES, WREN, WREN_LINES, escPhrase, trackerEsc } from "@/lib/game/arrival/hq/lines";
-import type { HqCard, HqEvent } from "@/lib/game/arrival/hq/script";
+import { HQ_END, HQ_END_TOUR, HQ_SCRIPT, type HqCard, type HqEvent } from "@/lib/game/arrival/hq/script";
 
 const WREN_TALKER = { id: "hq:wren", slug: WREN.slug, name: WREN.name, post: WREN.post, seed: 3 };
 /** Her lines wait this long after the room fades in (or a sheet closes): a breath, not a jump. */
 const SAY_DELAY_MS = 450;
+/** After Esc (the visit's last beat) the menu you opened stays up this long, to be seen, before her farewell closes it. */
+const MENU_LOOK_MS = 2600;
 
 export interface HqWorld {
   inside: string | null;
@@ -31,7 +36,6 @@ export interface HqWorld {
   free: boolean;
   /** The Esc layer is open (the UI view). */
   menuOpen: boolean;
-  mapOpen: boolean;
   touch: boolean;
   /** Your world name. */
   name: string | null;
@@ -46,13 +50,15 @@ export interface HqWorld {
 export function useHqOnboarding(w: HqWorld, dev: URLSearchParams | null) {
   const hq = useHq();
   const visit = hq.visit;
+  // Where the account is in all this (another device's progress, a reload's).
+  useEffect(() => { void syncHq(); }, []);
   // Dev previews: ?hqvisit=1 starts the visit (this account's tools taught; with ?hq=inside, at HQ); ?tools=taught
   // teaches the tools alone. And the evidence scripts' view of it (window.__hq).
   useEffect(() => {
     if (!dev) return;
     if (dev.get("hqvisit") === "1") { setToolsTaught(true); startVisit(); }
     else if (dev.get("tools") === "taught") setToolsTaught(true);
-    Object.assign(window, { __hq: () => ({ ...hqSnapshot(), cue: hqSnapshot().visit && visitCue(hqSnapshot().visit!), waiting: waitingFor(hqSnapshot().visit) }) });
+    Object.assign(window, { __hudCoins: setHudCoins, __hudGems: setHudGems, __hq: () => ({ ...hqSnapshot(), cue: hqSnapshot().visit && visitCue(hqSnapshot().visit!), waiting: waitingFor(hqSnapshot().visit) }) });
   }, [dev]);
 
   // What the wheel may hold: the inventory plus what a resident has handed over here (before it reads back).
@@ -93,15 +99,25 @@ export function useHqOnboarding(w: HqWorld, dev: URLSearchParams | null) {
     return () => window.removeEventListener("tsi:peaceful-got", got);
   }, []);
 
-  // The Esc menu and the map, wherever you open them.
-  useEffect(() => { if (w.menuOpen) hqEvent("esc"); }, [w.menuOpen]);
-  useEffect(() => { if (w.mapOpen) hqEvent("map"); }, [w.mapOpen]);
+  // The Esc menu, wherever you open it; open already as the beat comes round counts too.
+  const escBeat = !!visit && !visit.done && HQ_SCRIPT[visit.beat]?.wait === "esc";
+  useEffect(() => { if (w.menuOpen && escBeat) hqEvent("esc"); }, [w.menuOpen, escBeat]);
+  // Esc pressed while she's still saying "Press Esc": the dialogue box takes Esc to close itself, so the menu opens too
+  // (David's playtest: the press didn't register).
+  useEffect(() => {
+    if (!escBeat) return;
+    const down = (e: KeyboardEvent) => { if (e.key === "Escape" && talkStore.active?.script === "hq") window.setTimeout(pauseGame, 0); };
+    window.addEventListener("keydown", down, true);
+    return () => window.removeEventListener("keydown", down, true);
+  }, [escBeat]);
 
   // Alice says the beat's lines once you're at HQ with nothing over the room.
-  const cue = visit ? visitCue(visit) : null;
+  // Bram's tour still on (HQ first): she sends you back out to him.
+  const cue = visit ? visitCue(visit, HQ_SCRIPT, w.arriving ? HQ_END_TOUR : HQ_END) : null;
   const sayKeys = cue?.kind === "say" ? cue.keys.join("+") : null;
   const atHq = w.inside === "hq";
   const { free, name, touch, closeMenu } = w;
+  const farewell = !!visit && visit.beat >= HQ_SCRIPT.length;
   useEffect(() => {
     if (!sayKeys || !atHq || !free) return;
     const t = window.setTimeout(() => {
@@ -110,27 +126,33 @@ export function useHqOnboarding(w: HqWorld, dev: URLSearchParams | null) {
         .map(raw => parseTalkLine(fillName(raw.replaceAll("{esc}", escPhrase(touch)), name)));
       closeMenu();
       startTalk(beginTalk(WREN_TALKER, lines, performance.now() / 1000, "hq"));
-    }, SAY_DELAY_MS);
+    }, farewell ? MENU_LOOK_MS : SAY_DELAY_MS);
     return () => window.clearTimeout(t);
-  }, [sayKeys, atHq, free, name, touch, closeMenu]);
+  }, [sayKeys, atHq, free, name, touch, closeMenu, farewell]);
 
-  /** The card due now (the register, the check-in card): at HQ with nothing else over the room. */
+  /** The card due now (the ID, the check-in card, a fly): at HQ with nothing else over the room. */
   const card: HqCard | null = cue?.kind === "card" && atHq && free ? cue.card : null;
   const waiting: HqEvent | null = waitingFor(visit);
+  /** What's flying to its place on screen now: the island shows it there meanwhile (the minimap indoors, the menu's dock). */
+  const fly = card?.startsWith("fly:") ? (card.slice(4) as FlyTarget) : null;
+  // The keyboard tour is for a keyboard: a touch screen goes straight past it (phones get their own pass later).
+  const tourBeat = !!visit && !visit.done && HQ_SCRIPT[visit.beat]?.id === "tour";
+  useEffect(() => { if (touch && tourBeat && atHq) hqEvent(visit!.stage === "say" ? "said" : "tour"); }, [touch, tourBeat, atHq, visit]);
 
   // The tracker: the visit while it runs; the main quest's chapters carry on from a tool's hand-over (lib/game/mainQuest.ts).
   const quest: TrackedQuest | null = useMemo(() => {
-    if (w.arriving) return null;
+    // Alice's visit while it runs (mid-walk too: HQ first).
     if (visit && !visit.done) return hqQuest(visit, t => trackerEsc(t, touch));
     return null;
-  }, [w.arriving, visit, touch]);
+  }, [visit, touch]);
 
   /** Bram's tour is over: a new arrival's tools are taught and the visit with Alice starts. */
   const arrived = useCallback((taught: boolean) => {
     if (!taught) return;
     setToolsTaught(true);
-    startVisit();
+    // Not again if it ran mid-walk (HQ first) or the account already has it.
+    if (!hqSnapshot().visit) startVisit();
   }, []);
 
-  return { taught: hq.taught, owned, quest, card, waiting, arrived };
+  return { taught: hq.taught, visit, owned, quest, card, fly, waiting, arrived };
 }

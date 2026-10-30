@@ -24,7 +24,7 @@ import { RARITIES, RARITY_LABEL } from "@/lib/rarity";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import { Waves } from "lucide-react";
 import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
-import { BigMoment, ProgressCard, RewardPop, StatBar, StatBars } from "@/components/gui/flat";
+import { BigMoment, CardOverlay, DarkButton, FlyIn, GhostButton, KEYWORD_KINDS, KeyBoard, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, QuestCheck, RewardPop, SlotPop, Spotlight, StatBar, StatBars, WalletSlot } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
 import s from "./showroom.module.css";
 
@@ -43,7 +43,65 @@ function Loop({ ms, children }: { ms: number; children: (done: () => void) => Re
   return <div key={n} style={{ display: "contents" }}>{children(() => {})}</div>;
 }
 
+/** The kit's moments (components/gui/flat/moments.tsx), each looping through its states. */
+function KeyBoardShow() {
+  const [t, setT] = useState(0);
+  useEffect(() => { const i = window.setInterval(() => setT(v => v + 1), 120); return () => window.clearInterval(i); }, []);
+  const k = t % 40, hold = k < 20, bag = k >= 34;
+  // The light card: the key and a word, the keys on their well; a press brings its part of the screen in (here the Bag, top left).
+  return <>
+    {bag && <span data-demo-bag style={{ position: "absolute", top: 16, left: 16, display: "flex", gap: 6, alignItems: "center", padding: "8px 14px", borderRadius: 999, background: "var(--ui-card)", fontWeight: 800 }}><Backpack size={16} /> Bag</span>}
+    {bag && <SlotPop to={["[data-demo-bag]"]} />}
+    <Spotlight light open label="Keys" lead={hold ? <>Hold <Keycap>Tab</Keycap> Tools</> : <>Press <Keycap>I</Keycap> Bag</>}
+      steps={{ count: 9, at: hold ? 0 : 4 }} footer={<GhostButton>Skip</GhostButton>}>
+      <KeyBoard lit={hold ? "tab" : "i"} hold={hold} fill={hold ? Math.min(1, Math.max(0, (k - 4) / 12)) : 0} won={hold ? k >= 16 : k >= 34}
+        done={hold ? [] : ["tab", "g", "h", "enter"]} down={new Set(hold ? (k >= 4 && k < 16 ? ["tab"] : []) : (k >= 32 && k < 34 ? ["i"] : []))} />
+    </Spotlight>
+  </>;
+}
+/** The ID as the overlay: filled in on the card, printed out of the slot, stamped, then Done; hover it to tilt. */
+function PrintedShow() {
+  const [t, setT] = useState(0);
+  useEffect(() => { const i = window.setInterval(() => setT(v => (v + 1) % 8), 1000); return () => window.clearInterval(i); }, []);
+  const form = t < 3, printing = t >= 3 && t < 5, stamped = t >= 5;
+  const rows: [string, ReactNode][] = form
+    ? [["World name", <PaperField key="n" defaultValue="Marlowe" />], ["Birthday", <PaperField key="b" placeholder="March 14" />], ["From", <PaperField key="f" placeholder="Your hometown" />],
+      ["About you", <PaperField key="a" placeholder="Say hi in a line" />]]
+    : [["World name", "Marlowe"], ["Birthday", "March 14"], ["From", "Halifax"], ["About you", "Here for the fishing"], ["Friend code", "K7QM-4R2X"]];
+  return <CardOverlay open label="Your island ID" action={<DarkButton>{form ? "Print my ID" : "Done"}</DarkButton>}>
+    <PrintedCard key={form ? "a" : "b"} large tilt band="Tethos Island" kind="Resident" picture="M" printing={printing} stamp={stamped ? { top: "Tethos Island", word: "Resident" } : null} rows={rows} />
+  </CardOverlay>;
+}
+/** Talk lines with their keywords (the kit's Keyword, the default for every talk line): each word the dictionary
+ *  knows coloured, a little icon wiggling before it; under it every kind in the dictionary. */
+function KeywordShow() {
+  return <div style={{ display: "grid", alignContent: "end", justifyItems: "center", gap: 14, minHeight: "100%", padding: 24 }}>
+    <p style={{ margin: 0, display: "flex", flexWrap: "wrap", gap: "6px 14px", justifyContent: "center", maxWidth: 560 }}>
+      {KEYWORD_KINDS.map(kind => <Keyword key={kind} kind={kind}>{kind}</Keyword>)}
+    </p>
+    <Dialogue speaker="Bram">
+      <p style={{ margin: 0 }}><KeywordLine line="And that's the shop. Tools and clothes for the island, and real merch too. Fish sell at the fish market; my rod's yours." /></p>
+    </Dialogue>
+  </div>;
+}
+/** The wallet (design bible UI 8b) under a time pill: resting in the UI view, then a coin fly-in landing in its slot. */
+function WalletShow() {
+  const [t, setT] = useState(0);
+  useEffect(() => { const i = window.setInterval(() => setT(v => (v + 1) % 6), 1200); return () => window.clearInterval(i); }, []);
+  return <div style={{ position: "absolute", top: 16, right: 16, display: "grid", justifyItems: "end", gap: 8 }}>
+    <span style={{ padding: "4px 11px", borderRadius: 999, background: "var(--ui-card)", fontWeight: 900 }}>2:22 PM</span>
+    <WalletSlot coins={t < 3 ? 1240 : 1305} gems={35} at={t === 5 ? "out" : t >= 3 ? "in" : undefined} />
+  </div>;
+}
+
 const OVERLAYS: { id: string; title: string; render: () => ReactNode }[] = [
+  { id: "key-board", title: "Keys (a light Spotlight, KeyBoard and SlotPop)", render: () => <KeyBoardShow /> },
+  { id: "wallet", title: "The wallet (WalletSlot), its slot under the time", render: () => <WalletShow /> },
+  { id: "keyword", title: "Keywords in a line (Keyword)", render: () => <KeywordShow /> },
+  { id: "fly-in", title: "Fly-in, into the wallet's slot", render: () => <Loop ms={3600}>{done => <><span style={{ position: "absolute", top: 16, right: 16 }}><WalletSlot coins={1240} gems={35} at="in" landing="coins" /></span>
+    <FlyIn icon={<Coins size={52} />} name="Coins" text="For things on the island" to={['[data-hud-slot="coins"]']} onDone={done} /></>}</Loop> },
+  { id: "quest-check", title: "Quest complete", render: () => <Loop ms={3000}>{() => <QuestCheck eyebrow="Quest complete" title="Walk with Bram" />}</Loop> },
+  { id: "printed-card", title: "Printed card as the overlay (CardOverlay, PrintedCard, PaperField)", render: () => <PrintedShow /> },
   { id: "fish-reveal", title: "Fish reveal", render: () => <Loop ms={9000}>{done => <FishReveal fish={FISH.find(f => f.rarity === "rare") ?? FISH[0]} sizeCm={42} onDone={done} />}</Loop> },
   { id: "oracle-reveal", title: "Oracle reveal card", render: () => <FamilyReveal family="Warden" type="INFP" onContinue={() => {}} /> },
   { id: "rune", title: "Rune overlay", render: () => <Loop ms={30000}>{done => <IncantationOverlay runeId="cross" title="Cross" effect="A warding cross" onDone={done} onCancel={done} />}</Loop> },
