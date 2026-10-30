@@ -50,7 +50,7 @@ export function nodeAt(id: string, [x, z]: [number, number]): (NodeSpec & { bug:
 
 /** What the node holds for this member this hour, as the world shows it; null when nothing is out. */
 export function nodeRoll(member: string, node: NodeSpec & { bug?: boolean }, now: Date, weather: IslandWeather): Species | null {
-  const sp = node.drop ?? rollNode(member, node.id, hourKey(now), node.biomes, momentAt(now, weather), node.categories);
+  const sp = node.drop ?? rollNode(member, node.id, hourKey(now), node.biomes, momentAt(now, weather), node.categories, node.only);
   // A bug spot only shows a bug that has a model (VillageLife): nothing to catch otherwise.
   return sp && (!node.bug || sp.assetReady) ? sp : null;
 }

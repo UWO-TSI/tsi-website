@@ -778,13 +778,15 @@ function placeLeaf(model: THREE.Object3D, hand: THREE.Object3D, open: number, sc
  * own clip plays (the cast, the swing, the dig) it eases to that clip's grip. It shows in its hold and its use, and
  * hides in a seat, a glide, a slide, a roll or a climb. A new item pops out of the hand; one put away shrinks back in.
  */
-export type HoldKind = "rod" | "net" | "shovel" | "glider" | "front" | "hammer";
+export type HoldKind = "rod" | "net" | "shovel" | "pickaxe" | "glider" | "front" | "hammer";
 export interface HeldView { url: string; hold: HoldKind; /** Something held in front: fitted to this size (rig units) about its centre. */ fit?: number }
 type Grip = { clip: ClipName; rotation: [number, number, number]; offset?: [number, number, number]; scale?: number };
 const HELD_GRIPS: Record<HoldKind, Grip> = {
   rod: { clip: "HoldRod", rotation: [3.046, 1.018, -1.469] },
   net: { clip: "HoldTool", rotation: [0.134, -1.029, -0.635] },
   shovel: { clip: "HoldTool", rotation: [-0.461, 0.175, -1.611] },
+  // The pickaxe is built on the shovel's handle axis (art/props-enemies/build_tools.py): held the same way.
+  pickaxe: { clip: "HoldTool", rotation: [-0.461, 0.175, -1.611] },
   glider: { clip: "HoldTool", rotation: [-0.572, -0.643, -0.883], scale: 0.45 },
   front: { clip: "HoldFront", rotation: [-2.049, -1.105, -2.508], offset: [-0.0306, 0.0195, 0.0249] },
   // The workbench's hammer (art/props-enemies/build_forage.py), held like the net; its grips solved by render_forage_clips.py.

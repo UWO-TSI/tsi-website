@@ -20,6 +20,7 @@
 @keyframes flightY { 0% { transform: translateY(10px) scale(0.6); opacity: 0.4; } 18% { transform: translateY(-30px) scale(1.35); opacity: 1; } 100% { transform: translateY(var(--dy)) scale(0.42); opacity: 0.9; } }
 .fullNote { display: flex; align-items: center; gap: 7px; margin: 0; padding: 8px 14px; border-radius: var(--gui-r-blob); background: var(--gui-paper); color: var(--gui-warn); font: 800 var(--gui-text-sm)/1.2 var(--gui-font);
   white-space: nowrap; box-shadow: var(--gui-shadow-md), inset 0 0 0 2px var(--gui-warn-soft); pointer-events: none; animation: noteIn 300ms var(--gui-spring) both; zoom: var(--tsi-text-scale, 1); }
+.fullNote[data-calm] { color: var(--gui-ink-strong); }
 @keyframes noteIn { from { opacity: 0; transform: translateY(8px) scale(0.9); } }
 @media (prefers-reduced-motion: reduce) {
   .bagButton, .bagButton[data-bump], .fullNote { animation: none; transition: none; }

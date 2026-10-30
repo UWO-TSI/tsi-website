@@ -39,9 +39,10 @@ import { arrivalChanged, arrivalEvent, arrivalRun, useArrivalPhase } from "@/lib
 import { crossingShot } from "@/lib/game/arrival/sequence";
 import { crossingCamera, type CameraOut, type CrossingPoints } from "@/lib/game/arrival/crossing";
 import { ACTIVE_WORLD_BEND } from "@/lib/game/curvedWorld";
-import { awaitsTalk, newTutorial, stepTutorial } from "@/lib/game/arrival/tutorial";
+import { WAIT_GAP, awaitsTalk, bramPace, newTutorial, stepTutorial } from "@/lib/game/arrival/tutorial";
 import { resolvePlace, resolveRoute, type PlaceWorld, type ResolvedStop, type TutorialRoute, type XZ } from "@/lib/game/arrival/route";
 import { NEW_ROUTE } from "@/lib/game/arrival/routes/new";
+import { showGuide } from "@/lib/game/guideArrow";
 import { BRAM, fillKeys, hintLine, type HintKeys } from "@/lib/game/arrival/lines";
 import type { WheelItem } from "@/lib/game/toolWheel";
 import { worldLabels } from "@/lib/game/labelLayout";
@@ -237,9 +238,7 @@ interface Guide {
   /** The walk is over: his last word waits for your collection to close, then he waves and it ends. */
   ending: boolean; waved: boolean;
 }
-const BRAM_WALK = 3.1, BRAM_JOG = 6.2, HOP_S = 0.6;
-/** He leads; this far behind him you've lost him, and he waits for you to catch up. */
-const WAIT_GAP = 9;
+const HOP_S = 0.6;
 /** At his stand (or past the last leg): within this he's there and can be talked to. */
 const THERE = 0.6;
 const lineSeconds = (line: string) => Math.max(3.2, 1.4 + line.length * 0.05);
@@ -318,7 +317,7 @@ function guideFrame(f: GuideFrame, dt: number) {
   } else if (next) {
     const goal = g.path[g.path.length - 1];
     const ahead = Math.hypot(p.x - goal.x, p.z - goal.z) < Math.hypot(g.x - goal.x, g.z - goal.z);
-    speed = ahead && gap > 3.5 ? BRAM_JOG : gap > WAIT_GAP ? 0 : BRAM_WALK;
+    speed = bramPace(gap, ahead);
     if (next.hop) { g.hop = 0; g.from = { x: g.x, z: g.z }; m.play = "Jump"; m.yaw = Math.atan2(next.x - g.x, next.z - g.z); speed = 0; }
     else {
       const dx = next.x - g.x, dz = next.z - g.z, d = Math.hypot(dx, dz);
@@ -358,6 +357,8 @@ function BramGuide({ v, island, player, dock, keys, route, places }: {
   // The route in this world's places (he starts at the first stop: beside the boat as you land).
   const stops = useMemo(() => resolveRoute(route, places, { x: dock.x, z: dock.z }), [route, places, dock]);
   useEffect(() => { arrivalRun.stops = stops; arrivalChanged(); }, [stops]);
+  // Lose him and the guide arrow points the way back to him (t-short).
+  useEffect(() => showGuide("bram", () => (arrivalRun.current?.phase === "tutorial" ? arrivalRun.bram : null), { near: WAIT_GAP - 2 }), []);
   // His name over his head, as every resident's (lib/game/nameTags.ts), through the label layout.
   useEffect(() => worldLabels.add(residentTag(out => { const g = group.current; if (!g) return false; out.set(g.position.x, g.position.y + CHARACTER_HEIGHT + 0.3, g.position.z); return true; }, () => plate.current)), []);
   // Dev (evidence scripts): the resolved stops, where Bram is, the tutorial's state.

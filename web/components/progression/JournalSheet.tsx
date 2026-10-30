@@ -5,7 +5,8 @@ import { advance, setHudMuted } from "@/lib/progression/client";
 import { ApiError } from "@/lib/apiClient";
 import type { AdvanceAction } from "@/lib/progression/chapters";
 import { refreshProgression, setProgressionState, useProgression } from "@/lib/progression/useProgression";
-import type { ChapterView, GoalProgressView } from "@/lib/progression/types";
+import type { ChapterView, GoalProgressView, ProgressionState } from "@/lib/progression/types";
+import { museumLine } from "@/lib/game/mainQuest";
 import { onBoard } from "@/lib/progression/seasonal";
 import ClubGoal, { UpNextGoal, isUpNext } from "./ClubGoal";
 import ContributeSheet from "./ContributeSheet";
@@ -25,10 +26,14 @@ function chapterActions(c: ChapterView): { action: AdvanceAction; label: string 
   const out: { action: AdvanceAction; label: string }[] = [];
   const open = (k: string) => c.steps.find((x) => x.key === k && !x.done);
   if (c.requirement === "settle_in") {
+    // The village's chapter 1, as it always played.
     if (open("claim_plot")) out.push({ action: "claim_plot", label: "Claim plot" });
     if (open("donate_catch") && !open("first_catch")) out.push({ action: "donate_catch", label: "Donate catch" });
     if (c.status === "ready") out.push({ action: "report_hq", label: "Report to HQ" });
-  } else if (c.status === "ready") {
+  } else if (c.requirement === "first_find") {
+    // The new world's chapter 1 and its errands finish by talking to their person (Juno, Odile, Pim, Bram, Eliza).
+    if (open("claim_plot")) out.push({ action: "claim_plot", label: "Claim plot" });
+  } else if (c.status === "ready" && (c.requirement === "club_goal" || c.requirement === "oracle_trial")) {
     out.push({ action: "complete", label: c.requirement === "club_goal" ? "Finish chapter" : "Open the gate" });
   }
   if (c.can_skip) out.push({ action: "skip", label: "Skip chapter" });
@@ -81,15 +86,17 @@ export function JournalBody({ initialTab = "quests" }: { initialTab?: Tab }) {
       <TabPanel id={tab}>
         {tab === "quests" ? <>
           <Folds label="Chapters">
-            {state.chapters.map((c) => {
+            {state.chapters.map((c, i) => {
               const locked = c.status === "locked", done = c.status === "completed" || c.status === "skipped";
-              return <Fold key={c.slug} testId="chapter" label={`Chapter ${c.position}: ${c.title}, ${STATUS_LABEL[c.status]}`}
+              // The errands sit after the club rows' positions, so it counts.
+              const n = i + 1;
+              return <Fold key={c.slug} testId="chapter" label={`Chapter ${n}: ${c.title}, ${STATUS_LABEL[c.status]}`}
                 state={done ? "done" : locked ? "locked" : "now"}
-                lead={done ? <Check size={18} strokeWidth={3} /> : locked ? <Lock size={15} /> : c.position}
-                title={c.title} line={`Chapter ${c.position}`}
+                lead={done ? <Check size={18} strokeWidth={3} /> : locked ? <Lock size={15} /> : n}
+                title={c.title} line={`Chapter ${n}`}
                 meta={locked ? null : <span className={m.status} data-s={c.status}>{STATUS_LABEL[c.status]}</span>}
                 open={openSlug === c.slug} onToggle={locked ? undefined : () => setPicked(openSlug === c.slug ? null : c.slug)}>
-                <ChapterPage c={c} goal={c.goal_slug ? state.goals.find((g) => g.slug === c.goal_slug) ?? null : null}
+                <ChapterPage c={c} museum={state.museum} goal={c.goal_slug ? state.goals.find((g) => g.slug === c.goal_slug) ?? null : null}
                   now={state.objective?.chapter_slug === c.slug ? state.objective.step_key : null}
                   busy={busy} preview={preview} onAct={(a) => void act(c.slug, a)} onContribute={setContributeSlug} />
               </Fold>;
@@ -118,8 +125,8 @@ export function JournalBody({ initialTab = "quests" }: { initialTab?: Tab }) {
 }
 
 /** An open chapter: what it's about, its steps (the one to do now highlighted), and its one action. */
-function ChapterPage({ c, goal, now, busy, preview, onAct, onContribute }: {
-  c: ChapterView; goal: GoalProgressView | null; now: string | null; busy: string | null; preview: boolean;
+function ChapterPage({ c, museum, goal, now, busy, preview, onAct, onContribute }: {
+  c: ChapterView; museum: ProgressionState["museum"]; goal: GoalProgressView | null; now: string | null; busy: string | null; preview: boolean;
   onAct: (a: AdvanceAction) => void; onContribute: (slug: string) => void;
 }) {
   const actions = chapterActions(c), skip = actions.find((a) => a.action === "skip"), moves = actions.filter((a) => a.action !== "skip");
@@ -127,11 +134,12 @@ function ChapterPage({ c, goal, now, busy, preview, onAct, onContribute }: {
   const label = (a: { action: AdvanceAction; label: string }) => (busy === `${c.slug}:${a.action}` ? "One moment…" : a.label);
   return <>
     <p className={m.text}>{c.summary}</p>
+    {c.requirement === "museum_collab" ? <p className={m.text}>{museumLine(museum)}</p> : null}
     <ul className={m.steps}>
       {c.steps.map((step) => <li key={step.key} className={m.step} data-done={step.done} data-now={now === step.key || undefined}>
         <span className={m.check} aria-hidden="true">{step.done ? <Check size={13} strokeWidth={3.5} /> : null}</span>
         <span className={m.stepText}>
-          <span className={m.stepLabel}>{step.label}{now === step.key ? <span className={m.srOnly}> (do this next)</span> : null}</span>
+          <span className={m.stepLabel}>{step.label}{step.count && !step.done ? ` ${step.count.have}/${step.count.need}` : null}{now === step.key ? <span className={m.srOnly}> (do this next)</span> : null}</span>
           {step.hint && !step.done ? <span className={m.hint}>{step.hint}</span> : null}
         </span>
       </li>)}

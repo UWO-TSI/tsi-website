@@ -8,7 +8,7 @@
  */
 import { memoryCollectionsStore } from "@/lib/collections/memoryStore";
 import { torontoParts } from "@/lib/time";
-import { bagAction, bagView, catchAction, donate, getShowcase, journal, museum, setShowcase, tourney, trophies } from "@/lib/collections/service";
+import { bagAction, bagView, catchAction, donate, getShowcase, handIn, journal, museum, setShowcase, tourney, trophies } from "@/lib/collections/service";
 import { speciesClass, speciesSellPrice } from "@/lib/wallet/rules";
 import { memoryEconomyStore } from "@/lib/wallet/memoryStore";
 import { buy, getShop } from "@/lib/wallet/service";
@@ -82,6 +82,7 @@ export function installCollectionsDemo(): void {
         }
         case "/api/collections/museum": return reply(await museum(m.store), "wings");
         case "/api/collections/museum/donate": return reply(await donate(m.store, ME, body.species_key, body.idempotency_key), "donation");
+        case "/api/collections/museum/hand-in": return reply(await handIn(m.store, ME, body.species_key, body.idempotency_key), "hand_in");
         case "/api/collections/trophies": return reply(await trophies(m.store, now), "case");
         case "/api/collections/tourney": return reply(await tourney(m.store, DEFAULT_GOALS, ME, now), "tourney");
         case "/api/collections/showcase": return reply(method === "PUT" ? await setShowcase(m.store, ME, body.items) : await getShowcase(m.store, ME), "showcase");

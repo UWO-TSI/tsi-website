@@ -22,7 +22,7 @@ function load() {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) ?? "null") as Partial<HeldStore> | null;
     if (!raw || typeof raw !== "object") return;
-    const chosen = Object.fromEntries(Object.entries(raw.chosen ?? {}).filter(([k, v]) => ["rod", "net", "shovel"].includes(k) && str(v)));
+    const chosen = Object.fromEntries(Object.entries(raw.chosen ?? {}).filter(([k, v]) => ["rod", "net", "shovel", "pickaxe"].includes(k) && str(v)));
     state = { held: str(raw.held), last: str(raw.last), pins: (Array.isArray(raw.pins) ? raw.pins : []).map(str).filter((p): p is string => !!p).slice(0, MAX_PINS), chosen };
   } catch { /* empty hands */ }
 }

@@ -58,7 +58,7 @@ export const WREN_LINES: Readonly<Record<string, readonly string[]>> = {
     "Deliveries at the monument count, and so does showing up to real events. Everyone's bit goes in the same pot.",
   ],
   farewell: [
-    "That's you registered. Bring your first find to the museum shell, then come back and tell me.",
+    "That's you registered. Bring your first catch to Juno at the museum. She'll show you round.",
     "Oh, and you'll want more than a rod. Odile has a spare net and Pim always has a shovel. Ask them.",
     "[happy] Welcome to Tethos Island, {name}.",
   ],
@@ -131,31 +131,39 @@ export const PLAQUE_CARD = {
  * What each tool's resident says (lib/game/arrival/hq/teachers.ts TOOL_TEACHERS): `offer` the first time you talk to
  * them (they hand it over at the end, `given` a toast), `during` while its little quest runs, `done` as the quest
  * finishes (a toast).
- * The tracker shows `title` and the quest's one step.
  */
-export const TOOL_LINES: Readonly<Record<string, { title: string; step: string; offer: readonly string[]; during: readonly string[]; given: string; done: string }>> = {
+type ToolLines = { offer: readonly string[]; during: readonly string[]; given: string; done: string };
+/** The main quest's chapters (m2, m3, m6) carry on from the hand-over, so the offers say what's next. */
+export const TOOL_LINES: Readonly<Record<string, ToolLines>> = {
   net: {
-    title: "Odile's bug net",
-    step: "Catch any bug",
     offer: [
-      "[happy] {name}! You're the one Bram brought in. Found anything with wings yet?",
+      "[happy] {name}! Found anything with wings yet?",
       "No? You'll want a net. Here, my spare. It has seen a few summers.",
-      "Catch any bug you like. Then have a proper look at it before you decide what it's for.",
+      "Catch three bugs and come and show me. Then we'll talk about what they're for.",
     ],
-    during: ["Any bug at all. The flowers by the pond are busy this time of day."],
+    during: ["Bugs sit on flowers and trees. Walk up slowly and they'll stay put."],
     given: "Odile handed you her spare bug net.",
-    done: "The bug net is yours now. Odile says keep it.",
+    done: "Your first bug! Odile's net is yours to keep.",
   },
   shovel: {
-    title: "Pim's shovel",
-    step: "Dig up one buried thing",
     offer: [
       "[happy] A new face! Do you dig? Everybody should dig.",
       "Half this island is under the sand, and most of it is perfectly good. Perfectly good!",
-      "Here, take the shovel. Dig up one thing, anything, and it's yours to keep.",
+      "Look closely, they're easy to miss: a scuffed patch of sand or dirt. Dig up three things and show me.",
     ],
-    during: ["Look for the little cracks in the ground. There's always something under there."],
+    during: ["Walk slowly and look down. A scuffed patch of sand or dirt, and there's something under there."],
     given: "Pim handed you a shovel.",
-    done: "The shovel is yours now. Pim says it's perfectly good.",
+    done: "Your first find! Pim's shovel is yours to keep.",
+  },
+  pickaxe: {
+    offer: [
+      "[happy] {name}. Sit a moment. Did you know the HQ's first wall came out of these rocks?",
+      "I dug its foundations with this very pickaxe. It's wasted on my wall now.",
+      "Take it. Bring me three stones and a bit of iron, if the rocks give you any.",
+    ],
+    during: ["The big rocks give stone, and iron now and then. Swing hard."],
+    given: "Mayor Eliza handed you her old pickaxe.",
+    done: "Your first stone! Eliza's pickaxe is yours to keep.",
   },
 };
+

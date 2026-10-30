@@ -208,7 +208,8 @@ describe("wardrobe batch 2 (David's modes and prices, specs/wardrobe/batch2-pric
     for (const p of PARTS.filter((q) => q.key && q.slot === "accessory")) expect(existsSync(join(__dirname, "../../public/assets/icons", `${p.id}.webp`)), p.id).toBe(true);
   });
   it("keeps every earlier row where it was: the batch's positions follow them", () => {
-    const earlier = [...CATALOGUE, ...OWNERSHIP_ITEMS, ...EVENT_ITEMS].filter((r) => !WARDROBE_B2_ITEMS.includes(r) && r !== COLOUR_WHEEL_ITEM);
+    // The pickaxe (m6) came after the batch, at its own position.
+    const earlier = [...CATALOGUE, ...OWNERSHIP_ITEMS, ...EVENT_ITEMS].filter((r) => !WARDROBE_B2_ITEMS.includes(r) && r !== COLOUR_WHEEL_ITEM && r.slug !== "pickaxe-basic");
     const first = Math.min(...WARDROBE_B2_ITEMS.map((r) => r.position));
     expect(Math.max(...earlier.map((r) => r.position))).toBeLessThan(first);
     expect(new Set(WARDROBE_B2_ITEMS.map((r) => r.position)).size).toBe(WARDROBE_B2_ITEMS.length);

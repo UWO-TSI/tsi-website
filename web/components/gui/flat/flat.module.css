@@ -251,6 +251,111 @@ div.card:hover { box-shadow: none; }
 .retry { all: unset; margin-left: 6px; text-decoration: underline; cursor: pointer; }
 .rarity { display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 50%; vertical-align: 0.05em; box-shadow: inset 0 0 0 1px rgb(var(--ui-shade) / 0.12); }
 
+/* ── Rewards and moments (specs/design-bible.md UI 1, 4, 7, 9): juicy, a spring with ~12% overshoot, transform only ── */
+/* The reward pop keeps the old cream card's friendly shape in the flat palette (David 2026-10-28: "the ui should be a
+   combination, not so flat but also keep the old vibe but new color"): a soft rounded white card with a little grain and
+   depth, the picture on a round dish ringed in the rarity's colour, the facts as soft pills. The rarity is an outline,
+   never a fill. */
+.pop { --edge: var(--ui-line-strong); position: relative; display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 14px; align-items: center;
+  padding: 14px 20px 14px 14px; border-radius: 26px; background: var(--ui-grain), var(--ui-card); color: var(--ui-ink); font-family: var(--gui-font);
+  box-shadow: 0 0 0 2px var(--edge), inset 0 -3px 0 rgb(var(--ui-shade) / 0.05), 0 4px 0 rgb(var(--ui-shade) / 0.06), 0 16px 36px rgb(var(--ui-shade) / 0.16);
+  pointer-events: auto; cursor: pointer; transform-origin: 18% 50%; animation: popIn 0.52s cubic-bezier(0.34, 1.4, 0.64, 1) both; }
+.pop[data-leaving] { animation: popOut 0.26s ease-in forwards; }
+.pop[data-rarity="common"] { --edge: var(--ui-rarity-common); }
+.pop[data-rarity="uncommon"] { --edge: var(--ui-rarity-uncommon); }
+.pop[data-rarity="rare"] { --edge: var(--ui-rarity-rare); }
+.pop[data-rarity="epic"] { --edge: var(--ui-rarity-epic); }
+.pop[data-rarity="legendary"] { --edge: var(--ui-rarity-legendary); }
+.pop[data-rarity="contraband"] { --edge: var(--ui-rarity-contraband); }
+/* Divine: the holo, moving round the edge and the dish (a border painted from the gradient, the card white inside it). */
+.pop[data-rarity="divine"] { --edge: var(--ui-rarity-divine); border: 2px solid transparent;
+  box-shadow: inset 0 -3px 0 rgb(var(--ui-shade) / 0.05), 0 4px 0 rgb(var(--ui-shade) / 0.06), 0 16px 36px rgb(var(--ui-shade) / 0.2);
+  background: var(--ui-grain) padding-box, linear-gradient(var(--ui-card), var(--ui-card)) padding-box, var(--ui-holo) border-box; background-size: auto, 100% 100%, 300% 100%;
+  animation: popIn 0.52s cubic-bezier(0.34, 1.4, 0.64, 1) both, holo 3s linear infinite; }
+/* The dish: a soft round well ringed in the rarity's colour; the picture springs in a beat after the card with a turn. */
+.popArt { position: relative; display: grid; place-items: center; width: 88px; height: 88px; border-radius: 50%; overflow: hidden;
+  background: radial-gradient(circle at 38% 30%, var(--ui-card), var(--ui-card-dim) 72%);
+  box-shadow: inset 0 0 0 3px var(--edge), inset 0 0 0 6px var(--ui-card), inset 0 4px 10px rgb(var(--ui-shade) / 0.07), 0 2px 6px rgb(var(--ui-shade) / 0.08); }
+.pop[data-rarity="divine"] .popArt { box-shadow: inset 0 0 0 6px var(--ui-card), inset 0 4px 10px rgb(var(--ui-shade) / 0.07); }
+.pop[data-rarity="divine"] .popArt::before { content: ""; position: absolute; inset: 0; border-radius: 50%; padding: 3px; background: var(--ui-holo); background-size: 300% 100%;
+  mask: linear-gradient(var(--ui-ink) 0 0) content-box exclude, linear-gradient(var(--ui-ink) 0 0); animation: holoOne 3s linear infinite; }
+.popArt img, .popArt canvas { position: relative; width: 70px; height: 70px; object-fit: contain; animation: artPop 0.64s 0.09s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+/* Rare and up: a slow glint across the dish. */
+.pop:is([data-rarity="rare"], [data-rarity="epic"], [data-rarity="legendary"], [data-rarity="divine"], [data-rarity="contraband"]) .popArt::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none; background: var(--ui-glint) no-repeat; background-size: 260% 100%;
+  animation: glint 2.2s 0.5s ease-in-out infinite; }
+.popText { display: grid; gap: 3px; min-width: 0; }
+.popTitle { display: inline-flex; align-items: center; gap: 5px; color: var(--ui-muted); font: 700 12px/1.2 var(--gui-font); letter-spacing: 0.07em; text-transform: uppercase; }
+.pop[data-new] .popTitle { color: var(--ui-ink); }
+.popName { font: 800 21px/1.15 var(--gui-font); overflow-wrap: anywhere; }
+.popFacts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 2px; color: var(--ui-ink-2); font: 600 12.5px/1 var(--gui-font); font-variant-numeric: tabular-nums; }
+.popFacts > span { padding: 5px 10px; border-radius: 999px; background: var(--ui-pill); }
+.popFacts > .popRarity { color: var(--ui-ink); background: var(--ui-card); box-shadow: inset 0 0 0 1.5px var(--edge); }
+.pop[data-rarity="divine"] .popRarity { color: var(--ui-on-divine); background: var(--ui-holo); background-size: 300% 100%; box-shadow: none; animation: holoOne 3s linear infinite; }
+.pop[data-rarity="contraband"] .popRarity { color: var(--ui-on-divine); background: var(--ui-rarity-contraband); box-shadow: none; }
+.popNote { margin-top: 2px; color: var(--ui-muted); font: italic 500 13px/1.35 var(--gui-font); }
+@keyframes popIn { 0% { opacity: 0; transform: translateX(-18px) scale(0.86); } 55% { opacity: 1; } 100% { opacity: 1; transform: none; } }
+@keyframes popOut { to { opacity: 0; transform: translateY(-10px) scale(0.96); } }
+@keyframes artPop { 0% { opacity: 0; transform: scale(0.4) rotate(-14deg); } 70% { opacity: 1; transform: scale(1.1) rotate(3deg); } 100% { opacity: 1; transform: none; } }
+@keyframes glint { 0%, 55% { background-position: 130% 0; } 100% { background-position: -30% 0; } }
+@keyframes holo { to { background-position: 0 0, 0 0, 300% 0; } }
+@keyframes holoOne { to { background-position: 300% 0; } }
+
+/* ── The HUD's bars (StatBar, StatBars; specs/design-bible.md UI 1, 8): small and warm, a soft white card with a little
+   grain, rounded tracks with a highlight on the fill. Health and XP always on; stamina on its own pill while it's used. ── */
+.stats { display: grid; gap: 4px; width: max-content; padding: 8px 12px 8px 10px; border-radius: 15px; background: var(--ui-grain), var(--ui-card);
+  box-shadow: inset 0 -2px 0 rgb(var(--ui-shade) / 0.05), 0 3px 0 rgb(var(--ui-shade) / 0.05), 0 8px 22px rgb(var(--ui-shade) / 0.13);
+  font-family: var(--gui-font); color: var(--ui-ink); pointer-events: auto; transition: opacity 0.3s ease, transform 0.3s ease; }
+.stats[data-hidden] { opacity: 0; transform: translateY(-4px); pointer-events: none; }
+.stat { --fill: var(--ui-ink); display: grid; grid-template-columns: 18px 118px auto; align-items: center; gap: 6px; }
+.stat[data-kind="health"] { --fill: var(--ui-health); }
+.stat[data-kind="stamina"] { --fill: var(--ui-stamina); }
+.stat[data-kind="xp"] { --fill: var(--ui-xp); }
+.stat[data-low] { --fill: var(--ui-stamina-low); }
+.statLead { display: grid; place-items: center; height: 15px; color: var(--fill); font: 800 11px/1 var(--gui-font); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.statBadge { padding: 3px 7px; border-radius: 99px; background: var(--ui-accent); color: var(--ui-accent-ink); font: 800 10.5px/1 var(--gui-font);
+  font-variant-numeric: tabular-nums; white-space: nowrap; animation: badgeIn 0.4s cubic-bezier(0.34, 1.4, 0.64, 1) both; }
+@keyframes badgeIn { from { opacity: 0; transform: scale(0.6); } }
+.statTrack { position: relative; height: 9px; border-radius: 99px; overflow: hidden; background: var(--ui-well); box-shadow: inset 0 1px 2px rgb(var(--ui-shade) / 0.12); }
+.statTrack i { position: absolute; inset: 0; border-radius: inherit; background: var(--fill); box-shadow: inset 0 2px 0 var(--ui-sheen);
+  transform-origin: left; transform: scaleX(var(--v)); transition: transform 0.6s cubic-bezier(0.34, 1.12, 0.64, 1), background-color 0.3s ease; }
+.stat[data-snap] .statTrack i, .stat[data-live] .statTrack i { transition: background-color 0.3s ease; }
+/* Stamina's pill: in while it's used, out 1.5 s after it's full again (the host's timing); a little shake as it runs out. */
+.stat[data-alone] { width: max-content; padding: 5px 12px 5px 8px; border-radius: 99px; background: var(--ui-grain), var(--ui-card);
+  box-shadow: 0 3px 0 rgb(var(--ui-shade) / 0.05), 0 8px 22px rgb(var(--ui-shade) / 0.13); transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.34, 1.4, 0.64, 1); }
+.stat[data-alone]:not([data-shown]) { opacity: 0; transform: translateY(-6px) scale(0.96); }
+.stat[data-alone][data-low] { animation: statLow 0.45s ease-in-out; }
+@keyframes statLow { 0%, 100% { transform: none; } 25% { transform: translateX(-3px); } 50% { transform: translateX(3px); } 75% { transform: translateX(-2px); } }
+@media (prefers-reduced-motion: reduce) { .statTrack i { transition: none; } .stat[data-alone][data-low] { animation: none; } }
+
+.momentLayer { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 16px; background: var(--ui-scrim);
+  font-family: var(--gui-font); color: var(--ui-ink); animation: fade 0.2s ease-out both; }
+.moment { position: relative; display: grid; justify-items: center; gap: 6px; width: min(360px, 100%); box-sizing: border-box; padding: 26px 22px 20px;
+  border-radius: 22px; background: var(--ui-card); text-align: center; box-shadow: 0 24px 80px rgb(var(--ui-shade) / 0.3);
+  animation: momentIn 0.6s cubic-bezier(0.34, 1.4, 0.64, 1) both; }
+.momentKicker { display: inline-flex; align-items: center; gap: 6px; color: var(--ui-muted); font: 600 12px/1 var(--gui-font); letter-spacing: 0.1em; text-transform: uppercase; }
+.momentBig { position: relative; font: 800 56px/1 var(--gui-font); animation: bigIn 0.7s 0.12s cubic-bezier(0.34, 1.7, 0.64, 1) both; }
+.momentTitle { color: var(--ui-ink-2); font: 500 14px/1.3 var(--gui-font); }
+/* The burst: ten dots fly out from behind the number and fade. */
+.momentBurst { position: absolute; left: 50%; top: 74px; width: 0; height: 0; pointer-events: none; }
+.momentBurst i { position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; border-radius: 50%; background: var(--ui-rarity-legendary);
+  transform: rotate(calc(var(--k) * 36deg)) translateY(0); animation: burst 0.9s 0.15s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+.momentBurst i:nth-child(even) { background: var(--ui-rarity-rare); width: 6px; height: 6px; }
+.momentList { display: grid; gap: 8px; width: 100%; margin: 12px 0 14px; padding: 0; list-style: none; text-align: left; }
+.momentList li { display: grid; grid-template-columns: 36px 1fr; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 14px; background: var(--ui-card-dim);
+  animation: rowIn 0.45s calc(0.35s + var(--i) * 0.09s) cubic-bezier(0.34, 1.4, 0.64, 1) both; }
+.momentList b { display: block; font: 700 14px/1.25 var(--gui-font); }
+.momentList small { display: block; margin-top: 1px; color: var(--ui-muted); font: 500 12px/1.3 var(--gui-font); }
+.momentIcon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--ui-accent); color: var(--ui-accent-ink); }
+@keyframes momentIn { 0% { opacity: 0; transform: translateY(18px) scale(0.86); } 100% { opacity: 1; transform: none; } }
+@keyframes bigIn { 0% { opacity: 0; transform: scale(0.3); } 100% { opacity: 1; transform: none; } }
+@keyframes burst { 0% { opacity: 1; transform: rotate(calc(var(--k) * 36deg)) translateY(0) scale(1); } 100% { opacity: 0; transform: rotate(calc(var(--k) * 36deg)) translateY(-70px) scale(0.4); } }
+@keyframes rowIn { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .pop, .pop[data-rarity="divine"], .popArt img, .popArt::before, .popArt::after, .popRarity, .moment, .momentBig, .momentList li { animation: none; }
+  .momentBurst { display: none; }
+}
+
 /* The progress card (ProgressCard.tsx): icon and words in a row, the thin line under them across the card. */
 .progressCard { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px 12px; width: min(300px, 100%); padding: 16px 18px 18px;
   border-radius: 16px; background: var(--ui-card); color: var(--ui-ink); font-family: var(--gui-font); box-sizing: border-box; text-align: left; }

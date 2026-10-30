@@ -35,4 +35,24 @@
   --ui-water-deep: #5cc0de;
   --ui-stage: radial-gradient(ellipse 24% 4.5% at 50% 87%, rgb(0 0 0 / 0.45), rgb(0 0 0 / 0.18) 55%, transparent 100%),
     linear-gradient(180deg, #2c2c31 0%, #2c2c31 60%, #242428 84%, #1f1f22 100%);
+  /* The rarity ladder (specs/design-bible.md UI 7): a thin outline or edge, never a fill. Divine is the holo. */
+  --ui-rarity-common: #8f8f96;
+  --ui-rarity-uncommon: #6cc979;
+  --ui-rarity-rare: #6aa2ff;
+  --ui-rarity-epic: #b98af5;
+  --ui-rarity-legendary: #ffcc33;
+  --ui-rarity-divine: #c792ff;
+  --ui-holo: linear-gradient(115deg, #c792ff 0%, #ff8fe0 20%, #ffdb80 38%, #8dffc0 56%, #80d2ff 74%, #c792ff 100%);
+  --ui-on-divine: #ffffff;
+  /* Contraband (lib/rarity.ts, shut behind a flag): dark, with light text on it. */
+  --ui-rarity-contraband: #5a3a54;
+  /* A little texture where it helps (UI 1, "not so flat"): a fine grain over a card, and a glint across rare things. */
+  --ui-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  --ui-glint: linear-gradient(115deg, transparent 38%, rgb(255 255 255 / 0.55) 48%, transparent 58%);
+  /* The HUD's bars (UI 8): health, stamina (and run out), XP. */
+  --ui-health: #f07b6e;
+  --ui-stamina: #6cc979;
+  --ui-stamina-low: #f59a5c;
+  --ui-xp: #f5c04f;
+  --ui-sheen: rgb(255 255 255 / 0.35);
 }

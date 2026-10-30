@@ -76,7 +76,7 @@ export interface Stop {
 export const ROUTINE_SPECIAL = { home: { label: "Home (goes inside)" }, bench: { label: "Bench (under a lamp at night)" } } as const;
 /** A resident's home building by post; a resident's own `home` in the schedule wins. */
 export const POST_HOME: Record<string, LandmarkId> = {
-  hq_lead: "hq", shopkeeper: "shop", cafe_owner: "cafe", museum_curator: "museum", wharf_keeper: "hq",
+  hq_lead: "hq", shopkeeper: "shop", cafe_owner: "cafe", museum_curator: "museum", museum_guide: "museum", wharf_keeper: "hq",
   oracle_keeper: "oracle", workshop_crafter: "hq", villager: "hq",
 };
 /** Landmarks a resident can live in (a door; the wharf: aboard a boat at the stub end, once one is docked there). */
@@ -449,7 +449,7 @@ function wanderStops(stop: Stop, nav: NavGrid, seed: number, slug: string, res: 
 }
 
 /** The post's anchor (where they work), for the longer stay there. */
-const POST_ANCHOR: Record<string, string> = { hq_lead: "hq", shopkeeper: "shop", cafe_owner: "cafe", museum_curator: "museum", wharf_keeper: "wharf", oracle_keeper: "oracle", workshop_crafter: "hq" };
+const POST_ANCHOR: Record<string, string> = { hq_lead: "hq", shopkeeper: "shop", cafe_owner: "cafe", museum_curator: "museum", museum_guide: "museum", wharf_keeper: "wharf", oracle_keeper: "oracle", workshop_crafter: "hq" };
 
 /**
  * Resolve a resident's schedule into stops on this map. `slot` spreads residents round shared anchors; `res` is what

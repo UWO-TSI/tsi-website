@@ -75,7 +75,7 @@ describe("append-only tables (wire indexes: add at the end, never reorder, renam
     expect(hasFlag(FLAG.afk, FLAG.away)).toBe(false);
   });
   it("held kinds are the tool wheel's", () => {
-    locked(HELD_KINDS, ["rod", "net", "shovel", "pin", "weapon"]);
+    locked(HELD_KINDS, ["rod", "net", "shovel", "pin", "weapon", "pickaxe"]);
     expectTypeOf<HeldKind | "glider">().toEqualTypeOf<WheelKind>();
   });
   it("sys kinds and chat refusal reasons", () => {

@@ -110,6 +110,25 @@ export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
       if (error) raise(error);
       return caught(one(data));
     },
+    async dig(memberId, nodeId, hourKey, loot) {
+      // collections_dig (main quest r2): the spot spent, the member's dig tally, and the find recorded or the purse paid, in one transaction.
+      const find = "item_key" in loot ? loot : null, purse = "currency" in loot ? loot : null;
+      const { data, error } = await db.rpc("collections_dig", { p_member_id: memberId, p_node_id: nodeId, p_hour_key: hourKey, p_item_key: find?.item_key ?? null, p_size: find?.size_cm ?? null,
+        p_trophy: find?.trophy ?? false, p_currency: purse?.currency ?? null, p_amount: purse?.amount ?? null });
+      if (error) raise(error);
+      const r = one(data);
+      return { ...(find ? caught(r) : {}), digs: Number(r.digs) || 0 };
+    },
+    async handIn(memberId, speciesKey, key) {
+      const { data, error } = await db.rpc("museum_hand_in", { p_member_id: memberId, p_species_key: speciesKey, p_idempotency_key: key });
+      if (error) raise(error);
+      return { replayed: one(data).replayed === true };
+    },
+    async handIns() {
+      const { data, error } = await db.from("museum_handins").select("member_id, species_key");
+      if (error) raise(error);
+      return ((data ?? []) as Row[]).map((r) => ({ member_id: String(r.member_id), species_key: String(r.species_key) }));
+    },
     async ownedGear(memberId) {
       // A failed read fails the request: a transient error must not roll a tier-4/5 rod owner with the starter rod.
       // Rods are known by their catalogue_ref, nets and shovels by their slug (lib/game/tools.ts).

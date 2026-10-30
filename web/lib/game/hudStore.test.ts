@@ -13,6 +13,11 @@ describe("HUD XP follows the game's writes", () => {
     onApiWrite({ path: "/api/combat/missions/complete", data: { xp_awarded: 300, replayed: true } });
     onApiWrite({ path: "/api/economy/buy", data: { balance: 10 } });
     expect(getHud().xp).toBe(1340);
+    // A chapter's XP (the new world's chapter 1): the advance carries the new total.
+    onApiWrite({ path: "/api/progression/chapters/advance", data: { chapters: [], xp_gain: { amount: 125, total: 1465, level: 4, levelled_up: false } } });
+    expect(getHud().xp).toBe(1465);
+    onApiWrite({ path: "/api/progression/chapters/advance", data: { chapters: [] } });
+    expect(getHud().xp).toBe(1465);
   });
 });
 

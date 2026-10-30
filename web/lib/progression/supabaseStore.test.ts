@@ -17,7 +17,28 @@ const db = (tables: Record<string, Row[]>) => ({
 describe("chapter facts from the database", () => {
   it("chapter 4's level-10 step is the subclass choice (row 207), as the ruins gate reads it", async () => {
     const facts = (progression: Row[]) => supabaseProgressionStore(db({ profiles: [{ tier: 4, class: "Warden" }], member_progression: progression })).memberFacts(A);
-    expect(await facts([{ subclass: null }])).toMatchObject({ oracleDone: true, trialDone: false });
-    expect(await facts([{ subclass: "druid" }])).toMatchObject({ oracleDone: true, trialDone: true });
+    expect((await facts([{ subclass: null }])).counts).toMatchObject({ oracle: 1, trial: 0 });
+    expect((await facts([{ subclass: "druid" }])).counts).toMatchObject({ oracle: 1, trial: 1 });
+  });
+  it("tallies the main quest from the member's collection, gear and the museum's donations", async () => {
+    const f = await supabaseProgressionStore(db({
+      profiles: [{ tier: 4 }],
+      member_collections: [
+        { item_key: "fish_dace", count: 0, total_collected: 2, updated_at: "2026-10-27T10:00:00Z" },
+        { item_key: "fish_carp", count: 1, total_collected: 1, updated_at: "2026-10-27T11:00:00Z" },
+        { item_key: "bug_common_butterfly", count: 0, total_collected: 3, updated_at: null },
+        { item_key: "shell_asari", count: 1, total_collected: 2, updated_at: null },
+        { item_key: "rock_stone", count: 4, total_collected: 6, updated_at: null },
+      ],
+      member_inventory: [{ shop_items: { slug: "net-basic", catalogue_ref: null } }],
+      museum_donations: [{ species_key: "fish_dace", donor_id: A }, { species_key: "bug_common_butterfly", donor_id: "someone" }, { species_key: "shell_asari", donor_id: A }],
+      // The museum's drive (m5): hand-ins count too, duplicates included (a second dace).
+      museum_handins: [{ species_key: "fish_dace", member_id: A }, { species_key: "fish_carp", member_id: "someone" }],
+      member_digs: [{ digs: 5 }],
+    })).memberFacts(A);
+    expect(f).toMatchObject({ firstCatchKey: "fish_dace", lastFishAt: "2026-10-27T11:00:00Z", museum: { fish: 3, bugs: 1, finds: 1 } });
+    // Not taught (no ledger row): the starter net and shovel are everyone's; the pickaxe only from Eliza. Digs: the
+    // member's dig tally (whatever came up), not their finds.
+    expect(f.counts).toMatchObject({ fish: 3, fish_kinds: 2, bugs: 3, digs: 5, stone: 6, iron: 0, donations: 3, net: 1, shovel: 1, pickaxe: 0 });
   });
 });

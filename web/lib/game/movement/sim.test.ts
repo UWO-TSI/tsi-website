@@ -1122,3 +1122,42 @@ describe("the slide (row 274)", () => {
     expect(drive(steps.at(-1)!, wall, 0.5, () => ({ z: -1, sneak: true })).z).toBeLessThan(steps.at(-1)!.z - 0.5);
   });
 });
+
+describe("stamina (gentle: the HUD's stamina bar)", () => {
+  const run = { x: 1, z: 0, sprint: true };
+  it("drains sprinting (a full bar is about 10 s), and walking costs nothing", () => {
+    let s = createMoveState(0, 0, flat);
+    s = drive(s, flat, 5, () => run);
+    expect(s.stamina).toBeGreaterThan(0.45);
+    expect(s.stamina).toBeLessThan(0.6);
+    const walked = drive(createMoveState(0, 0, flat), flat, 20, () => ({ x: 1, z: 0 }));
+    expect(walked.stamina).toBe(1);
+  });
+  it("a dash costs a fifth", () => {
+    const s = drive(createMoveState(0, 0, flat), flat, 2 * STEP, (time) => ({ dashPressed: time === 0 }));
+    expect(s.stamina).toBeCloseTo(1 - T.staminaDash, 5);
+  });
+  it("refills after a short pause, about 3 s from empty", () => {
+    let s = { ...createMoveState(0, 0, flat), stamina: 0, winded: true };
+    s = drive(s, flat, T.staminaPause - 0.05, () => ({}));
+    expect(s.stamina).toBe(0);
+    s = drive(s, flat, 3.1, () => ({}));
+    expect(s.stamina).toBe(1);
+    expect(s.winded).toBe(false);
+  });
+  it("emptied: sprint drops to a walk, no dash and no glide until it's back above a fifth", () => {
+    let s = drive(createMoveState(0, 0, flat), flat, 10.6, () => run);
+    expect(s.winded).toBe(true);
+    s = drive(s, flat, 0.15, (time) => ({ ...run, dashPressed: time === 0 }));
+    expect(s.dashT).toBe(0);
+    expect(s.winded).toBe(true);
+    expect(Math.hypot(s.vx, s.vz)).toBeLessThan(T.sprintSpeed * 0.9);
+    const glider = { ...T, glider: 1 };
+    let air: MoveState = { ...createMoveState(0, 0, flat), y: 6, mode: "air", vy: -1, stamina: 0, winded: true };
+    air = drive(air, flat, 2 * STEP, (time) => ({ jump: true, jumpPressed: time === 0 }), undefined, glider);
+    expect(air.mode).not.toBe("glide");
+    // Back above a fifth, it all comes back.
+    s = drive(s, flat, T.staminaPause + 0.8, () => ({}));
+    expect(s.winded).toBe(false);
+  });
+});

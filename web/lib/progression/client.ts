@@ -26,10 +26,10 @@ export function previewState(now = new Date(), flags: DropFlags = DROPS): Progre
     };
   });
   const chapters = evaluateChapters(releasedChapters(DEFAULT_CHAPTERS, flags), [], {
-    tier: 5, oracleDone: false, trialDone: false, firstCatchKey: null,
+    tier: 5, firstCatchKey: null, lastFishAt: null, counts: {},
     goals: Object.fromEntries(goals.map((g) => [g.slug, { completed: false, myPoints: 0 }])),
   });
-  return { chapters, goals, objective: currentObjective(chapters, false), hud_muted: false, unlocked_regions: unlockedRegions(chapters, new Set()), unread_letters: 0, source: "defaults" };
+  return { chapters, goals, objective: currentObjective(chapters, false), hud_muted: false, unlocked_regions: unlockedRegions(chapters, new Set()), unread_letters: 0, museum: { fish: 0, bugs: 0, finds: 0 }, source: "defaults" };
 }
 
 export async function fetchState(): Promise<ProgressionState> {

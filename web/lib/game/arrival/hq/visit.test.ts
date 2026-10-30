@@ -88,7 +88,7 @@ describe("the HQ visit with Alice (row 312)", () => {
 
   it("keeps to the lore: no Founder words written for David, no school words, no em dashes", () => {
     expect(FOUNDER_PLAQUE).toBeNull();
-    const all = [...Object.values(WREN_LINES).flat(), ...Object.values(HQ_TRACKER), ...Object.values(TOOL_LINES).flatMap(t => [t.title, t.step, t.given, t.done, ...t.offer, ...t.during])];
+    const all = [...Object.values(WREN_LINES).flat(), ...Object.values(HQ_TRACKER), ...Object.values(TOOL_LINES).flatMap(t => [t.given, t.done, ...t.offer, ...t.during])];
     for (const line of all) {
       expect(line, line).not.toMatch(/—/);
       expect(line, line).not.toMatch(/\b(school|campus|class(es)?|lesson|teacher|student|course|homework|curriculum|semester|robot|human|machine|android)\b/i);

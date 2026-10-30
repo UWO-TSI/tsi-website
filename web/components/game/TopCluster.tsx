@@ -1,13 +1,13 @@
 "use client";
 
 /**
- * The cream top cluster (hud-first-login §2, row 124): play coins and the level
- * with its XP, then the caller's buttons (the gear). Coins count up and XP fills
- * instead of jumping; a gain pings. Coins only, never an exchange rate
+ * The cream top cluster (hud-first-login §2, row 124): play coins, then the
+ * caller's buttons (the gear). Coins count up instead of jumping; a gain pings
+ * (the level and its XP are the HUD's bars, HudBars). Coins only, never an exchange rate
  * (lib/economy.ts).
  *
  * The minimal HUD (`full` false; rows 283 and playtest round 1): nothing shows
- * while you play; coins slide in when they change and XP on a gain, then fade.
+ * while you play; coins slide in when they change, then fade.
  * The full one (the UI view, Esc 1; the HUD key held; the setting) shows them,
  * and the caller's buttons (`buttons`, default `full`). The island clock is
  * `HudClock`, under the minimap; mail is in the UI view's dock.
@@ -18,7 +18,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { CloudFog, CloudRain, Moon, Snowflake, Sun, Sunrise, Sunset, Wind } from "lucide-react";
 import { COINS } from "@/lib/economy";
-import { levelProgress } from "@/lib/combat/progression";
 import { useHud } from "@/lib/game/hudStore";
 import { worldNow } from "@/lib/game/worldClock";
 import { AudioManager } from "@/lib/game/audio";
@@ -90,8 +89,6 @@ function subscribeMinute(on: () => void) {
 const TIME = new Intl.DateTimeFormat("en-US", { timeZone: "America/Toronto", hour: "numeric", minute: "2-digit" });
 const DATE = new Intl.DateTimeFormat("en-US", { timeZone: "America/Toronto", weekday: "short", month: "short", day: "numeric" });
 
-const up = (a: unknown, b: unknown) => (b as number) > (a as number);
-
 /**
  * The island's time and its sky (playtest round 1: "time sun"), always on under the minimap: the hour on the world
  * clock and the weather or the sun's place in the day, the date on hover.
@@ -111,16 +108,12 @@ export default function TopCluster({ onWallet, walletKey, full = true, buttons =
   onWallet?: () => void; walletKey?: string;
 }) {
   const hud = useHud();
-  const progress = hud.xp === null ? null : levelProgress(hud.xp);
-  const coinGain = useGain(hud.coins), xpGain = useGain(hud.xp);
-  const levelUp = useGain(progress?.level ?? null);
+  const coinGain = useGain(hud.coins);
   useEffect(() => { if (coinGain) AudioManager.playSFX("blip2", { rate: 1.5, gain: 0.6 }); }, [coinGain]);
-  useEffect(() => { if (levelUp) AudioManager.playSFX("confirm"); }, [levelUp]);
-  const fill = progress ? (progress.needed ? progress.into / progress.needed : 1) : 0;
-  const flash = { coins: useFlash(hud.coins, FLASH_MS.coins), xp: useFlash(hud.xp, FLASH_MS.xp, up) };
+  const flash = { coins: useFlash(hud.coins, FLASH_MS.coins) };
   /** In the minimal HUD a part shows only while its change is (its flash state for the slide in and out). */
   const shows = (f: "in" | "out" | null) => (full ? { show: true, at: undefined } : { show: f !== null, at: f ?? undefined });
-  const coins = shows(flash.coins), xp = shows(flash.xp);
+  const coins = shows(flash.coins);
 
   return (
     <div className={className ? `${styles.cluster} ${className}` : styles.cluster} data-clean={full ? undefined : ""} data-hidden={hidden || undefined} aria-hidden={hidden || undefined}>
@@ -135,12 +128,6 @@ export default function TopCluster({ onWallet, walletKey, full = true, buttons =
               aria-label={`${label}. Open your wallet`} title={walletKey ? `Wallet (${walletKey})` : "Wallet"}>{face}</button>
             : <span className={styles.chip} data-flash={coins.at} data-ping={coinGain ? "" : undefined} aria-label={label} title="Play coins">{face}</span>;
         })()}
-        {progress && xp.show && <span className={styles.chip} data-flash={xp.at} data-ping={xpGain ? "" : undefined} data-levelup={levelUp ? "" : undefined}
-          aria-label={`Level ${progress.level}, ${progress.needed ? `${progress.into.toLocaleString()} of ${progress.needed.toLocaleString()} XP to the next level` : "top level"}`}>
-          <b className={styles.level} aria-hidden="true">Lv {progress.level}</b>
-          <span className={styles.xpBar} aria-hidden="true"><i style={{ transform: `scaleX(${fill})` }} /></span>
-          {xpGain && <em key={xpGain.id} className={styles.gain} aria-hidden="true">{levelUp ? "Level up!" : `+${xpGain.amount.toLocaleString()} XP`}</em>}
-        </span>}
       </div>
       {buttons && children && <div className={styles.buttons}>{children}</div>}
     </div>

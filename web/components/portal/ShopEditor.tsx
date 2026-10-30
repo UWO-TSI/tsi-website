@@ -41,7 +41,7 @@ const CATEGORIES: EditorCategory[] = [
   "profile-customization",
 ];
 const TIERS = ["", "basic", "mid", "premium"] as const;
-const SLOTS = ["", "rod", "net", "shovel", "outfit", "hair", "accessory"] as const;
+const SLOTS = ["", "rod", "net", "shovel", "pickaxe", "outfit", "hair", "accessory"] as const;
 type EconomyFields = { price_coins?: number | null; tier?: string | null; slot?: string | null; special_pool?: boolean; stackable?: boolean; catalogue_ref?: string | null };
 
 interface FormState {

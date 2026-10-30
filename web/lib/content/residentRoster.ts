@@ -52,6 +52,10 @@ export const RESIDENT_LOOKS: Record<string, Look> = {
   // Workshop crafter: a tinkerer with a cap on backwards. Wood-brown overalls over a cream tee, backpack of tools.
   crafter: look({ skin: 4, hair: 7, extras: ["blush"], back: "hair_anime_spikes", top: "top_tee", bottom: "bottom_overall_shorts", shoes: "shoes_boots",
     acc: { head: "acc_cap", bag: "acc_backpack" }, colors: { bottom_overall_shorts: 4, shoes_boots: 5, acc_cap: 7 } }),
+  // The museum's guide (m1): takes your first catch and shows you round. Warm and quick; a sea-green collar shirt, a long
+  // navy skirt, a shell necklace from the beach.
+  docent: look({ skin: 7, hair: 4, eyes: "mochi", mouth: "open_smile", back: "hair_swept_fringe", top: "top_collar_shirt", bottom: "bottom_long_skirt", shoes: "shoes_loafers",
+    acc: { neck: "acc_shell_necklace" }, colors: { top_collar_shirt: 15, bottom_long_skirt: 12, shoes_loafers: 5 } }),
   // Flavour: an early riser who runs the beach at dawn. High ponytail, teal tee, joggers.
   juniper: look({ skin: 3, hair: 8, back: "hair_long_pigtails", top: "top_tee", bottom: "bottom_joggers", shoes: "shoes_sneakers",
     colors: { top_tee: 15, bottom_joggers: 14, shoes_sneakers: 1 } }),
@@ -105,6 +109,10 @@ export const RESIDENT_TALK: Record<string, string[][]> = {
     ["Measure twice, glue once. That's the whole secret.", "[surprised] Well. Most of it. The rest is snacks."],
     ["Bottles wash up on the beach sometimes.", "Some have notes in them. Some have recipes. Keep your eyes open."],
   ],
+  docent: [
+    ["[happy] Welcome to the museum! Fish in the aquarium, bugs in the insect hall, buried finds in the nature room.", "The first of each kind anyone brings goes on show. Odile writes the labels."],
+    ["The club's filling the halls together. When they're full, the doors open properly.", "[happy] I'll be here. I'm always here. I like it here."],
+  ],
   juniper: [
     ["@morning [happy] Morning laps! Want to race to the pier?", "Kidding. Mostly. Stretch first, trust me."],
     ["The sand's firmest right by the water.", "[happy] Best place on the island for a sprint. Try it!"],
@@ -157,6 +165,10 @@ export const PROPOSED_RESIDENTS: NPCPersona[] = [
     bio: "The museum's curator, labelling the empty cases until the club fills them. Knows the Latin name of every bug and says it anyway.",
     schedule: { home: "museum", dawn: ["beach"], day: ["museum", "beach"], evening: ["museum", "plaza"], night: ["museum", "home"] },
     canned_dialogue: ["Every case in there is waiting for something you'll find.", "Did you see the dragonflies by the pond? Odonata. Lovely.", "Bring me anything with wings. Or fins. Or a shell."] }),
+  row({ slug: "docent", display_name: "Juno", post: "museum_guide", tone: "warm",
+    bio: "The museum's guide. Keeps the door, shows everyone round, and takes each new member's first catch for the halls.",
+    schedule: { home: "museum", dawn: ["museum"], day: ["museum"], evening: ["museum"], night: ["museum", "home"] },
+    canned_dialogue: ["Welcome to the museum!", "The first of each kind goes on show.", "Bring me your first catch!"] }),
   row({ slug: "wharf-keeper", display_name: "Bram", post: "wharf_keeper", tone: "playful",
     bio: "Minds the wharf and the boats, reads the tides off the posts and the weather off the gulls. Has a story for every knot.",
     schedule: { home: "hq", dawn: ["wharf"], day: ["wharf", "beach", "wharf", "plaza"], evening: ["wharf", "bench"], night: ["wharf", "beach", "wharf"] },
@@ -188,3 +200,23 @@ export function withProposed(seeded: readonly NPCPersona[]): NPCPersona[] {
   const proposed = new Map(PROPOSED_RESIDENTS.map(r => [r.slug, r]));
   return [...seeded.map(r => proposed.get(r.slug) ? { ...r, ...proposed.get(r.slug)!, id: r.id } : r), ...PROPOSED_RESIDENTS.filter(r => !seeded.some(s => s.slug === r.slug))];
 }
+
+/**
+ * x-lines (specs/launch/v1-gameplay.md): lines that send you to something closed (the boat home, the
+ * temple) say something about what's open instead. Swapped in code, line by line, so the seeded lines (and anything an
+ * admin rewrote) stay as they are in the database.
+ */
+export const NEW_WORLD_LINE_SWAPS: Readonly<Record<string, string>> = {
+  "Boat's ready whenever you want to go home.": "The barrel on the dock buys whatever you catch. Fair prices. I check the scales myself.",
+  "Your island's out past the pier. Small, but the sunsets are all yours.": "[happy] Want a better rod one day? I might have a challenge for you.",
+  "Which way will you grow, {name}? The temple can help you see it.": "Which way will you grow, {name}? Nobody can tell you yet. Not even me.",
+  "[happy] Not decide. Only see. The deciding is yours.": "[happy] Keep doing what you love here. It shows, in time.",
+  "Which way will you grow? Ask the temple.": "Which way will you grow? Time will show it.",
+};
+/** A resident as the new world has them: their lines with NEW_WORLD_LINE_SWAPS applied. */
+export function newWorldPersona<P extends Pick<NPCPersona, "talk" | "canned_dialogue">>(p: P): P {
+  const swap = (line: string) => NEW_WORLD_LINE_SWAPS[line] ?? line;
+  return { ...p, canned_dialogue: p.canned_dialogue?.map(swap) ?? p.canned_dialogue, talk: p.talk?.map(c => c.map(swap)) ?? p.talk };
+}
+/** The residents as the island has them (lib/content/loader.ts useNPCPersonas): with their swapped lines. */
+export const residentsHere = <P extends Pick<NPCPersona, "talk" | "canned_dialogue">>(personas: readonly P[]): P[] => personas.map(newWorldPersona);

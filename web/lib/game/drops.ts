@@ -9,6 +9,7 @@
  * | 2 | the café and its study tables; the mountain (the rockslide cleared) and the Oracle temple at its top |
  * | 3 | combat: the ruins (the rubble and the dense forest edge cleared), missions, the classes UI, weapons on the wheel |
  * | 4 | personal islands: the home island boat and claiming your plot |
+ * | (cave, unscheduled) | the pickaxe, Mayor Eliza's chapter, mining |
  *
  * The north island has no drop yet (David is still choosing the combat home, terrain-v2.md): its bridge stays unbuilt
  * until a drop is set for it here.
@@ -44,6 +45,11 @@ export const DROP_FEATURES = {
   northIsland: null,
   /** The new world's meadow (and the forest past it) beyond the invisible border (lib/game/barriers.ts "border"): not scheduled. */
   meadow: null,
+  /**
+   * The cave update: the pickaxe, Mayor Eliza's chapter and mining rocks for stone and iron (David 2026-10-28: "dont do
+   * pickaxe yet, release this with the cave update"). Built and parked: not scheduled.
+   */
+  cave: null,
 } as const satisfies Record<string, DropNumber | null>;
 export type DropFeature = keyof typeof DROP_FEATURES;
 export type DropFlags = Record<DropFeature, boolean>;
@@ -95,6 +101,8 @@ export const REGION_FEATURE: Readonly<Record<string, DropFeature>> = {
 };
 /** Chapter steps that need a feature: claiming your plot is the home island's. */
 export const STEP_FEATURE: Readonly<Record<string, DropFeature>> = { claim_plot: "homeIsland" };
+/** Whole chapters that need a feature (by requirement): Mayor Eliza's pickaxe is the cave update's. */
+export const REQUIREMENT_FEATURE: Readonly<Record<string, DropFeature>> = { pickaxe: "cave" };
 
 export const regionReleased = (region: string, flags: DropFlags = DROPS) => !REGION_FEATURE[region] || flags[REGION_FEATURE[region]];
 
@@ -104,10 +112,12 @@ export function releasedGoals<G extends { unlocks: readonly string[] }>(goals: r
 }
 
 /**
- * The quest chapters this drop offers, each with the steps it can't take yet listed in `hidden_steps` (counted as done
- * where they gate the chapter's end; lib/progression/chapters.ts evaluateChapters).
+ * The quest chapters this drop offers (the retired village's own chapters, `world` "village", never), each with the
+ * steps it can't take yet listed in `hidden_steps`
+ * (counted as done where they gate the chapter's end; lib/progression/chapters.ts evaluateChapters).
  */
-export function releasedChapters<C extends { unlocks_regions: readonly string[] }>(chapters: readonly C[], flags: DropFlags = DROPS): (C & { hidden_steps?: string[] })[] {
+export function releasedChapters<C extends { unlocks_regions: readonly string[]; world?: string | null; requirement?: string }>(chapters: readonly C[], flags: DropFlags = DROPS): (C & { hidden_steps?: string[] })[] {
   const hidden = Object.entries(STEP_FEATURE).filter(([, f]) => !flags[f]).map(([k]) => k);
-  return chapters.filter(c => c.unlocks_regions.every(r => regionReleased(r, flags))).map(c => (hidden.length ? { ...c, hidden_steps: hidden } : c));
+  const parked = (c: C) => !!c.requirement && !!REQUIREMENT_FEATURE[c.requirement] && !flags[REQUIREMENT_FEATURE[c.requirement]];
+  return chapters.filter(c => c.world !== "village" && !parked(c) && c.unlocks_regions.every(r => regionReleased(r, flags))).map(c => (hidden.length ? { ...c, hidden_steps: hidden } : c));
 }

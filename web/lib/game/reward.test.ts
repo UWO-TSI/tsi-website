@@ -2,8 +2,14 @@ import { describe, expect, it } from "vitest";
 import { REWARD_EVENTS, rewardHold, rewardOf, rewardSound } from "./reward";
 
 describe("the shared reward card's event", () => {
-  it("listens to the world's own events: a find, a craft, a bottle's recipe and a resident's gift", () => {
-    expect(REWARD_EVENTS).toEqual(["tsi:peaceful-got", "tsi:crafted", "tsi:recipe-learned", "tsi:gift"]);
+  it("listens to the world's own events: a find, a craft, a bottle's recipe, a resident's gift and a dig's purse", () => {
+    expect(REWARD_EVENTS).toEqual(["tsi:peaceful-got", "tsi:crafted", "tsi:recipe-learned", "tsi:gift", "tsi:dig-purse"]);
+  });
+  it("pops a dig's purse: coins plainly, a gem as the rare thing it is; nothing for a bad one", () => {
+    expect(rewardOf("tsi:dig-purse", { currency: "coins", amount: 32 })).toMatchObject({ kind: "purse", name: "32 coins", icon: "/assets/icons/coin.webp", rarity: null, title: "Dug up" });
+    expect(rewardOf("tsi:dig-purse", { currency: "gems", amount: 1 })).toMatchObject({ kind: "purse", name: "A gem", icon: "/assets/icons/gem.webp", rarity: "legendary" });
+    expect(rewardOf("tsi:dig-purse", { currency: "tickets", amount: 3 })).toBeNull();
+    expect(rewardOf("tsi:dig-purse", { currency: "coins", amount: 0 })).toBeNull();
   });
 
   it("shows a forage find with its art, name, rarity and size", () => {
