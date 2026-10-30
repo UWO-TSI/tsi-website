@@ -44,7 +44,6 @@ export type TutorialCue =
   | { kind: "visit" }
   | HintCue
   | { kind: "give"; item: "rod" }
-  /** A move he teaches is yours from now (lib/game/moveUnlocks.ts; a no-op when it already is). */
   | { kind: "glyph"; glyph: "wheel" | "bag" }
   | { kind: "reward" }
   | { kind: "done" };
