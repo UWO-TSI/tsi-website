@@ -667,3 +667,6 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - Effects plan page: https://claude.ai/artifact/DR29UeZaYKrVSZSrXZ9hPk (ids fx-*; 15 effects plus the performance rule). The VFX build waits for his picks.
   - His ask: "hella effects... bump set spike effect, slide, when ball gets blocked, when it hits the groud it shakes abit and kinda exploads".
 - **Volleyball effects approved.** Every contact gets four timing grades (perfect, good, early, late). Each effect is built and checked one by one with its own strip. Sound effects are synthesised or CC0 only, logged in web/public/audio/sfx/SOURCES.md; that rule is now in lane-rules (David 2026-10-30). Music and voice still need David.
+- **vb-anim done:** game/vb-anim 73b7739d (16 clips in vb_clips.glb, 463 KB, plus the clips.ts contract and a Character.tsx clip-replay fix). The volleyball lane merges it itself.
+  - Animations review page: https://claude.ai/artifact/8EEip8ZMwLPfu6xFxEKMbc (ids are the clip names), so David can redo moves before integration.
+  - Limit: the head is 42% of the height, so arms can't go overhead.
