@@ -11,13 +11,23 @@
  * renders only when the line or its state changes. The resident's clip, mouth and face follow the same conversation
  * in the residents' frame (NPC.tsx). Only this viewer's: nothing here is sent anywhere.
  */
-import { useCallback, useEffect, useRef, useSyncExternalStore, type MouseEvent } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type MouseEvent } from "react";
 import { Dialogue } from "@/components/gui";
 import { Keyword, keywordParts } from "@/components/gui/flat";
 import { AudioManager } from "@/lib/game/audio";
 import { useWorldDialog } from "@/lib/game/useWorldDialog";
 import { POST_TITLES, type ResidentPost } from "@/lib/content/residents";
-import { blipAt, emptyTalkView, endTalk, leaveTalk, pressTalk, stepTalk, subscribeTalk, talkChanged, talkStore, talkView, voiceBlip } from "@/lib/game/residentTalk";
+import { Gift } from "lucide-react";
+import { HeartMeter, ItemCard, RoundButton, StatusLine } from "@/components/gui/flat";
+import { giveGift, talkedTo, useFriendLevel, type FriendMove } from "@/lib/game/friendship";
+import { loadBag, useBag } from "@/lib/game/bagStore";
+import { itemInfo } from "@/lib/collections/bag";
+import { iconUrl } from "@/lib/icons/keys";
+import { ApiError } from "@/lib/apiClient";
+import { parseTalkLine } from "@/lib/content/talk";
+import { FRIEND_MAX, friendNote, tasteLine } from "@/lib/npc/friendship";
+import { toast } from "./ToastHub";
+import { blipAt, emptyTalkView, endTalk, leaveTalk, pressTalk, sayMore, stepTalk, subscribeTalk, talkChanged, talkStore, talkView, voiceBlip } from "@/lib/game/residentTalk";
 import styles from "./TalkBox.module.css";
 
 /** Blips no closer than this (s): a voice, not a buzz. */
@@ -79,6 +89,43 @@ function frame(seen: { line: number; typed: number; blip: number; parts: Element
   });
 }
 
+/** A move that reached a whole heart says so (its letter, its coins). */
+const noteMove = (f: FriendMove | null) => { const n = f && friendNote(f, f.name); if (n) toast(n); };
+/** They answer in the talk going on ("[face] words"). */
+const answer = (raw: string) => sayMore([parseTalkLine(raw)], performance.now() / 1000);
+
+/**
+ * Give them something from your bag (d-friends): your bag's items as small white cards; one, and they answer in the
+ * talk (their taste) while the hearts move. One gift a day each: a second gets their "tomorrow, maybe?".
+ */
+function GiftPicker({ slug, onDone }: { slug: string; onDone: () => void }) {
+  const bag = useBag();
+  useEffect(() => { void loadBag(); }, []);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const items = (bag.view?.items ?? []).filter(i => i.count > 0 && !i.locked);
+  const give = async (key: string) => {
+    setBusy(true); setError(null);
+    try {
+      const f = await giveGift(slug, key);
+      AudioManager.playSFX(f.taste === "hate" ? "click" : "confirm");
+      answer(tasteLine(f.taste ?? "meh"));
+      noteMove(f);
+      onDone();
+    } catch (e) {
+      if (e instanceof ApiError && e.code === "gift_done") { answer("[happy] You already gave me something today. Tomorrow, maybe?"); onDone(); return; }
+      setError(e instanceof ApiError ? e.message : "Couldn't reach the island. Try again.");
+      setBusy(false);
+    }
+  };
+  return <div className={styles.gifts} role="group" aria-label="Give a gift" data-testid="gift-picker" onClick={e => e.stopPropagation()}>
+    {bag.view && !items.length ? <StatusLine>Nothing in your bag to give yet.</StatusLine>
+      : <div className={styles.giftRow}>{items.map(i => <ItemCard key={i.item_key} size="sm" arrow={false} picture={iconUrl(i.item_key)} px={34}
+        name={itemInfo(i.item_key)?.name ?? i.item_key} pill={i.count > 1 ? `×${i.count}` : null} disabled={busy} onClick={() => void give(i.item_key)} />)}</div>}
+    {error && <StatusLine error>{error}</StatusLine>}
+  </div>;
+}
+
 export default function TalkBox() {
   const view = useSyncExternalStore(subscribeTalk, talkView, emptyTalkView);
   const open = view.activeId !== null;
@@ -94,8 +141,9 @@ export default function TalkBox() {
     return () => cancelAnimationFrame(raf);
   }, [open]);
   // The keys that move it on; Escape is the dialog system's (it leaves). A held key doesn't race through the lines.
+  const [giving, setGiving] = useState(false);
   useEffect(() => {
-    if (!open) return;
+    if (!open || giving) return;
     const on = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
       if (k !== "e" && k !== "enter" && k !== " ") return;
@@ -104,7 +152,18 @@ export default function TalkBox() {
     };
     window.addEventListener("keydown", on);
     return () => window.removeEventListener("keydown", on);
-  }, [open]);
+  }, [open, giving]);
+  // A whole conversation with them, its last line read, adds half a heart once a day (David 2026-10-28: "you actually have
+  // to have a full chat with them"); opening the talk and leaving early adds nothing.
+  const slug = view.slug, talkId = view.activeId, heard = view.complete && view.index + 1 >= view.count;
+  const credited = useRef<string | null>(null); // this talk's, until it closes
+  useEffect(() => {
+    if (!talkId) credited.current = null;
+    if (!talkId || !slug || !heard || credited.current === talkId) return;
+    credited.current = talkId;
+    void talkedTo(slug).then(noteMove);
+  }, [talkId, slug, heard]);
+  if (!open && giving) setGiving(false);
   const onBox = useCallback((e: MouseEvent) => { if (!(e.target as Element).closest("button")) press(); }, []);
   // Focus comes into the box once it shows (it's hidden while they turn to you, when the dialog system first tries).
   const phase = view.phase;
@@ -113,6 +172,7 @@ export default function TalkBox() {
     if (phase === "speaking" && el && !el.contains(document.activeElement)) el.focus({ preventScroll: true });
   }, [phase, panel]);
 
+  const friend = useFriendLevel(view.slug);
   if (!open) return null;
   const line = talkStore.active?.lines[view.index]?.text ?? "";
   const title = view.post && view.post !== "villager" ? POST_TITLES[view.post as ResidentPost] : null;
@@ -129,5 +189,12 @@ export default function TalkBox() {
       </p>
       <p className={styles.sr} aria-live="polite">{view.phase === "speaking" ? line : ""}</p>
     </Dialogue>
+    {slug && <div className={styles.friend} onClick={e => e.stopPropagation()}>
+      <span className={styles.hearts}><HeartMeter halves={friend} max={FRIEND_MAX} size={17} label={`Friendship with ${view.name}: ${friend / 2} of ${FRIEND_MAX} hearts`} /></span>
+      <RoundButton label={giving ? "Put the gift away" : `Give ${view.name} a gift`} className={styles.give} aria-pressed={giving} onClick={() => setGiving(g => !g)} data-testid="give-gift">
+        <Gift size={17} strokeWidth={2.2} aria-hidden="true" />
+      </RoundButton>
+    </div>}
+    {giving && slug && <GiftPicker slug={slug} onDone={() => setGiving(false)} />}
   </div>;
 }

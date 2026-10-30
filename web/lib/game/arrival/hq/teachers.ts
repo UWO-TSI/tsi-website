@@ -41,9 +41,8 @@ export const TOOL_TEACHERS: readonly ToolTeacher[] = [
   // Mayor Eliza: the pickaxe that dug the HQ's foundations (m6, specs/launch/v1-gameplay.md): the new world's, parked
   // for the cave update (lib/collections/roster.ts MINING).
   { tool: "pickaxe", npc: "mayor", live: MINING, key: "pickaxe-basic", finish: "mine" },
-  // Later moves (proposals in the spec; nothing here is built): dash and the glider are planned as Keeper-taught
-  // moves (lib/game/moveUnlocks.ts `unlockMove` is their hook).
-  { tool: "dash", npc: "juniper", live: false, key: null, finish: null },
+  // Later moves (proposals in the spec; nothing here is built). The dash is everyone's from the start; the glider comes
+  // with the mountain expansion (lib/game/moveUnlocks.ts `unlockMove` is its hook).
   { tool: "glider", npc: "nell", live: false, key: null, finish: null },
 ];
 

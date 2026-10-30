@@ -12,7 +12,7 @@
  * Outside macOS, Ctrl crouches only in fullscreen with the keyboard locked.
  *
  * The controls list lives only here (specs/v1-drop.md §1.5: no movement UI on the island): every remappable key, then
- * the fixed ones (the emote wheel is with the movement keys). The dash and the glider say they wait for a Keeper until one teaches them (lib/game/moveUnlocks.ts).
+ * the fixed ones (the emote wheel is with the movement keys). The glider says it comes later until it unlocks (lib/game/moveUnlocks.ts).
  *
  * Playtest round 1 (decision 3): the one Settings, the gear and the wrench merged, opened from the UI view's gear (Esc 1)
  * or the system menu (Esc 2). On the island it has tabs: Graphics, Sound, Controls, Account (Log out) and, in
@@ -210,12 +210,12 @@ export default function SettingsSheet({ open, onClose, detectedTier = null, plac
     <fieldset>
       <legend>Movement keys</legend>
       <ul className={styles.keyList}>{MOVE_ROW.map(a => <li key={a.id}>
-        <span>{a.name}{a.id === "dash" && !unlocks.dash && <small className={styles.hint}> · a Keeper teaches it</small>}</span>
+        <span>{a.name}</span>
         <button aria-pressed={moveListen === a.id} onClick={() => { setMoveListen(a.id); setMoveNote("Press a key (Esc to cancel)."); }}>
           {moveListen === a.id ? "Press a key…" : <kbd>{keyName(moveKeys[a.id])}</kbd>}
         </button>
       </li>)}
-        <li><span>Glide{!unlocks.glider && <small className={styles.hint}> · a Keeper teaches it</small>}</span><span><kbd>{keyName(moveKeys.jump)}</kbd> again in the air</span></li>
+        <li><span>Glide{!unlocks.glider && <small className={styles.hint}> · comes later</small>}</span><span><kbd>{keyName(moveKeys.jump)}</kbd> again in the air</span></li>
         {/* The tool wheel (specs/game-ui.md): hold to open, tap to swap back; the full HUD while held (row 283); the
             emote wheel (specs/v1-drop.md §3): hold to open, tap to play the last emote again. */}
         {(["wheel", "hud", "emote"] as const).map(a => <li key={a}>

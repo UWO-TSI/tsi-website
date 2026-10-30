@@ -18,12 +18,14 @@ import { rodByTier, type RodTier } from "./rods";
 import { rollFishFor } from "./peaceful";
 import type { WaterType } from "./fishingSpots";
 import { punchZoom, setAimZoom, setTensionZoom, shakeCamera } from "./cameraJuice";
-import { CAST, FISH, HOOK, HOOK_TIER, bossOf, catchShake, currentFishingContext, rollFish, rollSize, type FishDef } from "./fishing";
+import { CAST, TOGETHER, FISH, HOOK, HOOK_TIER, bossOf, catchShake, currentFishingContext, rollFish, rollSize, type FishDef } from "./fishing";
 import { weatherMods } from "./weatherPerks";
 import { liveIslandWeather, reelWeather } from "./islandWeather";
 import { raidNow, sendRaid } from "@/lib/net/raid";
 import { bindFishingCastLifecycle, castDevice, trackCastDevice, type CastDevice, type FishingHeldInput } from "./fishingInput";
 import { isGameControlTarget } from "./keyboardInput";
+import { remoteNearest } from "@/components/game/net/active";
+import { friendsStore } from "@/lib/net/friends";
 
 export type FishingPhase = "idle" | "charging" | "casting" | "waiting" | "bite" | "surfacing" | "reeling" | "revealing" | "missed";
 
@@ -63,6 +65,7 @@ export function useFishingSession({ onActiveChange, collectionScope, zoneOverrid
   const [wasNew, setWasNew] = useState(false);
   const [newRecord, setNewRecord] = useState(false);
   const [learned, setLearned] = useState<string | null>(null); // a recipe the landed catch taught
+  const [buddy, setBuddy] = useState<string | null>(null); // the friend this one was fished with (s-fishtogether)
   const [missNote, setMissNote] = useState<string | null>(null);
   // The hints name the input that started the cast (E, the click or a tap): fishingInput.ts FISHING_HINTS.
   const [device, setDevice] = useState<CastDevice>("mouse");
@@ -193,6 +196,7 @@ export function useFishingSession({ onActiveChange, collectionScope, zoneOverrid
       if (phaseRef.current !== "waiting" || rollRef.current !== roll || (answer && !answer.ok)) return;
       const rolled = answer && FISH.find(f => f.key === answer.catch.item_key);
       landRef.current = rolled && answer.catch.roll ? { roll: answer.catch.roll, size: answer.catch.size_cm } : null;
+      setBuddy(rolled ? answer.catch.together ?? null : null);
       const biting = rolled || rollHere();
       bitingRef.current = biting;
       const tier = HOOK_TIER[biting.rarity], hookBeat = HOOK[tier];
@@ -242,7 +246,8 @@ export function useFishingSession({ onActiveChange, collectionScope, zoneOverrid
     changePhase("casting");
     // Member island: the server rolls what will bite now; a refusal (too soon, no water here) ends the cast.
     const from = collectionScope ? null : castFromRef.current;
-    rollRef.current = from && castLine(from.site, from.from, power, rod.key);
+    // Fishing together: the nearest friend within a few steps rides along on the cast (the server checks the friendship).
+    rollRef.current = from && castLine(from.site, from.from, power, rod.key, remoteNearest(from.from[0], from.from[1], TOGETHER.range, uid => friendsStore().isFriend(uid)));
     void rollRef.current?.then(answer => {
       if (answer && !answer.ok && (phaseRef.current === "casting" || phaseRef.current === "waiting")) { bagFull(answer); miss(answer.error); }
     });
@@ -427,7 +432,7 @@ export function useFishingSession({ onActiveChange, collectionScope, zoneOverrid
   useEffect(() => () => clearTimers(), []);
 
   return {
-    phase, fish, caughtSize, wasNew, newRecord, learned, missNote, device, maxCast, bossMode, raidId, rod,
+    phase, fish, caughtSize, wasNew, newRecord, learned, buddy, missNote, device, maxCast, bossMode, raidId, rod,
     /** Species this player has caught (a first catch shows ??? on the reel). */
     owned: ownedRef.current,
     /** The input held from the hook into the reel. */

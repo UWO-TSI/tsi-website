@@ -38,7 +38,7 @@ const SAY: Record<string, [WalletKind, string]> = {
   study: ["study", "Study session"], chapter: ["chapter", "Chapter reward"], quest: ["quest", "Quest reward"], event: ["event", "Club event check-in"],
   admin: ["grant", "Club grant"], room: ["room", "A new room for your house"], goal: ["goal", "Chipped in to a club goal"], refund: ["refund", "Refund"],
   migration: ["carry", "Carried over"], merch: ["merch", "Merch reservation"], stat_reset: ["path", "Stats reset"], mission: ["mission", "Mission reward"],
-  repair: ["repair", "Weapon repair"], earn_bounty: ["bounty", "Bounty"], earn_event: ["event", "Club event"], earn_admin: ["grant", "Club grant"],
+  repair: ["repair", "Weapon repair"], friend: ["grant", "A gift from a friend"], campfire: ["event", "Campfire hour"], earn_bounty: ["bounty", "Bounty"], earn_event: ["event", "Club event"], earn_admin: ["grant", "Club grant"],
   earn_quest: ["quest", "Quest"], spend_shop: ["shop", "Shop purchase"], spend_merch: ["merch", "Merch reservation"], refund_merch: ["refund", "Merch refund"],
 };
 
@@ -56,7 +56,7 @@ function line(e: LedgerEntry, i: number, today: string): WalletLine {
     const it = ITEMS.get(ref);
     return { ...base, kind: "shop", title: it ? `Bought ${it.display_name}` : "Bought at the shop", detail: time, icon: it ? shopIcon(it) : null };
   }
-  if (e.source === "daily_gift") return { ...base, kind: "gift", title: ref === today ? "Today's gift" : "Daily gift", detail: time, icon: null };
+  if (e.source === "daily_gift") return { ...base, kind: "gift", title: ref.startsWith("welcome:") ? `Welcome week, day ${ref.slice(8)}` : ref === today ? "Today's gift" : "Daily gift", detail: time, icon: null };
   if (e.source === "respec") return { ...base, kind: "path", title: /subclass/i.test(ref) ? "Changed your subclass" : "Asked the Oracle again", detail: time, icon: null };
   const [kind, title] = SAY[e.source] ?? ["other", humanize(e.source)];
   // The Gem ledger's own note ("Bounty: accessibility audit") says what it was for.

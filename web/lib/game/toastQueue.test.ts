@@ -14,6 +14,13 @@ describe("world notification queue", () => {
     vi.advanceTimersByTime(2600); expect(entries).toEqual([]); expect(vi.getTimerCount()).toBe(0);
   });
 
+  it("marks a quiet notice (campfire hour) and nothing else", () => {
+    let entries: readonly GameToast[] = [];
+    const queue = createToastQueue((next) => { entries = next; });
+    queue.push({ text: "Campfire hour.", quiet: true }); queue.push({ text: "loud" }); queue.push({ text: "odd", quiet: "yes" });
+    expect(entries.map((item) => !!item.quiet)).toEqual([true, false, false]);
+  });
+
   it("lets each notification expire without removing a newer one", () => {
     let entries: readonly GameToast[] = [];
     const queue = createToastQueue((next) => { entries = next; });

@@ -45,7 +45,7 @@ export default function MemberFishing({ onActiveChange, rod }: { onActiveChange?
   if (phase === "idle") return null;
   if (phase === "revealing" && fish) {
     return <div className={m.card}>
-      <MemberCatchCard fish={fish} sizeCm={s.caughtSize} recipe={s.learned} isNew={s.wasNew} newRecord={s.newRecord} delay={s.revealDelay} onDone={s.cancel} />
+      <MemberCatchCard fish={fish} sizeCm={s.caughtSize} recipe={s.learned} together={s.buddy} isNew={s.wasNew} newRecord={s.newRecord} delay={s.revealDelay} onDone={s.cancel} />
     </div>;
   }
   const chip: [ChipTone, string, React.ReactNode] =
@@ -196,8 +196,8 @@ function MemberReel({ fish, known, onDone, initialInput, tensionMul, help, boss,
 }
 
 /** The catch card: the fish on its white stage, developing from a silhouette on a first catch; a rare one throws sparks. */
-export function MemberCatchCard({ fish, sizeCm, recipe, isNew, newRecord, delay, onDone }: {
-  fish: FishDef; sizeCm: number | null; recipe: string | null; isNew: boolean; newRecord: boolean; delay: number; onDone: () => void;
+export function MemberCatchCard({ fish, sizeCm, recipe, together = null, isNew, newRecord, delay, onDone }: {
+  fish: FishDef; sizeCm: number | null; recipe: string | null; together?: string | null; isNew: boolean; newRecord: boolean; delay: number; onDone: () => void;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const rare = RARE.has(fish.rarity);
@@ -223,7 +223,7 @@ export function MemberCatchCard({ fish, sizeCm, recipe, isNew, newRecord, delay,
   return <div style={{ ["--arrive-delay" as string]: `${delay}ms` }}>
     <CatchCard cardRef={cardRef} picture={iconFor(fish)} name={developed ? fish.name : "???"} developed={developed} build={suspense?.build} rarity={fish.rarity} rarityLabel={RARITY_META[fish.rarity].label} rare={rare}
       label={developed ? `You caught ${fish.label}` : "A catch"}
-      tags={<>{isNew && <CatchTag>New</CatchTag>}{!isNew && newRecord && <CatchTag>New record</CatchTag>}</>}
+      tags={<>{isNew && <CatchTag>New</CatchTag>}{!isNew && newRecord && <CatchTag>New record</CatchTag>}{together && <CatchTag>Fished with {together}</CatchTag>}</>}
       facts={<>{sizeCm !== null && <span>{sizeCm} cm</span>}{odds !== null && <span className={reelStyles.quiet}>1 in {odds}</span>}</>}
       line={line ? `“${line}”` : null}
       note={recipe ? <p className={reelStyles.line}>You learned a recipe: {recipe}</p> : null}

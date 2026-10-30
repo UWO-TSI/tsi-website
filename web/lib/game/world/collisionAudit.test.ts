@@ -83,9 +83,8 @@ function drawn(o: MapObject): Part[] {
     if (o.id === "oracle") return [{ url: `${B}/oracle-museum.glb`, m: M(o.x, g, o.z, yaw, k).multiply(ACNH) }];
     if (o.id === "museum") return CHALET.red.map(url => ({ url, m: M(o.x, g, o.z, yaw, k).multiply(ACNH) }));
     if (o.id === "cafe") return [{ url: "/assets/game/buildings/cafe.glb", m: M(o.x, g, o.z, yaw, k) }];
-    // The monument before its first stage (ClubMonument): its sign and the rope fence round the site.
-    if (o.id === "monument") return [{ url: "/assets/game/props/monument-sign.glb", m: M(o.x + 1.3, g, o.z - 1.25, -0.3) },
-      ...[[-1.1, -1.1, 0], [1.1, -1.1, 0], [-1.1, 1.1, Math.PI], [1.1, 1.1, Math.PI]].map(([x, z, r]) => ({ url: "/assets/acnh/props/fence-rope-a.glb", m: M(o.x + x, g, o.z + z, r) }))];
+    // The monument before its first stage (ClubMonument): its sign.
+    if (o.id === "monument") return [{ url: "/assets/game/props/monument-sign.glb", m: M(o.x + 1.3, g, o.z - 1.25, -0.3) }];
     return [];
   }
   if (o.kind === "tree") return treeParts(o.seed ?? 0, SEASON_TREES.summer).map(p => ({ url: p.url, m: M(o.x + p.offset[0], g + p.offset[1], o.z + p.offset[2], p.yaw, p.scale) }));

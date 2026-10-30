@@ -27,6 +27,7 @@ import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTr
 import { BigMoment, CardOverlay, DarkButton, FlyIn, GhostButton, KEYWORD_KINDS, KeyBoard, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, QuestCheck, RewardPop, SlotPop, Spotlight, StatBar, StatBars, WalletSlot } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
 import s from "./showroom.module.css";
+import FlatRewards from "./FlatRewards";
 
 /** The reward pop at each rung of the ladder, and a dig's purse (no rarity). */
 const POPS: readonly (readonly [Rarity | null, string, string, string, string | null])[] = [
@@ -106,6 +107,7 @@ const OVERLAYS: { id: string; title: string; render: () => ReactNode }[] = [
   { id: "oracle-reveal", title: "Oracle reveal card", render: () => <FamilyReveal family="Warden" type="INFP" onContinue={() => {}} /> },
   { id: "rune", title: "Rune overlay", render: () => <Loop ms={30000}>{done => <IncantationOverlay runeId="cross" title="Cross" effect="A warding cross" onDone={done} onCancel={done} />}</Loop> },
   { id: "emotes", title: "Emote wheel", render: () => <EmoteWheelShow /> },
+  { id: "flat-rewards", title: "Flat reward pieces (hearts, reward track, prize wheel, goal meter, quiet toast)", render: () => <div style={{ position: "absolute", inset: 0, overflow: "auto", padding: 24 }}><FlatRewards /><ToastHub /></div> },
 ];
 
 /** The emote wheel open (specs/v1-drop.md §3): the emotes with Clap chosen, then the dances, flipping every few seconds. */

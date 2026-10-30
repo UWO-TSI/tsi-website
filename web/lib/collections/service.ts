@@ -46,13 +46,14 @@ const fail = <T>(err: unknown): Result<T> => toFailure(ERRORS, err);
 const XZ = z.tuple([z.number().finite(), z.number().finite()]);
 const CatchRequest = z.discriminatedUnion("action", [
   z.object({ action: z.literal("harvest"), node: z.string().max(64), at: XZ, tool: z.string().max(64).optional() }),
-  z.object({ action: z.literal("cast"), site: z.enum(["village", "home"]), at: XZ, power: z.number().min(0).max(1), tool: z.string().max(64).optional() }),
+  z.object({ action: z.literal("cast"), site: z.enum(["village", "home"]), at: XZ, power: z.number().min(0).max(1), tool: z.string().max(64).optional(), with: z.string().uuid().optional() }),
   z.object({ action: z.literal("land"), roll: z.string().uuid() }),
   z.object({ action: z.literal("raid"), credit: z.string().max(1024) }),
 ]);
 /** A recorded catch (harvest, land: its counts, record and any recipe taught), or a cast's `roll` waiting to be landed. */
-/** `purse`: a dig that turned up coins or a gem (lib/collections/digLoot.ts); its item_key is the currency. */
-export type CatchReply = { item_key: string; size_cm: number | null; roll?: string; purse?: { currency: "coins" | "gems"; amount: number } } & Partial<CatchResult>;
+/** `purse`: a dig that turned up coins or a gem (lib/collections/digLoot.ts); its item_key is the currency.
+ * `together`: the friend's world name when the cast was fishing together (s-fishtogether), for the card's stamp. */
+export type CatchReply = { item_key: string; size_cm: number | null; roll?: string; purse?: { currency: "coins" | "gems"; amount: number }; together?: string | null } & Partial<CatchResult>;
 
 /**
  * A catch from the world (roadmap "Server-authoritative catch rolls"). The
@@ -74,10 +75,13 @@ export type CatchReply = { item_key: string; size_cm: number | null; roll?: stri
  * dig or a rock a shovel, each one the member owns (lib/game/tools.ts checkHeld); picking by hand needs none.
  * A landed or harvested rare catch may teach a recipe (`recipe` in the reply,
  * 20260930100000 crafting_catch_drop), also in that transaction.
+ * A cast `with` a friend nearby (s-fishtogether, lib/game/fishing.ts TOGETHER) rolls a little luckier when `friendName`
+ * says they are your friend (their world name; null: not friends, no boost).
  */
 export async function catchAction(
   store: CollectionsStore, memberId: string, body: unknown, now: Date,
   weather: () => Promise<IslandWeather>, goals: () => Promise<readonly ClubGoal[]> = async () => [], random = Math.random,
+  friendName: (memberId: string) => Promise<string | null> = async () => null,
   raidSecret = process.env.REALTIME_INTERNAL_SECRET,
 ): Promise<Result<CatchReply>> {
   const parsed = CatchRequest.safeParse(body);
@@ -115,13 +119,13 @@ export async function catchAction(
     if (!water) return { ok: false, status: 422, code: "wrong_place", error: "No water in reach." };
     const held = checkHeld(req.tool, "rod", await store.ownedGear(memberId));
     if (!held.ok) return held;
-    const [sky, active] = await Promise.all([weather(), goals()]);
-    const { fish, size } = fishRoll(water, req.power, rodByTier(held.tool.tier), now, sky, random, eventCatches(active, now));
+    const [sky, active, together] = await Promise.all([weather(), goals(), req.with && req.with !== memberId ? friendName(req.with) : null]);
+    const { fish, size } = fishRoll(water, req.power, rodByTier(held.tool.tier), now, sky, random, eventCatches(active, now), !!together);
     const sp = ROSTER.find((s) => s.key === fish.key);
     const kept = clampSize(sp, size);
     const roll = await store.cast(memberId, fish.key, kept, trophyFor(sp, kept));
     // Not caught yet: the reel and the card show what the land records (no size for a fish off the roster).
-    return { ok: true, data: { roll, item_key: fish.key, size_cm: kept } };
+    return { ok: true, data: { roll, item_key: fish.key, size_cm: kept, together } };
   } catch (err) {
     return fail(err);
   }

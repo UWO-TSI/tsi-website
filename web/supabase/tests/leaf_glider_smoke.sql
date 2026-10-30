@@ -13,7 +13,7 @@ DECLARE
 BEGIN
   ASSERT g IS NOT NULL AND (SELECT catalogue_ref FROM shop_items WHERE id = g) = 'glider_leaf', 'glider in the catalogue';
   ASSERT (SELECT NOT active AND category = 'tool' AND slot IS NULL FROM shop_items WHERE id = g), 'glider never on sale, no slot';
-  ASSERT (SELECT sources = ARRAY['quest','bottle'] FROM crafting_recipes WHERE id = 'glider-leaf'), 'learned like rods 4-5';
+  ASSERT (SELECT sources = ARRAY['quest'] FROM crafting_recipes WHERE id = 'glider-leaf'), 'quest only: hidden until the mountain expansion';
   -- Not for sale, whatever the coins.
   PERFORM wallet_apply(M, 'coins', 100000, 'admin', 'smoke', 'glider:fund');
   BEGIN PERFORM economy_buy(M, g, 1, 3000, 'glider-buy'); RAISE EXCEPTION 'x';

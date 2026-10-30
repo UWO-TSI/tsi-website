@@ -8,7 +8,9 @@ import { FISH } from "@/lib/game/fishing";
 import { fnv1a } from "@/lib/game/weatherSystem";
 import { dailySpecials, effectivePrice, isOnSale, ownedCounts, speciesClass, speciesSellPrice, TAB_OF, torontoDay, type ShopItem, type Special } from "./rules";
 import { toFailure, type Result } from "@/lib/result";
-import { EconomyError, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation } from "./store";
+import { EconomyError, type DailyGift, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation } from "./store";
+import { boxPool, welcomeDay } from "./catalogue";
+import { shopIcon } from "@/lib/icons/keys";
 
 const ERR: Record<string, [number, string]> = {
   unavailable: [503, "The shop is closed for now."],
@@ -43,13 +45,15 @@ export interface WalletView {
   gems: number;
   daily_claimed: boolean;
   day: string;
+  /** Today's welcome-week day (1 to 7; claimed or not), null once the week is over. */
+  welcome_day: number | null;
   recent: LedgerEntry[];
 }
 export const getWallet = (store: EconomyStore, m: string, now: Date) =>
   run<WalletView>(async () => {
     const day = torontoDay(now);
-    const [w, claimed, recent] = await Promise.all([store.wallet(m), store.dailyClaimed(m, day), store.ledger(m, 20)]);
-    return { ...w, daily_claimed: claimed, day, recent };
+    const [w, claimed, days, recent] = await Promise.all([store.wallet(m), store.dailyClaimed(m, day), store.giftDays(m), store.ledger(m, 20)]);
+    return { ...w, daily_claimed: claimed, day, welcome_day: welcomeDay(claimed ? days : days + 1), recent };
   });
 
 export interface ShopEntry {
@@ -172,7 +176,21 @@ export const equip = (store: EconomyStore, m: string, input: { item_id: string; 
     return r.data;
   });
 
-export const claimDailyGift = (store: EconomyStore, m: string) => run(() => store.dailyGift(m));
+/** A mystery-box prize as the gift card shows it. */
+export interface BoxPrize { slug: string; name: string; icon: string }
+/** Today's gift; on welcome day 7 the box's prize and `reel`, everything the box can hold (the roulette strip). */
+export interface GiftView extends Omit<DailyGift, "welcome"> {
+  welcome: { day: number; coins: number; gems: number; item: BoxPrize | null; reel: BoxPrize[] } | null;
+}
+const prize = (i: ShopItem): BoxPrize => ({ slug: i.slug, name: i.display_name, icon: i.sprite_url ?? shopIcon(i) });
+export const claimDailyGift = (store: EconomyStore, m: string) =>
+  run<GiftView>(async () => {
+    const g = await store.dailyGift(m);
+    if (!g.welcome?.item) return { ...g, welcome: g.welcome && { ...g.welcome, item: null, reel: [] } };
+    const items = await store.catalogue();
+    const won = items.find((i) => i.slug === g.welcome!.item);
+    return { ...g, welcome: { ...g.welcome, item: won ? prize(won) : null, reel: boxPool(items, new Set()).map(prize) } };
+  });
 
 /** Short pickup code derived from the reservation key, so a retry shows the same code. */
 export function pickupCode(memberId: string, key: string): string {

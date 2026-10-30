@@ -11,8 +11,9 @@ import { useSyncExternalStore } from "react";
 import { API_WRITE } from "@/lib/apiClient";
 import { httpEconomyTransport } from "@/lib/wallet/transport";
 
-export interface HudState { coins: number | null; gems: number | null; xp: number | null; giftClaimed: boolean; day: string | null }
-const EMPTY: HudState = { coins: null, gems: null, xp: null, giftClaimed: true, day: null };
+/** `welcomeDay`: today's day of a new member's welcome week (1 to 7), null after it (lib/wallet/catalogue.ts welcomeDay). */
+export interface HudState { coins: number | null; gems: number | null; xp: number | null; giftClaimed: boolean; day: string | null; welcomeDay: number | null }
+const EMPTY: HudState = { coins: null, gems: null, xp: null, giftClaimed: true, day: null, welcomeDay: null };
 let state = EMPTY;
 let started = false;
 let timer: ReturnType<typeof setTimeout> | undefined;
@@ -20,7 +21,7 @@ const listeners = new Set<() => void>();
 const publish = (next: Partial<HudState>) => { state = { ...state, ...next }; listeners.forEach(l => l()); };
 
 export function refreshHudWallet(): Promise<void> {
-  return httpEconomyTransport.wallet().then(w => publish({ coins: w.coins, gems: w.gems, giftClaimed: w.daily_claimed, day: w.day }), () => {});
+  return httpEconomyTransport.wallet().then(w => publish({ coins: w.coins, gems: w.gems, giftClaimed: w.daily_claimed, day: w.day, welcomeDay: w.welcome_day }), () => {});
 }
 /** The player's stamina as the movement sim has it (lib/game/movement/sim.ts), written each frame by the avatar and read by
  * the HUD's bar on its own frame loop (never a React render per frame). */

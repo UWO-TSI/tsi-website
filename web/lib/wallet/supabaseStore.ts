@@ -90,7 +90,13 @@ export function supabaseEconomyStore(db: SupabaseClient): EconomyStore {
       const { data, error } = await db.rpc("daily_gift_claim", { p_member_id: m });
       if (error) raise(error);
       const r = first(data);
-      return { coins: Number(r.coins), balance: Number(r.balance), claimed: r.claimed === true, day: String(r.day) };
+      const welcome = r.welcome_day == null ? null : { day: Number(r.welcome_day), coins: Number(r.welcome_coins), gems: Number(r.welcome_gems ?? 0), item: r.welcome_item == null ? null : String(r.welcome_item) };
+      return { coins: Number(r.coins), balance: Number(r.balance), claimed: r.claimed === true, day: String(r.day), welcome };
+    },
+    async giftDays(m) {
+      const { count, error } = await db.from("daily_login_claims").select("day", { count: "exact", head: true }).eq("member_id", m);
+      if (error) raise(error);
+      return count ?? 0;
     },
     async dailyClaimed(m, day) {
       const { data, error } = await db.from("daily_login_claims").select("day").eq("member_id", m).eq("day", day).maybeSingle();

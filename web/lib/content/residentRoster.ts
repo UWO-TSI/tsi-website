@@ -68,6 +68,26 @@ export const RESIDENT_LOOKS: Record<string, Look> = {
 };
 
 /**
+ * What each resident thinks of a gift from your bag (d-friends, lib/npc/friendship.ts giftTaste; David 2026-10-28):
+ * loved +1 heart, liked +1/2, hated -1, anything else nothing. Entries are a collection category (fish, sea, bug, fruit,
+ * nature: flowers, shells and mushrooms, mineral: wood, stone and ore) or one item's key, which wins over its category.
+ * In their own character; proposals for David's review.
+ */
+export interface GiftTastes { loves: readonly string[]; likes: readonly string[]; hates: readonly string[] }
+export const RESIDENT_GIFTS: Readonly<Record<string, GiftTastes>> = {
+  wren: { loves: ["fruit"], likes: ["nature"], hates: ["bug"] },
+  mayor: { loves: ["nature"], likes: ["fruit", "mineral"], hates: ["sea"] },
+  shopkeeper: { loves: ["mineral"], likes: ["fish"], hates: ["nature"] },
+  curator: { loves: ["bug"], likes: ["fish", "sea"], hates: ["fruit"] },
+  "wharf-keeper": { loves: ["fish"], likes: ["sea"], hates: ["bug"] },
+  "oracle-keeper": { loves: ["nature"], likes: ["mineral"], hates: ["fish"] },
+  crafter: { loves: ["mineral"], likes: ["sea"], hates: ["nature"] },
+  juniper: { loves: ["fruit"], likes: ["sea"], hates: ["mineral"] },
+  marlo: { loves: ["bug"], likes: ["nature"], hates: ["sea"] },
+  nell: { loves: ["nature"], likes: ["bug"], hates: ["fish"] },
+};
+
+/**
  * What each one says when you walk up and talk to them (specs/polish/reachability.md deliverable 1, row 123): two or
  * three conversations each, a box per line, "[happy]" and the like for the face they make (lib/content/talk.ts). In
  * their own tone (row 218); proposals for David's review (row 217, specs/polish/reachability-questions.md). The two
@@ -91,7 +111,7 @@ export const RESIDENT_TALK: Record<string, string[][]> = {
   ],
   curator: [
     ["[happy] {name}! Found anything with wings lately?", "The museum's cases are waiting. The first of every find you bring me goes on show.", "With a label. I write very good labels."],
-    ["Did you see the dragonflies by the pond? Odonata. Lovely things.", "[surprised] They can fly backwards, you know. I think about that a lot."],
+    ["Did you see the dragonflies along the river? Odonata. Lovely things.", "[surprised] They can fly backwards, you know. I think about that a lot."],
     ["If you catch something you've never seen before, bring it to me before you sell it.", "Once it's in a case, it belongs to the whole club."],
   ],
   "wharf-keeper": [
@@ -121,7 +141,7 @@ export const RESIDENT_TALK: Record<string, string[][]> = {
   marlo: [
     ["[happy] Hold still, you're in the shot.", "Kidding. Mostly. You do make a good shape for a sketch."],
     ["I've drawn HQ forty times now.", "[sad] I'm not happy with any of them. That roof has a mind of its own."],
-    ["The pond looks different every hour.", "I'm out of the green pencil again. If you find one, it's mine."],
+    ["The river looks different every hour.", "I'm out of the green pencil again. If you find one, it's mine."],
   ],
   nell: [
     ["I named a star after the founders. The bright one over HQ, once it's dark.", "[happy] The fainter ones are for everyone who joined after. There's room for plenty more."],
@@ -164,7 +184,7 @@ export const PROPOSED_RESIDENTS: NPCPersona[] = [
   row({ slug: "curator", display_name: "Odile", post: "museum_curator", tone: "earnest",
     bio: "The museum's curator, labelling the empty cases until the club fills them. Knows the Latin name of every bug and says it anyway.",
     schedule: { home: "museum", dawn: ["beach"], day: ["museum", "beach"], evening: ["museum", "plaza"], night: ["museum", "home"] },
-    canned_dialogue: ["Every case in there is waiting for something you'll find.", "Did you see the dragonflies by the pond? Odonata. Lovely.", "Bring me anything with wings. Or fins. Or a shell."] }),
+    canned_dialogue: ["Every case in there is waiting for something you'll find.", "Did you see the dragonflies along the river? Odonata. Lovely.", "Bring me anything with wings. Or fins. Or a shell."] }),
   row({ slug: "docent", display_name: "Juno", post: "museum_guide", tone: "warm",
     bio: "The museum's guide. Keeps the door, shows everyone round, and takes each new member's first catch for the halls.",
     schedule: { home: "museum", dawn: ["museum"], day: ["museum"], evening: ["museum"], night: ["museum", "home"] },
@@ -188,7 +208,7 @@ export const PROPOSED_RESIDENTS: NPCPersona[] = [
   row({ slug: "marlo", display_name: "Marlo", post: "villager", tone: "warm",
     bio: "Sketches the island from the benches, a page a day. Has drawn HQ forty times and isn't happy with any of them.",
     schedule: { home: "hq", day: ["bench", "beach", "museum"], evening: ["beach", "bench"], night: ["beach", "plaza", "home"] },
-    canned_dialogue: ["Hold still, you're in the shot. Kidding. Mostly.", "The pond looks different every hour.", "I'm out of the green pencil again."] }),
+    canned_dialogue: ["Hold still, you're in the shot. Kidding. Mostly.", "The river looks different every hour.", "I'm out of the green pencil again."] }),
   row({ slug: "nell", display_name: "Nell", post: "villager", tone: "warm",
     bio: "A night owl who sleeps in, then watches the stars from the bench under the lamp. Names the constellations after club members.",
     schedule: { home: "hq", dawn: ["home"], day: ["home", "plaza", "oracle"], evening: ["beach", "bench"], night: ["bench", "beach", "bench"] },

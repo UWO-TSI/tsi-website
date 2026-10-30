@@ -85,8 +85,9 @@ async function catchRequest(body: Record<string, unknown>): Promise<CatchAnswer 
 }
 /** A forage node or bug spot, from where the player stands, with the held tool's key (a net for a bug, a shovel to dig; none by hand). */
 export const harvestNode = (node: string, at: [number, number], tool?: string) => catchRequest({ action: "harvest", node, at, ...(tool ? { tool } : {}) });
-/** Roll the fish that will bite on the held rod (`tool`), from where the player stands; landed with landCatch when the reel is won. */
-export const castLine = (site: "village" | "home", at: [number, number], power: number, tool: string) => catchRequest({ action: "cast", site, at, power, tool });
+/** Roll the fish that will bite on the held rod (`tool`), from where the player stands, `buddy` a friend within a few steps (fishing together); landed with landCatch when the reel is won. */
+export const castLine = (site: "village" | "home", at: [number, number], power: number, tool: string, buddy?: string | null) =>
+  catchRequest({ action: "cast", site, at, power, tool, ...(buddy ? { with: buddy } : {}) });
 export const landCatch = (roll: string) => catchRequest({ action: "land", roll });
 /** A landed divine raid: claim this helper's catch with the realtime server's signed credit (lib/collections/raidCredit.ts). */
 export const claimRaid = (credit: string) => catchRequest({ action: "raid", credit });

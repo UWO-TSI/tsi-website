@@ -40,6 +40,10 @@ export interface Sellable {
   locked?: boolean;
 }
 
+/** The welcome week's part of a gift: the day (1 to 7), its coins and Gems, and the box's item slug on day 7. */
+export interface WelcomeGift { day: number; coins: number; gems: number; item: string | null }
+export interface DailyGift { coins: number; balance: number; claimed: boolean; day: string; welcome: WelcomeGift | null }
+
 export interface EconomyStore {
   wallet(memberId: string): Promise<{ coins: number; gems: number }>;
   ledger(memberId: string, limit: number): Promise<LedgerEntry[]>;
@@ -51,8 +55,11 @@ export interface EconomyStore {
   collections(memberId: string): Promise<Sellable[]>;
   sell(memberId: string, itemKey: string, qty: number, key: string): Promise<{ balance: number; remaining: number; paid: number; replayed: boolean }>;
   setEquipped(memberId: string, itemId: string, equipped: boolean): Promise<void>;
-  dailyGift(memberId: string): Promise<{ coins: number; balance: number; claimed: boolean; day: string }>;
+  /** Today's gift, and the welcome week's bonus on the member's first seven gift days (`welcome`, null after them). */
+  dailyGift(memberId: string): Promise<DailyGift>;
   dailyClaimed(memberId: string, day: string): Promise<boolean>;
+  /** How many days the member has opened the gift (the welcome week's count). */
+  giftDays(memberId: string): Promise<number>;
   merchReserve(memberId: string, itemId: string, key: string, pickupCode: string): Promise<{ reservation_id: string; gems_balance: number; replayed: boolean }>;
   reservations(filter: { memberId?: string; status?: Reservation["status"] }): Promise<Reservation[]>;
   merchResolve(reservationId: string, actorId: string, action: "fulfil" | "cancel", note: string | null): Promise<{ status: string; replayed: boolean }>;

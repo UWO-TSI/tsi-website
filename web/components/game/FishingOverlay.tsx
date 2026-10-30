@@ -61,14 +61,14 @@ const HINT_PILL: React.CSSProperties = {
 
 /** `rod` (rods.ts) widens the hook window, slows the drain and adds rare luck; `tsi:fish-start` may carry `water` (fishingSpots.ts), and on the member island `site` and `from` (where the player stands) for the server roll. */
 export default function FishingOverlay({ onActiveChange, collectionScope, zoneOverride, rod = rodByTier(1) }: { onActiveChange?: (active: boolean) => void; collectionScope?: string; zoneOverride?: "river" | "sea"; rod?: RodTier }) {
-  const { phase, fish, caughtSize, wasNew, newRecord, learned, missNote, device, maxCast, bossMode, raidId, owned, reelInput, releaseRequestedRef, castNow, cancel, onReelDone, revealDelay } =
+  const { phase, fish, caughtSize, wasNew, newRecord, learned, buddy, missNote, device, maxCast, bossMode, raidId, owned, reelInput, releaseRequestedRef, castNow, cancel, onReelDone, revealDelay } =
     useFishingSession({ onActiveChange, collectionScope, zoneOverride, rod });
 
   if (phase === "idle") return null;
 
   // The catch card, for every catch: it replaces the bottom card.
   if (phase === "revealing" && fish) {
-    return <FishReveal fish={fish} sizeCm={caughtSize} recipe={learned} isNew={wasNew} newRecord={newRecord} delay={revealDelay} onDone={cancel} />;
+    return <FishReveal fish={fish} sizeCm={caughtSize} recipe={learned} together={buddy} isNew={wasNew} newRecord={newRecord} delay={revealDelay} onDone={cancel} />;
   }
 
   const label =

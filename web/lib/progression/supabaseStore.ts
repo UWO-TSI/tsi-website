@@ -228,7 +228,7 @@ export function supabaseProgressionStore(db: SupabaseClient, flags: DropFlags = 
     async listLetters(memberId, limit) {
       const { data, error } = await db
         .from("letters")
-        .select("id, kind, sender_id, recipient_id, subject, body, created_at, read_at, reported, hidden")
+        .select("id, kind, sender_id, recipient_id, subject, body, created_at, read_at, reported, hidden, broadcast_key")
         .or(`recipient_id.eq.${memberId},sender_id.eq.${memberId}`)
         .order("created_at", { ascending: false })
         .limit(limit);
@@ -240,12 +240,20 @@ export function supabaseProgressionStore(db: SupabaseClient, flags: DropFlags = 
         const { data: profiles } = await db.from("profiles").select("id, display_name").in("id", ids);
         for (const p of (profiles ?? []) as Row[]) names.set(String(p.id), String(p.display_name ?? "Member"));
       }
+      // A resident's friendship letter is from them, by name (d-friends).
+      const friendOf = (r: Row) => (r.kind === "system" && String(r.broadcast_key ?? "").startsWith("friend:") ? String(r.broadcast_key).split(":")[1] : null);
+      const residents = new Map<string, string>();
+      const slugs = [...new Set(rows.map(friendOf).filter((s): s is string => !!s))];
+      if (slugs.length) {
+        const { data: personas } = await db.from("npc_personas").select("slug, display_name").in("slug", slugs);
+        for (const p of (personas ?? []) as Row[]) residents.set(String(p.slug), String(p.display_name));
+      }
       return rows.map(
         (r): LetterView => ({
           id: String(r.id),
-          kind: r.kind === "note" ? "note" : "system",
+          kind: r.kind === "note" ? "note" : friendOf(r) ? "resident" : "system",
           sender_id: (r.sender_id as string | null) ?? null,
-          sender_name: r.sender_id ? (names.get(String(r.sender_id)) ?? "Member") : "HQ",
+          sender_name: r.sender_id ? (names.get(String(r.sender_id)) ?? "Member") : friendOf(r) ? (residents.get(friendOf(r)!) ?? "A friend") : "HQ",
           recipient_id: String(r.recipient_id),
           recipient_name: names.get(String(r.recipient_id)) ?? "Member",
           subject: String(r.subject ?? ""),
