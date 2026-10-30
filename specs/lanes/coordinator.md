@@ -663,3 +663,6 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
 - **Volleyball net and ball page:** https://claude.ai/artifact/BQqmpEUmv69QDGQbUEpmth (ids vb-net-concept, vb-ball). The final net modelling waits for David's go.
   - Casual reward: 15 coins a win, 5 paid wins a day, a server ticket check; migration 20261030120000_volleyball_casual.
   - The decorative beach balls move to the new LP ball.
+- **Volleyball:** David approved the net concept (go relayed).
+  - Effects plan page: https://claude.ai/artifact/DR29UeZaYKrVSZSrXZ9hPk (ids fx-*; 15 effects plus the performance rule). The VFX build waits for his picks.
+  - His ask: "hella effects... bump set spike effect, slide, when ball gets blocked, when it hits the groud it shakes abit and kinda exploads".
