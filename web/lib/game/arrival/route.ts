@@ -53,6 +53,8 @@ export interface TutorialRoute {
 export interface PlaceWorld {
   dock: { x: number; z: number; yaw: number } | null;
   landmark: (id: LandmarkId, point?: "door" | "exit") => XZ | null;
+  /** A place moved off anything walkers keep off (the volleyball court and its free zone); none: as it is. */
+  clear?: (p: XZ) => XZ;
 }
 
 /** A place in world XZ (null when the world hasn't got it: no wharf, the landmark isn't placed). */
@@ -76,7 +78,7 @@ export interface ResolvedStop {
 /** The route in world XZ. A stop or waypoint its world can't place falls back to the last place before it. */
 export function resolveRoute(route: TutorialRoute, w: PlaceWorld, origin: XZ): ResolvedStop[] {
   let last = origin;
-  const at = (p: Place) => { const r = resolvePlace(p, w) ?? last; last = r; return r; };
+  const at = (p: Place) => { const q = resolvePlace(p, w), r = q && w.clear ? w.clear(q) : q ?? last; last = r; return r; };
   const way = (ws: readonly Waypoint[] = []) => ws.map(p => ({ ...at(p), ...(p.hop ? { hop: true } : {}) }));
   return route.stops.map(s => {
     const via = way(s.via), stand = at(s.stand);
