@@ -682,3 +682,9 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
     - entry-perf (game/entry-perf, port 3322): measures entry on a production build, then fixes and re-measures on v1.2.
   - Prod has no contraband shop rows (224 null, 1 rare, 1 epic, 1 legendary), so the shop_items rarity check without contraband applies cleanly.
   - Then: merge music-one and entry-perf into release-v12, prod dump, apply the migrations in order, verify, push, tag v1.2, confirm Ready, smoke prod, kill 3300 and 3301.
+- **v1.2 scope check (David: "make sure everythign works well and new v2 has all changes made you can open browser to test if yo wish"):** every branch ahead of main was checked. Added as merge 9: game/npc-editor 2a67bfb0, plus David's Residents editor look edits (marlo, mayor, sushi-chef, wren). They were exported from collection `residents` to scratchpad/residents-export/residents-export.json and sent to release-v12, to apply before the one final gen-seeds. Superseded and left out:
+  - creator-water (its gunwale and boat work is already in main);
+  - fish-tiers-ui-r1 (the rejected cream round);
+  - perf-v1, asset-audit and asset-thumbs (tools and audits);
+  - avatar-v8, classes-launch-tuning, apply-world and director-developer-recruitment (old).
+  Testing stays headless, even with David's go to open a browser.
