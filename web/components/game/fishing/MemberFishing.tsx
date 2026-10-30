@@ -165,7 +165,7 @@ function MemberReel({ fish, known, onDone, initialInput, rig, help, boss, raidId
       if (success) {
         const box = track.getBoundingClientRect();
         delete panel.dataset.tension;
-        sparkBurst(box.left + sim.fishPosition * box.width, box.top + box.height / 2, ["var(--ui-water-deep)", "var(--ui-water-line)", `var(--gui-rarity-${fish.rarity})`], 14);
+        sparkBurst(box.left + sim.fishPosition * box.width, box.top + box.height / 2, ["var(--ui-water-deep)", "var(--ui-water-line)", `var(--ui-rarity-${fish.rarity})`], 14);
         splash(box.left + sim.fishPosition * box.width, box.top + box.height / 2, 8);
         track.style.overflow = "visible";
         // The fish itself leaps (its rail stays where it is).
@@ -207,8 +207,8 @@ export function MemberCatchCard({ fish, sizeCm, recipe, together = null, isNew, 
     const stage = cardRef.current?.firstElementChild?.getBoundingClientRect();
     if (!stage) return;
     const x = stage.left + stage.width / 2, y = stage.top + stage.height / 2;
-    if (rare) sparkBurst(x, y, [`var(--gui-rarity-${fish.rarity})`, "var(--ui-water-deep)", "var(--ui-card)"], fish.rarity === "rare" ? 10 : 18);
-    if (suspense) confettiBurst(x, y, [`--gui-rarity-${fish.rarity}`, "--ui-water-deep", "--ui-water-line"], suspense.confetti);
+    if (rare) sparkBurst(x, y, [`var(--ui-rarity-${fish.rarity})`, "var(--ui-water-deep)", "var(--ui-card)"], fish.rarity === "rare" ? 10 : 18);
+    if (suspense) confettiBurst(x, y, [`--ui-rarity-${fish.rarity}`, "--ui-water-deep", "--ui-water-line"], suspense.confetti);
   } });
   // The build's ticks: quicker and higher toward the reveal.
   useEffect(() => {
