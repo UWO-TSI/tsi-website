@@ -525,11 +525,11 @@ describe("fishing together (s-fishtogether)", () => {
     mock.friends = [{ member_id: B, world_name: "Mika", since: "2026-10-01" }];
     const together = await post({ action: "cast", site: "village", at: SHORE, power: 0.5, tool: ROD, with: B });
     expect(together.body.catch.together).toBe("Mika");
-    expect(vi.mocked(watched).mock.calls.at(-1)?.[7]).toBe(true);
+    expect(vi.mocked(watched).mock.calls.at(-1)?.[8]).toBe(true);
     later(60_000);
     mock.friends = [];
     const alone = await post({ action: "cast", site: "village", at: SHORE, power: 0.5, tool: ROD, with: B });
     expect(alone.body.catch.together).toBeNull();
-    expect(vi.mocked(watched).mock.calls.at(-1)?.[7]).toBe(false);
+    expect(vi.mocked(watched).mock.calls.at(-1)?.[8]).toBe(false);
   });
 });

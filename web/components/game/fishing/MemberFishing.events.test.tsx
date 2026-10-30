@@ -76,6 +76,6 @@ describe("MemberFishing's fishing events (the tutorial's first-catch chip)", () 
     const src = readFileSync(new URL("./MemberFishing.tsx", import.meta.url), "utf8");
     expect(src).toContain("useFishingSession(");
     expect(src).toContain('aria-label="Fishing reel"');
-    expect(readFileSync(new URL("../../../lib/game/useReelLoop.ts", import.meta.url), "utf8")).toMatch(/createFishingReel\(fish, boss\)/);
+    expect(readFileSync(new URL("../../../lib/game/useReelLoop.ts", import.meta.url), "utf8")).toMatch(/createFishingReel\(fish, boss, undefined, rig\?\.barMul\)/);
   });
 });

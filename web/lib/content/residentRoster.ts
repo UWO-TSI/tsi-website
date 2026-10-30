@@ -76,6 +76,8 @@ export const RESIDENT_GIFTS: Readonly<Record<string, GiftTastes>> = {
   mayor: { loves: ["nature"], likes: ["fruit", "mineral"], hates: ["sea"] },
   shopkeeper: { loves: ["mineral"], likes: ["fish"], hates: ["nature"] },
   curator: { loves: ["bug"], likes: ["fish", "sea"], hates: ["fruit"] },
+  // Juno takes each new member's first catch for the halls (main-quest m1); a proposal for David (release-v12).
+  docent: { loves: ["fish"], likes: ["mineral"], hates: ["fruit"] },
   "wharf-keeper": { loves: ["fish"], likes: ["sea"], hates: ["bug"] },
   "oracle-keeper": { loves: ["nature"], likes: ["mineral"], hates: ["fish"] },
   crafter: { loves: ["mineral"], likes: ["sea"], hates: ["nature"] },

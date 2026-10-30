@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { BOX_CATEGORIES, BOX_GEAR, boxPool, CATALOGUE, SETTINGS, WELCOME_TRACK, FISH_CHEF_PAY, FISH_TASK_PAY, FISH_TASK_VARIETY, STAFF_MEAL, SUSHI_MENU } from "./catalogue";
+import { BOX_CATEGORIES, BOX_GEAR, boxPool, CATALOGUE, HOLLOW_TOOLS, SETTINGS, WELCOME_TRACK, FISH_CHEF_PAY, FISH_TASK_PAY, FISH_TASK_VARIETY, STAFF_MEAL, SUSHI_MENU } from "./catalogue";
 import { memoryEconomyStore } from "./memoryStore";
 import { dailySpecials, isOnSale, seedItems, sellPrice, speciesClass, speciesSellPrice, torontoDay, chefOrder, fishingTasks } from "./rules";
 import { DROPS } from "@/lib/game/drops";
@@ -328,7 +328,8 @@ describe("the welcome week (d-streak)", () => {
     expect(pool.length).toBeGreaterThan(10);
     expect(pool.some(i => i.id === "x-contraband")).toBe(false);
     const gear = pool.filter(i => i.category === "tool");
-    expect(gear.map(i => i.slug).sort()).toEqual([...BOX_GEAR].sort());
+    // The hollow tools are off sale (rod-gear), so the box skips them until they do something.
+    expect(gear.map(i => i.slug).sort()).toEqual(BOX_GEAR.filter(s => !HOLLOW_TOOLS.includes(s)).sort());
     for (const i of pool.filter(i => i.category !== "tool")) {
       expect(BOX_CATEGORIES as readonly string[]).toContain(i.category);
       expect(i.price_coins).not.toBeNull();

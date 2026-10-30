@@ -52,7 +52,7 @@ describe("Contraband is staff tools: no obtainable source has one (David, 2026-1
   });
   it("can't be put on a shop row, in the admin editor or the database", () => {
     expect(OBTAINABLE).not.toContain("contraband");
-    const sql = readFileSync(new URL("../supabase/migrations/20261027140000_rarity_ladder.sql", import.meta.url), "utf8");
+    const sql = readFileSync(new URL("../supabase/migrations/20261030010500_shop_items_no_contraband.sql", import.meta.url), "utf8");
     expect(sql.match(/shop_items_rarity_check\s+CHECK \(([^)]*)\)/)?.[1]).not.toMatch(/contraband/);
   });
 });

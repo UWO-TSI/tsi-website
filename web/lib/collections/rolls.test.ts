@@ -99,7 +99,7 @@ describe("a meal's buff in the server's roll (f-sushi)", () => {
   it("brings rarer fish with luck and bigger ones with size, within each species' range", () => {
     const run = (buff?: { luck: number; size: number }) => {
       const random = seededRandom(7);
-      return Array.from({ length: 4000 }, () => fishRoll("sea", 0, rodByTier(1), NOON, "clear", random, undefined, buff));
+      return Array.from({ length: 4000 }, () => fishRoll("sea", 0, rodByTier(5), NOON, "clear", random, undefined, buff));
     };
     const plain = run(), fed = run({ luck: 0.35, size: 0.6 });
     const rare = (rs: typeof plain) => rs.filter(r => r.fish.rarity !== "common" && r.fish.rarity !== "uncommon").length;
