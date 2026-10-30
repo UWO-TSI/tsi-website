@@ -666,3 +666,4 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
 - **Volleyball:** David approved the net concept (go relayed).
   - Effects plan page: https://claude.ai/artifact/DR29UeZaYKrVSZSrXZ9hPk (ids fx-*; 15 effects plus the performance rule). The VFX build waits for his picks.
   - His ask: "hella effects... bump set spike effect, slide, when ball gets blocked, when it hits the groud it shakes abit and kinda exploads".
+- **Volleyball effects approved.** Every contact gets four timing grades (perfect, good, early, late). Each effect is built and checked one by one with its own strip. Sound effects are synthesised or CC0 only, logged in web/public/audio/sfx/SOURCES.md; that rule is now in lane-rules (David 2026-10-30). Music and voice still need David.
