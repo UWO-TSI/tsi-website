@@ -4,7 +4,12 @@ Worktree `.claude/worktrees/music-one`, branch `game/music-one`, from origin/mai
 
 ## Status
 
-Started 2026-10-30. Nothing done yet.
+Done 2026-10-30, reported to the coordinator. Build commit be1463f3 (head: the lane-file commit after it). Not yet reviewed.
+
+- The three sources were the ambient channel (the CC0 time-of-day music), the music channel (its fallback, Stream Cafe's Ocean Railway or Willow Tree) and the campfire drums (`setLoop`). The before probe at the campfire showed all three at once. There was no duplicate manager or double start.
+- Fix, in `lib/game/audio.ts` and `musicSchedule.ts`: the music channel is the bed. It plays the room override, else the block's file, else the time-of-day track for the island's phase (`setMusic` now takes `phase`; `useMusicDirector` passes it). On the member island the ambient channel plays only listed real ambience (none exists), so it's silent. A playing loop layer ducks the bed (`channelVolume`, `DUCK_FULL` 0.15). `fallbackTrackFor` and `DAY_BLOCKS` were deleted. The applicant island is unchanged: its Stream Cafe track stays on the ambient channel.
+- Gates: tsc clean, eslint clean on changed files, 40 tests in the 4 audio test files pass. Evidence: `specs/evidence/music-one/audible.txt` (before and after table), `audible.mjs` (the probe).
+- Trial merges: clean into game/release-v12. No conflicts in this lane's files with volleyball, tutorial-v2, fishing-depth or daily-social.
 
 ## David's decisions
 
@@ -42,7 +47,14 @@ Keep the change small and in the one place every caller goes through (AudioManag
 
 Message the coordinator ("main") when done: the head SHA, what the three sources were, what changed, the table, and the tests. Keep the branch mergeable into game/release-v12 (the coordinator merges it there).
 
+## Next
+
+- Nothing until the review. Open items for the coordinator: the Ambience slider in Settings now does nothing on the member island (kept for real ambience later). Spawning right at the sushi bar (`?at=` next to it) flickers its override off. That bug is already on base 82a3c70b; arriving from a distance works.
+
 ## Tools and gotchas
+
+- Probe: `specs/evidence/music-one/audible.mjs` (run from a scratch copy with PORT=3321 and scene names: title day night campfire cafe bar). It patches play and AudioBufferSourceNode.start and samples the gain chains. Campfire dance: dispatch `tsi:sit` with clip DanceStomp next to `window.__campfire.site`. Move the player with `window.__move.teleport(x, z)`.
+- `/student/apply/portal` throws without Supabase env, so the applicant island can't be measured headless in a lane.
 
 - withlock: `LANE=game/music-one /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh heavy|devserver <cmd>`; exit 75 means retry. Never create a queue file.
 - Swap is nearly full. One headless browser at a time; close it and your dev server after each run. Kill only PIDs you started.
