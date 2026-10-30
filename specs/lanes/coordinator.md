@@ -644,3 +644,4 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - The court is at (-7.5, 103.8), turned a quarter; the shells and gather-shell-2 moved off it.
   - Six questions for David are on the page (the ball refs, animations, residents on the court, sharing the PowerMeter, the match length, casual rewards).
   - perf:check passed (a passerby gets +0 ms; a player in a match gets +1.2 ms).
+- **David's volleyball test server:** port 3301, bound to 0.0.0.0, worktree volleyball-test (detached at c2669f17), Supabase blanked. PID in scratchpad/volleyball-test-dev.pid. URLs: /lab/island?at=-7.5,107 (walk to the net, press E) and /lab/volleyball. Kill it, and 3300, when David is done.
