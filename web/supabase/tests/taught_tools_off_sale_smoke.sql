@@ -7,7 +7,9 @@ DO $$ BEGIN
   ASSERT NOT (SELECT active FROM shop_items WHERE slug = 'net-basic'), 'the bug net is off sale';
   ASSERT NOT (SELECT active FROM shop_items WHERE slug = 'shovel-basic'), 'the shovel is off sale';
   ASSERT (SELECT count(*) FROM shop_items WHERE slug IN ('net-basic', 'shovel-basic')) = 2, 'retired, not deleted';
-  ASSERT (SELECT bool_and(active) FROM shop_items WHERE slug IN ('net-mid', 'shovel-mid', 'rod-basic', 'rod-cedar', 'rod-glass')), 'the better tools are still sold';
+  ASSERT (SELECT bool_and(active) FROM shop_items WHERE slug IN ('rod-cedar', 'rod-glass')), 'the better rods are still sold';
+  -- The hollow tools (no effect behind them) are off sale too (rod-gear, 2026-10-27).
+  ASSERT NOT (SELECT bool_or(active) FROM shop_items WHERE slug IN ('net-mid', 'shovel-mid', 'rod-basic')), 'the hollow tools are off sale';
   RAISE NOTICE 'taught tools 1 off sale ok';
 END $$;
 -- A member who bought the bug net while it was on sale keeps it, and the shop won't sell them the shovel.

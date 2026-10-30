@@ -3,7 +3,8 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { BOX_CATEGORIES, BOX_GEAR, boxPool, CATALOGUE, SETTINGS, WELCOME_TRACK } from "./catalogue";
 import { memoryEconomyStore } from "./memoryStore";
-import { dailySpecials, seedItems, sellPrice, speciesClass, speciesSellPrice, torontoDay } from "./rules";
+import { dailySpecials, isOnSale, seedItems, sellPrice, speciesClass, speciesSellPrice, torontoDay } from "./rules";
+import { DROPS } from "@/lib/game/drops";
 import { ROSTER } from "@/lib/collections/roster";
 import { buy, claimDailyGift, equip, getShop, getWallet, pickupCode, reserveMerch, resolveMerch, sell, sellList, type GiftView } from "./service";
 
@@ -28,8 +29,8 @@ describe("wallet credit/debit", () => {
 describe("buying", () => {
   it("charges the server price once per key, refuses a second copy and insufficient funds", async () => {
     const m = memoryEconomyStore(() => noon);
-    m.fund(A, 150);
-    const rod = slug(m, "rod-basic");
+    m.fund(A, 350);
+    const rod = slug(m, "bait-sweet");
     expect(await buy(m.store, A, { item_id: rod, qty: 1, idempotency_key: "buy-0001" }, noon)).toMatchObject({ ok: true, data: { balance: 50, owned: 1, replayed: false } });
     expect(await buy(m.store, A, { item_id: rod, qty: 1, idempotency_key: "buy-0001" }, noon)).toMatchObject({ ok: true, data: { balance: 50, replayed: true } });
     expect(await buy(m.store, A, { item_id: rod, qty: 1, idempotency_key: "buy-0002" }, noon)).toMatchObject({ ok: false, code: "already_owned" });
@@ -260,18 +261,45 @@ describe("merch reservations (row 47)", () => {
 });
 
 describe("inventory", () => {
-  it("equips one item per slot", async () => {
+  it("equips one item per slot: bait and a bobber on the rod at once (v1-gameplay x-shop)", async () => {
     const m = memoryEconomyStore(() => noon);
-    m.fund(A, 1000);
-    const basic = slug(m, "rod-basic");
-    const cedar = slug(m, "rod-cedar");
-    await buy(m.store, A, { item_id: basic, qty: 1, idempotency_key: "buy-0010" }, noon);
-    await buy(m.store, A, { item_id: cedar, qty: 1, idempotency_key: "buy-0011" }, noon);
-    await equip(m.store, A, { item_id: basic, equipped: true });
-    const r = await equip(m.store, A, { item_id: cedar, equipped: true });
+    m.fund(A, 2000);
+    for (const [s, k] of [["bobber-lucky", "buy-0010"], ["bait-sweet", "buy-0011"]]) await buy(m.store, A, { item_id: slug(m, s), qty: 1, idempotency_key: k }, noon);
+    await equip(m.store, A, { item_id: slug(m, "bobber-lucky"), equipped: true });
+    const r = await equip(m.store, A, { item_id: slug(m, "bait-sweet"), equipped: true });
     const tools = r.ok ? r.data.groups.tools : [];
-    expect(tools.filter((x) => x.equipped).map((x) => x.item.slug)).toEqual(["rod-cedar"]);
+    expect(tools.filter((x) => x.equipped).map((x) => x.item.slug).sort()).toEqual(["bait-sweet", "bobber-lucky"]);
     expect(await equip(m.store, A, { item_id: slug(m, "net-basic"), equipped: true })).toMatchObject({ ok: false, code: "not_owned" });
+  });
+});
+
+describe("the rod shop (v1-gameplay m4): the tools shelf", () => {
+  it("shows the rods up to rare by tier (the starter and the workbench ones not for sale; the epic Tidewarden off the shelf), then the add-ons, and nothing hollow", async () => {
+    const m = memoryEconomyStore(() => noon);
+    m.fund(A, 5000);
+    const shop = await getShop(m.store, A, noon);
+    const tools = shop.ok ? shop.data.tabs.tools : [];
+    expect(tools.slice(0, 6).map((e) => e.catalogue_ref)).toEqual(["rod_flimsy", "rod_cedar", "rod_glass", "rod_lighthouse", "bait_sweet", "bobber_lucky"]);
+    expect(tools.some((e) => e.catalogue_ref === "rod_tidewarden")).toBe(false);
+    expect(tools.filter((e) => e.made).map((e) => [e.catalogue_ref, e.made, e.can_buy, e.owned])).toEqual([
+      ["rod_flimsy", "starter", false, 1], ["rod_lighthouse", "workbench", false, 0]]);
+    for (const s of ["rod-basic", "net-mid", "shovel-mid"]) expect(tools.some((e) => e.slug === s), s).toBe(false);
+    expect(await buy(m.store, A, { item_id: slug(m, "rod-basic"), qty: 1, idempotency_key: "buy-0020" }, noon)).toMatchObject({ ok: false, code: "not_for_sale" });
+  });
+  it("hides home things on the one switch that opens homes in every world: the home island's drop, as the boat home and Claim your plot", () => {
+    // The village and the new world alike: homes open with drop 4 (lib/game/drops.ts), whatever NEXT_PUBLIC_GAME_WORLD is.
+    const sofa = seedItems().find((i) => i.slug === "furn-lounge-sofa")!, rod = seedItems().find((i) => i.slug === "rod-cedar")!;
+    expect(isOnSale(sofa, noon, true)).toBe(true);
+    expect(isOnSale(sofa, noon, false)).toBe(false);
+    expect(isOnSale(sofa, noon)).toBe(DROPS.homeIsland);
+    expect(isOnSale(rod, noon, false)).toBe(true);
+  });
+  it("keeps home things off the shelves until homes open", async () => {
+    const m = memoryEconomyStore(() => noon);
+    const shop = await getShop(m.store, A, noon);
+    const home = (c: string) => ["furniture", "wallpaper", "flooring"].includes(c);
+    expect(shop.ok && shop.data.tabs.furniture).toEqual([]);
+    expect(shop.ok && shop.data.tabs.specials.some((e) => home(e.category))).toBe(false);
   });
 });
 

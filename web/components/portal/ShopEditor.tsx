@@ -6,7 +6,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { ShopItem, ShopCategory } from "@/lib/content/types";
-import { RARITIES, type Rarity } from "@/lib/rarity";
+import { OBTAINABLE, type Rarity } from "@/lib/rarity";
 import type { ShopCategory as CatalogueCategory } from "@/lib/wallet/catalogue";
 import ImageUploadButton from "@/components/portal/ImageUploadButton";
 import { CurrencyIcon } from "@/components/economy/Amount";
@@ -479,7 +479,7 @@ export default function ShopEditor({ mode, rowId, initial }: ShopEditorProps) {
             onChange={(e) => update("rarity", e.target.value as Rarity)}
             className="w-full"
           >
-            {RARITIES.map((r) => (
+            {OBTAINABLE.map((r) => (
               <option key={r} value={r}>
                 {r}
               </option>

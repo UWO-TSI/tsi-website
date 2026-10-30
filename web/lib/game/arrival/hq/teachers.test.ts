@@ -70,15 +70,16 @@ describe("tools unlocked by people (row 312)", () => {
     expect(questFinished("mine", { pickaxe: "given" })).toBe(NEW ? "pickaxe" : null);
   });
 
-  it("keeps the taught tools off the shop's shelves (David, 2026-10-17), the better tiers on them", () => {
+  it("keeps the taught tools off the shop's shelves (David, 2026-10-17), and the hollow ones (2026-10-27)", () => {
     // The pickaxe is never on a shelf: in the village nobody sells or teaches it, as before it existed.
     expect([...TAUGHT_TOOL_SLUGS].sort()).toEqual(["net-basic", "pickaxe-basic", "shovel-basic"]);
     const sold = (slug: string) => onSale(CATALOGUE.find(c => c.slug === slug)!);
     expect(sold("net-basic")).toBe(false);
     expect(sold("shovel-basic")).toBe(false);
-    expect(sold("net-mid")).toBe(true);
-    expect(sold("shovel-mid")).toBe(true);
-    expect(sold("rod-basic")).toBe(true);
+    // The tier 2 net and shovel had no effect, and the basic rod no tool behind it (v1-gameplay, "some shop items did nothing").
+    expect(sold("net-mid")).toBe(false);
+    expect(sold("shovel-mid")).toBe(false);
+    expect(sold("rod-basic")).toBe(false);
   });
 
   it("reads saved quests back safely", () => {

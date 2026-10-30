@@ -68,12 +68,13 @@ export const bossPhase = (stamina: number): 1 | 2 | 3 => (stamina > 2 / 3 ? 1 : 
  */
 export const reelAssist = { floor: 0 };
 
-/** `floor`: progress never drains below it (by default the reel assist's). */
-export function createFishingReel(fish: FishDef, boss = bossOf(fish.rarity), floor = reelAssist.floor) {
+/** `floor`: progress never drains below it (by default the reel assist's). `barMul` (the rod's control, rods.ts) widens the catch bar. */
+export function createFishingReel(fish: FishDef, boss = bossOf(fish.rarity), floor = reelAssist.floor, barMul = 1) {
   return {
     fish,
     floor,
-    barWidth: RARITY_META[fish.rarity].barW * (boss ? BOSS.barMul[0] : 1),
+    barMul,
+    barWidth: Math.min(0.5, RARITY_META[fish.rarity].barW * barMul * (boss ? BOSS.barMul[0] : 1)),
     position: 0,
     velocity: 0,
     fishPosition: 0.15,
@@ -94,8 +95,8 @@ export function createFishingReel(fish: FishDef, boss = bossOf(fish.rarity), flo
 export type FishingReel = ReturnType<typeof createFishingReel>;
 
 /** Preserve the authored 60 Hz fight on every display; bound suspended-frame catch-up. */
-/** `tensionMul` (rod tier, rods.ts) scales how fast progress drains while the fish is outside the bar. */
-export function advanceFishingReel(state: FishingReel, delta: number, holding: boolean, dartChanceMultiplier: number, random = Math.random, tensionMul = 1) {
+/** The rod's stats (rods.ts): `tensionMul` scales the drain while the fish is outside the bar, `fillMul` the fill inside it. */
+export function advanceFishingReel(state: FishingReel, delta: number, holding: boolean, dartChanceMultiplier: number, random = Math.random, tensionMul = 1, fillMul = 1) {
   const events = { bounced: false, darted: false, warned: null as BossMove | null, moved: null as BossMove | null, phased: false };
   if (state.result !== null) return events;
   state.remainder += Math.max(0, Math.min(delta, 0.1));
@@ -155,7 +156,7 @@ export function advanceFishingReel(state: FishingReel, delta: number, holding: b
       else if (state.progress === 0) state.result = false;
       continue;
     }
-    state.progress = Math.max(state.floor, Math.min(1, state.progress + (state.inside ? FILL_RATE : -drainRate) * STEP));
+    state.progress = Math.max(state.floor, Math.min(1, state.progress + (state.inside ? FILL_RATE * fillMul : -drainRate) * STEP));
     if (state.progress === 1) state.result = true;
     else if (state.progress === 0) state.result = false;
   }
@@ -167,7 +168,7 @@ function bossTurn(state: FishingReel, boss: BossReel, random: () => number, even
   const phase = bossPhase(boss.stamina);
   if (phase !== boss.phase) {
     boss.phase = phase;
-    state.barWidth = RARITY_META[state.fish.rarity].barW * BOSS.barMul[phase - 1];
+    state.barWidth = Math.min(0.5, RARITY_META[state.fish.rarity].barW * state.barMul * BOSS.barMul[phase - 1]);
     state.position = Math.min(state.position, 1 - state.barWidth);
     events.phased = true;
   }

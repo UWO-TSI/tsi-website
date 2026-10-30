@@ -24,6 +24,8 @@ import { SHELF_LABEL, itemLine, shelfItems, shopShelves, type ShopSection, type 
 import { CardGrid, Code, ColourDots, DarkButton, DetailView, FlatPanel, GhostButton, HairlineRow, HairlineRows, IconRail, InfoHead, ItemCard, Purse, Quiet, RowActions, STAGE, StatusLine,
   flatStyles as f } from "@/components/gui/flat";
 import ItemViewer from "./ItemViewer";
+import { RodRadar, TackleRadar, rodLine, rodOf } from "./RodGear";
+import { tackleByKey } from "@/lib/game/rods";
 
 const SHELF_ICON: Record<string, ReactNode> = {
   tools: <Wrench size={22} />, outfits: <Shirt size={22} />, furniture: <Sofa size={22} />, specials: <BadgePercent size={22} />, sell: <HandCoins size={22} />,
@@ -62,10 +64,21 @@ function countUp(el: HTMLElement | null, from: number, to: number, timers: numbe
 }
 
 function Card({ e, onOpen }: { e: ShopEntry; onOpen: () => void }) {
-  // An unpriced item (merch waiting on its price): "Price to come" on its pill, and its action off.
+  // An unpriced item (merch waiting on its price): "Price to come" on its pill, and its action off. A rod the shop
+  // doesn't sell (the starter, the workbench ones) says where it comes from instead.
   return <ItemCard picture={picture(e)} name={e.name} line={e.owned > 0 && !e.can_buy ? "Owned" : itemLine(e)} tag={tagOf(e)}
-    price={{ amount: e.price, currency: e.currency }} cover={e.stock === 0 ? "sold-out" : null}
-    onClick={onOpen} label={`${e.name}, ${e.price} ${e.currency}`} testId="shop-card" />;
+    price={e.made ? null : { amount: e.price, currency: e.currency }} pill={e.made ? MADE_PILL[e.made] : undefined} cover={e.stock === 0 ? "sold-out" : null}
+    rarity={rodOf(e.catalogue_ref)?.rarity} onClick={onOpen} label={`${e.name}, ${e.price} ${e.currency}`} testId="shop-card" />;
+}
+
+const MADE_PILL = { starter: "Yours", workbench: "Workbench" } as const;
+const MADE_ACTION = { starter: "Yours from the start", workbench: "Made at the workbench" } as const;
+const MADE_FINE = { starter: "Everyone fishes with it from day one.", workbench: "Craft it at a workbench." } as const;
+
+/** A rod's radar (the rod alone: the shop has no slots, David 2026-10-28), or an add-on's own. */
+function GearInfo({ e }: { e: ShopEntry }) {
+  const rod = rodOf(e.catalogue_ref), add = tackleByKey(e.catalogue_ref);
+  return rod ? <RodRadar rod={rod} /> : add ? <TackleRadar tackle={add} /> : null;
 }
 
 function Detail({ e, list, onPick, onBack, busy, onPay, viewer }: {
@@ -79,20 +92,24 @@ function Detail({ e, list, onPick, onBack, busy, onPay, viewer }: {
   const spec = useMemo(() => itemModel(e), [e]);
   // A hair dye's colour dots: the other dyes on the shelf.
   const dyes = e.category === "hair" ? list.filter(x => x.category === "hair") : [];
+  const rod = rodOf(e.catalogue_ref), gear = !!rod || !!tackleByKey(e.catalogue_ref);
   const action = merch ? "Redeem" : e.owned > 0 && e.can_buy ? "Buy another" : e.owned > 0 ? "Owned" : "Buy";
-  return <DetailView testId="shop-detail" onBack={onBack} hint={e.slug === "merch-tsi-lanyard" ? "Drag to slide along" : e.slug === "merch-genesis-sticker" ? "Drag to tilt" : undefined}
+  return <DetailView testId="shop-detail" rarity={rod?.rarity} onBack={onBack} hint={e.slug === "merch-tsi-lanyard" ? "Drag to slide along" : e.slug === "merch-genesis-sticker" ? "Drag to tilt" : undefined}
     stage={viewer ?? <ItemViewer key={e.id} spec={spec} picture={picture(e)} name={e.name} className={STAGE.stage} pictureClassName={STAGE.picture} />}
     steps={list.length > 1 ? { prev: { label: `Previous: ${prev.name}`, onClick: () => onPick(prev.id) }, next: { label: `Next: ${next.name}`, onClick: () => onPick(next.id) } } : null}
     info={<>
-      <InfoHead kind={kindOf(e)} title={e.name} text={itemLine(e)} />
+      <InfoHead kind={rod ? rodLine(rod) : kindOf(e)} title={e.name} text={itemLine(e)} />
       {dyes.length > 1 && <ColourDots value={e.id} onPick={onPick}
         items={dyes.map(d => ({ id: d.id, label: d.name, background: `url(${picture(d)}) center 62% / 260% no-repeat` }))} />}
+      <GearInfo e={e} />
     </>}
-    pay={{ price: { amount: e.price, currency: e.currency }, was: e.special ? e.base_price.toLocaleString() : null,
-      action: { label: busy === e.id ? "One moment…" : e.stock === 0 ? "Sold out" : action, disabled: !e.can_buy || busy !== null || e.stock === 0, onClick: () => onPay(e) } }}
-    fine={<>{merch ? "Pay with Gems. Reserve it here, then pick it up at HQ on campus." : `Pay with ${e.currency === "gems" ? "Gems" : "coins"}.`}
+    pay={e.made ? { action: { label: MADE_ACTION[e.made], disabled: true, onClick: () => {} } }
+      : { price: { amount: e.price, currency: e.currency }, was: e.special ? e.base_price.toLocaleString() : null,
+        action: { label: busy === e.id ? "One moment…" : e.stock === 0 ? "Sold out" : action, disabled: !e.can_buy || busy !== null || e.stock === 0, onClick: () => onPay(e) } }}
+    fine={e.made ? MADE_FINE[e.made]
+      : <>{merch ? "Pay with Gems. Reserve it here, then pick it up at HQ on campus." : `Pay with ${e.currency === "gems" ? "Gems" : "coins"}.`}
       {e.owned > 0 ? ` You own ${e.owned}.` : ""}</>}
-    specs={specsOf(e)} />;
+    specs={gear ? null : specsOf(e)} />;
 }
 
 /** The counter's Sell: what's in your bag the shop buys, one or the stack. */
@@ -166,7 +183,7 @@ export default function ShopOverlay({ open, onClose, title, section, sell = fals
   const shelves: (ShopShelf | "pickups")[] = useMemo(() => {
     if (!view) return [];
     const list: (ShopShelf | "pickups")[] = shopShelves(view, section, sell);
-    return section !== "items" ? [...list, "pickups"] : list;
+    return section === undefined || section === "merch" ? [...list, "pickups"] : list;
   }, [view, section, sell]);
   const current = shelf && shelves.includes(shelf) ? shelf : shelves[0] ?? null;
   const items = view && current && current !== "pickups" ? shelfItems(view, current) : [];
@@ -186,6 +203,7 @@ export default function ShopOverlay({ open, onClose, title, section, sell = fals
         setNote(`Bought ${e.name}.`);
         if (r.currency === "coins") countUp(coinsEl.current, r.balance + r.price_each, r.balance, timers.current);
         onBought?.(e, `The ${e.name.toLowerCase()}, all yours. Thanks for stopping by!`);
+        if (e.category === "tool") window.dispatchEvent(new CustomEvent("tsi:gear-changed"));
       }
       keysFor.current.delete(e.id);
       await load();

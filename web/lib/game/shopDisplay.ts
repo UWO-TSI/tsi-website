@@ -5,7 +5,8 @@
  * dailySpecials) until there's seasonal stock; everything else is a fixed pick from what's on sale.
  */
 import { CATALOGUE, OWNERSHIP_ITEMS, onSale, type CatalogueEntry } from "@/lib/wallet/catalogue";
-import { dailySpecials, torontoDay, type ShopItem } from "@/lib/wallet/rules";
+import { HOME_CATEGORIES, dailySpecials, torontoDay, type ShopItem } from "@/lib/wallet/rules";
+import { DROPS } from "./drops";
 import { iconKey, iconUrl, type IconSpec } from "@/lib/icons/manifest";
 import { itemSpec } from "@/lib/icons/itemModel";
 import { SHOP_SLOTS, SHOP_TAG_RANGE, type Level } from "./shopLayout";
@@ -14,7 +15,7 @@ import { SHOP_SLOTS, SHOP_TAG_RANGE, type Level } from "./shopLayout";
 export const SHOP_PICKS: Record<string, string> = {
   "clothes-1": "wear-top-cardigan", "clothes-2": "wear-top-collar-shirt", "clothes-3": "wear-top-tsi-crew",
   "clothes-4": "wear-shoes-loafers", "clothes-5": "wear-shoes-boots", "clothes-6": "wear-shoes-sandals",
-  "tools-1": "rod-cedar", "tools-2": "net-mid", "tools-3": "shovel-mid", "tools-4": "bag-30",
+  "tools-1": "rod-cedar", "tools-2": "rod-glass", "tools-3": "bobber-lucky", "tools-4": "bait-sweet",
   "dyes-1": "dye-wheat-blonde", "dyes-2": "dye-copper", "dyes-3": "dye-rust-red", "dyes-4": "dye-silver", "dyes-5": "dye-blossom-pink", "dyes-6": "dye-sea-blue",
   "accessories-1": "wear-acc-glasses-round", "accessories-2": "wear-acc-sunhat", "accessories-3": "wear-acc-cap", "accessories-4": "wear-acc-visor",
   "furniture-1": "furn-lounge-sofa", "furniture-2": "furn-floor-lamp", "furniture-3": "furn-study-chair",
@@ -48,6 +49,7 @@ export interface ShopDisplayItem {
 
 const ON_SALE: readonly CatalogueEntry[] = [...CATALOGUE, ...OWNERSHIP_ITEMS].filter(onSale);
 const BY_SLUG = new Map(ON_SALE.map(e => [e.slug, e]));
+const PLINTH_FILL = ON_SALE.filter(e => e.special_pool && (DROPS.homeIsland || !HOME_CATEGORIES.has(e.category)) && itemSpec(e));
 
 /** Today's specials as the shop picks them (the same shuffle the server runs on the same rows). */
 export function todaysSpecials(day: string): CatalogueEntry[] {
@@ -57,14 +59,17 @@ export function todaysSpecials(day: string): CatalogueEntry[] {
 
 /** Every display slot's item today (a slot with nothing to show is left out). */
 export function shopDisplay(now: Date = new Date()): ShopDisplayItem[] {
-  const specials = todaysSpecials(torontoDay(now));
+  // The plinths show today's specials that have a model, then fill up from the rest of the pool that does (a hairstyle
+  // has no model to stand on a plinth; home things wait for homes, lib/wallet/rules.ts).
+  const today = todaysSpecials(torontoDay(now)).filter(e => itemSpec(e));
+  const specials = [...today, ...PLINTH_FILL.filter(e => !today.includes(e))];
   const out: ShopDisplayItem[] = [];
   for (const s of SHOP_SLOTS) {
     const i = (SPECIALS_SLOTS as readonly string[]).indexOf(s.id);
     const entry = i >= 0 ? specials[i] : BY_SLUG.get(SHOP_PICKS[s.id] ?? "");
     const spec = entry && itemSpec(entry);
     if (!entry || !spec) continue;
-    out.push({ slot: s.id, slug: entry.slug, name: entry.display_name, icon: iconUrl(iconKey(entry)), spec, special: i >= 0 });
+    out.push({ slot: s.id, slug: entry.slug, name: entry.display_name, icon: iconUrl(iconKey(entry)), spec, special: i >= 0 && today.includes(entry) });
   }
   return out;
 }

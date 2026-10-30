@@ -11,7 +11,7 @@ import { shopIcon } from "@/lib/icons/keys";
 
 export type ShopCategory ="tool" | "outfit" | "hair" | "accessory" | "face" | "furniture" | "wallpaper" | "flooring" | "merch";
 export type Tier = "basic" | "mid" | "premium";
-export type Slot = "rod" | "net" | "shovel" | "pickaxe" | "outfit" | "hair" | "accessory";
+export type Slot = "rod" | "net" | "shovel" | "pickaxe" | "outfit" | "hair" | "accessory" | "bait" | "bobber";
 
 export interface CatalogueEntry {
   slug: string;
@@ -44,7 +44,7 @@ export const CATALOGUE: CatalogueEntry[] = [
   e("rod-basic", "Basic rod", "tool", 100, { tier: "basic", slot: "rod", description: "A sturdy starter rod." }),
   e("rod-cedar", "Cedar rod", "tool", 400, { tier: "mid", slot: "rod", catalogue_ref: "rod_cedar", description: "Lighter, and a little lucky." }),
   e("rod-glass", "Glass rod", "tool", 1200, { tier: "premium", slot: "rod", catalogue_ref: "rod_glass", description: "The pier regulars' favourite." }),
-  e("bobber-lucky", "Lucky bobber", "tool", 600, { tier: "premium", catalogue_ref: "bobber_lucky", description: "Tackle. Purely for luck." }),
+  e("bobber-lucky", "Lucky bobber", "tool", 600, { tier: "premium", slot: "bobber", catalogue_ref: "bobber_lucky", description: "A bobber for your rod: +20 luck, so rarer fish bite more often." }),
   e("net-basic", "Bug net", "tool", 100, { tier: "basic", slot: "net" }),
   e("net-mid", "Wide net", "tool", 400, { tier: "mid", slot: "net" }),
   e("shovel-basic", "Shovel", "tool", 100, { tier: "basic", slot: "shovel" }),
@@ -95,6 +95,8 @@ export const CATALOGUE: CatalogueEntry[] = [
   { ...e("merch-genesis-sticker", "GENESIS sticker", "merch", 0, { price_coins: null, price_gems: 200,
     description: "Holographic, in light or dark: the GENESIS ASCII art and GEN_26. Pick up at HQ on campus." }),
     sprite_url: "/assets/game/items/merch-genesis-sticker-light-sprite.webp" },
+  // Bait for the rod's bait slot (lib/game/rods.ts TACKLE; David 2026-10-27 x-shop). Last, so no earlier row moves.
+  e("bait-sweet", "Sweet bait", "tool", 300, { tier: "mid", slot: "bait", catalogue_ref: "bait_sweet", description: "Bait for your rod: +20 bite window and +10 lure, so you get longer to hook and bites come sooner." }),
 ];
 
 // ── Ownership (coordinator ruling on audit item 22; 20260926180000_ownership.sql) ──
@@ -187,13 +189,16 @@ export const OWNERSHIP_ITEMS: CatalogueEntry[] = [
  * 2026-10-17, "take them off sale"). Off sale; owners keep them, and the better tiers stay on the shelf.
  */
 export const TAUGHT_TOOL_SLUGS = ["net-basic", "shovel-basic", "pickaxe-basic"];
+/** Tools that did nothing in the shop (David 2026-10-27, v1-gameplay "some shop items did nothing"): the basic rod
+ * (no tool behind it: the flimsy rod is everyone's) and the tier 2 net and shovel (no tier effect yet). Off sale. */
+export const HOLLOW_TOOLS = ["rod-basic", "net-mid", "shovel-mid"];
 /** The placeholder tote and sticker pack, which aren't real merch (David, 2026-10-22: "Take both off sale"). */
 export const PLACEHOLDER_MERCH = ["merch-sticker-pack", "merch-tote"];
 /** Hairstyles David removed from the game (2026-10-27: Messy with headset, Fluffy boy, Wavy half-up): their shop rows go off sale. */
 export const REMOVED_HAIR = ["hair_wavy_half_up"];
-/** Shop rows with no character part: the pre-ownership outfits, the wardrobe cut's (CUT_WEARABLES), and the taught tools; and the placeholder merch. Off sale. */
+/** Shop rows with no character part: the pre-ownership outfits, the wardrobe cut's (CUT_WEARABLES), the taught tools and the hollow ones; and the placeholder merch. Off sale. */
 export const RETIRED = ["outfit-sage-overalls", "outfit-cream-knit", "outfit-wharf-raincoat", "outfit-club-tee", "hair-chestnut", "hair-sea-glass", "hair-sunset", "acc-straw-hat", "acc-round-glasses", "acc-bandana",
-  ...CUT_WEARABLES.map((c) => wearSlug(c.id)), ...REMOVED_HAIR.map(wearSlug), ...TAUGHT_TOOL_SLUGS, ...PLACEHOLDER_MERCH];
+  ...CUT_WEARABLES.map((c) => wearSlug(c.id)), ...REMOVED_HAIR.map(wearSlug), ...TAUGHT_TOOL_SLUGS, ...HOLLOW_TOOLS, ...PLACEHOLDER_MERCH];
 /** Sold, as opposed to only granted: starter clothes stay off sale. */
 export const onSale = (c: CatalogueEntry) => !RETIRED.includes(c.slug) && !(c.category !== "furniture" && c.catalogue_ref !== null && STARTER_REFS.has(c.catalogue_ref));
 

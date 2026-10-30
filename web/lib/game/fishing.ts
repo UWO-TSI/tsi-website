@@ -40,7 +40,7 @@ export const RARITY_META: Record<
   rare: { label: RARITY_LABEL.rare, color: "#889df0", weight: 18, barW: 0.24 },
   epic: { label: RARITY_LABEL.epic, color: "#b77dee", weight: 7, barW: 0.21 },
   legendary: { label: RARITY_LABEL.legendary, color: "#f7cd67", weight: 2.5, barW: 0.19 },
-  divine: { label: RARITY_LABEL.divine, color: "#7fd6dc", weight: 0.4, barW: 0.17 },
+  divine: { label: RARITY_LABEL.divine, color: "#b26bff", weight: 0.4, barW: 0.17 },
   // Shut until its earning path is decided (lib/rarity.ts): never rolled.
   contraband: { label: RARITY_LABEL.contraband, color: "#3b2436", weight: 0, barW: 0.15 },
 };

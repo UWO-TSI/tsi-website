@@ -25,6 +25,7 @@
   --ui-accent: #426b5b;
   --ui-accent-deep: #2f5143;
   --ui-accent-ink: #fffbe7;
+  --ui-chart: #5f86d0;  /* a chart's line and its light fill (the rod radar): soft, never bold */
   --ui-pill: #dfe9d9;
   --ui-pill-ink: #6b5843;
   --ui-disabled: #d3c39c;

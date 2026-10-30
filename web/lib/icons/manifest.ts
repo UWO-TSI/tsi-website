@@ -109,7 +109,7 @@ export function iconSpecs(shop: readonly Pick<CatalogueEntry, "slug" | "catalogu
   for (const e of shop) {
     const key = iconKey(e), ref = e.catalogue_ref ?? "";
     if (out.has(key)) continue;
-    if (key === "recipe_card" || key === "bobber-lucky" || key.startsWith("merch-")) add({ key, view: "three-quarter", url: `${ITEMS}${key === "recipe_card" ? "recipe_card" : e.slug}.glb` });
+    if (key === "recipe_card" || key === "bobber-lucky" || key === "bait-sweet" || key.startsWith("merch-")) add({ key, view: "three-quarter", url: `${ITEMS}${key === "recipe_card" ? "recipe_card" : e.slug}.glb` });
     // wardrobe batch 2: a hairstyle's icon is its creator tile (scripts/bake-hair-thumbs.mjs), a whole face's its parts on
     // the skin (art/characters/v7/face_icons.py), the colour wheel's the wheel (face_icons.py too): none is rendered here
     else if ((e.category === "hair" && (PART_BY_ID.has(ref) || ref === CUSTOM_HAIR_REF)) || e.category === "face") continue;

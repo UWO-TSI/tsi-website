@@ -9,10 +9,12 @@
  * with it; the grid stays in view. The grid is shared with the storage chest (ChestSheet). The server owns the stock
  * and the sizes (lib/game/bagStore); the grid's arrangement and the New marks are this device's.
  */
+import { RodRadar, RodSlots, RodStage, TackleRadar, equippedTackle, rodLine, rodOf } from "@/components/economy/RodGear";
+import { tackleByKey } from "@/lib/game/rods";
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { Apple, ArrowDownWideNarrow, Backpack, Bug, Fish, Gem, Lock, LockOpen, Pin, PinOff, Shirt, Sofa, Wrench, X } from "lucide-react";
 import { ConfirmDialog, SignInText } from "@/components/gui";
-import { CardGrid, DarkButton, FlatPanel, GhostButton, IconRail, ItemCard, NUDGE_GRID, Quiet, SidePanel, StatusLine, WithSide, flatStyles as f, useNudge } from "@/components/gui/flat";
+import { CardGrid, DarkButton, DetailView, FlatPanel, GhostButton, IconRail, InfoHead, ItemCard, NUDGE_GRID, Quiet, STAGE, SidePanel, StatusLine, WithSide, flatStyles as f, useNudge } from "@/components/gui/flat";
 import { Amount } from "@/components/economy/Amount";
 import { arrange, itemInfo, slotCounts, stackSize, type Slot } from "@/lib/collections/bag";
 import type { BagView } from "@/lib/collections/service";
@@ -27,7 +29,7 @@ import { ApiError } from "@/lib/apiClient";
 import { useLoad } from "@/components/economy/EconomySheets";
 import { cap } from "@/components/economy/ShopOverlay";
 import { bagWrite, loadBag, saveOrder, seeBag, sortBag, stockOf, swapSlots, useBag } from "@/lib/game/bagStore";
-import { httpEconomyTransport } from "@/lib/wallet/transport";
+import { httpEconomyTransport, type EconomyTransport } from "@/lib/wallet/transport";
 import type { InventoryRow } from "@/lib/wallet/store";
 import type { InventoryView } from "@/lib/wallet/service";
 import { DROPS } from "@/lib/game/drops";
@@ -131,8 +133,12 @@ const SHELVES: { id: Shelf; label: string; icon: ReactNode }[] = [
 const POCKET_FILTERS = new Set<Shelf>(["pockets", "fish", "bugs", "forage", "materials"]);
 
 /** The Bag (I): your pockets, filtered from the rail, and on its last shelves what you own that takes no pocket. */
-export function BagSheet({ open, onClose, keys }: { open: boolean; onClose: () => void; keys?: string }) {
-  const [shelf, setShelf] = useState<Shelf>("pockets");
+export function BagSheet({ open, onClose, keys, transport, initialShelf = "pockets" }: {
+  open: boolean; onClose: () => void; keys?: string;
+  /** What you own comes from here (the dev harness passes its memory store). */
+  transport?: EconomyTransport; initialShelf?: Shelf;
+}) {
+  const [shelf, setShelf] = useState<Shelf>(initialShelf);
   const bag = useBag();
   useEffect(() => { if (open) void loadBag(); }, [open]);
   // You looked: the New marks go as the bag closes.
@@ -146,7 +152,7 @@ export function BagSheet({ open, onClose, keys }: { open: boolean; onClose: () =
     purse={view ? <Readout used={view.used} capacity={view.capacity} label="Pockets" /> : undefined}
     rail={<IconRail label="Bag" value={shown} onChange={setShelf} items={shelves.map(x => ({ ...x, badge: x.id === "pockets" ? bag.fresh.length : undefined }))} />}>
     {POCKET_FILTERS.has(shown) ? <Pockets filter={shown === "pockets" ? null : shown as BagKind} title={SHELVES.find(x => x.id === shown)!.label} />
-      : <Owned group={shown as "tools" | "outfits" | "furniture"} />}
+      : <Owned group={shown as "tools" | "outfits" | "furniture"} transport={transport} />}
   </FlatPanel>;
 }
 
@@ -258,18 +264,17 @@ function Pins({ stock, onNote }: { stock: Record<string, number>; onNote: (n: { 
 
 const USE_HINT: Record<string, string> = { outfits: "Wear it from your closet", furniture: "Place it at home" };
 const SHELF_EMPTY: Record<string, string> = { tools: "No tools yet. The shop is by the plaza.", outfits: "No clothes yet. The shop is by the plaza.", furniture: "No furniture yet. The shop is by the plaza." };
-const SLOT_NAME: Record<string, string> = { rod: "Fishing rod", net: "Bug net", shovel: "Shovel", outfit: "Outfit", hair: "Hair dye", accessory: "Accessory" };
+const SLOT_NAME: Record<string, string> = { rod: "Fishing rod", net: "Bug net", shovel: "Shovel", outfit: "Outfit", hair: "Hair dye", accessory: "Accessory", bait: "Bait", bobber: "Bobber" };
 const rowPicture = (r: InventoryRow) => r.item.sprite_url ?? shopIcon(r.item);
 
 /** One shelf of what you own (tools, clothes, furniture and finishes): cards, and the picked one in the side panel. */
-function Owned({ group }: { group: "tools" | "outfits" | "furniture" }) {
-  const transport = httpEconomyTransport;
+function Owned({ group, transport = httpEconomyTransport }: { group: "tools" | "outfits" | "furniture"; transport?: EconomyTransport }) {
   const { data, error, reload, setError } = useLoad<InventoryView>(useCallback(() => transport.inventory(), [transport]));
   const [picked, setPicked] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const toggle = async (id: string, on: boolean) => {
     setBusy(true);
-    try { await transport.equip(id, on); await reload(); }
+    try { await transport.equip(id, on); await reload(); window.dispatchEvent(new CustomEvent("tsi:gear-changed")); }
     catch (e) { setError(errText(e)); }
     finally { setBusy(false); }
   };
@@ -278,16 +283,27 @@ function Owned({ group }: { group: "tools" | "outfits" | "furniture" }) {
   const row = rows.find(r => r.item.id === picked) ?? null;
   const title = SHELVES.find(x => x.id === group)!.label;
   const kind = (r: InventoryRow) => r.item.slot ? SLOT_NAME[r.item.slot] ?? cap(r.item.slot) : cap(String(r.item.category));
+  // A rod opens large: the model with its add-ons hanging from the tip, the slots in the stage's corner, the radar of
+  // the build (RodGear.tsx). An add-on shows its own radar.
+  const rod = rodOf(row?.item.catalogue_ref), add = tackleByKey(row?.item.catalogue_ref), on = equippedTackle(rows);
+  if (row && rod) return <>
+    {error && <StatusLine error><SignInText text={error} /></StatusLine>}
+    <DetailView testId="bag-rod" rarity={rod.rarity} onBack={() => setPicked(null)} stage={<RodStage rod={rod} tackle={on} className={STAGE.stage} />}
+      corner={<RodSlots rows={rows} busy={busy} onEquip={(id, eq) => void toggle(id, eq)} />}
+      info={<><InfoHead kind={rodLine(rod)} title={row.item.display_name} text={row.item.description ?? undefined} /><RodRadar rod={rod} tackle={on} /></>}
+      fine="Take it out from the tool wheel." />
+  </>;
   const side = row ? <SidePanel key={row.item.id} testId="bag-owned-item" onClose={() => setPicked(null)} picture={rowPicture(row)} title={row.item.display_name} kind={kind(row)}
-    facts={[["You own", row.qty.toLocaleString()], ["Status", row.item.slot ? (row.equipped ? "Equipped" : "In your closet") : USE_HINT[group] ?? "Yours"],
+    facts={[["You own", row.qty.toLocaleString()], ["Status", row.item.slot ? (row.equipped ? (add ? "On your rod" : "Equipped") : "In your closet") : USE_HINT[group] ?? "Yours"],
       ...(row.item.description ? [["About", row.item.description] as const] : [])]}
     actions={row.item.slot ? <DarkButton disabled={busy} onClick={() => void toggle(row.item.id, !row.equipped)}>{busy ? "One moment…" : row.equipped ? "Unequip" : "Equip"}</DarkButton> : null}>
     {error && <StatusLine error><SignInText text={error} /></StatusLine>}
+    {add && <TackleRadar tackle={add} />}
   </SidePanel> : null;
   return <>
     {!row && error && <StatusLine error><SignInText text={error} /></StatusLine>}
     {rows.length === 0 ? <Quiet>{SHELF_EMPTY[group]}</Quiet>
-      : <WithSide side={side}><CardGrid title={title} min={170} phoneMin={150}>{rows.map(r => <ItemCard key={r.item.id} size="md" arrow={false} picture={rowPicture(r)} name={r.item.display_name}
+      : <WithSide side={side}><CardGrid title={title} min={170} phoneMin={150}>{rows.map(r => <ItemCard key={r.item.id} size="md" arrow={false} rarity={rodOf(r.item.catalogue_ref)?.rarity} picture={rowPicture(r)} name={r.item.display_name}
         line={r.item.slot ? kind(r) : USE_HINT[group] ?? kind(r)} selected={r.item.id === picked}
         pill={r.equipped ? "Equipped" : r.qty > 1 ? `×${r.qty}` : null} onClick={() => setPicked(r.item.id === picked ? null : r.item.id)} label={`${r.item.display_name}${r.equipped ? ", equipped" : ""}`} />)}</CardGrid></WithSide>}
   </>;

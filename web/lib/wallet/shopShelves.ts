@@ -8,7 +8,8 @@ import { merchFilters, merchKind, type MerchKind } from "./merchShelf";
 
 export type ItemShelf = "tools" | "outfits" | "furniture" | "specials";
 export type ShopShelf = ItemShelf | "merch" | `merch:${MerchKind}` | "sell";
-export type ShopSection = "items" | "merch";
+/** The shopkeeper's answer (the game's things or the club merch), or the tackle shop's rod shop (its tools shelf). */
+export type ShopSection = "items" | "merch" | "rods";
 
 export const SHELF_LABEL: Record<string, string> = {
   tools: "Tools", outfits: "Clothes", furniture: "Home", specials: "Today's specials", sell: "Sell",
@@ -17,7 +18,9 @@ export const SHELF_LABEL: Record<string, string> = {
 
 /** The sidebar, top to bottom. `section` narrows it to one answer of the shopkeeper's; `sell` adds the counter's Sell. */
 export function shopShelves(view: Pick<ShopView, "tabs">, section?: ShopSection, sell = false): ShopShelf[] {
-  const items: ShopShelf[] = ["tools", "outfits", "furniture", "specials"];
+  if (section === "rods") return ["tools"];
+  // A shelf with nothing on it (home things before homes open, no specials in the pool) isn't shown; tools always is.
+  const items = (["tools", "outfits", "furniture", "specials"] as ShopShelf[]).filter(s => s === "tools" || view.tabs[s as ItemShelf].length > 0);
   const merch: ShopShelf[] = merchFilters(view.tabs.merch).map(f => (f === "all" ? "merch" : `merch:${f}` as ShopShelf));
   const shelves = section === "merch" ? merch : section === "items" ? items : [...items, "merch" as ShopShelf];
   return sell && section !== "merch" ? [...shelves, "sell"] : shelves;

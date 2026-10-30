@@ -427,3 +427,70 @@ div.card:hover { box-shadow: none; }
 .spinBall > i { position: absolute; left: calc(50% + var(--sx) * 34px); top: calc(50% - var(--sy) * 34px); width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%;
   background: var(--ui-ink); box-shadow: 0 0 0 3px var(--ui-card), 0 2px 6px rgb(var(--ui-shade) / 0.3); transition: left 0.05s linear, top 0.05s linear; }
 .spin[data-off] .spinBall > i { background: var(--ui-gold); }
+
+/* The radar (HexRadar, David 2026-10-28): big, light and thin. The current build is the chart colour's soft fill; the rod
+   alone sits faintly behind it. Each corner is its icon in a white chip and its value; hover names it in one line. */
+.radar { position: relative; width: 100%; margin: 0 auto; }
+.radar svg { display: block; width: 100%; height: auto; overflow: visible; }
+.radarRing { fill: none; stroke: var(--ui-line); stroke-width: 1; }
+.radarBase { fill: color-mix(in srgb, var(--ui-chart) 8%, transparent); stroke: color-mix(in srgb, var(--ui-chart) 35%, transparent); stroke-width: 1; stroke-dasharray: 3 3; stroke-linejoin: round; }
+.radarNow { fill: color-mix(in srgb, var(--ui-chart) 20%, transparent); stroke: var(--ui-chart); stroke-width: 1.5; stroke-linejoin: round; }
+.radarDot { fill: var(--ui-card); stroke: var(--ui-chart); stroke-width: 1.5; }
+.radarCorner { all: unset; position: absolute; display: grid; justify-items: center; gap: 3px; transform: translate(-50%, -14px); cursor: default; }
+.radarIcon { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--ui-card); color: var(--ui-ink-2);
+  box-shadow: 0 1px 4px rgb(var(--ui-shade) / 0.1); transition: transform 0.2s ease-out, color 0.2s ease-out; }
+.radarIcon svg { width: 15px; height: 15px; stroke-width: 1.75; }
+.radarValue { color: var(--ui-ink-2); font: 500 12px/1 var(--gui-font); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.radarValue small { color: var(--ui-chart); font: inherit; }
+.radarCorner:hover .radarIcon, .radarCorner:focus-visible .radarIcon { transform: translateY(-1px); color: var(--ui-ink); box-shadow: 0 4px 10px rgb(var(--ui-shade) / 0.14); }
+.radarCorner:focus-visible .radarIcon { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+.radarTip { position: absolute; bottom: calc(100% + 6px); left: 50%; z-index: 3; display: grid; gap: 2px; width: max-content; max-width: 190px; padding: 8px 10px;
+  border-radius: 10px; background: var(--ui-card); color: var(--ui-ink-2); font: 400 12px/1.35 var(--gui-font); text-align: left;
+  box-shadow: 0 6px 18px rgb(var(--ui-shade) / 0.14); opacity: 0; transform: translate(-50%, 4px); transition: opacity 0.2s ease-out, transform 0.2s ease-out; pointer-events: none; }
+.radarTip b { color: var(--ui-ink); font-weight: 600; }
+.radarCorner[data-side="right"] .radarTip { left: auto; right: -8px; transform: translate(0, 4px); }
+.radarCorner[data-side="left"] .radarTip { left: -8px; transform: translate(0, 4px); }
+.radarCorner:hover .radarTip, .radarCorner:focus-visible .radarTip { opacity: 1; transform: translate(-50%, 0); }
+.radarCorner[data-side]:hover .radarTip, .radarCorner[data-side]:focus-visible .radarTip { transform: translate(0, 0); }
+@media (prefers-reduced-motion: reduce) { .radarIcon, .radarTip { transition: none; } }
+
+/* Rarity as a thin outline (design bible UI 7, David 2026-10-28): a card or a stage edged in its rung's colour (`rarityEdge`
+   sets --edge); divine runs the holo round the edge. Never a fill. */
+.card[data-rarity], .stageWrap[data-rarity] { box-shadow: inset 0 0 0 1.5px var(--edge); }
+.card[data-rarity]:hover { box-shadow: inset 0 0 0 1.5px var(--edge), 0 8px 20px rgb(var(--ui-shade) / 0.1); }
+.card[data-rarity="divine"], .stageWrap[data-rarity="divine"] { box-shadow: none; }
+.card[data-rarity="divine"]::after, .stageWrap[data-rarity="divine"]::after { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 2px;
+  background: var(--ui-holo); background-size: 300% 100%; animation: edgeHolo 3s linear infinite; pointer-events: none;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+@keyframes edgeHolo { to { background-position: 300% 0; } }
+
+/* The stage's corner (a rod's slots), and a gear slot: a small white square, its list opening above it. */
+.stageCorner { position: absolute; right: 14px; bottom: 14px; z-index: 2; display: flex; gap: 8px; }
+.slotBox { position: relative; display: inline-flex; }
+.gearSlot { all: unset; position: relative; display: grid; place-items: center; width: 52px; height: 52px; border-radius: 12px; background: var(--ui-card);
+  box-shadow: 0 1px 4px rgb(var(--ui-shade) / 0.1); cursor: pointer; transition: transform 0.2s ease-out, box-shadow 0.2s ease-out; }
+.gearSlot:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgb(var(--ui-shade) / 0.14); }
+.gearSlot:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+.gearSlot[aria-expanded="true"] { box-shadow: inset 0 0 0 1.5px var(--ui-ink); }
+.gearSlotArt { width: 38px; height: 38px; }
+.gearSlotEmpty { position: relative; display: grid; place-items: center; color: var(--ui-hint); }
+.gearSlotEmpty svg:first-child { width: 20px; height: 20px; stroke-width: 1.6; }
+.gearSlotEmpty svg:last-child { position: absolute; right: -9px; bottom: -8px; padding: 1px; border-radius: 50%; background: var(--ui-card); }
+.gearSlot .radarTip { left: auto; right: 0; transform: translate(0, 4px); }
+.gearSlot:hover .radarTip, .gearSlot:focus-visible .radarTip { opacity: 1; transform: translate(0, 0); }
+.slotMenu { position: absolute; right: 0; bottom: calc(100% + 8px); z-index: 4; display: grid; gap: 2px; width: 230px; padding: 8px; border-radius: 14px;
+  background: var(--ui-card); box-shadow: 0 10px 28px rgb(var(--ui-shade) / 0.16); animation: slotIn 0.2s cubic-bezier(0.34, 1.3, 0.64, 1); }
+@keyframes slotIn { from { opacity: 0; transform: translateY(6px) scale(0.97); } }
+.slotMenuHead { padding: 2px 6px 4px; color: var(--ui-quiet); font: 600 12px/1.2 var(--gui-font); }
+.slotMenuEmpty { padding: 4px 6px 6px; color: var(--ui-ink-2); font: 400 13px/1.35 var(--gui-font); }
+.slotOption { all: unset; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 6px; border-radius: 10px; cursor: pointer; color: var(--ui-ink); }
+.slotOption:hover, .slotOption:focus-visible { background: var(--ui-card-hover); box-shadow: inset 0 0 0 1px var(--ui-line); }
+.slotOption[disabled] { opacity: 0.5; cursor: default; }
+.slotOptionArt { width: 34px; height: 34px; }
+.slotOptionName { display: block; font: 500 13px/1.25 var(--gui-font); }
+.slotOption small { display: block; color: var(--ui-quiet); font: 400 12px/1.3 var(--gui-font); }
+@media (prefers-reduced-motion: reduce) {
+  .card[data-rarity="divine"]::after, .stageWrap[data-rarity="divine"]::after, .slotMenu { animation: none; }
+  .gearSlot { transition: none; }
+  .gearSlot:hover { transform: none; }
+}

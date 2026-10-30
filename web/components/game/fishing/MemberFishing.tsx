@@ -18,7 +18,7 @@ import { BOSS, BOSS_CALL } from "@/lib/game/fishingReel";
 import { CAST, RARITY_META, START_PROGRESS, fishOdds, iconFor, type FishDef } from "@/lib/game/fishing";
 import { FISHING_HINTS, type CastDevice, type FishingHeldInput } from "@/lib/game/fishingInput";
 import { oneLinerFor } from "@/lib/game/peaceful";
-import type { RodTier } from "@/lib/game/rods";
+import type { RodEffects, RodTier } from "@/lib/game/rods";
 import { useCastMeter } from "@/lib/game/useCastMeter";
 import { useCatchCard } from "@/lib/game/useCatchCard";
 import { useFishingSession } from "@/lib/game/useFishingSession";
@@ -59,7 +59,7 @@ export default function MemberFishing({ onActiveChange, rod }: { onActiveChange?
     <div className={m.lane} data-member-fishing={phase}>
       {phase === "charging" ? <MemberMeter onRelease={s.castNow} releaseRequestedRef={s.releaseRequestedRef} hint={CHARGE[device]} />
         : phase === "reeling" && fish ? <MemberReel key={fish.key} fish={fish} known={s.owned.has(fish.key)} onDone={s.onReelDone} initialInput={s.reelInput}
-          tensionMul={s.rod.tensionMul} help={FISHING_HINTS[device].reel} boss={s.bossMode} raidId={s.raidId} />
+          rig={s.rod} help={FISHING_HINTS[device].reel} boss={s.bossMode} raidId={s.raidId} />
           : <StatusChip tone={chip[0]} icon={chip[2]}>{chip[1]}</StatusChip>}
     </div>
   );
@@ -87,19 +87,19 @@ function MemberMeter({ onRelease, releaseRequestedRef, hint }: { onRelease: (pow
  * done"): the tutorial teaches it once; `help` is only the screen reader's description. A boss adds its stamina (its
  * phases marked) and its call; a raid says how many are reeling.
  */
-function MemberReel({ fish, known, onDone, initialInput, tensionMul, help, boss, raidId }: {
-  fish: FishDef; known: boolean; onDone: (success: boolean) => void; initialInput: FishingHeldInput; tensionMul: number; help: string;
+function MemberReel({ fish, known, onDone, initialInput, rig, help, boss, raidId }: {
+  fish: FishDef; known: boolean; onDone: (success: boolean) => void; initialInput: FishingHeldInput; rig: Pick<RodEffects, "tensionMul" | "fillMul" | "barMul">; help: string;
   boss: "solo" | "shared" | null; raidId?: string;
 }) {
   const panelRef = useRef<HTMLDivElement>(null), trackRef = useRef<HTMLDivElement>(null), windowRef = useRef<HTMLDivElement>(null), markerRef = useRef<HTMLDivElement>(null);
   const gaugeRef = useRef<HTMLDivElement>(null), fillRef = useRef<HTMLDivElement>(null), staminaRef = useRef<HTMLDivElement>(null);
   const callRef = useRef<HTMLSpanElement>(null), whoRef = useRef<HTMLSpanElement>(null), pausedRef = useRef<HTMLParagraphElement>(null);
   const state = useRef({ inside: true, near: false, low: false, call: "", away: false, tension: "", step: -1, fishAt: 0.5, splashAt: 0 });
-  const barW = RARITY_META[fish.rarity].barW * (boss ? BOSS.barMul[0] : 1);
+  const barW = Math.min(0.5, RARITY_META[fish.rarity].barW * rig.barMul * (boss ? BOSS.barMul[0] : 1));
   const start = boss ? BOSS.line : START_PROGRESS;
 
   useReelLoop({
-    fish, boss, raidId, tensionMul, initialInput, focus: panelRef, onDone,
+    fish, boss, raidId, rig, initialInput, focus: panelRef, onDone,
     onPause: (paused) => { if (pausedRef.current) pausedRef.current.hidden = !paused; },
     onFrame: ({ sim, now, raid }) => {
       const st = state.current, track = trackRef.current;

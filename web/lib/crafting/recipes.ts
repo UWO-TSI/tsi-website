@@ -44,8 +44,8 @@ const tool = (slug: string, name: string, slot: "rod" | "net" | "shovel", tier: 
  * catalogue's one-price rule (their nominal value); nothing charges it.
  */
 export const CRAFTED_ITEMS: CatalogueEntry[] = [
-  tool("rod-lighthouse", "Lighthouse rod", "rod", 4, { catalogue_ref: "rod_lighthouse", description: "Tier 4. Legendary fish will bite." }),
-  tool("rod-tidewarden", "Tidewarden rod", "rod", 5, { catalogue_ref: "rod_tidewarden", description: "Tier 5. The widest bite window on the island." }),
+  tool("rod-lighthouse", "Lighthouse rod", "rod", 4, { catalogue_ref: "rod_lighthouse", description: "A rare rod: epic fish will bite." }),
+  tool("rod-tidewarden", "Tidewarden rod", "rod", 5, { catalogue_ref: "rod_tidewarden", description: "An epic rod with the widest bite window on the island." }),
   tool("net-silk", "Silk net", "net", 3),
   tool("net-dragonfly", "Dragonfly net", "net", 4),
   tool("net-emperor", "Emperor net", "net", 5),

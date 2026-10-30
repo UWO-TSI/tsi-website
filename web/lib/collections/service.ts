@@ -9,7 +9,7 @@ import { digRoll } from "./digLoot";
 import { TREATS } from "./treats";
 import { toFailure, type Result } from "@/lib/result";
 import { hourKey } from "@/lib/game/peaceful";
-import { rodByTier } from "@/lib/game/rods";
+import { ownedRig } from "@/lib/game/rods";
 import { checkHeld } from "@/lib/game/tools";
 import type { IslandWeather } from "@/lib/game/islandWeather";
 import { CollectionsError, type BagItem, type CatchResult, type ChestItem, type CollectionsStore } from "./store";
@@ -46,7 +46,7 @@ const fail = <T>(err: unknown): Result<T> => toFailure(ERRORS, err);
 const XZ = z.tuple([z.number().finite(), z.number().finite()]);
 const CatchRequest = z.discriminatedUnion("action", [
   z.object({ action: z.literal("harvest"), node: z.string().max(64), at: XZ, tool: z.string().max(64).optional() }),
-  z.object({ action: z.literal("cast"), site: z.enum(["village", "home"]), at: XZ, power: z.number().min(0).max(1), tool: z.string().max(64).optional(), with: z.string().uuid().optional() }),
+  z.object({ action: z.literal("cast"), site: z.enum(["village", "home"]), at: XZ, power: z.number().min(0).max(1), tool: z.string().max(64).optional(), with: z.string().uuid().optional(), tackle: z.array(z.string().max(64)).max(4).optional() }),
   z.object({ action: z.literal("land"), roll: z.string().uuid() }),
   z.object({ action: z.literal("raid"), credit: z.string().max(1024) }),
 ]);
@@ -71,7 +71,7 @@ export type CatchReply = { item_key: string; size_cm: number | null; roll?: stri
  * `weather` and `goals` are read only by the actions that use them (a land
  * needs no weather, a harvest no goals). Sizes clamp to the code roster the
  * roll uses (the collection_species rows are generated from it).
- * `tool` is the held tool's key (specs/game-ui.md): a cast rolls with the held rod's tier, a bug needs a net and a
+ * `tool` is the held tool's key (specs/game-ui.md): a cast rolls with the held rod's tier and its owned add-ons (`tackle`), a bug needs a net and a
  * dig or a rock a shovel, each one the member owns (lib/game/tools.ts checkHeld); picking by hand needs none.
  * A landed or harvested rare catch may teach a recipe (`recipe` in the reply,
  * 20260930100000 crafting_catch_drop), also in that transaction.
@@ -117,10 +117,12 @@ export async function catchAction(
     }
     const water = castWater(req.site, req.at);
     if (!water) return { ok: false, status: 422, code: "wrong_place", error: "No water in reach." };
-    const held = checkHeld(req.tool, "rod", await store.ownedGear(memberId));
+    const owned = await store.ownedGear(memberId);
+    const held = checkHeld(req.tool, "rod", owned);
     if (!held.ok) return held;
     const [sky, active, together] = await Promise.all([weather(), goals(), req.with && req.with !== memberId ? friendName(req.with) : null]);
-    const { fish, size } = fishRoll(water, req.power, rodByTier(held.tool.tier), now, sky, random, eventCatches(active, now), !!together);
+    // The add-ons on the rod (rods.ts): only ones the member owns count.
+    const { fish, size } = fishRoll(water, req.power, ownedRig(held.tool.tier, req.tackle ?? [], owned), now, sky, random, eventCatches(active, now), !!together);
     const sp = ROSTER.find((s) => s.key === fish.key);
     const kept = clampSize(sp, size);
     const roll = await store.cast(memberId, fish.key, kept, trophyFor(sp, kept));

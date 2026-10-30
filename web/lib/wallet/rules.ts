@@ -7,6 +7,7 @@ import { ROSTER } from "@/lib/collections/roster";
 import { FISH } from "@/lib/game/fishing";
 import { fnv1a, seededRandom } from "@/lib/game/weatherSystem";
 import { torontoParts } from "@/lib/time";
+import { DROPS } from "@/lib/game/drops";
 import { CATALOGUE, EVENT_ITEMS, OWNERSHIP_ITEMS, onSale, SELL_PRICES, SETTINGS, type ShopCategory, type Slot, type Tier } from "./catalogue";
 import type { InventoryRow } from "./store";
 
@@ -36,8 +37,12 @@ export function torontoDay(now: Date): string {
   return torontoParts(now).date;
 }
 
-export function isOnSale(item: ShopItem, now: Date): boolean {
+/** Things for a home: off the shelves until homes open (drop 4, lib/game/drops.ts), so the shop sells nothing hollow. */
+export const HOME_CATEGORIES: ReadonlySet<string> = new Set(["furniture", "wallpaper", "flooring"]);
+
+export function isOnSale(item: ShopItem, now: Date, homesOpen: boolean = DROPS.homeIsland): boolean {
   if (!item.active) return false;
+  if (!homesOpen && HOME_CATEGORIES.has(String(item.category))) return false;
   if (item.available_from && now < new Date(item.available_from)) return false;
   if (item.available_until && now > new Date(item.available_until)) return false;
   return true;
@@ -54,7 +59,7 @@ export interface Special {
  * picked from the coin-priced special pool by a seeded shuffle of the date.
  */
 export function dailySpecials(items: ShopItem[], day: string, count: number = SETTINGS.special_count, pct: number = SETTINGS.special_discount_pct): Special[] {
-  const pool = items.filter((i) => i.special_pool && i.active && i.price_coins !== null).sort((a, b) => a.slug.localeCompare(b.slug));
+  const pool = items.filter((i) => i.special_pool && i.active && i.price_coins !== null && (DROPS.homeIsland || !HOME_CATEGORIES.has(String(i.category)))).sort((a, b) => a.slug.localeCompare(b.slug));
   const r = seededRandom(fnv1a(`specials:${day}`));
   const picked = [...pool];
   for (let i = picked.length - 1; i > 0; i--) {

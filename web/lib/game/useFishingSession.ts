@@ -170,7 +170,7 @@ export function useFishingSession({ onActiveChange, collectionScope, zoneOverrid
     changePhase("waiting");
     // Cast power shortens the wait (max cast halves it); rain days shorten
     // it further (weather perk).
-    const wait = (2000 + Math.random() * 4000) * (1 - CAST.waitScale * powerRef.current) * weatherMods(reelWeather(liveIslandWeather())).biteWaitMul;
+    const wait = (2000 + Math.random() * 4000) * (1 - CAST.waitScale * powerRef.current) * weatherMods(reelWeather(liveIslandWeather())).biteWaitMul * rod.waitMul;
     // Fake nibbles (refinement 2026-07-23): 1-2 false-alarm tugs, never in
     // the last 1.2s before the real bite. Bobber dips + ripple + soft blip.
     if (wait > 2600) {
@@ -247,7 +247,7 @@ export function useFishingSession({ onActiveChange, collectionScope, zoneOverrid
     // Member island: the server rolls what will bite now; a refusal (too soon, no water here) ends the cast.
     const from = collectionScope ? null : castFromRef.current;
     // Fishing together: the nearest friend within a few steps rides along on the cast (the server checks the friendship).
-    rollRef.current = from && castLine(from.site, from.from, power, rod.key, remoteNearest(from.from[0], from.from[1], TOGETHER.range, uid => friendsStore().isFriend(uid)));
+    rollRef.current = from && castLine(from.site, from.from, power, rod.key, rod.tackle, remoteNearest(from.from[0], from.from[1], TOGETHER.range, uid => friendsStore().isFriend(uid)));
     void rollRef.current?.then(answer => {
       if (answer && !answer.ok && (phaseRef.current === "casting" || phaseRef.current === "waiting")) { bagFull(answer); miss(answer.error); }
     });

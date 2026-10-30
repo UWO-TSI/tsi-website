@@ -18,6 +18,8 @@ const noon = new Date("2026-09-24T16:00:00Z");
 const mock = vi.hoisted(() => ({ eco: null as unknown, ctx: null as unknown, userWrites: [] as unknown[], adminWrites: [] as unknown[],
   profile: { membership: "member", is_active: true } as { membership: string; is_active: boolean } }));
 vi.mock("@/lib/wallet/supabaseStore", () => ({ supabaseEconomyStore: () => mock.eco }));
+// Homes open (drop 4): furniture and finishes are on sale (lib/wallet/rules.ts isOnSale).
+vi.mock("@/lib/game/drops", async (original) => { const d = await original<typeof import("@/lib/game/drops")>(); return { ...d, DROPS: { ...d.DROPS, homeIsland: true } }; });
 vi.mock("@/lib/server/memberContext", async (original) => ({ ...(await original<typeof import("@/lib/server/memberContext")>()), withStore: async () => mock.ctx }));
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
