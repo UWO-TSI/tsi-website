@@ -24,8 +24,9 @@ import { RARITIES, RARITY_LABEL } from "@/lib/rarity";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import { Waves } from "lucide-react";
 import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
-import { BigMoment, CardOverlay, DarkButton, FlyIn, GhostButton, KEYWORD_KINDS, KeyBoard, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, QuestCheck, RewardPop, SlotPop, Spotlight, StatBar, StatBars, WalletSlot } from "@/components/gui/flat";
+import { ActionBar, ActionIcon, BigMoment, CardOverlay, DarkButton, FlyIn, GhostButton, KEYWORD_KINDS, KeyBoard, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, QuestCheck, RankBadge, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
+import { BoardRows } from "@/components/game/volleyball/BoardSheet";
 import s from "./showroom.module.css";
 import FlatRewards from "./FlatRewards";
 
@@ -275,6 +276,25 @@ export default function GuiShowroom() {
     <Section id="progress-card" title="Progress card (flat)" note="The flat kit’s loading card: a white card, the stage in a quiet line, the real progress as a thin ink line.">
       <Row><ProgressCard icon={<Sprout size={24} />} title="Tethos Island" status="Sweeping the plaza…" value={0.42} label="Loading the island" />
         <ProgressCard title="Saving" status="Nearly there" value={0.9} label="Saving" /></Row>
+    </Section>
+
+    <Section id="serve-meter" title="Serve meter (flat)" note="The volleyball serve’s power: a triangle wide at the top, the fill warming from sea to coral to gold; it leans in and trembles as it fills, and flashes Max at the top.">
+      <Row><ServeMeter value={0.3} label="Serve power"><Keycap>Hold</Keycap></ServeMeter><ServeMeter value={0.72} label="Serve power" /><ServeMeter value={0.97} label="Serve power, max" /></Row>
+    </Section>
+
+    <Section id="action-bar" title="Action bar (flat)" note="A match’s moves: each a pictogram, its key and its name. A slot that would connect glows; a press flashes it. The ground’s and the air’s rows swap in place.">
+      <Row><ActionBar active="ground" flash={{ id: "set", n: 1, ok: true }} rows={{ ground: ["bump", "set", "call", "dive", "jump"].map((a, i) => ({ id: a, label: a[0].toUpperCase() + a.slice(1), keycap: ["Click", "E", "R-click", "Ctrl", "Space"][i], icon: <ActionIcon move={a} />, ready: a === "bump" })) }} /></Row>
+      <Row><ActionBar active="air" rows={{ air: ["spike", "jumpset", "block"].map((a, i) => ({ id: a, label: ["Spike", "Jump set", "Block"][i], keycap: ["Click", "E", "R-click"][i], icon: <ActionIcon move={a} />, ready: a === "spike" })) }} /></Row>
+      <Row>{["serve", "charge", "spin", "slide", "dash"].map(a => <ActionIcon key={a} move={a} size={40} />)}</Row>
+    </Section>
+
+    <Section id="spin-picker" title="Spin picker (flat)" note="Where on the ball the serve is hit: off centre to a side curves it, the top dives, the bottom floats.">
+      <Row><SpinPicker x={0} y={0} picture="/assets/game/volleyball/ball-icon.png" label="Centre" /><SpinPicker x={0.6} y={0.4} picture="/assets/game/volleyball/ball-icon.png" label="Top right"><Keycap>R-click</Keycap></SpinPicker></Row>
+    </Section>
+
+    <Section id="rank" title="Rank badge and the leaderboard (flat)" note="A place in a ranking, the first in gold; the volleyball court’s board, its rows on hairlines and a Sample tag until phase 3.">
+      <Row><RankBadge rank={1} /><RankBadge rank={2} /><RankBadge rank={10} /></Row>
+      <BoardRows board={{ sample: true, rows: [{ rank: 1, name: "Kelpie", wins: 14, you: false }, { rank: 2, name: "Sandpiper", wins: 11, you: false }, { rank: 3, name: "Islander", wins: 9, you: true }] }} />
     </Section>
 
     <Section id="tooltips" title="Tooltips" kit={["wheel"]} note="The teal name pill with a tail, on hover and on keyboard focus.">

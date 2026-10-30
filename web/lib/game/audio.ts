@@ -59,7 +59,14 @@ export type SFXName =
   /** A fish bites, by hook tier (art/audio/synth_bite.py): louder and richer for legendary and divine. */
   | "bite"
   | "bite-legendary"
-  | "bite-divine";
+  | "bite-divine"
+  | VbSfx;
+
+/** The beach volleyball match's sounds, made in art/audio/synth_volleyball.py (lib/game/volleyball/sfx.ts plays them). */
+export const VB_SFX = ["vb-bump", "vb-set", "vb-serve", "vb-dig", "vb-block", "vb-spike", "vb-perfect", "vb-good", "vb-early", "vb-late",
+  "vb-sand", "vb-boom", "vb-net", "vb-tape", "vb-takeoff", "vb-touchdown", "vb-dive", "vb-slide", "vb-charge", "vb-max", "vb-toss", "vb-whiff",
+  "vb-point", "vb-point-them", "vb-win", "vb-call", "vb-out", "vb-heat", "vb-fire"] as const;
+export type VbSfx = (typeof VB_SFX)[number];
 
 interface AudioManifest {
   ambient: Record<AmbientPhase, string>;
@@ -91,6 +98,7 @@ const MANIFEST: AudioManifest = {
     bite: "/audio/sfx/bite.ogg",
     "bite-legendary": "/audio/sfx/bite-legendary.ogg",
     "bite-divine": "/audio/sfx/bite-divine.ogg",
+    ...(Object.fromEntries(VB_SFX.map(n => [n, `/audio/sfx/${n}.ogg`])) as Record<VbSfx, string>),
   },
 };
 

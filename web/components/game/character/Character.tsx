@@ -414,7 +414,11 @@ class Puppet {
   get attacking() { return !!this.clip?.startsWith("Attack") || !!(this.clip && verbInfo(this.clip)) || !!this.upperClip; }
 
   /** The verb library's clips (Character `verbs`), merged in when its GLB arrives. */
-  addClips(list: THREE.AnimationClip[]) { for (const c of list) this.clips.set(c.name, c); }
+  addClips(list: THREE.AnimationClip[]) {
+    for (const c of list) this.clips.set(c.name, c);
+    // A clip asked for before its file arrived has been showing Idle (or the fallback attack) under its name: play it now.
+    if (this.clip && this.action && this.action.getClip() !== this.clipFor(this.clip)) this.play(this.clip);
+  }
   /** A clip, or for a verb not loaded yet the fallback attack clip. */
   private clipFor(name: ClipName) { return this.clips.get(name) ?? (verbInfo(name) && !name.startsWith("HoldIdle_") ? this.clips.get(this.fallback) : undefined); }
   /** The clip showing now (a held item picks its grip and whether it shows from it). */

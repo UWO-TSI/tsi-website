@@ -32,6 +32,7 @@ import { CRATE_URL } from "@/lib/game/propModels";
 import { liveWaves } from "@/lib/game/waves";
 import { landmark, landmarkPoint, type VillageIsland } from "@/lib/game/defaultIsland";
 import { objectsOf, type Village } from "@/lib/game/villageMap";
+import { courtsOf, offCourt } from "@/lib/game/volleyball/island";
 import { navGrid } from "@/lib/game/residentRoutine";
 import { disposeModelMaterials, prepareModel } from "@/lib/game/modelMaterials";
 import { FACE as PFACE, type ParticlePool, type Recipe } from "@/lib/game/fx/particles";
@@ -69,6 +70,7 @@ const BRAM_ABOARD = { x: 0.08, z: -0.62 };
 
 /** The places a world resolves the route's against: its wharf (the dock frame) and its landmarks' points. */
 export function placeWorld(dock: Dock | null, v: Village): PlaceWorld {
+  const courts = courtsOf(v);
   return {
     dock: dock && { x: dock.x, z: dock.z, yaw: dock.yaw },
     landmark: (id, point) => {
@@ -77,6 +79,8 @@ export function placeWorld(dock: Dock | null, v: Village): PlaceWorld {
       return l ? { x: l.x, z: l.z } : null;
     },
     prop: id => { const o = objectsOf("prop", v).find(p => p.id === id); return o ? { x: o.x, z: o.z } : null; },
+    // Bram's stops keep off the volleyball court, as the residents do (the beach's landmark sits on it).
+    clear: p => { const [x, z] = offCourt(courts, p.x, p.z); return { x, z }; },
   };
 }
 /** The route's crates in world XZ, each with its turn (a dock-frame crate turns with the dock). */

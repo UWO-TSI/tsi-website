@@ -3402,7 +3402,9 @@ if "v1-preview" in ARGS:
     render_v1_clips(os.environ.get("V1_PREVIEW_OUT", "/tmp/v1-clips.webp"), [n for n in V1_CLIPS if n in only])
     raise SystemExit(0)
 
-if STAFF_MODE:
+if "lib" in ARGS:                                    # the pose kit only (volleyball/build_vb_clips.py runs this file for it)
+    pass
+elif STAFF_MODE:
     cat = []
     for c in STAFF_CLIPS:
         bake(c)

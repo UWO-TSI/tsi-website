@@ -10,6 +10,7 @@ import { MOVE_TUNING } from "@/lib/game/movement/sim";
 import type { WeaponKind } from "@/lib/game/combat/contract";
 import type { FaceOverride } from "./face";
 import type { FishingState } from "@/lib/game/fishingRig";
+import { isVbClip, VB_CLIPS, type VbClip } from "@/lib/game/volleyball/clips";
 
 type VillageClip = "Idle" | "Walk" | "Run" | "Sit" | "Study" | "Sleep" | "Fish" | "FishHold" | "Forage" | "Dig" | "Net"
   | "Wave" | "Cheer" | "Laugh" | "Sad" | "Dance" | "AttackMelee" | "AttackBow" | "AttackCast" | "DodgeRoll" | "Hit" | "Defeat" | "Trace" | "Stretch"
@@ -55,7 +56,8 @@ export type VerbClip = `${Verb}_${Grip}`;
 export type HoldIdleClip = `HoldIdle_${Grip}`;
 /** Per-subclass clips the family waves add (build_clips.py `@unique`): the ult and up to 3 unique ability clips. */
 export type UniqueClip = `Ult_${string}` | `Unique_${string}`;
-export type ClipName = VillageClip | VerbClip | HoldIdleClip | UniqueClip;
+/** VbClip: the beach volleyball clips, their own file that only a match loads (lib/game/volleyball/clips.ts). */
+export type ClipName = VillageClip | VerbClip | HoldIdleClip | UniqueClip | VbClip;
 
 /** The grip family of a weapon type (lib/combat/weapons.ts WeaponType; signature types fall back to one hand). */
 const GRIP_OF: Record<string, Grip> = { sword: "OneHand", shield: "OneHand", bow: "Bow", revolver: "Pistol", staff: "Staff", tome: "Book", fists: "Fists", totem: "Staff",
@@ -131,7 +133,9 @@ const FAMILY_FADE: Readonly<Record<Family, Readonly<Record<Family, number>>>> = 
   combat: { loco: 0.14, air: 0.06, land: 0.06, move: 0.05, seat: 0.25, act: 0.15, combat: 0.06, ability: 0.05 },
   ability: { loco: 0.1, air: 0.06, land: 0.06, move: 0.05, seat: 0.25, act: 0.15, combat: 0.06, ability: 0.05 },
 };
-const familyOf = (clip: ClipName): Family => (isVerb(clip) ? "ability" : clip.startsWith("HoldIdle_") ? "loco" : FAMILY[clip as VillageClip]);
+/** A volleyball one-shot cuts in like a verb (a touch is on the beat); its stance and shuffle are locomotion. */
+const familyOf = (clip: ClipName): Family => (isVerb(clip) ? "ability" : clip.startsWith("HoldIdle_") ? "loco"
+  : isVbClip(clip) ? (VB_CLIPS[clip].loop ? "loco" : "ability") : FAMILY[clip as VillageClip]);
 const FADES: Readonly<Record<string, number>> = {
   // Locomotion among itself: the walk and the run cross in step (`matchPhase`), the crouch eases.
   "Idle>Walk": 0.2, "Walk>Idle": 0.2, "Walk>Run": 0.15, "Run>Walk": 0.15, "Idle>Run": 0.12, "Run>Idle": 0.16,
@@ -224,7 +228,7 @@ export interface CharacterMotion { speed: number; yaw: number; lift: number; pos
    */
   beat?: number | null }
 
-export const isLoop = (clip: ClipName) => (CLIP_BY_NAME.get(clip) ?? VERB_BY_NAME.get(clip))?.loop ?? true;
+export const isLoop = (clip: ClipName) => (isVbClip(clip) ? VB_CLIPS[clip] : CLIP_BY_NAME.get(clip) ?? VERB_BY_NAME.get(clip))?.loop ?? true;
 
 /**
  * Idle below a crawl, Run above 1.25x walking pace (sprint is 1.85x). Already running, it keeps the run down to 1.15x,

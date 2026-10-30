@@ -194,6 +194,8 @@ div.card:hover { box-shadow: none; }
 .rowText { display: grid; gap: 3px; font: 400 14px/1.3 var(--gui-font); }
 .rowText b { font-weight: 500; }
 .rowActions { display: inline-flex; gap: 8px; }
+.rank { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--ui-pill); color: var(--ui-ink); font: 700 14px/1 var(--gui-font); font-variant-numeric: tabular-nums; }
+.rank[data-top] { background: var(--ui-gold); }
 .ghost { all: unset; padding: 8px 14px; border-radius: 999px; background: var(--ui-card); font: 500 13px var(--gui-font); cursor: pointer; }
 .buySmall { all: unset; padding: 8px 14px; border-radius: 999px; background: var(--ui-accent); color: var(--ui-accent-ink); font: 600 13px var(--gui-font); cursor: pointer; }
 .ghost:disabled, .buySmall:disabled { opacity: 0.5; cursor: default; }
@@ -367,3 +369,61 @@ div.card:hover { box-shadow: none; }
 .progressLine { grid-column: 1 / -1; height: 3px; border-radius: 2px; overflow: hidden; background: var(--ui-well); }
 .progressLine > i { display: block; height: 100%; background: var(--ui-ink); transform-origin: left; transform: scaleX(var(--p)); transition: transform 0.6s cubic-bezier(0.2, 0.9, 0.3, 1); }
 @media (prefers-reduced-motion: reduce) { .progressLine > i { transition: none; } }
+
+/* The serve meter (ServeMeter.tsx): a triangle, wide at the top, the fill rising by a transform through sea, coral and
+   gold; the meter leans in and trembles as it fills (--v), and flashes at the top. */
+.serveMeter { position: relative; display: inline-grid; justify-items: center; gap: 10px; padding: 14px 14px 10px; border-radius: 18px; background: var(--ui-card);
+  color: var(--ui-ink); font-family: var(--gui-font); box-shadow: 0 8px 22px rgb(var(--ui-shade) / 0.16);
+  transform: scale(calc(1 + var(--v) * 0.12)); transition: transform 0.12s cubic-bezier(0.2, 0.9, 0.3, 1.12);
+  animation: serveShake 0.09s linear infinite; }
+.serveTri { position: relative; width: 74px; height: 150px; clip-path: polygon(0 0, 100% 0, 58% 100%, 42% 100%); background: var(--ui-well); }
+/* The gold band at the top: the max zone. */
+.serveTri > b { position: absolute; inset: 0 0 auto; height: calc(var(--max) * 100%); background: var(--ui-marker); }
+/* The fill: the whole gradient laid on the meter's height, revealed from the foot. */
+.serveTri > i { position: absolute; inset: 0; background: linear-gradient(to top, var(--ui-away) 0%, var(--ui-home) 70%, var(--ui-gold) 100%);
+  clip-path: inset(calc((1 - var(--v)) * 100%) 0 0 0); }
+/* The rising edge: a bright line riding the fill's top. */
+.serveTri > s { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--ui-card); opacity: 0.85;
+  transform: translateY(calc(var(--v) * -147px)); }
+.serveMeter[data-max] { box-shadow: 0 0 0 3px var(--ui-gold), 0 10px 30px rgb(var(--ui-shade) / 0.2); animation: serveShake 0.06s linear infinite, serveFlash 0.5s ease-out; }
+.serveMax { position: absolute; top: -12px; left: 50%; padding: 3px 10px; border-radius: 999px; background: var(--ui-gold); color: var(--ui-ink);
+  font: 800 13px/1 var(--gui-font); font-style: normal; letter-spacing: 0.04em; transform: translateX(-50%); animation: servePop 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.4); }
+@keyframes serveShake {
+  0% { translate: calc(var(--v) * var(--v) * 2.4px) 0; } 25% { translate: calc(var(--v) * var(--v) * -2px) calc(var(--v) * var(--v) * 1.4px); }
+  50% { translate: calc(var(--v) * var(--v) * 1.8px) calc(var(--v) * var(--v) * -1.6px); } 75% { translate: calc(var(--v) * var(--v) * -2.2px) 0; } 100% { translate: 0 0; } }
+@keyframes serveFlash { from { background: var(--ui-gold); } }
+@keyframes servePop { from { transform: translateX(-50%) scale(0.3); } }
+@media (prefers-reduced-motion: reduce) { .serveMeter, .serveMeter[data-max], .serveMax { animation: none; transition: none; } }
+
+/* The action bar (ActionBar.tsx): white move cards with a pictogram, a keycap and the name. Bars stack in one place and
+   crossfade (the ground's moves and the air's), so a jump never moves or flickers the row. */
+.actionStack { display: grid; justify-items: center; }
+.actionBar { grid-area: 1 / 1; display: flex; gap: 10px; opacity: 0; transform: translateY(10px) scale(0.96); pointer-events: none;
+  transition: opacity 0.16s ease, transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.12); }
+.actionBar[data-active] { opacity: 1; transform: none; }
+.actionSlot { position: relative; display: grid; justify-items: center; gap: 4px; width: 72px; padding: 10px 6px 8px; border-radius: 16px; background: var(--ui-card);
+  color: var(--ui-ink); font-family: var(--gui-font); box-shadow: 0 6px 16px rgb(var(--ui-shade) / 0.14); transition: transform 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.12), box-shadow 0.2s; }
+.actionSlot > b { font: 700 12px/1 var(--gui-font); letter-spacing: 0.01em; }
+.actionIcon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--ui-well); }
+.actionKey { position: absolute; top: -8px; right: -6px; transform: scale(0.85); }
+.pictogram [data-ball] { fill: var(--ui-home); stroke: none; }
+.actionSlot[data-off] { opacity: 0.45; }
+.actionSlot[data-ready] { transform: translateY(-4px); box-shadow: 0 0 0 2px var(--ui-gold), 0 10px 22px rgb(var(--ui-shade) / 0.2); }
+.actionSlot[data-ready] .actionIcon { background: var(--ui-marker); animation: actionPulse 0.7s ease-in-out infinite alternate; }
+.actionSlot[data-flash="ok"] { animation: actionHit 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.4); }
+.actionSlot[data-flash="ok"]::after { content: ""; position: absolute; inset: -4px; border-radius: 20px; border: 3px solid var(--ui-gold); animation: actionRing 0.4s ease-out forwards; pointer-events: none; }
+.actionSlot[data-flash="miss"] { animation: actionMiss 0.3s ease-out; }
+@keyframes actionHit { 0% { transform: scale(0.86); } 60% { transform: scale(1.1); } 100% { transform: scale(1); } }
+@keyframes actionRing { from { opacity: 1; transform: scale(0.9); } to { opacity: 0; transform: scale(1.25); } }
+@keyframes actionMiss { 0%, 100% { translate: 0 0; } 25% { translate: -4px 0; } 75% { translate: 4px 0; } }
+@keyframes actionPulse { to { transform: scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .actionBar, .actionSlot { transition: none; } .actionSlot[data-flash], .actionSlot[data-flash]::after, .actionSlot[data-ready] .actionIcon { animation: none; } }
+
+/* The spin picker (SpinPicker.tsx): the ball's picture on a white card, the contact point a ringed dot. */
+.spin { display: inline-grid; justify-items: center; gap: 8px; padding: 12px; border-radius: 18px; background: var(--ui-card); color: var(--ui-ink);
+  font-family: var(--gui-font); box-shadow: 0 6px 18px rgb(var(--ui-shade) / 0.14); }
+.spinBall { position: relative; width: 84px; height: 84px; }
+.spinBall > img { display: block; image-rendering: auto; }
+.spinBall > i { position: absolute; left: calc(50% + var(--sx) * 34px); top: calc(50% - var(--sy) * 34px); width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%;
+  background: var(--ui-ink); box-shadow: 0 0 0 3px var(--ui-card), 0 2px 6px rgb(var(--ui-shade) / 0.3); transition: left 0.05s linear, top 0.05s linear; }
+.spin[data-off] .spinBall > i { background: var(--ui-gold); }
