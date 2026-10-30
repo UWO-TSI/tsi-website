@@ -33,7 +33,7 @@ export default function VolleyLab() {
   const { look } = useMyLook();
   useEffect(() => {
     const q = new URLSearchParams(location.search), seed = Number(q.get("seed")) || undefined;
-    startVolley(SPOT, FLAT, WORLD, seed, q.get("bots") !== "1");
+    startVolley(SPOT, FLAT, WORLD, { seed, human: q.get("bots") !== "1" });
     return () => stopVolley();
   }, []);
   return (

@@ -5,16 +5,25 @@
  * score live here. Pure (no three.js, no clock, a seeded random), so phase 2's server can run it as it is.
  */
 import { MOVE_TUNING, NO_INPUT, STEP, createMoveState, stepMove, type MoveInput, type MoveState, type MoveWorld } from "@/lib/game/movement/sim";
-import { FLAT, GRAVITY, arcTo, driveTo, heightAtNet, predictLanding, stepBall, timeToHeight, type Ball, type Ground } from "./ball";
-import { COURT, sideOf, type Side } from "./court";
+import { FLAT, GRAVITY, arcTo, ballAt, driveTo, heightAtNet, predictLanding, realVy, stepBall, timeToHeight, type Ball, type Ground } from "./ball";
+import { BALL_R, COURT, sideOf, type Side } from "./court";
+import { VB_FEEL, paceFor } from "./feel";
 import { awardRally, landingLoser, openingScore, sideOfTeam, type Score, type Team } from "./rules";
 import { judgeServe, meterPower, serveError, touchQuality, type ServeJudge } from "./timing";
 import { botInput, openSpot, pickReceivers } from "./bot";
+import { actionFor, stanceOf, type Control } from "./actions";
 
-/** On the sand: a little slower than the island's walk, no glider, no bunny-hop. */
-export const COURT_TUNING = { ...MOVE_TUNING, walkSpeed: 6.2, sprintSpeed: 8.6, glider: 0, hopChainMax: 0 };
-/** Hand heights above the feet for each contact (a 1.36 u character; arms up reach 1.75). */
-export const HAND = { bump: 0.55, set: 1.5, spike: 1.75, serve: 1.55, dig: 0.3 } as const;
+/**
+ * On the sand (feel.ts): a little slower than the island's walk with a gentler build-up, a higher and floatier jump that
+ * a released key never cuts short, no glider, no bunny-hop, no long jump.
+ */
+const F = VB_FEEL;
+export const COURT_TUNING = {
+  ...MOVE_TUNING, walkSpeed: F.move.walk, sprintSpeed: F.move.sprint, groundResponse: F.move.response, stopResponse: F.move.stop,
+  jumpHeight: F.jump.height, jumpApexTime: F.jump.apexTime, fallGravity: F.jump.fallGravity, jumpCutGravity: 1, longJumpAt: 99, glider: 0, hopChainMax: 0,
+};
+/** Hand heights above the feet for each contact: the vb_* clips' contact points (vb-anim clips.ts; the rig's arms reach about 0.85 u). */
+export const HAND = { bump: 0.45, set: 0.8, spike: 0.83, serve: 0.84, dig: 0.36 } as const;
 export type Touch = "bump" | "set" | "spike" | "dig";
 /** Reach from the body (horizontal) and the height band round the hand (either side). */
 export const REACH: Record<Touch, { reach: number; band: number }> = {
@@ -28,11 +37,12 @@ export const DIVE = {
 export const SLIDE_WINDOW = 0.3;
 /** After a touch, presses wait this long (no accidental double contact). */
 export const TOUCH_COOLDOWN = 0.3;
-export const WHIFF_COOLDOWN = 0.35, BLOCK_TIME = 0.35, CALL_TIME = 1.5, SERVE_TIME = 10, POINT_TIME = 1.8;
+export const WHIFF_COOLDOWN = 0.35, BLOCK_TIME = VB_FEEL.block.time, CALL_TIME = 1.5, SERVE_TIME = 10, POINT_TIME = 1.8;
 /** The toss's height above the hand, by the power bar. */
 export const TOSS = { low: 1.1, high: 3.2 } as const;
 
 export type Phase = "serve" | "toss" | "rally" | "point" | "over";
+export type Timing = "perfect" | "good" | "early" | "late";
 export type ContactKind = Touch | "jumpset" | "block" | "serve";
 
 export interface Player {
@@ -57,13 +67,19 @@ export interface Player {
   want: number; miss: boolean; lastQ: number;
   /** Raised the arms on this jump already. */
   blocked: boolean;
+  /** A press waiting for the ball to reach the hands (feel.ts timing.buffer): what, when pressed, where it looked. */
+  pend: { how: Touch | "jumpset"; at: number; aim: { x: number; z: number } | null } | null;
 }
 
 export type MatchEvent =
-  | { kind: "contact"; who: number; how: ContactKind; quality: number; x: number; y: number; z: number }
-  | { kind: "whiff"; who: number }
+  /** A touch: its quality (0..1) and its timing grade (feel.ts timing: perfect, good, or off early or late). */
+  | { kind: "contact"; who: number; how: ContactKind; quality: number; timing: Timing; x: number; y: number; z: number }
+  | { kind: "whiff"; who: number; how: Touch | "jumpset" }
   | { kind: "serve"; who: number; judge: ServeJudge }
-  | { kind: "toss"; who: number; power: number }
+  | { kind: "toss"; who: number; power: number; max: boolean }
+  /** A press that counted (it touches now or waits for the ball): the clip's wind-up and the action bar's flash. */
+  | { kind: "press"; who: number; how: Touch | "jumpset" }
+  | { kind: "block"; who: number }
   | { kind: "net" } | { kind: "tape" }
   | { kind: "land"; in: boolean; x: number; z: number }
   | { kind: "point"; team: Team; why: string }
@@ -77,8 +93,10 @@ export interface CourtInput {
   left: boolean; leftPressed: boolean; leftReleased: boolean; ePressed: boolean; rightPressed: boolean; ctrlPressed: boolean;
   /** Where the camera looks on the far side (spikes, serves, balls sent over): null for straight ahead. */
   aim: { x: number; z: number } | null;
+  /** The serve: where in the timing ring the click landed (−1..1, x right, y up) and the contact point on the ball. */
+  ring: { x: number; y: number } | null; spin: { x: number; y: number } | null;
 }
-export const NO_COURT_INPUT: CourtInput = { x: 0, z: 0, sprint: false, jump: false, jumpPressed: false, dashPressed: false, left: false, leftPressed: false, leftReleased: false, ePressed: false, rightPressed: false, ctrlPressed: false, aim: null };
+export const NO_COURT_INPUT: CourtInput = { x: 0, z: 0, sprint: false, jump: false, jumpPressed: false, dashPressed: false, left: false, leftPressed: false, leftReleased: false, ePressed: false, rightPressed: false, ctrlPressed: false, aim: null, ring: null, spin: null };
 
 export interface Match {
   t: number; phase: Phase; phaseT: number; seed: number;
@@ -91,8 +109,10 @@ export interface Match {
   touches: number; touchTeam: Team | null; lastTouch: number; lastTeam: Team | null; lastBlock: boolean;
   /** The serve is in the air and hasn't crossed yet (a net is a fault). */
   serving: boolean;
-  /** The human's power bar: seconds held, or null. */
-  meter: number | null;
+  /** The human's power bar: seconds held, or null. The last toss was at max power. */
+  meter: number | null; maxPower: boolean;
+  /** Touches since the serve (the ball's pace quickens with them). */
+  rallyTouches: number;
   serveTimer: number;
   /** A bot server's plan: when it tosses and its click's error. */
   botServe: { tossAt: number; power: number; err: number; clickAt: number | null };
@@ -131,13 +151,13 @@ export function createMatch(o: MatchOptions = {}): Match {
     t: 0, phase: "serve", phaseT: 0, seed,
     players: [0, 1, 2, 3].map(i => ({
       team: (i < 2 ? 0 : 1) as Team, slot: (i % 2) as 0 | 1, bot: !(human && i === 0), skill: i === 0 ? 1 : i === 1 ? skill.partner : skill.opponents,
-      s: createMoveState(0, 0, world), dive: null, down: 0, call: 0, cd: 0, block: 0, sinceDash: 9, want: 0.8, miss: false, lastQ: 0, blocked: false,
+      s: createMoveState(0, 0, world), dive: null, down: 0, call: 0, cd: 0, block: 0, sinceDash: 9, want: 0.8, miss: false, lastQ: 0, blocked: false, pend: null,
     })),
     human: human ? 0 : -1,
     ball: { x: 0, y: 1, z: 0, vx: 0, vy: 0, vz: 0 },
     score: openingScore(o.serving ?? 0, -1),
     touches: 0, touchTeam: null, lastTouch: -1, lastTeam: null, lastBlock: false, serving: false,
-    meter: null, serveTimer: SERVE_TIME, botServe: { tossAt: 1, power: 0.7, err: 0, clickAt: null },
+    meter: null, maxPower: false, rallyTouches: 0, serveTimer: SERVE_TIME, botServe: { tossAt: 1, power: 0.7, err: 0, clickAt: null },
     flight: 0, landing: null, landingFlight: -1, receiver: [-1, -1],
     ground, world, pointTo: null, switchPending: false, events: [], acc: 0, latch: { ...NO_COURT_INPUT },
   };
@@ -163,17 +183,18 @@ function readyServe(m: Match) {
     else if (p.team === st) { x = -0.9; z = side * 1.3; }
     else { x = p.slot ? 1.4 : -1.4; z = side * (COURT.halfLength - 1.8); }
     const s = createMoveState(x, z, m.world, facingFor(side));
-    Object.assign(p, { s, dive: null, down: 0, call: 0, cd: 0, block: 0, miss: false, lastQ: 0 });
+    Object.assign(p, { s, dive: null, down: 0, call: 0, cd: 0, block: 0, miss: false, lastQ: 0, pend: null });
   }
   Object.assign(m, { phase: "serve" as Phase, phaseT: 0, touches: 0, touchTeam: null, lastTouch: -1, lastTeam: null, lastBlock: false, serving: false,
-    meter: null, serveTimer: SERVE_TIME, pointTo: null, receiver: [-1, -1] as [number, number] });
+    meter: null, maxPower: false, rallyTouches: 0, serveTimer: SERVE_TIME, pointTo: null, receiver: [-1, -1] as [number, number] });
   m.botServe = { tossAt: 1 + rand(m) * 0.8, power: 0.55 + rand(m) * 0.4, err: 0, clickAt: null };
   holdBall(m);
 }
 
 function holdBall(m: Match) {
   const p = m.players[serverOf(m)].s, side = sideOfPlayer(m, serverOf(m));
-  Object.assign(m.ball, { x: p.x, y: p.y + HAND.serve - 0.45, z: p.z - side * 0.3, vx: 0, vy: 0, vz: 0 });
+  // In the right hand, a little ahead (vb_serve_toss holds it there), clear of the head in the camera's view.
+  Object.assign(m.ball, { x: p.x + side * 0.25, y: p.y + HAND.serve - 0.45, z: p.z - side * 0.3, vx: 0, vy: 0, vz: 0, k: paceFor(0, pointsPlayed(m)), cx: 0, cy: 0 });
 }
 
 function fault(m: Match, loser: Team, why: string) {
@@ -197,29 +218,49 @@ function toss(m: Match, power: number) {
   m.ball.y = p.y + HAND.serve;
   m.ball.vy = Math.sqrt(2 * GRAVITY * h);
   m.botServe.power = power;
+  m.maxPower = power >= F.serve.maxPower;
   m.phase = "toss"; m.phaseT = 0;
-  m.events.push({ kind: "toss", who: sv, power });
+  m.events.push({ kind: "toss", who: sv, power, max: m.maxPower });
 }
 
-/** The serve's click: judged on the timing circle; aims at `aim` (the server's side's opposite court). */
-export function serveHit(m: Match, aim: { x: number; z: number } | null) {
-  const sv = serverOf(m), p = m.players[sv], side = sideOfPlayer(m, sv), opp = -side, b = m.ball;
-  const err = serveError(b.y, b.vy, p.s.y + HAND.serve, GRAVITY), judge = judgeServe(err);
-  const target = aim ? aimOn(aim, opp as Side) : { x: 0, z: opp * COURT.halfLength * 0.6 };
+const pointsPlayed = (m: Match) => m.score.points[0] + m.score.points[1];
+
+/** The serve's timing error now (timing.ts serveError) on the ball's own clock. */
+export function serveErrNow(b: Ball, handY: number): number {
+  const k = b.k ?? 1;
+  return serveError(b.y, realVy(b), handY, (GRAVITY + (b.cy ?? 0)) * k * k);
+}
+
+/**
+ * The serve's click: judged on the timing circle; aims at `aim` (the server's side's opposite court), moved by where in
+ * the ring the click landed (`ring`), curved by the contact point on the ball (`spin`), harder after a max-power toss.
+ */
+export function serveHit(m: Match, aim: { x: number; z: number } | null, ring: { x: number; y: number } | null = null, spin: { x: number; y: number } | null = null) {
+  const sv = serverOf(m), p = m.players[sv], side = sideOfPlayer(m, sv), opp = -side as Side, b = m.ball;
+  const err = serveErrNow(b, p.s.y + HAND.serve), judge = judgeServe(err);
+  let target = aim ? aimOn(aim, opp) : { x: 0, z: opp * COURT.halfLength * 0.6 };
+  // The server faces the net, so the screen's right is +x on side +1 and −x on side −1.
+  const right = side;
+  if (ring) target = aimOn({ x: target.x + ring.x * right * F.serve.ringAcross, z: target.z + opp * ring.y * F.serve.ringDeep }, opp);
   const jumped = p.s.mode === "air";
-  let speed = (11 + 7 * m.botServe.power) * (jumped ? 1.15 : 1) * (judge === "perfect" ? 1.08 : 1);
+  let speed = (11 + 7 * m.botServe.power) * (jumped ? 1.15 : 1) * (judge === "perfect" ? 1.08 : 1) * (m.maxPower ? F.serve.maxBonus : 1);
+  // Hit the ball's right side and it curves left; hit its top and it dives (a float off its bottom).
+  const cx = spin ? -spin.x * right * F.serve.curve : 0, cy = spin ? spin.y * F.serve.topspin : 0;
   const from = { x: b.x, y: b.y, z: b.z };
   let v;
-  if (judge === "late") v = driveTo(from, { x: target.x * 0.3, y: COURT.netTop - 0.35, z: 0 }, speed * 0.8);
+  if (judge === "late") v = driveTo(from, { x: target.x * 0.3, y: COURT.netTop - 0.35, z: 0 }, speed * 0.8, cy);
   else {
     const to = judge === "early" ? { x: target.x, y: 0, z: opp * (COURT.halfLength + 1 + rand(m) * 1.5) } : { x: target.x, y: 0, z: target.z };
-    v = driveTo(from, to, speed);
-    while ((heightAtNet(from, v) ?? 99) < COURT.netTop + 0.25 && speed > 4) { speed *= 0.93; v = driveTo(from, to, speed); }
+    // A quarter of the curve is aimed off, so the ball bends visibly and still lands near where it was sent.
+    const tb = Math.hypot(to.x - from.x, to.z - from.z) / speed;
+    to.x -= 0.25 * cx * tb * tb;
+    v = driveTo(from, to, speed, cy);
+    while ((heightAtNet(from, v) ?? 99) < COURT.netTop + 0.25 && speed > 4) { speed *= 0.93; v = driveTo(from, to, speed, cy); }
   }
-  Object.assign(b, v);
+  Object.assign(b, v, { cx, cy, k: paceFor(0, pointsPlayed(m)) });
   Object.assign(m, { phase: "rally" as Phase, phaseT: 0, serving: true, touches: 0, touchTeam: null, lastTouch: sv, lastTeam: p.team, lastBlock: false });
   m.flight++;
-  m.events.push({ kind: "serve", who: sv, judge }, { kind: "contact", who: sv, how: "serve", quality: judge === "perfect" ? 1 : judge === "good" ? 0.7 : 0.2, x: b.x, y: b.y, z: b.z });
+  m.events.push({ kind: "serve", who: sv, judge }, { kind: "contact", who: sv, how: "serve", quality: judge === "perfect" ? 1 : judge === "good" ? 0.7 : 0.2, timing: judge, x: b.x, y: b.y, z: b.z });
 }
 
 /** Where a look sends the ball: on `side`, as far out as the free zone (a look past the lines lands out). */
@@ -234,34 +275,79 @@ export function aimOn(p: { x: number; z: number }, side: Side) {
 export const setSpot = (side: Side, x: number) => ({ x: Math.max(-1.5, Math.min(1.5, x * 0.4)), z: side * 1.1 });
 export const attackSpot = (side: Side, x: number) => ({ x: Math.max(-(COURT.halfWidth - 0.6), Math.min(COURT.halfWidth - 0.6, x)), z: side * 0.7 });
 
-/** The hand's height for a touch: where its window is centred. */
-const handFor = (how: Touch) => HAND[how];
-
-/** Would a touch reach now, and how well? null: out of reach. */
-export function reachOf(m: Match, i: number, how: Touch): number | null {
+/** The ball against player `i`'s hands for a touch: how far above them (dy) and off the body; null: out of reach. */
+function contactOf(m: Match, i: number, how: Touch): { dy: number; off: number } | null {
   const p = m.players[i], b = m.ball, r = REACH[how];
-  if (sideOf(b.z) !== sideOfPlayer(m, i) && Math.abs(b.z) > 0.15) return null;
-  const off = Math.hypot(b.x - p.s.x, b.z - p.s.z), dy = b.y - (p.s.y + handFor(how));
-  if (off > r.reach || Math.abs(dy) > r.band) return null;
-  return touchQuality(dy / Math.max(2, Math.abs(b.vy)), off, r.reach);
+  if (sideOf(b.z) !== sideOfPlayer(m, i) && Math.abs(b.z) > 0.15 + BALL_R) return null;
+  const off = Math.hypot(b.x - p.s.x, b.z - p.s.z), dy = b.y - (p.s.y + HAND[how]);
+  return off > r.reach || Math.abs(dy) > r.band ? null : { dy, off };
 }
 
-/** A press of `how` by player `i`: the touch if the ball's in reach, a whiff (and a short cooldown) if not. */
+/** Would a touch reach now, and how well (as if touched this moment)? null: out of reach. */
+export function reachOf(m: Match, i: number, how: Touch): number | null {
+  const c = contactOf(m, i, how);
+  return c && touchQuality(c.dy / Math.max(1, Math.abs(realVy(m.ball))), c.off, REACH[how].reach);
+}
+
+/** Reached the hands: at or under them, or rising into them (a pop off a block). */
+const atHands = (m: Match, c: { dy: number }) => c.dy <= 0 || m.ball.vy > 0;
+
+/**
+ * A press of `how` by player `i`. The ball at the hands: the touch now, graded by how late. Still coming down to them
+ * within the buffer (feel.ts): the press waits and touches as it arrives, graded by how early it was. Nothing coming:
+ * a whiff, and a short cooldown so spamming doesn't work.
+ */
 export function press(m: Match, i: number, how: Touch | "jumpset", aim: { x: number; z: number } | null = null): boolean {
   const p = m.players[i];
-  if (m.phase !== "rally" || p.cd > 0 || p.down > 0) return false;
-  const kind: Touch = how === "jumpset" ? "set" : how;
-  const q = reachOf(m, i, kind);
-  if (q === null) { p.cd = WHIFF_COOLDOWN; m.events.push({ kind: "whiff", who: i }); return false; }
-  touch(m, i, how, q, aim);
-  return true;
+  if (m.phase !== "rally" || p.cd > 0 || p.down > 0 || p.pend) return false;
+  const kind: Touch = how === "jumpset" ? "set" : how, r = REACH[kind];
+  const c = contactOf(m, i, kind);
+  if (c && atHands(m, c)) {
+    m.events.push({ kind: "press", who: i, how });
+    const late = -c.dy / Math.max(1, Math.abs(realVy(m.ball)));
+    touch(m, i, how, touchQuality(late, c.off, r.reach), aim, timingOf(late));
+    return true;
+  }
+  const t = timeToHeight(m.ball, p.s.y + HAND[kind]);
+  if (t !== null && t <= F.timing.buffer && sideOf(m.ball.z) === sideOfPlayer(m, i)) {
+    const at = ballAt(m.ball, t);
+    // Near enough that a step or two (or the jump's rise) brings the hands to it.
+    if (Math.hypot(at.x - p.s.x, at.z - p.s.z) <= r.reach + 0.9) {
+      p.pend = { how, at: m.t, aim };
+      m.events.push({ kind: "press", who: i, how });
+      return true;
+    }
+  }
+  p.cd = WHIFF_COOLDOWN;
+  m.events.push({ kind: "whiff", who: i, how });
+  return false;
 }
 
-function touch(m: Match, i: number, how: ContactKind, q: number, aim: { x: number; z: number } | null) {
+/** Waiting presses: touch as the ball reaches the hands, or whiff once the buffer runs out. */
+function resolvePresses(m: Match) {
+  for (let i = 0; i < 4; i++) {
+    const p = m.players[i], w = p.pend;
+    if (!w || m.phase !== "rally") { p.pend = null; continue; }
+    const kind: Touch = w.how === "jumpset" ? "set" : w.how, early = m.t - w.at, c = contactOf(m, i, kind);
+    if (c && atHands(m, c)) { p.pend = null; touch(m, i, w.how, touchQuality(early, c.off, REACH[kind].reach), w.aim, timingOf(-early)); }
+    else if (early > F.timing.buffer + 0.05 || p.down > 0 || p.dive) { p.pend = null; p.cd = WHIFF_COOLDOWN; m.events.push({ kind: "whiff", who: i, how: w.how }); }
+  }
+}
+
+/** A touch's timing grade from how far off the ideal moment it was (s; negative early, positive late). */
+export function timingOf(off: number): Timing {
+  const a = Math.abs(off);
+  return a <= F.timing.perfect ? "perfect" : a <= F.timing.good ? "good" : off < 0 ? "early" : "late";
+}
+
+function touch(m: Match, i: number, how: ContactKind, q: number, aim: { x: number; z: number } | null, timing: Timing) {
   const p = m.players[i], b = m.ball, side = sideOfPlayer(m, i), opp = -side as Side;
   if (m.touchTeam === p.team) m.touches++; else { m.touchTeam = p.team; m.touches = 1; }
   p.cd = TOUCH_COOLDOWN;
-  m.events.push({ kind: "contact", who: i, how, quality: q, x: b.x, y: b.y, z: b.z });
+  // The ball quickens with every touch of the rally, and a touch takes any spin off it.
+  m.rallyTouches++;
+  Object.assign(b, { k: paceFor(m.rallyTouches, pointsPlayed(m)), cx: 0, cy: 0 });
+  m.events.push({ kind: "contact", who: i, how, quality: q, timing, x: b.x, y: b.y, z: b.z });
   if (m.lastTouch === i && !m.lastBlock) return fault(m, p.team, "double");
   if (m.touches > 3) return fault(m, p.team, "four");
   Object.assign(m, { lastTouch: i, lastTeam: p.team, lastBlock: false, serving: false });
@@ -271,7 +357,10 @@ function touch(m: Match, i: number, how: ContactKind, q: number, aim: { x: numbe
   let v;
   if (how === "spike") {
     const e = scatter(1.5), to = { x: over.x + e.x, y: 0, z: over.z + e.z };
-    v = driveTo(from, to, q >= 0.5 ? 15 + 7 * q : 9);
+    let speed = q >= 0.5 ? 15 + 7 * q : 9;
+    v = driveTo(from, to, speed);
+    // A good spike clears the tape (it slows into a steeper arc); a poor one may find the net.
+    while (q >= 0.5 && (heightAtNet(from, v) ?? 99) < COURT.netTop + BALL_R + 0.05 && speed > 6) { speed *= 0.92; v = driveTo(from, to, speed); }
   } else if (m.touches >= 3) {
     // Third touch without a spike: a lob over (a free ball).
     const e = scatter(1.2);
@@ -280,10 +369,10 @@ function touch(m: Match, i: number, how: ContactKind, q: number, aim: { x: numbe
     const mate = m.players[partnerOf(i)];
     const spot = m.touches === 1 && how !== "set" && how !== "jumpset" ? setSpot(side, p.s.x) : m.touches === 1 ? setSpot(side, mate.s.x) : attackSpot(side, mate.s.x);
     const e = scatter(how === "dig" ? 2.6 : how === "bump" ? 2.0 : 1.4);
-    const apex = COURT.netTop + (how === "jumpset" ? 0.9 : m.touches === 2 ? 1.5 : 2.0 + 0.5 * q) - (how === "dig" ? 0.4 * (1 - q) : 0);
+    const apex = COURT.netTop + (how === "jumpset" ? 1.7 : m.touches === 2 ? 2.4 : 2.0 + 0.5 * q) - (how === "dig" ? 0.4 * (1 - q) : 0);
     // A shank: a touch this poor flies off the side.
     const shank = q < 0.15 && how !== "set" ? { x: Math.sign(p.s.x || 1) * (COURT.halfWidth + 1.5), z: 0 } : { x: 0, z: 0 };
-    v = arcTo(from, { x: spot.x + e.x + shank.x, y: m.touches === 2 ? 2.9 : 1.6, z: spot.z + e.z }, apex);
+    v = arcTo(from, { x: spot.x + e.x + shank.x, y: m.touches === 2 ? COURT_TUNING.jumpHeight * 0.85 + HAND.spike : 1.6, z: spot.z + e.z }, apex);
   }
   Object.assign(b, v);
 }
@@ -293,12 +382,14 @@ function blocks(m: Match) {
   const b = m.ball;
   for (let i = 0; i < 4; i++) {
     const p = m.players[i], side = sideOfPlayer(m, i);
-    if (p.block <= 0 || m.lastTeam === p.team || m.lastTeam === null) continue;
-    if (Math.sign(b.vz) !== side || Math.abs(b.z) > 0.45) continue;
-    const dx = Math.abs(b.x - p.s.x), top = p.s.y + HAND.spike + 0.35;
-    if (dx > 0.5 || b.y < COURT.netTop - 0.1 || b.y > top) continue;
-    const q = Math.max(0, 1 - 0.5 * (dx / 0.5) - 0.6 * Math.abs(BLOCK_TIME * 0.7 - p.block) / BLOCK_TIME);
-    m.events.push({ kind: "contact", who: i, how: "block", quality: q, x: b.x, y: b.y, z: b.z });
+    if (p.block <= 0 || m.lastTeam === p.team || m.lastTeam === null || Math.abs(p.s.z) > F.block.nearNet) continue;
+    if (Math.sign(b.vz) !== side || Math.abs(b.z) > 0.3 + BALL_R) continue;
+    const dx = Math.abs(b.x - p.s.x), top = p.s.y + HAND.spike + 0.35, hw = F.block.halfWidth;
+    if (dx > hw || b.y < COURT.netTop - 0.1 || b.y > top) continue;
+    // Best with the arms freshly up (their first 60%), centred on the ball.
+    const q = Math.max(0, 1 - 0.5 * (dx / hw) - 0.6 * Math.max(0, (BLOCK_TIME - p.block) / BLOCK_TIME - 0.6));
+    // Arms up too soon read as early; a block's timing is how fresh its arms were.
+    m.events.push({ kind: "contact", who: i, how: "block", quality: q, timing: q >= 0.85 ? "perfect" : q >= 0.6 ? "good" : "early", x: b.x, y: b.y, z: b.z });
     p.block = 0;
     m.flight++;
     if (q >= 0.7) {
@@ -328,7 +419,8 @@ function movePlayer(m: Match, i: number, input: MoveInput, dt: number) {
       const b = m.ball, off = Math.hypot(b.x - x, b.z - z), dy = b.y - (p.s.y + HAND.dig);
       if (off <= k.reach && Math.abs(dy) <= REACH.dig.band && (sideOf(b.z) === side)) {
         d.dug = true;
-        touch(m, i, "dig", touchQuality(dy / Math.max(2, Math.abs(b.vy)), off, k.reach) * (d.strong ? 1 : 0.8), null);
+        const late = -dy / Math.max(1, Math.abs(realVy(b)));
+        touch(m, i, "dig", touchQuality(late, off, k.reach) * (d.strong ? 1 : 0.8), null, timingOf(late));
       }
     }
     if (d.t >= k.time) { p.dive = null; p.down = k.down; }
@@ -356,25 +448,30 @@ export function startDive(m: Match, i: number, dirX: number, dirZ: number) {
   m.events.push({ kind: "dive", who: i, strong });
 }
 
+/** The human's controls this step, through the one table of what each control does now (actions.ts). */
 function humanStep(m: Match, i: number, inp: CourtInput): MoveInput {
-  const p = m.players[i], air = p.s.mode === "air";
-  const sv = serverOf(m) === i;
-  if (m.phase === "serve" && sv) {
+  const p = m.players[i];
+  // The serve's power bar: hold, and release to toss (a hold, not a press, so it stays out of the table's presses).
+  if (stanceOf(m, i) === "serve") {
     if (inp.leftPressed) m.meter = 0;
     if (m.meter !== null && inp.left) m.meter += STEP;
     if (m.meter !== null && (inp.leftReleased || !inp.left)) { const pw = meterPower(m.meter); m.meter = null; toss(m, pw); }
-  } else if (m.phase === "toss" && sv) {
-    if (inp.leftPressed) serveHit(m, inp.aim);
-  } else if (m.phase === "rally") {
-    if (inp.leftPressed) press(m, i, air ? "spike" : "bump", inp.aim);
-    if (inp.ePressed) press(m, i, air ? "jumpset" : "set", inp.aim);
-    if (inp.rightPressed) {
-      if (air) { if (Math.abs(p.s.z) < 1.2) p.block = BLOCK_TIME; }
-      else { p.call = CALL_TIME; m.events.push({ kind: "call", who: i }); m.flight++; }
-    }
-    if (inp.ctrlPressed) startDive(m, i, inp.x, inp.z);
   }
-  return { ...NO_INPUT, x: inp.x, z: inp.z, sprint: inp.sprint, jump: inp.jump, jumpPressed: inp.jumpPressed, dashPressed: inp.dashPressed };
+  const pressed: [Control, boolean][] = [["left", inp.leftPressed], ["e", inp.ePressed], ["right", inp.rightPressed], ["ctrl", inp.ctrlPressed]];
+  for (const [c, on] of pressed) {
+    if (!on) continue;
+    const a = actionFor(m, i, c);
+    if (a === "serve") serveHit(m, inp.aim, inp.ring, inp.spin);
+    else if (a === "bump" || a === "set" || a === "spike" || a === "jumpset") press(m, i, a, inp.aim);
+    else if (a === "call") { p.call = CALL_TIME; m.events.push({ kind: "call", who: i }); m.flight++; }
+    // Arms up for the rest of the jump (once a jump); they only stop a ball at the net (blocks).
+    else if (a === "block" && !p.blocked) { p.block = BLOCK_TIME; p.blocked = true; m.events.push({ kind: "block", who: i }); }
+    else if (a === "dive" || a === "slide") startDive(m, i, inp.x, inp.z);
+  }
+  if (p.s.mode !== "air") p.blocked = false;
+  // Holding the ball before the toss, you walk the baseline but don't jump.
+  const still = stanceOf(m, i) === "serve";
+  return { ...NO_INPUT, x: inp.x, z: inp.z, sprint: inp.sprint, jump: inp.jump && !still, jumpPressed: inp.jumpPressed && !still, dashPressed: inp.dashPressed };
 }
 
 // ── The step ────────────────────────────────────────────────────────────────
@@ -438,7 +535,8 @@ export function stepMatch(m: Match, inp: CourtInput = NO_COURT_INPUT, dt = STEP)
       return fault(m, landingLoser(m.score, e.in, sideOf(e.z), m.lastTeam), e.in ? "in" : "out");
     }
   }
-  blocks(m);
+  resolvePresses(m);
+  if (m.phase === "rally") blocks(m);
 }
 
 /** A frame: whole steps, presses latched to the next step (as the movement sim's advanceMove). Returns the events. */

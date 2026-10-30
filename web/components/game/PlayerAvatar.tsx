@@ -159,6 +159,7 @@ function rideFrame(r: AvatarRide, g: THREE.Group, bd: THREE.Group, hd: THREE.Gro
   if (r.hop) { m.play = "Jump"; r.hop = false; }
   if (r.play) { m.play = r.play; r.play = null; }
   if (r.upper) { m.upper = r.upper; r.upper = null; }
+  if (r.playRate) { m.playRate = r.playRate; r.playRate = undefined; }
   if (r.land) { m.stop = true; r.land = false; }
   // Footsteps from the feet on the boards: the sound, and what the boards throw (nothing but the sound, as on any wood).
   if (m.steps !== undefined && m.steps !== f.steps) {

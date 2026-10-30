@@ -533,7 +533,7 @@ function plazaSet(): Obj[] {
  */
 function beachSet(): Obj[] {
   const out: Obj[] = [...["sushi-bar", "sushi-bar-pier"].map(m => obj("prop", m, ...SUSHI, SUSHI_YAW, 1, m)), obj("prop", "lifeguard-tower", 1, 108.5, 0, 1, "lifeguard-tower")];
-  ([[4.5, 107.4, "a"], [5.1, 107.8, "b"], [5.7, 107.3, "c"], [-16, 107, "c"], [-15.4, 107.5, "a"], [33, 104, "b"], [33.6, 104.4, "a"]] as const)
+  ([[4.5, 107.4, "a"], [5.1, 107.8, "b"], [5.7, 107.3, "c"], [-19.6, 107, "c"], [-19, 107.5, "a"], [33, 104, "b"], [33.6, 104.4, "a"]] as const)
     .forEach(([x, z, m], i) => out.push(obj("prop", `surfboard-${i}`, x, z, 0.4 * (hash01(i, 30) - 0.5) + (x > 30 ? 2.6 : 0), 1, `surfboard-${m}`)));
   // wharf-art2's beach things (David, R2c: "brainstorm for more beach stuff, maybe beach balls"): by each parasol a
   // lounger looking out to sea, a towel or two, the cool box and a ball; the volleyball net on open sand well off the
@@ -544,10 +544,14 @@ function beachSet(): Obj[] {
     out.push(obj("prop", `beach-towel-${i}`, x - 1.5, z + 0.3, 0.5 * (h(1) - 0.5), 1, h(2) < 0.5 ? "beach-towel-a" : "beach-towel-b"));
     if (h(3) < 0.6) out.push(obj("prop", `beach-towel-${i}-b`, x - 2.6, z + 0.5, 0.5 * (h(4) - 0.5), 1, h(2) < 0.5 ? "beach-towel-b" : "beach-towel-a"));
     out.push(obj("prop", `beach-cooler-${i}`, x + 0.5, z - 1.2, h(5) * 6.28, 1, "beach-cooler"));
-    out.push(obj("prop", `beach-ball-${i}`, x + 2.3, z + 1.5, h(6) * 6.28, 1, `beach-ball-${"abc"[i]}`));
+    out.push(obj("prop", `beach-ball-${i}`, x + 2.3, z + 1.5, h(6) * 6.28, 0.28, "beach-ball")); // 0.56 across
   });
-  // The volleyball court (game/volleyball): the net across a real-proportion court along the beach, a ball by the far post.
-  out.push(obj("prop", "volleyball-net", ...VOLLEY, Math.PI / 2, 1, "volleyball-net"), obj("prop", "beach-ball-net", VOLLEY[0] + 0.7, VOLLEY[1] + 4.3, 1.3, 1, "beach-ball-b"));
+  // The volleyball court (game/volleyball): the net across the court along the beach, a ball by the far post off the
+  // free zone (the surfboards west of it too); up the grassy rise on the land side a log bench to watch from (facing
+  // the court), and at the east end, toward the campfire, the leaderboard board (the plaza's catch board, facing east).
+  out.push(obj("prop", "volleyball-net", ...VOLLEY, Math.PI / 2, 1, "volleyball-net"), obj("prop", "beach-ball-net", VOLLEY[0] + 0.7, VOLLEY[1] + 6.9, 1.3, 0.2, "beach-ball")); // the match's ball size (court.ts BALL_R)
+  out.push(obj("bench", "volley-bench", VOLLEY[0] + 3, VOLLEY[1] - 9.1, 0, 1, "log-bench"));
+  out.push(obj("prop", "volley-board", VOLLEY[0] + 12.1, VOLLEY[1] - 1.46, Math.PI / 2, 1, "catch-board"));
   out.push(obj("prop", "sandcastle", 8, SANDCASTLE_Z, 0.4, 1, "sandcastle"));
   return out;
 }

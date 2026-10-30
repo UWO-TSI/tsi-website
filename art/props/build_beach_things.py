@@ -1,11 +1,10 @@
 """More for the new world's beach (game/wharf-art2; David's R2c note, 2026-10-26: "brainstorm for more beach stuff, maybe
-beach balls you can play with"). Scenery for now: the game has no ball to kick or throw yet. Our style: round, smooth,
-plain colours with the right light response, low detail.
+beach balls you can play with"). The beach ball itself is the volleyball's (art/props/build_volleyball_ball.py, one
+ball design). Our style: round, smooth, plain colours with the right light response, low detail.
 
   /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P art/props/build_beach_things.py [-- review <dir>]
 
 Writes, under web/public/assets/game/props/, each in game units at scale 1, the origin on the sand (y 0):
-  beach-ball-{a,b,c}.glb  a beach ball 0.56 across resting on the sand: six gores in two colours and white, white caps.
   beach-towel-{a,b}.glb   a striped towel laid on the sand along z (0.9 by 1.8), rumpled, a corner turned over.
   beach-lounger.glb       a wooden sun lounger along z, its backrest raised at -z (the sitter looks toward +z), a
                           striped cushion on it.
@@ -30,29 +29,6 @@ ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 OUT = "game/props/"
 rng = np.random.default_rng(2740)
 SAND, SAND_DARK, WHITE = "#e8cf9a", "#cfae74", "#f6f2e8"
-BALLS = {"a": ("#e8553c", "#f2c94c", "#3f86c8"), "b": ("#3fb8c4", "#ef8a8a", "#f2c94c"), "c": ("#ef7ab0", "#f29a3c", "#8fcf5a")}
-
-
-def beach_ball(name, Mp):
-    """A UV sphere whose gores alternate colour and white, white caps at the poles."""
-    k = K.Kit(f"beach-ball-{name}")
-    R, segs, rings = 0.28, 12, 9
-    cols = BALLS[name]
-    for i in range(rings):
-        for j in range(segs):
-            q = []
-            for ii, jj in ((i, j), (i, j + 1), (i + 1, j + 1), (i + 1, j)):
-                th, ph = math.pi * ii / rings, math.tau * jj / segs
-                q.append((R * math.sin(th) * math.cos(ph), R + R * math.cos(th) * 0.97, R * math.sin(th) * math.sin(ph)))
-            col = WHITE if i in (0, rings - 1) else (cols[(j // 2) % 3] if j % 2 == 0 else WHITE)
-            if i == 0:
-                q = [q[0], q[2], q[3]]
-            elif i == rings - 1:
-                q = [q[0], q[1], q[2]]
-            k.face([k.vert(p) for p in q], [(0, 0)] * len(q), Mp, col)
-    k.lathe((0, 2 * R * 0.985, 0), [(0.0, 0.0), (0.05, -0.005), (0.05, 0.012), (0.0, 0.016)], Mp, WHITE, n=8)      # the valve cap
-    k.tint_gradient(0.86, 1.0, 0.0, 2 * R)
-    return k.finish(smooth_deg=70)
 
 
 def beach_towel(name, Mc):
@@ -164,8 +140,7 @@ def build():
     K.reset()
     wood = wood_mat("M_DecorWood", 2614)
     paint, cloth, stone, metal = K.Mat("P_Paint", rough=0.45), K.Mat("P_Cloth", rough=1.0), K.Mat("P_Stone", rough=0.95), K.Mat("P_Metal", rough=0.4)
-    jobs = [(f"beach-ball-{n}", (lambda n=n: beach_ball(n, paint))) for n in BALLS]
-    jobs += [(f"beach-towel-{n}", (lambda n=n: beach_towel(n, cloth))) for n in "ab"]
+    jobs = [(f"beach-towel-{n}", (lambda n=n: beach_towel(n, cloth))) for n in "ab"]
     jobs += [("beach-lounger", lambda: lounger(wood, cloth)), ("sandcastle", lambda: sandcastle(stone, paint, cloth)),
              ("beach-cooler", lambda: cooler(paint, metal))]
     obs = {}
@@ -180,8 +155,7 @@ def build():
 def scene(obs, out, views):
     import bpy
     shown = []
-    spots = {"beach-ball-a": (-1.0, -1.2, 0), "beach-ball-b": (1.6, -0.6, 0), "beach-ball-c": (2.2, 1.6, 0),
-             "beach-towel-a": (-2.3, 0.6, 0.15), "beach-towel-b": (-1.2, 0.8, -0.1), "beach-lounger": (0.3, 0.9, 0.0), "beach-cooler": (1.3, 0.9, 0.3),
+    spots = {"beach-towel-a": (-2.3, 0.6, 0.15), "beach-towel-b": (-1.2, 0.8, -0.1), "beach-lounger": (0.3, 0.9, 0.0), "beach-cooler": (1.3, 0.9, 0.3),
              "sandcastle": (0.6, 2.6, 0.0)}
     for name, (x, z, yaw) in spots.items():
         o = obs[name].copy()

@@ -22,7 +22,8 @@ import { FISH } from "@/lib/game/fishing";
 import { iconUrl } from "@/lib/icons/keys";
 import { RARITIES, RARITY_LABEL } from "@/lib/rarity";
 import { useSearch } from "@/lib/game/useMediaQuery";
-import { PowerMeter, ProgressCard } from "@/components/gui/flat";
+import { ActionBar, ActionIcon, ProgressCard, RankBadge, ServeMeter, SpinPicker } from "@/components/gui/flat";
+import { BoardRows } from "@/components/game/volleyball/BoardSheet";
 import s from "./showroom.module.css";
 
 /** Re-mounts its child every `ms` (an overlay that finishes and closes itself stays on show). */
@@ -201,8 +202,23 @@ export default function GuiShowroom() {
         <ProgressCard title="Saving" status="Nearly there" value={0.9} label="Saving" /></Row>
     </Section>
 
-    <Section id="power-meter" title="Power meter (flat)" note="A charge meter: the volleyball serve’s power bar (hold, release), the fill turning gold in the tip zone.">
-      <Row><PowerMeter value={0.35} label="Serve power"><Keycap>Hold</Keycap></PowerMeter><PowerMeter value={0.7} label="Serve power" /><PowerMeter value={0.96} label="Serve power, max" /></Row>
+    <Section id="serve-meter" title="Serve meter (flat)" note="The volleyball serve’s power: a triangle wide at the top, the fill warming from sea to coral to gold; it leans in and trembles as it fills, and flashes Max at the top.">
+      <Row><ServeMeter value={0.3} label="Serve power"><Keycap>Hold</Keycap></ServeMeter><ServeMeter value={0.72} label="Serve power" /><ServeMeter value={0.97} label="Serve power, max" /></Row>
+    </Section>
+
+    <Section id="action-bar" title="Action bar (flat)" note="A match’s moves: each a pictogram, its key and its name. A slot that would connect glows; a press flashes it. The ground’s and the air’s rows swap in place.">
+      <Row><ActionBar active="ground" flash={{ id: "set", n: 1, ok: true }} rows={{ ground: ["bump", "set", "call", "dive", "jump"].map((a, i) => ({ id: a, label: a[0].toUpperCase() + a.slice(1), keycap: ["Click", "E", "R-click", "Ctrl", "Space"][i], icon: <ActionIcon move={a} />, ready: a === "bump" })) }} /></Row>
+      <Row><ActionBar active="air" rows={{ air: ["spike", "jumpset", "block"].map((a, i) => ({ id: a, label: ["Spike", "Jump set", "Block"][i], keycap: ["Click", "E", "R-click"][i], icon: <ActionIcon move={a} />, ready: a === "spike" })) }} /></Row>
+      <Row>{["serve", "charge", "spin", "slide", "dash"].map(a => <ActionIcon key={a} move={a} size={40} />)}</Row>
+    </Section>
+
+    <Section id="spin-picker" title="Spin picker (flat)" note="Where on the ball the serve is hit: off centre to a side curves it, the top dives, the bottom floats.">
+      <Row><SpinPicker x={0} y={0} picture="/assets/game/volleyball/ball-icon.png" label="Centre" /><SpinPicker x={0.6} y={0.4} picture="/assets/game/volleyball/ball-icon.png" label="Top right"><Keycap>R-click</Keycap></SpinPicker></Row>
+    </Section>
+
+    <Section id="rank" title="Rank badge and the leaderboard (flat)" note="A place in a ranking, the first in gold; the volleyball court’s board, its rows on hairlines and a Sample tag until phase 3.">
+      <Row><RankBadge rank={1} /><RankBadge rank={2} /><RankBadge rank={10} /></Row>
+      <BoardRows board={{ sample: true, rows: [{ rank: 1, name: "Kelpie", wins: 14, you: false }, { rank: 2, name: "Sandpiper", wins: 11, you: false }, { rank: 3, name: "Islander", wins: 9, you: true }] }} />
     </Section>
 
     <Section id="tooltips" title="Tooltips" kit={["wheel"]} note="The teal name pill with a tail, on hover and on keyboard focus.">

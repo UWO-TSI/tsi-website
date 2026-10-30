@@ -18,7 +18,9 @@ import Court from "./volleyball/Court";
 import VolleyMatch from "./volleyball/VolleyMatch";
 import VolleyHud from "./volleyball/VolleyHud";
 import { courtOf, startVolley, useVolley, volley } from "@/lib/game/volleyball/session";
-import { toLocal } from "@/lib/game/volleyball/court";
+import { COURT, toLocal } from "@/lib/game/volleyball/court";
+import { boardSpot } from "@/lib/game/volleyball/island";
+import BoardSheet from "./volleyball/BoardSheet";
 import Residents from "./NPC";
 import GameSceneBoundary from "./GameSceneBoundary";
 import PostFX from "./PostFX";
@@ -228,10 +230,10 @@ import { roomHeading } from "@/lib/game/roomHeading";
 import { DevUiTheme } from "@/components/gui/DevUiTheme";
 import styles from "./DefaultIslandWorld.module.css";
 
-type Near = "knock" | "shop_enter" | "counter" | "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "stool" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | "bram" | "founder" | "coffee" | "aquarium" | "admin" | "sell" | "volley" | null;
-type Sheet = "counter" | "shopkeeper" | "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | "bag" | "wallet" | "chest" | "plaque" | "sell" | null;
+type Near = "knock" | "shop_enter" | "counter" | "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "stool" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | "bram" | "founder" | "coffee" | "aquarium" | "admin" | "sell" | "volley" | "leaderboard" | null;
+type Sheet = "counter" | "shopkeeper" | "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | "bag" | "wallet" | "chest" | "plaque" | "sell" | "vboard" | null;
 const DEV = process.env.NODE_ENV !== "production";
-const DEV_SHEETS: readonly Sheet[] = ["counter", "shopkeeper", "notice", "letters", "journal", "trophies", "showcase", "closet", "fitting", "oracle", "path", "settings", "missions", "tourney", "posters", "cafe", "wallet", "chest"];
+const DEV_SHEETS: readonly Sheet[] = ["vboard", "counter", "shopkeeper", "notice", "letters", "journal", "trophies", "showcase", "closet", "fitting", "oracle", "path", "settings", "missions", "tourney", "posters", "cafe", "wallet", "chest"];
 /** Sheets opened at a station with E: E closes them again (the dialog system's opening key). */
 const STATION_KEY = "e";
 const PHASE_NAMES: Record<IslandPhase, string> = { dawn: "Dawn", day: "Daylight", evening: "Evening", night: "Night" };
@@ -257,7 +259,7 @@ const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   coffee: "Get a coffee", aquarium: "Look at the aquarium", admin: "Try the door",
   // The new world's quick-sell barrel by the fish market.
   sell: "Quick sell your catch",
-  volley: "Play volleyball",
+  volley: "Play volleyball", leaderboard: "Volleyball leaderboard",
 };
 const CLOSED: Near[] = ["museum", "monument"];
 /** The door in reach for trick-or-treat (components/game/Halloween.tsx): IslandScene writes it each frame, E knocks. */
@@ -468,13 +470,14 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   // The volleyball court (game/volleyball): its net is drawn by Court (the world's net, or the close one in a match), not merged.
   // Dev (the perf measure's "before"): ?vbcourt=0 leaves the court out and its net merged with the scenery, as before.
   const court = useMemo(() => (DEV && new URLSearchParams(location.search).get("vbcourt") === "0" ? null : courtOf(v, island.ground)), [v, island]), playing = useVolley();
+  const board = useMemo(() => boardSpot(v), [v]);
   const [sceneryStill, sceneryMoving] = useMemo(() => {
     const all = court ? scenery.filter(p => !p.url.endsWith("/volleyball-net.glb")) : scenery;
     return v.terrain ? [all.filter(p => STILL.test(p.url)), all.filter(p => !STILL.test(p.url))] : [[], all];
   }, [v, scenery, court]);
   // E at the net starts a match on this court (the world's ground and walls, in the court's frame).
   useEffect(() => {
-    const on = () => { if (court && !volley.match) startVolley(court, island.ground, island); };
+    const on = () => { if (court && !volley.match) startVolley(court, island.ground, island, { ticket: true, seed: DEV ? Number(new URLSearchParams(location.search).get("vbseed")) || undefined : undefined }); };
     window.addEventListener("tsi:volley", on);
     return () => window.removeEventListener("tsi:volley", on);
   }, [court, island]);
@@ -551,7 +554,9 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     const tn = talkStore.near;
     if (tn.id && !fishing && tn.d < nextD) next = "talk";
     // At the volleyball net, on either side of it: play.
-    if (court && !next) { const [lx, lz] = toLocal(court, px, pz); if (Math.abs(lx) < 4.2 && Math.abs(lz) < 1.8) next = "volley"; }
+    if (court && !next) { const [lx, lz] = toLocal(court, px, pz); if (Math.abs(lx) < COURT.postX && Math.abs(lz) < 1.8) next = "volley"; }
+    // The leaderboard board beside the court.
+    if (board && !next && Math.hypot(px - board.x, pz - board.z) < 1.4) next = "leaderboard";
     if (studyHoldsPrompt() || talking || volley.match) next = null;
     // Bram waiting at his stop on the walk-along (or talking): E is his.
     else if (!fishing && bramNear(px, pz)) next = "bram";
@@ -606,7 +611,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
           While Bram brings a new arrival in and walks them round, his walking self stays out of sight: one Bram. */}
       <Residents personas={personas} phase={phase} ceremony={ceremony} player={player} island={island} v={v} away={arrivalPhase ? BRAM.slug : null}
         playerName={identity.display_name !== "You" ? identity.display_name : null} />
-      <PlayerAvatar key={`${reset}-${returned}-${fromBoat}-${exitFrom}`} spawnPosition={spawn} playerName={identity.display_name} playerLevel={level} member={identity.member} player={player} frozen={fishing || arriving || talking || photoOpen}
+      <PlayerAvatar key={`${reset}-${returned}-${fromBoat}-${exitFrom}`} spawnPosition={spawn} playerName={identity.display_name} playerLevel={level} member={identity.member} player={player} frozen={fishing || arriving || talking || photoOpen || playing}
         ride={myTrip.ride}
         world={walkOn} groundHeight={island.ground} groundSurface={island.surface} camTarget={focus} glider={peaceful.glider} dash={dash} held={held} />
       {court && <Court spot={court} ground={island.ground} close={playing} />}
@@ -835,6 +840,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   useEffect(() => AudioManager.prepare(), []); // behind the loading screen, not mid-walk
   const ambientPhase: AmbientPhase = phase === "evening" ? "dusk" : phase;
   const [fishing, setFishing] = useState(false);
+  // In a volleyball match the court owns the keys and the mouse (VolleyMatch): the wheels stand back.
+  const inMatch = useVolley();
   const [bagOpen, setBagOpen] = useState(() => devHome.get("sheet") === "bag");
   const identity = useWorldIdentity();
   const arrivalFlag = useArrivalFlag(identity.signedIn);
@@ -1041,6 +1048,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     }
     // E again at the same bench or bed stands you up (tsi:sit toggles there).
     if (action === "volley") { window.dispatchEvent(new Event("tsi:volley")); return; }
+    if (action === "leaderboard") { setSheet("vboard"); return; }
     if (action === "bench" || action === "stool") { if (benchSpot.current) window.dispatchEvent(new CustomEvent("tsi:sit", { detail: benchSpot.current })); return; }
     if (action === "bed") {
       const bed = nearestBed(layout, player.current.x, player.current.z);
@@ -1316,7 +1324,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <AudioController phase={ambientPhase} weather={weather} season={season.season} />
       {/* Top right (playtest round 1, decision 3): while you play, the quest line left of the minimap, the time under it;
           the UI view (Esc 1) grows the minimap and adds coins, the level and the gear left of the quest line. */}
-      <div className={styles.hudRight} data-hidden={hudCinematic || undefined}>
+      {/* In a volleyball match the court's HUD is the stage (VolleyHud): the island's top right steps aside. */}
+      <div className={styles.hudRight} data-hidden={hudCinematic || inMatch || undefined}>
         <div className={styles.hudLead} data-new={objectiveNew || undefined}>
           <TopCluster className={styles.rightCluster} full={full} buttons={uiView} hidden={hudCinematic}
             onWallet={() => setSheet(value => (value === "wallet" ? null : "wallet"))} walletKey={keyName(identity.settings.key_bindings.openWallet)}>
@@ -1365,9 +1374,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <FishingOverlay rod={held?.kind === "rod" && held.tier ? rodByTier(held.tier) : peaceful.rod} onActiveChange={setFishing} />
       {fishBosses() && !fishing && !inside && <RaidCall />}
       <ToolWheel items={wheelItems} held={heldState.held} wheelKey={wheelKeys.wheel} touch={touch} onEquip={holdItem} onSwap={() => swapHeld(wheelItems)}
-        enabled={ready && !inside && !fishing && !sheet && !bagOpen && !cinematic && !talking && !fading && !decor.decorating && !(touch && uiView)} />
+        enabled={ready && !inMatch && !inside && !fishing && !sheet && !bagOpen && !cinematic && !talking && !fading && !decor.decorating && !(touch && uiView)} />
       <EmoteWheel emoteKey={wheelKeys.emote} touch={touch} onPlay={entry => playWheelEntry(entry, player.current)}
-        enabled={ready && site !== "ruins" && !fishing && !sheet && !bagOpen && !cinematic && !talking && !fading && !decor.decorating && !(touch && uiView)} />
+        enabled={ready && !inMatch && site !== "ruins" && !fishing && !sheet && !bagOpen && !cinematic && !talking && !fading && !decor.decorating && !(touch && uiView)} />
       <DonateSheet open={donateOpen} onClose={() => setDonateOpen(false)} onDonated={loadMuseum} />
       <ToastHub />
       <VolleyHud />
@@ -1403,6 +1412,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         onChoose={decor.choose} onRotate={decor.rotateSelected} onPutAway={decor.putAway} onDone={decor.toggle}
         onFinish={(key, value) => decor.setRoomFinish(roomAt(player.current.x, layout.rooms.length), key, value)} onShop={() => toShop("More furniture")} />}
       <NoticeSheet open={sheet === "notice"} onClose={() => setSheet(null)} keys={STATION_KEY} />
+      <BoardSheet open={sheet === "vboard"} onClose={() => setSheet(null)} me={identity.display_name} />
       {/* The HQ visit's cards (row 312): the register, where the check-in code goes, the Founder's plaque. */}
       <RegisterCard open={hq.card === "register"} name={identity.signedIn ? identity.display_name : null} friendCode={friends.view?.code ?? null} letters={progression.unreadLetters ?? null} onDone={() => hqEvent("signed")} />
       <CheckInCard open={hq.card === "checkin"} onDone={() => hqEvent("checkin")} />

@@ -3,6 +3,7 @@
  * windows. Pure.
  */
 import { CAST } from "@/lib/game/fishing";
+import { VB_FEEL } from "./feel";
 
 /**
  * The power bar while held `held` seconds: the fishing cast meter's wave (FishingOverlay CastMeter), 0 → 1 → 0, the
@@ -39,9 +40,9 @@ export function serveError(ballY: number, ballVy: number, handY: number, g: numb
   return -dy / Math.max(0.5, -ballVy);
 }
 
-/** A touch's quality, 0..1, from how far off the ideal height (as time) and how far off centre. */
+/** A touch's quality, 0..1, from how far off the ideal moment (s) and how far off centre. */
 export function touchQuality(timeOff: number, off: number, reach: number): number {
-  const t = Math.min(1, Math.abs(timeOff) / 0.15), h = Math.min(1, off / reach);
+  const t = Math.min(1, Math.abs(timeOff) / VB_FEEL.timing.window), h = Math.min(1, off / reach);
   return Math.max(0, 1 - 0.6 * t - 0.4 * h * h);
 }
 export type Grade = "perfect" | "good" | "poor";

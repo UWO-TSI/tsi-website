@@ -29,6 +29,8 @@ export interface AvatarRide {
    * dive) and its Air phase, and a one-shot over the body or the upper body (a bump, a spike), taken by the avatar.
    */
   move?: ClipName | null; air?: number; play?: ClipName | null; upper?: ClipName | null;
+  /** The next one-shot's rate (a volleyball move's clip timed so its contact meets the ball). */
+  playRate?: number;
 }
 
 export const newRide = (): AvatarRide => ({

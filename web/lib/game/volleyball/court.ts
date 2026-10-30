@@ -7,19 +7,26 @@
 /** Real metres to world units: a 1.75 m person is our 1.36 u character (Character.tsx CHARACTER_HEIGHT = 1.045 × 1.3). */
 export const COURT_SCALE = (1.045 * 1.3) / 1.75;
 const m = (v: number) => v * COURT_SCALE;
+/**
+ * David 2026-10-30 (phase 1 review): "the field and net needs to be bigger". The court's plan and the net's height
+ * grow from the real proportions by these (the jump grows with them: match.ts COURT_TUNING).
+ */
+export const COURT_GROW = { plan: 1.3, net: 1.15 } as const;
+const g = (v: number) => m(v) * COURT_GROW.plan, n = (v: number) => m(v) * COURT_GROW.net;
 
 export const COURT = {
   /** Half the 16 m length (baseline to the net) and half the 8 m width. */
-  halfLength: m(8), halfWidth: m(4),
+  halfLength: g(8), halfWidth: g(4),
   /** The net's top tape (2.43 m) and its lower edge (1 m of mesh). */
-  netTop: m(2.43), netBottom: m(1.43),
+  netTop: n(2.43), netBottom: n(1.43),
   /** The posts stand 0.7 m outside the sidelines. */
-  postX: m(4.7),
+  postX: g(4) + m(0.7),
   /** The free zone round the court, where players may still run. */
   free: m(3),
 } as const;
 
-export const BALL_R = 0.1;
+/** A big inflatable beach ball (David's reference, specs/references/volleyball/beach-ball.png): 0.4 u across. */
+export const BALL_R = 0.2;
 
 export type Side = 1 | -1;
 export const sideOf = (z: number): Side => (z < 0 ? -1 : 1);

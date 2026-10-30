@@ -20,7 +20,9 @@ import f from "./flat.module.css";
 /** The kit's class names, for the odd surface that lays out its own content in the flat style. */
 export { f as flatStyles };
 export { ProgressCard } from "./ProgressCard";
-export { PowerMeter } from "./PowerMeter";
+export { ServeMeter } from "./ServeMeter";
+export { ActionBar, ActionIcon, type ActionSlot } from "./ActionBar";
+export { SpinPicker } from "./SpinPicker";
 /** The detail stage's classes: a viewer (TurnStage, ItemViewer, the keychain's stage) fills `stage`; a picture `picture`. */
 export const STAGE = { stage: f.stage, picture: f.stagePicture } as const;
 /**
@@ -350,6 +352,10 @@ export function HairlineRow({ art, title, detail, end }: { art?: string | ReactN
     <span className={f.rowText}><b>{title}</b>{detail !== undefined ? <span className={f.quiet}>{detail}</span> : null}</span>
     {end}
   </div>;
+}
+/** A place in a ranking (a leaderboard row's art): a round number, the first in gold. */
+export function RankBadge({ rank }: { rank: number }) {
+  return <span className={f.rank} data-top={rank === 1 || undefined} aria-label={`Rank ${rank}`}>{rank}</span>;
 }
 /** Buttons at a row's end. */
 export function RowActions({ children }: { children: ReactNode }) {

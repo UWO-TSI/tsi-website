@@ -83,3 +83,15 @@ generated, normalised to match the existing CC0 set (SFX target
 | Event | SFX | Where |
 |---|---|---|
 | Pressing the TSI keycap keychain's keycap (in the shop and in the merch view) | `keyswitch`: its own file, `keyswitch.ogg`. The press at 0 and the return at 0.11 s, in step with the keycap (`lib/game/keychainSwing.ts` PRESS). It's a synthesized stand-in (`art/audio/synth_keyswitch.py`); David is recording the real one, and that recording replaces this one file under the same name. | `KeycapKeychain.tsx` |
+
+## Beach volleyball (wired 2026-10-30, game/volleyball)
+
+| Event | SFX | Where |
+|---|---|---|
+| Every contact (serve, bump, set, jump set, dig, block, spike) | its body (`vb-serve`, `vb-bump`, `vb-set`, `vb-dig`, `vb-block`, `vb-spike`) and its timing grade's layer (`vb-perfect`, `vb-good`, `vb-early`, `vb-late`); early a touch higher and softer, late lower and softer | `lib/game/volleyball/sfx.ts` |
+| The ball down; out; the net; the tape | `vb-boom` (by speed); `vb-sand` + `vb-out`; `vb-net`; `vb-tape` | same |
+| Jumps, dives, slide dives | `vb-takeoff`, `vb-touchdown`, `vb-dive`, `vb-slide` | same |
+| The serve | `vb-charge` ticks up the meter, `vb-max` at max power, `vb-toss`; a missed press `vb-whiff` | same |
+| Points, the win, "Mine!", the rally's heat | `vb-point` / `vb-point-them`, `vb-win`, `vb-call`, `vb-heat` (every other touch from the 4th) and `vb-fire` (the 6th) | same |
+
+All self-made and CC0 (`SOURCES.md`, `art/audio/synth_volleyball.py`).

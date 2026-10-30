@@ -2,41 +2,43 @@
 
 Worktree `.claude/worktrees/volleyball`, branch `game/volleyball`, cut from origin/main f0be2c5e. Agent type `uwotsi-lane`.
 
-**Read first:** `specs/minigames/beach-volleyball.md` (the design spec: phases, controls, rules, bots, HUD, the two views, phase 2 and 3 designs, open questions), `specs/design-bible.md` (UI and Models), `specs/references/volleyball/camera-and-court.png` (camera and proportions only). CODEMAP sections: Movement, Camera, UI kit, Multiplayer.
+**Read first:** `specs/minigames/beach-volleyball.md` (the design spec, with David's phase 1 review verbatim and round 2's root causes at the top), `specs/design-bible.md` (UI and Models), `specs/references/volleyball/` (camera-and-court.png for the camera only; beach-ball.png is David's ball). CODEMAP sections: Movement, Camera, UI kit, Multiplayer.
 
 ## Status
 
-Head: the commit that updates this file, after 482f1a3e. Phase 1 is built and waiting for David's review. Nothing is approved yet.
+Head: the commit that updates this file. **Round 2 (the phase 1 redo after David played it) is built, waiting for review.** Phase 1's island match was approved; everything else was redone.
 
-- **Engine** (`web/lib/game/volleyball/`): court, ball, timing, rules, bot, match: pure, seeded, 24 tests. `session.ts` is the client store.
-- **In the game:** the court at the beach's net, (-7.5, 103.8), turned a quarter so it runs along the beach. E at the net ("Play volleyball") starts you and a bot partner against two bots. You play through your own avatar's ride (`myTrip.ride`), so others see you move. The HUD's Leave or the final panel ends a match.
-- **Two views:** passers-by get the line tapes and the LP net (`Court.tsx`); the player gets everything else (`VolleyMatch.tsx`, `VolleyHud.tsx`). Frame times are in spec §10.
-- **Net remodelled:** `art/props/build_volleyball_net.py`, HD 2400 tris and LP 1600 (the old net was 960). The old net builder was removed from `build_beach_things.py`.
-- **Kit:** `PowerMeter` (`components/gui/flat/`), shown in `/lab/gui`. New tokens `--ui-gold`, `--ui-home`, `--ui-away` in all three themes.
-- **World:** `generate.ts` got the VOLLEY spot and a court keep-out for shells and gather spots, and `world.json` was regenerated. The objects that changed: the net, its ball, gather-shell-2, and the shells, which lost 4 and were renumbered. `PROP_FOOTPRINT` and `PROP_TOP` were updated for the net.
-- **Gates at 482f1a3e:** tsc clean; vitest 3532 passed (one run); eslint clean on changed files; perf:check v2 passed (high 4.60 ms median frame, 359 calls; lite 2.90 ms, 290 calls).
-- **Evidence:** `specs/evidence/volleyball/p1/` (strips and the net's HD vs LP in `models/`).
+- **Controls (root causes fixed):** the avatar's keys stand back in a match (PlayerAvatar `frozen` while playing), the court takes the mouse on the window's capture phase (`courtInput.ts`; the orbit camera never sees its right button), Tab and G wheels are off in a match, presses wait up to 0.26 s for the ball. One controls table (`actions.ts`) drives the input and the action bar. Real-input checks on the island pass for every action (`specs/evidence/volleyball/p2/input-results.json`).
+- **Feel:** `feel.ts` VB_FEEL (ball pace 0.52 → 0.9 through a rally, higher floatier jump with apex slow-mo, gentler movement, ready stance, squash and stretch, timing grades). Hands follow the vb_* contract's contact points.
+- **Court:** ×1.3 plan, ×1.15 net (`COURT_GROW`); world regenerated (bench `volley-bench`, board `volley-board`, surfboards, shells, the net ball moved off the free zone). Camera glides in at the start; fog draws in; the island's top-right HUD hides.
+- **Serve:** triangle `ServeMeter` (Max at the top, a harder serve), ring cursor sets the direction, `SpinPicker` sets the curve.
+- **HUD:** kit `ActionBar` with pictograms, steadied rows; grade pops; pace line; bigger point word; final card with coins.
+- **Models:** beach ball HD 5,520 / LP 288 (island balls repointed, old a/b/c deleted); net remodelled from the approved concept, HD 9,436 / LP 2,378.
+- **Effects and sounds:** the 15 approved effects with four timing grades (`VolleyFx.tsx`, `VolleyStamps.tsx` via `fxBus.ts`); 29 synthesised CC0 sounds (`sfx.ts`, `web/public/audio/sfx/vb-*.ogg`, SOURCES.md).
+- **Rewards:** casual win 15 coins, 5 paid wins a day, server tickets (migration `20261030120000_volleyball_casual`, smoke in the chain). Ranked rewards wait for phase 3 (spec).
+- **Island:** leaderboard board (sample data, labelled), spectator bench, residents route round the court, others see a steady vb_spectate stand.
 
 ## David's decisions (newest first)
 
-- 2026-10-29 (via coordinator): "i need you to remodel the beach ball net on the beach to be bigger, i want you to incorperate this mini game in the game but watch out for performance, i want it so the people who are playing have a differeny view than ppl walking by so it doesnt affect their perforamnce." The spot is the existing net's; no spot proposals.
-- 2026-10-29 (via coordinator): right click on the ground is "Call it" (the "Mine!" call). No tip alternative.
-- 2026-10-29 (via coordinator): build phase 1 on clearly labelled stand-in models (except the net, remodelled from his direction); mechanics and feel are reviewed first. Stamina hooks stay in the spec only.
-- 2026-10-29: the brief, verbatim in the spec.
+- 2026-10-30 (via coordinator): the 15 effects approved; "should have differnt effect for timed hits, good, perfect ,early or late. and make these individually and make sure its good, also make fitting sound effect or go online t ofind sound effect libraries".
+- 2026-10-30 (via coordinator): the net concept approved; island beach balls move to the new LP ball; the casual reward as built (15 coins, 5 a day), keep the client-trust limit in the spec until phase 2.
+- 2026-10-30: the phase 1 review, verbatim in the spec ("beach volley ball redo, the controlsl dont even work properly", and per item).
+- 2026-10-29 (via coordinator): right click on the ground is "Call it"; phase 1 on labelled stand-ins; the brief, verbatim in the spec.
 
 ## Next
 
-1. David's phase 1 review: apply his notes. The open questions are at the end of the spec.
-2. When references come: the ball model (HD and LP), and the line tapes if he wants more.
-3. Phase 2 (multiplayer, spec "Phase 2" and §10), only after David approves phase 1.
+1. When game/vb-anim merges: set `VB_CLIPS_READY` in `lib/game/volleyball/moves.ts`, import the contract from `clips.ts` instead of the copied contact times, use vb_shuffle's playRate (speed × 0.5 / 0.26) and vb_shuffle_left, and vb_serve_stand for a standing serve.
+2. David's round 2 review.
+3. Phase 2 (multiplayer), only after David approves.
 
 ## Tools and gotchas
 
 - Locks: `LANE=game/volleyball /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh heavy|devserver|blender <cmd>`; exit 75 means retry. Swap is high, so hold one lock at a time.
-- Evidence: `PORT=3471 node specs/evidence/volleyball/shoot.mjs <out> [camera,serve,late,early,receive,rally,dive,point,island]` against a dev server on 3471 with Supabase blanked and `NEXT_PUBLIC_GAME_WORLD=new`. Start, warm and kill the server inside one devserver lock. Lab scenes drive `window.__volley.dev` (input, yaw and pitch, pause and steps of a 60th of a second, the event log). The `island` scene times frames with `window.__perf`, and `?vbcourt=0` (dev only) leaves the court out, which is the "before".
-- `/lab/volleyball?seed=7` starts with you serving; `?seed=2` with a good bot serve to you; `?bots=1` lets a bot play your place.
-- The world regenerates with `cd web && npx vite-node -c vitest.config.ts scripts/generate-world.ts`. It wrote `study:pier-bench`'s yaw at full precision; restore main's `-1.5708` by hand.
-- React compiler lint: per-frame mutation lives in module-scope functions (`frameStep`, `juice`, `lean` in VolleyMatch), not in component code.
-- The lab's sand texture has dark pebble spots that look like stains; they are in the texture.
-- Ctrl is the Mac crouch key in the movement system; in a match the court's own key handler takes it (`bindCourtInput`), and the world's keys stand back (DefaultIslandWorld checks `volley.match`).
-- Meshy keychain item is absent on this machine. Never ports 3000 or 3300.
+- Real-input checks: `PORT=3471 node specs/evidence/volleyball/p2input.mjs specs/evidence/volleyball/p2 inputs,rally,lab,court` against a dev server on 3471 (Supabase blanked, `NEXT_PUBLIC_GAME_WORLD=new`), started, warmed and killed inside one devserver lock. Pointer lock is emulated on the game's own calls. `?vbseed=N` (dev) seeds the island's match; seed 7 has you serve.
+- `window.__volley` (dev): `dev` (pause, steps, yaw, pitch, `side` close-up camera), `match()`, `controls`, `probe` (serveErr, reach, stance, hand, screen, ring).
+- Effects strips: `specs/evidence/volleyball/p2fx.mjs` (port 3472).
+- The island's post pass drops materials with depthTest off: the rings depth-test and draw late.
+- React compiler lint: per-frame mutation lives in module-scope functions (`frameStep`, `juice`, `camera`, `ballView`).
+- The palms at about (-10.8, 98.4) and (-8.4, 98.1) stand in the court's free zone and can block the camera near the land-side line: David's layout, flagged.
+- The world regenerates with `cd web && npx vite-node -c vitest.config.ts scripts/generate-world.ts`; restore `study:pier-bench`'s yaw to -1.5708 by hand.
+- Never ports 3000, 3300 or 3301.

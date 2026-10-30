@@ -9,7 +9,12 @@ import { BALL_R, COURT, inCourt } from "./court";
 export const GRAVITY = 13;
 const DRAG = 0.012;
 
-export interface Ball { x: number; y: number; z: number; vx: number; vy: number; vz: number }
+/**
+ * The ball, in its own clock: `k` is its pace against the players' (feel.ts: slow motion that quickens through a rally;
+ * 1 when absent), so velocities are the real-pace ones and a step moves it `k × dt`. `cx` and `cy` are a serve's spin
+ * (u/s² in ball time): a sideways curve along x and a topspin's extra drop (negative: a float).
+ */
+export interface Ball { x: number; y: number; z: number; vx: number; vy: number; vz: number; k?: number; cx?: number; cy?: number }
 export type Ground = (x: number, z: number) => number;
 export const FLAT: Ground = () => 0;
 
@@ -20,9 +25,10 @@ export type BallEvent =
   | { kind: "land"; in: boolean; x: number; z: number };
 
 /** One step; mutates `b`. Returns what the ball met this step, if anything. */
-export function stepBall(b: Ball, dt: number, ground: Ground = FLAT): BallEvent | null {
-  const z0 = b.z;
-  b.vy -= GRAVITY * dt;
+export function stepBall(b: Ball, realDt: number, ground: Ground = FLAT): BallEvent | null {
+  const z0 = b.z, dt = realDt * (b.k ?? 1);
+  b.vy -= (GRAVITY + (b.cy ?? 0)) * dt;
+  b.vx += (b.cx ?? 0) * dt;
   const k = 1 - DRAG * dt;
   b.vx *= k; b.vy *= k; b.vz *= k;
   b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt;
@@ -60,10 +66,10 @@ export function arcTo(from: P3, to: P3, apexY: number): V3 {
   return { vx: (to.x - from.x) / t, vy, vz: (to.z - from.z) / t };
 }
 
-/** A drive from `from` through `to` at a horizontal speed (a serve, a spike). */
-export function driveTo(from: P3, to: P3, speed: number): V3 {
+/** A drive from `from` through `to` at a horizontal speed (a serve, a spike); `drop` adds a topspin's pull. */
+export function driveTo(from: P3, to: P3, speed: number, drop = 0): V3 {
   const d = Math.hypot(to.x - from.x, to.z - from.z), t = Math.max(0.05, d / speed);
-  return { vx: (to.x - from.x) / t, vy: (to.y - from.y + 0.5 * GRAVITY * t * t) / t, vz: (to.z - from.z) / t };
+  return { vx: (to.x - from.x) / t, vy: (to.y - from.y + 0.5 * (GRAVITY + drop) * t * t) / t, vz: (to.z - from.z) / t };
 }
 
 /** The ball's height where it crosses the net's plane on this launch (null: it doesn't cross). */
@@ -73,21 +79,28 @@ export function heightAtNet(from: P3, v: V3): number | null {
   return from.y + v.vy * t - 0.5 * GRAVITY * t * t;
 }
 
-/** Seconds until the ball comes down through height `y` (null: it never does). */
+/** The pull down on the ball (gravity and its spin), in its own clock. */
+const gOf = (b: Ball) => GRAVITY + (b.cy ?? 0);
+
+/** Real seconds until the ball comes down through height `y` (null: it never does). */
 export function timeToHeight(b: Ball, y: number): number | null {
-  const disc = b.vy * b.vy + 2 * GRAVITY * (b.y - y);
+  const g = gOf(b), disc = b.vy * b.vy + 2 * g * (b.y - y);
   if (disc < 0) return null;
-  const t = (b.vy + Math.sqrt(disc)) / GRAVITY;
-  return t >= 0 ? t : null;
+  const t = (b.vy + Math.sqrt(disc)) / g;
+  return t >= 0 ? t / (b.k ?? 1) : null;
 }
 
-/** Where the ball is `t` seconds on (drag ignored). */
+/** Where the ball is `t` real seconds on (drag ignored). */
 export function ballAt(b: Ball, t: number): P3 {
-  return { x: b.x + b.vx * t, y: b.y + b.vy * t - 0.5 * GRAVITY * t * t, z: b.z + b.vz * t };
+  const tb = t * (b.k ?? 1);
+  return { x: b.x + b.vx * tb + 0.5 * (b.cx ?? 0) * tb * tb, y: b.y + b.vy * tb - 0.5 * gOf(b) * tb * tb, z: b.z + b.vz * tb };
 }
+
+/** The ball's real vertical speed (its own clock's times its pace). */
+export const realVy = (b: Ball) => b.vy * (b.k ?? 1);
 
 /** Run the flight ahead (the same step as play, net and all) to where it lands: the landing circle. */
-export function predictLanding(b: Ball, ground: Ground = FLAT, dt = 1 / 60, max = 5): { x: number; z: number; t: number; in: boolean } | null {
+export function predictLanding(b: Ball, ground: Ground = FLAT, dt = 1 / 60, max = 9): { x: number; z: number; t: number; in: boolean } | null {
   const c = { ...b };
   for (let t = dt; t <= max; t += dt) {
     const e = stepBall(c, dt, ground);

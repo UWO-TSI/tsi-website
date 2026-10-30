@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { arcTo, driveTo, predictLanding, stepBall, timeToHeight, type Ball } from "./ball";
-import { BALL_R, COURT, inCourt, toLocal, toWorld } from "./court";
+import { BALL_R, COURT, COURT_GROW, inCourt, toLocal, toWorld } from "./court";
 
 const fly = (b: Ball) => { for (let i = 0; i < 2400; i++) { const e = stepBall(b, 1 / 120); if (e) return e; } return null; };
 
 describe("the court", () => {
-  it("is 16 x 8 m and a 2.43 m net, scaled to a 1.36 u character", () => {
+  it("is 16 x 8 m and a 2.43 m net, scaled to a 1.36 u character, then grown (David: bigger)", () => {
     expect(COURT.halfLength * 2 / (COURT.halfWidth * 2)).toBeCloseTo(2);
-    expect(COURT.netTop).toBeCloseTo(1.886, 2);
+    expect(COURT.netTop).toBeCloseTo(1.886 * COURT_GROW.net, 2);
+    expect(COURT.halfLength * 2).toBeCloseTo(12.42 * COURT_GROW.plan, 1);
   });
   it("counts a ball on the line as in", () => {
     expect(inCourt(COURT.halfWidth + BALL_R * 0.9, 0)).toBe(true);
@@ -37,7 +38,7 @@ describe("the ball", () => {
     expect(b.z).toBeCloseTo(4, 0);
   });
   it("bounces back off the net's mesh and lands on the side it came from", () => {
-    const from = { x: 0, y: 1.5, z: -3 }, b = { ...from, ...driveTo(from, { x: 0, y: 1.5, z: 3 }, 12) };
+    const from = { x: 0, y: 1.9, z: -3 }, b = { ...from, ...driveTo(from, { x: 0, y: 1.9, z: 3 }, 12) };
     // aimed flat at the mesh
     b.vy = 0;
     let net = false;

@@ -22,6 +22,7 @@ import { FULL, HIDDEN, LOD, createLodEntry, type LodEntry } from "./lod";
 import { createFxState, type FxState } from "./fx";
 import { FX_BENCH, fxOn } from "@/lib/game/perf/fxBench";
 import { isEmoteClip } from "@/lib/net/protocol";
+import { heldClip } from "@/lib/game/volleyball/cheapView";
 
 /** What remotes stand on: the scene's walk world (movement's `top` and `wet`). Interiors are flat. */
 export interface GroundWorld {
@@ -126,7 +127,8 @@ export function driveRig(r: RemoteRig, now: number, world: GroundWorld, juice: J
   r.groundY = groundY;
   r.feet.current.set(s.x, s.y, s.z);
   r.anchor.current?.position.set(s.x, groundY, s.z);
-  const pose = knownClip(s.pose) ? s.pose : null, seated = pose !== null && SEAT_CLIPS.has(pose);
+  // A volleyball player's cheap view holds vb_spectate (its fallback until the clip ships: lib/game/volleyball/cheapView).
+  const pose = heldClip(s.pose, knownClip) as ClipName | null, seated = pose !== null && SEAT_CLIPS.has(pose);
   r.seated = seated;
   // A held clip (a seat, a fish hold) is asserted every frame; it's let go of only when the sender lets go of it, so a
   // looping emote Character turned into a pose (a Dance one-shot) keeps playing until they move.

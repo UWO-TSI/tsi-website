@@ -100,6 +100,8 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   ...Object.fromEntries(["deck-tile", "deck-steps", "wharf-piling", "wharf-ladder", "rope-post", "rope-span"].map(m => [m, `/assets/game/wharf/${m}.glb`])),
   // The log bench (art/props) as a map `bench`: the new world's round the beach campfire.
   "log-bench": LOG_BENCH_URL,
+  // The plaza's catch board as a map prop: the volleyball court's leaderboard board (game/volleyball, generate.ts).
+  "catch-board": CATCH_BOARD_URL,
   // The new world's plaza floor (art/props/build_plaza_tiles.py): stone setts in rings, 12 round, laid on the ground.
   "plaza-tiles": `${P}plaza-tiles.glb`,
   // Its palms (art/trees/build_palms.py): solid low-poly fronds in two layers, coconuts at the crown, a scaled trunk, in four
@@ -154,10 +156,10 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   ...Object.fromEntries(["a", "b", "c"].map(m => [`reeds-${m}`, `/assets/game/plants/reeds-${m}.glb`])),
   ...Object.fromEntries(["a", "b"].map(m => [`lily-pads-${m}`, `/assets/game/water/lily-pads-${m}.glb`])),
   ...Object.fromEntries(["river-stones-a", "river-stones-b", "driftwood-a", "driftwood-b"].map(m => [m, `${P}${m}.glb`])),
-  // game/wharf-art2: more for the beach (art/props/build_beach_things.py), the origin on the sand: beach balls 0.56 across
-  // (scenery: nothing kicks or throws them yet), towels laid along z (0.9 by 1.8), a lounger along z (backrest at -z, the
-  // sitter looks to +z), a sandcastle with its bucket and spade, a cool box, a volleyball net along x (real proportions, posts at x +-3.65; game/volleyball).
-  ...Object.fromEntries(["beach-ball-a", "beach-ball-b", "beach-ball-c", "beach-towel-a", "beach-towel-b", "beach-lounger", "sandcastle", "beach-cooler",
+  // game/wharf-art2: more for the beach (art/props/build_beach_things.py), the origin on the sand: the beach ball (the
+  // volleyball's low-poly ball, art/props/build_volleyball_ball.py, radius 1 resting on its origin, placed scaled), towels laid along z (0.9 by 1.8), a lounger along z (backrest at -z, the
+  // sitter looks to +z), a sandcastle with its bucket and spade, a cool box, a volleyball net along x (the grown court, posts at x +-4.58, sandbags to +-6.04; game/volleyball).
+  ...Object.fromEntries(["beach-ball", "beach-towel-a", "beach-towel-b", "beach-lounger", "sandcastle", "beach-cooler",
     "volleyball-net"].map(m => [m, `${P}${m}.glb`])),
   // Single low-poly forest trees for the closed forest (art/trees/build_forest_trees.py, game/trees-art), 120 to 380
   // triangles, the trunk's foot at the origin (it runs 0.8 under), not solid. Conifers: a layered cedar (8 tall), a fir

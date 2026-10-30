@@ -12,6 +12,8 @@ import { fileURLToPath } from "node:url";
 import { landmark, landmarkPoint } from "./defaultIsland";
 import { loadWorldFromDisk } from "./world/disk";
 import { villageOfWorld } from "./world/village";
+import { courtsOf, onCourt } from "./volleyball/island";
+import { toWorld } from "./volleyball/court";
 
 // The member island as the game plays it: the new world's heightfield.
 const v = villageOfWorld(loadWorldFromDisk(fileURLToPath(new URL("../../data/world/", import.meta.url)))), island = villageIsland(v), nav = navGrid(island, v);
@@ -243,6 +245,23 @@ describe("a schedule's places", () => {
     for (const s of plan.phases.day) {
       const at = placeAt(s.id.slice(7), nw)!;
       expect(Math.hypot(s.at[0] - at[0], s.at[1] - at[1])).toBeLessThan(6);
+    }
+  });
+});
+
+describe("the volleyball court (game/volleyball): residents keep off it", () => {
+  const courts = courtsOf(v);
+  it("the island has its court, and no resident stops on it or its free zone", () => {
+    expect(courts.length).toBe(1);
+    for (const p of plans) for (const s of Object.values(p.phases).flat()) expect(onCourt(courts, s.at[0], s.at[1]), `${p.slug} ${s.id}`).toBe(false);
+  });
+  it("a walk from one end of the beach to the other goes round it", () => {
+    const c = courts[0], west = toWorld(c, 0, -16), east = toWorld(c, 0, 16);
+    const path = nav.path(west[0], west[1], east[0], east[1]);
+    expect(path).not.toBeNull();
+    for (let i = 1; i < path!.length; i++) {
+      const [ax, az] = path![i - 1], [bx, bz] = path![i], n = Math.ceil(Math.hypot(bx - ax, bz - az) / 0.1);
+      for (let k = 0; k <= n; k++) expect(onCourt(courts, ax + ((bx - ax) * k) / n, az + ((bz - az) * k) / n)).toBe(false);
     }
   });
 });
