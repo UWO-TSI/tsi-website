@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
-import { AudioManager, DEFAULT_VOLUMES, type AmbientPhase, type AudioState } from "./audio";
+import { AudioManager, DEFAULT_VOLUMES, type AmbientPhase, type AudioState, type DayPhase } from "./audio";
 import { musicBlockAt, type MusicOverride } from "./musicSchedule";
 import type { IslandWeather } from "./islandWeather";
 import type { Season } from "./season";
@@ -12,7 +12,7 @@ import type { Season } from "./season";
  *
  * - `useAmbience({ phase, weather, season })` keeps the manager's ambient
  *   bed on the caller's time of day, trying a weather/season variant first.
- * - `useMusicDirector({ season, override })` keeps the music channel on the clock.
+ * - `useMusicDirector({ phase, season, override })` keeps the music bed on the clock.
  * - `useAudioState()` exposes the manager state to UI (enable prompt + sliders).
  * - `useSoundUnlock()` turns sound on at the first tap or key (browsers need a gesture).
  */
@@ -26,19 +26,19 @@ export function useAmbience(input: { phase: AmbientPhase; weather?: IslandWeathe
 }
 
 /**
- * Keeps `AudioManager`'s music channel following the real Toronto clock
+ * Keeps `AudioManager`'s music bed following the real Toronto clock
  * (rows 84, 106, 112-114): picks the current 2-hour block, re-checks every
  * minute (same cadence as `useIslandConditions`'s clock tick — a 2-hour
- * boundary doesn't need finer scheduling), and swaps in the cafe/interior
- * override whenever the player is indoors.
+ * boundary doesn't need finer scheduling), swaps in the room override
+ * whenever the player is indoors, and falls back to the `phase` track.
  */
-export function useMusicDirector({ season, override = null }: { season?: Season; override?: MusicOverride }): void {
+export function useMusicDirector({ phase, season, override = null }: { phase: DayPhase; season?: Season; override?: MusicOverride }): void {
   useEffect(() => {
-    const apply = () => AudioManager.setMusic({ block: musicBlockAt(), season, override });
+    const apply = () => AudioManager.setMusic({ block: musicBlockAt(), phase, season, override });
     apply();
     const id = window.setInterval(apply, 60_000);
     return () => window.clearInterval(id);
-  }, [season, override]);
+  }, [phase, season, override]);
 }
 
 const EMPTY_STATE: AudioState = {
