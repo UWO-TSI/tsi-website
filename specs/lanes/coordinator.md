@@ -660,3 +660,6 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - Two lanes:
     - vb-anim (game/vb-anim): Blender clips in vb_clips.glb plus the clips.ts contract;
     - volleyball r2 (game/volleyball): everything else, built against the clip names.
+- **Volleyball net and ball page:** https://claude.ai/artifact/BQqmpEUmv69QDGQbUEpmth (ids vb-net-concept, vb-ball). The final net modelling waits for David's go.
+  - Casual reward: 15 coins a win, 5 paid wins a day, a server ticket check; migration 20261030120000_volleyball_casual.
+  - The decorative beach balls move to the new LP ball.
