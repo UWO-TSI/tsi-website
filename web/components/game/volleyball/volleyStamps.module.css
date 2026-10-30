@@ -3,8 +3,8 @@
 
 /* The edges: a cool rim at the top of your jump, a warm one with the rally's heat. Opacity is set per frame. */
 .apex, .heat { position: absolute; inset: 0; opacity: 0; transition: opacity 0.18s ease; }
-.apex { box-shadow: inset 0 0 120px 30px rgb(var(--ui-shade) / 0.28); }
-.heat { background: radial-gradient(ellipse at center, transparent 55%, color-mix(in srgb, var(--ui-home) 28%, transparent) 100%); transition: opacity 0.6s ease; }
+.apex { box-shadow: inset 0 0 140px 36px rgb(var(--ui-shade) / 0.36); }
+.heat { background: radial-gradient(ellipse at center, transparent 55%, color-mix(in srgb, var(--ui-home) 40%, transparent) 100%); transition: opacity 0.6s ease; }
 
 /* One stamp at a time, springing in and fading up and out. */
 .stamp { position: absolute; top: 30%; left: 50%; display: grid; justify-items: center; gap: 4px; transform: translate(-50%, -50%);

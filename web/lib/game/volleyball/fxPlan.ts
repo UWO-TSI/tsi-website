@@ -29,10 +29,10 @@ export interface GradeLook {
 }
 
 export const GRADE_LOOK: Record<Timing, GradeLook> = {
-  perfect: { tint: FX_COLOR.gold, scale: 1.45, glow: true, sparkles: 1.5, rings: 2, ringSize: 1.25 },
-  good: { tint: FX_COLOR.white, scale: 1, glow: false, sparkles: 0.8, rings: 1, ringSize: 1 },
-  early: { tint: FX_COLOR.early, scale: 0.7, glow: false, sparkles: 0, rings: 1, ringSize: 0.6 },
-  late: { tint: FX_COLOR.late, scale: 0.7, glow: false, sparkles: 0, rings: 1, ringSize: 0.6 },
+  perfect: { tint: FX_COLOR.gold, scale: 1.3, glow: true, sparkles: 1.5, rings: 2, ringSize: 0.75 },
+  good: { tint: FX_COLOR.white, scale: 1, glow: false, sparkles: 0.8, rings: 1, ringSize: 0.7 },
+  early: { tint: FX_COLOR.early, scale: 0.7, glow: false, sparkles: 0, rings: 1, ringSize: 0.5 },
+  late: { tint: FX_COLOR.late, scale: 0.7, glow: false, sparkles: 0, rings: 1, ringSize: 0.5 },
 };
 
 /** The camera and time beat a contact asks for (shake 0..1, zoom punch in FOV degrees, hit-stop and slow-mo in s). */
@@ -60,15 +60,15 @@ export function heatColor(h: number, out: { r: number; g: number; b: number }) {
 }
 
 /** The sand's explosion on a point, scaled by the ball's speed and the rally's heat (a long rally ends bigger). */
-export const landScale = (speed: number, heat: number) => Math.min(2.2, 0.8 + speed / 22 + heatOf(heat) * 0.7);
+export const landScale = (speed: number, heat: number) => Math.min(2.4, 1 + speed / 20 + heatOf(heat) * 0.8);
 
 // ── Recipes (world units; lib/game/fx/particles.ts) ─────────────────────────
 const B = FACE.billboard;
 /** A sand explosion: grains thrown up and out. */
-export const SAND_BLAST: Recipe = { sprite: "sandBurst", count: [7, 9], life: [0.55, 0.8], size: [0.55, 0.8], grow: 1.3, speed: [1.6, 3.4], spread: Math.PI, up: [2.2, 4.2], gravity: 9, drag: 1.4, wind: 0.2, spin: 3, alpha: 1, face: B, rise: [0.05, 0.15] };
+export const SAND_BLAST: Recipe = { sprite: "sandBurst", count: [10, 12], life: [0.6, 0.85], size: [0.8, 1.1], grow: 1.3, speed: [1.6, 3.4], spread: Math.PI, up: [2.2, 4.2], gravity: 9, drag: 1.4, wind: 0.2, spin: 3, alpha: 1, face: B, rise: [0.05, 0.15] };
 /** Its dust: a low ring and a rising plume. */
 export const DUST_RING: Recipe = { sprite: "dustLow", count: [10, 12], life: [0.6, 0.85], size: [0.8, 1.05], grow: 1.6, speed: [2.4, 3.6], spread: 0, up: [0, 0.1], gravity: 0, drag: 4.5, wind: 0.5, lift: 0.05, alpha: 0.9, face: FACE.standing, jitter: 0.15 };
-export const DUST_PLUME: Recipe = { sprite: "dust", count: [4, 5], life: [0.8, 1.1], size: [0.9, 1.2], grow: 1.7, speed: [0.3, 0.8], spread: Math.PI, up: [0.7, 1.2], gravity: 0, drag: 3, wind: 0.6, lift: 0.45, alpha: 0.85, face: B, rise: [0.15, 0.3] };
+export const DUST_PLUME: Recipe = { sprite: "dust", count: [5, 6], life: [0.9, 1.2], size: [1.2, 1.6], grow: 1.7, speed: [0.3, 0.8], spread: Math.PI, up: [0.7, 1.2], gravity: 0, drag: 3, wind: 0.6, lift: 0.45, alpha: 0.85, face: B, rise: [0.15, 0.3] };
 /** A small sand puff at the feet (a bump, a takeoff). */
 export const SAND_PUFF: Recipe = { sprite: "sand", count: [3, 4], life: [0.4, 0.55], size: [0.5, 0.65], grow: 1.3, speed: [0.6, 1.3], spread: Math.PI, up: [0.6, 1.1], gravity: 4, drag: 3, wind: 0.3, alpha: 0.95, face: B, rise: [0.05, 0.12] };
 /** A soft matte puff at the hands: an early or a late touch. */
@@ -82,7 +82,7 @@ export const GLOW_BURST: Recipe = { sprite: "glow", count: [1, 1], life: [0.18, 
 /** Speed lines along a spike or a jump. */
 export const SPEED_LINES: Recipe = { sprite: "streak", count: [6, 7], life: [0.2, 0.3], size: [1.1, 1.6], grow: 1.2, aspect: 0.18, speed: [5, 9], spread: 0.35, up: [-0.6, 0.6], gravity: 0, drag: 2, wind: 0, alpha: 0.85, face: FACE.streak, jitter: 0.25 };
 /** The ball on fire: flames shed behind it (additive). */
-export const FLAME: Recipe = { sprite: "glow", count: [1, 2], life: [0.22, 0.34], size: [0.32, 0.46], grow: 0.4, speed: [0.2, 0.6], spread: Math.PI, up: [0.6, 1.2], gravity: -1, drag: 2, wind: 0.2, alpha: 0.9, face: B, jitter: 0.08 };
+export const FLAME: Recipe = { sprite: "glow", count: [1, 2], life: [0.24, 0.36], size: [0.42, 0.6], grow: 0.4, speed: [0.2, 0.6], spread: Math.PI, up: [0.6, 1.2], gravity: -1, drag: 2, wind: 0.2, alpha: 0.9, face: B, jitter: 0.08 };
 /** The serve's charge: motes of light drawn in to the ball. */
 export const CHARGE_MOTE: Recipe = { sprite: "glow", count: [1, 1], life: [0.28, 0.34], size: [0.14, 0.2], grow: 0.5, speed: [1.8, 2.4], spread: 0.15, up: [-0.2, 0.2], gravity: 0, drag: 0, wind: 0, alpha: 0.9, face: B };
 /** A dive's spray arc and its dust cloud. */
@@ -91,9 +91,9 @@ export const DIVE_CLOUD: Recipe = { sprite: "dust", count: [5, 7], life: [0.7, 1
 /** A skid mark the slide dive leaves (on the ground, fading). */
 export const SKID: Recipe = { sprite: "scuff", count: [1, 1], life: [2.4, 2.8], size: [0.55, 0.65], grow: 1, aspect: 1.6, speed: [0, 0], spread: 0, up: [0, 0], gravity: 0, drag: 0, wind: 0, alpha: 0.7, face: FACE.ground, fadeIn: 50 };
 /** Confetti: petals in the team's colour, tumbling down. */
-export const CONFETTI: Recipe = { sprite: "petal", count: [14, 18], life: [1.4, 2], size: [0.2, 0.28], grow: 1, speed: [1.4, 3.2], spread: Math.PI, up: [3.5, 5.5], gravity: 3.2, drag: 1.4, wind: 0.6, spin: 6, fps: 14, alpha: 1, face: B, rise: [0.4, 0.8] };
-/** A firework's shell bursting (additive sparks falling). */
-export const FIREWORK: Recipe = { sprite: "sparkle", count: [22, 28], life: [1.1, 1.5], size: [0.5, 0.7], grow: 0.4, speed: [5, 7], spread: Math.PI, up: [-5, 6], gravity: 2.4, drag: 1.2, wind: 0.2, alpha: 1, face: B };
+export const CONFETTI: Recipe = { sprite: "petal", count: [18, 22], life: [1.6, 2.2], size: [0.36, 0.48], grow: 1, speed: [1.4, 3.2], spread: Math.PI, up: [3.5, 5.5], gravity: 3.2, drag: 1.4, wind: 0.6, spin: 6, fps: 14, alpha: 1, face: B, rise: [0.4, 0.8] };
+/** A firework's shell bursting: painted sparks falling. */
+export const FIREWORK: Recipe = { sprite: "sparkle", count: [22, 28], life: [1.1, 1.5], size: [0.7, 0.95], grow: 0.4, speed: [5, 7], spread: Math.PI, up: [-5, 6], gravity: 2.4, drag: 1.2, wind: 0.2, alpha: 1, face: B };
 /** A whiff: a little swish of air. */
 export const SWISH: Recipe = { sprite: "swirl", count: [1, 1], life: [0.26, 0.3], size: [0.6, 0.7], grow: 1.3, speed: [0.4, 0.4], spread: 0, up: [0, 0], gravity: 0, drag: 3, wind: 0, alpha: 0.6, face: B };
 

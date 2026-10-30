@@ -74,7 +74,7 @@ Axes: the net lies along x at z = 0; each team owns one half (z < 0 or z > 0). T
 
 ## 2. Camera
 
-**Round 2:** as a match starts, the camera glides in (the sushi bar's stool view's logic): from the island's view, up behind your baseline over the whole court, then down to your shoulder (1.8 s, smootherstep). The island's fog draws in to near 20 and far 70 while you play, so the court is the stage, and the island's top-right HUD steps aside. The shoulder view is a little further back (3.1 back, 0.65 right, 1.95 up). During your toss the look lifts to keep the ball and its ring in view.
+**Round 2:** as a match starts, the camera glides in (the sushi bar's stool view's logic): from the island's view, up behind your baseline over the whole court, then down to your shoulder (1.8 s, smootherstep). The island's fog draws in to near 20 and far 70 while you play, so the court is the stage, and the island's top-right HUD steps aside. Anything between the camera and you (the palms in the free zone, a building) eases see-through round you: the island's own cut (`lib/game/occluders.ts`), aimed from the match camera. The shoulder view is a little further back (3.1 back, 0.65 right, 1.95 up). During your toss the look lifts to keep the ball and its ring in view.
 
 
 Third person over the right shoulder, as in the reference: close, the character a little left of centre and lower third, the net and the far court in the upper half.
@@ -201,7 +201,7 @@ One prompt at a time; nothing on screen that isn't needed now.
 
 **Stand-ins:** the line tapes stay a code ribbon draped on the sand (a model can't follow the sand's slope), and the bots' team rings.
 
-**Animations (round 2).** The vb-anim lane builds the vb_* clips (vb_clips.glb, contract in its `clips.ts`). The match plays them by name (`lib/game/volleyball/moves.ts`); until that lands each move borrows a clearly marked fallback clip. A press starts its clip at a rate that brings the clip's contact frame to the ball's arrival (`syncRate`). Phase 1's note follows.
+**Animations (round 2).** The vb-anim lane's vb_* clips (vb_clips.glb, the contract in `lib/game/volleyball/clips.ts`), loaded only on the players in a match (your own avatar too, only while you play). The match plays them by name (`lib/game/volleyball/moves.ts`). A press starts its clip at a rate that brings the clip's contact frame to the ball's arrival (`syncRate`); the hands are the clips' contact points; the ready stance and its shuffle (left or right) play under 1.8 u/s, the run above; the dives last until the clips stand up (1.4 s). Phase 1's note follows.
 
 **Animations (phase 1).** There are no volleyball clips yet. Phase 1 borrows existing village clips: bump `Pickup`, set and jump set `Cheer` (upper body), spike and serve `AttackMelee` (upper), block `Cheer` (upper), toss `CastSwing` (upper), a call `Wave` (upper), a point `Cheer`. A dive pitches the body forward over its knees in the `Glide` pose (arms reaching) and lies there until up. Proper clips (bump, set, spike, block, dive, a celebration) are an open question for the character-animation work.
 

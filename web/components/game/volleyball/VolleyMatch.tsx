@@ -15,6 +15,8 @@ import { Html, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import Character from "../character/Character";
 import VolleyFx from "./VolleyFx";
+import { CUT_FLOOR, CUT_RADIUS, CUTOUT, CUTOUT_CROWN, CUTOUT_VIEW, lineBlocked, type Occluder } from "@/lib/game/occluders";
+import { bendViewPoint } from "@/lib/game/worldProjection";
 import { useMoveKeys } from "@/lib/game/movement/keys";
 import { myTrip } from "@/lib/game/myTrip";
 import { randomLook, seeded, type CharacterLook } from "@/lib/game/character/look";
@@ -26,7 +28,8 @@ import { SERVE_WINDOW, grade } from "@/lib/game/volleyball/timing";
 import { VB_FEEL } from "@/lib/game/volleyball/feel";
 import { stanceOf } from "@/lib/game/volleyball/actions";
 import { bindCourtControls, newControls, takePresses, type CourtControls } from "@/lib/game/volleyball/courtInput";
-import { MOVE_OF, VB_CLIPS_READY, VB_CLIPS_URL, clipFor, syncRate, type VbClip } from "@/lib/game/volleyball/moves";
+import { MOVE_OF, clipFor, stanceClip, syncRate } from "@/lib/game/volleyball/moves";
+import { VB_CLIPS_URL, type VbClip } from "@/lib/game/volleyball/clips";
 import { emitFx, fxBus } from "@/lib/game/volleyball/fxBus";
 import { noteFlash, volley, volleyChanged, volleyOver, type CourtSpot } from "@/lib/game/volleyball/session";
 import styles from "./volley.module.css";
@@ -49,6 +52,7 @@ const RING_T = 1.4, RING_R = 1.2;
 /** The serve's timing ring round the ball: the target ring's radius (u). */
 const SERVE_R = 0.5;
 export const BALL_URL = "/assets/game/props/beach-ball.glb";
+const NONE: readonly Occluder[] = [];
 
 const newMotion = (): CharacterMotion => ({ speed: 0, yaw: 0, lift: 0 });
 /** The Air clip's phase from the vertical speed: 0 take-off, 0.5 the top, 1 reaching for the sand. */
@@ -58,7 +62,7 @@ const airPhase = (vy: number) => { const v0 = (2 * COURT_TUNING.jumpHeight) / CO
 type Dev = { input: Partial<CourtInput>; yaw: number | null; pitch: number | null; paused: boolean; steps: number; log: MatchEvent[]; side: [number, number, number] | null };
 
 interface Rig {
-  parts?: Parts; cam?: THREE.Camera; c: CourtControls; yaw: number; pitch: number; lift: number; lean: number[]; shake: number; time: number; airborne: boolean[];
+  parts?: Parts; cam?: THREE.Camera; cut: number; c: CourtControls; yaw: number; pitch: number; lift: number; shake: number; time: number; airborne: boolean[];
   intro: number; fog: { obj: THREE.Fog | null; near: number; far: number };
   squash: { t: number; dir: THREE.Vector3 }; spinAxis: THREE.Vector3; lastPhase: string;
   dev: Dev; motions: CharacterMotion[]; motionRefs: { current: CharacterMotion }[];
@@ -68,7 +72,7 @@ interface Rig {
 function newRig(spot: CourtSpot): Rig {
   const motions = [0, 1, 2, 3].map(newMotion);
   return {
-    c: newControls(), yaw: 0, pitch: 0.08, lift: 0, lean: [0, 0, 0, 0], shake: 0, time: 1, airborne: [false, false, false, false],
+    cut: 0, c: newControls(), yaw: 0, pitch: 0.08, lift: 0, shake: 0, time: 1, airborne: [false, false, false, false],
     intro: 0, fog: { obj: null, near: 0, far: 0 },
     squash: { t: 9, dir: new THREE.Vector3(0, 1, 0) }, spinAxis: new THREE.Vector3(1, 0, 0), lastPhase: "",
     dev: { input: {}, yaw: null, pitch: null, paused: false, steps: 0, log: [], side: null }, motions, motionRefs: motions.map(current => ({ current })),
@@ -78,20 +82,14 @@ function newRig(spot: CourtSpot): Rig {
 }
 type Ref<T> = { current: T };
 interface Parts {
-  bodies: Ref<(THREE.Group | null)[]>; tilts: Ref<(THREE.Group | null)[]>; calls: Ref<(HTMLDivElement | null)[]>;
+  bodies: Ref<(THREE.Group | null)[]>; calls: Ref<(HTMLDivElement | null)[]>;
   ball: Ref<THREE.Group | null>; spin: Ref<THREE.Group | null>; shadow: Ref<THREE.Mesh | null>;
   landRing: Ref<THREE.Group | null>; outer: Ref<THREE.Mesh | null>; serveRing: Ref<THREE.Group | null>; serveOuter: Ref<THREE.Mesh | null>; cursor: Ref<THREE.Mesh | null>;
   aimMark: Ref<THREE.Mesh | null>;
 }
-interface Env { spot: CourtSpot; camera: THREE.Camera; scene: THREE.Scene; bindings: ReturnType<typeof useMoveKeys>; selfLook?: CharacterLook }
+interface Env { spot: CourtSpot; camera: THREE.Camera; scene: THREE.Scene; occluders: readonly Occluder[]; bindings: ReturnType<typeof useMoveKeys>; selfLook?: CharacterLook }
 
-const leanAxis = new THREE.Vector3(), leanPivot = new THREE.Vector3(), UP = new THREE.Vector3(0, 1, 0), tmp = new THREE.Vector3(), tmpQ = new THREE.Quaternion();
-/** Pitch a body forward by `by` (radians) about its knees, the way it faces (PlayerAvatar's bankAbout, pitch only). */
-function lean(g: THREE.Group, facing: number, by: number) {
-  g.quaternion.setFromAxisAngle(leanAxis.set(Math.cos(facing), 0, -Math.sin(facing)), by);
-  leanPivot.set(0, 0.45, 0);
-  g.position.copy(leanPivot).sub(leanPivot.applyQuaternion(g.quaternion));
-}
+const UP = new THREE.Vector3(0, 1, 0), tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), tmpQ = new THREE.Quaternion();
 
 /** Face the net from your side as the match starts. */
 function faceNet(rig: Rig, m: Match, spot: CourtSpot) {
@@ -132,8 +130,7 @@ function leave(rig: Rig) {
 function playMove(rig: Rig, i: number, move: VbClip | undefined, inS = 0) {
   if (!move) return;
   const c = clipFor(move), mo = rig.motions[i];
-  if (!c.clip || c.on === "move") return;
-  if (c.on === "play") mo.play = c.clip; else mo.upper = c.clip;
+  mo.play = c.clip;
   mo.playRate = syncRate(c.contact, inS);
 }
 
@@ -185,15 +182,13 @@ function frameStep(rig: Rig, P: Parts, E: Env, raw: number) {
   for (let i = 0; i < 4; i++) {
     const pl = match.players[i], mo = rig.motions[i], g = P.bodies.current[i];
     const air = pl.s.mode === "air", speed = Math.hypot(pl.s.vx, pl.s.vz);
-    // A dive: the body pitches forward over its knees, arms reaching, and lies there until up.
+    // A dive plays its clip (vb_dive, vb_slide_dive: started on the dive) and the body stays on the sand until up.
     const diving = !!pl.dive || pl.down > 0;
-    rig.lean[i] = THREE.MathUtils.damp(rig.lean[i], pl.dive ? 1.3 : pl.down > 0 ? 1.42 : 0, pl.dive ? 30 : 10, dt);
-    // In a rally on the sand, slow moves are the ready stance's shuffle (moves.ts: the fallback crouch until vb_clips).
-    const ready = !air && !diving && match.phase === "rally" && speed < VB_FEEL.shuffleUnder;
-    const held = diving ? clipFor(pl.dive?.strong ? "vb_slide_dive" : "vb_dive").clip : air ? "Air" : ready ? clipFor(speed > 0.3 ? "vb_shuffle" : "vb_ready").clip : null;
-    Object.assign(mo, { speed: diving || ready ? 0 : speed, yaw: pl.s.facing, move: held as ClipName | null, air: airPhase(pl.s.vy) });
-    const tg = P.tilts.current[i];
-    if (tg) lean(tg, pl.s.facing, rig.lean[i]);
+    // In a rally on the sand, slow moves are the ready stance and its shuffle, stepping the way you go; faster, the run.
+    const sideways = pl.s.vx * -Math.cos(pl.s.facing) + pl.s.vz * Math.sin(pl.s.facing);
+    const stance = !air && !diving && match.phase === "rally" ? stanceClip(sideways, speed, VB_FEEL.shuffleUnder) : null;
+    const held: ClipName | null = diving ? null : air ? "Air" : stance;
+    Object.assign(mo, { speed: diving || stance ? 0 : speed, yaw: pl.s.facing, move: held, air: airPhase(pl.s.vy) });
     if (rig.airborne[i] !== air) {
       rig.airborne[i] = air;
       emitFx({ kind: air ? "takeoff" : "touchdown", who: i, x: pl.s.x, y: pl.s.y, z: pl.s.z });
@@ -203,7 +198,7 @@ function frameStep(rig: Rig, P: Parts, E: Env, raw: number) {
     if (call) call.style.opacity = pl.call > 0 ? "1" : "0";
     if (i === 0 && !E.selfLook) {
       const r = myTrip.ride, [rx, rz] = toWorld(E.spot, pl.s.x, pl.s.z);
-      Object.assign(r, { active: true, x: rx, y: E.spot.y + pl.s.y, z: rz, yaw: pl.s.facing + E.spot.yaw, speed: mo.speed, seated: false, lift: 0, roll: 0, pitch: rig.lean[i],
+      Object.assign(r, { active: true, x: rx, y: E.spot.y + pl.s.y, z: rz, yaw: pl.s.facing + E.spot.yaw, speed: mo.speed, seated: false, lift: 0, roll: 0, pitch: 0,
         ground: "sand", move: mo.move, air: mo.air });
       r.focus.x = rx; r.focus.y = E.spot.y + pl.s.y; r.focus.z = rz;
       if (mo.play) { r.play = mo.play; mo.play = null; }
@@ -309,6 +304,7 @@ function camera(rig: Rig, E: Env, match: Match, dt: number, serving: boolean) {
   const cam = E.camera as THREE.PerspectiveCamera;
   const fov = VB_CAMERA.fov - fxBus.cam.punch;
   if (cam.isPerspectiveCamera && Math.abs(cam.fov - fov) > 1e-3) { cam.fov = fov; cam.updateProjectionMatrix(); }
+  if (cam.isPerspectiveCamera) cutIn(rig, cam, px, py, pz, E.occluders, dt);
   // The stage: the fog draws in as the camera glides in (and goes back on leaving).
   const fog = E.scene.fog instanceof THREE.Fog ? E.scene.fog : null, f = rig.fog;
   if (fog && fog !== f.obj) { if (f.obj) { f.obj.near = f.near; f.obj.far = f.far; } Object.assign(f, { obj: fog, near: fog.near, far: fog.far }); }
@@ -317,6 +313,22 @@ function camera(rig: Rig, E: Env, match: Match, dt: number, serving: boolean) {
     fog.near = THREE.MathUtils.lerp(f.near, Math.min(f.near, VB_CAMERA.stageFog.near), w);
     fog.far = THREE.MathUtils.lerp(f.far, Math.min(f.far, VB_CAMERA.stageFog.far), w);
   }
+}
+
+/**
+ * A tree or building between this camera and you eases see-through round you (the island's own cut, lib/game/occluders,
+ * which IslandAtmosphere computes for the follow camera; in a match the camera is ours, so the cut is aimed from it).
+ */
+function cutIn(rig: Rig, cam: THREE.PerspectiveCamera, px: number, py: number, pz: number, list: readonly Occluder[], dt: number) {
+  cam.updateMatrixWorld();
+  const c = tmp.set(px, py + 1, pz), blocked = list.length > 0 && (lineBlocked(cam.position, c, list) || lineBlocked(cam.position, tmp2.set(px, py + 1.3, pz), list));
+  rig.cut = THREE.MathUtils.damp(rig.cut, blocked ? 1 : 0, 8, dt);
+  c.applyMatrix4(cam.matrixWorldInverse);
+  const depth = -c.z;
+  bendViewPoint(c).applyMatrix4(cam.projectionMatrix);
+  CUTOUT.value.set(c.x, c.y, CUT_RADIUS / (depth * Math.tan(THREE.MathUtils.degToRad(cam.fov / 2))), rig.cut < 0.01 ? 0 : rig.cut);
+  CUTOUT_VIEW.value.set(cam.aspect, depth, py + CUT_FLOOR);
+  CUTOUT_CROWN.value.set(0, 0);
 }
 
 /**
@@ -342,7 +354,7 @@ function juice(rig: Rig, e: MatchEvent, match: Match) {
     rig.squash.t = 0;
     rig.squash.dir.set(b.vx, b.vy, b.vz).normalize();
     // A touch with no press first (a dig, a serve) plays its clip now.
-    if (e.how === "dig" || e.how === "serve") playMove(rig, e.who, MOVE_OF[e.how]);
+    if (e.how === "serve") playMove(rig, e.who, match.players[e.who].s.mode === "air" ? "vb_serve_hit" : "vb_serve_stand");
     emitFx({ kind: "contact", who: e.who, team: match.players[e.who].team, how: e.how, timing: e.timing, quality: e.quality, x: e.x, y: e.y, z: e.z,
       speed: Math.hypot(b.vx, b.vy, b.vz) * (b.k ?? 1) });
   } else if (e.kind === "block") playMove(rig, e.who, "vb_block");
@@ -350,6 +362,7 @@ function juice(rig: Rig, e: MatchEvent, match: Match) {
   else if (e.kind === "call") { rig.motions[e.who].upper = "Wave"; emitFx({ kind: "call", who: e.who }); }
   else if (e.kind === "dive") {
     const p = match.players[e.who], d = p.dive;
+    playMove(rig, e.who, e.strong ? "vb_slide_dive" : "vb_dive");
     emitFx({ kind: "dive", who: e.who, strong: e.strong, x: p.s.x, z: p.s.z, dx: d?.dx ?? 0, dz: d?.dz ?? 1 });
   } else if (e.kind === "net" || e.kind === "tape") emitFx({ kind: e.kind, x: b.x, y: b.y });
   else if (e.kind === "land") {
@@ -373,8 +386,10 @@ function BeachBall() {
   return <primitive object={ball} position-y={-1} />;
 }
 
-export default function VolleyMatch({ spot, selfLook }: {
+export default function VolleyMatch({ spot, selfLook, occluders = NONE }: {
   spot: CourtSpot;
+  /** What can stand between the camera and you (the island's buildings and tree crowns): eased see-through. */
+  occluders?: readonly Occluder[];
   /** The lab draws you here; on the island your own avatar is moved through its ride. */
   selfLook?: CharacterLook;
 }) {
@@ -382,7 +397,7 @@ export default function VolleyMatch({ spot, selfLook }: {
   const bindings = useMoveKeys();
   const rig = useMemo(() => newRig(spot), [spot]);
   const looks = useMemo(() => { const r = seeded(Math.floor(spot.x * 31 + spot.z)); return [0, 1, 2, 3].map(() => randomLook(r)); }, [spot]);
-  const bodies = useRef<(THREE.Group | null)[]>([]), tilts = useRef<(THREE.Group | null)[]>([]);
+  const bodies = useRef<(THREE.Group | null)[]>([]);
   const calls = useRef<(HTMLDivElement | null)[]>([]);
   const ball = useRef<THREE.Group>(null), spin = useRef<THREE.Group>(null), shadow = useRef<THREE.Mesh>(null);
   const landRing = useRef<THREE.Group>(null), outer = useRef<THREE.Mesh>(null);
@@ -394,7 +409,7 @@ export default function VolleyMatch({ spot, selfLook }: {
   useEffect(() => bindCourtControls(rig.c, { el: gl.domElement, bindings, stance: () => (volley.match ? stanceOf(volley.match, 0) : "idle") }), [rig, bindings, gl]);
   useEffect(() => () => leave(rig), [rig]);
   useEffect(() => exposeDev(rig, spot), [rig, spot]);
-  useFrame((_, raw) => frameStep(rig, { bodies, tilts, calls, ball, spin, shadow, landRing, outer, serveRing, serveOuter, cursor, aimMark }, { spot, camera, scene, bindings, selfLook }, raw));
+  useFrame((_, raw) => frameStep(rig, { bodies, calls, ball, spin, shadow, landRing, outer, serveRing, serveOuter, cursor, aimMark }, { spot, camera, scene, occluders, bindings, selfLook }, raw));
 
   if (!m) return null;
   const drawn = selfLook ? [0, 1, 2, 3] : [1, 2, 3];
@@ -402,7 +417,7 @@ export default function VolleyMatch({ spot, selfLook }: {
     <group position={[spot.x, spot.y, spot.z]} rotation={[0, spot.yaw, 0]}>
       {drawn.map(i => (
         <group key={i} ref={g => { bodies.current[i] = g; }}>
-          <group ref={g => { tilts.current[i] = g; }}><Suspense fallback={null}><Character look={i === 0 && selfLook ? selfLook : looks[i]} motion={rig.motionRefs[i]} walkSpeed={COURT_TUNING.walkSpeed} clips={VB_CLIPS_READY ? VB_CLIPS_URL : undefined} /></Suspense></group>
+          <Suspense fallback={null}><Character look={i === 0 && selfLook ? selfLook : looks[i]} motion={rig.motionRefs[i]} walkSpeed={COURT_TUNING.walkSpeed} clips={VB_CLIPS_URL} /></Suspense>
           {i > 0 && <mesh rotation-x={-Math.PI / 2} position-y={0.03}><ringGeometry args={[0.36, 0.42, 32]} /><meshBasicMaterial color={TEAM[m.players[i].team]} transparent opacity={0.85} depthWrite={false} /></mesh>}
           <Html position={[0, 1.95, 0]} center zIndexRange={[20, 0]}><div ref={el => { calls.current[i] = el; }} className={styles.call} style={{ opacity: 0 }}>Mine!</div></Html>
         </group>

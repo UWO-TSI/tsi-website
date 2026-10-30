@@ -56,14 +56,6 @@ const contactAt = (how, timing, who = 0, team = 0) => page.evaluate(([how, timin
 }, [how, timing, who, team]);
 
 const FX = {
-  async debug() {
-    await hold(); await setup(atNet, { z: 4, hand: 0.45 }); await stepFx(2);
-    for (const g of ["perfect", "good"]) {
-      await contactAt("bump", g); await stepFx(4);
-      console.log(g, await page.evaluate(() => { const out = []; window.__volleyFx.scene?.traverse?.(() => {}); return JSON.stringify(window.__volleyFx.probe?.()); }));
-      await stepFx(60);
-    }
-  },
   async bump() { const rows = []; for (const g of GRADES) { await hold(); await setup(atNet, { z: 4, hand: 0.45 }); await stepFx(2); await contactAt("bump", g); rows.push(await frames(`bump-${g}`, [1, 4, 8, 14, 22], CLIP)); await stepFx(60); } strip("bump", rows); },
   async spike() { const rows = []; for (const g of GRADES) { await hold(); await setup(atNet, { z: 1.2, y: 2.05, hand: 0.83, vy: -2, vz: 18 }); await stepFx(2); await contactAt("spike", g); rows.push(await frames(`spike-${g}`, [1, 3, 6, 10, 16], CLIP)); await stepFx(60); } strip("spike", rows); },
   async block() { const rows = []; for (const g of ["perfect", "good", "early"]) { await hold(); await setup(atNet, { z: 0.6, y: 1.8, hand: 0.9, vz: -10 }); await stepFx(2); await page.evaluate(() => { const b = window.__volley.match().ball; b.z = (b.z < 0 ? -1 : 1) * 0.3; }); await contactAt("block", g); rows.push(await frames(`block-${g}`, [1, 4, 8, 14, 22], CLIP)); await stepFx(60); } strip("block", rows); },
@@ -84,14 +76,14 @@ const FX = {
     const rows = [];
     // The charge: the bar filling (light drawn in), then the max toss.
     await hold();
-    await setup(`(m) => { m.phase = "serve"; m.meter = 0.62; }`);
+    await setup(`(m) => { m.phase = "serve"; m.meter = 0.62; const p = m.players[0], side = p.s.z < 0 ? -1 : 1; Object.assign(m.ball, { x: p.s.x + side * 0.5, y: p.s.y + 1.1, z: p.s.z - side * 0.6 }); }`);
     const charge = await frames("serve-charge", [6, 14, 24, 34], CLIP);
     await setup(`(m) => { m.meter = null; m.phase = "toss"; }`);
     await emit({ kind: "toss", who: 0, power: 1, max: true });
     charge.push((await frames("serve-max", [3], CLIP))[0]);
     rows.push(charge);
     await stepFx(60);
-    for (const g of GRADES) { await setup(`(m) => { m.phase = "rally"; const b = m.ball, p = m.players[0], side = p.s.z < 0 ? -1 : 1; Object.assign(b, { x: p.s.x, y: p.s.y + 0.84, z: p.s.z - side * 0.3, vx: 0, vy: 2, vz: -side * 16, k: 0.6 }); }`); await contactAt("serve", g); rows.push(await frames(`serve-${g}`, [1, 3, 6, 10, 16], CLIP)); await stepFx(60); }
+    for (const g of GRADES) { await setup(`(m) => { m.phase = "rally"; const b = m.ball, p = m.players[0], side = p.s.z < 0 ? -1 : 1; Object.assign(b, { x: p.s.x + side * 0.5, y: p.s.y + 1.1, z: p.s.z - side * 0.6, vx: 0, vy: 2, vz: -side * 16, k: 0.6 }); }`); await contactAt("serve", g); rows.push(await frames(`serve-${g}`, [1, 3, 6, 10, 16], CLIP)); await stepFx(60); }
     strip("serve", rows);
   },
   async land() {
@@ -144,7 +136,7 @@ const FX = {
   async win() {
     await hold(); await setup(atNet, { z: 5 });
     await setup(`(m) => { m.players[0].s = { ...m.players[0].s, facing: m.players[0].s.facing }; }`);
-    await page.evaluate(() => { window.__volley.dev.pitch = 0.45; });
+    await page.evaluate(() => { window.__volley.dev.pitch = 0.05; });
     await emit({ kind: "win", team: 0 });
     strip("win", [await frames("win", [20, 50, 80, 110, 150, 200], { x: 0, y: 0, width: 1280, height: 800 })]);
     await page.evaluate(() => { window.__volley.dev.pitch = null; });

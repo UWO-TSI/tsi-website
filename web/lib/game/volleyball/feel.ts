@@ -17,7 +17,7 @@ export const VB_FEEL = {
   /** Moving on sand: a gentle build-up and glide-out, a little slower than the island's walk. */
   move: { walk: 6.2, sprint: 8.6, response: 8, stop: 6 },
   /** Under this speed in a rally you shuffle in the ready stance instead of walking. */
-  shuffleUnder: 2.6,
+  shuffleUnder: 1.8,
   /**
    * A press waits up to `buffer` s for the ball to reach your hands (early presses still connect, graded by how early);
    * the grade's clock: `window` s off is the worst a touch can be. A press with nothing coming is a whiff.

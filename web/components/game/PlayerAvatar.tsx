@@ -91,6 +91,8 @@ interface PlayerAvatarProps {
   /** The leaf glider: owned, and this area allows it (the village and the home island; never the ruins). */
   glider?: boolean;
   frozen?: boolean;
+  /** Another clip file for this avatar (a volleyball match's vb_clips.glb, loaded only while you play). */
+  clips?: string;
   desktopClickToMove?: boolean;
   /** /lab/move: live tuning and juice, slow motion, the HUD's readout and the Walk clip's pace. */
   tuning?: MoveTuning;
@@ -186,7 +188,7 @@ const AIR_TAP = 0.18;
 type SeatExit = { x: number; z: number; yaw: number };
 type Seat = { x: number; z: number; clip: ClipName; lift: number; yaw: number; ground?: boolean; drive?: SeatDrive; hide?: boolean; exit?: SeatExit };
 
-export default function PlayerAvatar({ spawnPosition, player, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = false, playerLevel, member = false, combat: inCombat = false, respawn = 0, glider = false, dash = true, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed, walkOnly = false, held = null, ride }: PlayerAvatarProps) {
+export default function PlayerAvatar({ spawnPosition, player, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = false, playerLevel, member = false, combat: inCombat = false, respawn = 0, glider = false, dash = true, frozen = false, clips, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed, walkOnly = false, held = null, ride }: PlayerAvatarProps) {
   const anchor = useRef<THREE.Group>(null), body = useRef<THREE.Group>(null), head = useRef<THREE.Group>(null);
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null, move: null, afterimages: true });
   const { look } = useMyLook();
@@ -777,7 +779,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       {/* Tap-to-walk's target: one painted marker on the ground (arrival-wharf.md §4). */}
       <MoveTargetIndicator mark={moveMark} />
       <group ref={anchor} position={spawnPosition}>
-        <group ref={body}><PlayerCharacter look={look} motion={motion} inCombat={inCombat} walkSpeed={walkSpeed} leaf={leafOwned} held={held} /></group>
+        <group ref={body}><PlayerCharacter look={look} motion={motion} inCombat={inCombat} walkSpeed={walkSpeed} leaf={leafOwned} held={held} clips={clips} /></group>
       </group>
       <group ref={head} position={spawnPosition}>
         {showNameplate && <Html calculatePosition={calculateCurvedHtmlPosition} zIndexRange={[40, 0]}
@@ -851,7 +853,7 @@ export function heldView(item: WheelItem | null): HeldView | null {
  * a weapon in hand (an encounter's is the runtime's); otherwise the default weapon across the back once the ruins
  * gate is open (row 140).
  */
-function PlayerCharacter({ look, motion, inCombat, walkSpeed, leaf, held }: { look: CharacterLook; motion: React.RefObject<CharacterMotion>; inCombat: boolean; walkSpeed: number; leaf: boolean; held: WheelItem | null }) {
+function PlayerCharacter({ look, motion, inCombat, walkSpeed, leaf, held, clips }: { look: CharacterLook; motion: React.RefObject<CharacterMotion>; inCombat: boolean; walkSpeed: number; leaf: boolean; held: WheelItem | null; clips?: string }) {
   // Only the weapon, and whether it shows, re-render the character (the runtime publishes ~10×/s).
   const key = useCombatValue(() => combat.rt.player.weapon), shown = useCombatValue(() => (inCombat ? combat.rt.player.alive : combat.rt.player.armed));
   const heldWeapon = !inCombat && held?.kind === "weapon" ? held.key : null;
@@ -863,5 +865,5 @@ function PlayerCharacter({ look, motion, inCombat, walkSpeed, leaf, held }: { lo
     return w?.model && (shown || heldWeapon) ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat || !!heldWeapon, grip: w.grip, hand, pulse: w.pulse, paint: v2 && inCombat ? signaturePaint : undefined } : null;
   }, [key, heldWeapon, shown, inCombat, v2]);
   const item = useMemo(() => (inCombat ? null : heldView(held)), [inCombat, held]);
-  return <Character look={look} motion={motion} walkSpeed={walkSpeed} weapon={weapon} held={item} leaf={leaf} verbs={inCombat && v2} keepFace />;
+  return <Character look={look} motion={motion} walkSpeed={walkSpeed} weapon={weapon} held={item} leaf={leaf} verbs={inCombat && v2} keepFace clips={clips} />;
 }

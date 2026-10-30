@@ -9,6 +9,8 @@ Worktree `.claude/worktrees/volleyball`, branch `game/volleyball`, cut from orig
 Head: the commit that updates this file. **Round 2 (the phase 1 redo after David played it) is built, waiting for review.** Phase 1's island match was approved; everything else was redone.
 
 - **Controls (root causes fixed):** the avatar's keys stand back in a match (PlayerAvatar `frozen` while playing), the court takes the mouse on the window's capture phase (`courtInput.ts`; the orbit camera never sees its right button), Tab and G wheels are off in a match, presses wait up to 0.26 s for the ball. One controls table (`actions.ts`) drives the input and the action bar. Real-input checks on the island pass for every action (`specs/evidence/volleyball/p2/input-results.json`).
+- **Clips:** game/vb-anim merged (13eead8a): the match players and your avatar (only while playing) load vb_clips.glb; hands are clips.ts contactPoints; a press's clip is timed to the ball (`moves.ts` syncRate); ready and shuffle under 1.8 u/s; dives last to the clips' `up`.
+- **Occluders:** the match camera aims the island's see-through cut (lib/game/occluders) from its own position, so the palms in the free zone fade round you.
 - **Feel:** `feel.ts` VB_FEEL (ball pace 0.52 → 0.9 through a rally, higher floatier jump with apex slow-mo, gentler movement, ready stance, squash and stretch, timing grades). Hands follow the vb_* contract's contact points.
 - **Court:** ×1.3 plan, ×1.15 net (`COURT_GROW`); world regenerated (bench `volley-bench`, board `volley-board`, surfboards, shells, the net ball moved off the free zone). Camera glides in at the start; fog draws in; the island's top-right HUD hides.
 - **Serve:** triangle `ServeMeter` (Max at the top, a harder serve), ring cursor sets the direction, `SpinPicker` sets the curve.
@@ -27,9 +29,8 @@ Head: the commit that updates this file. **Round 2 (the phase 1 redo after David
 
 ## Next
 
-1. When game/vb-anim merges: set `VB_CLIPS_READY` in `lib/game/volleyball/moves.ts`, import the contract from `clips.ts` instead of the copied contact times, use vb_shuffle's playRate (speed × 0.5 / 0.26) and vb_shuffle_left, and vb_serve_stand for a standing serve.
-2. David's round 2 review.
-3. Phase 2 (multiplayer), only after David approves.
+1. David's round 2 review.
+2. Phase 2 (multiplayer), only after David approves.
 
 ## Tools and gotchas
 

@@ -33,7 +33,7 @@ describe("the serve", () => {
     expect(sideOf(land.z)).toBe(-sideOfPlayer(m, 0));
   });
   it("late: into the net, a point to the other team", () => {
-    const m = serve(0.12);
+    const m = serve(0.1);
     expect(m.events.find(e => e.kind === "serve")).toMatchObject({ judge: "late" });
     const ev = until(m, e => e.some(x => x.kind === "point"));
     expect(ev.some(e => e.kind === "net")).toBe(true);

@@ -4,7 +4,7 @@
  * The match's HUD (specs/minigames/beach-volleyball.md §7), on the flat kit: the score top centre (you are home), the
  * serve timer under it while someone serves, the action bar at the foot (each move's pictogram, key and name; the
  * ground's moves and the air's swap in place as you jump, with no flicker), the triangle serve meter while you hold,
- * the spin picker while you serve, a grade over the bar for your touches, the point's word, and the final card with
+ * the spin picker while you serve, the point's word (the touches' grades are VolleyStamps'), and the final card with
  * the score, the coins and Play again and Leave. Only the player in the match has it.
  */
 import { useEffect, useRef, useState, type CSSProperties } from "react";
@@ -128,7 +128,6 @@ export default function VolleyHud() {
       {m.phase === "rally" && <div className={s.pace} aria-label={`Ball pace ${pace}%`} style={{ "--p": pace / 100 } as CSSProperties}><i /></div>}
 
       {!over && <div className={s.bar}>
-        {flash?.grade && <div key={flash.n} className={s.grade} data-grade={flash.grade}>{flash.grade === "perfect" ? "Perfect!" : flash.grade === "good" ? "Good" : "Poor"}</div>}
         <ActionBar rows={rowsOf(m)} active={shown} flash={flash} />
       </div>}
 

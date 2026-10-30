@@ -18,6 +18,7 @@ import Court from "./volleyball/Court";
 import VolleyMatch from "./volleyball/VolleyMatch";
 import VolleyHud from "./volleyball/VolleyHud";
 import { courtOf, startVolley, useVolley, volley } from "@/lib/game/volleyball/session";
+import { VB_CLIPS_URL } from "@/lib/game/volleyball/clips";
 import { COURT, toLocal } from "@/lib/game/volleyball/court";
 import { boardSpot } from "@/lib/game/volleyball/island";
 import BoardSheet from "./volleyball/BoardSheet";
@@ -611,11 +612,11 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
           While Bram brings a new arrival in and walks them round, his walking self stays out of sight: one Bram. */}
       <Residents personas={personas} phase={phase} ceremony={ceremony} player={player} island={island} v={v} away={arrivalPhase ? BRAM.slug : null}
         playerName={identity.display_name !== "You" ? identity.display_name : null} />
-      <PlayerAvatar key={`${reset}-${returned}-${fromBoat}-${exitFrom}`} spawnPosition={spawn} playerName={identity.display_name} playerLevel={level} member={identity.member} player={player} frozen={fishing || arriving || talking || photoOpen || playing}
+      <PlayerAvatar key={`${reset}-${returned}-${fromBoat}-${exitFrom}`} spawnPosition={spawn} playerName={identity.display_name} playerLevel={level} member={identity.member} player={player} frozen={fishing || arriving || talking || photoOpen || playing} clips={playing ? VB_CLIPS_URL : undefined}
         ride={myTrip.ride}
         world={walkOn} groundHeight={island.ground} groundSurface={island.surface} camTarget={focus} glider={peaceful.glider} dash={dash} held={held} />
       {court && <Court spot={court} ground={island.ground} close={playing} />}
-      {court && playing && <VolleyMatch spot={court} />}
+      {court && playing && <VolleyMatch spot={court} occluders={layout.occluders} />}
       <CharacterCrowd player={player} ground={island.ground} stepWorld={island} />
       {dock && <ArrivalWorld v={v} island={island} player={player} dock={dock} held={held} keys={hintKeys} />}
     </>

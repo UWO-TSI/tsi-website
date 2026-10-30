@@ -8,6 +8,7 @@ import { MOVE_TUNING, NO_INPUT, STEP, createMoveState, stepMove, type MoveInput,
 import { FLAT, GRAVITY, arcTo, ballAt, driveTo, heightAtNet, predictLanding, realVy, stepBall, timeToHeight, type Ball, type Ground } from "./ball";
 import { BALL_R, COURT, sideOf, type Side } from "./court";
 import { VB_FEEL, paceFor } from "./feel";
+import { VB_CLIPS } from "./clips";
 import { awardRally, landingLoser, openingScore, sideOfTeam, type Score, type Team } from "./rules";
 import { judgeServe, meterPower, serveError, touchQuality, type ServeJudge } from "./timing";
 import { botInput, openSpot, pickReceivers } from "./bot";
@@ -22,16 +23,18 @@ export const COURT_TUNING = {
   ...MOVE_TUNING, walkSpeed: F.move.walk, sprintSpeed: F.move.sprint, groundResponse: F.move.response, stopResponse: F.move.stop,
   jumpHeight: F.jump.height, jumpApexTime: F.jump.apexTime, fallGravity: F.jump.fallGravity, jumpCutGravity: 1, longJumpAt: 99, glider: 0, hopChainMax: 0,
 };
-/** Hand heights above the feet for each contact: the vb_* clips' contact points (vb-anim clips.ts; the rig's arms reach about 0.85 u). */
-export const HAND = { bump: 0.45, set: 0.8, spike: 0.83, serve: 0.84, dig: 0.36 } as const;
+/** Hand heights above the feet for each contact: the vb_* clips' contact points (clips.ts; the rig's arms reach about 0.85 u). */
+const cp = (c: { contactPoint: readonly [number, number, number] }) => c.contactPoint[1];
+export const HAND = { bump: cp(VB_CLIPS.vb_bump), set: cp(VB_CLIPS.vb_set), spike: cp(VB_CLIPS.vb_spike_hit), serve: cp(VB_CLIPS.vb_serve_stand), dig: cp(VB_CLIPS.vb_dive) } as const;
 export type Touch = "bump" | "set" | "spike" | "dig";
 /** Reach from the body (horizontal) and the height band round the hand (either side). */
 export const REACH: Record<Touch, { reach: number; band: number }> = {
   bump: { reach: 0.95, band: 0.5 }, set: { reach: 0.8, band: 0.45 }, spike: { reach: 0.85, band: 0.5 }, dig: { reach: 1.0, band: 0.45 },
 };
+/** The lunge (its time on the move) and the time on the sand after, so you're up as vb_dive and vb_slide_dive stand (`up`, 1.4 s). */
 export const DIVE = {
-  normal: { speed: 7, time: 0.35, down: 0.6, reach: 1.0 },
-  slide: { speed: 10.5, time: 0.45, down: 0.45, reach: 1.3 },
+  normal: { speed: 7, time: 0.45, down: 0.95, reach: 1.0 },
+  slide: { speed: 10.5, time: 0.5, down: 0.9, reach: 1.3 },
 } as const;
 /** A dash this recent (s), or still running, turns Ctrl's dive into the slide dive. */
 export const SLIDE_WINDOW = 0.3;
