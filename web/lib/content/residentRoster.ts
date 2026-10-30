@@ -25,7 +25,7 @@
 import type { NPCPersona } from "./types";
 
 type Look = Record<string, unknown>;
-const look = (l: { skin: number; hair: number; eyes?: string; mouth?: string; extras?: string[]; bangs?: string; back: string; top?: string | null; bottom?: string | null; onepiece?: string | null; shoes: string; acc?: Record<string, string>; colors?: Record<string, number> }): Look =>
+const look = (l: { skin: number; hair: number; eyes?: string; mouth?: string; extras?: string[]; bangs?: string; back: string; top?: string | null; bottom?: string | null; onepiece?: string | null; shoes: string | null; acc?: Record<string, string>; colors?: Record<string, number>; hairAccent?: number; hairColor?: string }): Look =>
   ({ eyes: "F1.1", mouth: "M1.1", extras: [], bangs: "", top: null, bottom: null, onepiece: null, acc: {}, colors: {}, ...l });
 
 /** Authored looks by slug (character catalogue part ids, palette indices). */
