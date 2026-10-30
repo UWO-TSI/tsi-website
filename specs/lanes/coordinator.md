@@ -670,3 +670,8 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
 - **vb-anim done:** game/vb-anim 73b7739d (16 clips in vb_clips.glb, 463 KB, plus the clips.ts contract and a Character.tsx clip-replay fix). The volleyball lane merges it itself.
   - Animations review page: https://claude.ai/artifact/8EEip8ZMwLPfu6xFxEKMbc (ids are the clip names), so David can redo moves before integration.
   - Limit: the head is 42% of the height, so arms can't go overhead.
+- **Volleyball round 2 review:** https://claude.ai/artifact/4hADsrK2pAmYcMVRgEvFDK (29 cards with sound previews), game/volleyball 71b13c9c.
+  - Test server 3301 (volleyball-test, detached at 71b13c9c).
+  - Migration 20261030120000_volleyball_casual.
+  - perf:check v2 failed under load (high 5.40 ms, lite 3.40 ms). Rerun it on a quiet machine before merging.
+  - It changed the arrival routes (Bram's beach stop moved off the court), so expect a conflict with tutorial-v2's routes/new.ts at merge.
