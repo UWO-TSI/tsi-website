@@ -4,7 +4,7 @@ Worktree `.claude/worktrees/release-v12`, branch `game/release-v12`, from origin
 
 ## Status
 
-Merged 1 to 8, npc-editor (9) and music-one (10), each its own merge commit, then fixes. Migrations in one 20261030 sequence, rarity_ladder restored, one fresh seed (20261030231818) with David's resident looks. Gates on the tree before entry-perf: tsc clean; full vitest 6 failures fixed (re-run green); eslint on changed files 0 errors; gen-seeds writes nothing; build passes; local SQL chain green; headless smoke green (see Tools). Milestone 1 sent. Waiting for game/entry-perf: merge it, then one more tsc, full vitest, build, and the single perf:check.
+Done 2026-10-30. Fast-forwarded to game/entry-perf bee6b4db (it contains 7a009eb6: merges 1 to 10 and every fix), so merge 11 is entry-perf. On bee6b4db the coordinator ran tsc clean, vitest 3728 passed and a production build; the tree is byte-identical, so vitest wasn't rerun. middleware.ts matches origin/main, and no committed code or config carries the bench's dummy Supabase URL (it appears only in entry-perf's run notes). Smoke after entry-perf: arrival through Alice's HQ interior, the shop and HQ interiors, the member reel catch, music (title none, day day.ogg, night night.ogg, one at a time), volleyball E at the net into a match, no console errors. perf:check (headless, measurement build, 3 runs each) passed every scene: v2 high 5.00 ms (baseline 4.80), v2 lite 3.00 (2.90), cafe high 1.50, cafe lite 1.10, ruins-summoner high 2.90, lite 1.80. web/.next deleted.
 
 Merge decisions worth knowing: TopCluster keeps only its buttons (both chips removed); one CountUp (the wallet's, `rise` for the rewards'); the dash is everyone's, so the tutorial's dash stop no longer unlocks it; fishing together lives in useFishingSession and shows as a "Fished with" tag on the member catch card; the rig (rod-gear) goes through useFishingSession, useReelLoop and MemberReel; createFishingReel(fish, boss, floor, barMul); fishRoll(..., catches, buff, together); castLine(site, at, power, tool, tackle, buddy); the tackle counter (fishing-depth) holds the tackle shop door and has a Browse rods button for rod-gear's rod shop; paper tokens are the tutorial's plus the menu's washi extras; pickaxe (mayor, MINING) and glider stay in TOOL_TEACHERS.
 
@@ -70,8 +70,7 @@ Message the coordinator ("main") at two milestones: when all eight merges and th
 
 ## Next
 
-1. When the coordinator says entry-perf is ready: merge it (merge 11), tsc, full vitest once, eslint on its files, gen-seeds, build, a short smoke (music day and night, the reel run), then perf:check once on a quiet machine.
-2. Message the coordinator at green, then the final report; delete web/.next.
+Nothing. The coordinator applies the migrations (check prod for contraband shop rows before 20261030010500), pushes and tags v1.2.
 
 ## Tools and gotchas
 
@@ -80,6 +79,7 @@ Message the coordinator ("main") at two milestones: when all eight merges and th
 - Ports: never 3000, 3300 or 3301 (David's test servers). Use 3320.
 - Don't push. Don't touch prod.
 - The local SQL chain: `zsh specs/evidence/launch-fixes/sql-smoke.sh` (Postgres 16 from Homebrew, port 55451); every migration must be in its GAME list and every smoke in SMOKES.
+- perf:check in pieces under the 10-minute call limit: `withlock.sh heavy sh specs/perf/measure-build.sh`, then `SKIP_BUILD=1 KEEP_BUILD=1 SCENES=v2 LOCK_OWNER=game/release-v12 npm run perf:check`, then the other scenes; delete web/.next after.
 - Smoke driver: scratchpad/smoke/session.sh "<cmd>" ... under `withlock.sh devserver` (next dev on 3320, Supabase blanked, killed after). Scripts reused: music-one/audible.mjs (title day night), fish-tiers/playtest/reel-shoot.mjs (WAIT=30000, run), tutorial-v2/v4/shoot.mjs walk-a, and a scratch copy for walk-b on the member reel (data-member-fishing, track [data-in]), a copy of fishing-depth/r2/shoot.mjs on 3320 with hud and rods flows added (hud tasks tackle rods menu), volleyball/shoot.mjs island,point, creator-polish/shoot.mjs, wardrobe-b3/shoot.mjs hairs (hair_fluffy_crop is a removed style, bald by design).
 - The island takes about 20 s to load headless here: probes need WAIT of 30 s.
 - web/.env.local was missing in this worktree (build failed prerendering /admin/recruit); linked to the main checkout's as the lane rules describe.

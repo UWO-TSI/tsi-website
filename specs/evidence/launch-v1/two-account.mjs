@@ -92,14 +92,16 @@ async function signIn(k) {
   const r = await admin(`users/${ids[k].id}`, { method: "PUT", body: JSON.stringify({ password: pw }) });
   if (!r.ok) throw new Error(`password ${k}: HTTP ${r.status}`);
   const jar = new Map();
-  const sb = createServerClient(SB_URL, ANON, { cookies: {
+  // On tethos.ca hosts the session is the shared sb-tethos-auth cookie (web/lib/supabase/cookie.ts); previews keep the default.
+  const shared = /(^|\.)tethos\.ca$/.test(HOST);
+  const sb = createServerClient(SB_URL, ANON, { ...(shared ? { cookieOptions: { name: "sb-tethos-auth", domain: ".tethos.ca" } } : {}), cookies: {
     getAll: () => [...jar].map(([name, value]) => ({ name, value })),
     setAll: list => { for (const c of list) c.value ? jar.set(c.name, c.value) : jar.delete(c.name); },
   } });
   const { data, error } = await sb.auth.signInWithPassword({ email: ids[k].email, password: pw });
   if (error) throw new Error(`sign-in ${k}: ${error.message}`);
   await new Promise(res => setTimeout(res, 50));
-  return { uid: data.user.id, cookies: [...jar].map(([name, value]) => ({ name, value, domain: HOST, path: "/", sameSite: "Lax", secure: true, httpOnly: false })) };
+  return { uid: data.user.id, cookies: [...jar].map(([name, value]) => ({ name, value, domain: shared ? ".tethos.ca" : HOST, path: "/", sameSite: "Lax", secure: true, httpOnly: false })) };
 }
 
 // ── Browser helpers ─────────────────────────────────────────────────
@@ -415,25 +417,27 @@ async function flow4(A) {
   const ledger = () => sql(`select source, ref, amount, idempotency_key from wallet_ledger where member_id = '${uid}' order by created_at`);
   const before = await ledger();
   record("flow 4: the arrival paid Bram's coins once", before.filter(r => /arriv/i.test(`${r.ref} ${r.idempotency_key}`)).length === 1, JSON.stringify(before.map(r => [r.source, r.ref, r.amount])));
-  // The river mouth by the wharf always bites with a fish (the sea also gives sea stars and the like, which aren't fish).
-  for (let i = 0; i < 3; i++) {
-    const cast = await api(A, "/api/collections", "POST", { action: "cast", site: "village", at: [8, -19.5], power: 0.6, tool: "rod_flimsy" });
-    record(`flow 4: cast at the wharf with the starter rod (${i + 1})`, cast.status === 200 && !!cast.json?.catch?.roll, `HTTP ${cast.status} ${cast.json?.catch?.item_key ?? JSON.stringify(cast.json).slice(0, 120)}`);
+  // v1.2 (new world, main quest): any fish counts for first-find; the shore cell is the first fishingSpot on the map.
+  const state = await api(A, "/api/progression/state");
+  log("chapters", JSON.stringify((state.json?.chapters ?? []).map(c => [c.slug, c.status, (c.steps ?? []).map(x => `${x.key}:${x.done ? 1 : 0}`).join(" ")])));
+  for (let i = 0; i < 4; i++) {
+    const cast = await api(A, "/api/collections", "POST", { action: "cast", site: "village", at: [-191.5, -275.5], power: 0.6, tool: "rod_flimsy" });
+    record(`flow 4: cast with the starter rod (${i + 1})`, cast.status === 200 && !!cast.json?.catch?.roll, `HTTP ${cast.status} ${cast.json?.catch?.item_key ?? JSON.stringify(cast.json).slice(0, 120)}`);
     if (!cast.json?.catch?.roll) break;
     await A.page.waitForTimeout(2500);
     const land = await api(A, "/api/collections", "POST", { action: "land", roll: cast.json.catch.roll });
     record(`flow 4: land it (${i + 1})`, land.status === 200, `HTTP ${land.status} ${land.json?.catch?.item_key ?? ""}`);
     if (String(land.json?.catch?.item_key ?? "").startsWith("fish_")) break;
   }
-  const donate = await api(A, "/api/progression/chapters/advance", "POST", { chapter_slug: "settle-in", action: "donate_catch" });
-  record("flow 4: donate the catch (chapter step)", donate.status === 200, `HTTP ${donate.status} ${donate.json?.error ?? ""}`);
-  const report = await api(A, "/api/progression/chapters/advance", "POST", { chapter_slug: "settle-in", action: "report_hq" });
-  record("flow 4: report to Wren (no plot step in v1)", report.status === 200, `HTTP ${report.status} ${report.json?.error ?? ""}`);
-  const again = await api(A, "/api/progression/chapters/advance", "POST", { chapter_slug: "settle-in", action: "report_hq" });
-  record("flow 4: a second report is refused", again.status === 409, `HTTP ${again.status}`);
+  for (const action of ["claim_plot", "donate_catch"]) {
+    const r = await api(A, "/api/progression/chapters/advance", "POST", { chapter_slug: "first-find", action });
+    record(`flow 4: first-find ${action}`, r.status === 200, `HTTP ${r.status} ${r.json?.error ?? JSON.stringify(r.json).slice(0, 120)}`);
+  }
+  const again = await api(A, "/api/progression/chapters/advance", "POST", { chapter_slug: "first-find", action: "donate_catch" });
+  record("flow 4: a second donate is refused", again.status === 409, `HTTP ${again.status}`);
   const after = await ledger();
-  const settle = after.filter(r => r.source === "chapter" && r.ref === "settle-in");
-  record("flow 4: 100 coins once (chapter:settle-in)", settle.length === 1 && Number(settle[0].amount) === 100, JSON.stringify(settle.map(r => [r.source, r.ref, r.amount])));
+  const settle = after.filter(r => r.source === "chapter" && r.ref === "first-find");
+  record("flow 4: 100 coins once (chapter:first-find)", settle.length === 1 && Number(settle[0].amount) === 100, JSON.stringify(after.map(r => [r.source, r.ref, r.amount])));
   const letters = await sql(`select count(*)::int as n from letters where recipient_id = '${uid}'`);
   record("flow 4: the chapter letter is in the mailbox", letters[0]?.n >= 1, `letters: ${letters[0]?.n}`);
 }

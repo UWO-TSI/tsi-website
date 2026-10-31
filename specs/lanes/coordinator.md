@@ -636,3 +636,85 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - Stamina is in MOVE_TUNING in movement/sim.ts. HudBars sit top left; the old level chip is removed from TopCluster.
   - Conflicts with tutorial r5 in TopCluster, hudStore and hudPrefs: keep both removals.
 - **Shipping:** fish-tiers 4b84c125 (the member fishing UI plus playtest fixes) merged. No migrations. Gates: vitest 3517, tsc clean, seeds up to date. Note: its rarity edges still use --gui-rarity-* until main-quest's --ui-rarity-* lands; switch them then.
+- **Tutorial r5 review:** https://claude.ai/artifact/GbbF8C1nVDqkyqcSP5UV2w (ids v5-*), game/tutorial-v2 d0346e6e (main and the archive merged).
+  - David's test server is moved to d0346e6e.
+  - Keyword icons are now the default for every talk line, through a dictionary; there's no *star* markup.
+  - Merge conflicts with main-quest r3 (TopCluster, hudStore, hudPrefs, themes): keep both sides.
+- **Volleyball phase 1 review:** https://claude.ai/artifact/QfKHX4FBzbjH9pcBc9ZBdC (ids p1-*), game/volleyball c2669f17 (from main f0be2c5e; no migrations).
+  - The court is at (-7.5, 103.8), turned a quarter; the shells and gather-shell-2 moved off it.
+  - Six questions for David are on the page (the ball refs, animations, residents on the court, sharing the PowerMeter, the match length, casual rewards).
+  - perf:check passed (a passerby gets +0 ms; a player in a match gets +1.2 ms).
+- **David's volleyball test server:** port 3301, bound to 0.0.0.0, worktree volleyball-test (detached at c2669f17), Supabase blanked. PID in scratchpad/volleyball-test-dev.pid. URLs: /lab/island?at=-7.5,107 (walk to the net, press E) and /lab/volleyball. Kill it, and 3300, when David is done.
+- **Volleyball phase 1 decisions (David played it: "the controlsl dont even work properly"):**
+  - Approved: island-match.
+  - Redo, everything else:
+    - controls;
+    - feel: a slow-mo ball that speeds up, higher and floatier jumps, squish on every hit;
+    - the camera zoom-in and a bigger field;
+    - the serve: a triangle meter, rewarded max power, direction from where you click in the ring, a curve contact UI;
+    - an action bar with icons that switches in the air;
+    - VFX;
+    - net remodel; the beach ball from his reference;
+    - a leaderboard board and a spectator bench; spectators see a cheap default loop; residents off the court.
+  - Answers: one set to 21; a casual win pays chill coins; ranked later pays better rewards, gems and the limited rod.
+  - Two lanes:
+    - vb-anim (game/vb-anim): Blender clips in vb_clips.glb plus the clips.ts contract;
+    - volleyball r2 (game/volleyball): everything else, built against the clip names.
+- **Volleyball net and ball page:** https://claude.ai/artifact/BQqmpEUmv69QDGQbUEpmth (ids vb-net-concept, vb-ball). The final net modelling waits for David's go.
+  - Casual reward: 15 coins a win, 5 paid wins a day, a server ticket check; migration 20261030120000_volleyball_casual.
+  - The decorative beach balls move to the new LP ball.
+- **Volleyball:** David approved the net concept (go relayed).
+  - Effects plan page: https://claude.ai/artifact/DR29UeZaYKrVSZSrXZ9hPk (ids fx-*; 15 effects plus the performance rule). The VFX build waits for his picks.
+  - His ask: "hella effects... bump set spike effect, slide, when ball gets blocked, when it hits the groud it shakes abit and kinda exploads".
+- **Volleyball effects approved.** Every contact gets four timing grades (perfect, good, early, late). Each effect is built and checked one by one with its own strip. Sound effects are synthesised or CC0 only, logged in web/public/audio/sfx/SOURCES.md; that rule is now in lane-rules (David 2026-10-30). Music and voice still need David.
+- **vb-anim done:** game/vb-anim 73b7739d (16 clips in vb_clips.glb, 463 KB, plus the clips.ts contract and a Character.tsx clip-replay fix). The volleyball lane merges it itself.
+  - Animations review page: https://claude.ai/artifact/8EEip8ZMwLPfu6xFxEKMbc (ids are the clip names), so David can redo moves before integration.
+  - Limit: the head is 42% of the height, so arms can't go overhead.
+- **Volleyball round 2 review:** https://claude.ai/artifact/4hADsrK2pAmYcMVRgEvFDK (29 cards with sound previews), game/volleyball 71b13c9c.
+  - Test server 3301 (volleyball-test, detached at 71b13c9c).
+  - Migration 20261030120000_volleyball_casual.
+  - perf:check v2 failed under load (high 5.40 ms, lite 3.40 ms). Rerun it on a quiet machine before merging.
+  - It changed the arrival routes (Bram's beach stop moved off the court), so expect a conflict with tutorial-v2's routes/new.ts at merge.
+- **v1.2 release (David, 2026-10-30):** "push all currents update and make sure everything works, v1.2, also ... make sure the performance to enter the game is good". Then: "fix the music, theres liek 3 overlapping music".
+  - Three lanes from origin/main 82a3c70b:
+    - release-v12 (game/release-v12, port 3320): merges main-quest, tutorial-v2, daily-social, volleyball, creator-polish, rod-gear, fishing-depth, wardrobe-b3 in that order; re-timestamps the unapplied migrations after 20261029062423; restores the applied rarity_ladder rod-gear edited and moves its change to a new migration; one fresh catalogue seed; gates, smoke, one perf:check.
+    - music-one (game/music-one, port 3321): one music bed at a time. The ambient channel plays CC0 Ninja Adventure music and the music channel falls back to the applicant's Stream Cafe tracks, both at once, plus the campfire loops.
+    - entry-perf (game/entry-perf, port 3322): measures entry on a production build, then fixes and re-measures on v1.2.
+  - Prod has no contraband shop rows (224 null, 1 rare, 1 epic, 1 legendary), so the shop_items rarity check without contraband applies cleanly.
+  - Then: merge music-one and entry-perf into release-v12, prod dump, apply the migrations in order, verify, push, tag v1.2, confirm Ready, smoke prod, kill 3300 and 3301.
+- **v1.2 scope check (David: "make sure everythign works well and new v2 has all changes made you can open browser to test if yo wish"):** every branch ahead of main was checked. Added as merge 9: game/npc-editor 2a67bfb0, plus David's Residents editor look edits (marlo, mayor, sushi-chef, wren). They were exported from collection `residents` to scratchpad/residents-export/residents-export.json and sent to release-v12, to apply before the one final gen-seeds. Superseded and left out:
+  - creator-water (its gunwale and boat work is already in main);
+  - fish-tiers-ui-r1 (the rejected cream round);
+  - perf-v1, asset-audit and asset-thumbs (tools and audits);
+  - avatar-v8, classes-launch-tuning, apply-world and director-developer-recruitment (old).
+  Testing stays headless, even with David's go to open a browser.
+- **v1.2 shipped (2026-10-30 ~21:00):**
+  - release-v12 242a0d94 merged as 2e7d7de8: the nine branches, npc-editor and the resident looks, music-one and entry-perf (bee6b4db).
+  - Gates: tsc clean; vitest 3728; eslint 0 errors; seeds up to date; build passes. perf:check passed: v2 high 5.00 ms (baseline 4.80), lite 3.00 (2.90). Smoke green.
+  - Prod dump prod-before-v1.2-20261030-2057.dump; contraband shop rows 0.
+  - Applied, in order: 20261030010000_main_quest, 010100_main_quest_r2, 010200_welcome_week, 010300_resident_friendship, 010400_volleyball_casual, 010500_shop_items_no_contraband, 010600_rod_tackle_slots, 010700_fishing_tasks_sushi, 010800_tackle_rolls, 20261030231818_catalogue_seed.
+  - Verify clean: RLS on every table, the same 5 user-callable definers, every new table and function present.
+  - Tag v1.2.
+  - Entry, Play to move (none cold 6.2 s to 3.9 s, campus cold 13.1 s to 9.7 s, campus warm 9.9 s to 6.2 s).
+  - Cache: next.config sends stale-while-revalidate on /assets, /models and /audio. Before the next deploy that changes an asset in place, content-versioned asset URLs must land (entry-perf r2), or a returning player gets the old file once.
+  - Entry-perf r2 proposals:
+    - lossless WebP for the entry PNGs (about 2.2 MB);
+    - meshopt and WebP in the entry GLBs (25 MB raw);
+    - cache the character parts per part (skin.glb loads 3 times);
+    - colour_atlas.png is 1.9 MB on entry.
+  - For David:
+    - Juno's gift tastes (proposed: loves fish, likes mineral, hates fruit);
+    - the tackle door opens the counter, then Browse rods into the rod shop;
+    - the menu paper is a shade lighter;
+    - sushi-chef skin 10 was applied as 9.
+  - Music: the Ambience slider is idle on the member island. A bug from before v1.2: spawning right at the sushi bar drops its override.
+- **v1.2 live check (2026-10-30 ~21:10, play.tethos.ca, deploy of eb1d06f3; headers serve stale-while-revalidate):**
+  - Three throwaway accounts through specs/evidence/launch-v1/two-account.mjs. It now uses the shared sb-tethos-auth cookie on tethos.ca hosts, and flow 4 follows v1.2's first-find.
+  - Passed:
+    - routes: all 200, and the dashboard serves the island;
+    - the arrival: the creator, Bram's walk-along, recorded as arrived and taught, realtime Here (1);
+    - day: tags, presence, chat both ways, friends, emotes, dance sync, report, mute and unmute live;
+    - flow 4: Bram's 30 coins once, a cast and land with the starter rod, the first-find donation (100 coins once, Juno's letter), the second donation refused (409).
+  - first-find's claim_plot answers "That isn't open yet" on the new world.
+  - Cleanup: users deleted, 172 columns scanned, nothing left.
+  - Test servers 3300 and 3301 stopped. Worktrees tutorial-test, volleyball-test, music-one and release-v12 removed.
