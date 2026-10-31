@@ -731,3 +731,4 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - Proof: pixel-identical; perf:check passed; packed fish caught live on the member reel with identical meshes.
   - Lane-rules: rerun pack-glbs.mjs after every Blender export.
   - Proposed, not done: quantized meshopt (needs David's eye), packing the character GLBs (2.5 MB), and gltfsOf for ACNHBuilding (the shop door is parsed 4x).
+- **Entry-perf r2 live (main 42a3bd3f):** the arrival passed on play.tethos.ca with a throwaway account, and the creator and spawn render the same with the WebP textures and packed GLBs (accounts deleted, nothing left). The entry-perf worktree is removed.
