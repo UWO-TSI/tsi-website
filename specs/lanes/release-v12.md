@@ -4,7 +4,7 @@ Worktree `.claude/worktrees/release-v12`, branch `game/release-v12`, from origin
 
 ## Status
 
-All nine merges done (1 to 8, plus npc-editor), each its own merge commit, then fixes. Migrations renamed into one 20261030 sequence, rarity_ladder restored, one fresh seed (20261030231818) with David's resident looks, member fishing on --ui-rarity/--ui-holo. tsc clean, local SQL chain (specs/evidence/launch-fixes/sql-smoke.sh) green. Milestone 1 sent to the coordinator. Gates in progress: vitest, eslint, build, smoke, perf:check.
+Merged 1 to 8, npc-editor (9) and music-one (10), each its own merge commit, then fixes. Migrations in one 20261030 sequence, rarity_ladder restored, one fresh seed (20261030231818) with David's resident looks. Gates on the tree before entry-perf: tsc clean; full vitest 6 failures fixed (re-run green); eslint on changed files 0 errors; gen-seeds writes nothing; build passes; local SQL chain green; headless smoke green (see Tools). Milestone 1 sent. Waiting for game/entry-perf: merge it, then one more tsc, full vitest, build, and the single perf:check.
 
 Merge decisions worth knowing: TopCluster keeps only its buttons (both chips removed); one CountUp (the wallet's, `rise` for the rewards'); the dash is everyone's, so the tutorial's dash stop no longer unlocks it; fishing together lives in useFishingSession and shows as a "Fished with" tag on the member catch card; the rig (rod-gear) goes through useFishingSession, useReelLoop and MemberReel; createFishingReel(fish, boss, floor, barMul); fishRoll(..., catches, buff, together); castLine(site, at, power, tool, tackle, buddy); the tackle counter (fishing-depth) holds the tackle shop door and has a Browse rods button for rod-gear's rod shop; paper tokens are the tutorial's plus the menu's washi extras; pickaxe (mayor, MINING) and glider stay in TOOL_TEACHERS.
 
@@ -70,8 +70,8 @@ Message the coordinator ("main") at two milestones: when all eight merges and th
 
 ## Next
 
-1. Gates: vitest, eslint on changed files, gen-seeds (nothing new), build, the headless smoke, perf:check. Fix and repeat.
-2. Message the coordinator at green, then the final report.
+1. When the coordinator says entry-perf is ready: merge it (merge 11), tsc, full vitest once, eslint on its files, gen-seeds, build, a short smoke (music day and night, the reel run), then perf:check once on a quiet machine.
+2. Message the coordinator at green, then the final report; delete web/.next.
 
 ## Tools and gotchas
 
@@ -80,4 +80,7 @@ Message the coordinator ("main") at two milestones: when all eight merges and th
 - Ports: never 3000, 3300 or 3301 (David's test servers). Use 3320.
 - Don't push. Don't touch prod.
 - The local SQL chain: `zsh specs/evidence/launch-fixes/sql-smoke.sh` (Postgres 16 from Homebrew, port 55451); every migration must be in its GAME list and every smoke in SMOKES.
+- Smoke driver: scratchpad/smoke/session.sh "<cmd>" ... under `withlock.sh devserver` (next dev on 3320, Supabase blanked, killed after). Scripts reused: music-one/audible.mjs (title day night), fish-tiers/playtest/reel-shoot.mjs (WAIT=30000, run), tutorial-v2/v4/shoot.mjs walk-a, and a scratch copy for walk-b on the member reel (data-member-fishing, track [data-in]), a copy of fishing-depth/r2/shoot.mjs on 3320 with hud and rods flows added (hud tasks tackle rods menu), volleyball/shoot.mjs island,point, creator-polish/shoot.mjs, wardrobe-b3/shoot.mjs hairs (hair_fluffy_crop is a removed style, bald by design).
+- The island takes about 20 s to load headless here: probes need WAIT of 30 s.
+- web/.env.local was missing in this worktree (build failed prerendering /admin/recruit); linked to the main checkout's as the lane rules describe.
 - David's resident export had sushi-chef at skin 10 (skins 10 and 11 left the picks); applied as 9 from a scratch copy.
