@@ -21,6 +21,7 @@ import { CONVERT, contourDistance, limitSteepness, padBuildings, rockRelief, she
 import type { World } from "./format";
 import { Paint, cellMapOf, createTerrain, paintAt, sampleX, sampleZ, terrainHeight, terrainSteepness } from "./terrain";
 import { hash01 } from "../worldFx";
+import { COURT } from "../volleyball/court";
 import { JETTY, SELL_BARREL, dockToWorld } from "../wharf";
 import type { ObjectKind } from "../villageMap";
 import type { NEW_LAMPS } from "../propModels";
@@ -178,6 +179,13 @@ function quayAt(z: number, d: number): { x: number; z: number; yaw: number } {
 const SANDCASTLE_Z = 112;
 /** The beach's palms, bigger than the wharf's (David, R2c: "bigger trees"). */
 const BEACH_PALM = 1.35;
+/**
+ * The volleyball court's middle (the net), turned a quarter so the court runs along the beach (game/volleyball): from
+ * wharf-art2's spot (-4, 103.5) 3.5 u west and 0.3 u seaward, clear of the lifeguard tower and the palms. `inCourtZone`:
+ * the court and its free zone, which the shells and gather spots keep off.
+ */
+export const VOLLEY: XZ = [-7.5, 103.8];
+const inCourtZone = (x: number, z: number) => Math.abs(x - VOLLEY[0]) <= COURT.halfLength + COURT.free && Math.abs(z - VOLLEY[1]) <= COURT.halfWidth + COURT.free;
 /** The beach's campfire. */
 const FIRE_AT = [14, 104] as const;
 /** The deck squares' middles run from z to z (every 4 u): their south end stops where the grassy band still stands at their level. */
@@ -411,9 +419,11 @@ const MARKET: readonly (readonly [model: string, z: number, d: number, turn: num
   // art-r2f's fish market, 7.8 wide by 4.2 deep, its porch turned south down the deck, its swordfish bursting up through the roof (R2e: "make building a bit wider").
   ["fish-market", 19.5, 4, -Math.PI / 2, 1],
   ["market-cart", 31.2, 5.7, 0.25, 0.55], ["market-cart", 40.6, 6.4, -0.2, 0.55], ["market-cart", 70.5, 6.1, 0.15, 0.53], ["market-cart", 79.6, 5.5, -0.35, 0.56],
-  ...[[24.4, 6.9, 0.07], [25.1, 6.3, 0.066], [24.7, 7.5, 0.072], [29.6, 2.2, 0.07], [43.4, 7.1, 0.068], [57.8, 1.6, 0.07], [58.4, 2.2, 0.065], [72.7, 7.3, 0.07], [77.2, 7.5, 0.07], [77.9, 6.8, 0.066]]
+  ...[[24.4, 6.9, 0.07], [25.1, 6.3, 0.066], [24.7, 7.5, 0.072], [43.4, 7.1, 0.068], [57.8, 1.6, 0.07], [58.4, 2.2, 0.065], [72.7, 7.3, 0.07], [77.2, 7.5, 0.07], [77.9, 6.8, 0.066]]
     .map(([z, d, scale]) => ["barrel", z, d, z * 1.3, scale] as const),
-  ["crate", 29.1, 1.1, 1.3, 1], ["crate", 30, 1.6, 0.45, 0.9], ["crate", 67.6, 1.3, 2, 1], ["crate", 55.4, 6.6, 0.6, 1.05],
+  // The barrel and two crates by the sell barrel, where Bram stands to watch your first sale, are gone (David's playtest:
+  // "these barral and crate infront of the sell fish shop should be removed").
+  ["crate", 67.6, 1.3, 2, 1], ["crate", 55.4, 6.6, 0.6, 1.05],
   ["shop-cart", 34.6, 4.6, 0.5, 1.5], ["shop-cart", 59.7, 4, -0.4, 1.5],
   // wharf-art's dock decor: nets heaped and over crates, crates under cloth, crates of fish tipped toward the walk.
   ["net-heap", 37.1, 3.9, 0.5, 1], ["crate-cloth", 28.2, 6.5, 0.3, 1], ["fish-crate", 25.2, 2.4, -0.5, 1], ["fish-crate", 68.9, 2.6, -0.2, 1],
@@ -525,7 +535,7 @@ function plazaSet(): Obj[] {
  */
 function beachSet(): Obj[] {
   const out: Obj[] = [...["sushi-bar", "sushi-bar-pier"].map(m => obj("prop", m, ...SUSHI, SUSHI_YAW, 1, m)), obj("prop", "lifeguard-tower", 1, 108.5, 0, 1, "lifeguard-tower")];
-  ([[4.5, 107.4, "a"], [5.1, 107.8, "b"], [5.7, 107.3, "c"], [-16, 107, "c"], [-15.4, 107.5, "a"], [33, 104, "b"], [33.6, 104.4, "a"]] as const)
+  ([[4.5, 107.4, "a"], [5.1, 107.8, "b"], [5.7, 107.3, "c"], [-19.6, 107, "c"], [-19, 107.5, "a"], [33, 104, "b"], [33.6, 104.4, "a"]] as const)
     .forEach(([x, z, m], i) => out.push(obj("prop", `surfboard-${i}`, x, z, 0.4 * (hash01(i, 30) - 0.5) + (x > 30 ? 2.6 : 0), 1, `surfboard-${m}`)));
   // wharf-art2's beach things (David, R2c: "brainstorm for more beach stuff, maybe beach balls"): by each parasol a
   // lounger looking out to sea, a towel or two, the cool box and a ball; the volleyball net on open sand well off the
@@ -536,9 +546,14 @@ function beachSet(): Obj[] {
     out.push(obj("prop", `beach-towel-${i}`, x - 1.5, z + 0.3, 0.5 * (h(1) - 0.5), 1, h(2) < 0.5 ? "beach-towel-a" : "beach-towel-b"));
     if (h(3) < 0.6) out.push(obj("prop", `beach-towel-${i}-b`, x - 2.6, z + 0.5, 0.5 * (h(4) - 0.5), 1, h(2) < 0.5 ? "beach-towel-b" : "beach-towel-a"));
     out.push(obj("prop", `beach-cooler-${i}`, x + 0.5, z - 1.2, h(5) * 6.28, 1, "beach-cooler"));
-    out.push(obj("prop", `beach-ball-${i}`, x + 2.3, z + 1.5, h(6) * 6.28, 1, `beach-ball-${"abc"[i]}`));
+    out.push(obj("prop", `beach-ball-${i}`, x + 2.3, z + 1.5, h(6) * 6.28, 0.28, "beach-ball")); // 0.56 across
   });
-  out.push(obj("prop", "volleyball-net", -4, 103.5, 0, 1, "volleyball-net"), obj("prop", "beach-ball-net", -2.2, 105.6, 1.3, 1, "beach-ball-b"));
+  // The volleyball court (game/volleyball): the net across the court along the beach, a ball by the far post off the
+  // free zone (the surfboards west of it too); up the grassy rise on the land side a log bench to watch from (facing
+  // the court), and at the east end, toward the campfire, the leaderboard board (the plaza's catch board, facing east).
+  out.push(obj("prop", "volleyball-net", ...VOLLEY, Math.PI / 2, 1, "volleyball-net"), obj("prop", "beach-ball-net", VOLLEY[0] + 0.7, VOLLEY[1] + 6.9, 1.3, 0.2, "beach-ball")); // the match's ball size (court.ts BALL_R)
+  out.push(obj("bench", "volley-bench", VOLLEY[0] + 3, VOLLEY[1] - 9.1, 0, 1, "log-bench"));
+  out.push(obj("prop", "volley-board", VOLLEY[0] + 12.1, VOLLEY[1] - 1.46, Math.PI / 2, 1, "catch-board"));
   out.push(obj("prop", "sandcastle", 8, SANDCASTLE_Z, 0.4, 1, "sandcastle"));
   return out;
 }
@@ -671,7 +686,7 @@ function shells(t: World["terrain"]): Obj[] {
   for (let x = -50; x < 58; x += 2) for (let z = 92; z < 122; z += 2) {
     const k = out.length + x * 31 + z, px = x + 1.6 * (hash01(x, z + 60) - 0.5), pz = z + 1.6 * (hash01(z, x + 61) - 0.5), y = terrainHeight(t, px, pz);
     const fire = Math.hypot(px - FIRE_AT[0], pz - FIRE_AT[1]);
-    if (y < t.seaLevel + 0.06 || y > H.beach + 0.35 || BEACH(px, pz) < -4 || fire < 7.2 || Math.hypot(px - SUSHI[0], pz - SUSHI[1]) < 7) continue;
+    if (y < t.seaLevel + 0.06 || y > H.beach + 0.35 || BEACH(px, pz) < -4 || fire < 7.2 || Math.hypot(px - SUSHI[0], pz - SUSHI[1]) < 7 || inCourtZone(px, pz)) continue;
     if (hash01(x + 200, z) > 0.08 + 0.45 * (1 - smoothstep(0.08, 0.35, y - t.seaLevel)) + 0.35 * (1 - smoothstep(8, 13, fire))) continue;
     out.push(obj("prop", `shell-${out.length}`, px, pz, hash01(k, 62) * 6.28, +(0.85 + 0.35 * hash01(k, 63)).toFixed(2), ["starfish", "sand-dollar", "conch"][Math.floor(hash01(k, 64) * 3)]));
   }
@@ -688,7 +703,7 @@ function gatherSpots(t: World["terrain"], objects: readonly Obj[]): Obj[] {
   const out: Obj[] = [], sea = t.seaLevel;
   const clear = (x: number, z: number, r: number) => [...objects, ...out].every(o => Math.hypot(o.x - x, o.z - z) >= r);
   const open = (x: number, z: number) => nearest(PATH, x, z).d > 3.5 && nearest(BEACH_WAY, x, z).d > 3 && Math.hypot(x - PX, z - PZ) > PLAZA.r + 2.5
-    && westOfQuay(x, z) > 8.5 && Math.hypot(x - FIRE_AT[0], z - FIRE_AT[1]) > 7.2 && Math.hypot(x - SUSHI[0], z - SUSHI[1]) > 7;
+    && westOfQuay(x, z) > 8.5 && Math.hypot(x - FIRE_AT[0], z - FIRE_AT[1]) > 7.2 && Math.hypot(x - SUSHI[0], z - SUSHI[1]) > 7 && !inCourtZone(x, z);
   const flat = (x: number, z: number) => terrainHeight(t, x, z) > sea + 0.35 && terrainSteepness(t, x, z) < 0.4;
   const near = ([ax, az]: XZ, ok: (x: number, z: number) => boolean): [number, number] | null => {
     for (let r = 0; r <= 8; r += 0.5) for (let a = 0; a < 12; a++) {

@@ -21,7 +21,7 @@ David, 2026-10-27, verbatim: "add these new hair fance accessories, i want you t
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, `fit_check` PASS, gen-seeds up to date (no seed yet; the coordinator writes prices after David picks). Message "main" when the evidence is ready, with the head SHA, the item list (key, id, name, triangles) and the gates, then stop.
 
-## Removal (David, 2026-10-27): "remove fluffy crop and wind swept"
+## Removal (David, 2026-10-27): "remove fluffy crop and wind swept" (done; later removals are in Status)
 
 Remove `hair_fluffy_crop` (hair-33, Fluffy crop, source #29) and `hair_long_windswept` (hair-35, Long windswept, source #31) from batch 3 entirely, the way hair-shelf removed three hairstyles (`specs/lanes/hair-shelf.md` Status):
 - their catalogue entries in both copies, their GLBs at full, lod1 and lod2, thumbs, shop icons and lod.json entries;
@@ -31,31 +31,18 @@ Remove `hair_fluffy_crop` (hair-33, Fluffy crop, source #29) and `hair_long_wind
 - tests and counts updated; any resident or default look that uses them repointed to a free hairstyle.
 Gates as before (vitest both worlds, tsc, eslint, fit_check). Commit, update Status, message "main" with the head SHA, and stop.
 
-## Status (2026-10-27)
+## Status (2026-10-27, end of the day's follow-ups)
 
-- **Head:** the commit carrying this file (on top of `4d5d7b3f`). Main `58e6f63f` (hair-shelf merged) is merged in. Evidence ready; nothing approved yet. Nothing merges before David prices and fits them.
-- **Keys (hair-28 to 31 went to four earlier hairs in the hair shelf, so batch 3 starts after them):**
-  - hairs #28-42 = `hair-32` to `hair-46`: spiky messy, fluffy crop, straight layers, long windswept, rolled-up mask, tousled spikes, ski mask and dreads, braided pigtails, space buns with fluffy edges, messy buns with a braid, messy with a braid, freeform afro, sponge twists, middle part, mod cut;
-  - faces #26-32 = `face-26` to `face-32` (squiggle, zombie, big eyes, crying, moody, dizzy, wink), mix-and-match parts;
-  - face accessories #25-27 = `acc-25` to `acc-27` (droopy glasses with a bow, cross bandage, face bandaids).
-  - None is in `batch2-pricing.json`. `look.ts partRef`: a keyed item without a price is free until David prices it. Shop icons exist for all of them (hair tiles, accessory renders, face icons), so pricing needs no rerun.
-- **What changed in the pipeline:**
-  - Hair atlas `hair_colour.png` grew from 6x5 to 6x7 cells. Its UVs are in atlas space, so every hair was rebuilt from source (import, LOD, hidden, hat cut). Existing hairs' triangles are unchanged; sheet 04 shows them before and after.
-  - Hair-shelf removals carried into the manifests: `hair_visor_messy` is `accessory_only` (acc_visor still split from it), `hair_fluffy_boy` and `hair_wavy_half_up` are `removed`. None of the three is back in the catalogue.
-  - New cap rules in `import_hair.py`: `light` (#34's white ski mask, `islands` so its logo is painted out, logos `dark`) and `skin_tone` (#36, #39, #40's painted scalp and edges, drawn as they are).
-  - Face page 2 (`v7_face_atlas_2.png`) is now 3264 x 3648: batch 3 sits in its own 1216-px columns on the right, because another band would have run past 4,096 px down. Every earlier rect and pixel is unchanged.
-  - Colour atlas: three 128 px tiles for the accessories. It has two 128 px tiles left, and no 256.
-  - `import_roblox.py`: entries take a source `set` (`david-b3`), and a new fit `face_on` (a bandage resting on the face, `side: right` for the cheek).
-  - `fit_check.py`: face limits raised to batch 3's widest parts, as batch 2 did: eye reach 66 deg (#28's big eyes, 65.2) and facing 82.5 deg (#29's tears run down the cheeks, 81.6).
-  - `#31 long windswept`: override 0.006 stud forward (about 2 mm; its fringe clipped the forehead by 2.8 mm). No height changes anywhere (fit-editor's `fit` map is for that).
-- **Gates:** tsc clean; eslint clean on the changed files; vitest 3,461 passed with and without `NEXT_PUBLIC_GAME_WORLD=new`; fit_check PASS (`specs/evidence/wardrobe-b3/fit-check.txt`); gen-seeds up to date (no seed). Heaviest look 7,757 / 4,981 / 3,970, within 7,800 / 5,100 / 4,000 (`budget.txt`), the same as batch 2.
-- **Evidence (`specs/evidence/wardrobe-b3/`):** `01-hairs.webp` (front, 3/4, side, back beside David's preview), `02-faces.webp`, `03-accessories.webp`, `04-existing-before-after.webp` (bob, two-tone curly pigtails, the ushanka, ribbon bob, own colours and dyed), `05-kits.webp` (facekit, hairkit).
-- **Open, for David:**
-  - #32's rolled-up mask still shows its white eye lenses: it reads as a well-known character's mask. Name is neutral.
-  - Short hairs at their provisional height (#29, #39, #40, #41) show the matte under-cap's stepped edge at the temples and nape. #36's scalp shell shows dark under-cap blocks at the nape; turning its under-cap off left the crown uncovered (fit_check float 9 cm), so it stays on.
-  - The skin-coloured scalp and edges (#36, #39, #40) are drawn in the source's own skin tone. They don't follow the member's skin. Their sources use alpha (#36's baby hairs), which our hair material doesn't cut out.
-  - #25's glasses are cut to the 350-triangle face cap, and the frames look jagged.
-  - fit_check flags: `hair_fluffy_crop` skin_through 4.9 mm at the nape, `hair_sponge_twists` 0.4 mm (and #20's old one).
+- **Head:** the commit carrying this file, on game/wardrobe-b3 (main merged earlier). Everything below is done and gated; nothing merged or pushed by this lane.
+- **Removed on David's word (catalogue both copies, GLBs at every tier, thumbs, icons, lod.json, manifests marked `removed` so a re-import skips them, atlas cells left, keys never reused):** `hair_fluffy_crop` hair-33, `hair_long_windswept` hair-35, `hair_tousled_spikes` hair-37, `hair_space_buns` hair-40, `hair_messy_braid` hair-42 (manifest `art/characters/hair/source/david-b3/manifest.json`), face-30 moody (`v7/face_set_b3.py` REMOVED, `build_face.py` leaves it and its parts out of `face_v7.json`), `acc_cross_bandage` acc-26 (`removed: true` in `accessories/roblox_attachments.json`, `import_roblox.py` skips it; its 128 px colour tile stays reserved).
+- **What is in the game from batch 3 (all priced, `specs/wardrobe/batch2-pricing.json`, David's shelf page):** free: hair-34 straight layers, hair-39 braided pigtails, hair-43 freeform afro, hair-45 middle part, hair-46 mod cut. 350 coins: hair-32 spiky messy, hair-41 messy buns with a braid, hair-44 sponge twists. 200 Gems: hair-36 rolled-up mask, hair-38 ski mask and dreads. Faces: face-29 crying and face-31 dizzy 250 coins, face-26 squiggle, face-27 zombie, face-28 big eyes, face-32 wink 100 Gems. acc-27 face bandaids 150 coins, acc-25 droopy glasses with a bow 100 Gems. Seed migration `web/supabase/migrations/20261027165850_catalogue_seed.sql` (unapplied; the coordinator applies it); `sql-smoke.sh` chain passes.
+- **Rule changes this lane made:** `offered(id)` in `look.ts` (a keyed part, or a keyed face's parts, with no entry in the pricing file is not offered in the creator or the closet; Face Fit and /lab still list everything); hairstyles and faces are never in the daily specials pool (`special_pool` false in `lib/wallet/catalogue.ts`).
+- **Placement:** Tousled spikes sat 78 mm forward (its fringe pulled the seat fit); fixed with an override before it was removed; `specs/evidence/wardrobe-b3/placement/` has the table. Nothing else moved. The method (bbox centre of the part above the skull's centre, `table-*.txt`) is the check for any new hair.
+- **Monocle (acc-11):** re-imported with `piece_budget` (`decimate_pieces` in `import_roblox.py`): the ring 210 triangles alone, the chain's first seven links and the clasp 140, 342 in all. The source has no separate lens. `specs/evidence/wardrobe-b3/monocle/`.
+- **Under-cap (David: "gotta remove that under layer thing"; his screenshot was Middle part):** `hidden_cut.py -- undercap [ids]`. For each cap triangle (u < 0) four sample points, the share of directions within 70 degrees of its outward normal that escape past the head, the body and the hair's own strands; more than `UNDERCAP_T` (0.1) is cut, per tier. `UNDERCAP_T_HAIR` raises it to 0.35 for `hair_dreads_cap` (at 0.1 its fit gap_max stood at 11 mm). 2,074 of 16,408 cap triangles cut over 30 hairstyles and three tiers (`specs/evidence/wardrobe-b3/undercap/cut-counts.txt`, `pair-1.webp` to `pair-8.webp`: every hairstyle, front, 3/4, side, back, before | after; `david-vs-after-middle-part.webp`: his screenshot beside it after. `make_pairs.py` builds them from `before/` and `after/` shots, which are not kept (12 MB of PNG); reshoot with `shoot.mjs ids:sN:...`. Note: `pair-4.webp`'s hair_dreads_cap row was shot at the first threshold (0.1); the shipped one cuts 7 of its 332 cap triangles, not 51, and fit_check passes on it). Run it after `hidden`, before `hatcut`; it keeps the `_HATCUT` marks (they move with the vertices).
+  - Not the under-cap, so still there: #40 Sponge twists' brown notches at the temples and the skin-coloured scalp and edges of freeform afro (hair-43) are the source's own skin-tone geometry (`skin_tone` cap rule), not the matte under-cap. Say if David wants those cut too.
+- **Gates:** vitest 3,463 passed with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc clean, eslint clean on changed files, fit_check PASS (0 over the limits), gen-seeds up to date, sql-smoke chain ok.
+- **Superseded earlier notes:** the batch 3 list above in "Do" is now 10 hairstyles (hair-32, 34, 36, 38, 39, 41, 43, 44, 45, 46), 6 faces and 2 face accessories; the evidence sheets 01 to 05 in this folder were shot before the removals and still show the removed items.
 
 ## Rules
 
@@ -69,7 +56,7 @@ Gates as before (vitest both worlds, tsc, eslint, fit_check). Commit, update Sta
 
 ## Next
 
-1. Wait for David's free-or-price picks and his heights in the fit editor. The coordinator writes prices and the seed.
+1. Done: prices and seed. Wait for the coordinator to merge; David's heights come from the fit editor.
 2. If he sends items back, rebuild only those (Tools below), then reshoot with `shoot.mjs` and `sheets.py`.
 
 ## Tools and gotchas

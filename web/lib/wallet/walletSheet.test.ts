@@ -8,7 +8,7 @@ const NOW = new Date("2026-10-03T18:05:00Z");
 const at = (iso: string) => new Date(iso).toISOString();
 const entry = (e: Partial<LedgerEntry> & Pick<LedgerEntry, "amount" | "source">): LedgerEntry => ({ currency: "coins", balance_after: 0, ref: null, created_at: at("2026-10-03T17:00:00Z"), ...e });
 const VIEW: WalletView = {
-  coins: 2400, gems: 650, daily_claimed: true, day: "2026-10-03",
+  coins: 2400, gems: 650, daily_claimed: true, day: "2026-10-03", welcome_day: null,
   recent: [
     entry({ amount: 20, source: "daily_gift", ref: "2026-10-03", balance_after: 2400, created_at: at("2026-10-03T13:10:00Z") }),
     entry({ amount: 60, source: "sell", ref: "fish_dace", balance_after: 2380, created_at: at("2026-10-03T12:30:00Z") }),
@@ -65,7 +65,7 @@ describe("the wallet sheet's data (reachability deliverable 2)", () => {
   });
 
   it("an empty wallet is still a wallet", () => {
-    const e = walletSheet({ coins: 0, gems: 0, daily_claimed: false, day: "2026-10-03", recent: [] }, NOW);
+    const e = walletSheet({ coins: 0, gems: 0, daily_claimed: false, day: "2026-10-03", welcome_day: null, recent: [] }, NOW);
     expect(e).toMatchObject({ coins: 0, earned: [], spent: [], totals: { earned: 0, spent: 0 } });
   });
 });

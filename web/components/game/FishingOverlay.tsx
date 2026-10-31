@@ -31,7 +31,7 @@
 import { useRef } from "react";
 import FishReveal from "./FishReveal";
 import { useFishingSession } from "@/lib/game/useFishingSession";
-import { rodByTier, type RodTier } from "@/lib/game/rods";
+import { rodByTier, type RodEffects, type RodTier } from "@/lib/game/rods";
 import {
   CAST,
   RARITY_META,
@@ -61,14 +61,14 @@ const HINT_PILL: React.CSSProperties = {
 
 /** `rod` (rods.ts) widens the hook window, slows the drain and adds rare luck; `tsi:fish-start` may carry `water` (fishingSpots.ts), and on the member island `site` and `from` (where the player stands) for the server roll. */
 export default function FishingOverlay({ onActiveChange, collectionScope, zoneOverride, rod = rodByTier(1) }: { onActiveChange?: (active: boolean) => void; collectionScope?: string; zoneOverride?: "river" | "sea"; rod?: RodTier }) {
-  const { phase, fish, caughtSize, wasNew, newRecord, learned, missNote, device, maxCast, bossMode, raidId, owned, reelInput, releaseRequestedRef, castNow, cancel, onReelDone, revealDelay } =
+  const { phase, fish, caughtSize, wasNew, newRecord, learned, buddy, missNote, device, maxCast, bossMode, raidId, owned, reelInput, releaseRequestedRef, castNow, cancel, onReelDone, revealDelay } =
     useFishingSession({ onActiveChange, collectionScope, zoneOverride, rod });
 
   if (phase === "idle") return null;
 
   // The catch card, for every catch: it replaces the bottom card.
   if (phase === "revealing" && fish) {
-    return <FishReveal fish={fish} sizeCm={caughtSize} recipe={learned} isNew={wasNew} newRecord={newRecord} delay={revealDelay} onDone={cancel} />;
+    return <FishReveal fish={fish} sizeCm={caughtSize} recipe={learned} together={buddy} isNew={wasNew} newRecord={newRecord} delay={revealDelay} onDone={cancel} />;
   }
 
   const label =
@@ -107,7 +107,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
       {phase === "charging" ? (
         <CastMeter onRelease={castNow} releaseRequestedRef={releaseRequestedRef} hint={FISHING_HINTS[device].charge} />
       ) : phase === "reeling" && fish ? (
-        <ReelMinigame fish={fish} known={owned.has(fish.key)} onDone={onReelDone} initialInput={reelInput} tensionMul={rod.tensionMul} help={FISHING_HINTS[device].reel} boss={bossMode} raidId={raidId} />
+        <ReelMinigame fish={fish} known={owned.has(fish.key)} onDone={onReelDone} initialInput={reelInput} rig={rod} help={FISHING_HINTS[device].reel} boss={bossMode} raidId={raidId} />
       ) : (
         <div
           style={{
@@ -212,7 +212,7 @@ export function ReelMinigame({
   known,
   onDone,
   initialInput,
-  tensionMul = 1,
+  rig,
   help = FISHING_HINTS.mouse.reel,
   boss: bossMode = bossOf(fish.rarity),
   raidId,
@@ -221,7 +221,8 @@ export function ReelMinigame({
   known: boolean;
   onDone: (success: boolean) => void;
   initialInput?: FishingHeldInput;
-  tensionMul?: number;
+  /** The rod in hand with its add-ons (rods.ts): the drain, the fill and the bar's width. */
+  rig?: Pick<RodEffects, "tensionMul" | "fillMul" | "barMul">;
   /** How to reel on the device that started the cast (FISHING_HINTS). */
   help?: string;
   /** The fight it puts up (fishingReel.ts): defaults to the fish's; a divine with no raid to join fights solo. */
@@ -242,12 +243,13 @@ export function ReelMinigame({
   const fightLabelRef = useRef<HTMLSpanElement>(null);
   const callRef = useRef<HTMLDivElement>(null);
 
+  const barMul = rig?.barMul ?? 1;
   // The boss reel narrows its bar by phase (fishingReel.ts BOSS); the bar's width is set from the simulation.
   const boss = bossMode !== null;
-  const barW = RARITY_META[fish.rarity].barW * (boss ? BOSS.barMul[0] : 1);
+  const barW = Math.min(0.5, RARITY_META[fish.rarity].barW * barMul * (boss ? BOSS.barMul[0] : 1));
 
   useReelLoop({
-    fish, boss: bossMode, raidId, tensionMul, initialInput, focus: reelRef, onDone,
+    fish, boss: bossMode, raidId, rig, initialInput, focus: reelRef, onDone,
     onPause: (paused) => { if (pausedLabelRef.current) pausedLabelRef.current.hidden = !paused; },
     onFrame: ({ sim: simulation, events, now, raid }) => {
       const { position: pos, fishPosition: fishPos, inside, progress } = simulation;

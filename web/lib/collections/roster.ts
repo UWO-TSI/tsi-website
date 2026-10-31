@@ -17,15 +17,17 @@
  * category and rarity. David edits these on the catalogue editor
  * (specs/tools/catalogue-editor), applied by scripts/apply-species.mjs.
  */
+import { DROPS } from "@/lib/game/drops";
 export type Category = "fish" | "sea" | "bug" | "fruit" | "nature" | "mineral";
 import { RARITIES, type Rarity } from "@/lib/rarity";
 export type { Rarity } from "@/lib/rarity";
 /** Where rod catches bite (the reel: sea, else river; pond fish only in ponds) and where land finds turn up (the island's nodes). */
 export const WATER_BIOMES = ["river", "pond", "cliff_pool", "sea"] as const;
 export const LAND_BIOMES = ["beach", "flowers", "trees", "ground", "water_edge", "bush", "woods", "rocks"] as const;
-export type Biome = (typeof WATER_BIOMES)[number] | (typeof LAND_BIOMES)[number];
+/** Buried finds come up from dig spots (the main quest, m3). */
+export type Biome = (typeof WATER_BIOMES)[number] | (typeof LAND_BIOMES)[number] | "dig_sand" | "dig_soil";
 export const WEATHERS = ["clear", "cloudy", "rain", "snow"] as const;
-export type Tool = "rod" | "net" | "hand" | "shovel";
+export type Tool = "rod" | "net" | "hand" | "shovel" | "pickaxe";
 export type Wing = "aquarium" | "insect_hall" | "nature_room";
 
 export interface Species {
@@ -276,7 +278,38 @@ export const REEL_FISH: Species[] = make("fish", "rod", "aquarium", [
   ["fish_hammerhead_shark", "Hammerhead Shark", "sea", "epic", [180, 350], null, { months: SUMMER, oneLiner: "Sees both sides of every argument." }],
 ], { model: null });
 
-export const ROSTER: Species[] = [...LAUNCH_ROSTER, ...EVENT_SPECIES, ...REEL_FISH];
+/**
+ * Buried finds (m3, specs/launch/v1-gameplay.md: "dirt will have some type of marking and sand as well and you can dig
+ * up rare stuff"): dug up with the shovel at the marked spots on sand and on dirt (lib/game/islandNodes.ts digSpots),
+ * shown in the museum's nature room. Seeded after the reel's fish so no earlier position moves.
+ */
+const find = (key: string, name: string, biome: Biome, rarity: Rarity, size: [number, number] | null, oneLiner: string): Row =>
+  [key, name, biome, rarity, size, null, { oneLiner, sub: "buried", model: `/assets/game/forage/${key}.glb` }];
+export const BURIED_FINDS: Species[] = make("nature", "shovel", "nature_room", [
+  find("find_sea_glass", "Sea Glass", "dig_sand", "common", [2, 4], "Worn smooth by a hundred tides."),
+  find("find_old_coin", "Old Coin", "dig_sand", "uncommon", [2, 3], "Nobody remembers who dropped it. Everybody wishes it was them."),
+  find("find_ammonite", "Ammonite", "dig_sand", "rare", [5, 15], "A spiral that was alive long before the island was."),
+  find("find_pottery_shard", "Pottery Shard", "dig_soil", "common", [4, 9], "Somebody's favourite bowl, once."),
+  find("find_geode", "Geode", "dig_soil", "uncommon", [6, 12], "Plain on the outside. Wait till you see the inside."),
+  find("find_amber", "Amber", "dig_soil", "epic", [3, 6], "Sunlight from a very long time ago."),
+  find("find_trilobite", "Trilobite", "dig_soil", "legendary", [4, 10], "Older than the dinosaurs, and it still looks surprised."),
+  // The very, very rare lore find (lib/collections/digLoot.ts; specs/lore.md "sudo canon": a sudo is built, never given).
+  // Never a dig spot's own roll (islandNodes.ts digs list their relics): only the server's dig loot turns it up.
+  find("find_broken_sudo", "Broken Sudo", "dig_soil", "legendary", null, "A little screen-faced chassis with an empty heart socket. Whoever built it never got to flash it."),
+]);
+
+/** Every species, with the buried finds (m3). */
+export const ROSTER: Species[] = [...LAUNCH_ROSTER, ...EVENT_SPECIES, ...REEL_FISH, ...BURIED_FINDS];
+
+/**
+ * Mining (m6): a rock is broken with Mayor Eliza's pickaxe for stone or iron. Parked for the cave
+ * update (David 2026-10-28, lib/game/drops.ts `cave`): until it's released, rocks are struck with the shovel as before.
+ */
+export const MINING = DROPS.cave;
+/** The tool a species is taken with (the pickaxe for a rock once mining is out; else its own). */
+export const toolOf = (sp: Pick<Species, "tool" | "biome">, mining: boolean = DROPS.cave): Tool => (sp.biome === "rocks" && mining ? "pickaxe" : sp.tool);
+/** The rocks' yield once mining is out (m6, David: "currently just stone and occasionally iron"). */
+export const NEW_WORLD_ROCKS = ["rock_stone", "rock_iron_nugget"] as const;
 
 export const CATEGORIES: Category[] = ["fish", "sea", "bug", "fruit", "nature", "mineral"];
 export { RARITY_RANK } from "@/lib/rarity";

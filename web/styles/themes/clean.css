@@ -12,6 +12,9 @@ body, [data-ui-theme="clean"] {
   --ui-select: #ffffff;
   --ui-highlight: #151515;
   --ui-marker: rgb(255 204 0 / 0.55);
+  --ui-gold: #f2b636;
+  --ui-home: #ef7a5a;
+  --ui-away: #4bb3c8;
   --ui-ink: #151515;
   --ui-ink-body: #222222;
   --ui-ink-2: #5f5f5f;
@@ -22,11 +25,13 @@ body, [data-ui-theme="clean"] {
   --ui-accent: #2a2a2a;
   --ui-accent-deep: #000000;
   --ui-accent-ink: #ffffff;
+  --ui-chart: #5b8cf0;  /* a chart's line and its light fill (the rod radar): soft, never bold */
   --ui-pill: #ececec;
   --ui-pill-ink: #6f6f6f;
   --ui-disabled: #c9c9c9;
   --ui-round: #2e3a63;
   --ui-error: #c4513d;
+  --ui-heart: #ef6f86;
   --ui-focus: #151515;
   --ui-scrim: rgb(18 18 18 / 0.42);
   --ui-shade: 0 0 0;
@@ -35,6 +40,49 @@ body, [data-ui-theme="clean"] {
   --ui-water-line: #a9d2e3;
   /* The reel's accent: the catch window, the line's fill and the droplets (calm water, not yellow or black). */
   --ui-water-deep: #2a92b8;
+  /* Paper, the material (the design bible's rule 2: only for things that are paper in the world: a printed card, a letter). */
+  --ui-paper: #fbf7ec;
+  --ui-paper-edge: #e9dfc9;
+  --ui-paper-ink: #2f2a22;
+  --ui-stamp: #c4513d;
+  /* A keyword in a line (the kit's Keyword): its word and its little icon. */
+  --ui-word-fish: #2f74c0;
+  --ui-word-bug: #3f8f3a;
+  --ui-word-coin: #b07a0c;
+  --ui-word-gem: #8b4fc9;
+  --ui-word-place: #b4582e;
+  --ui-word-item: #1d8577;
   --ui-stage: radial-gradient(ellipse 24% 4.5% at 50% 87%, rgb(0 0 0 / 0.17), rgb(0 0 0 / 0.07) 55%, transparent 100%),
     linear-gradient(180deg, #ffffff 0%, #ffffff 60%, #f5f5f5 84%, #eeeeee 100%);
+  /* The rarity ladder (specs/design-bible.md UI 7): a thin outline or edge, never a fill. Divine is the holo. */
+  --ui-rarity-common: #a3a3a3;
+  --ui-rarity-uncommon: #4fae5c;
+  --ui-rarity-rare: #3f7fe0;
+  --ui-rarity-epic: #9b5de5;
+  --ui-rarity-legendary: #f2b705;
+  --ui-rarity-divine: #b26bff;
+  --ui-holo: linear-gradient(115deg, #b26bff 0%, #ff7ad9 20%, #ffd36b 38%, #7dffb2 56%, #6bc8ff 74%, #b26bff 100%);
+  --ui-on-divine: #ffffff;
+  /* Contraband (lib/rarity.ts, shut behind a flag): dark, with light text on it. */
+  --ui-rarity-contraband: #3b2436;
+  /* A little texture where it helps (UI 1, "not so flat"): a fine grain over a card, and a glint across rare things. */
+  --ui-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.3 0 0 0 0 0.3 0 0 0 0 0.3 0 0 0 0.07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  --ui-glint: linear-gradient(115deg, transparent 38%, rgb(255 255 255 / 0.55) 48%, transparent 58%);
+  /* The HUD's bars (UI 8): health, stamina (and run out), XP. */
+  --ui-health: #ec6a5c;
+  --ui-stamina: #5dbb63;
+  --ui-stamina-low: #f08a4b;
+  --ui-xp: #f2b33d;
+  --ui-sheen: rgb(255 255 255 / 0.35);
+  /* Paper, the material (design bible UI 2): only for what is paper in the world (the sushi bar's folded menu, a
+     notice). Washi: warm off-white with soft fibre (our texture, art/ui/washi.py), ink-black type, one red hanko seal; a
+     dish sits on a lacquer tray and a plate. It stays paper-coloured in every theme. */
+  --ui-paper-quiet: #8a8478;
+  --ui-paper-rule: #d3ccbd;
+  --ui-paper-hover: #ebe5d8;
+  --ui-paper-seal: #b4342b;
+  --ui-paper-tray: #2b2622;
+  --ui-paper-tray-hi: #4a423b;
+  --ui-paper-plate: #faf8f3;
+  --ui-paper-washi: url("/assets/ui/washi.png");
 }

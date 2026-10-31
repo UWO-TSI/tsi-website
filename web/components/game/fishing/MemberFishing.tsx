@@ -18,7 +18,7 @@ import { BOSS, BOSS_CALL } from "@/lib/game/fishingReel";
 import { CAST, RARITY_META, START_PROGRESS, fishOdds, iconFor, type FishDef } from "@/lib/game/fishing";
 import { FISHING_HINTS, type CastDevice, type FishingHeldInput } from "@/lib/game/fishingInput";
 import { oneLinerFor } from "@/lib/game/peaceful";
-import type { RodTier } from "@/lib/game/rods";
+import type { RodEffects, RodTier } from "@/lib/game/rods";
 import { useCastMeter } from "@/lib/game/useCastMeter";
 import { useCatchCard } from "@/lib/game/useCatchCard";
 import { useFishingSession } from "@/lib/game/useFishingSession";
@@ -45,7 +45,7 @@ export default function MemberFishing({ onActiveChange, rod }: { onActiveChange?
   if (phase === "idle") return null;
   if (phase === "revealing" && fish) {
     return <div className={m.card}>
-      <MemberCatchCard fish={fish} sizeCm={s.caughtSize} recipe={s.learned} isNew={s.wasNew} newRecord={s.newRecord} delay={s.revealDelay} onDone={s.cancel} />
+      <MemberCatchCard fish={fish} sizeCm={s.caughtSize} recipe={s.learned} together={s.buddy} isNew={s.wasNew} newRecord={s.newRecord} delay={s.revealDelay} onDone={s.cancel} />
     </div>;
   }
   const chip: [ChipTone, string, React.ReactNode] =
@@ -59,7 +59,7 @@ export default function MemberFishing({ onActiveChange, rod }: { onActiveChange?
     <div className={m.lane} data-member-fishing={phase}>
       {phase === "charging" ? <MemberMeter onRelease={s.castNow} releaseRequestedRef={s.releaseRequestedRef} hint={CHARGE[device]} />
         : phase === "reeling" && fish ? <MemberReel key={fish.key} fish={fish} known={s.owned.has(fish.key)} onDone={s.onReelDone} initialInput={s.reelInput}
-          tensionMul={s.rod.tensionMul} help={FISHING_HINTS[device].reel} boss={s.bossMode} raidId={s.raidId} />
+          rig={s.rod} help={FISHING_HINTS[device].reel} boss={s.bossMode} raidId={s.raidId} />
           : <StatusChip tone={chip[0]} icon={chip[2]}>{chip[1]}</StatusChip>}
     </div>
   );
@@ -87,19 +87,19 @@ function MemberMeter({ onRelease, releaseRequestedRef, hint }: { onRelease: (pow
  * done"): the tutorial teaches it once; `help` is only the screen reader's description. A boss adds its stamina (its
  * phases marked) and its call; a raid says how many are reeling.
  */
-function MemberReel({ fish, known, onDone, initialInput, tensionMul, help, boss, raidId }: {
-  fish: FishDef; known: boolean; onDone: (success: boolean) => void; initialInput: FishingHeldInput; tensionMul: number; help: string;
+function MemberReel({ fish, known, onDone, initialInput, rig, help, boss, raidId }: {
+  fish: FishDef; known: boolean; onDone: (success: boolean) => void; initialInput: FishingHeldInput; rig: Pick<RodEffects, "tensionMul" | "fillMul" | "barMul">; help: string;
   boss: "solo" | "shared" | null; raidId?: string;
 }) {
   const panelRef = useRef<HTMLDivElement>(null), trackRef = useRef<HTMLDivElement>(null), windowRef = useRef<HTMLDivElement>(null), markerRef = useRef<HTMLDivElement>(null);
   const gaugeRef = useRef<HTMLDivElement>(null), fillRef = useRef<HTMLDivElement>(null), staminaRef = useRef<HTMLDivElement>(null);
   const callRef = useRef<HTMLSpanElement>(null), whoRef = useRef<HTMLSpanElement>(null), pausedRef = useRef<HTMLParagraphElement>(null);
   const state = useRef({ inside: true, near: false, low: false, call: "", away: false, tension: "", step: -1, fishAt: 0.5, splashAt: 0 });
-  const barW = RARITY_META[fish.rarity].barW * (boss ? BOSS.barMul[0] : 1);
+  const barW = Math.min(0.5, RARITY_META[fish.rarity].barW * rig.barMul * (boss ? BOSS.barMul[0] : 1));
   const start = boss ? BOSS.line : START_PROGRESS;
 
   useReelLoop({
-    fish, boss, raidId, tensionMul, initialInput, focus: panelRef, onDone,
+    fish, boss, raidId, rig, initialInput, focus: panelRef, onDone,
     onPause: (paused) => { if (pausedRef.current) pausedRef.current.hidden = !paused; },
     onFrame: ({ sim, now, raid }) => {
       const st = state.current, track = trackRef.current;
@@ -165,7 +165,7 @@ function MemberReel({ fish, known, onDone, initialInput, tensionMul, help, boss,
       if (success) {
         const box = track.getBoundingClientRect();
         delete panel.dataset.tension;
-        sparkBurst(box.left + sim.fishPosition * box.width, box.top + box.height / 2, ["var(--ui-water-deep)", "var(--ui-water-line)", `var(--gui-rarity-${fish.rarity})`], 14);
+        sparkBurst(box.left + sim.fishPosition * box.width, box.top + box.height / 2, ["var(--ui-water-deep)", "var(--ui-water-line)", `var(--ui-rarity-${fish.rarity})`], 14);
         splash(box.left + sim.fishPosition * box.width, box.top + box.height / 2, 8);
         track.style.overflow = "visible";
         // The fish itself leaps (its rail stays where it is).
@@ -196,8 +196,8 @@ function MemberReel({ fish, known, onDone, initialInput, tensionMul, help, boss,
 }
 
 /** The catch card: the fish on its white stage, developing from a silhouette on a first catch; a rare one throws sparks. */
-export function MemberCatchCard({ fish, sizeCm, recipe, isNew, newRecord, delay, onDone }: {
-  fish: FishDef; sizeCm: number | null; recipe: string | null; isNew: boolean; newRecord: boolean; delay: number; onDone: () => void;
+export function MemberCatchCard({ fish, sizeCm, recipe, together = null, isNew, newRecord, delay, onDone }: {
+  fish: FishDef; sizeCm: number | null; recipe: string | null; together?: string | null; isNew: boolean; newRecord: boolean; delay: number; onDone: () => void;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const rare = RARE.has(fish.rarity);
@@ -207,8 +207,8 @@ export function MemberCatchCard({ fish, sizeCm, recipe, isNew, newRecord, delay,
     const stage = cardRef.current?.firstElementChild?.getBoundingClientRect();
     if (!stage) return;
     const x = stage.left + stage.width / 2, y = stage.top + stage.height / 2;
-    if (rare) sparkBurst(x, y, [`var(--gui-rarity-${fish.rarity})`, "var(--ui-water-deep)", "var(--ui-card)"], fish.rarity === "rare" ? 10 : 18);
-    if (suspense) confettiBurst(x, y, [`--gui-rarity-${fish.rarity}`, "--ui-water-deep", "--ui-water-line"], suspense.confetti);
+    if (rare) sparkBurst(x, y, [`var(--ui-rarity-${fish.rarity})`, "var(--ui-water-deep)", "var(--ui-card)"], fish.rarity === "rare" ? 10 : 18);
+    if (suspense) confettiBurst(x, y, [`--ui-rarity-${fish.rarity}`, "--ui-water-deep", "--ui-water-line"], suspense.confetti);
   } });
   // The build's ticks: quicker and higher toward the reveal.
   useEffect(() => {
@@ -223,7 +223,7 @@ export function MemberCatchCard({ fish, sizeCm, recipe, isNew, newRecord, delay,
   return <div style={{ ["--arrive-delay" as string]: `${delay}ms` }}>
     <CatchCard cardRef={cardRef} picture={iconFor(fish)} name={developed ? fish.name : "???"} developed={developed} build={suspense?.build} rarity={fish.rarity} rarityLabel={RARITY_META[fish.rarity].label} rare={rare}
       label={developed ? `You caught ${fish.label}` : "A catch"}
-      tags={<>{isNew && <CatchTag>New</CatchTag>}{!isNew && newRecord && <CatchTag>New record</CatchTag>}</>}
+      tags={<>{isNew && <CatchTag>New</CatchTag>}{!isNew && newRecord && <CatchTag>New record</CatchTag>}{together && <CatchTag>Fished with {together}</CatchTag>}</>}
       facts={<>{sizeCm !== null && <span>{sizeCm} cm</span>}{odds !== null && <span className={reelStyles.quiet}>1 in {odds}</span>}</>}
       line={line ? `“${line}”` : null}
       note={recipe ? <p className={reelStyles.line}>You learned a recipe: {recipe}</p> : null}

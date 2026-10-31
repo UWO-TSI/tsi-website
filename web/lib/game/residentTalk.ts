@@ -22,6 +22,25 @@ import { hash01 } from "./worldFx";
 export const TALK_RANGE = 1.9;
 /** A click or tap on a resident this close talks to them (farther, they wave back). */
 export const TALK_CLICK_RANGE = 4.5;
+/**
+ * Talking this close is in their face (David's playtest): as a talk opens you take a short step back to a comfortable
+ * distance, still facing them (PlayerAvatar, on `tsi:face`). Any resident, Bram and Alice too.
+ */
+export const TALK_COMFORT = 1.3;
+/**
+ * Where to step back to from `them` (null: far enough already, or nowhere to step): straight away from them to
+ * TALK_COMFORT, or half that step if the full one doesn't `fit` (a wall, a drop, the water).
+ */
+export function stepBack(me: { x: number; z: number }, them: { x: number; z: number }, fits: (x: number, z: number) => boolean = () => true): { x: number; z: number } | null {
+  const dx = me.x - them.x, dz = me.z - them.z, d = Math.hypot(dx, dz);
+  if (d >= TALK_COMFORT * 0.85) return null;
+  const ux = d > 1e-3 ? dx / d : 0, uz = d > 1e-3 ? dz / d : 1;
+  for (const r of [TALK_COMFORT, (TALK_COMFORT + d) / 2]) {
+    const x = them.x + ux * r, z = them.z + uz * r;
+    if (fits(x, z)) return { x, z };
+  }
+  return null;
+}
 /** They stop and turn to you before the box opens. */
 export const TALK_TURN_S = 0.4;
 /** The box goes and they wave goodbye before walking on. */
@@ -211,6 +230,8 @@ export const talkStore = {
    * or a null answer: their own. The island sets it (lib/game/arrival/hq/teachers.ts teacherTalk).
    */
   script: null as ((slug: string) => { script: string; lines: readonly TalkLine[] } | null) | null,
+  /** The main quest's word first (lib/game/mainQuest.ts questTalk: a chapter's finish or nudge), set by the island. */
+  quest: null as ((slug: string) => { script: string; lines: readonly TalkLine[] } | null) | null,
   /** The camera's heading, tilt and zoom before the talk turned it, put back after. */
   cameraYaw: null as number | null,
   cameraPitch: null as number | null,
@@ -245,6 +266,14 @@ export function endTalk(): void {
   const t = talkStore.active;
   talkStore.active = null; talkStore.request = null; talkChanged();
   if (t?.script) scriptListeners.forEach(l => l(t.script!, t.slug));
+}
+/** Say more in the talk going on (their answer to a gift): the lines come after the current one, and it moves on to them. */
+export function sayMore(lines: readonly TalkLine[], now: number): void {
+  const t = talkStore.active;
+  if (!t || t.phase === "ended" || !lines.length) return;
+  t.lines = [...t.lines.slice(0, t.index + 1), ...lines];
+  t.index = Math.min(t.index + 1, t.lines.length - 1); t.typed = 0; t.lineAt = now; t.phase = "speaking"; t.since = now;
+  talkChanged();
 }
 const scriptListeners = new Set<(script: string, slug: string) => void>();
 /** A scripted conversation ended (said through, or left with Escape): its id and who said it. */

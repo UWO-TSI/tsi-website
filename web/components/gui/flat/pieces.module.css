@@ -1,0 +1,168 @@
+/* More flat kit pieces (pieces.tsx). The theme's --ui-* tokens only; the flat kit's spring for motion (design bible UI 9:
+   about 12% over, hover 200 ms, select 400 ms, transforms only, off under reduced motion). */
+.thumb, .reveal, .task, .dialog, .tip { --spring: cubic-bezier(0.34, 1.4, 0.64, 1); }
+@supports (transition-timing-function: linear(0, 1)) {
+  .thumb, .reveal, .task, .dialog, .tip { --spring: linear(0, 0.045, 0.157, 0.308, 0.473, 0.634, 0.778, 0.898, 0.992, 1.059, 1.101, 1.122, 1.126, 1.119, 1.103, 1.084, 1.063, 1.043, 1.025,
+    1.01, 0.999, 0.991, 0.987, 0.984, 0.984, 0.985, 0.987, 0.99, 0.993, 0.995, 0.997, 0.999, 1); }
+}
+
+/* The rarity edge (UI 7): a thin outline in its colour, never a fill; divine the holo. */
+:is(.thumb, .tipArt, .tipName small, .oddsRow dt, .revealCard)[data-rarity="common"] { --edge: var(--ui-rarity-common); }
+:is(.thumb, .tipArt, .tipName small, .oddsRow dt, .revealCard)[data-rarity="uncommon"] { --edge: var(--ui-rarity-uncommon); }
+:is(.thumb, .tipArt, .tipName small, .oddsRow dt, .revealCard)[data-rarity="rare"] { --edge: var(--ui-rarity-rare); }
+:is(.thumb, .tipArt, .tipName small, .oddsRow dt, .revealCard)[data-rarity="epic"] { --edge: var(--ui-rarity-epic); }
+:is(.thumb, .tipArt, .tipName small, .oddsRow dt, .revealCard)[data-rarity="legendary"] { --edge: var(--ui-rarity-legendary); }
+:is(.thumb, .tipArt, .tipName small, .oddsRow dt, .revealCard)[data-rarity="divine"] { --edge: var(--ui-rarity-divine); }
+
+/* ── Thumb ── */
+.thumb { all: unset; position: relative; display: inline-grid; place-items: center; flex: none; width: var(--thumb); height: var(--thumb); border-radius: calc(var(--thumb) * 0.28);
+  background: var(--ui-card); box-shadow: inset 0 0 0 1.5px var(--edge, var(--ui-line)); box-sizing: border-box; cursor: default;
+  transition: transform 0.2s var(--spring), box-shadow 0.2s ease-out, opacity 0.2s ease-out, filter 0.2s ease-out; }
+button.thumb { cursor: pointer; }
+button.thumb:hover, button.thumb:focus-visible { transform: translateY(-2px) scale(1.06); box-shadow: inset 0 0 0 1.5px var(--edge, var(--ui-line)), 0 6px 14px rgb(var(--ui-shade) / 0.12); z-index: 2; }
+.thumb:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+.thumb[data-rarity="divine"] { box-shadow: none; background: linear-gradient(var(--ui-card), var(--ui-card)) padding-box, var(--ui-holo) border-box; border: 2px solid transparent; }
+.thumb[data-dim] { opacity: 0.5; filter: saturate(0.4); }
+.thumb[data-dim]:hover, .thumb[data-dim]:focus-visible { opacity: 1; filter: none; }
+.thumb[data-selected] { box-shadow: inset 0 0 0 2px var(--ui-ink), 0 8px 18px rgb(var(--ui-shade) / 0.12); }
+.thumbArt { width: 70%; height: 70%; display: grid; place-items: center; }
+.thumbArt canvas, canvas.thumbArt { width: 100%; height: 100%; }
+.thumbCount { position: absolute; right: -5px; top: -5px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--ui-ink); color: var(--ui-accent-ink);
+  font: 700 11px/18px var(--gui-font); text-align: center; box-sizing: border-box; }
+.thumbMark { position: absolute; left: 4px; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--ui-error); box-shadow: 0 0 0 2px var(--ui-card); }
+
+/* ── Hover card ── */
+.tipHost { display: inline-flex; }
+.tip { position: fixed; z-index: 200; max-width: 280px; padding: 14px 16px; border-radius: 16px; background: var(--ui-card); color: var(--ui-ink);
+  font-family: var(--gui-font); box-shadow: 0 14px 36px rgb(var(--ui-shade) / 0.16), 0 0 0 1px rgb(var(--ui-shade) / 0.04); pointer-events: none;
+  animation: tipIn 0.2s var(--spring) both; transform-origin: 50% 100%; }
+.tip[data-below] { transform-origin: 50% 0; }
+@keyframes tipIn { from { opacity: 0; transform: translateY(4px) scale(0.96); } }
+.tipBody { display: grid; gap: 10px; }
+.tipHead { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; }
+.tipArt { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 15px; background: var(--ui-panel); box-shadow: inset 0 0 0 1.5px var(--edge, transparent); }
+.tipArt canvas { width: 44px; height: 44px; }
+.tipName { display: grid; gap: 2px; min-width: 0; }
+.tipName small { color: var(--edge, var(--ui-quiet)); font: 600 12px/1.2 var(--gui-font); text-transform: capitalize; }
+.tipName b { font: 600 17px/1.2 var(--gui-font); }
+.tipFacts { display: grid; gap: 6px; margin: 0; }
+.tipFacts > div { display: grid; grid-template-columns: 18px minmax(0, 1fr); align-items: center; gap: 8px; color: var(--ui-ink-2); font: 400 13px/1.35 var(--gui-font); }
+.tipFacts dt { display: grid; place-items: center; color: var(--ui-quiet); }
+.tipFacts dd { margin: 0; }
+.months { display: inline-grid; grid-template-columns: repeat(12, 1fr); gap: 3px; }
+.months i { display: grid; place-items: center; width: 15px; height: 15px; border-radius: 4px; background: var(--ui-well); color: var(--ui-quiet); font: 700 9px/1 var(--gui-font); font-style: normal; }
+.months i[data-on] { background: var(--ui-ink); color: var(--ui-accent-ink); }
+.months i[data-now] { box-shadow: 0 0 0 1.5px var(--ui-card), 0 0 0 3px var(--ui-rarity-legendary); }
+
+/* ── Day strip ── */
+.strip { --label: 52px; position: relative; display: grid; gap: 10px; padding-bottom: 4px; font-family: var(--gui-font); color: var(--ui-ink); }
+.axis, .lane { display: grid; grid-template-columns: var(--label) minmax(0, 1fr); gap: 12px; }
+.axisTrack { position: relative; height: 46px; }
+.tick { position: absolute; bottom: 0; width: 1px; height: 5px; background: var(--ui-line-strong); }
+.tick[data-major] { height: 9px; background: var(--ui-quiet); }
+.tickLabel { position: absolute; top: 4px; display: grid; justify-items: center; gap: 2px; transform: translateX(-50%); color: var(--ui-quiet); }
+.tickLabel small { font: 600 11px/1 var(--gui-font); }
+.nowPill { position: absolute; top: 0; left: calc(var(--now) * 100%); transform: translateX(-50%); padding: 4px 8px; border-radius: 999px; background: var(--ui-ink); color: var(--ui-accent-ink);
+  font: 700 12px/1 var(--gui-font); font-variant-numeric: tabular-nums; z-index: 2; }
+.needle { position: absolute; top: 24px; bottom: 0; left: calc(var(--label) + 12px + (100% - var(--label) - 12px) * var(--now)); width: 2px; margin-left: -1px; border-radius: 1px;
+  background: var(--ui-ink); opacity: 0.7; pointer-events: none; z-index: 1; }
+.lane { align-items: start; }
+.laneIcon { display: grid; place-items: center; width: var(--label); height: 52px; border-radius: 16px; background: var(--ui-card); color: var(--ui-ink-2); }
+.laneIcon svg { width: 24px; height: 24px; }
+.laneTrack { display: grid; gap: 6px; min-width: 0; padding: 6px 0; border-radius: 16px; background: repeating-linear-gradient(90deg, transparent 0 calc(25% - 1px), var(--ui-line) calc(25% - 1px) 25%); }
+.band { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); min-height: 48px; }
+.run { position: relative; display: flex; grid-row: 1; flex-wrap: wrap; align-content: center; align-items: center; justify-content: center; gap: 6px; min-height: 48px; margin: 0 -2px;
+  padding: 4px; border-radius: 14px; background: var(--ui-well); box-sizing: border-box; overflow: visible; transition: background 0.2s ease-out; }
+.band:not([data-now]) .run { background: color-mix(in srgb, var(--ui-well) 45%, transparent); }
+.run[data-edge="s"], .run[data-edge="se"] { border-top-left-radius: 6px; border-bottom-left-radius: 6px; }
+.run[data-edge="e"], .run[data-edge="se"] { border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
+.closed { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 16px; color: var(--ui-quiet); font: 500 14px/1.3 var(--gui-font); }
+.lane[data-closed] .laneIcon { opacity: 0.5; }
+.lane[data-closed] .laneTrack { background: repeating-linear-gradient(135deg, transparent 0 8px, var(--ui-well) 8px 9px); }
+
+/* ── Odds ── */
+.odds { display: grid; gap: 8px; margin: 0; font-family: var(--gui-font); }
+.oddsRow { display: grid; grid-template-columns: 128px minmax(0, 1fr); align-items: center; gap: 14px; padding: 8px 12px; border-radius: 14px; background: var(--ui-card); }
+.oddsRow dt { display: grid; gap: 2px; padding-left: 10px; border-left: 3px solid var(--edge, var(--ui-line)); }
+.oddsRow dt[data-rarity="divine"] { border-image: var(--ui-holo) 1; }
+.oddsRow dt span { color: var(--ui-ink-2); font: 500 13px/1.2 var(--gui-font); }
+.oddsRow dt b { font: 700 18px/1.1 var(--gui-font); font-variant-numeric: tabular-nums; }
+.oddsRow dd { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; }
+.oddsItem { display: grid; justify-items: center; gap: 3px; }
+.oddsItem small { color: var(--ui-quiet); font: 600 11px/1 var(--gui-font); font-variant-numeric: tabular-nums; }
+
+/* ── Reveal ── */
+.reveal { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; margin: 0; padding: 0; list-style: none; perspective: 900px; }
+.reveal[data-one] { grid-template-columns: minmax(0, 220px); justify-content: center; }
+.revealCard { position: relative; aspect-ratio: 3 / 4; transform-style: preserve-3d; animation: flip 0.62s var(--spring) both; animation-delay: calc(var(--i) * var(--stagger) + 250ms); }
+.reveal[data-one] .revealCard { aspect-ratio: 3 / 3.6; }
+@keyframes flip { 0% { transform: rotateY(180deg) translateY(10px) scale(0.92); } 100% { transform: rotateY(0) translateY(0) scale(1); } }
+.revealBack, .revealFace { position: absolute; inset: 0; border-radius: 18px; backface-visibility: hidden; }
+.revealBack { transform: rotateY(180deg); background: var(--ui-ink);
+  background-image: radial-gradient(circle at 50% 50%, rgb(255 255 255 / 0.14) 0 18%, transparent 19%), repeating-linear-gradient(45deg, rgb(255 255 255 / 0.05) 0 6px, transparent 6px 12px); }
+.revealFace { display: grid; grid-template-rows: 1fr auto; justify-items: center; padding: 12px 10px 14px; background: var(--ui-card); box-shadow: inset 0 0 0 2px var(--edge, var(--ui-line)), 0 8px 20px rgb(var(--ui-shade) / 0.08); }
+.revealCard[data-rarity="divine"] .revealFace { box-shadow: 0 8px 20px rgb(var(--ui-shade) / 0.08); background: linear-gradient(var(--ui-card), var(--ui-card)) padding-box, var(--ui-holo) border-box; border: 3px solid transparent; }
+.revealArt { display: grid; place-items: center; align-self: center; width: 100%; outline: none; }
+.revealArt canvas { width: min(84px, 70%); height: auto; aspect-ratio: 1; }
+.reveal[data-one] .revealArt canvas { width: 132px; }
+.revealName { color: var(--ui-ink); font: 600 13px/1.25 var(--gui-font); text-align: center; }
+.reveal[data-one] .revealName { font-size: 17px; }
+/* The best of a roll (epic and up) glows in its colour once it's face up. */
+.revealCard[data-best] .revealFace::after { content: ""; position: absolute; inset: -6px; border-radius: 22px; box-shadow: 0 0 0 2px var(--edge), 0 0 26px var(--edge); opacity: 0;
+  animation: glow 1.6s ease-out both; animation-delay: calc(var(--i) * var(--stagger) + 800ms); pointer-events: none; }
+@keyframes glow { 30% { opacity: 0.9; } 100% { opacity: 0.45; } }
+
+/* ── Task ── */
+.task { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 16px; padding: 14px 16px; border-radius: 18px; background: var(--ui-card);
+  font-family: var(--gui-font); transition: transform 0.2s var(--spring), box-shadow 0.2s ease-out; }
+.task:hover { box-shadow: 0 8px 20px rgb(var(--ui-shade) / 0.08); }
+.taskText { display: grid; gap: 7px; min-width: 0; }
+.taskText b { font: 600 15px/1.25 var(--gui-font); }
+.taskText small { color: var(--ui-quiet); font: 600 12px/1 var(--gui-font); font-variant-numeric: tabular-nums; }
+.taskBar { display: block; height: 6px; max-width: 220px; border-radius: 3px; background: var(--ui-well); overflow: hidden; }
+.taskBar i { display: block; height: 100%; border-radius: inherit; background: var(--ui-ink); transform-origin: 0 50%; transition: transform 0.4s var(--spring); }
+.task[data-done]:not([data-claimed]) .taskBar i { background: var(--ui-rarity-uncommon); }
+.taskReward { display: inline-flex; align-items: center; gap: 6px; padding: 7px 11px; border-radius: 10px; background: var(--ui-pill); color: var(--ui-ink); font: 700 14px/1 var(--gui-font); font-variant-numeric: tabular-nums; }
+.claim { all: unset; min-width: 72px; padding: 11px 18px; border-radius: 999px; background: var(--ui-accent); color: var(--ui-accent-ink); font: 600 14px/1 var(--gui-font); text-align: center; cursor: pointer;
+  transition: transform 0.2s var(--spring), background 0.15s ease-out; }
+.claim:hover:not(:disabled) { background: var(--ui-accent-deep); transform: translateY(-1px); }
+.claim:active:not(:disabled) { transform: scale(0.95); }
+.claim:disabled { background: var(--ui-well); color: var(--ui-quiet); cursor: default; }
+.claim:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+.task[data-done]:not([data-claimed]) .claim { animation: ready 1.8s ease-in-out infinite; }
+@keyframes ready { 50% { transform: scale(1.04); } }
+.taskDone { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--ui-well); color: var(--ui-rarity-uncommon); animation: pop 0.4s var(--spring) both; }
+@keyframes pop { from { transform: scale(0.4); opacity: 0; } }
+.task[data-claimed] { opacity: 0.72; }
+
+/* ── Small panel ── */
+.dialogLayer { position: fixed; inset: 0; z-index: 72; display: grid; place-items: center; padding: 16px; font-family: var(--gui-font); color: var(--ui-ink); }
+.dialogLayer[data-state="closing"], .dialogLayer[data-state="closing"] * { pointer-events: none !important; }
+.dialogScrim { position: absolute; inset: 0; background: var(--ui-scrim); animation: fade 0.18s ease-out both; }
+.dialogLayer[data-state="closing"] .dialogScrim { animation: fade 0.16s ease-in reverse forwards; }
+@keyframes fade { from { opacity: 0; } }
+.dialog { position: relative; display: grid; gap: 16px; width: min(460px, 100%); padding: 18px 20px 22px; border-radius: 24px; background: var(--ui-panel); outline: none;
+  box-shadow: 0 24px 80px rgb(var(--ui-shade) / 0.28); animation: dialogIn 0.4s var(--spring) both; }
+.dialogLayer[data-state="closing"] .dialog { animation: dialogOut 0.16s ease-in forwards; }
+@keyframes dialogIn { from { opacity: 0; transform: translateY(16px) scale(0.96); } }
+@keyframes dialogOut { to { opacity: 0; transform: translateY(10px) scale(0.98); } }
+.dialogTop { display: grid; grid-template-columns: 36px 1fr 36px; align-items: center; }
+.dialogTop h2 { grid-column: 2; margin: 0; font: 600 16px/1 var(--gui-font); text-align: center; }
+.dialogClose { all: unset; grid-column: 3; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--ui-card); cursor: pointer; transition: transform 0.2s var(--spring); }
+.dialogClose:active { transform: scale(0.9); }
+.dialogClose:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .thumb, .task, .claim, .taskBar i { transition: none; }
+  .tip, .revealCard, .revealCard[data-best] .revealFace::after, .dialog, .dialogScrim, .taskDone, .task[data-done]:not([data-claimed]) .claim { animation: none; }
+  .revealCard[data-best] .revealFace::after { opacity: 0.45; }
+  button.thumb:hover { transform: none; }
+}
+@media (max-width: 760px) {
+  .strip { --label: 40px; }
+  .laneIcon { height: 44px; border-radius: 12px; }
+  .reveal { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .oddsRow { grid-template-columns: minmax(0, 1fr); }
+  .task { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .task .taskReward { grid-column: 2; justify-self: start; }
+}

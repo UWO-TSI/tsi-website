@@ -1,21 +1,24 @@
 /**
- * The HQ visit with Alice as data (row 312, specs/hq-onboarding.md): after Bram's walk-along hands you off, you report
- * to Alice at HQ and she runs the visit. A beat at a time: she says its lines (by key, lines.ts WREN_LINES) in the
- * dialogue box, a card may open (the register, the check-in card), then the beat waits for what you do. Order:
- * register, the real club and its check-ins, the two lore beats (real life counts; the Founder's desk), the Esc menu
- * and the map, the notice board and the club goals. Moving it, cutting a beat or adding one is a change here only.
+ * The HQ visit with Alice as data (row 312, specs/hq-onboarding.md; reworked for t-hq, specs/launch/v1-gameplay.md, and
+ * David's v2 review): you report to Alice at HQ and she runs the visit. A beat at a time: she says its lines (by key,
+ * lines.ts WREN_LINES) in the dialogue box, a card or overlay may open, then the beat waits for what you do. Order: the
+ * lore (an overlay: the island, the Founder, the gatherings), your island ID (she asks, prints and stamps it), coins and
+ * gems (each icon flies to its place on screen), the gatherings' check-in, the keyboard tour (press along; each key
+ * brings its part of the screen in), then Esc for real. Moving it, cutting a beat or adding one is a change here only.
  *
  * Beats wait for one thing each (HqEvent):
  *   wren     E at the front desk (Alice behind it)
- *   signed   the register signed and its card closed
+ *   lore     the lore overlay closed
+ *   signed   the ID printed, stamped and Done
+ *   flown    an icon has flown to its place (a `fly:` card)
  *   checkin  the check-in card closed
- *   founder  the Founder's desk looked at (its plaque card closed)
+ *   tour     the keyboard tour finished (or skipped; a touch screen skips it)
  *   esc      the Esc menu (the UI view) opened
- *   map      the island map opened
- *   board    the notice board read (its sheet opened at HQ)
  */
-export type HqEvent = "wren" | "signed" | "checkin" | "founder" | "esc" | "map" | "board";
-export type HqCard = "register" | "checkin";
+import type { FlyTarget } from "./lines";
+
+export type HqEvent = "wren" | "lore" | "signed" | "flown" | "checkin" | "tour" | "esc";
+export type HqCard = "lore" | "id" | "checkin" | "tour" | `fly:${FlyTarget}`;
 
 export interface HqBeat {
   /** Its tracker step (lines.ts HQ_TRACKER). */
@@ -31,18 +34,23 @@ export interface HqBeat {
 export const HQ_SCRIPT: readonly HqBeat[] = [
   // Bram sent you up; she's behind the front desk.
   { id: "report", wait: "wren" },
-  // Registering: the island register (your world name), then the friend code and the mailbox on its card.
-  { id: "register", say: ["welcome"], card: "register", wait: "signed" },
-  // The real club: real TSI events level you up; where the check-in code goes.
-  { id: "checkin", say: ["registered", "club"], card: "checkin", wait: "checkin" },
-  // Lore, light: real life counts; then the Founder's empty desk and its blank plaque.
-  { id: "founder", say: ["realLife"], wait: "founder" },
-  // The Esc menu and the map.
-  { id: "esc", say: ["founder", "menu"], wait: "esc" },
-  { id: "map", wait: "map" },
-  // The notice board and the club goals.
-  { id: "board", say: ["map", "board"], wait: "board" },
+  // Where you've washed up: the island, the Founder, everyone welcome, the gatherings.
+  { id: "lore", say: ["welcome"], card: "lore", wait: "lore" },
+  // Your island ID: she asks, prints it, stamps it; Edit or Done.
+  { id: "id", say: ["idAsk"], card: "id", wait: "signed" },
+  // Coins, then gems: what each is for, its icon flying to its place.
+  { id: "coins", say: ["idDone", "coins"], card: "fly:coins", wait: "flown" },
+  { id: "gems", say: ["gems"], card: "fly:gems", wait: "flown" },
+  // The gatherings' check-in code.
+  { id: "events", say: ["events"], card: "checkin", wait: "checkin" },
+  // The keys, on a keyboard you press along on: each press brings its part of your screen in (the minimap, the bag, the
+  // menu's mail...), so the menu, mail and minimap no longer fly in beats of their own (David's v3 review).
+  { id: "tour", say: ["tour"], card: "tour", wait: "tour" },
+  // Esc for real.
+  { id: "esc", say: ["menu"], wait: "esc" },
 ];
 
-/** Said once the last beat is done: the club goals, and she sends you off. */
-export const HQ_END: readonly string[] = ["goals", "farewell"];
+/** Said once the last beat is done: she sends you off (to the museum with your first find). */
+export const HQ_END: readonly string[] = ["farewell"];
+/** The same while Bram's tour is still on (HQ first, the new world's route): he's waiting outside. */
+export const HQ_END_TOUR: readonly string[] = ["farewellTour"];

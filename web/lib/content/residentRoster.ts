@@ -25,18 +25,16 @@
 import type { NPCPersona } from "./types";
 
 type Look = Record<string, unknown>;
-const look = (l: { skin: number; hair: number; eyes?: string; mouth?: string; extras?: string[]; bangs?: string; back: string; top?: string | null; bottom?: string | null; onepiece?: string | null; shoes: string; acc?: Record<string, string>; colors?: Record<string, number> }): Look =>
+const look = (l: { skin: number; hair: number; eyes?: string; mouth?: string; extras?: string[]; bangs?: string; back: string; top?: string | null; bottom?: string | null; onepiece?: string | null; shoes: string | null; acc?: Record<string, string>; colors?: Record<string, number>; hairAccent?: number; hairColor?: string }): Look =>
   ({ eyes: "F1.1", mouth: "M1.1", extras: [], bangs: "", top: null, bottom: null, onepiece: null, acc: {}, colors: {}, ...l });
 
 /** Authored looks by slug (character catalogue part ids, palette indices). */
 export const RESIDENT_LOOKS: Record<string, Look> = {
   // The HQ lead, as the first-login greeting proposes her (lib/game/welcome.ts HQ_LEAD on main): the club crew tee, a ponytail (head-roblox: one of David's whole hairstyles).
-  wren: look({ skin: 3, hair: 2, eyes: "mochi", mouth: "open_smile", extras: ["freckles"], back: "hair_wispy_ponytail", top: "top_tsi_crew", bottom: "bottom_trousers", shoes: "shoes_boots",
-    acc: { bag: "acc_shoulder_bag" }, colors: { bottom_trousers: 4, shoes_boots: 5, acc_shoulder_bag: 3 } }),
+  wren: look({ acc: { bag: "acc_shoulder_bag" }, back: "hair_emo_layers", bottom: "bottom_trousers", colors: { acc_shoulder_bag: 3, bottom_trousers: 4, shoes_boots: 5 }, eyes: "weird_eyes", hair: 0, mouth: "tired_drool", shoes: "shoes_boots", skin: 3, top: "top_tsi_crew" }),
   // The mayor: the club's warm historian. A grey ponytail (round 3: the low pony was removed), round glasses, a lavender
   // cardigan and a long brown skirt.
-  mayor: look({ skin: 2, hair: 9, eyes: "F1.2", back: "hair_wispy_ponytail", top: "top_cardigan", bottom: "bottom_long_skirt", shoes: "shoes_loafers",
-    acc: { face: "acc_glasses_round" }, colors: { top_cardigan: 13, bottom_long_skirt: 5, shoes_loafers: 5 } }),
+  mayor: look({ acc: { face: "acc_wheat_stalk", head: "acc_propeller_cap", neck: "acc_paper_bowtie" }, back: "hair_anime_spikes", bottom: "bottom_joggers", colors: { bottom_long_skirt: 5, shoes_loafers: 5, top_cardigan: 13, top_hoodie: 14 }, extras: ["blush"], eyes: "tiny_dots", hair: 0, mouth: "tongue_out", shoes: "shoes_loafers", skin: 2, top: "top_stripe_ls" }),
   // Shopkeeper: deadpan, tidy. Square glasses, a sage sweater vest, charcoal trousers, work boots.
   shopkeeper: look({ skin: 8, hair: 0, mouth: "tiny_smirk", back: "hair_messy_boy", top: "top_sweater_vest", bottom: "bottom_trousers", shoes: "shoes_boots",
     acc: { face: "acc_glasses_square" }, colors: { top_sweater_vest: 3, bottom_trousers: 14, shoes_boots: 5 } }),
@@ -52,15 +50,40 @@ export const RESIDENT_LOOKS: Record<string, Look> = {
   // Workshop crafter: a tinkerer with a cap on backwards. Wood-brown overalls over a cream tee, backpack of tools.
   crafter: look({ skin: 4, hair: 7, extras: ["blush"], back: "hair_anime_spikes", top: "top_tee", bottom: "bottom_overall_shorts", shoes: "shoes_boots",
     acc: { head: "acc_cap", bag: "acc_backpack" }, colors: { bottom_overall_shorts: 4, shoes_boots: 5, acc_cap: 7 } }),
+  // The museum's guide (m1): takes your first catch and shows you round. Warm and quick; a sea-green collar shirt, a long
+  // navy skirt, a shell necklace from the beach.
+  docent: look({ skin: 7, hair: 4, eyes: "mochi", mouth: "open_smile", back: "hair_swept_fringe", top: "top_collar_shirt", bottom: "bottom_long_skirt", shoes: "shoes_loafers",
+    acc: { neck: "acc_shell_necklace" }, colors: { top_collar_shirt: 15, bottom_long_skirt: 12, shoes_loafers: 5 } }),
   // Flavour: an early riser who runs the beach at dawn. High ponytail, teal tee, joggers.
   juniper: look({ skin: 3, hair: 8, back: "hair_long_pigtails", top: "top_tee", bottom: "bottom_joggers", shoes: "shoes_sneakers",
     colors: { top_tee: 15, bottom_joggers: 14, shoes_sneakers: 1 } }),
   // Flavour: sketches the island from the benches. Straw hat, pink hoodie, a shoulder bag of pencils.
-  marlo: look({ skin: 5, hair: 1, eyes: "chill", back: "hair_bowl_cut", top: "top_hoodie", bottom: "bottom_shorts", shoes: "shoes_slipon",
-    acc: { head: "acc_straw_hat", bag: "acc_shoulder_bag" }, colors: { top_hoodie: 9, bottom_shorts: 2 } }),
+  marlo: look({ acc: { bag: "acc_shoulder_bag", head: "acc_monkey_ears" }, back: "hair_bowl_cut", bottom: "bottom_shorts", colors: { bottom_shorts: 2, top_hoodie: 9 }, eyes: "chill", hair: 1, shoes: "shoes_slipon", skin: 5, top: "top_hoodie" }),
   // Flavour: the night owl who watches the stars from the lamp bench. Navy cardigan, a long lavender skirt.
   nell: look({ skin: 1, hair: 4, extras: ["freckles"], back: "hair_windy_bob", top: "top_cardigan", bottom: "bottom_long_skirt", shoes: "shoes_boots",
     colors: { top_cardigan: 12, bottom_long_skirt: 13 } }),
+};
+
+/**
+ * What each resident thinks of a gift from your bag (d-friends, lib/npc/friendship.ts giftTaste; David 2026-10-28):
+ * loved +1 heart, liked +1/2, hated -1, anything else nothing. Entries are a collection category (fish, sea, bug, fruit,
+ * nature: flowers, shells and mushrooms, mineral: wood, stone and ore) or one item's key, which wins over its category.
+ * In their own character; proposals for David's review.
+ */
+export interface GiftTastes { loves: readonly string[]; likes: readonly string[]; hates: readonly string[] }
+export const RESIDENT_GIFTS: Readonly<Record<string, GiftTastes>> = {
+  wren: { loves: ["fruit"], likes: ["nature"], hates: ["bug"] },
+  mayor: { loves: ["nature"], likes: ["fruit", "mineral"], hates: ["sea"] },
+  shopkeeper: { loves: ["mineral"], likes: ["fish"], hates: ["nature"] },
+  curator: { loves: ["bug"], likes: ["fish", "sea"], hates: ["fruit"] },
+  // Juno takes each new member's first catch for the halls (main-quest m1); a proposal for David (release-v12).
+  docent: { loves: ["fish"], likes: ["mineral"], hates: ["fruit"] },
+  "wharf-keeper": { loves: ["fish"], likes: ["sea"], hates: ["bug"] },
+  "oracle-keeper": { loves: ["nature"], likes: ["mineral"], hates: ["fish"] },
+  crafter: { loves: ["mineral"], likes: ["sea"], hates: ["nature"] },
+  juniper: { loves: ["fruit"], likes: ["sea"], hates: ["mineral"] },
+  marlo: { loves: ["bug"], likes: ["nature"], hates: ["sea"] },
+  nell: { loves: ["nature"], likes: ["bug"], hates: ["fish"] },
 };
 
 /**
@@ -87,7 +110,7 @@ export const RESIDENT_TALK: Record<string, string[][]> = {
   ],
   curator: [
     ["[happy] {name}! Found anything with wings lately?", "The museum's cases are waiting. The first of every find you bring me goes on show.", "With a label. I write very good labels."],
-    ["Did you see the dragonflies by the pond? Odonata. Lovely things.", "[surprised] They can fly backwards, you know. I think about that a lot."],
+    ["Did you see the dragonflies along the river? Odonata. Lovely things.", "[surprised] They can fly backwards, you know. I think about that a lot."],
     ["If you catch something you've never seen before, bring it to me before you sell it.", "Once it's in a case, it belongs to the whole club."],
   ],
   "wharf-keeper": [
@@ -105,6 +128,10 @@ export const RESIDENT_TALK: Record<string, string[][]> = {
     ["Measure twice, glue once. That's the whole secret.", "[surprised] Well. Most of it. The rest is snacks."],
     ["Bottles wash up on the beach sometimes.", "Some have notes in them. Some have recipes. Keep your eyes open."],
   ],
+  docent: [
+    ["[happy] Welcome to the museum! Fish in the aquarium, bugs in the insect hall, buried finds in the nature room.", "The first of each kind anyone brings goes on show. Odile writes the labels."],
+    ["The club's filling the halls together. When they're full, the doors open properly.", "[happy] I'll be here. I'm always here. I like it here."],
+  ],
   juniper: [
     ["@morning [happy] Morning laps! Want to race to the pier?", "Kidding. Mostly. Stretch first, trust me."],
     ["The sand's firmest right by the water.", "[happy] Best place on the island for a sprint. Try it!"],
@@ -113,7 +140,7 @@ export const RESIDENT_TALK: Record<string, string[][]> = {
   marlo: [
     ["[happy] Hold still, you're in the shot.", "Kidding. Mostly. You do make a good shape for a sketch."],
     ["I've drawn HQ forty times now.", "[sad] I'm not happy with any of them. That roof has a mind of its own."],
-    ["The pond looks different every hour.", "I'm out of the green pencil again. If you find one, it's mine."],
+    ["The river looks different every hour.", "I'm out of the green pencil again. If you find one, it's mine."],
   ],
   nell: [
     ["I named a star after the founders. The bright one over HQ, once it's dark.", "[happy] The fainter ones are for everyone who joined after. There's room for plenty more."],
@@ -156,7 +183,11 @@ export const PROPOSED_RESIDENTS: NPCPersona[] = [
   row({ slug: "curator", display_name: "Odile", post: "museum_curator", tone: "earnest",
     bio: "The museum's curator, labelling the empty cases until the club fills them. Knows the Latin name of every bug and says it anyway.",
     schedule: { home: "museum", dawn: ["beach"], day: ["museum", "beach"], evening: ["museum", "plaza"], night: ["museum", "home"] },
-    canned_dialogue: ["Every case in there is waiting for something you'll find.", "Did you see the dragonflies by the pond? Odonata. Lovely.", "Bring me anything with wings. Or fins. Or a shell."] }),
+    canned_dialogue: ["Every case in there is waiting for something you'll find.", "Did you see the dragonflies along the river? Odonata. Lovely.", "Bring me anything with wings. Or fins. Or a shell."] }),
+  row({ slug: "docent", display_name: "Juno", post: "museum_guide", tone: "warm",
+    bio: "The museum's guide. Keeps the door, shows everyone round, and takes each new member's first catch for the halls.",
+    schedule: { home: "museum", dawn: ["museum"], day: ["museum"], evening: ["museum"], night: ["museum", "home"] },
+    canned_dialogue: ["Welcome to the museum!", "The first of each kind goes on show.", "Bring me your first catch!"] }),
   row({ slug: "wharf-keeper", display_name: "Bram", post: "wharf_keeper", tone: "playful",
     bio: "Minds the wharf and the boats, reads the tides off the posts and the weather off the gulls. Has a story for every knot.",
     schedule: { home: "hq", dawn: ["wharf"], day: ["wharf", "beach", "wharf", "plaza"], evening: ["wharf", "bench"], night: ["wharf", "beach", "wharf"] },
@@ -176,7 +207,7 @@ export const PROPOSED_RESIDENTS: NPCPersona[] = [
   row({ slug: "marlo", display_name: "Marlo", post: "villager", tone: "warm",
     bio: "Sketches the island from the benches, a page a day. Has drawn HQ forty times and isn't happy with any of them.",
     schedule: { home: "hq", day: ["bench", "beach", "museum"], evening: ["beach", "bench"], night: ["beach", "plaza", "home"] },
-    canned_dialogue: ["Hold still, you're in the shot. Kidding. Mostly.", "The pond looks different every hour.", "I'm out of the green pencil again."] }),
+    canned_dialogue: ["Hold still, you're in the shot. Kidding. Mostly.", "The river looks different every hour.", "I'm out of the green pencil again."] }),
   row({ slug: "nell", display_name: "Nell", post: "villager", tone: "warm",
     bio: "A night owl who sleeps in, then watches the stars from the bench under the lamp. Names the constellations after club members.",
     schedule: { home: "hq", dawn: ["home"], day: ["home", "plaza", "oracle"], evening: ["beach", "bench"], night: ["bench", "beach", "bench"] },
@@ -188,3 +219,23 @@ export function withProposed(seeded: readonly NPCPersona[]): NPCPersona[] {
   const proposed = new Map(PROPOSED_RESIDENTS.map(r => [r.slug, r]));
   return [...seeded.map(r => proposed.get(r.slug) ? { ...r, ...proposed.get(r.slug)!, id: r.id } : r), ...PROPOSED_RESIDENTS.filter(r => !seeded.some(s => s.slug === r.slug))];
 }
+
+/**
+ * x-lines (specs/launch/v1-gameplay.md): lines that send you to something closed (the boat home, the
+ * temple) say something about what's open instead. Swapped in code, line by line, so the seeded lines (and anything an
+ * admin rewrote) stay as they are in the database.
+ */
+export const NEW_WORLD_LINE_SWAPS: Readonly<Record<string, string>> = {
+  "Boat's ready whenever you want to go home.": "The barrel on the dock buys whatever you catch. Fair prices. I check the scales myself.",
+  "Your island's out past the pier. Small, but the sunsets are all yours.": "[happy] Want a better rod one day? I might have a challenge for you.",
+  "Which way will you grow, {name}? The temple can help you see it.": "Which way will you grow, {name}? Nobody can tell you yet. Not even me.",
+  "[happy] Not decide. Only see. The deciding is yours.": "[happy] Keep doing what you love here. It shows, in time.",
+  "Which way will you grow? Ask the temple.": "Which way will you grow? Time will show it.",
+};
+/** A resident as the new world has them: their lines with NEW_WORLD_LINE_SWAPS applied. */
+export function newWorldPersona<P extends Pick<NPCPersona, "talk" | "canned_dialogue">>(p: P): P {
+  const swap = (line: string) => NEW_WORLD_LINE_SWAPS[line] ?? line;
+  return { ...p, canned_dialogue: p.canned_dialogue?.map(swap) ?? p.canned_dialogue, talk: p.talk?.map(c => c.map(swap)) ?? p.talk };
+}
+/** The residents as the island has them (lib/content/loader.ts useNPCPersonas): with their swapped lines. */
+export const residentsHere = <P extends Pick<NPCPersona, "talk" | "canned_dialogue">>(personas: readonly P[]): P[] => personas.map(newWorldPersona);

@@ -11,23 +11,25 @@ import { SEASONS } from "./season";
 const PUBLIC = join(__dirname, "../../public");
 const onDisk = (src: string) => existsSync(join(PUBLIC, src));
 const PHASES: AmbientPhase[] = ["dawn", "day", "dusk", "night", "applicant-island", "applicant-hq"];
-const OVERRIDES: MusicOverride[] = [null, "cafe", "interior"];
+const OVERRIDES: MusicOverride[] = [null, "cafe", "interior", "bar-evening", "bar-night"];
 
 describe("audio requests only files on disk", () => {
   it("ambient: every phase, weather and season", () => {
     for (const phase of PHASES) for (const weather of [undefined, ...ISLAND_WEATHERS]) for (const season of [undefined, ...SEASONS]) {
       const list = ambientCandidates({ phase, weather, season });
-      expect(list.length).toBeGreaterThan(0);
+      if (phase.startsWith("applicant")) expect(list.length).toBeGreaterThan(0);
       for (const src of list) expect(onDisk(src), `${phase}/${weather}/${season}: ${src}`).toBe(true);
     }
   });
 
-  it("music: every block, season and override", () => {
+  it("music: every block, season and override, and the time-of-day tracks it falls back to; never a Stream Cafe track", () => {
     for (const block of MUSIC_BLOCKS) for (const season of [undefined, ...SEASONS]) for (const override of OVERRIDES) {
-      const list = buildMusicSrcList(block, { season, override });
-      expect(list.length).toBeGreaterThan(0);
-      for (const src of list) expect(onDisk(src), `${block}/${season}/${override}: ${src}`).toBe(true);
+      for (const src of buildMusicSrcList(block, { season, override })) {
+        expect(onDisk(src), `${block}/${season}/${override}: ${src}`).toBe(true);
+        expect(src).not.toContain("applicant");
+      }
     }
+    for (const phase of ["dawn", "day", "dusk", "night"]) expect(onDisk(`/audio/ambient/${phase}.ogg`), phase).toBe(true);
   });
 
   it("every listed variant and track is on disk", () => {
@@ -37,8 +39,8 @@ describe("audio requests only files on disk", () => {
 
   it("a listed variant is tried first", () => {
     expect(ambientCandidates({ phase: "day", weather: "rain", season: "autumn" }, new Set(["day-rain", "day-autumn"])))
-      .toEqual(["/audio/ambient/day-rain.ogg", "/audio/ambient/day-autumn.ogg", "/audio/ambient/day.ogg"]);
+      .toEqual(["/audio/ambient/day-rain.ogg", "/audio/ambient/day-autumn.ogg"]);
     expect(ambientCandidates({ phase: "day", weather: "rain", season: "autumn" }, new Set(["day-autumn"])))
-      .toEqual(["/audio/ambient/day-autumn.ogg", "/audio/ambient/day.ogg"]);
+      .toEqual(["/audio/ambient/day-autumn.ogg"]);
   });
 });

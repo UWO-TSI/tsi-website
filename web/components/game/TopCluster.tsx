@@ -1,31 +1,24 @@
 "use client";
 
 /**
- * The cream top cluster (hud-first-login §2, row 124): play coins and the level
- * with its XP, then the caller's buttons (the gear). Coins count up and XP fills
- * instead of jumping; a gain pings. Coins only, never an exchange rate
- * (lib/economy.ts).
- *
- * The minimal HUD (`full` false; rows 283 and playtest round 1): nothing shows
- * while you play; coins slide in when they change and XP on a gain, then fade.
- * The full one (the UI view, Esc 1; the HUD key held; the setting) shows them,
- * and the caller's buttons (`buttons`, default `full`). The island clock is
- * `HudClock`, under the minimap; mail is in the UI view's dock.
+ * The cream top cluster (hud-first-login §2, row 124): the caller's buttons (the
+ * gear), shown in the full HUD (the UI view, Esc 1; the HUD key held; the setting;
+ * `buttons`, default `full`). The level and its XP are the HUD's bars (HudBars),
+ * the island clock is `HudClock`, under the minimap, and the wallet `HudWallet`
+ * under the clock; mail is in the UI view's dock.
  *
  * `hidden`: a cinematic moment (talking, the greeting, the boat trip; world
  * audit item 7), where the whole cluster fades out, flashes included.
  */
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { CloudFog, CloudRain, Moon, Snowflake, Sun, Sunrise, Sunset, Wind } from "lucide-react";
-import { COINS } from "@/lib/economy";
-import { levelProgress } from "@/lib/combat/progression";
 import { useHud } from "@/lib/game/hudStore";
 import { worldNow } from "@/lib/game/worldClock";
 import { AudioManager } from "@/lib/game/audio";
 import type { IslandWeather } from "@/lib/game/islandWeather";
 import type { IslandPhase } from "@/lib/game/islandTime";
 import { FLASH_MS } from "@/lib/game/hudPrefs";
-import { CurrencyIcon } from "@/components/economy/Amount";
+import { WalletSlot } from "@/components/gui/flat";
 import { useFlash } from "./useFlash";
 import styles from "./TopCluster.module.css";
 
@@ -38,29 +31,6 @@ function WeatherIcon({ weather, phase }: { weather: IslandWeather; phase: Island
   const Icon = weather === "fog" ? CloudFog : weather === "rain" ? CloudRain : weather === "snow" ? Snowflake : weather === "wind" ? Wind
     : phase === "night" ? Moon : phase === "dawn" ? Sunrise : phase === "evening" ? Sunset : Sun;
   return <Icon size={18} aria-hidden />;
-}
-
-const reduced = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-/** The shown number eases to `value` (straight to the DOM, no re-render per frame); the first value just appears. */
-function CountUp({ value }: { value: number }) {
-  const span = useRef<HTMLSpanElement>(null);
-  const shown = useRef<number | null>(null);
-  useLayoutEffect(() => {
-    const el = span.current, from = shown.current;
-    if (!el) return;
-    const show = (n: number) => { shown.current = n; el.textContent = n.toLocaleString(); };
-    if (from === null || from === value || reduced()) { show(value); return; }
-    const start = performance.now(), ms = Math.min(1200, 500 + Math.abs(value - from) * 4);
-    let raf = 0;
-    const step = (now: number) => {
-      const k = Math.min(1, (now - start) / ms);
-      show(Math.round(from + (value - from) * (1 - (1 - k) ** 3)));
-      if (k < 1) raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [value]);
-  return <span ref={span} />;
 }
 
 /** A short-lived "+N" ping when a number goes up (not on its first load). */
@@ -90,8 +60,6 @@ function subscribeMinute(on: () => void) {
 const TIME = new Intl.DateTimeFormat("en-US", { timeZone: "America/Toronto", hour: "numeric", minute: "2-digit" });
 const DATE = new Intl.DateTimeFormat("en-US", { timeZone: "America/Toronto", weekday: "short", month: "short", day: "numeric" });
 
-const up = (a: unknown, b: unknown) => (b as number) > (a as number);
-
 /**
  * The island's time and its sky (playtest round 1: "time sun"), always on under the minimap: the hour on the world
  * clock and the weather or the sun's place in the day, the date on hover.
@@ -105,43 +73,41 @@ export function HudClock({ weather, phase, className }: { weather: IslandWeather
   </p>;
 }
 
-export default function TopCluster({ onWallet, walletKey, full = true, buttons = full, hidden = false, className, children }: {
-  full?: boolean; buttons?: boolean; hidden?: boolean; className?: string; children?: ReactNode;
-  /** The coins open the wallet (reachability §2), its key shown on the tooltip. */
+/**
+ * The wallet, coins and gems (design bible UI 8b): its slot top right directly under the time. In the UI view (`full`)
+ * it rests there; at rest it slides in when coins or gems change, counts, and slides away after about 2 s. `showcase`:
+ * a fly-in (Alice's coins and gems) is on its way to it: it slides in with that cell empty, the icon clicks in as the
+ * FlyIn lands, the count ticks, and it slides away after. A cinematic fades it with the rest of the top right.
+ */
+export function HudWallet({ full, showcase = null, onWallet, walletKey }: {
+  full: boolean; showcase?: "coins" | "gems" | null;
   onWallet?: () => void; walletKey?: string;
 }) {
   const hud = useHud();
-  const progress = hud.xp === null ? null : levelProgress(hud.xp);
-  const coinGain = useGain(hud.coins), xpGain = useGain(hud.xp);
-  const levelUp = useGain(progress?.level ?? null);
-  useEffect(() => { if (coinGain) AudioManager.playSFX("blip2", { rate: 1.5, gain: 0.6 }); }, [coinGain]);
-  useEffect(() => { if (levelUp) AudioManager.playSFX("confirm"); }, [levelUp]);
-  const fill = progress ? (progress.needed ? progress.into / progress.needed : 1) : 0;
-  const flash = { coins: useFlash(hud.coins, FLASH_MS.coins), xp: useFlash(hud.xp, FLASH_MS.xp, up) };
-  /** In the minimal HUD a part shows only while its change is (its flash state for the slide in and out). */
-  const shows = (f: "in" | "out" | null) => (full ? { show: true, at: undefined } : { show: f !== null, at: f ?? undefined });
-  const coins = shows(flash.coins), xp = shows(flash.xp);
+  const coinGain = useGain(hud.coins), gemGain = useGain(hud.gems);
+  useEffect(() => { if (coinGain || gemGain) AudioManager.playSFX("blip2", { rate: 1.5, gain: 0.6 }); }, [coinGain, gemGain]);
+  const coins = useFlash(hud.coins, FLASH_MS.coins), gems = useFlash(hud.gems, FLASH_MS.coins);
+  // The showcase holds it in, then it stays a moment as the count ticks, and slides away.
+  const [shown, setShown] = useState<{ kind: "coins" | "gems"; out: boolean } | null>(null);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- the wallet follows the showcase in, then lingers to slide out
+    if (showcase) { setShown({ kind: showcase, out: false }); return; }
+    const out = window.setTimeout(() => setShown(s => (s ? { ...s, out: true } : s)), 900);
+    const gone = window.setTimeout(() => setShown(null), 1300);
+    return () => { window.clearTimeout(out); window.clearTimeout(gone); };
+  }, [showcase]);
+  const at = full && !shown ? undefined : shown ? (shown.out ? "out" : "in") : coins === "in" || gems === "in" ? "in" : coins ?? gems ?? null;
+  // Signed out (a preview) there's no wallet to show, unless Alice is showing it to you.
+  if (at === null || (hud.coins === null && hud.gems === null && !shown)) return null;
+  return <WalletSlot coins={hud.coins ?? 0} gems={hud.gems ?? 0} at={at} landing={shown?.kind ?? null}
+    onOpen={onWallet} title={walletKey ? `Wallet (${walletKey})` : "Wallet"} />;
+}
 
+export default function TopCluster({ full = true, buttons = full, hidden = false, className, children }: {
+  full?: boolean; buttons?: boolean; hidden?: boolean; className?: string; children?: ReactNode;
+}) {
   return (
     <div className={className ? `${styles.cluster} ${className}` : styles.cluster} data-clean={full ? undefined : ""} data-hidden={hidden || undefined} aria-hidden={hidden || undefined}>
-      <div className={styles.chips}>
-        {hud.coins !== null && coins.show && (() => {
-          const label = `${hud.coins.toLocaleString()} ${COINS.name}`, face = <>
-            <span className={styles.coin} aria-hidden="true"><CurrencyIcon size={22} /></span><b aria-hidden="true"><CountUp value={hud.coins} /></b><small aria-hidden="true">{COINS.name}</small>
-            {coinGain && <em key={coinGain.id} className={styles.gain} aria-hidden="true">+{coinGain.amount.toLocaleString()}</em>}
-          </>;
-          return onWallet
-            ? <button type="button" className={styles.chip} data-flash={coins.at} data-ping={coinGain ? "" : undefined} data-wallet="" onClick={onWallet}
-              aria-label={`${label}. Open your wallet`} title={walletKey ? `Wallet (${walletKey})` : "Wallet"}>{face}</button>
-            : <span className={styles.chip} data-flash={coins.at} data-ping={coinGain ? "" : undefined} aria-label={label} title="Play coins">{face}</span>;
-        })()}
-        {progress && xp.show && <span className={styles.chip} data-flash={xp.at} data-ping={xpGain ? "" : undefined} data-levelup={levelUp ? "" : undefined}
-          aria-label={`Level ${progress.level}, ${progress.needed ? `${progress.into.toLocaleString()} of ${progress.needed.toLocaleString()} XP to the next level` : "top level"}`}>
-          <b className={styles.level} aria-hidden="true">Lv {progress.level}</b>
-          <span className={styles.xpBar} aria-hidden="true"><i style={{ transform: `scaleX(${fill})` }} /></span>
-          {xpGain && <em key={xpGain.id} className={styles.gain} aria-hidden="true">{levelUp ? "Level up!" : `+${xpGain.amount.toLocaleString()} XP`}</em>}
-        </span>}
-      </div>
       {buttons && children && <div className={styles.buttons}>{children}</div>}
     </div>
   );

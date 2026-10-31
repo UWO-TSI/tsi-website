@@ -18,6 +18,8 @@ const noon = new Date("2026-09-24T16:00:00Z");
 const mock = vi.hoisted(() => ({ eco: null as unknown, ctx: null as unknown, userWrites: [] as unknown[], adminWrites: [] as unknown[],
   profile: { membership: "member", is_active: true } as { membership: string; is_active: boolean } }));
 vi.mock("@/lib/wallet/supabaseStore", () => ({ supabaseEconomyStore: () => mock.eco }));
+// Homes open (drop 4): furniture and finishes are on sale (lib/wallet/rules.ts isOnSale).
+vi.mock("@/lib/game/drops", async (original) => { const d = await original<typeof import("@/lib/game/drops")>(); return { ...d, DROPS: { ...d.DROPS, homeIsland: true } }; });
 vi.mock("@/lib/server/memberContext", async (original) => ({ ...(await original<typeof import("@/lib/server/memberContext")>()), withStore: async () => mock.ctx }));
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
@@ -208,7 +210,8 @@ describe("wardrobe batch 2 (David's modes and prices, specs/wardrobe/batch2-pric
     for (const p of PARTS.filter((q) => q.key && q.slot === "accessory")) expect(existsSync(join(__dirname, "../../public/assets/icons", `${p.id}.webp`)), p.id).toBe(true);
   });
   it("keeps every earlier row where it was: the batch's positions follow them", () => {
-    const earlier = [...CATALOGUE, ...OWNERSHIP_ITEMS, ...EVENT_ITEMS].filter((r) => !WARDROBE_B2_ITEMS.includes(r) && r !== COLOUR_WHEEL_ITEM);
+    // The pickaxe (m6) came after the batch, at its own position.
+    const earlier = [...CATALOGUE, ...OWNERSHIP_ITEMS, ...EVENT_ITEMS].filter((r) => !WARDROBE_B2_ITEMS.includes(r) && r !== COLOUR_WHEEL_ITEM && r.slug !== "pickaxe-basic");
     const first = Math.min(...WARDROBE_B2_ITEMS.map((r) => r.position));
     expect(Math.max(...earlier.map((r) => r.position))).toBeLessThan(first);
     expect(new Set(WARDROBE_B2_ITEMS.map((r) => r.position)).size).toBe(WARDROBE_B2_ITEMS.length);

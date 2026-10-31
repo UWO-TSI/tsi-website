@@ -13,11 +13,11 @@ import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
+import { afterEntry } from "@/lib/game/sceneGate";
 
 const NET_URL = "/assets/acnh/props/tool-net.glb";
 const ROD_URL = "/assets/acnh/props/tool-rod.glb";
-useGLTF.preload(NET_URL);
-useGLTF.preload(ROD_URL);
+afterEntry(() => { useGLTF.preload(NET_URL); useGLTF.preload(ROD_URL); });
 
 const SWING_S = 0.55;
 const CAST_S = 0.9;

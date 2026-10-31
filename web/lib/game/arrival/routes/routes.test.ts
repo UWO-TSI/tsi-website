@@ -35,15 +35,27 @@ describe("the arrival on the new world", () => {
     expect(dry.slice(0, 5)).toEqual([]);
   });
 
-  it("walks Bram stop to stop on ground the walker stands on", () => {
+  it("walks Bram stop to stop on ground the walker stands on", async () => {
     const walker = I.islandOf(v), w = I.landmark("wharf", v)!;
     const dock = { x: w.x, z: w.z, yaw: w.yaw ?? 0 }, route = NEW_ROUTE;
     const stops = R.resolveRoute(route, arrival.placeWorld(dock, v), { x: dock.x, z: dock.z }), nav = N.navGrid(walker, v);
     expect(stops.map(s => s.id)).toEqual(route.stops.map(s => s.id));
     for (const s of stops) expect(walker.standable(s.stand.x, s.stand.z), `${s.id} at (${s.stand.x.toFixed(1)}, ${s.stand.z.toFixed(1)})`).toBe(true);
+    // His way: each stop's waypoints then its stand, on ground he can walk.
     for (let i = 1; i < stops.length; i++) {
-      const a = stops[i - 1].stand, b = stops[i].stand;
-      expect(nav.path(a.x, a.z, b.x, b.z), `${stops[i - 1].id} to ${stops[i].id}`).not.toBeNull();
+      const way = [stops[i - 1].stand, ...stops[i].via.filter(w => !w.hop), stops[i].stand];
+      for (const w of way) expect(walker.standable(w.x, w.z), `${stops[i].id} way at (${w.x.toFixed(1)}, ${w.z.toFixed(1)})`).toBe(true);
+      for (let k = 1; k < way.length; k++) expect(nav.path(way[k - 1].x, way[k - 1].z, way[k].x, way[k].z), `${stops[i - 1].id} to ${stops[i].id}, leg ${k}`).not.toBeNull();
     }
+    // Every place the route names is in this world (none fell back to the place before it).
+    // The new world: the first catch's stand has water in a cast's reach and is out of the sell barrel's reach, whose E is Sell.
+    const spots = await import("@/lib/game/fishingSpots");
+    for (const st of stops.filter(x => x.task?.kind === "catch")) {
+      expect(spots.fishingSpot(walker.map, () => "sea", st.stand.x, st.stand.z), `${st.id}: water in reach`).not.toBeNull();
+      const barrel = arrival.placeWorld(dock, v).prop?.("sell-barrel");
+      if (barrel) expect(Math.hypot(barrel.x - st.stand.x, barrel.z - st.stand.z), `${st.id}: clear of the barrel`).toBeGreaterThan(2.6);
+    }
+    const pw = arrival.placeWorld(dock, v);
+    for (const st of route.stops) for (const p of [st.stand, ...(st.via ?? []), ...(st.shots ?? []).filter(x => x !== null && x !== "bram")]) expect(R.resolvePlace(p, pw), JSON.stringify(p)).not.toBeNull();
   }, 60_000);
 });

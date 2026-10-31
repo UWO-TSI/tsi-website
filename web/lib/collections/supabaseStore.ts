@@ -2,12 +2,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Donation, MemberItem, WeeklyBest } from "./logic";
 import { ROSTER, type Species } from "./roster";
 import { raisePg } from "@/lib/result";
+import { torontoInstant } from "@/lib/time";
 import type { CollectionsStore } from "./store";
 import { ledgerToolsTaught } from "@/lib/game/arrival/arrivalLedger";
 
 type Row = Record<string, unknown>;
 const raise = (error: { code?: string; message?: string } | null): never =>
-  raisePg(error, ["already_donated", "not_owned", "not_donatable", "rate_limited", "too_fast", "no_roll", "roll_expired", "already_landed", "already_harvested", "out_of_season",
+  raisePg(error, ["already_donated", "not_owned", "not_donatable", "rate_limited", "too_fast", "no_roll", "roll_expired", "already_landed", "already_harvested", "out_of_season", "not_this_month", "not_bigger",
     "bag_full", "storage_full", "locked", "insufficient_items", "key_reused", "bad_qty"]);
 const one = (data: unknown) => (Array.isArray(data) ? data[0] : data) as Row;
 const caught = (r: Row) => ({
@@ -28,11 +29,12 @@ function toSpecies(r: Row): Species {
   };
 }
 
+/** World names (member_identity) for the museum's plaques, the trophy case and the boards: real names never show in game. */
 async function names(db: SupabaseClient, ids: string[]): Promise<Map<string, string>> {
   const out = new Map<string, string>();
   if (!ids.length) return out;
-  const { data } = await db.from("profiles").select("id, display_name").in("id", ids);
-  for (const p of (data ?? []) as Row[]) out.set(String(p.id), String(p.display_name ?? "Member"));
+  const { data } = await db.from("member_identity").select("member_id, world_name").in("member_id", ids);
+  for (const p of (data ?? []) as Row[]) if (p.world_name) out.set(String(p.member_id), String(p.world_name));
   return out;
 }
 
@@ -88,6 +90,26 @@ export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
       const n = await names(db, [...new Set(rows.map((r) => String(r.user_id)))]);
       return rows.map((r): WeeklyBest => ({ user_id: String(r.user_id), member_name: n.get(String(r.user_id)) ?? "Member", item_key: String(r.item_key), size_cm: Number(r.size_cm), caught_at: String(r.caught_at) }));
     },
+    async monthEntries(month) {
+      const { data, error } = await db.from("monthly_fish_entries").select("member_id, item_key, size_cm, entered_at").eq("month", month);
+      if (error) raise(error);
+      const rows = (data ?? []) as Row[];
+      const n = await names(db, [...new Set(rows.map((r) => String(r.member_id)))]);
+      return rows.map((r): WeeklyBest => ({ user_id: String(r.member_id), member_name: n.get(String(r.member_id)) ?? "Member", item_key: String(r.item_key), size_cm: Number(r.size_cm), caught_at: String(r.entered_at) }));
+    },
+    async monthCatches(memberId, month) {
+      const { data, error } = await db.from("weekly_catch_bests").select("item_key, size_cm").eq("user_id", memberId).gte("caught_at", torontoInstant(month, 0).toISOString());
+      if (error) raise(error);
+      const best = new Map<string, number>();
+      for (const r of (data ?? []) as Row[]) best.set(String(r.item_key), Math.max(best.get(String(r.item_key)) ?? 0, Number(r.size_cm)));
+      return [...best].map(([item_key, size_cm]) => ({ item_key, size_cm }));
+    },
+    async enterMonth(memberId, key, idem) {
+      const { data, error } = await db.rpc("monthly_fish_enter", { p_member_id: memberId, p_item_key: key, p_idempotency_key: idem });
+      if (error) raise(error);
+      const r = (Array.isArray(data) ? data[0] : data) as Row;
+      return { size_cm: Number(r.size_cm), replayed: r.replayed === true };
+    },
     async cast(memberId, key, size, trophy) {
       const { data, error } = await db.rpc("collections_cast", { p_member_id: memberId, p_item_key: key, p_size: size, p_trophy: trophy });
       if (error) raise(error);
@@ -110,6 +132,25 @@ export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
       if (error) raise(error);
       return caught(one(data));
     },
+    async dig(memberId, nodeId, hourKey, loot) {
+      // collections_dig (main quest r2): the spot spent, the member's dig tally, and the find recorded or the purse paid, in one transaction.
+      const find = "item_key" in loot ? loot : null, purse = "currency" in loot ? loot : null;
+      const { data, error } = await db.rpc("collections_dig", { p_member_id: memberId, p_node_id: nodeId, p_hour_key: hourKey, p_item_key: find?.item_key ?? null, p_size: find?.size_cm ?? null,
+        p_trophy: find?.trophy ?? false, p_currency: purse?.currency ?? null, p_amount: purse?.amount ?? null });
+      if (error) raise(error);
+      const r = one(data);
+      return { ...(find ? caught(r) : {}), digs: Number(r.digs) || 0 };
+    },
+    async handIn(memberId, speciesKey, key) {
+      const { data, error } = await db.rpc("museum_hand_in", { p_member_id: memberId, p_species_key: speciesKey, p_idempotency_key: key });
+      if (error) raise(error);
+      return { replayed: one(data).replayed === true };
+    },
+    async handIns() {
+      const { data, error } = await db.from("museum_handins").select("member_id, species_key");
+      if (error) raise(error);
+      return ((data ?? []) as Row[]).map((r) => ({ member_id: String(r.member_id), species_key: String(r.species_key) }));
+    },
     async ownedGear(memberId) {
       // A failed read fails the request: a transient error must not roll a tier-4/5 rod owner with the starter rod.
       // Rods are known by their catalogue_ref, nets and shovels by their slug (lib/game/tools.ts).
@@ -126,6 +167,13 @@ export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
       const rows = (data ?? []) as Row[];
       const n = await names(db, [...new Set(rows.map((r) => String(r.member_id)))]);
       return rows.map((r) => ({ member_id: String(r.member_id), member_name: n.get(String(r.member_id)) ?? "Member", category: r.category as "fish" | "sea", item_key: String(r.item_key), size_cm: Number(r.size_cm), caught_at: String(r.caught_at) }));
+    },
+    async buff(memberId, now) {
+      const { data, error } = await db.from("member_buffs").select("luck, size").eq("member_id", memberId).gt("until", now.toISOString()).maybeSingle();
+      // Before the meal buffs' migration (or any read failure) a cast rolls plain rather than failing.
+      if (error || !data) return null;
+      const r = data as Row;
+      return { luck: Number(r.luck), size: Number(r.size) };
     },
     async showcase(memberId) {
       const { data, error } = await db.from("member_showcase").select("slot, item_key").eq("member_id", memberId);

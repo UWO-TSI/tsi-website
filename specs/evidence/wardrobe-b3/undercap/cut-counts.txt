@@ -1,0 +1,32 @@
+Under-cap triangles cut (Full / LOD 1 / LOD 2: cut of cap), UNDERCAP_T 0.1 (hair_dreads_cap 0.35)
+
+hair_messy_boy           31 of 332  31 of 332  17 of 86
+hair_long_scruffy        15 of 320  15 of 153  10 of 78
+hair_short_tufts         15 of 330  12 of 157  14 of 87
+hair_hime_short          38 of 314  33 of 178  24 of 94
+hair_windy_bob           48 of 326  32 of 148  18 of 83
+hair_wispy_ponytail      23 of 292  12 of 124  6 of 68
+hair_messy_wolf          43 of 308  29 of 140  22 of 82
+hair_bowl_cut            23 of 256  21 of 144  21 of 131
+hair_layered_shag        33 of 310  32 of 173  17 of 99
+hair_anime_spikes        29 of 320  22 of 163  19 of 140
+hair_vkei                39 of 332  23 of 118  17 of 79
+hair_swept_fringe        26 of 284  14 of 93  12 of 56
+hair_bob_pigtail         19 of 326  30 of 178  28 of 106
+hair_long_pigtails       16 of 292  16 of 158  13 of 102
+hair_dreads_cap          7 of 332  5 of 135  4 of 84
+hair_messy_dreads        62 of 274  29 of 93  20 of 57
+hair_ribbon_bob          40 of 332  22 of 156  18 of 86
+hair_curly_pigtails      14 of 304  11 of 98  4 of 49
+hair_emo_layers          33 of 320  20 of 138  16 of 78
+hair_double_buns         12 of 296  12 of 161  8 of 90
+hair_spiky_messy         31 of 318  20 of 132  15 of 79
+hair_straight_layers     32 of 316  19 of 139  18 of 86
+hair_rolled_mask         23 of 312  23 of 190  14 of 123
+hair_ski_mask_dreads     50 of 320  34 of 147  13 of 86
+hair_braided_pigtails    18 of 320  17 of 176  14 of 110
+hair_buns_braid          16 of 320  15 of 142  10 of 75
+hair_freeform_afro       29 of 232  14 of 54  11 of 35
+hair_sponge_twists       27 of 244  19 of 86  10 of 55
+hair_middle_part         46 of 212  35 of 112  29 of 76
+hair_mod_cut             30 of 312  30 of 312  30 of 312

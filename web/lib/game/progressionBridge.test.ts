@@ -6,7 +6,7 @@ import { village } from "./villageMap";
 describe("progression world bridge", () => {
   it("resolves every objective anchor to the member island's land (the new world has no ruins gate yet)", () => {
     const { bounds: b } = village();
-    for (const anchor of ["hq", "monument", "fishing_spot", "museum", "oracle"] as const) {
+    for (const anchor of ["hq", "monument", "fishing_spot", "museum", "oracle", "wharf", "beach", "plaza", "bugs", "rocks", "dig_spots"] as const) {
       const xz = resolveAnchor(anchor);
       expect(xz, anchor).not.toBeNull();
       expect(xz![0] >= b.minX && xz![0] <= b.maxX && xz![1] >= b.minZ && xz![1] <= b.maxZ, anchor).toBe(true);
@@ -26,6 +26,11 @@ describe("progression world bridge", () => {
     expect(chapterOneActions(chapter("active", []))).toEqual({ claim: false, donate: true, report: false, fresh: true });
     expect(chapterOneActions(chapter("active", ["first_catch"]))).toEqual({ claim: false, donate: true, report: false, fresh: true });
     expect(chapterOneActions(chapter("ready", ["first_catch", "donate_catch"]))).toEqual({ claim: false, donate: false, report: true, fresh: false });
+  });
+  it("the new world's chapter 1 (first-find) offers no donate or report prompt: Juno's talk ends it", () => {
+    const chapter = (status: string, done: string[]) => [{ slug: "first-find", status, steps: ["first_catch", "donate_catch"].map(key => ({ key, done: done.includes(key) })) }];
+    expect(chapterOneActions(chapter("active", []))).toEqual({ claim: false, donate: false, report: false, fresh: true });
+    expect(chapterOneActions(chapter("ready", ["first_catch"]))).toEqual({ claim: false, donate: false, report: false, fresh: false });
   });
   it("plays each goal's ceremony once unless forced", () => {
     const saved = new Map<string, string>();

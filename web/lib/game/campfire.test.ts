@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { SOFT_BEAT } from "./danceSync";
-import { DRUM_LAYERS, FIRE, drumGains, drumLayers, fireLit, fireScale, freeSlot, ringPoint, sitPoint } from "./campfire";
+import { DRUM_LAYERS, FIRE, drumGains, drumLayers, fireLit, fireScale, freeSlot, isCampfireHour, ringPoint, sitPoint } from "./campfire";
 
 describe("the campfire's drum song (specs/v1-drop.md §3)", () => {
   it("adds one unique layer per dancer, six at most, and six dancers play the full song", () => {
     expect(DRUM_LAYERS).toHaveLength(6);
     expect(new Set(DRUM_LAYERS.map(l => l.src)).size).toBe(6);
-    expect([0, 1, 2, 3, 4, 5, 6, 7, 8].map(drumLayers)).toEqual([0, 1, 2, 3, 4, 5, 6, 6, 6]);
+    expect([0, 1, 2, 3, 4, 5, 6, 7, 8].map(n => drumLayers(n))).toEqual([0, 1, 2, 3, 4, 5, 6, 6, 6]);
     expect(drumLayers(-1)).toBe(0);
     expect(drumLayers(FIRE.maxDancers)).toBe(DRUM_LAYERS.length);
   });
@@ -87,5 +87,16 @@ describe("the drum loops on disk (public/audio/CREDITS.md)", () => {
       expect(row, `${src} has no row in CREDITS.md`).toBeDefined();
       expect(row).toMatch(/freesound\.org\/people\/[^/]+\/sounds\/\d+\/.*\| CC0 \|/);
     }
+  });
+});
+
+describe("campfire hour (s-campfire)", () => {
+  it("runs from 8 to 9 pm Toronto time", () => {
+    expect([19.99, 20, 20.5, 20.99, 21].map(isCampfireHour)).toEqual([false, true, true, true, false]);
+  });
+  it("lights the fire whatever the phase and plays the full drum circle", () => {
+    expect(fireLit("evening", true)).toBe(true);
+    expect(drumLayers(0, true)).toBe(DRUM_LAYERS.length);
+    expect(drumLayers(2)).toBe(2);
   });
 });

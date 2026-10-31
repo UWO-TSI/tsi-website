@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { FISH, RAW_TURN_X } from "../fishing";
 import { worldModel } from "./active";
+import { DISH_ART, SUSHI_MENU } from "@/lib/wallet/catalogue";
 
 describe("worldModel", () => {
   it("swaps a remodelled dump model for ours", () => {
@@ -11,6 +12,22 @@ describe("worldModel", () => {
     expect(worldModel("/assets/acnh/props/rock-b.glb")).toBe("/assets/game/remodel/props/rock-b.glb");
     expect(worldModel("/assets/acnh/critters/mantis.glb")).toBe("/assets/game/remodel/critters/mantis.glb");
     expect(worldModel("/assets/acnh/critters/monarch-butterfly.glb")).toBe("/assets/game/remodel/critters/monarch-butterfly.glb");
+  });
+  it("gives the rod's add-ons their low-poly copy, and the close-up keeps the high-def (design bible, Models 2)", async () => {
+    const { TACKLE } = await import("../rods");
+    for (const t of TACKLE) {
+      const lp = worldModel(t.model);
+      expect(lp).toBe(t.model.replace("/assets/game/items/", "/assets/game/items/lp/"));
+      expect(existsSync(join(process.cwd(), "public", lp)), lp).toBe(true);
+      expect(existsSync(join(process.cwd(), "public", t.model)), t.model).toBe(true);
+    }
+  });
+  it("serves the world the low-poly copy of a model with a high-def one (the sushi menu's dishes)", () => {
+    for (const { hd } of Object.values(DISH_ART)) {
+      expect(hd).toMatch(/^\/assets\/game\/food\/hd\/[\w-]+\.glb$/);
+      expect(worldModel(hd)).toBe(hd.replace("/hd/", "/"));
+    }
+    expect(Object.keys(DISH_ART).sort()).toEqual(SUSHI_MENU.map(d => d.id).sort());
   });
   it("leaves what isn't remodelled alone", () => {
     for (const url of ["/assets/acnh/critters/firefly.glb", "/assets/acnh/props/crab-hermit.glb", "/assets/acnh/props/crab-gazami.glb", "/assets/acnh/fruit/apple.glb", "/assets/acnh/sea/scallop.glb", "/assets/acnh/props/rock-d.glb"])

@@ -17,6 +17,7 @@ import { fishAt, fishSchools, type FishPose, type FishSchool } from "@/lib/game/
 import { fxOn } from "@/lib/game/perf/fxBench";
 import { worldTime } from "@/lib/game/worldClock";
 import { addUnderwater } from "../grid/terrainMaterials";
+import { lastCall } from "@/lib/game/lastCall";
 
 export const FISH_URL = "/assets/game/water/fish.glb";
 useGLTF.preload(FISH_URL);
@@ -72,11 +73,15 @@ function swim(f: Fish, camera: THREE.Camera) {
   if (f.mesh.instanceColor) f.mesh.instanceColor.needsUpdate = true;
 }
 
+/** The schools, once: the scene renders several times before it first commits (lib/game/lastCall.ts). */
+const schoolsOf = lastCall((map: IslandMap, avoid: ((x: number, z: number) => boolean) | undefined, lite: boolean, max: number | undefined, near: readonly [number, number][] | undefined) =>
+  fishSchools(map, shoreFieldOf(map), { avoid, lite, max, near }));
+
 /** `max`: how many schools, `near`: where to gather half of them (lib/game/decorativeFish.ts fishSchools; the new world's wide shallows and reefs). */
 export default function DecorativeFish({ map, lite = false, skip, max, near }: { map: IslandMap; lite?: boolean; skip?: (x: number, z: number) => boolean; max?: number; near?: readonly [number, number][] }) {
   const { nodes } = useGLTF(FISH_URL) as unknown as { nodes: Record<string, THREE.Mesh> };
   const fish = useMemo((): Fish | null => {
-    const schools = fishSchools(map, shoreFieldOf(map), { avoid: skip, lite, max, near });
+    const schools = schoolsOf(map, skip, lite, max, near);
     const total = schools.reduce((a, s) => a + s.count, 0), geometry = nodes.fish?.geometry;
     if (!total || !geometry) return null;
     const mesh = new THREE.InstancedMesh(geometry, fishMaterial(), total);

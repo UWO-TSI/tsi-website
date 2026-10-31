@@ -7,10 +7,14 @@
  */
 import type { NodeSpec } from "@/components/game/peaceful/VillageLife";
 import { HOME_FLOWERS, HOME_RADII, HOME_TREES, HOME_TREE_SEEDS, createHomeIsland } from "./homeIsland";
-import { isGroundAtWorld } from "./grid";
+import { Surface, cellToWorldX, cellToWorldZ, isGroundAtWorld, surfaceAt } from "./grid";
 import { MATERIALS } from "@/lib/crafting/recipes";
 import { objectsOf, village, type Village } from "./villageMap";
-import { isCedar } from "./defaultIsland";
+import { isCedar, landmarks } from "./defaultIsland";
+import { fnv1a } from "./weatherSystem";
+import { BURIED_FINDS, NEW_WORLD_ROCKS } from "@/lib/collections/roster";
+import { relicsOf } from "@/lib/collections/digLoot";
+import { DROPS } from "./drops";
 import type { TreeSpot } from "./treeFruit";
 
 /**
@@ -26,12 +30,55 @@ const beachRing = (radii: { x: number; z: number }, count: number, r = 0.92, pha
   Array.from({ length: count }, (_, i) => { const a = phase + (i / count) * Math.PI * 2; return [Math.cos(a) * radii.x * r, Math.sin(a) * radii.z * r]; });
 const xz = (o: { x: number; z: number }): [number, number] => [o.x, o.z];
 
+/** Buried finds (m3): how far apart, and how many on each of sand and soil. */
+const DIG_GAP = 7, DIG_EACH = 8;
+const digCache = new WeakMap<Village, { x: number; z: number; soil: boolean }[]>();
+/**
+ * Where things are buried (m3): spots on sand and on soil (dirt), read off the painted map (never authored), spread at
+ * least DIG_GAP apart, in from each surface's edge (two cells where there's room), and clear of buildings and props. Deterministic, so the client and
+ * the server (lib/collections/rolls.ts) agree. Each is a node whose roll is a buried find; its mark is the DigSpot.
+ */
+export function digSpots(v: Village = village()): { x: number; z: number; soil: boolean }[] {
+  const cached = digCache.get(v);
+  if (cached) return cached;
+  const m = v.map, out: { x: number; z: number; soil: boolean }[] = [];
+  const surface = v.digSurface ?? ((cx: number, cz: number) => surfaceAt(m, cx, cz));
+  const marks = landmarks(v);
+  const blocked = (x: number, z: number) => v.objects.some(o => Math.hypot(o.x - x, o.z - z) < 1.8)
+    || marks.some(l => Math.abs(x - l.x) < (l.half?.[0] ?? 0) + 1.5 && Math.abs(z - l.z) < (l.half?.[1] ?? 0) + 1.5);
+  /** How many cells in from the surface's edge the cell is, up to 2 (surfaces only: the server's cell view has no levels). */
+  const margin = (cx: number, cz: number, want: number) => {
+    for (let r = 1; r <= 2; r++) for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++)
+      if (surface(cx + dx, cz + dz) !== want) return r - 1;
+    return 2;
+  };
+  for (const soil of [false, true]) {
+    const want = soil ? Surface.Soil : Surface.Sand, cells: [number, number, number, number][] = [];
+    for (let cz = 2; cz < m.depth - 2; cz++) for (let cx = 2; cx < m.width - 2; cx++) {
+      const k = surface(cx, cz) === want ? margin(cx, cz, want) : 0;
+      if (k > 0) cells.push([cx, cz, k, fnv1a(`dig:${cx},${cz}`)]);
+    }
+    // Open ground first (two cells in), then a narrower strip of it (a path, a thin beach) if that's all there is.
+    cells.sort((a, b) => b[2] - a[2] || a[3] - b[3]);
+    let n = 0;
+    for (const [cx, cz] of cells) {
+      const x = cellToWorldX(m, cx), z = cellToWorldZ(m, cz);
+      if (out.some(o => Math.hypot(o.x - x, o.z - z) < DIG_GAP) || !isGroundAtWorld(m, x, z) || blocked(x, z)) continue;
+      out.push({ x, z, soil });
+      if (++n >= DIG_EACH) break;
+    }
+  }
+  digCache.set(v, out);
+  return out;
+}
+
+/** With the main quest's dig spots and, once mining is out, its stone-or-iron rocks (m3, m6). */
 export function villageNodes(v: Village = village()): { forage: NodeSpec[]; bugs: NodeSpec[] } {
   const trees = objectsOf("tree", v).map(({ x, z, seed = 0 }): TreeSpot => ({ x, z, seed })), flowers = objectsOf("flower", v).map(xz);
   // A cedar bears no fruit.
   const fruit = trees.filter(t => !isCedar(t.seed)).map((t, i) => fruitNode(`fruit-${i}`, t));
   const shells = objectsOf("shell", v).map(({ x, z }, i): NodeSpec => ({ id: `shell-${i}`, x, z, biomes: ["beach"], categories: ["nature", "fruit"] }));
-  const rocks = objectsOf("rock", v).map((p, i): NodeSpec => ({ id: `rock-${i}`, x: p.x, z: p.z - 0.9, biomes: ["rocks"], categories: ["mineral"] }));
+  const rocks = objectsOf("rock", v).map((p, i): NodeSpec => ({ id: `rock-${i}`, x: p.x, z: p.z - 0.9, biomes: ["rocks"], categories: ["mineral"], ...(DROPS.cave ? { only: NEW_WORLD_ROCKS } : {}) }));
   const woods = trees.slice(0, 4).map(({ x, z }, i): NodeSpec => ({ id: `mush-${i}`, x: x + 0.9, z: z - 0.4, biomes: ["woods"], categories: ["nature"] }));
   const blooms = flowers.slice(0, 6).map(([x, z], i): NodeSpec => ({ id: `flower-${i}`, x: x + 0.7, z: z - 0.6, biomes: ["flowers"], categories: ["nature"] }));
   const spots = (biome: string) => objectsOf("bug", v).filter(b => b.model === biome);
@@ -43,8 +90,11 @@ export function villageNodes(v: Village = village()): { forage: NodeSpec[]; bugs
     // Bug spots among blooms (the new world's lamps: its night butterflies come to the light).
     ...spots("flowers").map(({ x, z }, i): NodeSpec => ({ id: `bug-bloom-${i}`, x, z, biomes: ["flowers"], categories: ["bug"] })),
   ];
+  // A dig spot shows one of its surface's relics; what it really gives is the server's dig loot (lib/collections/digLoot.ts).
+  const digs = digSpots(v).map(({ x, z, soil }, i): NodeSpec => ({ id: `dig-${soil ? "soil" : "sand"}-${i}`, x, z, biomes: [soil ? "dig_soil" : "dig_sand"], categories: ["nature"],
+    only: relicsOf(BURIED_FINDS, soil).map(s => s.key) }));
   const onLand = (n: NodeSpec) => isGroundAtWorld(v.map, n.x, n.z);
-  return { forage: [...fruit, ...shells, ...rocks, ...woods, ...blooms, ...branchNodes(trees, "")].filter(onLand), bugs: bugs.filter(onLand) };
+  return { forage: [...fruit, ...shells, ...rocks, ...woods, ...blooms, ...digs, ...branchNodes(trees, "")].filter(onLand), bugs: bugs.filter(onLand) };
 }
 
 /** Where today's message bottle washes up (crafting): one of the map's bottle spots, by Toronto day. */

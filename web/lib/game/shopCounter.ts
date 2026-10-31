@@ -5,6 +5,7 @@
  * went with it): locked favourites are never sold. Amounts are coins only; nothing is ever said as money.
  */
 import { ApiError, newKey } from "@/lib/apiClient";
+import { AudioManager } from "@/lib/game/audio";
 import type { SellEntry, ShopEntry } from "@/lib/wallet/service";
 import type { EconomyTransport } from "@/lib/wallet/transport";
 
@@ -16,6 +17,8 @@ export async function sellAtCounter(t: EconomyTransport, e: SellEntry, qty: numb
   if (e.locked) return { ok: false, error: "That's locked in your bag.", line: "That one's a keeper, I can tell. Unlock it in your bag if you change your mind." };
   try {
     const r = await t.sell(e.item_key, qty, key);
+    // A sale, for whoever waits on one (Bram's first fish at the barrel, lib/game/arrival/tutorial.ts).
+    if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("tsi:sold", { detail: { key: e.item_key, paid: r.paid } }));
     return { ok: true, paid: r.paid, from: r.balance - r.paid, to: r.balance,
       line: qty > 1 ? `${qty} ${e.name.toLowerCase()}, that's ${r.paid.toLocaleString()} coins. Pleasure doing business!` : `One ${e.name.toLowerCase()}: ${r.paid.toLocaleString()} coins. Thank you kindly!` };
   } catch (err) {
@@ -45,4 +48,16 @@ export function coinSteps(from: number, to: number): { value: number; at: number
     out.push({ value, at: Math.round(80 + i * (420 / n) + i * i * 6) });
   }
   return out;
+}
+
+/** The till: counting the readout from one balance to another in a few clinks (module scope: written to the DOM). */
+export function countUp(el: HTMLElement | null, from: number, to: number, timers: number[]) {
+  if (!el) return;
+  timers.forEach(window.clearTimeout);
+  timers.length = 0;
+  el.textContent = from.toLocaleString();
+  coinSteps(from, to).forEach(({ value, at }, i, all) => timers.push(window.setTimeout(() => {
+    el.textContent = value.toLocaleString();
+    AudioManager.playSFX("click", { rate: 1.65 + i * 0.05, gain: i === all.length - 1 ? 0.5 : 0.3 });
+  }, at)));
 }

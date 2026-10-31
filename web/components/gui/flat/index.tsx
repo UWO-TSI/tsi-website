@@ -8,8 +8,9 @@
  * small parts (`Pill`, `DarkButton`, `GhostButton`, `RoundButton`, `HairlineRow`). Colours: the theme's --ui-* tokens
  * (styles/themes). Nothing here knows about the shop: every piece takes plain props.
  */
-import { Fragment, useMemo, useRef, type ButtonHTMLAttributes, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type ReactNode, type Ref } from "react";
-import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Sparkles, X } from "lucide-react";
+import type { Rarity } from "@/lib/rarity";
+import { Fragment, useEffect, useMemo, useRef, type ButtonHTMLAttributes, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type ReactNode, type Ref } from "react";
+import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Heart, Sparkles, Star, X, Zap } from "lucide-react";
 import { usePresence, useWorldDialog } from "@/lib/game/useWorldDialog";
 import { CurrencyIcon } from "@/components/economy/Amount";
 import PixelImage from "@/components/economy/PixelImage";
@@ -19,7 +20,13 @@ import f from "./flat.module.css";
 
 /** The kit's class names, for the odd surface that lays out its own content in the flat style. */
 export { f as flatStyles };
+export { CardOverlay, FLY_MS, FlyIn, KEYBOARD, KeyBoard, PaperField, PrintedCard, QUEST_CHECK_MS, QuestCheck, SlotPop, Spotlight, boardLabel, type BoardKey } from "./moments";
+export { CountUp, WalletSlot } from "./wallet";
+export { KEYWORD_KINDS, Keyword, KeywordLine, keywordParts, type KeywordKind, type LinePart } from "./keyword";
 export { ProgressCard } from "./ProgressCard";
+export { ServeMeter } from "./ServeMeter";
+export { ActionBar, ActionIcon, type ActionSlot } from "./ActionBar";
+export { SpinPicker } from "./SpinPicker";
 /** The detail stage's classes: a viewer (TurnStage, ItemViewer, the keychain's stage) fills `stage`; a picture `picture`. */
 export const STAGE = { stage: f.stage, picture: f.stagePicture } as const;
 /**
@@ -28,6 +35,14 @@ export const STAGE = { stage: f.stage, picture: f.stagePicture } as const;
  */
 export const NUDGE_GRID = f.nudge;
 export { useNudge };
+/** The reward pieces: hearts in halves, the reward track, the prize wheel, the goal meter (rewards.tsx). */
+export { GoalMeter, HeartMeter, RewardTrack, PrizeWheel, WHEEL_SPIN_MS, type TrackStep, type WheelPrize } from "./rewards";
+export { HexRadar, type RadarAxis } from "./HexRadar";
+export { GearSlot, type GearOption } from "./GearSlot";
+
+/** A rarity's thin outline (design bible UI 7) on a card or a stage: `data-rarity` and its colour as `--edge`. */
+export const rarityEdge = (rarity: Rarity | null | undefined) =>
+  rarity ? { "data-rarity": rarity, style: { "--edge": `var(--ui-rarity-${rarity})` } as CSSProperties } : {};
 
 const cx = (...names: (string | false | null | undefined)[]) => names.filter(Boolean).join(" ");
 
@@ -169,10 +184,12 @@ const COVER_TEXT: Record<Exclude<CardCover, "not-found">, string> = { "sold-out"
  * button; without, a picture. `size`: "lg" (the shop's), "md" or "sm" for many to a screen. `price`: the pill shows it
  * (its amount and currency's icon), or "Price to come" while it has none; `pill` is any other short value.
  */
-export function ItemCard({ picture, px = 44, name, line, price, pill: other, tag, arrow = true, cover, selected, size = "lg", label, testId, onClick, className, ...rest }:
+export function ItemCard({ picture, px = 44, name, line, price, pill: other, tag, arrow = true, cover, selected, size = "lg", label, testId, onClick, className, rarity, ...rest }:
   Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onClick" | "children"> & {
     picture: string | ReactNode; px?: number; name: ReactNode; line?: ReactNode; price?: Price | null; pill?: ReactNode; tag?: ReactNode; arrow?: boolean;
     cover?: CardCover | null; selected?: boolean; size?: "lg" | "md" | "sm"; label?: string; testId?: string; onClick?: () => void;
+    /** Its rung on the rarity ladder, as a thin outline round the card. */
+    rarity?: Rarity | null;
   }) {
   const pill = price ? (price.amount ? <>{price.amount.toLocaleString()}<CurrencyIcon currency={price.currency} size={14} /></> : PRICE_TO_COME) : other;
   const face = <>
@@ -189,7 +206,7 @@ export function ItemCard({ picture, px = 44, name, line, price, pill: other, tag
     {cover && cover !== "not-found" ? <span className={f.soldOut}>{COVER_TEXT[cover]}</span> : null}
   </>;
   const look = { className: cx(f.card, className), "data-testid": testId, "data-cover": cover || undefined,
-    "data-selected": selected || undefined, "data-size": size === "lg" ? undefined : size };
+    "data-selected": selected || undefined, "data-size": size === "lg" ? undefined : size, ...rarityEdge(rarity) };
   if (!onClick) return <div {...(rest as HTMLAttributes<HTMLDivElement>)} {...look} role="img" aria-label={label}>{face}</div>;
   // A card that is a radio or a tab (a finish to pick) says so by its role, not as a pressed button.
   return <button type="button" {...rest} {...look} onClick={onClick} aria-label={label} aria-pressed={selected === undefined || rest.role ? undefined : selected}>{face}</button>;
@@ -248,14 +265,19 @@ export type Action = { label: ReactNode; onClick: () => void; disabled?: boolean
  * action, `pay`, then the fine print, `fine`); the `SpecBand` along the bottom. A priced item with no price yet says
  * "Price to come" and its action is off.
  */
-export function DetailView({ stage, onBack, backLabel = "All", steps, hint = "Drag to turn", info, pay, fine, specs, testId }: {
+export function DetailView({ stage, onBack, backLabel = "All", steps, hint = "Drag to turn", info, pay, fine, specs, testId, rarity, corner }: {
   stage: ReactNode; onBack: () => void; backLabel?: string; steps?: { prev: Step; next: Step } | null; hint?: string | null;
   info: ReactNode; pay?: { price?: Price | null; was?: ReactNode; action?: Action } | null; fine?: ReactNode;
   specs?: readonly (readonly [string, ReactNode])[] | null; testId?: string;
+  /** The item's rung on the rarity ladder: a thin outline round the stage. */
+  rarity?: Rarity | null;
+  /** Small things in the stage's bottom-right corner (a rod's bait and bobber slots). */
+  corner?: ReactNode;
 }) {
   return <div className={f.detail} data-testid={testId}>
-    <div className={f.stageWrap}>
+    <div className={f.stageWrap} {...rarityEdge(rarity)}>
       {stage}
+      {corner ? <span className={f.stageCorner}>{corner}</span> : null}
       <button type="button" className={f.back} onClick={onBack}><ArrowLeft size={16} aria-hidden />{backLabel}</button>
       {steps && <span className={f.steps}>
         <RoundButton label={steps.prev.label} onClick={steps.prev.onClick}><ChevronLeft size={18} aria-hidden /></RoundButton>
@@ -350,6 +372,10 @@ export function HairlineRow({ art, title, detail, end }: { art?: string | ReactN
     {end}
   </div>;
 }
+/** A place in a ranking (a leaderboard row's art): a round number, the first in gold. */
+export function RankBadge({ rank }: { rank: number }) {
+  return <span className={f.rank} data-top={rank === 1 || undefined} aria-label={`Rank ${rank}`}>{rank}</span>;
+}
 /** Buttons at a row's end. */
 export function RowActions({ children }: { children: ReactNode }) {
   return <span className={f.rowActions}>{children}</span>;
@@ -369,3 +395,96 @@ export function Quiet({ children }: { children: ReactNode }) {
 export function StatusLine({ error, children }: { error?: boolean; children: ReactNode }) {
   return <p className={error ? f.error : f.note} role="status">{children}</p>;
 }
+
+// ── Rewards and moments ─────────────────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * A reward pop (the bible's "big moments are juicy"): a white card that springs in beside the middle of the screen with
+ * the real item picture (pixel finish), what happened (`title`: "Caught", "Dug up", "New!"), the name, a quiet line of
+ * facts and the one-liner. The edge is the rarity's outline (lib/rarity.ts; divine the moving holo), never a fill. A click
+ * puts it away.
+ */
+export function RewardPop({ picture, title, name, rarity, rarityLabel, facts, note, isNew, leaving, onClose, testId = "reward-card", kind, children }: {
+  picture: string; title: ReactNode; name: ReactNode; rarity?: Rarity | null; rarityLabel?: ReactNode; facts?: ReactNode; note?: ReactNode;
+  isNew?: boolean; leaving?: boolean; onClose?: () => void; testId?: string; kind?: string; children?: ReactNode;
+}) {
+  return <article className={f.pop} data-rarity={rarity ?? undefined} data-new={isNew || undefined} data-leaving={leaving || undefined} data-kind={kind}
+    onClick={onClose} data-testid={testId}>
+    <span className={f.popArt} aria-hidden><PixelImage src={picture} px={72} /></span>
+    <span className={f.popText}>
+      <span className={f.popTitle}>{isNew && <Sparkles size={13} aria-hidden />}{title}</span>
+      <strong className={f.popName}>{name}</strong>
+      {(rarityLabel || facts) && <span className={f.popFacts}>{rarityLabel && <span className={f.popRarity}>{rarityLabel}</span>}{facts}</span>}
+      {note && <span className={f.popNote}>{note}</span>}
+      {children}
+    </span>
+  </article>;
+}
+
+// ── The HUD's bars ──────────────────────────────────────────────────────────────────────────────────────────────────
+
+export type StatKind = "health" | "stamina" | "xp";
+const STAT_ICON = { health: Heart, stamina: Zap, xp: Star } as const;
+
+/**
+ * One of the player's bars (specs/design-bible.md UI 8, 8b: health, stamina and XP): its icon and a rounded track filled to
+ * `value` (0 to 1), then `badge` if any (the level, beside the XP bar in the UI view). The fill eases with a little spring; `snap` sets it without
+ * (an XP bar rolling over), `live` drops the ease for a value written every frame through the element's `--v`.
+ * `low`: a soft warning (stamina run out). `alone`: on its own little card (stamina, which shows only while it's used).
+ */
+export function StatBar({ kind, value, label, badge, low, snap, live, alone, shown = true, ref }: {
+  kind: StatKind; value: number; label: string; badge?: ReactNode; low?: boolean; snap?: boolean; live?: boolean; alone?: boolean; shown?: boolean; ref?: Ref<HTMLDivElement>;
+}) {
+  const Icon = STAT_ICON[kind];
+  return <div ref={ref} className={f.stat} data-kind={kind} data-low={low || undefined} data-snap={snap || undefined} data-live={live || undefined}
+    data-alone={alone || undefined} data-shown={shown || undefined} style={{ "--v": Math.max(0, Math.min(1, value)) } as CSSProperties}
+    role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(value * 100)} aria-hidden={!shown || undefined}>
+    <span className={f.statLead} aria-hidden><Icon size={13} strokeWidth={2.75} /></span>
+    <span className={f.statTrack} aria-hidden><i /></span>
+    {badge != null && <span className={f.statBadge} aria-hidden>{badge}</span>}
+  </div>;
+}
+
+/** The bars' card, top left: one soft white card for the bars that are always on. */
+export function StatBars({ children, hidden, className }: { children: ReactNode; hidden?: boolean; className?: string }) {
+  return <div className={className ? `${f.stats} ${className}` : f.stats} data-hidden={hidden || undefined} data-testid="hud-bars">{children}</div>;
+}
+
+export interface MomentItem { key: string; icon: ReactNode; title: ReactNode; line?: ReactNode }
+
+/**
+ * A big moment over the world (a level up): a scrim, one white card that springs in, the kicker, the big number or word
+ * with a burst behind it, what it brings (icon rows) and one dark button. Escape, Enter or E, a click on the scrim or
+ * the button put it away.
+ */
+export function BigMoment({ kicker, big, title, items, action = "Nice!", onClose, testId }: {
+  kicker: ReactNode; big: ReactNode; title?: ReactNode; items?: readonly MomentItem[]; action?: ReactNode; onClose: () => void; testId?: string;
+}) {
+  const close = useRef(onClose);
+  useEffect(() => { close.current = onClose; });
+  useEffect(() => {
+    const key = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== "Escape" && e.key !== "Enter" && e.key.toLowerCase() !== "e") return;
+      e.stopPropagation(); e.preventDefault(); close.current();
+    };
+    window.addEventListener("keydown", key, true);
+    return () => window.removeEventListener("keydown", key, true);
+  }, []);
+  return <div className={f.momentLayer} onClick={onClose} data-testid={testId}>
+    <section className={f.moment} role="dialog" aria-modal="true" aria-labelledby="moment-big" onClick={e => e.stopPropagation()}>
+      <span className={f.momentBurst} aria-hidden>{Array.from({ length: 10 }, (_, i) => <i key={i} style={{ "--k": i } as CSSProperties} />)}</span>
+      <span className={f.momentKicker}><Sparkles size={14} aria-hidden />{kicker}</span>
+      <strong id="moment-big" className={f.momentBig}>{big}</strong>
+      {title && <span className={f.momentTitle}>{title}</span>}
+      {items && items.length > 0 && <ul className={f.momentList}>{items.map((it, i) => <li key={it.key} style={{ "--i": i } as CSSProperties}>
+        <span className={f.momentIcon} aria-hidden>{it.icon}</span>
+        <span><b>{it.title}</b>{it.line && <small>{it.line}</small>}</span>
+      </li>)}</ul>}
+      <DarkButton onClick={onClose} autoFocus>{action}</DarkButton>
+    </section>
+  </div>;
+}
+/** The day strip, the hover card, odds, the reveal, tasks and the small panel (pieces.tsx). */
+export * from "./pieces";
+/** Paper for what is paper in the world: the folded menu, ink art, the hanko, a dish on its tray (paper.tsx). */
+export * from "./paper";

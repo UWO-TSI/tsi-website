@@ -26,7 +26,7 @@ export function fullHud(s: { always: boolean; keyHeld: boolean; uiView: boolean;
 export const compactTouchHud = (s: { touch: boolean; always: boolean }): boolean => s.touch && !s.always;
 
 /** How long a change shows in the clean HUD (ms), and the fade after it. */
-export const FLASH_MS = { coins: 3200, xp: 3200, clock: 4500, mail: 5000, objective: 6000, heading: 3500 } as const;
+export const FLASH_MS = { coins: 2000, clock: 4500, mail: 5000, objective: 6000, heading: 3500 } as const;
 export const FLASH_OUT_MS = 320;
 
 const KEY = "tsi.hud.full.v1";

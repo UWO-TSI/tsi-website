@@ -17,6 +17,7 @@ import { SEABED_KINDS, seabedProps, type SeabedKind } from "@/lib/game/seabedPro
 import { fxOn } from "@/lib/game/perf/fxBench";
 import { foamRings } from "@/lib/game/foamRings";
 import { addUnderwater } from "../grid/terrainMaterials";
+import { lastCall } from "@/lib/game/lastCall";
 
 export const SEABED_URL = "/assets/game/water/seabed.glb";
 useGLTF.preload(SEABED_URL);
@@ -86,9 +87,13 @@ const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vect
 const UP = new THREE.Vector3(0, 1, 0);
 const _eye = new THREE.Vector3(), _dir = new THREE.Vector3();
 
+/** The layout, once: the scene renders several times before it first commits (lib/game/lastCall.ts). */
+const layoutOf = lastCall((map: IslandMap, skip: ((x: number, z: number) => boolean) | undefined, lite: boolean, submerged: boolean | undefined) =>
+  seabedProps(map, shoreFieldOf(map), { skip, lite, submerged }));
+
 export default function Seabed({ map, lite = false, skip, submerged }: { map: IslandMap; lite?: boolean; skip?: (x: number, z: number) => boolean; submerged?: boolean }) {
   const { nodes } = useGLTF(SEABED_URL) as unknown as { nodes: Record<string, THREE.Mesh> };
-  const layout = useMemo(() => seabedProps(map, shoreFieldOf(map), { skip, lite, submerged }), [map, skip, lite, submerged]);
+  const layout = layoutOf(map, skip, lite, submerged);
   const kinds = useMemo((): Kind[] => SEABED_KINDS.filter(k => (!lite || k.lite) && layout.items[k.name].length && nodes[k.name]).map(kind => {
     const items = layout.items[kind.name], n = items.length;
     // Every placement's matrix and tint once; a refill copies the ones in reach.

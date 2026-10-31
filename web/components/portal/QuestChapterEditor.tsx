@@ -12,11 +12,16 @@ import { backLinkCls, DraftBar, Field, FixList, inputCls, listToText, textToList
 // ─── QuestChapterEditor ─────────────────────────────────────────────────────
 // Main quest chapter copy, order, regions, skip rule and (for club_goal
 // chapters) the goal it points at. The conditions themselves are code
-// (lib/progression/chapters.ts); admins pick one of the three requirement types.
+// (lib/progression/chapters.ts); admins pick one of its requirement types.
 
 const BACK = "/student/dashboard/admin/content/chapters";
 const REQUIREMENTS: { value: ChapterRequirement; label: string }[] = [
-  { value: "settle_in", label: "Settle in (claim plot, first catch, donate, report)" },
+  { value: "settle_in", label: "Settle in (first catch, donated to the museum's guide)" },
+  { value: "bug_net", label: "Odile's net (get the net, catch 3 bugs, show Odile)" },
+  { value: "dig", label: "Pim's shovel (get the shovel, dig up 3 things, show Pim)" },
+  { value: "rod_challenge", label: "Bram's challenge (5 kinds of fish, one at dawn or dusk)" },
+  { value: "museum_collab", label: "The club's museum (donate 3 new finds, tell Odile)" },
+  { value: "pickaxe", label: "Eliza's pickaxe (get it, 5 stone and an iron)" },
   { value: "club_goal", label: "Club goal (completes when the club goal does)" },
   { value: "oracle_trial", label: "Oracle quiz + level-10 subclass" },
 ];

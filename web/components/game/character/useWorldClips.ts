@@ -27,7 +27,7 @@ import { SEAT_CLIPS, isLoop, type CharacterMotion, type ClipName } from "@/lib/g
  *   tsi:act {clip, at?} → that clip, turned to face `at` (the workbench's Craft, the bottle's Pickup)
  *   tsi:emote {clip} → any catalogue clip as a one-shot (the emote wheel, study, admin tools); over the upper body while seated
  */
-const ACT_CLIP = { bug: "Net", dig: "Dig", forage: "Forage" } as const;
+const ACT_CLIP = { bug: "Net", dig: "Dig", mine: "Strike", forage: "Forage" } as const;
 /** The held poses a cast leaves you in; the cast's end lets them go. */
 const FISHING_POSES = new Set<ClipName>(["CastWindup", "FishHold", "Reel", "HoldUp"]);
 /** How long the turn to the camera takes when you show off a catch (s). */

@@ -22,6 +22,8 @@ import { DAWN_HOURS, EVENING_HALF_HOURS, sunFor, torontoDate, type SunDay } from
 import { hash01 } from "./worldFx";
 import { torontoInstant } from "@/lib/time";
 import { DROPS, type DropFlags } from "./drops";
+import { courtsOf, offCourt, onCourt } from "./volleyball/island";
+import type { CourtPlace } from "./volleyball/court";
 
 // ── Walking ─────────────────────────────────────────────────────────────
 /** A resident's stroll (world units/s): an unhurried ACNH pace. */
@@ -76,7 +78,7 @@ export interface Stop {
 export const ROUTINE_SPECIAL = { home: { label: "Home (goes inside)" }, bench: { label: "Bench (under a lamp at night)" } } as const;
 /** A resident's home building by post; a resident's own `home` in the schedule wins. */
 export const POST_HOME: Record<string, LandmarkId> = {
-  hq_lead: "hq", shopkeeper: "shop", cafe_owner: "cafe", museum_curator: "museum", wharf_keeper: "hq",
+  hq_lead: "hq", shopkeeper: "shop", cafe_owner: "cafe", museum_curator: "museum", museum_guide: "museum", wharf_keeper: "hq",
   oracle_keeper: "oracle", workshop_crafter: "hq", villager: "hq",
 };
 /** Landmarks a resident can live in (a door; the wharf: aboard a boat at the stub end, once one is docked there). */
@@ -120,11 +122,14 @@ export class NavGrid {
   readonly x0: number; readonly z0: number; readonly w: number; readonly h: number;
   private readonly free: Int8Array;
   private readonly plants: { x: number; z: number; r: number }[];
+  /** Volleyball courts and their free zones: residents walk round them (game/volleyball). */
+  readonly courts: CourtPlace[];
   constructor(private readonly island: VillageIsland, v: Village) {
     const { map } = v;
     this.x0 = map.originX - 0.5; this.z0 = map.originZ - 0.5;
     this.w = Math.ceil(map.width / NAV_STEP); this.h = Math.ceil(map.depth / NAV_STEP);
     this.free = new Int8Array(this.w * this.h).fill(-1);
+    this.courts = courtsOf(v);
     this.plants = [...objectsOf("bush", v).map(o => ({ x: o.x, z: o.z, r: PLANT_CLEAR.bush })), ...objectsOf("flower", v).map(o => ({ x: o.x, z: o.z, r: PLANT_CLEAR.flower }))];
   }
   cx(x: number) { return Math.floor((x - this.x0) / NAV_STEP); }
@@ -137,7 +142,7 @@ export class NavGrid {
    */
   body(x: number, z: number): boolean {
     const s = this.island.standable;
-    return s(x, z) && RIM.every(([dx, dz]) => s(x + dx, z + dz));
+    return s(x, z) && RIM.every(([dx, dz]) => s(x + dx, z + dz)) && !onCourt(this.courts, x, z, BODY);
   }
   /** A plant underfoot (a bush or a flower cluster): walked round when there's a way, through only when there isn't. */
   plant(x: number, z: number): boolean {
@@ -397,8 +402,10 @@ export function placeAt(key: string, v: Village, flags: DropFlags = DROPS): [num
 
 /** A spot at an anchor for this resident: its ring slot (or the next free one), facing the place's point of interest. */
 function anchorStop(key: string, v: Village, nav: NavGrid, slot: number, work: boolean, night: boolean, slug: string, res: Reservations): Stop | null {
-  const base = placeAt(key, v);
-  if (!base) return null;
+  const place = placeAt(key, v);
+  if (!place) return null;
+  // A place on a volleyball court (the beach's middle): its nearest point off the court.
+  const base = offCourt(nav.courts, place[0], place[1]);
   // The same spot at a place all day: theirs once taken.
   const mine = `${slug}|${key}`;
   let at: readonly [number, number] | null = res.anchors.get(mine) ?? null;
@@ -449,7 +456,7 @@ function wanderStops(stop: Stop, nav: NavGrid, seed: number, slug: string, res: 
 }
 
 /** The post's anchor (where they work), for the longer stay there. */
-const POST_ANCHOR: Record<string, string> = { hq_lead: "hq", shopkeeper: "shop", cafe_owner: "cafe", museum_curator: "museum", wharf_keeper: "wharf", oracle_keeper: "oracle", workshop_crafter: "hq" };
+const POST_ANCHOR: Record<string, string> = { hq_lead: "hq", shopkeeper: "shop", cafe_owner: "cafe", museum_curator: "museum", museum_guide: "museum", wharf_keeper: "wharf", oracle_keeper: "oracle", workshop_crafter: "hq" };
 
 /**
  * Resolve a resident's schedule into stops on this map. `slot` spreads residents round shared anchors; `res` is what

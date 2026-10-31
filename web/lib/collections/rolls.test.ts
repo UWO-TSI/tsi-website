@@ -5,12 +5,28 @@ import { rodByTier } from "@/lib/game/rods";
 import { seededRandom } from "@/lib/game/weatherSystem";
 import { villageNodes } from "@/lib/game/islandNodes";
 import { ROSTER, type Rarity } from "./roster";
-import { castWater, fishRoll, nodeRoll } from "./rolls";
+import { activeWaters, castWater, fishRoll, nodeRoll } from "./rolls";
 import { village } from "@/lib/game/villageMap";
+import { TOGETHER } from "@/lib/game/fishing";
 
 const NOON = new Date("2026-09-24T16:00:00Z"); // 12:00 in Toronto
 const close = (observed: number, p: number, n: number) => Math.abs(observed - p) <= 4 * Math.sqrt((p * (1 - p)) / n) + 0.002;
 const tally = (keys: string[]) => keys.reduce((m, k) => m.set(k, (m.get(k) ?? 0) + 1), new Map<string, number>());
+
+describe("fishing together (s-fishtogether)", () => {
+  it("rolls with a little more luck: the pool of a cast TOGETHER.luck luckier", () => {
+    const rod = rodByTier(3), at = { hour: 12, weather: "clear" as const, month: 9 };
+    const rare = (luck: number) => { const pool = fishPoolFor("river", luck, rod, at), total = pool.reduce((s, e) => s + e.weight, 0);
+      return pool.filter((e) => e.fish.rarity !== "common").reduce((s, e) => s + e.weight, 0) / total; };
+    expect(rare(0.5 + TOGETHER.luck)).toBeGreaterThan(rare(0.5));
+    // The roll uses it: same seed, the together roll matches the luckier pool's.
+    const a = fishRoll("river", 0.5, rod, NOON, "clear", seededRandom(3), undefined, undefined, true).fish.key;
+    const pool = fishPoolFor("river", 0.5 + TOGETHER.luck, rod, at), r = seededRandom(3)() * pool.reduce((s, e) => s + e.weight, 0);
+    let left = r, want = pool[pool.length - 1].fish.key;
+    for (const e of pool) { left -= e.weight; if (left <= 0) { want = e.fish.key; break; } }
+    expect(a).toBe(want);
+  });
+});
 
 describe("server rolls match the tables", () => {
   it("fish: the reel's weighted pool for the water, rod, cast luck, hour and weather", () => {
@@ -69,5 +85,27 @@ describe("catch checks judge the new world (the member island's only world)", ()
     expect(village().terrain).toBeUndefined(); // the server's cell view, never the heightfield
     expect(village().map.width).toBe(worldDoc.width);
     expect(castWater("village", [wharf.x, wharf.z])).not.toBeNull();
+  });
+});
+
+describe("the member island's waters", () => {
+  // When a pond is painted into the new world (f-pond), its line here gains "pond".
+  it("are what the world has: the new world has no pond yet, the village has all three", () => {
+    expect(activeWaters()).toEqual(["sea", "river"]);
+  });
+});
+
+describe("a meal's buff in the server's roll (f-sushi)", () => {
+  it("brings rarer fish with luck and bigger ones with size, within each species' range", () => {
+    const run = (buff?: { luck: number; size: number }) => {
+      const random = seededRandom(7);
+      return Array.from({ length: 4000 }, () => fishRoll("sea", 0, rodByTier(5), NOON, "clear", random, undefined, buff));
+    };
+    const plain = run(), fed = run({ luck: 0.35, size: 0.6 });
+    const rare = (rs: typeof plain) => rs.filter(r => r.fish.rarity !== "common" && r.fish.rarity !== "uncommon").length;
+    const ratio = (rs: typeof plain) => rs.reduce((s, { fish, size }) => s + (size - fish.sizeCm[0]) / Math.max(1, fish.sizeCm[1] - fish.sizeCm[0]), 0) / rs.length;
+    expect(rare(fed)).toBeGreaterThan(rare(plain) * 1.15);
+    expect(ratio(fed)).toBeGreaterThan(ratio(plain) + 0.1);
+    expect(fed.every(({ fish, size }) => size >= fish.sizeCm[0] && size <= fish.sizeCm[1])).toBe(true);
   });
 });

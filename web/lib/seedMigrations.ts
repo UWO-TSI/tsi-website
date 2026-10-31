@@ -11,7 +11,7 @@
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { EVENT_SPECIES, LAUNCH_ROSTER, REEL_FISH, ROSTER } from "./collections/roster";
+import { BURIED_FINDS, EVENT_SPECIES, LAUNCH_ROSTER, REEL_FISH, ROSTER } from "./collections/roster";
 import { seedSql, speciesPricesSql } from "./collections/seed";
 import { craftingSeedSql, recipeDropsSql } from "./crafting/seed";
 import { combatSeedSql } from "./combat/seed";
@@ -30,7 +30,7 @@ export interface Seed {
   guarded?: boolean;
 }
 export const SEEDS: readonly Seed[] = [
-  { name: "roster", file: "20260926150400_collections.sql", sql: () => seedSql([...LAUNCH_ROSTER, ...REEL_FISH]) },
+  { name: "roster", file: "20260926150400_collections.sql", sql: () => seedSql([...LAUNCH_ROSTER, ...REEL_FISH, ...BURIED_FINDS]) },
   { name: "economy", file: "20260926150600_economy.sql", sql: economySeedSql },
   { name: "crafting", file: "20260926160000_crafting.sql", sql: craftingSeedSql },
   { name: "ownership", file: "20260926180000_ownership.sql", sql: ownershipSeedSql },

@@ -6,7 +6,7 @@
  * `{ eyes, mouth, eyesApart, eyesSize, mouthSize }`; an older doc with fewer fields reads the same); scripts/apply-fit.mjs writes an
  * export of it into the catalogue's `fit` map, which the game reads as look.ts FIT. The page writes the same map live.
  */
-import { Component, StrictMode, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { StrictMode, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { createRoot } from "react-dom/client";
 import { Canvas } from "@react-three/fiber";
@@ -15,37 +15,7 @@ import { useThree } from "@react-three/fiber";
 import Character from "@/components/game/character/Character";
 import type { CharacterMotion } from "@/lib/game/character/clips";
 import { DEFAULT_LOOK, FACE, FIT, PARTS, type CharacterLook, type Fit } from "@/lib/game/character/look";
-
-// ---- running inside the artifact frame -----------------------------------------------------------------------------
-/** Any uncaught error, on a line at the top, so David can say what it says. */
-const fault = (m: string) => { const el = document.getElementById("fault"); if (el) { el.hidden = false; el.textContent = `Something went wrong: ${m}`; } };
-addEventListener("error", e => fault(e.message || String(e.error)));
-addEventListener("unhandledrejection", e => fault(String((e.reason as { message?: string })?.message ?? e.reason)));
-/**
- * The models are .glb.json files (build.mjs): a GLB in base64. The artifact frame refuses data: and blob: fetches, so
- * each is fetched as the page's own file and handed to the game's loader as the GLB bytes it asked for.
- */
-const fileLoad = THREE.FileLoader.prototype.load;
-THREE.FileLoader.prototype.load = function (this: THREE.FileLoader, url, onLoad, onProgress, onError) {
-  if (!url.endsWith(".glb.json")) return fileLoad.call(this, url, onLoad, onProgress, onError);
-  const at = this.manager.resolveURL(this.path + url);
-  this.manager.itemStart(at);
-  fetch(at).then(r => { if (!r.ok) throw new Error(`${r.status} ${at}`); return r.json() as Promise<string>; })
-    .then(b64 => { const s = atob(b64), b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i); onLoad?.(b.buffer); })
-    .catch(e => { onError?.(e); this.manager.itemError(at); })
-    .finally(() => this.manager.itemEnd(at));
-};
-/** A failure inside it shows `fallback` instead of unmounting the page. */
-class Catch extends Component<{ children: ReactNode; fallback: (message: string) => ReactNode }, { error: string | null }> {
-  state = { error: null as string | null };
-  static getDerivedStateFromError(e: unknown) { return { error: String((e as { message?: string })?.message ?? e) }; }
-  render() { return this.state.error === null ? this.props.children : this.props.fallback(this.state.error); }
-}
-/** Inside the 3D tree a fallback can't draw DOM: it hands the message to its cell. */
-function Report({ message, to }: { message: string; to: (m: string) => void }) {
-  useEffect(() => to(message), [message, to]);
-  return null;
-}
+import { Catch, Report } from "./frame";
 
 type Kind = "hair" | "face" | "acc";
 interface Item { id: string; name: string; kind: Kind; look: (skin: number) => CharacterLook; thumbs: string[]; noMouth?: boolean; noApart?: boolean }

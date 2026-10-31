@@ -1,28 +1,30 @@
 import { describe, expect, it } from "vitest";
-import { TOOL_TEACHERS, givenKeys, handOver, parseQuests, questFinished, teacherTalk, toolQuest, type TeachContext } from "./teachers";
+import { TOOL_TEACHERS, givenKeys, handOver, parseQuests, questFinished, teacherTalk, type TeachContext } from "./teachers";
 import { TOOL_LINES } from "./lines";
 import { PROPOSED_RESIDENTS } from "@/lib/content/residentRoster";
 import { toolByKey, TAUGHT_KINDS } from "@/lib/game/tools";
 import { wheelContents } from "@/lib/game/toolWheel";
 import { CATALOGUE, TAUGHT_TOOL_SLUGS, onSale } from "@/lib/wallet/catalogue";
+import { MINING } from "@/lib/collections/roster";
 
+/** Mayor Eliza teaches the pickaxe once mining is out (m6, the cave update: MINING); until then her row is a placeholder. */
+const NEW = MINING;
 const fresh: TeachContext = { taught: true, owned: [], quests: {} };
 const wheelKinds = (c: TeachContext) => wheelContents({ site: "village", owned: [...c.owned, ...givenKeys(c.quests)], weapons: [], armed: false, pins: [], stock: {}, taught: c.taught }).map(i => i.kind);
 
 describe("tools unlocked by people (row 312)", () => {
   it("pairs each taught tool with a resident on the roster, and leaves rows for the later tools", () => {
     const live = TOOL_TEACHERS.filter(t => t.live);
-    expect(live.map(t => [t.tool, t.npc])).toEqual([["net", "curator"], ["shovel", "crafter"]]);
-    expect(live.map(t => t.tool).sort()).toEqual([...TAUGHT_KINDS].sort());
+    expect(live.map(t => [t.tool, t.npc])).toEqual([["net", "curator"], ["shovel", "crafter"], ...(NEW ? [["pickaxe", "mayor"]] : [])]);
+    expect(live.map(t => t.tool).filter(k => k !== "pickaxe").sort()).toEqual([...TAUGHT_KINDS].sort());
     for (const t of TOOL_TEACHERS) if (t.npc) expect(PROPOSED_RESIDENTS.some(r => r.slug === t.npc), t.npc).toBe(true);
     for (const t of live) expect(toolByKey(t.key)?.tier).toBe(1);
-    expect(TOOL_TEACHERS.filter(t => !t.live).map(t => t.tool)).toEqual(["axe", "dash", "glider"]);
+    expect(TOOL_TEACHERS.filter(t => !t.live).map(t => t.tool)).toEqual(NEW ? ["glider"] : ["pickaxe", "glider"]);
   });
 
-  it("walks one tool from start to finish: offer, hand-over, the quest in the tracker, the catch, yours", () => {
+  it("walks one tool from start to finish: offer, hand-over, the catch, yours", () => {
     let c = fresh;
     expect(wheelKinds(c)).toEqual(["rod"]);
-    expect(toolQuest(c.quests)).toBeNull();
     // Odile offers her net.
     const talk = teacherTalk("curator", c)!;
     expect(talk).toMatchObject({ script: "tool:net:offer", tool: "net", lines: TOOL_LINES.net.offer });
@@ -31,7 +33,6 @@ describe("tools unlocked by people (row 312)", () => {
     expect(given).toBe("net");
     c = { ...c, quests: { ...c.quests, net: "given" } };
     expect(wheelKinds(c)).toEqual(["rod", "net"]);
-    expect(toolQuest(c.quests)).toEqual({ id: "tool:net", title: "Odile's bug net", kind: "quest", steps: [{ id: "tool:net:bug", label: "Catch any bug", done: false }] });
     // Talking again while it runs: her nudge, and nothing handed over twice.
     expect(teacherTalk("curator", c)).toMatchObject({ script: "tool:net:during" });
     expect(handOver("tool:net:offer", c.quests)).toBeNull();
@@ -40,7 +41,6 @@ describe("tools unlocked by people (row 312)", () => {
     expect(questFinished("forage", c.quests)).toBeNull();
     expect(questFinished("bug", c.quests)).toBe("net");
     c = { ...c, quests: { ...c.quests, net: "done" } };
-    expect(toolQuest(c.quests)).toBeNull();
     expect(wheelKinds(c)).toEqual(["rod", "net"]);
     // Done: Odile talks as she always does.
     expect(teacherTalk("curator", c)).toBeNull();
@@ -58,23 +58,28 @@ describe("tools unlocked by people (row 312)", () => {
     expect(teacherTalk("curator", old)).toBeNull();
     expect(teacherTalk("crafter", old)).toBeNull();
     expect(wheelKinds(old)).toEqual(["rod", "net", "shovel"]);
+    // The pickaxe is nobody's starter: on the new world Eliza offers it to everyone; the village's mayor talks as before.
+    expect(teacherTalk("mayor", old)?.script).toBe(NEW ? "tool:pickaxe:offer" : undefined);
   });
 
   it("knows a tool already owned (given on another device, or bought): no offer for it", () => {
     expect(teacherTalk("curator", { ...fresh, owned: ["net-basic"] })).toBeNull();
     expect(teacherTalk("crafter", { ...fresh, owned: ["net-basic"] })?.tool).toBe("shovel");
     expect(teacherTalk("wren", fresh)).toBeNull();
-    expect(teacherTalk("mayor", fresh)).toBeNull(); // the axe row is a placeholder
+    expect(teacherTalk("mayor", fresh)?.tool).toBe(NEW ? "pickaxe" : undefined);
+    expect(questFinished("mine", { pickaxe: "given" })).toBe(NEW ? "pickaxe" : null);
   });
 
-  it("keeps the taught tools off the shop's shelves (David, 2026-10-17), the better tiers on them", () => {
-    expect([...TAUGHT_TOOL_SLUGS].sort()).toEqual(TOOL_TEACHERS.filter(t => t.live).map(t => t.key).sort());
+  it("keeps the taught tools off the shop's shelves (David, 2026-10-17), and the hollow ones (2026-10-27)", () => {
+    // The pickaxe is never on a shelf: in the village nobody sells or teaches it, as before it existed.
+    expect([...TAUGHT_TOOL_SLUGS].sort()).toEqual(["net-basic", "pickaxe-basic", "shovel-basic"]);
     const sold = (slug: string) => onSale(CATALOGUE.find(c => c.slug === slug)!);
     expect(sold("net-basic")).toBe(false);
     expect(sold("shovel-basic")).toBe(false);
-    expect(sold("net-mid")).toBe(true);
-    expect(sold("shovel-mid")).toBe(true);
-    expect(sold("rod-basic")).toBe(true);
+    // The tier 2 net and shovel had no effect, and the basic rod no tool behind it (v1-gameplay, "some shop items did nothing").
+    expect(sold("net-mid")).toBe(false);
+    expect(sold("shovel-mid")).toBe(false);
+    expect(sold("rod-basic")).toBe(false);
   });
 
   it("reads saved quests back safely", () => {

@@ -11,6 +11,7 @@ import { AudioManager } from "./audio";
 import { punchZoom, setTensionZoom, shakeCamera } from "./cameraJuice";
 import type { FishDef } from "./fishing";
 import { advanceFishingReel, createFishingReel, type FishingReel } from "./fishingReel";
+import type { RodEffects } from "./rods";
 import { bindFishingInput, type FishingHeldInput } from "./fishingInput";
 import { live } from "./fishingRig";
 import { liveIslandWeather, reelWeather } from "./islandWeather";
@@ -21,11 +22,12 @@ import { RAID, type RaidView } from "@/lib/net/protocol";
 export type ReelEvents = ReturnType<typeof advanceFishingReel>;
 export interface ReelFrame { sim: FishingReel; events: ReelEvents; now: number; holding: boolean; raid: RaidView | null }
 
-export function useReelLoop({ fish, boss, raidId, tensionMul = 1, initialInput, focus, onFrame, onPause, onEnd, onDone }: {
+export function useReelLoop({ fish, boss, raidId, rig, initialInput, focus, onFrame, onPause, onEnd, onDone }: {
   fish: FishDef;
   boss: "solo" | "shared" | null;
   raidId?: string;
-  tensionMul?: number;
+  /** The rod in hand with its add-ons (rods.ts): the drain, the fill and the bar's width. */
+  rig?: Pick<RodEffects, "tensionMul" | "fillMul" | "barMul">;
   initialInput?: FishingHeldInput;
   /** The reel's element: focused while it runs (a pointer press brings the focus back), the old focus restored after. */
   focus: React.RefObject<HTMLElement | null>;
@@ -43,7 +45,7 @@ export function useReelLoop({ fish, boss, raidId, tensionMul = 1, initialInput, 
     const previouslyFocused = document.activeElement as HTMLElement | null;
     const el = focus.current;
     el?.focus({ preventScroll: true });
-    const sim = createFishingReel(fish, boss);
+    const sim = createFishingReel(fish, boss, undefined, rig?.barMul);
 
     const finish = (success: boolean) => {
       if (done) return;
@@ -58,7 +60,7 @@ export function useReelLoop({ fish, boss, raidId, tensionMul = 1, initialInput, 
       const dt = (now - last) / 1000;
       last = now;
       if (paused) { raf = requestAnimationFrame(step); return; }
-      const events = advanceFishingReel(sim, dt, holding, weatherMods(reelWeather(liveIslandWeather())).dartChanceMul, Math.random, tensionMul);
+      const events = advanceFishingReel(sim, dt, holding, weatherMods(reelWeather(liveIslandWeather())).dartChanceMul, Math.random, rig?.tensionMul, rig?.fillMul);
       // The fight in the world: the fish pulls the bobber across, the line tightens, the reel cranks while held.
       live.pull = sim.fishPosition * 2 - 1; live.tension = sim.tension; live.reeling = holding; live.reeled = sim.boss ? 1 - sim.boss.stamina : sim.progress;
       let raid: RaidView | null = null;

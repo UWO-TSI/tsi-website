@@ -12,6 +12,7 @@ import { useEffect, useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { prepareModel } from "@/lib/game/modelMaterials";
+import { afterEntry } from "@/lib/game/sceneGate";
 
 export const STICKER_URL = "/assets/game/items/merch-genesis-sticker.glb";
 export const STICKER_SLUG = "merch-genesis-sticker";
@@ -114,4 +115,4 @@ export default function GenesisSticker({ variant = "light", scale = 1, position,
   return <group position={position} rotation={rotation} scale={scale}><primitive object={built.card} /></group>;
 }
 
-useGLTF.preload(STICKER_URL);
+afterEntry(() => useGLTF.preload(STICKER_URL));

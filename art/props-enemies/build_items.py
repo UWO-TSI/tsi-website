@@ -1,8 +1,8 @@
 """Items without a model of their own (specs/game-ui.md §2, §4): held in front from the tool wheel, and the source of
 their icons. Fruit, rocks and ore, mushrooms, the seven bugs the island has no critter for, and the small things the
-shop sells (the coin, a recipe card, a dye bottle, the lucky bobber, the merch, the hand wraps and the buckler).
+shop sells (the coin, a recipe card, a dye bottle, the lucky bobber, the sweet bait, the merch, the hand wraps and the buckler).
 
-  /Applications/Blender.app/Contents/MacOS/Blender -b -P art/props-enemies/build_items.py [-- render <dir>]
+  /Applications/Blender.app/Contents/MacOS/Blender -b -P art/props-enemies/build_items.py [-- only <key>] [-- render <dir>]
 
 Writes web/public/assets/game/items/<key>.glb. The weapons' look (build_weapons.py): matte palette colours, the shared
 top-light gradient, low-poly with smooth shading inside 50 degrees. Each sits on its base at the origin, Blender Z up,
@@ -418,6 +418,21 @@ def bobber():
     return model("bobber-lucky", {"Red": "#D2493D", "White": "#F4EEE2", "Stem": "#3E3A36", "Clover": "#6FAF5A"}, b)
 
 
+@item("bait-sweet")
+def bait():
+    # Sweet bait (lib/game/rods.ts TACKLE): a squat teal tin, a cream label band, three amber dough balls heaped in it
+    # and its lid tipped against the side.
+    def b(pc):
+        pc.mat = "Tin"; lathe(pc, (0, 0, 0), [(0, 0), (0.036, 0.0), (0.038, 0.004), (0.038, 0.03), (0.034, 0.032), (0.03, 0.026), (0, 0.026)], n=14)
+        pc.mat = "Label"; lathe(pc, (0, 0, 0.008), [(0.0385, 0), (0.0385, 0.016)], n=14)
+        pc.mat = "Dough"
+        for x, y, z, r in ((-0.012, 0.004, 0.032, 0.012), (0.011, -0.006, 0.031, 0.011), (0.002, 0.012, 0.036, 0.01)):
+            pc.blob((x, y, z), (r, r, r * 0.85), segs=8, rings=4)
+        pc.mat = "Tin"
+        lathe(pc, (0.05, 0.0, 0.037), [(0, 0.0), (0.038, 0.0), (0.038, 0.006), (0, 0.006)], n=14, axis=(0.94, 0.0, 0.34))
+    return model("bait-sweet", {"Tin": "#4F9C95", "Label": "#F3E7C9", "Dough": "#E3A54A"}, b)
+
+
 @item("merch-sticker-pack")
 def stickers():
     def b(pc):
@@ -465,7 +480,11 @@ def buckler():
 
 built = []
 os.makedirs(OUT, exist_ok=True)
+# `-- only <key>` exports just that item (the others' files stay as they are).
+ONLY = ARGS[ARGS.index("only") + 1] if "only" in ARGS else None
 for key, fn in MODELS:
+    if ONLY and key != ONLY:
+        continue
     ob = fn()
     bpy.ops.object.select_all(action="DESELECT")
     ob.select_set(True)

@@ -391,12 +391,13 @@ def decimate(ob, max_tris, recalc=False):
 def decimate_pieces(ob, spec, recalc=False):
     """An item of one big piece and many small ones (#11's ring and its chain's 40 links): collapsing the whole mesh to its
     cap shreds the ring and eats the links (129 triangles of a torn ring). The biggest piece keeps spec["main"] triangles
-    alone, and the rest, thinned to every spec["keep_every"]th piece by distance from the big one (a chain of fewer links),
-    share spec["rest"], each group collapsed on its own and then joined back into `ob`. Returns the triangle count."""
+    alone, and of the rest only the spec["keep"] pieces nearest the big one (the chain's first links; the remainder runs
+    behind the ear into the hair) share spec["rest"], each group collapsed on its own and then joined back into `ob`.
+    Returns the triangle count."""
     parts = sorted(pieces(ob, gap=0.0), key=len, reverse=True)
     co = np.array([v.co[:] for v in ob.data.vertices])
-    c0 = co[parts[0]].mean(0)
-    rest = sorted(parts[1:], key=lambda idx: np.linalg.norm(co[idx].mean(0) - c0))[::spec.get("keep_every", 1)]
+    near = lambda idx: min(np.linalg.norm(co[parts[0]] - co[i], axis=1).min() for i in idx)      # a piece's gap to the big one
+    rest = sorted(parts[1:], key=near)[:spec["keep"]]
     outs = []
     for idx, budget in ((parts[0], spec["main"]), (np.concatenate(rest), spec["rest"])):
         keep = set(int(i) for i in idx)
@@ -409,7 +410,7 @@ def decimate_pieces(ob, spec, recalc=False):
         bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
         bm.to_mesh(cp.data)
         bm.free()
-        decimate(cp, budget, recalc)
+        print(f"PIECES {kit.ntris(cp)} -> {decimate(cp, budget, recalc)} (budget {budget})")
         outs.append(cp)
     bpy.ops.object.select_all(action="DESELECT")
     for o in outs:

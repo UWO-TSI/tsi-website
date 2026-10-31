@@ -114,6 +114,15 @@ export function remoteAt(sid: number): [number, number] | null {
   for (let i = 0; i < liveRemotes.n; i++) if (liveRemotes.sid[i] === sid) return [liveRemotes.x[i], liveRemotes.z[i]];
   return null;
 }
+/** The nearest remote in view within `r` of (x, z) whom `pick` accepts (a friend: fishing together), by uid; null if none. */
+export function remoteNearest(x: number, z: number, r: number, pick: (uid: string) => boolean): string | null {
+  let best: string | null = null, bestD = r;
+  for (let i = 0; i < liveRemotes.n; i++) {
+    const d = Math.hypot(liveRemotes.x[i] - x, liveRemotes.z[i] - z);
+    if (d < bestD && pick(liveRemotes.uid[i])) { bestD = d; best = liveRemotes.uid[i]; }
+  }
+  return best;
+}
 /** Is any remote in view within `r` of (x, z)? */
 export function remoteNear(x: number, z: number, r: number): boolean {
   for (let i = 0; i < liveRemotes.n; i++) if (Math.hypot(liveRemotes.x[i] - x, liveRemotes.z[i] - z) < r) return true;

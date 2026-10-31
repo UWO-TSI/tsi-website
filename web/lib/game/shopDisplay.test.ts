@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CATALOGUE, OWNERSHIP_ITEMS, onSale } from "@/lib/wallet/catalogue";
 import { SHOP_PICKS, SPECIALS_SLOTS, nearestDisplay, shopDisplay, todaysSpecials } from "./shopDisplay";
+import { itemSpec } from "@/lib/icons/itemModel";
 import { SHOP_SLOTS, SHOP_TAG_RANGE, type ItemKind } from "./shopLayout";
 
 const ON_SALE = new Map([...CATALOGUE, ...OWNERSHIP_ITEMS].filter(onSale).map(e => [e.slug, e]));
@@ -45,7 +46,8 @@ describe("what the shop shows (specs/interiors/shop.md, phase 2)", () => {
     expect(a).toHaveLength(SPECIALS_SLOTS.length);
     expect(a.map(e => e.slug)).not.toEqual(c.map(e => e.slug));
     const shown = shopDisplay(new Date("2026-10-17T15:00:00Z")).filter(d => d.special);
-    expect(shown.map(d => d.slug)).toEqual(a.map(e => e.slug));
+    // The ones with a model stand on the plinths (a hairstyle has none).
+    expect(shown.map(d => d.slug)).toEqual(a.filter(e => itemSpec(e)).map(e => e.slug));
   });
 
   it("tags the nearest item on your floor within range, and nothing from the stair", () => {

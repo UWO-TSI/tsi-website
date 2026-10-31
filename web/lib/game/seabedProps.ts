@@ -46,15 +46,24 @@ export interface SeabedLayout {
   breaking: { x: number; z: number; r: number; top: number; kind: string }[];
 }
 
-/** A cell's own random stream (a hash of its place and a salt): the same on every client. */
-function cellRandom(cx: number, cz: number, salt: number) {
-  let h = Math.imul(cx | 0, 0x9e3779b1) ^ Math.imul((cz | 0) + 0x632be5ab, 0x85ebca77) ^ Math.imul(salt, 0xc2b2ae35);
-  return () => {
-    h = (h + 0x6d2b79f5) | 0;
-    let t = Math.imul(h ^ (h >>> 15), 1 | h);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+/** The kind a spot's roll falls to (each takes its chance's share of the roll, in order), or none. */
+function kindFor(roll: number): SeabedKind | null {
+  let acc = 0;
+  for (const kind of SEABED_KINDS) if (roll < (acc += kind.chance)) return kind;
+  return null;
+}
+
+/** A cell's own random stream (a hash of its place and a salt): the same on every client. Its n-th draw (from 0) is
+ * `draw(seed, n)`: the stream steps its state by a constant, so any draw can be read without the ones before it. */
+const STEP = 0x6d2b79f5;
+function cellSeed(cx: number, cz: number, salt: number) {
+  return Math.imul(cx | 0, 0x9e3779b1) ^ Math.imul((cz | 0) + 0x632be5ab, 0x85ebca77) ^ Math.imul(salt, 0xc2b2ae35);
+}
+function draw(seed: number, n: number) {
+  const h = (seed + Math.imul(n + 1, STEP)) | 0;
+  let t = Math.imul(h ^ (h >>> 15), 1 | h);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 }
 
 /**
@@ -69,30 +78,28 @@ export function seabedProps(map: IslandMap, shore: ShoreSdf, { skip, lite = fals
   const surface = -WATER_DROP;
   for (let cz = 0; cz < map.depth; cz++) for (let cx = 0; cx < map.width; cx++) {
     if (!isWater(surfaceAt(map, cx, cz)) || levelAt(map, cx, cz) * LEVEL_STEP !== 0) continue;
-    const rnd = cellRandom(cx, cz, 0x5eab), x0 = cellToWorldX(map, cx), z0 = cellToWorldZ(map, cz);
+    const seed = cellSeed(cx, cz, 0x5eab), x0 = cellToWorldX(map, cx), z0 = cellToWorldZ(map, cz);
     for (let k = 0; k < 4; k++) {
-      const x = x0 + ((k & 1) - 0.5) * 0.5 + (rnd() - 0.5) * 0.45, z = z0 + ((k >> 1) - 0.5) * 0.5 + (rnd() - 0.5) * 0.45;
-      const roll = rnd(), yaw = rnd() * Math.PI * 2, s = rnd(), tint = rnd(), thin = rnd();
+      // Seven draws a spot: its offset (x, z), the roll, the yaw, the scale, the tint, Lite's thinning. One roll down the
+      // kinds' chances: a spot takes the first whose share of the roll it falls in. Most spots take none, so the roll is
+      // read first and the rest (the draws, the ground, the wharf, the depth) only for a spot that takes a kind.
+      const d = k * 7, kind = kindFor(draw(seed, d + 2));
+      if (!kind || (lite && (!kind.lite || draw(seed, d + 6) > 0.45))) continue;
+      const x = x0 + ((k & 1) - 0.5) * 0.5 + (draw(seed, d) - 0.5) * 0.45, z = z0 + ((k >> 1) - 0.5) * 0.5 + (draw(seed, d + 1) - 0.5) * 0.45;
+      const yaw = draw(seed, d + 3) * Math.PI * 2, s = draw(seed, d + 4), tint = draw(seed, d + 5);
       if (isGroundAtWorld(map, x, z) || skip?.(x, z)) continue;
       const dip = seabedDip(map, shore, x, z);
-      // One roll down the kinds' chances: a spot takes the first whose share of the roll it falls in.
-      let acc = 0;
-      for (const kind of SEABED_KINDS) {
-        acc += kind.chance;
-        if (roll >= acc) continue;
-        if (dip < kind.depth[0] || dip > kind.depth[1] || (lite && (!kind.lite || thin > 0.45))) break;
-        const rock = kind.name.startsWith("boulder"), y = surface - dip;
-        let scale = kind.scale[0] + (kind.scale[1] - kind.scale[0]) * s;
-        // Plants stay under the water: one too tall for the depth here grows smaller, or not at all.
-        if (!rock) scale = Math.min(scale, (dip - 0.06) / kind.height);
-        if (scale < kind.scale[0] * 0.6) break;
-        const top = y + kind.height * scale;
-        if (rock && submerged && top > surface) break;
-        items[kind.name].push({ x, y, z, yaw, scale, tint });
-        // A rock that stands out of the water, ringed with foam where it meets it (a third of its footprint's span).
-        if (rock && top > surface + 0.03) breaking.push({ x, z, r: (kind.name === "boulder_c" ? 0.3 : 0.38) * scale, top, kind: kind.name });
-        break;
-      }
+      if (dip < kind.depth[0] || dip > kind.depth[1]) continue;
+      const rock = kind.name.startsWith("boulder"), y = surface - dip;
+      let scale = kind.scale[0] + (kind.scale[1] - kind.scale[0]) * s;
+      // Plants stay under the water: one too tall for the depth here grows smaller, or not at all.
+      if (!rock) scale = Math.min(scale, (dip - 0.06) / kind.height);
+      if (scale < kind.scale[0] * 0.6) continue;
+      const top = y + kind.height * scale;
+      if (rock && submerged && top > surface) continue;
+      items[kind.name].push({ x, y, z, yaw, scale, tint });
+      // A rock that stands out of the water, ringed with foam where it meets it (a third of its footprint's span).
+      if (rock && top > surface + 0.03) breaking.push({ x, z, r: (kind.name === "boulder_c" ? 0.3 : 0.38) * scale, top, kind: kind.name });
     }
   }
   return { items, breaking };

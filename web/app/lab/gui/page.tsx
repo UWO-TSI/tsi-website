@@ -10,6 +10,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Backpack, BookOpen, Coins, Fish, Mail, MapIcon, PackageOpen, Settings, ShoppingBasket, Sprout, Volume2 } from "lucide-react";
 import FishReveal from "@/components/game/FishReveal";
+import FlatPieces from "./FlatPieces";
 import { FamilyReveal } from "@/components/game/oracle/OracleSheetEmbed";
 import IncantationOverlay from "@/components/game/combat/IncantationOverlay";
 import { EmoteWheelView } from "@/components/game/emotes/EmoteWheel";
@@ -21,11 +22,49 @@ import { Badge, Banner, Button, Card, ConfirmDialog, Counter, Dialogue, Empty, E
 import { FISH } from "@/lib/game/fishing";
 import { iconUrl } from "@/lib/icons/keys";
 import { RARITIES, RARITY_LABEL } from "@/lib/rarity";
+import { RODS, TACKLE } from "@/lib/game/rods";
+import { RodRadar, TackleRadar } from "@/components/economy/RodGear";
 import { useSearch } from "@/lib/game/useMediaQuery";
-import { Waves } from "lucide-react";
+import { CircleDot, Waves, Worm } from "lucide-react";
 import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
-import { ProgressCard } from "@/components/gui/flat";
+import { ActionBar, ActionIcon, BigMoment, CardOverlay, DarkButton, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KeyBoard, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, QuestCheck, RankBadge, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot } from "@/components/gui/flat";
+import type { Rarity } from "@/lib/rarity";
+import { BoardRows } from "@/components/game/volleyball/BoardSheet";
 import s from "./showroom.module.css";
+import FlatRewards from "./FlatRewards";
+
+/** The reward pop at each rung of the ladder, and a dig's purse (no rarity). */
+const POPS: readonly (readonly [Rarity | null, string, string, string, string | null])[] = [
+  ["common", "bug_common_butterfly", "Common Butterfly", "Caught", "6.2 cm"], ["uncommon", "find_old_coin", "Old Coin", "Dug up", "2.4 cm"],
+  ["rare", "find_ammonite", "Ammonite", "New!", "11.2 cm"], ["epic", "find_amber", "Amber", "Dug up", "4.8 cm"],
+  ["legendary", "find_broken_sudo", "Broken Sudo", "Dug up", null], ["divine", "find_trilobite", "Trilobite (divine)", "Dug up", "7.1 cm"],
+  [null, "coin", "32 coins", "Dug up", null],
+];
+
+/** The rod radar and its pieces (flat kit): a rod's build sliding as the lucky bobber goes on, every rod alone, an
+ * add-on's own radar, the gear slots, and the rarity outline on a card for each rung. */
+function RodGearShow() {
+  const [on, setOn] = useState(false);
+  const bobber = TACKLE.find(t => t.slot === "bobber")!, bait = TACKLE.find(t => t.slot === "bait")!;
+  return <>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 24, alignItems: "end" }}>
+      <div data-testid="radar-live"><b>Glass rod, your build</b><RodRadar rod={RODS[2]} tackle={on ? [bobber.key, bait.key] : []} />
+        <GhostButton onClick={() => setOn(v => !v)} data-testid="radar-toggle">{on ? "Take the bobber and bait off" : "Put the lucky bobber and sweet bait on"}</GhostButton></div>
+      <div><b>{bobber.name} on its own</b><TackleRadar tackle={bobber} /></div>
+      <div style={{ display: "flex", gap: 8, alignSelf: "center" }}>
+        <GearSlot label="Bait" icon={<Worm />} options={[]} empty="None yet. Bait is on the shop's Tools shelf." onPick={() => {}} />
+        <GearSlot label="Bobber" icon={<CircleDot />} onPick={() => {}} empty=""
+          options={[{ id: "b", name: bobber.name, picture: "/assets/icons/bobber-lucky.webp", line: "+20 Luck", on: true }]} />
+      </div>
+    </div>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 24, marginTop: 24 }}>
+      {RODS.map(r => <div key={r.key}><b>{r.name}</b><RodRadar rod={r} /></div>)}
+    </div>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12, marginTop: 24 }} data-testid="rarity-cards">
+      {RARITIES.filter(r => r !== "contraband").map(r => <ItemCard key={r} size="md" arrow={false} rarity={r} picture={iconUrl("rod_glass")} name={RARITY_LABEL[r]} line="A rod at this rung" />)}
+    </div>
+  </>;
+}
 
 /** Re-mounts its child every `ms` (an overlay that finishes and closes itself stays on show). */
 function Loop({ ms, children }: { ms: number; children: (done: () => void) => ReactNode }) {
@@ -34,11 +73,71 @@ function Loop({ ms, children }: { ms: number; children: (done: () => void) => Re
   return <div key={n} style={{ display: "contents" }}>{children(() => {})}</div>;
 }
 
+/** The kit's moments (components/gui/flat/moments.tsx), each looping through its states. */
+function KeyBoardShow() {
+  const [t, setT] = useState(0);
+  useEffect(() => { const i = window.setInterval(() => setT(v => v + 1), 120); return () => window.clearInterval(i); }, []);
+  const k = t % 40, hold = k < 20, bag = k >= 34;
+  // The light card: the key and a word, the keys on their well; a press brings its part of the screen in (here the Bag, top left).
+  return <>
+    {bag && <span data-demo-bag style={{ position: "absolute", top: 16, left: 16, display: "flex", gap: 6, alignItems: "center", padding: "8px 14px", borderRadius: 999, background: "var(--ui-card)", fontWeight: 800 }}><Backpack size={16} /> Bag</span>}
+    {bag && <SlotPop to={["[data-demo-bag]"]} />}
+    <Spotlight light open label="Keys" lead={hold ? <>Hold <Keycap>Tab</Keycap> Tools</> : <>Press <Keycap>I</Keycap> Bag</>}
+      steps={{ count: 9, at: hold ? 0 : 4 }} footer={<GhostButton>Skip</GhostButton>}>
+      <KeyBoard lit={hold ? "tab" : "i"} hold={hold} fill={hold ? Math.min(1, Math.max(0, (k - 4) / 12)) : 0} won={hold ? k >= 16 : k >= 34}
+        done={hold ? [] : ["tab", "g", "h", "enter"]} down={new Set(hold ? (k >= 4 && k < 16 ? ["tab"] : []) : (k >= 32 && k < 34 ? ["i"] : []))} />
+    </Spotlight>
+  </>;
+}
+/** The ID as the overlay: filled in on the card, printed out of the slot, stamped, then Done; hover it to tilt. */
+function PrintedShow() {
+  const [t, setT] = useState(0);
+  useEffect(() => { const i = window.setInterval(() => setT(v => (v + 1) % 8), 1000); return () => window.clearInterval(i); }, []);
+  const form = t < 3, printing = t >= 3 && t < 5, stamped = t >= 5;
+  const rows: [string, ReactNode][] = form
+    ? [["World name", <PaperField key="n" defaultValue="Marlowe" />], ["Birthday", <PaperField key="b" placeholder="March 14" />], ["From", <PaperField key="f" placeholder="Your hometown" />],
+      ["About you", <PaperField key="a" placeholder="Say hi in a line" />]]
+    : [["World name", "Marlowe"], ["Birthday", "March 14"], ["From", "Halifax"], ["About you", "Here for the fishing"], ["Friend code", "K7QM-4R2X"]];
+  return <CardOverlay open label="Your island ID" action={<DarkButton>{form ? "Print my ID" : "Done"}</DarkButton>}>
+    <PrintedCard key={form ? "a" : "b"} large tilt band="Tethos Island" kind="Resident" picture="M" printing={printing} stamp={stamped ? { top: "Tethos Island", word: "Resident" } : null} rows={rows} />
+  </CardOverlay>;
+}
+/** Talk lines with their keywords (the kit's Keyword, the default for every talk line): each word the dictionary
+ *  knows coloured, a little icon wiggling before it; under it every kind in the dictionary. */
+function KeywordShow() {
+  return <div style={{ display: "grid", alignContent: "end", justifyItems: "center", gap: 14, minHeight: "100%", padding: 24 }}>
+    <p style={{ margin: 0, display: "flex", flexWrap: "wrap", gap: "6px 14px", justifyContent: "center", maxWidth: 560 }}>
+      {KEYWORD_KINDS.map(kind => <Keyword key={kind} kind={kind}>{kind}</Keyword>)}
+    </p>
+    <Dialogue speaker="Bram">
+      <p style={{ margin: 0 }}><KeywordLine line="And that's the shop. Tools and clothes for the island, and real merch too. Fish sell at the fish market; my rod's yours." /></p>
+    </Dialogue>
+  </div>;
+}
+/** The wallet (design bible UI 8b) under a time pill: resting in the UI view, then a coin fly-in landing in its slot. */
+function WalletShow() {
+  const [t, setT] = useState(0);
+  useEffect(() => { const i = window.setInterval(() => setT(v => (v + 1) % 6), 1200); return () => window.clearInterval(i); }, []);
+  return <div style={{ position: "absolute", top: 16, right: 16, display: "grid", justifyItems: "end", gap: 8 }}>
+    <span style={{ padding: "4px 11px", borderRadius: 999, background: "var(--ui-card)", fontWeight: 900 }}>2:22 PM</span>
+    <WalletSlot coins={t < 3 ? 1240 : 1305} gems={35} at={t === 5 ? "out" : t >= 3 ? "in" : undefined} />
+  </div>;
+}
+
 const OVERLAYS: { id: string; title: string; render: () => ReactNode }[] = [
+  { id: "key-board", title: "Keys (a light Spotlight, KeyBoard and SlotPop)", render: () => <KeyBoardShow /> },
+  { id: "wallet", title: "The wallet (WalletSlot), its slot under the time", render: () => <WalletShow /> },
+  { id: "keyword", title: "Keywords in a line (Keyword)", render: () => <KeywordShow /> },
+  { id: "fly-in", title: "Fly-in, into the wallet's slot", render: () => <Loop ms={3600}>{done => <><span style={{ position: "absolute", top: 16, right: 16 }}><WalletSlot coins={1240} gems={35} at="in" landing="coins" /></span>
+    <FlyIn icon={<Coins size={52} />} name="Coins" text="For things on the island" to={['[data-hud-slot="coins"]']} onDone={done} /></>}</Loop> },
+  { id: "quest-check", title: "Quest complete", render: () => <Loop ms={3000}>{() => <QuestCheck eyebrow="Quest complete" title="Walk with Bram" />}</Loop> },
+  { id: "printed-card", title: "Printed card as the overlay (CardOverlay, PrintedCard, PaperField)", render: () => <PrintedShow /> },
   { id: "fish-reveal", title: "Fish reveal", render: () => <Loop ms={9000}>{done => <FishReveal fish={FISH.find(f => f.rarity === "rare") ?? FISH[0]} sizeCm={42} onDone={done} />}</Loop> },
   { id: "oracle-reveal", title: "Oracle reveal card", render: () => <FamilyReveal family="Warden" type="INFP" onContinue={() => {}} /> },
   { id: "rune", title: "Rune overlay", render: () => <Loop ms={30000}>{done => <IncantationOverlay runeId="cross" title="Cross" effect="A warding cross" onDone={done} onCancel={done} />}</Loop> },
   { id: "emotes", title: "Emote wheel", render: () => <EmoteWheelShow /> },
+  { id: "flat-rewards", title: "Flat reward pieces (hearts, reward track, prize wheel, goal meter, quiet toast)", render: () => <div style={{ position: "absolute", inset: 0, overflow: "auto", padding: 24 }}><FlatRewards /><ToastHub /></div> },
+  { id: "flat-pieces", title: "Flat pieces (tiles, hover card, day strip, odds, reveal, tasks, small panel, paper menu)", render: () => <div style={{ position: "absolute", inset: 0, overflow: "auto", padding: 24 }}><FlatPieces /></div> },
 ];
 
 /** The emote wheel open (specs/v1-drop.md §3): the emotes with Clap chosen, then the dances, flipping every few seconds. */
@@ -94,13 +193,14 @@ export default function GuiShowroom() {
   const [volume, setVolume] = useState(70);
   const [sheet, setSheet] = useState<null | "sm" | "md" | "lg" | "butter" | "oracle">(only === "sheet" ? "md" : null);
   const [confirm, setConfirm] = useState(false);
+  const [moment, setMoment] = useState(only === "moment");
   if (overlay) return <Stage tall>{overlay.render()}</Stage>;
 
   return <main className={`gui ${s.page}`}>
     <header className={s.top}>
       <h1>Our GUI sheet</h1>
       <p>The member game, portal and companion, drawn from David’s Animal Crossing UI kit: warm paper, sage, wood and Tethos accents. Tokens in <code>styles/game-tokens.css</code>, pieces in <code>components/gui</code>.</p>
-      <nav className={s.toc} aria-label="Sections">{["colour", "type", "paper", "buttons", "tabs", "lists", "tiles", "controls", "dialogue", "badges", "progress", "tooltips", "banners", "cards", "sheets", "states", "toasts", "overlays", "fishing"].map(id => <a key={id} href={`#${id}`}>{id}</a>)}</nav>
+      <nav className={s.toc} aria-label="Sections">{["colour", "type", "paper", "buttons", "tabs", "lists", "tiles", "controls", "dialogue", "badges", "progress", "tooltips", "banners", "cards", "sheets", "states", "toasts", "rewards", "overlays", "fishing"].map(id => <a key={id} href={`#${id}`}>{id}</a>)}</nav>
     </header>
 
     <Section id="colour" title="Colour" kit={["palette"]} note="The kit’s creams and inks, with our sage, wood and the Tethos accents. Every text pair is AA (lib/gui/contrast.test.ts).">
@@ -179,6 +279,10 @@ export default function GuiShowroom() {
       <Row label="Name tags"><NameTag>Alice</NameTag><NameTag tone="sage">Rosa · Café</NameTag><NameTag tone="paper">Sable</NameTag></Row>
     </Section>
 
+    <Section id="radar" title="Rod radar (flat kit)" note="lib/game/rods.ts: six stats out of 100, a light hex with an icon at each corner (hover for what it does). Your build in the chart colour with the rod alone faint behind; an add-on slides it linearly. The gear slots sit in your rod's stage corner; rarity is a thin outline.">
+      <RodGearShow />
+    </Section>
+
     <Section id="badges" title="Badges and counters" kit={["recipe", "phone"]} note="Status tags and the red count on a shoulder (nothing at zero).">
       <Row label="Badges"><Badge>Basic</Badge><Badge tone="sage">Owned</Badge><Badge tone="success">Done</Badge><Badge tone="warn">Ready</Badge><Badge tone="danger">Sold out</Badge><Badge tone="info">Event</Badge><Badge tone="gold">Daily selection</Badge><Badge tone="new">New!</Badge></Row>
       <Row label="Rarity">{RARITIES.map(r => <RarityBadge key={r} rarity={r}>{RARITY_LABEL[r]}</RarityBadge>)}</Row>
@@ -205,6 +309,25 @@ export default function GuiShowroom() {
     <Section id="progress-card" title="Progress card (flat)" note="The flat kit’s loading card: a white card, the stage in a quiet line, the real progress as a thin ink line.">
       <Row><ProgressCard icon={<Sprout size={24} />} title="Tethos Island" status="Sweeping the plaza…" value={0.42} label="Loading the island" />
         <ProgressCard title="Saving" status="Nearly there" value={0.9} label="Saving" /></Row>
+    </Section>
+
+    <Section id="serve-meter" title="Serve meter (flat)" note="The volleyball serve’s power: a triangle wide at the top, the fill warming from sea to coral to gold; it leans in and trembles as it fills, and flashes Max at the top.">
+      <Row><ServeMeter value={0.3} label="Serve power"><Keycap>Hold</Keycap></ServeMeter><ServeMeter value={0.72} label="Serve power" /><ServeMeter value={0.97} label="Serve power, max" /></Row>
+    </Section>
+
+    <Section id="action-bar" title="Action bar (flat)" note="A match’s moves: each a pictogram, its key and its name. A slot that would connect glows; a press flashes it. The ground’s and the air’s rows swap in place.">
+      <Row><ActionBar active="ground" flash={{ id: "set", n: 1, ok: true }} rows={{ ground: ["bump", "set", "call", "dive", "jump"].map((a, i) => ({ id: a, label: a[0].toUpperCase() + a.slice(1), keycap: ["Click", "E", "R-click", "Ctrl", "Space"][i], icon: <ActionIcon move={a} />, ready: a === "bump" })) }} /></Row>
+      <Row><ActionBar active="air" rows={{ air: ["spike", "jumpset", "block"].map((a, i) => ({ id: a, label: ["Spike", "Jump set", "Block"][i], keycap: ["Click", "E", "R-click"][i], icon: <ActionIcon move={a} />, ready: a === "spike" })) }} /></Row>
+      <Row>{["serve", "charge", "spin", "slide", "dash"].map(a => <ActionIcon key={a} move={a} size={40} />)}</Row>
+    </Section>
+
+    <Section id="spin-picker" title="Spin picker (flat)" note="Where on the ball the serve is hit: off centre to a side curves it, the top dives, the bottom floats.">
+      <Row><SpinPicker x={0} y={0} picture="/assets/game/volleyball/ball-icon.png" label="Centre" /><SpinPicker x={0.6} y={0.4} picture="/assets/game/volleyball/ball-icon.png" label="Top right"><Keycap>R-click</Keycap></SpinPicker></Row>
+    </Section>
+
+    <Section id="rank" title="Rank badge and the leaderboard (flat)" note="A place in a ranking, the first in gold; the volleyball court’s board, its rows on hairlines and a Sample tag until phase 3.">
+      <Row><RankBadge rank={1} /><RankBadge rank={2} /><RankBadge rank={10} /></Row>
+      <BoardRows board={{ sample: true, rows: [{ rank: 1, name: "Kelpie", wins: 14, you: false }, { rank: 2, name: "Sandpiper", wins: 11, you: false }, { rank: 3, name: "Islander", wins: 9, you: true }] }} />
     </Section>
 
     <Section id="tooltips" title="Tooltips" kit={["wheel"]} note="The teal name pill with a tail, on hover and on keyboard focus.">
@@ -250,6 +373,25 @@ export default function GuiShowroom() {
         <Button size="sm" variant="quiet" onClick={() => toast("A new room is ready. 1,240 TC left.", iconUrl("home-bed"))}>Room toast</Button>
         <Button size="sm" variant="quiet" onClick={() => toast("Your backpack is full.")}>Plain toast</Button></Row>
       <div className={s.toastStage}><ToastHub /></div>
+    </Section>
+
+    <Section id="hud-bars" title="The HUD's bars (flat kit)" note="specs/design-bible.md UI 8: health and XP always on, stamina on its own pill while it's used (warm and shaking once when it runs out). components/gui/flat StatBar and StatBars; the island's are components/game/HudBars.tsx.">
+      <Row>
+        <StatBars><StatBar kind="health" value={1} label="Health 100 of 100" /><StatBar kind="xp" value={0.42} label="Level 3" /></StatBars>
+        <StatBars><StatBar kind="health" value={0.7} label="Health 70 of 100" /><StatBar kind="xp" value={0.42} badge="Lv 3" label="Level 3" /></StatBars>
+        <StatBar kind="stamina" value={0.55} alone label="Stamina" />
+        <StatBar kind="stamina" value={0} alone low label="Stamina run out" />
+      </Row>
+    </Section>
+
+    <Section id="rewards" title="Rewards and moments (flat kit)" note="specs/design-bible.md UI 4 and 7: a reward pops with its rarity as the outline (divine: the holo); a level up is the big moment. components/gui/flat RewardPop and BigMoment.">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 18 }}>
+        {POPS.map(([rarity, key, name, title, facts]) => <RewardPop key={rarity ?? key} picture={iconUrl(key)} title={title} name={name} rarity={rarity}
+          rarityLabel={rarity ? rarity[0].toUpperCase() + rarity.slice(1) : null} facts={facts ? <span>{facts}</span> : null} isNew={rarity === "rare"} note="The one-liner, quiet." testId={`pop-${rarity ?? key}`} />)}
+      </div>
+      <Row><Button size="sm" onClick={() => setMoment(true)}>Show the level up</Button></Row>
+      {moment && <BigMoment kicker="Level up" big={2} title="You're level 2" onClose={() => setMoment(false)} testId="showroom-moment"
+        items={[{ key: "quest", icon: <BookOpen size={18} />, title: "New quest: Odile's net", line: "Odile at the museum has a spare net." }]} />}
     </Section>
 
     <section id="overlays" className={s.section}>

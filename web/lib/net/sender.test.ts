@@ -7,6 +7,7 @@ import { Remotes, RemoteBuffer, type MotionWire } from "./interp";
 import { toRemotePlayer, type NetSource, type NetStatus } from "./types";
 import { registerLocalAvatar, unregisterLocalAvatar, type LocalAvatar } from "./localAvatar";
 import { EVENT_MAX_AGE_MS, SLOW_GAP_MS, TELEPORT_FRAME, createSender, type SenderDeps, type SenderHints } from "./sender";
+import { VB_SPECTATE, type Stand } from "@/lib/game/volleyball/cheapView";
 
 const FRAME = 1000 / 60;
 
@@ -37,7 +38,8 @@ function rig(o: { sim?: { current: MoveSim | null } } = {}) {
   const motion = { current: { speed: 0, yaw: 0, lift: 0, pose: null, play: null, move: null } as CharacterMotion };
   const reg = registerLocalAvatar(motion, o.sim ?? null);
   const handlers = new Map<string, Set<(e: Event) => void>>(), timers: (() => void)[] = [];
-  const world = { now: 0, combat: { armed: false, weapon: "sword-driftwood" }, study: { phase: null as string | null, endsAt: null as string | null, seated: null as { anchor: string; seat: number } | null } };
+  const world = { now: 0, combat: { armed: false, weapon: "sword-driftwood" }, study: { phase: null as string | null, endsAt: null as string | null, seated: null as { anchor: string; seat: number } | null },
+    stand: null as Stand | null };
   const deps: SenderDeps = {
     clock: () => world.now,
     avatar: () => current,
@@ -45,6 +47,7 @@ function rig(o: { sim?: { current: MoveSim | null } } = {}) {
     study: () => world.study,
     listen: (type, fn) => { const set = handlers.get(type) ?? new Set(); handlers.set(type, set); set.add(fn); return () => { set.delete(fn); }; },
     every: (_ms, fn) => { timers.push(fn); return () => { timers.splice(timers.indexOf(fn), 1); }; },
+    stand: () => world.stand,
   };
   let current: LocalAvatar | null = reg;
   const sender = createSender(src, deps);
@@ -389,3 +392,28 @@ function encodeBack(p: Pose): MotionWire {
     vz: Math.round(p.vz * 100), yaw: Math.round((p.yaw / (2 * Math.PI)) * 65536) % 65536, move: p.move, air: Math.round(p.air * 255), leaf: Math.round((p.leaf / 1.3) * 255),
     lift: Math.round(p.lift * 1000), tp: 0 };
 }
+
+describe("a volleyball match's cheap view (lib/game/volleyball/cheapView)", () => {
+  it("sends the steady stand holding vb_spectate, not the rally's movement or one-shots, and lets go after", () => {
+    const r = rig();
+    r.frame();
+    const from = r.src.poses.length;
+    r.world.stand = { x: 4, y: 1, z: -3, yaw: 1.2 };
+    r.run(1000, p => { p.x += 0.1; p.y = 0.5 + Math.sin(p.x); });
+    r.motion.current.play = "Cheer";
+    r.run(600);
+    // The jump to the stand and its settling sample, then nothing while it holds still: the cheapest a player can be.
+    const during = r.src.poses.slice(from);
+    expect(during.length).toBeGreaterThan(0);
+    expect(during.length).toBeLessThanOrEqual(2);
+    for (const p of during) {
+      expect(p.x).toBeCloseTo(4, 1); expect(p.z).toBeCloseTo(-3, 1); expect(p.y).toBeCloseTo(1, 1);
+      expect(p.ev.length).toBe(0);
+    }
+    expect(during.at(-1)!.vx).toBe(0);
+    expect(r.src.slows.some(s => s.pose === VB_SPECTATE)).toBe(true);
+    r.world.stand = null;
+    r.run(600);
+    expect(r.src.slows.at(-1)?.pose).toBe("");
+  });
+});

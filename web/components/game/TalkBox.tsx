@@ -11,12 +11,23 @@
  * renders only when the line or its state changes. The resident's clip, mouth and face follow the same conversation
  * in the residents' frame (NPC.tsx). Only this viewer's: nothing here is sent anywhere.
  */
-import { useCallback, useEffect, useRef, useSyncExternalStore, type MouseEvent } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type MouseEvent } from "react";
 import { Dialogue } from "@/components/gui";
+import { Keyword, keywordParts } from "@/components/gui/flat";
 import { AudioManager } from "@/lib/game/audio";
 import { useWorldDialog } from "@/lib/game/useWorldDialog";
 import { POST_TITLES, type ResidentPost } from "@/lib/content/residents";
-import { blipAt, emptyTalkView, endTalk, leaveTalk, pressTalk, stepTalk, subscribeTalk, talkChanged, talkStore, talkView, voiceBlip } from "@/lib/game/residentTalk";
+import { Gift } from "lucide-react";
+import { HeartMeter, ItemCard, RoundButton, StatusLine } from "@/components/gui/flat";
+import { giveGift, talkedTo, useFriendLevel, type FriendMove } from "@/lib/game/friendship";
+import { loadBag, useBag } from "@/lib/game/bagStore";
+import { itemInfo } from "@/lib/collections/bag";
+import { iconUrl } from "@/lib/icons/keys";
+import { ApiError } from "@/lib/apiClient";
+import { parseTalkLine } from "@/lib/content/talk";
+import { FRIEND_MAX, friendNote, tasteLine } from "@/lib/npc/friendship";
+import { toast } from "./ToastHub";
+import { blipAt, emptyTalkView, endTalk, leaveTalk, pressTalk, sayMore, stepTalk, subscribeTalk, talkChanged, talkStore, talkView, voiceBlip } from "@/lib/game/residentTalk";
 import styles from "./TalkBox.module.css";
 
 /** Blips no closer than this (s): a voice, not a buzz. */
@@ -42,9 +53,11 @@ function leave() {
 
 /**
  * One frame of the talk: step it, write the letters that are showing (the rest stay in place, unseen, so the box never
- * reflows as a line grows), and say them. `seen` remembers the line and letters last drawn.
+ * reflows as a line grows), and say them. A line's parts (its keywords, the kit's Keyword) are each a shown and a
+ * rest span under `box`; a keyword's icon comes in as the typing reaches it. `seen` remembers the line, letters and
+ * spans last drawn.
  */
-function frame(seen: { line: number; typed: number; blip: number }, shown: HTMLSpanElement | null, rest: HTMLSpanElement | null, reduced: boolean) {
+function frame(seen: { line: number; typed: number; blip: number; parts: Element | null }, box: HTMLElement | null, reduced: boolean) {
   const t = talkStore.active;
   if (!t) return;
   const now = performance.now() / 1000;
@@ -56,6 +69,8 @@ function frame(seen: { line: number; typed: number; blip: number }, shown: HTMLS
   if (t.phase !== "speaking" && t.phase !== "closing") return;
   const text = t.lines[t.index].text;
   if (t.index !== seen.line) { seen.line = t.index; seen.typed = -1; }
+  // A new line's spans (React mounts them a frame late): draw them afresh.
+  if (box && box.firstElementChild !== seen.parts) { seen.parts = box.firstElementChild; seen.typed = -1; }
   if (t.typed === seen.typed) return;
   for (let i = Math.max(0, seen.typed); i < t.typed; i++) {
     if (!blipAt(text, i) || now - seen.blip < BLIP_GAP) continue;
@@ -64,27 +79,71 @@ function frame(seen: { line: number; typed: number; blip: number }, shown: HTMLS
     seen.blip = now;
   }
   seen.typed = t.typed;
-  if (shown) shown.textContent = text.slice(0, t.typed);
-  if (rest) rest.textContent = text.slice(t.typed);
+  box?.querySelectorAll<HTMLElement>("[data-at]").forEach(part => {
+    const at = Number(part.dataset.at), words = part.dataset.text ?? "", n = Math.max(0, Math.min(words.length, t.typed - at));
+    const [shown, rest] = part.querySelectorAll<HTMLElement>("[data-shown], [data-rest]");
+    if (shown) shown.textContent = words.slice(0, n);
+    if (rest) rest.textContent = words.slice(n);
+    const word = part.closest("[data-tone]") ?? part.querySelector("[data-tone]");
+    if (word) word.toggleAttribute("data-off", n === 0);
+  });
+}
+
+/** A move that reached a whole heart says so (its letter, its coins). */
+const noteMove = (f: FriendMove | null) => { const n = f && friendNote(f, f.name); if (n) toast(n); };
+/** They answer in the talk going on ("[face] words"). */
+const answer = (raw: string) => sayMore([parseTalkLine(raw)], performance.now() / 1000);
+
+/**
+ * Give them something from your bag (d-friends): your bag's items as small white cards; one, and they answer in the
+ * talk (their taste) while the hearts move. One gift a day each: a second gets their "tomorrow, maybe?".
+ */
+function GiftPicker({ slug, onDone }: { slug: string; onDone: () => void }) {
+  const bag = useBag();
+  useEffect(() => { void loadBag(); }, []);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const items = (bag.view?.items ?? []).filter(i => i.count > 0 && !i.locked);
+  const give = async (key: string) => {
+    setBusy(true); setError(null);
+    try {
+      const f = await giveGift(slug, key);
+      AudioManager.playSFX(f.taste === "hate" ? "click" : "confirm");
+      answer(tasteLine(f.taste ?? "meh"));
+      noteMove(f);
+      onDone();
+    } catch (e) {
+      if (e instanceof ApiError && e.code === "gift_done") { answer("[happy] You already gave me something today. Tomorrow, maybe?"); onDone(); return; }
+      setError(e instanceof ApiError ? e.message : "Couldn't reach the island. Try again.");
+      setBusy(false);
+    }
+  };
+  return <div className={styles.gifts} role="group" aria-label="Give a gift" data-testid="gift-picker" onClick={e => e.stopPropagation()}>
+    {bag.view && !items.length ? <StatusLine>Nothing in your bag to give yet.</StatusLine>
+      : <div className={styles.giftRow}>{items.map(i => <ItemCard key={i.item_key} size="sm" arrow={false} picture={iconUrl(i.item_key)} px={34}
+        name={itemInfo(i.item_key)?.name ?? i.item_key} pill={i.count > 1 ? `×${i.count}` : null} disabled={busy} onClick={() => void give(i.item_key)} />)}</div>}
+    {error && <StatusLine error>{error}</StatusLine>}
+  </div>;
 }
 
 export default function TalkBox() {
   const view = useSyncExternalStore(subscribeTalk, talkView, emptyTalkView);
   const open = view.activeId !== null;
   const panel = useWorldDialog<HTMLDivElement>(open, leave, [], true);
-  const shown = useRef<HTMLSpanElement>(null), rest = useRef<HTMLSpanElement>(null);
+  const lineRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
     if (!open) return;
-    const seen = { line: -1, typed: -1, blip: 0 }, reduced = reducedMotion();
+    const seen = { line: -1, typed: -1, blip: 0, parts: null as Element | null }, reduced = reducedMotion();
     let raf = 0;
-    const loop = () => { raf = requestAnimationFrame(loop); frame(seen, shown.current, rest.current, reduced); };
+    const loop = () => { raf = requestAnimationFrame(loop); frame(seen, lineRef.current, reduced); };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
   }, [open]);
   // The keys that move it on; Escape is the dialog system's (it leaves). A held key doesn't race through the lines.
+  const [giving, setGiving] = useState(false);
   useEffect(() => {
-    if (!open) return;
+    if (!open || giving) return;
     const on = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
       if (k !== "e" && k !== "enter" && k !== " ") return;
@@ -93,7 +152,18 @@ export default function TalkBox() {
     };
     window.addEventListener("keydown", on);
     return () => window.removeEventListener("keydown", on);
-  }, [open]);
+  }, [open, giving]);
+  // A whole conversation with them, its last line read, adds half a heart once a day (David 2026-10-28: "you actually have
+  // to have a full chat with them"); opening the talk and leaving early adds nothing.
+  const slug = view.slug, talkId = view.activeId, heard = view.complete && view.index + 1 >= view.count;
+  const credited = useRef<string | null>(null); // this talk's, until it closes
+  useEffect(() => {
+    if (!talkId) credited.current = null;
+    if (!talkId || !slug || !heard || credited.current === talkId) return;
+    credited.current = talkId;
+    void talkedTo(slug).then(noteMove);
+  }, [talkId, slug, heard]);
+  if (!open && giving) setGiving(false);
   const onBox = useCallback((e: MouseEvent) => { if (!(e.target as Element).closest("button")) press(); }, []);
   // Focus comes into the box once it shows (it's hidden while they turn to you, when the dialog system first tries).
   const phase = view.phase;
@@ -102,6 +172,7 @@ export default function TalkBox() {
     if (phase === "speaking" && el && !el.contains(document.activeElement)) el.focus({ preventScroll: true });
   }, [phase, panel]);
 
+  const friend = useFriendLevel(view.slug);
   if (!open) return null;
   const line = talkStore.active?.lines[view.index]?.text ?? "";
   const title = view.post && view.post !== "villager" ? POST_TITLES[view.post as ResidentPost] : null;
@@ -109,8 +180,21 @@ export default function TalkBox() {
   return <div ref={panel} tabIndex={-1} role="dialog" aria-label={`Talking with ${view.name}`} data-gui-dialog className={styles.talk} data-phase={view.phase}
     data-ready={view.complete || undefined} data-testid="talk-box" onClick={onBox}>
     <Dialogue speaker={title ? `${view.name} · ${title}` : view.name} onContinue={press} continueLabel={last && view.complete ? "Bye" : "Next"}>
-      <p className={styles.line} aria-hidden="true"><span ref={shown} /><span ref={rest} className={styles.rest} /></p>
+      <p ref={lineRef} className={styles.line} aria-hidden="true">
+        {/* Keyed by the line: its spans are new for each, the typing fills them (frame). */}
+        <span key={view.index}>{keywordParts(line).map(p => {
+          const typed = <span data-at={p.at} data-text={p.text}><span data-shown="" /><span data-rest="" className={styles.rest}>{p.text}</span></span>;
+          return p.kind ? <Keyword key={p.at} kind={p.kind} off>{typed}</Keyword> : <span key={p.at}>{typed}</span>;
+        })}</span>
+      </p>
       <p className={styles.sr} aria-live="polite">{view.phase === "speaking" ? line : ""}</p>
     </Dialogue>
+    {slug && <div className={styles.friend} onClick={e => e.stopPropagation()}>
+      <span className={styles.hearts}><HeartMeter halves={friend} max={FRIEND_MAX} size={17} label={`Friendship with ${view.name}: ${friend / 2} of ${FRIEND_MAX} hearts`} /></span>
+      <RoundButton label={giving ? "Put the gift away" : `Give ${view.name} a gift`} className={styles.give} aria-pressed={giving} onClick={() => setGiving(g => !g)} data-testid="give-gift">
+        <Gift size={17} strokeWidth={2.2} aria-hidden="true" />
+      </RoundButton>
+    </div>}
+    {giving && slug && <GiftPicker slug={slug} onDone={() => setGiving(false)} />}
   </div>;
 }

@@ -2,7 +2,7 @@
 -- it (supabase_stub.sql first). Never Supabase. Fails before it: production had two residents.
 \set ON_ERROR_STOP 1
 DO $$ BEGIN
-  ASSERT (SELECT count(*) FROM npc_personas WHERE active AND is_permanent) = 10, 'the roster walks: ten residents, got ' || (SELECT count(*) FROM npc_personas);
+  ASSERT (SELECT count(*) FROM npc_personas WHERE active AND is_permanent) = 11, 'the roster walks: eleven residents (Juno since the main quest), got ' || (SELECT count(*) FROM npc_personas);
   ASSERT (SELECT display_name || '|' || post FROM npc_personas WHERE slug = 'curator') = 'Odile|museum_curator', 'Odile (the net, row 312)';
   ASSERT (SELECT display_name || '|' || post FROM npc_personas WHERE slug = 'crafter') = 'Pim|workshop_crafter', 'Pim (the shovel, row 312)';
   ASSERT (SELECT schedule->>'home' FROM npc_personas WHERE slug = 'crafter') = 'hq', 'a routine and a home';
@@ -33,7 +33,7 @@ ROLLBACK;
 -- Again: nothing changes.
 \ir ../migrations/20261017020000_resident_roster.sql
 DO $$ BEGIN
-  ASSERT (SELECT count(*) FROM npc_personas) = 10, 'idempotent';
-  ASSERT (SELECT count(DISTINCT slug) FROM npc_personas) = 10, 'no duplicates';
+  ASSERT (SELECT count(*) FROM npc_personas) = 11, 'idempotent';
+  ASSERT (SELECT count(DISTINCT slug) FROM npc_personas) = 11, 'no duplicates';
   RAISE NOTICE 'resident roster 3 idempotent ok';
 END $$;
