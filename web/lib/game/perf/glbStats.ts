@@ -3,6 +3,9 @@
  * lib/game/perf/budget.test.ts): triangles, draw primitives, distinct materials, the largest embedded texture and
  * the skins' bone counts. No three.js, no DOM: the JSON chunk and the embedded images' headers only.
  */
+import { MeshoptDecoder } from "meshoptimizer";
+
+await MeshoptDecoder.ready;
 
 export interface GlbStats {
   /** Triangles over every mesh primitive (indexed or not; strips and fans counted as triangles; points and lines 0). */
@@ -21,19 +24,23 @@ export interface GlbStats {
 }
 
 interface Accessor { count: number }
+interface Meshopt { byteOffset?: number; byteLength: number; byteStride: number; count: number; mode: "ATTRIBUTES" | "TRIANGLES" | "INDICES"; filter?: "NONE" | "OCTAHEDRAL" | "QUATERNION" | "EXPONENTIAL" }
 interface Primitive { indices?: number; attributes: Record<string, number>; material?: number; mode?: number }
 interface GltfJson {
   accessors?: Accessor[];
   meshes?: { primitives: Primitive[] }[];
   images?: { bufferView?: number; mimeType?: string; uri?: string }[];
-  bufferViews?: { byteOffset?: number; byteLength: number }[];
+  bufferViews?: { buffer?: number; byteOffset?: number; byteLength: number; byteStride?: number; extensions?: { EXT_meshopt_compression?: Meshopt } }[];
   skins?: { joints: number[] }[];
   animations?: unknown[];
 }
 
 const MAGIC = 0x46546c67, JSON_CHUNK = 0x4e4f534a, BIN_CHUNK = 0x004e4942;
 
-/** The JSON and the binary chunk of a GLB (throws on anything that isn't one). */
+/**
+ * The JSON and the binary chunk of a GLB (throws on anything that isn't one). Buffer views packed with
+ * EXT_meshopt_compression (scripts/pack-glbs.mjs) come back decoded, at the end of `bin`, so readers see plain data.
+ */
 export function readGlb(bytes: Uint8Array): { json: GltfJson; bin: Uint8Array | null } {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   if (view.getUint32(0, true) !== MAGIC) throw new Error("not a GLB");
@@ -45,7 +52,24 @@ export function readGlb(bytes: Uint8Array): { json: GltfJson; bin: Uint8Array | 
     at += 8 + length;
   }
   if (!json) throw new Error("GLB without a JSON chunk");
-  return { json, bin };
+  const packed = (json.bufferViews ?? []).filter(v => v.extensions?.EXT_meshopt_compression);
+  if (!bin || !packed.length) return { json, bin };
+  const parts = [bin];
+  let end = bin.byteLength;
+  for (const v of packed) {
+    const m = v.extensions!.EXT_meshopt_compression!, out = new Uint8Array(m.count * m.byteStride);
+    MeshoptDecoder.decodeGltfBuffer(out, m.count, m.byteStride, bin.subarray(m.byteOffset ?? 0, (m.byteOffset ?? 0) + m.byteLength), m.mode, m.filter);
+    const pad = (4 - (end % 4)) % 4;
+    if (pad) { parts.push(new Uint8Array(pad)); end += pad; }
+    Object.assign(v, { buffer: 0, byteOffset: end });
+    delete v.extensions!.EXT_meshopt_compression;
+    parts.push(out);
+    end += out.byteLength;
+  }
+  const all = new Uint8Array(end);
+  let at2 = 0;
+  for (const p of parts) { all.set(p, at2); at2 += p.byteLength; }
+  return { json, bin: all };
 }
 
 /** An image's pixel size from its header (PNG, JPEG, WebP, KTX2); null for a format it doesn't know. */

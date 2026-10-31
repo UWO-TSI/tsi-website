@@ -30,6 +30,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three-stdlib";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import type { CharacterMotion } from "@/lib/game/character/clips";
 import { HOME_S, bobberOnWater, flightAt, flightTime, releaseAfter, type BobberPose, type FishingState } from "@/lib/game/fishingRig";
@@ -88,9 +89,10 @@ interface Rig {
   bang: HTMLDivElement | null;
 }
 
-const fishLoader = new GLTFLoader();
+// The fish ship packed (scripts/pack-glbs.mjs): drei's own meshopt decoder (three-stdlib's, as useGLTF sets it), not a second copy.
+const fishLoader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder() as Parameters<GLTFLoader["setMeshoptDecoder"]>[0]);
 const fishScenes = new Map<string, Promise<THREE.Object3D>>();
-/** A species' model, loaded once (the fish GLBs need no decoders). */
+/** A species' model, loaded once. */
 function loadFish(url: string): Promise<THREE.Object3D> {
   let p = fishScenes.get(url);
   if (!p) {
