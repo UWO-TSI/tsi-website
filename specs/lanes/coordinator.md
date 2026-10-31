@@ -688,3 +688,23 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - perf-v1, asset-audit and asset-thumbs (tools and audits);
   - avatar-v8, classes-launch-tuning, apply-world and director-developer-recruitment (old).
   Testing stays headless, even with David's go to open a browser.
+- **v1.2 shipped (2026-10-30 ~21:00):**
+  - release-v12 242a0d94 merged as 2e7d7de8: the nine branches, npc-editor and the resident looks, music-one and entry-perf (bee6b4db).
+  - Gates: tsc clean; vitest 3728; eslint 0 errors; seeds up to date; build passes. perf:check passed: v2 high 5.00 ms (baseline 4.80), lite 3.00 (2.90). Smoke green.
+  - Prod dump prod-before-v1.2-20261030-2057.dump; contraband shop rows 0.
+  - Applied, in order: 20261030010000_main_quest, 010100_main_quest_r2, 010200_welcome_week, 010300_resident_friendship, 010400_volleyball_casual, 010500_shop_items_no_contraband, 010600_rod_tackle_slots, 010700_fishing_tasks_sushi, 010800_tackle_rolls, 20261030231818_catalogue_seed.
+  - Verify clean: RLS on every table, the same 5 user-callable definers, every new table and function present.
+  - Tag v1.2.
+  - Entry, Play to move (none cold 6.2 s to 3.9 s, campus cold 13.1 s to 9.7 s, campus warm 9.9 s to 6.2 s).
+  - Cache: next.config sends stale-while-revalidate on /assets, /models and /audio. Before the next deploy that changes an asset in place, content-versioned asset URLs must land (entry-perf r2), or a returning player gets the old file once.
+  - Entry-perf r2 proposals:
+    - lossless WebP for the entry PNGs (about 2.2 MB);
+    - meshopt and WebP in the entry GLBs (25 MB raw);
+    - cache the character parts per part (skin.glb loads 3 times);
+    - colour_atlas.png is 1.9 MB on entry.
+  - For David:
+    - Juno's gift tastes (proposed: loves fish, likes mineral, hates fruit);
+    - the tackle door opens the counter, then Browse rods into the rod shop;
+    - the menu paper is a shade lighter;
+    - sushi-chef skin 10 was applied as 9.
+  - Music: the Ambience slider is idle on the member island. A bug from before v1.2: spawning right at the sushi bar drops its override.
