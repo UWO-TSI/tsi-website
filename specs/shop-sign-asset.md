@@ -1,6 +1,6 @@
 # Shop sign texture, September 7, 2026
 
-- Runtime asset: `web/public/assets/branding/shop-sign-v1.png`.
+- Runtime asset: `web/public/assets/branding/shop-sign-v1.webp` (2026-10-30: the PNG below as lossless WebP, `cwebp -lossless -exact`, pixel-identical).
 - Built-in image_gen edit, not CLI. Output copied unchanged from `/Users/DavidLiu/.codex/generated_images/01a07833-2c27-7871-b1fb-66a98f5426c7/exec-51326ed7-d5be-440d-be0d-f59e86833510.png`.
 - Edit target: `/Users/DavidLiu/Downloads/Assets/Model/StrcMarketA02_USen.Nin_NX_NVN/mSign_Alb.png`. The original export looked only in the base asset folder, leaving mSign untextured. Language-specific source contains the sign atlas. Existing source/library distribution status is unchanged by this edit.
 - Applied only to the owned `mSign` material of `shop-market.glb`, sRGB, flipY=false. No GLB binary changed. No original sign emission map applied because its lettering would disagree with the edited text.

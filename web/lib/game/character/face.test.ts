@@ -240,7 +240,8 @@ describe("David's 19 faces (face set 305, art/characters/v7/face_set_305.py)", (
     expect(createHash("sha256").update(JSON.stringify(legacy)).digest("hex")).toBe("270719a91c09c0a0d2225454ef04db02c9d003f7d551b13017f6e9fa406056cd");
     const atlas = (f: string) => createHash("sha256").update(readFileSync(join(__dirname, "../../../public", f))).digest("hex");
     expect(atlas(FACE_ATLAS_URLS.creator)).toBe("211ea82a9da577f555f9cb8b5e4527e44824c503f683279e1a2899c5fa9f67a8");
-    expect(atlas(FACE_ATLAS_URLS.world)).toBe("b78f199b24d5b6ea02fb56db25efab28cc4250ca004a35a467c0b949162bbd54");
+    // the world copy as lossless WebP since 2026-10-30, pixel for pixel the PNG that hashed b78f199b...
+    expect(atlas(FACE_ATLAS_URLS.world)).toBe("c384b6ba63c6fe5f61a8eff4deca434fed75af99fbe27d01ee54f78e0b174400");
     // an old look's own slots all read the first page; every character still loads the second for its expressions
     const old = look({ eyes: "F1.2", mouth: "G3.3", extras: ["blush", "mole", "blush_band", "freckles"] });
     expect(faceSlots(old, restPose(old, "neutral")).every(s => s.page === 0)).toBe(true);

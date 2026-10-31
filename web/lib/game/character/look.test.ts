@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { glbStats, readGlb } from "@/lib/game/perf/glbStats";
 import { CHARACTER_BUDGET } from "@/lib/game/perf/budget";
-import { BASE_URL, BATCH2_PRICES, COLOUR_ATLAS_URL, DESIGNS, CUSTOM_HAIR_REF, HAIR_MAPS_URLS, HAIR_THUMB_URL, NATURAL_HAIR, naturalHex, OLD_HAIR, LOD_SKIN_URL, CLIPS, DEFAULT_LOOK, FACE, FACE_ATLAS2_URLS, FACE_ATLAS_URLS, PALETTE, PARTS, PART_BY_ID, bodyKey, faceRef, facePartRef, hairHex, lookBytes, lookRefs, parseLook, partRef, priceOf, randomLook, resolveParts, seeded, SKIN_PICKS, STARTER_PARTS, unlockRef, wear, wornParts } from "./look";
+import { BASE_URL, BATCH2_PRICES, COLOUR_ATLAS_URL, DESIGN_ATLAS_URL, DESIGNS, CUSTOM_HAIR_REF, HAIR_MAPS_URLS, HAIR_THUMB_URL, NATURAL_HAIR, naturalHex, OLD_HAIR, LOD_SKIN_URL, CLIPS, DEFAULT_LOOK, FACE, FACE_ATLAS2_URLS, FACE_ATLAS_URLS, PALETTE, PARTS, PART_BY_ID, bodyKey, faceRef, facePartRef, hairHex, lookBytes, lookRefs, parseLook, partRef, priceOf, randomLook, resolveParts, seeded, SKIN_PICKS, STARTER_PARTS, unlockRef, wear, wornParts } from "./look";
 import { LOOK_MAX_BYTES } from "@/lib/net/protocol";
 import { hairShift, NO_SHIFT, shiftedMedian } from "./hairColour";
 
@@ -25,7 +25,7 @@ describe("character catalogue", () => {
   it("ships every part GLB, the clip base and the face atlases", () => {
     for (const p of PARTS) expect(existsSync(join(web, "public/assets/characters/v6", p.glb)), p.glb).toBe(true);
     for (const f of [BASE_URL, FACE_ATLAS_URLS.creator, FACE_ATLAS_URLS.world, FACE_ATLAS2_URLS.creator, FACE_ATLAS2_URLS.world]) expect(existsSync(join(web, "public", f)), f).toBe(true);
-    expect(existsSync(join(web, "public/assets/characters/v6", DESIGNS.atlas))).toBe(true);
+    expect(existsSync(join(web, "public", DESIGN_ATLAS_URL))).toBe(true);
     expect(BASE_URL).toMatch(/v8_clips\.glb$/); // the v8 head on the shared skull (head fit, row 304)
   });
   it("ships a LOD 1 for every part and the base skin, lighter than the full (art/characters/build_lod.py)", () => {

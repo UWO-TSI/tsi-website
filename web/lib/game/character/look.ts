@@ -15,6 +15,8 @@ import { hairShift, NO_SHIFT, oklabToHex, oklchToOklab, shiftedMedian, type Hair
 import type { DesignUse } from "./rig";
 
 export const CHARACTER_ROOT = "/assets/characters/v6/";
+/** The world's character textures ship as lossless WebP (scripts/sync-character-assets.mjs): the art names the PNG. */
+const worldWebp = (png: string) => png.replace(/\.png$/, ".webp");
 /** The clip-bearing base: the v6 body with the hand-modeled v7 head (avatar v7). */
 export const BASE_URL = `${CHARACTER_ROOT}${catalog.base.clips_glb}`;
 /** LOD 1 (art/characters/build_lod.py): every part decimated on the same rig, and the base's skin alone (the face, head and clips stay the base's). */
@@ -23,27 +25,27 @@ export const LOD_SKIN_URL = `${LOD_ROOT}base/skin.glb`;
 /** LOD 2 (head-roblox): the whole hairstyles at about 1,100 triangles for characters far and small; other parts use LOD 1. */
 export const LOD2_ROOT = `${CHARACTER_ROOT}lod2/`;
 /** The face layer atlas: 1024 px per face canvas in the creator, the 512 copy in the world (same layout). */
-export const FACE_ATLAS_URLS = { creator: `${CHARACTER_ROOT}base/${faceV7.atlas}`, world: `${CHARACTER_ROOT}base/${faceV7.atlas_world}` };
+export const FACE_ATLAS_URLS = { creator: `${CHARACTER_ROOT}base/${faceV7.atlas}`, world: worldWebp(`${CHARACTER_ROOT}base/${faceV7.atlas_world}`) };
 /** Round 2 (David, 2026-10-17): every mapped hairstyle's own source texture, one cell a piece (art/characters/hair/
  * import_hair.py natural_map): RGB as drawn in Roblox, alpha its recolour channel (1 the hair's colour, 2/3 its second, 1/3
  * fixed), at 512 px a cell (the creator) and its half-size copy (the world, as the face atlas). A picked colour is a hue
  * and saturation shift of it (hairColour.ts, Character.tsx). */
-export const HAIR_MAPS_URLS = { creator: `${CHARACTER_ROOT}${catalog.hairMaps.atlas}`, world: `${CHARACTER_ROOT}${catalog.hairMaps.atlas_world}` };
+export const HAIR_MAPS_URLS = { creator: `${CHARACTER_ROOT}${catalog.hairMaps.atlas}`, world: worldWebp(`${CHARACTER_ROOT}${catalog.hairMaps.atlas_world}`) };
 /** Its second page (David's 19 faces, face_set_305.py), loaded only for a look that wears one of them. */
-export const FACE_ATLAS2_URLS = { creator: `${CHARACTER_ROOT}base/${faceV7.atlas2}`, world: `${CHARACTER_ROOT}base/${faceV7.atlas2_world}` };
+export const FACE_ATLAS2_URLS = { creator: `${CHARACTER_ROOT}base/${faceV7.atlas2}`, world: worldWebp(`${CHARACTER_ROOT}base/${faceV7.atlas2_world}`) };
 /** head-v10 (row 311): each whole hairstyle's creator tile, baked once at build time (scripts/bake-hair-thumbs.mjs) in its
  * own colours (round 2) on the default head: the tiles never redraw when the colour changes, and show at once. */
 export const HAIR_THUMB_URL = (id: string) => `${CHARACTER_ROOT}hair/thumbs/${id}.webp`;
 /** Wardrobe batch 2: the fixed-colour atlas (art/characters/colour_atlas.py): David's Roblox accessories and #22's hat keep
  * their own textures. A vertex whose u is 2 or more draws the texel at (u - 2, v), never tinted (Character.tsx). */
-export const COLOUR_ATLAS_URL = `${CHARACTER_ROOT}colour_atlas.png`;
+export const COLOUR_ATLAS_URL = `${CHARACTER_ROOT}colour_atlas.webp`;
 /**
  * clothing-v2 (David, 2026-10-26: universal garments, a new design only changes the paint over them): one mesh
  * per garment type, a design is paint on it. Every design is one cell of this atlas (art/characters/outfits/
  * build_outfits.py), drawn over the garment's tint by its alpha (Character.tsx); a part names its cell (`design`).
  */
 export const DESIGNS = catalog.designs as { atlas: string; materials: string[]; cells: Record<string, number>; rects: number[][] };
-export const DESIGN_ATLAS_URL = `${CHARACTER_ROOT}${DESIGNS.atlas}`;
+export const DESIGN_ATLAS_URL = worldWebp(`${CHARACTER_ROOT}${DESIGNS.atlas}`);
 /** Where a design cell sits in the atlas (its `rects` entry, inside its gutter): a garment's uv (0..1) maps to
  * (u0 + u s, v0 + v s) (rig.ts DesignUse). */
 export function designUse(cell: number): DesignUse {
