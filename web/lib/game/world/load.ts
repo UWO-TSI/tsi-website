@@ -8,7 +8,7 @@ import { seedTerrain } from "../grid";
 import { setVillage, villageSwapped } from "../villageMap";
 import { decodeWorld, type World, type WorldDoc } from "./format";
 import "./member";
-import type { DerivedWorld } from "./derive";
+import type { DerivePart, DerivedWorld } from "./derive";
 import { villageOfWorld } from "./village";
 
 /** The images as build assets (hashed URLs): the bundler emits each file the `new URL` names. */
@@ -44,18 +44,20 @@ export function loadGameWorld(): Promise<void> | null {
 }
 
 /**
- * The world's derived fields from a worker (derive.ts), so the loading screen never freezes on them. Null without
- * workers or on any failure: the game then derives them on first use, as before.
+ * The world's derived fields from two workers side by side (derive.ts: the cell shapes, the shore field), so the
+ * loading screen never freezes on them. Null without workers or on any failure: the game then derives them on first
+ * use, as before.
  */
 function deriveOffThread(w: World): Promise<DerivedWorld | null> {
   if (typeof Worker === "undefined") return Promise.resolve(null);
-  return new Promise(done => {
+  const part = (name: DerivePart) => new Promise<Partial<DerivedWorld> | null>(done => {
     try {
       const worker = new Worker(new URL("./deriveWorker.ts", import.meta.url), { type: "module" });
-      const end = (out: DerivedWorld | null) => { worker.terminate(); done(out); };
-      worker.onmessage = (e: MessageEvent<DerivedWorld>) => end(e.data);
+      const end = (out: Partial<DerivedWorld> | null) => { worker.terminate(); done(out); };
+      worker.onmessage = (e: MessageEvent<Partial<DerivedWorld>>) => end(e.data);
       worker.onerror = () => end(null);
-      worker.postMessage(w.terrain);
+      worker.postMessage({ terrain: w.terrain, part: name });
     } catch { done(null); }
   });
+  return Promise.all([part("terrain"), part("shore")]).then(([a, b]) => (a && b ? { ...a, ...b } as DerivedWorld : null));
 }
