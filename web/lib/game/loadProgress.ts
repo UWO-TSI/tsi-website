@@ -6,6 +6,7 @@
  * rendered behind the screen while every shader compiles (lib/game/sceneGate.ts), of the frames it waits for.
  */
 import { useSyncExternalStore } from "react";
+import { assetUrl } from "@/lib/assetUrl";
 import { islandPhase, parseTimeOverride } from "./islandTime";
 import { worldNow } from "./worldClock";
 
@@ -39,5 +40,5 @@ export const useLoadProgress = () => useSyncExternalStore(subscribe, () => shown
  */
 export function loadingStill(search = typeof window === "undefined" ? "" : window.location.search): string {
   const forced = process.env.NODE_ENV !== "production" ? parseTimeOverride(new URLSearchParams(search).get("time")) : null;
-  return `/assets/loading/island-${forced ?? islandPhase(new Date(worldNow()))}.webp`;
+  return assetUrl(`/assets/loading/island-${forced ?? islandPhase(new Date(worldNow()))}.webp`);
 }
