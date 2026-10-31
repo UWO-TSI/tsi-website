@@ -718,3 +718,7 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - first-find's claim_plot answers "That isn't open yet" on the new world.
   - Cleanup: users deleted, 172 columns scanned, nothing left.
   - Test servers 3300 and 3301 stopped. Worktrees tutorial-test, volleyball-test, music-one and release-v12 removed.
+- **Entry-perf r2 step 1 shipped (main 3590501b, ~21:35):** content-versioned game file URLs.
+  - A file with `?v=` is served immutable for a year; a bare file revalidates (round 1's stale-while-revalidate is gone).
+  - Live: the arrival passes on play.tethos.ca with a throwaway account (deleted, nothing left), and the spawn still matches.
+  - Steps 2 to 5 are running in game/entry-perf: per-part character caching, lossless WebP, meshopt GLBs, the final measure.
