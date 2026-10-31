@@ -61,7 +61,7 @@ describe("asset budgets (budget.ts ASSET_CATEGORIES)", () => {
     }
   });
   it("reads image sizes from PNG, JPEG and WebP headers", () => {
-    const png = readFileSync(join(web, "public/assets/characters/v6/outfits/designs.png"));
+    const png = readFileSync(join(web, "public/assets/characters/v6/base/v7_face_atlas.png"));
     expect(imageSize(png)?.width).toBeGreaterThan(0);
   });
 });

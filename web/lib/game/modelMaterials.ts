@@ -23,7 +23,7 @@ export function lightHQWindows(model: Object3D, color: string): void {
 }
 function getShopSignTexture() {
   if (!shopSignTexture) {
-    shopSignTexture = new TextureLoader().load("/assets/branding/shop-sign-v1.png");
+    shopSignTexture = new TextureLoader().load("/assets/branding/shop-sign-v1.webp");
     shopSignTexture.colorSpace = SRGBColorSpace;
     shopSignTexture.flipY = false;
   }

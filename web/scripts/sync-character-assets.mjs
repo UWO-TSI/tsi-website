@@ -4,6 +4,7 @@
  * app: every catalogue GLB plus the clip-bearing base body (the catalogue's
  * base.clips_glb: v7_clips.glb, the hand-modeled v7 head), the verb library (verbs.glb) and the sushi bar staff's clips (staff.glb) to
  * public/assets/characters/v6/, the v7 face layer atlases next to it, the
+ * world's textures as lossless WebP (pixel for pixel the art's PNGs, a third to a half the bytes; look.ts names them), the
  * catalogue/palette/face JSON to data/characters/, and the LOD 1 GLBs (art/characters/lod1, build_lod.py) to lod1/.
  *
  *   node web/scripts/sync-character-assets.mjs
@@ -17,6 +18,7 @@ import { ALL_EXTENSIONS, EXTMeshoptCompression } from "@gltf-transform/extension
 import { reorder } from "@gltf-transform/functions";
 import { MeshoptDecoder, MeshoptEncoder } from "meshoptimizer";
 import { execFileSync } from "node:child_process";
+import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -25,6 +27,8 @@ const art = resolve(web, "../art/characters");
 const out = join(web, "public/assets/characters/v6");
 const data = join(web, "data/characters");
 const copy = (from, to) => { mkdirSync(dirname(to), { recursive: true }); copyFileSync(from, to); };
+/** A PNG to its lossless WebP (look.ts worldWebp): -exact keeps the colour under transparent texels too. */
+const webp = (from, to) => { mkdirSync(dirname(to), { recursive: true }); execFileSync("cwebp", ["-quiet", "-lossless", "-exact", "-z", "9", "-metadata", "none", from, "-o", to.replace(/\.png$/, ".webp")]); };
 
 const catalog = JSON.parse(readFileSync(join(art, "character_catalog.json"), "utf8"));
 // wardrobe batch 2: David's Roblox accessories (art/characters/accessories/import_roblox.py) in their own section
@@ -58,19 +62,24 @@ for (const [dir, glb] of [...["", "lod1/", "lod2/"].flatMap(d => hairGlbs.map(g 
 }
 // avatar v7 face: the layer atlas at 1024 px per face canvas (creator) and 512 (world), animated by uniforms
 const face = JSON.parse(readFileSync(join(art, "v7/face/face_v7.json"), "utf8"));
-for (const f of [face.atlas, face.atlas_world, face.atlas2, face.atlas2_world]) copy(join(art, "v7/face", f), join(out, "base", f));
+for (const f of [face.atlas, face.atlas2]) copy(join(art, "v7/face", f), join(out, "base", f));
+for (const f of [face.atlas_world, face.atlas2_world]) webp(join(art, "v7/face", f), join(out, "base", f));
 // head fit: the full hairstyles' shared shading atlas (art/characters/hair/import_hair.py)
 if (catalog.hairMaps) copy(join(art, catalog.hairMaps.atlas), join(out, catalog.hairMaps.atlas));
 // round 2: its world copy at half size (like the face atlas's), a 2 x 2 box filter on each channel alone: cells and their
 // padding halve exactly, and no texel's colour is weighted by its channel alpha (which a premultiplied resize would do)
-if (catalog.hairMaps?.atlas_world) execFileSync("magick", [join(art, catalog.hairMaps.atlas), "-channel", "RGBA", "-separate", "-filter", "box",
-  "-resize", "50%", "-combine", "-define", "png:color-type=6", join(out, catalog.hairMaps.atlas_world)]);
+if (catalog.hairMaps?.atlas_world) {
+  const half = join(tmpdir(), "hair_colour_world.png");
+  execFileSync("magick", [join(art, catalog.hairMaps.atlas), "-channel", "RGBA", "-separate", "-filter", "box",
+    "-resize", "50%", "-combine", "-define", "png:color-type=6", half]);
+  webp(half, join(out, catalog.hairMaps.atlas_world));
+}
 // wardrobe batch 2: the fixed-colour atlas (art/characters/colour_atlas.py: the Roblox accessories' and #22's hat's own
 // textures) and David's prices for the batch (specs/wardrobe/batch2-pricing.json)
-copy(join(art, "colour_atlas.png"), join(out, "colour_atlas.png"));
+webp(join(art, "colour_atlas.png"), join(out, "colour_atlas.png"));
 // clothing-v2: the garment designs, one atlas cell each (art/characters/outfits/build_outfits.py)
-copy(join(art, catalog.designs.atlas), join(out, catalog.designs.atlas));
+webp(join(art, catalog.designs.atlas), join(out, catalog.designs.atlas));
 copy(resolve(web, "../specs/wardrobe/batch2-pricing.json"), join(data, "batch2-pricing.json"));
 for (const name of ["character_catalog.json", "palette.json", "v7/face/face_v7.json", "skull/skull.json"]) copy(join(art, name), join(data, name.replace(/^.*\//, "")));
 
-console.log(`synced ${parts.length} parts (${hairGlbs.length} hairstyles meshopt-compressed in 3 tiers, ${accGlbs.length} Roblox accessories in 2), base, ${Object.keys(lod).length} LOD 1 and ${Object.keys(lod2).length} LOD 2 GLBs, 4 face atlases (2 pages), the hair, colour and design atlases, 5 JSON files`);
+console.log(`synced ${parts.length} parts (${hairGlbs.length} hairstyles meshopt-compressed in 3 tiers, ${accGlbs.length} Roblox accessories in 2), base, ${Object.keys(lod).length} LOD 1 and ${Object.keys(lod2).length} LOD 2 GLBs, 4 face atlases (2 pages; the world's as WebP), the hair, colour and design atlases, 5 JSON files`);
