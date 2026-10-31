@@ -23,6 +23,20 @@ export function warmupFrame(frames: number, loaded: boolean, timedOut: boolean, 
 }
 export const warmedUp = (frames: number) => frames >= WARMUP_FRAMES;
 
+/**
+ * Loads nobody sees on entry (the interiors, the merch, the tools' flourish): a module-scope preload counts in the
+ * loading manager, so the loading screen waited for them. Queued until the world's first frame (LoadGate calls
+ * `enterWorld`), then started; a room entered sooner loads when it mounts, as before.
+ */
+const later: (() => void)[] = [];
+let entered = false;
+export function afterEntry(load: () => void) { if (entered) load(); else later.push(load); }
+export function enterWorld() {
+  if (!entered && typeof performance !== "undefined") performance.mark("island entered"); // for specs/perf/entry-trace.mjs
+  entered = true;
+  for (const load of later.splice(0)) load();
+}
+
 export type EscapeAction = "none" | "close" | "layer";
 /**
  * What an Escape keydown does, in order: nothing while a door is mid-fade, or when the browser's own Escape just ended

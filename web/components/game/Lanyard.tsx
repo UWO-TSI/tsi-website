@@ -14,6 +14,7 @@ import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { prepareModel } from "@/lib/game/modelMaterials";
 import { dragSwing, newSwing, stepSwingFor, type Swing } from "@/lib/game/keychainSwing";
+import { afterEntry } from "@/lib/game/sceneGate";
 
 export const LANYARD_URL = "/assets/game/items/merch-tsi-lanyard.glb";
 export const LANYARD_SLUG = "merch-tsi-lanyard";
@@ -150,4 +151,4 @@ export default function Lanyard({ grab = false, scale = 1, position, still = fal
   </group>;
 }
 
-useGLTF.preload(LANYARD_URL);
+afterEntry(() => useGLTF.preload(LANYARD_URL));

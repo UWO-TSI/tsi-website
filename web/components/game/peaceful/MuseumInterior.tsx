@@ -28,9 +28,9 @@ import { ROSTER } from "@/lib/collections/roster";
 import { ISLAND_LIGHTING, type IslandLight } from "@/lib/game/islandLighting";
 import { interiorLight } from "@/lib/game/interiorLight";
 import InteriorDaylight from "../InteriorDaylight";
+import { afterEntry } from "@/lib/game/sceneGate";
 
-preloadPieces(["museum-tank", "museum-case", "museum-stand"]);
-preloadShells(["museum"]);
+afterEntry(() => { preloadPieces(["museum-tank", "museum-case", "museum-stand"]); preloadShells(["museum"]); });
 const BOUNDS: RoomBounds = { halfW: 9, halfD: 5, spawn: [0, -3.0] };
 const CASES_PER_WING = 6;
 /** The wings in the shell's order (build_interiors.py WINGS): a label column each. */

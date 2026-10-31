@@ -14,6 +14,7 @@ import * as THREE from "three";
 import { AudioManager } from "@/lib/game/audio";
 import { prepareModel } from "@/lib/game/modelMaterials";
 import { DRAG_SPIN, TURN_MAX, capOffset, dragSwing, linkDir, newPress, newSwing, pressDepth, pressKey, spinTwist, stepCap, stepSwingFor, type Swing, type Vec3 } from "@/lib/game/keychainSwing";
+import { afterEntry } from "@/lib/game/sceneGate";
 
 export const KEYCHAIN_URL = "/assets/game/items/merch-tsi-keycap-keychain.glb";
 /** How far the keycap goes in, bottomed out (model units: the switch's 4 mm travel). */
@@ -153,4 +154,4 @@ export default function KeycapKeychain({ grab = false, onKeycapDown, scale = 1, 
   </group>;
 }
 
-useGLTF.preload(KEYCHAIN_URL);
+afterEntry(() => useGLTF.preload(KEYCHAIN_URL));

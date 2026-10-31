@@ -30,6 +30,7 @@ import TickingClock from "../TickingClock";
 import TrophyCase from "../TrophyCase";
 import { Workbench } from "../crafting/Workshop";
 import HqRoom, { preloadHqRoom } from "./HqRoom";
+import { afterEntry } from "@/lib/game/sceneGate";
 
 const BOUNDS: RoomBounds = { halfW: HQ_ROOM.halfW, halfD: HQ_ROOM.halfD, spawn: HQ_SPAWN };
 const toStation = ({ id, name, pos, action, range }: Station): InteriorStation => ({ id, name, pos, action, range });
@@ -38,7 +39,7 @@ const GROUND = HQ.stations.filter(s => s.level === 0).map(toStation);
 const UPPER = HQ.stations.filter(s => s.level === 1).map(toStation);
 const NONE: InteriorStation[] = [];
 
-preloadHqRoom();
+afterEntry(preloadHqRoom);
 
 /** You arrive a step inside the door, clear of its prompt (it shows when you walk back to it). */
 function arrive(player: React.MutableRefObject<THREE.Vector3>) { player.current.set(HQ_SPAWN[0], 0, HQ_SPAWN[1]); }

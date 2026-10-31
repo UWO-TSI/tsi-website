@@ -24,6 +24,7 @@ import {
 } from "./interiorShared";
 import Keeper from "./Keeper";
 import ShopRoom, { preloadShopRoom } from "./ShopRoom";
+import { afterEntry } from "@/lib/game/sceneGate";
 
 const BOUNDS: RoomBounds = { halfW: SHOP_ROOM.halfW, halfD: SHOP_ROOM.halfD, spawn: SHOP_SPAWN };
 
@@ -34,7 +35,7 @@ export const SHOP_STATIONS: InteriorStation[] = [
   ...SHOP_BOOTH_LIST.map(({ id, spot }) => ({ id, name: "Changing room", pos: spot, action: "fitting", range: SHOP_BOOTHS.range })),
 ];
 
-preloadShopRoom();
+afterEntry(preloadShopRoom);
 
 export default function ShopInterior({
   frozen,

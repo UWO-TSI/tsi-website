@@ -34,13 +34,14 @@ import { standWorld } from "@/lib/game/movement/sim";
 import { studyHoldsPrompt } from "@/lib/study/worldStore";
 import { CAFE_BOARD, CAFE_DOOR, CAFE_EXIT_RANGE, CAFE_ROOM, CAFE_SPAWN, CAFE_WINDOW, OWNER_TALK, cafeWalkable } from "@/lib/game/cafe";
 import world from "../DefaultIslandWorld.module.css";
+import { afterEntry } from "@/lib/game/sceneGate";
 
 const flat = () => 0;
 const SPAWN: [number, number, number] = [CAFE_SPAWN[0], 0, CAFE_SPAWN[1]];
 /** The café floor for the movement kit: inside the walls, clear of the bar, the shelves, the plants and the study tables. */
 const CAFE = standWorld(flat, (x, z) => cafeWalkable(x, z), () => false);
 // The room only once the café opens (drop 2): until then the village loads only the kit its study tables use.
-preloadCafe(DROPS.cafe ? ["cafe-room", "cafe-kit"] : ["cafe-kit"]);
+afterEntry(() => preloadCafe(DROPS.cafe ? ["cafe-room", "cafe-kit"] : ["cafe-kit"]));
 
 /** Outside the window wall, per phase: sky, a haze band and the far hedge line. */
 const OUTSIDE: Record<IslandPhase, [string, string, string]> = {

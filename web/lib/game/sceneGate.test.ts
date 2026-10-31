@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COMPILE_AT, WARMUP_FRAMES, escapeAction, warmedUp, warmupFrame } from "./sceneGate";
+import { COMPILE_AT, WARMUP_FRAMES, afterEntry, enterWorld, escapeAction, warmedUp, warmupFrame } from "./sceneGate";
 
 describe("doors wait for the room (interiors deliverable 5)", () => {
   it("lifts the fade only after the room has loaded and rendered a few frames", () => {
@@ -45,5 +45,20 @@ describe("Escape steps to the next Esc layer once nothing else is open (playtest
   it("steps on when an Escape reaches the page with the mouse still held (fullscreen with the keyboard locked)", () => {
     expect(escapeAction({ ...base, captureEnded: true, locked: true })).toBe("layer");
     expect(escapeAction({ ...base, locked: true, fading: true })).toBe("none");
+  });
+});
+
+describe("loads nobody sees on entry wait for the first frame (entry-perf)", () => {
+  it("holds them until the world is entered, runs them once, then runs new ones at once", () => {
+    const ran: string[] = [];
+    afterEntry(() => ran.push("shop"));
+    afterEntry(() => ran.push("hq"));
+    expect(ran).toEqual([]);
+    enterWorld();
+    expect(ran).toEqual(["shop", "hq"]);
+    enterWorld();
+    expect(ran).toEqual(["shop", "hq"]);
+    afterEntry(() => ran.push("home"));
+    expect(ran).toEqual(["shop", "hq", "home"]);
   });
 });

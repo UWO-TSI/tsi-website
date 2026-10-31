@@ -16,6 +16,7 @@ import {
   type InteriorStation, type RoomBounds,
 } from "./interiorShared";
 import Keeper from "./Keeper";
+import { afterEntry } from "@/lib/game/sceneGate";
 
 const BOUNDS: RoomBounds = { halfW: 4, halfD: 4, spawn: [0, -2.8] };
 
@@ -24,7 +25,7 @@ export const WHARF_STATIONS: InteriorStation[] = [
   { id: "exit", name: "Exit", pos: [0, -3.5], action: "exit", range: 2.0 },
 ];
 
-preloadPieces(["counter-register", "barrel", "cardboard-pile", "yellow-message-mat"]);
+afterEntry(() => preloadPieces(["counter-register", "barrel", "cardboard-pile", "yellow-message-mat"]));
 
 export default function WharfShackInterior({
   frozen,

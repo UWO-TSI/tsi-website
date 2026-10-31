@@ -24,11 +24,12 @@ import {
   FLOORINGS, MAX_ROOMS, ROOM_SIZE, WALLPAPERS, cellsOf, footprint, roomInside, roomWallLength, snapToWall,
   type HomeLayoutDoc, type PlacedItem, type Rotation, type Wall,
 } from "@/lib/homes/layout";
+import { afterEntry } from "@/lib/game/sceneGate";
 
 const [RW, RD] = ROOM_SIZE;
 const WALL_H = 3.2;
 const I = "/assets/acnh/interior/";
-[...WALLPAPERS.map(w => `${I}wall-${w}.png`), ...FLOORINGS.map(f => `${I}floor-${f}.png`)].forEach(url => useTexture.preload(url));
+afterEntry(() => [...WALLPAPERS.map(w => `${I}wall-${w}.png`), ...FLOORINGS.map(f => `${I}floor-${f}.png`)].forEach(url => useTexture.preload(url)));
 
 export type HouseNear = "exit" | "buy" | "closet" | "bed" | "chest" | null;
 /** World x of room i's screen-left edge (rooms centred on x = 0). */
