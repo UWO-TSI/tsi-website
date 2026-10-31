@@ -23,7 +23,7 @@ These rules are hard. The coordinator merges and pushes; lanes never push.
 - **Heavy lock:** full tsc and vitest run under `/private/tmp/claude-501/uwotsi-heavy.lock`, via `/Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh (set LANE=game/<lane> for the owner file) heavy <cmd>`. Use `vitest --maxWorkers=2`.
 - **Browser lock:** dev servers, browsers and benches run only under `withlock.sh devserver <cmd>`. There is no queue file: never create one. The script exits 75 after 20 minutes of waiting, so retry and check the exit code (a `| tail` hides it).
 - **Memory:** no second browser. Don't build while a browser is open. Swap runs high on this machine.
-  - **Blender lock:** only one Blender at a time, machine-wide: `withlock.sh blender <cmd>`. Blender runs headless only (`/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P <script>`), never through the blender MCP. Close it after each export batch.
+  - **Blender lock:** only one Blender at a time, machine-wide: `withlock.sh blender <cmd>`. Blender runs headless only (`/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P <script>`), never through the blender MCP. Close it after each export batch. A GLB exported into `web/public/` replaces a packed file with an unpacked one, so run `cd web && node scripts/pack-glbs.mjs` after every export (lossless meshopt and WebP, entry-perf r2).
   - **High swap:** while `sysctl -n vm.swapusage` shows more than 9 GB used, the heavy, browser and Blender locks are mutually exclusive. Hold at most one of them, and wait for the others to be free before taking yours.
 
 ## Commands

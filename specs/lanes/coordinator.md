@@ -722,3 +722,12 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - A file with `?v=` is served immutable for a year; a bare file revalidates (round 1's stale-while-revalidate is gone).
   - Live: the arrival passes on play.tethos.ca with a throwaway account (deleted, nothing left), and the spawn still matches.
   - Steps 2 to 5 are running in game/entry-perf: per-part character caching, lossless WebP, meshopt GLBs, the final measure.
+- **Entry-perf r2 merged (49f3a243):**
+  - What it does:
+    - each character part loads once;
+    - six entry PNGs are lossless WebP (6.6 MB to 3.8 MB);
+    - 217 entry GLBs are packed with lossless meshopt (13.4 MB to 10.2 MB brotli), done by web/scripts/pack-glbs.mjs.
+  - Campus cold, Play to move: 9.9 s to 7.8 s. A warm entry sends no game-file requests.
+  - Proof: pixel-identical; perf:check passed; packed fish caught live on the member reel with identical meshes.
+  - Lane-rules: rerun pack-glbs.mjs after every Blender export.
+  - Proposed, not done: quantized meshopt (needs David's eye), packing the character GLBs (2.5 MB), and gltfsOf for ACNHBuilding (the shop door is parsed 4x).
