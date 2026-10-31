@@ -39,6 +39,14 @@ await ctx.addInitScript(() => {
   try { if (!localStorage.getItem("tsi.look.v1")) { localStorage.setItem("tsi.look.v1", "{}"); localStorage.setItem("tsi.welcomed.v1", "1"); } } catch {}
   const et = window.__et = { marks: [], loaf: [], gl: { compile: 0, link: 0, programs: 0, tex: 0, buf: 0 }, cams: [], renderers: [] };
   const seen = new Set();
+  // glTF parses (GLTFLoader reads each file's JSON with JSON.parse), by the file's meshes: three's FileLoader shares one
+  // fetch between loads of a URL in flight, but each load parses the file again.
+  const parses = et.parses = {}, parse0 = JSON.parse;
+  JSON.parse = function (...a) {
+    const r = parse0.apply(this, a);
+    if (r?.asset?.version && Array.isArray(r.meshes)) { const k = `${r.meshes.map(m => m.name).join(",").slice(0, 70) || "(no meshes)"} (${r.buffers?.[0]?.byteLength ?? 0} B)`; parses[k] = (parses[k] ?? 0) + 1; }
+    return r;
+  };
   et.mark = (name, at = performance.now()) => { if (!seen.has(name)) { seen.add(name); et.marks.push([Math.round(at), name]); } };
   // three's devtools hook: the renderers, so the camera of every render is known (the player's follow camera moves when W walks).
   const hook = window.__THREE_DEVTOOLS__ = new EventTarget();
@@ -109,7 +117,7 @@ async function snap() {
     nav: performance.getEntriesByType("navigation")[0]?.toJSON(),
     paint: Object.fromEntries(performance.getEntriesByType("paint").map(p => [p.name, Math.round(p.startTime)])),
     res: performance.getEntriesByType("resource").map(r => ({ url: r.name, type: r.initiatorType, t0: Math.round(r.startTime), t1: Math.round(r.responseEnd), wire: r.transferSize, body: r.encodedBodySize })),
-    entered: performance.getEntriesByName("island entered")[0]?.startTime, marks: window.__et.marks, loaf: window.__et.loaf, gl: window.__et.gl,
+    entered: performance.getEntriesByName("island entered")[0]?.startTime, parses: window.__et.parses, marks: window.__et.marks, loaf: window.__et.loaf, gl: window.__et.gl,
     heap: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1e6) : null,
     info: window.__et.renderers.map(r => ({ ...r.info.memory, programs: r.info.programs?.length ?? 0 })),
     // The biggest textures on the GPU: width x height and where they came from.
@@ -209,6 +217,8 @@ out(`largest over the wire before can move:\n${big.map(r => `- ${mb(r.wire)} MB 
 // browser revalidates on every visit.
 const bare = [...new Set([...t.res, ...w.res].map(r => new URL(r.url)).filter(u => u.origin === BASE && /^\/(assets|models|audio)\//.test(u.pathname) && !u.searchParams.has("v")).map(u => u.pathname))];
 out(`game files without a version: ${bare.length}${bare.length ? `\n${bare.slice(0, 20).map(p => `- ${p}`).join("\n")}` : ""}`);
+const twice = Object.entries(w.parses).filter(([, n]) => n > 1).sort((a, b) => b[1] - a[1]);
+out(`glTF parses on the island: ${Object.values(w.parses).reduce((a, n) => a + n, 0)} of ${Object.keys(w.parses).length} distinct files; parsed more than once: ${twice.length}${twice.length ? `\n${twice.slice(0, 20).map(([k, n]) => `- ${n}x ${k}`).join("\n")}` : ""}`);
 out(`console (errors and warm-up lines, ${logs.length}):\n${[...new Set(logs)].slice(0, 12).map(l => `- ${l}`).join("\n")}`);
 out(`biggest textures in the scene:\n${w.textures.map(t => `- ${t}`).join("\n")}`);
 if (profile) {

@@ -914,10 +914,9 @@ export default function Character({ look, motion, walkSpeed = MOVE_TUNING.walkSp
     if (parts.some(p => p.colour)) COLOUR.ensure();
     if (parts.some(p => p.design !== null)) DESIGN.ensure();
   }, [parts]);
-  const loaded = useGLTF([BASE_URL, ...parts.map(p => p.url)]) as unknown as Gltf[];
+  const loaded = gltfsOf([BASE_URL, ...parts.map(p => p.url)]);
   const atlas = useLoader(THREE.TextureLoader, faceSize >= 1024 ? FACE_ATLAS_URLS.creator : FACE_ATLAS_URLS.world);
-  const base = loaded[0];
-  const puppet = useMemo(() => new Puppet(base), [base]);
+  const puppet = useMemo(() => new Puppet(loaded[0]), [loaded]);
   useEffect(() => () => puppet.dispose(), [puppet]);
   // A verb asked for before the library loads plays the weapon's own attack clip.
   useEffect(() => setFallback(puppet, weapon?.kind), [puppet, weapon?.kind]);
@@ -972,15 +971,29 @@ export default function Character({ look, motion, walkSpeed = MOVE_TUNING.walkSp
     {leaf && <Suspense fallback={null}><HeldLeaf puppet={puppet} motion={motion} scale={scale} remote={remote} /></Suspense>}
   </group>;
 }
+const lists = new Map<string, Gltf[]>();
+/**
+ * A look's GLBs, each fetched and parsed once however many looks share it (useGLTF of a list caches the whole list, so
+ * skin.glb was parsed again for every look). All start loading at once; one array per list, so effects on it run when
+ * the list changes. useGLTF is a suspend-react cache read, not a React hook, so it can run in a loop.
+ */
+function gltfsOf(urls: string[]): Gltf[] {
+  for (const u of urls) useGLTF.preload(u);
+  const loaded = urls.map(u => useGLTF(u) as unknown as Gltf);
+  const key = urls.join("\n"), last = lists.get(key);
+  if (last && last.every((g, i) => g === loaded[i])) return last;
+  lists.set(key, loaded);
+  return loaded;
+}
 /** The look's LOD 1 parts (art/characters/build_lod.py), merged once per look and shared like the full one. */
 function LodMesh({ puppet, look, parts }: { puppet: Puppet; look: CharacterLook; parts: ResolvedPart[] }) {
-  const loaded = useGLTF([LOD_SKIN_URL, ...parts.map(p => p.lod)]) as unknown as Gltf[];
+  const loaded = gltfsOf([LOD_SKIN_URL, ...parts.map(p => p.lod)]);
   useEffect(() => puppet.setLod(look, parts, loaded[0].scene, loaded.slice(1).map(g => g.scene)), [puppet, look, parts, loaded]);
   return null;
 }
 /** The look's LOD 2 (head-roblox: the far hair), loaded after LOD 1 and merged once per look like it. */
 function LodMesh2({ puppet, look, parts }: { puppet: Puppet; look: CharacterLook; parts: ResolvedPart[] }) {
-  const loaded = useGLTF([LOD_SKIN_URL, ...parts.map(p => p.lod2)]) as unknown as Gltf[];
+  const loaded = gltfsOf([LOD_SKIN_URL, ...parts.map(p => p.lod2)]);
   useEffect(() => puppet.setLod2(look, parts, loaded[0].scene, loaded.slice(1).map(g => g.scene)), [puppet, look, parts, loaded]);
   return null;
 }
