@@ -9,6 +9,8 @@
  * a time, fewer on a slow line; nothing on a phone (it gets the companion, not the island) or with data saver on.
  */
 
+import { assetUrl } from "@/lib/assetUrl";
+
 const CHUNK = /static\/chunks\/[\w.-]+\.js/g;
 let started = false;
 
@@ -43,6 +45,6 @@ export function preloadGame() {
   const idle = window.requestIdleCallback ? (f: () => void) => window.requestIdleCallback(f, { timeout: 1000 }) : (f: () => void) => window.setTimeout(f, 200);
   idle(() => {
     void Promise.all([islandCode().catch(() => []), import("@/lib/game/preloadAssets"), import("@/lib/game/loadProgress")])
-      .then(([code, { GAME_ASSETS }, { loadingStill }]) => prefetch([loadingStill(), ...code, ...GAME_ASSETS], slow ? 2 : 6));
+      .then(([code, { GAME_ASSETS }, { loadingStill }]) => prefetch([loadingStill(), ...code, ...GAME_ASSETS.map(assetUrl)], slow ? 2 : 6));
   });
 }

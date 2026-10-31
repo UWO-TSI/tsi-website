@@ -205,6 +205,10 @@ out(`API and Supabase requests (${calls.length}):\n${calls.map(c => `- ${c}`).jo
 const big = [...w.res].filter(r => r.t0 <= end && r.wire > 200e3).sort((a, b) => b.wire - a.wire).slice(0, 12);
 out(`largest over the wire before can move:\n${big.map(r => `- ${mb(r.wire)} MB ${r.url.replace(BASE, "")} (${r.t0}-${r.t1})`).join("\n")}`);
 
+// Every game file the title and the island ask for should carry its version (lib/assetUrl.ts): the bare ones, which the
+// browser revalidates on every visit.
+const bare = [...new Set([...t.res, ...w.res].map(r => new URL(r.url)).filter(u => u.origin === BASE && /^\/(assets|models|audio)\//.test(u.pathname) && !u.searchParams.has("v")).map(u => u.pathname))];
+out(`game files without a version: ${bare.length}${bare.length ? `\n${bare.slice(0, 20).map(p => `- ${p}`).join("\n")}` : ""}`);
 out(`console (errors and warm-up lines, ${logs.length}):\n${[...new Set(logs)].slice(0, 12).map(l => `- ${l}`).join("\n")}`);
 out(`biggest textures in the scene:\n${w.textures.map(t => `- ${t}`).join("\n")}`);
 if (profile) {

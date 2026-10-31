@@ -37,6 +37,7 @@
  *   AudioManager.getState()
  */
 
+import { assetUrl } from "@/lib/assetUrl";
 import { buildMusicSrcList, type MusicBlock, type MusicOverride } from "./musicSchedule";
 import { worldNow } from "./worldClock";
 import type { IslandWeather } from "./islandWeather";
@@ -370,7 +371,7 @@ export class AudioManagerImpl {
     if (layer.loading || layer.failed || !this.ctx) return;
     layer.loading = true;
     const ctx = this.ctx;
-    fetch(src).then(r => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(String(r.status)))))
+    fetch(assetUrl(src)).then(r => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(String(r.status)))))
       .then(data => ctx.decodeAudioData(data))
       .then(buffer => {
         layer.buffer = buffer; layer.loading = false;
@@ -490,7 +491,7 @@ export class AudioManagerImpl {
     while (i < candidates.length && this.missingFiles.has(candidates[i])) i++;
     if (i >= candidates.length) return; // nothing left to try — stays silent
     const src = candidates[i];
-    el.src = src;
+    el.src = assetUrl(src);
     void el.play().catch((error: unknown) => {
       if (!this.isTracked(el)) return;
       this.oneShots.delete(el); // a one-shot that failed is done

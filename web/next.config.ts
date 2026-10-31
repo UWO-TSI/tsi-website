@@ -1,9 +1,14 @@
 import type { NextConfig } from "next";
+import { join } from "node:path";
+import { assetVersions } from "./lib/assetVersions";
 import { hostRedirects, hostRewrites } from "./lib/hosts";
 
 const nextConfig: NextConfig = {
   turbopack: { root: __dirname },
   outputFileTracingRoot: __dirname,
+  // The game's files by path to their content's version, for lib/assetUrl.ts (production builds only: in dev a file
+  // edited while the server runs must show on reload).
+  env: { ASSET_VERSIONS: process.env.NODE_ENV === "production" ? JSON.stringify(assetVersions(join(__dirname, "public"))) : "{}" },
   // Retired pages: sponsorship lives on /genesis, /student is the portal's title screen (sign-in and sign-up).
   async redirects() {
     return [
@@ -14,13 +19,14 @@ const nextConfig: NextConfig = {
       ...hostRedirects,
     ];
   },
-  // The game's public files (models, textures, sounds) keep their names across deploys, so they can't be immutable.
-  // Served from the browser's cache at once and checked in the background (stale-while-revalidate, a week): a return
-  // visit no longer waits on a revalidation per file (~460 at entry). The trade-off: after a deploy that changes a file
-  // in place, a returning player's first visit can draw the old file with the new code; the next visit has the new one.
+  // The game's public files (models, textures, sounds): a URL carrying its content's version (`?v=`, lib/assetUrl.ts)
+  // never changes what it serves, so the browser keeps it a year without asking; a bare URL is checked on every use.
   async headers() {
-    const cache = [{ key: "Cache-Control", value: "public, max-age=0, stale-while-revalidate=604800" }];
-    return ["/assets/:path*", "/models/:path*", "/audio/:path*"].map(source => ({ source, headers: cache }));
+    const v = [{ type: "query" as const, key: "v" }];
+    return ["/assets/:path*", "/models/:path*", "/audio/:path*"].flatMap(source => [
+      { source, missing: v, headers: [{ key: "Cache-Control", value: "public, max-age=0, must-revalidate" }] },
+      { source, has: v, headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] },
+    ]);
   },
   async rewrites() {
     return { beforeFiles: hostRewrites, afterFiles: [], fallback: [] };
