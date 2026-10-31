@@ -120,6 +120,7 @@ import ShopkeeperChoice, { MERCH_LINE, type ShopSection } from "./ShopkeeperChoi
 import IslandLoading from "./IslandLoading";
 import { setLoadPart } from "@/lib/game/loadProgress";
 import { READY_FILES } from "@/lib/game/preloadAssets";
+import { lastCall } from "@/lib/game/lastCall";
 import { loadGameWorld } from "@/lib/game/world/load";
 import { worldModel } from "@/lib/game/world/active";
 import TalkBox from "./TalkBox";
@@ -290,6 +291,7 @@ function gullPerchSpots(v: Village, ground: (x: number, z: number) => number): [
  * walking, objects, doors, spawns, nodes, water and the size-dependent settings.
  * Built once per loaded map; nothing here is placed relative to the local player.
  */
+const layoutOf = lastCall(villageLayout);
 function villageLayout(v: Village) {
   const decks = wharfDecks(v);
   const fitting = objectsOf("fitting", v)[0], missions = objectsOf("missions", v)[0], marks = landmarks(v), fire = campfireSite(v);
@@ -441,7 +443,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   player: React.RefObject<THREE.Vector3>; onNear: (near: Near) => void;
 }) {
   const v = village();
-  const layout = useMemo(() => villageLayout(v), [v]);
+  const layout = layoutOf(v); // once, though the scene renders several times before it first commits (lib/game/lastCall.ts)
   const { island, spawns, doors } = layout;
   // Photo mode holds you still while you frame a photo.
   const photoOpen = usePhoto().open;

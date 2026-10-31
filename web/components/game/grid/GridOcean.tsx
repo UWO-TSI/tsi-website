@@ -8,6 +8,7 @@ import { ACTIVE_WORLD_BEND, ACTIVE_WORLD_BEND_SIDE } from "@/lib/game/curvedWorl
 import { terrainMaterial, waterSurfaceMaterial, waterSurfaceUniforms } from "./terrainMaterials";
 import { deepestSeabed } from "@/lib/game/seabed";
 import { groundFile, groundOf, type GroundSet } from "@/lib/game/groundTextures";
+import { lastCall } from "@/lib/game/lastCall";
 
 /**
  * Continue the grid's water outside its editable rectangle to the horizon, with its glint sprites
@@ -277,10 +278,13 @@ export function glintShader(sea: SeaKind, shader: { uniforms: Record<string, THR
  * far sparkles folded back under the horizon and showed twice); in fog they
  * fade out rather than turn the fog's colour (`GLINT_FOG`).
  */
+/** The glints' places, once: the scene renders several times before it first commits (lib/game/lastCall.ts). */
+const glintsOf = lastCall((map: IslandMap, skip: ((x: number, z: number) => boolean) | undefined, radius: number | undefined) => glintPoints(map, skip, radius));
+
 /** `ground`: whose sparkle sprite masks each sparkle (lib/game/groundTextures.ts seaGlint: ours, or the dump's July sea glints). */
 function WaterGlints({ map, lite, skip, radius, sea, ground }: { map: IslandMap; lite: boolean; skip?: (x: number, z: number) => boolean; radius?: number; sea: SeaKind; ground: GroundSet }) {
   const [geometry, material] = useMemo(() => {
-    const position = glintPoints(map, skip, radius), n = position.length / 3, tilt = new Float32Array(n * 2);
+    const position = glintsOf(map, skip, radius), n = position.length / 3, tilt = new Float32Array(n * 2);
     for (let i = 0; i < n; i++) tilt.set(facetTilt(position[i * 3], position[i * 3 + 2]), i * 2);
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.BufferAttribute(position, 3));
