@@ -131,13 +131,16 @@ const waitMark = (name, ms) => page.waitForFunction(n => window.__et?.marks.some
 async function enter(record) {
   await page.goto(`${BASE}/student/dashboard`, { waitUntil: "commit" });
   await waitMark("first island frame", Number(process.env.WAIT ?? 300) * 1000);
+  // SHOT=<s>: a screenshot that many seconds after the first island frame, standing at the spawn (the camera and the
+  // lamps nearest you are then the same every run), for before and after comparisons. It delays "can move".
+  if (record && process.env.SHOT) { await page.waitForTimeout(Number(process.env.SHOT) * 1000); await page.screenshot({ path: `${OUT}/${LABEL}.png`, scale: "css" }); }
   const start = await page.evaluate(() => window.__et.cam);
   await page.keyboard.down("w");
   await page.waitForFunction(s => { const c = window.__et.cam; return c && s && Math.hypot(c[0] - s[0], c[2] - s[2]) > 0.3; }, start, { timeout: 60000, polling: "raf" })
     .then(() => page.evaluate(() => window.__et.mark("can move")), async () => { if (record) await page.screenshot({ path: `${OUT}/${LABEL}-stuck.png`, scale: "css" }); });
   await page.keyboard.up("w");
   if (record) await page.waitForTimeout(3000); // the frames just after, and the heap once it settles
-  if (record && process.env.SHOT) await page.screenshot({ path: `${OUT}/${LABEL}.png`, scale: "css" }); // SHOT=1: the view 3 s after the first step
+
 }
 
 async function title() {
