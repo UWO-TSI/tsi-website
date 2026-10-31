@@ -1,48 +1,22 @@
 "use client";
 
 /**
- * The HQ visit's cards (row 312, specs/hq-onboarding.md), paper sheets from the GUI kit over the room: the island
- * register at the front desk (your world name to sign with, then the friend code and the mailbox it issued, real data
- * where there is some), where a real event's check-in code goes (the existing flow: the QR at the door), and the
- * Founder's plaque, blank until David writes it. Copy: lib/game/arrival/hq/lines.ts (drafts).
+ * The HQ visit's cards (row 312, specs/hq-onboarding.md), from the GUI kit over the room: where a gathering's check-in
+ * code goes (the existing flow: the QR at the door), the Founder's plaque (blank until David writes it), the lore
+ * overlay (the island, a page at a time, over a dimmed room) and the fly card (an icon up in the middle, then off to
+ * its place on screen; David's v2 review: coins and gems). Your island ID is IdCard.tsx. Copy: lib/game/arrival/hq/lines.ts (drafts).
  */
 import { useState } from "react";
-import { BookUser, CalendarCheck, Landmark, Mail, QrCode, UserPlus } from "lucide-react";
+import { CalendarCheck, Landmark, QrCode } from "lucide-react";
 import { Button, Sheet } from "@/components/gui";
+import { DarkButton, FlyIn, Spotlight } from "@/components/gui/flat";
+import { CurrencyIcon } from "@/components/economy/Amount";
 import { AudioManager } from "@/lib/game/audio";
-import { CHECKIN_CARD, FOUNDER_PLAQUE, PLAQUE_CARD, REGISTER_CARD } from "@/lib/game/arrival/hq/lines";
+import { CHECKIN_CARD, FLY_CARDS, FOUNDER_PLAQUE, LORE_CARD, PLAQUE_CARD, type FlyTarget } from "@/lib/game/arrival/hq/lines";
 import { CHECK_IN_ORIGIN } from "@/lib/portal/checkIn";
 import s from "./HqCards.module.css";
 
-/** The register: sign as your world name; then what signing issued, a line each. `onDone` once it's signed and closed. */
-export function RegisterCard({ open, name, friendCode, letters, onDone }: {
-  /** Your world name (null signed out: a preview has none). */
-  open: boolean; name: string | null;
-  /** Your friend code (null: no account to issue one for). */
-  friendCode: string | null;
-  /** Letters waiting in your mailbox (null: not known). */
-  letters: number | null;
-  onDone: () => void;
-}) {
-  const [signed, setSigned] = useState(false);
-  const close = () => { if (signed) { setSigned(false); onDone(); } };
-  return <Sheet open={open} onClose={close} title={REGISTER_CARD.title} eyebrow={REGISTER_CARD.eyebrow} icon={<BookUser size={20} />} size="sm" tone="butter" testId="hq-register"
-    footer={signed
-      ? <Button onClick={close} data-testid="hq-register-done">{REGISTER_CARD.done}</Button>
-      : <Button onClick={() => { setSigned(true); AudioManager.playSFX("confirm", { rate: 1.1, gain: 0.4 }); }} data-testid="hq-register-sign">{REGISTER_CARD.sign}</Button>}>
-    <div className={s.register}>
-      <p className={s.label}>{signed ? REGISTER_CARD.signed : REGISTER_CARD.signAs}</p>
-      <p className={s.signature} data-signed={signed || undefined} data-none={name ? undefined : ""}>{name ?? REGISTER_CARD.noName}</p>
-      {!signed && <p className={s.note}>{REGISTER_CARD.note}</p>}
-      {signed && <ul className={s.issued}>
-        <li style={{ animationDelay: "120ms" }}><UserPlus size={17} aria-hidden /><span>{REGISTER_CARD.friendCode}</span><b data-testid="hq-friend-code">{friendCode ?? REGISTER_CARD.friendCodeLater}</b></li>
-        <li style={{ animationDelay: "520ms" }}><Mail size={17} aria-hidden /><span>{REGISTER_CARD.mailbox}</span><b>{REGISTER_CARD.mailboxAt}{letters ? ` · ${REGISTER_CARD.letters(letters)}` : ""}</b></li>
-      </ul>}
-    </div>
-  </Sheet>;
-}
-
-/** Where a real event's check-in code goes: the QR at the door, which opens the check-in page. */
+/** Where a gathering's check-in code goes: the QR at the door, which opens the check-in page. */
 export function CheckInCard({ open, onDone }: { open: boolean; onDone: () => void }) {
   const host = CHECK_IN_ORIGIN.replace(/^https?:\/\//, "");
   return <Sheet open={open} onClose={onDone} title={CHECKIN_CARD.title} eyebrow={CHECKIN_CARD.eyebrow} icon={<CalendarCheck size={20} />} size="sm" tone="sage" testId="hq-checkin"
@@ -63,4 +37,32 @@ export function PlaqueCard({ open, onClose }: { open: boolean; onClose: () => vo
     </div>
     {FOUNDER_PLAQUE === null && <p className={s.caption}>{PLAQUE_CARD.blank}</p>}
   </Sheet>;
+}
+
+/** The lore (David's v2 review: the island first), a page at a time in the kit's Spotlight. `onDone` after the last. */
+export function LoreOverlay({ open, onDone }: { open: boolean; onDone: () => void }) {
+  const [page, setPage] = useState(0);
+  const pages = LORE_CARD.pages, p = pages[page], last = page === pages.length - 1;
+  const next = () => { AudioManager.playSFX("blip2", { rate: 1.2, gain: 0.35 }); if (last) { setPage(0); onDone(); } else setPage(page + 1); };
+  return <Spotlight open={open} label={p.title} eyebrow={`${page + 1} / ${pages.length}`} title={p.title} text={p.text} story
+    steps={{ count: pages.length, at: page }} testId="hq-lore"
+    footer={<DarkButton onClick={next} autoFocus data-testid="hq-lore-next">{last ? LORE_CARD.done : LORE_CARD.next}</DarkButton>} />;
+}
+
+const FLY_ICON: Record<FlyTarget, React.ReactNode> = { coins: <CurrencyIcon size={64} />, gems: <CurrencyIcon currency="gems" size={64} /> };
+/** Where each lives on screen: its cell in the wallet, which slides in while it flies there (TopCluster HudWallet). */
+const FLY_TO: Record<FlyTarget, readonly string[]> = { coins: ['[data-hud-slot="coins"]', "[data-hud-right]"], gems: ['[data-hud-slot="gems"]', "[data-hud-right]"] };
+const FLY_SOUND = { pop: ["blip3", 1.3], fly: ["blip2", 1.5], land: ["blip4", 1.4] } as const;
+
+/**
+ * David's v2 review: "the coin icon pops in screen and screen darkens a lil and the coin moves to the coin slot and
+ * same with gems ... same for things like menu, mailbox, and minimap". The kit's FlyIn: up in the middle with its name
+ * and what it's for, then off to its place on your screen, which rings once. The menu, mail and minimap come in with
+ * their keys in the keyboard tour now (KeyboardTour, the v3 review).
+ */
+export function FlyCard({ target, onDone }: { target: FlyTarget | null; onDone: () => void }) {
+  if (!target) return null;
+  const card = FLY_CARDS[target];
+  return <FlyIn key={target} icon={FLY_ICON[target]} name={card.name} text={card.text} to={FLY_TO[target]} onDone={onDone} testId="hq-fly"
+    onBeat={b => AudioManager.playSFX(FLY_SOUND[b][0], { rate: FLY_SOUND[b][1], gain: 0.45 })} />;
 }

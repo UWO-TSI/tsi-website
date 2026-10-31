@@ -12,6 +12,9 @@
   --ui-select: #ffeea0;
   --ui-highlight: #ffcc00;
   --ui-marker: rgb(255 204 0 / 0.55);
+  --ui-gold: #f2b636;
+  --ui-home: #ef7a5a;
+  --ui-away: #4bb3c8;
   --ui-ink: #3a2e22;
   --ui-ink-body: #4f3f31;
   --ui-ink-2: #6b5843;
@@ -22,11 +25,13 @@
   --ui-accent: #426b5b;
   --ui-accent-deep: #2f5143;
   --ui-accent-ink: #fffbe7;
+  --ui-chart: #5f86d0;  /* a chart's line and its light fill (the rod radar): soft, never bold */
   --ui-pill: #dfe9d9;
   --ui-pill-ink: #6b5843;
   --ui-disabled: #d3c39c;
   --ui-round: #946429;
   --ui-error: #b23a2e;
+  --ui-heart: #e0607a;
   --ui-focus: #a8722f;
   --ui-scrim: rgb(64 52 36 / 0.3);
   --ui-shade: 114 92 78;
@@ -34,6 +39,49 @@
   --ui-water: #d9eef4;
   --ui-water-line: #9fcbdb;
   --ui-water-deep: #2f8aa6;
+  /* Paper, the material (the design bible's rule 2: only for things that are paper in the world: a printed card, a letter). */
+  --ui-paper: #fffaf0;
+  --ui-paper-edge: #e8dcc0;
+  --ui-paper-ink: #3a3025;
+  --ui-stamp: #c4513d;
+  /* A keyword in a line (the kit's Keyword): its word and its little icon. */
+  --ui-word-fish: #2f74c0;
+  --ui-word-bug: #3f8f3a;
+  --ui-word-coin: #b07a0c;
+  --ui-word-gem: #8b4fc9;
+  --ui-word-place: #b4582e;
+  --ui-word-item: #1d8577;
   --ui-stage: radial-gradient(ellipse 24% 4.5% at 50% 87%, rgb(114 92 78 / 0.2), rgb(114 92 78 / 0.08) 55%, transparent 100%),
     linear-gradient(180deg, #fffff7 0%, #fffff7 60%, #f8f4e8 84%, #eee9ca 100%);
+  /* The rarity ladder (specs/design-bible.md UI 7): a thin outline or edge, never a fill. Divine is the holo. */
+  --ui-rarity-common: #b3a88f;
+  --ui-rarity-uncommon: #5fa86a;
+  --ui-rarity-rare: #4f84d6;
+  --ui-rarity-epic: #9a66d8;
+  --ui-rarity-legendary: #e3ad1f;
+  --ui-rarity-divine: #b26bff;
+  --ui-holo: linear-gradient(115deg, #b26bff 0%, #ff7ad9 20%, #ffd36b 38%, #7dffb2 56%, #6bc8ff 74%, #b26bff 100%);
+  --ui-on-divine: #ffffff;
+  /* Contraband (lib/rarity.ts, shut behind a flag): dark, with light text on it. */
+  --ui-rarity-contraband: #3b2436;
+  /* A little texture where it helps (UI 1, "not so flat"): a fine grain over a card, and a glint across rare things. */
+  --ui-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.36 0 0 0 0 0.29 0 0 0 0 0.21 0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  --ui-glint: linear-gradient(115deg, transparent 38%, rgb(255 255 255 / 0.55) 48%, transparent 58%);
+  /* The HUD's bars (UI 8): health, stamina (and run out), XP. */
+  --ui-health: #e0604f;
+  --ui-stamina: #5aa95e;
+  --ui-stamina-low: #e8803f;
+  --ui-xp: #e3a52f;
+  --ui-sheen: rgb(255 255 255 / 0.35);
+  /* Paper, the material (design bible UI 2): only for what is paper in the world (the sushi bar's folded menu, a
+     notice). Washi: warm off-white with soft fibre (our texture, art/ui/washi.py), ink-black type, one red hanko seal; a
+     dish sits on a lacquer tray and a plate. It stays paper-coloured in every theme. */
+  --ui-paper-quiet: #8e8268;
+  --ui-paper-rule: #d6caae;
+  --ui-paper-hover: #ece3cf;
+  --ui-paper-seal: #b4342b;
+  --ui-paper-tray: #2e2823;
+  --ui-paper-tray-hi: #4d443b;
+  --ui-paper-plate: #fbf8f1;
+  --ui-paper-washi: url("/assets/ui/washi.png");
 }

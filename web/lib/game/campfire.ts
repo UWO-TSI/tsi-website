@@ -39,11 +39,20 @@ export const DRUM_LAYERS = [
   { src: "/audio/drums/tambourine.ogg", gain: 0.42 },
 ] as const;
 
-/** Lit every real night. */
-export const fireLit = (phase: IslandPhase) => phase === "night";
+/**
+ * Campfire hour (s-campfire, specs/launch/v1-gameplay.md): every evening from 8 to 9 pm Toronto time the fire burns
+ * for everyone whatever the season's dusk, the full drum circle plays, and sitting by it for CAMPFIRE_SIT_S earns a
+ * small bonus once a day (POST /api/world/campfire checks the hour). The HUD announces it as it starts.
+ */
+export const CAMPFIRE_HOUR = { start: 20, end: 21 } as const;
+export const isCampfireHour = (torontoHour: number) => torontoHour >= CAMPFIRE_HOUR.start && torontoHour < CAMPFIRE_HOUR.end;
+export const CAMPFIRE_SIT_S = 30;
 
-/** Drum layers playing for `dancers` round the fire: one each, six at most (six play the full song). */
-export const drumLayers = (dancers: number) => Math.max(0, Math.min(DRUM_LAYERS.length, Math.floor(dancers)));
+/** Lit every real night, and in campfire hour. */
+export const fireLit = (phase: IslandPhase, hour = false) => phase === "night" || hour;
+
+/** Drum layers playing for `dancers` round the fire: one each, six at most (six play the full song); all in campfire hour. */
+export const drumLayers = (dancers: number, hour = false) => (hour ? DRUM_LAYERS.length : Math.max(0, Math.min(DRUM_LAYERS.length, Math.floor(dancers))));
 /** Each layer's gain for `dancers`: the first `drumLayers` at their mix level, the rest silent. */
 export function drumGains(dancers: number): number[] {
   const n = drumLayers(dancers);

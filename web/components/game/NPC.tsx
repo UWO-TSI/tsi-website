@@ -176,7 +176,7 @@ function startRequested(list: readonly Runtime[], c: Clock, p: THREE.Vector3, no
   talksBySlug.set(r.slug, n + 1);
   // What they'd say now (a morning conversation only in the morning), unless the island has them say something else (a
   // tool's resident handing it over, row 312).
-  const scripted = talkStore.script?.(r.slug) ?? null;
+  const scripted = talkStore.quest?.(r.slug) ?? talkStore.script?.(r.slug) ?? null;
   const talk = scripted ? [] : talkFor(r.persona, { phase, hour: torontoHour(new Date(t * 1000)) });
   const conv = scripted ? scripted.lines : talk[pickConversation(talk.length, r.slug, c.span?.key ?? "", n)] ?? [];
   startTalk(beginTalk({ id: r.id, slug: r.slug, name: r.name, post: r.post, seed: r.seed }, conv.map(l => ({ text: fillName(l.text, playerName), face: l.face })), performance.now() / 1000, scripted?.script));
@@ -448,18 +448,23 @@ function tagPoint(r: Runtime, out: THREE.Vector3): boolean {
   return true;
 }
 
-export default function Residents({ personas, phase, ceremony, player, island, v, away = null, playerName = null }: {
+export default function Residents({ personas, phase, ceremony, player, island, v, away = null, playerName = null, posts }: {
   personas: readonly NPCPersona[]; phase: IslandPhase; ceremony: boolean; player: RefObject<THREE.Vector3>; island: VillageIsland; v: Village;
   /** A resident (slug) who is somewhere else for now (the HQ lead greeting a first login on the wharf): out of sight, routine running. */
   away?: string | null;
   /** The member's island name, for the `{name}` in what residents say to them. */
   playerName?: string | null;
+  /** Where the main quest keeps people (slug: anchor, lib/game/mainQuest.ts questPosts): they stay there all day meanwhile. */
+  posts?: Readonly<Record<string, string>>;
 }) {
   const nav = useMemo(() => navGrid(island, v), [island, v]);
   // Dev only: `?residents=N` keeps the first N (by slug), for performance checks like CharacterCrowd's `?crowd=N`.
   const [cap] = useState(() => (process.env.NODE_ENV !== "production" && typeof window !== "undefined" ? Number(new URLSearchParams(window.location.search).get("residents") ?? Infinity) : Infinity));
   const residents = useMemo(() => {
-    const sorted = [...personas].sort((a, b) => a.slug.localeCompare(b.slug)).slice(0, cap);
+    const sorted = [...personas].sort((a, b) => a.slug.localeCompare(b.slug)).slice(0, cap).map(p => {
+      const at = posts?.[p.slug];
+      return at ? { ...p, schedule: { ...p.schedule, dawn: [at], day: [at], evening: [at], night: [at] } } : p;
+    });
     const plans = planResidents(sorted, v, island), gather = objectsOf("gather", v);
     return sorted.map((persona, i) => {
       const plan = plans[i];
@@ -471,7 +476,7 @@ export default function Residents({ personas, phase, ceremony, player, island, v
         gather: (g ? [g.x, g.z] : plan.home?.door ?? [0, 0]) as readonly [number, number],
       };
     });
-  }, [personas, v, island, nav, cap]);
+  }, [personas, v, island, nav, cap, posts]);
   const registry = useRef<Registry>({ map: new Map(), list: [] });
   const monument = useMemo(() => landmark("monument", v), [v]);
   const clock = useRef<Clock>({ span: null, forced: null, base: 0, since: 0 });

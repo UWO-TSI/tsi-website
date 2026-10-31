@@ -12,7 +12,7 @@ const entry = (slug: string, name: string, category: string, extra: Partial<Shop
 const view = {
   tabs: {
     tools: [entry("rod-cedar", "Cedar rod", "tool", { tier: "mid" })], outfits: [entry("wear-top-cardigan", "Cardigan", "outfit")],
-    furniture: [entry("furn-lounge-sofa", "Sofa", "furniture")], specials: [],
+    furniture: [entry("furn-lounge-sofa", "Sofa", "furniture")], specials: [entry("furn-lounge-sofa", "Sofa", "furniture", { special: true })],
     merch: [entry("merch-sticker-pack", "TSI sticker pack", "merch"), entry("merch-tote", "TSI tote bag", "merch")],
   },
 };
@@ -23,6 +23,13 @@ describe("the shop overlay's sidebar (specs/interiors/shop.md, the shop overlay)
     expect(shopShelves(view, "items", true)).toEqual(["tools", "outfits", "furniture", "specials", "sell"]);
     expect(shopShelves(view, "merch", true)).toEqual(["merch", "merch:accessories", "merch:stickers"]);
     expect(shopShelves(view)).toEqual(["tools", "outfits", "furniture", "specials", "merch"]);
+  });
+
+  it("hides an empty shelf but tools, and the tackle shop shows only rods and tackle", () => {
+    const bare = { tabs: { ...view.tabs, furniture: [], specials: [] } };
+    expect(shopShelves(bare, "items")).toEqual(["tools", "outfits"]);
+    expect(shopShelves({ tabs: { ...bare.tabs, tools: [] } }, "items")).toEqual(["tools", "outfits"]);
+    expect(shopShelves(view, "rods", true)).toEqual(["tools"]);
   });
 
   it("puts each item on its shelf, and the merch's kinds split the merch", () => {

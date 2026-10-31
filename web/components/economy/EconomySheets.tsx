@@ -29,7 +29,7 @@ import s from "./economy.module.css";
 
 const fmt = (n: number, c: string) => <Amount n={n} currency={c} />;
 // Signed out (the session ran out mid-visit): said as a sign-in, whose words link back here (reachability §3).
-const errText = (err: unknown) => (err instanceof ApiError ? (err.status === 401 ? "Sign in first." : err.message) : "Couldn't reach the shop. Try again.");
+export const errText = (err: unknown) => (err instanceof ApiError ? (err.status === 401 ? "Sign in first." : err.message) : "Couldn't reach the shop. Try again.");
 
 /** Loads once (and on `reload`), the error said for a person (a sign-in when signed out). */
 export function useLoad<T>(load: () => Promise<T>) {
@@ -81,6 +81,8 @@ export function SellBody({ transport = httpEconomyTransport }: { transport?: Eco
     try {
       const r = await transport.sell(e.item_key, qty, newKey());
       setEarned((x) => x + r.paid);
+      // A sale, for whoever waits on one (Bram's first fish, lib/game/arrival/tutorial.ts).
+      window.dispatchEvent(new CustomEvent("tsi:sold", { detail: { key: e.item_key, paid: r.paid } }));
       await reload();
     } catch (err) {
       setError(errText(err));
@@ -192,7 +194,7 @@ export function WalletBody({ transport = httpEconomyTransport }: { transport?: E
   const load = useCallback(() => transport.wallet(), [transport]);
   const { data, error, reload, setError } = useLoad<WalletView>(load);
   const [tab, setTab] = useState<"earned" | "spent">("earned");
-  const [gift, setGift] = useState<{ busy: boolean; got: number | null }>({ busy: false, got: null });
+  const [gift, setGift] = useState<{ busy: boolean; got: string | null }>({ busy: false, got: null });
   const now = useMinute();
   const model = useMemo(() => (data ? walletSheet(data, now) : null), [data, now]);
   const claim = async () => {
@@ -202,7 +204,9 @@ export function WalletBody({ transport = httpEconomyTransport }: { transport?: E
       const r = await transport.dailyGift();
       // The HUD's coins count it in and today's pop-up stands down.
       markGiftClaimed(r.balance, r.day);
-      setGift({ busy: false, got: r.claimed ? r.coins : null });
+      // The welcome week's bonus rides along; a box opened here says what it held (the island's card spins it).
+      const w = r.welcome, coins = r.coins + (w?.coins ?? 0);
+      setGift({ busy: false, got: r.claimed ? `+${coins.toLocaleString()} ${COINS.name}${w ? `, welcome day ${w.day}` : ", today's gift"}${w?.item ? `, and a ${w.item.name} from the mystery box` : ""}` : null });
       if (r.claimed) { AudioManager.playSFX("confirm"); window.setTimeout(() => AudioManager.playSFX("blip2", { rate: 1.5, gain: 0.6 }), 260); }
       await reload();
     } catch (err) {
@@ -232,7 +236,7 @@ export function WalletBody({ transport = httpEconomyTransport }: { transport?: E
       {model.gift.opened
         ? <div className={s.gift} data-opened="">
           <span className={s.giftIcon} aria-hidden><Check size={20} strokeWidth={3} /></span>
-          <span><b>{gift.got ? `+${gift.got.toLocaleString()} ${COINS.name}, today's gift` : "Today's gift is opened"}</b><span className={p.muted}>The next one comes in {model.gift.next}.</span></span>
+          <span><b>{gift.got ?? "Today's gift is opened"}</b><span className={p.muted}>The next one comes in {model.gift.next}.</span></span>
         </div>
         : <div className={s.gift}>
           <span className={s.giftIcon} aria-hidden><Gift size={22} /></span>

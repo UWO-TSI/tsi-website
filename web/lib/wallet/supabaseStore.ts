@@ -1,10 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ShopItem } from "./rules";
 import { raisePg } from "@/lib/result";
+import { torontoInstant } from "@/lib/time";
 import { EconomyError, type EconomyErrorCode, type EconomyStore, type LedgerEntry, type Reservation } from "./store";
 
 type Row = Record<string, unknown>;
-const CODES: EconomyErrorCode[] = ["insufficient", "not_found", "not_for_sale", "already_owned", "bad_qty", "bad_price", "sold_out", "not_sellable", "insufficient_items", "too_many_open", "already_resolved", "forbidden", "locked"];
+const CODES: EconomyErrorCode[] = ["insufficient", "not_found", "not_for_sale", "already_owned", "bad_qty", "bad_price", "sold_out", "not_sellable", "insufficient_items", "too_many_open", "already_resolved", "forbidden", "locked", "already_filled", "not_done", "already_claimed"];
 const raise = (error: { code?: string; message?: string } | null): never => raisePg(error, CODES);
 const first = (data: unknown) => ((Array.isArray(data) ? data[0] : data) ?? {}) as Row;
 const ITEM_COLS = "id, slug, display_name, category, description, price_coins, tc_price, tier, slot, special_pool, stackable, stock, catalogue_ref, sprite_url, position, active, available_from, available_until, retired_at";
@@ -73,6 +74,57 @@ export function supabaseEconomyStore(db: SupabaseClient): EconomyStore {
       const r = first(data);
       return { balance: Number(r.balance), remaining: Number(r.remaining), paid: Number(r.paid), replayed: r.replayed === true };
     },
+    async taskState(m, day, week) {
+      // What fishing_task_claim checks: rod casts landed since the Toronto day began, and the week's catches.
+      const dayStart = torontoInstant(day, 0).toISOString();
+      const [today, wk, claimed] = await Promise.all([
+        db.from("catch_rolls").select("item_key").eq("member_id", m).is("node_id", null).gte("landed_at", dayStart),
+        db.from("weekly_catch_bests").select("item_key").eq("user_id", m).eq("week_start", week),
+        db.from("fishing_task_claims").select("period, task_id").eq("member_id", m).in("period_start", [day, week]),
+      ]);
+      for (const r of [today, wk, claimed]) if (r.error) raise(r.error);
+      const keys = (rows: unknown) => [...new Set(((rows ?? []) as Row[]).map((r) => String(r.item_key)))];
+      return { today: keys(today.data), week: keys(wk.data), claimed: ((claimed.data ?? []) as Row[]).map((r) => `${r.period}:${r.task_id}`) };
+    },
+    async claimTask(m, task, start, idem) {
+      const { data, error } = await db.rpc("fishing_task_claim", {
+        p_member_id: m, p_period: task.period, p_start: start, p_task: task.id, p_item_key: task.item_key, p_need: task.need, p_reward: task.reward, p_idempotency_key: idem,
+      });
+      if (error) raise(error);
+      const r = first(data);
+      return { balance: Number(r.balance), paid: Number(r.paid), replayed: r.replayed === true };
+    },
+    async chefFills(m, day) {
+      const { data, error } = await db.from("chef_order_fills").select("item_key").eq("member_id", m).eq("day", day);
+      if (error) raise(error);
+      return ((data ?? []) as Row[]).map((r) => String(r.item_key));
+    },
+    async chefFill(m, day, itemKey, reward, idem, meal) {
+      const { data, error } = await db.rpc("chef_order_fill", {
+        p_member_id: m, p_day: day, p_item_key: itemKey, p_reward: reward, p_idempotency_key: idem, p_luck: meal.luck, p_size: meal.size, p_until: meal.until,
+      });
+      if (error) raise(error);
+      const r = first(data);
+      return { balance: Number(r.balance), remaining: Number(r.remaining), paid: Number(r.paid), replayed: r.replayed === true };
+    },
+    async tackleRoll(m, currency, cost, prizes, idem) {
+      const { data, error } = await db.rpc("tackle_roll", { p_member_id: m, p_currency: currency, p_cost: cost, p_prizes: prizes, p_idempotency_key: idem });
+      if (error) raise(error);
+      const r = first(data);
+      return { balance: Number(r.balance), prizes: (r.prizes as string[]) ?? [], replayed: r.replayed === true };
+    },
+    async order(m, dish, price, fishKey, buff, idem) {
+      const { data, error } = await db.rpc("sushi_order", { p_member_id: m, p_dish: dish, p_price: price, p_fish_key: fishKey, p_luck: buff.luck, p_size: buff.size, p_until: buff.until, p_idempotency_key: idem });
+      if (error) raise(error);
+      const r = first(data);
+      return { balance: Number(r.balance), paid: Number(r.paid), buff: { source: String(r.source), luck: Number(r.luck), size: Number(r.size), until: String(r.until) }, replayed: r.replayed === true };
+    },
+    async buff(m, now) {
+      const { data, error } = await db.from("member_buffs").select("source, luck, size, until").eq("member_id", m).gt("until", now.toISOString()).maybeSingle();
+      if (error) raise(error);
+      const r = data as Row | null;
+      return r ? { source: String(r.source), luck: Number(r.luck), size: Number(r.size), until: String(r.until) } : null;
+    },
     async setEquipped(m, itemId, equipped) {
       const { data: row, error } = await db.from("member_inventory").select("slot").eq("member_id", m).eq("item_id", itemId).maybeSingle();
       if (error) raise(error);
@@ -90,7 +142,13 @@ export function supabaseEconomyStore(db: SupabaseClient): EconomyStore {
       const { data, error } = await db.rpc("daily_gift_claim", { p_member_id: m });
       if (error) raise(error);
       const r = first(data);
-      return { coins: Number(r.coins), balance: Number(r.balance), claimed: r.claimed === true, day: String(r.day) };
+      const welcome = r.welcome_day == null ? null : { day: Number(r.welcome_day), coins: Number(r.welcome_coins), gems: Number(r.welcome_gems ?? 0), item: r.welcome_item == null ? null : String(r.welcome_item) };
+      return { coins: Number(r.coins), balance: Number(r.balance), claimed: r.claimed === true, day: String(r.day), welcome };
+    },
+    async giftDays(m) {
+      const { count, error } = await db.from("daily_login_claims").select("day", { count: "exact", head: true }).eq("member_id", m);
+      if (error) raise(error);
+      return count ?? 0;
     },
     async dailyClaimed(m, day) {
       const { data, error } = await db.from("daily_login_claims").select("day").eq("member_id", m).eq("day", day).maybeSingle();

@@ -13,54 +13,57 @@
 /** Alice, the HQ lead (lib/game/welcome.ts HQ_LEAD, residentRoster `wren`). */
 export const WREN = { slug: "wren", name: "Alice", post: "hq_lead" } as const;
 
-/** Her lines by key (script.ts says which beat says which). */
+/** Her lines by key (script.ts says which beat says which). David's v2 review: the lore first, for someone who's never
+ * heard of the club; then the club woven in (the gatherings, GENESIS). Never a rate between gems or coins and money. */
 export const WREN_LINES: Readonly<Record<string, readonly string[]>> = {
-  // Registering.
+  // The lore overlay opens after these.
   welcome: [
     "[happy] There you are! Bram said you'd be up. I'm Alice. I keep HQ running, more or less.",
-    "First things first: the island register. Everyone who stays signs it.",
-    "Just your world name. That's the one everybody here knows you by.",
+    "You've washed up somewhere special. Let me tell you where.",
   ],
-  registered: [
-    "[happy] That's you on the register, {name}.",
-    "Your friend code's on your card now. Give it to anyone you want to find again.",
-    "And your mailbox is set up out by the plaza. Letters from HQ land there. Mostly from me, sorry in advance.",
+  // Your island ID: the card opens after these.
+  idAsk: [
+    "[happy] Now, every islander gets an ID. Let's make yours.",
+    "A few questions, then I'll print it for you.",
   ],
-  // The real club and its check-ins.
-  club: [
-    "Here's the part people miss. You're not only on the island's register. You're in the real club.",
-    "Every real TSI event has a check-in code at the door. Scan it and you're checked in.",
-    "That's what levels you up. Not fishing, not chores. Showing up.",
+  idDone: [
+    "[happy] There. That's you, {name}. Official.",
+    "Your friend code's on it. Give it to anyone you want to find again.",
   ],
-  // Lore: real life counts, then the Founder's desk.
-  realLife: [
-    "The island measures you by what you do out there, not in here.",
-    "Come and see something. The desk by the notice board.",
+  // Money: each currency's icon pops up and flies to where it lives on your screen.
+  coins: [
+    "Now, money. Coins first.",
+    "You earn coins fishing, selling, all sorts. Spend them on the island: tools, clothes, things for your house.",
   ],
-  founder: [
-    "That's the Founder's desk. Nobody sits there.",
-    "The Founder left it for whoever came next.",
+  gems: [
+    "Gems are the rare ones. You get them at the gatherings and from club goals.",
+    "Trade them for rare items, or for real merch. Real shirts and stickers, shipped to your door.",
   ],
-  // The Esc menu and the map. `{esc}`: the key, or the menu button on a touch screen.
+  // The gatherings' check-in code: the card opens after these.
+  events: [
+    "Remember those gatherings out in the world? Each one has a check-in code at the door.",
+    "Scan it, and the awards and experience land on your account.",
+  ],
+  // The keyboard tour opens after this: each key you press brings its part of your screen in.
+  tour: ["Now your keys. Press each one as it lights up, and watch your screen fill in."],
+  // Esc for real. `{esc}`: the key, or the menu button on a touch screen.
   menu: [
-    "Right. Practical things. {esc}",
-    "That's your menu: the map, your quests and journal, your bag, friends and mail. Open the map for me.",
+    "Last thing, then you're free. {esc}",
   ],
-  map: [
-    "[happy] That's the whole island. The village is open. The rest opens as the island gets to know you.",
-  ],
-  // The notice board and the club goals.
-  board: [
-    "Last thing. The notice board on the back wall. Have a read.",
-  ],
-  goals: [
-    "Those are the club goals. The café and the museum are the club's to fund.",
-    "Deliveries at the monument count, and so does showing up to real events. Everyone's bit goes in the same pot.",
-  ],
+  // The visit's end, Bram's tour already done: your first catch to Juno at the museum (m1). Things in HQ to look at.
+  // Her look-round-HQ line (the notice board, the trophy case, the Founder's desk) is out until later (David's playtest).
   farewell: [
-    "That's you registered. Bring your first find to the museum shell, then come back and tell me.",
+    "That's your menu. It's there whenever you need it.",
+    "That's you registered. Bring your first catch to Juno at the museum. She'll show you round.",
     "Oh, and you'll want more than a rod. Odile has a spare net and Pim always has a shovel. Ask them.",
     "[happy] Welcome to Tethos Island, {name}.",
+  ],
+  // The visit's end with Bram's tour still on (HQ first): things in HQ to look at, then he's waiting outside.
+  farewellTour: [
+    "That's your menu. It's there whenever you need it.",
+    "[happy] That's you sorted, {name}. Welcome to Tethos Island.",
+    "Bram's waiting for you outside. He'll show you the rest of the island.",
+    "And once you've a first catch, bring it to Juno at the museum. She'll show you round.",
   ],
 };
 
@@ -71,46 +74,80 @@ export const escPhrase = (touch: boolean) => (touch ? "Tap the menu button." : "
 export const HQ_TITLE = "Register at HQ";
 export const HQ_TRACKER: Readonly<Record<string, string>> = {
   report: "Report to Alice at HQ",
-  register: "Sign the island register",
-  checkin: "Find out about check-ins",
-  founder: "Look at the Founder's desk",
+  lore: "Hear about Tethos Island",
+  id: "Make your island ID",
+  coins: "Find out about coins",
+  gems: "Find out about gems",
+  events: "Find out about check-ins",
+  tour: "Learn the keys",
   esc: "Open the menu ({esc})",
-  map: "Open the map",
-  board: "Read the notice board",
 };
 export const trackerEsc = (label: string, touch: boolean) => (touch ? label.replace(" ({esc})", "") : label.replaceAll("{esc}", "Esc"));
 
-/** The register's card (the front desk): your world name to sign with, then what signing issued. */
-export const REGISTER_CARD = {
-  eyebrow: "HQ front desk",
-  title: "The island register",
-  signAs: "Sign as",
-  /** Signed out (a preview): no world name to sign with. */
-  noName: "Your world name",
-  note: "Your world name is the only name anyone sees here.",
-  sign: "Sign the register",
-  signed: "Signed",
-  friendCode: "Friend code",
-  /** No account to issue one for (signed out, a preview). */
-  friendCodeLater: "Issued once you're signed in",
-  mailbox: "Mailbox",
-  mailboxAt: "By the plaza",
-  /** `{n}` letters waiting. */
-  letters: (n: number) => (n === 1 ? "1 letter waiting" : `${n} letters waiting`),
-  done: "Done",
+/** The lore overlay, a page at a time over the room: the island first (the Founder, everyone welcome), then the gatherings. DRAFTS. */
+export const LORE_CARD = {
+  pages: [
+    { title: "Tethos Island", text: "Far out past the veil, where no map reaches, the Founder found this island." },
+    { title: "Open to everyone", text: "The Founder didn't keep it. The island was opened to anyone who washes ashore: to fish, dig, build a home, and find each other." },
+    { title: "The gatherings", text: "Tethos also holds gatherings in person, out in the world, like GENESIS. Go to one and you bring back limited awards, and plenty of experience: they're a great way to level up." },
+  ],
+  next: "Next",
+  done: "Got it",
 } as const;
 
-/** The check-in card: where a real event's check-in code goes (the existing flow: the door's QR, lib/portal/checkIn.ts). */
+/** What flies to its place on your screen (script.ts `fly:` cards): its name and what it's for. Never a rate to real money. */
+export const FLY_CARDS = {
+  coins: { name: "Coins", text: "For things on the island" },
+  gems: { name: "Gems", text: "For rare items and real merch" },
+} as const;
+export type FlyTarget = keyof typeof FLY_CARDS;
+
+/**
+ * Your island ID (the front desk): Alice asks, prints it and stamps it. Only existing profile fields, ones that mean
+ * something to anyone, in the club or not (David's playtest: "ask for stuff that matters"): your world name, your
+ * birthday (private), where you're from (`hometown`) and a line about you (`bio`). Your world name only.
+ */
+export const ID_CARD = {
+  eyebrow: "HQ front desk",
+  title: "Your island ID",
+  island: "Tethos Island",
+  kind: "Resident",
+  name: "World name",
+  /** Signed out (a preview): no world name. */
+  noName: "Your world name",
+  nameHint: "The only name anyone sees here.",
+  birthday: "Birthday",
+  birthdayHint: "Optional. Only HQ sees it.",
+  from: "From",
+  fromHint: "Optional. Where you call home.",
+  fromSample: "Your hometown",
+  about: "About you",
+  aboutHint: "Optional. One line about you, on your profile.",
+  aboutSample: "Say hi in a line",
+  /** An empty row on the printed card. */
+  blank: "·",
+  code: "Friend code",
+  /** No account to issue one for (signed out, a preview). */
+  codeLater: "Issued once you're signed in",
+  print: "Print my ID",
+  printing: "Printing…",
+  stamp: "Resident",
+  done: "Done",
+  /** The save didn't take: said under the card, and Done still works. */
+  unsaved: "HQ couldn't save that just now. Your card's still yours.",
+} as const;
+
+/** The check-in card: where a gathering's check-in code goes (the existing flow: the door's QR, lib/portal/checkIn.ts). */
 export const CHECKIN_CARD = {
-  eyebrow: "The real club",
-  title: "Real event check-ins",
+  eyebrow: "Out in the world",
+  title: "Gathering check-ins",
   /** `{host}` is where the QR opens (CHECK_IN_ORIGIN). */
   steps: [
-    "At a TSI event, find the check-in QR code by the door.",
+    "At a Tethos gathering, find the check-in QR code by the door.",
     "Scan it with your phone. It opens {host}/student/check-in.",
-    "You're checked in. Your XP and coins land in your account.",
+    "You're checked in. Your awards and experience land on your account.",
   ],
-  note: "Only real events level you up.",
+  note: "Gatherings in person are a great way to level up.",
   done: "Got it",
 } as const;
 
@@ -131,31 +168,39 @@ export const PLAQUE_CARD = {
  * What each tool's resident says (lib/game/arrival/hq/teachers.ts TOOL_TEACHERS): `offer` the first time you talk to
  * them (they hand it over at the end, `given` a toast), `during` while its little quest runs, `done` as the quest
  * finishes (a toast).
- * The tracker shows `title` and the quest's one step.
  */
-export const TOOL_LINES: Readonly<Record<string, { title: string; step: string; offer: readonly string[]; during: readonly string[]; given: string; done: string }>> = {
+type ToolLines = { offer: readonly string[]; during: readonly string[]; given: string; done: string };
+/** The main quest's chapters (m2, m3, m6) carry on from the hand-over, so the offers say what's next. */
+export const TOOL_LINES: Readonly<Record<string, ToolLines>> = {
   net: {
-    title: "Odile's bug net",
-    step: "Catch any bug",
     offer: [
-      "[happy] {name}! You're the one Bram brought in. Found anything with wings yet?",
+      "[happy] {name}! Found anything with wings yet?",
       "No? You'll want a net. Here, my spare. It has seen a few summers.",
-      "Catch any bug you like. Then have a proper look at it before you decide what it's for.",
+      "Catch three bugs and come and show me. Then we'll talk about what they're for.",
     ],
-    during: ["Any bug at all. The flowers by the pond are busy this time of day."],
+    during: ["Bugs sit on flowers and trees. Walk up slowly and they'll stay put."],
     given: "Odile handed you her spare bug net.",
-    done: "The bug net is yours now. Odile says keep it.",
+    done: "Your first bug! Odile's net is yours to keep.",
   },
   shovel: {
-    title: "Pim's shovel",
-    step: "Dig up one buried thing",
     offer: [
       "[happy] A new face! Do you dig? Everybody should dig.",
       "Half this island is under the sand, and most of it is perfectly good. Perfectly good!",
-      "Here, take the shovel. Dig up one thing, anything, and it's yours to keep.",
+      "Look closely, they're easy to miss: a scuffed patch of sand or dirt. Dig up three things and show me.",
     ],
-    during: ["Look for the little cracks in the ground. There's always something under there."],
+    during: ["Walk slowly and look down. A scuffed patch of sand or dirt, and there's something under there."],
     given: "Pim handed you a shovel.",
-    done: "The shovel is yours now. Pim says it's perfectly good.",
+    done: "Your first find! Pim's shovel is yours to keep.",
+  },
+  pickaxe: {
+    offer: [
+      "[happy] {name}. Sit a moment. Did you know the HQ's first wall came out of these rocks?",
+      "I dug its foundations with this very pickaxe. It's wasted on my wall now.",
+      "Take it. Bring me three stones and a bit of iron, if the rocks give you any.",
+    ],
+    during: ["The big rocks give stone, and iron now and then. Swing hard."],
+    given: "Mayor Eliza handed you her old pickaxe.",
+    done: "Your first stone! Eliza's pickaxe is yours to keep.",
   },
 };
+

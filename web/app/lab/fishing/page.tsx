@@ -40,7 +40,7 @@ const WEATHERS = ["sunny", "cloudy", "rain"] as const;
 // Divine renders holographic (David 2026-07-23) — pairs with the
 // tsi-holo-shift keyframes in this page's <style> block.
 const HOLO_TEXT: React.CSSProperties = {
-  backgroundImage: "var(--gui-holo)",
+  backgroundImage: "var(--ui-holo)",
   backgroundSize: "300% 100%",
   WebkitBackgroundClip: "text",
   backgroundClip: "text",
@@ -48,7 +48,7 @@ const HOLO_TEXT: React.CSSProperties = {
   animation: "tsi-holo-shift 2.2s linear infinite",
 };
 const HOLO_BG: React.CSSProperties = {
-  background: "var(--gui-holo)",
+  background: "var(--ui-holo)",
   backgroundSize: "300% 100%",
   animation: "tsi-holo-shift 2.2s linear infinite",
   boxShadow: "0 0 12px rgba(122, 231, 255, 0.75)",

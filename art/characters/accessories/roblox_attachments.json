@@ -431,10 +431,10 @@
    "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
    "fit_why": "David, 2026-10-17: on the eye (the ring is the largest piece; its top part took the chain's clip and stood 27 cm off)",
    "piece_budget": {
-    "main": 220,
-    "rest": 130,
-    "keep_every": 3,
-    "why": "David, 2026-10-27 (the monocle looked torn at 129 triangles): the ring and lens keep 220 alone, every third chain link shares 130, within the 350 face cap"
+    "main": 210,
+    "rest": 140,
+    "keep": 7,
+    "why": "David, 2026-10-27 (the monocle looked torn at 129 triangles): the ring keeps 210 alone, the chain's first seven links (the rest runs behind the ear into the hair) and its clasp share 140, within the 350 face cap"
    }
   },
   {

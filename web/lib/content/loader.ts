@@ -15,7 +15,7 @@ import {
   DEFAULT_NPC_PERSONAS,
   DEFAULT_PALETTES,
 } from "@/data/content-defaults";
-import { withProposed } from "@/lib/content/residentRoster";
+import { residentsHere, withProposed } from "@/lib/content/residentRoster";
 import type {
   NPCPersona,
   SeasonalPalette,
@@ -101,7 +101,7 @@ function filterPermanent(rows: NPCPersona[], permanentOnly: boolean): NPCPersona
   return permanentOnly ? active.filter((r) => r.is_permanent) : active;
 }
 // Stable fallbacks so memoised consumers don't recompute before the fetch lands.
-const DEFAULT_PERSONAS = { all: filterPermanent(FALLBACK_PERSONAS, false), permanent: filterPermanent(FALLBACK_PERSONAS, true) };
+const DEFAULT_PERSONAS = { all: residentsHere(filterPermanent(FALLBACK_PERSONAS, false)), permanent: residentsHere(filterPermanent(FALLBACK_PERSONAS, true)) };
 
 function applyNPCDraft(rows: NPCPersona[], draft: Record<string, unknown>): NPCPersona[] {
   if (!draft || typeof draft !== "object" || !("slug" in draft)) return rows;
@@ -139,10 +139,11 @@ export function useNPCPersonas(options?: {
   const { data, error, isLoading } = useSWR<NPCPersona[]>(
     key,
     async () => {
+      // This world's residents only (Juno is the new world's; the village's lines stay as they are).
       const live = await fetchNPCPersonas(permanentOnly);
-      if (!previewId) return live;
+      if (!previewId) return residentsHere(live);
       const draft = await fetchDraftData(previewId, "npc_personas");
-      return draft ? applyNPCDraft(live, draft) : live;
+      return residentsHere(draft ? applyNPCDraft(live, draft) : live);
     },
     SWR_OPTS,
   );

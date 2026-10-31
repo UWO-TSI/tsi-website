@@ -93,12 +93,19 @@ export const DEFAULT_GOALS: ClubGoal[] = [
   ...SEASONAL_GOALS,
 ];
 
+/** A new-world chapter (m2 to m6): an errand with a person and a place, skippable for everyone (principle 7). */
+const errand = (n: number, slug: string, title: string, requirement: QuestChapter["requirement"], summary: string, step_copy: QuestChapter["step_copy"], reward_coins: number, extra: Partial<QuestChapter> = {}): QuestChapter => ({
+  id: `00000000-0000-4000-8000-0000000000b${n}`, slug, position: n + 4, title, summary, requirement, goal_slug: null, step_copy,
+  unlocks_regions: [], completion_letter: "", skippable_max_tier: 5, reward_coins, reward_item: null, world: "new", active: true, ...extra,
+});
+
 export const DEFAULT_CHAPTERS: QuestChapter[] = [
   {
     id: "00000000-0000-4000-8000-0000000000a1",
     slug: "settle-in",
     position: 1,
     title: "Settle in",
+    // The village's chapter 1, as it has always played (the new world has its own: first-find).
     // Claiming your plot is the home island's drop (lib/game/drops.ts STEP_FEATURE): the summary leaves it out until then.
     // Alice is HQ's host after Bram's tour (row 312, 20261017010000_hq_onboarding_copy).
     summary: "Make your first catch and donate it to the museum, then report back to Alice at HQ.",
@@ -115,8 +122,61 @@ export const DEFAULT_CHAPTERS: QuestChapter[] = [
     // Design principle 7: onboarding is opt-in and skippable in one click for everyone.
     skippable_max_tier: 5,
     reward_coins: 100,
+    reward_item: null,
+    world: "village",
     active: true,
   },
+  {
+    id: "00000000-0000-4000-8000-0000000000b1",
+    slug: "first-find",
+    position: 5,
+    title: "Settle in",
+    // m1 (David, 2026-10-27), the new world's chapter 1: first catch, donated to the museum's guide, who explains the
+    // museum and pays 100 coins and a thank-you letter. No report to Alice.
+    summary: "Make your first catch and bring it to Juno at the museum.",
+    requirement: "first_find",
+    goal_slug: null,
+    step_copy: {
+      claim_plot: { label: "Claim your plot at HQ" },
+      first_catch: { label: "Make your first catch", hint: "Any fish counts. Try the end of the pier." },
+      donate_catch: { label: "Bring your catch to Juno at the museum", hint: "She's the museum's guide. Talk to her by the door." },
+    },
+    unlocks_regions: ["village_core"],
+    completion_letter: "Thank you for the museum's first find from you! I've written its label myself. Every fish, bug and buried treasure you bring in helps the whole club fill the halls. Come and see me any time. Juno, the museum",
+    skippable_max_tier: 5,
+    reward_coins: 100,
+    reward_item: null,
+    // David 2026-10-28: "chapter 1 done get enough exp to level up to level 2" (lib/combat/progression.ts xpForLevel(2)).
+    reward_xp: 125,
+    world: "new",
+    active: true,
+  },
+  errand(2, "odiles-net", "Odile's net", "bug_net", "Odile at the museum has a spare net. Catch a few bugs with it and show her.", {
+    get_net: { label: "Ask Odile at the museum for a net" },
+    catch_bugs: { label: "Catch 3 bugs", hint: "Bugs sit on flowers and trees. Walk up slowly (hold C) and swing when the net says so." },
+    show_odile: { label: "Show Odile your bugs at the museum" },
+  }, 150),
+  errand(3, "pims-shovel", "Pim's shovel", "dig", "Pim on the beach always has a shovel. Things are buried all over the island: find the marks and dig.", {
+    get_shovel: { label: "Ask Pim on the beach for a shovel" },
+    dig_up: { label: "Dig up 3 buried things", hint: "Look closely: a scuffed patch of sand or dirt. Relics, coins, ore, and now and then something rare." },
+    show_pim: { label: "Show Pim your finds on the beach" },
+  }, 150),
+  errand(4, "brams-challenge", "Bram's challenge", "rod_challenge", "Bram bets you can't catch five kinds of fish, one of them at dawn or dusk. Win and his Cedar rod is yours.", {
+    fish_kinds: { label: "Catch 5 different fish", hint: "The pier, the river and the pond all have their own." },
+    twilight_catch: { label: "Catch a fish at dawn or dusk", hint: "Island time follows the real sun: fish around sunrise or sunset." },
+    show_bram: { label: "Show Bram at the wharf" },
+  }, 0, { reward_item: "rod-cedar" }),
+  // David 2026-10-28 ("this might get impossible if people donate all the stuff"): anything handed in counts, duplicates too.
+  errand(5, "the-museum", "The club's museum", "museum_collab", "The museum opens when the club has brought it 10 fish, 5 bugs and 3 buried finds. Do your part.", {
+    donate_new: { label: "Bring Odile 3 things for the museum", hint: "Any fish, bug or buried find counts, even a kind the museum already has. Odile waits by the museum." },
+    tell_odile: { label: "Tell Odile at the museum" },
+  }, 200),
+  errand(6, "elizas-pickaxe", "Eliza's pickaxe", "pickaxe", "Mayor Eliza still has the pickaxe that dug the HQ's foundations. Break some rocks with it.", {
+    get_pickaxe: { label: "Ask Mayor Eliza at the plaza for her pickaxe" },
+    mine_stone: { label: "Break rocks for 3 stone", hint: "Swing the pickaxe at the big rocks. Each one gives a stone or so an hour." },
+    mine_iron: { label: "Find a lump of iron", hint: "Iron turns up in rocks now and then." },
+    show_eliza: { label: "Bring your stone to Mayor Eliza" },
+  }, 200),
   {
     id: "00000000-0000-4000-8000-0000000000a2",
     slug: "reopen-cafe",
@@ -133,6 +193,7 @@ export const DEFAULT_CHAPTERS: QuestChapter[] = [
     completion_letter: "",
     skippable_max_tier: 0,
     reward_coins: 0,
+    reward_item: null,
     active: true,
   },
   {
@@ -151,6 +212,7 @@ export const DEFAULT_CHAPTERS: QuestChapter[] = [
     completion_letter: "",
     skippable_max_tier: 0,
     reward_coins: 0,
+    reward_item: null,
     active: true,
   },
   {
@@ -170,6 +232,14 @@ export const DEFAULT_CHAPTERS: QuestChapter[] = [
     completion_letter: "The ruins gate is open to you. Tread carefully.",
     skippable_max_tier: 0,
     reward_coins: 300,
+    reward_item: null,
     active: true,
   },
 ];
+
+/**
+ * m5: what the club brings the museum before it opens (next launch), by kind: every fish, bug and buried find given to
+ * it counts, a first donation (museum_donations) or a hand-in (museum_handins), duplicates included, so the drive can
+ * always be finished (David 2026-10-28).
+ */
+export const MUSEUM_TARGETS = { fish: 10, bugs: 5, finds: 3 } as const;

@@ -40,7 +40,7 @@ export const RARITY_META: Record<
   rare: { label: RARITY_LABEL.rare, color: "#889df0", weight: 18, barW: 0.24 },
   epic: { label: RARITY_LABEL.epic, color: "#b77dee", weight: 7, barW: 0.21 },
   legendary: { label: RARITY_LABEL.legendary, color: "#f7cd67", weight: 2.5, barW: 0.19 },
-  divine: { label: RARITY_LABEL.divine, color: "#7fd6dc", weight: 0.4, barW: 0.17 },
+  divine: { label: RARITY_LABEL.divine, color: "#b26bff", weight: 0.4, barW: 0.17 },
   // Shut until its earning path is decided (lib/rarity.ts): never rolled.
   contraband: { label: RARITY_LABEL.contraband, color: "#3b2436", weight: 0, barW: 0.15 },
 };
@@ -214,6 +214,13 @@ export const CAST = {
   biteBonusMs: 800, // max power widens the 1.4s hook window by this
 };
 
+/**
+ * Fishing together (s-fishtogether, specs/launch/v1-gameplay.md): a cast within `range` (a few steps) of a friend rolls
+ * with `luck` more (a small rare-odds boost, a third of a MAX cast's) and the catch card wears a "Fished with" stamp. Each
+ * of you gets it on your own casts. The server checks you're friends (POST /api/collections cast `with`).
+ */
+export const TOGETHER = { luck: 0.1, range: 4 } as const;
+
 /** Luck-aware weight: cast power inflates rare-and-up odds (max ≈ 2×). */
 function luckWeight(f: FishDef, weather: string, luck: number): number {
   let w = fishWeight(f, weather);
@@ -243,9 +250,9 @@ export function rollFish(luck = 0, zone: "river" | "sea" = "river", context: Fis
   return pool[pool.length - 1].fish;
 }
 
-/** Skewed size roll — most catches modest, big ones are the brag. */
-export function rollSize([min, max]: [number, number], random = Math.random): number {
-  return Math.round(min + (max - min) * Math.pow(random(), 1.7));
+/** Skewed size roll: most catches modest, big ones are the brag. `boost` (a meal's size buff, 0 to 1) eases the skew toward the top. */
+export function rollSize([min, max]: [number, number], random = Math.random, boost = 0): number {
+  return Math.round(min + (max - min) * Math.pow(random(), 1.7 * (1 - boost)));
 }
 
 // ─── Reel tuning (track space is 0..1; bar width comes from rarity) ─────────

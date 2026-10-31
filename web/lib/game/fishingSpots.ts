@@ -197,6 +197,12 @@ export function waterClassifier(map: IslandMap, classes: Uint8Array = classifyWa
   };
 }
 
+/** The water types a map's classes hold, sea first (the fish market's requests and the tackle shop's board ask only for those). */
+export const watersOf = (classes: Uint8Array): WaterType[] => {
+  const has = new Set(classes);
+  return (["sea", "river", "pond"] as const).filter(w => has.has(WATER_CLASS[w]));
+};
+
 const waters = new WeakMap<Village, { classes: Uint8Array; classify: (x: number, z: number) => WaterType }>();
 /** The village map's water classes and classifier, built once per loaded map. */
 export function villageWater(v: Village = village()) {

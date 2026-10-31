@@ -28,12 +28,13 @@ import { combat } from "@/lib/game/combat/runtime";
 import { getWorldStudy } from "@/lib/study/worldStore";
 import { seatKey } from "@/lib/study/patrons";
 import { armJournal, drainJournal, keepArmed, localAvatar, type LocalAvatar } from "./localAvatar";
+import { VB_SPECTATE, matchStand, type Stand } from "@/lib/game/volleyball/cheapView";
 import {
   AFK_MS, EV, EV_DT_MAX_MS, EV_MAX, PACKET_FLAG, RATE_LIMITS, SANITY, SEND, encodePose, heldOf, isClipName, isEmoteClip, isItemKey, isSeatKey,
   moveIndex, roomTime, studyIndex, type PosePacket, type SlowState,
 } from "./protocol";
 import type { NetSource } from "./types";
-import { SEAT_CLIPS } from "@/lib/game/character/clips";
+import { SEAT_CLIPS, type CharacterMotion } from "@/lib/game/character/clips";
 
 /** A position jump this big in one frame is a teleport, whatever caused it. */
 export const TELEPORT_FRAME = 2.5;
@@ -80,6 +81,11 @@ export interface SenderDeps {
   listen(type: string, fn: (e: Event) => void): () => void;
   /** A repeating timer; returns the stop. */
   every(ms: number, fn: () => void): () => void;
+  /**
+   * A volleyball match's cheap view (lib/game/volleyball/cheapView): while it returns a stand, others get that steady
+   * stand holding `vb_spectate` instead of your live movement and one-shots.
+   */
+  stand?(): Stand | null;
 }
 const DEFAULTS: SenderDeps = {
   clock: () => performance.now(),
@@ -95,6 +101,7 @@ const DEFAULTS: SenderDeps = {
     return () => window.removeEventListener(type, fn, { capture: true });
   },
   every: (ms, fn) => { const id = setInterval(fn, ms); return () => clearInterval(id); },
+  stand: matchStand,
 };
 
 /** A token bucket like the room's limiters, with an optional per-minute cap. */
@@ -150,6 +157,9 @@ export function createSender(source: NetSource, deps: Partial<SenderDeps> = {}):
   let endsAtSeen: string | null | undefined, endsAtMs = 0;
   /** The seat `tsi:sit` named last (null: none named; study seats come from getWorldStudy). */
   let sitKey: string | null = null;
+  /** A volleyball match's stand (SenderDeps.stand): the motion others see while it lasts. */
+  let standing = false;
+  const standMotion: LocalAvatar["motion"]["current"] = { speed: 0, yaw: 0, lift: 0, pose: VB_SPECTATE as CharacterMotion["pose"], play: null, move: null };
 
   const pending = (kind: number, value: number | string, at: number) => {
     if (pCount === PENDING) { pStart = (pStart + 1) % PENDING; pCount--; }
@@ -237,7 +247,7 @@ export function createSender(source: NetSource, deps: Partial<SenderDeps> = {}):
   /** Slow state on change (`force`: the hidden tab's poll, which has no frame). */
   function slow(now: number, force = false) {
     if (!force && now - lastSlow < SLOW_GAP_MS) return;
-    const reg = d.avatar(), m = reg?.motion.current ?? null;
+    const reg = d.avatar(), m = standing ? standMotion : reg?.motion.current ?? null;
     let patch: SlowState | null = null;
     // The item in hand, as a string only when it changed (no string a frame).
     if (reg?.held !== heldItem) { heldItem = reg?.held; heldStr = heldItem ? heldOf(heldItem.kind, heldItem.key) : ""; }
@@ -278,7 +288,9 @@ export function createSender(source: NetSource, deps: Partial<SenderDeps> = {}):
     tick(player, dtMs) {
       const now = d.clock();
       if (source.status().kind !== "joined") { offline(); return; }
-      const reg = d.avatar(), m = reg?.motion.current;
+      const reg = d.avatar(), stand = d.stand?.() ?? null;
+      standing = !!stand;
+      const m = stand ? Object.assign(standMotion, { yaw: stand.yaw }) : reg?.motion.current;
       if (!reg || !m) return;
       keepArmed();
       // A new session, a new area, a remount, a swapped sim.
@@ -290,10 +302,11 @@ export function createSender(source: NetSource, deps: Partial<SenderDeps> = {}):
       if (area !== areaSeen) { areaSeen = area; fresh = true; }
       if (reg.generation !== genSeen) { if (genSeen >= 0) snapUntil = now + SNAP_WINDOW_MS; genSeen = reg.generation; swapsSeen = reg.simSwaps; }
       if (reg.simSwaps !== swapsSeen) { swapsSeen = reg.simSwaps; snapUntil = now + SNAP_WINDOW_MS; }
-      drainJournal(onJournal);
+      // In a match others see the stand, not the rally's one-shots.
+      drainJournal(stand ? () => {} : onJournal);
 
       // Where you are, and how fast, by difference over the frame (smoothed).
-      const x = player.x, y = player.y, z = player.z, dt = dtMs / 1000;
+      const x = stand?.x ?? player.x, y = stand?.y ?? player.y, z = stand?.z ?? player.z, dt = dtMs / 1000;
       if (fresh || px !== px) {
         px = x; py = y; pz = z; vx = vy = vz = 0; stillFrames = 0;
       } else {

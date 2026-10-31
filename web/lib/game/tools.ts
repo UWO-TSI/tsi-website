@@ -7,7 +7,7 @@
  */
 import { RODS } from "./rods";
 
-export type ToolKind = "rod" | "net" | "shovel";
+export type ToolKind = "rod" | "net" | "shovel" | "pickaxe";
 export type ToolTier = 1 | 2 | 3 | 4 | 5;
 export interface Tool { kind: ToolKind; tier: ToolTier; key: string; name: string; source: "starter" | "shop" | "crafted"; model: string; icon: string }
 
@@ -20,6 +20,9 @@ export const TOOLS: readonly Tool[] = [
   tool("net", 3, "net-silk", "Silk net", "crafted"), tool("net", 4, "net-dragonfly", "Dragonfly net", "crafted"), tool("net", 5, "net-emperor", "Emperor net", "crafted"),
   tool("shovel", 1, "shovel-basic", "Shovel", "starter"), tool("shovel", 2, "shovel-mid", "Iron shovel", "shop"),
   tool("shovel", 3, "shovel-sturdy", "Sturdy shovel", "crafted"), tool("shovel", 4, "shovel-crystal", "Crystal shovel", "crafted"), tool("shovel", 5, "shovel-gold", "Golden shovel", "crafted"),
+  // m6: Mayor Eliza's pickaxe breaks rocks (stone, sometimes iron). One tier for now, and nobody's starter: everyone
+  // gets it from her (lib/game/arrival/hq/teachers.ts), whenever they arrived.
+  tool("pickaxe", 1, "pickaxe-basic", "Pickaxe", "shop"),
 ];
 
 export const toolByKey = (key: unknown): Tool | null => TOOLS.find(t => t.key === key) ?? null;
@@ -38,7 +41,7 @@ export const ownedTools = (kind: ToolKind, owned: readonly string[], taught = fa
 export const bestTool = (kind: ToolKind, owned: readonly string[], taught = false): Tool | null => ownedTools(kind, owned, taught).at(-1) ?? null;
 
 export type HeldCheck = { ok: true; tool: Tool } | { ok: false; status: number; code: "no_tool" | "wrong_tool" | "tool_not_owned"; error: string };
-const NEEDS: Record<ToolKind, string> = { rod: "Take out your rod first.", net: "You need a net for that.", shovel: "You need a shovel for that." };
+const NEEDS: Record<ToolKind, string> = { rod: "Take out your rod first.", net: "You need a net for that.", shovel: "You need a shovel for that.", pickaxe: "You need a pickaxe for that." };
 /** The held tool as the server takes it: a known `kind` tool the member owns (the client only names it). */
 export function checkHeld(key: unknown, kind: ToolKind, owned: readonly string[], taught = false): HeldCheck {
   if (key === undefined || key === null) return { ok: false, status: 422, code: "no_tool", error: NEEDS[kind] };

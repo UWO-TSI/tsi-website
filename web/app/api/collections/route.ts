@@ -5,6 +5,7 @@ import { supabaseCollectionsStore } from "@/lib/collections/supabaseStore";
 import { jsonResult, withStore } from "@/lib/server/memberContext";
 import { islandWeatherNow } from "@/lib/server/weather";
 import { supabaseProgressionStore } from "@/lib/progression/supabaseStore";
+import { supabaseFriendStore } from "@/lib/world/friendsSupabase";
 
 /**
  * Member collections: stackable collectibles (fish, bugs, fruit, flowers,
@@ -50,5 +51,7 @@ export async function POST(request: Request) {
   // (before 20260929120000) the limited-time fish stay shut.
   const body = await request.json().catch(() => null);
   const goals = () => supabaseProgressionStore(ctx.db).listGoals().catch(() => []);
-  return jsonResult(await catchAction(ctx.store, ctx.userId, body, ctx.now, () => islandWeatherNow(ctx.now), goals), "catch");
+  // Fishing together: a cast names a friend nearby; only a real friend's name comes back (and the boost with it).
+  const friendName = async (other: string) => (await supabaseFriendStore(ctx.db).friends(ctx.userId).catch(() => [])).find((f) => f.member_id === other)?.world_name ?? null;
+  return jsonResult(await catchAction(ctx.store, ctx.userId, body, ctx.now, () => islandWeatherNow(ctx.now), goals, Math.random, friendName), "catch");
 }

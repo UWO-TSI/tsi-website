@@ -43,7 +43,7 @@ const SEA = () => "sea" as const;
 /** The cast's aim, written each frame (fishingSpots castAim). */
 const AIM: [number, number] = [0, 1];
 
-export type HomeNear = "house" | "village" | "mailbox" | "fish" | "forage" | "net" | "dig" | null;
+export type HomeNear = "house" | "village" | "mailbox" | "fish" | "forage" | "net" | "dig" | "mine" | null;
 const TREES: TreeSpot[] = HOME_TREES.map(([x, z], i) => ({ x, z, seed: HOME_TREE_SEEDS[i] }));
 const DOOR_SPAWN: [number, number, number] = [HOUSE.door[0], 0, HOUSE.door[1] - 0.6];
 /** The islet's sea is all one: gulls off its shores in view, butterflies on its flowers, crabs on its sand ring. */

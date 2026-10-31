@@ -11,7 +11,7 @@ import { shopIcon } from "@/lib/icons/keys";
 
 export type ShopCategory ="tool" | "outfit" | "hair" | "accessory" | "face" | "furniture" | "wallpaper" | "flooring" | "merch";
 export type Tier = "basic" | "mid" | "premium";
-export type Slot = "rod" | "net" | "shovel" | "outfit" | "hair" | "accessory";
+export type Slot = "rod" | "net" | "shovel" | "pickaxe" | "outfit" | "hair" | "accessory" | "bait" | "bobber";
 
 export interface CatalogueEntry {
   slug: string;
@@ -44,7 +44,7 @@ export const CATALOGUE: CatalogueEntry[] = [
   e("rod-basic", "Basic rod", "tool", 100, { tier: "basic", slot: "rod", description: "A sturdy starter rod." }),
   e("rod-cedar", "Cedar rod", "tool", 400, { tier: "mid", slot: "rod", catalogue_ref: "rod_cedar", description: "Lighter, and a little lucky." }),
   e("rod-glass", "Glass rod", "tool", 1200, { tier: "premium", slot: "rod", catalogue_ref: "rod_glass", description: "The pier regulars' favourite." }),
-  e("bobber-lucky", "Lucky bobber", "tool", 600, { tier: "premium", catalogue_ref: "bobber_lucky", description: "Tackle. Purely for luck." }),
+  e("bobber-lucky", "Lucky bobber", "tool", 600, { tier: "premium", slot: "bobber", catalogue_ref: "bobber_lucky", description: "A bobber for your rod: +20 luck, so rarer fish bite more often." }),
   e("net-basic", "Bug net", "tool", 100, { tier: "basic", slot: "net" }),
   e("net-mid", "Wide net", "tool", 400, { tier: "mid", slot: "net" }),
   e("shovel-basic", "Shovel", "tool", 100, { tier: "basic", slot: "shovel" }),
@@ -95,6 +95,8 @@ export const CATALOGUE: CatalogueEntry[] = [
   { ...e("merch-genesis-sticker", "GENESIS sticker", "merch", 0, { price_coins: null, price_gems: 200,
     description: "Holographic, in light or dark: the GENESIS ASCII art and GEN_26. Pick up at HQ on campus." }),
     sprite_url: "/assets/game/items/merch-genesis-sticker-light-sprite.webp" },
+  // Bait for the rod's bait slot (lib/game/rods.ts TACKLE; David 2026-10-27 x-shop). Last, so no earlier row moves.
+  e("bait-sweet", "Sweet bait", "tool", 300, { tier: "mid", slot: "bait", catalogue_ref: "bait_sweet", description: "Bait for your rod: +20 bite window and +10 lure, so you get longer to hook and bites come sooner." }),
 ];
 
 // ── Ownership (coordinator ruling on audit item 22; 20260926180000_ownership.sql) ──
@@ -177,19 +179,26 @@ export const OWNERSHIP_ITEMS: CatalogueEntry[] = [
   ...PIECES.filter((p) => !HAS_FURNITURE.has(p.id) && !EVENT_PIECE_IDS.has(p.id)).map((p) => furniture(p.id, p.label, pieceValue(p))),
   ...WARDROBE_B2_ITEMS,
   COLOUR_WHEEL_ITEM,
+  // m6: Mayor Eliza hands it over (lib/game/arrival/hq/teachers.ts); off sale like the other taught tools. Not through
+  // e(): its own position, so no other row's moves.
+  withIcon({ slug: "pickaxe-basic", display_name: "Pickaxe", category: "tool", description: "Breaks rocks: stone, and iron now and then.", price_coins: 100, price_gems: null,
+    tier: "basic", slot: "pickaxe", special_pool: false, stackable: false, stock: null, catalogue_ref: null, sprite_url: null, position: 1000 }),
 ];
 /**
  * The tier-1 bug net and shovel: a resident hands them over (row 312, lib/game/arrival/hq/teachers.ts; David
  * 2026-10-17, "take them off sale"). Off sale; owners keep them, and the better tiers stay on the shelf.
  */
-export const TAUGHT_TOOL_SLUGS = ["net-basic", "shovel-basic"];
+export const TAUGHT_TOOL_SLUGS = ["net-basic", "shovel-basic", "pickaxe-basic"];
+/** Tools that did nothing in the shop (David 2026-10-27, v1-gameplay "some shop items did nothing"): the basic rod
+ * (no tool behind it: the flimsy rod is everyone's) and the tier 2 net and shovel (no tier effect yet). Off sale. */
+export const HOLLOW_TOOLS = ["rod-basic", "net-mid", "shovel-mid"];
 /** The placeholder tote and sticker pack, which aren't real merch (David, 2026-10-22: "Take both off sale"). */
 export const PLACEHOLDER_MERCH = ["merch-sticker-pack", "merch-tote"];
 /** Hairstyles David removed from the game (2026-10-27: Messy with headset, Fluffy boy, Wavy half-up): their shop rows go off sale. */
 export const REMOVED_HAIR = ["hair_wavy_half_up"];
-/** Shop rows with no character part: the pre-ownership outfits, the wardrobe cut's (CUT_WEARABLES), and the taught tools; and the placeholder merch. Off sale. */
+/** Shop rows with no character part: the pre-ownership outfits, the wardrobe cut's (CUT_WEARABLES), the taught tools and the hollow ones; and the placeholder merch. Off sale. */
 export const RETIRED = ["outfit-sage-overalls", "outfit-cream-knit", "outfit-wharf-raincoat", "outfit-club-tee", "hair-chestnut", "hair-sea-glass", "hair-sunset", "acc-straw-hat", "acc-round-glasses", "acc-bandana",
-  ...CUT_WEARABLES.map((c) => wearSlug(c.id)), ...REMOVED_HAIR.map(wearSlug), ...TAUGHT_TOOL_SLUGS, ...PLACEHOLDER_MERCH];
+  ...CUT_WEARABLES.map((c) => wearSlug(c.id)), ...REMOVED_HAIR.map(wearSlug), ...TAUGHT_TOOL_SLUGS, ...HOLLOW_TOOLS, ...PLACEHOLDER_MERCH];
 /** Sold, as opposed to only granted: starter clothes stay off sale. */
 export const onSale = (c: CatalogueEntry) => !RETIRED.includes(c.slug) && !(c.category !== "furniture" && c.catalogue_ref !== null && STARTER_REFS.has(c.catalogue_ref));
 
@@ -210,10 +219,76 @@ export const SELL_PRICES: Record<string, Record<string, number>> = {
   mineral: { common: 5, uncommon: 15, rare: 45, epic: 135, legendary: 450, divine: 1125 },
 };
 
+/** A fishing task (lib/wallet/rules.ts fishingTasks) pays this many times the fish's sell price (twice for the week's); you keep the fish. */
+export const FISH_TASK_PAY = 2;
+/** The weekly variety task: this many different fish landed in the week, for these coins. */
+export const FISH_TASK_VARIETY = { need: 8, reward: 250 } as const;
+/** The chef's order takes the fish, so it pays this many times its sell price, and a staff meal. */
+export const FISH_CHEF_PAY = 3;
+
+/**
+ * The sushi bar's meals (f-sushi phase B, specs/launch/sushi-bar.md): each a fishing buff for a while, the last meal
+ * replacing the one before. `luck` adds to the cast's luck (rarer fish bite, as a better rod's does), `size` pulls the
+ * size roll toward the top (fishRoll). The feast is cooked from one of your own epic or legendary fish instead of coins
+ * (David: "good for repeated legendary fish they wanna use instead of sell").
+ */
+export interface MealBuff { luck: number; size: number; minutes: number }
+export interface Dish { id: string; name: string; blurb: string; price: number | null; buff: MealBuff }
+/**
+ * Each dish's art (design bible Models): its high-def model for the menu (`hd`, and the icon rendered from it, `icon`),
+ * and the low-poly world copy `worldModel(hd)` serves at the bar. The models wait for David's references; until one is
+ * made (`ready`), the menu shows `standIn`, an existing icon, marked as a stand-in.
+ */
+export const DISH_ART: Record<string, { hd: string; icon: string; standIn: string; ready: boolean }> = {
+  miso_soup: { hd: "/assets/game/food/hd/miso-soup.glb", icon: "dish_miso_soup", standIn: "lounge-tea", ready: false },
+  salmon_nigiri: { hd: "/assets/game/food/hd/salmon-nigiri.glb", icon: "dish_salmon_nigiri", standIn: "fish_salmon", ready: false },
+  tuna_roll: { hd: "/assets/game/food/hd/tuna-roll.glb", icon: "dish_tuna_roll", standIn: "fish_tuna", ready: false },
+  omakase: { hd: "/assets/game/food/hd/omakase.glb", icon: "dish_omakase", standIn: "sea_sweet_shrimp", ready: false },
+  feast: { hd: "/assets/game/food/hd/banchas-feast.glb", icon: "dish_banchas_feast", standIn: "fish_king_salmon", ready: false },
+};
+export const SUSHI_MENU: readonly Dish[] = [
+  { id: "miso_soup", name: "Miso soup", blurb: "Warm and simple.", price: 20, buff: { luck: 0.05, size: 0, minutes: 15 } },
+  { id: "salmon_nigiri", name: "Salmon nigiri", blurb: "Fresh off the morning boats.", price: 40, buff: { luck: 0.1, size: 0, minutes: 20 } },
+  { id: "tuna_roll", name: "Tuna roll", blurb: "Thick cut and generous.", price: 40, buff: { luck: 0, size: 0.3, minutes: 20 } },
+  { id: "omakase", name: "Omakase", blurb: "Whatever Bancha picks today.", price: 150, buff: { luck: 0.15, size: 0.3, minutes: 30 } },
+  { id: "feast", name: "Bancha's feast", blurb: "Bring one of your epic or legendary fish and he cooks it into a feast.", price: null, buff: { luck: 0.35, size: 0.6, minutes: 60 } },
+];
+/** The chef's order pays its coins and this meal (David: "side quest for special fish for money and food"). */
+export const STAFF_MEAL: MealBuff = { luck: 0.1, size: 0.2, minutes: 30 };
+
 /** Daily gift (row 225): 10 coins, doubled on Fridays (Toronto day). */
 export function dailyGiftAmount(day: string, base: number = SETTINGS.daily_gift_coins): number {
   const [y, m, d] = day.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d)).getUTCDay() === 5 ? base * 2 : base;
 }
 
-export const SETTINGS = { daily_gift_coins: 10, event_attendance_coins: 50, special_count: 3, special_discount_pct: 20, max_open_merch: 3 } as const;
+export const SETTINGS = { daily_gift_coins: 10, event_attendance_coins: 50, special_count: 3, special_discount_pct: 20, max_open_merch: 3, welcome_box_coins: 300, friend_gift_coins: 50, campfire_coins: 25, welcome_box_furniture: 0 } as const;
+
+/**
+ * The welcome week (d-streak, 20261030010200_welcome_week.sql; David 2026-10-28: "see the reward for logging in each day
+ * ... a total of like 1500 coins, 25 gems, and mystery box with a wheel that spins for gear/clothing"): a member's first
+ * seven gift days each bring the track's reward, shown ahead on the gift card. Day 7 opens the mystery box (one random
+ * prize from the box pool, or welcome_box_coins when the member already owns it all) with its Gems. 1500 coins and 25
+ * Gems over the week. `days` counts the member's gift days so far.
+ */
+export const WELCOME_DAYS = 7;
+export interface WelcomeReward { coins: number; gems: number; box: boolean }
+export const WELCOME_TRACK: readonly WelcomeReward[] = [
+  { coins: 200, gems: 0, box: false }, { coins: 300, gems: 0, box: false }, { coins: 0, gems: 5, box: false }, { coins: 400, gems: 0, box: false },
+  { coins: 0, gems: 10, box: false }, { coins: 600, gems: 0, box: false }, { coins: 0, gems: 10, box: true },
+];
+export const welcomeDay = (days: number): number | null => (days >= 1 && days <= WELCOME_DAYS ? days : null);
+/**
+ * The mystery box's pool, spun on its wheel: clothing (active special_pool outfits, hair, faces and accessories, priced in
+ * coins at no more than the box's coin prize, welcome_box_coins) or gear (BOX_GEAR, the second-tier tools), that the
+ * member doesn't own yet. Furniture joins only once homes open (welcome_box_furniture = 1; homes are closed, so a sofa
+ * would be a prize nobody can use). Never Contraband (staff-only, David 2026-10-27), merch, wallpaper, flooring or
+ * anything in gems. Mirrored in 20261030010200_welcome_week.sql.
+ */
+export const BOX_CATEGORIES = ["outfit", "hair", "face", "accessory"] as const;
+export const BOX_GEAR = ["rod-cedar", "net-mid", "shovel-mid"] as const;
+export const boxPool = <T extends { id: string; slug: string; special_pool: boolean; active: boolean; price_coins: number | null; stackable: boolean; category: string; rarity?: string | null }>(
+  items: readonly T[], owned: ReadonlySet<string>, cap: number = SETTINGS.welcome_box_coins, furniture: boolean = (SETTINGS.welcome_box_furniture as number) === 1,
+) => items.filter((i) => i.active && i.price_coins !== null && i.rarity !== "contraband" && (i.stackable || !owned.has(i.id))
+  && ((BOX_GEAR as readonly string[]).includes(i.slug)
+    || (i.special_pool && i.price_coins <= cap && ((BOX_CATEGORIES as readonly string[]).includes(i.category) || (furniture && i.category === "furniture")))));

@@ -42,6 +42,13 @@
 @keyframes glyphPulse { 50% { transform: translateX(-50%) scale(1.14); box-shadow: var(--gui-shadow-md), 0 0 0 6px rgb(255 204 0 / 0.45); } }
 @keyframes glyphOut { to { opacity: 0; transform: translate(-50%, 6px); } }
 
+/* The dock's move (the box, the dash): its key held up above the prompt lane until you do it, the cap pressing. */
+.teach { position: absolute; left: 50%; bottom: calc(var(--hud-lane-bottom, 132px) + 64px); display: flex; align-items: center; gap: 12px; padding: 8px 18px 8px 10px;
+  border-radius: 999px; background: var(--ui-card); color: var(--ui-ink); font: 800 16px/1.2 var(--gui-font); box-shadow: 0 8px 24px rgb(var(--ui-shade) / 0.18);
+  transform: translateX(-50%); zoom: var(--tsi-text-scale, 1); pointer-events: none !important; animation: glyphIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.teachCap { min-width: 44px; text-align: center; animation: teachTap 1.3s ease-in-out 0.6s infinite; }
+@keyframes teachTap { 0%, 22%, 100% { transform: translateY(0); filter: none; } 11% { transform: translateY(3px); filter: brightness(0.9); } }
+
 /* Leaving the tour: small, out of the way at the top, one click. */
 .leave { position: absolute; top: max(14px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); min-height: 36px; padding: 6px 16px; border: 0;
   border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.88); color: var(--gui-muted); font: 800 var(--gui-text-xs)/1 var(--gui-font); box-shadow: var(--gui-shadow-sm);
@@ -50,6 +57,6 @@
 .leave:focus-visible { outline: 3px solid var(--gui-focus, #3e7fa6); outline-offset: 2px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .letterbox i, .skip, .glyph { animation: none; }
+  .letterbox i, .skip, .glyph, .teach, .teachCap { animation: none; }
   .fadeIn { animation-duration: 1ms; }
 }

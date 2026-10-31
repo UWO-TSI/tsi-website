@@ -44,8 +44,8 @@ const tool = (slug: string, name: string, slot: "rod" | "net" | "shovel", tier: 
  * catalogue's one-price rule (their nominal value); nothing charges it.
  */
 export const CRAFTED_ITEMS: CatalogueEntry[] = [
-  tool("rod-lighthouse", "Lighthouse rod", "rod", 4, { catalogue_ref: "rod_lighthouse", description: "Tier 4. Legendary fish will bite." }),
-  tool("rod-tidewarden", "Tidewarden rod", "rod", 5, { catalogue_ref: "rod_tidewarden", description: "Tier 5. The widest bite window on the island." }),
+  tool("rod-lighthouse", "Lighthouse rod", "rod", 4, { catalogue_ref: "rod_lighthouse", description: "A rare rod: epic fish will bite." }),
+  tool("rod-tidewarden", "Tidewarden rod", "rod", 5, { catalogue_ref: "rod_tidewarden", description: "An epic rod with the widest bite window on the island." }),
   tool("net-silk", "Silk net", "net", 3),
   tool("net-dragonfly", "Dragonfly net", "net", 4),
   tool("net-emperor", "Emperor net", "net", 5),
@@ -107,8 +107,9 @@ export const RECIPES: Recipe[] = [
   r("bow-yew", { wood_branch: 6, bug_bagworm: 2 }, ["bottle"], "weapon"),
   r("revolver-brass", { rock_iron_nugget: 3, rock_gold_nugget: 1 }, ["quest", "bottle"], "weapon"),
   r("staff-rune", { wood_branch: 4, rock_crystal: 2, fish_football_fish: 1 }, ["quest", "bottle"], "weapon"),
-  // The leaf glider (row 245), learned the way rods 4-5 are: a resident's quest or the message bottle. Last, so the seeded recipes keep their positions.
-  r("glider-leaf", { wood_branch: 6, flower_windflower: 2, bug_red_dragonfly: 1 }, ["quest", "bottle"]),
+  // The leaf glider (row 245): hidden until the mountain expansion (specs/launch/v1-gameplay.md x-moves), so only its quest
+  // will teach it, never the bottle. Last, so the seeded recipes keep their positions.
+  r("glider-leaf", { wood_branch: 6, flower_windflower: 2, bug_red_dragonfly: 1 }, ["quest"]),
   // The backpack's upgrades (specs/game-ui-questions.md 23): 30 slots, known by everyone (or bought, 1,500 coins); 40, from the bottle.
   r("bag-30", { bug_bagworm: 4, wood_branch: 6 }, ["starter"]),
   r("bag-40", { bug_bagworm: 6, rock_gold_nugget: 1, flower_windflower: 2 }, ["bottle"]),

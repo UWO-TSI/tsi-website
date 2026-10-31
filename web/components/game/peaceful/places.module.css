@@ -1,0 +1,79 @@
+/* The fishing places (FishingPlaces.tsx), on the flat kit: the theme's --ui-* tokens only. */
+.money { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
+.place { display: grid; gap: 18px; align-content: start; }
+.empty { display: grid; justify-items: center; gap: 8px; padding: 60px 0; color: var(--ui-quiet); }
+.groupHead { display: flex; align-items: center; gap: 8px; margin: 0 0 10px 2px; color: var(--ui-ink); font: 600 17px/1.2 var(--gui-font); text-transform: capitalize; }
+.renew { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; padding: 4px 8px; border-radius: 8px; background: var(--ui-pill); color: var(--ui-pill-ink); font: 600 12px/1 var(--gui-font); }
+
+/* Tasks */
+.tasks { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 26px; align-items: start; }
+.taskGroup { display: grid; gap: 10px; }
+.tasks > p { grid-column: 1 / -1; }
+
+/* Quick sell */
+.thumbGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 14px; justify-items: center; padding: 18px; border-radius: 20px; background: var(--ui-card); }
+.bar { position: sticky; bottom: 0; display: flex; align-items: center; justify-content: flex-end; gap: 18px; padding: 14px 18px; border-radius: 18px; background: var(--ui-card);
+  box-shadow: 0 -6px 20px rgb(var(--ui-shade) / 0.06); }
+.total { display: inline-flex; align-items: center; gap: 10px; color: var(--ui-ink-2); font: 600 20px/1 var(--gui-font); }
+
+/* Monthly board */
+.monthly { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(260px, 1fr); gap: 24px; align-items: start; }
+.podium, .enter { display: grid; align-content: start; padding: 18px; border-radius: 20px; background: var(--ui-card); }
+.ranks { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.ranks li { display: grid; grid-template-columns: 28px auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 14px; }
+.ranks li:nth-child(-n + 3) .rank { color: var(--ui-ink); }
+.ranks li[data-mine] { background: var(--ui-panel); }
+.rank { color: var(--ui-quiet); font: 800 18px/1 var(--gui-font); text-align: center; font-variant-numeric: tabular-nums; }
+.rankWho { display: grid; gap: 2px; min-width: 0; }
+.rankWho b { font: 600 15px/1.2 var(--gui-font); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rankWho small { color: var(--ui-quiet); font: 500 12px/1.2 var(--gui-font); }
+.rankSize { font: 700 20px/1 var(--gui-font); font-variant-numeric: tabular-nums; }
+.rankSize small { margin-left: 2px; color: var(--ui-quiet); font-size: 12px; }
+.enterRow { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--ui-line); }
+.enterRow:first-of-type { border-top: 0; }
+.up { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--ui-panel); color: var(--ui-rarity-uncommon); }
+
+/* Tackle counter */
+.counter { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 22px; align-items: start; }
+.counterMain { display: grid; gap: 14px; align-content: start; }
+.stage { display: grid; align-content: center; min-height: 430px; padding: 22px; border-radius: 22px; background: var(--ui-stage); }
+.banner { display: grid; justify-items: center; align-content: center; gap: 16px; }
+.season { padding: 5px 12px; border-radius: 999px; background: var(--ui-ink); color: var(--ui-accent-ink); font: 700 12px/1 var(--gui-font); letter-spacing: 0.12em; text-transform: uppercase; }
+.crazy { display: flex; gap: 22px; }
+.crazy > * { animation: bob 3.2s ease-in-out infinite; }
+.crazy > *:nth-child(2) { animation-delay: -1.6s; }
+@keyframes bob { 50% { transform: translateY(-6px); } }
+.standIn { color: var(--ui-hint); font: 500 12px/1.3 var(--gui-font); }
+.pulls { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pull { all: unset; display: grid; justify-items: center; gap: 6px; padding: 16px; border-radius: 18px; background: var(--ui-card); color: var(--ui-ink); cursor: pointer; box-sizing: border-box;
+  box-shadow: inset 0 0 0 1.5px var(--ui-line); transition: transform 0.2s cubic-bezier(0.34, 1.4, 0.64, 1), box-shadow 0.2s ease-out, background 0.15s ease-out; }
+.pull b { font: 800 22px/1 var(--gui-font); }
+.pull .money { font: 600 15px/1 var(--gui-font); }
+.pull[data-ten] { background: var(--ui-accent); color: var(--ui-accent-ink); box-shadow: none; }
+.pull:hover:not(:disabled) { transform: translateY(-2px); box-shadow: inset 0 0 0 1.5px var(--ui-line), 0 10px 22px rgb(var(--ui-shade) / 0.1); }
+.pull[data-ten]:hover:not(:disabled) { background: var(--ui-accent-deep); box-shadow: 0 10px 22px rgb(var(--ui-shade) / 0.18); }
+.pull:active:not(:disabled) { transform: scale(0.97); }
+.pull:disabled { opacity: 0.45; cursor: default; }
+.pull:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+.oddsSide { display: grid; gap: 4px; align-content: start; }
+
+/* Chef's order */
+.orderStage { position: relative; display: grid; justify-items: center; gap: 12px; padding: 30px 20px 22px; border-radius: 20px; background: var(--ui-stage); }
+.chef { position: absolute; top: 14px; left: 14px; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--ui-card); color: var(--ui-ink-2); }
+.orderName { font: 600 22px/1.2 var(--gui-font); }
+.pays { display: flex; justify-content: center; gap: 12px; }
+.payChip { display: inline-flex; align-items: center; gap: 7px; padding: 10px 14px; border-radius: 14px; background: var(--ui-card); font: 700 17px/1 var(--gui-font); outline: none; }
+.payChip:focus-visible { box-shadow: 0 0 0 2px var(--ui-focus); }
+.orderAction { display: grid; }
+.orderAction > button { width: 100%; height: 50px; }
+.served { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 50px; border-radius: 999px; background: var(--ui-card); color: var(--ui-rarity-uncommon); font: 600 15px/1 var(--gui-font); }
+
+@media (max-width: 760px) {
+  .monthly, .counter { grid-template-columns: minmax(0, 1fr); }
+  .stage { min-height: 0; }
+  .crazy > * { --thumb: 88px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .crazy > * { animation: none; }
+  .pull { transition: none; }
+}

@@ -72,8 +72,13 @@ export const SET = {
    * off and how far past it it runs (m), and its height (the reflection's wobble at the crest). `ahead`, `behind`: how
    * far your reflection reaches before and after your face along the wave's way (m), so it knows when it is crossing you.
    */
-  wave: { heading: 0.4, speed: 1.8, lead: 1.1, exit: 1.5, height: 0.013, ahead: 0.35, behind: 0.65 },
+  wave: { heading: 0.4, speed: 1.5, lead: 1.1, exit: 1.5, height: 0.009, ahead: 0.35, behind: 0.65 },
 };
+/**
+ * How far the sea's tilt (its swell and chop) and a rolling wave's bend your reflection, against how far they tilt the
+ * water's own light and shade (1). Playtest 2026-10-29 (David: "the reflection isnt moving as much"): was 1 and 1.
+ */
+const REFLECT_BEND = { sea: 0.25, wave: 0.5 };
 /** The sea's colours at golden hour (the deep, the shallower tint, the sky the reflection shows round you). */
 const SEA = { deep: "#2a6c80", shallow: "#4b9aa6", sky: "#dfe9e4", haze: "#f3e6cf", sun: "#fff1cf" };
 
@@ -153,9 +158,11 @@ vec2 waves(vec2 p, out float foam, out float lift, out float shade, out float sw
 void main() {
   vec2 p = vW.xz;
   float foam, lift, shade, swept;
-  vec2 g = sea(p, uTime) + waves(p, foam, lift, shade, swept);
+  vec2 gs = sea(p, uTime), gw = waves(p, foam, lift, shade, swept), g = gs + gw;
+  // The reflection moves much less than the water (playtest 2026-10-29: "more chill so its easier to see the character"):
+  // the sea bends it a quarter as far as its surface tilts, a wave half; the surface's own light and shade keep all of it.
   vec4 proj = vR;
-  proj.xy += g * 0.22 * proj.w;
+  proj.xy += (gs * ${REFLECT_BEND.sea.toFixed(2)} + gw * ${REFLECT_BEND.wave.toFixed(2)}) * 0.22 * proj.w;
   vec2 uv = proj.xy / proj.w;
   vec3 refl = texture2D(tRefl, uv, uBlur).rgb;
   // Ahead of a sweeping wave's crest the water still shows the look it is replacing.
@@ -180,14 +187,36 @@ void main() {
 const POST_VERT = /* glsl */ `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
 /**
  * The composite: a soft disk blur on the frame's mips (less round your reflection and on the waves, which the water
- * marks in the frame's alpha), washed toward the morning haze.
+ * marks in the frame's alpha), washed toward the morning haze. While a wave sweeps a change in, `uDissolve` (0 to 1)
+ * dissolves the frame with the old you over the side into the one with the new you: a clumpy pixel noise, a thin edge of
+ * the waves' foam cream where the two differ (playtest 2026-10-29: "the back of the head hair to dissolve into new hair").
  */
 const COMPOSITE_FRAG = /* glsl */ `
-uniform sampler2D tScene;
+uniform sampler2D tScene, tSceneNew;
 uniform vec2 uRes, uFocus, uFocusR;
-uniform float uLod, uWash, uFocusOn;
+uniform float uLod, uWash, uFocusOn, uDissolve;
 uniform vec3 uHaze;
 varying vec2 vUv;
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + 1.0), f.x), f.y);
+}
+// Explicit mip levels (the frame is drawn 1:1, so the same as a bias): the dissolve samples inside a branch that differs
+// cell to cell, where implicit ones would come out wrong along the cells' edges.
+vec3 blur(sampler2D t, float lod, vec2 k) {
+  vec3 c = textureLod(t, vUv, lod).rgb * 2.0;
+  c += textureLod(t, vUv + vec2(1.0, 0.0) * k, lod).rgb;
+  c += textureLod(t, vUv + vec2(-1.0, 0.0) * k, lod).rgb;
+  c += textureLod(t, vUv + vec2(0.0, 1.0) * k, lod).rgb;
+  c += textureLod(t, vUv + vec2(0.0, -1.0) * k, lod).rgb;
+  c += textureLod(t, vUv + vec2(0.7, 0.7) * k, lod).rgb;
+  c += textureLod(t, vUv + vec2(-0.7, 0.7) * k, lod).rgb;
+  c += textureLod(t, vUv + vec2(0.7, -0.7) * k, lod).rgb;
+  c += textureLod(t, vUv + vec2(-0.7, -0.7) * k, lod).rgb;
+  return c / 10.0;
+}
 void main() {
   vec2 q = (vUv - uFocus) / uFocusR;
   float m = uFocusOn * (1.0 - smoothstep(0.55, 1.0, length(q)));
@@ -195,16 +224,18 @@ void main() {
   float lod = mix(uLod, uLod * 0.2, max(m, wave));
   float r = exp2(lod) * 1.35 / uRes.y;
   vec2 k = vec2(uRes.y / uRes.x, 1.0) * r;
-  vec3 c = texture2D(tScene, vUv, lod).rgb * 2.0;
-  c += texture2D(tScene, vUv + vec2(1.0, 0.0) * k, lod).rgb;
-  c += texture2D(tScene, vUv + vec2(-1.0, 0.0) * k, lod).rgb;
-  c += texture2D(tScene, vUv + vec2(0.0, 1.0) * k, lod).rgb;
-  c += texture2D(tScene, vUv + vec2(0.0, -1.0) * k, lod).rgb;
-  c += texture2D(tScene, vUv + vec2(0.7, 0.7) * k, lod).rgb;
-  c += texture2D(tScene, vUv + vec2(-0.7, 0.7) * k, lod).rgb;
-  c += texture2D(tScene, vUv + vec2(0.7, -0.7) * k, lod).rgb;
-  c += texture2D(tScene, vUv + vec2(-0.7, -0.7) * k, lod).rgb;
-  c /= 10.0;
+  vec3 c = blur(tScene, lod, k);
+  if (uDissolve > 0.0) {
+    // Pixels of a 900-high frame, in 3-pixel cells: clumps of about 20 cells, a little crumbly at their edges.
+    vec2 px = floor(vUv * uRes / (3.0 * uRes.y / 900.0));
+    float n = noise(px / 6.0) * 0.85 + hash(px) * 0.15, p = uDissolve * 1.1 - 0.05;
+    if (n < p + 0.05) {
+      vec3 cn = blur(tSceneNew, lod, k);
+      // The edge only where the two yous differ (unblurred: the blur's wide mips would carry it over the water).
+      float differ = step(0.06, dot(abs(textureLod(tScene, vUv, 0.0).rgb - textureLod(tSceneNew, vUv, 0.0).rgb), vec3(1.0)));
+      c = n < p ? cn : mix(c, vec3(0.98, 0.97, 0.93), 0.85 * differ);
+    }
+  }
   float wash = uWash * (1.0 - 0.75 * max(m, wave));
   float l = dot(c, vec3(0.299, 0.587, 0.114));
   c = mix(c, mix(vec3(l), uHaze, 0.5) * 1.06 + 0.04, wash);
@@ -252,29 +283,37 @@ function makeGpu() {
   });
   const composite = new THREE.ShaderMaterial({
     vertexShader: POST_VERT, fragmentShader: COMPOSITE_FRAG, depthTest: false, depthWrite: false,
-    uniforms: { tScene: { value: frame.texture }, uRes: { value: new THREE.Vector2(1, 1) }, uFocus: { value: new THREE.Vector2(0.5, 0.5) }, uFocusR: { value: new THREE.Vector2(0.2, 0.2) },
+    uniforms: { tScene: { value: frame.texture }, tSceneNew: { value: frame.texture }, uDissolve: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) }, uFocus: { value: new THREE.Vector2(0.5, 0.5) }, uFocusR: { value: new THREE.Vector2(0.2, 0.2) },
       uLod: { value: 4 }, uWash: { value: 0.6 }, uFocusOn: { value: 0 }, uHaze: { value: new THREE.Color(SEA.haze) } },
   });
   const post = new THREE.Scene(), postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   post.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), composite));
   const sky = new THREE.ShaderMaterial({ vertexShader: SKY_VERT, fragmentShader: SKY_FRAG, side: THREE.BackSide, depthWrite: false,
     uniforms: { uTop: { value: new THREE.Color("#9fc7d6") }, uHorizon: { value: new THREE.Color("#f4d8ae") }, uSun: { value: new THREE.Color(SEA.sun) } } });
-  // The old look's mirror, made the first time a wave sweeps a change in (reflectionPasses.ts).
-  const reflOld = null as THREE.WebGLRenderTarget | null;
-  return { refl, reflOld, frame, mirror, texMatrix, clip, water, composite, post, postCam, sky };
+  // The old look's mirror and the new look's frame, made the first time a wave sweeps a change in (reflectionPasses.ts).
+  const reflOld = null as THREE.WebGLRenderTarget | null, frameNew = null as THREE.WebGLRenderTarget | null;
+  return { refl, reflOld, frame, frameNew, mirror, texMatrix, clip, water, composite, post, postCam, sky };
 }
 /** Everything the creator's canvas made, gone with it (the mirror exists only while the creator does). */
 function disposeGpu(gpu: Gpu) {
-  gpu.refl.dispose(); gpu.reflOld?.dispose(); gpu.frame.dispose(); gpu.water.dispose(); gpu.composite.dispose(); gpu.sky.dispose();
+  gpu.refl.dispose(); gpu.reflOld?.dispose(); gpu.frame.dispose(); gpu.frameNew?.dispose(); gpu.water.dispose(); gpu.composite.dispose(); gpu.sky.dispose();
   gpu.post.traverse(o => (o as THREE.Mesh).geometry?.dispose());
 }
-function resizeGpu(gpu: Gpu, w: number, h: number) { gpu.frame.setSize(Math.max(1, Math.round(w)), Math.max(1, Math.round(h))); }
+function resizeGpu(gpu: Gpu, w: number, h: number) {
+  for (const t of [gpu.frame, gpu.frameNew]) t?.setSize(Math.max(1, Math.round(w)), Math.max(1, Math.round(h)));
+}
 
 interface Frame {
   gl: THREE.WebGLRenderer; scene: THREE.Scene; camera: THREE.PerspectiveCamera; size: { width: number; height: number }; gpu: Gpu;
   tmp: { a: THREE.Vector3; b: THREE.Vector3; up: THREE.Vector3; head: THREE.Vector3; eye: THREE.Vector3; aim: THREE.Vector3; qa: THREE.Quaternion; qc: THREE.Quaternion };
   clock: React.RefObject<number>; waves: React.RefObject<number[]>; view: React.RefObject<{ x: number; y: number; w: number; h: number } | null>;
-  you: THREE.Group | null; youNow: THREE.Group | null; youOld: THREE.Group | null; bram: THREE.Group | null; boat: THREE.Group | null; water: THREE.Mesh | null; youMotion: CharacterMotion; bramMotion: CharacterMotion;
+  you: THREE.Group | null; youNow: THREE.Group | null; youOld: THREE.Group | null; sweep: boolean; bram: THREE.Group | null; boat: THREE.Group | null; water: THREE.Mesh | null; youMotion: CharacterMotion; bramMotion: CharacterMotion;
+}
+/** A character's live bones (its body's skeleton), under `o`. */
+function bonesOf(o: THREE.Object3D) {
+  let bones: THREE.Bone[] | null = null;
+  o.traverse(m => { if (!bones && (m as THREE.SkinnedMesh).isSkinnedMesh) bones = (m as THREE.SkinnedMesh).skeleton.bones; });
+  return bones as THREE.Bone[] | null;
 }
 const Y = new THREE.Vector3(0, 1, 0), _m = new THREE.Matrix4();
 /** A camera at `eye` looking at `at` with `up`, turned `roll` about its view axis, as a quaternion. */
@@ -360,12 +399,20 @@ function drawReflection(f: Frame, dt: number) {
   w.uWaveDir.value.set(Math.cos(W0.heading), Math.sin(W0.heading));
   w.uWaveRun.value.set(W0.speed, W0.lead, W0.height, W0.exit);
   // A change being swept in (the old look still there): the latest wave carries it.
-  if (f.youOld && !gpu.reflOld) {
-    gpu.reflOld = new THREE.WebGLRenderTarget(gpu.refl.width, gpu.refl.height, { type: THREE.HalfFloatType, colorSpace: THREE.LinearSRGBColorSpace, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter });
+  const sweep = f.sweep && !!f.youOld;
+  if (sweep && !gpu.reflOld) {
+    const opts = { type: THREE.HalfFloatType, colorSpace: THREE.LinearSRGBColorSpace, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter } as const;
+    gpu.reflOld = new THREE.WebGLRenderTarget(gpu.refl.width, gpu.refl.height, opts);
+    gpu.frameNew = new THREE.WebGLRenderTarget(gpu.frame.width, gpu.frame.height, { ...opts, samples: 4 });
     w.tReflOld.value = gpu.reflOld.texture;
+    gpu.composite.uniforms.tSceneNew.value = gpu.frameNew.texture;
   }
-  w.uSweepT.value = f.youOld ? list[list.length - 1] ?? -1 : -1;
+  const sweptAt = list[list.length - 1] ?? -1;
+  w.uSweepT.value = sweep ? sweptAt : -1;
   const c = gpu.composite.uniforms;
+  // Over the side, the old you dissolves into the new one while the wave's crest crosses your reflection.
+  const beats = waveBeats();
+  c.uDissolve.value = sweep ? Math.max(1e-3, smooth(beats.ride, beats.done, t - sweptAt)) : 0;
   c.uLod.value = (1 - clarity) * 5.2;
   c.uWash.value = (1 - clarity) * 0.8;
   c.uFocusOn.value = lean;
@@ -377,7 +424,13 @@ function drawReflection(f: Frame, dt: number) {
 
   // The mirror pass and the frame, of the one scene: the you over the side and the you in the water are the same character
   // (and the old look's too while a wave sweeps a change in).
-  renderReflection(gl, scene, f.water, cam, gpu.mirror, gpu, gpu.clip, { now: f.youNow, old: f.youOld });
+  if (!sweep && f.youOld) f.youOld.visible = false;
+  // Both yous hold the one pose (their idles can drift apart), so the dissolve changes the look and nothing else.
+  if (sweep && f.youNow && f.youOld) {
+    const from = bonesOf(f.youNow), to = bonesOf(f.youOld);
+    if (from && to && from.length === to.length) to.forEach((b, i) => { b.position.copy(from[i].position); b.quaternion.copy(from[i].quaternion); b.scale.copy(from[i].scale); });
+  }
+  renderReflection(gl, scene, f.water, cam, gpu.mirror, gpu, gpu.clip, { now: f.youNow, old: sweep ? f.youOld : null });
   gl.setRenderTarget(null);
   gl.render(gpu.post, gpu.postCam);
 }
@@ -413,7 +466,7 @@ export default function ReflectionScene({ look, before, waves, clock, view }: {
   const tmp = useMemo(() => ({ a: new THREE.Vector3(), b: new THREE.Vector3(), up: new THREE.Vector3(), head: new THREE.Vector3(), eye: new THREE.Vector3(),
     aim: new THREE.Vector3(), qa: new THREE.Quaternion(), qc: new THREE.Quaternion() }), []);
   // Takes over the canvas's rendering (priority 1): the mirror, the frame, the composite. The thumbnail baker (priority 0) reads back before it.
-  useFrame((_, raw) => drawReflection({ gl, scene, camera: camera as THREE.PerspectiveCamera, size, gpu, tmp, clock, waves, view, you: you.current, youNow: youNow.current, youOld: youOld.current, bram: bram.current,
+  useFrame((_, raw) => drawReflection({ gl, scene, camera: camera as THREE.PerspectiveCamera, size, gpu, tmp, clock, waves, view, you: you.current, youNow: youNow.current, youOld: youOld.current, sweep: !!before, bram: bram.current,
     boat: boatGroup.current, water: waterMesh.current, youMotion: youMotion.current, bramMotion: bramMotion.current }, Math.min(raw, 0.1)), 1);
 
   return <>
@@ -427,8 +480,12 @@ export default function ReflectionScene({ look, before, waves, clock, view }: {
     <group ref={boatGroup}><primitive object={boat} scale={BOAT.scale} /></group>
     <group ref={bram}><Suspense fallback={null}><Character look={BRAM_LOOK} motion={bramMotion} lod={false} faceSize={1024} /></Suspense></group>
     <group ref={you}>
-      <group ref={youNow}><Suspense fallback={null}><Character look={look} motion={youMotion} lod={false} faceSize={1024} /></Suspense></group>
-      {before && <group ref={youOld}><Suspense fallback={null}><Character look={before} motion={youMotion} lod={false} faceSize={1024} /></Suspense></group>}
+      {/* The old look's you is always there (hidden but between waves), so it is dressed and its idle in step with the new
+          one's the moment a wave sweeps a change in: both mount together, one boundary. */}
+      <Suspense fallback={null}>
+        <group ref={youNow}><Character look={look} motion={youMotion} lod={false} faceSize={1024} /></group>
+        <group ref={youOld} visible={false}><Character look={before ?? look} motion={youMotion} lod={false} faceSize={1024} /></group>
+      </Suspense>
     </group>
     <ThumbBaker />
   </>;

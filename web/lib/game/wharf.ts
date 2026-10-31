@@ -269,6 +269,35 @@ export const JETTY = {
 /** The new world's quick-sell stall outside the fish market (a prop by this id; art/wharf/build_sell_stall.py): E there opens the sell sheet. */
 export const SELL_BARREL = "sell-barrel";
 
+/**
+ * The fish market's two boards (David, 2026-10-28: the catch board "should be near the fish shop"; the fishing tasks "on
+ * a sperate board"): chalkboards out front, left of the door, in the market's frame (propModels.ts "fish-market": the
+ * front faces +z; the quick-sell stall stands front right, about (3, 7.2), barrels and a cart front left), so they move with the market wherever David
+ * paints it. E beside one reads it.
+ */
+export const FISH_MARKET = "fish-market";
+export const BOARD = { w: 1.0, h: 0.72, legs: 0.55 } as const;
+/** Each turns its face (`turn` past half a turn) toward where the game camera looks in from, so the chalk reads on screen. */
+export const MARKET_BOARDS = { catch: { x: -5.4, z: 7.6, turn: Math.PI + 0.35 }, tasks: { x: -8.2, z: 6.5, turn: Math.PI + 0.55 } } as const;
+export interface BoardSpot { x: number; z: number; yaw: number }
+/** Where the market's boards stand in the world and which way they face; null on a world without the market. */
+export function marketBoardsOf(props: readonly { model?: string; x: number; z: number; yaw?: number }[]): { catch: BoardSpot; tasks: BoardSpot } | null {
+  const m = props.find(o => o.model === FISH_MARKET);
+  if (!m) return null;
+  const d = { x: m.x, z: m.z, yaw: m.yaw ?? 0 }, at = (b: { x: number; z: number; turn: number }) => ({ ...dockToWorld(d, b.x, b.z, { x: 0, z: 0 }), yaw: d.yaw + b.turn });
+  return { catch: at(MARKET_BOARDS.catch), tasks: at(MARKET_BOARDS.tasks) };
+}
+/**
+ * The tackle shop's counter (David: "the tackle shop should be like a gatcha roll"): its door on the porch, in the shop's
+ * frame (propModels.ts "tackle-shop": the porch runs z 1.15 to 2.45). E there opens the rolls.
+ */
+export const TACKLE_SHOP = "tackle-shop";
+export const TACKLE_COUNTER = { x: 0, z: 2.3 } as const;
+export function tackleCounterOf(props: readonly { model?: string; x: number; z: number; yaw?: number }[]): { x: number; z: number } | null {
+  const s = props.find(o => o.model === TACKLE_SHOP);
+  return s ? dockToWorld({ x: s.x, z: s.z, yaw: s.yaw ?? 0 }, TACKLE_COUNTER.x, TACKLE_COUNTER.z, { x: 0, z: 0 }) : null;
+}
+
 /** The wharf's shops on the deck's water edge (wharf-art4's, in the old ship houses' frame: their backs over the sea on piles, facing in). */
 export const EDGE_SHOPS: readonly string[] = ["tackle-shop", "shipwright-ship"];
 /** How near a deck square's middle a shop leaves its water edge bare. */

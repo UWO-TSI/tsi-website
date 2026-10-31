@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bugReaction, curatorLine, fishPoolFor, fleeRadius, hasClue, hourKey, nodeAvailable, oneLinerFor, rollFishFor, rollNode, NET_REACH, SNEAK_SPEED } from "./peaceful";
+import { bugReaction, curatorLine, fishOut, fishOutToday, fishPoolFor, fleeRadius, hasClue, hourKey, nodeAvailable, oneLinerFor, rollFishFor, rollNode, NET_REACH, SNEAK_SPEED } from "./peaceful";
 import { rodByTier } from "./rods";
 import { RARITY_RANK } from "@/lib/rarity";
 import { ROSTER } from "@/lib/collections/roster";
@@ -23,6 +23,23 @@ describe("fish pools", () => {
     expect(has(5)).toBe(true);
     expect(rollFishFor("river", 0, rodByTier(2), noon, () => 0).key).toBe(fishPoolFor("river", 0, rodByTier(2), noon)[0].fish.key);
     expect(oneLinerFor("fish_dace")).toMatch(/river fish/);
+  });
+});
+
+describe("what's out", () => {
+  it("lists each fish once, under the first water it bites in, and only waters given", () => {
+    const out = fishOut(["sea", "river"], { ...noon, month: 9 });
+    expect(new Set(out.map(o => o.fish.key)).size).toBe(out.length);
+    expect(out.some(o => o.water === "sea") && out.some(o => o.water === "river")).toBe(true);
+    expect(out.every(o => o.water !== "pond")).toBe(true);
+    expect(fishOut([], { ...noon, month: 9 })).toEqual([]);
+    expect(fishOut(["pond"], { ...noon, month: 9 }).every(o => ROSTER.find(s => s.key === o.fish.key)?.biome === "pond")).toBe(true);
+  });
+  it("by day: everything out at some hour or weather of the day, more than at noon", () => {
+    const day = fishOutToday(["sea", "river"], 9).map(o => o.fish.key);
+    const now = fishOut(["sea", "river"], { ...noon, month: 9 }).map(o => o.fish.key);
+    expect(now.every(k => day.includes(k))).toBe(true);
+    expect(day.length).toBeGreaterThan(now.length);
   });
 });
 

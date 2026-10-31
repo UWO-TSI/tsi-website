@@ -1449,7 +1449,7 @@
    "slot": "back",
    "name": "Messy boy",
    "glb": "hair/full/hair_messy_boy.glb",
-   "tris": 827,
+   "tris": 796,
    "materials": [
     {
      "name": "M_Hair",
@@ -1481,7 +1481,7 @@
    "slot": "back",
    "name": "Long scruffy",
    "glb": "hair/full/hair_long_scruffy.glb",
-   "tris": 4186,
+   "tris": 4171,
    "materials": [
     {
      "name": "M_Hair",
@@ -1513,7 +1513,7 @@
    "slot": "back",
    "name": "Short with tufts",
    "glb": "hair/full/hair_short_tufts.glb",
-   "tris": 3816,
+   "tris": 3801,
    "materials": [
     {
      "name": "M_Hair",
@@ -1545,7 +1545,7 @@
    "slot": "back",
    "name": "Short hime cut",
    "glb": "hair/full/hair_hime_short.glb",
-   "tris": 4127,
+   "tris": 4089,
    "materials": [
     {
      "name": "M_Hair",
@@ -1577,7 +1577,7 @@
    "slot": "back",
    "name": "Windy bob",
    "glb": "hair/full/hair_windy_bob.glb",
-   "tris": 4216,
+   "tris": 4168,
    "materials": [
     {
      "name": "M_Hair",
@@ -1609,7 +1609,7 @@
    "slot": "back",
    "name": "Wispy ponytail",
    "glb": "hair/full/hair_wispy_ponytail.glb",
-   "tris": 4018,
+   "tris": 3995,
    "materials": [
     {
      "name": "M_Hair",
@@ -1641,7 +1641,7 @@
    "slot": "back",
    "name": "Messy wolf cut",
    "glb": "hair/full/hair_messy_wolf.glb",
-   "tris": 3857,
+   "tris": 3814,
    "materials": [
     {
      "name": "M_Hair",
@@ -1673,7 +1673,7 @@
    "slot": "back",
    "name": "Bowl cut",
    "glb": "hair/full/hair_bowl_cut.glb",
-   "tris": 2046,
+   "tris": 2023,
    "materials": [
     {
      "name": "M_Hair",
@@ -1705,7 +1705,7 @@
    "slot": "back",
    "name": "Layered shag",
    "glb": "hair/full/hair_layered_shag.glb",
-   "tris": 3682,
+   "tris": 3649,
    "materials": [
     {
      "name": "M_Hair",
@@ -1738,7 +1738,7 @@
    "slot": "back",
    "name": "Anime spikes",
    "glb": "hair/full/hair_anime_spikes.glb",
-   "tris": 2080,
+   "tris": 2051,
    "materials": [
     {
      "name": "M_Hair",
@@ -1770,7 +1770,7 @@
    "slot": "back",
    "name": "V-kei layers",
    "glb": "hair/full/hair_vkei.glb",
-   "tris": 2973,
+   "tris": 2934,
    "materials": [
     {
      "name": "M_Hair",
@@ -1803,7 +1803,7 @@
    "slot": "back",
    "name": "Swept fringe",
    "glb": "hair/full/hair_swept_fringe.glb",
-   "tris": 3001,
+   "tris": 2975,
    "materials": [
     {
      "name": "M_Hair",
@@ -1836,7 +1836,7 @@
    "slot": "back",
    "name": "Bob with a pigtail",
    "glb": "hair/full/hair_bob_pigtail.glb",
-   "tris": 4023,
+   "tris": 4004,
    "materials": [
     {
      "name": "M_Hair",
@@ -1868,7 +1868,7 @@
    "slot": "back",
    "name": "Long pigtails",
    "glb": "hair/full/hair_long_pigtails.glb",
-   "tris": 2891,
+   "tris": 2875,
    "materials": [
     {
      "name": "M_Hair",
@@ -1900,7 +1900,7 @@
    "slot": "back",
    "name": "Dreads with a cap",
    "glb": "hair/full/hair_dreads_cap.glb",
-   "tris": 3812,
+   "tris": 3805,
    "materials": [
     {
      "name": "M_Hair",
@@ -1973,7 +1973,7 @@
    "slot": "back",
    "name": "Messy dreads",
    "glb": "hair/full/hair_messy_dreads.glb",
-   "tris": 3613,
+   "tris": 3551,
    "materials": [
     {
      "name": "M_Hair",
@@ -2030,7 +2030,7 @@
    "slot": "back",
    "name": "Ribbon bob",
    "glb": "hair/full/hair_ribbon_bob.glb",
-   "tris": 3929,
+   "tris": 3889,
    "materials": [
     {
      "name": "M_Hair",
@@ -2071,7 +2071,7 @@
    "slot": "back",
    "name": "Curly pigtails",
    "glb": "hair/full/hair_curly_pigtails.glb",
-   "tris": 4075,
+   "tris": 4061,
    "materials": [
     {
      "name": "M_Hair",
@@ -2112,7 +2112,7 @@
    "slot": "back",
    "name": "Emo layers",
    "glb": "hair/full/hair_emo_layers.glb",
-   "tris": 4199,
+   "tris": 4166,
    "materials": [
     {
      "name": "M_Hair",
@@ -2145,7 +2145,7 @@
    "slot": "back",
    "name": "Double buns",
    "glb": "hair/full/hair_double_buns.glb",
-   "tris": 4020,
+   "tris": 4008,
    "materials": [
     {
      "name": "M_Hair",
@@ -2202,7 +2202,7 @@
    "slot": "back",
    "name": "Spiky messy",
    "glb": "hair/full/hair_spiky_messy.glb",
-   "tris": 3482,
+   "tris": 3451,
    "materials": [
     {
      "name": "M_Hair",
@@ -2235,7 +2235,7 @@
    "slot": "back",
    "name": "Straight layers",
    "glb": "hair/full/hair_straight_layers.glb",
-   "tris": 3712,
+   "tris": 3680,
    "materials": [
     {
      "name": "M_Hair",
@@ -2268,7 +2268,7 @@
    "slot": "back",
    "name": "Rolled-up mask",
    "glb": "hair/full/hair_rolled_mask.glb",
-   "tris": 3802,
+   "tris": 3779,
    "materials": [
     {
      "name": "M_Hair",
@@ -2301,7 +2301,7 @@
    "slot": "back",
    "name": "Ski mask and dreads",
    "glb": "hair/full/hair_ski_mask_dreads.glb",
-   "tris": 3826,
+   "tris": 3776,
    "materials": [
     {
      "name": "M_Hair",
@@ -2335,7 +2335,7 @@
    "slot": "back",
    "name": "Braided pigtails",
    "glb": "hair/full/hair_braided_pigtails.glb",
-   "tris": 3563,
+   "tris": 3545,
    "materials": [
     {
      "name": "M_Hair",
@@ -2368,7 +2368,7 @@
    "slot": "back",
    "name": "Messy buns with a braid",
    "glb": "hair/full/hair_buns_braid.glb",
-   "tris": 3900,
+   "tris": 3884,
    "materials": [
     {
      "name": "M_Hair",
@@ -2401,7 +2401,7 @@
    "slot": "back",
    "name": "Freeform afro",
    "glb": "hair/full/hair_freeform_afro.glb",
-   "tris": 2636,
+   "tris": 2607,
    "materials": [
     {
      "name": "M_Hair",
@@ -2435,7 +2435,7 @@
    "slot": "back",
    "name": "Sponge twists",
    "glb": "hair/full/hair_sponge_twists.glb",
-   "tris": 3733,
+   "tris": 3706,
    "materials": [
     {
      "name": "M_Hair",
@@ -2469,7 +2469,7 @@
    "slot": "back",
    "name": "Middle part",
    "glb": "hair/full/hair_middle_part.glb",
-   "tris": 3512,
+   "tris": 3466,
    "materials": [
     {
      "name": "M_Hair",
@@ -2502,7 +2502,7 @@
    "slot": "back",
    "name": "Mod cut",
    "glb": "hair/full/hair_mod_cut.glb",
-   "tris": 748,
+   "tris": 718,
    "materials": [
     {
      "name": "M_Hair",
@@ -4769,7 +4769,7 @@
    "slot": "accessory",
    "name": "Gold monocle",
    "glb": "accessories/roblox/acc_gold_monocle.glb",
-   "tris": 129,
+   "tris": 307,
    "materials": [
     {
      "name": "M_Acc",

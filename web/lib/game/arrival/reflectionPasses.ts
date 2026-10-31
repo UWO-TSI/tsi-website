@@ -40,27 +40,34 @@ export interface PassRenderer {
 
 /**
  * The mirror pass then the frame pass, both of the one scene: only the water is left out of the mirror's. While a wave
- * sweeps a new look in (`you.old`: the look it replaces), the old look's reflection is drawn too, into `reflOld`, for the
- * water to show ahead of the crest; over the side you keep the old look until the wave has crossed.
+ * sweeps a new look in (`you.old`: the look it replaces, null otherwise), the old look's reflection is drawn too, into
+ * `reflOld`, for the water to show ahead of the crest; and the frame is drawn twice, the old you over the side in `frame`
+ * and the new one in `frameNew`, for the composite to dissolve one into the other (playtest 2026-10-29: the back of the
+ * head no longer pops). Afterwards the new you is shown and the old one hidden.
  */
 export function renderReflection(gl: PassRenderer, scene: THREE.Object3D, water: THREE.Object3D | null, cam: THREE.Camera, mirror: THREE.Camera,
-  targets: { refl: THREE.WebGLRenderTarget; reflOld?: THREE.WebGLRenderTarget | null; frame: THREE.WebGLRenderTarget }, clip: THREE.Plane,
+  targets: { refl: THREE.WebGLRenderTarget; reflOld?: THREE.WebGLRenderTarget | null; frame: THREE.WebGLRenderTarget; frameNew?: THREE.WebGLRenderTarget | null }, clip: THREE.Plane,
   you?: { now: THREE.Object3D | null; old: THREE.Object3D | null }) {
-  const now = you?.now, old = targets.reflOld ? you?.old : null;
+  const now = you?.now, old = now ? you?.old : null;
+  const show = (o: THREE.Object3D) => { if (old) { old.visible = o === old; now!.visible = o === now; } };
   if (water) water.visible = false;
   gl.clippingPlanes = [clip];
-  if (old && now) {
-    now.visible = false;
-    gl.setRenderTarget(targets.reflOld!);
+  if (old && targets.reflOld) {
+    show(old);
+    gl.setRenderTarget(targets.reflOld);
     gl.render(scene, mirror);
-    now.visible = true; old.visible = false;
   }
+  if (now) show(now);
   gl.setRenderTarget(targets.refl);
   gl.render(scene, mirror);
   gl.clippingPlanes = [];
   if (water) water.visible = true;
-  if (old && now) { old.visible = true; now.visible = false; }
+  if (old) show(old);
   gl.setRenderTarget(targets.frame);
   gl.render(scene, cam);
-  if (now) now.visible = true;
+  if (now) show(now);
+  if (old && targets.frameNew) {
+    gl.setRenderTarget(targets.frameNew);
+    gl.render(scene, cam);
+  }
 }

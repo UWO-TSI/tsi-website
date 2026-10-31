@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { blockForHour, buildMusicSrcList, fallbackTrackFor, musicBlockAt, MUSIC_BLOCKS } from "./musicSchedule";
+import { blockForHour, buildMusicSrcList, musicBlockAt, MUSIC_BLOCKS } from "./musicSchedule";
 
 describe("musicSchedule", () => {
   it("has twelve two-hour blocks covering the day", () => {
@@ -38,58 +38,28 @@ describe("musicSchedule", () => {
     expect(musicBlockAt(justAfterJump)).toBe("02");
   });
 
-  it("splits the fallback tracks between day-leaning and night-leaning blocks", () => {
-    expect(fallbackTrackFor("12")).toBe("/audio/ambient/applicant-ocean-railway.ogg");
-    expect(fallbackTrackFor("08")).toBe("/audio/ambient/applicant-ocean-railway.ogg");
-    expect(fallbackTrackFor("22")).toBe("/audio/ambient/applicant-willow-tree.ogg");
-    expect(fallbackTrackFor("00")).toBe("/audio/ambient/applicant-willow-tree.ogg");
-  });
-
   const ALL = new Set(["cafe.mp3", "interior.mp3", "14-winter.mp3", "14.mp3", "06.mp3"]);
+  // The time-of-day track that ends every list is AudioManager.setMusic's (audio.music.test.ts).
 
-  it("orders candidates: cafe override first when set", () => {
-    expect(buildMusicSrcList("12", { override: "cafe" }, ALL)).toEqual([
-      "/assets/audio/music/cafe.mp3",
-      "/audio/ambient/applicant-ocean-railway.ogg",
-    ]);
+  it("orders candidates: the room override first when set, and only it", () => {
+    expect(buildMusicSrcList("12", { override: "cafe" }, ALL)).toEqual(["/assets/audio/music/cafe.mp3"]);
+    expect(buildMusicSrcList("22", { override: "interior" }, ALL)).toEqual(["/assets/audio/music/interior.mp3"]);
   });
 
-  it("orders candidates: interior override first when set", () => {
-    expect(buildMusicSrcList("22", { override: "interior" }, ALL)).toEqual([
-      "/assets/audio/music/interior.mp3",
-      "/audio/ambient/applicant-willow-tree.ogg",
-    ]);
+  it("plays the bar's own evening and night slots near the sushi bar", () => {
+    expect(buildMusicSrcList("18", { override: "bar-evening" }, new Set(["bar-evening.mp3"]))).toEqual(["/assets/audio/music/bar-evening.mp3"]);
+    expect(buildMusicSrcList("22", { override: "bar-night" }, new Set(["bar-evening.mp3", "bar-night.mp3"]))).toEqual(["/assets/audio/music/bar-night.mp3"]);
+    expect(buildMusicSrcList("18", { override: "bar-evening" }, new Set())).toEqual([]);
   });
 
-  it("plays the bar's own evening and night slots near the sushi bar, else the other track from the one outside", () => {
-    expect(buildMusicSrcList("18", { override: "bar-evening" }, new Set(["bar-evening.mp3"]))[0]).toBe("/assets/audio/music/bar-evening.mp3");
-    expect(buildMusicSrcList("22", { override: "bar-night" }, new Set(["bar-evening.mp3", "bar-night.mp3"]))[0]).toBe("/assets/audio/music/bar-night.mp3");
-    expect(buildMusicSrcList("18", { override: "bar-evening" }, new Set())).toEqual([fallbackTrackFor("22")]);
-    expect(buildMusicSrcList("22", { override: "bar-night" }, new Set())).toEqual([fallbackTrackFor("12")]);
+  it("orders candidates: seasonal variant, then the plain block", () => {
+    expect(buildMusicSrcList("14", { season: "winter" }, ALL)).toEqual(["/assets/audio/music/14-winter.mp3", "/assets/audio/music/14.mp3"]);
+    expect(buildMusicSrcList("06", {}, ALL)).toEqual(["/assets/audio/music/06.mp3"]);
   });
 
-  it("orders candidates: seasonal variant, then the plain block, then the fallback", () => {
-    expect(buildMusicSrcList("14", { season: "winter" }, ALL)).toEqual([
-      "/assets/audio/music/14-winter.mp3",
-      "/assets/audio/music/14.mp3",
-      "/audio/ambient/applicant-ocean-railway.ogg",
-    ]);
-  });
-
-  it("skips the seasonal candidate when no season is given", () => {
-    expect(buildMusicSrcList("06", {}, ALL)).toEqual([
-      "/assets/audio/music/06.mp3",
-      "/audio/ambient/applicant-ocean-railway.ogg",
-    ]);
-  });
-
-  it("requests only the files that are on disk, then the fallback", () => {
-    expect(buildMusicSrcList("14", { season: "winter" }, new Set(["14.mp3"]))).toEqual([
-      "/assets/audio/music/14.mp3",
-      "/audio/ambient/applicant-ocean-railway.ogg",
-    ]);
-    expect(buildMusicSrcList("20", { season: "autumn", override: "cafe" }, new Set())).toEqual([
-      "/audio/ambient/applicant-willow-tree.ogg",
-    ]);
+  it("requests only the files that are on disk, and never the applicant island's Stream Cafe tracks", () => {
+    expect(buildMusicSrcList("14", { season: "winter" }, new Set(["14.mp3"]))).toEqual(["/assets/audio/music/14.mp3"]);
+    expect(buildMusicSrcList("20", { season: "autumn", override: "cafe" }, new Set())).toEqual([]);
+    for (const block of MUSIC_BLOCKS) expect(buildMusicSrcList(block).join()).not.toContain("applicant");
   });
 });

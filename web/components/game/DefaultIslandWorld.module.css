@@ -81,7 +81,6 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .hudLead > * { pointer-events: auto; }
 .hudLead > .rightCluster { position: static; }
 .hudColumn { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; zoom: var(--tsi-text-scale, 1); }
-.healthSlot { display: none; }
 /* The quest tracker (QuestTracker.tsx), one line on the minimap's top row, centred on the 44px chips beside it. */
 .hudLead > .questSlot { position: static; margin-top: 4px; }
 /* A phone: no room for the gear, the line and the big map in one row, so the line keeps the top and the cluster drops
@@ -109,6 +108,8 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 /* The decorate panel itself is components/game/home/DecorateSheet.module.css (the flat UI). */
 .decorateToggle { position: absolute; right: var(--hud-edge); bottom: var(--hud-side-bottom); min-height: 44px; padding: 0 16px 0 10px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper); color: var(--gui-ink-strong); font: inherit; font-size: var(--gui-text-sm); font-weight: 800; cursor: pointer; box-shadow: var(--gui-shadow-md); z-index: 11; display: inline-flex; align-items: center; gap: 7px; }
 .world[data-inside] .heading { color: var(--gui-paper); text-shadow: 0 2px 12px #11152a; }
+/* The player's bars (HudBars), top left above the Bag and under the place name; stamina's pill beside them. */
+.hudBars { position: absolute; left: var(--hud-edge); top: 94px; z-index: 11; display: flex; align-items: center; gap: 8px; pointer-events: none; zoom: var(--tsi-text-scale, 1); }
 .bagButtons { position: absolute; left: 16px; top: 150px; z-index: 11; display: flex; align-items: center; gap: 8px; }
 .bagButton { position: relative; display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 0 16px 0 10px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper); color: var(--gui-ink-strong); font: inherit; font-size: var(--gui-text-sm); font-weight: 800; cursor: pointer; box-shadow: var(--gui-shadow-md); z-index: 11; }
 .curatorLine { margin: 0 0 12px; padding: 10px 14px; border-radius: var(--gui-r-card); background: var(--gui-paper-warm); color: var(--gui-ink); font-style: italic; }
@@ -460,3 +461,5 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .world[data-photo] > :not(:has(canvas[data-engine])):not([data-photo-ui]) { visibility: hidden !important; }
 .world[data-photo] canvas[data-engine] ~ * { visibility: hidden !important; }
 .world[data-photo] canvas[data-engine] { filter: var(--photo-filter, none); }
+/* The sushi bar's menu on the counter while you sit (f-sushi): over the toolbar, centred. */
+.barMenu { position: fixed; left: 50%; bottom: 112px; transform: translateX(-50%); z-index: 30; }

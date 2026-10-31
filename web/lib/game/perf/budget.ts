@@ -200,6 +200,9 @@ export const ASSET_CATEGORIES: readonly AssetCategory[] = [
 ];
 /** Shipped before the budget, over their category: each capped where it is today. Shrink, never raise. */
 export const ASSET_EXCEPTIONS: Record<string, Partial<AssetBudget> & { why: string }> = {
+  // The design bible's two versions (Models rule 2): the high-def copies only the player in a volleyball match loads, one on screen.
+  "game/props/beach-ball-hd.glb": { triangles: 5520, why: "the beach ball's high-def copy: close-ups and the HUD's icon, never in the world" },
+  "game/props/volleyball-net-hd.glb": { triangles: 9436, why: "the net's high-def copy: drawn only for the player in a match (passers-by get the 2,378-tri LP)" },
   "game/weapons/tanto-gilt.glb": { primitives: 12, why: "twin blades in 12 parts: 24 draws with its shadow on each Full player holding it" },
   "game/weapons/tanto-lotus.glb": { primitives: 12, why: "twin blades in 12 parts" },
   "game/weapons/tanto-rune.glb": { primitives: 10, why: "twin blades in 10 parts" },

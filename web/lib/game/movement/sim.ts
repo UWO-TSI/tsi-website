@@ -112,6 +112,13 @@ export const MOVE_TUNING = {
   slideTurn: 2.2, // heading ease toward the stick (1/s): gentle
   slideJumpHeight: 0.55, // a slide-jump: lower and longer than a jump
   slideJumpApexTime: 0.27, // gravity about 10% lighter (was 0.26)
+  // Stamina (David, 2026-10-28: "the user should have a health, stamina, and exp bar"), gentle: 1 is a full bar.
+  staminaSprint: 0.1, // per second of sprinting on the ground: a full bar is about 10 s
+  staminaDash: 0.2, // each dash
+  staminaGlide: 0.04, // per second gliding: about 25 s
+  staminaRefill: 1 / 3, // per second once resting: about 3 s from empty
+  staminaPause: 0.6, // seconds without spending before it refills
+  staminaWinded: 0.2, // emptied: sprint drops to a walk, no dash and no glide until it's back above this
 };
 export type MoveTuning = typeof MOVE_TUNING;
 /** The bunny-hop's cap: a long jump plus a full chain of held hops. Past it only tech carries speed, up to `momentumCeiling`. */
@@ -158,6 +165,8 @@ export interface MoveState {
   crouch: boolean;
   /** Seconds the stick has pushed into water on foot and been held at its edge (0 when not): the avatar braces. */
   shore: number;
+  /** Stamina, 0 to 1; seconds since it was last spent; emptied and not yet back above `staminaWinded`. */
+  stamina: number; staminaRest: number; winded: boolean;
   events: MoveEvent[];
 }
 
@@ -173,10 +182,16 @@ export function createMoveState(x: number, z: number, world: MoveWorld, facing =
   return {
     x, y, z, vx: 0, vy: 0, vz: 0, mode: "ground", modeT: 0, facing, coyote: 0, buffer: 0, cut: false, long: false, slideJump: false,
     airMax: 0, topY: y, hops: 0, dashT: 0, dashCd: 0, dashCarry: 0, dashX: Math.sin(facing), dashZ: Math.cos(facing), dashSpeed: 0, dashEnd: 0, airDashes: 0,
-    from: [x, y, z], to: [x, y, z], safe: [x, y, z], keep: 0, bleed: false, slid: false, crouch: false, shore: 0, events: [],
+    from: [x, y, z], to: [x, y, z], safe: [x, y, z], keep: 0, bleed: false, slid: false, crouch: false, shore: 0, stamina: 1, staminaRest: 0, winded: false, events: [],
   };
 }
 
+/** Spend stamina: the rest timer starts over; emptied, you're winded. */
+function spend(s: MoveState, amount: number) {
+  s.stamina = Math.max(0, s.stamina - amount);
+  s.staminaRest = 0;
+  if (s.stamina <= 0) s.winded = true;
+}
 const onFoot = (s: MoveState) => s.mode === "ground" || s.mode === "skid" || s.mode === "roll" || s.mode === "recover" || s.mode === "slide";
 const hypot = Math.hypot;
 const angleTo = (a: number, b: number) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
@@ -343,7 +358,7 @@ function land(s: MoveState, t: MoveTuning, input: MoveInput, y: number, steep = 
   s.y = y; s.vy = 0; s.airDashes = 0; s.dashT = 0; s.cut = false; s.long = false; s.slideJump = false;
   emit(s, "land", drop);
   // Space held while sprinting (or carrying momentum): the next hop goes off on the landing step (the bunny-hop). A press just before touching down is a plain jump.
-  const hop = input.jump && t.hopChainMax > 0 && ((input.sprint && speed >= t.walkSpeed * 0.9) || speed > t.walkSpeed * t.slideEnterAt);
+  const hop = input.jump && t.hopChainMax > 0 && ((input.sprint && !s.winded && speed >= t.walkSpeed * 0.9) || speed > t.walkSpeed * t.slideEnterAt);
   if ((hop || s.buffer > 0) && drop < t.recoverDrop && !steep) { setMode(s, "ground"); jump(s, t, input, hop); return; }
   s.hops = 0;
   // The crouch key held at speed: straight into a slide that keeps the landing's speed (no roll, no recovery).
@@ -459,7 +474,8 @@ export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveW
 
   // ── Dash (Q): on the ground, or once in the air (gliding: a forward gust, no lift) ──
   const aloft = s.mode === "air" || s.mode === "glide";
-  if (input.dashPressed && s.mode !== "recover" && s.dashCd <= 0 && (!aloft || s.airDashes < t.airDashes)) {
+  if (input.dashPressed && !s.winded && s.mode !== "recover" && s.dashCd <= 0 && (!aloft || s.airDashes < t.airDashes)) {
+    spend(s, t.staminaDash);
     // The stick's way (camera-relative), or the way you face; the burst eases out to dashExit of itself, or to the speed you came in with.
     const [dx, dz] = steering ? [ix, iz] : [Math.sin(s.facing), Math.cos(s.facing)], entry = Math.max(0, s.vx * dx + s.vz * dz);
     if (s.mode === "air") { s.airDashes++; s.vy = t.airDashLift; s.topY = s.y; }
@@ -477,7 +493,7 @@ export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveW
   if (s.buffer > 0 && ((onFoot(s) && s.mode !== "recover" && !w.steep?.(s.x, s.z)) || (s.mode === "air" && s.coyote > 0))) jump(s, t, input, false, onFoot(s) ? ceilingAt(w, t, s.x, s.z, s.vx, s.vz) : t.momentumCeiling);
 
   // ── Glider: a fresh press while falling opens the leaf, unless you would land within the jump buffer anyway ──
-  if (t.glider > 0 && input.jumpPressed && s.mode === "air" && s.vy <= 0 && s.dashT <= 0 && timeToGround(s, w, t, input.jump) > t.jumpBuffer) {
+  if (t.glider > 0 && !s.winded && input.jumpPressed && s.mode === "air" && s.vy <= 0 && s.dashT <= 0 && timeToGround(s, w, t, input.jump) > t.jumpBuffer) {
     setMode(s, "glide");
     s.buffer = 0; s.coyote = 0; s.cut = false; s.long = false; s.slideJump = false; s.hops = 0; s.topY = s.y;
     emit(s, "glide");
@@ -515,7 +531,7 @@ export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveW
       if (s.mode === "ground" && input.sneak && v > t.walkSpeed * t.slideEnterAt) startSlide(s, "dashslide", v);
     }
   } else if (s.mode === "ground") {
-    const target = mag * (input.sneak ? t.sneakSpeed : input.sprint ? t.sprintSpeed : t.walkSpeed);
+    const target = mag * (input.sneak ? t.sneakSpeed : input.sprint && !s.winded ? t.sprintSpeed : t.walkSpeed);
     const turn = speed > 1e-3 && steering ? Math.abs(angleTo(Math.atan2(s.vx, s.vz), Math.atan2(ix, iz))) : 0;
     if (speed > t.skidSpeed && turn > (t.skidAngle * Math.PI) / 180) {
       setMode(s, "skid");
@@ -611,6 +627,18 @@ export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveW
   if (s.y < -8) { setMode(s, "splash"); s.modeT = 0.55; }
   if (s.mode === "ground" && s.keep <= 0) s.slid = false;
   s.crouch = s.mode === "ground" && input.sneak && s.dashT <= 0;
+
+  // Stamina: sprinting on the ground and gliding spend it (a dash spent its share above); resting, it refills after a pause.
+  const sprinting = s.mode === "ground" && input.sprint && !input.sneak && steering && hypot(s.vx, s.vz) > t.walkSpeed * 1.05;
+  if (sprinting) spend(s, t.staminaSprint * dt);
+  else if (s.mode === "glide") spend(s, t.staminaGlide * dt);
+  else if (!s.events.some(e => e.kind === "dash")) {
+    s.staminaRest += dt;
+    if (s.staminaRest >= t.staminaPause) s.stamina = Math.min(1, s.stamina + t.staminaRefill * dt);
+    if (s.winded && s.stamina > t.staminaWinded) s.winded = false;
+  }
+  // Emptied while gliding: the leaf folds (you drop, as letting go of Space does).
+  if (s.winded && s.mode === "glide") { setMode(s, "air"); s.cut = true; s.topY = s.y; s.airMax = hypot(s.vx, s.vz); }
 
   // Facing: the way you travel, or the stick when turning on the spot.
   const fx = hypot(s.vx, s.vz) > 0.3 && s.mode !== "skid" ? Math.atan2(s.vx, s.vz) : steering ? Math.atan2(ix, iz) : s.facing;

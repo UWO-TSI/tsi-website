@@ -1,7 +1,7 @@
 /*
  * The flat kit's fishing pieces (components/gui/flat/reel.tsx; specs/design-bible.md UI): the reel's water track with
  * its catch window and the fish, a line gauge, the cast's power meter, the status chip and the catch card. Theme
- * tokens only (--ui-*, the rarity edges' --gui-rarity-* and --gui-holo). Motion: a spring with about 12% overshoot,
+ * tokens only (--ui-*, the rarity edges' --ui-rarity-* and --ui-holo). Motion: a spring with about 12% overshoot,
  * transform only, and the juice kept for the big moments (the hook, the catch, a rare fish).
  */
 .panel { position: relative; padding: 14px 16px 14px; border-radius: 18px; background: var(--ui-card); color: var(--ui-ink); font-family: var(--gui-font);
@@ -115,7 +115,7 @@
 .stage { position: relative; display: grid; place-items: center; width: 104px; height: 104px; border-radius: 16px; background: var(--ui-panel);
   box-shadow: inset 0 0 0 2px var(--edge, var(--ui-line)); transition: box-shadow 0.3s ease-out; }
 .stage[data-rarity="divine"] { box-shadow: none; }
-.stage[data-rarity="divine"]::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 2px; background: var(--gui-holo);
+.stage[data-rarity="divine"]::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 2px; background: var(--ui-holo);
   -webkit-mask: linear-gradient(currentColor 0 0) content-box, linear-gradient(currentColor 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
 .stagePicture { width: 80px; height: 80px; transition: transform 0.4s var(--spring, ease-out); }
 .stage[data-developed="false"] .stagePicture { filter: brightness(0) opacity(0.35); }
@@ -139,7 +139,7 @@
 .facts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--ui-ink-2); font: 500 13px/1.3 var(--gui-font); transition: opacity 0.3s ease-out; }
 .card[data-developed="false"] .facts, .card[data-developed="false"] .line { opacity: 0; }
 .rarity { padding: 3px 9px; border-radius: 999px; box-shadow: inset 0 0 0 1.5px var(--edge, var(--ui-line)); color: var(--ui-ink); font: 600 12px/1.2 var(--gui-font); }
-.rarity[data-rarity="divine"] { background: var(--gui-holo); box-shadow: none; color: var(--ui-accent-ink); }
+.rarity[data-rarity="divine"] { background: var(--ui-holo); box-shadow: none; color: var(--ui-accent-ink); }
 .quiet { color: var(--ui-quiet); }
 .line { margin: 0; color: var(--ui-ink-2); font: 400 13px/1.4 var(--gui-font); transition: opacity 0.3s ease-out 0.1s; }
 .tag { padding: 3px 8px; border-radius: 6px; background: color-mix(in srgb, var(--gui-tethos-blue) 12%, var(--ui-card)); color: var(--gui-tethos-blue); font: 600 12px/1.2 var(--gui-font); }

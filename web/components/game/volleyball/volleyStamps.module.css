@@ -1,0 +1,38 @@
+/* The match's words over the action and the two screen edges (VolleyStamps.tsx): the flat kit's tokens only. */
+.layer { position: fixed; inset: 0; z-index: 29; pointer-events: none; font-family: var(--gui-font); }
+
+/* The edges: a cool rim at the top of your jump, a warm one with the rally's heat. Opacity is set per frame. */
+.apex, .heat { position: absolute; inset: 0; opacity: 0; transition: opacity 0.18s ease; }
+.apex { box-shadow: inset 0 0 140px 36px rgb(var(--ui-shade) / 0.36); }
+.heat { background: radial-gradient(ellipse at center, transparent 55%, color-mix(in srgb, var(--ui-home) 40%, transparent) 100%); transition: opacity 0.6s ease; }
+
+/* One stamp at a time, springing in and fading up and out. */
+.stamp { position: absolute; top: 30%; left: 50%; display: grid; justify-items: center; gap: 4px; transform: translate(-50%, -50%);
+  animation: stampIn 0.9s cubic-bezier(0.2, 0.9, 0.3, 1.3) forwards; }
+.stamp > b { display: inline-block; padding: 6px 16px; border-radius: 999px; background: var(--ui-card); color: var(--ui-ink); font: 800 22px/1 var(--gui-font);
+  box-shadow: 0 6px 18px rgb(var(--ui-shade) / 0.18); letter-spacing: 0.01em; }
+.stamp[data-kind="perfect"] > b { background: var(--ui-gold); font-size: 30px; padding: 8px 20px; box-shadow: 0 0 0 4px var(--ui-card), 0 8px 24px rgb(var(--ui-shade) / 0.22); }
+.stamp[data-kind="good"] > b { font-size: 20px; }
+.stamp[data-kind="soft"] { top: 34%; animation-duration: 0.75s; }
+.stamp[data-kind="soft"] > b { background: var(--ui-card-dim); color: var(--ui-quiet); font: 700 18px/1 var(--gui-font); padding: 5px 14px; box-shadow: 0 3px 10px rgb(var(--ui-shade) / 0.12); }
+.stamp[data-kind="block"] > b, .stamp[data-kind="saved"] > b { background: var(--team); color: var(--ui-card); font: 900 38px/1 var(--gui-font); padding: 8px 22px; transform: rotate(-4deg);
+  box-shadow: 0 0 0 4px var(--ui-card), 0 10px 26px rgb(var(--ui-shade) / 0.24); }
+.stamp[data-kind="saved"] > b { transform: rotate(3deg); font-size: 32px; }
+.stamp[data-kind="out"] > b { background: var(--ui-error); color: var(--ui-card); font: 900 40px/1 var(--gui-font); padding: 8px 24px; box-shadow: 0 0 0 4px var(--ui-card), 0 10px 26px rgb(var(--ui-shade) / 0.24); }
+.stamp[data-kind="max"] { top: 24%; }
+.stamp[data-kind="max"] > b { background: var(--ui-gold); font: 900 26px/1 var(--gui-font); }
+.stamp[data-kind="win"] { top: 22%; animation: winIn 2.4s cubic-bezier(0.2, 0.9, 0.3, 1.3) forwards; }
+.stamp[data-kind="win"] > b { display: none; }
+.trophy { color: var(--ui-gold); filter: drop-shadow(0 6px 10px rgb(var(--ui-shade) / 0.25)); animation: trophy 1.2s ease-in-out 0.5s infinite alternate; }
+
+@keyframes stampIn {
+  0% { opacity: 0; transform: translate(-50%, -30%) scale(0.4); }
+  18% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+  30% { transform: translate(-50%, -50%) scale(1); }
+  75% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -64%) scale(1); }
+}
+@keyframes winIn { 0% { opacity: 0; transform: translate(-50%, -10%) scale(0.3) rotate(-20deg); } 25% { opacity: 1; transform: translate(-50%, -50%) scale(1.2) rotate(6deg); }
+  40% { transform: translate(-50%, -50%) scale(1) rotate(0); } 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes trophy { to { transform: translateY(-6px) rotate(3deg); } }
+@media (prefers-reduced-motion: reduce) { .stamp, .stamp[data-kind="win"], .trophy { animation: none; } .apex, .heat { transition: none; } }

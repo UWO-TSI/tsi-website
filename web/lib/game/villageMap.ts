@@ -134,6 +134,9 @@ export interface Village {
    * Every other world (the village, the applicant island, the ruins, the home island, the title) has none.
    */
   terrain?: WorldTerrain;
+  /** The sand and soil where things are buried (lib/game/islandNodes.ts digSpots), where `map` doesn't carry them: the
+   * server's cell view of the smooth world (world/cells.ts). Absent: `map`'s own surfaces. */
+  digSurface?: (cx: number, cz: number) => number;
   /** The cells a smooth world marks as river (its "River" annotation): they fish as river where the river opens to the sea. */
   rivers?: readonly (readonly [number, number])[];
 }

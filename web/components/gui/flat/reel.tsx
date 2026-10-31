@@ -96,7 +96,7 @@ export function StatusChip({ icon, tone = "plain", children }: { icon?: ReactNod
 }
 
 /** The rarity's edge colour (the GUI sheet's one palette). */
-const edge = (rarity: string) => `var(--gui-rarity-${rarity})`;
+const edge = (rarity: string) => `var(--ui-rarity-${rarity})`;
 
 export function CatchCard({ cardRef, picture, name, developed, build, rarity, rarityLabel, rare, facts, tags, line, note, action, label }: {
   cardRef?: Ref<HTMLDivElement>;

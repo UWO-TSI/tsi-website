@@ -38,8 +38,10 @@ import { shakeCamera } from "@/lib/game/cameraJuice";
 import { STUCK_TIME, advanceMove, clearSpot, createMoveSim, createMoveState, interpolated, topSpeed, towards, MOVE_TUNING, NO_INPUT, type MoveEvent, type MoveInput, type MoveSim, type MoveState, type MoveTuning, type MoveWorld } from "@/lib/game/movement/sim";
 import { crouchKey, useKeyboardLocked, useMoveKeys } from "@/lib/game/movement/keys";
 import { easeFacing } from "@/lib/game/locomotion";
+import { stepBack } from "@/lib/game/residentTalk";
 import { routePilot, type RouteStep } from "@/lib/game/movement/course";
 import type { AvatarRide } from "@/lib/game/movement/ride";
+import { hudLive } from "@/lib/game/hudStore";
 import { BASE_FOV, EVENT_CLIP, SEAT_FOV, MOVE_JUICE, TAKEOFF, applyFov, liveWind, momentumOf, screenOf, touchStick, useMoveParticles, type MoveJuice, type MoveTelemetry } from "./movement/moveFx";
 import { SPLASH, cooldownWisp, dashBurst, dashReady as dashBack, footprint, footstep, glideFurl, glideOpen, glideRibbon, glideSetDown, groundUnder, landKind, landing, mantleGrab, mantleStep, puffRing, rollTumble, scuff, settle, skidKick, skidPush, slideBurst, slidePop, slideTrail, splash, springStep, streak, takeoff, trail, type GroundKind } from "@/lib/game/movement/juice";
 
@@ -91,6 +93,8 @@ interface PlayerAvatarProps {
   /** The leaf glider: owned, and this area allows it (the village and the home island; never the ruins). */
   glider?: boolean;
   frozen?: boolean;
+  /** Another clip file for this avatar (a volleyball match's vb_clips.glb, loaded only while you play). */
+  clips?: string;
   desktopClickToMove?: boolean;
   /** /lab/move: live tuning and juice, slow motion, the HUD's readout and the Walk clip's pace. */
   tuning?: MoveTuning;
@@ -98,8 +102,6 @@ interface PlayerAvatarProps {
   timeScale?: number;
   telemetry?: React.RefObject<MoveTelemetry>;
   walkSpeed?: number;
-  /** The dash (Q) is yours: a Keeper teaches it (lib/game/moveUnlocks.ts); until then Q does nothing. The ruins' dodge is the encounter's. */
-  dash?: boolean;
   /** Walk only (the café, cafe-polish §4): no running, jumping or dashing. */
   walkOnly?: boolean;
   /** What this player holds from the tool wheel (specs/game-ui.md): drawn in the hand. In an encounter the weapon is the runtime's. */
@@ -155,8 +157,11 @@ function rideFrame(r: AvatarRide, g: THREE.Group, bd: THREE.Group, hd: THREE.Gro
   bd.scale.set(1, 1, 1);
   bankAbout(bd, r.yaw, r.roll, r.seated ? RIDE_PIVOT.seated : RIDE_PIVOT.standing, r.pitch);
   hd.position.set(r.x, r.y, r.z);
-  Object.assign(m, { yaw: r.yaw, speed: r.seated ? 0 : r.speed, lift: r.seated ? r.lift : 0, pose: r.seated ? "Sit" : null, move: null, rate: 1 });
+  Object.assign(m, { yaw: r.yaw, speed: r.seated ? 0 : r.speed, lift: r.seated ? r.lift : 0, pose: r.seated ? "Sit" : null, move: r.move ?? null, air: r.air, rate: 1 });
   if (r.hop) { m.play = "Jump"; r.hop = false; }
+  if (r.play) { m.play = r.play; r.play = null; }
+  if (r.upper) { m.upper = r.upper; r.upper = null; }
+  if (r.playRate) { m.playRate = r.playRate; r.playRate = undefined; }
   if (r.land) { m.stop = true; r.land = false; }
   // Footsteps from the feet on the boards: the sound, and what the boards throw (nothing but the sound, as on any wood).
   if (m.steps !== undefined && m.steps !== f.steps) {
@@ -183,7 +188,7 @@ const AIR_TAP = 0.18;
 type SeatExit = { x: number; z: number; yaw: number };
 type Seat = { x: number; z: number; clip: ClipName; lift: number; yaw: number; ground?: boolean; drive?: SeatDrive; hide?: boolean; exit?: SeatExit };
 
-export default function PlayerAvatar({ spawnPosition, player, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = false, playerLevel, member = false, combat: inCombat = false, respawn = 0, glider = false, dash = true, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed, walkOnly = false, held = null, ride }: PlayerAvatarProps) {
+export default function PlayerAvatar({ spawnPosition, player, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = false, playerLevel, member = false, combat: inCombat = false, respawn = 0, glider = false, frozen = false, clips, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed, walkOnly = false, held = null, ride }: PlayerAvatarProps) {
   const anchor = useRef<THREE.Group>(null), body = useRef<THREE.Group>(null), head = useRef<THREE.Group>(null);
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null, move: null, afterimages: true });
   const { look } = useMyLook();
@@ -199,6 +204,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
   const target = useRef<{ x: number; z: number } | null>(null);
   /** A point to turn and face while standing still (`tsi:face`, null lets go): the resident you're talking to. */
   const faceGoal = useRef<{ x: number; z: number } | null>(null);
+  /** Where a talk opened in someone's face steps you back to (and when it gives up), facing them all the while. */
+  const backOff = useRef<{ x: number; z: number; until: number } | null>(null);
   const seat = useRef<Seat | null>(null);
   const reported = useRef<THREE.Vector3 | null>(null);
   const fx = useRef({ sq: 0, sqv: 0, steps: 0, trail: 0, stuck: 0, level: 0, punch: 0, leaf: 0, leafV: 0, bank: 0, pitch: 0, sliding: false, slideT: 0, slideBeat: 0, drop: 0, heading: 0,
@@ -327,12 +334,18 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     };
   }, [groundHeight, groundSurface, world, leaveSeat, particles]);
 
-  // Talking to a resident: turn to face them while you talk (a turn, not a snap), until they let you go.
+  // Talking to a resident: turn to face them while you talk (a turn, not a snap), until they let you go. In their face,
+  // you take a short step back first (onto ground at your level), still facing them.
   useEffect(() => {
-    const on = (e: Event) => { faceGoal.current = (e as CustomEvent<{ x: number; z: number } | null>).detail ?? null; };
+    const on = (e: Event) => {
+      const goal = (e as CustomEvent<{ x: number; z: number } | null>).detail ?? null, s = sim.current?.state;
+      faceGoal.current = goal;
+      const to = goal && s && s.mode === "ground" ? stepBack(s, goal, (x, z) => Math.abs(groundHeight(x, z) - s.y) < 0.35) : null;
+      backOff.current = to && { ...to, until: performance.now() + 700 };
+    };
     window.addEventListener("tsi:face", on);
     return () => window.removeEventListener("tsi:face", on);
-  }, []);
+  }, [groundHeight]);
 
   // World interactions → clips (fish, forage, net, emotes).
   const faceToward = useCallback((x: number, z: number) => turnTo(sim.current?.state, x, z), []);
@@ -412,7 +425,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     let ix = (k[b.right] ? 1 : 0) - (k[b.left] ? 1 : 0), iz = (k[b.forward] ? 1 : 0) - (k[b.back] ? 1 : 0);
     const keyed = Math.hypot(ix, iz), tilt = Math.hypot(st.x, st.z);
     if (keyed) { ix /= keyed; iz /= keyed; } else { ix = st.x; iz = st.z; }
-    const jumpPressed = !walkOnly && (presses.current.jump || st.jumpPressed), dashPressed = !walkOnly && (dash || inCombat) && (presses.current.dash || st.dashPressed);
+    const jumpPressed = !walkOnly && (presses.current.jump || st.jumpPressed), dashPressed = !walkOnly && (presses.current.dash || st.dashPressed);
     presses.current.jump = presses.current.dash = false;
     st.jumpPressed = st.dashPressed = false;
     if (frozen || keyed || tilt > 0.05) target.current = null;
@@ -460,18 +473,25 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       const piloted = d.pilot && dt > 0 ? d.pilot(s.state, dt) : null;
       if (d.pilot && dt > 0 && !piloted) d.pilot = null;
       const steer = goal ?? cameraRelative(ix, iz, fwdX, fwdZ);
-      const input: MoveInput = piloted ?? (live ? {
+      // The step back out of someone's face as a talk opens: it walks you even while the talk holds you still.
+      const back = backOff.current && performance.now() < backOff.current.until ? towards(s.state, backOff.current.x, backOff.current.z, t) : null;
+      if (!back) backOff.current = null;
+      const input: MoveInput = piloted ?? (back ? { ...NO_INPUT, x: back.x, z: back.z } : live ? {
         x: steer.x, z: steer.z,
         sprint: !walkOnly && (!!k[b.sprint] || (!keyed && tilt > 0.92)), sneak: (!!crouch && !!k[crouch]) || st.crouch,
         jump: !walkOnly && (!!k[b.jump] || st.jump) && !airJump, jumpPressed: press && !airJump, dashPressed,
       } : { ...NO_INPUT, dashPressed: !frozen && !down && !root && dashPressed });
       if (inCombat) { input.push = push; if (p.aimHold > 0 || Math.hypot(s.state.vx, s.state.vz) < 0.6) s.state.facing = p.facing; } // attacking or standing: the kit turns from your facing (a dash with no stick goes that way)
       events = advanceMove(s, input, dt, world, t);
+      hudLive.stamina = s.state.stamina; hudLive.winded = s.state.winded;
       if (faceGoal.current && frozen) easeTurn(s.state, faceGoal.current, dt);
+      if (back && faceGoal.current) turnTo(s.state, faceGoal.current.x, faceGoal.current.z);
       if (target.current) {
         f.stuck = Math.hypot(s.state.vx, s.state.vz) < 0.3 ? f.stuck + dt : 0;
         if (f.stuck > STUCK_TIME) target.current = null;
       }
+      // A dash, for whoever is teaching it (the arrival's dock, lib/game/arrival/tutorial.ts).
+      if (!inCombat && events.some(e => e.kind === "dash")) window.dispatchEvent(new Event("tsi:dash"));
       if (inCombat && events.some(e => e.kind === "dash")) dashDodge(combat.rt, { x: s.state.dashX, z: s.state.dashZ }, s.state.airDashes > 0); // an air dash: no i-frames
       if (inCombat && combat.rt.v2) for (const e of events) {
         const on = e.kind === "dash" ? "dash" : e.kind === "slide" || e.kind === "dashslide" || e.kind === "landslide" ? "slide" : e.kind === "land" ? "land" : null;
@@ -774,7 +794,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       {/* Tap-to-walk's target: one painted marker on the ground (arrival-wharf.md §4). */}
       <MoveTargetIndicator mark={moveMark} />
       <group ref={anchor} position={spawnPosition}>
-        <group ref={body}><PlayerCharacter look={look} motion={motion} inCombat={inCombat} walkSpeed={walkSpeed} leaf={leafOwned} held={held} /></group>
+        <group ref={body}><PlayerCharacter look={look} motion={motion} inCombat={inCombat} walkSpeed={walkSpeed} leaf={leafOwned} held={held} clips={clips} /></group>
       </group>
       <group ref={head} position={spawnPosition}>
         {showNameplate && <Html calculatePosition={calculateCurvedHtmlPosition} zIndexRange={[40, 0]}
@@ -839,7 +859,7 @@ export function heldView(item: WheelItem | null): HeldView | null {
   if (!item) return null;
   if (item.kind === "glider") return { url: LEAF_URL, hold: "glider" };
   if (item.kind === "pin") { const m = itemModel(item.key); return m && { url: m.url, hold: "front", fit: m.fit }; }
-  const tool = item.kind === "rod" || item.kind === "net" || item.kind === "shovel" ? toolByKey(item.key) : null;
+  const tool = item.kind === "rod" || item.kind === "net" || item.kind === "shovel" || item.kind === "pickaxe" ? toolByKey(item.key) : null;
   return tool && { url: tool.model, hold: tool.kind };
 }
 
@@ -848,7 +868,7 @@ export function heldView(item: WheelItem | null): HeldView | null {
  * a weapon in hand (an encounter's is the runtime's); otherwise the default weapon across the back once the ruins
  * gate is open (row 140).
  */
-function PlayerCharacter({ look, motion, inCombat, walkSpeed, leaf, held }: { look: CharacterLook; motion: React.RefObject<CharacterMotion>; inCombat: boolean; walkSpeed: number; leaf: boolean; held: WheelItem | null }) {
+function PlayerCharacter({ look, motion, inCombat, walkSpeed, leaf, held, clips }: { look: CharacterLook; motion: React.RefObject<CharacterMotion>; inCombat: boolean; walkSpeed: number; leaf: boolean; held: WheelItem | null; clips?: string }) {
   // Only the weapon, and whether it shows, re-render the character (the runtime publishes ~10×/s).
   const key = useCombatValue(() => combat.rt.player.weapon), shown = useCombatValue(() => (inCombat ? combat.rt.player.alive : combat.rt.player.armed));
   const heldWeapon = !inCombat && held?.kind === "weapon" ? held.key : null;
@@ -860,5 +880,5 @@ function PlayerCharacter({ look, motion, inCombat, walkSpeed, leaf, held }: { lo
     return w?.model && (shown || heldWeapon) ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat || !!heldWeapon, grip: w.grip, hand, pulse: w.pulse, paint: v2 && inCombat ? signaturePaint : undefined } : null;
   }, [key, heldWeapon, shown, inCombat, v2]);
   const item = useMemo(() => (inCombat ? null : heldView(held)), [inCombat, held]);
-  return <Character look={look} motion={motion} walkSpeed={walkSpeed} weapon={weapon} held={item} leaf={leaf} verbs={inCombat && v2} keepFace />;
+  return <Character look={look} motion={motion} walkSpeed={walkSpeed} weapon={weapon} held={item} leaf={leaf} verbs={inCombat && v2} keepFace clips={clips} />;
 }

@@ -271,9 +271,9 @@ async function chapterContext(store: ProgressionStore, memberId: string, now: Da
   const views = await goalViews(store, goals, memberId, now);
   const chapterFacts: ChapterFacts = {
     tier: facts.tier,
-    oracleDone: facts.oracleDone,
-    trialDone: facts.trialDone,
     firstCatchKey: facts.firstCatchKey,
+    lastFishAt: facts.lastFishAt,
+    counts: facts.counts,
     goals: Object.fromEntries(views.map((g) => [g.slug, { completed: g.completed, myPoints: g.my_points }])),
   };
   return { chapters, goals, goalViews: views, progress, facts, chapterFacts };
@@ -289,6 +289,7 @@ function buildState(ctx: Awaited<ReturnType<typeof chapterContext>>, facts: Memb
     hud_muted: facts.hudMuted,
     unlocked_regions: unlockedRegions(views, completedGoals),
     unread_letters: unread,
+    museum: facts.museum,
     source: "live",
   };
 }
@@ -325,11 +326,14 @@ export async function advanceChapter(
     if (result.next.status === "completed" && chapter.reward_coins > 0) {
       await store.creditCoins(memberId, chapter.reward_coins, "chapter", chapter.slug, `chapter:${chapter.slug}`);
     }
+    if (result.next.status === "completed" && chapter.reward_item) await store.grantItem(memberId, chapter.reward_item);
+    const xp = result.next.status === "completed" && chapter.reward_xp ? await store.grantXp(memberId, chapter.reward_xp, chapter.slug, `chapter_xp:${chapter.slug}`) : null;
     if (result.next.status === "completed" && chapter.completion_letter) {
       await store.sendSystemLetter(memberId, `chapter:${chapter.slug}`, chapter.title, chapter.completion_letter);
     }
     await store.saveMemberProgress(memberId, chapter.id, result.next, result.completedChapter ? now.toISOString() : null);
-    return loadState(store, memberId, now);
+    const state = await loadState(store, memberId, now);
+    return xp && !xp.replayed && state.ok ? { ok: true, data: { ...state.data, xp_gain: { amount: chapter.reward_xp!, total: xp.total, level: xp.level, levelled_up: xp.levelled_up } } } : state;
   } catch (err) {
     return storeFailure(err);
   }

@@ -1,0 +1,19 @@
+Headless audibility (specs/evidence/music-one/audible.mjs; chromium headless, --mute-audio, dev server on 3321, Supabase env blank).
+Every media element and Web Audio buffer source the page starts, with its effective gain (element volume, or the
+product of the gain chain); audible = gain > 0.01. Sampled 5, 20 and 60 s after the first key unlocks sound.
+
+AFTER (game/music-one be1463f3)
+place                      5 s / 20 s / 60 s (same at all three)
+title (/student)           nothing
+island, day                /audio/ambient/day.ogg @0.385                       (the bed: CC0 time-of-day track)
+island, night              /audio/ambient/night.ogg @0.385
+campfire, night, dancing   /audio/drums/taiko.ogg @0.346                       (bed ducked to 0; dancers=1, lit)
+  walked away (+6 s)       /audio/ambient/night.ogg @0.385                     (bed back)
+cafe (?cafe=inside), day   /audio/ambient/day.ogg @0.385                       (cafe.mp3 not authored: time-of-day track)
+sushi bar, night           /assets/audio/music/bar-night.mp3 @0.385            (the bar's own slot)
+applicant island           not measurable headless: the page needs Supabase env (lanes run it blank)
+
+BEFORE (base 82a3c70b, same probe, run mid-day Toronto time with ?time=night)
+island, night              night.ogg @0.42 + applicant-ocean-railway.ogg @0.385
+campfire, night, dancing   night.ogg @0.42 + applicant-ocean-railway.ogg @0.385 + drums/taiko.ogg @0.346   <- the three
+sushi bar, night           night.ogg @0.42 + bar-night.mp3 @0.385
