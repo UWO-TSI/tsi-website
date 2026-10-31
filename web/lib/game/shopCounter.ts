@@ -17,6 +17,8 @@ export async function sellAtCounter(t: EconomyTransport, e: SellEntry, qty: numb
   if (e.locked) return { ok: false, error: "That's locked in your bag.", line: "That one's a keeper, I can tell. Unlock it in your bag if you change your mind." };
   try {
     const r = await t.sell(e.item_key, qty, key);
+    // A sale, for whoever waits on one (Bram's first fish at the barrel, lib/game/arrival/tutorial.ts).
+    if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("tsi:sold", { detail: { key: e.item_key, paid: r.paid } }));
     return { ok: true, paid: r.paid, from: r.balance - r.paid, to: r.balance,
       line: qty > 1 ? `${qty} ${e.name.toLowerCase()}, that's ${r.paid.toLocaleString()} coins. Pleasure doing business!` : `One ${e.name.toLowerCase()}: ${r.paid.toLocaleString()} coins. Thank you kindly!` };
   } catch (err) {
