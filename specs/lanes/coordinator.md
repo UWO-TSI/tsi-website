@@ -708,3 +708,13 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
     - the menu paper is a shade lighter;
     - sushi-chef skin 10 was applied as 9.
   - Music: the Ambience slider is idle on the member island. A bug from before v1.2: spawning right at the sushi bar drops its override.
+- **v1.2 live check (2026-10-30 ~21:10, play.tethos.ca, deploy of eb1d06f3; headers serve stale-while-revalidate):**
+  - Three throwaway accounts through specs/evidence/launch-v1/two-account.mjs. It now uses the shared sb-tethos-auth cookie on tethos.ca hosts, and flow 4 follows v1.2's first-find.
+  - Passed:
+    - routes: all 200, and the dashboard serves the island;
+    - the arrival: the creator, Bram's walk-along, recorded as arrived and taught, realtime Here (1);
+    - day: tags, presence, chat both ways, friends, emotes, dance sync, report, mute and unmute live;
+    - flow 4: Bram's 30 coins once, a cast and land with the starter rod, the first-find donation (100 coins once, Juno's letter), the second donation refused (409).
+  - first-find's claim_plot answers "That isn't open yet" on the new world.
+  - Cleanup: users deleted, 172 columns scanned, nothing left.
+  - Test servers 3300 and 3301 stopped. Worktrees tutorial-test, volleyball-test, music-one and release-v12 removed.
