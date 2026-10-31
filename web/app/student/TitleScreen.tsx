@@ -16,7 +16,7 @@ const TitleScene = dynamic(() => import("@/components/title/TitleScene"), { ssr:
 export type TitleView = "menu" | "signin" | "signup" | "forgot" | "check" | "settings";
 
 /**
- * The student portal's title screen (David, 2026-10-03; the v1 look, specs/v1-drop.md §8b after
+ * The game's title screen (David, 2026-10-03; the v1 look, specs/v1-drop.md §8b after
  * `references/look/2026-10-13/title-piece-by-piece-ref.png`): the live village close up with depth of field, the
  * logo top-left, a cream card with a dashed border holding Let's Play, Settings and Exit (a soft pill under the
  * chosen one), and a small input hint bottom-right. Arrow keys (or W/S) move, Enter picks, Escape steps back.
@@ -111,7 +111,7 @@ export default function TitleScreen({ landing, account, open, initialView, when,
       <section className={s.column}>
         <header className={s.brand}>
           <TsiLogo width={56} height={56} className={s.logo} />
-          <h1 className={s.wordmark}>Tethos<span>Student Portal</span></h1>
+          <h1 className={s.wordmark}>Tethos<span>Island</span></h1>
         </header>
 
         <div className={s.card} data-view={view}>

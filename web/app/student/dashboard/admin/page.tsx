@@ -190,7 +190,7 @@ function AdminHub() {
 
       <GameContentIndex />
 
-      <h2 className="mb-3 text-base font-extrabold text-[var(--gui-ink-strong)]">Club portal</h2>
+      <h2 className="mb-3 text-base font-extrabold text-[var(--gui-ink-strong)]">Club tools</h2>
       {/* Admin Sections Grid */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {adminSections.map((section) => (

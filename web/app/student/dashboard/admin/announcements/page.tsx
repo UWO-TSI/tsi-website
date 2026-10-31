@@ -190,7 +190,7 @@ export default function AdminAnnouncementsPage() {
         <Loading label="Getting the announcements…" />
       ) : announcements.length === 0 ? (
         <Empty icon={<Megaphone size={32} />} title="No announcements yet">
-          Post one and members see it in the portal.
+          Post one and members see it in the game.
         </Empty>
       ) : (
         <div className="space-y-3">

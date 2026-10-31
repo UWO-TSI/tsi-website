@@ -173,7 +173,7 @@ export default function SettingsPage() {
               <Toggle
                 checked={!questsMuted}
                 onChange={(on) => setQuestsMuted(!on)}
-                hint="A floating checklist that walks new members through the portal. Quests are signposts only, no rewards."
+                hint="A floating checklist that walks new members around the island. Quests are signposts only, no rewards."
               >
                 Show onboarding quests
               </Toggle>

@@ -19,7 +19,7 @@ describe("the admin hub (#27)", () => {
     expect(loading).toContain("Checking your access");
   });
   it("then shows the tools to T1/T2 and Admins only to everyone else", () => {
-    expect(html({ profile: { tier: 1 }, loading: false })).toContain("Club portal");
+    expect(html({ profile: { tier: 1 }, loading: false })).toContain("Club tools");
     expect(html({ profile: { tier: 4 }, loading: false })).toContain("Admins only");
     expect(html({ profile: null, loading: false })).toContain("Admins only");
   });

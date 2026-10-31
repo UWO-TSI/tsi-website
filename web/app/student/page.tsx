@@ -7,7 +7,7 @@ import { memberWorldIsAvailable, sameOriginPath } from "@/lib/recruitment-access
 import { createClient } from "@/lib/supabase/server";
 import TitleScreen, { type TitleView } from "./TitleScreen";
 
-export const metadata: Metadata = { title: "Tethos Student Portal", description: "Sign in to Tethos Island, the Tech for Social Impact student portal." };
+export const metadata: Metadata = { title: "Tethos Island", description: "Sign in to Tethos Island, the Tech for Social Impact member world." };
 
 const PHASE_WORD = { dawn: "dawn", day: "afternoon", evening: "evening", night: "night" } as const;
 
