@@ -29,6 +29,14 @@ re-derived on each of its six renders before it commits; the seabed reads only e
 the title prefetches only what the first frame needs that the title doesn't load itself, within 1 s of drawing.
 Deleted: the manifest generator in load-trace.mjs (moved to entry-trace.mjs).
 
+## Round 2 progress
+
+- Step 1 done, 88576ac4: versioned URLs (lib/assetUrl.ts, lib/assetVersions.ts, lib/game/versionedLoads.ts imported
+  first in TitleScene and DefaultIslandWorld; next.config.ts env ASSET_VERSIONS and the has/missing v headers).
+  entry-trace prints "game files without a version" (0 on all four runs). Gates: tsc clean, eslint clean, vitest 3730
+  passed. Runs r2base-* (before) and r2s1-* in specs/evidence/entry-perf/runs. Not covered: the applicant island
+  (recruitment code, not touched) still asks for bare URLs, so it revalidates each file (as before round 1).
+
 ## David's decisions
 
 - 2026-10-30: "make sure the performance to enter the game is good". This ships in v1.2. The release candidate is being built in parallel on game/release-v12 (eight lane branches merged: main quest, tutorial, daily social, volleyball, creator, rods, fishing depth, wardrobe).
