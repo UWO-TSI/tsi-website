@@ -159,7 +159,10 @@ const FX = {
     const rows = [];
     for (const team of [0, 1]) {
       await hold(); await setup(atNet, { z: 5 });
+      // Through a rally frame first, so the HUD sees the phase change (in play the match tells it).
+      await setup(`(m) => { m.phase = "rally"; }`); await page.waitForTimeout(150);
       await setup(`(m, t) => { m.phase = "point"; m.pointTo = t; m.phaseT = 0; m.score = { ...m.score, points: t ? [3, 5] : [5, 3] }; }`, team);
+      await page.waitForTimeout(150);
       await page.evaluate(t => { const m = window.__volley.match(), side = m.players[0].s.z < 0 ? -1 : 1; window.__volleyFx.emit({ kind: "point", team: t, why: "in", x: 0, z: -side * 2.5, heat: 2 }); }, team);
       rows.push(await frames(`point-${team}`, [2, 10, 25, 45, 70], CLIP)); await stepFx(60);
     }

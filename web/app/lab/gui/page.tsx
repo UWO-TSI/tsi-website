@@ -317,9 +317,9 @@ export default function GuiShowroom() {
     </Section>
 
     <Section id="action-bar" title="Action bar (flat)" note="A match’s moves: each a pictogram, its key and its name. A slot that would connect glows; a press flashes it. The ground’s and the air’s rows swap in place.">
-      <Row><ActionBar active="ground" flash={{ id: "set", n: 1, ok: true }} rows={{ ground: ["bump", "set", "call", "dive", "jump"].map((a, i) => ({ id: a, label: a[0].toUpperCase() + a.slice(1), keycap: ["Click", "E", "R-click", "Ctrl", "Space"][i], icon: <ActionIcon move={a} />, ready: a === "bump" })) }} /></Row>
-      <Row><ActionBar active="air" rows={{ air: ["spike", "jumpset", "block"].map((a, i) => ({ id: a, label: ["Spike", "Jump set", "Block"][i], keycap: ["Click", "E", "R-click"][i], icon: <ActionIcon move={a} />, ready: a === "spike" })) }} /></Row>
-      <Row>{["serve", "charge", "spin", "slide", "dash"].map(a => <ActionIcon key={a} move={a} size={40} />)}</Row>
+      <Row><ActionBar active="ground" flash={{ id: "set", n: 1, ok: true }} rows={{ ground: ["bump", "set", "dive"].map((a, i) => ({ id: a, label: ["Bump", "Set", "Dive"][i], keycap: ["Left click", "E", "Q"][i], mouse: i === 0 ? "left" as const : undefined, icon: <ActionIcon move={a} />, ready: a === "bump" })) }} /></Row>
+      <Row><ActionBar active="air" rows={{ air: ["spike", "jumpset", "block"].map((a, i) => ({ id: a, label: ["Spike", "Jump set", "Block"][i], keycap: ["Left click", "E", "Right click"][i], mouse: i === 1 ? undefined : i === 0 ? "left" as const : "right" as const, icon: <ActionIcon move={a} />, ready: a === "spike" })) }} /></Row>
+      <Row>{["serve", "charge", "spin"].map(a => <ActionIcon key={a} move={a} size={40} />)}</Row>
     </Section>
 
     <Section id="spin-picker" title="Spin picker (flat)" note="Where on the ball the serve is hit: off centre to a side curves it, the top dives, the bottom floats.">
