@@ -52,3 +52,6 @@ web/supabase/.temp/
 node_modules/
 !art/characters/lod1/lod.json
 specs/tools/*/dist/
+
+# Meshy output never ships raw (art/meshy/meshy.mjs)
+art/meshy/raw/

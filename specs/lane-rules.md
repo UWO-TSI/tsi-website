@@ -36,7 +36,7 @@ These rules are hard. The coordinator merges and pushes; lanes never push.
 - **One world:** the new world (`web/data/world/`) is the only member world. The old village is retired (David, 2026-10-28: "it should not be used or archived"). Shots, runs and gates are new world only, and vitest runs once.
 - **How it looks:** UI, art and models follow `specs/design-bible.md`. It wins over any older spec, and over this file if they disagree.
 - Never fetch or use art references or textures you found yourself. David supplies or approves every reference (design bible, Models).
-- No asset libraries or generators, except Meshy, which is part of the modelling pipeline (design bible, Models, rule 3).
+- No asset libraries or generators, except Meshy, which is part of the modelling pipeline: Meshy makes a new model (`art/meshy/meshy.mjs`), and every edit after that is done in Blender (`art/meshy/clean.py`, then the lane's own script; design bible, Models, rule 3).
 - **Sound effects** (David, 2026-10-30: "make fitting sound effect or go online t ofind sound effect libraries"): synthesise them (like art/audio/synth_bite.py) or take them from online libraries, but **CC0 only** (public domain, e.g. Freesound's CC0 filter, Kenney, OpenGameArt CC0), because the repo is public. Search headless. Log every file's source URL, author and licence in web/public/audio/sfx/SOURCES.md. Music and voice still need David.
   - The exception is official technical templates David has OK'd, such as Roblox's creator reference avatar and head for fitting.
 - Real names never show in game (world names only). Never reveal the TC to CAD rate.
