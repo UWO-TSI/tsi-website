@@ -63,17 +63,35 @@ Round 2 (David's review 2026-10-28) built on top of round 1, work at ec62699d (m
 - `.hands` must not be `preserve-3d`: it broke the turn button's hit testing.
 - Evidence: `specs/evidence/fishing-depth/r3-menu/` (old-vs-new.png puts r2's menu beside the new cover and spread).
 
+## Round 4 (coordinator, 2026-11-01)
+
+Rounds 1 to 3 shipped in v1.2 (main 2e7d7de8; migrations applied). Merge origin/main first: the village is retired and the new world is the only world.
+
+Build, from David's round 2 and sushi-menu notes (verbatim below, 2026-10-29):
+1. **Catch board sheet:** add the season and the conditions (weather, time of day) to the approved board.
+2. **Catch board in the world:** remodel it bigger, where it makes sense and is easy to see. It stays in the market's frame (`MARKET_BOARDS` in lib/game/wharf.ts), never a repaint of world.json. Shoot two or three spots; build the best one and say why.
+3. **Quick sell:** each fish shows its price and a few basic details, and selling is instant: the coins and the row update on the click (optimistic), the server confirms after. Measure click to update before and after.
+4. **Showroom:** refine so it's easy to understand. Signs per water type (river, pond, sea, deep sea) are only a proposal: show one mock, don't build it.
+5. **Sushi menu cover:** another refinement pass, and new copy. Poetic, plain, in the game's voice, nothing that reads like an AI wrote it. Three options on the page.
+6. **Sushi menu spread 1:** a simple photo of the dish with the price and stats beside it. Use the existing dish images as stand-ins and label them; the high-quality dish models come in a modelling lane.
+7. **Sushi mechanic:** two or three written proposals for what sushi does beyond vibes and buffs (a loop the player plays, its costs and rewards), each in a few lines on the review page. Don't build one.
+
+Out of this round: the gacha chest animation (its own lane later) and the dish models.
+
+Evidence in `specs/evidence/fishing-depth/r4/` (before and after, desktop and phone), then report to the coordinator for a review page.
+
 ## David's decisions
 
+- 2026-10-29, round 2 review: board "Looks so much better  include season and condition too, this is what im talking about". board-world "remodle the catch board and make it bigger, put it somewhere where it makes sense and easy to see". market "quick sell fish should still show the price per, and some basic details, also make sure quick sell is isntant and it shouldnt load for too long cuz performance for selling needs to be quick and isntance for user experience. monthly board is good looking. fishing task looks good". showroom approved: "looks a lot better but refine so its also easy to understand. also what should we do for river, pond sea, deep sea and all those types of different fishing? should we have different signs for different areas?". chef, tasks, tasks-claim approved. gacha: its own lane.
+- 2026-10-29, sushi menu: font, hover, lift, picked, spread 2, turning approved. cover "it needs another refinement run it looks crappy. the words say something that isnt claudlish with on the wharf after dark say something like poetic but not claude". spread 1 "the ui for the shocase of dishes needs to be changed, simple photo of food and then price on the side with like stats and stuff, you also gotta start making the 3d model high quality and well designed. and also time to think about what game mechanic this sushi should provideother than vibes and buffs".
 - 2026-10-28, on the menu: "heres the inspo i want for the sushi menu" (specs/references/sushi-menu/).
 - 2026-10-28 review: collection-season approved. bar-menu: "BAR MENU SHOULD BE PAPER MENU LIKE REAL RESTAURANCE, NOT THIS BULL SHIT. i need you to fuckign lock in on all the ui, looking at these makes me depressed, these food should have a detailed food model on the menu and you can pick it up first person and hover over dishes show what they do". chef-order: "REDO THE FUCKING UI". board-sheet: "the ui needs completely redone for this and have a time graphic with the things available. like it will be icon and you can hover to see what the fish is and etc". board-world-left: "that should be near the fish shop the tackle shop should be like a gatcha roll for parts thing one for coin one for gem, roll for 1 to 10, seasonal crazy bait and rod". market-records: "i dont like that these are 3 sepetate tables, i want a place to quick sell, a place to put your fish to monthly leaderboard and daily /weekly fishing task". market-requests: "ui needs to be updated. the daily tasks should be on a sperate board that shows the daily quest, and its not a hand one over, its if you did it you claim it".
 - 2026-10-27, on f-pond: "pond only in mountain".
 
 ## Next
 
-1. David reviews round 2 (specs/evidence/fishing-depth/r2/).
-2. The coordinator applies `20261028160000_fishing_tasks_sushi.sql` then `20261028161000_tackle_rolls.sql`, and wires the tackle prizes into rod-gear's TACKLE at merge.
-3. With David's references: the five dishes (miso soup, salmon nigiri, tuna roll, omakase, Bancha's feast) as HD + LP models (set `ready`, render their icons as `dish_<id>`), and the prizes' models.
+1. Round 4 above.
+2. Report to the coordinator with the head SHA, gates and evidence.
 
 ## Tools and gotchas
 
@@ -87,7 +105,7 @@ Round 2 (David's review 2026-10-28) built on top of round 1, work at ec62699d (m
 
 - **Headless only:** never open a window, tab, app or audio on David's screen; never `open`; never the Playwright MCP, the claude-in-chrome tools or the `blender` MCP tools. Blender only as `/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P <script>`. Never port 3000.
 - **Locks:** `LANE=game/fishing-depth /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh heavy|blender|devserver <cmd>` (`specs/lane-rules.md`).
-- **The default village world stays unchanged** (the launch fallback). New-world changes sit behind `NEXT_PUBLIC_GAME_WORLD=new`; run vitest with and without it.
+- **The village is retired:** new world only, in shots and gates.
 - **Git:** commit with the `[build]` prefix. Never push. Never bare `git stash`. Work only in this worktree. Never touch prod; ask the coordinator for any read-only prod query.
 - **Text:** no em dashes; real names never show in game; never write the gem-to-money rate anywhere (the repo is public).
 - **Art:** David supplies every reference; never fetch art, textures or music; no asset libraries or generators.

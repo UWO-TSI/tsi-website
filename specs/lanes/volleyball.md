@@ -6,7 +6,7 @@ Worktree `.claude/worktrees/volleyball`, branch `game/volleyball`, cut from orig
 
 ## Status
 
-Head: the commit that updates this file. **Round 2 (the phase 1 redo after David played it) is built, waiting for review.** Phase 1's island match was approved; everything else was redone.
+**Round 2 shipped in v1.2 (main 2e7d7de8; migration 20261030120000_volleyball_casual applied).** David reviewed it (2026-10-30, below): round 3 is the build now. Merge origin/main first. The round 2 notes that follow describe what is live.
 
 - **Controls (root causes fixed):** the avatar's keys stand back in a match (PlayerAvatar `frozen` while playing), the court takes the mouse on the window's capture phase (`courtInput.ts`; the orbit camera never sees its right button), Tab and G wheels are off in a match, presses wait up to 0.26 s for the ball. One controls table (`actions.ts`) drives the input and the action bar. Real-input checks on the island pass for every action (`specs/evidence/volleyball/p2/input-results.json`).
 - **Clips:** game/vb-anim merged (13eead8a): the match players and your avatar (only while playing) load vb_clips.glb; hands are clips.ts contactPoints; a press's clip is timed to the ball (`moves.ts` syncRate); ready and shuffle under 1.8 u/s; dives last to the clips' `up`.
@@ -24,15 +24,50 @@ Head: the commit that updates this file. **Round 2 (the phase 1 redo after David
 
 ## David's decisions (newest first)
 
+- 2026-10-30, round 2 review (https://claude.ai/artifact/4hADsrK2pAmYcMVRgEvFDK), verbatim:
+  - Approved: p2-ball, p2-net, p2-rewards, fx-set, fx-land ("good improvements"), p2-zoom ("good"), p2-bench ("2 benches"), p2-squish ("more squish and should feel it").
+  - p2-play: "many bugs, ui not responsive to jumps, the timing for balls is off when in the air."
+  - p2-before-after: "camera angle needs to change for this game, needs tweak currently the camera angle charater takes up too much space,"
+  - p2-meter: "i want there to be more juice to filling out the bar "
+  - p2-ring: "timing ring is good for most part but timing ring should follow the ball when its high up in the air for timighing for jump set spike or block, and if its flat maybe just show the ground ring"
+  - p2-bar: "the ui for the action bar needs heavy work, the current one looks ugly, the icon isnt intuitive, and its not responsive for when you jump. the bar should old show bump set dive, no jump or right click for callout. and jumping should switch the set of ui to jumping actions"
+  - p2-rally: "better but still lacks the juice, and smoothness of gameplay"
+  - p2-board: "redo the ui of this leader board with better ui, have a podium with character model and name, more visual less names"
+  - fx-spike: "spike sound effect should feel it, recreate the spike sound. and it sohuld look really good with perfect splike, like fire trail or smth, should have juice, feel good, and satisfying"
+  - fx-block: "all the sound effects sound the same rn and needs editing and changes, a block should feel like a block and not just any other shot. mechanic needs refinement currently laggy and doesnt work"
+  - fx-bump: "sound effect needs to be different, good so far, but make it feel juicy"
+  - fx-jumpset: "needs to be redone and refined for game mechanic and smoothness"
+  - fx-jump: "jump needs to feel like a jump, and jump proper hight, animation needs to be better done and feel smooth"
+  - fx-dive: "the q dash is too fast rn, im thinking dont do crtl and just do a dive qith q and thats it, it should feel nice and clutch with dives"
+  - fx-serve: "the ui placement for the ball high is wrog and should be redone somewhere intuitive and not ruining the view, make the serve cooler have flame trail if its a perfect serve, and have juicy serves"
+  - fx-out: "out need to show out with proper animation feel"
+  - fx-net: "need to feel likes its tape with micro animatin and juice"
+  - fx-point: "need to feel likes its point with micro animatin and juice"
+  - fx-heat: "need to feel likes its rally with micro animatin and juice"
+  - fx-win: "need to feel likes its winning with micro animatin and juice"
+  - fx-call: "need to feel likes its mine with micro animatin and juice, need to be clear"
+  - fx-whiff: "need to feel likes its miss with micro animatin and juice"
 - 2026-10-30 (via coordinator): the 15 effects approved; "should have differnt effect for timed hits, good, perfect ,early or late. and make these individually and make sure its good, also make fitting sound effect or go online t ofind sound effect libraries".
 - 2026-10-30 (via coordinator): the net concept approved; island beach balls move to the new LP ball; the casual reward as built (15 coins, 5 a day), keep the client-trust limit in the spec until phase 2.
 - 2026-10-30: the phase 1 review, verbatim in the spec ("beach volley ball redo, the controlsl dont even work properly", and per item).
 - 2026-10-29 (via coordinator): right click on the ground is "Call it"; phase 1 on labelled stand-ins; the brief, verbatim in the spec.
 
-## Next
+## Next: round 3 (coordinator, 2026-11-01)
 
-1. David's round 2 review.
-2. Phase 2 (multiplayer), only after David approves.
+Order: the play first (it has to work and feel smooth before any effect matters), then the HUD, then effects and sounds.
+
+1. **Play:** fix the bugs in p2-play. The timing in the air is off: a press while airborne has to meet the ball. Jump to a proper height with a smoother clip; refine the jump set. Dive is Q only (drop Ctrl), slower than today's dash, and clutch: it reaches a ball you'd otherwise miss. Block works and isn't laggy. Rerun the real-input checks for every action, airborne ones included.
+2. **Camera:** the character takes up too much of the frame. Pull back or raise it so the court reads. Before and after stills.
+3. **Action bar:** rebuild it. On the ground it shows only bump, set and dive (no jump, no right-click call). In the air it switches to the jump actions (spike, block, jump set). Clear icons, flat kit look (design bible UI rules), switches the instant you leave or touch the ground.
+4. **Timing ring:** follows the ball when it's high (for jump set, spike and block); a flat ball shows only the ground ring.
+5. **Serve:** move the ball-height UI somewhere intuitive that doesn't block the view; a perfect serve gets a flame trail; juicier serves. The power meter fill gets juice.
+6. **Effects:** every redo in the list above. Each of call, heat, net, out, point, whiff and win gets a micro-animation that says what it is at a glance. A perfect spike gets a fire trail. More squish on hits. One strip per effect, before and after.
+7. **Sounds:** every sound distinct (block, bump, spike, serve, set, net, out, point, win, call, whiff). Synthesised or CC0 only, logged in `web/public/audio/sfx/SOURCES.md`. A sound preview per effect on the page.
+8. **Leaderboard board:** a podium with the top players' character models and names; more visual, fewer names.
+9. **Benches:** two spectator benches.
+10. Gates, one perf:check (SCENES=v2) when the machine is quiet, evidence in `specs/evidence/volleyball/p3/`, then report to the coordinator for a review page.
+
+Phase 2 (multiplayer) waits until David approves round 3.
 
 ## Tools and gotchas
 

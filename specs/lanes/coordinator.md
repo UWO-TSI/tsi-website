@@ -732,3 +732,11 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
   - Lane-rules: rerun pack-glbs.mjs after every Blender export.
   - Proposed, not done: quantized meshopt (needs David's eye), packing the character GLBs (2.5 MB), and gltfsOf for ACNHBuilding (the shop door is parsed 4x).
 - **Entry-perf r2 live (main 42a3bd3f):** the arrival passed on play.tethos.ca with a throwaway account, and the creator and spawn render the same with the WebP textures and packed GLBs (accounts deleted, nothing left). The entry-perf worktree is removed.
+- **Title wording (David, 2026-10-31: "for the game, dont do like say student portal"):** 25d37655 renames the title wordmark to Tethos / ISLAND, the tab to Tethos Island, and the member-facing "portal" copy (settings hint, announcements note, admin heading "Club tools"). Live and shot headless. The marketing nav and footer links and the applicant pages still say portal (out of scope).
+- **Development resumed (David, 2026-11-01: "resume development what do you need from me").** Unread decisions found: volleyball r2 (all 29 cards, 2026-10-30) and creator polish (dissolve rejected: "a more chill subtle hair change"). Main quest r3, tutorial r5 and the animations page have no decisions yet. Five lanes started from origin/main:
+  - volleyball r3 (game/volleyball, `uwotsi-lane`): David's round 2 notes, verbatim in its lane file.
+  - fishing-depth r4 (game/fishing-depth, `uwotsi-lane`): board season and conditions, the bigger catch board, instant quick sell, the sushi cover and spread 1, sushi mechanic proposals. The gacha chest animation is its own lane later.
+  - title-r2 (game/title-r2, `uwotsi-lane`): the title's left side as a game title screen, three directions for David.
+  - polish (game/polish, `uwotsi-lane`): the creator's calmer hair change, the rod bag and shop fixes, the Lighthouse rod's lamp.
+  - fixes (game/fixes, `uwotsi-lane-light`): sushi bar music on spawn, the idle Ambience slider, shared GLTF parses, packed character GLBs.
+  - Waiting on the Meshy key: the new rod roster, the bait and bobber remodels, the sushi dish models, the gacha chests.
