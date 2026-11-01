@@ -63,6 +63,28 @@ Round 2 (David's review 2026-10-28) built on top of round 1, work at ec62699d (m
 - `.hands` must not be `preserve-3d`: it broke the turn button's hit testing.
 - Evidence: `specs/evidence/fishing-depth/r3-menu/` (old-vs-new.png puts r2's menu beside the new cover and spread).
 
+### Round 4: built (2026-11-01), waiting on David's review
+
+Branch head after this file's commit; built on origin/main 887445b5 (Meshy pipeline merged; not used: no new model).
+
+1. **Catch board sheet:** a `Conditions` kit piece (pieces.tsx, in the showroom) above the strip: season and month, weather, time of day (`CatchBoardSheet` takes `season` and `phase` from useIslandConditions). Each lane now has its word under its icon (`StripLane.short`: Sea, River, Pond).
+2. **Catch board in the world:** remodelled bigger (CatchBoard.tsx `Chalkboard`): one merged wood mesh (posts, frame, back, brace, chalk ledge, header plank, a small pitched roof) plus the chalk plane and a chalk stick, 3 draws (was 5); slate 1.6 x 1.05 m with its foot at 0.85 m (`BOARD.catch`; the task board keeps the old size, `BOARD.tasks`, same model). The chalk is a 512 px canvas with each fish's icon beside its name. **Spot: B, on the boardwalk just past the sell stall** (`MARKET_BOARDS.catch` x 2.53, z 10.42, facing the camera). Shot three: A the grass at the wharf's edge (the old spot), B, C the boardwalk before the market's door. C looked best from the stall, but the reading spot in front of it puts the camera inside the market's roof and its big marlin; A is off the boardwalk where nobody sells. B is in full view while you sell and reads cleanly (`r4/spots/`, `r4/after/*/board-world*.png`). Not a Blender model: it's built in code like the old one; a proper Blender or Meshy model needs David's direction and references first (design bible, Models 1).
+3. **Quick sell:** cards (the kit's `CardGrid` + `ItemCard`): picture, name, count, rung and water ("Rare · River"), price each in the pill. Selling is optimistic (FishingPlaces.tsx `QuickSell`, `lessSold`): the card counts down and the purse counts up on the click; sales go to the server one at a time in order; the server's `remaining` and balance settle it; a refused sale puts the fish and coins back. `useTill` gained `add` and `settle`. **Click to update: 313 to 350 ms before, 8 to 12 ms after** (desktop and phone, each sale's answer held 300 ms in the page to stand in for production's round trip; `shoot.mjs` flow `sellms`). The old path also re-read the whole list after every sale; now nothing is re-read.
+4. **Showroom:** each piece has a caption (name, what it is for, where the game uses it), the strip's lanes have their own icons and words. Water signs: one mock only, `r4/signs-mock.html` / `r4/after/desktop/signs-mock.png` (river, mountain pond, sea, deep sea; not built).
+5. **Menu cover:** `CoverTitle` (paper.tsx) replaces `InkTitle`: a thin ink ring with the fish, "Bancha" in light brushed ink over a pale wash, a hairline with SUSHI BAR and the hanko, one line; the spine is sewn with thread; the pagoda and plum fill the foot. Three lines on offer (`r4/after/*/cover-option-1..3.png`; the game uses 1, `COVER_LINE` in SushiSheets.tsx):
+   1. "Sit anywhere. The rice is still warm."
+   2. "Whatever the boats brought in today."
+   3. "Bring your best fish. Bancha knows what to do with it."
+6. **Spread 1 (and 2, same piece):** `MenuDish` replaces `TrayDish`: a photo (the plate seen from above on a print, marked stand-in) with the name and price beside it, then a row a stat (rarer fish and bigger fish as +% with dots of the menu's most, how long it lasts), the blurb under. On a phone held upright the menu is taller and each dish stacks the photo over the words; the touch controls hide while the menu is up (they sat over it).
+7. **Sushi mechanic, three proposals (not built):**
+   - **The tasting book.** Bancha makes a nigiri from any species you bring him; each new one stamps a page of a tasting book at the back of the menu, a page per water. Cost: the fish (it leaves your bag) and a small coin fee. Reward: that dish's buff, the stamp, and at 10, 25 and a full water a title, a bar stool for your home or a rod part. Loop: fish, taste, see the empty stamps, go after what's missing.
+   - **Dinner service.** In the evening Bancha is short-handed: you take the counter for a short shift. Residents sit and order; you serve from your own bag with a quick slice, press and plate rhythm in the same taps as reeling. Cost: your fish and two minutes. Reward: tips scaled by speed and how rare the fish, friendship with whoever you served, and a recipe now and then. One shift a night.
+   - **The club feast.** A long table at the bar fills over the week: each member brings one fish. When it's full (say 12), everyone who brought one gets the feast's buff in the same evening hour, so the club fishes together, and the rarest fish names the feast on the monthly board. Cost: one fish each. Reward: a shared buff window, a feast photo for HQ, a reason to show up together.
+
+- **Deleted:** `TrayDish`, `InkTitle` and their CSS (tray, plate rim, chopsticks, vertical title), `--ui-paper-tray-hi` (clean, cream, dark), the quick sell's thumb grid (`.thumbGrid`), the chalk's fixed 256 x 184 canvas and `ROWS`.
+- **Evidence:** `specs/evidence/fishing-depth/r4/` `before/` and `after/`, each `desktop/` (1280 x 800) and `phone/` (390 x 844 at 2x, touch); `spots/` (the three spots, from the stall and the grass); shots palette-quantised to keep the repo light. The phone menu has no before: the old flow clicked the HUD's touch Menu button, not the bar's.
+- **Gates:** tsc clean; vitest 3732 passed, 4 skipped (one run, NEXT_PUBLIC_GAME_WORLD=new) before the last small edits, then wharf, peaceful and flat kit tests again (48 passed); eslint clean on every changed file. perf:check (SCENES=v2, one run): FAILED against the 2026-10-14 baseline, v2 high 5.3 ms (+10.4%), lite 3.4 ms (+17.2%), draw calls 368 (+2.5%), load average about 4. Not this lane's: the boards went from 5 draws to 3 each and add about 300 triangles; the baseline predates many merged lanes. Not rerun (rules: once, no reruns for noise).
+
 ## Round 4 (coordinator, 2026-11-01)
 
 Rounds 1 to 3 shipped in v1.2 (main 2e7d7de8; migrations applied). Merge origin/main first: the village is retired and the new world is the only world.
@@ -90,12 +112,14 @@ Evidence in `specs/evidence/fishing-depth/r4/` (before and after, desktop and ph
 
 ## Next
 
-1. Round 4 above.
-2. Report to the coordinator with the head SHA, gates and evidence.
+1. Wait for David's review of round 4 (the cover line, the board's spot, the mechanic, the signs).
+2. Then whatever he picks; a Blender or Meshy catch board only with his direction and references.
 
 ## Tools and gotchas
 
 - Throwaway Postgres: `scratchpad/fishing-depth/smoke.sh <smoke files>` (PG16 on 127.0.0.1:54329, `-k ''`, stub, every migration in order; `020_player_persistence` fails in the stub, as before).
+- Round 4 shots: `ONLY=desktop|phone scratchpad/fishing-depth/session4.sh <out> <flows>` under `withlock.sh devserver` runs `r4/shoot.mjs` (flows: showroom, board, world, market, sellms, spots, covers, signs, menu); `spots` rewrites `MARKET_BOARDS.catch` in wharf.ts per spot and restores it. On touch, the HUD's menu button is also named "Menu": click the bar's by text (`button:text-is('Menu')`).
+- The camera looks +z (up the screen is +z). Anything within about 5 m south of the fish market puts the camera in its roof and marlin; the market's front faces away from the camera.
 - Shots: `scratchpad/fishing-depth/session.sh <flows>` under `withlock.sh devserver` starts `next dev -p 3147` (Supabase blanked, NEXT_PUBLIC_GAME_WORLD=new), runs `specs/evidence/fishing-depth/r2/shoot.mjs` (flows: showroom, board, world, tasks, market, tackle, chef, menu) and stops it. The scratchpad is shared with other lanes: keep to `scratchpad/fishing-depth/`.
 - Demo data: `?collections=demo&tasks=1` lands today's first two task fish and five different fish, puts the chef's fish in the pockets, 1,200 coins and 60 Gems; the demo answers tasks, chef, tackle, monthly, sushi.
 - CSS modules need pure selectors: scope attribute selectors to a local class (`:is(.thumb, ...)[data-rarity]`).
