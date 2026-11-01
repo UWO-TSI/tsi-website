@@ -1,0 +1,11 @@
+Sushi bar music on spawn (fixes lane, fix 1). Probe: specs/evidence/music-one/audible.mjs, scene barspawn
+(/student/dashboard?time=night&weather=clear&season=summer&at=-47,114.5), sound unlocked after the island loads.
+
+Cause: the bar's frame loop reported "near" before its mount effect ran; React's strict-mode effect replay then ran the
+unmount cleanup (onNear(false)) while the component's own near flag stayed true, so it never reported again and the
+override was dropped (setMusic null at +0.3 s). Fix: barEarshot in lib/game/sushiBar.ts; its release() resets the flag.
+
+before  barspawn 5s/20s/60s  /audio/ambient/night.ogg @0.385      (the time-of-day track: override lost)
+before  bar (teleport)       /assets/audio/music/bar-night.mp3 @0.385
+after   barspawn 5s/20s/60s  /assets/audio/music/bar-night.mp3 @0.385  (the only audible source)
+after   bar (teleport)       /assets/audio/music/bar-night.mp3 @0.385
