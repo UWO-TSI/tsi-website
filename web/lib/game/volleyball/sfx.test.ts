@@ -30,6 +30,16 @@ describe("the match's sounds", () => {
     expect(e[0].rate).toBeGreaterThan(1);
     expect(l[0].rate).toBeLessThan(1);
   });
+  it("a perfect serve or spike catches fire; nothing else does", () => {
+    for (const how of KINDS) for (const t of GRADES) {
+      const fire = cuesFor(contact(how, t), ctx()).some(q => q.name === "vb-flame");
+      expect(fire, `${how} ${t}`).toBe(t === "perfect" && (how === "serve" || how === "spike"));
+    }
+  });
+  it("the jump set is the set, higher", () => {
+    expect(BODY.jumpset.name).toBe(BODY.set.name);
+    expect(cuesFor(contact("jumpset", "good"), ctx())[0].rate).toBeGreaterThan(cuesFor(contact("set", "good"), ctx())[0].rate);
+  });
   it("the spike is the loudest hit", () => {
     for (const how of KINDS) expect(BODY.spike.gain).toBeGreaterThanOrEqual(BODY[how].gain);
   });
@@ -62,7 +72,7 @@ describe("the match's sounds", () => {
     expect(names({ kind: "takeoff", who: 0, x: 0, y: 0, z: -4 })).toEqual(["vb-takeoff"]);
     expect(names({ kind: "touchdown", who: 0, x: 0, y: 0, z: -4 })).toEqual(["vb-touchdown"]);
     expect(names({ kind: "dive", who: 0, strong: false, x: 0, z: -4, dx: 0, dz: 1 })).toEqual(["vb-dive"]);
-    expect(names({ kind: "dive", who: 0, strong: true, x: 0, z: -4, dx: 0, dz: 1 })).toEqual(["vb-slide"]);
+    expect(names({ kind: "dive", who: 0, strong: true, x: 0, z: -4, dx: 0, dz: 1 })).toEqual(["vb-dive"]);
     expect(names({ kind: "toss", who: 0, power: 0.5, max: false })).toEqual(["vb-toss"]);
     expect(names({ kind: "toss", who: 0, power: 0.97, max: true })).toEqual(["vb-toss", "vb-max"]);
     expect(names({ kind: "whiff", who: 0 })).toEqual(["vb-whiff"]);

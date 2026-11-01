@@ -3,8 +3,10 @@
  * sound), played through the game's audio (lib/game/audio.ts: the sfx volume, the master and mute apply). The files
  * are made in art/audio/synth_volleyball.py (ours, CC0; web/public/audio/sfx/SOURCES.md).
  *
- * A contact is its kind's body (a forearm bump, a fingertip set, a palm serve, a scoop, a block, the spike's crack)
- * with its grade on top: perfect a gold chime, good a clean tick, early a thin rising brush and late a dull falling
+ * A contact is its kind's body, each its own character (round 3, David: "all the sound effects sound the same"): a
+ * rubbery forearm bwomp, a fingertip double tap, a palm smack with a rising whoosh, a sandy scoop, a block's double slap
+ * and wooden knock with a grunt, the spike's whip crack and boom. A perfect serve or spike also catches fire (vb-flame).
+ * Its grade sits on top: perfect a gold chime, good a clean tick, early a thin rising brush and late a dull falling
  * scuff, with the body softer and duller (early a touch higher, late lower). Bots' sounds fall off with distance, each
  * play gets a little pitch spread, and a sound can't stack on itself within a few hundredths of a second, so a long
  * rally stays easy on the ear.
@@ -18,9 +20,9 @@ import { volley } from "./session";
 
 export interface Cue { name: SFXName; gain: number; rate: number; delay?: number }
 
-/** Each contact kind's body and its level (the spike is the loudest hit; the files are balanced here). */
-export const BODY: Record<ContactKind, { name: SFXName; gain: number }> = {
-  bump: { name: "vb-bump", gain: 0.55 }, set: { name: "vb-set", gain: 0.6 }, jumpset: { name: "vb-set", gain: 0.62 },
+/** Each contact kind's body, its level and pitch (the spike is the loudest hit; the jump set is the set, quicker and higher). */
+export const BODY: Record<ContactKind, { name: SFXName; gain: number; rate?: number }> = {
+  bump: { name: "vb-bump", gain: 0.6 }, set: { name: "vb-set", gain: 0.6 }, jumpset: { name: "vb-set", gain: 0.64, rate: 1.12 },
   serve: { name: "vb-serve", gain: 0.65 }, dig: { name: "vb-dig", gain: 0.6 }, block: { name: "vb-block", gain: 0.62 }, spike: { name: "vb-spike", gain: 0.95 },
 };
 /** Each grade: the body's level and pitch, and the layer on top. */
@@ -52,9 +54,11 @@ export function cuesFor(e: VbFx, c: SfxContext): Cue[] {
     case "contact": {
       const body = BODY[e.how], g = GRADE[e.timing], d = e.who === 0 ? 1 : near(c, e.x, e.z);
       const out: Cue[] = [
-        { name: body.name, gain: body.gain * g.gain * d, rate: g.rate * spread(c) },
+        { name: body.name, gain: body.gain * g.gain * d, rate: (body.rate ?? 1) * g.rate * spread(c) },
         { name: g.layer, gain: g.layerGain * d * (e.who === 0 ? 1 : 0.7), rate: spread(c, 0.02) },
       ];
+      // A perfect serve or spike leaves on fire (the flame trail's fwoosh).
+      if (e.timing === "perfect" && (e.how === "serve" || e.how === "spike")) out.push({ name: "vb-flame", gain: 0.6 * d, rate: spread(c, 0.03), delay: 0.03 });
       // The rally heats up: a shimmer every other touch from the 4th, higher each time; the ball catches fire at the 6th.
       if (e.how !== "serve" && HEAT_AT.includes(c.heat)) out.push({ name: "vb-heat", gain: 0.45, rate: Math.min(1.5, 0.9 + 0.06 * HEAT_AT.indexOf(c.heat)), delay: 0.05 });
       if (e.how !== "serve" && c.heat === FIRE_AT) out.push({ name: "vb-fire", gain: 0.55, rate: spread(c, 0.03), delay: 0.08 });
@@ -70,7 +74,7 @@ export function cuesFor(e: VbFx, c: SfxContext): Cue[] {
     case "tape": return [{ name: "vb-tape", gain: 0.55, rate: spread(c, 0.05) }];
     case "takeoff": return [{ name: "vb-takeoff", gain: e.who === 0 ? 0.6 : 0.4 * near(c, e.x, e.z), rate: spread(c, 0.08) }];
     case "touchdown": return [{ name: "vb-touchdown", gain: e.who === 0 ? 0.65 : 0.4 * near(c, e.x, e.z), rate: spread(c, 0.08) }];
-    case "dive": return [{ name: e.strong ? "vb-slide" : "vb-dive", gain: (e.strong ? 0.8 : 0.7) * (e.who === 0 ? 1 : near(c, e.x, e.z)), rate: spread(c, 0.05) }];
+    case "dive": return [{ name: "vb-dive", gain: 0.75 * (e.who === 0 ? 1 : near(c, e.x, e.z)), rate: spread(c, 0.05) }];
     case "toss": return [{ name: "vb-toss", gain: 0.55, rate: 0.9 + 0.25 * e.power }, ...(e.max ? [{ name: "vb-max" as SFXName, gain: 0.7, rate: 1 }] : [])];
     case "whiff": return e.who === 0 ? [{ name: "vb-whiff", gain: 0.7, rate: spread(c, 0.08) }] : [];
     case "point": return [{ name: e.team === 0 ? "vb-point" : "vb-point-them", gain: e.team === 0 ? 0.6 : 0.5, rate: 1, delay: 0.15 }];

@@ -1,6 +1,8 @@
 """The beach volleyball match's sounds (specs/minigames/beach-volleyball.md, David's approved effects plan 2026-10-30),
-made here from sines and noise, never fetched (so they are ours, CC0, like synth_bite.py). A big inflatable beach ball
-is a hollow vinyl skin: every hit is a skin slap over the air cavity's low "bwomp" and a little vinyl ping.
+made here from sines and noise, never fetched (so they are ours, CC0, like synth_bite.py). Round 3 (David: "all the
+sound effects sound the same"): each contact and moment has its own character, not one thud re-pitched: the bump a
+rubbery bwomp, the set a fingertip double tap, the serve a smack and whoosh, the block a double slap and knock with a
+grunt, the spike a whip crack and boom; a whistle for out, brass for a point and the win, a synthesised "hey!" call.
 
   python3 art/audio/synth_volleyball.py <wav dir> [<preview dir>]
      writes one .wav per sound into <wav dir> and, given a preview dir, the review previews (each effect and each
@@ -144,27 +146,124 @@ def save(path, y):
         w.writeframes((np.clip(y, -1, 1) * 32767).astype(np.int16).tobytes())
 
 
-# ── Contacts: one body per kind ─────────────────────────────────────────────
+def phase_of(f):
+    return 2 * np.pi * np.cumsum(f) / SR
 
-t = track(0.4)
-# Bump: forearms, a broad dull slap and a round bwomp.
-write("vb-bump", room(ball(t, 0, 165, 0.11, 0.55, 0.15, 900, 4500), 0.18, 0.04, 0.12), 0.8)
-# Set: fingertips, two quick light pokes (the hands give), higher.
-write("vb-set", room(ball(t, 0, 230, 0.07, 0.35, 0.3, 2500, 8000) + 0.55 * ball(t, 0.018, 250, 0.05, 0.25, 0.2, 2500, 8000), 0.16, 0.04, 0.12), 0.7)
-# Serve: an open palm, a smack.
-write("vb-serve", room(ball(t, 0, 190, 0.12, 1.0, 0.25, 1500, 7000), 0.2, 0.05, 0.14), 0.85)
-# Dig: a scoop off the sand, low, with grit.
-write("vb-dig", room(ball(t, 0, 140, 0.1, 0.4, 0.1, 700, 3500) + sand(t, 0.005, 0.18, 0.35), 0.16, 0.04, 0.1), 0.75)
-# Block: hands as a wall, a dense low thump with a slap.
+
+def pluck(t, at, f, keep=0.993, cut=2400):
+    """A taut string or band plucked (Karplus-Strong): a twang that rings and dulls."""
+    period = max(2, int(SR / f))
+    buf = rng.uniform(-1, 1, period)
+    y = np.zeros(len(t))
+    start = int(at * SR)
+    for i in range(start, len(t)):
+        j = (i - start) % period
+        y[i] = buf[j]
+        buf[j] = keep * 0.5 * (buf[j] + buf[(j + 1) % period])
+    return low(y, cut, 4)
+
+
+def voice(t, at, f0, formants, length, gain=1.0):
+    """A synthesised vowel: a buzzy pulse train (pitch f0, an array over t or a number) through formant bands.
+    `formants` is a list of (start Hz, end Hz, gain); the bands glide from start to end over `length`."""
+    f = np.full(len(t), float(f0)) if np.isscalar(f0) else f0
+    ph = phase_of(f) % (2 * np.pi)
+    src = (ph / np.pi - 1) * (t >= at)
+    src += 0.15 * noise(len(t))
+    out = np.zeros(len(t))
+    blocks = 16
+    for lo_f, hi_f, g in formants:
+        for i in range(blocks):
+            a, b = at + length * i / blocks, at + length * (i + 1) / blocks
+            fc = lo_f + (hi_f - lo_f) * (i / (blocks - 1))
+            seg = (t >= a) & (t < b + 0.008)
+            if seg.any():
+                w = np.clip(np.minimum((t - a) / 0.004, (b + 0.008 - t) / 0.008), 0, 1)
+                out += g * band(src, fc * 0.85, fc * 1.15) * w * seg
+    return gain * out
+
+
+def brass(t, at, f, dur, gain, bright=2600):
+    """A soft synth brass note: three detuned saws, a quick swell, a filter that opens on the attack."""
+    s = np.maximum(t - at, 0)
+    y = np.zeros(len(t))
+    for d in (0.997, 1.0, 1.004):
+        ph = (f * d * s) % 1
+        y += 2 * ph - 1
+    vib = 1 + 0.004 * np.sin(2 * np.pi * 5.5 * s) * np.clip((s - 0.15) / 0.2, 0, 1)
+    y = np.interp(np.arange(len(t)) * 1.0, np.arange(len(t)) * vib, y)
+    shape = np.clip(s / 0.015, 0, 1) * np.clip((at + dur - t) / 0.08 + 1, 0, 1) * (t >= at)
+    shape *= 0.75 + 0.25 * np.exp(-s / 0.08)
+    return gain * low(y * shape, bright, 2)
+
+
+def hiss(t, at, lo, decay, gain, attack=0.0004):
+    return gain * high(noise(len(t)), lo) * env(t, at, attack, decay)
+
+
+# ── Contacts: one body per kind, each its own character ─────────────────────
+
+# Bump: forearms, juicy. A rubbery "bwomp" (the pitch drops and wobbles like a squeezed toy), a springy pop rising off
+# it, a soft slap of skin and a little sub.
 t = track(0.5)
-y = ball(t, 0, 120, 0.14, 0.8, 0.12, 900, 5000) + 0.6 * glide(t, 0, 90, 60, 0.05) * env(t, 0, 0.002, 0.12)
-write("vb-block", room(y, 0.22, 0.06, 0.16), 0.9)
-# Spike: a crack (a hard broadband slap), a boomy cavity and the air ripping after it.
+s = t
+wob = 1 + 0.09 * np.sin(2 * np.pi * 21 * s) * np.exp(-s / 0.09)
+f = (105 + 200 * np.exp(-s / 0.035)) * wob
+y = np.sin(phase_of(f)) * env(t, 0, 0.002, 0.17) + 0.45 * np.sin(phase_of(f * 2.02)) * env(t, 0, 0.002, 0.06)
+y += 0.4 * glide(t, 0.014, 480, 1020, 0.022) * env(t, 0.014, 0.001, 0.055)
+y += 0.45 * band(noise(len(t)), 600, 3200) * env(t, 0, 0.0006, 0.01)
+y += 0.6 * glide(t, 0, 85, 48, 0.04) * env(t, 0, 0.002, 0.07)
+write("vb-bump", room(np.tanh(1.7 * y), 0.18, 0.04, 0.1), 0.85)
+
+# Set: fingertips, light. Two soft taps 45 ms apart (the hands catch and push), a muted fingertip pluck under each,
+# no bwomp at all.
+t = track(0.35)
+y = np.zeros(len(t))
+for at, g in ((0, 1.0), (0.045, 0.8)):
+    y += g * band(noise(len(t)), 1800, 6500) * env(t, at, 0.0004, 0.004)
+    y += g * 0.6 * glide(t, at, 760, 620, 0.01) * env(t, at, 0.001, 0.028)
+    y += g * 0.25 * np.sin(2 * np.pi * 1240 * np.maximum(t - at, 0)) * env(t, at, 0.0008, 0.014)
+write("vb-set", room(y, 0.14, 0.035, 0.12), 0.62)
+
+# Serve: an open palm smacks the ball (a sharp skin crack and the ball's pop) and it leaves on a rising whoosh.
 t = track(0.6)
-y = ball(t, 0, 150, 0.13, 1.6, 0.35, 1200, 9000) + 0.7 * glide(t, 0, 110, 55, 0.04) * env(t, 0, 0.001, 0.09)
-y += 0.25 * high(noise(len(t)), 3000) * env(t, 0, 0.0002, 0.004)
-y += sweep(t, 0.02, 0.32, 2400, 700, 1.6, 0.28)
-write("vb-spike", room(y, 0.3, 0.08, 0.18), 0.95)
+y = 0.8 * band(noise(len(t)), 2000, 9000) * env(t, 0, 0.0004, 0.006) + 0.5 * band(noise(len(t)), 900, 3000) * env(t, 0, 0.0005, 0.02)
+y += 0.7 * glide(t, 0, 260, 175, 0.02) * env(t, 0, 0.0015, 0.07)
+y += sweep(t, 0.03, 0.42, 450, 2800, 1.5, 0.55)
+write("vb-serve", room(np.tanh(1.4 * y), 0.2, 0.05, 0.12), 0.85)
+
+# Dig: a scoop off the sand, low, with grit.
+t = track(0.4)
+write("vb-dig", room(ball(t, 0, 140, 0.1, 0.4, 0.1, 700, 3500) + sand(t, 0.005, 0.18, 0.35), 0.16, 0.04, 0.1), 0.75)
+
+# Block: a wall. Two hard palm slaps a beat apart (both hands), a low wooden knock, the ball's thump stopped dead and a
+# short grunted "oof" under it.
+t = track(0.55)
+y = 0.8 * band(noise(len(t)), 1200, 6000) * env(t, 0, 0.0004, 0.008) + 0.65 * band(noise(len(t)), 1200, 6000) * env(t, 0.02, 0.0004, 0.009)
+for fm, g, d in ((185, 1.0, 0.09), (452, 0.5, 0.045), (790, 0.3, 0.025)):
+    y += 1.2 * g * np.sin(2 * np.pi * fm * np.maximum(t, 0)) * env(t, 0, 0.0008, d)
+y += 1.1 * glide(t, 0, 105, 52, 0.035) * env(t, 0, 0.002, 0.1)
+oof = voice(t, 0.025, 128 - 30 * np.clip(t / 0.15, 0, 1), [(380, 330, 1.0), (850, 700, 0.5), (2300, 2200, 0.15)], 0.15)
+y += 0.55 * oof * env(t, 0.025, 0.02, 0.07) / (np.max(np.abs(oof)) + 1e-9)
+write("vb-block", room(np.tanh(2.0 * y), 0.2, 0.05, 0.12), 0.95)
+
+# Spike: you feel it. A whip crack (a hard transient and a fast falling chirp), a deep punchy boom driven into the
+# limiter, and the air ripping after the ball.
+t = track(0.8)
+y = hiss(t, 0, 2500, 0.003, 1.4, 0.0001) + 0.8 * glide(t, 0, 5200, 450, 0.004) * env(t, 0, 0.0001, 0.014)
+y += 1.6 * glide(t, 0, 125, 40, 0.05) * env(t, 0, 0.001, 0.24)
+y += ball(t, 0, 150, 0.09, 0.9, 0.3, 1200, 9000)
+y += sweep(t, 0.015, 0.3, 3600, 520, 1.5, 0.55) + 0.25 * sweep(t, 0.015, 0.22, 7000, 2000, 1.3, 1)
+write("vb-spike", room(np.tanh(2.4 * y), 0.3, 0.07, 0.15), 0.98)
+
+# A perfect serve or spike: the ball catches fire as it leaves, a fwoosh with a rising rumble and crackle.
+t = track(0.9)
+roar = low(noise(len(t)), 900) * env(t, 0, 0.06, 0.32)
+y = roar + 0.6 * glide(t, 0, 55, 140, 0.25) * env(t, 0, 0.05, 0.3) + sweep(t, 0, 0.55, 280, 2200, 1.6, 0.6)
+for _ in range(26):
+    w = rng.uniform(0.05, 0.75)
+    y += 0.3 * band(noise(len(t)), 1800, 6000) * env(t, w, 0.0002, 0.004)
+write("vb-flame", room(np.tanh(1.3 * y), 0.3, 0.08, 0.12), 0.7)
 
 # ── Timing grade layers (on top of the body) ────────────────────────────────
 
@@ -175,17 +274,17 @@ write("vb-perfect", room(y, 0.4, 0.12, 0.3), 0.6)
 # Good: a clean short tick, nothing more.
 t = track(0.15)
 write("vb-good", mallet(t, 0.004, 1567.98, 0.05, 1, 0.5), 0.35)
-# Early: a thin, dull brush that rises (the hands got there first): desaturated, soft.
+# Early: a thin brush that rises (the hands got there first): a quick "bwip" up.
 t = track(0.3)
-y = low(sweep(t, 0, 0.18, 600, 1600, 1.4, 1), 2200) + 0.4 * glide(t, 0, 330, 420, 0.06) * env(t, 0, 0.004, 0.06)
+y = low(sweep(t, 0, 0.18, 600, 1600, 1.4, 1), 2200) + 0.5 * glide(t, 0, 330, 520, 0.05) * env(t, 0, 0.004, 0.06)
 write("vb-early", y, 0.32)
-# Late: a muffled scuff that falls (the ball got there first): dull, soft.
-y = low(noise(len(t)), 900) * env(t, 0, 0.003, 0.05) + 0.7 * glide(t, 0, 200, 110, 0.05) * env(t, 0, 0.002, 0.09)
+# Late: a muffled scuff that falls (the ball got there first): a dull "bwop" down.
+y = low(noise(len(t)), 900) * env(t, 0, 0.003, 0.05) + 0.7 * glide(t, 0, 220, 95, 0.05) * env(t, 0, 0.002, 0.1)
 write("vb-late", y, 0.34)
 
 # ── The sand, the net ───────────────────────────────────────────────────────
 
-# The ball landing in play: a soft thud into sand.
+# The ball landing out of play: a soft dull drop into sand.
 t = track(0.45)
 y = ball(t, 0, 120, 0.07, 0.2, 0.05, 400, 2500) + sand(t, 0.003, 0.25, 0.7, 400, 4000, 90)
 write("vb-sand", room(y, 0.2, 0.05, 0.12), 0.7)
@@ -194,20 +293,16 @@ t = track(1.3)
 y = 1.5 * glide(t, 0, 95, 38, 0.09) * env(t, 0, 0.002, 0.28) + ball(t, 0, 115, 0.09, 0.5, 0.05, 600, 3000)
 y += sand(t, 0.006, 0.55, 1.0, 350, 5000, 360, 0.3) + 0.5 * sand(t, 0.35, 0.8, 0.5, 900, 6000, 220, 0.35)
 write("vb-boom", room(y, 0.5, 0.14, 0.2), 0.95)
-# The net: cords catching the ball, a rattle and a soft swallowed thud.
-t = track(0.55)
-y = band(noise(len(t)), 900, 5000) * (0.5 + 0.5 * np.sin(2 * np.pi * 34 * t) ** 2) * env(t, 0, 0.004, 0.14)
-y += 0.6 * glide(t, 0, 140, 90, 0.05) * env(t, 0, 0.003, 0.08)
-write("vb-net", room(y, 0.25, 0.06, 0.15), 0.6)
-# The tape: a taut band's twang (plucked, Karplus-Strong) and a tick.
+# The net: the ball in the mesh, a long cord rustle (rattling, uneven), and the top band twanging high above it.
+t = track(0.8)
+rattle = 0.5 + 0.5 * np.sin(2 * np.pi * (31 + 9 * np.exp(-t / 0.2)) * t) ** 2
+y = band(noise(len(t)), 1100, 6000) * rattle * env(t, 0, 0.004, 0.2)
+y += 0.5 * glide(t, 0, 140, 85, 0.05) * env(t, 0, 0.003, 0.08)
+y += 0.7 * pluck(t, 0.01, 392, 0.995, 3200) * env(t, 0.01, 0.001, 0.35)
+write("vb-net", room(y, 0.25, 0.06, 0.15), 0.62)
+# The tape: a taut band's low twang and a tick (the ball rolls over).
 t = track(0.5)
-period = int(SR / 196)
-buf = rng.uniform(-1, 1, period)
-y = np.zeros(len(t))
-for i in range(len(t)):
-    y[i] = buf[i % period]
-    buf[i % period] = 0.993 * 0.5 * (buf[i % period] + buf[(i + 1) % period])
-y = low(y, 2400, 4) * env(t, 0, 0.001, 0.2) + 0.12 * band(noise(len(t)), 2000, 5000) * env(t, 0, 0.0004, 0.005)
+y = pluck(t, 0, 196) * env(t, 0, 0.001, 0.2) + 0.12 * band(noise(len(t)), 2000, 5000) * env(t, 0, 0.0004, 0.005)
 write("vb-tape", y, 0.5)
 
 # ── Bodies on sand ──────────────────────────────────────────────────────────
@@ -216,11 +311,11 @@ t = track(0.3)
 write("vb-takeoff", sand(t, 0, 0.12, 1, 300, 3500, 70, 0.07) + 0.4 * glide(t, 0, 120, 80, 0.03) * env(t, 0, 0.002, 0.04), 0.42)
 t = track(0.35)
 write("vb-touchdown", sand(t, 0.002, 0.16, 1, 250, 3000, 90, 0.08) + 0.7 * glide(t, 0, 100, 60, 0.03) * env(t, 0, 0.002, 0.06), 0.5)
-t = track(0.7)
-write("vb-dive", room(sand(t, 0.01, 0.45, 1, 400, 5000, 260, 0.22) + 0.6 * glide(t, 0.02, 110, 60, 0.04) * env(t, 0.02, 0.003, 0.08), 0.2, 0.05, 0.1), 0.62)
-t = track(1.0)
-y = sand(t, 0.0, 0.75, 1, 300, 4500, 420, 0.4) + 0.4 * sweep(t, 0, 0.6, 1800, 600, 1.5, 1)
-write("vb-slide", room(y, 0.25, 0.06, 0.12), 0.66)
+# The dive: a body thrown along the sand, a long spray with a whoosh into it and the thud of landing.
+t = track(0.9)
+y = sand(t, 0.06, 0.6, 1, 300, 5000, 380, 0.3) + 0.35 * sweep(t, 0, 0.25, 700, 1900, 1.5, 1)
+y += 0.7 * glide(t, 0.06, 110, 55, 0.04) * env(t, 0.06, 0.003, 0.09)
+write("vb-dive", room(y, 0.22, 0.05, 0.1), 0.66)
 
 # ── The serve ───────────────────────────────────────────────────────────────
 
@@ -235,41 +330,57 @@ write("vb-max", room(y, 0.6, 0.18, 0.35), 0.62)
 # The toss: a soft rising whoosh.
 t = track(0.45)
 write("vb-toss", sweep(t, 0, 0.38, 380, 1500, 1.5, 1), 0.28)
-# A whiff: a quick swish of air, falling.
-t = track(0.25)
-write("vb-whiff", sweep(t, 0, 0.18, 2200, 700, 1.6, 1), 0.3)
+# A whiff: a hollow swish through empty air, then a little sad "womp" falling away.
+t = track(0.55)
+y = sweep(t, 0, 0.2, 1900, 520, 1.25, 1)
+s = np.maximum(t - 0.12, 0)
+f = (115 + 170 * np.exp(-s / 0.09)) * (1 + 0.03 * np.sin(2 * np.pi * 9 * s))
+womp = np.sin(phase_of(f)) + 0.4 * np.sin(phase_of(f * 2))
+y += 0.55 * low(womp, 900) * env(t, 0.12, 0.015, 0.16)
+write("vb-whiff", y, 0.45)
 
 # ── Moments ─────────────────────────────────────────────────────────────────
 
-# Your point: three mallet notes up (G5, C6, E6) and a bell on the top.
-t = track(1.0)
-y = mallet(t, 0, 783.99, 0.22, 0.7) + mallet(t, 0.08, 1046.5, 0.22, 0.7) + mallet(t, 0.16, 1318.5, 0.4, 0.8) + bell(t, 0.16, 2637, 0.3, 0.12)
-write("vb-point", room(y, 0.5, 0.15, 0.3), 0.6)
+# Your point: a bright brassy sting, three notes up (C5, G5, C6) with a shing on the top.
+t = track(1.1)
+y = brass(t, 0, 523.25, 0.09, 0.6) + brass(t, 0.075, 783.99, 0.09, 0.6) + brass(t, 0.15, 1046.5, 0.5, 0.75, 4200)
+y += brass(t, 0.15, 1318.5, 0.5, 0.35, 4200) + hiss(t, 0.15, 6000, 0.22, 0.12, 0.002) + bell(t, 0.15, 2093, 0.4, 0.2)
+write("vb-point", room(y, 0.5, 0.15, 0.3), 0.62)
 # Their point: two soft notes down (E5, C5), quieter.
 t = track(0.8)
 y = mallet(t, 0, 659.25, 0.2, 0.6, 0.15) + mallet(t, 0.12, 523.25, 0.32, 0.6, 0.15)
 write("vb-point-them", room(y, 0.4, 0.12, 0.25), 0.4)
-# The win: a cozy fanfare, an arpeggio up (C major) to a held chord with bells and a sparkle, ~2 s.
-t = track(2.4)
+# The win: a short brass fanfare, "ta-ta-ta-taaa" (G4 three times, then a held C major chord) on a soft drum and a
+# cymbal swell, with sparkle.
+t = track(2.3)
 y = np.zeros(len(t))
-for i, f in enumerate((523.25, 659.25, 783.99, 1046.5)):
-    y += mallet(t, 0.11 * i, f, 0.3, 0.6)
-for f in (523.25, 659.25, 783.99, 1046.5, 1318.5):
-    y += mallet(t, 0.5, f, 0.9, 0.35, 0.2) + mallet(t, 0.5, f * 1.003, 0.9, 0.2, 0)
-y += bell(t, 0.5, 2093, 0.8, 0.25) + bell(t, 0.62, 2637, 0.7, 0.2) + sparkles(t, 0.5, 1.2, 36, 2600, 5500, 0.08)
-write("vb-win", room(y, 1.0, 0.3, 0.4), 0.7)
-# "Mine!": a bubble pop and a bright blip.
-t = track(0.25)
-y = glide(t, 0, 420, 1250, 0.02) * env(t, 0, 0.001, 0.035) + mallet(t, 0.03, 1760, 0.06, 0.5, 0.2)
-write("vb-call", y, 0.42)
-# Out: a soft referee's whistle, one short blast.
-t = track(0.5)
-s = np.maximum(t, 0)
-f = 2650 * (1 + 0.012 * np.sin(2 * np.pi * 28 * s))
-tone = np.sin(2 * np.pi * np.cumsum(f) / SR) + 0.25 * np.sin(2 * np.pi * 2 * np.cumsum(f) / SR)
-shape = np.clip(np.minimum(s / 0.02, (0.34 - s) / 0.06), 0, 1)
-y = (tone * 0.8 + 0.25 * band(noise(len(t)), 2000, 6000)) * shape
-write("vb-out", room(low(y, 5000), 0.25, 0.06, 0.15), 0.3)
+for i in range(3):
+    y += brass(t, 0.13 * i, 392.0, 0.09, 0.55)
+for fm, g in ((523.25, 0.55), (659.25, 0.45), (783.99, 0.45), (1046.5, 0.4)):
+    y += brass(t, 0.4, fm, 1.3, g, 3800)
+for i in range(3):
+    y += 0.5 * glide(t, 0.13 * i, 120, 80, 0.03) * env(t, 0.13 * i, 0.002, 0.08)
+y += 1.0 * glide(t, 0.4, 90, 55, 0.08) * env(t, 0.4, 0.002, 0.3)
+y += hiss(t, 0.4, 5000, 0.9, 0.16, 0.01) + sparkles(t, 0.45, 1.2, 36, 2600, 5500, 0.08)
+write("vb-win", room(y, 1.0, 0.3, 0.35), 0.72)
+# "Mine!": a synthesised shout, "hey!" (a breath into a rising vowel that bends up and back), and a bright blip.
+t = track(0.4)
+s = t
+f0 = 240 + 110 * np.clip((s - 0.03) / 0.07, 0, 1) - 50 * np.clip((s - 0.12) / 0.12, 0, 1)
+hey = voice(t, 0.025, f0, [(560, 330, 1.0), (1750, 2250, 0.7), (2500, 2900, 0.3)], 0.2)
+hey = hey / (np.max(np.abs(hey)) + 1e-9) * np.clip((s - 0.025) / 0.02, 0, 1) * np.clip((0.26 - s) / 0.07, 0, 1)
+y = hey + 0.35 * band(noise(len(t)), 1200, 5000) * env(t, 0, 0.008, 0.03) + 0.25 * mallet(t, 0.2, 1760, 0.06, 1, 0.2)
+write("vb-call", room(y, 0.15, 0.04, 0.1), 0.55)
+# Out: a referee's pea whistle, clear and sharp: a short blast and a long one ("fweet-fweeeet"), the pea rattling it.
+t = track(0.75)
+s = t
+trill = np.sin(2 * np.pi * 34 * s)
+f = 2850 * (1 + 0.035 * trill)
+tone = np.sin(phase_of(f)) + 0.3 * np.sin(phase_of(2 * f)) + 0.1 * np.sin(phase_of(3 * f))
+am = 0.65 + 0.35 * trill
+shape = np.clip(np.minimum(s / 0.012, (0.15 - s) / 0.02), 0, 1) + np.clip(np.minimum((s - 0.21) / 0.012, (0.62 - s) / 0.05), 0, 1)
+y = (tone * am + 0.18 * band(noise(len(t)), 2200, 7000)) * shape
+write("vb-out", room(low(y, 9000), 0.2, 0.05, 0.12), 0.5)
 
 # ── The rally's heat ────────────────────────────────────────────────────────
 
@@ -292,47 +403,44 @@ write("vb-fire", low(y, 5500), 0.45)
 if PREVIEW:
     os.makedirs(PREVIEW, exist_ok=True)
 
-    def mix(parts, length=None):
-        n = max(int(at * SR) + len(SOUNDS[name]) for name, at, g in parts)
+    def rate(y, r):
+        """A rate change as the game plays it (a resample)."""
+        idx = np.arange(0, len(y) - 1, r)
+        return np.interp(idx, np.arange(len(y)), y)
+
+    def mix(parts):
+        """(name, at s, gain, rate) parts laid on one track."""
+        tracks = [(rate(SOUNDS[p[0]], p[3] if len(p) > 3 else 1), p[1], p[2]) for p in parts]
+        n = max(int(at * SR) + len(s) for s, at, g in tracks)
         y = np.zeros(n)
-        for name, at, g in parts:
-            s = SOUNDS[name]
+        for s, at, g in tracks:
             i = int(at * SR)
             y[i:i + len(s)] += g * s
         return y
 
-    # Early and late play the body softer and duller (sfx.ts: a lower gain and a slower or faster rate); a rate here is
-    # a resample.
-    def rate(y, r):
-        idx = np.arange(0, len(y) - 1, r)
-        return np.interp(idx, np.arange(len(y)), y)
+    # A contact is its body at the grade's level and rate, with the grade's layer (sfx.ts BODY and GRADE).
+    GRADE = {"perfect": (1.0, 1.0, "vb-perfect", 0.75), "good": (0.88, 1.0, "vb-good", 0.6), "early": (0.6, 1.07, "vb-early", 0.85), "late": (0.6, 0.9, "vb-late", 0.85)}
 
-    GRADE = {"perfect": (1.0, 1.0, "vb-perfect", 0.9), "good": (0.9, 1.0, "vb-good", 0.7), "early": (0.6, 1.07, "vb-early", 0.9), "late": (0.6, 0.9, "vb-late", 0.9)}
-    for kind in ("bump", "set", "serve", "dig", "block", "spike"):
-        for grade, (g, r, layer, lg) in GRADE.items():
-            body = rate(SOUNDS[f"vb-{kind}"], r) * g
-            lay = SOUNDS[layer] * lg
-            n = max(len(body), len(lay))
-            y = np.zeros(n); y[:len(body)] += body; y[:len(lay)] += lay
-            save(os.path.join(PREVIEW, f"contact-{kind}-{grade}.wav"), y * 0.9)
-    singles = {
-        "sand-impact-point": [("vb-boom", 0, 1.0)], "ball-lands": [("vb-sand", 0, 0.9)], "net-ripple": [("vb-net", 0, 0.9)], "tape": [("vb-tape", 0, 0.9)],
-        "jump": [("vb-takeoff", 0, 0.9), ("vb-touchdown", 0.95, 0.9)], "dive-saved": [("vb-dive", 0, 0.9), ("vb-dig", 0.08, 0.8), ("vb-good", 0.09, 0.6)],
-        "slide-dive": [("vb-slide", 0, 0.9), ("vb-dig", 0.18, 0.8)],
-        "serve-charge-max": [*((("vb-charge", 0.1 * i, 0.9)) for i in range(10)), ("vb-max", 1.0, 0.9), ("vb-toss", 1.15, 0.9), ("vb-serve", 1.9, 0.9), ("vb-perfect", 1.9, 0.9)],
-        "whiff": [("vb-whiff", 0, 0.9)], "point-yours": [("vb-boom", 0, 0.8), ("vb-point", 0.15, 0.8)], "point-theirs": [("vb-boom", 0, 0.6), ("vb-point-them", 0.15, 0.8)],
-        "win": [("vb-win", 0, 0.9)], "mine-call": [("vb-call", 0, 0.9)], "out": [("vb-sand", 0, 0.7), ("vb-out", 0.2, 0.9)],
-        "rally-heat": [("vb-heat", 0, 0.8), ("vb-heat", 0.9, 0.9), ("vb-fire", 1.8, 0.9)],
-        "block": [("vb-block", 0, 0.9), ("vb-perfect", 0, 0.7), ("vb-boom", 0.35, 0.6)],
+    def contact(body, grade, gain=1.0, r=1.0, extra=()):
+        g, gr, layer, lg = GRADE[grade]
+        return [(body, 0, gain * g, r * gr), (layer, 0, lg), *extra]
+
+    previews = {
+        "bump": contact("vb-bump", "good"), "set": contact("vb-set", "good"), "jumpset": contact("vb-set", "good", 1.0, 1.12),
+        "dig": contact("vb-dig", "good"), "block": contact("vb-block", "good"), "spike": contact("vb-spike", "good"),
+        "spike-perfect": contact("vb-spike", "perfect", extra=[("vb-flame", 0.03, 0.6)]),
+        "serve": contact("vb-serve", "good"), "serve-perfect": contact("vb-serve", "perfect", extra=[("vb-flame", 0.03, 0.6)]),
+        "grade-perfect": contact("vb-bump", "perfect"), "grade-good": contact("vb-bump", "good"),
+        "grade-early": contact("vb-bump", "early"), "grade-late": contact("vb-bump", "late"),
+        "net": [("vb-net", 0, 0.9)], "tape": [("vb-tape", 0, 0.9)], "out": [("vb-sand", 0, 0.7), ("vb-out", 0.18, 0.8)],
+        "lands": [("vb-boom", 0, 0.9)], "point": [("vb-point", 0, 0.9)], "point-theirs": [("vb-point-them", 0, 0.9)],
+        "win": [("vb-win", 0, 0.9)], "call": [("vb-call", 0, 0.9)], "whiff": [("vb-whiff", 0, 0.9)],
+        "jump": [("vb-takeoff", 0, 0.9)], "touchdown": [("vb-touchdown", 0, 0.9)], "dive": [("vb-dive", 0, 0.9), ("vb-dig", 0.12, 0.7), ("vb-good", 0.12, 0.5)],
+        "toss": [("vb-toss", 0, 0.9)], "max": [("vb-max", 0, 0.9)], "flame": [("vb-flame", 0, 0.9)],
+        "charge": [("vb-charge", 0.1 * i, 0.35 + 0.35 * i / 9, 0.8 + i / 9) for i in range(10)],
+        "heat": [("vb-heat", 0, 0.8, 0.9), ("vb-heat", 0.6, 0.85, 1.02), ("vb-heat", 1.2, 0.9, 1.14)], "fire": [("vb-fire", 0, 0.9)],
     }
-    # The charge ticks rise through the meter in the preview as in the game.
-    for name, parts in singles.items():
-        if name == "serve-charge-max":
-            ticks = [rate(SOUNDS["vb-charge"], 0.8 + i * 0.1) for i in range(10)]
-            y = mix([p for p in parts if p[0] != "vb-charge"])
-            for i, tk in enumerate(ticks):
-                j = int(0.1 * i * SR); y[j:j + len(tk)] += 0.9 * tk[: len(y) - j]
-        else:
-            y = mix(parts)
+    for name, parts in previews.items():
+        y = mix(parts)
         save(os.path.join(PREVIEW, f"{name}.wav"), y / max(1, np.max(np.abs(y))) * 0.95)
     print("previews in", PREVIEW)
