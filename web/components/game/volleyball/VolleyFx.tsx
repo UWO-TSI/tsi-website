@@ -314,11 +314,11 @@ function handle(f: Fx, c: Ctx, e: VbFx) {
       return;
     }
     case "dive": {
-      const p = m.players[e.who], gy = m.ground(e.x, e.z), k = e.strong ? 1.45 : 1;
+      // Onto a ball (clutch): a bigger spray and a harder punch in.
+      const gy = m.ground(e.x, e.z), k = e.onBall ? 1.35 : 1;
       throwAt(f, "move", DIVE_SPRAY, c, e.x, gy, e.z, e.dx, e.dz, k, FX_COLOR.sandDark);
       throwAt(f, "move", DIVE_CLOUD, c, e.x, gy, e.z, -e.dx, -e.dz, k, FX_COLOR.sand);
-      if (e.who === m.human) camBeat({ punch: e.strong ? 3 : 1.5, shake: e.strong ? 0.3 : 0.18 });
-      void p;
+      if (e.who === m.human) camBeat({ punch: e.onBall ? 3 : 1.5, shake: e.onBall ? 0.3 : 0.18 });
       return;
     }
     case "toss": {
@@ -445,8 +445,8 @@ function frame(f: Fx, c: Ctx, camera: THREE.Camera, dt: number, stamp: number) {
       f.glinted[i] = true;
       throwAt(f, "glow", GLINT, c, p.s.x, p.s.y + HAND.spike + 0.15, p.s.z, 0, 0, 1, FX_COLOR.spark);
     }
-    // The slide dive's skid marks.
-    if (!f.lite && p.dive?.strong && p.dive.t < 0.4) {
+    // The dive's skid marks along the lunge.
+    if (!f.lite && p.dive && p.dive.t < 0.45) {
       f.skidT -= dt;
       if (f.skidT <= 0) { f.skidT = 0.03; throwAt(f, "move", SKID, c, p.s.x, m.ground(p.s.x, p.s.z) + 0.02, p.s.z, p.dive.dx, p.dive.dz, 1, FX_COLOR.sandDark, 0.7); }
     }

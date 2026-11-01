@@ -71,8 +71,8 @@ describe("the match's sounds", () => {
     expect(names({ kind: "tape", x: 0, y: 2.1 })).toEqual(["vb-tape"]);
     expect(names({ kind: "takeoff", who: 0, x: 0, y: 0, z: -4 })).toEqual(["vb-takeoff"]);
     expect(names({ kind: "touchdown", who: 0, x: 0, y: 0, z: -4 })).toEqual(["vb-touchdown"]);
-    expect(names({ kind: "dive", who: 0, strong: false, x: 0, z: -4, dx: 0, dz: 1 })).toEqual(["vb-dive"]);
-    expect(names({ kind: "dive", who: 0, strong: true, x: 0, z: -4, dx: 0, dz: 1 })).toEqual(["vb-dive"]);
+    expect(names({ kind: "dive", who: 0, onBall: false, x: 0, z: -4, dx: 0, dz: 1 })).toEqual(["vb-dive"]);
+    expect(names({ kind: "dive", who: 0, onBall: true, x: 0, z: -4, dx: 0, dz: 1 })).toEqual(["vb-dive"]);
     expect(names({ kind: "toss", who: 0, power: 0.5, max: false })).toEqual(["vb-toss"]);
     expect(names({ kind: "toss", who: 0, power: 0.97, max: true })).toEqual(["vb-toss", "vb-max"]);
     expect(names({ kind: "whiff", who: 0 })).toEqual(["vb-whiff"]);

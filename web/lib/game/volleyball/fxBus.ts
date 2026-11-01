@@ -13,7 +13,7 @@ export type VbFx =
   | { kind: "land"; x: number; z: number; in: boolean; speed: number; heat: number }
   | { kind: "net"; x: number; y: number } | { kind: "tape"; x: number; y: number }
   | { kind: "takeoff"; who: number; x: number; y: number; z: number } | { kind: "touchdown"; who: number; x: number; y: number; z: number }
-  | { kind: "dive"; who: number; strong: boolean; x: number; z: number; dx: number; dz: number }
+  | { kind: "dive"; who: number; onBall: boolean; x: number; z: number; dx: number; dz: number }
   | { kind: "toss"; who: number; power: number; max: boolean }
   | { kind: "whiff"; who: number }
   | { kind: "point"; team: Team; why: string; x: number; z: number; heat: number }

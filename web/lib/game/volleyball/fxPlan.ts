@@ -88,7 +88,7 @@ export const CHARGE_MOTE: Recipe = { sprite: "glow", count: [1, 1], life: [0.28,
 /** A dive's spray arc and its dust cloud. */
 export const DIVE_SPRAY: Recipe = { sprite: "sandBurst", count: [6, 8], life: [0.5, 0.7], size: [0.45, 0.65], grow: 1.2, speed: [2.2, 3.8], spread: 0.7, up: [1.6, 2.8], gravity: 8, drag: 1.5, wind: 0.2, spin: 3, alpha: 1, face: B, rise: [0.05, 0.12] };
 export const DIVE_CLOUD: Recipe = { sprite: "dust", count: [5, 7], life: [0.7, 1], size: [0.7, 0.95], grow: 1.7, speed: [0.6, 1.4], spread: 1.2, up: [0.2, 0.5], gravity: 0, drag: 3, wind: 0.5, lift: 0.25, alpha: 0.85, face: B, rise: [0.1, 0.25] };
-/** A skid mark the slide dive leaves (on the ground, fading). */
+/** A skid mark the dive leaves along its lunge (on the ground, fading). */
 export const SKID: Recipe = { sprite: "scuff", count: [1, 1], life: [2.4, 2.8], size: [0.55, 0.65], grow: 1, aspect: 1.6, speed: [0, 0], spread: 0, up: [0, 0], gravity: 0, drag: 0, wind: 0, alpha: 0.7, face: FACE.ground, fadeIn: 50 };
 /** Confetti: petals in the team's colour, tumbling down. */
 export const CONFETTI: Recipe = { sprite: "petal", count: [18, 22], life: [1.6, 2.2], size: [0.36, 0.48], grow: 1, speed: [1.4, 3.2], spread: Math.PI, up: [3.5, 5.5], gravity: 3.2, drag: 1.4, wind: 0.6, spin: 6, fps: 14, alpha: 1, face: B, rise: [0.4, 0.8] };
