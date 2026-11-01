@@ -1578,7 +1578,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       {DEV && site === "ruins" && <PlaytestHud />}
       {/* Clear of the minimap (left) and the audio widget (bottom right). */}
       {/* A touch screen's UI view is for its menus: the stick and buttons step aside for the dock. */}
-      {touch && !hudCinematic && !uiView && (!inside || inside === "cafe") && <TouchControls left="var(--hud-stick-left)" bottom="var(--hud-stick-bottom)" walkOnly={inside === "cafe"} />}
+      {touch && !hudCinematic && !uiView && sheet !== "sushi" && (!inside || inside === "cafe") && <TouchControls left="var(--hud-stick-left)" bottom="var(--hud-stick-bottom)" walkOnly={inside === "cafe"} />}
       {(!compact || (headingFlash !== null && !hudCinematic)) && <p className={styles.touchControls} data-flash={compact ? headingFlash ?? undefined : undefined}>Tap the ground to move · two fingers turn the camera</p>}
       {captured === "free" && !touch && !hudCinematic && <p className={styles.lookHint} role="status">Click to look around</p>}
       {captured === "captured" && site === "ruins" && <svg className={styles.crosshair} viewBox="-10 -10 20 20" aria-hidden="true"><circle r="5.5" /><circle r="1.2" /></svg>}

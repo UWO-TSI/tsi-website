@@ -284,11 +284,11 @@ export const BOARD = { catch: { w: 1.6, h: 1.05, foot: 0.85 }, tasks: { w: 1.0, 
 export type BoardSize = (typeof BOARD)[keyof typeof BOARD];
 /**
  * Each turns its face (`turn` past half a turn) toward where the game camera looks in from, so the chalk reads on screen.
- * The catch board stands on the boardwalk before the market's door, a few steps left of the sell stall (round 4: of
- * three spots shot, the grass at the wharf's edge, past the stall, and here, only here is it in full view while you sell
- * and as you come out of the market, square to the camera; specs/evidence/fishing-depth/r4/spots/).
+ * The catch board stands on the boardwalk just past the sell stall, square to the camera (round 4: of three spots shot,
+ * the grass at the wharf's edge, before the market's door, and here, only here is it in full view while you sell and
+ * can you read it without the market's roof and marlin between you and the camera; specs/evidence/fishing-depth/r4/spots/).
  */
-export const MARKET_BOARDS = { catch: { x: -0.69, z: 7.63, turn: Math.PI - 0.2 }, tasks: { x: -8.2, z: 6.5, turn: Math.PI + 0.55 } } as const;
+export const MARKET_BOARDS = { catch: { x: 2.53, z: 10.42, turn: Math.PI - 0.2 }, tasks: { x: -8.2, z: 6.5, turn: Math.PI + 0.55 } } as const;
 export interface BoardSpot { x: number; z: number; yaw: number }
 /** Where the market's boards stand in the world and which way they face; null on a world without the market. */
 export function marketBoardsOf(props: readonly { model?: string; x: number; z: number; yaw?: number }[]): { catch: BoardSpot; tasks: BoardSpot } | null {

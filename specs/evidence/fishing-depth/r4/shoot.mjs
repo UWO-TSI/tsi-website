@@ -54,7 +54,7 @@ const FLOW = {
     await shot("showroom-hover", page, { clip: { x: 0, y: 0, width: VW, height: 420 } });
   },
   async board() {
-    await world("at=68.2,26.6&time=day");
+    await world("at=71.9,29.2&time=day");
     await shot("board-sheet");
     const thumbs = testid("catch-board").locator("button[aria-label]");
     const n = await thumbs.count();
@@ -64,7 +64,7 @@ const FLOW = {
     await shot("board-sheet-hover");
   },
   async world() {
-    for (const [name, at] of [["board-world", "71.74,28.4"], ["board-world-close", "68.2,26.6"], ["board-world-tasks", "61.32,29.24"], ["board-world-far", "70.4,26.2"]]) {
+    for (const [name, at] of [["board-world", "71.74,28.4"], ["board-world-close", "71.9,29.2"], ["board-world-tasks", "61.32,29.24"], ["board-world-far", "73.0,25.5"]]) {
       await world(`at=${at}&time=day`, { press: false, settle: 10000 });
       if (name.endsWith("far")) { await page.mouse.move(VW / 2, VH / 2); for (let i = 0; i < 4; i++) { await page.mouse.wheel(0, 240); await wait(300); } await wait(1500); }
       await shot(name);

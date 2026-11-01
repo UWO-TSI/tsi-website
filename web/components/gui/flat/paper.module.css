@@ -73,11 +73,11 @@
 .emblemRing { fill: none; stroke: var(--ui-paper-ink); stroke-width: 1; opacity: 0.55; }
 .emblemFish { fill: var(--ui-paper-ink); opacity: 0.6; }
 .titleWrap { position: relative; isolation: isolate; }
-.titleInk { position: relative; margin: 0; color: var(--ui-paper-ink); font: 300 clamp(38px, 7.4vh, 70px)/1 var(--gui-font); letter-spacing: 0.16em; padding-left: 0.16em; }
+.titleInk { position: relative; margin: 0; color: var(--ui-paper-ink); font: 300 clamp(26px, min(7.4vh, 8.5vw), 70px)/1 var(--gui-font); letter-spacing: 0.16em; padding-left: 0.16em; }
 .swash { position: absolute; z-index: -1; top: 30%; left: 50%; width: 130%; height: 70%; transform: translateX(-50%) rotate(-2deg); pointer-events: none; }
 .swash path { fill: var(--ui-paper-ink); opacity: 0.08; }
 .kindRow { display: grid; grid-template-columns: minmax(16px, 44px) auto auto minmax(16px, 44px); align-items: center; gap: 10px; color: var(--ui-paper-quiet);
-  font: 600 10.5px/1 var(--gui-font); letter-spacing: 0.32em; text-transform: uppercase; }
+  font: 600 10.5px/1 var(--gui-font); letter-spacing: 0.32em; text-transform: uppercase; white-space: nowrap; }
 .kindRow i { height: 1px; background: var(--ui-paper-ink); opacity: 0.3; }
 .coverLine { max-width: 34ch; margin: 3% 0 0; color: var(--ui-paper-ink); opacity: 0.72; font: 400 clamp(12px, 1.7vh, 15px)/1.65 var(--gui-font); letter-spacing: 0.03em; }
 
@@ -118,6 +118,19 @@
 .dishNote { color: var(--ui-paper-quiet); font: 500 11.5px/1.4 var(--gui-font); }
 .dishAction { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; animation: open 0.3s var(--spring) both; }
 @keyframes open { from { opacity: 0; transform: translateY(-4px); } }
+
+/* A phone held upright: a taller menu, so each narrow panel stacks its dishes, the photo over the words. */
+@media (max-aspect-ratio: 3/4) {
+  .book { width: min(96vw, calc(var(--h) * 0.78)); aspect-ratio: 0.78; }
+  .panel { padding: 10% 7% 8%; }
+  .dishPick { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .photo { width: min(100%, 112px); }
+  .dishLine { grid-template-columns: minmax(0, 1fr); gap: 3px; }
+  .stat { gap: 5px; font-size: 11px; }
+  .dishNote { display: none; }
+  .kindRow { gap: 6px; letter-spacing: 0.2em; }
+  .dots { display: none; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .spread, .turn, .photo { transition: none; }
