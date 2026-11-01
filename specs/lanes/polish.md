@@ -41,7 +41,7 @@ tsc, vitest on the touched areas, eslint on changed files, headless before and a
 
 ## Status
 
-Both parts built 2026-11-01 on `game/polish` (from f9cebe44), ready for David's review. Gates: tsc clean; vitest on the touched areas (arrival, rods, gui, economy, icons, rarityPalette, gui contrast) 24 files / 224 tests passed; eslint clean on changed TS files. No perf:check: the lamp adds 204 triangles to rod-4 (361 to 565), not noticeable.
+Both parts built 2026-11-01 on `game/polish` (from f9cebe44), ready for David's review. Gates: tsc clean; vitest on the touched areas (arrival, rods, gui, economy, icons, rarityPalette, gui contrast) 224 tests passed (128 in 18 files, then 96); eslint clean on changed TS files. No perf:check: the lamp adds 204 triangles to rod-4 (361 to 565), not noticeable.
 
 - **Part A, the creator's hair change:** `COMPOSITE_FRAG` (ReflectionScene.tsx) now cross-fades the old you into the new one (`mix` by `uDissolve`, which keeps its smoothstep over the crest's crossing, `ride` to `done`). The noise cells, the hash/noise functions and the foam-cream edge are deleted. Bone copying during the sweep is unchanged, so only the look fades. Tops go through the same path.
 - **Part B, rods:**
