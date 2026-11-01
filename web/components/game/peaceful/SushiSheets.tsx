@@ -5,12 +5,13 @@
  * these food should have a detailed food model on the menu and you can pick it up first person and hover over dishes
  * show what they do"). Seated at the bar, Menu picks it up: the camera leans in and looks down (SushiBar's readingView,
  * on tsi:bar-menu) while a folded teahouse menu (David's references, specs/references/sushi-menu/) rises into your
- * hands and fills the view; it opens from its cover, and its panels turn. Each dish shows its picture on a tray and plate (its high-def model's icon once made: DISH_ART; a marked stand-in until then); hovering one says what it
- * does in a line. Pick a dish, then order it: coins, or for the feast one of your own epic or legendary fish. The
+ * hands and fills the view; it opens from its cover, and its panels turn. Each dish is a photo (its high-def model's icon
+ * once made: DISH_ART; a marked stand-in until then) with its name, price and what it does beside it (round 4, David:
+ * "simple photo of food and then price on the side with like stats"). Pick a dish, then order it: coins, or for the feast one of your own epic or legendary fish. The
  * server prices everything and rolls your casts with the meal's buff (lib/wallet/service.ts orderDish).
  */
 import { useCallback, useEffect, useState } from "react";
-import { Clock, Fish, Soup, X } from "lucide-react";
+import { Clock, Fish, Ruler, Soup, Sparkles, X } from "lucide-react";
 import { DISH_ART, SUSHI_MENU, type Dish, type MealBuff } from "@/lib/wallet/catalogue";
 import type { ActiveBuff } from "@/lib/wallet/store";
 import type { SellEntry, SushiView } from "@/lib/wallet/service";
@@ -21,7 +22,7 @@ import { httpEconomyTransport, type EconomyTransport } from "@/lib/wallet/transp
 import { CurrencyIcon } from "@/components/economy/Amount";
 import PixelImage from "@/components/economy/PixelImage";
 import { errText } from "@/components/economy/EconomySheets";
-import { FoldedMenu, Hanko, InkArt, InkDefs, InkTitle, PanelSection, Thumb, TrayDish, useInkId } from "@/components/gui/flat";
+import { CoverTitle, FoldedMenu, Hanko, InkArt, InkDefs, MenuDish, PanelSection, Thumb, useInkId, type DishStat } from "@/components/gui/flat";
 import { toast } from "@/components/gui";
 import m from "./menu.module.css";
 
@@ -37,7 +38,21 @@ const FEAST_RARITIES = ["epic", "legendary"];
 /** A dish's picture on its plate: the icon of its high-def model once made, else its stand-in. */
 function DishPicture({ id }: { id: string }) {
   const art = DISH_ART[id];
-  return <PixelImage src={iconUrl(art ? (art.ready ? art.icon : art.standIn) : "lounge-tea")} px={40} />;
+  return <PixelImage src={iconUrl(art ? (art.ready ? art.icon : art.standIn) : "lounge-tea")} px={64} />;
+}
+
+/** The cover's one line (round 4, David: "say something like poetic but not claude"; options for him on the review page). */
+export const COVER_LINE = "Sit anywhere. The rice is still warm.";
+
+const MOST = { luck: Math.max(...SUSHI_MENU.map(d => d.buff.luck)), size: Math.max(...SUSHI_MENU.map(d => d.buff.size)) };
+/** What a meal does, a row a stat beside its photo: rarer fish and bigger fish (as dots of the menu's most), how long. */
+export function dishStats(b: MealBuff): DishStat[] {
+  const dots = (v: number, most: number) => Math.max(1, Math.round((5 * v) / most));
+  return [
+    ...(b.luck > 0 ? [{ icon: <Sparkles />, label: "Rarer fish", value: `+${Math.round(b.luck * 100)}%`, level: dots(b.luck, MOST.luck) }] : []),
+    ...(b.size > 0 ? [{ icon: <Ruler />, label: "Bigger fish", value: `+${Math.round(b.size * 100)}%`, level: dots(b.size, MOST.size) }] : []),
+    { icon: <Clock />, label: "Lasts", value: `${b.minutes} min` },
+  ];
 }
 
 /** Tell the bar the menu is up or down: the seated camera leans in to read it (SushiBar). */
@@ -81,19 +96,18 @@ export function MenuPickup({ open, onClose, transport = httpEconomyTransport }: 
     const d = menu.find(x => x.id === id);
     if (!d) return null;
     const feast = d.price === null, isOpen = picked === d.id;
-    return <TrayDish key={d.id} open={isOpen} picture={<DishPicture id={d.id} />} standIn={!DISH_ART[d.id]?.ready} name={d.name}
-      does={<><Clock size={12} aria-hidden />{mealText(d.buff, d.buff.minutes)}</>}
-      price={feast ? <Fish size={13} aria-label="Your fish" /> : <>{d.price}<CurrencyIcon size={12} /></>}
+    return <MenuDish key={d.id} open={isOpen} picture={<DishPicture id={d.id} />} standIn={!DISH_ART[d.id]?.ready} name={d.name}
+      stats={dishStats(d.buff)} note={d.blurb}
+      price={feast ? <><Fish size={14} aria-hidden />Your fish</> : <>{d.price}<CurrencyIcon size={13} /></>}
       onPick={() => setPicked(isOpen ? null : d.id)}>
       {!feast ? <button type="button" className={m.order} disabled={busy} onClick={() => void order(d)}>Order<span>{d.price}<CurrencyIcon size={12} /></span></button>
         : rare.length === 0 ? <span className={m.quiet}>Bring an epic or legendary fish.</span>
         : rare.map(f => <Thumb key={f.item_key} picture={iconUrl(f.item_key)} rarity={f.rarity} size={46} count={f.count} label={`Cook my ${f.name}`} onClick={busy ? undefined : () => void order(d, f.item_key)} />)}
-    </TrayDish>;
+    </MenuDish>;
   };
   const cover = <>
-    <InkTitle filter={ink} title="Bancha" side={<>Sushi<br />by the sea<br /><br />on the wharf,<br />after dark</>} />
+    <CoverTitle filter={ink} title="Bancha" kind="Sushi bar" line={COVER_LINE} />
     <div className={m.coverFoot}>
-      <Hanko filter={ink} size={30} className={m.coverSeal} />
       <InkArt kind="pagoda" filter={ink} className={m.coverPagoda} />
       <InkArt kind="plum" filter={ink} fade="none" className={m.coverPlum} />
       <InkArt kind="mist" filter={ink} fade="none" className={m.coverMist} />

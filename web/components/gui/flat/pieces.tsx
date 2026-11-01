@@ -96,7 +96,8 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 export interface StripItem { key: string; picture: string; rarity?: string | null; label: string; mark?: boolean }
 /** A row of things on at the same hours (`hours`: 24 flags, hour 0 first). */
 export interface StripBand<T extends StripItem = StripItem> { id: string; hours: readonly boolean[]; items: readonly T[] }
-export interface StripLane<T extends StripItem = StripItem> { id: string; icon: ReactNode; label: string; bands: readonly StripBand<T>[]; closed?: ReactNode }
+/** `label`: the lane's whole name (its title); `short`: the word under its icon ("Sea"), so it reads without hovering. */
+export interface StripLane<T extends StripItem = StripItem> { id: string; icon: ReactNode; label: string; short?: string; bands: readonly StripBand<T>[]; closed?: ReactNode }
 
 /** A band's runs of hours on, as [from, to) hour pairs; a run over midnight is two. */
 export function runsOf(hours: readonly boolean[]): [number, number][] {
@@ -134,7 +135,7 @@ export function TimeStrip<T extends StripItem>({ now, lanes, tip, label }: { now
       </span>
     </div>
     {lanes.map(lane => <section key={lane.id} className={p.lane} aria-label={lane.label} data-closed={lane.closed ? "" : undefined}>
-      <span className={p.laneIcon} title={lane.label}>{lane.icon}</span>
+      <span className={p.laneIcon} title={lane.label}>{lane.icon}{lane.short ? <small>{lane.short}</small> : null}</span>
       <div className={p.laneTrack}>
         {lane.closed ? <div className={p.closed}>{lane.closed}</div> : lane.bands.map(band => {
           const runs = runsOf(band.hours), share = shareOut(runs, band.items.length);
@@ -152,6 +153,19 @@ export function TimeStrip<T extends StripItem>({ now, lanes, tip, label }: { now
     </section>)}
     <i className={p.needle} aria-hidden />
   </div>;
+}
+
+/**
+ * What is true right now, in a row of soft chips (the catch board's season, weather and time of day; David, 2026-10-29:
+ * "include season and condition too"): an icon, a quiet word for what it is, and its value.
+ */
+export function Conditions({ items, label = "Right now" }: { items: readonly { icon: ReactNode; label: string; value: ReactNode }[]; label?: string }) {
+  return <dl className={p.conditions} aria-label={label}>
+    {items.map(it => <div key={it.label} className={p.condition}>
+      <dt><span className={p.conditionIcon} aria-hidden>{it.icon}</span><span>{it.label}</span></dt>
+      <dd>{it.value}</dd>
+    </div>)}
+  </dl>;
 }
 
 // ── Odds ────────────────────────────────────────────────────────────────────────────────────────────────────────────

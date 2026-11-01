@@ -18,8 +18,9 @@
 .panel[data-side="right"]::after { left: 0; background: linear-gradient(to right, rgb(var(--ui-shade) / 0.1), transparent); }
 /* The cover: a bound edge with its stitches, and a click opens it. */
 .cover { cursor: pointer; border-radius: 4px; justify-items: center; align-content: stretch; grid-template-rows: auto 1fr; padding-left: 13%; }
-.cover::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 5.5%; background: var(--ui-paper-tray);
-  background-image: radial-gradient(circle, var(--ui-paper-rule) 0 1.2px, transparent 1.6px); background-size: 100% 26px; background-position: 50% 10px; }
+/* The spine: darker, sewn across with thread every few centimetres, as a bound teahouse menu is. */
+.cover::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 5.5%; background-color: var(--ui-paper-tray);
+  background-image: repeating-linear-gradient(to bottom, transparent 0 46px, var(--ui-paper-rule) 46px 48px); background-size: 46% 100%; background-repeat: no-repeat; background-position: 100% 20px; }
 .cover::after { display: none; }
 .cover:focus-visible, .book:focus-visible .cover { outline: 2px solid var(--ui-paper-ink); outline-offset: 3px; }
 
@@ -66,16 +67,19 @@
 .sealCut { stroke: var(--ui-paper); }
 .sealFish { fill: var(--ui-paper); }
 
-/* The title: small horizontal words, a hairline, then the name top to bottom in brushed ink. */
-.title { display: grid; grid-auto-flow: column; align-items: start; justify-content: center; gap: 14px; }
-.titleInk { position: relative; margin: 0; writing-mode: vertical-rl; text-orientation: upright; color: var(--ui-paper-ink); font: 900 clamp(34px, 6.4vh, 60px)/1 var(--gui-font);
-  letter-spacing: 0.02em; text-transform: uppercase; }
-/* A pale brush stroke behind the name, as a big wash character sits behind a banner's words. */
-.swash { position: absolute; z-index: -1; top: -6%; left: 50%; width: 170%; height: 112%; transform: translateX(-50%) rotate(-4deg); pointer-events: none; }
-.swash path { fill: var(--ui-paper-ink); opacity: 0.1; }
+/* The cover's words: an emblem, the name over a pale wash, a hairline with the kind of place and the seal, one line. */
+.coverTitle { display: grid; justify-items: center; gap: clamp(8px, 1.6vh, 16px); padding-top: 6%; text-align: center; }
+.emblem { width: clamp(30px, 5vh, 44px); height: auto; margin-bottom: 4%; overflow: visible; }
+.emblemRing { fill: none; stroke: var(--ui-paper-ink); stroke-width: 1; opacity: 0.55; }
+.emblemFish { fill: var(--ui-paper-ink); opacity: 0.6; }
 .titleWrap { position: relative; isolation: isolate; }
-.titleRule { width: 1px; height: clamp(90px, 16vh, 150px); background: var(--ui-paper-ink); opacity: 0.45; }
-.titleSide { margin: 0; max-width: 11ch; color: var(--ui-paper-quiet); font: 600 11px/1.6 var(--gui-font); letter-spacing: 0.14em; text-transform: uppercase; }
+.titleInk { position: relative; margin: 0; color: var(--ui-paper-ink); font: 300 clamp(38px, 7.4vh, 70px)/1 var(--gui-font); letter-spacing: 0.16em; padding-left: 0.16em; }
+.swash { position: absolute; z-index: -1; top: 30%; left: 50%; width: 130%; height: 70%; transform: translateX(-50%) rotate(-2deg); pointer-events: none; }
+.swash path { fill: var(--ui-paper-ink); opacity: 0.08; }
+.kindRow { display: grid; grid-template-columns: minmax(16px, 44px) auto auto minmax(16px, 44px); align-items: center; gap: 10px; color: var(--ui-paper-quiet);
+  font: 600 10.5px/1 var(--gui-font); letter-spacing: 0.32em; text-transform: uppercase; }
+.kindRow i { height: 1px; background: var(--ui-paper-ink); opacity: 0.3; }
+.coverLine { max-width: 34ch; margin: 3% 0 0; color: var(--ui-paper-ink); opacity: 0.72; font: 400 clamp(12px, 1.7vh, 15px)/1.65 var(--gui-font); letter-spacing: 0.03em; }
 
 /* A section: its heading small, top to bottom, at the top right; the dishes beside it. */
 .section { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7%; }
@@ -83,33 +87,39 @@
 .sectionTitle::after { content: ""; position: absolute; top: calc(100% + 10px); left: 50%; width: 1px; height: 36px; background: var(--ui-paper-ink); opacity: 0.35; }
 .sectionBody { grid-column: 1; grid-row: 1; display: grid; gap: clamp(10px, 2.4vh, 22px); align-content: start; min-width: 0; }
 
-/* A dish on its tray. */
-.dish { display: grid; gap: 6px; width: min(100%, 280px); }
-.dishPick { all: unset; display: grid; gap: 7px; cursor: pointer; }
+/* A dish: its photo, and beside it the name and price on a hairline, then what it does, a row a stat. */
+.dish { display: grid; gap: 8px; }
+.dishPick { all: unset; display: grid; grid-template-columns: clamp(96px, 18vh, 168px) minmax(0, 1fr); align-items: start; gap: clamp(10px, 1.8vh, 16px); cursor: pointer; }
 .dishPick:disabled { cursor: default; }
 .dishPick:focus-visible { outline: 2px solid var(--ui-paper-ink); outline-offset: 4px; border-radius: 6px; }
-.tray { position: relative; display: grid; place-items: center; width: 100%; aspect-ratio: 2.1; border-radius: 7px;
-  background: linear-gradient(170deg, var(--ui-paper-tray-hi), var(--ui-paper-tray) 45%); box-shadow: 0 6px 14px rgb(var(--ui-shade) / 0.16);
+/* The photo: a print laid on the menu, a plate seen from above on a soft ground. */
+.photo { position: relative; display: grid; place-items: center; aspect-ratio: 1; padding: 6%; box-sizing: border-box; border-radius: 3px;
+  background: var(--ui-paper-plate); box-shadow: 0 0 0 1px var(--ui-paper-rule), 0 4px 10px rgb(var(--ui-shade) / 0.14); transform: rotate(-1.2deg);
   transition: transform 0.2s var(--spring), box-shadow 0.2s ease-out; }
-.tray::before { content: ""; position: absolute; inset: 5px; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--ui-paper-tray-hi); opacity: 0.8; }
-.plate { position: relative; display: grid; place-items: center; height: 82%; aspect-ratio: 1; border-radius: 50%;
-  background: radial-gradient(circle at 50% 45%, var(--ui-paper-plate) 0 58%, var(--ui-paper-edge) 60% 63%, var(--ui-paper-plate) 65%); box-shadow: 0 3px 6px rgb(var(--ui-shade) / 0.3); }
-.plate canvas { width: 66%; height: 66%; }
-.chopsticks { position: absolute; top: 20%; bottom: 20%; right: 13%; width: 3px; border-radius: 2px; background: var(--ui-paper-edge); opacity: 0.75; transform: rotate(9deg);
-  box-shadow: 7px 1px 0 var(--ui-paper-edge); }
-.standIn { position: absolute; left: 8px; bottom: 7px; padding: 2px 6px; border-radius: 4px; background: var(--ui-paper); color: var(--ui-paper-ink); opacity: 0.85;
-  font: 700 8.5px/1.2 var(--gui-font); letter-spacing: 0.1em; text-transform: uppercase; }
-.dishPick:hover .tray, .dishPick:focus-visible .tray, .dish[data-open] .tray { transform: translateY(-2px); box-shadow: 0 10px 22px rgb(var(--ui-shade) / 0.22); }
+.photo::before { content: ""; position: absolute; inset: 6%; border-radius: 2px; background: radial-gradient(circle at 50% 40%, var(--ui-paper) 0 30%, var(--ui-paper-edge) 100%); }
+.plate { position: relative; display: grid; place-items: center; width: 84%; aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle at 50% 45%, var(--ui-paper-plate) 0 58%, var(--ui-paper-edge) 60% 63%, var(--ui-paper-plate) 65%); box-shadow: 0 3px 6px rgb(var(--ui-shade) / 0.22); }
+.plate canvas { width: 70%; height: 70%; }
+.standIn { position: absolute; left: 50%; bottom: -7px; transform: translateX(-50%); padding: 2px 6px; border-radius: 4px; background: var(--ui-paper); color: var(--ui-paper-quiet);
+  box-shadow: 0 0 0 1px var(--ui-paper-rule); font: 700 8.5px/1.2 var(--gui-font); letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap; }
+.dishPick:hover .photo, .dishPick:focus-visible .photo, .dish[data-open] .photo { transform: rotate(0deg) translateY(-2px); box-shadow: 0 0 0 1px var(--ui-paper-rule), 0 10px 20px rgb(var(--ui-shade) / 0.2); }
+.dishInfo { display: grid; gap: 7px; min-width: 0; }
 .dishLine { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--ui-paper-rule); }
 .dishLine b { font: 600 clamp(13px, 1.9vh, 16px)/1.25 var(--gui-font); letter-spacing: 0.02em; }
-.dishPrice { display: inline-flex; align-items: center; gap: 4px; color: var(--ui-paper-quiet); font: 600 12px/1 var(--gui-font); font-variant-numeric: tabular-nums; }
-.dishDoes { display: inline-flex; align-items: center; gap: 6px; max-height: 0; overflow: hidden; color: var(--ui-paper-quiet); font: 500 12px/1.35 var(--gui-font); opacity: 0;
-  transition: max-height 0.2s ease-out, opacity 0.2s ease-out; }
-.dishPick:hover .dishDoes, .dishPick:focus-visible .dishDoes, .dish[data-open] .dishDoes { max-height: 34px; opacity: 1; }
+.dishPrice { display: inline-flex; align-items: center; gap: 4px; color: var(--ui-paper-ink); font: 700 clamp(13px, 1.8vh, 15px)/1 var(--gui-font); font-variant-numeric: tabular-nums; }
+.stats { display: grid; gap: 5px; }
+.stat { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto auto; align-items: center; gap: 7px; color: var(--ui-paper-quiet); font: 500 12px/1.2 var(--gui-font); }
+.statIcon { display: grid; place-items: center; color: var(--ui-paper-ink); opacity: 0.7; }
+.statIcon svg { width: 13px; height: 13px; }
+.statValue { min-width: 4ch; color: var(--ui-paper-ink); font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+.dots { display: inline-flex; gap: 3px; }
+.dots i { width: 6px; height: 6px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--ui-paper-rule); }
+.dots i[data-on] { background: var(--ui-paper-ink); box-shadow: none; opacity: 0.75; }
+.dishNote { color: var(--ui-paper-quiet); font: 500 11.5px/1.4 var(--gui-font); }
 .dishAction { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; animation: open 0.3s var(--spring) both; }
 @keyframes open { from { opacity: 0; transform: translateY(-4px); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .spread, .turn, .tray, .dishDoes { transition: none; }
+  .spread, .turn, .photo { transition: none; }
   .leaf, .dishAction { animation: none; }
 }

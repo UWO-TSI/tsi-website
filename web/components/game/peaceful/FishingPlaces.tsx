@@ -20,11 +20,12 @@ import { apiCall, newKey } from "@/lib/apiClient";
 import { iconUrl } from "@/lib/icons/keys";
 import { countUp, sellAtCounter } from "@/lib/game/shopCounter";
 import { RARITY_LABEL, type Rarity } from "@/lib/rarity";
+import { ROSTER } from "@/lib/collections/roster";
 import { CurrencyIcon } from "@/components/economy/Amount";
 import { errText } from "@/components/economy/EconomySheets";
 import { mealText } from "@/components/game/peaceful/SushiSheets";
 import {
-  DarkButton, FlatDialog, FlatPanel, GachaReveal, GhostButton, IconRail, OddsTable, Purse, HoverTip, Quiet, StatusLine, TaskCard, Thumb, TipBody,
+  CardGrid, DarkButton, FlatDialog, ItemCard, FlatPanel, GachaReveal, GhostButton, IconRail, OddsTable, Purse, HoverTip, Quiet, StatusLine, TaskCard, Thumb, TipBody,
   type OddsRow, type RailItem, type RevealItem,
 } from "@/components/gui/flat";
 import s from "./places.module.css";
@@ -33,26 +34,34 @@ import s from "./places.module.css";
 const Money = ({ n, currency = "coins", size = 15 }: { n: number; currency?: string; size?: number }) =>
   <span className={s.money}>{n.toLocaleString()}<CurrencyIcon currency={currency} size={size} /></span>;
 
-/** The purse, counting up or down when it changes (design bible UI 9: animate the change, never jump). */
+/**
+ * The purse, counting up or down when it changes (design bible UI 9: animate the change, never jump). `move` counts from
+ * one balance to another; `add` counts on from what it shows now (a sale before the server answers); `settle` puts it
+ * on the server's balance, counting only if that differs.
+ */
 function useTill(transport: EconomyTransport) {
   const [wallet, setWallet] = useState<WalletView | null>(null);
-  const coinsEl = useRef<HTMLSpanElement>(null), gemsEl = useRef<HTMLSpanElement>(null), timers = useRef<number[]>([]);
-  useEffect(() => { let live = true; transport.wallet().then(w => { if (live) setWallet(w); }, () => {}); return () => { live = false; }; }, [transport]);
+  const coinsEl = useRef<HTMLSpanElement>(null), gemsEl = useRef<HTMLSpanElement>(null), timers = useRef<number[]>([]), now = useRef<WalletView | null>(null);
+  useEffect(() => { let live = true; transport.wallet().then(w => { if (live) { now.current = w; setWallet(w); } }, () => {}); return () => { live = false; }; }, [transport]);
   useEffect(() => () => timers.current.forEach(window.clearTimeout), []);
   const move = useCallback((currency: "coins" | "gems", from: number, to: number) => {
+    if (now.current) now.current = { ...now.current, [currency]: to };
     setWallet(w => (w ? { ...w, [currency]: to } : w));
     countUp(currency === "coins" ? coinsEl.current : gemsEl.current, from, to, timers.current);
   }, []);
+  const add = useCallback((currency: "coins" | "gems", by: number) => { const from = now.current?.[currency]; if (from !== undefined && by) move(currency, from, from + by); }, [move]);
+  const settle = useCallback((currency: "coins" | "gems", to: number) => { const from = now.current?.[currency]; if (from !== undefined && from !== to) move(currency, from, to); }, [move]);
   const purse = <Purse coins={wallet ? wallet.coins : null} gems={wallet ? wallet.gems : null} coinsRef={coinsEl} gemsRef={gemsEl} />;
-  return { wallet, purse, move };
+  return { wallet, purse, move, add, settle };
 }
+type Till = ReturnType<typeof useTill>;
 
 /** Load once (and again on `reload`), keeping the last good data while a reload runs. */
 function useData<T>(load: () => Promise<T>) {
   const [data, setData] = useState<T | null>(null), [error, setError] = useState<string | null>(null);
   const reload = useCallback(() => load().then(d => { setData(d); setError(null); }, e => setError(errText(e))), [load]);
   useEffect(() => { void reload(); }, [reload]);
-  return { data, error, setError, reload };
+  return { data, setData, error, setError, reload };
 }
 
 // ── Fishing tasks ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -113,37 +122,62 @@ export function TaskBoardSheet({ open, onClose, keys, transport = httpEconomyTra
 // ── The fish market's three places ──────────────────────────────────────────────────────────────────────────────────
 
 const FISHY = new Set(["fish", "sea"]);
-/** Quick sell: your fish as pictures; a tap sells one, the button sells every one you haven't locked. */
-function QuickSell({ transport, onSold }: { transport: EconomyTransport; onSold: (from: number, to: number) => void }) {
+const WATER_WORD: Partial<Record<string, string>> = { river: "River", pond: "Pond", cliff_pool: "Cliff pool", sea: "Sea" };
+/** "Uncommon · River": a fish's rung and where it lives, under its name on the card. */
+const fishLine = (e: SellEntry) => [RARITY_LABEL[e.rarity as Rarity] ?? e.rarity, WATER_WORD[ROSTER.find(sp => sp.key === e.item_key)?.biome ?? ""]].filter(Boolean).join(" · ");
+
+/** Fish counted off the bag before the server confirms: each `[key, qty]` taken from its row, rows at none dropped. */
+export function lessSold(rows: readonly SellEntry[], pending: Readonly<Record<string, number>>): SellEntry[] {
+  return rows.map(e => ({ ...e, count: e.count - (pending[e.item_key] ?? 0) })).filter(e => e.count > 0);
+}
+
+/**
+ * Quick sell (David, 2026-10-29: "should still show the price per, and some basic details ... make sure quick sell is
+ * isntant"): your fish as cards, each its picture, name and count, rung and water, and its price each. A tap sells one,
+ * Sell all every one you haven't locked. The sale shows at once (the card counts down, the purse counts up) and the
+ * server confirms after, one sale at a time in order; a refused sale puts the fish and the coins back.
+ */
+function QuickSell({ transport, till }: { transport: EconomyTransport; till: Till }) {
   const load = useCallback(() => transport.sellable(), [transport]);
-  const { data, error, setError, reload } = useData<SellEntry[]>(load);
-  const [busy, setBusy] = useState(false);
-  const fish = useMemo(() => (data ?? []).filter(e => FISHY.has(e.category)), [data]);
+  const { data, setData, error, setError } = useData<SellEntry[]>(load);
+  const [pending, setPending] = useState<Record<string, number>>({});
+  const queue = useRef<Promise<void>>(Promise.resolve()), waiting = useRef(0);
+  const fish = useMemo(() => lessSold((data ?? []).filter(e => FISHY.has(e.category)), pending), [data, pending]);
   const open = fish.filter(e => !e.locked), total = open.reduce((t, e) => t + e.price_each * e.count, 0);
-  const sell = async (list: readonly (readonly [SellEntry, number])[]) => {
-    setBusy(true);
+  const bump = (key: string, by: number) => setPending(p => ({ ...p, [key]: (p[key] ?? 0) + by }));
+  const sell = (list: readonly (readonly [SellEntry, number])[]) => {
+    setError(null);
     for (const [e, qty] of list) {
-      const r = await sellAtCounter(transport, e, qty);
-      if (r.ok) onSold(r.from, r.to); else { setError(r.error); break; }
+      bump(e.item_key, qty);
+      till.add("coins", e.price_each * qty);
+      waiting.current++;
+      queue.current = queue.current.then(async () => {
+        const r = await sellAtCounter(transport, e, qty);
+        waiting.current--;
+        bump(e.item_key, -qty);
+        if (r.ok) {
+          setData(rows => rows && rows.map(x => (x.item_key === e.item_key ? { ...x, count: x.count - qty } : x)));
+          if (waiting.current === 0) till.settle("coins", r.to);
+        } else {
+          till.add("coins", -e.price_each * qty);
+          setError(r.error);
+        }
+      });
     }
-    await reload();
-    setBusy(false);
   };
   if (!data) return <Quiet>{error ?? "Counting your fish…"}</Quiet>;
   return <div className={s.place}>
     {error ? <StatusLine error>{error}</StatusLine> : null}
     {fish.length === 0 ? <div className={s.empty}><Fish size={40} aria-hidden /><Quiet>No fish in your bag.</Quiet></div> : <>
-      <div className={s.thumbGrid} role="list" aria-label="Your fish">
-        {fish.map(e => <span role="listitem" key={e.item_key}>
-          <Thumb picture={iconUrl(e.item_key)} rarity={e.rarity} size={76} count={e.count} label={`${e.name}: sell one for ${e.price_each} coins`} dim={e.locked}
-            onClick={e.locked || busy ? undefined : () => void sell([[e, 1]])}
-            tip={<TipBody picture={iconUrl(e.item_key)} rarity={e.rarity} kind={RARITY_LABEL[e.rarity as Rarity] ?? e.rarity} name={e.name}
-              facts={[[<Coins key="c" size={14} />, <>{e.price_each.toLocaleString()} each</>], ...(e.locked ? [[<Lock key="l" size={14} />, "Locked in your bag"] as const] : [])]} />} />
-        </span>)}
-      </div>
+      <CardGrid min={168} phoneMin={140} label="Your fish">
+        {fish.map(e => <ItemCard key={e.item_key} size="md" arrow={false} picture={iconUrl(e.item_key)} rarity={e.rarity as Rarity}
+          name={e.name} line={<>{e.count > 1 ? <b className={s.count}>×{e.count} · </b> : null}{e.locked ? <><Lock size={12} aria-hidden /> Locked</> : fishLine(e)}</>}
+          price={{ amount: e.price_each, currency: "coins" }} cover={null} label={e.locked ? `${e.name}: locked in your bag` : `${e.name}: sell one for ${e.price_each} coins`}
+          onClick={e.locked ? undefined : () => sell([[e, 1]])} />)}
+      </CardGrid>
       <div className={s.bar}>
         <span className={s.total}><HandCoins size={20} aria-hidden /><Money n={total} size={18} /></span>
-        <DarkButton disabled={busy || open.length === 0} onClick={() => void sell(open.map(e => [e, e.count] as const))}>Sell all</DarkButton>
+        <DarkButton disabled={open.length === 0} onClick={() => sell(open.map(e => [e, e.count] as const))}>Sell all</DarkButton>
       </div>
     </>}
   </div>;
@@ -216,7 +250,7 @@ export function FishMarketSheet({ open, onClose, keys, transport = httpEconomyTr
   const till = useTill(transport);
   return <FlatPanel open={open} onClose={onClose} title={PLACE_TITLE[place]} keys={keys} purse={till.purse} contentKey={place} testId="fish-market"
     rail={<IconRail items={PLACES} value={place} onChange={setPlace} label="Fish market" />}>
-    {!open ? null : place === "sell" ? <QuickSell transport={transport} onSold={(a, b) => till.move("coins", a, b)} />
+    {!open ? null : place === "sell" ? <QuickSell transport={transport} till={till} />
       : place === "board" ? <MonthlyBoard load={loadMonthly} />
       : <FishingTasks transport={transport} onPaid={(a, b) => till.move("coins", a, b)} />}
   </FlatPanel>;

@@ -271,14 +271,24 @@ export const SELL_BARREL = "sell-barrel";
 
 /**
  * The fish market's two boards (David, 2026-10-28: the catch board "should be near the fish shop"; the fishing tasks "on
- * a sperate board"): chalkboards out front, left of the door, in the market's frame (propModels.ts "fish-market": the
+ * a sperate board"): boards out front, in the market's frame (propModels.ts "fish-market": the
  * front faces +z; the quick-sell stall stands front right, about (3, 7.2), barrels and a cart front left), so they move with the market wherever David
  * paints it. E beside one reads it.
  */
 export const FISH_MARKET = "fish-market";
-export const BOARD = { w: 1.0, h: 0.72, legs: 0.55 } as const;
-/** Each turns its face (`turn` past half a turn) toward where the game camera looks in from, so the chalk reads on screen. */
-export const MARKET_BOARDS = { catch: { x: -5.4, z: 7.6, turn: Math.PI + 0.35 }, tasks: { x: -8.2, z: 6.5, turn: Math.PI + 0.55 } } as const;
+/**
+ * The boards' sizes (the slate's width and height, and how high its foot stands): the catch board is the big one
+ * (round 4, David: "remodle the catch board and make it bigger, put it somewhere where it makes sense and easy to see").
+ */
+export const BOARD = { catch: { w: 1.6, h: 1.05, foot: 0.85 }, tasks: { w: 1.0, h: 0.72, foot: 0.55 } } as const;
+export type BoardSize = (typeof BOARD)[keyof typeof BOARD];
+/**
+ * Each turns its face (`turn` past half a turn) toward where the game camera looks in from, so the chalk reads on screen.
+ * The catch board stands on the boardwalk before the market's door, a few steps left of the sell stall (round 4: of
+ * three spots shot, the grass at the wharf's edge, past the stall, and here, only here is it in full view while you sell
+ * and as you come out of the market, square to the camera; specs/evidence/fishing-depth/r4/spots/).
+ */
+export const MARKET_BOARDS = { catch: { x: -0.69, z: 7.63, turn: Math.PI - 0.2 }, tasks: { x: -8.2, z: 6.5, turn: Math.PI + 0.55 } } as const;
 export interface BoardSpot { x: number; z: number; yaw: number }
 /** Where the market's boards stand in the world and which way they face; null on a world without the market. */
 export function marketBoardsOf(props: readonly { model?: string; x: number; z: number; yaw?: number }[]): { catch: BoardSpot; tasks: BoardSpot } | null {
