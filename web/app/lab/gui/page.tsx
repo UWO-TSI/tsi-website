@@ -29,7 +29,8 @@ import { CircleDot, Waves, Worm } from "lucide-react";
 import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
 import { ActionBar, ActionIcon, BigMoment, CardOverlay, DarkButton, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KeyBoard, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, QuestCheck, RankBadge, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
-import { BoardRows } from "@/components/game/volleyball/BoardSheet";
+import { BoardBody } from "@/components/game/volleyball/BoardSheet";
+import { DEFAULT_LOOK } from "@/lib/game/character/look";
 import s from "./showroom.module.css";
 import FlatRewards from "./FlatRewards";
 
@@ -325,9 +326,9 @@ export default function GuiShowroom() {
       <Row><SpinPicker x={0} y={0} picture="/assets/game/volleyball/ball-icon.png" label="Centre" /><SpinPicker x={0.6} y={0.4} picture="/assets/game/volleyball/ball-icon.png" label="Top right"><Keycap>R-click</Keycap></SpinPicker></Row>
     </Section>
 
-    <Section id="rank" title="Rank badge and the leaderboard (flat)" note="A place in a ranking, the first in gold; the volleyball court’s board, its rows on hairlines and a Sample tag until phase 3.">
+    <Section id="rank" title="Rank badge, podium and the leaderboard (flat)" note="A place in a ranking, the first in gold; the podium (the top three on their steps, thin gold, silver and bronze edges, the players standing on them); the volleyball court’s board: the podium, a few rows under it, your place, and a Sample tag until phase 3.">
       <Row><RankBadge rank={1} /><RankBadge rank={2} /><RankBadge rank={10} /></Row>
-      <BoardRows board={{ sample: true, rows: [{ rank: 1, name: "Kelpie", wins: 14, you: false }, { rank: 2, name: "Sandpiper", wins: 11, you: false }, { rank: 3, name: "Islander", wins: 9, you: true }] }} />
+      <BoardBody mine={DEFAULT_LOOK} board={{ sample: true, rows: [["Kelpie", 14], ["Sandpiper", 11], ["Driftwood", 9], ["Pebble", 7], ["Tidepool", 5], ["Coralie", 4], ["Gull", 2], ["Islander", 1]].map(([name, wins], i) => ({ rank: i + 1, name: name as string, wins: wins as number, you: name === "Islander" })) }} />
     </Section>
 
     <Section id="tooltips" title="Tooltips" kit={["wheel"]} note="The teal name pill with a tail, on hover and on keyboard focus.">

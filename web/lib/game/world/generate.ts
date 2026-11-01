@@ -549,10 +549,11 @@ function beachSet(): Obj[] {
     out.push(obj("prop", `beach-ball-${i}`, x + 2.3, z + 1.5, h(6) * 6.28, 0.28, "beach-ball")); // 0.56 across
   });
   // The volleyball court (game/volleyball): the net across the court along the beach, a ball by the far post off the
-  // free zone (the surfboards west of it too); up the grassy rise on the land side a log bench to watch from (facing
+  // free zone (the surfboards west of it too); up the grassy rise on the land side two log benches to watch from (facing
   // the court), and at the east end, toward the campfire, the leaderboard board (the plaza's catch board, facing east).
   out.push(obj("prop", "volleyball-net", ...VOLLEY, Math.PI / 2, 1, "volleyball-net"), obj("prop", "beach-ball-net", VOLLEY[0] + 0.7, VOLLEY[1] + 6.9, 1.3, 0.2, "beach-ball")); // the match's ball size (court.ts BALL_R)
-  out.push(obj("bench", "volley-bench", VOLLEY[0] + 3, VOLLEY[1] - 9.1, 0, 1, "log-bench"));
+  // Two benches (David, round 2 review: "2 benches"), either side of the net's line, both facing the court.
+  out.push(obj("bench", "volley-bench", VOLLEY[0] + 3, VOLLEY[1] - 9.1, 0, 1, "log-bench"), obj("bench", "volley-bench-2", VOLLEY[0] - 3, VOLLEY[1] - 9.1, 0, 1, "log-bench"));
   out.push(obj("prop", "volley-board", VOLLEY[0] + 12.1, VOLLEY[1] - 1.46, Math.PI / 2, 1, "catch-board"));
   out.push(obj("prop", "sandcastle", 8, SANDCASTLE_Z, 0.4, 1, "sandcastle"));
   return out;

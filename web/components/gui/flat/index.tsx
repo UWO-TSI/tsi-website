@@ -24,6 +24,7 @@ export { CardOverlay, FLY_MS, FlyIn, KEYBOARD, KeyBoard, PaperField, PrintedCard
 export { CountUp, WalletSlot } from "./wallet";
 export { KEYWORD_KINDS, Keyword, KeywordLine, keywordParts, type KeywordKind, type LinePart } from "./keyword";
 export { ProgressCard } from "./ProgressCard";
+export { PODIUM, Podium, podiumFeet, type PodiumPlace } from "./Podium";
 export { ServeMeter } from "./ServeMeter";
 export { ActionBar, ActionIcon, type ActionSlot } from "./ActionBar";
 export { SpinPicker } from "./SpinPicker";
