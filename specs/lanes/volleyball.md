@@ -6,21 +6,21 @@ Worktree `.claude/worktrees/volleyball`, branch `game/volleyball`, cut from orig
 
 ## Status
 
-**Round 2 shipped in v1.2 (main 2e7d7de8; migration 20261030120000_volleyball_casual applied).** David reviewed it (2026-10-30, below): round 3 is the build now. Merge origin/main first. The round 2 notes that follow describe what is live.
+**Round 3 built, waiting for David's review (branch head: see the last commit; merged origin/main de6ff1bb).** Round 2 shipped in v1.2 (main 2e7d7de8; migration 20261030120000_volleyball_casual applied). Round 3 changes no migration and no protocol.
 
-- **Controls (root causes fixed):** the avatar's keys stand back in a match (PlayerAvatar `frozen` while playing), the court takes the mouse on the window's capture phase (`courtInput.ts`; the orbit camera never sees its right button), Tab and G wheels are off in a match, presses wait up to 0.26 s for the ball. One controls table (`actions.ts`) drives the input and the action bar. Real-input checks on the island pass for every action (`specs/evidence/volleyball/p2/input-results.json`).
-- **Clips:** game/vb-anim merged (13eead8a): the match players and your avatar (only while playing) load vb_clips.glb; hands are clips.ts contactPoints; a press's clip is timed to the ball (`moves.ts` syncRate); ready and shuffle under 1.8 u/s; dives last to the clips' `up`.
-- **Occluders:** the match camera aims the island's see-through cut (lib/game/occluders) from its own position, so the palms in the free zone fade round you.
-- **Feel:** `feel.ts` VB_FEEL (ball pace 0.52 → 0.9 through a rally, higher floatier jump with apex slow-mo, gentler movement, ready stance, squash and stretch, timing grades). Hands follow the vb_* contract's contact points.
-- **Court:** ×1.3 plan, ×1.15 net (`COURT_GROW`); world regenerated (bench `volley-bench`, board `volley-board`, surfboards, shells, the net ball moved off the free zone). Camera glides in at the start; fog draws in; the island's top-right HUD hides.
-- **Serve:** triangle `ServeMeter` (Max at the top, a harder serve), ring cursor sets the direction, `SpinPicker` sets the curve.
-- **HUD:** kit `ActionBar` with pictograms, steadied rows; grade pops; pace line; bigger point word; final card with coins.
-- **Models:** beach ball HD 5,520 / LP 288 (island balls repointed, old a/b/c deleted); net remodelled from the approved concept, HD 9,436 / LP 2,378.
-- **Effects and sounds:** the 15 approved effects with four timing grades (`VolleyFx.tsx`, `VolleyStamps.tsx` via `fxBus.ts`); 29 synthesised CC0 sounds (`sfx.ts`, `web/public/audio/sfx/vb-*.ogg`, SOURCES.md).
-- **Rewards:** casual win 15 coins, 5 paid wins a day, server tickets (migration `20261030120000_volleyball_casual`, smoke in the chain). Ranked rewards wait for phase 3 (spec).
-- **Island:** leaderboard board (sample data, labelled), spectator bench, residents route round the court, others see a steady vb_spectate stand. Bram's arrival stops keep off the court too (the beach landmark sits on it).
-- **Gates (round 2, after 8439167b):** tsc clean; vitest one run 3586 passed with 2 failures, both fixed and their files rerun green (the HD copies listed as budget exceptions; Bram's beach stop moved off the court); eslint clean on every changed file; SQL smoke chain passed (volleyball casual smoke ok); perf:check v2 FAILED on frame time with the machine loaded (load average about 4): high 5.40 ms (+12.5% on 4.8), lite 3.40 ms (+17.2% on 2.9), draw calls 366 and 293 (+1.9% and +1.4%), triangles +2%. Not rerun (the rules); the coordinator's combined check decides.
-- **Evidence:** `specs/evidence/volleyball/p2/` (strips, `input-results.json`, `fx/` per effect, `sfx/` previews).
+- **Play (root cause of "the timing for balls is off when in the air"):** an airborne press waited for the ball to reach where the hands were at the press, ignoring the jump still moving them. Now a spike or a jump set in the air plans its meeting on both flights (`match.ts meetOf`, the jump's arc and the ball's stepped together, up to 0.42 s), touches then with a little arm stretch, and grades by the press's lead (0.08 s before is perfect; `feel.ts air`). Jump 1.75 u / 0.44 s, fall ×1.3, no apex hang; apex slow-mo 0.62. The jump plays vb_spike_jump posed by the arc (`moves.ts jumpPose`; Character poses a held vb one-shot by `air`). Block: 2 u off the net, 0.85 u wide, 0.5 u over the hand, 0.25 u under the tape.
+- **Dive:** Q only (Ctrl does nothing, no dash, no slide dive in the court; `vb_slide_dive` is unused now). 7.6 u/s easing, 0.55 s, 0.8 s down; steers onto a ball within 3.8 u and 75° of your push; the dig is always playable (q ≥ 0.5) with a slow-mo save beat (`feel.ts dive`, `match.ts diveTarget/startDive`).
+- **Camera:** back 4.9, right 0.85, up 2.75, ahead 8, look 0.75, FOV 58; height smoothed (sand plus 30% of the jump).
+- **Action bar (kit `ActionBar`, rebuilt):** sand Bump/Set/Dive, air Spike/Jump set/Block; bold silhouettes, mouse glyph for clicks (`MouseKey`), air row with a sky edge; the HUD flips the row on the DOM the frame your stance changes (`shownStance`; the old steadying removed). Call and jump work but aren't on the bar.
+- **Rings:** a high ball you'd jump for gets a ring riding the ball that closes on the moment to jump, then on the moment to press (gold at the moment); a flat ball keeps the landing circle (`VolleyMatch highBall`).
+- **Serve:** meter and curve moved low either side of the bar; meter glow, notches, edge sparks, rays at Max; perfect serve catches fire.
+- **Effects:** fire on perfect spikes and serves (flight trail, ignition, landing explosion); block as a wall; bump/set pop rings; squash 45% with a damped wobble; jump and landing rings; stamps with animated glyphs for OUT, NET, TAPE!, Miss, BLOCK!, SAVED!; heat chip under the score (4th touch on, "On fire!" at 6); point rays and a +1 (their point sags); win rays behind the trophy; MINE! speech bubble.
+- **Sounds:** every one distinct (fork commit 88e678d8: block slap-thump-oof, spike whip-boom-rip, rubbery bump, fingertip set, serve smack-whoosh, flame layer on perfect, net rattle and twang, whistle on out, brass point sting and win fanfare, synthesised "hey!" call, swish-womp whiff). `vb-slide` deleted, `vb-flame` added. Not listened to by ear.
+- **Leaderboard:** kit `Podium` (`components/gui/flat/Podium.tsx`, in /lab/gui) with the top three's characters in one canvas while the sheet is open, places 4 to 6 as quiet rows (`leaderboard.ts boardView`, `nameSeed`); `--ui-silver`, `--ui-bronze` tokens. Fork commit 6ec04778.
+- **Benches:** `volley-bench-2` at (-10.5, 94.7) mirrors the first across the net's line; world regenerated (pier-bench yaw restored).
+- **Gates (round 3, after the merge):** tsc clean; vitest one full run 3742 passed, 4 skipped, 0 failed; eslint clean on every changed file (one old `<img>` warning in VolleyHud); real-input checks on the island all 27 PASS incl. airborne spike, early spike, jump set, block, clutch dive and the bar's frame-exact swap (`p3/input-results.json`); rally pilot PASS (`p3/rally-results.json`). perf:check SCENES=v2 FAILED on frame time with load 5.1 to 5.5 (another lane's bench running): high 5.20 ms (+8.3%), lite 3.40 ms (+17.2%, the same 3.40 as round 2), draw calls 359 (0%) and 286 (−1%), triangles +0.7% and +1.4% (the bench). Not rerun (the rules).
+- **Evidence:** `specs/evidence/volleyball/p3/`: `p3-camera-before-after.png`, `p3-zoom-*`, `p3-bar-*` and `p3-bar-air.png`, `p3-air-spike.png`, `p3-air-jumpset.png`, `p3-meter-strip.png`, `p3-ring.png`, `p3-rally-strip.webp`, `fx/*.webp` (one per effect; before in `p2/fx/`), `sfx/*.ogg` (one per sound), `board-podium.png` (before `p2/p2-board-open.png`), `podium-showroom.png`, `benches.png`.
+- **Not verified:** the sounds by ear; a signed-in podium with your own look; E at the board and sitting on bench 2 with real input; the high-ball ring and the action bar's ready glows as a player would see them through a whole live rally (checked in pieces).
 
 ## David's decisions (newest first)
 
@@ -52,29 +52,20 @@ Worktree `.claude/worktrees/volleyball`, branch `game/volleyball`, cut from orig
 - 2026-10-30: the phase 1 review, verbatim in the spec ("beach volley ball redo, the controlsl dont even work properly", and per item).
 - 2026-10-29 (via coordinator): right click on the ground is "Call it"; phase 1 on labelled stand-ins; the brief, verbatim in the spec.
 
-## Next: round 3 (coordinator, 2026-11-01)
+## Next
 
-Order: the play first (it has to work and feel smooth before any effect matters), then the HUD, then effects and sounds.
-
-1. **Play:** fix the bugs in p2-play. The timing in the air is off: a press while airborne has to meet the ball. Jump to a proper height with a smoother clip; refine the jump set. Dive is Q only (drop Ctrl), slower than today's dash, and clutch: it reaches a ball you'd otherwise miss. Block works and isn't laggy. Rerun the real-input checks for every action, airborne ones included.
-2. **Camera:** the character takes up too much of the frame. Pull back or raise it so the court reads. Before and after stills.
-3. **Action bar:** rebuild it. On the ground it shows only bump, set and dive (no jump, no right-click call). In the air it switches to the jump actions (spike, block, jump set). Clear icons, flat kit look (design bible UI rules), switches the instant you leave or touch the ground.
-4. **Timing ring:** follows the ball when it's high (for jump set, spike and block); a flat ball shows only the ground ring.
-5. **Serve:** move the ball-height UI somewhere intuitive that doesn't block the view; a perfect serve gets a flame trail; juicier serves. The power meter fill gets juice.
-6. **Effects:** every redo in the list above. Each of call, heat, net, out, point, whiff and win gets a micro-animation that says what it is at a glance. A perfect spike gets a fire trail. More squish on hits. One strip per effect, before and after.
-7. **Sounds:** every sound distinct (block, bump, spike, serve, set, net, out, point, win, call, whiff). Synthesised or CC0 only, logged in `web/public/audio/sfx/SOURCES.md`. A sound preview per effect on the page.
-8. **Leaderboard board:** a podium with the top players' character models and names; more visual, fewer names.
-9. **Benches:** two spectator benches.
-10. Gates, one perf:check (SCENES=v2) when the machine is quiet, evidence in `specs/evidence/volleyball/p3/`, then report to the coordinator for a review page.
-
-Phase 2 (multiplayer) waits until David approves round 3.
+1. Coordinator: review page for round 3 from the evidence above; David's notes go in "David's decisions".
+2. Phase 2 (multiplayer) waits until David approves round 3.
 
 ## Tools and gotchas
 
 - Locks: `LANE=game/volleyball /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh heavy|devserver|blender <cmd>`; exit 75 means retry. Swap is high, so hold one lock at a time.
-- Real-input checks: `PORT=3471 node specs/evidence/volleyball/p2input.mjs specs/evidence/volleyball/p2 inputs,rally,lab,court` against a dev server on 3471 (Supabase blanked, `NEXT_PUBLIC_GAME_WORLD=new`), started, warmed and killed inside one devserver lock. Pointer lock is emulated on the game's own calls. `?vbseed=N` (dev) seeds the island's match; seed 7 has you serve.
+- Real-input checks: `PORT=3471 node specs/evidence/volleyball/p3input.mjs specs/evidence/volleyball/p3 inputs,rally` (round 3: airborne presses with the ball arriving for real, the clutch dive, the block, the bar's swap frame by frame) against a dev server on 3471 (Supabase blanked, `NEXT_PUBLIC_GAME_WORLD=new`), started, warmed and killed inside one devserver lock. Pointer lock is emulated on the game's own calls. `?vbseed=N` (dev) seeds the island's match; seed 7 has you serve.
 - `window.__volley` (dev): `dev` (pause, steps, yaw, pitch, `side` close-up camera), `match()`, `controls`, `probe` (serveErr, reach, stance, hand, screen, ring).
-- Effects strips: `specs/evidence/volleyball/p2fx.mjs` (port 3472).
+- Effects strips: `specs/evidence/volleyball/p3fx.mjs` (port 3472); it pins the HUD's CSS animations to each frame's time and finishes old ones first, so stamps strip deterministically. Court shots (board, benches): `p3court.mjs`.
+- A dev-server wrapper that starts, warms, runs and kills inside one lock: `vbrun.sh <port> <cmd>` (write it to your scratchpad: next dev with Supabase blanked and NEXT_PUBLIC_GAME_WORLD=new, curl warm-up, run, kill by port).
+- The island's curved-world bend patches every three.js canvas on the page, UI canvases too: keep a UI canvas's camera close (the podium's is 1.2 u off).
+- perf:check on this machine: build first under the heavy lock (`withlock.sh heavy env NODE_OPTIONS=--max-old-space-size=8192 sh ../specs/perf/measure-build.sh`), then `SKIP_BUILD=1 SCENES=v2 LOCK_OWNER=game/volleyball npm run perf:check`, then delete web/.next.
 - The island's post pass drops materials with depthTest off: the rings depth-test and draw late.
 - React compiler lint: per-frame mutation lives in module-scope functions (`frameStep`, `juice`, `camera`, `ballView`).
 - The palms at about (-10.8, 98.4) and (-8.4, 98.1) stand in the court's free zone and can block the camera near the land-side line: David's layout, flagged.
