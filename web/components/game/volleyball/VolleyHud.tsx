@@ -130,8 +130,8 @@ export default function VolleyHud() {
       {me === "toss" && m.maxPower && <div className={s.maxNote}>Max power</div>}
 
       {/* A point: the word in the scoring team's colour while the point plays out. */}
-      {m.phase === "point" && m.pointTo !== null && <div key={a + b} className={s.word} style={{ "--team": TEAM_VAR[m.pointTo] } as CSSProperties}>
-        <span>{m.pointTo === 0 ? "Point!" : "Their point"}</span>{m.switchPending && <small>Switch sides</small>}</div>}
+      {m.phase === "point" && m.pointTo !== null && <div key={a + b} className={s.word} data-them={m.pointTo !== 0 || undefined} style={{ "--team": TEAM_VAR[m.pointTo] } as CSSProperties}>
+        <em className={s.plus}>+1</em><span>{m.pointTo === 0 ? "Point!" : "Their point"}</span>{m.switchPending && <small>Switch sides</small>}</div>}
       {!over && <GhostButton className={s.leave} onClick={stopVolley}>Leave</GhostButton>}
       {over && <>
         {won && <div className={s.confetti} aria-hidden="true">{Array.from({ length: 48 }, (_, i) => (

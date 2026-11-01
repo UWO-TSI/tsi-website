@@ -41,9 +41,12 @@ export function contactBeat(how: ContactKind, timing: Timing, speed: number): { 
   const sp = Math.min(1, speed / 24);
   if (how === "spike") return { shake: soft ? 0.25 : 0.55 + 0.4 * sp, punch: soft ? 0 : perfect ? 6 : 3.5, stop: soft ? 0 : perfect ? 0.08 : 0.05, slow: perfect ? 0.45 : 0 };
   if (how === "serve") return { shake: soft ? 0.12 : 0.3 + 0.3 * sp, punch: soft ? 0 : perfect ? 4 : 2, stop: perfect ? 0.05 : 0, slow: perfect ? 0.35 : 0 };
-  if (how === "block") return { shake: 0.5, punch: perfect ? 3 : 1.5, stop: 0.05, slow: 0 };
-  if (how === "dig") return { shake: 0.25, punch: 1.5, stop: 0, slow: 0 };
-  return { shake: soft ? 0 : 0.1, punch: 0, stop: 0, slow: 0 };
+  // A block is a wall: the hardest stop of all, a heavy shake, and a stuffed ball hangs a beat.
+  if (how === "block") return { shake: 0.75, punch: perfect ? 5 : 3, stop: 0.1, slow: perfect ? 0.3 : 0 };
+  // A dig off the sand is a save: a clutch slow-mo beat.
+  if (how === "dig") return { shake: 0.3, punch: 2.5, stop: 0.04, slow: soft ? 0 : 0.4 };
+  // A bump and a set: a soft thump you feel (round 3: "make it feel juicy").
+  return { shake: soft ? 0.05 : 0.18, punch: soft ? 0 : perfect ? 2 : 1, stop: perfect ? 0.03 : 0, slow: 0 };
 }
 
 /** The ball's heat through a rally (touches): 0 cold, 1 at full heat; it catches fire from `fireAt`. */
@@ -104,6 +107,8 @@ export interface ContactPlan {
   flash: boolean; pulse: boolean;
   /** Sand at the feet, sparkles, a glint, speed lines, a shield ripple at the net, a dive's spray. */
   sand: boolean; sparkles: boolean; glint: boolean; lines: boolean; shield: boolean; spray: boolean;
+  /** A perfect spike or serve sets the ball on fire for its flight (round 3, David: "fire trail or smth"). */
+  fire: boolean;
   /** The stamp over the action for this contact, if any (VolleyStamps). */
   stamp: "Perfect!" | "Good" | "Early" | "Late" | "BLOCK!" | "SAVED!" | null;
 }
@@ -122,6 +127,7 @@ export function contactPlan(how: ContactKind, timing: Timing, mine: boolean, myT
     lines: how === "spike" && clean,
     shield: how === "block",
     spray: how === "dig",
+    fire: timing === "perfect" && (how === "spike" || how === "serve"),
     stamp: how === "block" ? "BLOCK!" : how === "dig" && myTeam ? "SAVED!" : tag,
   };
 }

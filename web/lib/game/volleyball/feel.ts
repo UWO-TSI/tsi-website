@@ -42,7 +42,7 @@ export const VB_FEEL = {
    */
   dive: { speed: 7.6, time: 0.55, down: 0.8, reach: 1.25, band: 0.6, assist: 3.8, cone: 1.3, floor: 0.5 },
   /** Squash and stretch on every touch (view only): how much, how long; and the stretch along a fast flight. */
-  squash: { amount: 0.3, time: 0.2, stretchPerSpeed: 0.012, stretchMax: 0.18 },
+  squash: { amount: 0.45, time: 0.32, stretchPerSpeed: 0.014, stretchMax: 0.22 },
   /** The serve: max power (the meter's top) is rewarded; the ring's click sets the direction; the contact point curves. */
   serve: {
     /** The meter at or over this on release is a max-power toss: a "Max" burst and a harder serve. */

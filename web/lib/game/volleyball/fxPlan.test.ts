@@ -27,6 +27,14 @@ describe("the effects' plan", () => {
     expect(g.slow).toBe(0);
     expect(contactBeat("serve", "perfect", 15).slow).toBeGreaterThan(0);
     expect(contactBeat("bump", "perfect", 5).slow).toBe(0);
+    expect(contactBeat("block", "good", 10).stop).toBeGreaterThan(contactBeat("spike", "good", 10).stop);
+    expect(contactBeat("dig", "good", 5).slow).toBeGreaterThan(0);
+  });
+  it("sets a perfect spike or serve on fire, nothing else", () => {
+    expect(contactPlan("spike", "perfect", true, true).fire).toBe(true);
+    expect(contactPlan("serve", "perfect", false, false).fire).toBe(true);
+    expect(contactPlan("spike", "good", true, true).fire).toBe(false);
+    expect(contactPlan("bump", "perfect", true, true).fire).toBe(false);
   });
   it("heats the trail white to orange to hot pink, and a hot rally ends bigger", () => {
     const c = { r: 0, g: 0, b: 0 };
@@ -42,5 +50,9 @@ describe("the effects' plan", () => {
     expect(stampOf({ kind: "toss", who: 2, power: 1, max: true }, 0, 0)).toBeNull();
     expect(stampOf({ kind: "win", team: 0 }, 0, 0)?.kind).toBe("win");
     expect(stampOf({ kind: "win", team: 1 }, 0, 0)).toBeNull();
+    expect(stampOf({ kind: "net", x: 0, y: 1.5 }, 0, 0)?.kind).toBe("net");
+    expect(stampOf({ kind: "tape", x: 0, y: 2.1 }, 0, 0)?.text).toBe("TAPE!");
+    expect(stampOf({ kind: "whiff", who: 0 }, 0, 0)?.kind).toBe("whiff");
+    expect(stampOf({ kind: "whiff", who: 2 }, 0, 0)).toBeNull();
   });
 });

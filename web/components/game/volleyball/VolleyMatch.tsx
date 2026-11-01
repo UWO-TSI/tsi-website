@@ -9,7 +9,7 @@
  * player's avatar, moved through its ride (myTrip.ride). Everything here sits in the court's frame (a group at the
  * court's middle).
  */
-import { Suspense, useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef, type CSSProperties } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Html, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
@@ -51,6 +51,8 @@ export const VB_CAMERA = {
 };
 /** Team edges under the players' feet (home, away): 3D materials, not UI. */
 const TEAM = ["#ef7a5a", "#4bb3c8"];
+/** The calls' bubbles are HUD: the theme's team tokens. */
+const TEAM_VAR = ["var(--ui-home)", "var(--ui-away)"];
 /** The landing circle: full size this many seconds out, closing to the inner ring (a fifth of it) as the ball reaches your hands. */
 const RING_T = 1.4, RING_R = 1.2;
 /** The ball's own ring for a high ball (spike, jump set, block): its radius round the ball, and the seconds over which it closes. */
@@ -68,7 +70,7 @@ const V0 = (2 * COURT_TUNING.jumpHeight) / COURT_TUNING.jumpApexTime, V_LAND = V
 type Dev = { input: Partial<CourtInput>; yaw: number | null; pitch: number | null; paused: boolean; steps: number; log: MatchEvent[]; side: [number, number, number] | null };
 
 interface Rig {
-  parts?: Parts; cam?: THREE.Camera; cut: number; c: CourtControls; yaw: number; pitch: number; lift: number; shake: number; time: number; airborne: boolean[];
+  parts?: Parts; cam?: THREE.Camera; cut: number; camY: number; c: CourtControls; yaw: number; pitch: number; lift: number; shake: number; time: number; airborne: boolean[];
   intro: number; fog: { obj: THREE.Fog | null; near: number; far: number };
   squash: { t: number; dir: THREE.Vector3 }; spinAxis: THREE.Vector3; lastPhase: string;
   dev: Dev; motions: CharacterMotion[]; motionRefs: { current: CharacterMotion }[];
@@ -78,7 +80,7 @@ interface Rig {
 function newRig(spot: CourtSpot): Rig {
   const motions = [0, 1, 2, 3].map(newMotion);
   return {
-    cut: 0, c: newControls(), yaw: 0, pitch: 0.08, lift: 0, shake: 0, time: 1, airborne: [false, false, false, false],
+    cut: 0, camY: NaN, c: newControls(), yaw: 0, pitch: 0.08, lift: 0, shake: 0, time: 1, airborne: [false, false, false, false],
     intro: 0, fog: { obj: null, near: 0, far: 0 },
     squash: { t: 9, dir: new THREE.Vector3(0, 1, 0) }, spinAxis: new THREE.Vector3(1, 0, 0), lastPhase: "",
     dev: { input: {}, yaw: null, pitch: null, paused: false, steps: 0, log: [], side: null }, motions, motionRefs: motions.map(current => ({ current })),
@@ -202,7 +204,7 @@ function frameStep(rig: Rig, P: Parts, E: Env, raw: number) {
     }
     if (g) g.position.set(pl.s.x, pl.s.y, pl.s.z);
     const call = P.calls.current[i];
-    if (call) call.style.opacity = pl.call > 0 ? "1" : "0";
+    if (call) call.toggleAttribute("data-on", pl.call > 0);
     if (i === 0 && !E.selfLook) {
       const r = myTrip.ride, [rx, rz] = toWorld(E.spot, pl.s.x, pl.s.z);
       Object.assign(r, { active: true, x: rx, y: E.spot.y + pl.s.y, z: rz, yaw: pl.s.facing + E.spot.yaw, speed: mo.speed, seated: false, lift: 0, roll: 0, pitch: 0,
@@ -295,9 +297,10 @@ function ballView(rig: Rig, P: Parts, match: Match, dt: number) {
     const v = tmp.set(bl.vx, bl.vy, bl.vz).multiplyScalar(k), speed = v.length();
     // Squash along the touch's direction, springing back; between touches a stretch along the flight.
     rig.squash.t += dt;
-    const sq = VB_FEEL.squash, s = rig.squash.t < sq.time ? Math.sin((rig.squash.t / sq.time) * Math.PI) * Math.exp(-rig.squash.t * 6) : 0;
-    const along = s > 0.001 ? 1 - sq.amount * s : 1 + Math.min(sq.stretchMax, speed * sq.stretchPerSpeed);
-    const dir = s > 0.001 ? rig.squash.dir : speed > 0.5 ? v.normalize() : UP;
+    // A squash that springs back through a stretch and wobbles out (round 3: "more squish and should feel it").
+    const sq = VB_FEEL.squash, t = rig.squash.t, s = t < sq.time * 1.5 ? Math.exp(-t * (6 / sq.time) * 0.5) * Math.cos((t / sq.time) * 2.6 * Math.PI) : 0;
+    const along = Math.abs(s) > 0.01 ? 1 - sq.amount * s : 1 + Math.min(sq.stretchMax, speed * sq.stretchPerSpeed);
+    const dir = Math.abs(s) > 0.01 ? rig.squash.dir : speed > 0.5 ? v.normalize() : UP;
     g.quaternion.setFromUnitVectors(UP, dir);
     g.scale.set(BALL_R / Math.sqrt(along), BALL_R * along, BALL_R / Math.sqrt(along));
     // The roll (inside the squash): about the axis across its flight.
@@ -312,7 +315,12 @@ function ballView(rig: Rig, P: Parts, match: Match, dt: number) {
 /** The camera: the glide in at the start, then behind your back over the right shoulder; the stage's fog. */
 function camera(rig: Rig, E: Env, match: Match, dt: number, serving: boolean) {
   const me = match.players[0], spot = E.spot;
-  const [px, pz] = toWorld(spot, me.s.x, me.s.z), py = spot.y + me.s.y;
+  const [px, pz] = toWorld(spot, me.s.x, me.s.z);
+  // The camera rides a smoothed height: the sand under you plus a little of your jump, so a jump lifts the view a touch
+  // instead of yanking it (round 3: "the smoothness of gameplay").
+  const floor = spot.y + match.ground(me.s.x, me.s.z), want = floor + 0.3 * Math.max(0, me.s.y + spot.y - floor);
+  rig.camY = rig.intro < 1 || !Number.isFinite(rig.camY) ? want : THREE.MathUtils.damp(rig.camY, want, 7, dt);
+  const py = rig.camY;
   const fx = Math.sin(rig.yaw), fz = Math.cos(rig.yaw), rx = -fz, rz = fx;
   rig.shake = Math.max(0, Math.max(rig.shake, fxBus.cam.shake) - dt * 2.5);
   fxBus.cam.shake = 0;
@@ -465,11 +473,11 @@ export default function VolleyMatch({ spot, selfLook, occluders = NONE }: {
         <group key={i} ref={g => { bodies.current[i] = g; }}>
           <Suspense fallback={null}><Character look={i === 0 && selfLook ? selfLook : looks[i]} motion={rig.motionRefs[i]} walkSpeed={COURT_TUNING.walkSpeed} clips={VB_CLIPS_URL} /></Suspense>
           {i > 0 && <mesh rotation-x={-Math.PI / 2} position-y={0.03}><ringGeometry args={[0.36, 0.42, 32]} /><meshBasicMaterial color={TEAM[m.players[i].team]} transparent opacity={0.85} depthWrite={false} /></mesh>}
-          <Html position={[0, 1.95, 0]} center zIndexRange={[20, 0]}><div ref={el => { calls.current[i] = el; }} className={styles.call} style={{ opacity: 0 }}>Mine!</div></Html>
+          <Html position={[0, 1.95, 0]} center zIndexRange={[20, 0]}><div ref={el => { calls.current[i] = el; }} className={styles.call} style={{ "--team": TEAM_VAR[m.players[i].team] } as CSSProperties}>MINE!</div></Html>
         </group>
       ))}
       {/* Your own "Mine!" on the island: over your avatar, which the ride moves. */}
-      {!selfLook && <group ref={g => { bodies.current[0] = g; }}><Html position={[0, 1.95, 0]} center zIndexRange={[20, 0]}><div ref={el => { calls.current[0] = el; }} className={styles.call} style={{ opacity: 0 }}>Mine!</div></Html></group>}
+      {!selfLook && <group ref={g => { bodies.current[0] = g; }}><Html position={[0, 1.95, 0]} center zIndexRange={[20, 0]}><div ref={el => { calls.current[0] = el; }} className={styles.call} style={{ "--team": TEAM_VAR[0] } as CSSProperties}>MINE!</div></Html></group>}
       <group ref={ball}><group ref={spin}><Suspense fallback={<mesh><icosahedronGeometry args={[1, 2]} /><meshStandardMaterial color="#fbf6ea" /></mesh>}><BeachBall /></Suspense></group></group>
       <mesh ref={shadow} rotation-x={-Math.PI / 2}><circleGeometry args={[BALL_R * 1.2, 20]} /><meshBasicMaterial color="#000000" transparent opacity={0.22} depthWrite={false} /></mesh>
       <group ref={landRing} visible={false}>

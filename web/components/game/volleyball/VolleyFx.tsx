@@ -53,6 +53,8 @@ interface Fx {
   shield: { mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial; age: number; size: number };
   heat: Trail; ribbon: Trail; hist: Float32Array; histN: number;
   lastHow: string; lastTeam: number; tick: number; seed: number;
+  /** The ball is on fire from a perfect spike or serve until its next touch or the sand. */
+  fire: boolean;
   glinted: boolean[]; skidT: number; chargeT: number; shells: { at: number; x: number; y: number; z: number; tint: number }[]; clock: number;
   lite: boolean; built: Match | null;
   q: THREE.Quaternion; qYaw: THREE.Quaternion; tmp: THREE.Vector3; side: THREE.Vector3; color: { r: number; g: number; b: number };
@@ -124,7 +126,7 @@ function newFx(): Fx {
       return { mesh, mat, age: 99, size: 1 };
     })(),
     heat: trail(), ribbon: trail(), hist: new Float32Array(TRAIL * 3), histN: 0,
-    lastHow: "", lastTeam: 0, tick: 0, seed: 1,
+    lastHow: "", lastTeam: 0, tick: 0, seed: 1, fire: false,
     glinted: [false, false, false, false], skidT: 0, chargeT: 0, shells: [], clock: 0,
     lite: false, built: null,
     q: new THREE.Quaternion(), qYaw: new THREE.Quaternion(), tmp: new THREE.Vector3(), side: new THREE.Vector3(), color: { r: 1, g: 1, b: 1 },
@@ -196,7 +198,13 @@ function throwAt(f: Fx, pool: "move" | "glow", r: Recipe, c: Ctx, x: number, y: 
 function onContact(f: Fx, c: Ctx, e: Extract<VbFx, { kind: "contact" }>) {
   const m = c.m, p = m.players[e.who], plan = contactPlan(e.how, e.timing, e.who === m.human, e.team === m.players[Math.max(0, m.human)].team);
   const L = plan.look, s = L.scale, feetY = m.ground(p.s.x, p.s.z), b = m.ball;
-  f.lastHow = e.how; f.lastTeam = e.team;
+  f.lastHow = e.how; f.lastTeam = e.team; f.fire = plan.fire;
+  if (plan.fire) {
+    // Ignition: a burst of flame and light off the hand, the ball streaming fire from here.
+    throwAt(f, "glow", GLOW_BURST, c, e.x, e.y, e.z, 0, 0, 2.2, FX_COLOR.heatOrange);
+    throwAt(f, "move", FIREWORK, c, e.x, e.y, e.z, 0, 0, 0.7, FX_COLOR.heatOrange);
+    ring(f.softRings, e.x, e.y, e.z, 0, 0.2, 1.5, 0.4, FX_COLOR.heatPink, 0.9);
+  }
   // The flash at the hands: a painted ring in the grade's colour over a soft dark edge (light alone washes out on a
   // sunny beach), the perfect one with a core of light; an early or late touch only a small grey ring and a matte puff.
   if (plan.flash || L.sparkles > 0) {
@@ -217,11 +225,18 @@ function onContact(f: Fx, c: Ctx, e: Extract<VbFx, { kind: "contact" }>) {
   if (plan.glint) throwAt(f, L.glow ? "glow" : "move", GLINT, c, e.x, e.y + 0.1, e.z, 0, 0, L.glow ? s : 0.8, L.glow ? L.tint : FX_COLOR.spark, L.glow ? 1 : 0.8);
   if (plan.lines) throwAt(f, "move", SPEED_LINES, c, e.x, e.y, e.z, b.vx, b.vz, s, L.tint, 0.95);
   if (plan.shield) {
-    // A ripple across the raised hands in the blocker's colour, a thin white ring, and sparks off it.
-    ripple(f, e.x, e.y, TEAM_COLOR[e.team]);
-    ring(f.softRings, e.x, e.y, 0.03, 2, 0.2, 0.75, 0.32, FX_COLOR.white, 0.9);
-    throwAt(f, "move", SPARKLES, c, e.x, e.y, 0, 0, Math.sign(b.vz) || 1, 1.4, FX_COLOR.spark);
+    // A wall: a big ripple across the raised hands in the blocker's colour, a hard white ring slammed out in the net's
+    // plane twice, a burst of light and sparks thrown back the way the ball came.
+    ripple(f, e.x, e.y, TEAM_COLOR[e.team], 1.6);
+    ring(f.softRings, e.x, e.y, 0.03, 2, 0.2, 1.1, 0.3, FX_COLOR.white, 1);
+    ring(f.softRings, e.x, e.y, 0.03, 2, 0.3, 1.7, 0.42, TEAM_COLOR[e.team], 0.9, 0.05);
+    throwAt(f, "glow", GLOW_BURST, c, e.x, e.y, 0, 0, 0, 1.8, TEAM_COLOR[e.team]);
+    throwAt(f, "move", SPARKLES, c, e.x, e.y, 0, 0, Math.sign(b.vz) || 1, 2, FX_COLOR.spark);
+    throwAt(f, "move", SPEED_LINES, c, e.x, e.y, e.z, b.vx, b.vz, 1.2, FX_COLOR.white, 0.9);
   }
+  // A bump or a set you feel: a pop ring at the hands as the ball squashes on them.
+  if ((e.how === "bump" || e.how === "set" || e.how === "jumpset") && (e.timing === "perfect" || e.timing === "good"))
+    ring(f.softRings, e.x, e.y, e.z, 0, 0.3 * s, L.ringSize * 1.5, 0.22, FX_COLOR.white, 0.7);
   if (plan.spray) {
     throwAt(f, "move", DIVE_SPRAY, c, p.s.x, feetY, p.s.z, p.s.vx, p.s.vz, 1.1, FX_COLOR.sandDark);
     throwAt(f, "move", DIVE_CLOUD, c, p.s.x, feetY, p.s.z, p.s.vx, p.s.vz, 1, FX_COLOR.sand);
@@ -234,6 +249,14 @@ function onContact(f: Fx, c: Ctx, e: Extract<VbFx, { kind: "contact" }>) {
 
 function onLand(f: Fx, c: Ctx, e: Extract<VbFx, { kind: "land" }>) {
   f.lastHow = "";
+  if (f.fire) {
+    // A ball on fire lands in an explosion of it.
+    const gy = c.m.ground(e.x, e.z);
+    throwAt(f, "glow", FIREWORK, c, e.x, gy + 0.3, e.z, 0, 0, 1.2, FX_COLOR.heatOrange);
+    throwAt(f, "glow", GLOW_BURST, c, e.x, gy + 0.2, e.z, 0, 0, 3, FX_COLOR.heatOrange);
+    ring(f.softRings, e.x, gy + 0.06, e.z, 1, 0.3, 3.4, 0.6, FX_COLOR.heatPink, 0.95);
+    f.fire = false;
+  }
   const m = c.m, gy = m.ground(e.x, e.z), k = landScale(e.speed, e.heat);
   // The sand explodes: grains thrown up, a low ring of dust, a plume; a shockwave across the sand; a crater left behind.
   throwAt(f, "move", SAND_BLAST, c, e.x, gy, e.z, 0, 0, k, FX_COLOR.sandDark);
@@ -303,14 +326,20 @@ function handle(f: Fx, c: Ctx, e: VbFx) {
     }
     case "takeoff": {
       const [wx, wz] = W(c, e.x, e.z), p = m.players[e.who];
-      takeoff(f.move.pool, "sand", wx, c.spot.y + e.y, wz, p.s.vx, p.s.vz, e.who === m.human ? 1.3 : 0.8);
-      if (e.who === m.human) throwAt(f, "glow", SPEED_LINES, c, e.x, e.y + 0.3, e.z, 0, 0, 0.6, FX_COLOR.white, 0.5);
+      takeoff(f.move.pool, "sand", wx, c.spot.y + e.y, wz, p.s.vx, p.s.vz, e.who === m.human ? 1.6 : 0.8);
+      if (e.who === m.human) {
+        // The push off the sand: a ring kicked out at the feet and lines rushing down past you.
+        throwAt(f, "glow", SPEED_LINES, c, e.x, e.y + 0.3, e.z, 0, 0, 0.8, FX_COLOR.white, 0.6);
+        ring(f.softRings, e.x, e.y + 0.05, e.z, 1, 0.2, 1.1, 0.35, FX_COLOR.sand, 0.9);
+        throwAt(f, "move", SAND_PUFF, c, e.x, e.y, e.z, 0, 0, 1.3, FX_COLOR.sandDark);
+      }
       f.glinted[e.who] = false;
       return;
     }
     case "touchdown": {
       const [wx, wz] = W(c, e.x, e.z);
-      landPuff(f.move.pool, "sand", "normal", wx, c.spot.y + e.y, wz, 0, 0, e.who === m.human ? 1 : 0.7);
+      landPuff(f.move.pool, "sand", e.who === m.human ? "heavy" : "normal", wx, c.spot.y + e.y, wz, 0, 0, e.who === m.human ? 1.2 : 0.7);
+      if (e.who === m.human) { ring(f.softRings, e.x, e.y + 0.05, e.z, 1, 0.3, 1.3, 0.4, FX_COLOR.sand, 0.85); camBeat({ shake: 0.12 }); }
       return;
     }
     case "dive": {
@@ -364,8 +393,9 @@ function stepTrails(f: Fx, m: Match, camLocal: THREE.Vector3) {
   } else f.histN = Math.max(0, f.histN - 2);
   const k = b.k ?? 1, speed = Math.hypot(b.vx, b.vy, b.vz) * k, heat = heatOf(m.rallyTouches);
   const set = live && m.phase === "rally" && (f.lastHow === "set" || f.lastHow === "jumpset");
-  const hot = live && !set && (m.phase === "toss" || speed > 8 || heat > 0.3);
-  fillTrail(f, f.heat, hot, m.phase === "toss" ? 0.06 : 0.08 + 0.22 * heat + Math.min(0.08, speed * 0.004), heat, camLocal, -1);
+  const hot = live && !set && (f.fire || m.phase === "toss" || speed > 8 || heat > 0.3);
+  const fire = f.fire && m.phase === "rally";
+  fillTrail(f, f.heat, hot, fire ? 0.34 : m.phase === "toss" ? 0.06 : 0.08 + 0.22 * heat + Math.min(0.08, speed * 0.004), fire ? 0.75 : heat, camLocal, -1);
   fillTrail(f, f.ribbon, set, 0.09, 0, camLocal, f.lastTeam);
 }
 
@@ -413,8 +443,12 @@ function frame(f: Fx, c: Ctx, camera: THREE.Camera, dt: number, stamp: number) {
   if (x.group.visible) { x.age += dt; const t = x.age / 1.6; x.mat.opacity = t < 0.08 ? t * 12 : Math.max(0, 1 - (t - 0.6) / 0.4); x.group.scale.setScalar(t < 0.15 ? 0.4 + 4 * t : 1); if (t >= 1) x.group.visible = false; }
   stepTrails(f, m, camLocal);
   const b = m.ball, heat = heatOf(m.rallyTouches);
-  // The ball on fire after a long rally.
-  if (m.phase === "rally" && m.rallyTouches >= HEAT.fireAt && f.tick % (f.lite ? 3 : 1) === 0) {
+  if (m.phase !== "rally") f.fire = false;
+  // The ball on fire: a perfect spike's or serve's flight, or a long rally.
+  if (f.fire && f.tick % (f.lite ? 2 : 1) === 0) {
+    throwAt(f, "move", FLAME, c, b.x, b.y, b.z, -b.vx, -b.vz, 1.3, f.tick % 2 ? FX_COLOR.heatOrange : FX_COLOR.gold, 1);
+    throwAt(f, "glow", FLAME, c, b.x, b.y, b.z, -b.vx, -b.vz, 1, f.tick % 3 ? FX_COLOR.heatOrange : FX_COLOR.heatPink, 0.9);
+  } else if (m.phase === "rally" && m.rallyTouches >= HEAT.fireAt && f.tick % (f.lite ? 3 : 1) === 0) {
     throwAt(f, "move", FLAME, c, b.x, b.y, b.z, -b.vx, -b.vz, 0.8 + heat * 0.5, f.tick % 2 ? FX_COLOR.heatOrange : FX_COLOR.heatPink, 0.95);
     if (f.tick % 2 === 0) throwAt(f, "glow", FLAME, c, b.x, b.y, b.z, -b.vx, -b.vz, 0.6, FX_COLOR.gold, 0.8);
   }
