@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { Button, Field, Slider, Toggle } from "@/components/gui";
 import TsiLogo from "@/components/ui/TsiLogo";
@@ -35,6 +35,12 @@ export default function TitleScreen({ landing, account, open, initialView, when,
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", email: "", password: "", invite: "" });
+  /** Dev only (specs/lanes/title-r2.md): `?titleStyle=a|b|c` wears one of three left-side directions; production ignores it. */
+  const screen = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const look = new URLSearchParams(window.location.search).get("titleStyle");
+    if (process.env.NODE_ENV !== "production" && look && screen.current) screen.current.dataset.look = look;
+  }, []);
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm(f => ({ ...f, [key]: e.target.value }));
 
   const go = (next: TitleView) => { setView(next); setError(null); setNotice(null); };
@@ -104,7 +110,7 @@ export default function TitleScreen({ landing, account, open, initialView, when,
   };
 
   return (
-    <main className={`gui ${s.screen}`} data-ready={ready || undefined}>
+    <main className={`gui ${s.screen}`} ref={screen} data-ready={ready || undefined}>
       <div className={s.scene}><TitleScene onReady={() => setReady(true)} /></div>
       <div className={s.shade} aria-hidden />
 
@@ -163,7 +169,8 @@ export default function TitleScreen({ landing, account, open, initialView, when,
           {!account && <a className={s.apply} href={apply}>Apply to TSI</a>}
         </span>
         <span className={s.hint} aria-hidden>
-          {view === "menu" ? <><kbd>↵</kbd>Select</> : <><kbd>Esc</kbd>Back</>}
+          {view === "menu" && <span className={s.move}><kbd>↑↓</kbd>Move</span>}
+          <span>{view === "menu" ? <><kbd>↵</kbd>Select</> : <><kbd>Esc</kbd>Back</>}</span>
         </span>
       </footer>
     </main>

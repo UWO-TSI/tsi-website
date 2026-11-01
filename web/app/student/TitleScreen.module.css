@@ -111,3 +111,115 @@
   .scene { transition: none; }
   .menu button { transition: none; }
 }
+
+/* ---- title-r2: three directions for the left side, worn by ?titleStyle=a|b|c (dev only; specs/lanes/title-r2.md). ---- */
+.hint > span { display: inline-flex; align-items: center; gap: 8px; }
+.hint > .move { display: none; }
+.screen[data-look] .hint > .move { display: inline-flex; }
+.screen[data-look] { --t-o: var(--ui-title-outline); --t-lift: 0 14px 30px rgb(var(--ui-shade) / 0.26); }
+/* Every direction: the forms sit on one flat white panel (no dashed seam), the menu has no card of its own. */
+.screen[data-look] .card::before { display: none; }
+.screen[data-look] .card:not([data-view="menu"]) { background: var(--ui-card); border-radius: 24px; box-shadow: var(--t-lift); }
+.screen[data-look] .card[data-view="menu"] { width: 100%; padding: 0; background: none; box-shadow: none; }
+.screen[data-look] .hint { gap: 16px; background: var(--t-o); }
+.screen[data-look] .hint kbd { background: var(--ui-card); color: var(--t-o); }
+
+/* A, the crest: the emblem on a round medallion over a chunky extruded wordmark, ISLAND on a gold ribbon, floating
+   gently; the menu is big outlined words on the scene, the chosen one between two bobbing gold diamonds. */
+.screen[data-look="a"] .column { align-items: center; width: min(480px, calc(100vw - 32px)); left: clamp(16px, 4.5vw, 80px); }
+.screen[data-look="a"] .brand { justify-items: center; gap: 0; animation: float 6s ease-in-out 1s infinite; }
+.screen[data-look="a"] .logo { position: relative; z-index: 1; width: 88px; height: 88px; padding: 16px; box-sizing: border-box; margin-bottom: 14px;
+  border-radius: 50%; background: var(--ui-card); color: var(--t-o); filter: none;
+  box-shadow: 0 0 0 6px var(--t-o), 0 7px 0 6px var(--t-o), 0 14px 24px 6px rgb(var(--ui-shade) / 0.22); }
+.screen[data-look="a"] .wordmark { justify-items: center; font-size: clamp(68px, 8vw, 118px); -webkit-text-stroke: 0.15em var(--t-o);
+  text-shadow: 0 3px 0 var(--t-o), 0 6px 0 var(--t-o), 0 9px 0 var(--t-o), 0 12px 0 var(--t-o), 0 20px 26px rgb(var(--ui-shade) / 0.3); }
+.screen[data-look="a"] .wordmark span { margin-top: 20px; padding: 8px 34px 9px; font-size: clamp(15px, 1.4vw, 20px); letter-spacing: 0.36em; text-indent: 0.36em;
+  color: var(--t-o); background: var(--ui-gold); -webkit-text-stroke: 0; text-shadow: none; box-shadow: inset 0 -4px 0 rgb(var(--ui-shade) / 0.16);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 14px) 50%, 100% 100%, 0 100%, 14px 50%); }
+.screen[data-look="a"] .card:not([data-view="menu"]) { max-width: 400px; }
+.screen[data-look="a"] .caption { width: max-content; max-width: 100%; margin: 0 auto 8px; padding: 4px 14px; border-radius: 999px; background: var(--t-o); color: var(--ui-card); }
+.screen[data-look="a"] .menu { justify-items: center; gap: 2px; }
+.screen[data-look="a"] .menu button { width: auto; min-height: 54px; padding: 4px 44px; background: none; color: var(--ui-card); font: 900 32px/1.1 var(--gui-font);
+  -webkit-text-stroke: 0.2em var(--t-o); paint-order: stroke fill; text-shadow: 0 4px 0 var(--t-o); transform: scale(0.82); }
+.screen[data-look="a"] .menu button[data-selected] { background: none; color: var(--ui-card); transform: scale(1.06); box-shadow: none; }
+.screen[data-look="a"] .menu button[data-selected]::before, .screen[data-look="a"] .menu button[data-selected]::after { content: ""; position: absolute; top: 50%;
+  width: 13px; height: 13px; margin-top: -9px; border: 3px solid var(--t-o); border-radius: 3px; background: var(--ui-gold); rotate: 45deg;
+  animation: nudge-l 0.9s ease-in-out infinite; }
+.screen[data-look="a"] .menu button[data-selected]::before { left: 8px; }
+.screen[data-look="a"] .menu button[data-selected]::after { right: 8px; animation-name: nudge-r; }
+.screen[data-look="a"] .apply { padding: 5px 14px; border-radius: 999px; background: var(--ui-card); color: var(--t-o); font-weight: 800; text-decoration: none;
+  text-shadow: none; box-shadow: 0 2px 8px rgb(var(--ui-shade) / 0.25); }
+
+/* B, the start buttons: a sticker lockup (the emblem on a teal tile beside a teal wordmark cut out in white), tilted;
+   the menu is chunky white buttons with a pressed edge, Let's Play the biggest, the chosen one ink black and slid out. */
+/* The tilt and the tile's ring reach past the column's edge, which clips (it scrolls): pad it and shift it back. */
+.screen[data-look="b"] .column { padding-inline: 18px; translate: -18px 0; width: min(416px, calc(100vw - 12px)); }
+.screen[data-look="b"] .brand { grid-template-columns: auto auto; align-items: center; justify-content: start; column-gap: 18px; rotate: -4deg; transform-origin: 0 100%; }
+.screen[data-look="b"] .logo { width: 84px; height: 84px; padding: 15px; box-sizing: border-box; border-radius: 24px; background: var(--t-o); color: var(--ui-card); filter: none;
+  box-shadow: 0 0 0 5px var(--ui-card), 0 8px 0 5px rgb(var(--ui-shade) / 0.16), 0 14px 26px rgb(var(--ui-shade) / 0.22); }
+.screen[data-look="b"] .wordmark { color: var(--t-o); font-size: clamp(56px, 6.2vw, 90px); -webkit-text-stroke: 0.2em var(--ui-card);
+  text-shadow: 0 7px 0 rgb(var(--ui-shade) / 0.14), 0 12px 24px rgb(var(--ui-shade) / 0.2); }
+.screen[data-look="b"] .wordmark span { justify-self: start; margin-top: 14px; padding: 5px 10px 5px 15px; border-radius: 10px; color: var(--ui-card); background: var(--t-o);
+  -webkit-text-stroke: 0; text-shadow: none; box-shadow: 0 0 0 4px var(--ui-card); letter-spacing: 0.34em; }
+.screen[data-look="b"] .card[data-view="menu"] { width: 300px; }
+.screen[data-look="b"] .caption { width: max-content; max-width: 100%; margin: 0 0 10px; padding: 6px 12px; border-radius: 12px; background: var(--ui-card); color: var(--ui-ink-2); }
+.screen[data-look="b"] .menu { gap: 12px; padding: 0 0 8px; }
+.screen[data-look="b"] .menu button { min-height: 58px; padding: 0 22px; border-radius: 18px; text-align: left; background: var(--ui-card); color: var(--ui-ink);
+  font: 900 22px/1 var(--gui-font); box-shadow: 0 5px 0 var(--ui-line-strong), 0 10px 22px rgb(var(--ui-shade) / 0.16); }
+.screen[data-look="b"] .menu li:first-child button { min-height: 72px; font-size: 28px; }
+.screen[data-look="b"] .menu button[data-selected] { background: var(--ui-accent); color: var(--ui-accent-ink); transform: translateX(14px);
+  box-shadow: 0 5px 0 var(--ui-accent-deep), 0 12px 26px rgb(var(--ui-shade) / 0.3); }
+.screen[data-look="b"] .menu button[data-selected]::after { content: ""; position: absolute; right: 22px; top: 50%; width: 13px; height: 16px; margin-top: -8px;
+  background: var(--ui-card); clip-path: polygon(0 0, 100% 50%, 0 100%); }
+.screen[data-look="b"] .menu button:active { transform: translateX(14px) translateY(3px); }
+.screen[data-look="b"] .when { padding: 5px 5px 5px 14px; border-radius: 999px; background: var(--ui-card); color: var(--ui-ink); text-shadow: none; box-shadow: 0 2px 10px rgb(var(--ui-shade) / 0.2); }
+.screen[data-look="b"] .apply { padding: 4px 12px; border-radius: 999px; background: var(--ui-accent); color: var(--ui-accent-ink); text-decoration: none; }
+
+/* C, the banner: one flat panel hanging from the top edge with a swallowtail, the emblem and wordmark in teal on it and
+   the menu below, the chosen row on a soft gold marker between two small diamonds. It drops in on a spring. */
+.screen[data-look="c"] .column { top: 0; bottom: auto; max-height: calc(100% - 64px); width: 330px; padding: clamp(28px, 5vh, 52px) 30px 66px; gap: 26px;
+  filter: drop-shadow(0 14px 22px rgb(var(--ui-shade) / 0.26)); animation: drop 0.9s var(--gui-spring) both; }
+.screen[data-look="c"] .column::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--ui-card);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 40px), 0 100%); }
+.screen[data-look="c"] .brand { justify-items: center; gap: 12px; }
+.screen[data-look="c"] .logo { width: 64px; height: 64px; color: var(--t-o); filter: none; }
+.screen[data-look="c"] .wordmark { justify-items: center; color: var(--t-o); font-size: clamp(64px, 5.8vw, 82px); -webkit-text-stroke: 0; text-shadow: none; }
+.screen[data-look="c"] .wordmark span { display: flex; align-items: center; gap: 12px; margin-top: 12px; color: var(--ui-ink-2); -webkit-text-stroke: 0; text-shadow: none; letter-spacing: 0.4em; }
+.screen[data-look="c"] .wordmark span::before, .screen[data-look="c"] .wordmark span::after { content: ""; width: 30px; height: 3px; border-radius: 2px; background: var(--ui-gold); }
+.screen[data-look="c"] .wordmark span::before { margin-right: 0.4em; }
+.screen[data-look="c"] .card[data-view] { width: 100%; padding: 0; background: none; box-shadow: none; animation: none; }
+.screen[data-look="c"] .caption { color: var(--ui-muted); }
+.screen[data-look="c"] .menu button { min-height: 50px; text-align: center; color: var(--ui-ink); font: 800 24px/1.2 var(--gui-font); }
+.screen[data-look="c"] .menu button[data-selected] { background: var(--ui-marker); color: var(--ui-ink); transform: none; box-shadow: none; }
+.screen[data-look="c"] .menu button[data-selected]::before, .screen[data-look="c"] .menu button[data-selected]::after { content: ""; position: absolute; top: 50%;
+  width: 8px; height: 8px; margin-top: -4px; border-radius: 2px; background: var(--ui-ink); rotate: 45deg; }
+.screen[data-look="c"] .menu button[data-selected]::before { left: 24px; }
+.screen[data-look="c"] .menu button[data-selected]::after { right: 24px; }
+.screen[data-look="c"] .apply { padding: 4px 12px; border-radius: 999px; background: var(--ui-gold); color: var(--ui-ink); text-decoration: none; text-shadow: none; }
+
+@keyframes float { 50% { transform: translateY(-6px); } }
+@keyframes nudge-l { 50% { translate: 5px 0; } }
+@keyframes nudge-r { 50% { translate: -5px 0; } }
+@keyframes drop { from { transform: translateY(-110%); } }
+
+@media (max-width: 640px) {
+  .screen[data-look="a"] .column { left: 16px; right: 16px; width: auto; }
+  .screen[data-look="a"] .logo { width: 68px; height: 68px; padding: 12px; }
+  .screen[data-look="a"] .wordmark { font-size: clamp(60px, 18vw, 78px); }
+  .screen[data-look="a"] .card:not([data-view="menu"]) { max-width: none; }
+  .screen[data-look="b"] .column { left: 0; right: 0; width: auto; translate: none; padding-inline: 16px; }
+  .screen[data-look="b"] .logo { width: 64px; height: 64px; padding: 11px; border-radius: 18px; }
+  .screen[data-look="b"] .wordmark { font-size: clamp(46px, 13vw, 60px); }
+  .screen[data-look="b"] .card[data-view="menu"] { width: 100%; }
+  .screen[data-look="b"] .menu button[data-selected], .screen[data-look="b"] .menu button:active { transform: none; }
+  .screen[data-look="c"] .column { left: 16px; right: 16px; width: auto; bottom: 60px; max-height: none; padding: 0; }
+  .screen[data-look="c"] .column::before { display: none; }
+  .screen[data-look="c"] .brand { justify-self: center; align-self: center; width: 250px; padding: 22px 0 50px; background: var(--ui-card);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 30px), 0 100%); }
+  .screen[data-look="c"] .wordmark { font-size: 56px; }
+  .screen[data-look="c"] .card[data-view] { padding: 14px; border-radius: 24px; background: var(--ui-card); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen[data-look] .brand, .screen[data-look] .column, .screen[data-look] .menu button::before, .screen[data-look] .menu button::after { animation: none; }
+}

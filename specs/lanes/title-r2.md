@@ -37,8 +37,24 @@ tsc, vitest on `app/student`, eslint on changed files, headless shots. No perf:c
 
 ## Status
 
-Not started.
+Steps 1 to 4 done 2026-11-01, waiting on David's pick (step 5). Head: see `git log -1` on game/title-r2.
+- Three directions behind a dev-only switch, `?titleStyle=a|b|c`. `TitleScreen.tsx` sets `data-look` on `<main>` from the query in an effect, only when NODE_ENV isn't production. With no switch, the title is unchanged: that look is the "before". The CSS for each direction is one block at the end of `TitleScreen.module.css`, scoped to `.screen[data-look="x"]`.
+  - **A, crest:** the emblem on a round white medallion, a chunky white "Tethos" with a teal extrude, ISLAND on a gold notched ribbon, floating gently. The menu is big outlined words on the scene with no card, and the chosen one sits between two bobbing gold diamonds.
+  - **B, start buttons:** a sticker lockup, tilted -4deg: the emblem on a teal tile beside a teal wordmark cut out in white, with ISLAND on a teal tag. The menu is chunky white buttons with a pressed edge. Let's Play is the biggest, and the chosen button is ink black, slid out, with a play arrow. The footer is a white chip with a dark Apply pill.
+  - **C, banner:** one white panel hanging from the top edge with a swallowtail. It holds the teal emblem, the wordmark, ISLAND between gold rules and the menu, with the chosen row on a soft gold marker between two diamonds. It drops in on a spring. On a phone it splits: a short pennant at the top holds the logo, and a white panel at the bottom holds the menu.
+  - All three: the forms sit on one flat white panel with no dashed seam, the hint pill gains "Move", and Apply to TSI is restyled per direction.
+- New token: `--ui-title-outline` (the logo's teal) in `styles/themes/clean.css`.
+- Gates: tsc clean; vitest app/student 16/16; eslint clean on TitleScreen.tsx and TitleMenu.tsx. No perf:check, because the scene is unchanged.
+- Evidence in `specs/evidence/title-r2/`: `sheet-desktop.jpg` (rows: before, A, B, C; columns: day, night, sign-in), `sheet-phone.jpg` (columns, in triples: before, A, B, C) and every full shot (`before-now-*`, `after-{a,b,c}-*`).
+- Open: the form fields and buttons inside are still the cream kit (VillageButton and VillageField: butter Google button, cream fields, green Sign in). The kit has no flat Button or Field (the `GuiVariantContext` only switches Tabs and ConfirmDialog). Making them flat is a kit change, so it's out of scope here unless David asks.
 
 ## Next
 
-The task above, in order.
+1. After David picks: delete the other two blocks, the switch (the effect, the `screen` ref and `data-look`) and the old default look. Then make the chosen direction the plain `.screen` styles, drop the `.move` toggle (always show Move), and fix the CSS header comment, which still says "portal". Reshoot the pick, then run the gates.
+
+## Tools and gotchas
+
+- Shots: `specs/evidence/title-r2/shoot.mjs` (PORT, STYLES="- a b c", OUT; label arg). Wrap it in a script that starts `next dev -p 3330` with the Supabase env blanked, waits on `curl /student`, shoots and kills the server, all inside `withlock.sh devserver`. One run of four styles takes about 3 min. The script hides the Next dev badge, which otherwise covers the footer.
+- The column has `overflow-y: auto`, so anything that pokes past its edge gets clipped (B's tilt and tile ring did). Pad the column and translate it back.
+- `clip-path` clips box-shadow. C puts the panel on `column::before` and the drop-shadow filter on the column.
+- The React lint rule `set-state-in-effect` forbids a setState for the switch, which is why the effect writes the dataset directly.
