@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BAR_REACH, CHEF_LOOP, CHEF_STATIONS, ENTRY, ENTRY_RANGE, PIECES, SERVER, STOOLS, STOOL_TOP, STOOL_Z, barOpen, barPoint, barSeat, prepAt, seatView, servedAt, stoolAt, stoolKey, type Bar } from "./sushiBar";
+import { BAR_MUSIC_IN, BAR_MUSIC_OUT, BAR_REACH, CHEF_LOOP, CHEF_STATIONS, ENTRY, ENTRY_RANGE, PIECES, SERVER, STOOLS, STOOL_TOP, STOOL_Z, barEarshot, barOpen, barPoint, barSeat, prepAt, seatView, servedAt, stoolAt, stoolKey, type Bar } from "./sushiBar";
 import { ownerAt } from "./cafe";
 import { isSeatKey } from "@/lib/net/protocol";
 
@@ -99,3 +99,27 @@ describe("sushi bar", () => {
   });
 });
 
+
+describe("the bar's earshot", () => {
+  const listen = () => { const told: boolean[] = []; return { told, ear: barEarshot(n => told.push(n)) }; };
+  it("tells the listener when you come in and when you leave, with a margin so the edge doesn't flicker", () => {
+    const { told, ear } = listen();
+    ear.frame(BAR_MUSIC_IN + 1, true);
+    ear.frame(BAR_MUSIC_IN - 1, true);
+    ear.frame(BAR_MUSIC_OUT - 1, true); // inside the margin: still near
+    ear.frame(BAR_MUSIC_OUT + 1, true);
+    expect(told).toEqual([true, false]);
+  });
+  it("is silent while the bar is shut", () => {
+    const { told, ear } = listen();
+    ear.frame(1, false);
+    expect(told).toEqual([]);
+  });
+  it("tells again after a release: spawning at the bar, the first frame lands before the effects, which strict mode replays", () => {
+    const { told, ear } = listen();
+    ear.frame(5, true); // the first frame, as the player spawns beside the bar
+    ear.release();      // the replayed effect cleanup tells the listener "not near"
+    ear.frame(5, true); // the next frame, still beside the bar, must say so again
+    expect(told).toEqual([true, false, true]);
+  });
+});
