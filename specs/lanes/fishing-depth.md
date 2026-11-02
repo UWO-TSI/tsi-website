@@ -29,6 +29,22 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 6: David's round 5 review (2026-11-02, verbatim; https://claude.ai/artifact/QGHxuaAFtRLX9Yun6rx6Uq)
+
+Approved: f5-board, f5-board-chips, f5-board-far, f5-board-hover, f5-seasons, f5-cover, f5-phone, f5-sell, f5-showroom, f5-sign-river.
+- f5-board-model (approve): "i want the fish on top to like kidna move a bit, and i wand the fish in the sell bin to flop around"
+- f5-board-close (redo): "make it no text just simple icons"
+- f5-board-world (redo): "should be angled outwards towards the wharf rotate 90 degrees"
+- f5-signs (redo): "remove signs we dont rly need it, it should say the biome when you fish on the fish bar, there should also be a biome tag in the ui"
+- f5-sign-deep, f5-sign-pond, f5-sign-sea (redo, no note): covered by the note above.
+- f5-sold (redo): "do coin animation so that coins fly from the fish you sold to the wallet to signify selling, make juicy, sound effect, mult coin fly staggered to the wallet, wallet coin num count up, glows yellow based on how much coin is added. add sparkles, yellow gets darker if more coins, the nnumberinflates as cions enter"
+
+Build:
+1. The world board's face: no text, simple icons only. Rotate it 90 degrees so it faces out toward the wharf.
+2. The fish on top of the board moves a little (a gentle idle sway), and the fish in the sell bin flop now and then.
+3. Remove the four water signs (models, placement, their E). Instead: the fishing bar (the reel UI) names the biome while you fish, and the HUD gets a small biome tag (where you are: Sea, River, Pond, Deep sea).
+4. Selling: several coins fly, staggered, from the sold fish to the wallet (`[data-hud-slot="coins"]`, the tutorial's WalletSlot and FlyIn); each landing ticks the count up and the number inflates a little; the wallet glows yellow by how much came in (a deeper yellow for more), with sparkles, and a coin sound. Synthesised or CC0 sound, logged in SOURCES.md.
+
 ## Status
 
 Round 2 (David's review 2026-10-28) built on top of round 1, work at ec62699d (merge of origin/main at e7747edd); see "Round 2" below. Round 1 items stay as built unless round 2 replaced them.
