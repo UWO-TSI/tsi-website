@@ -2,8 +2,9 @@
 
 /**
  * The volleyball court's leaderboard (E at the board beside the court; David 2026-10-30: "redo the ui of this leader
- * board with better ui, have a podium with character model and name, more visual less names"): the kit's Podium with
- * the top three standing on their steps (their characters in one small canvas, up only while the sheet is open), a few
+ * board with better ui, have a podium with character model and name, more visual less names"; 2026-11-01: "make them
+ * dance"): the kit's Podium with the top three dancing on their blocks, each their own dance on one shared beat
+ * (their characters in one small canvas, up only while the sheet is open), a few
  * quiet rows under it and your own place if it's further down. A "Sample" tag until phase 3's real board
  * (lib/game/volleyball/leaderboard). Built only while open, so it costs passers-by nothing. World names only.
  */
@@ -15,7 +16,7 @@ import Character from "@/components/game/character/Character";
 import { StudioLights } from "@/components/economy/TurnStage";
 import { randomLook, seeded, type CharacterLook } from "@/lib/game/character/look";
 import { useMyLook } from "@/lib/game/character/lookStore";
-import type { CharacterMotion } from "@/lib/game/character/clips";
+import type { CharacterMotion, DanceClip } from "@/lib/game/character/clips";
 import { boardView, nameSeed, weeklyBoard, type Board, type BoardRow } from "@/lib/game/volleyball/leaderboard";
 import s from "./boardSheet.module.css";
 
@@ -26,24 +27,28 @@ const ZOOM = 115;
  * by its view distance squared, so at 10 u the figures would sink 0.3 u below their steps; at 1.2 u it's under a pixel.
  */
 const CAM_Z = 1.2;
-/** Each place turns a little toward the middle; the winner faces you and cheers. */
+/** Each place turns a little toward the middle; the winner faces you. */
 const YAW = { 1: 0, 2: 0.32, 3: -0.32 } as const;
+/** Each place's dance (the emote wheel's), the winner's the biggest. */
+const DANCE: Record<1 | 2 | 3, DanceClip> = { 1: "DanceSpin", 2: "DanceSway", 3: "DanceWiggle" };
 
 const wins = (r: BoardRow) => `${r.wins} ${r.wins === 1 ? "win" : "wins"}`;
 const lookOf = (r: BoardRow, mine: CharacterLook) => (r.you ? mine : randomLook(seeded(nameSeed(r.name))));
 
 /**
- * One player on their step. The stage is orthographic: a step's top in px is a height in units over the frustum's
- * foot (read from the camera each frame, so it follows the canvas's real size).
+ * One player on their block. The stage is orthographic: a block's top in px is a height in units over the frustum's
+ * foot (read from the camera each frame, so it follows the canvas's real size). The three dance on one beat (the
+ * stage's clock, as a group of dancers on the island share the world's: lib/game/danceSync).
  */
-function place(g: THREE.Group | null, cam: THREE.Camera, rank: 1 | 2 | 3) {
+function place(g: THREE.Group | null, cam: THREE.Camera, rank: 1 | 2 | 3, motion: CharacterMotion, clock: number) {
   const c = cam as THREE.OrthographicCamera, feet = podiumFeet(rank);
   if (g && c.isOrthographicCamera) g.position.set((c.left + (c.right - c.left) * feet.x) / c.zoom, (c.bottom + feet.y) / c.zoom, 0);
+  motion.beat = clock;
 }
 function Stand({ row, look }: { row: BoardRow; look: CharacterLook }) {
   const rank = row.rank as 1 | 2 | 3, g = useRef<THREE.Group>(null);
-  const motion = useRef<CharacterMotion>({ speed: 0, yaw: YAW[rank], lift: 0, pose: null, play: rank === 1 ? "Cheer" : null });
-  useFrame(({ camera }) => place(g.current, camera, rank));
+  const motion = useRef<CharacterMotion>({ speed: 0, yaw: YAW[rank], lift: 0, pose: DANCE[rank], play: null, beat: 0 });
+  useFrame(({ camera, clock }) => place(g.current, camera, rank, motion.current, clock.elapsedTime));
   return <group ref={g}>
     <Suspense fallback={null}><Character look={look} motion={motion} scale={1} faceSize={512} lod={false} /></Suspense>
   </group>;

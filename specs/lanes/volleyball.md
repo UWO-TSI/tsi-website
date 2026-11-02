@@ -24,6 +24,20 @@ Worktree `.claude/worktrees/volleyball`, branch `game/volleyball`, cut from orig
 
 ## David's decisions (newest first)
 
+- 2026-11-01, round 3 review, verbatim:
+  - Approved with no note: p3-bar, p3-bar-more, p3-benches, p3-camera, p3-fx-jump, p3-fx-jumpset, p3-fx-land, p3-fx-out, p3-fx-point, p3-fx-set, p3-fx-whiff, p3-jumpset, p3-meter, p3-play, p3-rally, p3-ring.
+  - p3-board (approve): "make them dance, and make it more podium like ,"
+  - p3-podium-kit (redo, no note): make it match the reworked podium.
+  - p3-fx-block (redo): "the text that shows up doesnt look good, it should feel like a block and not say a block"
+  - p3-fx-bump (redo): "the text that shows up doesnt look good"
+  - p3-fx-dive (redo): "the text that shows up doesnt look good, i also want like a split character flash frame to show its hit and more juice"
+  - p3-fx-net (redo): "sound is fine the text should show somewhere else it doesnt look goodf"
+  - p3-fx-serve (approve): "the text that shows up doesnt look good, better design and less noticable"
+  - p3-fx-spike (redo): "the text that shows up doesnt look good, should be less noticable, should have a 1 frame impact frame for perfect spikes, and more animation vfx juice to it"
+  - p3-fx-call (approve): "redo the call sfx, just do a alert sound effect"
+  - p3-fx-heat (redo): "redo sfx, should feel simple sfx fitting for game"
+  - p3-fx-win (redo): "redo sfx"
+  - Round 4 brief (coordinator): one new smaller, quieter callout design for every action that fits the UI kit; the net call moves elsewhere; the block shows no word; 1 frame impact frame on perfect spikes, split character flash frame on dive hits (one or two frames, never back to back, dropped under reduced motion); more juice on spike and dive; call a plain alert, heat simple, win redone (synth or CC0, ogg for review); podium: top three dance, stepped 1-2-3 blocks with numbers; showroom kit piece matches.
 - 2026-10-30, round 2 review (https://claude.ai/artifact/4hADsrK2pAmYcMVRgEvFDK), verbatim:
   - Approved: p2-ball, p2-net, p2-rewards, fx-set, fx-land ("good improvements"), p2-zoom ("good"), p2-bench ("2 benches"), p2-squish ("more squish and should feel it").
   - p2-play: "many bugs, ui not responsive to jumps, the timing for balls is off when in the air."

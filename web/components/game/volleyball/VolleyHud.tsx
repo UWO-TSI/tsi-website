@@ -127,7 +127,6 @@ export default function VolleyHud() {
 
       {m.meter !== null && <div className={s.meter}><ServeMeter value={meterPower(m.meter)} max={VB_FEEL.serve.maxPower} label="Serve power" /></div>}
       {me === "serve" && <div className={s.spinAt}><SpinPicker x={spin.x} y={spin.y} picture={BALL_ICON} label="Where on the ball you'll hit it"><span className={s.hint}>Hold R-click, move</span></SpinPicker></div>}
-      {me === "toss" && m.maxPower && <div className={s.maxNote}>Max power</div>}
 
       {/* A point: the word in the scoring team's colour while the point plays out. */}
       {m.phase === "point" && m.pointTo !== null && <div key={a + b} className={s.word} data-them={m.pointTo !== 0 || undefined} style={{ "--team": TEAM_VAR[m.pointTo] } as CSSProperties}>

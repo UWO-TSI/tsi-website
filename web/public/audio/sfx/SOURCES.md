@@ -32,7 +32,7 @@ To rebuild: `python3 art/audio/synth_volleyball.py <wav dir> [<preview dir>]`, t
 | `vb-whiff.ogg` | a miss: a hollow swish and a little sad womp falling away | synth_volleyball.py | game/volleyball (Tethos) | CC0 |
 | `vb-point.ogg` | your point: a bright brass sting, three notes up with a shing | synth_volleyball.py | game/volleyball (Tethos) | CC0 |
 | `vb-point-them.ogg` | their point: two soft notes down | synth_volleyball.py | game/volleyball (Tethos) | CC0 |
-| `vb-win.ogg` | the win: a brass fanfare (ta-ta-ta-taaa) on a drum and a cymbal swell | synth_volleyball.py | game/volleyball (Tethos) | CC0 |
-| `vb-call.ogg` | "Mine!": a synthesised shouted "hey!" (a buzzy vowel through formants, no recorded voice) and a blip | synth_volleyball.py | game/volleyball (Tethos) | CC0 |
+| `vb-win.ogg` | the win (round 4): a short victory jingle, four soft notes up to a held C6 over a bell chord, a twinkle after | synth_volleyball.py | game/volleyball (Tethos) | CC0 |
+| `vb-call.ogg` | "Mine!" (round 4): a plain alert, two soft chime notes up (E5, A5) | synth_volleyball.py | game/volleyball (Tethos) | CC0 |
 | `vb-out.ogg` | out: a referee's pea whistle, one short blast and one long | synth_volleyball.py | game/volleyball (Tethos) | CC0 |
-| `vb-heat.ogg`, `vb-fire.ogg` | the rally heating up; the ball catching fire | synth_volleyball.py | game/volleyball (Tethos) | CC0 |
+| `vb-heat.ogg`, `vb-fire.ogg` | the rally heating up (round 4: a simple three-note blip up, C5 E5 G5); the ball catching fire | synth_volleyball.py | game/volleyball (Tethos) | CC0 |

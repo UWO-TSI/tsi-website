@@ -32,7 +32,7 @@ export const GRADE: Record<Timing, { gain: number; rate: number; layer: SFXName;
   early: { gain: 0.6, rate: 1.07, layer: "vb-early", layerGain: 0.85 },
   late: { gain: 0.6, rate: 0.9, layer: "vb-late", layerGain: 0.85 },
 };
-/** The rally's heat: a rising shimmer at these touches, and the ball catching fire at FIRE_AT (the plan: about 6). */
+/** The rally's heat: a blip up at these touches, and the ball catching fire at FIRE_AT (the plan: about 6). */
 export const HEAT_AT = [4, 6, 8, 10, 12, 14], FIRE_AT = 6;
 
 export interface SfxContext {
@@ -59,7 +59,7 @@ export function cuesFor(e: VbFx, c: SfxContext): Cue[] {
       ];
       // A perfect serve or spike leaves on fire (the flame trail's fwoosh).
       if (e.timing === "perfect" && (e.how === "serve" || e.how === "spike")) out.push({ name: "vb-flame", gain: 0.6 * d, rate: spread(c, 0.03), delay: 0.03 });
-      // The rally heats up: a shimmer every other touch from the 4th, higher each time; the ball catches fire at the 6th.
+      // The rally heats up: a blip every other touch from the 4th, higher each time; the ball catches fire at the 6th.
       if (e.how !== "serve" && HEAT_AT.includes(c.heat)) out.push({ name: "vb-heat", gain: 0.45, rate: Math.min(1.5, 0.9 + 0.06 * HEAT_AT.indexOf(c.heat)), delay: 0.05 });
       if (e.how !== "serve" && c.heat === FIRE_AT) out.push({ name: "vb-fire", gain: 0.55, rate: spread(c, 0.03), delay: 0.08 });
       return out;

@@ -20,6 +20,7 @@ import { GlowParticles } from "../GlowFx";
 import { takeoff, landing as landPuff } from "@/lib/game/movement/juice";
 import { seedAt, type Recipe } from "@/lib/game/fx/particles";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
+import { readComfort } from "@/lib/game/comfortSettings";
 import { GRAVITY } from "@/lib/game/volleyball/ball";
 import { COURT, toWorld } from "@/lib/game/volleyball/court";
 import { HAND, type Match } from "@/lib/game/volleyball/match";
@@ -27,14 +28,14 @@ import { meterPower } from "@/lib/game/volleyball/timing";
 import { volley, type CourtSpot } from "@/lib/game/volleyball/session";
 import { camBeat, drainFx, emitFx, fxBus, type VbFx } from "@/lib/game/volleyball/fxBus";
 import {
-  CHARGE_MOTE, CONFETTI, DIVE_CLOUD, DIVE_SPRAY, DUST_PLUME, DUST_RING, FIREWORK, FLAME, FX_COLOR, GLINT, GLOW_BURST, HEAT, SAND_BLAST, SAND_PUFF,
-  SKID, SOFT_PUFF, SPARKLES, SPEED_LINES, SWISH, TEAM_COLOR, contactBeat, contactPlan, heatColor, heatOf, landScale,
+  CHARGE_MOTE, CONFETTI, DIVE_CLOUD, DIVE_SPRAY, DUST_PLUME, DUST_RING, FIREWORK, FLAME, FX_COLOR, GLINT, GLOW_BURST, HEAT, HIT_STREAKS, IMPACT, SAND_BLAST, SAND_PUFF,
+  SKID, SOFT_PUFF, SPARKLES, SPEED_LINES, SWISH, TEAM_COLOR, contactBeat, contactPlan, heatColor, heatOf, impactOk, landScale,
 } from "@/lib/game/volleyball/fxPlan";
 
 const RINGS = 14, CRATERS = 3, TRAIL = 22, SHELLS = 7;
 /** A trail point every this many units of the ball's travel. */
 const TRAIL_STEP = 0.14;
-type RingFace = 0 | 1 | 2; // the camera, the ground, the net's plane
+type RingFace = 0 | 1 | 2 | 3; // the camera, the ground, the net's plane, aimed (turned once by the caller)
 interface Ring { mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial; age: number; life: number; from: number; to: number; alpha: number; face: RingFace; delay: number }
 interface Trail { mesh: THREE.Mesh; pos: Float32Array; col: Float32Array; attrP: THREE.BufferAttribute; attrC: THREE.BufferAttribute }
 
@@ -60,7 +61,7 @@ interface Fx {
   q: THREE.Quaternion; qYaw: THREE.Quaternion; tmp: THREE.Vector3; side: THREE.Vector3; color: { r: number; g: number; b: number };
 }
 
-const UP = new THREE.Vector3(0, 1, 0), X_AXIS = new THREE.Vector3(1, 0, 0), CAM = new THREE.Vector3();
+const UP = new THREE.Vector3(0, 1, 0), X_AXIS = new THREE.Vector3(1, 0, 0), Z_AXIS = new THREE.Vector3(0, 0, 1), CAM = new THREE.Vector3(), DIR = new THREE.Vector3();
 const RING_GEO = new THREE.RingGeometry(0.87, 1, 48);
 const DISC_GEO = new THREE.CircleGeometry(1, 28);
 
@@ -166,6 +167,7 @@ function ring(pool: Ring[], x: number, y: number, z: number, face: RingFace, fro
   r.mesh.scale.setScalar(from);
   if (face === 1) r.mesh.quaternion.setFromAxisAngle(X_AXIS, -Math.PI / 2);
   else if (face === 2) r.mesh.quaternion.identity();
+  return r;
 }
 
 function stepRings(pool: Ring[], dt: number, q: THREE.Quaternion) {
@@ -241,10 +243,43 @@ function onContact(f: Fx, c: Ctx, e: Extract<VbFx, { kind: "contact" }>) {
     throwAt(f, "move", DIVE_SPRAY, c, p.s.x, feetY, p.s.z, p.s.vx, p.s.vz, 1.1, FX_COLOR.sandDark);
     throwAt(f, "move", DIVE_CLOUD, c, p.s.x, feetY, p.s.z, p.s.vx, p.s.vz, 1, FX_COLOR.sand);
   }
+  if (plan.lines) {
+    // A sonic boom (round 4: "more animation vfx juice"): rings punched out one after another along the ball's new
+    // flight, and a star of short streaks cracking off the hand.
+    const v = DIR.set(b.vx, b.vy, b.vz), sp = v.length();
+    if (sp > 0.1) {
+      v.divideScalar(sp);
+      for (let k = 0; k < (L.glow ? 3 : 2); k++) {
+        const d = 0.3 + 0.5 * k;
+        ring(f.softRings, e.x + v.x * d, e.y + v.y * d, e.z + v.z * d, 3, 0.12, 0.5 + 0.18 * k, 0.2 + 0.05 * k, k ? FX_COLOR.white : L.tint, 0.9 - 0.2 * k, k * 0.04).mesh.quaternion.setFromUnitVectors(Z_AXIS, v);
+      }
+    }
+    throwAt(f, "move", HIT_STREAKS, c, e.x, e.y, e.z, 0, 0, s, L.tint);
+  }
+  if (plan.spray && e.who === m.human) {
+    // Your clutch save: a shock ring across the sand from the body, the ball popped up in rings of your team's colour.
+    ring(f.softRings, p.s.x, feetY + 0.05, p.s.z, 1, 0.3, 2.4, 0.5, FX_COLOR.white, 0.85);
+    ring(f.softRings, e.x, e.y, e.z, 0, 0.2, 0.9, 0.3, TEAM_COLOR[e.team], 0.95);
+    ring(f.softRings, e.x, e.y, e.z, 0, 0.2, 1.3, 0.38, FX_COLOR.white, 0.8, 0.05);
+    throwAt(f, "move", SPARKLES, c, e.x, e.y, e.z, 0, 0, 1.4, TEAM_COLOR[e.team]);
+    throwAt(f, "move", HIT_STREAKS, c, e.x, e.y, e.z, 0, 0, 0.8, FX_COLOR.white);
+  }
+  if (plan.impact) startImpact(f, plan.impact, e.x, e.y, e.z);
   const beat = contactBeat(e.how, e.timing, e.speed);
   // The camera answers your touches and the big ones near you; a far bump is the bots' business.
   const near = e.who === m.human || e.how === "spike" || e.how === "block";
   if (near) camBeat(e.who === m.human ? beat : { ...beat, shake: beat.shake * 0.6, slow: 0, punch: beat.punch * 0.5 });
+}
+
+/** Reduced flashing (the Settings sheet's comfort, on by default when the OS asks) or reduced motion: no impact frames. */
+const calm = () => readComfort().reduceFlashing || (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches);
+
+/** Start an impact frame at a court-frame point (VolleyStamps draws it), unless it would come back to back or calm. */
+function startImpact(f: Fx, kind: "spike" | "dive", x: number, y: number, z: number) {
+  const im = fxBus.impact;
+  if (!impactOk(f.clock, im.at, calm())) return;
+  const at = fxBus.screen?.(x, y, z) ?? [0.5, 0.5];
+  Object.assign(im, { kind, left: IMPACT.frames[kind], n: im.n + 1, x: at[0], y: at[1], at: f.clock });
 }
 
 function onLand(f: Fx, c: Ctx, e: Extract<VbFx, { kind: "land" }>) {
@@ -428,6 +463,8 @@ function frame(f: Fx, c: Ctx, camera: THREE.Camera, dt: number, stamp: number) {
     if (f.outline.mesh) { f.outline.mesh.geometry.dispose(); f.outline.mesh.geometry = g; }
     else { f.outline.mesh = new THREE.Mesh(g, f.outline.mat); f.outline.mesh.visible = false; f.outline.mesh.renderOrder = 4; root.add(f.outline.mesh); }
   }
+  // The impact frame holds for its count of rendered frames (dev pauses hold it too).
+  if (dt > 0 && fxBus.impact.left > 0) fxBus.impact.left--;
   for (const e of drainFx()) handle(f, c, e);
   // The camera's turn in the court's frame (rings that face it), and the eye there (trails).
   f.qYaw.setFromAxisAngle(UP, -c.spot.yaw);
@@ -500,7 +537,7 @@ function frame(f: Fx, c: Ctx, camera: THREE.Camera, dt: number, stamp: number) {
 }
 
 /** Dev only (evidence): fire an effect, and pause and step the effects a 60th of a second at a time. */
-const DEV = { paused: false, steps: 0 };
+const DEV = fxBus.dev;
 function exposeDev(f: Fx) {
   if (process.env.NODE_ENV === "production") return;
   const w = window as unknown as { __volleyFx?: unknown };
@@ -508,6 +545,15 @@ function exposeDev(f: Fx) {
   const probe = () => ({ rings: f.softRings.filter(r => r.mesh.visible).length, move: f.move.pool.alive, glow: f.glow.pool.alive, trails: [f.heat.mesh.visible, f.ribbon.mesh.visible] });
   w.__volleyFx = { emit: emitFx, dev: DEV, cam: fxBus.cam, probe };
   return () => { delete w.__volleyFx; };
+}
+
+/** A court-frame point on the view (fxBus.screen): 0..1 across and down, null behind the camera. */
+const P = new THREE.Vector3();
+function projector(root: THREE.Object3D, camera: THREE.Camera) {
+  return (x: number, y: number, z: number): [number, number] | null => {
+    root.localToWorld(P.set(x, y, z)).project(camera);
+    return P.z > 1 ? null : [(P.x + 1) / 2, (1 - P.y) / 2];
+  };
 }
 
 /** The effects' clock: the match's hit-stops and slow-mo beats hold it too; dev pauses step it. */
@@ -526,6 +572,7 @@ export default function VolleyFx() {
     return () => { scene.remove(...f.move.meshes, f.glow.mesh); f.move.clear(); f.move.dispose(); f.glow.clear(); f.glow.dispose(); };
   }, [scene, f]);
   useEffect(() => exposeDev(f), [f]);
+  useEffect(() => { fxBus.screen = projector(f.root, camera); return () => { fxBus.screen = null; }; }, [f, camera]);
   useFrame((state, raw) => {
     const m = volley.match, spot = volley.spot;
     if (!m || !spot) { drainFx(); return; }

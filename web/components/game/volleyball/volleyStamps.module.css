@@ -1,4 +1,4 @@
-/* The match's words over the action and the two screen edges (VolleyStamps.tsx): the flat kit's tokens only. */
+/* The match's calls, the impact frames and the two screen edges (VolleyStamps.tsx): the flat kit's tokens only. */
 .layer { position: fixed; inset: 0; z-index: 29; pointer-events: none; font-family: var(--gui-font); }
 
 /* The edges: a cool rim at the top of your jump, a warm one with the rally's heat. Opacity is set per frame. */
@@ -6,90 +6,49 @@
 .apex { box-shadow: inset 0 0 140px 36px rgb(var(--ui-shade) / 0.36); }
 .heat { background: radial-gradient(ellipse at center, transparent 55%, color-mix(in srgb, var(--ui-home) 40%, transparent) 100%); transition: opacity 0.6s ease; }
 
-/* One stamp at a time, springing in and fading up and out. */
-.stamp { position: absolute; top: 30%; left: 50%; display: grid; justify-items: center; gap: 4px; transform: translate(-50%, -50%);
-  animation: stampIn 0.9s cubic-bezier(0.2, 0.9, 0.3, 1.3) forwards; }
-.stamp > b { display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px; border-radius: 999px; background: var(--ui-card); color: var(--ui-ink); font: 800 22px/1 var(--gui-font);
-  box-shadow: 0 6px 18px rgb(var(--ui-shade) / 0.18); letter-spacing: 0.01em; }
-.stamp[data-kind="perfect"] > b { background: var(--ui-gold); font-size: 30px; padding: 8px 20px; box-shadow: 0 0 0 4px var(--ui-card), 0 8px 24px rgb(var(--ui-shade) / 0.22); }
-.stamp[data-kind="good"] > b { font-size: 20px; }
-.stamp[data-kind="soft"] { top: 34%; animation-duration: 0.75s; }
-.stamp[data-kind="soft"] > b { background: var(--ui-card-dim); color: var(--ui-quiet); font: 700 18px/1 var(--gui-font); padding: 5px 14px; box-shadow: 0 3px 10px rgb(var(--ui-shade) / 0.12); }
-.stamp[data-kind="block"] > b, .stamp[data-kind="saved"] > b { background: var(--team); color: var(--ui-card); font: 900 38px/1 var(--gui-font); padding: 8px 22px; transform: rotate(-4deg);
-  box-shadow: 0 0 0 4px var(--ui-card), 0 10px 26px rgb(var(--ui-shade) / 0.24); }
-.stamp[data-kind="saved"] > b { transform: rotate(3deg); font-size: 32px; }
-.stamp[data-kind="out"] > b { background: var(--ui-error); color: var(--ui-card); font: 900 40px/1 var(--gui-font); padding: 8px 24px; box-shadow: 0 0 0 4px var(--ui-card), 0 10px 26px rgb(var(--ui-shade) / 0.24); }
-.stamp[data-kind="max"] { top: 24%; }
-.stamp[data-kind="max"] > b { background: var(--ui-gold); font: 900 26px/1 var(--gui-font); }
-.stamp[data-kind="win"] { top: 22%; animation: winIn 2.4s cubic-bezier(0.2, 0.9, 0.3, 1.3) forwards; }
-.stamp[data-kind="win"] > b { display: none; }
-.trophy { color: var(--ui-gold); filter: drop-shadow(0 6px 10px rgb(var(--ui-shade) / 0.25)); animation: trophy 1.2s ease-in-out 0.5s infinite alternate; }
+/* A touch's tag (round 4: one small quiet design for every call): a little white pill a touch over the hit, a dot in
+   its colour, rising a few px and fading. Perfect has a thin gold edge; Early, Late and Miss are grey and smaller. */
+.tag { position: absolute; display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px 4px 7px; border-radius: 999px; background: var(--ui-card); color: var(--ui-ink);
+  font: 800 13px/1 var(--gui-font); letter-spacing: 0.01em; white-space: nowrap; box-shadow: 0 2px 8px rgb(var(--ui-shade) / 0.16);
+  transform: translate(-50%, -100%); animation: tag 0.9s cubic-bezier(0.2, 0.9, 0.3, 1.12) forwards; }
+.tag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent, var(--ui-line-strong)); }
+.tag[data-kind="perfect"] { --accent: var(--ui-gold); box-shadow: inset 0 0 0 1.5px var(--ui-gold), 0 2px 8px rgb(var(--ui-shade) / 0.16); }
+.tag[data-kind="perfect"]::before { animation: dot 0.5s ease-out 0.08s; }
+.tag[data-kind="saved"] { --accent: var(--team); }
+.tag[data-kind="max"] { --accent: var(--ui-gold); }
+.tag[data-kind="soft"], .tag[data-kind="whiff"] { padding: 3px 8px 3px 6px; color: var(--ui-quiet); font-size: 12px; font-weight: 700; animation-duration: 0.75s; }
+@keyframes tag { 0% { opacity: 0; transform: translate(-50%, -70%) scale(0.85); } 16% { opacity: 1; transform: translate(-50%, -100%) scale(1.06); }
+  28% { transform: translate(-50%, -100%) scale(1); } 72% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, calc(-100% - 14px)); } }
+@keyframes dot { 40% { transform: scale(1.8); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ui-gold) 35%, transparent); } }
 
-/* The moments' stamps (round 3): each with its own motion and a little picture of what happened. */
-.glyph { flex: none; margin: -6px 0 -6px -6px; overflow: visible; }
-.glyph circle:not([fill]) { fill: var(--ui-home); stroke: none; }
-.stamp[data-kind="net"] > b, .stamp[data-kind="tape"] > b { background: var(--ui-card); color: var(--ui-ink); font: 900 34px/1 var(--gui-font); padding: 8px 20px 8px 14px;
-  box-shadow: 0 0 0 3px var(--ui-ink), 0 10px 26px rgb(var(--ui-shade) / 0.22); }
-.stamp[data-kind="net"] { animation: stampIn 1s cubic-bezier(0.2, 0.9, 0.3, 1.3) forwards, jelly 0.6s ease-out 0.08s; }
-.stamp[data-kind="tape"] { animation: stampIn 1s cubic-bezier(0.2, 0.9, 0.3, 1.3) forwards, twangIn 0.5s ease-out 0.05s; }
-.stamp[data-kind="tape"] > b { font-size: 28px; }
-.stamp[data-kind="whiff"] { top: 36%; animation: whiffIn 0.8s ease-out forwards; }
-.stamp[data-kind="whiff"] > b { background: var(--ui-card-dim); color: var(--ui-quiet); font: 800 20px/1 var(--gui-font); padding: 5px 14px 5px 10px; box-shadow: 0 3px 10px rgb(var(--ui-shade) / 0.12); }
-.stamp[data-kind="whiff"] .glyph { width: 32px; height: 32px; }
-.stamp[data-kind="out"] { animation: stampIn 1.1s cubic-bezier(0.2, 0.9, 0.3, 1.3) forwards, flag 0.7s ease-in-out 0.1s; }
-.stamp[data-kind="block"] { animation: slam 1.05s cubic-bezier(0.2, 0.9, 0.3, 1.2) forwards; }
-.stamp[data-kind="saved"] { animation: slideIn 1s cubic-bezier(0.2, 0.9, 0.3, 1.2) forwards; }
-/* OUT: the ball skips across the line and an X slams down on it. */
+/* Under the score: the rally's heat chip and the referee's call, side by side, away from the play. */
+.under { position: absolute; top: 96px; left: 50%; display: flex; align-items: center; gap: 6px; transform: translateX(-50%); }
+.ref { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px 4px 7px; border-radius: 999px; background: var(--ui-card); color: var(--accent);
+  font: 800 13px/1 var(--gui-font); box-shadow: inset 0 0 0 1.5px var(--accent), 0 2px 8px rgb(var(--ui-shade) / 0.14); animation: ref 1.5s cubic-bezier(0.2, 0.9, 0.3, 1.12) forwards; }
+.ref[data-kind="out"] { --accent: var(--ui-error); }
+.ref[data-kind="net"], .ref[data-kind="tape"] { --accent: var(--ui-ink); }
+@keyframes ref { 0% { opacity: 0; transform: translateY(-6px) scale(0.8); } 12% { opacity: 1; transform: scale(1.06); } 22% { transform: none; } 80% { opacity: 1; } 100% { opacity: 0; } }
+
+/* The referee's calls' pictures, each one small motion. */
+.glyph { flex: none; overflow: visible; }
+.glyph circle { fill: var(--ui-home); stroke: none; }
 .skip { animation: skip 0.5s cubic-bezier(0.3, 0.6, 0.4, 1) 0.1s both; }
-.slam { stroke: var(--ui-card); stroke-width: 3; animation: xSlam 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.6) 0.45s both; transform-origin: 18.5px 11.5px; }
-.stamp[data-kind="out"] .line { stroke: var(--ui-card); }
+.slam { animation: xSlam 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.6) 0.45s both; transform-origin: 18.5px 11.5px; }
 @keyframes skip { 0% { transform: translate(0, 0); } 40% { transform: translate(5px, -6px); } 70% { transform: translate(10px, 0); } 100% { transform: translate(14px, -3px); opacity: 0.4; } }
 @keyframes xSlam { from { transform: scale(2.4); opacity: 0; } }
-/* NET: the ball drives in, the mesh bulges and wobbles, the ball drops. */
 .into { animation: into 0.7s ease-out 0.05s both; }
 .mesh { transform-origin: 12px 12px; animation: bulge 0.6s ease-out 0.15s both; }
 @keyframes into { 0% { transform: translate(-10px, -2px) scale(0.7); } 35% { transform: translate(0, 0) scale(1.1); } 55% { transform: translate(-1px, 0); } 100% { transform: translate(-2px, 8px); opacity: 0.6; } }
 @keyframes bulge { 0% { transform: none; } 25% { transform: scale(1.12, 0.92); } 50% { transform: scale(0.95, 1.05); } 75% { transform: scale(1.03, 0.98); } 100% { transform: none; } }
-@keyframes jelly { 0%, 100% { scale: 1 1; } 20% { scale: 1.18 0.86; } 45% { scale: 0.92 1.08; } 70% { scale: 1.04 0.97; } }
-/* TAPE: the tape twangs, the ball rolls over its top. */
 .twang { transform-origin: 12px 12px; animation: twang 0.5s ease-out 0.1s both; }
 .roll { animation: roll 0.7s ease-in-out 0.05s both; }
 @keyframes twang { 0%, 100% { transform: none; } 20% { transform: scaleY(5) translateY(0.4px); } 40% { transform: scaleY(-3); } 60% { transform: scaleY(2); } 80% { transform: scaleY(-1); } }
 @keyframes roll { from { transform: translateX(0) rotate(0); } to { transform: translateX(12px) translateY(-1px) rotate(200deg); } }
-@keyframes twangIn { 0%, 100% { rotate: 0deg; } 20% { rotate: -5deg; } 40% { rotate: 4deg; } 60% { rotate: -2deg; } 80% { rotate: 1deg; } }
-/* Miss: the swish draws past, the ball sails on, the word droops away. */
-.swish { stroke-dasharray: 26; animation: draw 0.3s ease-out both; }
-.pass { animation: pass 0.6s ease-out 0.05s both; }
-@keyframes draw { from { stroke-dashoffset: 26; } }
-@keyframes pass { from { transform: translate(-12px, 8px); opacity: 0; } 30% { opacity: 1; } to { transform: translate(4px, -3px); opacity: 0.2; } }
-@keyframes whiffIn { 0% { opacity: 0; transform: translate(-30%, -50%); } 20% { opacity: 1; transform: translate(-50%, -50%); } 60% { opacity: 1; transform: translate(-50%, -50%) rotate(0); }
-  100% { opacity: 0; transform: translate(-50%, -30%) rotate(8deg); } }
-/* BLOCK: the palms slam shut with a burst, the stamp drops hard and shakes the screen-way. */
-.palmL { animation: palmL 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.6) both; }
-.palmR { animation: palmR 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.6) both; }
-.burst { animation: burst 0.35s ease-out 0.18s both; transform-origin: 12px 12px; }
-@keyframes palmL { from { transform: translateX(-6px) rotate(-20deg); } }
-@keyframes palmR { from { transform: translateX(6px) rotate(20deg); } }
-@keyframes burst { from { transform: scale(0.3); opacity: 0; } 50% { opacity: 1; } to { transform: scale(1.3); opacity: 0; } }
-@keyframes slam { 0% { opacity: 0; transform: translate(-50%, -50%) scale(2.6); } 14% { opacity: 1; transform: translate(-50%, -50%) scale(0.92); }
-  20% { transform: translate(calc(-50% + 6px), -50%) scale(1); } 26% { transform: translate(calc(-50% - 5px), -50%); } 32% { transform: translate(-50%, -50%); }
-  80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -58%); } }
-/* SAVED: in from the side with the dive, the ball popping up. */
-.pop { animation: popUp 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.4) 0.1s both; }
-@keyframes popUp { from { transform: translate(-6px, 6px); } 60% { transform: translate(0, -5px); } }
-@keyframes slideIn { 0% { opacity: 0; transform: translate(-120%, -50%) skewX(-12deg); } 18% { opacity: 1; transform: translate(-46%, -50%) skewX(6deg); }
-  28% { transform: translate(-50%, -50%) skewX(0); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -60%); } }
-@keyframes flag { 0%, 100% { rotate: 0deg; } 25% { rotate: -8deg; } 55% { rotate: 6deg; } 80% { rotate: -2deg; } }
-/* The win: rays turning behind the trophy. */
-.rays { position: absolute; left: 50%; top: 48px; width: 280px; height: 280px; margin: -140px 0 0 -140px; border-radius: 50%; z-index: -1;
-  background: repeating-conic-gradient(var(--ui-gold) 0 8deg, transparent 8deg 24deg); mask: radial-gradient(closest-side, black 20%, transparent 100%);
-  opacity: 0.7; animation: spin 6s linear infinite, raysIn 0.6s ease-out both; }
-@keyframes spin { to { rotate: 360deg; } }
-@keyframes raysIn { from { scale: 0.2; opacity: 0; } }
-/* The rally's heat: a flame chip under the score, bumping on every touch, hotter as it goes; on fire it burns. */
-.rally { position: absolute; top: 96px; left: 50%; display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px 4px 8px; border-radius: 999px; background: var(--ui-card);
-  color: var(--ui-ink); font: 800 16px/1 var(--gui-font); font-variant-numeric: tabular-nums; box-shadow: 0 0 0 calc(var(--h) * 3px) var(--ui-home), 0 4px 12px rgb(var(--ui-shade) / 0.16);
-  transform: translateX(-50%) scale(calc(1 + var(--h) * 0.25)); animation: bump 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.6); }
+
+/* The rally's heat: a flame chip, bumping on every touch, hotter as it goes; on fire it burns. */
+.rally { display: inline-flex; align-items: center; gap: 4px; padding: 4px 11px 4px 7px; border-radius: 999px; background: var(--ui-card);
+  color: var(--ui-ink); font: 800 14px/1 var(--gui-font); font-variant-numeric: tabular-nums; box-shadow: 0 0 0 calc(var(--h) * 2.5px) var(--ui-home), 0 2px 8px rgb(var(--ui-shade) / 0.14);
+  transform: scale(calc(1 + var(--h) * 0.15)); animation: bump 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.6); }
 .rally > em { margin-left: 4px; color: var(--ui-home); font-style: normal; font-weight: 900; animation: emPop 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.6) both; }
 @keyframes emPop { from { opacity: 0; transform: scale(0.3) rotate(-12deg); } }
 .rally[data-fire] { background: var(--ui-gold); }
@@ -98,15 +57,44 @@
 .flame .inner { fill: var(--ui-gold); transform-origin: 12px 22px; animation: flick 0.13s ease-in-out infinite alternate-reverse; }
 .rally[data-fire] .flame .inner { fill: var(--ui-card); }
 @keyframes flick { from { transform: scale(0.9, 1.08) skewX(-4deg); } to { transform: scale(1.06, 0.94) skewX(4deg); } }
-@keyframes bump { 0% { transform: translateX(-50%) scale(calc(1.5 + var(--h) * 0.25)); } }
-@keyframes stampIn {
-  0% { opacity: 0; transform: translate(-50%, -30%) scale(0.4); }
-  18% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
-  30% { transform: translate(-50%, -50%) scale(1); }
-  75% { opacity: 1; }
-  100% { opacity: 0; transform: translate(-50%, -64%) scale(1); }
-}
+@keyframes bump { 0% { transform: scale(calc(1.4 + var(--h) * 0.15)); } }
+
+/* The impact frame (one or two rendered frames, shown by data-on): the scene thresholded to ink by a backdrop filter, so
+   the characters stand as silhouettes, with lines converging on the hit. The spike's is the negative (ink ground, white
+   figures); the dive's is split along a slanted line through the hit, ink on one side and negative on the other. */
+.impact { position: absolute; inset: 0; display: none; }
+.impact[data-on] { display: block; }
+.impact > i { position: absolute; inset: 0; backdrop-filter: grayscale(1) brightness(1.5) contrast(14); }
+.impact > .neg { backdrop-filter: grayscale(1) brightness(1.5) contrast(14) invert(1); }
+.impact > i::after { content: ""; position: absolute; inset: 0; mask: radial-gradient(circle at var(--x) var(--y), transparent 0 16%, black 62%);
+  background: repeating-conic-gradient(from 3deg at var(--x) var(--y), var(--ui-ink) 0 1deg, transparent 1deg 6deg, var(--ui-ink) 6deg 6.6deg, transparent 6.6deg 13deg); }
+.impact > .neg::after { background: repeating-conic-gradient(from 3deg at var(--x) var(--y), var(--ui-card) 0 1deg, transparent 1deg 6deg, var(--ui-card) 6deg 6.6deg, transparent 6.6deg 13deg); }
+.impact[data-on="spike"] > .ink { display: none; }
+.impact[data-on="dive"] > .ink { clip-path: polygon(0 0, calc(var(--x) + 22vh) 0, calc(var(--x) - 22vh) 100%, 0 100%); }
+.impact[data-on="dive"] > .neg { clip-path: polygon(calc(var(--x) + 22vh) 0, 100% 0, 100% 100%, calc(var(--x) - 22vh) 100%); }
+/* Then focus lines rush in on the hit and fade. */
+.focus { position: absolute; inset: 0; opacity: 0; mask: radial-gradient(circle at var(--x) var(--y), transparent 0 20%, black 70%);
+  background: repeating-conic-gradient(from 0deg at var(--x) var(--y), var(--ui-card) 0 0.7deg, transparent 0.7deg 5deg, var(--ui-card) 5deg 5.4deg, transparent 5.4deg 11deg);
+  transform-origin: var(--x) var(--y); animation: focus 0.36s ease-out both; }
+.focus[data-kind="dive"] { animation-duration: 0.45s; }
+@keyframes focus { 0% { opacity: 0.85; transform: scale(1.25); } 100% { opacity: 0; transform: scale(1); } }
+
+/* The win: the trophy bouncing in rays turning behind it. */
+.win { position: absolute; top: 22%; left: 50%; display: grid; justify-items: center; transform: translate(-50%, -50%); animation: winIn 2.4s cubic-bezier(0.2, 0.9, 0.3, 1.3) forwards; }
+.trophy { color: var(--ui-gold); filter: drop-shadow(0 6px 10px rgb(var(--ui-shade) / 0.25)); animation: trophy 1.2s ease-in-out 0.5s infinite alternate; }
+.rays { position: absolute; left: 50%; top: 48px; width: 280px; height: 280px; margin: -140px 0 0 -140px; border-radius: 50%; z-index: -1;
+  background: repeating-conic-gradient(var(--ui-gold) 0 8deg, transparent 8deg 24deg); mask: radial-gradient(closest-side, black 20%, transparent 100%);
+  opacity: 0.7; animation: spin 6s linear infinite, raysIn 0.6s ease-out both; }
+@keyframes spin { to { rotate: 360deg; } }
+@keyframes raysIn { from { scale: 0.2; opacity: 0; } }
 @keyframes winIn { 0% { opacity: 0; transform: translate(-50%, -10%) scale(0.3) rotate(-20deg); } 25% { opacity: 1; transform: translate(-50%, -50%) scale(1.2) rotate(6deg); }
   40% { transform: translate(-50%, -50%) scale(1) rotate(0); } 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
 @keyframes trophy { to { transform: translateY(-6px) rotate(3deg); } }
-@media (prefers-reduced-motion: reduce) { .stamp, .stamp[data-kind], .trophy, .rays, .rally, .rally > em, .glyph *, .flame * { animation: none !important; } .apex, .heat { transition: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .tag::before, .win, .trophy, .rays, .rally, .rally > em, .glyph *, .flame * { animation: none !important; }
+  /* The calls still go: a fade, no motion. */
+  .tag, .ref { animation-name: fade !important; }
+  @keyframes fade { 70% { opacity: 1; } 100% { opacity: 0; } }
+  .impact, .focus { display: none !important; }
+  .apex, .heat { transition: none; }
+}

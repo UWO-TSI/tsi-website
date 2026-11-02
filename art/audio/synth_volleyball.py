@@ -2,7 +2,9 @@
 made here from sines and noise, never fetched (so they are ours, CC0, like synth_bite.py). Round 3 (David: "all the
 sound effects sound the same"): each contact and moment has its own character, not one thud re-pitched: the bump a
 rubbery bwomp, the set a fingertip double tap, the serve a smack and whoosh, the block a double slap and knock with a
-grunt, the spike a whip crack and boom; a whistle for out, brass for a point and the win, a synthesised "hey!" call.
+grunt, the spike a whip crack and boom; a whistle for out, brass for a point. Round 4: the call a plain two-note
+alert, the heat a simple three-note blip, the win a short jingle (their old versions' draws are burned, so the rest
+come out the same).
 
   python3 art/audio/synth_volleyball.py <wav dir> [<preview dir>]
      writes one .wav per sound into <wav dir> and, given a preview dir, the review previews (each effect and each
@@ -119,9 +121,9 @@ def sweep(t, at, length, f0, f1, q, gain):
     return gain * y * shape
 
 
-def room(y, length, decay, wet):
+def room(y, length, decay, wet, r=None):
     n = int(SR * length)
-    ir = rng.standard_normal(n) * np.exp(-np.arange(n) / (SR * decay))
+    ir = (r or rng).standard_normal(n) * np.exp(-np.arange(n) / (SR * decay))
     size = len(y) + n
     w = np.fft.irfft(np.fft.rfft(y, size) * np.fft.rfft(ir, size), size)[: len(y)]
     return y + wet * w / (np.max(np.abs(w)) + 1e-9) * np.max(np.abs(y))
@@ -199,6 +201,24 @@ def brass(t, at, f, dur, gain, bright=2600):
 
 def hiss(t, at, lo, decay, gain, attack=0.0004):
     return gain * high(noise(len(t)), lo) * env(t, at, attack, decay)
+
+
+def burn(*draws):
+    """Draw what a retired sound drew from the shared noise stream (round 3's win, call and heat: ("n", count) normals,
+    ("u", count) uniforms), so every sound made after it stays the same, bit for bit."""
+    for kind, n in draws:
+        rng.standard_normal(n) if kind == "n" else rng.uniform(size=n)
+
+
+# Round 4's sounds draw their room from their own stream.
+calm = np.random.default_rng(4)
+
+
+def soft(t, at, f, decay, gain, attack=0.004):
+    """A soft game tone: a triangle-ish note (odd partials falling fast), gently attacked, no edge."""
+    s = np.maximum(t - at, 0)
+    y = sum(np.sin(2 * np.pi * f * k * s) / (k * k) * (-1) ** (k // 2) for k in (1, 3, 5))
+    return gain * y * env(t, at, attack, decay)
 
 
 # ── Contacts: one body per kind, each its own character ─────────────────────
@@ -350,27 +370,27 @@ write("vb-point", room(y, 0.5, 0.15, 0.3), 0.62)
 t = track(0.8)
 y = mallet(t, 0, 659.25, 0.2, 0.6, 0.15) + mallet(t, 0.12, 523.25, 0.32, 0.6, 0.15)
 write("vb-point-them", room(y, 0.4, 0.12, 0.25), 0.4)
-# The win: a short brass fanfare, "ta-ta-ta-taaa" (G4 three times, then a held C major chord) on a soft drum and a
-# cymbal swell, with sparkle.
-t = track(2.3)
+# The win (round 4, David: "redo sfx"): a bright little victory jingle, not a fanfare. Four quick notes up (G4 C5 E5
+# G5) on soft tones doubled by a marimba, landing on a held C6 over a C major chord of bells, a soft low thump under
+# the landing and a short twinkle running up after it. Warm, about 1.6 s, nothing above the bells.
+burn(("n", len(track(2.3))), ("u", 108), ("n", SR))
+t = track(1.7)
 y = np.zeros(len(t))
-for i in range(3):
-    y += brass(t, 0.13 * i, 392.0, 0.09, 0.55)
-for fm, g in ((523.25, 0.55), (659.25, 0.45), (783.99, 0.45), (1046.5, 0.4)):
-    y += brass(t, 0.4, fm, 1.3, g, 3800)
-for i in range(3):
-    y += 0.5 * glide(t, 0.13 * i, 120, 80, 0.03) * env(t, 0.13 * i, 0.002, 0.08)
-y += 1.0 * glide(t, 0.4, 90, 55, 0.08) * env(t, 0.4, 0.002, 0.3)
-y += hiss(t, 0.4, 5000, 0.9, 0.16, 0.01) + sparkles(t, 0.45, 1.2, 36, 2600, 5500, 0.08)
-write("vb-win", room(y, 1.0, 0.3, 0.35), 0.72)
-# "Mine!": a synthesised shout, "hey!" (a breath into a rising vowel that bends up and back), and a bright blip.
-t = track(0.4)
-s = t
-f0 = 240 + 110 * np.clip((s - 0.03) / 0.07, 0, 1) - 50 * np.clip((s - 0.12) / 0.12, 0, 1)
-hey = voice(t, 0.025, f0, [(560, 330, 1.0), (1750, 2250, 0.7), (2500, 2900, 0.3)], 0.2)
-hey = hey / (np.max(np.abs(hey)) + 1e-9) * np.clip((s - 0.025) / 0.02, 0, 1) * np.clip((0.26 - s) / 0.07, 0, 1)
-y = hey + 0.35 * band(noise(len(t)), 1200, 5000) * env(t, 0, 0.008, 0.03) + 0.25 * mallet(t, 0.2, 1760, 0.06, 1, 0.2)
-write("vb-call", room(y, 0.15, 0.04, 0.1), 0.55)
+for i, f in enumerate((392.0, 523.25, 659.25, 783.99)):
+    y += soft(t, 0.1 * i, f, 0.12, 0.55) + mallet(t, 0.1 * i, f, 0.16, 0.35, 0.15)
+y += soft(t, 0.42, 1046.5, 0.7, 0.6, 0.006) + mallet(t, 0.42, 1046.5, 0.5, 0.3, 0.15)
+for f, g in ((523.25, 0.35), (659.25, 0.3), (783.99, 0.3)):
+    y += bell(t, 0.42, f, 0.9, g)
+y += 0.6 * glide(t, 0.42, 130, 65, 0.05) * env(t, 0.42, 0.002, 0.16)
+for i, f in enumerate((1567.98, 2093.0, 2637.0)):
+    y += 0.12 * bell(t, 0.62 + 0.06 * i, f, 0.18, 1)
+write("vb-win", room(low(y, 5000), 0.8, 0.25, 0.25, calm), 0.62)
+# "Mine!" (round 4, David: "just do a alert sound effect"): a plain alert, two soft chime notes up (E5 then A5),
+# short and round, no voice.
+burn(("n", len(track(0.4))), ("n", len(track(0.4))), ("n", int(SR * 0.15)))
+t = track(0.42)
+y = soft(t, 0, 659.25, 0.1, 0.8) + 0.3 * bell(t, 0, 659.25, 0.1, 1) + soft(t, 0.1, 880.0, 0.18, 0.9) + 0.3 * bell(t, 0.1, 880.0, 0.16, 1)
+write("vb-call", room(low(y, 4500), 0.2, 0.05, 0.12, calm), 0.5)
 # Out: a referee's pea whistle, clear and sharp: a short blast and a long one ("fweet-fweeeet"), the pea rattling it.
 t = track(0.75)
 s = t
@@ -384,11 +404,12 @@ write("vb-out", room(low(y, 9000), 0.2, 0.05, 0.12), 0.5)
 
 # ── The rally's heat ────────────────────────────────────────────────────────
 
-# A rising shimmer as the rally grows (sfx.ts plays it every few touches, higher each time).
-t = track(0.8)
-y = sum(np.sin(2 * np.pi * f * t) * (0.6 + 0.4 * np.sin(2 * np.pi * 6 * t)) for f in (659.25, 987.77, 1318.5)) / 3
-y = y * np.sin(np.pi * np.clip(t / 0.75, 0, 1)) ** 2 + 0.3 * sweep(t, 0, 0.75, 800, 3000, 1.4, 1)
-write("vb-heat", room(y, 0.4, 0.12, 0.3), 0.26)
+# The rally heating up (round 4, David: "simple sfx fitting for game"): a quick three-note blip up (C5 E5 G5) on soft
+# tones, like a level-up tick; sfx.ts plays it every few touches, higher each time.
+burn(("n", len(track(0.8))), ("n", int(SR * 0.4)))
+t = track(0.36)
+y = sum(soft(t, 0.05 * i, f, 0.07 + 0.04 * i, 0.7) for i, f in enumerate((523.25, 659.25, 783.99)))
+write("vb-heat", room(low(y, 4500), 0.2, 0.05, 0.1, calm), 0.3)
 # The ball catches fire: a whoosh igniting, with crackle.
 t = track(0.9)
 y = low(noise(len(t)), 1200) * np.sin(np.pi * np.clip(t / 0.8, 0, 1)) ** 0.7 * 0.7

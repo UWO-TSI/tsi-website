@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GRADE_LOOK, HEAT, contactBeat, contactPlan, heatColor, heatOf, landScale } from "./fxPlan";
+import { GRADE_LOOK, HEAT, IMPACT, contactBeat, contactPlan, heatColor, heatOf, impactOk, landScale } from "./fxPlan";
 import { stampOf } from "@/components/game/volleyball/VolleyStamps";
 
 describe("the effects' plan", () => {
@@ -13,8 +13,10 @@ describe("the effects' plan", () => {
   it("gives each contact its pieces: speed lines on a clean spike, a shield on a block, spray on a dig", () => {
     expect(contactPlan("spike", "good", true, true).lines).toBe(true);
     expect(contactPlan("spike", "late", true, true).lines).toBe(false);
-    expect(contactPlan("block", "good", false, false)).toMatchObject({ shield: true, stamp: "BLOCK!" });
-    expect(contactPlan("dig", "good", false, true)).toMatchObject({ spray: true, stamp: "SAVED!" });
+    // Round 4 (David: "it should feel like a block and not say a block"): a block says no word at all.
+    expect(contactPlan("block", "good", false, false)).toMatchObject({ shield: true, stamp: null });
+    expect(contactPlan("block", "perfect", true, true).stamp).toBeNull();
+    expect(contactPlan("dig", "good", false, true)).toMatchObject({ spray: true, stamp: "Saved" });
     expect(contactPlan("bump", "early", true, true)).toMatchObject({ pulse: true, sand: true, stamp: "Early" });
     // Timing tags are yours only.
     expect(contactPlan("bump", "perfect", false, true).stamp).toBeNull();
@@ -44,14 +46,31 @@ describe("the effects' plan", () => {
     expect(heatOf(HEAT.full)).toBe(1);
     expect(landScale(15, HEAT.full)).toBeGreaterThan(landScale(15, 0));
   });
-  it("stamps: OUT on a ball out, MAX! on your max toss, the trophy on your win", () => {
-    expect(stampOf({ kind: "land", x: 0, z: 0, in: false, speed: 5, heat: 0 }, 0, 0)?.text).toBe("OUT");
-    expect(stampOf({ kind: "toss", who: 0, power: 1, max: true }, 0, 0)?.text).toBe("MAX!");
+  it("flashes an impact frame on your perfect spike (one frame) and your dive's dig (two, split), never on others", () => {
+    expect(contactPlan("spike", "perfect", true, true).impact).toBe("spike");
+    expect(contactPlan("spike", "good", true, true).impact).toBeNull();
+    expect(contactPlan("spike", "perfect", false, false).impact).toBeNull();
+    expect(contactPlan("dig", "late", true, true).impact).toBe("dive");
+    expect(contactPlan("dig", "good", false, true).impact).toBeNull();
+    expect(contactPlan("block", "perfect", true, true).impact).toBeNull();
+    expect(IMPACT.frames).toEqual({ spike: 1, dive: 2 });
+  });
+  it("never flashes back to back, and never under reduced motion or reduced flashing", () => {
+    expect(impactOk(10, -99, false)).toBe(true);
+    expect(impactOk(10, 10 - IMPACT.gap / 2, false)).toBe(false);
+    expect(impactOk(10, 10 - IMPACT.gap - 0.01, false)).toBe(true);
+    expect(impactOk(10, -99, true)).toBe(false);
+  });
+  it("calls: the referee's under the score (Out, Net, Tape), the rest small at the touch; Max on your max toss; the trophy on your win", () => {
+    expect(stampOf({ kind: "land", x: 0, z: 0, in: false, speed: 5, heat: 0 }, 0, 0)).toMatchObject({ text: "Out", at: "ref" });
+    expect(stampOf({ kind: "toss", who: 0, power: 1, max: true }, 0, 0)).toMatchObject({ text: "Max", at: "hit" });
     expect(stampOf({ kind: "toss", who: 2, power: 1, max: true }, 0, 0)).toBeNull();
     expect(stampOf({ kind: "win", team: 0 }, 0, 0)?.kind).toBe("win");
     expect(stampOf({ kind: "win", team: 1 }, 0, 0)).toBeNull();
-    expect(stampOf({ kind: "net", x: 0, y: 1.5 }, 0, 0)?.kind).toBe("net");
-    expect(stampOf({ kind: "tape", x: 0, y: 2.1 }, 0, 0)?.text).toBe("TAPE!");
+    expect(stampOf({ kind: "net", x: 0, y: 1.5 }, 0, 0)).toMatchObject({ kind: "net", at: "ref" });
+    expect(stampOf({ kind: "tape", x: 0, y: 2.1 }, 0, 0)?.text).toBe("Tape");
+    expect(stampOf({ kind: "contact", who: 0, team: 0, how: "block", timing: "perfect", quality: 1, x: 0, y: 2, z: 0, speed: 9 }, 0, 0)).toBeNull();
+    expect(stampOf({ kind: "contact", who: 0, team: 0, how: "spike", timing: "perfect", quality: 1, x: 0, y: 2, z: 0, speed: 20 }, 0, 0)).toMatchObject({ text: "Perfect", at: "hit" });
     expect(stampOf({ kind: "whiff", who: 0 }, 0, 0)?.kind).toBe("whiff");
     expect(stampOf({ kind: "whiff", who: 2 }, 0, 0)).toBeNull();
   });

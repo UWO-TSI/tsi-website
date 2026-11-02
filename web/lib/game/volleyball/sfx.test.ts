@@ -53,7 +53,7 @@ describe("the match's sounds", () => {
     expect(hi - lo).toBeGreaterThan(0.05);
     expect(hi - lo).toBeLessThan(0.1);
   });
-  it("the rally heats up: a shimmer from the 4th touch, the fire at the 6th, none on the serve", () => {
+  it("the rally heats up: a blip from the 4th touch, the fire at the 6th, none on the serve", () => {
     expect(cuesFor(contact("bump", "good"), ctx({ heat: 3 })).map(q => q.name)).not.toContain("vb-heat");
     expect(cuesFor(contact("bump", "good"), ctx({ heat: HEAT_AT[0] })).map(q => q.name)).toContain("vb-heat");
     expect(cuesFor(contact("set", "good"), ctx({ heat: FIRE_AT })).map(q => q.name)).toContain("vb-fire");

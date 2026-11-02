@@ -97,6 +97,8 @@ export const SKID: Recipe = { sprite: "scuff", count: [1, 1], life: [2.4, 2.8], 
 export const CONFETTI: Recipe = { sprite: "petal", count: [18, 22], life: [1.6, 2.2], size: [0.36, 0.48], grow: 1, speed: [1.4, 3.2], spread: Math.PI, up: [3.5, 5.5], gravity: 3.2, drag: 1.4, wind: 0.6, spin: 6, fps: 14, alpha: 1, face: B, rise: [0.4, 0.8] };
 /** A firework's shell bursting: painted sparks falling. */
 export const FIREWORK: Recipe = { sprite: "sparkle", count: [22, 28], life: [1.1, 1.5], size: [0.7, 0.95], grow: 0.4, speed: [5, 7], spread: Math.PI, up: [-5, 6], gravity: 2.4, drag: 1.2, wind: 0.2, alpha: 1, face: B };
+/** A clean spike's crack: a star of short streaks flung out from the hand (round 4: "more animation vfx juice"). */
+export const HIT_STREAKS: Recipe = { sprite: "streak", count: [9, 11], life: [0.12, 0.18], size: [0.8, 1.2], grow: 1.15, aspect: 0.13, speed: [8, 12], spread: Math.PI, up: [-3, 3], gravity: 0, drag: 7, wind: 0, alpha: 1, face: FACE.streak };
 /** A whiff: a little swish of air. */
 export const SWISH: Recipe = { sprite: "swirl", count: [1, 1], life: [0.26, 0.3], size: [0.6, 0.7], grow: 1.3, speed: [0.4, 0.4], spread: 0, up: [0, 0], gravity: 0, drag: 3, wind: 0, alpha: 0.6, face: B };
 
@@ -109,14 +111,24 @@ export interface ContactPlan {
   sand: boolean; sparkles: boolean; glint: boolean; lines: boolean; shield: boolean; spray: boolean;
   /** A perfect spike or serve sets the ball on fire for its flight (round 3, David: "fire trail or smth"). */
   fire: boolean;
-  /** The stamp over the action for this contact, if any (VolleyStamps). */
-  stamp: "Perfect!" | "Good" | "Early" | "Late" | "BLOCK!" | "SAVED!" | null;
+  /** The small call at the touch, if any (VolleyStamps). A block has none: it reads by its effect, sound and camera. */
+  stamp: "Perfect" | "Good" | "Early" | "Late" | "Saved" | null;
+  /** An anime impact frame (VolleyStamps): your perfect spike's one frame, your dive's dig's two split frames. */
+  impact: "spike" | "dive" | null;
 }
+
+/**
+ * The impact frames (round 4, David: "a 1 frame impact frame for perfect spikes", "a split character flash frame to show
+ * its hit"): how many rendered frames each holds, and the least time between two (s), so they never come back to back.
+ */
+export const IMPACT = { frames: { spike: 1, dive: 2 }, gap: 1.2 } as const;
+/** Whether an impact frame may flash now: not too soon after the last, and never with reduced motion or flashing. */
+export const impactOk = (clock: number, lastAt: number, calm: boolean) => !calm && clock - lastAt >= IMPACT.gap;
 
 /** The plan for one contact: its kind's pieces in its grade's look. `mine`: your touch (the timing tags are yours only). */
 export function contactPlan(how: ContactKind, timing: Timing, mine: boolean, myTeam: boolean): ContactPlan {
   const look = GRADE_LOOK[timing], clean = timing === "perfect" || timing === "good";
-  const tag = mine ? (timing === "perfect" ? "Perfect!" : timing === "good" ? "Good" : timing === "early" ? "Early" : "Late") : null;
+  const tag = mine ? (timing === "perfect" ? "Perfect" : timing === "good" ? "Good" : timing === "early" ? "Early" : "Late") : null;
   return {
     look,
     flash: clean || how === "spike" || how === "serve" || how === "block",
@@ -128,6 +140,7 @@ export function contactPlan(how: ContactKind, timing: Timing, mine: boolean, myT
     shield: how === "block",
     spray: how === "dig",
     fire: timing === "perfect" && (how === "spike" || how === "serve"),
-    stamp: how === "block" ? "BLOCK!" : how === "dig" && myTeam ? "SAVED!" : tag,
+    stamp: how === "block" ? null : how === "dig" && myTeam ? "Saved" : tag,
+    impact: !mine ? null : how === "spike" && timing === "perfect" ? "spike" : how === "dig" ? "dive" : null,
   };
 }

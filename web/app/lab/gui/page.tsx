@@ -326,7 +326,7 @@ export default function GuiShowroom() {
       <Row><SpinPicker x={0} y={0} picture="/assets/game/volleyball/ball-icon.png" label="Centre" /><SpinPicker x={0.6} y={0.4} picture="/assets/game/volleyball/ball-icon.png" label="Top right"><Keycap>R-click</Keycap></SpinPicker></Row>
     </Section>
 
-    <Section id="rank" title="Rank badge, podium and the leaderboard (flat)" note="A place in a ranking, the first in gold; the podium (the top three on their steps, thin gold, silver and bronze edges, the players standing on them); the volleyball court’s board: the podium, a few rows under it, your place, and a Sample tag until phase 3.">
+    <Section id="rank" title="Rank badge, podium and the leaderboard (flat)" note="A place in a ranking, the first in gold; the podium (three white blocks in one stepped stand, the first in the middle and tallest, big gold, silver and bronze numbers and thin edges of them, the names in a row under it, the top three dancing on their blocks on one beat); the volleyball court’s board: the podium, a few rows under it, your place, and a Sample tag until phase 3.">
       <Row><RankBadge rank={1} /><RankBadge rank={2} /><RankBadge rank={10} /></Row>
       <BoardBody mine={DEFAULT_LOOK} board={{ sample: true, rows: [["Kelpie", 14], ["Sandpiper", 11], ["Driftwood", 9], ["Pebble", 7], ["Tidepool", 5], ["Coralie", 4], ["Gull", 2], ["Islander", 1]].map(([name, wins], i) => ({ rank: i + 1, name: name as string, wins: wins as number, you: name === "Islander" })) }} />
     </Section>

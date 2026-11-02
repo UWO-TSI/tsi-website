@@ -25,6 +25,15 @@ export const fxBus = {
   /** Camera and time requests (VolleyMatch eases them back): shake 0..1, zoom punch (FOV degrees), hit-stop and slow-mo (s). */
   cam: { shake: 0, punch: 0, stop: 0, slow: 0, slowScale: 0.35 },
   listeners: new Set<(e: VbFx) => void>(),
+  /** A court-frame point on the view (0..1 across and down), set by VolleyFx while it draws; null behind the camera. */
+  screen: null as ((x: number, y: number, z: number) => [number, number] | null) | null,
+  /**
+   * The impact frame (fxPlan IMPACT): VolleyFx starts it and counts it down by rendered frames, VolleyStamps draws it
+   * while `left` > 0. `n` counts them; `x`, `y` is the hit on the view; `at` the effects' clock when it flashed.
+   */
+  impact: { kind: null as "spike" | "dive" | null, left: 0, n: 0, x: 0.5, y: 0.5, at: -99 },
+  /** Dev only (evidence): the effects paused, and stepped a 60th of a second at a time. */
+  dev: { paused: false, steps: 0 },
 };
 
 export function emitFx(e: VbFx) {

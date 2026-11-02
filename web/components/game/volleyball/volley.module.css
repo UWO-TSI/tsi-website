@@ -33,9 +33,6 @@
 .meter { position: absolute; left: calc(50% + 116px); bottom: 14px; transform-origin: bottom left; }
 .spinAt { position: absolute; right: calc(50% + 116px); bottom: 14px; }
 .hint { font: 600 12px/1 var(--gui-font); color: var(--ui-quiet); }
-.maxNote { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); padding: 6px 14px; border-radius: 999px; background: var(--ui-gold);
-  font: 800 16px/1 var(--gui-font); animation: maxPop 1.2s cubic-bezier(0.2, 0.9, 0.3, 1.3) forwards; }
-@keyframes maxPop { 0% { opacity: 0; transform: translate(-50%, 8px) scale(0.6); } 20% { opacity: 1; transform: translate(-50%, 0) scale(1.12); } 35% { transform: translate(-50%, 0) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -16px); } }
 .word { position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 6px; color: var(--team);
   animation: word 1.6s cubic-bezier(0.2, 0.9, 0.3, 1.12) forwards; }
 .word > span { font: 900 72px/1 var(--gui-font); text-shadow: 0 5px 0 rgb(var(--ui-shade) / 0.14); }
@@ -69,4 +66,4 @@
 .confetti { position: absolute; inset: 0; overflow: hidden; }
 .confetti > i { position: absolute; top: -12px; width: 8px; height: 12px; border-radius: 2px; background: var(--c); animation: fall var(--d) linear var(--w) forwards; }
 @keyframes fall { to { transform: translate(var(--x), 110vh) rotate(720deg); } }
-@media (prefers-reduced-motion: reduce) { .points > span[data-pop], .word, .word::before, .word > span, .plus, .final, .confetti > i, .maxNote, .finalBall, .coins, .call[data-on] { animation: none; } .confetti { display: none; } }
+@media (prefers-reduced-motion: reduce) { .points > span[data-pop], .word, .word::before, .word > span, .plus, .final, .confetti > i, .finalBall, .coins, .call[data-on] { animation: none; } .confetti { display: none; } }
