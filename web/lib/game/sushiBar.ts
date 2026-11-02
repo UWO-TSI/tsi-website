@@ -69,6 +69,23 @@ export interface BarView { eye: { x: number; y: number; z: number }; look: { x: 
 export const BAR_MUSIC_IN = 8, BAR_MUSIC_OUT = 10;
 
 /**
+ * Tells `report` when the player comes within earshot of the bar while it's open, and when they leave. `release` is
+ * the unmount: it tells the listener "not near" and forgets what it knew, so a remount (React's strict-mode effect
+ * replay: a spawn at the bar has its first frame before its effects run) reports again instead of leaving the
+ * listener on "not near" for as long as the player stands there.
+ */
+export function barEarshot(report: (near: boolean) => void) {
+  let near = false;
+  return {
+    frame(distance: number, open: boolean) {
+      const now = open && (near ? distance < BAR_MUSIC_OUT : distance < BAR_MUSIC_IN);
+      if (now !== near) { near = now; report(now); }
+    },
+    release() { near = false; report(false); },
+  };
+}
+
+/**
  * The staff at work behind the counter (cafe.ts ownerAt on the world clock; facing the guests is yaw 0; David, round 3:
  * "refine sushi cooking movements"; their clips, build_clips.py `-- staff`). The chef (David's "Bancha": cool and
  * focused, he rarely talks) works his two boards on the ledge behind the fish case in turn: he slices the block of fish
