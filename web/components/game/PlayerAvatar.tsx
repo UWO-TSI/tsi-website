@@ -794,7 +794,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       {/* Tap-to-walk's target: one painted marker on the ground (arrival-wharf.md §4). */}
       <MoveTargetIndicator mark={moveMark} />
       <group ref={anchor} position={spawnPosition}>
-        <group ref={body}><PlayerCharacter look={look} motion={motion} inCombat={inCombat} walkSpeed={walkSpeed} leaf={leafOwned} held={held} clips={clips} /></group>
+        {/* Named: a volleyball dig's blink finds your body by it (VolleyMatch, fxBus.body). */}
+        <group ref={body} name="player-body"><PlayerCharacter look={look} motion={motion} inCombat={inCombat} walkSpeed={walkSpeed} leaf={leafOwned} held={held} clips={clips} /></group>
       </group>
       <group ref={head} position={spawnPosition}>
         {showNameplate && <Html calculatePosition={calculateCurvedHtmlPosition} zIndexRange={[40, 0]}

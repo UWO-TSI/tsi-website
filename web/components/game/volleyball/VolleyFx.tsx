@@ -28,7 +28,7 @@ import { meterPower } from "@/lib/game/volleyball/timing";
 import { volley, type CourtSpot } from "@/lib/game/volleyball/session";
 import { camBeat, drainFx, emitFx, fxBus, type VbFx } from "@/lib/game/volleyball/fxBus";
 import {
-  CHARGE_MOTE, CONFETTI, DIVE_CLOUD, DIVE_SPRAY, DUST_PLUME, DUST_RING, FIREWORK, FLAME, FX_COLOR, GLINT, GLOW_BURST, HEAT, HIT_STREAKS, IMPACT, SAND_BLAST, SAND_PUFF,
+  BLINK, CHARGE_MOTE, CONFETTI, DIVE_CLOUD, DIVE_SPRAY, DUST_PLUME, DUST_RING, FIREWORK, FLAME, FX_COLOR, GLINT, GLOW_BURST, HEAT, HIT_STREAKS, IMPACT, SAND_BLAST, SAND_PUFF,
   SKID, SOFT_PUFF, SPARKLES, SPEED_LINES, SWISH, TEAM_COLOR, contactBeat, contactPlan, heatColor, heatOf, impactOk, landScale,
 } from "@/lib/game/volleyball/fxPlan";
 
@@ -58,6 +58,8 @@ interface Fx {
   fire: boolean;
   glinted: boolean[]; skidT: number; chargeT: number; shells: { at: number; x: number; y: number; z: number; tint: number }[]; clock: number;
   lite: boolean; built: Match | null;
+  /** A blink (fxPlan BLINK): the rendered frames left, and the meshes turned white with their own materials, to give back. */
+  blink: { left: number; swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][] };
   q: THREE.Quaternion; qYaw: THREE.Quaternion; tmp: THREE.Vector3; side: THREE.Vector3; color: { r: number; g: number; b: number };
 }
 
@@ -129,7 +131,7 @@ function newFx(): Fx {
     heat: trail(), ribbon: trail(), hist: new Float32Array(TRAIL * 3), histN: 0,
     lastHow: "", lastTeam: 0, tick: 0, seed: 1, fire: false,
     glinted: [false, false, false, false], skidT: 0, chargeT: 0, shells: [], clock: 0,
-    lite: false, built: null,
+    lite: false, built: null, blink: { left: 0, swapped: [] },
     q: new THREE.Quaternion(), qYaw: new THREE.Quaternion(), tmp: new THREE.Vector3(), side: new THREE.Vector3(), color: { r: 1, g: 1, b: 1 },
   };
   f.root.add(...f.softRings.map(r => r.mesh), ...f.craters.map(c => c.mesh), f.cross.group, f.apex.mesh, f.shield.mesh, f.heat.mesh, f.ribbon.mesh);
@@ -264,22 +266,49 @@ function onContact(f: Fx, c: Ctx, e: Extract<VbFx, { kind: "contact" }>) {
     throwAt(f, "move", SPARKLES, c, e.x, e.y, e.z, 0, 0, 1.4, TEAM_COLOR[e.team]);
     throwAt(f, "move", HIT_STREAKS, c, e.x, e.y, e.z, 0, 0, 0.8, FX_COLOR.white);
   }
-  if (plan.impact) startImpact(f, plan.impact, e.x, e.y, e.z);
+  if (plan.impact) startImpact(f, e.x, e.y, e.z);
+  if (plan.blink) startBlink(f, e.who);
   const beat = contactBeat(e.how, e.timing, e.speed);
   // The camera answers your touches and the big ones near you; a far bump is the bots' business.
   const near = e.who === m.human || e.how === "spike" || e.how === "block";
   if (near) camBeat(e.who === m.human ? beat : { ...beat, shake: beat.shake * 0.6, slow: 0, punch: beat.punch * 0.5 });
 }
 
-/** Reduced flashing (the Settings sheet's comfort, on by default when the OS asks) or reduced motion: no impact frames. */
+/** Reduced flashing (the Settings sheet's comfort, on by default when the OS asks) or reduced motion: no impact frames, no blinks. */
 const calm = () => readComfort().reduceFlashing || (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches);
 
 /** Start an impact frame at a court-frame point (VolleyStamps draws it), unless it would come back to back or calm. */
-function startImpact(f: Fx, kind: "spike" | "dive", x: number, y: number, z: number) {
+function startImpact(f: Fx, x: number, y: number, z: number) {
   const im = fxBus.impact;
   if (!impactOk(f.clock, im.at, calm())) return;
   const at = fxBus.screen?.(x, y, z) ?? [0.5, 0.5];
-  Object.assign(im, { kind, left: IMPACT.frames[kind], n: im.n + 1, x: at[0], y: at[1], at: f.clock });
+  Object.assign(im, { left: IMPACT.frames, n: im.n + 1, x: at[0], y: at[1], at: f.clock });
+}
+
+/** A blink's white: unlit, both faces (as the body's are), not tone-mapped, so the body reads as one white shape. */
+const BLINK_WHITE = new THREE.MeshBasicMaterial({ color: "#ffffff", side: THREE.DoubleSide, toneMapped: false });
+
+/**
+ * Your dive's dig (round 5, David: "no imact frame just a white flash on the charater"): player `who`'s body turns white
+ * for BLINK rendered frames, the character only (its see-through bits, like a bot's team ring, stay). Not calm.
+ */
+function startBlink(f: Fx, who: number) {
+  const body = calm() ? null : fxBus.body?.(who);
+  if (!body) return;
+  endBlink(f);
+  body.traverse(o => {
+    const mesh = o as THREE.Mesh, mats = mesh.isMesh ? [mesh.material].flat() : [];
+    if (!mats.length || mats.some(x => x.transparent)) return;
+    f.blink.swapped.push([mesh, mesh.material]);
+    mesh.material = BLINK_WHITE;
+  });
+  f.blink.left = BLINK;
+}
+
+function endBlink(f: Fx) {
+  for (const [mesh, mat] of f.blink.swapped) mesh.material = mat;
+  f.blink.swapped.length = 0;
+  f.blink.left = 0;
 }
 
 function onLand(f: Fx, c: Ctx, e: Extract<VbFx, { kind: "land" }>) {
@@ -465,6 +494,7 @@ function frame(f: Fx, c: Ctx, camera: THREE.Camera, dt: number, stamp: number) {
   }
   // The impact frame holds for its count of rendered frames (dev pauses hold it too).
   if (dt > 0 && fxBus.impact.left > 0) fxBus.impact.left--;
+  if (dt > 0 && f.blink.left > 0 && --f.blink.left === 0) endBlink(f);
   for (const e of drainFx()) handle(f, c, e);
   // The camera's turn in the court's frame (rings that face it), and the eye there (trails).
   f.qYaw.setFromAxisAngle(UP, -c.spot.yaw);
@@ -541,8 +571,8 @@ const DEV = fxBus.dev;
 function exposeDev(f: Fx) {
   if (process.env.NODE_ENV === "production") return;
   const w = window as unknown as { __volleyFx?: unknown };
-  /** What's live now: the painted rings' and the particles' counts, and the trails. */
-  const probe = () => ({ rings: f.softRings.filter(r => r.mesh.visible).length, move: f.move.pool.alive, glow: f.glow.pool.alive, trails: [f.heat.mesh.visible, f.ribbon.mesh.visible] });
+  /** What's live now: the painted rings' and the particles' counts, the trails, and how many meshes a blink holds white. */
+  const probe = () => ({ rings: f.softRings.filter(r => r.mesh.visible).length, move: f.move.pool.alive, glow: f.glow.pool.alive, trails: [f.heat.mesh.visible, f.ribbon.mesh.visible], blink: f.blink.swapped.length });
   w.__volleyFx = { emit: emitFx, dev: DEV, cam: fxBus.cam, probe };
   return () => { delete w.__volleyFx; };
 }
@@ -572,6 +602,7 @@ export default function VolleyFx() {
     return () => { scene.remove(...f.move.meshes, f.glow.mesh); f.move.clear(); f.move.dispose(); f.glow.clear(); f.glow.dispose(); };
   }, [scene, f]);
   useEffect(() => exposeDev(f), [f]);
+  useEffect(() => () => endBlink(f), [f]);
   useEffect(() => { fxBus.screen = projector(f.root, camera); return () => { fxBus.screen = null; }; }, [f, camera]);
   useFrame((state, raw) => {
     const m = volley.match, spot = volley.spot;

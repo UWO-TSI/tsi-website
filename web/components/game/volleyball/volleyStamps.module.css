@@ -6,20 +6,8 @@
 .apex { box-shadow: inset 0 0 140px 36px rgb(var(--ui-shade) / 0.36); }
 .heat { background: radial-gradient(ellipse at center, transparent 55%, color-mix(in srgb, var(--ui-home) 40%, transparent) 100%); transition: opacity 0.6s ease; }
 
-/* A touch's tag (round 4: one small quiet design for every call): a little white pill a touch over the hit, a dot in
-   its colour, rising a few px and fading. Perfect has a thin gold edge; Early, Late and Miss are grey and smaller. */
-.tag { position: absolute; display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px 4px 7px; border-radius: 999px; background: var(--ui-card); color: var(--ui-ink);
-  font: 800 13px/1 var(--gui-font); letter-spacing: 0.01em; white-space: nowrap; box-shadow: 0 2px 8px rgb(var(--ui-shade) / 0.16);
-  transform: translate(-50%, -100%); animation: tag 0.9s cubic-bezier(0.2, 0.9, 0.3, 1.12) forwards; }
-.tag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent, var(--ui-line-strong)); }
-.tag[data-kind="perfect"] { --accent: var(--ui-gold); box-shadow: inset 0 0 0 1.5px var(--ui-gold), 0 2px 8px rgb(var(--ui-shade) / 0.16); }
-.tag[data-kind="perfect"]::before { animation: dot 0.5s ease-out 0.08s; }
-.tag[data-kind="saved"] { --accent: var(--team); }
-.tag[data-kind="max"] { --accent: var(--ui-gold); }
-.tag[data-kind="soft"], .tag[data-kind="whiff"] { padding: 3px 8px 3px 6px; color: var(--ui-quiet); font-size: 12px; font-weight: 700; animation-duration: 0.75s; }
-@keyframes tag { 0% { opacity: 0; transform: translate(-50%, -70%) scale(0.85); } 16% { opacity: 1; transform: translate(-50%, -100%) scale(1.06); }
-  28% { transform: translate(-50%, -100%) scale(1); } 72% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, calc(-100% - 14px)); } }
-@keyframes dot { 40% { transform: scale(1.8); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ui-gold) 35%, transparent); } }
+/* A touch's call (the kit's CallTag) stands a touch over the hit. */
+.at { position: absolute; transform: translate(-50%, -100%); }
 
 /* Under the score: the rally's heat chip and the referee's call, side by side, away from the play. */
 .under { position: absolute; top: 96px; left: 50%; display: flex; align-items: center; gap: 6px; transform: translateX(-50%); }
@@ -59,24 +47,16 @@
 @keyframes flick { from { transform: scale(0.9, 1.08) skewX(-4deg); } to { transform: scale(1.06, 0.94) skewX(4deg); } }
 @keyframes bump { 0% { transform: scale(calc(1.4 + var(--h) * 0.15)); } }
 
-/* The impact frame (one or two rendered frames, shown by data-on): the scene thresholded to ink by a backdrop filter, so
-   the characters stand as silhouettes, with lines converging on the hit. The spike's is the negative (ink ground, white
-   figures); the dive's is split along a slanted line through the hit, ink on one side and negative on the other. */
-.impact { position: absolute; inset: 0; display: none; }
+/* The impact frame (one rendered frame, shown by data-on): the scene thresholded to ink by a backdrop filter and
+   inverted, so the characters stand white on ink. Round 5 (David: "maybe remove the line"): no lines. data-lines puts
+   round 4's back (lines converging on the hit, then focus lines rushing in) for the with-and-without sheet. */
+.impact { position: absolute; inset: 0; display: none; backdrop-filter: grayscale(1) brightness(1.5) contrast(14) invert(1); }
 .impact[data-on] { display: block; }
-.impact > i { position: absolute; inset: 0; backdrop-filter: grayscale(1) brightness(1.5) contrast(14); }
-.impact > .neg { backdrop-filter: grayscale(1) brightness(1.5) contrast(14) invert(1); }
-.impact > i::after { content: ""; position: absolute; inset: 0; mask: radial-gradient(circle at var(--x) var(--y), transparent 0 16%, black 62%);
-  background: repeating-conic-gradient(from 3deg at var(--x) var(--y), var(--ui-ink) 0 1deg, transparent 1deg 6deg, var(--ui-ink) 6deg 6.6deg, transparent 6.6deg 13deg); }
-.impact > .neg::after { background: repeating-conic-gradient(from 3deg at var(--x) var(--y), var(--ui-card) 0 1deg, transparent 1deg 6deg, var(--ui-card) 6deg 6.6deg, transparent 6.6deg 13deg); }
-.impact[data-on="spike"] > .ink { display: none; }
-.impact[data-on="dive"] > .ink { clip-path: polygon(0 0, calc(var(--x) + 22vh) 0, calc(var(--x) - 22vh) 100%, 0 100%); }
-.impact[data-on="dive"] > .neg { clip-path: polygon(calc(var(--x) + 22vh) 0, 100% 0, 100% 100%, calc(var(--x) - 22vh) 100%); }
-/* Then focus lines rush in on the hit and fade. */
+.impact[data-lines]::after { content: ""; position: absolute; inset: 0; mask: radial-gradient(circle at var(--x) var(--y), transparent 0 16%, black 62%);
+  background: repeating-conic-gradient(from 3deg at var(--x) var(--y), var(--ui-card) 0 1deg, transparent 1deg 6deg, var(--ui-card) 6deg 6.6deg, transparent 6.6deg 13deg); }
 .focus { position: absolute; inset: 0; opacity: 0; mask: radial-gradient(circle at var(--x) var(--y), transparent 0 20%, black 70%);
   background: repeating-conic-gradient(from 0deg at var(--x) var(--y), var(--ui-card) 0 0.7deg, transparent 0.7deg 5deg, var(--ui-card) 5deg 5.4deg, transparent 5.4deg 11deg);
   transform-origin: var(--x) var(--y); animation: focus 0.36s ease-out both; }
-.focus[data-kind="dive"] { animation-duration: 0.45s; }
 @keyframes focus { 0% { opacity: 0.85; transform: scale(1.25); } 100% { opacity: 0; transform: scale(1); } }
 
 /* The win: the trophy bouncing in rays turning behind it. */
@@ -91,9 +71,9 @@
   40% { transform: translate(-50%, -50%) scale(1) rotate(0); } 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
 @keyframes trophy { to { transform: translateY(-6px) rotate(3deg); } }
 @media (prefers-reduced-motion: reduce) {
-  .tag::before, .win, .trophy, .rays, .rally, .rally > em, .glyph *, .flame * { animation: none !important; }
-  /* The calls still go: a fade, no motion. */
-  .tag, .ref { animation-name: fade !important; }
+  .win, .trophy, .rays, .rally, .rally > em, .glyph *, .flame * { animation: none !important; }
+  /* The referee's calls still go: a fade, no motion. */
+  .ref { animation-name: fade !important; }
   @keyframes fade { 70% { opacity: 1; } 100% { opacity: 0; } }
   .impact, .focus { display: none !important; }
   .apex, .heat { transition: none; }

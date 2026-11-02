@@ -27,7 +27,7 @@ import { RodRadar, TackleRadar } from "@/components/economy/RodGear";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import { CircleDot, Waves, Worm } from "lucide-react";
 import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
-import { ActionBar, ActionIcon, BigMoment, CardOverlay, DarkButton, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KeyBoard, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, QuestCheck, RankBadge, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot } from "@/components/gui/flat";
+import { ActionBar, ActionIcon, BigMoment, CALL_LOOKS, CallTag, CardOverlay, DarkButton, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KeyBoard, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, QuestCheck, RankBadge, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
 import { BoardBody } from "@/components/game/volleyball/BoardSheet";
 import { DEFAULT_LOOK } from "@/lib/game/character/look";
@@ -189,6 +189,7 @@ export default function GuiShowroom() {
   const overlay = OVERLAYS.find(o => o.id === only);
   const [tab, setTab] = useState<"tools" | "outfits" | "furniture" | "specials">("tools");
   const [row, setRow] = useState(1);
+  const [callRun, setCallRun] = useState(0);
   const [tile, setTile] = useState("fish_arowana");
   const [toggles, setToggles] = useState({ sound: true, hud: false });
   const [volume, setVolume] = useState(70);
@@ -314,6 +315,16 @@ export default function GuiShowroom() {
 
     <Section id="serve-meter" title="Serve meter (flat)" note="The volleyball serve’s power: a triangle wide at the top, the fill warming from sea to coral to gold; it leans in and trembles as it fills, and flashes Max at the top.">
       <Row><ServeMeter value={0.3} label="Serve power"><Keycap>Hold</Keycap></ServeMeter><ServeMeter value={0.72} label="Serve power" /><ServeMeter value={0.97} label="Serve power, max" /></Row>
+    </Section>
+
+    <Section id="call-tag" title="Call tag (flat), three directions" note="A call at a moment of play, small and quiet: Chip (a white chip, a coloured cap with the call’s picture), Bubble (a white speech bubble pointing at the touch, a thin edge in the call’s colour), Letters (no box, the word lettered white with an ink outline over a swoosh). Gold for Perfect and Max, the team’s colour for Saved and Block, grey for Early, Late and Miss. Played: in with a spring (a block slams down), a held beat, up and out.">
+      {CALL_LOOKS.map(look => <Row key={look} label={look[0].toUpperCase() + look.slice(1)}>
+        {([["perfect", "Perfect"], ["good", "Good"], ["soft", "Early"], ["soft", "Late"], ["saved", "Saved"], ["block", "Block"], ["whiff", "Miss"], ["max", "Max"]] as const).map(([kind, word]) =>
+          <CallTag key={word} look={look} kind={kind} team={kind === "block" ? "var(--ui-away)" : "var(--ui-home)"}>{word}</CallTag>)}
+      </Row>)}
+      <Row label="Played">{CALL_LOOKS.map(look => <span key={`${look}-${callRun}`} style={{ display: "inline-grid", gap: 8 }}>
+        <CallTag look={look} kind="perfect" live>Perfect</CallTag><CallTag look={look} kind="block" team="var(--ui-away)" live>Block</CallTag></span>)}
+        <GhostButton onClick={() => setCallRun(n => n + 1)}>Play again</GhostButton></Row>
     </Section>
 
     <Section id="action-bar" title="Action bar (flat)" note="A match’s moves: each a pictogram, its key and its name. A slot that would connect glows; a press flashes it. The ground’s and the air’s rows swap in place.">

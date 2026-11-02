@@ -111,17 +111,24 @@ export interface ContactPlan {
   sand: boolean; sparkles: boolean; glint: boolean; lines: boolean; shield: boolean; spray: boolean;
   /** A perfect spike or serve sets the ball on fire for its flight (round 3, David: "fire trail or smth"). */
   fire: boolean;
-  /** The small call at the touch, if any (VolleyStamps). A block has none: it reads by its effect, sound and camera. */
-  stamp: "Perfect" | "Good" | "Early" | "Late" | "Saved" | null;
-  /** An anime impact frame (VolleyStamps): your perfect spike's one frame, your dive's dig's two split frames. */
-  impact: "spike" | "dive" | null;
+  /** The small call at the touch, if any (VolleyStamps): every block's, your grade, your team's saves. */
+  stamp: "Perfect" | "Good" | "Early" | "Late" | "Saved" | "Block" | null;
+  /** An anime impact frame (VolleyStamps): your perfect spike's one frame. */
+  impact: boolean;
+  /** Your dive's dig: your character flashes white for a beat (BLINK), the character only. */
+  blink: boolean;
 }
 
 /**
- * The impact frames (round 4, David: "a 1 frame impact frame for perfect spikes", "a split character flash frame to show
- * its hit"): how many rendered frames each holds, and the least time between two (s), so they never come back to back.
+ * The impact frame (round 4, David: "a 1 frame impact frame for perfect spikes"): how many rendered frames it holds, and
+ * the least time between two (s), so they never come back to back.
  */
-export const IMPACT = { frames: { spike: 1, dive: 2 }, gap: 1.2 } as const;
+export const IMPACT = { frames: 1, gap: 1.2 } as const;
+/**
+ * How many rendered frames your diving character stays white after the dig (round 5: "just a white flash on the
+ * charater"): counted like the impact frame, so the dig's slow-mo beat doesn't stretch it (about 0.13 s at 60 fps).
+ */
+export const BLINK = 8;
 /** Whether an impact frame may flash now: not too soon after the last, and never with reduced motion or flashing. */
 export const impactOk = (clock: number, lastAt: number, calm: boolean) => !calm && clock - lastAt >= IMPACT.gap;
 
@@ -140,7 +147,8 @@ export function contactPlan(how: ContactKind, timing: Timing, mine: boolean, myT
     shield: how === "block",
     spray: how === "dig",
     fire: timing === "perfect" && (how === "spike" || how === "serve"),
-    stamp: how === "block" ? null : how === "dig" && myTeam ? "Saved" : tag,
-    impact: !mine ? null : how === "spike" && timing === "perfect" ? "spike" : how === "dig" ? "dive" : null,
+    stamp: how === "block" ? "Block" : how === "dig" && myTeam ? "Saved" : tag,
+    impact: mine && how === "spike" && timing === "perfect",
+    blink: mine && how === "dig",
   };
 }

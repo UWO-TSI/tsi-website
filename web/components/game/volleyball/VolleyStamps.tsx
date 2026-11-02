@@ -1,29 +1,31 @@
 "use client";
 
 /**
- * The match's calls on the HUD layer, on the flat kit's tokens. Round 4 (David: "the text that shows up doesnt look good",
- * "less noticable"): one small quiet tag for every touch, at the touch on screen, rising a little and fading (your grade:
- * Perfect with a gold edge, Good, Early and Late in grey; Saved; Miss; Max for a max-power toss). A block says no word:
- * it reads by its effect, sound and camera. The referee's calls (Out, Net, Tape) sit in a chip under the score beside
- * the rally's heat chip, away from the play (David: "the text should show somewhere else"). The win keeps its trophy.
+ * The match's calls on the HUD layer, on the flat kit's tokens. Every touch's call is the kit's CallTag at the touch on
+ * screen (your grade: Perfect, Good, Early, Late; Saved; every Block; Miss; Max for a max-power toss): round 5 (David:
+ * "still needs the text tag just a redesign") puts the block's tag back and gives the tag its own look, in three
+ * directions for David to pick (fxBus.dev.tag picks one for the review sheets). The referee's calls (Out, Net, Tape) sit
+ * in a chip under the score beside the rally's heat chip, away from the play. The win keeps its trophy.
  *
- * Also here: the impact frames (fxPlan IMPACT, started and counted by VolleyFx through fxBus.impact): your perfect
- * spike's one negative frame and your dive's two split frames, the scene thresholded to ink by a backdrop filter so the
- * characters stand as silhouettes, focus lines rushing in on the hit after them; and the two screen edges (a cool one
- * at the top of your jump, a warm one with the rally's heat). Fed by fxBus (onFx); the edges and the flash per frame.
+ * Also here: the impact frame (fxPlan IMPACT, started and counted by VolleyFx through fxBus.impact): your perfect spike's
+ * one negative frame, the scene thresholded to ink by a backdrop filter so the characters stand as silhouettes (round 5:
+ * "maybe remove the line", so no lines; fxBus.dev.lines puts round 4's back for the with-and-without sheet); and the two
+ * screen edges (a cool one at the top of your jump, a warm one with the rally's heat). Fed by fxBus (onFx); the edges
+ * and the flash per frame.
  */
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { fxBus, onFx, type VbFx } from "@/lib/game/volleyball/fxBus";
 import { HEAT, contactPlan, heatOf } from "@/lib/game/volleyball/fxPlan";
 import { volley } from "@/lib/game/volleyball/session";
 import { HAND, type Match } from "@/lib/game/volleyball/match";
+import { CallTag, type CallKind, type CallLook } from "@/components/gui/flat";
 import s from "./volleyStamps.module.css";
 
-type Kind = "perfect" | "good" | "soft" | "saved" | "whiff" | "max" | "out" | "net" | "tape" | "win";
+type Kind = CallKind | "out" | "net" | "tape" | "win";
 /** Where a call shows: at the touch, in the referee's chip under the score, or the win's trophy. */
 type At = "hit" | "ref" | "win";
 interface Call { text: string; kind: Kind; team: 0 | 1; at: At }
-interface Shown extends Call { n: number; x: number; y: number }
+interface Shown extends Call { n: number; x: number; y: number; look?: CallLook }
 const TEAM_VAR = ["var(--ui-home)", "var(--ui-away)"];
 
 /** The call an effect makes, if any (null: none). */
@@ -31,7 +33,7 @@ export function stampOf(e: VbFx, human: number, myTeam: number): Call | null {
   if (e.kind === "contact") {
     const st = contactPlan(e.how, e.timing, e.who === human, e.team === myTeam).stamp;
     if (!st) return null;
-    const kind: Kind = st === "Saved" ? "saved" : st === "Perfect" ? "perfect" : st === "Good" ? "good" : "soft";
+    const kind: Kind = st === "Saved" ? "saved" : st === "Block" ? "block" : st === "Perfect" ? "perfect" : st === "Good" ? "good" : "soft";
     return { text: st, kind, team: e.team, at: "hit" };
   }
   if (e.kind === "land" && !e.in) return { text: "Out", kind: "out", team: 0, at: "ref" };
@@ -55,10 +57,10 @@ function hitPoint(e: VbFx, m: Match): [number, number] {
 function perFrame(apex: HTMLDivElement | null, heat: HTMLDivElement | null, flash: HTMLDivElement | null) {
   const m = volley.match, im = fxBus.impact;
   if (flash) {
-    const on = im.left > 0 && im.kind ? im.kind : "";
-    if ((flash.dataset.on ?? "") !== on) {
-      if (on) { flash.style.setProperty("--x", `${im.x * 100}%`); flash.style.setProperty("--y", `${im.y * 100}%`); flash.dataset.on = on; }
-      else delete flash.dataset.on;
+    const on = im.left > 0;
+    if (flash.hasAttribute("data-on") !== on) {
+      if (on) { flash.style.setProperty("--x", `${im.x * 100}%`); flash.style.setProperty("--y", `${im.y * 100}%`); flash.toggleAttribute("data-lines", fxBus.dev.lines); }
+      flash.toggleAttribute("data-on", on);
     }
   }
   if (!m || m.human < 0) { if (apex) apex.style.opacity = "0"; if (heat) heat.style.opacity = "0"; return; }
@@ -100,13 +102,13 @@ export default function VolleyStamps() {
   const [ref, setRef] = useState<Shown | null>(null);
   const [win, setWin] = useState(false);
   const [rally, setRally] = useState(0);
-  const [focus, setFocus] = useState<{ n: number; kind: string; x: number; y: number } | null>(null);
+  const [focus, setFocus] = useState<{ n: number; x: number; y: number } | null>(null);
   const apex = useRef<HTMLDivElement>(null), heat = useRef<HTMLDivElement>(null), flash = useRef<HTMLDivElement>(null);
   useEffect(() => onFx(e => {
     const m = volley.match;
     if (!m) return;
     const st = stampOf(e, m.human, m.players[Math.max(0, m.human)].team);
-    if (st?.at === "hit") { const [x, y] = hitPoint(e, m); setHit(prev => ({ ...st, n: (prev?.n ?? 0) + 1, x, y })); }
+    if (st?.at === "hit") { const [x, y] = hitPoint(e, m); setHit(prev => ({ ...st, n: (prev?.n ?? 0) + 1, x, y, look: (fxBus.dev.tag as CallLook | null) ?? undefined })); }
     else if (st?.at === "ref") setRef(prev => ({ ...st, n: (prev?.n ?? 0) + 1, x: 0, y: 0 }));
     else if (st?.at === "win") setWin(true);
     if (e.kind === "contact" && e.how !== "serve") setRally(m.rallyTouches);
@@ -117,26 +119,27 @@ export default function VolleyStamps() {
     const loop = () => {
       perFrame(apex.current, heat.current, flash.current);
       const im = fxBus.impact;
-      // Focus lines rush in on the hit after each impact frame.
-      if (im.n !== seen) { seen = im.n; setFocus({ n: im.n, kind: im.kind ?? "spike", x: im.x, y: im.y }); }
+      // Round 4's focus lines rushing in on the hit after the impact frame: only with the lines (fxBus.dev.lines).
+      if (im.n !== seen) { seen = im.n; if (fxBus.dev.lines) setFocus({ n: im.n, x: im.x, y: im.y }); }
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
   }, []);
-  const team = (c: Shown) => ({ "--team": TEAM_VAR[c.team] }) as CSSProperties;
   return <div className={s.layer} aria-live="polite">
     <div ref={apex} className={s.apex} aria-hidden="true" />
     <div ref={heat} className={s.heat} aria-hidden="true" />
-    {focus && <div key={focus.n} className={s.focus} data-kind={focus.kind} style={{ "--x": `${focus.x * 100}%`, "--y": `${focus.y * 100}%` } as CSSProperties} aria-hidden="true" />}
-    <div ref={flash} className={s.impact} aria-hidden="true"><i className={s.ink} /><i className={s.neg} /></div>
+    {focus && <div key={focus.n} className={s.focus} style={{ "--x": `${focus.x * 100}%`, "--y": `${focus.y * 100}%` } as CSSProperties} aria-hidden="true" />}
+    <div ref={flash} className={s.impact} aria-hidden="true" />
     <div className={s.under}>
       {rally >= HEAT_FROM && <span key={rally} className={s.rally} data-fire={rally >= HEAT.fireAt || undefined} style={{ "--h": heatOf(rally) } as CSSProperties} aria-label={`Rally of ${rally}`}>
         <Flame /><b>{rally}</b>{rally === HEAT.fireAt && <em>On fire!</em>}
       </span>}
       {ref && <span key={ref.n} className={s.ref} data-kind={ref.kind}><Glyph kind={ref.kind} />{ref.text}</span>}
     </div>
-    {hit && <span key={hit.n} className={s.tag} data-kind={hit.kind} style={{ ...team(hit), left: `${hit.x * 100}%`, top: `${hit.y * 100}%` }}>{hit.text}</span>}
+    {hit && <span key={hit.n} className={s.at} style={{ left: `${hit.x * 100}%`, top: `${hit.y * 100}%` }}>
+      <CallTag kind={hit.kind as CallKind} look={hit.look} team={TEAM_VAR[hit.team]} live>{hit.text}</CallTag>
+    </span>}
     {win && <div className={s.win} aria-label="You win!"><span className={s.rays} /><span className={s.trophy}><Trophy /></span></div>}
   </div>;
 }

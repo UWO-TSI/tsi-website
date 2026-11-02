@@ -140,8 +140,14 @@ const SCENES = {
       const dirKey = await page.evaluate(() => { const P = window.__volley.probe, yaw = P.yaw(), spot = window.__volley.spot, c = Math.cos(spot.yaw), sn = Math.sin(spot.yaw);
         const wx = c, wz = -sn, fx = Math.sin(yaw), fz = Math.cos(yaw), f = wx * fx + wz * fz, r = -(wx * -fz + wz * fx);
         return Math.abs(f) > Math.abs(r) ? (f > 0 ? "w" : "s") : (r > 0 ? "a" : "d"); });
+      // Round 5: the dig turns your avatar white for a beat (meshes held white), with no impact frame, then gives it back.
+      await page.evaluate(() => { const w = window; w.__seen = { blink: 0, impact: 0, on: true }; const el = document.querySelector("[class*=impact]");
+        const tick = () => { if (!w.__seen.on) return; w.__seen.blink = Math.max(w.__seen.blink, w.__volleyFx?.probe().blink ?? 0); w.__seen.impact += el?.dataset.on !== undefined ? 1 : 0; requestAnimationFrame(tick); }; tick(); });
       await page.keyboard.down(dirKey); await page.keyboard.press("q"); await page.keyboard.up(dirKey);
       await v.step(60);
+      await page.waitForTimeout(400);
+      const seen = await page.evaluate(() => { window.__seen.on = false; return { ...window.__seen, after: window.__volleyFx?.probe().blink }; });
+      check("rally: your dig flashes your avatar white (no impact frame) and gives its look back", seen.blink > 0 && seen.impact === 0 && seen.after === 0, JSON.stringify(seen));
       const ev = await v.since(k);
       check("rally: a clutch dive (Q) digs a ball out of reach on foot", ev.some(x => x.kind === "dive" && x.who === 0 && x.onBall) && ev.some(x => x.kind === "contact" && x.who === 0 && x.how === "dig"), ev.filter(x => x.who === 0).map(x => `${x.kind}:${x.how ?? ""}${x.onBall ? ":onBall" : ""}`).join(" "));
       await v.step(150);

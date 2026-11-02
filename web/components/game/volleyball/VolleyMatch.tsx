@@ -461,6 +461,11 @@ export default function VolleyMatch({ spot, selfLook, occluders = NONE }: {
   useEffect(() => bindCourtControls(rig.c, { el: gl.domElement, bindings, stance: () => (volley.match ? stanceOf(volley.match, 0) : "idle") }), [rig, bindings, gl]);
   useEffect(() => () => leave(rig), [rig]);
   useEffect(() => exposeDev(rig, spot), [rig, spot]);
+  // A blink's body (fxBus.body): the bots' (and yours in the lab) drawn here, yours on the island the avatar (PlayerAvatar).
+  useEffect(() => {
+    fxBus.body = who => (who === 0 && !selfLook ? scene.getObjectByName("player-body") : bodies.current[who]) ?? null;
+    return () => { fxBus.body = null; };
+  }, [scene, selfLook]);
   // Before the default frame callbacks (the effects', VolleyFx): the match places the camera for them. After the
   // island's follow camera (IslandAtmosphere, -3), which this overrides in a match.
   useFrame((_, raw) => frameStep(rig, { bodies, calls, ball, spin, shadow, landRing, outer, airRing, airOuter, serveRing, serveOuter, cursor, aimMark }, { spot, camera, scene, occluders, bindings, selfLook }, raw), -2);

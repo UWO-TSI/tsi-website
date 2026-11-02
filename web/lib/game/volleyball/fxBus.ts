@@ -2,8 +2,9 @@
  * The match's effects and sounds (David's approved plan, 2026-10-30: 15 effects, each contact in four timing grades),
  * fed from the match's events. VolleyMatch emits here; the effects (VolleyFx.tsx, VolleyStamps.tsx) and the sounds
  * (sfx.ts) drain or listen. The camera and time requests an effect makes (a shake, a zoom punch, a hit-stop, a slow-mo
- * beat) sit in `cam`, read and eased by VolleyMatch. Only the player in a match has any of it. Pure, no three.js.
+ * beat) sit in `cam`, read and eased by VolleyMatch. Only the player in a match has any of it. Pure: three.js only as a type.
  */
+import type { Object3D } from "three";
 import type { ContactKind, Timing } from "./match";
 import type { Team } from "./rules";
 
@@ -31,9 +32,14 @@ export const fxBus = {
    * The impact frame (fxPlan IMPACT): VolleyFx starts it and counts it down by rendered frames, VolleyStamps draws it
    * while `left` > 0. `n` counts them; `x`, `y` is the hit on the view; `at` the effects' clock when it flashed.
    */
-  impact: { kind: null as "spike" | "dive" | null, left: 0, n: 0, x: 0.5, y: 0.5, at: -99 },
-  /** Dev only (evidence): the effects paused, and stepped a 60th of a second at a time. */
-  dev: { paused: false, steps: 0 },
+  impact: { left: 0, n: 0, x: 0.5, y: 0.5, at: -99 },
+  /** Player `who`'s drawn body (VolleyMatch sets it): what a blink (fxPlan BLINK) turns white. */
+  body: null as ((who: number) => Object3D | null) | null,
+  /**
+   * Dev only (evidence): the effects paused, and stepped a 60th of a second at a time. Round 5's review sheets: `tag`
+   * picks a call tag direction (the kit's CallTag looks; null its default), `lines` puts round 4's lines back on the impact frame.
+   */
+  dev: { paused: false, steps: 0, tag: null as string | null, lines: false },
 };
 
 export function emitFx(e: VbFx) {
