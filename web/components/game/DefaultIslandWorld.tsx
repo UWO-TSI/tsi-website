@@ -54,8 +54,8 @@ import confetti from "canvas-confetti";
 import type { InteriorStation } from "./interiorShared";
 import { villageIsland, villageSpawn, villageScale, landmark, landmarks, landmarkPoint, turn, wharfDecks, wharfDock, benchSeat, propFootprint, BENCH_SEAT_TOP, houseHalf, houseModel, type Landmark } from "@/lib/game/defaultIsland";
 import { village, objectsOf, type Village } from "@/lib/game/villageMap";
-import { SELL_BARREL, marketBoardsOf, tackleCounterOf } from "@/lib/game/wharf";
-import { CatchBoardSheet, CatchChalk, TaskChalk } from "@/components/game/peaceful/CatchBoard";
+import { SELL_BARREL, marketBoardsOf, tackleCounterOf, waterSignsOf } from "@/lib/game/wharf";
+import { CatchBoardSheet, CatchChalk, TaskChalk, WaterSigns } from "@/components/game/peaceful/CatchBoard";
 import { LEVEL_STEP, levelAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import { CLUBHOUSE_LIGHTING, ISLAND_TERRAIN, islandLightAt, smoothWorldLight, weatherLight, windowLit, withSeason, type IslandLight } from "@/lib/game/islandLighting";
@@ -67,7 +67,7 @@ import { IslandAtmosphere, useFollowCamera, type TreeSpot } from "./IslandAtmosp
 import PeacefulLayer, { peacefulNear } from "./peaceful/PeacefulLayer";
 import WardrobeSheet from "./peaceful/WardrobeSheet";
 import { WalletSheet } from "@/components/economy/EconomySheets";
-import { ChefOrderDialog, FishMarketSheet, TackleCounterSheet, TaskBoardSheet } from "@/components/game/peaceful/FishingPlaces";
+import { ChefOrderDialog, FishMarketSheet, TackleCounterSheet, TaskBoardSheet, prefetchMarket } from "@/components/game/peaceful/FishingPlaces";
 import { BagSheet } from "./Bag";
 import { ChestSheet } from "./ChestSheet";
 import { BagButton } from "./BagButton";
@@ -366,6 +366,8 @@ function villageLayout(v: Village) {
     sellBarrel: (b => (b ? xz(b) : null))(objectsOf("prop", v).find(o => o.id === SELL_BARREL)),
     /** The fish market's catch board and task board (lib/game/wharf.ts marketBoardsOf), or none. */
     boards: marketBoardsOf(objectsOf("prop", v)),
+    /** The water signs, each where its water is fished (lib/game/wharf.ts waterSignsOf). */
+    signs: waterSignsOf(v.objects),
     /** The tackle shop's counter, at its door (lib/game/wharf.ts tackleCounterOf), or none. */
     tackle: (t => (t ? xz(t) : null))(tackleCounterOf(objectsOf("prop", v))),
     /** The water types the island has (the catch board lists fish for those). */
@@ -555,6 +557,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     // Before the café's drop Rosa sweeps out front: the café's prompt is hers.
     const sweeper: [number, number] | null = !DROPS.cafe && cafeSweeper.on ? [cafeSweeper.x, cafeSweeper.z] : null;
     // While Bram walks you round, HQ's door is only ever the way in (HQ first on the new world: Alice signs you in).
+    const sign = layout.signs.find(sg => within([sg.x, sg.z], 1.6));
     const door: [Near, [number, number] | null] = within(doors.hq, 2) ? [arrivalPhase ? "enter" : chapter.claim ? "claim" : chapter.report ? "report" : "enter", doors.hq]
       // Not while Bram brings you in and walks you round (the arrival): the boat home waits for after.
       : DROPS.homeIsland && within(doors.boat, 1.6) && !arrivalPhase ? ["home", doors.boat]
@@ -562,6 +565,8 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       : within(layout.sellBarrel, 2.2) ? ["sell", layout.sellBarrel]
       : within(layout.boards && [layout.boards.catch.x, layout.boards.catch.z], 1.6) ? ["catchboard", [layout.boards!.catch.x, layout.boards!.catch.z]]
       : within(layout.boards && [layout.boards.tasks.x, layout.boards.tasks.z], 1.6) ? ["tasks", [layout.boards!.tasks.x, layout.boards!.tasks.z]]
+      // A water sign reads the catch board.
+      : sign ? ["catchboard", [sign.x, sign.z]]
       : within(layout.tackle, 1.6) ? ["tackle", layout.tackle]
       // By day the sushi chef waits outside his closed bar with his fishing order (f-sushi).
       : chefSpot && !barOpen(phase) && within(chefSpot, 1.8) ? ["chef", chefSpot]
@@ -653,9 +658,10 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       {fountain && <LampGlow points={fountain.jet} ground={fountain.water} on={light.lampsOn} halo={2.4} pool={3} color="#a8e8ff" />}
       {fountain && <FadeLight position={fountain.light} color="#ffd59a" intensity={light.lampsOn ? light.lamp * 2 : 0} distance={12} />}
       {layout.boards && <>
-        <CatchChalk at={layout.boards.catch} y={island.ground(layout.boards.catch.x, layout.boards.catch.z)} waters={layout.waters} hour={peaceful.moment.hour} month={peaceful.moment.month} weather={weather} />
+        <CatchChalk at={layout.boards.catch} y={island.ground(layout.boards.catch.x, layout.boards.catch.z)} waters={layout.waters} hour={peaceful.moment.hour} season={peaceful.moment.season} weather={weather} />
         <TaskChalk at={layout.boards.tasks} y={island.ground(layout.boards.tasks.x, layout.boards.tasks.z)} waters={layout.waters} />
       </>}
+      <WaterSigns signs={layout.signs} ground={island.ground} />
       {bar && <Suspense fallback={null}><SushiBar bar={bar} y={barY} player={player} phase={phase} viewRef={barView} onNear={onBar} /></Suspense>}
       {layout.campfire && <Campfire site={layout.campfire} ground={island.ground} phase={phase} hour={campfireHour} player={player} walled={!!v.terrain} />}
       {/* Nature and props from the map, instanced: one draw per model sub-mesh however many the island has. */}
@@ -874,6 +880,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const [sceneShown, setSceneShown] = useState(0);
   const onSceneReady = useCallback(() => { setReady(true); setFading(false); tripSceneReady(); }, []);
   const [near, setNear] = useState<Near>(null);
+  // Walking up to the fish market's stall reads your purse and fish, so its sheet opens on them with nothing to wait for.
+  useEffect(() => { if (near === "sell") prefetchMarket(); }, [near]);
   // HQ's stations answer by what they do (lib/game/hqLayout.ts).
   const hqStation = useCallback((s: InteriorStation | null) => setNear((s?.action as Near) ?? null), []);
   // On a bench or in bed the seat's prompt stands you up (world audit item 17).
@@ -1557,7 +1565,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <ChefOrderDialog open={sheet === "chef"} onClose={() => setSheet(null)} keys={STATION_KEY} />
       <MenuPickup open={sheet === "sushi"} onClose={() => setSheet(null)} waters={catchWaters} />
       {barSeated && sheet === null ? <div className={styles.barMenu}><DarkButton onClick={() => setSheet("sushi")}>Menu</DarkButton></div> : null}
-      <CatchBoardSheet open={sheet === "outnow"} onClose={() => setSheet(null)} keys={STATION_KEY} waters={catchWaters} hour={peaceful.moment.hour} month={peaceful.moment.month} weather={conditions.weather} season={season.season} phase={phase} />
+      <CatchBoardSheet open={sheet === "outnow"} onClose={() => setSheet(null)} keys={STATION_KEY} waters={catchWaters} hour={peaceful.moment.hour} weather={conditions.weather} season={season.season} soon={peaceful.moment.soon} phase={phase} />
       <ShopOverlay open={sheet === "rods"} title="Rod shop" section="rods" onClose={() => setSheet(null)} keys={STATION_KEY} />
       <WalletSheet open={sheet === "wallet"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openWallet} />
       <WardrobeSheet open={sheet === "closet" || sheet === "fitting"} place={sheet === "closet" ? "closet" : "fitting"} onClose={() => { if (sheet === "fitting") window.dispatchEvent(new CustomEvent("tsi:fitting")); setSheet(null); }} onShop={() => { setSheet(null); toShop("More clothes"); }} />

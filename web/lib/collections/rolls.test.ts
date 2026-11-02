@@ -3,6 +3,7 @@ import worldDoc from "@/data/world/world.json";
 import { fishPoolFor } from "@/lib/game/peaceful";
 import { rodByTier } from "@/lib/game/rods";
 import { seededRandom } from "@/lib/game/weatherSystem";
+import { seasonBlend, seasonsOf, type Season } from "@/lib/game/season";
 import { villageNodes } from "@/lib/game/islandNodes";
 import { ROSTER, type Rarity } from "./roster";
 import { activeWaters, castWater, fishRoll, nodeRoll } from "./rolls";
@@ -15,7 +16,7 @@ const tally = (keys: string[]) => keys.reduce((m, k) => m.set(k, (m.get(k) ?? 0)
 
 describe("fishing together (s-fishtogether)", () => {
   it("rolls with a little more luck: the pool of a cast TOGETHER.luck luckier", () => {
-    const rod = rodByTier(3), at = { hour: 12, weather: "clear" as const, month: 9 };
+    const rod = rodByTier(3), at = { hour: 12, weather: "clear" as const, season: "autumn" as const };
     const rare = (luck: number) => { const pool = fishPoolFor("river", luck, rod, at), total = pool.reduce((s, e) => s + e.weight, 0);
       return pool.filter((e) => e.fish.rarity !== "common").reduce((s, e) => s + e.weight, 0) / total; };
     expect(rare(0.5 + TOGETHER.luck)).toBeGreaterThan(rare(0.5));
@@ -32,8 +33,8 @@ describe("server rolls match the tables", () => {
   it("fish: the reel's weighted pool for the water, rod, cast luck, hour and weather", () => {
     const N = 20_000, random = seededRandom(7), rod = rodByTier(3);
     const got = tally(Array.from({ length: N }, () => fishRoll("river", 1, rod, NOON, "rain", random).fish.key));
-    // Max cast: luck 1 + the max-cast bonus; rain is "rain" to the reel; September.
-    const pool = fishPoolFor("river", 1.3, rod, { hour: 12, weather: "rain", month: 9 });
+    // Max cast: luck 1 + the max-cast bonus; rain is "rain" to the reel; NOON's season.
+    const pool = fishPoolFor("river", 1.3, rod, { hour: 12, weather: "rain", season: seasonBlend(NOON).season });
     const total = pool.reduce((s, e) => s + e.weight, 0);
     expect([...got.keys()].every((k) => pool.some((e) => e.fish.key === k))).toBe(true);
     for (const { fish, weight } of pool) expect(close((got.get(fish.key) ?? 0) / N, weight / total, N), fish.key).toBe(true);
@@ -44,12 +45,15 @@ describe("server rolls match the tables", () => {
       const random = seededRandom(5);
       return new Set(Array.from({ length: 6000 }, () => fishRoll("river", 1, rodByTier(3), new Date(iso), "clear", random).fish.key));
     };
-    const may = keys("2026-05-15T16:00:00Z"), october = keys("2026-10-15T16:00:00Z");
+    // By the island's season: December 5 is still autumn (winter starts on the 21st), so the salmon still bites.
+    const may = keys("2026-05-15T16:00:00Z"), october = keys("2026-10-15T16:00:00Z"), december = keys("2026-12-05T17:00:00Z");
     expect(may.has("fish_salmon")).toBe(false);
     expect(october.has("fish_salmon")).toBe(true);
-    const outOfSeason = (month: number, got: Set<string>) => [...got].filter((k) => { const sp = ROSTER.find((s) => s.key === k); return !!sp?.months.length && !sp.months.includes(month); });
-    expect(outOfSeason(5, may)).toEqual([]);
-    expect(outOfSeason(10, october)).toEqual([]);
+    expect(december.has("fish_salmon")).toBe(true);
+    const outOfSeason = (season: Season, got: Set<string>) => [...got].filter((k) => { const on = seasonsOf(ROSTER.find((s) => s.key === k)?.months ?? []); return on.length > 0 && !on.includes(season); });
+    expect(outOfSeason("spring", may)).toEqual([]);
+    expect(outOfSeason("autumn", october)).toEqual([]);
+    expect(outOfSeason("autumn", december)).toEqual([]);
   });
 
   it("fish: sizes stay in the species range, skewed small", () => {

@@ -49,7 +49,7 @@ function DishPicture({ id }: { id: string }) {
 }
 
 /** The cover's one line (round 4, David: "say something like poetic but not claude"; options for him on the review page). */
-export const COVER_LINE = "Sit anywhere. The rice is still warm.";
+export const COVER_LINE = "Bring your best fish. Bancha knows what to do with it.";
 
 const MOST = { luck: Math.max(...SUSHI_MENU.map(d => d.buff.luck)), size: Math.max(...SUSHI_MENU.map(d => d.buff.size)) };
 /** What a meal does, a row a stat beside its photo: rarer fish and bigger fish (as dots of the menu's most), how long. */

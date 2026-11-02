@@ -9,9 +9,10 @@
  */
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type FocusEvent, type PointerEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Check, Moon, Sun, Sunrise, Sunset, X } from "lucide-react";
+import { Check, Flower2, Leaf, Moon, Snowflake, Sun, Sunrise, Sunset, X } from "lucide-react";
 import PixelImage from "@/components/economy/PixelImage";
 import { usePresence, useWorldDialog } from "@/lib/game/useWorldDialog";
+import type { Season } from "@/lib/game/season";
 import { GuiVariantContext } from "../variant";
 import p from "./pieces.module.css";
 
@@ -83,13 +84,23 @@ export function TipBody({ picture, rarity, kind, name, facts, children }: {
   </div>;
 }
 
-/** Twelve month dots, the `on` months filled and this month ringed (a hover card's season). */
-export function MonthDots({ on, now }: { on: readonly number[]; now: number }) {
-  return <span className={p.months} aria-label={on.length >= 12 ? "All year" : `In season: ${on.map(m => MONTHS[m - 1]).join(", ")}`}>
-    {MONTHS.map((m, i) => <i key={m} title={m} data-on={on.includes(i + 1) || undefined} data-now={i + 1 === now || undefined}>{m[0]}</i>)}
+/** The four seasons as their icons, each in its colour when `on` ([] = all year), the island's season now ringed (a hover card's seasons). */
+export function SeasonDots({ on, now }: { on: readonly Season[]; now: Season }) {
+  const all = on.length === 0;
+  return <span className={p.seasons} aria-label={all ? "All year" : `In season: ${on.map(s => SEASON_LOOK[s].word).join(", ")}`}>
+    {SEASON_ORDER.map(s => <span key={s} className={p.season} data-tint={SEASON_LOOK[s].tint} data-on={all || on.includes(s) || undefined} data-now={s === now || undefined}>
+      <i aria-hidden>{SEASON_LOOK[s].icon}</i><small>{SEASON_LOOK[s].word}</small>
+    </span>)}
   </span>;
 }
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const SEASON_ORDER: readonly Season[] = ["spring", "summer", "autumn", "winter"];
+/** Each season's icon, word and colour (the theme's --ui-tint-*), for the season chip and the season dots. */
+export const SEASON_LOOK: Record<Season, { word: string; icon: ReactNode; tint: Tint }> = {
+  spring: { word: "Spring", icon: <Flower2 />, tint: "rose" }, summer: { word: "Summer", icon: <Sun />, tint: "sun" },
+  autumn: { word: "Autumn", icon: <Leaf />, tint: "amber" }, winter: { word: "Winter", icon: <Snowflake />, tint: "ice" },
+};
+/** The theme's condition colours (--ui-tint-*): the seasons, the sky and the time of day each wear one. */
+export type Tint = "rose" | "sun" | "amber" | "ice" | "sky" | "rain" | "mist" | "leaf" | "night";
 
 // ── The day strip ───────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -156,14 +167,15 @@ export function TimeStrip<T extends StripItem>({ now, lanes, tip, label }: { now
 }
 
 /**
- * What is true right now, in a row of soft chips (the catch board's season, weather and time of day; David, 2026-10-29:
- * "include season and condition too"): an icon, a quiet word for what it is, and its value.
+ * What is true right now, in a row of chips (the catch board's season, weather and time of day; David, 2026-11-01: "make
+ * more intuitive and colors"): each in its own colour (`tint`), its icon on a solid tile, a quiet word for what it is,
+ * its value, and a quiet `note` when there is one ("Winter on Dec 21").
  */
-export function Conditions({ items, label = "Right now" }: { items: readonly { icon: ReactNode; label: string; value: ReactNode }[]; label?: string }) {
+export function Conditions({ items, label = "Right now" }: { items: readonly { icon: ReactNode; label: string; value: ReactNode; tint: Tint; note?: ReactNode }[]; label?: string }) {
   return <dl className={p.conditions} aria-label={label}>
-    {items.map(it => <div key={it.label} className={p.condition}>
+    {items.map(it => <div key={it.label} className={p.condition} data-tint={it.tint}>
       <dt><span className={p.conditionIcon} aria-hidden>{it.icon}</span><span>{it.label}</span></dt>
-      <dd>{it.value}</dd>
+      <dd>{it.value}{it.note ? <small>{it.note}</small> : null}</dd>
     </div>)}
   </dl>;
 }

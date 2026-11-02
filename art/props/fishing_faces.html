@@ -1,0 +1,52 @@
+<!doctype html>
+<!-- The painted faces of the fishing signs (art/props/build_fishing_signs.py), drawn as the approved round 4 mock
+     (specs/evidence/fishing-depth/r4/signs-mock.html; David, 2026-11-01: approved, "build them for the shores"):
+     a plaque per water (river, mountain pond, sea, deep sea) and the catch board's header. fishing_faces.mjs fills the
+     counts and screenshots each face to a PNG. The fish pictures are the game's own icons; the type is the game's Nunito. -->
+<html><head><meta charset="utf-8"><style>
+  @font-face { font-family: "Tethos Nunito"; src: url("../../web/public/fonts/nunito/Nunito-Variable.ttf"); font-weight: 200 1000; }
+  :root { --plank: #f4ecdc; --ink: #2b2b2b; --quiet: #7a7266; }
+  body { margin: 0; background: #000; font-family: "Tethos Nunito", sans-serif; color: var(--ink); }
+  .face { position: relative; box-sizing: border-box; width: 1024px; height: 736px; padding: 46px 52px 40px; background: var(--plank);
+    display: grid; grid-template-rows: auto auto 1fr auto auto; justify-items: center; align-items: center; text-align: center; gap: 14px; overflow: hidden; }
+  /* A little grain so the paint reads as painted boards: faint seams across, as the mock's plank. */
+  .face::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, transparent 0 182px, rgb(120 90 50 / 0.10) 182px 185px); }
+  .icon { display: grid; place-items: center; width: 150px; height: 150px; border-radius: 50%; color: #fff; box-shadow: inset 0 -8px 0 rgb(0 0 0 / 0.12); }
+  .icon svg { width: 82px; height: 82px; fill: none; stroke: currentColor; stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; }
+  .name { font: 900 92px/1 "Tethos Nunito"; letter-spacing: 0.01em; }
+  .how { color: var(--quiet); font: 700 38px/1.25 "Tethos Nunito"; max-width: 860px; }
+  .fish { display: flex; gap: 22px; }
+  .fish img { width: 118px; height: 118px; padding: 8px; box-sizing: border-box; border-radius: 26px; background: #fff; box-shadow: inset 0 0 0 5px var(--edge, #bbb); object-fit: contain; image-rendering: pixelated; }
+  .count { color: var(--quiet); font: 700 34px/1 "Tethos Nunito"; }
+  /* The catch board's header plank: its name in big letters between two fish. */
+  .header { box-sizing: border-box; width: 1536px; height: 256px; padding: 0 70px; background: var(--plank); display: flex; align-items: center; justify-content: center; gap: 46px; position: relative; }
+  .header::before { content: ""; position: absolute; inset: 14px; border: 6px solid #e47b33; border-radius: 22px; }
+  .header b { font: 900 150px/1 "Tethos Nunito"; letter-spacing: 0.02em; color: #24406e; }
+  .header img { width: 170px; height: 170px; object-fit: contain; image-rendering: pixelated; }
+</style></head><body>
+  <div class="face" id="river">
+    <span class="icon" style="background:#4f9bd0"><svg viewBox="0 0 24 24"><path d="M12 3c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11z"/></svg></span>
+    <span class="name">River</span><span class="how">Cast from the bank. Small fish all day, bigger ones at dusk.</span>
+    <span class="fish"><img src="../../web/public/assets/icons/fish_dace.webp"><img src="../../web/public/assets/icons/fish_salmon.webp" style="--edge:#4caf50"><img src="../../web/public/assets/icons/fish_pike.webp" style="--edge:#3b82f6"></span>
+    <span class="count" data-count="river">kinds</span>
+  </div>
+  <div class="face" id="pond">
+    <span class="icon" style="background:#6aa86a"><svg viewBox="0 0 24 24"><path d="M3 16c3-2 5-2 9 0s6 2 9 0"/><path d="M8 11l4-6 4 6"/></svg></span>
+    <span class="name">Mountain pond</span><span class="how">Still water up the mountain. Opens when the mountain does.</span>
+    <span class="fish"><img src="../../web/public/assets/icons/fish_goldfish.webp"><img src="../../web/public/assets/icons/fish_carp.webp" style="--edge:#4caf50"><img src="../../web/public/assets/icons/fish_golden_koi.webp" style="--edge:#e2b400"></span>
+    <span class="count" data-count="pond">kinds</span>
+  </div>
+  <div class="face" id="sea">
+    <span class="icon" style="background:#2f7fa8"><svg viewBox="0 0 24 24"><path d="M2 10c2.5-2 4.5-2 7 0s4.5 2 7 0 4.5-2 6 0"/><path d="M2 16c2.5-2 4.5-2 7 0s4.5 2 7 0 4.5-2 6 0"/></svg></span>
+    <span class="name">Sea</span><span class="how">Off the pier and the beach. Crabs and shells on the sea floor.</span>
+    <span class="fish"><img src="../../web/public/assets/icons/fish_sea_bass.webp"><img src="../../web/public/assets/icons/fish_squid.webp" style="--edge:#4caf50"><img src="../../web/public/assets/icons/fish_tuna.webp" style="--edge:#3b82f6"></span>
+    <span class="count" data-count="sea">kinds, sea floor too</span>
+  </div>
+  <div class="face" id="deep">
+    <span class="icon" style="background:#24406e"><svg viewBox="0 0 24 24"><path d="M4 7c2.5-2 4.5-2 7 0s4.5 2 7 0"/><path d="M12 11v9"/><path d="M8 16l4 4 4-4"/></svg></span>
+    <span class="name">Deep sea</span><span class="how">Out past the buoys, by boat. Big fish, long fights.</span>
+    <span class="fish"><img src="../../web/public/assets/icons/fish_blue_marlin.webp" style="--edge:#3b82f6"><img src="../../web/public/assets/icons/fish_oarfish.webp" style="--edge:#9b5de5"><img src="../../web/public/assets/icons/fish_coelacanth.webp" style="--edge:#e2b400"></span>
+    <span class="count">new: from the boat</span>
+  </div>
+  <div class="header" id="header"><img src="../../web/public/assets/icons/fish_salmon.webp"><b>Catch board</b><img src="../../web/public/assets/icons/fish_tuna.webp" style="transform: scaleX(-1)"></div>
+</body></html>

@@ -83,6 +83,6 @@ describe("the reel reads the island's weather on Toronto time (the server roll's
     vi.spyOn(Date.prototype, "getMonth").mockReturnValue(0);
     const ctx = currentFishingContext();
     expect(ctx.hour).toBeCloseTo(12.5);
-    expect(ctx.month).toBe(7);
+    expect(ctx.season).toBe("summer");
   });
 });

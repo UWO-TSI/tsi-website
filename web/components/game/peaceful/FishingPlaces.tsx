@@ -15,6 +15,9 @@ import { CalendarDays, Check, ChefHat, Clock, Coins, Fish, Gem, HandCoins, ListC
 import type { MonthBoard } from "@/lib/collections/service";
 import type { ChefView, FishingTasksView, SellEntry, TackleView, TaskView, WalletView } from "@/lib/wallet/service";
 import { prizeByKey, type Counter, type Pulls } from "@/lib/wallet/tackle";
+import { sellRows } from "@/lib/wallet/rules";
+import { readBag } from "@/lib/game/bagStore";
+import { getHud } from "@/lib/game/hudStore";
 import { httpEconomyTransport, type EconomyTransport } from "@/lib/wallet/transport";
 import { apiCall, newKey } from "@/lib/apiClient";
 import { iconUrl } from "@/lib/icons/keys";
@@ -35,20 +38,45 @@ const Money = ({ n, currency = "coins", size = 15 }: { n: number; currency?: str
   <span className={s.money}>{n.toLocaleString()}<CurrencyIcon currency={currency} size={size} /></span>;
 
 /**
+ * What the fish market last knew (the purse and your fish), so it opens on them at once and reads the server behind
+ * (David, 2026-11-01: "the sell should be instant and no loading required"); `prefetchMarket` fills it as you walk up.
+ */
+type Coins = Pick<WalletView, "coins" | "gems">;
+const SEEN = new WeakMap<EconomyTransport, { wallet?: Coins; fish?: SellEntry[] | null }>();
+const seenBy = (t: EconomyTransport) => { let m = SEEN.get(t); if (!m) SEEN.set(t, (m = {})); return m; };
+export function prefetchMarket(transport: EconomyTransport = httpEconomyTransport): void {
+  const seen = seenBy(transport);
+  transport.wallet().then(w => { seen.wallet = w; }, () => {});
+  transport.sellable().then(f => { seen.fish = f; }, () => {});
+}
+/** The purse to show before the server answers: the market's last, else the HUD's. */
+function knownPurse(transport: EconomyTransport): Coins | null {
+  const last = seenBy(transport).wallet, { coins, gems } = getHud();
+  return last ?? (transport === httpEconomyTransport && coins !== null ? { coins, gems: gems ?? 0 } : null);
+}
+/** Your fish before the server answers: the market's last list, else the bag the island already holds. */
+function knownFish(transport: EconomyTransport): SellEntry[] | null {
+  const view = transport === httpEconomyTransport ? readBag().view : null;
+  return seenBy(transport).fish ?? (view ? sellRows(view.items) : null);
+}
+
+/**
  * The purse, counting up or down when it changes (design bible UI 9: animate the change, never jump). `move` counts from
  * one balance to another; `add` counts on from what it shows now (a sale before the server answers); `settle` puts it
- * on the server's balance, counting only if that differs.
+ * on the server's balance, counting only if that differs. It opens on the last purse it knew and settles on the server's.
  */
 function useTill(transport: EconomyTransport) {
-  const [wallet, setWallet] = useState<WalletView | null>(null);
-  const coinsEl = useRef<HTMLSpanElement>(null), gemsEl = useRef<HTMLSpanElement>(null), timers = useRef<number[]>([]), now = useRef<WalletView | null>(null);
-  useEffect(() => { let live = true; transport.wallet().then(w => { if (live) { now.current = w; setWallet(w); } }, () => {}); return () => { live = false; }; }, [transport]);
+  const [wallet, setWallet] = useState(() => knownPurse(transport));
+  const coinsEl = useRef<HTMLSpanElement>(null), gemsEl = useRef<HTMLSpanElement>(null), timers = useRef<number[]>([]), now = useRef(wallet), moved = useRef(false);
+  // The server's purse, unless a sale already moved it (then the sale's answer settles it).
+  useEffect(() => { let live = true; transport.wallet().then(w => { if (live && !moved.current) { now.current = seenBy(transport).wallet = w; setWallet(w); } }, () => {}); return () => { live = false; }; }, [transport]);
   useEffect(() => () => timers.current.forEach(window.clearTimeout), []);
   const move = useCallback((currency: "coins" | "gems", from: number, to: number) => {
-    if (now.current) now.current = { ...now.current, [currency]: to };
+    moved.current = true;
+    if (now.current) now.current = seenBy(transport).wallet = { ...now.current, [currency]: to };
     setWallet(w => (w ? { ...w, [currency]: to } : w));
     countUp(currency === "coins" ? coinsEl.current : gemsEl.current, from, to, timers.current);
-  }, []);
+  }, [transport]);
   const add = useCallback((currency: "coins" | "gems", by: number) => { const from = now.current?.[currency]; if (from !== undefined && by) move(currency, from, from + by); }, [move]);
   const settle = useCallback((currency: "coins" | "gems", to: number) => { const from = now.current?.[currency]; if (from !== undefined && from !== to) move(currency, from, to); }, [move]);
   const purse = <Purse coins={wallet ? wallet.coins : null} gems={wallet ? wallet.gems : null} coinsRef={coinsEl} gemsRef={gemsEl} />;
@@ -56,9 +84,9 @@ function useTill(transport: EconomyTransport) {
 }
 type Till = ReturnType<typeof useTill>;
 
-/** Load once (and again on `reload`), keeping the last good data while a reload runs. */
-function useData<T>(load: () => Promise<T>) {
-  const [data, setData] = useState<T | null>(null), [error, setError] = useState<string | null>(null);
+/** Load once (and again on `reload`), keeping the last good data while a reload runs; `first`: what to show until then. */
+function useData<T>(load: () => Promise<T>, first: () => T | null = () => null) {
+  const [data, setData] = useState<T | null>(first), [error, setError] = useState<string | null>(null);
   const reload = useCallback(() => load().then(d => { setData(d); setError(null); }, e => setError(errText(e))), [load]);
   useEffect(() => { void reload(); }, [reload]);
   return { data, setData, error, setError, reload };
@@ -133,13 +161,15 @@ export function lessSold(rows: readonly SellEntry[], pending: Readonly<Record<st
 
 /**
  * Quick sell (David, 2026-10-29: "should still show the price per, and some basic details ... make sure quick sell is
- * isntant"): your fish as cards, each its picture, name and count, rung and water, and its price each. A tap sells one,
- * Sell all every one you haven't locked. The sale shows at once (the card counts down, the purse counts up) and the
- * server confirms after, one sale at a time in order; a refused sale puts the fish and the coins back.
+ * isntant"; 2026-11-01: "no loading required"): your fish as cards, each its picture, name and count, rung and water,
+ * and its price each. It opens on the fish it already knows (the last list, else the bag the client holds) and the
+ * server's list replaces them behind; nothing waits or spins. A tap sells one, Sell all every one you haven't locked.
+ * The sale shows at once (the card counts down, the purse counts up) and the server confirms after, one sale at a time
+ * in order; a refused sale puts the fish and the coins back.
  */
 function QuickSell({ transport, till }: { transport: EconomyTransport; till: Till }) {
-  const load = useCallback(() => transport.sellable(), [transport]);
-  const { data, setData, error, setError } = useData<SellEntry[]>(load);
+  const load = useCallback(() => transport.sellable().then(f => (seenBy(transport).fish = f)), [transport]);
+  const { data, setData, error, setError } = useData<SellEntry[]>(load, () => knownFish(transport));
   const [pending, setPending] = useState<Record<string, number>>({});
   const queue = useRef<Promise<void>>(Promise.resolve()), waiting = useRef(0);
   const fish = useMemo(() => lessSold((data ?? []).filter(e => FISHY.has(e.category)), pending), [data, pending]);
@@ -156,7 +186,7 @@ function QuickSell({ transport, till }: { transport: EconomyTransport; till: Til
         waiting.current--;
         bump(e.item_key, -qty);
         if (r.ok) {
-          setData(rows => rows && rows.map(x => (x.item_key === e.item_key ? { ...x, count: x.count - qty } : x)));
+          setData(rows => (seenBy(transport).fish = rows && rows.map(x => (x.item_key === e.item_key ? { ...x, count: x.count - qty } : x))));
           if (waiting.current === 0) till.settle("coins", r.to);
         } else {
           till.add("coins", -e.price_each * qty);
@@ -165,7 +195,7 @@ function QuickSell({ transport, till }: { transport: EconomyTransport; till: Til
       });
     }
   };
-  if (!data) return <Quiet>{error ?? "Counting your fish…"}</Quiet>;
+  if (!data) return error ? <Quiet>{error}</Quiet> : null;
   return <div className={s.place}>
     {error ? <StatusLine error>{error}</StatusLine> : null}
     {fish.length === 0 ? <div className={s.empty}><Fish size={40} aria-hidden /><Quiet>No fish in your bag.</Quiet></div> : <>

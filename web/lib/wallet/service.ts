@@ -3,12 +3,10 @@
  * decided here from server data; the database functions re-check and apply
  * them atomically. Clients name only what they want, never a price.
  */
-import { ROSTER } from "@/lib/collections/roster";
-import { FISH } from "@/lib/game/fishing";
 import { fnv1a } from "@/lib/game/weatherSystem";
 import { RODS, TACKLE, onShopShelf } from "@/lib/game/rods";
 import { CRAFTED_ITEMS } from "@/lib/crafting/recipes";
-import { dailySpecials, effectivePrice, isOnSale, ownedCounts, speciesClass, speciesSellPrice, TAB_OF, torontoDay, type ShopItem, type Special, chefOrder, fishingTasks, tastingWater, type FishingTask, type FishRequest } from "./rules";
+import { dailySpecials, effectivePrice, isOnSale, ownedCounts, speciesClass, sellRows, TAB_OF, type SellEntry, torontoDay, type ShopItem, type Special, chefOrder, fishingTasks, tastingWater, type FishingTask, type FishRequest } from "./rules";
 import { toFailure, type Result } from "@/lib/result";
 import { EconomyError, type DailyGift, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation, type ActiveBuff, type TastingSlot } from "./store";
 import { boxPool, welcomeDay, SUSHI_MENU, TASTING, type Dish, type MealBuff } from "./catalogue";
@@ -153,30 +151,8 @@ export async function buy(store: EconomyStore, m: string, input: { item_id: stri
   });
 }
 
-export interface SellEntry {
-  item_key: string;
-  name: string;
-  category: string;
-  rarity: string;
-  count: number;
-  price_each: number;
-  /** Locked in the bag: shown, never sold (unlock it in the bag first). */
-  locked: boolean;
-}
-const FISH_NAME = new Map(FISH.map((f) => [f.key, f.name]));
-export const sellList = (store: EconomyStore, m: string) =>
-  run<SellEntry[]>(async () => {
-    const rows = await store.collections(m);
-    return rows
-      .flatMap((r) => {
-        const cls = speciesClass(r.item_key);
-        const price = speciesSellPrice(r.item_key);
-        if (!cls || !price) return [];
-        const name = ROSTER.find((s) => s.key === r.item_key)?.name ?? FISH_NAME.get(r.item_key) ?? r.item_key;
-        return [{ item_key: r.item_key, name, category: cls.category, rarity: cls.rarity, count: r.count, price_each: price, locked: r.locked === true }];
-      })
-      .sort((a, b) => b.price_each - a.price_each || a.name.localeCompare(b.name));
-  });
+export type { SellEntry };
+export const sellList = (store: EconomyStore, m: string) => run<SellEntry[]>(async () => sellRows(await store.collections(m)));
 
 export const sell = (store: EconomyStore, m: string, input: { item_key: string; qty: number; idempotency_key: string }) =>
   run(() => store.sell(m, input.item_key, input.qty, input.idempotency_key));

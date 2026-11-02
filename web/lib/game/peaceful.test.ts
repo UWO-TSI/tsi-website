@@ -5,7 +5,7 @@ import { RARITY_RANK } from "@/lib/rarity";
 import { ROSTER } from "@/lib/collections/roster";
 
 const noon = { hour: 12, weather: "clear" };
-const moment = { hour: 12, month: 9, weather: "clear" as const };
+const moment = { hour: 12, month: 9, season: "autumn" as const, soon: "autumn" as const, weather: "clear" as const };
 
 describe("fish pools", () => {
   it("keeps pond species in ponds and sea species at sea", () => {
@@ -28,16 +28,16 @@ describe("fish pools", () => {
 
 describe("what's out", () => {
   it("lists each fish once, under the first water it bites in, and only waters given", () => {
-    const out = fishOut(["sea", "river"], { ...noon, month: 9 });
+    const out = fishOut(["sea", "river"], { ...noon, season: "autumn" });
     expect(new Set(out.map(o => o.fish.key)).size).toBe(out.length);
     expect(out.some(o => o.water === "sea") && out.some(o => o.water === "river")).toBe(true);
     expect(out.every(o => o.water !== "pond")).toBe(true);
-    expect(fishOut([], { ...noon, month: 9 })).toEqual([]);
-    expect(fishOut(["pond"], { ...noon, month: 9 }).every(o => ROSTER.find(s => s.key === o.fish.key)?.biome === "pond")).toBe(true);
+    expect(fishOut([], { ...noon, season: "autumn" })).toEqual([]);
+    expect(fishOut(["pond"], { ...noon, season: "autumn" }).every(o => ROSTER.find(s => s.key === o.fish.key)?.biome === "pond")).toBe(true);
   });
   it("by day: everything out at some hour or weather of the day, more than at noon", () => {
-    const day = fishOutToday(["sea", "river"], 9).map(o => o.fish.key);
-    const now = fishOut(["sea", "river"], { ...noon, month: 9 }).map(o => o.fish.key);
+    const day = fishOutToday(["sea", "river"], "autumn").map(o => o.fish.key);
+    const now = fishOut(["sea", "river"], { ...noon, season: "autumn" }).map(o => o.fish.key);
     expect(now.every(k => day.includes(k))).toBe(true);
     expect(day.length).toBeGreaterThan(now.length);
   });

@@ -277,18 +277,20 @@ export const SELL_BARREL = "sell-barrel";
  */
 export const FISH_MARKET = "fish-market";
 /**
- * The boards' sizes (the slate's width and height, and how high its foot stands): the catch board is the big one
- * (round 4, David: "remodle the catch board and make it bigger, put it somewhere where it makes sense and easy to see").
+ * The boards' model (art/props/build_fishing_signs.py; round 5, David: "remodel this board so its better more eye
+ * catching") and their sizes: the slate's width and height and how high its foot stands, the catch board's the model's
+ * own (round 4, David: "remodle the catch board and make it bigger"), the task board the same model at 0.625.
  */
-export const BOARD = { catch: { w: 1.6, h: 1.05, foot: 0.85 }, tasks: { w: 1.0, h: 0.72, foot: 0.55 } } as const;
+export const FISH_BOARD_URL = "/assets/game/props/fish-board.glb";
+export const BOARD = { catch: { w: 1.6, h: 1.05, foot: 0.85 }, tasks: { w: 1.0, h: 0.65625, foot: 0.53125 } } as const;
 export type BoardSize = (typeof BOARD)[keyof typeof BOARD];
 /**
- * Each turns its face (`turn` past half a turn) toward where the game camera looks in from, so the chalk reads on screen.
- * The catch board stands on the boardwalk just past the sell stall, square to the camera (round 4: of three spots shot,
- * the grass at the wharf's edge, before the market's door, and here, only here is it in full view while you sell and
- * can you read it without the market's roof and marlin between you and the camera; specs/evidence/fishing-depth/r4/spots/).
+ * Each turns its face by `turn` from the market's. The catch board stands right of the carts and left of the market,
+ * facing the deck (round 5, David: "place it to the right side of the stands, to left side of the fish shot and faced
+ * towards the deck area"; of round 4's spots "c is the closest"): between spot C and the market's front, clear of the sell
+ * stall and the walk past it, its face toward the boardwalk and turned a little to the camera so the chalk reads.
  */
-export const MARKET_BOARDS = { catch: { x: 2.53, z: 10.42, turn: Math.PI - 0.2 }, tasks: { x: -8.2, z: 6.5, turn: Math.PI + 0.55 } } as const;
+export const MARKET_BOARDS = { catch: { x: -0.44, z: 6.36, turn: 2.173 }, tasks: { x: -8.2, z: 6.5, turn: Math.PI + 0.55 } } as const;
 export interface BoardSpot { x: number; z: number; yaw: number }
 /** Where the market's boards stand in the world and which way they face; null on a world without the market. */
 export function marketBoardsOf(props: readonly { model?: string; x: number; z: number; yaw?: number }[]): { catch: BoardSpot; tasks: BoardSpot } | null {
@@ -296,6 +298,31 @@ export function marketBoardsOf(props: readonly { model?: string; x: number; z: n
   if (!m) return null;
   const d = { x: m.x, z: m.z, yaw: m.yaw ?? 0 }, at = (b: { x: number; z: number; turn: number }) => ({ ...dockToWorld(d, b.x, b.z, { x: 0, z: 0 }), yaw: d.yaw + b.turn });
   return { catch: at(MARKET_BOARDS.catch), tasks: at(MARKET_BOARDS.tasks) };
+}
+/**
+ * The water signs (round 5; David approved round 4's mock: "build them for the shores"), one where each water is fished:
+ * the river's by the washed-out bridge on the village bank, the mountain pond's at the foot of the mountain way (its
+ * water is up the mountain, shut for now), the sea's on the jetty's platform by the middle gangway, the deep sea's at the
+ * head of the jetty's middle pier, where the boat goes out. Each stands in its anchor's frame (an object of the world:
+ * the jetty, the bridge, the rockslide) so it moves with it; `turn` is its face's turn from the anchor's, most toward the
+ * game camera. E at one reads the catch board.
+ */
+export const WATER_SIGNS = [
+  { water: "river", anchor: "bridge-river", x: 3.4, z: 2.6, turn: 1.171 },
+  { water: "pond", anchor: "slide-mountain", x: -2.16, z: 6.52, turn: 3.042 },
+  { water: "sea", anchor: "wharf", x: -2.4, z: 12.6, turn: 5.112 },
+  { water: "deep", anchor: "wharf", x: -1.8, z: 0.9, turn: 5.112 },
+] as const;
+export type SignWater = (typeof WATER_SIGNS)[number]["water"];
+export const waterSignUrl = (water: SignWater) => `/assets/game/props/water-sign-${water}.glb`;
+/** Where the water signs stand and face, for the anchors this world has. */
+export function waterSignsOf(objects: readonly { id: string; x: number; z: number; yaw?: number }[]): (BoardSpot & { water: SignWater })[] {
+  return WATER_SIGNS.flatMap(sg => {
+    const a = objects.find(o => o.id === sg.anchor);
+    if (!a) return [];
+    const d = { x: a.x, z: a.z, yaw: a.yaw ?? 0 };
+    return [{ water: sg.water, ...dockToWorld(d, sg.x, sg.z, { x: 0, z: 0 }), yaw: d.yaw + sg.turn }];
+  });
 }
 /**
  * The tackle shop's counter (David: "the tackle shop should be like a gatcha roll"): its door on the porch, in the shop's
