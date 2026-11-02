@@ -416,3 +416,15 @@ export function springStep(x: number, v: number, target: number, k: number, c: n
   SPRING_OUT.x = x; SPRING_OUT.v = v;
   return SPRING_OUT;
 }
+
+/**
+ * The body's lean with the ground speed's changes (vb-anim round 2, David: "movement should not feel so linear"): it
+ * tips into a start, and on a stop it runs on over the planted feet, rocks back past upright and settles (an
+ * underdamped spring). `accel`: the change of ground speed (u/s per s); `amount`: the Juice panel's `lean`. Returns
+ * springStep's scratch { x: pitch in radians, + forward; v }.
+ */
+export const LEAN = { start: 0.0016, stop: 0.0026, max: 0.16, k: 130, c: 9 };
+export function leanStep(x: number, v: number, accel: number, dt: number, amount: number) {
+  const want = amount * Math.min(LEAN.max, accel > 0 ? accel * LEAN.start : -accel * LEAN.stop);
+  return springStep(x, v, want, LEAN.k, LEAN.c, dt);
+}
