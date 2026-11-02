@@ -40,7 +40,7 @@ Worktree `.claude/worktrees/tool-pipeline`, branch `game/tool-pipeline`, cut fro
 
 ## Status
 
-Round 1 done on `game/tool-pipeline` (the commit "[build] tool-pipeline round 1"), not yet reviewed or merged.
+Round 1 done on `game/tool-pipeline` at 576859f6, not yet reviewed or merged.
 - `art/pipeline/profile.py` (headless: GLBs in, five ortho views as webp and a dimensions JSON out), `collage.py`, `families.sh` (`profile` reruns all four families, then the collages), `blueprint.py` (a turnaround sheet split into cropped views at a set length, silhouettes in `blueprint.json`; `--model` renders the model over them and scores the overlap). Self-tested: rod-3's own renders as a sheet score 0.83 to 0.97, pike's side 0.98.
 - Collages: `art/pipeline/out/rods/collage.webp`, `out/fish/collage.webp`, `out/gear/tools/collage.webp`, `out/gear/weapons/collage.webp`, with every view and JSON beside them (JSONs unignored in `.gitignore`).
 - Style sheets `rod-style.md`, `fish-style.md`, `gear-style.md`; prompts in `prompts/` (Carrot, Precision, Training, Riptide, Titanium, Tempest; fish and gear templates); `tools.md` with step 4 as Blender from blueprints (Meshy paused) and step 6b (pitch page); CODEMAP row and design bible pointer (Models rule 3).
