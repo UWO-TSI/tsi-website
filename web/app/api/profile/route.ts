@@ -40,6 +40,8 @@ const ProfileUpdateSchema = z.object({
   year: z.string().max(20).nullable().optional(),
   program: z.string().max(100).nullable().optional(),
   hometown: z.string().max(100).nullable().optional(),
+  // The island ID (HQ, IdCard.tsx; migration 20261101230000).
+  pronouns: z.string().trim().max(24).nullable().optional(),
   phone: z.string().max(20).nullable().optional(),
   preferred_email: z.string().email().nullable().optional(),
   github_username: z.string().max(50).nullable().optional(),

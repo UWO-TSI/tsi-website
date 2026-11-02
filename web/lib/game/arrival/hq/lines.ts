@@ -50,17 +50,21 @@ export const WREN_LINES: Readonly<Record<string, readonly string[]>> = {
   menu: [
     "Last thing, then you're free. {esc}",
   ],
+  // Straight after Esc, before her farewell (David's v5 review: "explain that you click to be in locked camera and esc to
+  // be free cam"): the menu, and the camera. Left out on a touch screen (no mouse).
+  camera: [
+    "That's your menu. Esc brings it up whenever you need it.",
+    "Out on the island, click and your mouse turns the camera. Esc lets it go again.",
+  ],
   // The visit's end, Bram's tour already done: your first catch to Juno at the museum (m1). Things in HQ to look at.
   // Her look-round-HQ line (the notice board, the trophy case, the Founder's desk) is out until later (David's playtest).
   farewell: [
-    "That's your menu. It's there whenever you need it.",
     "That's you registered. Bring your first catch to Juno at the museum. She'll show you round.",
     "Oh, and you'll want more than a rod. Odile has a spare net and Pim always has a shovel. Ask them.",
     "[happy] Welcome to Tethos Island, {name}.",
   ],
   // The visit's end with Bram's tour still on (HQ first): things in HQ to look at, then he's waiting outside.
   farewellTour: [
-    "That's your menu. It's there whenever you need it.",
     "[happy] That's you sorted, {name}. Welcome to Tethos Island.",
     "Bram's waiting for you outside. He'll show you the rest of the island.",
     "And once you've a first catch, bring it to Juno at the museum. She'll show you round.",
@@ -103,9 +107,10 @@ export const FLY_CARDS = {
 export type FlyTarget = keyof typeof FLY_CARDS;
 
 /**
- * Your island ID (the front desk): Alice asks, prints it and stamps it. Only existing profile fields, ones that mean
- * something to anyone, in the club or not (David's playtest: "ask for stuff that matters"): your world name, your
- * birthday (private), where you're from (`hometown`) and a line about you (`bio`). Your world name only.
+ * Your island ID (the front desk): Alice asks, prints it and stamps it. What a player card means in a game you share
+ * with others (David's v5 review: "remove like where youre from and put stuff thats important in game, like
+ * pronouns"): your world name, your pronouns, your birthday (private) and a line about you (`bio`), plus your friend
+ * code. Your world name only, never a real name.
  */
 export const ID_CARD = {
   eyebrow: "HQ front desk",
@@ -118,9 +123,11 @@ export const ID_CARD = {
   nameHint: "The only name anyone sees here.",
   birthday: "Birthday",
   birthdayHint: "Optional. Only HQ sees it.",
-  from: "From",
-  fromHint: "Optional. Where you call home.",
-  fromSample: "Your hometown",
+  pronouns: "Pronouns",
+  pronounsHint: "Optional. Shown with your world name.",
+  pronounsSample: "she/her, he/him, they/them",
+  /** Offered as you type (any other is fine too). */
+  pronounsPicks: ["she/her", "he/him", "they/them", "she/they", "he/they", "any pronouns"],
   about: "About you",
   aboutHint: "Optional. One line about you, on your profile.",
   aboutSample: "Say hi in a line",

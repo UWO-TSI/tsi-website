@@ -31,7 +31,7 @@ describe("the HQ visit with Alice (row 312)", () => {
       "say:events", "card:checkin", "wait:checkin",
       "say:tour", "card:tour", "wait:tour",
       "say:menu", "wait:esc",
-      "say:farewell",
+      "say:camera+farewell",
     ]);
     expect(playThrough().s.done).toBe(true);
   });
@@ -100,10 +100,16 @@ describe("the HQ visit with Alice (row 312)", () => {
     expect(HQ_END.at(-1)).toBe("farewell");
   });
 
+  it("explains the menu and the camera straight after Esc (David's v5 review: click to lock it, Esc to free it)", () => {
+    expect(HQ_END[0]).toBe("camera");
+    expect(WREN_LINES.camera.join(" ")).toMatch(/menu/);
+    expect(WREN_LINES.camera.join(" ")).toMatch(/click.*camera.*Esc/);
+  });
+
   it("with Bram's tour still on (HQ first), sends you back out to him", () => {
     let s = newVisit();
     for (let g = 0; g < 50 && !(s.beat >= HQ_SCRIPT.length); g++) s = visitEvent(s, visitCue(s)?.kind === "say" ? "said" : waitingFor(s)!);
-    expect(visitCue(s, HQ_SCRIPT, HQ_END_TOUR)).toEqual({ kind: "say", keys: ["farewellTour"] });
+    expect(visitCue(s, HQ_SCRIPT, HQ_END_TOUR)).toEqual({ kind: "say", keys: ["camera", "farewellTour"] });
     expect(WREN_LINES.farewellTour.join(" ")).toMatch(/Bram's waiting for you outside/);
   });
 
@@ -127,7 +133,7 @@ describe("the HQ visit with Alice (row 312)", () => {
     expect(FOUNDER_PLAQUE).toBeNull();
     const tour = tourSteps({ wheel: "tab", emote: "g", hud: "h", bag: "i", collection: "b", quests: "j", map: "m", mail: "l" });
     const all = [...Object.values(WREN_LINES).flat(), ...Object.values(HQ_TRACKER), ...LORE_CARD.pages.flatMap(p => [p.title, p.text]),
-      ...Object.values(FLY_CARDS).flatMap(c => [c.name, c.text]), ...Object.values(ID_CARD), ...CHECKIN_CARD.steps.filter(x => !x.includes("{host}")), CHECKIN_CARD.note,
+      ...Object.values(FLY_CARDS).flatMap(c => [c.name, c.text]), ...Object.values(ID_CARD).flat(), ...CHECKIN_CARD.steps.filter(x => !x.includes("{host}")), CHECKIN_CARD.note,
       ...tour.map(t => t.title), ...Object.values(TOOL_LINES).flatMap(t => [t.given, t.done, ...t.offer, ...t.during])];
     for (const line of all) {
       expect(line, line).not.toMatch(/—/);

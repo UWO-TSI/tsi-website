@@ -53,6 +53,8 @@ body, [data-ui-theme="clean"] {
   --ui-word-gem: #8b4fc9;
   --ui-word-place: #b4582e;
   --ui-word-item: #1d8577;
+  --ui-word-person: #c23d86;
+  --ui-word-act: #cf4a2e;
   --ui-stage: radial-gradient(ellipse 24% 4.5% at 50% 87%, rgb(0 0 0 / 0.17), rgb(0 0 0 / 0.07) 55%, transparent 100%),
     linear-gradient(180deg, #ffffff 0%, #ffffff 60%, #f5f5f5 84%, #eeeeee 100%);
   /* The rarity ladder (specs/design-bible.md UI 7): a thin outline or edge, never a fill. Divine is the holo. */

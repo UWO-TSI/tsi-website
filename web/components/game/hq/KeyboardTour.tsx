@@ -6,17 +6,21 @@
  * keyboard; there's no Next. Every key you touch sinks on the drawing too. Each step done brings its part of your
  * screen in, in its real place (`onShow`: the HUD's coins, the chat, the bag, the menu's entries, the minimap), which
  * springs in and rings (SlotPop): the HUD builds up a piece at a time. While it's up it takes every key, so nothing
- * opens behind it. The steps and words: lib/game/arrival/hq/uiTour.ts. `onDone` after the last, or on Skip.
+ * opens behind it. While a key the tour knows is down, a peek at what it brings up pops on the card's right (KeyPeek:
+ * the wheel spinning and picking, the bag's bar filling...; David's v5 review) and fades when you let go, after a beat
+ * for a quick press. The steps and words: lib/game/arrival/hq/uiTour.ts. `onDone` after the last, or on Skip.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check } from "lucide-react";
 import { Keycap } from "@/components/gui";
-import { GhostButton, KeyBoard, SlotPop, Spotlight, boardLabel } from "@/components/gui/flat";
+import { GhostButton, KeyBoard, KeyPeek, SlotPop, Spotlight, boardLabel, type PeekKind } from "@/components/gui/flat";
 import { AudioManager } from "@/lib/game/audio";
 import { HOLD_MS, UI_TOUR, tourInput, tourSteps, tourTick, type HudPiece, type TourKeys, type TourProgress } from "@/lib/game/arrival/hq/uiTour";
 
 /** A finished step stays lit this long before the next key lights up (ms); the last one, before it closes. */
 const NEXT_MS = 650, END_MS = 1100;
+/** A peek stays at least this long (a quick press still shows it), then fades out over PEEK_FADE_MS. */
+const PEEK_MIN_MS = 1100, PEEK_FADE_MS = 240;
 const START: TourProgress = { step: 0, holdFrom: null };
 /** Where each piece lands on screen (DefaultIslandWorld draws it there once shown). */
 const PIECE_AT: Record<HudPiece, readonly string[]> = {
@@ -43,6 +47,9 @@ export default function KeyboardTour({ open, keys, onShow, onDone }: {
   useEffect(() => { doneRef.current = onDone; showRef.current = onShow; }, [onDone, onShow]);
   /** The piece just brought in (it springs into its place). */
   const [popped, setPopped] = useState<HudPiece | null>(null);
+  /** The peek showing (the step whose key went down), and whether it's fading out. */
+  const [peek, setPeek] = useState<{ kind: PeekKind; out: boolean } | null>(null);
+  const peekAt = useRef({ since: 0, timers: [] as number[] });
   // A step done: lit a moment, its piece in, then the next key (or, after the last, the tour closes).
   const complete = useRef((from: number) => {
     setWon(from); setFill(0);
@@ -61,6 +68,17 @@ export default function KeyboardTour({ open, keys, onShow, onDone }: {
       if (isDown) { e.preventDefault(); e.stopImmediatePropagation(); }
       setDown(d => { const n = new Set(d); if (isDown) n.add(k); else n.delete(k); return n; });
       if (isDown && !e.repeat) AudioManager.playSFX("keyswitch", { gain: 0.5 });
+      // The peek: in on the key's press, out once it's let go (after PEEK_MIN_MS in all).
+      const known = live.current.steps.find(s => s.key === k);
+      if (known && !e.repeat) {
+        const pk = peekAt.current;
+        pk.timers.forEach(t => window.clearTimeout(t)); pk.timers = [];
+        if (isDown) { pk.since = performance.now(); setPeek({ kind: known.id as PeekKind, out: false }); }
+        else {
+          const wait = Math.max(0, PEEK_MIN_MS - (performance.now() - pk.since));
+          pk.timers.push(window.setTimeout(() => setPeek(v => v && { ...v, out: true }), wait), window.setTimeout(() => setPeek(null), wait + PEEK_FADE_MS));
+        }
+      }
       const { p: cur, won: w } = live.current;
       if (w !== null) return;
       const next = tourInput(cur, steps, { type: isDown ? "down" : "up", key: k, repeat: e.repeat, at: performance.now() });
@@ -69,7 +87,7 @@ export default function KeyboardTour({ open, keys, onShow, onDone }: {
       if (next.holdFrom === null) setFill(0);
       if (next.step > cur.step) complete.current(cur.step);
     };
-    const blur = () => setDown(new Set());
+    const blur = () => { setDown(new Set()); setPeek(null); };
     window.addEventListener("keydown", on, true);
     window.addEventListener("keyup", on, true);
     window.addEventListener("blur", blur);
@@ -97,6 +115,7 @@ export default function KeyboardTour({ open, keys, onShow, onDone }: {
   return <>
     <Spotlight light open={open} label={`${UI_TOUR.eyebrow}: ${step.title}`} lead={lead} steps={{ count: steps.length, at: shown }}
       testId="ui-tour" dataset={{ "data-step": step.id, "data-won": won !== null ? "" : undefined }}
+      aside={peek && <KeyPeek key={peek.kind} kind={peek.kind} out={peek.out} testId="ui-tour-peek" />}
       footer={<GhostButton onClick={() => { setP(START); setWon(null); setPopped(null); onDone(); }} data-testid="ui-tour-skip">{UI_TOUR.skip}</GhostButton>}>
       <KeyBoard lit={step.key} hold={step.hold} fill={fill} won={won !== null} done={steps.slice(0, p.step).map(s => s.key)} down={down} />
     </Spotlight>
