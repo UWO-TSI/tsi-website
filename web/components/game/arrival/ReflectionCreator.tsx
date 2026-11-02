@@ -146,7 +146,7 @@ export default function ReflectionCreator({ phase, initial, askName, onYes }: {
     <Canvas className={s.canvas} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={tierDpr(graphics.liteMode, [1, 2])} camera={{ fov: 40, near: 0.05, far: 200 }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace;
-        if (process.env.NODE_ENV !== "production") (window as unknown as { __reflectGl?: THREE.WebGLRenderer }).__reflectGl = gl;
+        if (("development" as string) !== "production") (window as unknown as { __reflectGl?: THREE.WebGLRenderer }).__reflectGl = gl;
       }}>
       <ReflectionScene look={water.shown} before={water.before} waves={waves} clock={clock} view={view} />
     </Canvas>

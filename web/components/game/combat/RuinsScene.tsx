@@ -291,7 +291,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
   useEffect(() => {
     player.current.set(...spawn); resetEncounter(); publishCombat();
     // Dev (screenshots): hold a telegraph with __combat.freeze, stage mission steps with __combatDev.
-    if (process.env.NODE_ENV !== "production") Object.assign(window, { __combatDev: { player: player.current, missionEvent: (ev: Parameters<typeof missionEvent>[1]) => missionEvent(combat.rt, ev), spawnWave: (id: string, i: number) => spawnWave(combat.rt, WAVES[id][i]),
+    if (("development" as string) !== "production") Object.assign(window, { __combatDev: { player: player.current, missionEvent: (ev: Parameters<typeof missionEvent>[1]) => missionEvent(combat.rt, ev), spawnWave: (id: string, i: number) => spawnWave(combat.rt, WAVES[id][i]),
       /** One enemy of a type at (x, z), hunting you (evidence). */
       spawn: (type: string, x: number, z: number, id: string) => spawnWave(combat.rt, [{ id, type, x, z }]),
       /** The whole spawn table back at its spots, dens and clouds as packs (evidence). */
@@ -302,7 +302,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
   useEffect(() => () => setAimZoom(0), []); // a scope left up doesn't follow you out of the ruins
   // Dev (screenshots): where a ground point is on the page, to aim the mouse at an enemy.
   useEffect(() => {
-    if (process.env.NODE_ENV === "production") return;
+    if (("development" as string) === "production") return;
     const w = window as unknown as { __combatDev?: Record<string, unknown> };
     // Half a unit above the ground (screenOf lifts 0.7).
     w.__combatDev = { ...w.__combatDev, screenOf: (x: number, z: number) => screenOf([x, ruins.ground(x, z) - 0.2, z], camera, gl.domElement) };

@@ -38,7 +38,7 @@ export function digScuff(seed: number): THREE.BufferGeometry {
 
 /** How long a twitch lasts (s), and the quiet between them (s, from its seed). */
 export const TWITCH_S = 0.4;
-const twitchEvery = (seed: number) => 3.5 + hash01(seed, 90) * 3.5;
+const twitchEvery = (seed: number) => 2.5 + hash01(seed, 90) * 2.5;
 
 /**
  * The scuff twitching a little now and then (David's r3 review of the sand's mark: "make it move or twitch a lil bit"):
@@ -49,5 +49,5 @@ export function digTwitch(t: number, seed: number): { scale: number; turn: numbe
   const every = twitchEvery(seed), k = (t + hash01(seed, 91) * every) % every / TWITCH_S;
   if (k >= 1) return { scale: 1, turn: 0 };
   const fade = 1 - k;
-  return { scale: 1 + 0.16 * Math.sin(k * Math.PI * 3) * fade, turn: 0.14 * Math.sin(k * Math.PI * 4) * fade };
+  return { scale: 1 + 0.24 * Math.sin(k * Math.PI * 3) * fade, turn: 0.22 * Math.sin(k * Math.PI * 4) * fade };
 }

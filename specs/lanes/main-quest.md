@@ -84,36 +84,35 @@ Redo:
 
 ## Status
 
-**Round 3** (game/main-quest; merged origin/main f0be2c5e). Done:
-- Merge: the new world only. residentsHere always swaps the lines (no village filter); ROSTER always has BURIED_FINDS;
-  inWorld deleted; releasedChapters and villageNodes have no world param (chapters with world "village" are never offered);
-  useMainQuest has no `on`; QuestTracker has no `dropdown` prop; deleted chapterQuest, toolQuest, the village tool and
-  sweeper lines, VillageLife's sprite cracks and holes, HOLE_TINT, FLASH_MS.xp, villagePinned.test.tsx and its fixture.
-  Took main's residentRoutine (schedules renamed pond and path) and dropped STAND_IN.
-- Arrow: 28 px round button, the upright Navigation2 arrow centred in it (measured: icon offset 0, button on the row's middle).
-- Sand mark: the same scuff as the dirt (digMark.ts digScuff for both; crackStar deleted), sand tone at 0.25 opacity; the
-  copy says "a scuffed patch of sand or dirt" (lines.ts, mainQuest.ts, defaults.ts, the unapplied r2 migration).
-- Reward pop: the old card's shape in the flat palette: a soft rounded white card with grain (--ui-grain) and depth, the
-  picture on a round dish ringed in the rarity, a glint on rare and up (--ui-glint), facts as pills (the rarity pill
-  outlined), divine holo on the edge, the dish and the pill; contraband dark. RewardPop takes lib/rarity's Rarity
-  (LadderRarity deleted). The broken sudo has no size (roster size null), so no "cm".
-- HUD bars: kit StatBar/StatBars (flat), game HudBars.tsx top left above the Bag: health (combat hp/maxHp) and XP
-  (hudStore levelProgress) always on; the level badge only in the UI view; stamina on its own pill while below full,
-  out 1.5 s after full, warm and shaking once when run out. TopCluster's level/XP chip is deleted (the bars replace it).
-  The XP bar fills to its end on a level up, fires `tsi:level-filled`, rolls over; LevelUpCard shows on that (after a
-  chapter's check-mark, never over it) for any level up; a quest unlock is listed only for a chapter's level up.
-- Stamina (movement/sim.ts MOVE_TUNING stamina*): staminaSprint 0.1/s (10 s), staminaDash 0.2, staminaGlide 0.04/s
-  (25 s), staminaRefill 1/3 per s (3 s from empty) after staminaPause 0.6 s, staminaWinded 0.2. Emptied: sprint is a
-  walk, no dash, no glider (an open glide folds). Walking and talking cost nothing. The avatar writes hudLive each frame.
-  No new move event (the net protocol's event list is unchanged); bots run the same sim.
-- Migrations, in order, none applied: 20261028144337_main_quest, 20261028153805_main_quest_r2 (unapplied, so its dig hint
-  was edited), 20261029064914_catalogue_seed (generated after main's 20261029062423: the buried finds, the sudo without
-  a size, the docent). Smokes: main_quest_smoke.sql, main_quest_r2_smoke.sql.
+**Round 4** (game/main-quest, on origin/main 4fb4b8cc). Done, waiting for David's review (evidence specs/evidence/main-quest/r4/):
+- Vitals (kit `components/gui/flat/vitals.tsx` Vitals, VitalBar; game `HudBars.tsx`): one soft white card in the top left
+  corner, level with the quest line (DefaultIslandWorld.module.css `.hudBars`; the place name `.heading` moved under it,
+  top 86px; on touch, `data-compact`, they sit under the menu button and the place name under them; the compact
+  `.bagButtons` column lets taps through except on its buttons, via `:where()` so the hidden Bag's pointer-events none
+  still wins: before, a hidden Bag button sat over the ring and a tap opened the bag). Health and stamina stacked, both always there (stamina rests at half opacity 1.5 s after it's full, shakes
+  once when winded); a class's shield or mana is one more VitalBar row (a kind, an icon, two tokens). Each fill slides
+  full colour > shared amber > low colour by its value (CSS color-mix on a registered `--vital`, so colour eases with
+  the fill); a notch every 20 points of `max` (TALLY). Tokens: --ui-health, --ui-health-low, --ui-stamina,
+  --ui-stamina-low, --ui-vital-mid in clean, cream and dark.
+- XP ring (vitals.tsx XpRing): the level number on a white disc, XP round it, always on (it replaces the XP bar and the
+  layer-2 level badge); hover, focus or a tap shows "Level n, into / needed XP, x to level n+1" (the kit's HoverTip;
+  touch keeps the tip while the ring has focus). Same roll-over and LEVEL_FILLED as round 3.
+- Level up (kit `levelUp.tsx` LevelUpMoment, LEVEL_UP_MS; game `LevelUpCard.tsx`): your character (CreatorStage
+  Portrait, body framing, white studio, own small canvas while it's up; Portrait gained an optional `motion` prop), 7 XP
+  motes curve in 180 ms apart, each landing flashes the figure white for two frames and blips a little higher; the
+  burst: "Level up!", sparks, the figure grows 8% and jumps (lift arc 0.2 m, Cheer clip, the jump SFX); the reveal: Lv n
+  and the real unlocks (lib/game/levelUp.ts) slide up over the lower half. A click/E/Enter/Esc skips to the reveal, then
+  closes. Reduced motion opens at the reveal. BigMoment, StatBar and StatBars deleted (and their CSS).
+- Dig spot twitch (lib/game/digMark.ts digTwitch, tested; VillageLife DigSpot): every 2.5 to 5 s (per spot) a 0.4 s
+  wobble, scale up to +-24% and a turn up to 0.22 rad, dying away; on sand and dirt alike; none under reduced motion.
+  Measured on the mesh in the headless run (scale 0.89 to 1.20).
+- Bible to update (coordinator): UI 8b says "stamina only while below full" and "the level badge beside the XP bar" in
+  layer 2; round 4 has stamina always in the stack (quiet when full) and the level always in the XP ring.
 
 ## Next
 
-1. Wait for David's review of round 3 (evidence in specs/evidence/main-quest/r3/); the coordinator merges and applies the
-   migrations in order.
+1. Wait for David's review of round 4 (specs/evidence/main-quest/r4/); the round 3 migrations still wait to be applied in
+   order (20261028144337_main_quest, 20261028153805_main_quest_r2, 20261029064914_catalogue_seed).
 
 ## Tools and gotchas
 
@@ -126,6 +125,10 @@ Redo:
 - `scripts/world-cells.ts` regenerates `web/data/world/cells.json`; `node scripts/gen-seeds.mjs` writes a NEW seed.
 - `talkStore.quest` (main quest) is consulted before `talkStore.script` (tool teachers) in `NPC.tsx`.
 - The new world's places for shots (activeVillage("new")): museum 4,70.5 (Juno ~7,70), dig-sand-0 -17,102, dig-soil-15 35,84, rock-1 38,25.1.
+- Browser runner (round 4): scratchpad `mqrun/qrun5.sh <scenes>` (run5.sh, out to mq-r4; scenes mq4hud, mq4hud-phone,
+  mq4tap, mq4sand; mq4lab's element shot of /lab/gui came out black, unused). `mqrun/evid4.py` builds r4/. A failed
+  scene no longer kills the batch (logged in errors). The level-up flash lasts two frames: the strip holds it by setting
+  the figure's data-flash. `__combat.rt.player.hp` + `__publishCombat()` set health; `__move.sim.current.state.stamina` stamina.
 - Browser runner (round 3): scratchpad `mqrun/qrun4.sh <scenes>` (run4.sh, out to mq-r3; scenes r3arrow r3dig r3bars r3pops).
 - Browser runner (round 2): scratchpad `mqrun/qrun.sh <scenes>` joins the browser queue, waits up to 9 min (exit 75:
   call again), then runs `run3.sh` under the lock (new world; ICONS="key ..." renders icons first; POPS passes through).

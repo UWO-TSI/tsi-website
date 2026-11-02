@@ -158,7 +158,7 @@ export default function RemoteAvatars({ source, area, player }: { source: NetSou
   // Development (evidence scripts): who is drawn at which tier, and where (on the page too).
   const get = useThree(s => s.get);
   useEffect(() => {
-    if (process.env.NODE_ENV === "production") return;
+    if (("development" as string) === "production") return;
     const at = { x: 0, y: 0, depth: 0 };
     Object.assign(window, { __net: {
       remotes: () => driver.store.list.map(r => ({

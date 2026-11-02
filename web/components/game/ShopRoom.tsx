@@ -77,7 +77,7 @@ export default function ShopRoom({ walker, light, player, frozen }: {
   useOutside(light);
   // The layout's numbers and the walker, for the evidence script's labels and routes (dev only).
   useEffect(() => {
-    if (process.env.NODE_ENV === "production") return;
+    if (("development" as string) === "production") return;
     Object.assign(window, { __shopLayout: layout, __shopWalker: walker });
     return () => { delete (window as { __shopLayout?: unknown }).__shopLayout; delete (window as { __shopWalker?: unknown }).__shopWalker; };
   }, [walker]);
@@ -89,7 +89,7 @@ export default function ShopRoom({ walker, light, player, frozen }: {
   // The evidence script presses the keychain's keycap (dev): window.__shopKeychainPress().
   const [press, setPress] = useState(0);
   useEffect(() => {
-    if (process.env.NODE_ENV === "production") return;
+    if (("development" as string) === "production") return;
     Object.assign(window, { __shopKeychainPress: () => setPress(n => n + 1) });
   }, []);
   const upper = useRef<THREE.Group>(null);

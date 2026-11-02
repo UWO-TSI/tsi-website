@@ -100,7 +100,7 @@ function faceNet(rig: Rig, m: Match, spot: CourtSpot) {
 
 /** Dev only (evidence): script the inputs, set the look, pause and step; the controls for real-input checks. */
 function exposeDev(rig: Rig, spot: CourtSpot) {
-  if (process.env.NODE_ENV === "production") return;
+  if (("development" as string) === "production") return;
   const w = window as unknown as { __volley?: unknown };
   // Read-only probes for real-input checks: the serve's timing error now and a touch's reach for you.
   const probe = {
@@ -175,7 +175,7 @@ function frameStep(rig: Rig, P: Parts, E: Env, raw: number) {
   const phase0 = match.phase, score0 = match.score.points[0] + match.score.points[1];
   const events = advanceMatch(match, input, step);
   for (const e of events) juice(rig, e, match);
-  if (events.length && process.env.NODE_ENV !== "production") { d.log.push(...events); if (d.log.length > 400) d.log.splice(0, d.log.length - 400); }
+  if (events.length && ("development" as string) !== "production") { d.log.push(...events); if (d.log.length > 400) d.log.splice(0, d.log.length - 400); }
   if (match.phase !== phase0 || match.score.points[0] + match.score.points[1] !== score0 || events.some(e => e.kind === "toss" || e.kind === "call")) volleyChanged();
 
   // The players: bots (and you, in the lab) drawn here; on the island you through the ride.

@@ -53,7 +53,7 @@ function Walker({ i, n, player, origin, ground, stepWorld, stroll, clip, label }
 }
 
 export default function CharacterCrowd({ player, ground, stepWorld }: { player: React.RefObject<THREE.Vector3>; ground: (x: number, z: number) => number; stepWorld?: StepWorld }) {
-  const [params] = useState(() => (process.env.NODE_ENV !== "production" && typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams()));
+  const [params] = useState(() => (("development" as string) !== "production" && typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams()));
   const n = Math.min(40, Number(params.get("crowd")) || 0);
   useEffect(() => {
     if (params.get("armed") !== "1") return;

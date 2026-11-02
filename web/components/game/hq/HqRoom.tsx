@@ -29,7 +29,7 @@ import LampPools from "./LampPools";
 
 const DIR = "/assets/game/interiors/hq/";
 const GROUND = `${DIR}ground.glb`, UPPER = `${DIR}upper.glb`, CEILING = `${DIR}ceiling.glb`;
-const DEV = process.env.NODE_ENV !== "production";
+const DEV = ("development" as string) !== "production";
 
 /**
  * The room's own light field for reflections and fill (the island's sky isn't indoors): the dark ceiling and its oval

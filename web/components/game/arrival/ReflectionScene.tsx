@@ -245,7 +245,7 @@ const smooth = (a: number, b: number, x: number) => { const t = Math.min(1, Math
 const LEAN_AT = ARRIVAL_TIMES.aboard - 1.9;
 
 /** Dev (tuning the set against the sketch): `window.__reflect` holds SET; edit it live. */
-if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") (window as unknown as { __reflect?: typeof SET }).__reflect = SET;
+if (("development" as string) !== "production" && typeof window !== "undefined") (window as unknown as { __reflect?: typeof SET }).__reflect = SET;
 
 type Gpu = ReturnType<typeof makeGpu>;
 /** The mirror's and the frame's targets, the mirror camera, the water's, the composite's and the sky's materials. */

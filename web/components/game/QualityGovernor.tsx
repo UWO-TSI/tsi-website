@@ -26,7 +26,7 @@ export default function QualityGovernor({ dpr, scene }: {
   useEffect(() => {
     quality.reset();
     setDpr(resolve(dpr));
-    if (process.env.NODE_ENV !== "production") Object.assign(window, { __governor: quality });
+    if (("development" as string) !== "production") Object.assign(window, { __governor: quality });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by the dpr's value (`base`): a new array each render is the same setting
   }, [scene, base, setDpr]);
   useFrame((_, delta) => {

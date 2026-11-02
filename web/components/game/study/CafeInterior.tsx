@@ -113,12 +113,12 @@ export default function CafeInterior({ phase, player, frozen, identity, level, o
   const { scene, camera } = useThree();
   useEffect(() => applyInteriorBackdrop(scene, null), [scene]);   // the branded dark behind the canvas (InteriorBackdrop)
   const devCam = useMemo(() => {
-    if (process.env.NODE_ENV === "production" || typeof window === "undefined") return null;
+    if (("development" as string) === "production" || typeof window === "undefined") return null;
     const q = new URLSearchParams(window.location.search), v = q.get("cafecam")?.split(",").map(Number);
     return v?.length === 6 && v.every(Number.isFinite) ? { at: v.slice(0, 3) as [number, number, number], look: v.slice(3) as [number, number, number], fov: Number(q.get("fov")) || 0 } : null;
   }, []);
   const spawn = useMemo((): [number, number, number] => {
-    if (process.env.NODE_ENV === "production" || typeof window === "undefined") return SPAWN;
+    if (("development" as string) === "production" || typeof window === "undefined") return SPAWN;
     const v = new URLSearchParams(window.location.search).get("cafeat")?.split(",").map(Number);
     return v?.length === 2 && v.every(Number.isFinite) ? [v[0], 0, v[1]] : SPAWN;
   }, []);

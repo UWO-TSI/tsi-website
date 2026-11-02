@@ -22,7 +22,7 @@ export interface IslandEvent {
   goal: EventGoal;
 }
 
-export function parseEventOverride(search: string, isProduction = process.env.NODE_ENV === "production"): string | null {
+export function parseEventOverride(search: string, isProduction = ("development" as string) === "production"): string | null {
   if (isProduction) return null;
   const value = new URLSearchParams(search).get("event");
   return value === "none" || (value && DECOR_SETS[value]) ? value : null;

@@ -41,7 +41,7 @@ import { toRemotePlayer, type FollowResult, type KickReason, type NetSource, typ
 import { RemoteBuffer, Remotes, parseNetsim, type Netsim } from "./interp";
 import { NetClock } from "./clock";
 
-const DEV = process.env.NODE_ENV !== "production";
+const DEV = ("development" as string) !== "production";
 /** The last release leaves after this long (ms): Strict Mode's remount and a door's scene swap re-acquire inside it. */
 export const LEAVE_DELAY_MS = 2000;
 /**

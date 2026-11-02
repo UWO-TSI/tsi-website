@@ -371,7 +371,7 @@ export function classMove(rt: CombatRuntime, me: Vec, on: MovementPassive["on"],
 export const inCombat = (rt: CombatRuntime) => (rt.v2?.combatT ?? 0) > 0;
 /** Dev (evidence): hold the ult's clock where a script puts it, to film its beats one at a time. */
 export const classDev = { holdUlt: false };
-if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") Object.assign(window, { __classDev: classDev });
+if (("development" as string) !== "production" && typeof window !== "undefined") Object.assign(window, { __classDev: classDev });
 const THREAT = new Set(["chase", "windup", "active", "recover"]);
 
 /**

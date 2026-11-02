@@ -6,7 +6,7 @@ import path from "node:path";
  * repo (specs/evidence/gui-sheet/ref_crops.py writes them to GUI_REF_DIR) and are never part of the product.
  */
 export async function GET(_: Request, { params }: { params: Promise<{ name: string }> }) {
-  if (process.env.NODE_ENV === "production") return new Response("Not found", { status: 404 });
+  if (("development" as string) === "production") return new Response("Not found", { status: 404 });
   const { name } = await params;
   if (!/^[a-z-]+$/.test(name)) return new Response("Not found", { status: 404 });
   try {

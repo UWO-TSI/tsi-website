@@ -133,6 +133,8 @@ async function vitalsAt(page, name, health, stamina, clip) {
 async function levelUpStrip(page, prefix, wide) {
   const xp = (total, levelled) => page.evaluate(([t, l]) => window.dispatchEvent(new CustomEvent("tsi:api-write", { detail: { path: "/api/progression/chapters/advance", data: { xp_gain: { amount: 0, total: t, level: l ? 2 : 1, levelled_up: l } } } })), [total, levelled]);
   await xp(90, false); await sleep(1500);
+  // A chapter's level up (its check-mark first), so the reveal lists the quest it opens.
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent("tsi:quest-complete", { detail: { title: "Settle in" } })));
   await xp(160, true);
   await page.waitForSelector("[data-testid=level-up]", { timeout: 8000 });
   const t0 = await page.evaluate(() => performance.now());
@@ -162,7 +164,22 @@ async function levelUpStrip(page, prefix, wide) {
   await page.keyboard.press("Escape"); await sleep(1000);
 }
 
-for (const scene of SCENES) {
+for (const scene of SCENES) try {
+  if (scene === "mq4tap") {
+    // The phone's ring tapped for its tip (the full phone pass is mq4hud-phone).
+    const { ctx, page } = await open("", {}, PHONE);
+    await go(page, 30, 46, Math.PI);
+    await hudIn(page);
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent("tsi:api-write", { detail: { path: "/api/progression/chapters/advance", data: { xp_gain: { amount: 0, total: 60, level: 1, levelled_up: false } } } })));
+    await sleep(1400);
+    log.push({ name: "ring hit", at: await page.evaluate(() => { const r = document.querySelector("[data-testid=hud-xp]").getBoundingClientRect(); const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return [Math.round(r.left), Math.round(r.top), Math.round(r.width), e?.tagName, String(e?.className?.baseVal ?? e?.className), e?.closest("[data-testid=hud-xp]") ? "ring" : "other"]; }) });
+    const r = await page.$eval("[data-testid=hud-xp]", el => { const b = el.getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; });
+    await page.touchscreen.tap(r[0], r[1]);
+    await sleep(700);
+    log.push({ name: "mq4-phone-xp-tap", tip: await page.$eval("[role=tooltip]", el => el.textContent).catch(() => null), active: await page.evaluate(() => document.activeElement?.getAttribute("data-testid")) });
+    await shot(page, "mq4-phone-xp-tap", { x: 0, y: 0, width: 390, height: 300 });
+    await ctx.close();
+  }
   if (scene === "mq4hud" || scene === "mq4hud-phone") {
     const phone = scene.endsWith("phone");
     const { ctx, page } = await open("", {}, phone ? PHONE : undefined);
@@ -182,7 +199,8 @@ for (const scene of SCENES) {
     await page.evaluate(() => window.dispatchEvent(new CustomEvent("tsi:api-write", { detail: { path: "/api/progression/chapters/advance", data: { xp_gain: { amount: 0, total: 60, level: 1, levelled_up: false } } } })));
     await sleep(1400);
     await shot(page, `${p}-xp-ring`, corner);
-    if (phone) await page.tap("[data-testid=hud-xp]"); else await page.hover("[data-testid=hud-xp]");
+    if (phone) log.push({ name: "ring hit", at: await page.evaluate(() => { const r = document.querySelector("[data-testid=hud-xp]").getBoundingClientRect(); const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return [Math.round(r.left), Math.round(r.top), Math.round(r.width), e?.tagName, e?.className?.baseVal ?? e?.className, e?.closest("[data-testid=hud-xp]") ? "ring" : "other"]; }) });
+    if (phone) await page.tap("[data-testid=hud-xp]", { timeout: 8000 }).catch(e => log.push({ name: "tap failed", e: e.message.slice(0, 200) })); else await page.hover("[data-testid=hud-xp]");
     await sleep(600);
     await shot(page, `${p}-xp-hover`, { ...corner, height: phone ? 260 : 240 });
     log.push({ name: `${p}-xp-hover`, tip: await page.$eval("[role=tooltip]", el => el.textContent).catch(() => null) });
@@ -190,6 +208,18 @@ for (const scene of SCENES) {
     await sleep(800);
     await levelUpStrip(page, `${p}-levelup`, !phone);
     await shot(page, `${p}-after-levelup`, corner);
+    await ctx.close();
+  }
+  if (scene === "mq4lab") {
+    // The showroom (/lab/gui): the vitals full, half and low, a 200-point bar, and the level ring.
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await ctx.newPage();
+    await page.goto(`${HOST}/lab/gui`, { waitUntil: "domcontentloaded" });
+    await page.waitForSelector("#hud-bars", { timeout: 300000 });
+    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" }).catch(() => {});
+    await page.$eval("#hud-bars", el => el.scrollIntoView());
+    await sleep(1500);
+    await (await page.$("#hud-bars")).screenshot({ path: `${OUT}/mq4-showroom-vitals.png` });
     await ctx.close();
   }
   if (scene === "mq4sand") {
@@ -200,10 +230,15 @@ for (const scene of SCENES) {
     await sleep(2500);
     await shot(page, "mq4-sand");
     const clip = await markClip(page);
-    for (let i = 0; i < 90; i++) {
-      const t = await page.evaluate(() => performance.now());
-      await page.screenshot({ path: `${OUT}/mq4-sand-burst-${String(i).padStart(2, "0")}.png`, clip });
-      log.push({ name: `mq4-sand-burst-${i}`, t: Math.round(t) });
+    // The nearest mark's scale and turn as each crop is taken (the mesh's own, so a twitch is proven, not guessed).
+    const pose = () => page.evaluate(() => {
+      const { camera, scene } = window.__orbit.three(); let best = null;
+      scene.traverse(o => { if (o.isMesh && o.material?.name === "DigSpot") { const d = o.getWorldPosition(o.position.clone()).distanceTo(camera.position); if (!best || d < best.d) best = { d, s: o.scale.x, r: o.rotation.y }; } });
+      return best && [+best.s.toFixed(3), +best.r.toFixed(3)];
+    });
+    for (let i = 0; i < 150; i++) {
+      await page.screenshot({ path: `${OUT}/mq4-sand-burst-${String(i).padStart(3, "0")}.png`, clip: { x: clip.x + 50, y: clip.y + 70, width: 80, height: 50 } });
+      log.push({ name: `mq4-sand-burst-${i}`, pose: await pose() });
     }
     await ctx.close();
   }
@@ -558,7 +593,7 @@ for (const scene of SCENES) {
     log.push({ name: "50-village-line", dropdown: !!(await page.$("[data-testid=quest-tracker] button[aria-expanded]")), label: await page.$eval("[data-testid=quest-tracker]", el => el.getAttribute("aria-label")) });
     await ctx.close();
   }
-}
+} catch (e) { errors.push(`${scene}: ${e.message.slice(0, 300)}`); console.log("scene failed", scene, e.message.slice(0, 300)); }
 writeFileSync(`${OUT}/log.json`, JSON.stringify({ log, errors }, null, 2));
 await browser.close();
 console.log("errors", errors.length);

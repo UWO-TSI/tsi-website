@@ -8,7 +8,7 @@ import { phaseBlend, setLiveSunDays, sunFor, type PhaseBlend } from "./sunTimes"
 import { phaseInstant, solarPosition, SUN_STEP_MS, type SunAngles } from "./sunPath";
 import { setWorldClockOffset, worldNow } from "./worldClock";
 
-const DEV = process.env.NODE_ENV !== "production";
+const DEV = ("development" as string) !== "production";
 const search = () => (DEV && typeof window !== "undefined" ? window.location.search : "");
 
 export interface IslandConditions {

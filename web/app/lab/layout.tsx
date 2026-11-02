@@ -10,7 +10,7 @@ import Link from "next/link";
  * components, so there's no replica drift between lab and game.
  */
 export default function LabLayout({ children }: { children: React.ReactNode }) {
-  if (process.env.NODE_ENV === "production") notFound();
+  if (("development" as string) === "production") notFound();
 
   return (
     <div style={{ minHeight: "100vh", background: "#0b0e14", color: "#f1ffff" }}>

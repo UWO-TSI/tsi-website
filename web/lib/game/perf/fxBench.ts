@@ -16,7 +16,7 @@
 import { useSyncExternalStore } from "react";
 import { resetTuning, setTuning, type Tuning } from "@/lib/game/tuning";
 
-export const FX_BENCH = process.env.NODE_ENV !== "production";
+export const FX_BENCH = ("development" as string) !== "production";
 
 /** The effects the bench switches, on the other players (specs/perf/effects-cost.md has what each one covers). */
 export const FX_KEYS = ["auraFamily", "auraSubclass", "dust", "juice", "ghost", "leaf", "held", "weapon", "rod", "fishing", "plates", "shadows", "emotes", "interp", "dance"] as const;

@@ -186,7 +186,7 @@ export default function Campfire({ site, ground, phase, hour = false, player, wa
   useEffect(() => { campfireLive.lit = lit; }, [lit]);
   useEffect(() => () => { for (const l of DRUM_LAYERS) AudioManager.setLoop(l.src, 0); }, []);
   useEffect(() => {
-    if (process.env.NODE_ENV === "production") return;
+    if (("development" as string) === "production") return;
     Object.assign(window, { __campfire: { site: at, lit: () => campfireLive.lit, dancers: () => state.current.dancers, size: () => state.current.size, light: () => light.current?.intensity ?? 0, particles: () => system.pool.alive } });
     return () => { delete (window as { __campfire?: unknown }).__campfire; };
   }, [at, system]);

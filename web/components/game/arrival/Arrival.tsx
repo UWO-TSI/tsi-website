@@ -148,7 +148,7 @@ export default function Arrival({ play, look, askName, touch, keys, onCross, onS
   useEffect(() => { skipRef.current = skip; });
   // Dev (evidence scripts): where the arrival is, and a press to skip.
   useEffect(() => {
-    if (process.env.NODE_ENV === "production") return;
+    if (("development" as string) === "production") return;
     Object.assign(window, { __arrival: {
       state: () => { const a = arrivalRun.current, t = myTrip.current; return a && { phase: a.phase, t: (performance.now() - a.at) / 1000, choices: a.choices, tutorial: arrivalRun.tutorial && { stop: arrivalRun.tutorial.stop, stage: arrivalRun.tutorial.stage, done: arrivalRun.tutorial.done }, trip: t && { phase: t.phase, t: (worldNow() - t.at) / 1000 } }; },
       skip: () => skipRef.current(),

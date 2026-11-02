@@ -467,7 +467,7 @@ function BramGuide({ v, island, player, dock, keys, route, places }: {
   useEffect(() => worldLabels.add(residentTag(out => { const g = group.current; if (!g) return false; out.set(g.position.x, g.position.y + CHARACTER_HEIGHT + 0.3, g.position.z); return true; }, () => plate.current)), []);
   // Dev (evidence scripts): the resolved stops, where Bram is, the tutorial's state.
   useEffect(() => {
-    if (process.env.NODE_ENV === "production") return;
+    if (("development" as string) === "production") return;
     Object.assign(window, { __arrivalStops: () => stops, __bram: () => ({ ...arrivalRun.bram, yaw: motion.current.yaw }), __tutorial: () => (arrivalRun.tutorial ? { ...arrivalRun.tutorial } : null) });
   }, [stops]);
   // Back out of HQ (the island remounts him), he's where the walk is: its stop's stand.

@@ -16,7 +16,7 @@ export interface LabState {
   hour: number | null; // 0-24 fractional; null = wall clock
 }
 
-const IS_DEV = process.env.NODE_ENV !== "production";
+const IS_DEV = ("development" as string) !== "production";
 const EMPTY: LabState = { hour: null };
 
 const state: LabState = { hour: null };

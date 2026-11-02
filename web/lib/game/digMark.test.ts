@@ -27,8 +27,8 @@ describe("a dig spot's twitch", () => {
     for (const seed of [3, 10.5, 77]) {
       const s = sample(seed), moving = s.filter(x => x.scale !== 1 || x.turn !== 0).length / s.length;
       expect(moving).toBeGreaterThan(0.03);
-      expect(moving).toBeLessThan(0.15);
-      for (const x of s) { expect(Math.abs(x.scale - 1)).toBeLessThan(0.17); expect(Math.abs(x.turn)).toBeLessThan(0.15); }
+      expect(moving).toBeLessThan(0.2);
+      for (const x of s) { expect(Math.abs(x.scale - 1)).toBeLessThan(0.25); expect(Math.abs(x.turn)).toBeLessThan(0.23); }
     }
     expect(sample(3)).not.toEqual(sample(77));
   });

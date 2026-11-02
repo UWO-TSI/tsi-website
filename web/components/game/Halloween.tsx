@@ -110,7 +110,7 @@ export async function knockAt(door: KnockDoor): Promise<void> {
       got = await apiCall<{ resident: string; name: string; line: string; item_key: string }>("/api/traditions/treat", "treat", { resident: who.slug });
     } catch (err) {
       const signedOut = err instanceof ApiError && (err.status === 401 || err.status === 503);
-      if (!(signedOut && process.env.NODE_ENV !== "production")) {
+      if (!(signedOut && ("development" as string) !== "production")) {
         toast(err instanceof ApiError && err.status === 401 ? "Sign in to go trick-or-treating." : err instanceof Error ? err.message : "The door didn't open.");
         if (err instanceof ApiError && err.status === 409) knockStore.treated.add(who.slug);
         return;

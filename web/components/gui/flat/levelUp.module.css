@@ -18,11 +18,11 @@
 @keyframes flare { 0% { opacity: 1; transform: scale(1); } 35% { opacity: 1; transform: scale(1.35); } 100% { opacity: 0.45; transform: scale(1.1); } }
 
 /* The figure: the character, standing in the middle; a landing mote flashes it white for two frames. */
-.figure { position: absolute; left: 50%; top: 18px; width: 240px; height: 380px; margin-left: -120px; transform-origin: 50% 92%;
+.figure { position: absolute; left: 50%; top: 40px; width: 240px; height: 380px; margin-left: -120px; transform-origin: 50% 92%;
   transition: transform 0.6s cubic-bezier(0.34, 1.4, 0.64, 1); }
 .figure[data-flash] { filter: brightness(3.2) saturate(0); }
-.card[data-phase="burst"] .figure { transform: scale(1.1); }
-.card[data-phase="reveal"] .figure { transform-origin: 50% 0; transform: translateY(-4px) scale(0.62); }
+.card[data-phase="burst"] .figure { transform: scale(1.08); }
+.card[data-phase="reveal"] .figure { transform-origin: 50% 0; transform: translateY(-22px) scale(0.8); }
 
 /* The motes: each flies its own curve in (x eases in, y eases out) to the figure's middle and lands there. */
 .motes { position: absolute; left: 50%; top: 46%; width: 0; height: 0; pointer-events: none; }

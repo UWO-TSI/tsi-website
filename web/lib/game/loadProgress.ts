@@ -39,6 +39,6 @@ export const useLoadProgress = () => useSyncExternalStore(subscribe, () => shown
  * `?time=` picks the phase outside production, as on the island.
  */
 export function loadingStill(search = typeof window === "undefined" ? "" : window.location.search): string {
-  const forced = process.env.NODE_ENV !== "production" ? parseTimeOverride(new URLSearchParams(search).get("time")) : null;
+  const forced = ("development" as string) !== "production" ? parseTimeOverride(new URLSearchParams(search).get("time")) : null;
   return assetUrl(`/assets/loading/island-${forced ?? islandPhase(new Date(worldNow()))}.webp`);
 }

@@ -42,7 +42,7 @@ export default function GuideArrow({ player, ground }: { player: React.RefObject
   const geo = useMemo(() => chevron(), []);
   useEffect(() => () => geo.dispose(), [geo]);
   // Dev (evidence scripts): point it somewhere, see where it points.
-  useEffect(() => { if (process.env.NODE_ENV !== "production") Object.assign(window, { __guide: { show: showGuide, clear: clearGuide, now: guideNow } }); }, []);
+  useEffect(() => { if (("development" as string) !== "production") Object.assign(window, { __guide: { show: showGuide, clear: clearGuide, now: guideNow } }); }, []);
   useFrame((st, dt) => { if (mesh.current && mat.current) step(mesh.current, mat.current, player.current, ground, Math.min(dt, 0.1), st.clock.elapsedTime); });
   return <mesh ref={mesh} geometry={geo} visible={false} renderOrder={2} frustumCulled={false}>
     <meshBasicMaterial ref={mat} color="#fff4d6" transparent opacity={0} depthWrite={false} polygonOffset polygonOffsetFactor={-2} toneMapped={false} fog={false} />

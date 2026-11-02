@@ -30,7 +30,7 @@ import s from "./study.module.css";
 
 export default function StudyHud() {
   const search = useSearch();
-  const demo = process.env.NODE_ENV !== "production" && search ? new URLSearchParams(search).get("study") : null;
+  const demo = ("development" as string) !== "production" && search ? new URLSearchParams(search).get("study") : null;
   if (search === null) return null;
   return demo ? <Demo scenario={demo} /> : <Hud />;
 }

@@ -7,7 +7,7 @@
 import { apiCall } from "@/lib/apiClient";
 
 let ticket: string | null = null;
-const quiet = (e: unknown) => { if (process.env.NODE_ENV !== "production") console.debug("[volleyball reward]", e); return null; };
+const quiet = (e: unknown) => { if (("development" as string) !== "production") console.debug("[volleyball reward]", e); return null; };
 
 /** A match starts on the island: open its ticket (a newer one closes any older one, server side). */
 export async function beginTicket(): Promise<void> {

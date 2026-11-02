@@ -28,7 +28,7 @@ export function routeDemoFetch(prefix: string, handle: DemoHandler): void {
 const installed = new Set<string>();
 /** `?<flag>=demo` on this page: build the demo once (`setup` gets the page query) and route `prefix` to it. */
 export function installDemoFetch(flag: string, prefix: string, setup: (query: URLSearchParams) => DemoHandler): void {
-  if (installed.has(flag) || process.env.NODE_ENV === "production" || typeof window === "undefined") return;
+  if (installed.has(flag) || ("development" as string) === "production" || typeof window === "undefined") return;
   const query = new URLSearchParams(window.location.search);
   if (query.get(flag) !== "demo") return;
   installed.add(flag);

@@ -127,7 +127,7 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
       <Canvas className={styles.canvas} gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }} dpr={tierDpr(graphics.liteMode, [1, 2])} camera={{ fov: FRAMES.face.fov, near: 0.05, far: 30 }}
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace;
-          if (process.env.NODE_ENV !== "production") (window as unknown as { __creatorGl?: THREE.WebGLRenderer }).__creatorGl = gl;
+          if (("development" as string) !== "production") (window as unknown as { __creatorGl?: THREE.WebGLRenderer }).__creatorGl = gl;
         }}>
         <Portrait look={look} framing={cat.framing} yaw={yaw} studio={flat ? "white" : "warm"} />
         <ThumbBaker />

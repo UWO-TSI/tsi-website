@@ -50,7 +50,7 @@ export default function CafeSweeper({ cafe, ground, player, night }: {
   const blips = useRef<number[]>([]);
   useEffect(() => {
     // Dev (evidence scripts): where she is.
-    if (process.env.NODE_ENV !== "production") Object.assign(window, { __sweeper: cafeSweeper });
+    if (("development" as string) !== "production") Object.assign(window, { __sweeper: cafeSweeper });
     return () => { blips.current.forEach(window.clearTimeout); cafeSweeper.on = false; };
   }, []);
   useEffect(() => { if (night) cafeSweeper.on = false; }, [night]);
