@@ -13,6 +13,19 @@ Proper volleyball clips keyed on the game's own rig (22 `mixamorig:` bones, v8 h
 - Clips: vb_ready, vb_shuffle (+ vb_shuffle_left, mirrored), vb_serve_toss, vb_serve_hit, vb_bump, vb_set, vb_jump_set, vb_spike_jump, vb_spike_hit, vb_block, vb_dive, vb_slide_dive, vb_celebrate_point, vb_celebrate_win, vb_spectate.
 - The engine plays them through the usual `motion.play` / `motion.pose` once `<Character clips={VB_CLIPS_URL}>` has loaded them; `lib/game/character/clips.ts` knows their names, loop flags and fades.
 
+## Round 2: animation feel (coordinator, 2026-11-01 night)
+
+David's marks on the animations page (https://claude.ai/artifact/8EEip8ZMwLPfu6xFxEKMbc, collection approvals), verbatim:
+- Approved: vb_block, vb_bump, vb_celebrate_point, vb_celebrate_win, vb_jump_set, vb_ready, vb_serve_hit, vb_serve_stand, vb_serve_toss, vb_set, vb_shuffle, vb_slide_dive, vb_spectate, vb_spike_hit, vb_spike_jump.
+- vb_dive (redo): "needs to be redone to be more dramatic"
+- anim-note (redo): "yeah i know and im thinking if it makes sense to increase the body head ratio so the body is bigger for these animations. i want the animatinos to be more dramatic and animated. movement should not feel so linear and you can feel each step and stride if that makes sense"
+
+Build:
+1. **vb_dive redone, dramatic:** a real launch (anticipation crouch, full stretch in the air, arms reaching), a hard landing with a slide and a beat of hold before getting up. You own `vb_clips.glb`; the volleyball lane is adding dive VFX and a flash frame in parallel and won't touch the clip. Keep the clip's name and length contract in `clips.ts` unless the VFX timing needs a new contact time (then say so).
+2. **Movement with weight:** the everyday walk, run and dash (and their starts and stops) stop feeling linear: a stride you can feel, foot plants, body bob and hip sway, ease in and out on start and stop, a little overshoot on stopping. Find the current locomotion clips and the movement lab (`/lab/move`, CODEMAP) first. Same rig, same clip names, so everything that plays them keeps working.
+3. **More drama across the set, gently:** push the approved volleyball clips' key poses a little further (anticipation, follow-through, arcs) only where it reads better in the strips; show before and after for each one you touch, and leave any you can't improve.
+4. **The head to body question (a preview, not a change):** render the same character in three proportions side by side, still and mid-spike: today, a slightly bigger body (torso and limbs about +10%), and a slightly smaller head (about -10%). A shot only, through a bone scale in the preview: don't change the rig, the outfits or the creator. The coordinator's advice to David: get the drama from the animation first, because a proportion change ripples into every outfit, hair, accessory fit, LOD and the character budget.
+
 ## Status
 
 Head: the commit that adds this file's update (see `git log`). Round 1 is built and waiting for review. Nothing is approved yet.
