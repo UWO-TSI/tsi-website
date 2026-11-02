@@ -67,7 +67,7 @@ Logic `web/lib/game/` (flat, `foo.ts` + `foo.test.ts`). R3F `web/components/game
 
 ## 4. Art pipeline
 
-New models start in Meshy (`node art/meshy/meshy.mjs`, raw output in the untracked `art/meshy/raw/`, credits in `art/meshy/log.md`), then `art/meshy/clean.py`. Blender headless: `Blender -b -P art/<dir>/<script>.py`. Outputs GLB/PNG into `web/public/assets/{game,characters,acnh,fx,icons,nature,sky,buildings,fauna,audio}`.
+New models start in Meshy (`node art/meshy/meshy.mjs`, raw output in the untracked `art/meshy/raw/`, credits in `art/meshy/log.md`), then `art/meshy/clean.py`; Meshy is paused (David, 2026-11-02), so models are built in Blender from the concept's blueprints. New versions of tools, fish and gear follow `art/pipeline/tools.md`. Blender headless: `Blender -b -P art/<dir>/<script>.py`. Outputs GLB/PNG into `web/public/assets/{game,characters,acnh,fx,icons,nature,sky,buildings,fauna,audio}`.
 
 | `art/` dir | Contents |
 |---|---|
@@ -76,6 +76,7 @@ New models start in Meshy (`node art/meshy/meshy.mjs`, raw output in the untrack
 | `nature/`, `trees/`, `rocks/` | nature kit, trees, flowers, bushes, rocks |
 | `terrain/`, `water/`, `wharf/` | ground, fish, seabed, wharf |
 | `buildings/`, `interiors/`, `cafe/` | buildings, interiors (`shop_layout.json`), cafe (`cafekit.py`) |
+| `pipeline/` | new tool, fish and gear versions (`tools.md`): `profile.py` (views and dimensions of any GLB), `collage.py`, `families.sh`, `blueprint.py` (a turnaround sheet as blueprints, the match check), `{rod,fish,gear}-style.md`, image prompts in `prompts/`, sheets in `out/` |
 | `barriers/`, `fx/`, `icons/`, `merch/`, `traditions/`, `audio/` | fences, FX packs, class icons, lanyard/keychain/sticker, pumpkin, key synth |
 
 Import scripts (`web/scripts/`, `node`): `extract-acnh-*`, `extract-{sky,road,grass}-*`, `derive-kit-mapping`, `organize-dump`, `sync-character-assets`, `convert-fbx-to-glb.js`, `convert-world.ts`, `bake-hair-thumbs`, `render-icons`, `finish-{trees,bushes,greenery}`, `fix-normal-maps`, `restore-*-assets`, `glb-bbox`, `character-inspect`. Root `scripts/`: `fbx_to_glb.py`, `prepare-hq-lamp.py`, `restore-hq-textures.py`. David supplies all art references.

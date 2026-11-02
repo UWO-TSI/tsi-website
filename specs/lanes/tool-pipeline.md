@@ -23,6 +23,14 @@ Worktree `.claude/worktrees/tool-pipeline`, branch `game/tool-pipeline`, cut fro
 4. Write `art/pipeline/tools.md` (the six steps above, commands included) and add a row to CODEMAP and the design bible's Models rules pointing at it.
 5. Report: the collage paths, the style text, the prompts, and anything the image step needs from the coordinator.
 
+## Round 1 additions (coordinator relay, David 2026-11-02 verbatim: "once you rendered the differnt rods i want you to pitch me the different rods and models as a artifact, do this with new fish and new gear as well")
+
+6. The same profile collage and style sheet for fish (6 to 8 of our fish GLBs spanning sizes and rarities) and gear (the other tools, weapons, wearable gear GLBs in web/public): `art/pipeline/fish-style.md`, `art/pipeline/gear-style.md`, collages in `art/pipeline/out/fish/` and `out/gear/`.
+7. Prompt templates for a new fish (side, top, three-quarter on white) and a new gear piece (five-view turnaround), each with a slot for the name and a one-line description, for the coordinator to fill from the fish-list and treasure lanes' proposals.
+8. `art/pipeline/tools.md` step 6b: every batch of concepts goes to David as a pitch page (name, rarity, what it's for, the turnaround) before anything goes to Meshy.
+
+9. Meshy paused (coordinator relay, David 2026-11-02 verbatim: "dont use meshy as for now, just try to replicant the same output through using blender and modeling it from the multi angle designs"). Step 4 becomes: the picked turnaround's front, side and top views go in as aligned blueprint planes in a headless Blender script, and the tool is modelled to match them in our style and budgets (then clean, HD and LP, pack-glbs, icon). Meshy stays documented as a paused option. `art/pipeline/blueprint.py` loads the views as aligned reference planes and renders the model over them for a match check. The prompts ask for orthographic, aligned views at one scale so they work as blueprints.
+
 ## Rules
 
 - Headless only: never open a window, tab, app or audio on David's screen; never `open`; never the Playwright MCP, the claude-in-chrome tools or the `blender` MCP tools. Blender only as `/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P <script>`.
@@ -32,4 +40,20 @@ Worktree `.claude/worktrees/tool-pipeline`, branch `game/tool-pipeline`, cut fro
 
 ## Status
 
-Not started.
+Round 1 done on `game/tool-pipeline` (the commit "[build] tool-pipeline round 1"), not yet reviewed or merged.
+- `art/pipeline/profile.py` (headless: GLBs in, five ortho views as webp and a dimensions JSON out), `collage.py`, `families.sh` (`profile` reruns all four families, then the collages), `blueprint.py` (a turnaround sheet split into cropped views at a set length, silhouettes in `blueprint.json`; `--model` renders the model over them and scores the overlap). Self-tested: rod-3's own renders as a sheet score 0.83 to 0.97, pike's side 0.98.
+- Collages: `art/pipeline/out/rods/collage.webp`, `out/fish/collage.webp`, `out/gear/tools/collage.webp`, `out/gear/weapons/collage.webp`, with every view and JSON beside them (JSONs unignored in `.gitignore`).
+- Style sheets `rod-style.md`, `fish-style.md`, `gear-style.md`; prompts in `prompts/` (Carrot, Precision, Training, Riptide, Titanium, Tempest; fish and gear templates); `tools.md` with step 4 as Blender from blueprints (Meshy paused) and step 6b (pitch page); CODEMAP row and design bible pointer (Models rule 3).
+
+## Next
+
+1. Coordinator: run the image step with the prompts and collages, publish the pitch page (6b), relay David's picks.
+2. Next round: model the picked rods from their sheets (`blueprint.py`, then a modelling script per rod, then the match check, clean.py, budgets, pack-glbs, icon).
+3. Open for the coordinator: the high-def budget (the sheets propose at most 3,000 triangles and 512 px textures); the Carrot rod's rarity; whether Cedar stays on the new roster.
+
+## Tools and gotchas
+
+- Blender 5.2 headless; Eevee renders fine with `-b`. Locks: `LANE=game/tool-pipeline /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh blender <cmd>`.
+- Raw fish GLBs (`acnh/fish`) carry a stray material-less icosphere (profile.py skips material-less meshes); Dace and Bluegill are stored nose up (`@x90`). Fish are not to one scale: `--fit`.
+- Rod materials are named `rod-N_<Part>`; the Lighthouse's gold is both reel and finial and its red both stripes and lamp roof, so parts are measured on their biggest group along the length (`also` lists the rest).
+- `clean.py` re-pivots to the bottom centre; held tools need the grip at the origin (a rod's hand is 0.12 GLB m above the butt).
