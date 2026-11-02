@@ -4,6 +4,19 @@ Worktree `.claude/worktrees/volleyball`, branch `game/volleyball`, cut from orig
 
 **Read first:** `specs/minigames/beach-volleyball.md` (the design spec, with David's phase 1 review verbatim and round 2's root causes at the top), `specs/design-bible.md` (UI and Models), `specs/references/volleyball/` (camera-and-court.png for the camera only; beach-ball.png is David's ball). CODEMAP sections: Movement, Camera, UI kit, Multiplayer.
 
+## Round 5: David's round 4 review (2026-11-02, verbatim; https://claude.ai/artifact/KxJpWfHN8dd5rddG1Lrajm)
+
+Approved: p4-board, p4-board-dance, p4-podium-kit, p4-fx-bump, p4-fx-call, p4-fx-dive, p4-fx-heat, p4-fx-net (so Out, Net and Tape under the score stay), p4-fx-serve, p4-fx-set, p4-fx-spike, p4-fx-win.
+- p4-calls (redo): "still needs the text tag just a redesign"
+- p4-fx-block (redo, no note): with the note above, the block gets its text tag back, in the new design.
+- p4-impact-dive (redo): "no imact frame just a white flash on the charater "
+- p4-impact-spike (redo): "maybe remove the line, "
+
+Build:
+1. Keep a text tag on every action (block included), redesigned: round 4's small pill is approved in spirit as quiet, but give the tag a better look of its own that fits the UI kit. Show two or three directions side by side on one sheet so David can pick.
+2. Dive: drop the split impact frame; the diving character flashes white for a beat (the character only, not the screen).
+3. Perfect spike: keep the one impact frame, without the radiating lines. Show with and without side by side.
+
 ## Status
 
 **Round 4 built, waiting for David's review (branch head: see the last commit; merged origin/main 3f9f2b4d).** Round 3 is approved except the items in the 2026-11-01 notes below. No migration, no protocol change.
