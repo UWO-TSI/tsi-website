@@ -30,6 +30,22 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 4: the new rods' data, the Training rod, the catch tracker (2026-11-02)
+
+David's rod pitch review, verbatim (https://claude.ai/artifact/XqZK2hk32ydhYjbKFhhwFJ):
+- rod-carrot (approve): "make the carrot thicket, this is uncommon rod"
+- rod-precision (approve)
+- rod-training (approve): "this is good, but make it like a common thats like easter egg to unlock and not a common rod you can buy, this rod also has very good satts comparable to uncommon rare, one of best starter rods and it has upgrade potential. I want you to also do a fish caught tracker for all rods so yo know how many fish you caught with a certain rod. "
+- rod-ours (redo): "tide warden rod not even epic bruh not cool at all, other rods are wtv, glass rod can be cooler or just make it uncomon, cedar rod should have like leaf elements"
+
+The tool-pipeline lane (game/tool-pipeline) models the rods in parallel: `tools/rod-carrot.glb`, `rod-precision.glb`, `rod-training.glb`, plus reworked Cedar, Glass, Tidewarden, Tempest, Titanium and Riptide. Wire to those file names; until they land, use the old rod files as stand-ins and say so.
+
+Build:
+1. **Roster entries** in `web/lib/game/rods.ts` and the catalogue for Carrot (uncommon), Precision (common) and Training (common, never sold). Stats, prices and sell values in the existing economy rules. Never write the gem-to-money rate.
+2. **The Training rod as an easter egg:** hidden, unlocked by doing something (propose two or three unlocks and build the one that fits the island best; server-checked), stats comparable to uncommon and rare, one of the best starter rods, with upgrade potential: use the existing tackle and upgrade systems if they fit, otherwise propose the smallest upgrade path and build it.
+3. **Per-rod catch tracker:** how many fish you've caught with each rod, counted on the server at catch time, shown on the rod's card (bag and shop). A migration (timestamped after the newest on main) if the catch rows don't already record the rod; stop before prod, the coordinator applies it.
+4. Glass may move to uncommon (David: "glass rod can be cooler or just make it uncomon"): wait for his pick on the next pitch, don't move it yet.
+
 ## Status
 
 - Round 1 (94eade9f, e35dd842): rarity ladder (cb7bed43, on main), five rods with six stats, bait and bobber slots, the rod shop, hollow items hidden. David reviewed it 2026-10-28 (below).
