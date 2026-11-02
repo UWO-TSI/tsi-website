@@ -2,6 +2,25 @@
 
 Worktree `.claude/worktrees/polish`, branch `game/polish` (round 1 plus origin/main 3f9f2b4d merged in). Agent type `uwotsi-lane`. Dev port 3332.
 
+## Round 3: David's round 2 review (2026-11-02, verbatim; https://claude.ai/artifact/AdBQ3wtaW2xWdv5JxpXdDA)
+
+Approved: pol2-glass.
+- pol2-lantern (redo): "too much haze, just a clear light with smaller visual "
+- pol2-lantern-walk (redo): "shouldnt be blinding, like subtle glow like the day"
+- pol2-lantern-times, pol2-lantern-play (redo, no note)
+- pol2-compare (redo): "less glow and thinner and les opacity circle"
+- pol2-ring-sell (redo): "thinner lighter"
+- pol2-ring-night (redo): "less glow, thiner ring"
+- pol2-ring-doors (redo): "subtle and less glow and white not yellow for all"
+- pol2-ring-bench (redo): "bench shouldnt even get a interaction its too small"
+- pol2-ring-skip (redo): "people bench small things"
+- pol2-ring-boards, pol2-ring-play (redo, no note)
+
+Build:
+1. Lantern: a clear, small light at the lamp, no haze over the character; at night about as subtle as round 2's day look. Never blinding.
+2. Ring: thinner, lighter, lower opacity, much less glow, white (not yellow) for every target.
+3. No ring on benches, people or small things. Keep it for the bigger interactables (sell stand, boards, counters, doors).
+
 ## Status (round 2, 2026-11-01)
 
 Built on `game/polish`, ready for David's review. Head: see the last `[build] polish lane file` commit. Gates: full vitest 3733 passed (398 files) after item 0; on the final head 3732 passed and 1 timed out (shoreField "crosses 0 on the drawn coast", 5 s timeout at load 8; untouched by this lane), which passes alone (2/2); tsc clean; eslint clean on changed files; perf:check (SCENES=v2, once) failed on frame time on a loaded machine (1-minute load 5.3 to 5.7, other lanes benching and building): v2 high 6.5 ms (baseline 4.8, +35%), lite 4.0 ms (2.9, +38%); draws 367 (359, +2.2%) and 291 (289, +0.7%), triangles +1.5% and +2.2%, all within tolerance. The bench holds no lantern and has no E target, so neither effect draws there (the ring and glow are `visible = false` until a target; the lantern mounts only with rod-4 in hand); the small draw and triangle drift is against a 10-14 baseline. When shown, each costs two transparent draws (the ring: ring + glow; per lantern holder: halo + pool) and no shader compile into lit materials. The coordinator should rerun it on a quiet machine.
