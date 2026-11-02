@@ -97,34 +97,45 @@ export default function ToolWheel({ items, held, wheelKey, enabled, touch, onEqu
   useEffect(() => () => { slowMotion(false); window.clearTimeout(live.current.timer); }, []);
 
   const n = items.length, picked = choice === "keep" ? items.findIndex(i => i.id === held) : choice;
-  const label = picked === null ? "Put away" : picked >= 0 ? items[picked].name : held ? "" : "Empty hands";
-  const sub = picked !== null && picked >= 0 && items[picked].kind !== "pin" && items[picked].tier ? `Tier ${items[picked].tier}` : null;
-  // The name sits beside the choice on the outside (above a petal in the top half, below one in the bottom half, under
-  // the flower for the centre), its tail pointing at it: never over the centre.
-  const [lx, ly] = picked !== null && picked >= 0 ? slotPosition(picked, n, RING) : [0, RING + 24]; // the centre's goes under the flower
   return <>
     {touch && !open && enabled && n > 0 && <button className={styles.touchButton} onClick={() => begin("touch")} aria-label="Open the tool wheel">
       {held ? <ItemIcon item={items.find(i => i.id === held) ?? null} /> : <Hand size={22} aria-hidden />}
     </button>}
     {open && <div className={styles.wheel} data-shown={shown || undefined} role="menu" aria-label="Tool wheel" onClick={open === "touch" ? () => close(false) : undefined}>
-      <div className={styles.flower} style={{ "--n": n } as CSSProperties}>
-        {items.map((item, i) => {
-          const [x, y] = slotPosition(i, n, RING);
-          return <button key={item.id} role="menuitem" className={styles.petal} data-chosen={picked === i || undefined} data-held={item.id === held || undefined}
-            style={{ "--x": `${x}px`, "--y": `${y}px`, "--i": i } as CSSProperties}
-            onClick={e => { e.stopPropagation(); live.current.choice = i; close(true); }} aria-label={item.name}>
-            <ItemIcon item={item} />
-            {item.id === held && <span className={styles.check} aria-hidden><Check size={13} strokeWidth={3.4} /></span>}
-            {item.tier && item.kind !== "pin" ? <span className={styles.pips} aria-hidden>{Array.from({ length: item.tier }, (_, k) => <i key={k} />)}</span> : null}
-          </button>;
-        })}
-        <button role="menuitem" className={styles.centre} data-chosen={picked === null || undefined} aria-label="Put away"
-          onClick={e => { e.stopPropagation(); live.current.choice = null; close(true); }}><Hand size={22} aria-hidden /></button>
-        {label && <p className={styles.name} aria-live="polite" data-above={ly < -1 || undefined} style={{ "--lx": `${lx}px`, "--ly": `${ly}px` } as CSSProperties}><b>{label}</b>{sub && <small>{sub}</small>}</p>}
-      </div>
+      <ToolWheelView items={items} held={held} picked={picked} onPick={i => { live.current.choice = i; close(true); }} />
       {open === "key" && <p className={styles.hint}><span><kbd>{keyName(wheelKey)}</kbd>{choice === null ? "Put away" : "Hold"}</span><span><kbd>Esc</kbd>Cancel</span></p>}
     </div>}
   </>;
+}
+
+/**
+ * The flower itself: the overlay above, and the keyboard tour's peek (hq/TourPeek.tsx). `picked`: the petal chosen (null
+ * the centre, -1 none); `standalone`: shown on its own, not inside the overlay that fades it in.
+ */
+export function ToolWheelView({ items, held, picked, standalone, onPick }: {
+  items: readonly WheelItem[]; held: string | null; picked: number | null; standalone?: boolean; onPick?: (i: number | null) => void;
+}) {
+  const n = items.length;
+  const label = picked === null ? "Put away" : picked >= 0 ? items[picked].name : held ? "" : "Empty hands";
+  const sub = picked !== null && picked >= 0 && items[picked].kind !== "pin" && items[picked].tier ? `Tier ${items[picked].tier}` : null;
+  // The name sits beside the choice on the outside (above a petal in the top half, below one in the bottom half, under
+  // the flower for the centre), its tail pointing at it: never over the centre.
+  const [lx, ly] = picked !== null && picked >= 0 ? slotPosition(picked, n, RING) : [0, RING + 24]; // the centre's goes under the flower
+  return <div className={styles.flower} data-shown={standalone || undefined} style={{ "--n": n } as CSSProperties}>
+    {items.map((item, i) => {
+      const [x, y] = slotPosition(i, n, RING);
+      return <button key={item.id} role="menuitem" className={styles.petal} data-chosen={picked === i || undefined} data-held={item.id === held || undefined}
+        style={{ "--x": `${x}px`, "--y": `${y}px`, "--i": i } as CSSProperties}
+        onClick={e => { e.stopPropagation(); onPick?.(i); }} aria-label={item.name}>
+        <ItemIcon item={item} />
+        {item.id === held && <span className={styles.check} aria-hidden><Check size={13} strokeWidth={3.4} /></span>}
+        {item.tier && item.kind !== "pin" ? <span className={styles.pips} aria-hidden>{Array.from({ length: item.tier }, (_, k) => <i key={k} />)}</span> : null}
+      </button>;
+    })}
+    <button role="menuitem" className={styles.centre} data-chosen={picked === null || undefined} aria-label="Put away"
+      onClick={e => { e.stopPropagation(); onPick?.(null); }}><Hand size={22} aria-hidden /></button>
+    {label && <p className={styles.name} aria-live="polite" data-above={ly < -1 || undefined} style={{ "--lx": `${lx}px`, "--ly": `${ly}px` } as CSSProperties}><b>{label}</b>{sub && <small>{sub}</small>}</p>}
+  </div>;
 }
 
 function ItemIcon({ item }: { item: WheelItem | null }) {

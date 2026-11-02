@@ -6,15 +6,16 @@
  * keyboard; there's no Next. Every key you touch sinks on the drawing too. Each step done brings its part of your
  * screen in, in its real place (`onShow`: the HUD's coins, the chat, the bag, the menu's entries, the minimap), which
  * springs in and rings (SlotPop): the HUD builds up a piece at a time. While it's up it takes every key, so nothing
- * opens behind it. While a key the tour knows is down, a peek at what it brings up pops on the card's right (KeyPeek:
- * the wheel spinning and picking, the bag's bar filling...; David's v5 review) and fades when you let go, after a beat
- * for a quick press. The steps and words: lib/game/arrival/hq/uiTour.ts. `onDone` after the last, or on Skip.
+ * opens behind it. While a key the tour knows is down, a peek at what it brings up pops on the card's right (TourPeek:
+ * the game's real tool wheel picking, the bag's slots filling...; David's v5 and round 6 reviews) and fades when you
+ * let go, after a beat for a quick press. The steps and words: lib/game/arrival/hq/uiTour.ts. `onDone` after the last, or on Skip.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check } from "lucide-react";
 import { Keycap } from "@/components/gui";
-import { GhostButton, KeyBoard, KeyPeek, SlotPop, Spotlight, boardLabel, type PeekKind } from "@/components/gui/flat";
+import { GhostButton, KeyBoard, SlotPop, Spotlight, boardLabel, type PeekKind } from "@/components/gui/flat";
 import { AudioManager } from "@/lib/game/audio";
+import TourPeek from "./TourPeek";
 import { HOLD_MS, UI_TOUR, tourInput, tourSteps, tourTick, type HudPiece, type TourKeys, type TourProgress } from "@/lib/game/arrival/hq/uiTour";
 
 /** A finished step stays lit this long before the next key lights up (ms); the last one, before it closes. */
@@ -115,7 +116,7 @@ export default function KeyboardTour({ open, keys, onShow, onDone }: {
   return <>
     <Spotlight light open={open} label={`${UI_TOUR.eyebrow}: ${step.title}`} lead={lead} steps={{ count: steps.length, at: shown }}
       testId="ui-tour" dataset={{ "data-step": step.id, "data-won": won !== null ? "" : undefined }}
-      aside={peek && <KeyPeek key={peek.kind} kind={peek.kind} out={peek.out} testId="ui-tour-peek" />}
+      aside={peek && <TourPeek key={peek.kind} kind={peek.kind} out={peek.out} testId="ui-tour-peek" />}
       footer={<GhostButton onClick={() => { setP(START); setWon(null); setPopped(null); onDone(); }} data-testid="ui-tour-skip">{UI_TOUR.skip}</GhostButton>}>
       <KeyBoard lit={step.key} hold={step.hold} fill={fill} won={won !== null} done={steps.slice(0, p.step).map(s => s.key)} down={down} />
     </Spotlight>

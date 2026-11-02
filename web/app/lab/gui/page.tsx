@@ -14,6 +14,7 @@ import FlatPieces from "./FlatPieces";
 import { FamilyReveal } from "@/components/game/oracle/OracleSheetEmbed";
 import IncantationOverlay from "@/components/game/combat/IncantationOverlay";
 import { EmoteWheelView } from "@/components/game/emotes/EmoteWheel";
+import TourPeek from "@/components/game/hq/TourPeek";
 import { DANCE_RING } from "@/lib/game/emoteWheel";
 import ToastHub, { toast } from "@/components/game/ToastHub";
 import { Amount } from "@/components/economy/Amount";
@@ -27,7 +28,7 @@ import { RodRadar, TackleRadar } from "@/components/economy/RodGear";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import { CircleDot, Waves, Worm } from "lucide-react";
 import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
-import { ActionBar, ActionIcon, BigMoment, CardOverlay, DarkButton, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, KeyPeek, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, ShowOff, ShowOffPicks, Thumb, QuestCheck, RankBadge, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot, type PeekKind } from "@/components/gui/flat";
+import { ActionBar, ActionIcon, BigMoment, CardOverlay, DarkButton, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, ShowOff, ShowOffPicks, Thumb, QuestCheck, RankBadge, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot, type PeekKind } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
 import { BoardRows } from "@/components/game/volleyball/BoardSheet";
 import s from "./showroom.module.css";
@@ -84,21 +85,21 @@ function KeyBoardShow() {
     {bag && <SlotPop to={["[data-demo-bag]"]} />}
     <Spotlight light open label="Keys" lead={hold ? <>Hold <Keycap>Tab</Keycap> Tools</> : <>Press <Keycap>I</Keycap> Bag</>}
       steps={{ count: 9, at: hold ? 0 : 4 }} footer={<GhostButton>Skip</GhostButton>}
-      aside={hold ? k >= 4 && <KeyPeek kind="wheel" out={k >= 18} /> : k >= 32 && <KeyPeek kind="bag" out={k >= 39} />}>
+      aside={hold ? k >= 4 && <TourPeek kind="wheel" out={k >= 18} /> : k >= 32 && <TourPeek kind="bag" out={k >= 39} />}>
       <KeyBoard lit={hold ? "tab" : "i"} hold={hold} fill={hold ? Math.min(1, Math.max(0, (k - 4) / 12)) : 0} won={hold ? k >= 16 : k >= 34}
         done={hold ? [] : ["tab", "g", "h", "enter"]} down={new Set(hold ? (k >= 4 && k < 16 ? ["tab"] : []) : (k >= 32 && k < 34 ? ["i"] : []))} />
     </Spotlight>
   </>;
 }
-/** Every KeyPeek, one after another: each pops in, plays its loop, then fades as if the key were let go. */
+/** Every peek (TourPeek in the kit's KeyPeek), one after another: each pops in, plays its loop, then fades as if the key were let go. */
 const PEEK_KINDS: PeekKind[] = ["wheel", "emote", "hud", "chat", "bag", "collection", "quests", "map", "mail"];
 function KeyPeekShow() {
   const [t, setT] = useState(0);
   useEffect(() => { const i = window.setInterval(() => setT(v => v + 1), 300); return () => window.clearInterval(i); }, []);
   const kind = PEEK_KINDS[Math.floor(t / 10) % PEEK_KINDS.length];
   return <div style={{ display: "grid", gridAutoFlow: "column", gap: 18, placeItems: "center", minHeight: "100%" }}>
-    <KeyPeek key={kind} kind={kind} out={t % 10 >= 9} />
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 150px)", gap: 12 }}>{PEEK_KINDS.map(k => <KeyPeek key={k} kind={k} />)}</div>
+    <TourPeek key={kind} kind={kind} out={t % 10 >= 9} />
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 184px)", gap: 12 }}>{PEEK_KINDS.map(k => <TourPeek key={k} kind={k} />)}</div>
   </div>;
 }
 /** The ID as the overlay: filled in on the card, printed out of the slot, stamped, then Done; hover it to tilt. */

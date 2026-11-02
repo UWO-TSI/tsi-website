@@ -5,33 +5,10 @@
   font: 800 12px/1 var(--gui-font); animation: peekIn 0.34s cubic-bezier(0.34, 1.56, 0.64, 1) both; transition: opacity 0.24s ease, scale 0.24s ease;
 }
 .peek[data-out] { opacity: 0; scale: 0.9; }
-.peek svg { width: 100%; height: 100%; stroke-width: 2.2; }
+/* The game's real piece, small (TourPeek): a little more room, nothing spilling out. */
+.peek[data-real] { --s: 184px; padding: 10px; overflow: hidden; }
+.peek:not([data-real]) svg { width: 100%; height: 100%; stroke-width: 2.2; }
 @keyframes peekIn { 0% { opacity: 0; scale: 0.6; translate: -14px 0; } 100% { opacity: 1; scale: 1; translate: 0 0; } }
-
-/* The wheels: six round slots on a ring that spins in, a pointer stepping round, the pick popping in the hub. */
-.wheel { position: relative; width: 118px; height: 118px; border-radius: 50%; background: var(--ui-card-dim); box-shadow: inset 0 0 0 1px var(--ui-line);
-  animation: spinIn 0.7s cubic-bezier(0.3, 1.3, 0.5, 1) both; }
-.slot { position: absolute; left: 50%; top: 50%; display: grid; place-items: center; width: 30px; height: 30px; margin: -15px; padding: 6px; box-sizing: border-box;
-  border-radius: 50%; background: var(--ui-card); box-shadow: 0 0 0 1px var(--ui-line); color: var(--ui-ink-2);
-  transform: rotate(calc(var(--i) * 60deg)) translateY(-42px) rotate(calc(var(--i) * -60deg)); }
-.pointer { position: absolute; inset: 0; border-radius: 50%; animation: pick 2.4s cubic-bezier(0.5, 0, 0.3, 1) 0.5s infinite; }
-.pointer::before { content: ""; position: absolute; left: 50%; top: 0; width: 34px; height: 34px; margin-left: -17px; border-radius: 50%; box-shadow: 0 0 0 3px var(--ui-marker); }
-.hub { position: absolute; left: 50%; top: 50%; display: grid; place-items: center; width: 40px; height: 40px; margin: -20px; padding: 8px; box-sizing: border-box; border-radius: 50%;
-  background: var(--ui-ink); color: var(--ui-accent-ink); animation: hub 2.4s ease 0.5s infinite; }
-.peek[data-kind="emote"] .hub { background: var(--ui-heart); }
-@keyframes spinIn { 0% { rotate: -120deg; scale: 0.5; } 100% { rotate: 0deg; scale: 1; } }
-@keyframes pick { 0% { rotate: 0deg; } 30% { rotate: 120deg; } 55%, 100% { rotate: 360deg; } }
-@keyframes hub { 0%, 55% { scale: 0.4; opacity: 0; } 68% { scale: 1.18; opacity: 1; } 78%, 92% { scale: 1; opacity: 1; } 100% { scale: 0.4; opacity: 0; } }
-
-/* At a glance: the time, the wallet and the bars sliding in, one after the other. */
-.hud { display: grid; justify-items: end; gap: 7px; width: 100%; }
-.pill { display: inline-flex; align-items: center; gap: 4px; padding: 5px 9px; border-radius: 999px; background: var(--ui-card); box-shadow: 0 0 0 1px var(--ui-line), 0 2px 6px rgb(var(--ui-shade) / 0.12);
-  animation: slideIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) calc(0.15s + var(--i) * 0.28s) both; }
-.pill svg, .pill img { width: 13px; height: 13px; }
-.bars { display: grid; gap: 4px; width: 84px; animation: slideIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) calc(0.15s + var(--i) * 0.28s) both; }
-.bars i { height: 7px; border-radius: 4px; background: var(--ui-health); }
-.bars i + i { width: 70%; background: var(--ui-xp); }
-@keyframes slideIn { 0% { opacity: 0; translate: 26px 0; } 100% { opacity: 1; translate: 0 0; } }
 
 /* Chat: someone typing, then your line writing out. */
 .chat { display: grid; gap: 10px; width: 100%; }
@@ -44,22 +21,6 @@
 @keyframes dot { 0%, 100% { translate: 0 0; } 50% { translate: 0 -3px; } }
 @keyframes write { 0% { width: 0; } 80%, 100% { width: 80px; } }
 
-/* The bag: its bar fills a slot at a time. */
-.bag { display: grid; justify-items: center; gap: 10px; }
-.bagIcon { width: 34px !important; height: 34px !important; animation: hop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
-.bar { display: flex; gap: 4px; padding: 4px; border-radius: 10px; background: var(--ui-card-dim); box-shadow: inset 0 0 0 1px var(--ui-line); }
-.bar > span { display: grid; place-items: center; width: 20px; height: 20px; padding: 3px; border-radius: 6px; background: var(--ui-card); box-shadow: 0 0 0 1px var(--ui-line); color: var(--ui-word-item); }
-.bar > span svg { animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) calc(0.3s + var(--i) * 0.18s) both; }
-@keyframes hop { 0% { scale: 0.4; } 100% { scale: 1; } }
-@keyframes popIn { 0% { scale: 0; } 100% { scale: 1; } }
-
-/* The collection: its cards flipping in. */
-.grid { display: grid; grid-template-columns: repeat(3, 32px); gap: 6px; }
-.grid > span { display: grid; place-items: center; width: 32px; height: 32px; padding: 6px; box-sizing: border-box; border-radius: 8px; background: var(--ui-card); box-shadow: 0 0 0 1px var(--ui-line); color: var(--ui-word-fish);
-  animation: flip 0.45s ease calc(0.1s + var(--i) * 0.14s) both; }
-.grid > span:nth-child(even) { color: var(--ui-word-bug); }
-@keyframes flip { 0% { opacity: 0; transform: rotateY(90deg); } 100% { opacity: 1; transform: rotateY(0deg); } }
-
 /* Quests: three lines, each ticked in turn. */
 .quests { display: grid; gap: 9px; width: 100%; }
 .quests > span { display: flex; align-items: center; gap: 7px; }
@@ -69,13 +30,6 @@
 .quests b { flex: 1; height: 7px; border-radius: 4px; background: var(--ui-line-strong); }
 .quests > span:nth-child(2) b { flex: 0.7; } .quests > span:nth-child(3) b { flex: 0.85; }
 @keyframes tick { 0% { background: transparent; scale: 1; } 60% { background: var(--ui-ink); scale: 1.25; } 100% { background: var(--ui-ink); scale: 1; } }
-
-/* The map: the island on the water, you a dot pulsing on it. */
-.map { position: relative; width: 120px; height: 88px; border-radius: 14px; background: var(--ui-water); box-shadow: inset 0 0 0 1px var(--ui-water-line); overflow: hidden; animation: hop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
-.map svg { position: absolute; inset: 8px; width: calc(100% - 16px); height: calc(100% - 16px); }
-.land { fill: var(--ui-word-bug); opacity: 0.55; }
-.you { position: absolute; left: 52%; top: 46%; width: 10px; height: 10px; margin: -5px; border-radius: 50%; background: var(--ui-ink); box-shadow: 0 0 0 2px var(--ui-card); animation: ping 1.4s ease-out infinite; }
-@keyframes ping { 0% { box-shadow: 0 0 0 2px var(--ui-card), 0 0 0 2px var(--ui-ink); } 100% { box-shadow: 0 0 0 2px var(--ui-card), 0 0 0 14px transparent; } }
 
 /* Mail: a letter rising out of its envelope. */
 .mail { position: relative; width: 84px; height: 84px; }
