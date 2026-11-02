@@ -23,8 +23,8 @@ import { SHELF_LABEL, itemLine, shelfItems, shopShelves, type ShopSection, type 
 import { CardGrid, Code, ColourDots, DarkButton, DetailView, FlatPanel, GhostButton, HairlineRow, HairlineRows, IconRail, InfoHead, ItemCard, Purse, Quiet, RowActions, STAGE, StatusLine,
   flatStyles as f } from "@/components/gui/flat";
 import ItemViewer from "./ItemViewer";
-import { RodRadar, TackleRadar, rodLine, rodOf } from "./RodGear";
-import { tackleByKey } from "@/lib/game/rods";
+import { RodRadar, TackleRadar, rodFacts, rodLine } from "./RodGear";
+import { rodByKey, tackleByKey, trained } from "@/lib/game/rods";
 
 const SHELF_ICON: Record<string, ReactNode> = {
   tools: <Wrench size={22} />, outfits: <Shirt size={22} />, furniture: <Sofa size={22} />, specials: <BadgePercent size={22} />, sell: <HandCoins size={22} />,
@@ -51,26 +51,28 @@ export function specsOf(e: ShopEntry): [string, string][] {
 }
 
 
-function Card({ e, onOpen }: { e: ShopEntry; onOpen: () => void }) {
+function Card({ e, catches, onOpen }: { e: ShopEntry; catches: number; onOpen: () => void }) {
   // An unpriced item (merch waiting on its price): "Price to come" on its pill, and its action off. A rod the shop
-  // doesn't sell (the starter, the workbench ones) says where it comes from instead.
-  return <ItemCard picture={picture(e)} name={e.name} line={e.owned > 0 && !e.can_buy ? "Owned" : itemLine(e)} tag={tagOf(e)}
+  // doesn't sell (the starter, the workbench ones, a found one) says where it comes from instead. A rod you own says
+  // how many fish it has landed (rod_catches).
+  const rod = rodByKey(e.catalogue_ref), owned = e.owned > 0 && !e.can_buy;
+  return <ItemCard picture={picture(e)} name={e.name} line={owned ? (rod ? `Owned · ${catches.toLocaleString()} fish` : "Owned") : itemLine(e)} tag={tagOf(e)}
     price={e.made ? null : { amount: e.price, currency: e.currency }} pill={e.made ? MADE_PILL[e.made] : undefined} cover={e.stock === 0 ? "sold-out" : null}
-    rarity={rodOf(e.catalogue_ref)?.rarity} onClick={onOpen} label={`${e.name}, ${e.price} ${e.currency}`} testId="shop-card" />;
+    rarity={rod?.rarity} onClick={onOpen} label={`${e.name}, ${e.price} ${e.currency}`} testId="shop-card" />;
 }
 
-const MADE_PILL = { starter: "Yours", workbench: "Workbench" } as const;
-const MADE_ACTION = { starter: "Yours from the start", workbench: "Made at the workbench" } as const;
-const MADE_FINE = { starter: "Everyone fishes with it from day one.", workbench: "Craft it at a workbench." } as const;
+const MADE_PILL = { starter: "Yours", workbench: "Workbench", found: "Found" } as const;
+const MADE_ACTION = { starter: "Yours from the start", workbench: "Made at the workbench", found: "Found, never sold" } as const;
+const MADE_FINE = { starter: "Everyone fishes with it from day one.", workbench: "Craft it at a workbench.", found: "Nobody sells this one. You found it." } as const;
 
-/** A rod's radar (the rod alone: the shop has no slots, David 2026-10-28), or an add-on's own. */
-function GearInfo({ e }: { e: ShopEntry }) {
-  const rod = rodOf(e.catalogue_ref), add = tackleByKey(e.catalogue_ref);
-  return rod ? <RodRadar rod={rod} /> : add ? <TackleRadar tackle={add} /> : null;
+/** A rod's radar (the rod alone, as trained: the shop has no slots, David 2026-10-28), or an add-on's own. */
+function GearInfo({ e, catches }: { e: ShopEntry; catches: number }) {
+  const rod = rodByKey(e.catalogue_ref), add = tackleByKey(e.catalogue_ref);
+  return rod ? <RodRadar rod={trained(rod, catches)} /> : add ? <TackleRadar tackle={add} /> : null;
 }
 
-function Detail({ e, list, onPick, onBack, busy, onPay, viewer }: {
-  e: ShopEntry; list: ShopEntry[]; onPick: (id: string) => void; onBack: () => void; busy: string | null; onPay: (e: ShopEntry) => void;
+function Detail({ e, catches, list, onPick, onBack, busy, onPay, viewer }: {
+  e: ShopEntry; catches: number; list: ShopEntry[]; onPick: (id: string) => void; onBack: () => void; busy: string | null; onPay: (e: ShopEntry) => void;
   /** A model of its own for the left pane (the keychain's), in place of the turning icon model. */
   viewer?: ReactNode | null;
 }) {
@@ -80,7 +82,7 @@ function Detail({ e, list, onPick, onBack, busy, onPay, viewer }: {
   const spec = useMemo(() => itemModel(e), [e]);
   // A hair dye's colour dots: the other dyes on the shelf.
   const dyes = e.category === "hair" ? list.filter(x => x.category === "hair") : [];
-  const rod = rodOf(e.catalogue_ref), gear = !!rod || !!tackleByKey(e.catalogue_ref);
+  const rod = rodByKey(e.catalogue_ref), gear = !!rod || !!tackleByKey(e.catalogue_ref);
   const action = merch ? "Redeem" : e.owned > 0 && e.can_buy ? "Buy another" : e.owned > 0 ? "Owned" : "Buy";
   return <DetailView testId="shop-detail" rarity={rod?.rarity} onBack={onBack} hint={e.slug === "merch-tsi-lanyard" ? "Drag to slide along" : e.slug === "merch-genesis-sticker" ? "Drag to tilt" : undefined}
     stage={viewer ?? <ItemViewer key={e.id} spec={spec} picture={picture(e)} name={e.name} className={STAGE.stage} pictureClassName={STAGE.picture} />}
@@ -89,7 +91,7 @@ function Detail({ e, list, onPick, onBack, busy, onPay, viewer }: {
       <InfoHead kind={rod ? rodLine(rod) : kindOf(e)} title={e.name} text={itemLine(e)} />
       {dyes.length > 1 && <ColourDots value={e.id} onPick={onPick}
         items={dyes.map(d => ({ id: d.id, label: d.name, background: `url(${picture(d)}) center 62% / 260% no-repeat` }))} />}
-      <GearInfo e={e} />
+      <GearInfo e={e} catches={catches} />
     </>}
     pay={e.made ? { action: { label: MADE_ACTION[e.made], disabled: true, onClick: () => {} } }
       : { price: { amount: e.price, currency: e.currency }, was: e.special ? e.base_price.toLocaleString() : null,
@@ -97,7 +99,7 @@ function Detail({ e, list, onPick, onBack, busy, onPay, viewer }: {
     fine={e.made ? MADE_FINE[e.made]
       : <>{merch ? "Pay with Gems. Reserve it here, then pick it up at HQ on campus." : `Pay with ${e.currency === "gems" ? "Gems" : "coins"}.`}
       {e.owned > 0 ? ` You own ${e.owned}.` : ""}</>}
-    specs={gear ? null : specsOf(e)} />;
+    specs={rod && e.owned > 0 ? rodFacts(rod, catches) : gear ? null : specsOf(e)} />;
 }
 
 /** The counter's Sell: what's in your bag the shop buys, one or the stack. */
@@ -210,8 +212,8 @@ export default function ShopOverlay({ open, onClose, title, section, sell = fals
     {!view ? <Quiet>{error ? "" : "Opening the shop…"}</Quiet>
       : current === "sell" ? <SellPane transport={transport} onSold={(from, to, line, ok) => { if (ok) countUp(coinsEl.current, from, to, timers.current); onSold?.(line, ok); }} />
       : current === "pickups" ? <Pickups transport={transport} />
-      : item ? <Detail e={item} list={items} onPick={setPicked} onBack={() => setPicked(null)} busy={busy} onPay={e => void pay(e)} viewer={viewerFor?.(item, STAGE.stage, STAGE.picture)} />
+      : item ? <Detail e={item} catches={view?.catches[item.catalogue_ref ?? ""] ?? 0} list={items} onPick={setPicked} onBack={() => setPicked(null)} busy={busy} onPay={e => void pay(e)} viewer={viewerFor?.(item, STAGE.stage, STAGE.picture)} />
       : items.length === 0 ? <Quiet>{current === "specials" ? "No specials today. New picks go up at midnight, Toronto time." : current?.startsWith("merch") ? "New club merch arrives with the next order." : "The shopkeeper restocks with each update."}</Quiet>
-      : <CardGrid title={current ? SHELF_LABEL[current] : ""}>{items.map(e => <Card key={e.id} e={e} onOpen={() => { setPicked(e.id); setNote(null); }} />)}</CardGrid>}
+      : <CardGrid title={current ? SHELF_LABEL[current] : ""}>{items.map(e => <Card key={e.id} e={e} catches={view?.catches[e.catalogue_ref ?? ""] ?? 0} onOpen={() => { setPicked(e.id); setNote(null); }} />)}</CardGrid>}
   </FlatPanel>;
 }

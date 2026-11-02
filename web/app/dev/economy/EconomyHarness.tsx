@@ -1,11 +1,16 @@
 "use client";
 
-/** /dev/economy?view=shop|overlay|bag|sell|inventory|wallet|admin[&tab=specials][&section=items|merch|rods: the shop overlay's two answers, or the rod shop] */
+/**
+ * /dev/economy?view=shop|overlay|bag|sell|inventory|wallet|admin|unlock[&tab=specials][&section=items|merch|rods: the shop
+ * overlay's two answers, or the rod shop][&found=0: before the Training rod is found]
+ */
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { InventorySheet, SellSheet, ShopBody, WalletSheet } from "@/components/economy/EconomySheets";
 import MerchFulfilment from "@/components/economy/MerchFulfilment";
 import ShopOverlay from "@/components/economy/ShopOverlay";
 import { BagSheet } from "@/components/game/Bag";
+import RewardCard from "@/components/game/RewardCard";
+import { rodNews } from "@/lib/game/useFishingSession";
 import { merchViewer } from "@/components/game/ShopCounter";
 import { memoryEconomyStore } from "@/lib/wallet/memoryStore";
 import { memoryEconomyTransport } from "@/lib/wallet/memoryTransport";
@@ -40,6 +45,12 @@ async function seed(): Promise<EconomyTransport> {
   await S.equip(m.store, ME, { item_id: id("acc-straw-hat"), equipped: true });
   await S.sell(m.store, ME, { item_key: "fish_dace", qty: 2, idempotency_key: "demo-sell-1" });
   await S.reserveMerch(m.store, ME, { item_id: id("merch-genesis-sticker"), idempotency_key: "demo-merch-me" });
+  // The fish each rod has landed (rod_catches), and the Training rod the Flimsy rod's 50th found (unless ?found=0).
+  for (const [rod, n] of [["rod_flimsy", 50], ["rod_cedar", 37], ["rod_glass", 12], ["rod_training", 31]] as const) m.caught(ME, rod, n);
+  if (new URLSearchParams(window.location.search).get("found") !== "0") {
+    const item = m.items.find((i) => i.slug === "rod-training")!;
+    m.inventory.set(`${ME}:${item.id}`, { item, qty: 1, equipped: false, acquired_at: now.toISOString() });
+  }
   m.fund(MAYA, 0, 800);
   m.fund(JORDAN, 0, 2000);
   await S.reserveMerch(m.store, MAYA, { item_id: id("merch-tsi-lanyard"), idempotency_key: "demo-merch-maya" });
@@ -71,6 +82,16 @@ export default function EconomyHarness() {
       {view === "inventory" ? <InventorySheet open onClose={close} transport={t} /> : null}
       {view === "wallet" ? <WalletSheet open onClose={close} transport={t} /> : null}
       {view === "admin" ? <div style={{ maxWidth: 1000, margin: "0 auto" }}><MerchFulfilment transport={t} /></div> : null}
+      {/* The Training rod's unlock moment: the land that found it, as the fishing session shows it: ?view=unlock */}
+      {view === "unlock" ? <Unlock /> : null}
     </main>
   );
+}
+
+function Unlock() {
+  useEffect(() => {
+    const t = window.setTimeout(() => rodNews({ item_key: "fish_dace", size_cm: 12, rod: { key: "rod_flimsy", catches: 50 }, unlocked: "rod_training" }), 300);
+    return () => window.clearTimeout(t);
+  }, []);
+  return <RewardCard />;
 }

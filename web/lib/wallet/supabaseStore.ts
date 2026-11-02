@@ -47,6 +47,11 @@ export function supabaseEconomyStore(db: SupabaseClient): EconomyStore {
       if (error) raise(error);
       return ((data ?? []) as Row[]).map(toItem);
     },
+    async rodCatches(m) {
+      const { data, error } = await db.from("rod_catches").select("rod_key, count").eq("member_id", m);
+      if (error) raise(error);
+      return Object.fromEntries(((data ?? []) as Row[]).map((r) => [String(r.rod_key), Number(r.count)]));
+    },
     async inventory(m) {
       const { data, error } = await db.from("member_inventory").select(`qty, equipped, acquired_at, shop_items(${ITEM_COLS})`).eq("member_id", m);
       if (error) raise(error);

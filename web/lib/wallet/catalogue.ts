@@ -39,11 +39,19 @@ const e = (slug: string, display_name: string, category: ShopCategory, price: nu
 });
 const furniture = (ref: string, name: string, price: number) => e(`furn-${ref}`, name, "furniture", price, { catalogue_ref: ref, stackable: true, special_pool: true });
 
+const rodRow = (slug: string, display_name: string, price: number, tier: Tier, description: string, position: number): CatalogueEntry => withIcon({
+  slug, display_name, category: "tool", description, price_coins: price, price_gems: null, tier, slot: "rod", special_pool: false, stackable: false, stock: null,
+  catalogue_ref: slug.replace("-", "_"), sprite_url: null, position });
+
 export const CATALOGUE: CatalogueEntry[] = [
   // Tools (row 127: basic rod ~100, mid ~400)
   e("rod-basic", "Basic rod", "tool", 100, { tier: "basic", slot: "rod", description: "A sturdy starter rod." }),
   e("rod-cedar", "Cedar rod", "tool", 400, { tier: "mid", slot: "rod", catalogue_ref: "rod_cedar", description: "Lighter, and a little lucky." }),
   e("rod-glass", "Glass rod", "tool", 1200, { tier: "premium", slot: "rod", catalogue_ref: "rod_glass", description: "The pier regulars' favourite." }),
+  // Round 4's rods (David 2026-11-02; lib/game/rods.ts): their own positions, so no other row's moves. The Training rod is never sold (FOUND_ONLY).
+  rodRow("rod-precision", "Precision rod", 200, "basic", "A wide catch bar and a long bite window.", 1001),
+  rodRow("rod-carrot", "Carrot rod", 550, "mid", "A thick carrot of a rod. Fish can't help but nibble.", 1002),
+  rodRow("rod-training", "Training rod", 900, "mid", "Found, never sold. It gets better with every fish it lands.", 1003),
   e("bobber-lucky", "Lucky bobber", "tool", 600, { tier: "premium", slot: "bobber", catalogue_ref: "bobber_lucky", description: "A bobber for your rod: +20 luck, so rarer fish bite more often." }),
   e("net-basic", "Bug net", "tool", 100, { tier: "basic", slot: "net" }),
   e("net-mid", "Wide net", "tool", 400, { tier: "mid", slot: "net" }),
@@ -192,13 +200,15 @@ export const TAUGHT_TOOL_SLUGS = ["net-basic", "shovel-basic", "pickaxe-basic"];
 /** Tools that did nothing in the shop (David 2026-10-27, v1-gameplay "some shop items did nothing"): the basic rod
  * (no tool behind it: the flimsy rod is everyone's) and the tier 2 net and shovel (no tier effect yet). Off sale. */
 export const HOLLOW_TOOLS = ["rod-basic", "net-mid", "shovel-mid"];
+/** Rods nobody sells: found in the world (lib/game/rods.ts TRAINING). Off sale; finders keep them. */
+export const FOUND_ONLY = ["rod-training"];
 /** The placeholder tote and sticker pack, which aren't real merch (David, 2026-10-22: "Take both off sale"). */
 export const PLACEHOLDER_MERCH = ["merch-sticker-pack", "merch-tote"];
 /** Hairstyles David removed from the game (2026-10-27: Messy with headset, Fluffy boy, Wavy half-up): their shop rows go off sale. */
 export const REMOVED_HAIR = ["hair_wavy_half_up"];
-/** Shop rows with no character part: the pre-ownership outfits, the wardrobe cut's (CUT_WEARABLES), the taught tools and the hollow ones; and the placeholder merch. Off sale. */
+/** Shop rows with no character part: the pre-ownership outfits, the wardrobe cut's (CUT_WEARABLES), the taught tools, the hollow ones and the found rods; and the placeholder merch. Off sale. */
 export const RETIRED = ["outfit-sage-overalls", "outfit-cream-knit", "outfit-wharf-raincoat", "outfit-club-tee", "hair-chestnut", "hair-sea-glass", "hair-sunset", "acc-straw-hat", "acc-round-glasses", "acc-bandana",
-  ...CUT_WEARABLES.map((c) => wearSlug(c.id)), ...REMOVED_HAIR.map(wearSlug), ...TAUGHT_TOOL_SLUGS, ...HOLLOW_TOOLS, ...PLACEHOLDER_MERCH];
+  ...CUT_WEARABLES.map((c) => wearSlug(c.id)), ...REMOVED_HAIR.map(wearSlug), ...TAUGHT_TOOL_SLUGS, ...HOLLOW_TOOLS, ...FOUND_ONLY, ...PLACEHOLDER_MERCH];
 /** Sold, as opposed to only granted: starter clothes stay off sale. */
 export const onSale = (c: CatalogueEntry) => !RETIRED.includes(c.slug) && !(c.category !== "furniture" && c.catalogue_ref !== null && STARTER_REFS.has(c.catalogue_ref));
 

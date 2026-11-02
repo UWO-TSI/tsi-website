@@ -1,5 +1,6 @@
-/** In-memory CollectionsStore mirroring the 031, 036, catch-roll, seasonal-land, recipe-drop and backpack SQL functions (tests, dev harness). */
+/** In-memory CollectionsStore mirroring the 031, 036, catch-roll, seasonal-land, recipe-drop, backpack and rod-catches SQL functions (tests, dev harness). */
 import { FISH } from "@/lib/game/fishing";
+import { TRAINING } from "@/lib/game/rods";
 import { CHEST_SLOTS, bagCapacity, fits, isMaterial, slotsUsed, type Stock } from "./bag";
 import { clampSize, monthStart, trophyFor, weekStart, type Donation, type MemberItem, type WeeklyBest } from "./logic";
 import { CAST_GAP_MS, MIN_REEL_MS, ROLL_TTL_MS } from "./rolls";
@@ -21,7 +22,8 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
   const showcases = new Map<string, (string | null)[]>();
   const entries = new Map<string, TourneyEntry & { goal: string }>(); // `${goal}:${cycle}:${member}:${category}`
   const hourly = new Map<string, number>(); // `${member}:${hour}:${key}`
-  const rolls = new Map<string, { member: string; key: string; size: number | null; trophy: boolean; at: number; landed: boolean }>();
+  const rolls = new Map<string, { member: string; key: string; size: number | null; trophy: boolean; at: number; landed: boolean; rod: string }>();
+  const rodCounts = new Map<string, number>(); // rod_catches: `${member}:${rod}`
   const harvests = new Set<string>(); // `${member}:${node}:${hourKey}`
   const digs = new Map<string, number>(); // member_digs
   const purses = new Map<string, { coins: number; gems: number }>(); // what digs paid into the wallet
@@ -137,12 +139,12 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
     async weeklyBests(week) {
       return [...bests.values()].filter((b) => b.week === week).map(({ week: _w, ...b }) => (void _w, { ...b, member_name: names.get(b.user_id) ?? "Member" }));
     },
-    async cast(m, key, size, trophy) {
+    async cast(m, key, size, trophy, rod) {
       const at = now().getTime();
       if ([...rolls.values()].some((r) => r.member === m && at - r.at < CAST_GAP_MS)) throw new CollectionsError("too_fast");
       room(m, key, 1);
       const id = crypto.randomUUID();
-      rolls.set(id, { member: m, key, size, trophy, at, landed: false });
+      rolls.set(id, { member: m, key, size, trophy, at, landed: false, rod });
       return id;
     },
     async land(m, id, seasonal) {
@@ -157,7 +159,14 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
       const res = recordCatch(m, r.key, r.size, r.trophy);
       r.landed = true;
       if (seasonal?.tourney) enter(seasonal.tourney.goal_id, seasonal.tourney.cycle, m, r.key, r.size);
-      return { item_key: r.key, size_cm: r.size, ...res, recipe: drop(m, r.key) };
+      // rod_catches, and the Training rod found on the Flimsy rod's unlock catch (collections_land).
+      const catches = (rodCounts.get(`${m}:${r.rod}`) ?? 0) + 1;
+      rodCounts.set(`${m}:${r.rod}`, catches);
+      if (r.rod === TRAINING.unlock.rod && catches >= TRAINING.unlock.catches && !gear.get(m)?.includes(TRAINING.key)) gear.set(m, [...(gear.get(m) ?? []), TRAINING.key]);
+      return { item_key: r.key, size_cm: r.size, ...res, recipe: drop(m, r.key), rod: { key: r.rod, catches } };
+    },
+    async rodCatches(m) {
+      return mine(rodCounts, m);
     },
     async dig(m, node, hourKey, loot) {
       if (!/^dig-/.test(node)) throw new CollectionsError("failed");
@@ -287,6 +296,8 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
     stash: (m: string, key: string, n: number) => chest.set(`${m}:${key}`, (chest.get(`${m}:${key}`) ?? 0) + n),
     chestOf: (m: string, k: string) => chest.get(`${m}:${k}`) ?? 0,
     own: (m: string, refs: string[]) => gear.set(m, refs),
+    /** `n` fish already landed with `rod` (rod_catches). */
+    caught: (m: string, rod: string, n: number) => rodCounts.set(`${m}:${rod}`, (rodCounts.get(`${m}:${rod}`) ?? 0) + n),
     /** The member arrived under row 312: their net and shovel come from residents (lib/game/tools.ts TAUGHT_KINDS). */
     teach: (m: string) => taught.add(m),
     /** Demo fixture: a tourney entry as seasonal_land would leave it. */

@@ -11,8 +11,8 @@ describe("the tool wheel's contents (specs/game-ui.md §1)", () => {
   it("holds everyone's tier-1 rod, net and shovel, and the best owned once you have more", () => {
     expect(ids({})).toEqual(["rod:rod_flimsy", "net:net-basic", "shovel:shovel-basic"]);
     expect(ids({ owned: ["rod_glass", "rod_cedar", "net-mid", "shovel-gold"] })).toEqual(["rod:rod_glass", "net:net-mid", "shovel:shovel-gold"]);
-    // Every tier 1 is a starter but the pickaxe, which only Mayor Eliza gives (m6).
-    expect(TOOLS.filter(t => t.tier === 1 && t.source !== "starter").map(t => t.key)).toEqual(["pickaxe-basic"]);
+    // Every tier 1 is a starter but the Precision rod (the shop's) and the pickaxe, which only Mayor Eliza gives (m6).
+    expect(TOOLS.filter(t => t.tier === 1 && t.source !== "starter").map(t => t.key)).toEqual(["rod_precision", "pickaxe-basic"]);
     expect(ids({ owned: ["pickaxe-basic"] })).toContain("pickaxe:pickaxe-basic");
     expect(bestTool("shovel", ["shovel-gold", "shovel-mid"])?.tier).toBe(5);
   });

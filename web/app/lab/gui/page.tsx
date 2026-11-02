@@ -22,7 +22,7 @@ import { Badge, Banner, Button, Card, ConfirmDialog, Counter, Dialogue, Empty, E
 import { FISH } from "@/lib/game/fishing";
 import { iconUrl } from "@/lib/icons/keys";
 import { RARITIES, RARITY_LABEL } from "@/lib/rarity";
-import { RODS, TACKLE } from "@/lib/game/rods";
+import { RODS, TACKLE, rodByKey } from "@/lib/game/rods";
 import { RodRadar, TackleRadar } from "@/components/economy/RodGear";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import { CircleDot, Waves, Worm } from "lucide-react";
@@ -48,7 +48,7 @@ function RodGearShow() {
   const bobber = TACKLE.find(t => t.slot === "bobber")!, bait = TACKLE.find(t => t.slot === "bait")!;
   return <>
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 24, alignItems: "end" }}>
-      <div data-testid="radar-live"><b>Glass rod, your build</b><RodRadar rod={RODS[2]} tackle={on ? [bobber.key, bait.key] : []} />
+      <div data-testid="radar-live"><b>Glass rod, your build</b><RodRadar rod={rodByKey("rod_glass")!} tackle={on ? [bobber.key, bait.key] : []} />
         <GhostButton onClick={() => setOn(v => !v)} data-testid="radar-toggle">{on ? "Take the bobber and bait off" : "Put the lucky bobber and sweet bait on"}</GhostButton></div>
       <div><b>{bobber.name} on its own</b><TackleRadar tackle={bobber} /></div>
       <div style={{ display: "flex", gap: 8, alignSelf: "center" }}>

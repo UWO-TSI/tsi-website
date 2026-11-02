@@ -9,8 +9,8 @@
  * with it; the grid stays in view. The grid is shared with the storage chest (ChestSheet). The server owns the stock
  * and the sizes (lib/game/bagStore); the grid's arrangement and the New marks are this device's.
  */
-import { RodRadar, RodSlots, RodStage, TackleRadar, equippedTackle, rodLine, rodOf } from "@/components/economy/RodGear";
-import { tackleByKey } from "@/lib/game/rods";
+import { RodRadar, RodSlots, RodStage, TackleRadar, equippedTackle, rodFacts, rodLine } from "@/components/economy/RodGear";
+import { rodByKey, tackleByKey, trained } from "@/lib/game/rods";
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { Apple, ArrowDownWideNarrow, Backpack, Bug, Fish, Gem, Lock, LockOpen, Pin, PinOff, Shirt, Sofa, Wrench, X } from "lucide-react";
 import { ConfirmDialog, SignInText } from "@/components/gui";
@@ -284,14 +284,15 @@ function Owned({ group, transport = httpEconomyTransport }: { group: "tools" | "
   const title = SHELVES.find(x => x.id === group)!.label;
   const kind = (r: InventoryRow) => r.item.slot ? SLOT_NAME[r.item.slot] ?? cap(r.item.slot) : cap(String(r.item.category));
   // A rod opens large: the model with its add-ons hanging from the tip, the slots in the stage's corner, the radar of
-  // the build (RodGear.tsx). An add-on shows its own radar.
-  const rod = rodOf(row?.item.catalogue_ref), add = tackleByKey(row?.item.catalogue_ref), on = equippedTackle(rows);
+  // the build (RodGear.tsx), and the fish it has landed (rod_catches; the Training rod's level). An add-on shows its own radar.
+  const rod = rodByKey(row?.item.catalogue_ref), add = tackleByKey(row?.item.catalogue_ref), on = equippedTackle(rows);
+  const caught = (ref: string | null) => data.catches?.[ref ?? ""] ?? 0;
   if (row && rod) return <>
     {error && <StatusLine error><SignInText text={error} /></StatusLine>}
     <DetailView testId="bag-rod" rarity={rod.rarity} onBack={() => setPicked(null)} stage={<RodStage rod={rod} tackle={on} className={STAGE.stage} />}
       corner={<RodSlots rows={rows} busy={busy} onEquip={(id, eq) => void toggle(id, eq)} />}
-      info={<><InfoHead kind={rodLine(rod)} title={row.item.display_name} text={row.item.description ?? undefined} /><RodRadar rod={rod} tackle={on} /></>}
-      fine="Take it out from the tool wheel." />
+      info={<><InfoHead kind={rodLine(rod)} title={row.item.display_name} text={row.item.description ?? undefined} /><RodRadar rod={trained(rod, caught(rod.key))} tackle={on} /></>}
+      specs={rodFacts(rod, caught(rod.key))} fine="Take it out from the tool wheel." />
   </>;
   const side = row ? <SidePanel key={row.item.id} testId="bag-owned-item" onClose={() => setPicked(null)} picture={rowPicture(row)} title={row.item.display_name} kind={kind(row)}
     facts={[["You own", row.qty.toLocaleString()], ["Status", row.item.slot ? (row.equipped ? (add ? "On your rod" : "Equipped") : "In your closet") : USE_HINT[group] ?? "Yours"],
@@ -303,8 +304,8 @@ function Owned({ group, transport = httpEconomyTransport }: { group: "tools" | "
   return <>
     {!row && error && <StatusLine error><SignInText text={error} /></StatusLine>}
     {rows.length === 0 ? <Quiet>{SHELF_EMPTY[group]}</Quiet>
-      : <WithSide side={side}><CardGrid title={title} min={170} phoneMin={150}>{rows.map(r => <ItemCard key={r.item.id} size="md" arrow={false} rarity={rodOf(r.item.catalogue_ref)?.rarity} picture={rowPicture(r)} name={r.item.display_name}
-        line={r.item.slot ? kind(r) : USE_HINT[group] ?? kind(r)} selected={r.item.id === picked}
+      : <WithSide side={side}><CardGrid title={title} min={170} phoneMin={150}>{rows.map(r => <ItemCard key={r.item.id} size="md" arrow={false} rarity={rodByKey(r.item.catalogue_ref)?.rarity} picture={rowPicture(r)} name={r.item.display_name}
+        line={rodByKey(r.item.catalogue_ref) ? `${caught(r.item.catalogue_ref).toLocaleString()} fish caught` : r.item.slot ? kind(r) : USE_HINT[group] ?? kind(r)} selected={r.item.id === picked}
         pill={r.equipped ? "Equipped" : r.qty > 1 ? `×${r.qty}` : null} onClick={() => setPicked(r.item.id === picked ? null : r.item.id)} label={`${r.item.display_name}${r.equipped ? ", equipped" : ""}`} />)}</CardGrid></WithSide>}
   </>;
 }

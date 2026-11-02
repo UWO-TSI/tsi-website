@@ -57,6 +57,8 @@ export interface EconomyStore {
   ledger(memberId: string, limit: number): Promise<LedgerEntry[]>;
   catalogue(): Promise<ShopItem[]>;
   inventory(memberId: string): Promise<InventoryRow[]>;
+  /** Fish landed with each rod (rod_catches: the rod card's count), rod key to count. */
+  rodCatches(memberId: string): Promise<Record<string, number>>;
   /** The free starters, once per account (economy_grant_starters). */
   grantStarters(memberId: string): Promise<{ granted: boolean }>;
   buy(memberId: string, itemId: string, qty: number, priceEach: number, key: string): Promise<{ balance: number; owned: number; replayed: boolean }>;

@@ -18,17 +18,23 @@ import { worldModel } from "@/lib/game/world/active";
 import { keyModel } from "@/lib/icons/itemModel";
 import { shopIcon } from "@/lib/icons/keys";
 import { RARITY_LABEL } from "@/lib/rarity";
-import { RODS, SLOTS, STAT_INFO, TACKLE, STAT_KEYS, STAT_MAX, hookCap, rig, tackleByKey, type RodStat, type RodTier, type Tackle, type TackleSlot } from "@/lib/game/rods";
+import { SLOTS, STAT_INFO, TACKLE, STAT_KEYS, STAT_MAX, TRAINING, hookCap, rig, tackleByKey, toNextLevel, trainingLevel, type RodStat, type RodTier, type Tackle, type TackleSlot } from "@/lib/game/rods";
 import type { InventoryRow } from "@/lib/wallet/store";
 import { FittedModel } from "./ItemViewer";
 import TurnStage from "./TurnStage";
 
-export const rodOf = (ref: string | null | undefined): RodTier | null => RODS.find(r => r.key === ref) ?? null;
 /** The add-ons a member has on (equipped inventory rows), by key. */
 export const equippedTackle = (rows: readonly InventoryRow[]): string[] =>
   rows.flatMap(r => (r.equipped && tackleByKey(r.item.catalogue_ref) ? [r.item.catalogue_ref!] : []));
 /** "+20 Luck, +10 Lure". */
 export const gainsText = (t: Tackle) => STAT_KEYS.flatMap(k => (t.gains[k] ? [`+${t.gains[k]} ${STAT_INFO[k].label}`] : [])).join(", ");
+/** The rod card's facts (rod_catches): the fish landed with it, and the Training rod's level and its next. */
+export function rodFacts(r: RodTier, catches = 0): [string, string][] {
+  const facts: [string, string][] = [["Fish caught", catches.toLocaleString()]];
+  if (r.key !== TRAINING.key) return facts;
+  const next = toNextLevel(catches);
+  return [...facts, ["Training", `Level ${trainingLevel(catches)} of ${TRAINING.levels.length}${next === null ? "" : `, ${(next - catches).toLocaleString()} more fish to the next`}`]];
+}
 /** "Rare rod · hooks up to epic". */
 export const rodLine = (r: RodTier) => `${RARITY_LABEL[r.rarity]} rod · hooks up to ${RARITY_LABEL[hookCap(r.rarity)].toLowerCase()}`;
 

@@ -1,9 +1,10 @@
 /**
- * Fishing rods and their add-ons (decisions 193, 94; David 2026-10-27, v1-gameplay m4 and x-shop): five launch rods,
- * each with a rarity and six stats graded out of 100 (the hex radar), and add-on slots for bait and a bobber whose
- * gains stack on the rod's stats. Every stat is a real effect inside the cast/bite/reel loop (`effects`). The rod's
- * rarity caps the fish it hooks (`hookCap`, David 2026-10-28). Tiers 2-3 are shop rods (lib/wallet/catalogue.ts);
- * 4-5 are crafted (lib/crafting/recipes.ts).
+ * Fishing rods and their add-ons (decisions 193, 94; David 2026-10-27, v1-gameplay m4 and x-shop): the rods, each with
+ * a rarity and six stats graded out of 100 (the hex radar), and add-on slots for bait and a bobber whose gains stack on
+ * the rod's stats. Every stat is a real effect inside the cast/bite/reel loop (`effects`). The rod's rarity caps the
+ * fish it hooks (`hookCap`, David 2026-10-28). Shop rods are lib/wallet/catalogue.ts, crafted ones lib/crafting/recipes.ts;
+ * the Training rod is found, never sold (`TRAINING`, David 2026-11-02), and grows with the fish it lands (`trained`).
+ * Every landed cast counts toward its rod (rod_catches, 20261102120000_rod_catches.sql).
  * The server rolls a cast with the held rod plus the equipped add-ons the member owns (lib/collections/service.ts).
  */
 import { OBTAINABLE, RARITY_RANK, type Rarity } from "@/lib/rarity";
@@ -51,12 +52,14 @@ export function effects(s: Stats): RodEffects {
 }
 
 export interface RodTier extends RodEffects {
+  /** Its tool tier (the wheel's "Tier n"); several rods can share one. */
   tier: 1 | 2 | 3 | 4 | 5;
   key: string;
   name: string;
   /** Its rung on the ladder: the shop card's outline and the fish it can hook (`hookCap`). */
   rarity: Rarity;
-  source: "starter" | "shop" | "crafted";
+  /** `found`: never sold or crafted; the shop shows it only to its owner. */
+  source: "starter" | "shop" | "crafted" | "found";
   /** The rod's own stats. */
   base: Stats;
   /** With the add-ons on it (`rig`); the base alone otherwise. */
@@ -69,13 +72,42 @@ const stats = (luck: number, bite: number, strength: number, reel: number, lure:
 const rod = (tier: RodTier["tier"], key: string, name: string, rarity: Rarity, source: RodTier["source"], base: Stats): RodTier =>
   ({ tier, key, name, rarity, source, base, stats: base, tackle: [], ...effects(base) });
 
+/** Weakest to strongest: the wheel's default is the last one owned (`bestOwnedRod`), and the last hooks the most. */
 export const RODS: readonly RodTier[] = [
   rod(1, "rod_flimsy", "Flimsy rod", "common", "starter", stats(10, 10, 10, 10, 10, 10)),
+  rod(1, "rod_precision", "Precision rod", "common", "shop", stats(15, 30, 15, 15, 15, 35)),
   rod(2, "rod_cedar", "Cedar rod", "uncommon", "shop", stats(30, 30, 20, 20, 30, 20)),
+  rod(2, "rod_carrot", "Carrot rod", "uncommon", "shop", stats(35, 25, 25, 25, 40, 20)),
+  rod(2, "rod_training", "Training rod", "common", "found", stats(30, 40, 30, 35, 30, 40)),
   rod(3, "rod_glass", "Glass rod", "rare", "shop", stats(40, 40, 30, 40, 30, 50)),
   rod(4, "rod_lighthouse", "Lighthouse rod", "rare", "crafted", stats(50, 60, 50, 50, 50, 40)),
   rod(5, "rod_tidewarden", "Tidewarden rod", "epic", "crafted", stats(70, 80, 70, 60, 60, 60)),
 ];
+/**
+ * tool-pipeline is modelling David's round-4 rods (tools/rod-precision.glb, rod-carrot.glb, rod-training.glb). Until
+ * each lands, it wears this older rod's model and icon (lib/game/tools.ts, lib/icons/keys.ts): delete its line then.
+ */
+export const STAND_IN: Readonly<Record<string, string>> = { rod_precision: "rod_flimsy", rod_carrot: "rod_cedar", rod_training: "rod_glass" };
+
+/**
+ * The Training rod (David 2026-11-02: "easter egg to unlock and not a common rod you can buy ... very good stats
+ * comparable to uncommon rare, one of best starter rods and it has upgrade potential"). Nobody sells it: the
+ * `unlock.catches`th fish landed with the `unlock.rod` finds it (the server grants it in collections_land, which
+ * repeats these numbers; rods.test.ts checks they match). It trains with use: each of `levels` fish landed with it
+ * adds `step` to every stat.
+ */
+export const TRAINING = { key: "rod_training", unlock: { rod: "rod_flimsy", catches: 50 }, levels: [25, 75, 150], step: 5 } as const;
+/** The Training rod's level for the fish landed with it (0 to 3). */
+export const trainingLevel = (catches: number) => TRAINING.levels.filter(n => catches >= n).length;
+/** Fish still to land for its next level, or null at the top. */
+export const toNextLevel = (catches: number) => TRAINING.levels.find(n => catches < n) ?? null;
+/** A rod as it is after `catches` fish: the Training rod's stats grow; every other rod's stay. */
+export function trained(r: RodTier, catches = 0): RodTier {
+  if (r.key !== TRAINING.key) return r;
+  const up = TRAINING.step * trainingLevel(catches), base = { ...r.base };
+  for (const k of STAT_KEYS) base[k] = Math.min(STAT_MAX, base[k] + up);
+  return { ...r, base, stats: base, ...effects(base) };
+}
 
 /**
  * The rarest fish a rod hooks: one rung above its own (David 2026-10-28: a rare rod hooks up to epic, an epic rod up to
@@ -108,13 +140,20 @@ export function rig(r: RodTier, tackleKeys: readonly unknown[] = []): RodTier {
   return { ...r, stats: s, tackle: on.map(t => t.key), ...effects(s) };
 }
 
-/** The rod a cast rolls with on the server: the held tier, with only the add-ons the member owns. */
-export const ownedRig = (tier: number, tackle: readonly string[], owned: readonly string[]) => rig(rodByTier(tier), tackle.filter(k => owned.includes(k)));
+/** The held rod (by key) as trained by `catches` (rod key: fish landed with it), with the add-ons `tackle`. */
+export const heldRig = (key: string, tackle: readonly string[], catches: Readonly<Record<string, number>> = {}) =>
+  rig(trained(rodByKey(key) ?? RODS[0], catches[key] ?? 0), tackle);
+/** The rod a cast rolls with on the server: the held rod, trained, with only the add-ons the member owns. */
+export const ownedRig = (key: string, tackle: readonly string[], owned: readonly string[], catches: Readonly<Record<string, number>> = {}) =>
+  heldRig(key, tackle.filter(k => owned.includes(k)), catches);
 
+export const rodByKey = (key: unknown): RodTier | null => RODS.find(r => r.key === key) ?? null;
+/** The first rod of a tool tier (1 to 5). */
 export function rodByTier(tier: number): RodTier {
-  return RODS[Math.min(RODS.length, Math.max(1, Math.round(tier))) - 1];
+  const t = Math.min(5, Math.max(1, Math.round(tier)));
+  return RODS.find(r => r.tier === t)!;
 }
-/** Best rod among owned gear keys (inventory `catalogue_ref`s; starter rod always owned). Tiers 4–5 are owned only by crafting them. */
+/** Best rod among owned gear keys (inventory `catalogue_ref`s; starter rod always owned). Crafted and found rods are owned only once made or found. */
 export function bestOwnedRod(owned: readonly string[]): RodTier {
   return [...RODS].reverse().find(r => r.source === "starter" || owned.includes(r.key)) ?? RODS[0];
 }

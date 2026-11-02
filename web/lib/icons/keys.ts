@@ -4,6 +4,7 @@
  * sprite_url and the client both read it from here. Light on imports: the catalogues use it.
  */
 import { toolByKey } from "@/lib/game/tools";
+import { STAND_IN } from "@/lib/game/rods";
 
 export const iconUrl = (key: string) => `/assets/icons/${key}.webp`;
 
@@ -25,7 +26,7 @@ export function iconKey(e: IconRow): string {
     if (e.slug === "rod-basic") return "rod_flimsy";
     if (ref === "glider_leaf") return "glider_leaf";
     const tool = toolByKey(ref) ?? toolByKey(e.slug);
-    return tool?.key ?? e.slug;
+    return tool ? STAND_IN[tool.key] ?? tool.key : e.slug;
   }
   if (e.category === "hair") return ref.startsWith("hair:") ? `dye-${ref.slice(5)}` : ref || e.slug;   // a dye, or a hairstyle (wardrobe batch 2)
   if (e.category === "face") return `face-${ref.replace(/^face:/, "").replace(/_/g, "-")}`;   // a whole face (wardrobe batch 2)

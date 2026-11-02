@@ -6,7 +6,7 @@ import { memoryEconomyStore } from "./memoryStore";
 import { dailySpecials, isOnSale, seedItems, sellPrice, speciesClass, speciesSellPrice, torontoDay, chefOrder, fishingTasks } from "./rules";
 import { DROPS } from "@/lib/game/drops";
 import { ROSTER } from "@/lib/collections/roster";
-import { buy, claimDailyGift, equip, getShop, getWallet, pickupCode, reserveMerch, resolveMerch, sell, sellList, type GiftView, chefView, claimFishingTask, fillChefOrder, fishingTasksView, orderDish, rollAtTackle } from "./service";
+import { buy, claimDailyGift, equip, getInventory, getShop, getWallet, pickupCode, reserveMerch, resolveMerch, sell, sellList, type GiftView, chefView, claimFishingTask, fillChefOrder, fishingTasksView, orderDish, rollAtTackle } from "./service";
 import { odds, prizeItems, rollTackle, TACKLE_COUNTERS, TACKLE_PRIZES } from "./tackle";
 import { weekStart } from "@/lib/collections/logic";
 import { fishOutToday } from "@/lib/game/peaceful";
@@ -437,17 +437,34 @@ describe("inventory", () => {
 });
 
 describe("the rod shop (v1-gameplay m4): the tools shelf", () => {
-  it("shows the rods up to rare by tier (the starter and the workbench ones not for sale; the epic Tidewarden off the shelf), then the add-ons, and nothing hollow", async () => {
+  it("shows the rods up to rare, weakest first (the starter and the workbench ones not for sale; the epic Tidewarden off the shelf), then the add-ons, and nothing hollow", async () => {
     const m = memoryEconomyStore(() => noon);
     m.fund(A, 5000);
     const shop = await getShop(m.store, A, noon);
     const tools = shop.ok ? shop.data.tabs.tools : [];
-    expect(tools.slice(0, 6).map((e) => e.catalogue_ref)).toEqual(["rod_flimsy", "rod_cedar", "rod_glass", "rod_lighthouse", "bait_sweet", "bobber_lucky"]);
+    expect(tools.slice(0, 8).map((e) => e.catalogue_ref)).toEqual(["rod_flimsy", "rod_precision", "rod_cedar", "rod_carrot", "rod_glass", "rod_lighthouse", "bait_sweet", "bobber_lucky"]);
+    expect(tools.filter((e) => ["rod_precision", "rod_carrot"].includes(e.catalogue_ref ?? "")).map((e) => [e.price, e.can_buy])).toEqual([[200, true], [550, true]]);
     expect(tools.some((e) => e.catalogue_ref === "rod_tidewarden")).toBe(false);
     expect(tools.filter((e) => e.made).map((e) => [e.catalogue_ref, e.made, e.can_buy, e.owned])).toEqual([
       ["rod_flimsy", "starter", false, 1], ["rod_lighthouse", "workbench", false, 0]]);
     for (const s of ["rod-basic", "net-mid", "shovel-mid"]) expect(tools.some((e) => e.slug === s), s).toBe(false);
     expect(await buy(m.store, A, { item_id: slug(m, "rod-basic"), qty: 1, idempotency_key: "buy-0020" }, noon)).toMatchObject({ ok: false, code: "not_for_sale" });
+  });
+  it("never sells the Training rod, and shows it only to its finder, with every rod's catch count", async () => {
+    const m = memoryEconomyStore(() => noon);
+    m.fund(A, 5000);
+    expect(await buy(m.store, A, { item_id: slug(m, "rod-training"), qty: 1, idempotency_key: "buy-0021" }, noon)).toMatchObject({ ok: false, code: "not_for_sale" });
+    const shelf = async () => { const r = await getShop(m.store, A, noon); return r.ok ? r.data : null; };
+    expect((await shelf())!.tabs.tools.some((e) => e.catalogue_ref === "rod_training")).toBe(false);
+    const item = m.items.find((i) => i.slug === "rod-training")!;
+    m.inventory.set(`${A}:${item.id}`, { item, qty: 1, equipped: false, acquired_at: noon.toISOString() });
+    m.caught(A, "rod_flimsy", 50);
+    m.caught(A, "rod_training", 3);
+    const view = (await shelf())!;
+    expect(view.tabs.tools.filter((e) => e.catalogue_ref === "rod_training").map((e) => [e.made, e.owned, e.can_buy])).toEqual([["found", 1, false]]);
+    expect(view.catches).toEqual({ rod_flimsy: 50, rod_training: 3 });
+    const inv = await getInventory(m.store, A);
+    expect(inv.ok && inv.data.catches).toEqual({ rod_flimsy: 50, rod_training: 3 });
   });
   it("hides home things on the one switch that opens homes in every world: the home island's drop, as the boat home and Claim your plot", () => {
     // The village and the new world alike: homes open with drop 4 (lib/game/drops.ts), whatever NEXT_PUBLIC_GAME_WORLD is.

@@ -10,10 +10,10 @@ import { digRoll } from "./digLoot";
 import { TREATS } from "./treats";
 import { toFailure, type Result } from "@/lib/result";
 import { hourKey } from "@/lib/game/peaceful";
-import { ownedRig } from "@/lib/game/rods";
+import { TRAINING, ownedRig } from "@/lib/game/rods";
 import { checkHeld } from "@/lib/game/tools";
 import type { IslandWeather } from "@/lib/game/islandWeather";
-import { CollectionsError, type BagItem, type CatchResult, type ChestItem, type CollectionsStore } from "./store";
+import { CollectionsError, type BagItem, type CatchResult, type ChestItem, type CollectionsStore, type RodCount } from "./store";
 import { readRaidCredit } from "./raidCredit";
 import { FISH, HOOK_TIER, fishBosses, rollSize } from "@/lib/game/fishing";
 import { CHEST_SLOTS, bagCapacity, slotsUsed } from "./bag";
@@ -56,7 +56,9 @@ const CatchRequest = z.discriminatedUnion("action", [
 /** A recorded catch (harvest, land: its counts, record and any recipe taught), or a cast's `roll` waiting to be landed. */
 /** `purse`: a dig that turned up coins or a gem (lib/collections/digLoot.ts); its item_key is the currency.
  * `together`: the friend's world name when the cast was fishing together (s-fishtogether), for the card's stamp. */
-export type CatchReply = { item_key: string; size_cm: number | null; roll?: string; purse?: { currency: "coins" | "gems"; amount: number }; together?: string | null } & Partial<CatchResult>;
+/** `rod`: a land's rod and the fish landed with it so far; `unlocked`: the rod key this land found (the Training rod). */
+export type CatchReply = { item_key: string; size_cm: number | null; roll?: string; purse?: { currency: "coins" | "gems"; amount: number }; together?: string | null;
+  rod?: RodCount | null; unlocked?: string } & Partial<CatchResult>;
 
 /**
  * A catch from the world (roadmap "Server-authoritative catch rolls"). The
@@ -91,7 +93,12 @@ export async function catchAction(
   if (!parsed.success) return { ok: false, status: 400, code: "invalid", error: "Invalid request" };
   const req = parsed.data;
   try {
-    if (req.action === "land") return { ok: true, data: await store.land(memberId, req.roll, landSeason(await goals(), now)) };
+    if (req.action === "land") {
+      const landed = await store.land(memberId, req.roll, landSeason(await goals(), now));
+      // The land that found the Training rod (collections_land granted it with this count): the card says so.
+      const { rod: unlock, catches } = TRAINING.unlock;
+      return { ok: true, data: landed.rod?.key === unlock && landed.rod.catches === catches ? { ...landed, unlocked: TRAINING.key } : landed };
+    }
     if (req.action === "raid") {
       const credit = fishBosses() ? readRaidCredit(req.credit, raidSecret, now.getTime()) : null;
       if (!credit || credit.m !== memberId) return fail(new CollectionsError("bad_credit"));
@@ -123,12 +130,13 @@ export async function catchAction(
     const owned = await store.ownedGear(memberId);
     const held = checkHeld(req.tool, "rod", owned);
     if (!held.ok) return held;
-    const [sky, active, together, buff] = await Promise.all([weather(), goals(), req.with && req.with !== memberId ? friendName(req.with) : null, store.buff(memberId, now)]);
-    // The add-ons on the rod (rods.ts): only ones the member owns count.
-    const { fish, size } = fishRoll(water, req.power, ownedRig(held.tool.tier, req.tackle ?? [], owned), now, sky, random, eventCatches(active, now), buff ?? undefined, !!together);
+    const [sky, active, together, buff, catches] = await Promise.all([weather(), goals(), req.with && req.with !== memberId ? friendName(req.with) : null, store.buff(memberId, now),
+      held.tool.key === TRAINING.key ? store.rodCatches(memberId) : {}]);
+    // The held rod as trained (the Training rod grows) and its add-ons (rods.ts): only ones the member owns count.
+    const { fish, size } = fishRoll(water, req.power, ownedRig(held.tool.key, req.tackle ?? [], owned, catches), now, sky, random, eventCatches(active, now), buff ?? undefined, !!together);
     const sp = ROSTER.find((s) => s.key === fish.key);
     const kept = clampSize(sp, size);
-    const roll = await store.cast(memberId, fish.key, kept, trophyFor(sp, kept));
+    const roll = await store.cast(memberId, fish.key, kept, trophyFor(sp, kept), held.tool.key);
     // Not caught yet: the reel and the card show what the land records (no size for a fish off the roster).
     return { ok: true, data: { roll, item_key: fish.key, size_cm: kept, together } };
   } catch (err) {

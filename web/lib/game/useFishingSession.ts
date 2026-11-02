@@ -14,7 +14,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AudioManager } from "./audio";
 import { castLine, claimRaid, collect, landCatch, localCollections, localRecord, mergeWithLocal, type CatchAnswer } from "./collections";
-import { rodByTier, type RodTier } from "./rods";
+import { TRAINING, rodByTier, trainingLevel, type RodTier } from "./rods";
+import type { CatchReply } from "@/lib/collections/service";
 import { rollFishFor } from "./peaceful";
 import type { WaterType } from "./fishingSpots";
 import { punchZoom, setAimZoom, setTensionZoom, shakeCamera } from "./cameraJuice";
@@ -365,6 +366,7 @@ export function useFishingSession({ onActiveChange, collectionScope, zoneOverrid
             collect(fish.key);
             intoBag(fish.key);
             setLearned(answer?.catch.recipe?.name ?? null);
+            if (answer) rodNews(answer.catch);
             const beat = localRecord(fish.key, size);
             setNewRecord(!isNew && (answer ? answer.catch.new_record === true && answer.catch.total_collected !== 1 : beat));
           });
@@ -441,4 +443,20 @@ export function useFishingSession({ onActiveChange, collectionScope, zoneOverrid
     /** How long the card waits for the world's beat (a boss's landing takes longer). */
     revealDelay: bossMode ? BOSS_REVEAL_DELAY_MS : REVEAL_DELAY_MS,
   };
+}
+
+/**
+ * What a land did to its rod (rod_catches): the Flimsy rod's unlock catch found the Training rod (a gift card, and the
+ * wheel and the bag re-read it), or the Training rod reached its next level (a toast; the rod's stats re-read).
+ */
+export function rodNews(reply: CatchReply) {
+  if (reply.unlocked === TRAINING.key) {
+    window.dispatchEvent(new CustomEvent("tsi:gift", { detail: { key: "rod-training", name: "Training rod", // its shop row: the icon (lib/game/reward.ts madeIcon)
+      title: "Found: the Training rod", note: `${TRAINING.unlock.catches} fish on your Flimsy rod. Nobody sells this one, and it gets better with every fish it lands.` } }));
+    window.dispatchEvent(new Event("tsi:tools-changed"));
+    window.dispatchEvent(new Event("tsi:gear-changed"));
+  } else if (reply.rod?.key === TRAINING.key && trainingLevel(reply.rod.catches) > trainingLevel(reply.rod.catches - 1)) {
+    window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `Training rod: level ${trainingLevel(reply.rod.catches)}. Every stat is up.` } }));
+    window.dispatchEvent(new Event("tsi:gear-changed"));
+  }
 }
