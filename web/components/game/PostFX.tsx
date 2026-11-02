@@ -79,8 +79,8 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   c = (c - 0.5) * uContrast + 0.5;
   // Low health (lib/game/lowHealth.ts): the colour drains toward grey, and the edges darken toward a deep red. 0 = identity.
   c = mix(c, vec3(dot(c, vec3(0.299, 0.587, 0.114))), uDrain);
-  float edge = smoothstep(0.35, 1.0, length(uv - 0.5) * 1.414);
-  c = mix(c, c * vec3(0.55, 0.1, 0.08), edge * uHurt);
+  float edge = smoothstep(0.3, 0.95, length(uv - 0.5) * 1.414);
+  c = mix(c, c * vec3(0.62, 0.1, 0.08), edge * uHurt);
   outputColor = vec4(c, inputColor.a);
 }
 `;

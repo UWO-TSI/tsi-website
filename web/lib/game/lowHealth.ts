@@ -10,7 +10,7 @@ export const CRITICAL = 0.25;
 /** The vignette starts as health falls under this share. */
 export const HURT_FROM = 0.6;
 /** The most the vignette and the drain ever reach (at empty): subtle, the world stays readable. */
-export const VIGNETTE_MAX = 0.55, DRAIN_MAX = 0.45;
+export const VIGNETTE_MAX = 0.8, DRAIN_MAX = 0.7;
 
 /** How hurt the screen looks at a health share (0 to 1): the vignette's strength and the colour drained, both 0 when well. */
 export function hurtLook(health: number): { vignette: number; drain: number } {

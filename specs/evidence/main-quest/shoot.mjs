@@ -139,6 +139,8 @@ async function levelUpStrip(page, prefix, wide) {
   await page.waitForSelector("[data-testid=level-up]", { timeout: 8000 });
   const t0 = await page.evaluate(() => performance.now());
   const card = async () => {
+    // A phone's whole screen (the moment has no card to crop to, and the jump grows past its box).
+    if (!wide && prefix.startsWith("mq5")) return { x: 0, y: 40, width: 390, height: 804 };
     const b = await page.$eval("[data-testid=level-up] section", el => { const r = el.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; });
     const m = wide ? 70 : 10;
     return { x: Math.max(0, b.x - m), y: Math.max(0, b.y - m), width: b.w + 2 * m, height: b.h + 2 * m };
@@ -173,7 +175,7 @@ for (const scene of SCENES) try {
     await go(page, 30, 46, Math.PI);
     await hudIn(page);
     const p = phone ? "mq5-phone" : "mq5";
-    const corner = phone ? { x: 0, y: 0, width: 390, height: 190 } : { x: 0, y: 0, width: 460, height: 120 };
+    const corner = phone ? { x: 0, y: 40, width: 390, height: 140 } : { x: 0, y: 40, width: 460, height: 80 };
     const card = on => page.evaluate(c => { const v = document.querySelector("[data-testid=hud-vitals]"); if (c) v.removeAttribute("data-bare"); else v.setAttribute("data-bare", ""); }, on);
     await shot(page, `${p}-hud-rest`);
     log.push({ name: `${p}-hud-rest`, emoteButton: await page.$("[aria-label='Open the emote wheel']").then(e => !!e), camera: await page.evaluate(() => { const c = window.__orbit.three().camera; return c.position.toArray().map(n => +n.toFixed(2)); }) });
@@ -189,7 +191,7 @@ for (const scene of SCENES) try {
       const t0 = Date.now();
       for (let i = 0; i < 8; i++) {
         const at = i * 110; if (Date.now() - t0 < at) await sleep(at - (Date.now() - t0));
-        await page.screenshot({ path: `${OUT}/${p}-critical-${look}-${i}.png`, clip: phone ? { x: 0, y: 50, width: 260, height: 90 } : { x: 0, y: 0, width: 300, height: 80 } });
+        await page.screenshot({ path: `${OUT}/${p}-critical-${look}-${i}.png`, clip: phone ? { x: 0, y: 95, width: 260, height: 75 } : { x: 0, y: 40, width: 300, height: 70 } });
       }
     }
     await card(false);
