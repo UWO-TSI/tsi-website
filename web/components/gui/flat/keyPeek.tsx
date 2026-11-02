@@ -23,6 +23,7 @@ const DRAWN: Partial<Record<PeekKind, () => ReactNode>> = {
   mail: () => <div className={p.mail}><span className={p.letter}><b /><b /></span><Mail className={p.envelope} aria-hidden /></div>,
 };
 
-export function KeyPeek({ kind, out, testId, children }: { kind: PeekKind; out?: boolean; testId?: string; children?: ReactNode }) {
-  return <div className={p.peek} data-out={out || undefined} data-kind={kind} data-real={children ? "" : undefined} data-testid={testId} aria-hidden="true">{children ?? DRAWN[kind]?.()}</div>;
+/** `bare`: no card, the piece floats over the world as it does in the game (the wheels, the HUD, the minimap). */
+export function KeyPeek({ kind, out, bare, testId, children }: { kind: PeekKind; out?: boolean; bare?: boolean; testId?: string; children?: ReactNode }) {
+  return <div className={p.peek} data-out={out || undefined} data-kind={kind} data-real={children ? "" : undefined} data-bare={bare || undefined} data-testid={testId} aria-hidden="true">{children ?? DRAWN[kind]?.()}</div>;
 }

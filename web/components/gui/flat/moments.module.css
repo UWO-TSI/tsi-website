@@ -157,6 +157,7 @@
 /* The show-off: a third column, a framed square of paper (dashed while empty), its rarity a thin edge. */
 .paperBody[data-show-off] { grid-template-columns: 29% 1fr 22%; }
 .printed[data-large] .paperBody[data-show-off] { grid-template-columns: 30% 1fr 21%; }
+.printed[data-large] .paperBody[data-show-off] .rows div:not([data-lead]) dd { font-size: 17px; }
 .showOff { display: grid; align-content: start; justify-items: center; gap: 5px; min-width: 0; }
 .showOff small { justify-self: stretch; text-align: center; font: 700 10px/1.2 var(--gui-font); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.6; }
 .printed[data-large] .showOff small { font-size: 12px; }

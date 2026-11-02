@@ -40,11 +40,11 @@ const Small = ({ k, children }: { k: number; children: ReactNode }) => <div clas
 function WheelPeek() {
   const n = useBeat(520), picked = n % (TOOLS.length + 1);
   // Round the petals, then the rod again, in hand.
-  return <Small k={0.5}><ToolWheelView standalone items={TOOLS} held={TOOLS[0]?.id ?? null} picked={picked < TOOLS.length ? picked : 0} /></Small>;
+  return <Small k={0.6}><ToolWheelView standalone items={TOOLS} held={TOOLS[0]?.id ?? null} picked={picked < TOOLS.length ? picked : 0} /></Small>;
 }
 function EmotePeek() {
   const n = useBeat(480);
-  return <Small k={0.46}><EmoteWheelView standalone ring="emotes" choice={n % 8} last={null} /></Small>;
+  return <Small k={0.54}><EmoteWheelView standalone ring="emotes" choice={n % 8} last={null} /></Small>;
 }
 function HudPeek() {
   const n = useBeat(700), on = Math.min(2, n);
@@ -71,8 +71,10 @@ function MapPeek() {
 }
 
 const REAL: Partial<Record<PeekKind, () => ReactNode>> = { wheel: WheelPeek, emote: EmotePeek, hud: HudPeek, bag: BagPeek, collection: CollectionPeek, map: MapPeek };
+/** What floats over the world in the game (no card round it there either). */
+const BARE = new Set<PeekKind>(["wheel", "emote", "hud", "map"]);
 
 export default function TourPeek({ kind, out, testId }: { kind: PeekKind; out?: boolean; testId?: string }) {
   const Real = REAL[kind];
-  return <KeyPeek kind={kind} out={out} testId={testId}>{Real ? <Real /> : null}</KeyPeek>;
+  return <KeyPeek kind={kind} out={out} bare={BARE.has(kind)} testId={testId}>{Real ? <Real /> : null}</KeyPeek>;
 }

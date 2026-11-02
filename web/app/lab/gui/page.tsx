@@ -15,6 +15,8 @@ import { FamilyReveal } from "@/components/game/oracle/OracleSheetEmbed";
 import IncantationOverlay from "@/components/game/combat/IncantationOverlay";
 import { EmoteWheelView } from "@/components/game/emotes/EmoteWheel";
 import TourPeek from "@/components/game/hq/TourPeek";
+// The minimap peek draws the member world (the game registers it; the showroom does here).
+import "@/lib/game/world/member";
 import { DANCE_RING } from "@/lib/game/emoteWheel";
 import ToastHub, { toast } from "@/components/game/ToastHub";
 import { Amount } from "@/components/economy/Amount";

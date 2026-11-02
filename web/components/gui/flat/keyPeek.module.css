@@ -7,6 +7,8 @@
 .peek[data-out] { opacity: 0; scale: 0.9; }
 /* The game's real piece, small (TourPeek): a little more room, nothing spilling out. */
 .peek[data-real] { --s: 184px; padding: 10px; overflow: hidden; }
+/* Bare: over the world, under the same soft dim the wheels bring with them in the game. */
+.peek[data-bare] { overflow: visible; background: radial-gradient(circle at 50% 50%, rgb(var(--ui-shade) / 0.08), rgb(var(--ui-shade) / 0.3) 75%); box-shadow: none; }
 .peek:not([data-real]) svg { width: 100%; height: 100%; stroke-width: 2.2; }
 @keyframes peekIn { 0% { opacity: 0; scale: 0.6; translate: -14px 0; } 100% { opacity: 1; scale: 1; translate: 0 0; } }
 
