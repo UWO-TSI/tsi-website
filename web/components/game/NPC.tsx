@@ -459,7 +459,7 @@ export default function Residents({ personas, phase, ceremony, player, island, v
 }) {
   const nav = useMemo(() => navGrid(island, v), [island, v]);
   // Dev only: `?residents=N` keeps the first N (by slug), for performance checks like CharacterCrowd's `?crowd=N`.
-  const [cap] = useState(() => (("development" as string) !== "production" && typeof window !== "undefined" ? Number(new URLSearchParams(window.location.search).get("residents") ?? Infinity) : Infinity));
+  const [cap] = useState(() => (process.env.NODE_ENV !== "production" && typeof window !== "undefined" ? Number(new URLSearchParams(window.location.search).get("residents") ?? Infinity) : Infinity));
   const residents = useMemo(() => {
     const sorted = [...personas].sort((a, b) => a.slug.localeCompare(b.slug)).slice(0, cap).map(p => {
       const at = posts?.[p.slug];
@@ -499,7 +499,7 @@ export default function Residents({ personas, phase, ceremony, player, island, v
   useEffect(() => () => { if (talkStore.active) endTalk(); setTalkNear(null, "", Infinity); benchHeld.clear(); }, []);
   // Dev (evidence scripts): where everyone is, to walk up to one.
   useEffect(() => {
-    if (("development" as string) === "production") return;
+    if (process.env.NODE_ENV === "production") return;
     Object.assign(window, { __residents: () => registry.current.list.map(r => ({ id: r.id, slug: r.slug, name: r.name, x: r.x, z: r.z, hidden: r.hidden, speed: r.speed, lag: r.lag, seat: r.seatKey })) });
   }, []);
 

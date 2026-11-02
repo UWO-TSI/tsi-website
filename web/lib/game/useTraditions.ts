@@ -27,7 +27,7 @@ async function fetchTraditions(): Promise<Tradition[]> {
   }
 }
 
-export function parseTraditionOverride(search: string, production = ("development" as string) === "production"): string | null {
+export function parseTraditionOverride(search: string, production = process.env.NODE_ENV === "production"): string | null {
   if (production) return null;
   const v = new URLSearchParams(search).get("tradition");
   return v && /^[a-z0-9-]{1,40}$/.test(v) ? v : null;

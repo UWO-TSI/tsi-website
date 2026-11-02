@@ -101,6 +101,31 @@ Redo:
 
 ## Status
 
+**Round 5** (game/main-quest, head after this file's commit; evidence specs/evidence/main-quest/r5/, befores are r4's shots).
+Done, waiting for David's review:
+- Vitals (kit vitals.tsx/.module.css; game HudBars.tsx): bars 184 px (phone 132), the tally notches a 1 px hairline,
+  `Vitals bare` straight over the world (white-rimmed tracks with a shadow, white-filled icons) is the island's default;
+  `?vitals=card` (dev only) shows the white card. Once David picks, delete the other (the `bare` prop and the query).
+  Health colour reaches the low red by a quarter (`--lo` from 0.25), --ui-health-low stronger in all three themes;
+  `critical` (lib/game/lowHealth.ts CRITICAL 0.25): the well flashes red, the heart icon beats (0.9 s); reduced motion
+  keeps a still red well.
+- Low health in the world (lib/game/lowHealth.ts hurtLook, tested; PostFX.tsx): two uniforms in the existing pastel
+  grade pass (uHurt: a red-dark edge vignette from 60% health down, max 0.8; uDrain: colour drained from 25% down, max
+  0.7), damped toward combat.rt.player hp/maxHp each frame. No new pass, so no perf:check; identity at full health.
+- Level up (kit levelUp.tsx/.module.css): no card. `.moment` (was `.card`) over a radial scrim (rgb(--ui-shade) 0.52
+  centre, 0.16 edge); white type (new token --ui-on-scrim in clean, cream, dark) with a dark soft edge; the reveal steps
+  the figure up to 0.6 and puts Lv, the title and the unlock rows (gold-ringed icon, no row background) under it, one
+  button in the card colour.
+- Phone (DefaultIslandWorld.tsx/.module.css): TOUCH_ZOOM 1.3 on the follow camera for any touch screen (camZoom =
+  devZoom x it, all three scenes); EmoteWheel gets `touch={touch && !compact}` (no emote button on a phone; the tool
+  wheel's hand button stays); `.world[data-compact]` upright phone: --touch-stick 112, --touch-scale 0.8, stick 32 px
+  off the floor, minimap 96 px. Layout: the ring and vitals stay top left under the menu button (`.hudBars`), the place
+  name under them, top right untouched (the fishing lane's biome tag goes there).
+- Bible UI 8 and 8b updated (the level in its ring always, the vitals stack, low health, the phone line). The ledger row
+  for it is the coordinator's to number.
+- Fixed a round 4 regression: commit 2c0e4fc2 had replaced `process.env.NODE_ENV` with `("development" as string)` in
+  46 files (dev-only code would have run in production; demoFetch and playtest tests caught it). Restored.
+
 **Round 4** (game/main-quest, on origin/main 4fb4b8cc). Done, waiting for David's review (evidence specs/evidence/main-quest/r4/):
 - Vitals (kit `components/gui/flat/vitals.tsx` Vitals, VitalBar; game `HudBars.tsx`): one soft white card in the top left
   corner, level with the quest line (DefaultIslandWorld.module.css `.hudBars`; the place name `.heading` moved under it,
@@ -134,8 +159,10 @@ Redo:
 
 ## Next
 
-1. Wait for David's review of round 4 (specs/evidence/main-quest/r4/); the round 3 migrations still wait to be applied in
-   order (20261028144337_main_quest, 20261028153805_main_quest_r2, 20261029064914_catalogue_seed).
+1. Wait for David's review of round 5 (specs/evidence/main-quest/r5/). He picks bare or card for the vitals: delete the
+   other (Vitals `bare`, HudBars' `?vitals=card`, the showroom's second row).
+2. The round 3 migrations still wait to be applied in order (20261028144337_main_quest, 20261028153805_main_quest_r2,
+   20261029064914_catalogue_seed).
 
 ## Tools and gotchas
 
@@ -148,6 +175,10 @@ Redo:
 - `scripts/world-cells.ts` regenerates `web/data/world/cells.json`; `node scripts/gen-seeds.mjs` writes a NEW seed.
 - `talkStore.quest` (main quest) is consulted before `talkStore.script` (tool teachers) in `NPC.tsx`.
 - The new world's places for shots (activeVillage("new")): museum 4,70.5 (Juno ~7,70), dig-sand-0 -17,102, dig-soil-15 35,84, rock-1 38,25.1.
+- Browser runner (round 5): scratchpad `mqrun/run6.sh <scene>` under `withlock.sh devserver` (out to mq-r5; scenes
+  mq5hud, mq5hud-phone; one scene per call or it passes 10 min), `mqrun/evid5.py` builds r5/. The /lab/island nav is the
+  top 40 px: crops start at y 40. Low health: set `__combat.rt.player.hp` + `__publishCombat()`, wait ~2 s for the grade.
+- Check `git grep '("development" as string)'` is empty before committing (round 4's regression).
 - Browser runner (round 4): scratchpad `mqrun/qrun5.sh <scenes>` (run5.sh, out to mq-r4; scenes mq4hud, mq4hud-phone,
   mq4tap, mq4sand; mq4lab's element shot of /lab/gui came out black, unused). `mqrun/evid4.py` builds r4/. A failed
   scene no longer kills the batch (logged in errors). The level-up flash lasts two frames: the strip holds it by setting

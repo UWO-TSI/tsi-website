@@ -93,7 +93,7 @@ export function useTripControl({ dockOf, goTo, site, ready, onDone }: {
 
   // Dev (evidence scripts): where the trip is, and starting, arriving and skipping without the prompt.
   useEffect(() => {
-    if (("development" as string) === "production") return;
+    if (process.env.NODE_ENV === "production") return;
     Object.assign(window, { __trip: { state: () => { const t = myTrip.current; return t && { phase: t.phase, t: (worldNow() - t.at) / 1000, leg: t.leg, to: t.to }; }, start, arrive, skip } });
   }, [start, arrive]);
 

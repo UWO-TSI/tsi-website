@@ -985,7 +985,7 @@ function LodMesh2({ puppet, look, parts }: { puppet: Puppet; look: CharacterLook
   return null;
 }
 /** Development (evidence): `?charlod=0` draws every character at Full, `?charlod=1` its LOD 1 mesh, `?charlod=2` its LOD 2, so it can be looked at up close. */
-const SHOW_LOD = ("development" as string) !== "production" && typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("charlod") : null;
+const SHOW_LOD = process.env.NODE_ENV !== "production" && typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("charlod") : null;
 const seen = new THREE.Vector3(), view = new THREE.Frustum(), viewProj = new THREE.Matrix4(), body = new THREE.Sphere(new THREE.Vector3(), 1);
 let viewAt = -1, viewCam: THREE.Camera | null = null;
 /**

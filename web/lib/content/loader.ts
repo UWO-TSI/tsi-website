@@ -72,7 +72,7 @@ async function fetchDraftData(
 
 // Outside production the fallback carries the resident roster (residentRoster.ts; seeded for production by
 // 20261017020000_resident_roster); production's fallback, used only without the database, keeps the seeded two.
-const FALLBACK_PERSONAS = ("development" as string) === "production" ? DEFAULT_NPC_PERSONAS : withProposed(DEFAULT_NPC_PERSONAS);
+const FALLBACK_PERSONAS = process.env.NODE_ENV === "production" ? DEFAULT_NPC_PERSONAS : withProposed(DEFAULT_NPC_PERSONAS);
 
 async function fetchNPCPersonas(permanentOnly: boolean): Promise<NPCPersona[]> {
   if (!hasSupabaseEnv()) return filterPermanent(FALLBACK_PERSONAS, permanentOnly);

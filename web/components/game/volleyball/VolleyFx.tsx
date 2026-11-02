@@ -468,7 +468,7 @@ function frame(f: Fx, c: Ctx, camera: THREE.Camera, dt: number, stamp: number) {
 /** Dev only (evidence): fire an effect, and pause and step the effects a 60th of a second at a time. */
 const DEV = { paused: false, steps: 0 };
 function exposeDev(f: Fx) {
-  if (("development" as string) === "production") return;
+  if (process.env.NODE_ENV === "production") return;
   const w = window as unknown as { __volleyFx?: unknown };
   /** What's live now: the painted rings' and the particles' counts, and the trails. */
   const probe = () => ({ rings: f.softRings.filter(r => r.mesh.visible).length, move: f.move.pool.alive, glow: f.glow.pool.alive, trails: [f.heat.mesh.visible, f.ribbon.mesh.visible] });

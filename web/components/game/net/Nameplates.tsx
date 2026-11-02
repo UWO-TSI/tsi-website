@@ -169,7 +169,7 @@ export default function Nameplates({ pool, here }: { pool: PlatePool; here: (r: 
   useEffect(() => {
     const box = gl.domElement.parentElement;
     if (!box) return;
-    return pool.mount(box, here, ("development" as string) !== "production" && new URLSearchParams(window.location.search).has("lod"));
+    return pool.mount(box, here, process.env.NODE_ENV !== "production" && new URLSearchParams(window.location.search).has("lod"));
   }, [gl, pool, here]);
   return null;
 }

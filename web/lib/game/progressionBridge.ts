@@ -85,7 +85,7 @@ export interface WorldProgressionView extends Pick<WorldProgression, "activeGoal
 
 export function useProgressionWorld(): WorldProgressionView {
   const live = useProgressionWorldSource(resolveAnchor);
-  const [force] = useState(() => ("development" as string) !== "production" && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("ceremony") === "1");
+  const [force] = useState(() => process.env.NODE_ENV !== "production" && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("ceremony") === "1");
   const forcedGoal = force ? (live.recentlyCompleted ?? (live.activeGoal ? { ...live.activeGoal, progress: 1, completed: true } : null)) : null;
   return {
     activeGoal: live.activeGoal, completedGoals: forcedGoal ? [...new Set([...live.completedGoals, forcedGoal.id])] : live.completedGoals,

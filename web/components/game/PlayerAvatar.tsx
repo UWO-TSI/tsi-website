@@ -353,7 +353,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
 
   useEffect(() => {
     // Dev (evidence scripts): read the sim, teleport, drive a route, step the sim a moment at a time.
-    if (("development" as string) === "production") return;
+    if (process.env.NODE_ENV === "production") return;
     Object.assign(window, { __move: {
       sim,
       teleport: (x: number, z: number, facing = 0) => { seat.current = null; sim.current = createMoveSim(createMoveState(x, z, world, facing)); },

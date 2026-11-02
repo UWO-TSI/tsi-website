@@ -50,7 +50,7 @@ export function useOrbitInput(pick = true) {
   useEffect(() => {
     loadOrbit();
     // Dev (evidence scripts): read the angles and the capture state, or set the angles directly; `three` the r3f state.
-    if (("development" as string) !== "production") Object.assign(window, { __orbit: { orbit, capture, three: get } });
+    if (process.env.NODE_ENV !== "production") Object.assign(window, { __orbit: { orbit, capture, three: get } });
     const el = gl.domElement, doc = el.ownerDocument;
     const fine = window.matchMedia("(pointer: fine)").matches;
     const cursorCompute = get().events.compute;

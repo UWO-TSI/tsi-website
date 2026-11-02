@@ -20,7 +20,7 @@ let ult = 1;
 export function ultSlowMotion(k: number) { ult = k; }
 let dev = 1;
 /** Dev (the class playtest's panel, `?combat=demo`): the whole world held at 0.5 or 0.25 speed. Always 1 in production. */
-export function devSlowMotion(k: number) { dev = ("development" as string) === "production" ? 1 : k; }
+export function devSlowMotion(k: number) { dev = process.env.NODE_ENV === "production" ? 1 : k; }
 /** The world's speed now: 1 normal, SLOW with the wheel open, slower in an ult's slow motion. */
 export function timeScale(now = performance.now()): number {
   return (to + (from - to) * Math.exp(-EASE * Math.max(0, now - at) / 1000)) * ult * dev;

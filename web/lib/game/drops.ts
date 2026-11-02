@@ -81,7 +81,7 @@ export function resolveDrop({ env, search, production }: { env: string | undefin
 export const DROP: DropNumber = resolveDrop({
   env: process.env.NEXT_PUBLIC_GAME_DROP,
   search: typeof window === "undefined" ? "" : window.location.search,
-  production: ("development" as string) === "production",
+  production: process.env.NODE_ENV === "production",
 });
 
 /** This build's switches. */

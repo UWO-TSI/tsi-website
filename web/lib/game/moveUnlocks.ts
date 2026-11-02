@@ -36,7 +36,7 @@ export function unlockMove(move: LockedMove, storage: Store = local()): void {
   listeners.forEach(l => l());
 }
 
-const DEV = ("development" as string) !== "production";
+const DEV = process.env.NODE_ENV !== "production";
 const devLocked = () => DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("moves") === "locked";
 let cache: { v: number; flags: Record<LockedMove, boolean> } | null = null;
 function snapshot(): Record<LockedMove, boolean> {

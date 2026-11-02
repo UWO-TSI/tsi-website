@@ -22,7 +22,7 @@ function read() {
 }
 /** The demo is on: a dev build and `?combat=demo` on this page (the dev panel's controls, the flags, the spawner). */
 export function playtestOn(): boolean {
-  if (("development" as string) === "production" || typeof window === "undefined") return false;
+  if (process.env.NODE_ENV === "production" || typeof window === "undefined") return false;
   read();
   return on;
 }
