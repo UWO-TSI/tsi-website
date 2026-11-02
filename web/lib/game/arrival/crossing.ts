@@ -17,11 +17,11 @@ export interface CrossingFrame { from: V3; to: V3; aim: Aim; aimTo?: Aim; fov: n
 export const CROSSING_FRAMES: Record<CrossingShotId, CrossingFrame> = {
   // High off the starboard beam, drifting in: the boat small in the foreground below, the island across the sea above it
   // (aimed at the town past the wharf, not the island's far middle, so the curve doesn't sink it to a strip).
-  drone: { from: [12, 10, -4], to: [9, 8, -1], aim: { blend: [{ boat: [0, 0, 4] }, { world: "island", y: 2 }, 0.7] }, fov: 40, fovTo: 36 },
+  drone: { from: [12, 10, -4], to: [9, 8, -1], aim: { blend: [{ boat: [0, 0, 4] }, { world: "island", y: 2 }, 0.7] }, fov: 44, fovTo: 40 },
   // Up over the bow, looking ahead past the stem at the island: the wharf, its buildings and the town behind (David's
   // round 5 playtest: low over the water "you can only rly see water": the world's curve hid the island below a camera
-  // that low, so it rides about 4 m up, on a longer lens).
-  bow: { from: [1.4, 4.4, 0.4], to: [1.2, 3.8, 1.4], aim: { world: "island", y: 2.5 }, fov: 34, fovTo: 30 },
+  // that low, so it rides about 5 m up, on a long lens: the wharf fills the frame).
+  bow: { from: [1.4, 5.6, 0.4], to: [1.2, 4.8, 1.4], aim: { world: "island", y: 3 }, fov: 28, fovTo: 25 },
   // In front of you on the bench, close: your face, wet hair, drops running off.
   closeup: { from: [0.38, 1.3, 2.45], to: [0.26, 1.26, 2.2], aim: { boat: [0, 1.12, 0.58] }, fov: 34, fovTo: 32 },
   // Up behind the stern, looking back: the wake spreading out to the horizon, Bram at the tiller below.

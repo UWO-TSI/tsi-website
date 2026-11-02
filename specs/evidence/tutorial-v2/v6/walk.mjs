@@ -214,6 +214,8 @@ if (SCENES.includes("kit")) {
   for (const [id, n, every] of [["key-board", 10, 500], ["key-peek", 6, 300], ["keyword", 4, 200], ["keyword-library", 1, 0], ["printed-card", 9, 900]]) {
     const ctx = await browser.newContext({ viewport: { width: 1200, height: 760 } });
     const page = await ctx.newPage();
+    page.on("console", m => { if (m.type() === "error") log.push({ kit: id, console: m.text().slice(0, 300) }); });
+    page.on("pageerror", e => log.push({ kit: id, pageerror: e.message.slice(0, 300) }));
     await page.goto(`${HOST}/lab/gui?only=${id}`, { waitUntil: "domcontentloaded" }).catch(() => {});
     await sleep(9000);
     await strip(page, `k-${id}`, n, every);
