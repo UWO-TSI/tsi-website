@@ -15,7 +15,7 @@ Title A (the scene, the camera dolly through the four phases) is approved and st
 2. Shoot the current title (desktop 1440x900 and phone 390x844, day and night) as the before.
 3. Build three directions for the left side as real code behind a dev-only switch (`?titleStyle=a|b|c`, ignored in production). Each one should read as a game's title screen at a glance: a logo lockup with presence on the scene, a menu that feels like a game's start menu, and footer text that doesn't look like a login page. Keep every function: Let's Play, Settings, Exit, the sign-in, sign-up, forgot and check views, Google sign-in, "Signed in as", the time and place line, and the Apply to TSI link (recruitment's way in; it stays, restyled).
 4. Shoot all three at both sizes and day and night, plus the sign-in view for each. Evidence in `specs/evidence/title-r2/`.
-5. Report to the coordinator for a review page. After David picks, delete the other two and the switch.
+5. Report to the coordinator for a review page. David picked C; the other two and the switch are deleted.
 
 ## Constraints
 
@@ -35,26 +35,25 @@ tsc, vitest on `app/student`, eslint on changed files, headless shots. No perf:c
 - Locks: `LANE=game/title-r2 /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh heavy|devserver <cmd>`; exit 75 means retry. Start, use and kill your dev server inside one devserver lock, Supabase env blanked.
 - Commit `[build]`, never push, never bare `git stash`. No em dashes. Real names never show. Ponytail code (`specs/lane-rules.md`).
 
+## David's decisions
+
+- 2026-11-01, picking the banner: "i already chose C". Direction C is the title's only look. A, B, the old cream-card look and the `?titleStyle=` switch are deleted.
+
 ## Status
 
-Steps 1 to 4 done 2026-11-01, waiting on David's pick (step 5). Head: see `git log -1` on game/title-r2.
-- Three directions behind a dev-only switch, `?titleStyle=a|b|c`. `TitleScreen.tsx` sets `data-look` on `<main>` from the query in an effect, only when NODE_ENV isn't production. With no switch, the title is unchanged: that look is the "before". The CSS for each direction is one block at the end of `TitleScreen.module.css`, scoped to `.screen[data-look="x"]`.
-  - **A, crest:** the emblem on a round white medallion, a chunky white "Tethos" with a teal extrude, ISLAND on a gold notched ribbon, floating gently. The menu is big outlined words on the scene with no card, and the chosen one sits between two bobbing gold diamonds.
-  - **B, start buttons:** a sticker lockup, tilted -4deg: the emblem on a teal tile beside a teal wordmark cut out in white, with ISLAND on a teal tag. The menu is chunky white buttons with a pressed edge. Let's Play is the biggest, and the chosen button is ink black, slid out, with a play arrow. The footer is a white chip with a dark Apply pill.
-  - **C, banner:** one white panel hanging from the top edge with a swallowtail. It holds the teal emblem, the wordmark, ISLAND between gold rules and the menu, with the chosen row on a soft gold marker between two diamonds. It drops in on a spring. On a phone it splits: a short pennant at the top holds the logo, and a white panel at the bottom holds the menu.
-  - All three: the forms sit on one flat white panel with no dashed seam, the hint pill gains "Move", and Apply to TSI is restyled per direction.
-- New token: `--ui-title-outline` (the logo's teal) in `styles/themes/clean.css`.
-- Gates: tsc clean; vitest app/student 16/16; eslint clean on TitleScreen.tsx and TitleMenu.tsx. No perf:check, because the scene is unchanged.
-- Evidence in `specs/evidence/title-r2/`: `sheet-desktop.jpg` (rows: before, A, B, C; columns: day, night, sign-in), `sheet-phone.jpg` (columns, in triples: before, A, B, C) and every full shot (`before-now-*`, `after-{a,b,c}-*`).
-- Open: the form fields and buttons inside are still the cream kit (VillageButton and VillageField: butter Google button, cream fields, green Sign in). The kit has no flat Button or Field (the `GuiVariantContext` only switches Tabs and ConfirmDialog). Making them flat is a kit change, so it's out of scope here unless David asks.
+Done 2026-11-01. Head: see `git log -1` on game/title-r2 (merged origin/main 4fb4b8cc first).
+- C, the banner, is now the plain `.screen` styles in `TitleScreen.module.css` (no `data-look`, no dev switch, no `screen` ref, no `.move` toggle: the hint always shows Move). A's and B's blocks, the old cream card and dashed seam, the `--title-*` vars, the `pop`, `float` and `nudge` keyframes are gone. The emblem size is now the `TsiLogo` props (64), not CSS. CSS header and the component doc comment no longer say "portal" or describe the old look.
+- Token `--ui-title-outline` (the banner's teal) is set in all three themes (`contrast.test.ts` requires every theme to set every token; dark gets a lighter teal).
+- The sign-in form is unchanged: still the cream kit (VillageButton and VillageField) on the white banner.
+- Gates: tsc clean; eslint clean on TitleScreen.tsx and TitleMenu.tsx; `npm run build` ok; full vitest 3732 passed, 1 failed (`lib/game/shoreField.test.ts` village crossing, a 5000 ms timeout under load, passes alone in 4.9 s, unrelated). No perf:check (UI only).
+- Evidence in `specs/evidence/title-r2/`: `title-final-before-*` (main's old look) and `title-final-*` (the banner), each as `{desktop,phone}-{day-menu,night-menu,day-signin}`. The round-1 `before-now-*` and `after-c-*` shots stay. The A and B shots and the sheets were removed (in git history).
 
 ## Next
 
-1. After David picks: delete the other two blocks, the switch (the effect, the `screen` ref and `data-look`) and the old default look. Then make the chosen direction the plain `.screen` styles, drop the `.move` toggle (always show Move), and fix the CSS header comment, which still says "portal". Reshoot the pick, then run the gates.
+1. Open with David: the sign-in form is still the cream kit on the white banner (butter Google button, cream fields, green Sign in). Making it flat needs a flat Button and Field in the kit (the `GuiVariantContext` only switches Tabs and ConfirmDialog), so it is a kit change. Do it only if David says so.
 
 ## Tools and gotchas
 
-- Shots: `specs/evidence/title-r2/shoot.mjs` (PORT, STYLES="- a b c", OUT; label arg). Wrap it in a script that starts `next dev -p 3330` with the Supabase env blanked, waits on `curl /student`, shoots and kills the server, all inside `withlock.sh devserver`. One run of four styles takes about 3 min. The script hides the Next dev badge, which otherwise covers the footer.
+- Shots: `specs/evidence/title-r2/shoot.mjs` (PORT, OUT; label arg; six shots per run). Wrap it in a script that starts `next dev -p 3330` with the Supabase env blanked, waits on `curl /student`, shoots and kills the server, all inside `withlock.sh devserver`. The script hides the Next dev badge, which otherwise covers the footer.
 - The column has `overflow-y: auto`, so anything that pokes past its edge gets clipped (B's tilt and tile ring did). Pad the column and translate it back.
 - `clip-path` clips box-shadow. C puts the panel on `column::before` and the drop-shadow filter on the column.
-- The React lint rule `set-state-in-effect` forbids a setState for the switch, which is why the effect writes the dataset directly.

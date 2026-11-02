@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { Button, Field, Slider, Toggle } from "@/components/gui";
 import TsiLogo from "@/components/ui/TsiLogo";
@@ -16,10 +16,10 @@ const TitleScene = dynamic(() => import("@/components/title/TitleScene"), { ssr:
 export type TitleView = "menu" | "signin" | "signup" | "forgot" | "check" | "settings";
 
 /**
- * The game's title screen (David, 2026-10-03; the v1 look, specs/v1-drop.md §8b after
- * `references/look/2026-10-13/title-piece-by-piece-ref.png`): the live village close up with depth of field, the
- * logo top-left, a cream card with a dashed border holding Let's Play, Settings and Exit (a soft pill under the
- * chosen one), and a small input hint bottom-right. Arrow keys (or W/S) move, Enter picks, Escape steps back.
+ * The game's title screen (David, 2026-10-03; the banner look chosen 2026-11-01, specs/lanes/title-r2.md): the live
+ * island close up with depth of field, a white banner hanging from the top-left with the logo and Let's Play,
+ * Settings and Exit (a gold marker under the chosen one), and a small input hint bottom-right.
+ * Arrow keys (or W/S) move, Enter picks, Escape steps back.
  * Let's Play continues a signed-in member and asks anyone else to sign in (creating an account and Google from
  * there); Settings holds the graphics and sound (and signing out); Exit goes back to tethos.ca. After any sign-in,
  * `landing` (/student/go, carrying a safe ?next=) decides where the member goes.
@@ -35,12 +35,6 @@ export default function TitleScreen({ landing, account, open, initialView, when,
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", email: "", password: "", invite: "" });
-  /** Dev only (specs/lanes/title-r2.md): `?titleStyle=a|b|c` wears one of three left-side directions; production ignores it. */
-  const screen = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const look = new URLSearchParams(window.location.search).get("titleStyle");
-    if (process.env.NODE_ENV !== "production" && look && screen.current) screen.current.dataset.look = look;
-  }, []);
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm(f => ({ ...f, [key]: e.target.value }));
 
   const go = (next: TitleView) => { setView(next); setError(null); setNotice(null); };
@@ -110,13 +104,13 @@ export default function TitleScreen({ landing, account, open, initialView, when,
   };
 
   return (
-    <main className={`gui ${s.screen}`} ref={screen} data-ready={ready || undefined}>
+    <main className={`gui ${s.screen}`} data-ready={ready || undefined}>
       <div className={s.scene}><TitleScene onReady={() => setReady(true)} /></div>
       <div className={s.shade} aria-hidden />
 
       <section className={s.column}>
         <header className={s.brand}>
-          <TsiLogo width={56} height={56} className={s.logo} />
+          <TsiLogo width={64} height={64} className={s.logo} />
           <h1 className={s.wordmark}>Tethos<span>Island</span></h1>
         </header>
 
@@ -169,7 +163,7 @@ export default function TitleScreen({ landing, account, open, initialView, when,
           {!account && <a className={s.apply} href={apply}>Apply to TSI</a>}
         </span>
         <span className={s.hint} aria-hidden>
-          {view === "menu" && <span className={s.move}><kbd>↑↓</kbd>Move</span>}
+          {view === "menu" && <span><kbd>↑↓</kbd>Move</span>}
           <span>{view === "menu" ? <><kbd>↵</kbd>Select</> : <><kbd>Esc</kbd>Back</>}</span>
         </span>
       </footer>
