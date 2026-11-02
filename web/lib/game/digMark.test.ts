@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { digScuff } from "./digMark";
+import { TWITCH_S, digScuff, digTwitch } from "./digMark";
 
 const radius = (g: ReturnType<typeof digScuff>) => { g.computeBoundingSphere(); return g.boundingSphere!.radius; };
 const flatFinite = (g: ReturnType<typeof digScuff>) => {
@@ -17,5 +17,25 @@ describe("a dig spot's mark", () => {
       expect(radius(g)).toBeLessThan(0.35);
     }
     expect(digScuff(3).getAttribute("position").array).not.toEqual(digScuff(10).getAttribute("position").array);
+  });
+});
+
+// r3, the sand's mark: "make it move or twitch a lil bit".
+describe("a dig spot's twitch", () => {
+  const sample = (seed: number) => Array.from({ length: 1200 }, (_, i) => digTwitch(i / 60, seed));
+  it("rests most of the time and twitches a little every few seconds, its own rhythm per spot", () => {
+    for (const seed of [3, 10.5, 77]) {
+      const s = sample(seed), moving = s.filter(x => x.scale !== 1 || x.turn !== 0).length / s.length;
+      expect(moving).toBeGreaterThan(0.03);
+      expect(moving).toBeLessThan(0.15);
+      for (const x of s) { expect(Math.abs(x.scale - 1)).toBeLessThan(0.17); expect(Math.abs(x.turn)).toBeLessThan(0.15); }
+    }
+    expect(sample(3)).not.toEqual(sample(77));
+  });
+  it("settles back to rest as each twitch ends", () => {
+    const at = sample(3).findIndex(x => x.scale !== 1);
+    const end = digTwitch(at / 60 + TWITCH_S - 0.01, 3);
+    expect(Math.abs(end.scale - 1)).toBeLessThan(0.01);
+    expect(Math.abs(end.turn)).toBeLessThan(0.01);
   });
 });

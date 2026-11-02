@@ -68,10 +68,12 @@
   /* A little texture where it helps (UI 1, "not so flat"): a fine grain over a card, and a glint across rare things. */
   --ui-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.36 0 0 0 0 0.29 0 0 0 0 0.21 0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
   --ui-glint: linear-gradient(115deg, transparent 38%, rgb(255 255 255 / 0.55) 48%, transparent 58%);
-  /* The HUD's bars (UI 8): health, stamina (and run out), XP. */
-  --ui-health: #e0604f;
-  --ui-stamina: #5aa95e;
+  /* The HUD's vitals (UI 8): each bar's colour when full and when nearly empty, the shared amber between; XP's ring. */
+  --ui-health: #5aae62;
+  --ui-health-low: #e0604f;
+  --ui-stamina: #4ba6cf;
   --ui-stamina-low: #e8803f;
+  --ui-vital-mid: #e9b23a;
   --ui-xp: #e3a52f;
   --ui-sheen: rgb(255 255 255 / 0.35);
   /* Paper, the material (design bible UI 2): only for what is paper in the world (the sushi bar's folded menu, a

@@ -4,7 +4,7 @@
 // `?progression=demo` (the real progression service on an in-memory store; `&chapter=` and `&tally=` set where the
 // member is). Headless Chromium, muted, under the shared browser lock.
 //   HOST=http://localhost:3147 node specs/evidence/main-quest/shoot.mjs <out_dir> <scene> [<scene> ...]
-// Scenes: r2flow, r2museum, r2dig, pops, strips (round 2); flow, chapters, dig, pickaxe (round 1; the new world: run the dev server with NEXT_PUBLIC_GAME_WORLD=new); village (the
+// Scenes: mq4hud, mq4hud-phone, mq4sand (round 4); r2flow, r2museum, r2dig, pops, strips (round 2); flow, chapters, dig, pickaxe (round 1; the new world: run the dev server with NEXT_PUBLIC_GAME_WORLD=new); village (the
 // default world, no env: the village's one tracker line, unchanged).
 // Places are the new world's (lib/collections/rolls.ts activeVillage("new"): museum 4,70.5; dig-sand-0 -17,102;
 // dig-soil-15 35,84; rock-1 38,25.1).
@@ -23,8 +23,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 const LOOK = JSON.stringify({ skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", extras: [], bangs: "", back: "hair_wispy_ponytail", top: "top_hoodie", bottom: "bottom_joggers", onepiece: null, shoes: "shoes_sneakers", acc: {}, colors: { top_hoodie: 2 } });
 const CAMERA = JSON.stringify({ yaw: 0, pitch: 0.55, zoom: 1, sensitivity: 1, invertY: false, mouseLook: false, autoFollow: false });
 
-async function open(query, store = {}) {
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+/** A phone (round 4): a touch screen's size; the game's touch layout. */
+const PHONE = { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true };
+async function open(query, store = {}, view = { viewport: { width: 1440, height: 900 } }) {
+  const ctx = await browser.newContext(view);
   const page = await ctx.newPage();
   page.on("pageerror", e => { errors.push(e.message.slice(0, 300)); console.log("pageerror", e.message.slice(0, 300)); });
   await page.goto(`${HOST}/lab/island`, { waitUntil: "domcontentloaded" });
@@ -118,7 +120,94 @@ const widths = page => page.evaluate(() => {
   return { bar: t?.getBoundingClientRect().width ?? null, list: l?.getBoundingClientRect().width ?? null, barLeft: t?.getBoundingClientRect().left ?? null, listLeft: l?.getBoundingClientRect().left ?? null };
 });
 
+/** Round 4: the vitals at a health and stamina (0 to 1), the HUD's corner cropped. */
+async function vitalsAt(page, name, health, stamina, clip) {
+  await page.evaluate(h => { window.__combat.rt.player.hp = Math.round(window.__combat.rt.player.maxHp * h); window.__publishCombat(); }, health);
+  await sleep(1000);
+  await page.evaluate(s => { window.__move.sim.current.state.stamina = s; }, stamina);
+  await sleep(60);
+  await shot(page, name, clip);
+  log.push({ name, vitals: await page.evaluate(() => [...document.querySelectorAll("[data-testid=hud-vitals] [role=meter]")].map(m => [m.getAttribute("aria-label"), getComputedStyle(m).getPropertyValue("--vital").trim(), getComputedStyle(m).color])) });
+}
+/** Round 4: the level-up moment as a strip: a chapter's XP fills the ring, then the moment's beats (times from its start, ms). */
+async function levelUpStrip(page, prefix, wide) {
+  const xp = (total, levelled) => page.evaluate(([t, l]) => window.dispatchEvent(new CustomEvent("tsi:api-write", { detail: { path: "/api/progression/chapters/advance", data: { xp_gain: { amount: 0, total: t, level: l ? 2 : 1, levelled_up: l } } } })), [total, levelled]);
+  await xp(90, false); await sleep(1500);
+  await xp(160, true);
+  await page.waitForSelector("[data-testid=level-up]", { timeout: 8000 });
+  const t0 = await page.evaluate(() => performance.now());
+  const card = async () => {
+    const b = await page.$eval("[data-testid=level-up] section", el => { const r = el.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; });
+    const m = wide ? 70 : 10;
+    return { x: Math.max(0, b.x - m), y: Math.max(0, b.y - m), width: b.w + 2 * m, height: b.h + 2 * m };
+  };
+  let clip = null;
+  for (const [k, at] of [["a", 250], ["b", 850], ["c", 1500], ["e", 2420], ["f", 2750], ["g", 3700], ["h", 4600]]) {
+    const now = await page.evaluate(() => performance.now());
+    if (at > now - t0) await sleep(at - (now - t0));
+    clip = clip ?? await card();
+    const took = Math.round(await page.evaluate(() => performance.now()) - t0);
+    await page.screenshot({ path: `${OUT}/${prefix}-${k}.png`, clip });
+    log.push({ name: `${prefix}-${k}`, ms: took, phase: await page.$eval("[data-testid=level-up]", el => el.dataset.phase).catch(() => null) });
+    if (k === "c") {
+      // A flash frame: a landing mote whitens the figure for two frames, too short to catch, so it is held for this shot.
+      await page.evaluate(() => { const f = document.querySelector("[data-testid=level-up-hero]")?.parentElement; if (f) f.dataset.flash = ""; });
+      await page.screenshot({ path: `${OUT}/${prefix}-d.png`, clip });
+      await page.evaluate(() => { const f = document.querySelector("[data-testid=level-up-hero]")?.parentElement; if (f) delete f.dataset.flash; });
+      log.push({ name: `${prefix}-d (flash held)` });
+    }
+  }
+  await shot(page, `${prefix}-full`);
+  log.push({ name: `${prefix}-full`, card: await page.$eval("[data-testid=level-up]", el => el.textContent).catch(() => null) });
+  await page.keyboard.press("Escape"); await sleep(1000);
+}
+
 for (const scene of SCENES) {
+  if (scene === "mq4hud" || scene === "mq4hud-phone") {
+    const phone = scene.endsWith("phone");
+    const { ctx, page } = await open("", {}, phone ? PHONE : undefined);
+    await go(page, 30, 46, Math.PI);
+    await hudIn(page);
+    const p = phone ? "mq4-phone" : "mq4";
+    const corner = phone ? { x: 0, y: 0, width: 390, height: 200 } : { x: 0, y: 0, width: 460, height: 190 };
+    await shot(page, `${p}-hud-rest`);
+    await vitalsAt(page, `${p}-vitals-full`, 1, 1, corner);
+    await sleep(2000);
+    await shot(page, `${p}-vitals-rested`, corner);
+    await vitalsAt(page, `${p}-vitals-half`, 0.5, 0.5, corner);
+    await vitalsAt(page, `${p}-vitals-low`, 0.14, 0.1, corner);
+    await shot(page, `${p}-vitals-low-wide`);
+    await vitalsAt(page, `${p}-vitals-back`, 1, 1, corner);
+    // The XP ring: some XP in, then hover (a tap on the phone) for the exact XP.
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent("tsi:api-write", { detail: { path: "/api/progression/chapters/advance", data: { xp_gain: { amount: 0, total: 60, level: 1, levelled_up: false } } } })));
+    await sleep(1400);
+    await shot(page, `${p}-xp-ring`, corner);
+    if (phone) await page.tap("[data-testid=hud-xp]"); else await page.hover("[data-testid=hud-xp]");
+    await sleep(600);
+    await shot(page, `${p}-xp-hover`, { ...corner, height: phone ? 260 : 240 });
+    log.push({ name: `${p}-xp-hover`, tip: await page.$eval("[role=tooltip]", el => el.textContent).catch(() => null) });
+    await page.mouse.move(phone ? 200 : 900, 600); await page.evaluate(() => document.activeElement?.blur());
+    await sleep(800);
+    await levelUpStrip(page, `${p}-levelup`, !phone);
+    await shot(page, `${p}-after-levelup`, corner);
+    await ctx.close();
+  }
+  if (scene === "mq4sand") {
+    // The sand's mark twitching: a burst of crops round the mark, then the frames where it moved.
+    const { ctx, page } = await open("collections=demo&time=day", { "tsi.held.v1": JSON.stringify({ held: "shovel:shovel-basic" }) });
+    await hudIn(page);
+    await go(page, -15.8, 99.5, 0);
+    await sleep(2500);
+    await shot(page, "mq4-sand");
+    const clip = await markClip(page);
+    for (let i = 0; i < 90; i++) {
+      const t = await page.evaluate(() => performance.now());
+      await page.screenshot({ path: `${OUT}/mq4-sand-burst-${String(i).padStart(2, "0")}.png`, clip });
+      log.push({ name: `mq4-sand-burst-${i}`, t: Math.round(t) });
+    }
+    await ctx.close();
+  }
+
   if (scene === "r3bars") {
     // The HUD's bars: at rest; stamina spent sprinting and on dashes, then refilling; XP filling into a level up.
     const { ctx, page } = await open("");

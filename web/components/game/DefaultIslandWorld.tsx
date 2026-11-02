@@ -1512,8 +1512,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <CraftingSheet />
       <CollectionBook open={bagOpen} onClose={() => setBagOpen(false)} keys={identity.settings.key_bindings.openJournal} />
       {/* The Bag shows only as a pickup flies into it; a touch screen's menu button opens the UI view (it has no Esc). */}
-      {/* The player's bars (specs/design-bible.md UI 8): health and XP always on, stamina while it's used. */}
-      <HudBars className={styles.hudBars} hidden={hudCinematic} full={uiView} />
+      {/* The player's level ring and vitals, top left (specs/design-bible.md UI 8). */}
+      <HudBars className={styles.hudBars} hidden={hudCinematic} />
       <div className={styles.bagButtons}>
         {touch && !hudCinematic && <button className={styles.menuButton} onClick={() => setLayer(l => (l ? null : "ui"))} aria-expanded={uiView} aria-label={uiView ? "Close the menu" : "Menu"}><Menu size={20} aria-hidden /></button>}
         <BagButton full={tourShown.has("bag")} keyLabel={keyName(identity.settings.key_bindings.openBag)} onOpen={() => setSheet("bag")} />

@@ -1,0 +1,78 @@
+/* The level-up moment (levelUp.tsx; specs/design-bible.md UI 1, 4, 9): one white card over a light scrim, juicy, a spring
+   with ~12% overshoot, transform and opacity only. The beats come from the card's data-phase and its --start, --fly,
+   --gap and --charge (LEVEL_UP_MS). */
+.layer { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 16px; background: var(--ui-scrim);
+  font-family: var(--gui-font); color: var(--ui-ink); animation: fade 0.25s ease-out both; }
+.card { position: relative; display: grid; width: min(340px, 100%); height: min(430px, calc(100dvh - 32px)); overflow: hidden; border-radius: 24px;
+  background: var(--ui-grain), var(--ui-card); box-shadow: 0 24px 80px rgb(var(--ui-shade) / 0.3); text-align: center;
+  animation: cardIn 0.55s cubic-bezier(0.34, 1.4, 0.64, 1) both; }
+.stage, .panel { grid-area: 1 / 1; }
+.stage { position: relative; }
+
+/* The glow behind the figure: it gathers as the motes land and flares at the burst. */
+.glow { position: absolute; left: 50%; top: 46%; width: 300px; height: 300px; margin: -150px 0 0 -150px; border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in oklab, var(--ui-xp) 55%, transparent), transparent);
+  opacity: 0.12; transform: scale(0.7); animation: gather var(--charge) var(--start) linear both; }
+.card:not([data-phase="charge"]) .glow { animation: flare 0.9s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+@keyframes gather { to { opacity: 0.75; transform: scale(1); } }
+@keyframes flare { 0% { opacity: 1; transform: scale(1); } 35% { opacity: 1; transform: scale(1.35); } 100% { opacity: 0.45; transform: scale(1.1); } }
+
+/* The figure: the character, standing in the middle; a landing mote flashes it white for two frames. */
+.figure { position: absolute; left: 50%; top: 18px; width: 240px; height: 380px; margin-left: -120px; transform-origin: 50% 92%;
+  transition: transform 0.6s cubic-bezier(0.34, 1.4, 0.64, 1); }
+.figure[data-flash] { filter: brightness(3.2) saturate(0); }
+.card[data-phase="burst"] .figure { transform: scale(1.1); }
+.card[data-phase="reveal"] .figure { transform-origin: 50% 0; transform: translateY(-4px) scale(0.62); }
+
+/* The motes: each flies its own curve in (x eases in, y eases out) to the figure's middle and lands there. */
+.motes { position: absolute; left: 50%; top: 46%; width: 0; height: 0; pointer-events: none; }
+.moteX { position: absolute; animation: moteX var(--fly) calc(var(--start) + var(--i) * var(--gap)) cubic-bezier(0.5, 0, 0.8, 0.5) both; }
+.moteY { display: block; animation: moteY var(--fly) calc(var(--start) + var(--i) * var(--gap)) cubic-bezier(0.2, 0.5, 0.5, 1) both; }
+.moteY i { display: block; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--ui-xp);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ui-xp) 30%, transparent), 0 0 14px 4px color-mix(in oklab, var(--ui-xp) 60%, transparent);
+  animation: moteDot var(--fly) calc(var(--start) + var(--i) * var(--gap)) ease-out both; }
+@keyframes moteX { from { transform: translateX(var(--x)); } to { transform: none; } }
+@keyframes moteY { from { transform: translateY(var(--y)); } to { transform: none; } }
+@keyframes moteDot { 0% { opacity: 0; transform: scale(0.3); } 20% { opacity: 1; transform: scale(1.15); } 85% { opacity: 1; transform: scale(0.9); } 100% { opacity: 0; transform: scale(0.4); } }
+
+/* The burst: "Level up!" springs out over the figure's legs with sparks thrown from its middle. */
+.shout { position: absolute; left: 0; right: 0; top: 64%; display: inline-flex; justify-content: center; align-items: center; gap: 8px;
+  color: var(--ui-ink); font: 900 38px/1 var(--gui-font); letter-spacing: -0.01em; text-shadow: 0 2px 0 var(--ui-card), 0 0 18px var(--ui-card);
+  animation: shout 0.6s cubic-bezier(0.34, 1.7, 0.64, 1) both; }
+.shout svg { color: var(--ui-xp); }
+.card[data-phase="reveal"] .shout { animation: shoutOut 0.3s ease-in both; }
+@keyframes shout { 0% { opacity: 0; transform: scale(0.3) rotate(-6deg); } 100% { opacity: 1; transform: none; } }
+@keyframes shoutOut { to { opacity: 0; transform: translateY(-20px) scale(0.9); } }
+.sparks { position: absolute; left: 50%; top: 46%; width: 0; height: 0; pointer-events: none; }
+.sparks i { position: absolute; left: -5px; top: -5px; width: 10px; height: 10px; border-radius: 50%; background: var(--ui-xp);
+  transform: rotate(calc(var(--k) * 30deg)); animation: spark 0.9s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+.sparks i:nth-child(3n) { background: var(--ui-rarity-rare); width: 7px; height: 7px; }
+.sparks i:nth-child(3n + 1) { background: var(--ui-rarity-epic); width: 8px; height: 8px; }
+@keyframes spark { 0% { opacity: 1; transform: rotate(calc(var(--k) * 30deg)) translateY(0) scale(1); } 100% { opacity: 0; transform: rotate(calc(var(--k) * 30deg)) translateY(-150px) scale(0.3); } }
+
+/* The reveal: the new level and its unlocks slide up over the figure's lower half (a fade of the card's white on top). */
+.panel { align-self: end; display: grid; justify-items: center; gap: 4px; padding: 34px 20px 20px;
+  background: linear-gradient(to bottom, transparent, var(--ui-card) 30px), var(--ui-grain); animation: panelIn 0.5s cubic-bezier(0.34, 1.3, 0.64, 1) both; }
+.kicker { display: inline-flex; align-items: center; gap: 6px; color: var(--ui-muted); font: 700 12px/1 var(--gui-font); letter-spacing: 0.12em; text-transform: uppercase; }
+.big { display: inline-flex; align-items: baseline; gap: 4px; font: 900 52px/1 var(--gui-font); animation: bigIn 0.6s 0.12s cubic-bezier(0.34, 1.7, 0.64, 1) both; }
+.big small { color: var(--ui-muted); font-size: 18px; font-weight: 800; }
+.title { color: var(--ui-ink-2); font: 500 14px/1.3 var(--gui-font); }
+.list { display: grid; gap: 8px; width: 100%; margin: 10px 0 12px; padding: 0; list-style: none; text-align: left; }
+.list li { display: grid; grid-template-columns: 36px 1fr; gap: 10px; align-items: center; padding: 9px 12px; border-radius: 14px; background: var(--ui-card-dim);
+  animation: rowIn 0.45s calc(0.3s + var(--i) * 0.1s) cubic-bezier(0.34, 1.4, 0.64, 1) both; }
+.list b { display: block; font: 700 14px/1.25 var(--gui-font); }
+.list small { display: block; margin-top: 1px; color: var(--ui-muted); font: 500 12px/1.3 var(--gui-font); }
+.icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--ui-accent); color: var(--ui-accent-ink); }
+.panel > button { width: 100%; }
+@keyframes fade { from { opacity: 0; } }
+@keyframes cardIn { 0% { opacity: 0; transform: translateY(18px) scale(0.86); } 100% { opacity: 1; transform: none; } }
+@keyframes panelIn { 0% { opacity: 0; transform: translateY(60px); } 100% { opacity: 1; transform: none; } }
+@keyframes bigIn { 0% { opacity: 0; transform: scale(0.3); } 100% { opacity: 1; transform: none; } }
+@keyframes rowIn { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .layer, .card, .glow, .card:not([data-phase="charge"]) .glow, .shout, .card[data-phase="reveal"] .shout, .panel, .big, .list li { animation: none; }
+  .figure { transition: none; }
+  .sparks { display: none; }
+  .card[data-phase="reveal"] .shout { opacity: 0; }
+}

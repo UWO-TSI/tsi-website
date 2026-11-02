@@ -1,0 +1,55 @@
+/* The vitals and the level ring (vitals.tsx; specs/design-bible.md UI 1, 8, 9): small and warm, soft white with a little
+   grain, rounded tracks with a highlight on the fill. A bar's colour is its fill: full colour above half, through the
+   shared amber to its low colour as it empties. */
+@property --vital { syntax: "<number>"; inherits: true; initial-value: 1; }
+@property --xp { syntax: "<number>"; inherits: true; initial-value: 0; }
+
+.card { display: grid; gap: 5px; width: max-content; padding: 8px 11px 8px 9px; border-radius: 15px; background: var(--ui-grain), var(--ui-card);
+  box-shadow: inset 0 -2px 0 rgb(var(--ui-shade) / 0.05), 0 3px 0 rgb(var(--ui-shade) / 0.05), 0 8px 22px rgb(var(--ui-shade) / 0.13);
+  pointer-events: auto; transition: opacity 0.3s ease, transform 0.3s ease; }
+.card[data-hidden], .ring[data-hidden] { opacity: 0; transform: translateY(-4px); pointer-events: none; }
+
+.bar { --full: var(--ui-health); --low: var(--ui-health-low);
+  --hi: clamp(0%, calc((var(--vital) - 0.5) * 200%), 100%); --lo: clamp(0%, calc(var(--vital) * 200%), 100%);
+  --fill: color-mix(in oklab, var(--full) var(--hi), color-mix(in oklab, var(--ui-vital-mid) var(--lo), var(--low)));
+  display: grid; grid-template-columns: 16px 132px; align-items: center; gap: 6px; color: var(--fill);
+  transition: --vital 0.6s cubic-bezier(0.34, 1.12, 0.64, 1), opacity 0.4s ease; }
+.bar[data-kind="stamina"] { --full: var(--ui-stamina); --low: var(--ui-stamina-low); }
+.bar[data-live] { transition: opacity 0.4s ease; }
+.bar[data-quiet] { opacity: 0.5; }
+.bar[data-low] { animation: shake 0.45s ease-in-out; }
+.icon { justify-self: center; fill: currentColor; fill-opacity: 0.22; }
+.track { position: relative; height: 10px; border-radius: 99px; overflow: hidden; background: var(--ui-well); box-shadow: inset 0 1px 2px rgb(var(--ui-shade) / 0.12); }
+.track i { position: absolute; inset: 0; border-radius: inherit; background: var(--fill); box-shadow: inset 0 2px 0 var(--ui-sheen);
+  transform-origin: left; transform: scaleX(var(--vital)); }
+/* The tallies: a notch of the card's white every 20 points, over the fill and the well alike. */
+.track::after { content: ""; position: absolute; inset: 0; --seg: calc(var(--tally) * 100%);
+  background: repeating-linear-gradient(90deg, transparent 0 calc(var(--seg) - 2px), var(--ui-card) calc(var(--seg) - 2px) var(--seg)); }
+@keyframes shake { 0%, 100% { transform: none; } 25% { transform: translateX(-3px); } 50% { transform: translateX(3px); } 75% { transform: translateX(-2px); } }
+
+/* The level ring: the number on a white disc, the XP round it from the top, clockwise. */
+.ring { position: relative; display: grid; place-items: center; width: 50px; height: 50px; padding: 0; border: 0; border-radius: 50%; cursor: default;
+  background: var(--ui-grain), var(--ui-card); color: var(--ui-ink); font: 800 17px/1 var(--gui-font); font-variant-numeric: tabular-nums;
+  box-shadow: inset 0 -2px 0 rgb(var(--ui-shade) / 0.05), 0 3px 0 rgb(var(--ui-shade) / 0.05), 0 8px 22px rgb(var(--ui-shade) / 0.13);
+  pointer-events: auto; transition: opacity 0.3s ease, transform 0.3s ease, --xp 0.65s cubic-bezier(0.34, 1.12, 0.64, 1); }
+.ring[data-snap] { transition: opacity 0.3s ease, transform 0.3s ease; }
+.ring:focus-visible { outline: 2px solid var(--ui-ink); outline-offset: 2px; }
+.ring svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring circle { fill: none; stroke-width: 4.5; }
+.ringWell { stroke: var(--ui-well); }
+/* Empty, the round cap would leave a dot: hidden until there is some XP. */
+.ringFill { stroke: var(--ui-xp); stroke-linecap: round; stroke-dasharray: 1 1; stroke-dashoffset: calc(1 - var(--xp)); opacity: clamp(0, calc(var(--xp) * 100), 1); }
+.level { position: relative; animation: levelIn 0.5s cubic-bezier(0.34, 1.6, 0.64, 1) both; }
+@keyframes levelIn { from { transform: scale(0.4); opacity: 0; } }
+.tip { display: grid; gap: 2px; font: 500 13px/1.3 var(--gui-font); font-variant-numeric: tabular-nums; }
+.tip b { font-weight: 800; font-size: 14px; }
+.tip small { color: var(--ui-muted); font-size: 12px; }
+
+@media (max-width: 700px) {
+  .bar { grid-template-columns: 14px 96px; }
+  .ring { width: 44px; height: 44px; font-size: 15px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar, .ring { transition: opacity 0.3s ease; }
+  .bar[data-low], .level { animation: none; }
+}

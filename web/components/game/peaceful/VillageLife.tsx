@@ -48,7 +48,7 @@ import { LIFT, handOf, liftPose, type Lift } from "@/lib/game/forageLift";
 import { FACE, seedAt, type Recipe } from "@/lib/game/fx/particles";
 import { CHIPS, CHIP_TINT, DIG_RISE, FLOWER_TINT, GLINT, GLINT_EVERY, GLINT_TINT, LIFT_PUFF, NEW_HOLE_TINT, PETALS, ROCK_DUST, SAND_BURST, SAND_GRAINS, SAND_TINT, STRIKE_PUFF } from "@/lib/game/forageFx";
 import { hash01 } from "@/lib/game/worldFx";
-import { digScuff } from "@/lib/game/digMark";
+import { digScuff, digTwitch } from "@/lib/game/digMark";
 import { TREE_WIND, WORLD_SNOW, leafTintHex, prepareModel } from "@/lib/game/modelMaterials";
 import TreeFruit, { FRUIT_REST_RADIUS, type HangingFruit } from "./TreeFruit";
 
@@ -101,7 +101,8 @@ function Outcrop({ sp, at, nodeId, struck, spent = false }: { sp: Species; at: [
 /**
  * A dig spot (a buried find, m3), lib/game/digMark.ts: on sand and on dirt a scuff of turned ground (David 2026-10-28:
  * "way more subtle and small and lower opacity", "should look natural and hard to find usually"; r3, the sand's "make
- * it similar to the dirt") Faint and see-through, a shade darker than the ground. Shared, so the spots cost one material each.
+ * it similar to the dirt") Faint and see-through, a shade darker than the ground, twitching a little now and then ("make
+ * it move or twitch a lil bit"). Shared, so the spots cost one material each.
  */
 const crackLooks = new Map<boolean, THREE.MeshStandardMaterial>();
 const crackLook = (soil: boolean) => {
@@ -111,8 +112,18 @@ const crackLook = (soil: boolean) => {
   return m;
 };
 const SCUFFS = Array.from({ length: 8 }, (_, f) => digScuff(f * 7 + 3));
+const stillDig = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+/** The scuff twitches a little now and then (digTwitch; not under reduced motion). */
+function twitchSpot(mesh: THREE.Mesh | null, seed: number) {
+  if (!mesh || stillDig) return;
+  const { scale, turn } = digTwitch(performance.now() / 1000, seed);
+  mesh.scale.setScalar(scale);
+  mesh.rotation.y = seed * 1.3 + turn;
+}
 function DigSpot({ at, seed, soil }: { at: [number, number, number]; seed: number; soil: boolean }) {
-  return <mesh geometry={SCUFFS[Math.floor(hash01(seed, 7) * 8) % 8]} material={crackLook(soil)} position={[at[0], at[1] + 0.02, at[2]]} rotation={[0, seed * 1.3, 0]} renderOrder={2} receiveShadow />;
+  const mesh = useRef<THREE.Mesh>(null);
+  useFrame(() => twitchSpot(mesh.current, seed));
+  return <mesh ref={mesh} geometry={SCUFFS[Math.floor(hash01(seed, 7) * 8) % 8]} material={crackLook(soil)} position={[at[0], at[1] + 0.02, at[2]]} rotation={[0, seed * 1.3, 0]} renderOrder={2} receiveShadow />;
 }
 
 /**

@@ -25,9 +25,9 @@ import { RARITIES, RARITY_LABEL } from "@/lib/rarity";
 import { RODS, TACKLE } from "@/lib/game/rods";
 import { RodRadar, TackleRadar } from "@/components/economy/RodGear";
 import { useSearch } from "@/lib/game/useMediaQuery";
-import { CircleDot, Waves, Worm } from "lucide-react";
+import { CircleDot, UserRound, Waves, Worm } from "lucide-react";
 import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
-import { ActionBar, ActionIcon, BigMoment, CardOverlay, DarkButton, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KeyBoard, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, QuestCheck, RankBadge, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot } from "@/components/gui/flat";
+import { ActionBar, ActionIcon, CardOverlay, DarkButton, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KeyBoard, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, QuestCheck, RankBadge, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, VitalBar, Vitals, WalletSlot, XpRing, LevelUpMoment } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
 import { BoardRows } from "@/components/game/volleyball/BoardSheet";
 import s from "./showroom.module.css";
@@ -375,22 +375,24 @@ export default function GuiShowroom() {
       <div className={s.toastStage}><ToastHub /></div>
     </Section>
 
-    <Section id="hud-bars" title="The HUD's bars (flat kit)" note="specs/design-bible.md UI 8: health and XP always on, stamina on its own pill while it's used (warm and shaking once when it runs out). components/gui/flat StatBar and StatBars; the island's are components/game/HudBars.tsx.">
+    <Section id="hud-bars" title="The vitals and the level ring (flat kit)" note="specs/design-bible.md UI 8: health and stamina stacked (room for a class's shield or mana row), each bar sliding from its full colour through amber to its low colour as it empties, a notch every 20 points; the level in a ring of XP, hover for the exact XP. components/gui/flat/vitals.tsx; the island's are components/game/HudBars.tsx.">
       <Row>
-        <StatBars><StatBar kind="health" value={1} label="Health 100 of 100" /><StatBar kind="xp" value={0.42} label="Level 3" /></StatBars>
-        <StatBars><StatBar kind="health" value={0.7} label="Health 70 of 100" /><StatBar kind="xp" value={0.42} badge="Lv 3" label="Level 3" /></StatBars>
-        <StatBar kind="stamina" value={0.55} alone label="Stamina" />
-        <StatBar kind="stamina" value={0} alone low label="Stamina run out" />
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}><XpRing level={3} fill={0.42} into={126} needed={300} />
+          <Vitals><VitalBar kind="health" value={1} label="Health 100 of 100" /><VitalBar kind="stamina" value={1} quiet label="Stamina" /></Vitals></div>
+        <Vitals><VitalBar kind="health" value={0.5} label="Health 50 of 100" /><VitalBar kind="stamina" value={0.5} label="Stamina" /></Vitals>
+        <Vitals><VitalBar kind="health" value={0.15} label="Health 15 of 100" /><VitalBar kind="stamina" value={0.05} low label="Stamina run out" /></Vitals>
+        <Vitals><VitalBar kind="health" value={0.7} max={200} label="Health 140 of 200" /></Vitals>
       </Row>
     </Section>
 
-    <Section id="rewards" title="Rewards and moments (flat kit)" note="specs/design-bible.md UI 4 and 7: a reward pops with its rarity as the outline (divine: the holo); a level up is the big moment. components/gui/flat RewardPop and BigMoment.">
+    <Section id="rewards" title="Rewards and moments (flat kit)" note="specs/design-bible.md UI 4 and 7: a reward pops with its rarity as the outline (divine: the holo); a level up is the big moment (motes into the figure, a flash per mote, the burst, then what it unlocks). components/gui/flat RewardPop and LevelUpMoment.">
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 18 }}>
         {POPS.map(([rarity, key, name, title, facts]) => <RewardPop key={rarity ?? key} picture={iconUrl(key)} title={title} name={name} rarity={rarity}
           rarityLabel={rarity ? rarity[0].toUpperCase() + rarity.slice(1) : null} facts={facts ? <span>{facts}</span> : null} isNew={rarity === "rare"} note="The one-liner, quiet." testId={`pop-${rarity ?? key}`} />)}
       </div>
       <Row><Button size="sm" onClick={() => setMoment(true)}>Show the level up</Button></Row>
-      {moment && <BigMoment kicker="Level up" big={2} title="You're level 2" onClose={() => setMoment(false)} testId="showroom-moment"
+      {moment && <LevelUpMoment level={2} title="You're level 2" onClose={() => setMoment(false)} testId="showroom-moment"
+        figure={<UserRound size={200} strokeWidth={1.25} style={{ display: "block", margin: "60px auto 0", color: "var(--ui-ink-2)" }} />}
         items={[{ key: "quest", icon: <BookOpen size={18} />, title: "New quest: Odile's net", line: "Odile at the museum has a spare net." }]} />}
     </Section>
 
