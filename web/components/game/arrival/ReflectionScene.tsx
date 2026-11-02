@@ -188,8 +188,9 @@ const POST_VERT = /* glsl */ `varying vec2 vUv; void main() { vUv = uv; gl_Posit
 /**
  * The composite: a soft disk blur on the frame's mips (less round your reflection and on the waves, which the water
  * marks in the frame's alpha), washed toward the morning haze. While a wave sweeps a change in, `uDissolve` (0 to 1)
- * dissolves the frame with the old you over the side into the one with the new you: a clumpy pixel noise, a thin edge of
- * the waves' foam cream where the two differ (playtest 2026-10-29: "the back of the head hair to dissolve into new hair").
+ * cross-fades the frame with the old you over the side into the one with the new you, softly, with no noise and no edge
+ * (playtest 2026-10-29: "the back of the head hair to dissolve into new hair"; David 10-29: "do a more chill subtle hair
+ * change thats less glitchy").
  */
 const COMPOSITE_FRAG = /* glsl */ `
 uniform sampler2D tScene, tSceneNew;
@@ -197,14 +198,7 @@ uniform vec2 uRes, uFocus, uFocusR;
 uniform float uLod, uWash, uFocusOn, uDissolve;
 uniform vec3 uHaze;
 varying vec2 vUv;
-float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-float noise(vec2 p) {
-  vec2 i = floor(p), f = fract(p);
-  f = f * f * (3.0 - 2.0 * f);
-  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + 1.0), f.x), f.y);
-}
-// Explicit mip levels (the frame is drawn 1:1, so the same as a bias): the dissolve samples inside a branch that differs
-// cell to cell, where implicit ones would come out wrong along the cells' edges.
+// Explicit mip levels (the frame is drawn 1:1, so the same as a bias).
 vec3 blur(sampler2D t, float lod, vec2 k) {
   vec3 c = textureLod(t, vUv, lod).rgb * 2.0;
   c += textureLod(t, vUv + vec2(1.0, 0.0) * k, lod).rgb;
@@ -225,17 +219,7 @@ void main() {
   float r = exp2(lod) * 1.35 / uRes.y;
   vec2 k = vec2(uRes.y / uRes.x, 1.0) * r;
   vec3 c = blur(tScene, lod, k);
-  if (uDissolve > 0.0) {
-    // Pixels of a 900-high frame, in 3-pixel cells: clumps of about 20 cells, a little crumbly at their edges.
-    vec2 px = floor(vUv * uRes / (3.0 * uRes.y / 900.0));
-    float n = noise(px / 6.0) * 0.85 + hash(px) * 0.15, p = uDissolve * 1.1 - 0.05;
-    if (n < p + 0.05) {
-      vec3 cn = blur(tSceneNew, lod, k);
-      // The edge only where the two yous differ (unblurred: the blur's wide mips would carry it over the water).
-      float differ = step(0.06, dot(abs(textureLod(tScene, vUv, 0.0).rgb - textureLod(tSceneNew, vUv, 0.0).rgb), vec3(1.0)));
-      c = n < p ? cn : mix(c, vec3(0.98, 0.97, 0.93), 0.85 * differ);
-    }
-  }
+  if (uDissolve > 0.0) c = mix(c, blur(tSceneNew, lod, k), uDissolve);
   float wash = uWash * (1.0 - 0.75 * max(m, wave));
   float l = dot(c, vec3(0.299, 0.587, 0.114));
   c = mix(c, mix(vec3(l), uHaze, 0.5) * 1.06 + 0.04, wash);
@@ -410,7 +394,7 @@ function drawReflection(f: Frame, dt: number) {
   const sweptAt = list[list.length - 1] ?? -1;
   w.uSweepT.value = sweep ? sweptAt : -1;
   const c = gpu.composite.uniforms;
-  // Over the side, the old you dissolves into the new one while the wave's crest crosses your reflection.
+  // Over the side, the old you fades into the new one while the wave's crest crosses your reflection.
   const beats = waveBeats();
   c.uDissolve.value = sweep ? Math.max(1e-3, smooth(beats.ride, beats.done, t - sweptAt)) : 0;
   c.uLod.value = (1 - clarity) * 5.2;
@@ -425,7 +409,7 @@ function drawReflection(f: Frame, dt: number) {
   // The mirror pass and the frame, of the one scene: the you over the side and the you in the water are the same character
   // (and the old look's too while a wave sweeps a change in).
   if (!sweep && f.youOld) f.youOld.visible = false;
-  // Both yous hold the one pose (their idles can drift apart), so the dissolve changes the look and nothing else.
+  // Both yous hold the one pose (their idles can drift apart), so the fade changes the look and nothing else.
   if (sweep && f.youNow && f.youOld) {
     const from = bonesOf(f.youNow), to = bonesOf(f.youOld);
     if (from && to && from.length === to.length) to.forEach((b, i) => { b.position.copy(from[i].position); b.quaternion.copy(from[i].quaternion); b.scale.copy(from[i].scale); });
