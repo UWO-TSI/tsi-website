@@ -158,6 +158,16 @@
 .paperBody[data-show-off] { grid-template-columns: 29% 1fr 22%; }
 .printed[data-large] .paperBody[data-show-off] { grid-template-columns: 30% 1fr 21%; }
 .printed[data-large] .paperBody[data-show-off] .rows div:not([data-lead]) dd { font-size: 17px; }
+/* A phone: the held card is about 340 px wide, so its type steps down to keep the rows beside the show-off. */
+@media (max-width: 520px) {
+  .printed[data-large] .paperBody { gap: 10px; padding: 12px; }
+  .printed[data-large] .rows { gap: 5px; }
+  .printed[data-large] .rows dt { font-size: 9px; }
+  .printed[data-large] .rows [data-lead] dd { font-size: 22px; }
+  .printed[data-large] .rows div:not([data-lead]) dd { font-size: 12px; }
+  .printed[data-large] .showOff small { font-size: 9px; }
+  .printed[data-large] .showOffName { font-size: 10px; }
+}
 .showOff { display: grid; align-content: start; justify-items: center; gap: 5px; min-width: 0; }
 .showOff small { justify-self: stretch; text-align: center; font: 700 10px/1.2 var(--gui-font); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.6; }
 .printed[data-large] .showOff small { font-size: 12px; }
