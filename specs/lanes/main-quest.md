@@ -31,6 +31,24 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest (once), tsc, eslint, the SQL smoke chain, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 4: David's review of round 3 (2026-11-01, verbatim; page G6Zne7fKcCCaVBUfBcum6G, collection approvals)
+
+Approved: r3-arrow, r3-pops.
+- r3-bars (redo): "the ui for the health bar stamina bar and exp bar needs to be completely redone, stamina should be with health and eventually there might be a shield or mana bar for different classes."
+- r3-bars-world (redo): "placement off and in the middle of nowhere"
+- r3-stamina (redo): "should be redone"
+- r3-stamina-empty (redo): "all the bars should change color as it depleats, so perifiral visiion you cna tell how youre doing and have tallies for every like 20 hearts or smth"
+- r3-xp (redo): "exp bar should exists somewhere seperate, maybe a circular bar around a number somewhere and hover shows specific xp amount"
+- r3-level-up (redo): "level up card should feel mor oomph, more juice, suspense should feel a lot of dopamine, maybe have your character model there and like the experience floats into the character and flash frame for every experence going in and it has level up animation and the text that says level up and the character jumps and grows a lil and next fram over lay the level upgrade and the things you unlock like gems crafting new unoclable stuff"
+- r3-sand (approve): "make it move or twitch a lil bit"
+- r3-pop-strip (approve): "i think about time we do 1 round of all dug up treasure, make like a list of like stuff that can be dug up and model it and give it rarity and purpose" (not this lane: a separate treasure lane)
+
+Build:
+1. The vitals, redone from scratch: health and stamina together as one stack built to take a third bar later (shield or mana by class), each bar shifting colour as it empties so it reads in peripheral vision, tally ticks every 20 points. Placement that belongs to the HUD's layout (design bible), not floating in the world.
+2. XP on its own: a small circular ring around the level number, somewhere sensible in the HUD; hover (or tap) shows the exact XP.
+3. Level up as a moment: the character model on the card, XP motes float into it with a one or two frame flash per mote, a level up animation (the character jumps and grows a little), the "Level up" text, then the next frame overlays the new level and what it unlocks (gems, crafting, new unlockables: only what really unlocks). Flashes never back to back; reduced motion drops them.
+4. The dig spot's sand moves or twitches a little.
+
 ## Round 3: David's review of round 2 (verbatim) and the coordinator's rulings
 
 - Approved: r2-01-line, r2-02-dropdown, r2-21-dig-mark-dirt ("looks good").
