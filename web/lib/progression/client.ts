@@ -4,6 +4,8 @@
  * Browser transport for /api/progression/*. When the API can't answer
  * (signed out, migration 029 not applied, offline) the journal falls back
  * to the seeded chapters/goals with zero progress, marked source "defaults".
+ * A dev server with no Supabase (and tests) plays the quest locally instead
+ * (localProgression.ts); production never does.
  */
 import { evaluateChapters, currentObjective, unlockedRegions, type AdvanceAction } from "./chapters";
 import { DEFAULT_CHAPTERS, DEFAULT_GOALS } from "./defaults";
@@ -11,6 +13,8 @@ import { goalCycle } from "./goals";
 import type { DeliveryKind, GoalProgressView, LetterView, ProgressionState } from "./types";
 import { ApiError, apiCall } from "@/lib/apiClient";
 import { DROPS, releasedChapters, releasedGoals, type DropFlags } from "@/lib/game/drops";
+import { offline } from "@/lib/wallet/localEconomy";
+import { localAdvance, localState } from "./localProgression";
 
 /** The seeded content as this drop offers it (lib/game/drops.ts), with nobody's progress. */
 export function previewState(now = new Date(), flags: DropFlags = DROPS): ProgressionState {
@@ -35,13 +39,14 @@ export function previewState(now = new Date(), flags: DropFlags = DROPS): Progre
 export async function fetchState(): Promise<ProgressionState> {
   try {
     return await apiCall<ProgressionState>("/api/progression/state", "state");
-  } catch {
-    return previewState();
+  } catch (e) {
+    return offline(e) ? localState() : previewState();
   }
 }
 
 export const advance = (chapter_slug: string, action: AdvanceAction) =>
-  apiCall<ProgressionState>("/api/progression/chapters/advance", "state", { chapter_slug, action });
+  apiCall<ProgressionState>("/api/progression/chapters/advance", "state", { chapter_slug, action })
+    .catch((e: unknown) => (offline(e) ? localAdvance(chapter_slug, action) : Promise.reject(e)));
 
 export const setHudMuted = (hud_muted: boolean) => apiCall<boolean>("/api/progression/prefs", "hud_muted", { hud_muted });
 
