@@ -31,6 +31,23 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest (once), tsc, eslint, the SQL smoke chain, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 5: David's round 4 review (2026-11-02, verbatim; https://claude.ai/artifact/BNWtSh7obrfHW7S5EAZ39E)
+
+Approved: mq4-xp, mq4-ring-after, mq4-sand, mq4-bible (update design bible UI 8b to match: stamina stays in the card, dimmed when full; the level shows in the ring all the time).
+- mq4-hud (redo): "the divide line needs to be thinner and the bar should be longer, idk if they should have a huge white pill "
+- mq4-vitals (redo): "more red and critical and flashes"
+- mq4-vitals-world (redo): "the screen should get subtle vingette and when its really low the heart pulses and the screen gets less saturaed"
+- mq4-levelup (redo): "remove white backgound level up card needs to be redone"
+- mq4-reveal, mq4-phone-levelup (redo, no note): follow the level up redo.
+- mq4-phone (redo): "the ui for phone needs to increase the camera distance, remove emote dance and make it more compact"
+
+Build:
+1. The vitals: a thinner divider, longer bars, and try it without the big white pill (show with and without). Low reads critical: a stronger red, and it flashes when very low.
+2. Low health in the world: a subtle vignette as health drops; when very low the heart icon pulses and the screen desaturates a little. Honour reduced motion for the pulse.
+3. Level up redone with no white card: the character, motes, flash frames and text over the world (a soft scrim at most), then the reveal in the same style. Phone too.
+4. Phone HUD: the camera pulled further back, the emote and dance button removed from the phone HUD, everything more compact.
+5. Update bible UI 8b per mq4-bible.
+
 ## Round 4: David's review of round 3 (2026-11-01, verbatim; page G6Zne7fKcCCaVBUfBcum6G, collection approvals)
 
 Approved: r3-arrow, r3-pops.
