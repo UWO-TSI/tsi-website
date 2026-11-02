@@ -8,7 +8,8 @@ The sheet is one row of views on white, in --views order (the prompts in art/pip
 It is split at the white gaps between views, each view is cropped to its ink, and the first view's longest side is set
 to --length metres (GLB units), which fixes metres per pixel for every view (the prompts ask for one scale).
 --mirror flips views drawn from the other side; --turn turns a view counterclockwise by quarter turns, so it matches
-the model's camera: front from -Y, side from +X (front -Y on the left), back from +Y, top from +Z with +Y up. A fish
+the model's camera: front from -Y, side from +X (front -Y on the left), back from +Y, left from -X, top from +Z with
++Y up. A sheet that draws the reel face-on first was drawn with the rods' side as its front: `--views side,front,left,...`. A fish
 sheet (side, top, three-quarter, nose left) needs --turn top=90. Writes to <out>:
   <view>.png          the cropped view
   blueprint.json      metres per pixel, each view's size in metres, and its silhouette: for 64 slices bottom to top
@@ -128,6 +129,7 @@ if a.model:
         "front": (Vector((mid.x, lo.y - 5, lo.z)), (math.pi / 2, 0, 0)),
         "side": (Vector((hi.x + 5, mid.y, lo.z)), (math.pi / 2, 0, math.pi / 2)),
         "back": (Vector((mid.x, hi.y + 5, lo.z)), (math.pi / 2, 0, math.pi)),
+        "left": (Vector((lo.x - 5, mid.y, lo.z)), (math.pi / 2, 0, -math.pi / 2)),
         "top": (Vector((mid.x, mid.y, hi.z + 5)), (0, 0, 0)),
     }
     for v, (at, rot) in lay.items():
