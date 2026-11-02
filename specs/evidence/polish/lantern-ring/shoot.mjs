@@ -42,7 +42,7 @@ for (const shot of SHOTS) {
   if (flags.includes("nohud")) await page.addStyleTag({ content: "main > :not(:has(canvas)), nav { visibility: hidden !important; }" });
   await page.waitForTimeout(Number(process.env.WAIT ?? 9000));
   if (flags.includes("walk")) { await page.keyboard.down("w"); await page.waitForTimeout(900); }
-  await page.screenshot({ path: `${OUT}/${name}-${TAG}.png` });
+  await page.screenshot({ path: `${OUT}/${name}-${TAG}.png` }); // (webp for the repo: converted after, as round 1)
   if (flags.includes("walk")) await page.keyboard.up("w");
   const prompt = await page.locator("button[class*=interact]").first().textContent({ timeout: 500 }).catch(() => null);
   console.log("shot", name, TAG, "prompt:", prompt);
