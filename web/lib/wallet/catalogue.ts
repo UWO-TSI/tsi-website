@@ -245,7 +245,8 @@ export const DISH_ART: Record<string, { hd: string; icon: string; standIn: strin
   tuna_roll: { hd: "/assets/game/food/hd/tuna-roll.glb", icon: "dish_tuna_roll", standIn: "fish_tuna", ready: false },
   omakase: { hd: "/assets/game/food/hd/omakase.glb", icon: "dish_omakase", standIn: "sea_sweet_shrimp", ready: false },
   feast: { hd: "/assets/game/food/hd/banchas-feast.glb", icon: "dish_banchas_feast", standIn: "fish_king_salmon", ready: false },
-  tasting: { hd: "/assets/game/food/hd/nigiri.glb", icon: "dish_nigiri", standIn: "fish_red_snapper", ready: false },
+  tasting: { hd: "/assets/game/food/hd/nigiri.glb", icon: "dish_nigiri", standIn: "fish_sea_bass", ready: false },
+  snapper_chazuke: { hd: "/assets/game/food/hd/snapper-chazuke.glb", icon: "dish_snapper_chazuke", standIn: "fish_red_snapper", ready: false },
 };
 export const SUSHI_MENU: readonly Dish[] = [
   { id: "miso_soup", name: "Miso soup", blurb: "Warm and simple.", price: 20, buff: { luck: 0.05, size: 0, minutes: 15 } },
@@ -255,15 +256,27 @@ export const SUSHI_MENU: readonly Dish[] = [
   { id: "feast", name: "Bancha's feast", blurb: "Bring one of your epic or legendary fish and he cooks it into a feast.", price: null, buff: { luck: 0.35, size: 0.6, minutes: 60 } },
 ];
 /**
- * The tasting book (20261101120000_tasting_book.sql; David 2026-11-01: "one per fish kinda thing and they can either
- * turn into meal that gets buff and a stamp or in the aquarium"): any rod fish you bring, Bancha makes into a nigiri for
- * the dish's small fee and buff, and its slot in the book is stamped the first time; or it goes to HQ's tank, free,
- * filling the slot instead. Filling slots pays at `marks` (the book's count) and for each water filled (`full`).
+ * The tasting book (20261102120000_tasting_book.sql; David 2026-11-01: "one per fish kinda thing and they can either
+ * turn into meal that gets buff and a stamp or in the aquarium"; round 2, 2026-11-02: "cooking fee like 100 ... a perm
+ * small like 1% buff for fishing for new species and it can unlcok dishes taht are temp big buff but require ingredients
+ * and expensive. the fee for cooking scales with new fish unlock"). A rod fish whose slot is still empty: Bancha cooks it
+ * (`nigiri`) for `fee.base` coins plus `fee.step` for each species he has cooked for you before, and its stamp makes your
+ * casts a little luckier for good (bookLuck: `luck.each` a species for the first `luck.first`, then `luck.then`, up to
+ * `luck.cap`); or it goes to HQ's tank, free, filling the slot instead. A filled slot is never cooked again. Filling slots
+ * pays at `marks` (the book's count) and for each water filled (`full`). Some stamps teach Bancha a dish (`dishes`).
  */
+export interface BookDish extends Dish { price: number; unlock: string; ingredients: readonly (readonly [key: string, n: number])[] }
 export const TASTING = {
-  dish: { id: "tasting", name: "Bancha's nigiri", blurb: "Any fish you bring, sliced and pressed. A new one gets its stamp in the book.", price: 10, buff: { luck: 0.1, size: 0.1, minutes: 20 } } satisfies Dish,
+  nigiri: { id: "tasting", name: "Bancha's nigiri", blurb: "A fish he hasn't cooked for you yet. Its stamp goes in the book, and your casts stay a little luckier for good." },
+  fee: { base: 100, step: 5 },
+  luck: { first: 20, each: 0.01, then: 0.005, cap: 0.4 },
   marks: [{ at: 10, coins: 150 }, { at: 25, coins: 400 }],
   full: 250,
+  /** The book's dishes (round 2): learnt when `unlock` is stamped, then ordered for coins and `ingredients` from your bag. */
+  dishes: [
+    { id: "snapper_chazuke", name: "Snapper chazuke", blurb: "Snapper over rice, hot tea poured at the counter.", price: 250, unlock: "fish_red_snapper",
+      ingredients: [["fish_red_snapper", 1], ["fish_sea_bass", 2]], buff: { luck: 0.3, size: 0.3, minutes: 45 } },
+  ] satisfies readonly BookDish[] as readonly BookDish[],
 } as const;
 /** The chef's order pays its coins and this meal (David: "side quest for special fish for money and food"). */
 export const STAFF_MEAL: MealBuff = { luck: 0.1, size: 0.2, minutes: 30 };

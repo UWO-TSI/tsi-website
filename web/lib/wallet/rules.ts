@@ -233,3 +233,10 @@ export function tastingMarks(book: ReadonlySet<string>, key: string, at: readonl
   if (page && page.species.every((s) => book.has(s))) { earned += full; marks.push(`water:${water}`); }
   return { earned, marks };
 }
+/** The fee for Bancha's first cook of a species, with `cooked` species stamped before it (tasting_serve sums the same). */
+export const tastingFee = (cooked: number) => TASTING.fee.base + TASTING.fee.step * cooked;
+/** The book's permanent luck on every cast (rarer fish, as a meal's luck) with `cooked` species stamped: a gentle curve to a cap. */
+export function bookLuck(cooked: number): number {
+  const { first, each, then, cap } = TASTING.luck;
+  return Math.round(Math.min(cap, each * Math.min(cooked, first) + then * Math.max(0, cooked - first)) * 1000) / 1000;
+}

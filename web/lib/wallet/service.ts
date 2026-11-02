@@ -39,6 +39,7 @@ const ERR: Record<string, [number, string]> = {
   already_claimed: [409, "Already claimed."],
   not_rare_enough: [422, "Bancha only cooks an epic or legendary fish into a feast."],
   already_in_book: [409, "That fish already has its slot in your book."],
+  not_learned: [409, "Bancha hasn't learnt that one yet. Cook its fish for the book first."],
   failed: [500, "Something went wrong. Try again."],
 };
 const fail = <T>(err: unknown): Result<T> => toFailure(ERR, err);
@@ -237,9 +238,16 @@ export const sushiView = (store: EconomyStore, m: string, now: Date) => run<Sush
 
 /**
  * Order at the sushi bar (f-sushi): a dish off the menu for its coins, or the feast for one of your own epic or
- * legendary fish (`fish`). Eating it sets your meal buff from now for its minutes, replacing the last one.
+ * legendary fish (`fish`), or a dish the tasting book taught (TASTING.dishes: its coins and its ingredients, once its fish
+ * is stamped). Eating it sets your meal buff from now for its minutes, replacing the last one.
  */
 export async function orderDish(store: EconomyStore, m: string, input: { dish: string; fish?: string; idempotency_key: string }, now: Date): Promise<Result<{ balance: number; paid: number; buff: ActiveBuff; replayed: boolean }>> {
+  const learnt = TASTING.dishes.find((d) => d.id === input.dish);
+  if (learnt) {
+    if (input.fish) return { ok: false, status: 400, code: "invalid", error: "Invalid request" };
+    const buff = { source: learnt.id, luck: learnt.buff.luck, size: learnt.buff.size, until: until(now, learnt.buff.minutes) };
+    return run(() => store.bookDish(m, learnt.id, learnt.price, learnt.unlock, learnt.ingredients.flatMap(([k, n]) => Array<string>(n).fill(k)), buff, input.idempotency_key));
+  }
   const dish = SUSHI_MENU.find((d) => d.id === input.dish);
   if (!dish) return fail(new EconomyError("not_found"));
   if ((dish.price === null) !== !!input.fish) return { ok: false, status: 400, code: "invalid", error: "Invalid request" };
@@ -258,14 +266,14 @@ export const AQUARIUM_MAX = 12;
 export const tastingView = (store: EconomyStore, m: string) =>
   run<TastingView>(async () => { const [book, aquarium] = await Promise.all([store.tasting(m), store.aquarium(AQUARIUM_MAX)]); return { book, aquarium }; });
 /**
- * Bring Bancha a fish (the tasting book, catalogue TASTING): `cook` makes it into his nigiri for the dish's fee and buff
- * (its slot stamped the first time), `aquarium` gives it to HQ's tank (an empty slot only). The server prices it all.
+ * Bring Bancha a fish whose slot in your book is empty (catalogue TASTING): `cook` stamps it for the fee (tastingFee,
+ * summed in the store under its lock), which raises your casts' luck for good (bookLuck); `aquarium` gives it to HQ's
+ * tank for free. The server prices it all.
  */
-export const serveFish = (store: EconomyStore, m: string, input: { fish: string; way: "cook" | "aquarium"; idempotency_key: string }, now: Date) =>
+export const serveFish = (store: EconomyStore, m: string, input: { fish: string; way: "cook" | "aquarium"; idempotency_key: string }) =>
   run(async () => {
     if (!tastingWater(input.fish)) throw new EconomyError("not_found");
-    const d = TASTING.dish, buff = { source: "tasting", luck: d.buff.luck, size: d.buff.size, until: until(now, d.buff.minutes) };
-    return store.serve(m, input.fish, input.way, input.way === "cook" ? d.price : 0, buff, TASTING.marks, TASTING.full, input.idempotency_key);
+    return store.serve(m, input.fish, input.way, TASTING.fee, TASTING.marks, TASTING.full, input.idempotency_key);
   });
 
 export interface InventoryView {

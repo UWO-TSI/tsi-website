@@ -90,7 +90,10 @@ export interface CollectionsStore {
   toolsTaught(memberId: string): Promise<boolean>;
   /** Every entry of one tourney cycle, with names (service role: the route applies the board's privacy). */
   tourneyEntries(goalId: string, cycle: number): Promise<TourneyEntry[]>;
-  /** The member's meal buff from the sushi bar while it lasts (member_buffs), which their casts roll with; null when none. */
+  /**
+   * The member's fishing buff, which their casts roll with: the sushi bar's meal while it lasts (member_buffs) plus the
+   * tasting book's permanent luck (bookLuck of their cooked slots); null when neither.
+   */
   buff(memberId: string, now: Date): Promise<{ luck: number; size: number } | null>;
   showcase(memberId: string): Promise<(string | null)[]>;
   setShowcase(memberId: string, keys: (string | null)[]): Promise<void>;

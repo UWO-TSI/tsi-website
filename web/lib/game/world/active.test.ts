@@ -27,7 +27,7 @@ describe("worldModel", () => {
       expect(hd).toMatch(/^\/assets\/game\/food\/hd\/[\w-]+\.glb$/);
       expect(worldModel(hd)).toBe(hd.replace("/hd/", "/"));
     }
-    expect(Object.keys(DISH_ART).sort()).toEqual([...SUSHI_MENU.map(d => d.id), TASTING.dish.id].sort());
+    expect(Object.keys(DISH_ART).sort()).toEqual([...SUSHI_MENU.map(d => d.id), TASTING.nigiri.id, ...TASTING.dishes.map(d => d.id)].sort());
   });
   it("leaves what isn't remodelled alone", () => {
     for (const url of ["/assets/acnh/critters/firefly.glb", "/assets/acnh/props/crab-hermit.glb", "/assets/acnh/props/crab-gazami.glb", "/assets/acnh/fruit/apple.glb", "/assets/acnh/sea/scallop.glb", "/assets/acnh/props/rock-d.glb"])
