@@ -106,6 +106,12 @@ Redo:
 - Dig spot twitch (lib/game/digMark.ts digTwitch, tested; VillageLife DigSpot): every 2.5 to 5 s (per spot) a 0.4 s
   wobble, scale up to +-24% and a turn up to 0.22 rad, dying away; on sand and dirt alike; none under reduced motion.
   Measured on the mesh in the headless run (scale 0.89 to 1.20).
+- Gates: tsc clean; vitest 3733 passed, 2 failed outside this lane (shoreField timed out under load and passes alone;
+  study.test.ts "demo scenarios" fails on the date, week_start 2026-11-02, and passed an hour earlier); eslint clean on
+  the 12 changed TS files. perf:check SCENES=v2 (one run, load average 8.3, swap 12.7 GB, another lane's Blender lock
+  held): v2 high 6.7 ms median (baseline 4.8 from 2026-10-14, +40%, over the 6.5 budget), lite 3.7 (2.9); draw calls
+  364 (359), triangles 752k (757k). The bench never mounts the level-up canvas; the only always-on render change is a
+  useFrame per dig spot (a scale and a turn). Not rerun (the rules: never for noise); the coordinator's merge-batch check decides.
 - Bible to update (coordinator): UI 8b says "stamina only while below full" and "the level badge beside the XP bar" in
   layer 2; round 4 has stamina always in the stack (quiet when full) and the level always in the XP ring.
 
