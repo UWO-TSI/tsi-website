@@ -109,6 +109,39 @@ const FLOW = {
     await wait(1600);
     await menuShot("tb-book-aquarium-mark");
   },
+  /** Round 2 (tb2-*): the book's page and its dish locked, a first cook's fee and its lesson, the stamp, the dish learnt and ordered. */
+  async book2() {
+    await world("at=-47,114.4&time=19.5&bag=23&dish=1", { settle: 12000 });
+    await wait(3000);
+    await page.locator("button:text-is('Menu')").first().click({ timeout: 10000 }).catch(e => console.log("menu", e.message.slice(0, 120)));
+    await wait(1800);
+    await centre(page.getByRole("button", { name: "Open the menu" }));
+    await wait(1200);
+    await turnPage(); await turnPage();
+    await menuShot("tb2-book-locked");
+    await page.getByRole("button", { name: /Snapper chazuke/ }).first().click({ force: true }).catch(e => console.log("dish", e.message.slice(0, 120)));
+    await wait(600); await menuShot("tb2-dish-locked");
+    await centre(page.getByRole("button", { name: "Turn back" })); await wait(1100);
+    await page.getByRole("button", { name: /Bancha's nigiri/ }).first().click({ force: true }).catch(e => console.log("nigiri", e.message.slice(0, 120)));
+    await wait(700); await menuShot("tb2-nigiri");
+    await page.getByRole("button", { name: "Red Snapper", exact: true }).first().click({ force: true }).catch(e => console.log("snapper", e.message.slice(0, 120)));
+    await page.mouse.move(4, VH - 4);
+    await wait(700);
+    await shot("tb2-counter-choice");
+    await menuShot("tb2-counter-choice-menu");
+    await page.getByRole("button", { name: /^Cook it/ }).first().click({ force: true }).catch(e => console.log("cook", e.message.slice(0, 120)));
+    await page.waitForFunction(() => !document.querySelector('[aria-roledescription="folded menu"] [data-dir]'), null, { timeout: 5000 }).catch(() => {});
+    await wait(1400); await shot("tb2-stamp-toast"); await menuShot("tb2-stamp-landed");
+    await centre(page.getByRole("button", { name: "Turn back" })); await wait(1100);
+    await page.getByRole("button", { name: /Snapper chazuke/ }).first().click({ force: true }).catch(e => console.log("dish", e.message.slice(0, 120)));
+    await wait(600); await menuShot("tb2-dish-learnt");
+    await page.getByRole("button", { name: /^Order/ }).first().click({ force: true }).catch(e => console.log("order", e.message.slice(0, 120)));
+    await wait(1200); await shot("tb2-dish-ordered");
+    await page.locator("button:text-is('Menu')").first().click({ timeout: 10000 }).catch(e => console.log("menu", e.message.slice(0, 120)));
+    await wait(1800);
+    await centre(page.getByRole("button", { name: "Open the menu" }));
+    await wait(1200); await menuShot("tb2-meal");
+  },
   async aquarium() {
     await world("hq=inside&at=0,4.2&time=day", { press: false, settle: 14000 });
     await page.keyboard.down("w"); await wait(400); await page.keyboard.up("w");
