@@ -13,7 +13,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check } from "lucide-react";
 import { Keycap } from "@/components/gui";
-import { GhostButton, KeyBoard, SlotPop, Spotlight, boardLabel, type PeekKind } from "@/components/gui/flat";
+import { GhostButton, KeyBoard, KeywordLine, SlotPop, Spotlight, boardLabel, type PeekKind } from "@/components/gui/flat";
 import { AudioManager } from "@/lib/game/audio";
 import TourPeek from "./TourPeek";
 import { HOLD_MS, UI_TOUR, tourInput, tourSteps, tourTick, type HudPiece, type TourKeys, type TourProgress } from "@/lib/game/arrival/hq/uiTour";
@@ -111,8 +111,10 @@ export default function KeyboardTour({ open, keys, onShow, onDone }: {
   }, [open, p.holdFrom]);
 
   const shown = won ?? Math.min(p.step, steps.length - 1), step = steps[shown];
-  const lead = won !== null ? <><Check size={16} aria-hidden /> {won >= steps.length - 1 ? UI_TOUR.done : step.title}</>
-    : <>{step.hold ? UI_TOUR.hold : UI_TOUR.press} <Keycap>{boardLabel(step.key)}</Keycap> {step.title}</>;
+  // The step's word carries its library icon (round 7: the bag, the map... the same drawing everywhere).
+  const title = <KeywordLine line={step.title} />;
+  const lead = won !== null ? <><Check size={16} aria-hidden /> {won >= steps.length - 1 ? UI_TOUR.done : title}</>
+    : <>{step.hold ? UI_TOUR.hold : UI_TOUR.press} <Keycap>{boardLabel(step.key)}</Keycap> {title}</>;
   return <>
     <Spotlight light open={open} label={`${UI_TOUR.eyebrow}: ${step.title}`} lead={lead} steps={{ count: steps.length, at: shown }}
       testId="ui-tour" dataset={{ "data-step": step.id, "data-won": won !== null ? "" : undefined }}

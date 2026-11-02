@@ -3,12 +3,14 @@
 /**
  * The Esc layers' own pieces (David, playtest round 1, decision 3; lib/game/escMenu.ts):
  * - `MenuDock`, the UI view's (Esc 1) row of menu entries over the live game: Map, Quests and journal, Bag and
- *   Collection, Friends and Mail, each with its key. The world keeps running and its keys keep working.
+ *   Collection, Friends and Mail, each with its key and the icon library's drawing (round 7: the same icon for a
+ *   thing everywhere). The world keeps running and its keys keep working.
  * - `SystemMenu`, Esc 2: Resume, Settings, and Log out (Sign in for a guest). Escape or ✕ goes back to the game.
  */
 import { useState } from "react";
-import { BookOpen, HeartHandshake, LogOut, Mail, Map as MapIcon, Play, ScrollText, Settings, ShoppingBag, Users } from "lucide-react";
+import { LogOut, Play } from "lucide-react";
 import { Button, Counter, Sheet, SignInLink } from "@/components/gui";
+import { KeywordIcon } from "@/components/gui/flat";
 import { createClient } from "@/lib/supabase/client";
 import styles from "./EscLayers.module.css";
 
@@ -36,19 +38,19 @@ export function MenuDock({ keys, touch, unread, asking, people, only, onMap, onJ
   const all = !only;
   return <nav className={styles.dock} aria-label="Menu" data-testid="menu-dock">
     {all && <div className={styles.group} aria-label="Map">
-      <Entry icon={<MapIcon size={20} />} label="Map" keyLabel={k(keys.map)} disabled={!onMap} onClick={() => onMap?.()} />
+      <Entry icon={<KeywordIcon kind="map" />} label="Map" keyLabel={k(keys.map)} disabled={!onMap} onClick={() => onMap?.()} />
     </div>}
     {(all || only.has("quests")) && <div className={styles.group} aria-label="Quests and journal">
-      <Entry icon={<ScrollText size={20} />} label="Quests and journal" keyLabel={k(keys.journal)} onClick={onJournal} />
+      <Entry icon={<KeywordIcon kind="quest" />} label="Quests and journal" keyLabel={k(keys.journal)} onClick={onJournal} />
     </div>}
     {(all || only.has("collection")) && <div className={styles.group} aria-label="Bag and collection">
-      {all && <Entry icon={<ShoppingBag size={20} />} label="Bag" keyLabel={k(keys.bag)} onClick={onBag} />}
-      <Entry icon={<BookOpen size={20} />} label="Collection" keyLabel={k(keys.collection)} onClick={onCollection} />
+      {all && <Entry icon={<KeywordIcon kind="bag" />} label="Bag" keyLabel={k(keys.bag)} onClick={onBag} />}
+      <Entry icon={<KeywordIcon kind="collection" />} label="Collection" keyLabel={k(keys.collection)} onClick={onCollection} />
     </div>}
     {(all || only.has("mail")) && <div className={styles.group} aria-label="Friends and mail">
-      {all && <Entry icon={<HeartHandshake size={20} />} label="Friends" badge={asking} onClick={onFriends} />}
-      {all && people !== null && <Entry icon={<Users size={20} />} label={`Here (${people})`} onClick={onPeople} />}
-      <Entry icon={<Mail size={20} />} label="Mail" keyLabel={k(keys.mail)} badge={unread} onClick={onMail} />
+      {all && <Entry icon={<KeywordIcon kind="friend" />} label="Friends" badge={asking} onClick={onFriends} />}
+      {all && people !== null && <Entry icon={<KeywordIcon kind="player" />} label={`Here (${people})`} onClick={onPeople} />}
+      <Entry icon={<KeywordIcon kind="mail" />} label="Mail" keyLabel={k(keys.mail)} badge={unread} onClick={onMail} />
     </div>}
   </nav>;
 }
@@ -70,7 +72,7 @@ export function SystemMenu({ open, signedIn, name, onResume, onSettings, onClose
   return <Sheet open={open} onClose={onClose} title="Menu" size="sm" testId="system-menu" eyebrow={signedIn ? `Signed in as ${name}` : "Playing as a guest"}>
     <div className={styles.system}>
       <Button onClick={onResume}><Play size={17} aria-hidden /> Resume</Button>
-      <Button variant="secondary" onClick={onSettings}><Settings size={17} aria-hidden /> Settings</Button>
+      <Button variant="secondary" onClick={onSettings}><KeywordIcon kind="settings" size={17} /> Settings</Button>
       {signedIn
         ? <Button variant="quiet" disabled={leaving} onClick={() => { setLeaving(true); void logOut(); }}><LogOut size={17} aria-hidden /> {leaving ? "Logging out…" : "Log out"}</Button>
         : <SignInLink button>Sign in</SignInLink>}

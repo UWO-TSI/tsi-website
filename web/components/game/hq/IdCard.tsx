@@ -15,7 +15,7 @@
  * the show-off or anything else). Copy: lib/game/arrival/hq/lines.ts ID_CARD.
  */
 import { useEffect, useState, type FormEvent } from "react";
-import { CardOverlay, DarkButton, GhostButton, PaperField, PrintedCard, ShowOff, ShowOffPicks, StatusLine, Thumb } from "@/components/gui/flat";
+import { CardOverlay, DarkButton, GhostButton, KeywordLine, PaperField, PrintedCard, ShowOff, ShowOffPicks, StatusLine, Thumb } from "@/components/gui/flat";
 import { apiCall } from "@/lib/apiClient";
 import type { JournalEntryKnown } from "@/lib/collections/logic";
 import { iconUrl } from "@/lib/icons/keys";
@@ -131,7 +131,7 @@ export default function IdCard({ open, name, signedIn, friendCode, onDone }: {
       </> : null}>
     <PrintedCard large tilt band={ID_CARD.island} kind={ID_CARD.kind} picture={<IdHeadshot />} printing={phase === "print"} testId="hq-id-card"
       stamp={stamped ? { top: ID_CARD.island, word: ID_CARD.stamp } : null} rows={rows} showOff={showOff} />
-    {form && picking && <ShowOffPicks testId="hq-id-picks" hint={catches.length ? ID_CARD.showOffHint : ID_CARD.showOffEmpty}
+    {form && picking && <ShowOffPicks testId="hq-id-picks" hint={<KeywordLine line={catches.length ? ID_CARD.showOffHint : ID_CARD.showOffEmpty} />}
       clear={a.showOff && <GhostButton type="button" onClick={() => { setA({ ...a, showOff: null }); setPicking(false); }}>{ID_CARD.showOffClear}</GhostButton>}>
       {catches.map(c => <Thumb key={c.key} picture={iconUrl(c.key)} rarity={c.rarity} label={c.name} size={56} selected={c.key === a.showOff}
         onClick={() => { setA({ ...a, showOff: c.key }); setPicking(false); }} />)}

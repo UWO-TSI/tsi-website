@@ -22,7 +22,7 @@ import f from "./flat.module.css";
 export { f as flatStyles };
 export { CardOverlay, FLY_MS, FlyIn, KEYBOARD, KeyBoard, PaperField, PrintedCard, QUEST_CHECK_MS, QuestCheck, ShowOff, ShowOffPicks, SlotPop, Spotlight, boardLabel, type BoardKey } from "./moments";
 export { CountUp, WalletSlot } from "./wallet";
-export { KEYWORD_KINDS, KEYWORD_LIBRARY, Keyword, KeywordLine, keywordParts, type KeywordKind, type LinePart } from "./keyword";
+export { KEYWORD_KINDS, KEYWORD_LIBRARY, Keyword, KeywordIcon, KeywordLine, keywordParts, type KeywordKind, type LinePart } from "./keyword";
 export { ProgressCard } from "./ProgressCard";
 export { ServeMeter } from "./ServeMeter";
 export { ActionBar, ActionIcon, type ActionSlot } from "./ActionBar";
