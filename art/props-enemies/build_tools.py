@@ -37,7 +37,7 @@ ROD = {
     1: dict(name="Flimsy rod", blank="#C9B07A", band="#9C8452", grip="#8E7350", line="#EDE6D4", reel=None, length=0.7, bamboo=True),
     2: dict(name="Cedar rod", blank="#9A5A3A", band="#6D3B26", grip="#C8A27A", line="#F2ECDD", reel="#B8925A", length=0.76),
     3: dict(name="Glass rod", blank="#8FC7C0", band="#5F9C97", grip="#E6DCC6", line="#F4F1E8", reel="#B9C3C6", length=0.8),
-    4: dict(name="Lighthouse rod", blank="#E8E1D2", band="#C9463D", grip="#5A4636", line="#F4F1E8", reel="#C79A3E", length=0.84, stripes=True, lamp="#FFA22E"),
+    4: dict(name="Lighthouse rod", blank="#E8E1D2", band="#C9463D", grip="#5A4636", line="#F4F1E8", reel="#C79A3E", length=0.84, stripes=True, lamp="#FFB548"),
     5: dict(name="Tidewarden rod", blank="#2F6E73", band="#D2A845", grip="#E9DFC8", line="#F4F1E8", reel="#D2A845", length=0.88, shell=True),
 }
 
@@ -73,14 +73,14 @@ def rod(tier):
             pc.blob((0.033, -0.048, 0.003), 0.008, segs=6, rings=4)
             if s.get("shell"):          # a little scallop on the reel's face
                 lathe(pc, (-0.017, -0.048, 0.02), [(0, 0), (0.016, 0.003), (0, 0.007)], n=7, axis=(-1, 0, 0))
-        pc.mat = "Line"
+        pc.mat = "Blank" if s.get("lamp") else "Line"    # the lamp rod's line shares the blank (near the same cream): 5 materials with the lamp
         start = Vector((0, -0.048, 0.034)) if s["reel"] else Vector((0, -0.012, 0.05))
         pts = [start] + [bend(z) + Vector((0, -0.012, 0)) for z in (0.2, 0.42, 0.64)] + [bend(L - 0.005) + Vector((0, -0.006, 0))]
         pc.tube(pts, [0.0022] * len(pts), sides=3, tip=False)
         if s.get("bamboo"):             # line wound round the stick where a reel would be
             pc.mat = "Line"
             lathe(pc, (0, 0, 0.09), [(0.0145, -0.02), (0.016, -0.01), (0.016, 0.01), (0.0145, 0.02)], n=7)
-        if s.get("lamp"):               # the lighthouse's lamp at the tip (David 10-29): a red gallery, the glowing glass, a red roof, a gold finial
+        if s.get("lamp"):               # the lighthouse's lamp at the tip (David 10-29): a red gallery, the warm glass, a red roof, a gold finial
             k, z0 = 1.3, L - 0.016
             pc.mat = "Band"
             pc.tube([bend(z0), bend(z0 + 0.006 * k)], [0.0105 * k, 0.0105 * k], sides=8, tip=False)
@@ -91,18 +91,14 @@ def rod(tier):
             lathe(pc, roof, [(0, 0), (0.0105 * k, 0), (0.0105 * k, 0.002 * k), (0, 0.011 * k)], n=8)
             pc.mat = "Reel"
             pc.blob(roof + Vector((0, 0, 0.0125 * k)), 0.0028 * k, segs=6, rings=4)
-    mats = {"Grip": s["grip"], "Blank": s["blank"], "Band": s["band"], "Line": s["line"]}
+    mats = {"Grip": s["grip"], "Blank": s["blank"], "Band": s["band"]}
+    if not s.get("lamp"):
+        mats["Line"] = s["line"]
     if s["reel"]:
         mats["Reel"] = s["reel"]
-    if s.get("lamp"):
+    if s.get("lamp"):                   # plain, not emissive, so the held rod stays one mesh (heldMesh.ts); its glow is the held lantern's (LanternGlow, Character.tsx)
         mats["Lamp"] = s["lamp"]
-    ob = model(f"rod-{tier}", mats, b)
-    if s.get("lamp"):                   # warm and emissive: no light source, the glass just glows (and blooms where there's bloom)
-        bsdf = next(n for n in bpy.data.materials[f"rod-{tier}_Lamp"].node_tree.nodes if n.type == "BSDF_PRINCIPLED")
-        col = bsdf.inputs["Base Color"].default_value[:]
-        bsdf.inputs["Emission Color" if "Emission Color" in bsdf.inputs else "Emission"].default_value = col
-        bsdf.inputs["Emission Strength"].default_value = 2.0
-    return ob
+    return model(f"rod-{tier}", mats, b)
 
 
 # ================================================================ nets: the pole up +Z, the hoop facing front, the bag behind
