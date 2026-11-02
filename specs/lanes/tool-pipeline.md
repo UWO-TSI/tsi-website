@@ -61,16 +61,20 @@ Data (roster entries, rarity, prices, stats, the Training unlock, the per-rod ca
 
 ## Status
 
-Round 1 done on `game/tool-pipeline` at 576859f6, not yet reviewed or merged.
-- `art/pipeline/profile.py` (headless: GLBs in, five ortho views as webp and a dimensions JSON out), `collage.py`, `families.sh` (`profile` reruns all four families, then the collages), `blueprint.py` (a turnaround sheet split into cropped views at a set length, silhouettes in `blueprint.json`; `--model` renders the model over them and scores the overlap). Self-tested: rod-3's own renders as a sheet score 0.83 to 0.97, pike's side 0.98.
-- Collages: `art/pipeline/out/rods/collage.webp`, `out/fish/collage.webp`, `out/gear/tools/collage.webp`, `out/gear/weapons/collage.webp`, with every view and JSON beside them (JSONs unignored in `.gitignore`).
-- Style sheets `rod-style.md`, `fish-style.md`, `gear-style.md`; prompts in `prompts/` (Carrot, Precision, Training, Riptide, Titanium, Tempest; fish and gear templates); `tools.md` with step 4 as Blender from blueprints (Meshy paused) and step 6b (pitch page); CODEMAP row and design bible pointer (Models rule 3).
+Round 2 (rod models) built on `game/tool-pipeline` (head: see `git log`; the build commit is 866c3dbc), not yet reviewed or merged. Round 1 (576859f6) is under it.
+- `art/pipeline/build_rods.py` (headless) models all nine and exports them; `render <dir>` writes each rod's five views and a lit hero; `old <dir> name=glb` and `scale <m>` render other GLBs the same way for old-beside-new.
+- Rods (Tool budget: at most 600 triangles, 5 materials, one held mesh, nothing emissive): `tools/rod-carrot.glb` 541 tris 5 mats, `rod-precision` 309/4, `rod-training` 435/4, Cedar `rod-2` 521/5, Glass `rod-3` 433/5, `rod-riptide` 567/4, Tidewarden `rod-5` 594/4, `rod-tempest` 487/4, `rod-titanium` 578/3. Not meshopt-packed (no tool GLB is; the held-mesh test loads them raw).
+- Effects: `game/props/rodfx-{riptide,tidewarden,tempest,titanium}.glb` (112, 400, 464, 380 tris), drawn by `web/components/game/character/RodAura.tsx`, mounted in `Character.tsx` HeldItem for any rod whose GLB names a `rodFx` (scene extras). Per holder: Tempest 3 meshes + 2 halos, Titanium 3 + 2, Tidewarden 3 + 1, Riptide 1 (5, 5, 4, 1 draws), no lights, no shadows, sparks in the scene's one glow pool. Idle: spin, bob, pulse, crackle, breathing glow, stronger at night. `lib/game/rodTip.ts` skips effect meshes (`userData.fx`). Test: `RodAura.test.ts`.
+- Concept takes used: Carrot take 1, Precision take 1, Training take 1. Match check (`blueprint.py --model`): carrot 0.28/0.39/0.65, precision 0.39/0.50/0.47, training 0.39/0.35/0.51 (front/side/back). Below 0.8 because the sheets turn the reel face-on to the front where every rod of ours keeps it facing the side (kept, the family's convention), the line and the thin blank cost overlap at a pixel's offset, and the Carrot is deliberately thicker than its sheet; the overlays (`rm2-*-match.webp`) show grip, reel height, bands and tip in place.
+- Icons: `public/assets/icons/rod_{cedar,glass,tidewarden}.webp` re-rendered; `rod_{carrot,precision,training,riptide,tempest,titanium}.webp` rendered ahead of the roster (keys guessed as `rod_<name>`).
+- Evidence `specs/evidence/tool-pipeline/rods-r2/` (webp): `rm2-<rod>-views` (five views and the hero), `rm2-<rod>-hand` (in hand, day and night), `rm2-<rod>-idle` (six frames a quarter second apart, night: riptide, tidewarden, tempest, titanium), `rm2-{cedar,glass,tidewarden}-old-new` (one scale), `rm2-{carrot,precision,training}-match` (the sheet over the model), `rm2-all-heroes`, `rm2-icons`. `shoot.mjs` takes them.
+- perf:check (SCENES=v2, one run, the Tempest held through `HELD_ROD`, new in `specs/perf/perf-bench.mjs`): FAILED on frame time, v2 high 7.0 ms (+46% on the 2026-10-14 baseline, over the 6.5 budget), lite 3.8 ms (+31%); draws 364 (+5, the Tempest's five) and triangles flat. Load average 5.2 to 5.7 and swap 10.4 GB during the run; not rerun (rules). Priced in `specs/perf/effects-cost.md`. The bench's wide shot doesn't show the rod clearly, so the hold is inferred from the +5 draws.
 
 ## Next
 
-1. Coordinator: run the image step with the prompts and collages, publish the pitch page (6b), relay David's picks.
-2. Next round: model the picked rods from their sheets (`blueprint.py`, then a modelling script per rod, then the match check, clean.py, budgets, pack-glbs, icon).
-3. Open for the coordinator: the high-def budget (the sheets propose at most 3,000 triangles and 512 px textures); the Carrot rod's rarity; whether Cedar stays on the new roster.
+1. Coordinator: review page for David (the evidence above). Glass: the cooler sea-glass one is built and replaces rod-3; his alternative (the old Glass as uncommon) is the old file in git (`git show 576859f6:web/public/assets/game/tools/rod-3.glb`).
+2. rod-gear: wire `rod-carrot/precision/training/riptide/tempest/titanium.glb` into the roster (keys `rod_<name>` match the icons), and mount `RodAura` in the shop's RodStage (`<RodAura rod={model} url={rodFxUrl(model)} />`) so the shop shows the effect too.
+3. Open: high-def copies for the rods (none yet: one version each within the Tool budget); the Tempest's links read pale on a light icon background.
 
 ## Tools and gotchas
 
@@ -78,3 +82,6 @@ Round 1 done on `game/tool-pipeline` at 576859f6, not yet reviewed or merged.
 - Raw fish GLBs (`acnh/fish`) carry a stray material-less icosphere (profile.py skips material-less meshes); Dace and Bluegill are stored nose up (`@x90`). Fish are not to one scale: `--fit`.
 - Rod materials are named `rod-N_<Part>`; the Lighthouse's gold is both reel and finial and its red both stripes and lamp roof, so parts are measured on their biggest group along the length (`also` lists the rest).
 - `clean.py` re-pivots to the bottom centre; held tools need the grip at the origin (a rod's hand is 0.12 GLB m above the butt).
+- `build_rods.py`: a rod is `kit.Piece` faces (`loft`, `leaf`, `flange`, `lathe`, `reel`, `line`), one object per rod; its effect parts are their own objects (`fx_part`, origin at their pivot) with extras that RodAura reads. Blender names repeat as `Aura.001`, so RodAura matches by prefix. A part with two materials is two draws: keep each effect node one material.
+- In-game shots: `run.sh`-style wrapper (next dev on 3347, Supabase blanked) under `withlock.sh devserver`, then `HOST=http://localhost:3347 node specs/evidence/tool-pipeline/rods-r2/shoot.mjs <out> name=rod-x.glb@day|night@140,8,0.6[@strip]` with `CLIP=420,240,440,480`; about 20 s a shot after the first. Camera zoom bottoms out at 0.6, so crop. Any rod is held by answering `rod-1.glb` (the Flimsy, everyone's starter) with it; the bench does the same with `HELD_ROD=<file>` (perf-bench.mjs).
+- `blueprint.py` has a `left` view (from -X) now.

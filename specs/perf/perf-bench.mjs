@@ -5,7 +5,8 @@
 //   (default: v2, cafe and the four heavy ults' kits).
 //   Env: TIER=high|lite (default high), SECONDS (default 8), PROFILE=1 (a CPU profile after each run, top self time),
 //   UNCAPPED=0 (keep the display's frame pacing; default off so the frame rate shows the real cost), SHOTS=dir (a
-//   close-up and a wide screenshot per scene), HEADED=1 (show the window; the default is headless, no window on David's screen: for machines whose agents may only run
+//   close-up and a wide screenshot per scene), HELD_ROD=<file in web/public/assets/game/tools> (the player holds that rod:
+//   the Flimsy rod's GLB answered with it, to price a rod's effect, components/game/character/RodAura.tsx), HEADED=1 (show the window; the default is headless, no window on David's screen: for machines whose agents may only run
 //   headless; compare headless runs with headless runs, never with a headed baseline).
 // Headed Chromium off to the side (--window-position=2400,0), muted, the real GPU (ANGLE on Metal), never brought to
 // the front. Each scene runs on a fresh page, waits for the world to settle, then samples every frame for SECONDS
@@ -14,7 +15,7 @@
 // The ruins: k5-perf.mjs's fight (a pack of 17 hunting you at 30x health, you can't fall, the kit's keys on a loop, the
 // ult a second in), and its first ult's worst frame (the first-use hitch) and a second ult's (TWICE: on by default).
 import { createRequire } from "node:module";
-import { appendFileSync, mkdirSync } from "node:fs";
+import { appendFileSync, mkdirSync, readFileSync } from "node:fs";
 import { loadavg } from "node:os";
 const require = createRequire("/opt/homebrew/lib/node_modules/");
 const { chromium } = require("playwright");
@@ -26,6 +27,8 @@ if (UNCAPPED) args.push("--disable-gpu-vsync", "--disable-frame-rate-limit");
 const browser = await chromium.launch({ headless: process.env.HEADED !== "1", args });
 const LOOK = JSON.stringify({ skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [], bangs: "bangs_curtain", back: "back_bob", top: "top_hoodie", bottom: "bottom_joggers", onepiece: null, shoes: "shoes_sneakers", acc: {}, colors: {} });
 const TIER = { high: { "tsi.liteMode.v1": "false", "tsi.shadows.v1": "true" }, lite: { "tsi.liteMode.v1": "true", "tsi.shadows.v1": "false" } }[TIER_NAME];
+const HELD_ROD = process.env.HELD_ROD ?? "";
+const STORE = HELD_ROD ? { ...TIER, "tsi.held.v1": JSON.stringify({ held: "rod:rod_flimsy", last: null, pins: [], chosen: { rod: "rod_flimsy" } }) } : TIER;
 const BASE = "time=day&weather=clear&season=summer";
 const ME = { x: 2, z: -16 }, AIM = { x: 2, z: -11.5 };
 const PACK = [
@@ -43,7 +46,9 @@ async function fresh() {
     localStorage.setItem("tsi.look.v1", look); localStorage.removeItem("tsi.combatKeys.v3"); localStorage.setItem("tsi.hud.full.v1", "true");
     localStorage.setItem("tsi.camera.v1", JSON.stringify({ yaw: 1.05, pitch: 0.62, zoom: 1.12, mouseLook: false, autoFollow: false, sensitivity: 1, invertY: false }));
     for (const [k, v] of Object.entries(store)) localStorage.setItem(k, v);
-  } catch {} }, [LOOK, TIER]);
+  } catch {} }, [LOOK, STORE]);
+  if (HELD_ROD) await ctx.route("**/assets/game/tools/rod-1.glb", r => r.fulfill({ status: 200, contentType: "model/gltf-binary",
+    body: readFileSync(new URL(`../../web/public/assets/game/tools/${HELD_ROD}`, import.meta.url)) }));
   page = await ctx.newPage();
   page.on("pageerror", e => console.log("pageerror", e.message.slice(0, 200)));
 }
