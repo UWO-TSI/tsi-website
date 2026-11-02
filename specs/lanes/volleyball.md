@@ -13,7 +13,7 @@ Worktree `.claude/worktrees/volleyball`, branch `game/volleyball`, cut from orig
 - **Juice:** clean spikes punch two (perfect three) sonic-boom rings along the ball's new flight (ring face 3, aimed) and a star of streaks (`HIT_STREAKS`); your dig throws a shock ring across the sand, team-colour rings and sparkles round the ball, and streaks.
 - **Sounds:** `vb-call` a plain two-note alert (E5, A5), `vb-heat` a three-note blip (C5 E5 G5), `vb-win` a short jingle up to a held C6 over a bell chord. `synth_volleyball.py` burns the old versions' noise draws, so the other 26 sounds render bit for bit the same (checked with cmp). SOURCES.md updated.
 - **Podium (kit Podium.tsx, podium.module.css; BoardSheet.tsx):** three white blocks joined into one stepped stand (1 middle 96 px, 2 left 68, 3 right 48), big gold, silver and bronze numbers and a thin top edge, a lighter top face; names and wins in a row under it (`PODIUM.names`, `podiumFeet` includes it). The three dance on one beat (`motion.beat` = the stage clock): 1 DanceSpin, 2 DanceSway, 3 DanceWiggle. The showroom's BoardBody shows the same piece (note updated).
-- **Gates (round 4):** tsc clean; vitest full run 3746 passed, 1 failed (a float edge in my new test, fixed; the volleyball files then 88/88); eslint clean on every changed file (the one old `<img>` warning in VolleyHud); real-input checks 28/28 PASS (`p4/input-results.json`); impact checks PASS (spike 1 frame, dive 2, none back to back, none under reduced motion). perf:check: see Next.
+- **Gates (round 4):** tsc clean; vitest full run 3746 passed, 1 failed (a float edge in my new test, fixed; the volleyball files then 88/88); eslint clean on every changed file (the one old `<img>` warning in VolleyHud); real-input checks 28/28 PASS (`p4/input-results.json`); impact checks PASS (spike 1 frame, dive 2, none back to back, none under reduced motion). perf:check SCENES=v2 FAILED on frame time with the machine loaded (load 5.5 to 7.5; game/fishing-depth held the devserver lock just before): high 5.70 ms (+18.8%), lite 3.80 ms (+31.0%); draw calls 363 (+1.1%) and 287 (-0.7%), triangles +0.8% and +1.6%, as in round 3. The v2 scene draws no match, so round 4's effects do not render in it. Not rerun (the rules).
 - **Evidence:** `specs/evidence/volleyball/p4/`: `fx/*.webp` (bump, spike, block, set, jumpset, serve, out, net, dive, heat, whiff; before in `p3/fx/`), `p4-impact-spike.png`, `p4-impact-dive.png`, `p4-calls-before-after.png`, `p4-net-call.png`, `board-podium.png`, `board-dance.webp`, `podium-showroom.png` (before `p3/`), `sfx/call.ogg`, `heat.ogg`, `win.ogg`.
 - **Not verified:** the sounds by ear; the impact frames in a live rally by eye (checked in real time by frame counts, and stepped); the podium signed in with your own look.
 
@@ -63,7 +63,7 @@ Worktree `.claude/worktrees/volleyball`, branch `game/volleyball`, cut from orig
 
 ## Next
 
-1. Coordinator: review page for round 4 from the evidence above; David's notes go in "David's decisions". Rerun perf:check on a quiet machine before merging if this one ran loaded.
+1. Coordinator: review page for round 4 from the evidence above; David's notes go in "David's decisions". Rerun perf:check on a quiet machine before merging (this one ran loaded).
 2. The vb-anim lane owns `vb_clips.glb` and the dive clip (coordinator, 2026-11-01): don't edit it or the clip contract in `clips.ts`; dive work here stays VFX, flash, camera and sound.
 3. Phase 2 (multiplayer) waits until David approves.
 
