@@ -6,9 +6,10 @@
  * our texture), ink-black type, the cover's name over a small emblem, a hairline and one quiet line (`CoverTitle`), one red hanko
  * seal (`Hanko`), soft ink-wash art that fades into the paper (`InkArt`: plum, bamboo, pagoda, mist; drawn here as SVG),
  * each dish as a photo with its name, price and what it does beside it (`MenuDish`), and the menu itself, a cover and
- * inner panels that turn like a folded menu (`FoldedMenu`). Shown at /lab/gui?only=flat-pieces. Tokens only.
+ * inner panels that turn like a folded menu (`FoldedMenu`), and its back pages, the tasting book (`BookPage`, a page per
+ * water of `BookSlot`s, and `BookMarks`). Shown at /lab/gui?only=flat-pieces. Tokens only.
  */
-import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useImperativeHandle, useRef, useState, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import p from "./paper.module.css";
 
@@ -167,6 +168,38 @@ export function MenuDish({ picture, name, price, stats, note, standIn, open, dis
   </div>;
 }
 
+// ── The tasting book (the menu's back pages) ────────────────────────────────────────────────────────────────────────
+
+/** What a book slot holds: nothing yet, a cooked fish (its red stamp), or a fish given to the aquarium (a wave mark). */
+export type BookSlotState = "empty" | "cooked" | "aquarium";
+const SLOT_WORD: Record<BookSlotState, string> = { empty: "Not yet", cooked: "Cooked: stamped", aquarium: "In the aquarium" };
+/**
+ * One species' slot in the tasting book: an empty one shows the fish as a faint ink shadow; a cooked one in colour with
+ * the hanko pressed over its corner; an aquarium one in colour with a wave mark. `fresh`: the stamp or mark just landed
+ * (it presses down with a spring). Hover says what it is.
+ */
+export function BookSlot({ picture, name, state, fresh, filter }: { picture: ReactNode; name: string; state: BookSlotState; fresh?: boolean; filter: string }) {
+  const label = `${state === "empty" ? "Not tasted yet" : name}. ${SLOT_WORD[state]}`;
+  return <span className={p.slot} data-state={state} data-fresh={fresh || undefined} role="img" aria-label={label} title={label}>
+    <span className={p.slotArt}>{picture}</span>
+    {state === "cooked" ? <Hanko filter={filter} size={18} className={p.slotSeal} /> : null}
+    {state === "aquarium" ? <svg viewBox="0 0 20 20" className={p.slotWave} aria-hidden><circle cx={10} cy={10} r={9} /><path d="M4 8.5 C6 6.5 8 10.5 10 8.5 C12 6.5 14 10.5 16 8.5 M4 12.5 C6 10.5 8 14.5 10 12.5 C12 10.5 14 14.5 16 12.5" /></svg> : null}
+  </span>;
+}
+
+/** A page of the book, one water: its name down the side, how many of its slots are filled, a quiet `note`, the slots. */
+export function BookPage({ title, filled, total, note, children }: { title: string; filled: number; total: number; note?: ReactNode; children: ReactNode }) {
+  return <PanelSection title={title}>
+    <p className={p.bookCount}><b>{filled}</b><span>of {total}</span>{note ? <span className={p.bookNote}>{note}</span> : null}</p>
+    <div className={p.slots}>{children}</div>
+  </PanelSection>;
+}
+
+/** The book's milestones: at each count, its reward; a reached one is inked in. */
+export function BookMarks({ marks }: { marks: readonly { at: number; reward: ReactNode; done: boolean }[] }) {
+  return <p className={p.bookMarks}>{marks.map(m => <span key={m.at} data-done={m.done || undefined}><b>{m.at}</b>{m.reward}</span>)}</p>;
+}
+
 // ── The folded menu ─────────────────────────────────────────────────────────────────────────────────────────────────
 
 const TURN_MS = 720;
@@ -175,7 +208,9 @@ const TURN_MS = 720;
  * the leaf over the fold (the right panel turns over onto the left). The arrows, the arrow keys, and a click on the cover
  * turn it. `panels` go in pairs (left, right). Under reduced motion it turns at once.
  */
-export function FoldedMenu({ cover, panels, label, onTurn }: { cover: ReactNode; panels: readonly ReactNode[]; label: string; onTurn?: (spread: number) => void }) {
+/** Turns a FoldedMenu from outside: to a spread (0 the cover, then one a pair of panels). */
+export interface FoldedMenuHandle { turn(spread: number): void }
+export function FoldedMenu({ cover, panels, label, onTurn, handle }: { cover: ReactNode; panels: readonly ReactNode[]; label: string; onTurn?: (spread: number) => void; handle?: Ref<FoldedMenuHandle> }) {
   const spreads: [ReactNode, ReactNode][] = [[null, cover]];
   for (let i = 0; i < panels.length; i += 2) spreads.push([panels[i], panels[i + 1] ?? null]);
   const [spread, setSpread] = useState(0), [turn, setTurn] = useState<{ from: number; to: number } | null>(null);
@@ -188,6 +223,7 @@ export function FoldedMenu({ cover, panels, label, onTurn }: { cover: ReactNode;
     setTurn({ from: spread, to });
     timer.current = window.setTimeout(() => { setSpread(to); setTurn(null); }, TURN_MS);
   }, [turn, spread, spreads.length, onTurn]);
+  useImperativeHandle(handle, () => ({ turn: go }), [go]);
   const key = (e: KeyboardEvent) => {
     if (e.key === "ArrowRight") { e.preventDefault(); go(spread + 1); }
     if (e.key === "ArrowLeft") { e.preventDefault(); go(spread - 1); }

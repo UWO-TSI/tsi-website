@@ -4,7 +4,7 @@ import { DomainError } from "@/lib/result";
 export type EconomyErrorCode =
   | "unavailable" | "insufficient" | "not_found" | "not_for_sale" | "already_owned" | "bad_qty" | "bad_price" | "sold_out"
   | "not_sellable" | "insufficient_items" | "too_many_open" | "already_resolved" | "forbidden" | "not_owned" | "no_slot" | "locked" | "failed"
-  | "not_requested" | "already_filled" | "not_rare_enough" | "not_done" | "already_claimed";
+  | "not_requested" | "already_filled" | "not_rare_enough" | "not_done" | "already_claimed" | "already_in_book";
 export class EconomyError extends DomainError<EconomyErrorCode> {}
 
 export interface LedgerEntry {
@@ -51,6 +51,10 @@ export interface ActiveBuff {
   size: number;
   until: string;
 }
+/** A filled slot of the tasting book (tasting_book): the species Bancha cooked (its stamp), or gave to HQ's tank. */
+export interface TastingSlot { species_key: string; way: "cooked" | "aquarium" }
+/** A fish served at the counter: the fee paid, whether its slot got its stamp, and the milestones it paid (`marks`). */
+export interface TastingServe { balance: number; remaining: number; paid: number; stamped: boolean; earned: number; marks: string[]; replayed: boolean }
 
 export interface EconomyStore {
   wallet(memberId: string): Promise<{ coins: number; gems: number }>;
@@ -89,6 +93,16 @@ export interface EconomyStore {
    * replaces the member's meal buff.
    */
   order(memberId: string, dish: string, price: number, fishKey: string | null, buff: ActiveBuff, key: string): Promise<{ balance: number; paid: number; buff: ActiveBuff; replayed: boolean }>;
+  /** The member's tasting book: the slots filled. */
+  tasting(memberId: string): Promise<TastingSlot[]>;
+  /** The club's aquarium: the species members gave to HQ's tank, newest first, each once, at most `limit`. */
+  aquarium(limit: number): Promise<string[]>;
+  /**
+   * Atomic, once per key (tasting_serve): one unlocked fish of a rod species leaves the bag. `cook` pays `fee` and
+   * `buff` replaces the meal buff, and its slot is stamped the first time; `aquarium` fills an empty slot only
+   * (already_in_book). A newly filled slot pays its milestones (`marks` by the book's count, `full` for a full water).
+   */
+  serve(memberId: string, speciesKey: string, way: "cook" | "aquarium", fee: number, buff: ActiveBuff, marks: readonly { at: number; coins: number }[], full: number, key: string): Promise<TastingServe>;
   /** The member's meal buff while it lasts at `now`, or null. */
   buff(memberId: string, now: Date): Promise<ActiveBuff | null>;
   setEquipped(memberId: string, itemId: string, equipped: boolean): Promise<void>;

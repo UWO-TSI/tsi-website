@@ -1555,7 +1555,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <TaskBoardSheet open={sheet === "tasks"} onClose={() => setSheet(null)} keys={STATION_KEY} />
       <TackleCounterSheet open={sheet === "tackle"} onClose={() => setSheet(null)} onRods={() => setSheet("rods")} keys={STATION_KEY} />
       <ChefOrderDialog open={sheet === "chef"} onClose={() => setSheet(null)} keys={STATION_KEY} />
-      <MenuPickup open={sheet === "sushi"} onClose={() => setSheet(null)} />
+      <MenuPickup open={sheet === "sushi"} onClose={() => setSheet(null)} waters={catchWaters} />
       {barSeated && sheet === null ? <div className={styles.barMenu}><DarkButton onClick={() => setSheet("sushi")}>Menu</DarkButton></div> : null}
       <CatchBoardSheet open={sheet === "outnow"} onClose={() => setSheet(null)} keys={STATION_KEY} waters={catchWaters} hour={peaceful.moment.hour} month={peaceful.moment.month} weather={conditions.weather} season={season.season} phase={phase} />
       <ShopOverlay open={sheet === "rods"} title="Rod shop" section="rods" onClose={() => setSheet(null)} keys={STATION_KEY} />

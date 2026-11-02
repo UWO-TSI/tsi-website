@@ -245,6 +245,7 @@ export const DISH_ART: Record<string, { hd: string; icon: string; standIn: strin
   tuna_roll: { hd: "/assets/game/food/hd/tuna-roll.glb", icon: "dish_tuna_roll", standIn: "fish_tuna", ready: false },
   omakase: { hd: "/assets/game/food/hd/omakase.glb", icon: "dish_omakase", standIn: "sea_sweet_shrimp", ready: false },
   feast: { hd: "/assets/game/food/hd/banchas-feast.glb", icon: "dish_banchas_feast", standIn: "fish_king_salmon", ready: false },
+  tasting: { hd: "/assets/game/food/hd/nigiri.glb", icon: "dish_nigiri", standIn: "fish_red_snapper", ready: false },
 };
 export const SUSHI_MENU: readonly Dish[] = [
   { id: "miso_soup", name: "Miso soup", blurb: "Warm and simple.", price: 20, buff: { luck: 0.05, size: 0, minutes: 15 } },
@@ -253,6 +254,17 @@ export const SUSHI_MENU: readonly Dish[] = [
   { id: "omakase", name: "Omakase", blurb: "Whatever Bancha picks today.", price: 150, buff: { luck: 0.15, size: 0.3, minutes: 30 } },
   { id: "feast", name: "Bancha's feast", blurb: "Bring one of your epic or legendary fish and he cooks it into a feast.", price: null, buff: { luck: 0.35, size: 0.6, minutes: 60 } },
 ];
+/**
+ * The tasting book (20261101120000_tasting_book.sql; David 2026-11-01: "one per fish kinda thing and they can either
+ * turn into meal that gets buff and a stamp or in the aquarium"): any rod fish you bring, Bancha makes into a nigiri for
+ * the dish's small fee and buff, and its slot in the book is stamped the first time; or it goes to HQ's tank, free,
+ * filling the slot instead. Filling slots pays at `marks` (the book's count) and for each water filled (`full`).
+ */
+export const TASTING = {
+  dish: { id: "tasting", name: "Bancha's nigiri", blurb: "Any fish you bring, sliced and pressed. A new one gets its stamp in the book.", price: 10, buff: { luck: 0.1, size: 0.1, minutes: 20 } } satisfies Dish,
+  marks: [{ at: 10, coins: 150 }, { at: 25, coins: 400 }],
+  full: 250,
+} as const;
 /** The chef's order pays its coins and this meal (David: "side quest for special fish for money and food"). */
 export const STAFF_MEAL: MealBuff = { luck: 0.1, size: 0.2, minutes: 30 };
 

@@ -8,10 +8,10 @@ import { FISH } from "@/lib/game/fishing";
 import { fnv1a } from "@/lib/game/weatherSystem";
 import { RODS, TACKLE, onShopShelf } from "@/lib/game/rods";
 import { CRAFTED_ITEMS } from "@/lib/crafting/recipes";
-import { dailySpecials, effectivePrice, isOnSale, ownedCounts, speciesClass, speciesSellPrice, TAB_OF, torontoDay, type ShopItem, type Special, chefOrder, fishingTasks, type FishingTask, type FishRequest } from "./rules";
+import { dailySpecials, effectivePrice, isOnSale, ownedCounts, speciesClass, speciesSellPrice, TAB_OF, torontoDay, type ShopItem, type Special, chefOrder, fishingTasks, tastingWater, type FishingTask, type FishRequest } from "./rules";
 import { toFailure, type Result } from "@/lib/result";
-import { EconomyError, type DailyGift, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation, type ActiveBuff } from "./store";
-import { boxPool, welcomeDay, SUSHI_MENU, type Dish, type MealBuff } from "./catalogue";
+import { EconomyError, type DailyGift, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation, type ActiveBuff, type TastingSlot } from "./store";
+import { boxPool, welcomeDay, SUSHI_MENU, TASTING, type Dish, type MealBuff } from "./catalogue";
 import { shopIcon } from "@/lib/icons/keys";
 import type { WaterType } from "@/lib/game/fishingSpots";
 import { seasonBlend, type Season } from "@/lib/game/season";
@@ -40,6 +40,7 @@ const ERR: Record<string, [number, string]> = {
   not_done: [409, "Catch it first, then claim it."],
   already_claimed: [409, "Already claimed."],
   not_rare_enough: [422, "Bancha only cooks an epic or legendary fish into a feast."],
+  already_in_book: [409, "That fish already has its slot in your book."],
   failed: [500, "Something went wrong. Try again."],
 };
 const fail = <T>(err: unknown): Result<T> => toFailure(ERR, err);
@@ -273,6 +274,23 @@ export async function orderDish(store: EconomyStore, m: string, input: { dish: s
   const buff = { source: dish.id, luck: dish.buff.luck, size: dish.buff.size, until: until(now, dish.buff.minutes) };
   return run(() => store.order(m, dish.id, dish.price ?? 0, input.fish ?? null, buff, input.idempotency_key));
 }
+
+/** The tasting book: your filled slots, and the club's aquarium (the species given to HQ's tank, newest first). */
+export interface TastingView { book: TastingSlot[]; aquarium: string[] }
+/** How many of the club's gifts swim in HQ's tank at once (the newest). */
+export const AQUARIUM_MAX = 12;
+export const tastingView = (store: EconomyStore, m: string) =>
+  run<TastingView>(async () => { const [book, aquarium] = await Promise.all([store.tasting(m), store.aquarium(AQUARIUM_MAX)]); return { book, aquarium }; });
+/**
+ * Bring Bancha a fish (the tasting book, catalogue TASTING): `cook` makes it into his nigiri for the dish's fee and buff
+ * (its slot stamped the first time), `aquarium` gives it to HQ's tank (an empty slot only). The server prices it all.
+ */
+export const serveFish = (store: EconomyStore, m: string, input: { fish: string; way: "cook" | "aquarium"; idempotency_key: string }, now: Date) =>
+  run(async () => {
+    if (!tastingWater(input.fish)) throw new EconomyError("not_found");
+    const d = TASTING.dish, buff = { source: "tasting", luck: d.buff.luck, size: d.buff.size, until: until(now, d.buff.minutes) };
+    return store.serve(m, input.fish, input.way, input.way === "cook" ? d.price : 0, buff, TASTING.marks, TASTING.full, input.idempotency_key);
+  });
 
 export interface InventoryView {
   groups: Record<string, InventoryRow[]>;

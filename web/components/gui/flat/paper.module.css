@@ -119,6 +119,29 @@
 .dishAction { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; animation: open 0.3s var(--spring) both; }
 @keyframes open { from { opacity: 0; transform: translateY(-4px); } }
 
+/* The tasting book: a page per water, its count, then a grid of slots, the fish faint in ink until it's filled. */
+.bookCount { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; margin: 0; color: var(--ui-paper-quiet); font: 500 12px/1.3 var(--gui-font); }
+.bookCount b { color: var(--ui-paper-ink); font: 700 clamp(16px, 2.6vh, 22px)/1 var(--gui-font); font-variant-numeric: tabular-nums; }
+.bookNote { flex-basis: 100%; }
+.slots { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(clamp(26px, 5.4vh, 46px), 1fr)); gap: clamp(3px, 0.8vh, 7px); }
+.slot { position: relative; display: grid; place-items: center; aspect-ratio: 1; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--ui-paper-rule); }
+.slotArt { display: grid; place-items: center; width: 78%; height: 78%; }
+.slotArt canvas { width: 100%; height: 100%; }
+.slot[data-state="empty"] .slotArt { filter: brightness(0); opacity: 0.1; }
+.slot:not([data-state="empty"]) { background: var(--ui-paper-plate); box-shadow: 0 0 0 1px var(--ui-paper-rule), 0 2px 4px rgb(var(--ui-shade) / 0.12); }
+.slotSeal, .slotWave { position: absolute; right: -8%; bottom: -8%; width: 46%; height: 46%; transform: rotate(-8deg); }
+.slotWave circle { fill: var(--ui-paper); stroke: var(--ui-paper-ink); stroke-width: 1.2; }
+.slotWave path { fill: none; stroke: var(--ui-paper-ink); stroke-width: 1.5; stroke-linecap: round; }
+.slot[data-fresh] .slotSeal, .slot[data-fresh] .slotWave { animation: press 0.6s var(--spring) 0.2s both; }
+.slot[data-fresh] .slotArt { animation: ink 0.6s ease-out both; }
+@keyframes press { from { opacity: 0; transform: scale(2.4) rotate(-24deg); } }
+@keyframes ink { from { filter: brightness(0); opacity: 0.1; } }
+.bookMarks { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 2% 0 0; color: var(--ui-paper-quiet); font: 500 11.5px/1.3 var(--gui-font); }
+.bookMarks span { display: inline-flex; align-items: center; gap: 4px; }
+.bookMarks b { display: grid; place-items: center; min-width: 20px; height: 20px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--ui-paper-rule); color: var(--ui-paper-quiet); font: 700 10px/1 var(--gui-font); }
+.bookMarks [data-done] { color: var(--ui-paper-ink); }
+.bookMarks [data-done] b { background: var(--ui-paper-seal); box-shadow: none; color: var(--ui-paper); }
+
 /* A phone held upright: a taller menu, so each narrow panel stacks its dishes, the photo over the words. */
 @media (max-aspect-ratio: 3/4) {
   .book { width: min(96vw, calc(var(--h) * 0.78)); aspect-ratio: 0.78; }
@@ -130,9 +153,12 @@
   .dishNote { display: none; }
   .kindRow { gap: 6px; letter-spacing: 0.2em; }
   .dots { display: none; }
+  .dish[data-open] .stats { display: none; }
+  .slots { grid-template-columns: repeat(auto-fill, minmax(22px, 1fr)); gap: 3px; }
+  .slotSeal, .slotWave { width: 52%; height: 52%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .spread, .turn, .photo { transition: none; }
-  .leaf, .dishAction { animation: none; }
+  .leaf, .dishAction, .slot[data-fresh] .slotSeal, .slot[data-fresh] .slotWave, .slot[data-fresh] .slotArt { animation: none; }
 }

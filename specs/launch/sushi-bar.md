@@ -59,3 +59,11 @@ David planned it on 2026-10-26 (https://claude.ai/artifact/QddVeVSPgcEZRZEBgYJAj
 - The chef gives fishing orders, so the bar becomes one of the places that hand out fishing missions, plus side quests for special fish that pay money and food.
 - TODO (David, round 3, on the closed bar: "taklking to him gives you fishing quests"): by day the chef stands outside (sushiBar.ts CHEF_OUTSIDE); talking to him there is where his fishing quests start.
 - Photos.
+
+## What sushi does (David, fishing r4 review, 2026-11-01)
+
+His words, verbatim: "i think the dinner service is cool way to have mini game that makes money, so that maybe in next launch, and the tasting book should be impliment ed and one per fish kinda thing and they can either turn into meal that gets buff and a stamp or in the aquarium."
+
+- **The tasting book (built, lane game/tasting-book).** Bring Bancha any fish from your bag at the counter: cook it into his nigiri (a small coin fee, the dish's buff, and the species' stamp in the book the first time) or give it to HQ's aquarium (free, the slot marked with a wave). The book is the menu's back pages, a page per water, a slot per species. Filling slots pays coins at 10 and 25, and for each water filled. The aquarium is the club's: everyone's gifts swim in HQ's tank.
+- **Next launch: dinner service.** In the evening Bancha is short-handed and you take the counter for a short shift. Residents sit and order; you serve from your own bag with a quick slice, press and plate rhythm in the same taps as reeling. Cost: your fish and two minutes. Reward: tips scaled by speed and how rare the fish, friendship with whoever you served, and a recipe now and then. One shift a night. Not built yet.
+- **Not picked:** the club feast (a long table filled over the week). Don't build it.

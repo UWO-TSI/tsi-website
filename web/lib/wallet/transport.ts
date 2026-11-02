@@ -1,9 +1,9 @@
 /** Economy transport: /api/economy/* by default; in-memory for the dev harness. */
 import { apiCall } from "@/lib/apiClient";
-import type { GiftView, InventoryView, ShopView, SellEntry, WalletView, ChefView, FishingTasksView, SushiView, TackleView } from "./service";
+import type { GiftView, InventoryView, ShopView, SellEntry, WalletView, ChefView, FishingTasksView, SushiView, TackleView, TastingView } from "./service";
 import { localSell, localSellable, offline } from "./localEconomy";
 import type { Counter, Pulls } from "./tackle";
-import type { ActiveBuff } from "./store";
+import type { ActiveBuff, TastingServe } from "./store";
 import type { Reservation } from "./store";
 
 export interface MerchView {
@@ -25,6 +25,8 @@ export interface EconomyTransport {
   roll(counter: Counter, pulls: Pulls, key: string): Promise<{ balance: number; prizes: string[]; replayed: boolean }>;
   sushi(): Promise<SushiView>;
   order(dish: string, key: string, fish?: string): Promise<{ balance: number; paid: number; buff: ActiveBuff; replayed: boolean }>;
+  tasting(): Promise<TastingView>;
+  serve(fish: string, way: "cook" | "aquarium", key: string): Promise<TastingServe>;
   inventory(): Promise<InventoryView>;
   equip(itemId: string, equipped: boolean): Promise<InventoryView>;
   dailyGift(): Promise<GiftView>;
@@ -52,6 +54,8 @@ export const httpEconomyTransport: EconomyTransport = {
   roll: (counter, pulls, idempotency_key) => call("tackle", "roll", { counter, pulls, idempotency_key }),
   sushi: () => call("sushi", "sushi"),
   order: (dish, idempotency_key, fish) => call("sushi", "order", { dish, fish, idempotency_key }),
+  tasting: () => call("tasting", "tasting"),
+  serve: (fish, way, idempotency_key) => call("tasting", "serve", { fish, way, idempotency_key }),
   inventory: () => call("inventory", "inventory"),
   equip: (item_id, equipped) => call("equip", "inventory", { item_id, equipped }),
   dailyGift: () => call("daily-gift", "gift", {}),

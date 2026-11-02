@@ -9,14 +9,16 @@ import { useState, type CSSProperties, type ReactNode } from "react";
 import { Clock, Droplets, Leaf, MapPin, Ruler, Sun, Sunset, Waves } from "lucide-react";
 import { CurrencyIcon } from "@/components/economy/Amount";
 import PixelImage from "@/components/economy/PixelImage";
-import { Conditions, CoverTitle, FlatDialog, DarkButton, FoldedMenu, GachaReveal, InkArt, InkDefs, MenuDish, MonthDots, OddsTable, PanelSection, TaskCard, Thumb, TimeStrip, TipBody, useInkId, type OddsRow } from "@/components/gui/flat";
+import { BookMarks, BookPage, BookSlot, Conditions, CoverTitle, FlatDialog, DarkButton, FoldedMenu, GachaReveal, InkArt, InkDefs, MenuDish, MonthDots, OddsTable, PanelSection, TaskCard, Thumb, TimeStrip, TipBody, useInkId, type OddsRow } from "@/components/gui/flat";
 import { catchLanes } from "@/components/game/peaceful/CatchBoard";
 import { COVER_LINE, dishStats } from "@/components/game/peaceful/SushiSheets";
-import { SUSHI_MENU } from "@/lib/wallet/catalogue";
+import { SUSHI_MENU, TASTING } from "@/lib/wallet/catalogue";
+import { tastingPages } from "@/lib/wallet/rules";
 import { iconUrl } from "@/lib/icons/keys";
 import { RARITY_LABEL, type Rarity } from "@/lib/rarity";
 import { odds, prizeByKey } from "@/lib/wallet/tackle";
 
+const RIVER = tastingPages()[0].species;
 const RARITIES: Rarity[] = ["common", "uncommon", "rare", "epic", "legendary", "divine"];
 const SAMPLE = ["fish_dace", "fish_salmon", "fish_pike", "fish_catfish", "fish_coelacanth", "fish_golden_koi"];
 const LANE = { sea: { icon: <Waves />, label: "The sea", short: "Sea" }, river: { icon: <Droplets />, label: "The river", short: "River" } } as const;
@@ -92,6 +94,14 @@ export default function FlatPieces() {
             <PanelSection key="a" title="Nigiri and rolls">{dish("salmon_nigiri")}{dish("tuna_roll", true)}</PanelSection>,
             <div key="b" style={{ display: "grid", gap: 12 }}><InkArt kind="bamboo" filter={ink} /><InkArt kind="pagoda" filter={ink} /></div>,
           ]} />
+      </div>
+    </Piece>
+    <Piece name="Tasting book (paper)" what="The menu's back pages: a page per water, a slot per fish. A cooked fish gets the red stamp, a fish given to HQ's tank the wave; empty ones are a faint shadow." where="the sushi bar's menu">
+      <div style={{ maxWidth: 380, padding: "18px 22px", borderRadius: 4, background: "var(--ui-paper)", color: "var(--ui-paper-ink)" }}>
+        <BookPage title="River" filled={6} total={RIVER.length} note={<>Fill it for {TASTING.full}<CurrencyIcon size={11} /></>}>
+          {RIVER.map((k, i) => <BookSlot key={k} filter={ink} name={k} state={i < 5 ? "cooked" : i === 6 ? "aquarium" : "empty"} fresh={i === 4} picture={<PixelImage src={iconUrl(k)} px={36} />} />)}
+        </BookPage>
+        <BookMarks marks={TASTING.marks.map(m => ({ at: m.at, done: m.at <= 6, reward: <>{m.coins}<CurrencyIcon size={11} /></> }))} />
       </div>
     </Piece>
     <FlatDialog open={dialog} onClose={() => setDialog(false)} title="A small panel"><p style={{ margin: 0 }}>One thing, one action.</p><DarkButton onClick={() => setDialog(false)}>Done</DarkButton></FlatDialog>

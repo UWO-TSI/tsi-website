@@ -46,4 +46,27 @@ vitest (with and without `NEXT_PUBLIC_GAME_WORLD=new`), tsc, eslint on changed f
 
 ## Status
 
-Not started.
+Round 1 built (2026-11-01), waiting on the coordinator's review; the migration is NOT applied. Head: see the last `[build]` commit on `game/tasting-book`.
+
+- **Migration (not applied, coordinator applies):** `web/supabase/migrations/20261101120000_tasting_book.sql`: `tasting_book` (member, species, way cooked|aquarium; owner reads), `tasting_serves` (replays), `tasting_serve(...)` service role only: takes one unlocked fish (collections_take_one), cook pays the fee ('shop') and sets member_buffs source 'tasting', stamps the first time; aquarium fills an empty slot only (`already_in_book`); a newly filled slot pays the count marks and a full water once ('quest'). Fee, buff and marks come from TS (`TASTING`, lib/wallet/catalogue.ts) and are bounded in SQL. Smoke `web/supabase/tests/tasting_book_smoke.sql` passes on a throwaway PG16 after every migration (with fishing_tasks_sushi and game_security smokes).
+- **Server:** `tastingPages`, `tastingWater`, `tastingMarks` (rules.ts); `EconomyStore.tasting/aquarium/serve` (memory and Supabase); `tastingView`, `serveFish`, `AQUARIUM_MAX` 12 (service.ts); `GET/POST /api/economy/tasting`; transports; the `?collections=demo` shim answers it (five slots stamped, one in the aquarium, five club gifts).
+- **Numbers (TASTING):** fee 10 coins, buff rarer +10% and bigger +10% for 20 min, marks 10 slots 150 coins and 25 slots 400 coins, each full water 250 coins. Pages: River 30, Sea 44 (34 fish and 10 sea creatures), Pond 13 ("Opens with the mountain" while the pond is shut), Cliff pools 4 ("Opens later": no water has them yet).
+- **Counter (SushiSheets.tsx MenuPickup):** "Bancha's nigiri" sits with the feast under "Bring your own"; open it, pick a fish from your bag (kit Thumbs), then "Cook it" (fee) or "For the aquarium" (only for an empty slot). After a serve the menu turns to that water's page (`FoldedMenu` `handle`, `FoldedMenuHandle.turn`) and the stamp presses down; milestones pop the reward card (`tsi:gift`, the coin).
+- **Book (paper.tsx kit, in the showroom):** `BookPage`, `BookSlot` (empty ink shadow, cooked with the hanko, aquarium with a wave mark, `fresh` press), `BookMarks`; four back pages after the menu's four.
+- **Aquarium:** club-shared (HQ is the club's building, and the museum's tanks are club-wide too): `Aquarium.tsx` `Gifts` swims the newest 12 gifted species as their own models on `giftPaths` (hqAquarium.ts), tank-lit.
+- **Also:** dinner service written up as next launch in `specs/launch/sushi-bar.md` with David's quote; a selected kit Thumb now keeps its ring while hovered (pieces.module.css).
+- **Gates:** tsc clean; vitest with NEXT_PUBLIC_GAME_WORLD=new 3736 passed, 1 failed (active.test.ts listed DISH_ART against SUSHI_MENU; fixed to include the tasting dish, that file passes both ways), and without it 3737 passed, 4 skipped; eslint clean on every changed file; SQL smokes pass. No perf:check: no bench scene covers HQ's interior (v2, cafe, ruins-summoner), so it could not measure the gifts (at most 12 fish models in HQ, a draw or two each).
+- **Evidence:** `specs/evidence/tasting-book/{desktop,phone}/tb-*.png` (palette-quantised), shot by `shoot.mjs`.
+- **Skipped (no such thing in the economy yet):** titles, the home bar stool (homes closed, no stool item), the rod part (waits for the rod roster). Milestones pay coins only.
+
+## Next
+
+1. Coordinator: review the evidence, apply `20261101120000_tasting_book.sql` to prod, merge after game/fishing-depth.
+2. Open questions for David: should the feast also stamp its species; should the aquarium show the giver's world name; cliff pools have no water yet; should the HQ tank's E line mention the gifts.
+
+## Tools and gotchas
+
+- Smoke: `scratchpad/tasting-book/smoke.sh tasting_book_smoke.sql` (PG16 on 127.0.0.1:54331; 020_player_persistence fails in the stub, as before).
+- Shots: `ONLY=desktop|phone scratchpad/tasting-book/session.sh <out> showroom counter aquarium` under `withlock.sh devserver` (next dev on :3476, Supabase blanked, new world) runs `specs/evidence/tasting-book/shoot.mjs`. Desktop and phone together run past 10 minutes: run them as two calls. The demo's pockets need `&bag=23`.
+- The held menu sways forever, so Playwright clicks inside it need `force: true`. "Cook it" has the price in its name: match `/^Cook it/`.
+- `?at=` doesn't move you inside HQ: walk with `w` instead.

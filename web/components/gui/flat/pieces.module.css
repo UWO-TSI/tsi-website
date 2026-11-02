@@ -24,7 +24,7 @@ button.thumb:hover, button.thumb:focus-visible { transform: translateY(-2px) sca
 .thumb[data-rarity="divine"] { box-shadow: none; background: linear-gradient(var(--ui-card), var(--ui-card)) padding-box, var(--ui-holo) border-box; border: 2px solid transparent; }
 .thumb[data-dim] { opacity: 0.5; filter: saturate(0.4); }
 .thumb[data-dim]:hover, .thumb[data-dim]:focus-visible { opacity: 1; filter: none; }
-.thumb[data-selected] { box-shadow: inset 0 0 0 2px var(--ui-ink), 0 8px 18px rgb(var(--ui-shade) / 0.12); }
+.thumb[data-selected], button.thumb[data-selected]:hover { box-shadow: inset 0 0 0 2px var(--ui-ink), 0 8px 18px rgb(var(--ui-shade) / 0.12); }
 .thumbArt { width: 70%; height: 70%; display: grid; place-items: center; }
 .thumbArt canvas, canvas.thumbArt { width: 100%; height: 100%; }
 .thumbCount { position: absolute; right: -5px; top: -5px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--ui-ink); color: var(--ui-accent-ink);

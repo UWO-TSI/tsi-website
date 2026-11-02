@@ -9,10 +9,10 @@
 import { memoryCollectionsStore } from "@/lib/collections/memoryStore";
 import { torontoParts } from "@/lib/time";
 import { bagAction, bagView, catchAction, donate, enterMonthly, getShowcase, handIn, journal, monthBoard, museum, setShowcase, tourney, trophies } from "@/lib/collections/service";
-import { chefOrder, fishingTasks, speciesClass, speciesSellPrice, torontoDay } from "@/lib/wallet/rules";
+import { chefOrder, fishingTasks, speciesClass, speciesSellPrice, tastingMarks, tastingWater, torontoDay } from "@/lib/wallet/rules";
 import { claimFishingTask, fishingTasksView, rollAtTackle, tackleView } from "@/lib/wallet/service";
 import { weekStart } from "@/lib/collections/logic";
-import { SUSHI_MENU } from "@/lib/wallet/catalogue";
+import { SUSHI_MENU, TASTING } from "@/lib/wallet/catalogue";
 import type { ActiveBuff } from "@/lib/wallet/store";
 import { memoryEconomyStore } from "@/lib/wallet/memoryStore";
 import { buy, equip, getInventory, getShop } from "@/lib/wallet/service";
@@ -51,6 +51,9 @@ export function installCollectionsDemo(): void {
     const WATERS = ["sea", "river"] as const, filled = new Set<string>();
     const chefToday = () => chefOrder(torontoDay(new Date()), WATERS);
     let meal: ActiveBuff | null = null;
+    // The tasting book: five fish stamped (four river, one sea) and one in the aquarium already; the club's tank holds a few more gifts.
+    const book = new Map<string, "cooked" | "aquarium">([["fish_dace", "cooked"], ["fish_pale_chub", "cooked"], ["fish_loach", "cooked"], ["fish_black_bass", "cooked"], ["fish_sea_bass", "cooked"], ["fish_rainbow_trout", "aquarium"]]);
+    const clubTank = ["fish_rainbow_trout", "fish_mahi_mahi", "fish_red_snapper", "fish_pike", "fish_blowfish"];
     if (query.get("tasks")) {
       const now = new Date(), t = fishingTasks(torontoDay(now), weekStart(now), WATERS);
       for (const task of t.day.slice(0, 2)) eco.land(ME, task.item_key!, now);
@@ -167,6 +170,25 @@ export function installCollectionsDemo(): void {
           }
           meal = { source: dish.id, luck: dish.buff.luck, size: dish.buff.size, until: new Date(now.getTime() + dish.buff.minutes * 60_000).toISOString() };
           return reply({ ok: true, data: { balance: eco.coinsOf(ME), paid: dish.price ?? 0, buff: meal, replayed: false } }, "order");
+        }
+        case "/api/economy/tasting": {
+          if (method !== "POST") return reply({ ok: true, data: { book: [...book].map(([species_key, way]) => ({ species_key, way })), aquarium: clubTank } }, "tasting");
+          // Bring Bancha a fish over the demo's pockets and till (tasting_serve's rules).
+          const fish = String(body.fish), cook = body.way === "cook", d = TASTING.dish;
+          const row = (await m.store.bag(ME)).items.find(r => r.item_key === fish);
+          if (!tastingWater(fish)) return reply({ ok: false, status: 404, code: "not_found", error: "That isn't in the shop." }, "serve");
+          if (!cook && book.has(fish)) return reply({ ok: false, status: 409, code: "already_in_book", error: "That fish already has its slot in your book." }, "serve");
+          if (!row || row.count < 1) return reply({ ok: false, status: 409, code: "insufficient_items", error: "You don't have that many." }, "serve");
+          if (cook && eco.coinsOf(ME) < d.price) return reply({ ok: false, status: 409, code: "insufficient", error: "Not enough in your wallet for that." }, "serve");
+          m.give(ME, fish, -1);
+          if (cook) {
+            eco.fund(ME, eco.coinsOf(ME) - d.price, eco.gemsOf(ME));
+            meal = { source: "tasting", luck: d.buff.luck, size: d.buff.size, until: new Date(now.getTime() + d.buff.minutes * 60_000).toISOString() };
+          } else clubTank.unshift(fish);
+          const fresh = !book.has(fish);
+          let won = { earned: 0, marks: [] as string[] };
+          if (fresh) { book.set(fish, cook ? "cooked" : "aquarium"); won = tastingMarks(new Set(book.keys()), fish); eco.fund(ME, eco.coinsOf(ME) + won.earned, eco.gemsOf(ME)); }
+          return reply({ ok: true, data: { balance: eco.coinsOf(ME), remaining: row.count - 1, paid: cook ? d.price : 0, stamped: fresh && cook, ...won, replayed: false } }, "serve");
         }
         case "/api/economy/shop": return reply(await getShop(eco.store, ME, now), "shop");
         case "/api/economy/buy": return reply(await buy(eco.store, ME, body, now), "purchase");
