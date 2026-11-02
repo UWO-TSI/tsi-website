@@ -33,3 +33,9 @@ To rebuild: `python3 art/audio/synth_volleyball.py <wav dir> [<preview dir>]`, t
 | `vb-call.ogg` | "Mine!": a pop and a blip | synth_volleyball.py | game/volleyball | CC0 |
 | `vb-out.ogg` | out: one soft whistle | synth_volleyball.py | game/volleyball | CC0 |
 | `vb-heat.ogg`, `vb-fire.ogg` | the rally heating up; the ball catching fire | synth_volleyball.py | game/volleyball | CC0 |
+
+## Coins
+
+| File | What it is | Source | Author | Licence |
+|---|---|---|---|---|
+| `coin.ogg` | a coin landing in the wallet: a bright two-partial clink, a metal tick, a glint (played once per coin of a sale, rising) | self-made, `art/audio/synth_coin.py` (2026-11-02), synthesised from sines and noise, nothing fetched | game/fishing-depth (Tethos) | CC0 1.0 |

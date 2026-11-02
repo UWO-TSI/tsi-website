@@ -20,7 +20,7 @@ import f from "./flat.module.css";
 
 /** The kit's class names, for the odd surface that lays out its own content in the flat style. */
 export { f as flatStyles };
-export { CardOverlay, FLY_MS, FlyIn, KEYBOARD, KeyBoard, PaperField, PrintedCard, QUEST_CHECK_MS, QuestCheck, SlotPop, Spotlight, boardLabel, type BoardKey } from "./moments";
+export { CardOverlay, COIN_SLOTS, FLY_MS, FlyIn, coinCount, coinHeat, coinShares, flyCoins, KEYBOARD, KeyBoard, PaperField, PrintedCard, QUEST_CHECK_MS, QuestCheck, SlotPop, Spotlight, boardLabel, type BoardKey } from "./moments";
 export { CountUp, WalletSlot } from "./wallet";
 export { KEYWORD_KINDS, Keyword, KeywordLine, keywordParts, type KeywordKind, type LinePart } from "./keyword";
 export { ProgressCard } from "./ProgressCard";
@@ -96,7 +96,7 @@ export function Purse({ coins, gems, coinsRef, gemsRef }: {
   coins: number | null; gems: number | null; coinsRef?: Ref<HTMLSpanElement>; gemsRef?: Ref<HTMLSpanElement>;
 }) {
   return <span className={f.purse} aria-label="Your coins and Gems">
-    <span className={f.amount}><CurrencyIcon size={18} /><span ref={coinsRef}>{coins === null ? "…" : coins.toLocaleString()}</span></span>
+    <span className={f.amount} data-purse="coins"><CurrencyIcon size={18} /><span ref={coinsRef}>{coins === null ? "…" : coins.toLocaleString()}</span></span>
     <span className={f.amount}><CurrencyIcon currency="gems" size={18} /><span ref={gemsRef}>{gems === null ? "…" : gems.toLocaleString()}</span></span>
   </span>;
 }

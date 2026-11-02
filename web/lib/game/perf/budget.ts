@@ -203,10 +203,6 @@ export const ASSET_EXCEPTIONS: Record<string, Partial<AssetBudget> & { why: stri
   // The design bible's two versions (Models rule 2): the high-def copies only the player in a volleyball match loads, one on screen.
   "game/props/beach-ball-hd.glb": { triangles: 5520, why: "the beach ball's high-def copy: close-ups and the HUD's icon, never in the world" },
   "game/props/fish-board-hd.glb": { texture: 1536, why: "the fish market board's high-def copy (its 1536 x 256 painted header): close-ups only, never in the world" },
-  "game/props/water-sign-river-hd.glb": { texture: 1024, why: "the river sign's high-def copy (its 1024 x 736 painted plaque): close-ups only, never in the world" },
-  "game/props/water-sign-pond-hd.glb": { texture: 1024, why: "the mountain pond sign's high-def copy (its 1024 x 736 painted plaque): close-ups only, never in the world" },
-  "game/props/water-sign-sea-hd.glb": { texture: 1024, why: "the sea sign's high-def copy (its 1024 x 736 painted plaque): close-ups only, never in the world" },
-  "game/props/water-sign-deep-hd.glb": { texture: 1024, why: "the deep sea sign's high-def copy (its 1024 x 736 painted plaque): close-ups only, never in the world" },
   "game/props/volleyball-net-hd.glb": { triangles: 9436, why: "the net's high-def copy: drawn only for the player in a match (passers-by get the 2,378-tri LP)" },
   "game/weapons/tanto-gilt.glb": { primitives: 12, why: "twin blades in 12 parts: 24 draws with its shadow on each Full player holding it" },
   "game/weapons/tanto-lotus.glb": { primitives: 12, why: "twin blades in 12 parts" },

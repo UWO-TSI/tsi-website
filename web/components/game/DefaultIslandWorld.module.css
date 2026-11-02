@@ -81,6 +81,8 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .hudLead > * { pointer-events: auto; }
 .hudLead > .rightCluster { position: static; }
 .hudColumn { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; zoom: var(--tsi-text-scale, 1); }
+/* The time's row: the biome tag (where you fish) left of the time. */
+.clockRow { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
 /* The quest tracker (QuestTracker.tsx), one line on the minimap's top row, centred on the 44px chips beside it. */
 .hudLead > .questSlot { position: static; margin-top: 4px; }
 /* A phone: no room for the gear, the line and the big map in one row, so the line keeps the top and the cluster drops
