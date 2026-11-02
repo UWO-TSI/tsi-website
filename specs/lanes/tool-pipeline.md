@@ -19,6 +19,8 @@ Worktree `.claude/worktrees/tool-pipeline`, branch `game/tool-pipeline`, cut fro
 3. **Epic redesigns, exaggerated and barely rod-shaped:** Tempest (from `epic-tempest-ref.png`, and `epic-tornado.png` for the aura), Tidewarden (epic, from the rule and the references' level of drama), Titanium (from `epic-titanium-ref.png`), Riptide (rare: cooler than round 1 but "still chill"). Effects: glowing parts, an aura and particles built the way the lantern glow is (`LanternGlow.tsx`, no real lights, a few transparent draws), and a **default idle animation** while held (floating or orbiting parts, a pulse, sparks). Say the cost per holder.
 4. **Pitch evidence:** for each rod, five views and a three-quarter hero render, in hand in the game (day and night), and an idle animation strip. Old rod beside new for Cedar, Glass and Tidewarden.
 
+**File names (coordinator, 2026-11-02):** Cedar, Glass and Tidewarden replace `tools/rod-2.glb`, `rod-3.glb`, `rod-5.glb` in place (live with no wiring, no parallel copies); the new rods are `tools/rod-<name>.glb` (carrot, precision, training, tempest, titanium, riptide). A rod's effect is keyed by its GLB's scene extras (`userData.rodFx`), not its URL, so rod-gear can rename freely; the effect's moving parts are `game/props/rodfx-<name>.glb`. This branch merges `game/polish` at 020c16e0 (LanternGlow, `lib/game/glow.ts`), which polish merges to main first.
+
 Data (roster entries, rarity, prices, stats, the Training unlock, the per-rod catch tracker) is the rod-gear lane's: don't edit `rods.ts` or the catalogue. Name your files as above so it can wire them.
 
 ## David's call (2026-11-02, verbatim)
