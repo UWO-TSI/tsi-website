@@ -19,7 +19,18 @@ Build:
 
 ## Status
 
-**Round 4 built, waiting for David's review (branch head: see the last commit; merged origin/main 3f9f2b4d).** Round 3 is approved except the items in the 2026-11-01 notes below. No migration, no protocol change.
+**Round 5 built, waiting for David's review (branch head: see the last commit; last origin/main merge 3f9f2b4d; origin/main has moved since, not merged: the lane file didn't ask).** No migration, no protocol change.
+
+- **Call tag, a kit piece now** (design bible UI, How it's built 2): `web/components/gui/flat/CallTag.tsx` + `callTag.module.css`, exported from the kit index, in the showroom (`/lab/gui#call-tag`, "Call tag (flat), three directions", with a Played row and a Play again button). `look`: **chip** (A, the live default: a white chip, a coloured cap with the call's picture: star, tick, clock, up arrow, bricks, dashed ring, bolt), **bubble** (B: a white speech bubble whose tail points at the touch, a thin edge in the call's colour), **letters** (C: no box, white Nunito 900 with an ink outline over a skewed swoosh). Gold for Perfect and Max, the team's colour for Saved and Block, grey for Early, Late and Miss. `live` plays it once (spring in, held, up and out; a block slams down and jolts; reduced motion fades). VolleyStamps renders it at the touch (`.at` wrapper). Once David picks, delete the other two looks, `CALL_LOOKS`, `fxBus.dev.tag` and the showroom's extra rows.
+- **Block's tag back:** `contactPlan(...).stamp` is "Block" for every block (any team, as round 3); `stampOf` kind "block".
+- **Dive:** no impact frame. `contactPlan(...).blink` (your dig) makes VolleyFx swap every opaque mesh under the diver's body for one unlit white `MeshBasicMaterial` for `BLINK` = 8 rendered frames (counted like the impact frame, so the dig's slow-mo can't stretch it; dev pauses hold it), then give the materials back (also on unmount). Calm (reduce flashing or reduced motion): none. The body comes from `fxBus.body(who)`, set by VolleyMatch: the bots' (and yours in the lab) groups, and on the island `scene.getObjectByName("player-body")`, a name added to PlayerAvatar's body group. `__volleyFx.probe().blink` = meshes held white.
+- **Perfect spike:** still one impact frame (`IMPACT = { frames: 1, gap: 1.2 }`, `impact` now a boolean), the scene thresholded and inverted, no lines and no focus lines after. `fxBus.dev.lines = true` puts round 4's lines and focus lines back (for the with-and-without sheet); delete it, `.focus`, the `[data-lines]` rule and the focus state once David picks without.
+- **Fixed on the way:** the impact frame stuck on after its frame when its data attribute was "" (my refactor; now `toggleAttribute`).
+- **Gates (round 5):** tsc clean; vitest full run 3748 passed, 4 skipped (400 files); eslint clean on every changed file; real-input checks 29/29 PASS on the island (`p5/input-results.json`, new: "your dig flashes your avatar white (no impact frame) and gives its look back", 6 meshes); real-time checks PASS (`p5/checks.json`: spike frame 1 long, back to back none, dig no impact and 8 white frames then restored, reduced motion neither). No perf:check this round (coordinator runs one).
+- **Evidence (`specs/evidence/volleyball/p5/`):** `p5-calls.png` (the sheet: a column per direction, a whole view plus Perfect, Good, Early, Block, Saved, Miss, Max at rest), `p5-calltag-showroom.png` (the kit piece, every call in each look, and played), `p5-fx-block.webp` (the block's tag played in each look; before: `p4/fx/block.webp`, no tag), `p5-impact-spike.webp` (row 1 with round 4's lines, row 2 without; before: `p4/p4-impact-spike.png`), `p5-impact-dive.webp` (frames 0 to 20 and a close crop: white on 1, 4, 7, itself on 9; before: `p4/p4-impact-dive.png`), `checks.json`, `input-results.json`.
+- **Not verified:** the blink and tags by eye in a live rally at full speed (stepped and counted in real time only); the tags on a phone-sized view.
+
+**Round 4 (reviewed 2026-11-02, notes at the top; superseded where round 5 says so):**
 
 - **Calls (VolleyStamps.tsx, volleyStamps.module.css):** one small quiet design: a 13 px white pill with a coloured dot, a touch over the hit on screen (`fxBus.screen`, set by VolleyFx), rising 14 px and fading in 0.9 s. Perfect has a thin gold edge; Early, Late and Miss are grey and 12 px; Saved has the team dot; Max (your max toss) replaces the HUD's old "Max power" note (deleted with its CSS). The block says no word (`contactPlan` stamp null). The referee's calls (Out, Net, Tape) are a chip under the score beside the heat chip (`.under`). The win keeps its trophy and rays. Reduced motion: calls fade with no motion.
 - **Impact frames:** `fxPlan IMPACT` (spike 1 frame, dive 2, gap 1.2 s on the effects' clock) and `impactOk`; `contactPlan(...).impact` is "spike" for your perfect spike and "dive" for your dive's dig. VolleyFx starts it (`fxBus.impact`) and counts it down by rendered frames (dev pause holds it); VolleyStamps draws it per frame: a full-screen backdrop filter that thresholds the scene to ink (the spike's the negative; the dive's split on a slant through the hit, ink and negative) with lines converging on the hit, then 0.36 s focus lines. Dropped under the comfort setting Reduce flashing or prefers-reduced-motion. Keyed to the dig contact event, not to the vb_dive clip.
@@ -76,15 +87,17 @@ Build:
 
 ## Next
 
-1. Coordinator: review page for round 4 from the evidence above; David's notes go in "David's decisions". Rerun perf:check on a quiet machine before merging (this one ran loaded).
-2. The vb-anim lane owns `vb_clips.glb` and the dive clip (coordinator, 2026-11-01): don't edit it or the clip contract in `clips.ts`; dive work here stays VFX, flash, camera and sound.
-3. Phase 2 (multiplayer) waits until David approves.
+1. Coordinator: review page for round 5 from the evidence above (David picks a call tag direction, and with or without lines); his notes go in "David's decisions". Run the perf:check on a quiet machine before merging.
+2. After his pick: delete the losing looks and dev toggles (see Status), keep the one look, update the showroom note.
+3. The vb-anim lane owns `vb_clips.glb` and the dive clip, and the clip contract in `clips.ts`: don't edit them; dive work here stays VFX, flash, camera and sound.
+4. Phase 2 (multiplayer) waits until David approves.
 
 ## Tools and gotchas
 
 - Locks: `LANE=game/volleyball /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh heavy|devserver|blender <cmd>`; exit 75 means retry. Swap is high, so hold one lock at a time.
 - Real-input checks: `PORT=3471 node specs/evidence/volleyball/p3input.mjs specs/evidence/volleyball/p3 inputs,rally` (round 3: airborne presses with the ball arriving for real, the clutch dive, the block, the bar's swap frame by frame) against a dev server on 3471 (Supabase blanked, `NEXT_PUBLIC_GAME_WORLD=new`), started, warmed and killed inside one devserver lock. Pointer lock is emulated on the game's own calls. `?vbseed=N` (dev) seeds the island's match; seed 7 has you serve.
 - `window.__volley` (dev): `dev` (pause, steps, yaw, pitch, `side` close-up camera), `match()`, `controls`, `probe` (serveErr, reach, stance, hand, screen, ring).
+- Round 5 script: `p5fx.mjs <out> [calls,block,spike,dive,checks,showroom]` (port 3472, via vbrun.sh); `fxBus.dev.tag` and `.lines` switch the looks for its sheets. `p3input.mjs` now also checks the island dig's blink.
 - Round 4 scripts: `p4fx.mjs` (effects strips plus `impact`, the real-time flash checks) and `p4court.mjs` (the podium still, its dance strip, the showroom). KEEP=1 keeps `.frames`; delete it before committing.
 - Effects strips: `specs/evidence/volleyball/p3fx.mjs` (port 3472); it pins the HUD's CSS animations to each frame's time and finishes old ones first, so stamps strip deterministically. Court shots (board, benches): `p3court.mjs`.
 - A dev-server wrapper that starts, warms, runs and kills inside one lock: `vbrun.sh <port> <cmd>` (write it to your scratchpad: next dev with Supabase blanked and NEXT_PUBLIC_GAME_WORLD=new, curl warm-up, run, kill by port).

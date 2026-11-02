@@ -144,7 +144,7 @@ const FX = {
     await page.evaluate(() => { const m = window.__volley.match(), p = m.players[0], b = m.ball; Object.assign(b, { x: p.s.x + 0.45, y: p.s.y + 0.4, z: p.s.z, vx: 0, vy: 6, vz: 0 }); window.__volleyFx.emit({ kind: "contact", who: 0, team: 0, how: "dig", timing: "good", quality: 0.7, x: b.x, y: b.y, z: b.z, speed: 6 }); });
     const shots = await frames("dive-dig", [1, 4, 7, 9, 12, 20], CLIP);
     // Frames 0 (before the dig), 1, 4, 7 (white), 9, 12, 20 (itself again); under them a close crop round the diver.
-    const close = [before, ...shots].map(f => { const c = f.replace(".png", "-close.png"); execFileSync("magick", [f, "-crop", "380x300+40+330", "+repage", c]); return c; });
+    const close = [before, ...shots].map(f => { const c = f.replace(".png", "-close.png"); execFileSync("magick", [f, "-crop", "400x320+170+250", "+repage", c]); return c; });
     sheet("p5-impact-dive", [[before, ...shots], close], 300, ["Dig", "Close"]);
     await stepFx(90);
   },
