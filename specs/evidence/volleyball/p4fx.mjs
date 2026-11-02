@@ -121,7 +121,17 @@ const FX = {
     strip("land", rows);
   },
   async out() { await hold(); await setup(atNet, { z: 5 }); await page.evaluate(() => { const m = window.__volley.match(), side = m.players[0].s.z < 0 ? -1 : 1; window.__volleyFx.emit({ kind: "land", x: 4.9, z: -side * 4, in: false, speed: 10, heat: 1 }); }); strip("out", [await frames("out", [2, 8, 20, 40, 80], CLIP)]); },
-  async net() { const rows = []; for (const k of ["net", "tape"]) { await hold(); await setup(atNet, { z: 4 }); await emit({ kind: k, x: 0.5, y: k === "net" ? 1.7 : 2.17 }); rows.push(await frames(`net-${k}`, [1, 5, 10, 18, 28], CLIP)); await stepFx(40); } strip("net", rows); },
+  async net() {
+    const rows = [];
+    for (const k of ["net", "tape"]) {
+      await hold(); await setup(atNet, { z: 4 }); await emit({ kind: k, x: 0.5, y: k === "net" ? 1.7 : 2.17 });
+      rows.push(await frames(`net-${k}`, [1, 5, 10, 18, 28], CLIP));
+      // The whole view once: the referee's call sits under the score, away from the play.
+      if (k === "net") { await cssAt(500); await page.screenshot({ path: `${OUT}/../p4-net-call.png` }); await cssRun(); }
+      await stepFx(40);
+    }
+    strip("net", rows);
+  },
   async dive() {
     const rows = [];
     for (const onBall of [true, false]) {
