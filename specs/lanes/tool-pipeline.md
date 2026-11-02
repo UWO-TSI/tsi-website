@@ -2,6 +2,25 @@
 
 Worktree `.claude/worktrees/tool-pipeline`, branch `game/tool-pipeline`, cut from origin/main 1ae98ff6. Agent type `uwotsi-lane`. No dev port needed.
 
+## Round 2: rod models (David's rod pitch review, 2026-11-02, verbatim; https://claude.ai/artifact/XqZK2hk32ydhYjbKFhhwFJ)
+
+- rod-carrot (approve): "make the carrot thicket, this is uncommon rod"
+- rod-precision (approve)
+- rod-training (approve): "this is good, but make it like a common thats like easter egg to unlock and not a common rod you can buy, this rod also has very good satts comparable to uncommon rare, one of best starter rods and it has upgrade potential. I want you to also do a fish caught tracker for all rods so yo know how many fish you caught with a certain rod." (the unlock, stats and tracker are the rod-gear lane's, not yours)
+- rod-tempest (redo): "not cool"; rod-titanium (redo): "not cool"; rod-riptide (redo): "not cool enough i need you to use "
+- rod-next (redo): "i sent you references for tempest and titatium like epic rods are supposed to look epic, these rods are poorly designed and needs to be more exaggerated with effects and get like default idle animatinos"
+- rod-ours (redo): "tide warden rod not even epic bruh not cool at all, other rods are wtv, glass rod can be cooler or just make it uncomon, cedar rod should have like leaf elements"
+
+**Read first:** David's rod references and his rarity rule, `/Users/DavidLiu/Developer/uwotsi/.claude/worktrees/rod-gear/specs/references/rods/README.md` and the images beside it (untracked, third-party: never copy them into git). The rule: the rarer the rod, the cooler and more abstract; rare is "still chill"; epic is where rods start to look really cool; epic and legendary "almost doesnt look like a rod", with aura effects. Round 1's prompts kept every rod rod-shaped; that's why the epic ones failed.
+
+**Build (Blender, headless; no Meshy; the ElevenLabs credits are spent, so no new concept images: model straight from the sheets and the references, and render your own views as the concepts):**
+1. **Approved rods, modelled from their concept sheets** (`/private/tmp/claude-501/-Users-DavidLiu/62203045-4999-4738-af95-c4357660b05d/scratchpad/rodgen/sheets/<name>-<n>.png`; David approved without a take number, so pick the cleanest take for blueprints and say which): Carrot (a noticeably thicker carrot), Precision, Training. Files `web/public/assets/game/tools/rod-carrot.glb`, `rod-precision.glb`, `rod-training.glb`, within the tool budget, pivot at the hand, icons rendered.
+2. **Existing rods:** Cedar gets leaf elements; Glass: a cooler version (David's alternative is to move it to uncommon as it is: show the cooler one and say so).
+3. **Epic redesigns, exaggerated and barely rod-shaped:** Tempest (from `epic-tempest-ref.png`, and `epic-tornado.png` for the aura), Tidewarden (epic, from the rule and the references' level of drama), Titanium (from `epic-titanium-ref.png`), Riptide (rare: cooler than round 1 but "still chill"). Effects: glowing parts, an aura and particles built the way the lantern glow is (`LanternGlow.tsx`, no real lights, a few transparent draws), and a **default idle animation** while held (floating or orbiting parts, a pulse, sparks). Say the cost per holder.
+4. **Pitch evidence:** for each rod, five views and a three-quarter hero render, in hand in the game (day and night), and an idle animation strip. Old rod beside new for Cedar, Glass and Tidewarden.
+
+Data (roster entries, rarity, prices, stats, the Training unlock, the per-rod catch tracker) is the rod-gear lane's: don't edit `rods.ts` or the catalogue. Name your files as above so it can wire them.
+
 ## David's call (2026-11-02, verbatim)
 
 "i want you to make a multi angle profile on our basic rod designs and have it create a colloge of the rod dimentions and the vibes and describe the art style of the rod, then i want you to go to elevenlabs connect to gpt image 2.5 and ask for it to produce a rod in the same style but the rod is like carrot rod or like one of our rods weve written down adn have it create a multiangle render of the new rod object then put it in meshy.ai to create a 3d model of the rod. remember this pipeline for creating versions of tools. set this up and start working on this"
