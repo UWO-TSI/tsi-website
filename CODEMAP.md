@@ -67,7 +67,7 @@ Logic `web/lib/game/` (flat, `foo.ts` + `foo.test.ts`). R3F `web/components/game
 
 ## 4. Art pipeline
 
-Blender headless: `Blender -b -P art/<dir>/<script>.py`. Outputs GLB/PNG into `web/public/assets/{game,characters,acnh,fx,icons,nature,sky,buildings,fauna,audio}`.
+New models start in Meshy (`node art/meshy/meshy.mjs`, raw output in the untracked `art/meshy/raw/`, credits in `art/meshy/log.md`), then `art/meshy/clean.py`. Blender headless: `Blender -b -P art/<dir>/<script>.py`. Outputs GLB/PNG into `web/public/assets/{game,characters,acnh,fx,icons,nature,sky,buildings,fauna,audio}`.
 
 | `art/` dir | Contents |
 |---|---|
