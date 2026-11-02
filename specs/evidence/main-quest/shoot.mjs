@@ -4,7 +4,7 @@
 // `?progression=demo` (the real progression service on an in-memory store; `&chapter=` and `&tally=` set where the
 // member is). Headless Chromium, muted, under the shared browser lock.
 //   HOST=http://localhost:3147 node specs/evidence/main-quest/shoot.mjs <out_dir> <scene> [<scene> ...]
-// Scenes: mq4hud, mq4hud-phone, mq4sand (round 4); r2flow, r2museum, r2dig, pops, strips (round 2); flow, chapters, dig, pickaxe (round 1; the new world: run the dev server with NEXT_PUBLIC_GAME_WORLD=new); village (the
+// Scenes: mq5hud, mq5hud-phone (round 5); mq4hud, mq4hud-phone, mq4sand (round 4); r2flow, r2museum, r2dig, pops, strips (round 2); flow, chapters, dig, pickaxe (round 1; the new world: run the dev server with NEXT_PUBLIC_GAME_WORLD=new); village (the
 // default world, no env: the village's one tracker line, unchanged).
 // Places are the new world's (lib/collections/rolls.ts activeVillage("new"): museum 4,70.5; dig-sand-0 -17,102;
 // dig-soil-15 35,84; rock-1 38,25.1).
@@ -165,6 +165,46 @@ async function levelUpStrip(page, prefix, wide) {
 }
 
 for (const scene of SCENES) try {
+  if (scene === "mq5hud" || scene === "mq5hud-phone") {
+    // Round 5: the vitals bare and on the card, critical's flash and heartbeat as strips, the world as health falls
+    // (vignette, then the drain), the level up with no card, the phone's camera and compact controls.
+    const phone = scene.endsWith("phone");
+    const { ctx, page } = await open("time=day", {}, phone ? PHONE : undefined);
+    await go(page, 30, 46, Math.PI);
+    await hudIn(page);
+    const p = phone ? "mq5-phone" : "mq5";
+    const corner = phone ? { x: 0, y: 0, width: 390, height: 190 } : { x: 0, y: 0, width: 460, height: 120 };
+    const card = on => page.evaluate(c => { const v = document.querySelector("[data-testid=hud-vitals]"); if (c) v.removeAttribute("data-bare"); else v.setAttribute("data-bare", ""); }, on);
+    await shot(page, `${p}-hud-rest`);
+    log.push({ name: `${p}-hud-rest`, emoteButton: await page.$("[aria-label='Open the emote wheel']").then(e => !!e), camera: await page.evaluate(() => { const c = window.__orbit.three().camera; return c.position.toArray().map(n => +n.toFixed(2)); }) });
+    for (const [k, h, st] of [["full", 1, 1], ["half", 0.5, 0.5], ["low", 0.14, 0.1]]) {
+      await vitalsAt(page, `${p}-vitals-${k}-bare`, h, st, corner);
+      await card(true); await sleep(80);
+      await shot(page, `${p}-vitals-${k}-card`, corner);
+      await card(false);
+    }
+    // Critical: the well flashes and the heart beats (0.9 s a cycle): a strip, bare then card.
+    for (const look of ["bare", "card"]) {
+      await card(look === "card"); await sleep(120);
+      const t0 = Date.now();
+      for (let i = 0; i < 8; i++) {
+        const at = i * 110; if (Date.now() - t0 < at) await sleep(at - (Date.now() - t0));
+        await page.screenshot({ path: `${OUT}/${p}-critical-${look}-${i}.png`, clip: phone ? { x: 0, y: 50, width: 260, height: 90 } : { x: 0, y: 0, width: 300, height: 80 } });
+      }
+    }
+    await card(false);
+    // The world as health falls: a wide shot at each (the grade eases in about a second).
+    for (const [k, h] of [["100", 1], ["50", 0.5], ["35", 0.35], ["14", 0.14]]) {
+      await page.evaluate(v => { window.__combat.rt.player.hp = Math.round(window.__combat.rt.player.maxHp * v); window.__publishCombat(); }, h);
+      await sleep(2200);
+      await shot(page, `${p}-world-${k}`);
+    }
+    await page.evaluate(() => { window.__combat.rt.player.hp = window.__combat.rt.player.maxHp; window.__publishCombat(); });
+    await sleep(2200);
+    await page.mouse.move(phone ? 200 : 900, 600);
+    await levelUpStrip(page, `${p}-levelup`, !phone);
+    await ctx.close();
+  }
   if (scene === "mq4tap") {
     // The phone's ring tapped for its tip (the full phone pass is mq4hud-phone).
     const { ctx, page } = await open("", {}, PHONE);

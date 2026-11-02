@@ -452,6 +452,11 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 /* Touch: the level ring and the vitals sit under the menu button (it keeps the corner). */
 .world[data-compact] .hudBars { top: calc(max(14px, env(safe-area-inset-top)) + 54px); }
 @media (max-width: 700px) { .world[data-compact] .heading { top: calc(max(14px, env(safe-area-inset-top)) + 112px); left: var(--hud-edge); } }
+/* A phone upright, more compact (David r4: "make it more compact"): smaller stick and buttons, lower, and a smaller map. */
+@media (pointer: coarse) and (max-width: 700px) {
+  .world[data-compact] { --touch-stick: 112px; --touch-scale: 0.8; --hud-stick-bottom: calc(var(--hud-floor) + 32px); }
+  .world[data-compact] .hudColumn { --minimap-size: 96px; }
+}
 .touchControls[data-flash="out"] { animation: hintFade 0.32s ease-in forwards; }
 @keyframes hintFade { to { opacity: 0; } }
 :global(html[data-contrast="high"]) .world .menuButton { background: #000000; color: #ffffff; box-shadow: 0 0 0 2px #ffffff; }

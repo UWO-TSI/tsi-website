@@ -27,7 +27,9 @@ import { createGraphicsContextStore } from "@/lib/game/graphicsContext";
 import type { Grade } from "@/lib/game/grading";
 import type { LookFx, ToneMap } from "@/lib/game/lookPreset";
 import { BlendFunction, Effect, ToneMappingMode, type DepthOfFieldEffect } from "postprocessing";
-import { Uniform, Vector3, type Scene } from "three";
+import { MathUtils, Uniform, Vector3, type Scene } from "three";
+import { combat } from "@/lib/game/combat/runtime";
+import { hurtLook } from "@/lib/game/lowHealth";
 
 /**
  * Photo mode's depth of field (v1, components/game/photo): only while photo mode is open with Focus above 0, so it costs
@@ -60,6 +62,8 @@ uniform vec3 uWarmCast;
 uniform vec3 uBlackLift;
 uniform float uContrast;
 uniform float uVibrance;
+uniform float uHurt;
+uniform float uDrain;
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
   vec3 c = inputColor.rgb;
   // Vibrance (BSL-style): saturation boost weighted toward the LEAST
@@ -73,6 +77,10 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   c = c + uBlackLift * (1.0 - c);
   // Contrast around mid-grey. 1 = identity.
   c = (c - 0.5) * uContrast + 0.5;
+  // Low health (lib/game/lowHealth.ts): the colour drains toward grey, and the edges darken toward a deep red. 0 = identity.
+  c = mix(c, vec3(dot(c, vec3(0.299, 0.587, 0.114))), uDrain);
+  float edge = smoothstep(0.35, 1.0, length(uv - 0.5) * 1.414);
+  c = mix(c, c * vec3(0.55, 0.1, 0.08), edge * uHurt);
   outputColor = vec4(c, inputColor.a);
 }
 `;
@@ -109,6 +117,8 @@ class PastelEffect extends Effect {
         ["uBlackLift", new Uniform(new Vector3(0.025, 0.021, 0.016))],
         ["uContrast", new Uniform(1)],
         ["uVibrance", new Uniform(0)],
+        ["uHurt", new Uniform(0)],
+        ["uDrain", new Uniform(0)],
       ]),
     });
   }
@@ -128,6 +138,13 @@ function onceAFrame(scene: Scene) {
   return () => { scene.onAfterRender = after; scene.matrixWorldAutoUpdate = true; };
 }
 function frameStart(scene: Scene) { scene.matrixWorldAutoUpdate = true; }
+/** Low health in the grade (lib/game/lowHealth.ts): the vignette and the drain ease toward the player's health share. */
+function hurtGrade(pastel: Effect, dt: number) {
+  const p = combat.rt.player, look = hurtLook(p.maxHp > 0 ? p.hp / p.maxHp : 1);
+  const hurt = pastel.uniforms.get("uHurt")!, drain = pastel.uniforms.get("uDrain")!;
+  hurt.value = MathUtils.damp(hurt.value, look.vignette, 3, dt);
+  drain.value = MathUtils.damp(drain.value, look.drain, 3, dt);
+}
 type AoPass = { autoDetectTransparency: boolean; configuration: { transparencyAware: boolean } };
 /** Transparency aware from the start, as the pass would decide on its first frame, without walking the scene every frame to decide it again. */
 function settleTransparency(pass: AoPass | null) {
@@ -160,6 +177,7 @@ export default function PostFX({ antialias = false, grade: g, fx, dof = null }: 
   useEffect(() => (aoOn ? onceAFrame(scene) : undefined), [scene, aoOn]);
   useEffect(() => { if (aoOn) settleTransparency(ao.current); }, [aoOn]);
   useFrame(() => frameStart(scene), -1001);
+  useFrame((_, dt) => hurtGrade(pastel, dt));
   useEffect(() => {
     (pastel.uniforms.get("uDesat")!).value = g.desat;
     (pastel.uniforms.get("uWarmCast")!.value as Vector3).set(1 + 0.03 * g.warmth, 1.0, 1 - 0.06 * g.warmth);

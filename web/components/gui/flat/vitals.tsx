@@ -5,9 +5,11 @@
  * health and eventually there might be a shield or mana bar for different classes", "all the bars should change color
  * as it depleats, so perifiral visiion you cna tell how youre doing and have tallies for every like 20", "exp bar should
  * exists somewhere seperate, maybe a circular bar around a number somewhere and hover shows specific xp amount").
- * - `Vitals`: one soft white card, a stack of `VitalBar` rows (health, stamina; a class's shield or mana is one more row).
+ * - `Vitals`: a stack of `VitalBar` rows (health, stamina; a class's shield or mana is one more row), on one soft white
+ *   card, or `bare` straight over the world (r4: "idk if they should have a huge white pill": both, for David to pick).
  * - `VitalBar`: icon and track; the fill slides from its full colour through amber to its low colour as it empties, so
- *   it reads from the corner of the eye; a notch every 20 points of `max`.
+ *   it reads from the corner of the eye; a thin notch every 20 points of `max`. `critical` (r4: "more red and critical
+ *   and flashes"): the well flashes red and the icon beats like a heart (both still under reduced motion: a red well).
  * - `XpRing`: the level number in a round ring that fills with the XP into the level; hover, focus or a tap shows the
  *   exact XP (the kit's HoverTip).
  * Colours: the theme's --ui-* tokens. Shown on /lab/gui.
@@ -25,12 +27,13 @@ export const TALLY = 20;
 /**
  * One vital, `value` 0 to 1 of `max` points. The fill eases (a little spring); `live` drops the ease for a value written
  * every frame to the element's `--vital`. `low`: run out (a shake, once). `quiet`: full and idle, it rests dimmer.
+ * `critical`: nearly gone (lib/game/lowHealth.ts CRITICAL), it flashes.
  */
-export function VitalBar({ kind, value, max = 100, label, live, low, quiet, ref }: {
-  kind: VitalKind; value: number; max?: number; label: string; live?: boolean; low?: boolean; quiet?: boolean; ref?: Ref<HTMLDivElement>;
+export function VitalBar({ kind, value, max = 100, label, live, low, quiet, critical, ref }: {
+  kind: VitalKind; value: number; max?: number; label: string; live?: boolean; low?: boolean; quiet?: boolean; critical?: boolean; ref?: Ref<HTMLDivElement>;
 }) {
   const Icon = ICON[kind];
-  return <div ref={ref} className={v.bar} data-kind={kind} data-live={live || undefined} data-low={low || undefined} data-quiet={quiet || undefined}
+  return <div ref={ref} className={v.bar} data-kind={kind} data-live={live || undefined} data-low={low || undefined} data-quiet={quiet || undefined} data-critical={critical || undefined}
     style={{ "--vital": Math.max(0, Math.min(1, value)), "--tally": TALLY / Math.max(TALLY, max) } as CSSProperties}
     role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(value * 100)}>
     <Icon className={v.icon} size={14} strokeWidth={2.75} aria-hidden />
@@ -38,9 +41,9 @@ export function VitalBar({ kind, value, max = 100, label, live, low, quiet, ref 
   </div>;
 }
 
-/** The vitals' card: the rows stacked, one soft white card. */
-export function Vitals({ children, hidden }: { children: ReactNode; hidden?: boolean }) {
-  return <div className={v.card} data-hidden={hidden || undefined} data-testid="hud-vitals">{children}</div>;
+/** The vitals: the rows stacked, on one soft white card or `bare` over the world. */
+export function Vitals({ children, hidden, bare }: { children: ReactNode; hidden?: boolean; bare?: boolean }) {
+  return <div className={v.card} data-hidden={hidden || undefined} data-bare={bare || undefined} data-testid="hud-vitals">{children}</div>;
 }
 
 /**

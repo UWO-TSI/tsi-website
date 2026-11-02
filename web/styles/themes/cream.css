@@ -70,10 +70,12 @@
   --ui-glint: linear-gradient(115deg, transparent 38%, rgb(255 255 255 / 0.55) 48%, transparent 58%);
   /* The HUD's vitals (UI 8): each bar's colour when full and when nearly empty, the shared amber between; XP's ring. */
   --ui-health: #5aae62;
-  --ui-health-low: #e0604f;
+  --ui-health-low: #d63a2c;
   --ui-stamina: #4ba6cf;
   --ui-stamina-low: #e8803f;
   --ui-vital-mid: #e9b23a;
+  /* Type straight over the world on a soft scrim (the level-up moment): white, whatever the theme. */
+  --ui-on-scrim: #ffffff;
   --ui-xp: #e3a52f;
   --ui-sheen: rgb(255 255 255 / 0.35);
   /* Paper, the material (design bible UI 2): only for what is paper in the world (the sushi bar's folded menu, a

@@ -301,6 +301,8 @@ const TOOL_FOR: Record<"fish" | "net" | "dig" | "mine", string> = { fish: "rod",
 const AIM: [number, number] = [0, 1];
 /** The café's prompt is its door's, open or boarded up (cafe-polish §2). */
 const CAFE_DOOR_RANGE = 1.4;
+/** A touch screen's camera, this much further back: a phone's small screen shows more of the world (David r4: "increase the camera distance"). */
+const TOUCH_ZOOM = 1.3;
 type Spot = [number, number, number];
 const spot = (p: [number, number] | null): Spot | null => p && [p[0], 0, p[1]];
 const xz = (o: { x: number; z: number }): [number, number] => [o.x, o.z];
@@ -942,6 +944,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const cinematic = welcoming || trip.active;
   const moveKeys = useMoveKeys(), abilityKeys = useAbilityKeys();
   const touch = useCoarsePointer() || devHome.get("touch") === "1";
+  const camZoom = devZoom * (touch ? TOUCH_ZOOM : 1);
   // Row 312: the HQ visit with Alice after Bram's tour, and the tools residents hand over (components/game/hq).
   const closeMenu = useCallback(() => setLayer(null), []);
   const hq = useHqOnboarding({ inside, free: ready && !fading && !sheet && !mapOpen && !bagOpen && !donateOpen && !talking, menuOpen: layer === "ui",
@@ -1397,7 +1400,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         camera={{ position: [0, 10.2, -21], fov: BASE_FOV, near: 0.1, far: 120 }} shadows={castShadows ? "percentage" : false} frameloop={creatorOpen ? "never" : "always"}
         onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
         <Suspense fallback={null}>
-          {site === "ruins" ? <RuinsScene key={`ruins-${ruinsRun}`} level={level} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={devZoom} player={player}
+          {site === "ruins" ? <RuinsScene key={`ruins-${ruinsRun}`} level={level} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={camZoom} player={player}
               onNear={n => setNear(n === "exit" ? "ruins_exit" : n)} onDefeat={onRuinsDefeat} start={ruinsRun <= 1 ? devAt : null} glider={peaceful.glider} />
             : inside === "oracle" ? <OracleTemple frozen={fading || sheet === "oracle"} talking={sheet === "oracle"} light={light} player={player} onNear={n => setNear(n)} ceremony={reveal} />
             : inside === "cafe" ? <CafeInterior phase={phase} player={player} frozen={fading || !!sheet} identity={identity} level={level} onNear={setNear} />
@@ -1407,11 +1410,11 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
             : inside === "hq" ? <HqInterior light={light} player={player} frozen={fading} talking={sheet === "showcase" || hq.card !== null || (talking && talkNow.slug === WREN.slug)} member={peaceful.member} onNearestStation={hqStation} />
             : inside === "house" ? <HomeInterior layout={layout} phase={phase} light={light} frozen={fading} player={player} onNear={(n: HouseNear) => setNear(n)}
               decorating={decor.decorating} selected={decor.selected} onPlace={decor.place} onPickUp={decor.pickUp} />
-            : atHome ? <HomeIslandScene held={eating || trip.active ? null : held} identity={identity} level={level} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={devZoom}
+            : atHome ? <HomeIslandScene held={eating || trip.active ? null : held} identity={identity} level={level} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={camZoom}
               overview={overview} returned={returned} player={player} onNear={(n: HomeNear) => setNear(n)} outdoor={layout.outdoor}
               decorating={decor.decorating} selected={decor.selected} onPlace={item => decor.place("outdoor", item)} onPickUp={item => decor.pickUp("outdoor", item)} />
             : <IslandScene held={eating || trip.active ? null : held} identity={identity} level={level} devAt={devAt} exitFrom={exitFrom} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} chapter={chapterFlags} questPosts={main.posts} fromBoat={fromBoat} progression={progressionWorld} ceremony={ceremony} event={islandEvent} traditions={traditions} fogNight={fogNight}
-              arriving={welcoming} hintKeys={hintKeys} campfireHour={campfireHour} talking={talking} phase={scenePhase} light={light} look={look} weather={sceneWeather} overview={overview} zoom={devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onNear={setNear} onBar={setAtBar} />}
+              arriving={welcoming} hintKeys={hintKeys} campfireHour={campfireHour} talking={talking} phase={scenePhase} light={light} look={look} weather={sceneWeather} overview={overview} zoom={camZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onNear={setNear} onBar={setAtBar} />}
           {/* Classes v2: the subclass's aura replaces the family's once its kit exists (§1.9). */}
           {DROPS.classes && identity.aura && (classAura ? <Suspense fallback={null}><SubclassAura player={player} kit={classAura.kit} mastery={classAura.mastery} colour={classAura.colour} /></Suspense>
             : identity.family && <Suspense fallback={null}><FamilyAura player={player} color={FAMILIES[identity.family].light} /></Suspense>)}
@@ -1492,7 +1495,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       {fishBosses() && !fishing && !inside && <RaidCall />}
       <ToolWheel items={wheelItems} held={heldState.held} wheelKey={wheelKeys.wheel} touch={touch} onEquip={holdItem} onSwap={() => swapHeld(wheelItems)}
         enabled={ready && !inMatch && !inside && !fishing && !sheet && !bagOpen && !cinematic && !talking && !fading && !decor.decorating && !(touch && uiView)} />
-      <EmoteWheel emoteKey={wheelKeys.emote} touch={touch} onPlay={entry => playWheelEntry(entry, player.current)}
+      <EmoteWheel emoteKey={wheelKeys.emote} touch={touch && !compact} onPlay={entry => playWheelEntry(entry, player.current)}
         enabled={ready && !inMatch && site !== "ruins" && !fishing && !sheet && !bagOpen && !cinematic && !talking && !fading && !decor.decorating && !(touch && uiView)} />
       <DonateSheet open={donateOpen} onClose={() => setDonateOpen(false)} onDonated={loadMuseum} />
       <MuseumDrive open={driveOpen} onClose={() => setDriveOpen(false)} onGiven={loadMuseum} />

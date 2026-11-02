@@ -4,11 +4,12 @@
  * A level up as a moment (specs/design-bible.md UI 4; David's r3 review: "level up card should feel mor oomph, more juice,
  * suspense ... maybe have your character model there and like the experience floats into the character and flash frame
  * for every experence going in and it has level up animation and the text that says level up and the character jumps and
- * grows a lil and next fram over lay the level upgrade and the things you unlock"). Three beats on one white card:
+ * grows a lil and next fram over lay the level upgrade and the things you unlock"; r4: "remove white backgound level up
+ * card needs to be redone"). Three beats, straight over the world on a soft scrim (no card):
  * - charge: the `figure` (the game's 3D character) on a soft glow; XP motes curve in from around it, and each one landing
  *   flashes the figure white for two frames (never back to back: they land `LEVEL_UP_MS.gap` apart) and calls `onBeat`;
  * - burst: "Level up!" springs out with a burst of sparks, the figure grows a little (the host makes it jump);
- * - reveal: the new level and what it unlocks slide up over the figure's lower half, with one dark button.
+ * - reveal: the figure steps up and back; the new level and what it unlocks rise under it, white type, one button.
  * Reduced motion starts at the reveal (no motes, no flashes). A click, E, Enter or Escape skips to the reveal, then closes.
  */
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
@@ -65,7 +66,7 @@ export function LevelUpMoment({ level, figure, title, items, action = "Nice!", o
     beat.current?.("mote", i);
   };
   return <div className={l.layer} onClick={() => next.current()} data-testid={testId} data-phase={phase}>
-    <section className={l.card} role="dialog" aria-modal="true" aria-label={`Level up: level ${level}`} data-phase={phase}
+    <section className={l.moment} role="dialog" aria-modal="true" aria-label={`Level up: level ${level}`} data-phase={phase}
       style={{ "--start": `${LEVEL_UP_MS.start}ms`, "--fly": `${LEVEL_UP_MS.fly}ms`, "--gap": `${LEVEL_UP_MS.gap}ms`, "--charge": `${LEVEL_UP_MS.burst - LEVEL_UP_MS.start}ms` } as CSSProperties}>
       <div className={l.stage}>
         <span className={l.glow} aria-hidden />

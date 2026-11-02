@@ -9,12 +9,15 @@
  * - the vitals' stack beside it: health (the combat runtime's hp of maxHp, full on the island) and stamina (the movement
  *   sim's, lib/game/movement/sim.ts, written by the avatar each frame to hudLive), both always there; stamina rests dimmer
  *   1.5 s after it's full again, and shakes once as it runs out. A class's shield or mana would be one more row.
+ *   Health at CRITICAL or under (lib/game/lowHealth.ts) flashes and its heart beats; the world's side is PostFX's.
+ * Bare over the world by default; `?vitals=card` (dev) shows them on the white card, for David to pick (r4).
  */
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { VitalBar, Vitals, XpRing } from "@/components/gui/flat";
 import { levelProgress } from "@/lib/combat/progression";
 import { combat, useCombatValue } from "@/lib/game/combat/runtime";
 import { hudLive, useHud } from "@/lib/game/hudStore";
+import { CRITICAL } from "@/lib/game/lowHealth";
 
 /** Fired as the XP ring reaches its end on a level up (detail: { level }). */
 export const LEVEL_FILLED = "tsi:level-filled";
@@ -72,10 +75,12 @@ export default function HudBars({ hidden, className }: { hidden?: boolean; class
   const xp = useXpBar(hud.xp);
   const staminaEl = useRef<HTMLDivElement>(null);
   const stamina = useStamina(staminaEl);
+  const [card] = useState(() => process.env.NODE_ENV !== "production" && new URLSearchParams(window.location.search).get("vitals") === "card");
+  const health = maxHp > 0 ? hp / maxHp : 1;
   return <div className={className}>
     {xp && <XpRing level={xp.level} fill={xp.fill} snap={xp.snap} into={xp.into} needed={xp.needed} hidden={hidden} />}
-    <Vitals hidden={hidden}>
-      <VitalBar kind="health" value={maxHp > 0 ? hp / maxHp : 1} max={maxHp} label={`Health ${Math.round(hp)} of ${Math.round(maxHp)}`} />
+    <Vitals hidden={hidden} bare={!card}>
+      <VitalBar kind="health" value={health} max={maxHp} critical={health <= CRITICAL} label={`Health ${Math.round(hp)} of ${Math.round(maxHp)}`} />
       <VitalBar ref={staminaEl} kind="stamina" value={1} live quiet={stamina.quiet} low={stamina.low} label={stamina.low ? "Stamina run out" : "Stamina"} />
     </Vitals>
   </div>;

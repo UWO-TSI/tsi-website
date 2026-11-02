@@ -1,6 +1,7 @@
 /* The vitals and the level ring (vitals.tsx; specs/design-bible.md UI 1, 8, 9): small and warm, soft white with a little
-   grain, rounded tracks with a highlight on the fill. A bar's colour is its fill: full colour above half, through the
-   shared amber to its low colour as it empties. */
+   grain, rounded tracks with a highlight on the fill. A bar's colour is its fill: full colour near full, the shared amber
+   at half, its low colour (a strong red for health) by a quarter. Bare: no card, each track rimmed in white with a
+   shadow so it reads over any ground. Critical: the well flashes red and the heart beats. */
 @property --vital { syntax: "<number>"; inherits: true; initial-value: 1; }
 @property --xp { syntax: "<number>"; inherits: true; initial-value: 0; }
 
@@ -10,9 +11,9 @@
 .card[data-hidden], .ring[data-hidden] { opacity: 0; transform: translateY(-4px); pointer-events: none; }
 
 .bar { --full: var(--ui-health); --low: var(--ui-health-low);
-  --hi: clamp(0%, calc((var(--vital) - 0.5) * 200%), 100%); --lo: clamp(0%, calc(var(--vital) * 200%), 100%);
+  --hi: clamp(0%, calc((var(--vital) - 0.5) * 200%), 100%); --lo: clamp(0%, calc((var(--vital) - 0.25) * 400%), 100%);
   --fill: color-mix(in oklab, var(--full) var(--hi), color-mix(in oklab, var(--ui-vital-mid) var(--lo), var(--low)));
-  display: grid; grid-template-columns: 16px 132px; align-items: center; gap: 6px; color: var(--fill);
+  display: grid; grid-template-columns: 16px 184px; align-items: center; gap: 6px; color: var(--fill);
   transition: --vital 0.6s cubic-bezier(0.34, 1.12, 0.64, 1), opacity 0.4s ease; }
 .bar[data-kind="stamina"] { --full: var(--ui-stamina); --low: var(--ui-stamina-low); }
 .bar[data-live] { transition: opacity 0.4s ease; }
@@ -22,9 +23,21 @@
 .track { position: relative; height: 10px; border-radius: 99px; overflow: hidden; background: var(--ui-well); box-shadow: inset 0 1px 2px rgb(var(--ui-shade) / 0.12); }
 .track i { position: absolute; inset: 0; border-radius: inherit; background: var(--fill); box-shadow: inset 0 2px 0 var(--ui-sheen);
   transform-origin: left; transform: scaleX(var(--vital)); }
-/* The tallies: a notch of the card's white every 20 points, over the fill and the well alike. */
+/* The tallies: a hairline of the card's white every 20 points, over the fill and the well alike. */
 .track::after { content: ""; position: absolute; inset: 0; --seg: calc(var(--tally) * 100%);
-  background: repeating-linear-gradient(90deg, transparent 0 calc(var(--seg) - 2px), var(--ui-card) calc(var(--seg) - 2px) var(--seg)); }
+  background: repeating-linear-gradient(90deg, transparent 0 calc(var(--seg) - 1px), var(--ui-card) calc(var(--seg) - 1px) var(--seg)); opacity: 0.85; }
+/* Critical: the well under the fill flashes the low red, and the icon beats like a heart (twice, then a rest). */
+.track::before { content: ""; position: absolute; inset: 0; background: var(--low); opacity: 0; }
+.bar[data-critical] .track::before { animation: flash 0.9s ease-in-out infinite; }
+.bar[data-critical] .icon { fill-opacity: 1; animation: beat 0.9s ease-out infinite; }
+@keyframes flash { 0%, 100% { opacity: 0.12; } 18% { opacity: 0.6; } 50% { opacity: 0.2; } }
+@keyframes beat { 0%, 100% { transform: scale(1); } 12% { transform: scale(1.32); } 24% { transform: scale(1.05); } 36% { transform: scale(1.22); } 55% { transform: scale(1); } }
+
+/* Bare: straight over the world, no card. Each track wears a white rim and a soft shadow, the icons a white fill. */
+.card[data-bare] { gap: 7px; padding: 0; background: none; box-shadow: none; }
+.card[data-bare] .track { box-shadow: 0 0 0 1.5px var(--ui-card), 0 2px 6px rgb(var(--ui-shade) / 0.3); }
+.card[data-bare] .icon { fill: var(--ui-card); fill-opacity: 1; filter: drop-shadow(0 1px 1.5px rgb(var(--ui-shade) / 0.35)); }
+.card[data-bare] .bar[data-critical] .icon { fill: currentColor; }
 @keyframes shake { 0%, 100% { transform: none; } 25% { transform: translateX(-3px); } 50% { transform: translateX(3px); } 75% { transform: translateX(-2px); } }
 
 /* The level ring: the number on a white disc, the XP round it from the top, clockwise. */
@@ -46,10 +59,11 @@
 .tip small { color: var(--ui-muted); font-size: 12px; }
 
 @media (max-width: 700px) {
-  .bar { grid-template-columns: 14px 96px; }
+  .bar { grid-template-columns: 14px 132px; }
   .ring { width: 44px; height: 44px; font-size: 15px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .bar, .ring { transition: opacity 0.3s ease; }
-  .bar[data-low], .level { animation: none; }
+  .bar[data-low], .level, .bar[data-critical] .icon { animation: none; }
+  .bar[data-critical] .track::before { animation: none; opacity: 0.35; }
 }
