@@ -291,15 +291,17 @@ const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
 };
 const CLOSED: Near[] = ["museum"];
 /**
- * The targets that wear the interact ring (InteractRing), its radius and the glow's height over the ground. Not the
- * residents (talk, Bram, the chef, Rosa): they turn to you and their prompt names them, and a person moves out of a
- * ring. Not a building's sign (the museum, the ruins), nor the court's net, nor a tool's target (water, a bug, a dig spot).
+ * The targets that wear the interact ring (InteractRing), its radius and the glow's height over the ground: the bigger
+ * things only, the stands, boards, counters and doors (pol2-ring-bench: "bench shouldnt even get a interaction its too
+ * small"; pol2-ring-skip: "people bench small things"). Not the residents (talk, Bram, the chef, Rosa) nor the picnic,
+ * not a bench or a bar stool, not the small things (the mailbox, a lantern to pick up, a cocoa). Not a building's sign
+ * (the museum, the ruins), nor the court's net, nor a tool's target (water, a bug, a dig spot).
  */
 const RING: Partial<Record<Exclude<Near, null>, readonly [r: number, h: number]>> = {
-  sell: [0.7, 0.5], catchboard: [0.9, 0.9], tasks: [0.9, 0.9], tackle: [0.9, 0.8], leaderboard: [0.8, 0.9], mailbox: [0.55, 0.6], notice: [0.8, 0.9],
-  catch: [0.8, 0.9], monument: [1.2, 1], bench: [0.95, 0.4], stool: [0.45, 0.4], knock: [0.6, 0.4], fitting: [0.9, 1], missions: [0.9, 0.9],
+  sell: [0.7, 0.5], catchboard: [0.9, 0.9], tasks: [0.9, 0.9], tackle: [0.9, 0.8], leaderboard: [0.8, 0.9], notice: [0.8, 0.9],
+  catch: [0.8, 0.9], monument: [1.2, 1], knock: [0.6, 0.4], fitting: [0.9, 1], missions: [0.9, 0.9],
   enter: [0.9, 1], claim: [0.9, 1], report: [0.9, 1], home: [0.9, 1], shop_enter: [0.9, 1], cafe_enter: [0.9, 1], cafe: [0.9, 1], oracle_enter: [0.9, 1],
-  lantern: [0.8, 0.6], trophy: [0.8, 0.6], posters: [0.8, 0.6], cocoa: [0.8, 0.6], picnic: [0.8, 0.6],
+  trophy: [0.8, 0.6], posters: [0.8, 0.6],
 };
 /** The door in reach for trick-or-treat (components/game/Halloween.tsx): IslandScene writes it each frame, E knocks. */
 const knockSpot: { current: KnockDoor | null } = { current: null };
@@ -601,9 +603,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     const ev = spots.find(s => within([s.x, s.z], s.range)), seat = benchSpot.current;
     const nearer = (p: { x: number; z: number }) => Math.hypot(px - p.x, pz - p.z);
     if (!next && (ev || seat)) { const e = ev && (!seat || nearer(ev) < nearer(seat)), p = e ? ev! : seat!; next = e ? ev!.near : stool ? "stool" : "bench"; nextD = nearer(p);
-      // The ring goes round the whole bench (its middle), not the half you'd sit on.
-      const whole = next === "bench" ? layout.benches.find(o => Math.hypot(o.x - p.x, o.z - p.z) < 1) : null;
-      at = whole ? [whole.x, whole.z] : [p.x, p.z]; }
+      at = [p.x, p.z]; }
     // Trick-or-treat: the door's pumpkin in reach (someone behind it hasn't answered you tonight) beats the door itself.
     const kd = knockNear(px, pz);
     knockSpot.current = kd;

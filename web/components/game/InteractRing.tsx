@@ -2,7 +2,8 @@
  * What E would act on, confirmed (David, f4-board-world: "a very faint glow and circle around when close enough to
  * interact with a interactable object like the sell stand"): a soft circle on the ground round the current target and
  * a very faint glow over it. One of each for the whole world (two draws), moved to whichever target holds the prompt
- * (DefaultIslandWorld's `near`), eased in and out. The colours are the kit's: the circle --ui-highlight, the glow --ui-select.
+ * (DefaultIslandWorld's `near`), eased in and out. Thin, light and white for every target, the glow barely there (pol2-ring
+ * notes: "thinner lighter", "less glow", "white not yellow for all"): the kit's near-white --ui-card.
  */
 import { useEffect, useMemo, type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
@@ -12,20 +13,20 @@ import { glowTexture } from "@/lib/game/glow";
 /** The target: where it stands (`y` its floor), the circle's radius, and the glow's height above the floor. */
 export type RingSpot = { x: number; y: number; z: number; r: number; h: number };
 
-// A thin soft band at the disc's rim, nothing inside it.
-const BAND = [[0, 0], [0.74, 0], [0.88, 1], [0.96, 0.3], [1, 0]] as const;
-const RING_ALPHA = 0.35, GLOW_ALPHA = 0.14, RATE = 10;
+// A thin soft line at the disc's rim, nothing inside it.
+const BAND = [[0, 0], [0.86, 0], [0.93, 1], [0.98, 0.2], [1, 0]] as const;
+const RING_ALPHA = 0.22, GLOW_ALPHA = 0.05, RATE = 10;
 
 const at = new THREE.Vector3(), cam = new THREE.Vector3();
 
 export default function InteractRing({ spot, on }: { spot: RefObject<RingSpot | null>; on: boolean }) {
   const { ring, glow } = useMemo(() => {
-    // The HUD's tokens (the cream base on <html>, the E prompt's), not the menus' theme on <body>.
-    const token = (name: string, or: string) => new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue(name).trim() || or);
-    const ring = new THREE.Mesh(new THREE.CircleGeometry(1, 40).rotateX(-Math.PI / 2),
-      new THREE.MeshBasicMaterial({ map: glowTexture(BAND), color: token("--ui-highlight", "#ffcc00"), transparent: true, depthWrite: false, opacity: 0, polygonOffset: true, polygonOffsetFactor: -2, fog: false }));
+    // The HUD's token (the cream base on <html>, the E prompt's), not the menus' theme on <body>.
+    const white = new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue("--ui-card").trim() || "#ffffff");
+    const ring = new THREE.Mesh(new THREE.CircleGeometry(1, 48).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ map: glowTexture(BAND), color: white, transparent: true, depthWrite: false, opacity: 0, polygonOffset: true, polygonOffsetFactor: -2, fog: false }));
     ring.renderOrder = 1;
-    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: token("--ui-select", "#ffeea0"), transparent: true, depthWrite: false, opacity: 0, blending: THREE.AdditiveBlending, fog: false }));
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: white, transparent: true, depthWrite: false, opacity: 0, blending: THREE.AdditiveBlending, fog: false }));
     glow.renderOrder = 2;
     ring.visible = glow.visible = false;
     return { ring, glow };
@@ -43,7 +44,7 @@ function place(ring: THREE.Mesh, glow: THREE.Sprite, target: RingSpot | null, ca
     ringMat.opacity = glow.material.opacity = 0;
     ring.position.set(target.x, target.y + 0.1, target.z);
     ring.scale.setScalar(target.r);
-    glow.scale.setScalar(target.r * 2.6);
+    glow.scale.setScalar(target.r * 1.8);
     ring.userData.spot = target;
   }
   const s = ring.userData.spot as RingSpot | undefined;
