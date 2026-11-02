@@ -11,6 +11,7 @@
 import { Suspense, useDeferredValue, useEffect, useMemo, useRef, type RefObject } from "react";
 import { useFrame, useLoader, useThree } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
+import { gltfsOf } from "@/lib/game/gltfsOf";
 import type { WeaponPaint } from "@/lib/game/combat/primitives";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
@@ -973,20 +974,6 @@ export default function Character({ look, motion, walkSpeed = MOVE_TUNING.walkSp
     {/* Its own boundary: crafting the glider mid-session must not suspend the scene while the leaf loads. */}
     {leaf && <Suspense fallback={null}><HeldLeaf puppet={puppet} motion={motion} scale={scale} remote={remote} /></Suspense>}
   </group>;
-}
-const lists = new Map<string, Gltf[]>();
-/**
- * A look's GLBs, each fetched and parsed once however many looks share it (useGLTF of a list caches the whole list, so
- * skin.glb was parsed again for every look). All start loading at once; one array per list, so effects on it run when
- * the list changes. useGLTF is a suspend-react cache read, not a React hook, so it can run in a loop.
- */
-function gltfsOf(urls: string[]): Gltf[] {
-  for (const u of urls) useGLTF.preload(u);
-  const loaded = urls.map(u => useGLTF(u) as unknown as Gltf);
-  const key = urls.join("\n"), last = lists.get(key);
-  if (last && last.every((g, i) => g === loaded[i])) return last;
-  lists.set(key, loaded);
-  return loaded;
 }
 /** The look's LOD 1 parts (art/characters/build_lod.py), merged once per look and shared like the full one. */
 function LodMesh({ puppet, look, parts }: { puppet: Puppet; look: CharacterLook; parts: ResolvedPart[] }) {

@@ -60,7 +60,6 @@ const FIXED_CONTROLS: { label: string; keys: string[] }[] = [
 const SOUND_SLIDERS: { key: keyof AudioVolumes; label: string }[] = [
   { key: "master", label: "Master" },
   { key: "music", label: "Music" },
-  { key: "ambient", label: "Ambience" },
   { key: "sfx", label: "Sound effects" },
 ];
 

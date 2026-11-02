@@ -9,10 +9,11 @@
  *
  *   node web/scripts/sync-character-assets.mjs
  *
+ * Every GLB ships packed (the hairstyles and Roblox accessories meshopt-compressed, the rest through pack-glbs.mjs: lossless).
  * Re-run after any character build. lib/game/character/look.test.ts fails
  * when the copies drift from art/characters.
  */
-import { copyFileSync, mkdirSync, readFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { NodeIO } from "@gltf-transform/core";
 import { ALL_EXTENSIONS, EXTMeshoptCompression } from "@gltf-transform/extensions";
 import { reorder } from "@gltf-transform/functions";
@@ -21,6 +22,7 @@ import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { packGlbBytes } from "./pack-glbs.mjs";
 
 const web = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const art = resolve(web, "../art/characters");
@@ -60,6 +62,15 @@ for (const [dir, glb] of [...["", "lod1/", "lod2/"].flatMap(d => hairGlbs.map(g 
   doc.createExtension(EXTMeshoptCompression).setRequired(true).setEncoderOptions({ method: EXTMeshoptCompression.EncoderMethod.QUANTIZE });
   await io.write(path, doc);
 }
+// Every other GLB (outfits, accessories, the clip bases, the verbs and staff clips, the LOD skin) ships packed like the
+// entry GLBs: lossless meshopt on the buffer views, PNG images as lossless WebP (pack-glbs.mjs). The hairstyles and
+// Roblox accessories above are meshopt-compressed already, so it leaves them alone.
+let packed = 0;
+for (const file of readdirSync(out, { recursive: true })) {
+  if (!String(file).endsWith(".glb")) continue;
+  const path = join(out, String(file)), result = packGlbBytes(readFileSync(path));
+  if (result) { writeFileSync(path, result.bytes); packed++; }
+}
 // avatar v7 face: the layer atlas at 1024 px per face canvas (creator) and 512 (world), animated by uniforms
 const face = JSON.parse(readFileSync(join(art, "v7/face/face_v7.json"), "utf8"));
 for (const f of [face.atlas, face.atlas2]) copy(join(art, "v7/face", f), join(out, "base", f));
@@ -82,4 +93,4 @@ webp(join(art, catalog.designs.atlas), join(out, catalog.designs.atlas));
 copy(resolve(web, "../specs/wardrobe/batch2-pricing.json"), join(data, "batch2-pricing.json"));
 for (const name of ["character_catalog.json", "palette.json", "v7/face/face_v7.json", "skull/skull.json"]) copy(join(art, name), join(data, name.replace(/^.*\//, "")));
 
-console.log(`synced ${parts.length} parts (${hairGlbs.length} hairstyles meshopt-compressed in 3 tiers, ${accGlbs.length} Roblox accessories in 2), base, ${Object.keys(lod).length} LOD 1 and ${Object.keys(lod2).length} LOD 2 GLBs, 4 face atlases (2 pages; the world's as WebP), the hair, colour and design atlases, 5 JSON files`);
+console.log(`synced ${parts.length} parts (${hairGlbs.length} hairstyles meshopt-compressed in 3 tiers, ${accGlbs.length} Roblox accessories in 2), base, ${Object.keys(lod).length} LOD 1 and ${Object.keys(lod2).length} LOD 2 GLBs, 4 face atlases (2 pages; the world's as WebP), the hair, colour and design atlases, 5 JSON files; ${packed} more GLBs packed`);
