@@ -200,12 +200,15 @@ describe("the monthly board (David, 2026-10-28: \"a place to put your fish to mo
 });
 
 describe("showcase", () => {
-  it("takes three slots of things you've found, no repeats", () => {
-    const mine = [{ item_key: "fish_dace", count: 0, total_collected: 1, best_size_cm: 12, first_collected_at: "" }];
-    expect(validateShowcase(["fish_dace", null, null], mine)).toEqual({ ok: true, keys: ["fish_dace", null, null] });
-    expect(validateShowcase(["fish_dace", "fish_dace", null], mine)).toMatchObject({ ok: false });
-    expect(validateShowcase(["fish_koi", null, null], mine)).toMatchObject({ ok: false });
-    expect(validateShowcase(["fish_dace"], mine)).toMatchObject({ ok: false });
+  it("takes one slot (round 7: the show-off on your ID): a fish, sea creature or bug you've caught, or empty", () => {
+    const row = (item_key: string) => ({ item_key, count: 0, total_collected: 1, best_size_cm: 12, first_collected_at: "" });
+    const mine = [row("fish_dace"), row("bug_common_butterfly"), row("fruit_pear")];
+    expect(validateShowcase(["fish_dace"], mine)).toEqual({ ok: true, keys: ["fish_dace"] });
+    expect(validateShowcase(["bug_common_butterfly"], mine)).toEqual({ ok: true, keys: ["bug_common_butterfly"] });
+    expect(validateShowcase([null], mine)).toEqual({ ok: true, keys: [null] });
+    expect(validateShowcase(["fruit_pear"], mine)).toMatchObject({ ok: false });
+    expect(validateShowcase(["fish_koi"], mine)).toMatchObject({ ok: false });
+    expect(validateShowcase(["fish_dace", null, null], mine)).toMatchObject({ ok: false });
   });
 });
 

@@ -3,7 +3,7 @@
  * (row 203), museum wings (rows 67, 201, 202), weekly trophy case and
  * catch records (rows 196, 204).
  */
-import { RARITY_RANK, WING_OF, type Biome, type Category, type Rarity, type Species, type Wing } from "./roster";
+import { RARITY_RANK, ROSTER, WING_OF, type Biome, type Category, type Rarity, type Species, type Wing } from "./roster";
 import { torontoParts } from "@/lib/time";
 import { rosterWeather, type IslandWeather } from "@/lib/game/islandWeather";
 
@@ -304,17 +304,19 @@ export function weeklyTrophies(roster: Species[], bests: WeeklyBest[], slots = T
   return out;
 }
 
-export const SHOWCASE_SLOTS = 3;
+/** The show-off on your ID (David's round 6 review: "have a 1 slot for a cool fish or bug showoff on the id"). */
+export const SHOWCASE_SLOTS = 1;
+const CATEGORY_OF = new Map(ROSTER.map((s) => [s.key, s.category]));
+/** What can be shown off: a fish, a sea creature or a bug. */
+export const showable = (key: string) => ["fish", "sea", "bug"].includes(CATEGORY_OF.get(key) ?? "");
 
 export function validateShowcase(keys: unknown, mine: MemberItem[]): { ok: true; keys: (string | null)[] } | { ok: false; error: string } {
-  if (!Array.isArray(keys) || keys.length !== SHOWCASE_SLOTS) return { ok: false, error: "Pick exactly three slots (empty slots are null)." };
+  if (!Array.isArray(keys) || keys.length !== SHOWCASE_SLOTS) return { ok: false, error: "Pick one thing to show off." };
   const owned = new Set(mine.map((r) => r.item_key));
-  const seen = new Set<string>();
   for (const k of keys) {
     if (k === null) continue;
     if (typeof k !== "string" || !owned.has(k)) return { ok: false, error: "You can only show things you've found." };
-    if (seen.has(k)) return { ok: false, error: "Each item can be shown once." };
-    seen.add(k);
+    if (!showable(k)) return { ok: false, error: "Show off a fish, a sea creature or a bug." };
   }
   return { ok: true, keys: keys as (string | null)[] };
 }

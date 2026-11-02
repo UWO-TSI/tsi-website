@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { RARITY_RANK, type Rarity } from "@/lib/rarity";
 import {
-  checkDonation, clampSize, journalPage, monthStart, museumWings, trophyFor, validateShowcase, weekStart, weeklyTrophies,
+  checkDonation, clampSize, journalPage, monthStart, museumWings, showable, trophyFor, validateShowcase, weekStart, weeklyTrophies,
   type Exhibit, type JournalPage, type MuseumWing, type Trophy, type WorldMoment,
 } from "./logic";
 import { castWater, closedBiomes, fishRoll, forageSize, nodeAt, nodeRoll } from "./rolls";
@@ -292,7 +292,7 @@ export async function getShowcase(store: CollectionsStore, memberId: string): Pr
       ok: true,
       data: keys.map((k, i) => {
         const sp = roster.find((s) => s.key === k);
-        if (!k || !sp) return null;
+        if (!k || !sp || !showable(k)) return null;
         return { slot: i + 1, key: k, name: sp.name, icon: sp.icon, rarity: sp.rarity, best_size_cm: mine.find((r) => r.item_key === k)?.best_size_cm ?? null };
       }),
     };

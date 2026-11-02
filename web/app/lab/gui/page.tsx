@@ -27,7 +27,7 @@ import { RodRadar, TackleRadar } from "@/components/economy/RodGear";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import { CircleDot, Waves, Worm } from "lucide-react";
 import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
-import { ActionBar, ActionIcon, BigMoment, CardOverlay, DarkButton, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, KeyPeek, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, QuestCheck, RankBadge, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot, type PeekKind } from "@/components/gui/flat";
+import { ActionBar, ActionIcon, BigMoment, CardOverlay, DarkButton, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, KeyPeek, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, ShowOff, ShowOffPicks, Thumb, QuestCheck, RankBadge, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot, type PeekKind } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
 import { BoardRows } from "@/components/game/volleyball/BoardSheet";
 import s from "./showroom.module.css";
@@ -110,8 +110,14 @@ function PrintedShow() {
     ? [["World name", <PaperField key="n" defaultValue="Marlowe" />], ["Pronouns", <PaperField key="p" placeholder="she/her, he/him, they/them" />], ["Birthday", <PaperField key="b" placeholder="March 14" />],
       ["About you", <PaperField key="a" placeholder="Say hi in a line" />]]
     : [["World name", "Marlowe"], ["Pronouns", "they/them"], ["Birthday", "March 14"], ["About you", "Here for the fishing"], ["Friend code", "K7QM-4R2X"]];
+  // The show-off: empty with its picks up while it is filled in (t 1), then the arowana on the printed card.
+  const koi = t >= 2;
   return <CardOverlay open label="Your island ID" action={<DarkButton>{form ? "Print my ID" : "Done"}</DarkButton>}>
-    <PrintedCard key={form ? "a" : "b"} large tilt band="Tethos Island" kind="Resident" picture="M" printing={printing} stamp={stamped ? { top: "Tethos Island", word: "Resident" } : null} rows={rows} />
+    <PrintedCard key={form ? "a" : "b"} large tilt band="Tethos Island" kind="Resident" picture="M" printing={printing} stamp={stamped ? { top: "Tethos Island", word: "Resident" } : null} rows={rows}
+      showOff={<ShowOff label="Show-off" picture={koi ? "/assets/icons/fish_arowana.webp" : null} rarity="epic" name={koi ? "Arowana" : form ? "Pick a catch" : "Nothing yet"} onClick={form ? () => {} : undefined} open={t === 1} />} />
+    {t === 1 && <ShowOffPicks hint="One fish, sea creature or bug of yours, on your ID for everyone to see.">
+      {["fish_arowana", "fish_dace", "bug_emperor_butterfly"].map(k => <Thumb key={k} picture={`/assets/icons/${k}.webp`} rarity={k === "fish_dace" ? "common" : k === "fish_arowana" ? "epic" : "rare"} label={k} size={56} onClick={() => {}} />)}
+    </ShowOffPicks>}
   </CardOverlay>;
 }
 /** Talk lines with their keywords (the kit's Keyword, the default for every talk line): each word the dictionary

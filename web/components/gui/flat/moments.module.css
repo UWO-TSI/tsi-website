@@ -154,6 +154,34 @@
 .band small { font: 700 11px/1.2 var(--gui-font); letter-spacing: 0.14em; text-transform: uppercase; }
 .paperBody { display: grid; grid-template-columns: 29% 1fr; gap: 12px; padding: 12px 14px; }
 .picture { display: grid; place-items: center; aspect-ratio: 4 / 5; border-radius: 10px; background: var(--ui-paper-edge); color: var(--ui-paper-ink); font: 800 calc(var(--w) * 0.13)/1 var(--gui-font); }
+/* The show-off: a third column, a framed square of paper (dashed while empty), its rarity a thin edge. */
+.paperBody[data-show-off] { grid-template-columns: 29% 1fr 22%; }
+.printed[data-large] .paperBody[data-show-off] { grid-template-columns: 30% 1fr 21%; }
+.showOff { display: grid; align-content: start; justify-items: center; gap: 5px; min-width: 0; }
+.showOff small { justify-self: stretch; text-align: center; font: 700 10px/1.2 var(--gui-font); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.6; }
+.printed[data-large] .showOff small { font-size: 12px; }
+.showOffFrame { all: unset; box-sizing: border-box; display: grid; place-items: center; width: 100%; aspect-ratio: 1; border-radius: 12px; background: var(--ui-paper-edge);
+  box-shadow: inset 0 0 0 2px var(--edge, transparent); color: var(--ui-paper-ink); transition: transform 0.2s cubic-bezier(0.34, 1.4, 0.64, 1); }
+.showOffFrame[data-empty] { background: transparent; box-shadow: none; border: 2px dashed var(--ui-paper-edge); }
+button.showOffFrame { cursor: pointer; }
+button.showOffFrame:hover, button.showOffFrame:focus-visible { transform: translateY(-2px) scale(1.04); }
+button.showOffFrame:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+.showOffFrame svg { width: 38%; height: 38%; opacity: 0.45; }
+.showOffArt { width: 78%; height: 78%; animation: showIn 0.4s cubic-bezier(0.34, 1.4, 0.64, 1) both; }
+.showOffFrame[data-rarity="common"] { --edge: var(--ui-rarity-common); }
+.showOffFrame[data-rarity="uncommon"] { --edge: var(--ui-rarity-uncommon); }
+.showOffFrame[data-rarity="rare"] { --edge: var(--ui-rarity-rare); }
+.showOffFrame[data-rarity="epic"] { --edge: var(--ui-rarity-epic); }
+.showOffFrame[data-rarity="legendary"] { --edge: var(--ui-rarity-legendary); }
+.showOffFrame[data-rarity="divine"] { box-shadow: none; background: linear-gradient(var(--ui-paper-edge), var(--ui-paper-edge)) padding-box, var(--ui-holo) border-box; border: 2px solid transparent; }
+.showOffName { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 11px/1.2 var(--gui-font); text-align: center; }
+.printed[data-large] .showOffName { font-size: 13px; }
+@keyframes showIn { 0% { scale: 0.5; opacity: 0; } 100% { scale: 1; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .showOffArt { animation: none; } .showOffFrame { transition: none; } }
+.picks { display: grid; gap: 10px; max-width: min(600px, calc(100vw - 48px)); padding: 12px 14px; border-radius: 18px; background: var(--ui-card); color: var(--ui-ink);
+  box-shadow: 0 0 0 1px var(--ui-line), 0 12px 30px rgb(var(--ui-shade) / 0.16); animation: rise 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.12) both; }
+.picksRow { display: flex; gap: 8px; overflow-x: auto; padding: 4px; }
+.picksHint { margin: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font: 600 13px/1.35 var(--gui-font); color: var(--ui-ink-2); }
 .rows { margin: 0; display: grid; gap: 4px; align-content: start; }
 .rows div { display: grid; grid-template-columns: auto 1fr; gap: 6px; align-items: baseline; }
 .rows dt { font: 700 10px/1.2 var(--gui-font); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.6; }

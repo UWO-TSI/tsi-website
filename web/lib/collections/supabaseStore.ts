@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Donation, MemberItem, WeeklyBest } from "./logic";
+import { SHOWCASE_SLOTS, type Donation, type MemberItem, type WeeklyBest } from "./logic";
 import { ROSTER, type Species } from "./roster";
 import { raisePg } from "@/lib/result";
 import { torontoInstant } from "@/lib/time";
@@ -178,8 +178,9 @@ export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
     async showcase(memberId) {
       const { data, error } = await db.from("member_showcase").select("slot, item_key").eq("member_id", memberId);
       if (error) raise(error);
-      const out: (string | null)[] = [null, null, null];
-      for (const r of (data ?? []) as Row[]) out[Number(r.slot) - 1] = String(r.item_key);
+      // One slot now (the show-off on your ID); an old pick in slots 2 and 3 is left out until the next save clears it.
+      const out: (string | null)[] = Array(SHOWCASE_SLOTS).fill(null);
+      for (const r of (data ?? []) as Row[]) if (Number(r.slot) <= SHOWCASE_SLOTS) out[Number(r.slot) - 1] = String(r.item_key);
       return out;
     },
     async setShowcase(memberId, keys) {

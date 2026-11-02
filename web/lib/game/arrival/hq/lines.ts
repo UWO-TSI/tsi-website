@@ -110,7 +110,8 @@ export type FlyTarget = keyof typeof FLY_CARDS;
  * Your island ID (the front desk): Alice asks, prints it and stamps it. What a player card means in a game you share
  * with others (David's v5 review: "remove like where youre from and put stuff thats important in game, like
  * pronouns"): your world name, your pronouns, your birthday (private) and a line about you (`bio`), plus your friend
- * code. Your world name only, never a real name.
+ * code; and (round 6: "have a 1 slot for a cool fish or bug showoff on the id") one fish, sea creature or bug you've
+ * caught, shown off on the card. Your world name only, never a real name.
  */
 export const ID_CARD = {
   eyebrow: "HQ front desk",
@@ -136,6 +137,16 @@ export const ID_CARD = {
   code: "Friend code",
   /** No account to issue one for (signed out, a preview). */
   codeLater: "Issued once you're signed in",
+  showOff: "Show-off",
+  /** The slot while the card's filled in, nothing picked. */
+  showOffPick: "Pick a catch",
+  /** On the printed card, nothing picked. */
+  showOffNone: "Nothing yet",
+  /** Under the picks. */
+  showOffHint: "One fish, sea creature or bug of yours, on your ID for everyone to see.",
+  /** Nothing caught yet (a new arrival). */
+  showOffEmpty: "Your first fish or bug can sit here once you've caught it.",
+  showOffClear: "Leave it empty",
   print: "Print my ID",
   printing: "Printing…",
   stamp: "Resident",

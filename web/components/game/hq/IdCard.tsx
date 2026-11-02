@@ -7,12 +7,19 @@
  * (IdHeadshot: your real avatar). You fill it in on the card itself: your world name, your pronouns, your birthday
  * and a line about you (David's playtest: "ask for stuff that matters"; v5: pronouns in place of where you're from),
  * all profile fields (the world name through /api/identity/name, the rest through PATCH /api/profile; birthday is
- * private, read back only server side). One button under it: Print, and the card slides out of HQ's
+ * private, read back only server side). One slot on its right shows off a fish, sea creature or bug you've caught
+ * (round 6: "have a 1 slot for a cool fish or bug showoff on the id"; /api/collections/showcase): click it while
+ * filling in and your catches come up under the card. One button under it: Print, and the card slides out of HQ's
  * printer and a stamp comes down on it; then Done. Hover it and it leans toward the pointer with a sheen. Only your
- * world name is ever on it. Signed out (a preview) nothing is saved. Copy: lib/game/arrival/hq/lines.ts ID_CARD.
+ * world name is ever on it. Signed out (a preview) nothing is saved. HQ's front desk opens it again later (to change
+ * the show-off or anything else). Copy: lib/game/arrival/hq/lines.ts ID_CARD.
  */
 import { useEffect, useState, type FormEvent } from "react";
-import { CardOverlay, DarkButton, PaperField, PrintedCard, StatusLine } from "@/components/gui/flat";
+import { CardOverlay, DarkButton, GhostButton, PaperField, PrintedCard, ShowOff, ShowOffPicks, StatusLine, Thumb } from "@/components/gui/flat";
+import { apiCall } from "@/lib/apiClient";
+import type { JournalEntryKnown } from "@/lib/collections/logic";
+import { iconUrl } from "@/lib/icons/keys";
+import { fetchJournalPage } from "../JournalPages";
 import { AudioManager } from "@/lib/game/audio";
 import { ID_CARD } from "@/lib/game/arrival/hq/lines";
 import { refreshIdentity } from "@/lib/game/identity";
@@ -22,7 +29,9 @@ import IdHeadshot from "./IdHeadshot";
 /** The print's beats (ms): out of the slot, then the stamp, then Done. */
 const PRINT_MS = 1500, STAMP_MS = 1300;
 type Phase = "form" | "print" | "stamp" | "card";
-interface Answers { name: string; pronouns: string; birthday: string; about: string }
+interface Answers { name: string; pronouns: string; birthday: string; about: string; showOff: string | null }
+/** A catch you could show off (or the one shown). */
+type Catch = Pick<JournalEntryKnown, "key" | "name" | "rarity">;
 
 /** "March 14" from YYYY-MM-DD (the year stays off the card). */
 export const birthdayLabel = (ymd: string) => {
@@ -32,6 +41,7 @@ export const birthdayLabel = (ymd: string) => {
 
 async function save(a: Answers, was: Answers, signedIn: boolean): Promise<boolean> {
   if (!signedIn) return true;
+  if (a.showOff !== was.showOff && !(await apiCall("/api/collections/showcase", "showcase", { items: [a.showOff] }, "PUT").then(() => true, () => false))) return false;
   try {
     if (a.name.trim() && a.name.trim() !== was.name) {
       const n = await fetch("/api/identity/name", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: a.name.trim() }) });
@@ -53,9 +63,24 @@ export default function IdCard({ open, name, signedIn, friendCode, onDone }: {
   onDone: () => void;
 }) {
   const [phase, setPhase] = useState<Phase>("form");
-  const [a, setA] = useState<Answers>({ name: name ?? "", pronouns: "", birthday: "", about: "" });
+  const [a, setA] = useState<Answers>({ name: name ?? "", pronouns: "", birthday: "", about: "", showOff: null });
   const [was, setWas] = useState<Answers>(a);
   const [saved, setSaved] = useState(true);
+  // Your fish, sea creatures and bugs (what the show-off can hold), and whether their picks are up.
+  const [catches, setCatches] = useState<Catch[]>([]);
+  const [picking, setPicking] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    let live = true;
+    void Promise.all((["fish", "sea", "bug"] as const).map(fetchJournalPage)).then(pages => {
+      if (live) setCatches(pages.flatMap(p => (p?.entries ?? []).filter((e): e is JournalEntryKnown => e.discovered)));
+    });
+    void apiCall<({ key: string } | null)[]>("/api/collections/showcase", "showcase").then(s => {
+      const key = s[0]?.key ?? null;
+      if (live) { setA(v => ({ ...v, showOff: key })); setWas(v => ({ ...v, showOff: key })); }
+    }, () => {});
+    return () => { live = false; };
+  }, [open]);
   // What the account already has (another device, an earlier visit).
   useEffect(() => {
     if (!open || !signedIn) return;
@@ -63,7 +88,7 @@ export default function IdCard({ open, name, signedIn, friendCode, onDone }: {
     void fetch("/api/profile").then(r => (r.ok ? r.json() : null)).then((d: { profile?: { pronouns?: string | null; birthday?: string | null; bio?: string | null } } | null) => {
       if (!live || !d?.profile) return;
       const got = { name: name ?? "", pronouns: d.profile.pronouns ?? "", birthday: d.profile.birthday?.slice(0, 10) ?? "", about: d.profile.bio ?? "" };
-      setA(got); setWas(got);
+      setA(v => ({ ...v, ...got })); setWas(v => ({ ...v, ...got }));
     }).catch(() => {});
     return () => { live = false; };
   }, [open, signedIn, name]);
@@ -71,7 +96,7 @@ export default function IdCard({ open, name, signedIn, friendCode, onDone }: {
 
   const print = (e: FormEvent) => {
     e.preventDefault();
-    setPhase("print");
+    setPhase("print"); setPicking(false);
     AudioManager.playSFX("blip1", { rate: 0.8, gain: 0.4 });
     void save(a, was, signedIn).then(ok => { setSaved(ok); if (ok) setWas(a); });
     // The stamper comes down; its thump lands with it (moments.module.css: the hit at 0.3 s).
@@ -95,14 +120,22 @@ export default function IdCard({ open, name, signedIn, friendCode, onDone }: {
     [ID_CARD.name, shownName], [ID_CARD.pronouns, a.pronouns.trim() || ID_CARD.blank], [ID_CARD.birthday, birthdayLabel(a.birthday) || ID_CARD.blank],
     [ID_CARD.about, a.about.trim() || ID_CARD.blank], [ID_CARD.code, <span key="code" data-testid="hq-friend-code">{friendCode ?? ID_CARD.codeLater}</span>],
   ];
+  const shown = catches.find(c => c.key === a.showOff) ?? null;
+  const showOff = <ShowOff label={ID_CARD.showOff} picture={shown ? iconUrl(shown.key) : null} rarity={shown?.rarity} testId="hq-id-showcase"
+    name={shown?.name ?? (form ? ID_CARD.showOffPick : ID_CARD.showOffNone)} onClick={form ? () => setPicking(p => !p) : undefined} open={picking} />;
   return <CardOverlay open={open} label={ID_CARD.title} testId="hq-id" dataset={{ "data-phase": phase }}
     action={form ? <form id="hq-id-form" onSubmit={print}><DarkButton type="submit" data-testid="hq-id-print">{ID_CARD.print}</DarkButton></form>
       : phase === "card" ? <>
         {!saved && <StatusLine error>{ID_CARD.unsaved}</StatusLine>}
-        <DarkButton onClick={() => { setPhase("form"); onDone(); }} autoFocus data-testid="hq-id-done">{ID_CARD.done}</DarkButton>
+        <DarkButton onClick={() => { setPhase("form"); setPicking(false); onDone(); }} autoFocus data-testid="hq-id-done">{ID_CARD.done}</DarkButton>
       </> : null}>
     <PrintedCard large tilt band={ID_CARD.island} kind={ID_CARD.kind} picture={<IdHeadshot />} printing={phase === "print"} testId="hq-id-card"
-      stamp={stamped ? { top: ID_CARD.island, word: ID_CARD.stamp } : null} rows={rows} />
+      stamp={stamped ? { top: ID_CARD.island, word: ID_CARD.stamp } : null} rows={rows} showOff={showOff} />
+    {form && picking && <ShowOffPicks testId="hq-id-picks" hint={catches.length ? ID_CARD.showOffHint : ID_CARD.showOffEmpty}
+      clear={a.showOff && <GhostButton type="button" onClick={() => { setA({ ...a, showOff: null }); setPicking(false); }}>{ID_CARD.showOffClear}</GhostButton>}>
+      {catches.map(c => <Thumb key={c.key} picture={iconUrl(c.key)} rarity={c.rarity} label={c.name} size={56} selected={c.key === a.showOff}
+        onClick={() => { setA({ ...a, showOff: c.key }); setPicking(false); }} />)}
+    </ShowOffPicks>}
     <datalist id="hq-id-pronouns">{ID_CARD.pronounsPicks.map(p => <option key={p} value={p} />)}</datalist>
   </CardOverlay>;
 }
