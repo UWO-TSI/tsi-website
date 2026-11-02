@@ -6,17 +6,26 @@
 import { RARITY_RANK, WING_OF, type Biome, type Category, type Rarity, type Species, type Wing } from "./roster";
 import { torontoParts } from "@/lib/time";
 import { rosterWeather, type IslandWeather } from "@/lib/game/islandWeather";
+import { seasonBlend, seasonsOf, type Season } from "@/lib/game/season";
 
 export interface WorldMoment {
   hour: number; // 0-24 local island time
   month: number; // 1-12
   weather: "clear" | "cloudy" | "rain" | "snow";
+  /** The island's season now and a month on (lib/game/season.ts): what the rod's catches go by. */
+  season: Season;
+  soon: Season;
 }
 
-/** The world moment VillageLife rolls against and the server's rolls check: Toronto hour (mid-hour), month, roster weather. */
+/** The island's season on a date, and a month on from it. */
+export function seasonsAt(now: Date): { season: Season; soon: Season } {
+  return { season: seasonBlend(now).season, soon: seasonBlend(new Date(now.getTime() + 30 * 86_400_000)).season };
+}
+
+/** The world moment VillageLife rolls against and the server's rolls check: Toronto hour (mid-hour), month, season, roster weather. */
 export function momentAt(now: Date, weather: IslandWeather): WorldMoment {
   const { hour, month } = torontoParts(now);
-  return { hour: hour + 0.5, month, weather: rosterWeather(weather) };
+  return { hour: hour + 0.5, month, weather: rosterWeather(weather), ...seasonsAt(now) };
 }
 
 export interface MemberItem {
@@ -39,12 +48,15 @@ export interface Donation {
 
 const inWindow = (h: number, [s, e]: [number, number]) => (s <= e ? h >= s && h < e : h >= s || h < e);
 
-export function inSeason(sp: Pick<Species, "months">, month: number): boolean {
-  return sp.months.length === 0 || sp.months.includes(month);
+/** In season at `m`: the rod's catches by the island's season, everything else by the month. */
+export function inSeason(sp: Pick<Species, "months" | "tool">, m: Pick<WorldMoment, "month" | "season">): boolean {
+  if (sp.tool !== "rod") return sp.months.length === 0 || sp.months.includes(m.month);
+  const on = seasonsOf(sp.months);
+  return on.length === 0 || on.includes(m.season);
 }
 
 export function availableAt(sp: Species, m: WorldMoment): boolean {
-  if (!inSeason(sp, m.month)) return false;
+  if (!inSeason(sp, m)) return false;
   if (sp.weather.length && !sp.weather.includes(m.weather)) return false;
   if (!sp.hours) return true;
   return inWindow(m.hour, sp.hours) || (sp.rainAnyHour && m.weather === "rain");
@@ -52,7 +64,7 @@ export function availableAt(sp: Species, m: WorldMoment): boolean {
 
 /** Not out now, but its window opens before midnight in the current weather and season. */
 export function laterToday(sp: Species, m: WorldMoment): boolean {
-  if (availableAt(sp, m) || !sp.hours || !inSeason(sp, m.month)) return false;
+  if (availableAt(sp, m) || !sp.hours || !inSeason(sp, m)) return false;
   if (sp.weather.length && !sp.weather.includes(m.weather)) return false;
   for (let h = Math.floor(m.hour) + 1; h < 24; h++) if (inWindow(h, sp.hours)) return true;
   return false;
@@ -84,13 +96,20 @@ function monthsLabel(months: number[]): string {
   }
   return runs.map(([a, b]) => (a === b ? MONTHS[a - 1] : `${MONTHS[a - 1]}–${MONTHS[b - 1]}`)).join(", ");
 }
+const SEASON_WORD: Record<Season, string> = { spring: "spring", summer: "summer", autumn: "autumn", winter: "winter" };
+/** "autumn and winter", "all year". */
+export function seasonsLabel(on: readonly Season[]): string {
+  if (!on.length) return "all year";
+  const words = on.map((s) => SEASON_WORD[s]);
+  return words.length > 1 ? `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}` : words[0];
+}
 
 /** Habitat · time · weather · season. Never includes the species name or key. */
 export function clueFor(sp: Species): string {
   const time = sp.hours ? `${hh(sp.hours[0])}–${hh(sp.hours[1])}${sp.rainAnyHour ? " (any hour in rain)" : ""}` : "any time";
   const weather = sp.weather.length ? `only in ${sp.weather.join(" or ")}` : "any weather";
   const size = sp.size && sp.size[1] >= 100 ? " · a big shadow" : sp.size && sp.size[1] <= 6 ? " · a tiny shadow" : "";
-  return `${BIOME_LABEL[sp.biome]} · ${time} · ${weather} · ${monthsLabel(sp.months)}${size}`;
+  return `${BIOME_LABEL[sp.biome]} · ${time} · ${weather} · ${sp.tool === "rod" ? seasonsLabel(seasonsOf(sp.months)) : monthsLabel(sp.months)}${size}`;
 }
 
 // ── Journal pages ───────────────────────────────────────────────────────────
@@ -111,7 +130,7 @@ export interface JournalEntryKnown {
   clue: string;
   available_now: boolean;
   later_today: boolean;
-  /** The seasonal view (d-now): out this month, its last month, or back next month. */
+  /** The seasonal view (d-now): in season now, leaving within the month, or back within the month (a rod catch by its seasons, the rest by month). */
   in_season: boolean;
   leaving: boolean;
   arriving: boolean;
@@ -153,7 +172,7 @@ export function journalPage(roster: Species[], category: Category, mine: MemberI
   const list = speciesInCategory(roster, category);
   const entries = list.map((sp, i): JournalEntryKnown | JournalEntryUnknown => {
     const row = owned.get(sp.key);
-    const shut = closed.has(sp.biome), now = !shut && inSeason(sp, m.month), next = !shut && inSeason(sp, (m.month % 12) + 1);
+    const shut = closed.has(sp.biome), now = !shut && inSeason(sp, m), next = !shut && inSeason(sp, { month: (m.month % 12) + 1, season: m.soon });
     const base = { slot: i + 1, clue: clueFor(sp), available_now: !shut && availableAt(sp, m), later_today: !shut && laterToday(sp, m), in_season: now, leaving: now && !next, arriving: !now && next, closed: shut };
     if (!row) return { ...base, discovered: false, silhouette: `/api/collections/silhouette/${category}/${i + 1}` };
     const d = donated.get(sp.key);
@@ -234,7 +253,7 @@ export function momentFrom(url: URL, now: Date) {
   const hour = url.searchParams.has("hour") && hourParam >= 0 && hourParam < 24 ? hourParam : t.hour;
   const w = url.searchParams.get("weather");
   const weather = w === "rain" || w === "snow" || w === "cloudy" ? w : "clear";
-  return { hour, month: t.month, weather } as const;
+  return { hour, month: t.month, weather, ...seasonsAt(now) } as const;
 }
 
 /** Monday 00:00 in America/Toronto, as YYYY-MM-DD (matches 031's SQL). */

@@ -10,6 +10,7 @@ import { torontoParts } from "@/lib/time";
 import { DROPS } from "@/lib/game/drops";
 import { CATALOGUE, EVENT_ITEMS, OWNERSHIP_ITEMS, onSale, SELL_PRICES, SETTINGS, type ShopCategory, type Slot, type Tier, FISH_CHEF_PAY, FISH_TASK_PAY, FISH_TASK_VARIETY, STAFF_MEAL, type MealBuff } from "./catalogue";
 import { fishOutToday } from "@/lib/game/peaceful";
+import { seasonBlend } from "@/lib/game/season";
 import type { WaterType } from "@/lib/game/fishingSpots";
 import type { InventoryRow } from "./store";
 
@@ -140,7 +141,7 @@ export function fishingTasks(day: string, week: string, waters: readonly WaterTy
 
 /** The fish of these rarities biting that day in `waters`, paying `pay` times their price, in key order. */
 function requestable(day: string, waters: readonly WaterType[], rarities: readonly string[], pay: number): FishRequest[] {
-  return fishOutToday(waters, Number(day.slice(5, 7))).flatMap(({ fish }) => {
+  return fishOutToday(waters, seasonBlend(new Date(`${day}T17:00:00Z`)).season).flatMap(({ fish }) => {
     const cls = speciesClass(fish.key), price = cls && speciesSellPrice(fish.key);
     return cls && price && rarities.includes(cls.rarity) ? [{ item_key: fish.key, name: fish.name, rarity: cls.rarity, reward: price * pay }] : [];
   }).sort((a, b) => a.item_key.localeCompare(b.item_key));
@@ -153,6 +154,29 @@ export function chefOrder(day: string, waters: readonly WaterType[]): (FishReque
   const asked = new Set(fishingTasks(day, day, waters).day.map((f) => f.item_key));
   const pool = requestable(day, waters, ["rare", "epic"], FISH_CHEF_PAY).filter((f) => !asked.has(f.item_key));
   return pool.length ? { ...pool[Math.floor(seededRandom(fnv1a(`chef-order:${day}`))() * pool.length)], meal: STAFF_MEAL } : null;
+}
+
+export interface SellEntry {
+  item_key: string;
+  name: string;
+  category: string;
+  rarity: string;
+  count: number;
+  price_each: number;
+  /** Locked in the bag: shown, never sold (unlock it in the bag first). */
+  locked: boolean;
+}
+const FISH_NAME = new Map(FISH.map((f) => [f.key, f.name]));
+/** What the fish market buys from these bag rows, dearest first (the server's sell list; the market's first frame from the bag the client already has). */
+export function sellRows(rows: readonly { item_key: string; count: number; locked?: boolean }[]): SellEntry[] {
+  return rows
+    .flatMap((r) => {
+      const cls = speciesClass(r.item_key), price = speciesSellPrice(r.item_key);
+      if (!cls || !price || r.count <= 0) return [];
+      const name = ROSTER.find((s) => s.key === r.item_key)?.name ?? FISH_NAME.get(r.item_key) ?? r.item_key;
+      return [{ item_key: r.item_key, name, category: cls.category, rarity: cls.rarity, count: r.count, price_each: price, locked: r.locked === true }];
+    })
+    .sort((a, b) => b.price_each - a.price_each || a.name.localeCompare(b.name));
 }
 
 /** What one of this item sells for: its roster price when set, else its category and rarity's (economy_sell, 20261027180000_species_sell_price.sql). */

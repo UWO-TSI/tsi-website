@@ -38,6 +38,16 @@
   --ui-water: #1c3240;
   --ui-water-line: #3f6c82;
   --ui-water-deep: #5cc0de;
+  /* Condition colours (the catch board's chips, the seasons, the water signs): one hue each. */
+  --ui-tint-rose: #f19ab4;
+  --ui-tint-sun: #f5c24a;
+  --ui-tint-amber: #f08f4a;
+  --ui-tint-ice: #84c4ea;
+  --ui-tint-sky: #67b6ee;
+  --ui-tint-rain: #7894cc;
+  --ui-tint-mist: #a9b2bb;
+  --ui-tint-leaf: #62c4aa;
+  --ui-tint-night: #8186d6;
   /* Paper, the material (the design bible's rule 2: only for things that are paper in the world: a printed card, a letter). */
   --ui-paper: #efe8d8;
   --ui-paper-edge: #cfc3a8;

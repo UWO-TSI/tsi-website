@@ -10,6 +10,20 @@ export type Season = "spring" | "summer" | "autumn" | "winter";
 export const SEASONS: readonly Season[] = ["spring", "summer", "autumn", "winter"];
 export const SEASON_BLEND_DAYS = 14;
 
+/** The months of each season as the roster writes them (spring is March to May). */
+export const SEASON_MONTHS: Record<Season, readonly number[]> = { spring: [3, 4, 5], summer: [6, 7, 8], autumn: [9, 10, 11], winter: [12, 1, 2] };
+/**
+ * A species' seasons from its roster months, [] for all year: a season counts when it has two of its three months, and
+ * a species with no more than one month in any season keeps the seasons it touches (David, 2026-11-01: "i want it fish
+ * to be in seasons and not monthly").
+ */
+export function seasonsOf(months: readonly number[]): Season[] {
+  if (!months.length) return [];
+  const has = (s: Season) => SEASON_MONTHS[s].filter(m => months.includes(m)).length, most = Math.max(...SEASONS.map(has));
+  const on = SEASONS.filter(s => has(s) >= Math.min(2, most));
+  return on.length === SEASONS.length ? [] : on;
+}
+
 const STARTS: { season: Season; month: number; day: number }[] = [
   { season: "spring", month: 3, day: 20 },
   { season: "summer", month: 6, day: 21 },
@@ -17,6 +31,12 @@ const STARTS: { season: Season; month: number; day: number }[] = [
   { season: "winter", month: 12, day: 21 },
 ];
 const DAY = 86_400_000;
+
+/** The next season and the day it starts, in Toronto (the catch board's "Winter on Dec 21"). */
+export function nextSeason(date = new Date()): { season: Season; month: number; day: number } {
+  const t = torontoParts(date), today = t.month * 100 + t.day;
+  return STARTS.find(s => s.month * 100 + s.day > today) ?? STARTS[0];
+}
 
 /** Calendar date in Toronto, as a UTC-midnight timestamp (DST-proof day arithmetic). */
 function torontoDay(date: Date): number {

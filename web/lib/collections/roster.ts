@@ -18,6 +18,7 @@
  * (specs/tools/catalogue-editor), applied by scripts/apply-species.mjs.
  */
 import { DROPS } from "@/lib/game/drops";
+import { SEASON_MONTHS, type Season } from "@/lib/game/season";
 export type Category = "fish" | "sea" | "bug" | "fruit" | "nature" | "mineral";
 import { RARITIES, type Rarity } from "@/lib/rarity";
 export type { Rarity } from "@/lib/rarity";
@@ -59,7 +60,8 @@ const MIDDAY: [number, number] = [9, 16];
 const EVE_NIGHT: [number, number] = [16, 9];
 const LATE: [number, number] = [21, 4];
 const AUTUMN = [9, 10, 11];
-const SPRING_AUTUMN = [3, 4, 5, 6, 9, 10, 11];
+/** A rod catch's months: whole seasons (David, 2026-11-01: "i want it fish to be in seasons and not monthly"). */
+const seasons = (...on: Season[]) => on.flatMap(s => SEASON_MONTHS[s]);
 
 type Row = [key: string, name: string, biome: Biome, rarity: Rarity, size: [number, number] | null, hours: [number, number] | null, extra?: Partial<Species>];
 let pos = 0;
@@ -79,46 +81,46 @@ const FISH_ROWS: Row[] = [
   // river
   ["fish_dace", "Dace", "river", "common", [10, 18], null, { oneLiner: "A dependable little river fish." }],
   ["fish_pale_chub", "Pale Chub", "river", "common", [8, 14], DAY, { oneLiner: "Pale, quick and everywhere in daylight." }],
-  ["fish_loach", "Loach", "river", "common", [12, 20], null, { months: [3, 4, 5], oneLiner: "Whiskers first, then the rest of it." }],
+  ["fish_loach", "Loach", "river", "common", [12, 20], null, { months: seasons("spring"), oneLiner: "Whiskers first, then the rest of it." }],
   ["fish_freshwater_goby", "Freshwater Goby", "river", "common", [10, 15], NIGHT, { oneLiner: "Comes out when the lamps come on." }],
-  ["fish_sweetfish", "Sweetfish", "river", "uncommon", [18, 30], null, { months: [7, 8, 9], oneLiner: "Smells faintly of melon. Really." }],
-  ["fish_salmon", "Salmon", "river", "uncommon", [50, 80], null, { months: AUTUMN, oneLiner: "Headed upstream, like the rest of us in October." }],
-  ["fish_rainbow_trout", "Rainbow Trout", "river", "uncommon", [30, 50], [5, 19], { months: SPRING_AUTUMN, oneLiner: "Every colour, all at once." }],
-  ["fish_yamame_trout", "Yamame Trout", "river", "uncommon", [20, 35], null, { months: SPRING_AUTUMN, oneLiner: "Spotted along the flanks like river pebbles." }],
+  ["fish_sweetfish", "Sweetfish", "river", "uncommon", [18, 30], null, { months: seasons("summer"), oneLiner: "Smells faintly of melon. Really." }],
+  ["fish_salmon", "Salmon", "river", "uncommon", [50, 80], null, { months: seasons("autumn"), oneLiner: "Headed upstream, like the rest of us in October." }],
+  ["fish_rainbow_trout", "Rainbow Trout", "river", "uncommon", [30, 50], [5, 19], { months: seasons("spring", "autumn"), oneLiner: "Every colour, all at once." }],
+  ["fish_yamame_trout", "Yamame Trout", "river", "uncommon", [20, 35], null, { months: seasons("spring", "autumn"), oneLiner: "Spotted along the flanks like river pebbles." }],
   ["fish_black_bass", "Black Bass", "river", "rare", [30, 55], null, { oneLiner: "Put up a real fight." }],
-  ["fish_pike", "Pike", "river", "rare", [50, 90], null, { months: [9, 10, 11, 12], oneLiner: "All teeth and patience." }],
+  ["fish_pike", "Pike", "river", "rare", [50, 90], null, { months: seasons("autumn"), oneLiner: "All teeth and patience." }],
   ["fish_snakehead", "Snakehead", "river", "rare", [40, 90], MIDDAY, { oneLiner: "Breathes air when it feels like it." }],
   ["fish_catfish", "Catfish", "river", "epic", [50, 110], NIGHT, { rainAnyHour: true, oneLiner: "Whiskers the size of a bookmark." }],
-  ["fish_king_salmon", "King Salmon", "river", "epic", [70, 120], null, { months: [9], oneLiner: "The heaviest thing in the river in September." }],
+  ["fish_king_salmon", "King Salmon", "river", "epic", [70, 120], null, { months: seasons("autumn"), oneLiner: "The heaviest thing in the river in September." }],
   // pond
-  ["fish_bitterling", "Bitterling", "pond", "common", [5, 10], null, { months: [11, 12, 1, 2, 3], oneLiner: "Small and a little shiny." }],
-  ["fish_killifish", "Killifish", "pond", "common", [3, 5], [6, 20], { months: [4, 5, 6, 7, 8], oneLiner: "Tiny, but it counts." }],
-  ["fish_tadpole", "Tadpole", "pond", "common", [3, 5], null, { months: [3, 4, 5, 6, 7], oneLiner: "Will be a frog by next month." }],
-  ["fish_frog", "Frog", "pond", "common", [5, 10], null, { months: [5, 6, 7, 8], oneLiner: "Not technically a fish. Donate it anyway." }],
+  ["fish_bitterling", "Bitterling", "pond", "common", [5, 10], null, { months: seasons("winter"), oneLiner: "Small and a little shiny." }],
+  ["fish_killifish", "Killifish", "pond", "common", [3, 5], [6, 20], { months: seasons("spring", "summer"), oneLiner: "Tiny, but it counts." }],
+  ["fish_tadpole", "Tadpole", "pond", "common", [3, 5], null, { months: seasons("spring", "summer"), oneLiner: "Will be a frog by next month." }],
+  ["fish_frog", "Frog", "pond", "common", [5, 10], null, { months: seasons("summer"), oneLiner: "Not technically a fish. Donate it anyway." }],
   ["fish_crucian_carp", "Crucian Carp", "pond", "uncommon", [15, 30], null, { oneLiner: "A pond regular." }],
   ["fish_goldfish", "Goldfish", "pond", "uncommon", [8, 15], null, { oneLiner: "Someone's old pet, living its best life." }],
   ["fish_carp", "Carp", "pond", "uncommon", [35, 70], null, { oneLiner: "Big, calm, unbothered." }],
   ["fish_bluegill", "Bluegill", "pond", "uncommon", [12, 22], MIDDAY, { oneLiner: "Blue cheeks, bright afternoons." }],
-  ["fish_snapping_turtle", "Snapping Turtle", "pond", "rare", [20, 35], NIGHT, { months: [4, 5, 6, 7, 8, 9, 10], oneLiner: "Keep fingers clear." }],
+  ["fish_snapping_turtle", "Snapping Turtle", "pond", "rare", [20, 35], NIGHT, { months: seasons("spring", "summer", "autumn"), oneLiner: "Keep fingers clear." }],
   ["fish_golden_koi", "Golden Koi", "pond", "epic", [60, 95], null, { oneLiner: "The pond's quiet celebrity." }],
   // cliff pools
-  ["fish_char", "Char", "cliff_pool", "rare", [40, 60], null, { months: SPRING_AUTUMN, oneLiner: "Cold water, clear head." }],
-  ["fish_gar", "Gar", "cliff_pool", "epic", [90, 150], EVE_NIGHT, { rainAnyHour: true, months: [6, 7, 8, 9], oneLiner: "Older than the dinosaurs, and looks it." }],
-  ["fish_golden_trout", "Golden Trout", "cliff_pool", "epic", [40, 60], null, { months: [3, 4, 5, 9, 10, 11], oneLiner: "Glows like the last hour of daylight." }],
-  ["fish_stringfish", "Stringfish", "cliff_pool", "epic", [80, 130], LATE, { rainAnyHour: true, months: [12, 1, 2, 3], oneLiner: "Long, pale and very rare." }],
+  ["fish_char", "Char", "cliff_pool", "rare", [40, 60], null, { months: seasons("spring", "autumn"), oneLiner: "Cold water, clear head." }],
+  ["fish_gar", "Gar", "cliff_pool", "epic", [90, 150], EVE_NIGHT, { rainAnyHour: true, months: seasons("summer"), oneLiner: "Older than the dinosaurs, and looks it." }],
+  ["fish_golden_trout", "Golden Trout", "cliff_pool", "epic", [40, 60], null, { months: seasons("spring", "autumn"), oneLiner: "Glows like the last hour of daylight." }],
+  ["fish_stringfish", "Stringfish", "cliff_pool", "epic", [80, 130], LATE, { rainAnyHour: true, months: seasons("winter"), oneLiner: "Long, pale and very rare." }],
   // sea (beach and pier)
   ["fish_anchovy", "Anchovy", "sea", "common", [10, 15], DAY, { oneLiner: "Comes in a crowd." }],
   ["fish_horse_mackerel", "Horse Mackerel", "sea", "common", [20, 40], null, { oneLiner: "The pier's bread and butter." }],
   ["fish_sea_bass", "Sea Bass", "sea", "common", [50, 90], null, { oneLiner: "No, it's at least a C+." }],
-  ["fish_squid", "Squid", "sea", "common", [20, 40], null, { months: [12, 1, 2, 3, 4, 5, 6, 7, 8], oneLiner: "Eight arms, zero regrets." }],
+  ["fish_squid", "Squid", "sea", "common", [20, 40], null, { months: seasons("spring", "summer", "winter"), oneLiner: "Eight arms, zero regrets." }],
   ["fish_olive_flounder", "Olive Flounder", "sea", "uncommon", [40, 80], null, { oneLiner: "Both eyes on one side, always watching." }],
   ["fish_red_snapper", "Red Snapper", "sea", "uncommon", [30, 60], null, { oneLiner: "The colour of a good sunset." }],
-  ["fish_blowfish", "Blowfish", "sea", "uncommon", [20, 40], NIGHT, { months: [11, 12, 1, 2], oneLiner: "Please don't squeeze it." }],
-  ["fish_barred_knifejaw", "Barred Knifejaw", "sea", "uncommon", [30, 50], null, { months: [3, 4, 5, 6, 7, 8, 9, 10, 11], oneLiner: "Striped like a club hoodie." }],
-  ["fish_ray", "Ray", "sea", "rare", [100, 200], DAY, { months: [8, 9, 10, 11], oneLiner: "Glides like it has somewhere to be." }],
-  ["fish_mahi_mahi", "Mahi-mahi", "sea", "rare", [80, 140], null, { months: [6, 7, 8, 9], oneLiner: "So good they named it twice." }],
-  ["fish_football_fish", "Football Fish", "sea", "rare", [30, 60], NIGHT, { months: [11, 12, 1, 2, 3], oneLiner: "Brings its own lamp." }],
-  ["fish_tuna", "Tuna", "sea", "epic", [150, 250], null, { months: [11, 12, 1, 2, 3, 4], oneLiner: "Built like a torpedo." }],
+  ["fish_blowfish", "Blowfish", "sea", "uncommon", [20, 40], NIGHT, { months: seasons("winter"), oneLiner: "Please don't squeeze it." }],
+  ["fish_barred_knifejaw", "Barred Knifejaw", "sea", "uncommon", [30, 50], null, { months: seasons("spring", "summer", "autumn"), oneLiner: "Striped like a club hoodie." }],
+  ["fish_ray", "Ray", "sea", "rare", [100, 200], DAY, { months: seasons("autumn"), oneLiner: "Glides like it has somewhere to be." }],
+  ["fish_mahi_mahi", "Mahi-mahi", "sea", "rare", [80, 140], null, { months: seasons("summer"), oneLiner: "So good they named it twice." }],
+  ["fish_football_fish", "Football Fish", "sea", "rare", [30, 60], NIGHT, { months: seasons("winter"), oneLiner: "Brings its own lamp." }],
+  ["fish_tuna", "Tuna", "sea", "epic", [150, 250], null, { months: seasons("spring", "winter"), oneLiner: "Built like a torpedo." }],
   ["fish_coelacanth", "Coelacanth", "sea", "epic", [120, 180], NIGHT, { weather: ["rain"], oneLiner: "A living fossil that only shows up on rainy nights." }],
 ];
 
@@ -219,14 +221,11 @@ export const LAUNCH_ROSTER: Species[] = [
  * 20260929120000_seasonal_events.sql.
  */
 export const EVENT_SPECIES: Species[] = make("fish", "rod", "aquarium", [
-  ["fish_yellow_perch", "Yellow Perch", "river", "common", [20, 30], null, { months: [9], oneLiner: "Tourney season's favourite. Striped like the leaves." }],
-  ["fish_sturgeon", "Sturgeon", "river", "epic", [100, 200], null, { months: [9], oneLiner: "Older than the lake. Only surfaces for the tourney." }],
-  ["fish_giant_trevally", "Giant Trevally", "sea", "rare", [80, 150], null, { months: [9], oneLiner: "Hits the line like it has a grudge." }],
+  ["fish_yellow_perch", "Yellow Perch", "river", "common", [20, 30], null, { months: seasons("autumn"), oneLiner: "Tourney season's favourite. Striped like the leaves." }],
+  ["fish_sturgeon", "Sturgeon", "river", "epic", [100, 200], null, { months: seasons("autumn"), oneLiner: "Older than the lake. Only surfaces for the tourney." }],
+  ["fish_giant_trevally", "Giant Trevally", "sea", "rare", [80, 150], null, { months: seasons("autumn"), oneLiner: "Hits the line like it has a grudge." }],
 ], { model: null });
 
-const SUMMER = [6, 7, 8, 9];
-const WARM = [4, 5, 6, 7, 8, 9];
-const APR_NOV = [4, 5, 6, 7, 8, 9, 10, 11];
 /**
  * The reel's other catches (row 260: every fish the reel can land is on the
  * roster). Rarity, size and hours are the reel's own (FISH); months are the
@@ -236,46 +235,46 @@ const APR_NOV = [4, 5, 6, 7, 8, 9, 10, 11];
  */
 export const REEL_FISH: Species[] = make("fish", "rod", "aquarium", [
   // river
-  ["fish_pond_smelt", "Pond Smelt", "river", "common", [6, 10], null, { months: [12, 1, 2], oneLiner: "Bites best when the water is cold enough to hurt." }],
-  ["fish_guppy", "Guppy", "river", "common", [3, 5], DAY, { months: APR_NOV, oneLiner: "A splash of colour the size of a fingertip." }],
-  ["fish_neon_tetra", "Neon Tetra", "river", "common", [3, 4], DAY, { months: APR_NOV, oneLiner: "Lit up blue and red like a shop sign." }],
-  ["fish_angelfish", "Angelfish", "river", "uncommon", [8, 12], null, { months: [5, 6, 7, 8, 9, 10], oneLiner: "Tall, thin and very composed." }],
-  ["fish_betta", "Betta", "river", "uncommon", [6, 8], DAY, { months: [5, 6, 7, 8, 9, 10], oneLiner: "Small fins, big attitude." }],
-  ["fish_doctor_fish", "Doctor Fish", "river", "uncommon", [15, 25], null, { months: [5, 6, 7, 8, 9], oneLiner: "Will nibble your toes if you let it." }],
-  ["fish_tilapia", "Tilapia", "river", "uncommon", [25, 40], null, { months: [6, 7, 8, 9, 10], oneLiner: "Plain, sturdy and always hungry." }],
-  ["fish_soft_shelled_turtle", "Soft-shelled Turtle", "river", "uncommon", [20, 35], null, { months: [8, 9], oneLiner: "A pancake with a snorkel." }],
-  ["fish_mitten_crab", "Mitten Crab", "river", "uncommon", [10, 18], null, { months: [9, 10, 11], oneLiner: "Wears fuzzy gloves all year." }],
-  ["fish_piranha", "Piranha", "river", "rare", [25, 40], DAY, { months: SUMMER, oneLiner: "Mind the teeth when you unhook it." }],
-  ["fish_bichir", "Bichir", "river", "rare", [40, 70], NIGHT, { months: SUMMER, oneLiner: "Armoured, ancient and in no hurry." }],
-  ["fish_arowana", "Arowana", "river", "epic", [60, 90], NIGHT, { months: SUMMER, oneLiner: "Leaps out of the water for bugs." }],
-  ["fish_dorado", "Dorado", "river", "epic", [70, 100], DAY, { months: SUMMER, oneLiner: "A gold streak that pulls like the current." }],
-  ["fish_arapaima", "Arapaima", "river", "epic", [150, 300], EVE_NIGHT, { rainAnyHour: true, months: SUMMER, oneLiner: "Longer than the canoe. Bring a friend." }],
-  ["fish_golden_arowana", "Golden Arowana", "river", "epic", [70, 100], NIGHT, { months: SUMMER, oneLiner: "Gold scales, and it knows it." }],
+  ["fish_pond_smelt", "Pond Smelt", "river", "common", [6, 10], null, { months: seasons("winter"), oneLiner: "Bites best when the water is cold enough to hurt." }],
+  ["fish_guppy", "Guppy", "river", "common", [3, 5], DAY, { months: seasons("spring", "summer", "autumn"), oneLiner: "A splash of colour the size of a fingertip." }],
+  ["fish_neon_tetra", "Neon Tetra", "river", "common", [3, 4], DAY, { months: seasons("spring", "summer", "autumn"), oneLiner: "Lit up blue and red like a shop sign." }],
+  ["fish_angelfish", "Angelfish", "river", "uncommon", [8, 12], null, { months: seasons("summer", "autumn"), oneLiner: "Tall, thin and very composed." }],
+  ["fish_betta", "Betta", "river", "uncommon", [6, 8], DAY, { months: seasons("summer", "autumn"), oneLiner: "Small fins, big attitude." }],
+  ["fish_doctor_fish", "Doctor Fish", "river", "uncommon", [15, 25], null, { months: seasons("summer"), oneLiner: "Will nibble your toes if you let it." }],
+  ["fish_tilapia", "Tilapia", "river", "uncommon", [25, 40], null, { months: seasons("summer", "autumn"), oneLiner: "Plain, sturdy and always hungry." }],
+  ["fish_soft_shelled_turtle", "Soft-shelled Turtle", "river", "uncommon", [20, 35], null, { months: seasons("summer", "autumn"), oneLiner: "A pancake with a snorkel." }],
+  ["fish_mitten_crab", "Mitten Crab", "river", "uncommon", [10, 18], null, { months: seasons("autumn"), oneLiner: "Wears fuzzy gloves all year." }],
+  ["fish_piranha", "Piranha", "river", "rare", [25, 40], DAY, { months: seasons("summer"), oneLiner: "Mind the teeth when you unhook it." }],
+  ["fish_bichir", "Bichir", "river", "rare", [40, 70], NIGHT, { months: seasons("summer"), oneLiner: "Armoured, ancient and in no hurry." }],
+  ["fish_arowana", "Arowana", "river", "epic", [60, 90], NIGHT, { months: seasons("summer"), oneLiner: "Leaps out of the water for bugs." }],
+  ["fish_dorado", "Dorado", "river", "epic", [70, 100], DAY, { months: seasons("summer"), oneLiner: "A gold streak that pulls like the current." }],
+  ["fish_arapaima", "Arapaima", "river", "epic", [150, 300], EVE_NIGHT, { rainAnyHour: true, months: seasons("summer"), oneLiner: "Longer than the canoe. Bring a friend." }],
+  ["fish_golden_arowana", "Golden Arowana", "river", "epic", [70, 100], NIGHT, { months: seasons("summer"), oneLiner: "Gold scales, and it knows it." }],
   // pond
-  ["fish_crayfish", "Crayfish", "pond", "common", [5, 12], null, { months: WARM, oneLiner: "Backs away from you, claws up." }],
+  ["fish_crayfish", "Crayfish", "pond", "common", [5, 12], null, { months: seasons("spring", "summer"), oneLiner: "Backs away from you, claws up." }],
   ["fish_pop_eyed_goldfish", "Pop-eyed Goldfish", "pond", "uncommon", [8, 12], null, { oneLiner: "Sees everything and is startled by all of it." }],
   ["fish_ranchu_goldfish", "Ranchu Goldfish", "pond", "uncommon", [10, 15], null, { oneLiner: "Round, slow and proud of its head." }],
   // sea
-  ["fish_sea_butterfly", "Sea Butterfly", "sea", "common", [2, 4], null, { months: [12, 1, 2, 3], oneLiner: "A snail that learned to fly underwater." }],
-  ["fish_clown_fish", "Clown Fish", "sea", "common", [8, 12], null, { months: WARM, oneLiner: "Lives in an anemone and pays no rent." }],
-  ["fish_surgeonfish", "Surgeonfish", "sea", "common", [15, 25], null, { months: WARM, oneLiner: "Blue, busy and a little sharp at the tail." }],
-  ["fish_dab", "Dab", "sea", "common", [25, 45], null, { months: [10, 11, 12, 1, 2, 3, 4], oneLiner: "Flat, sandy and easy to miss." }],
-  ["fish_seahorse", "Seahorse", "sea", "uncommon", [3, 6], null, { months: APR_NOV, oneLiner: "Dad carries the eggs." }],
-  ["fish_butterfly_fish", "Butterfly Fish", "sea", "uncommon", [10, 15], null, { months: WARM, oneLiner: "Dressed in stripes for a party." }],
-  ["fish_porcupine_fish", "Porcupine Fish", "sea", "uncommon", [20, 35], null, { months: [7, 8, 9], oneLiner: "Spikes out at the first sign of trouble." }],
-  ["fish_zebra_turkeyfish", "Zebra Turkeyfish", "sea", "uncommon", [25, 40], null, { months: APR_NOV, oneLiner: "Beautiful fins. Don't touch them." }],
-  ["fish_suckerfish", "Suckerfish", "sea", "uncommon", [30, 60], null, { months: SUMMER, oneLiner: "Rides along with sharks for free." }],
-  ["fish_ribbon_eel", "Ribbon Eel", "sea", "uncommon", [60, 100], null, { months: [6, 7, 8, 9, 10], oneLiner: "A streamer with a face." }],
-  ["fish_moray_eel", "Moray Eel", "sea", "uncommon", [60, 100], null, { months: [8, 9, 10], oneLiner: "Grins at you from a crack in the rock." }],
+  ["fish_sea_butterfly", "Sea Butterfly", "sea", "common", [2, 4], null, { months: seasons("winter"), oneLiner: "A snail that learned to fly underwater." }],
+  ["fish_clown_fish", "Clown Fish", "sea", "common", [8, 12], null, { months: seasons("spring", "summer"), oneLiner: "Lives in an anemone and pays no rent." }],
+  ["fish_surgeonfish", "Surgeonfish", "sea", "common", [15, 25], null, { months: seasons("spring", "summer"), oneLiner: "Blue, busy and a little sharp at the tail." }],
+  ["fish_dab", "Dab", "sea", "common", [25, 45], null, { months: seasons("spring", "autumn", "winter"), oneLiner: "Flat, sandy and easy to miss." }],
+  ["fish_seahorse", "Seahorse", "sea", "uncommon", [3, 6], null, { months: seasons("spring", "summer", "autumn"), oneLiner: "Dad carries the eggs." }],
+  ["fish_butterfly_fish", "Butterfly Fish", "sea", "uncommon", [10, 15], null, { months: seasons("spring", "summer"), oneLiner: "Dressed in stripes for a party." }],
+  ["fish_porcupine_fish", "Porcupine Fish", "sea", "uncommon", [20, 35], null, { months: seasons("summer"), oneLiner: "Spikes out at the first sign of trouble." }],
+  ["fish_zebra_turkeyfish", "Zebra Turkeyfish", "sea", "uncommon", [25, 40], null, { months: seasons("spring", "summer", "autumn"), oneLiner: "Beautiful fins. Don't touch them." }],
+  ["fish_suckerfish", "Suckerfish", "sea", "uncommon", [30, 60], null, { months: seasons("summer"), oneLiner: "Rides along with sharks for free." }],
+  ["fish_ribbon_eel", "Ribbon Eel", "sea", "uncommon", [60, 100], null, { months: seasons("summer", "autumn"), oneLiner: "A streamer with a face." }],
+  ["fish_moray_eel", "Moray Eel", "sea", "uncommon", [60, 100], null, { months: seasons("autumn"), oneLiner: "Grins at you from a crack in the rock." }],
   ["fish_barreleye", "Barreleye", "sea", "epic", [10, 15], NIGHT, { oneLiner: "You can see right through its head." }],
-  ["fish_napoleonfish", "Napoleonfish", "sea", "epic", [100, 180], DAY, { months: [7, 8], oneLiner: "Wears a bump on its head like a hat." }],
-  ["fish_saw_shark", "Saw Shark", "sea", "epic", [120, 200], NIGHT, { months: SUMMER, oneLiner: "Brings its own toolbox." }],
-  ["fish_ocean_sunfish", "Ocean Sunfish", "sea", "epic", [150, 300], null, { months: [7, 8, 9], oneLiner: "Basks at the surface like a dropped dinner plate." }],
-  ["fish_blue_marlin", "Blue Marlin", "sea", "epic", [200, 350], null, { months: [7, 8, 9, 11, 12, 1, 2, 3, 4], oneLiner: "The sword is not for show." }],
-  ["fish_oarfish", "Oarfish", "sea", "epic", [300, 500], null, { months: [12, 1, 2, 3, 4, 5], oneLiner: "Long enough to need its own postcode." }],
-  ["fish_great_white_shark", "Great White Shark", "sea", "epic", [300, 500], null, { months: SUMMER, oneLiner: "You're going to need a bigger pier." }],
-  ["fish_whale_shark", "Whale Shark", "sea", "epic", [400, 800], null, { months: SUMMER, oneLiner: "Gentle, spotted and longer than the pier." }],
-  ["fish_hammerhead_shark", "Hammerhead Shark", "sea", "epic", [180, 350], null, { months: SUMMER, oneLiner: "Sees both sides of every argument." }],
+  ["fish_napoleonfish", "Napoleonfish", "sea", "epic", [100, 180], DAY, { months: seasons("summer"), oneLiner: "Wears a bump on its head like a hat." }],
+  ["fish_saw_shark", "Saw Shark", "sea", "epic", [120, 200], NIGHT, { months: seasons("summer"), oneLiner: "Brings its own toolbox." }],
+  ["fish_ocean_sunfish", "Ocean Sunfish", "sea", "epic", [150, 300], null, { months: seasons("summer"), oneLiner: "Basks at the surface like a dropped dinner plate." }],
+  ["fish_blue_marlin", "Blue Marlin", "sea", "epic", [200, 350], null, { oneLiner: "The sword is not for show." }],
+  ["fish_oarfish", "Oarfish", "sea", "epic", [300, 500], null, { months: seasons("spring", "winter"), oneLiner: "Long enough to need its own postcode." }],
+  ["fish_great_white_shark", "Great White Shark", "sea", "epic", [300, 500], null, { months: seasons("summer"), oneLiner: "You're going to need a bigger pier." }],
+  ["fish_whale_shark", "Whale Shark", "sea", "epic", [400, 800], null, { months: seasons("summer"), oneLiner: "Gentle, spotted and longer than the pier." }],
+  ["fish_hammerhead_shark", "Hammerhead Shark", "sea", "epic", [180, 350], null, { months: seasons("summer"), oneLiner: "Sees both sides of every argument." }],
 ], { model: null });
 
 /**

@@ -104,6 +104,17 @@ Evidence in `specs/evidence/fishing-depth/r4/` (before and after, desktop and ph
 
 ## David's decisions
 
+- 2026-11-01, round 4 review. Approved with no note: f4-cover, f4-phone, f4-picked, f4-sold, f4-spread-2.
+  - f4-board (redo): "the top left ui is what i had in mindm but i want like make more intuitive and colors" (the season, weather and time-of-day chips on the catch board sheet).
+  - f4-board-hover (redo): "i want it fish to be in seasons and not monthly remove the jfma monthly icons".
+  - f4-board-world (redo): "wrong location it now blocks the sell bin, i want you place it to the right side of the stands, to left side of the fish shot and faced towards the deck area. remodel this board so its better more eye catching, i also want a very faint glow and circle around when close enough to interact with a interactable object like the sell stand". (The glow and circle are the polish lane's, shared through the `near` path.)
+  - f4-board-close, f4-board-far (redo, no note). f4-spots (redo): "neither, c is the closest". f4-spots-grass (redo, no note).
+  - f4-cover-line (approve): "3".
+  - f4-showroom (redo): "no the explination just ruined the ui".
+  - f4-sell (approve): "the sell should be instant and no loading required so selling feels good for the ux".
+  - f4-signs (approve): the mock of river, pond, sea and deep sea signs; approving meant build them for the shores.
+  - f4-spread-1 (approve): "the food needs to be redone, needs to be 3d modeled on meshi.ai and imported to blender and then 2d render for picture and 3d for the actual food on a plate".
+  - f4-mechanic: the tasting book, built by its own lane `tasting-book` (branch `game/tasting-book`, cut from 0db249b4). This lane keeps out of the counter and the menu's back pages; that lane stays out of `wharf.ts` and the catch board.
 - 2026-10-29, round 2 review: board "Looks so much better  include season and condition too, this is what im talking about". board-world "remodle the catch board and make it bigger, put it somewhere where it makes sense and easy to see". market "quick sell fish should still show the price per, and some basic details, also make sure quick sell is isntant and it shouldnt load for too long cuz performance for selling needs to be quick and isntance for user experience. monthly board is good looking. fishing task looks good". showroom approved: "looks a lot better but refine so its also easy to understand. also what should we do for river, pond sea, deep sea and all those types of different fishing? should we have different signs for different areas?". chef, tasks, tasks-claim approved. gacha: its own lane.
 - 2026-10-29, sushi menu: font, hover, lift, picked, spread 2, turning approved. cover "it needs another refinement run it looks crappy. the words say something that isnt claudlish with on the wharf after dark say something like poetic but not claude". spread 1 "the ui for the shocase of dishes needs to be changed, simple photo of food and then price on the side with like stats and stuff, you also gotta start making the 3d model high quality and well designed. and also time to think about what game mechanic this sushi should provideother than vibes and buffs".
 - 2026-10-28, on the menu: "heres the inspo i want for the sushi menu" (specs/references/sushi-menu/).

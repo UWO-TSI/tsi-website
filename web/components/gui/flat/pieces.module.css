@@ -49,10 +49,6 @@ button.thumb:hover, button.thumb:focus-visible { transform: translateY(-2px) sca
 .tipFacts > div { display: grid; grid-template-columns: 18px minmax(0, 1fr); align-items: center; gap: 8px; color: var(--ui-ink-2); font: 400 13px/1.35 var(--gui-font); }
 .tipFacts dt { display: grid; place-items: center; color: var(--ui-quiet); }
 .tipFacts dd { margin: 0; }
-.months { display: inline-grid; grid-template-columns: repeat(12, 1fr); gap: 3px; }
-.months i { display: grid; place-items: center; width: 15px; height: 15px; border-radius: 4px; background: var(--ui-well); color: var(--ui-quiet); font: 700 9px/1 var(--gui-font); font-style: normal; }
-.months i[data-on] { background: var(--ui-ink); color: var(--ui-accent-ink); }
-.months i[data-now] { box-shadow: 0 0 0 1.5px var(--ui-card), 0 0 0 3px var(--ui-rarity-legendary); }
 
 /* ── Day strip ── */
 .strip { --label: 52px; position: relative; display: grid; gap: 10px; padding-bottom: 4px; font-family: var(--gui-font); color: var(--ui-ink); }
@@ -71,13 +67,33 @@ button.thumb:hover, button.thumb:focus-visible { transform: translateY(-2px) sca
 .laneIcon svg { width: 24px; height: 24px; }
 .laneIcon:has(small) { align-content: center; gap: 2px; height: 60px; }
 .laneIcon small { color: var(--ui-quiet); font: 600 11px/1 var(--gui-font); }
-/* What is true right now: soft chips, an icon, a quiet word and its value. */
+/* What is true right now: a chip each, in its colour (--tint): the icon on a solid tile, a quiet word, the value. */
+:is(.condition, .season)[data-tint="rose"] { --tint: var(--ui-tint-rose); }
+:is(.condition, .season)[data-tint="sun"] { --tint: var(--ui-tint-sun); }
+:is(.condition, .season)[data-tint="amber"] { --tint: var(--ui-tint-amber); }
+:is(.condition, .season)[data-tint="ice"] { --tint: var(--ui-tint-ice); }
+:is(.condition, .season)[data-tint="sky"] { --tint: var(--ui-tint-sky); }
+:is(.condition, .season)[data-tint="rain"] { --tint: var(--ui-tint-rain); }
+:is(.condition, .season)[data-tint="mist"] { --tint: var(--ui-tint-mist); }
+:is(.condition, .season)[data-tint="leaf"] { --tint: var(--ui-tint-leaf); }
+:is(.condition, .season)[data-tint="night"] { --tint: var(--ui-tint-night); }
 .conditions { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 14px; font-family: var(--gui-font); }
-.condition { display: grid; grid-template-columns: auto auto; align-items: center; gap: 2px 10px; padding: 9px 16px 9px 10px; border-radius: 16px; background: var(--ui-card); box-shadow: 0 2px 8px rgb(var(--ui-shade) / 0.05); }
-.condition dt { display: contents; color: var(--ui-quiet); font: 500 12px/1.1 var(--gui-font); }
-.conditionIcon { display: grid; grid-row: span 2; place-items: center; width: 34px; height: 34px; border-radius: 11px; background: var(--ui-well); color: var(--ui-ink-2); }
-.conditionIcon svg { width: 19px; height: 19px; }
-.condition dd { grid-column: 2; margin: 0; color: var(--ui-ink); font: 600 15px/1.15 var(--gui-font); }
+.condition { display: grid; grid-template-columns: auto auto; align-items: center; gap: 1px 10px; padding: 8px 18px 8px 8px; border-radius: 18px;
+  background: color-mix(in srgb, var(--tint) 13%, var(--ui-card)); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--tint) 30%, transparent), 0 2px 8px rgb(var(--ui-shade) / 0.05); }
+.condition dt { display: contents; color: color-mix(in srgb, var(--tint) 55%, var(--ui-ink-2)); font: 600 11px/1.1 var(--gui-font); letter-spacing: 0.02em; }
+.conditionIcon { display: grid; grid-row: span 2; place-items: center; width: 38px; height: 38px; border-radius: 13px; background: var(--tint); color: var(--ui-card);
+  box-shadow: inset 0 -2px 0 rgb(var(--ui-shade) / 0.12); }
+.conditionIcon svg { width: 21px; height: 21px; }
+.condition dd { grid-column: 2; display: flex; align-items: baseline; gap: 6px; margin: 0; color: var(--ui-ink); font: 700 16px/1.15 var(--gui-font); }
+.condition dd small { color: var(--ui-quiet); font: 500 12px/1 var(--gui-font); }
+/* A hover card's seasons: four icons in their colours, the off ones faint, now ringed. */
+.seasons { display: inline-grid; grid-template-columns: repeat(4, auto); gap: 6px; }
+.season { display: grid; justify-items: center; gap: 3px; color: var(--ui-quiet); font: 600 10px/1 var(--gui-font); }
+.season i { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 9px; background: var(--ui-well); color: var(--ui-disabled); }
+.season i svg { width: 15px; height: 15px; }
+.season[data-on] { color: var(--ui-ink-2); }
+.season[data-on] i { background: var(--tint); color: var(--ui-card); }
+.season[data-now] i { box-shadow: 0 0 0 1.5px var(--ui-card), 0 0 0 3px var(--ui-ink); }
 .laneTrack { display: grid; gap: 6px; min-width: 0; padding: 6px 0; border-radius: 16px; background: repeating-linear-gradient(90deg, transparent 0 calc(25% - 1px), var(--ui-line) calc(25% - 1px) 25%); }
 .band { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); min-height: 48px; }
 .run { position: relative; display: flex; grid-row: 1; flex-wrap: wrap; align-content: center; align-items: center; justify-content: center; gap: 6px; min-height: 48px; margin: 0 -2px;
@@ -173,8 +189,11 @@ button.thumb:hover, button.thumb:focus-visible { transform: translateY(-2px) sca
   .laneIcon:has(small) { height: 52px; }
   .laneIcon small { font-size: 10px; }
   .conditions { gap: 6px; }
-  .condition { padding: 6px 10px 6px 6px; gap: 1px 7px; }
-  .conditionIcon { width: 28px; height: 28px; border-radius: 9px; }
+  .condition { padding: 6px 12px 6px 6px; gap: 1px 7px; border-radius: 14px; }
+  .conditionIcon { width: 30px; height: 30px; border-radius: 10px; }
+  .conditionIcon svg { width: 17px; height: 17px; }
+  .condition dd { font-size: 14px; }
+  .condition dd small { display: none; }
   .reveal { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .oddsRow { grid-template-columns: minmax(0, 1fr); }
   .task { grid-template-columns: auto minmax(0, 1fr) auto; }

@@ -18,6 +18,7 @@ import { village } from "@/lib/game/villageMap";
 import "@/lib/game/world/member";
 import { torontoParts } from "@/lib/time";
 import { momentAt } from "./logic";
+import { seasonBlend } from "@/lib/game/season";
 import type { Biome, Species } from "./roster";
 
 export type Site = "village" | "home";
@@ -74,14 +75,14 @@ export function castWater(site: Site, [x, z]: [number, number]): WaterType | nul
 }
 
 /**
- * The fish that bites: the reel's pool (FishingOverlay) for the water, rod and cast power, at the Toronto hour, month and real weather.
+ * The fish that bites: the reel's pool (FishingOverlay) for the water, rod and cast power, at the Toronto hour, the island's season and the real weather.
  * `catches`: the seasonal events' limited-time species and the ones biting now (lib/progression/seasonal.ts eventCatches);
  * without it the seeded events' catches are shut. `buff`: the member's meal at the sushi bar (member_buffs), its luck on
  * the cast's and its size pulling the size toward the top.
  */
 export function fishRoll(water: WaterType, power: number, rod: RodTier, now: Date, weather: IslandWeather, random = Math.random, catches?: EventCatches, buff?: { luck: number; size: number }, together = false): { fish: FishDef; size: number } {
-  const { hour, minute, month } = torontoParts(now);
+  const { hour, minute } = torontoParts(now);
   const luck = power + (power >= CAST.maxZone ? CAST.maxBonus : 0) + (buff?.luck ?? 0) + (together ? TOGETHER.luck : 0);
-  const fish = rollFishFor(water, luck, rod, { hour: hour + minute / 60, weather: reelWeather(weather), month, catches }, random);
+  const fish = rollFishFor(water, luck, rod, { hour: hour + minute / 60, weather: reelWeather(weather), season: seasonBlend(now).season, catches }, random);
   return { fish, size: rollSize(fish.sizeCm, random, buff?.size) };
 }
