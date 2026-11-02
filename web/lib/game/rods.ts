@@ -4,7 +4,7 @@
  * the rod's stats. Every stat is a real effect inside the cast/bite/reel loop (`effects`). The rod's rarity caps the
  * fish it hooks (`hookCap`, David 2026-10-28). Shop rods are lib/wallet/catalogue.ts, crafted ones lib/crafting/recipes.ts;
  * the Training rod is found, never sold (`TRAINING`, David 2026-11-02), and grows with the fish it lands (`trained`).
- * Every landed cast counts toward its rod (rod_catches, 20261102120000_rod_catches.sql).
+ * Every landed cast counts toward its rod (rod_catches, 20261102170000_rod_catches.sql).
  * The server rolls a cast with the held rod plus the equipped add-ons the member owns (lib/collections/service.ts).
  */
 import { OBTAINABLE, RARITY_RANK, type Rarity } from "@/lib/rarity";

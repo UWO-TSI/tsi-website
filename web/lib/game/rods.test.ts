@@ -141,7 +141,7 @@ describe("the Training rod (David 2026-11-02)", () => {
     expect(ownedRig(TRAINING.key, [], [], { rod_flimsy: 75 }).base).toEqual(training.base);
   });
   it("is found and counted by the migration with the same numbers", () => {
-    const sql = readFileSync(join(__dirname, "../../supabase/migrations/20261102120000_rod_catches.sql"), "utf8");
+    const sql = readFileSync(join(__dirname, "../../supabase/migrations/20261102170000_rod_catches.sql"), "utf8");
     expect(sql).toContain(`r.rod_key = '${TRAINING.unlock.rod}' AND v_count >= ${TRAINING.unlock.catches}`);
     expect(sql).toContain(`s.catalogue_ref = '${TRAINING.key}'`);
   });

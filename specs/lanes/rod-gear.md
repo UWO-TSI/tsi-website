@@ -67,12 +67,12 @@ Build:
   - Migrations: `20261028155000_rod_tackle_slots` (re-timestamped, unapplied) and `20261029020457_catalogue_seed` (regenerated, unapplied). Both are in the chain in specs/evidence/launch-fixes/sql-smoke.sh, with the new `rod_tackle_slots_smoke.sql`. 033 and taught_tools smokes now follow the hollow tools.
   - Evidence: `specs/evidence/rod-gear/r2/` (shots.mjs makes them). The round-1 shots in `specs/evidence/rod-gear/` are the "before" set.
 
-- **Round 4 built** on `game/rod-gear` (on 1ae98ff6; gates: tsc clean, full vitest 3744 passed + 1 load-timeout flake (shoreField, passes alone), eslint clean on changed files, SQL smoke chain clean incl. the new `rod_catches_smoke.sql`; the world_chat smoke's "the rest" assert fails on main too, untouched):
+- **Round 4 built** on `game/rod-gear` (on 1ae98ff6; gates: tsc clean, full vitest 3744 passed + 1 load-timeout flake (shoreField, passes alone), eslint clean on changed files, SQL smoke chain clean incl. the new `rod_catches_smoke.sql`; the world_chat smoke's "the rest" assert fails on origin/main's own chain too (checked 1ae98ff6), untouched; migrations re-timestamped to 170000/170100 after tasting-book's 120000):
   - Roster (lib/game/rods.ts, weakest first): Flimsy, **Precision** (common, shop 200), Cedar, **Carrot** (uncommon, shop 550), **Training** (common, `found`, never sold), Glass, Lighthouse, Tidewarden. Tools key by rod key now (`rodByKey`, `heldRig`, `ownedRig(key, …)`); `rodByTier` is the first rod of a tool tier. `rodOf` in RodGear.tsx is gone (use `rodByKey`).
   - Stand-in art: `STAND_IN` (rods.ts) gives Precision the Flimsy's model and icon, Carrot the Cedar's, Training the Glass's (tools.ts, icons/keys.ts). When tool-pipeline's `tools/rod-precision.glb`, `rod-carrot.glb`, `rod-training.glb` and their icons land: delete the lines, then `node scripts/gen-seeds.mjs` (the sprite_urls). rods.test.ts checks every rod's model and icon file exists.
   - The Training rod (`TRAINING`): the Flimsy rod's 50th landed fish finds it (granted in collections_land, server-side; the land reply says `unlocked`, the client shows a "Found: the Training rod" card: `rodNews` in useFishingSession.ts). It trains: +5 to every stat at 25, 75 and 150 fish landed with it (`trained`, `trainingLevel`), on the server's roll and the client's reel; a level-up toasts. Base 205 total (Carrot 170, Glass 230), fully trained 295 (Lighthouse 300). Off sale (`FOUND_ONLY` in RETIRED); the shop shows it only to its finder, pill "Found".
   - Catch tracker: `catch_rolls.rod_key` + `rod_catches` (owner-read RLS, written only by collections_land). Shown on the bag's and the shop's rod cards ("37 fish caught", "Owned · 37 fish") and the rod details' specs (Fish caught, Training level). `InventoryView.catches`, `ShopView.catches`, `rodCatches()` on both stores.
-  - Migrations (unapplied, stop for the coordinator): `20261102120000_rod_catches.sql`, `20261102154130_catalogue_seed.sql` (the three rods' rows and icons). Both in the sql-smoke chain (with main's 20261101230000_profile_pronouns, which was missing from it). Apply the migration before the code deploys: the new `collections_cast` takes `p_rod` (old 4-arg calls still work).
+  - Migrations (unapplied, stop for the coordinator): `20261102170000_rod_catches.sql`, `20261102170100_catalogue_seed.sql` (the three rods' rows and icons). Both in the sql-smoke chain (with main's 20261101230000_profile_pronouns, which was missing from it). Apply the migration before the code deploys: the new `collections_cast` takes `p_rod` (old 4-arg calls still work).
   - Evidence: `specs/evidence/rod-gear/r4/` (shots.mjs makes them).
 
 ## David's decisions
@@ -81,7 +81,7 @@ Build:
 
 ## Next
 
-1. Coordinator: apply `20261102120000_rod_catches` then `20261102154130_catalogue_seed`; David reviews `specs/evidence/rod-gear/r4/` (open questions in the round-4 report: the Training rod's hook cap, the unlock count, the stats).
+1. Coordinator: apply `20261102170000_rod_catches` then `20261102170100_catalogue_seed`; David reviews `specs/evidence/rod-gear/r4/` (open questions in the round-4 report: the Training rod's hook cap, the unlock count, the stats).
 2. When tool-pipeline's three rod models and icons land: drop their `STAND_IN` lines, regenerate the seed (delete this lane's unapplied seed first), re-shoot r4.
 3. Glass to uncommon only on David's pick (round 4 item 4).
 4. When references arrive: model the base bobber, the lucky four-leaf-clover bobber and the bait in Blender (design bible Models), HD to `public/assets/game/items/`, LP to `items/lp/`.

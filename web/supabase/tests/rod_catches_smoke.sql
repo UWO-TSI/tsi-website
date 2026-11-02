@@ -1,6 +1,6 @@
--- The per-rod catch tracker and the Training rod (20261102120000_rod_catches). Throwaway local Postgres after every
+-- The per-rod catch tracker and the Training rod (20261102170000_rod_catches). Throwaway local Postgres after every
 -- migration through it and the catalogue seed that adds the Training rod's row. Never Supabase. Each section fails
--- before 20261102120000 (no rod_key, no rod_catches, a four-argument collections_cast).
+-- before 20261102170000 (no rod_key, no rod_catches, a four-argument collections_cast).
 -- NOW() is fixed inside a transaction, so rolls are aged by moving rolled_at back.
 \set ON_ERROR_STOP 1
 -- backpack_smoke.sql re-applies 20261003054110_backpack, which brings back the four-argument cast this migration drops.
