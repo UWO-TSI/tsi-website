@@ -35,6 +35,7 @@ import { frameStats } from "@/lib/game/perf/frameStats";
 import { createHairAtlas } from "@/lib/game/character/hairAtlas";
 import { MOVE_TUNING } from "@/lib/game/movement/sim";
 import FishingRig from "./FishingRig";
+import LanternGlow, { LANTERN_URL } from "./LanternGlow";
 
 export type { CharacterMotion, ClipName } from "@/lib/game/character/clips";
 /** v6 is 1.045 m tall; at 1.3 a character stands ~1.36 world units, a little over one tile (ACNH). */
@@ -857,7 +858,11 @@ function HeldItem({ puppet, motion, view: { url, hold, fit }, remote }: { puppet
   });
   // The rod carries its fishing: the bobber, the line and the catch of this avatar's own cast. Not on another player's
   // until remote casts are sent (specs/multiplayer.md follow-up): their rod shows alone, as it always has.
-  return hold === "rod" && !remote ? <FishingRig motion={motion} rod={model} hands={puppet.sockets} /> : null;
+  // The Lighthouse rod is a lantern in anyone's hand (LanternGlow).
+  return <>
+    {hold === "rod" && !remote && <FishingRig motion={motion} rod={model} hands={puppet.sockets} />}
+    {url === LANTERN_URL && <LanternGlow rod={model} root={puppet.root} clip={puppet} />}
+  </>;
 }
 /** Module scope (the react compiler forbids writing through hook values): pop out, hide where put away, ease to the use grip. */
 function poseHeld(model: THREE.Object3D, clip: ClipName | null, grip: Grip, hold: HoldKind, age: number, delta: number) {

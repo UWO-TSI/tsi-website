@@ -1,6 +1,51 @@
-# Lane: polish (round 2: lighthouse lantern glow, interact ring)
+# Lane: polish (round 3 done: a small clear lantern, a thin white ring on the bigger targets only)
 
 Worktree `.claude/worktrees/polish`, branch `game/polish` (round 1 plus origin/main 3f9f2b4d merged in). Agent type `uwotsi-lane`. Dev port 3332.
+
+## Round 3: David's round 2 review (2026-11-02, verbatim; https://claude.ai/artifact/AdBQ3wtaW2xWdv5JxpXdDA)
+
+Approved: pol2-glass.
+- pol2-lantern (redo): "too much haze, just a clear light with smaller visual "
+- pol2-lantern-walk (redo): "shouldnt be blinding, like subtle glow like the day"
+- pol2-lantern-times, pol2-lantern-play (redo, no note)
+- pol2-compare (redo): "less glow and thinner and les opacity circle"
+- pol2-ring-sell (redo): "thinner lighter"
+- pol2-ring-night (redo): "less glow, thiner ring"
+- pol2-ring-doors (redo): "subtle and less glow and white not yellow for all"
+- pol2-ring-bench (redo): "bench shouldnt even get a interaction its too small"
+- pol2-ring-skip (redo): "people bench small things"
+- pol2-ring-boards, pol2-ring-play (redo, no note)
+
+Build:
+1. Lantern: a clear, small light at the lamp, no haze over the character; at night about as subtle as round 2's day look. Never blinding.
+2. Ring: thinner, lighter, lower opacity, much less glow, white (not yellow) for every target.
+3. No ring on benches, people or small things. Keep it for the bigger interactables (sell stand, boards, counters, doors).
+
+## Status (round 3, 2026-11-02)
+
+Built on `game/polish` (f838a95d, then this lane file), ready for David's review. Gates: tsc clean; full vitest 3733 passed, 4 skipped (398 files passed, 2 skipped); eslint clean on the three changed files. No perf:check this round (the coordinator runs one on a quiet machine before merging). Both effects keep the same draws as round 2 (two each when shown), only sizes, alphas and colours changed.
+
+- **1. Lantern** (`LanternGlow.tsx`): one small sprite at the glass, slid only 0.15 toward the camera (was 0.5, which put the halo over the holder). Short falloff (`STOPS` `[0,1],[0.12,0.8],[0.28,0.3],[0.6,0.05],[1,0]`), a warm-white core `#ffcf8a` (was `#ffb35c`), size `0.55 + 0.25 * night` world units (was `1.2 + 2 * night`), opacity `(0.5 + 0.4 * night) * breath` (was `(0.3 + 0.65 * night)`). The ground pool is smaller and fainter (radius 0.9, alpha `0.22 * night`; was 1.6 and 0.42). Reads as a small light at the rod's tip; no wash over the head at dusk or night.
+- **2. Ring** (`InteractRing.tsx`): a thin line at the rim (`BAND` `[0.86,0],[0.93,1],[0.98,0.2]`, was a band from 0.74), `RING_ALPHA` 0.22 (was 0.35), `GLOW_ALPHA` 0.05 (was 0.14) and the glow 1.8 radii wide (was 2.6). Both white for every target: the kit's near-white `--ui-card` (#fffff7 on the cream base on `<html>`), was `--ui-highlight` yellow and `--ui-select`.
+- **3. Which targets** (`RING` in DefaultIslandWorld.tsx): dropped `bench`, `stool` (the sushi bar's seats), `mailbox`, `lantern` (the pick-up), `cocoa` and `picnic`. Kept the stands, boards, counters, doors and the monument: sell, catchboard, tasks, tackle, leaderboard, notice, catch, monument, knock (a house door), fitting, missions, enter, claim and report (HQ's door), home, shop_enter, cafe_enter, cafe, oracle_enter, trophy, posters. Residents never had it. The bench's "ring the whole bench" lookup is deleted.
+- **Evidence** `specs/evidence/polish/round3/` (webp, ids pol3-*): `pol3-00-compare-before-after` (left before = round 2, right after; rows: lantern night, lantern walking night, lantern day, sell night, shop door night, catch board day, bench night); every shot as `pol3-<name>-before|after`: `lan-day|dusk|night`, `lan-walk-night`, `lan-phone-night`, `ring-sell-day|dusk|night`, `ring-sell-phone`, `ring-shop-day|night`, `ring-catch-day`, `ring-bench-night`.
+
+## Next
+
+1. The coordinator merges round 3 (after its quiet-machine perf:check) and puts `round3/` on a review page for David.
+2. On notes: lantern `glow()` and `STOPS` in LanternGlow.tsx; ring `BAND`, `RING_ALPHA`, `GLOW_ALPHA` and the glow's `1.8` in InteractRing.tsx; which targets ring, and their sizes, in `RING` (DefaultIslandWorld.tsx).
+
+## Status (round 2, 2026-11-01)
+
+Built on `game/polish`, ready for David's review. Head: see the last `[build] polish lane file` commit. Gates: full vitest 3733 passed (398 files) after item 0; on the final head 3732 passed and 1 timed out (shoreField "crosses 0 on the drawn coast", 5 s timeout at load 8; untouched by this lane), which passes alone (2/2); tsc clean; eslint clean on changed files; perf:check (SCENES=v2, once) failed on frame time on a loaded machine (1-minute load 5.3 to 5.7, other lanes benching and building): v2 high 6.5 ms (baseline 4.8, +35%), lite 4.0 ms (2.9, +38%); draws 367 (359, +2.2%) and 291 (289, +0.7%), triangles +1.5% and +2.2%, all within tolerance. The bench holds no lantern and has no E target, so neither effect draws there (the ring and glow are `visible = false` until a target; the lantern mounts only with rod-4 in hand); the small draw and triangle drift is against a 10-14 baseline. When shown, each costs two transparent draws (the ring: ring + glow; per lantern holder: halo + pool) and no shader compile into lit materials. The coordinator should rerun it on a quiet machine.
+
+- **0. Round 1's two failures fixed** (5b58b09a, sent to the coordinator): rod-4 is 5 materials and one held mesh. In `build_tools.py` the lamp rod's line uses the Blank material (near the same cream) and the glass (`rod-4_Lamp`, now #FFB548) is plain, not emissive: `heldMesh.ts` keeps any emissive part as its own mesh, so a glowing glass can't merge. The glow now comes from item 1. Icon re-rendered (`rod_lighthouse.webp`).
+- **1. The Lighthouse rod is a lantern** (`components/game/character/LanternGlow.tsx`, mounted by `HeldItem` in Character.tsx for `LANTERN_URL`, so yours and other players'): one additive sprite at the glass (a bright core in a wide warm halo, slid 0.5 toward the camera along the view ray so it washes over the holder) and one warm pool disc on the ground under the lamp (hidden mid-jump). Two draws per holder, no real light, no shader added to lit materials. Strength follows `nightLit()` (`lib/game/glow.ts`, written by DefaultIslandWorld from `windowLit(light)`): faint by day, about 2/3 at dusk, full at night; it breathes with the lamps' `breath`.
+- **2. Interact ring** (`components/game/InteractRing.tsx`): one shared ring (a soft band on a disc, `--ui-highlight` at 0.35) and one shared glow sprite (`--ui-select`, additive, 0.14), both read from the HUD's cream tokens on `<html>` (the body's clean theme has a black highlight). It follows the `near` loop in `IslandScene`: each branch records its spot (`at`), the `RING` table gives the radius and glow height per `Near`, and it shows only while the E prompt is up (`ring` prop: the prompt's own condition). Doors put it 1.6 past the doorstep toward the building (`doorRings`); a bench rings the whole bench; on the wharf it sits on the deck you stand on. The catch board gets it through `layout.boards`, wherever the fishing lane moves it.
+  - Not on residents (talk, Bram, the chef, Rosa): they turn to you and the prompt names them, and a person walks out of a ring. Not on building signs (museum, ruins), the volleyball net (a whole court) or tool targets (water, bugs, dig spots). Interiors (HQ, café, museum stations) don't get it: their `onNear` passes no positions.
+- `glowTexture` and `breath` moved from AmbientProps.tsx to `lib/game/glow.ts` (shared by the lamps, the lantern and the ring).
+- **Evidence** `specs/evidence/polish/lantern-ring/` (webp): `00-compare-before-after` (left before, right after: sell stand day, bench night, lantern night standing, lantern night walking); `01-icon-before-after`; `ring-<target>-<day|night>-after` for sell, catch, bench, shop, tackle, board (leaderboard), plus `ring-bench-play` (play camera) and `ring-sell-phone`; `lan-day|dusk|night`, `lan-walk-day|dusk|night`, `lan-play-night`, `lan-phone-night`; `*-before` for the four in the compare sheet. Script `shoot.mjs` (headless, `x,z@time@yaw,pitch,zoom@flags`).
+
 
 ## Round 2 (coordinator, 2026-11-01)
 
@@ -87,3 +132,7 @@ Both parts built 2026-11-01 on `game/polish` (from f9cebe44), ready for David's 
 - `specs/evidence/polish/` also holds an older lane's files (polish-ownership); this lane's are under `hair-rods/`.
 - Shots: hold `withlock.sh devserver`, start `next dev -p 3332` with the Supabase env blanked, then `HOST=http://localhost:3332 node specs/evidence/creator-polish/shoot.mjs <dir>` and `PW=~/.npm/_npx/9833c18b2d85bc59/node_modules/playwright/index.mjs SHELL_BIN=<chromium_headless_shell-1217> BASE=http://localhost:3332 ONLY=shop,bag,phone node specs/evidence/polish/hair-rods/rod-shots.mjs <dir>`, then kill the server. The rod shots take about 8 minutes (swiftshader).
 - Blender: `withlock.sh blender /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P art/props-enemies/build_tools.py` rebuilds every tool; only changed outputs show in git.
+- Round 3 shot specs (same script and run.sh): lantern `30,44.5@<day|evening|night>@0,30,0.6@lantern` (the plaza, south of the fountain; the rod is held low at the right hand, the tip right of the head); sell `71.5,28.4@..@180,40,0.8`; shop door `32.7,62@..@0,35,0.8`; catch board `63.6,30.2@day@180,40,0.8`; bench `20.3,43.6@night@0,40,0.8`. The tall green lamp post right in front of the player in the plaza shots is the plaza's, not the rod. Additive light can't show over a bright backdrop (the lit fountain): judge the lantern at the tip, against the paving.
+- Round 2 shots: `withlock.sh devserver <scratch>/run.sh specs/evidence/polish/lantern-ring <tag> "<name>=x,z@time@yaw,pitch,zoom@flags" ...` where run.sh starts `next dev -p 3332` (Supabase blanked), runs `HOST=http://localhost:3332 node specs/evidence/polish/lantern-ring/shoot.mjs <out> <tag> <shots>` and kills its server. Keep it to 4 shots a call (about 2 min a shot on a loaded machine), and run it with `run_in_background` so a slow run isn't cut at 10 minutes. Then convert the PNGs to webp.
+- The lab island (`/lab/island?time=day|evening|night&at=x,z`) takes `tsi.held.v1` and `tsi.camera.v1` from localStorage; owning the Lighthouse rod signed out needs `/api/economy/inventory` answered (the script does it). Camera yaw 0 looks +z.
+- The wharf's deck is drawn about 0.1 over `island.ground`, so anything flat on it needs lifting that much (the ring's +0.1).
