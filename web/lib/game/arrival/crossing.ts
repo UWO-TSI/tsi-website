@@ -15,10 +15,13 @@ type Aim = { boat: V3 } | { world: "island" | "wharf"; y: number } | { blend: [{
 export interface CrossingFrame { from: V3; to: V3; aim: Aim; aimTo?: Aim; fov: number; fovTo?: number }
 
 export const CROSSING_FRAMES: Record<CrossingShotId, CrossingFrame> = {
-  // High off the starboard beam, drifting in: the boat small in the foreground below, the island across the sea above it.
-  drone: { from: [12, 10, -4], to: [9, 8, -1], aim: { blend: [{ boat: [0, 0, 4] }, { world: "island", y: 0 }, 0.5] }, fov: 44, fovTo: 40 },
-  // Low beside the bow, just over the water, looking ahead past the stem: the bow wave, the island across the sea.
-  bow: { from: [1.35, 0.45, 0.2], to: [1.3, 0.42, 0.75], aim: { boat: [-0.6, 0.7, 24] }, fov: 52 },
+  // High off the starboard beam, drifting in: the boat small in the foreground below, the island across the sea above it
+  // (aimed at the town past the wharf, not the island's far middle, so the curve doesn't sink it to a strip).
+  drone: { from: [12, 10, -4], to: [9, 8, -1], aim: { blend: [{ boat: [0, 0, 4] }, { world: "island", y: 2 }, 0.7] }, fov: 44, fovTo: 40 },
+  // Up over the bow, looking ahead past the stem at the island: the wharf, its buildings and the town behind (David's
+  // round 5 playtest: low over the water "you can only rly see water": the world's curve hid the island below a camera
+  // that low, so it rides about 5 m up, on a long lens: the wharf fills the frame).
+  bow: { from: [1.4, 5.6, 0.4], to: [1.2, 4.8, 1.4], aim: { world: "island", y: 3 }, fov: 28, fovTo: 25 },
   // In front of you on the bench, close: your face, wet hair, drops running off.
   closeup: { from: [0.38, 1.3, 2.45], to: [0.26, 1.26, 2.2], aim: { boat: [0, 1.12, 0.58] }, fov: 34, fovTo: 32 },
   // Up behind the stern, looking back: the wake spreading out to the horizon, Bram at the tiller below.
@@ -30,7 +33,7 @@ export const CROSSING_FRAMES: Record<CrossingShotId, CrossingFrame> = {
 const ease = (k: number) => k * k * (3 - 2 * k);
 /** The boat in the world: where it floats (its origin on the water) and which way its bow points. */
 export interface BoatWorld { x: number; y: number; z: number; yaw: number }
-/** Fixed world points the shots look at: the island's middle and the pier's tip. */
+/** Fixed world points the shots look at: the island as it reads from the sea (the town past the wharf) and the pier's tip. */
 export interface CrossingPoints { island: { x: number; z: number }; wharf: { x: number; z: number } }
 export interface CameraOut { pos: [number, number, number]; look: [number, number, number]; fov: number }
 

@@ -24,7 +24,7 @@ import { useWorldDialog } from "@/lib/game/useWorldDialog";
 import m from "./moments.module.css";
 
 /** A step that wants your whole attention: a flat panel in the middle over a light scrim. Holds the world's keys. */
-export function Spotlight({ open, label, eyebrow, title, lead, text, story, light, steps, children, footer, testId, dataset }: {
+export function Spotlight({ open, label, eyebrow, title, lead, text, story, light, steps, children, footer, aside, testId, dataset }: {
   open: boolean; label: string; eyebrow?: ReactNode; title?: ReactNode;
   /** Under the title: what to do now, in a word or two (it changes with a little rise); then a quiet line about it. */
   lead?: ReactNode; text?: ReactNode;
@@ -35,6 +35,8 @@ export function Spotlight({ open, label, eyebrow, title, lead, text, story, ligh
   /** A dot per step, `at` the one showing, the ones before it done. */
   steps?: { count: number; at: number };
   children?: ReactNode; footer?: ReactNode; testId?: string;
+  /** Shown beside the card on its right (the keyboard tour's KeyPeek). */
+  aside?: ReactNode;
   /** More data attributes for the evidence scripts (a step's id). */
   dataset?: Record<`data-${string}`, string | undefined>;
 }) {
@@ -54,6 +56,7 @@ export function Spotlight({ open, label, eyebrow, title, lead, text, story, ligh
         {steps && <span className={m.dots} aria-hidden="true">{Array.from({ length: steps.count }, (_, i) => <i key={i} data-on={i === steps.at || undefined} data-done={i < steps.at || undefined} />)}</span>}
         {footer}
       </footer>}
+      {aside && <div className={m.aside}>{aside}</div>}
     </section>
   </div>;
 }

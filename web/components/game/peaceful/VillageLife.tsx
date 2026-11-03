@@ -680,9 +680,10 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
         // Away from you, curving off to a side seeded by the bug, from where it was.
         bug.fled = true; bug.fleeT = 0; bug.fx = g.position.x; bug.fy = g.position.y; bug.fz = g.position.z;
         bug.dir = Math.atan2(bx - p.x, bz - p.z); bug.side = bug.x * 7.3 + bug.z * 3.1 - Math.floor(bug.x * 7.3 + bug.z * 3.1) < 0.5 ? 1 : -1;
-        // Its wings brushing off (a quick, high brush), never the door sound; and a word over where it was.
+        // Its wings brushing off (a quick, high brush), never the door sound; and a word over where it was, only when
+        // your swing scared it off (David, 2026-11-01: "only show it if im trying to catch a bug").
         AudioManager.playSFX("footstep", { rate: 1.7, gain: 0.45 });
-        window.dispatchEvent(new CustomEvent("tsi:bug-fled", { detail: { x: bug.fx, z: bug.fz } }));
+        if (startled) window.dispatchEvent(new CustomEvent("tsi:bug-fled", { detail: { x: bug.fx, z: bug.fz } }));
         continue;
       }
       const wary = reaction === "wary" || reaction === "catchable";
