@@ -2,6 +2,16 @@
 
 Worktree `.claude/worktrees/title-r2`, branch `game/title-r2`, cut from origin/main. Agent type `uwotsi-lane`. Dev port 3330.
 
+## Round 3: David's note on C (saved 2026-11-02 02:37 UTC, read 2026-11-03; https://claude.ai/artifact/4Jp1L8AExKJUB3a6EMvuoq)
+
+- title-c (approve): "looks good out of the 3, i want yout to take the option a diamond dot, the sign in ui needs to be simplified and to make cleaner"
+- title-forms (approve), title-now: "C"
+
+C is live (main 98e42ab8). Build:
+1. **Option A's diamond dot** on C: find it in round 1's option A (commit 122adbf0, `?titleStyle=a`, deleted since) and bring that diamond marker into C's menu in place of C's current one. One look only, no switch.
+2. **A simpler, cleaner sign-in:** fewer elements, less text, clear hierarchy, in C's banner style (the UI kit and design bible). Keep every sign-in path that works today; say what you removed or merged.
+3. Before and after shots, desktop and phone, day and night: the menu and the sign-in (ids title3-*).
+
 ## The ask
 
 - David, 2026-10-29, on the approved title A: "the left side needs to be remade so that its more of a game title screen and less of a student portal screen".
