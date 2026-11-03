@@ -345,13 +345,13 @@ export default function GuiShowroom() {
       <Row><ServeMeter value={0.3} label="Serve power"><Keycap>Hold</Keycap></ServeMeter><ServeMeter value={0.72} label="Serve power" /><ServeMeter value={0.97} label="Serve power, max" /></Row>
     </Section>
 
-    <Section id="call-tag" title="Call tag (flat), three directions" note="A call at a moment of play, small and quiet: Chip (a white chip, a coloured cap with the call’s picture), Bubble (a white speech bubble pointing at the touch, a thin edge in the call’s colour), Letters (no box, the word lettered white with an ink outline over a swoosh). Gold for Perfect and Max, the team’s colour for Saved and Block, grey for Early, Late and Miss. Played: in with a spring (a block slams down), a held beat, up and out.">
-      {CALL_LOOKS.map(look => <Row key={look} label={look[0].toUpperCase() + look.slice(1)}>
+    <Section id="call-tag" title="Call tag (flat)" note="A call at a moment of play, small and quiet: a white chip with a coloured cap holding the call’s picture. Gold for Perfect and Max, the team’s colour for Saved and Block, grey for Early, Late and Miss. Played: in with a spring (a block slams down), a held beat, up and out.">
+      <Row label="Calls">
         {([["perfect", "Perfect"], ["good", "Good"], ["soft", "Early"], ["soft", "Late"], ["saved", "Saved"], ["block", "Block"], ["whiff", "Miss"], ["max", "Max"]] as const).map(([kind, word]) =>
-          <CallTag key={word} look={look} kind={kind} team={kind === "block" ? "var(--ui-away)" : "var(--ui-home)"}>{word}</CallTag>)}
-      </Row>)}
-      <Row label="Played">{CALL_LOOKS.map(look => <span key={`${look}-${callRun}`} style={{ display: "inline-grid", gap: 8 }}>
-        <CallTag look={look} kind="perfect" live>Perfect</CallTag><CallTag look={look} kind="block" team="var(--ui-away)" live>Block</CallTag></span>)}
+          <CallTag key={word} kind={kind} team={kind === "block" ? "var(--ui-away)" : "var(--ui-home)"}>{word}</CallTag>)}
+      </Row>
+      <Row label="Played"><span key={callRun} style={{ display: "inline-grid", gap: 8 }}>
+        <CallTag kind="perfect" live>Perfect</CallTag><CallTag kind="block" team="var(--ui-away)" live>Block</CallTag></span>
         <GhostButton onClick={() => setCallRun(n => n + 1)}>Play again</GhostButton></Row>
     </Section>
 

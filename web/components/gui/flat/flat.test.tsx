@@ -1,7 +1,7 @@
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { CALL_LOOKS, CallTag, CardGrid, DetailView, FlatPanel, HairlineRow, IconRail, ItemCard, PayRow, Purse, SidePanel, SpecBand, WithSide, badgeText, priced, railStep, type RailItem } from ".";
+import { CallTag, CardGrid, DetailView, FlatPanel, HairlineRow, IconRail, ItemCard, PayRow, Purse, SidePanel, SpecBand, WithSide, badgeText, priced, railStep, type RailItem } from ".";
 import { NUDGE, markerOf, nudgeOf } from "../motion";
 
 const html = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(el);
@@ -207,10 +207,9 @@ describe("the micro animations' marker", () => {
 });
 
 describe("CallTag", () => {
-  it("draws the call's picture only in the chip, and plays only when live", () => {
-    const chip = html(h(CallTag, { kind: "block", look: "chip", team: "var(--ui-away)", live: true, children: "Block" }));
+  it("draws the call's picture, and plays only when live", () => {
+    const chip = html(h(CallTag, { kind: "block", team: "var(--ui-away)", live: true, children: "Block" }));
     expect(chip).toContain("<svg"); expect(chip).toContain('data-kind="block"'); expect(chip).toContain("data-live"); expect(chip).toContain("--team:var(--ui-away)");
-    for (const look of CALL_LOOKS.filter(l => l !== "chip")) expect(html(h(CallTag, { kind: "perfect", look, children: "Perfect" }))).not.toContain("<svg");
     expect(html(h(CallTag, { kind: "good", children: "Good" }))).not.toContain("data-live");
   });
 });

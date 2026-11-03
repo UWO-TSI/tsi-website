@@ -2,18 +2,12 @@ import type { CSSProperties, ReactNode } from "react";
 import c from "./callTag.module.css";
 
 /**
- * A call at a moment of play (the volleyball match's touches: your grade, a save, a block, a miss, a max toss). Round 5
- * (David 2026-11-02: "still needs the text tag just a redesign"): small and quiet like round 4's pill, with a look of
- * its own, in three directions for David to pick from (`look`):
- * - "chip": a white chip with a coloured cap holding the call's little picture;
- * - "bubble": a white speech bubble whose tail points at the touch, a thin edge in the call's colour;
- * - "letters": no box, the word lettered white with an ink outline over a swoosh in the call's colour.
- * `live` plays it once: in with a spring (a block slams down), a held beat, then up and out. Without it, it rests (the
- * showroom). `team` colours a save or a block (a CSS colour, the team token).
+ * A call at a moment of play (the volleyball match's touches: your grade, a save, a block, a miss, a max toss). Small and
+ * quiet: a white chip with a coloured cap holding the call's little picture (David 2026-11-03: "A chip"). `live` plays it
+ * once: in with a spring (a block slams down), a held beat, then up and out. Without it, it rests (the showroom). `team`
+ * colours a save or a block (a CSS colour, the team token).
  */
 export type CallKind = "perfect" | "good" | "soft" | "saved" | "block" | "whiff" | "max";
-export const CALL_LOOKS = ["chip", "bubble", "letters"] as const;
-export type CallLook = (typeof CALL_LOOKS)[number];
 
 /** Each call's picture (16 × 16 in currentColor). */
 const PICTURE: Record<CallKind, ReactNode> = {
@@ -27,9 +21,9 @@ const PICTURE: Record<CallKind, ReactNode> = {
   max: <path d="M9.5 1.5L4 9h4l-1.5 5.5L12 7H8z" fill="currentColor" stroke="none" />,
 };
 
-export function CallTag({ kind, look = "chip", live, team, children }: { kind: CallKind; look?: CallLook; live?: boolean; team?: string; children: ReactNode }) {
-  return <span className={c.tag} data-look={look} data-kind={kind} data-live={live || undefined} style={team ? { "--team": team } as CSSProperties : undefined}>
-    {look === "chip" && <i className={c.cap}><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">{PICTURE[kind]}</svg></i>}
+export function CallTag({ kind, live, team, children }: { kind: CallKind; live?: boolean; team?: string; children: ReactNode }) {
+  return <span className={c.tag} data-kind={kind} data-live={live || undefined} style={team ? { "--team": team } as CSSProperties : undefined}>
+    <i className={c.cap}><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">{PICTURE[kind]}</svg></i>
     <b className={c.word}>{children}</b>
   </span>;
 }

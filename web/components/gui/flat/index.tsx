@@ -26,7 +26,7 @@ export { KEYWORD_KINDS, KEYWORD_LIBRARY, Keyword, KeywordLine, keywordParts, typ
 export { ProgressCard } from "./ProgressCard";
 export { PODIUM, Podium, podiumFeet, type PodiumPlace } from "./Podium";
 export { ServeMeter } from "./ServeMeter";
-export { CALL_LOOKS, CallTag, type CallKind, type CallLook } from "./CallTag";
+export { CallTag, type CallKind } from "./CallTag";
 export { ActionBar, ActionIcon, type ActionSlot } from "./ActionBar";
 export { SpinPicker } from "./SpinPicker";
 /** The detail stage's classes: a viewer (TurnStage, ItemViewer, the keychain's stage) fills `stage`; a picture `picture`. */

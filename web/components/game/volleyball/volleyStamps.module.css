@@ -48,16 +48,12 @@
 @keyframes bump { 0% { transform: scale(calc(1.4 + var(--h) * 0.15)); } }
 
 /* The impact frame (one rendered frame, shown by data-on): the scene thresholded to ink by a backdrop filter and
-   inverted, so the characters stand white on ink. Round 5 (David: "maybe remove the line"): no lines. data-lines puts
-   round 4's back (lines converging on the hit, then focus lines rushing in) for the with-and-without sheet. */
+   inverted, so the characters stand white on ink, with a few short lines round the hit (round 6, David: "keep the lines
+   but not as many and shorter maybe": 12 spokes, in a band that starts clear of the ball and stops well short of the edges). */
 .impact { position: absolute; inset: 0; display: none; backdrop-filter: grayscale(1) brightness(1.5) contrast(14) invert(1); }
 .impact[data-on] { display: block; }
-.impact[data-lines]::after { content: ""; position: absolute; inset: 0; mask: radial-gradient(circle at var(--x) var(--y), transparent 0 16%, black 62%);
-  background: repeating-conic-gradient(from 3deg at var(--x) var(--y), var(--ui-card) 0 1deg, transparent 1deg 6deg, var(--ui-card) 6deg 6.6deg, transparent 6.6deg 13deg); }
-.focus { position: absolute; inset: 0; opacity: 0; mask: radial-gradient(circle at var(--x) var(--y), transparent 0 20%, black 70%);
-  background: repeating-conic-gradient(from 0deg at var(--x) var(--y), var(--ui-card) 0 0.7deg, transparent 0.7deg 5deg, var(--ui-card) 5deg 5.4deg, transparent 5.4deg 11deg);
-  transform-origin: var(--x) var(--y); animation: focus 0.36s ease-out both; }
-@keyframes focus { 0% { opacity: 0.85; transform: scale(1.25); } 100% { opacity: 0; transform: scale(1); } }
+.impact::after { content: ""; position: absolute; inset: 0; mask: radial-gradient(circle at var(--x) var(--y), transparent 0 9%, black 12% 24%, transparent 29%);
+  background: repeating-conic-gradient(from 8deg at var(--x) var(--y), var(--ui-card) 0 1.4deg, transparent 1.4deg 30deg); }
 
 /* The win: the trophy bouncing in rays turning behind it. */
 .win { position: absolute; top: 22%; left: 50%; display: grid; justify-items: center; transform: translate(-50%, -50%); animation: winIn 2.4s cubic-bezier(0.2, 0.9, 0.3, 1.3) forwards; }
@@ -75,6 +71,6 @@
   /* The referee's calls still go: a fade, no motion. */
   .ref { animation-name: fade !important; }
   @keyframes fade { 70% { opacity: 1; } 100% { opacity: 0; } }
-  .impact, .focus { display: none !important; }
+  .impact { display: none !important; }
   .apex, .heat { transition: none; }
 }

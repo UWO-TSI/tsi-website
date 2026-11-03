@@ -36,10 +36,9 @@ export const fxBus = {
   /** Player `who`'s drawn body (VolleyMatch sets it): what a blink (fxPlan BLINK) turns white. */
   body: null as ((who: number) => Object3D | null) | null,
   /**
-   * Dev only (evidence): the effects paused, and stepped a 60th of a second at a time. Round 5's review sheets: `tag`
-   * picks a call tag direction (the kit's CallTag looks; null its default), `lines` puts round 4's lines back on the impact frame.
+   * Dev only (evidence): the effects paused, and stepped a 60th of a second at a time.
    */
-  dev: { paused: false, steps: 0, tag: null as string | null, lines: false },
+  dev: { paused: false, steps: 0 },
 };
 
 export function emitFx(e: VbFx) {
