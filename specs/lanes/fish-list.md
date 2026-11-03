@@ -2,6 +2,22 @@
 
 Worktree `.claude/worktrees/fish-list`, branch `game/fish-list`, cut from `game/fishing-depth` at 92cd709f (it has round 5's seasons; merges after fishing-depth). Agent type `uwotsi-lane`. Docs only this round.
 
+## Round 2: David's fish list review (2026-11-03, verbatim; https://claude.ai/artifact/DLfnEVT1VFBPamnBsD25Fz)
+
+Approved: fl-classparts, fl-models. fl-rods (approve): "the mathing of it looks pretty good". fl-roster (approve): "idk you figure it out it looks pretty good". fl-new (approve): "fill it and fix it". fl-questions (approve): "all rods will have slightly different stats even if both in uncommon". fl-creatures (approve): "L2 should be megladon with electricty aura and tech stuff like a robot megladon"
+- fl-today (redo): "i want like 10 common ish, 10 uncommon ish, 8 rare ish, 5 epic ish, 2 legendary so far for each biome, so brainstorm what should be added, this is roughly so could be more or less, like river and sea would have more fish obviously but also have more common and rare type, but deep sea and cliff pool will have higher epic leg ratio to common uncommon kinda thing.  also epic will have added like lil thing that you gotta do while you reel in. also the current reel in is laggy and not smooth and affecting user experience for fishing"
+- fl-gaps (redo): "fill it and fix it"
+- fl-materials (redo): "these drops are rarer for common fish and almost guarenteed for legendary or divine fish drops"
+- fl-odds (redo): "make it hard, cuz there will be a lot of stuff giving luck boost like sushi and bobber so dont make it too easy"
+
+Round 2 is still the list (the laggy reel is the fishing-depth lane's fix):
+1. Per biome, about 10 common, 10 uncommon, 8 rare, 5 epic and 2 legendary (river and sea larger and heavier on common and rare; deep sea and cliff pools weighted toward epic and legendary). Brainstorm the additions and fix the gaps.
+2. Megabyte (the sea legendary) becomes a robot megalodon with an electric aura and tech parts.
+3. Epic catches get a small extra task during the reel: propose one per epic, or a few shared kinds.
+4. Material drops scale with rarity: rare from common fish, nearly certain from legendary and Divine.
+5. Odds harder, assuming luck stacks from sushi, the tasting book, bobbers and rods; show the odds with and without a full stack.
+6. Every rod gets slightly different stats even within a rarity (a table).
+
 ## David's call (2026-11-02)
 
 "i need you to expand this fishing catagory". Asked what he meant, he picked: "The fish list: do for fish what the treasure page did for digging: every fish with its rarity as a percentage, where and when, what it's for (crafting materials for class gear, the tasting book, the aquarium), plus new fish to fill the gaps. A list for you to mark first, nothing built."
