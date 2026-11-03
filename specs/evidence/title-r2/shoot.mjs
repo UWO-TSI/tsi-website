@@ -1,6 +1,6 @@
 // Title left-side shots (specs/lanes/title-r2.md). Headless, muted. Against next dev on PORT.
 //   PORT=3330 OUT=<dir> node specs/evidence/title-r2/shoot.mjs <label>
-// Desktop 1440x900 and phone 390x844, day and night, the menu; plus the sign-in view (day).
+// Desktop 1440x900 and phone 390x844, day and night, the menu and the sign-in; plus the sign-up view (day).
 import { createRequire } from "node:module";
 import { mkdirSync } from "node:fs";
 const require = createRequire("/opt/homebrew/lib/node_modules/");
@@ -12,7 +12,7 @@ const browser = await chromium.launch({ channel: "chromium", headless: true, arg
 for (const [size, viewport] of Object.entries(SIZES)) {
   const ctx = await browser.newContext({ viewport, deviceScaleFactor: size === "phone" ? 2 : 1, isMobile: size === "phone", hasTouch: size === "phone" });
   const page = await ctx.newPage();
-  for (const [phase, view] of [["day", "menu"], ["night", "menu"], ["day", "signin"]]) {
+  for (const [phase, view] of [["day", "menu"], ["night", "menu"], ["day", "signin"], ["night", "signin"], ["day", "signup"]]) {
     const q = new URLSearchParams({ time: phase, weather: "clear", season: "summer", ...(view !== "menu" && { view }) });
     await page.goto(`http://localhost:${PORT}/student?${q}`, { waitUntil: "domcontentloaded", timeout: 300000 });
     await page.waitForSelector("main[data-ready]", { timeout: 240000 }).catch(() => console.log("no ready", size, phase));

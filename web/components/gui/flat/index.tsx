@@ -5,11 +5,11 @@
  * shared so the game's menus can wear the same style. One flat light-grey panel over most of the screen (`FlatPanel`):
  * a purse top left, the title, a round close; a rail of icons down the left (`IconRail`); white cards in a grid
  * (`CardGrid`, `ItemCard`); an item opened in the same panel on the white studio stage (`DetailView`, `SpecBand`); and the
- * small parts (`Pill`, `DarkButton`, `GhostButton`, `RoundButton`, `HairlineRow`). Colours: the theme's --ui-* tokens
+ * small parts (`Pill`, `DarkButton`, `GhostButton`, `RoundButton`, `FlatField`, `HairlineRow`). Colours: the theme's --ui-* tokens
  * (styles/themes). Nothing here knows about the shop: every piece takes plain props.
  */
 import type { Rarity } from "@/lib/rarity";
-import { Fragment, useEffect, useMemo, useRef, type ButtonHTMLAttributes, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type ReactNode, type Ref } from "react";
+import { Fragment, useEffect, useMemo, useRef, type ButtonHTMLAttributes, type CSSProperties, type HTMLAttributes, type InputHTMLAttributes, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Heart, Sparkles, Star, X, Zap } from "lucide-react";
 import { usePresence, useWorldDialog } from "@/lib/game/useWorldDialog";
 import { CurrencyIcon } from "@/components/economy/Amount";
@@ -353,6 +353,10 @@ export function GhostButton({ className, ...props }: ButtonHTMLAttributes<HTMLBu
 /** A round button: the Tethos navy, white glyphs (as approved on the studio stage). */
 export function RoundButton({ label, className, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
   return <button type="button" {...props} className={cx(f.round, className)} aria-label={label} />;
+}
+/** A text field on a grey well, no box: the label is read aloud and shown as the placeholder (the title's sign-in). */
+export function FlatField({ label, className, placeholder, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string }) {
+  return <label className={cx(f.field, className)}><span>{label}</span><input {...props} placeholder={placeholder ?? label} /></label>;
 }
 
 // ── Lists ───────────────────────────────────────────────────────────────────────────────────────────────────────────

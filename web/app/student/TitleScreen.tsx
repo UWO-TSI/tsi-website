@@ -2,7 +2,9 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
-import { Button, Field, Slider, Toggle } from "@/components/gui";
+import { ChevronLeft } from "lucide-react";
+import { Button, Slider, Toggle } from "@/components/gui";
+import { DarkButton, FlatField, GhostButton, RoundButton } from "@/components/gui/flat";
 import TsiLogo from "@/components/ui/TsiLogo";
 import { createClient } from "@/lib/supabase/client";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
@@ -18,7 +20,7 @@ export type TitleView = "menu" | "signin" | "signup" | "forgot" | "check" | "set
 /**
  * The game's title screen (David, 2026-10-03; the banner look chosen 2026-11-01, specs/lanes/title-r2.md): the live
  * island close up with depth of field, a white banner hanging from the top-left with the logo and Let's Play,
- * Settings and Exit (a gold marker under the chosen one), and a small input hint bottom-right.
+ * Settings and Exit (a gold marker under the chosen one, between two gold diamonds), and a small input hint bottom-right.
  * Arrow keys (or W/S) move, Enter picks, Escape steps back.
  * Let's Play continues a signed-in member and asks anyone else to sign in (creating an account and Google from
  * there); Settings holds the graphics and sound (and signing out); Exit goes back to tethos.ca. After any sign-in,
@@ -120,39 +122,39 @@ export default function TitleScreen({ landing, account, open, initialView, when,
           {view === "settings" && <Settings onBack={() => go("menu")} onSignOut={account ? signOut : null} />}
 
           {view === "signin" && <Form title="Sign in" onBack={() => go("menu")} onSubmit={signIn}>
-            <GoogleButton onClick={google} disabled={busy}>Continue with Google</GoogleButton>
-            <Or />
-            <Field label="Email" type="email" value={form.email} onChange={set("email")} required autoComplete="email" autoFocus />
-            <Field label="Password" type="password" value={form.password} onChange={set("password")} required minLength={6} autoComplete="current-password" />
+            <GoogleButton onClick={google} disabled={busy} />
+            <p className={s.or}>or</p>
+            <FlatField label="Email" type="email" value={form.email} onChange={set("email")} required autoComplete="email" autoFocus />
+            <FlatField label="Password" type="password" value={form.password} onChange={set("password")} required minLength={6} autoComplete="current-password" />
             <Messages error={error} notice={notice} />
-            <Button type="submit" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</Button>
+            <DarkButton type="submit" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</DarkButton>
             <div className={s.links}>
               <button type="button" onClick={() => go("forgot")}>Forgot password?</button>
-              <button type="button" onClick={() => go("signup")}>Create an account</button>
+              <button type="button" onClick={() => go("signup")}>Create account</button>
             </div>
           </Form>}
 
-          {view === "signup" && <Form title="Create account" onBack={() => go("menu")} onSubmit={signUp}>
-            <GoogleButton onClick={google} disabled={busy}>Sign up with Google</GoogleButton>
-            <Or />
-            <Field label="Name" value={form.name} onChange={set("name")} required autoComplete="name" autoFocus />
-            <Field label="Email" type="email" value={form.email} onChange={set("email")} required autoComplete="email" />
-            <Field label="Password" type="password" value={form.password} onChange={set("password")} required minLength={6} autoComplete="new-password" placeholder="At least 6 characters" />
-            <Field label="Invite code" value={form.invite} onChange={set("invite")} autoComplete="off" placeholder="Optional, from your TSI chapter" />
+          {view === "signup" && <Form title="New account" onBack={() => go("menu")} onSubmit={signUp}>
+            <GoogleButton onClick={google} disabled={busy} />
+            <p className={s.or}>or</p>
+            <FlatField label="Name" value={form.name} onChange={set("name")} required autoComplete="name" autoFocus />
+            <FlatField label="Email" type="email" value={form.email} onChange={set("email")} required autoComplete="email" />
+            <FlatField label="Password" type="password" value={form.password} onChange={set("password")} required minLength={6} autoComplete="new-password" placeholder="Password, 6+ characters" />
+            <FlatField label="Invite code" value={form.invite} onChange={set("invite")} autoComplete="off" placeholder="Invite code (optional)" />
             <Messages error={error} notice={notice} />
-            <Button type="submit" disabled={busy}>{busy ? "Creating…" : "Create account"}</Button>
-            <div className={s.links}><button type="button" onClick={() => go("signin")}>I already have an account</button></div>
+            <DarkButton type="submit" disabled={busy}>{busy ? "Creating…" : "Create account"}</DarkButton>
+            <div className={s.links}><button type="button" onClick={() => go("signin")}>I have an account</button></div>
           </Form>}
 
           {view === "forgot" && <Form title="Reset password" onBack={() => go("signin")} onSubmit={forgot}>
-            <p className={s.lead}>We&apos;ll email you a link to set a new one.</p>
-            <Field label="Email" type="email" value={form.email} onChange={set("email")} required autoComplete="email" autoFocus />
+            <p className={s.lead}>We&apos;ll email you a link.</p>
+            <FlatField label="Email" type="email" value={form.email} onChange={set("email")} required autoComplete="email" autoFocus />
             <Messages error={error} notice={notice} />
-            <Button type="submit" disabled={busy}>{busy ? "Sending…" : "Send reset link"}</Button>
+            <DarkButton type="submit" disabled={busy}>{busy ? "Sending…" : "Send link"}</DarkButton>
           </Form>}
 
           {view === "check" && <Form title="Check your email" onBack={() => go("menu")}>
-            <p className={s.lead}>We sent a link to {form.email}. Open it to finish creating your account.</p>
+            <p className={s.lead}>Open the link we sent to {form.email}.</p>
           </Form>}
         </div>
       </section>
@@ -194,7 +196,7 @@ function Settings({ onBack, onSignOut }: { onBack: () => void; onSignOut: (() =>
   return (
     <div className={s.form} role="group" aria-labelledby="title-settings">
       <div className={s.formHead}>
-        <button type="button" className={s.back} onClick={onBack} aria-label="Back" autoFocus>‹</button>
+        <RoundButton label="Back" onClick={onBack} autoFocus><ChevronLeft size={18} /></RoundButton>
         <h2 id="title-settings">Settings</h2>
       </div>
       <div className={s.setting}>
@@ -221,7 +223,7 @@ function Form({ title, onBack, onSubmit, children }: { title: string; onBack: ()
   return (
     <form className={s.form} onSubmit={onSubmit ?? (e => e.preventDefault())} noValidate={false}>
       <div className={s.formHead}>
-        <button type="button" className={s.back} onClick={onBack} aria-label="Back">‹</button>
+        <RoundButton label="Back" onClick={onBack}><ChevronLeft size={18} /></RoundButton>
         <h2>{title}</h2>
       </div>
       {children}
@@ -229,22 +231,19 @@ function Form({ title, onBack, onSubmit, children }: { title: string; onBack: ()
   );
 }
 
-function GoogleButton({ children, ...props }: { children: ReactNode; onClick: () => void; disabled?: boolean }) {
+/** Google, the one-tap way in: a white pill with the G (both sign-in and sign-up, as before). */
+function GoogleButton(props: { onClick: () => void; disabled?: boolean }) {
   return (
-    <Button variant="secondary" {...props}>
+    <GhostButton className={s.google} {...props}>
       <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
         <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
         <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
         <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
       </svg>
-      {children}
-    </Button>
+      Continue with Google
+    </GhostButton>
   );
-}
-
-function Or() {
-  return <div className={s.or}><span>or</span></div>;
 }
 
 function Messages({ error, notice }: { error: string | null; notice: string | null }) {
