@@ -29,6 +29,20 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 7: David's round 6 review (2026-11-03, verbatim; https://claude.ai/artifact/MjtzeKrEZESrahRE1YLo9S)
+
+Approved: f6-board-fish, f6-bin-fish, f6-board-world, f6-model, f6-coins, f6-coins-kit, f6-phone.
+- f6-biome-hud (approve): "the biome tag should also show like the location like village wharf plains etc, move it under. the time"
+- f6-biome-reel (redo): "make the height match the dace, either increase dace to shrink river"
+- f6-board-face (redo): "direction is good, move to where the barrels are rn"
+- From the fish list review (fl-today), verbatim: "also the current reel in is laggy and not smooth and affecting user experience for fishing"
+
+Build:
+1. The HUD tag names the place as well as the water (village, wharf, plains and so on, from the world's areas) and sits under the time.
+2. On the reel bar, the biome tag and the fish name chip are the same height.
+3. Keep the board's facing; move it to where the barrels stand now (move the barrels somewhere sensible nearby, and say where).
+4. **The reel-in is laggy and not smooth:** profile the reel minigame headless (frame times while reeling, input to response), find the cause and fix it at the root. Show the numbers before and after.
+
 ## Round 6: David's round 5 review (2026-11-02, verbatim; https://claude.ai/artifact/QGHxuaAFtRLX9Yun6rx6Uq)
 
 Approved: f5-board, f5-board-chips, f5-board-far, f5-board-hover, f5-seasons, f5-cover, f5-phone, f5-sell, f5-showroom, f5-sign-river.
