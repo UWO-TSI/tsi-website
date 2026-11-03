@@ -1,8 +1,8 @@
-/* The portal title screen (the v1 look, specs/v1-drop.md §8b, after title-piece-by-piece-ref.png): the live village
-   close up, the logo top-left, a cream card with a dashed border and a soft pill under the chosen item, a small input
-   hint bottom-right. Above the site splash (z 99999), which the title never needs. */
-.screen { position: fixed; inset: 0; z-index: 100000; overflow: hidden; color: #fff; font-family: var(--gui-font);
-  --title-ink: #2f4b57; --title-pill: #9cbd98; --title-pill-ink: #fffdf2; --title-hint: #2f5a60;
+/* The title screen (David, 2026-11-01: the banner): the live island close up, one white banner hanging from the top edge
+   with a swallowtail, holding the emblem, the wordmark, ISLAND between gold rules and the menu, the chosen row on a soft
+   gold marker between two diamonds. A small input hint bottom-right. Above the site splash (z 99999). On a phone it
+   splits: a short pennant at the top holds the logo and a white panel at the bottom holds the menu. */
+.screen { position: fixed; inset: 0; z-index: 100000; overflow: hidden; color: #fff; font-family: var(--gui-font); --title-r: 14px;
   background: linear-gradient(#8fc3dc 0%, #cfe3e2 55%, #e8e0c2 100%); }
 
 /* The island fades in once its first frames have drawn; until then the sky colour holds the screen. */
@@ -10,48 +10,50 @@
 .screen[data-ready] .scene { opacity: 1; }
 .scene canvas { display: block; }
 
-/* A little reading light behind the logo and the card; the scene stays bright, as in the reference. */
+/* A little reading light behind the banner; the scene stays bright, as in the reference. */
 .shade { position: absolute; inset: 0; pointer-events: none;
   background: radial-gradient(ellipse 46% 60% at 0% 30%, rgb(18 30 26 / 0.3), transparent 70%),
               linear-gradient(0deg, rgb(10 14 12 / 0.22) 0%, transparent 16%); }
 
-/* The logo at the top, the card under it; the column scrolls rather than clipping when a form runs tall. */
-.column { position: absolute; left: clamp(24px, 6.5vw, 112px); top: 0; bottom: 56px; width: min(380px, calc(100vw - 48px));
-  padding: clamp(24px, 6vh, 64px) 0 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: clamp(18px, 5vh, 48px);
-  overflow-y: auto; scrollbar-width: none; animation: rise 0.9s var(--gui-ease) both; }
+/* The banner: the white panel is the column's ::before (clip-path would clip a box-shadow, so the drop-shadow filter sits on
+   the column). It drops in on a spring and scrolls rather than clipping when a form runs tall. */
+.column { position: absolute; left: clamp(24px, 6.5vw, 112px); top: 0; max-height: calc(100% - 64px); width: 330px; box-sizing: border-box;
+  padding: clamp(28px, 5vh, 52px) 30px 66px; display: flex; flex-direction: column; gap: 26px; overflow-y: auto; scrollbar-width: none;
+  filter: drop-shadow(0 14px 22px rgb(var(--ui-shade) / 0.26)); animation: drop 0.9s var(--gui-spring) both; }
 .column::-webkit-scrollbar { display: none; }
+.column::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--ui-card);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 40px), 0 100%); }
 .column > * { flex: none; }
 .column:has(.card:not([data-view="menu"])) .wordmark { font-size: clamp(44px, 4.6vw, 68px); }
 
-/* The logo: chunky white letters with a deep teal outline, the way the reference's game logo sits on the scene. */
-.brand { display: grid; justify-items: start; gap: 8px; }
-.logo { color: #fff; filter: drop-shadow(0 0 0 #234a52) drop-shadow(0 3px 0 #234a52) drop-shadow(0 4px 10px rgb(0 0 0 / 0.25)); }
-.wordmark { margin: 0; display: grid; font: 900 clamp(58px, 7vw, 100px)/0.92 var(--gui-font); letter-spacing: -0.015em; color: #fff;
-  -webkit-text-stroke: 0.16em #234a52; paint-order: stroke fill; text-shadow: 0 6px 0 #234a52, 0 10px 22px rgb(0 0 0 / 0.22); }
-.wordmark span { margin-top: 10px; font: 900 clamp(14px, 1.3vw, 18px)/1.2 var(--gui-font); letter-spacing: 0.3em; text-transform: uppercase;
-  -webkit-text-stroke: 0.3em #234a52; text-shadow: 0 2px 0 #234a52; }
+/* The logo: the teal emblem over the teal wordmark, ISLAND between two gold rules. */
+.brand { display: grid; justify-items: center; gap: 12px; }
+.logo { color: var(--ui-title-outline); }
+.wordmark { margin: 0; display: grid; justify-items: center; font: 900 clamp(64px, 5.8vw, 82px)/0.92 var(--gui-font); letter-spacing: -0.015em;
+  color: var(--ui-title-outline); }
+.wordmark span { display: flex; align-items: center; gap: 12px; margin-top: 12px; font: 900 clamp(14px, 1.3vw, 18px)/1.2 var(--gui-font);
+  letter-spacing: 0.4em; text-transform: uppercase; color: var(--ui-ink-2); }
+.wordmark span::before, .wordmark span::after { content: ""; width: 30px; height: 3px; border-radius: 2px; background: var(--ui-gold); }
+.wordmark span::before { margin-right: 0.4em; }
 
-/* The card: cream paper, a dashed seam inside its edge, soft shadow. */
-.card { position: relative; justify-self: start; width: 100%; padding: 16px; box-sizing: border-box; color: var(--gui-ink-strong);
-  background: #fcf3dc; border-radius: 26px; box-shadow: 0 2px 0 rgb(140 112 70 / 0.18), 0 14px 34px rgb(30 40 30 / 0.24);
-  animation: pop 0.5s var(--gui-spring) 0.25s both; }
-.card::before { content: ""; position: absolute; inset: 9px; border: 2px dashed #e2cfa6; border-radius: 19px; pointer-events: none; }
-.card[data-view="menu"] { width: 260px; padding: 20px 18px; }
+/* The card holds whichever view is open, on the banner itself. */
+.card { position: relative; width: 100%; color: var(--gui-ink-strong); }
 
-/* The menu: words on paper, the chosen one on a soft sage pill. Transform and colour only, so rows never reflow. */
+/* The menu: words on the banner, the chosen one on a soft gold marker between two diamonds. Transform and colour only, so rows never reflow. */
 .menu { list-style: none; margin: 0; padding: 4px 0; display: grid; gap: 2px; position: relative; }
-.menu button { position: relative; width: 100%; min-height: 46px; padding: 6px 18px; border: 0; border-radius: 999px; cursor: pointer;
-  background: transparent; color: var(--title-ink); font: 800 22px/1.2 var(--gui-font); letter-spacing: 0.005em;
+.menu button { position: relative; width: 100%; min-height: 50px; padding: 6px 18px; border: 0; border-radius: 999px; cursor: pointer; text-align: center;
+  background: transparent; color: var(--ui-ink); font: 800 24px/1.2 var(--gui-font); letter-spacing: 0.005em;
   transition: background var(--gui-t-fast) ease, color var(--gui-t-fast) ease, transform var(--gui-t-fast) ease; }
-.menu button[data-selected] { background: var(--title-pill); color: var(--title-pill-ink); transform: scale(1.03);
-  box-shadow: inset 0 -2px 0 rgb(47 81 67 / 0.18); }
+.menu button[data-selected] { background: var(--ui-marker); }
+.menu button[data-selected]::before, .menu button[data-selected]::after { content: ""; position: absolute; top: 50%; width: 8px; height: 8px; margin-top: -4px;
+  border-radius: 2px; background: var(--ui-ink); rotate: 45deg; }
+.menu button[data-selected]::before { left: 24px; }
+.menu button[data-selected]::after { right: 24px; }
 .menu button:active { transform: scale(0.98); }
 .menu button:focus-visible { outline: none; }
-.menu button[data-selected]:focus-visible { box-shadow: inset 0 -2px 0 rgb(47 81 67 / 0.18), 0 0 0 3px rgb(47 75 87 / 0.35); }
-.caption { position: relative; margin: 2px 0 6px; text-align: center; font: 700 13px/1.4 var(--gui-font); color: var(--gui-muted); overflow-wrap: anywhere; }
+.caption { position: relative; margin: 2px 0 6px; text-align: center; font: 700 13px/1.4 var(--gui-font); color: var(--ui-muted); overflow-wrap: anywhere; }
 
 .form { position: relative; display: grid; gap: 10px; padding: 8px 10px 6px; }
-.screen { --title-r: 14px; }
 /* The kit's buttons and fields are pills; on this screen they square up to the title's rounded rectangle. */
 .form button:not(.back):not([role="switch"]), .form input:not([type="range"]) { border-radius: var(--title-r) !important; }
 .formHead { display: flex; align-items: center; gap: 10px; }
@@ -82,23 +84,26 @@
   align-items: center; gap: 16px; font: 700 13px/1.3 var(--gui-font); color: rgb(255 255 255 / 0.9); text-shadow: 0 1px 6px rgb(0 0 0 / 0.45); }
 .when { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 .soon { font-style: normal; padding: 3px 10px; border-radius: var(--gui-r-pill); background: var(--gui-butter); color: var(--gui-ink-strong); text-shadow: none; }
-.apply { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
+.apply { padding: 4px 12px; border-radius: 999px; background: var(--ui-gold); color: var(--ui-ink); text-decoration: none; text-shadow: none; }
 
-/* The input hint: a small dark pill bottom-right, a round key and the verb. */
-.hint { display: inline-flex; align-items: center; gap: 8px; padding: 5px 16px 5px 6px; border-radius: 999px; background: var(--title-hint);
+/* The input hint: a small teal pill bottom-right, a round key and the verb. */
+.hint { display: inline-flex; align-items: center; gap: 16px; padding: 5px 16px 5px 6px; border-radius: 999px; background: var(--ui-title-outline);
   color: #fff; font: 800 15px/1 var(--gui-font); text-shadow: none; box-shadow: 0 2px 10px rgb(0 0 0 / 0.22); white-space: nowrap; }
+.hint > span { display: inline-flex; align-items: center; gap: 8px; }
 .hint kbd { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 6px; box-sizing: border-box; border-radius: 999px;
-  background: #dceee9; color: var(--title-hint); font: 900 13px/1 var(--gui-font); }
+  background: var(--ui-card); color: var(--ui-title-outline); font: 900 13px/1 var(--gui-font); }
 
-@keyframes rise { from { opacity: 0; transform: translateY(18px); } }
-@keyframes pop { from { opacity: 0; transform: scale(0.94); } }
+@keyframes drop { from { transform: translateY(-110%); } }
 
-/* Phones: the logo up top, the card along the bottom, no key hint. */
+/* Phones: the banner splits. A short pennant at the top holds the logo, a white panel along the bottom holds the menu, no key hint. */
 @media (max-width: 640px) {
-  .column { left: 16px; right: 16px; width: auto; bottom: 60px; gap: 18px; }
+  .column { left: 16px; right: 16px; width: auto; top: 0; bottom: 60px; max-height: none; padding: 0; }
+  .column::before { display: none; }
   .column > :last-child { margin-top: auto; }
-  .card, .card[data-view="menu"] { width: 100%; }
-  .wordmark { font-size: clamp(52px, 15vw, 72px); }
+  .brand { justify-self: center; align-self: center; width: 250px; padding: 22px 0 50px; background: var(--ui-card);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 30px), 0 100%); }
+  .wordmark { font-size: 56px; }
+  .card { padding: 14px; border-radius: 24px; background: var(--ui-card); }
   .footer { left: 16px; right: 16px; bottom: 14px; font-size: 12px; }
   .when { gap: 8px; }
   .soon { padding: 2px 8px; white-space: nowrap; }
@@ -107,7 +112,7 @@
 @media (pointer: coarse) { .hint { display: none; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .column, .card { animation: none; }
+  .column { animation: none; }
   .scene { transition: none; }
   .menu button { transition: none; }
 }

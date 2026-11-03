@@ -51,6 +51,6 @@ export const HQ_SCRIPT: readonly HqBeat[] = [
 ];
 
 /** Said once the last beat is done: she sends you off (to the museum with your first find). */
-export const HQ_END: readonly string[] = ["farewell"];
+export const HQ_END: readonly string[] = ["camera", "farewell"];
 /** The same while Bram's tour is still on (HQ first, the new world's route): he's waiting outside. */
-export const HQ_END_TOUR: readonly string[] = ["farewellTour"];
+export const HQ_END_TOUR: readonly string[] = ["camera", "farewellTour"];

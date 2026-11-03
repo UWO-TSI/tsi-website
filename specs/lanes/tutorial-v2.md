@@ -35,6 +35,24 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 6: David's playtest of round 5 (2026-11-01 night, verbatim, local test server)
+
+Screenshot: `/private/tmp/claude-501/-Users-DavidLiu/62203045-4999-4738-af95-c4357660b05d/images/82.png` (night, Bram's first line on the dock, the talk box with the hearts row and the gift button).
+- "no need to show heart and gift in the tutorial"
+- "also in the cut scene to come on the island on one of the cuts it shows the island from the dock but the camera angle and teh way the world is curved you can only rly see water"
+
+- On Bram's wharf line "And the shipwright's. Boats, one of these days." (screenshot `.../images/83.png`): "rewrite" (coordinator: say plainly what the building is and that boats come later, in Bram's voice, one short sentence, keeping the shipwright and boat icons; check the lore first; show old and new lines on the review).
+- "remove the it got away ui when a bug gets away and only show it if im trying to catch a bug, if not dont show" (coordinator: the toast only when the player swung the net at that bug or was mid-catch; a bug flying off on its own shows nothing).
+
+His round 5 review marks (page GbbF8C1nVDqkyqcSP5UV2w), verbatim:
+- v5-id (redo): "i think we remove like where youre from and put stuff thats important in game, like pronouns or smth like what does other multi player games need" (coordinator: drop "where you're from"; propose fields from what cozy multiplayer games show on a player card, build the best few, list the others for him).
+- v5-keys (redo): "the keyboard overlay can be bigger, 15% bigger, also when holding each key it should pop on the right side what it will look like and fade away when let go, like the inventory bar or emote wheel with a mini animation on it spinning or selecting "
+- v5-kit (approve): " on thing is the museum is closed so i cant donate anything to the museum and im stuck for the tutorial" (coordinator: signed out on a local server the progression is the static previewState (lib/progression/client.ts, source "defaults"), the first catch never ticks, so Juno never takes it; check that reading; say if a signed-out player can really get stuck, but don't build a local progression).
+- v5-sights (redo): "i want you to make a icon library that matches words to icons so all future convo uses colored icons" (coordinator: keyword.tsx's KEYWORDS becomes the documented library with much wider coverage (places, items, creatures, actions, roles), a design bible rule that every talk line uses it, the full library on /lab/gui as a kit page).
+- v5-wallet-slot (redo): "pressing esc there is a long pause of silence, it should be instant when you press esc alice explains, and explain that you click to be in locked camera and esc to be free cam"
+
+More notes may follow from the coordinator while you work.
+
 ## Round 5: David's v4 review (2026-10-29, verbatim)
 
 Approved: v4-dock, v4-esc, v4-glide, v4-hop, v4-props, v4-reel, v4-sell, v4-small.
@@ -85,25 +103,34 @@ Not ours: the creator's water and hair; casting toward the cursor; the reel pane
 
 ## Status
 
-Round 5 built on the new world and shot headless: `specs/evidence/tutorial-v2/v5/` (a-* HQ, b-* the sights and wharf, k-* the kit, c-keys-r3-r4-r5 the comparison). Waiting on David's review. Main merged at 660eb79d (the village retired: `routes/index.ts` and GAME_WORLD gone, NEW_ROUTE everywhere; tutorial.test's walk-along mechanics run on a fixture route `WALK`, the old village stops). Round 4's status is in git history (1fc48ea3).
+Round 6 built (David's round 5 playtest and review, 2026-11-01), code at 3b2f6b9a and 0f5216fb; evidence `specs/evidence/tutorial-v2/v6/` (t6-*). Round 5's status is in git history (21e72484).
 
-- **wallet (v4-currency, bible UI 8b):** kit `WalletSlot` (`components/gui/flat/wallet.tsx`: coins and gems in one white pill, each cell `data-hud-slot`; `at` in/out slides; `landing`: that cell's icon waits until a FlyIn marks it `data-landed`, then clicks in and its count ticks up from 0; `CountUp` moved here from TopCluster). `TopCluster.tsx` `HudWallet` is the HUD's wallet, under `HudClock` in the top-right column (DefaultIslandWorld): it rests there in the UI view (Esc 1, the HUD key, the setting, the keys tour's H), slides in at rest for `FLASH_MS.coins` (now 2000) when coins or gems change, and holds in for Alice's `showcase` (hq.fly), lingering 0.9 s after; a cinematic (Alice talking again) fades it with the rest of the top right (it isn't unmounted). TopCluster lost its coin chip and the old showcase slot; the quest line no longer hides for a fly. `hudStore` carries `gems` (from the wallet read) and `setHudGems`; dev hook `window.__hudGems` beside `__hudCoins`.
-- **keys (v4-keys):** round 3's card back as a light `Spotlight` (`light`: no scrim, a small white card on a hairline, only "Hold [H] At a glance", the keys on a light well, dots and Skip). `KeyPrompt` and its CSS deleted; `KeyBoard` back on its well (32 px keys, thin foot). Steps lost their `text` (uiTour.ts titles a word or two). Kept round 4's behaviour: each press moves on and its HUD piece springs in (SlotPop); H now points at the wallet.
-- **ID (v4-id):** printing, the card's wrapper is clipped at the slot's line (`clip-path` on `.paperWrap`, top edge only) and the card slides down out of it (`printOut` is a plain translate); nothing shows above the slot.
-- **keywords (v4-sights):** `keyword.tsx` is a dictionary (`KEYWORDS`: fish, bug, coin, gem, rod (a drawn rod), shovel, merch, ID, mail, map, study, ship/boat/shipwright, shop/tackle shop, market/fish market, café, museum, HQ, wharf, barrel, gathering), each with a lucide icon and a tone (`--ui-word-fish|bug|coin|gem|place|item`, all three themes). `keywordParts` finds them in any line (whole words, any case, longest phrase first); no stars any more (`plainLine` deleted), so every TalkBox line in the game gets them (TalkBox shows a keyword's icon as the typing reaches it through `[data-tone]`). Lines: the café "Study there with friends, and you'll earn coins for it.", the shop "Tools and clothes for the island, and real merch too.", the wharf "Here's the wharf and the fish market."
-- **Kit (v4-kit):** /lab/gui `?only=key-board` (the light card), `wallet`, `fly-in` (into the wallet's cell), `keyword` (every kind, then a line), `printed-card`.
+- **Hearts and gift (note 1):** `useInTutorial()` (arrivalStore: an arrival running, or Alice's visit not done) hides TalkBox's friendship row and gift picker; they come back after.
+- **The crossing (note 2):** the curve (view-space z^2 x 0.0032) hid the island below a low camera: from 0.45 m the sea's horizon is 12 m away. The bow cut now rides about 5 m up over the bow on a 28 to 25 lens, aimed at the island (the wharf fills the frame); the drone cut stays wide and aims there too. The "island" point is now a quarter of the way from the pier's tip to HQ (the wharf's buildings and the town), not half HQ's position (the island's far middle, 110 to 130 m off). Nothing in the world moved. The crossing is always dawn gold (by design), so day and night shots of it match; the night difference starts on the dock.
+- **Shipwright line (note 3):** "And the shipwright's. Boats, one of these days." is now "And that's the shipwright's yard, where you'll build a boat of your own one day." (m7: crafting boats is the next launch.)
+- **Bug toast (note 4):** "It got away!" only when your swing startled the bug (VillageLife `startled`); one that flies off on its own is silent.
+- **v5-id:** "From" is out; Pronouns in (free text with picks: she/her, he/him, they/them, she/they, he/they, any pronouns). New column `profiles.pronouns` (migration `20261101230000_profile_pronouns.sql`, not applied: the coordinator applies it), PATCH /api/profile takes it. Proposed for David, not built: a title (ACNH passport's two-word phrase), "here for" tags (fishing, bugs, decorating, chatting, studying), favourite catch (from the collection), usual play hours or time zone, "resident since" date, showing pronouns on other players' cards (the net card).
+- **v5-keys:** the light keyboard card 15% bigger (keys 37 px, lead 17 px); `KeyPeek` (kit, new) pops on the card's right while a tour key is down (wheel spins in and picks, emote wheel picks a heart, HUD pills slide in, bag bar fills, collection flips, quests tick, map pings, mail rises) and fades on release (at least 1.1 s for a quick press). Spotlight got an `aside` slot.
+- **v5-sights:** `keyword.tsx` is the icon library: 70-odd kinds over 8 tones (sea creatures, land creatures, coins, gems/rewards/events, things, places, people, things you do; new tokens `--ui-word-person`, `--ui-word-act` in all three themes). Design bible UI rule 8c: every talk line uses it, new things get a row. Kit page `/lab/gui?only=keyword-library`.
+- **v5-wallet-slot (Esc):** Alice answers 150 ms after Esc (was 2.6 s of silence) with the new `camera` lines: "That's your menu. Esc brings it up whenever you need it." / "Out on the island, click and your mouse turns the camera. Esc lets it go again." (left out on touch). Both farewells lost their old menu line.
+- **Evidence (`specs/evidence/tutorial-v2/v6/`):** t6-before-/t6-after- `{d,n}-cuts` (every cut's middle plus the landing), `-bow`, `-drone` (15/50/90%), `-talk-bram`; t6-talk-hearts-before-after-crop; t6-id-form, t6-id-card; t6-keys-card-bigger, t6-keys-peek-{wheel,emote,hud,fade,press} strips and the wheel and bag crops; t6-esc-instant strip, t6-esc-alice-menu, t6-esc-alice-camera; t6-shipwright-line (old: v5/b-46-wharf-shipwright); t6-kit-{key-peek,key-board,keyword,keyword-library,printed-card}. /lab/gui logs a hydration mismatch on every overlay (pre-existing, not this round's).
+- **v5-kit (museum stuck):** confirmed: signed out the progression is the static `previewState` (lib/progression/client.ts, source "defaults"), `firstCatchKey` is always null, so Juno's step never takes the catch and a signed-out player is stuck at "bring your first catch to Juno". Signed in, facts read the catch from the DB and Juno takes it. Not built (no local progression), per the coordinator.
 
 ## Next
 
-1. Act on David's round 5 review once main relays it.
-2. At the main-quest r3 merge: TopCluster (their XP chip out, my coin chip out: keep both removals), hudStore (their `hudLive` and chapter XP, my `gems`), hudPrefs FLASH_MS (their `xp` gone, my `coins: 2000`), the theme files (their tokens at the end, mine after `--ui-word-coin`).
-3. Other coin and gem animations (rewards, sales) should fly to `[data-hud-slot="coins"|"gems"]` too (bible 8b); the sale already slides the wallet in through the coins change.
-4. Bring Alice's look-round-HQ line back when David says.
-5. Later, after David approves the desktop tutorial: the phone pass.
-6. At the fish-tiers merge: MemberFishing must dispatch `tsi:fish-hooked` / `tsi:fish-caught` / `tsi:fish-escaped` / `tsi:fish-end`, answer `[aria-label="Fishing reel"]`, and build its reel with `createFishingReel`.
-7. Open for David: a job board or past-projects display in HQ; his name in the lore (the Founder for now).
+1. Act on David's round 6 review once main relays it.
+2. The coordinator applies `20261101230000_profile_pronouns.sql` before the ID ships (without it, PATCH /api/profile with pronouns fails and the card says it wasn't saved).
+3. At the main-quest r3 merge: TopCluster (their XP chip out, my coin chip out: keep both removals), hudStore (their `hudLive` and chapter XP, my `gems`), hudPrefs FLASH_MS (their `xp` gone, my `coins: 2000`), the theme files (their tokens at the end, mine after `--ui-word-coin`, now with `--ui-word-person` and `--ui-word-act`).
+4. Other coin and gem animations (rewards, sales) should fly to `[data-hud-slot="coins"|"gems"]` too (bible 8b).
+5. Bring Alice's look-round-HQ line back when David says.
+6. Later, after David approves the desktop tutorial: the phone pass (KeyPeek sits right of the card: no room on a phone).
+7. At the fish-tiers merge: MemberFishing must dispatch `tsi:fish-hooked` / `tsi:fish-caught` / `tsi:fish-escaped` / `tsi:fish-end`, answer `[aria-label="Fishing reel"]`, and build its reel with `createFishingReel`.
+8. Open for David: the ID fields he picks from the list above; the wake cut (all sea, by design) if he wants it changed too; a job board or past-projects display in HQ; his name in the lore (the Founder for now).
 
 ## Tools and gotchas
+
+- Round 6: `scratchpad/tv6-multi.sh <out> shoot:day shoot:night walk:hq walk:sights walk:kit` under `withlock.sh devserver` (one dev server on 3172, several scenes). `v6/shoot.mjs <out> day|night`: the crossing played out, each cut at 15/50/90% (`<P>-cut-N-<id>-fNN`), the middles plus the landing as `<P>-cuts-fNN`, then Bram's first talk box. `v6/walk.mjs`: round 5's walks (hq: pronouns, key peeks, Esc; sights: the shipwright line) and the kit (key-peek, keyword-library). Then `python3 specs/evidence/tutorial-v2/v4/strips.py <out> <dir>`.
+- The crossing's geometry (dock frame, new world): the boat starts about 45 m off the pier's tip and 130 m from half HQ's position; the curve's horizon from height h is sqrt(h / 0.0032) m away (0.45 m: 12 m; 4 m: 35 m).
 
 - Round 5: `scratchpad/tv5-run.sh <out> hq|sights|kit` under `withlock.sh devserver` (starts `next dev -p 3172` new world, Supabase blanked, runs `specs/evidence/tutorial-v2/v5/shoot.mjs`, stops the server); then `python3 specs/evidence/tutorial-v2/v4/strips.py <out> <dir>`. The hq scene pre-sets `tsi.dock.cleared` (the dock's lessons skipped) and sets coins 1240 and gems 35 through the dev hooks inside HQ.
 - Round 4: `/private/.../scratchpad/run.sh <out> <scene>` style: start `NEXT_PUBLIC_GAME_WORLD=new NEXT_PUBLIC_SUPABASE_URL= NEXT_PUBLIC_SUPABASE_ANON_KEY= npx next dev -p 3172` under the devserver lock, then `HOST=http://localhost:3172 node specs/evidence/tutorial-v2/v4/shoot.mjs <out> walk-a|walk-b|kit`, one scene per call (walk-a about 7 min, walk-b about 6), then `python3 specs/evidence/tutorial-v2/v4/strips.py <out> specs/evidence/tutorial-v2/v4`.
@@ -115,7 +142,7 @@ Round 5 built on the new world and shot headless: `specs/evidence/tutorial-v2/v5
 
 ## Rules
 
-- **Gates round 5:** tsc clean; full vitest (new world) 376 files, 3543 passed, 4 skipped; eslint clean on every file changed since the merge. perf:check not run (UI only).
+- **Gates round 6:** tsc clean; full vitest 398 files passed (2 skipped), 3737 tests passed, 4 skipped; eslint clean on every changed .ts/.tsx since 4fb4b8cc. perf:check not run (camera framing and UI only; nothing new renders in the world).
 - **Headless only:** never open a window, tab, app or audio on David's screen; never `open`; never the Playwright MCP, the claude-in-chrome tools or the `blender` MCP tools. Blender only as `/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P <script>`. Never port 3000.
 - **Locks:** `LANE=game/tutorial-v2 /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh heavy|blender|devserver <cmd>` (`specs/lane-rules.md`).
 - **The village is retired (David, 2026-10-28):** every shot and run is on the new world; gates are vitest with `NEXT_PUBLIC_GAME_WORLD=new` only; no village-only code; keep off `web/lib/game/world/active.ts`.
