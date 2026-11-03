@@ -1,0 +1,148 @@
+{
+ "checks": {
+  "island: a click takes the mouse": {
+   "ok": true,
+   "detail": ""
+  },
+  "island: E at the net starts the match": {
+   "ok": true,
+   "detail": ""
+  },
+  "camera: the glide in finishes": {
+   "ok": true,
+   "detail": ""
+  },
+  "serve: you serve first (seed 7)": {
+   "ok": true,
+   "detail": ""
+  },
+  "serve: right-drag sets the contact point (curve)": {
+   "ok": true,
+   "detail": "{\"x\":0.5454545454545455,\"y\":0.27272727272727276}"
+  },
+  "serve: the right button keeps the mouse (orbit never sees it)": {
+   "ok": true,
+   "detail": ""
+  },
+  "serve: holding the left button fills the meter": {
+   "ok": true,
+   "detail": "held 0.6000000000000003"
+  },
+  "serve: releasing tosses": {
+   "ok": true,
+   "detail": ""
+  },
+  "serve: in the toss the mouse moves the ring's cursor": {
+   "ok": true,
+   "detail": "{\"x\":0.4285714285714285,\"y\":-0.21428571428571425}"
+  },
+  "serve: a click on time serves": {
+   "ok": true,
+   "detail": "{\"kind\":\"serve\",\"who\":0,\"judge\":\"perfect\"}"
+  },
+  "rally: bump (left click)": {
+   "ok": true,
+   "detail": "press:bump contact:bump"
+  },
+  "rally: set (E)": {
+   "ok": true,
+   "detail": "press:set contact:set"
+  },
+  "rally: early bump waits for the ball": {
+   "ok": true,
+   "detail": "press:bump contact:bump"
+  },
+  "rally: call (right click)": {
+   "ok": true,
+   "detail": "call:"
+  },
+  "rally: the right click kept the mouse": {
+   "ok": true,
+   "detail": ""
+  },
+  "rally: dive (Q)": {
+   "ok": true,
+   "detail": "dive:"
+  },
+  "rally: Ctrl does nothing in a match": {
+   "ok": true,
+   "detail": ""
+  },
+  "rally: your dig flashes your avatar white (no impact frame) and gives its look back": {
+   "ok": true,
+   "detail": "{\"blink\":6,\"impact\":0,\"on\":false,\"after\":0}"
+  },
+  "rally: a clutch dive (Q) digs a ball out of reach on foot": {
+   "ok": true,
+   "detail": "dive::onBall contact:dig"
+  },
+  "air: spike pressed on the way up meets the ball (Space, left click)": {
+   "ok": true,
+   "detail": "air spike:perfect press contact"
+  },
+  "air: spike pressed early still meets it (graded early)": {
+   "ok": true,
+   "detail": "air spike:early press contact"
+  },
+  "air: jump set in the air meets the ball (Space, E)": {
+   "ok": true,
+   "detail": "air jumpset:perfect press contact"
+  },
+  "air: block (Space, right click) stops their spike at the net": {
+   "ok": true,
+   "detail": "block: contact:block"
+  },
+  "rally: the block's right click kept the mouse": {
+   "ok": true,
+   "detail": ""
+  },
+  "rally: Space jumps": {
+   "ok": true,
+   "detail": ""
+  },
+  "rally: Q never dashes in a match": {
+   "ok": true,
+   "detail": ""
+  },
+  "island: Tab and G don't open the wheels in a match": {
+   "ok": true,
+   "detail": ""
+  },
+  "bar: a jump swaps ground to air the frame you leave the sand and back the frame you land": {
+   "ok": true,
+   "detail": "frames out of step 0, flips 2"
+  },
+  "rally: the pilot played touches with real input": {
+   "ok": true,
+   "detail": "set:0.92 set:0.80 set:0.84"
+  }
+ },
+ "inputs": {
+  "spin": {
+   "x": 0.5454545454545455,
+   "y": 0.27272727272727276
+  },
+  "ring": {
+   "x": 0.4285714285714285,
+   "y": -0.21428571428571425
+  },
+  "meter": 0.6000000000000003,
+  "served": {
+   "kind": "serve",
+   "who": 0,
+   "judge": "perfect"
+  }
+ },
+ "rally": {
+  "myTouches": [
+   "set:0.92",
+   "set:0.80",
+   "set:0.84"
+  ],
+  "points": [
+   1,
+   2
+  ],
+  "events": "serve2 contact2:serve contact1:bump contact0:set contact1:spike dive3 contact3:dig contact2:set contact3:spike land point toss2 serve2 contact2:serve contact1:bump contact0:set contact1:spike net contact1:spike point toss2 serve2 contact2:serve contact1:bump contact0:set contact1:spike land point"
+ }
+}

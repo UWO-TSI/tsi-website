@@ -28,3 +28,15 @@ export function stanceClip(side: number, speed: number, shuffleUnder: number): V
   if (speed < 0.3) return "vb_ready";
   return side >= 0 ? "vb_shuffle" : "vb_shuffle_left";
 }
+
+/**
+ * The court jump's pose: vb_spike_jump held and posed by the jump (Character's `air`, a fraction of the clip). Rising,
+ * from just before the clip's take-off (the push off the sand) to its apex as the climb slows; falling, from the apex to
+ * its feet-down frame as the fall quickens. Linear in the sim's time, so the body moves with the arc, never ahead of it.
+ * `vy` the vertical speed, `v0` the take-off speed, `vLand` the speed at touchdown.
+ */
+export function jumpPose(vy: number, v0: number, vLand: number): number {
+  const c = VB_CLIPS.vb_spike_jump, from = c.takeoff - 0.06;
+  const t = vy > 0 ? from + (1 - Math.min(1, vy / v0)) * (c.apex - from) : c.apex + Math.min(1, -vy / vLand) * (c.land - c.apex);
+  return t / c.duration;
+}

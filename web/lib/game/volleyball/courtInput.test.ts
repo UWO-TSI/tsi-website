@@ -23,12 +23,12 @@ function harness(stance: Stance = "ground", locked = true) {
 }
 
 describe("the court's controls (real key and mouse events)", () => {
-  it("Space, Q, E and Ctrl are presses; WASD and Shift are held", () => {
+  it("Space, Q and E are presses; WASD and Shift are held; Ctrl is nothing", () => {
     const h = harness();
     for (const k of [" ", "q", "e", "Control", "w", "Shift"]) h.key("keydown", k);
-    expect(takePresses(h.c)).toMatchObject({ jump: true, dash: true, e: true, ctrl: true });
+    expect(takePresses(h.c)).toEqual({ jump: true, dash: true, e: true, left: false, leftUp: false, right: false });
     expect(h.c.keys).toMatchObject({ w: true, shift: true });
-    expect(takePresses(h.c)).toMatchObject({ jump: false, dash: false, e: false, ctrl: false });
+    expect(takePresses(h.c)).toMatchObject({ jump: false, dash: false, e: false });
     h.dispose();
   });
   it("a held key's repeat is not a second press", () => {
@@ -37,10 +37,10 @@ describe("the court's controls (real key and mouse events)", () => {
     h.key("keydown", "e", { repeat: true });
     expect(takePresses(h.c).e).toBe(false);
   });
-  it("Space and Ctrl keep the page's default (no scroll, no shortcut)", () => {
+  it("Space and Q keep the page's default (no scroll, no shortcut)", () => {
     const h = harness();
     expect(h.key("keydown", " ").defaultPrevented).toBe(true);
-    expect(h.key("keydown", "Control", { ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(h.key("keydown", "q").defaultPrevented).toBe(true);
   });
   it("left and right buttons press and hold, and the island never sees them under the lock", () => {
     const h = harness();

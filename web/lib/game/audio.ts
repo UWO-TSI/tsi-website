@@ -68,8 +68,8 @@ export type SFXName =
 
 /** The beach volleyball match's sounds, made in art/audio/synth_volleyball.py (lib/game/volleyball/sfx.ts plays them). */
 export const VB_SFX = ["vb-bump", "vb-set", "vb-serve", "vb-dig", "vb-block", "vb-spike", "vb-perfect", "vb-good", "vb-early", "vb-late",
-  "vb-sand", "vb-boom", "vb-net", "vb-tape", "vb-takeoff", "vb-touchdown", "vb-dive", "vb-slide", "vb-charge", "vb-max", "vb-toss", "vb-whiff",
-  "vb-point", "vb-point-them", "vb-win", "vb-call", "vb-out", "vb-heat", "vb-fire"] as const;
+  "vb-sand", "vb-boom", "vb-net", "vb-tape", "vb-takeoff", "vb-touchdown", "vb-dive", "vb-charge", "vb-max", "vb-toss", "vb-whiff",
+  "vb-point", "vb-point-them", "vb-win", "vb-call", "vb-out", "vb-heat", "vb-fire", "vb-flame"] as const;
 export type VbSfx = (typeof VB_SFX)[number];
 
 interface AudioManifest {
