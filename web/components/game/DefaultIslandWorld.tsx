@@ -58,6 +58,8 @@ import { SELL_BARREL, marketBoardsOf, tackleCounterOf } from "@/lib/game/wharf";
 import { CatchBoardSheet, CatchChalk, TaskChalk } from "@/components/game/peaceful/CatchBoard";
 import { LEVEL_STEP, levelAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
+import { setNightLit } from "@/lib/game/glow";
+import InteractRing, { type RingSpot } from "./InteractRing";
 import { CLUBHOUSE_LIGHTING, ISLAND_TERRAIN, islandLightAt, smoothWorldLight, weatherLight, windowLit, withSeason, type IslandLight } from "@/lib/game/islandLighting";
 import { SEASON_TREES, paletteBySeason, seasonLook, type SeasonLook } from "@/lib/game/seasonalLook";
 import { useNPCPersonas, useSeasonPalettes } from "@/lib/content/loader";
@@ -288,6 +290,19 @@ const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   volley: "Play volleyball", leaderboard: "Volleyball leaderboard",
 };
 const CLOSED: Near[] = ["museum"];
+/**
+ * The targets that wear the interact ring (InteractRing), its radius and the glow's height over the ground: the bigger
+ * things only, the stands, boards, counters and doors (pol2-ring-bench: "bench shouldnt even get a interaction its too
+ * small"; pol2-ring-skip: "people bench small things"). Not the residents (talk, Bram, the chef, Rosa) nor the picnic,
+ * not a bench or a bar stool, not the small things (the mailbox, a lantern to pick up, a cocoa). Not a building's sign
+ * (the museum, the ruins), nor the court's net, nor a tool's target (water, a bug, a dig spot).
+ */
+const RING: Partial<Record<Exclude<Near, null>, readonly [r: number, h: number]>> = {
+  sell: [0.7, 0.5], catchboard: [0.9, 0.9], tasks: [0.9, 0.9], tackle: [0.9, 0.8], leaderboard: [0.8, 0.9], notice: [0.8, 0.9],
+  catch: [0.8, 0.9], monument: [1.2, 1], knock: [0.6, 0.4], fitting: [0.9, 1], missions: [0.9, 0.9],
+  enter: [0.9, 1], claim: [0.9, 1], report: [0.9, 1], home: [0.9, 1], shop_enter: [0.9, 1], cafe_enter: [0.9, 1], cafe: [0.9, 1], oracle_enter: [0.9, 1],
+  trophy: [0.8, 0.6], posters: [0.8, 0.6],
+};
 /** The door in reach for trick-or-treat (components/game/Halloween.tsx): IslandScene writes it each frame, E knocks. */
 const knockSpot: { current: KnockDoor | null } = { current: null };
 /** The village bench in reach as a `tsi:sit` detail: IslandScene writes it each frame, E sits (or stands) there. */
@@ -460,7 +475,7 @@ function Performance({ player, output }: { player: React.RefObject<THREE.Vector3
   return null;
 }
 
-function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpot, fishing, chapter, questPosts, phase, campfireHour, light, look, weather, overview, zoom, reset, returned, fromBoat, liteMode, castShadows, player, onNear, progression, ceremony, event, arriving, hintKeys, talking, traditions, fogNight, onBar }: {
+function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpot, fishing, chapter, questPosts, phase, campfireHour, light, look, weather, overview, zoom, reset, returned, fromBoat, liteMode, castShadows, player, onNear, progression, ceremony, event, arriving, hintKeys, talking, traditions, fogNight, onBar, ring }: {
   /** Campfire hour (lib/game/campfire.ts): the fire burns, the drum circle plays, sitting by it earns the bonus. */
   campfireHour: boolean;
   /** Near the sushi bar (its music): lib/game/sushiBar.ts BAR_MUSIC_IN. */
@@ -482,10 +497,19 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   peaceful: { moment: WorldMoment; member: string; glider: boolean }; fishSpot: { current: FishingSpot | null }; fishing: boolean; exitFrom: "museum" | "oracle" | "ruins" | "cafe" | "shop" | null; devAt: [number, number, number] | null; identity: WorldIdentity; level?: number;
   phase: IslandPhase; light: IslandLight; look: SeasonLook; weather: IslandWeather; overview: boolean; zoom: number; reset: number; returned: boolean; liteMode: boolean; castShadows: boolean;
   player: React.RefObject<THREE.Vector3>; onNear: (near: Near) => void;
+  /** The E prompt is up: its target wears the interact ring (InteractRing). */
+  ring: boolean;
 }) {
   const v = village();
   const layout = layoutOf(v); // once, though the scene renders several times before it first commits (lib/game/lastCall.ts)
   const { island, spawns, doors } = layout;
+  // A door's point is its doorstep, out front: its ring sits 1.6 on toward the building's middle, at the door.
+  const doorRings = useMemo(() => new Map(([["hq", doors.hq], ["oracle", doors.oracle], ["wharf", doors.boat], ["cafe", doors.cafe], ["shop", doors.shop]] as const).flatMap(([id, p]) => {
+    const l = landmark(id, v);
+    if (!p || !l) return [];
+    const d = Math.hypot(l.x - p[0], l.z - p[1]) || 1;
+    return [[p, [p[0] + (l.x - p[0]) / d * 1.6, p[1] + (l.z - p[1]) / d * 1.6] as [number, number]] as const];
+  })), [doors, v]);
   // Photo mode holds you still while you frame a photo.
   const photoOpen = usePhoto().open;
   const { data: personas } = useNPCPersonas({ permanentOnly: true });
@@ -530,7 +554,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   const bar = useMemo(() => barOf(v), [v]), barY = bar ? island.ground(bar.x, bar.z) : 0, barView = useRef<BarView | null>(null);
   const chefSpot = useMemo(() => (bar ? barPoint(bar, ...CHEF_OUTSIDE.at) : null), [bar]);
   const poolPoints = useMemo(() => (bar ? [...lampPoints, lampLight([bar.x, barY, bar.z], bar.yaw ?? 0, BAR_LIGHT)] : lampPoints), [lampPoints, bar, barY]);
-  const near = useRef<Near>(null);
+  const near = useRef<Near>(null), ringAt = useRef<RingSpot | null>(null);
   const fauna = useMemo(() => ({ ...layout.fauna, ground: island.ground, standable: island.standable, surface: island.surface, top: island.top, player }), [layout, island, player]);
   // The arrival (components/game/arrival): Bram walks you through, the fish crate on the pier until the tour is over.
   const arrivalPhase = useArrivalPhase();
@@ -570,7 +594,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       : DROPS.cafe && within(doors.cafe, CAFE_DOOR_RANGE) ? [progression.opened.includes("cafe") ? "cafe_enter" : "cafe", doors.cafe]
       : within(sweeper, SWEEPER_TALK) ? ["owner", sweeper]
       : DROPS.combat && within(layout.missions?.at ?? null, 1.5) ? ["missions", layout.missions!.at] : [null, null];
-    let next: Near = door[0], nextD = gap(door[1]);
+    let next: Near = door[0], nextD = gap(door[1]), at = door[1];
     const b = benchSeat(px, pz, 1.3, v, layout.benches, remoteSeatTaken), stool = !b && bar ? barSeat(bar, px, pz, barOpen(phase), remoteSeatTaken, remoteSeatOutranks) : null;
     benchSpot.current = b ? { ...b, seatY: island.ground(b.x, b.z) + BENCH_SEAT_TOP } : stool && { ...stool, seatY: barY + stool.top };
     // Another's claim on your stool outranks yours (you both pressed E together): on to the next free one, or up.
@@ -578,11 +602,12 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     // An event spot and a bench both in reach: the nearer one takes E.
     const ev = spots.find(s => within([s.x, s.z], s.range)), seat = benchSpot.current;
     const nearer = (p: { x: number; z: number }) => Math.hypot(px - p.x, pz - p.z);
-    if (!next && (ev || seat)) { const e = ev && (!seat || nearer(ev) < nearer(seat)); next = e ? ev!.near : stool ? "stool" : "bench"; nextD = nearer(e ? ev! : seat!); }
+    if (!next && (ev || seat)) { const e = ev && (!seat || nearer(ev) < nearer(seat)), p = e ? ev! : seat!; next = e ? ev!.near : stool ? "stool" : "bench"; nextD = nearer(p);
+      at = [p.x, p.z]; }
     // Trick-or-treat: the door's pumpkin in reach (someone behind it hasn't answered you tonight) beats the door itself.
     const kd = knockNear(px, pz);
     knockSpot.current = kd;
-    if (kd && (!next || nearer(kd) < nextD)) { next = "knock"; nextD = nearer(kd); }
+    if (kd && (!next || nearer(kd) < nextD)) { next = "knock"; nextD = nearer(kd); at = [kd.x, kd.z]; }
     if (!next) {
       let best = 1.4;
       for (const l of layout.prompts) {
@@ -591,7 +616,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
         if (opened && l.id !== "museum") continue;
         const d = footprintDistance(l, px, pz);
         if (opened && d < best) { best = d; next = "museum_enter"; continue; }
-        if (d < best) { best = d; next = l.id === "museum" && chapter.donate ? "donate" : l.id as Near; }
+        if (d < best) { best = d; next = l.id === "museum" && chapter.donate ? "donate" : l.id as Near; at = [l.x, l.z]; }
       }
       if (next) nextD = best;
     }
@@ -604,7 +629,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     // At the volleyball net, on either side of it: play.
     if (court && !next) { const [lx, lz] = toLocal(court, px, pz); if (Math.abs(lx) < COURT.postX && Math.abs(lz) < 1.8) next = "volley"; }
     // The leaderboard board beside the court.
-    if (board && !next && Math.hypot(px - board.x, pz - board.z) < 1.4) next = "leaderboard";
+    if (board && !next && Math.hypot(px - board.x, pz - board.z) < 1.4) { next = "leaderboard"; at = [board.x, board.z]; }
     if (studyHoldsPrompt() || talking || volley.match) next = null;
     // Bram waiting at his stop on the walk-along (or talking): E is his.
     else if (!fishing && bramNear(px, pz)) next = "bram";
@@ -619,9 +644,15 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       else if (peace && (peace === "forage" ? (getPeacefulTarget()?.distance ?? Infinity) < tn.d : held?.kind === TOOL_FOR[peace])) next = peace;
     }
     if (near.current !== next) { near.current = next; onNear(next); }
+    const size = next && RING[next];
+    if (at && doorRings.has(at)) at = doorRings.get(at)!;
+    // On the ground there, or on the deck you stand on (the wharf's decks are over the ground).
+    const floor = at && Math.max(island.ground(at[0], at[1]), player.current.y > island.ground(px, pz) + 0.25 ? player.current.y : -Infinity);
+    ringAt.current = size && at ? { x: at[0], y: floor!, z: at[1], r: size[0], h: size[1] } : null;
   }, -2);
   return (
     <>
+      <InteractRing spot={ringAt} on={ring} />
       <IslandAtmosphere phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} overview={overview} overviewFog={layout.scale.overviewFog}
         ground={island.ground} puddles={layout.puddles} cloudSize={layout.scale.cloudSize} shadowExtent={layout.scale.shadowExtent} shadowFollow={v.terrain ? player : undefined} fireflyAnchors={layout.fireflies} trees={layout.trees} fauna={fauna} />
       <GridWorld map={island.map} field={v.field} light={light} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} lite={liteMode} clear={grassClear} terrain={v.terrain} waves ownGround />
@@ -1059,6 +1090,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // The new world (a heightfield in the village's place) has its own warmer fog and livelier night.
   const smooth = useMemo(() => !!village().terrain, []);
   const light = useMemo(() => fogNightLight(smooth ? smoothWorldLight(dayLight) : dayLight, fogNight), [smooth, dayLight, fogNight]);
+  // How lit the night is, for the glows that follow it (the held lantern: glow.ts nightLit).
+  useEffect(() => setNightLit(windowLit(light)), [light]);
   const conditionsLabel = `${season.season[0].toUpperCase()}${season.season.slice(1)}${Object.values(season.weights).some(w => w > 0 && w < 1) ? " (changing)" : ""} · ${weather[0].toUpperCase()}${weather.slice(1)}`;
   const grade = inside === "cafe" ? { ...CLUBHOUSE_LIGHTING[phase].grade, ...CAFE_GRADE } : inside ? CLUBHOUSE_LIGHTING[phase].grade : light.grade;
   const atHome = site === "home";
@@ -1411,7 +1444,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
               overview={overview} returned={returned} player={player} onNear={(n: HomeNear) => setNear(n)} outdoor={layout.outdoor}
               decorating={decor.decorating} selected={decor.selected} onPlace={item => decor.place("outdoor", item)} onPickUp={item => decor.pickUp("outdoor", item)} />
             : <IslandScene held={eating || trip.active ? null : held} identity={identity} level={level} devAt={devAt} exitFrom={exitFrom} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} chapter={chapterFlags} questPosts={main.posts} fromBoat={fromBoat} progression={progressionWorld} ceremony={ceremony} event={islandEvent} traditions={traditions} fogNight={fogNight}
-              arriving={welcoming} hintKeys={hintKeys} campfireHour={campfireHour} talking={talking} phase={scenePhase} light={light} look={look} weather={sceneWeather} overview={overview} zoom={devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onNear={setNear} onBar={setAtBar} />}
+              arriving={welcoming} hintKeys={hintKeys} campfireHour={campfireHour} talking={talking} phase={scenePhase} light={light} look={look} weather={sceneWeather} overview={overview} zoom={devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onNear={setNear} onBar={setAtBar}
+              ring={!!near && !toolNear && !sheet && !hq.card && !cinematic && !talking && !fishing} />}
           {/* Classes v2: the subclass's aura replaces the family's once its kit exists (§1.9). */}
           {DROPS.classes && identity.aura && (classAura ? <Suspense fallback={null}><SubclassAura player={player} kit={classAura.kit} mastery={classAura.mastery} colour={classAura.colour} /></Suspense>
             : identity.family && <Suspense fallback={null}><FamilyAura player={player} color={FAMILIES[identity.family].light} /></Suspense>)}
