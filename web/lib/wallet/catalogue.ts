@@ -8,6 +8,7 @@
 import { CUSTOM_HAIR_REF, dyeRef, DYE_HAIR, FACE, faceRef, PARTS, priceOf, STARTER_PARTS, type Batch2Price, type PartSlot } from "@/lib/game/character/look";
 import { CATALOGUE as PIECES, EVENT_PIECE_IDS } from "@/lib/homes/catalogue";
 import { shopIcon } from "@/lib/icons/keys";
+import type { RodStat } from "@/lib/game/rods";
 
 export type ShopCategory ="tool" | "outfit" | "hair" | "accessory" | "face" | "furniture" | "wallpaper" | "flooring" | "merch";
 export type Tier = "basic" | "mid" | "premium";
@@ -228,11 +229,13 @@ export const FISH_CHEF_PAY = 3;
 
 /**
  * The sushi bar's meals (f-sushi phase B, specs/launch/sushi-bar.md): each a fishing buff for a while, the last meal
- * replacing the one before. `luck` adds to the cast's luck (rarer fish bite, as a better rod's does), `size` pulls the
- * size roll toward the top (fishRoll). The feast is cooked from one of your own epic or legendary fish instead of coins
- * (David: "good for repeated legendary fish they wanna use instead of sell").
+ * replacing the one before, named in the rod's six stats (tasting-book r3, David: "chill out on the buff and use term
+ * like luck and the other 5 criteria"). Each is a share of that stat's effect: `luck` adds to the cast's luck on the
+ * server (rarer fish bite, member_buffs.luck), the other five scale the rod's effect in the reel (lib/game/rods.ts
+ * withMeal: +10% reel fills the meter 10% faster). The feast is cooked from one of your own epic or legendary fish
+ * instead of coins (David: "good for repeated legendary fish they wanna use instead of sell").
  */
-export interface MealBuff { luck: number; size: number; minutes: number }
+export type MealBuff = Partial<Record<RodStat, number>> & { minutes: number };
 export interface Dish { id: string; name: string; blurb: string; price: number | null; buff: MealBuff }
 /**
  * Each dish's art (design bible Models): its high-def model for the menu (`hd`, and the icon rendered from it, `icon`),
@@ -247,39 +250,57 @@ export const DISH_ART: Record<string, { hd: string; icon: string; standIn: strin
   feast: { hd: "/assets/game/food/hd/banchas-feast.glb", icon: "dish_banchas_feast", standIn: "fish_king_salmon", ready: false },
   tasting: { hd: "/assets/game/food/hd/nigiri.glb", icon: "dish_nigiri", standIn: "fish_sea_bass", ready: false },
   snapper_chazuke: { hd: "/assets/game/food/hd/snapper-chazuke.glb", icon: "dish_snapper_chazuke", standIn: "fish_red_snapper", ready: false },
+  dace_karaage: { hd: "/assets/game/food/hd/dace-karaage.glb", icon: "dish_dace_karaage", standIn: "fish_dace", ready: false },
+  squid_tempura: { hd: "/assets/game/food/hd/squid-tempura.glb", icon: "dish_squid_tempura", standIn: "fish_squid", ready: false },
+  catfish_kabayaki: { hd: "/assets/game/food/hd/catfish-kabayaki.glb", icon: "dish_catfish_kabayaki", standIn: "fish_catfish", ready: false },
+  tuna_otoro: { hd: "/assets/game/food/hd/tuna-otoro.glb", icon: "dish_tuna_otoro", standIn: "fish_tuna", ready: false },
 };
 export const SUSHI_MENU: readonly Dish[] = [
-  { id: "miso_soup", name: "Miso soup", blurb: "Warm and simple.", price: 20, buff: { luck: 0.05, size: 0, minutes: 15 } },
-  { id: "salmon_nigiri", name: "Salmon nigiri", blurb: "Fresh off the morning boats.", price: 40, buff: { luck: 0.1, size: 0, minutes: 20 } },
-  { id: "tuna_roll", name: "Tuna roll", blurb: "Thick cut and generous.", price: 40, buff: { luck: 0, size: 0.3, minutes: 20 } },
-  { id: "omakase", name: "Omakase", blurb: "Whatever Bancha picks today.", price: 150, buff: { luck: 0.15, size: 0.3, minutes: 30 } },
-  { id: "feast", name: "Bancha's feast", blurb: "Bring one of your epic or legendary fish and he cooks it into a feast.", price: null, buff: { luck: 0.35, size: 0.6, minutes: 60 } },
+  { id: "miso_soup", name: "Miso soup", blurb: "Warm and simple.", price: 20, buff: { lure: 0.05, minutes: 15 } },
+  { id: "salmon_nigiri", name: "Salmon nigiri", blurb: "Fresh off the morning boats.", price: 40, buff: { luck: 0.05, minutes: 20 } },
+  { id: "tuna_roll", name: "Tuna roll", blurb: "Thick cut and generous.", price: 40, buff: { strength: 0.08, minutes: 20 } },
+  { id: "omakase", name: "Omakase", blurb: "Whatever Bancha picks today.", price: 150, buff: { luck: 0.08, reel: 0.05, minutes: 30 } },
+  { id: "feast", name: "Bancha's feast", blurb: "Bring one of your epic or legendary fish and he cooks it into a feast.", price: null, buff: { luck: 0.12, control: 0.08, minutes: 60 } },
 ];
 /**
  * The tasting book (20261102120000_tasting_book.sql; David 2026-11-01: "one per fish kinda thing and they can either
  * turn into meal that gets buff and a stamp or in the aquarium"; round 2, 2026-11-02: "cooking fee like 100 ... a perm
  * small like 1% buff for fishing for new species and it can unlcok dishes taht are temp big buff but require ingredients
- * and expensive. the fee for cooking scales with new fish unlock"). A rod fish whose slot is still empty: Bancha cooks it
+ * and expensive. the fee for cooking scales with new fish unlock"; round 3, 2026-11-03: "key fish, tank is the route for
+ * milestones and unlocks and cooking is solely for bonuses, no"). A rod fish whose slot is still empty: Bancha cooks it
  * (`nigiri`) for `fee.base` coins plus `fee.step` for each species he has cooked for you before, and its stamp makes your
  * casts a little luckier for good (bookLuck: `luck.each` a species for the first `luck.first`, then `luck.then`, up to
- * `luck.cap`); or it goes to HQ's tank, free, filling the slot instead. A filled slot is never cooked again. Filling slots
- * pays at `marks` (the book's count) and for each water filled (`full`). Some stamps teach Bancha a dish (`dishes`).
+ * `luck.cap`), and that is all a cook gives; or it goes to HQ's tank, free, filling the slot instead. A filled slot is
+ * never cooked again, and a duplicate gets no nigiri (it goes into a dish or the sell sheet). The tank is the route to
+ * the rest: its gifts pay at `marks` (fish in the tank) and for each water whose every fish is in it (`full`), and a key
+ * fish in it teaches Bancha its dish (`dishes`, by `unlock`).
  */
 export interface BookDish extends Dish { price: number; unlock: string; ingredients: readonly (readonly [key: string, n: number])[] }
 export const TASTING = {
-  nigiri: { id: "tasting", name: "Bancha's nigiri", blurb: "A fish he hasn't cooked for you yet. Its stamp goes in the book, and your casts stay a little luckier for good." },
+  nigiri: { id: "tasting", name: "Bancha's nigiri", blurb: "A fish new to your book. Its stamp keeps your luck a little higher for good." },
   fee: { base: 100, step: 5 },
   luck: { first: 20, each: 0.01, then: 0.005, cap: 0.4 },
   marks: [{ at: 10, coins: 150 }, { at: 25, coins: 400 }],
   full: 250,
-  /** The book's dishes (round 2): learnt when `unlock` is stamped, then ordered for coins and `ingredients` from your bag. */
+  /** The book's dishes: learnt when their key fish (`unlock`) is in the tank, then ordered for coins and `ingredients` from your bag. */
   dishes: [
     { id: "snapper_chazuke", name: "Snapper chazuke", blurb: "Snapper over rice, hot tea poured at the counter.", price: 250, unlock: "fish_red_snapper",
-      ingredients: [["fish_red_snapper", 1], ["fish_sea_bass", 2]], buff: { luck: 0.3, size: 0.3, minutes: 45 } },
+      ingredients: [["fish_red_snapper", 1], ["fish_sea_bass", 2]], buff: { luck: 0.1, bite: 0.1, minutes: 45 } },
+    { id: "dace_karaage", name: "Dace karaage", blurb: "Little river fish, fried crisp and eaten whole.", price: 200, unlock: "fish_dace",
+      ingredients: [["fish_dace", 3]], buff: { reel: 0.1, minutes: 40 } },
+    { id: "squid_tempura", name: "Squid tempura", blurb: "Squid, shrimp and scallop in a light batter.", price: 300, unlock: "fish_squid",
+      ingredients: [["fish_squid", 1], ["sea_sweet_shrimp", 2], ["sea_scallop", 1]], buff: { lure: 0.1, control: 0.05, minutes: 45 } },
+    { id: "catfish_kabayaki", name: "Catfish kabayaki", blurb: "Grilled over coals and glazed sweet.", price: 500, unlock: "fish_catfish",
+      ingredients: [["fish_catfish", 1], ["fish_freshwater_goby", 2]], buff: { strength: 0.1, control: 0.1, minutes: 60 } },
+    { id: "tuna_otoro", name: "Tuna otoro", blurb: "The belly cut, barely seared.", price: 600, unlock: "fish_tuna",
+      ingredients: [["fish_tuna", 1], ["fish_horse_mackerel", 2], ["fish_anchovy", 2]], buff: { luck: 0.12, reel: 0.08, minutes: 60 } },
   ] satisfies readonly BookDish[] as readonly BookDish[],
 } as const;
 /** The chef's order pays its coins and this meal (David: "side quest for special fish for money and food"). */
-export const STAFF_MEAL: MealBuff = { luck: 0.1, size: 0.2, minutes: 30 };
+export const STAFF_MEAL: MealBuff = { luck: 0.05, bite: 0.08, minutes: 30 };
+/** The meal a buff came from (member_buffs.source: a dish id or "staff_meal"), its name and six stats; null for one off the menu now. */
+export const mealOf = (source: string | null | undefined): { name: string; buff: MealBuff } | null =>
+  source === "staff_meal" ? { name: "Staff meal", buff: STAFF_MEAL } : [...SUSHI_MENU, ...TASTING.dishes].find((d) => d.id === source) ?? null;
 
 /** Daily gift (row 225): 10 coins, doubled on Fridays (Toronto day). */
 export function dailyGiftAmount(day: string, base: number = SETTINGS.daily_gift_coins): number {

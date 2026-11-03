@@ -14,7 +14,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AudioManager } from "./audio";
 import { castLine, claimRaid, collect, landCatch, localCollections, localRecord, mergeWithLocal, type CatchAnswer } from "./collections";
-import { rodByTier, type RodTier } from "./rods";
+import { BITE_WINDOW_MS, rodByTier, type RodTier } from "./rods";
 import { rollFishFor } from "./peaceful";
 import type { WaterType } from "./fishingSpots";
 import { punchZoom, setAimZoom, setTensionZoom, shakeCamera } from "./cameraJuice";
@@ -29,7 +29,6 @@ import { friendsStore } from "@/lib/net/friends";
 
 export type FishingPhase = "idle" | "charging" | "casting" | "waiting" | "bite" | "surfacing" | "reeling" | "revealing" | "missed";
 
-const BITE_WINDOW_MS = 1400;
 /** The catch card arrives this long after the reel is won: the world's beat first (the fish out of the water and into your hands). */
 const REVEAL_DELAY_MS = 520;
 /** A boss catch's (legendary, divine) card waits for its landing in the world (fishing/BossCreature.tsx). */

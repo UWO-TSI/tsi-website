@@ -7,7 +7,7 @@ import { useProgress } from "@react-three/drei";
 import * as THREE from "three";
 import { Menu, Settings } from "lucide-react";
 import { Toggle } from "@/components/gui";
-import { BiomeTag, DarkButton } from "@/components/gui/flat";
+import { BiomeTag, DarkButton, GhostButton } from "@/components/gui/flat";
 import GridWorld from "./grid/GridWorld";
 import GridOcean from "./grid/GridOcean";
 import Seabed from "./water/Seabed";
@@ -171,7 +171,9 @@ import { saveMyLook, useMyLook } from "@/lib/game/character/lookStore";
 import { useProgression } from "@/lib/progression/useProgression";
 import { WarmupProbe } from "./LoadGate";
 import { escapeAction } from "@/lib/game/sceneGate";
-import TopCluster, { HudClock, HudWallet, hudButton } from "./TopCluster";
+import TopCluster, { HudBuff, HudClock, HudWallet, hudButton } from "./TopCluster";
+import { useMeal } from "@/lib/game/mealStore";
+import { mealOf } from "@/lib/wallet/catalogue";
 import { setHudCoins, setHudXp } from "@/lib/game/hudStore";
 import CollectionBook from "./CollectionBook";
 import { usePeacefulContext } from "@/lib/game/usePeacefulContext";
@@ -180,7 +182,7 @@ import { clickAction, heldItem, toolNeeded, wheelContents, type Reach, type Whee
 import { holdItem, swapHeld, useHeld } from "@/lib/game/heldStore";
 import { useRuinsHand } from "@/lib/game/ruinsHand";
 import { useWheelKeys } from "@/lib/game/movement/keys";
-import { rig, rodByTier } from "@/lib/game/rods";
+import { rig, rodByTier, withMeal } from "@/lib/game/rods";
 import { eatItem, localCollections, mergeWithLocal } from "@/lib/game/collections";
 import { capture } from "@/lib/game/orbitCamera";
 import { iconUrl } from "@/lib/icons/keys";
@@ -822,6 +824,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const conditions = useIslandConditions();
   // Seated at the sushi bar while it's open (SushiBar's tsi:bar-seated): the menu on the counter (f-sushi).
   const [barSeated, setBarSeated] = useState(false);
+  // The meal you ate there, while it lasts: its stats on the rod in the reel (its luck is the server's) and faint on the right (HudBuff).
+  const meal = mealOf(useMeal()?.source)?.buff;
   useEffect(() => {
     const on = (e: Event) => setBarSeated((e as CustomEvent<boolean>).detail);
     window.addEventListener("tsi:bar-seated", on);
@@ -1476,6 +1480,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
             onWallet={() => setSheet(value => (value === "wallet" ? null : "wallet"))} walletKey={keyName(identity.settings.key_bindings.openWallet)} />
         </div>
       </div>
+      {/* The meal's buff, faint on the right edge, well under the time column (the minimap, the time and its biome tag, the wallet). */}
+      {!hudCinematic && !inMatch && <HudBuff className={styles.buffSlot} />}
       {DEV && <section id="island-options" className={styles.panel} data-open={devPanel} aria-label="Developer view options" onKeyDown={(event) => {
         if (devPanel && event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setDevPanel(false); }
       }}>
@@ -1499,17 +1505,17 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         </details>
         <button className={styles.return} onClick={() => setDevPanel(false)}>Close the dev panel</button>
       </section>}
-      {near && !toolNear && !sheet && !hq.card && !cinematic && !talking && !(reveal && inside === "oracle") && (CLOSED.includes(near)
+      {near && !toolNear && !sheet && !hq.card && !cinematic && !talking && !(reveal && inside === "oracle") && !(touch && barSeated && near === "stool") && (CLOSED.includes(near)
         ? <p className={styles.interact} data-closed="true" role="status">{NEAR_LABELS[near]}</p>
         : fishing ? null : <button className={styles.interact} onClick={() => act(near)}><kbd>{touch ? "Tap" : "E"}</kbd>{near === "forage" ? targetLabel ?? NEAR_LABELS[near] : near === "talk" && talkNow.nearName ? `Talk to ${talkNow.nearName}` : near === "bram" ? bramPrompt() : near === "desk" && hq.waiting === "wren" ? `Talk to ${WREN.name}` : near === "stool" && seated ? "Leave the bar" : near === "bench" || near === "stool" || near === "bed" ? seatPrompt(NEAR_LABELS[near], seated) : NEAR_LABELS[near]}</button>)}
       {/* The held item's use (specs/game-ui.md §2): what left click does with it here, or the tool something in reach wants. Touch presses the prompt. */}
       {!sheet && !cinematic && !talking && !fishing && !inside && site !== "ruins" && (toolAction && (toolAction.target && (toolNear || toolAction.verb === "eat"))
         ? <button className={styles.interact} data-use onPointerDown={e => { if (e.pointerType !== "mouse" || capture.state !== "captured") applyTool(); }}><kbd>{touch ? "Tap" : "Click"}</kbd>{toolAction.label}</button>
         : needTool && <p className={styles.interact} data-closed="true" role="status"><kbd>{touch ? "Wheel" : keyName(wheelKeys.wheel)}</kbd>Take out your {needTool === "rod" ? "fishing rod" : needTool}</p>)}
-      <MemberFishing rod={held?.kind === "rod" && held.tier ? rig(rodByTier(held.tier), peaceful.tackle) : peaceful.rod} onActiveChange={setFishing} />
+      <MemberFishing rod={withMeal(held?.kind === "rod" && held.tier ? rig(rodByTier(held.tier), peaceful.tackle) : peaceful.rod, meal)} onActiveChange={setFishing} />
       {fishBosses() && !fishing && !inside && <RaidCall />}
       <ToolWheel items={wheelItems} held={heldState.held} wheelKey={wheelKeys.wheel} touch={touch} onEquip={holdItem} onSwap={() => swapHeld(wheelItems)}
-        enabled={ready && !inMatch && !inside && !fishing && !sheet && !bagOpen && !cinematic && !talking && !fading && !decor.decorating && !(touch && uiView)} />
+        enabled={ready && !inMatch && !inside && !fishing && !sheet && !bagOpen && !cinematic && !talking && !fading && !decor.decorating && !(touch && uiView) && !barSeated} />
       <EmoteWheel emoteKey={wheelKeys.emote} touch={touch} onPlay={entry => playWheelEntry(entry, player.current)}
         enabled={ready && !inMatch && site !== "ruins" && !fishing && !sheet && !bagOpen && !cinematic && !talking && !fading && !decor.decorating && !(touch && uiView)} />
       <DonateSheet open={donateOpen} onClose={() => setDonateOpen(false)} onDonated={loadMuseum} />
@@ -1574,7 +1580,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <TackleCounterSheet open={sheet === "tackle"} onClose={() => setSheet(null)} onRods={() => setSheet("rods")} keys={STATION_KEY} />
       <ChefOrderDialog open={sheet === "chef"} onClose={() => setSheet(null)} keys={STATION_KEY} />
       <MenuPickup open={sheet === "sushi"} onClose={() => setSheet(null)} waters={catchWaters} />
-      {barSeated && sheet === null ? <div className={styles.barMenu}><DarkButton onClick={() => setSheet("sushi")}>Menu</DarkButton></div> : null}
+      {/* A phone at the bar keeps two buttons, the menu and leaving, on one row (tasting-book r3, David: "phone ui gotta chill out"). */}
+      {barSeated && sheet === null ? <div className={styles.barMenu}><DarkButton onClick={() => setSheet("sushi")}>Menu</DarkButton>
+        {touch && near === "stool" && <GhostButton onClick={() => act(near)}>Leave</GhostButton>}</div> : null}
       <CatchBoardSheet open={sheet === "outnow"} onClose={() => setSheet(null)} keys={STATION_KEY} waters={catchWaters} hour={peaceful.moment.hour} weather={conditions.weather} season={season.season} soon={peaceful.moment.soon} phase={phase} />
       <ShopOverlay open={sheet === "rods"} title="Rod shop" section="rods" onClose={() => setSheet(null)} keys={STATION_KEY} />
       <WalletSheet open={sheet === "wallet"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openWallet} />
@@ -1596,7 +1604,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       {DEV && site === "ruins" && <PlaytestHud />}
       {/* Clear of the minimap (left) and the audio widget (bottom right). */}
       {/* A touch screen's UI view is for its menus: the stick and buttons step aside for the dock. */}
-      {touch && !hudCinematic && !uiView && sheet !== "sushi" && (!inside || inside === "cafe") && <TouchControls left="var(--hud-stick-left)" bottom="var(--hud-stick-bottom)" walkOnly={inside === "cafe"} />}
+      {touch && !hudCinematic && !uiView && !barSeated && sheet !== "sushi" && (!inside || inside === "cafe") && <TouchControls left="var(--hud-stick-left)" bottom="var(--hud-stick-bottom)" walkOnly={inside === "cafe"} />}
       {(!compact || (headingFlash !== null && !hudCinematic)) && <p className={styles.touchControls} data-flash={compact ? headingFlash ?? undefined : undefined}>Tap the ground to move · two fingers turn the camera</p>}
       {captured === "free" && !touch && !hudCinematic && <p className={styles.lookHint} role="status">Click to look around</p>}
       {captured === "captured" && site === "ruins" && <svg className={styles.crosshair} viewBox="-10 -10 20 20" aria-hidden="true"><circle r="5.5" /><circle r="1.2" /></svg>}

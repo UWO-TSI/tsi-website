@@ -46,7 +46,12 @@
 .fishRow { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; width: 100%; }
 .choice { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; width: 100%; }
 .choice .quiet { flex-basis: 100%; text-align: right; }
-@media (max-aspect-ratio: 3/4) { .fishRow > * { --thumb: 30px !important; } }
+/* A phone: smaller fish with room for their counts, and the put-down button over the menu's top right (not off the screen). */
+@media (max-aspect-ratio: 3/4) {
+  .fishRow { gap: 10px 9px; }
+  .fishRow > * { --thumb: 30px !important; }
+  .down { right: 4px; bottom: auto; top: -42px; }
+}
 .order[data-quiet] { background: transparent; color: var(--ui-paper-ink); box-shadow: inset 0 0 0 1.5px var(--ui-paper-ink); }
 .quiet { color: var(--ui-paper-quiet); font: 500 12px/1.3 var(--gui-font); }
 .error { position: absolute; top: 2dvh; left: 50%; transform: translateX(-50%); margin: 0; padding: 6px 12px; border-radius: 8px; background: var(--ui-paper); color: var(--ui-error);

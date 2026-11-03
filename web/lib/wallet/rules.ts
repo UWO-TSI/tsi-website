@@ -222,15 +222,16 @@ export const tastingWater = (key: string): TastingWater | null => {
   return sp ? (sp.biome as TastingWater) : null;
 };
 /**
- * What filling `key`'s slot pays, given every filled slot after it (`book`, `key` among them): a mark when the count
- * reaches one, the water's bonus when its page is full (tasting_serve does the same sums).
+ * What giving `key` to the tank pays (round 3, David: "tank is the route for milestones"), given every fish in the
+ * tank after it (`tank`, `key` among them): a mark when the count reaches one, the water's bonus when every fish of its
+ * page is in the tank. A cook pays none of it (tasting_serve does the same sums).
  */
-export function tastingMarks(book: ReadonlySet<string>, key: string, at: readonly { at: number; coins: number }[] = TASTING.marks, full: number = TASTING.full): { earned: number; marks: string[] } {
+export function tastingMarks(tank: ReadonlySet<string>, key: string, at: readonly { at: number; coins: number }[] = TASTING.marks, full: number = TASTING.full): { earned: number; marks: string[] } {
   const marks: string[] = [];
   let earned = 0;
-  for (const m of at) if (book.size === m.at) { earned += m.coins; marks.push(`count:${m.at}`); }
+  for (const m of at) if (tank.size === m.at) { earned += m.coins; marks.push(`count:${m.at}`); }
   const water = tastingWater(key), page = tastingPages().find((p) => p.water === water);
-  if (page && page.species.every((s) => book.has(s))) { earned += full; marks.push(`water:${water}`); }
+  if (page && page.species.every((s) => tank.has(s))) { earned += full; marks.push(`water:${water}`); }
   return { earned, marks };
 }
 /** The fee for Bancha's first cook of a species, with `cooked` species stamped before it (tasting_serve sums the same). */

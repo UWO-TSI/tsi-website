@@ -8,9 +8,10 @@ import { useState, type CSSProperties } from "react";
 import { Clock, Droplets, Leaf, MapPin, Ruler, Sun, Sunset, Waves } from "lucide-react";
 import { CurrencyIcon } from "@/components/economy/Amount";
 import PixelImage from "@/components/economy/PixelImage";
-import { BiomeTag, BookMarks, BookPage, BookSlot, Conditions, CoverTitle, FlatDialog, DarkButton, FoldedMenu, GachaReveal, InkArt, InkDefs, MenuDish, OddsTable, SeasonDots, PanelSection, TaskCard, Thumb, TimeStrip, TipBody, useInkId, type OddsRow } from "@/components/gui/flat";
+import { BiomeTag, BookMarks, BuffChip, BookPage, BookSlot, Conditions, CoverTitle, FlatDialog, DarkButton, FoldedMenu, GachaReveal, InkArt, InkDefs, MenuDish, OddsTable, SeasonDots, PanelSection, TaskCard, Thumb, TimeStrip, TipBody, useInkId, type OddsRow } from "@/components/gui/flat";
 import { catchLanes } from "@/components/game/peaceful/CatchBoard";
 import { COVER_LINE, dishStats } from "@/components/game/peaceful/SushiSheets";
+import { mealRows } from "@/components/economy/statIcons";
 import { SUSHI_MENU, TASTING } from "@/lib/wallet/catalogue";
 import { tastingPages } from "@/lib/wallet/rules";
 import { iconUrl } from "@/lib/icons/keys";
@@ -70,10 +71,15 @@ export default function FlatPieces() {
         ]} />
     </div>
     <div style={{ maxWidth: 380, padding: "18px 22px", borderRadius: 4, background: "var(--ui-paper)", color: "var(--ui-paper-ink)" }}>
-      <BookPage title="River" filled={6} total={RIVER.length} note={<>Fill it for {TASTING.full}<CurrencyIcon size={11} /></>}>
+      <BookPage title="River" filled={6} total={RIVER.length} note={<>All in the tank: {TASTING.full}<CurrencyIcon size={11} /></>}>
         {RIVER.map((k, i) => <BookSlot key={k} filter={ink} name={k} state={i < 5 ? "cooked" : i === 6 ? "aquarium" : "empty"} fresh={i === 4} picture={<PixelImage src={iconUrl(k)} px={36} />} />)}
       </BookPage>
       <BookMarks marks={TASTING.marks.map(m => ({ at: m.at, done: m.at <= 6, reward: <>{m.coins}<CurrencyIcon size={11} /></> }))} />
+    </div>
+    {/* The HUD's meal buff (tasting-book r3): faint, on the right edge in the game; one stat and two here. */}
+    <div data-testid="buff-showroom" style={{ display: "flex", gap: 18, alignItems: "flex-start", padding: 18, borderRadius: 14, background: "var(--ui-water-deep)" }}>
+      <BuffChip stats={mealRows(TASTING.dishes[1].buff)} left="38m" title="Dace karaage: Reel speed +10%, 38 min left" />
+      <BuffChip stats={mealRows(TASTING.dishes[0].buff)} left="12m" title="Snapper chazuke: Luck +10%, Bite window +10%, 12 min left" />
     </div>
     <FlatDialog open={dialog} onClose={() => setDialog(false)} title="A small panel"><p style={{ margin: 0 }}>One thing, one action.</p><DarkButton onClick={() => setDialog(false)}>Done</DarkButton></FlatDialog>
   </div>;

@@ -100,11 +100,11 @@ export interface EconomyStore {
   /**
    * Atomic, once per key (tasting_serve): one unlocked fish of a rod species whose slot is empty (already_in_book) leaves
    * the bag. `cook` pays `fee.base` plus `fee.step` for each species cooked before and stamps the slot; `aquarium` fills
-   * it for free. The new slot pays its milestones (`marks` by the book's count, `full` for a full water).
+   * it for free, and only a gift pays the milestones (`marks` by the fish in the tank, `full` for a water all in it).
    */
   serve(memberId: string, speciesKey: string, way: "cook" | "aquarium", fee: { base: number; step: number }, marks: readonly { at: number; coins: number }[], full: number, key: string): Promise<TastingServe>;
   /**
-   * Atomic, once per key (tasting_dish): a dish the book taught (not_learned until `unlock` is stamped): one of each of
+   * Atomic, once per key (tasting_dish): a dish the book taught (not_learned until `unlock` is in the tank): one of each of
    * `ingredients` (a key twice is two) leaves the bag, `price` coins are paid, and `buff` replaces the meal buff.
    */
   bookDish(memberId: string, dish: string, price: number, unlock: string, ingredients: readonly string[], buff: ActiveBuff, key: string): Promise<{ balance: number; paid: number; buff: ActiveBuff; replayed: boolean }>;

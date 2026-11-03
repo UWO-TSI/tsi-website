@@ -2,7 +2,8 @@
 \set ON_ERROR_STOP 1
 INSERT INTO auth.users (id, email) VALUES ('00000000-0000-4000-8000-0000000000e1', 'taster@x'), ('00000000-0000-4000-8000-0000000000e2', 'giver@x') ON CONFLICT DO NOTHING;
 
--- Cook: the fish leaves the bag, the fee (base plus a step per species cooked before) is paid, the slot stamped; a filled slot is never served again.
+-- Cook: the fish leaves the bag, the fee (base plus a step per species cooked before) is paid, the slot stamped, and nothing else
+-- (no milestone: those are the tank's); a filled slot is never served again.
 DO $$
 DECLARE T uuid := '00000000-0000-4000-8000-0000000000e1'; r record;
 BEGIN
@@ -25,8 +26,9 @@ BEGIN
   ASSERT (SELECT count FROM member_collections WHERE user_id = T AND item_key = 'fish_dace') = 1, 'a refused serve keeps the fish';
   -- the second species costs a step more
   PERFORM collections_record_catch(T, 'fish_sea_bass', 30, true);
-  SELECT * INTO r FROM tasting_serve(T, 'fish_sea_bass', 'cook', 100, 5, '{10,25}', '{150,400}', 250, 'tb-0010');
+  SELECT * INTO r FROM tasting_serve(T, 'fish_sea_bass', 'cook', 100, 5, '{2,25}', '{150,400}', 250, 'tb-0010');
   ASSERT r.paid = 105 AND r.balance = 795, 'fee scales with the species cooked: ' || r.paid;
+  ASSERT r.earned = 0 AND r.marks = '{}', 'a cook pays no milestone, even as the book reaches one: ' || r.earned;
   -- a gift doesn't raise the fee
   PERFORM collections_record_catch(T, 'fish_anchovy', 12, true);
   PERFORM tasting_serve(T, 'fish_anchovy', 'aquarium', 100, 5, '{10,25}', '{150,400}', 250, 'tb-0011');
@@ -57,7 +59,8 @@ BEGIN
   RAISE NOTICE 'tasting cook ok';
 END $$;
 
--- A dish the book taught: not before its fish is stamped; then the ingredients and the coins, all or nothing, and its buff.
+-- A dish the book taught: not before its key fish is in the tank (a cooked one teaches nothing); then the ingredients and the
+-- coins, all or nothing, and its buff.
 DO $$
 DECLARE T uuid := '00000000-0000-4000-8000-0000000000e1'; r record; v_coins int;
 BEGIN
@@ -65,25 +68,28 @@ BEGIN
   PERFORM collections_record_catch(T, 'fish_red_snapper', 40, true);
   PERFORM collections_record_catch(T, 'fish_red_snapper', 41, true);
   PERFORM collections_record_catch(T, 'fish_sea_bass', 31, true);
-  BEGIN PERFORM tasting_dish(T, 'snapper_chazuke', 250, 'fish_red_snapper', '{fish_red_snapper,fish_sea_bass,fish_sea_bass}', 0.3, 0.3, '2030-01-01', 'tb-d001'); RAISE EXCEPTION 'x';
+  BEGIN PERFORM tasting_dish(T, 'snapper_chazuke', 250, 'fish_red_snapper', '{fish_red_snapper,fish_sea_bass,fish_sea_bass}', 0.1, 0, '2030-01-01', 'tb-d001'); RAISE EXCEPTION 'x';
   EXCEPTION WHEN raise_exception THEN ASSERT SQLERRM = 'not_learned', 'unlearnt: ' || SQLERRM; END;
-  PERFORM tasting_serve(T, 'fish_red_snapper', 'cook', 100, 5, '{10,25}', '{150,400}', 250, 'tb-d002');
+  -- the dace was cooked, so its dish isn't learnt
+  BEGIN PERFORM tasting_dish(T, 'dace_karaage', 200, 'fish_dace', '{fish_dace}', 0, 0, '2030-01-01', 'tb-d007'); RAISE EXCEPTION 'x';
+  EXCEPTION WHEN raise_exception THEN ASSERT SQLERRM = 'not_learned', 'a cooked key fish: ' || SQLERRM; END;
+  PERFORM tasting_serve(T, 'fish_red_snapper', 'aquarium', 100, 5, '{10,25}', '{150,400}', 250, 'tb-d002');
   SELECT coins INTO v_coins FROM wallets WHERE member_id = T;
   -- one sea bass short: nothing taken, nothing paid
-  BEGIN PERFORM tasting_dish(T, 'snapper_chazuke', 250, 'fish_red_snapper', '{fish_red_snapper,fish_sea_bass,fish_sea_bass}', 0.3, 0.3, '2030-01-01', 'tb-d003'); RAISE EXCEPTION 'x';
+  BEGIN PERFORM tasting_dish(T, 'snapper_chazuke', 250, 'fish_red_snapper', '{fish_red_snapper,fish_sea_bass,fish_sea_bass}', 0.1, 0, '2030-01-01', 'tb-d003'); RAISE EXCEPTION 'x';
   EXCEPTION WHEN raise_exception THEN ASSERT SQLERRM = 'insufficient_items', 'short: ' || SQLERRM; END;
   ASSERT (SELECT count FROM member_collections WHERE user_id = T AND item_key = 'fish_red_snapper') = 1 AND (SELECT coins FROM wallets WHERE member_id = T) = v_coins, 'a short dish takes nothing';
   PERFORM collections_record_catch(T, 'fish_sea_bass', 32, true);
-  SELECT * INTO r FROM tasting_dish(T, 'snapper_chazuke', 250, 'fish_red_snapper', '{fish_red_snapper,fish_sea_bass,fish_sea_bass}', 0.3, 0.3, '2030-01-01', 'tb-d004');
+  SELECT * INTO r FROM tasting_dish(T, 'snapper_chazuke', 250, 'fish_red_snapper', '{fish_red_snapper,fish_sea_bass,fish_sea_bass}', 0.1, 0, '2030-01-01', 'tb-d004');
   ASSERT r.paid = 250 AND r.balance = v_coins - 250 AND r.source = 'snapper_chazuke' AND NOT r.replayed, 'dish served';
   ASSERT (SELECT count FROM member_collections WHERE user_id = T AND item_key = 'fish_red_snapper') = 0, 'snapper used';
   ASSERT (SELECT count FROM member_collections WHERE user_id = T AND item_key = 'fish_sea_bass') = 0, 'both sea bass used';
-  ASSERT (SELECT source FROM member_buffs WHERE member_id = T) = 'snapper_chazuke' AND (SELECT luck FROM member_buffs WHERE member_id = T) = 0.3, 'its buff is the meal';
-  SELECT * INTO r FROM tasting_dish(T, 'snapper_chazuke', 250, 'fish_red_snapper', '{fish_red_snapper,fish_sea_bass,fish_sea_bass}', 0.3, 0.3, '2030-01-01', 'tb-d004');
+  ASSERT (SELECT source FROM member_buffs WHERE member_id = T) = 'snapper_chazuke' AND (SELECT luck FROM member_buffs WHERE member_id = T) = 0.1, 'its buff is the meal';
+  SELECT * INTO r FROM tasting_dish(T, 'snapper_chazuke', 250, 'fish_red_snapper', '{fish_red_snapper,fish_sea_bass,fish_sea_bass}', 0.1, 0, '2030-01-01', 'tb-d004');
   ASSERT r.replayed AND (SELECT coins FROM wallets WHERE member_id = T) = v_coins - 250, 'replay pays nothing more';
-  BEGIN PERFORM tasting_dish(T, 'snapper_chazuke', 0, 'fish_red_snapper', '{fish_red_snapper}', 0.3, 0.3, '2030-01-01', 'tb-d005'); RAISE EXCEPTION 'x';
+  BEGIN PERFORM tasting_dish(T, 'snapper_chazuke', 0, 'fish_red_snapper', '{fish_red_snapper}', 0.1, 0, '2030-01-01', 'tb-d005'); RAISE EXCEPTION 'x';
   EXCEPTION WHEN raise_exception THEN ASSERT SQLERRM = 'bad_qty', 'free dish: ' || SQLERRM; END;
-  BEGIN PERFORM tasting_dish(T, 'snapper_chazuke', 250, 'fish_red_snapper', '{}', 0.3, 0.3, '2030-01-01', 'tb-d006'); RAISE EXCEPTION 'x';
+  BEGIN PERFORM tasting_dish(T, 'snapper_chazuke', 250, 'fish_red_snapper', '{}', 0.1, 0, '2030-01-01', 'tb-d006'); RAISE EXCEPTION 'x';
   EXCEPTION WHEN raise_exception THEN ASSERT SQLERRM = 'bad_qty', 'no ingredients: ' || SQLERRM; END;
   RAISE NOTICE 'tasting dish ok';
 END $$;

@@ -59,6 +59,8 @@ const FLOW = {
     await page.goto(`${HOST}/lab/gui?only=flat-pieces`, { waitUntil: "domcontentloaded" });
     await wait(6000);
     await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+    const buffs = testid("buff-showroom");
+    if (await buffs.count()) { await buffs.scrollIntoViewIfNeeded().catch(() => {}); await wait(500); const bb = await buffs.boundingBox(); if (bb) await shot("tb3-showroom-buff", page, { clip: { x: bb.x, y: bb.y, width: Math.min(bb.width, VW - bb.x), height: bb.height } }); }
     const piece = page.getByText("Tasting book (paper)").first().locator("xpath=ancestor::section[1]");
     await piece.scrollIntoViewIfNeeded().catch(() => {});
     await wait(800);
@@ -141,6 +143,41 @@ const FLOW = {
     await wait(1800);
     await centre(page.getByRole("button", { name: "Open the menu" }));
     await wait(1200); await menuShot("tb2-meal");
+  },
+  /** Round 3 (tb3-*): the calmer bar on a phone, the nigiri page, a key fish to the tank teaching its dish, the dishes in
+   * the rod's stats, one ordered and its faint buff on the right of the screen. */
+  async book3() {
+    await world("at=-47,114.4&at=19:30&time=evening&bag=23&dish=1", { settle: 12000 });
+    await wait(3000);
+    await shot("tb3-bar");
+    await page.locator("button:text-is('Menu')").first().click({ timeout: 10000 }).catch(e => console.log("menu", e.message.slice(0, 120)));
+    await wait(1800);
+    await centre(page.getByRole("button", { name: "Open the menu" }));
+    await wait(1200);
+    await turnPage();
+    await menuShot("tb3-chef");
+    await page.getByRole("button", { name: /Bancha's nigiri/ }).first().click({ force: true }).catch(e => console.log("nigiri", e.message.slice(0, 120)));
+    await wait(700); await menuShot("tb3-nigiri");
+    await page.getByRole("button", { name: "Red Snapper", exact: true }).first().click({ force: true }).catch(e => console.log("snapper", e.message.slice(0, 120)));
+    await page.mouse.move(4, VH - 4);
+    await wait(700); await menuShot("tb3-choice");
+    await page.getByRole("button", { name: "For the aquarium" }).first().click({ force: true }).catch(e => console.log("tank", e.message.slice(0, 120)));
+    await page.waitForFunction(() => !document.querySelector('[aria-roledescription="folded menu"] [data-dir]'), null, { timeout: 5000 }).catch(() => {});
+    await wait(1400); await shot("tb3-tank-toast"); await menuShot("tb3-tank-mark");
+    // Back to the book's spread: its count of the tank, then the dishes.
+    for (let i = 0; i < 3; i++) { await centre(page.getByRole("button", { name: "Turn back" })); await wait(1100); }
+    await menuShot("tb3-book");
+    await turnPage(); await menuShot("tb3-dishes-2");
+    await centre(page.getByRole("button", { name: "Turn back" })); await wait(1100);
+    await page.getByRole("button", { name: /Snapper chazuke/ }).first().click({ force: true }).catch(e => console.log("dish", e.message.slice(0, 120)));
+    await wait(600); await menuShot("tb3-dish-learnt");
+    await page.getByRole("button", { name: /^Order/ }).first().click({ force: true }).catch(e => console.log("order", e.message.slice(0, 120)));
+    await wait(2500); await shot("tb3-buff");
+    const b = await testid("buff-chip").boundingBox();
+    if (b) await shot("tb3-buff-crop", page, { clip: { x: Math.max(0, b.x - 120), y: Math.max(0, b.y - 140), width: Math.min(VW - Math.max(0, b.x - 120), b.width + 140), height: b.height + 280 } });
+    else console.log("no buff chip");
+    const hud = await page.locator("[data-hud-right]").first().boundingBox();
+    console.log("buff", JSON.stringify(b), "hudRight", JSON.stringify(hud));
   },
   async aquarium() {
     await world("hq=inside&at=0,4.2&time=day", { press: false, settle: 14000 });

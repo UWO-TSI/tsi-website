@@ -177,7 +177,8 @@ export function memoryEconomyStore(clock: () => Date = () => new Date(), random:
       const remaining = take(m, key);
       let balance = paid > 0 ? apply(m, "coins", -paid, "shop", `tasting:${key}`, `tasting:${idem}`).balance : (coins.get(m) ?? 0);
       book.push({ member: m, slot: { species_key: key, way: way === "cook" ? "cooked" : "aquarium" } });
-      const { earned, marks: got } = tastingMarks(new Set([...mine.map((b) => b.slot.species_key), key]), key, marks, full);
+      // Only the tank's gifts count toward the milestones; a cook is its stamp and luck alone.
+      const { earned, marks: got } = way === "aquarium" ? tastingMarks(new Set([...mine.filter((b) => b.slot.way === "aquarium").map((b) => b.slot.species_key), key]), key, marks, full) : { earned: 0, marks: [] };
       if (earned > 0) balance = apply(m, "coins", earned, "quest", `tasting:${got.join(",")}`, `tasting_mark:${idem}`).balance;
       const r = { balance, remaining, paid, stamped: way === "cook", earned, marks: got, replayed: false };
       serves.set(`${m}:${idem}`, r);
@@ -186,7 +187,7 @@ export function memoryEconomyStore(clock: () => Date = () => new Date(), random:
     async bookDish(m, dish, price, unlock, ingredients, buff, key) {
       const prior = orders.get(`${m}:${key}`);
       if (prior) return { balance: coins.get(m) ?? 0, ...prior, replayed: true };
-      if (!book.some((b) => b.member === m && b.slot.species_key === unlock && b.slot.way === "cooked")) throw new EconomyError("not_learned");
+      if (!book.some((b) => b.member === m && b.slot.species_key === unlock && b.slot.way === "aquarium")) throw new EconomyError("not_learned");
       if ((coins.get(m) ?? 0) < price) throw new EconomyError("insufficient");
       // All or nothing, as the transaction: check the bag before taking.
       const need = new Map<string, number>();

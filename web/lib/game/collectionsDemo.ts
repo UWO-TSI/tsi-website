@@ -96,7 +96,8 @@ export function installCollectionsDemo(): void {
         m.give(ME, key, n);
       }
       // `?dish=1`: what the book's first dish takes, beside the snapper the pockets bring to cook for its stamp.
-      if (query.get("dish")) for (const [key, n] of TASTING.dishes[0].ingredients) m.give(ME, key, n);
+      // `dish=1`: the chazuke's ingredients, and one more red snapper for the tank (its key fish there teaches the dish).
+      if (query.get("dish")) { for (const [key, n] of TASTING.dishes[0].ingredients) m.give(ME, key, n); m.give(ME, TASTING.dishes[0].unlock, 1); }
     })();
     return async (path, body, url, method) => {
       await ready;
@@ -148,7 +149,7 @@ export function installCollectionsDemo(): void {
           if (!row || row.count < 1) return reply({ ok: false, status: 409, code: "insufficient_items", error: "You don't have that many." }, "fill");
           m.give(ME, chef.item_key, -1);
           filled.add(chef.item_key);
-          meal = { source: "staff_meal", luck: chef.meal.luck, size: chef.meal.size, until: new Date(now.getTime() + chef.meal.minutes * 60_000).toISOString() };
+          meal = { source: "staff_meal", luck: chef.meal.luck ?? 0, size: 0, until: new Date(now.getTime() + chef.meal.minutes * 60_000).toISOString() };
           eco.fund(ME, eco.coinsOf(ME) + chef.reward, eco.gemsOf(ME));
           return reply({ ok: true, data: { balance: eco.coinsOf(ME), remaining: row.count - 1, paid: chef.reward, replayed: false } }, "fill");
         }
@@ -165,13 +166,13 @@ export function installCollectionsDemo(): void {
           if (!dish) return reply({ ok: false, status: 404, code: "not_found", error: "That isn't on the menu." }, "order");
           const learnt = TASTING.dishes.find(d => d.id === dish.id), bag = (await m.store.bag(ME)).items;
           const have = (key: string, n: number) => (bag.find(r => r.item_key === key)?.count ?? 0) >= n;
-          if (learnt && book.get(learnt.unlock) !== "cooked") return reply({ ok: false, status: 409, code: "not_learned", error: "Bancha hasn't learnt that one yet." }, "order");
+          if (learnt && book.get(learnt.unlock) !== "aquarium") return reply({ ok: false, status: 409, code: "not_learned", error: "Bancha hasn't learnt that one yet." }, "order");
           if (learnt ? !learnt.ingredients.every(([k, n]) => have(k, n)) : dish.price === null && !have(body.fish, 1)) return reply({ ok: false, status: 409, code: "insufficient_items", error: "You don't have that many." }, "order");
           if (dish.price !== null && eco.coinsOf(ME) < dish.price) return reply({ ok: false, status: 409, code: "insufficient", error: "Not enough in your wallet for that." }, "order");
           if (learnt) for (const [k, n] of learnt.ingredients) m.give(ME, k, -n);
           else if (dish.price === null) m.give(ME, body.fish, -1);
           if (dish.price !== null) eco.fund(ME, eco.coinsOf(ME) - dish.price, eco.gemsOf(ME));
-          meal = { source: dish.id, luck: dish.buff.luck, size: dish.buff.size, until: new Date(now.getTime() + dish.buff.minutes * 60_000).toISOString() };
+          meal = { source: dish.id, luck: dish.buff.luck ?? 0, size: 0, until: new Date(now.getTime() + dish.buff.minutes * 60_000).toISOString() };
           return reply({ ok: true, data: { balance: eco.coinsOf(ME), paid: dish.price ?? 0, buff: meal, replayed: false } }, "order");
         }
         case "/api/economy/tasting": {
@@ -187,7 +188,8 @@ export function installCollectionsDemo(): void {
           eco.fund(ME, eco.coinsOf(ME) - fee, eco.gemsOf(ME));
           if (!cook) clubTank.unshift(fish);
           book.set(fish, cook ? "cooked" : "aquarium");
-          const won = tastingMarks(new Set(book.keys()), fish);
+          // Only the tank's gifts pay the milestones (tasting_serve's).
+          const won = cook ? { earned: 0, marks: [] } : tastingMarks(new Set([...book].filter(([, w]) => w === "aquarium").map(([k]) => k)), fish);
           eco.fund(ME, eco.coinsOf(ME) + won.earned, eco.gemsOf(ME));
           return reply({ ok: true, data: { balance: eco.coinsOf(ME), remaining: row.count - 1, paid: fee, stamped: cook, ...won, replayed: false } }, "serve");
         }

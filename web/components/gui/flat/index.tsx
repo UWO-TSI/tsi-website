@@ -450,6 +450,18 @@ export function StatBars({ children, hidden, className }: { children: ReactNode;
   return <div className={className ? `${f.stats} ${className}` : f.stats} data-hidden={hidden || undefined} data-testid="hud-bars">{children}</div>;
 }
 
+/**
+ * A meal's buff at rest (tasting-book r3, David: "buff will show on the right side of the screen with icon, timer and
+ * percent, its like very faint so its not obvious"): a slim column of each stat's icon over its share, then the minutes
+ * left, all faint; it firms up under the pointer, where `title` says it in words.
+ */
+export function BuffChip({ stats, left, title }: { stats: readonly { key: string; icon: ReactNode; value: string }[]; left: string; title: string }) {
+  return <p className={f.buff} title={title} aria-label={title} data-testid="buff-chip">
+    {stats.map(s => <span key={s.key}><i aria-hidden>{s.icon}</i>{s.value}</span>)}
+    <small>{left}</small>
+  </p>;
+}
+
 export interface MomentItem { key: string; icon: ReactNode; title: ReactNode; line?: ReactNode }
 
 /**
