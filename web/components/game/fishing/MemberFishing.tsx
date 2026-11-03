@@ -23,6 +23,7 @@ import { useCastMeter } from "@/lib/game/useCastMeter";
 import { useCatchCard } from "@/lib/game/useCatchCard";
 import { useFishingSession } from "@/lib/game/useFishingSession";
 import { useReelLoop } from "@/lib/game/useReelLoop";
+import type { WaterType } from "@/lib/game/fishingSpots";
 import m from "./MemberFishing.module.css";
 
 /** Rare and up: a rare fish's card flares and throws sparks. */
@@ -59,7 +60,7 @@ export default function MemberFishing({ onActiveChange, rod }: { onActiveChange?
     <div className={m.lane} data-member-fishing={phase}>
       {phase === "charging" ? <MemberMeter onRelease={s.castNow} releaseRequestedRef={s.releaseRequestedRef} hint={CHARGE[device]} />
         : phase === "reeling" && fish ? <MemberReel key={fish.key} fish={fish} known={s.owned.has(fish.key)} onDone={s.onReelDone} initialInput={s.reelInput}
-          rig={s.rod} help={FISHING_HINTS[device].reel} boss={s.bossMode} raidId={s.raidId} />
+          rig={s.rod} help={FISHING_HINTS[device].reel} boss={s.bossMode} raidId={s.raidId} water={s.water} />
           : <StatusChip tone={chip[0]} icon={chip[2]}>{chip[1]}</StatusChip>}
     </div>
   );
@@ -87,9 +88,11 @@ function MemberMeter({ onRelease, releaseRequestedRef, hint }: { onRelease: (pow
  * done"): the tutorial teaches it once; `help` is only the screen reader's description. A boss adds its stamina (its
  * phases marked) and its call; a raid says how many are reeling.
  */
-function MemberReel({ fish, known, onDone, initialInput, rig, help, boss, raidId }: {
+function MemberReel({ fish, known, onDone, initialInput, rig, help, boss, raidId, water }: {
   fish: FishDef; known: boolean; onDone: (success: boolean) => void; initialInput: FishingHeldInput; rig: Pick<RodEffects, "tensionMul" | "fillMul" | "barMul">; help: string;
   boss: "solo" | "shared" | null; raidId?: string;
+  /** The water cast into (its biome on the bar); else the fish's own. */
+  water?: WaterType | null;
 }) {
   const panelRef = useRef<HTMLDivElement>(null), trackRef = useRef<HTMLDivElement>(null), windowRef = useRef<HTMLDivElement>(null), markerRef = useRef<HTMLDivElement>(null);
   const gaugeRef = useRef<HTMLDivElement>(null), fillRef = useRef<HTMLDivElement>(null), staminaRef = useRef<HTMLDivElement>(null);
@@ -186,7 +189,7 @@ function MemberReel({ fish, known, onDone, initialInput, rig, help, boss, raidId
         <div className={m.row}><span ref={whoRef} className={m.label}>{raidId ? "Raid" : "It fights back"}</span><span ref={callRef} className={reelStyles.call} aria-live="assertive" /></div>
         <LineGauge fillRef={staminaRef} value={1} marks={[1 / 3, 2 / 3]} label="Its stamina" />
       </div>}
-      <ReelTags name={known ? fish.name : "???"} water={fish.zone ?? "river"} />
+      <ReelTags name={known ? fish.name : "???"} water={water ?? fish.zone ?? "river"} />
       <ReelTrack trackRef={trackRef} windowRef={windowRef} markerRef={markerRef} picture={iconFor(fish)} unknown={!known} windowWidth={barW} />
       <LineGauge gaugeRef={gaugeRef} fillRef={fillRef} value={start} marks={boss ? [] : QUARTERS} label={boss ? "Line" : `Catch progress: ${known ? fish.name : "an unknown fish"}`} />
       <p id="member-reel-help" hidden>{help}</p>

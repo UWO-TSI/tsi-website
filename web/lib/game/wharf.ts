@@ -268,6 +268,8 @@ export const JETTY = {
 
 /** The new world's quick-sell stall outside the fish market (a prop by this id; art/wharf/build_sell_stall.py): E there opens the sell sheet. */
 export const SELL_BARREL = "sell-barrel";
+/** The three fish on top of the stall's heap, each its own part so they can flop (art/wharf/build_sell_stall.py FLOPPERS). */
+export const SELL_FISH_URL = "/assets/game/wharf/sell-fish.glb";
 
 /**
  * The fish market's two boards (David, 2026-10-28: the catch board "should be near the fish shop"; the fishing tasks "on
@@ -288,9 +290,10 @@ export type BoardSize = (typeof BOARD)[keyof typeof BOARD];
  * Each turns its face by `turn` from the market's. The catch board stands right of the carts and left of the market,
  * facing the deck (round 5, David: "place it to the right side of the stands, to left side of the fish shot and faced
  * towards the deck area"; of round 4's spots "c is the closest"): between spot C and the market's front, clear of the sell
- * stall and the walk past it, its face toward the boardwalk and turned a little to the camera so the chalk reads.
+ * stall and the walk past it. Round 6 (David: "should be angled outwards towards the wharf rotate 90 degrees"): its face
+ * turned a quarter from round 5's, out toward the wharf and the jetty.
  */
-export const MARKET_BOARDS = { catch: { x: -0.44, z: 6.36, turn: 2.173 }, tasks: { x: -8.2, z: 6.5, turn: Math.PI + 0.55 } } as const;
+export const MARKET_BOARDS = { catch: { x: -0.44, z: 6.36, turn: 2.173 - Math.PI / 2 }, tasks: { x: -8.2, z: 6.5, turn: Math.PI + 0.55 } } as const;
 export interface BoardSpot { x: number; z: number; yaw: number }
 /** Where the market's boards stand in the world and which way they face; null on a world without the market. */
 export function marketBoardsOf(props: readonly { model?: string; x: number; z: number; yaw?: number }[]): { catch: BoardSpot; tasks: BoardSpot } | null {
@@ -298,31 +301,6 @@ export function marketBoardsOf(props: readonly { model?: string; x: number; z: n
   if (!m) return null;
   const d = { x: m.x, z: m.z, yaw: m.yaw ?? 0 }, at = (b: { x: number; z: number; turn: number }) => ({ ...dockToWorld(d, b.x, b.z, { x: 0, z: 0 }), yaw: d.yaw + b.turn });
   return { catch: at(MARKET_BOARDS.catch), tasks: at(MARKET_BOARDS.tasks) };
-}
-/**
- * The water signs (round 5; David approved round 4's mock: "build them for the shores"), one where each water is fished:
- * the river's by the washed-out bridge on the village bank, the mountain pond's at the foot of the mountain way (its
- * water is up the mountain, shut for now), the sea's on the jetty's platform by the middle gangway, the deep sea's at the
- * head of the jetty's middle pier, where the boat goes out. Each stands in its anchor's frame (an object of the world:
- * the jetty, the bridge, the rockslide) so it moves with it; `turn` is its face's turn from the anchor's, most toward the
- * game camera. E at one reads the catch board.
- */
-export const WATER_SIGNS = [
-  { water: "river", anchor: "bridge-river", x: 3.4, z: 2.6, turn: 1.171 },
-  { water: "pond", anchor: "slide-mountain", x: -2.16, z: 6.52, turn: 3.042 },
-  { water: "sea", anchor: "wharf", x: -2.4, z: 12.6, turn: 5.112 },
-  { water: "deep", anchor: "wharf", x: -1.8, z: 0.9, turn: 5.112 },
-] as const;
-export type SignWater = (typeof WATER_SIGNS)[number]["water"];
-export const waterSignUrl = (water: SignWater) => `/assets/game/props/water-sign-${water}.glb`;
-/** Where the water signs stand and face, for the anchors this world has. */
-export function waterSignsOf(objects: readonly { id: string; x: number; z: number; yaw?: number }[]): (BoardSpot & { water: SignWater })[] {
-  return WATER_SIGNS.flatMap(sg => {
-    const a = objects.find(o => o.id === sg.anchor);
-    if (!a) return [];
-    const d = { x: a.x, z: a.z, yaw: a.yaw ?? 0 };
-    return [{ water: sg.water, ...dockToWorld(d, sg.x, sg.z, { x: 0, z: 0 }), yaw: d.yaw + sg.turn }];
-  });
 }
 /**
  * The tackle shop's counter (David: "the tackle shop should be like a gatcha roll"): its door on the porch, in the shop's

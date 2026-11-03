@@ -3,28 +3,29 @@
 /**
  * The fish market's boards (d-now; David, 2026-10-28: the board "should be near the fish shop", and "a time graphic with
  * the things available ... icon and you can hover to see what the fish is"): two chalkboards out front of the market
- * (lib/game/wharf.ts marketBoardsOf; the catch board the big one, both the board model of art/props/build_fishing_signs.py). The catch board's chalk lists what bites this hour; E opens the day as a strip
+ * (lib/game/wharf.ts marketBoardsOf; the catch board the big one, both the board model of art/props/build_fish_board.py). The catch board's chalk shows what bites this hour, in pictures; E opens the day as a strip
  * (CatchBoardSheet: the kit's TimeStrip, a lane per water, the fish on at each span of hours, each a hover card). The
  * task board's chalk lists today's fishing tasks; E opens them (FishingTasks).
  */
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useGLTF } from "@react-three/drei";
-import { Clock, CloudFog, CloudRain, Coins, Droplets, Lock, MapPin, Moon, Mountain, Ruler, Snowflake, Sparkles, Sun, Sunrise, Sunset, Waves, Wind } from "lucide-react";
+import { Clock, CloudFog, CloudRain, Coins, Lock, MapPin, Moon, Ruler, Snowflake, Sparkles, Sun, Sunrise, Sunset, Wind } from "lucide-react";
 import { RARITY_RANK, ROSTER } from "@/lib/collections/roster";
 import { fishOut } from "@/lib/game/peaceful";
 import { reelWeather, type IslandWeather } from "@/lib/game/islandWeather";
 import type { WaterType } from "@/lib/game/fishingSpots";
 import { nextSeason, seasonsOf, type Season } from "@/lib/game/season";
 import type { IslandPhase } from "@/lib/game/islandTime";
-import { iconFor, type FishDef } from "@/lib/game/fishing";
-import { BOARD, FISH_BOARD_URL, waterSignUrl, type BoardSize, type BoardSpot, type SignWater } from "@/lib/game/wharf";
+import { RARITY_META, iconFor, type FishDef } from "@/lib/game/fishing";
+import { BOARD, FISH_BOARD_URL, SELL_FISH_URL, type BoardSize, type BoardSpot } from "@/lib/game/wharf";
 import { disposeModelMaterials, prepareModel } from "@/lib/game/modelMaterials";
 import { fishingTasks, speciesSellPrice, torontoDay } from "@/lib/wallet/rules";
 import { weekStart } from "@/lib/collections/logic";
 import { RARITY_LABEL, type Rarity } from "@/lib/rarity";
 import { CurrencyIcon } from "@/components/economy/Amount";
-import { Conditions, FlatPanel, SEASON_LOOK, SeasonDots, TimeStrip, TipBody, type StripLane, type Tint } from "@/components/gui/flat";
+import { BIOME_LOOK, Conditions, FlatPanel, SEASON_LOOK, SeasonDots, TimeStrip, TipBody, type StripLane, type Tint } from "@/components/gui/flat";
 
 const rank = (f: FishDef) => RARITY_RANK[f.rarity as keyof typeof RARITY_RANK] ?? RARITY_RANK.legendary + 1;
 
@@ -77,13 +78,8 @@ export function hoursText(on: readonly boolean[]): string {
   return `${from}:00 to ${(from + len) % 24}:00`;
 }
 
-const WATER: Record<WaterType, { label: string; icon: React.ReactNode }> = {
-  sea: { label: "The sea, off the pier and the beach", icon: <Waves /> },
-  river: { label: "The river", icon: <Droplets /> },
-  pond: { label: "The mountain pond", icon: <Mountain /> },
-};
+const WATER: Record<WaterType, string> = { sea: "The sea, off the pier and the beach", river: "The river", pond: "The mountain pond" };
 const WHERE: Record<WaterType, string> = { sea: "Sea", river: "River", pond: "Mountain pond" };
-const SHORT_NAME: Record<WaterType, string> = { sea: "Sea", river: "River", pond: "Pond" };
 
 const SKY: Record<IslandWeather, [string, React.ReactNode, Tint]> = { clear: ["Clear", <Sun key="w" />, "sky"], rain: ["Rain", <CloudRain key="w" />, "rain"], snow: ["Snow", <Snowflake key="w" />, "ice"], fog: ["Fog", <CloudFog key="w" />, "mist"], wind: ["Windy", <Wind key="w" />, "leaf"] };
 const PHASE: Record<IslandPhase, [string, React.ReactNode, Tint]> = { dawn: ["Dawn", <Sunrise key="p" />, "rose"], day: ["Day", <Sun key="p" />, "sun"], evening: ["Evening", <Sunset key="p" />, "amber"], night: ["Night", <Moon key="p" />, "night"] };
@@ -100,8 +96,8 @@ export function CatchBoardSheet({ open, onClose, keys, waters, hour, weather, se
   const lanes = useMemo(() => (open ? catchLanes(waters, season, weather, soon) : []), [open, waters, season, weather, soon]);
   const pondShut = useMemo(() => open && !waters.includes("pond"), [open, waters]);
   const strip: StripLane<StripFish>[] = [
-    ...lanes.map(l => ({ id: l.water, icon: WATER[l.water].icon, label: WATER[l.water].label, short: SHORT_NAME[l.water], bands: l.bands })),
-    ...(pondShut ? [{ id: "pond", icon: WATER.pond.icon, label: WATER.pond.label, short: SHORT_NAME.pond, bands: [], closed: <><Lock size={16} aria-hidden /> Opens with the mountain</> }] : []),
+    ...lanes.map(l => ({ id: l.water, icon: BIOME_LOOK[l.water].icon, label: WATER[l.water], short: BIOME_LOOK[l.water].word, bands: l.bands })),
+    ...(pondShut ? [{ id: "pond", icon: BIOME_LOOK.pond.icon, label: WATER.pond, short: BIOME_LOOK.pond.word, bands: [], closed: <><Lock size={16} aria-hidden /> Opens with the mountain</> }] : []),
   ];
   const next = nextSeason();
   const now = [
@@ -132,10 +128,10 @@ function FishTip({ f, season }: { f: StripFish; season: Season }) {
 
 const PX = 512;
 const FONT = '"Tethos Nunito", Nunito, ui-rounded, "Segoe UI", system-ui, sans-serif';
-const CHALK = { slate: "#2f3b36", ink: "#f2efe4", soft: "#c9d4c6" };
-/** A chalk row: its words, a quiet end, and a picture (a fish's icon) drawn before the words when it has loaded. */
-type ChalkRow = readonly [main: string, end: string, picture?: string];
-/** A board's chalk, a canvas texture as wide as PX and as tall as the slate's shape, drawn by `chalkList`. */
+const CHALK = { slate: "#2f3b36", tile: "#3a4842", ink: "#f2efe4", soft: "#c9d4c6" };
+/** Paints a board's chalk on the slate (already wiped); `redraw` paints it again (a picture it asked for has loaded). */
+type ChalkDraw = (g: CanvasRenderingContext2D, w: number, h: number, redraw: () => void) => void;
+/** A board's chalk, a canvas texture as wide as PX and as tall as the slate's shape. */
 function newChalk(size: BoardSize) {
   const canvas = Object.assign(document.createElement("canvas"), { width: PX, height: Math.round((PX * size.h) / size.w) });
   const texture = new THREE.CanvasTexture(canvas);
@@ -152,15 +148,10 @@ function picture(src: string, onLoad: () => void): HTMLImageElement | null {
   img.addEventListener("load", onLoad, { once: true });
   return null;
 }
-const ROW = 44, TOP = 76;
-/** How many rows a board's chalk holds under its title, leaving the foot. */
-const rowsOn = (size: BoardSize) => Math.floor((Math.round((PX * size.h) / size.w) - TOP - 34) / ROW);
-/** A title, a quiet note at its right, a rule, then as many rows as fit (a picture, the words, a quiet end) and a quiet foot. */
-function chalkList({ canvas, texture }: ReturnType<typeof newChalk>, title: string, note: string, rows: readonly ChalkRow[], foot: string, redraw: () => void) {
-  texture.needsUpdate = true;
-  const g = canvas.getContext("2d")!, W = canvas.width, H = canvas.height, fit = Math.floor((H - TOP - 34) / ROW);
-  g.fillStyle = CHALK.slate;
-  g.fillRect(0, 0, W, H);
+
+/** A chalk list (the task board): a title, a quiet note at its right, a rule, as many rows as fit (the words, a quiet end) and a quiet foot. */
+function chalkList(g: CanvasRenderingContext2D, W: number, H: number, title: string, note: string, rows: readonly (readonly [string, string])[], foot: string) {
+  const ROW = 44, TOP = 76, fit = Math.floor((H - TOP - 34) / ROW);
   g.textBaseline = "middle";
   g.fillStyle = CHALK.ink;
   g.font = `800 40px ${FONT}`;
@@ -173,13 +164,11 @@ function chalkList({ canvas, texture }: ReturnType<typeof newChalk>, title: stri
   g.globalAlpha = 0.7;
   g.fillRect(22, 62, W - 44, 2.5);
   g.globalAlpha = 1;
-  rows.slice(0, fit).forEach(([main, end, src], i) => {
-    const y = TOP + i * ROW + ROW / 2, img = src ? picture(src, redraw) : null;
-    if (img) g.drawImage(img, 22, y - 19, 38, 38);
-    const x = src ? 70 : 24;
+  rows.slice(0, fit).forEach(([main, end], i) => {
+    const y = TOP + i * ROW + ROW / 2;
     g.fillStyle = CHALK.ink;
     g.font = `700 28px ${FONT}`;
-    g.fillText(main, x, y, W - x - 130);
+    g.fillText(main, 24, y, W - 24 - 130);
     g.fillStyle = CHALK.soft;
     g.font = `600 22px ${FONT}`;
     g.textAlign = "right";
@@ -193,20 +182,110 @@ function chalkList({ canvas, texture }: ReturnType<typeof newChalk>, title: stri
   }
 }
 
+/** Chalk strokes: round ends, the ink's colour. */
+function stroke(g: CanvasRenderingContext2D, width: number, colour: string = CHALK.ink) {
+  g.lineWidth = width;
+  g.lineCap = g.lineJoin = "round";
+  g.strokeStyle = colour;
+}
+/** A clock face at (x, y), radius r, its hand on `hour` (and the minute hand on the hour). */
+function chalkClock(g: CanvasRenderingContext2D, x: number, y: number, r: number, hour: number) {
+  stroke(g, 4);
+  g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.stroke();
+  const a = ((hour % 12) / 12) * Math.PI * 2 - Math.PI / 2;
+  g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * r * 0.5, y + Math.sin(a) * r * 0.5); g.stroke();
+  stroke(g, 3);
+  g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - r * 0.75); g.stroke();
+}
+/** A water's mark, `s` across, centred on (x, y): the sea's two waves, the river's drop, the pond's mountain. */
+function chalkWater(g: CanvasRenderingContext2D, water: WaterType, x: number, y: number, s: number, colour: string = CHALK.soft) {
+  stroke(g, Math.max(2, s / 7), colour);
+  g.beginPath();
+  if (water === "sea") for (const dy of [-s * 0.18, s * 0.18]) {
+    g.moveTo(x - s / 2, y + dy);
+    g.bezierCurveTo(x - s / 4, y + dy - s * 0.22, x - s / 8, y + dy + s * 0.22, x, y + dy);
+    g.bezierCurveTo(x + s / 8, y + dy - s * 0.22, x + s / 4, y + dy + s * 0.22, x + s / 2, y + dy);
+  }
+  else if (water === "river") {
+    g.moveTo(x, y - s / 2);
+    g.bezierCurveTo(x + s * 0.45, y, x + s * 0.4, y + s / 2, x, y + s / 2);
+    g.bezierCurveTo(x - s * 0.4, y + s / 2, x - s * 0.45, y, x, y - s / 2);
+  }
+  else { g.moveTo(x - s / 2, y + s / 3); g.lineTo(x - s / 8, y - s / 3); g.lineTo(x + s / 8, y); g.lineTo(x + s / 4, y - s / 6); g.lineTo(x + s / 2, y + s / 3); g.closePath(); }
+  g.stroke();
+}
+/** A padlock, `s` tall, centred on (x, y). */
+function chalkLock(g: CanvasRenderingContext2D, x: number, y: number, s: number) {
+  stroke(g, Math.max(2, s / 8));
+  g.beginPath(); g.arc(x, y - s * 0.12, s * 0.22, Math.PI, 0); g.stroke();
+  g.beginPath(); g.roundRect(x - s * 0.34, y - s * 0.12, s * 0.68, s * 0.5, s * 0.08); g.stroke();
+}
+/** A rounded tile, its edge `edge` (a rarity's colour) when given. */
+function chalkTile(g: CanvasRenderingContext2D, x: number, y: number, s: number, edge?: string) {
+  g.beginPath(); g.roundRect(x, y, s, s, 12);
+  g.fillStyle = CHALK.tile; g.fill();
+  if (edge) { stroke(g, 3, edge); g.stroke(); }
+}
+
+const TILE = 70, GAP = 10, COLS = 6, GRID_TOP = 76;
 /**
- * One board at `at`, on the ground `y`, `size` big: the fish market's board model (art/props/build_fishing_signs.py, the
- * catch board's size; the task board at its scale), its chalk `rows` under `title` on the slate in its frame.
+ * The catch board's chalk, pictures only (round 6, David: "make it no text just simple icons"): a clock on the hour up
+ * top, then what bites now as tiles, rarest first, each the fish's icon edged in its rarity with its water's mark in the
+ * corner; three dots when there are more than fit; the mountain's pond, shut, as a lock over its mountain.
  */
-export function Chalkboard({ at, y, size, title, note, rows, foot = "" }: { at: BoardSpot; y: number; size: BoardSize; title: string; note: string; rows: readonly ChalkRow[]; foot?: string }) {
+function chalkIcons(g: CanvasRenderingContext2D, W: number, H: number, hour: number, fish: readonly { picture: string; rarity: string; water: WaterType }[], pondShut: boolean, redraw: () => void) {
+  chalkClock(g, 44, 36, 24, hour);
+  g.globalAlpha = 0.7;
+  g.fillStyle = CHALK.ink;
+  g.fillRect(84, 35, W - 106, 2.5);
+  g.globalAlpha = 1;
+  const x0 = (W - (COLS * TILE + (COLS - 1) * GAP)) / 2, rows = Math.floor((H - GRID_TOP + GAP) / (TILE + GAP)), fit = rows * COLS;
+  const shown = fish.length + (pondShut ? 1 : 0) > fit ? fish.slice(0, fit - 1 - (pondShut ? 1 : 0)) : fish;
+  const at = (i: number) => [x0 + (i % COLS) * (TILE + GAP), GRID_TOP + Math.floor(i / COLS) * (TILE + GAP)] as const;
+  shown.forEach((f, i) => {
+    const [x, y] = at(i), img = picture(f.picture, redraw);
+    chalkTile(g, x, y, TILE, RARITY_META[f.rarity as Rarity]?.color);
+    if (img) g.drawImage(img, x + 6, y + 4, TILE - 12, TILE - 12);
+    chalkWater(g, f.water, x + TILE - 14, y + TILE - 13, 15);
+  });
+  let next = shown.length;
+  if (shown.length < fish.length) {
+    const [x, y] = at(next++);
+    chalkTile(g, x, y, TILE);
+    g.fillStyle = CHALK.ink;
+    for (const dx of [-16, 0, 16]) { g.beginPath(); g.arc(x + TILE / 2 + dx, y + TILE / 2, 4.5, 0, Math.PI * 2); g.fill(); }
+  }
+  if (pondShut) {
+    const [x, y] = at(next);
+    chalkTile(g, x, y, TILE);
+    chalkWater(g, "pond", x + TILE / 2, y + TILE / 2 + 12, 34);
+    chalkLock(g, x + TILE / 2, y + TILE / 2 - 10, 30);
+  }
+}
+
+/** Wipe the slate and chalk it again. */
+function paint({ canvas, texture }: ReturnType<typeof newChalk>, draw: ChalkDraw, redraw: () => void) {
+  const g = canvas.getContext("2d")!;
+  texture.needsUpdate = true;
+  g.fillStyle = CHALK.slate;
+  g.fillRect(0, 0, canvas.width, canvas.height);
+  draw(g, canvas.width, canvas.height, redraw);
+}
+
+/**
+ * One board at `at`, on the ground `y`, `size` big: the fish market's board model (art/props/build_fish_board.py, the
+ * catch board's size; the task board at its scale), its golden ridge fish swaying, and the chalk `draw` paints on the
+ * slate in its frame, painted again when `drawKey` changes.
+ */
+function Chalkboard({ at, y, size, draw, drawKey }: { at: BoardSpot; y: number; size: BoardSize; draw: ChalkDraw; drawKey: string }) {
   const [chalk] = useState(() => newChalk(size));
   const [loaded, setLoaded] = useState(0);
-  const key = JSON.stringify([title, note, rows, foot]);
-  useEffect(() => chalkList(chalk, title, note, rows, foot, () => setLoaded(n => n + 1)), [chalk, key, loaded]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => paint(chalk, draw, () => setLoaded(n => n + 1)), [chalk, drawKey, loaded]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => chalk.texture.dispose(), [chalk]);
   const { w, h, foot: up } = BOARD.catch;
   return (
     <group position={[at.x, y, at.z]} rotation={[0, at.yaw, 0]} scale={size.w / w}>
-      <Suspense fallback={null}><Glb url={FISH_BOARD_URL} /></Suspense>
+      <Suspense fallback={null}><Glb url={FISH_BOARD_URL} animate={swayRidgeFish} /></Suspense>
       <mesh position={[0, up + h / 2, 0.042]}>
         <planeGeometry args={[w, h]} />
         <meshStandardMaterial map={chalk.texture} roughness={1} metalness={0} />
@@ -214,30 +293,56 @@ export function Chalkboard({ at, y, size, title, note, rows, foot = "" }: { at: 
     </group>
   );
 }
-/** One of our props' models, as the game draws it (its look class and shadows). */
-function Glb({ url }: { url: string }) {
+/** One of our props' models, as the game draws it (its look class and shadows); `animate` moves its parts each frame. */
+function Glb({ url, animate }: { url: string; animate?: (model: THREE.Object3D, t: number) => void }) {
   const { scene } = useGLTF(url);
   const model = useMemo(() => prepareModel(scene, url), [scene, url]);
   useEffect(() => () => disposeModelMaterials(model), [model]);
+  useFrame(({ clock }) => animate?.(model, clock.elapsedTime));
   return <primitive object={model} />;
 }
-
-/** The water signs (lib/game/wharf.ts WATER_SIGNS; the approved round 4 mock): each water's sign where it is fished. */
-export function WaterSigns({ signs, ground }: { signs: readonly (BoardSpot & { water: SignWater })[]; ground: (x: number, z: number) => number }) {
-  return <Suspense fallback={null}>
-    {signs.map(sg => <group key={sg.water} position={[sg.x, ground(sg.x, sg.z), sg.z]} rotation={[0, sg.yaw, 0]}><Glb url={waterSignUrl(sg.water)} /></group>)}
-  </Suspense>;
+/** A part of a model by name, found once. */
+const part = (model: THREE.Object3D, name: string) => (model.userData[name] ??= model.getObjectByName(name) ?? null) as THREE.Object3D | null;
+/** The golden fish on the board's ridge sways a little (round 6, David: "i want the fish on top to like kidna move a bit"), as if in a breeze. */
+function swayRidgeFish(model: THREE.Object3D, t: number) {
+  const f = part(model, "ridge-fish");
+  if (!f) return;
+  f.rotation.y = 0.2 * Math.sin(t * 0.9) + 0.06 * Math.sin(t * 2.3);
+  f.rotation.z = 0.07 * Math.sin(t * 1.6 + 0.8);
 }
 
-const SHORT: Record<WaterType, string> = { sea: "sea", river: "river", pond: "pond" };
-/** The catch board in the world: what bites this hour, redrawn when the hour or the weather turns. */
+const FLOP_Q = new THREE.Quaternion(), FLOP_E = new THREE.Euler();
+/** Each flopping fish: how often it flops (s), when its first comes, and which way it rolls. */
+const FLOPS = [[3.7, 0.4, 1], [5.3, 2.1, -1], [6.1, 4.2, 1]] as const;
+const FLOP_S = 0.75;
+/**
+ * The three fish on top of the sell bin's heap flop now and then (round 6, David: "i wand the fish in the sell bin to flop
+ * around"): each hops, rolls up off the ice and back, its tail thrashing, then lies still till its next.
+ */
+function flopFish(model: THREE.Object3D, t: number) {
+  FLOPS.forEach(([every, first, side], i) => {
+    const f = part(model, `flop-${i}`);
+    if (!f) return;
+    const rest = (f.userData.rest ??= { p: f.position.clone(), q: f.quaternion.clone() }) as { p: THREE.Vector3; q: THREE.Quaternion };
+    const k = Math.min(1, (((t + every - first) % every) / FLOP_S)), up = Math.sin(Math.PI * k);
+    f.position.set(rest.p.x, rest.p.y + 0.07 * up, rest.p.z);
+    f.quaternion.copy(rest.q).multiply(FLOP_Q.setFromEuler(FLOP_E.set(side * 0.85 * up, 0.5 * Math.sin(3 * Math.PI * k) * (1 - k), 0)));
+  });
+}
+/** The sell bin's flopping fish (art/wharf/build_sell_stall.py FLOPPERS), in the stall's frame at `at` on the ground `y`. */
+export function SellBinFish({ at, y }: { at: { x: number; z: number; yaw?: number }; y: number }) {
+  return <group position={[at.x, y, at.z]} rotation={[0, at.yaw ?? 0, 0]}>
+    <Suspense fallback={null}><Glb url={SELL_FISH_URL} animate={flopFish} /></Suspense>
+  </group>;
+}
+
+/** The catch board in the world: what bites this hour, in pictures, redrawn when the hour or the weather turns. */
 export function CatchChalk({ at, y, waters, hour, season, weather }: { at: BoardSpot; y: number; waters: readonly WaterType[]; hour: number; season: Season; weather: IslandWeather }) {
   const h = Math.floor(hour) % 24;
-  const out = useMemo(() => outNow(waters, h + 0.5, season, weather), [waters, h, season, weather]);
-  const pondClosed = useMemo(() => closedNow(waters, h + 0.5, season, weather).length > 0, [waters, h, season, weather]);
-  const rows = out.map(({ fish, water }) => [fish.name, SHORT[water], iconFor(fish)] as const), fit = rowsOn(BOARD.catch);
-  const foot = [out.length > fit ? `and ${out.length - fit} more` : "", pondClosed ? "Pond fish: mountain, closed" : ""].filter(Boolean).join(" · ");
-  return <Chalkboard at={at} y={y} size={BOARD.catch} title="Biting now" note={`${String(h).padStart(2, "0")}:00 to ${String((h + 1) % 24).padStart(2, "0")}:00`} rows={rows} foot={foot} />;
+  const fish = useMemo(() => outNow(waters, h + 0.5, season, weather).map(({ fish: f, water }) => ({ picture: iconFor(f), rarity: f.rarity, water })), [waters, h, season, weather]);
+  const pondShut = useMemo(() => closedNow(waters, h + 0.5, season, weather).length > 0, [waters, h, season, weather]);
+  const draw = useCallback<ChalkDraw>((g, W, H, redraw) => chalkIcons(g, W, H, h, fish, pondShut, redraw), [h, fish, pondShut]);
+  return <Chalkboard at={at} y={y} size={BOARD.catch} draw={draw} drawKey={JSON.stringify([h, fish, pondShut])} />;
 }
 
 /** The task board in the world: today's three fishing tasks in chalk, rewritten each Toronto day. */
@@ -248,5 +353,7 @@ export function TaskChalk({ at, y, waters }: { at: BoardSpot; y: number; waters:
   const tasks = useMemo(() => fishingTasks(day, week, waters), [day, week, waters]);
   const rows = tasks.day.map(t => [`Catch a ${t.name}`, `${t.reward} coins`] as const);
   const big = tasks.week[0];
-  return <Chalkboard at={at} y={y} size={BOARD.tasks} title="Fishing tasks" note="Today" rows={rows} foot={big?.item_key ? `This week: a ${big.name}, and ${tasks.week[1]?.need ?? 8} kinds` : ""} />;
+  const foot = big?.item_key ? `This week: a ${big.name}, and ${tasks.week[1]?.need ?? 8} kinds` : "";
+  const draw = useCallback<ChalkDraw>((g, W, H) => chalkList(g, W, H, "Fishing tasks", "Today", rows, foot), [rows, foot]);
+  return <Chalkboard at={at} y={y} size={BOARD.tasks} draw={draw} drawKey={JSON.stringify([rows, foot])} />;
 }

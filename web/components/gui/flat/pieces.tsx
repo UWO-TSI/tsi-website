@@ -9,10 +9,11 @@
  */
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type FocusEvent, type PointerEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Check, Flower2, Leaf, Moon, Snowflake, Sun, Sunrise, Sunset, X } from "lucide-react";
+import { Check, Droplets, Flower2, Leaf, Moon, Mountain, Snowflake, Sun, Sunrise, Sunset, Waves, X } from "lucide-react";
 import PixelImage from "@/components/economy/PixelImage";
 import { usePresence, useWorldDialog } from "@/lib/game/useWorldDialog";
 import type { Season } from "@/lib/game/season";
+import type { WaterType } from "@/lib/game/fishingSpots";
 import { GuiVariantContext } from "../variant";
 import p from "./pieces.module.css";
 
@@ -99,6 +100,18 @@ export const SEASON_LOOK: Record<Season, { word: string; icon: ReactNode; tint: 
   spring: { word: "Spring", icon: <Flower2 />, tint: "rose" }, summer: { word: "Summer", icon: <Sun />, tint: "sun" },
   autumn: { word: "Autumn", icon: <Leaf />, tint: "amber" }, winter: { word: "Winter", icon: <Snowflake />, tint: "ice" },
 };
+/** Each water's icon, word and colour: the biome tag on the reel and the HUD, the catch board's lanes. */
+export const BIOME_LOOK: Record<WaterType, { word: string; icon: ReactNode; tint: Tint }> = {
+  sea: { word: "Sea", icon: <Waves />, tint: "sky" }, river: { word: "River", icon: <Droplets />, tint: "rain" }, pond: { word: "Pond", icon: <Mountain />, tint: "leaf" },
+};
+/**
+ * The biome you fish (round 6, David: "it should say the biome when you fish on the fish bar, there should also be a
+ * biome tag in the ui"): a small pill, the water's icon on a disc in its colour and its word.
+ */
+export function BiomeTag({ water }: { water: WaterType }) {
+  const b = BIOME_LOOK[water];
+  return <span className={p.biome} data-tint={b.tint} data-testid="biome-tag"><i aria-hidden>{b.icon}</i>{b.word}</span>;
+}
 /** The theme's condition colours (--ui-tint-*): the seasons, the sky and the time of day each wear one. */
 export type Tint = "rose" | "sun" | "amber" | "ice" | "sky" | "rain" | "mist" | "leaf" | "night";
 

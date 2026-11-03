@@ -64,6 +64,8 @@ export type SFXName =
   | "bite"
   | "bite-legendary"
   | "bite-divine"
+  /** A coin landing in the wallet (art/audio/synth_coin.py), played higher for each coin of a sale. */
+  | "coin"
   | VbSfx;
 
 /** The beach volleyball match's sounds, made in art/audio/synth_volleyball.py (lib/game/volleyball/sfx.ts plays them). */
@@ -102,6 +104,7 @@ const MANIFEST: AudioManifest = {
     bite: "/audio/sfx/bite.ogg",
     "bite-legendary": "/audio/sfx/bite-legendary.ogg",
     "bite-divine": "/audio/sfx/bite-divine.ogg",
+    coin: "/audio/sfx/coin.ogg",
     ...(Object.fromEntries(VB_SFX.map(n => [n, `/audio/sfx/${n}.ogg`])) as Record<VbSfx, string>),
   },
 };

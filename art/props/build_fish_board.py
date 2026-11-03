@@ -1,23 +1,22 @@
-"""The fish market's boards and the water signs (fishing-depth round 5, David 2026-11-01).
+"""The fish market's board (fishing-depth round 5, remodelled; round 6, David 2026-11-02).
 
-  cd web && node ../art/props/fishing_faces.mjs <faces dir>      (the painted faces, from fishing_faces.html)
-  /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P art/props/build_fishing_signs.py -- <faces dir> [review <dir>]
-  cd web && node scripts/pack-glbs.mjs
+  cd web && node ../art/props/fish_board_face.mjs <faces dir>      (the header plank's face, from fish_board_face.html)
+  /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P art/props/build_fish_board.py -- <faces dir> [review <dir>]
+  cd web && node scripts/pack-glbs.mjs public/assets/game/props/fish-board.glb public/assets/game/props/fish-board-hd.glb
 
-The board (David: "remodel this board so its better more eye catching"): the catch board out front of the fish market,
-and the task board at 0.625 of its size (components/game/peaceful/CatchBoard.tsx Chalkboard). A slate in a painted teal
-frame between two posts, a cream header plank with "Catch board" between two fish, a red pitched roof with a golden
-fish on its ridge, a chalk ledge with two sticks, an orange float hung off the header on a rope. The slate itself is the
-game's: a canvas of chalk (what bites now) laid over the opening at z 0.042, so the opening is BOARD.catch in
-lib/game/wharf.ts (1.6 x 1.05, its foot 0.85 up). Writes game/props/fish-board-hd.glb and game/props/fish-board.glb.
+The board (David: "remodel this board so its better more eye catching"; round 6: "make it no text just simple icons"):
+the catch board out front of the fish market, and the task board at 0.625 of its size (components/game/peaceful/CatchBoard.tsx
+Chalkboard). A slate in a painted teal frame between two posts, a cream header plank painted with icons only (two fish
+either side of a clock), a red pitched roof with a golden fish on its ridge, a chalk ledge with two sticks, an orange
+float hung off the header on a rope. The slate itself is the game's: a canvas of chalk (what bites now) laid over the
+opening at z 0.042, so the opening is BOARD.catch in lib/game/wharf.ts (1.6 x 1.05, its foot 0.85 up).
 
-The water signs (the approved round 4 mock, specs/evidence/fishing-depth/r4/signs-mock.html): a cream plaque in a thick
-rounded wooden board on one post, the plaque painted with the water's ring, name, a line, three of its fish and how many
-kinds. Writes game/props/water-sign-<river|pond|sea|deep>-hd.glb and game/props/water-sign-<water>.glb.
+The ridge fish is its own object, "ridge-fish", its origin on the ridge under it, so the game can sway it (round 6, David:
+"i want the fish on top to like kidna move a bit"). Writes game/props/fish-board-hd.glb and game/props/fish-board.glb.
 
-Frame: game units, the origin on the ground under the middle, the face toward +z. Each model is one mesh (P_Wood and
-P_Paint take their colour from COLOR_0; the painted faces are their own textured material). The high-def is the
-shaped mesh; the low-poly is it decimated, its face texture at most 512 across (the props' budget).
+Frame: game units, the origin on the ground under the middle, the face toward +z. P_Wood and P_Paint take their colour
+from COLOR_0; the painted header is its own textured material. The high-def is the shaped mesh; the low-poly is it
+decimated, its face texture at most 512 across (the props' budget).
 """
 import math, os, sys
 import bpy
@@ -31,7 +30,6 @@ REVIEW = ARGS[ARGS.index("review") + 1] if "review" in ARGS else None
 
 WOOD, WOOD_DARK, TEAL, ROOF, ROOF_DARK, GOLD, ORANGE, WHITE, CHALK = (
     "#8a5a36", "#6e4a2c", "#2f8a92", "#c9533a", "#a8432f", "#f2b636", "#e8743a", "#f5f1e8", "#f2efe4")
-SIGN_WOOD, SIGN_WOOD_DARK = "#9a6a42", "#6e4a2c"
 
 
 def mats():
@@ -45,23 +43,6 @@ def face_mat(name, png, fit=None):
         img.scale(fit, round(img.size[1] * fit / img.size[0]))
     img.pack()
     return K.Mat(name, rough=0.7, tex=img)
-
-
-def rounded_rect(w, h, r, n=5):
-    """A rounded rectangle's outline (counter-clockwise), centred on 0."""
-    pts = []
-    for cx, cy, a0 in ((w / 2 - r, -h / 2 + r, -90), (w / 2 - r, h / 2 - r, 0), (-w / 2 + r, h / 2 - r, 90), (-w / 2 + r, -h / 2 + r, 180)):
-        for i in range(n + 1):
-            a = math.radians(a0 + 90 * i / n)
-            pts.append((cx + r * math.cos(a), cy + r * math.sin(a)))
-    return pts
-
-
-def flat_face(kit, outline, y0, z, mat, uv_box):
-    """One flat face in the plane z, its outline lifted by y0, planar UVs over uv_box (x0, y0, x1, y1)."""
-    x0, b0, x1, b1 = uv_box
-    vs = [kit.vert((x, y + y0, z)) for x, y in outline]
-    kit.face(vs, [((x - x0) / (x1 - x0), (y - b0) / (b1 - b0)) for x, y in outline], mat)
 
 
 def fish_outline(length, height):
@@ -106,12 +87,8 @@ def board(header, wood, paint):
         rot = K.game_rot(roll=-s * pitch)
         k.rbox((s * half / 2, (eave + ridge) / 2, 0.02), (half / math.cos(pitch) + 0.04, 0.05, 0.78), 0.012, paint, ROOF, rot=rot, segs=2)
     k.beam((0, ridge + 0.02, -0.39), (0, ridge + 0.02, 0.43), 0.07, 0.06, 0.02, paint, ROOF_DARK, up=(0, 1, 0), segs=2)
-    # The golden fish on the ridge, side on to the wharf, an eye each side.
-    fl, fh = 0.72, 0.3
-    k.extrude(fish_outline(fl, fh), -0.025, 0.025, paint, GOLD, bevel=0.012, at=(0, ridge + 0.05 + fh / 2, 0.02), steps=2)
+    # The golden fish's stand on the ridge (the fish itself is ridge_fish, its own object).
     k.rbox((0, ridge + 0.05, 0.02), (0.05, 0.1, 0.05), 0.01, paint, ROOF_DARK)
-    for z in (0.047, -0.007):
-        k.blob((fl * 0.3, ridge + 0.05 + fh * 0.58, z), (0.03, 0.03, 0.006), paint, "#2b2b2b", segs=10, rings=6)
     # An orange float hung off the header's right end on a rope.
     rx = hw / 2 - 0.12
     k.tube([(rx, hy0 + 0.02, 0.07), (rx + 0.01, hy0 - 0.12, 0.08), (rx, hy0 - 0.24, 0.08)], 0.009, wood, "#c7a268", n=6)
@@ -121,19 +98,19 @@ def board(header, wood, paint):
     return k.finish(name="fish-board")
 
 
-def sign(face, wood, paint):
-    """A water sign: a thick rounded board (the mock's wood border) with the painted plaque in it, on one post."""
-    PW, PH, B, Y0 = 1.0, 0.72, 0.075, 1.0
-    cy = Y0 + PH / 2 + B
-    k = K.Kit("water-sign")
-    k.extrude(rounded_rect(PW + 2 * B, PH + 2 * B, 0.12), -0.045, 0.035, wood, SIGN_WOOD, bevel=0.018, at=(0, cy, 0), steps=2)
-    face_pts = rounded_rect(PW, PH, 0.06)
-    flat_face(k, face_pts, cy, 0.0352, face, (-PW / 2, -PH / 2, PW / 2, PH / 2))
-    # A dark bead round the plaque, as the mock's line where the plank meets the board.
-    k.tube([(x, y + cy, 0.036) for x, y in rounded_rect(PW + 0.012, PH + 0.012, 0.064)], 0.007, wood, SIGN_WOOD_DARK, n=5, closed_path=True)
-    k.beam((0, 0.0, -0.1), (0, cy + 0.1, -0.1), 0.12, 0.11, 0.025, wood, SIGN_WOOD, segs=2)
-    k.rbox((0, 0.035, -0.1), (0.24, 0.07, 0.22), 0.02, wood, SIGN_WOOD_DARK)
-    return k.finish(name="water-sign")
+RIDGE = 1.9 + 0.1 + 0.36 + 0.34 + 0.05   # the ridge fish's foot: the header's top + the roof's rise + its stand
+
+
+def ridge_fish(paint):
+    """The golden fish on the ridge, side on to the wharf, an eye each side, built round its foot (where it sways from)."""
+    fl, fh = 0.72, 0.3
+    k = K.Kit("ridge-fish")
+    k.extrude(fish_outline(fl, fh), -0.025, 0.025, paint, GOLD, bevel=0.012, at=(0, fh / 2, 0), steps=2)
+    for z in (0.027, -0.027):
+        k.blob((fl * 0.3, fh * 0.58, z), (0.03, 0.03, 0.006), paint, "#2b2b2b", segs=10, rings=6)
+    ob = k.finish(name="ridge-fish")
+    ob.location = K.G(0, RIDGE, 0.02)
+    return ob
 
 
 def low_poly(ob, ratio):
@@ -147,26 +124,26 @@ def low_poly(ob, ratio):
     return lp
 
 
-def build(name, make, ratio, face_png, face_name):
+def build():
     K.clear()
     wood, paint = mats()
-    hd = make(face_mat(face_name, face_png), wood, paint)
-    K.export([hd], f"game/props/{name}-hd.glb")
+    hd = [board(face_mat("M_BoardHeader", "header.png"), wood, paint), ridge_fish(paint)]
+    K.export(hd, "game/props/fish-board-hd.glb")
     if REVIEW:
-        K.show_vertex_colors([hd])
-        K.review([hd], os.path.join(REVIEW, f"{name}-hd.png"), views=((18, 12), (200, 18)))
+        K.show_vertex_colors(hd)
+        K.review(hd, os.path.join(REVIEW, "fish-board-hd.png"), views=((18, 12), (200, 18)))
     K.clear()
     wood, paint = mats()
-    ob = make(face_mat(face_name, face_png, fit=512), wood, paint)
-    lp = low_poly(ob, ratio)
-    bpy.data.objects.remove(ob, do_unlink=True)
-    lp.name = name
-    K.export([lp], f"game/props/{name}.glb")
+    obs = [board(face_mat("M_BoardHeader", "header.png", fit=512), wood, paint), ridge_fish(paint)]
+    lp = [low_poly(ob, ratio) for ob, ratio in zip(obs, (0.4, 0.6))]
+    for ob, low in zip(obs, lp):
+        name = ob.name
+        bpy.data.objects.remove(ob, do_unlink=True)
+        low.name = name
+    K.export(lp, "game/props/fish-board.glb")
     if REVIEW:
-        K.show_vertex_colors([lp])
-        K.review([lp], os.path.join(REVIEW, f"{name}-lp.png"), views=((18, 12), (200, 18)))
+        K.show_vertex_colors(lp)
+        K.review(lp, os.path.join(REVIEW, "fish-board-lp.png"), views=((18, 12), (200, 18)))
 
 
-build("fish-board", board, 0.4, "header.png", "M_BoardHeader")
-for water in ("river", "pond", "sea", "deep"):
-    build(f"water-sign-{water}", sign, 0.65, f"{water}.png", f"M_SignFace_{water}")
+build()

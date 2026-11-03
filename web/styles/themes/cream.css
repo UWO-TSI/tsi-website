@@ -13,6 +13,9 @@
   --ui-highlight: #ffcc00;
   --ui-marker: rgb(255 204 0 / 0.55);
   --ui-gold: #f2b636;
+  /* A sale's coins landing: the wallet glows from the light yellow to the deep (more coins, deeper). */
+  --ui-gold-light: #ffe27a;
+  --ui-gold-deep: #c9770c;
   --ui-home: #ef7a5a;
   --ui-away: #4bb3c8;
   --ui-ink: #3a2e22;

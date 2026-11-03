@@ -29,6 +29,36 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 7: David's round 6 review (2026-11-03, verbatim; https://claude.ai/artifact/MjtzeKrEZESrahRE1YLo9S)
+
+Approved: f6-board-fish, f6-bin-fish, f6-board-world, f6-model, f6-coins, f6-coins-kit, f6-phone.
+- f6-biome-hud (approve): "the biome tag should also show like the location like village wharf plains etc, move it under. the time"
+- f6-biome-reel (redo): "make the height match the dace, either increase dace to shrink river"
+- f6-board-face (redo): "direction is good, move to where the barrels are rn"
+- From the fish list review (fl-today), verbatim: "also the current reel in is laggy and not smooth and affecting user experience for fishing"
+
+Build:
+1. The HUD tag names the place as well as the water (village, wharf, plains and so on, from the world's areas) and sits under the time.
+2. On the reel bar, the biome tag and the fish name chip are the same height.
+3. Keep the board's facing; move it to where the barrels stand now (move the barrels somewhere sensible nearby, and say where).
+4. **The reel-in is laggy and not smooth:** profile the reel minigame headless (frame times while reeling, input to response), find the cause and fix it at the root. Show the numbers before and after.
+
+## Round 6: David's round 5 review (2026-11-02, verbatim; https://claude.ai/artifact/QGHxuaAFtRLX9Yun6rx6Uq)
+
+Approved: f5-board, f5-board-chips, f5-board-far, f5-board-hover, f5-seasons, f5-cover, f5-phone, f5-sell, f5-showroom, f5-sign-river.
+- f5-board-model (approve): "i want the fish on top to like kidna move a bit, and i wand the fish in the sell bin to flop around"
+- f5-board-close (redo): "make it no text just simple icons"
+- f5-board-world (redo): "should be angled outwards towards the wharf rotate 90 degrees"
+- f5-signs (redo): "remove signs we dont rly need it, it should say the biome when you fish on the fish bar, there should also be a biome tag in the ui"
+- f5-sign-deep, f5-sign-pond, f5-sign-sea (redo, no note): covered by the note above.
+- f5-sold (redo): "do coin animation so that coins fly from the fish you sold to the wallet to signify selling, make juicy, sound effect, mult coin fly staggered to the wallet, wallet coin num count up, glows yellow based on how much coin is added. add sparkles, yellow gets darker if more coins, the nnumberinflates as cions enter"
+
+Build:
+1. The world board's face: no text, simple icons only. Rotate it 90 degrees so it faces out toward the wharf.
+2. The fish on top of the board moves a little (a gentle idle sway), and the fish in the sell bin flop now and then.
+3. Remove the four water signs (models, placement, their E). Instead: the fishing bar (the reel UI) names the biome while you fish, and the HUD gets a small biome tag (where you are: Sea, River, Pond, Deep sea).
+4. Selling: several coins fly, staggered, from the sold fish to the wallet (`[data-hud-slot="coins"]`, the tutorial's WalletSlot and FlyIn); each landing ticks the count up and the number inflates a little; the wallet glows yellow by how much came in (a deeper yellow for more), with sparkles, and a coin sound. Synthesised or CC0 sound, logged in SOURCES.md.
+
 ## Status
 
 Round 2 (David's review 2026-10-28) built on top of round 1, work at ec62699d (merge of origin/main at e7747edd); see "Round 2" below. Round 1 items stay as built unless round 2 replaced them.
@@ -85,7 +115,20 @@ Branch head after this file's commit; built on origin/main 887445b5 (Meshy pipel
 - **Evidence:** `specs/evidence/fishing-depth/r4/` `before/` and `after/`, each `desktop/` (1280 x 800) and `phone/` (390 x 844 at 2x, touch); `spots/` (the three spots, from the stall and the grass); shots palette-quantised to keep the repo light. The phone menu has no before: the old flow clicked the HUD's touch Menu button, not the bar's.
 - **Gates:** tsc clean; vitest 3732 passed, 4 skipped (one run, NEXT_PUBLIC_GAME_WORLD=new) before the last small edits, then wharf, peaceful and flat kit tests again (48 passed); eslint clean on every changed file. perf:check (SCENES=v2, one run): FAILED against the 2026-10-14 baseline, v2 high 5.3 ms (+10.4%), lite 3.4 ms (+17.2%), draw calls 368 (+2.5%), load average about 4. Not this lane's: the boards went from 5 draws to 3 each and add about 300 triangles; the baseline predates many merged lanes. Not rerun (rules: once, no reruns for noise).
 
-### Round 5: built (2026-11-01), waiting on David's review
+### Round 6: built (2026-11-02), waiting on David's review
+
+Branch head after this file's commit. Not merged with origin/main (the lane file didn't say main moved). Round 5's seed migration `20261102031338_catalogue_seed.sql` is untouched (not applied).
+
+1. **The board's face, icons only, turned to the wharf.** `MARKET_BOARDS.catch.turn` is `2.173 - Math.PI / 2`: the face turns a quarter from round 5's, out toward the jetty (world facing about (0.72, 0.70)). From the default camera (it looks +z) the board is now seen from its side; its face shows with the camera turned round (the arrow keys), from the deck past the stall (`r6/after/desktop/f6-board-face.png`). The header plank is repainted with icons only (two of the game's fish either side of a navy clock; `art/props/fish_board_face.html` + `.mjs`). The chalk (`CatchChalk`, CatchBoard.tsx `chalkIcons`) has no words: a chalk clock on the hour, then what bites now as tiles (6 x 3), rarest first, each the fish's icon edged in its rarity colour (`RARITY_META.color`) with its water's chalk mark in the corner (sea waves, river drop); three dots when more than fit; the shut mountain pond as a lock over a mountain. The task board keeps its words (not in David's note; it shares the model, so its header is the icon plank too). `Chalkboard` now takes a `draw` function (`chalkList` for the tasks, `chalkIcons` for the catch board).
+2. **Moving fish.** The board's golden ridge fish is its own object `ridge-fish` in the board GLB (origin at its foot on the ridge); `swayRidgeFish` turns it a little each frame (both boards). The sell stall's three top fish (`FLOPPERS` in `art/wharf/build_sell_stall.py`) left `sell-barrel.glb` for their own `game/wharf/sell-fish.glb` (three objects `flop-0..2`, 219 tris, tail along +x); `SellBinFish` (CatchBoard.tsx) draws them at the stall (`layout.sellStall`) and `flopFish` makes each hop, roll up off the ice and thrash its tail every 3.7, 5.3 and 6.1 s. Board LP 1,214 tris (was 1,117: the fish decimated apart at 0.6), HD 2,794; stall 7,219 tris. All packed.
+3. **The water signs are gone** (models, `WATER_SIGNS`, `waterSignsOf`, `waterSignUrl`, `WaterSigns`, their E, the budget's four exceptions, the eight GLBs, the sign faces and `sign()` in the Blender script; `build_fishing_signs.py` is now `build_fish_board.py`, `fishing_faces.*` now `fish_board_face.*`). **The biome instead:** a kit piece `BiomeTag` and `BIOME_LOOK` (pieces.tsx: sea waves on sky, river drops on rain, pond mountain on leaf; also the catch board sheet's lane icons now). The reel's `ReelTags` shows it, from the water the cast went into (`useFishingSession` returns `water`, MemberFishing passes it; else the fish's own). The HUD: **the biome tag sits left of the time pill, on the time's row under the minimap, top right** (`.clockRow` in DefaultIslandWorld.module.css; the vitals top left are untouched). It names the water nearest you within 8 m (`BIOME_REACH`, `nearestWater` + the island's classifier, looked for each metre you move; IslandScene `onBiome`), and is hidden away from water, indoors and off the village. There is no deep sea water to fish yet, so the tag never says Deep sea.
+4. **Coins fly when you sell** (kit `flyCoins`, moments.tsx, on /lab/gui `?only=coin-fly`): from the sold fish's card picture, `coinCount` coins (3 to 12 by amount, never more than the money) pop up and fly one after another (75 ms apart) in arcs to the sheet's purse (`[data-purse="coins"]`, else the HUD wallet `[data-hud-slot="coins"]`; with the sheet open the HUD wallet is under it). Each landing ticks the number by its share (`coinShares`), plays `coin` (a little higher each time), swells the purse (more with each coin), glows it yellow from `--ui-gold-light` to `--ui-gold-deep` by what has come in so far (`coinHeat`; new tokens in clean, cream, dark) and throws three sparkles; the glow fades after. `useTill.sell` holds React off the number while coins fly and settles on the server's balance after the last lands. The sound is self-made: `art/audio/synth_coin.py` to `web/public/audio/sfx/coin.ogg`, logged in SOURCES.md (CC0). Sell all flies each fish's coins at once.
+
+- **Deleted:** the water signs (above); the reel tag's water chip CSS; `SHORT_NAME` and the WATER icons in CatchBoard.tsx (BIOME_LOOK); chalk rows with pictures and `rowsOn`.
+- **Evidence:** `specs/evidence/fishing-depth/r6/` `before/` and `after/` (`desktop/` 1280 x 800, `phone/` 390 x 844 touch; ids f6-*), `models/` (Blender: the board HD front and back, LP front; the stall). Strips: `f6-sold-strip` and `f6-sold-all-strip` (the sale, animations at a fifth of their speed: before the count ticking, after the coins), `f6-motion-board-strip` and `f6-motion-bin-strip`, `f6-showroom-fly-strip`. Shot by `r6/shoot.mjs`. Palette-quantised.
+- **Gates:** tsc clean; vitest with NEXT_PUBLIC_GAME_WORLD=new 3737 passed, 4 skipped; without it 3736 passed, 1 failed, 4 skipped: `shoreField.test.ts` "crosses 0 on the drawn coast" timed out at 5,028 ms (load average about 8) and passes alone (4.2 s); not touched by this round. eslint clean on every changed file. No perf:check (the coordinator runs one).
+
+### Round 5: built (2026-11-01), reviewed by David 2026-11-02 (Round 6 above)
 
 Branch head after this file's commit (code and evidence in 3a1c008e). Not merged with origin/main this round (the lane file didn't say main moved).
 
@@ -143,16 +186,18 @@ Evidence in `specs/evidence/fishing-depth/r4/` (before and after, desktop and ph
 
 ## Next
 
-1. Wait for David's review of round 5 (the chips, the seasons and the changes above, the board's spot and model, the signs and their spots, sell).
+1. Wait for David's review of round 6 (the board's face and its turn, the moving fish, the biome tag and the reel's biome, the coin fly).
 2. The coordinator applies `20261102031338_catalogue_seed.sql` with the merge (the fish's months as whole seasons).
 3. Dish pictures (David on f4-spread-1: "needs to be 3d modeled on meshi.ai and imported to blender and then 2d render for picture and 3d for the actual food on a plate"): Meshy, then Blender, a 2D render for the menu and the 3D dish on the plate. Waiting on the Meshy key: the "Meshy API" keychain item is still missing. Ask the coordinator before generating (credits).
-4. The glow and circle on interact targets is the polish lane's (shared `near` path); the board and the four signs are on it ("catchboard").
-5. Known: the catch board's reading spot is inside the market's camera dead zone (the camera sits in the market's roof there); the sheet covers the view once E is pressed, but walking up the board is seen best from the sell stall.
+4. The glow and circle on interact targets is the polish lane's (shared `near` path); the board is on it ("catchboard"). The signs are gone.
+5. Open question for David: with the board turned to the wharf, the default camera sees its side; is that the look he wants, or a turn between the two?
 
 ## Tools and gotchas
 
-- Round 5 shots: `ONLY=desktop|phone scratchpad/fishing-depth/session5.sh <out> <flows>` under `withlock.sh devserver` runs `r5/shoot.mjs` (flows: showroom, board, world, market, signs, cover, spots; `BOARD=x,z` the catch board's reading spot, `SPOTS` JSON for the spots flow, which rewrites `MARKET_BOARDS.catch` and restores it).
-- The board and signs: `cd web && node ../art/props/fishing_faces.mjs <dir>` (devserver lock: headless Chromium) paints the faces, then `withlock.sh blender .../Blender -b --factory-startup -P art/props/build_fishing_signs.py -- <dir> [review <dir>]`, then `node scripts/pack-glbs.mjs <the ten GLBs>` (pack-glbs takes file paths; with none it does nothing). High-def copies are `<name>-hd.glb` beside the LP (budget.ts ASSET_EXCEPTIONS lists their textures).
+- Round 5 shots (the signs flow is moot now): `ONLY=desktop|phone scratchpad/fishing-depth/session5.sh <out> <flows>` under `withlock.sh devserver` runs `r5/shoot.mjs` (flows: showroom, board, world, market, signs, cover, spots; `BOARD=x,z` the catch board's reading spot, `SPOTS` JSON for the spots flow, which rewrites `MARKET_BOARDS.catch` and restores it).
+- Round 6 shots: `ONLY=desktop|phone scratchpad/fishing-depth/session6.sh <out> <flows>` under `withlock.sh devserver` runs `r6/shoot.mjs` (flows: world, turn, signs, hud, reel, sold, showroom). `turn` with no `TURN` sweeps the camera round with ArrowLeft (a shot each 250 ms); `TURN=1500 ZOOM=-240` from the default spot (71.2, 31.8) looks back at the board's face and the stall's front, then takes the motion frames. `sold` slows the page's animations to a fifth (CDP `Animation.setPlaybackRate`; flyCoins is all Web Animations, so it slows whole) for its frames. Frames land in `<out>/frames/`; `python3 -I scratchpad/fishing-depth/strip.py <out.png> <cols> <width> [x,y,w,h] <frames...>` tiles them. On a phone the lab's dev bar covers the sheet's purse: the sold flow hides it.
+- The board: `cd web && node ../art/props/fish_board_face.mjs <dir>` (devserver lock: headless Chromium) paints the header, then `withlock.sh blender .../Blender -b --factory-startup -P art/props/build_fish_board.py -- <dir> [review <dir>]`, then `node scripts/pack-glbs.mjs public/assets/game/props/fish-board.glb public/assets/game/props/fish-board-hd.glb` (pack-glbs takes file paths; with none it does nothing). The sell stall and its flopping fish: `withlock.sh blender .../Blender -b --factory-startup -P art/wharf/build_sell_stall.py [-- review <dir>]`, then pack `sell-barrel.glb` (sell-fish.glb has nothing to pack).
+- The camera turns with the arrow keys (useOrbitInput.ts); V puts it back.
 - A top-down map of the world with props and labels: `python3 -I scratchpad/fishing-depth/r5/map.py web <out.png> x0 z0 x1 z1 px_per_unit [name:x:z ...]` (run from the worktree root).
 - The camera looks +z: a sign or board must face about -z (turn near half a turn from +z) to read on screen; things at smaller z than the player are behind the camera.
 
