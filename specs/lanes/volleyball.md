@@ -4,6 +4,12 @@ Worktree `.claude/worktrees/volleyball`, branch `game/volleyball`, cut from orig
 
 **Read first:** `specs/minigames/beach-volleyball.md` (the design spec, with David's phase 1 review verbatim and round 2's root causes at the top), `specs/design-bible.md` (UI and Models), `specs/references/volleyball/` (camera-and-court.png for the camera only; beach-ball.png is David's ball). CODEMAP sections: Movement, Camera, UI kit, Multiplayer.
 
+## Round 6: David's round 5 review (2026-11-03, verbatim; https://claude.ai/artifact/Wx6Sm6NVC5gC2eo73tdGsS)
+
+Approved: p5-calltag, p5-block, p5-dive. p5-calls (approve): "A chip". p5-spike (redo): "keep the lines but not as many and shorter maybe"
+
+Build: keep look A (Chip) only and delete Bubble, Letters and the look switch; the perfect spike's impact frame gets its lines back, fewer and shorter (delete the lines dev switch once set). Merge origin/main first (it now has vb-anim's new dive clip: regenerate anything generated from the clips, like `match.ts` HAND.dig). Shots of the spike frame before and after (ids p6-*).
+
 ## Round 5: David's round 4 review (2026-11-02, verbatim; https://claude.ai/artifact/KxJpWfHN8dd5rddG1Lrajm)
 
 Approved: p4-board, p4-board-dance, p4-podium-kit, p4-fx-bump, p4-fx-call, p4-fx-dive, p4-fx-heat, p4-fx-net (so Out, Net and Tape under the score stay), p4-fx-serve, p4-fx-set, p4-fx-spike, p4-fx-win.
