@@ -30,6 +30,13 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 5: David's rod data review (2026-11-03, verbatim; https://claude.ai/artifact/LNrapLgneyk16D14xRTVsi)
+
+- rg4-unlock (approve)
+- rg4-training (no mark): "the ui needs fixing, you dont need a whole bar to say " (the note stops there)
+
+Build: the Training rod's level and progress move into the rod card as one small line or ring next to the stats, not a full-width bar; the same for the Fish caught line if it takes a bar too. Wire the tool-pipeline lane's new model files (`rod-carrot.glb`, `rod-precision.glb`, `rod-training.glb`, in game/tool-pipeline) in place of the stand-ins and mount `RodAura` in the shop's RodStage (see tool-pipeline's lane file). Shots of the cards before and after (ids rg5-*).
+
 ## Round 4: the new rods' data, the Training rod, the catch tracker (2026-11-02)
 
 David's rod pitch review, verbatim (https://claude.ai/artifact/XqZK2hk32ydhYjbKFhhwFJ):
