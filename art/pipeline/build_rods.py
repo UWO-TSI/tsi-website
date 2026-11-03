@@ -1,5 +1,5 @@
 """Rods round 2 (David's rod pitch review, 2026-11-02; specs/lanes/tool-pipeline.md): the approved Carrot, Precision and
-Training modelled from their concept sheets, Cedar with leaves, a cooler Glass, and the redesigned Tidewarden,
+Training modelled from their concept sheets, Cedar grown into a little cedar tree (round 3), a cooler Glass, and the redesigned Tidewarden,
 Tempest, Titanium and Riptide, the rarer the more abstract (David's rule, specs/references/rods/README.md on rod-gear).
 
   Blender -b --factory-startup -P art/pipeline/build_rods.py -- [only carrot,tempest] [render <dir>] [old <dir> <name>=<glb> ...]
@@ -252,32 +252,53 @@ def training():
 
 
 # ================================================================ the reworked two
+def whorl(pc, c, R, n, phase, rise=0.35, droop=0.7, arch=0.12, seed=0):
+    """One layer of a cedar: `n` flat needle sprays fanned round the blank at `c` (the trunk), joined at their foot and
+    split by deep notches, each a raised midrib with branchlets pointing out along both edges, rising off the trunk
+    then drooping; 8 * n triangles."""
+    c, k = V(c), lambda j: 1.0 + 0.12 * math.sin(5.1 * j + 2.7 * seed)       # a little uneven, spray to spray
+    step = TAU / n
+
+    def at(j, u, v, lift=0.0):              # u out along spray j (of its reach), v across it (1 = the notch)
+        a, r = phase + step * (j + 0.5 * v), R * k(j) * u
+        return pc.v(c + V((math.cos(a) * r, math.sin(a) * r, rise * r - droop * r * r / R + lift * R)))
+    hub = pc.v(c)
+    notch = [at(j - 0.5, 0.26, 0) for j in range(n)]
+    below = lambda vs: sum((v.co for v in vs), V()) / len(vs) - V((0, 0, 0.05))
+    for j in range(n):
+        mid = at(j, 0.52, 0, arch)
+        edge = [notch[j], at(j, 0.6, -0.78), at(j, 0.64, -0.26), at(j, 1.0, 0.04), at(j, 0.76, 0.28), at(j, 0.8, 0.74),
+                notch[(j + 1) % n]]               # out, in, the tip, in, out: the branchlets alternate a little
+        for q in [[hub, notch[j], mid], [hub, mid, notch[(j + 1) % n]]] + [[e0, e1, mid] for e0, e1 in zip(edge, edge[1:])]:
+            pc.f(q, below(q))
+
+
 def cedar():
-    """Uncommon, rod-2 (David: "cedar rod should have like leaf elements"). Round 1's cedar rod with cedar sprigs: two
-    fronds hugging the blank up from the reel seat, a sprig budding at the tip, a leaf on the reel."""
+    """Uncommon, rod-2 (David 11-03: "the leave should grow in a natural looking way, make it look like a cedar tree").
+    The blank is the trunk of a little cedar: layers of flat needle sprays up its top half, a cone wide and drooping
+    low and small near the tip, each layer turned on from the last, the blank's tip standing out as the leader."""
     L = 0.76
     bend = bender(L)
+    rad = lambda z: 0.0135 - 0.0075 * (z - 0.06) / (L - 0.06)
 
     def b(pc):
         pc.mat = "Grip"
         grip(pc, [(0, -0.12), (0.016, -0.118), (0.019, -0.09), (0.019, 0.04), (0.015, 0.07)], n=7)
         zs = [0.06 + (L - 0.06) * k / 6 for k in range(7)]
         pc.mat = "Blank"
-        loft(pc, [bend(z) for z in zs], [0.0135 - 0.0075 * k / 6 for k in range(7)], sides=6, tip=True)
+        loft(pc, [bend(z) for z in zs], [rad(z) for z in zs], sides=6, tip=True)
         pc.mat = "Band"
-        for z in (0.075, 0.3, 0.55):
-            c, r = bend(z), 0.0135 - 0.0075 * (z - 0.06) / (L - 0.06)
-            pc.tube([c - V((0, 0, 0.006)), c + V((0, 0, 0.006))], [r * 1.25, r * 1.25], sides=6, tip=False)
+        for z in (0.075, 0.3):
+            c, r = bend(z), rad(z)
+            pc.tube([c - V((0, 0, 0.006)), c + V((0, 0, 0.006))], [r * 1.25, r * 1.25], sides=6, tip=False, cap=False)
         reel(pc, z=0.02, mat="Grip")
         pc.mat = "Leaf"
-        frond = (0.25, 0.85, 0.55, 1.0, 0.6, 0.8, 0.2)        # cedar's flat scale-leaf spray, lobed
-        for s in (-1, 1):
-            leaf(pc, bend(0.085) + V((s * 0.011, 0.004, 0)), V((s * 0.32, 0.12, 1)), 0.13, 0.013, side=V((0, -1, 0)), curl=0.0, lobes=frond)
-        tip = bend(L - 0.1)
-        for s, ln in ((-1, 0.06), (1, 0.05)):
-            leaf(pc, tip + V((s * 0.006, 0.002, 0)), V((s * 0.55, 0.15, 1)), ln, 0.009, side=V((0, -1, 0)), lobes=(0.3, 1.0, 0.7, 0.2))
+        layers = [  # z, reach, sprays: a cone of layers, wide and drooping low, small near the tip
+            (0.35, 0.1, 6), (0.415, 0.088, 6), (0.48, 0.075, 5), (0.545, 0.061, 5), (0.605, 0.047, 4), (0.66, 0.034, 4), (0.71, 0.022, 3)]
+        for w, (z, R, n) in enumerate(layers):
+            whorl(pc, bend(z), R, n, 0.4 + w * 2.4, droop=0.85 - 0.06 * w, seed=w)   # each layer turned on from the last
         line(pc, (0, -0.048, 0.034), bend, L, "Line")
-    return model("rod-2", {"Grip": "#C8A27A", "Blank": "#9A5A3A", "Band": "#6D3B26", "Line": "#F2ECDD", "Leaf": "#5C8C3C"}, b)
+    return model("rod-2", {"Grip": "#C8A27A", "Blank": "#9A5A3A", "Band": "#6D3B26", "Line": "#F2ECDD", "Leaf": "#4A7A38"}, b)
 
 
 def glass():
