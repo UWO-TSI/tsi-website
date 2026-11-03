@@ -84,3 +84,8 @@ These rules are hard. The coordinator merges and pushes; lanes never push.
   - evidence paths;
   - what you couldn't verify.
 - Then release locks and delete `web/.next`.
+
+## The game vault (David, 2026-11-03)
+Everything provided or made for the game (review pages and other Claude artifacts, David's references, concept images, assets, important docs, a summary of each working day) is filed in the **TSI Game** Obsidian vault, tagged with its system (`system/<name>`) and type (`review`, `reference`, `asset`, `concept`, `conversation`, `canon`) and linked to its system note. Chats are summarized there, never transcribed.
+- The coordinator files review pages, David's marks, his references and concepts as they happen. Lanes don't write to the vault; list in your report anything David sent you directly so the coordinator files it.
+- Canon and the asset catalogue refresh with `python3 -I ~/Developer/claudebrain-tools/sync_tsi_game.py`. The repo stays the source of truth for specs; models and raw evidence stay in the repo and are catalogued, not copied.
