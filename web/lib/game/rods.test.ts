@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { RODS, STAND_IN, STAT_KEYS, STAT_MAX, TACKLE, TRAINING, bestOwnedRod, heldRig, ownedRig, biteWindowMs, canHook, castLuck, hookCap, onShopShelf, rig, rodByKey, rodByTier, toNextLevel, trained, trainingLevel, type Stats } from "./rods";
+import { RODS, STAT_KEYS, STAT_MAX, TACKLE, TRAINING, bestOwnedRod, heldRig, ownedRig, biteWindowMs, canHook, castLuck, hookCap, onShopShelf, rig, rodByKey, rodByTier, toNextLevel, trained, trainingLevel, type Stats } from "./rods";
 import { TOOLS } from "./tools";
 import { CATALOGUE, HOLLOW_TOOLS, onSale } from "@/lib/wallet/catalogue";
 import { advanceFishingReel, createFishingReel } from "./fishingReel";
@@ -22,8 +22,8 @@ describe("rod tiers", () => {
     }
     expect(RODS.filter(r => r.source === "shop").map(r => r.key)).toEqual(["rod_precision", "rod_cedar", "rod_carrot", "rod_glass"]);
   });
-  it("wears an older rod's model and icon until tool-pipeline's lands, and every rod's model exists", () => {
-    for (const [key, art] of Object.entries(STAND_IN)) { expect(rodByKey(key), key).not.toBeNull(); expect(STAND_IN[art], art).toBeUndefined(); }
+  it("every rod has its own model and icon file", () => {
+    expect(new Set(TOOLS.filter(t => t.kind === "rod").map(t => t.model)).size).toBe(RODS.length);
     for (const t of TOOLS.filter(t => t.kind === "rod")) {
       expect(existsSync(join(__dirname, "../../public", t.model)), t.model).toBe(true);
       expect(existsSync(join(__dirname, "../../public", t.icon)), t.icon).toBe(true);

@@ -6,7 +6,7 @@
 import { ROSTER } from "@/lib/collections/roster";
 import { FISH } from "@/lib/game/fishing";
 import { fnv1a } from "@/lib/game/weatherSystem";
-import { RODS, STAND_IN, TACKLE, onShopShelf } from "@/lib/game/rods";
+import { RODS, TACKLE, onShopShelf } from "@/lib/game/rods";
 import { CRAFTED_ITEMS } from "@/lib/crafting/recipes";
 import { dailySpecials, effectivePrice, isOnSale, ownedCounts, speciesClass, speciesSellPrice, TAB_OF, torontoDay, type ShopItem, type Special, chefOrder, fishingTasks, type FishingTask, type FishRequest } from "./rules";
 import { toFailure, type Result } from "@/lib/result";
@@ -137,7 +137,7 @@ function rodShelf(tools: ShopEntry[], inv: InventoryRow[]): ShopEntry[] {
     id: `rod:${r.key}`, slug: listed.get(r.key)?.slug ?? r.key, name: r.name, category: "tool", tier: listed.get(r.key)?.tier ?? "basic",
     description: listed.get(r.key)?.description ?? "Everyone's first rod. Light, forgiving and a little wobbly.",
     currency: "coins", price: 0, base_price: 0, special: false, stock: null, owned: r.source === "starter" || have.has(r.key) ? 1 : 0, can_buy: false,
-    sprite_url: iconUrl(STAND_IN[r.key] ?? r.key), catalogue_ref: r.key, made: MADE[r.source as keyof typeof MADE] ?? "workbench",
+    sprite_url: iconUrl(r.key), catalogue_ref: r.key, made: MADE[r.source as keyof typeof MADE] ?? "workbench",
   });
   const tackle = TACKLE.flatMap((t) => tools.filter((e) => e.catalogue_ref === t.key));
   return [...rods, ...tackle, ...tools.filter((e) => !rods.includes(e) && !tackle.includes(e))];

@@ -11,6 +11,7 @@ import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { prepareModel } from "@/lib/game/modelMaterials";
 import { rodTip } from "@/lib/game/rodTip";
+import RodAura, { rodFxUrl } from "@/components/game/character/RodAura";
 import type { IconSpec } from "@/lib/icons/manifest";
 import PixelImage from "./PixelImage";
 import TurnStage from "./TurnStage";
@@ -43,7 +44,8 @@ function measure(o: THREE.Object3D): THREE.Box3 {
 
 /**
  * The model, centred on the stage's middle and scaled to `span` across its biggest side. `hang` draws things hanging
- * from its top (a rod's tip): placed at the tip, in stage units, with down still down as it turns.
+ * from its top (a rod's tip): placed at the tip, in stage units, with down still down as it turns. A rod whose GLB names
+ * an effect wears it here as it does in a hand (RodAura), so the shop and the bag show the aura too.
  */
 export function FittedModel({ spec, span = 1.7, hang }: { spec: IconSpec; span?: number; hang?: ReactNode }) {
   const { scene } = useGLTF(spec.url);
@@ -59,7 +61,8 @@ export function FittedModel({ spec, span = 1.7, hang }: { spec: IconSpec; span?:
     if (spec.view === "diagonal") inner.rotation.z = -Math.PI / 4;
     measure(inner).getSize(size);
     box.getCenter(mid);
-    const k = span / Math.max(size.x, size.y, size.z, 1e-3);
+    // An effect rod wears its aura beyond the rod: leave it room.
+    const k = span * (rodFxUrl(model) ? 0.78 : 1) / Math.max(size.x, size.y, size.z, 1e-3);
     const outer = new THREE.Group();
     inner.position.set(-mid.x, -mid.y, -mid.z);
     outer.add(inner);
@@ -67,9 +70,12 @@ export function FittedModel({ spec, span = 1.7, hang }: { spec: IconSpec; span?:
     outer.traverse(c => { const m = c as THREE.Mesh; if (m.isMesh) m.frustumCulled = false; });
     outer.updateMatrixWorld(true);
     const tip = hangs ? rodTip(model).applyMatrix4(model.matrix).applyMatrix4(inner.matrix) : null;
-    return { outer, tip, k };
+    return { outer, tip, k, model, fx: rodFxUrl(model) };
   }, [scene, spec, span, hangs]);
-  return <primitive object={object.outer}>{hang && object.tip && <group position={object.tip} scale={1 / object.k}>{hang}</group>}</primitive>;
+  return <primitive object={object.outer}>
+    {hang && object.tip && <group position={object.tip} scale={1 / object.k}>{hang}</group>}
+    {object.fx && <Suspense fallback={null}><RodAura rod={object.model} url={object.fx} /></Suspense>}
+  </primitive>;
 }
 
 export default function ItemViewer({ spec, picture, name, className, pictureClassName }: {

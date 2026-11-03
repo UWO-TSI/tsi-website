@@ -2,7 +2,7 @@
 
 /**
  * /dev/economy?view=shop|overlay|bag|sell|inventory|wallet|admin|unlock[&tab=specials][&section=items|merch|rods: the shop
- * overlay's two answers, or the rod shop][&found=0: before the Training rod is found]
+ * overlay's two answers, or the rod shop][&found=0: before the Training rod is found][&tide=1: a Tidewarden rod in the bag]
  */
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { InventorySheet, SellSheet, ShopBody, WalletSheet } from "@/components/economy/EconomySheets";
@@ -49,6 +49,11 @@ async function seed(): Promise<EconomyTransport> {
   for (const [rod, n] of [["rod_flimsy", 50], ["rod_cedar", 37], ["rod_glass", 12], ["rod_training", 31]] as const) m.caught(ME, rod, n);
   if (new URLSearchParams(window.location.search).get("found") !== "0") {
     const item = m.items.find((i) => i.slug === "rod-training")!;
+    m.inventory.set(`${ME}:${item.id}`, { item, qty: 1, equipped: false, acquired_at: now.toISOString() });
+  }
+  // ?tide=1: a Tidewarden rod in the bag (made at the workbench; its effect shows on the stage, RodAura).
+  if (new URLSearchParams(window.location.search).get("tide") === "1") {
+    const item = { ...m.items.find((i) => i.slug === "rod-training")!, id: "dev-rod-tidewarden", slug: "rod-tidewarden", display_name: "Tidewarden rod", catalogue_ref: "rod_tidewarden" };
     m.inventory.set(`${ME}:${item.id}`, { item, qty: 1, equipped: false, acquired_at: now.toISOString() });
   }
   m.fund(MAYA, 0, 800);

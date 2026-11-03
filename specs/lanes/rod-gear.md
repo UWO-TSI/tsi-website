@@ -82,14 +82,21 @@ Build:
   - Migrations (unapplied, stop for the coordinator): `20261102170000_rod_catches.sql`, `20261102170100_catalogue_seed.sql` (the three rods' rows and icons). Both in the sql-smoke chain (with main's 20261101230000_profile_pronouns, which was missing from it). Apply the migration before the code deploys: the new `collections_cast` takes `p_rod` (old 4-arg calls still work).
   - Evidence: `specs/evidence/rod-gear/r4/` (shots.mjs makes them).
 
+- **Round 5 built** on `game/rod-gear` (origin/main b56f3c36 and game/tool-pipeline merged; gates: tsc clean, full vitest 3765 passed + the known shoreField timeout flake (passes alone), eslint clean on changed files, SQL smoke chain clean except the world_chat "the rest" assert that fails on origin/main too):
+  - The rod card's record is one small line under the title (`RodRecord`, RodGear.tsx): "31 fish caught", and on the Training rod a small ring of the way to its next level with "Level 1 of 3 · 31 fish caught" (hover: fish to the next). The full-width specs strip (`rodFacts`) is gone from the shop's and the bag's rod details. The shop's rod radar is 340 wide so the column fits.
+  - `STAND_IN` deleted (rods.ts, tools.ts, icons/keys.ts, wallet/service.ts, rods.test.ts): Precision, Carrot and Training use `tools/rod-precision|carrot|training.glb` and their own icons. The seed `20261102170100_catalogue_seed.sql` is regenerated (three sprite_urls), still unapplied, same name.
+  - `RodAura` mounts in `FittedModel` (components/economy/ItemViewer.tsx), which the shop's detail and the bag's `RodStage` both use: a rod whose GLB names a `rodFx` wears its effect there; such a rod fits 22% smaller to leave the aura room. Only Tidewarden (rod-5) has an effect among the roster's eight; Riptide, Tempest and Titanium (models and effects landed) are not in the roster yet.
+  - Dev harness: `/dev/economy?view=bag&tide=1` puts a Tidewarden rod in the bag.
+  - Evidence: `specs/evidence/rod-gear/r5/` (`rg5-before-*` are the round-4 shots, `rg5-*` after; shots.mjs makes them).
+
 ## David's decisions
 
 - 2026-10-28 review (verbatim in the coordinator's round-2 prompt): rarity outline on shop cards (common grey, uncommon green, rare blue, epic purple, legendary yellow, divine purple holo); shop sells up to rare rods; hook caps by rod rarity; Flimsy common, Lighthouse rare; divine text white; gui-tiles approved; radar redone (bigger, minimal, lighter, icons with hover lines at the corners, out of 100, the base faint behind the build, linear slide); bait and bobber slots bottom-right of your own rod's square only, fitted ones show on the rod model with a settle; the bobber's detail shows only the bobber with its own radar; bobber and bait to be remodelled properly in Blender (HD for the shop, LP on the rod; the lucky bobber a four-leaf clover), **waiting on David's references** (coordinator asked him).
 
 ## Next
 
-1. Coordinator: apply `20261102170000_rod_catches` then `20261102170100_catalogue_seed`; David reviews `specs/evidence/rod-gear/r4/` (open questions in the round-4 report: the Training rod's hook cap, the unlock count, the stats).
-2. When tool-pipeline's three rod models and icons land: drop their `STAND_IN` lines, regenerate the seed (delete this lane's unapplied seed first), re-shoot r4.
+1. Coordinator: apply `20261102170000_rod_catches` then `20261102170100_catalogue_seed`; David reviews `specs/evidence/rod-gear/r5/`.
+2. Riptide, Tempest and Titanium: add them to the roster (tool-pipeline's note) only on David's word on their stats, rarity and tier; their models, icons and effects are already in the tree.
 3. Glass to uncommon only on David's pick (round 4 item 4).
 4. When references arrive: model the base bobber, the lucky four-leaf-clover bobber and the bait in Blender (design bible Models), HD to `public/assets/game/items/`, LP to `items/lp/`.
 

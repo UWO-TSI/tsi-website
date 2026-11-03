@@ -28,12 +28,22 @@ export const equippedTackle = (rows: readonly InventoryRow[]): string[] =>
   rows.flatMap(r => (r.equipped && tackleByKey(r.item.catalogue_ref) ? [r.item.catalogue_ref!] : []));
 /** "+20 Luck, +10 Lure". */
 export const gainsText = (t: Tackle) => STAT_KEYS.flatMap(k => (t.gains[k] ? [`+${t.gains[k]} ${STAT_INFO[k].label}`] : [])).join(", ");
-/** The rod card's facts (rod_catches): the fish landed with it, and the Training rod's level and its next. */
-export function rodFacts(r: RodTier, catches = 0): [string, string][] {
-  const facts: [string, string][] = [["Fish caught", catches.toLocaleString()]];
-  if (r.key !== TRAINING.key) return facts;
-  const next = toNextLevel(catches);
-  return [...facts, ["Training", `Level ${trainingLevel(catches)} of ${TRAINING.levels.length}${next === null ? "" : `, ${(next - catches).toLocaleString()} more fish to the next`}`]];
+/**
+ * The rod card's record (rod_catches), one small line under its title (David 2026-11-03: "you dont need a whole bar to
+ * say"): the fish landed with it, and on the Training rod a small ring of how far it is to its next level.
+ */
+export function RodRecord({ rod, catches = 0 }: { rod: RodTier; catches?: number }) {
+  const training = rod.key === TRAINING.key, level = trainingLevel(catches), next = toNextLevel(catches);
+  const from = TRAINING.levels[level - 1] ?? 0, done = next === null ? 1 : (catches - from) / (next - from);
+  const fish = `${catches.toLocaleString()} fish caught`;
+  return <p data-testid="rod-record" title={training && next !== null ? `${(next - catches).toLocaleString()} more fish to the next level` : undefined}
+    style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 4px", color: "var(--ui-ink-2)", font: "500 13px var(--gui-font)" }}>
+    {training && <svg width="22" height="22" viewBox="0 0 22 22" role="img" aria-label={`Training level ${level} of ${TRAINING.levels.length}`} style={{ flex: "none" }}>
+      <circle cx="11" cy="11" r="8.5" fill="none" stroke="var(--ui-line)" strokeWidth="2.5" />
+      <circle cx="11" cy="11" r="8.5" fill="none" stroke="var(--ui-chart)" strokeWidth="2.5" strokeLinecap="round" pathLength="100" strokeDasharray={`${done * 100} 100`} transform="rotate(-90 11 11)" />
+    </svg>}
+    <span>{training ? `Level ${level} of ${TRAINING.levels.length} · ${fish}` : fish}</span>
+  </p>;
 }
 /** "Rare rod · hooks up to epic". */
 export const rodLine = (r: RodTier) => `${RARITY_LABEL[r.rarity]} rod · hooks up to ${RARITY_LABEL[hookCap(r.rarity)].toLowerCase()}`;
@@ -44,9 +54,9 @@ const STAT_ICON: Record<RodStat, ReactNode> = {
 const axis = (k: RodStat, value: number, base?: number) => ({ label: STAT_INFO[k].label, hint: STAT_INFO[k].does, icon: STAT_ICON[k], value, base });
 
 /** A rod's radar: the rod alone, or (`tackle`) the build with its add-ons over the rod alone. */
-export function RodRadar({ rod, tackle }: { rod: RodTier; tackle?: readonly string[] }) {
+export function RodRadar({ rod, tackle, size }: { rod: RodTier; tackle?: readonly string[]; size?: number }) {
   const on = tackle ? rig(rod, tackle) : null;
-  return <HexRadar label={`${rod.name} stats`} max={STAT_MAX} testId="rod-radar"
+  return <HexRadar label={`${rod.name} stats`} max={STAT_MAX} size={size} testId="rod-radar"
     axes={STAT_KEYS.map(k => axis(k, on ? on.stats[k] : rod.base[k], on ? rod.base[k] : undefined))} />;
 }
 

@@ -5,7 +5,7 @@
  * inventory's: a rod's catalogue_ref, a net's or shovel's shop slug (they have no ref). Tools never break (row 279).
  * Rod tiers' effects are rods.ts; nets and shovels have none yet (specs/game-ui-questions.md).
  */
-import { RODS, STAND_IN } from "./rods";
+import { RODS } from "./rods";
 
 export type ToolKind = "rod" | "net" | "shovel" | "pickaxe";
 export type ToolTier = 1 | 2 | 3 | 4 | 5;
@@ -14,13 +14,10 @@ export interface Tool { kind: ToolKind; tier: ToolTier; key: string; name: strin
 const tool = (kind: ToolKind, tier: ToolTier, key: string, name: string, source: Tool["source"]): Tool =>
   ({ kind, tier, key, name, source, model: `/assets/game/tools/${kind}-${tier}.glb`, icon: `/assets/icons/${key}.webp` });
 
-/** A rod's model: the launch five's tools/rod-<tier>.glb, round 4's tools/rod-<name>.glb, or its stand-in's (rods.ts STAND_IN). */
+/** A rod's model: the launch five's tools/rod-<tier>.glb, the rest's tools/rod-<name>.glb. */
 const LAUNCH_RODS = ["rod_flimsy", "rod_cedar", "rod_glass", "rod_lighthouse", "rod_tidewarden"];
-const rodTool = (r: (typeof RODS)[number]): Tool => {
-  const art = RODS.find(x => x.key === (STAND_IN[r.key] ?? r.key))!;
-  return { ...tool("rod", r.tier, r.key, r.name, r.source), icon: `/assets/icons/${art.key}.webp`,
-    model: LAUNCH_RODS.includes(art.key) ? `/assets/game/tools/rod-${art.tier}.glb` : `/assets/game/tools/${art.key.replace("_", "-")}.glb` };
-};
+const rodTool = (r: (typeof RODS)[number]): Tool =>
+  ({ ...tool("rod", r.tier, r.key, r.name, r.source), model: LAUNCH_RODS.includes(r.key) ? `/assets/game/tools/rod-${r.tier}.glb` : `/assets/game/tools/${r.key.replace("_", "-")}.glb` });
 
 export const TOOLS: readonly Tool[] = [
   ...RODS.map(rodTool),

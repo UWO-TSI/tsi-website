@@ -9,7 +9,7 @@
  * with it; the grid stays in view. The grid is shared with the storage chest (ChestSheet). The server owns the stock
  * and the sizes (lib/game/bagStore); the grid's arrangement and the New marks are this device's.
  */
-import { RodRadar, RodSlots, RodStage, TackleRadar, equippedTackle, rodFacts, rodLine } from "@/components/economy/RodGear";
+import { RodRadar, RodSlots, RodStage, TackleRadar, equippedTackle, RodRecord, rodLine } from "@/components/economy/RodGear";
 import { rodByKey, tackleByKey, trained } from "@/lib/game/rods";
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { Apple, ArrowDownWideNarrow, Backpack, Bug, Fish, Gem, Lock, LockOpen, Pin, PinOff, Shirt, Sofa, Wrench, X } from "lucide-react";
@@ -291,8 +291,8 @@ function Owned({ group, transport = httpEconomyTransport }: { group: "tools" | "
     {error && <StatusLine error><SignInText text={error} /></StatusLine>}
     <DetailView testId="bag-rod" rarity={rod.rarity} onBack={() => setPicked(null)} stage={<RodStage rod={rod} tackle={on} className={STAGE.stage} />}
       corner={<RodSlots rows={rows} busy={busy} onEquip={(id, eq) => void toggle(id, eq)} />}
-      info={<><InfoHead kind={rodLine(rod)} title={row.item.display_name} text={row.item.description ?? undefined} /><RodRadar rod={trained(rod, caught(rod.key))} tackle={on} /></>}
-      specs={rodFacts(rod, caught(rod.key))} fine="Take it out from the tool wheel." />
+      info={<><InfoHead kind={rodLine(rod)} title={row.item.display_name} text={row.item.description ?? undefined} /><RodRecord rod={rod} catches={caught(rod.key)} /><RodRadar rod={trained(rod, caught(rod.key))} tackle={on} /></>}
+      fine="Take it out from the tool wheel." />
   </>;
   const side = row ? <SidePanel key={row.item.id} testId="bag-owned-item" onClose={() => setPicked(null)} picture={rowPicture(row)} title={row.item.display_name} kind={kind(row)}
     facts={[["You own", row.qty.toLocaleString()], ["Status", row.item.slot ? (row.equipped ? (add ? "On your rod" : "Equipped") : "In your closet") : USE_HINT[group] ?? "Yours"],

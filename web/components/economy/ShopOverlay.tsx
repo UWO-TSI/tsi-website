@@ -23,7 +23,7 @@ import { SHELF_LABEL, itemLine, shelfItems, shopShelves, type ShopSection, type 
 import { CardGrid, Code, ColourDots, DarkButton, DetailView, FlatPanel, GhostButton, HairlineRow, HairlineRows, IconRail, InfoHead, ItemCard, Purse, Quiet, RowActions, STAGE, StatusLine,
   flatStyles as f } from "@/components/gui/flat";
 import ItemViewer from "./ItemViewer";
-import { RodRadar, TackleRadar, rodFacts, rodLine } from "./RodGear";
+import { RodRadar, TackleRadar, RodRecord, rodLine } from "./RodGear";
 import { rodByKey, tackleByKey, trained } from "@/lib/game/rods";
 
 const SHELF_ICON: Record<string, ReactNode> = {
@@ -68,7 +68,7 @@ const MADE_FINE = { starter: "Everyone fishes with it from day one.", workbench:
 /** A rod's radar (the rod alone, as trained: the shop has no slots, David 2026-10-28), or an add-on's own. */
 function GearInfo({ e, catches }: { e: ShopEntry; catches: number }) {
   const rod = rodByKey(e.catalogue_ref), add = tackleByKey(e.catalogue_ref);
-  return rod ? <RodRadar rod={trained(rod, catches)} /> : add ? <TackleRadar tackle={add} /> : null;
+  return rod ? <>{catches > 0 && <RodRecord rod={rod} catches={catches} />}<RodRadar rod={trained(rod, catches)} size={340} /></> : add ? <TackleRadar tackle={add} /> : null;
 }
 
 function Detail({ e, catches, list, onPick, onBack, busy, onPay, viewer }: {
@@ -99,7 +99,7 @@ function Detail({ e, catches, list, onPick, onBack, busy, onPay, viewer }: {
     fine={e.made ? MADE_FINE[e.made]
       : <>{merch ? "Pay with Gems. Reserve it here, then pick it up at HQ on campus." : `Pay with ${e.currency === "gems" ? "Gems" : "coins"}.`}
       {e.owned > 0 ? ` You own ${e.owned}.` : ""}</>}
-    specs={rod && e.owned > 0 ? rodFacts(rod, catches) : gear ? null : specsOf(e)} />;
+    specs={gear ? null : specsOf(e)} />;
 }
 
 /** The counter's Sell: what's in your bag the shop buys, one or the stack. */

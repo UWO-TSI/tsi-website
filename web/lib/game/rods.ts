@@ -84,12 +84,6 @@ export const RODS: readonly RodTier[] = [
   rod(5, "rod_tidewarden", "Tidewarden rod", "epic", "crafted", stats(70, 80, 70, 60, 60, 60)),
 ];
 /**
- * tool-pipeline is modelling David's round-4 rods (tools/rod-precision.glb, rod-carrot.glb, rod-training.glb). Until
- * each lands, it wears this older rod's model and icon (lib/game/tools.ts, lib/icons/keys.ts): delete its line then.
- */
-export const STAND_IN: Readonly<Record<string, string>> = { rod_precision: "rod_flimsy", rod_carrot: "rod_cedar", rod_training: "rod_glass" };
-
-/**
  * The Training rod (David 2026-11-02: "easter egg to unlock and not a common rod you can buy ... very good stats
  * comparable to uncommon rare, one of best starter rods and it has upgrade potential"). Nobody sells it: the
  * `unlock.catches`th fish landed with the `unlock.rod` finds it (the server grants it in collections_land, which
