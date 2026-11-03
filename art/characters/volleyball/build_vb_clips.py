@@ -1,6 +1,8 @@
 """Beach volleyball clips on the game's own rig -> web/public/assets/characters/v6/base/vb_clips.glb + the contract clips.ts.
 
-  /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P art/characters/volleyball/build_vb_clips.py [-- evidence [names]]
+  /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P art/characters/volleyball/build_vb_clips.py [-- evidence [names]] [only names] [quick]
+
+`only a,b`: bake and check just those (and vb_ready), no export: for iterating on a clip.
 
 The pose kit (Pose, body, hand, arm, legs, plant, keys, bake, check) is build_clips.py's, run with `-- head v8 lib` so the
 body, rig and v8 head are exactly the ones v8_clips.glb ships. Every clip here is keyed as key poses in armature space
@@ -32,7 +34,7 @@ from mathutils import Quaternion, Vector  # noqa: E402
 
 OUT_GLB = os.path.join(ROOT, "web", "public", "assets", "characters", "v6", "base", "vb_clips.glb")
 OUT_TS = os.path.join(ROOT, "web", "lib", "game", "volleyball", "clips.ts")
-EVIDENCE = os.path.join(ROOT, "specs", "evidence", "vb-anim")
+EVIDENCE = os.environ.get("VB_EVIDENCE") or os.path.join(ROOT, "specs", "evidence", "vb-anim")   # VB_EVIDENCE=<dir> elsewhere
 GAME = 1.3                                              # game units per rig metre (Character.tsx CHARACTER_SCALE)
 SX = dict(SIDES)
 VB = []
@@ -166,9 +168,9 @@ def platform(P, lift=0.0):
 
 def bump_keys():
     form = stand(platform(body(crouch=0.11, lean=12, nod=-24, shift=(0, 0.03), hips=rx(20))))
-    low = stand(platform(body(crouch=0.122, lean=13, nod=-26, shift=(0, 0.032), hips=rx(22)), lift=2))
-    drive = stand(platform(body(crouch=0.04, lean=6, nod=-26, shift=(0, 0.012), hips=rx(8)), lift=10))       # contact
-    rise = stand(platform(body(crouch=0.02, lean=4, nod=-28, shift=(0, 0.006), hips=rx(4)), lift=18))
+    low = stand(platform(body(crouch=0.14, lean=17, nod=-28, shift=(0, 0.04), hips=rx(26)), lift=0))        # round 2: sat deeper
+    drive = stand(platform(body(crouch=0.03, lean=5, nod=-26, shift=(0, 0.01), hips=rx(6)), lift=11))       # contact
+    rise = stand(platform(body(crouch=0.0, lean=-1, nod=-30, shift=(0, 0.0), hips=rx(0)), lift=24))         # up through the legs, arms on through
     hold = stand(platform(body(crouch=0.035, lean=6, nod=-24, shift=(0, 0.01), hips=rx(8)), lift=12))
     return [(0, READY, "lin"), (0.16, form, "io"), (0.26, low, "io"), (0.36, drive, "out"), (0.5, rise, "out"), (0.66, hold, "io"),
             (1.0, READY, "io")]
@@ -194,7 +196,7 @@ def window_hands(P, ext=0.0, open_=0.0):
 
 
 def set_keys():
-    load = stand(window_hands(body(crouch=0.1, lean=-2, nod=-30, hips=rx(14), shift=(0, 0.012))))
+    load = stand(window_hands(body(crouch=0.122, lean=0, nod=-30, hips=rx(17), shift=(0, 0.016))))
     contact = stand(window_hands(body(crouch=0.025, lean=-6, nod=-32, hips=rx(4)), ext=0.6))
     follow = stand(window_hands(body(crouch=-0.004, lean=-6, nod=-28, hips=rx(0)), ext=1.0, open_=1.0))
     down = stand(arms(body(crouch=0.035, lean=4, nod=-24, hips=rx(8)), (0.55, -0.35, -0.76), (0.4, -0.75, -0.52)))
@@ -207,7 +209,7 @@ SET = set_keys()
 @vb_clip("vb_set", 1.1, False, contact=0.4, hand="both")
 def vb_set(p):
     P = keys(p, SET)
-    return stand(planted(P, 1.0, ankles=STANCE, knees_out=0.5, lift=0.012 * window(p, 0.36, 0.48, 0.55, 0.7)))
+    return stand(planted(P, 1.0, ankles=STANCE, knees_out=0.5, lift=0.018 * window(p, 0.36, 0.48, 0.55, 0.7)))
 
 
 # ================================================================ the court jump: approach takeoff, arms back then up, the floaty hang
@@ -246,9 +248,9 @@ APEX = apex_pose()
 
 
 def spike_jump_keys():
-    load = body(crouch=0.11, lean=14, nod=-20, shift=(0, 0.035), hips=rx(16))
-    girdle(load, up=16, fwd=-12)
-    arms(load, (0.35, 0.68, 0.5), (0.24, 0.76, 0.48))                                 # arms swung back high
+    load = body(crouch=0.13, lean=19, nod=-24, shift=(0, 0.042), hips=rx(20))       # round 2: deeper
+    girdle(load, up=18, fwd=-16)
+    arms(load, (0.3, 0.68, 0.6), (0.2, 0.74, 0.62))                                   # arms swung back high
     load = stand(load)
     drop = body(crouch=0.105, lean=12, nod=-21, shift=(0, 0.03), hips=rx(14))
     arms(drop, (0.32, 0.4, -0.86), (0.22, 0.45, -0.86))                              # arms falling past the hips
@@ -291,7 +293,7 @@ def vb_spike_jump(p):
 
 # ================================================================ the spike: whip, contact at the top, wrist snap, land
 def spike_keys():
-    whip = body(lean=-4, twist=-10, side=6, tilt=6, nod=-18, turn=8, hips=rx(-2))
+    whip = body(lean=-9, twist=-14, side=6, tilt=6, nod=-18, turn=8, hips=rx(-4))
     air_legs(whip, (0, 10), (78, 56), foot=36)
     girdle(whip, up=28, side="Right")
     girdle(whip, up=8, side="Left")
@@ -304,8 +306,8 @@ def spike_keys():
     arm(hit, "Right", V(-0.8, -0.35, 0.49), V(-0.74, -0.45, 0.5))                    # long arm, high, out and in front: the contact
     arm(hit, "Left", V(0.65, -0.1, -0.75), V(0.35, -0.5, -0.8))
     hit.aim("RightHand", V(-0.6, -0.62, 0.5))
-    snap = body(lean=12, twist=30, side=-3, nod=-14, turn=-18, hips=rx(6))
-    air_legs(snap, (34, 28), (52, 46), foot=30)
+    snap = body(lean=19, twist=36, side=-4, nod=-12, turn=-20, hips=rx(9))           # round 2: folded further through
+    air_legs(snap, (42, 34), (60, 52), foot=30)
     girdle(snap, up=8, side="Right")
     arm(snap, "Right", V(-0.25, -0.85, -0.46), V(0.2, -0.75, -0.63))               # through, down across the body
     arm(snap, "Left", V(0.6, 0.15, -0.78), V(0.4, -0.2, -0.9))
@@ -446,7 +448,7 @@ def vb_serve_toss(p):
 def serve_hit_keys():
     air0 = serve_cocked(body(lean=-6, nod=-22, twist=-26, side=2, turn=14, hips=rx(-2)))
     air_legs(air0, (-4, 8), (70, 52), foot=38)
-    whip = body(lean=-4, twist=-4, side=6, tilt=6, nod=-24, hips=rx(0))
+    whip = body(lean=-9, twist=-8, side=6, tilt=6, nod=-24, hips=rx(-2))
     air_legs(whip, (6, 12), (62, 48), foot=36)
     girdle(whip, up=26, side="Right")
     arm(whip, "Right", V(-0.84, 0.1, 0.53), V(-0.75, 0.3, 0.59))
@@ -458,8 +460,8 @@ def serve_hit_keys():
     arm(hit, "Right", V(-0.8, -0.4, 0.45), V(-0.72, -0.52, 0.46))                 # out in front: the serve meets it early
     arm(hit, "Left", V(0.6, -0.1, -0.65), V(0.3, -0.45, -0.84))
     hit.aim("RightHand", V(-0.55, -0.7, 0.45))
-    snap = body(lean=12, twist=22, nod=-14, turn=-12, hips=rx(6))
-    air_legs(snap, (28, 24), (46, 40), foot=28)
+    snap = body(lean=18, twist=28, nod=-12, turn=-14, hips=rx(9))
+    air_legs(snap, (36, 30), (54, 46), foot=28)
     arm(snap, "Right", V(-0.1, -0.9, -0.42), V(0.2, -0.8, -0.56))
     arm(snap, "Left", V(0.55, 0.15, -0.82), V(0.35, -0.2, -0.9))
     snap.aim("RightHand", V(0.2, -0.5, -0.84))
@@ -556,26 +558,48 @@ def kneel_up():
 
 
 def dive_keys():
-    load = body(crouch=0.13, lean=32, nod=-16, shift=(0, 0.01), hips=rx(30))
-    arms(load, (0.35, -0.6, -0.72), (0.2, -0.85, -0.5))
-    launch = body(crouch=0.07, lean=18, nod=-40, hips=rx(52), side=-2)
-    air_legs(launch, (-24, 30), (14, 56), foot=28)
-    girdle(launch, up=20, fwd=8)
-    arm(launch, "Right", V(-0.2, -0.88, -0.2), V(-0.1, -0.97, -0.15))
-    arm(launch, "Left", V(0.3, -0.8, -0.4), V(0.2, -0.9, -0.3))
-    fly = dive_air()
-    fly.loc.z -= 0.05
-    touch = prone(chin=6, legs_up=0.6)
-    touch.loc.z -= 0.17
-    settle = prone(chin=-4, legs_up=1.0)
-    settle.loc.z -= 0.18
-    lie = prone(chin=0, legs_up=0.3)
+    """Round 2 (David: "needs to be redone to be more dramatic"): a deep gather with the arms flung back, an explosive
+    push off one leg into a full flat stretch in the air (both arms long at the ball, legs straight and together, toes
+    pointed), a hard belly landing that whips the heels up and slides the body on along the sand, a beat lying still,
+    then the push up, a knee, and up into the stance."""
+    load = body(crouch=0.15, lean=16, nod=-24, shift=(0, 0.045), hips=rx(28), twist=-6)            # sat back low, wound, head up on the ball
+    girdle(load, up=10, fwd=-14)
+    arms(load, (0.32, 0.62, -0.6), (0.2, 0.78, -0.5))                                               # flung back behind
+    launch = body(crouch=0.04, lean=14, nod=-50, hips=rx(50), side=-3)
+    air_legs(launch, (-30, 46), (8, 74), foot=46, splay=3)                                          # push leg long behind, right knee driving
+    girdle(launch, up=26, fwd=10)
+    arm(launch, "Right", V(-0.18, -0.84, -0.12), V(-0.1, -0.96, -0.02))                            # arms whipped through to the front
+    arm(launch, "Left", V(0.32, -0.8, -0.3), V(0.2, -0.92, -0.2))
+    launch.loc.z += 0.03
+    fly = body(lean=-6, nod=-64, hips=rx(80), side=-3)                                              # flat, chest up, the whole body long
+    air_legs(fly, (-14, -10), (4, 8), foot=58, splay=2)
+    girdle(fly, up=34, fwd=12, side="Right")
+    girdle(fly, up=24, fwd=8, side="Left")
+    arm(fly, "Right", V(-0.12, -0.96, 0.12), V(-0.05, -0.99, 0.08))                                # the right reaching furthest
+    arm(fly, "Left", V(0.3, -0.9, 0.05), V(0.18, -0.97, 0.0))
+    fly.aim("RightHand", V(-0.12, -0.85, 0.5))
+    fly.loc += V(0, 0.05, 0.04)
+    impact = prone(chin=3, legs_up=0.4)                                                             # chest hits; the head dips with it
+    girdle(impact, up=30, fwd=10)
+    impact.loc += V(0, 0.12, -0.19)
+    whip = prone(chin=12, legs_up=2.3)                                                              # the heels whip up, the chin comes up
+    girdle(whip, up=30, fwd=10)
+    whip.loc += V(0, 0.07, -0.18)
+    slide = prone(chin=6, legs_up=0.9)                                                              # still sliding on, heels coming down
+    girdle(slide, up=28, fwd=8)
+    slide.loc += V(0, 0.015, -0.18)
+    lie = prone(chin=-2, legs_up=0.25)
     lie.loc.z -= 0.18
+    breath = prone(chin=-7, legs_up=0.2)                                                            # the beat: a breath out, the head drops
+    breath.loc.z -= 0.185
     up1 = push_up()
     up1.loc.z -= 0.12
     up2 = kneel_up()
-    return [(0, READY, "lin"), (0.05, stand(load), "io"), (0.15, launch, "out"), (0.22, fly, "lin"), (0.3, touch, "in"),
-            (0.38, settle, "out"), (0.55, lie, "io"), (0.68, up1, "io"), (0.82, up2, "io"), (1.0, READY, "io")]
+    up3 = body(crouch=0.1, lean=16, nod=-20, shift=(0, 0.02), hips=rx(16))                         # up, still low, arms out to steady
+    arms(up3, (0.62, -0.5, -0.6), (0.45, -0.8, -0.4))
+    return [(0, READY, "lin"), (0.07, stand(load), "io"), (0.15, launch, "io"), (0.21, fly, "out"), (0.255, fly, "lin"),
+            (0.3, impact, "in"), (0.335, whip, "out"), (0.4, slide, "io"), (0.46, lie, "io"), (0.56, breath, "io"),
+            (0.62, lie, "io"), (0.7, up1, "io"), (0.79, up2, "io"), (0.875, stand(up3), "io"), (1.0, READY, "io")]
 
 
 DIVE = dive_keys()
@@ -585,11 +609,11 @@ def ground_w_dive(on0, on1, off0, off1):
     return lambda p: window(p, on0, on1, off0, off1)
 
 
-@vb_clip("vb_dive", 1.6, False, ground="frame", ground_w=ground_w_dive(0.27, 0.3, 0.86, 0.93),
-         takeoff=0.24, contact=0.35, down=0.48, up=1.4, hand="R")
+@vb_clip("vb_dive", 1.6, False, ground="frame", ground_w=ground_w_dive(0.285, 0.3, 0.8, 0.86),
+         takeoff=0.24, contact=0.35, down=0.48, up=1.4, hand="R", sheet=(0.0, 0.13, 0.24, 0.35, 0.48, 0.54, 0.64, 0.84, 1.12, 1.27, 1.4, 1.6))
 def vb_dive(p):
     P = keys(p, DIVE)
-    return stand(P, float(p <= 0.05 or p >= 0.999))     # planted keys meet the free ones exactly at the load and the end: no blend to pop
+    return stand(P, float(p <= 0.07 or p >= 0.875))     # planted keys meet the free ones exactly at the load and up: no blend to pop
 
 
 def slide_dive_keys():
@@ -632,11 +656,11 @@ def vb_slide_dive(p):
 
 # ================================================================ celebrations
 def celebrate_point_keys():
-    coil = body(crouch=0.08, lean=14, nod=-6, twist=-14, hips=rx(14))
+    coil = body(crouch=0.1, lean=17, nod=-6, twist=-20, hips=rx(16))
     arm(coil, "Right", V(-0.82, -0.2, 0.53), V(-0.62, -0.5, 0.6))                     # fist up by the cheek
     arm(coil, "Left", V(0.55, 0.0, -0.84), V(0.35, -0.45, -0.82))
     coil = stand(coil)
-    pump = body(crouch=0.0, lean=-8, nod=-24, twist=10, hips=rx(-4))
+    pump = body(crouch=0.0, lean=-12, nod=-28, twist=14, hips=rx(-6))
     arm(pump, "Right", V(-0.4, -0.15, -0.9), V(-0.12, -0.55, 0.83))                 # elbow yanked down: "yes!"
     arm(pump, "Left", V(0.7, 0.2, -0.68), V(0.55, -0.3, -0.78))
     down = body(crouch=0.06, lean=10, nod=-10, twist=4, hips=rx(10))
@@ -657,7 +681,7 @@ CELEBRATE_POINT = celebrate_point_keys()
 @vb_clip("vb_celebrate_point", 1.2, False)
 def vb_celebrate_point(p):
     k = window(p, 0.2, 0.3, 0.36, 0.46)                               # the right knee comes up with the pull
-    ank = {"Left": STANCE["Left"], "Right": STANCE["Right"] + V(0.0, -0.03, 0.08) * k}
+    ank = {"Left": STANCE["Left"], "Right": STANCE["Right"] + V(0.0, -0.035, 0.1) * k}
     return plant(keys(p, CELEBRATE_POINT), ankles=ank, knees_out=0.5)
 
 
@@ -1017,7 +1041,9 @@ def evidence(names):
         rig.animation_data.action = bpy.data.actions[name]
         n = c["frames"]
         frames = sorted({round(i * n / 7) for i in range(8)} | ({round(c["meta"]["contact"] * FPS)} if "contact" in c["meta"] else set()))
-        if len(frames) > 8:                                             # keep 8: drop the frame nearest the contact
+        if "sheet" in c["meta"]:                                        # the clip's own beats (seconds)
+            frames = [round(t * FPS) for t in c["meta"]["sheet"]]
+        elif len(frames) > 8:                                           # keep 8: drop the frame nearest the contact
             ct = round(c["meta"]["contact"] * FPS)
             frames.remove(min((f for f in frames if f != ct), key=lambda f: abs(f - ct)))
         files = []
@@ -1036,7 +1062,8 @@ def evidence(names):
                 centre.z = max(0.45, centre.z)
                 a = math.radians(yaw)
                 fwd = Vector((math.sin(a), -math.cos(a), 0))                 # the camera's view direction on the ground
-                cam.location = centre - fwd * math.hypot(CAM_BACK, CAM_RIGHT) + Vector((0, 0, CAM_UP - 0.45))
+                near = 0.78 if "close" in MY_ARGS else 1.0                   # `close`: nearer, lower (the gait reviews)
+                cam.location = centre - fwd * math.hypot(CAM_BACK, CAM_RIGHT) * near + Vector((0, 0, (CAM_UP - 0.45) * near * near))
                 cam.rotation_euler = (centre - cam.location).to_track_quat("-Z", "Y").to_euler()
                 touching = "contact" in c["meta"] and f == round(c["meta"]["contact"] * FPS)
                 if touching:
@@ -1058,6 +1085,14 @@ def evidence(names):
         print("wrote", out)
 
 
+if "loco" in MY_ARGS:                                    # the base walk, run and dash (build_clips.py), for their sheets: never exported here
+    VB[:] = [c for c in VB if c["name"] == "vb_ready"] + [
+        dict(c, meta={**c["meta"], "sheet": tuple(i * c["frames"] / FPS / 8 for i in range(8))}) for c in CLIPS if c["name"] in ("Walk", "Run", "Dash")]
+    MY_ARGS.append("noexport")
+if "only" in MY_ARGS:                                    # iterate on a few clips (and vb_ready, the reference): no export
+    keep = set(MY_ARGS[MY_ARGS.index("only") + 1].split(",")) | {"vb_ready"}
+    VB[:] = [c for c in VB if c["name"] in keep]
+    MY_ARGS.append("noexport")
 REPORT = build()
 if "evidence" in MY_ARGS:
     i = MY_ARGS.index("evidence")

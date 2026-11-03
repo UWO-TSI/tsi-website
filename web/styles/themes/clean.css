@@ -15,6 +15,7 @@ body, [data-ui-theme="clean"] {
   --ui-gold: #f2b636;
   --ui-silver: #b8c0cc;  /* podium places (the leaderboard): gold, silver, bronze edges */
   --ui-bronze: #d08a52;
+  --ui-title-outline: #234a52;  /* the title banner's deep island teal: logo, wordmark and hint pill */
   --ui-home: #ef7a5a;
   --ui-away: #4bb3c8;
   --ui-ink: #151515;
@@ -28,6 +29,7 @@ body, [data-ui-theme="clean"] {
   --ui-accent-deep: #000000;
   --ui-accent-ink: #ffffff;
   --ui-chart: #5b8cf0;  /* a chart's line and its light fill (the rod radar): soft, never bold */
+  --ui-chart-gain: #1fa898;  /* the build with its add-ons over the rod alone (David 10-29: "a slightly different color so its more ob") */
   --ui-pill: #ececec;
   --ui-pill-ink: #6f6f6f;
   --ui-disabled: #c9c9c9;
@@ -54,6 +56,8 @@ body, [data-ui-theme="clean"] {
   --ui-word-gem: #8b4fc9;
   --ui-word-place: #b4582e;
   --ui-word-item: #1d8577;
+  --ui-word-person: #c23d86;
+  --ui-word-act: #cf4a2e;
   --ui-stage: radial-gradient(ellipse 24% 4.5% at 50% 87%, rgb(0 0 0 / 0.17), rgb(0 0 0 / 0.07) 55%, transparent 100%),
     linear-gradient(180deg, #ffffff 0%, #ffffff 60%, #f5f5f5 84%, #eeeeee 100%);
   /* The rarity ladder (specs/design-bible.md UI 7): a thin outline or edge, never a fill. Divine is the holo. */

@@ -26,6 +26,7 @@ export const MOVE_JUICE = {
   fovKick: 2.5, // degrees wider at top speed
   dashKick: 2, // degrees the FOV punches out on a dash
   squash: 1, // squash and stretch amount
+  lean: 1, // the body's lean into a start and its rock on a stop (vb-anim round 2)
   // Each effect's amount (0 turns it off): /lab/move's Juice panel.
   footsteps: 1, // flecks, grains and puffs at each foot contact
   takeoff: 1, // dust kicked back at a jump

@@ -27,7 +27,7 @@ import { RodRadar, TackleRadar } from "@/components/economy/RodGear";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import { CircleDot, Waves, Worm } from "lucide-react";
 import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
-import { ActionBar, ActionIcon, BigMoment, CALL_LOOKS, CallTag, CardOverlay, DarkButton, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KeyBoard, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, QuestCheck, RankBadge, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot } from "@/components/gui/flat";
+import { ActionBar, ActionIcon, BigMoment, CallTag, CardOverlay, DarkButton, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, KeyPeek, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, QuestCheck, RankBadge, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot, type PeekKind } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
 import { BoardBody } from "@/components/game/volleyball/BoardSheet";
 import { DEFAULT_LOOK } from "@/lib/game/character/look";
@@ -84,11 +84,23 @@ function KeyBoardShow() {
     {bag && <span data-demo-bag style={{ position: "absolute", top: 16, left: 16, display: "flex", gap: 6, alignItems: "center", padding: "8px 14px", borderRadius: 999, background: "var(--ui-card)", fontWeight: 800 }}><Backpack size={16} /> Bag</span>}
     {bag && <SlotPop to={["[data-demo-bag]"]} />}
     <Spotlight light open label="Keys" lead={hold ? <>Hold <Keycap>Tab</Keycap> Tools</> : <>Press <Keycap>I</Keycap> Bag</>}
-      steps={{ count: 9, at: hold ? 0 : 4 }} footer={<GhostButton>Skip</GhostButton>}>
+      steps={{ count: 9, at: hold ? 0 : 4 }} footer={<GhostButton>Skip</GhostButton>}
+      aside={hold ? k >= 4 && <KeyPeek kind="wheel" out={k >= 18} /> : k >= 32 && <KeyPeek kind="bag" out={k >= 39} />}>
       <KeyBoard lit={hold ? "tab" : "i"} hold={hold} fill={hold ? Math.min(1, Math.max(0, (k - 4) / 12)) : 0} won={hold ? k >= 16 : k >= 34}
         done={hold ? [] : ["tab", "g", "h", "enter"]} down={new Set(hold ? (k >= 4 && k < 16 ? ["tab"] : []) : (k >= 32 && k < 34 ? ["i"] : []))} />
     </Spotlight>
   </>;
+}
+/** Every KeyPeek, one after another: each pops in, plays its loop, then fades as if the key were let go. */
+const PEEK_KINDS: PeekKind[] = ["wheel", "emote", "hud", "chat", "bag", "collection", "quests", "map", "mail"];
+function KeyPeekShow() {
+  const [t, setT] = useState(0);
+  useEffect(() => { const i = window.setInterval(() => setT(v => v + 1), 300); return () => window.clearInterval(i); }, []);
+  const kind = PEEK_KINDS[Math.floor(t / 10) % PEEK_KINDS.length];
+  return <div style={{ display: "grid", gridAutoFlow: "column", gap: 18, placeItems: "center", minHeight: "100%" }}>
+    <KeyPeek key={kind} kind={kind} out={t % 10 >= 9} />
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 150px)", gap: 12 }}>{PEEK_KINDS.map(k => <KeyPeek key={k} kind={k} />)}</div>
+  </div>;
 }
 /** The ID as the overlay: filled in on the card, printed out of the slot, stamped, then Done; hover it to tilt. */
 function PrintedShow() {
@@ -96,9 +108,9 @@ function PrintedShow() {
   useEffect(() => { const i = window.setInterval(() => setT(v => (v + 1) % 8), 1000); return () => window.clearInterval(i); }, []);
   const form = t < 3, printing = t >= 3 && t < 5, stamped = t >= 5;
   const rows: [string, ReactNode][] = form
-    ? [["World name", <PaperField key="n" defaultValue="Marlowe" />], ["Birthday", <PaperField key="b" placeholder="March 14" />], ["From", <PaperField key="f" placeholder="Your hometown" />],
+    ? [["World name", <PaperField key="n" defaultValue="Marlowe" />], ["Pronouns", <PaperField key="p" placeholder="she/her, he/him, they/them" />], ["Birthday", <PaperField key="b" placeholder="March 14" />],
       ["About you", <PaperField key="a" placeholder="Say hi in a line" />]]
-    : [["World name", "Marlowe"], ["Birthday", "March 14"], ["From", "Halifax"], ["About you", "Here for the fishing"], ["Friend code", "K7QM-4R2X"]];
+    : [["World name", "Marlowe"], ["Pronouns", "they/them"], ["Birthday", "March 14"], ["About you", "Here for the fishing"], ["Friend code", "K7QM-4R2X"]];
   return <CardOverlay open label="Your island ID" action={<DarkButton>{form ? "Print my ID" : "Done"}</DarkButton>}>
     <PrintedCard key={form ? "a" : "b"} large tilt band="Tethos Island" kind="Resident" picture="M" printing={printing} stamp={stamped ? { top: "Tethos Island", word: "Resident" } : null} rows={rows} />
   </CardOverlay>;
@@ -115,6 +127,20 @@ function KeywordShow() {
     </Dialogue>
   </div>;
 }
+/** The whole icon library (design bible UI 8c: every talk line uses it), by tone: each kind's icon and the words that
+ *  bring it up. */
+const TONES = [["fish", "Sea creatures"], ["bug", "Land creatures"], ["coin", "Coins"], ["gem", "Gems, rewards, events"], ["item", "Things"], ["place", "Places"], ["person", "People"], ["act", "Things you do"]] as const;
+function KeywordLibrary() {
+  return <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "14px 22px", padding: 22, alignContent: "start", height: "100%", overflow: "auto" }}>
+    {TONES.map(([tone, title]) => <section key={tone} style={{ display: "grid", gap: 5, alignContent: "start" }}>
+      <h3 style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 900, color: "var(--ui-ink-2)" }}>{title}</h3>
+      {KEYWORD_LIBRARY.filter(e => e.tone === tone).map(e => <div key={e.kind} style={{ display: "flex", gap: 8, alignItems: "baseline", fontSize: 15 }}>
+        <Keyword kind={e.kind}>{e.words[0]}</Keyword>
+        <span style={{ fontSize: 12, color: "var(--ui-muted)" }}>{e.words.slice(1).join(", ")}</span>
+      </div>)}
+    </section>)}
+  </div>;
+}
 /** The wallet (design bible UI 8b) under a time pill: resting in the UI view, then a coin fly-in landing in its slot. */
 function WalletShow() {
   const [t, setT] = useState(0);
@@ -126,9 +152,11 @@ function WalletShow() {
 }
 
 const OVERLAYS: { id: string; title: string; render: () => ReactNode }[] = [
-  { id: "key-board", title: "Keys (a light Spotlight, KeyBoard and SlotPop)", render: () => <KeyBoardShow /> },
+  { id: "key-board", title: "Keys (a light Spotlight, KeyBoard, KeyPeek and SlotPop)", render: () => <KeyBoardShow /> },
+  { id: "key-peek", title: "A key's peek (KeyPeek), every kind", render: () => <KeyPeekShow /> },
   { id: "wallet", title: "The wallet (WalletSlot), its slot under the time", render: () => <WalletShow /> },
   { id: "keyword", title: "Keywords in a line (Keyword)", render: () => <KeywordShow /> },
+  { id: "keyword-library", title: "The icon library (every word Keyword knows)", render: () => <KeywordLibrary /> },
   { id: "fly-in", title: "Fly-in, into the wallet's slot", render: () => <Loop ms={3600}>{done => <><span style={{ position: "absolute", top: 16, right: 16 }}><WalletSlot coins={1240} gems={35} at="in" landing="coins" /></span>
     <FlyIn icon={<Coins size={52} />} name="Coins" text="For things on the island" to={['[data-hud-slot="coins"]']} onDone={done} /></>}</Loop> },
   { id: "quest-check", title: "Quest complete", render: () => <Loop ms={3000}>{() => <QuestCheck eyebrow="Quest complete" title="Walk with Bram" />}</Loop> },

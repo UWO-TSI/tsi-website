@@ -93,6 +93,17 @@ export function useTutorialQuest(keys: { bag: string; jump: string; dash: string
   }, [key, phase, keys.bag, keys.jump, keys.dash, keys.touch]);
 }
 
+/**
+ * The tutorial is on: an arrival running (the landing to Bram's last line), or Alice's visit not yet done. Talk boxes
+ * leave out the friendship hearts and the gift button meanwhile (David's round 5 playtest: "no need to show heart and
+ * gift in the tutorial").
+ */
+export function useInTutorial(): boolean {
+  const arriving = useSyncExternalStore(subscribeArrival, readArrival, () => "") !== "";
+  const visit = useSyncExternalStore(subscribeHq, () => hqSnapshot().visit, () => null);
+  return arriving || (!!visit && !visit.done);
+}
+
 /** The tutorial's chip is up (its glyph): the island's own prompt for the same key hides, so there's one prompt. */
 export function useArrivalChip(): boolean {
   return useSyncExternalStore(subscribeArrival, readArrival, () => "").endsWith("|1");
