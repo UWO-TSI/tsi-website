@@ -49,12 +49,13 @@
  */
 import { Suspense, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Vector3, type Object3D } from "three";
 import { PerspectiveCamera, View } from "@react-three/drei";
 import Character, { type CharacterMotion, type ClipName } from "@/components/game/character/Character";
 import { Lights as CreatorLights } from "@/components/game/character/CreatorStage";
 import { CUTS } from "@/lib/game/character/rig";
-import { DEFAULT_LOOK, FACE, NATURAL_HAIR, PARTS, parseLook, partsIn, SKIN_PICKS, STARTER_PARTS, type CharacterLook, type EyeFrame } from "@/lib/game/character/look";
+import { CLIP_BY_NAME, DEFAULT_LOOK, FACE, NATURAL_HAIR, PARTS, parseLook, partsIn, SKIN_PICKS, STARTER_PARTS, type CharacterLook, type EyeFrame } from "@/lib/game/character/look";
 import { isVbClip, VB_CLIPS, VB_CLIPS_URL, type VbClip, type VbClipInfo } from "@/lib/game/volleyball/clips";
 import { RESIDENT_LOOKS } from "@/lib/content/residentRoster";
 import { HQ_LEAD } from "@/lib/game/welcome";
@@ -67,9 +68,9 @@ const STYLES: Record<string, Pick<CharacterLook, "bangs" | "back">> = {
   long: { bangs: "", back: "hair_long_scruffy" },
 };
 /** Head fit sheets: the three review views (the character faces the camera at yaw 0). */
-const VIEWS: Record<string, number> = { front: 0, "34": -0.6, side: -Math.PI / 2, back: Math.PI, high: -0.6, low: -0.6 };
+const VIEWS: Record<string, number> = { front: 0, "34": -0.6, side: -Math.PI / 2, back: Math.PI, high: -0.6, low: -0.6, play: Math.PI + 0.6 };
 /** Wardrobe round 5: the hat cut judged from above and below too (3/4, the camera's orbit pitched up or down, radians). */
-const VIEW_PITCH: Record<string, number> = { high: 0.55, low: -0.3 };
+const VIEW_PITCH: Record<string, number> = { high: 0.55, low: -0.3, play: 0.6 };
 /** `&cut=0`: every hidden triangle drawn (rig.ts CUTS), for the hat cut's before-and-after sheet. */
 if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("cut") === "0") CUTS.on = false;
 /** `&charlod=1|2`: the cells load their LOD meshes and draw that tier (Character's SHOW_LOD). */
@@ -113,7 +114,37 @@ function Stage({ cell, framing, faceSize, orbit }: { cell: Cell; framing: keyof 
     </>}
     <Suspense fallback={null}><Character look={cell.look} motion={motion} scale={1} faceSize={faceSize} lod={LOD_SHEET}
       clips={cell.clip && isVbClip(cell.clip[0]) ? VB_CLIPS_URL : undefined} /></Suspense>
+    {BONE_SCALE && <BoneScale motion={motion} lift={cell.lift ?? 0} />}
   </>;
+}
+
+/**
+ * &bones=Hips:1.1,Head:0.909 (vb-anim round 2, the head-to-body preview): each named bone drawn at that scale, which
+ * its children inherit, and the body lifted by the legs' growth so the soles stay on the ground. A shot only: the rig,
+ * the outfits and the creator are unchanged.
+ */
+const BONE_SCALE = typeof window !== "undefined"
+  ? new URLSearchParams(window.location.search).get("bones")?.split(",").map(b => b.split(":")).map(([n, v]) => [`mixamorig${n}`, Number(v)] as const)
+  : undefined;
+const HIPS_SCALE = BONE_SCALE?.find(([n]) => n === "mixamorigHips")?.[1] ?? 1;
+const _a = new Vector3(), _b = new Vector3();
+
+function BoneScale({ motion, lift }: { motion: React.RefObject<CharacterMotion>; lift: number }) {
+  const scene = useThree(s => s.scene);
+  useFrame(() => {
+    let hips: Object3D | null = null, toe: Object3D | null = null;
+    scene.traverse(o => {
+      const s = BONE_SCALE!.find(([n]) => n === o.name)?.[1];
+      if (s) o.scale.setScalar(s);
+      if (o.name === "mixamorigHips") hips ??= o;
+      if (o.name === "mixamorigLeftToeBase") toe ??= o;
+    });
+    if (!hips || !toe) return;
+    // the hips to the toes, scaled: lift by what the scale added (the root's lift doesn't change the distance)
+    const h = (hips as Object3D).getWorldPosition(_a).y - (toe as Object3D).getWorldPosition(_b).y;
+    motion.current.lift = lift + h * (1 - 1 / HIPS_SCALE);
+  });
+  return null;
 }
 
 export default function AvatarBenchPage() {
@@ -153,14 +184,14 @@ function AvatarBench() {
       return FIT_POSES.flatMap(([pose, clip, t]) => FIT_VIEWS.map(([v, y]) => ({ label: `${id} ${pose} ${v}`, look, yaw: y, face: OPEN, clip: [clip, t] as [ClipName, number] })));
     });
     if (sheet === "vb") return (q.get("ids")?.split(",") ?? Object.keys(VB_CLIPS)).flatMap(id => {
-      const c: VbClipInfo = VB_CLIPS[id as VbClip], n = Number(q.get("frames") ?? 8), h = Number(q.get("jump") ?? 0.45);
-      const times = Array.from({ length: n }, (_, i) => (i / (n - 1)) * c.duration);
+      const c: VbClipInfo = isVbClip(id) ? VB_CLIPS[id] : { duration: CLIP_BY_NAME.get(id)!.length, loop: CLIP_BY_NAME.get(id)!.loop, startsOn: "" }, n = Number(q.get("frames") ?? 8), h = Number(q.get("jump") ?? 0.45);
+      const times = Array.from({ length: n }, (_, i) => (i / (c.loop && !isVbClip(id) ? n : n - 1)) * c.duration);   // a base loop: n distinct phases
       if (c.contact !== undefined) times[times.reduce((k, t, i) => (Math.abs(t - c.contact!) < Math.abs(times[k] - c.contact!) ? i : k), 1)] = c.contact;
       // the sim's jump, drawn: up from takeoff to the apex and down to land; the air clips start at the top
       const from = c.startsOn === "vb_spike_jump" ? 0 : c.takeoff, apex = c.apex ?? 0, end = c.land;
       const lift = (t: number) => from === undefined || end === undefined || t <= from || t >= end ? 0
         : c.startsOn === "vb_spike_jump" ? h * (1 - (t / end) ** 2) : h * Math.max(0, 1 - ((t - apex) / (t < apex ? apex - from : end - apex)) ** 2);
-      return times.map(t => ({ label: `${id} ${t.toFixed(2)}s${t === c.contact ? " contact" : ""}`, look: base, yaw: view, face: OPEN,
+      return times.map(t => ({ label: `${id} ${t.toFixed(2)}s${t === c.contact ? " contact" : ""}`, look: base, yaw: view, pitch: VIEW_PITCH[q.get("view") ?? ""], face: OPEN,
         clip: [id as VbClip, t / c.duration] as [ClipName, number], lift: lift(t) }));
     });
     if (sheet === "live") return [{ label: q.get("style") ?? "bob", look: bob, yaw, talk: q.get("talk") === "1" }];

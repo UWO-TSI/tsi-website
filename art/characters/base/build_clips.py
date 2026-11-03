@@ -1,13 +1,15 @@
 """Full clip set on the locked v6 body -> base/v6_clips.glb (+ the "clips" section of ../character_catalog.json).
 
-  /Applications/Blender.app/Contents/MacOS/Blender -b -P art/characters/base/build_clips.py [-- head v7|v8]
+  /Applications/Blender.app/Contents/MacOS/Blender -b -P art/characters/base/build_clips.py [-- head v7|v8] [loco]
+
+`loco`: only the walk, the run, the dash and the slide clips that meet them, swapped into the existing clip base (the loco branch at the end).
 
 With `head v7` the head is the hand-modeled V7_Head (art/characters/v7/head.blend) and the file is base/v7_clips.glb
 (avatar v7). With `head v8` it is V8_Head (art/characters/skull/head.blend, the rounded head with the flat face area,
 specs/characters/head-fit.md) and the file is base/v8_clips.glb, which the engine loads; body, rig and clips are the
 same.
 
-Idle and Walk are v6's own actions, unchanged. Every other clip is hand-keyed here as key poses in armature space
+Idle is v6's own action, unchanged; Walk and Run are IK gaits (vb-anim round 2). Every other clip is hand-keyed here as key poses in armature space
 (rotations relative to the parent, the same convention as build_v6.apply_pose), with eased, overshooting
 interpolation for the bouncy toy feel (row 139). Standing clips re-plant both feet with two-bone IK every frame, so
 bobbing hips never slide or sink the feet; Run is grounded by a constant offset, rolls and falls per frame.
@@ -156,6 +158,7 @@ def keys(p, ks):
 # ================================================================ neutral = Idle frame 0 (one-shots blend to Idle seamlessly)
 rig.animation_data.action = bpy.data.actions["Idle"]
 sc.frame_set(0)
+bpy.data.actions.remove(bpy.data.actions["Walk"])          # v6's walk: the gait below (vb-anim round 2) replaces it
 N = Pose({n: REST[n] @ rig.pose.bones[P_ + n].rotation_quaternion @ REST[n].inverted() for n in NAMES},
          REST["Hips"] @ rig.pose.bones[P_ + "Hips"].location)
 ANKLE = {s: HEAD0[f"{s}Foot"].copy() for s, _ in SIDES}
@@ -210,26 +213,115 @@ def clip(name, seconds, loop, ground=None, **meta):
     return deco
 
 
+# ---------------------------------------------------------------- the walk and the run (vb-anim round 2, David: "movement should
+# not feel so linear and you can feel each step and stride"). Real gaits in place, every foot placed by two-bone IK: the
+# heel strikes ahead with the toes up, the foot rolls flat and treads back along the ground (planted: it moves exactly
+# with the stride), the heel peels and the toes push off, then the swing lifts the knee and reaches forward. The hips
+# drop into each step as the weight lands (fast) and rise over the planted foot (slower), sway over it, drop on the
+# swinging side and turn with the swinging leg; the spine counters, the head rides a beat behind and the arms swing
+# against the legs with a little drag.
+HEEL_BACK = 0.015                                     # the heel behind the ankle (the shoe's back)
+
+
+def tween(u, ks):
+    """Piecewise smoothstep through [(u, value)...] (u ascending, 0..1, wraps if the ends match)."""
+    for (u0, a), (u1, b) in zip(ks[:-1], ks[1:]):
+        if u <= u1:
+            return a + (b - a) * ss(u0, u1, u) if u1 > u0 else b
+    return ks[-1][1]
+
+
+def spline(u, ks, wrap=False):
+    """A smooth curve through [(u, value)...] (cubic Hermite, tangents from the neighbours; `wrap`: a loop whose ends
+    match), so a swinging foot or the bobbing hips keep moving through a key instead of stopping on it."""
+    us, vs, n = [k[0] for k in ks], [k[1] for k in ks], len(ks)
+
+    def tan(i):
+        if 0 < i < n - 1:
+            return (vs[i + 1] - vs[i - 1]) / (us[i + 1] - us[i - 1])
+        if wrap:
+            return (vs[1] - vs[-2]) / ((us[1] - us[0]) + (us[-1] - us[-2]))
+        return (vs[1] - vs[0]) / (us[1] - us[0]) if i == 0 else (vs[-1] - vs[-2]) / (us[-1] - us[-2])
+    i = next((i for i in range(n - 1) if u <= us[i + 1]), n - 2)
+    h = us[i + 1] - us[i]
+    t = max(0.0, min(1.0, (u - us[i]) / h))
+    return ((2 * t ** 3 - 3 * t * t + 1) * vs[i] + (t ** 3 - 2 * t * t + t) * h * tan(i) + (3 * t * t - 2 * t ** 3) * vs[i + 1]
+            + (t ** 3 - t * t) * h * tan(i + 1))
+
+
+def foot_at(P, s, y, lift, pitch, toes=0.0, out=0.0):
+    """Places the foot: its sole `lift` above the ground, `y` along the walk (- ahead), pitched `pitch` degrees (+ the
+    heel up, rolling over the ball; - the toes up, rocking on the heel); the toes bend `toes` back at push-off."""
+    sx = dict(SIDES)[s]
+    a0, b0 = ANKLE[s], HEAD0[f"{s}ToeBase"]
+    pivot = b0 if pitch >= 0 else V(a0.x, a0.y + HEEL_BACK, b0.z)
+    off = V(sx * out, y, lift)
+    ankle = pivot + off + rx(pitch) @ (a0 - pivot)
+    P.ik(f"{s}UpLeg", f"{s}Leg", ankle, V(sx * 0.18, -1, 0))
+    P.world(f"{s}Foot", rx(pitch))
+    P.world(f"{s}ToeBase", rx(pitch - toes))
+    return P
+
+
+def gait(p, cyc):
+    """One gait cycle at phase p (left heel strike at 0, right at 0.5) from the numbers in `cyc`."""
+    c = cyc
+    q = (2 * p) % 1.0                                                     # the step's phase (each foot's contact at 0)
+    lead = 1 if p < 0.5 else -1                                          # +1 while the left foot is the one down
+    bob = spline((q - c["bob_lag"]) % 1.0, c["bob"], wrap=True)
+    s1, c1 = math.sin(TAU * (p - c["sway_lag"])), math.cos(TAU * p)
+    yaw, roll = -c["yaw"] * c1, -c["roll"] * s1
+    P = body(lean=c["lean"] + c["lean_bob"] * bob / 0.02, crouch=c["crouch"] - bob, shift=(c["sway"] * s1, c.get("back", 0.0)),
+             twist=-yaw * 1.6, side=-roll * 0.7, nod=c["nod"] - c["head_bob"] * spline((q - c["bob_lag"] - 0.1) % 1.0, c["bob"], wrap=True) / 0.02,
+             hips=rz(yaw) @ ry(roll))
+    for s, sx in SIDES:
+        u = (p - (0.0 if s == "Left" else 0.5)) % 1.0
+        st, S = c["stance"], c["stride"]
+        if u < st:                                                        # planted: treads back with the stride
+            k = u / st
+            y, lift = -S / 2 + S * k, 0.0
+            pitch = c["strike"] * (1 - ss(0.0, c["flat"], k)) + c["peel"] * ss(c["peel_at"], 1.0, k)
+            toes = c["peel"] * 0.8 * ss(c["peel_at"], 1.0, k)
+        else:                                                             # the swing: lift, reach, set down
+            k = (u - st) / (1 - st)
+            y = spline(k, c["swing_y"]) * S
+            lift = max(0.0, spline(k, c["swing_z"]))
+            pitch = tween(k, [(0.0, c["peel"]), (0.35, c["swing_pitch"]), (0.8, c["strike"] * 0.6), (1.0, c["strike"])])
+            toes = c["peel"] * 0.8 * (1 - ss(0.0, 0.3, k))
+        foot_at(P, s, y, lift, pitch, toes, out=c.get("out", 0.0))
+        # the arm against the opposite leg, a beat late: forward (+) as that leg goes back
+        ua = (p - (0.0 if s == "Left" else 0.5) - c["arm_lag"]) % 1.0
+        fwd = -c["arm"] * math.cos(TAU * ua)
+        bend = c["elbow"] + c["elbow_fwd"] * max(0.0, fwd) / c["arm"]
+        a, o = math.radians(fwd), math.radians(c["arm_out"])
+        up = V(sx * math.sin(o), -math.sin(a) * math.cos(o), -math.cos(a) * math.cos(o))
+        e = math.radians(fwd + bend)
+        arm(P, s, up, V(sx * math.sin(o) * 0.6, -math.sin(e) * math.cos(o), -math.cos(e) * math.cos(o)))
+    return P
+
+
+WALK = dict(stance=0.6, stride=0.2, flat=0.2, strike=-16, peel=26, peel_at=0.6, swing_pitch=6,
+            swing_y=[(0.0, 0.5), (0.5, 0.0), (1.0, -0.5)], swing_z=[(0.0, 0.0), (0.4, 0.05), (0.75, 0.026), (1.0, 0.0)],
+            crouch=0.025, bob=[(0.0, 0.0), (0.14, -0.016), (0.55, 0.015), (1.0, 0.0)], bob_lag=0.0, lean=4, lean_bob=1.0,
+            sway=0.01, sway_lag=0.03, roll=6, yaw=7, nod=-3, head_bob=2.5, arm=28, arm_lag=0.05, elbow=14, elbow_fwd=16, arm_out=22)
+
+
+@clip("Walk", 1.0, True, ground="const")
+def walk(p):
+    return gait(p, WALK)
+
+
+RUN = dict(stance=0.36, stride=0.32, flat=0.15, strike=-4, peel=40, peel_at=0.5, swing_pitch=34,
+           swing_y=[(0.0, 0.5), (0.22, 0.6), (0.48, 0.25), (0.74, -0.2), (1.0, -0.5)], swing_z=[(0.0, 0.0), (0.25, 0.088), (0.55, 0.085), (0.85, 0.036), (1.0, 0.0)],
+           crouch=0.062, bob=[(0.0, -0.004), (0.32, -0.024), (0.72, 0.0), (0.86, 0.014), (1.0, -0.004)], bob_lag=0.0, lean=16, lean_bob=1.5,
+           sway=0.004, sway_lag=0.03, roll=4, yaw=10, nod=-12, head_bob=3.0, arm=48, arm_lag=0.04, elbow=78, elbow_fwd=14, arm_out=20,
+           back=0.008)
+
+
 @clip("Run", 0.6, True, ground="const")
 def run(p):
-    """Fast scamper: forward lean, high knees, pumping bent arms, big bounce."""
-    s, c = math.sin(TAU * p), math.cos(TAU * p)
-    th = 36 * s
-    bl, br = 16 + 78 * max(0.0, c) ** 1.2, 16 + 78 * max(0.0, -c) ** 1.2
-    roll, yaw = -7 * c, -9 * s
-    hips = rz(yaw) @ ry(roll)
-    P = N.copy()
-    P.R["Hips"], P.loc = hips, V(-0.012 * c, 0, 0.03 * abs(s) ** 0.7)
-    P.R["Spine"] = rx(10) @ ry(-roll * 0.3) @ rz(-yaw * 0.6)
-    P.R["Spine1"], P.R["Spine2"] = rx(4), rx(2) @ ry(-roll * 0.2)
-    P.R["Neck"], P.R["Head"] = Quaternion(), rx(-9 + 3 * math.cos(2 * TAU * p)) @ ry(roll * 0.4) @ rz(-yaw * 0.4)
-    P.R["LeftUpLeg"], P.R["RightUpLeg"] = hips.inverted() @ rx(-th), hips.inverted() @ rx(th)
-    P.R["LeftLeg"], P.R["RightLeg"] = rx(bl), rx(br)
-    P.R["LeftFoot"], P.R["RightFoot"] = rx(0.6 * (th - bl)), rx(0.6 * (-th - br))
-    fl, fr = -42 * s, 42 * s
-    P.R["LeftArm"], P.R["RightArm"] = rx(-fl) @ ry(72), rx(-fr) @ ry(-72)
-    P.R["LeftForeArm"], P.R["RightForeArm"] = rz(-78), rz(78)
-    return P
+    """Fast scamper: a forward lean, a flight between steps, high knees and the heel kicked up behind, bent arms pumping."""
+    return gait(p, RUN)
 
 
 SEAT = 0.12                                   # bench seat height (m) for Sit / Study; feet dangle
@@ -779,25 +871,26 @@ def mantle(p):
 
 
 def dash_pose():
-    P = body(lean=28, nod=-10, crouch=0.02)
-    legs(P, (55, -35), (70, 30), foot=30)  # front knee driving, back leg trailing
+    P = body(lean=34, nod=-15, crouch=0.032)
+    legs(P, (62, -42), (78, 34), foot=34)  # front knee driving, back leg trailing long (vb-anim round 2: pushed further)
     for s, sx in SIDES:
-        arm(P, s, V(sx * 0.45, 0.75, -0.35), V(sx * 0.3, 0.9, -0.2))  # swept back
+        arm(P, s, V(sx * 0.4, 0.82, -0.3), V(sx * 0.26, 0.94, -0.1))  # swept back
     return P
 
 
 def dash_keys():
-    """A beat of gathering (a dip, arms in front), the lunge (lean in, arms swept back), then a settle: upright, a touch
-    back past it with the arms coming forward, and home."""
-    gather = body(lean=-5, nod=5, crouch=0.03)
-    legs(gather, 22, 34, foot=18)
+    """A beat of gathering (a dip, the arms coming forward), the lunge (lean in, arms swept back), then the stop with
+    weight: rocked back past upright with the arms thrown forward, a small tip forward again, and home."""
+    gather = body(lean=-7, nod=6, crouch=0.045)
+    legs(gather, 26, 40, foot=18)
     for s, sx in SIDES:
-        arm(gather, s, V(sx * 0.35, -0.62, -0.7), V(sx * 0.2, -0.85, -0.4))
-    settle = body(lean=-7, nod=7, crouch=0.022)
-    legs(settle, (18, 4), (26, 10), foot=12)
+        arm(gather, s, V(sx * 0.42, -0.4, -0.8), V(sx * 0.28, -0.7, -0.6))
+    settle = body(lean=-11, nod=9, crouch=0.03)
+    legs(settle, (20, 2), (30, 8), foot=12)
     for s, sx in SIDES:
-        arm(settle, s, V(sx * 0.55, -0.42, -0.72), V(sx * 0.35, -0.6, -0.6))
-    return [(0, N, "lin"), (0.1, gather, "out"), (0.3, DASH, "out"), (0.6, DASH, "lin"), (0.8, settle, "io"), (1.0, N, "io")]
+        arm(settle, s, V(sx * 0.5, -0.3, -0.81), V(sx * 0.34, -0.6, -0.72))
+    tip = body(lean=4, nod=-2, crouch=0.012)
+    return [(0, N, "lin"), (0.12, gather, "out"), (0.3, DASH, "out"), (0.56, DASH, "lin"), (0.74, settle, "io"), (0.88, tip, "io"), (1.0, N, "io")]
 
 
 DASH = dash_pose()
@@ -3404,6 +3497,42 @@ if "v1-preview" in ARGS:
 
 if "lib" in ARGS:                                    # the pose kit only (volleyball/build_vb_clips.py runs this file for it)
     pass
+elif "loco" in ARGS:
+    # vb-anim round 2: the walk, the run and the dash (and the slide clips that meet them) baked and swapped into the clip base in place (its meshes and the
+    # hidden-cut marks untouched; web/scripts/swap-glb-clips.mjs), and their catalogue rows. Then hidden_cut.py bodycut
+    # (the skin under each garment over the new poses) and web/scripts/sync-character-assets.mjs.
+    import subprocess, tempfile
+    LOCO = ("Walk", "Run", "Dash", "SlideIn", "SlideInDash", "SlideUp")      # the slide's ins and out start or end on the run and the dash
+    rows = {}
+    for c in CLIPS:
+        if c["name"] in LOCO:
+            act = bake(c)
+            worst, lowest = check(c["name"], c["frames"])
+            meta = {k: v for k, v in c["meta"].items() if k != "ground_w"}
+            rows[c["name"]] = {"name": c["name"], "length": round(c["frames"] / FPS, 3), "loop": c["loop"], "frames": c["frames"],
+                               **({} if c["loop"] else {"endsNeutral": meta.pop("endsNeutral", "endsOn" not in meta)}), **meta,
+                               **({"contacts": contacts(act, c["frames"])} if c["loop"] else {})}
+            print(f"LOCO {c['name']:6s} {c['frames'] / FPS:4.2f}s head_intrusion={worst:5.3f} min_z={lowest:+.3f} {rows[c['name']].get('contacts', '')}")
+    for a in list(bpy.data.actions):
+        if a.name not in LOCO:
+            bpy.data.actions.remove(a)
+    rig.animation_data.action = bpy.data.actions["Walk"]
+    sc.frame_set(0)
+    bpy.ops.object.select_all(action="DESELECT")
+    rig.select_set(True)
+    bpy.context.view_layer.objects.active = rig
+    tmp = os.path.join(tempfile.mkdtemp(prefix="loco_"), "loco.glb")
+    bpy.ops.export_scene.gltf(
+        filepath=tmp, export_format="GLB", use_selection=True, export_yup=True,
+        export_skins=True, export_animations=True, export_animation_mode="ACTIONS", export_force_sampling=True,
+        export_leaf_bone=False, export_optimize_animation_size=True)
+    web = os.path.join(HERE, "..", "..", "..", "web")
+    subprocess.run(["node", os.path.join(web, "scripts", "swap-glb-clips.mjs"), os.path.join(HERE, OUT_GLB), tmp], check=True)
+    path = os.path.join(HERE, "..", "character_catalog.json")
+    cat = json.load(open(path))
+    cat["clips"] = [rows.get(r["name"], r) for r in cat["clips"]]
+    kit.update_catalog("clips", cat["clips"])
+    print("LOCO_OK", ", ".join(rows))
 elif STAFF_MODE:
     cat = []
     for c in STAFF_CLIPS:
@@ -3461,15 +3590,14 @@ elif VERBS_MODE:
     if "warden-evidence" in ARGS:
         render_warden_clips(cat)
 else:
-    catalog = [{"name": "Idle", "length": 2.0, "loop": True, "frames": 60, "source": "v6"},
-               {"name": "Walk", "length": 1.0, "loop": True, "frames": 30, "source": "v6", "contacts": contacts(bpy.data.actions["Walk"], 30)}]
+    catalog = [{"name": "Idle", "length": 2.0, "loop": True, "frames": 60, "source": "v6"}]
     for c in CLIPS:
         act = bake(c)
         worst, lowest = check(c["name"], c["frames"])
         meta = {k: v for k, v in c["meta"].items() if k != "ground_w"}
         catalog.append({"name": c["name"], "length": round(c["frames"] / FPS, 3), "loop": c["loop"], "frames": c["frames"],
                         **({} if c["loop"] else {"endsNeutral": meta.pop("endsNeutral", "endsOn" not in meta)}), **meta,
-                        **({"contacts": contacts(act, c["frames"])} if c["name"] in ("Run", "CrouchWalk") else {})})
+                        **({"contacts": contacts(act, c["frames"])} if c["name"] in ("Walk", "Run", "CrouchWalk") else {})})
         print(f"CLIP {c['name']:12s} {c['frames'] / FPS:4.2f}s loop={c['loop']!s:5s} head_intrusion={worst:5.3f} min_z={lowest:+.3f}")
 
     rig.animation_data.action = bpy.data.actions["Idle"]
