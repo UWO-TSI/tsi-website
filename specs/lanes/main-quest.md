@@ -31,6 +31,15 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest (once), tsc, eslint, the SQL smoke chain, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 6: David's round 5 review (2026-11-03, verbatim; https://claude.ai/artifact/LXxnPfXbcf6wQZmxAgwbZH)
+
+Approved: mq5-critical, mq5-world.
+- mq5-vitals (redo): "keep the full card, but keep in mind for shield or mana"
+- mq5-levelup (approve): "in the level up reveal, i want you to fade the characetr out, move the level up up and take the center screen with micro animation aof each thing that was unlocked"
+- mq5-reveal, mq5-phone, mq5-phone-vitals, mq5-phone-world, mq5-phone-levelup (redo, no note): follow the notes above on the phone too.
+
+Build: the vitals keep the white card (delete the bare look and the `?vitals=` switch), laid out so a third bar (shield or mana) fits without a redesign; in the level up reveal the character fades out, "Level up" moves up, and the unlocks take the centre of the screen, each with its own small animation. Phone too. Before merging: `git grep '("development" as string)' -- web` must be empty.
+
 ## Round 5: David's round 4 review (2026-11-02, verbatim; https://claude.ai/artifact/BNWtSh7obrfHW7S5EAZ39E)
 
 Approved: mq4-xp, mq4-ring-after, mq4-sand, mq4-bible (update design bible UI 8b to match: stamina stays in the card, dimmed when full; the level shows in the ring all the time).
