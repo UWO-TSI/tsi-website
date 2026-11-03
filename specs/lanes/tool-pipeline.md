@@ -2,6 +2,13 @@
 
 Worktree `.claude/worktrees/tool-pipeline`, branch `game/tool-pipeline`, cut from origin/main 1ae98ff6. Agent type `uwotsi-lane`. No dev port needed.
 
+## Round 3: David's rod models review (2026-11-03, verbatim; https://claude.ai/artifact/LFoFkQq2pABPtHPEZS4A7L)
+
+Approved: rm2-carrot, rm2-glass (the cooler sea glass stays rare), rm2-precision, rm2-training. Not marked yet: Tempest, Titanium, Tidewarden, Riptide.
+- rm2-cedar (redo): "the leave should grow in a natural looking way, make it look like a cedar tree"
+
+Build: Cedar's foliage grows naturally, like a little cedar tree (layered sprays of flat needle foliage along the upper blank), not leaves stuck on. Same budget. Old and new shots (ids rm3-*). Leave the four epic and rare rods as they are until David marks them.
+
 ## Round 2: rod models (David's rod pitch review, 2026-11-02, verbatim; https://claude.ai/artifact/XqZK2hk32ydhYjbKFhhwFJ)
 
 - rod-carrot (approve): "make the carrot thicket, this is uncommon rod"
