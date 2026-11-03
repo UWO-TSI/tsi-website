@@ -792,3 +792,4 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
 - **Treasure r3 review:** https://claude.ai/artifact/DPY2vfZ3eKuRUV71i6zTcY (ids tr3-*; game/treasure 6e7518d6; filed in the vault).
 - **Polish r2+r3 and vb-anim r2 pushed (2026-11-03):** gates tsc clean, build ok, vitest 3735 with 5 load timeouts (loopback, shoreField, budget network, cells, walk) that pass alone (39/39). perf:check under load 8 to 24 (Roblox and another session's headless browsers): high 7.6, lite 5.0, but draws 360/285 and triangles flat versus main's 364/288, so no added render cost; frame times not comparable at that load.
 - **Fish list r2 review:** https://claude.ai/artifact/Q4u9e7MMD9CumnCqUEEcdu (ids fl2-*; game/fish-list af89ab07; filed in the vault).
+- **Polish r2+r3 and vb-anim r2 live (main b56f3c36):** live check passed (routes 200, arrival with the new walk, Here (1)); accounts deleted, nothing left (scratchpad/v16-prod8).
