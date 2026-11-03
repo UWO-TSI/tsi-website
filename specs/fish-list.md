@@ -1,354 +1,645 @@
 # The fish list: what you can catch, and why
 
-Lane `fish-list`, round 1 (2026-11-02). The list for David's marks: every fish with its water, season, time, weather, rarity, chance per cast and sell price, what each one is for, the gaps, the new fish proposed to fill them (with legendary and Divine catches tied to class gear), and how the new ones get modelled. Nothing ships this round.
+Lane `fish-list`, round 2 (2026-11-03). Still the list only: nothing is built or modelled. Round 1 (2026-11-02) listed today's 91 catches, 24 new fish and 6 creatures; David marked it on the review page. This round rewrites it to his marks.
 
-David (2026-11-02): "i need you to expand this fishing catagory", then: "The fish list: do for fish what the treasure page did for digging: every fish with its rarity as a percentage, where and when, what it's for (crafting materials for class gear, the tasting book, the aquarium), plus new fish to fill the gaps. A list for you to mark first, nothing built."
+## 0. David's marks
 
-His treasure notes the same night set the direction: "give the percentage too for the rarity, more rare core crafting ingredient, like a few more legendary item to make legendary gear for mage, marksman, and the classes", "legendary and divine gear digs should have like a glow or aura to it", and for the tasting book "every new fish you find you can cook it for a very small perm fishing buff ... it can unlcok dishes taht are temp big buff but require ingredients and expensive".
+Round 2 review (2026-11-03, verbatim):
 
-Read on `game/fish-list` (cut from `game/fishing-depth`, so it has round 5's whole seasons). Every number below is computed from the code on this branch (`fishPoolFor`, `rig`, the roster), not estimated, except the new fish, which are estimated by adding them to the same pools.
+- Approved: fl-classparts, fl-models. fl-rods: "the mathing of it looks pretty good". fl-roster: "idk you figure it out it looks pretty good". fl-new: "fill it and fix it". fl-questions: "all rods will have slightly different stats even if both in uncommon". fl-creatures: "L2 should be megladon with electricty aura and tech stuff like a robot megladon".
+- fl-today (redo): "i want like 10 common ish, 10 uncommon ish, 8 rare ish, 5 epic ish, 2 legendary so far for each biome, so brainstorm what should be added, this is roughly so could be more or less, like river and sea would have more fish obviously but also have more common and rare type, but deep sea and cliff pool will have higher epic leg ratio to common uncommon kinda thing.  also epic will have added like lil thing that you gotta do while you reel in. also the current reel in is laggy and not smooth and affecting user experience for fishing"
+- fl-gaps (redo): "fill it and fix it"
+- fl-materials (redo): "these drops are rarer for common fish and almost guarenteed for legendary or divine fish drops"
+- fl-odds (redo): "make it hard, cuz there will be a lot of stuff giving luck boost like sushi and bobber so dont make it too easy"
 
-## 1. What exists today
+His approved picks on round 1's questions (fl-questions) stand: letting a fish go is how it gives its material; cliff pools become their own water when the mountain opens (in the river until then); fish-made gear is a look at its tier's stats; the legendary rod is the Fallen Star rod; a MAX cast lands a slightly bigger fish; David sends references for the creatures and their cores, the rest go from text prompts; no named favourite fish for residents who dislike fish; the pond opens in the next fishing round.
 
-**The roster.** 91 rod catches (`lib/collections/roster.ts`: `FISH_ROWS`, `SEA_ROWS`, `EVENT_SPECIES`, `REEL_FISH`), every one with a reel entry in `lib/game/fishing.ts` `FISH` and a remodelled model (`art/remodel/build_fish.py`: 600 to 2,000 triangles, one material, one texture, a soft wet sheen).
+The laggy reel is the `fishing-depth` lane's fix, in parallel. The epic tasks (section 5) are built on top of its smooth reel, after it lands.
 
-| Water (roster biome) | Kinds | common | uncommon | rare | epic | legendary | Divine | Can you fish it today? |
-|---|---|---|---|---|---|---|---|---|
-| River | 30 (2 tourney only) | 8 | 10 | 5 | 7 | 0 | 0 | yes |
-| Cliff pool | 4 | 0 | 0 | 1 | 3 | 0 | 0 | no water of its own: they bite in the river (see findings) |
-| Pond | 13 | 5 | 6 | 1 | 1 | 0 | 0 | no: the pond is up the mountain, shut (David: "pond only in mountain") |
-| Sea | 44 (34 fish, 10 sea creatures; 1 tourney only) | 12 | 14 | 6 | 12 | 0 | 0 | yes |
-| Deep sea | 0 | | | | | | | no: the HUD's biome tag names it (fishing-depth r6), but no water rolls it yet; the boats are next launch (m7) |
+**What changed from round 1:**
+1. Every water now has about 10 common, 10 uncommon, 8 rare, 5 epic and 2 legendary (section 1): 70 more fish (62 fish and 8 creatures), river and sea biggest and heaviest on common and rare, cliff pools and the deep sea heaviest on epic and legendary. Every water has every rarity from common to epic in every season, by day and by night (checked by script).
+2. Megabyte is a robot megalodon with an electric aura (section 4).
+3. Every epic fish has a small task during its reel, from six shared kinds; legendaries chain two or three (section 5).
+4. Materials drop by the fish's rarity: 15% from a common, 95% from a legendary, 98% from a Divine, never two misses in a row on a creature (section 6).
+5. The odds are harder and no longer depend on how many fish a water has; luck boosts cap together, and the tables show each rod alone and with a full stack (section 7).
+6. Every rod has its own stat profile, even within a rarity (section 8).
+7. Fixes: the Electric Eel moves to the cliff pools; 7 sea epics move to the deep sea (they stay in the sea until it opens); named gifts only for residents who like fish or sea creatures (section 2).
 
-**How a cast picks a fish** (`fishPoolFor` in `lib/game/peaceful.ts`, rolled on the server in `lib/collections/rolls.ts` `fishRoll`):
+## 1. Per biome: the counts and the new fish
 
-1. **Who's out:** the water's species that bite now. Season (whole seasons since round 5: spring Mar to May, summer Jun to Aug, autumn Sep to Nov, winter Dec to Feb), the Toronto hour, the island's weather (the reel only knows sunny, cloudy and rain: snow and fog count as cloudy), and the tourney window for the 3 event fish.
-2. **The rod's cap** (`hookCap`, `lib/game/rods.ts`): a rod hooks one rung above its own rarity. Flimsy (common, the starter) hooks up to uncommon; Cedar (uncommon, shop) up to rare; Glass (rare, shop) and Lighthouse (rare, crafted) up to epic; Tidewarden (epic, crafted) up to legendary. A legendary rod would hook Divine; none exists.
-3. **Weights:** common 100, uncommon 48, rare 18, epic 7, legendary 2.5, Divine 0.4 (`RARITY_META`). Rare and up are multiplied by (1 + luck). The Golden Koi counts double in rain.
-4. **Luck:** cast power (0 to 1) plus 0.3 on a MAX cast, plus the rod's luck (0.04 per 10 luck over 10: Cedar 0.08, Glass 0.12, Lighthouse 0.16, Tidewarden 0.24), the Lucky bobber 0.08, rain 0.1, a sushi meal 0.05 to 0.35, fishing together 0.1. Sweet bait changes the bite window and the wait, not the odds.
+Coins by rarity, unchanged (`SELL_PRICES`): common 8, uncommon 20, rare 60, epic 180, legendary 600, Divine 1500 (a creature is let go, so a legendary or Divine catch sells its core).
 
-**The rarity bands per rod** (share of casts by rarity, averaged over the year's seasons and hours in fair weather):
+| Water | common | uncommon | rare | epic | legendary | Divine | All | Epic and up | New this round |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| River | 13 | 12 | 11 | 8 | 2 |  | 46 | 22% | 10 |
+| Cliff pools | 6 | 6 | 6 | 6 | 2 |  | 26 | 31% | 18 |
+| Pond | 10 | 10 | 8 | 5 | 2 |  | 35 | 20% | 17 |
+| Sea | 16 | 16 | 11 | 7 | 2 | 1 | 53 | 19% | 10 |
+| Deep sea | 6 | 6 | 6 | 8 | 4 | 1 | 31 | 42% | 15 |
 
-| Water | Gear and cast | common | uncommon | rare | epic |
-|---|---|---|---|---|---|
-| River | Flimsy (any cast) | 68.8% | 31.2% | 0 | 0 |
-| River | Cedar, plain cast | 63.0% | 28.5% | 8.5% | 0 |
-| River | Cedar, MAX cast | 57.2% | 25.8% | 17.0% | 0 |
-| River | Glass, plain cast | 61.3% | 27.4% | 8.6% | 2.7% |
-| River | Glass, MAX cast | 54.5% | 24.1% | 16.3% | 5.1% |
-| River | Tidewarden, MAX cast | 54.0% | 23.8% | 17.0% | 5.2% |
-| River | Tidewarden + Lucky bobber, MAX cast | 53.6% | 23.6% | 17.4% | 5.4% |
-| Pond | Flimsy (any cast) | 34.2% | 65.8% | 0 | 0 |
-| Pond | Cedar, MAX cast | 33.5% | 63.9% | 2.6% | 0 |
-| Pond | Glass, MAX cast | 32.4% | 61.0% | 2.5% | 4.1% |
-| Pond | Tidewarden + Lucky bobber, MAX cast | 32.3% | 60.6% | 2.7% | 4.4% |
-| Sea | Flimsy (any cast) | 70.6% | 29.4% | 0 | 0 |
-| Sea | Cedar, plain cast | 68.4% | 28.4% | 3.2% | 0 |
-| Sea | Cedar, MAX cast | 65.9% | 27.3% | 6.8% | 0 |
-| Sea | Glass, plain cast | 66.8% | 27.7% | 3.3% | 2.2% |
-| Sea | Glass, MAX cast | 62.9% | 26.1% | 6.6% | 4.4% |
-| Sea | Tidewarden + Lucky bobber, MAX cast | 62.3% | 25.9% | 7.1% | 4.8% |
+River and sea are the biggest and lean on common and rare; the deep sea and the cliff pools carry the most epic and legendary for their size, and their odds lean that way too (section 7). The river keeps 8 epics because 7 bite there today; the sea's 16 uncommon are today's 14 plus round 1's two winter fish. The counts include the 3 tourney fish (Yellow Perch, Sturgeon, Giant Trevally), which bite only while a tourney is open.
 
-Rain adds 0.1 luck on top (a few tenths of a point more rare and epic). A meal or a friend beside you adds the same kind of nudge.
+**The new fish, by name:**
 
-**What a fish is for today:**
-- **Sell:** `SELL_PRICES` fish and sea rows (`lib/wallet/catalogue.ts`): 8, 20, 60, 180 coins common to epic (legendary 600, Divine 1500, unused). No species has its own price.
-- **Museum:** the first of each kind can be donated to the aquarium wing.
-- **The tasting book** (on `game/tasting-book`, not merged): cook a species at Bancha's counter for its stamp, or give it to HQ's club tank. Round 2 there adds David's "very small perm fishing buff" per first cook and the dishes it unlocks.
-- **Work:** the daily fish requests and weekly tasks (pay 2 times the sell price, you keep the fish), the chef's order (3 times, he takes it), Bancha's feast (cooked from your own epic), size records and the club board.
-- **Main quest:** Juno takes your first catch for the halls (m1).
-- **Recipes** (`lib/crafting/recipes.ts`), the whole fish as an ingredient: Black Bass and Pearl Oyster (Lighthouse rod), Tuna and Giant Isopod (Tidewarden rod), Golden Koi (Koi kimono), Football Fish (Rune staff). Nothing else.
-- **Gifts** (`RESIDENT_GIFTS`): by category only. Fish: loved by Juno and Bram, liked by Toren and Odile, hated by Sable and Nell. Sea creatures: liked by Odile, Bram, Pim and Juniper, hated by Mayor Eliza and Marlo. No fish is named.
+- **River.** New this round: common: Common Shiner, Brook Stickleback, White Sucker, Rock Bass; rare: Lake Trout, Brown Trout, Bowfin, American Eel, Paddlefish; legendary: Namazu. From round 1: common: Lake Whitefish; uncommon: Burbot, Brook Trout; rare: Walleye; epic: Muskellunge; legendary: Imugi.
+- **Cliff pools.** New this round: common: Cave Shrimp, Fathead Minnow, Alpine Newt, Stone Loach, Pearl Dace; uncommon: Arctic Grayling, Cutthroat Trout, Freshwater Mussel, Glass Catfish, Kokanee; rare: Black Ghost Knifefish, Golden Mahseer, Geode Clam, Hillstream Loach; epic: Taimen, Olm; legendary: Raiju, Hanzaki. From round 1: common: Sculpin; uncommon: Blind Cavefish; rare: Crystal Crayfish. Moved in: Electric Eel.
+- **Pond.** New this round: common: Weather Loach, Golden Shiner, Pond Snail; uncommon: Medaka, Paradise Fish, Black Crappie, Painted Turtle; rare: Butterfly Koi, Bullfrog, Brown Bullhead, Eastern Newt, Oranda Goldfish, Tench; epic: Platinum Koi, Tancho Koi, Giant Gourami; legendary: Dragon Gate Koi. From round 1: common: Pumpkinseed, Mudminnow; rare: Axolotl; epic: Mossback Turtle; legendary: Ness.
+- **Sea.** New this round: common: Blue Mussel, Sardine, Sand Dollar; rare: Octopus, Spiny Lobster, Yellowtail, Cuttlefish, Halibut, Sea Urchin; legendary: Umibozu. From round 1: common: Herring; uncommon: Lumpfish, Snowflake Eel; epic: Black-lip Oyster, Sailfish; legendary: Megabyte; Divine: Longwang, the Dragon King.
+- **Deep sea.** New this round: common: Bristlemouth, Hagfish, Glass Squid, Ruby Shrimp; uncommon: Sea Pig, Chimaera, Blobfish, Yeti Crab; rare: Fangtooth, Viperfish, Spider Crab, Dragonfish; legendary: Charybdis, Bakunawa, Lyngbakr. From round 1: common: Lanternfish, Hatchetfish; uncommon: Dumbo Octopus, Gulper Eel; rare: Vampire Squid; epic: Giant Squid; legendary: Kraken; Divine: Leviathan. Moved in: Football Fish, Barreleye, Giant Isopod, Oarfish, Coelacanth, Blue Marlin, Whale Shark, Saw Shark.
 
-**Findings while reading** (for the coordinator, none fixed here):
-1. **The starter rod can't feel a MAX cast.** Cast luck only lifts rare and up, and the Flimsy rod hooks only common and uncommon, so a MAX cast changes nothing for a new player.
-2. **The rod's luck stat barely moves the odds.** Glass to Tidewarden at a MAX cast moves the river's epic share from 5.1% to 5.2%: the cast's 1.3 dwarfs the rod's 0.12 to 0.24. What a better rod really changes is the cap (which rarities can bite). That is rod-gear's call; it matters for the hex radar's honesty.
-3. **Cliff pool fish already bite in the river** (`fishPoolFor` sends every non-pond fish to the river), while the tasting book's Cliff pools page says "Opens later". One of the two should change.
-4. **The pond is shut, so 13 fish can't be caught,** among them the Golden Koi, which the Koi kimono recipe needs, and the Snapping Turtle.
-5. **No fish is legendary or Divine** (by design: the boss reel and the raid are behind `NEXT_PUBLIC_FISH_BOSSES`). Divine also needs a legendary rod, and there isn't one.
-6. `fishing.ts`'s header still says "Legendary is deliberately tight (7)": stale since the re-tier.
+Plus the Tide-rusted Gear (round 1): salvage, not a fish, uncommon, in any water (a sudo part later; the lore's fishing part family).
+
+**Gaps fixed** (round 1's list, then the ones the new counts would have opened):
+
+| Where it was thin | Filled by |
+|---|---|
+| River in winter, by day: no uncommon or epic | Burbot (now any hour), Brook Trout (winter and spring), Lake Trout, Muskellunge (spring, autumn and winter) |
+| River in spring, by day: no epic | Muskellunge now bites in spring too |
+| River at dusk | Walleye (17 to 21) |
+| River's rare band: 5 kinds | Lake Trout, Brown Trout, Bowfin, American Eel, Paddlefish (11 rare) |
+| Pond: shut, 1 rare, no common in autumn | 17 new kinds, among them a koi set (Golden, Platinum, Tancho, then the Dragon Gate Koi); opens in the next fishing round (David's pick) |
+| Cliff pools: 4 kinds, no common or uncommon | 6 of every band, all new except Char, Gar, Golden Trout and Stringfish; the hull breach is the excuse for the odd ones (crystal, electric, blind) |
+| Sea: 12 epics, rare band thin | 7 epics move to the deep sea; 6 new rares (Octopus, Spiny Lobster, Yellowtail, Cuttlefish, Halibut, Sea Urchin) |
+| Deep sea: nothing | 30 kinds and the Leviathan |
+| Weather: snow and fog never mattered | Snowflake Eel (snow), Umibozu (cloud, fog or snow), Bakunawa and the Dragon Gate Koi (clear sky), Weather Loach (rain) |
+| Legendary and Divine: none | 12 legendary (3 per class family) and 2 Divine |
+
+**The check:** for every water, season, day (06 to 18) and night (18 to 06), at least one common, uncommon, rare and epic fish bites in fair weather. No gaps.
 
 ## 2. The rules every fish follows
 
-1. **A reason beyond coins.** Every fish already has four: the museum, the tasting book, HQ's tank and the fishing tasks. This list adds a fifth to almost every one: a crafting material (section 5), and for some a resident who loves it by name or a dish.
-2. **Fits the island.** Ontario seasons, the river, the mountain pond, the sea off the wharf, the deep sea past it. Legendary and Divine are the creatures of legend David asked for ("sea monsters and stuff thats like building level", "divine is like actually crazy big models and is like server size fight"), with the tech skin he wants and the lore allows (the island's monsters are feral hardware the sea grew over). No real names; item text never explains the war or quotes the Founder.
-3. **Uses what's there.** The one rarity ladder, the roster's `months`, `hours` and `weather`, `SELL_PRICES`, `RESIDENT_GIFTS` keys, rows in `recipes.ts`.
-4. **Hard at the top.** Legendary and Divine get a fixed, small chance per cast (section 7), the way the treasure page set its legendary at about 1 in 600.
+1. **A reason beyond coins.** Every fish has the museum, the tasting book, HQ's tank and the fishing tasks; almost every one also leaves a crafting material when let go (section 6), and some are a dish, a recipe or a resident's favourite.
+2. **Fits the island.** Ontario seasons; the river, the mountain pond, the cliff pools by the hull breach, the sea off the wharf, the deep sea past it. Legendary and Divine are the creatures of legend, with the tech skin the lore allows (feral hardware the sea grew over; nobody inside them). No real names; item text never explains the war or quotes the Founder.
+3. **Uses what's there.** The one rarity ladder, the roster's seasons, hours and weather, `SELL_PRICES`, `RESIDENT_GIFTS` keys, rows in `recipes.ts`.
+4. **Hard at the top** (section 7).
+5. **Named gifts only where they fit** (David: no named favourites for residents who dislike fish). Fish: Juno and Bram love them, Toren and Odile like them; sea creatures: Odile, Bram, Pim and Juniper like them. Round 1's named gifts for Nell, Sable, Mayor Eliza and Marlo are gone (the Coelacanth goes to Juno, the Dumbo Octopus to Juniper).
 
-## 3. The roster (all 91)
+## 3. The roster, water by water
 
-**Columns.** *Hours* are island time, start to end, wrapping past midnight. *Starter*: the chance per cast in its water while it's out, fair weather, Flimsy rod ("no": the starter can't hook it). *First rod*: the first rod that hooks it, on a MAX cast (Cedar for rare, Glass for epic). *Best*: Tidewarden with the Lucky bobber on a MAX cast (bait doesn't change odds). Common and uncommon fish lose a little share as the rarer ones join the pool. *Coins*: the sell price. *Purpose (new)*: the material it leaves when released (section 5), plus G (a resident who would love it by name), R (a recipe that uses it today), dish (a dish ingredient candidate for the tasting book's round 2). Every fish also has the museum, the tasting book stamp, HQ's tank and the fishing tasks, not repeated per row. Cliff pool fish are listed as cliff pools but roll in the river today.
+**Columns.** *Hours* are island time (the Toronto hour), start to end, wrapping past midnight. *Status*: blank is today's fish, **new** is new this round, *new (r1)* came in round 1, *from the sea* moves to the deep sea when it opens (until then it stays in the sea). *Let it go*: the material it may leave (section 6). *Reel task*: epic fish only (section 5); legendaries list their boss reel. *First rod %*: the chance per cast while it's out, with the first rod that hooks it and nothing else (Flimsy for common and uncommon, Cedar for rare, Glass for epic, Tidewarden for legendary, Fallen Star for Divine), a plain cast, fair weather. *Full stack %*: with the Tidewarden (Fallen Star for Divine), the Lucky bobber, a MAX cast and every boost (section 7). Common and uncommon fish lose a little share under a full stack, because the rarer ones take more. Rain-only and snow-only fish are computed in their weather. Legendary and Divine are per cast while their window holds. Every number is computed by the lane's script from this list and the proposed odds, averaged over the fish's seasons and hours.
 
-| Fish | Water | Seasons | Hours, weather | Rarity | Coins | Size cm | Starter % | First rod % | Best % | Purpose (new) |
-|---|---|---|---|---|---|---|---|---|---|---|
-| Dace | River | all year | any | common | 8 | 10-18 | 24.3 | - | 18.7 | Fish Scale |
-| Freshwater Goby | River | all year | 20-04 | common | 8 | 10-15 | 26.3 | - | 19.4 | Fish Scale |
-| Guppy | River | Sp Su Au | 06-18 | common | 8 | 3-5 | 14.7 | - | 11.9 | Fish Scale; G: Odile |
-| Loach | River | Sp | any | common | 8 | 12-20 | 24.1 | - | 18.1 | Fish Scale |
-| Neon Tetra | River | Sp Su Au | 06-18 | common | 8 | 3-4 | 14.7 | - | 11.9 | Fish Scale; G: Marlo |
-| Pale Chub | River | all year | 06-18 | common | 8 | 8-14 | 19.4 | - | 15.6 | Fish Scale |
-| Pond Smelt | River | Wi | any | common | 8 | 6-10 | 36.1 | - | 28.9 | Fish Scale; dish: fried smelt |
-| Yellow Perch | River | Au | any | common | 8 | 20-30 | 14.6 | - | 11.0 | Fish Scale; tourney catch |
-| Angelfish | River | Su Au | any | uncommon | 20 | 8-12 | 8.9 | - | 6.7 | Fin |
-| Betta | River | Su Au | 06-18 | uncommon | 20 | 6-8 | 6.5 | - | 5.3 | Fin; G: Juniper |
-| Doctor Fish | River | Su | any | uncommon | 20 | 15-25 | 9.5 | - | 7.3 | Fin |
-| Mitten Crab | River | Au | any | uncommon | 20 | 10-18 | 8.3 | - | 6.1 | Crab Shell; dish: hotpot; G: Pim |
-| Rainbow Trout | River | Sp Au | 05-19 | uncommon | 20 | 30-50 | 8.0 | - | 6.3 | Fin |
-| Salmon | River | Au | any | uncommon | 20 | 50-80 | 8.3 | - | 6.1 | Fin; dish: Salmon nigiri (menu) |
-| Soft-shelled Turtle | River | Su Au | any | uncommon | 20 | 20-35 | 8.9 | - | 6.7 | Crab Shell |
-| Sweetfish | River | Su | any | uncommon | 20 | 18-30 | 9.5 | - | 7.3 | Fin; dish: salt-grilled |
-| Tilapia | River | Su Au | any | uncommon | 20 | 25-40 | 8.9 | - | 6.7 | Fin |
-| Yamame Trout | River | Sp Au | any | uncommon | 20 | 20-35 | 9.9 | - | 7.4 | Fin |
-| Bichir | River | Su | 20-04 | rare | 60 | 40-70 | no | Cedar 8.1 | 7.5 | Armour Scale |
-| Black Bass | River | all year | any | rare | 60 | 30-55 | no | Cedar 8.6 | 8.8 | Fin (2); R: Lighthouse rod (today) |
-| Pike | River | Au | any | rare | 60 | 50-90 | no | Cedar 5.9 | 6.0 | Fang |
-| Piranha | River | Su | 06-18 | rare | 60 | 25-40 | no | Cedar 5.4 | 5.6 | Fang |
-| Snakehead | River | all year | 09-16 | rare | 60 | 40-90 | no | Cedar 6.7 | 7.1 | Fang |
-| Arapaima | River | Su | 16-09, rain any hour | epic | 180 | 150-300 | no | Glass 2.9 | 3.0 | Arapaima Scale (Guardian) |
-| Arowana | River | Su | 20-04 | epic | 180 | 60-90 | no | Glass 2.8 | 2.9 | Silver Scale (Illusionist) |
-| Catfish | River | all year | 20-04, rain any hour | epic | 180 | 50-110 | no | Glass 3.4 | 3.6 | Whisker (Shaman) |
-| Dorado | River | Su | 06-18 | epic | 180 | 70-100 | no | Glass 2.0 | 2.2 | Golden Scale |
-| Golden Arowana | River | Su | 20-04 | epic | 180 | 70-100 | no | Glass 2.8 | 2.9 | Golden Scale |
-| King Salmon | River | Au | any | epic | 180 | 70-120 | no | Glass 2.2 | 2.3 | Roe (dish ingredient); feast |
-| Sturgeon | River | Au | any | epic | 180 | 100-200 | no | Glass 1.9 | 2.0 | Ancient Bone (Necromancer); Roe; tourney catch |
-| Char | Cliff pool | Sp Au | any | rare | 60 | 40-60 | no | Cedar 7.1 | 7.3 | Armour Scale |
-| Gar | Cliff pool | Su | 16-09, rain any hour | epic | 180 | 90-150 | no | Glass 2.9 | 3.0 | Gar Fang (Assassin) |
-| Golden Trout | Cliff pool | Sp Au | any | epic | 180 | 40-60 | no | Glass 2.7 | 2.8 | Golden Scale |
-| Stringfish | Cliff pool | Wi | 21-04, rain any hour | epic | 180 | 80-130 | no | Glass 4.5 | 4.8 | Frost Fin (Elementalist) |
-| Bitterling | Pond | Wi | any | common | 8 | 5-10 | 28.4 | - | 26.9 | Fish Scale |
-| Crayfish | Pond | Sp Su | any | common | 8 | 5-12 | 18.2 | - | 17.0 | Shell Grit |
-| Frog | Pond | Su | any | common | 8 | 5-10 | 16.5 | - | 15.6 | none (book, tank); G: Nell |
-| Killifish | Pond | Sp Su | 06-20 | common | 8 | 3-5 | 16.4 | - | 15.9 | Fish Scale; G: Nell |
-| Tadpole | Pond | Sp Su | any | common | 8 | 3-5 | 18.2 | - | 17.0 | none (book, tank) |
-| Bluegill | Pond | all year | 09-16 | uncommon | 20 | 12-22 | 11.0 | - | 10.5 | Fin |
-| Carp | Pond | all year | any | uncommon | 20 | 35-70 | 12.5 | - | 11.5 | Fin |
-| Crucian Carp | Pond | all year | any | uncommon | 20 | 15-30 | 12.5 | - | 11.5 | Fin |
-| Goldfish | Pond | all year | any | uncommon | 20 | 8-15 | 12.5 | - | 11.5 | Fin; G: Mayor Eliza |
-| Pop-eyed Goldfish | Pond | all year | any | uncommon | 20 | 8-12 | 12.5 | - | 11.5 | Fin |
-| Ranchu Goldfish | Pond | all year | any | uncommon | 20 | 10-15 | 12.5 | - | 11.5 | Fin |
-| Snapping Turtle | Pond | Sp Su Au | 20-04 | rare | 60 | 20-35 | no | Cedar 10.5 | 10.9 | Turtle Shell |
-| Golden Koi | Pond | all year | any | epic | 180 | 60-95 | no | Glass 4.1 | 4.4 | Golden Scale; R: Koi kimono (today); G: Mayor Eliza |
-| Acorn Barnacle | Sea | all year | any | common | 8 | 2-4 | 8.0 | - | 7.0 | Shell Grit |
-| Anchovy | Sea | all year | 06-18 | common | 8 | 10-15 | 7.8 | - | 7.0 | Fish Scale |
-| Clown Fish | Sea | Sp Su | any | common | 8 | 8-12 | 7.1 | - | 6.2 | Fish Scale; G: Bram |
-| Dab | Sea | Sp Au Wi | any | common | 8 | 25-45 | 8.3 | - | 7.4 | Fish Scale |
-| Horse Mackerel | Sea | all year | any | common | 8 | 20-40 | 8.0 | - | 7.0 | Fish Scale |
-| Scallop | Sea | all year | any | common | 8 | 8-14 | 8.0 | - | 7.0 | Shell Grit; dish: scallop |
-| Sea Bass | Sea | all year | any | common | 8 | 50-90 | 8.0 | - | 7.0 | Fish Scale |
-| Sea Butterfly | Sea | Wi | any | common | 8 | 2-4 | 9.0 | - | 7.8 | Shell Grit |
-| Sea Star | Sea | all year | any | common | 8 | 8-15 | 8.0 | - | 7.0 | Shell Grit |
-| Squid | Sea | Sp Su Wi | any | common | 8 | 20-40 | 7.7 | - | 6.8 | Squid Ink; dish: grilled squid |
-| Surgeonfish | Sea | Sp Su | any | common | 8 | 15-25 | 7.1 | - | 6.2 | Fish Scale |
-| Sweet Shrimp | Sea | all year | 16-09 | common | 8 | 5-9 | 7.9 | - | 6.9 | Shell Grit; dish: Omakase |
-| Barred Knifejaw | Sea | Sp Su Au | any | uncommon | 20 | 30-50 | 3.7 | - | 3.2 | Fin |
-| Blowfish | Sea | Wi | 20-04 | uncommon | 20 | 20-40 | 4.2 | - | 3.5 | Spine |
-| Butterfly Fish | Sea | Sp Su | any | uncommon | 20 | 10-15 | 3.4 | - | 3.0 | Fin |
-| Dungeness Crab | Sea | all year | any | uncommon | 20 | 15-25 | 3.8 | - | 3.4 | Crab Shell |
-| Firefly Squid | Sea | all year | 21-04 | uncommon | 20 | 5-8 | 3.8 | - | 3.3 | Glow Ink; G: Marlo |
-| Garden Eel | Sea | all year | 06-18 | uncommon | 20 | 30-40 | 3.7 | - | 3.4 | Eel Skin |
-| Moray Eel | Sea | Au | any | uncommon | 20 | 60-100 | 4.2 | - | 3.8 | Eel Skin |
-| Olive Flounder | Sea | all year | any | uncommon | 20 | 40-80 | 3.8 | - | 3.4 | Fin |
-| Porcupine Fish | Sea | Su | any | uncommon | 20 | 20-35 | 3.3 | - | 2.9 | Spine |
-| Red Snapper | Sea | all year | any | uncommon | 20 | 30-60 | 3.8 | - | 3.4 | Fin; dish: snapper rice |
-| Ribbon Eel | Sea | Su Au | any | uncommon | 20 | 60-100 | 3.8 | - | 3.3 | Eel Skin |
-| Seahorse | Sea | Sp Su Au | any | uncommon | 20 | 3-6 | 3.7 | - | 3.2 | Fin; G: Juniper |
-| Suckerfish | Sea | Su | any | uncommon | 20 | 30-60 | 3.3 | - | 2.9 | Fin |
-| Zebra Turkeyfish | Sea | Sp Su Au | any | uncommon | 20 | 25-40 | 3.7 | - | 3.2 | Spine |
-| Abalone | Sea | all year | 16-09 | rare | 60 | 12-20 | no | Cedar 3.1 | 3.3 | Nacre |
-| Football Fish | Sea | Wi | 20-04 | rare | 60 | 30-60 | no | Cedar 3.4 | 3.4 | Lantern Lure; R: Rune staff (today) |
-| Giant Trevally | Sea | Au | any | rare | 60 | 80-150 | no | Cedar 3.4 | 3.6 | Armour Scale; tourney catch |
-| Mahi-mahi | Sea | Su | any | rare | 60 | 80-140 | no | Cedar 2.8 | 2.8 | Fin (2); dish: grilled mahi |
-| Pearl Oyster | Sea | all year | any | rare | 60 | 7-12 | no | Cedar 3.2 | 3.3 | Pearl; R: Lighthouse rod (today) |
-| Ray | Sea | Au | 06-18 | rare | 60 | 100-200 | no | Cedar 3.4 | 3.6 | Ray Leather |
-| Barreleye | Sea | all year | 20-04 | epic | 180 | 10-15 | no | Glass 1.2 | 1.3 | Barreleye Lens (Sniper) |
-| Blue Marlin | Sea | all year | any | epic | 180 | 200-350 | no | Glass 1.2 | 1.3 | Marlin Bill (Marksman) |
-| Coelacanth | Sea | all year | 20-04, rain only | epic | 180 | 120-180 | no | Glass 1.2 | 1.3 | Ancient Bone (Necromancer); G: Sable |
-| Giant Isopod | Sea | all year | 20-04 | epic | 180 | 20-40 | no | Glass 1.2 | 1.3 | Isopod Plate (Guardian); R: Tidewarden rod (today) |
-| Great White Shark | Sea | Su | any | epic | 180 | 300-500 | no | Glass 1.0 | 1.1 | Great White Tooth (Transmuter) |
-| Hammerhead Shark | Sea | Su | any | epic | 180 | 180-350 | no | Glass 1.0 | 1.1 | Hammer Crest (Juggernaut) |
-| Napoleonfish | Sea | Su | 06-18 | epic | 180 | 100-180 | no | Glass 1.0 | 1.1 | dish: Bancha's feast |
-| Oarfish | Sea | Sp Wi | any | epic | 180 | 300-500 | no | Glass 1.2 | 1.3 | Oar Ribbon (Illusionist) |
-| Ocean Sunfish | Sea | Su | any | epic | 180 | 150-300 | no | Glass 1.0 | 1.1 | Sun Scale (Priest) |
-| Saw Shark | Sea | Su | 20-04 | epic | 180 | 120-200 | no | Glass 1.0 | 1.1 | Saw Rostrum (Hunter) |
-| Tuna | Sea | Sp Wi | any | epic | 180 | 150-250 | no | Glass 1.2 | 1.3 | dish: Tuna roll (menu); R: Tidewarden rod (today); G: Toren |
-| Whale Shark | Sea | Su | any | epic | 180 | 400-800 | no | Glass 1.0 | 1.1 | Whale Shark Hide (Martial Artist) |
+### River
 
-Tourney fish (Yellow Perch, Sturgeon, Giant Trevally) are shown with the tourney open; outside it they never bite. The Coelacanth is shown in rain, the only weather it bites in.
+| Fish | Rarity | Seasons | Hours, weather | Status | Let it go | Also | Reel task | First rod % | Full stack % |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Dace | common | all year | any hour |  | Fish Scale |  |  | 15.5 | 12.5 |
+| Freshwater Goby | common | all year | 20-04 |  | Fish Scale |  |  | 17.8 | 14.4 |
+| Guppy | common | Sp Su Au | 06-18 |  | Fish Scale | gift: Odile |  | 10.0 | 8.1 |
+| Loach | common | Sp | any hour |  | Fish Scale |  |  | 11.8 | 9.5 |
+| Neon Tetra | common | Sp Su Au | 06-18 |  | Fish Scale |  |  | 10.0 | 8.1 |
+| Pale Chub | common | all year | 06-18 |  | Fish Scale |  |  | 10.9 | 8.8 |
+| Pond Smelt | common | Wi | any hour |  | Fish Scale | dish: fried smelt |  | 16.5 | 13.3 |
+| Yellow Perch | common | Au | any hour |  | Fish Scale | tourney only |  | 14.5 | 11.7 |
+| Lake Whitefish | common | Wi | any hour | new (r1) | Fish Scale | dish: smoked whitefish |  | 16.5 | 13.3 |
+| Common Shiner | common | all year | 06-18 | **new** | Fish Scale |  |  | 10.9 | 8.8 |
+| Brook Stickleback | common | Sp Su | any hour | **new** | Fish Scale |  |  | 13.1 | 10.6 |
+| White Sucker | common | Sp | any hour | **new** | Fish Scale | the spring run |  | 11.8 | 9.5 |
+| Rock Bass | common | Su Au | any hour | **new** | Fish Scale |  |  | 16.8 | 13.6 |
+| Angelfish | uncommon | Su Au | any hour |  | Fin |  |  | 5.1 | 4.1 |
+| Betta | uncommon | Su Au | 06-18 |  | Fin | gift: Juniper |  | 4.5 | 3.7 |
+| Doctor Fish | uncommon | Su | any hour |  | Fin |  |  | 5.7 | 4.6 |
+| Mitten Crab | uncommon | Au | any hour |  | Crab Shell | dish: hotpot; gift: Pim |  | 4.5 | 3.6 |
+| Rainbow Trout | uncommon | Sp Au | 05-19 |  | Fin |  |  | 7.2 | 5.8 |
+| Salmon | uncommon | Au | any hour |  | Fin | dish: salmon nigiri (menu) |  | 4.5 | 3.6 |
+| Soft-shelled Turtle | uncommon | Su Au | any hour |  | Crab Shell |  |  | 5.1 | 4.1 |
+| Sweetfish | uncommon | Su | any hour |  | Fin | dish: salt-grilled |  | 5.7 | 4.6 |
+| Tilapia | uncommon | Su Au | any hour |  | Fin |  |  | 5.1 | 4.1 |
+| Yamame Trout | uncommon | Sp Au | any hour |  | Fin |  |  | 11.7 | 9.5 |
+| Burbot | uncommon | Wi | any hour | new (r1) | Fin | dish: stew |  | 22.0 | 17.8 |
+| Brook Trout | uncommon | Wi Sp | 05-19 | new (r1) | Fin |  |  | 13.0 | 10.5 |
+| Bichir | rare | Su | 20-04 |  | Armour Scale |  |  | 2.1 | 4.0 |
+| Black Bass | rare | all year | any hour |  | Fin x2 | recipe: Lighthouse rod |  | 3.1 | 5.9 |
+| Pike | rare | Au | any hour |  | Fang |  |  | 2.8 | 5.1 |
+| Piranha | rare | Su | 06-18 |  | Fang |  |  | 3.4 | 6.4 |
+| Snakehead | rare | all year | 09-16 |  | Fang |  |  | 2.7 | 4.9 |
+| Walleye | rare | Au Wi | 17-21 | new (r1) | Fang | gift: Toren |  | 2.5 | 5.0 |
+| Lake Trout | rare | Wi Sp | any hour | **new** | Fin x2 |  |  | 2.9 | 5.7 |
+| Brown Trout | rare | Sp Au | 18-06 | **new** | Fin x2 |  |  | 2.2 | 4.2 |
+| Bowfin | rare | Su | 20-04 | **new** | Armour Scale |  |  | 2.1 | 4.0 |
+| American Eel | rare | Su Au | 20-04, any hour in rain | **new** | Eel Skin x2 |  |  | 2.1 | 3.9 |
+| Paddlefish | rare | Sp | any hour | **new** | Ray Leather |  |  | 2.3 | 4.4 |
+| Arapaima | epic | Su | 16-09, any hour in rain |  | Arapaima Scale |  | Leap | 1.1 | 1.7 |
+| Arowana | epic | Su | 20-04 |  | Silver Scale |  | Leap | 0.54 | 0.87 |
+| Catfish | epic | all year | 20-04, any hour in rain |  | Whisker |  | Snag | 1.5 | 2.4 |
+| Dorado | epic | Su | 06-18 |  | Golden Scale |  | Leap | 1.7 | 2.7 |
+| Golden Arowana | epic | Su | 20-04 |  | Golden Scale |  | Snag | 0.54 | 0.87 |
+| King Salmon | epic | Au | any hour |  | Roe | feast | Run | 1.3 | 2.0 |
+| Sturgeon | epic | Au | any hour |  | Ancient Bone | Roe too; tourney only; gift: Juno | Run | 0.77 | 1.3 |
+| Muskellunge | epic | Sp Au Wi | 06-18 | new (r1) | Muskie Fang |  | Snag | 1.8 | 2.9 |
+| Imugi | legendary | Su | 20-04, rain only | new (r1) | Imugi's Pearl | Arcane core | Snag, Dark | 1 in 2,281 | 1 in 1,680 |
+| Namazu | legendary | Wi Sp | 20-04 | **new** | Namazu Keystone | Vanguard core | Run, Pry | 1 in 2,281 | 1 in 1,680 |
 
-## 4. The gaps
+### Cliff pools
 
-| Where it's thin | Today | Filled by (section 6) |
-|---|---|---|
-| River in winter, by day | 5 kinds: 3 common, 2 rare; no uncommon, no epic | Lake Whitefish, Muskellunge (day); Burbot (night) |
-| River at dusk | every window is day, night, midday or any | Walleye (17:00 to 21:00) |
-| Pond, all of it | 13 kinds, shut; 1 rare (night only), no common in autumn | Pumpkinseed, Mudminnow, Axolotl, Mossback Turtle, and Ness |
-| Cliff pools | 4 kinds, no common or uncommon, no water of their own | Sculpin, Blind Cavefish, Crystal Crayfish (and a decision: own water or part of the river) |
-| Sea in autumn, by day | 1 epic (Blue Marlin) | Sailfish |
-| Sea in winter | 4 uncommon | Lumpfish, Snowflake Eel, Herring |
-| Deep sea | nothing | 6 new kinds, 4 moved from the sea, and the Kraken and Leviathan |
-| Weather | rain matters for 5 fish; snow and fog never do | Axolotl (rain), Snowflake Eel (snow, needs the reel to know snow), the legendaries' storms |
-| Legendary and Divine | none | 4 legendary (one per class family) and 2 Divine |
-| Class materials | none; 6 whole-fish recipe ingredients | the materials below, every subclass covered |
+Their own water when the mountain opens (David's pick); until then these fish bite in the river, as today's four do.
 
-## 5. Crafting materials: what fish give
+| Fish | Rarity | Seasons | Hours, weather | Status | Let it go | Also | Reel task | First rod % | Full stack % |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Sculpin | common | all year | any hour | new (r1) | Fish Scale |  |  | 16.5 | 10.9 |
+| Cave Shrimp | common | all year | any hour | **new** | Shell Grit |  |  | 16.5 | 10.9 |
+| Fathead Minnow | common | Sp Su Au | 06-18 | **new** | Fish Scale |  |  | 14.8 | 9.8 |
+| Alpine Newt | common | Sp Su Au | any hour | **new** | Fish Scale |  |  | 15.6 | 10.3 |
+| Stone Loach | common | all year | 20-04 | **new** | Fish Scale |  |  | 15.1 | 9.9 |
+| Pearl Dace | common | Wi Sp | any hour | **new** | Fish Scale |  |  | 16.3 | 10.7 |
+| Blind Cavefish | uncommon | all year | 20-04 | new (r1) | Fin |  |  | 10.7 | 7.0 |
+| Arctic Grayling | uncommon | Su Au | 06-18 | **new** | Fin |  |  | 9.1 | 6.0 |
+| Cutthroat Trout | uncommon | Sp Su | any hour | **new** | Fin |  |  | 13.0 | 8.5 |
+| Freshwater Mussel | uncommon | all year | any hour | **new** | Shell Grit x2 |  |  | 13.0 | 8.5 |
+| Glass Catfish | uncommon | Su Au | any hour | **new** | Fin |  |  | 9.7 | 6.4 |
+| Kokanee | uncommon | Au Wi | any hour | **new** | Fin | dish: smoked kokanee |  | 13.0 | 8.5 |
+| Char | rare | Sp Au | any hour |  | Armour Scale |  |  | 5.1 | 9.6 |
+| Crystal Crayfish | rare | Wi | any hour | new (r1) | Crystal Carapace |  |  | 10.6 | 19.8 |
+| Black Ghost Knifefish | rare | all year | 20-04 | **new** | Fin x2 |  |  | 4.8 | 8.9 |
+| Golden Mahseer | rare | Su | any hour | **new** | Armour Scale |  |  | 4.6 | 9.6 |
+| Geode Clam | rare | Sp Su Au | any hour | **new** | Crystal Carapace |  |  | 5.0 | 9.6 |
+| Hillstream Loach | rare | Sp Su | 06-18 | **new** | Fin x2 |  |  | 4.3 | 8.9 |
+| Gar | epic | Su | 16-09, any hour in rain |  | Gar Fang |  | Snag | 4.4 | 7.1 |
+| Golden Trout | epic | Sp Au | any hour |  | Golden Scale | gift: Juno | Leap | 4.1 | 6.6 |
+| Stringfish | epic | Wi | 21-04, any hour in rain |  | Frost Fin |  | Run | 2.1 | 3.5 |
+| Electric Eel | epic | Su | 20-04, any hour in rain | new (r1), from the river | Storm Coil | moved from the river (round 1) | Spark | 2.1 | 3.5 |
+| Taimen | epic | Wi Sp | any hour | **new** | Frost Fin |  | Run | 4.0 | 6.4 |
+| Olm | epic | all year | 20-04 | **new** | Ancient Bone |  | Dark | 2.4 | 4.0 |
+| Raiju | legendary | Su | any hour, rain only | **new** | Raiju Capacitor | Arcane core | Spark, Spark, Leap | 1 in 1,095 | 1 in 806 |
+| Hanzaki | legendary | Au Wi | 20-04 | **new** | Hanzaki Hide | Vanguard core | Pry, Snag | 1 in 1,095 | 1 in 806 |
 
-**How a fish gives one: let it go.** The catch card gets a third choice beside keep and sell: *Let it go*. The fish swims off and leaves its material behind (a shed scale, a fin, a squirt of ink, a tooth: sharks really do shed teeth). Nothing gets filleted, it stays cozy, and releasing becomes a real choice. Common and uncommon fish leave 1, rare and epic 1 (or 2 where the table says so). The first catch of a species still goes to the book and the museum as today. A legendary or Divine catch is always let go (it's the size of a building) and always leaves its core.
+### Pond
 
-**The materials:**
+Up the mountain; opens in the next fishing round (David's pick).
 
-| Material | Rarity | From | Used for |
-|---|---|---|---|
-| Fish Scale | common | most common fish | rod grips, every Guardian shield's facing, fishing outfit trims |
-| Shell Grit | common | Scallop, Sweet Shrimp, Sea Star, Acorn Barnacle, Crayfish, Sea Butterfly | the polish in every crafted rod; shell housings for sudos later (lore: beachcombing) |
-| Squid Ink | common | Squid | Summoner seals, Illusionist cards, Necromancer pages (tiers 1 to 3 looks) |
-| Fin | uncommon | most uncommon fish (2 from Black Bass, Mahi-mahi) | Marksman fletching, Hunter bolt vanes, Shaman totem feathers |
-| Crab Shell | uncommon | Dungeness Crab, Mitten Crab, Soft-shelled Turtle | Juggernaut and Guardian plating |
-| Spine | uncommon | Blowfish, Porcupine Fish, Zebra Turkeyfish | Assassin kunai, Hunter barbs |
-| Eel Skin | uncommon | Ribbon Eel, Moray Eel, Garden Eel, Gulper Eel, Snowflake Eel | Martial Artist wraps, bow and holster leather |
-| Glow Ink | uncommon | Firefly Squid | Illusionist and Summoner glow; the lamps in place of a firefly |
-| Pearl | rare | Pearl Oyster | Gunslinger grips, Priest and Sniper settings |
-| Nacre | rare | Abalone | Illusionist card faces, staff inlays |
-| Fang | rare | Pike, Snakehead, Piranha, Walleye | Transmuter charms, Assassin and Hunter edges |
-| Armour Scale | rare | Bichir, Char, Giant Trevally | Juggernaut, Sniper stock |
-| Ray Leather | rare | Ray | Martial Artist wraps, Marksman grip |
-| Turtle Shell | rare | Snapping Turtle | Guardian shield |
-| Lantern Lure | rare | Football Fish | Shaman totem light, the Rune staff (today it takes the whole fish) |
-| Night Ink | rare | Vampire Squid (new) | Necromancer and Summoner, the rare look |
-| Axolotl Frill | rare | Axolotl (new) | Druid |
-| Crystal Carapace | rare | Crystal Crayfish (new) | Elementalist staffs (beside the treasure list's special crystals) |
-| Golden Scale | epic | Golden Koi, Golden Trout, Golden Arowana, Dorado | the gold trim on any epic-look piece of any class (the class sheet's T4 look is gold trim) |
-| Roe | epic | King Salmon, Sturgeon | a dish ingredient only (the tasting book's big dishes) |
-| The epic parts | epic | one or two per subclass, below | the subclass's epic-look signature weapon |
-| The legendary cores | legendary | the 4 legendaries, below | the family's legendary-look gear, with the gold aura |
-| The Divine cores | Divine | the 2 Divines, below | a Divine piece, with the holographic aura |
+| Fish | Rarity | Seasons | Hours, weather | Status | Let it go | Also | Reel task | First rod % | Full stack % |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Bitterling | common | Wi | any hour |  | Fish Scale |  |  | 17.4 | 14.7 |
+| Crayfish | common | Sp Su | any hour |  | Shell Grit |  |  | 11.3 | 9.5 |
+| Frog | common | Su | any hour |  | none |  |  | 10.0 | 8.5 |
+| Killifish | common | Sp Su | 06-20 |  | Fish Scale |  |  | 10.2 | 8.7 |
+| Tadpole | common | Sp Su | any hour |  | none |  |  | 11.3 | 9.5 |
+| Pumpkinseed | common | Su Au | 06-18 | new (r1) | Fish Scale |  |  | 13.0 | 11.0 |
+| Mudminnow | common | Wi | any hour | new (r1) | Fish Scale |  |  | 17.4 | 14.7 |
+| Weather Loach | common | all year | any hour, x3 in rain | **new** | Fish Scale | bites 3 times as often in rain |  | 15.1 | 12.7 |
+| Golden Shiner | common | Sp Su Au | any hour | **new** | Fish Scale |  |  | 14.3 | 12.1 |
+| Pond Snail | common | all year | any hour | **new** | Shell Grit |  |  | 15.1 | 12.7 |
+| Bluegill | uncommon | all year | 09-16 |  | Fin |  |  | 4.0 | 3.4 |
+| Carp | uncommon | all year | any hour |  | Fin |  |  | 4.9 | 4.2 |
+| Crucian Carp | uncommon | all year | any hour |  | Fin |  |  | 4.9 | 4.2 |
+| Goldfish | uncommon | all year | any hour |  | Fin |  |  | 4.9 | 4.2 |
+| Pop-eyed Goldfish | uncommon | all year | any hour |  | Fin |  |  | 4.9 | 4.2 |
+| Ranchu Goldfish | uncommon | all year | any hour |  | Fin |  |  | 4.9 | 4.2 |
+| Medaka | uncommon | Sp Su | 06-18 | **new** | Fin |  |  | 4.0 | 3.4 |
+| Paradise Fish | uncommon | Su Au | any hour | **new** | Fin |  |  | 4.5 | 3.8 |
+| Black Crappie | uncommon | Sp Au Wi | 17-21 | **new** | Fin |  |  | 4.8 | 4.0 |
+| Painted Turtle | uncommon | Sp Su Au | 09-16 | **new** | Crab Shell |  |  | 3.7 | 3.1 |
+| Snapping Turtle | rare | Sp Su Au | 20-04 |  | Turtle Shell |  |  | 2.5 | 4.6 |
+| Axolotl | rare | Sp Au | any hour, rain only | new (r1) | Axolotl Frill | gift: Juniper |  | 1.7 | 3.2 |
+| Butterfly Koi | rare | all year | 06-18 | **new** | Fin x2 |  |  | 2.5 | 4.7 |
+| Bullfrog | rare | Su | 20-04 | **new** | none |  |  | 1.7 | 3.2 |
+| Brown Bullhead | rare | Su Au | 20-04 | **new** | Fin x2 |  |  | 2.0 | 3.7 |
+| Eastern Newt | rare | Sp Su Au | 06-18, any hour in rain | **new** | Axolotl Frill |  |  | 2.2 | 4.1 |
+| Oranda Goldfish | rare | all year | any hour | **new** | Fin x2 |  |  | 3.5 | 6.4 |
+| Tench | rare | Su Au | 04-09 | **new** | Fin x2 |  |  | 2.4 | 4.5 |
+| Golden Koi | epic | all year | any hour, x2 in rain |  | Golden Scale | recipe: Koi kimono | Leap | 0.88 | 1.4 |
+| Mossback Turtle | epic | Sp Su | 04-08 | new (r1) | Living Moss |  | Pry | 0.60 | 0.97 |
+| Platinum Koi | epic | Au Wi | 20-04 | **new** | Silver Scale |  | Dark | 0.67 | 1.1 |
+| Tancho Koi | epic | Wi Sp | 06-18 | **new** | Sun Scale |  | Snag | 0.78 | 1.3 |
+| Giant Gourami | epic | Su Au | any hour | **new** | Roe |  | Snag | 0.74 | 1.2 |
+| Ness | legendary | Wi Sp | 04-08 | new (r1) | Ness Scale | Warden core | Run, Dark | 1 in 2,281 | 1 in 1,680 |
+| Dragon Gate Koi | legendary | Sp Su | 10-16, clear sky only | **new** | Dragon Gate Scale | Warden core | Leap, Leap, Leap | 1 in 2,281 | 1 in 1,680 |
 
-**Class gear.** One row per subclass (`specs/classes/design-sheet.md`): its signature weapon and the fish parts that make its looks. The gear is the class's own weapon in a sea-made look (a "tide" set), at the same stats as the tier it stands for, because classes are flair, not mechanics (design principles, rule 4). Whether it replaces or sits beside the guardian's T4 and T5 drops is David's call (question 6).
+### Sea
 
-| Family | Subclass | Signature weapon | Rare part | Epic part (fish) | Legendary core |
+| Fish | Rarity | Seasons | Hours, weather | Status | Let it go | Also | Reel task | First rod % | Full stack % |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Acorn Barnacle | common | all year | any hour |  | Shell Grit |  |  | 6.0 | 4.8 |
+| Anchovy | common | all year | 06-18 |  | Fish Scale |  |  | 5.5 | 4.5 |
+| Clown Fish | common | Sp Su | any hour |  | Fish Scale | gift: Bram |  | 5.6 | 4.5 |
+| Dab | common | Sp Au Wi | any hour |  | Fish Scale |  |  | 6.0 | 4.9 |
+| Horse Mackerel | common | all year | any hour |  | Fish Scale |  |  | 6.0 | 4.8 |
+| Scallop | common | all year | any hour |  | Shell Grit | dish: scallop |  | 6.0 | 4.8 |
+| Sea Bass | common | all year | any hour |  | Fish Scale |  |  | 6.0 | 4.8 |
+| Sea Butterfly | common | Wi | any hour |  | Shell Grit |  |  | 5.7 | 4.6 |
+| Sea Star | common | all year | any hour |  | Shell Grit |  |  | 6.0 | 4.8 |
+| Squid | common | Sp Su Wi | any hour |  | Squid Ink | dish: grilled squid |  | 5.6 | 4.5 |
+| Surgeonfish | common | Sp Su | any hour |  | Fish Scale |  |  | 5.6 | 4.5 |
+| Sweet Shrimp | common | all year | 16-09 |  | Shell Grit | dish: omakase |  | 6.1 | 4.9 |
+| Herring | common | Wi Sp | 06-18 | new (r1) | Fish Scale | dish |  | 5.0 | 4.0 |
+| Blue Mussel | common | all year | any hour | **new** | Shell Grit | dish: steamed mussels |  | 6.0 | 4.8 |
+| Sardine | common | all year | 06-18 | **new** | Fish Scale |  |  | 5.5 | 4.5 |
+| Sand Dollar | common | all year | any hour | **new** | Shell Grit |  |  | 6.0 | 4.8 |
+| Barred Knifejaw | uncommon | Sp Su Au | any hour |  | Fin |  |  | 3.5 | 2.8 |
+| Blowfish | uncommon | Wi | 20-04 |  | Spine |  |  | 5.3 | 4.3 |
+| Butterfly Fish | uncommon | Sp Su | any hour |  | Fin |  |  | 3.4 | 2.8 |
+| Dungeness Crab | uncommon | all year | any hour |  | Crab Shell |  |  | 4.2 | 3.4 |
+| Firefly Squid | uncommon | all year | 21-04 |  | Glow Ink |  |  | 3.8 | 3.1 |
+| Garden Eel | uncommon | all year | 06-18 |  | Eel Skin |  |  | 4.1 | 3.3 |
+| Moray Eel | uncommon | Au | any hour |  | Eel Skin |  |  | 3.5 | 2.9 |
+| Olive Flounder | uncommon | all year | any hour |  | Fin |  |  | 4.2 | 3.4 |
+| Porcupine Fish | uncommon | Su | any hour |  | Spine |  |  | 2.9 | 2.3 |
+| Red Snapper | uncommon | all year | any hour |  | Fin | dish: snapper chazuke |  | 4.2 | 3.4 |
+| Ribbon Eel | uncommon | Su Au | any hour |  | Eel Skin |  |  | 3.2 | 2.6 |
+| Seahorse | uncommon | Sp Su Au | any hour |  | Fin | gift: Odile |  | 3.5 | 2.8 |
+| Suckerfish | uncommon | Su | any hour |  | Fin |  |  | 2.9 | 2.3 |
+| Zebra Turkeyfish | uncommon | Sp Su Au | any hour |  | Spine |  |  | 3.5 | 2.8 |
+| Lumpfish | uncommon | Wi | any hour | new (r1) | Fin | gift: Juniper |  | 6.2 | 5.0 |
+| Snowflake Eel | uncommon | Wi | any hour, snow only | new (r1) | Eel Skin |  |  | 5.1 | 4.2 |
+| Abalone | rare | all year | 16-09 |  | Nacre |  |  | 1.6 | 3.0 |
+| Giant Trevally | rare | Au | any hour |  | Armour Scale | tourney only |  | 1.5 | 2.9 |
+| Mahi-mahi | rare | Su | any hour |  | Fin x2 | dish: grilled mahi |  | 1.4 | 2.7 |
+| Pearl Oyster | rare | all year | any hour |  | Pearl | recipe: Lighthouse rod |  | 1.7 | 3.3 |
+| Ray | rare | Au | 06-18 |  | Ray Leather |  |  | 2.0 | 3.6 |
+| Octopus | rare | all year | 20-04 | **new** | Squid Ink x2 |  |  | 1.3 | 2.4 |
+| Spiny Lobster | rare | Au Wi Sp | 20-04 | **new** | Crab Shell x2 | gift: Bram |  | 1.4 | 2.5 |
+| Yellowtail | rare | Wi Sp | any hour | **new** | Fin x2 | dish: yellowtail nigiri |  | 1.9 | 3.5 |
+| Cuttlefish | rare | Sp Su | any hour | **new** | Nacre |  |  | 1.5 | 2.9 |
+| Halibut | rare | Su Au | any hour | **new** | Fin x2 | dish |  | 1.6 | 3.1 |
+| Sea Urchin | rare | all year | any hour | **new** | Spine x2 | dish: uni |  | 1.7 | 3.3 |
+| Great White Shark | epic | Su | any hour |  | Great White Tooth |  | Run | 0.57 | 0.91 |
+| Hammerhead Shark | epic | Su | any hour |  | Hammer Crest |  | Run | 0.57 | 0.91 |
+| Napoleonfish | epic | Su | 06-18 |  | Roe | feast | Snag | 0.54 | 0.87 |
+| Ocean Sunfish | epic | Su | any hour |  | Sun Scale |  | Leap | 0.57 | 0.91 |
+| Tuna | epic | Sp Wi | any hour |  | Roe | dish: tuna roll (menu); recipe: Tidewarden rod; gift: Toren | Run | 1.8 | 2.9 |
+| Black-lip Oyster | epic | all year | 20-04 | new (r1) | Black Pearl |  | Pry | 1.2 | 1.9 |
+| Sailfish | epic | Au | 06-18 | new (r1) | Sail Fin |  | Leap | 2.1 | 3.5 |
+| Megabyte | legendary | Su Au | 20-04, any hour in rain | new (r1) | Megabyte Fang | Ranger core | Spark, Run, Leap | 1 in 2,281 | 1 in 1,680 |
+| Umibozu | legendary | Au Wi | 20-04, cloud, fog or snow only | **new** | Umibozu Lamp | Ranger core | Dark, Run | 1 in 2,281 | 1 in 1,680 |
+| Longwang, the Dragon King | Divine | Sp | 04-07, rain only | new (r1) | Dragon King's Pearl | the river mouth; raid | raid | 1 in 18,868 | 1 in 15,974 |
+
+### Deep sea
+
+Opens with the boats (next launch, m7). The seven epics and the Football Fish marked *from the sea* stay in the sea until then.
+
+| Fish | Rarity | Seasons | Hours, weather | Status | Let it go | Also | Reel task | First rod % | Full stack % |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Lanternfish | common | all year | any hour | new (r1) | Fish Scale |  |  | 11.6 | 6.8 |
+| Hatchetfish | common | all year | any hour | new (r1) | Fish Scale |  |  | 11.6 | 6.8 |
+| Bristlemouth | common | all year | any hour | **new** | Fish Scale |  |  | 11.6 | 6.8 |
+| Hagfish | common | all year | 20-04 | **new** | Eel Skin |  |  | 10.3 | 6.0 |
+| Glass Squid | common | all year | any hour | **new** | Squid Ink |  |  | 11.6 | 6.8 |
+| Ruby Shrimp | common | all year | any hour | **new** | Shell Grit |  |  | 11.6 | 6.8 |
+| Dumbo Octopus | uncommon | all year | any hour | new (r1) | Squid Ink | gift: Juniper |  | 8.5 | 5.0 |
+| Gulper Eel | uncommon | all year | 20-04 | new (r1) | Eel Skin |  |  | 6.4 | 3.8 |
+| Sea Pig | uncommon | all year | any hour | **new** | Shell Grit x2 | gift: Pim |  | 8.5 | 5.0 |
+| Chimaera | uncommon | all year | 20-04 | **new** | Spine |  |  | 6.4 | 3.8 |
+| Blobfish | uncommon | all year | any hour | **new** | none | gift: Juniper |  | 8.5 | 5.0 |
+| Yeti Crab | uncommon | all year | any hour | **new** | Crab Shell |  |  | 8.5 | 5.0 |
+| Vampire Squid | rare | all year | 20-04 | new (r1) | Night Ink |  |  | 3.0 | 5.6 |
+| Football Fish | rare | Wi | 20-04 | from the sea | Lantern Lure | recipe: Rune staff |  | 2.3 | 4.3 |
+| Fangtooth | rare | all year | any hour | **new** | Fang |  |  | 4.8 | 9.0 |
+| Viperfish | rare | all year | 20-04 | **new** | Fang |  |  | 3.0 | 5.6 |
+| Spider Crab | rare | Wi Sp | any hour | **new** | Crab Shell x2 | gift: Pim |  | 3.9 | 7.3 |
+| Dragonfish | rare | all year | any hour | **new** | Lantern Lure |  |  | 4.8 | 9.0 |
+| Barreleye | epic | all year | 20-04 | from the sea | Barreleye Lens |  | Dark | 2.3 | 3.6 |
+| Giant Isopod | epic | all year | 20-04 | from the sea | Isopod Plate | recipe: Tidewarden rod | Pry | 2.3 | 3.6 |
+| Oarfish | epic | Sp Wi | any hour | from the sea | Oar Ribbon |  | Snag | 2.8 | 4.5 |
+| Coelacanth | epic | all year | 20-04, rain only | from the sea | Ancient Bone | gift: Juno | Dark | 1.8 | 2.9 |
+| Blue Marlin | epic | all year | any hour | from the sea | Marlin Bill | gift: Bram | Leap | 4.2 | 6.8 |
+| Whale Shark | epic | Su | any hour | from the sea | Whale Shark Hide |  | Run | 3.9 | 6.2 |
+| Saw Shark | epic | Su | 20-04 | from the sea | Saw Rostrum |  | Snag | 1.9 | 3.1 |
+| Giant Squid | epic | Wi Sp | any hour | new (r1) | Abyss Ink |  | Dark | 2.8 | 4.5 |
+| Kraken | legendary | Au Wi | any hour, rain only | new (r1) | Kraken Beak | Vanguard core | Snag, Snag, Dark | 1 in 912 | 1 in 672 |
+| Charybdis | legendary | Sp Su | 16-20 | **new** | Charybdis Turbine | Ranger core | Run, Snag | 1 in 912 | 1 in 672 |
+| Bakunawa | legendary | all year | 22-02, clear sky only | **new** | Bakunawa Moonscale | Arcane core | Leap, Dark | 1 in 912 | 1 in 672 |
+| Lyngbakr | legendary | Sp Su | 06-12 | **new** | Lyngbakr Seed | Warden core | Run, Pry | 1 in 912 | 1 in 672 |
+| Leviathan | Divine | all year | 22-02, rain only | new (r1) | Leviathan Heart | raid | raid | 1 in 18,868 | 1 in 15,974 |
+
+## 4. Legendary and Divine
+
+Twelve legendaries, two in every water and four in the deep sea, three per class family; two Divine. Each surfaces in the cutscene, fights (the boss reel, behind `NEXT_PUBLIC_FISH_BOSSES`), and on landing is let go and leaves its core (section 6). Legendaries glow with the shared gold aura (an emissive rim, slow gold sparks, matching the golden "!"); Divine with the holographic shimmer (the `--gui-holo` look). Their cores glow the same way in the bag, in the museum and on the gear they make.
+
+| # | Creature | Water | When | Core (family) | What it is |
 |---|---|---|---|---|---|
-| Arcane (mage) | Elementalist | crystal staff | Crystal Carapace, Pearl | Storm Coil (Electric Eel), Frost Fin (Stringfish) | Imugi's Pearl |
-| Arcane | Illusionist | enchanted cards | Nacre | Silver Scale (Arowana), Oar Ribbon (Oarfish) | Imugi's Pearl |
-| Arcane | Necromancer | bone tome | Night Ink | Ancient Bone (Coelacanth, Sturgeon) | Imugi's Pearl |
-| Arcane | Transmuter | monster-tooth charm | Fang | Great White Tooth (Great White Shark), Muskie Fang (Muskellunge) | Imugi's Pearl |
-| Ranger (marksman) | Marksman | recurve bow | Ray Leather | Marlin Bill (Blue Marlin) | Megabyte Fang |
-| Ranger | Sniper | scoped rifle | Pearl, Armour Scale | Barreleye Lens (Barreleye) | Megabyte Fang |
-| Ranger | Hunter | harpoon crossbow | Fang | Saw Rostrum (Saw Shark) | Megabyte Fang |
-| Ranger | Gunslinger | revolver | Pearl | Black Pearl (Black-lip Oyster) | Megabyte Fang |
-| Vanguard (warrior) | Guardian | shield and sword | Turtle Shell | Arapaima Scale (Arapaima), Isopod Plate (Giant Isopod) | Kraken Beak |
-| Vanguard | Juggernaut | war hammer | Armour Scale | Hammer Crest (Hammerhead Shark) | Kraken Beak |
-| Vanguard | Martial Artist | hand wraps | Ray Leather | Whale Shark Hide (Whale Shark) | Kraken Beak |
-| Vanguard | Assassin | tanto and kunai | Fang | Gar Fang (Gar) | Kraken Beak |
-| Warden (healer) | Summoner | ink-black seal gloves | Night Ink | Abyss Ink (Giant Squid) | Ness Scale |
-| Warden | Shaman | totem staff | Lantern Lure | Sail Fin (Sailfish), Whisker (Catfish) | Ness Scale |
-| Warden | Druid | living staff | Axolotl Frill | Living Moss (Mossback Turtle) | Ness Scale |
-| Warden | Priest | sunstone staff | Pearl | Sun Scale (Ocean Sunfish) | Ness Scale |
+| L1 | Imugi | River | Su, 20 to 04, rain only | Imugi's Pearl (Arcane) | A river serpent with a pearl in its jaw, waiting a thousand years to become a dragon. Faint circuit-trace light runs down its scales. (round 1) |
+| L2 | Namazu | River | Wi Sp, 20 to 04 | Namazu Keystone (Vanguard) | A catfish as long as the bridge with a mossy keystone pinned to its head. Its whiskers are seismograph needles; the riverbed hums when it turns. |
+| L3 | Megabyte | Sea | Su Au, 20 to 04, any hour in a storm | Megabyte Fang (Ranger) | The robot megalodon, below. |
+| L4 | Umibozu | Sea | Au Wi, 20 to 04, cloud, fog or snow only | Umibozu Lamp (Ranger) | A smooth black dome rises out of a still night sea and two lamp eyes open: the conning tower of something huge, barnacled and silent. |
+| L5 | Ness | Pond | Wi Sp, 04 to 08 (dawn mist) | Ness Scale (Warden) | The mountain pond's shy giant: moss on its back, one lamp-like eye. A long, patient fight, not a violent one. (round 1) |
+| L6 | Dragon Gate Koi | Pond | Sp Su, 10 to 16, clear sky only | Dragon Gate Scale (Warden) | A koi as long as a rowboat that leaps the mountain falls, its scales brushed-gold plates with fine seams. The top of the pond's koi set. |
+| L7 | Raiju | Cliff pools | Su, any hour, rain only | Raiju Capacitor (Arcane) | The thunder beast of the storm pools: an eel-long body of copper coil and fine filaments, living on the power that leaks from the hull breach. |
+| L8 | Hanzaki | Cliff pools | Au Wi, 20 to 04 | Hanzaki Hide (Vanguard) | A giant salamander older than the Keepers, its hide like rubbered hull lining, a cell glowing faintly in its belly. |
+| L9 | Kraken | Deep sea (the sea's far edge until it opens) | Au Wi, any hour, rain only | Kraken Beak (Vanguard) | Arms of tangled fleet cable, a beak like an anchor's fluke. (round 1) |
+| L10 | Charybdis | Deep sea | Sp Su, 16 to 20 | Charybdis Turbine (Ranger) | A whirlpool with a throat: a scuttled intake turbine on the bottom, still turning, and the sea grew a mouth around it. It doesn't swim; it pulls. |
+| L11 | Bakunawa | Deep sea | all year, 22 to 02, clear sky only | Bakunawa Moonscale (Arcane) | The moon-eating sea serpent: silver plate scales like dish antennas, rising when the moon is up. |
+| L12 | Lyngbakr | Deep sea | Sp Su, 06 to 12 | Lyngbakr Seed (Warden) | A whale so big a garden grows on its back and sailors take it for an island; it rhymes with the island itself. A long, gentle fight. |
+| D1 | Leviathan | Deep sea | all year, 22 to 02, rain only | Leviathan Heart (one Divine piece, Vanguard or Ranger) | Bigger than the wharf, still humming like a machine nobody switched off. The raid boss. (round 1) |
+| D2 | Longwang, the Dragon King | The sea off the river mouth | Sp, 04 to 07, rain only | Dragon King's Pearl (one Divine piece, Arcane or Warden) | What an Imugi becomes. The second raid. (round 1) |
 
-A look's recipe, as a shape: the epic look takes its epic part, a Golden Scale, two of its rare part and the commons (Fish Scale, Shell Grit, Fin) plus coins; the legendary look takes the family's legendary core on top. The Divine cores make one Divine piece each: Leviathan Heart for Vanguard or Ranger, Dragon King's Pearl for Arcane or Warden. Exact counts come with the recipes, after David's marks.
+Until the deep sea opens, the Kraken waits at the sea's far edge (round 1); Charybdis, Bakunawa, Lyngbakr and the Leviathan wait for the deep sea. Every family has a legendary before then except Warden, whose two are in the pond, which opens next fishing round. Names are myth names (Imugi, Namazu, Umibozu, Raiju, Hanzaki, Kraken, Charybdis, Bakunawa, Lyngbakr, Leviathan, Longwang) or ours (Megabyte, Ness, Dragon Gate Koi).
 
-**The legendary rod.** Divine fish need a legendary rod (`hookCap`), and none exists. Proposed: it is the treasure list's Fallen Star rod (David: "fallen star should be core crafting material like fallen star rod"), crafted from a Fallen Star and one legendary core. That links the two lists: dig for the star, fish for the core, then fish for the Divine.
+**Megabyte, the robot megalodon** (David: "L2 should be megladon with electricty aura and tech stuff like a robot megladon"):
+- **Body:** a megalodon's shape, three times a great white, plated in riveted hull steel; the seams between plates glow electric blue.
+- **Head:** a sonar dome on the snout with a sweeping scan light; its eyes are two lens rings that focus.
+- **Jaw:** hinged on visible pistons, rows of steel blade teeth set like rivets.
+- **Gills:** five cooling vents a side that spark as it breathes.
+- **Dorsal fin:** an antenna mast with a blinking tip, the first thing you see cutting the water.
+- **Tail:** an exposed cable spine running into a ribbed fluke.
+- **Electric aura:** blue-white arcs crawl over the plates and jump to the water, and the sea around it fizzes. It sits over the shared gold rim, so Megabyte still reads legendary at a glance.
+- **When:** summer and autumn nights, and any hour in a storm (it rides the lightning).
+- **Its boss reel:** Spark, Run, Leap (section 5).
+- **Core:** the Megabyte Fang, a serrated steel tooth with a chip at its root, crackling faintly. Ranger gear made with it (bow, rifle, crossbow, revolver) carries the crackle.
+- **Model:** route C, from David's references (section 9).
 
-## 6. New fish
+## 5. Epic reel tasks
 
-**Status:** *new* (a new roster row and model) or *moved* (an existing fish whose water changes). *Est. %* is the chance per cast while it's out, estimated by adding all the new fish to today's pools (starter rod, or the first rod that hooks it on a MAX cast). Coins come from `SELL_PRICES`.
+David: "epic will have added like lil thing that you gotta do while you reel in". Six shared kinds, each epic fish has one. Common to rare keep today's reel.
 
-| # | Fish | Water | Seasons | Hours, weather | Rarity | Coins | Est. % | Material | Fills | Model route (section 8) |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | Lake Whitefish | River | Wi | any | common | 8 | 25.5 | Fish Scale; dish: smoked whitefish | winter river by day | A: from the Dace |
-| 2 | Burbot | River | Wi | 20-04 | uncommon | 20 | 10.7 | Fin; dish: stew | winter river uncommon | A: from the Loach |
-| 3 | Brook Trout | River | Sp | 05-19 | uncommon | 20 | 8.4 | Fin | spring river | A: from the Rainbow Trout |
-| 4 | Walleye | River | Au Wi | 17-21 (dusk) | rare | 60 | Cedar 8.3 | Fang | dusk, winter rare | A: from the Black Bass |
-| 5 | Muskellunge | River | Au Wi | 06-18 | epic | 180 | Glass 2.6 | Muskie Fang (Transmuter) | winter river epic by day | A: from the Pike |
-| 6 | Electric Eel | River | Su | 20-04, rain any hour | epic | 180 | Glass 2.8 | Storm Coil (Elementalist) | a storm fish | B |
-| 7 | Pumpkinseed | Pond | Su Au | 06-18 | common | 8 | 20.2 | Fish Scale; G: Nell | pond autumn common | A: from the Bluegill |
-| 8 | Mudminnow | Pond | Wi | any | common | 8 | 22.1 | Fish Scale | pond winter | A: from the Killifish |
-| 9 | Axolotl | Pond | Sp Au | rain only | rare | 60 | Cedar 9.8 | Axolotl Frill (Druid); G: Juniper | pond rare by day, rain | B |
-| 10 | Mossback Turtle | Pond | Sp Su | 04-08 (dawn) | epic | 180 | Glass 2.9 | Living Moss (Druid) | pond epic, dawn | A: from the Snapping Turtle |
-| 11 | Sculpin | Cliff pool | all year | any | common | 8 | see note | Fish Scale | cliff common | A: from the Freshwater Goby |
-| 12 | Blind Cavefish | Cliff pool | all year | 20-04 | uncommon | 20 | see note | Fin | cliff uncommon | A: from the Dace |
-| 13 | Crystal Crayfish | Cliff pool | Wi | any | rare | 60 | see note | Crystal Carapace (Elementalist) | mage crystals | A: from the Crayfish |
-| 14 | Herring | Sea | Wi Sp | 06-18 | common | 8 | 6.8 | Fish Scale; dish | sea winter | A: from the Horse Mackerel |
-| 15 | Lumpfish | Sea | Wi | any | uncommon | 20 | 3.7 | Fin; G: Juniper | sea winter uncommon | B |
-| 16 | Snowflake Eel | Sea | Wi | snow only | uncommon | 20 | 3.4 | Eel Skin | the first snow fish | A: from the Moray Eel |
-| 17 | Black-lip Oyster | Sea | all year | 20-04 | epic | 180 | Glass 1.1 | Black Pearl (Gunslinger) | Gunslinger | A: from the Pearl Oyster |
-| 18 | Sailfish | Sea | Au | 06-18 | epic | 180 | Glass 1.2 | Sail Fin (Shaman) | sea autumn epic by day | A: from the Blue Marlin |
-| 19 | Lanternfish | Deep sea | all year | any | common | 8 | 38.1 | Fish Scale | deep sea common | B |
-| 20 | Hatchetfish | Deep sea | all year | any | common | 8 | 38.1 | Fish Scale | deep sea common | B |
-| 21 | Dumbo Octopus | Deep sea | all year | any | uncommon | 20 | 18.3 | Squid Ink; G: Marlo | deep sea uncommon | B |
-| 22 | Gulper Eel | Deep sea | all year | 20-04 | uncommon | 20 | 16.2 | Eel Skin | deep sea night | B |
-| 23 | Vampire Squid | Deep sea | all year | 20-04 | rare | 60 | Cedar 12.3 | Night Ink | Necromancer, Summoner | B |
-| 24 | Giant Squid | Deep sea | Wi Sp | any | epic | 180 | Glass 5.3 | Abyss Ink (Summoner) | deep sea epic | B |
-| 25 | Barreleye | Deep sea (from the sea) | all year | 20-04 | epic | 180 | Best 4.8 | Barreleye Lens | moved | exists |
-| 26 | Football Fish | Deep sea (from the sea) | Wi | 20-04 | rare | 60 | Best 10.7 | Lantern Lure | moved | exists |
-| 27 | Giant Isopod | Deep sea (from the sea) | all year | 20-04 | epic | 180 | Best 4.8 | Isopod Plate | moved | exists |
-| 28 | Oarfish | Deep sea (from the sea) | Sp Wi | any | epic | 180 | Best 6.1 | Oar Ribbon | moved | exists |
-| 29 | Tide-rusted Gear (salvage, not a fish) | any water | all year | any | uncommon | 20 | about a Fin's | a sudo part later (lore: tide-rusted gears are fishing's part family); one key shared with the treasure list's gear | lore | A: Blender alone |
+| Task | What happens | What you do (desktop; phone) | Rod stat that helps |
+|---|---|---|---|
+| **Leap** | The fish jumps clear of the water; a ring closes on it at the top of the arc | Press space or click as the ring closes; tap | Control widens the timing window (300 ms, plus 20 ms per 10 Control over 10) |
+| **Run** | It bolts and the line glows red | Let go of the reel until the glow fades (about 1 s), then reel again; lift your thumb | Strength shortens the glow |
+| **Snag** | It heads for roots, rock or coral; an arrow shows which way | Steer the other way with A or D (or the arrows); swipe | Control widens the window |
+| **Pry** | It clamps shut or digs into the bottom | 6 quick presses in 2 s; 6 quick taps | Reel: one tap fewer per 20 Reel over 40 |
+| **Dark** | It inks or slips into the dark: the catch bar fades out for 2 s | Keep the fish in the bar by its faint shadow and the line's tug | Control (a wider bar is easier blind) |
+| **Spark** | It shocks the line: three quick flashes | Stop reeling on each flash, reel between them | Strength shortens each flash |
 
-The moved four stay in the sea until the deep sea opens, so no catch disappears in between.
+**Rules:**
+1. One task per epic reel, at a random point between 35% and 75% of the catch meter. The four giants (Whale Shark, Great White Shark, Blue Marlin, Oarfish) get two.
+2. A short cue first: an icon over the bobber and a sound, 0.4 s ahead (plus 25 ms per 10 Bite window over 10), so the task is never a surprise.
+3. **Hit:** +10% on the catch meter and a small "nice" pip. **Miss:** -15%. A miss never loses the fish by itself; only an empty meter does, as today. Strength softens a miss (-1% per 10 Strength over 10, to -10% at most).
+4. **Clean catch:** every task hit stamps the catch card and adds 10 points to its material drop if you let it go (section 6).
+5. One input each: a tap, a lift or a swipe, so every task works on a phone (design principle 5).
+6. **Legendaries** chain their tasks in order through the boss reel (the table below); the Divine raids have their own fight.
+7. Built after the `fishing-depth` lane's smooth reel lands, on the reel's own frame loop, so the tasks add no lag.
 
-**Cliff pools note.** As their own water, the 7 cliff fish would be far too easy (the Crystal Crayfish about 28% a cast, the Sculpin 89% with a starter rod), because the pool is small. Two ways: keep cliff pools as part of the river, as the code does today (and give the tasting book's page the river's rule), or give them their own water with lower weights. Question 3.
+**Which epic does which:**
 
-**Legendary and Divine** (all new; the catches behind the boss reel and the raid, `fishBosses`). They surface in the cutscene, fight, and on landing are let go and leave their core. They glow: legendary with a gold aura (an emissive rim, slow gold sparks, matching the golden "!"), Divine with the holographic shimmer (the `--gui-holo` look, matching the Divine "!"). Their cores glow the same way in the bag, in the museum and on the gear they make. Names come from David's own draft list where they fit; the tech skin is the lore's (the island's monsters are hardware from the buried vessel that the sea grew over).
+| Task | Epic fish (water) | Count |
+| --- | --- | --- |
+| Leap | Arapaima (river), Arowana (river), Dorado (river), Golden Trout (cliff), Golden Koi (pond), Ocean Sunfish (sea), Sailfish (sea), Blue Marlin (deep) | 8 |
+| Run | King Salmon (river), Sturgeon (river), Stringfish (cliff), Taimen (cliff), Great White Shark (sea), Hammerhead Shark (sea), Tuna (sea), Whale Shark (deep) | 8 |
+| Snag | Catfish (river), Golden Arowana (river), Muskellunge (river), Gar (cliff), Tancho Koi (pond), Giant Gourami (pond), Napoleonfish (sea), Oarfish (deep), Saw Shark (deep) | 9 |
+| Pry | Mossback Turtle (pond), Black-lip Oyster (sea), Giant Isopod (deep) | 3 |
+| Dark | Olm (cliff), Platinum Koi (pond), Barreleye (deep), Coelacanth (deep), Giant Squid (deep) | 5 |
+| Spark | Electric Eel (cliff) | 1 |
 
-| # | Creature | Water | When | Rarity | Core (family) | What it is | Glow |
-|---|---|---|---|---|---|---|---|
-| L1 | Imugi | River | Su, rain only, 20-04 | legendary | Imugi's Pearl (Arcane: Elementalist, Illusionist, Necromancer, Transmuter) | A river serpent with a pearl in its jaw, waiting a thousand years to become a dragon. Faint circuit-trace light runs down its scales. | gold aura |
-| L2 | Megabyte | Sea (deep sea once it opens) | Su Au, 20-04 | legendary | Megabyte Fang (Ranger: Marksman, Sniper, Hunter, Gunslinger) | A megalodon plated in old hull steel, rivets for teeth. The name is the tech joke David asked for. | gold aura |
-| L3 | Kraken | Deep sea (the sea's far edge until then) | Au Wi, rain only | legendary | Kraken Beak (Vanguard: Guardian, Juggernaut, Martial Artist, Assassin) | Arms of tangled fleet cable, a beak like an anchor's fluke. | gold aura |
-| L4 | Ness | Pond (the mountain) | Wi Sp, 04-08 (dawn mist) | legendary | Ness Scale (Warden: Summoner, Shaman, Druid, Priest) | The mountain pond's shy giant: moss on its back, one lamp-like eye. Its fight is a long, patient one, not a violent one. | gold aura |
-| D1 | Leviathan | Deep sea | all year, rain only, 22-02 | Divine | Leviathan Heart (one Divine piece, Vanguard or Ranger) | Bigger than the wharf, still humming like a machine nobody switched off. The raid boss. | holographic |
-| D2 | Longwang, the Dragon King | The sea off the river mouth | Sp, rain only, 04-07 | Divine | Dragon King's Pearl (one Divine piece, Arcane or Warden) | What an Imugi becomes. The second raid. | holographic |
+**The legendaries' boss reels:**
 
-Sell: legendary 600, Divine 1500 (`SELL_PRICES`), for the core, since the creature itself is let go. David's other drafts (Umibozu, Charybdis and Scylla, Lyngbakr, the sea beasts) wait for a later round. "Sea Kings" and "Lord of the Coast" are a well-known manga's names, so those would want names of our own.
+| Creature | Water | Its boss reel, in order |
+| --- | --- | --- |
+| Imugi | River | Snag, Dark |
+| Namazu | River | Run, Pry |
+| Raiju | Cliff pools | Spark, Spark, Leap |
+| Hanzaki | Cliff pools | Pry, Snag |
+| Ness | Pond | Run, Dark |
+| Dragon Gate Koi | Pond | Leap, Leap, Leap |
+| Megabyte | Sea | Spark, Run, Leap |
+| Umibozu | Sea | Dark, Run |
+| Kraken | Deep sea | Snag, Snag, Dark |
+| Charybdis | Deep sea | Run, Snag |
+| Bakunawa | Deep sea | Leap, Dark |
+| Lyngbakr | Deep sea | Run, Pry |
 
-## 7. The odds for legendary and Divine, as proposed
+## 6. Crafting materials: what fish give
 
-Today's weights would make a legendary's chance depend on the water's size: one legendary at weight 2.5 with Tidewarden on a MAX cast would be about 1 in 74 casts in the pond, 1 in 98 in the river and 1 in 245 at sea. Too easy, and uneven. Proposed instead, as the treasure page did for digging:
+**How:** the catch card's third choice, *Let it go* (David approved): the fish swims off and may leave its material behind (a shed scale, a fin, a squirt of ink, a tooth). The first catch of a species still goes to the book and the museum as today. A legendary or Divine catch is always let go (it's the size of a building) and rolls for its core.
 
-- **Legendary: a fixed share, 1 in 600 casts,** with the Tidewarden (the first rod that hooks one) on a MAX cast, in its water, while its window holds. A plain cast halves it (1 in 1,200). Luck lifts it toward 1 in 300 at most (the legendary rod, the Lucky bobber, the feast, fishing together). The hourly cap stays (3 an hour).
-- **Divine: 1 in 6,000 casts** with the legendary rod on a MAX cast, in its window, and at most one raid per room per day. It's a server fight, so it should feel like an event.
-- **Everything below legendary keeps today's weights.** The new fish join their pools and take a little share from their neighbours, as the estimates above show.
+**The drop, by the fish's rarity** (David: "these drops are rarer for common fish and almost guarenteed for legendary or divine fish drops"):
 
-## 8. Modelling
+| Fish rarity | Drop when you let it go | Amount | Releases per drop, on average |
+|---|---|---|---|
+| common | 15% | 1 | about 7 |
+| uncommon | 30% | 1 | about 3 |
+| rare | 50% | 1, or 2 where the roster says x2 | 2 |
+| epic | 75% (85% on a clean catch) | 1 | 1.3 (1.2) |
+| legendary | 95%, and never two misses in a row on the same creature | its core | about 1.05 |
+| Divine | 98%, the same rule; everyone in the raid rolls for their own | its core | about 1.02 |
 
-Meshy is paused (David, 2026-11-02, via the coordinator: "dont use meshy as for now, just try to replicant the same output through using blender and modeling it from the multi angle designs"). The route for every new fish:
+Luck doesn't touch the drop (luck is for rarity), so the drop is the same for every player.
 
-1. **Concept views:** front, side and top, made with the ElevenLabs image tool from a text prompt or from David's reference.
-2. **Headless Blender from those views** (`Blender -b --factory-startup -P`), matching our existing fish: the remodel's finish (`art/remodel/build_fish.py`: smooth shading, the palette grade, the counter-shade, the soft wet sheen), the game's frame (head up +y, back toward -z, game scale), 600 to 2,000 triangles, one material, one texture. Fish are one version today (the catch card, the tank and the hold all use it); new fish match.
-3. `cd web && node scripts/pack-glbs.mjs`, then the icon render.
+**The materials** (sources come straight from the roster):
 
-**Three routes:**
+| Material | Rarity | From (let it go) | Used for |
+| --- | --- | --- | --- |
+| Fish Scale | common | Dace, Freshwater Goby, Guppy, Loach, Neon Tetra, Pale Chub, Pond Smelt, Yellow Perch, Lake Whitefish, Common Shiner, Brook Stickleback, White Sucker, Rock Bass, Sculpin, Fathead Minnow, Alpine Newt, Stone Loach, Pearl Dace, Bitterling, Killifish, Pumpkinseed, Mudminnow, Weather Loach, Golden Shiner, Anchovy, Clown Fish, Dab, Horse Mackerel, Sea Bass, Surgeonfish, Herring, Sardine, Lanternfish, Hatchetfish, Bristlemouth | rod grips, every Guardian shield's facing, fishing outfit trims |
+| Shell Grit | common | Cave Shrimp, Freshwater Mussel (x2), Crayfish, Pond Snail, Acorn Barnacle, Scallop, Sea Butterfly, Sea Star, Sweet Shrimp, Blue Mussel, Sand Dollar, Ruby Shrimp, Sea Pig (x2) | the polish in every crafted rod; shell housings for sudos later (lore: beachcombing) |
+| Squid Ink | common | Squid, Octopus (x2), Glass Squid, Dumbo Octopus | Summoner seals, Illusionist cards, Necromancer pages |
+| Fin | uncommon | Angelfish, Betta, Doctor Fish, Rainbow Trout, Salmon, Sweetfish, Tilapia, Yamame Trout, Burbot, Brook Trout, Black Bass (x2), Lake Trout (x2), Brown Trout (x2), Blind Cavefish, Arctic Grayling, Cutthroat Trout, Glass Catfish, Kokanee, Black Ghost Knifefish (x2), Hillstream Loach (x2), Bluegill, Carp, Crucian Carp, Goldfish, Pop-eyed Goldfish, Ranchu Goldfish, Medaka, Paradise Fish, Black Crappie, Butterfly Koi (x2), Brown Bullhead (x2), Oranda Goldfish (x2), Tench (x2), Barred Knifejaw, Butterfly Fish, Olive Flounder, Red Snapper, Seahorse, Suckerfish, Lumpfish, Mahi-mahi (x2), Yellowtail (x2), Halibut (x2) | Marksman fletching, Hunter bolt vanes, Shaman totem feathers |
+| Crab Shell | uncommon | Mitten Crab, Soft-shelled Turtle, Painted Turtle, Dungeness Crab, Spiny Lobster (x2), Yeti Crab, Spider Crab (x2) | Juggernaut and Guardian plating |
+| Spine | uncommon | Blowfish, Porcupine Fish, Zebra Turkeyfish, Sea Urchin (x2), Chimaera | Assassin kunai, Hunter barbs |
+| Eel Skin | uncommon | American Eel (x2), Garden Eel, Moray Eel, Ribbon Eel, Snowflake Eel, Hagfish, Gulper Eel | Martial Artist wraps, bow and holster leather |
+| Glow Ink | uncommon | Firefly Squid | Illusionist and Summoner glow |
+| Pearl | rare | Pearl Oyster | Gunslinger grips, Priest and Sniper settings, Elementalist staff tips |
+| Nacre | rare | Abalone, Cuttlefish | Illusionist card faces, staff inlays |
+| Fang | rare | Pike, Piranha, Snakehead, Walleye, Fangtooth, Viperfish | Transmuter charms, Assassin and Hunter edges |
+| Armour Scale | rare | Bichir, Bowfin, Char, Golden Mahseer, Giant Trevally | Juggernaut, Sniper stock |
+| Ray Leather | rare | Paddlefish, Ray | Martial Artist wraps, Marksman grip |
+| Turtle Shell | rare | Snapping Turtle | Guardian shield |
+| Lantern Lure | rare | Football Fish, Dragonfish | Shaman totem light, the Rune staff |
+| Night Ink | rare | Vampire Squid | Necromancer and Summoner |
+| Axolotl Frill | rare | Axolotl, Eastern Newt | Druid |
+| Crystal Carapace | rare | Crystal Crayfish, Geode Clam | Elementalist staffs |
+| Golden Scale | epic | Dorado, Golden Arowana, Golden Trout, Golden Koi | the gold trim on any epic-look piece of any class |
+| Roe | epic | King Salmon, Sturgeon, Giant Gourami, Napoleonfish, Tuna | a dish ingredient only (the tasting book's big dishes) |
 
-| Route | Which | How |
+**The epic parts** (one or more per subclass; the subclass's epic-look signature weapon):
+
+| Epic part | Subclass | From |
+| --- | --- | --- |
+| Gar Fang | Assassin | Gar |
+| Living Moss | Druid | Mossback Turtle |
+| Frost Fin | Elementalist | Stringfish, Taimen |
+| Storm Coil | Elementalist | Electric Eel |
+| Arapaima Scale | Guardian | Arapaima |
+| Isopod Plate | Guardian | Giant Isopod |
+| Black Pearl | Gunslinger | Black-lip Oyster |
+| Saw Rostrum | Hunter | Saw Shark |
+| Silver Scale | Illusionist | Arowana, Platinum Koi |
+| Oar Ribbon | Illusionist | Oarfish |
+| Hammer Crest | Juggernaut | Hammerhead Shark |
+| Marlin Bill | Marksman | Blue Marlin |
+| Whale Shark Hide | Martial Artist | Whale Shark |
+| Ancient Bone | Necromancer | Sturgeon, Olm, Coelacanth |
+| Sun Scale | Priest | Tancho Koi, Ocean Sunfish |
+| Whisker | Shaman | Catfish |
+| Sail Fin | Shaman | Sailfish |
+| Barreleye Lens | Sniper | Barreleye |
+| Abyss Ink | Summoner | Giant Squid |
+| Muskie Fang | Transmuter | Muskellunge |
+| Great White Tooth | Transmuter | Great White Shark |
+
+**The cores.** Each legendary leaves its own core; any one of a family's three makes that family's legendary-look gear, and the core you use sets the piece's trim (a Megabyte-made bow crackles blue; an Umibozu one has lamp-glass).
+
+| Family | Subclasses | Legendary cores (water) |
 |---|---|---|
-| A: from an existing fish | Lake Whitefish, Burbot, Brook Trout, Walleye, Muskellunge, Pumpkinseed, Mudminnow, Mossback Turtle, Sculpin, Blind Cavefish, Crystal Crayfish, Herring, Snowflake Eel, Black-lip Oyster, Sailfish, the Tide-rusted Gear (15 fish, 1 salvage) | concept views from a plain text prompt; the Blender script starts from the named fish's mesh and reshapes and repaints it (proportional moves, fins and heads remodelled, a new painted texture). Same family look for free. |
-| B: new shapes | Electric Eel, Axolotl, Lumpfish, Lanternfish, Hatchetfish, Dumbo Octopus, Gulper Eel, Vampire Squid, Giant Squid (9) | concept views from a plain text prompt, then modelled in Blender from the views (blockout, joined, shaped). |
-| C: David's references | Imugi, Megabyte, Kraken, Ness, Leviathan, Longwang (6 creatures) and their 6 cores | David supplies the references (or approves picks). Each creature needs a building-size fight model with its own budget row (one on screen, in the cutscene and the fight) and the aura material; each core is a high-def and low-poly item that glows. |
+| Arcane (mage) | Elementalist, Illusionist, Necromancer, Transmuter | Imugi's Pearl (river), Raiju Capacitor (cliff pools), Bakunawa Moonscale (deep sea) |
+| Ranger (marksman) | Marksman, Sniper, Hunter, Gunslinger | Megabyte Fang (sea), Umibozu Lamp (sea), Charybdis Turbine (deep sea) |
+| Vanguard (warrior) | Guardian, Juggernaut, Martial Artist, Assassin | Namazu Keystone (river), Hanzaki Hide (cliff pools), Kraken Beak (deep sea) |
+| Warden (healer) | Summoner, Shaman, Druid, Priest | Ness Scale (pond), Dragon Gate Scale (pond), Lyngbakr Seed (deep sea) |
 
-**Materials as items** (the 47 things in section 5): small held things, each a high-def close-up (bag, reward card, icon) and a low-poly copy. Blender alone from a plain text direction for the commons, uncommons and rares (a scale, a fin, an ink vial, a pearl, a fang, a shell piece); concept views from a text prompt for the epic parts. Only the 6 legendary and Divine cores need David's references.
+Divine: the Leviathan Heart makes one Divine piece for Vanguard or Ranger, the Dragon King's Pearl one for Arcane or Warden.
 
-**The aura material** is one shared pair, extending the look classes in `lib/game/modelMaterials.ts` (`lookClassFor`): *aura-gold* for legendary and *aura-holo* for Divine, so every legendary and Divine thing (creature, core, gear) glows the same way and shares a material.
+**Class gear** (fl-classparts, approved): every subclass's signature weapon in a sea-made look, at its tier's stats (a look, David's pick). The epic look takes its epic part, a Golden Scale, two of its rare part and the commons plus coins; the legendary look adds one of its family's cores. Exact counts come with the recipes. The legendary rod is the Fallen Star rod (David's pick): a Fallen Star from the treasure list and any one legendary core.
 
-**Image credits:** about 24 fish concept sheets plus the epic parts; logged per model like the Meshy log was. The coordinator OKs anything past 10 in a round.
+## 7. The odds
 
-## 9. Code and data each needs (later rounds, not now)
+David: "make it hard, cuz there will be a lot of stuff giving luck boost like sushi and bobber so dont make it too easy".
 
-- Roster rows for the new fish (`REEL_FISH` style, appended so no position moves), reel entries in `fishing.ts` `FISH` with their move fields, a seed migration through `scripts/gen-seeds.mjs`.
-- A `deep` water type (`WaterType` in `fishingSpots.ts`, `fishPoolFor`, the server roll) and the boat or spot that fishes it; the biome tag already names it.
-- Snow (and fog) reaching the reel (`reelWeather` maps them to cloudy today) for the Snowflake Eel and the misty legendaries.
-- *Let it go* on the catch card: a server path that records the material instead of the fish (the catch is the server's own roll, so the check is the same one keep and sell use). Material rows like `MATERIALS` in `recipes.ts`.
-- The fixed share for legendary and Divine in `fishPoolFor` (a per-rarity share, not a weight), and the one-raid-a-day rule in the realtime room.
-- Gift keys in `RESIDENT_GIFTS` (a key wins over the category).
-- The tide set's recipes in `recipes.ts`, the legendary rod with the treasure lane's Fallen Star.
+**How a cast rolls (proposed):**
+1. **Who's out:** as today (season, hour, weather, the tourney window).
+2. **The rarity first,** from the water's bands below, not from how many kinds bite. Adding fish to a water never makes rare or epic more common; it only spreads the band over more kinds. (Today's weights made the odds depend on a water's size: the pond's one epic bit as often as the sea's twelve together.)
+3. **The rod's cap** (`hookCap`, unchanged): bands above what the rod hooks give their share to common and uncommon.
+4. **Luck lifts rare and up only, less at the top:** rare x(1 + 0.8 L), epic x(1 + 0.6 L), legendary x(1 + 0.4 L), Divine x(1 + 0.2 L), where L is the total luck. Common and uncommon take what's left, in their usual ratio.
+5. **Then the kind:** the fish out in that band share it equally (the Golden Koi counts x2 in rain, the Weather Loach x3). If none of that band is out, the roll drops a rung.
+6. **Legendary and Divine:** a fixed share per cast while the creature's window holds, lifted by luck as above. The hourly cap stays (3 an hour); a Divine raid at most once a day per room.
 
-## 10. Open questions for David
+**The bands** (per cast, a rod that hooks it, no luck):
 
-1. **The list.** Which of the 24 new fish stay, go or get renamed? The 4 moved to the deep sea?
-2. **Let it go.** Is releasing a fish for its material the way fish give materials? (The other way is cleaning it at Pim's bench, which uses up the fish and reads less cozy.)
-3. **Cliff pools.** Part of the river (as the code does today) or a water of their own (then with lower weights)?
-4. **Legendary and Divine.** Are these six the ones (Imugi, Megabyte, Kraken, Ness, Leviathan, Longwang)? One legendary per class family, one Divine per two families?
-5. **Odds.** Legendary 1 in 600 with the Tidewarden, Divine 1 in 6,000 with the legendary rod and one raid a day: hard enough?
-6. **Class gear.** Is the fish-made gear a look (same stats as its tier) or real stat gear beside the guardian's T4 and T5 drops?
-7. **The legendary rod.** Is it the Fallen Star rod from the treasure list (a Fallen Star and a legendary core)?
-8. **The starter rod and the MAX cast.** Should a MAX cast do something a new player can feel (a bigger fish, a bit more uncommon), since luck only touches rare and up?
-9. **References.** For the 6 creatures and their cores: will you send references, or should the lane search headless and show you picks first? The rest go from plain text prompts.
-10. **Gifts.** OK to name fish for residents (Sable loves the Coelacanth, Nell the Frog, Mayor Eliza the Golden Koi, and so on), even where they dislike fish in general?
+| Water | common | uncommon | rare | epic | legendary, in its window | Divine, in its window |
+|---|---|---|---|---|---|---|
+| River | 62% | 28% | 8% | 2% | 1 in 2,500 | none |
+| Sea | 62% | 28% | 8% | 2% | 1 in 2,500 | 1 in 20,000 (Longwang) |
+| Pond | 64% | 28% | 6.5% | 1.5% | 1 in 2,500 | none |
+| Cliff pools | 52% | 30% | 12% | 6% | 1 in 1,200 | none |
+| Deep sea | 48% | 30% | 13% | 9% | 1 in 1,000 | 1 in 20,000 (Leviathan) |
+
+**Luck, and the full stack:**
+
+| Source | Today | Proposed | Group |
+|---|---|---|---|
+| Cast power | 0 to 1.0 | 0 to 0.15 | the cast |
+| MAX cast | +0.30 | +0.15 (and a slightly bigger fish, David's pick) | the cast |
+| The rod's Luck stat | 0.04 per 10 over 10 | unchanged; every rod differs (section 8) | the rig |
+| Lucky bobber | +20 Luck (+0.08) | unchanged | the rig |
+| The tasting book | up to +0.40 (60 species) | unchanged | boosts |
+| A meal or a book dish | +0.05 to +0.35 | unchanged | boosts |
+| Rain | +0.10 | unchanged | boosts |
+| Fishing together | +0.10 | unchanged | boosts |
+| **Boosts together** | no cap | **capped at 0.60** | |
+
+The cast and the rig stay outside the cap, so a better rod and a good cast always count; the boosts cap together, so the sushi, the book, the weather, friends and whatever comes later can't stack past 0.60. **Full stack:** a MAX cast at full power (0.30), the rod with the Lucky bobber, and boosts at the cap (the full book and the best meal already pass it). That's L = 1.22 with the Tidewarden. **Rod alone:** the rod's own Luck, a plain cast, nothing else.
+
+Cutting the cast's share from 1.3 to 0.3 fixes round 1's finding that the cast dwarfed the rod; the MAX cast's feel moves to the bigger fish.
+
+**The river, every rod:**
+
+| Water | Rod | Setup | Luck (L) | common % | uncommon % | rare % | epic % | legendary, in its window | Divine, in its window |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| River | Flimsy rod | rod alone | 0.00 | 68.9 | 31.1 | 0.0 | 0.0 | no | no |
+| River | Flimsy rod | full stack | 0.98 | 68.9 | 31.1 | 0.0 | 0.0 | no | no |
+| River | Cedar rod | rod alone | 0.08 | 63.0 | 28.5 | 8.5 | 0.0 | no | no |
+| River | Cedar rod | full stack | 1.06 | 58.7 | 26.5 | 14.8 | 0.0 | no | no |
+| River | Glass rod | rod alone | 0.12 | 61.4 | 27.7 | 8.9 | 2.0 | no | no |
+| River | Glass rod | full stack | 1.10 | 56.2 | 25.4 | 15.3 | 3.0 | no | no |
+| River | Lighthouse rod | rod alone | 0.16 | 61.2 | 27.6 | 9.2 | 2.0 | no | no |
+| River | Lighthouse rod | full stack | 1.14 | 56.0 | 25.3 | 15.6 | 3.1 | no | no |
+| River | Tidewarden rod | rod alone | 0.24 | 60.7 | 27.4 | 9.7 | 2.1 | 1 in 2,281 | no |
+| River | Tidewarden rod | full stack | 1.22 | 55.6 | 25.1 | 16.1 | 3.2 | 1 in 1,680 | no |
+| River | Fallen Star rod | rod alone | 0.30 | 60.4 | 27.3 | 10.1 | 2.2 | 1 in 2,232 | none here |
+| River | Fallen Star rod | full stack | 1.26 | 55.4 | 25.0 | 16.4 | 3.2 | 1 in 1,662 | none here |
+
+**The other waters, from the first epic rod up:**
+
+| Water | Rod | Setup | Luck (L) | common % | uncommon % | rare % | epic % | legendary, in its window | Divine, in its window |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Cliff pools | Glass rod | rod alone | 0.12 | 51.0 | 29.4 | 13.6 | 6.0 | no | no |
+| Cliff pools | Glass rod | full stack | 1.10 | 42.8 | 24.7 | 23.3 | 9.2 | no | no |
+| Cliff pools | Tidewarden rod | rod alone | 0.24 | 50.0 | 28.8 | 14.8 | 6.4 | 1 in 1,095 | no |
+| Cliff pools | Tidewarden rod | full stack | 1.22 | 41.8 | 24.1 | 24.5 | 9.6 | 1 in 806 | no |
+| Cliff pools | Fallen Star rod | rod alone | 0.30 | 49.5 | 28.6 | 15.4 | 6.6 | 1 in 1,071 | none here |
+| Cliff pools | Fallen Star rod | full stack | 1.26 | 41.5 | 23.9 | 24.9 | 9.8 | 1 in 798 | none here |
+| Pond | Glass rod | rod alone | 0.12 | 63.5 | 27.8 | 7.1 | 1.6 | no | no |
+| Pond | Glass rod | full stack | 1.10 | 59.3 | 26.0 | 12.2 | 2.5 | no | no |
+| Pond | Tidewarden rod | rod alone | 0.24 | 63.0 | 27.6 | 7.7 | 1.7 | 1 in 2,281 | no |
+| Pond | Tidewarden rod | full stack | 1.22 | 58.8 | 25.7 | 12.8 | 2.6 | 1 in 1,680 | no |
+| Pond | Fallen Star rod | rod alone | 0.30 | 62.7 | 27.4 | 8.1 | 1.8 | 1 in 2,232 | none here |
+| Pond | Fallen Star rod | full stack | 1.26 | 58.7 | 25.7 | 13.1 | 2.6 | 1 in 1,662 | none here |
+| Sea | Glass rod | rod alone | 0.12 | 61.4 | 27.7 | 8.9 | 2.1 | no | no |
+| Sea | Glass rod | full stack | 1.10 | 56.2 | 25.4 | 15.2 | 3.2 | no | no |
+| Sea | Tidewarden rod | rod alone | 0.24 | 60.7 | 27.4 | 9.6 | 2.2 | 1 in 2,281 | no |
+| Sea | Tidewarden rod | full stack | 1.22 | 55.6 | 25.1 | 16.0 | 3.3 | 1 in 1,680 | no |
+| Sea | Fallen Star rod | rod alone | 0.30 | 60.4 | 27.3 | 10.0 | 2.3 | 1 in 2,232 | 1 in 18,868 |
+| Sea | Fallen Star rod | full stack | 1.26 | 55.4 | 25.0 | 16.2 | 3.4 | 1 in 1,662 | 1 in 15,974 |
+| Deep sea | Glass rod | rod alone | 0.12 | 46.8 | 29.3 | 14.2 | 9.6 | no | no |
+| Deep sea | Glass rod | full stack | 1.10 | 37.3 | 23.3 | 24.4 | 14.9 | no | no |
+| Deep sea | Tidewarden rod | rod alone | 0.24 | 45.7 | 28.5 | 15.5 | 10.3 | 1 in 912 | no |
+| Deep sea | Tidewarden rod | full stack | 1.22 | 36.1 | 22.6 | 25.7 | 15.6 | 1 in 672 | no |
+| Deep sea | Fallen Star rod | rod alone | 0.30 | 45.1 | 28.2 | 16.1 | 10.6 | 1 in 893 | 1 in 18,868 |
+| Deep sea | Fallen Star rod | full stack | 1.26 | 35.7 | 22.3 | 26.1 | 15.8 | 1 in 665 | 1 in 15,974 |
+
+**Today, for comparison** (today's weights and roster, the same seasons and hours):
+
+| Water | Today's gear and cast | Luck | common % | uncommon % | rare % | epic % |
+| --- | --- | --- | --- | --- | --- | --- |
+| River | Glass, MAX cast | 1.42 | 54.5 | 24.1 | 16.3 | 5.1 |
+| River | Tidewarden + Lucky bobber, MAX cast | 1.62 | 53.6 | 23.6 | 17.4 | 5.4 |
+| River | Tidewarden, every boost (MAX, bobber, full book, best meal, a friend) | 2.47 | 50.1 | 21.9 | 21.4 | 6.6 |
+| Sea | Glass, MAX cast | 1.42 | 62.9 | 26.1 | 6.6 | 4.4 |
+| Sea | Tidewarden + Lucky bobber, MAX cast | 1.62 | 62.3 | 25.9 | 7.1 | 4.8 |
+| Sea | Tidewarden, every boost (MAX, bobber, full book, best meal, a friend) | 2.47 | 60.0 | 24.9 | 9.0 | 6.0 |
+
+In the river, every boost on the Tidewarden now gives rare 16.1% and epic 3.2%: under today's Tidewarden, bobber and MAX cast (17.4% and 5.4%) and well under today's every boost (21.4% and 6.6%). The rod alone gives 9.7% and 2.1%, against 16.3% and 5.1% for today's Glass rod on a MAX cast. At sea, epic halves (6.0% with every boost today, 3.3% proposed).
+
+**What that means in time** (about 20 seconds a cast, 3 a minute): a river, sea or pond legendary at a full stack is about 1,680 casts in its window, roughly 9 hours of fishing its hours; a deep sea one about 670 casts, under 4 hours; a cliff pool one about 800. A Divine is about 16,000 casts for one player, but the raid is the room's: ten people fishing its window find it ten times sooner, and it comes at most once a day per room. A legendary also has to be won in the boss reel.
+
+## 8. Rods: every one different
+
+David: "all rods will have slightly different stats even if both in uncommon".
+
+**The rule:** each rarity has a stat budget (the six stats added up: common 60 to 70, uncommon 150 to 160, rare 230 to 300, epic about 400, legendary about 480), and each rod spends it its own way, its lean. No two rods share a profile, and no rod beats another of its rarity at everything. Stats stay out of 100 (`STAT_MAX`); a rod's rarity still sets what it hooks (`hookCap`).
+
+| Rod | Rarity | Source | Status | Luck | Bite | Strength | Reel | Lure | Control | Total | Lean | Rig luck (alone / + Lucky bobber) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Flimsy rod | common | starter | today | 10 | 10 | 10 | 10 | 10 | 10 | 60 | even, the floor | 0.00 / 0.08 |
+| Driftwood rod | common | found | later (example) | 15 | 10 | 5 | 10 | 15 | 10 | 65 | luck and lure, a weak line | 0.02 / 0.10 |
+| Cedar rod | uncommon | shop | today | 30 | 30 | 20 | 20 | 30 | 20 | 150 | luck, bite and lure | 0.08 / 0.16 |
+| Bamboo rod | uncommon | shop | later (example) | 20 | 30 | 30 | 30 | 20 | 30 | 160 | steady: strength, reel, control | 0.04 / 0.12 |
+| Glass rod | rare | shop | today | 40 | 40 | 30 | 40 | 30 | 50 | 230 | control (the widest bar) | 0.12 / 0.20 |
+| Coral rod | rare | crafted | later (example) | 55 | 40 | 35 | 40 | 50 | 40 | 260 | luck and lure, a sea rod | 0.18 / 0.26 |
+| Lighthouse rod | rare | crafted | today | 50 | 60 | 50 | 50 | 50 | 40 | 300 | bite window, all-round | 0.16 / 0.24 |
+| Tidewarden rod | epic | crafted | today | 70 | 80 | 70 | 60 | 60 | 60 | 400 | bite window, strong line | 0.24 / 0.32 |
+| Abyss rod | epic | crafted | later (example) | 60 | 60 | 85 | 75 | 55 | 65 | 400 | strength and reel, for runs and the deep sea | 0.20 / 0.28 |
+| Fallen Star rod | legendary | crafted | proposed | 85 | 75 | 80 | 80 | 70 | 90 | 480 | control and luck | 0.30 / 0.36 |
+
+The five today keep their stats (already all different, Glass and Lighthouse included). The Fallen Star rod is the legendary rod (round 1, David's pick), the only rod that hooks Divine. The four marked *later* are examples of the rule, not proposed for this launch: they show how a second rod in a rarity differs (the Bamboo rod gives up luck for a steadier line than the Cedar; the Abyss rod trades the Tidewarden's bite window for strength and reel, for the deep sea's runs). The Coral and Abyss rods would be crafted from fish materials (Shell Grit, Nacre, Pearl; Isopod Plate, Abyss Ink).
+
+What each stat does now, with the tasks: Luck lifts rarer fish (section 7); Bite window gives more time to hook, and a longer task cue; Line strength drains the meter slower, shortens Run and Spark, and softens a missed task; Reel speed fills the meter faster and takes taps off Pry; Lure brings the bite sooner; Control widens the bar and the Leap and Snag windows.
+
+## 9. Modelling
+
+Unchanged from round 1 (approved, fl-models): concept views (front, side, top) from the ElevenLabs image tool, from a text prompt or David's reference, then headless Blender matching the remodel's finish (`art/remodel/build_fish.py`: 600 to 2,000 triangles, one material, one texture, the soft wet sheen), then `node scripts/pack-glbs.mjs` and the icon. No Meshy (paused).
+
+**Route A, from an existing fish** (reshaped and repainted; the family look for free), 48:
+- Small fish: Common Shiner, Fathead Minnow, Golden Shiner and Sardine (from the Pale Chub or the Anchovy), Brook Stickleback and Medaka (Killifish), Pearl Dace (Dace), Weather Loach and Stone Loach (Loach).
+- Bass, carp, trout and koi: White Sucker and Golden Mahseer (Carp), Rock Bass and Black Crappie (Bluegill), Lake Trout, Brown Trout, Cutthroat Trout and Arctic Grayling (Rainbow Trout), Kokanee and Taimen (Salmon), Bowfin (Snakehead), Tench (Crucian Carp), Paradise Fish (Betta), Oranda Goldfish (Ranchu), Butterfly Koi, Platinum Koi and Tancho Koi (Golden Koi), Brown Bullhead and Glass Catfish (Catfish).
+- Eels, turtles and frogs: American Eel and Hagfish (Moray Eel, Garden Eel), Painted Turtle (Snapping Turtle), Bullfrog (Frog).
+- Shells and crabs: Freshwater Mussel, Geode Clam and Blue Mussel (Pearl Oyster, Scallop), Sand Dollar (Sea Star), Cave Shrimp and Ruby Shrimp (Sweet Shrimp), Yeti Crab and Spider Crab (Dungeness Crab).
+- Sea and deep: Yellowtail (Horse Mackerel), Cuttlefish (Squid), Halibut (Olive Flounder), Glass Squid (Firefly Squid), Fangtooth (Football Fish).
+- Once their route B parent exists: Eastern Newt and Olm (from the Axolotl), Bristlemouth (from the Lanternfish).
+
+**Route B, new shapes** (modelled from the views): Paddlefish, Alpine Newt, Black Ghost Knifefish, Hillstream Loach, Pond Snail, Giant Gourami, Octopus, Spiny Lobster, Sea Urchin, Sea Pig, Chimaera, Blobfish, Viperfish, Dragonfish (14), plus round 1's 9.
+
+**Route C, David's references:** the 12 legendaries, the 2 Divine and their 14 cores. Each creature is a building-size fight model with its own budget row and the aura material (aura-gold, aura-holo; Megabyte adds its electric arcs).
+
+**Image credits:** about 62 new concept sheets this round on top of round 1's 24; the coordinator OKs anything past 10 in a round, so the fish go in batches by water.
+
+## 10. Code and data each needs (later rounds, not now)
+
+- Roster rows for the new fish (appended so no position moves), reel entries in `fishing.ts` `FISH`, a seed migration through `scripts/gen-seeds.mjs`; the Electric Eel and the seven epics' water changes.
+- The rarity-first roll in `fishPoolFor` and the server's `fishRoll`: per-water bands, the luck lifts, the boost cap, the cast retune, fixed shares for legendary and Divine, the drop-a-rung rule.
+- Water types: `cliff` and `deep` in `WaterType`, the spots or boat that fish them; snow and fog reaching the reel (`reelWeather` maps them to cloudy today).
+- The epic tasks in the reel (after fishing-depth's smooth reel): the six kinds, the cue, the hit and miss, the rod stat hooks, the clean catch stamp.
+- *Let it go* on the catch card: a server path that rolls the drop by rarity, with the pity rule for creatures; material rows like `MATERIALS` in `recipes.ts`.
+- Rod stat rows for the Fallen Star rod, and the later rods if David keeps any.
+- Gift keys in `RESIDENT_GIFTS` (a key wins over the category); the class gear recipes.
+
+## 11. Findings (for the coordinator, none fixed here)
+
+From round 1, with where they stand:
+1. The starter rod couldn't feel a MAX cast: answered (a slightly bigger fish, David's pick).
+2. Rod luck barely moved the odds next to the cast: fixed by the cast retune (section 7).
+3. Cliff pool fish bite in the river while the tasting book says "Opens later": answered (their own water when the mountain opens; the book's page should say so until then).
+4. The pond is shut, so 13 fish and the Koi kimono's Golden Koi can't be caught: answered (opens next fishing round).
+5. No legendary or Divine: this list.
+6. `fishing.ts`'s header still says "Legendary is deliberately tight (7)": stale.
+
+New: the tasting book's luck (+1% a species for 20, then +0.5%, cap +0.40) lives in its own lane; under this proposal it counts inside the 0.60 boost cap, so its numbers can stay.
+
+## 12. Open questions for David
+
+1. **The counts.** The river keeps 8 epics (7 today plus the Muskellunge) and the sea 16 uncommon: fine, or demote one or two?
+2. **The new fish.** Any to cut or rename (sections 1 and 3)? The koi set in the pond (Golden, Platinum, Tancho, then the Dragon Gate Koi)?
+3. **The creatures.** The twelve legendaries and their myth names (Namazu, Umibozu, Raiju, Hanzaki, Charybdis, Bakunawa, Lyngbakr), three per class family?
+4. **Megabyte's aura.** Electric arcs over the gold legendary rim (so it still reads legendary), or electric instead of gold?
+5. **The tasks.** Six shared kinds, one per epic and two for the four giants; a miss costs 15%, never the fish. Too easy, too hard?
+6. **The drops.** 15, 30, 50, 75, 95 and 98%, with no two misses in a row on a creature?
+7. **The odds.** Legendary 1 in 2,500 (1 in 1,000 in the deep sea) and Divine 1 in 20,000 per cast before luck; about 9 hours of fishing its window for a river legendary at a full stack. Hard enough, or too hard?
+8. **The boost cap.** Book, meals, rain and friends capped at 0.60 together, the cast cut to 0.30: right?
+9. **The later rods.** Keep any of the four examples (Driftwood, Bamboo, Coral, Abyss), or only the rule for now?
+10. **The Warden family** has no legendary until the pond opens: fine, since it opens next fishing round?

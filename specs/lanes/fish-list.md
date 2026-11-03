@@ -24,7 +24,7 @@ Round 2 is still the list (the laggy reel is the fishing-depth lane's fix):
 
 His treasure notes the same night set the direction (verbatim): "give the percentage too for the rarity, more rare core crafting ingredient, like a few more legendary item to make legendary gear for mage, marksman, and the classes", "legendary and divine gear digs should have like a glow or aura to it", and for the tasting book: "every new fish you find you can cook it for a very small perm fishing buff ... it can unlcok dishes taht are temp big buff but require ingredients and expensive".
 
-## Round 1: the list
+## Round 1: the list (done)
 
 1. **Read what exists:** the roster (`collection_species` rows with the rod tool, the catalogue seeds, `web/lib/collections/`), each fish's water, seasons (round 5 moved them to whole seasons), time of day, weather, size, rarity and sell price; the odds (`fishPoolFor` in peaceful.ts, the rod tiers and bait), the rarity ladder, the tasting book (`specs/lanes/tasting-book.md`), the aquarium, the museum, the treasure list (`.claude/worktrees/treasure/specs/treasure.md` on game/treasure), the classes (`specs/design-principles.md`) and the lore.
 2. **The table:** every fish: name, water (Sea, River, Pond, Deep sea, Cliff pools), seasons, time and weather, rarity, chance per cast as a percentage with the starter rod (and how better rods and bait shift it), sell price, and its purposes: the tasting book (cook for the permanent buff, dish ingredient), the aquarium, the museum, crafting material (scales, fins, pearls, ink...) for class gear, a resident's favourite gift, quests. Every fish needs a reason beyond coins.
@@ -39,24 +39,29 @@ His treasure notes the same night set the direction (verbatim): "give the percen
 
 ## Status
 
-Round 1 done (2026-11-02): `specs/fish-list.md` written and committed (listed in `specs/INDEX.md`). Docs only; no code, models or data changed. Head SHA: see `git log -1` on `game/fish-list`.
+Round 2 done (2026-11-03): `specs/fish-list.md` rewritten to David's round 2 marks. Docs only; no code, models or data changed. Head SHA: see `git log -1` on `game/fish-list`.
 
-- What exists: 91 rod catches (river 30, cliff pool 4, pond 13, sea 44; no legendary or Divine), how a cast picks (season, hour, weather, `hookCap`, weights, luck), the rarity bands per rod tier, every current use.
-- The roster table: all 91 with water, seasons, hours and weather, rarity, coins, size, chance per cast (starter, first rod that hooks it, best gear), and a proposed purpose (material on release, gift, dish, today's recipes).
-- Gaps, 47 crafting materials (common to Divine) with a per-subclass gear map (all 16), 24 new fish plus 4 moved to the deep sea and one salvage catch, 4 legendary (one per class family) and 2 Divine with gold and holographic auras, fixed-share odds for legendary (1 in 600) and Divine (1 in 6,000), the modelling route (no Meshy: ElevenLabs concept views, then headless Blender), the later code list, 10 open questions.
-- Findings for the coordinator (not fixed): the starter rod can't feel a MAX cast; rod luck barely moves odds next to cast power; cliff pool fish already bite in the river while the tasting book says "Opens later"; the shut pond makes the Golden Koi (Koi kimono recipe) uncatchable; a stale comment in `fishing.ts`'s header.
+- Counts per water (common, uncommon, rare, epic, legendary, Divine): river 13/12/11/8/2, cliff pools 6/6/6/6/2, pond 10/10/8/5/2, sea 16/16/11/7/2/1, deep sea 6/6/6/8/4/1; 191 catches. 70 new this round (62 fish, 8 legendaries). Gap check by script: every water has common to epic in every season, by day and by night.
+- Moves: the Electric Eel to the cliff pools; Football Fish and 7 sea epics (Barreleye, Giant Isopod, Oarfish, Coelacanth, Blue Marlin, Whale Shark, Saw Shark) to the deep sea, staying in the sea until it opens. Burbot any hour, Brook Trout winter and spring, Muskellunge spring too. Named gifts only for residents who like fish or sea creatures.
+- Megabyte is the robot megalodon with an electric aura (section 4). 12 legendaries, 3 per class family (any one core makes the family's legendary look); 2 Divine unchanged.
+- Epic reel tasks: six shared kinds (Leap, Run, Snag, Pry, Dark, Spark), one per epic, two for the four giants; legendaries chain 2 or 3. Built after fishing-depth's smooth reel.
+- Drops on Let it go by fish rarity: 15, 30, 50, 75 (85 clean catch), 95, 98%, never two misses in a row on a creature.
+- Odds proposed: rarity rolled first from per-water bands; luck lifts rare x(1+0.8L), epic 0.6, legendary 0.4, Divine 0.2; boosts (book, meal, rain, friends) cap at 0.60 together; cast cut to 0.30 (MAX gives a bigger fish). Legendary 1 in 2,500 (cliff 1,200, deep 1,000), Divine 1 in 20,000 before luck.
+- Rods: a budget per rarity and a lean per rod; Fallen Star rod (legendary) proposed; Driftwood, Bamboo, Coral, Abyss as later examples only.
 
 ## David's decisions
 
+- 2026-11-03: the round 2 review, verbatim in "Round 2" above (counts per water, robot megalodon, epic reel tasks, drops by rarity, harder odds, every rod different). Round 1's approved picks (fl-questions) are listed in `specs/fish-list.md` section 0.
 - 2026-11-02 (via the coordinator): Meshy is paused: "dont use meshy as for now, just try to replicant the same output through using blender and modeling it from the multi angle designs". New fish: concept views (ElevenLabs image, from a text prompt or David's reference), then modelled in headless Blender from those views, matching our existing fish.
 
 ## Next
 
-1. Wait for David's marks on `specs/fish-list.md` section 10 (the list, let it go, cliff pools, the six creatures, odds, gear as look or stats, the legendary rod, the MAX cast, references, gifts).
-2. Round 2 (after his marks): models only for the fish he keeps, route A first (reshaped from existing fish), then B; creatures only with his references.
-3. Data, the deep sea water, let it go and the odds change: their own round or lane, after the models.
+1. Wait for David's marks on round 2 (`specs/fish-list.md` section 12, ten questions).
+2. After his marks: models for the fish he keeps, by water in batches of 10 concept sheets (route A first, then B); creatures only with his references.
+3. Data, the cliff and deep waters, Let it go, the odds change and the epic tasks: their own round or lane (the tasks after fishing-depth's smooth reel).
 
 ## Tools and gotchas
 
+- **The generator** (round 2): `specs/fish-list-src/` holds `data.mjs` (every catch: water, rarity, seasons, hours, weather, status, material, also, task), `analyze.mjs` (the proposed odds, the gap check, today's formula for comparison; writes the ignored `res.json`), `build.mjs` and `template.md`. Rebuild with `cd specs/fish-list-src && node build.mjs "$PWD/../fish-list.md"`. Edit the data or the template, never the generated tables in the spec. Plain node, no `node_modules` needed.
 - The worktree has no `node_modules`. The odds were computed with `npx tsx` from `web/`, `NODE_PATH=<fishing-depth worktree>/web/node_modules NEXT_PUBLIC_GAME_WORLD=new`, importing `fishPoolFor`, `rig` and the roster; scripts in the session scratchpad (`fish-list/odds.ts`, `newodds.ts`, `gen.mjs` builds the roster table).
 - Existing fish models: `web/public/assets/game/remodel/fish/` (81 files), 600 to 2,000 tris, 1 material.
