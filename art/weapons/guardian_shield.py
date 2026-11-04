@@ -13,8 +13,10 @@ The face is one sculpted surface, not stacked slabs: the outline and every plate
 edges of one triangulation (with a grid between them), and each point stands forward by the sum of its plates' heights.
 A plate rises from its edge over its slope width (the tracer's inset line) to its top, so neighbouring plates slope down
 into sharp creases between them and every edge stays crisp. The body tapers to a knife edge at the outline and rises to
-a spine down the middle; the blades lean, outer edge forward, and taper toward the point. Steep slopes take the bright
-edge material: the drawing's edge highlights (and the foot trough's side walls, gentler but drawn bright). A flat back and a thin wall round the outline close it into one solid; the
+a spine down the middle; the blades lean, outer edge forward, taper toward the point and stack like armour lames, each
+lapping over the next. A plate's slope is dark iron with a thin polished lip along its top (the bright edge material,
+the drawing's edge highlights), as are the foot trough's side walls and the outline's steep rim; the cross is inlaid
+in a dark groove, and under its point stands a faceted arrowhead. A flat back and a thin wall round the outline close it into one solid; the
 back fittings (rim, braces, handle on posts, forearm strap) are merged on, the cross's runes cut in, then the whole is
 curved round the arm once.
 
@@ -51,12 +53,18 @@ BACK_Y, EDGE_T = -0.020, 0.005               # the flat back; the thickness at t
 SPINE = 0.026                                # the body's rise from the edge to the middle
 GRID = 0.0068                                # the triangulation's point spacing between the constraint lines
 EDGE_ANGLE = 50                              # degrees: faces steeper than this off the face are the bright edges
+RIM = 4 / 876                                # ... within this of the outline (4 px): the point's steep spine stays dark
 # By plate (name prefix): its height above what lies under it, how much its outer edge leans further forward, how much
 # it tapers toward the point (0: none, 1: down to nothing at its foot; the crown rings fade out so their foot leaves no
 # crease across the arches).
-SPEC = {"body": (0.014, 0.0, 0.0), "crown": (0.006, 0.0, 1.0), "blade": (0.009, 0.010, 0.55), "vpanel": (0.005, 0.0, 0.0),
-        "lower_v": (0.008, 0.009, 0.0), "arch": (0.010, 0.0, 0.0), "cross_back": (0.009, 0.0, 0.0), "cross": (0.015, 0.0, 0.0),
+SPEC = {"body": (0.014, 0.0, 0.0), "crown": (0.006, 0.0, 1.0), "blade": (0.006, 0.010, 0.55), "vpanel": (0.005, 0.0, 0.0),
+        "lower_v": (0.008, 0.009, 0.0), "arch": (0.009, 0.0, 0.0), "arrow": (0.020, 0.0, 0.0),
+        "cross_back": (-0.006, 0.0, 0.0), "cross": (0.008, 0.0, 0.0),
         "bottom": (-0.008, 0.0, 0.0), "lens": (0.010, 0.0, 0.0), "bar": (0.005, 0.0, 0.0)}
+# The blades stack like armour lames, the innermost on top: each rank down stands this much lower, so every blade's
+# raised outer edge laps over the next one's foot (all at one height, their seams read as lines drawn on one surface).
+BLADE_STEP = 0.0045
+# The cross is inlaid: a groove (cross_back) sunk round it, the cross standing just proud of the face it's set in.
 
 
 def spec(name):
@@ -113,6 +121,7 @@ def heights(pts, plates):
     for name, pl in plates.items():
         poly = np.array(pl["poly"])
         height, lean, taper = spec(name)
+        height += BLADE_STEP * (4 - pl.get("rank", 4)) if name.startswith("blade") else 0.0
         ind = inside(pts, poly)
         if not ind.any():
             continue
@@ -155,12 +164,16 @@ def face_mesh(m, tier, plate, edge):
     """The sculpted solid: the face triangulated with every plate line as a constraint, heights applied, a flat back
     and a wall round the outline."""
     plates = {k: v for k, v in P.PLATES.items() if k != "body"}
-    loops = [P.PLATES["body"]["poly"], P.PLATES["body"]["inset"]] + [pl[k] for pl in plates.values() for k in ("poly", "inset")]
+    loops = [P.PLATES["body"]["poly"], P.PLATES["body"]["inset"]] + [pl[k] for pl in plates.values() for k in ("poly", "inset", "lip") if k in pl]
     verts, edges = [], []
     for lp in loops:
         base = len(verts)
         verts += [Vector(p) for p in lp]
         edges += [(base + i, base + (i + 1) % len(lp)) for i in range(len(lp))]
+    for pl in plates.values():                                   # a pyramid's ridges, so its creases come out straight
+        for a, b in pl.get("ridges", []):
+            verts += [Vector(a), Vector(b)]
+            edges.append((len(verts) - 2, len(verts) - 1))
     outline = np.array(loops[0])
     lo, hi = outline.min(0), outline.max(0)
     gx, gz = np.meshgrid(np.arange(lo[0], hi[0], GRID), np.arange(lo[1], hi[1], GRID))
@@ -168,7 +181,9 @@ def face_mesh(m, tier, plate, edge):
     grid = grid[inside(grid, outline)]
     grid = grid[edge_distance(grid, outline) > GRID * 0.4]
     verts += [Vector(p) for p in grid]
-    co, _, faces, *_ = delaunay_2d_cdt(verts, edges, [list(range(len(loops[0])))], 1, 1e-7)
+    # points closer than 5e-5 (0.04 px) merge here: where several plate lines cross in a pixel, nearer points made
+    # slivers that the pipeline's 1e-5 weld folded into non-manifold edges
+    co, _, faces, *_ = delaunay_2d_cdt(verts, edges, [list(range(len(loops[0])))], 1, 5e-5)
     pts = np.array([(v.x, v.y) for v in co])
     front = BACK_Y - EDGE_T - heights(pts, plates)               # each face point's y (forward is -Y)
 
@@ -181,9 +196,21 @@ def face_mesh(m, tier, plate, edge):
     back = bm.faces.new(list(reversed(bv)))
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
 
-    cross, lens = (np.array(P.PLATES[k]["poly"]) for k in ("cross", "lens"))
+    cross, lens, groove = (np.array(P.PLATES[k]["poly"]) for k in ("cross", "lens", "cross_back"))
     cent = np.array([(f.calc_center_median().x, f.calc_center_median().z) for f in tris])
     in_cross, in_lens = inside(cent, cross), inside(cent, lens)
+    in_groove = inside(cent, groove) & ~in_cross                 # the groove's walls stay dark: the drawing's black outline
+    # A plate's slope is dark iron, its wall in shadow, but for the polished lip along its top edge: thick overlapping
+    # parts, not outlines (every steep wall bright read as lines drawn on the face). Steep faces on no plate's slope,
+    # the outline's spikes and rim, stay bright.
+    on_slope = np.zeros(len(tris), bool)
+    on_lip = np.zeros(len(tris), bool)
+    for name, pl in plates.items():
+        if name in ("cross", "cross_back", "bottom", "lens") or "lip" not in pl:
+            continue
+        ins, inset, lip = (inside(cent, np.array(pl[k])) for k in ("poly", "inset", "lip"))
+        on_slope |= ins & ~inset
+        on_lip |= (lip & ~inset) if pl["lip_side"] == "top" else (ins & ~lip)
     # the foot trough's side walls are the drawing's bright bands (gentler than EDGE_ANGLE, so named here); its top
     # wall, under the V, stays dark: the drawing has no edge there, the trough opens up between the blades
     tr = P.PLATES["bottom"]
@@ -195,8 +222,9 @@ def face_mesh(m, tier, plate, edge):
     slots = list(dict.fromkeys(names))
     slot = [slots.index(n) for n in names]
     steep = math.cos(math.radians(EDGE_ANGLE))
-    for f, c, l, w in zip(tris, in_cross, in_lens, wall):
-        f.material_index = slot[2 if c else 3 if l else (1 if w or -f.normal.y < steep else 0)]
+    rim = edge_distance(cent, outline) < RIM                     # the bright rim: steep faces at the outline only
+    for f, c, l, w, g, sl, lp, r in zip(tris, in_cross, in_lens, wall, in_groove, on_slope, on_lip, rim):
+        f.material_index = slot[2 if c else 3 if l else 0 if g else 1 if (w or lp) else 0 if sl else (1 if r and -f.normal.y < steep else 0)]
     for f in walls:
         f.material_index = slot[1]
     back.material_index = slot[0]
@@ -340,8 +368,8 @@ def shield(tier):
     if tier >= 3:                                          # rune strokes down the cross's upright, cut into its face
         cr = np.array(P.PLATES["cross"]["poly"])
         cx, top = (cr[:, 0].min() + cr[:, 0].max()) / 2, cr[:, 1].max()
-        for k in range(4):
-            z = top - 0.30 - 0.05 * k
+        for k in range(4):                                 # between the crossbar and the foot (the upright ends at y 428)
+            z = top - 0.16 - 0.045 * k
             y = surface(cx, z + 0.0035)
             cuts.append(box(f"r{k}", (cx - 0.0035, y - 0.003, z), (cx + 0.0035, y + 0.004, z + 0.007), "M_Rune", m))
     boolean(body, cuts, "DIFFERENCE")

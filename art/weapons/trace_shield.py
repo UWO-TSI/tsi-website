@@ -12,12 +12,12 @@ Needs OpenCV and numpy (a scratch venv: pip install opencv-python-headless). Ste
 3. The right half (traced unaided; the left half was cut by hand beside the character) mirrored about the cross's axis
    and widened by WIDEN: straightened, the drawn left half is 9 to 34% wider than the right at every height (the view's
    perspective, not the hand cut: it holds at the foot too), so the true width lies between them.
-4. Plates: in the crown, two insets of the outline (13 and 28 px) as the drawing's concentric arches. Down each side,
-   the blades: big plates between boundary lines read off the drawing's bright blade strokes, each from under a side
-   spike down and in to the centre line (the first along the V panel's edge). Five a side, the upper ones in front.
+4. Plates: in the crown, an inset of the outline (13 px) as its rim. Down each side, the blades: big plates between
+   boundary lines read off the drawing's bright blade strokes, each from under a side spike down and in to the centre
+   line (the first along the V panel's edge), each with its rank (0 innermost) for the builder to stack them.
 5. The centre pieces read off the straightened drawing on a grid (px, x right, y down, centre x 215): the V panel
-   under the crossbar, the cross with its long tapered foot, the V trough under it, the sunken trough at the foot with
-   its teeth, the bar and the lens. Round the cross's top arm, two arch ridges.
+   under the crossbar, the cross and the groove it's set in, the raised arrowhead under its point, the V trough under
+   that, the sunken trough at the foot with its teeth, the bar and the lens. Round the cross's top arm, one arch band.
 Units: the shield is 1.0 rig units tall (the drawing's 876 px), point down at z = -0.265 (just above the ground with the
 left hand at 0.285 in Idle), centred CX = 0.04 outboard of the hand.
 """
@@ -46,12 +46,15 @@ C = 215
 # line stands at C before mirroring: mirrored about a straight C, the point (11 px left of it) was lost and the foot
 # came out blunt.
 AXIS = [(0, 215), (700, 215), (792, 212), (825, 208.5), (919, 204), (940, 203.5)]
-# Two gothic arch ridges framing the cross's top arm (centre, half-width, height, band), standing on the crossbar's top.
-ARCHES = [((215, 200), 105, 140, 12), ((215, 200), 70, 110, 11)]
+# The gothic arch round the cross's top arm (centre, half-width, height, band): one broad raised band, standing on the
+# groove round the crossbar (two thin ridges and two crown rings read as lines drawn on, not parts).
+ARCHES = [((215, 200), 102, 138, 18)]
 VPANEL = [(215, 212), (300, 222), (282, 300), (252, 400), (226, 470), (215, 486)]    # under the crossbar, to the cross's foot
-CROSS_UP = dict(half=6.5, top=115, full_to=440, tip=552)                             # the upright, tapering to a point
+CROSS_UP = dict(half=6.5, top=115, full_to=410, tip=428)                             # the upright, ending in a short point
 CROSS_BAR = dict(half=6.5, y=202, reach=106)                                         # the crossbar, centred on y
-CROSS_GROW = 5                                                                       # the backing plate's border
+CROSS_GROW = 5                                                                       # the groove it's set into
+# Under the cross's foot: the raised arrowhead (a faceted pyramid, ridges to its centre), the cross's point set into it.
+ARROWHEAD = dict(corner=(247, 410), point=(215, 492))                                # its right top corner and its point
 # Under the cross's foot: the V trough, its two halves sloping in (outer edge, then the inner edge back up).
 LOWER_V = [(215, 528), (232, 470), (262, 408), (284, 412), (240, 520), (222, 566), (215, 572)]
 # The foot, read off the right half (the left is wider in the view; mirrored and widened it put the teeth on the rim):
@@ -65,9 +68,12 @@ BAR = [(215, 788), (226, 788), (226, 795), (215, 795)]                          
 # The right edge down the point (y, x): the drawing shades it in speckle that runs into the background, and the mask
 # had it wide and cut off blunt above the point.
 FOOT_EDGE = [(760, 275), (780, 275), (800, 273), (820, 266), (840, 257), (860, 249), (880, 238), (900, 228), (910, 222), (919, 215)]
+# The notch at the top, a clean U between two horns (y, x of its right inner edge): the mask had it ragged.
+TOP_NOTCH = [(18, 230), (25, 232), (32, 232), (40, 229), (46, 224), (50, 219), (53, 215)]
 # Each plate's slope width (px): its edge runs down this far to the creases round it.
-CHAMFER = dict(body=18, crown=5, blade=6, vpanel=5, lower_v=4, arch=3, cross_back=3, cross=2, bottom=9, lens=2, bar=1)
-CROWN_INSETS = [13, 28]
+CHAMFER = dict(body=18, crown=5, blade=6, vpanel=5, lower_v=4, arch=5, cross_back=2, cross=2, bottom=9, lens=2, bar=1)
+CROWN_INSETS = [13]
+LIP = 1.5                                                                           # a plate's polished edge (px), at the top of its slope
 CROWN_BELOW = 150                                                                   # the arches stop where the blades begin
 # The blade boundaries (right side, read off the straightened drawing's bright blade strokes): each starts on the outline
 # (its first point is snapped there) and runs down and in to the centre line. The first follows the V panel's edge.
@@ -86,12 +92,19 @@ def arch_polys():
     """Each arch ridge: the band between two half-ellipses, its feet on the crossbar's top."""
     out = []
     for (cx, cy), w, h, band in ARCHES:
-        foot = CROSS_BAR["y"] - CROSS_BAR["half"] + 2          # into the crossbar: feet level with its top make coincident faces
+        foot = CROSS_BAR["y"] - CROSS_BAR["half"] - CROSS_GROW - 1   # on the groove round the crossbar
         t = np.linspace(0, np.pi, 41)
         outer = [(cx - w * np.cos(a), foot - h * np.sin(a)) for a in t]
         inner = [(cx - (w - band) * np.cos(a), foot - (h - band) * np.sin(a)) for a in t[::-1]]
         out.append(outer + inner)
     return out
+
+
+def incentre(tri):
+    """A triangle's incentre: where a pyramid over it (height = distance to the edge) peaks."""
+    A, B, Cc = (np.array(p, float) for p in tri)
+    a, b, c = np.linalg.norm(B - Cc), np.linalg.norm(Cc - A), np.linalg.norm(A - B)
+    return tuple((a * A + b * B + c * Cc) / (a + b + c))
 
 
 def cross_poly(g):
@@ -180,9 +193,10 @@ def contour(m, eps=1.4, smooth=0.0):
     return cv2.approxPolyDP(c.astype(np.float32).reshape(-1, 1, 2), eps, True)[:, 0, :].astype(float)
 
 
-def plate(poly_px=None, mask=None, w=0):
+def plate(poly_px=None, mask=None, w=0, lip=None):
     """A plate as the builder needs it: its outline and the line where its slope meets its top (inset by w px), in rig
-    units, plus the slope width. From a polygon (rasterised) or a mask."""
+    units, plus the slope width. From a polygon (rasterised) or a mask. `lip` (px in from the outline, or None) adds the
+    line bounding its bright polished edge: by default the top LIP px of its slope, under the inset."""
     if mask is None:
         mask = np.zeros((940, 430), np.uint8)
         cv2.fillPoly(mask, [np.array(poly_px, np.int32)], 1)
@@ -192,7 +206,13 @@ def plate(poly_px=None, mask=None, w=0):
     w = min(w, max(1, int(dist.max()) - 1))                      # a thin plate's slope narrows to fit
     outline = contour(mask)
     inset = contour(dist >= w) if w else outline
-    return {"poly": model(outline), "inset": model(inset), "w": round(w * SCALE, 5)}
+    out = {"poly": model(outline), "inset": model(inset), "w": round(w * SCALE, 5)}
+    if lip is None and w >= 4:
+        lip = w - LIP
+    if lip:
+        out["lip"] = model(contour(dist >= lip))
+        out["lip_side"] = "top" if lip > w / 2 else "foot"     # the band above the lip line, or below it
+    return out
 
 
 def model(pts):
@@ -233,11 +253,10 @@ def blades(sym):
         region = (right & (count == k)).astype(np.uint8)
         region = cv2.erode(region, np.ones((3, 3), np.uint8))          # a hairline gap between neighbours: the drawing's dark seam
         region = cv2.morphologyEx(region, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))   # no slivers
-        if region.sum() < 50:
-            continue
-        poly = contour(region, 1.2)
-        out.append(poly)
-    left = [np.array([(2 * C - x, y) for x, y in poly[::-1]]) for poly in out]
+        if region.sum() < 1200:
+            continue                                             # slivers where the trough cuts a blade: a busy ladder of lips
+        out.append((k - 1, contour(region, 1.2)))
+    left = [(k, np.array([(2 * C - x, y) for x, y in poly[::-1]])) for k, poly in out]
     return out + left, curves
 
 
@@ -252,24 +271,38 @@ def main():
         front[y, C:] = 0
         if y <= F[-1, 0]:
             front[y, C:int(round(np.interp(y, F[:, 0], F[:, 1]))) + 1] = 1
+    # clean the edge: the speckle and the ink leave pixel-scale jags that came out as bright crumbs on the bevel
+    disc = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    front = cv2.morphologyEx(cv2.morphologyEx(front, cv2.MORPH_OPEN, disc), cv2.MORPH_CLOSE, disc)
+    N = np.array(TOP_NOTCH, float)
+    for y in range(int(N[0, 0]), int(N[-1, 0]) + 1):
+        front[y, C:int(round(np.interp(y, N[:, 0], N[:, 1])))] = 0
+    front[:int(N[0, 0]), C:int(N[0, 1])] = 0
     sym = mirrored(front)
     dist = cv2.distanceTransform(sym, cv2.DIST_L2, 5)
     above = (np.mgrid[0:sym.shape[0], 0:sym.shape[1]][0] < CROWN_BELOW)
     crown = [contour((dist >= d) & above) for d in CROWN_INSETS]
     blade_px, curves = blades(sym)
-    outline = contour(sym)
+    outline = contour(sym, 1.8)
     cross = cross_poly(0)
     ch = CHAMFER
-    right_blades = blade_px[:len(blade_px) // 2]
     plates = {"body": plate(mask=sym, w=ch["body"])}
     for k, d in enumerate(CROWN_INSETS):
-        plates[f"crown{k}"] = plate(mask=((dist >= d) & above).astype(np.uint8), w=ch["crown"])
-    for k, poly in enumerate(blade_px):
-        plates[f"blade{k}"] = plate(poly, w=ch["blade"])
-    plates["vpanel"] = plate(mirror_half(VPANEL), w=ch["vpanel"])
+        plates[f"crown{k}"] = plate(mask=((dist >= d) & above).astype(np.uint8), w=ch["crown"], lip=0)   # its cut-off foot would draw a line across the arch
+    for i, (rank, poly) in enumerate(blade_px):
+        pl = plate(poly, w=ch["blade"])
+        if pl:
+            pl["rank"] = rank                                    # 0 the innermost: the builder stacks them, inner over outer
+        plates[f"blade{i}"] = pl
+    plates["vpanel"] = plate(mirror_half(VPANEL), w=ch["vpanel"], lip=0)      # blade0's lip draws its V; its top would double the crossbar's
     plates["lower_v"] = plate(mirror_half(LOWER_V), w=ch["lower_v"])
     for k, poly in enumerate(arch_polys()):
         plates[f"arch{k}"] = plate(poly, w=ch["arch"])
+    (ax, ay), point = ARROWHEAD["corner"], ARROWHEAD["point"]
+    head = [(2 * C - ax, ay), (ax, ay), point]
+    plates["arrow"] = plate(head, w=99, lip=4)                   # slope all the way in, a pyramid; its rim bright, the drawing's V
+    cx, cy = incentre(head)
+    plates["arrow"]["ridges"] = [model([p, (cx, cy)]) for p in head]
     plates["cross_back"] = plate(cross_poly(CROSS_GROW), w=ch["cross_back"])
     plates["cross"] = plate(cross, w=ch["cross"])
     bp = np.zeros((940, 430), np.uint8)

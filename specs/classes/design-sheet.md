@@ -1293,6 +1293,27 @@ The tracer changed too. It now reads the V trough under the cross foot. The draw
 
 Fixed on the way: on tiers 1 to 3 the cross came out on M_Cloth, because repeated material slots (edge, cross and lens are all M_Blade there) were renumbered in the merge with the back fittings. The slots are now unique, and the build fails unless the cross's face is M_Blade. Results: high-def 23,338 to 23,478 triangles; world copy 998 to 1,000; one closed solid each; every skin material on both. Silhouette: front 0.984, side and top 0.961. `pipeline.py` now checks the side and top against 0.95 (`MIN_IOU_DEPTH`), the front still against 0.97: 1,000 triangles can't keep every slope of the relief's depth. Review round 3: same page, ids sh3-front, sh3-angle, sh3-foot, sh3-tiers, sh3-held, sh3-back, sh3-world. Known gaps: the drawing's fine panel lines inside the arch, and its glossy curved blade highlights (ours are flat sloped facets).
 
+**Round 4 (2026-11-04), David on round 3, verbatim:** "i want you to clean the design up a but, the cross should be more imbedded in the shielf, the shielf has parts that look like assebled parts rather than just drawn in, the part under the cross has a buldge like an arrow head shape".
+
+- **The cross:** inlaid. A groove (`cross_back`, now negative) is sunk round it, with dark walls (the drawing's black outline), and the cross stands just proud of the face. Its upright ends in a short point at y 428, as drawn; round 3 tapered it to y 552.
+- **The arrowhead:** a raised, faceted pyramid (`arrow`) under the cross's point. Its ridges to the incentre are triangulation constraints, so the creases come out straight, and its rim is bright.
+- **Assembled parts:**
+  - The blades stack like armour lames: each rank in from the outside stands `BLADE_STEP` (0.0045) higher, so each raised outer edge laps over the next one's foot.
+  - A plate's slope is dark iron except a 1.5 px polished lip at its top (`lip` in the plate data). Every steep wall had been lit, and that read as lines drawn on one surface.
+  - Steep faces off any plate's slope are bright only within 4 px of the outline, so the point's steep spine no longer makes a ragged bright patch.
+- **Clean-up:**
+  - the outline is opened and closed with a 5 px disc, simplified at 1.8 px;
+  - the top notch is a hand-read U (`TOP_NOTCH`);
+  - one crown ring, with no lip;
+  - one broad arch band instead of two ridges;
+  - no lip on the V panel;
+  - blade slivers under 1,200 px² dropped (where the trough cut them, their lips made a ladder);
+  - the triangulation merges points within 5e-5. Several plate lines crossing within a pixel had left slivers that the pipeline's weld folded into non-manifold edges.
+- **Runes:** moved up the upright, onto the shorter cross.
+- **Results:** high-def 23,796 to 23,992 triangles; world copy 1,000, which keeps the steps, the inlay and the outline but not the lips; silhouette front 0.983, side 0.959, top 0.970; one closed solid each.
+
+Review round 4: same page, ids sh4-front, sh4-close, sh4-angle, sh4-tiers, sh4-held, sh4-back, sh4-world.
+
 **The pilot (David, 2026-11-04):** the Guardian's hull-plate shield, modelled fully first (high-def, low-poly, five tiers) before the other eight. References come from David before any modelling. The pipeline is ready: `art/weapons/pipeline.py` reduces each tier's high-def to the low-poly, checks the node layout, the trim-kit material names, the budget and the silhouette (IoU of at least 0.97 from three sides), exports both and renders a review sheet. Tested on stand-in data (the old shield-and-sword subdivided): all five tiers at 1,399 of 1,400 triangles, silhouettes 0.988 or better (the real weapon budget is 1,000: `lib/game/perf/budget.ts`). Found on the way: no current weapon GLB has UVs (Models rule 3); the pipeline generates them.
 
 **The other seven: all kept** (David, the picks page, 2026-11-04). Each keeps today's weapon and gets the high-def and low-poly remodel. Two ideas become skins (shop `weapon_skin`, §1.10), verbatim:
