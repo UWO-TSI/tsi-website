@@ -36,10 +36,11 @@ async function seed(): Promise<EconomyTransport> {
   await m.store.credit(ME, "gems", 900, "admin", "Bounty: landing page", "demo-gems-1");
   for (const [k, n] of [["fish_coelacanth", 1], ["fish_carp", 4], ["fish_dace", 6], ["bug_monarch_butterfly", 2], ["apple", 5], ["shell_whelk", 1]] as const) m.give(ME, k, n);
   const id = (slug: string) => m.items.find((i) => i.slug === slug)!.id;
+  await m.store.credit(ME, "coins", 2500, "event", "fishing week", "demo-event-3");
   await S.buy(m.store, ME, { item_id: id("rod-cedar"), qty: 1, idempotency_key: "demo-buy-1" }, now);
   await S.buy(m.store, ME, { item_id: id("bobber-lucky"), qty: 1, idempotency_key: "demo-buy-4" }, now);
   await S.equip(m.store, ME, { item_id: id("bobber-lucky"), equipped: true });
-  await m.store.credit(ME, "coins", 1500, "event", "fishing derby", "demo-event-2");
+  await m.store.credit(ME, "coins", 7500, "event", "fishing derby", "demo-event-2");
   await S.buy(m.store, ME, { item_id: id("rod-glass"), qty: 1, idempotency_key: "demo-buy-5" }, now);
   await S.buy(m.store, ME, { item_id: id("bait-sweet"), qty: 1, idempotency_key: "demo-buy-6" }, now);
   await S.buy(m.store, ME, { item_id: id("acc-straw-hat"), qty: 1, idempotency_key: "demo-buy-2" }, now);
@@ -53,7 +54,8 @@ async function seed(): Promise<EconomyTransport> {
   if (q.get("found") !== "0") await m.store.tradeForTraining(ME);
   // ?tide=1: a Tidewarden rod in the bag (made at the workbench; its effect shows on the stage, RodAura).
   if (q.get("tide") === "1") {
-    const item = { ...m.items.find((i) => i.slug === "rod-training")!, id: "dev-rod-tidewarden", slug: "rod-tidewarden", display_name: "Tidewarden rod", catalogue_ref: "rod_tidewarden" };
+    const item = { ...m.items.find((i) => i.slug === "rod-training")!, id: "dev-rod-tidewarden", slug: "rod-tidewarden", display_name: "Tidewarden rod", catalogue_ref: "rod_tidewarden",
+      description: "An epic rod with the widest bite window on the island." };
     m.inventory.set(`${ME}:${item.id}`, { item, qty: 1, equipped: false, acquired_at: now.toISOString() });
   }
   m.fund(MAYA, 0, 800);

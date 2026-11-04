@@ -109,16 +109,31 @@ Build:
   - Dev harness: `/dev/economy?view=bag&tide=1` puts a Tidewarden rod in the bag.
   - Evidence: `specs/evidence/rod-gear/r5/` (`rg5-before-*` are the round-4 shots, `rg5-*` after; shots.mjs makes them).
 
+- **Round 6 built** on `game/rod-gear` (origin/main 18362223 merged; gates: tsc clean, full vitest 3787 passed + 1 real failure fixed after (toolWheel.test.ts, the Training rod now tier 1; passes alone), no load timeouts, eslint clean on changed files, SQL smoke chain clean except the known world_chat "the rest" assert):
+  - **No levels.** `trained`, `trainingLevel`, `toNextLevel`, `TRAINING.levels/step/unlock` and the level ring are deleted. `awakened(rod, catches)` (rods.ts): a rod's `awakenings` (`at`, `base`, `looks`, optional `hooks` and `passive`) replace its stats as it lands fish. `RodTier` gains `hooks`, `passive`, `awakenings`, `stage`; `canHook` reads `hooks`.
+  - Training: about the Flimsy's stats (12 each), hooks up to rare; awakens at 50, 250, 1000 to rare (36 to 38), epic (56 to 62), legendary (94 to 100, hooks divine, passive Seasoned) stats. Secret (`secretAwakenings`): its card shows only its fish count; the landing fish pops the reward card "Awakened!" in the new rung's outline (`rodNews`, `tsi:gift` now takes `rarity`).
+  - Epics (Titanium, Tidewarden, Tempest) awaken in the open: +6 every stat at 200 fish, +12 at 800 (Tidewarden's second also widens its passive). **Proposed, built, awaiting David's OK.** The card shows a 64 px bar "120 / 200 fish to awaken". A stronger aura per awakening is proposed only (RodAura takes no strength yet).
+  - Passives (rare and up, `inPlay`): Glass Sunlit (+10 control, sunny), Riptide Current (+10 reel, sea), Lighthouse Beacon (+10 luck, 8 pm to 6 am), Titanium Steel line (+10 strength, river and pond), Tidewarden Tide keeper (+10 strength, sea), Tempest Storm born (+10 reel and luck, rain). Applied on the server's roll (rolls.ts fishRoll) and the client's reel (useFishingSession). The card's passive line is kept (empty) on rods without one.
+  - Rescale: `STAT_MAX` 120 (the radar's ring and the cap). Table: `specs/evidence/rod-gear/r6/rg6-table.png`. Glass's strength 16 is its weakest stat.
+  - The Training trade: at the Flimsy's 35th fish a toast and the tracker's quest "The rod seller" (`trainingQuest`, DefaultIslandWorld's quests); E at the tackle counter opens `RodSellerTalk` (components/game) instead of the counter; "Trade the Flimsy rod" calls POST /api/economy/rod-trade, `rod_training_trade` (owning the Training rod retires the Flimsy everywhere: `ownsRod` in rods.ts, tools.ts `ownsTool`, the shop shelf). Store method `tradeForTraining` on both economy stores and transports; error `not_ready`.
+  - Shop: a found rod you lack shows as a teaser card (service.ts `TEASER`: "???", "Unique scenario required", silhouette via the kit's `not-found` cover, not clickable; no ref or slug sent). Tempest is found-only and epic, so off the shelf.
+  - Rod box: `DetailView quiet` (kit): All without its arrow; previous and next as faint 16 px chevrons at the stage's sides (stayed, for paging). Used by the shop's rod detail and the bag's rod detail.
+  - Prices by hours of fishing (about 80 fish an hour: 1,000 coins an hour on a common, 1,250 uncommon, 1,900 rare): Precision 1,000 (was 200), Cedar 2,500 (400), Carrot 3,000 (550), Glass 6,000 (1,200); nominal: Riptide 6,500, Lighthouse 8,000 (3,000), Titanium 14,000, Tidewarden 16,000 (6,000), Training 2,500 (900), Tempest 16,000.
+  - Roster: Riptide (rare, tier 3, crafted: wood 6, iron 2, whelk 2, mahi-mahi 1), Titanium (epic, tier 5, crafted: iron 8, gold 2, crystal 2, sturgeon 1), Tempest (epic, tier 5, found, catalogue row 1004, FOUND_ONLY). Current models wired by name (`tools/rod-riptide|titanium|tempest.glb`, their icons and rodFx).
+  - Migrations (unapplied, same names and order): `20261102170000_rod_catches.sql` (no grant in collections_land; new `rod_training_trade(uuid)`, service role only) and `20261102170100_catalogue_seed.sql` (regenerated: prices, Tempest, Training copy, and now a crafting block for the two crafted rods). Smoke: `rod_catches_smoke.sql` section 2 tests the trade.
+  - Evidence: `specs/evidence/rod-gear/r6/` (shots.mjs makes them).
+
 ## David's decisions
 
 - 2026-10-28 review (verbatim in the coordinator's round-2 prompt): rarity outline on shop cards (common grey, uncommon green, rare blue, epic purple, legendary yellow, divine purple holo); shop sells up to rare rods; hook caps by rod rarity; Flimsy common, Lighthouse rare; divine text white; gui-tiles approved; radar redone (bigger, minimal, lighter, icons with hover lines at the corners, out of 100, the base faint behind the build, linear slide); bait and bobber slots bottom-right of your own rod's square only, fitted ones show on the rod model with a settle; the bobber's detail shows only the bobber with its own radar; bobber and bait to be remodelled properly in Blender (HD for the shop, LP on the rod; the lucky bobber a four-leaf clover), **waiting on David's references** (coordinator asked him).
 
 ## Next
 
-1. Coordinator: apply `20261102170000_rod_catches` then `20261102170100_catalogue_seed`; David reviews `specs/evidence/rod-gear/r5/`.
-2. Riptide, Tempest and Titanium: add them to the roster (tool-pipeline's note) only on David's word on their stats, rarity and tier; their models, icons and effects are already in the tree.
-3. Glass to uncommon only on David's pick (round 4 item 4).
-4. When references arrive: model the base bobber, the lucky four-leaf-clover bobber and the bait in Blender (design bible Models), HD to `public/assets/game/items/`, LP to `items/lp/`.
+1. Coordinator: apply `20261102170000_rod_catches` then `20261102170100_catalogue_seed` (before the code deploys); David reviews `specs/evidence/rod-gear/r6/`.
+2. David's OK on the proposals: the epics' awakenings (+6 at 200, +12 at 800), each passive, the prices; how the Tempest rod is earned (the quest or event isn't built: it's found-only, never sold).
+3. A stronger aura per awakening, if David wants it: RodAura needs a strength input (tool-pipeline's file).
+4. Glass to uncommon only on David's pick (round 4 item 4). Riptide, Titanium and Tempest's redone models land on tool-pipeline with the same names: nothing to rewire.
+5. When references arrive: model the base bobber, the lucky four-leaf-clover bobber and the bait in Blender (design bible Models).
 
 ## Tools and gotchas
 
@@ -126,7 +141,7 @@ Build:
 - `node scripts/gen-seeds.mjs` writes the catalogue seed migration after a catalogue change; a hand migration that widens a check must sort before it.
 - Dev harness: `/dev/economy?view=overlay&section=rods` (the rod shop) and `/dev/economy?view=bag` (the bag's tools: Cedar and Glass rods, the lucky bobber on, sweet bait owned), memory store.
 - Shots: `specs/evidence/rod-gear/r2/shots.mjs` (PW=playwright index.mjs from ~/.npm/_npx, SHELL_BIN=the cached chromium_headless_shell-1217, BASE=dev server). The site's intro curtain (`.ld-overlay`) waits on window load and covers dev pages: the script hides it.
-- `/dev/economy` seeds rod catches (Flimsy 50, Cedar 37, Glass 12, Training 31) and the found Training rod (`&found=0`: not found yet); `?view=unlock` plays the Training rod's card through `rodNews`.
+- `/dev/economy` seeds rod catches (Flimsy 50, Cedar 37, Glass 12, Training `&tc=` default 31, Tidewarden `&tdc=` default 120) and trades for the Training rod (`&found=0`: not yet, the quest is on); `?view=awaken` plays the Training rod's awakening through `rodNews`; `?view=trade&found=0` the rod seller's ask. The harness funds enough coins for the new prices.
 - The SQL smoke chain re-applies the backpack migration inside backpack_smoke, which brings back the 4-arg `collections_cast`: rod_catches_smoke drops it first.
 - Memory stores: `m.caught(member, rod, n)` seeds rod_catches (both the collections and the economy store).
 - The vitest seed check fails until `node scripts/gen-seeds.mjs` runs after any catalogue text change; delete the lane's own unapplied seed first, and update the chain in launch-fixes/sql-smoke.sh.
