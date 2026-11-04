@@ -71,7 +71,7 @@ export default function FlatPieces() {
         ]} />
     </div>
     <div style={{ maxWidth: 380, padding: "18px 22px", borderRadius: 4, background: "var(--ui-paper)", color: "var(--ui-paper-ink)" }}>
-      <BookPage title="River" filled={6} total={RIVER.length} note={<>All in the tank: {TASTING.full}<CurrencyIcon size={11} /></>}>
+      <BookPage title="River" filled={6} total={RIVER.length} note={<>A full page: {TASTING.full}<CurrencyIcon size={11} /></>}>
         {RIVER.map((k, i) => <BookSlot key={k} filter={ink} name={k} state={i < 5 ? "cooked" : i === 6 ? "aquarium" : "empty"} fresh={i === 4} picture={<PixelImage src={iconUrl(k)} px={36} />} />)}
       </BookPage>
       <BookMarks marks={TASTING.marks.map(m => ({ at: m.at, done: m.at <= 6, reward: <>{m.coins}<CurrencyIcon size={11} /></> }))} />

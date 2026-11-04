@@ -1,7 +1,7 @@
 // tasting-book evidence: headless Chromium (never a window), muted, signed out, the dev server on :3476 with
 // the Supabase env blanked and NEXT_PUBLIC_GAME_WORLD=new, the new world (/lab/island) with the demo data.
 //   VIEW=phone node specs/evidence/tasting-book/shoot.mjs <out_dir> <flow> [<flow> ...]
-// VIEW: desktop (1280 x 800, the default) or phone (390 x 844, touch). Flows: showroom, counter (choice, cook, stamp, book), aquarium.
+// VIEW: desktop (1280 x 800, the default) or phone (390 x 844, touch). Flows: showroom, counter (choice, cook, stamp, book), aquarium, book3, book4.
 import { createRequire } from "node:module";
 import { readFileSync, writeFileSync } from "node:fs";
 const require = createRequire("/opt/homebrew/lib/node_modules/");
@@ -27,13 +27,13 @@ const shot = async (name, target = page, opts = {}) => {
 };
 const wait = ms => page.waitForTimeout(ms);
 /** The new world at (x, z), signed out with the demo's pockets; E pressed when `press`. */
-async function world(query, { press = true, settle = 9000 } = {}) {
+async function world(query, { press = true, settle = 9000, click = true } = {}) {
   await page.goto(`${HOST}/lab/island?collections=demo&tasks=1&${query}`, { waitUntil: "domcontentloaded" });
   await page.waitForSelector("canvas", { timeout: 300000 });
   await page.waitForFunction(() => !document.querySelector('[role="status"]')?.textContent?.includes("Preparing"), null, { timeout: 300000 }).catch(() => {});
   await wait(settle);
   await page.addStyleTag({ content: 'nextjs-portal { display: none !important; } p[role="status"][style*="top: 48"] { display: none !important; }' });
-  await page.locator("canvas").first().click({ position: { x: VW / 2, y: VH / 2 } }).catch(() => {});
+  if (click) await page.locator("canvas").first().click({ position: { x: VW / 2, y: VH / 2 } }).catch(() => {});
   await page.mouse.move(4, VH - 4);
   if (press) { await page.keyboard.press("e"); await wait(1800); }
 }
@@ -182,6 +182,74 @@ const FLOW = {
     console.log("buff", JSON.stringify(b), "hudRight", JSON.stringify(hud));
     // The UI view (Esc 1): the minimap grows and the wallet stays; the buff stays clear under them.
     if (!PHONE) { await page.keyboard.press("Escape"); await wait(1500); await shot("tb3-buff-uiview"); }
+  },
+  /** Round 4 (tb4-*): the stool with no Menu or Leave button and no "Click to look around"; looking down (the mouse with no
+   * click, a finger on a phone) at the menu on the counter shows the prompt; E (a tap) reads it; the nigiri page (Lasts:
+   * Permanent, Cook it alone); looking back up (a tap outside on a phone) puts it down; moving gets you up. */
+  async book4() {
+    await world("at=-47,114.4&at=19:30&time=evening&bag=23&dish=1", { settle: 12000, press: false, click: false });
+    const seatLine = () => page.getByText(/down (at|to) the menu/).count();
+    for (let i = 0; i < 40 && !(await seatLine()); i++) { await page.keyboard.press("e"); await wait(5000); }
+    await wait(2500);
+    const state = async tag => console.log(tag, JSON.stringify(await page.evaluate(() => ({ pitch: window.__orbit?.orbit.target.pitch, capture: window.__orbit?.capture.state, hint: !!document.querySelector('p[role="status"]')?.textContent?.includes("Click to look") }))));
+    await state("seated");
+    await shot("tb4-seat");
+    // Look down at the counter: the mouse alone (no click, no lock) on a desktop; a finger dragged down on a phone.
+    if (PHONE) {
+      await page.evaluate(async () => {
+        const el = document.querySelector("canvas"), at = (type, y) => el.dispatchEvent(new PointerEvent(type, { pointerType: "touch", pointerId: 7, clientX: 195, clientY: y, bubbles: true, isPrimary: true }));
+        at("pointerdown", 380);
+        for (let y = 384; y <= 480; y += 4) { at("pointermove", y); await new Promise(r => setTimeout(r, 16)); }
+        window.dispatchEvent(new PointerEvent("pointerup", { pointerType: "touch", pointerId: 7, clientX: 195, clientY: 480, bubbles: true }));
+      });
+    } else {
+      await page.mouse.move(VW / 2, VH / 2);
+      for (let i = 0; i < 25; i++) { await page.mouse.move(VW / 2, VH / 2 + 4 * (i + 1)); await wait(16); }
+    }
+    await wait(2000);
+    await state("looked down");
+    await shot("tb4-look");
+    await page.getByRole("button", { name: /Read the menu/ }).first().click({ timeout: 10000 }).catch(e => console.log("read", e.message.slice(0, 120)));
+    await wait(1800);
+    await shot("tb4-menu-open");
+    await centre(page.getByRole("button", { name: "Open the menu" }));
+    await wait(1200);
+    await turnPage();
+    await page.getByRole("button", { name: /Bancha's nigiri/ }).first().click({ force: true }).catch(e => console.log("nigiri", e.message.slice(0, 120)));
+    await wait(700); await menuShot("tb4-nigiri");
+    await page.getByRole("button", { name: "Red Snapper", exact: true }).first().click({ force: true }).catch(e => console.log("snapper", e.message.slice(0, 120)));
+    await page.mouse.move(4, VH - 4);
+    await wait(700); await menuShot("tb4-choice");
+    console.log("aquarium button", await page.getByRole("button", { name: /aquarium/i }).count());
+    // Put it down: the arrow up (looking back up) on a desktop, a tap outside it on a phone.
+    if (PHONE) await page.touchscreen.tap(VW / 2, 24); else await page.keyboard.press("ArrowUp");
+    await wait(2200);
+    await state("put down");
+    await shot("tb4-menu-down");
+    // Moving gets you up: W on a desktop, the stick on a phone.
+    if (PHONE) {
+      const b = await testid("touch-stick").boundingBox();
+      if (b) { await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down(); await page.mouse.move(b.x + b.width / 2, b.y + 4, { steps: 4 }); await wait(700); await page.mouse.up(); }
+      else console.log("no stick");
+    } else { await page.keyboard.down("w"); await wait(600); await page.keyboard.up("w"); }
+    await wait(2600);
+    console.log("seat line after moving", await seatLine());
+    await shot("tb4-leave");
+  },
+  /** Round 4: the give at HQ's tank (E there; the bar only cooks). */
+  async tank4() {
+    await world("hq=inside&at=0,4.2&time=day&bag=23&dish=1", { press: false, settle: 14000 });
+    await page.keyboard.down("w"); await wait(2600); await page.keyboard.up("w");
+    await wait(1500);
+    await shot("tb4-tank-prompt");
+    for (let i = 0; i < 6 && !(await testid("tank-sheet").count()); i++) { await page.keyboard.press("e"); await wait(1500); }
+    await wait(1000);
+    await shot("tb4-tank");
+    await page.locator('[data-testid="tank-sheet"] [data-key="fish_red_snapper"]').first().click({ timeout: 10000 }).catch(e => console.log("give", e.message.slice(0, 120)));
+    await wait(1800);
+    await shot("tb4-tank-given");
+    await page.keyboard.press("Escape"); await wait(3000);
+    await shot("tb4-tank-swim");
   },
   async aquarium() {
     await world("hq=inside&at=0,4.2&time=day", { press: false, settle: 14000 });

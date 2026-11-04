@@ -269,17 +269,16 @@ export const SUSHI_MENU: readonly Dish[] = [
  * and expensive. the fee for cooking scales with new fish unlock"; round 3, 2026-11-03: "key fish, tank is the route for
  * milestones and unlocks and cooking is solely for bonuses, no"). A rod fish whose slot is still empty: Bancha cooks it
  * (`nigiri`) for `fee.base` coins plus `fee.step` for each species he has cooked for you before, and its stamp makes your
- * casts a little luckier for good (bookLuck: `luck.each` a species for the first `luck.first`, then `luck.then`, up to
- * `luck.cap`), and that is all a cook gives; or it goes to HQ's tank, free, filling the slot instead. A filled slot is
+ * casts a little luckier for good (bookLuck: `luck.each` a species up to `luck.cap`, round 4: +20%), and that is all a cook gives; or it goes to HQ's tank, free, filling the slot instead. A filled slot is
  * never cooked again, and a duplicate gets no nigiri (it goes into a dish or the sell sheet). The tank is the route to
- * the rest: its gifts pay at `marks` (fish in the tank) and for each water whose every fish is in it (`full`), and a key
+ * the rest: its gifts pay at `marks` (fish in the tank), any fill pays for a water whose page it completes (`full`, round 4), and a key
  * fish in it teaches Bancha its dish (`dishes`, by `unlock`).
  */
 export interface BookDish extends Dish { price: number; unlock: string; ingredients: readonly (readonly [key: string, n: number])[] }
 export const TASTING = {
   nigiri: { id: "tasting", name: "Bancha's nigiri", blurb: "A fish new to your book. Its stamp keeps your luck a little higher for good." },
   fee: { base: 100, step: 5 },
-  luck: { first: 20, each: 0.01, then: 0.005, cap: 0.4 },
+  luck: { each: 0.01, cap: 0.2 },
   marks: [{ at: 10, coins: 150 }, { at: 25, coins: 400 }],
   full: 250,
   /** The book's dishes: learnt when their key fish (`unlock`) is in the tank, then ordered for coins and `ingredients` from your bag. */

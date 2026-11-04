@@ -177,8 +177,8 @@ export function memoryEconomyStore(clock: () => Date = () => new Date(), random:
       const remaining = take(m, key);
       let balance = paid > 0 ? apply(m, "coins", -paid, "shop", `tasting:${key}`, `tasting:${idem}`).balance : (coins.get(m) ?? 0);
       book.push({ member: m, slot: { species_key: key, way: way === "cook" ? "cooked" : "aquarium" } });
-      // Only the tank's gifts count toward the milestones; a cook is its stamp and luck alone.
-      const { earned, marks: got } = way === "aquarium" ? tastingMarks(new Set([...mine.filter((b) => b.slot.way === "aquarium").map((b) => b.slot.species_key), key]), key, marks, full) : { earned: 0, marks: [] };
+      // The tank's count pays only a gift; a water's page pays whichever fill completes it.
+      const { earned, marks: got } = tastingMarks(new Map([...mine, book.at(-1)!].map((b) => [b.slot.species_key, b.slot.way])), key, marks, full);
       if (earned > 0) balance = apply(m, "coins", earned, "quest", `tasting:${got.join(",")}`, `tasting_mark:${idem}`).balance;
       const r = { balance, remaining, paid, stamped: way === "cook", earned, marks: got, replayed: false };
       serves.set(`${m}:${idem}`, r);

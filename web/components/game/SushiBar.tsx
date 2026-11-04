@@ -15,6 +15,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import Character, { type CharacterMotion, type ClipName } from "./character/Character";
 import LampPools from "./hq/LampPools";
 import { STAFF_URL, parseLook } from "@/lib/game/character/look";
@@ -26,9 +27,10 @@ import type { IslandPhase } from "@/lib/game/islandTime";
 import { SUSHI_BAR_GETA_URL, SUSHI_BAR_GLOW_URL, SUSHI_BAR_HOURS_URL, SUSHI_BAR_ISLES_URL, SUSHI_KNIFE_URL } from "@/lib/game/propModels";
 import { localAvatar } from "@/lib/net/localAvatar";
 import { isSeatedPose } from "@/lib/game/seatPrompt";
+import { DEFAULT_PITCH, orbit } from "@/lib/game/orbitCamera";
 import {
   BAR_POOLS, CHEF_LOOK, CHEF_OUTSIDE, CHEF_STATIONS, HANDOFF, HOURS_TOP, PIECES, PREP_AT, SERVED_AT, SERVER, SERVER_LOOK,
-  SERVE_S, STAFF_Y, STOOLS, barEarshot, barOpen, barPoint, prepAt, readingView, seatView, servedAt, stoolAt, type Bar, type BarStation, type BarView,
+  SERVE_S, STAFF_Y, STOOLS, barEarshot, barOpen, barPoint, looksAtMenu, menuAt, prepAt, readingView, seatView, servedAt, stoolAt, type Bar, type BarStation, type BarView,
 } from "@/lib/game/sushiBar";
 
 /** The glow's brightness (in the evening a little under the night's), how fast it comes up or goes out (the lamps' ease, AmbientProps LAMP_RATE), and how fast the blinds roll. */
@@ -43,6 +45,31 @@ const GETAS = STOOLS.length + 1;
 const ISLES_NEAR = 1.5;
 /** The staff are there (drawn, at work) only while you're this near the bar; a little further before they go. */
 const STAFF_IN = 40, STAFF_OUT = 44;
+
+/**
+ * The menu lying on the counter before your stool (tasting-book round 4, David: "have menu be on the table"): a folded
+ * washi card with its name in an ink strip down the cover and the red seal, as the menu in your hands (SushiSheets
+ * MenuPickup). One mesh in vertex colour, paper's matte (cloth's preset): small, so plain colour, one draw.
+ */
+function counterMenu() {
+  const part = (size: [number, number, number], at: [number, number, number], hex: string) => {
+    const g = new THREE.BoxGeometry(...size).translate(...at), c = new THREE.Color(hex), n = g.attributes.position.count;
+    g.setAttribute("color", new THREE.Float32BufferAttribute(Array.from({ length: n }, () => [c.r, c.g, c.b]).flat(), 3));
+    return g;
+  };
+  const geo = mergeGeometries([
+    part([0.24, 0.012, 0.34], [0, 0.006, 0], "#efe5cf"),
+    part([0.036, 0.002, 0.2], [0.05, 0.013, -0.04], "#3a3025"),
+    part([0.03, 0.002, 0.03], [0.05, 0.013, 0.1], "#b23a2a"),
+  ]);
+  return new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ name: "BarMenu", vertexColors: true, roughness: 1, metalness: 0 }));
+}
+
+/** Module scope (the react compiler forbids writing through hook values): the counter's menu before stool `i` (none at -1), down unless `down` is false. */
+function layMenu(menu: THREE.Object3D, i: number, down: boolean) {
+  menu.visible = i >= 0 && down;
+  if (i >= 0) { menu.position.set(...menuAt(STOOLS[i])); menu.rotation.y = 0.06; }
+}
 
 /** Module scope (the react compiler forbids writing through hook values): the glow's materials and the pools' gain. */
 function shine(mats: readonly THREE.MeshStandardMaterial[], pools: THREE.Object3D | null, level: number) {
@@ -128,6 +155,8 @@ export default function SushiBar({ bar, y, player, phase, viewRef, onNear }: {
   useEffect(() => () => { getas.meshes.forEach(m => m.geometry.dispose()); disposeModelMaterials(getas.model); }, [getas]);
   const pools = useRef<THREE.Group>(null);
   const [seated, setSeated] = useState(false), [staffOn, setStaffOn] = useState(false);
+  const menu = useMemo(() => counterMenu(), []);
+  useEffect(() => () => { menu.geometry.dispose(); (menu.material as THREE.Material).dispose(); }, [menu]);
   const ear = useMemo(() => barEarshot(onNear), [onNear]);
   const s = useRef({
     on: 0, open: open ? 1 : 0, staff: false, stool: -1, prep: [NaN, NaN], getas: { served: -1, carried: false },
@@ -135,6 +164,8 @@ export default function SushiBar({ bar, y, player, phase, viewRef, onNear }: {
     base: { eye: { x: 0, y: 0, z: 0 }, look: { x: 0, y: 0, z: 0 } } as BarView,
     /** The menu in your hands (tsi:bar-menu): 0 down on the counter, 1 picked up; `read` its target. */
     reading: 0, read: 0,
+    /** Looking down at the menu on the counter (tsi:bar-look: the E prompt). */
+    look: false,
   });
   useEffect(() => {
     const on = (e: Event) => { s.current.read = (e as CustomEvent<boolean>).detail ? 1 : 0; };
@@ -165,6 +196,10 @@ export default function SushiBar({ bar, y, player, phase, viewRef, onNear }: {
       Object.assign(st.base.eye, { x: ex, y: y + eye[1], z: ez });
       Object.assign(st.base.look, { x: lx, y: y + look[1], z: lz });
     }
+    // The menu lies there while you sit (it's in your hands while you read it), and looking down at it is the prompt.
+    layMenu(menu, i, st.reading < 0.5);
+    const look = i >= 0 && looksAtMenu(orbit.target.pitch, DEFAULT_PITCH, st.look);
+    if (look !== st.look) { st.look = look; window.dispatchEvent(new CustomEvent("tsi:bar-look", { detail: look })); }
     st.stool = i;
     st.reading = THREE.MathUtils.damp(st.reading, i >= 0 ? st.read : 0, 6, dt);
     readingView(st.base, st.reading, st.seat);
@@ -180,6 +215,7 @@ export default function SushiBar({ bar, y, player, phase, viewRef, onNear }: {
     <primitive object={glow.model} />
     <primitive object={hours.model} />
     {seated && <Suspense fallback={null}><Isles viewRef={viewRef} /></Suspense>}
+    {seated && <primitive object={menu} />}
     <group ref={pools}><LampPools pools={BAR_POOLS} gain={0} /></group>
     <primitive object={getas.group} />
     {staffOn && <Staff look={CHEF_LOOK} stations={CHEF_STATIONS} outside={open ? null : CHEF_OUTSIDE} />}

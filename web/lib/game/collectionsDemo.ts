@@ -188,8 +188,8 @@ export function installCollectionsDemo(): void {
           eco.fund(ME, eco.coinsOf(ME) - fee, eco.gemsOf(ME));
           if (!cook) clubTank.unshift(fish);
           book.set(fish, cook ? "cooked" : "aquarium");
-          // Only the tank's gifts pay the milestones (tasting_serve's).
-          const won = cook ? { earned: 0, marks: [] } : tastingMarks(new Set([...book].filter(([, w]) => w === "aquarium").map(([k]) => k)), fish);
+          // The milestones, as tasting_serve pays them.
+          const won = tastingMarks(book, fish);
           eco.fund(ME, eco.coinsOf(ME) + won.earned, eco.gemsOf(ME));
           return reply({ ok: true, data: { balance: eco.coinsOf(ME), remaining: row.count - 1, paid: fee, stamped: cook, ...won, replayed: false } }, "serve");
         }

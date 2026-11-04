@@ -12,9 +12,10 @@
  * The back pages are the tasting book (David, 2026-11-01: "one per fish kinda thing and they can either turn into meal
  * that gets buff and a stamp or in the aquarium"; round 2: "perm small like 1% buff for fishing for new species and it
  * can unlcok dishes"; round 3: "key fish, tank is the route for milestones and unlocks and cooking is solely for
- * bonuses"): bring Bancha a fish not yet in your book, cook it (his nigiri: a fee that grows with the species cooked, its
- * stamp, and a little more luck for good, nothing else) or give it to HQ's tank (the book's milestones, and a key fish
- * teaches him its dish); a page per water, a slot per species (lib/wallet/service.ts serveFish). The dishes are ordered
+ * bonuses"): bring Bancha a fish not yet in your book and he cooks it (his nigiri: a fee that grows with the species
+ * cooked, its stamp, and a little more luck for good, nothing else); or give it to HQ's tank there (TankSheet: the tank's
+ * milestones, and a key fish teaches him its dish; round 4, David: "no button that says fr thwe aquarium"); a page per
+ * water, a slot per species (lib/wallet/service.ts serveFish). The dishes are ordered
  * off the book's second page for coins and their ingredients (orderDish). Every meal is named in the rod's six stats.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -30,12 +31,16 @@ import { newKey } from "@/lib/apiClient";
 import { iconUrl } from "@/lib/icons/keys";
 import { usePresence, useWorldDialog } from "@/lib/game/useWorldDialog";
 import { httpEconomyTransport, type EconomyTransport } from "@/lib/wallet/transport";
+import { useMoveKeys } from "@/lib/game/movement/keys";
+import { DEFAULT_PITCH, lookOrbit, orbit } from "@/lib/game/orbitCamera";
 import { CurrencyIcon } from "@/components/economy/Amount";
 import { mealRows } from "@/components/economy/statIcons";
 import PixelImage from "@/components/economy/PixelImage";
 import { errText } from "@/components/economy/EconomySheets";
 import { BookMarks, BookPage, BookSlot, CoverTitle, FoldedMenu, Hanko, InkArt, InkDefs, MenuDish, PanelSection, Thumb, useInkId, type DishStat, type FoldedMenuHandle } from "@/components/gui/flat";
-import { toast } from "@/components/gui";
+import { Badge, Empty, List, ListRow, Loading, toast } from "@/components/gui";
+import { HQ_LINES } from "@/lib/game/hqLayout";
+import IslandSheet from "../IslandSheet";
 import m from "./menu.module.css";
 
 /** "Luck +10%, Bite window +10%, 45 min": what a meal does, in the rod's words. */
@@ -82,8 +87,8 @@ const COUNT_WORD: Record<number, string> = { 10: "Ten", 25: "Twenty-five" };
 function markGift(mark: string) {
   const [kind, v] = mark.split(":"), count = kind === "count";
   const coins = count ? TASTING.marks.find(m => m.at === Number(v))?.coins ?? 0 : TASTING.full;
-  return { key: "coin", name: `${coins} coins`, title: count ? `${COUNT_WORD[Number(v)] ?? v} in the tank` : `The ${WATER_TITLE[v as TastingWater]?.toLowerCase() ?? v}, all in the tank`,
-    note: count ? "Bancha keeps count. He nods, and slides the coins across." : "Every fish from that water, swimming at HQ. Bancha is impressed." };
+  return { key: "coin", name: `${coins} coins`, title: count ? `${COUNT_WORD[Number(v)] ?? v} in the tank` : `The ${WATER_TITLE[v as TastingWater]?.toLowerCase() ?? v}, a full page`,
+    note: count ? "Bancha keeps count. He nods, and slides the coins across." : "Every fish from that water in your book. Bancha is impressed." };
 }
 
 /** Tell the bar the menu is up or down: the seated camera leans in to read it (SushiBar). */
@@ -96,7 +101,21 @@ const lift = (up: boolean) => window.dispatchEvent(new CustomEvent("tsi:bar-menu
  */
 export function MenuPickup({ open, onClose, waters = ["sea", "river"], transport = httpEconomyTransport }: { open: boolean; onClose: () => void; waters?: readonly WaterType[]; transport?: EconomyTransport }) {
   const state = usePresence(open, 380);
+  // Put down (round 4): Esc, M, a tap outside, looking back up (the arrow up, or the mouse up past it), or moving, which gets you up too.
   const panel = useWorldDialog<HTMLDivElement>(open, onClose, "m");
+  const moves = useMoveKeys();
+  useEffect(() => {
+    if (!open) return;
+    const walk = [moves.forward, moves.back, moves.left, moves.right].map(k => k.toLowerCase());
+    const key = (e: KeyboardEvent) => {
+      if (e.repeat) return;
+      if (walk.includes(e.key.toLowerCase())) { onClose(); window.dispatchEvent(new Event("tsi:stand")); }
+      // The arrow up looks back up from the counter (the seated view's middle), which puts the menu down.
+      if (e.key === "ArrowUp") { orbit.target.pitch = Math.min(orbit.target.pitch, DEFAULT_PITCH); onClose(); }
+    };
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, [open, onClose, moves]);
   const [data, setData] = useState<[SushiView, SellEntry[], TastingView | null] | null>(null), [error, setError] = useState<string | null>(null);
   const [picked, setPicked] = useState<string | null>(null), [busy, setBusy] = useState(false);
   // The tasting book: the fish picked at the counter, the slot whose stamp just landed, and the page to turn to.
@@ -119,15 +138,14 @@ export function MenuPickup({ open, onClose, waters = ["sea", "river"], transport
   // Only a fish whose slot is empty goes to the counter: a slot fills once.
   const tastable = (data?.[1] ?? []).filter(e => tastingWater(e.item_key) && !book.has(e.item_key) && !e.locked && e.count > 0);
   const cooked = [...book.values()].filter(w => w === "cooked").length, tanked = book.size - cooked, fee = tastingFee(cooked);
-  const serve = async (fish: SellEntry, way: "cook" | "aquarium") => {
+  const cook = async (fish: SellEntry) => {
     setBusy(true);
     try {
-      const r = await transport.serve(fish.item_key, way, newKey());
-      const taught = way === "aquarium" && TASTING.dishes.find(d => d.unlock === fish.item_key);
-      toast(way === "cook" ? `${fish.name}, stamped. Luck ${pct(bookLuck(cooked + 1))} for good.` : `Your ${fish.name.toLowerCase()} swims in HQ's tank now${taught ? `, and Bancha learnt his ${taught.name.toLowerCase()}` : ""}.`, iconUrl(fish.item_key));
+      const r = await transport.serve(fish.item_key, "cook", newKey());
+      toast(`${fish.name}, stamped. Luck ${pct(bookLuck(cooked + 1))} for good.`, iconUrl(fish.item_key));
       r.marks.forEach(mk => window.dispatchEvent(new CustomEvent("tsi:gift", { detail: markGift(mk) })));
       // The slot fills here at once (the server has said so), the page turns to it and the stamp presses down.
-      const slot: TastingSlot = { species_key: fish.item_key, way: way === "cook" ? "cooked" : "aquarium" };
+      const slot: TastingSlot = { species_key: fish.item_key, way: "cooked" };
       setData(cur => cur && [cur[0], cur[1].map(e => (e.item_key === fish.item_key ? { ...e, count: r.remaining } : e)), cur[2] && { ...cur[2], book: [...cur[2].book, slot] }]);
       setChosen(null);
       setPicked(null);
@@ -169,7 +187,7 @@ export function MenuPickup({ open, onClose, waters = ["sea", "river"], transport
   const step = bookLuck(cooked + 1) - bookLuck(cooked), teaches = chosenFish && TASTING.dishes.find(d => d.unlock === chosenFish.item_key);
   const nigiriStats: DishStat[] = [
     ...(step > 0 ? [{ icon: <Clover />, label: "Luck", value: pct(step) }] : []),
-    { icon: <Clock />, label: "Lasts", value: "For good" },
+    { icon: <Clock />, label: "Lasts", value: "Permanent" },
   ];
   const tasting = <MenuDish key="tasting" open={picked === T.id} picture={<DishPicture id={T.id} />} standIn={!DISH_ART[T.id]?.ready} name={T.name}
     stats={nigiriStats} note={T.blurb} price={<>{fee}<CurrencyIcon size={13} /></>} onPick={() => { setPicked(picked === T.id ? null : T.id); setChosen(null); }}>
@@ -177,16 +195,15 @@ export function MenuPickup({ open, onClose, waters = ["sea", "river"], transport
       <div className={m.fishRow}>{tastable.map(f => <Thumb key={f.item_key} picture={iconUrl(f.item_key)} rarity={f.rarity} size={42} count={f.count} label={f.name}
         selected={chosen === f.item_key} onClick={busy ? undefined : () => setChosen(chosen === f.item_key ? null : f.item_key)} />)}</div>
       {chosenFish ? <div className={m.choice} data-testid="tasting-choice">
-        <span className={m.quiet}>{teaches ? `${chosenFish.name}: cook it for luck, or in the tank it teaches Bancha his ${teaches.name.toLowerCase()}.` : `${chosenFish.name}: cook it for luck, or give it to the tank?`}</span>
-        <button type="button" className={m.order} disabled={busy} onClick={() => void serve(chosenFish, "cook")}>Cook it<span>{fee}<CurrencyIcon size={12} /></span></button>
-        <button type="button" className={m.order} data-quiet="" disabled={busy} onClick={() => void serve(chosenFish, "aquarium")}>For the aquarium</button>
+        <span className={m.quiet}>{teaches ? `${chosenFish.name}: cook it for luck. In HQ's tank instead, it teaches Bancha his ${teaches.name.toLowerCase()}.` : `${chosenFish.name}: cook it for luck, or give it to HQ's tank.`}</span>
+        <button type="button" className={m.order} disabled={busy} onClick={() => void cook(chosenFish)}>Cook it<span>{fee}<CurrencyIcon size={12} /></span></button>
       </div> : null}
     </>}
   </MenuDish>;
   // The book's dishes: learnt with their fish's stamp, then ordered for coins and what's in your bag.
   const inBag = new Map((data?.[1] ?? []).filter(e => !e.locked).map(e => [e.item_key, e.count]));
   const bookDish = (d: BookDish) => {
-    const fish = NAME.get(d.unlock) ?? d.unlock, hint = book.get(d.unlock) === "cooked" ? `Cooked: only a ${fish} in the tank teaches it.` : `Give a ${fish} to the tank and Bancha learns it.`;
+    const fish = NAME.get(d.unlock) ?? d.unlock, hint = book.get(d.unlock) === "cooked" ? `Cooked: only a ${fish} in HQ's tank teaches it.` : `Give a ${fish} to HQ's tank and Bancha learns it.`;
     const learnt = book.get(d.unlock) === "aquarium", ready = d.ingredients.every(([k, n]) => (inBag.get(k) ?? 0) >= n), isOpen = picked === d.id;
     return <MenuDish key={d.id} open={isOpen} picture={<DishPicture id={d.id} />} standIn={!DISH_ART[d.id]?.ready} name={d.name}
       stats={dishStats(d.buff)} note={learnt ? d.blurb : hint}
@@ -201,10 +218,10 @@ export function MenuPickup({ open, onClose, waters = ["sea", "river"], transport
   const PAGE_ART = [<InkArt key="a" kind="bamboo" filter={ink} className={m.bamboo} />, <InkArt key="b" kind="mist" filter={ink} fade="none" className={m.mistLow} />,
     <InkArt key="c" kind="plum" filter={ink} fade="left" className={m.plumCorner} />, <InkArt key="d" kind="pagoda" filter={ink} className={m.pagodaLow} />];
   const pages = PAGES.map(({ water, species }, i) => {
-    const filled = species.filter(k => book.has(k)).length, cookedHere = species.some(k => book.get(k) === "cooked");
+    const filled = species.filter(k => book.has(k)).length;
     const opensLater = water === "cliff_pool" ? "Opens later" : water === "pond" && !waters.includes("pond") ? "Opens with the mountain" : null;
-    // A water pays when every fish of it is in the tank: once one is cooked, the page just fills.
-    const note = opensLater ?? (filled === species.length ? "Full" : cookedHere ? null : <>All in the tank: {TASTING.full}<CurrencyIcon size={11} /></>);
+    // A water pays when its page fills, cooked or in the tank (round 4 pick).
+    const note = opensLater ?? (filled === species.length ? "Full" : <>A full page: {TASTING.full}<CurrencyIcon size={11} /></>);
     return <>
       <BookPage title={WATER_TITLE[water]} filled={filled} total={species.length} note={note}>
         {species.map(k => <BookSlot key={k} filter={ink} name={NAME.get(k) ?? k} state={book.get(k) ?? "empty"} fresh={fresh === k} picture={<PixelImage src={iconUrl(k)} px={36} />} />)}
@@ -242,7 +259,7 @@ export function MenuPickup({ open, onClose, waters = ["sea", "river"], transport
     </>,
     <>
       <PanelSection title="The book">
-        <p className={m.welcome}>A fish new to your book: cook it for luck,<br />or give it to the tank for the marks and a key fish&apos;s dish.</p>
+        <p className={m.welcome}>A fish new to your book: cook it here for luck,<br />or give it to HQ&apos;s tank for the marks and a key fish&apos;s dish.</p>
         <p className={m.meal} data-testid="book-luck"><Clover size={13} aria-hidden />{cooked ? `${cooked} cooked: luck ${pct(bookLuck(cooked))} for good` : "Nothing cooked yet"}</p>
         <p className={m.meal}><Fish size={13} aria-hidden />{tanked} in the tank</p>
         <BookMarks marks={TASTING.marks.map(mk => ({ at: mk.at, done: tanked >= mk.at, reward: <>{mk.coins}<CurrencyIcon size={11} /></> }))} />
@@ -258,7 +275,8 @@ export function MenuPickup({ open, onClose, waters = ["sea", "river"], transport
     ...pages,
   ];
   return <div className={m.layer} data-state={state}>
-    <div className={m.vignette} onClick={onClose} aria-hidden />
+    {/* Round the menu the mouse still tilts the seated view: back up to the middle puts it down (DefaultIslandWorld, tsi:bar-look). */}
+    <div className={m.vignette} onClick={onClose} onPointerMove={e => { if (e.pointerType === "mouse") lookOrbit(0, e.movementY); }} aria-hidden />
     <div ref={panel} role="dialog" aria-modal aria-label="Menu" tabIndex={-1} data-gui-dialog data-gui-overlay className={m.hands} data-testid="sushi-menu">
       <InkDefs id={ink} />
       {error ? <p className={m.error} role="status">{error}</p> : null}
@@ -266,4 +284,43 @@ export function MenuPickup({ open, onClose, waters = ["sea", "river"], transport
       <button type="button" className={m.down} onClick={onClose} aria-label="Put the menu down"><X size={16} aria-hidden /></button>
     </div>
   </div>;
+}
+
+/**
+ * HQ's tank (tasting-book round 4, David: "no button that says fr thwe aquarium"): the bar only cooks, and a fish goes
+ * to the club's tank here, at the tank in HQ (E). Free, into an empty slot of your book (tasting_serve's 'aquarium'): the
+ * tank's count pays the marks, a page filled pays its water, and a key fish teaches Bancha its dish.
+ */
+export function TankSheet({ open, onClose, transport = httpEconomyTransport }: { open: boolean; onClose: () => void; transport?: EconomyTransport }) {
+  const [data, setData] = useState<[SellEntry[], TastingView] | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState<string | null>(null);
+  const load = useCallback(() => Promise.all([transport.sellable(), transport.tasting()]).then(setData, e => setError(errText(e))), [transport]);
+  useEffect(() => { if (open) { setError(null); void load(); } }, [open, load]);
+  const book = new Set((data?.[1].book ?? []).map(s => s.species_key)), tanked = (data?.[1].book ?? []).filter(s => s.way === "aquarium").length;
+  const fish = (data?.[0] ?? []).filter(e => tastingWater(e.item_key) && !book.has(e.item_key) && !e.locked && e.count > 0);
+  const next = TASTING.marks.find(mk => mk.at > tanked);
+  const give = async (f: SellEntry) => {
+    setBusy(true);
+    try {
+      const r = await transport.serve(f.item_key, "aquarium", newKey());
+      const taught = TASTING.dishes.find(d => d.unlock === f.item_key);
+      toast(`Your ${f.name.toLowerCase()} swims in HQ's tank now${taught ? `, and Bancha learnt his ${taught.name.toLowerCase()}` : ""}.`, iconUrl(f.item_key));
+      r.marks.forEach(mk => window.dispatchEvent(new CustomEvent("tsi:gift", { detail: markGift(mk) })));
+      window.dispatchEvent(new Event("tsi:tank"));
+      await load();
+    } catch (err) {
+      setError(errText(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return <IslandSheet open={open} title="HQ's tank" onClose={onClose} testId="tank-sheet" keys="e">
+    <p role="status">{error ?? HQ_LINES.aquarium} {tanked} of yours swim here{next ? `; at ${next.at}, Bancha pays ${next.coins} coins.` : "."}</p>
+    {data === null ? <Loading label="Looking through your bag…" /> : fish.length === 0 ? <Empty icon={<Fish size={32} />} title="No fish for the tank">Catch a fish that isn&apos;t in your tasting book yet and bring it here.</Empty> :
+      <List label="Fish you can give">{fish.map(f => {
+        const teaches = TASTING.dishes.find(d => d.unlock === f.item_key);
+        return <ListRow key={f.item_key} data-key={f.item_key} icon={iconUrl(f.item_key)} title={f.name}
+          detail={`In bag ×${f.count}${teaches ? ` · teaches Bancha his ${teaches.name.toLowerCase()}` : ""}`}
+          value={<Badge tone="gold">Give</Badge>} disabled={busy} onClick={() => void give(f)} />;
+      })}</List>}
+  </IslandSheet>;
 }

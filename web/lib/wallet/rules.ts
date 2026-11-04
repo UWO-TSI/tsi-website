@@ -222,22 +222,20 @@ export const tastingWater = (key: string): TastingWater | null => {
   return sp ? (sp.biome as TastingWater) : null;
 };
 /**
- * What giving `key` to the tank pays (round 3, David: "tank is the route for milestones"), given every fish in the
- * tank after it (`tank`, `key` among them): a mark when the count reaches one, the water's bonus when every fish of its
- * page is in the tank. A cook pays none of it (tasting_serve does the same sums).
+ * What filling `key`'s slot pays, given your book after it (`book`, `key` in it): a gift to the tank pays a mark when the
+ * tank's count reaches one (round 3, David: "tank is the route for milestones"); any fill, cooked too, pays the water's
+ * bonus when it completes that water's page (round 4 pick). tasting_serve does the same sums.
  */
-export function tastingMarks(tank: ReadonlySet<string>, key: string, at: readonly { at: number; coins: number }[] = TASTING.marks, full: number = TASTING.full): { earned: number; marks: string[] } {
+export function tastingMarks(book: ReadonlyMap<string, "cooked" | "aquarium">, key: string, at: readonly { at: number; coins: number }[] = TASTING.marks, full: number = TASTING.full): { earned: number; marks: string[] } {
   const marks: string[] = [];
   let earned = 0;
-  for (const m of at) if (tank.size === m.at) { earned += m.coins; marks.push(`count:${m.at}`); }
+  const tank = [...book.values()].filter((w) => w === "aquarium").length;
+  if (book.get(key) === "aquarium") for (const m of at) if (tank === m.at) { earned += m.coins; marks.push(`count:${m.at}`); }
   const water = tastingWater(key), page = tastingPages().find((p) => p.water === water);
-  if (page && page.species.every((s) => tank.has(s))) { earned += full; marks.push(`water:${water}`); }
+  if (page && page.species.every((s) => book.has(s))) { earned += full; marks.push(`water:${water}`); }
   return { earned, marks };
 }
 /** The fee for Bancha's first cook of a species, with `cooked` species stamped before it (tasting_serve sums the same). */
 export const tastingFee = (cooked: number) => TASTING.fee.base + TASTING.fee.step * cooked;
-/** The book's permanent luck on every cast (rarer fish, as a meal's luck) with `cooked` species stamped: a gentle curve to a cap. */
-export function bookLuck(cooked: number): number {
-  const { first, each, then, cap } = TASTING.luck;
-  return Math.round(Math.min(cap, each * Math.min(cooked, first) + then * Math.max(0, cooked - first)) * 1000) / 1000;
-}
+/** The book's permanent luck on every cast (rarer fish, as a meal's luck) with `cooked` species stamped: `each` a species, to `cap`. */
+export const bookLuck = (cooked: number): number => Math.round(Math.min(TASTING.luck.cap, TASTING.luck.each * cooked) * 1000) / 1000;

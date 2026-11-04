@@ -221,9 +221,12 @@ function GiftFish({ def, path }: { def: FishDef; path: Path }) {
 function Gifts() {
   const [keys, setKeys] = useState<string[]>([]);
   useEffect(() => {
+    // Again after a gift at the tank (TankSheet's tsi:tank), so yours swims in at once.
     let live = true;
-    httpEconomyTransport.tasting().then(v => { if (live) setKeys(v.aquarium); }, () => {});
-    return () => { live = false; };
+    const load = () => httpEconomyTransport.tasting().then(v => { if (live) setKeys(v.aquarium); }, () => {});
+    void load();
+    window.addEventListener("tsi:tank", load);
+    return () => { live = false; window.removeEventListener("tsi:tank", load); };
   }, []);
   const defs = useMemo(() => keys.map(tankFishDef).filter((d): d is FishDef => !!d), [keys]);
   const paths = useMemo(() => giftPaths(defs.length), [defs.length]);

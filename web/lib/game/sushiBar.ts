@@ -253,6 +253,18 @@ export function seatView(lx: number): { eye: [number, number, number]; look: [nu
 }
 
 /**
+ * The menu lying on the counter before your stool (tasting-book round 4, David: "remove menu and leave bar button, have
+ * menu be on the table, and character look down and press e to open"): where it lies in the bar's frame (on the
+ * counter's top, the builder's TOP_Y, between its edge and the fish case), how far the seated view tilts down per unit
+ * of the orbit's tilt (SEAT_TILT_DOWN: the full tilt down centres it), and how far past the orbit's middle tilt looking
+ * down reads as looking at it (MENU_LOOK: the E prompt shows; back up to the middle puts it down).
+ */
+export const menuAt = (lx: number) => [lx + 0.1, 0.84, 1.27] as const;
+export const SEAT_TILT_DOWN = 2.3, MENU_LOOK = 0.1;
+/** Seated, whether the orbit's tilt `pitch` (over its middle `mid`) looks down at the menu; `was` the last answer (it holds till the middle). */
+export const looksAtMenu = (pitch: number, mid: number, was: boolean) => pitch - mid > (was ? 0 : MENU_LOOK);
+
+/**
  * The seated view with the menu picked up (David, 2026-10-28: "you can pick it up first person"): at `k` 1 you lean in
  * a little and look down at it in your hands; at 0, the stool's own view. Written into `out`.
  */

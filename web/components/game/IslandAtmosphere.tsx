@@ -34,7 +34,8 @@ import { bossCam } from "@/lib/game/bossCam";
 import { treeParts } from "./NatureModels";
 import AmbientFauna, { type FaunaProps } from "./AmbientFauna";
 import WeatherGround from "./WeatherGround";
-import { autoFollow, capture, DEFAULT_PITCH, orbit, ORBIT_DISTANCE, orbitOffset, stepOrbit, turnOffset, wrapAngle } from "@/lib/game/orbitCamera";
+import { autoFollow, capture, DEFAULT_PITCH, orbit, ORBIT_DISTANCE, orbitOffset, seated, stepOrbit, turnOffset, wrapAngle } from "@/lib/game/orbitCamera";
+import { SEAT_TILT_DOWN } from "@/lib/game/sushiBar";
 import { CROWN_REACH, CUT_FLOOR, CUT_RADIUS, CUTOUT, CUTOUT_CROWN, CUTOUT_VIEW, canopyAround, groundBlocks, lineBlocked, type Occluder } from "@/lib/game/occluders";
 import { bendViewPoint } from "@/lib/game/worldProjection";
 import { orbitKeys, useOrbitInput } from "./useOrbitInput";
@@ -183,9 +184,10 @@ const SEAT_GLIDE = 1.8;
 /** How much sooner the glide's height arrives than the rest of it. */
 const SEAT_DROP = 1.5;
 /**
- * Looking round from a seat (David, sushi bar round 2: "can look around"): the mouse, the arrows or two fingers turn
- * the view up to SEAT_YAW either side and tilt it SEAT_TILT times the orbit's tilt from the middle (about 20 degrees up
- * or down); left alone SEAT_SETTLE seconds it eases back to the middle.
+ * Looking round from a seat (David, sushi bar round 2: "can look around"): the mouse (no click needed seated), the
+ * arrows, a finger or two turn the view up to SEAT_YAW either side and tilt it SEAT_TILT times the orbit's tilt from the
+ * middle up (about 20 degrees), SEAT_TILT_DOWN times down (to the menu on the counter, round 4); left alone SEAT_SETTLE
+ * seconds it eases back to the middle, though a look down stays on the menu.
  */
 const SEAT_YAW = Math.PI / 3, SEAT_TILT = 1.4, SEAT_SETTLE = 1.5, UP = new THREE.Vector3(0, 1, 0);
 /** The least height the camera keeps over the ground under it (a hill or cliff behind you lifts it, never through). */
@@ -252,12 +254,13 @@ export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: num
       if (rig.seat === 0) { rig.from.copy(rig.lastCam); rig.fromLook.copy(rig.lastLook); }
       if (!rig.sat) { rig.sat = true; rig.yaw0 = t.yaw; rig.pitchBack = t.pitch; t.pitch = DEFAULT_PITCH; }
       t.yaw = rig.yaw0 + THREE.MathUtils.clamp(wrapAngle(t.yaw - rig.yaw0), -SEAT_YAW, SEAT_YAW);
-      if (orbit.idle > SEAT_SETTLE) { t.yaw = THREE.MathUtils.damp(t.yaw, rig.yaw0, 2, dt); t.pitch = THREE.MathUtils.damp(t.pitch, DEFAULT_PITCH, 2, dt); }
+      if (orbit.idle > SEAT_SETTLE) { t.yaw = THREE.MathUtils.damp(t.yaw, rig.yaw0, 2, dt); if (t.pitch < DEFAULT_PITCH) t.pitch = THREE.MathUtils.damp(t.pitch, DEFAULT_PITCH, 2, dt); }
       rig.seatEye.set(sv.eye.x, sv.eye.y, sv.eye.z);
       rig.seatLook.set(sv.look.x, sv.look.y, sv.look.z).sub(rig.seatEye).applyAxisAngle(UP, v.yaw - rig.yaw0);
-      rig.seatLook.applyAxisAngle(rig.side.crossVectors(rig.seatLook, UP).normalize(), (DEFAULT_PITCH - v.pitch) * SEAT_TILT).add(rig.seatEye);
+      rig.seatLook.applyAxisAngle(rig.side.crossVectors(rig.seatLook, UP).normalize(), (DEFAULT_PITCH - v.pitch) * (v.pitch > DEFAULT_PITCH ? SEAT_TILT_DOWN : SEAT_TILT)).add(rig.seatEye);
       camera.position.copy(rig.from); look.copy(rig.fromLook);
     } else if (rig.sat) { rig.sat = false; t.pitch = rig.pitchBack; }
+    seated.on = rig.sat;
     rig.seat = THREE.MathUtils.clamp(rig.seat + (sv ? dt : -dt) / SEAT_GLIDE, 0, 1);
     const glide = THREE.MathUtils.smootherstep(rig.seat, 0, 1);
     if (glide > 1e-3) {

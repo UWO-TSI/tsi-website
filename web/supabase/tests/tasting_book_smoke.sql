@@ -94,7 +94,7 @@ BEGIN
   RAISE NOTICE 'tasting dish ok';
 END $$;
 
--- The aquarium: free, fills the slot; the marks pay once, the water once.
+-- The aquarium: free, fills the slot; the marks pay once (gifts only), the water once (whichever fill completes it, a cook too).
 DO $$
 DECLARE G uuid := '00000000-0000-4000-8000-0000000000e2'; r record; k text; n int := 0; v_total int;
 BEGIN
@@ -107,17 +107,18 @@ BEGIN
   SELECT * INTO r FROM tasting_serve(G, 'fish_gar', 'aquarium', 100, 5, '{2,3}', '{150,400}', 250, 'tb-0102');
   ASSERT r.earned = 150 AND r.marks = '{count:2}' AND r.balance = 150, 'second slot: the first mark';
   ASSERT (SELECT source FROM wallet_ledger WHERE member_id = G AND idempotency_key = 'tasting_mark:tb-0102') = 'quest', 'marks are a quest credit';
-  -- the rest of the cliff pools: the third mark, then the full water
+  -- the rest of the cliff pools: the third mark, then the last one cooked, which completes the page and pays the water
   SELECT count(*) INTO v_total FROM collection_species WHERE tool = 'rod' AND active AND biome = 'cliff_pool';
+  ASSERT v_total >= 4, 'cliff pool species seeded';
   FOR k IN SELECT key FROM collection_species WHERE tool = 'rod' AND active AND biome = 'cliff_pool' AND key NOT IN ('fish_char', 'fish_gar') ORDER BY key LOOP
     n := n + 1;
     PERFORM collections_record_catch(G, k, 50, true);
-    SELECT * INTO r FROM tasting_serve(G, k, 'aquarium', 100, 5, '{2,3}', '{150,400}', 250, 'tb-02' || lpad(n::text, 2, '0'));
+    SELECT * INTO r FROM tasting_serve(G, k, CASE WHEN n = v_total - 2 THEN 'cook' ELSE 'aquarium' END, 100, 5, '{2,3}', '{150,400}', 250, 'tb-02' || lpad(n::text, 2, '0'));
     IF n = 1 THEN ASSERT r.earned = 400 AND r.marks = '{count:3}', 'third slot: the second mark'; END IF;
+    IF n < v_total - 2 THEN ASSERT NOT r.marks @> '{water:cliff_pool}', 'a page not yet full pays nothing'; END IF;
   END LOOP;
-  ASSERT v_total >= 3, 'cliff pool species seeded';
-  ASSERT r.marks @> '{water:cliff_pool}' AND r.earned >= 250, 'the last cliff pool fish fills the water: ' || r.marks::text;
-  ASSERT (SELECT coins FROM wallets WHERE member_id = G) = 150 + 400 + 250, 'marks paid once each';
+  ASSERT r.stamped AND r.paid = 100 AND r.earned = 250 AND r.marks = '{water:cliff_pool}', 'the last cliff pool fish, cooked, fills the water: ' || r.marks::text;
+  ASSERT (SELECT coins FROM wallets WHERE member_id = G) = 150 + 400 - 100 + 250, 'marks paid once each, the cook''s fee taken';
   RAISE NOTICE 'tasting aquarium ok';
 END $$;
 
