@@ -73,6 +73,7 @@ New models start in Meshy (`node art/meshy/meshy.mjs`, raw output in the untrack
 |---|---|
 | `characters/` | base body `base/`, `hair/`, `accessories/`, `outfits/`, `lod1|2/`, `build_lod.py`, `colour_atlas.py`; out `assets/characters/v6` |
 | `props-enemies/` | `pe.py` helper (out `assets/game/`), build_{enemies,props,items,tools,weapons,arcane,warden,forage,bobber,combat_fx}.py |
+| `weapons/` | `pipeline.py`: a signature weapon's high-def per tier in, the low-poly reduced from it, checked (nodes, trim-kit materials, budget, silhouette), exported to `assets/game/weapons/{,hd/}` and shown on a review sheet |
 | `nature/`, `trees/`, `rocks/` | nature kit, trees, flowers, bushes, rocks |
 | `terrain/`, `water/`, `wharf/` | ground, fish, seabed, wharf |
 | `buildings/`, `interiors/`, `cafe/` | buildings, interiors (`shop_layout.json`), cafe (`cafekit.py`) |

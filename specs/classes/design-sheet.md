@@ -1251,8 +1251,15 @@ Read before any **Weapon** line above. For the nine classes below, David's picks
 **David's picks** (the picks page, 2026-11-04, no notes on any card):
 - Transmuter: **B, Mimic Core** (not the gauntlet).
 - Hunter: **A, whaling harpoon on a chain**, replacing the crossbow.
-- Martial Artist: **A, flow spear**, a spear class with five polearm tiers. The class name is still open (Spearmaster, Lancer or Spear Dancer).
-- Guardian: **A, hull-plate shield**, sword removed.
+- Martial Artist: **A, flow spear**, a spear class with five polearm tiers, named **Lancer** (David, 2026-11-04; key `monk` stays in data).
+- Guardian: **A, hull-plate shield**, sword removed. Then David, verbatim: "maybe guardian is dual shielf". Proposed, waiting on his yes:
+  - **Look:** a matched pair of round hull-plate shields, one on each forearm (the main node right, `OffHand` left, as the twin tanto), each a little smaller than the single design.
+  - **Basic:** left and right bashes alternating; the third hit claps both together in a short shockwave.
+  - **Block / Parry:** both shields together in front; a perfect parry counter-bashes.
+  - **Shield Throw:** throw one, which ricochets between 3 enemies and returns, while the other keeps blocking.
+  - **Aegis Dome:** plant one shield as the dome and fight on with the other until you pick it back up.
+  - **Shield Rush:** both shields forward as a battering ram. **Unbreakable:** both lock into a shell round you, then the double slam.
+  - Needs a dual-wield clip family instead of `OneHand` (lib/game/character/clips.ts), and WEAPON_SKINS `guardian:ivory` loses M_Blade with the sword.
 - Assassin: **A, steel war fans**.
 - Summoner: **A, Shadow Lantern**.
 - Shaman: **A, totem pole and thrown carvings**.
@@ -1282,6 +1289,8 @@ Read before any **Weapon** line above. For the nine classes below, David's picks
 | Priest | Sun mirror: reflected-beam Lightbolt, focused Holy Beam | Light quill that writes the drawn spells |
 
 For every spear tier option, the five tiers are five different polearms (T1 bamboo training spear, T2 red-tassel qiang, T3 sea-iron trident, T4 ji halberd, T5 dragon spear), which breaks §1.5's one-base-mesh rule for that class only, at David's request.
+
+**The pilot (David, 2026-11-04):** the Guardian's hull-plate shield, modelled fully first (high-def, low-poly, five tiers) before the other eight. References come from David before any modelling. The pipeline is ready: `art/weapons/pipeline.py` reduces each tier's high-def to the low-poly, checks the node layout, the trim-kit material names, the budget and the silhouette (IoU of at least 0.97 from three sides), exports both and renders a review sheet. Tested on stand-in data (the old shield-and-sword subdivided): all five tiers at 1,399 of 1,400 triangles, silhouettes 0.988 or better. Found on the way: no current weapon GLB has UVs (Models rule 3); the pipeline generates them.
 
 **The other seven: all kept** (David, the picks page, 2026-11-04). Each keeps today's weapon and gets the high-def and low-poly remodel. Two ideas become skins (shop `weapon_skin`, §1.10), verbatim:
 - Gunslinger: "have pepperbox be a skin i guess" (the pepperbox pistol).
