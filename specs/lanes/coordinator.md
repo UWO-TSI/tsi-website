@@ -799,3 +799,4 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
 - **Weekly usage limit hit (2026-11-03 evening), reset 2026-11-04:** five lanes stopped mid-round (fishing r7, main-quest r6, tasting-book r3, tutorial-v2 r8, tool-pipeline r3) and were resumed by message; no locks or dev servers were left behind.
 - **Cedar r3 (tool-pipeline 12e77616)** added to the rod models page as card rm3-cedar (republished, same URL, marks kept).
 - **Main quest r6 review:** https://claude.ai/artifact/VKAEfjZnWuPR6QStdT9H2A (ids mq6-*; game/main-quest 061f5e0d; vitest 3745 clean; filed in the vault). Its lane file still calls the round 3 migrations unapplied: they are applied (20261030010000/010100).
+- **Tasting book r3 review:** https://claude.ai/artifact/9TZdz2Gtq8aNbN1AiqVaJQ (ids tb3-*; game/tasting-book d65a27f0; migration changed in place, unapplied; filed in the vault).
