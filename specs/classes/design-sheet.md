@@ -1283,7 +1283,11 @@ Read before any **Weapon** line above. For the nine classes below, David's picks
 
 For every spear tier option, the five tiers are five different polearms (T1 bamboo training spear, T2 red-tassel qiang, T3 sea-iron trident, T4 ji halberd, T5 dragon spear), which breaks §1.5's one-base-mesh rule for that class only, at David's request.
 
-**The other seven, keep or replace** (open; the same page, choices `keep`, `a`, `b`, `c` or `other`; each keeps today's weapon unless David picks an idea). Every idea keeps the class's core mechanic, so a swap changes the model and animations, not the kit:
+**The other seven: all kept** (David, the picks page, 2026-11-04). Each keeps today's weapon and gets the high-def and low-poly remodel. Two ideas become skins (shop `weapon_skin`, §1.10), verbatim:
+- Gunslinger: "have pepperbox be a skin i guess" (the pepperbox pistol).
+- Juggernaut: "giant wrench as a skin".
+
+The ideas he was shown, for the record (choices were `keep`, `a`, `b`, `c` or `other`):
 
 | Class (today) | A | B | C |
 |---|---|---|---|
