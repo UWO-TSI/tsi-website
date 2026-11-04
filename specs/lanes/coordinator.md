@@ -797,3 +797,5 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
 - **Rod data r5 review:** https://claude.ai/artifact/1sHjWWpEULGjw1m2rTgeF9 (ids rg5-*; supersedes the unmarked rg4 cards). game/rod-gear 6ba4e7ac (tool-pipeline merged in). Riptide, Tempest, Titanium have models but no roster entries: asked on rg5-epics.
 - **Volleyball live (main 18362223):** live check passed (routes 200, arrival, Here (1)); accounts deleted, nothing left (scratchpad/v17-prod9).
 - **Weekly usage limit hit (2026-11-03 evening), reset 2026-11-04:** five lanes stopped mid-round (fishing r7, main-quest r6, tasting-book r3, tutorial-v2 r8, tool-pipeline r3) and were resumed by message; no locks or dev servers were left behind.
+- **Cedar r3 (tool-pipeline 12e77616)** added to the rod models page as card rm3-cedar (republished, same URL, marks kept).
+- **Main quest r6 review:** https://claude.ai/artifact/VKAEfjZnWuPR6QStdT9H2A (ids mq6-*; game/main-quest 061f5e0d; vitest 3745 clean; filed in the vault). Its lane file still calls the round 3 migrations unapplied: they are applied (20261030010000/010100).
