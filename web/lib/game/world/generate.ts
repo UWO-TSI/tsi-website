@@ -419,8 +419,10 @@ const MARKET: readonly (readonly [model: string, z: number, d: number, turn: num
   // art-r2f's fish market, 7.8 wide by 4.2 deep, its porch turned south down the deck, its swordfish bursting up through the roof (R2e: "make building a bit wider").
   ["fish-market", 19.5, 4, -Math.PI / 2, 1],
   ["market-cart", 31.2, 5.7, 0.25, 0.55], ["market-cart", 40.6, 6.4, -0.2, 0.55], ["market-cart", 70.5, 6.1, 0.15, 0.53], ["market-cart", 79.6, 5.5, -0.35, 0.56],
-  ...[[24.4, 6.9, 0.07], [25.1, 6.3, 0.066], [24.7, 7.5, 0.072], [43.4, 7.1, 0.068], [57.8, 1.6, 0.07], [58.4, 2.2, 0.065], [72.7, 7.3, 0.07], [77.2, 7.5, 0.07], [77.9, 6.8, 0.066]]
+  ...[[25.4, 4.4, 0.07], [26.1, 3.8, 0.066], [25.7, 5.0, 0.072], [43.4, 7.1, 0.068], [57.8, 1.6, 0.07], [58.4, 2.2, 0.065], [72.7, 7.3, 0.07], [77.2, 7.5, 0.07], [77.9, 6.8, 0.066]]
     .map(([z, d, scale]) => ["barrel", z, d, z * 1.3, scale] as const),
+  // The first three stand where the catch board stood before round 7, which took their old place (David: "move to where
+  // the barrels are rn").
   // The barrel and two crates by the sell barrel, where Bram stands to watch your first sale, are gone (David's playtest:
   // "these barral and crate infront of the sell fish shop should be removed").
   ["crate", 67.6, 1.3, 2, 1], ["crate", 55.4, 6.6, 0.6, 1.05],

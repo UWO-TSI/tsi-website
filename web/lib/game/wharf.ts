@@ -291,9 +291,10 @@ export type BoardSize = (typeof BOARD)[keyof typeof BOARD];
  * facing the deck (round 5, David: "place it to the right side of the stands, to left side of the fish shot and faced
  * towards the deck area"; of round 4's spots "c is the closest"): between spot C and the market's front, clear of the sell
  * stall and the walk past it. Round 6 (David: "should be angled outwards towards the wharf rotate 90 degrees"): its face
- * turned a quarter from round 5's, out toward the wharf and the jetty.
+ * turned a quarter from round 5's, out toward the wharf and the jetty. Round 7 (David: "direction is good, move to where
+ * the barrels are rn"): the same facing, 2.6 m to the left where three barrels stood; they took its old place.
  */
-export const MARKET_BOARDS = { catch: { x: -0.44, z: 6.36, turn: 2.173 - Math.PI / 2 }, tasks: { x: -8.2, z: 6.5, turn: Math.PI + 0.55 } } as const;
+export const MARKET_BOARDS = { catch: { x: -2.9, z: 5.35, turn: 2.173 - Math.PI / 2 }, tasks: { x: -8.2, z: 6.5, turn: Math.PI + 0.55 } } as const;
 export interface BoardSpot { x: number; z: number; yaw: number }
 /** Where the market's boards stand in the world and which way they face; null on a world without the market. */
 export function marketBoardsOf(props: readonly { model?: string; x: number; z: number; yaw?: number }[]): { catch: BoardSpot; tasks: BoardSpot } | null {

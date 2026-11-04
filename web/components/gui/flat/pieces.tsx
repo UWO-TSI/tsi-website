@@ -9,7 +9,7 @@
  */
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type FocusEvent, type PointerEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Check, Droplets, Flower2, Leaf, Moon, Mountain, Snowflake, Sun, Sunrise, Sunset, Waves, X } from "lucide-react";
+import { Check, Droplets, Flower2, Leaf, MapPin, Moon, Mountain, Snowflake, Sun, Sunrise, Sunset, Waves, X } from "lucide-react";
 import PixelImage from "@/components/economy/PixelImage";
 import { usePresence, useWorldDialog } from "@/lib/game/useWorldDialog";
 import type { Season } from "@/lib/game/season";
@@ -106,11 +106,13 @@ export const BIOME_LOOK: Record<WaterType, { word: string; icon: ReactNode; tint
 };
 /**
  * The biome you fish (round 6, David: "it should say the biome when you fish on the fish bar, there should also be a
- * biome tag in the ui"): a small pill, the water's icon on a disc in its colour and its word.
+ * biome tag in the ui"): a small pill, the water's icon on a disc in its colour and its word. With `place` (the HUD,
+ * round 7: "should also show like the location like village wharf plains etc") the place leads ("Wharf · Sea"), and
+ * away from water it is the place alone, on a pin.
  */
-export function BiomeTag({ water }: { water: WaterType }) {
-  const b = BIOME_LOOK[water];
-  return <span className={p.biome} data-tint={b.tint} data-testid="biome-tag"><i aria-hidden>{b.icon}</i>{b.word}</span>;
+export function BiomeTag({ water, place }: { water?: WaterType | null; place?: string | null }) {
+  const b = water ? BIOME_LOOK[water] : null;
+  return <span className={p.biome} data-tint={b?.tint ?? "mist"} data-testid="biome-tag"><i aria-hidden>{b?.icon ?? <MapPin />}</i>{place && b && place !== b.word ? `${place} · ${b.word}` : place ?? b?.word}</span>;
 }
 /** The theme's condition colours (--ui-tint-*): the seasons, the sky and the time of day each wear one. */
 export type Tint = "rose" | "sun" | "amber" | "ice" | "sky" | "rain" | "mist" | "leaf" | "night";

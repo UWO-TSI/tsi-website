@@ -142,6 +142,7 @@ import { setLoadPart } from "@/lib/game/loadProgress";
 import { READY_FILES } from "@/lib/game/preloadAssets";
 import { lastCall } from "@/lib/game/lastCall";
 import { loadGameWorld } from "@/lib/game/world/load";
+import { placeAt } from "@/lib/game/world/places";
 import TalkBox from "./TalkBox";
 import { emptyTalkView, requestTalk, subscribeTalk, talkStore, talkView } from "@/lib/game/residentTalk";
 import DailyGift from "./DailyGift";
@@ -253,6 +254,7 @@ import styles from "./DefaultIslandWorld.module.css";
 
 /** How far from the water the HUD's biome tag still names it. */
 const BIOME_REACH = 8;
+type Biome = { water: WaterType | null; place: string | null };
 type Near = "knock" | "shop_enter" | "counter" | "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "mine" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "stool" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | "bram" | "founder" | "coffee" | "aquarium" | "admin" | "sell" | "volley" | "leaderboard" | "catchboard" | "tasks" | "tackle" | "chef" | null;
 type Sheet = "counter" | "shopkeeper" | "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | "bag" | "wallet" | "chest" | "plaque" | "sell" | "monument" | "vboard" | "rods" | "outnow" | "tasks" | "tackle" | "chef" | "sushi" | null;
 const DEV = process.env.NODE_ENV !== "production";
@@ -501,8 +503,8 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   peaceful: { moment: WorldMoment; member: string; glider: boolean }; fishSpot: { current: FishingSpot | null }; fishing: boolean; exitFrom: "museum" | "oracle" | "ruins" | "cafe" | "shop" | null; devAt: [number, number, number] | null; identity: WorldIdentity; level?: number;
   phase: IslandPhase; light: IslandLight; look: SeasonLook; weather: IslandWeather; overview: boolean; zoom: number; reset: number; returned: boolean; liteMode: boolean; castShadows: boolean;
   player: React.RefObject<THREE.Vector3>; onNear: (near: Near) => void;
-  /** The water nearest you (the HUD's biome tag), or null with none near. */
-  onBiome: (water: WaterType | null) => void;
+  /** Where you are for the HUD's biome tag: the water nearest you (null with none near) and the place's name. */
+  onBiome: (biome: Biome) => void;
   /** The E prompt is up: its target wears the interact ring (InteractRing). */
   ring: boolean;
 }) {
@@ -561,7 +563,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   const chefSpot = useMemo(() => (bar ? barPoint(bar, ...CHEF_OUTSIDE.at) : null), [bar]);
   const poolPoints = useMemo(() => (bar ? [...lampPoints, lampLight([bar.x, barY, bar.z], bar.yaw ?? 0, BAR_LIGHT)] : lampPoints), [lampPoints, bar, barY]);
   const near = useRef<Near>(null), ringAt = useRef<RingSpot | null>(null);
-  const biome = useRef<{ at: [number, number]; water: WaterType | null }>({ at: [Infinity, 0], water: null });
+  const biome = useRef<{ at: [number, number] } & Biome>({ at: [Infinity, 0], water: null, place: null });
   const fauna = useMemo(() => ({ ...layout.fauna, ground: island.ground, standable: island.standable, surface: island.surface, top: island.top, player }), [layout, island, player]);
   // The arrival (components/game/arrival): Bram walks you through, the fish crate on the pier until the tour is over.
   const arrivalPhase = useArrivalPhase();
@@ -651,11 +653,11 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       else if (peace && (peace === "forage" ? (getPeacefulTarget()?.distance ?? Infinity) < tn.d : held?.kind === TOOL_FOR[peace])) next = peace;
     }
     if (near.current !== next) { near.current = next; onNear(next); }
-    // The biome tag (round 6): the water nearest you within BIOME_REACH, looked for again each metre you move.
+    // The biome tag (rounds 6 and 7): the place and the water nearest you within BIOME_REACH, looked for again each metre you move.
     if (Math.hypot(px - biome.current.at[0], pz - biome.current.at[1]) > 1) {
-      const w = nearestWater(island.map, px, pz, BIOME_REACH), water = w ? layout.water(w[0], w[1]) : null;
+      const w = nearestWater(island.map, px, pz, BIOME_REACH), water = w ? layout.water(w[0], w[1]) : null, place = placeAt(px, pz);
       biome.current.at = [px, pz];
-      if (water !== biome.current.water) { biome.current.water = water; onBiome(water); }
+      if (water !== biome.current.water || place !== biome.current.place) { biome.current.water = water; biome.current.place = place; onBiome({ water, place }); }
     }
     const size = next && RING[next];
     if (at && doorRings.has(at)) at = doorRings.get(at)!;
@@ -919,7 +921,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const [sceneShown, setSceneShown] = useState(0);
   const onSceneReady = useCallback(() => { setReady(true); setFading(false); tripSceneReady(); }, []);
   const [near, setNear] = useState<Near>(null);
-  const [biome, setBiome] = useState<WaterType | null>(null);
+  const [biome, setBiome] = useState<Biome>({ water: null, place: null });
   // Walking up to the fish market's stall reads your purse and fish, so its sheet opens on them with nothing to wait for.
   useEffect(() => { if (near === "sell") prefetchMarket(); }, [near]);
   // HQ's stations answer by what they do (lib/game/hqLayout.ts).
@@ -1504,8 +1506,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         </div>
         <div className={styles.hudColumn} data-minimap data-new={objectiveNew || undefined}>
           {((mapHere && !holdObjective) || tourShown.has("map")) && <MiniMap playerPosRef={player} plot={objectivePlot} big={uiView} onOpen={() => setMapOpen(true)} />}
-          {/* The biome tag sits left of the time, on its row under the minimap (round 6). */}
-          <div className={styles.clockRow}>{biome && !inside && site === "village" && <BiomeTag water={biome} />}<HudClock weather={weather} phase={phase} /></div>
+          {/* The biome tag sits under the time, both under the minimap (round 7). */}
+          <div className={styles.clockRow}><HudClock weather={weather} phase={phase} />{(biome.water || biome.place) && !inside && site === "village" && <BiomeTag water={biome.water} place={biome.place} />}</div>
           <HudWallet full={full} showcase={showcase}
             onWallet={() => setSheet(value => (value === "wallet" ? null : "wallet"))} walletKey={keyName(identity.settings.key_bindings.openWallet)} />
         </div>

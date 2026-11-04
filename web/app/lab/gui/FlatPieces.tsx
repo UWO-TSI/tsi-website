@@ -46,7 +46,7 @@ export default function FlatPieces() {
       <Thumb picture={iconUrl("fish_dace")} size={64} dim label="Not out now" />
     </section>
     <Conditions items={[{ icon: <Leaf />, label: "Season", value: "Autumn", tint: "amber", note: "Winter on Dec 21" }, { icon: <Sun />, label: "Weather", value: "Clear", tint: "sky" }, { icon: <Sunset />, label: "Time of day", value: "Evening", tint: "amber" }]} />
-    <div style={{ display: "flex", gap: 8, margin: "0 0 14px" }}><BiomeTag water="sea" /><BiomeTag water="river" /><BiomeTag water="pond" /></div>
+    <div style={{ display: "flex", gap: 8, margin: "0 0 14px" }}><BiomeTag water="sea" /><BiomeTag water="river" /><BiomeTag water="pond" /><BiomeTag water="sea" place="Wharf" /><BiomeTag place="Meadow" /></div>
     <TimeStrip now={14.5} lanes={lanes} label="Catch board" tip={f => <TipBody picture={f.picture} rarity={f.rarity} kind={f.rarity} name={f.label} />} />
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 22 }}>
       <OddsTable rows={rows} />
