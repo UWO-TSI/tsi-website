@@ -13,6 +13,8 @@
 // v1 water (VARIANTS=water): each piece of the water pass off against the water as shipped:
 //   seabedOff the seabed's props; foamOff the foam rings; glassOff glass water (High's refraction wobble); fishOff the
 //   decorative fish (lib/game/perf/fxBench.ts WORLD_KEYS).
+// Sky-ambient round 1 (VARIANTS=sky): skyA, skyB, skyC (the dome's directions), windStorm (the shared wind), motes and
+//   swirls, each against the sky as shipped (window.__sky, components/game/SkyLab.tsx).
 // The title has no probe and no switches: its frame and main-thread time are sampled alone (`title`).
 // Headed, off to the side, muted, never brought to the front; the real GPU; uncapped.
 import { createRequire } from "node:module";
@@ -37,8 +39,16 @@ const ALL_VARIANTS = {
   foamOff: { off: ["foamRings"], tune: null },
   glassOff: { off: ["glassWater"], tune: null },
   fishOff: { off: ["fish"], tune: null },
+  // Sky-ambient round 1 (specs/sky-ambient.md; lib/game/skyLab.ts, development switches): each sky direction, the shared
+  // wind (stormy), and the two particle pitches, against the sky as shipped.
+  skyA: { off: [], tune: null, sky: { sky: "A" } },
+  skyB: { off: [], tune: null, sky: { sky: "B" } },
+  skyC: { off: [], tune: null, sky: { sky: "C" } },
+  windStorm: { off: [], tune: null, sky: { wind: "storm" } },
+  motes: { off: [], tune: null, sky: { amb: ["motes"] } },
+  swirls: { off: [], tune: null, sky: { amb: ["swirls"], wind: "storm" } },
 };
-const SETS = { world: ["domeOff", "grassHalf", "grass0", "rocksOff"], water: ["seabedOff", "foamOff", "glassOff", "fishOff"] };
+const SETS = { world: ["domeOff", "grassHalf", "grass0", "rocksOff"], water: ["seabedOff", "foamOff", "glassOff", "fishOff"], sky: ["skyA", "skyB", "skyC", "windStorm", "motes", "swirls"] };
 const VARIANTS = Object.fromEntries((SETS[process.env.VARIANTS ?? "world"] ?? (process.env.VARIANTS ?? "").split(",")).map(k => [k, ALL_VARIANTS[k]]));
 const SHIPPED = { off: [], tune: null };
 
@@ -63,7 +73,7 @@ for (const scene of ONLY.split(",")) {
   }
   await page.waitForTimeout(5000);
   const metrics = async () => Object.fromEntries((await cdp.send("Performance.getMetrics")).metrics.map(m => [m.name, m.value]));
-  const apply = v => page.evaluate(v => { window.__fx.set({ off: v.off }); if (v.tune) window.__fx.tune(...v.tune); else window.__fx.tune(); }, v);
+  const apply = v => page.evaluate(v => { window.__fx.set({ off: v.off }); if (v.tune) window.__fx.tune(...v.tune); else window.__fx.tune(); window.__sky?.set({ sky: null, wind: null, amb: [], ...v.sky }); }, v);
   async function sample(v) {
     if (probe) { await apply(v); await page.waitForTimeout(SETTLE * 1000); }
     const m0 = await metrics();
