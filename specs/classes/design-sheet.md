@@ -1244,3 +1244,35 @@ The inner temple (Animated Book, Stone Golem) and the Guardian Statue stay as th
 - **Mastery unlocks are per class** (usually one skill at about mastery 3), not the 2/4/6/8 template.
 - **Each class has a stat direction** (the table above) that mastery raises.
 - **Class movement passives and skills are ruins-only** and extend the movement combo (row 292).
+
+## Weapon redo (David, 2026-11-04; open, waiting on his picks)
+Read before any **Weapon** line above. For the nine classes below, David's notes replace the locked weapon. Until he picks, the locked kits stand and no weapon model work starts (design bible, Models rule 1).
+
+**David, verbatim:**
+- "im thinking of transmuter weapon tahts more obvious maybe? like a charm thats not a necklace noone can see and a thing you can equip"
+- "i want hunter to also have harpoon as a weapon, basically the same kind of game play just a different weapon model"
+- "martial artist i wanna change it to something that uses a cool spear like weapon that has models for chinese warrior spear, trident etc. so change the class."
+- "vanguard only has a shield but he uses the shield as a weapon for close range smashing" (read as the Guardian, Vanguard's shield class)
+- "i want characters to have very unique weapons and fighting styles, and i want you to look at other games and their character game mechanics and weapons and learn from it, look at brawlstarts character attack style, weapon super etc, look at honor of king too, cuz theres characters that swings an anchor or like brawl star theres a new character that throws 3 frogs that shoots electricity and could be used similarly to shaman. I dnt like transmuter, martial art, assasin, summonor, driod, proest and shaman weapons"
+
+**The picks page:** https://claude.ai/artifact/Mfp4PrcER4vKm5gA35h5Po (collection `picks`; one document per class, `transmuter`, `hunter`, `monk`, `guardian`, `assassin`, `summoner`, `shaman`, `druid`, `priest`, each `{choice: "a" | "b" | "other", note, updated}`; `monk` adds `name`; `_general` holds his general note). Option A is the recommendation on each card:
+
+| Class | A (recommended) | B |
+|---|---|---|
+| Transmuter | Mimic Gauntlet: brass-and-glass forearm gauntlet, five sockets filled by learned forms, reshapes into each form's part | Mimic Core: a floating living-metal orb that pours over the arm per form |
+| Hunter | Whaling harpoon on a chain, thrown and reeled back, replaces the crossbow; kit unchanged | Keep the crossbow and add the harpoon as a second model line, same kit |
+| Martial Artist, becoming a spear class (Spearmaster, Lancer or Spear Dancer; key `monk` stays) | Flow spear: thrust, thrust, sweep, spin chain on the existing combo system; Lunge, Whirlwind, Pole Vault, Spear Throw (pick up to power the next hit), Leg Sweep; ult Hundred Thrusts | Stance spear: spear, trident and halberd stances on one key |
+| Guardian | Hull-plate shield: rim bash, bash, overhead slam; ricochet throw kept; sword removed | Tower shield with a spiked edge; the throw becomes a ground shove |
+| Assassin | Steel war fans: open-fan slashes, a returning thrown fan, Fan Blink | Kusarigama (overlaps the Hunter's chain pull) |
+| Summoner | Shadow Lantern: beasts are shadow puppets cast by the lantern | Tamer's bell crook |
+| Shaman | Totem pole on the back; skills snap off a carving (thunderbird, salamander, bear) and throw it; it regrows when ready | Storm drum: totems fire on your beat |
+| Druid | Living vine whip: tip-weighted lash; Vine Snare, Vine Swing and seeds come from it | Seed gourd |
+| Priest | Sun mirror: reflected-beam Lightbolt, focused Holy Beam | Light quill that writes the drawn spells |
+
+For every spear tier option, the five tiers are five different polearms (T1 bamboo training spear, T2 red-tassel qiang, T3 sea-iron trident, T4 ji halberd, T5 dragon spear), which breaks §1.5's one-base-mesh rule for that class only, at David's request.
+
+**Unchanged:** Elementalist (prism staff), Illusionist (trick deck), Necromancer (bone tome), Marksman (recurve), Sniper (long rifle), Gunslinger (revolver), Juggernaut (war hammer). They get the high-def and low-poly remodel only. An anchor was floated as a later Juggernaut skin line, not a pick.
+
+**Research behind it (text only, no images fetched):** Ma Chao (Honor of Kings: spears left on the ground power the next hit when picked up, recalled spears hit on the way back), Ata (anchor throw that pulls him to terrain or pulls an enemy back), Ming (one link heals an ally or hurts an enemy), Mulan (two weapon forms); Brawl Stars: each brawler's main attack has its own shape, the Super is the payoff (Nita's bear, Juju's Gris-Gris), Juju's shot changes with the ground underfoot, Thunder Frogs (revealed 2026-10-31) throw three frogs that make an electric triangle. The Shaman uses our own spirits, not frogs, so it doesn't copy that brawler.
+
+**Code note:** `weapon_affinity` in `web/lib/combat/kits.ts` predates the locked weapons (Hunter "bow", Summoner "tome", Juggernaut "sword"). The signature sets in `lib/combat/{arcaneSeed,weapons,vanguardKits,wardenData}.ts` match the locked weapons. Update both when the picks land.
