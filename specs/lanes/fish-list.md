@@ -2,6 +2,19 @@
 
 Worktree `.claude/worktrees/fish-list`, branch `game/fish-list`, cut from `game/fishing-depth` at 92cd709f (it has round 5's seasons; merges after fishing-depth). Agent type `uwotsi-lane`. Docs only this round.
 
+## Round 3: David's fish list round 2 review (2026-11-04, verbatim; https://claude.ai/artifact/Q4u9e7MMD9CumnCqUEEcdu)
+
+Every card approved (fl2-biome, fl2-new, fl2-megabyte, fl2-odds, fl2-questions "looks good", all ten picks), with notes:
+- fl2-drops (approve): "more rare so like divine 80, leg 70 epic 60"
+- fl2-rods (approve): "glass strenght lower, the stats should make sense with the rod. passive ability exist aswell"
+- fl2-tasks (approve): "maybe stuff that moves out of the actual bar, so like mouse mouse placement matters"
+
+Round 3 (spec only, through the generator; no code):
+1. Drops: epic 60% (70% if every task was hit), legendary 70%, Divine 80%; keep the rest of the table. Say whether the "never two misses in a row" rule still fits "more rare" and leave it as is.
+2. Rods: record the note and hand it on: rod stats, Glass's lower strength and rod passives are the rod-gear lane's (it is rescaling every rod this round); the fish list keeps only the rule.
+3. Epic reel tasks: add David's idea as the design direction for when they're built: targets that move out of the reel bar, so where the mouse (or finger) is matters. Sketch how each of the six tasks would use it in a line each.
+4. Commit and report. No review page unless something needs David's call: the coordinator merges this after fishing-depth.
+
 ## Round 2: David's fish list review (2026-11-03, verbatim; https://claude.ai/artifact/DLfnEVT1VFBPamnBsD25Fz)
 
 Approved: fl-classparts, fl-models. fl-rods (approve): "the mathing of it looks pretty good". fl-roster (approve): "idk you figure it out it looks pretty good". fl-new (approve): "fill it and fix it". fl-questions (approve): "all rods will have slightly different stats even if both in uncommon". fl-creatures (approve): "L2 should be megladon with electricty aura and tech stuff like a robot megladon"
