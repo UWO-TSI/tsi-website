@@ -54,16 +54,18 @@
 .menu button:focus-visible { outline: none; }
 .caption { position: relative; margin: 2px 0 6px; text-align: center; font: 700 13px/1.4 var(--gui-font); color: var(--ui-muted); overflow-wrap: anywhere; }
 
-/* The forms: the flat kit's pieces on the banner. One dark action, grey-well fields, Google as a white pill, quiet links. */
-.form { position: relative; display: grid; gap: 10px; padding: 4px 6px 6px; }
+/* The forms: the flat kit's pieces on the banner. One teal action (the banner's teal stands in for the kit's ink accent,
+   so the switches and the slider fill teal too), grey-well fields, white pills with a thin line, quiet links. */
+.form { position: relative; display: grid; gap: 10px; padding: 4px 6px 6px;
+  --ui-accent: var(--ui-title-outline); --ui-accent-deep: color-mix(in srgb, var(--ui-title-outline), var(--ui-ink) 35%); --ui-accent-ink: var(--ui-card); }
 .formHead { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
 /* The kit's round back, quiet here (grey well) so the dark action is the only dark thing. */
 .formHead > button { background: var(--ui-well); color: var(--ui-ink); }
 .formHead > button:hover { background: var(--ui-line); }
 .formHead h2 { margin: 0; font: 800 21px/1.2 var(--gui-font); color: var(--ui-ink); }
-.form .google { display: flex; align-items: center; justify-content: center; gap: 10px; height: 44px; box-sizing: border-box;
+.form .line { display: flex; align-items: center; justify-content: center; gap: 10px; height: 44px; box-sizing: border-box;
   box-shadow: inset 0 0 0 1.5px var(--ui-line-strong); font: 700 15px var(--gui-font); color: var(--ui-ink); }
-.form .google:hover:not(:disabled) { background: var(--ui-card-hover); }
+.form .line:hover:not(:disabled) { background: var(--ui-card-hover); }
 .google svg { flex: none; }
 .or { margin: 0; text-align: center; font: 700 12px/1 var(--gui-font); color: var(--ui-quiet); }
 .lead { margin: 0; font: 600 14px/1.5 var(--gui-font); color: var(--ui-ink-2); overflow-wrap: anywhere; }
@@ -74,20 +76,20 @@
 .error, .notice { margin: 0; font: 700 13px/1.45 var(--gui-font); overflow-wrap: anywhere; }
 .error { color: var(--ui-error); }
 .notice { color: var(--ui-ink-2); }
-/* A choice of a few (Quality): the kit's segmented pills, as in the game's Settings (playtest round 1). */
-.setting { display: grid; gap: 6px; }
-.setting > span { font: 800 14px/1.2 var(--gui-font); color: var(--gui-ink-strong); }
-.setting > small { font: 600 12px/1.4 var(--gui-font); color: var(--gui-muted); }
-.segmented { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 999px; background: var(--gui-paper-deep); }
-.form .segmented button[aria-pressed] { min-height: 38px; border: 0; border-radius: 999px; background: transparent; font: 800 14px/1 var(--gui-font); color: var(--gui-ink-2); cursor: pointer; }
-.form .segmented button[aria-pressed="true"] { background: var(--gui-butter); color: var(--gui-ink-strong); box-shadow: var(--gui-shadow-sm); }
-.form .segmented button[aria-pressed]:focus-visible { outline: 3px solid var(--gui-focus); outline-offset: -3px; }
+/* A choice of a few (Quality): three pills on a grey well, the chosen one white and lifted. */
+.setting { display: grid; gap: 6px; margin-bottom: 4px; }
+.setting > span { font: 700 15px/1.2 var(--gui-font); color: var(--ui-ink); }
+.setting > small { font: 600 12px/1.4 var(--gui-font); color: var(--ui-muted); }
+.segmented { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 999px; background: var(--ui-well); }
+.form .segmented button[aria-pressed] { min-height: 36px; border: 0; border-radius: 999px; background: transparent; font: 700 14px/1 var(--gui-font); color: var(--ui-ink-2); cursor: pointer;
+  transition: background var(--gui-t-fast) ease, color var(--gui-t-fast) ease; }
+.form .segmented button[aria-pressed="true"] { background: var(--ui-card); color: var(--ui-ink); box-shadow: 0 1px 4px rgb(var(--ui-shade) / 0.2); }
+.form .segmented button[aria-pressed]:focus-visible { outline: 2px solid var(--ui-ink); outline-offset: -2px; }
 
 .footer { position: absolute; left: clamp(24px, 6.5vw, 112px); right: clamp(18px, 3vw, 44px); bottom: 20px; display: flex; justify-content: space-between;
   align-items: center; gap: 16px; font: 700 13px/1.3 var(--gui-font); color: rgb(255 255 255 / 0.9); text-shadow: 0 1px 6px rgb(0 0 0 / 0.45); }
 .when { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 .soon { font-style: normal; padding: 3px 10px; border-radius: var(--gui-r-pill); background: var(--gui-butter); color: var(--gui-ink-strong); text-shadow: none; }
-.apply { padding: 4px 12px; border-radius: 999px; background: var(--ui-gold); color: var(--ui-ink); text-decoration: none; text-shadow: none; }
 
 /* The input hint: a small teal pill bottom-right, a round key and the verb. */
 .hint { display: inline-flex; align-items: center; gap: 16px; padding: 5px 16px 5px 6px; border-radius: 999px; background: var(--ui-title-outline);

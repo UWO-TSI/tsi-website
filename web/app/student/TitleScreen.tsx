@@ -3,8 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { ChevronLeft } from "lucide-react";
-import { Button, Slider, Toggle } from "@/components/gui";
-import { DarkButton, FlatField, GhostButton, RoundButton } from "@/components/gui/flat";
+import { DarkButton, FlatField, FlatSlider, FlatToggle, GhostButton, RoundButton } from "@/components/gui/flat";
 import TsiLogo from "@/components/ui/TsiLogo";
 import { createClient } from "@/lib/supabase/client";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
@@ -48,7 +47,6 @@ export default function TitleScreen({ landing, account, open, initialView, when,
     else leave(siteHome);
   };
   const signOut = async () => { await createClient().auth.signOut(); window.location.reload(); };
-  const apply = `${siteHome.replace(/\/$/, "")}/student/apply`;
 
   const google = async () => {
     setBusy(true); setError(null);
@@ -162,7 +160,6 @@ export default function TitleScreen({ landing, account, open, initialView, when,
       <footer className={s.footer}>
         <span className={s.when}>
           {when}{!open && <em className={s.soon}>The island opens soon</em>}
-          {!account && <a className={s.apply} href={apply}>Apply to TSI</a>}
         </span>
         <span className={s.hint} aria-hidden>
           {view === "menu" && <span><kbd>↑↓</kbd>Move</span>}
@@ -175,7 +172,7 @@ export default function TitleScreen({ landing, account, open, initialView, when,
 
 /**
  * Settings on the title: the game's own graphics settings and sound, kept on this device (the world reads the same).
- * Quality is the kit's segmented pills, as in the game's Settings (David, playtest round 1: the dropdowns get the kit's look).
+ * Flat like the sign-in (David, title round 3): Quality as three pills on a grey well, the kit's flat switches and slider.
  */
 function Settings({ onBack, onSignOut }: { onBack: () => void; onSignOut: (() => void) | null }) {
   const [graphics, actions] = useGraphicsSettings();
@@ -206,10 +203,10 @@ function Settings({ onBack, onSignOut }: { onBack: () => void; onSignOut: (() =>
         </div>
         <small>Lite is for older laptops: lighter grass and no shadows.</small>
       </div>
-      <Toggle checked={graphics.pixelated} onChange={actions.setPixelated} hint="The island's crisp pixel look">Pixel finish</Toggle>
-      <Toggle checked={graphics.shadows && !graphics.liteMode} disabled={graphics.liteMode} onChange={actions.setShadows}>Sun shadows</Toggle>
-      <Slider label="Volume" value={Math.round(audio.volumes.master * 100)} onChange={v => AudioManager.setVolumes({ master: v / 100 })} format={v => `${v}%`} />
-      {onSignOut && <Button variant="secondary" onClick={onSignOut}>Sign out</Button>}
+      <FlatToggle checked={graphics.pixelated} onChange={actions.setPixelated} hint="The island's crisp pixel look">Pixel finish</FlatToggle>
+      <FlatToggle checked={graphics.shadows && !graphics.liteMode} disabled={graphics.liteMode} onChange={actions.setShadows}>Sun shadows</FlatToggle>
+      <FlatSlider label="Volume" value={Math.round(audio.volumes.master * 100)} onChange={v => AudioManager.setVolumes({ master: v / 100 })} format={v => `${v}%`} />
+      {onSignOut && <GhostButton className={s.line} onClick={onSignOut}>Sign out</GhostButton>}
     </div>
   );
 }
@@ -234,7 +231,7 @@ function Form({ title, onBack, onSubmit, children }: { title: string; onBack: ()
 /** Google, the one-tap way in: a white pill with the G (both sign-in and sign-up, as before). */
 function GoogleButton(props: { onClick: () => void; disabled?: boolean }) {
   return (
-    <GhostButton className={s.google} {...props}>
+    <GhostButton className={`${s.line} ${s.google}`} {...props}>
       <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
         <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
