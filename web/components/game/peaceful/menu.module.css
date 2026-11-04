@@ -51,6 +51,7 @@
   .fishRow { gap: 10px 9px; }
   .fishRow > * { --thumb: 30px !important; }
   .down { right: 4px; bottom: auto; top: -42px; }
+  .backSeal { display: none; }
 }
 .order[data-quiet] { background: transparent; color: var(--ui-paper-ink); box-shadow: inset 0 0 0 1.5px var(--ui-paper-ink); }
 .quiet { color: var(--ui-paper-quiet); font: 500 12px/1.3 var(--gui-font); }

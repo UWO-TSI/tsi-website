@@ -147,7 +147,7 @@
   .book { width: min(96vw, calc(var(--h) * 0.78)); aspect-ratio: 0.78; }
   .panel { padding: 10% 7% 8%; }
   .dishPick { grid-template-columns: minmax(0, 1fr); gap: 8px; }
-  .photo { width: min(100%, 112px); }
+  .photo { width: min(100%, 76px); }
   .dishLine { grid-template-columns: minmax(0, 1fr); gap: 3px; }
   .stat { gap: 5px; font-size: 11px; }
   .dishNote { display: none; }

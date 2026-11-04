@@ -147,8 +147,10 @@ const FLOW = {
   /** Round 3 (tb3-*): the calmer bar on a phone, the nigiri page, a key fish to the tank teaching its dish, the dishes in
    * the rod's stats, one ordered and its faint buff on the right of the screen. */
   async book3() {
-    await world("at=-47,114.4&at=19:30&time=evening&bag=23&dish=1", { settle: 12000 });
-    await wait(3000);
+    await world("at=-47,114.4&at=19:30&time=evening&bag=23&dish=1", { settle: 12000, press: false });
+    // The first load can run long: press E until the stool takes you and the bar's Menu shows.
+    for (let i = 0; i < 40 && !(await page.locator("button:text-is('Menu')").count()); i++) { await page.keyboard.press("e"); await wait(5000); }
+    await wait(2000);
     await shot("tb3-bar");
     await page.locator("button:text-is('Menu')").first().click({ timeout: 10000 }).catch(e => console.log("menu", e.message.slice(0, 120)));
     await wait(1800);
@@ -165,7 +167,7 @@ const FLOW = {
     await page.waitForFunction(() => !document.querySelector('[aria-roledescription="folded menu"] [data-dir]'), null, { timeout: 5000 }).catch(() => {});
     await wait(1400); await shot("tb3-tank-toast"); await menuShot("tb3-tank-mark");
     // Back to the book's spread: its count of the tank, then the dishes.
-    for (let i = 0; i < 3; i++) { await centre(page.getByRole("button", { name: "Turn back" })); await wait(1100); }
+    for (let i = 0; i < 2; i++) { await centre(page.getByRole("button", { name: "Turn back" })); await wait(1100); }
     await menuShot("tb3-book");
     await turnPage(); await menuShot("tb3-dishes-2");
     await centre(page.getByRole("button", { name: "Turn back" })); await wait(1100);
@@ -178,6 +180,8 @@ const FLOW = {
     else console.log("no buff chip");
     const hud = await page.locator("[data-hud-right]").first().boundingBox();
     console.log("buff", JSON.stringify(b), "hudRight", JSON.stringify(hud));
+    // The UI view (Esc 1): the minimap grows and the wallet stays; the buff stays clear under them.
+    if (!PHONE) { await page.keyboard.press("Escape"); await wait(1500); await shot("tb3-buff-uiview"); }
   },
   async aquarium() {
     await world("hq=inside&at=0,4.2&time=day", { press: false, settle: 14000 });

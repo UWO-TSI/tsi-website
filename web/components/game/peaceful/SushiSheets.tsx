@@ -186,13 +186,14 @@ export function MenuPickup({ open, onClose, waters = ["sea", "river"], transport
   // The book's dishes: learnt with their fish's stamp, then ordered for coins and what's in your bag.
   const inBag = new Map((data?.[1] ?? []).filter(e => !e.locked).map(e => [e.item_key, e.count]));
   const bookDish = (d: BookDish) => {
+    const fish = NAME.get(d.unlock) ?? d.unlock, hint = book.get(d.unlock) === "cooked" ? `Cooked: only a ${fish} in the tank teaches it.` : `Give a ${fish} to the tank and Bancha learns it.`;
     const learnt = book.get(d.unlock) === "aquarium", ready = d.ingredients.every(([k, n]) => (inBag.get(k) ?? 0) >= n), isOpen = picked === d.id;
     return <MenuDish key={d.id} open={isOpen} picture={<DishPicture id={d.id} />} standIn={!DISH_ART[d.id]?.ready} name={d.name}
-      stats={dishStats(d.buff)} note={learnt ? d.blurb : book.get(d.unlock) === "cooked" ? `Cooked: only a ${NAME.get(d.unlock) ?? d.unlock} in the tank teaches it.` : `Give a ${NAME.get(d.unlock) ?? d.unlock} to the tank and Bancha learns it.`}
+      stats={dishStats(d.buff)} note={learnt ? d.blurb : hint}
       price={<>{d.price}<CurrencyIcon size={13} /></>} onPick={() => setPicked(isOpen ? null : d.id)}>
       <div className={m.fishRow}>{d.ingredients.map(([k, n]) => <Thumb key={k} picture={iconUrl(k)} size={42} count={n} dim={(inBag.get(k) ?? 0) < n}
         label={`${n} ${NAME.get(k) ?? k}, you have ${inBag.get(k) ?? 0}`} />)}</div>
-      {!learnt ? <span className={m.quiet}>Not learnt yet.</span>
+      {!learnt ? <span className={m.quiet}>{hint}</span>
         : <button type="button" className={m.order} disabled={busy || !ready} onClick={() => void order(d)}>{ready ? "Order" : "Bring what it takes"}<span>{d.price}<CurrencyIcon size={12} /></span></button>}
     </MenuDish>;
   };
