@@ -64,7 +64,7 @@ function SharedWindDriver({ level }: { level: NonNullable<SkyLabState["wind"]> }
     sharedWindAt(level, t, wind);
     WIND_LAB.on = true; WIND_LAB.grass = wind.strength; WIND_LAB.dirX = wind.dirX; WIND_LAB.dirZ = wind.dirZ;
     TREE_WIND.value.x = t;
-    TREE_WIND.value.y = 0.03 * wind.strength;
+    TREE_WIND.value.y = 0.05 * wind.strength;
     const lean = 0.07 * wind.strength * (0.3 + 0.7 * wind.gust);
     TREE_LEAN.value.set(wind.dirX * lean, wind.dirZ * lean);
   });
@@ -115,7 +115,7 @@ function stepMotes(mat: THREE.ShaderMaterial, camera: THREE.Camera, ground: (x: 
   u.uStrength.value = WIND_LAB.on ? wind.strength : 1;
   u.uDay.value = 1 - skyUniforms.uNight.value;
   // The canvas's height sets a point's pixels: the pixel finish draws at half size.
-  u.uSize.value = 0.12 * height;
+  u.uSize.value = 0.14 * height;
 }
 
 function stepSwirls(mat: THREE.ShaderMaterial, camera: THREE.Camera, ground: (x: number, z: number) => number) {

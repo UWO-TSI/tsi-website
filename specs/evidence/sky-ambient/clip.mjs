@@ -24,7 +24,8 @@ const CLIPS = {
   "fog": { spot: BEACH, at: "12:30", weather: "fog", view: SEA, tilt: 8 },
   "windy": { spot: BEACH, at: "12:30", weather: "wind", view: SEA, tilt: 8 },
   // The ambient pitches: motes toward the low sun, and the night skies (twinkle, the moon, the odd shooting star).
-  "motes": { spot: BEACH, at: "20:00", sky: "A", amb: "motes", face: "sun", tilt: 6, view: { pitch: 0.35, zoom: 1.2 } },
+  "motes": { spot: MEADOW, at: "20:00", sky: "A", amb: "motes", face: "sun", view: { pitch: 0.42, zoom: 1.2 } },
+  "motes-noon": { spot: MEADOW, at: "12:30", amb: "motes", view: GROUND },
   "night-today": { spot: BEACH, at: "23:30", face: "moon", tilt: 24, view: { pitch: 0.35, zoom: 1 }, seconds: 8 },
   "night-A": { spot: BEACH, at: "23:30", sky: "A", face: "moon", tilt: 24, view: { pitch: 0.35, zoom: 1 }, seconds: 12 },
   "night-B": { spot: BEACH, at: "23:30", sky: "B", face: "moon", tilt: 24, view: { pitch: 0.35, zoom: 1 }, seconds: 12 },
@@ -64,8 +65,8 @@ for (const item of (process.env.CLIPS ?? Object.keys(CLIPS).join(" ")).split(" "
   await page.waitForTimeout(seconds * 1000);
   await ctx.close();
   const base = `${OUT}/sky1-clip-${name}-${size}`, webm = `${tmp}/${readdirSync(tmp).find(f => f.endsWith(".webm"))}`;
-  // The desktop page keeps a 40 px strip above the canvas: cropped out.
-  const crop = phone ? [] : ["-vf", `crop=${viewport.width}:${viewport.height - 40}:0:40`];
+  // The page keeps a 40 px strip above the canvas: cropped out.
+  const crop = ["-vf", `crop=${viewport.width}:${viewport.height - 40}:0:40`];
   execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-ss", String(from), "-t", String(seconds), "-i", webm, ...crop, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "27", "-movflags", "+faststart", "-an", `${base}.mp4`]);
   execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-i", `${base}.mp4`, "-frames:v", "1", "-q:v", "4", `${base}-poster.jpg`]);
   rmSync(tmp, { recursive: true, force: true });

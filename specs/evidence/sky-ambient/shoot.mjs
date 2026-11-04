@@ -29,6 +29,7 @@ const PLANS = {
   day: [{ size: "desktop", weather: "clear", skies: SKIES, times: Object.keys(TIMES), views: ["sky", "island"] }],
   weather: ["rain", "snow", "fog", "wind"].map(weather => ({ size: "desktop", weather, skies: SKIES, times: ["midday", "sunset"], views: ["sky"] })),
   phone: [{ size: "phone", weather: "clear", skies: SKIES, times: ["midday", "sunset", "night"], views: ["sky"] }],
+  phoneplay: [{ size: "phone", weather: "clear", skies: [null], times: ["midday", "sunset"], views: ["play", "game"] }],
   today: [{ size: "desktop", weather: "clear", skies: [null], times: Object.keys(TIMES), views: ["sky", "island", "play", "game"] },
     ...["rain", "snow", "fog", "wind"].map(weather => ({ size: "desktop", weather, skies: [null], times: ["midday"], views: ["sky", "game"] }))],
 };
@@ -38,6 +39,7 @@ const LOOK = JSON.stringify({ skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", bro
 mkdirSync(OUT, { recursive: true });
 const browser = await chromium.launch({ headless: true, args: ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist"] });
 for (const run of PLANS[PLAN]) {
+  if (process.env.SKIES) run.skies = process.env.SKIES.split(",").map(s => s === "today" ? null : s);
   const phone = run.size === "phone";
   const ctx = await browser.newContext({ viewport: SIZES[run.size], deviceScaleFactor: 1, isMobile: phone, hasTouch: phone });
   await ctx.addInitScript(([look]) => { try {
@@ -63,8 +65,8 @@ for (const run of PLANS[PLAN]) {
       await page.evaluate(view => window.__sky.view(view), view);
       await page.waitForTimeout(2200);
       const name = `sky1-${PLAN}-${run.size}-${run.weather}-${sky ?? "today"}-${time}-${v}`;
-      // The page keeps a 40 px strip above the canvas on desktop: left out.
-      const { width, height } = SIZES[run.size], top = phone ? 0 : 40;
+      // The page keeps a 40 px strip above the canvas: left out.
+      const { width, height } = SIZES[run.size], top = 40;
       await page.screenshot({ path: `${OUT}/${name}.jpg`, type: "jpeg", quality: 82, clip: { x: 0, y: top, width, height: height - top } });
       console.log(name);
     }

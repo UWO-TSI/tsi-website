@@ -57,7 +57,7 @@ export const useSkyLab = (): SkyLabState =>
 
 // ─── The shared wind pitch ───────────────────────────────────────────────
 /** Base strength per level: 1 is today's clear-day grass sway. */
-export const WIND_LEVEL: Record<WindLevel, number> = { calm: 0.35, breeze: 1, storm: 2.6 };
+export const WIND_LEVEL: Record<WindLevel, number> = { calm: 0.35, breeze: 1, storm: 3 };
 
 /**
  * Slow gusts on the world clock, 0..1: three incommensurate swells, so the field breathes rather than pulses, and every

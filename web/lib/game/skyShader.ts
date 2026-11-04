@@ -249,7 +249,9 @@ float meteor() {
 
 void labSky(inout vec3 sky, float fade) {
   lDir = normalize(vDir);
-  float low = lowSun(), toSun = sunSide(), up = smoothstep(-0.07, 0.01, uSunDir.y), day = 1.0 - uNight;
+  // How clear the sky is: overcast (rain, snow, fog) hides the sun, its glow, the moon and the stars.
+  float clear = 1.0 - clamp(uCover.z * 1.15, 0.0, 1.0);
+  float low = lowSun() * clear, toSun = sunSide(), up = smoothstep(-0.07, 0.01, uSunDir.y) * clear, day = 1.0 - uNight;
   vec3 glow = mix(vec3(1.0, 0.5, 0.44), vec3(1.0, 0.76, 0.46), smoothstep(-0.04, 0.16, uSunDir.y));
 #if SKY_LAB == 2
   // Toon: the gradient in soft steps, a flat sun with a ring, a gentle wash on the sun's side.
@@ -296,7 +298,7 @@ void labSky(inout vec3 sky, float fade) {
   float k = cos(6.2832 * uMoonPhase), edge = sqrt(max(0.0, 1.0 - mp.y * mp.y));
   float lit = smoothstep(-0.1, 0.1, (uMoonPhase < 0.5 ? mp.x : -mp.x) - k * edge);
   float crater = 1.0 - 0.12 * (smoothstep(0.32, 0.2, length(mp - vec2(-0.3, 0.25))) + smoothstep(0.22, 0.12, length(mp - vec2(0.35, -0.2))) + smoothstep(0.16, 0.08, length(mp - vec2(0.1, 0.5))));
-  float mVis = smoothstep(0.15, 0.6, uNight);
+  float mVis = smoothstep(0.15, 0.6, uNight) * clear;
   vec3 moonC = vec3(1.0, 0.97, 0.86) * crater;
 #if SKY_LAB == 2
   moonC = vec3(1.0, 0.95, 0.72) * mix(1.0, crater, 0.6);
@@ -307,7 +309,7 @@ void labSky(inout vec3 sky, float fade) {
   // Stars, twinkling as the title's do (each its own beat), never over the moon; the odd shooting star.
   if (uNight > 0.001) {
     vec2 starUv = uvAt(0.9, vec2(0.0));
-    float s = texture2D(uStars, starUv).r;
+    float s = texture2D(uStars, starUv).r * clear;
     float ph = texture2D(uNoise, starUv * 0.37).r * 43.0;
 #if SKY_LAB == 2
     float starry = 1.0;
@@ -319,7 +321,7 @@ void labSky(inout vec3 sky, float fade) {
 #if SKY_LAB == 3
     sky += vec3(0.5, 0.46, 0.8) * texture2D(uGalaxy, uvAt(0.32, vec2(0.0))).rgb * uNight * fade * 0.55 * (1.0 - mIn);
 #endif
-    sky += vec3(1.0, 0.96, 0.85) * meteor() * uNight * fade * 1.4;
+    sky += vec3(1.0, 0.96, 0.85) * meteor() * uNight * fade * 1.4 * clear;
   }
 }
 
@@ -327,7 +329,7 @@ void labClouds(out float density, out float shade) {
 #if SKY_LAB == 2
   // Toon clouds: soft noise cut to crisp puffs, lit on the side toward the sun, cool underneath; weather thickens them
   // (coverage), greys them (overcast) and darkens their bellies (storm).
-  float cov = clamp(cover0 * 0.5 + cover1 * 0.45 + cover2 * 0.35 + cover3 * 0.3, 0.0, 1.0);
+  float cov = clamp(cover0 * 0.5 + cover1 * 0.45 + cover2 * 0.35 + cover3 * 0.3, 0.0, 1.0) * (1.0 - 0.45 * uNight);
   vec2 uv = uvAt(0.42, vec2(0.011, 0.004));
   float n = (texture2D(uNoise, uv).r * 0.7 + texture2D(uNoise, uv * 2.7 + 0.37).r * 0.3) * mix(0.7, 1.0, band);
   float thr = mix(0.64, 0.3, cov);
@@ -340,6 +342,8 @@ void labClouds(out float density, out float shade) {
   shade = mix(shade, 0.42 + 0.25 * litSide, cover3);
   density = max(d, cover2 * 0.7 * smoothstep(-0.3, 0.5, elN));
   shade = mix(shade, 0.7, cover2 * (1.0 - d) * 0.8);
+  // Night: fewer, darker puffs, so the stars and the moon lead.
+  shade *= 1.0 - 0.35 * uNight;
 #else
   clouds(density, shade);
 #endif
