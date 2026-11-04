@@ -800,3 +800,4 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
 - **Cedar r3 (tool-pipeline 12e77616)** added to the rod models page as card rm3-cedar (republished, same URL, marks kept).
 - **Main quest r6 review:** https://claude.ai/artifact/VKAEfjZnWuPR6QStdT9H2A (ids mq6-*; game/main-quest 061f5e0d; vitest 3745 clean; filed in the vault). Its lane file still calls the round 3 migrations unapplied: they are applied (20261030010000/010100).
 - **Tasting book r3 review:** https://claude.ai/artifact/9TZdz2Gtq8aNbN1AiqVaJQ (ids tb3-*; game/tasting-book d65a27f0; migration changed in place, unapplied; filed in the vault).
+- **Tutorial r8 review:** https://claude.ai/artifact/B7SrDpE4EsdadjUSnXKYes (ids t8-*; game/tutorial-v2 1c6f8205; vitest had 7 load timeouts at load 30 to 56, two still slow alone: shoreField village (now 20 s on main) and world/generate 'is the same twice'; showcase API left unused; filed in the vault).
