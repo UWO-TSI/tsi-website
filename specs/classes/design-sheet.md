@@ -1252,14 +1252,7 @@ Read before any **Weapon** line above. For the nine classes below, David's picks
 - Transmuter: **B, Mimic Core** (not the gauntlet).
 - Hunter: **A, whaling harpoon on a chain**, replacing the crossbow.
 - Martial Artist: **A, flow spear**, a spear class with five polearm tiers, named **Lancer** (David, 2026-11-04; key `monk` stays in data).
-- Guardian: **A, hull-plate shield**, sword removed. Then David, verbatim: "maybe guardian is dual shielf". Proposed, waiting on his yes:
-  - **Look:** a matched pair of round hull-plate shields, one on each forearm (the main node right, `OffHand` left, as the twin tanto), each a little smaller than the single design.
-  - **Basic:** left and right bashes alternating; the third hit claps both together in a short shockwave.
-  - **Block / Parry:** both shields together in front; a perfect parry counter-bashes.
-  - **Shield Throw:** throw one, which ricochets between 3 enemies and returns, while the other keeps blocking.
-  - **Aegis Dome:** plant one shield as the dome and fight on with the other until you pick it back up.
-  - **Shield Rush:** both shields forward as a battering ram. **Unbreakable:** both lock into a shell round you, then the double slam.
-  - Needs a dual-wield clip family instead of `OneHand` (lib/game/character/clips.ts), and WEAPON_SKINS `guardian:ivory` loses M_Blade with the sword.
+- Guardian: **A, hull-plate shield**, one shield, sword removed. David floated "maybe guardian is dual shielf", then: "1 shielf actually". The single shield stands, as on the picks page (Shield Throw ricochets and returns; no blocking until it does). WEAPON_SKINS `guardian:ivory` loses M_Blade with the sword.
 - Assassin: **A, steel war fans**.
 - Summoner: **A, Shadow Lantern**.
 - Shaman: **A, totem pole and thrown carvings**.
