@@ -306,6 +306,7 @@
     {"id":"volleyball-net","kind":"prop","x":-7.5,"z":103.8,"yaw":1.5708,"model":"volleyball-net"},
     {"id":"beach-ball-net","kind":"prop","x":-6.8,"z":110.7,"yaw":1.3,"scale":0.2,"model":"beach-ball"},
     {"id":"volley-bench","kind":"bench","x":-4.5,"z":94.7,"model":"log-bench"},
+    {"id":"volley-bench-2","kind":"bench","x":-10.5,"z":94.7,"model":"log-bench"},
     {"id":"volley-board","kind":"prop","x":4.6,"z":102.34,"yaw":1.5708,"model":"catch-board"},
     {"id":"sandcastle","kind":"prop","x":8,"z":112,"yaw":0.4,"model":"sandcastle"},
     {"id":"lamp-path-0","kind":"lamp","x":63.41,"z":59.23,"yaw":1.8925,"model":"woodPost"},

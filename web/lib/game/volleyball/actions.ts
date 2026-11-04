@@ -3,26 +3,31 @@
  * (match.ts humanStep), the action bar (VolleyHud) and the tests read, so what the bar shows is what a key does.
  * Pure.
  */
-import { SLIDE_WINDOW, serverOf, type Match } from "./match";
+import { serverOf, type Match } from "./match";
 
-export type Control = "left" | "e" | "right" | "ctrl" | "jump" | "dash";
-export type Action = "charge" | "serve" | "spin" | "bump" | "set" | "jumpset" | "spike" | "block" | "call" | "dive" | "slide" | "jump" | "dash";
+/** `dash` is the movement's dash key (Q by default): in the court it dives. */
+export type Control = "left" | "e" | "right" | "jump" | "dash";
+export type Action = "charge" | "serve" | "spin" | "bump" | "set" | "jumpset" | "spike" | "block" | "call" | "dive" | "jump";
 /** Your stance: serving (before the toss), the toss in the air, or in the rally on the sand or in the air; idle between points. */
 export type Stance = "serve" | "toss" | "ground" | "air" | "idle";
 
 export const ACTIONS: Record<Stance, Partial<Record<Control, Action>>> = {
   serve: { left: "charge", right: "spin" },
   toss: { left: "serve", jump: "jump" },
-  ground: { left: "bump", e: "set", right: "call", ctrl: "dive", jump: "jump", dash: "dash" },
-  air: { left: "spike", e: "jumpset", right: "block", dash: "dash" },
+  ground: { left: "bump", e: "set", right: "call", dash: "dive", jump: "jump" },
+  air: { left: "spike", e: "jumpset", right: "block" },
   idle: {},
 };
 
-/** The order the bar shows a stance's actions in (the main hit first). */
+/**
+ * What the bar shows in each stance, the main hit first (David, round 3: "the bar should old show bump set dive, no
+ * jump or right click for callout. and jumping should switch the set of ui to jumping actions"). Jump and the call
+ * still work; they just aren't on the bar.
+ */
 export const BAR: Record<Stance, Action[]> = {
   serve: ["charge", "spin"],
-  toss: ["serve", "jump"],
-  ground: ["bump", "set", "call", "dive", "jump"],
+  toss: ["serve"],
+  ground: ["bump", "set", "dive"],
   air: ["spike", "jumpset", "block"],
   idle: [],
 };
@@ -31,7 +36,7 @@ export const BAR: Record<Stance, Action[]> = {
 export function controlOf(stance: Stance, action: Action): Control | null {
   const row = ACTIONS[stance];
   for (const c of Object.keys(row) as Control[]) if (row[c] === action) return c;
-  return stance === "ground" && action === "slide" ? "ctrl" : null;
+  return null;
 }
 
 export function stanceOf(m: Match, i: number): Stance {
@@ -42,8 +47,5 @@ export function stanceOf(m: Match, i: number): Stance {
   return p.s.mode === "air" ? "air" : "ground";
 }
 
-/** What a press of `c` does for player `i` now: Ctrl's dive is the slide dive just after a dash (or during one). */
-export function actionFor(m: Match, i: number, c: Control): Action | null {
-  const a = ACTIONS[stanceOf(m, i)][c] ?? null, p = m.players[i];
-  return a === "dive" && (p.s.dashT > 0 || p.sinceDash < SLIDE_WINDOW) ? "slide" : a;
-}
+/** What a press of `c` does for player `i` now. */
+export const actionFor = (m: Match, i: number, c: Control): Action | null => ACTIONS[stanceOf(m, i)][c] ?? null;

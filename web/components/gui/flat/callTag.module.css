@@ -1,0 +1,32 @@
+/* A call at a moment of play (CallTag.tsx): the white chip on the flat kit's tokens. Each call's colour is --accent. */
+.tag { --accent: var(--ui-ink); position: relative; display: inline-flex; align-items: center; white-space: nowrap; font-family: var(--gui-font); color: var(--ui-ink); }
+.tag[data-kind="perfect"], .tag[data-kind="max"] { --accent: var(--ui-gold); }
+.tag[data-kind="saved"], .tag[data-kind="block"] { --accent: var(--team, var(--ui-home)); }
+.tag[data-kind="soft"], .tag[data-kind="whiff"] { --accent: var(--ui-line-strong); color: var(--ui-quiet); }
+.word { font: inherit; font-weight: 800; }
+
+/* A white chip, gently rounded, with a coloured cap holding the call's picture. */
+.tag { gap: 6px; padding: 3px 9px 3px 3px; border-radius: 9px; background: var(--ui-card); font-size: 13px; line-height: 1;
+  box-shadow: 0 1px 0 rgb(var(--ui-shade) / 0.08), 0 3px 10px rgb(var(--ui-shade) / 0.14); }
+.cap { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 6px; background: var(--accent); color: var(--ui-card); }
+.tag[data-kind="perfect"] .cap, .tag[data-kind="max"] .cap { color: var(--ui-ink); }
+.tag[data-kind="soft"] .cap, .tag[data-kind="whiff"] .cap { background: var(--ui-well); color: var(--ui-quiet); }
+.tag[data-kind="soft"], .tag[data-kind="whiff"] { font-size: 12px; padding-right: 8px; }
+
+/* Played once: in with a spring, a held beat, up and out. The quiet ones are quicker; a block slams down and jolts. */
+.tag[data-live] { animation: callIn 0.9s cubic-bezier(0.2, 0.9, 0.3, 1.12) forwards; }
+.tag[data-live][data-kind="soft"], .tag[data-live][data-kind="whiff"] { animation-duration: 0.75s; }
+.tag[data-live][data-kind="block"] { animation-name: callSlam; }
+.tag[data-live][data-kind="perfect"] .cap { animation: callShine 0.5s ease-out 0.08s; }
+@keyframes callIn { 0% { opacity: 0; transform: translateY(8px) scale(0.85); } 16% { opacity: 1; transform: scale(1.08); }
+  28% { transform: scale(1); } 72% { opacity: 1; } 100% { opacity: 0; transform: translateY(-14px); } }
+@keyframes callSlam { 0% { opacity: 0; transform: translateY(-16px) scale(1.15); } 12% { opacity: 1; transform: translateY(2px) scale(1.12, 0.86); }
+  20% { transform: translateX(-2px) scale(0.98, 1.04); } 26% { transform: translateX(2px); }
+  72% { opacity: 1; } 100% { opacity: 0; transform: translateY(-10px); } }
+@keyframes callShine { 40% { transform: scale(1.25); filter: brightness(1.15); } }
+@media (prefers-reduced-motion: reduce) {
+  /* The calls still go: a fade, no motion. */
+  .tag[data-live] { animation-name: callFade !important; }
+  .tag[data-live] .cap { animation: none !important; }
+  @keyframes callFade { 70% { opacity: 1; } 100% { opacity: 0; } }
+}

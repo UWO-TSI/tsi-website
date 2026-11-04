@@ -191,7 +191,10 @@ export interface CharacterMotion { speed: number; yaw: number; lift: number; pos
   face?: FaceOverride | null;
   /** The leaf glider in the right hand (specs/glider.md): its size, 0 furled (hidden) to 1 open, a little over 1 as it pops open. */
   leaf?: number;
-  /** The Air clip's pose while `move` is "Air": 0 take-off, 0.5 the apex tuck, 1 reaching for the ground (airPhase). */
+  /**
+   * The Air clip's pose while `move` is "Air": 0 take-off, 0.5 the apex tuck, 1 reaching for the ground (airPhase). A
+   * held volleyball one-shot (`move` vb_spike_jump) is posed by it too, as a fraction of the clip.
+   */
   air?: number;
   /** Any other clip posed by a phase (catalogue `scrub`), 0..1: CastWindup by the cast's power. */
   scrub?: number;

@@ -24,7 +24,9 @@ export { CardOverlay, FLY_MS, FlyIn, KEYBOARD, KeyBoard, PaperField, PrintedCard
 export { CountUp, WalletSlot } from "./wallet";
 export { KEYWORD_KINDS, KEYWORD_LIBRARY, Keyword, KeywordLine, keywordParts, type KeywordKind, type LinePart } from "./keyword";
 export { ProgressCard } from "./ProgressCard";
+export { PODIUM, Podium, podiumFeet, type PodiumPlace } from "./Podium";
 export { ServeMeter } from "./ServeMeter";
+export { CallTag, type CallKind } from "./CallTag";
 export { ActionBar, ActionIcon, type ActionSlot } from "./ActionBar";
 export { SpinPicker } from "./SpinPicker";
 /** The detail stage's classes: a viewer (TurnStage, ItemViewer, the keychain's stage) fills `stage`; a picture `picture`. */
