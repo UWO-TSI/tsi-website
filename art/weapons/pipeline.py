@@ -6,6 +6,8 @@ one review sheet for David.
       --hd aegis-oak=<hd.glb> ... [--old aegis-oak=<old.glb> ...] [--require M_Brass,M_Cloth,M_Iron,M_Wood]
 
 The high-defs come from the weapon's own Blender script: a shaped mesh, not a stack of primitives (Models rule 3).
+--lp-from gives, per tier, the same script's lower-detail build (its small detail off) to reduce instead of the
+high-def: one design, so the low-poly's budget goes on the shape. It's still checked against the high-def.
 Nodes keep their names and transforms: the main node (held in the weapon hand) and `OffHand` (the other hand, parked
 on the back; components/game/character/Character.tsx holdOffHand). Authoring frame as art/props-enemies/build_weapons.py:
 the grip at the origin (the hand socket), the long axis +Z, the front -Y, rig units (the engine scales by 1.3).
@@ -18,8 +20,9 @@ under hd/; then run web/scripts/pack-glbs.mjs on both.
 Checks (any failure exits 1 and names it):
 - each file holds only a main node and, optionally, `OffHand`, one mesh each;
 - both versions closed and manifold: no open or non-manifold edges (Models rule 3); extra loose pieces are reported;
-- only the trim kit's materials (KIT), and across the tiers every one in --require (the class's skins and mastery
-  trim recolour by these names: lib/combat/*Kits.ts WEAPON_SKINS and look.trim);
+- only the trim kit's materials (KIT), and across the tiers every one in --require, on the high-defs and on the
+  low-polys, which are the world copies (the class's skins and mastery trim recolour by these names:
+  lib/combat/*Kits.ts WEAPON_SKINS and look.trim);
 - the low-poly within --lp-tris, the high-def above it;
 - the low-poly's silhouette matches the high-def's from the front, the side and above (IoU >= MIN_IOU).
 UVs missing on a mesh are generated (Smart UV Project) and reported.
@@ -36,8 +39,8 @@ from mathutils import Vector
 
 KIT = {"M_Blade", "M_Iron", "M_Brass", "M_Wood", "M_Cloth", "M_Wrap", "M_Glow", "M_Rune"}
 MIN_IOU = 0.97
-PLANAR = 4          # degrees: faces flatter than this to each other merge before the collapse
 SHARP = 35          # degrees: the low-poly's edges sharper than this shade hard
+RETRIES = 8         # collapse attempts, each 1.5% lower, before the topology check fails the low-poly
 RASTER = 256        # silhouette check resolution
 CLOSE, WORLD, PIXEL = 360, 96, 4   # review tiles: close-up px; world-size px, shown at x PIXEL (nearest) as the pixel finish
 
@@ -49,10 +52,11 @@ def parse():
     p.add_argument("--lp-tris", type=int, required=True)
     p.add_argument("--hd", action="append", required=True, help="key=path, one per tier, in tier order")
     p.add_argument("--old", action="append", default=[], help="key=path of the model this replaces")
+    p.add_argument("--lp-from", action="append", default=[], help="key=path: reduce the low-poly from this lower-detail build of the same design instead of the high-def")
     p.add_argument("--require", default="")
     a = p.parse_args(argv)
     pairs = lambda xs: [tuple(x.split("=", 1)) for x in xs]
-    return a, pairs(a.hd), dict(pairs(a.old)), {m for m in a.require.split(",") if m}
+    return a, pairs(a.hd), dict(pairs(a.old)), {m for m in a.require.split(",") if m}, dict(pairs(a.lp_from))
 
 
 def reset():
@@ -64,6 +68,24 @@ def load(path):
     before = set(bpy.context.scene.objects)
     bpy.ops.import_scene.gltf(filepath=path)
     return [o for o in bpy.context.scene.objects if o not in before and o.type == "MESH"]
+
+
+def own(objs):
+    """A second file loaded beside the high-def brings its materials in as "M_Iron.001": point every slot back at the
+    high-def's material of the same name (skins and trim find parts by these names)."""
+    for o in objs:
+        for slot in o.material_slots:
+            m = slot.material
+            if m and m.name[-4:-3] == "." and m.name[-3:].isdigit() and m.name[:-4] in bpy.data.materials:
+                slot.material = bpy.data.materials[m.name[:-4]]
+                if m.users == 0:
+                    bpy.data.materials.remove(m)
+
+
+def base_name(name):
+    """A node's own name, without the "~hd" this script parks the high-def under or Blender's ".001"."""
+    name = name.split("~hd")[0]
+    return name[:-4] if name[-4:-3] == "." and name[-3:].isdigit() else name
 
 
 def ntris(objs):
@@ -130,9 +152,9 @@ def ensure_uvs(objs, notes):
 
 
 def reduce(objs, budget):
-    """The low-poly: each node reduced from its high-def, sharing the budget by triangle count. First the near-flat
-    detail goes (planar dissolve within PLANAR degrees, never across a material border, so skins still find their
-    parts), then an edge collapse takes it the rest of the way to the budget."""
+    """The low-poly: each node reduced from its source (the high-def, or a lower-detail build of the same design),
+    sharing the budget by triangle count: welded back into one surface, then edge-collapsed. (A planar-dissolve pass
+    before the collapse was tried and dropped: its self-touching n-gons triangulate into non-manifold edges.)"""
     total = ntris(objs)
     out = []
     for o in objs:
@@ -142,22 +164,37 @@ def reduce(objs, budget):
         bpy.context.view_layer.objects.active = lp
         weld(lp)
         share = budget * ntris([o]) / total
-        if ntris([o]) > share:
-            d = lp.modifiers.new("planar", "DECIMATE")
-            d.decimate_type, d.angle_limit, d.delimit = "DISSOLVE", math.radians(PLANAR), {"MATERIAL"}
-            bpy.ops.object.modifier_apply(modifier=d.name)
-            t = lp.modifiers.new("tri", "TRIANGULATE")
-            bpy.ops.object.modifier_apply(modifier=t.name)
         if ntris([lp]) > share:
-            m = lp.modifiers.new("lp", "DECIMATE")
-            m.ratio = max(share / ntris([lp]), 0.01)
-            m.use_collapse_triangulate = True
-            bpy.ops.object.modifier_apply(modifier=m.name)
+            collapse(lp, share)
         bpy.ops.object.select_all(action="DESELECT")
         lp.select_set(True)
         bpy.ops.object.shade_smooth_by_angle(angle=math.radians(SHARP))   # its own normals: the high-def's no longer fit
         out.append(lp)
     return out
+
+
+def collapse(o, target):
+    """Edge-collapse to `target` triangles, then clear the degenerate faces a collapse can leave. A collapse that still
+    leaves an open or non-manifold edge is redone from the same mesh a little lower (the result depends on the exact
+    ratio), up to RETRIES times; the low-poly's own topology check then has the last word."""
+    keep = o.data.copy()
+    for k in range(RETRIES + 1):
+        if k:
+            o.data = keep.copy()
+        m = o.modifiers.new("lp", "DECIMATE")
+        m.ratio = max(target * (1 - 0.015 * k) / ntris([o]), 0.01)
+        m.use_collapse_triangulate = True
+        bpy.context.view_layer.objects.active = o
+        bpy.ops.object.modifier_apply(modifier=m.name)
+        bm = bmesh.new()
+        bm.from_mesh(o.data)
+        bmesh.ops.dissolve_degenerate(bm, dist=1e-6, edges=bm.edges[:])
+        bmesh.ops.triangulate(bm, faces=bm.faces[:])
+        bm.to_mesh(o.data)
+        bm.free()
+        if topology(o)[0] == 0:
+            break
+    bpy.data.meshes.remove(keep)
 
 
 def weld(o):
@@ -307,8 +344,8 @@ def sheet(rows, path):
 
 
 def main():
-    a, tiers, old, require = parse()
-    fails, notes, seen, rows = [], [], set(), []
+    a, tiers, old, require, lp_from = parse()
+    fails, notes, seen, seen_lp, rows = [], [], set(), set(), []
     fail = fails.append
     tmp = os.path.join(a.out, "_review")
     for key, src in tiers:
@@ -320,7 +357,17 @@ def main():
         seen |= materials(hd)
         n_hd = ntris(hd)
         export(hd, os.path.join(a.out, "hd", f"{key}.glb"))
-        lp = reduce(hd, a.lp_tris)
+        for o in hd:                     # free the names for the low-poly: the engine finds `OffHand` by its exact name
+            o.name = f"{o.name}~hd"
+        src = hd                         # reduce the high-def, or a lower-detail build of the same design
+        if key in lp_from:
+            src = load(lp_from[key])
+            own(src)
+            check_nodes(key, src, fail)
+        lp = reduce(src, a.lp_tris)
+        if src is not hd:
+            for o in src:
+                bpy.data.objects.remove(o, do_unlink=True)
         n_lp = ntris(lp)
         if n_lp > a.lp_tris:
             fail(f"{key}: low-poly {n_lp} triangles, over {a.lp_tris}")
@@ -329,13 +376,12 @@ def main():
         sil = iou(hd, lp)
         if min(sil.values()) < MIN_IOU:
             fail(f"{key}: low-poly silhouette off the high-def ({', '.join(f'{v} {s:.3f}' for v, s in sil.items())})")
-        for o, src_o in zip(lp, hd):     # free the names first: the engine finds `OffHand` by its exact name
-            name = src_o.name
-            src_o.name = f"{name}~hd"
-            o.name = name
-        if sorted(o.name for o in lp) != sorted(o.name.removesuffix("~hd") for o in hd):
+        for o in lp:
+            o.name = base_name(o.name)
+        if sorted(o.name for o in lp) != sorted(base_name(o.name) for o in hd):
             fail(f"{key}: low-poly node names {[o.name for o in lp]}")
         check_topology(f"{key} low-poly", lp, fail, notes)
+        seen_lp |= materials(lp)
         export(lp, os.path.join(a.out, f"{key}.glb"))
         row = [shot(hd, CLOSE, os.path.join(tmp, f"{key}-hd.png"))]
         pts = world_tris(hd).reshape(-1, 3)
@@ -345,9 +391,9 @@ def main():
             row.append(shot(load(old[key]), WORLD, os.path.join(tmp, f"{key}-old.png"), frame))
         rows.append(row)
         print(f"TIER {key}: hd {n_hd} tris, lp {n_lp} tris, silhouette " + " ".join(f"{v} {s:.3f}" for v, s in sil.items()), flush=True)
-    missing = require - seen
-    if missing:
-        fail(f"materials the class's skins or trim need, on no tier: {sorted(missing)}")
+    for label, have in (("high-def", seen), ("low-poly", seen_lp)):          # the low-poly is the world copy skins recolour
+        if require - have:
+            fail(f"materials the class's skins or trim need, on no tier's {label}: {sorted(require - have)}")
     sheet(rows, os.path.join(a.out, "review.png"))
     for n in notes:
         print("NOTE", n)
