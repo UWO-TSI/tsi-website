@@ -30,6 +30,26 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 6: David's rod data round 5 review (2026-11-04, verbatim; https://claude.ai/artifact/1sHjWWpEULGjw1m2rTgeF9)
+
+Approved: rg5-aura, rg5-bag, rg5-models, rg5-shelf, rg5-epics ("i will check": Riptide rare and Titanium epic, both crafted at the workbench; Tempest epic from a quest or event).
+- rg5-questions (redo): "make common fish up to rare as default no level up exists only like awakening some rods have 1, for training rod it has 2 awakenings, but dont show it, its supposed to be sudden. okay to unlock the training rod 35 flimsy rod fish and it triggers a quest that allows you to talk to the rod guy and he asks u to trade the flimsy rod for a training rod. no levels, only awakenings for rods. more expensive, price rods properly. yeah and say unique cenario required"
+- rg5-stats (redo): "training should be lower level like similar to flimsy stats, but once you fish like 50 fish it evolves and it goes to stats of a rare, and 2nd level up to a epic, and 3rd to a legendary stats . has to fish 50, 250, 1000. make sure the epic rods dont max out too early, so i think you scale down the stats for all the rods down, to make room for legendary and divine rods stats, legendary is basically 100 and divine goes past like 110-120"
+- rg5-training (redo): "on the fishing rod have the bar that has the evolution bar for fish caught thing like the training rod but only certain rare rods have that only epic+ with exception of training rod has the evolution thing, so matters more about how long u fish with a rod rather than always the rarity for late game rods, also the left right arror in the rod box ui needs to be remove same with the all arrow, removed. left right arror put very faint and small and light. also have space for a line for the passive for the rod, some rod dont have passive but like rare+ rods will have passives"
+- From the fish list review (fl2-rods, approve): "glass strenght lower, the stats should make sense with the rod. passive ability exist aswell"
+- David's answers (2026-11-04, asked because the notes disagreed): the Training rod has **three** awakenings, at 50, 250 and 1000 fish; **epic and up show a fish-caught bar** to the next awakening, and **the Training rod shows only its fish count** (its awakenings stay a surprise).
+
+Round 6:
+1. **No levels anywhere, only awakenings.** Delete the level code and copy ("Level 1 of 3", the ring). Training starts at about Flimsy's stats and hooks common to rare from the start; at 50, 250 and 1000 fish caught with it, it awakens to rare, then epic, then legendary stats. Its card shows only its fish count, and an awakening lands as a short surprise reveal when the fish that triggers it is landed.
+2. **Epic and up awaken too**, with a fish-caught evolution bar to the next awakening on the rod card (small, in the r5 line's place), so late rods reward time fished with them. Rare and below have none (Training is the exception). Propose each epic and up rod's awakenings (how many, at how many fish, what each gives: stats, a passive, a stronger aura) for David's OK.
+3. **The Training unlock:** at the 35th Flimsy-rod fish a quest starts: the rod seller asks to trade your Flimsy rod for the Training rod (the Flimsy leaves your bag). `20261102170000_rod_catches.sql` is unapplied: change it in place (no grant at the 50th; whatever the quest needs server side). The shop's ??? teaser card reads "Unique scenario required".
+4. **Stats rescaled:** every rod down so epics don't max out early; legendary about 100 per stat, Divine past it (110 to 120). Each rod's numbers fit the rod (Glass's strength lower). Old and new table side by side.
+5. **Passives:** rare and up have one (a few may have none); a line for it on the rod card, empty for rods without. Propose one per rare and up rod, in the six stats' vocabulary or plain rules.
+6. **Prices:** higher, priced against what a player earns per hour fishing at each stage; show the reasoning in a line. Never the gem-to-money rate.
+7. **Rod box UI:** remove the left and right arrows on the rod box and the "all" arrow; any left and right arrows that must stay become very faint, small and light. Say which ones stayed.
+8. **The roster:** Riptide (rare, crafted), Titanium (epic, crafted) and Tempest (epic, a quest or event) join with stats in the new scale and recipes. Their models are being redone from David's references on the tool-pipeline lane with the same file names; wire the current ones.
+9. Evidence ids `rg6-*`: the rod cards (Training before and after an awakening, an epic with its bar, a rare with its passive), the awakening reveal as a strip, the shop with the teaser, the quest talk, the rescaled table, desktop and phone.
+
 ## Round 5: David's rod data review (2026-11-03, verbatim; https://claude.ai/artifact/LNrapLgneyk16D14xRTVsi)
 
 - rg4-unlock (approve)
