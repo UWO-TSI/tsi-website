@@ -7,7 +7,7 @@ import { COURT, toWorld } from "./court";
 import { BOARD_ID, boardSpot, courtsOf, offCourt, onCourt } from "./island";
 import { VB_SPECTATE, VB_SPECTATE_FALLBACK, heldClip, spectateStand } from "./cheapView";
 import { createMatch } from "./match";
-import { myWeekWins, noteCasualWin, weekKey, weeklyBoard } from "./leaderboard";
+import { boardView, myWeekWins, nameSeed, noteCasualWin, weekKey, weeklyBoard } from "./leaderboard";
 
 const v = villageOfWorld(loadWorldFromDisk(fileURLToPath(new URL("../../../data/world/", import.meta.url))));
 const courts = courtsOf(v), c = courts[0];
@@ -27,10 +27,14 @@ describe("the court on the island", () => {
     const on = v.objects.filter(o => onCourt(courts, o.x, o.z) && o.kind !== "anchor" && o.kind !== "landmark").map(o => o.id);
     // The tower's corner and the palms at the land side's edge were there before the court (David's layout).
     expect(on.filter(id => !/^(volleyball-net|lifeguard-tower|palm-\d+)$/.test(id!))).toEqual([]);
-    const bench = objectsOf("bench", v).find(o => o.id === "volley-bench")!;
-    expect(bench).toBeTruthy();
-    expect(onCourt(courts, bench.x, bench.z)).toBe(false);
-    expect(onCourt(courts, bench.x, bench.z, 3)).toBe(true);
+    // Two benches to watch from (David: "2 benches"), off the footprint but beside it.
+    const benches = objectsOf("bench", v).filter(o => /^volley-bench/.test(o.id ?? ""));
+    expect(benches.length).toBe(2);
+    for (const bench of benches) {
+      expect(onCourt(courts, bench.x, bench.z)).toBe(false);
+      expect(onCourt(courts, bench.x, bench.z, 3)).toBe(true);
+    }
+    expect(Math.hypot(benches[0].x - benches[1].x, benches[0].z - benches[1].z)).toBeGreaterThan(3);
     const spot = boardSpot(v)!;
     expect(objectsOf("prop", v).some(o => o.id === BOARD_ID)).toBe(true);
     expect(onCourt(courts, spot.x, spot.z)).toBe(false);
@@ -70,5 +74,15 @@ describe("the leaderboard (sample until phase 3)", () => {
     expect(rows.find(r => r.you)).toMatchObject({ name: "Islander", wins: 8, rank: 4 });
     expect(rows.map(r => r.rank)).toEqual(rows.map((_, i) => i + 1));
     expect(myWeekWins(new Date("2026-11-03T12:00:00Z"), store)).toBe(0);
+  });
+  it("the sheet: the top three on the podium, three rows under it, and your place when it's further down", () => {
+    const row = (rank: number, you = false) => ({ rank, name: `P${rank}`, wins: 20 - rank, you });
+    const v1 = boardView({ sample: true, rows: [1, 2, 3, 4, 5, 6, 7, 8].map(r => row(r, r === 8)) });
+    expect(v1.podium.map(r => r.rank)).toEqual([1, 2, 3]);
+    expect(v1.rows.map(r => r.rank)).toEqual([4, 5, 6]);
+    expect(v1.you?.rank).toBe(8);
+    expect(boardView({ sample: true, rows: [1, 2, 3, 4].map(r => row(r, r === 2)) }).you).toBeNull();
+    expect(nameSeed("Kelpie")).toBe(nameSeed("Kelpie"));
+    expect(nameSeed("Kelpie")).not.toBe(nameSeed("Gull"));
   });
 });

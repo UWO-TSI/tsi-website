@@ -24,6 +24,7 @@ import { beatRate } from "@/lib/game/danceSync";
 import { quality } from "@/lib/game/perf/governor";
 import { FaceAnimator, faceSlots, poseKey } from "@/lib/game/character/face";
 import { createFaceMaterial, loadFacePage, MATTE, prepareFaceAtlas, type FaceMaterial } from "@/lib/game/character/faceMaterial";
+import { isVbClip } from "@/lib/game/volleyball/clips";
 import { ATTACK_CLIP, WEAPON_HAND, contactCrossed, crossfade, holdLayer, isLoop, layerTrack, layerWeight, matchPhase, resolveClip, tempo, verbInfo, type CharacterMotion, type ClipName, type Layer } from "@/lib/game/character/clips";
 import { DESIGN_U, materialName, mergeLook, refCache, skinnedPrimitives, type PieceCut } from "@/lib/game/character/rig";
 import type { WeaponGrip, WeaponKind } from "@/lib/game/combat/contract";
@@ -582,10 +583,12 @@ class Puppet {
     const changed = want !== this.clip || restart;
     if (changed) this.play(want);
     const action = this.action!, length = action.getClip().duration;
-    if (CLIP_BY_NAME.get(want)?.scrub) {
+    // A volleyball jump (vb_spike_jump held as the move) is posed by the court's jump, as Air is by the island's.
+    const airPosed = want === "Air" || (want === motion.move && isVbClip(want) && !isLoop(want));
+    if (CLIP_BY_NAME.get(want)?.scrub || airPosed) {
       // Posed by its phase (Air by vertical speed, CastWindup by the cast's power), not by the clock.
       action.setEffectiveTimeScale(0);
-      action.time = Math.min(1, Math.max(0, (want === "Air" ? motion.air : motion.scrub) ?? 0)) * length * 0.999;
+      action.time = Math.min(1, Math.max(0, (airPosed ? motion.air : motion.scrub) ?? 0)) * length * 0.999;
     } else if (motion.freeze !== undefined && want === motion.pose) {
       action.setEffectiveTimeScale(0);                 // the avatar bench: a pose held still at one phase
       action.time = Math.min(1, Math.max(0, motion.freeze)) * length * 0.999;
