@@ -13,7 +13,7 @@ import { createHomeIsland } from "@/lib/game/homeIsland";
 import { homeNodes, villageNodes } from "@/lib/game/islandNodes";
 import { reelWeather, type IslandWeather } from "@/lib/game/islandWeather";
 import { hourKey, rollFishFor, rollNode } from "@/lib/game/peaceful";
-import type { RodTier } from "@/lib/game/rods";
+import { inPlay, type RodTier } from "@/lib/game/rods";
 import { village } from "@/lib/game/villageMap";
 import "@/lib/game/world/member";
 import { torontoParts } from "@/lib/time";
@@ -82,6 +82,8 @@ export function castWater(site: Site, [x, z]: [number, number]): WaterType | nul
 export function fishRoll(water: WaterType, power: number, rod: RodTier, now: Date, weather: IslandWeather, random = Math.random, catches?: EventCatches, buff?: { luck: number; size: number }, together = false): { fish: FishDef; size: number } {
   const { hour, minute, month } = torontoParts(now);
   const luck = power + (power >= CAST.maxZone ? CAST.maxBonus : 0) + (buff?.luck ?? 0) + (together ? TOGETHER.luck : 0);
-  const fish = rollFishFor(water, luck, rod, { hour: hour + minute / 60, weather: reelWeather(weather), month, catches }, random);
+  const at = { hour: hour + minute / 60, weather: reelWeather(weather) };
+  // The rod's passive when the scene holds (rods.ts inPlay): the same rule the reel uses.
+  const fish = rollFishFor(water, luck, inPlay(rod, { water, ...at }), { ...at, month, catches }, random);
   return { fish, size: rollSize(fish.sizeCm, random, buff?.size) };
 }

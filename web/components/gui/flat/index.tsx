@@ -267,7 +267,7 @@ export type Action = { label: ReactNode; onClick: () => void; disabled?: boolean
  * action, `pay`, then the fine print, `fine`); the `SpecBand` along the bottom. A priced item with no price yet says
  * "Price to come" and its action is off.
  */
-export function DetailView({ stage, onBack, backLabel = "All", steps, hint = "Drag to turn", info, pay, fine, specs, testId, rarity, corner }: {
+export function DetailView({ stage, onBack, backLabel = "All", steps, hint = "Drag to turn", info, pay, fine, specs, testId, rarity, corner, quiet }: {
   stage: ReactNode; onBack: () => void; backLabel?: string; steps?: { prev: Step; next: Step } | null; hint?: string | null;
   info: ReactNode; pay?: { price?: Price | null; was?: ReactNode; action?: Action } | null; fine?: ReactNode;
   specs?: readonly (readonly [string, ReactNode])[] | null; testId?: string;
@@ -275,13 +275,19 @@ export function DetailView({ stage, onBack, backLabel = "All", steps, hint = "Dr
   rarity?: Rarity | null;
   /** Small things in the stage's bottom-right corner (a rod's bait and bobber slots). */
   corner?: ReactNode;
+  /** Quiet paging (a rod's box, David 2026-11-04): back without its arrow, previous and next as faint small chevrons at the sides. */
+  quiet?: boolean;
 }) {
   return <div className={f.detail} data-testid={testId}>
     <div className={f.stageWrap} {...rarityEdge(rarity)}>
       {stage}
       {corner ? <span className={f.stageCorner}>{corner}</span> : null}
-      <button type="button" className={f.back} onClick={onBack}><ArrowLeft size={16} aria-hidden />{backLabel}</button>
-      {steps && <span className={f.steps}>
+      <button type="button" className={f.back} onClick={onBack}>{!quiet && <ArrowLeft size={16} aria-hidden />}{backLabel}</button>
+      {steps && quiet && <>
+        <button type="button" className={f.faintStep} data-side="prev" aria-label={steps.prev.label} onClick={steps.prev.onClick}><ChevronLeft size={16} strokeWidth={1.5} aria-hidden /></button>
+        <button type="button" className={f.faintStep} data-side="next" aria-label={steps.next.label} onClick={steps.next.onClick}><ChevronRight size={16} strokeWidth={1.5} aria-hidden /></button>
+      </>}
+      {steps && !quiet && <span className={f.steps}>
         <RoundButton label={steps.prev.label} onClick={steps.prev.onClick}><ChevronLeft size={18} aria-hidden /></RoundButton>
         <RoundButton label={steps.next.label} onClick={steps.next.onClick}><ChevronRight size={18} aria-hidden /></RoundButton>
       </span>}

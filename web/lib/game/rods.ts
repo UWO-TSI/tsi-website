@@ -1,19 +1,26 @@
 /**
  * Fishing rods and their add-ons (decisions 193, 94; David 2026-10-27, v1-gameplay m4 and x-shop): the rods, each with
- * a rarity and six stats graded out of 100 (the hex radar), and add-on slots for bait and a bobber whose gains stack on
+ * a rarity and six stats on the hex radar (up to STAT_MAX), and add-on slots for bait and a bobber whose gains stack on
  * the rod's stats. Every stat is a real effect inside the cast/bite/reel loop (`effects`). The rod's rarity caps the
  * fish it hooks (`hookCap`, David 2026-10-28). Shop rods are lib/wallet/catalogue.ts, crafted ones lib/crafting/recipes.ts;
- * the Training rod is found, never sold (`TRAINING`, David 2026-11-02), and grows with the fish it lands (`trained`).
- * Every landed cast counts toward its rod (rod_catches, 20261102170000_rod_catches.sql).
+ * the Training rod is traded for at the tackle shop, never sold (`TRAINING`). No levels: some rods awaken as they land
+ * fish (`awakened`, David 2026-11-04), and rare and up carry a passive (`inPlay`). Every landed cast counts toward its
+ * rod (rod_catches, 20261102170000_rod_catches.sql).
  * The server rolls a cast with the held rod plus the equipped add-ons the member owns (lib/collections/service.ts).
  */
 import { OBTAINABLE, RARITY_RANK, type Rarity } from "@/lib/rarity";
+import type { WaterType } from "./fishingSpots";
+import type { Weather } from "./weather";
+import type { TrackedQuest } from "./questTracker";
 
 export const STAT_KEYS = ["luck", "bite", "strength", "reel", "lure", "control"] as const;
 export type RodStat = (typeof STAT_KEYS)[number];
 export type Stats = Record<RodStat, number>;
-/** Stats are graded out of 100 (David 2026-10-28). Launch rods top out well inside it: more rods come later. */
-export const STAT_MAX = 100;
+/**
+ * The radar's outer ring and every stat's cap (David 2026-11-04): legendary rods sit about 100, Divine ones past it
+ * (110 to 120), so the epics never max out early.
+ */
+export const STAT_MAX = 120;
 /** Each stat's name and what it does, for the radar and the shop. */
 export const STAT_INFO: Record<RodStat, { label: string; does: string }> = {
   luck: { label: "Luck", does: "Rarer fish bite more often." },
@@ -66,42 +73,32 @@ export interface RodTier extends RodEffects {
   stats: Stats;
   /** The add-ons on it (TACKLE keys). */
   tackle: readonly string[];
+  /** The rarest fish it hooks (`hookCap` of its rarity, unless an awakening or the rod says otherwise). */
+  hooks: Rarity;
+  /** Its passive (rare and up; a few have none), or null. */
+  passive: Passive | null;
+  /** What it becomes as it lands fish with it (epic and up, and the Training rod), first to last. */
+  awakenings: readonly Awakening[];
+  /** How many of them it has reached (`awakened`). */
+  stage: number;
 }
 
-const stats = (luck: number, bite: number, strength: number, reel: number, lure: number, control: number): Stats => ({ luck, bite, strength, reel, lure, control });
-const rod = (tier: RodTier["tier"], key: string, name: string, rarity: Rarity, source: RodTier["source"], base: Stats): RodTier =>
-  ({ tier, key, name, rarity, source, base, stats: base, tackle: [], ...effects(base) });
-
-/** Weakest to strongest: the wheel's default is the last one owned (`bestOwnedRod`), and the last hooks the most. */
-export const RODS: readonly RodTier[] = [
-  rod(1, "rod_flimsy", "Flimsy rod", "common", "starter", stats(10, 10, 10, 10, 10, 10)),
-  rod(1, "rod_precision", "Precision rod", "common", "shop", stats(15, 30, 15, 15, 15, 35)),
-  rod(2, "rod_cedar", "Cedar rod", "uncommon", "shop", stats(30, 30, 20, 20, 30, 20)),
-  rod(2, "rod_carrot", "Carrot rod", "uncommon", "shop", stats(35, 25, 25, 25, 40, 20)),
-  rod(2, "rod_training", "Training rod", "common", "found", stats(30, 40, 30, 35, 30, 40)),
-  rod(3, "rod_glass", "Glass rod", "rare", "shop", stats(40, 40, 30, 40, 30, 50)),
-  rod(4, "rod_lighthouse", "Lighthouse rod", "rare", "crafted", stats(50, 60, 50, 50, 50, 40)),
-  rod(5, "rod_tidewarden", "Tidewarden rod", "epic", "crafted", stats(70, 80, 70, 60, 60, 60)),
-];
+/** Where and when a cast is: what a passive checks. `hour` is the island's (0 to 24), `weather` the reel's. */
+export interface CastScene { water: WaterType | null; hour: number; weather: string }
+/** A passive: a few points on some stats while its scene holds (David 2026-11-04: "passive ability exist aswell"). */
+export interface Passive {
+  name: string;
+  /** The card's line: what it gives and when. */
+  text: string;
+  gains: Partial<Stats>;
+  when: { water?: readonly WaterType[]; weather?: readonly Weather[]; night?: true };
+}
 /**
- * The Training rod (David 2026-11-02: "easter egg to unlock and not a common rod you can buy ... very good stats
- * comparable to uncommon rare, one of best starter rods and it has upgrade potential"). Nobody sells it: the
- * `unlock.catches`th fish landed with the `unlock.rod` finds it (the server grants it in collections_land, which
- * repeats these numbers; rods.test.ts checks they match). It trains with use: each of `levels` fish landed with it
- * adds `step` to every stat.
+ * An awakening (David 2026-11-04: "no levels, only awakenings for rods"): at `at` fish landed with the rod its stats
+ * become `base`, it may hook rarer fish (`hooks`) and take a new passive. `looks` is the rung its stats now match, for
+ * the reveal's outline.
  */
-export const TRAINING = { key: "rod_training", unlock: { rod: "rod_flimsy", catches: 50 }, levels: [25, 75, 150], step: 5 } as const;
-/** The Training rod's level for the fish landed with it (0 to 3). */
-export const trainingLevel = (catches: number) => TRAINING.levels.filter(n => catches >= n).length;
-/** Fish still to land for its next level, or null at the top. */
-export const toNextLevel = (catches: number) => TRAINING.levels.find(n => catches < n) ?? null;
-/** A rod as it is after `catches` fish: the Training rod's stats grow; every other rod's stay. */
-export function trained(r: RodTier, catches = 0): RodTier {
-  if (r.key !== TRAINING.key) return r;
-  const up = TRAINING.step * trainingLevel(catches), base = { ...r.base };
-  for (const k of STAT_KEYS) base[k] = Math.min(STAT_MAX, base[k] + up);
-  return { ...r, base, stats: base, ...effects(base) };
-}
+export interface Awakening { at: number; base: Stats; looks: Rarity; hooks?: Rarity; passive?: Passive }
 
 /**
  * The rarest fish a rod hooks: one rung above its own (David 2026-10-28: a rare rod hooks up to epic, an epic rod up to
@@ -109,6 +106,93 @@ export function trained(r: RodTier, catches = 0): RodTier {
  * The server rolls with the same rule (peaceful.ts via lib/collections/rolls.ts).
  */
 export const hookCap = (rod: Rarity): Rarity => OBTAINABLE[Math.min(OBTAINABLE.indexOf(rod === "contraband" ? "divine" : rod) + 1, OBTAINABLE.length - 1)];
+const stats = (luck: number, bite: number, strength: number, reel: number, lure: number, control: number): Stats => ({ luck, bite, strength, reel, lure, control });
+const plus = (s: Stats, n: number): Stats => Object.fromEntries(STAT_KEYS.map(k => [k, Math.min(STAT_MAX, s[k] + n)])) as Stats;
+const rod = (tier: RodTier["tier"], key: string, name: string, rarity: Rarity, source: RodTier["source"], base: Stats,
+  x: { passive?: Passive; awakenings?: Awakening[]; hooks?: Rarity } = {}): RodTier =>
+  ({ tier, key, name, rarity, source, base, stats: base, tackle: [], hooks: x.hooks ?? hookCap(rarity), passive: x.passive ?? null, awakenings: x.awakenings ?? [], stage: 0, ...effects(base) });
+const passive = (name: string, text: string, gains: Partial<Stats>, when: Passive["when"]): Passive => ({ name, text, gains, when });
+/** An epic's two awakenings (proposed for David's OK, 2026-11-04): +6 to every stat at 200 fish, +6 more at 800. */
+const epicAwakenings = (base: Stats, last?: Passive): Awakening[] =>
+  [{ at: 200, base: plus(base, 6), looks: "epic" }, { at: 800, base: plus(base, 12), looks: "epic", ...(last ? { passive: last } : {}) }];
+
+const TIDEWARDEN = stats(56, 64, 56, 50, 50, 50), TITANIUM = stats(46, 50, 68, 56, 44, 48), TEMPEST = stats(60, 52, 54, 64, 58, 46);
+
+/**
+ * Weakest to strongest (by their stats as bought): the wheel's default is the last one owned (`bestOwnedRod`). Rescaled
+ * 2026-11-04 so legendary sits about 100 and Divine past it; each rod's numbers fit the rod (Glass is brittle).
+ */
+export const RODS: readonly RodTier[] = [
+  rod(1, "rod_flimsy", "Flimsy rod", "common", "starter", stats(10, 10, 10, 10, 10, 10)),
+  // The Training rod (David 2026-11-04): about the Flimsy's stats, hooking up to rare from the start; it awakens three
+  // times, unannounced (its card shows only its fish count), to a rare's stats, an epic's and a legendary's.
+  rod(1, "rod_training", "Training rod", "common", "found", stats(12, 12, 12, 12, 12, 12), { hooks: "rare", awakenings: [
+    { at: 50, base: stats(36, 38, 32, 34, 34, 38), looks: "rare", hooks: "epic" },
+    { at: 250, base: stats(58, 62, 56, 58, 56, 62), looks: "epic", hooks: "legendary" },
+    { at: 1000, base: stats(96, 100, 94, 98, 96, 100), looks: "legendary", hooks: "divine",
+      passive: passive("Seasoned", "+10 lure in the rain.", { lure: 10 }, { weather: ["rain"] }) },
+  ] }),
+  rod(1, "rod_precision", "Precision rod", "common", "shop", stats(12, 22, 12, 12, 12, 26)),
+  rod(2, "rod_cedar", "Cedar rod", "uncommon", "shop", stats(22, 20, 18, 16, 22, 16)),
+  rod(2, "rod_carrot", "Carrot rod", "uncommon", "shop", stats(22, 16, 18, 18, 30, 16)),
+  rod(3, "rod_glass", "Glass rod", "rare", "shop", stats(36, 34, 16, 36, 30, 44),
+    { passive: passive("Sunlit", "+10 control in sunny weather.", { control: 10 }, { weather: ["sunny"] }) }),
+  rod(3, "rod_riptide", "Riptide rod", "rare", "crafted", stats(30, 30, 36, 42, 34, 30),
+    { passive: passive("Current", "+10 reel speed in the sea.", { reel: 10 }, { water: ["sea"] }) }),
+  rod(4, "rod_lighthouse", "Lighthouse rod", "rare", "crafted", stats(44, 46, 38, 36, 40, 34),
+    { passive: passive("Beacon", "+10 luck after dark (8 pm to 6 am).", { luck: 10 }, { night: true }) }),
+  rod(5, "rod_titanium", "Titanium rod", "epic", "crafted", TITANIUM, {
+    passive: passive("Steel line", "+10 line strength in rivers and ponds.", { strength: 10 }, { water: ["river", "pond"] }), awakenings: epicAwakenings(TITANIUM) }),
+  rod(5, "rod_tidewarden", "Tidewarden rod", "epic", "crafted", TIDEWARDEN, {
+    passive: passive("Tide keeper", "+10 line strength in the sea.", { strength: 10 }, { water: ["sea"] }),
+    awakenings: epicAwakenings(TIDEWARDEN, passive("Tide keeper", "+10 line strength and +10 luck in the sea.", { strength: 10, luck: 10 }, { water: ["sea"] })) }),
+  rod(5, "rod_tempest", "Tempest rod", "epic", "found", TEMPEST, {
+    passive: passive("Storm born", "+10 reel speed and +10 luck in the rain.", { reel: 10, luck: 10 }, { weather: ["rain"] }), awakenings: epicAwakenings(TEMPEST) }),
+];
+/**
+ * The Training rod (David 2026-11-04): nobody sells it. At the `quest.catches`th fish landed with the `quest.rod` a quest
+ * starts: the rod seller at the tackle shop trades it for your Flimsy rod (the Flimsy leaves your bag). The server
+ * repeats these numbers in rod_training_trade (20261102170000_rod_catches.sql; rods.test.ts keeps them equal).
+ */
+export const TRAINING = { key: "rod_training", quest: { rod: "rod_flimsy", catches: 35 } } as const;
+/**
+ * The rod seller's quest for the tracker: once the Flimsy rod has landed TRAINING.quest.catches fish, until the
+ * Training rod is yours. Null otherwise.
+ */
+export function trainingQuest(catches: Readonly<Record<string, number>>, owned: readonly string[]): TrackedQuest | null {
+  const { rod, catches: need } = TRAINING.quest;
+  if ((catches[rod] ?? 0) < need || owned.includes(TRAINING.key)) return null;
+  return { id: "rod-seller", title: "The rod seller", kind: "quest", hint: "The tackle shop's counter, on the wharf",
+    steps: [{ id: "fish", label: `Land ${need} fish with the Flimsy rod`, done: true }, { id: "talk", label: "Talk to the rod seller at the tackle shop", done: false }] };
+}
+/** Whether a rod's awakenings stay a surprise (the Training rod's: its card shows only its fish count). */
+export const secretAwakenings = (r: Pick<RodTier, "key">) => r.key === TRAINING.key;
+/** How many awakenings a rod has reached after `catches` fish. */
+export const stageAt = (r: Pick<RodTier, "awakenings">, catches: number) => r.awakenings.filter(a => catches >= a.at).length;
+/** The next awakening after `catches` fish, or null (none, or all reached). */
+export const nextAwakening = (r: Pick<RodTier, "awakenings">, catches: number) => r.awakenings.find(a => catches < a.at) ?? null;
+/** A rod as it is after `catches` fish landed with it: its last awakening's stats, hooks and passive. */
+export function awakened(r: RodTier, catches = 0): RodTier {
+  const stage = stageAt(r, catches);
+  if (stage === 0) return r;
+  const a = r.awakenings[stage - 1], passive = r.awakenings.slice(0, stage).reverse().find(x => x.passive)?.passive ?? r.passive;
+  return { ...r, base: a.base, stats: a.base, hooks: a.hooks ?? r.hooks, passive, stage, ...effects(a.base) };
+}
+/** Whether a passive holds for this cast. Night is 8 pm to 6 am on the island. */
+export const passiveHolds = (p: Passive, at: CastScene) =>
+  (!p.when.water || (at.water !== null && p.when.water.includes(at.water))) && (!p.when.weather || (p.when.weather as readonly string[]).includes(at.weather))
+  && (!p.when.night || at.hour >= 20 || at.hour < 6);
+/** The rod as it fishes this cast: its passive's gains on top when the scene holds (both the server's roll and the reel). */
+export function inPlay(r: RodTier, at: CastScene): RodTier {
+  if (!r.passive || !passiveHolds(r.passive, at)) return r;
+  const s = { ...r.stats };
+  for (const k of STAT_KEYS) s[k] = Math.min(STAT_MAX, s[k] + (r.passive.gains[k] ?? 0));
+  return { ...r, stats: s, ...effects(s) };
+}
+/** Owned gear keys own a rod: the starter is everyone's until it's traded for the Training rod. */
+export const ownsRod = (r: Pick<RodTier, "key" | "source">, owned: readonly string[]) =>
+  owned.includes(r.key) || (r.source === "starter" && !owned.includes(TRAINING.key));
+
 /** The shop's rods go up to rare for now (legendary fish aren't out yet); rarer rods stay off its shelf. */
 export const SHOP_ROD_MAX: Rarity = "rare";
 export const onShopShelf = (r: Pick<RodTier, "rarity">) => RARITY_RANK[r.rarity] <= RARITY_RANK[SHOP_ROD_MAX];
@@ -134,10 +218,10 @@ export function rig(r: RodTier, tackleKeys: readonly unknown[] = []): RodTier {
   return { ...r, stats: s, tackle: on.map(t => t.key), ...effects(s) };
 }
 
-/** The held rod (by key) as trained by `catches` (rod key: fish landed with it), with the add-ons `tackle`. */
+/** The held rod (by key) as awakened by `catches` (rod key: fish landed with it), with the add-ons `tackle`. */
 export const heldRig = (key: string, tackle: readonly string[], catches: Readonly<Record<string, number>> = {}) =>
-  rig(trained(rodByKey(key) ?? RODS[0], catches[key] ?? 0), tackle);
-/** The rod a cast rolls with on the server: the held rod, trained, with only the add-ons the member owns. */
+  rig(awakened(rodByKey(key) ?? RODS[0], catches[key] ?? 0), tackle);
+/** The rod a cast rolls with on the server: the held rod, awakened, with only the add-ons the member owns. */
 export const ownedRig = (key: string, tackle: readonly string[], owned: readonly string[], catches: Readonly<Record<string, number>> = {}) =>
   heldRig(key, tackle.filter(k => owned.includes(k)), catches);
 
@@ -147,9 +231,9 @@ export function rodByTier(tier: number): RodTier {
   const t = Math.min(5, Math.max(1, Math.round(tier)));
   return RODS.find(r => r.tier === t)!;
 }
-/** Best rod among owned gear keys (inventory `catalogue_ref`s; starter rod always owned). Crafted and found rods are owned only once made or found. */
+/** Best rod among owned gear keys (inventory `catalogue_ref`s; the starter until it's traded, `ownsRod`). */
 export function bestOwnedRod(owned: readonly string[]): RodTier {
-  return [...RODS].reverse().find(r => r.source === "starter" || owned.includes(r.key)) ?? RODS[0];
+  return [...RODS].reverse().find(r => ownsRod(r, owned)) ?? RODS[0];
 }
 export function biteWindowMs(baseMs: number, r: RodEffects): number {
   return baseMs + r.biteWindowMs;
@@ -157,7 +241,7 @@ export function biteWindowMs(baseMs: number, r: RodEffects): number {
 export function castLuck(luck: number, r: RodEffects): number {
   return luck + r.rarityBonus;
 }
-/** Whether a fish of this rarity can bite for this rod (`hookCap`). */
-export function canHook(rarity: Rarity, r: Pick<RodTier, "rarity">): boolean {
-  return RARITY_RANK[rarity] <= RARITY_RANK[hookCap(r.rarity)];
+/** Whether a fish of this rarity can bite for this rod (its `hooks`). */
+export function canHook(rarity: Rarity, r: Pick<RodTier, "hooks">): boolean {
+  return RARITY_RANK[rarity] <= RARITY_RANK[r.hooks];
 }

@@ -44,14 +44,19 @@ const rodRow = (slug: string, display_name: string, price: number, tier: Tier, d
   catalogue_ref: slug.replace("-", "_"), sprite_url: null, position });
 
 export const CATALOGUE: CatalogueEntry[] = [
-  // Tools (row 127: basic rod ~100, mid ~400)
+  // Tools (row 127). Rods are priced by the hours of fishing they take with the rod before (David 2026-11-04: "more
+  // expensive, price rods properly"): a cast to its card is about 30 s, so about 80 fish an hour, which sell for about
+  // 1,000 coins an hour on a common rod, 1,250 on an uncommon and 1,900 on a rare. Precision is an hour on the Flimsy,
+  // Cedar and Carrot two and a half to three hours on a common, Glass five hours on an uncommon.
   e("rod-basic", "Basic rod", "tool", 100, { tier: "basic", slot: "rod", description: "A sturdy starter rod." }),
-  e("rod-cedar", "Cedar rod", "tool", 400, { tier: "mid", slot: "rod", catalogue_ref: "rod_cedar", description: "Lighter, and a little lucky." }),
-  e("rod-glass", "Glass rod", "tool", 1200, { tier: "premium", slot: "rod", catalogue_ref: "rod_glass", description: "The pier regulars' favourite." }),
-  // Round 4's rods (David 2026-11-02; lib/game/rods.ts): their own positions, so no other row's moves. The Training rod is never sold (FOUND_ONLY).
-  rodRow("rod-precision", "Precision rod", 200, "basic", "A wide catch bar and a long bite window.", 1001),
-  rodRow("rod-carrot", "Carrot rod", 550, "mid", "A thick carrot of a rod. Fish can't help but nibble.", 1002),
-  rodRow("rod-training", "Training rod", 900, "mid", "Found, never sold. It gets better with every fish it lands.", 1003),
+  e("rod-cedar", "Cedar rod", "tool", 2500, { tier: "mid", slot: "rod", catalogue_ref: "rod_cedar", description: "Lighter, and a little lucky." }),
+  e("rod-glass", "Glass rod", "tool", 6000, { tier: "premium", slot: "rod", catalogue_ref: "rod_glass", description: "The pier regulars' favourite. Clear as water, and about as tough." }),
+  // Round 4's rods (David 2026-11-02; lib/game/rods.ts): their own positions, so no other row's moves. The Training and
+  // Tempest rods are never sold (FOUND_ONLY): their prices are only their nominal value.
+  rodRow("rod-precision", "Precision rod", 1000, "basic", "A wide catch bar and a long bite window.", 1001),
+  rodRow("rod-carrot", "Carrot rod", 3000, "mid", "A thick carrot of a rod. Fish can't help but nibble.", 1002),
+  rodRow("rod-training", "Training rod", 2500, "mid", "Traded for, never sold. A plain rod. Keep fishing with it.", 1003),
+  rodRow("rod-tempest", "Tempest rod", 16000, "premium", "An epic rod that comes with a storm. Never sold.", 1004),
   e("bobber-lucky", "Lucky bobber", "tool", 600, { tier: "premium", slot: "bobber", catalogue_ref: "bobber_lucky", description: "A bobber for your rod: +20 luck, so rarer fish bite more often." }),
   e("net-basic", "Bug net", "tool", 100, { tier: "basic", slot: "net" }),
   e("net-mid", "Wide net", "tool", 400, { tier: "mid", slot: "net" }),
@@ -200,8 +205,8 @@ export const TAUGHT_TOOL_SLUGS = ["net-basic", "shovel-basic", "pickaxe-basic"];
 /** Tools that did nothing in the shop (David 2026-10-27, v1-gameplay "some shop items did nothing"): the basic rod
  * (no tool behind it: the flimsy rod is everyone's) and the tier 2 net and shovel (no tier effect yet). Off sale. */
 export const HOLLOW_TOOLS = ["rod-basic", "net-mid", "shovel-mid"];
-/** Rods nobody sells: found in the world (lib/game/rods.ts TRAINING). Off sale; finders keep them. */
-export const FOUND_ONLY = ["rod-training"];
+/** Rods nobody sells: the Training rod (traded for, lib/game/rods.ts TRAINING) and the Tempest rod (a quest or event, not built yet). Off sale; owners keep them. */
+export const FOUND_ONLY = ["rod-training", "rod-tempest"];
 /** The placeholder tote and sticker pack, which aren't real merch (David, 2026-10-22: "Take both off sale"). */
 export const PLACEHOLDER_MERCH = ["merch-sticker-pack", "merch-tote"];
 /** Hairstyles David removed from the game (2026-10-27: Messy with headset, Fluffy boy, Wavy half-up): their shop rows go off sale. */

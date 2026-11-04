@@ -143,6 +143,7 @@ import { READY_FILES } from "@/lib/game/preloadAssets";
 import { lastCall } from "@/lib/game/lastCall";
 import { loadGameWorld } from "@/lib/game/world/load";
 import TalkBox from "./TalkBox";
+import RodSellerTalk from "./RodSellerTalk";
 import { emptyTalkView, requestTalk, subscribeTalk, talkStore, talkView } from "@/lib/game/residentTalk";
 import DailyGift from "./DailyGift";
 import { markWelcomed, welcomeStep } from "@/lib/game/welcome";
@@ -182,7 +183,7 @@ import { clickAction, heldItem, toolNeeded, wheelContents, type Reach, type Whee
 import { holdItem, swapHeld, useHeld } from "@/lib/game/heldStore";
 import { useRuinsHand } from "@/lib/game/ruinsHand";
 import { useWheelKeys } from "@/lib/game/movement/keys";
-import { heldRig } from "@/lib/game/rods";
+import { heldRig, trainingQuest } from "@/lib/game/rods";
 import { eatItem, localCollections, mergeWithLocal } from "@/lib/game/collections";
 import { capture } from "@/lib/game/orbitCamera";
 import { iconUrl } from "@/lib/icons/keys";
@@ -252,7 +253,7 @@ import { DevUiTheme } from "@/components/gui/DevUiTheme";
 import styles from "./DefaultIslandWorld.module.css";
 
 type Near = "knock" | "shop_enter" | "counter" | "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "mine" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "stool" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | "bram" | "founder" | "coffee" | "aquarium" | "admin" | "sell" | "volley" | "leaderboard" | "catchboard" | "tasks" | "tackle" | "chef" | null;
-type Sheet = "counter" | "shopkeeper" | "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | "bag" | "wallet" | "chest" | "plaque" | "sell" | "monument" | "vboard" | "rods" | "outnow" | "tasks" | "tackle" | "chef" | "sushi" | null;
+type Sheet = "counter" | "shopkeeper" | "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | "bag" | "wallet" | "chest" | "plaque" | "sell" | "monument" | "vboard" | "rods" | "outnow" | "tasks" | "tackle" | "chef" | "sushi" | "rodseller" | null;
 const DEV = process.env.NODE_ENV !== "production";
 const DEV_SHEETS: readonly Sheet[] = ["vboard", "counter", "shopkeeper", "notice", "letters", "journal", "trophies", "showcase", "closet", "fitting", "oracle", "path", "settings", "missions", "tourney", "posters", "cafe", "wallet", "chest"];
 /** Sheets opened at a station with E: E closes them again (the dialog system's opening key). */
@@ -934,6 +935,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   useEffect(loadFriends, []);
   const peacefulRaw = usePeacefulContext(weather, conditions.now);
   const peaceful = useMemo(() => ({ ...peacefulRaw, glider: peacefulRaw.glider && unlocks.glider }), [peacefulRaw, unlocks.glider]);
+  // The rod seller's quest (David 2026-11-04): 35 fish on the Flimsy rod, until the Training rod is yours.
+  const rodQuest = useMemo(() => trainingQuest(peaceful.catches, peaceful.owned), [peaceful.catches, peaceful.owned]);
   // Audio pass (row 169 / polish-ownership item 9): the hourly music player
   // follows the real clock everywhere on this island; cafe and other
   // interiors override the outdoor block with their own bed.
@@ -1120,7 +1123,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     if (action === "sell") { setSheet("sell"); return; }
     if (action === "catchboard") { setSheet("outnow"); return; }
     if (action === "tasks") { setSheet("tasks"); return; }
-    if (action === "tackle") { setSheet("tackle"); return; }
+    // The rod seller's quest (rods.ts trainingQuest): while it's on, the counter's E is his ask first.
+    if (action === "tackle") { setSheet(rodQuest ? "rodseller" : "tackle"); return; }
     if (action === "chef") { setSheet("chef"); return; }
     if (action === "owner") { window.dispatchEvent(new CustomEvent("tsi:cafe-owner-talk")); return; }
     if (action === "talk") { requestTalk(talkStore.near.id); return; }
@@ -1204,7 +1208,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       // A fresh warm-up probe for the next scene: the fade lifts when it has loaded and compiled.
       setSceneShown(n => n + 1);
     }, 320);
-  }, [fading, chapterActions, homeActions, inside, gate, layout, startTrip, atHome, hq.waiting]);
+  }, [fading, chapterActions, homeActions, inside, gate, layout, startTrip, atHome, hq.waiting, rodQuest]);
   // The arrival (components/game/arrival): it starts once the island is up on the village; the crossing is the boat's.
   const arrivalPlays = step === "arrival" && ready && !inside && site === "village";
   const startCrossing = useCallback(() => arriveByBoat("village", true, true), [arriveByBoat]);
@@ -1368,8 +1372,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const tutorialQuest = useTutorialQuest(hintKeys);
   // The main quest (t-next, m1 to m6): the member's chapter, its people's words, and the dropdown's guide arrow.
   const main = useMainQuest(player);
-  const quests = useMemo(() => [tutorialQuest ?? hq.quest, main.quest].filter((q): q is NonNullable<typeof q> => !!q),
-    [tutorialQuest, hq.quest, main.quest]);
+  const quests = useMemo(() => [tutorialQuest ?? hq.quest, main.quest, rodQuest].filter((q): q is NonNullable<typeof q> => !!q),
+    [tutorialQuest, hq.quest, main.quest, rodQuest]);
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
       // Arriving, the keys are the arrival's (components/game/arrival: a press skips the beat showing).
@@ -1587,6 +1591,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <ChestSheet open={sheet === "chest"} onClose={() => setSheet(null)} keys={STATION_KEY} />
       <FishMarketSheet open={sheet === "sell"} onClose={() => setSheet(null)} keys={STATION_KEY} />
       <TaskBoardSheet open={sheet === "tasks"} onClose={() => setSheet(null)} keys={STATION_KEY} />
+      <RodSellerTalk open={sheet === "rodseller"} onClose={() => setSheet(null)} />
       <TackleCounterSheet open={sheet === "tackle"} onClose={() => setSheet(null)} onRods={() => setSheet("rods")} keys={STATION_KEY} />
       <ChefOrderDialog open={sheet === "chef"} onClose={() => setSheet(null)} keys={STATION_KEY} />
       <MenuPickup open={sheet === "sushi"} onClose={() => setSheet(null)} />

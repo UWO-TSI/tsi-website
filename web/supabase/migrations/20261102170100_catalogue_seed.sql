@@ -6,11 +6,12 @@
 -- BEGIN GENERATED ECONOMY SEED (web/scripts/gen-seeds.mjs)
 INSERT INTO shop_items (slug, display_name, category, description, price_coins, tc_price, tier, slot, special_pool, stackable, stock, catalogue_ref, position) VALUES
   ('rod-basic', 'Basic rod', 'tool', 'A sturdy starter rod.', 100, NULL, 'basic', 'rod', FALSE, FALSE, NULL, NULL, 1),
-  ('rod-cedar', 'Cedar rod', 'tool', 'Lighter, and a little lucky.', 400, NULL, 'mid', 'rod', FALSE, FALSE, NULL, 'rod_cedar', 2),
-  ('rod-glass', 'Glass rod', 'tool', 'The pier regulars'' favourite.', 1200, NULL, 'premium', 'rod', FALSE, FALSE, NULL, 'rod_glass', 3),
-  ('rod-precision', 'Precision rod', 'tool', 'A wide catch bar and a long bite window.', 200, NULL, 'basic', 'rod', FALSE, FALSE, NULL, 'rod_precision', 1001),
-  ('rod-carrot', 'Carrot rod', 'tool', 'A thick carrot of a rod. Fish can''t help but nibble.', 550, NULL, 'mid', 'rod', FALSE, FALSE, NULL, 'rod_carrot', 1002),
-  ('rod-training', 'Training rod', 'tool', 'Found, never sold. It gets better with every fish it lands.', 900, NULL, 'mid', 'rod', FALSE, FALSE, NULL, 'rod_training', 1003),
+  ('rod-cedar', 'Cedar rod', 'tool', 'Lighter, and a little lucky.', 2500, NULL, 'mid', 'rod', FALSE, FALSE, NULL, 'rod_cedar', 2),
+  ('rod-glass', 'Glass rod', 'tool', 'The pier regulars'' favourite. Clear as water, and about as tough.', 6000, NULL, 'premium', 'rod', FALSE, FALSE, NULL, 'rod_glass', 3),
+  ('rod-precision', 'Precision rod', 'tool', 'A wide catch bar and a long bite window.', 1000, NULL, 'basic', 'rod', FALSE, FALSE, NULL, 'rod_precision', 1001),
+  ('rod-carrot', 'Carrot rod', 'tool', 'A thick carrot of a rod. Fish can''t help but nibble.', 3000, NULL, 'mid', 'rod', FALSE, FALSE, NULL, 'rod_carrot', 1002),
+  ('rod-training', 'Training rod', 'tool', 'Traded for, never sold. A plain rod. Keep fishing with it.', 2500, NULL, 'mid', 'rod', FALSE, FALSE, NULL, 'rod_training', 1003),
+  ('rod-tempest', 'Tempest rod', 'tool', 'An epic rod that comes with a storm. Never sold.', 16000, NULL, 'premium', 'rod', FALSE, FALSE, NULL, 'rod_tempest', 1004),
   ('bobber-lucky', 'Lucky bobber', 'tool', 'A bobber for your rod: +20 luck, so rarer fish bite more often.', 600, NULL, 'premium', 'bobber', FALSE, FALSE, NULL, 'bobber_lucky', 4),
   ('net-basic', 'Bug net', 'tool', '', 100, NULL, 'basic', 'net', FALSE, FALSE, NULL, NULL, 5),
   ('net-mid', 'Wide net', 'tool', '', 400, NULL, 'mid', 'net', FALSE, FALSE, NULL, NULL, 6),
@@ -102,10 +103,95 @@ ON CONFLICT (key) DO NOTHING;
 -- END GENERATED ECONOMY SEED
 -- The rows this change adds or edits, so they land where the insert above does nothing.
 INSERT INTO shop_items (slug, display_name, category, description, price_coins, tc_price, tier, slot, special_pool, stackable, stock, catalogue_ref, position) VALUES
-  ('rod-precision', 'Precision rod', 'tool', 'A wide catch bar and a long bite window.', 200, NULL, 'basic', 'rod', FALSE, FALSE, NULL, 'rod_precision', 1001),
-  ('rod-carrot', 'Carrot rod', 'tool', 'A thick carrot of a rod. Fish can''t help but nibble.', 550, NULL, 'mid', 'rod', FALSE, FALSE, NULL, 'rod_carrot', 1002),
-  ('rod-training', 'Training rod', 'tool', 'Found, never sold. It gets better with every fish it lands.', 900, NULL, 'mid', 'rod', FALSE, FALSE, NULL, 'rod_training', 1003)
+  ('rod-cedar', 'Cedar rod', 'tool', 'Lighter, and a little lucky.', 2500, NULL, 'mid', 'rod', FALSE, FALSE, NULL, 'rod_cedar', 2),
+  ('rod-glass', 'Glass rod', 'tool', 'The pier regulars'' favourite. Clear as water, and about as tough.', 6000, NULL, 'premium', 'rod', FALSE, FALSE, NULL, 'rod_glass', 3),
+  ('rod-precision', 'Precision rod', 'tool', 'A wide catch bar and a long bite window.', 1000, NULL, 'basic', 'rod', FALSE, FALSE, NULL, 'rod_precision', 1001),
+  ('rod-carrot', 'Carrot rod', 'tool', 'A thick carrot of a rod. Fish can''t help but nibble.', 3000, NULL, 'mid', 'rod', FALSE, FALSE, NULL, 'rod_carrot', 1002),
+  ('rod-training', 'Training rod', 'tool', 'Traded for, never sold. A plain rod. Keep fishing with it.', 2500, NULL, 'mid', 'rod', FALSE, FALSE, NULL, 'rod_training', 1003),
+  ('rod-tempest', 'Tempest rod', 'tool', 'An epic rod that comes with a storm. Never sold.', 16000, NULL, 'premium', 'rod', FALSE, FALSE, NULL, 'rod_tempest', 1004)
 ON CONFLICT (slug) DO UPDATE SET display_name = EXCLUDED.display_name, category = EXCLUDED.category, description = EXCLUDED.description, price_coins = EXCLUDED.price_coins, tc_price = EXCLUDED.tc_price, tier = EXCLUDED.tier, slot = EXCLUDED.slot, special_pool = EXCLUDED.special_pool, stackable = EXCLUDED.stackable, catalogue_ref = EXCLUDED.catalogue_ref, position = EXCLUDED.position;
+
+-- previous block: 20261030231818_catalogue_seed.sql
+-- seed: crafting
+-- BEGIN GENERATED CRAFTING SEED (web/scripts/gen-crafting-seed.mjs)
+INSERT INTO collection_species (key, category, sub, name, biome, tool, rarity, size_min_cm, size_max_cm, start_hour, end_hour,
+  rain_any_hour, weather, months, one_liner, icon, model, asset_ready, donatable, wing, position) VALUES
+  ('wood_branch', 'mineral', 'wood', 'Tree branch', 'trees', 'hand', 'common', NULL, NULL, NULL, NULL, FALSE, '{}'::text[], '{}'::int[], 'Shake a tree and one usually falls out.', '/assets/icons/wood_branch.webp', NULL, FALSE, FALSE, NULL, 101)
+ON CONFLICT (key) DO NOTHING;
+INSERT INTO shop_items (slug, display_name, category, description, price_coins, tc_price, tier, slot, special_pool, stackable, stock, catalogue_ref, position, active) VALUES
+  ('rod-lighthouse', 'Lighthouse rod', 'tool', 'A rare rod: epic fish will bite.', 8000, NULL, 'premium', 'rod', FALSE, FALSE, NULL, 'rod_lighthouse', 101, FALSE),
+  ('rod-tidewarden', 'Tidewarden rod', 'tool', 'An epic rod with the widest bite window on the island.', 16000, NULL, 'premium', 'rod', FALSE, FALSE, NULL, 'rod_tidewarden', 102, FALSE),
+  ('net-silk', 'Silk net', 'tool', 'Tier 3. Crafted at a workbench.', 1200, NULL, 'premium', 'net', FALSE, FALSE, NULL, NULL, 103, FALSE),
+  ('net-dragonfly', 'Dragonfly net', 'tool', 'Tier 4. Crafted at a workbench.', 3000, NULL, 'premium', 'net', FALSE, FALSE, NULL, NULL, 104, FALSE),
+  ('net-emperor', 'Emperor net', 'tool', 'Tier 5. Crafted at a workbench.', 6000, NULL, 'premium', 'net', FALSE, FALSE, NULL, NULL, 105, FALSE),
+  ('shovel-sturdy', 'Sturdy shovel', 'tool', 'Tier 3. Crafted at a workbench.', 1200, NULL, 'premium', 'shovel', FALSE, FALSE, NULL, NULL, 106, FALSE),
+  ('shovel-crystal', 'Crystal shovel', 'tool', 'Tier 4. Crafted at a workbench.', 3000, NULL, 'premium', 'shovel', FALSE, FALSE, NULL, NULL, 107, FALSE),
+  ('shovel-gold', 'Golden shovel', 'tool', 'Tier 5. Crafted at a workbench.', 6000, NULL, 'premium', 'shovel', FALSE, FALSE, NULL, NULL, 108, FALSE),
+  ('acc-flower-crown', 'Flower crown', 'accessory', '', 200, NULL, NULL, 'accessory', FALSE, FALSE, NULL, 'acc_flower_crown', 109, FALSE),
+  ('acc-shell-necklace', 'Shell necklace', 'accessory', '', 250, NULL, NULL, 'accessory', FALSE, FALSE, NULL, 'acc_shell_necklace', 110, FALSE),
+  ('acc-crystal-circlet', 'Crystal circlet', 'accessory', 'Rare. Catches the lamplight.', 2000, NULL, NULL, 'accessory', FALSE, FALSE, NULL, 'acc_crystal_circlet', 111, FALSE),
+  ('outfit-silk-sweater', 'Silk sweater', 'outfit', '', 300, NULL, NULL, 'outfit', FALSE, FALSE, NULL, 'outfit_silk_sweater', 112, FALSE),
+  ('outfit-monarch-cape', 'Monarch cape', 'outfit', 'Rare. Orange and black, like October.', 1500, NULL, NULL, 'outfit', FALSE, FALSE, NULL, 'outfit_monarch_cape', 113, FALSE),
+  ('outfit-koi-kimono', 'Koi kimono', 'outfit', 'Rare. Woven around a golden koi scale.', 4000, NULL, NULL, 'outfit', FALSE, FALSE, NULL, 'outfit_koi_kimono', 114, FALSE),
+  ('glider-leaf', 'Leaf glider', 'tool', 'Jump, then press jump again while falling and hold it to glide. Crafted at a workbench.', 3000, NULL, 'premium', NULL, FALSE, FALSE, NULL, 'glider_leaf', 119, FALSE),
+  ('bag-40', 'Roomiest pocket', 'tool', 'Your backpack holds 40 things. Crafted at a workbench.', 3000, NULL, NULL, NULL, FALSE, FALSE, NULL, 'bag:40', 120, FALSE),
+  ('rod-riptide', 'Riptide rod', 'tool', 'A rare rod that rides the current. Crafted at a workbench.', 6500, NULL, 'premium', 'rod', FALSE, FALSE, NULL, 'rod_riptide', 1101, FALSE),
+  ('rod-titanium', 'Titanium rod', 'tool', 'An epic rod that never gives. Crafted at a workbench.', 14000, NULL, 'premium', 'rod', FALSE, FALSE, NULL, 'rod_titanium', 1102, FALSE),
+  ('card-shovel-sturdy', 'Sturdy shovel recipe', 'tool', 'Recipe card. Buying it teaches you the recipe.', 300, NULL, NULL, NULL, FALSE, FALSE, NULL, 'recipe:shovel-sturdy', 115, TRUE),
+  ('card-acc-flower-crown', 'Flower crown recipe', 'tool', 'Recipe card. Buying it teaches you the recipe.', 300, NULL, NULL, NULL, FALSE, FALSE, NULL, 'recipe:acc-flower-crown', 116, TRUE),
+  ('card-furn-bookshelf', 'Bookshelf recipe', 'tool', 'Recipe card. Buying it teaches you the recipe.', 300, NULL, NULL, NULL, FALSE, FALSE, NULL, 'recipe:furn-bookshelf', 117, TRUE),
+  ('card-furn-floor-lamp', 'Floor lamp recipe', 'tool', 'Recipe card. Buying it teaches you the recipe.', 300, NULL, NULL, NULL, FALSE, FALSE, NULL, 'recipe:furn-floor-lamp', 118, TRUE)
+ON CONFLICT (slug) DO NOTHING;
+INSERT INTO crafting_recipes (id, output_item, output_weapon, output_qty, ingredients, sources, position) VALUES
+  ('rod-glass', 'rod-glass', NULL, 1, '{"wood_branch":4,"rock_crystal":1,"rock_clay":2}'::jsonb, ARRAY['bottle']::text[], 1),
+  ('rod-lighthouse', 'rod-lighthouse', NULL, 1, '{"wood_branch":6,"rock_iron_nugget":3,"sea_pearl_oyster":1,"fish_black_bass":1}'::jsonb, ARRAY['quest','bottle']::text[], 2),
+  ('rod-tidewarden', 'rod-tidewarden', NULL, 1, '{"wood_branch":8,"rock_gold_nugget":1,"rock_crystal":2,"fish_tuna":1,"sea_giant_isopod":1}'::jsonb, ARRAY['quest','bottle']::text[], 3),
+  ('net-silk', 'net-silk', NULL, 1, '{"wood_branch":4,"bug_bagworm":3}'::jsonb, ARRAY['bottle']::text[], 4),
+  ('net-dragonfly', 'net-dragonfly', NULL, 1, '{"wood_branch":5,"rock_iron_nugget":2,"bug_darner_dragonfly":2}'::jsonb, ARRAY['bottle']::text[], 5),
+  ('net-emperor', 'net-emperor', NULL, 1, '{"wood_branch":6,"rock_gold_nugget":1,"bug_emperor_butterfly":1,"bug_rhinoceros_beetle":1}'::jsonb, ARRAY['quest','bottle']::text[], 6),
+  ('shovel-sturdy', 'shovel-sturdy', NULL, 1, '{"wood_branch":2,"rock_iron_nugget":3,"rock_stone":2}'::jsonb, ARRAY['shop']::text[], 7),
+  ('shovel-crystal', 'shovel-crystal', NULL, 1, '{"wood_branch":3,"rock_iron_nugget":3,"rock_crystal":2}'::jsonb, ARRAY['bottle']::text[], 8),
+  ('shovel-gold', 'shovel-gold', NULL, 1, '{"wood_branch":3,"rock_iron_nugget":4,"rock_gold_nugget":2}'::jsonb, ARRAY['quest','bottle']::text[], 9),
+  ('acc-straw-hat', 'acc-straw-hat', NULL, 1, '{"wood_branch":3}'::jsonb, ARRAY['starter']::text[], 10),
+  ('acc-flower-crown', 'acc-flower-crown', NULL, 1, '{"flower_cosmos":2,"flower_lily":2,"flower_rose":1}'::jsonb, ARRAY['shop']::text[], 11),
+  ('acc-shell-necklace', 'acc-shell-necklace', NULL, 1, '{"shell_scallop":2,"shell_turban":1,"shell_whelk":1}'::jsonb, ARRAY['bottle']::text[], 12),
+  ('outfit-silk-sweater', 'outfit-silk-sweater', NULL, 1, '{"bug_bagworm":4,"flower_lily":2}'::jsonb, ARRAY['bottle']::text[], 13),
+  ('outfit-monarch-cape', 'outfit-monarch-cape', NULL, 1, '{"bug_monarch_butterfly":2,"bug_bagworm":3,"flower_mum":2}'::jsonb, ARRAY['bottle']::text[], 14),
+  ('outfit-koi-kimono', 'outfit-koi-kimono', NULL, 1, '{"fish_golden_koi":1,"bug_bagworm":4,"flower_rose":3}'::jsonb, ARRAY['quest','bottle']::text[], 15),
+  ('acc-crystal-circlet', 'acc-crystal-circlet', NULL, 1, '{"rock_crystal":2,"rock_gold_nugget":1}'::jsonb, ARRAY['quest','bottle']::text[], 16),
+  ('furn-campfire', 'furn-campfire', NULL, 1, '{"wood_branch":5,"rock_stone":3}'::jsonb, ARRAY['starter']::text[], 17),
+  ('furn-study-chair', 'furn-study-chair', NULL, 1, '{"wood_branch":4}'::jsonb, ARRAY['starter']::text[], 18),
+  ('furn-bookshelf', 'furn-bookshelf', NULL, 1, '{"wood_branch":8}'::jsonb, ARRAY['shop']::text[], 19),
+  ('furn-floor-lamp', 'furn-floor-lamp', NULL, 1, '{"wood_branch":2,"rock_iron_nugget":2,"bug_firefly":1}'::jsonb, ARRAY['shop']::text[], 20),
+  ('furn-study-desk', 'furn-study-desk', NULL, 1, '{"wood_branch":6,"rock_iron_nugget":1}'::jsonb, ARRAY['bottle']::text[], 21),
+  ('furn-bench-park', 'furn-bench-park', NULL, 1, '{"wood_branch":6,"rock_iron_nugget":2}'::jsonb, ARRAY['bottle']::text[], 22),
+  ('furn-streetlamp', 'furn-streetlamp', NULL, 1, '{"rock_iron_nugget":4,"rock_stone":2,"bug_firefly":1}'::jsonb, ARRAY['bottle']::text[], 23),
+  ('furn-plant-monstera', 'furn-plant-monstera', NULL, 1, '{"rock_clay":3,"wood_branch":1}'::jsonb, ARRAY['bottle']::text[], 24),
+  ('furn-wall-clock', 'furn-wall-clock', NULL, 1, '{"wood_branch":3,"rock_iron_nugget":1}'::jsonb, ARRAY['bottle']::text[], 25),
+  ('furn-wall-frame', 'furn-wall-frame', NULL, 1, '{"wood_branch":2,"flower_pansy":1}'::jsonb, ARRAY['bottle']::text[], 26),
+  ('furn-lounge-rug', 'furn-lounge-rug', NULL, 1, '{"bug_bagworm":3,"flower_hyacinth":2}'::jsonb, ARRAY['bottle']::text[], 27),
+  ('sword-iron', NULL, 'sword-iron', 1, '{"rock_iron_nugget":4,"wood_branch":2}'::jsonb, ARRAY['bottle']::text[], 28),
+  ('bow-yew', NULL, 'bow-yew', 1, '{"wood_branch":6,"bug_bagworm":2}'::jsonb, ARRAY['bottle']::text[], 29),
+  ('revolver-brass', NULL, 'revolver-brass', 1, '{"rock_iron_nugget":3,"rock_gold_nugget":1}'::jsonb, ARRAY['quest','bottle']::text[], 30),
+  ('staff-rune', NULL, 'staff-rune', 1, '{"wood_branch":4,"rock_crystal":2,"fish_football_fish":1}'::jsonb, ARRAY['quest','bottle']::text[], 31),
+  ('glider-leaf', 'glider-leaf', NULL, 1, '{"wood_branch":6,"flower_windflower":2,"bug_red_dragonfly":1}'::jsonb, ARRAY['quest']::text[], 32),
+  ('bag-30', 'bag-30', NULL, 1, '{"bug_bagworm":4,"wood_branch":6}'::jsonb, ARRAY['starter']::text[], 33),
+  ('bag-40', 'bag-40', NULL, 1, '{"bug_bagworm":6,"rock_gold_nugget":1,"flower_windflower":2}'::jsonb, ARRAY['bottle']::text[], 34),
+  ('rod-riptide', 'rod-riptide', NULL, 1, '{"wood_branch":6,"rock_iron_nugget":2,"shell_whelk":2,"fish_mahi_mahi":1}'::jsonb, ARRAY['quest','bottle']::text[], 35),
+  ('rod-titanium', 'rod-titanium', NULL, 1, '{"rock_iron_nugget":8,"rock_gold_nugget":2,"rock_crystal":2,"fish_sturgeon":1}'::jsonb, ARRAY['quest','bottle']::text[], 36)
+ON CONFLICT (id) DO NOTHING;
+-- END GENERATED CRAFTING SEED
+-- The rows this change adds or edits, so they land where the insert above does nothing.
+INSERT INTO shop_items (slug, display_name, category, description, price_coins, tc_price, tier, slot, special_pool, stackable, stock, catalogue_ref, position, active) VALUES
+  ('rod-lighthouse', 'Lighthouse rod', 'tool', 'A rare rod: epic fish will bite.', 8000, NULL, 'premium', 'rod', FALSE, FALSE, NULL, 'rod_lighthouse', 101, FALSE),
+  ('rod-tidewarden', 'Tidewarden rod', 'tool', 'An epic rod with the widest bite window on the island.', 16000, NULL, 'premium', 'rod', FALSE, FALSE, NULL, 'rod_tidewarden', 102, FALSE),
+  ('rod-riptide', 'Riptide rod', 'tool', 'A rare rod that rides the current. Crafted at a workbench.', 6500, NULL, 'premium', 'rod', FALSE, FALSE, NULL, 'rod_riptide', 1101, FALSE),
+  ('rod-titanium', 'Titanium rod', 'tool', 'An epic rod that never gives. Crafted at a workbench.', 14000, NULL, 'premium', 'rod', FALSE, FALSE, NULL, 'rod_titanium', 1102, FALSE)
+ON CONFLICT (slug) DO UPDATE SET display_name = EXCLUDED.display_name, category = EXCLUDED.category, description = EXCLUDED.description, price_coins = EXCLUDED.price_coins, tc_price = EXCLUDED.tc_price, tier = EXCLUDED.tier, slot = EXCLUDED.slot, special_pool = EXCLUDED.special_pool, stackable = EXCLUDED.stackable, catalogue_ref = EXCLUDED.catalogue_ref, position = EXCLUDED.position, active = EXCLUDED.active;
+INSERT INTO crafting_recipes (id, output_item, output_weapon, output_qty, ingredients, sources, position) VALUES
+  ('rod-riptide', 'rod-riptide', NULL, 1, '{"wood_branch":6,"rock_iron_nugget":2,"shell_whelk":2,"fish_mahi_mahi":1}'::jsonb, ARRAY['quest','bottle']::text[], 35),
+  ('rod-titanium', 'rod-titanium', NULL, 1, '{"rock_iron_nugget":8,"rock_gold_nugget":2,"rock_crystal":2,"fish_sturgeon":1}'::jsonb, ARRAY['quest','bottle']::text[], 36)
+ON CONFLICT (id) DO UPDATE SET output_item = EXCLUDED.output_item, output_weapon = EXCLUDED.output_weapon, output_qty = EXCLUDED.output_qty, ingredients = EXCLUDED.ingredients, sources = EXCLUDED.sources, position = EXCLUDED.position;
 
 -- previous block: 20261030231818_catalogue_seed.sql
 -- seed: ownership
@@ -229,7 +315,7 @@ INSERT INTO shop_items (slug, display_name, category, description, price_coins, 
   ('hair-colour-wheel', 'Hair colour wheel', 'hair', '', NULL, 250, NULL, NULL, FALSE, FALSE, NULL, 'colour-wheel', 800, TRUE),
   ('pickaxe-basic', 'Pickaxe', 'tool', 'Breaks rocks: stone, and iron now and then.', 100, NULL, 'basic', 'pickaxe', FALSE, FALSE, NULL, NULL, 1000, FALSE)
 ON CONFLICT (slug) DO NOTHING;
-UPDATE shop_items SET active = FALSE WHERE slug IN ('outfit-sage-overalls', 'outfit-cream-knit', 'outfit-wharf-raincoat', 'outfit-club-tee', 'hair-chestnut', 'hair-sea-glass', 'hair-sunset', 'acc-straw-hat', 'acc-round-glasses', 'acc-bandana', 'wear-onepiece-raincape', 'wear-onepiece-robe', 'wear-onepiece-jumpsuit', 'wear-acc-beanie', 'wear-acc-scarf', 'wear-hair-wavy-half-up', 'net-basic', 'shovel-basic', 'pickaxe-basic', 'rod-basic', 'net-mid', 'shovel-mid', 'rod-training', 'merch-sticker-pack', 'merch-tote');
+UPDATE shop_items SET active = FALSE WHERE slug IN ('outfit-sage-overalls', 'outfit-cream-knit', 'outfit-wharf-raincoat', 'outfit-club-tee', 'hair-chestnut', 'hair-sea-glass', 'hair-sunset', 'acc-straw-hat', 'acc-round-glasses', 'acc-bandana', 'wear-onepiece-raincape', 'wear-onepiece-robe', 'wear-onepiece-jumpsuit', 'wear-acc-beanie', 'wear-acc-scarf', 'wear-hair-wavy-half-up', 'net-basic', 'shovel-basic', 'pickaxe-basic', 'rod-basic', 'net-mid', 'shovel-mid', 'rod-training', 'rod-tempest', 'merch-sticker-pack', 'merch-tote');
 UPDATE shop_items s SET starter_qty = v.qty FROM (VALUES
   ('furn-study-chair', 1),
   ('furn-bookshelf', 1),
@@ -266,6 +352,7 @@ UPDATE shop_items s SET sprite_url = v.url FROM (VALUES
   ('rod-precision', '/assets/icons/rod_precision.webp'),
   ('rod-carrot', '/assets/icons/rod_carrot.webp'),
   ('rod-training', '/assets/icons/rod_training.webp'),
+  ('rod-tempest', '/assets/icons/rod_tempest.webp'),
   ('bobber-lucky', '/assets/icons/bobber-lucky.webp'),
   ('net-basic', '/assets/icons/net-basic.webp'),
   ('net-mid', '/assets/icons/net-mid.webp'),
@@ -444,6 +531,8 @@ UPDATE shop_items s SET sprite_url = v.url FROM (VALUES
   ('outfit-koi-kimono', '/assets/icons/outfit_koi_kimono.webp'),
   ('glider-leaf', '/assets/icons/glider_leaf.webp'),
   ('bag-40', '/assets/icons/bag-40.webp'),
+  ('rod-riptide', '/assets/icons/rod_riptide.webp'),
+  ('rod-titanium', '/assets/icons/rod_titanium.webp'),
   ('card-shovel-sturdy', '/assets/icons/recipe_card.webp'),
   ('card-acc-flower-crown', '/assets/icons/recipe_card.webp'),
   ('card-furn-bookshelf', '/assets/icons/recipe_card.webp'),

@@ -2,7 +2,7 @@
 
 /**
  * A rod's stats and add-ons (David 2026-10-27 and 10-28, v1-gameplay m4 and x-shop), wherever a rod is shown. The hex
- * radar grades the six stats out of 100: in the shop the rod alone; on your own rod the build with its add-ons, the
+ * radar grades the six stats up to STAT_MAX (legendary about 100, Divine past it): in the shop the rod alone; on your own rod the build with its add-ons, the
  * rod alone faint behind it, sliding as an add-on goes on. Only your own rods carry the bait and bobber slots (the
  * stage's bottom-right corner), and what's on them hangs from the rod's tip (their low-poly copies). An add-on's own
  * detail shows just the add-on and its own radar.
@@ -18,7 +18,7 @@ import { worldModel } from "@/lib/game/world/active";
 import { keyModel } from "@/lib/icons/itemModel";
 import { shopIcon } from "@/lib/icons/keys";
 import { RARITY_LABEL } from "@/lib/rarity";
-import { SLOTS, STAT_INFO, TACKLE, STAT_KEYS, STAT_MAX, TRAINING, hookCap, rig, tackleByKey, toNextLevel, trainingLevel, type RodStat, type RodTier, type Tackle, type TackleSlot } from "@/lib/game/rods";
+import { SLOTS, STAT_INFO, TACKLE, STAT_KEYS, STAT_MAX, awakened, nextAwakening, rig, secretAwakenings, tackleByKey, type RodStat, type RodTier, type Tackle, type TackleSlot } from "@/lib/game/rods";
 import type { InventoryRow } from "@/lib/wallet/store";
 import { FittedModel } from "./ItemViewer";
 import TurnStage from "./TurnStage";
@@ -28,25 +28,31 @@ export const equippedTackle = (rows: readonly InventoryRow[]): string[] =>
   rows.flatMap(r => (r.equipped && tackleByKey(r.item.catalogue_ref) ? [r.item.catalogue_ref!] : []));
 /** "+20 Luck, +10 Lure". */
 export const gainsText = (t: Tackle) => STAT_KEYS.flatMap(k => (t.gains[k] ? [`+${t.gains[k]} ${STAT_INFO[k].label}`] : [])).join(", ");
+const RECORD_LINE = { display: "flex", alignItems: "center", gap: 8, margin: 0, color: "var(--ui-ink-2)", font: "500 13px var(--gui-font)" } as const;
 /**
- * The rod card's record (rod_catches), one small line under its title (David 2026-11-03: "you dont need a whole bar to
- * say"): the fish landed with it, and on the Training rod a small ring of how far it is to its next level.
+ * The rod card's record (rod_catches), small lines under its title (David 2026-11-03: "you dont need a whole bar to
+ * say"; 2026-11-04: no levels, only awakenings). The fish landed with it; on a rod that awakens in the open (epic and
+ * up) a small bar of the way to its next awakening (the Training rod's stay a surprise: its count only); and its
+ * passive, a line kept empty on rods without one so every card lines up. `rod` is the rod as bought; the line shows it
+ * as `catches` have awakened it.
  */
 export function RodRecord({ rod, catches = 0 }: { rod: RodTier; catches?: number }) {
-  const training = rod.key === TRAINING.key, level = trainingLevel(catches), next = toNextLevel(catches);
-  const from = TRAINING.levels[level - 1] ?? 0, done = next === null ? 1 : (catches - from) / (next - from);
+  const now = awakened(rod, catches), open = rod.awakenings.length > 0 && !secretAwakenings(rod), next = nextAwakening(rod, catches);
+  const from = rod.awakenings[now.stage - 1]?.at ?? 0, done = next ? (catches - from) / (next.at - from) : 1;
   const fish = `${catches.toLocaleString()} fish caught`;
-  return <p data-testid="rod-record" title={training && next !== null ? `${(next - catches).toLocaleString()} more fish to the next level` : undefined}
-    style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 4px", color: "var(--ui-ink-2)", font: "500 13px var(--gui-font)" }}>
-    {training && <svg width="22" height="22" viewBox="0 0 22 22" role="img" aria-label={`Training level ${level} of ${TRAINING.levels.length}`} style={{ flex: "none" }}>
-      <circle cx="11" cy="11" r="8.5" fill="none" stroke="var(--ui-line)" strokeWidth="2.5" />
-      <circle cx="11" cy="11" r="8.5" fill="none" stroke="var(--ui-chart)" strokeWidth="2.5" strokeLinecap="round" pathLength="100" strokeDasharray={`${done * 100} 100`} transform="rotate(-90 11 11)" />
-    </svg>}
-    <span>{training ? `Level ${level} of ${TRAINING.levels.length} · ${fish}` : fish}</span>
-  </p>;
+  return <div data-testid="rod-record" style={{ display: "grid", gap: 4, margin: "0 0 4px" }}>
+    <p style={RECORD_LINE} title={open && next ? `${(next.at - catches).toLocaleString()} more fish to its next awakening` : undefined}>
+      {open && <span role="progressbar" aria-label="To its next awakening" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(done * 100)}
+        style={{ flex: "none", width: 64, height: 4, borderRadius: 2, background: "var(--ui-line)", overflow: "hidden" }}>
+        <span style={{ display: "block", width: `${done * 100}%`, height: "100%", background: "var(--ui-chart)" }} />
+      </span>}
+      <span>{!open ? fish : next ? `${catches.toLocaleString()} / ${next.at.toLocaleString()} fish to awaken` : `${fish} · fully awakened`}</span>
+    </p>
+    <p data-testid="rod-passive" style={{ ...RECORD_LINE, minHeight: 18 }}>{now.passive && <><b style={{ fontWeight: 600, color: "var(--ui-ink)" }}>{now.passive.name}</b>{now.passive.text}</>}</p>
+  </div>;
 }
-/** "Rare rod · hooks up to epic". */
-export const rodLine = (r: RodTier) => `${RARITY_LABEL[r.rarity]} rod · hooks up to ${RARITY_LABEL[hookCap(r.rarity)].toLowerCase()}`;
+/** "Rare rod · hooks up to epic" (the rod as it is now: an awakening can hook rarer fish). */
+export const rodLine = (r: RodTier) => `${RARITY_LABEL[r.rarity]} rod · hooks up to ${RARITY_LABEL[r.hooks].toLowerCase()}`;
 
 const STAT_ICON: Record<RodStat, ReactNode> = {
   luck: <Clover />, bite: <Timer />, strength: <Link />, reel: <RefreshCw />, lure: <Magnet />, control: <MoveHorizontal />,

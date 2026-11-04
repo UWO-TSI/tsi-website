@@ -160,6 +160,12 @@ div.card:hover { box-shadow: none; }
 .back { all: unset; position: absolute; top: 4px; left: 10px; display: inline-flex; align-items: center; gap: 6px; color: var(--ui-quiet); font: 500 14px var(--gui-font); cursor: pointer; }
 .back:hover { color: var(--ui-ink); }
 .steps { position: absolute; top: 2px; right: 8px; display: inline-flex; gap: 8px; }
+/* A rod's box pages quietly (David 2026-11-04: "very faint and small and light"): bare chevrons at the stage's sides. */
+.faintStep { all: unset; position: absolute; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 28px; height: 44px; color: var(--ui-ink); opacity: 0.18; cursor: pointer; transition: opacity 0.2s; }
+.faintStep[data-side="prev"] { left: 2px; }
+.faintStep[data-side="next"] { right: 2px; }
+.faintStep:hover { opacity: 0.5; }
+.faintStep:focus-visible { opacity: 0.7; outline: 2px solid var(--ui-ink); outline-offset: -2px; border-radius: 6px; }
 /* Round buttons (David, 2026-10-18: "lighter black in a blue color"): the Tethos navy of the keycap and the lanyard, a
    step lighter so it sits well on the white stage; the glyphs stay white. */
 .round { all: unset; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--ui-round); color: white; cursor: pointer;

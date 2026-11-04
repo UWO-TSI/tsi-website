@@ -6,7 +6,7 @@ import { memoryEconomyStore } from "./memoryStore";
 import { dailySpecials, isOnSale, seedItems, sellPrice, speciesClass, speciesSellPrice, torontoDay, chefOrder, fishingTasks } from "./rules";
 import { DROPS } from "@/lib/game/drops";
 import { ROSTER } from "@/lib/collections/roster";
-import { buy, claimDailyGift, equip, getInventory, getShop, getWallet, pickupCode, reserveMerch, resolveMerch, sell, sellList, type GiftView, chefView, claimFishingTask, fillChefOrder, fishingTasksView, orderDish, rollAtTackle } from "./service";
+import { buy, claimDailyGift, equip, getInventory, getShop, getWallet, pickupCode, reserveMerch, resolveMerch, sell, sellList, type GiftView, chefView, claimFishingTask, fillChefOrder, fishingTasksView, orderDish, rollAtTackle, tradeForTraining } from "./service";
 import { odds, prizeItems, rollTackle, TACKLE_COUNTERS, TACKLE_PRIZES } from "./tackle";
 import { weekStart } from "@/lib/collections/logic";
 import { fishOutToday } from "@/lib/game/peaceful";
@@ -439,29 +439,35 @@ describe("inventory", () => {
 describe("the rod shop (v1-gameplay m4): the tools shelf", () => {
   it("shows the rods up to rare, weakest first (the starter and the workbench ones not for sale; the epic Tidewarden off the shelf), then the add-ons, and nothing hollow", async () => {
     const m = memoryEconomyStore(() => noon);
-    m.fund(A, 5000);
+    m.fund(A, 2500);
     const shop = await getShop(m.store, A, noon);
     const tools = shop.ok ? shop.data.tabs.tools : [];
-    expect(tools.slice(0, 8).map((e) => e.catalogue_ref)).toEqual(["rod_flimsy", "rod_precision", "rod_cedar", "rod_carrot", "rod_glass", "rod_lighthouse", "bait_sweet", "bobber_lucky"]);
-    expect(tools.filter((e) => ["rod_precision", "rod_carrot"].includes(e.catalogue_ref ?? "")).map((e) => [e.price, e.can_buy])).toEqual([[200, true], [550, true]]);
-    expect(tools.some((e) => e.catalogue_ref === "rod_tidewarden")).toBe(false);
+    // The unfound Training rod is a teaser (no ref, nothing given away).
+    expect(tools.slice(0, 10).map((e) => e.catalogue_ref ?? e.name)).toEqual(["rod_flimsy", "???", "rod_precision", "rod_cedar", "rod_carrot", "rod_glass", "rod_riptide", "rod_lighthouse", "bait_sweet", "bobber_lucky"]);
+    expect(tools.filter((e) => ["rod_precision", "rod_carrot"].includes(e.catalogue_ref ?? "")).map((e) => [e.price, e.can_buy])).toEqual([[1000, true], [3000, false]]);
+    expect(tools.some((e) => ["rod_titanium", "rod_tidewarden", "rod_tempest"].includes(e.catalogue_ref ?? ""))).toBe(false);
     expect(tools.filter((e) => e.made).map((e) => [e.catalogue_ref, e.made, e.can_buy, e.owned])).toEqual([
-      ["rod_flimsy", "starter", false, 1], ["rod_lighthouse", "workbench", false, 0]]);
+      ["rod_flimsy", "starter", false, 1], [null, "found", false, 0], ["rod_riptide", "workbench", false, 0], ["rod_lighthouse", "workbench", false, 0]]);
+    expect(tools[1]).toMatchObject({ name: "???", description: "Unique scenario required" });
     for (const s of ["rod-basic", "net-mid", "shovel-mid"]) expect(tools.some((e) => e.slug === s), s).toBe(false);
     expect(await buy(m.store, A, { item_id: slug(m, "rod-basic"), qty: 1, idempotency_key: "buy-0020" }, noon)).toMatchObject({ ok: false, code: "not_for_sale" });
   });
-  it("never sells the Training rod, and shows it only to its finder, with every rod's catch count", async () => {
+  it("never sells the Training rod: the rod seller trades it for the Flimsy at 35 Flimsy fish, once, with every rod's catch count", async () => {
     const m = memoryEconomyStore(() => noon);
     m.fund(A, 5000);
     expect(await buy(m.store, A, { item_id: slug(m, "rod-training"), qty: 1, idempotency_key: "buy-0021" }, noon)).toMatchObject({ ok: false, code: "not_for_sale" });
     const shelf = async () => { const r = await getShop(m.store, A, noon); return r.ok ? r.data : null; };
     expect((await shelf())!.tabs.tools.some((e) => e.catalogue_ref === "rod_training")).toBe(false);
-    const item = m.items.find((i) => i.slug === "rod-training")!;
-    m.inventory.set(`${A}:${item.id}`, { item, qty: 1, equipped: false, acquired_at: noon.toISOString() });
-    m.caught(A, "rod_flimsy", 50);
+    m.caught(A, "rod_flimsy", 34);
+    expect(await tradeForTraining(m.store, A)).toMatchObject({ ok: false, code: "not_ready" });
+    m.caught(A, "rod_flimsy", 16);
+    expect(await tradeForTraining(m.store, A)).toEqual({ ok: true, data: { traded: true } });
+    expect(await tradeForTraining(m.store, A)).toEqual({ ok: true, data: { traded: false } });
     m.caught(A, "rod_training", 3);
     const view = (await shelf())!;
     expect(view.tabs.tools.filter((e) => e.catalogue_ref === "rod_training").map((e) => [e.made, e.owned, e.can_buy])).toEqual([["found", 1, false]]);
+    // The Flimsy went to the rod seller: off the shelf.
+    expect(view.tabs.tools.some((e) => e.catalogue_ref === "rod_flimsy")).toBe(false);
     expect(view.catches).toEqual({ rod_flimsy: 50, rod_training: 3 });
     const inv = await getInventory(m.store, A);
     expect(inv.ok && inv.data.catches).toEqual({ rod_flimsy: 50, rod_training: 3 });
@@ -486,7 +492,8 @@ describe("the rod shop (v1-gameplay m4): the tools shelf", () => {
 describe("catalogue", () => {
   it("anchors prices to row 127 (the SQL seed: lib/seedMigrations.ts)", () => {
     const price = (s: string) => CATALOGUE.find((c) => c.slug === s)!.price_coins;
-    expect([price("rod-basic"), price("rod-cedar")]).toEqual([100, 400]);
+    // Rods are priced by hours of fishing (David 2026-11-04: "more expensive, price rods properly"; lib/wallet/catalogue.ts).
+    expect([price("rod-basic"), price("rod-precision"), price("rod-cedar"), price("rod-carrot"), price("rod-glass")]).toEqual([100, 1000, 2500, 3000, 6000]);
     expect(CATALOGUE.filter((c) => c.category === "outfit").every((c) => c.price_coins! >= 120 && c.price_coins! <= 180)).toBe(true);
     expect(CATALOGUE.filter((c) => c.category === "merch").every((c) => c.price_coins === null && c.price_gems! > 0)).toBe(true);
   });

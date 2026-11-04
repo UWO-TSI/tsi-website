@@ -30,6 +30,7 @@ export function memoryEconomyTransport(me: string, m = memoryEconomyStore(), clo
     inventory: () => u(S.getInventory(m.store, me)),
     equip: (id, on) => u(S.equip(m.store, me, { item_id: id, equipped: on })),
     dailyGift: () => u(S.claimDailyGift(m.store, me)),
+    tradeForTraining: () => u(S.tradeForTraining(m.store, me)),
     merch: () => u(S.merchView(m.store, me, clock())),
     reserve: (id, key) => u(S.reserveMerch(m.store, me, { item_id: id, idempotency_key: key })),
     adminReservations: (status) => u(S.adminReservations(m.store, status as never)),

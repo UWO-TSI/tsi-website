@@ -14,7 +14,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AudioManager } from "./audio";
 import { castLine, claimRaid, collect, landCatch, localCollections, localRecord, mergeWithLocal, type CatchAnswer } from "./collections";
-import { TRAINING, rodByTier, trainingLevel, type RodTier } from "./rods";
+import { RARITY_LABEL } from "@/lib/rarity";
+import { TRAINING, inPlay, rodByKey, rodByTier, stageAt, type RodTier } from "./rods";
 import type { CatchReply } from "@/lib/collections/service";
 import { rollFishFor } from "./peaceful";
 import type { WaterType } from "./fishingSpots";
@@ -50,7 +51,7 @@ export interface FishingSessionOptions {
   rod?: RodTier;
 }
 
-export function useFishingSession({ onActiveChange, collectionScope, zoneOverride, rod = rodByTier(1) }: FishingSessionOptions) {
+export function useFishingSession({ onActiveChange, collectionScope, zoneOverride, rod: held = rodByTier(1) }: FishingSessionOptions) {
   const [phase, setPhase] = useState<FishingPhase>("idle");
   const phaseRef = useRef<FishingPhase>("idle");
   const releaseRequestedRef = useRef(false);
@@ -72,6 +73,8 @@ export function useFishingSession({ onActiveChange, collectionScope, zoneOverrid
   const [device, setDevice] = useState<CastDevice>("mouse");
   useEffect(() => trackCastDevice(), []);
   const waterRef = useRef<WaterType | null>(null);
+  // The rod as it fishes here and now: its passive on when the water, hour and weather fit (rods.ts inPlay; the server's roll applies the same).
+  const rod = inPlay(held, { water: waterRef.current, ...currentFishingContext() });
   const castFromRef = useRef<{ site: "village" | "home"; from: [number, number] } | null>(null);
   // The server's roll for this cast (null: roll here), and once hooked, the roll to land.
   const rollRef = useRef<Promise<CatchAnswer | null> | null>(null);
@@ -446,17 +449,20 @@ export function useFishingSession({ onActiveChange, collectionScope, zoneOverrid
 }
 
 /**
- * What a land did to its rod (rod_catches): the Flimsy rod's unlock catch found the Training rod (a gift card, and the
- * wheel and the bag re-read it), or the Training rod reached its next level (a toast; the rod's stats re-read).
+ * What a land did to its rod (rod_catches): the Flimsy rod's quest catch starts the rod seller's quest (a toast; the
+ * tracker re-reads the counts), and a rod's awakening lands as a surprise (David 2026-11-04: "its supposed to be
+ * sudden"): the reward card in the rarity its stats now match, and the rod's stats re-read.
  */
 export function rodNews(reply: CatchReply) {
-  if (reply.unlocked === TRAINING.key) {
-    window.dispatchEvent(new CustomEvent("tsi:gift", { detail: { key: "rod-training", name: "Training rod", // its shop row: the icon (lib/game/reward.ts madeIcon)
-      title: "Found: the Training rod", note: `${TRAINING.unlock.catches} fish on your Flimsy rod. Nobody sells this one, and it gets better with every fish it lands.` } }));
-    window.dispatchEvent(new Event("tsi:tools-changed"));
-    window.dispatchEvent(new Event("tsi:gear-changed"));
-  } else if (reply.rod?.key === TRAINING.key && trainingLevel(reply.rod.catches) > trainingLevel(reply.rod.catches - 1)) {
-    window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `Training rod: level ${trainingLevel(reply.rod.catches)}. Every stat is up.` } }));
-    window.dispatchEvent(new Event("tsi:gear-changed"));
-  }
+  const r = reply.rod && rodByKey(reply.rod.key);
+  if (!reply.rod || !r) return;
+  const n = reply.rod.catches, stage = stageAt(r, n);
+  if (r.key === TRAINING.quest.rod && n === TRAINING.quest.catches) {
+    window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: "A new quest: the rod seller at the tackle shop wants a word." } }));
+  } else if (stage > stageAt(r, n - 1)) {
+    const looks = r.awakenings[stage - 1].looks;
+    window.dispatchEvent(new CustomEvent("tsi:gift", { detail: { key: r.key.replace("_", "-"), name: r.name, rarity: looks, // its shop row: the icon (lib/game/reward.ts madeIcon)
+      title: "Awakened!", note: looks === r.rarity ? "Something in it woke up. Every stat is up." : `Something in it woke up. It fishes like a ${RARITY_LABEL[looks].toLowerCase()} rod now.` } }));
+  } else return;
+  window.dispatchEvent(new Event("tsi:gear-changed"));
 }

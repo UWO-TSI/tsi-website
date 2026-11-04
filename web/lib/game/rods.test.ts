@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { RODS, STAT_KEYS, STAT_MAX, TACKLE, TRAINING, bestOwnedRod, heldRig, ownedRig, biteWindowMs, canHook, castLuck, hookCap, onShopShelf, rig, rodByKey, rodByTier, toNextLevel, trained, trainingLevel, type Stats } from "./rods";
-import { TOOLS } from "./tools";
-import { CATALOGUE, HOLLOW_TOOLS, onSale } from "@/lib/wallet/catalogue";
+import { RODS, STAT_KEYS, STAT_MAX, TACKLE, TRAINING, awakened, bestOwnedRod, heldRig, inPlay, nextAwakening, ownedRig, ownsRod, biteWindowMs, canHook, castLuck, hookCap,
+  onShopShelf, rig, rodByKey, rodByTier, secretAwakenings, stageAt, trainingQuest, type Stats } from "./rods";
+import { TOOLS, checkHeld } from "./tools";
+import { CATALOGUE, onSale } from "@/lib/wallet/catalogue";
 import { advanceFishingReel, createFishingReel } from "./fishingReel";
 import { FISH } from "./fishing";
 
@@ -11,15 +12,15 @@ const total = (s: Stats) => STAT_KEYS.reduce((n, k) => n + s[k], 0);
 
 describe("rod tiers", () => {
   it("lists the rods weakest first, and the launch five only ever get more forgiving", () => {
-    expect(RODS.map(r => r.tier)).toEqual([1, 1, 2, 2, 2, 3, 4, 5]);
+    expect(RODS.map(r => r.tier)).toEqual([1, 1, 1, 2, 2, 3, 3, 4, 5, 5, 5]);
     for (let i = 1; i < RODS.length; i++) expect(total(RODS[i].base), RODS[i].key).toBeGreaterThan(total(RODS[i - 1].base));
-    const launch = [1, 2, 3, 4, 5].map(rodByTier);
-    expect(launch.map(r => r.key)).toEqual(["rod_flimsy", "rod_cedar", "rod_glass", "rod_lighthouse", "rod_tidewarden"]);
+    const launch = ["rod_flimsy", "rod_cedar", "rod_glass", "rod_lighthouse", "rod_tidewarden"].map(k => rodByKey(k)!);
     for (let i = 1; i < launch.length; i++) {
       expect(launch[i].biteWindowMs).toBeGreaterThan(launch[i - 1].biteWindowMs);
-      expect(launch[i].tensionMul).toBeLessThan(launch[i - 1].tensionMul);
       expect(launch[i].rarityBonus).toBeGreaterThan(launch[i - 1].rarityBonus);
     }
+    // The Glass rod's line is brittle (David 2026-11-04: "glass strenght lower"); the rest only hold better.
+    for (let i = 1; i < launch.length; i++) if (launch[i].key !== "rod_glass" && launch[i - 1].key !== "rod_glass") expect(launch[i].tensionMul).toBeLessThan(launch[i - 1].tensionMul);
     expect(RODS.filter(r => r.source === "shop").map(r => r.key)).toEqual(["rod_precision", "rod_cedar", "rod_carrot", "rod_glass"]);
   });
   it("every rod has its own model and icon file", () => {
@@ -31,8 +32,8 @@ describe("rod tiers", () => {
   });
   it("applies bite window and luck", () => {
     expect(biteWindowMs(1400, rodByTier(1))).toBe(1400);
-    expect(biteWindowMs(1400, rodByTier(5))).toBe(2450);
-    expect(castLuck(0.3, rodByTier(3))).toBeCloseTo(0.42);
+    expect(biteWindowMs(1400, rodByKey("rod_tidewarden")!)).toBe(2210);
+    expect(castLuck(0.3, rodByTier(3))).toBeCloseTo(0.404);
     expect(rodByTier(9).tier).toBe(5);
     expect(bestOwnedRod([]).tier).toBe(1);
     expect(bestOwnedRod(["rod_glass", "rod_cedar"]).tier).toBe(3);
@@ -48,7 +49,7 @@ describe("rod tiers", () => {
       advanceFishingReel(reel, 0.05, false, 0, () => 0.99, mul);
       return start - reel.progress;
     };
-    expect(drain(rodByTier(5).tensionMul)).toBeLessThan(drain(rodByTier(1).tensionMul));
+    expect(drain(rodByKey("rod_tidewarden")!.tensionMul)).toBeLessThan(drain(rodByTier(1).tensionMul));
     expect(drain(1) / drain(0.7)).toBeCloseTo(1 / 0.7, 1);
   });
   it("fills faster with reel speed and widens the bar with control", () => {
@@ -66,30 +67,31 @@ describe("rod tiers", () => {
 });
 
 describe("rod rarity (David 2026-10-28)", () => {
-  it("climbs the ladder: Flimsy, Precision and Training common, Cedar and Carrot uncommon, Glass and Lighthouse rare, Tidewarden epic", () => {
-    expect(RODS.map(r => r.rarity)).toEqual(["common", "common", "uncommon", "uncommon", "common", "rare", "rare", "epic"]);
+  it("climbs the ladder: Flimsy, Training and Precision common, Cedar and Carrot uncommon, Glass, Riptide and Lighthouse rare, Titanium, Tidewarden and Tempest epic", () => {
+    expect(RODS.map(r => r.rarity)).toEqual(["common", "common", "common", "uncommon", "uncommon", "rare", "rare", "rare", "epic", "epic", "epic"]);
+    expect(RODS.filter(r => r.rarity === "epic").map(r => [r.key, r.source])).toEqual([["rod_titanium", "crafted"], ["rod_tidewarden", "crafted"], ["rod_tempest", "found"]]);
   });
   it("hooks fish up to one rung above the rod's own rarity", () => {
     expect([hookCap("common"), hookCap("uncommon"), hookCap("rare"), hookCap("epic"), hookCap("legendary"), hookCap("divine")])
       .toEqual(["uncommon", "rare", "epic", "legendary", "divine", "divine"]);
-    const flimsy = rodByTier(1), cedar = rodByTier(2), glass = rodByTier(3), tide = rodByTier(5);
+    const flimsy = rodByTier(1), cedar = rodByTier(2), glass = rodByTier(3), tide = rodByKey("rod_tidewarden")!;
     expect([canHook("common", flimsy), canHook("uncommon", flimsy), canHook("rare", flimsy)]).toEqual([true, true, false]);
     expect([canHook("rare", cedar), canHook("epic", cedar)]).toEqual([true, false]);
     expect([canHook("epic", glass), canHook("legendary", glass), canHook("epic", rodByTier(4))]).toEqual([true, false, true]);
     expect([canHook("legendary", tide), canHook("divine", tide)]).toEqual([true, false]);
-    expect(canHook("divine", { rarity: "legendary" })).toBe(true);
-    expect(canHook("contraband", { rarity: "legendary" })).toBe(false);
+    expect(canHook("divine", { hooks: hookCap("legendary") })).toBe(true);
+    expect(canHook("contraband", { hooks: hookCap("legendary") })).toBe(false);
   });
   it("sells rods up to rare only: every rod on sale, and the shelf's workbench rods", () => {
-    const onSale = CATALOGUE.filter(e => e.slot === "rod" && !HOLLOW_TOOLS.includes(e.slug));
-    expect(onSale.length).toBeGreaterThan(0);
-    for (const e of onSale) expect(onShopShelf(RODS.find(r => r.key === e.catalogue_ref)!), e.slug).toBe(true);
-    expect(RODS.filter(onShopShelf).map(r => r.key)).toEqual(["rod_flimsy", "rod_precision", "rod_cedar", "rod_carrot", "rod_training", "rod_glass", "rod_lighthouse"]);
+    const sold = CATALOGUE.filter(e => e.slot === "rod" && onSale(e));
+    expect(sold.length).toBeGreaterThan(0);
+    for (const e of sold) expect(onShopShelf(RODS.find(r => r.key === e.catalogue_ref)!), e.slug).toBe(true);
+    expect(RODS.filter(onShopShelf).map(r => r.key)).toEqual(["rod_flimsy", "rod_training", "rod_precision", "rod_cedar", "rod_carrot", "rod_glass", "rod_riptide", "rod_lighthouse"]);
   });
 });
 
 describe("rod stats and add-ons (v1-gameplay m4, x-shop)", () => {
-  it("gives every rod six stats out of 100, the starter's all 10 (no effect)", () => {
+  it("gives every rod six stats up to STAT_MAX, the starter's all 10 (no effect)", () => {
     for (const r of RODS) for (const k of STAT_KEYS) { expect(r.base[k]).toBeGreaterThanOrEqual(10); expect(r.base[k]).toBeLessThanOrEqual(STAT_MAX); }
     const s = rodByTier(1);
     expect([s.biteWindowMs, s.tensionMul, s.rarityBonus, s.fillMul, s.waitMul, s.barMul]).toEqual([0, 1, 0, 1, 1, 1]);
@@ -104,7 +106,7 @@ describe("rod stats and add-ons (v1-gameplay m4, x-shop)", () => {
     expect(baited.tackle).toEqual(["bait_sweet", "bobber_lucky"]);
     expect(baited.biteWindowMs).toBeGreaterThan(glass.biteWindowMs);
     expect(baited.waitMul).toBeLessThan(glass.waitMul);
-    expect(rig(rodByTier(5), TACKLE.map(t => t.key)).stats.bite).toBeLessThanOrEqual(STAT_MAX);
+    expect(rig(awakened(rodByKey(TRAINING.key)!, 1000), TACKLE.map(t => t.key)).stats.bite).toBe(STAT_MAX);
   });
   it("rolls a cast on the server with the held rod and only the add-ons the member owns", () => {
     expect(ownedRig("rod_cedar", ["bobber_lucky"], []).rarityBonus).toBe(rodByTier(2).rarityBonus);
@@ -114,35 +116,93 @@ describe("rod stats and add-ons (v1-gameplay m4, x-shop)", () => {
   });
 });
 
-describe("the Training rod (David 2026-11-02)", () => {
+describe("the rescale (David 2026-11-04)", () => {
+  const top = (r: (typeof RODS)[number]) => Math.max(...STAT_KEYS.map(k => r.base[k]));
+  it("keeps every epic, fully awakened, under a legendary's 100, which sits about 100; Divine has room past it", () => {
+    for (const r of RODS.filter(x => x.rarity === "epic")) expect(top(awakened(r, 99_999)), r.key).toBeLessThan(90);
+    const legend = awakened(rodByKey(TRAINING.key)!, 1000);
+    for (const k of STAT_KEYS) expect(legend.base[k]).toBeGreaterThanOrEqual(90);
+    expect(STAT_MAX).toBeGreaterThanOrEqual(120);
+  });
+  it("fits each rod: the Glass rod's line is its weakest stat", () => {
+    const glass = rodByKey("rod_glass")!;
+    expect(Math.min(...STAT_KEYS.map(k => glass.base[k]))).toBe(glass.base.strength);
+    expect(glass.base.strength).toBeLessThan(rodByKey("rod_cedar")!.base.strength);
+  });
+});
+
+describe("passives (David 2026-11-04)", () => {
+  const sunny = { water: "river" as const, hour: 14, weather: "sunny" };
+  it("rare and up have one; commons and uncommons none", () => {
+    for (const r of RODS) expect(!!r.passive, r.key).toBe(r.rarity === "rare" || r.rarity === "epic");
+  });
+  it("adds its gains only while its water, weather or hour holds", () => {
+    const glass = rodByKey("rod_glass")!, lh = rodByKey("rod_lighthouse")!, rip = rodByKey("rod_riptide")!;
+    expect(inPlay(glass, sunny).stats.control).toBe(glass.base.control + 10);
+    expect(inPlay(glass, { ...sunny, weather: "rain" })).toBe(glass);
+    expect(inPlay(lh, { ...sunny, hour: 22 }).rarityBonus).toBeGreaterThan(lh.rarityBonus);
+    expect(inPlay(lh, sunny)).toBe(lh);
+    expect(inPlay(rip, { ...sunny, water: "sea" }).fillMul).toBeGreaterThan(rip.fillMul);
+    expect(inPlay(rip, { ...sunny, water: null })).toBe(rip);
+    expect(inPlay(rodByTier(1), sunny)).toBe(rodByTier(1));
+  });
+});
+
+describe("awakenings (David 2026-11-04: no levels, only awakenings)", () => {
   const training = rodByKey(TRAINING.key)!;
-  it("is a common rod nobody sells: found only", () => {
-    expect([training.rarity, training.source]).toEqual(["common", "found"]);
+  it("the Training rod starts about the Flimsy's stats, hooks up to rare, and stays a surprise", () => {
+    for (const k of STAT_KEYS) expect(Math.abs(training.base[k] - rodByTier(1).base[k])).toBeLessThanOrEqual(5);
+    expect([training.rarity, training.source, training.hooks]).toEqual(["common", "found", "rare"]);
+    expect(secretAwakenings(training)).toBe(true);
+    expect(RODS.filter(secretAwakenings).map(r => r.key)).toEqual([TRAINING.key]);
+  });
+  it("awakens at 50, 250 and 1000 fish to a rare's, an epic's and a legendary's stats", () => {
+    expect(training.awakenings.map(a => [a.at, a.looks])).toEqual([[50, "rare"], [250, "epic"], [1000, "legendary"]]);
+    expect([0, 49, 50, 249, 250, 999, 1000, 5000].map(n => stageAt(training, n))).toEqual([0, 0, 1, 1, 2, 2, 3, 3]);
+    const best = (rarity: string) => Math.max(...RODS.filter(r => r.rarity === rarity).map(r => total(r.base)));
+    expect(total(awakened(training, 50).base)).toBeGreaterThanOrEqual(best("rare") - 30);
+    expect(total(awakened(training, 50).base)).toBeLessThanOrEqual(best("rare"));
+    expect(total(awakened(training, 250).base)).toBeGreaterThan(best("epic"));
+    expect([awakened(training, 50).hooks, awakened(training, 250).hooks, awakened(training, 1000).hooks]).toEqual(["epic", "legendary", "divine"]);
+    expect(awakened(training, 1000).passive?.name).toBe("Seasoned");
+    expect(awakened(training, 49)).toBe(training);
+    expect(heldRig(TRAINING.key, ["bobber_lucky"], { [TRAINING.key]: 50 }).stats.luck).toBe(training.awakenings[0].base.luck + 20);
+    expect(ownedRig(TRAINING.key, [], [], { rod_flimsy: 75 }).base).toEqual(training.base);
+  });
+  it("epic and up awaken in the open; rare and below (but the Training rod) never do", () => {
+    for (const r of RODS) expect(r.awakenings.length > 0, r.key).toBe(r.key === TRAINING.key || r.rarity === "epic");
+    const tide = rodByKey("rod_tidewarden")!;
+    expect(nextAwakening(tide, 120)?.at).toBe(200);
+    expect(nextAwakening(tide, 900)).toBeNull();
+    expect(awakened(tide, 800).passive?.text).toContain("luck");
+    expect(awakened(tide, 200).passive).toBe(tide.passive);
+    expect(awakened(rodByKey("rod_glass")!, 5000)).toBe(rodByKey("rod_glass"));
+  });
+});
+
+describe("the Training rod's trade (David 2026-11-04)", () => {
+  it("is never sold", () => {
     const row = CATALOGUE.find(e => e.catalogue_ref === TRAINING.key)!;
     expect(onSale(row)).toBe(false);
     expect(CATALOGUE.filter(e => e.slot === "rod" && onSale(e)).map(e => e.catalogue_ref)).toEqual(["rod_cedar", "rod_glass", "rod_precision", "rod_carrot"]);
   });
-  it("starts between the uncommon and rare rods, and trains past the Glass rod but not the Lighthouse", () => {
-    const best = (rarity: string) => Math.max(...RODS.filter(r => r.rarity === rarity && r.key !== TRAINING.key).map(r => total(r.base)));
-    expect(total(training.base)).toBeGreaterThan(best("uncommon"));
-    expect(total(training.base)).toBeLessThan(total(rodByKey("rod_glass")!.base));
-    const top = trained(training, TRAINING.levels.at(-1)!);
-    expect(total(top.base)).toBeGreaterThan(total(rodByKey("rod_glass")!.base));
-    expect(total(top.base)).toBeLessThan(total(rodByKey("rod_lighthouse")!.base));
+  it("starts the rod seller's quest at the Flimsy's 35th fish, until the Training rod is yours", () => {
+    expect(trainingQuest({ rod_flimsy: 34 }, [])).toBeNull();
+    expect(trainingQuest({ rod_flimsy: 35 }, [])?.steps.map(s => s.done)).toEqual([true, false]);
+    expect(trainingQuest({ rod_flimsy: 80 }, [TRAINING.key])).toBeNull();
   });
-  it("levels up with the fish it lands; other rods never change", () => {
-    expect([0, 24, 25, 74, 75, 149, 150, 999].map(trainingLevel)).toEqual([0, 0, 1, 1, 2, 2, 3, 3]);
-    expect([0, 25, 100, 150].map(toNextLevel)).toEqual([25, 75, 150, null]);
-    const lv1 = trained(training, 25);
-    for (const k of STAT_KEYS) expect(lv1.base[k]).toBe(training.base[k] + TRAINING.step);
-    expect(lv1.biteWindowMs).toBeGreaterThan(training.biteWindowMs);
-    expect(trained(rodByKey("rod_glass")!, 500)).toBe(rodByKey("rod_glass"));
-    expect(heldRig(TRAINING.key, ["bobber_lucky"], { [TRAINING.key]: 75 }).stats.luck).toBe(training.base.luck + 2 * TRAINING.step + 20);
-    expect(ownedRig(TRAINING.key, [], [], { rod_flimsy: 75 }).base).toEqual(training.base);
+  it("retires the Flimsy rod once traded: off the wheel, refused on a cast", () => {
+    const flimsy = rodByTier(1);
+    expect([ownsRod(flimsy, []), ownsRod(flimsy, [TRAINING.key])]).toEqual([true, false]);
+    expect(bestOwnedRod([TRAINING.key]).key).toBe(TRAINING.key);
+    expect(checkHeld("rod_flimsy", "rod", [TRAINING.key]).ok).toBe(false);
+    expect(checkHeld(TRAINING.key, "rod", [TRAINING.key]).ok).toBe(true);
   });
-  it("is found and counted by the migration with the same numbers", () => {
+  it("trades in the migration with the same numbers, and landing grants nothing", () => {
     const sql = readFileSync(join(__dirname, "../../supabase/migrations/20261102170000_rod_catches.sql"), "utf8");
-    expect(sql).toContain(`r.rod_key = '${TRAINING.unlock.rod}' AND v_count >= ${TRAINING.unlock.catches}`);
+    expect(sql).toContain(`k.rod_key = '${TRAINING.quest.rod}'), 0) < ${TRAINING.quest.catches}`);
     expect(sql).toContain(`s.catalogue_ref = '${TRAINING.key}'`);
+    const land = sql.slice(sql.indexOf("FUNCTION public.collections_land"), sql.indexOf("FUNCTION public.rod_training_trade"));
+    expect(land).not.toContain("member_inventory");
   });
 });

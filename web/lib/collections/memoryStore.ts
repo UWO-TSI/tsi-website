@@ -1,6 +1,5 @@
 /** In-memory CollectionsStore mirroring the 031, 036, catch-roll, seasonal-land, recipe-drop, backpack and rod-catches SQL functions (tests, dev harness). */
 import { FISH } from "@/lib/game/fishing";
-import { TRAINING } from "@/lib/game/rods";
 import { CHEST_SLOTS, bagCapacity, fits, isMaterial, slotsUsed, type Stock } from "./bag";
 import { clampSize, monthStart, trophyFor, weekStart, type Donation, type MemberItem, type WeeklyBest } from "./logic";
 import { CAST_GAP_MS, MIN_REEL_MS, ROLL_TTL_MS } from "./rolls";
@@ -159,10 +158,9 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
       const res = recordCatch(m, r.key, r.size, r.trophy);
       r.landed = true;
       if (seasonal?.tourney) enter(seasonal.tourney.goal_id, seasonal.tourney.cycle, m, r.key, r.size);
-      // rod_catches, and the Training rod found on the Flimsy rod's unlock catch (collections_land).
+      // rod_catches (collections_land).
       const catches = (rodCounts.get(`${m}:${r.rod}`) ?? 0) + 1;
       rodCounts.set(`${m}:${r.rod}`, catches);
-      if (r.rod === TRAINING.unlock.rod && catches >= TRAINING.unlock.catches && !gear.get(m)?.includes(TRAINING.key)) gear.set(m, [...(gear.get(m) ?? []), TRAINING.key]);
       return { item_key: r.key, size_cm: r.size, ...res, recipe: drop(m, r.key), rod: { key: r.rod, catches } };
     },
     async rodCatches(m) {

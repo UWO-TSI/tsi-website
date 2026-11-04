@@ -4,7 +4,7 @@
  *   tsi:peaceful-got   { key, name, rarity, one_liner, size, isNew, kind | bug }  a bug, a forage find, a dig, a tree's drop
  *   tsi:crafted        { id, name, kind }                                          a workbench craft (Workshop)
  *   tsi:recipe-learned { id, name }                                                a message bottle's recipe (BeachBottle)
- *   tsi:gift           { key, name, title, note }                                  a resident's gift (Bram's old rod, the arrival)
+ *   tsi:gift           { key, name, title, note, rarity? }                       a resident's gift (Bram's old rod, the arrival)
  * The pickup's fly-in into the Bag (BagButton) is the bag's; the card sits beside it and says what it was.
  */
 import type { SFXName } from "./audio";
@@ -85,7 +85,9 @@ export function rewardOf(type: string, detail: unknown): Reward | null {
   if (type === "tsi:gift") {
     const key = str(d.key, 64), name = str(d.name);
     if (!key || !name) return null;
-    return { kind: "craft", key, name, icon: madeIcon(key), rarity: null, size: null, isNew: true, title: str(d.title, 60) ?? "A gift", note: str(d.note, 200) ?? "" };
+    // `rarity`: the card's outline (a rod's awakening shows the rung its stats now match).
+    const rarity = isRarity(d.rarity) ? d.rarity : null;
+    return { kind: "craft", key, name, icon: madeIcon(key), rarity, size: null, isNew: true, title: str(d.title, 60) ?? "A gift", note: str(d.note, 200) ?? "" };
   }
   if (type === "tsi:recipe-learned") {
     const id = str(d.id, 64), name = str(d.name);

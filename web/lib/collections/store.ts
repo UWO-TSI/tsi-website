@@ -20,8 +20,8 @@ export interface LandSeason {
 }
 
 /**
- * A landed cast's rod and the fish landed with it so far (rod_catches, 20261102170000): collections_land counts it, and
- * the Flimsy rod's TRAINING.unlock.catches-th finds the Training rod in the same transaction (lib/game/rods.ts).
+ * A landed cast's rod and the fish landed with it so far (rod_catches, 20261102170000): collections_land counts it. The
+ * client reads it for the rod seller's quest and an awakening (lib/game/rods.ts).
  */
 export interface RodCount {
   key: string;

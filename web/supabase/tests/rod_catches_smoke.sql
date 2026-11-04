@@ -1,4 +1,4 @@
--- The per-rod catch tracker and the Training rod (20261102170000_rod_catches). Throwaway local Postgres after every
+-- The per-rod catch tracker and the Training rod's trade (20261102170000_rod_catches). Throwaway local Postgres after every
 -- migration through it and the catalogue seed that adds the Training rod's row. Never Supabase. Each section fails
 -- before 20261102170000 (no rod_key, no rod_catches, a four-argument collections_cast).
 -- NOW() is fixed inside a transaction, so rolls are aged by moving rolled_at back.
@@ -35,40 +35,38 @@ BEGIN
   RAISE NOTICE 'rod catches 1 counting ok';
 END $$;
 
--- ─── 2. The Flimsy rod's 50th fish finds the Training rod, once ──────────────
+-- ─── 2. Landing never grants a rod; the rod seller trades at 35 Flimsy fish, once ──
 DO $$
 DECLARE
   D1 uuid := '00000000-0000-4000-8000-0000000007c1';
+  D2 uuid := '00000000-0000-4000-8000-0000000007c2';
   a uuid;
   training uuid := (SELECT id FROM shop_items WHERE catalogue_ref = 'rod_training');
 BEGIN
   ASSERT training IS NOT NULL, 'the Training rod has a shop row';
   ASSERT NOT (SELECT active FROM shop_items WHERE id = training), 'the Training rod is never sold';
-  INSERT INTO rod_catches (member_id, rod_key, count) VALUES (D1, 'rod_flimsy', 48);
+  INSERT INTO rod_catches (member_id, rod_key, count) VALUES (D1, 'rod_flimsy', 33);
   UPDATE catch_rolls SET rolled_at = rolled_at - INTERVAL '10 seconds' WHERE member_id = D1;
   a := collections_cast(D1, 'fish_dace', 12, true, 'rod_flimsy');
   UPDATE catch_rolls SET rolled_at = rolled_at - INTERVAL '5 seconds' WHERE id = a;
   PERFORM collections_land(D1, a);
-  ASSERT NOT EXISTS (SELECT 1 FROM member_inventory WHERE member_id = D1 AND item_id = training), 'the 49th finds nothing';
+  ASSERT (SELECT count FROM rod_catches WHERE member_id = D1 AND rod_key = 'rod_flimsy') = 34, '34 on the flimsy rod';
+  BEGIN PERFORM rod_training_trade(D1); RAISE EXCEPTION 'x';
+  EXCEPTION WHEN raise_exception THEN ASSERT SQLERRM = 'not_ready', 'the 34th is too soon: ' || SQLERRM; END;
   UPDATE catch_rolls SET rolled_at = rolled_at - INTERVAL '10 seconds' WHERE member_id = D1;
   a := collections_cast(D1, 'fish_dace', 12, true, 'rod_flimsy');
   UPDATE catch_rolls SET rolled_at = rolled_at - INTERVAL '5 seconds' WHERE id = a;
   PERFORM collections_land(D1, a);
-  ASSERT (SELECT count FROM rod_catches WHERE member_id = D1 AND rod_key = 'rod_flimsy') = 50, 'fifty on the flimsy rod';
-  ASSERT (SELECT qty FROM member_inventory WHERE member_id = D1 AND item_id = training) = 1, 'the 50th finds the Training rod';
-  UPDATE catch_rolls SET rolled_at = rolled_at - INTERVAL '10 seconds' WHERE member_id = D1;
-  a := collections_cast(D1, 'fish_dace', 12, true, 'rod_flimsy');
-  UPDATE catch_rolls SET rolled_at = rolled_at - INTERVAL '5 seconds' WHERE id = a;
-  PERFORM collections_land(D1, a);
-  ASSERT (SELECT qty FROM member_inventory WHERE member_id = D1 AND item_id = training) = 1, 'found once';
-  -- Fish on another rod never find it.
-  INSERT INTO rod_catches (member_id, rod_key, count) VALUES ('00000000-0000-4000-8000-0000000007c2', 'rod_cedar', 80);
-  UPDATE catch_rolls SET rolled_at = rolled_at - INTERVAL '10 seconds' WHERE member_id = '00000000-0000-4000-8000-0000000007c2';
-  a := collections_cast('00000000-0000-4000-8000-0000000007c2', 'fish_dace', 12, true, 'rod_cedar');
-  UPDATE catch_rolls SET rolled_at = rolled_at - INTERVAL '5 seconds' WHERE id = a;
-  PERFORM collections_land('00000000-0000-4000-8000-0000000007c2', a);
-  ASSERT NOT EXISTS (SELECT 1 FROM member_inventory WHERE member_id = '00000000-0000-4000-8000-0000000007c2' AND item_id = training), 'only the flimsy rod finds it';
-  RAISE NOTICE 'rod catches 2 training rod ok';
+  ASSERT NOT EXISTS (SELECT 1 FROM member_inventory WHERE member_id = D1 AND item_id = training), 'the 35th land grants nothing by itself';
+  ASSERT rod_training_trade(D1), 'at 35 the rod seller trades';
+  ASSERT (SELECT qty FROM member_inventory WHERE member_id = D1 AND item_id = training) = 1, 'the Training rod is in the bag';
+  ASSERT NOT rod_training_trade(D1), 'a second trade gives nothing';
+  ASSERT (SELECT qty FROM member_inventory WHERE member_id = D1 AND item_id = training) = 1, 'traded once';
+  -- Fish on another rod never count toward it.
+  INSERT INTO rod_catches (member_id, rod_key, count) VALUES (D2, 'rod_cedar', 80);
+  BEGIN PERFORM rod_training_trade(D2); RAISE EXCEPTION 'x';
+  EXCEPTION WHEN raise_exception THEN ASSERT SQLERRM = 'not_ready', 'only flimsy fish count: ' || SQLERRM; END;
+  RAISE NOTICE 'rod catches 2 training trade ok';
 END $$;
 
 -- ─── 3. Owners read their own counts; nobody writes them or casts ────────────
@@ -85,6 +83,8 @@ DO $$ BEGIN
   BEGIN DELETE FROM rod_catches; RAISE EXCEPTION 'member cleared a count';
   EXCEPTION WHEN insufficient_privilege THEN NULL; END;
   BEGIN PERFORM collections_cast('00000000-0000-4000-8000-0000000007c1', 'fish_dace', 12, true, 'rod_flimsy'); RAISE EXCEPTION 'member cast';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  BEGIN PERFORM rod_training_trade('00000000-0000-4000-8000-0000000007c1'); RAISE EXCEPTION 'member traded';
   EXCEPTION WHEN insufficient_privilege THEN NULL; END;
   RAISE NOTICE 'rod catches 3 owner read only ok';
 END $$;

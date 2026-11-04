@@ -10,7 +10,7 @@
  * and the sizes (lib/game/bagStore); the grid's arrangement and the New marks are this device's.
  */
 import { RodRadar, RodSlots, RodStage, TackleRadar, equippedTackle, RodRecord, rodLine } from "@/components/economy/RodGear";
-import { rodByKey, tackleByKey, trained } from "@/lib/game/rods";
+import { awakened, rodByKey, tackleByKey } from "@/lib/game/rods";
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { Apple, ArrowDownWideNarrow, Backpack, Bug, Fish, Gem, Lock, LockOpen, Pin, PinOff, Shirt, Sofa, Wrench, X } from "lucide-react";
 import { ConfirmDialog, SignInText } from "@/components/gui";
@@ -284,14 +284,14 @@ function Owned({ group, transport = httpEconomyTransport }: { group: "tools" | "
   const title = SHELVES.find(x => x.id === group)!.label;
   const kind = (r: InventoryRow) => r.item.slot ? SLOT_NAME[r.item.slot] ?? cap(r.item.slot) : cap(String(r.item.category));
   // A rod opens large: the model with its add-ons hanging from the tip, the slots in the stage's corner, the radar of
-  // the build (RodGear.tsx), and the fish it has landed (rod_catches; the Training rod's level). An add-on shows its own radar.
+  // the build (RodGear.tsx), the fish it has landed (rod_catches), its awakening bar and its passive. An add-on shows its own radar.
   const rod = rodByKey(row?.item.catalogue_ref), add = tackleByKey(row?.item.catalogue_ref), on = equippedTackle(rows);
   const caught = (ref: string | null) => data.catches?.[ref ?? ""] ?? 0;
   if (row && rod) return <>
     {error && <StatusLine error><SignInText text={error} /></StatusLine>}
-    <DetailView testId="bag-rod" rarity={rod.rarity} onBack={() => setPicked(null)} stage={<RodStage rod={rod} tackle={on} className={STAGE.stage} />}
+    <DetailView testId="bag-rod" rarity={rod.rarity} quiet onBack={() => setPicked(null)} stage={<RodStage rod={rod} tackle={on} className={STAGE.stage} />}
       corner={<RodSlots rows={rows} busy={busy} onEquip={(id, eq) => void toggle(id, eq)} />}
-      info={<><InfoHead kind={rodLine(rod)} title={row.item.display_name} text={row.item.description ?? undefined} /><RodRecord rod={rod} catches={caught(rod.key)} /><RodRadar rod={trained(rod, caught(rod.key))} tackle={on} /></>}
+      info={<><InfoHead kind={rodLine(awakened(rod, caught(rod.key)))} title={row.item.display_name} text={row.item.description ?? undefined} /><RodRecord rod={rod} catches={caught(rod.key)} /><RodRadar rod={awakened(rod, caught(rod.key))} tackle={on} /></>}
       fine="Take it out from the tool wheel." />
   </>;
   const side = row ? <SidePanel key={row.item.id} testId="bag-owned-item" onClose={() => setPicked(null)} picture={rowPicture(row)} title={row.item.display_name} kind={kind(row)}

@@ -9,6 +9,7 @@ import { InventorySheet, SellSheet, ShopBody, WalletSheet } from "@/components/e
 import MerchFulfilment from "@/components/economy/MerchFulfilment";
 import ShopOverlay from "@/components/economy/ShopOverlay";
 import { BagSheet } from "@/components/game/Bag";
+import RodSellerTalk from "@/components/game/RodSellerTalk";
 import RewardCard from "@/components/game/RewardCard";
 import { rodNews } from "@/lib/game/useFishingSession";
 import { merchViewer } from "@/components/game/ShopCounter";
@@ -45,14 +46,13 @@ async function seed(): Promise<EconomyTransport> {
   await S.equip(m.store, ME, { item_id: id("acc-straw-hat"), equipped: true });
   await S.sell(m.store, ME, { item_key: "fish_dace", qty: 2, idempotency_key: "demo-sell-1" });
   await S.reserveMerch(m.store, ME, { item_id: id("merch-genesis-sticker"), idempotency_key: "demo-merch-me" });
-  // The fish each rod has landed (rod_catches), and the Training rod the Flimsy rod's 50th found (unless ?found=0).
-  for (const [rod, n] of [["rod_flimsy", 50], ["rod_cedar", 37], ["rod_glass", 12], ["rod_training", 31]] as const) m.caught(ME, rod, n);
-  if (new URLSearchParams(window.location.search).get("found") !== "0") {
-    const item = m.items.find((i) => i.slug === "rod-training")!;
-    m.inventory.set(`${ME}:${item.id}`, { item, qty: 1, equipped: false, acquired_at: now.toISOString() });
-  }
+  // The fish each rod has landed (rod_catches; &tc= the Training rod's, &tdc= the Tidewarden's), and the Training rod
+  // traded for at the rod seller's (unless ?found=0: the Flimsy's 50 fish have the quest on).
+  const q = new URLSearchParams(window.location.search);
+  for (const [rod, n] of [["rod_flimsy", 50], ["rod_cedar", 37], ["rod_glass", 12], ["rod_training", Number(q.get("tc") ?? 31)], ["rod_tidewarden", Number(q.get("tdc") ?? 120)]] as const) m.caught(ME, rod, n);
+  if (q.get("found") !== "0") await m.store.tradeForTraining(ME);
   // ?tide=1: a Tidewarden rod in the bag (made at the workbench; its effect shows on the stage, RodAura).
-  if (new URLSearchParams(window.location.search).get("tide") === "1") {
+  if (q.get("tide") === "1") {
     const item = { ...m.items.find((i) => i.slug === "rod-training")!, id: "dev-rod-tidewarden", slug: "rod-tidewarden", display_name: "Tidewarden rod", catalogue_ref: "rod_tidewarden" };
     m.inventory.set(`${ME}:${item.id}`, { item, qty: 1, equipped: false, acquired_at: now.toISOString() });
   }
@@ -87,15 +87,17 @@ export default function EconomyHarness() {
       {view === "inventory" ? <InventorySheet open onClose={close} transport={t} /> : null}
       {view === "wallet" ? <WalletSheet open onClose={close} transport={t} /> : null}
       {view === "admin" ? <div style={{ maxWidth: 1000, margin: "0 auto" }}><MerchFulfilment transport={t} /></div> : null}
-      {/* The Training rod's unlock moment: the land that found it, as the fishing session shows it: ?view=unlock */}
-      {view === "unlock" ? <Unlock /> : null}
+      {/* An awakening, as the fishing session shows it: the Training rod's 50th fish (?view=awaken) */}
+      {view === "awaken" ? <Awaken /> : null}
+      {/* The rod seller's ask (use with &found=0): ?view=trade */}
+      {view === "trade" ? <><RodSellerTalk open onClose={close} transport={t} /><RewardCard /></> : null}
     </main>
   );
 }
 
-function Unlock() {
+function Awaken() {
   useEffect(() => {
-    const t = window.setTimeout(() => rodNews({ item_key: "fish_dace", size_cm: 12, rod: { key: "rod_flimsy", catches: 50 }, unlocked: "rod_training" }), 300);
+    const t = window.setTimeout(() => rodNews({ item_key: "fish_dace", size_cm: 12, rod: { key: "rod_training", catches: 50 } }), 300);
     return () => window.clearTimeout(t);
   }, []);
   return <RewardCard />;

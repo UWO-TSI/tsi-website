@@ -6,7 +6,7 @@
 import { ROSTER } from "@/lib/collections/roster";
 import { FISH } from "@/lib/game/fishing";
 import { fnv1a } from "@/lib/game/weatherSystem";
-import { RODS, TACKLE, onShopShelf } from "@/lib/game/rods";
+import { RODS, TACKLE, onShopShelf, ownsRod } from "@/lib/game/rods";
 import { CRAFTED_ITEMS } from "@/lib/crafting/recipes";
 import { dailySpecials, effectivePrice, isOnSale, ownedCounts, speciesClass, speciesSellPrice, TAB_OF, torontoDay, type ShopItem, type Special, chefOrder, fishingTasks, type FishingTask, type FishRequest } from "./rules";
 import { toFailure, type Result } from "@/lib/result";
@@ -39,6 +39,7 @@ const ERR: Record<string, [number, string]> = {
   already_filled: [409, "You've already brought that one in today."],
   not_done: [409, "Catch it first, then claim it."],
   already_claimed: [409, "Already claimed."],
+  not_ready: [409, "Land a few more fish on your Flimsy rod first."],
   not_rare_enough: [422, "Bancha only cooks an epic or legendary fish into a feast."],
   failed: [500, "Something went wrong. Try again."],
 };
@@ -126,22 +127,30 @@ export const getShop = (store: EconomyStore, m: string, now: Date) =>
 
 /**
  * The tools shelf as the rod shop (David 2026-10-27, v1-gameplay m4): the rods up to rare, weakest first (the starter and
- * the workbench ones shown, not sold; rarer rods stay off the shelf, David 2026-10-28; a found rod only to its finder),
- * then the add-ons, then the rest.
+ * the workbench ones shown, not sold; rarer rods stay off the shelf, David 2026-10-28; the starter only until it's
+ * traded), then the add-ons, then the rest. A found rod you don't have is a teaser (David 2026-11-04): "???", "Unique
+ * scenario required", nothing about it given away.
  */
 const MADE = { starter: "starter", crafted: "workbench", found: "found" } as const;
+export const TEASER = { name: "???", description: "Unique scenario required" } as const;
 function rodShelf(tools: ShopEntry[], inv: InventoryRow[]): ShopEntry[] {
-  const have = new Set(inv.map((r) => r.item.catalogue_ref));
+  const have = inv.flatMap((r) => r.item.catalogue_ref ?? []);
   const listed = new Map([...CATALOGUE, ...CRAFTED_ITEMS].map((c) => [c.catalogue_ref, c]));
-  const rods = RODS.filter((r) => onShopShelf(r) && (r.source !== "found" || have.has(r.key))).map((r): ShopEntry => tools.find((e) => e.catalogue_ref === r.key) ?? {
-    id: `rod:${r.key}`, slug: listed.get(r.key)?.slug ?? r.key, name: r.name, category: "tool", tier: listed.get(r.key)?.tier ?? "basic",
-    description: listed.get(r.key)?.description ?? "Everyone's first rod. Light, forgiving and a little wobbly.",
-    currency: "coins", price: 0, base_price: 0, special: false, stock: null, owned: r.source === "starter" || have.has(r.key) ? 1 : 0, can_buy: false,
-    sprite_url: iconUrl(r.key), catalogue_ref: r.key, made: MADE[r.source as keyof typeof MADE] ?? "workbench",
+  const rods = RODS.filter((r) => onShopShelf(r) && (r.source !== "starter" || ownsRod(r, have))).map((r, i): ShopEntry => {
+    const teaser = r.source === "found" && !have.includes(r.key);
+    return tools.find((e) => e.catalogue_ref === r.key) ?? {
+      id: teaser ? `rod:teaser:${i}` : `rod:${r.key}`, slug: teaser ? `rod:teaser:${i}` : listed.get(r.key)?.slug ?? r.key, name: teaser ? TEASER.name : r.name, category: "tool", tier: listed.get(r.key)?.tier ?? "basic",
+      description: teaser ? TEASER.description : listed.get(r.key)?.description ?? "Everyone's first rod. Light, forgiving and a little wobbly.",
+      currency: "coins", price: 0, base_price: 0, special: false, stock: null, owned: ownsRod(r, have) ? 1 : 0, can_buy: false,
+      sprite_url: iconUrl(r.key), catalogue_ref: teaser ? null : r.key, made: MADE[r.source as keyof typeof MADE] ?? "workbench",
+    };
   });
   const tackle = TACKLE.flatMap((t) => tools.filter((e) => e.catalogue_ref === t.key));
   return [...rods, ...tackle, ...tools.filter((e) => !rods.includes(e) && !tackle.includes(e))];
 }
+
+/** The rod seller's quest (rods.ts TRAINING): your Flimsy rod for the Training rod, once. */
+export const tradeForTraining = (store: EconomyStore, m: string) => run(() => store.tradeForTraining(m));
 
 export async function buy(store: EconomyStore, m: string, input: { item_id: string; qty: number; idempotency_key: string }, now: Date): Promise<Result<{ balance: number; owned: number; replayed: boolean; price_each: number; currency: "coins" | "gems" }>> {
   return run(async () => {

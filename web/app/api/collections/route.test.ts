@@ -389,21 +389,24 @@ describe("POST /api/collections: the held tool (row 279, specs/game-ui.md)", () 
     expect(rolledTier()).toBe(5);
   });
 
-  it("rolls round 4's rods by key, and the Training rod as trained by its catches", async () => {
+  it("rolls round 4's rods by key, and an awakening rod as its catches have awakened it", async () => {
     const rolled = () => vi.mocked(fishRoll).mock.calls.at(-1)![2];
     m.own(A, ["rod_carrot", "rod_training"]);
     expect((await cast("rod_carrot")).status).toBe(200);
     expect(rolled().key).toBe("rod_carrot");
     later(5000);
     expect((await cast("rod_training")).status).toBe(200);
-    const fresh = rolled().stats.luck;
-    m.caught(A, "rod_training", 25);
+    expect([rolled().stage, rolled().hooks]).toEqual([0, "rare"]);
+    m.caught(A, "rod_training", 50);
     later(5000);
     expect((await cast("rod_training")).status).toBe(200);
-    expect(rolled().stats.luck).toBe(fresh + 5);
+    expect([rolled().stage, rolled().hooks]).toEqual([1, "epic"]);
+    // Traded for the Training rod, the Flimsy is the rod seller's now.
+    later(5000);
+    expect((await cast(ROD)).body.code).toBe("tool_not_owned");
   });
 
-  it("counts each landed fish for its rod, and the Flimsy rod's 50th finds the Training rod", async () => {
+  it("counts each landed fish for its rod; a land never grants a rod (the rod seller trades the Training rod)", async () => {
     m.caught(A, ROD, 48);
     later(5000);
     const first = (await cast(ROD)).body.catch.roll;
@@ -415,12 +418,8 @@ describe("POST /api/collections: the held tool (row 279, specs/game-ui.md)", () 
     const roll = (await cast(ROD)).body.catch.roll;
     later(4000);
     const land = await post({ action: "land", roll });
-    expect(land.body.catch).toMatchObject({ rod: { key: ROD, catches: 50 }, unlocked: "rod_training" });
-    expect(await m.store.ownedGear(A)).toContain("rod_training");
-    later(5000);
-    const next = (await cast(ROD)).body.catch.roll;
-    later(4000);
-    expect((await post({ action: "land", roll: next })).body.catch.unlocked).toBeUndefined();
+    expect(land.body.catch).toMatchObject({ rod: { key: ROD, catches: 50 } });
+    expect(await m.store.ownedGear(A)).not.toContain("rod_training");
   });
 
   it("nets a bug only with a net the member owns", async () => {

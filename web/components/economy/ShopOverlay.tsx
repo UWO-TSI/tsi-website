@@ -24,7 +24,7 @@ import { CardGrid, Code, ColourDots, DarkButton, DetailView, FlatPanel, GhostBut
   flatStyles as f } from "@/components/gui/flat";
 import ItemViewer from "./ItemViewer";
 import { RodRadar, TackleRadar, RodRecord, rodLine } from "./RodGear";
-import { rodByKey, tackleByKey, trained } from "@/lib/game/rods";
+import { awakened, rodByKey, tackleByKey } from "@/lib/game/rods";
 
 const SHELF_ICON: Record<string, ReactNode> = {
   tools: <Wrench size={22} />, outfits: <Shirt size={22} />, furniture: <Sofa size={22} />, specials: <BadgePercent size={22} />, sell: <HandCoins size={22} />,
@@ -56,6 +56,9 @@ function Card({ e, catches, onOpen }: { e: ShopEntry; catches: number; onOpen: (
   // doesn't sell (the starter, the workbench ones, a found one) says where it comes from instead. A rod you own says
   // how many fish it has landed (rod_catches).
   const rod = rodByKey(e.catalogue_ref), owned = e.owned > 0 && !e.can_buy;
+  // A found rod you don't have (lib/wallet/service.ts TEASER): its silhouette, "???", "Unique scenario required", nothing to open.
+  if (e.made === "found" && !rod) return <ItemCard picture={picture(e)} cover="not-found" name={e.name} line={e.description} label={`${e.name}: ${e.description}`}
+    testId="shop-teaser" arrow={false} disabled />;
   return <ItemCard picture={picture(e)} name={e.name} line={owned ? (rod ? `Owned · ${catches.toLocaleString()} fish` : "Owned") : itemLine(e)} tag={tagOf(e)}
     price={e.made ? null : { amount: e.price, currency: e.currency }} pill={e.made ? MADE_PILL[e.made] : undefined} cover={e.stock === 0 ? "sold-out" : null}
     rarity={rod?.rarity} onClick={onOpen} label={`${e.name}, ${e.price} ${e.currency}`} testId="shop-card" />;
@@ -65,10 +68,10 @@ const MADE_PILL = { starter: "Yours", workbench: "Workbench", found: "Found" } a
 const MADE_ACTION = { starter: "Yours from the start", workbench: "Made at the workbench", found: "Found, never sold" } as const;
 const MADE_FINE = { starter: "Everyone fishes with it from day one.", workbench: "Craft it at a workbench.", found: "Nobody sells this one. You found it." } as const;
 
-/** A rod's radar (the rod alone, as trained: the shop has no slots, David 2026-10-28), or an add-on's own. */
+/** A rod's radar (the rod alone, as awakened: the shop has no slots, David 2026-10-28), or an add-on's own. */
 function GearInfo({ e, catches }: { e: ShopEntry; catches: number }) {
   const rod = rodByKey(e.catalogue_ref), add = tackleByKey(e.catalogue_ref);
-  return rod ? <>{catches > 0 && <RodRecord rod={rod} catches={catches} />}<RodRadar rod={trained(rod, catches)} size={340} /></> : add ? <TackleRadar tackle={add} /> : null;
+  return rod ? <>{catches > 0 && <RodRecord rod={rod} catches={catches} />}<RodRadar rod={awakened(rod, catches)} size={340} /></> : add ? <TackleRadar tackle={add} /> : null;
 }
 
 function Detail({ e, catches, list, onPick, onBack, busy, onPay, viewer }: {
@@ -84,11 +87,12 @@ function Detail({ e, catches, list, onPick, onBack, busy, onPay, viewer }: {
   const dyes = e.category === "hair" ? list.filter(x => x.category === "hair") : [];
   const rod = rodByKey(e.catalogue_ref), gear = !!rod || !!tackleByKey(e.catalogue_ref);
   const action = merch ? "Redeem" : e.owned > 0 && e.can_buy ? "Buy another" : e.owned > 0 ? "Owned" : "Buy";
-  return <DetailView testId="shop-detail" rarity={rod?.rarity} onBack={onBack} hint={e.slug === "merch-tsi-lanyard" ? "Drag to slide along" : e.slug === "merch-genesis-sticker" ? "Drag to tilt" : undefined}
+  // A rod's box keeps its paging quiet (David 2026-11-04): no arrow on All, faint small chevrons for the next rod.
+  return <DetailView testId="shop-detail" rarity={rod?.rarity} quiet={!!rod} onBack={onBack} hint={e.slug === "merch-tsi-lanyard" ? "Drag to slide along" : e.slug === "merch-genesis-sticker" ? "Drag to tilt" : undefined}
     stage={viewer ?? <ItemViewer key={e.id} spec={spec} picture={picture(e)} name={e.name} className={STAGE.stage} pictureClassName={STAGE.picture} />}
     steps={list.length > 1 ? { prev: { label: `Previous: ${prev.name}`, onClick: () => onPick(prev.id) }, next: { label: `Next: ${next.name}`, onClick: () => onPick(next.id) } } : null}
     info={<>
-      <InfoHead kind={rod ? rodLine(rod) : kindOf(e)} title={e.name} text={itemLine(e)} />
+      <InfoHead kind={rod ? rodLine(awakened(rod, catches)) : kindOf(e)} title={e.name} text={itemLine(e)} />
       {dyes.length > 1 && <ColourDots value={e.id} onPick={onPick}
         items={dyes.map(d => ({ id: d.id, label: d.name, background: `url(${picture(d)}) center 62% / 260% no-repeat` }))} />}
       <GearInfo e={e} catches={catches} />

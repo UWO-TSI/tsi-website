@@ -3,6 +3,7 @@ import { boxPool, dailyGiftAmount, SELL_PRICES, SETTINGS, STARTER_REFS, WELCOME_
 import { seedItems, speciesSellPrice, torontoDay, type ShopItem, speciesClass } from "./rules";
 import { EconomyError, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation, type ActiveBuff } from "./store";
 import { prizeItems } from "./tackle";
+import { TRAINING } from "@/lib/game/rods";
 
 export function memoryEconomyStore(clock: () => Date = () => new Date(), random: () => number = Math.random) {
   const items: ShopItem[] = [...seedItems(), ...prizeItems()];
@@ -55,6 +56,14 @@ export function memoryEconomyStore(clock: () => Date = () => new Date(), random:
     },
     async rodCatches(m) {
       return { ...rodCatches.get(m) };
+    },
+    async tradeForTraining(m) {
+      if ((rodCatches.get(m)?.[TRAINING.quest.rod] ?? 0) < TRAINING.quest.catches) throw new EconomyError("not_ready");
+      const it = items.find((i) => i.catalogue_ref === TRAINING.key);
+      if (!it) throw new EconomyError("not_found");
+      if (inventory.has(`${m}:${it.id}`)) return { traded: false };
+      inventory.set(`${m}:${it.id}`, { item: it, qty: 1, equipped: false, acquired_at: clock().toISOString() });
+      return { traded: true };
     },
     async inventory(m) {
       return [...inventory.entries()].filter(([k]) => k.startsWith(`${m}:`)).map(([, v]) => ({ ...v, item: { ...v.item } }));
