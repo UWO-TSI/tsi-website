@@ -128,13 +128,13 @@ Not ours: the creator's water and hair; casting toward the cursor; the reel pane
 
 ## Status
 
-Round 8 built (David's round 7 review, 2026-11-03) on origin/main b56f3c36; evidence `specs/evidence/tutorial-v2/v8/` (t8-before-*, t8-after-*, t8-dock-before-after). No migration. Round 7's status is in git history (29451dc2).
+Round 8 built (David's round 7 review, 2026-11-03) on origin/main b56f3c36, code at 1208d8ee; evidence `specs/evidence/tutorial-v2/v8/` (t8-before-*, t8-after-*, t8-dock-before-after). No migration. Round 7's status is in git history (29451dc2).
 
 - **t7-icons-esc (the Esc dock), coordinator-confirmed reading:** Settings moved into the dock as its first entry (`MenuDock` `onSettings`), and the lone top-right gear went (TopCluster's default export, `hudButton` and the cluster/button CSS deleted; `TopCluster.tsx` keeps `HudClock` and `HudWallet`). Simplified: Map dropped from the dock (the Esc view's big minimap opens it; M still works); "Quests and journal" is now "Quests"; "Here (n)" folded into Friends (a "Who's on the island (n)" button at the top of FriendsSheet while you're with the others, opening PresenceList). Dock now: Settings | Quests | Bag, Collection | Friends, Mail. Esc 2's Settings stays.
 - **t7-id:** the show-off slot is gone from the ID (kit `ShowOff`, `ShowOffPicks`, `PrintedCard.showOff`, their CSS, the ID_CARD show-off lines, the lab demo). Pronouns stay. HQ's front desk still reopens your ID. Left in place: `/api/collections/showcase`, `SHOWCASE_SLOTS = 1` and `showable` (lib/collections) now have no UI caller (the coordinator decides whether to delete them or bring a showcase back).
 - **t7-peek-hud / t7-peek-map:** no peek card for these any more. While H or M is down in the keyboard tour the real pieces come in where they sit (`KeyboardTour` `onPeek`, DefaultIslandWorld `tourPeek` merged into the shown set) and a new kit piece `PeekRing` rings them (HUD: the bars top left, the time plus wallet under the minimap; map: the minimap), pulsing until the key is let go. On /lab/gui?only=key-board.
 - **t7-peek-wheel:** round 6's drawn tool wheel is back (keyPeek.tsx `DRAWN.wheel` and its CSS), shown above the keyboard card (`Spotlight` `asideAt="top"`); the light keyboard card sits a little lower (`.spotlight[data-light]` translate `clamp(32px, 9vh, 96px)`). `ToolWheelView`'s `standalone` and `MapPlot`'s export (only the peeks used them) are reverted; the lab no longer imports the member world.
-- **Gates round 8:** see the report (tsc clean; vitest; eslint clean on the 14 changed .ts/.tsx). No perf:check (UI only).
+- **Gates round 8:** tsc clean; full vitest (NEXT_PUBLIC_GAME_WORLD=new) 395 files passed, 4 failed, 2 skipped; 3738 tests passed, 7 failed, 4 skipped. All 7 were timeouts in world generation and net files this round does not touch (machine load 30 to 56, swap 11.7 GB); rerun alone with a 120 s timeout, walk.test and loopback.test passed and 2 still timed out (shoreField "crosses 0 on the drawn coast (village)", generate "is the same twice", its own 60 s limit). eslint clean on the 14 changed .ts/.tsx. No perf:check (UI only).
 
 ## Next
 
