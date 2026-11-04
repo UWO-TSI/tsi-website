@@ -9,9 +9,13 @@
  */
 
 /** The bindings the tour teaches, as `KeyboardEvent.key` in lower case ("tab", "g", "enter"). */
-export interface TourKeys { wheel: string; emote: string; hud: string; bag: string; collection: string; quests: string; map: string; mail: string }
+export interface TourKeys { wheel: string; emote: string; hud: string; bag: string; collection: string; quests: string; map: string; mail: string; phone: string }
 /** A part of your screen a key brings in (DefaultIslandWorld shows it from that press until the tour ends). */
-export type HudPiece = "hud" | "chat" | "bag" | "collection" | "quests" | "map" | "mail";
+export type HudPiece = "hud" | "chat" | "bag" | "collection" | "quests" | "map" | "mail" | "phone";
+/** The pieces that aren't on screen at all before their key, then show off above the card and fly to their place
+ * (round 9, David: "the hud doesnt exist, you press it it shows off above the keyboard and it flies to where it usually
+ * sits"; "have the hud pop ontop of the keyboard and fly over"). They come in at the key's press, a hold's too. */
+export const FLY_PIECES: ReadonlySet<HudPiece> = new Set(["hud", "map"]);
 export interface TourStep {
   id: string;
   /** What pressing it brings onto your screen (the wheels open only out in the world: none). */
@@ -38,6 +42,8 @@ export function tourSteps(k: TourKeys): TourStep[] {
     { id: "quests", piece: "quests", key: k.quests, hold: false, title: "Quests" },
     { id: "map", piece: "map", key: k.map, hold: false, title: "Map" },
     { id: "mail", piece: "mail", key: k.mail, hold: false, title: "Mail" },
+    // Round 9: the phone, bottom right, whose apps are the menus (Quests, Collection and Mail came into it a key at a time).
+    { id: "phone", piece: "phone", key: k.phone, hold: false, title: "Phone" },
   ];
 }
 

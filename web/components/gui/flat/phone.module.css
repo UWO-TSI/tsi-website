@@ -1,0 +1,57 @@
+/* The kit's phone (phone.tsx; design bible UI, the phone): bottom right, an ink bezel round a light screen, app tiles in
+   a grid of three, a home bar. It slides up with a spring (about 12% overshoot) and drops away; an open app tucks it down. */
+.phone {
+  position: absolute; right: var(--hud-edge, 16px); bottom: var(--hud-floor, 16px); z-index: 13; width: 236px; box-sizing: border-box; padding: 7px;
+  border-radius: 34px; background: var(--ui-ink); box-shadow: 0 18px 44px rgb(var(--ui-shade) / 0.32), 0 3px 10px rgb(var(--ui-shade) / 0.2);
+  font-family: var(--gui-font); zoom: var(--tsi-text-scale, 1);
+  animation: phoneIn 0.44s cubic-bezier(0.34, 1.32, 0.64, 1) both; transition: translate 0.28s cubic-bezier(0.5, 0, 0.75, 0), opacity 0.2s ease;
+}
+.phone[data-state="closing"] { animation: phoneOut 0.22s cubic-bezier(0.5, 0, 0.75, 0) forwards; }
+/* An app is open: the phone tucks down out of the way, and comes back up when the app closes. */
+.phone[data-away] { translate: 0 calc(100% + 40px); opacity: 0; pointer-events: none; transition: translate 0.24s cubic-bezier(0.5, 0, 0.75, 0), opacity 0.2s ease 0.04s; }
+.phone:not([data-away]) { transition: translate 0.42s cubic-bezier(0.34, 1.32, 0.64, 1), opacity 0.16s ease; }
+@keyframes phoneIn { from { translate: 0 calc(100% + 40px); rotate: 4deg; } }
+@keyframes phoneOut { to { translate: 0 calc(100% + 40px); rotate: 4deg; opacity: 0; } }
+
+.screen { position: relative; display: grid; gap: 12px; padding: 22px 12px 10px; border-radius: 28px; background: var(--ui-panel); }
+.speaker { position: absolute; top: 9px; left: 50%; width: 46px; height: 6px; margin-left: -23px; border-radius: 99px; background: var(--ui-line-strong); }
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 6px; }
+.app { display: grid; justify-items: center; gap: 5px; padding: 0; border: 0; background: none; color: var(--ui-ink); font: inherit; cursor: pointer; }
+.tile {
+  position: relative; display: grid; place-items: center; width: 54px; height: 54px; border-radius: 17px; background: var(--ui-card);
+  box-shadow: 0 0 0 1px var(--ui-line), 0 4px 12px rgb(var(--ui-shade) / 0.12); transition: translate 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+}
+.app:hover .tile { translate: 0 -2px; box-shadow: 0 0 0 1px var(--ui-line-strong), 0 8px 18px rgb(var(--ui-shade) / 0.18); }
+.app:active .tile { translate: 0 1px; }
+.app:focus-visible { outline: none; }
+.app:focus-visible .tile { box-shadow: 0 0 0 3px var(--ui-focus); }
+.tile kbd {
+  position: absolute; right: -5px; bottom: -5px; display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box;
+  border-radius: 99px; background: var(--ui-ink); color: var(--ui-card); font: 800 10px/1 var(--gui-font);
+}
+.badge { position: absolute; top: -6px; right: -6px; }
+.label { font-size: 11px; font-weight: 800; line-height: 1.15; white-space: nowrap; }
+.home {
+  display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 26px; padding: 0; border: 0; border-radius: 99px; background: none;
+  color: var(--ui-muted); font: 700 11px/1 var(--gui-font); cursor: pointer;
+}
+.home i { width: 64px; height: 5px; border-radius: 99px; background: var(--ui-ink); opacity: 0.8; }
+.home kbd { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 99px; background: var(--ui-well); color: var(--ui-ink); font: 800 10px/1 var(--gui-font); }
+.home:focus-visible { outline: 3px solid var(--ui-focus); outline-offset: 2px; }
+
+/* A phone screen: the phone takes more of it, with bigger tiles to tap and no keys. */
+@media (max-width: 700px) {
+  .phone { width: min(calc(100% - 2 * var(--hud-edge, 16px)), 330px); padding: 8px; border-radius: 38px; }
+  .screen { gap: 16px; padding: 26px 16px 12px; border-radius: 31px; }
+  .grid { gap: 16px 8px; }
+  .tile { width: 66px; height: 66px; border-radius: 20px; }
+  .tile kbd { display: none; }
+  .label { font-size: 12px; }
+  .home { min-height: 32px; }
+  .home i { width: 92px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .phone, .phone[data-state="closing"] { animation: none; }
+  .phone, .phone[data-away], .phone:not([data-away]), .tile { transition: opacity 0.16s ease; }
+  .phone[data-away] { translate: none; }
+}

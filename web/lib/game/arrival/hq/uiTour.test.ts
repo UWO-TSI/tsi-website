@@ -1,20 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { HOLD_MS, tourInput, tourSteps, tourTick, type TourProgress } from "./uiTour";
+import { FLY_PIECES, HOLD_MS, tourInput, tourSteps, tourTick, type TourProgress } from "./uiTour";
 import { KEYBOARD } from "@/components/gui/flat/moments";
 import { DEFAULT_WHEEL_KEYS } from "@/lib/game/movement/keys";
 import { DEFAULT_KEYS } from "@/lib/identity/settings";
 
-const KEYS = { ...DEFAULT_WHEEL_KEYS, bag: DEFAULT_KEYS.openBag, collection: DEFAULT_KEYS.openJournal, quests: "j", map: DEFAULT_KEYS.openMap, mail: DEFAULT_KEYS.openMail };
+const KEYS = { ...DEFAULT_WHEEL_KEYS, bag: DEFAULT_KEYS.openBag, collection: DEFAULT_KEYS.openJournal, quests: "j", map: DEFAULT_KEYS.openMap, mail: DEFAULT_KEYS.openMail, phone: DEFAULT_KEYS.openPhone };
 const steps = tourSteps(KEYS);
 const start: TourProgress = { step: 0, holdFrom: null };
 
 describe("Alice's keyboard tour (the v2 review)", () => {
-  it("teaches the real default bindings: hold Tab, hold G, hold H, Enter, I, B, J, M, L", () => {
+  it("teaches the real default bindings: hold Tab, hold G, hold H, Enter, I, B, J, M, L, Y", () => {
     expect(steps.map(s => `${s.hold ? "hold" : "press"} ${s.key}`)).toEqual(
-      ["hold tab", "hold g", "hold h", "press enter", "press i", "press b", "press j", "press m", "press l"]);
+      ["hold tab", "hold g", "hold h", "press enter", "press i", "press b", "press j", "press m", "press l", "press y"]);
   });
   it("brings in a part of the screen with every key but the wheels' (the v3 review), each its own", () => {
-    expect(steps.map(s => s.piece ?? "-")).toEqual(["-", "-", "hud", "chat", "bag", "collection", "quests", "map", "mail"]);
+    expect(steps.map(s => s.piece ?? "-")).toEqual(["-", "-", "hud", "chat", "bag", "collection", "quests", "map", "mail", "phone"]);
+  });
+  it("flies only the HUD and the minimap in from above the card (round 9)", () => {
+    expect(steps.filter(s => s.piece && FLY_PIECES.has(s.piece)).map(s => s.id)).toEqual(["hud", "map"]);
   });
   it("draws every key it asks for on the keyboard", () => {
     const board = new Set(KEYBOARD.flat().map(k => k.key));

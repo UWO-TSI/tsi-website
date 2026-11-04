@@ -20,8 +20,9 @@ import f from "./flat.module.css";
 
 /** The kit's class names, for the odd surface that lays out its own content in the flat style. */
 export { f as flatStyles };
-export { CardOverlay, FLY_MS, FlyIn, KEYBOARD, KeyBoard, PaperField, PeekRing, PrintedCard, QUEST_CHECK_MS, QuestCheck, SlotPop, Spotlight, boardLabel, type BoardKey } from "./moments";
+export { CardOverlay, FLY_HOME_MS, FLY_MS, FlyHome, FlyIn, KEYBOARD, KeyBoard, PaperField, PrintedCard, QUEST_CHECK_MS, QuestCheck, SlotPop, Spotlight, boardLabel, type BoardKey } from "./moments";
 export { CountUp, WalletSlot } from "./wallet";
+export { Phone, type PhoneApp } from "./phone";
 export { KEYWORD_KINDS, KEYWORD_LIBRARY, Keyword, KeywordIcon, KeywordLine, keywordParts, type KeywordKind, type LinePart } from "./keyword";
 export { ProgressCard } from "./ProgressCard";
 export { PODIUM, Podium, podiumFeet, type PodiumPlace } from "./Podium";

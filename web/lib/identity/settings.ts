@@ -7,17 +7,18 @@ export const TEXT_SIZES = ["small", "default", "large", "xl"] as const;
 export type TextSize = (typeof TEXT_SIZES)[number];
 export const TEXT_SCALE: Record<TextSize, number> = { small: 0.9, default: 1, large: 1.15, xl: 1.3 };
 
-export const MENU_ACTIONS = ["openJournal", "openBag", "openMap", "openWallet", "openMail", "nextTab", "prevTab", "confirm"] as const;
+export const MENU_ACTIONS = ["openPhone", "openJournal", "openBag", "openMap", "openWallet", "openMail", "nextTab", "prevTab", "confirm"] as const;
 export type MenuAction = (typeof MENU_ACTIONS)[number];
-/** The naming pass (menus §4): `openJournal` opens the Collection (catches), `openBag` the Bag (items); the Journal (quests) is J. */
+/** The naming pass (menus §4): `openJournal` opens the Collection (catches), `openBag` the Bag (items); the Journal (quests) is J.
+ * `openPhone` (tutorial round 9): the phone bottom right, whose apps are the menus (it replaced the UI view's dock). */
 export const ACTION_LABEL: Record<MenuAction, string> = {
-  openJournal: "Open collection", openBag: "Open bag", openMap: "Open map", openWallet: "Open wallet", openMail: "Open mailbox",
+  openPhone: "Open phone", openJournal: "Open collection", openBag: "Open bag", openMap: "Open map", openWallet: "Open wallet", openMail: "Open mailbox",
   nextTab: "Next tab", prevTab: "Previous tab", confirm: "Confirm",
 };
 /** The menu actions Settings offers to remap. `confirm` (Enter) stays a stored setting but isn't offered: Enter already presses the focused button. */
 export const REMAPPABLE_ACTIONS: readonly MenuAction[] = MENU_ACTIONS.filter(a => a !== "confirm");
 export const DEFAULT_KEYS: Record<MenuAction, string> = {
-  openJournal: "b", openBag: "i", openMap: "m", openWallet: "k", openMail: "l", nextTab: "]", prevTab: "[", confirm: "enter",
+  openPhone: "y", openJournal: "b", openBag: "i", openMap: "m", openWallet: "k", openMail: "l", nextTab: "]", prevTab: "[", confirm: "enter",
 };
 /** Keys no remap can take: interact E, Escape, Tab, zoom Z, quests J, decorate F, emotes G, put away X, the camera back to its default view V, photo mode P, turn a piece while decorating R. */
 export const FIXED_KEYS: readonly string[] = ["e", "escape", "tab", "z", "j", "f", "g", "x", "v", "p", "r"];

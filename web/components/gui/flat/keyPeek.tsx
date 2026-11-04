@@ -7,7 +7,7 @@
  * the keyboard card holding `children`: the game's real piece, small (the emote wheel, the bag, the collection:
  * components/game/hq/TourPeek.tsx). The tool wheel, the chat, the quests and the mail are drawn here in a short loop
  * (round 8, David on the tool wheel: "keep the old one", round 6's drawn wheel). The HUD and the minimap have no peek
- * card: the real ones come in where they sit, ringed (PeekRing). `out`: let go, it fades away. Shown on
+ * card: the real ones show off above the keyboard card and fly to where they sit (FlyHome, round 9). `out`: let go, it fades away. Shown on
  * /lab/gui?only=key-peek.
  */
 import type { ReactNode } from "react";

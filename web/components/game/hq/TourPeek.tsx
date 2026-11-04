@@ -5,7 +5,7 @@
  * review on the key previews: "make it look more similar to the actual ui"): the real emote wheel with its choice
  * stepping round, the bag's real slots filling and the collection's cards. Small, the same pieces. The tool wheel, the
  * chat, quests and mail keep the kit's drawings (round 8, David: "keep the old one" for the tool wheel); the HUD and the
- * minimap have no peek, the real ones come in where they sit (KeyboardTour's PeekRing). Shown on /lab/gui?only=key-peek too.
+ * minimap have no peek, the real ones fly in from above the card (KeyboardTour's FlyHome); nor does the phone, which slides in itself. Shown on /lab/gui?only=key-peek too.
  */
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { ItemCard, KeyPeek, type PeekKind } from "@/components/gui/flat";

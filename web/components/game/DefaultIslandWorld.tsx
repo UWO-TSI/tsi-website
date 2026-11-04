@@ -5,9 +5,9 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExt
 import { Canvas, useFrame } from "@react-three/fiber";
 import { useProgress } from "@react-three/drei";
 import * as THREE from "three";
-import { Menu } from "lucide-react";
+import { Smartphone } from "lucide-react";
 import { Toggle } from "@/components/gui";
-import { DarkButton } from "@/components/gui/flat";
+import { DarkButton, KeywordIcon, Phone, type PhoneApp } from "@/components/gui/flat";
 import GridWorld from "./grid/GridWorld";
 import GridOcean from "./grid/GridOcean";
 import Seabed from "./water/Seabed";
@@ -188,10 +188,10 @@ import { capture } from "@/lib/game/orbitCamera";
 import { iconUrl } from "@/lib/icons/keys";
 import { FLASH_MS, compactTouchHud, fullHud as isFullHud, setClassTag, useAlwaysFullHud } from "@/lib/game/hudPrefs";
 import { nextLayer, subscribePause, type EscLayer } from "@/lib/game/escMenu";
-import { MenuDock, SystemMenu } from "./EscLayers";
+import { SystemMenu } from "./EscLayers";
 import QuestTracker from "./QuestTracker";
 import { useMainQuest } from "./useMainQuest";
-import { setNetSheet } from "./net/sheets";
+import { setNetSheet, useNetSheet } from "./net/sheets";
 import { useFriends } from "./net/friendActions";
 import { useFlash } from "./useFlash";
 
@@ -833,6 +833,13 @@ export default function DefaultIslandWorld({ preset, children }: { preset?: Look
   return <GameSceneBoundary><DefaultIslandWorldContent preset={preset}>{children}</DefaultIslandWorldContent></GameSceneBoundary>;
 }
 
+/** Kept in its place but not on screen (round 9: the keyboard tour's HUD and minimap before their key). Visibility
+ * only, no fade, so the tour's fly-in owns how it appears. */
+const UNSEEN = { visibility: "hidden" } as const;
+function Unseen({ when, children }: { when: boolean; children: ReactNode }) {
+  return <div style={when ? { display: "contents", ...UNSEEN } : { display: "contents" }}>{children}</div>;
+}
+
 function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; children?: ReactNode }) {
   const [graphics, actions] = useGraphicsSettings();
   const conditions = useIslandConditions();
@@ -1006,7 +1013,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // Alice's UI tour names your own keys too (t-hq).
   const binds = identity.settings.key_bindings;
   const tourKeys = useMemo(() => ({ wheel: wheelKeys.wheel, emote: wheelKeys.emote, hud: wheelKeys.hud, bag: binds.openBag, collection: binds.openJournal,
-    quests: "j", map: binds.openMap, mail: binds.openMail }), [wheelKeys, binds]);
+    quests: "j", map: binds.openMap, mail: binds.openMail, phone: binds.openPhone }), [wheelKeys, binds]);
   const armed = useCombatValue(() => combat.rt.player.armed);
   const weaponList = useCombatValue(() => combat.rt.player.owned.join(","));
   const runtimeWeapon = useCombatValue(() => combat.rt.player.weapon);
@@ -1328,23 +1335,41 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const touring = hq.card === "tour" && !touch;
   useEffect(() => { if (!touring) setTourShown(s => (s.size ? new Set() : s)); }, [touring]);
   const showPiece = useCallback((p: HudPiece) => setTourShown(s => new Set(s).add(p)), []);
-  // The tour's HUD and minimap peeks (round 8): the real piece in its place while its key is down.
-  const [tourPeek, setTourPeek] = useState<HudPiece | null>(null);
-  const tourOn = useMemo(() => (tourPeek ? new Set(tourShown).add(tourPeek) : tourShown), [tourShown, tourPeek]);
-  const tourDock = useMemo(() => new Set([...tourShown].filter((p): p is "quests" | "collection" | "mail" => p === "quests" || p === "collection" || p === "mail")), [tourShown]);
-  const full = isFullHud({ always: alwaysFullHud, keyHeld: hudKey, uiView, cinematic: hudCinematic }) || tourOn.has("hud");
+  // Before their key the HUD and the minimap aren't on screen at all (round 9): they keep their places, unseen, until
+  // the key flies them in (KeyboardTour's FlyHome).
+  const tourWaits = (piece: HudPiece) => touring && !tourShown.has(piece);
+  const full = isFullHud({ always: alwaysFullHud, keyHeld: hudKey, uiView, cinematic: hudCinematic }) || tourShown.has("hud");
+  // The phone (round 9; design bible UI, the phone): bottom right, its apps the menus. Y (the account's binding) brings
+  // it up over play and puts it away; the UI view (Esc 1, or the touch screen's phone button) brings it with the fuller
+  // HUD. An app opens its sheet and the phone tucks away until the sheet closes back to it.
+  const [phoneUp, setPhoneUp] = useState(false);
+  // The Friends app's count: friend requests waiting.
+  const friends = useFriends();
+  useEffect(() => { holdCursor("phone", phoneUp); }, [phoneUp]);
+  useEffect(() => () => holdCursor("phone", false), []);
+  const netSheet = useNetSheet();
+  const appOpen = !!sheet || bagOpen || netSheet !== null || mapOpen;
+  const phoneApps = useMemo<PhoneApp[]>(() => [
+    { id: "settings", label: "Settings", icon: <KeywordIcon kind="settings" size={24} />, onOpen: () => setSheet("settings") },
+    { id: "quests", label: "Quests", icon: <KeywordIcon kind="quest" size={24} />, keyLabel: touch ? undefined : "J", onOpen: () => setSheet("journal") },
+    { id: "bag", label: "Bag", icon: <KeywordIcon kind="bag" size={24} />, keyLabel: touch ? undefined : keyName(binds.openBag), onOpen: () => setSheet("bag") },
+    { id: "collection", label: "Collection", icon: <KeywordIcon kind="collection" size={24} />, keyLabel: touch ? undefined : keyName(binds.openJournal), onOpen: () => setBagOpen(true) },
+    { id: "friends", label: "Friends", icon: <KeywordIcon kind="friend" size={24} />, badge: friends.asking, onOpen: () => setNetSheet("friends") },
+    { id: "mail", label: "Mail", icon: <KeywordIcon kind="mail" size={24} />, keyLabel: touch ? undefined : keyName(binds.openMail), badge: progression.unreadLetters, onOpen: () => setSheet("letters") },
+  ], [touch, binds, friends.asking, progression.unreadLetters]);
+  // Alice's tour brings the phone in an app at a time (Bag, Collection, Quests, Mail), then whole with its own key.
+  const tourApps = useMemo(() => (tourShown.has("phone") ? phoneApps : phoneApps.filter(a => tourShown.has(a.id as HudPiece))), [tourShown, phoneApps]);
+  const phoneOn = touring ? tourApps.length > 0 : (uiView || phoneUp) && !hudCinematic;
   // On a phone the menu button opens the UI view; the heading and touch hint flash (world audit item 11).
   const compact = compactTouchHud({ touch, always: alwaysFullHud });
   // Mouse-look ending on its own (Esc, the window losing focus) opens the UI view; capturing again closes the layers.
   useEffect(() => subscribePause(() => setLayer(l => l ?? "ui")), []);
-  useEffect(() => { if (captured === "captured") setLayer(null); }, [captured]);
+  useEffect(() => { if (captured === "captured") { setLayer(null); setPhoneUp(false); } }, [captured]);
   // The island map is the village's (the minimap and M). At HQ (Alice shows you the map there, row 312) it opens with you
   // at HQ's door; the minimap stays outdoors.
   const mapHere = !inside && !atHome && site !== "ruins";
   const mapOpenable = mapHere || (inside === "hq" && site === "village");
   const mapPlayer = useMemo(() => ({ current: new THREE.Vector3(hqDoor?.[0] ?? 0, 0, hqDoor?.[1] ?? 0) }), [hqDoor]);
-  // The dock's counts: friend requests waiting, and who's on the island while you're with the others.
-  const friends = useFriends();
   // Hold the HUD key (H) for the full HUD.
   useEffect(() => {
     const key = wheelKeys.hud;
@@ -1400,13 +1425,15 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       if (menu === "openWallet") setSheet("wallet");
       if (!menu && event.key.toLowerCase() === "j") setSheet("journal");
       if (menu === "openMail") setSheet("letters");
+      // Y: the phone up over play, or away again (with the UI view, if that brought it).
+      if (menu === "openPhone") { if (layer) setLayer(null); setPhoneUp(up => !up && !layer); }
       // The Esc that ended mouse-look is the browser's (it opened the UI view); a later one closes what's open, then
       // steps through the Esc layers, indoors too (playtest round 1: a room is left by its door; lib/game/sceneGate.ts).
       if (event.key === "Escape") {
-        const open = !!sheet || bagOpen || donateOpen || decor.decorating || !!(reveal && inside === "oracle") || studyHoldsPrompt() || !!document.querySelector('[role="dialog"]');
+        const open = !!sheet || bagOpen || phoneUp || donateOpen || decor.decorating || !!(reveal && inside === "oracle") || studyHoldsPrompt() || !!document.querySelector('[role="dialog"]');
         const locked = capture.state === "captured" && !!document.pointerLockElement;
         const esc = escapeAction({ captureEnded: escapeEndedCapture(), locked, fading, open });
-        if (esc === "close") { setSheet(null); if (decor.selected) decor.cancel(); }
+        if (esc === "close") { if (!sheet && !bagOpen) setPhoneUp(false); setSheet(null); if (decor.selected) decor.cancel(); }
         // An Escape that came through with the mouse still held lets it go: the end of the lock opens the UI view.
         if (esc === "layer") { if (locked) document.exitPointerLock(); else setLayer(nextLayer); }
       }
@@ -1416,7 +1443,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [act, near, inside, atHome, decor, identity.settings, welcoming, site, abilityKeys, sheet, bagOpen, donateOpen, reveal, fading, mapOpenable]);
+  }, [act, near, inside, atHome, decor, identity.settings, welcoming, site, abilityKeys, sheet, bagOpen, donateOpen, reveal, fading, mapOpenable, layer, phoneUp]);
   // Development only (the old wrench panel, hud-first-login §4): Settings' Dev tab shows or hides it; it stays mounted
   // (the class playtest's harness and slow motion run from it) and stands on the left, clear of the minimap.
   const devTools = DEV ? <>
@@ -1469,7 +1496,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           {photo.open && <PhotoCamera player={player} />}
         </Suspense>
       </Canvas>
-      <header className={styles.heading} data-fading={fading || !ready || hudCinematic || ((!full || compact) && headingFlash === null)} data-clean={full && !compact ? undefined : ""}>
+      <header className={styles.heading} data-fading={fading || !ready || hudCinematic || headingFlash === null}>
         <h1>{heading.title}</h1>
         {heading.subtitle && <p>{heading.subtitle}</p>}
       </header>
@@ -1477,14 +1504,14 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       {/* Top right (playtest round 1, decision 3; design bible UI 8b): while you play, the quest line left of the minimap,
           the time under it; the UI view (Esc 1) grows the minimap and adds the wallet (coins and gems) under the time, which also slides in at rest when they change. */}
       {/* In a volleyball match the court's HUD is the stage (VolleyHud): the island's top right steps aside. */}
-      <div className={styles.hudRight} data-hud-right="" data-hidden={hudCinematic || inMatch || undefined}>
-        <div className={styles.hudLead} data-new={objectiveNew || undefined}>
+      <div className={styles.hudRight} data-hud-right="" data-hidden={hudCinematic || inMatch || undefined} style={tourWaits("hud") ? UNSEEN : undefined}>
+        <div className={styles.hudLead} data-new={objectiveNew || undefined} data-hud-quest="">
           {/* Bram's walk-along, then the HQ visit with Alice and a tool's little quest (row 312), then the chapter. */}
           <QuestTracker className={styles.questSlot} quests={quests} hidden={tutorialQuest || hq.quest ? false : holdObjective} onOpen={() => setSheet("journal")}
             guidable={main.quest && !inside ? [main.quest.id] : []} guided={main.guided} onGuide={main.guide} />
         </div>
         <div className={styles.hudColumn} data-minimap data-new={objectiveNew || undefined}>
-          {((mapHere && !holdObjective) || tourOn.has("map")) && <MiniMap playerPosRef={player} plot={objectivePlot} big={uiView} onOpen={() => setMapOpen(true)} />}
+          {((mapHere && !holdObjective) || touring) && <Unseen when={tourWaits("map")}><MiniMap playerPosRef={player} plot={objectivePlot} big={uiView} onOpen={() => setMapOpen(true)} /></Unseen>}
           <HudClock weather={weather} phase={phase} />
           <HudWallet full={full} showcase={showcase}
             onWallet={() => setSheet(value => (value === "wallet" ? null : "wallet"))} walletKey={keyName(identity.settings.key_bindings.openWallet)} />
@@ -1545,16 +1572,14 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <CollectionBook open={bagOpen} onClose={() => setBagOpen(false)} keys={identity.settings.key_bindings.openJournal} />
       {/* The Bag shows only as a pickup flies into it; a touch screen's menu button opens the UI view (it has no Esc). */}
       {/* The player's bars (specs/design-bible.md UI 8): health and XP always on, stamina while it's used. */}
-      <HudBars className={styles.hudBars} hidden={hudCinematic} full={uiView} />
+      <Unseen when={tourWaits("hud")}><HudBars className={styles.hudBars} hidden={hudCinematic} full={uiView} /></Unseen>
       <div className={styles.bagButtons}>
-        {touch && !hudCinematic && <button className={styles.menuButton} onClick={() => setLayer(l => (l ? null : "ui"))} aria-expanded={uiView} aria-label={uiView ? "Close the menu" : "Menu"}><Menu size={20} aria-hidden /></button>}
+        {touch && !hudCinematic && <button className={styles.menuButton} onClick={() => setLayer(l => (l ? null : "ui"))} aria-expanded={uiView} aria-label={uiView ? "Put the phone away" : "Phone"}><Smartphone size={20} aria-hidden /></button>}
         <BagButton full={tourShown.has("bag")} keyLabel={keyName(identity.settings.key_bindings.openBag)} onOpen={() => setSheet("bag")} />
       </div>
-      {/* The UI view's dock (Esc 1): the menu entries over the live game. Their sheets close back to it. */}
-      {(uiView || tourDock.size > 0) && <MenuDock touch={touch} unread={progression.unreadLetters} asking={friends.asking} only={uiView ? undefined : tourDock}
-        keys={{ journal: "J", bag: keyName(identity.settings.key_bindings.openBag), collection: keyName(identity.settings.key_bindings.openJournal), mail: keyName(identity.settings.key_bindings.openMail) }}
-        onSettings={() => setSheet("settings")} onJournal={() => setSheet("journal")} onBag={() => setSheet("bag")} onCollection={() => setBagOpen(true)}
-        onFriends={() => setNetSheet("friends")} onMail={() => setSheet("letters")} />}
+      {/* The phone (round 9): bottom right, its apps the menus; their sheets close back to it. */}
+      <Phone open={phoneOn} apps={touring ? tourApps : phoneApps} away={appOpen && !touring} onClose={() => { setPhoneUp(false); setLayer(null); }}
+        hint={touch ? undefined : <kbd>{keyName(binds.openPhone)}</kbd>} />
       {/* Esc 2: the system menu. Resume asks for the mouse again; Escape (or ✕) goes back to the game. */}
       <SystemMenu open={layer === "system" && !hudCinematic} signedIn={identity.signedIn} name={identity.display_name} onClose={() => setLayer(null)}
         onResume={() => { setLayer(null); requestResume(); }} onSettings={() => setSheet("settings")} />
@@ -1574,7 +1599,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <CheckInCard open={hq.card === "checkin"} onDone={() => hqEvent("checkin")} />
       <PlaqueCard open={sheet === "plaque"} onClose={() => setSheet(null)} />
       <LoreOverlay open={hq.card === "lore"} onDone={() => hqEvent("lore")} />
-      <KeyboardTour open={touring} keys={tourKeys} onShow={showPiece} onPeek={setTourPeek} onDone={() => hqEvent("tour")} />
+      <KeyboardTour open={touring} keys={tourKeys} onShow={showPiece} onDone={() => hqEvent("tour")} />
       <ShopkeeperChoice open={sheet === "shopkeeper"} onClose={() => setSheet(null)} onChoose={section => {
         setShopSection(section);
         if (section === "merch") window.dispatchEvent(new CustomEvent("tsi:shopkeeper-say", { detail: { line: MERCH_LINE, clip: "Chat" } }));
