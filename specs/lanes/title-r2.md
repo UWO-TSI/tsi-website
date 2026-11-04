@@ -2,6 +2,16 @@
 
 Worktree `.claude/worktrees/title-r2`, branch `game/title-r2`, cut from origin/main. Agent type `uwotsi-lane`. Dev port 3330.
 
+## Round 4: David's title round 3 review (2026-11-04, verbatim; https://claude.ai/artifact/84SCYnW4qmndkFnuJkUHkw)
+
+Approved: title3-diamond, title3-menu, title3-signin, title3-signup, title3-phone, title3-questions (both picks: the Sign in button in the banner's teal; Settings flat too, with a flat toggle and slider in the kit).
+- title3-night (redo): "I want you to reshoot the title screen and i want like 2-3 sepreaate versions and i want it to be a video where its a placed scene and not just a actual scene, so we set up a scene and the camera fov and stuff is all changed to give a vibe to it, and i want like a sene where you get a character sitting on a log looking and in the background is the plaza with stuff and theres lamps glowign like fire animation, and like fire flies and stars twinkle like it should feel welcoming scene instead of the image place holder we have rn, remove apply to tsi. i will give you the schene reference"
+
+Round 4:
+1. **First, small and separate (own commit, so it can ship ahead):** the Sign in button in the banner's teal; remove "Apply to TSI" from the title screen; Settings flat (a flat Toggle and Slider in the kit, used there).
+2. **The title scene, staged:** 2 or 3 versions of a set-up scene behind the title, each its own camera (position, fov, framing) chosen for the vibe: a character sitting on a log, looking out; behind, the plaza with its things; lamps glowing with an animated fire flicker; fireflies; stars twinkling. Welcoming, at night. It replaces today's still placeholder and moves (a loop, not a still): pick the cheapest way to get that on the title screen (a short seamless video loop rendered from our own assets, or a small live scene) and say why; keep a still poster for slow loads and reduced motion; budget it (`specs/perf/budget.md`). David will send a scene reference: build the pieces that don't depend on it first (the seated pose on a log, lamp flicker, fireflies, stars, the camera rig); the coordinator forwards the reference when it arrives.
+3. Evidence ids `title4-*`: each version as a short clip (mp4, a few seconds, plus a poster frame) and still, desktop and phone; the teal button, the menu without Apply to TSI, flat Settings.
+
 ## Round 3: David's note on C (saved 2026-11-02 02:37 UTC, read 2026-11-03; https://claude.ai/artifact/4Jp1L8AExKJUB3a6EMvuoq)
 
 - title-c (approve): "looks good out of the 3, i want yout to take the option a diamond dot, the sign in ui needs to be simplified and to make cleaner"
