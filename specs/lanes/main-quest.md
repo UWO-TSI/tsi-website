@@ -124,6 +124,26 @@ Redo:
 
 ## Status
 
+**Round 7** (game/main-quest, on origin/main 18362223; evidence specs/evidence/main-quest/r7/, befores are round 6's
+after shots). Done, waiting for David's review and his pick of the vitals look:
+- "Level up!" is type alone (the Sparkles icon is gone: a hanging icon can't balance it), centred on the screen; the
+  shoot measures the text box's centre against the screen's: 0 px off on desktop and on the phone (log.json `-centre`).
+- Stamina is off the card: kit `StaminaArc` (vitals.tsx), a ")" SVG over the canvas (`.world` is its layer), placed by
+  HudBars' `useStaminaArc` in r3f's `addAfterEffect` (the camera final, as LabelLayer does) from `hudLive.at` (the
+  avatar's drawn feet, PlayerAvatar) and `hudLive.camera` (set by PlayerAvatar). Shown at stamina <= 0.25
+  (STAMINA_SHOW) with a 0.35 s fade; the arc is that last quarter (full as it fades in, empty when winded, shakes once
+  then); blue to the low orange as it drains. No render per frame, no new pass. VitalBar lost `live`, `quiet`, `low` and
+  the stamina kind; XpRing lost `hidden` (the `.hud` wrapper hides both).
+- Vitals reimagined, three looks on one markup (kit `Vitals look ring`; CSS on `.hud[data-look]`): **capsule** (the
+  ring at the head of a thick white-rimmed bar, no card; a shield or mana row is a slimmer bar under it), **hearts** (a
+  heart per 20 points through a CSS mask on a white pill; shield and mana rows are shields and drops), **dial** (one
+  white medallion: health a thick arc round the ring, open at the bottom where its heart sits; a shield or mana row is
+  an arc outside it). The pick: capsule (the default). `?vitals=hearts|dial` (dev only) switches until David picks;
+  then delete the losers' CSS, VITALS_LOOKS, `lookOf` and the DefaultIslandWorld `.heading` rules for hearts and dial.
+- Bible UI 8b: stamina is the arc beside the character; the vitals look waits on David's pick.
+- Gates: tsc clean; vitest 399 files passed (2 skipped), 3760 tests passed, 4 skipped, 0 failed, no timeouts; eslint
+  clean on the 7 changed TS files; `git grep '("development" as string)' -- web` empty. No perf:check (UI lane).
+
 **Round 6** (game/main-quest, on origin/main b56f3c36; evidence specs/evidence/main-quest/r6/, befores shot at the
 merge 39f8e42d). Done, waiting for David's review:
 - Vitals on the white card only: `Vitals bare`, its CSS, HudBars' `?vitals=card` and the showroom's bare row deleted.
@@ -202,12 +222,16 @@ Done, waiting for David's review:
 
 ## Next
 
-1. Wait for David's review of round 6 (specs/evidence/main-quest/r6/).
-2. The round 3 migrations still wait to be applied in order (20261028144337_main_quest, 20261028153805_main_quest_r2,
-   20261029064914_catalogue_seed).
+1. Wait for David's review of round 7 (specs/evidence/main-quest/r7/) and his vitals pick; then delete the other two
+   looks (see Status) and reshoot the pick.
+2. The round 3 migrations (20261030010000_main_quest, 20261030010100_main_quest_r2, renamed from their 20261028 names) are applied to prod: no migration waits on this lane.
 
 ## Tools and gotchas
 
+- Browser runner (round 7): scratchpad `mqrun/qrun8.sh <scenes>` (run8.sh, out to mq-r7/$MQ_OUT; scenes mq7lab,
+  mq7hud, mq7hud-phone); `mqrun/evid7.py` builds r7/; `mqrun/sheet.py` makes quick contact sheets for checking. The
+  looks are pure CSS on `.hud[data-look]`, so the scene sets the attribute and shoots all three from one load. The
+  stamina strip holds a value with `state.staminaRest = -100`, then lets go with `staminaRest = 1`.
 - Browser runner (round 6): scratchpad `mqrun/qrun7.sh <scene>` (run7.sh; `MQ_OUT=before|after` picks mq-r6/<dir>;
   scenes mq6hud, mq6hud-phone, one per call); `mqrun/evid6.py` builds r6/. Run it with run_in_background when the lock
   may be held: a foreground call that waits on the lock passes 10 min.

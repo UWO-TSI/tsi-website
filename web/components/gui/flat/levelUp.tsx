@@ -8,14 +8,14 @@
  * card needs to be redone"). Three beats, straight over the world on a soft scrim (no card):
  * - charge: the `figure` (the game's 3D character) on a soft glow; XP motes curve in from around it, and each one landing
  *   flashes the figure white for two frames (never back to back: they land `LEVEL_UP_MS.gap` apart) and calls `onBeat`;
- * - burst: "Level up!" springs out with a burst of sparks, the figure grows a little (the host makes it jump);
+ * - burst: "Level up!" springs out with a burst of sparks, the figure grows a little (the host makes it jump); the title
+ *   is type alone, on the screen's centre line (r6: "the level up isnt centered because of the logo icon to the left");
  * - reveal (r5: "fade the characetr out, move the level up up and take the center screen with micro animation aof each
  *   thing that was unlocked"): the figure fades out, "Level up!" rises to the top with the new level under it, and the
  *   unlocks take the middle of the screen, each with its own small animation (`motion`: flip, twinkle or pop), one button.
  * Reduced motion starts at the reveal (no motes, no flashes). A click, E, Enter or Escape skips to the reveal, then closes.
  */
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { Sparkles } from "lucide-react";
 import f from "./flat.module.css";
 import l from "./levelUp.module.css";
 
@@ -81,7 +81,7 @@ export function LevelUpMoment({ level, figure, title, items, action = "Nice!", o
             <span className={l.moteY}><i /></span>
           </span>)}</span>}
         {phase !== "charge" && <span className={l.sparks} aria-hidden>{Array.from({ length: 12 }, (_, k) => <i key={k} style={{ "--k": k } as CSSProperties} />)}</span>}
-        {phase !== "charge" && <strong className={l.shout}><Sparkles size={20} aria-hidden />Level up!</strong>}
+        {phase !== "charge" && <strong className={l.shout}>Level up!</strong>}
       </div>
       {phase === "reveal" && <div className={l.panel} onClick={e => e.stopPropagation()}>
         <header className={l.head}>

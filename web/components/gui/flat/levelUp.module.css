@@ -40,12 +40,11 @@
 @keyframes moteDot { 0% { opacity: 0; transform: scale(0.3); } 20% { opacity: 1; transform: scale(1.15); } 85% { opacity: 1; transform: scale(0.9); } 100% { opacity: 0; transform: scale(0.4); } }
 
 /* The burst: "Level up!" springs out over the figure's legs with sparks thrown from its middle; at the reveal it rises
-   to the top (translate, so the spring-in's transform still runs). */
-.shout { position: absolute; left: 0; right: 0; top: 0; translate: 0 calc(var(--mh) * 0.64); transition: translate 0.65s cubic-bezier(0.34, 1.25, 0.64, 1); display: inline-flex; justify-content: center; align-items: center; gap: 8px;
+   to the top (translate, so the spring-in's transform still runs). Type alone, centred on the screen (r6: no icon). */
+.shout { position: absolute; left: 0; right: 0; top: 0; translate: 0 calc(var(--mh) * 0.64); transition: translate 0.65s cubic-bezier(0.34, 1.25, 0.64, 1); text-align: center;
   color: var(--ui-on-scrim); font: 900 44px/1 var(--gui-font); letter-spacing: -0.01em;
   text-shadow: 0 3px 0 rgb(var(--ui-shade) / 0.4), 0 0 22px rgb(var(--ui-shade) / 0.55);
   animation: shout 0.6s cubic-bezier(0.34, 1.7, 0.64, 1) both; }
-.shout svg { color: var(--ui-xp); filter: drop-shadow(0 2px 0 rgb(var(--ui-shade) / 0.35)); }
 .moment[data-phase="reveal"] .shout { translate: 0 14px; }
 @keyframes shout { 0% { opacity: 0; transform: scale(0.3) rotate(-6deg); } 100% { opacity: 1; transform: none; } }
 .sparks { position: absolute; left: 50%; top: 42%; width: 0; height: 0; pointer-events: none; }

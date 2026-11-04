@@ -8,6 +8,7 @@
  * out, coins and gems stay null and the HUD shows no wallet.
  */
 import { useSyncExternalStore } from "react";
+import type { Camera } from "three";
 import { API_WRITE } from "@/lib/apiClient";
 import { httpEconomyTransport } from "@/lib/wallet/transport";
 
@@ -23,9 +24,10 @@ const publish = (next: Partial<HudState>) => { state = { ...state, ...next }; li
 export function refreshHudWallet(): Promise<void> {
   return httpEconomyTransport.wallet().then(w => publish({ coins: w.coins, gems: w.gems, giftClaimed: w.daily_claimed, day: w.day, welcomeDay: w.welcome_day }), () => {});
 }
-/** The player's stamina as the movement sim has it (lib/game/movement/sim.ts), written each frame by the avatar and read by
- * the HUD's bar on its own frame loop (never a React render per frame). */
-export const hudLive = { stamina: 1, winded: false };
+/** The player's stamina as the movement sim has it (lib/game/movement/sim.ts), where the avatar is drawn (its feet) and
+ * the camera that draws it: written by the avatar each frame and read after the frame is drawn by the HUD's stamina arc,
+ * which stands beside the character (never a React render per frame). */
+export const hudLive = { stamina: 1, winded: false, at: { x: 0, y: 0, z: 0 }, camera: null as Camera | null };
 export const setHudCoins = (coins: number) => publish({ coins });
 export const setHudGems = (gems: number) => publish({ gems });
 export const setHudXp = (xp: number) => publish({ xp });

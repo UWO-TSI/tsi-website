@@ -27,7 +27,7 @@ import { RodRadar, TackleRadar } from "@/components/economy/RodGear";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import { CircleDot, Sparkles, UserRound, Waves, Worm } from "lucide-react";
 import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
-import { ActionBar, ActionIcon, CallTag, CardOverlay, DarkButton, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, KeyPeek, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, QuestCheck, RankBadge, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, VitalBar, Vitals, WalletSlot, XpRing, LevelUpMoment, type PeekKind } from "@/components/gui/flat";
+import { ActionBar, ActionIcon, CallTag, CardOverlay, DarkButton, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, KeyPeek, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, QuestCheck, RankBadge, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, StaminaArc, VITALS_LOOKS, VitalBar, Vitals, WalletSlot, XpRing, LevelUpMoment, type PeekKind } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
 import { BoardBody } from "@/components/game/volleyball/BoardSheet";
 import { DEFAULT_LOOK } from "@/lib/game/character/look";
@@ -415,19 +415,15 @@ export default function GuiShowroom() {
       <div className={s.toastStage}><ToastHub /></div>
     </Section>
 
-    <Section id="hud-bars" title="The vitals and the level ring (flat kit)" note="specs/design-bible.md UI 8: health and stamina stacked (room for a class's shield or mana row), each bar sliding from its full colour through amber to its low colour as it empties, a hairline every 20 points, critical health flashing with a beating heart, all on one white card; a class's shield or mana is a third row (the second row here); the level in a ring of XP, hover for the exact XP. components/gui/flat/vitals.tsx; the island's are components/game/HudBars.tsx.">
-      <Row>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}><XpRing level={3} fill={0.42} into={126} needed={300} />
-          <Vitals><VitalBar kind="health" value={1} label="Health 100 of 100" /><VitalBar kind="stamina" value={1} quiet label="Stamina" /></Vitals></div>
-        <Vitals><VitalBar kind="health" value={0.5} label="Health 50 of 100" /><VitalBar kind="stamina" value={0.5} label="Stamina" /></Vitals>
-        <Vitals><VitalBar kind="health" value={0.15} critical label="Health 15 of 100" /><VitalBar kind="stamina" value={0.05} low label="Stamina run out" /></Vitals>
-        <Vitals><VitalBar kind="health" value={0.7} max={200} label="Health 140 of 200" /></Vitals>
-      </Row>
-      <Row>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}><XpRing level={3} fill={0.42} into={126} needed={300} />
-          <Vitals><VitalBar kind="health" value={0.8} label="Health 80 of 100" /><VitalBar kind="stamina" value={1} quiet label="Stamina" /><VitalBar kind="shield" value={0.6} label="Shield 30 of 50" max={50} /></Vitals></div>
-        <Vitals><VitalBar kind="health" value={0.8} label="Health 80 of 100" /><VitalBar kind="stamina" value={0.6} label="Stamina" /><VitalBar kind="mana" value={0.35} label="Mana 35 of 100" /></Vitals>
-      </Row>
+    <Section id="hud-bars" title="The vitals, the level ring and the stamina arc (flat kit)" note="specs/design-bible.md UI 8: the level in a ring of XP (hover for the exact XP) with health, sliding from its full colour through amber to its low colour as it empties, a notch every 20 points, critical flashing with a beating heart; a class's shield or mana is one more row. Three looks (r7 pitch): capsule, hearts, dial. Stamina is a ) beside the character, only at a quarter or under. components/gui/flat/vitals.tsx; the island's are components/game/HudBars.tsx.">
+      {VITALS_LOOKS.map(look => <Row key={look}>
+        {([[1, "100"], [0.5, "50"], [0.15, "15"]] as const).map(([h, n]) =>
+          <Vitals key={n} look={look} ring={<XpRing level={3} fill={0.42} into={126} needed={300} />}><VitalBar kind="health" value={h} critical={h < 0.25} label={`Health ${n} of 100`} /></Vitals>)}
+        <Vitals look={look} ring={<XpRing level={3} fill={0.42} into={126} needed={300} />}><VitalBar kind="health" value={0.8} label="Health 80 of 100" /><VitalBar kind="shield" value={0.6} max={60} label="Shield 36 of 60" /></Vitals>
+        <Vitals look={look} ring={<XpRing level={3} fill={0.42} into={126} needed={300} />}><VitalBar kind="health" value={0.8} label="Health 80 of 100" /><VitalBar kind="mana" value={0.35} label="Mana 35 of 100" /></Vitals>
+      </Row>)}
+      <Row>{[1, 0.5, 0].map(st => <div key={st} style={{ position: "relative", width: 60, height: 120 }}>
+        <StaminaArc ref={el => { el?.toggleAttribute("data-show", true); el?.style.setProperty("--vital", String(st)); el?.style.setProperty("--x", "0.2"); el?.style.setProperty("--h", "1"); }} /></div>)}</Row>
     </Section>
 
     <Section id="rewards" title="Rewards and moments (flat kit)" note="specs/design-bible.md UI 4 and 7: a reward pops with its rarity as the outline (divine: the holo); a level up is the big moment (motes into the figure, a flash per mote, the burst, then what it unlocks). components/gui/flat RewardPop and LevelUpMoment.">

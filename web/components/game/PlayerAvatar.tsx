@@ -373,6 +373,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     } });
   }, [world, camera, gl, particles, groundSurface, groundHeight]);
 
+  useEffect(() => { hudLive.camera = camera; return () => { if (hudLive.camera === camera) hudLive.camera = null; }; }, [camera]);
   useFrame((_state, rawDelta) => {
     const g = anchor.current, bd = body.current, hd = head.current;
     if (!g || !bd || !hd) return;
@@ -695,6 +696,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     f.grow = THREE.MathUtils.damp(f.grow, inCombat ? 1 + combat.rt.buffs.reduce((n, b) => n + (b.stat === "size" && b.t > 0 ? b.value : 0), 0) : 1, 6, rawDelta);
     bd.scale.set(sxz * f.grow, sy * f.grow, sxz * f.grow);
     hd.position.set(rx, sitting ? groundY : y + Math.min(1, f.leaf) * 0.45, rz); // the nameplate clears an open leaf
+    hudLive.at.x = rx; hudLive.at.y = sitting ? groundY : y; hudLive.at.z = rz; // the HUD's stamina arc stands beside it
 
     // Character: yaw, lift above the ground under it, the movement state clip; a seat holds its clip.
     if (sitting) Object.assign(m, { speed: 0, yaw: sitting.yaw, lift: sitting.lift, pose: sitting.clip, move: null });

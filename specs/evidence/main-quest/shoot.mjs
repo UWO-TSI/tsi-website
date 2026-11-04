@@ -4,7 +4,7 @@
 // `?progression=demo` (the real progression service on an in-memory store; `&chapter=` and `&tally=` set where the
 // member is). Headless Chromium, muted, under the shared browser lock.
 //   HOST=http://localhost:3147 node specs/evidence/main-quest/shoot.mjs <out_dir> <scene> [<scene> ...]
-// Scenes: mq6hud, mq6hud-phone (round 6); mq5hud, mq5hud-phone (round 5); mq4hud, mq4hud-phone, mq4sand (round 4); r2flow, r2museum, r2dig, pops, strips (round 2); flow, chapters, dig, pickaxe (round 1; the new world: run the dev server with NEXT_PUBLIC_GAME_WORLD=new); village (the
+// Scenes: mq7hud, mq7hud-phone (round 7); mq6hud, mq6hud-phone (round 6); mq5hud, mq5hud-phone (round 5); mq4hud, mq4hud-phone, mq4sand (round 4); r2flow, r2museum, r2dig, pops, strips (round 2); flow, chapters, dig, pickaxe (round 1; the new world: run the dev server with NEXT_PUBLIC_GAME_WORLD=new); village (the
 // default world, no env: the village's one tracker line, unchanged).
 // Places are the new world's (lib/collections/rolls.ts activeVillage("new"): museum 4,70.5; dig-sand-0 -17,102;
 // dig-soil-15 35,84; rock-1 38,25.1).
@@ -140,7 +140,7 @@ async function levelUpStrip(page, prefix, wide, times = [["a", 250], ["b", 850],
   const t0 = await page.evaluate(() => performance.now());
   const card = async () => {
     // A phone's whole screen (the moment has no card to crop to, and the jump grows past its box).
-    if (!wide && /^mq[56]/.test(prefix)) return { x: 0, y: 40, width: 390, height: 804 };
+    if (!wide && /^mq[567]/.test(prefix)) return { x: 0, y: 40, width: 390, height: 804 };
     const b = await page.$eval("[data-testid=level-up] section", el => { const r = el.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; });
     const m = wide ? 70 : 10;
     return { x: Math.max(0, b.x - m), y: Math.max(0, b.y - m), width: b.w + 2 * m, height: b.h + 2 * m };
@@ -175,12 +175,86 @@ async function levelUpStrip(page, prefix, wide, times = [["a", 250], ["b", 850],
     await page.evaluate(() => window.__anims.forEach(([a]) => a.play()));
     await sleep(600);
   }
+  log.push({ name: `${prefix}-centre`, shout: await page.evaluate(() => {
+    const el = document.querySelector("[data-testid=level-up] strong"), r = document.createRange(); r.selectNodeContents(el);
+    const b = r.getBoundingClientRect(); return { text: el.textContent, left: Math.round(b.left), right: Math.round(b.right), offFromCentre: +((b.left + b.right) / 2 - window.innerWidth / 2).toFixed(1) };
+  }).catch(e => String(e)) });
   await shot(page, `${prefix}-full`);
   log.push({ name: `${prefix}-full`, card: await page.$eval("[data-testid=level-up]", el => el.textContent).catch(() => null) });
   await page.keyboard.press("Escape"); await sleep(1000);
 }
 
 for (const scene of SCENES) try {
+  if (scene === "mq7lab") {
+    // The showroom's vitals section (kit pieces first, bible How it's built 3).
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } }), page = await ctx.newPage();
+    page.on("pageerror", e => errors.push(e.message.slice(0, 300)));
+    await page.goto(`${HOST}/lab/gui?only=hud-bars`, { waitUntil: "networkidle", timeout: 300000 });
+    await sleep(2500);
+    const el = await page.$("#hud-bars") ?? await page.$("section");
+    await el.screenshot({ path: `${OUT}/mq7-lab-vitals.png` });
+    log.push({ name: "mq7-lab-vitals" });
+    await ctx.close();
+  }
+  if (scene === "mq7hud" || scene === "mq7hud-phone") {
+    // Round 7: the three vitals looks (capsule, hearts, dial: the CSS reads .hud's data-look, so one load shoots all
+    // three) at full, half, low and critical, with a shield row fitted; the stamina arc beside the character from 30%
+    // down to empty and back; the level up with "Level up!" measured against the screen's centre line.
+    const phone = scene.endsWith("phone");
+    const { ctx, page } = await open("time=day", {}, phone ? PHONE : undefined);
+    await go(page, 30, 46, Math.PI);
+    await hudIn(page);
+    const p = phone ? "mq7-phone" : "mq7";
+    const corner = phone ? { x: 0, y: 40, width: 390, height: 170 } : { x: 0, y: 40, width: 420, height: 130 };
+    const setLook = look => page.evaluate(l => { document.querySelector("[data-look]").dataset.look = l; }, look);
+    for (const look of ["capsule", "hearts", "dial"]) {
+      await setLook(look); await sleep(300);
+      for (const [k, h] of [["full", 1], ["half", 0.5], ["low", 0.3]]) await vitalsAt(page, `${p}-${look}-${k}`, h, 1, corner);
+      await page.evaluate(() => { window.__combat.rt.player.hp = Math.round(window.__combat.rt.player.maxHp * 0.12); window.__publishCombat(); });
+      await sleep(1200);
+      const t0 = Date.now();
+      for (let i = 0; i < 6; i++) {
+        const at = i * 150; if (Date.now() - t0 < at) await sleep(at - (Date.now() - t0));
+        await page.screenshot({ path: `${OUT}/${p}-${look}-critical-${i}.png`, clip: corner });
+      }
+      await shot(page, `${p}-${look}-critical-screen`);
+      await page.evaluate(() => { window.__combat.rt.player.hp = Math.round(window.__combat.rt.player.maxHp * 0.8); window.__publishCombat(); });
+      await sleep(1200);
+      // A class's shield row (fit check): the health row cloned in as a shield of 60.
+      await page.evaluate(() => { const v = document.querySelector("[data-testid=hud-vitals]"); const r = v.firstElementChild.cloneNode(true); r.dataset.kind = "shield"; r.removeAttribute("data-critical"); r.style.setProperty("--vital", "0.6"); r.style.setProperty("--tally", "0.333"); r.style.setProperty("--n", "3"); r.setAttribute("aria-label", "Shield (fit check)"); v.appendChild(r);
+        const h = document.querySelector("main header"); if (h) h.dataset.fading = "false"; });
+      await sleep(400);
+      await shot(page, `${p}-${look}-shield`, phone ? { x: 0, y: 40, width: 390, height: 220 } : { x: 0, y: 40, width: 460, height: 180 });
+      await page.evaluate(() => { const v = document.querySelector("[data-testid=hud-vitals]"); if (v.children.length > 1) v.lastElementChild.remove(); });
+    }
+    await page.evaluate(() => { window.__combat.rt.player.hp = window.__combat.rt.player.maxHp; window.__publishCombat(); });
+    await setLook("capsule"); await sleep(1200);
+    await shot(page, `${p}-hud-rest`);
+    // The stamina arc: held at each value (the refill's rest timer held back), then let go to refill past a quarter.
+    const arcLog = () => page.evaluate(() => { const a = document.querySelector("[data-testid=hud-stamina]"), s = window.__move.sim.current.state;
+      return { stamina: +s.stamina.toFixed(3), show: a.hasAttribute("data-show"), opacity: getComputedStyle(a).opacity, box: (({ left, top, width, height }) => [left, top, width, height].map(Math.round))(a.getBoundingClientRect()) }; });
+    const me = await page.evaluate(() => window.__move.screen());
+    const around = phone ? { x: Math.max(0, me.x - 150), y: Math.max(40, me.y - 170), width: 300, height: 280 } : { x: me.x - 180, y: me.y - 200, width: 360, height: 300 };
+    log.push({ name: "avatar on screen", me });
+    for (const [k, v] of [["a30", 0.3], ["b25", 0.25], ["c18", 0.18], ["d10", 0.1], ["e04", 0.04], ["f00", 0]]) {
+      await page.evaluate(x => { const s = window.__move.sim.current.state; s.stamina = x; s.staminaRest = -100; s.winded = x <= 0; }, v);
+      await sleep(500);
+      await page.screenshot({ path: `${OUT}/${p}-stamina-${k}.png`, clip: around });
+      log.push({ name: `${p}-stamina-${k}`, arc: await arcLog() });
+      if (k === "d10") await shot(page, `${p}-stamina-screen`);
+    }
+    await page.evaluate(() => { window.__move.sim.current.state.staminaRest = 1; });
+    for (const k of ["g", "h", "i", "j", "k"]) {
+      await sleep(260);
+      await page.screenshot({ path: `${OUT}/${p}-stamina-${k}.png`, clip: around });
+      log.push({ name: `${p}-stamina-${k}`, arc: await arcLog() });
+    }
+    await sleep(1500);
+    log.push({ name: `${p}-stamina-after`, arc: await arcLog() });
+    await page.mouse.move(phone ? 200 : 900, 600);
+    await levelUpStrip(page, `${p}-levelup`, !phone, [["a", 250], ["b", 1500], ["c", 2420]], [0, 300, 650, 1150, 3500]);
+    await ctx.close();
+  }
   if (scene === "mq6hud" || scene === "mq6hud-phone") {
     // Round 6: the vitals on the white card (full, half, low; critical as a strip), a third row cloned in to show a
     // shield or mana bar fits, and the level up: the figure fades, "Level up" moves up, the unlocks take the centre.
