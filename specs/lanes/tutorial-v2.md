@@ -35,6 +35,21 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 9: David's tutorial round 8 review (2026-11-04, verbatim; https://claude.ai/artifact/B7SrDpE4EsdadjUSnXKYes)
+
+Approved: t8-id, t8-wheel.
+- t8-dock (redo): "simplify the bar, i was thinking pressing a button and a phone pops up on the bottom right and the apps are like all the stuff in the bar so that we dont need the bottom bar anymore"
+- t8-esc (redo): "tethos island shouldnt take up screen remove"
+- t8-esc-phone (redo): no note (the same changes on a phone)
+- t8-hud (redo): "i was thinking the hud doesnt exist, you press it it shows off above the keyboard and it flies to where it usually sits"
+- t8-map (redo): "have the hud pop ontop of the keyboard and fly over"
+
+Round 9:
+1. **The in-game phone replaces the Esc view's bottom bar.** One key (pick a free one, say which, and add it to the keyboard card and the Settings key list) and a small tap target on touch screens bring up a phone in the bottom right; its apps are everything the bar held (Settings first, Friends with Who's on the island, Quests, and the rest). The bottom bar is deleted, not hidden. The phone is a new kit piece: write it into the design bible's UI section (size, corner, slide-in, app grid, how an app opens and how you get back) so later UI matches it. On a phone screen it may take more of the screen; show both. Say in the report whether Esc still opens the big-minimap view or now just opens the phone.
+2. **Esc view:** remove the big "Tethos Island" title; nothing else takes its place.
+3. **H and M lessons:** before the lesson the HUD (and, for M, the minimap) isn't on screen at all. Pressing the key makes it appear above the keyboard card, show off for a beat, then fly to where it usually sits and stay. Reduced motion: it fades in at its place.
+4. Evidence ids t8 to t9 (`t9-*`): the phone opening and an app open (desktop and phone), the Esc view without the title, the H and M lessons as frame strips (before the key, above the card, mid-flight, settled).
+
 ## Round 8: David's round 7 review (2026-11-03, verbatim; https://claude.ai/artifact/CZ2GaCgveWyeVh13EewDS8)
 
 Approved: t7-quest, t7-id-pick, t7-icons, t7-peek-bag. t7-icons-toast (approve): "looks good, "
