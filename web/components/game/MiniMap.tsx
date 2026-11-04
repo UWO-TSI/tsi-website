@@ -46,7 +46,7 @@ export interface MiniMapPlot {
 }
 
 /** The plot, turning with the camera, with your dot and your friends' (polled at 5 Hz, straight to the DOM per frame for the turn). */
-export function MapPlot({ playerPosRef, plot, className }: { playerPosRef: React.RefObject<THREE.Vector3>; plot: MiniMapPlot; className?: string }) {
+function MapPlot({ playerPosRef, plot, className }: { playerPosRef: React.RefObject<THREE.Vector3>; plot: MiniMapPlot; className?: string }) {
   const [dot, setDot] = useState<[number, number] | null>(null);
   const [friends, setFriends] = useState<[number, number][]>([]);
 

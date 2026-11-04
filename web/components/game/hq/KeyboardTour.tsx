@@ -6,14 +6,16 @@
  * keyboard; there's no Next. Every key you touch sinks on the drawing too. Each step done brings its part of your
  * screen in, in its real place (`onShow`: the HUD's coins, the chat, the bag, the menu's entries, the minimap), which
  * springs in and rings (SlotPop): the HUD builds up a piece at a time. While it's up it takes every key, so nothing
- * opens behind it. While a key the tour knows is down, a peek at what it brings up pops on the card's right (TourPeek:
- * the game's real tool wheel picking, the bag's slots filling...; David's v5 and round 6 reviews) and fades when you
- * let go, after a beat for a quick press. The steps and words: lib/game/arrival/hq/uiTour.ts. `onDone` after the last, or on Skip.
+ * opens behind it. While a key the tour knows is down, a peek at what it brings up pops beside the
+ * card (TourPeek: the bag's slots filling, the emote wheel picking...; David's v5 and round 6 reviews; the tool wheel's,
+ * round 6's drawing, above the card, round 8) and fades when you let go, after a beat for a quick press. The HUD and the
+ * minimap have no peek card (round 8, David: "the time heath and exp and stuff should go to the ui"): the real ones come
+ * in where they sit while the key is down (`onPeek`) and a ring points them out (PeekRing). The steps and words: lib/game/arrival/hq/uiTour.ts. `onDone` after the last, or on Skip.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check } from "lucide-react";
 import { Keycap } from "@/components/gui";
-import { GhostButton, KeyBoard, KeywordLine, SlotPop, Spotlight, boardLabel, type PeekKind } from "@/components/gui/flat";
+import { GhostButton, KeyBoard, KeywordLine, PeekRing, SlotPop, Spotlight, boardLabel, type PeekKind } from "@/components/gui/flat";
 import { AudioManager } from "@/lib/game/audio";
 import TourPeek from "./TourPeek";
 import { HOLD_MS, UI_TOUR, tourInput, tourSteps, tourTick, type HudPiece, type TourKeys, type TourProgress } from "@/lib/game/arrival/hq/uiTour";
@@ -27,13 +29,21 @@ const START: TourProgress = { step: 0, holdFrom: null };
 const PIECE_AT: Record<HudPiece, readonly string[]> = {
   hud: ["[data-hud-wallet]", "[data-hud-right]"], chat: ['[data-testid="chat-dock"] button', '[data-testid="chat-dock"]'], bag: ['button[aria-label^="Open your bag"]'],
   collection: ['[data-testid="menu-dock"] [aria-label^="Collection"]'], quests: ['[data-testid="menu-dock"] [aria-label^="Quests"]'],
-  map: ['[aria-label="Minimap"]', '[data-testid="menu-dock"] [aria-label^="Map"]'], mail: ['[data-testid="menu-dock"] [aria-label^="Mail"]'],
+  map: ['[aria-label="Minimap"]'], mail: ['[data-testid="menu-dock"] [aria-label^="Mail"]'],
 };
+/** The peeks shown on the real pieces, and what each rings: the bars top left, the time and wallet under the minimap. */
+const ON_SCREEN: Partial<Record<PeekKind, readonly (readonly string[])[]>> = {
+  hud: [['[data-testid="hud-bars"]'], ["[data-minimap] > p", "[data-hud-wallet]"]], map: [['[aria-label="Minimap"]']],
+};
+/** The peeks that sit above the card instead of on its right. */
+const ABOVE = new Set<PeekKind>(["wheel"]);
 
-export default function KeyboardTour({ open, keys, onShow, onDone }: {
+export default function KeyboardTour({ open, keys, onShow, onPeek, onDone }: {
   open: boolean; keys: TourKeys;
   /** A step done brings its part of the screen in (shown until the tour closes). */
   onShow: (piece: HudPiece) => void;
+  /** The real piece shown for now while its key is down (the HUD, the minimap), null once the peek's gone. */
+  onPeek: (piece: HudPiece | null) => void;
   onDone: () => void;
 }) {
   const steps = useMemo(() => tourSteps(keys), [keys]);
@@ -44,13 +54,15 @@ export default function KeyboardTour({ open, keys, onShow, onDone }: {
   const [fill, setFill] = useState(0);
   const live = useRef({ p, won, count: steps.length, steps });
   useEffect(() => { live.current = { p, won, count: steps.length, steps }; }, [p, won, steps]);
-  const doneRef = useRef(onDone), showRef = useRef(onShow);
-  useEffect(() => { doneRef.current = onDone; showRef.current = onShow; }, [onDone, onShow]);
+  const doneRef = useRef(onDone), showRef = useRef(onShow), peekRef = useRef(onPeek);
+  useEffect(() => { doneRef.current = onDone; showRef.current = onShow; peekRef.current = onPeek; }, [onDone, onShow, onPeek]);
   /** The piece just brought in (it springs into its place). */
   const [popped, setPopped] = useState<HudPiece | null>(null);
   /** The peek showing (the step whose key went down), and whether it's fading out. */
   const [peek, setPeek] = useState<{ kind: PeekKind; out: boolean } | null>(null);
   const peekAt = useRef({ since: 0, timers: [] as number[] });
+  const onScreen = peek && ON_SCREEN[peek.kind] ? peek.kind as HudPiece : null;
+  useEffect(() => { peekRef.current(open ? onScreen : null); }, [open, onScreen]);
   // A step done: lit a moment, its piece in, then the next key (or, after the last, the tour closes).
   const complete = useRef((from: number) => {
     setWon(from); setFill(0);
@@ -118,10 +130,11 @@ export default function KeyboardTour({ open, keys, onShow, onDone }: {
   return <>
     <Spotlight light open={open} label={`${UI_TOUR.eyebrow}: ${step.title}`} lead={lead} steps={{ count: steps.length, at: shown }}
       testId="ui-tour" dataset={{ "data-step": step.id, "data-won": won !== null ? "" : undefined }}
-      aside={peek && <TourPeek key={peek.kind} kind={peek.kind} out={peek.out} testId="ui-tour-peek" />}
+      aside={peek && !onScreen && <TourPeek key={peek.kind} kind={peek.kind} out={peek.out} testId="ui-tour-peek" />} asideAt={peek && ABOVE.has(peek.kind) ? "top" : "right"}
       footer={<GhostButton onClick={() => { setP(START); setWon(null); setPopped(null); onDone(); }} data-testid="ui-tour-skip">{UI_TOUR.skip}</GhostButton>}>
       <KeyBoard lit={step.key} hold={step.hold} fill={fill} won={won !== null} done={steps.slice(0, p.step).map(s => s.key)} down={down} />
     </Spotlight>
     {open && popped && <SlotPop key={popped} to={PIECE_AT[popped]} />}
+    {open && peek && onScreen && <PeekRing key={`ring-${peek.kind}`} to={ON_SCREEN[peek.kind]!} out={peek.out} testId="ui-tour-peek-ring" />}
   </>;
 }

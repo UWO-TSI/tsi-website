@@ -27,6 +27,8 @@
    scrim, a small white card on a hairline edge with a soft shadow, just the cue, the keys and a quiet foot. */
 /* v5 review: "the keyboard overlay can be bigger, 15% bigger" (the keys 37 px, up from 32). */
 .spotlight[data-light] { gap: 11px; padding: 14px 14px 9px; border-radius: 20px; background: var(--ui-card); box-shadow: 0 0 0 1px var(--ui-line), 0 12px 32px rgb(var(--ui-shade) / 0.16); }
+/* Round 8 ("move the keyboard ui a lil down"): the light card sits a little under the middle, room for a peek above it. */
+.spotlight[data-light] { translate: 0 clamp(32px, 9vh, 96px); }
 .spotlight[data-light] .lead { min-height: 0; margin: 2px 0 0; font-size: 17px; gap: 8px; }
 .spotlight[data-light] .board { --u: min(37px, calc((100vw - 72px) / 15.5)); }
 .spotlight[data-light] .foot { padding: 0 2px; }
@@ -34,6 +36,8 @@
 .spotlight[data-light] .dots i { width: 7px; height: 7px; }
 /* Beside the card, on its right (the keyboard tour's KeyPeek): centred on it, never taking its room. */
 .aside { position: absolute; left: calc(100% + 16px); top: 50%; translate: 0 -50%; pointer-events: none; }
+/* Above it, centred (round 8: the tool wheel's peek "on top of the keyboard ui"). */
+.aside[data-at="top"] { left: 50%; top: auto; bottom: calc(100% + 14px); translate: -50% 0; }
 
 /* The keyboard: white keys on a light well, a thin foot for depth; the lit key ink with the marker's glow. */
 .board { --u: min(32px, calc((100vw - 72px) / 15.5)); display: grid; gap: calc(var(--u) * 0.12); padding: calc(var(--u) * 0.2); border-radius: 12px; background: var(--ui-card-dim); box-shadow: inset 0 0 0 1px var(--ui-line); }
@@ -75,6 +79,10 @@
 .flyName span { font: 600 14px/1.3 var(--gui-font); color: var(--ui-ink-2); }
 .fly:not([data-phase="pop"]) .flyName { animation: none; opacity: 0; }
 .flyRing { position: absolute; border-radius: 16px; box-shadow: 0 0 0 3px var(--ui-ink), 0 0 0 8px var(--ui-marker); animation: ring 0.65s ease-out both; }
+/* PeekRing: the same ring, held and breathing while a key is down, fading when it's let go. */
+.peekRing { position: absolute; border-radius: 16px; box-shadow: 0 0 0 3px var(--ui-ink), 0 0 0 8px var(--ui-marker); animation: peekRing 1.1s ease-in-out infinite; transition: opacity 0.24s ease; }
+.fly[data-out] .peekRing { opacity: 0; }
+@keyframes peekRing { 0%, 100% { scale: 1; } 50% { scale: 1.05; } }
 @keyframes bob { 50% { transform: translateY(-5px); } }
 @keyframes ring { 0% { opacity: 0; transform: scale(1.25); } 30% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.05); } }
 
@@ -154,45 +162,14 @@
 .band small { font: 700 11px/1.2 var(--gui-font); letter-spacing: 0.14em; text-transform: uppercase; }
 .paperBody { display: grid; grid-template-columns: 29% 1fr; gap: 12px; padding: 12px 14px; }
 .picture { display: grid; place-items: center; aspect-ratio: 4 / 5; border-radius: 10px; background: var(--ui-paper-edge); color: var(--ui-paper-ink); font: 800 calc(var(--w) * 0.13)/1 var(--gui-font); }
-/* The show-off: a third column, a framed square of paper (dashed while empty), its rarity a thin edge. */
-.paperBody[data-show-off] { grid-template-columns: 29% 1fr 22%; }
-.printed[data-large] .paperBody[data-show-off] { grid-template-columns: 30% 1fr 21%; }
-.printed[data-large] .paperBody[data-show-off] .rows div:not([data-lead]) dd { font-size: 17px; }
-/* A phone: the held card is about 340 px wide, so its type steps down to keep the rows beside the show-off. */
+/* A phone: the held card is about 340 px wide, so its type steps down to keep the rows beside the headshot. */
 @media (max-width: 520px) {
   .printed[data-large] .paperBody { gap: 10px; padding: 12px; }
   .printed[data-large] .rows { gap: 5px; }
   .printed[data-large] .rows dt { font-size: 9px; }
   .printed[data-large] .rows [data-lead] dd { font-size: 22px; }
   .printed[data-large] .rows div:not([data-lead]) dd { font-size: 12px; }
-  .printed[data-large] .showOff small { font-size: 9px; }
-  .printed[data-large] .showOffName { font-size: 10px; }
 }
-.showOff { display: grid; align-content: start; justify-items: center; gap: 5px; min-width: 0; }
-.showOff small { justify-self: stretch; text-align: center; font: 700 10px/1.2 var(--gui-font); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.6; }
-.printed[data-large] .showOff small { font-size: 12px; }
-.showOffFrame { all: unset; box-sizing: border-box; display: grid; place-items: center; width: 100%; aspect-ratio: 1; border-radius: 12px; background: var(--ui-paper-edge);
-  box-shadow: inset 0 0 0 2px var(--edge, transparent); color: var(--ui-paper-ink); transition: transform 0.2s cubic-bezier(0.34, 1.4, 0.64, 1); }
-.showOffFrame[data-empty] { background: transparent; box-shadow: none; border: 2px dashed var(--ui-paper-edge); }
-button.showOffFrame { cursor: pointer; }
-button.showOffFrame:hover, button.showOffFrame:focus-visible { transform: translateY(-2px) scale(1.04); }
-button.showOffFrame:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
-.showOffFrame svg { width: 38%; height: 38%; opacity: 0.45; }
-.showOffArt { width: 78%; height: 78%; animation: showIn 0.4s cubic-bezier(0.34, 1.4, 0.64, 1) both; }
-.showOffFrame[data-rarity="common"] { --edge: var(--ui-rarity-common); }
-.showOffFrame[data-rarity="uncommon"] { --edge: var(--ui-rarity-uncommon); }
-.showOffFrame[data-rarity="rare"] { --edge: var(--ui-rarity-rare); }
-.showOffFrame[data-rarity="epic"] { --edge: var(--ui-rarity-epic); }
-.showOffFrame[data-rarity="legendary"] { --edge: var(--ui-rarity-legendary); }
-.showOffFrame[data-rarity="divine"] { box-shadow: none; background: linear-gradient(var(--ui-paper-edge), var(--ui-paper-edge)) padding-box, var(--ui-holo) border-box; border: 2px solid transparent; }
-.showOffName { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 11px/1.2 var(--gui-font); text-align: center; }
-.printed[data-large] .showOffName { font-size: 13px; }
-@keyframes showIn { 0% { scale: 0.5; opacity: 0; } 100% { scale: 1; opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .showOffArt { animation: none; } .showOffFrame { transition: none; } }
-.picks { display: grid; gap: 10px; max-width: min(600px, calc(100vw - 48px)); padding: 12px 14px; border-radius: 18px; background: var(--ui-card); color: var(--ui-ink);
-  box-shadow: 0 0 0 1px var(--ui-line), 0 12px 30px rgb(var(--ui-shade) / 0.16); animation: rise 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.12) both; }
-.picksRow { display: flex; gap: 8px; overflow-x: auto; padding: 4px; }
-.picksHint { margin: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font: 600 13px/1.35 var(--gui-font); color: var(--ui-ink-2); }
 .rows { margin: 0; display: grid; gap: 4px; align-content: start; }
 .rows div { display: grid; grid-template-columns: auto 1fr; gap: 6px; align-items: baseline; }
 .rows dt { font: 700 10px/1.2 var(--gui-font); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.6; }
@@ -234,7 +211,7 @@ button.showOffFrame:focus-visible { outline: 2px solid var(--ui-focus); outline-
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes fade { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
-  .scrim, .spotlight, .lead, .key, .key[data-lit], .key[data-won], .flyDim, .flyIcon, .flyIcon > span, .flyName, .flyRing, .pop, .disc, .ring, .spark,
+  .scrim, .spotlight, .lead, .key, .key[data-lit], .key[data-won], .flyDim, .flyIcon, .flyIcon > span, .flyName, .flyRing, .peekRing, .pop, .disc, .ring, .spark,
   .popEyebrow, .popTitle, .printed[data-printing] .slot, .printed[data-printing] .paper, .stamp, .held { animation: none; transition: none; }
   .paper[data-tilt] { transform: none; }
   .stamper { display: none; }

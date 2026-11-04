@@ -15,8 +15,6 @@ import { FamilyReveal } from "@/components/game/oracle/OracleSheetEmbed";
 import IncantationOverlay from "@/components/game/combat/IncantationOverlay";
 import { EmoteWheelView } from "@/components/game/emotes/EmoteWheel";
 import TourPeek from "@/components/game/hq/TourPeek";
-// The minimap peek draws the member world (the game registers it; the showroom does here).
-import "@/lib/game/world/member";
 import { DANCE_RING } from "@/lib/game/emoteWheel";
 import ToastHub, { toast } from "@/components/game/ToastHub";
 import { Amount } from "@/components/economy/Amount";
@@ -30,7 +28,7 @@ import { RodRadar, TackleRadar } from "@/components/economy/RodGear";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import { CircleDot, Waves, Worm } from "lucide-react";
 import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
-import { ActionBar, ActionIcon, BigMoment, CardOverlay, DarkButton, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, ShowOff, ShowOffPicks, Thumb, QuestCheck, RankBadge, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot, type PeekKind } from "@/components/gui/flat";
+import { ActionBar, ActionIcon, BigMoment, CardOverlay, DarkButton, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, Keyword, KeywordLine, PaperField, PrintedCard, PeekRing, ProgressCard, QuestCheck, RankBadge, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot, type PeekKind } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
 import { BoardRows } from "@/components/game/volleyball/BoardSheet";
 import s from "./showroom.module.css";
@@ -85,16 +83,20 @@ function KeyBoardShow() {
   return <>
     {bag && <span data-demo-bag style={{ position: "absolute", top: 16, left: 16, display: "flex", gap: 6, alignItems: "center", padding: "8px 14px", borderRadius: 999, background: "var(--ui-card)", fontWeight: 800 }}><Backpack size={16} /> Bag</span>}
     {bag && <SlotPop to={["[data-demo-bag]"]} />}
+    {/* PeekRing (round 8): the HUD's peek points at the real pieces where they sit; here a stand-in clock, top right. */}
+    {k >= 22 && k < 32 && <span data-demo-clock style={{ position: "absolute", top: 16, right: 16, padding: "6px 12px", borderRadius: 999, background: "var(--ui-card)", fontWeight: 800 }}>2:20 PM</span>}
+    {k >= 22 && k < 32 && <PeekRing to={[["[data-demo-clock]"]]} out={k >= 30} />}
     <Spotlight light open label="Keys" lead={hold ? <>Hold <Keycap>Tab</Keycap> Tools</> : <>Press <Keycap>I</Keycap> Bag</>}
       steps={{ count: 9, at: hold ? 0 : 4 }} footer={<GhostButton>Skip</GhostButton>}
-      aside={hold ? k >= 4 && <TourPeek kind="wheel" out={k >= 18} /> : k >= 32 && <TourPeek kind="bag" out={k >= 39} />}>
+      aside={hold ? k >= 4 && <TourPeek kind="wheel" out={k >= 18} /> : k >= 32 && <TourPeek kind="bag" out={k >= 39} />} asideAt={hold ? "top" : "right"}>
       <KeyBoard lit={hold ? "tab" : "i"} hold={hold} fill={hold ? Math.min(1, Math.max(0, (k - 4) / 12)) : 0} won={hold ? k >= 16 : k >= 34}
         done={hold ? [] : ["tab", "g", "h", "enter"]} down={new Set(hold ? (k >= 4 && k < 16 ? ["tab"] : []) : (k >= 32 && k < 34 ? ["i"] : []))} />
     </Spotlight>
   </>;
 }
-/** Every peek (TourPeek in the kit's KeyPeek), one after another: each pops in, plays its loop, then fades as if the key were let go. */
-const PEEK_KINDS: PeekKind[] = ["wheel", "emote", "hud", "chat", "bag", "collection", "quests", "map", "mail"];
+/** Every peek (TourPeek in the kit's KeyPeek), one after another: each pops in, plays its loop, then fades as if the key
+ *  were let go. The HUD and the minimap have none: the real pieces come in where they sit (PeekRing, above). */
+const PEEK_KINDS: PeekKind[] = ["wheel", "emote", "chat", "bag", "collection", "quests", "mail"];
 function KeyPeekShow() {
   const [t, setT] = useState(0);
   useEffect(() => { const i = window.setInterval(() => setT(v => v + 1), 300); return () => window.clearInterval(i); }, []);
@@ -113,14 +115,8 @@ function PrintedShow() {
     ? [["World name", <PaperField key="n" defaultValue="Marlowe" />], ["Pronouns", <PaperField key="p" placeholder="she/her, he/him, they/them" />], ["Birthday", <PaperField key="b" placeholder="March 14" />],
       ["About you", <PaperField key="a" placeholder="Say hi in a line" />]]
     : [["World name", "Marlowe"], ["Pronouns", "they/them"], ["Birthday", "March 14"], ["About you", "Here for the fishing"], ["Friend code", "K7QM-4R2X"]];
-  // The show-off: empty with its picks up while it is filled in (t 1), then the arowana on the printed card.
-  const koi = t >= 2;
   return <CardOverlay open label="Your island ID" action={<DarkButton>{form ? "Print my ID" : "Done"}</DarkButton>}>
-    <PrintedCard key={form ? "a" : "b"} large tilt band="Tethos Island" kind="Resident" picture="M" printing={printing} stamp={stamped ? { top: "Tethos Island", word: "Resident" } : null} rows={rows}
-      showOff={<ShowOff label="Show-off" picture={koi ? "/assets/icons/fish_arowana.webp" : null} rarity="epic" name={koi ? "Arowana" : form ? "Pick a catch" : "Nothing yet"} onClick={form ? () => {} : undefined} open={t === 1} />} />
-    {t === 1 && <ShowOffPicks hint="One fish, sea creature or bug of yours, on your ID for everyone to see.">
-      {["fish_arowana", "fish_dace", "bug_emperor_butterfly"].map(k => <Thumb key={k} picture={`/assets/icons/${k}.webp`} rarity={k === "fish_dace" ? "common" : k === "fish_arowana" ? "epic" : "rare"} label={k} size={56} onClick={() => {}} />)}
-    </ShowOffPicks>}
+    <PrintedCard key={form ? "a" : "b"} large tilt band="Tethos Island" kind="Resident" picture="M" printing={printing} stamp={stamped ? { top: "Tethos Island", word: "Resident" } : null} rows={rows} />
   </CardOverlay>;
 }
 /** Talk lines with their keywords (the kit's Keyword, the default for every talk line): each word the dictionary
@@ -160,7 +156,7 @@ function WalletShow() {
 }
 
 const OVERLAYS: { id: string; title: string; render: () => ReactNode }[] = [
-  { id: "key-board", title: "Keys (a light Spotlight, KeyBoard, KeyPeek and SlotPop)", render: () => <KeyBoardShow /> },
+  { id: "key-board", title: "Keys (a light Spotlight, KeyBoard, KeyPeek, SlotPop and PeekRing)", render: () => <KeyBoardShow /> },
   { id: "key-peek", title: "A key's peek (KeyPeek), every kind", render: () => <KeyPeekShow /> },
   { id: "wallet", title: "The wallet (WalletSlot), its slot under the time", render: () => <WalletShow /> },
   { id: "keyword", title: "Keywords in a line (Keyword)", render: () => <KeywordShow /> },

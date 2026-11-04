@@ -20,13 +20,11 @@
  * Colours: the theme's --ui-* tokens only. Plain props; nothing here knows the game.
  */
 import { useEffect, useRef, useState, type CSSProperties, type InputHTMLAttributes, type PointerEvent, type ReactNode } from "react";
-import { Plus } from "lucide-react";
-import PixelImage from "@/components/economy/PixelImage";
 import { useWorldDialog } from "@/lib/game/useWorldDialog";
 import m from "./moments.module.css";
 
 /** A step that wants your whole attention: a flat panel in the middle over a light scrim. Holds the world's keys. */
-export function Spotlight({ open, label, eyebrow, title, lead, text, story, light, steps, children, footer, aside, testId, dataset }: {
+export function Spotlight({ open, label, eyebrow, title, lead, text, story, light, steps, children, footer, aside, asideAt, testId, dataset }: {
   open: boolean; label: string; eyebrow?: ReactNode; title?: ReactNode;
   /** Under the title: what to do now, in a word or two (it changes with a little rise); then a quiet line about it. */
   lead?: ReactNode; text?: ReactNode;
@@ -37,8 +35,8 @@ export function Spotlight({ open, label, eyebrow, title, lead, text, story, ligh
   /** A dot per step, `at` the one showing, the ones before it done. */
   steps?: { count: number; at: number };
   children?: ReactNode; footer?: ReactNode; testId?: string;
-  /** Shown beside the card on its right (the keyboard tour's KeyPeek). */
-  aside?: ReactNode;
+  /** Shown beside the card on its right (the keyboard tour's KeyPeek), or above it (`asideAt` "top"). */
+  aside?: ReactNode; asideAt?: "right" | "top";
   /** More data attributes for the evidence scripts (a step's id). */
   dataset?: Record<`data-${string}`, string | undefined>;
 }) {
@@ -58,7 +56,7 @@ export function Spotlight({ open, label, eyebrow, title, lead, text, story, ligh
         {steps && <span className={m.dots} aria-hidden="true">{Array.from({ length: steps.count }, (_, i) => <i key={i} data-on={i === steps.at || undefined} data-done={i < steps.at || undefined} />)}</span>}
         {footer}
       </footer>}
-      {aside && <div className={m.aside}>{aside}</div>}
+      {aside && <div className={m.aside} data-at={asideAt}>{aside}</div>}
     </section>
   </div>;
 }
@@ -86,6 +84,35 @@ export function SlotPop({ to }: { to: readonly string[] }) {
   }, []);
   return ring && <div className={`${m.fly} gui`} aria-hidden="true">
     <i className={m.flyRing} style={{ left: ring.x, top: ring.y, width: ring.w, height: ring.h }} />
+  </div>;
+}
+
+type Box = { x: number; y: number; w: number; h: number };
+/**
+ * Parts of the screen pointed at where they sit (round 8, David on the keyboard tour's HUD and map previews: "should
+ * go to the actual ui"): each group in `to` (selectors) gets one ring round all of its parts on screen, pulsing while
+ * it's held; `out`: it fades. It follows them as they slide in.
+ */
+export function PeekRing({ to, out, testId }: { to: readonly (readonly string[])[]; out?: boolean; testId?: string }) {
+  const [rings, setRings] = useState<Box[]>([]);
+  useEffect(() => {
+    let raf = 0, last = "";
+    const measure = () => {
+      const next = to.flatMap(group => {
+        const rs = group.flatMap(sel => [...document.querySelectorAll<HTMLElement>(sel)]).map(e => e.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
+        if (!rs.length) return [];
+        const x = Math.min(...rs.map(r => r.left)), y = Math.min(...rs.map(r => r.top));
+        return [{ x: x - 6, y: y - 6, w: Math.max(...rs.map(r => r.right)) - x + 12, h: Math.max(...rs.map(r => r.bottom)) - y + 12 }];
+      });
+      const key = JSON.stringify(next);
+      if (key !== last) { last = key; setRings(next); }
+      raf = requestAnimationFrame(measure);
+    };
+    raf = requestAnimationFrame(measure);
+    return () => cancelAnimationFrame(raf);
+  }, [to]);
+  return <div className={`${m.fly} gui`} data-out={out || undefined} data-testid={testId} aria-hidden="true">
+    {rings.map((r, i) => <i key={i} className={m.peekRing} style={{ left: r.x, top: r.y, width: r.w, height: r.h }} />)}
   </div>;
 }
 
@@ -187,10 +214,8 @@ export function QuestCheck({ eyebrow, title, testId }: { eyebrow: ReactNode; tit
  * it, a light blinking. `stamp` set: a stamper comes down on it, the card gives under it, the mark is left and a gleam
  * runs across the new card.
  */
-export function PrintedCard({ band, kind, picture, rows, showOff, stamp, printing, large, tilt, testId }: {
+export function PrintedCard({ band, kind, picture, rows, stamp, printing, large, tilt, testId }: {
   band: ReactNode; kind?: ReactNode; picture: ReactNode; rows: readonly (readonly [ReactNode, ReactNode])[];
-  /** A third column on the right: the one thing shown off (ShowOff). */
-  showOff?: ReactNode;
   stamp?: { top: ReactNode; word: ReactNode } | null; printing?: boolean;
   /** Held up as the overlay (CardOverlay): larger. */
   large?: boolean;
@@ -212,43 +237,15 @@ export function PrintedCard({ band, kind, picture, rows, showOff, stamp, printin
       onPointerMove={leaning ? lean : undefined} onPointerLeave={leaning ? rest : undefined}>
       {leaning && <i className={m.sheen} aria-hidden="true" />}
       <header className={m.band}><span>{band}</span>{kind && <small>{kind}</small>}</header>
-      <div className={m.paperBody} data-show-off={showOff ? "" : undefined}>
+      <div className={m.paperBody}>
         <div className={m.picture} aria-hidden="true">{picture}</div>
         <dl className={m.rows}>{rows.map(([k, v], i) => <div key={i} data-lead={i === 0 || undefined}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
-        {showOff}
       </div>
       {stamp && <span className={m.stamp} aria-hidden="true"><b>{stamp.top}</b><small>{stamp.word}</small></span>}
     </article>
     {/* The stamper: down onto the card (the mark lands as it hits), then up and away. */}
     {stamp && <i className={m.stamper} aria-hidden="true"><b /></i>}
     </div>
-  </div>;
-}
-
-/**
- * The show-off on a printed card (David's round 6 review: "have a 1 slot for a cool fish or bug showoff on the id"):
- * `label` over a framed square holding the thing's picture (its rarity a thin edge), its name under it. Empty, the
- * frame is dashed. `onClick` (the card being filled in): the frame is a button with a plus, for picking.
- */
-export function ShowOff({ label, picture, name, rarity, onClick, open, testId }: {
-  label: ReactNode; picture?: string | null; name: ReactNode; rarity?: string | null;
-  onClick?: () => void; open?: boolean; testId?: string;
-}) {
-  const face = picture ? <PixelImage src={picture} px={56} className={m.showOffArt} /> : onClick ? <Plus aria-hidden /> : null;
-  const frame = { className: m.showOffFrame, "data-rarity": picture ? rarity ?? undefined : undefined, "data-empty": picture ? undefined : "" };
-  return <div className={m.showOff}>
-    <small>{label}</small>
-    {onClick ? <button type="button" {...frame} onClick={onClick} aria-expanded={open} data-testid={testId} aria-label={typeof name === "string" ? `${typeof label === "string" ? label : "Show-off"}: ${name}` : undefined}>{face}</button>
-      : <span {...frame} data-testid={testId}>{face}</span>}
-    <span className={m.showOffName}>{name}</span>
-  </div>;
-}
-
-/** The picks for a ShowOff, under the card: a light strip of the things you could show (Thumbs), a line under them and a way to leave it empty. */
-export function ShowOffPicks({ children, hint, clear, testId }: { children: ReactNode; hint: ReactNode; clear?: ReactNode; testId?: string }) {
-  return <div className={m.picks} data-testid={testId}>
-    {children && <div className={m.picksRow} role="group">{children}</div>}
-    <p className={m.picksHint}>{hint}{clear}</p>
   </div>;
 }
 

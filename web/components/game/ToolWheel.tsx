@@ -109,11 +109,10 @@ export default function ToolWheel({ items, held, wheelKey, enabled, touch, onEqu
 }
 
 /**
- * The flower itself: the overlay above, and the keyboard tour's peek (hq/TourPeek.tsx). `picked`: the petal chosen (null
- * the centre, -1 none); `standalone`: shown on its own, not inside the overlay that fades it in.
+ * The flower itself, inside the overlay above. `picked`: the petal chosen (null the centre, -1 none).
  */
-export function ToolWheelView({ items, held, picked, standalone, onPick }: {
-  items: readonly WheelItem[]; held: string | null; picked: number | null; standalone?: boolean; onPick?: (i: number | null) => void;
+export function ToolWheelView({ items, held, picked, onPick }: {
+  items: readonly WheelItem[]; held: string | null; picked: number | null; onPick?: (i: number | null) => void;
 }) {
   const n = items.length;
   const label = picked === null ? "Put away" : picked >= 0 ? items[picked].name : held ? "" : "Empty hands";
@@ -121,7 +120,7 @@ export function ToolWheelView({ items, held, picked, standalone, onPick }: {
   // The name sits beside the choice on the outside (above a petal in the top half, below one in the bottom half, under
   // the flower for the centre), its tail pointing at it: never over the centre.
   const [lx, ly] = picked !== null && picked >= 0 ? slotPosition(picked, n, RING) : [0, RING + 24]; // the centre's goes under the flower
-  return <div className={styles.flower} data-shown={standalone || undefined} style={{ "--n": n } as CSSProperties}>
+  return <div className={styles.flower} style={{ "--n": n } as CSSProperties}>
     {items.map((item, i) => {
       const [x, y] = slotPosition(i, n, RING);
       return <button key={item.id} role="menuitem" className={styles.petal} data-chosen={picked === i || undefined} data-held={item.id === held || undefined}

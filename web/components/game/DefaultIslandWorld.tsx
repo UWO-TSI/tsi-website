@@ -5,7 +5,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExt
 import { Canvas, useFrame } from "@react-three/fiber";
 import { useProgress } from "@react-three/drei";
 import * as THREE from "three";
-import { Menu, Settings } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Toggle } from "@/components/gui";
 import { DarkButton } from "@/components/gui/flat";
 import GridWorld from "./grid/GridWorld";
@@ -173,7 +173,7 @@ import { saveMyLook, useMyLook } from "@/lib/game/character/lookStore";
 import { useProgression } from "@/lib/progression/useProgression";
 import { WarmupProbe } from "./LoadGate";
 import { escapeAction } from "@/lib/game/sceneGate";
-import TopCluster, { HudClock, HudWallet, hudButton } from "./TopCluster";
+import { HudClock, HudWallet } from "./TopCluster";
 import { setHudCoins, setHudXp } from "@/lib/game/hudStore";
 import CollectionBook from "./CollectionBook";
 import { usePeacefulContext } from "@/lib/game/usePeacefulContext";
@@ -192,7 +192,6 @@ import { MenuDock, SystemMenu } from "./EscLayers";
 import QuestTracker from "./QuestTracker";
 import { useMainQuest } from "./useMainQuest";
 import { setNetSheet } from "./net/sheets";
-import { useNetStatus, useRoster } from "@/lib/net/netStore";
 import { useFriends } from "./net/friendActions";
 import { useFlash } from "./useFlash";
 
@@ -1132,7 +1131,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     if (action === "monument") { setSheet("monument"); return; }
     if (action === "curator") { setDonateOpen(true); return; }
     if (action === "display") { setSheet("trophies"); return; }
-    // Reporting to Alice (the visit's first step): the desk is hers to talk at; otherwise your ID again (its show-off).
+    // Reporting to Alice (the visit's first step): the desk is hers to talk at; otherwise your ID again.
     if (action === "desk") { if (hq.waiting === "wren") hqEvent("wren"); else setSheet("id"); return; }
     // Stepping into the fitting room: its curtain sweeps across (FittingRoom), then the wardrobe opens.
     if (action === "fitting") { window.dispatchEvent(new CustomEvent("tsi:fitting")); window.setTimeout(() => setSheet("fitting"), FITTING_STEP_MS); return; }
@@ -1329,8 +1328,11 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const touring = hq.card === "tour" && !touch;
   useEffect(() => { if (!touring) setTourShown(s => (s.size ? new Set() : s)); }, [touring]);
   const showPiece = useCallback((p: HudPiece) => setTourShown(s => new Set(s).add(p)), []);
+  // The tour's HUD and minimap peeks (round 8): the real piece in its place while its key is down.
+  const [tourPeek, setTourPeek] = useState<HudPiece | null>(null);
+  const tourOn = useMemo(() => (tourPeek ? new Set(tourShown).add(tourPeek) : tourShown), [tourShown, tourPeek]);
   const tourDock = useMemo(() => new Set([...tourShown].filter((p): p is "quests" | "collection" | "mail" => p === "quests" || p === "collection" || p === "mail")), [tourShown]);
-  const full = isFullHud({ always: alwaysFullHud, keyHeld: hudKey, uiView, cinematic: hudCinematic }) || tourShown.has("hud");
+  const full = isFullHud({ always: alwaysFullHud, keyHeld: hudKey, uiView, cinematic: hudCinematic }) || tourOn.has("hud");
   // On a phone the menu button opens the UI view; the heading and touch hint flash (world audit item 11).
   const compact = compactTouchHud({ touch, always: alwaysFullHud });
   // Mouse-look ending on its own (Esc, the window losing focus) opens the UI view; capturing again closes the layers.
@@ -1342,7 +1344,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const mapOpenable = mapHere || (inside === "hq" && site === "village");
   const mapPlayer = useMemo(() => ({ current: new THREE.Vector3(hqDoor?.[0] ?? 0, 0, hqDoor?.[1] ?? 0) }), [hqDoor]);
   // The dock's counts: friend requests waiting, and who's on the island while you're with the others.
-  const friends = useFriends(), roster = useRoster(), netStatus = useNetStatus();
+  const friends = useFriends();
   // Hold the HUD key (H) for the full HUD.
   useEffect(() => {
     const key = wheelKeys.hud;
@@ -1473,20 +1475,16 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       </header>
       <AudioController phase={ambientPhase} weather={weather} season={season.season} />
       {/* Top right (playtest round 1, decision 3; design bible UI 8b): while you play, the quest line left of the minimap,
-          the time under it; the UI view (Esc 1) grows the minimap, adds the level and the gear left of the quest line and
-          the wallet (coins and gems) under the time, which also slides in at rest when they change. */}
+          the time under it; the UI view (Esc 1) grows the minimap and adds the wallet (coins and gems) under the time, which also slides in at rest when they change. */}
       {/* In a volleyball match the court's HUD is the stage (VolleyHud): the island's top right steps aside. */}
       <div className={styles.hudRight} data-hud-right="" data-hidden={hudCinematic || inMatch || undefined}>
         <div className={styles.hudLead} data-new={objectiveNew || undefined}>
-          <TopCluster className={styles.rightCluster} full={full} buttons={uiView} hidden={hudCinematic}>
-            <button className={hudButton} onClick={() => setSheet("settings")} aria-label="Settings" title="Settings"><Settings size={18} aria-hidden /></button>
-          </TopCluster>
           {/* Bram's walk-along, then the HQ visit with Alice and a tool's little quest (row 312), then the chapter. */}
           <QuestTracker className={styles.questSlot} quests={quests} hidden={tutorialQuest || hq.quest ? false : holdObjective} onOpen={() => setSheet("journal")}
             guidable={main.quest && !inside ? [main.quest.id] : []} guided={main.guided} onGuide={main.guide} />
         </div>
         <div className={styles.hudColumn} data-minimap data-new={objectiveNew || undefined}>
-          {((mapHere && !holdObjective) || tourShown.has("map")) && <MiniMap playerPosRef={player} plot={objectivePlot} big={uiView} onOpen={() => setMapOpen(true)} />}
+          {((mapHere && !holdObjective) || tourOn.has("map")) && <MiniMap playerPosRef={player} plot={objectivePlot} big={uiView} onOpen={() => setMapOpen(true)} />}
           <HudClock weather={weather} phase={phase} />
           <HudWallet full={full} showcase={showcase}
             onWallet={() => setSheet(value => (value === "wallet" ? null : "wallet"))} walletKey={keyName(identity.settings.key_bindings.openWallet)} />
@@ -1553,10 +1551,10 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         <BagButton full={tourShown.has("bag")} keyLabel={keyName(identity.settings.key_bindings.openBag)} onOpen={() => setSheet("bag")} />
       </div>
       {/* The UI view's dock (Esc 1): the menu entries over the live game. Their sheets close back to it. */}
-      {(uiView || tourDock.size > 0) && <MenuDock touch={touch} unread={progression.unreadLetters} asking={friends.asking} people={netStatus.kind === "joined" ? roster.length : null} only={uiView ? undefined : tourDock}
-        keys={{ map: keyName(identity.settings.key_bindings.openMap), journal: "J", bag: keyName(identity.settings.key_bindings.openBag), collection: keyName(identity.settings.key_bindings.openJournal), mail: keyName(identity.settings.key_bindings.openMail) }}
-        onMap={mapOpenable ? () => setMapOpen(true) : null} onJournal={() => setSheet("journal")} onBag={() => setSheet("bag")} onCollection={() => setBagOpen(true)}
-        onFriends={() => setNetSheet("friends")} onPeople={() => setNetSheet("people")} onMail={() => setSheet("letters")} />}
+      {(uiView || tourDock.size > 0) && <MenuDock touch={touch} unread={progression.unreadLetters} asking={friends.asking} only={uiView ? undefined : tourDock}
+        keys={{ journal: "J", bag: keyName(identity.settings.key_bindings.openBag), collection: keyName(identity.settings.key_bindings.openJournal), mail: keyName(identity.settings.key_bindings.openMail) }}
+        onSettings={() => setSheet("settings")} onJournal={() => setSheet("journal")} onBag={() => setSheet("bag")} onCollection={() => setBagOpen(true)}
+        onFriends={() => setNetSheet("friends")} onMail={() => setSheet("letters")} />}
       {/* Esc 2: the system menu. Resume asks for the mouse again; Escape (or ✕) goes back to the game. */}
       <SystemMenu open={layer === "system" && !hudCinematic} signedIn={identity.signedIn} name={identity.display_name} onClose={() => setLayer(null)}
         onResume={() => { setLayer(null); requestResume(); }} onSettings={() => setSheet("settings")} />
@@ -1576,7 +1574,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <CheckInCard open={hq.card === "checkin"} onDone={() => hqEvent("checkin")} />
       <PlaqueCard open={sheet === "plaque"} onClose={() => setSheet(null)} />
       <LoreOverlay open={hq.card === "lore"} onDone={() => hqEvent("lore")} />
-      <KeyboardTour open={touring} keys={tourKeys} onShow={showPiece} onDone={() => hqEvent("tour")} />
+      <KeyboardTour open={touring} keys={tourKeys} onShow={showPiece} onPeek={setTourPeek} onDone={() => hqEvent("tour")} />
       <ShopkeeperChoice open={sheet === "shopkeeper"} onClose={() => setSheet(null)} onChoose={section => {
         setShopSection(section);
         if (section === "merch") window.dispatchEvent(new CustomEvent("tsi:shopkeeper-say", { detail: { line: MERCH_LINE, clip: "Chat" } }));

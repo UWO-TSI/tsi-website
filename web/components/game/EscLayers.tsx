@@ -2,9 +2,12 @@
 
 /**
  * The Esc layers' own pieces (David, playtest round 1, decision 3; lib/game/escMenu.ts):
- * - `MenuDock`, the UI view's (Esc 1) row of menu entries over the live game: Map, Quests and journal, Bag and
- *   Collection, Friends and Mail, each with its key and the icon library's drawing (round 7: the same icon for a
- *   thing everywhere). The world keeps running and its keys keep working.
+ * - `MenuDock`, the UI view's (Esc 1) row of menu entries over the live game: Settings, Quests, Bag and Collection,
+ *   Friends and Mail, each with its key and the icon library's drawing (round 7: the same icon for a thing everywhere).
+ *   Round 8 (David: "the settings icon should be in the bar before, and i want you to simplify the bar below"): Settings
+ *   moved in from the top right as the first entry; Map went (the UI view's big minimap opens it); "Here (n)" folded into
+ *   Friends (its "Who's on the island" button); "Quests and journal" is just Quests. The world keeps running and its
+ *   keys keep working.
  * - `SystemMenu`, Esc 2: Resume, Settings, and Log out (Sign in for a guest). Escape or ✕ goes back to the game.
  */
 import { useState } from "react";
@@ -23,25 +26,23 @@ function Entry({ icon, label, keyLabel, badge, disabled, onClick }: { icon: Reac
   </button>;
 }
 
-export interface DockKeys { map: string; journal: string; bag: string; collection: string; mail: string }
+export interface DockKeys { journal: string; bag: string; collection: string; mail: string }
 
-/** The UI view's dock (Esc 1), bottom centre. `onMap` null where there's no island map (rooms, home, the ruins). */
-export function MenuDock({ keys, touch, unread, asking, people, only, onMap, onJournal, onBag, onCollection, onFriends, onPeople, onMail }: {
+/** The UI view's dock (Esc 1), bottom centre. */
+export function MenuDock({ keys, touch, unread, asking, only, onSettings, onJournal, onBag, onCollection, onFriends, onMail }: {
   keys: DockKeys; touch: boolean; unread: number; asking: number;
   /** Only these entries (Alice's keyboard tour brings them in a key at a time); all when unset. */
   only?: ReadonlySet<"quests" | "collection" | "mail">;
-  /** Players on the island with you (multiplayer on), or null while you're not with the others. */
-  people: number | null;
-  onMap: (() => void) | null; onJournal: () => void; onBag: () => void; onCollection: () => void; onFriends: () => void; onPeople: () => void; onMail: () => void;
+  onSettings: () => void; onJournal: () => void; onBag: () => void; onCollection: () => void; onFriends: () => void; onMail: () => void;
 }) {
   const k = (key: string) => (touch ? undefined : key);
   const all = !only;
   return <nav className={styles.dock} aria-label="Menu" data-testid="menu-dock">
-    {all && <div className={styles.group} aria-label="Map">
-      <Entry icon={<KeywordIcon kind="map" />} label="Map" keyLabel={k(keys.map)} disabled={!onMap} onClick={() => onMap?.()} />
+    {all && <div className={styles.group} aria-label="Settings">
+      <Entry icon={<KeywordIcon kind="settings" />} label="Settings" onClick={onSettings} />
     </div>}
-    {(all || only.has("quests")) && <div className={styles.group} aria-label="Quests and journal">
-      <Entry icon={<KeywordIcon kind="quest" />} label="Quests and journal" keyLabel={k(keys.journal)} onClick={onJournal} />
+    {(all || only.has("quests")) && <div className={styles.group} aria-label="Quests">
+      <Entry icon={<KeywordIcon kind="quest" />} label="Quests" keyLabel={k(keys.journal)} onClick={onJournal} />
     </div>}
     {(all || only.has("collection")) && <div className={styles.group} aria-label="Bag and collection">
       {all && <Entry icon={<KeywordIcon kind="bag" />} label="Bag" keyLabel={k(keys.bag)} onClick={onBag} />}
@@ -49,7 +50,6 @@ export function MenuDock({ keys, touch, unread, asking, people, only, onMap, onJ
     </div>}
     {(all || only.has("mail")) && <div className={styles.group} aria-label="Friends and mail">
       {all && <Entry icon={<KeywordIcon kind="friend" />} label="Friends" badge={asking} onClick={onFriends} />}
-      {all && people !== null && <Entry icon={<KeywordIcon kind="player" />} label={`Here (${people})`} onClick={onPeople} />}
       <Entry icon={<KeywordIcon kind="mail" />} label="Mail" keyLabel={k(keys.mail)} badge={unread} onClick={onMail} />
     </div>}
   </nav>;

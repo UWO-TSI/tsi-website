@@ -1,12 +1,12 @@
 /* The tool wheel (specs/game-ui.md §1, row 283), in the language of David's Animal Crossing UI kit: cream circles for
    petals round a small centre (a flower, never a thin ring), the chosen one grows and turns butter yellow, a teal
    check on what's in hand, the name in a teal pill under the choice, round brown keycaps. Matte, restrained shadows. */
-.wheel, .flower { --cream: #fffae6; --butter: var(--gui-butter); --teal: var(--gui-teal); --pill: var(--gui-teal-pill); --ink: var(--gui-bark); --paper: var(--gui-paper-deep); }
-.wheel { position: absolute; inset: 0; z-index: 35; display: grid; place-items: center; pointer-events: none; font-family: var(--gui-font); }
+.wheel { --cream: #fffae6; --butter: var(--gui-butter); --teal: var(--gui-teal); --pill: var(--gui-teal-pill); --ink: var(--gui-bark); --paper: var(--gui-paper-deep);
+  position: absolute; inset: 0; z-index: 35; display: grid; place-items: center; pointer-events: none; font-family: var(--gui-font); }
 .wheel::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, #1c2a2a14 0, #1c2a2a38 75%); opacity: 0; transition: opacity 0.16s ease; }
 .wheel[data-shown]::before { opacity: 1; }
 .flower { position: relative; width: 0; height: 0; opacity: 0; transform: scale(0.72); transition: opacity 0.14s ease, transform 0.24s cubic-bezier(0.2, 1.4, 0.4, 1); zoom: var(--tsi-text-scale, 1); }
-.wheel[data-shown] .flower, .flower[data-shown] { opacity: 1; transform: scale(1); pointer-events: auto; }
+.wheel[data-shown] .flower { opacity: 1; transform: scale(1); pointer-events: auto; }
 .petal { position: absolute; left: 0; top: 0; width: 80px; height: 80px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 50%; cursor: pointer;
   background: var(--cream); box-shadow: 0 3px 0 #725c4e1f, 0 6px 16px #2946411f;
   transform: translate(-50%, -50%) translate(var(--x), var(--y)) scale(var(--s, 1)); transition: transform 0.16s cubic-bezier(0.2, 1.6, 0.4, 1), background 0.12s;

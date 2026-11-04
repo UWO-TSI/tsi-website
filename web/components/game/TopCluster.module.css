@@ -1,19 +1,5 @@
-/* Top cluster (hud-first-login §2): the GUI sheet's round buttons (row 285), top right. */
-.cluster { position: absolute; top: 20px; right: 20px; display: flex; align-items: center; gap: 8px; z-index: 14; color: var(--gui-ink-strong); zoom: var(--tsi-text-scale, 1); }
-.buttons { display: flex; align-items: center; gap: 8px; }
-/* A cinematic moment (world audit item 7): the cluster fades out and can't be focused or clicked. */
-.cluster { transition: opacity 0.3s ease, visibility 0s; }
-.cluster[data-hidden] { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.3s ease, visibility 0s linear 0.3s; }
 /* The island clock under the minimap (HudClock): the sky's icon and the hour, on a soft paper wash. */
 .time { display: inline-flex; align-items: center; gap: 6px; margin: 0; padding: 4px 11px 4px 9px; border-radius: 999px; background: rgb(255 251 231 / 0.9); color: var(--gui-ink-strong); box-shadow: var(--gui-shadow-sm); font-size: var(--gui-text-sm); zoom: var(--tsi-text-scale, 1); }
 .time b { font-weight: 900; font-variant-numeric: tabular-nums; }
 .time svg { color: var(--gui-warn); }
-.button { position: relative; width: 44px; height: 44px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 999px; background: rgb(255 251 231 / 0.96); color: var(--gui-ink); font: inherit; box-shadow: var(--gui-shadow-md); cursor: pointer; transition: transform var(--gui-t-fast) var(--gui-spring); }
-.button:hover { background: var(--gui-paper-hi); transform: translateY(-2px); }
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
-/* Phones: smaller buttons. */
-@media (max-width: 700px) {
-  .buttons { gap: 6px; }
-  .button { width: 40px; height: 40px; }
-}
-:global(html[data-contrast="high"]) .button { background: #ffffff; color: #000000; border: 2px solid #000000; }
