@@ -143,26 +143,28 @@ Not ours: the creator's water and hair; casting toward the cursor; the reel pane
 
 ## Status
 
-Round 8 built (David's round 7 review, 2026-11-03) on origin/main b56f3c36, code at 1208d8ee; evidence `specs/evidence/tutorial-v2/v8/` (t8-before-*, t8-after-*, t8-dock-before-after). No migration. Round 7's status is in git history (29451dc2).
+Round 9 built (David's round 8 review, 2026-11-04) on origin/main 18362223 (merged at 6e97d63d), code at 8749c4df; evidence `specs/evidence/tutorial-v2/v9/` (t9-after-*, t9-before-* copied from round 8's after shots, which are the code before this round). No migration. Round 8's status is in git history (e89164be).
 
-- **t7-icons-esc (the Esc dock), coordinator-confirmed reading:** Settings moved into the dock as its first entry (`MenuDock` `onSettings`), and the lone top-right gear went (TopCluster's default export, `hudButton` and the cluster/button CSS deleted; `TopCluster.tsx` keeps `HudClock` and `HudWallet`). Simplified: Map dropped from the dock (the Esc view's big minimap opens it; M still works); "Quests and journal" is now "Quests"; "Here (n)" folded into Friends (a "Who's on the island (n)" button at the top of FriendsSheet while you're with the others, opening PresenceList). Dock now: Settings | Quests | Bag, Collection | Friends, Mail. Esc 2's Settings stays.
-- **t7-id:** the show-off slot is gone from the ID (kit `ShowOff`, `ShowOffPicks`, `PrintedCard.showOff`, their CSS, the ID_CARD show-off lines, the lab demo). Pronouns stay. HQ's front desk still reopens your ID. Left in place: `/api/collections/showcase`, `SHOWCASE_SLOTS = 1` and `showable` (lib/collections) now have no UI caller (the coordinator decides whether to delete them or bring a showcase back).
-- **t7-peek-hud / t7-peek-map:** no peek card for these any more. While H or M is down in the keyboard tour the real pieces come in where they sit (`KeyboardTour` `onPeek`, DefaultIslandWorld `tourPeek` merged into the shown set) and a new kit piece `PeekRing` rings them (HUD: the bars top left, the time plus wallet under the minimap; map: the minimap), pulsing until the key is let go. On /lab/gui?only=key-board.
-- **t7-peek-wheel:** round 6's drawn tool wheel is back (keyPeek.tsx `DRAWN.wheel` and its CSS), shown above the keyboard card (`Spotlight` `asideAt="top"`); the light keyboard card sits a little lower (`.spotlight[data-light]` translate `clamp(32px, 9vh, 96px)`). `ToolWheelView`'s `standalone` and `MapPlot`'s export (only the peeks used them) are reverted; the lab no longer imports the member world.
-- **Gates round 8:** tsc clean; full vitest (NEXT_PUBLIC_GAME_WORLD=new) 395 files passed, 4 failed, 2 skipped; 3738 tests passed, 7 failed, 4 skipped. All 7 were timeouts in world generation and net files this round does not touch (machine load 30 to 56, swap 11.7 GB); rerun alone with a 120 s timeout, walk.test and loopback.test passed and 2 still timed out (shoreField "crosses 0 on the drawn coast (village)", generate "is the same twice", its own 60 s limit). eslint clean on the 14 changed .ts/.tsx. No perf:check (UI only).
+- **The phone (t8-dock):** kit piece `Phone` (`web/components/gui/flat/phone.tsx` + css, `/lab/gui?only=phone`), written into the design bible as UI 8d (8b's dock line now says the phone). Apps: Settings, Quests, Bag, Collection, Friends (Who's on the island inside), Mail. Key **Y** (`openPhone` in `lib/identity/settings.ts`, so it's in Settings' remappable key list). Y brings the phone up over play (cursor freed via `holdCursor("phone")`), Y/Esc/the home bar put it away. **Esc still opens the UI view** (big minimap, wallet, level badge) with the phone up where the bar was; Esc again is Esc 2. Touch: the old menu button (top left) is now a phone icon opening the UI view with the phone. An app opens its sheet and the phone tucks down (`away`) until the sheet closes. `MenuDock`, `Entry`, `DockKeys` and the dock CSS are deleted.
+- **t8-esc:** the place-name heading ("Tethos Island") no longer shows with the full HUD or the UI view; it only flashes as you arrive in a scene.
+- **t8-hud / t8-map:** in the tour the HUD (bars, quest line, time, wallet) and the minimap are unseen (`Unseen`, visibility only, places kept) until their key; the press (H's too, before the hold finishes) shows them, the kit's new `FlyHome` pops them up in a row above the keyboard card, shows off ~1 s and flies them home (FLY_HOME_MS 380/1000/760), and the next key waits for the landing. Reduced motion: a fade in place. `PeekRing` deleted. The tour's dock pieces (Quests, Collection, Mail, and Bag) now fill the phone a tile at a time, and a last step "Press Y Phone" brings the whole phone.
+- **Gates round 9:** tsc clean; full vitest (NEXT_PUBLIC_GAME_WORLD=new, maxWorkers 2) 398 files passed, 1 failed, 2 skipped; 3757 passed, 4 failed: all 4 in `movement/keys.test.ts`, which used Y as a free key (now the phone's); switched it to U and the file plus arrival and identity (14 files, 116 tests) pass. No load timeouts this run. eslint clean on the 14 changed .ts/.tsx. No perf:check (UI only).
 
 ## Next
 
-1. Act on David's round 8 review once main relays it.
-2. Icons, next batches: the collection and journal sheets, the shop and economy sheets, letters; after the other lanes merge, the quest tracker, the reel's tags and the interact prompt.
-3. At the main-quest merge: TopCluster.tsx lost its default export this round (keep theirs for HudClock/HudWallet edits, drop any reintroduced gear).
-4. Other coin and gem animations (rewards, sales) should fly to `[data-hud-slot="coins"|"gems"]` too (bible 8b).
-5. Bring Alice's look-round-HQ line back when David says.
-6. The phone pass after David approves the desktop tutorial.
-7. At the fish-tiers merge: MemberFishing must keep `data-member-fishing` and `[aria-label="Fishing reel"]`.
-8. Open for David: the wake cut; a job board or past-projects display in HQ; his name in the lore (the Founder for now); whether the orphaned showcase API goes.
+1. Act on David's round 9 review once main relays it.
+2. Known edge: a saved account that already bound Y to a menu action now fails the duplicate check in `mergeSettings`, so `readSettings` falls back to the defaults for that account. Decide with the coordinator whether to drop the clashing default on read.
+3. The ledger row for bible UI 8d (the coordinator records bible changes).
+4. Icons, next batches: the collection and journal sheets, the shop and economy sheets, letters; after the other lanes merge, the quest tracker, the reel's tags and the interact prompt.
+5. At the main-quest merge: TopCluster.tsx lost its default export in round 8 (keep theirs for HudClock/HudWallet edits, drop any reintroduced gear); `hudLead` now carries `data-hud-quest` (FlyHome's target).
+6. Other coin and gem animations (rewards, sales) should fly to `[data-hud-slot="coins"|"gems"]` too (bible 8b).
+7. Bring Alice's look-round-HQ line back when David says.
+8. At the fish-tiers merge: MemberFishing must keep `data-member-fishing` and `[aria-label="Fishing reel"]`.
+9. Open for David: the wake cut; a job board or past-projects display in HQ; his name in the lore (the Founder for now); whether the orphaned showcase API goes.
 
 ## Tools and gotchas
+
+- Round 9: `specs/evidence/tutorial-v2/v9/run.sh <out> hq|ui|ui-phone|kit|kit-phone ...` under `withlock.sh devserver` (dev server on 3172, runs `v9/walk.mjs`). hq shoots H and M as 4 frames each (`a-hud-f01..04`, `a-map-f01..04`: before the key, 700 ms, 1700 ms, 2900 ms after it) plus the phone filling in the tour; ui: Y's phone, an app, back, away, then Esc's view and its apps; ui-phone: the phone button. The H/M frames go into 2x2 grids (`t9-after-hud-lesson-frames.webp`) with a few lines of PIL (strips.py makes them too small). Free keys left for later bindings: N, O, U.
 
 - Round 8: `specs/evidence/tutorial-v2/v8/run.sh <out> hq|ui|ui-phone|kit|kit-phone ...` under `withlock.sh devserver` (dev server on 3172, runs `v8/walk.mjs`); hq's peeks are whole-screen frames (the HUD and map peeks ring the real pieces), ui shoots the Esc view, its dock, the top right, Settings and Friends. Before shots: copy walk/run to the scratchpad, `git switch --detach <base>`, shoot, switch back. Then `python3 specs/evidence/tutorial-v2/v4/strips.py <out> <dir> 720`. The devserver lock is busy with other lanes for long stretches: loop on exit 75.
 - Signed out the wallet is null, so the walk sets `__hudCoins(1240)` / `__hudGems(35)` before the keys.
