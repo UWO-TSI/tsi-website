@@ -13,6 +13,8 @@
   --ui-highlight: #ffcc00;
   --ui-marker: rgb(255 204 0 / 0.55);
   --ui-gold: #f2b636;
+  --ui-silver: #b8c0cc;  /* podium places (the leaderboard): gold, silver, bronze edges */
+  --ui-bronze: #d08a52;
   --ui-title-outline: #234a52;
   --ui-home: #ef7a5a;
   --ui-away: #4bb3c8;

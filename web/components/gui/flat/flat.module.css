@@ -334,6 +334,23 @@ div.card:hover { box-shadow: none; }
 /* The rising edge: a bright line riding the fill's top. */
 .serveTri > s { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--ui-card); opacity: 0.85;
   transform: translateY(calc(var(--v) * -147px)); }
+/* The notches a quarter apart: the fill clicks past them. */
+.serveTri > u { position: absolute; inset: 0; background: repeating-linear-gradient(to top, transparent 0 calc(25% - 2px), rgb(var(--ui-shade) / 0.18) calc(25% - 2px) 25%); }
+/* The glow swells with the fill (the drop shadow sits outside the triangle's clip). */
+.serveGlow { position: relative; filter: drop-shadow(0 0 calc(var(--v) * var(--v) * 16px) var(--ui-gold)); }
+/* Sparks riding the fill's edge, spitting up and out, faster and wider as it fills. */
+.serveSparks { position: absolute; left: 50%; bottom: 0; width: 0; height: 0; transform: translateY(calc(var(--v) * -147px)); opacity: calc(0.2 + var(--v)); }
+.serveSparks > i { position: absolute; width: 5px; height: 5px; margin: -2.5px; border-radius: 50%; background: var(--ui-gold); animation: serveSpark 0.42s ease-out infinite; }
+.serveSparks > i:nth-child(2) { --dx: -22px; animation-delay: 0.1s; background: var(--ui-home); }
+.serveSparks > i:nth-child(3) { --dx: 18px; animation-delay: 0.21s; }
+.serveSparks > i:nth-child(4) { --dx: -8px; animation-delay: 0.31s; background: var(--ui-card); }
+@keyframes serveSpark { from { transform: translate(0, 0) scale(1); opacity: 1; } to { transform: translate(calc(var(--dx, 24px) * (0.5 + var(--v))), calc(-14px - var(--v) * 18px)) scale(0.2); opacity: 0; } }
+/* Max: rays turning behind the meter. */
+.serveRays { position: absolute; inset: -34px; border-radius: 50%; pointer-events: none; z-index: -1;
+  background: repeating-conic-gradient(var(--ui-gold) 0 10deg, transparent 10deg 30deg); mask: radial-gradient(closest-side, transparent 38%, black 40%, transparent 100%);
+  animation: serveRays 2.4s linear infinite, raysIn 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.4); }
+@keyframes serveRays { to { rotate: 360deg; } }
+@keyframes raysIn { from { scale: 0.4; opacity: 0; } }
 .serveMeter[data-max] { box-shadow: 0 0 0 3px var(--ui-gold), 0 10px 30px rgb(var(--ui-shade) / 0.2); animation: serveShake 0.06s linear infinite, serveFlash 0.5s ease-out; }
 .serveMax { position: absolute; top: -12px; left: 50%; padding: 3px 10px; border-radius: 999px; background: var(--ui-gold); color: var(--ui-ink);
   font: 800 13px/1 var(--gui-font); font-style: normal; letter-spacing: 0.04em; transform: translateX(-50%); animation: servePop 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.4); }
@@ -342,31 +359,39 @@ div.card:hover { box-shadow: none; }
   50% { translate: calc(var(--v) * var(--v) * 1.8px) calc(var(--v) * var(--v) * -1.6px); } 75% { translate: calc(var(--v) * var(--v) * -2.2px) 0; } 100% { translate: 0 0; } }
 @keyframes serveFlash { from { background: var(--ui-gold); } }
 @keyframes servePop { from { transform: translateX(-50%) scale(0.3); } }
-@media (prefers-reduced-motion: reduce) { .serveMeter, .serveMeter[data-max], .serveMax { animation: none; transition: none; } }
+@media (prefers-reduced-motion: reduce) { .serveMeter, .serveMeter[data-max], .serveMax, .serveRays, .serveSparks > i { animation: none; transition: none; } }
 
-/* The action bar (ActionBar.tsx): white move cards with a pictogram, a keycap and the name. Bars stack in one place and
-   crossfade (the ground's moves and the air's), so a jump never moves or flickers the row. */
+/* The action bar (ActionBar.tsx): white move cards with a bold silhouette, the name and the key. Rows share one place;
+   the shown one flips in at once (no fade-through), the air row with a sky edge, so a jump reads at a glance. */
 .actionStack { display: grid; justify-items: center; }
-.actionBar { grid-area: 1 / 1; display: flex; gap: 10px; opacity: 0; transform: translateY(10px) scale(0.96); pointer-events: none;
-  transition: opacity 0.16s ease, transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.12); }
-.actionBar[data-active] { opacity: 1; transform: none; }
-.actionSlot { position: relative; display: grid; justify-items: center; gap: 4px; width: 72px; padding: 10px 6px 8px; border-radius: 16px; background: var(--ui-card);
-  color: var(--ui-ink); font-family: var(--gui-font); box-shadow: 0 6px 16px rgb(var(--ui-shade) / 0.14); transition: transform 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.12), box-shadow 0.2s; }
-.actionSlot > b { font: 700 12px/1 var(--gui-font); letter-spacing: 0.01em; }
-.actionIcon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--ui-well); }
-.actionKey { position: absolute; top: -8px; right: -6px; transform: scale(0.85); }
+.actionBar { grid-area: 1 / 1; display: flex; gap: 12px; visibility: hidden; opacity: 0; transform: translateY(14px) scale(0.94); pointer-events: none; }
+.actionBar[data-active] { visibility: visible; opacity: 1; transform: none; transition: transform 0.16s cubic-bezier(0.2, 0.9, 0.3, 1.25), opacity 0.06s linear; }
+.actionSlot { position: relative; display: grid; justify-items: center; align-content: start; gap: 5px; width: 84px; padding: 10px 6px 9px; border-radius: 18px;
+  background: var(--ui-card); color: var(--ui-ink); font-family: var(--gui-font); box-shadow: 0 6px 16px rgb(var(--ui-shade) / 0.14), inset 0 -3px 0 rgb(var(--ui-shade) / 0.05);
+  transition: transform 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.12), box-shadow 0.2s; }
+.actionBar[data-row="air"] .actionSlot { box-shadow: inset 0 3px 0 var(--ui-away), 0 6px 16px rgb(var(--ui-shade) / 0.14); }
+.actionSlot > b { font: 700 13px/1 var(--gui-font); letter-spacing: 0.01em; white-space: nowrap; }
+.actionIcon { display: grid; place-items: center; width: 44px; height: 40px; color: var(--ui-ink); }
+.actionKey { transform: scale(0.85); }
 .pictogram [data-ball] { fill: var(--ui-home); stroke: none; }
-.actionSlot[data-off] { opacity: 0.45; }
-.actionSlot[data-ready] { transform: translateY(-4px); box-shadow: 0 0 0 2px var(--ui-gold), 0 10px 22px rgb(var(--ui-shade) / 0.2); }
-.actionSlot[data-ready] .actionIcon { background: var(--ui-marker); animation: actionPulse 0.7s ease-in-out infinite alternate; }
-.actionSlot[data-flash="ok"] { animation: actionHit 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.4); }
-.actionSlot[data-flash="ok"]::after { content: ""; position: absolute; inset: -4px; border-radius: 20px; border: 3px solid var(--ui-gold); animation: actionRing 0.4s ease-out forwards; pointer-events: none; }
-.actionSlot[data-flash="miss"] { animation: actionMiss 0.3s ease-out; }
-@keyframes actionHit { 0% { transform: scale(0.86); } 60% { transform: scale(1.1); } 100% { transform: scale(1); } }
-@keyframes actionRing { from { opacity: 1; transform: scale(0.9); } to { opacity: 0; transform: scale(1.25); } }
-@keyframes actionMiss { 0%, 100% { translate: 0 0; } 25% { translate: -4px 0; } 75% { translate: 4px 0; } }
-@keyframes actionPulse { to { transform: scale(1.08); } }
-@media (prefers-reduced-motion: reduce) { .actionBar, .actionSlot { transition: none; } .actionSlot[data-flash], .actionSlot[data-flash]::after, .actionSlot[data-ready] .actionIcon { animation: none; } }
+.pictogram [data-fill] { fill: currentColor; stroke: none; }
+.pictogram [data-mark] { stroke: var(--ui-quiet); stroke-width: 1.6; }
+.mouseKey { display: block; }
+.mouseBody { fill: var(--ui-card); stroke: var(--ui-ink); stroke-width: 1.4; }
+.mouseLit { fill: var(--ui-ink); }
+.mouseLine { fill: none; stroke: var(--ui-ink); stroke-width: 1.2; }
+.actionSlot[data-off] { opacity: 0.5; }
+.actionSlot[data-ready] { transform: translateY(-5px); box-shadow: 0 0 0 2.5px var(--ui-gold), 0 12px 24px rgb(var(--ui-shade) / 0.2); }
+.actionSlot[data-ready] .actionIcon { animation: actionPulse 0.5s ease-in-out infinite alternate; }
+.actionSlot[data-flash="ok"] { animation: actionHit 0.34s cubic-bezier(0.2, 0.9, 0.3, 1.4); }
+.actionSlot[data-flash="ok"]::after { content: ""; position: absolute; inset: -4px; border-radius: 22px; border: 3px solid var(--ui-gold); animation: actionRing 0.42s ease-out forwards; pointer-events: none; }
+.actionSlot[data-flash="miss"] { animation: actionMiss 0.32s ease-out; }
+.actionSlot[data-flash="miss"] .actionIcon { color: var(--ui-error); }
+@keyframes actionHit { 0% { transform: scale(0.82); } 55% { transform: scale(1.12); } 100% { transform: scale(1); } }
+@keyframes actionRing { from { opacity: 1; transform: scale(0.9); } to { opacity: 0; transform: scale(1.28); } }
+@keyframes actionMiss { 0%, 100% { translate: 0 0; } 20% { translate: -6px 0; } 45% { translate: 5px 0; } 70% { translate: -3px 0; } }
+@keyframes actionPulse { to { transform: scale(1.1); } }
+@media (prefers-reduced-motion: reduce) { .actionBar, .actionBar[data-active], .actionSlot { transition: none; } .actionSlot[data-flash], .actionSlot[data-flash]::after, .actionSlot[data-ready] .actionIcon { animation: none; } }
 
 /* The spin picker (SpinPicker.tsx): the ball's picture on a white card, the contact point a ringed dot. */
 .spin { display: inline-grid; justify-items: center; gap: 8px; padding: 12px; border-radius: 18px; background: var(--ui-card); color: var(--ui-ink);

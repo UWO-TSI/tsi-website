@@ -3,7 +3,7 @@
  * match: its listeners sit on the window's capture phase and stop the events they use, so the island's mouse-look (the
  * orbit camera's right-click hold, which lets the pointer go), the held tool's click and the wheels never see them.
  * Keys go through the world's own key binding (bindGameKeys). The island's avatar stands back in a match (its keys
- * are frozen), so Space, Q and Ctrl reach the court rather than being taken first.
+ * are frozen), so Space and Q reach the court rather than being taken first. Q (the dash key) dives; Ctrl is nothing.
  *
  * Where the mouse's movement goes depends on your stance: the camera's look; while serving with the right button held,
  * the contact point on the ball (the curve); during your toss, the cursor in the timing ring (the serve's direction).
@@ -14,7 +14,7 @@ import type { Stance } from "./actions";
 export interface CourtControls {
   keys: Record<string, boolean>;
   /** Edges since the frame last took them. */
-  presses: { jump: boolean; dash: boolean; left: boolean; leftUp: boolean; right: boolean; e: boolean; ctrl: boolean };
+  presses: { jump: boolean; dash: boolean; left: boolean; leftUp: boolean; right: boolean; e: boolean };
   left: boolean; right: boolean;
   /** Mouse movement for the camera since the last frame (pixels, pointer locked). */
   look: { dx: number; dy: number };
@@ -23,7 +23,7 @@ export interface CourtControls {
 }
 
 export const newControls = (): CourtControls => ({
-  keys: {}, presses: { jump: false, dash: false, left: false, leftUp: false, right: false, e: false, ctrl: false },
+  keys: {}, presses: { jump: false, dash: false, left: false, leftUp: false, right: false, e: false },
   left: false, right: false, look: { dx: 0, dy: 0 }, ring: { x: 0, y: 0 }, spin: { x: 0, y: 0 },
 });
 
@@ -45,15 +45,14 @@ export function bindCourtControls(c: CourtControls, o: {
   const win = o.win ?? window, doc = o.doc ?? (document as unknown as Doc), el = o.el, b = o.bindings, p = c.presses;
   const unbind = bindGameKeys({
     keys: c.keys, windowTarget: win, documentTarget: doc,
-    accepted: [b.forward, b.left, b.back, b.right, b.jump, b.dash, b.sprint, "e", "control"],
+    accepted: [b.forward, b.left, b.back, b.right, b.jump, b.dash, b.sprint, "e"],
     onPress: (e) => {
       const k = e.key.toLowerCase();
-      if (k === b.jump || k === b.dash || k === "e" || k === "control" || e.ctrlKey) e.preventDefault();
+      if (k === b.jump || k === b.dash || k === "e") e.preventDefault();
       if (e.repeat) return;
       if (k === b.jump) p.jump = true;
       if (k === b.dash) p.dash = true;
       if (k === "e") p.e = true;
-      if (k === "control") p.ctrl = true;
     },
     onReset: () => { c.left = c.right = false; },
   });

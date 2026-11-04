@@ -1,0 +1,78 @@
+{
+ "pass": true,
+ "spike": {
+  "shown": 1,
+  "longest": 1,
+  "blink": 0,
+  "blinkFrames": 0,
+  "after": 0,
+  "cam": {
+   "shake": 0,
+   "punch": 0.9020002054880554,
+   "stop": -0.003299999952316276,
+   "slow": 0.1792999999523162,
+   "slowScale": 0.35
+  },
+  "paused": false
+ },
+ "backToBack": {
+  "shown": 0,
+  "longest": 0,
+  "blink": 0,
+  "blinkFrames": 0,
+  "after": 0,
+  "cam": {
+   "shake": 0,
+   "punch": 0.9001079928759199,
+   "stop": -0.0020999999046325754,
+   "slow": 0.179,
+   "slowScale": 0.35
+  },
+  "paused": false
+ },
+ "dig": {
+  "shown": 0,
+  "longest": 0,
+  "blink": 2,
+  "blinkFrames": 8,
+  "after": 0,
+  "cam": {
+   "shake": 0,
+   "punch": 0.3750449970316337,
+   "stop": -0.001600000143051148,
+   "slow": 0.12899999999999978,
+   "slowScale": 0.35
+  },
+  "paused": false
+ },
+ "reducedSpike": {
+  "shown": 0,
+  "longest": 0,
+  "blink": 0,
+  "blinkFrames": 0,
+  "after": 0,
+  "cam": {
+   "shake": 0,
+   "punch": 0.9001079928759199,
+   "stop": -0.0033999998569488564,
+   "slow": 0.179,
+   "slowScale": 0.35
+  },
+  "paused": false
+ },
+ "reducedDig": {
+  "shown": 0,
+  "longest": 0,
+  "blink": 0,
+  "blinkFrames": 0,
+  "after": 0,
+  "cam": {
+   "shake": 0,
+   "punch": 0.37478255764849344,
+   "stop": -0.0015999999046325706,
+   "slow": 0.12890000009536737,
+   "slowScale": 0.35
+  },
+  "paused": false
+ }
+}
