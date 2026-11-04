@@ -40,7 +40,13 @@ body, [data-ui-theme="clean"] {
   --ui-scrim: rgb(18 18 18 / 0.42);
   --ui-shade: 0 0 0;
   /* The fishing reel's water (components/gui/flat/reel): the track, and its ripples and edge. */
-  --ui-phone-glass: #cdecb8;  /* the phone's backlit screen (bible UI 8d): the reference's pale green */
+  /* The phone's screen in pixel art (bible UI 8d; components/gui/flat/pixel.tsx): the rendered glass shows through, so
+     these are the phone's own colours in every theme: deep green lines and type, cream, mint and its shade, star yellow. */
+  --ui-phone-ink: #2f6b4a;
+  --ui-phone-cream: #fbfdf2;
+  --ui-phone-mint: #b6e6c0;
+  --ui-phone-mint-deep: #7cc48c;
+  --ui-phone-star: #f6d44c;
   --ui-water: #e4f2f8;
   --ui-water-line: #a9d2e3;
   /* The reel's accent: the catch window, the line's fill and the droplets (calm water, not yellow or black). */

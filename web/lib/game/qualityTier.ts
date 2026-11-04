@@ -19,8 +19,14 @@
 export type QualityTier = "light" | "high";
 
 /**
+ * The pixel finish's size: CSS pixels per world pixel (the island's canvas renders at 1 / PIXEL_FINISH and is scaled up
+ * without smoothing), on every tier and screen. UI with the finish (the phone, bible UI 8d) draws its pixels this size.
+ */
+export const PIXEL_FINISH = 2;
+
+/**
  * A canvas's pixel ratio for the tier: as asked on High; on Lite never past 1 device pixel per CSS pixel (a pixel
- * finish's 0.5 stays). Every game canvas reads it: the island, the creators, the arrival's reflection.
+ * finish's 1 / PIXEL_FINISH stays). Every game canvas reads it: the island, the creators, the arrival's reflection.
  */
 export function tierDpr(liteMode: boolean, dpr: number | [number, number]): number | [number, number] {
   if (!liteMode) return dpr;

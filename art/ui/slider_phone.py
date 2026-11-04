@@ -6,7 +6,7 @@ until the top slides up; a braided strap with a jelly star charm hangs off the l
 
 The game shows it as three pre-rendered layers (the body with the keypad, the sliding top, the charm), moved in CSS,
 with the screen as live HTML laid over the rendered glass (design bible UI 8d). One orthographic camera, so a flat
-plane in the model is an affine map in the picture and the HTML screen matches the glass with one CSS matrix.
+plane in the model is an affine map in the picture; untipped, the glass is an upright rectangle the HTML screen sits on.
 
   Blender -b --factory-startup -P art/ui/slider_phone.py -- layers <dir>      the three layers + meta.json (closed)
   Blender -b --factory-startup -P art/ui/slider_phone.py -- turnaround <dir>  front, side, back, three-quarter; closed, open
@@ -24,7 +24,9 @@ W, H, R = 5.0, 9.4, 1.0          # each half: width, height, plan corner
 SLIDE = 4.2                       # how far the top half slides up
 BASE_Y = (0.0, 0.8)               # the body (bottom half) from its front face back
 TOP_Y = (-0.74, -0.14)            # the top half's shell; its mint back plate fills -0.14..0
-TURN, TILT = math.radians(-20), math.radians(8)   # the game's view: turned to show the right side, tipped a little forward
+# The game's view: turned to show the right side, not tipped (round 11): with no tilt the glass stays an upright
+# rectangle in the picture, so the screen's pixel UI lays over it unskewed, its pixels square on the world's grid.
+TURN, TILT = math.radians(-20), 0.0
 PPU = 150                         # pixels per unit in the layers (the phone 750 px wide: sharp on a phone screen)
 SCREEN = (4.0, 4.4, 0.38, 1.7)    # the glass: width, height, corner, centre height on the top half
 GLASS_Y = -0.76

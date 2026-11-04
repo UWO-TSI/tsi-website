@@ -28,7 +28,7 @@ import { RodRadar, TackleRadar } from "@/components/economy/RodGear";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import { CircleDot, Waves, Worm } from "lucide-react";
 import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
-import { ActionBar, ActionIcon, BigMoment, CallTag, CardOverlay, DarkButton, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, FlyHome, KeyBoard, Keyword, KeywordIcon, KeywordLine, PaperField, Phone, PrintedCard, ProgressCard, QuestCheck, RankBadge, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot, type PeekKind, type PhoneApp } from "@/components/gui/flat";
+import { ActionBar, ActionIcon, BigMoment, CallTag, CardOverlay, DarkButton, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, FlyHome, KeyBoard, Keyword, KeywordLine, PaperField, Phone, PixelIcon, PrintedCard, ProgressCard, QuestCheck, RankBadge, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot, type PeekKind, type PhoneApp } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
 import { BoardBody } from "@/components/game/volleyball/BoardSheet";
 import { DEFAULT_LOOK } from "@/lib/game/character/look";
@@ -102,12 +102,12 @@ function PhoneShow() {
   const [t, setT] = useState(0);
   useEffect(() => { const i = window.setInterval(() => setT(v => (v + 1) % 10), 700); return () => window.clearInterval(i); }, []);
   const apps: PhoneApp[] = [
-    { id: "settings", label: "Settings", icon: <KeywordIcon kind="settings" size={24} />, onOpen: () => {} },
-    { id: "quests", label: "Quests", icon: <KeywordIcon kind="quest" size={24} />, keyLabel: "J", onOpen: () => {} },
-    { id: "bag", label: "Bag", icon: <KeywordIcon kind="bag" size={24} />, keyLabel: "I", onOpen: () => {} },
-    { id: "collection", label: "Collection", icon: <KeywordIcon kind="collection" size={24} />, keyLabel: "B", onOpen: () => {} },
-    { id: "friends", label: "Friends", icon: <KeywordIcon kind="friend" size={24} />, badge: 1, onOpen: () => {} },
-    { id: "mail", label: "Mail", icon: <KeywordIcon kind="mail" size={24} />, keyLabel: "L", badge: 2, onOpen: () => {} },
+    { id: "settings", label: "Settings", icon: <PixelIcon kind="settings" />, onOpen: () => {} },
+    { id: "quests", label: "Quests", icon: <PixelIcon kind="quest" />, keyLabel: "J", onOpen: () => {} },
+    { id: "bag", label: "Bag", icon: <PixelIcon kind="bag" />, keyLabel: "I", onOpen: () => {} },
+    { id: "collection", label: "Collection", icon: <PixelIcon kind="collection" />, keyLabel: "B", onOpen: () => {} },
+    { id: "friends", label: "Friends", icon: <PixelIcon kind="friend" />, badge: 1, onOpen: () => {} },
+    { id: "mail", label: "Mail", icon: <PixelIcon kind="mail" />, keyLabel: "L", badge: 2, onOpen: () => {} },
   ];
   return <Phone open={t < 9} away={t >= 4 && t < 7} apps={apps} hint={<kbd>Y</kbd>} onClose={() => {}} />;
 }

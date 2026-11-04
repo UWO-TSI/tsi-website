@@ -7,7 +7,7 @@ import { useProgress } from "@react-three/drei";
 import * as THREE from "three";
 import { Smartphone } from "lucide-react";
 import { Toggle } from "@/components/gui";
-import { DarkButton, KeywordIcon, Phone, type PhoneApp } from "@/components/gui/flat";
+import { DarkButton, Phone, PixelIcon, type PhoneApp } from "@/components/gui/flat";
 import GridWorld from "./grid/GridWorld";
 import GridOcean from "./grid/GridOcean";
 import Seabed from "./water/Seabed";
@@ -207,7 +207,7 @@ import { useDecorate } from "./home/useDecorate";
 import { useHomeLayout } from "@/lib/homes/useHomeLayout";
 import { catalogueItem } from "@/lib/homes/catalogue";
 import { ROOM_PRICE } from "@/lib/homes/layout";
-import { PROBE_FRAMES, PROBE_WARMUP, medianFrameMs, tierDpr, tierForFrameMs, type QualityTier } from "@/lib/game/qualityTier";
+import { PIXEL_FINISH, PROBE_FRAMES, PROBE_WARMUP, medianFrameMs, tierDpr, tierForFrameMs, type QualityTier } from "@/lib/game/qualityTier";
 import { ISLAND_PHASES, torontoHour, type IslandPhase } from "@/lib/game/islandTime";
 import CraftingSheet, { BeachBottle } from "./crafting/Workshop";
 import StudySeats from "./study/StudySeats";
@@ -1071,7 +1071,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const liteMode = graphics.liteMode;
   // The canvas's resolution: half with the pixel finish; without it up to 1.5 device pixels per CSS pixel, but never
   // past 1 on Lite (the weaker GPUs Lite is for draw every extra pixel; v1 performance, specs/perf/2026-10-v1-results.md).
-  const canvasDpr = tierDpr(liteMode, graphics.pixelated ? 0.5 : [1, 1.5]);
+  const canvasDpr = tierDpr(liteMode, graphics.pixelated ? 1 / PIXEL_FINISH : [1, 1.5]);
   const castShadows = graphics.shadows && !liteMode;
   // The creator and the wardrobe cover the screen: the island stops drawing under them (it resumes as they close).
   const creatorOpen = useCreatorOpen();
@@ -1350,12 +1350,12 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const netSheet = useNetSheet();
   const appOpen = !!sheet || bagOpen || netSheet !== null || mapOpen;
   const phoneApps = useMemo<PhoneApp[]>(() => [
-    { id: "settings", label: "Settings", icon: <KeywordIcon kind="settings" size={24} />, onOpen: () => setSheet("settings") },
-    { id: "quests", label: "Quests", icon: <KeywordIcon kind="quest" size={24} />, keyLabel: touch ? undefined : "J", onOpen: () => setSheet("journal") },
-    { id: "bag", label: "Bag", icon: <KeywordIcon kind="bag" size={24} />, keyLabel: touch ? undefined : keyName(binds.openBag), onOpen: () => setSheet("bag") },
-    { id: "collection", label: "Collection", icon: <KeywordIcon kind="collection" size={24} />, keyLabel: touch ? undefined : keyName(binds.openJournal), onOpen: () => setBagOpen(true) },
-    { id: "friends", label: "Friends", icon: <KeywordIcon kind="friend" size={24} />, badge: friends.asking, onOpen: () => setNetSheet("friends") },
-    { id: "mail", label: "Mail", icon: <KeywordIcon kind="mail" size={24} />, keyLabel: touch ? undefined : keyName(binds.openMail), badge: progression.unreadLetters, onOpen: () => setSheet("letters") },
+    { id: "settings", label: "Settings", icon: <PixelIcon kind="settings" />, onOpen: () => setSheet("settings") },
+    { id: "quests", label: "Quests", icon: <PixelIcon kind="quest" />, keyLabel: touch ? undefined : "J", onOpen: () => setSheet("journal") },
+    { id: "bag", label: "Bag", icon: <PixelIcon kind="bag" />, keyLabel: touch ? undefined : keyName(binds.openBag), onOpen: () => setSheet("bag") },
+    { id: "collection", label: "Collection", icon: <PixelIcon kind="collection" />, keyLabel: touch ? undefined : keyName(binds.openJournal), onOpen: () => setBagOpen(true) },
+    { id: "friends", label: "Friends", icon: <PixelIcon kind="friend" />, badge: friends.asking, onOpen: () => setNetSheet("friends") },
+    { id: "mail", label: "Mail", icon: <PixelIcon kind="mail" />, keyLabel: touch ? undefined : keyName(binds.openMail), badge: progression.unreadLetters, onOpen: () => setSheet("letters") },
   ], [touch, binds, friends.asking, progression.unreadLetters]);
   // Alice's tour brings the phone in an app at a time (Bag, Collection, Quests, Mail), then whole with its own key.
   const tourApps = useMemo(() => (tourShown.has("phone") ? phoneApps : phoneApps.filter(a => tourShown.has(a.id as HudPiece))), [tourShown, phoneApps]);
@@ -1578,7 +1578,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         <BagButton full={tourShown.has("bag")} keyLabel={keyName(identity.settings.key_bindings.openBag)} onOpen={() => setSheet("bag")} />
       </div>
       {/* The phone (round 9): bottom right, its apps the menus; their sheets close back to it. */}
-      <Phone open={phoneOn} apps={touring ? tourApps : phoneApps} away={appOpen && !touring} onClose={() => { setPhoneUp(false); setLayer(null); }}
+      <Phone open={phoneOn} apps={touring ? tourApps : phoneApps} away={appOpen && !touring} pixelated={graphics.pixelated} onClose={() => { setPhoneUp(false); setLayer(null); }}
         hint={touch ? undefined : <kbd>{keyName(binds.openPhone)}</kbd>} />
       {/* Esc 2: the system menu. Resume asks for the mouse again; Escape (or ✕) goes back to the game. */}
       <SystemMenu open={layer === "system" && !hudCinematic} signedIn={identity.signedIn} name={identity.display_name} onClose={() => setLayer(null)}
