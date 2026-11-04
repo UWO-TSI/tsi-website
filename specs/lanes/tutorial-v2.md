@@ -35,6 +35,17 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 11: the phone's screen in a pixel style (David, 2026-11-04, verbatim)
+
+"phone ui reference, change color but  keep the pixel-y style" (with a reference image: `specs/references/phone/phone-ui-ref.png` and its README entry; untracked, third-party (a Nintendo DS game), never in git). Rounds 9 (https://claude.ai/artifact/99FLDZKNXT2AG9KJ9uBn4M) and 10 (https://claude.ai/artifact/RyNFwoRguwVeQ649Ye5VLc) are still waiting for marks: the coordinator forwards them if they arrive while you work.
+
+Round 11:
+1. **Restyle what's on the phone's screen** (the app grid, the app labels and their keys, the home bar, and anything else drawn on the glass) in the reference's pixel style: chunky pixel-stepped frames with a dark outer and a light inner line, small pixel curls at the corners, a pill label or title band, square app tiles with a pixel border and a clear highlighted tile for the hovered or keyboard-selected app. Take the style only: our own drawn frames and icons, in the phone's colours (cream white, mint and the pale-green screen, a deep green for the outlines), never the game's art, font or text. Its orange and brown are what David means by "change color".
+2. **Crisp pixels:** draw the frames as tiny pixel images (9-slice) scaled by whole numbers with pixelated rendering, so the pixels stay square on desktop and on a phone screen at their real sizes; the app icons in the same pixel look (redraw or render them on a pixel grid) and readable at the round 10 tile size. A pixel font only if one with an open licence fits and stays readable; logged in SOURCES.md; otherwise keep the kit font.
+3. **Keep everything round 10 built:** the model, the slide, the apps opening and coming back, the keys, touch, reduced motion. Fix round 10's known edge: under about 820 px tall the open phone reaches the wallet's slot by about 12 px.
+4. If it fits, a small pixel pointing-hand on the selected app (keyboard and controller use); say if you left it out. Update bible UI 8d with the pixel screen rules so later phone apps match.
+5. Evidence ids `t11-*`: the reference's style beside our screen (review only), the screen before (round 10) and after, close up at real pixel size and at 2x, the highlighted tile, the slide with the new screen, desktop and phone screens.
+
 ## Round 10: the phone as a 3D model (David, 2026-11-04, verbatim)
 
 "phone model, make it 3d blender with a slide up animation" (with a reference image: `specs/references/phone/slider-phone-ref.png` and its README; untracked, third-party, never in git). Round 9's page (https://claude.ai/artifact/99FLDZKNXT2AG9KJ9uBn4M) is still waiting for marks: the coordinator forwards them if they arrive while you work.
