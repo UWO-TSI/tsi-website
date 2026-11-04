@@ -1245,8 +1245,20 @@ The inner temple (Animated Book, Stone Golem) and the Guardian Statue stay as th
 - **Each class has a stat direction** (the table above) that mastery raises.
 - **Class movement passives and skills are ruins-only** and extend the movement combo (row 292).
 
-## Weapon redo (David, 2026-11-04; open, waiting on his picks)
-Read before any **Weapon** line above. For the nine classes below, David's notes replace the locked weapon. Until he picks, the locked kits stand and no weapon model work starts (design bible, Models rule 1).
+## Weapon redo (David, 2026-11-04; nine picked)
+Read before any **Weapon** line above. For the nine classes below, David's picks replace the locked weapon. Model work still waits for references (design bible, Models rule 1).
+
+**David's picks** (the picks page, 2026-11-04, no notes on any card):
+- Transmuter: **B, Mimic Core** (not the gauntlet).
+- Hunter: **A, whaling harpoon on a chain**, replacing the crossbow.
+- Martial Artist: **A, flow spear**, a spear class with five polearm tiers. The class name is still open (Spearmaster, Lancer or Spear Dancer).
+- Guardian: **A, hull-plate shield**, sword removed.
+- Assassin: **A, steel war fans**.
+- Summoner: **A, Shadow Lantern**.
+- Shaman: **A, totem pole and thrown carvings**.
+- Druid: **A, living vine whip**.
+- Priest: **A, sun mirror**.
+- General note: "i want you to explore all other cool weapon ideas you can for the other classes as well" (the seven below).
 
 **David, verbatim:**
 - "im thinking of transmuter weapon tahts more obvious maybe? like a charm thats not a necklace noone can see and a thing you can equip"
@@ -1271,8 +1283,18 @@ Read before any **Weapon** line above. For the nine classes below, David's notes
 
 For every spear tier option, the five tiers are five different polearms (T1 bamboo training spear, T2 red-tassel qiang, T3 sea-iron trident, T4 ji halberd, T5 dragon spear), which breaks §1.5's one-base-mesh rule for that class only, at David's request.
 
-**Unchanged:** Elementalist (prism staff), Illusionist (trick deck), Necromancer (bone tome), Marksman (recurve), Sniper (long rifle), Gunslinger (revolver), Juggernaut (war hammer). They get the high-def and low-poly remodel only. An anchor was floated as a later Juggernaut skin line, not a pick.
+**The other seven, keep or replace** (open; the same page, choices `keep`, `a`, `b`, `c` or `other`; each keeps today's weapon unless David picks an idea). Every idea keeps the class's core mechanic, so a swap changes the model and animations, not the kit:
 
-**Research behind it (text only, no images fetched):** Ma Chao (Honor of Kings: spears left on the ground power the next hit when picked up, recalled spears hit on the way back), Ata (anchor throw that pulls him to terrain or pulls an enemy back), Ming (one link heals an ally or hurts an enemy), Mulan (two weapon forms); Brawl Stars: each brawler's main attack has its own shape, the Super is the payoff (Nita's bear, Juju's Gris-Gris), Juju's shot changes with the ground underfoot, Thunder Frogs (revealed 2026-10-31) throw three frogs that make an electric triangle. The Shaman uses our own spirits, not frogs, so it doesn't copy that brawler.
+| Class (today) | A | B | C |
+|---|---|---|---|
+| Elementalist (prism staff) | Elemental orrery: four element stones circling on brass rings, flung per element, smashed together for combos; they dim as mana runs low (close to the Transmuter's Mimic Core) | Storm kite: spells drop from a kite flying above you; Gale Step pulls you | Flask bandolier: lobbed flasks that mix where they land |
+| Illusionist (floating cards) | Top hat and cane: clones step out of the hat, Vanish drops into it | Paper cranes: slow curving cranes; clones unfold from paper | |
+| Necromancer (bone tome) | Reboot rod: jumper clamps revive broken machines as allies (fits the canon: monsters are empty hardware, no skeletons) | Reliquary on the back: minions climb out, one skull per minion alive | Scythe (reads as death, against the wholesome tone) |
+| Marksman (recurve bow) | Big driftwood slingshot: ammo changes per buff | Repeating crossbow: the crank pumps faster as Focus builds | |
+| Sniper (long rifle) | Salvage coilgun: charge shot, harder the further it flies; coils light per killstreak stack | Great longbow | Folding ballista you plant |
+| Gunslinger (revolver) | Pepperbox pistol: six turning barrels, keeps Russian Roulette as is | Twin flintlocks (roulette needs rethinking) | Blunderbuss (makes the class close range) |
+| Juggernaut (war hammer) | Ship's anchor on a chain (Ata) | Giant wrench | Temple bell: every hit rings as a shockwave |
+
+**Research behind it (text only, no images fetched):** Ma Chao (Honor of Kings: spears left on the ground power the next hit when picked up, recalled spears hit on the way back), Ata (anchor throw that pulls him to terrain or pulls an enemy back), Ming (one link heals an ally or hurts an enemy), Mulan (two weapon forms); Brawl Stars: each brawler's main attack has its own shape, the Super is the payoff (Nita's bear, Juju's Gris-Gris), Juju's shot changes with the ground underfoot, Thunder Frogs (revealed 2026-10-31) throw three frogs that make an electric triangle; Barley lobs bottles over walls, Piper's shots hit harder the further they fly, Shelly fires a close spread. The Shaman uses our own spirits, not frogs, so it doesn't copy that brawler.
 
 **Code note:** `weapon_affinity` in `web/lib/combat/kits.ts` predates the locked weapons (Hunter "bow", Summoner "tome", Juggernaut "sword"). The signature sets in `lib/combat/{arcaneSeed,weapons,vanguardKits,wardenData}.ts` match the locked weapons. Update both when the picks land.
