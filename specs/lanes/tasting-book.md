@@ -2,6 +2,20 @@
 
 Worktree `.claude/worktrees/tasting-book`, branch `game/tasting-book`, cut from `game/fishing-depth` at 0db249b4 (it needs that branch's new menu layout; fishing-depth merges to main first, then this one). Agent type `uwotsi-lane`. Dev port 3476.
 
+## Round 4: David's tasting book round 3 review (2026-11-04, verbatim; https://claude.ai/artifact/9TZdz2Gtq8aNbN1AiqVaJQ)
+
+Approved: tb3-book, tb3-buff, tb3-dishes, tb3-learnt, tb3-numbers, tb3-questions (all four picks: count cooked slots for the full-water prize, lower the permanent luck cap to +20%, one vocabulary on the menu, the buff on the right edge half faint).
+- tb3-bar (redo): "remove menu and leave bar button, have menu be on the table, and character look down and press e to open, and find a way to exit. remove clock to look around"
+- tb3-nigiri (redo): "ud for the nigiti page change, lasts say permanent"
+- tb3-rules (redo): "no button that says fr thwe aquarium"
+
+Round 4:
+1. **The bar seat (coordinator's reading; show it on the card so David can correct it):** delete the Menu and Leave buttons (`DefaultIslandWorld.tsx` `barMenu`). The menu is a physical menu lying on the counter in front of the seat. Looking down at it (mouse, arrows, or a drag on touch) shows the usual E prompt (a tap target on touch); E opens the menu. Exits that need no button: Esc, tap outside or looking back up closes the menu; moving (WASD or the stick) stands you up and leaves the bar. "remove clock to look around" reads as the "Click to look around" hint (`lookHint`, line ~1609): don't show it while seated, and seated look-around works without a click.
+2. **Nigiri page:** "Lasts" says "Permanent" (it says "For good" now).
+3. **No "For the aquarium" button** on the nigiri choice (`SushiSheets.tsx`): the bar only cooks. Giving a fish to the tank happens at the tank in HQ (walk up, E, pick the fish); build that if it isn't there, with the same rules (free, the only way to milestones and a key fish's dish, no duplicates). Update the hint lines that tell you to give a fish to the tank so they point at HQ's tank.
+4. **The approved picks:** the full-water prize counts cooked slots; the permanent luck cap drops to +20% (the migration is unapplied: change it in place, plus `bookLuck`); the numbers table updated.
+5. Evidence ids `tb4-*`: the seat looking down at the menu with the prompt, the menu open, leaving by moving, the nigiri page, the tank give in HQ, desktop and phone.
+
 ## Round 3: David's round 2 review (2026-11-03, verbatim; https://claude.ai/artifact/R5ytwGPwnom5jxWo6e5rPb)
 
 Approved: tb2-book, tb2-choice, tb2-dish-learnt, tb2-dish-locked, tb2-numbers, tb2-stamp.
