@@ -40,6 +40,7 @@
   --ui-scrim: rgb(64 52 36 / 0.3);
   --ui-shade: 114 92 78;
   /* The fishing reel's water (components/gui/flat/reel): the track, and its ripples and edge. */
+  --ui-phone-glass: #d3eebd;  /* the phone's backlit screen (bible UI 8d): the reference's pale green */
   --ui-water: #d9eef4;
   --ui-water-line: #9fcbdb;
   --ui-water-deep: #2f8aa6;

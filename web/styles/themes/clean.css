@@ -40,6 +40,7 @@ body, [data-ui-theme="clean"] {
   --ui-scrim: rgb(18 18 18 / 0.42);
   --ui-shade: 0 0 0;
   /* The fishing reel's water (components/gui/flat/reel): the track, and its ripples and edge. */
+  --ui-phone-glass: #cdecb8;  /* the phone's backlit screen (bible UI 8d): the reference's pale green */
   --ui-water: #e4f2f8;
   --ui-water-line: #a9d2e3;
   /* The reel's accent: the catch window, the line's fill and the droplets (calm water, not yellow or black). */
