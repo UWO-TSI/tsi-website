@@ -795,3 +795,5 @@ The four reports (assets, dead code, UI, docs) are summarised here; the full tex
 - **Polish r2+r3 and vb-anim r2 live (main b56f3c36):** live check passed (routes 200, arrival with the new walk, Here (1)); accounts deleted, nothing left (scratchpad/v16-prod8).
 - **Volleyball r3 to r6 merged and pushed (main 18362223)** (Chip tags, 12 short spike lines; every earlier card approved), plus a 20 s timeout on the slow shoreField village test. Live check running (scratchpad/v17-prod9).
 - **Rod data r5 review:** https://claude.ai/artifact/1sHjWWpEULGjw1m2rTgeF9 (ids rg5-*; supersedes the unmarked rg4 cards). game/rod-gear 6ba4e7ac (tool-pipeline merged in). Riptide, Tempest, Titanium have models but no roster entries: asked on rg5-epics.
+- **Volleyball live (main 18362223):** live check passed (routes 200, arrival, Here (1)); accounts deleted, nothing left (scratchpad/v17-prod9).
+- **Weekly usage limit hit (2026-11-03 evening), reset 2026-11-04:** five lanes stopped mid-round (fishing r7, main-quest r6, tasting-book r3, tutorial-v2 r8, tool-pipeline r3) and were resumed by message; no locks or dev servers were left behind.
