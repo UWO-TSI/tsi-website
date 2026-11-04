@@ -31,6 +31,20 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest (once), tsc, eslint, the SQL smoke chain, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 7: David's main quest round 6 review (2026-11-04, verbatim; https://claude.ai/artifact/VKAEfjZnWuPR6QStdT9H2A)
+
+Approved: mq6-critical, mq6-hud, mq6-reveal, mq6-phone-reveal, mq6-phone-vitals.
+- mq6-levelup (redo): "the level up isnt centered because of the logo icon to the left"
+- mq6-phone-levelup (redo): "level up not centered visually"
+- mq6-third (redo): "3 bar is too think , so i think stamina could be rewored to not be a bar under health but rather incorporated to be beside the character and fades in a ) shaped bar beside the character when stamina is low but doesnt show when it is above 25%"
+- mq6-vitals (redo): "needs to be reimagined"
+
+Round 7:
+1. **Level up title, optically centred:** "Level up!" sits on the screen's centre line with its icon outside the centring (or drop the icon if it can't be balanced). Desktop and phone.
+2. **Stamina leaves the vitals card:** a ")" shaped arc beside the character (screen space, following the character, right side), hidden while stamina is above 25%, fading in at or below 25% and out again as it refills past it. Built the cheap way (one draw or plain DOM/SVG over the canvas, no new pass). The card loses its stamina row.
+3. **Vitals, reimagined:** pitch 2 or 3 new looks for what stays (health and exp, room for a shield or mana row later), in the game at full, half and low and at critical health, desktop and phone, with your pick. Build each just far enough to shoot; after David's pick, delete the losers.
+4. Evidence ids `mq7-*`. Before merging, `git grep '("development" as string)' -- web` must still be empty.
+
 ## Round 6: David's round 5 review (2026-11-03, verbatim; https://claude.ai/artifact/LXxnPfXbcf6wQZmxAgwbZH)
 
 Approved: mq5-critical, mq5-world.
