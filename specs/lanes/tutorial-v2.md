@@ -35,6 +35,17 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 10: the phone as a 3D model (David, 2026-11-04, verbatim)
+
+"phone model, make it 3d blender with a slide up animation" (with a reference image: `specs/references/phone/slider-phone-ref.png` and its README; untracked, third-party, never in git). Round 9's page (https://claude.ai/artifact/99FLDZKNXT2AG9KJ9uBn4M) is still waiting for marks: the coordinator forwards them if they arrive while you work.
+
+Round 10:
+1. **Model it in headless Blender from the reference:** a slider phone, cream-white with a soft mint tint, rounded and chunky in our art direction (simple, smooth, cartoony, subtle texture). Top half: a pale-green backlit screen, three heart buttons under it, a round d-pad with two teardrop soft keys either side, small clover, flower and heart marks. Bottom half: a 4 by 3 keypad of pill keys with a green glow, hidden until the top slides up. The braided green strap and the lime jelly star charm on the side. **No Sanrio character anywhere** (the stickers on the reference are Pochacco): where the reference has stickers, use our own motifs or leave them plain.
+2. **The slide-up animation:** Y (and the touch button) brings the phone up from the bottom right, and its top half slides up to reveal the keypad, the classic slider motion with a small settle; putting it away plays it in reverse. The charm may swing with the motion if it's cheap; nothing else animates. Reduced motion: it appears open, no slide.
+3. **The apps live on its screen:** the round 9 app grid (Settings, Quests, Bag, Collection, Friends, Mail, and how an app opens and comes back) shows on the phone's screen, legible at the phone's size on desktop and on a phone screen. The screen may take the reference's pale-green tint if the icons stay readable; show it.
+4. **The cheapest way that still reads as 3D:** e.g. layers rendered from the Blender model (the body and keypad, the sliding top half) animated in CSS with the screen as live HTML, or a small live model; pick one, say why and what it costs (file sizes, or draws and frame time). Budgets in `specs/perf/budget.md`. Update bible UI 8d.
+5. Evidence ids `t10-*`: the model's turnaround (front, side, back, three-quarter; closed and open), the slide as a frame strip, the phone in game with an app grid on its screen and with an app open, desktop and phone screens; the reference beside the render (in the review only; the reference itself never goes in git).
+
 ## Round 9: David's tutorial round 8 review (2026-11-04, verbatim; https://claude.ai/artifact/B7SrDpE4EsdadjUSnXKYes)
 
 Approved: t8-id, t8-wheel.
