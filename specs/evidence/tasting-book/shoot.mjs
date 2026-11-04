@@ -215,6 +215,8 @@ const FLOW = {
     await centre(page.getByRole("button", { name: "Open the menu" }));
     await wait(1200);
     await turnPage();
+    // The nigiri's page shut (a phone shows a dish's stats only shut), then open.
+    await menuShot("tb4-nigiri-page");
     await page.getByRole("button", { name: /Bancha's nigiri/ }).first().click({ force: true }).catch(e => console.log("nigiri", e.message.slice(0, 120)));
     await wait(700); await menuShot("tb4-nigiri");
     await page.getByRole("button", { name: "Red Snapper", exact: true }).first().click({ force: true }).catch(e => console.log("snapper", e.message.slice(0, 120)));
@@ -222,7 +224,7 @@ const FLOW = {
     await wait(700); await menuShot("tb4-choice");
     console.log("aquarium button", await page.getByRole("button", { name: /aquarium/i }).count());
     // Put it down: the arrow up (looking back up) on a desktop, a tap outside it on a phone.
-    if (PHONE) await page.touchscreen.tap(VW / 2, 24); else await page.keyboard.press("ArrowUp");
+    if (PHONE) await page.touchscreen.tap(VW / 2, 262); else await page.keyboard.press("ArrowUp");
     await wait(2200);
     await state("put down");
     await shot("tb4-menu-down");
@@ -239,8 +241,14 @@ const FLOW = {
   /** Round 4: the give at HQ's tank (E there; the bar only cooks). */
   async tank4() {
     await world("hq=inside&at=0,4.2&time=day&bag=23&dish=1", { press: false, settle: 14000 });
-    await page.keyboard.down("w"); await wait(2600); await page.keyboard.up("w");
-    await wait(1500);
+    // The sectional and the beanbags stand before the glass: round the sofa's right end into the strip before the tank
+    // (the room's frame, a tap's walk: tsi:interior-move).
+    const prompt = () => page.getByText("Give a fish to the tank").count();
+    for (const [x, z] of [[-5.2, 0], [-5.2, 6.9], [-0.6, 6.9]]) {
+      await page.evaluate(([x, z]) => window.dispatchEvent(new CustomEvent("tsi:interior-move", { detail: { x, z } })), [x, z]);
+      await wait(3200);
+    }
+    console.log("tank prompt", await prompt());
     await shot("tb4-tank-prompt");
     for (let i = 0; i < 6 && !(await testid("tank-sheet").count()); i++) { await page.keyboard.press("e"); await wait(1500); }
     await wait(1000);

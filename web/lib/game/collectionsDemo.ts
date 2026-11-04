@@ -186,7 +186,8 @@ export function installCollectionsDemo(): void {
           if (eco.coinsOf(ME) < fee) return reply({ ok: false, status: 409, code: "insufficient", error: "Not enough in your wallet for that." }, "serve");
           m.give(ME, fish, -1);
           eco.fund(ME, eco.coinsOf(ME) - fee, eco.gemsOf(ME));
-          if (!cook) clubTank.unshift(fish);
+          // The tank lists each species once, newest first (as the store's aquarium does).
+          if (!cook) clubTank.splice(0, clubTank.length, fish, ...clubTank.filter(k => k !== fish));
           book.set(fish, cook ? "cooked" : "aquarium");
           // The milestones, as tasting_serve pays them.
           const won = tastingMarks(book, fish);

@@ -87,40 +87,41 @@ vitest (with and without `NEXT_PUBLIC_GAME_WORLD=new`), tsc, eslint on changed f
 
 ## Status
 
-Round 3 built (2026-11-04), waiting on the coordinator's review. Head: the last `[build]` commit on `game/tasting-book`; `game/fishing-depth` 8fe80dfe (round 6) is merged in (one conflict, the kit import line in FlatPieces.tsx: both sides' pieces kept). The migration is NOT applied.
+Round 4 built (2026-11-04), waiting on the coordinator's review. Head: the last `[build]` commit on `game/tasting-book`. origin/main 18362223 is merged in (conflicts kept both sides: the theme tokens, SOURCES.md's volleyball rows plus Coins, the sql-smoke chain, the lab gui imports, DefaultIslandWorld's biome tag plus interact ring). `game/fishing-depth` 8fe80dfe (round 6) was merged in round 3; it is mid-review, don't merge it again. The migration is NOT applied.
 
-- **Rules (round 3, David: "key fish, tank is the route for milestones and unlocks and cooking is solely for bonuses, no"):** a cook pays its fee and gives its stamp and the permanent luck, nothing else. A gift to the tank is free and is the only thing that counts toward the milestones (150 at 10 fish in the tank, 400 at 25, 250 for a water whose every fish is in the tank) and the only way a key fish teaches its dish. A filled slot is never served again; no nigiri for duplicates (they go into dishes or the sell sheet). Rules in `rules.ts tastingMarks` (the tank's set), `memoryStore.ts serve/bookDish`, the SQL and the demo shim.
-- **Migration (not applied, coordinator applies):** `web/supabase/migrations/20261102120000_tasting_book.sql` changed in place: `tasting_serve` counts marks only on an aquarium serve and only aquarium slots (the water's bonus when every rod species of it is in the tank); `tasting_dish` is `not_learned` until its key fish is in the tank. Signatures unchanged. Smoke `web/supabase/tests/tasting_book_smoke.sql` adds: a cook pays no mark as the book reaches one; a cooked key fish teaches nothing.
-- **Dishes (catalogue.ts):** `MealBuff` is now `Partial<Record<RodStat, number>> & { minutes }`, every meal named in the rod's six stats and small (+5% to +12% a stat); `size` (bigger fish) is gone from every meal (member_buffs.size written 0). `mealOf(source)` finds a buff's meal (name and stats) from member_buffs.source. Five key-fish dishes (TASTING.dishes): snapper chazuke, dace karaage, squid tempura (key squid, not scallop: the scallop isn't a rod fish so it has no slot), catfish kabayaki, tuna otoro (flat mushroom dropped from the karaage: no model, not caught). Numbers table in the round 3 report and below.
-- **Buff on the rod:** luck stays the server's (member_buffs.luck on the cast's roll); the other five scale the rod's effects in the reel, `rods.ts withMeal` (bite: + share of `BITE_WINDOW_MS`, now exported from rods.ts; strength: drain x (1 - p); reel: fill x (1 + p); lure: wait x (1 - p); control: bar x (1 + p)), applied at the one place the new world hands MemberFishing its rod (DefaultIslandWorld). `lib/game/mealStore.ts useMeal()` reads the meal (GET /api/economy/sushi), again after a sushi or chef write, and drops it at `until`.
-- **HUD buff:** kit piece `BuffChip` (components/gui/flat/index.tsx, flat.module.css `.buff`, in the showroom), `TopCluster.tsx HudBuff`, slot `.buffSlot` in DefaultIslandWorld.module.css: the right edge at 54% of the height (desktop top 401 px, the time column ends at 292 at rest and about 384 in the UI view with the big minimap and wallet; phone top 425, the column ends at 204). A slim faint column (opacity 0.5, 0.9 on hover): each stat's icon over its percent, then the minutes left; its title says it in words. Stat icons moved to `components/economy/statIcons.tsx` (`STAT_ICON`, `mealRows`), RodGear's copy deleted.
-- **Phone:** seated at the bar (barSeated) the stick, Slide, Dash, Jump and the tool wheel hide; the "Tap Leave the bar" prompt merges into the Menu row as a quiet "Leave" button (desktop keeps E Leave the bar). The emote button stays. The nigiri page holds only the nigiri (the feast moved to the chef's page beside the omakase); phone dish photos 76 px (from 112) so two dishes fit a narrow panel; the hanko hides on a phone (it sat on the buttons); the put-down X moved over the menu's top right on a phone (it was off screen at right: -48px); fish thumbs get room for their counts. The book's dishes go two to a panel (book spread: The book and dishes 1-2; next: 3-4 and 5); water pages start at spread 5 (`BEFORE_PAGES`). A locked dish's hint (give its key fish to the tank, or "only a ... in the tank teaches it" when it was cooked) shows in its open action too, since a phone hides dish notes.
-- **Round 1 and 2 (approved):** stamp, book, empty book, give, aquarium (club-shared), kit, choice, dish learnt and locked, numbers. Dinner service is next launch in `specs/launch/sushi-bar.md` (paragraph updated for round 3).
-- **Gates (round 3):** tsc clean; vitest without the env 3747 passed, 4 skipped; with NEXT_PUBLIC_GAME_WORLD=new 3747 passed, 4 skipped; eslint clean on changed files; SQL smokes (tasting_book, game_security) pass on a throwaway PG16.
-- **Evidence:** `specs/evidence/tasting-book/{desktop,phone}/tb3-*.png` by `shoot.mjs showroom book3`.
+Round 4 (David's tb3 review):
+- **The bar seat:** the Menu and Leave buttons are gone (`barMenu` and its CSS deleted). A menu lies on the counter before your stool (`SushiBar.tsx counterMenu`: one merged mesh in vertex colour, washi card, ink strip, red seal, matte; +1 draw call, only while seated; hidden while you read it). Seated, the mouse looks round with no click (`orbitCamera.ts seated`, set by IslandAtmosphere's rig; `useOrbitInput look`), one finger drags the view on a phone (a drag never taps to walk), the arrows as before. The seated tilt down is SEAT_TILT_DOWN (2.3) times the orbit's tilt, so the full look down centres the menu; a look down no longer settles back up. Past MENU_LOOK (0.1 over the middle tilt) SushiBar dispatches `tsi:bar-look`: the prompt "E Read the menu" (Tap on a phone); E (act "stool" while seated) opens it. Not looking down, a quiet status line in the prompt's place: "Look down at the menu · move to get up" (phone: "Drag down to the menu · the stick gets you up"). Put down: Esc, M, a tap outside, the arrow up (looks back to the middle), or the mouse moved up over the vignette past the middle tilt (`looksAtMenu` holds till the middle). Moving gets you up: WASD (also from inside the open menu: it closes and sends tsi:stand) or the phone's stick, which is back while seated (walk only: no Slide, Dash, Jump). "Click to look around" never shows while seated. `lib/game/sushiBar.ts menuAt, SEAT_TILT_DOWN, MENU_LOOK, looksAtMenu`, tests in sushiBar.test.ts.
+- **Nigiri page:** "Lasts: Permanent". The choice has only "Cook it" (its line: "cook it for luck, or give it to HQ's tank", or for a key fish "In HQ's tank instead, it teaches Bancha his ..."). The menu's `serve` is now `cook`.
+- **HQ's tank:** E at the tank's station ("Give a fish to the tank", was "Look at the aquarium") opens `TankSheet` (SushiSheets.tsx; IslandSheet with List/ListRow like the curator's DonateSheet): HQ_LINES.aquarium, how many of yours swim there and the next mark, then each fish in your bag whose slot is empty (key fish say which dish they teach), Give: POST /api/economy/tasting way aquarium (same rules: free, the only route to the count marks and a key fish's dish, no duplicates). The toast and the mark cards as before; `tsi:tank` makes the Aquarium's gifts reload so yours swims in. Hint lines now say "HQ's tank". The demo's club tank lists each species once (it duplicated a key).
+- **Picks:** the full-water prize counts cooked slots (any fill that completes a water's page pays it, a cook too); the count marks stay gifts only. `rules.ts tastingMarks(book: Map, key)` (memoryStore, the demo and the SQL agree). The page note is "A full page: 250" (was "All in the tank", and it went quiet once a fish was cooked). The book's luck is +1% a species to a +20% cap (`TASTING.luck { each: 0.01, cap: 0.2 }`, `bookLuck`; the 0.5% tail is gone, it could never apply under the cap).
+- **Migration (not applied, coordinator applies):** `web/supabase/migrations/20261102120000_tasting_book.sql` changed in place: `tasting_serve`'s water check moved out of the aquarium-only block and counts every slot of the water (cooked or aquarium); the count marks unchanged. Header comment updated. Signatures unchanged. The luck cap is TS only (no SQL). Smoke `web/supabase/tests/tasting_book_smoke.sql`: the last cliff pool fish is cooked and pays the water (paid 100, earned 250), a page not yet full pays nothing.
+- **Gates (round 4):** tsc clean; full vitest (one run, the new world is the only world) 3774 passed, 4 skipped, 401 files, no load timeouts; eslint clean on changed files; SQL smokes tasting_book and game_security pass on a throwaway PG16.
+- **Evidence:** `specs/evidence/tasting-book/{desktop,phone}/tb4-*.png` by `shoot.mjs book4 tank4`: seat, look, menu-open, nigiri (phone also nigiri-page, shut, with Lasts Permanent), choice, menu-down, leave, tank-prompt, tank, tank-given, tank-swim.
 
-Numbers (round 3):
+Round 3 and before (approved): only key fish teach a dish; cooking gives its stamp and the permanent luck only; dishes small and in the rod's six stats (`withMeal`, `mealOf`); the faint buff on the right edge (`HudBuff`, `BuffChip`); the calmer phone bar; the book (a page per water), stamps, the club-shared tank; dinner service is next launch (`specs/launch/sushi-bar.md`).
 
-| Meal | Cost | Buff | Round 2 |
-|---|---|---|---|
-| Miso soup | 20 | Lure +5%, 15 min | Rarer +5% |
-| Salmon nigiri | 40 | Luck +5%, 20 min | Rarer +10% |
-| Tuna roll | 40 | Strength +8%, 20 min | Bigger +30% |
-| Omakase | 150 | Luck +8%, Reel +5%, 30 min | Rarer +15%, bigger +30% |
-| Bancha's feast | your epic or legendary fish | Luck +12%, Control +8%, 60 min | Rarer +35%, bigger +60% |
-| Staff meal (chef's order) | the fish | Luck +5%, Bite +8%, 30 min | Rarer +10%, bigger +20% |
-| Snapper chazuke (key: red snapper) | 250, snapper 1, sea bass 2 | Luck +10%, Bite +10%, 45 min | Rarer +30%, bigger +30% |
-| Dace karaage (key: dace) | 200, dace 3 | Reel +10%, 40 min | proposed: bigger +50% |
-| Squid tempura (key: squid) | 300, squid 1, sweet shrimp 2, scallop 1 | Lure +10%, Control +5%, 45 min | proposed (scallop): rarer +40% |
-| Catfish kabayaki (key: catfish) | 500, catfish 1, freshwater goby 2 | Strength +10%, Control +10%, 60 min | proposed: rarer +50%, bigger +40% |
-| Tuna otoro (key: tuna) | 600, tuna 1, horse mackerel 2, anchovy 2 | Luck +12%, Reel +8%, 60 min | proposed: rarer +60%, bigger +60% |
+Numbers (round 4; meals unchanged from round 3):
 
-The book, unchanged: cook fee 100 + 5 a species cooked before; luck +1% a species for the first 20, then +0.5%, cap +40% (at 60).
+| Meal | Cost | Buff |
+|---|---|---|
+| Miso soup | 20 | Lure +5%, 15 min |
+| Salmon nigiri | 40 | Luck +5%, 20 min |
+| Tuna roll | 40 | Strength +8%, 20 min |
+| Omakase | 150 | Luck +8%, Reel +5%, 30 min |
+| Bancha's feast | your epic or legendary fish | Luck +12%, Control +8%, 60 min |
+| Staff meal (chef's order) | the fish | Luck +5%, Bite +8%, 30 min |
+| Snapper chazuke (key: red snapper) | 250, snapper 1, sea bass 2 | Luck +10%, Bite +10%, 45 min |
+| Dace karaage (key: dace) | 200, dace 3 | Reel +10%, 40 min |
+| Squid tempura (key: squid) | 300, squid 1, sweet shrimp 2, scallop 1 | Lure +10%, Control +5%, 45 min |
+| Catfish kabayaki (key: catfish) | 500, catfish 1, freshwater goby 2 | Strength +10%, Control +10%, 60 min |
+| Tuna otoro (key: tuna) | 600, tuna 1, horse mackerel 2, anchovy 2 | Luck +12%, Reel +8%, 60 min |
+
+The book: cook fee 100 + 5 a species cooked before; luck +1% a cooked species, cap +20% (at 20; round 3: +1% for 20, then +0.5%, cap +40%). Marks (gifts to the tank): 150 at 10, 400 at 25. A full water's page (cooked or given): 250.
 
 ## Next
 
-1. Coordinator: review tb3-*, apply `20261102120000_tasting_book.sql` to prod after fishing-depth's catalogue seed, merge after game/fishing-depth.
-2. Open for David: (a) a cooked fish can never go to the tank, so cooking any fish of a water gives up that water's 250 (the page note goes quiet then): keep, or let the full-water prize count cooked slots too; (b) the permanent luck (cap +40%) is now far above any dish (+12% at most): lower its cap to match "chill out", or keep it; (c) the menu's dishes were changed too (one vocabulary on the menu): say if any should keep "bigger fish"; (d) the buff's place (right edge, mid height) and how faint (half opacity).
+1. Coordinator: review tb4-*, apply `20261102120000_tasting_book.sql` to prod after fishing-depth's catalogue seed, merge after game/fishing-depth.
+2. Open for David (show on the card): (a) the seat's reading: the menu on the counter, look down and E, put down by Esc, a tap outside or looking up, up by moving; (b) the quiet line in the prompt's place while seated ("Look down at the menu · move to get up"): keep it, or no line at all; (c) the phone's walk stick comes back while seated so moving can get you up (round 3 hid it): keep, or hide it and let a tap on the floor get you up; (d) the counter menu is a plain stand-in card (one mesh) until the Meshy menu model.
 
 ## Tools and gotchas
 
@@ -130,3 +131,6 @@ The book, unchanged: cook fee 100 + 5 a species cooked before; luck +1% a specie
 - `?at=` doesn't move you inside HQ: walk with `w` instead.
 - The bar opens in the evening: shoot it with `at=19:30&time=evening` (the real clock decides otherwise). The first load can outlast the settle: book3 presses E until the Menu shows. The devserver lock often waits its full 20 minutes (exit 75): run the shoot in the background and wait on its output.
 - The `showroom` flow's old "Tasting book (paper)" locator no longer finds its section (it times out after the buff shot); tb-showroom is stale.
+- book4 (round 4) doesn't click the canvas, so the seated look is the mouse with no lock (`world(..., { click: false })`); on a phone it dispatches touch PointerEvents on the canvas (one finger), taps the vignette at y 262 to put the menu down (y 24 hits the lab nav), and drags the stick with the mouse (its handlers take any pointer).
+- Inside HQ there's no `__move`: walk by `tsi:interior-move` targets in the room's frame (tank4: (-5.2, 0), (-5.2, 6.9), (-0.6, 6.9) rounds the sectional to the tank's station at (0, 6.95)). The dev log prints `window.__orbit` pitch and capture state.
+- session.sh exits 1 with ONLY=desktop (its last test is false): not a failure.
