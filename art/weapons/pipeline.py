@@ -2,7 +2,7 @@
 one per tier, the low-poly for each reduced from it, both checked against the game's rules, exported, and laid out on
 one review sheet for David.
 
-  Blender -b --factory-startup -P art/weapons/pipeline.py -- --out <dir> --lp-tris 1400 \
+  Blender -b --factory-startup -P art/weapons/pipeline.py -- --out <dir> --lp-tris 1000 \
       --hd aegis-oak=<hd.glb> ... [--old aegis-oak=<old.glb> ...] [--require M_Brass,M_Cloth,M_Iron,M_Wood]
 
 The high-defs come from the weapon's own Blender script: a shaped mesh, not a stack of primitives (Models rule 3).
@@ -17,6 +17,7 @@ under hd/; then run web/scripts/pack-glbs.mjs on both.
 
 Checks (any failure exits 1 and names it):
 - each file holds only a main node and, optionally, `OffHand`, one mesh each;
+- both versions closed and manifold: no open or non-manifold edges (Models rule 3); extra loose pieces are reported;
 - only the trim kit's materials (KIT), and across the tiers every one in --require (the class's skins and mastery
   trim recolour by these names: lib/combat/*Kits.ts WEAPON_SKINS and look.trim);
 - the low-poly within --lp-tris, the high-def above it;
@@ -28,12 +29,15 @@ import math
 import os
 import sys
 
-import bpy
+import bpy  # before bmesh: outside Blender's own binary, bmesh exists only once bpy has loaded
+import bmesh
 import numpy as np
 from mathutils import Vector
 
 KIT = {"M_Blade", "M_Iron", "M_Brass", "M_Wood", "M_Cloth", "M_Wrap", "M_Glow", "M_Rune"}
 MIN_IOU = 0.97
+PLANAR = 4          # degrees: faces flatter than this to each other merge before the collapse
+SHARP = 35          # degrees: the low-poly's edges sharper than this shade hard
 RASTER = 256        # silhouette check resolution
 CLOSE, WORLD, PIXEL = 360, 96, 4   # review tiles: close-up px; world-size px, shown at x PIXEL (nearest) as the pixel finish
 
@@ -80,6 +84,37 @@ def check_nodes(key, objs, fail):
         fail(f"{key}: materials outside the trim kit {sorted(stray)}")
 
 
+def topology(o):
+    """(open or non-manifold edges, separate pieces) of one node, its seam-split vertices welded first (the glTF
+    import splits them where UVs or normals break)."""
+    bm = bmesh.new()
+    bm.from_mesh(o.data)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+    bad = sum(1 for e in bm.edges if not e.is_manifold)
+    seen, pieces = set(), 0
+    for v in bm.verts:
+        if v.index in seen:
+            continue
+        pieces += 1
+        stack = [v]
+        while stack:
+            u = stack.pop()
+            if u.index not in seen:
+                seen.add(u.index)
+                stack.extend(e.other_vert(u) for e in u.link_edges)
+    bm.free()
+    return bad, pieces
+
+
+def check_topology(label, objs, fail, notes):
+    for o in objs:
+        bad, pieces = topology(o)
+        if bad:
+            fail(f"{label} {o.name}: {bad} open or non-manifold edges (Models rule 3: clean topology)")
+        if pieces > 1:
+            notes.append(f"{label} {o.name}: {pieces} separate pieces")
+
+
 def ensure_uvs(objs, notes):
     for o in objs:
         if o.data.uv_layers:
@@ -95,22 +130,49 @@ def ensure_uvs(objs, notes):
 
 
 def reduce(objs, budget):
-    """The low-poly: each node decimated from its high-def, sharing the budget by triangle count."""
+    """The low-poly: each node reduced from its high-def, sharing the budget by triangle count. First the near-flat
+    detail goes (planar dissolve within PLANAR degrees, never across a material border, so skins still find their
+    parts), then an edge collapse takes it the rest of the way to the budget."""
     total = ntris(objs)
     out = []
     for o in objs:
         lp = o.copy()
         lp.data = o.data.copy()
         bpy.context.scene.collection.objects.link(lp)
+        bpy.context.view_layer.objects.active = lp
+        weld(lp)
         share = budget * ntris([o]) / total
         if ntris([o]) > share:
+            d = lp.modifiers.new("planar", "DECIMATE")
+            d.decimate_type, d.angle_limit, d.delimit = "DISSOLVE", math.radians(PLANAR), {"MATERIAL"}
+            bpy.ops.object.modifier_apply(modifier=d.name)
+            t = lp.modifiers.new("tri", "TRIANGULATE")
+            bpy.ops.object.modifier_apply(modifier=t.name)
+        if ntris([lp]) > share:
             m = lp.modifiers.new("lp", "DECIMATE")
-            m.ratio = max(share / ntris([o]), 0.01)
+            m.ratio = max(share / ntris([lp]), 0.01)
             m.use_collapse_triangulate = True
-            bpy.context.view_layer.objects.active = lp
             bpy.ops.object.modifier_apply(modifier=m.name)
+        bpy.ops.object.select_all(action="DESELECT")
+        lp.select_set(True)
+        bpy.ops.object.shade_smooth_by_angle(angle=math.radians(SHARP))   # its own normals: the high-def's no longer fit
         out.append(lp)
     return out
+
+
+def weld(o):
+    """One surface again: the glTF import splits vertices wherever UVs or normals break, and reducing those islands
+    apart opens cracks between them. UVs live on the face corners, so they survive; normals are re-derived after."""
+    me = o.data
+    if me.has_custom_normals:
+        bpy.ops.object.select_all(action="DESELECT")
+        o.select_set(True)
+        bpy.ops.mesh.customdata_custom_splitnormals_clear()
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+    bm.to_mesh(me)
+    bm.free()
 
 
 def world_tris(objs):
@@ -128,8 +190,10 @@ def world_tris(objs):
 
 
 def silhouette(tris, axes, lo, hi):
-    """A RASTER x RASTER coverage mask of the triangles projected on two world axes (numpy only: Blender's Python)."""
-    span = max(hi[axes[0]] - lo[axes[0]], hi[axes[1]] - lo[axes[1]], 1e-6)
+    """A RASTER x RASTER coverage mask of the triangles projected on two world axes (numpy only: Blender's Python).
+    Each axis is stretched to fill the raster: overlap ratios don't change under a stretch, and a thin view (a shield
+    edge-on) then gets as many pixels across as a wide one, instead of a few pixels of edge noise."""
+    span = np.maximum((hi - lo)[list(axes)], 1e-6)
     p = (tris[:, :, axes] - lo[list(axes)]) / span * (RASTER - 1)
     mask = np.zeros((RASTER, RASTER), bool)
     for t in p:
@@ -251,6 +315,7 @@ def main():
         reset()
         hd = load(src)
         check_nodes(key, hd, fail)
+        check_topology(f"{key} high-def", hd, fail, notes)
         ensure_uvs(hd, notes)
         seen |= materials(hd)
         n_hd = ntris(hd)
@@ -270,6 +335,7 @@ def main():
             o.name = name
         if sorted(o.name for o in lp) != sorted(o.name.removesuffix("~hd") for o in hd):
             fail(f"{key}: low-poly node names {[o.name for o in lp]}")
+        check_topology(f"{key} low-poly", lp, fail, notes)
         export(lp, os.path.join(a.out, f"{key}.glb"))
         row = [shot(hd, CLOSE, os.path.join(tmp, f"{key}-hd.png"))]
         pts = world_tris(hd).reshape(-1, 3)
