@@ -4,7 +4,7 @@ model", so the shapes come from the drawing, not from an eyeballed sketch.
 
   python3 art/weapons/trace_shield.py <reference.png> art/weapons/guardian_shield_plates.py [debug_dir]
 
-Needs OpenCV, scikit-image and numpy (a scratch venv: pip install opencv-python-headless scikit-image). Steps:
+Needs OpenCV and numpy (a scratch venv: pip install opencv-python-headless). Steps:
 1. The shield's mask: solid ink (dark, densely filled), plus the grey-gradient metal that touches it in the zones where
    the drawing shades metal instead of the character; the shield's left edge, beside the character, is a hand-read line.
 2. The drawing is a three-quarter view, so the cross's arms meet at 72 degrees. One affine turns the upright vertical and
@@ -16,11 +16,8 @@ Needs OpenCV, scikit-image and numpy (a scratch venv: pip install opencv-python-
    the blades: big plates between boundary lines read off the drawing's bright blade strokes, each from under a side
    spike down and in to the centre line (the first along the V panel's edge). Five a side, the upper ones in front.
 5. The centre pieces read off the straightened drawing on a grid (px, x right, y down, centre x 215): the V panel
-   under the crossbar, the cross with its long tapered foot, the lower chevron and
-   the lens at the foot. Round the cross's top arm, two arch ridges.
-6. The line work: the drawing's bright strokes (its edge highlights and panel lines) inside the shield, off the cross,
-   thinned to centre lines and traced into paths (right half, mirrored). guardian_shield.py raises a thin bright ridge
-   along each, on whatever plate lies under it.
+   under the crossbar, the cross with its long tapered foot, the V trough under it, the sunken trough at the foot with
+   its teeth, the bar and the lens. Round the cross's top arm, two arch ridges.
 Units: the shield is 1.0 rig units tall (the drawing's 876 px), point down at z = -0.265 (just above the ground with the
 left hand at 0.285 in Idle), centred CX = 0.04 outboard of the hand.
 """
@@ -30,7 +27,6 @@ import sys
 
 import cv2
 import numpy as np
-from skimage.morphology import skeletonize
 
 REF, OUT = sys.argv[1], sys.argv[2]
 DEBUG = sys.argv[3] if len(sys.argv) > 3 else None
@@ -45,14 +41,32 @@ CROSS_TOP, CROSS_BOT, CROSS_L, CROSS_R = (335, 132), (250, 452), (222, 155), (40
 
 # ── 5. the centre pieces, in the straightened drawing's pixels (right half from the centre line; mirrored) ──
 C = 215
+# The drawing's centre line (y, x), straightened: the cross's axis down to y 700, then it bends left toward the point
+# (the curved shield seen three-quarter), read off the short bar, the lens and the point. Each row is shifted so the
+# line stands at C before mirroring: mirrored about a straight C, the point (11 px left of it) was lost and the foot
+# came out blunt.
+AXIS = [(0, 215), (700, 215), (792, 212), (825, 208.5), (919, 204), (940, 203.5)]
 # Two gothic arch ridges framing the cross's top arm (centre, half-width, height, band), standing on the crossbar's top.
 ARCHES = [((215, 200), 105, 140, 12), ((215, 200), 70, 110, 11)]
 VPANEL = [(215, 212), (300, 222), (282, 300), (252, 400), (226, 470), (215, 486)]    # under the crossbar, to the cross's foot
 CROSS_UP = dict(half=6.5, top=115, full_to=440, tip=552)                             # the upright, tapering to a point
 CROSS_BAR = dict(half=6.5, y=202, reach=106)                                         # the crossbar, centred on y
 CROSS_GROW = 5                                                                       # the backing plate's border
-CHEVRON = [(215, 758), (247, 742), (232, 790), (215, 806)]                           # the lower chevron
-LENS = [(215, 812), (222, 823), (224, 840), (215, 858)]                              # the lens at the foot, starting below the chevron's point (their points meeting on the centre line empties the exact boolean)
+# Under the cross's foot: the V trough, its two halves sloping in (outer edge, then the inner edge back up).
+LOWER_V = [(215, 528), (232, 470), (262, 408), (284, 412), (240, 520), (222, 566), (215, 572)]
+# The foot, read off the right half (the left is wider in the view; mirrored and widened it put the teeth on the rim):
+# a sunken trough open at the top under the V, its walls the side blades' inner edges with two teeth a side jutting out,
+# converging to a point on the short bar; under that the lens, then the point's two plain facets.
+BOTTOM_PANEL = [(215, 576), (246, 590), (272, 600), (268, 640), (264, 686), (275, 699), (262, 704), (253, 738), (263, 748),
+                (249, 751), (222, 786), (215, 789)]
+FOOT = [(215, 789), (249, 751), (263, 748), (305, 772), (305, 940), (215, 940)]       # the side blades end at the lower tooth
+LENS = [(215, 800), (222, 811), (222, 840), (215, 851)]                              # the elongated hexagonal lens under the trough's point
+BAR = [(215, 788), (226, 788), (226, 795), (215, 795)]                                # the short bar between them
+# The right edge down the point (y, x): the drawing shades it in speckle that runs into the background, and the mask
+# had it wide and cut off blunt above the point.
+FOOT_EDGE = [(760, 275), (780, 275), (800, 273), (820, 266), (840, 257), (860, 249), (880, 238), (900, 228), (910, 222), (919, 215)]
+# Each plate's slope width (px): its edge runs down this far to the creases round it.
+CHAMFER = dict(body=18, crown=5, blade=6, vpanel=5, lower_v=4, arch=3, cross_back=3, cross=2, bottom=9, lens=2, bar=1)
 CROWN_INSETS = [13, 28]
 CROWN_BELOW = 150                                                                   # the arches stop where the blades begin
 # The blade boundaries (right side, read off the straightened drawing's bright blade strokes): each starts on the outline
@@ -130,6 +144,16 @@ def straighten():
     return np.hstack([A, -t[:, None]])
 
 
+def unbend(img, nearest=True):
+    """Shift each row so the drawing's centre line (AXIS) stands at C."""
+    h, w = img.shape[:2]
+    A = np.array(AXIS, float)
+    shift = np.interp(np.arange(h), A[:, 0], A[:, 1]) - C
+    mx = (np.arange(w)[None, :] + shift[:, None]).astype(np.float32)
+    my = np.repeat(np.arange(h, dtype=np.float32)[:, None], w, 1)
+    return cv2.remap(img, mx, my, cv2.INTER_NEAREST if nearest else cv2.INTER_LINEAR, borderValue=0 if nearest else (255, 255, 255))
+
+
 def mirrored(m):
     right = m.copy()
     right[:, :C] = 0
@@ -154,6 +178,21 @@ def contour(m, eps=1.4, smooth=0.0):
         pad = np.concatenate([c[-r:], c, c[:r]])
         c = np.stack([np.convolve(pad[:, i], k, mode="valid") for i in range(2)], 1)
     return cv2.approxPolyDP(c.astype(np.float32).reshape(-1, 1, 2), eps, True)[:, 0, :].astype(float)
+
+
+def plate(poly_px=None, mask=None, w=0):
+    """A plate as the builder needs it: its outline and the line where its slope meets its top (inset by w px), in rig
+    units, plus the slope width. From a polygon (rasterised) or a mask."""
+    if mask is None:
+        mask = np.zeros((940, 430), np.uint8)
+        cv2.fillPoly(mask, [np.array(poly_px, np.int32)], 1)
+    if mask.sum() < 60:
+        return None                                              # a sliver: no plate
+    dist = cv2.distanceTransform(mask.astype(np.uint8), cv2.DIST_L2, 5)
+    w = min(w, max(1, int(dist.max()) - 1))                      # a thin plate's slope narrows to fit
+    outline = contour(mask)
+    inset = contour(dist >= w) if w else outline
+    return {"poly": model(outline), "inset": model(inset), "w": round(w * SCALE, 5)}
 
 
 def model(pts):
@@ -185,6 +224,10 @@ def blades(sym):
     # leaves non-manifold edges there; the base shows as a thin rim round the edge instead.
     inner = cv2.distanceTransform(sym, cv2.DIST_L2, 5) >= 6
     right = sym.astype(bool) & (xx >= C) & inner
+    stop = np.zeros_like(sym)
+    for poly in (mirror_half(BOTTOM_PANEL), mirror_half(LOWER_V), mirror_half(FOOT)):     # the blades end where these begin
+        cv2.fillPoly(stop, [np.array(poly, np.int32)], 1)
+    right &= cv2.dilate(stop, np.ones((5, 5), np.uint8)) == 0
     out = []
     for k in range(1, len(BLADE_LINES) + 1):
         region = (right & (count == k)).astype(np.uint8)
@@ -198,95 +241,59 @@ def blades(sym):
     return out + left, curves
 
 
-def line_work(gray, sym):
-    """The drawing's bright strokes as paths (straightened px), right half then mirrored."""
-    th = cv2.morphologyEx(gray, cv2.MORPH_TOPHAT, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11, 11)))
-    inside = cv2.erode(sym, np.ones((9, 9), np.uint8)) > 0
-    cross = np.zeros_like(sym)
-    cv2.fillPoly(cross, [np.array(cross_poly(7), np.int32)], 1)
-    lines = ((th > 42) & inside & (cross == 0)).astype(np.uint8)
-    lines[:, :C + 2] = 0
-    lines = cv2.morphologyEx(lines, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8))
-    sk = skeletonize(lines > 0)
-    n, lab, st, _ = cv2.connectedComponentsWithStats(sk.astype(np.uint8), connectivity=8)
-    sk &= np.isin(lab, [i for i in range(1, n) if st[i, 4] >= 14])
-    nb = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
-    pix = set(zip(*np.nonzero(sk)))
-    deg = {p: sum((p[0] + dy, p[1] + dx) in pix for dy, dx in nb) for p in pix}
-    seen, paths = set(), []
-
-    def walk(p):
-        path = [p]
-        seen.add(p)
-        while True:
-            nxt = [(p[0] + dy, p[1] + dx) for dy, dx in nb if (p[0] + dy, p[1] + dx) in pix and (p[0] + dy, p[1] + dx) not in seen]
-            if not nxt:
-                return path
-            p = nxt[0]
-            seen.add(p)
-            path.append(p)
-            if deg[p] > 2:
-                return path
-
-    for p in sorted(pix, key=lambda q: (deg[q], q)):
-        if p not in seen and deg[p] <= 2:
-            paths.append(walk(p))
-    for p in sorted(pix):
-        if p not in seen:
-            paths.append(walk(p))
-    out = []
-    for pth in paths:
-        if len(pth) < 12:
-            continue
-        ap = cv2.approxPolyDP(np.array([(x, y) for y, x in pth], np.float32).reshape(-1, 1, 2), 1.5, False)[:, 0, :]
-        if len(ap) >= 2:
-            out.append(ap.tolist())
-    return out + [[(2 * C - x, y) for x, y in p] for p in out]
-
-
 def main():
     gray = cv2.imread(REF, cv2.IMREAD_GRAYSCALE)
     m = shield_mask(gray)
     M = straighten()
     W, H = 430, 940
-    front = cv2.warpAffine(m, M, (W, H), flags=cv2.INTER_NEAREST)
+    front = unbend(cv2.warpAffine(m, M, (W, H), flags=cv2.INTER_NEAREST))
+    F = np.array(FOOT_EDGE, float)
+    for y in range(int(F[0, 0]), H):
+        front[y, C:] = 0
+        if y <= F[-1, 0]:
+            front[y, C:int(round(np.interp(y, F[:, 0], F[:, 1]))) + 1] = 1
     sym = mirrored(front)
     dist = cv2.distanceTransform(sym, cv2.DIST_L2, 5)
     above = (np.mgrid[0:sym.shape[0], 0:sym.shape[1]][0] < CROWN_BELOW)
     crown = [contour((dist >= d) & above) for d in CROWN_INSETS]
     blade_px, curves = blades(sym)
-    strokes = line_work(cv2.warpAffine(gray, M, (W, H), borderValue=255), sym)
     outline = contour(sym)
     cross = cross_poly(0)
-    data = {
-        "OUTLINE": model(outline),
-        "CROWN": [model(c) for c in crown],
-        "BLADES": [model(b) for b in blade_px],
-        "CROSS": model(cross),
-        "CROSS_BACK": model(cross_poly(CROSS_GROW)),
-        "ARCHES": [model(a) for a in arch_polys()],
-        "VPANEL": model(mirror_half(VPANEL)),
-        "CHEVRON": model(mirror_half(CHEVRON)),
-        "LENS": model(mirror_half(LENS)),
-        "LINES": [model(p) for p in strokes],
-    }
+    ch = CHAMFER
+    right_blades = blade_px[:len(blade_px) // 2]
+    plates = {"body": plate(mask=sym, w=ch["body"])}
+    for k, d in enumerate(CROWN_INSETS):
+        plates[f"crown{k}"] = plate(mask=((dist >= d) & above).astype(np.uint8), w=ch["crown"])
+    for k, poly in enumerate(blade_px):
+        plates[f"blade{k}"] = plate(poly, w=ch["blade"])
+    plates["vpanel"] = plate(mirror_half(VPANEL), w=ch["vpanel"])
+    plates["lower_v"] = plate(mirror_half(LOWER_V), w=ch["lower_v"])
+    for k, poly in enumerate(arch_polys()):
+        plates[f"arch{k}"] = plate(poly, w=ch["arch"])
+    plates["cross_back"] = plate(cross_poly(CROSS_GROW), w=ch["cross_back"])
+    plates["cross"] = plate(cross, w=ch["cross"])
+    bp = np.zeros((940, 430), np.uint8)
+    cv2.fillPoly(bp, [np.array(mirror_half(BOTTOM_PANEL), np.int32)], 1)
+    plates["bottom"] = plate(mask=bp, w=ch["bottom"])
+    plates["lens"] = plate(mirror_half(LENS), w=ch["lens"])
+    plates["bar"] = plate(mirror_half(BAR), w=ch["bar"])
+    plates = {k: v for k, v in plates.items() if v}
+    data = {"PLATES": plates, "OUTLINE": model(outline)}
     with open(OUT, "w") as f:
         f.write('"""Generated by art/weapons/trace_shield.py from David\'s reference: the Guardian\'s shield as plates, in rig units\n'
                 '(x, z), the face toward -Y. Rerun the tracer to change it; don\'t edit by hand."""\n')
         for k, v in data.items():
             f.write(f"{k} = {json.dumps(v)}\n")
-    print("outline", len(data["OUTLINE"]), "points; crown arches", [len(c) for c in crown], "; blades", [len(b) for b in blade_px], "; strokes", len(strokes))
+    print("outline", len(data["OUTLINE"]), "points; plates", {k: len(v["poly"]) for k, v in plates.items()})
     if DEBUG:
         os.makedirs(DEBUG, exist_ok=True)
-        ref = cv2.warpAffine(cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR), M, (W, H), borderValue=(255, 255, 255))
+        ref = unbend(cv2.warpAffine(cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR), M, (W, H), borderValue=(255, 255, 255)), nearest=False)
         vis = ref.copy()
-        cv2.polylines(vis, [outline.astype(np.int32).reshape(-1, 1, 2)], True, (0, 200, 0), 1)
-        for c in crown:
-            cv2.polylines(vis, [c.astype(np.int32).reshape(-1, 1, 2)], True, (0, 160, 255), 1)
-        for i, b in enumerate(blade_px):
-            cv2.polylines(vis, [np.array(b, np.int32).reshape(-1, 1, 2)], True, [(255, 120, 0), (200, 0, 200), (0, 0, 255), (0, 140, 0), (120, 60, 255)][i % 5], 1)
-        for poly in [cross, mirror_half(VPANEL), mirror_half(CHEVRON), mirror_half(LENS)] + arch_polys():
-            cv2.polylines(vis, [np.array(poly, np.int32).reshape(-1, 1, 2)], True, (0, 230, 230), 1)
+        px = lambda pts: np.array([(C + (x - CX) / (SCALE * WIDEN), TOP_PX + (Z_TOP - z) / SCALE) for x, z in pts], np.int32).reshape(-1, 1, 2)
+        for name, pl in plates.items():
+            col = (0, 200, 0) if name == "body" else (0, 210, 230) if name in ("cross", "lens", "bar") else (255, 120, 0)
+            cv2.polylines(vis, [px(pl["poly"])], True, col, 1)
+            cv2.polylines(vis, [px(pl["inset"])], True, (200, 0, 200), 1)
         cv2.imwrite(os.path.join(DEBUG, "trace-front.png"), np.hstack([ref, vis]))
         np.save(os.path.join(DEBUG, "sym.npy"), sym)
         json.dump({"M": M.tolist()}, open(os.path.join(DEBUG, "affine.json"), "w"))

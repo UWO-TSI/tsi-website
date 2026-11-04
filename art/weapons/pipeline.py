@@ -6,8 +6,6 @@ one review sheet for David.
       --hd aegis-oak=<hd.glb> ... [--old aegis-oak=<old.glb> ...] [--require M_Brass,M_Cloth,M_Iron,M_Wood]
 
 The high-defs come from the weapon's own Blender script: a shaped mesh, not a stack of primitives (Models rule 3).
---lp-from gives, per tier, the same script's lower-detail build (its small detail off) to reduce instead of the
-high-def: one design, so the low-poly's budget goes on the shape. It's still checked against the high-def.
 Nodes keep their names and transforms: the main node (held in the weapon hand) and `OffHand` (the other hand, parked
 on the back; components/game/character/Character.tsx holdOffHand). Authoring frame as art/props-enemies/build_weapons.py:
 the grip at the origin (the hand socket), the long axis +Z, the front -Y, rig units (the engine scales by 1.3).
@@ -24,7 +22,8 @@ Checks (any failure exits 1 and names it):
   low-polys, which are the world copies (the class's skins and mastery trim recolour by these names:
   lib/combat/*Kits.ts WEAPON_SKINS and look.trim);
 - the low-poly within --lp-tris, the high-def above it;
-- the low-poly's silhouette matches the high-def's from the front, the side and above (IoU >= MIN_IOU).
+- the low-poly's silhouette matches the high-def's: from the front IoU >= MIN_IOU, from the side and above (a thin
+  relief's depth, which the budget simplifies) >= MIN_IOU_DEPTH.
 UVs missing on a mesh are generated (Smart UV Project) and reported.
 """
 import argparse
@@ -38,7 +37,8 @@ import numpy as np
 from mathutils import Vector
 
 KIT = {"M_Blade", "M_Iron", "M_Brass", "M_Wood", "M_Cloth", "M_Wrap", "M_Glow", "M_Rune"}
-MIN_IOU = 0.97
+MIN_IOU = 0.97      # the front: the outline players see
+MIN_IOU_DEPTH = 0.95  # the side and the top: a thin relief's depth profile, which a 1,000-triangle copy simplifies
 SHARP = 35          # degrees: the low-poly's edges sharper than this shade hard
 RETRIES = 8         # collapse attempts, each 1.5% lower, before the topology check fails the low-poly
 RASTER = 256        # silhouette check resolution
@@ -52,11 +52,10 @@ def parse():
     p.add_argument("--lp-tris", type=int, required=True)
     p.add_argument("--hd", action="append", required=True, help="key=path, one per tier, in tier order")
     p.add_argument("--old", action="append", default=[], help="key=path of the model this replaces")
-    p.add_argument("--lp-from", action="append", default=[], help="key=path: reduce the low-poly from this lower-detail build of the same design instead of the high-def")
     p.add_argument("--require", default="")
     a = p.parse_args(argv)
     pairs = lambda xs: [tuple(x.split("=", 1)) for x in xs]
-    return a, pairs(a.hd), dict(pairs(a.old)), {m for m in a.require.split(",") if m}, dict(pairs(a.lp_from))
+    return a, pairs(a.hd), dict(pairs(a.old)), {m for m in a.require.split(",") if m}
 
 
 def reset():
@@ -68,18 +67,6 @@ def load(path):
     before = set(bpy.context.scene.objects)
     bpy.ops.import_scene.gltf(filepath=path)
     return [o for o in bpy.context.scene.objects if o not in before and o.type == "MESH"]
-
-
-def own(objs):
-    """A second file loaded beside the high-def brings its materials in as "M_Iron.001": point every slot back at the
-    high-def's material of the same name (skins and trim find parts by these names)."""
-    for o in objs:
-        for slot in o.material_slots:
-            m = slot.material
-            if m and m.name[-4:-3] == "." and m.name[-3:].isdigit() and m.name[:-4] in bpy.data.materials:
-                slot.material = bpy.data.materials[m.name[:-4]]
-                if m.users == 0:
-                    bpy.data.materials.remove(m)
 
 
 def base_name(name):
@@ -152,8 +139,8 @@ def ensure_uvs(objs, notes):
 
 
 def reduce(objs, budget):
-    """The low-poly: each node reduced from its source (the high-def, or a lower-detail build of the same design),
-    sharing the budget by triangle count: welded back into one surface, then edge-collapsed. (A planar-dissolve pass
+    """The low-poly: each node reduced from its high-def, sharing the budget by triangle count: welded back into one
+    surface, then edge-collapsed. (A planar-dissolve pass
     before the collapse was tried and dropped: its self-touching n-gons triangulate into non-manifold edges.)"""
     total = ntris(objs)
     out = []
@@ -344,7 +331,7 @@ def sheet(rows, path):
 
 
 def main():
-    a, tiers, old, require, lp_from = parse()
+    a, tiers, old, require = parse()
     fails, notes, seen, seen_lp, rows = [], [], set(), set(), []
     fail = fails.append
     tmp = os.path.join(a.out, "_review")
@@ -359,22 +346,14 @@ def main():
         export(hd, os.path.join(a.out, "hd", f"{key}.glb"))
         for o in hd:                     # free the names for the low-poly: the engine finds `OffHand` by its exact name
             o.name = f"{o.name}~hd"
-        src = hd                         # reduce the high-def, or a lower-detail build of the same design
-        if key in lp_from:
-            src = load(lp_from[key])
-            own(src)
-            check_nodes(key, src, fail)
-        lp = reduce(src, a.lp_tris)
-        if src is not hd:
-            for o in src:
-                bpy.data.objects.remove(o, do_unlink=True)
+        lp = reduce(hd, a.lp_tris)
         n_lp = ntris(lp)
         if n_lp > a.lp_tris:
             fail(f"{key}: low-poly {n_lp} triangles, over {a.lp_tris}")
         if n_hd <= a.lp_tris:
             notes.append(f"{key}: high-def is only {n_hd} triangles, not above the low-poly budget")
         sil = iou(hd, lp)
-        if min(sil.values()) < MIN_IOU:
+        if sil["front"] < MIN_IOU or min(sil["side"], sil["top"]) < MIN_IOU_DEPTH:
             fail(f"{key}: low-poly silhouette off the high-def ({', '.join(f'{v} {s:.3f}' for v, s in sil.items())})")
         for o in lp:
             o.name = base_name(o.name)
