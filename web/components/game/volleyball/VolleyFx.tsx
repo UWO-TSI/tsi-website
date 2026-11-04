@@ -20,6 +20,7 @@ import { GlowParticles } from "../GlowFx";
 import { takeoff, landing as landPuff } from "@/lib/game/movement/juice";
 import { seedAt, type Recipe } from "@/lib/game/fx/particles";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
+import { readComfort } from "@/lib/game/comfortSettings";
 import { GRAVITY } from "@/lib/game/volleyball/ball";
 import { COURT, toWorld } from "@/lib/game/volleyball/court";
 import { HAND, type Match } from "@/lib/game/volleyball/match";
@@ -27,14 +28,14 @@ import { meterPower } from "@/lib/game/volleyball/timing";
 import { volley, type CourtSpot } from "@/lib/game/volleyball/session";
 import { camBeat, drainFx, emitFx, fxBus, type VbFx } from "@/lib/game/volleyball/fxBus";
 import {
-  CHARGE_MOTE, CONFETTI, DIVE_CLOUD, DIVE_SPRAY, DUST_PLUME, DUST_RING, FIREWORK, FLAME, FX_COLOR, GLINT, GLOW_BURST, HEAT, SAND_BLAST, SAND_PUFF,
-  SKID, SOFT_PUFF, SPARKLES, SPEED_LINES, SWISH, TEAM_COLOR, contactBeat, contactPlan, heatColor, heatOf, landScale,
+  BLINK, CHARGE_MOTE, CONFETTI, DIVE_CLOUD, DIVE_SPRAY, DUST_PLUME, DUST_RING, FIREWORK, FLAME, FX_COLOR, GLINT, GLOW_BURST, HEAT, HIT_STREAKS, IMPACT, SAND_BLAST, SAND_PUFF,
+  SKID, SOFT_PUFF, SPARKLES, SPEED_LINES, SWISH, TEAM_COLOR, contactBeat, contactPlan, heatColor, heatOf, impactOk, landScale,
 } from "@/lib/game/volleyball/fxPlan";
 
 const RINGS = 14, CRATERS = 3, TRAIL = 22, SHELLS = 7;
 /** A trail point every this many units of the ball's travel. */
 const TRAIL_STEP = 0.14;
-type RingFace = 0 | 1 | 2; // the camera, the ground, the net's plane
+type RingFace = 0 | 1 | 2 | 3; // the camera, the ground, the net's plane, aimed (turned once by the caller)
 interface Ring { mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial; age: number; life: number; from: number; to: number; alpha: number; face: RingFace; delay: number }
 interface Trail { mesh: THREE.Mesh; pos: Float32Array; col: Float32Array; attrP: THREE.BufferAttribute; attrC: THREE.BufferAttribute }
 
@@ -53,12 +54,16 @@ interface Fx {
   shield: { mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial; age: number; size: number };
   heat: Trail; ribbon: Trail; hist: Float32Array; histN: number;
   lastHow: string; lastTeam: number; tick: number; seed: number;
+  /** The ball is on fire from a perfect spike or serve until its next touch or the sand. */
+  fire: boolean;
   glinted: boolean[]; skidT: number; chargeT: number; shells: { at: number; x: number; y: number; z: number; tint: number }[]; clock: number;
   lite: boolean; built: Match | null;
+  /** A blink (fxPlan BLINK): the rendered frames left, and the meshes turned white with their own materials, to give back. */
+  blink: { left: number; swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][] };
   q: THREE.Quaternion; qYaw: THREE.Quaternion; tmp: THREE.Vector3; side: THREE.Vector3; color: { r: number; g: number; b: number };
 }
 
-const UP = new THREE.Vector3(0, 1, 0), X_AXIS = new THREE.Vector3(1, 0, 0), CAM = new THREE.Vector3();
+const UP = new THREE.Vector3(0, 1, 0), X_AXIS = new THREE.Vector3(1, 0, 0), Z_AXIS = new THREE.Vector3(0, 0, 1), CAM = new THREE.Vector3(), DIR = new THREE.Vector3();
 const RING_GEO = new THREE.RingGeometry(0.87, 1, 48);
 const DISC_GEO = new THREE.CircleGeometry(1, 28);
 
@@ -124,9 +129,9 @@ function newFx(): Fx {
       return { mesh, mat, age: 99, size: 1 };
     })(),
     heat: trail(), ribbon: trail(), hist: new Float32Array(TRAIL * 3), histN: 0,
-    lastHow: "", lastTeam: 0, tick: 0, seed: 1,
+    lastHow: "", lastTeam: 0, tick: 0, seed: 1, fire: false,
     glinted: [false, false, false, false], skidT: 0, chargeT: 0, shells: [], clock: 0,
-    lite: false, built: null,
+    lite: false, built: null, blink: { left: 0, swapped: [] },
     q: new THREE.Quaternion(), qYaw: new THREE.Quaternion(), tmp: new THREE.Vector3(), side: new THREE.Vector3(), color: { r: 1, g: 1, b: 1 },
   };
   f.root.add(...f.softRings.map(r => r.mesh), ...f.craters.map(c => c.mesh), f.cross.group, f.apex.mesh, f.shield.mesh, f.heat.mesh, f.ribbon.mesh);
@@ -164,6 +169,7 @@ function ring(pool: Ring[], x: number, y: number, z: number, face: RingFace, fro
   r.mesh.scale.setScalar(from);
   if (face === 1) r.mesh.quaternion.setFromAxisAngle(X_AXIS, -Math.PI / 2);
   else if (face === 2) r.mesh.quaternion.identity();
+  return r;
 }
 
 function stepRings(pool: Ring[], dt: number, q: THREE.Quaternion) {
@@ -196,7 +202,13 @@ function throwAt(f: Fx, pool: "move" | "glow", r: Recipe, c: Ctx, x: number, y: 
 function onContact(f: Fx, c: Ctx, e: Extract<VbFx, { kind: "contact" }>) {
   const m = c.m, p = m.players[e.who], plan = contactPlan(e.how, e.timing, e.who === m.human, e.team === m.players[Math.max(0, m.human)].team);
   const L = plan.look, s = L.scale, feetY = m.ground(p.s.x, p.s.z), b = m.ball;
-  f.lastHow = e.how; f.lastTeam = e.team;
+  f.lastHow = e.how; f.lastTeam = e.team; f.fire = plan.fire;
+  if (plan.fire) {
+    // Ignition: a burst of flame and light off the hand, the ball streaming fire from here.
+    throwAt(f, "glow", GLOW_BURST, c, e.x, e.y, e.z, 0, 0, 2.2, FX_COLOR.heatOrange);
+    throwAt(f, "move", FIREWORK, c, e.x, e.y, e.z, 0, 0, 0.7, FX_COLOR.heatOrange);
+    ring(f.softRings, e.x, e.y, e.z, 0, 0.2, 1.5, 0.4, FX_COLOR.heatPink, 0.9);
+  }
   // The flash at the hands: a painted ring in the grade's colour over a soft dark edge (light alone washes out on a
   // sunny beach), the perfect one with a core of light; an early or late touch only a small grey ring and a matte puff.
   if (plan.flash || L.sparkles > 0) {
@@ -217,23 +229,98 @@ function onContact(f: Fx, c: Ctx, e: Extract<VbFx, { kind: "contact" }>) {
   if (plan.glint) throwAt(f, L.glow ? "glow" : "move", GLINT, c, e.x, e.y + 0.1, e.z, 0, 0, L.glow ? s : 0.8, L.glow ? L.tint : FX_COLOR.spark, L.glow ? 1 : 0.8);
   if (plan.lines) throwAt(f, "move", SPEED_LINES, c, e.x, e.y, e.z, b.vx, b.vz, s, L.tint, 0.95);
   if (plan.shield) {
-    // A ripple across the raised hands in the blocker's colour, a thin white ring, and sparks off it.
-    ripple(f, e.x, e.y, TEAM_COLOR[e.team]);
-    ring(f.softRings, e.x, e.y, 0.03, 2, 0.2, 0.75, 0.32, FX_COLOR.white, 0.9);
-    throwAt(f, "move", SPARKLES, c, e.x, e.y, 0, 0, Math.sign(b.vz) || 1, 1.4, FX_COLOR.spark);
+    // A wall: a big ripple across the raised hands in the blocker's colour, a hard white ring slammed out in the net's
+    // plane twice, a burst of light and sparks thrown back the way the ball came.
+    ripple(f, e.x, e.y, TEAM_COLOR[e.team], 1.6);
+    ring(f.softRings, e.x, e.y, 0.03, 2, 0.2, 1.1, 0.3, FX_COLOR.white, 1);
+    ring(f.softRings, e.x, e.y, 0.03, 2, 0.3, 1.7, 0.42, TEAM_COLOR[e.team], 0.9, 0.05);
+    throwAt(f, "glow", GLOW_BURST, c, e.x, e.y, 0, 0, 0, 1.8, TEAM_COLOR[e.team]);
+    throwAt(f, "move", SPARKLES, c, e.x, e.y, 0, 0, Math.sign(b.vz) || 1, 2, FX_COLOR.spark);
+    throwAt(f, "move", SPEED_LINES, c, e.x, e.y, e.z, b.vx, b.vz, 1.2, FX_COLOR.white, 0.9);
   }
+  // A bump or a set you feel: a pop ring at the hands as the ball squashes on them.
+  if ((e.how === "bump" || e.how === "set" || e.how === "jumpset") && (e.timing === "perfect" || e.timing === "good"))
+    ring(f.softRings, e.x, e.y, e.z, 0, 0.3 * s, L.ringSize * 1.5, 0.22, FX_COLOR.white, 0.7);
   if (plan.spray) {
     throwAt(f, "move", DIVE_SPRAY, c, p.s.x, feetY, p.s.z, p.s.vx, p.s.vz, 1.1, FX_COLOR.sandDark);
     throwAt(f, "move", DIVE_CLOUD, c, p.s.x, feetY, p.s.z, p.s.vx, p.s.vz, 1, FX_COLOR.sand);
   }
+  if (plan.lines) {
+    // A sonic boom (round 4: "more animation vfx juice"): rings punched out one after another along the ball's new
+    // flight, and a star of short streaks cracking off the hand.
+    const v = DIR.set(b.vx, b.vy, b.vz), sp = v.length();
+    if (sp > 0.1) {
+      v.divideScalar(sp);
+      for (let k = 0; k < (L.glow ? 3 : 2); k++) {
+        const d = 0.3 + 0.5 * k;
+        ring(f.softRings, e.x + v.x * d, e.y + v.y * d, e.z + v.z * d, 3, 0.12, 0.5 + 0.18 * k, 0.2 + 0.05 * k, k ? FX_COLOR.white : L.tint, 0.9 - 0.2 * k, k * 0.04).mesh.quaternion.setFromUnitVectors(Z_AXIS, v);
+      }
+    }
+    throwAt(f, "move", HIT_STREAKS, c, e.x, e.y, e.z, 0, 0, s, L.tint);
+  }
+  if (plan.spray && e.who === m.human) {
+    // Your clutch save: a shock ring across the sand from the body, the ball popped up in rings of your team's colour.
+    ring(f.softRings, p.s.x, feetY + 0.05, p.s.z, 1, 0.3, 2.4, 0.5, FX_COLOR.white, 0.85);
+    ring(f.softRings, e.x, e.y, e.z, 0, 0.2, 0.9, 0.3, TEAM_COLOR[e.team], 0.95);
+    ring(f.softRings, e.x, e.y, e.z, 0, 0.2, 1.3, 0.38, FX_COLOR.white, 0.8, 0.05);
+    throwAt(f, "move", SPARKLES, c, e.x, e.y, e.z, 0, 0, 1.4, TEAM_COLOR[e.team]);
+    throwAt(f, "move", HIT_STREAKS, c, e.x, e.y, e.z, 0, 0, 0.8, FX_COLOR.white);
+  }
+  if (plan.impact) startImpact(f, e.x, e.y, e.z);
+  if (plan.blink) startBlink(f, e.who);
   const beat = contactBeat(e.how, e.timing, e.speed);
   // The camera answers your touches and the big ones near you; a far bump is the bots' business.
   const near = e.who === m.human || e.how === "spike" || e.how === "block";
   if (near) camBeat(e.who === m.human ? beat : { ...beat, shake: beat.shake * 0.6, slow: 0, punch: beat.punch * 0.5 });
 }
 
+/** Reduced flashing (the Settings sheet's comfort, on by default when the OS asks) or reduced motion: no impact frames, no blinks. */
+const calm = () => readComfort().reduceFlashing || (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches);
+
+/** Start an impact frame at a court-frame point (VolleyStamps draws it), unless it would come back to back or calm. */
+function startImpact(f: Fx, x: number, y: number, z: number) {
+  const im = fxBus.impact;
+  if (!impactOk(f.clock, im.at, calm())) return;
+  const at = fxBus.screen?.(x, y, z) ?? [0.5, 0.5];
+  Object.assign(im, { left: IMPACT.frames, n: im.n + 1, x: at[0], y: at[1], at: f.clock });
+}
+
+/** A blink's white: unlit, both faces (as the body's are), not tone-mapped, so the body reads as one white shape. */
+const BLINK_WHITE = new THREE.MeshBasicMaterial({ color: "#ffffff", side: THREE.DoubleSide, toneMapped: false });
+
+/**
+ * Your dive's dig (round 5, David: "no imact frame just a white flash on the charater"): player `who`'s body turns white
+ * for BLINK rendered frames, the character only (its see-through bits, like a bot's team ring, stay). Not calm.
+ */
+function startBlink(f: Fx, who: number) {
+  const body = calm() ? null : fxBus.body?.(who);
+  if (!body) return;
+  endBlink(f);
+  body.traverse(o => {
+    const mesh = o as THREE.Mesh, mats = mesh.isMesh ? [mesh.material].flat() : [];
+    if (!mats.length || mats.some(x => x.transparent)) return;
+    f.blink.swapped.push([mesh, mesh.material]);
+    mesh.material = BLINK_WHITE;
+  });
+  f.blink.left = BLINK;
+}
+
+function endBlink(f: Fx) {
+  for (const [mesh, mat] of f.blink.swapped) mesh.material = mat;
+  f.blink.swapped.length = 0;
+  f.blink.left = 0;
+}
+
 function onLand(f: Fx, c: Ctx, e: Extract<VbFx, { kind: "land" }>) {
   f.lastHow = "";
+  if (f.fire) {
+    // A ball on fire lands in an explosion of it.
+    const gy = c.m.ground(e.x, e.z);
+    throwAt(f, "glow", FIREWORK, c, e.x, gy + 0.3, e.z, 0, 0, 1.2, FX_COLOR.heatOrange);
+    throwAt(f, "glow", GLOW_BURST, c, e.x, gy + 0.2, e.z, 0, 0, 3, FX_COLOR.heatOrange);
+    ring(f.softRings, e.x, gy + 0.06, e.z, 1, 0.3, 3.4, 0.6, FX_COLOR.heatPink, 0.95);
+    f.fire = false;
+  }
   const m = c.m, gy = m.ground(e.x, e.z), k = landScale(e.speed, e.heat);
   // The sand explodes: grains thrown up, a low ring of dust, a plume; a shockwave across the sand; a crater left behind.
   throwAt(f, "move", SAND_BLAST, c, e.x, gy, e.z, 0, 0, k, FX_COLOR.sandDark);
@@ -303,22 +390,28 @@ function handle(f: Fx, c: Ctx, e: VbFx) {
     }
     case "takeoff": {
       const [wx, wz] = W(c, e.x, e.z), p = m.players[e.who];
-      takeoff(f.move.pool, "sand", wx, c.spot.y + e.y, wz, p.s.vx, p.s.vz, e.who === m.human ? 1.3 : 0.8);
-      if (e.who === m.human) throwAt(f, "glow", SPEED_LINES, c, e.x, e.y + 0.3, e.z, 0, 0, 0.6, FX_COLOR.white, 0.5);
+      takeoff(f.move.pool, "sand", wx, c.spot.y + e.y, wz, p.s.vx, p.s.vz, e.who === m.human ? 1.6 : 0.8);
+      if (e.who === m.human) {
+        // The push off the sand: a ring kicked out at the feet and lines rushing down past you.
+        throwAt(f, "glow", SPEED_LINES, c, e.x, e.y + 0.3, e.z, 0, 0, 0.8, FX_COLOR.white, 0.6);
+        ring(f.softRings, e.x, e.y + 0.05, e.z, 1, 0.2, 1.1, 0.35, FX_COLOR.sand, 0.9);
+        throwAt(f, "move", SAND_PUFF, c, e.x, e.y, e.z, 0, 0, 1.3, FX_COLOR.sandDark);
+      }
       f.glinted[e.who] = false;
       return;
     }
     case "touchdown": {
       const [wx, wz] = W(c, e.x, e.z);
-      landPuff(f.move.pool, "sand", "normal", wx, c.spot.y + e.y, wz, 0, 0, e.who === m.human ? 1 : 0.7);
+      landPuff(f.move.pool, "sand", e.who === m.human ? "heavy" : "normal", wx, c.spot.y + e.y, wz, 0, 0, e.who === m.human ? 1.2 : 0.7);
+      if (e.who === m.human) { ring(f.softRings, e.x, e.y + 0.05, e.z, 1, 0.3, 1.3, 0.4, FX_COLOR.sand, 0.85); camBeat({ shake: 0.12 }); }
       return;
     }
     case "dive": {
-      const p = m.players[e.who], gy = m.ground(e.x, e.z), k = e.strong ? 1.45 : 1;
+      // Onto a ball (clutch): a bigger spray and a harder punch in.
+      const gy = m.ground(e.x, e.z), k = e.onBall ? 1.35 : 1;
       throwAt(f, "move", DIVE_SPRAY, c, e.x, gy, e.z, e.dx, e.dz, k, FX_COLOR.sandDark);
       throwAt(f, "move", DIVE_CLOUD, c, e.x, gy, e.z, -e.dx, -e.dz, k, FX_COLOR.sand);
-      if (e.who === m.human) camBeat({ punch: e.strong ? 3 : 1.5, shake: e.strong ? 0.3 : 0.18 });
-      void p;
+      if (e.who === m.human) camBeat({ punch: e.onBall ? 3 : 1.5, shake: e.onBall ? 0.3 : 0.18 });
       return;
     }
     case "toss": {
@@ -364,8 +457,9 @@ function stepTrails(f: Fx, m: Match, camLocal: THREE.Vector3) {
   } else f.histN = Math.max(0, f.histN - 2);
   const k = b.k ?? 1, speed = Math.hypot(b.vx, b.vy, b.vz) * k, heat = heatOf(m.rallyTouches);
   const set = live && m.phase === "rally" && (f.lastHow === "set" || f.lastHow === "jumpset");
-  const hot = live && !set && (m.phase === "toss" || speed > 8 || heat > 0.3);
-  fillTrail(f, f.heat, hot, m.phase === "toss" ? 0.06 : 0.08 + 0.22 * heat + Math.min(0.08, speed * 0.004), heat, camLocal, -1);
+  const hot = live && !set && (f.fire || m.phase === "toss" || speed > 8 || heat > 0.3);
+  const fire = f.fire && m.phase === "rally";
+  fillTrail(f, f.heat, hot, fire ? 0.34 : m.phase === "toss" ? 0.06 : 0.08 + 0.22 * heat + Math.min(0.08, speed * 0.004), fire ? 0.75 : heat, camLocal, -1);
   fillTrail(f, f.ribbon, set, 0.09, 0, camLocal, f.lastTeam);
 }
 
@@ -398,6 +492,9 @@ function frame(f: Fx, c: Ctx, camera: THREE.Camera, dt: number, stamp: number) {
     if (f.outline.mesh) { f.outline.mesh.geometry.dispose(); f.outline.mesh.geometry = g; }
     else { f.outline.mesh = new THREE.Mesh(g, f.outline.mat); f.outline.mesh.visible = false; f.outline.mesh.renderOrder = 4; root.add(f.outline.mesh); }
   }
+  // The impact frame holds for its count of rendered frames (dev pauses hold it too).
+  if (dt > 0 && fxBus.impact.left > 0) fxBus.impact.left--;
+  if (dt > 0 && f.blink.left > 0 && --f.blink.left === 0) endBlink(f);
   for (const e of drainFx()) handle(f, c, e);
   // The camera's turn in the court's frame (rings that face it), and the eye there (trails).
   f.qYaw.setFromAxisAngle(UP, -c.spot.yaw);
@@ -413,8 +510,12 @@ function frame(f: Fx, c: Ctx, camera: THREE.Camera, dt: number, stamp: number) {
   if (x.group.visible) { x.age += dt; const t = x.age / 1.6; x.mat.opacity = t < 0.08 ? t * 12 : Math.max(0, 1 - (t - 0.6) / 0.4); x.group.scale.setScalar(t < 0.15 ? 0.4 + 4 * t : 1); if (t >= 1) x.group.visible = false; }
   stepTrails(f, m, camLocal);
   const b = m.ball, heat = heatOf(m.rallyTouches);
-  // The ball on fire after a long rally.
-  if (m.phase === "rally" && m.rallyTouches >= HEAT.fireAt && f.tick % (f.lite ? 3 : 1) === 0) {
+  if (m.phase !== "rally") f.fire = false;
+  // The ball on fire: a perfect spike's or serve's flight, or a long rally.
+  if (f.fire && f.tick % (f.lite ? 2 : 1) === 0) {
+    throwAt(f, "move", FLAME, c, b.x, b.y, b.z, -b.vx, -b.vz, 1.3, f.tick % 2 ? FX_COLOR.heatOrange : FX_COLOR.gold, 1);
+    throwAt(f, "glow", FLAME, c, b.x, b.y, b.z, -b.vx, -b.vz, 1, f.tick % 3 ? FX_COLOR.heatOrange : FX_COLOR.heatPink, 0.9);
+  } else if (m.phase === "rally" && m.rallyTouches >= HEAT.fireAt && f.tick % (f.lite ? 3 : 1) === 0) {
     throwAt(f, "move", FLAME, c, b.x, b.y, b.z, -b.vx, -b.vz, 0.8 + heat * 0.5, f.tick % 2 ? FX_COLOR.heatOrange : FX_COLOR.heatPink, 0.95);
     if (f.tick % 2 === 0) throwAt(f, "glow", FLAME, c, b.x, b.y, b.z, -b.vx, -b.vz, 0.6, FX_COLOR.gold, 0.8);
   }
@@ -445,8 +546,8 @@ function frame(f: Fx, c: Ctx, camera: THREE.Camera, dt: number, stamp: number) {
       f.glinted[i] = true;
       throwAt(f, "glow", GLINT, c, p.s.x, p.s.y + HAND.spike + 0.15, p.s.z, 0, 0, 1, FX_COLOR.spark);
     }
-    // The slide dive's skid marks.
-    if (!f.lite && p.dive?.strong && p.dive.t < 0.4) {
+    // The dive's skid marks along the lunge.
+    if (!f.lite && p.dive && p.dive.t < 0.45) {
       f.skidT -= dt;
       if (f.skidT <= 0) { f.skidT = 0.03; throwAt(f, "move", SKID, c, p.s.x, m.ground(p.s.x, p.s.z) + 0.02, p.s.z, p.dive.dx, p.dive.dz, 1, FX_COLOR.sandDark, 0.7); }
     }
@@ -466,14 +567,23 @@ function frame(f: Fx, c: Ctx, camera: THREE.Camera, dt: number, stamp: number) {
 }
 
 /** Dev only (evidence): fire an effect, and pause and step the effects a 60th of a second at a time. */
-const DEV = { paused: false, steps: 0 };
+const DEV = fxBus.dev;
 function exposeDev(f: Fx) {
   if (process.env.NODE_ENV === "production") return;
   const w = window as unknown as { __volleyFx?: unknown };
-  /** What's live now: the painted rings' and the particles' counts, and the trails. */
-  const probe = () => ({ rings: f.softRings.filter(r => r.mesh.visible).length, move: f.move.pool.alive, glow: f.glow.pool.alive, trails: [f.heat.mesh.visible, f.ribbon.mesh.visible] });
+  /** What's live now: the painted rings' and the particles' counts, the trails, and how many meshes a blink holds white. */
+  const probe = () => ({ rings: f.softRings.filter(r => r.mesh.visible).length, move: f.move.pool.alive, glow: f.glow.pool.alive, trails: [f.heat.mesh.visible, f.ribbon.mesh.visible], blink: f.blink.swapped.length });
   w.__volleyFx = { emit: emitFx, dev: DEV, cam: fxBus.cam, probe };
   return () => { delete w.__volleyFx; };
+}
+
+/** A court-frame point on the view (fxBus.screen): 0..1 across and down, null behind the camera. */
+const P = new THREE.Vector3();
+function projector(root: THREE.Object3D, camera: THREE.Camera) {
+  return (x: number, y: number, z: number): [number, number] | null => {
+    root.localToWorld(P.set(x, y, z)).project(camera);
+    return P.z > 1 ? null : [(P.x + 1) / 2, (1 - P.y) / 2];
+  };
 }
 
 /** The effects' clock: the match's hit-stops and slow-mo beats hold it too; dev pauses step it. */
@@ -492,6 +602,8 @@ export default function VolleyFx() {
     return () => { scene.remove(...f.move.meshes, f.glow.mesh); f.move.clear(); f.move.dispose(); f.glow.clear(); f.glow.dispose(); };
   }, [scene, f]);
   useEffect(() => exposeDev(f), [f]);
+  useEffect(() => () => endBlink(f), [f]);
+  useEffect(() => { fxBus.screen = projector(f.root, camera); return () => { fxBus.screen = null; }; }, [f, camera]);
   useFrame((state, raw) => {
     const m = volley.match, spot = volley.spot;
     if (!m || !spot) { drainFx(); return; }

@@ -3,7 +3,7 @@
  * art/characters/volleyball/build_vb_clips.py with vb_clips.glb: change the script and rebuild, never this file.
  * clips.test.ts checks every name and duration against the GLB.
  *
- * The clips live in their own file (the rig and its actions only, about 453 KB) that only a match loads:
+ * The clips live in their own file (the rig and its actions only, about 451 KB) that only a match loads:
  * `<Character clips={VB_CLIPS_URL} />` on the players in a match (Character.tsx MoreClips). The island never fetches it.
  *
  * Times are seconds from the clip's start at playRate 1. In place: the movement sim moves and lifts the root (runs,
@@ -46,16 +46,16 @@ export interface VbClipInfo {
 export const VB_CLIPS = {
   vb_ready: { duration: 1.2, loop: true, startsOn: "vb_ready" },
   vb_shuffle: { duration: 0.5, loop: true, stride: 0.26, startsOn: "vb_ready" },
-  vb_bump: { duration: 1.0, loop: false, contact: 0.36, hand: "both", contactPoint: [0, 0.445, 0.221], startsOn: "vb_ready", endsOn: "vb_ready" },
+  vb_bump: { duration: 1.0, loop: false, contact: 0.36, hand: "both", contactPoint: [0, 0.468, 0.212], startsOn: "vb_ready", endsOn: "vb_ready" },
   vb_set: { duration: 1.1, loop: false, contact: 0.4, hand: "both", contactPoint: [0, 0.791, 0.198], startsOn: "vb_ready", endsOn: "vb_ready" },
   vb_spike_jump: { duration: 2.0, loop: false, takeoff: 0.56, apex: 1.0, land: 1.62, startsOn: "vb_ready", endsOn: "vb_ready" },
-  vb_spike_hit: { duration: 1.2, loop: false, contact: 0.18, land: 0.6, hand: "R", contactPoint: [-0.29, 0.829, 0.148], startsOn: "vb_spike_jump", endsOn: "vb_ready" },
+  vb_spike_hit: { duration: 1.2, loop: false, contact: 0.18, land: 0.6, hand: "R", contactPoint: [-0.289, 0.831, 0.142], startsOn: "vb_spike_jump", endsOn: "vb_ready" },
   vb_block: { duration: 1.2, loop: false, contact: 0.12, land: 0.77, hand: "both", contactPoint: [0, 0.799, 0.149], startsOn: "vb_spike_jump", endsOn: "vb_ready" },
   vb_jump_set: { duration: 1.2, loop: false, contact: 0.26, land: 0.77, hand: "both", contactPoint: [0, 0.817, 0.151], startsOn: "vb_spike_jump", endsOn: "vb_ready" },
   vb_serve_toss: { duration: 1.0, loop: false, contact: 0.4, hand: "L", contactPoint: [0.299, 0.789, 0.138], startsOn: "vb_serve_toss", endsOn: "hold" },
-  vb_serve_hit: { duration: 1.2, loop: false, contact: 0.15, land: 0.62, hand: "R", contactPoint: [-0.3, 0.833, 0.116], startsOn: "vb_spike_jump", endsOn: "vb_ready" },
+  vb_serve_hit: { duration: 1.2, loop: false, contact: 0.15, land: 0.62, hand: "R", contactPoint: [-0.299, 0.836, 0.105], startsOn: "vb_spike_jump", endsOn: "vb_ready" },
   vb_serve_stand: { duration: 1.3, loop: false, contact: 0.26, hand: "R", contactPoint: [-0.284, 0.744, 0.287], startsOn: "vb_serve_toss", endsOn: "vb_ready" },
-  vb_dive: { duration: 1.6, loop: false, contact: 0.35, takeoff: 0.24, down: 0.48, up: 1.4, hand: "R", contactPoint: [-0.179, 0.378, 0.544], startsOn: "vb_ready", endsOn: "vb_ready" },
+  vb_dive: { duration: 1.6, loop: false, contact: 0.35, takeoff: 0.24, down: 0.48, up: 1.4, hand: "R", contactPoint: [-0.16, 0.513, 0.497], startsOn: "vb_ready", endsOn: "vb_ready" },
   vb_slide_dive: { duration: 1.8, loop: false, contact: 0.42, takeoff: 0.27, down: 0.49, up: 1.4, hand: "both", contactPoint: [-0.002, 0.298, 0.581], startsOn: "vb_ready", endsOn: "vb_ready" },
   vb_celebrate_point: { duration: 1.2, loop: false, startsOn: "vb_ready", endsOn: "vb_ready" },
   vb_celebrate_win: { duration: 2.0, loop: false, startsOn: "vb_ready", endsOn: "vb_ready" },

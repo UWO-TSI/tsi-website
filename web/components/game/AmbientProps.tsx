@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { GLBProp } from "./NatureModels";
 import InstancedGLB, { MergedModels, type ModelPlacement } from "./InstancedNature";
 import { STREETLAMP_URL } from "@/lib/game/propModels";
+import { breath, glowTexture } from "@/lib/game/glow";
 
 /** Seconds-ish a lamp takes to come up to full (or go out): an ease, never a switch (living-village §5). */
 const LAMP_RATE = 0.9;
@@ -106,11 +107,7 @@ export function lampLight(p: readonly [number, number, number], yaw: number, [lx
   return [p[0] + lx * c + lz * s, p[1] + ly, p[2] - lx * s + lz * c];
 }
 
-/**
- * A flame's breath (David, 2026-10-26: "lights should breath like fire, glow should grow and shrink like real lamps"):
- * a slow swell, a quicker waver and a flutter, uneven, each lamp at its own phase. LampGlow's shaders run the same sum.
- */
-export const breath = (t: number, phase: number) => 0.84 + 0.09 * Math.sin(t * 1.9 + phase) + 0.05 * Math.sin(t * 4.7 + phase * 1.3) + 0.02 * Math.sin(t * 11 + phase * 0.7);
+/** lib/game/glow.ts breath, in GLSL. */
 const BREATH_GLSL = "(0.84 + 0.09 * sin(uTime * 1.9 + ph) + 0.05 * sin(uTime * 4.7 + ph * 1.3) + 0.02 * sin(uTime * 11.0 + ph * 0.7))";
 /** A lamp's phase from where it stands. */
 export const lampPhase = (x: number, z: number) => x * 1.7 + z * 2.3;
@@ -145,21 +142,6 @@ export function LampPool({ points, intensity, reach, player, count = 4 }: {
     });
   });
   return <>{Array.from({ length: count }, (_, k) => <pointLight key={k} ref={l => { lights.current[k] = l; }} color="#FFA040" intensity={0} distance={reach} />)}</>;
-}
-
-/** A soft round glow, white in the middle fading to nothing at the rim (the halos' and the pools' alpha). */
-let glowTex: THREE.Texture | null = null;
-function glowTexture(): THREE.Texture {
-  if (glowTex) return glowTex;
-  const c = document.createElement("canvas");
-  c.width = c.height = 64;
-  const g = c.getContext("2d")!, grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-  grad.addColorStop(0, "rgba(255,255,255,1)");
-  grad.addColorStop(0.35, "rgba(255,255,255,0.45)");
-  grad.addColorStop(1, "rgba(255,255,255,0)");
-  g.fillStyle = grad;
-  g.fillRect(0, 0, 64, 64);
-  return (glowTex = new THREE.CanvasTexture(c));
 }
 
 type GlowUniforms = { uTime: { value: number }; uOn: { value: number } };

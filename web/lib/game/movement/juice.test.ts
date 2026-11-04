@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ParticlePool } from "@/lib/game/fx/particles";
 import { PACK, PACK_COLS } from "@/lib/game/fx/pack";
 import { Surface } from "@/lib/game/grid";
-import { LAND, SPLASH, dashBurst, springStep, footprint, footstep, glideFurl, glideOpen, glideRibbon, glideSetDown, groundUnder, landKind, landing, mantleGrab, mantleStep, rollTumble, skidKick, skidPush, slideBurst, slidePop, slideTrail, splash, takeoff } from "./juice";
+import { LAND, SPLASH, dashBurst, leanStep, springStep, footprint, footstep, glideFurl, glideOpen, glideRibbon, glideSetDown, groundUnder, landKind, landing, mantleGrab, mantleStep, rollTumble, skidKick, skidPush, slideBurst, slidePop, slideTrail, splash, takeoff } from "./juice";
 
 const dry = () => false;
 /** Sprite names written to the pool, sorted (what a move threw). */
@@ -204,5 +204,37 @@ describe("the cosmetic springs at a low frame rate (world audit item 23)", () =>
     let s = { x: 0.1, v: 0 };
     for (let i = 0; i < 5; i++) s = { ...springStep(s.x, s.v, 0, 260, 16, 0.01) };
     expect(one.x).toBeCloseTo(s.x, 3);
+  });
+});
+
+describe("the body's lean on starts and stops (vb-anim round 2)", () => {
+  /** The lean (radians, + forward) over a run of frames of a walk's speed: the sim's exponential approach to `to`. */
+  function lean(from: number, to: number, rate: number, seconds = 1.2, frame = 1 / 60) {
+    let x = 0, v = 0, speed = from;
+    const out: number[] = [];
+    for (let t = 0; t < seconds; t += frame) {
+      const next = to + (speed - to) * Math.exp(-rate * frame);
+      ({ x, v } = leanStep(x, v, (next - speed) / frame, frame, 1));
+      speed = next;
+      out.push(x);
+    }
+    return out;
+  }
+  it("tips into a start and settles upright at a steady walk", () => {
+    const s = lean(0, 7.4, 12);
+    expect(Math.max(...s)).toBeGreaterThan(0.04);
+    expect(Math.abs(s.at(-1)!)).toBeLessThan(0.005);
+  });
+  it("runs on over the feet on a stop, rocks back past upright, and settles", () => {
+    const s = lean(7.4, 0, 7.5), top = s.indexOf(Math.max(...s));
+    expect(s[top]).toBeGreaterThan(0.04);                                         // the body carries on forward
+    expect(Math.min(...s.slice(top))).toBeLessThan(-0.008);                       // the overshoot back
+    expect(Math.abs(s.at(-1)!)).toBeLessThan(0.005);
+  });
+  it("stays inside its limit and does nothing turned off", () => {
+    let x = 0, v = 0;
+    for (let i = 0; i < 120; i++) ({ x, v } = leanStep(x, v, 400, 1 / 60, 1));
+    expect(x).toBeLessThanOrEqual(0.17);
+    expect(leanStep(0, 0, 90, 1 / 60, 0).x).toBe(0);
   });
 });
