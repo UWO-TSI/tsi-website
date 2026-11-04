@@ -2,8 +2,9 @@
  * The match's effects and sounds (David's approved plan, 2026-10-30: 15 effects, each contact in four timing grades),
  * fed from the match's events. VolleyMatch emits here; the effects (VolleyFx.tsx, VolleyStamps.tsx) and the sounds
  * (sfx.ts) drain or listen. The camera and time requests an effect makes (a shake, a zoom punch, a hit-stop, a slow-mo
- * beat) sit in `cam`, read and eased by VolleyMatch. Only the player in a match has any of it. Pure, no three.js.
+ * beat) sit in `cam`, read and eased by VolleyMatch. Only the player in a match has any of it. Pure: three.js only as a type.
  */
+import type { Object3D } from "three";
 import type { ContactKind, Timing } from "./match";
 import type { Team } from "./rules";
 
@@ -13,7 +14,7 @@ export type VbFx =
   | { kind: "land"; x: number; z: number; in: boolean; speed: number; heat: number }
   | { kind: "net"; x: number; y: number } | { kind: "tape"; x: number; y: number }
   | { kind: "takeoff"; who: number; x: number; y: number; z: number } | { kind: "touchdown"; who: number; x: number; y: number; z: number }
-  | { kind: "dive"; who: number; strong: boolean; x: number; z: number; dx: number; dz: number }
+  | { kind: "dive"; who: number; onBall: boolean; x: number; z: number; dx: number; dz: number }
   | { kind: "toss"; who: number; power: number; max: boolean }
   | { kind: "whiff"; who: number }
   | { kind: "point"; team: Team; why: string; x: number; z: number; heat: number }
@@ -25,6 +26,19 @@ export const fxBus = {
   /** Camera and time requests (VolleyMatch eases them back): shake 0..1, zoom punch (FOV degrees), hit-stop and slow-mo (s). */
   cam: { shake: 0, punch: 0, stop: 0, slow: 0, slowScale: 0.35 },
   listeners: new Set<(e: VbFx) => void>(),
+  /** A court-frame point on the view (0..1 across and down), set by VolleyFx while it draws; null behind the camera. */
+  screen: null as ((x: number, y: number, z: number) => [number, number] | null) | null,
+  /**
+   * The impact frame (fxPlan IMPACT): VolleyFx starts it and counts it down by rendered frames, VolleyStamps draws it
+   * while `left` > 0. `n` counts them; `x`, `y` is the hit on the view; `at` the effects' clock when it flashed.
+   */
+  impact: { left: 0, n: 0, x: 0.5, y: 0.5, at: -99 },
+  /** Player `who`'s drawn body (VolleyMatch sets it): what a blink (fxPlan BLINK) turns white. */
+  body: null as ((who: number) => Object3D | null) | null,
+  /**
+   * Dev only (evidence): the effects paused, and stepped a 60th of a second at a time.
+   */
+  dev: { paused: false, steps: 0 },
 };
 
 export function emitFx(e: VbFx) {

@@ -11,8 +11,14 @@ import f from "./flat.module.css";
 export function ServeMeter({ value, max = 0.94, label, children }: { value: number; max?: number; label: string; children?: ReactNode }) {
   const v = Math.max(0, Math.min(1, value)), top = v >= max;
   return <div className={f.serveMeter} data-max={top || undefined} style={{ "--v": v, "--max": 1 - max } as CSSProperties}>
-    <div className={f.serveTri} role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(v * 100)}>
-      <b /><i /><s />
+    {/* Round 3 juice (David: "more juice to filling out the bar"): a glow that swells with the fill, notches the fill
+        clicks past, sparks riding the rising edge, and at the top rays turning behind it. */}
+    {top && <span className={f.serveRays} aria-hidden="true" />}
+    <div className={f.serveGlow}>
+      <div className={f.serveTri} role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(v * 100)}>
+        <b /><i /><u /><s />
+      </div>
+      <span className={f.serveSparks} aria-hidden="true"><i /><i /><i /><i /></span>
     </div>
     {top && <em className={f.serveMax}>Max</em>}
     {children}

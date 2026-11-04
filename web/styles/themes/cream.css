@@ -16,6 +16,8 @@
   /* A sale's coins landing: the wallet glows from the light yellow to the deep (more coins, deeper). */
   --ui-gold-light: #ffe27a;
   --ui-gold-deep: #c9770c;
+  --ui-silver: #b8c0cc;  /* podium places (the leaderboard): gold, silver, bronze edges */
+  --ui-bronze: #d08a52;
   --ui-title-outline: #234a52;
   --ui-home: #ef7a5a;
   --ui-away: #4bb3c8;

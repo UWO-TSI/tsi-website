@@ -22,6 +22,6 @@ describe("the shore field", () => {
       }
       expect(checked).toBeGreaterThan(1000);
       expect(worst).toBeLessThan(0.05);
-    });
+    }, 20_000); // a dense scan: about 5 s alone, past the default 5 s on a loaded machine
   }
 });
