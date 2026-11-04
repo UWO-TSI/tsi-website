@@ -4,7 +4,7 @@
 // `?progression=demo` (the real progression service on an in-memory store; `&chapter=` and `&tally=` set where the
 // member is). Headless Chromium, muted, under the shared browser lock.
 //   HOST=http://localhost:3147 node specs/evidence/main-quest/shoot.mjs <out_dir> <scene> [<scene> ...]
-// Scenes: mq5hud, mq5hud-phone (round 5); mq4hud, mq4hud-phone, mq4sand (round 4); r2flow, r2museum, r2dig, pops, strips (round 2); flow, chapters, dig, pickaxe (round 1; the new world: run the dev server with NEXT_PUBLIC_GAME_WORLD=new); village (the
+// Scenes: mq6hud, mq6hud-phone (round 6); mq5hud, mq5hud-phone (round 5); mq4hud, mq4hud-phone, mq4sand (round 4); r2flow, r2museum, r2dig, pops, strips (round 2); flow, chapters, dig, pickaxe (round 1; the new world: run the dev server with NEXT_PUBLIC_GAME_WORLD=new); village (the
 // default world, no env: the village's one tracker line, unchanged).
 // Places are the new world's (lib/collections/rolls.ts activeVillage("new"): museum 4,70.5; dig-sand-0 -17,102;
 // dig-soil-15 35,84; rock-1 38,25.1).
@@ -130,7 +130,7 @@ async function vitalsAt(page, name, health, stamina, clip) {
   log.push({ name, vitals: await page.evaluate(() => [...document.querySelectorAll("[data-testid=hud-vitals] [role=meter]")].map(m => [m.getAttribute("aria-label"), getComputedStyle(m).getPropertyValue("--vital").trim(), getComputedStyle(m).color])) });
 }
 /** Round 4: the level-up moment as a strip: a chapter's XP fills the ring, then the moment's beats (times from its start, ms). */
-async function levelUpStrip(page, prefix, wide) {
+async function levelUpStrip(page, prefix, wide, times = [["a", 250], ["b", 850], ["c", 1500], ["e", 2420], ["f", 2750], ["g", 3700], ["h", 4600]], seek = null) {
   const xp = (total, levelled) => page.evaluate(([t, l]) => window.dispatchEvent(new CustomEvent("tsi:api-write", { detail: { path: "/api/progression/chapters/advance", data: { xp_gain: { amount: 0, total: t, level: l ? 2 : 1, levelled_up: l } } } })), [total, levelled]);
   await xp(90, false); await sleep(1500);
   // A chapter's level up (its check-mark first), so the reveal lists the quest it opens.
@@ -140,13 +140,13 @@ async function levelUpStrip(page, prefix, wide) {
   const t0 = await page.evaluate(() => performance.now());
   const card = async () => {
     // A phone's whole screen (the moment has no card to crop to, and the jump grows past its box).
-    if (!wide && prefix.startsWith("mq5")) return { x: 0, y: 40, width: 390, height: 804 };
+    if (!wide && /^mq[56]/.test(prefix)) return { x: 0, y: 40, width: 390, height: 804 };
     const b = await page.$eval("[data-testid=level-up] section", el => { const r = el.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; });
     const m = wide ? 70 : 10;
     return { x: Math.max(0, b.x - m), y: Math.max(0, b.y - m), width: b.w + 2 * m, height: b.h + 2 * m };
   };
   let clip = null;
-  for (const [k, at] of [["a", 250], ["b", 850], ["c", 1500], ["e", 2420], ["f", 2750], ["g", 3700], ["h", 4600]]) {
+  for (const [k, at] of times) {
     const now = await page.evaluate(() => performance.now());
     if (at > now - t0) await sleep(at - (now - t0));
     clip = clip ?? await card();
@@ -161,12 +161,54 @@ async function levelUpStrip(page, prefix, wide) {
       log.push({ name: `${prefix}-d (flash held)` });
     }
   }
+  if (seek) {
+    // The reveal frame by frame: at its first frame every animation is paused, then each is stepped on by the same ms
+    // (headless frames under load are too slow to catch a 0.45 s fade). Then they run on.
+    await page.waitForFunction(() => document.querySelector("[data-testid=level-up]")?.dataset.phase === "reveal", null, { timeout: 8000, polling: "raf" });
+    await page.evaluate(() => { window.__anims = document.getAnimations().map(a => { a.pause(); return [a, a.currentTime ?? 0]; }); });
+    for (const ms of seek) {
+      await page.evaluate(t => { for (const [a, base] of window.__anims) a.currentTime = base + t; }, ms);
+      await sleep(120);
+      await page.screenshot({ path: `${OUT}/${prefix}-r${String(ms).padStart(4, "0")}.png`, clip });
+      log.push({ name: `${prefix}-r${ms}`, seek: ms });
+    }
+    await page.evaluate(() => window.__anims.forEach(([a]) => a.play()));
+    await sleep(600);
+  }
   await shot(page, `${prefix}-full`);
   log.push({ name: `${prefix}-full`, card: await page.$eval("[data-testid=level-up]", el => el.textContent).catch(() => null) });
   await page.keyboard.press("Escape"); await sleep(1000);
 }
 
 for (const scene of SCENES) try {
+  if (scene === "mq6hud" || scene === "mq6hud-phone") {
+    // Round 6: the vitals on the white card (full, half, low; critical as a strip), a third row cloned in to show a
+    // shield or mana bar fits, and the level up: the figure fades, "Level up" moves up, the unlocks take the centre.
+    const phone = scene.endsWith("phone");
+    const { ctx, page } = await open("time=day", {}, phone ? PHONE : undefined);
+    await go(page, 30, 46, Math.PI);
+    await hudIn(page);
+    const p = phone ? "mq6-phone" : "mq6";
+    const corner = phone ? { x: 0, y: 40, width: 390, height: 160 } : { x: 0, y: 40, width: 460, height: 110 };
+    await shot(page, `${p}-hud-rest`);
+    for (const [k, h, st] of [["full", 1, 1], ["half", 0.5, 0.5], ["low", 0.14, 0.1]]) await vitalsAt(page, `${p}-vitals-${k}`, h, st, corner);
+    const t0 = Date.now();
+    for (let i = 0; i < 8; i++) {
+      const at = i * 110; if (Date.now() - t0 < at) await sleep(at - (Date.now() - t0));
+      await page.screenshot({ path: `${OUT}/${p}-critical-${i}.png`, clip: phone ? { x: 0, y: 95, width: 260, height: 85 } : { x: 0, y: 40, width: 300, height: 80 } });
+    }
+    await page.evaluate(() => { window.__combat.rt.player.hp = window.__combat.rt.player.maxHp; window.__publishCombat(); });
+    await sleep(1500);
+    // A third row (a class's shield or mana): the stamina row cloned in as the shield, with the place name showing.
+    await page.evaluate(() => { const v = document.querySelector("[data-testid=hud-vitals]"); const r = v.lastElementChild.cloneNode(true); r.dataset.kind = "shield"; r.removeAttribute("data-quiet"); r.style.setProperty("--vital", "0.7"); r.setAttribute("aria-label", "Shield (fit check)"); v.appendChild(r);
+      const h = document.querySelector("main header"); if (h) h.dataset.fading = "false"; });
+    await sleep(400);
+    await shot(page, `${p}-vitals-three`, phone ? { x: 0, y: 40, width: 390, height: 200 } : { x: 0, y: 40, width: 460, height: 160 });
+    await page.evaluate(() => { const v = document.querySelector("[data-testid=hud-vitals]"); if (v.children.length > 2) v.lastElementChild.remove(); });
+    await page.mouse.move(phone ? 200 : 900, 600);
+    await levelUpStrip(page, `${p}-levelup`, !phone, [["a", 250], ["b", 1500], ["c", 2420]], [0, 150, 300, 450, 650, 800, 950, 1150, 3500]);
+    await ctx.close();
+  }
   if (scene === "mq5hud" || scene === "mq5hud-phone") {
     // Round 5: the vitals bare and on the card, critical's flash and heartbeat as strips, the world as health falls
     // (vignette, then the drain), the level up with no card, the phone's camera and compact controls.

@@ -6,8 +6,8 @@
  * flash frame for every experence going in ... the character jumps and grows a lil"): when the HUD's XP ring fills
  * (HudBars' LEVEL_FILLED), the kit's LevelUpMoment plays with your own character on it (the creator's studio portrait,
  * its own small canvas, up only while the moment is): each XP mote landing blips a little higher, the burst makes the
- * character jump and cheer, and the reveal says the new level and what it opens (lib/game/levelUp.ts: only what's
- * real). A finished chapter's check-mark (tutorial-v2's QuestCheck, on "tsi:quest-complete") plays first; the moment
+ * character jump and cheer, and the reveal fades the character out and says the new level and what it opens in the
+ * middle (lib/game/levelUp.ts: only what's real; the quest's book flips, the stat points twinkle). A finished chapter's check-mark (tutorial-v2's QuestCheck, on "tsi:quest-complete") plays first; the moment
  * waits for it.
  */
 import { useEffect, useRef, useState, type RefObject } from "react";
@@ -79,5 +79,6 @@ export default function LevelUpCard() {
   const unlocks = levelUnlocks(state.chapters, DROPS.classes).filter(u => shown.chapter || u.kind !== "quest");
   return <LevelUpMoment level={shown.level} title={`You're level ${shown.level}`} testId="level-up" onBeat={beat} onClose={() => setShown(null)}
     figure={<Hero motion={motion} jumpAt={jumpAt} />}
-    items={unlocks.map(u => ({ key: u.kind, icon: u.kind === "quest" ? <BookOpen size={18} /> : <Sparkles size={18} />, title: u.title, line: u.detail }))} />;
+    items={unlocks.map(u => u.kind === "quest" ? { key: u.kind, icon: <BookOpen size={28} />, motion: "flip", title: u.title, line: u.detail }
+      : { key: u.kind, icon: <Sparkles size={28} />, motion: "twinkle", title: u.title, line: u.detail })} />;
 }

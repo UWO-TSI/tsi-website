@@ -9,7 +9,9 @@
  * - charge: the `figure` (the game's 3D character) on a soft glow; XP motes curve in from around it, and each one landing
  *   flashes the figure white for two frames (never back to back: they land `LEVEL_UP_MS.gap` apart) and calls `onBeat`;
  * - burst: "Level up!" springs out with a burst of sparks, the figure grows a little (the host makes it jump);
- * - reveal: the figure steps up and back; the new level and what it unlocks rise under it, white type, one button.
+ * - reveal (r5: "fade the characetr out, move the level up up and take the center screen with micro animation aof each
+ *   thing that was unlocked"): the figure fades out, "Level up!" rises to the top with the new level under it, and the
+ *   unlocks take the middle of the screen, each with its own small animation (`motion`: flip, twinkle or pop), one button.
  * Reduced motion starts at the reveal (no motes, no flashes). A click, E, Enter or Escape skips to the reveal, then closes.
  */
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
@@ -17,7 +19,8 @@ import { Sparkles } from "lucide-react";
 import f from "./flat.module.css";
 import l from "./levelUp.module.css";
 
-export interface MomentItem { key: string; icon: ReactNode; title: ReactNode; line?: ReactNode }
+/** An unlock on the reveal; `motion` is its icon's small animation (default pop). */
+export interface MomentItem { key: string; icon: ReactNode; title: ReactNode; line?: ReactNode; motion?: "flip" | "twinkle" | "pop" }
 export type LevelBeat = "mote" | "burst" | "reveal";
 
 const MOTES = 7;
@@ -40,6 +43,8 @@ export function LevelUpMoment({ level, figure, title, items, action = "Nice!", o
 }) {
   const [phase, setPhase] = useState<"charge" | "burst" | LevelBeat>(() => (reduced() ? "reveal" : "charge"));
   const figureEl = useRef<HTMLDivElement>(null);
+  // The figure fades out at the reveal; once it has (or from the start, under reduced motion) its canvas goes.
+  const [gone, setGone] = useState(reduced);
   const beat = useRef(onBeat), close = useRef(onClose), at = useRef(phase);
   useEffect(() => { beat.current = onBeat; close.current = onClose; at.current = phase; });
   const go = (p: LevelBeat) => { if (at.current === "reveal") return; at.current = p; setPhase(p); beat.current?.(p, 0); };
@@ -70,22 +75,23 @@ export function LevelUpMoment({ level, figure, title, items, action = "Nice!", o
       style={{ "--start": `${LEVEL_UP_MS.start}ms`, "--fly": `${LEVEL_UP_MS.fly}ms`, "--gap": `${LEVEL_UP_MS.gap}ms`, "--charge": `${LEVEL_UP_MS.burst - LEVEL_UP_MS.start}ms` } as CSSProperties}>
       <div className={l.stage}>
         <span className={l.glow} aria-hidden />
-        <div ref={figureEl} className={l.figure}>{figure}</div>
+        {!gone && <div ref={figureEl} className={l.figure} onTransitionEnd={e => e.propertyName === "opacity" && setGone(true)}>{figure}</div>}
         {phase === "charge" && <span className={l.motes} aria-hidden>{FROM.map((p, i) =>
           <span key={i} className={l.moteX} style={{ "--i": i, "--x": `${p.x}px`, "--y": `${p.y}px` } as CSSProperties} onAnimationEnd={e => e.target === e.currentTarget && landed(i)}>
             <span className={l.moteY}><i /></span>
           </span>)}</span>}
         {phase !== "charge" && <span className={l.sparks} aria-hidden>{Array.from({ length: 12 }, (_, k) => <i key={k} style={{ "--k": k } as CSSProperties} />)}</span>}
-        {phase !== "charge" && <strong className={l.shout} aria-hidden><Sparkles size={20} />Level up!</strong>}
+        {phase !== "charge" && <strong className={l.shout}><Sparkles size={20} aria-hidden />Level up!</strong>}
       </div>
       {phase === "reveal" && <div className={l.panel} onClick={e => e.stopPropagation()}>
-        <span className={l.kicker}>Level up</span>
-        <strong className={l.big}><small>Lv</small>{level}</strong>
-        {title && <span className={l.title}>{title}</span>}
-        {items && items.length > 0 && <ul className={l.list}>{items.map((it, i) => <li key={it.key} style={{ "--i": i } as CSSProperties}>
-          <span className={l.icon} aria-hidden>{it.icon}</span>
-          <span><b>{it.title}</b>{it.line && <small>{it.line}</small>}</span>
-        </li>)}</ul>}
+        <header className={l.head}>
+          <strong className={l.big}><small>Lv</small>{level}</strong>
+          {title && <span className={l.title}>{title}</span>}
+        </header>
+        <ul className={l.list}>{items?.map((it, i) => <li key={it.key} data-motion={it.motion ?? "pop"} style={{ "--i": i } as CSSProperties}>
+          <span className={l.icon} aria-hidden><span>{it.icon}</span></span>
+          <b>{it.title}</b>{it.line && <small>{it.line}</small>}
+        </li>)}</ul>
         <button type="button" className={f.buy} onClick={onClose} autoFocus>{action}</button>
       </div>}
     </section>

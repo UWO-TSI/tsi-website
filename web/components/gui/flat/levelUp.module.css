@@ -6,7 +6,7 @@
 .layer { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 16px; overflow: hidden;
   background: radial-gradient(ellipse 70% 62% at 50% 48%, rgb(var(--ui-shade) / 0.52), rgb(var(--ui-shade) / 0.16));
   font-family: var(--gui-font); color: var(--ui-on-scrim); animation: fade 0.3s ease-out both; }
-.moment { position: relative; display: grid; width: min(360px, 100%); height: min(540px, calc(100dvh - 32px)); text-align: center;
+.moment { --mh: min(540px, calc(100dvh - 32px)); position: relative; display: grid; width: min(360px, 100%); height: var(--mh); text-align: center;
   animation: momentIn 0.55s cubic-bezier(0.34, 1.4, 0.64, 1) both; }
 .stage, .panel { grid-area: 1 / 1; }
 .stage { position: relative; }
@@ -14,19 +14,19 @@
 /* The glow behind the figure: it gathers as the motes land and flares at the burst. */
 .glow { position: absolute; left: 50%; top: 42%; width: 340px; height: 340px; margin: -170px 0 0 -170px; border-radius: 50%;
   background: radial-gradient(closest-side, color-mix(in oklab, var(--ui-xp) 60%, transparent), transparent);
-  opacity: 0.15; transform: scale(0.7); animation: gather var(--charge) var(--start) linear both; }
+  opacity: 0.15; transform: scale(0.7); animation: gather var(--charge) var(--start) linear both; transition: translate 0.6s cubic-bezier(0.34, 1.2, 0.64, 1); }
 .moment:not([data-phase="charge"]) .glow { animation: flare 0.9s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
-.moment[data-phase="reveal"] .glow { top: 22%; }
+.moment[data-phase="reveal"] .glow { translate: 0 calc(var(--mh) * 0.16); }
 @keyframes gather { to { opacity: 0.8; transform: scale(1); } }
 @keyframes flare { 0% { opacity: 1; transform: scale(1); } 35% { opacity: 1; transform: scale(1.4); } 100% { opacity: 0.5; transform: scale(1.05); } }
 
 /* The figure: the character, standing in the middle; a landing mote flashes it white for two frames. At the reveal it
-   steps up and back so the level and the unlocks have the lower half to themselves. */
+   fades out, so the unlocks have the middle to themselves. */
 .figure { position: absolute; left: 50%; top: 40px; width: 240px; height: 380px; margin-left: -120px; transform-origin: 50% 92%;
-  transition: transform 0.6s cubic-bezier(0.34, 1.4, 0.64, 1); }
+  transition: transform 0.6s cubic-bezier(0.34, 1.4, 0.64, 1), opacity 0.45s ease; }
 .figure[data-flash] { filter: brightness(3.2) saturate(0); }
 .moment[data-phase="burst"] .figure { transform: scale(1.08); }
-.moment[data-phase="reveal"] .figure { transform-origin: 50% 0; transform: translateY(-28px) scale(0.6); }
+.moment[data-phase="reveal"] .figure { opacity: 0; transform: scale(0.9); }
 
 /* The motes: each flies its own curve in (x eases in, y eases out) to the figure's middle and lands there. */
 .motes { position: absolute; left: 50%; top: 42%; width: 0; height: 0; pointer-events: none; }
@@ -39,15 +39,15 @@
 @keyframes moteY { from { transform: translateY(var(--y)); } to { transform: none; } }
 @keyframes moteDot { 0% { opacity: 0; transform: scale(0.3); } 20% { opacity: 1; transform: scale(1.15); } 85% { opacity: 1; transform: scale(0.9); } 100% { opacity: 0; transform: scale(0.4); } }
 
-/* The burst: "Level up!" springs out over the figure's legs with sparks thrown from its middle. */
-.shout { position: absolute; left: 0; right: 0; top: 64%; display: inline-flex; justify-content: center; align-items: center; gap: 8px;
+/* The burst: "Level up!" springs out over the figure's legs with sparks thrown from its middle; at the reveal it rises
+   to the top (translate, so the spring-in's transform still runs). */
+.shout { position: absolute; left: 0; right: 0; top: 0; translate: 0 calc(var(--mh) * 0.64); transition: translate 0.65s cubic-bezier(0.34, 1.25, 0.64, 1); display: inline-flex; justify-content: center; align-items: center; gap: 8px;
   color: var(--ui-on-scrim); font: 900 44px/1 var(--gui-font); letter-spacing: -0.01em;
   text-shadow: 0 3px 0 rgb(var(--ui-shade) / 0.4), 0 0 22px rgb(var(--ui-shade) / 0.55);
   animation: shout 0.6s cubic-bezier(0.34, 1.7, 0.64, 1) both; }
 .shout svg { color: var(--ui-xp); filter: drop-shadow(0 2px 0 rgb(var(--ui-shade) / 0.35)); }
-.moment[data-phase="reveal"] .shout { animation: shoutOut 0.3s ease-in both; }
+.moment[data-phase="reveal"] .shout { translate: 0 14px; }
 @keyframes shout { 0% { opacity: 0; transform: scale(0.3) rotate(-6deg); } 100% { opacity: 1; transform: none; } }
-@keyframes shoutOut { to { opacity: 0; transform: translateY(-20px) scale(0.9); } }
 .sparks { position: absolute; left: 50%; top: 42%; width: 0; height: 0; pointer-events: none; }
 .sparks i { position: absolute; left: -5px; top: -5px; width: 10px; height: 10px; border-radius: 50%; background: var(--ui-xp);
   transform: rotate(calc(var(--k) * 30deg)); animation: spark 0.9s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
@@ -55,32 +55,50 @@
 .sparks i:nth-child(3n + 1) { background: var(--ui-on-scrim); width: 8px; height: 8px; }
 @keyframes spark { 0% { opacity: 1; transform: rotate(calc(var(--k) * 30deg)) translateY(0) scale(1); } 100% { opacity: 0; transform: rotate(calc(var(--k) * 30deg)) translateY(-170px) scale(0.3); } }
 
-/* The reveal, in the same style: the new level and its unlocks rise into the lower half, white on the scrim, then one
-   button in the theme's card colour. */
-.panel { align-self: end; display: grid; justify-items: center; gap: 4px; padding: 0 12px 8px; text-shadow: 0 1px 2px rgb(var(--ui-shade) / 0.55), 0 0 16px rgb(var(--ui-shade) / 0.4);
-  animation: panelIn 0.5s cubic-bezier(0.34, 1.3, 0.64, 1) both; }
-.kicker { color: var(--ui-xp); font: 800 13px/1 var(--gui-font); letter-spacing: 0.14em; text-transform: uppercase; }
-.big { display: inline-flex; align-items: baseline; gap: 4px; font: 900 64px/1 var(--gui-font); animation: bigIn 0.6s 0.12s cubic-bezier(0.34, 1.7, 0.64, 1) both; }
-.big small { color: var(--ui-xp); font-size: 22px; font-weight: 800; }
+/* The reveal, in the same style: under "Level up!" the new level, then the unlocks in the middle of the screen, white on
+   the scrim, each icon in a gold ring with its own small animation (data-motion) and a ping, then one button in the
+   theme's card colour. */
+.panel { display: grid; grid-template-rows: auto 1fr auto; justify-items: center; padding: 66px 12px 8px;
+  text-shadow: 0 1px 2px rgb(var(--ui-shade) / 0.55), 0 0 16px rgb(var(--ui-shade) / 0.4); animation: fade 0.4s ease-out both; }
+.head { display: grid; justify-items: center; gap: 2px; }
+.big { display: inline-flex; align-items: baseline; gap: 4px; font: 900 56px/1 var(--gui-font); animation: bigIn 0.6s 0.12s cubic-bezier(0.34, 1.7, 0.64, 1) both; }
+.big small { color: var(--ui-xp); font-size: 20px; font-weight: 800; }
 .title { font: 600 15px/1.3 var(--gui-font); opacity: 0.9; }
-.list { display: grid; gap: 12px; width: min(300px, 100%); margin: 14px 0 16px; padding: 0; list-style: none; text-align: left; }
-.list li { display: grid; grid-template-columns: 36px 1fr; gap: 12px; align-items: center;
-  animation: rowIn 0.45s calc(0.3s + var(--i) * 0.1s) cubic-bezier(0.34, 1.4, 0.64, 1) both; }
-.list b { display: block; font: 800 15px/1.25 var(--gui-font); }
-.list small { display: block; margin-top: 2px; font: 500 13px/1.3 var(--gui-font); opacity: 0.85; }
-.icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; color: var(--ui-on-scrim);
-  background: rgb(var(--ui-shade) / 0.28); box-shadow: inset 0 0 0 2px var(--ui-xp); filter: drop-shadow(0 1px 2px rgb(var(--ui-shade) / 0.35)); }
+.list { align-content: center; display: grid; justify-items: center; gap: 26px; width: min(320px, 100%); margin: 0; padding: 0; list-style: none; }
+.list li { --at: calc(0.3s + var(--i) * 0.22s); display: grid; justify-items: center; gap: 3px;
+  animation: rowIn 0.5s var(--at) cubic-bezier(0.34, 1.5, 0.64, 1) both; }
+.list b { margin-top: 8px; font: 800 18px/1.25 var(--gui-font); }
+.list small { font: 500 14px/1.35 var(--gui-font); opacity: 0.88; }
+.icon { position: relative; display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; color: var(--ui-on-scrim); perspective: 240px;
+  background: rgb(var(--ui-shade) / 0.28); box-shadow: inset 0 0 0 2.5px var(--ui-xp), 0 0 18px color-mix(in oklab, var(--ui-xp) 45%, transparent);
+  filter: drop-shadow(0 1px 2px rgb(var(--ui-shade) / 0.35)); }
+.icon > span { display: grid; animation: pop 2.8s calc(var(--at) + 0.3s) ease-out infinite both; }
+.icon::after { content: ""; position: absolute; inset: 0; border-radius: 50%; box-shadow: 0 0 0 2px var(--ui-xp); opacity: 0;
+  animation: ping 2.8s calc(var(--at) + 0.3s) ease-out infinite both; }
+.list li[data-motion="flip"] .icon > span { animation-name: flip; }
+.list li[data-motion="twinkle"] .icon > span { animation-name: twinkle; }
+/* A twinkle throws a glint off the icon's corner. */
+.list li[data-motion="twinkle"] .icon::before { content: ""; position: absolute; right: 6px; top: 6px; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--ui-on-scrim); box-shadow: 0 0 8px var(--ui-xp); opacity: 0; animation: glint 2.8s calc(var(--at) + 0.4s) ease-out infinite both; }
 .panel > button { width: min(240px, 100%); background: var(--ui-card); color: var(--ui-ink); text-shadow: none; box-shadow: 0 3px 0 rgb(var(--ui-shade) / 0.18), 0 8px 22px rgb(var(--ui-shade) / 0.3); }
 .panel > button:hover:not(:disabled) { background: var(--ui-card-dim); }
+@keyframes pop { 0% { transform: none; } 9% { transform: scale(1.25); } 18% { transform: scale(0.92); } 26%, 100% { transform: none; } }
+@keyframes flip { 0% { transform: rotateY(0); } 12% { transform: rotateY(200deg) scale(1.18); } 24%, 100% { transform: rotateY(360deg); } }
+@keyframes twinkle { 0% { transform: none; } 8% { transform: rotate(-16deg) scale(1.22); } 16% { transform: rotate(11deg) scale(1.06); } 24%, 100% { transform: none; } }
+@keyframes glint { 0% { opacity: 0; transform: scale(0.3); } 9% { opacity: 1; transform: translate(5px, -5px) scale(1.2); } 22%, 100% { opacity: 0; transform: translate(9px, -9px) scale(0.4); } }
+@keyframes ping { 0% { opacity: 0.9; transform: scale(1); } 28%, 100% { opacity: 0; transform: scale(1.75); } }
 @keyframes fade { from { opacity: 0; } }
 @keyframes momentIn { 0% { opacity: 0; transform: translateY(18px) scale(0.86); } 100% { opacity: 1; transform: none; } }
-@keyframes panelIn { 0% { opacity: 0; transform: translateY(60px); } 100% { opacity: 1; transform: none; } }
 @keyframes bigIn { 0% { opacity: 0; transform: scale(0.3); } 100% { opacity: 1; transform: none; } }
-@keyframes rowIn { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: none; } }
+@keyframes rowIn { 0% { opacity: 0; transform: translateY(14px) scale(0.7); } 100% { opacity: 1; transform: none; } }
 
+/* A phone: the moment fills most of the screen, so the reveal starts lower, clear of the HUD's top rows. */
+@media (max-width: 700px) {
+  .moment[data-phase="reveal"] .shout { translate: 0 84px; }
+  .panel { padding-top: 136px; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .layer, .moment, .glow, .moment:not([data-phase="charge"]) .glow, .shout, .moment[data-phase="reveal"] .shout, .panel, .big, .list li { animation: none; }
-  .figure { transition: none; }
+  .layer, .moment, .glow, .moment:not([data-phase="charge"]) .glow, .shout, .panel, .big, .list li, .icon > span, .icon::before, .icon::after { animation: none; }
+  .figure, .shout, .glow { transition: none; }
   .sparks { display: none; }
-  .moment[data-phase="reveal"] .shout { opacity: 0; }
 }

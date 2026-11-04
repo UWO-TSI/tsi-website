@@ -5,8 +5,8 @@
  * health and eventually there might be a shield or mana bar for different classes", "all the bars should change color
  * as it depleats, so perifiral visiion you cna tell how youre doing and have tallies for every like 20", "exp bar should
  * exists somewhere seperate, maybe a circular bar around a number somewhere and hover shows specific xp amount").
- * - `Vitals`: a stack of `VitalBar` rows (health, stamina; a class's shield or mana is one more row), on one soft white
- *   card, or `bare` straight over the world (r4: "idk if they should have a huge white pill": both, for David to pick).
+ * - `Vitals`: a stack of `VitalBar` rows on one soft white card (r5: "keep the full card, but keep in mind for shield or
+ *   mana"): health and stamina now; a class's shield or mana is one more row (its kind is here), the card grows down.
  * - `VitalBar`: icon and track; the fill slides from its full colour through amber to its low colour as it empties, so
  *   it reads from the corner of the eye; a thin notch every 20 points of `max`. `critical` (r4: "more red and critical
  *   and flashes"): the well flashes red and the icon beats like a heart (both still under reduced motion: a red well).
@@ -15,12 +15,12 @@
  * Colours: the theme's --ui-* tokens. Shown on /lab/gui.
  */
 import type { CSSProperties, ReactNode, Ref } from "react";
-import { Heart, Zap } from "lucide-react";
+import { Droplet, Heart, Shield, Zap } from "lucide-react";
 import { HoverTip } from "./pieces";
 import v from "./vitals.module.css";
 
-export type VitalKind = "health" | "stamina";
-const ICON = { health: Heart, stamina: Zap } as const;
+export type VitalKind = "health" | "stamina" | "shield" | "mana";
+const ICON = { health: Heart, stamina: Zap, shield: Shield, mana: Droplet } as const;
 /** One notch every this many points. */
 export const TALLY = 20;
 
@@ -41,9 +41,9 @@ export function VitalBar({ kind, value, max = 100, label, live, low, quiet, crit
   </div>;
 }
 
-/** The vitals: the rows stacked, on one soft white card or `bare` over the world. */
-export function Vitals({ children, hidden, bare }: { children: ReactNode; hidden?: boolean; bare?: boolean }) {
-  return <div className={v.card} data-hidden={hidden || undefined} data-bare={bare || undefined} data-testid="hud-vitals">{children}</div>;
+/** The vitals: the rows stacked on one soft white card. */
+export function Vitals({ children, hidden }: { children: ReactNode; hidden?: boolean }) {
+  return <div className={v.card} data-hidden={hidden || undefined} data-testid="hud-vitals">{children}</div>;
 }
 
 /**

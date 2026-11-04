@@ -110,6 +110,26 @@ Redo:
 
 ## Status
 
+**Round 6** (game/main-quest, on origin/main b56f3c36; evidence specs/evidence/main-quest/r6/, befores shot at the
+merge 39f8e42d). Done, waiting for David's review:
+- Vitals on the white card only: `Vitals bare`, its CSS, HudBars' `?vitals=card` and the showroom's bare row deleted.
+  Built for a third row: VitalKind gained `shield` (lucide Shield) and `mana` (Droplet), tokens --ui-shield and --ui-mana
+  in clean, cream and dark (their low colour is --ui-stamina-low); rows 14 px with a 4 px gap, padding 9, so two rows
+  are the ring's 50 px; `.hudBars` tops the ring and card (align flex-start) so a third row grows the card down; a
+  `:has()` rule (DefaultIslandWorld.module.css) steps the place name down 18 px when the card has a third row. The
+  showroom shows three-row cards (shield, mana). Nothing in game uses shield or mana yet.
+- Level up reveal (kit levelUp.tsx/.module.css): the figure fades out (0.45 s, scale 0.9; its canvas unmounts on the
+  transition's end, and never mounts under reduced motion); "Level up!" stays and rises to the top (the `translate`
+  property, so its spring-in keyframes still run); Lv n and the title under it; the unlocks take the middle, centred,
+  each a 64 px gold-ringed icon that springs in staggered, then plays its own motion every 2.8 s with a ping ring:
+  MomentItem `motion` flip (the quest's book turns over), twinkle (stat points: a wiggle and a glint), pop (default).
+  The panel's kicker is gone. Phone (max-width 700): the reveal starts 84 px lower, clear of the HUD's top rows.
+- Bible UI 8b: the vitals on one white card, a third row grows it down.
+- shoot.mjs scenes mq6hud, mq6hud-phone; the reveal strip pauses every animation at the reveal's first frame and steps
+  them (`seek`), since headless frames are too slow for a 0.45 s fade.
+- Gates: tsc clean; vitest 399 files, 3745 passed, 4 skipped, 0 failed; eslint clean on the 5 changed TS files;
+  `git grep '("development" as string)' -- web` empty. No perf:check (UI only, per the round's prompt).
+
 **Round 5** (game/main-quest, head after this file's commit; evidence specs/evidence/main-quest/r5/, befores are r4's shots).
 Done, waiting for David's review:
 - Vitals (kit vitals.tsx/.module.css; game HudBars.tsx): bars 184 px (phone 132), the tally notches a 1 px hairline,
@@ -168,13 +188,15 @@ Done, waiting for David's review:
 
 ## Next
 
-1. Wait for David's review of round 5 (specs/evidence/main-quest/r5/). He picks bare or card for the vitals: delete the
-   other (Vitals `bare`, HudBars' `?vitals=card`, the showroom's second row).
+1. Wait for David's review of round 6 (specs/evidence/main-quest/r6/).
 2. The round 3 migrations still wait to be applied in order (20261028144337_main_quest, 20261028153805_main_quest_r2,
    20261029064914_catalogue_seed).
 
 ## Tools and gotchas
 
+- Browser runner (round 6): scratchpad `mqrun/qrun7.sh <scene>` (run7.sh; `MQ_OUT=before|after` picks mq-r6/<dir>;
+  scenes mq6hud, mq6hud-phone, one per call); `mqrun/evid6.py` builds r6/. Run it with run_in_background when the lock
+  may be held: a foreground call that waits on the lock passes 10 min.
 - Browser batches: `LANE=game/main-quest /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh devserver <script>`,
   retried while it exits 75 (no queue file). One short batch per hold. Runner pattern in the scratchpad `mqrun/`.
 - `?progression=demo&chapter=<slug>&tally=bugs:2,net:1` puts the demo member anywhere in the main quest.

@@ -25,7 +25,7 @@ import { RARITIES, RARITY_LABEL } from "@/lib/rarity";
 import { RODS, TACKLE } from "@/lib/game/rods";
 import { RodRadar, TackleRadar } from "@/components/economy/RodGear";
 import { useSearch } from "@/lib/game/useMediaQuery";
-import { CircleDot, UserRound, Waves, Worm } from "lucide-react";
+import { CircleDot, Sparkles, UserRound, Waves, Worm } from "lucide-react";
 import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
 import { ActionBar, ActionIcon, CardOverlay, DarkButton, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, KeyPeek, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, QuestCheck, RankBadge, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, VitalBar, Vitals, WalletSlot, XpRing, LevelUpMoment, type PeekKind } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
@@ -403,19 +403,18 @@ export default function GuiShowroom() {
       <div className={s.toastStage}><ToastHub /></div>
     </Section>
 
-    <Section id="hud-bars" title="The vitals and the level ring (flat kit)" note="specs/design-bible.md UI 8: health and stamina stacked (room for a class's shield or mana row), each bar sliding from its full colour through amber to its low colour as it empties, a hairline every 20 points, critical health flashing with a beating heart; bare over the world (the island's default) or on the white card; the level in a ring of XP, hover for the exact XP. components/gui/flat/vitals.tsx; the island's are components/game/HudBars.tsx.">
+    <Section id="hud-bars" title="The vitals and the level ring (flat kit)" note="specs/design-bible.md UI 8: health and stamina stacked (room for a class's shield or mana row), each bar sliding from its full colour through amber to its low colour as it empties, a hairline every 20 points, critical health flashing with a beating heart, all on one white card; a class's shield or mana is a third row (the second row here); the level in a ring of XP, hover for the exact XP. components/gui/flat/vitals.tsx; the island's are components/game/HudBars.tsx.">
       <Row>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}><XpRing level={3} fill={0.42} into={126} needed={300} />
-          <Vitals bare><VitalBar kind="health" value={1} label="Health 100 of 100" /><VitalBar kind="stamina" value={1} quiet label="Stamina" /></Vitals></div>
-        <Vitals bare><VitalBar kind="health" value={0.5} label="Health 50 of 100" /><VitalBar kind="stamina" value={0.5} label="Stamina" /></Vitals>
-        <Vitals bare><VitalBar kind="health" value={0.15} critical label="Health 15 of 100" /><VitalBar kind="stamina" value={0.05} low label="Stamina run out" /></Vitals>
-      </Row>
-      <Row>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}><XpRing level={3} fill={0.42} into={126} needed={300} />
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}><XpRing level={3} fill={0.42} into={126} needed={300} />
           <Vitals><VitalBar kind="health" value={1} label="Health 100 of 100" /><VitalBar kind="stamina" value={1} quiet label="Stamina" /></Vitals></div>
         <Vitals><VitalBar kind="health" value={0.5} label="Health 50 of 100" /><VitalBar kind="stamina" value={0.5} label="Stamina" /></Vitals>
         <Vitals><VitalBar kind="health" value={0.15} critical label="Health 15 of 100" /><VitalBar kind="stamina" value={0.05} low label="Stamina run out" /></Vitals>
         <Vitals><VitalBar kind="health" value={0.7} max={200} label="Health 140 of 200" /></Vitals>
+      </Row>
+      <Row>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}><XpRing level={3} fill={0.42} into={126} needed={300} />
+          <Vitals><VitalBar kind="health" value={0.8} label="Health 80 of 100" /><VitalBar kind="stamina" value={1} quiet label="Stamina" /><VitalBar kind="shield" value={0.6} label="Shield 30 of 50" max={50} /></Vitals></div>
+        <Vitals><VitalBar kind="health" value={0.8} label="Health 80 of 100" /><VitalBar kind="stamina" value={0.6} label="Stamina" /><VitalBar kind="mana" value={0.35} label="Mana 35 of 100" /></Vitals>
       </Row>
     </Section>
 
@@ -427,7 +426,8 @@ export default function GuiShowroom() {
       <Row><Button size="sm" onClick={() => setMoment(true)}>Show the level up</Button></Row>
       {moment && <LevelUpMoment level={2} title="You're level 2" onClose={() => setMoment(false)} testId="showroom-moment"
         figure={<UserRound size={200} strokeWidth={1.25} style={{ display: "block", margin: "60px auto 0", color: "var(--ui-ink-2)" }} />}
-        items={[{ key: "quest", icon: <BookOpen size={18} />, title: "New quest: Odile's net", line: "Odile at the museum has a spare net." }]} />}
+        items={[{ key: "quest", icon: <BookOpen size={28} />, motion: "flip", title: "New quest: Odile's net", line: "Odile at the museum has a spare net." },
+          { key: "points", icon: <Sparkles size={28} />, motion: "twinkle", title: "3 stat points", line: "Spend them on your path (P)." }]} />}
     </Section>
 
     <section id="overlays" className={s.section}>
