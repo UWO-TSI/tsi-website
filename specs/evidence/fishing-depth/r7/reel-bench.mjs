@@ -4,9 +4,7 @@
 // Real (trusted) mouse presses play the reel from Node: hold while the fish is ahead of the window's middle.
 // Per frame while the reel is up: the frame's interval, where the catch window and the fish are drawn (read from the
 // styles the reel writes, at the frame they land in), every press and release, Event Timing and long tasks.
-//   node reel-bench.mjs <out.json> [catches=3]   Env: UNCAPPED=1 (rAF unthrottled, like a 120 Hz screen or faster),
-//   MOUSELOOK=off (the camera setting off: headless can't take the pointer lock, so with it on each click asks again),
-//   WHY=1 (log which of the world's hooks and props change while reeling),
+//   node reel-bench.mjs <out.json> [catches=3]   Env: WHY=1 (log which of the world's hooks and props change while reeling),
 //   PROFILE=<file.cpuprofile> (a CPU profile of the first catch).
 import { createRequire } from "node:module";
 import { writeFileSync } from "node:fs";
@@ -16,7 +14,6 @@ const [OUT, N = "3"] = process.argv.slice(2);
 const HOST = "http://localhost:3147", FISH = "fish_black_bass";
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const args = ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist", "--enable-gpu"];
-if (process.env.UNCAPPED === "1") args.push("--disable-frame-rate-limit", "--disable-gpu-vsync");
 const browser = await chromium.launch({ channel: "chromium", headless: true, args });
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
 await ctx.addInitScript(() => {
@@ -80,13 +77,12 @@ await page.route("**/api/collections", route => {
 const LOOK = { skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [], bangs: "bangs_straight", back: "back_bob",
   top: "top_cardigan", bottom: "bottom_trousers", onepiece: null, shoes: "shoes_sneakers", acc: {}, colors: { top_cardigan: 2 } };
 await page.goto(`${HOST}/lab/island`, { waitUntil: "domcontentloaded", timeout: 300000 });
-await page.evaluate(([look, lookOff]) => {
+await page.evaluate(([look]) => {
   localStorage.clear();
   const day = new Date().toLocaleDateString("en-CA", { timeZone: "America/Toronto" });
   for (const [k, v] of Object.entries({ "tsi.look.v1": look, "tsi.pixelated.v1": "false", "tsi.welcomed.v1": "1", "tsi.gift.later": day,
     "tsi.held.v1": JSON.stringify({ held: "rod:rod_flimsy", last: null, pins: [], chosen: {} }) })) localStorage.setItem(k, v);
-  if (lookOff) localStorage.setItem("tsi.camera.v1", JSON.stringify({ mouseLook: false }));
-}, [JSON.stringify(LOOK), process.env.MOUSELOOK === "off"]);
+}, [JSON.stringify(LOOK)]);
 await page.goto(`${HOST}/lab/island?time=day`, { waitUntil: "domcontentloaded", timeout: 300000 });
 await page.waitForSelector("canvas", { timeout: 300000 });
 await page.waitForFunction(() => !!window.__move?.sim?.current && !/Tethos Island/.test([...document.querySelectorAll("[role=status]")].map(e => e.textContent).join("")), null, { timeout: 300000 });
@@ -193,7 +189,7 @@ for (const rec of catches) {
 }
 const iv = all.intervals;
 const result = {
-  mode: process.env.UNCAPPED === "1" ? "uncapped" : "60 Hz", mouseLook: process.env.MOUSELOOK !== "off", catches: catches.length, seconds: r1(all.seconds), frames: iv.length, errors: errors.slice(0, 5),
+  mode: "60 Hz", catches: catches.length, seconds: r1(all.seconds), frames: iv.length, errors: errors.slice(0, 5),
   frameMs: { mean: r1(iv.reduce((a, b) => a + b, 0) / iv.length), p50: r1(pct(iv, 0.5)), p95: r1(pct(iv, 0.95)), p99: r1(pct(iv, 0.99)), max: r1(Math.max(...iv)), over25: iv.filter(x => x > 25).length, over50: iv.filter(x => x > 50).length },
   longTasks: { count: all.longs, ms: Math.round(all.longMs) },
   smooth: { movingFrames: all.moving, stalledPct: r1(100 * all.stalls / all.moving), doubledPct: r1(100 * all.doubles / all.moving), speedJitterPct: r1(100 * all.jitter.reduce((a, b) => a + b, 0) / all.jitter.length) },
