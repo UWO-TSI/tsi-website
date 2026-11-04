@@ -1,8 +1,19 @@
 # The fish list: what you can catch, and why
 
-Lane `fish-list`, round 2 (2026-11-03). Still the list only: nothing is built or modelled. Round 1 (2026-11-02) listed today's 91 catches, 24 new fish and 6 creatures; David marked it on the review page. This round rewrites it to his marks.
+Lane `fish-list`, round 3 (2026-11-04). Still the list only: nothing is built or modelled. Round 1 (2026-11-02) listed today's 91 catches, 24 new fish and 6 creatures; round 2 (2026-11-03) rewrote it to David's marks; round 3 (this one) applies his notes on drops, rods and the epic reel tasks (section 0, "Round 3").
 
 ## 0. David's marks
+
+Round 3 review (2026-11-04, verbatim; every card approved: fl2-biome, fl2-new, fl2-megabyte, fl2-odds, fl2-questions "looks good", all ten picks), with these notes:
+
+- fl2-drops (approve): "more rare so like divine 80, leg 70 epic 60"
+- fl2-rods (approve): "glass strenght lower, the stats should make sense with the rod. passive ability exist aswell"
+- fl2-tasks (approve): "maybe stuff that moves out of the actual bar, so like mouse mouse placement matters"
+
+**What changed in round 3:**
+1. **Drops** (section 6): epic 60% (70% on a clean catch), legendary 70%, Divine 80%; common 15, uncommon 30 and rare 50 stay. The "never two misses in a row" rule on creatures stays as it is (it still fits, see section 6).
+2. **Rods** (section 8): David's note is recorded and handed to the `rod-gear` lane, which is rescaling every rod this round. Rod stats, Glass's lower strength and rod passives are its. This list keeps only the rule. No rod stat is changed here.
+3. **Epic reel tasks** (section 5): the design direction is now David's: the targets move out of the reel bar, so where the mouse (or finger) is matters. One line per task says how each of the six uses it.
 
 Round 2 review (2026-11-03, verbatim):
 
@@ -20,7 +31,7 @@ The laggy reel is the `fishing-depth` lane's fix, in parallel. The epic tasks (s
 1. Every water now has about 10 common, 10 uncommon, 8 rare, 5 epic and 2 legendary (section 1): 70 more fish (62 fish and 8 creatures), river and sea biggest and heaviest on common and rare, cliff pools and the deep sea heaviest on epic and legendary. Every water has every rarity from common to epic in every season, by day and by night (checked by script).
 2. Megabyte is a robot megalodon with an electric aura (section 4).
 3. Every epic fish has a small task during its reel, from six shared kinds; legendaries chain two or three (section 5).
-4. Materials drop by the fish's rarity: 15% from a common, 95% from a legendary, 98% from a Divine, never two misses in a row on a creature (section 6).
+4. Materials drop by the fish's rarity: 15% from a common, 60% from an epic, 70% from a legendary, 80% from a Divine, never two misses in a row on a creature (section 6; round 3 made the top three rarer).
 5. The odds are harder and no longer depend on how many fish a water has; luck boosts cap together, and the tables show each rod alone and with a full stack (section 7).
 6. Every rod has its own stat profile, even within a rarity (section 8).
 7. Fixes: the Electric Eel moves to the cliff pools; 7 sea epics move to the deep sea (they stay in the sea until it opens); named gifts only for residents who like fish or sea creatures (section 2).
@@ -134,21 +145,31 @@ Until the deep sea opens, the Kraken waits at the sea's far edge (round 1); Char
 
 David: "epic will have added like lil thing that you gotta do while you reel in". Six shared kinds, each epic fish has one. Common to rare keep today's reel.
 
-| Task | What happens | What you do (desktop; phone) | Rod stat that helps |
+**Design direction (David, round 3: "maybe stuff that moves out of the actual bar, so like mouse mouse placement matters").** Today the reel is one input: hold to raise the bar, let go to lower it, and where the pointer is never matters. An epic task is played **outside the bar**: a target appears in the water around it and moves, and the task is won by putting the mouse (or a finger) on it, so where you aim counts as well as when you press. The bar keeps running under it, so the task is a second thing to do, not a pause.
+
+How it works, for every task:
+- **Two hands.** Holding the reel stays what it is (Space or any pressed pointer). On a desktop the mouse can be free to aim while Space holds the reel, or the mouse holds the click and drags to the target. On a phone one thumb holds and the other places, or the held finger drags onto the target (a held pointer still counts as holding, `bindFishingInput`).
+- **The pointer is read, not clicked.** Run, Snag, Dark and Spark read where the pointer is every frame. Only Leap and Pry need a click or tap, and those two freeze the catch meter for their 1 to 2 seconds so a click can never let the bar fall.
+- **Fair to aim at.** A target is never smaller than 28 px on a desktop and 44 px on a phone. Control widens it (below). Targets stay inside the reel panel, clear of the HUD and the Esc hint, and move at a speed a thumb can follow. Reduced motion slows them.
+- **No mouse, still playable.** If the last input was a key, the same target is a marker the arrow keys or WASD move, and Space acts as the click. Same task, same windows.
+- **Cheap to draw.** The pointer position is a ref updated on `pointermove` and tested in the reel's own frame loop (`useReelLoop`'s `onFrame`: refs and styles, no React renders), so the tasks add no lag to the smooth reel.
+- **Build check.** The mouse must be free during a reel. If the camera's mouse-look has the pointer locked while fishing, the reel frees it (Esc already ends mouse-look, `fishingInput`) and shows a cursor. Confirmed when the tasks are built.
+
+| Task | What happens | What you do (desktop; phone): the target moves out of the bar | Rod stat that helps |
 |---|---|---|---|
-| **Leap** | The fish jumps clear of the water; a ring closes on it at the top of the arc | Press space or click as the ring closes; tap | Control widens the timing window (300 ms, plus 20 ms per 10 Control over 10) |
-| **Run** | It bolts and the line glows red | Let go of the reel until the glow fades (about 1 s), then reel again; lift your thumb | Strength shortens the glow |
-| **Snag** | It heads for roots, rock or coral; an arrow shows which way | Steer the other way with A or D (or the arrows); swipe | Control widens the window |
-| **Pry** | It clamps shut or digs into the bottom | 6 quick presses in 2 s; 6 quick taps | Reel: one tap fewer per 20 Reel over 40 |
-| **Dark** | It inks or slips into the dark: the catch bar fades out for 2 s | Keep the fish in the bar by its faint shadow and the line's tug | Control (a wider bar is easier blind) |
-| **Spark** | It shocks the line: three quick flashes | Stop reeling on each flash, reel between them | Strength shortens each flash |
+| **Leap** | The fish jumps clear of the water and the bar freezes; a ring drifts out from the bar along the fish's arc toward where it will land, closing as it goes | Put the pointer in the ring and click as it closes, so you aim at the landing as well as time it; tap the ring | Control widens the timing window (300 ms, plus 20 ms per 10 Control over 10) and the ring |
+| **Run** | It bolts and a buoy on the line races off across the water, away from the bar, the line glowing red | Keep the pointer on the buoy for about 1.5 s as it tows; drag a finger after it. Leaving it lets the line burn | Strength shortens the run |
+| **Snag** | Roots, rock or coral slide in from one side of the panel, towards the bar's water; a clear lane stays open on the other side | Move the pointer into the clear lane before the snag closes (about 1.2 s) and hold it there until it passes; slide a finger over | Control widens the lane and the window |
+| **Pry** | It clamps shut or digs into the bottom and the bar freezes; four pry points glow round the bar, one at a time, each for about 1 s | Click each point as it lights, so where you click matters as well as when; tap each | Reel: one point fewer per 20 Reel over 40 (two at least) |
+| **Dark** | It inks or slips into the dark: the catch bar fades for 2 s and a faint lamp drifts through the ink beside it | Follow the lamp with the pointer; the bar's edge shows again while you are on it; slide a finger after it | Control widens the lamp's ring (a wider bar is easier blind) |
+| **Spark** | It shocks the line: three sparks run down the line from the fish toward your rod, at different heights | Sweep the pointer through each spark before it reaches the rod tip; swipe through each | Strength slows each spark |
 
 **Rules:**
 1. One task per epic reel, at a random point between 35% and 75% of the catch meter. The four giants (Whale Shark, Great White Shark, Blue Marlin, Oarfish) get two.
 2. A short cue first: an icon over the bobber and a sound, 0.4 s ahead (plus 25 ms per 10 Bite window over 10), so the task is never a surprise.
 3. **Hit:** +10% on the catch meter and a small "nice" pip. **Miss:** -15%. A miss never loses the fish by itself; only an empty meter does, as today. Strength softens a miss (-1% per 10 Strength over 10, to -10% at most).
 4. **Clean catch:** every task hit stamps the catch card and adds 10 points to its material drop if you let it go (section 6).
-5. One input each: a tap, a lift or a swipe, so every task works on a phone (design principle 5).
+5. One placement each, plus a click, a tap or a follow, so every task works on a phone (design principle 5) and with a key marker when there is no mouse (above). Targets are never shown outside the panel or under a finger's own hand (on a phone they spawn away from the holding thumb's corner).
 6. **Legendaries** chain their tasks in order through the boss reel (the table below); the Divine raids have their own fight.
 7. Built after the `fishing-depth` lane's smooth reel lands, on the reel's own frame loop, so the tasks add no lag.
 
@@ -171,11 +192,13 @@ David: "epic will have added like lil thing that you gotta do while you reel in"
 | common | 15% | 1 | about 7 |
 | uncommon | 30% | 1 | about 3 |
 | rare | 50% | 1, or 2 where the roster says x2 | 2 |
-| epic | 75% (85% on a clean catch) | 1 | 1.3 (1.2) |
-| legendary | 95%, and never two misses in a row on the same creature | its core | about 1.05 |
-| Divine | 98%, the same rule; everyone in the raid rolls for their own | its core | about 1.02 |
+| epic | 60% (70% on a clean catch) | 1 | 1.7 (1.4) |
+| legendary | 70%, and never two misses in a row on the same creature | its core | about 1.3 with the rule (1.4 without) |
+| Divine | 80%, the same rule; everyone in the raid rolls for their own | its core | about 1.2 with the rule (1.25 without) |
 
 Luck doesn't touch the drop (luck is for rarity), so the drop is the same for every player.
+
+**Round 3 (David: "more rare so like divine 80, leg 70 epic 60").** Epic 75 to 60, legendary 95 to 70, Divine 98 to 80; the clean-catch bonus stays +10 points (so 70% for an epic with every task hit; with two tasks on a giant, both must be hit). The ladder still climbs 15, 30, 50, 60, 70, 80, and the top three are no longer "almost guaranteed", they are earned. **Does "never two misses in a row" still fit?** Yes, and it is left as is. It applies only to a legendary or a Divine creature, whose catch takes hours of fishing and a boss reel, so two empty releases running would be a loss the player cannot fairly be asked to take; it also barely moves the number. With a 70% roll, a miss is followed by a sure drop, so the average legendary drop comes in 1.3 releases (77% felt, against 70% rolled) and a Divine in 1.2 (83% against 80%). Epics have no such rule and stay a plain 60 (70). So "more rare" holds everywhere, the legendary from 1.05 to 1.3 releases a drop and the Divine from 1.02 to 1.2, and a bad streak on a creature is capped at one miss. If David wants the felt rate to be exactly 70 and 80, the rule would go, or the rolls drop to about 57 and 75 (question 6).
 
 **The materials** (sources come straight from the roster):
 
@@ -258,6 +281,13 @@ In the river, every boost on the Tidewarden now gives rare 16.1% and epic 3.2%: 
 
 David: "all rods will have slightly different stats even if both in uncommon".
 
+**Handed to the `rod-gear` lane (round 3).** David's note on this section, verbatim: "glass strenght lower, the stats should make sense with the rod. passive ability exist aswell". Three asks, all for `rod-gear`, which is rescaling every rod this round (`web/lib/game/rods.ts`), so this list changes none of them:
+1. **Glass's strength goes lower** (30 in the table below).
+2. **A rod's stats make sense with the rod:** the lean follows what the rod is and looks like (the Glass rod a fine, brittle control rod; the Tidewarden's strong line; the Cedar's leaf-light luck and lure), and the reading of a stat on its hex radar matches its name and its model.
+3. **Rod passives exist as well:** a rod may carry a passive ability beside its six stats. What they are is `rod-gear`'s to design.
+
+What stays here is **the rule below** (a budget per rarity, no two rods alike, a lean for each, stats out of 100). The table of stats and the budget numbers below are round 2's proposal, kept only so the odds in section 7 can be read: when `rod-gear` lands its numbers, `rods.ts` wins on every stat, and the odds tables are rebuilt from them (edit `RODS` in `specs/fish-list-src/analyze.mjs`, then `node analyze.mjs` and `node build.mjs`). Anything in this section that disagrees with `rod-gear` is out of date.
+
 **The rule:** each rarity has a stat budget (the six stats added up: common 60 to 70, uncommon 150 to 160, rare 230 to 300, epic about 400, legendary about 480), and each rod spends it its own way, its lean. No two rods share a profile, and no rod beats another of its rarity at everything. Stats stay out of 100 (`STAT_MAX`); a rod's rarity still sets what it hooks (`hookCap`).
 
 {{rods}}
@@ -289,7 +319,7 @@ Unchanged from round 1 (approved, fl-models): concept views (front, side, top) f
 - Roster rows for the new fish (appended so no position moves), reel entries in `fishing.ts` `FISH`, a seed migration through `scripts/gen-seeds.mjs`; the Electric Eel and the seven epics' water changes.
 - The rarity-first roll in `fishPoolFor` and the server's `fishRoll`: per-water bands, the luck lifts, the boost cap, the cast retune, fixed shares for legendary and Divine, the drop-a-rung rule.
 - Water types: `cliff` and `deep` in `WaterType`, the spots or boat that fish them; snow and fog reaching the reel (`reelWeather` maps them to cloudy today).
-- The epic tasks in the reel (after fishing-depth's smooth reel): the six kinds, the cue, the hit and miss, the rod stat hooks, the clean catch stamp.
+- The epic tasks in the reel (after fishing-depth's smooth reel): the six kinds as targets that move out of the bar (a pointer ref read in the frame loop, the key marker, the 28 and 44 px floors, the freeze for Leap and Pry), the cue, the hit and miss, the rod stat hooks, the clean catch stamp.
 - *Let it go* on the catch card: a server path that rolls the drop by rarity, with the pity rule for creatures; material rows like `MATERIALS` in `recipes.ts`.
 - Rod stat rows for the Fallen Star rod, and the later rods if David keeps any.
 - Gift keys in `RESIDENT_GIFTS` (a key wins over the category); the class gear recipes.
@@ -312,8 +342,8 @@ New: the tasting book's luck (+1% a species for 20, then +0.5%, cap +0.40) lives
 2. **The new fish.** Any to cut or rename (sections 1 and 3)? The koi set in the pond (Golden, Platinum, Tancho, then the Dragon Gate Koi)?
 3. **The creatures.** The twelve legendaries and their myth names (Namazu, Umibozu, Raiju, Hanzaki, Charybdis, Bakunawa, Lyngbakr), three per class family?
 4. **Megabyte's aura.** Electric arcs over the gold legendary rim (so it still reads legendary), or electric instead of gold?
-5. **The tasks.** Six shared kinds, one per epic and two for the four giants; a miss costs 15%, never the fish. Too easy, too hard?
-6. **The drops.** 15, 30, 50, 75, 95 and 98%, with no two misses in a row on a creature?
+5. **The tasks.** Six shared kinds, one per epic and two for the four giants, now played with the pointer on targets that move out of the bar (section 5); a miss costs 15%, never the fish. Fine as sketched? In particular, is the key-marker fallback for players with no mouse right, or should the tasks need a mouse or finger?
+6. **The drops.** 15, 30, 50, 60 (70 clean), 70 and 80% (David's round 3 numbers), with no two misses in a row on a creature. That rule makes a legendary feel 77% and a Divine 83%: leave it, or drop it (or lower the rolls to about 57 and 75) so they feel like 70 and 80?
 7. **The odds.** Legendary 1 in 2,500 (1 in 1,000 in the deep sea) and Divine 1 in 20,000 per cast before luck; about 9 hours of fishing its window for a river legendary at a full stack. Hard enough, or too hard?
 8. **The boost cap.** Book, meals, rain and friends capped at 0.60 together, the cast cut to 0.30: right?
 9. **The later rods.** Keep any of the four examples (Driftwood, Bamboo, Coral, Abyss), or only the rule for now?

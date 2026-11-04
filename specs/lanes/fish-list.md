@@ -52,6 +52,14 @@ His treasure notes the same night set the direction (verbatim): "give the percen
 
 ## Status
 
+Round 3 done (2026-11-04): spec only, through the generator (`template.md`; the data and the tables are unchanged, the rebuild is clean and the spec matches it). Head SHA: see `git log -1` on `game/fish-list`.
+
+- Drops (section 6): epic 60% (70% clean), legendary 70%, Divine 80%; common 15, uncommon 30, rare 50 kept. "Never two misses in a row" on creatures kept: it still fits, and lifts the felt rate to about 77% (legendary) and 83% (Divine). Open question 6 asks David whether he wants it that way.
+- Rods (section 8): David's note recorded verbatim and handed to `rod-gear` (Glass strength lower, stats that make sense with the rod, passives); no stat changed. The table is round 2's proposal, kept to read the odds; `rods.ts` wins when rod-gear lands, then rebuild the odds from `RODS` in `analyze.mjs`.
+- Epic reel tasks (section 5): the design direction is targets that move out of the bar, read by pointer position; a line per task (Leap ring along the arc, Run buoy to follow, Snag clear lane, Pry points, Dark lamp, Spark sweep), the two-hands rule, 28 and 44 px floors, the key-marker fallback, no React renders. Open question 5 asks about the key fallback.
+
+Round 2 (earlier):
+
 Round 2 done (2026-11-03): `specs/fish-list.md` rewritten to David's round 2 marks. Docs only; no code, models or data changed. Head SHA: see `git log -1` on `game/fish-list`.
 
 - Counts per water (common, uncommon, rare, epic, legendary, Divine): river 13/12/11/8/2, cliff pools 6/6/6/6/2, pond 10/10/8/5/2, sea 16/16/11/7/2/1, deep sea 6/6/6/8/4/1; 191 catches. 70 new this round (62 fish, 8 legendaries). Gap check by script: every water has common to epic in every season, by day and by night.
@@ -69,7 +77,7 @@ Round 2 done (2026-11-03): `specs/fish-list.md` rewritten to David's round 2 mar
 
 ## Next
 
-1. Wait for David's marks on round 2 (`specs/fish-list.md` section 12, ten questions).
+1. The coordinator merges round 3 after fishing-depth. Wait for David on questions 5 and 6 (`specs/fish-list.md` section 12) if the coordinator puts them to him; round 2's other nine are approved.
 2. After his marks: models for the fish he keeps, by water in batches of 10 concept sheets (route A first, then B); creatures only with his references.
 3. Data, the cliff and deep waters, Let it go, the odds change and the epic tasks: their own round or lane (the tasks after fishing-depth's smooth reel).
 
