@@ -21,9 +21,12 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { skyMaterial, advanceSky, type SkyLayerWeights } from "@/lib/game/skyShader";
+import { skyMaterial, advanceSky, skyLabUniforms, skyUniforms, type SkyLayerWeights } from "@/lib/game/skyShader";
 import { useTuning, type Tuning } from "@/lib/game/tuning";
-import { worldTime } from "@/lib/game/worldClock";
+import { worldNow, worldTime } from "@/lib/game/worldClock";
+import { WIND_LAB, moonPhase, skyLabOn, useSkyLab } from "@/lib/game/skyLab";
+import { solarPosition } from "@/lib/game/sunPath";
+import { CURRENT, sunAngles, sunFromAngles } from "@/lib/game/lookPreset";
 import type { IslandLight } from "@/lib/game/islandLighting";
 import type { IslandWeather } from "@/lib/game/islandWeather";
 
@@ -41,9 +44,21 @@ function weightsFor(weather: IslandWeather, k: Tuning["sky"]): SkyLayerWeights {
   }
 }
 
+/** Development only (?sky=, lib/game/skyLab.ts): the real sun and the drawn moon (low on the night key's azimuth, so the follow view sees it). */
+const MOON_ELEVATION = 16;
+function labFrame() {
+  const now = worldNow(), s = solarPosition(new Date(now)), u = skyLabUniforms;
+  u.uSunDir.value.set(...sunFromAngles(s.elevation, s.azimuth - 180, 1)).normalize();
+  u.uMoonDir.value.set(...sunFromAngles(MOON_ELEVATION, sunAngles(CURRENT.light.sunPosition).azimuth, 1)).normalize();
+  u.uMoonPhase.value = moonPhase(now);
+  // The shared wind pitch carries the clouds too, at its strength along its direction.
+  if (WIND_LAB.on) skyUniforms.uWind.value = 0.84 * WIND_LAB.grass;
+}
+
 export default function SkyDome({ light, weather }: { light: IslandLight; weather: IslandWeather }) {
   const t = useTuning();
-  const mat = useMemo(() => skyMaterial("luxury"), []);
+  const lab = useSkyLab().sky;
+  const mat = useMemo(() => skyMaterial("luxury", lab ? " ABC".indexOf(lab) : 0), [lab]);
   const mesh = useRef<THREE.Mesh>(null);
   const col = useMemo(() => ({
     zenith: new THREE.Color(), horizon: new THREE.Color(), lit: new THREE.Color(), dark: new THREE.Color(),
@@ -68,6 +83,7 @@ export default function SkyDome({ light, weather }: { light: IslandLight; weathe
       k.wind * (weather === "wind" ? 2.2 : 1),
       k.cloudScale,
     );
+    if (skyLabOn()) labFrame();
   });
   return (
     <mesh ref={mesh} material={mat} scale={[RADIUS, RADIUS, RADIUS]} frustumCulled={false} renderOrder={-10}>

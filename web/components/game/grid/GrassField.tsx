@@ -45,6 +45,7 @@ import { GRASS_BENDERS } from "@/lib/game/grassBenders";
 import { useTuning } from "@/lib/game/tuning";
 import { worldTime } from "@/lib/game/worldClock";
 import { WIND_DIR, viewFocus } from "@/lib/game/worldFx";
+import { WIND_LAB } from "@/lib/game/skyLab";
 import { addCutout } from "@/lib/game/occluders";
 import { TERRAIN_GRASS, TERRAIN_SNOW, TERRAIN_WET } from "./GridTerrain";
 import { SPLAT_GROUND_GLSL } from "../world/splatMaterial";
@@ -410,7 +411,9 @@ function advance(s: FieldState, camera: THREE.Camera, delta: number, g: Grass, w
   if (bend.encode()) s.bendTex.needsUpdate = true;
   const u = s.uniforms;
   u.uTime.value = worldTime();
-  u.uWind.value.set(g.swayAmount * windScale, g.swaySpeed, g.gustLength, g.bladeHeight);
+  // The shared wind pitch (development only, ?wind=, lib/game/skyLab.ts) replaces the weather's scale and direction.
+  u.uWind.value.set(g.swayAmount * (WIND_LAB.on ? WIND_LAB.grass : windScale), g.swaySpeed, g.gustLength, g.bladeHeight);
+  if (WIND_LAB.on) u.uWindDir.value.set(WIND_LAB.dirX, WIND_LAB.dirZ);
   u.uFocus.value.set(_focus.x, _focus.z);
   u.uBendN.value.z = g.bend;
   u.uLean.value = g.lean;

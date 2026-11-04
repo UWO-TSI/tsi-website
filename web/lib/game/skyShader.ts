@@ -129,6 +129,9 @@ void main() {
 
   vec3 sky = mix(uHorizon, uZenith, pow(elN, 0.7));
   float fade = smoothstep(0.0, 0.16, elN);
+#ifdef SKY_LAB
+  labSky(sky, fade);
+#endif
 
   cover0 = uCover.x; cover1 = uCover.y; cover2 = uCover.z; cover3 = uCover.w;
   uChemtrails = uShape.w;
@@ -150,16 +153,23 @@ void main() {
 
   float density = 0.0;
   float shade = 1.0;
+#ifdef SKY_LAB
+  labClouds(density, shade);
+#else
   clouds(density, shade);
+#endif
   density = clamp(density, 0.0, 1.0) * fade;
   shade = clamp(shade, 0.0, 1.0);
 
   vec3 cloud = mix(uCloudDark, uCloudLit, shade);
-
+#ifdef SKY_LAB
+  labCloud(cloud, density, shade);
+#else
   if (uNight > 0.001) {
     float s = texture2D(uStars, uvAt(0.9, vec2(0.0))).r;
     sky += vec3(0.85, 0.9, 1.0) * pow(s, 2.2) * uNight * fade * 2.2;
   }
+#endif
 
   gl_FragColor = vec4(mix(sky, cloud, density) * uValue, 1.0);
 }
@@ -188,11 +198,173 @@ function tex(key: string): THREE.Texture {
   return t;
 }
 
-const matCache = new Map<SkyVariantId, THREE.ShaderMaterial>();
+/**
+ * Development only (lib/game/skyLab.ts, specs/sky-ambient.md): the round 1 sky directions' uniforms, written by SkyDome
+ * while `?sky=` is set. The shipped dome never declares them.
+ */
+export const skyLabUniforms = {
+  /** The real sun (below the horizon too), world direction. */
+  uSunDir: { value: new THREE.Vector3(0, 1, 0) },
+  uMoonDir: { value: new THREE.Vector3(0, 0.4, 0.9).normalize() },
+  /** The moon's age, 0 new, 0.5 full. */
+  uMoonPhase: { value: 0.5 },
+  uGalaxy: { value: null as THREE.Texture | null },
+};
 
-/** The dome material for one variant. Cached; call freely. */
-export function skyMaterial(id: SkyVariantId = "luxury"): THREE.ShaderMaterial {
-  const hit = matCache.get(id);
+/**
+ * The three directions as one block behind SKY_LAB (1 A painted, 2 B toon, 3 C storybook). Each fills the same hooks in
+ * MAIN: labSky (the gradient, the sun, the moon, the stars and meteors, under the clouds), labClouds (which clouds) and
+ * labCloud (their colour).
+ */
+const LAB_GLSL = /* glsl */ `
+uniform vec3 uSunDir;
+uniform vec3 uMoonDir;
+uniform float uMoonPhase;
+uniform sampler2D uGalaxy;
+// The view direction renormalised per pixel: vDir is interpolated across the dome's faces, which squares off a sun.
+vec3 lDir;
+
+float labHash(float n) { return fract(sin(n * 127.1 + 311.7) * 43758.5453); }
+
+// 1 while the sun is near the horizon (about -9 to 15 degrees): dawn, golden hour, sunset and dusk.
+float lowSun() { return smoothstep(0.26, 0.06, uSunDir.y) * smoothstep(-0.16, -0.03, uSunDir.y); }
+float sunSide() { return dot(normalize(lDir.xz + 1e-5), normalize(uSunDir.xz + 1e-5)); }
+
+// A shooting star now and then on the world clock, in the moon's half of the sky (so the moon-facing view catches it).
+float meteor() {
+  float P = 11.0, c = floor(uTime / P), age = uTime - c * P;
+  if (labHash(c) > 0.6 || age > 1.1) return 0.0;
+  float maz = atan(uMoonDir.z, uMoonDir.x);
+  float az = maz + (labHash(c + 3.1) - 0.5) * 1.6, e = 0.12 + labHash(c + 7.7) * 0.2;
+  vec3 a = vec3(cos(az) * cos(e), sin(e), sin(az) * cos(e));
+  vec3 side = normalize(cross(a, vec3(0.0, 1.0, 0.0))) * (labHash(c + 1.3) > 0.5 ? 1.0 : -1.0);
+  vec3 vel = normalize(side - vec3(0.0, 0.5, 0.0)) * 0.42;
+  vec3 head = normalize(a + vel * age), tail = normalize(a + vel * max(age - 0.25, 0.0));
+  vec3 ab = head - tail;
+  float u = clamp(dot(lDir - tail, ab) / max(dot(ab, ab), 1e-7), 0.0, 1.0);
+  float d = length(lDir - (tail + ab * u));
+  float life = smoothstep(0.0, 0.12, age) * smoothstep(1.1, 0.7, age);
+  return smoothstep(0.0032, 0.0008, d) * u * life;
+}
+
+void labSky(inout vec3 sky, float fade) {
+  lDir = normalize(vDir);
+  float low = lowSun(), toSun = sunSide(), up = smoothstep(-0.07, 0.01, uSunDir.y), day = 1.0 - uNight;
+  vec3 glow = mix(vec3(1.0, 0.5, 0.44), vec3(1.0, 0.76, 0.46), smoothstep(-0.04, 0.16, uSunDir.y));
+#if SKY_LAB == 2
+  // Toon: the gradient in soft steps, a flat sun with a ring, a gentle wash on the sun's side.
+  float g = pow(elN, 0.7) * 4.0;
+  g = (floor(g) + smoothstep(0.35, 0.65, fract(g))) / 4.0;
+  sky = mix(uHorizon, uZenith, g);
+  sky = mix(sky, glow, low * pow(max(toSun, 0.0), 2.0) * pow(1.0 - elN, 2.0) * 0.5);
+#elif SKY_LAB == 3
+  // Storybook: its own richer palette by the sun's height (a deeper blue noon; a violet zenith over an orange and rose
+  // skyline at the low sun, the rose band opposite it: the belt of Venus), over today's, which keeps the night.
+  float e = uSunDir.y;
+  vec3 zen = mix(vec3(0.24, 0.25, 0.6), vec3(0.22, 0.5, 0.9), smoothstep(0.08, 0.4, e));
+  zen = mix(vec3(0.13, 0.13, 0.36), zen, smoothstep(-0.12, 0.02, e));
+  vec3 hor = mix(mix(vec3(0.8, 0.5, 0.62), vec3(0.96, 0.47, 0.2), pow(max(toSun, 0.0), 1.5)), vec3(0.64, 0.83, 0.96), smoothstep(0.12, 0.4, e));
+  hor = mix(vec3(0.42, 0.28, 0.5), hor, smoothstep(-0.12, 0.0, e));
+  sky = mix(sky, mix(hor, zen, pow(elN, 0.6)), 0.88 * day * (1.0 - 0.85 * clamp(uCover.z, 0.0, 1.0)));
+  sky = mix(sky, vec3(1.0, 0.42, 0.16), low * pow(max(toSun, 0.0), 4.0) * pow(1.0 - elN, 3.0) * 0.6);
+  float anti = max(-toSun, 0.0);
+  sky = mix(sky, vec3(0.86, 0.5, 0.7), low * anti * anti * smoothstep(0.02, 0.2, elN) * smoothstep(0.75, 0.3, elN) * 0.55);
+#else
+  // Painted: today's gradient with a soft wash toward the low sun.
+  sky = mix(sky, glow, low * pow(max(toSun, 0.0), 3.0) * pow(1.0 - elN, 2.0) * 0.55);
+#endif
+
+  // The sun: a disc and its halo, gone once it sets.
+  float sd = dot(lDir, uSunDir);
+  vec3 sunC = mix(vec3(1.0, 0.98, 0.9), vec3(1.0, 0.74, 0.48), low);
+#if SKY_LAB == 2
+  float disc = smoothstep(0.99835, 0.99850, sd) + 0.5 * smoothstep(0.99700, 0.99712, sd) * (1.0 - smoothstep(0.99722, 0.99734, sd));
+  float halo = pow(max(sd, 0.0), 60.0) * 0.18;
+#else
+  float disc = smoothstep(0.99884, 0.99904, sd);
+  float halo = pow(max(sd, 0.0), 220.0) * 0.45 + pow(max(sd, 0.0), 22.0) * (0.04 + 0.08 * low);
+#endif
+  sky += sunC * halo * up * day;
+  sky = mix(sky, sunC * 1.12, clamp(disc, 0.0, 1.0) * up * day);
+
+  // The moon: its phase from the calendar, a few soft craters, a halo by how full it is; from deep dusk on.
+  vec3 mr = normalize(cross(vec3(0.0, 1.0, 0.0), uMoonDir)), mu = cross(uMoonDir, mr);
+  float R = 0.032;
+  vec2 mp = vec2(dot(lDir, mr), dot(lDir, mu)) / R;
+  float md = dot(lDir, uMoonDir), mlen = length(mp);
+  float mIn = md > 0.0 ? 1.0 - smoothstep(0.9, 1.0, mlen) : 0.0;
+  float k = cos(6.2832 * uMoonPhase), edge = sqrt(max(0.0, 1.0 - mp.y * mp.y));
+  float lit = smoothstep(-0.1, 0.1, (uMoonPhase < 0.5 ? mp.x : -mp.x) - k * edge);
+  float crater = 1.0 - 0.12 * (smoothstep(0.32, 0.2, length(mp - vec2(-0.3, 0.25))) + smoothstep(0.22, 0.12, length(mp - vec2(0.35, -0.2))) + smoothstep(0.16, 0.08, length(mp - vec2(0.1, 0.5))));
+  float mVis = smoothstep(0.15, 0.6, uNight);
+  vec3 moonC = vec3(1.0, 0.97, 0.86) * crater;
+#if SKY_LAB == 2
+  moonC = vec3(1.0, 0.95, 0.72) * mix(1.0, crater, 0.6);
+#endif
+  sky = mix(sky, mix(sky * 1.15 + 0.02, moonC, lit), mIn * mVis);
+  sky += vec3(0.62, 0.72, 1.0) * (pow(max(md, 0.0), 900.0) * 0.4 + pow(max(md, 0.0), 60.0) * 0.08) * mVis * (1.0 - k) * 0.5 * (1.0 - mIn);
+
+  // Stars, twinkling as the title's do (each its own beat), never over the moon; the odd shooting star.
+  if (uNight > 0.001) {
+    vec2 starUv = uvAt(0.9, vec2(0.0));
+    float s = texture2D(uStars, starUv).r;
+    float ph = texture2D(uNoise, starUv * 0.37).r * 43.0;
+#if SKY_LAB == 2
+    float starry = 1.0;
+#else
+    float starry = 0.6;
+#endif
+    float tw = 1.0 + starry * (1.1 - 0.7 * sin(uTime * 2.1 + ph));
+    sky += vec3(0.85, 0.9, 1.0) * pow(s, 2.2 + starry * 1.4) * tw * uNight * fade * 2.2 * (1.0 - mIn);
+#if SKY_LAB == 3
+    sky += vec3(0.5, 0.46, 0.8) * texture2D(uGalaxy, uvAt(0.32, vec2(0.0))).rgb * uNight * fade * 0.55 * (1.0 - mIn);
+#endif
+    sky += vec3(1.0, 0.96, 0.85) * meteor() * uNight * fade * 1.4;
+  }
+}
+
+void labClouds(out float density, out float shade) {
+#if SKY_LAB == 2
+  // Toon clouds: soft noise cut to crisp puffs, lit on the side toward the sun, cool underneath; weather thickens them
+  // (coverage), greys them (overcast) and darkens their bellies (storm).
+  float cov = clamp(cover0 * 0.5 + cover1 * 0.45 + cover2 * 0.35 + cover3 * 0.3, 0.0, 1.0);
+  vec2 uv = uvAt(0.42, vec2(0.011, 0.004));
+  float n = (texture2D(uNoise, uv).r * 0.7 + texture2D(uNoise, uv * 2.7 + 0.37).r * 0.3) * mix(0.7, 1.0, band);
+  float thr = mix(0.64, 0.3, cov);
+  float d = smoothstep(thr, thr + 0.03, n);
+  vec2 lift = normalize(uSunDir.xz + vec2(1e-4)) * 0.05 * (1.0 - 0.6 * uNight);
+  float n2 = texture2D(uNoise, uv + lift).r * 0.7 + texture2D(uNoise, (uv + lift) * 2.7 + 0.37).r * 0.3;
+  float litSide = smoothstep(-0.015, 0.02, n2 - n + 0.012);
+  float core = smoothstep(thr + 0.05, thr + 0.2, n);
+  shade = mix(0.62, 1.0, max(litSide, 1.0 - core));
+  shade = mix(shade, 0.42 + 0.25 * litSide, cover3);
+  density = max(d, cover2 * 0.7 * smoothstep(-0.3, 0.5, elN));
+  shade = mix(shade, 0.7, cover2 * (1.0 - d) * 0.8);
+#else
+  clouds(density, shade);
+#endif
+}
+
+void labCloud(inout vec3 cloud, float density, float shade) {
+#if SKY_LAB == 3
+  // Storybook: the low sun paints the clouds' lit side, deepest toward it, with a bright rim on thin edges.
+  float low = lowSun(), toSun = max(sunSide(), 0.0);
+  vec3 warm = mix(vec3(1.0, 0.5, 0.45), vec3(1.0, 0.72, 0.45), smoothstep(-0.04, 0.16, uSunDir.y));
+  cloud = mix(cloud, warm * (0.6 + 0.35 * shade), low * (0.5 + 0.5 * toSun));
+  cloud = mix(cloud, vec3(0.4, 0.32, 0.54), low * (1.0 - shade) * 0.8);
+  cloud = mix(cloud, cloud * vec3(0.9, 0.95, 1.05), (1.0 - low) * (1.0 - uNight) * 0.5);
+  cloud += warm * low * toSun * smoothstep(0.55, 0.1, density) * smoothstep(0.0, 0.08, density) * 0.35;
+#elif SKY_LAB == 2
+  cloud = mix(cloud, cloud * vec3(1.0, 0.86, 0.78), lowSun() * max(sunSide(), 0.0) * shade * 0.6);
+#endif
+}
+`;
+
+const matCache = new Map<string, THREE.ShaderMaterial>();
+
+/** The dome material for one variant (and, in development, one round 1 direction: 1, 2 or 3). Cached; call freely. */
+export function skyMaterial(id: SkyVariantId = "luxury", lab = 0): THREE.ShaderMaterial {
+  const key = `${id}:${lab}`, hit = matCache.get(key);
   if (hit) return hit;
 
   const v: SkyVariant = skyVariant(id);
@@ -204,17 +376,22 @@ export function skyMaterial(id: SkyVariantId = "luxury"): THREE.ShaderMaterial {
   const decls = v.textures.map((k) => `uniform sampler2D ${samplerName(k)};`).join("\n");
   const uniforms: Record<string, { value: unknown }> = { ...skyUniforms };
   for (const k of v.textures) uniforms[samplerName(k)] = { value: tex(k) };
+  if (lab) {
+    skyLabUniforms.uGalaxy.value = tex("galaxy");
+    Object.assign(uniforms, skyLabUniforms);
+  }
 
   const mat = new THREE.ShaderMaterial({
     side: THREE.BackSide,
     depthWrite: false,
     fog: false,
+    defines: lab ? { SKY_LAB: lab } : {},
     uniforms: uniforms as { [k: string]: THREE.IUniform },
     vertexShader: VERT,
-    fragmentShader: PREAMBLE + decls + "\n" + VORONOI_GLSL + v.glsl + "\n" + MAIN,
+    fragmentShader: PREAMBLE + decls + "\n" + VORONOI_GLSL + v.glsl + "\n" + (lab ? LAB_GLSL : "") + MAIN,
   });
-  mat.name = `sky:${id}`;
-  matCache.set(id, mat);
+  mat.name = `sky:${id}${lab ? `:lab${lab}` : ""}`;
+  matCache.set(key, mat);
   return mat;
 }
 

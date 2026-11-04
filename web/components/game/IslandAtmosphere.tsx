@@ -38,6 +38,8 @@ import { autoFollow, capture, DEFAULT_PITCH, orbit, ORBIT_DISTANCE, orbitOffset,
 import { CROWN_REACH, CUT_FLOOR, CUT_RADIUS, CUTOUT, CUTOUT_CROWN, CUTOUT_VIEW, canopyAround, groundBlocks, lineBlocked, type Occluder } from "@/lib/game/occluders";
 import { bendViewPoint } from "@/lib/game/worldProjection";
 import { orbitKeys, useOrbitInput } from "./useOrbitInput";
+import SkyLab from "./SkyLab";
+import { SKY_LAB, skyLabOn, useSkyLab } from "@/lib/game/skyLab";
 
 /** Screen-space vertical sky gradient (a plain 2D background texture): `top` at the top, `horizon` from mid-screen down. */
 export function SkyGradient({ top, horizon }: { top: string; horizon: string }) {
@@ -134,6 +136,9 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
   useEffect(() => { setPuddles(weather === "rain" ? puddleBlobs : []); return () => setPuddles([]); }, [weather, puddleBlobs]);
   // Development (the world bench, lib/game/perf/fxBench.ts): the dome off draws the gradient as Light does.
   const fx = useFxBench(), flat = liteMode || (FX_BENCH && fx.off.has("skyDome"));
+  // Development only: the sky-ambient pitches (?sky=, ?wind=, ?amb=; lib/game/skyLab.ts).
+  useSkyLab();
+  const lab = SKY_LAB && skyLabOn();
   return <>
     {/* The full tier flies the tuned dome (sun-phase colours, weather clouds, stars); Light keeps the flat gradient.
         The background colour stays behind both as the backstop past the dome's radius. */}
@@ -161,6 +166,7 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
     <TreeWind strength={liteMode ? 0 : weather === "wind" ? 0.14 : 0.035} />
     {fauna && <AmbientFauna {...fauna} season={look.season} weather={weather} liteMode={liteMode} />}
     {fauna && <WeatherGround site={groundSite!} rain={weather === "rain"} snow={look.snow >= 0.5} puddles={puddleBlobs} />}
+    {lab && <SkyLab weather={weather} ground={ground} />}
     {fireflyNight(light, weather) && <Fireflies anchors={fireflyAnchors} count={liteMode ? 8 : Math.min(64, fireflyAnchors.length * 2)} groundHeight={ground} />}
   </>;
 }
