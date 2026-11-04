@@ -16,10 +16,10 @@ const TitleScene = dynamic(() => import("@/components/title/TitleScene"), { ssr:
 export type TitleView = "menu" | "signin" | "signup" | "forgot" | "check" | "settings";
 
 /**
- * The game's title screen (David, 2026-10-03; the v1 look, specs/v1-drop.md §8b after
- * `references/look/2026-10-13/title-piece-by-piece-ref.png`): the live village close up with depth of field, the
- * logo top-left, a cream card with a dashed border holding Let's Play, Settings and Exit (a soft pill under the
- * chosen one), and a small input hint bottom-right. Arrow keys (or W/S) move, Enter picks, Escape steps back.
+ * The game's title screen (David, 2026-10-03; the banner look chosen 2026-11-01, specs/lanes/title-r2.md): the live
+ * island close up with depth of field, a white banner hanging from the top-left with the logo and Let's Play,
+ * Settings and Exit (a gold marker under the chosen one), and a small input hint bottom-right.
+ * Arrow keys (or W/S) move, Enter picks, Escape steps back.
  * Let's Play continues a signed-in member and asks anyone else to sign in (creating an account and Google from
  * there); Settings holds the graphics and sound (and signing out); Exit goes back to tethos.ca. After any sign-in,
  * `landing` (/student/go, carrying a safe ?next=) decides where the member goes.
@@ -110,7 +110,7 @@ export default function TitleScreen({ landing, account, open, initialView, when,
 
       <section className={s.column}>
         <header className={s.brand}>
-          <TsiLogo width={56} height={56} className={s.logo} />
+          <TsiLogo width={64} height={64} className={s.logo} />
           <h1 className={s.wordmark}>Tethos<span>Island</span></h1>
         </header>
 
@@ -163,7 +163,8 @@ export default function TitleScreen({ landing, account, open, initialView, when,
           {!account && <a className={s.apply} href={apply}>Apply to TSI</a>}
         </span>
         <span className={s.hint} aria-hidden>
-          {view === "menu" ? <><kbd>↵</kbd>Select</> : <><kbd>Esc</kbd>Back</>}
+          {view === "menu" && <span><kbd>↑↓</kbd>Move</span>}
+          <span>{view === "menu" ? <><kbd>↵</kbd>Select</> : <><kbd>Esc</kbd>Back</>}</span>
         </span>
       </footer>
     </main>

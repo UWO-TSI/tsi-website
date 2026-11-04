@@ -36,3 +36,14 @@ describe("volleyball clips contract", () => {
     expect(crossfade("vb_ready", "vb_spike_hit")).toBeLessThanOrEqual(0.06);
   });
 });
+
+describe("the court jump's pose (moves.ts jumpPose)", () => {
+  it("runs from the push off to the apex rising, and from the apex to feet down falling", async () => {
+    const { jumpPose } = await import("./moves");
+    const c = VB_CLIPS.vb_spike_jump, f = (t: number) => t / c.duration;
+    expect(jumpPose(10, 10, 12)).toBeCloseTo(f(c.takeoff - 0.06));
+    expect(jumpPose(0, 10, 12)).toBeCloseTo(f(c.apex));
+    expect(jumpPose(-12, 10, 12)).toBeCloseTo(f(c.land));
+    expect(jumpPose(5, 10, 12)).toBeLessThan(jumpPose(-1, 10, 12));
+  });
+});

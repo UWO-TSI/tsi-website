@@ -1,0 +1,2 @@
+/* The volleyball board (BoardSheet.tsx): the lead line, the podium, a few rows under it. */
+.board { display: grid; gap: 16px; max-width: 480px; margin: 0 auto; }

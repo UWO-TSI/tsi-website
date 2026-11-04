@@ -72,7 +72,7 @@ const GROUPS: { name: string; keys: [keyof MoveTuning, ...Range][] }[] = [
     ["slideJumpHeight", 0.2, 1.2, 0.05], ["slideJumpApexTime", 0.1, 0.4, 0.01], ["techBoost", 0, 2, 0.05]] },
   { name: "Momentum", keys: [["keepGrace", 0, 0.4, 0.01], ["momentumCeiling", 12, 30, 0.5], ["downhillCeiling", 0, 20, 0.5], ["ceilingBleed", 5, 80, 1]] },
 ];
-const JUICE_KEYS: [keyof MoveJuice, ...Range][] = [["camLead", 0, 0.4, 0.01], ["fovKick", 0, 10, 0.5], ["dashKick", 0, 8, 0.5], ["squash", 0, 2, 0.05],
+const JUICE_KEYS: [keyof MoveJuice, ...Range][] = [["camLead", 0, 0.4, 0.01], ["fovKick", 0, 10, 0.5], ["dashKick", 0, 8, 0.5], ["squash", 0, 2, 0.05], ["lean", 0, 2, 0.05],
   ["anticipation", 0, 2, 0.05], ["footsteps", 0, 2, 0.05], ["takeoff", 0, 2, 0.05], ["landing", 0, 2, 0.05], ["camDip", 0, 3, 0.1],
   ["dashBurst", 0, 2, 0.05], ["streaks", 0, 2, 0.05], ["afterimage", 0, 1, 1], ["cooldown", 0, 2, 0.05],
   ["slideTrail", 0, 2, 0.05], ["slideBurst", 0, 2, 0.05], ["slideKick", 0, 6, 0.25], ["slideDrop", 0, 0.5, 0.01], ["prints", 0, 1.5, 0.05],

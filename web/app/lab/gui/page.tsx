@@ -27,9 +27,10 @@ import { RodRadar, TackleRadar } from "@/components/economy/RodGear";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import { CircleDot, Waves, Worm } from "lucide-react";
 import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
-import { ActionBar, ActionIcon, BigMoment, CardOverlay, DarkButton, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KeyBoard, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, Purse, QuestCheck, RankBadge, flyCoins, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot } from "@/components/gui/flat";
+import { ActionBar, ActionIcon, BigMoment, CallTag, CardOverlay, DarkButton, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, KeyPeek, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, Purse, QuestCheck, RankBadge, flyCoins, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot, type PeekKind } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
-import { BoardRows } from "@/components/game/volleyball/BoardSheet";
+import { BoardBody } from "@/components/game/volleyball/BoardSheet";
+import { DEFAULT_LOOK } from "@/lib/game/character/look";
 import s from "./showroom.module.css";
 import FlatRewards from "./FlatRewards";
 
@@ -83,11 +84,23 @@ function KeyBoardShow() {
     {bag && <span data-demo-bag style={{ position: "absolute", top: 16, left: 16, display: "flex", gap: 6, alignItems: "center", padding: "8px 14px", borderRadius: 999, background: "var(--ui-card)", fontWeight: 800 }}><Backpack size={16} /> Bag</span>}
     {bag && <SlotPop to={["[data-demo-bag]"]} />}
     <Spotlight light open label="Keys" lead={hold ? <>Hold <Keycap>Tab</Keycap> Tools</> : <>Press <Keycap>I</Keycap> Bag</>}
-      steps={{ count: 9, at: hold ? 0 : 4 }} footer={<GhostButton>Skip</GhostButton>}>
+      steps={{ count: 9, at: hold ? 0 : 4 }} footer={<GhostButton>Skip</GhostButton>}
+      aside={hold ? k >= 4 && <KeyPeek kind="wheel" out={k >= 18} /> : k >= 32 && <KeyPeek kind="bag" out={k >= 39} />}>
       <KeyBoard lit={hold ? "tab" : "i"} hold={hold} fill={hold ? Math.min(1, Math.max(0, (k - 4) / 12)) : 0} won={hold ? k >= 16 : k >= 34}
         done={hold ? [] : ["tab", "g", "h", "enter"]} down={new Set(hold ? (k >= 4 && k < 16 ? ["tab"] : []) : (k >= 32 && k < 34 ? ["i"] : []))} />
     </Spotlight>
   </>;
+}
+/** Every KeyPeek, one after another: each pops in, plays its loop, then fades as if the key were let go. */
+const PEEK_KINDS: PeekKind[] = ["wheel", "emote", "hud", "chat", "bag", "collection", "quests", "map", "mail"];
+function KeyPeekShow() {
+  const [t, setT] = useState(0);
+  useEffect(() => { const i = window.setInterval(() => setT(v => v + 1), 300); return () => window.clearInterval(i); }, []);
+  const kind = PEEK_KINDS[Math.floor(t / 10) % PEEK_KINDS.length];
+  return <div style={{ display: "grid", gridAutoFlow: "column", gap: 18, placeItems: "center", minHeight: "100%" }}>
+    <KeyPeek key={kind} kind={kind} out={t % 10 >= 9} />
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 150px)", gap: 12 }}>{PEEK_KINDS.map(k => <KeyPeek key={k} kind={k} />)}</div>
+  </div>;
 }
 /** The ID as the overlay: filled in on the card, printed out of the slot, stamped, then Done; hover it to tilt. */
 function PrintedShow() {
@@ -95,9 +108,9 @@ function PrintedShow() {
   useEffect(() => { const i = window.setInterval(() => setT(v => (v + 1) % 8), 1000); return () => window.clearInterval(i); }, []);
   const form = t < 3, printing = t >= 3 && t < 5, stamped = t >= 5;
   const rows: [string, ReactNode][] = form
-    ? [["World name", <PaperField key="n" defaultValue="Marlowe" />], ["Birthday", <PaperField key="b" placeholder="March 14" />], ["From", <PaperField key="f" placeholder="Your hometown" />],
+    ? [["World name", <PaperField key="n" defaultValue="Marlowe" />], ["Pronouns", <PaperField key="p" placeholder="she/her, he/him, they/them" />], ["Birthday", <PaperField key="b" placeholder="March 14" />],
       ["About you", <PaperField key="a" placeholder="Say hi in a line" />]]
-    : [["World name", "Marlowe"], ["Birthday", "March 14"], ["From", "Halifax"], ["About you", "Here for the fishing"], ["Friend code", "K7QM-4R2X"]];
+    : [["World name", "Marlowe"], ["Pronouns", "they/them"], ["Birthday", "March 14"], ["About you", "Here for the fishing"], ["Friend code", "K7QM-4R2X"]];
   return <CardOverlay open label="Your island ID" action={<DarkButton>{form ? "Print my ID" : "Done"}</DarkButton>}>
     <PrintedCard key={form ? "a" : "b"} large tilt band="Tethos Island" kind="Resident" picture="M" printing={printing} stamp={stamped ? { top: "Tethos Island", word: "Resident" } : null} rows={rows} />
   </CardOverlay>;
@@ -112,6 +125,20 @@ function KeywordShow() {
     <Dialogue speaker="Bram">
       <p style={{ margin: 0 }}><KeywordLine line="And that's the shop. Tools and clothes for the island, and real merch too. Fish sell at the fish market; my rod's yours." /></p>
     </Dialogue>
+  </div>;
+}
+/** The whole icon library (design bible UI 8c: every talk line uses it), by tone: each kind's icon and the words that
+ *  bring it up. */
+const TONES = [["fish", "Sea creatures"], ["bug", "Land creatures"], ["coin", "Coins"], ["gem", "Gems, rewards, events"], ["item", "Things"], ["place", "Places"], ["person", "People"], ["act", "Things you do"]] as const;
+function KeywordLibrary() {
+  return <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "14px 22px", padding: 22, alignContent: "start", height: "100%", overflow: "auto" }}>
+    {TONES.map(([tone, title]) => <section key={tone} style={{ display: "grid", gap: 5, alignContent: "start" }}>
+      <h3 style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 900, color: "var(--ui-ink-2)" }}>{title}</h3>
+      {KEYWORD_LIBRARY.filter(e => e.tone === tone).map(e => <div key={e.kind} style={{ display: "flex", gap: 8, alignItems: "baseline", fontSize: 15 }}>
+        <Keyword kind={e.kind}>{e.words[0]}</Keyword>
+        <span style={{ fontSize: 12, color: "var(--ui-muted)" }}>{e.words.slice(1).join(", ")}</span>
+      </div>)}
+    </section>)}
   </div>;
 }
 /** The wallet (design bible UI 8b) under a time pill: resting in the UI view, then a coin fly-in landing in its slot. */
@@ -144,9 +171,11 @@ function CoinFlyShow() {
 }
 
 const OVERLAYS: { id: string; title: string; render: () => ReactNode }[] = [
-  { id: "key-board", title: "Keys (a light Spotlight, KeyBoard and SlotPop)", render: () => <KeyBoardShow /> },
+  { id: "key-board", title: "Keys (a light Spotlight, KeyBoard, KeyPeek and SlotPop)", render: () => <KeyBoardShow /> },
+  { id: "key-peek", title: "A key's peek (KeyPeek), every kind", render: () => <KeyPeekShow /> },
   { id: "wallet", title: "The wallet (WalletSlot), its slot under the time", render: () => <WalletShow /> },
   { id: "keyword", title: "Keywords in a line (Keyword)", render: () => <KeywordShow /> },
+  { id: "keyword-library", title: "The icon library (every word Keyword knows)", render: () => <KeywordLibrary /> },
   { id: "fly-in", title: "Fly-in, into the wallet's slot", render: () => <Loop ms={3600}>{done => <><span style={{ position: "absolute", top: 16, right: 16 }}><WalletSlot coins={1240} gems={35} at="in" landing="coins" /></span>
     <FlyIn icon={<Coins size={52} />} name="Coins" text="For things on the island" to={['[data-hud-slot="coins"]']} onDone={done} /></>}</Loop> },
   { id: "coin-fly", title: "A sale's coins, into the purse (flyCoins)", render: () => <Loop ms={3400}>{() => <CoinFlyShow />}</Loop> },
@@ -208,6 +237,7 @@ export default function GuiShowroom() {
   const overlay = OVERLAYS.find(o => o.id === only);
   const [tab, setTab] = useState<"tools" | "outfits" | "furniture" | "specials">("tools");
   const [row, setRow] = useState(1);
+  const [callRun, setCallRun] = useState(0);
   const [tile, setTile] = useState("fish_arowana");
   const [toggles, setToggles] = useState({ sound: true, hud: false });
   const [volume, setVolume] = useState(70);
@@ -335,19 +365,29 @@ export default function GuiShowroom() {
       <Row><ServeMeter value={0.3} label="Serve power"><Keycap>Hold</Keycap></ServeMeter><ServeMeter value={0.72} label="Serve power" /><ServeMeter value={0.97} label="Serve power, max" /></Row>
     </Section>
 
+    <Section id="call-tag" title="Call tag (flat)" note="A call at a moment of play, small and quiet: a white chip with a coloured cap holding the call’s picture. Gold for Perfect and Max, the team’s colour for Saved and Block, grey for Early, Late and Miss. Played: in with a spring (a block slams down), a held beat, up and out.">
+      <Row label="Calls">
+        {([["perfect", "Perfect"], ["good", "Good"], ["soft", "Early"], ["soft", "Late"], ["saved", "Saved"], ["block", "Block"], ["whiff", "Miss"], ["max", "Max"]] as const).map(([kind, word]) =>
+          <CallTag key={word} kind={kind} team={kind === "block" ? "var(--ui-away)" : "var(--ui-home)"}>{word}</CallTag>)}
+      </Row>
+      <Row label="Played"><span key={callRun} style={{ display: "inline-grid", gap: 8 }}>
+        <CallTag kind="perfect" live>Perfect</CallTag><CallTag kind="block" team="var(--ui-away)" live>Block</CallTag></span>
+        <GhostButton onClick={() => setCallRun(n => n + 1)}>Play again</GhostButton></Row>
+    </Section>
+
     <Section id="action-bar" title="Action bar (flat)" note="A match’s moves: each a pictogram, its key and its name. A slot that would connect glows; a press flashes it. The ground’s and the air’s rows swap in place.">
-      <Row><ActionBar active="ground" flash={{ id: "set", n: 1, ok: true }} rows={{ ground: ["bump", "set", "call", "dive", "jump"].map((a, i) => ({ id: a, label: a[0].toUpperCase() + a.slice(1), keycap: ["Click", "E", "R-click", "Ctrl", "Space"][i], icon: <ActionIcon move={a} />, ready: a === "bump" })) }} /></Row>
-      <Row><ActionBar active="air" rows={{ air: ["spike", "jumpset", "block"].map((a, i) => ({ id: a, label: ["Spike", "Jump set", "Block"][i], keycap: ["Click", "E", "R-click"][i], icon: <ActionIcon move={a} />, ready: a === "spike" })) }} /></Row>
-      <Row>{["serve", "charge", "spin", "slide", "dash"].map(a => <ActionIcon key={a} move={a} size={40} />)}</Row>
+      <Row><ActionBar active="ground" flash={{ id: "set", n: 1, ok: true }} rows={{ ground: ["bump", "set", "dive"].map((a, i) => ({ id: a, label: ["Bump", "Set", "Dive"][i], keycap: ["Left click", "E", "Q"][i], mouse: i === 0 ? "left" as const : undefined, icon: <ActionIcon move={a} />, ready: a === "bump" })) }} /></Row>
+      <Row><ActionBar active="air" rows={{ air: ["spike", "jumpset", "block"].map((a, i) => ({ id: a, label: ["Spike", "Jump set", "Block"][i], keycap: ["Left click", "E", "Right click"][i], mouse: i === 1 ? undefined : i === 0 ? "left" as const : "right" as const, icon: <ActionIcon move={a} />, ready: a === "spike" })) }} /></Row>
+      <Row>{["serve", "charge", "spin"].map(a => <ActionIcon key={a} move={a} size={40} />)}</Row>
     </Section>
 
     <Section id="spin-picker" title="Spin picker (flat)" note="Where on the ball the serve is hit: off centre to a side curves it, the top dives, the bottom floats.">
       <Row><SpinPicker x={0} y={0} picture="/assets/game/volleyball/ball-icon.png" label="Centre" /><SpinPicker x={0.6} y={0.4} picture="/assets/game/volleyball/ball-icon.png" label="Top right"><Keycap>R-click</Keycap></SpinPicker></Row>
     </Section>
 
-    <Section id="rank" title="Rank badge and the leaderboard (flat)" note="A place in a ranking, the first in gold; the volleyball court’s board, its rows on hairlines and a Sample tag until phase 3.">
+    <Section id="rank" title="Rank badge, podium and the leaderboard (flat)" note="A place in a ranking, the first in gold; the podium (three white blocks in one stepped stand, the first in the middle and tallest, big gold, silver and bronze numbers and thin edges of them, the names in a row under it, the top three dancing on their blocks on one beat); the volleyball court’s board: the podium, a few rows under it, your place, and a Sample tag until phase 3.">
       <Row><RankBadge rank={1} /><RankBadge rank={2} /><RankBadge rank={10} /></Row>
-      <BoardRows board={{ sample: true, rows: [{ rank: 1, name: "Kelpie", wins: 14, you: false }, { rank: 2, name: "Sandpiper", wins: 11, you: false }, { rank: 3, name: "Islander", wins: 9, you: true }] }} />
+      <BoardBody mine={DEFAULT_LOOK} board={{ sample: true, rows: [["Kelpie", 14], ["Sandpiper", 11], ["Driftwood", 9], ["Pebble", 7], ["Tidepool", 5], ["Coralie", 4], ["Gull", 2], ["Islander", 1]].map(([name, wins], i) => ({ rank: i + 1, name: name as string, wins: wins as number, you: name === "Islander" })) }} />
     </Section>
 
     <Section id="tooltips" title="Tooltips" kit={["wheel"]} note="The teal name pill with a tail, on hover and on keyboard focus.">

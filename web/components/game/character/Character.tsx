@@ -11,6 +11,7 @@
 import { Suspense, useDeferredValue, useEffect, useMemo, useRef, type RefObject } from "react";
 import { useFrame, useLoader, useThree } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
+import { gltfsOf } from "@/lib/game/gltfsOf";
 import type { WeaponPaint } from "@/lib/game/combat/primitives";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
@@ -23,6 +24,7 @@ import { beatRate } from "@/lib/game/danceSync";
 import { quality } from "@/lib/game/perf/governor";
 import { FaceAnimator, faceSlots, poseKey } from "@/lib/game/character/face";
 import { createFaceMaterial, loadFacePage, MATTE, prepareFaceAtlas, type FaceMaterial } from "@/lib/game/character/faceMaterial";
+import { isVbClip } from "@/lib/game/volleyball/clips";
 import { ATTACK_CLIP, WEAPON_HAND, contactCrossed, crossfade, holdLayer, isLoop, layerTrack, layerWeight, matchPhase, resolveClip, tempo, verbInfo, type CharacterMotion, type ClipName, type Layer } from "@/lib/game/character/clips";
 import { DESIGN_U, materialName, mergeLook, refCache, skinnedPrimitives, type PieceCut } from "@/lib/game/character/rig";
 import type { WeaponGrip, WeaponKind } from "@/lib/game/combat/contract";
@@ -34,6 +36,7 @@ import { frameStats } from "@/lib/game/perf/frameStats";
 import { createHairAtlas } from "@/lib/game/character/hairAtlas";
 import { MOVE_TUNING } from "@/lib/game/movement/sim";
 import FishingRig from "./FishingRig";
+import LanternGlow, { LANTERN_URL } from "./LanternGlow";
 
 export type { CharacterMotion, ClipName } from "@/lib/game/character/clips";
 /** v6 is 1.045 m tall; at 1.3 a character stands ~1.36 world units, a little over one tile (ACNH). */
@@ -580,10 +583,12 @@ class Puppet {
     const changed = want !== this.clip || restart;
     if (changed) this.play(want);
     const action = this.action!, length = action.getClip().duration;
-    if (CLIP_BY_NAME.get(want)?.scrub) {
+    // A volleyball jump (vb_spike_jump held as the move) is posed by the court's jump, as Air is by the island's.
+    const airPosed = want === "Air" || (want === motion.move && isVbClip(want) && !isLoop(want));
+    if (CLIP_BY_NAME.get(want)?.scrub || airPosed) {
       // Posed by its phase (Air by vertical speed, CastWindup by the cast's power), not by the clock.
       action.setEffectiveTimeScale(0);
-      action.time = Math.min(1, Math.max(0, (want === "Air" ? motion.air : motion.scrub) ?? 0)) * length * 0.999;
+      action.time = Math.min(1, Math.max(0, (airPosed ? motion.air : motion.scrub) ?? 0)) * length * 0.999;
     } else if (motion.freeze !== undefined && want === motion.pose) {
       action.setEffectiveTimeScale(0);                 // the avatar bench: a pose held still at one phase
       action.time = Math.min(1, Math.max(0, motion.freeze)) * length * 0.999;
@@ -856,7 +861,11 @@ function HeldItem({ puppet, motion, view: { url, hold, fit }, remote }: { puppet
   });
   // The rod carries its fishing: the bobber, the line and the catch of this avatar's own cast. Not on another player's
   // until remote casts are sent (specs/multiplayer.md follow-up): their rod shows alone, as it always has.
-  return hold === "rod" && !remote ? <FishingRig motion={motion} rod={model} hands={puppet.sockets} /> : null;
+  // The Lighthouse rod is a lantern in anyone's hand (LanternGlow).
+  return <>
+    {hold === "rod" && !remote && <FishingRig motion={motion} rod={model} hands={puppet.sockets} />}
+    {url === LANTERN_URL && <LanternGlow rod={model} root={puppet.root} clip={puppet} />}
+  </>;
 }
 /** Module scope (the react compiler forbids writing through hook values): pop out, hide where put away, ease to the use grip. */
 function poseHeld(model: THREE.Object3D, clip: ClipName | null, grip: Grip, hold: HoldKind, age: number, delta: number) {
@@ -970,20 +979,6 @@ export default function Character({ look, motion, walkSpeed = MOVE_TUNING.walkSp
     {/* Its own boundary: crafting the glider mid-session must not suspend the scene while the leaf loads. */}
     {leaf && <Suspense fallback={null}><HeldLeaf puppet={puppet} motion={motion} scale={scale} remote={remote} /></Suspense>}
   </group>;
-}
-const lists = new Map<string, Gltf[]>();
-/**
- * A look's GLBs, each fetched and parsed once however many looks share it (useGLTF of a list caches the whole list, so
- * skin.glb was parsed again for every look). All start loading at once; one array per list, so effects on it run when
- * the list changes. useGLTF is a suspend-react cache read, not a React hook, so it can run in a loop.
- */
-function gltfsOf(urls: string[]): Gltf[] {
-  for (const u of urls) useGLTF.preload(u);
-  const loaded = urls.map(u => useGLTF(u) as unknown as Gltf);
-  const key = urls.join("\n"), last = lists.get(key);
-  if (last && last.every((g, i) => g === loaded[i])) return last;
-  lists.set(key, loaded);
-  return loaded;
 }
 /** The look's LOD 1 parts (art/characters/build_lod.py), merged once per look and shared like the full one. */
 function LodMesh({ puppet, look, parts }: { puppet: Puppet; look: CharacterLook; parts: ResolvedPart[] }) {

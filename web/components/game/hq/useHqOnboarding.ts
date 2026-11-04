@@ -27,8 +27,9 @@ import { HQ_END, HQ_END_TOUR, HQ_SCRIPT, type HqCard, type HqEvent } from "@/lib
 const WREN_TALKER = { id: "hq:wren", slug: WREN.slug, name: WREN.name, post: WREN.post, seed: 3 };
 /** Her lines wait this long after the room fades in (or a sheet closes): a breath, not a jump. */
 const SAY_DELAY_MS = 450;
-/** After Esc (the visit's last beat) the menu you opened stays up this long, to be seen, before her farewell closes it. */
-const MENU_LOOK_MS = 2600;
+/** After Esc (the visit's last beat) she answers at once (David's v5 review: "it should be instant when you press esc
+ *  alice explains"): the menu shows while she talks it through. */
+const MENU_SAY_MS = 150;
 
 export interface HqWorld {
   inside: string | null;
@@ -122,11 +123,12 @@ export function useHqOnboarding(w: HqWorld, dev: URLSearchParams | null) {
     if (!sayKeys || !atHq || !free) return;
     const t = window.setTimeout(() => {
       if (talkStore.active) return;
-      const lines = sayKeys.split("+").flatMap(k => WREN_LINES[k] ?? [])
+      // The camera's lines are for a mouse: a touch screen hasn't one.
+      const lines = sayKeys.split("+").filter(k => !(touch && k === "camera")).flatMap(k => WREN_LINES[k] ?? [])
         .map(raw => parseTalkLine(fillName(raw.replaceAll("{esc}", escPhrase(touch)), name)));
       closeMenu();
       startTalk(beginTalk(WREN_TALKER, lines, performance.now() / 1000, "hq"));
-    }, farewell ? MENU_LOOK_MS : SAY_DELAY_MS);
+    }, farewell ? MENU_SAY_MS : SAY_DELAY_MS);
     return () => window.clearTimeout(t);
   }, [sayKeys, atHq, free, name, touch, closeMenu, farewell]);
 

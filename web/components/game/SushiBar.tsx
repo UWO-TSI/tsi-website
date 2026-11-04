@@ -27,8 +27,8 @@ import { SUSHI_BAR_GETA_URL, SUSHI_BAR_GLOW_URL, SUSHI_BAR_HOURS_URL, SUSHI_BAR_
 import { localAvatar } from "@/lib/net/localAvatar";
 import { isSeatedPose } from "@/lib/game/seatPrompt";
 import {
-  BAR_MUSIC_IN, BAR_MUSIC_OUT, BAR_POOLS, CHEF_LOOK, CHEF_OUTSIDE, CHEF_STATIONS, HANDOFF, HOURS_TOP, PIECES, PREP_AT, SERVED_AT, SERVER, SERVER_LOOK,
-  SERVE_S, STAFF_Y, STOOLS, barOpen, barPoint, prepAt, readingView, seatView, servedAt, stoolAt, type Bar, type BarStation, type BarView,
+  BAR_POOLS, CHEF_LOOK, CHEF_OUTSIDE, CHEF_STATIONS, HANDOFF, HOURS_TOP, PIECES, PREP_AT, SERVED_AT, SERVER, SERVER_LOOK,
+  SERVE_S, STAFF_Y, STOOLS, barEarshot, barOpen, barPoint, prepAt, readingView, seatView, servedAt, stoolAt, type Bar, type BarStation, type BarView,
 } from "@/lib/game/sushiBar";
 
 /** The glow's brightness (in the evening a little under the night's), how fast it comes up or goes out (the lamps' ease, AmbientProps LAMP_RATE), and how fast the blinds roll. */
@@ -128,8 +128,9 @@ export default function SushiBar({ bar, y, player, phase, viewRef, onNear }: {
   useEffect(() => () => { getas.meshes.forEach(m => m.geometry.dispose()); disposeModelMaterials(getas.model); }, [getas]);
   const pools = useRef<THREE.Group>(null);
   const [seated, setSeated] = useState(false), [staffOn, setStaffOn] = useState(false);
+  const ear = useMemo(() => barEarshot(onNear), [onNear]);
   const s = useRef({
-    on: 0, open: open ? 1 : 0, near: false, staff: false, stool: -1, prep: [NaN, NaN], getas: { served: -1, carried: false },
+    on: 0, open: open ? 1 : 0, staff: false, stool: -1, prep: [NaN, NaN], getas: { served: -1, carried: false },
     seat: { eye: { x: 0, y: 0, z: 0 }, look: { x: 0, y: 0, z: 0 } } as BarView,
     base: { eye: { x: 0, y: 0, z: 0 }, look: { x: 0, y: 0, z: 0 } } as BarView,
     /** The menu in your hands (tsi:bar-menu): 0 down on the counter, 1 picked up; `read` its target. */
@@ -153,8 +154,8 @@ export default function SushiBar({ bar, y, player, phase, viewRef, onNear }: {
       if (n !== st.prep[b]) { st.prep[b] = n; setOut(hours.prep[b], hours.getas[b], n); }
     }
     setGetas(getas.meshes, open, now, getas.carry, st.getas);
-    const d = Math.hypot(p.x - bar.x, p.z - bar.z), near = open && (st.near ? d < BAR_MUSIC_OUT : d < BAR_MUSIC_IN);
-    if (near !== st.near) { st.near = near; onNear(near); }
+    const d = Math.hypot(p.x - bar.x, p.z - bar.z);
+    ear.frame(d, open);
     const staff = d < (st.staff ? STAFF_OUT : STAFF_IN);
     if (staff !== st.staff) { st.staff = staff; setStaffOn(staff); }
     const i = d < STAFF_IN && isSeatedPose(localAvatar()?.motion.current?.pose) ? stoolAt(bar, p.x, p.z) : -1;
@@ -169,7 +170,7 @@ export default function SushiBar({ bar, y, player, phase, viewRef, onNear }: {
     readingView(st.base, st.reading, st.seat);
     viewRef.current = i < 0 ? null : st.seat;
   });
-  useEffect(() => () => onNear(false), [onNear]);
+  useEffect(() => () => ear.release(), [ear]);
   // Seated: the world shows the menu on the counter (f-sushi; DefaultIslandWorld listens).
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("tsi:bar-seated", { detail: seated }));
