@@ -9,11 +9,15 @@
  */
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type FocusEvent, type PointerEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Check, Droplets, Flower2, Leaf, MapPin, Moon, Mountain, Snowflake, Sun, Sunrise, Sunset, Waves, X } from "lucide-react";
+import {
+  Anchor, Castle, Check, Compass, Droplet, Droplets, Flower2, Gem, House, Leaf, Moon, Mountain, MountainSnow, Snowflake, Sparkles, Sprout, Sun,
+  Sunrise, Sunset, TreePalm, Umbrella, Waves, X,
+} from "lucide-react";
 import PixelImage from "@/components/economy/PixelImage";
 import { usePresence, useWorldDialog } from "@/lib/game/useWorldDialog";
 import type { Season } from "@/lib/game/season";
 import type { WaterType } from "@/lib/game/fishingSpots";
+import type { Place } from "@/lib/game/world/places";
 import { GuiVariantContext } from "../variant";
 import p from "./pieces.module.css";
 
@@ -104,15 +108,32 @@ export const SEASON_LOOK: Record<Season, { word: string; icon: ReactNode; tint: 
 export const BIOME_LOOK: Record<WaterType, { word: string; icon: ReactNode; tint: Tint }> = {
   sea: { word: "Sea", icon: <Waves />, tint: "sky" }, river: { word: "River", icon: <Droplets />, tint: "rain" }, pond: { word: "Pond", icon: <Mountain />, tint: "leaf" },
 };
+/** A lighthouse, drawn as lucide draws (24 box, round strokes): the tapered tower, its gallery and lamp, two beams. */
+function Lighthouse() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M6 21h12M9 21l1.5-11h3L15 21M8.5 10h7M10 10V6.5a2 2 0 0 1 4 0V10M3 5l3.5 1.5M21 5l-3.5 1.5" />
+  </svg>;
+}
+/**
+ * Each place's icon and colour on the HUD's tag away from water (round 8, David: "give village meadow icons as well"),
+ * the talk library's where it names the place (wharf, beach, ruins, island), the water's own for River and Pond.
+ */
+export const PLACE_LOOK: Record<Place, { icon: ReactNode; tint: Tint }> = {
+  Village: { icon: <House />, tint: "amber" }, Wharf: { icon: <Anchor />, tint: "sky" }, Beach: { icon: <Umbrella />, tint: "sun" },
+  Meadow: { icon: <Sprout />, tint: "leaf" }, Mountain: { icon: <MountainSnow />, tint: "ice" }, Ruins: { icon: <Castle />, tint: "mist" },
+  "Oracle Temple": { icon: <Sparkles />, tint: "rose" }, Falls: { icon: <Droplet />, tint: "sky" }, "North Island": { icon: <Compass />, tint: "ice" },
+  Cave: { icon: <Gem />, tint: "night" }, River: BIOME_LOOK.river, Pond: BIOME_LOOK.pond, Lighthouse: { icon: <Lighthouse />, tint: "sun" },
+  Islands: { icon: <TreePalm />, tint: "sky" },
+};
 /**
  * The biome you fish (round 6, David: "it should say the biome when you fish on the fish bar, there should also be a
  * biome tag in the ui"): a small pill, the water's icon on a disc in its colour and its word. With `place` (the HUD,
  * round 7: "should also show like the location like village wharf plains etc") the place leads ("Wharf · Sea"), and
- * away from water it is the place alone, on a pin.
+ * away from water it is the place alone, on its own icon.
  */
-export function BiomeTag({ water, place }: { water?: WaterType | null; place?: string | null }) {
-  const b = water ? BIOME_LOOK[water] : null;
-  return <span className={p.biome} data-tint={b?.tint ?? "mist"} data-testid="biome-tag"><i aria-hidden>{b?.icon ?? <MapPin />}</i>{place && b && place !== b.word ? `${place} · ${b.word}` : place ?? b?.word}</span>;
+export function BiomeTag({ water, place }: { water?: WaterType | null; place?: Place | null }) {
+  const b = water ? BIOME_LOOK[water] : null, look = b ?? (place ? PLACE_LOOK[place] : null);
+  return <span className={p.biome} data-tint={look?.tint} data-testid="biome-tag"><i aria-hidden>{look?.icon}</i>{place && b && place !== b.word ? `${place} · ${b.word}` : place ?? b?.word}</span>;
 }
 /** The theme's condition colours (--ui-tint-*): the seasons, the sky and the time of day each wear one. */
 export type Tint = "rose" | "sun" | "amber" | "ice" | "sky" | "rain" | "mist" | "leaf" | "night";

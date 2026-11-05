@@ -418,7 +418,8 @@ const SHOPS: readonly (readonly [z: number, model: string])[] = [[63.5, "tackle-
 const MARKET: readonly (readonly [model: string, z: number, d: number, turn: number, scale: number])[] = [
   // art-r2f's fish market, 7.8 wide by 4.2 deep, its porch turned south down the deck, its swordfish bursting up through the roof (R2e: "make building a bit wider").
   ["fish-market", 19.5, 4, -Math.PI / 2, 1],
-  ["market-cart", 31.2, 5.7, 0.25, 0.55], ["market-cart", 40.6, 6.4, -0.2, 0.55], ["market-cart", 70.5, 6.1, 0.15, 0.53], ["market-cart", 79.6, 5.5, -0.35, 0.56],
+  // The stands by the catch board, 1.8 m further up the deck (round 8, David: "move the stands more to the left").
+  ["market-cart", 33.0, 5.8, 0.25, 0.55], ["market-cart", 40.6, 6.4, -0.2, 0.55], ["market-cart", 70.5, 6.1, 0.15, 0.53], ["market-cart", 79.6, 5.5, -0.35, 0.56],
   ...[[25.4, 4.4, 0.07], [26.1, 3.8, 0.066], [25.7, 5.0, 0.072], [43.4, 7.1, 0.068], [57.8, 1.6, 0.07], [58.4, 2.2, 0.065], [72.7, 7.3, 0.07], [77.2, 7.5, 0.07], [77.9, 6.8, 0.066]]
     .map(([z, d, scale]) => ["barrel", z, d, z * 1.3, scale] as const),
   // The first three stand where the catch board stood before round 7, which took their old place (David: "move to where
@@ -426,7 +427,7 @@ const MARKET: readonly (readonly [model: string, z: number, d: number, turn: num
   // The barrel and two crates by the sell barrel, where Bram stands to watch your first sale, are gone (David's playtest:
   // "these barral and crate infront of the sell fish shop should be removed").
   ["crate", 67.6, 1.3, 2, 1], ["crate", 55.4, 6.6, 0.6, 1.05],
-  ["shop-cart", 34.6, 4.6, 0.5, 1.5], ["shop-cart", 59.7, 4, -0.4, 1.5],
+  ["shop-cart", 36.0, 4.9, 0.5, 1.5], ["shop-cart", 59.7, 4, -0.4, 1.5],
   // wharf-art's dock decor: nets heaped and over crates, crates under cloth, crates of fish tipped toward the walk.
   ["net-heap", 37.1, 3.9, 0.5, 1], ["crate-cloth", 28.2, 6.5, 0.3, 1], ["fish-crate", 25.2, 2.4, -0.5, 1], ["fish-crate", 68.9, 2.6, -0.2, 1],
   ["net-heap", 75.4, 2.1, 1.2, 1], ["crate-cloth", 54.8, 5.3, -0.2, 1], ["crate-net", 57.3, 6.6, 0.1, 1], ["net-heap", 15.6, 7.2, 2.1, 0.9],
@@ -576,7 +577,8 @@ function lamps(): Obj[] {
   put("lamp-beach-way", "village", 39, 84, 35, 84);
   // The deck: lantern posts here and there, their arms toward the water, one lighting the market's front (David, R2d:
   // "lighting ... make it organic"); hand lanterns along its edge at uneven gaps, on the market's porch and by its stall.
-  ([[24.6, 1.6], [31.5, 4.4], [38.6, 3.1], [52.6, 3.7], [57.6, 5.1], [68.2, 3.2], [76.6, 4.6]] as const)
+  // The second stands between the catch board and the stands (round 8, David: "move the lamp post between sign and stands").
+  ([[24.6, 1.6], [29.2, 5.6], [38.6, 3.1], [52.6, 3.7], [57.6, 5.1], [68.2, 3.2], [76.6, 4.6]] as const)
     .forEach(([z, d], i) => { const q = quayAt(z, d), e = quayAt(z, -1); put(`lamp-deck-${i}`, "wharf", q.x, q.z, e.x, e.z); });
   for (let z = 15, i = 0; z <= 79; z += 4.2 + 2.6 * hash01(i, 50), i++) {
     if (Math.abs(z - DOCK.z) > 5 && [SELL_AT, ...SHOPS.map(h => h[0])].every(at => Math.abs(z - at) > 3)) { const q = quayAt(z, 0.1 + 0.5 * hash01(i, 51)); put(`lamp-deck-hand-${i}`, "hand", q.x, q.z); }
