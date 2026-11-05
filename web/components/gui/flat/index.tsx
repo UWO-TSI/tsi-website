@@ -5,11 +5,11 @@
  * shared so the game's menus can wear the same style. One flat light-grey panel over most of the screen (`FlatPanel`):
  * a purse top left, the title, a round close; a rail of icons down the left (`IconRail`); white cards in a grid
  * (`CardGrid`, `ItemCard`); an item opened in the same panel on the white studio stage (`DetailView`, `SpecBand`); and the
- * small parts (`Pill`, `DarkButton`, `GhostButton`, `RoundButton`, `HairlineRow`). Colours: the theme's --ui-* tokens
+ * small parts (`Pill`, `DarkButton`, `GhostButton`, `RoundButton`, `FlatField`, `FlatToggle`, `FlatSlider`, `HairlineRow`). Colours: the theme's --ui-* tokens
  * (styles/themes). Nothing here knows about the shop: every piece takes plain props.
  */
 import type { Rarity } from "@/lib/rarity";
-import { Fragment, useEffect, useMemo, useRef, type ButtonHTMLAttributes, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type ReactNode, type Ref } from "react";
+import { Fragment, useEffect, useId, useMemo, useRef, type ButtonHTMLAttributes, type CSSProperties, type HTMLAttributes, type InputHTMLAttributes, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Heart, Sparkles, Star, X, Zap } from "lucide-react";
 import { usePresence, useWorldDialog } from "@/lib/game/useWorldDialog";
 import { CurrencyIcon } from "@/components/economy/Amount";
@@ -355,6 +355,30 @@ export function GhostButton({ className, ...props }: ButtonHTMLAttributes<HTMLBu
 /** A round button: the Tethos navy, white glyphs (as approved on the studio stage). */
 export function RoundButton({ label, className, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
   return <button type="button" {...props} className={cx(f.round, className)} aria-label={label} />;
+}
+/** A text field on a grey well, no box: the label is read aloud and shown as the placeholder (the title's sign-in). */
+export function FlatField({ label, className, placeholder, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string }) {
+  return <label className={cx(f.field, className)}><span>{label}</span><input {...props} placeholder={placeholder ?? label} /></label>;
+}
+/** On or off: the label, then a grey-well track whose white knob slides over on a spring and fills with the accent. */
+export function FlatToggle({ checked, onChange, children, hint, disabled, className }: { checked: boolean; onChange: (on: boolean) => void; children: ReactNode; hint?: ReactNode; disabled?: boolean; className?: string }) {
+  const hintId = useId();
+  return <button type="button" role="switch" aria-checked={checked} aria-describedby={hint ? hintId : undefined} disabled={disabled} className={cx(f.toggle, className)} onClick={() => onChange(!checked)}>
+    <span><b>{children}</b>{hint && <small id={hintId}>{hint}</small>}</span>
+    <i aria-hidden="true" />
+  </button>;
+}
+/** A slider on a grey-well track, the accent filling up to a white knob; the label and the value either side. */
+export function FlatSlider({ label, value, min = 0, max = 100, step = 1, onChange, format = v => String(v), className }: {
+  label: ReactNode; value: number; min?: number; max?: number; step?: number; onChange: (v: number) => void; format?: (v: number) => string; className?: string;
+}) {
+  const id = useId();
+  return <div className={cx(f.slider, className)}>
+    <label htmlFor={id}>{label}</label>
+    <input id={id} type="range" min={min} max={max} step={step} value={value} onChange={e => onChange(Number(e.target.value))}
+      style={{ "--fill": `${((value - min) / (max - min || 1)) * 100}%` } as CSSProperties} aria-valuetext={format(value)} />
+    <output htmlFor={id}>{format(value)}</output>
+  </div>;
 }
 
 // ── Lists ───────────────────────────────────────────────────────────────────────────────────────────────────────────

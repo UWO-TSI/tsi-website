@@ -1,8 +1,8 @@
 /* The title screen (David, 2026-11-01: the banner): the live island close up, one white banner hanging from the top edge
    with a swallowtail, holding the emblem, the wordmark, ISLAND between gold rules and the menu, the chosen row on a soft
-   gold marker between two diamonds. A small input hint bottom-right. Above the site splash (z 99999). On a phone it
+   gold marker between two gold diamonds (round 1's option A, David 2026-11-02). A small input hint bottom-right. Above the site splash (z 99999). On a phone it
    splits: a short pennant at the top holds the logo and a white panel at the bottom holds the menu. */
-.screen { position: fixed; inset: 0; z-index: 100000; overflow: hidden; color: #fff; font-family: var(--gui-font); --title-r: 14px;
+.screen { position: fixed; inset: 0; z-index: 100000; overflow: hidden; color: #fff; font-family: var(--gui-font);
   background: linear-gradient(#8fc3dc 0%, #cfe3e2 55%, #e8e0c2 100%); }
 
 /* The island fades in once its first frames have drawn; until then the sky colour holds the screen. */
@@ -39,52 +39,57 @@
 /* The card holds whichever view is open, on the banner itself. */
 .card { position: relative; width: 100%; color: var(--gui-ink-strong); }
 
-/* The menu: words on the banner, the chosen one on a soft gold marker between two diamonds. Transform and colour only, so rows never reflow. */
+/* The menu: words on the banner, the chosen one on a soft gold marker between two teal-edged gold diamonds that nudge in.
+   Transform and colour only, so rows never reflow. */
 .menu { list-style: none; margin: 0; padding: 4px 0; display: grid; gap: 2px; position: relative; }
 .menu button { position: relative; width: 100%; min-height: 50px; padding: 6px 18px; border: 0; border-radius: 999px; cursor: pointer; text-align: center;
   background: transparent; color: var(--ui-ink); font: 800 24px/1.2 var(--gui-font); letter-spacing: 0.005em;
   transition: background var(--gui-t-fast) ease, color var(--gui-t-fast) ease, transform var(--gui-t-fast) ease; }
 .menu button[data-selected] { background: var(--ui-marker); }
-.menu button[data-selected]::before, .menu button[data-selected]::after { content: ""; position: absolute; top: 50%; width: 8px; height: 8px; margin-top: -4px;
-  border-radius: 2px; background: var(--ui-ink); rotate: 45deg; }
-.menu button[data-selected]::before { left: 24px; }
-.menu button[data-selected]::after { right: 24px; }
+.menu button[data-selected]::before, .menu button[data-selected]::after { content: ""; position: absolute; top: 50%; width: 13px; height: 13px; margin-top: -9px;
+  border: 3px solid var(--ui-title-outline); border-radius: 3px; background: var(--ui-gold); rotate: 45deg; animation: nudge-l 0.9s ease-in-out infinite; }
+.menu button[data-selected]::before { left: 18px; }
+.menu button[data-selected]::after { right: 18px; animation-name: nudge-r; }
 .menu button:active { transform: scale(0.98); }
 .menu button:focus-visible { outline: none; }
 .caption { position: relative; margin: 2px 0 6px; text-align: center; font: 700 13px/1.4 var(--gui-font); color: var(--ui-muted); overflow-wrap: anywhere; }
 
-.form { position: relative; display: grid; gap: 10px; padding: 8px 10px 6px; }
-/* The kit's buttons and fields are pills; on this screen they square up to the title's rounded rectangle. */
-.form button:not(.back):not([role="switch"]), .form input:not([type="range"]) { border-radius: var(--title-r) !important; }
-.formHead { display: flex; align-items: center; gap: 10px; }
-.formHead h2 { margin: 0; font: 900 22px/1.2 var(--gui-font); color: var(--gui-ink-strong); }
-.back { width: 32px; height: 32px; flex: none; border: 0; border-radius: 10px; background: var(--gui-paper-deep); color: var(--gui-ink);
-  font: 900 20px/1 var(--gui-font); cursor: pointer; }
-.back:hover { background: var(--gui-paper-edge); }
-.form button svg { flex: none; }
-/* A choice of a few (Quality): the kit's segmented pills, as in the game's Settings (playtest round 1). */
-.setting { display: grid; gap: 6px; }
-.setting > span { font: 800 14px/1.2 var(--gui-font); color: var(--gui-ink-strong); }
-.setting > small { font: 600 12px/1.4 var(--gui-font); color: var(--gui-muted); }
-.segmented { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 999px; background: var(--gui-paper-deep); }
-.form .segmented button[aria-pressed] { min-height: 38px; border: 0; border-radius: 999px !important; background: transparent; font: 800 14px/1 var(--gui-font); color: var(--gui-ink-2); cursor: pointer; }
-.form .segmented button[aria-pressed="true"] { background: var(--gui-butter); color: var(--gui-ink-strong); box-shadow: var(--gui-shadow-sm); }
-.form .segmented button[aria-pressed]:focus-visible { outline: 3px solid var(--gui-focus); outline-offset: -3px; }
-.lead { margin: 0; font: 600 14px/1.5 var(--gui-font); color: var(--gui-ink-2); overflow-wrap: anywhere; }
-.or { display: flex; align-items: center; gap: 10px; font: 700 12px var(--gui-font); color: var(--gui-muted); }
-.or::before, .or::after { content: ""; flex: 1; height: 2px; border-radius: 2px; background: var(--gui-paper-edge); }
-.links { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
-.links button { padding: 2px 0; border: 0; background: none; cursor: pointer; font: 700 13px var(--gui-font); color: var(--gui-teal-ink);
-  text-decoration: underline; text-underline-offset: 3px; }
-.error, .notice { margin: 0; padding: 9px 12px; border-radius: 12px; font: 700 13px/1.45 var(--gui-font); overflow-wrap: anywhere; }
-.error { background: var(--gui-danger-soft); color: var(--gui-danger); }
-.notice { background: var(--gui-success-soft); color: var(--gui-success); }
+/* The forms: the flat kit's pieces on the banner. One teal action (the banner's teal stands in for the kit's ink accent,
+   so the switches and the slider fill teal too), grey-well fields, white pills with a thin line, quiet links. */
+.form { position: relative; display: grid; gap: 10px; padding: 4px 6px 6px;
+  --ui-accent: var(--ui-title-outline); --ui-accent-deep: color-mix(in srgb, var(--ui-title-outline), var(--ui-ink) 35%); --ui-accent-ink: var(--ui-card); }
+.formHead { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+/* The kit's round back, quiet here (grey well) so the dark action is the only dark thing. */
+.formHead > button { background: var(--ui-well); color: var(--ui-ink); }
+.formHead > button:hover { background: var(--ui-line); }
+.formHead h2 { margin: 0; font: 800 21px/1.2 var(--gui-font); color: var(--ui-ink); }
+.form .line { display: flex; align-items: center; justify-content: center; gap: 10px; height: 44px; box-sizing: border-box;
+  box-shadow: inset 0 0 0 1.5px var(--ui-line-strong); font: 700 15px var(--gui-font); color: var(--ui-ink); }
+.form .line:hover:not(:disabled) { background: var(--ui-card-hover); }
+.google svg { flex: none; }
+.or { margin: 0; text-align: center; font: 700 12px/1 var(--gui-font); color: var(--ui-quiet); }
+.lead { margin: 0; font: 600 14px/1.5 var(--gui-font); color: var(--ui-ink-2); overflow-wrap: anywhere; }
+.links { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px 20px; margin-top: 2px; }
+.links button { padding: 4px 0; border: 0; background: none; cursor: pointer; font: 700 13px var(--gui-font); color: var(--ui-ink-2); }
+.links button:hover { color: var(--ui-ink); text-decoration: underline; text-underline-offset: 3px; }
+.links button:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; border-radius: 4px; }
+.error, .notice { margin: 0; font: 700 13px/1.45 var(--gui-font); overflow-wrap: anywhere; }
+.error { color: var(--ui-error); }
+.notice { color: var(--ui-ink-2); }
+/* A choice of a few (Quality): three pills on a grey well, the chosen one white and lifted. */
+.setting { display: grid; gap: 6px; margin-bottom: 4px; }
+.setting > span { font: 700 15px/1.2 var(--gui-font); color: var(--ui-ink); }
+.setting > small { font: 600 12px/1.4 var(--gui-font); color: var(--ui-muted); }
+.segmented { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 999px; background: var(--ui-well); }
+.form .segmented button[aria-pressed] { min-height: 36px; border: 0; border-radius: 999px; background: transparent; font: 700 14px/1 var(--gui-font); color: var(--ui-ink-2); cursor: pointer;
+  transition: background var(--gui-t-fast) ease, color var(--gui-t-fast) ease; }
+.form .segmented button[aria-pressed="true"] { background: var(--ui-card); color: var(--ui-ink); box-shadow: 0 1px 4px rgb(var(--ui-shade) / 0.2); }
+.form .segmented button[aria-pressed]:focus-visible { outline: 2px solid var(--ui-ink); outline-offset: -2px; }
 
 .footer { position: absolute; left: clamp(24px, 6.5vw, 112px); right: clamp(18px, 3vw, 44px); bottom: 20px; display: flex; justify-content: space-between;
   align-items: center; gap: 16px; font: 700 13px/1.3 var(--gui-font); color: rgb(255 255 255 / 0.9); text-shadow: 0 1px 6px rgb(0 0 0 / 0.45); }
 .when { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 .soon { font-style: normal; padding: 3px 10px; border-radius: var(--gui-r-pill); background: var(--gui-butter); color: var(--gui-ink-strong); text-shadow: none; }
-.apply { padding: 4px 12px; border-radius: 999px; background: var(--ui-gold); color: var(--ui-ink); text-decoration: none; text-shadow: none; }
 
 /* The input hint: a small teal pill bottom-right, a round key and the verb. */
 .hint { display: inline-flex; align-items: center; gap: 16px; padding: 5px 16px 5px 6px; border-radius: 999px; background: var(--ui-title-outline);
@@ -94,6 +99,8 @@
   background: var(--ui-card); color: var(--ui-title-outline); font: 900 13px/1 var(--gui-font); }
 
 @keyframes drop { from { transform: translateY(-110%); } }
+@keyframes nudge-l { 50% { translate: 5px 0; } }
+@keyframes nudge-r { 50% { translate: -5px 0; } }
 
 /* Phones: the banner splits. A short pennant at the top holds the logo, a white panel along the bottom holds the menu, no key hint. */
 @media (max-width: 640px) {
@@ -115,4 +122,5 @@
   .column { animation: none; }
   .scene { transition: none; }
   .menu button { transition: none; }
+  .menu button::before, .menu button::after { animation: none; }
 }
