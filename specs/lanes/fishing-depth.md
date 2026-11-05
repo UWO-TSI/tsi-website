@@ -138,7 +138,22 @@ Branch head after this file's commit; built on origin/main 887445b5 (Meshy pipel
 - **Evidence:** `specs/evidence/fishing-depth/r4/` `before/` and `after/`, each `desktop/` (1280 x 800) and `phone/` (390 x 844 at 2x, touch); `spots/` (the three spots, from the stall and the grass); shots palette-quantised to keep the repo light. The phone menu has no before: the old flow clicked the HUD's touch Menu button, not the bar's.
 - **Gates:** tsc clean; vitest 3732 passed, 4 skipped (one run, NEXT_PUBLIC_GAME_WORLD=new) before the last small edits, then wharf, peaceful and flat kit tests again (48 passed); eslint clean on every changed file. perf:check (SCENES=v2, one run): FAILED against the 2026-10-14 baseline, v2 high 5.3 ms (+10.4%), lite 3.4 ms (+17.2%), draw calls 368 (+2.5%), load average about 4. Not this lane's: the boards went from 5 draws to 3 each and add about 300 triangles; the baseline predates many merged lanes. Not rerun (rules: once, no reruns for noise).
 
-### Round 8: built (2026-11-04), waiting on David's review
+### Round 9: built (2026-11-05), waiting on David's review; ready to merge
+
+Branch head after this file's commit. origin/main has not moved since round 8 (still a8a03985): `git merge origin/main` is "Already up to date". Round 5's seed migration `20261102031338_catalogue_seed.sql` is still unapplied: the coordinator applies it before merging.
+
+1. **The catch board area** (David on f8-board-close: "move the lamp more to the left , remove the lanter, barrel crate in the way"):
+   - The lamp post (`lamp-deck-1`) further left in the face view (up the deck), between the board and the stands and clear of the board: quay (29.2, 5.6) to (31.0, 5.4), world (67.48, 29.51) to (67.77, 31.3). Its own lantern stays (a post needs its light).
+   - "The lanter" read as the hand lantern standing on the deck between the board and the stall (`lamp-market-hand-2`, quay (27.9, 3.4)): removed.
+   - "Barrel crate in the way" read as the three barrels by the board (`market-5` to `market-7`, quay z 25.4 to 26.1) and the cloth crate in front of it (`market-19`, quay (28.2, 6.5)): removed.
+   - The board's spot and facing are unchanged.
+   - Removing them renumbers the later `market-*` ids (8 to 25 become 5 to 21) and `lamp-market-hand-3`, `-4` (now `-2`, `-3`): every generated prop and lamp is rebuilt each run (`GENERATED` in generate.ts), so nothing keys on them.
+2. **Where the wharf props' positions live** (for the world-editor lane): `web/lib/game/world/generate.ts`. `MARKET` (line 418) holds the market, carts, barrels, crates and dock decor as `[model, z, d, turn, scale]` in the quay's frame (`quayAt(z, d)`: z along the deck, d inland from the water's edge, `QUAY` the edge's polyline); `lamps()` (line 570) the deck's lamp posts (`lamp-deck-*`), its hand lanterns (`lamp-deck-hand-*`, spaced by hash) and the market's (`lamp-market-hand-*`); `SELL_AT` and `SHOPS` the sell stall and the ship houses. The two market boards stand in the fish market's own frame: `MARKET_BOARDS` in `web/lib/game/wharf.ts`. `layoutObjects` writes them all into `web/data/world/world.json`'s `objects` (one per line, kind `prop` or `lamp`, world x and z), which the game reads; the generator rebuilds those kinds on every run, so an edit made only in world.json is lost on the next generate.
+- **Deleted:** the three barrels, the cloth crate and the hand lantern by the board.
+- **Gates:** tsc clean; eslint clean on generate.ts; vitest 3765 passed, 4 skipped (401 files, 2 skipped) with NEXT_PUBLIC_GAME_WORLD=new and the same without; `next build` (NEXT_PUBLIC_GAME_WORLD=new, Supabase pointed at a dead port) exit 0, 231 pages. No perf:check (four props and a lantern removed, one post moved).
+- **Evidence:** `specs/evidence/fishing-depth/r9/`: `before/` (r8's after shots, the same code) and `after/` (`desktop/` 1280 x 800, `phone/` 390 x 844), and the pairs, before left: `f9-board-close-pair.png` (the face view cropped), `f9-board-wide-pair.png` (the face view whole), `f9-board-deck-pair.png` (down the deck from the stall), `f9-board-phone-pair.png`. The phone's turned camera lands a little further out in the after shot (the turn is a timed key hold).
+
+### Round 8: built (2026-11-04), reviewed by David 2026-11-05 (Round 9 above)
 
 Branch head after this file's commit; origin/main merged at c2031cf4 (a8a03985: the reel fix shipped ahead, merged clean; one import-line conflict in app/lab/gui/page.tsx, both sides kept). The reel-fix lines are untouched. Round 5's seed migration is still unapplied.
 
@@ -239,14 +254,15 @@ Evidence in `specs/evidence/fishing-depth/r4/` (before and after, desktop and ph
 
 ## Next
 
-1. Wait for David's review of round 8 (the place icons, the board area: the lantern barrel gone, the stands moved up, the lamp post between).
-   - Ask with it: should the talk library (keyword.tsx) get rows for village, meadow, mountain and the other places, with the HUD's icons?
+1. Wait for David's review of round 9 (the board area: the lamp post further left, the lantern, barrels and crate gone). The lane is ready to merge.
+   - Still open from round 8: should the talk library (keyword.tsx) get rows for village, meadow, mountain and the other places, with the HUD's icons?
 2. The coordinator applies `20261102031338_catalogue_seed.sql` with the merge (the fish's months as whole seasons).
 3. Dish pictures (David on f4-spread-1: "needs to be 3d modeled on meshi.ai and imported to blender and then 2d render for picture and 3d for the actual food on a plate"): Meshy, then Blender. Waiting on the Meshy key ("Meshy API" keychain item). Ask the coordinator before generating (credits).
 4. Open for David: "Meadow" or "Plains" for the big grass (places.ts `NAMES`).
 
 ## Tools and gotchas
 
+- Round 9 shots: `withlock.sh devserver scratchpad/fishing-depth/serve7.sh scratchpad/fishing-depth/r9/shoot-all.sh` (`OUT=<dir>`, default `r9/after`) runs `r9/shoot.mjs` (r8's, renamed f9) for world and turn on desktop and phone. `python3 -I scratchpad/fishing-depth/r9/pair.py <before> <after> <out> [x,y,w,h|-] [scale]` makes a pair. `scratchpad/fishing-depth/r9/sync-objects.ts` is r8's sync plus removals: it drops world.json lines of `market-*` and `lamp-*` objects the generator no longer makes (other generated props, river and shells, aren't made by `layoutObjects`, so only those prefixes are dropped).
 - Round 8 shots: `withlock.sh devserver scratchpad/fishing-depth/serve7.sh node <abs path>/r8/shoot.mjs <abs out> <flows>` (absolute paths: serve7.sh runs from web/; flows: places, world, turn, hud). The board's face: `TURN=1500 ZOOM=-240` on a desktop, `TURN=1650 ZOOM=240` with `VIEW=phone`. For before shots: park the work in a `[wip]` commit, `git checkout <base> -- web art`, shoot, `git checkout HEAD -- web art`. `scratchpad/fishing-depth/r8/sync-objects.ts` (`npx vite-node -c vitest.config.ts <it> [--write]` from web/) diffs the generator's objects against world.json and rewrites the changed lines (study kinds skipped: the pier bench's rounding differs).
 - `?weather=clear` (useIslandConditions) pins the weather; otherwise it follows the real report and before and after shots can differ.
 - Round 7: the reel bench `MODE=start withlock.sh devserver scratchpad/fishing-depth/serve7.sh node specs/evidence/fishing-depth/r7/reel-bench.mjs <out.json> [catches]` against a measurement build (`withlock.sh heavy sh specs/perf/measure-build.sh --no-mangling`, about 20 min on a loaded machine). `PROFILE=<file>` writes a CPU profile of the first catch (`scratchpad/fishing-depth/prof.py`, `prof-when.py` summarise it); `WHY=1` logs which of DefaultIslandWorldContent's and IslandScene's hooks and props change while reeling (a devtools-hook diff). Headless can't take the pointer lock, so each click there runs the refused-lock path. Shots: `serve7.sh` (MODE dev) with `r7/shoot.mjs` (flows world, turn, hud, reel, showroom; `TURN=1500 ZOOM=-240` for the board's face); under load a flow can time out at 300 s, rerun it alone.
