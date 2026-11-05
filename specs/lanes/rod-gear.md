@@ -30,6 +30,34 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 8: David's rods awakening round 7 review (2026-11-05, verbatim; https://claude.ai/artifact/BHtKmVCxwLk6MdRxugfPFg)
+
+Approved: rg7-awakened-card, rg7-gary, rg7-questions, rg7-rodbox-bag, rg7-rodbox, rg7-traded.
+- rg7-awaken-epic (redo): "remove circle, make rod in the midle of the glow, also the glow is recealing theres a hard box around cuz glow is cut off. i want you to edit more effects like the tidewarden should get wave animation and shouldnt be a stagnant rod, orb shoul grow in size etc."
+- rg7-awaken-legendary (redo): "the background glow needs to show that its previously a epic or rare and not glow white,"
+- rg7-awaken-training (redo): "make the stats grow after rod animation is done, one of the design priciples is that the eye cant look at two things at once, i dont htink we need the circle, make the bacground glow a glow on the rod instead"
+- rg7-table (redo), no note
+
+Build:
+1. The awakening cutscene:
+   - No circle or ring anywhere.
+   - The glow is on the rod itself, not a background glow. The rod sits in the middle of it.
+   - The glow is never cut off by a hard edge: make the quad or render target big enough, or soft-edged.
+   - One thing at a time: the rod's animation plays first, and the stats grow only after it ends ("the eye cant look at two things at once").
+2. More effects, per rod:
+   - Tidewarden gets a wave animation and moves; it is never a still rod.
+   - The orb grows in size.
+   - "etc.": give each awakening rod its own motion that fits it (Tempest's wind and storm, Titanium's metal sheen), within the perf budget. Clip each rod.
+3. The legendary awakening: the glow starts in the colour of the rarity the rod had (rare blue or epic violet) and turns into the legendary colour. Never white.
+4. rg7-table was marked Redo with no note. Keep the numbers, and put the table on the questions card asking which ones to change.
+5. The approved picks from rg7-questions stand:
+   - Epics stay epic.
+   - Real awakened models come through the tool pipeline with David's references (Tempest, Tidewarden and Riptide are still awaited). Meshy is paused and ElevenLabs credits are out, so the stand-in recolours stay.
+   - The recolour shows only in the cutscene.
+   - The aura gets a strength setting.
+   - The cutscene replaces the card on every awakening.
+6. `specs/references/rods/` is third-party art and is untracked. Never commit it.
+
 ## Round 7: David's rod data round 6 review (2026-11-04, verbatim; https://claude.ai/artifact/YSyC1PSg7s3yeftBuVcdJu)
 
 Approved: rg6-epic, rg6-passive, rg6-shop, rg6-stats, rg6-training-phone.
