@@ -70,7 +70,7 @@ const CONTROLS: [string, string][] = [
   ["1–9", "hotbar slot"], ["E", "palette: choose what the slot holds"], ["B", "cell mode ⇄ brush mode"],
   ["Scroll", "brush size (cell mode: N × N)"], ["Shift + scroll", "strength (cell mode: the step)"], ["H", "hard edge ⇄ soft (banks, quays)"],
   ["Alt + click · middle click", "sample the level height"], ["R · Shift + R", "turn the ghost or the selection"], ["+ · −", "scale the selection"],
-  ["] · [ (Shift: more)", "raise · lower the selection (props, boards)"], ["G", "snap the selection to the ground"],
+  ["] · [ (Alt: more)", "raise · lower the selection (props, boards)"], ["G", "snap the selection to the ground"],
   ["Delete · X", "delete the selection"], ["Ctrl+Z · Ctrl+Shift+Z", "undo · redo"], ["O · Tab", "overhead view"], ["Ctrl+S", "save to web/data/world"],
   ["P", "walk it: play from the camera"], ["?", "these controls"],
 ];
@@ -174,7 +174,8 @@ export default function WorldEditor() {
       if (key === "=" || key === "+") { scaleSelected(1.1); return; }
       if (key === "-" || key === "_") { scaleSelected(1 / 1.1); return; }
       if (key === "Delete" || key === "Backspace" || key === "x") { deleteSelected(); return; }
-      if (key === "]" || key === "}" || key === "[" || key === "{") { liftSelected((key === "]" || key === "}" ? 1 : -1) * (e.shiftKey ? 0.25 : 0.05)); return; }
+      // By the key's place, not its character (Alt+] types another one on a Mac); Alt for big steps, since Shift flies down.
+      if (e.code === "BracketRight" || e.code === "BracketLeft") { liftSelected((e.code === "BracketRight" ? 1 : -1) * (e.altKey ? 0.25 : 0.05)); return; }
       if (key === "g") { liftSelected(null); return; }
       if (key === "p") { walk(); return; }
       if (key === "?" || key === "F1") { e.preventDefault(); ed.help = !ed.help; bump(); return; }

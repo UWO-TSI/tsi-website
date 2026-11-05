@@ -30,13 +30,13 @@ Build (a working first version plus one pitch; nothing ships until David marks i
 
 ## Status
 
-Round 1 built on game/world-editor (head: see the last commit; the report names it). Not reviewed yet; nothing ships.
+Round 1 built on game/world-editor (the commit "[build] world-editor r1: evidence"). Gates: vitest 3761 passed and 4 skipped (398 files); tsc clean; eslint clean on the 16 touched ts and tsx files. Not reviewed yet; nothing ships.
 
 **What was already there.** `/lab/world` (the lab's top bar, "World editor"; specs/world-editor.md) is already a creative-mode editor. It has fly, the hotbar and palette, select, move, rotate, scale, delete, place, undo and redo, Ctrl+S save to web/data/world through the dev route `/api/lab/world`, and P to walk it in the game. Round 1 extends it; there is no second editor. `/lab/map` is the old grid painter, and it doesn't edit the member world.
 
 **Round 1 adds to /lab/world:**
 - Select picks what the crosshair passes through (editorStore `objectOnRay`), not the ground behind it.
-- `]` and `[` raise and lower a prop or a board (Shift for 0.25), and G snaps it to the ground. A new `lift` field is read by the game's prop placement (NatureModels `sceneryOf`) and by the boards.
+- `]` and `[` raise and lower a prop or a board (Alt for 0.25; Shift already flies down), and G snaps it to the ground. A new `lift` field is read by the game's prop placement (NatureModels `sceneryOf`) and by the boards.
 - The palette's "Scenery props" group holds every SCENERY_URLS model plus the market's two boards. A placed prop takes the scale the world already uses for its model, and its ghost shows the model.
 - The catch board and task board are data now: `board` objects in world.json (ids `catch` and `tasks`). The game reads them (wharf.ts `boardsOf`); the generator lays them from MARKET_BOARDS.
 - Edits survive generate-world. Whatever the editor changes is `pin`ned, with `of`, where the generator had put it. layoutObjects keeps pinned objects; each one replaces the generator's object of the same kind and model nearest `of` (within 3) and takes its current id, so positional ids (market-5) can shift. A delete stays as a pinned `gone`, which no world shows (villageMap `standing`). New objects get `placed-N` ids.
@@ -64,10 +64,18 @@ Round 1 built on game/world-editor (head: see the last commit; the report names 
 - (a) The repo file: the editor writes web/data/world in dev and a commit carries it to prod. There is no migration. It is reviewed and diffable, the server's cells.json stays in step, and the tests guard it. It needs a dev server and a commit. Round 1 is built on this.
 - (b) Supabase, staged as a plan: the draft `web/supabase/drafts/world_layout.sql` holds one row per pinned object in world.json's own shape. Members read it; writes go only through an admin route behind adminContext (T1/T2) with the service role. The game lays the rows over world.json the way layoutObjects does, a "Build" toggle for T1/T2 in the game mounts the editor's object tools, and a bake script folds the rows into world.json and clears them. It gives live edits in prod. It needs the migration, the route, the bake step and a cache bust. The risks: prod edits skip review, and the terrain stays repo-only (cells.json).
 
+**Evidence** (`specs/evidence/world-editor/r1/`, desktop 1280 x 800, headless; phone isn't needed for an admin tool):
+- we1-01: `we1-01-board.mp4` with its poster `we1-01-board-poster.webp`, plus shots `we1-01a` to `we1-01g`. In /lab/world, aim at the catch board and select it, drag it along the deck, turn it, raise it, snap it down and save; P walks it in the game. `we1-01g-game-before-after.webp` crops the game's own view from before the edit and after the save: the board has moved from the grass by the palm onto the deck.
+- we1-02: `we1-02-place.mp4` with its poster `we1-02-place-poster.webp`, plus shots `we1-02a` to `we1-02e`. A barrel's ghost from the catalogue at the market's barrel scale, three barrels placed and turned, then a fish crate. The crate is selected, raised 0.75, snapped down and deleted, and undo brings it back.
+- we1-03: `we1-03-palette-catalogue.webp`, the palette's "Scenery props" group with the two market boards.
+- The demo's save was restored (`git checkout -- web/data/world`); no layout change is committed.
+
 **Not done or not verified:**
 - If David moves the fish market but not its boards, a generator rerun lays the boards from the generator's market, not his.
 - Phone isn't needed for an admin tool; there is no phone pass.
 - Pick by ray uses an upright post per object, not the mesh.
+- The walk-it shot (we1-01e) puts the game camera behind the fish market's roof; the game's own before and after view is we1-01g.
+- In we1-02 the fish crate lands under the stall's awning, so the raise reads mostly through its selection box.
 
 ## Next
 

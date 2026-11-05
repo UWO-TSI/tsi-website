@@ -127,7 +127,7 @@ Dev only (404 in production). It loads and saves `web/data/world/` through `/api
 | Alt + click, middle click | Sample the height the level tool uses |
 | R, Shift + R | Turn the placement ghost or the selection by 15° |
 | + / − | Scale the selection |
-| ] / [ (Shift: 0.25 a step) | Raise or lower the selection 0.05 off the ground (props and the market boards) |
+| ] / [ (Alt: 0.25 a step) | Raise or lower the selection 0.05 off the ground (props and the market boards) |
 | G | Snap the selection back onto the ground |
 | Delete, Backspace, X | Delete the selection |
 | Ctrl+Z, Ctrl+Shift+Z (Ctrl+Y) | Undo, redo (a stroke at a time, 200 deep) |
