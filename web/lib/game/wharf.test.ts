@@ -4,7 +4,7 @@ import { islandOf } from "./defaultIsland";
 import { objectsOf, type Village } from "./villageMap";
 import { loadWorldFromDisk } from "./world/disk";
 import { villageOfWorld } from "./world/village";
-import { BUOYS, MOORED, marketBoardsOf, SEA_Y, deckPieces, dockToWorld, fitPlane, floatBoat, floatBuoy, mooredPose, newBoatPose, newFloat, newRide, tackleCounterOf, worldToDock, type Dock } from "./wharf";
+import { BUOYS, MOORED, PILE_LANTERN, marketBoardsOf, SEA_Y, deckPieces, dockToWorld, fitPlane, floatBoat, floatBuoy, mooredPose, newBoatPose, newFloat, newRide, tackleCounterOf, worldToDock, type Dock } from "./wharf";
 import { TRAINS, waterWaveAt, waveState } from "./waves";
 import { mirrorWaterField } from "./waterField";
 import { TUNING_DEFAULTS } from "./tuning";
@@ -150,11 +150,19 @@ describe("the wharf kit on the deck squares", () => {
     for (const p of piles) { expect(Math.abs(p.x - 4.2)).toBeLessThan(0.05); expect(p.y).toBe(1); }
   });
 
+  it("stands a hand lantern on the top of one pile of each edge square (David, round 10: \"have landers on the dock wood stumps\")", () => {
+    const pieces = deckPieces(row(2), ground), piles = pieces.filter(p => p.model === "dock-pile-rope");
+    const lanterns = pieces.filter(p => p.model === PILE_LANTERN.model);
+    expect(lanterns.length).toBe(10);
+    for (const l of lanterns) expect(piles.some(p => p.x === l.x && p.z === l.z && l.y === p.y + PILE_LANTERN.lift)).toBe(true);
+    expect(new Set(lanterns.map(l => piles.findIndex(p => p.z === l.z) % 2)).size).toBe(2);
+  });
+
   it("puts ladders with life rings, rope nets and rope fencing on some edge squares, none near the jetty's landing", () => {
     const all = deckPieces(row(2), ground), kept = deckPieces(row(2), ground, { x: 0, z: 18 }, 7);
     expect(all.some(p => p.model === "wharf-ladder")).toBe(true);
     for (const m of ["rope-span", "rope-net", "life-ring"]) expect(all.some(p => p.model === m), m).toBe(true);
-    for (const p of kept) if (p.model !== "deck-tile" && p.model !== "dock-pile-rope") expect(Math.abs(p.z - 18)).toBeGreaterThan(5);
+    for (const p of kept) if (!["deck-tile", "dock-pile-rope", PILE_LANTERN.model].includes(p.model)) expect(Math.abs(p.z - 18)).toBeGreaterThan(5);
   });
 });
 

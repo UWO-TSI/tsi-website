@@ -54,7 +54,7 @@ import confetti from "canvas-confetti";
 import type { InteriorStation } from "./interiorShared";
 import { villageIsland, villageSpawn, villageScale, landmark, landmarks, landmarkPoint, turn, wharfDecks, wharfDock, benchSeat, propFootprint, BENCH_SEAT_TOP, houseHalf, houseModel, type Landmark } from "@/lib/game/defaultIsland";
 import { village, objectsOf, type Village } from "@/lib/game/villageMap";
-import { SELL_BARREL, marketBoardsOf, tackleCounterOf } from "@/lib/game/wharf";
+import { PILE_LANTERN, SELL_BARREL, marketBoardsOf, tackleCounterOf } from "@/lib/game/wharf";
 import { CatchBoardSheet, CatchChalk, SellBinFish, TaskChalk } from "@/components/game/peaceful/CatchBoard";
 import { LEVEL_STEP, levelAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
@@ -541,7 +541,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   const court = useMemo(() => (DEV && new URLSearchParams(location.search).get("vbcourt") === "0" ? null : courtOf(v, island.ground)), [v, island]), playing = useVolley();
   const board = useMemo(() => boardSpot(v), [v]);
   const [sceneryStill, sceneryMoving] = useMemo(() => {
-    const all = court ? scenery.filter(p => !p.url.endsWith("/volleyball-net.glb")) : scenery;
+    const all = scenery.filter(p => p.url !== NEW_LAMPS.hand.url && !(court && p.url.endsWith("/volleyball-net.glb")));
     return v.terrain ? [all.filter(p => STILL.test(p.url)), all.filter(p => !STILL.test(p.url))] : [[], all];
   }, [v, scenery, court]);
   // E at the net starts a match on this court (the world's ground and walls, in the court's frame).
@@ -550,11 +550,18 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     window.addEventListener("tsi:volley", on);
     return () => window.removeEventListener("tsi:volley", on);
   }, [court, island]);
-  // The lamps by model: the street lamp (none), or the new world's (propModels NEW_LAMPS), each turned by its yaw.
+  // The lamps by model: the street lamp (none), or the new world's (propModels NEW_LAMPS), each turned by its yaw; the
+  // hand lanterns on the deck's piles (wharf.ts PILE_LANTERN) with the hand lanterns.
+  const piled = useMemo(() => scenery.filter(p => p.url === NEW_LAMPS.hand.url), [scenery]);
   const lampSets = useMemo(() => (["", ...Object.keys(NEW_LAMPS) as (keyof typeof NEW_LAMPS)[]] as const).map(kind => {
-    const ls = layout.lamps.filter(l => (l.model ?? "") === kind);
-    return { kind, positions: ls.map((l): [number, number, number] => [l.x, island.ground(l.x, l.z), l.z]), yaws: kind ? ls.map(l => l.yaw ?? 0) : undefined };
-  }).filter(s => s.positions.length), [layout, island]);
+    const ls = layout.lamps.filter(l => (l.model ?? "") === kind), on = kind === "hand" ? piled : [];
+    return { kind, positions: [...ls.map((l): [number, number, number] => [l.x, island.ground(l.x, l.z), l.z]), ...on.map(p => p.position)], yaws: kind ? [...ls.map(l => l.yaw ?? 0), ...on.map(p => p.rotation ?? 0)] : undefined };
+  }).filter(s => s.positions.length), [layout, island, piled]);
+  // A piled lantern's pool lies on the deck under it, not on the sea below the pile.
+  const handGround = useMemo(() => {
+    const deck = new Map(piled.map(p => [`${p.position[0]},${p.position[2]}`, p.position[1] - PILE_LANTERN.lift]));
+    return (x: number, z: number) => deck.get(`${x},${z}`) ?? island.ground(x, z);
+  }, [piled, island]);
   const lampModels = useMemo(() => lampSets.flatMap(s => s.positions.map((position, i) => ({ url: s.kind ? NEW_LAMPS[s.kind].url : STREETLAMP_URL, position, rotation: s.yaws?.[i] }))), [lampSets]);
   const lampPoints = useMemo(() => lampSets.flatMap(s => (s.kind === "hand" ? [] : s.positions.map((p, i) => lampLight(p, s.yaws?.[i] ?? 0, s.kind ? NEW_LAMPS[s.kind].light : [0, 2.4, 0])))), [lampSets]);
   const handPoints = useMemo(() => lampSets.flatMap(s => (s.kind === "hand" ? s.positions.map((p, i) => lampLight(p, s.yaws?.[i] ?? 0, NEW_LAMPS.hand.light)) : [])), [lampSets]);
@@ -695,7 +702,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       {v.terrain && <LampPool points={poolPoints} intensity={light.lampsOn ? light.lamp * 2 : 0} reach={11} player={player} />}
       {/* Every lamp's warm halo and ground pool, breathing like a flame (two draws a set). */}
       {v.terrain && <LampGlow points={lampPoints} ground={island.ground} on={light.lampsOn} />}
-      {v.terrain && <LampGlow points={handPoints} ground={island.ground} on={light.lampsOn} halo={1.1} pool={2.2} />}
+      {v.terrain && <LampGlow points={handPoints} ground={handGround} on={light.lampsOn} halo={1.1} pool={2.2} />}
       {fountain && <LampGlow points={fountain.jet} ground={fountain.water} on={light.lampsOn} halo={2.4} pool={3} color="#a8e8ff" />}
       {fountain && <FadeLight position={fountain.light} color="#ffd59a" intensity={light.lampsOn ? light.lamp * 2 : 0} distance={12} />}
       {layout.boards && <>

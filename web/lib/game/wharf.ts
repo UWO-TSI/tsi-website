@@ -329,15 +329,18 @@ function shedClears(s: { x: number; z: number; yaw?: number; model?: string }, x
   const c = Math.cos(s.yaw ?? 0), n = Math.sin(s.yaw ?? 0), along = (x - s.x) * c - (z - s.z) * n;
   return along > SHIP_SPAN[0] && along < SHIP_SPAN[1] && Math.abs((x - s.x) * n + (z - s.z) * c) < 6;
 }
+/** The hand lantern on an edge pile (propModels.ts SCENERY_URLS: the hand lantern's model), on its top 0.9 over the deck. */
+export const PILE_LANTERN = { model: "pile-lantern", lift: 0.9 } as const;
 /** A wharf kit model placed on the deck (art/wharf/build_wharf_kit.py, lib/game/propModels.ts SCENERY_URLS): world x, y, z and its turn. */
 export interface KitPiece { model: string; x: number; y: number; z: number; yaw: number }
 /**
  * The wharf kit on the `deck` squares (each 4 u, local +z inland, level at the ground under its middle): a deck tile on
  * each; on each square at the water's edge two rope-lashed piles just outside it (David: "wood pillars on the side with
- * rope attached"), and on some a ladder down with a life ring by it, a rope net with floats, or rope fencing along it,
- * never within `clear` of `keep` (the jetty's gangways land there); none at all on the edge within SHED_CLEAR of what
- * stands there (`sheds`: the shops, the quick-sell stall). Everything but the tiles sits a little off and turned its
- * own way, the ladders at uneven gaps (David, R2d: "make it organic").
+ * rope attached"), a hand lantern on one of the two (round 10, David: "have landers on the dock wood stumps"), and on
+ * some a ladder down with a life ring by it, a rope net with floats, or rope fencing along it, never within `clear` of
+ * `keep` (the jetty's gangways land there); none at all on the edge within SHED_CLEAR of what stands there (`sheds`: the
+ * shops, the quick-sell stall). Everything but the tiles sits a little off and turned its own way, the ladders at uneven
+ * gaps (David, R2d: "make it organic").
  */
 export function deckPieces(decks: readonly { x: number; z: number; yaw?: number }[], ground: (x: number, z: number) => number, keep?: { x: number; z: number }, clear = 9,
   sheds: readonly { x: number; z: number; yaw?: number; model?: string }[] = []): KitPiece[] {
@@ -356,6 +359,8 @@ export function deckPieces(decks: readonly { x: number; z: number; yaw?: number 
     if (ground(at.x, at.z) > 0 || sheds.some(s => shedClears(s, o.x, o.z))) continue;
     const i = edge++, open = !keep || Math.hypot(o.x - keep.x, o.z - keep.z) > clear;
     for (const lx of [-1, 1]) put("dock-pile-rope", lx, -2.2, 0.5);
+    const pile = out[out.length - (hash01(i, 11) < 0.5 ? 2 : 1)];
+    out.push({ ...pile, model: PILE_LANTERN.model, y: pile.y + PILE_LANTERN.lift });
     if (open && i - ladder > 2 && hash01(i, 8) < 0.4) {
       ladder = i;
       const side = hash01(i, 10) < 0.5 ? 1 : -1;
