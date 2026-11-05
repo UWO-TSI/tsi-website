@@ -9,6 +9,80 @@ their switches get deleted, and the pick is built properly in round 2.
 Evidence: `specs/evidence/sky-ambient/r1/` (ids `sky1-*`). Boards first: `sky1-board-day.jpg`,
 `sky1-board-weather.jpg`, `sky1-board-today.jpg`, `sky1-board-phone.jpg`.
 
+## R3. Round 3: clouds reimagined, the cost, the night, the one wind (2026-11-05)
+
+David, round 2: "clouds model look horrible, i wanna know whats the best way for good looking clouds without
+sacrificing too much performance ... is there anyway to have the cloud feel 3d and react the lighting while not ruining
+the performance", "performance not as good", on the night "the perspective of the sky look slightly weird" and "is it
+possibe to have the pixel pass be less strong on the sky", on the wind "its so random rn ... it should blow the same way
+as the wind and [last] like 2 second and 0.3 opacity". His cloud references (2026-11-05, vault only, never in the repo):
+two in the style of Sky: Children of the Light, three from Genshin. Nothing ships until David marks it. Evidence
+`specs/evidence/sky-ambient/r3/` (ids `sky3-*`).
+
+**The answer to David's question:** draw each cloud as a card that carries its own painted shape, surface normals and
+thickness (baked once, in code), and light it live from the real sun, moon and sky. It reads as a lit 3D volume (bright
+sunlit side, cool shade, the light through its thin edges against the sun), it can carry as much painted detail as the
+references (brushed outlines, crowded bumps, loose puffs) because the detail is baked, and it costs one draw of a few
+dozen quads a frame. That is direction (c), the pick.
+
+### One cloud field, three ways to draw it (L/clouds.ts, L/skyShader.ts, C/SkyClouds.tsx; `?clouds=`)
+
+All three read one layout (`cloudField`): at most one cumulus per 2.6 km square of a layer 1.5 km up, out to 18 km,
+carried by the wind; the weather's cover grows a cloud in or shrinks it away (no pops); the 40 nearest in view, written
+every frame to a 10 × 40 float texture. Eight shapes, each a flat-based cluster of seven lobes (a middle, smaller lobes
+sunk lower toward the ends, a crown), turned and sized per cloud. So the three can be compared on the same sky.
+
+| Direction | How | Frame cost |
+|---|---|---|
+| (a) painted (in the dome) | each cloud a flat shape on the sky round its drawn centre: its lobes as discs, cut flat along the base, an outline brushed with noise; shaded as the volume it stands for (each disc a dome of its lobe, the lobes' normals blended), a crisp painted terminator, a bright edge against the light | no draw; per sky pixel a loop over the clouds in view (cheap tests) and seven lobes for the one or two it is inside |
+| (b) models | every lobe an instanced ball (320 triangles), its underside pressed flat onto the base, the lobes' outward directions blended into one soft body, lit with a wrapped sun and a soft second step, the lower lobes in shade, the edges glowing against the light | one instanced draw, up to 280 balls (about 90k triangles at most, fewer in view) |
+| (c) lit sprites (the pick) | every cloud a camera-facing card of a baked atlas (eight 256 × 128 cards: normal, thickness, coverage), painted after the references: bumps crowding the lobes' tops, a brushed outline, loose puffs; lit live with the references' soft two tone, the thick middle darker, the sun through the thin edges | one instanced draw of up to 40 quads; the atlas baked once (about 0.14 s) |
+| traced (round 2, for the cost only) | ray-traced balls per sky pixel | the dome's per-pixel tracer |
+
+COST_TABLE
+
+### The night's perspective (L/clouds.ts skyBend)
+
+What was off: round 2 bent the dome in view space with the curved world (the sky's lowest rings pulled down by the
+square of their distance from the camera's axis), so the whole sky warped with the camera: the moon and the stars sat
+up to a dozen degrees lower than they are, the star field bowed in the middle of the screen and slid as the camera
+tilted. Now the sky's bend is rigid: every direction's elevation is lowered by an amount that depends on the direction
+alone (the dip at the skyline, nothing overhead), the dip chosen so the skyline meets the sea's far edge. The sun, the
+moon, the stars, the Milky Way and the clouds are all drawn in the bent sky, so they keep their shapes; the air and the
+skyline's fog use the true direction. The stars dim toward the skyline as the air does (the faint first).
+
+### The pixel finish on the sky (`?skypx=light`, PostFX SkyPixels)
+
+The preview draws the canvas at full resolution and gives everything nearer than the dome the pixel finish's 2 × 2
+blocks again, so only the sky (and the sprites) shows at full resolution: stars a crisp point, the moon's limb and the
+clouds' edges smooth. Built for the game it would draw the world at half resolution as now and only the dome at full.
+PIXEL_COST
+
+### The one wind (L/wind.ts), its marks and the motes (C/AmbienceFX.tsx)
+
+- **One wind:** the prevailing direction everything already rode (rain, leaves, mist, clouds), a strength by weather
+  (fog 0.35, clear 1, snow 1.4, rain 2.2, windy 3), a slow swell, and gust fronts: bands of stronger air 46 units apart
+  rolling downwind at 8 units a second, bowed along their length, each its own strength, all on the world clock. The
+  grass bows deeper and catches the light as a front crosses it; the trees lean into it; the clouds drift with it.
+  Round 1's lab pitch (`?wind=`) is gone: this is it, built.
+- **Its marks** (replacing round 2's swirls): only where wind shows (tree crowns, the shoreline, open ground across the
+  whole land) and only as a front's crest crosses the spot: a streak of air gliding over the grass, a curl now and then,
+  a wisp of sand along the shore, a few leaves torn off a crown (in a breeze too, by the season's colour). Each lives
+  2 s, drawn at most 0.3 opacity, blowing downwind with its front, so a gust reads as a line of marks moving together.
+- **Golden-hour motes:** round 1's approved motes, now in the game: pollen and dust drifting downwind round the view,
+  bright toward the low sun, fading in as the sun sinks under about 15° and out as it sets (clear and windy days, High).
+
+### Ambient sound (art/audio/synth_ambience.py, public/audio/ambient/bed-*.ogg)
+
+Eight synthesised beds, CC0, listed in `public/audio/sfx/SOURCES.md`: dawn, day, dusk, night (the sea washing in and
+out, the breeze, birds by day, crickets at night) and wind, rain, snow, fog. The member island's ambient channel plays
+the weather's bed, else the time of day's, under the music (lib/game/audio.ts `ambientCandidates`).
+
+### Also
+
+- `?time=dawn` previews 20 minutes before sunrise (round 2's pick).
+- Clips are recorded frame by frame on a stepped clock (clip.mjs), so they play at an even 30 fps.
+
 ## R2. Round 2: the sky built properly (2026-11-05)
 
 David, round 1: "i want you take the sky design seriously because thats where the feeling comes from and the

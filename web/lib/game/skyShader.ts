@@ -291,9 +291,11 @@ vec4 painted(vec3 u, float px, vec3 sky) {
     // The lobes that meet near the front blend into one surface, so the shading runs on across them.
     for (int i = 0; i < LOBES; i++) n += lobeN[i].xyz * exp(-(top - lobeN[i].w) / 0.07);
     n = length(n) > 0.0 ? normalize(n) : nTop;
-    // Flat along the base, which rounds its lobes off into it.
+    // A brushed outline (a little noise on it, as David's references paint them), flat along the base.
+    vec4 look = cloudTexel(k, LOBES + 2);
+    sd += 0.07 * (vnoise(vec3(q * 7.0, look.w * 50.0)) * 0.7 + vnoise(vec3(q * 16.0, look.w * 50.0 + 3.0)) * 0.3 - 0.5);
     sd = min(sd, q.y + 0.02);
-    float a = smoothstep(-pxs, pxs, sd) * cloudTexel(k, LOBES + 2).x;
+    float a = smoothstep(-pxs, pxs, sd) * look.x;
     if (a <= 0.0) continue;
     n = normalize(mix(n, vec3(0.0, -0.8, 0.6), 1.0 - smoothstep(0.0, 0.16, q.y)));
     vec3 ls = vec3(dot(uSunDir, right), dot(uSunDir, upv), -dot(uSunDir, dr.xyz));
@@ -303,7 +305,7 @@ vec4 painted(vec3 u, float px, vec3 sky) {
     vec3 amb = mix(uAmbBottom, uAmbTop, clamp(n.y * 0.5 + 0.5, 0.0, 1.0));
     float direct = 1.0 - 0.85 * uCloud.z;
     // Against the light the thin outer edge glows (only the cloud's own outline, not where lobes overlap).
-    float rim = (1.0 - smoothstep(0.0, 0.12, sd)) * max(0.0, -ls.z);
+    float rim = (1.0 - smoothstep(0.0, 0.05, sd)) * max(0.0, -ls.z);
     vec3 cc = amb * 1.1 + (uSunLight * (lit * 0.95 + rim * 1.1) + uMoonLight * litM) * direct;
     // The painted line where a lobe overlaps the one behind it.
     cc *= 1.0 - 0.08 * (1.0 - smoothstep(0.0, 0.03, top - second)) * step(-1e8, second);

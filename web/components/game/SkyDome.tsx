@@ -30,7 +30,7 @@ const RADIUS = 110;
 
 /** Per weather: the share of the sky's squares with a cumulus, their size (km), grey, cirrus, haze at the skyline, drift (km a second). */
 const WEATHER_SKY: Record<IslandWeather, readonly [number, number, number, number, number, number]> = {
-  clear: [0.45, 0.55, 0, 0.55, 0, 0.05],
+  clear: [0.55, 0.6, 0, 0.55, 0, 0.05],
   wind: [0.5, 0.5, 0.04, 0.3, 0, 0.16],
   fog: [0.35, 0.55, 0.35, 0, 1, 0.03],
   rain: [0.9, 0.65, 0.72, 0, 0.45, 0.09],

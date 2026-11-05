@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CLOUD_MAX, CLOUD_REACH, CLOUD_SHAPES, CLOUD_TEXELS, LOBES, bendElevation, cloudField, skyBend } from "./clouds";
+import { CLOUD_MAX, CLOUD_REACH, CLOUD_SHAPES, CLOUD_TEXELS, LOBES, bakeCloudAtlas, bendElevation, cloudField, skyBend } from "./clouds";
 import type { Vec3 } from "./atmosphere";
 
 const field = (cover: number, drift = { x: 0, y: 0 }) => {
@@ -34,11 +34,23 @@ describe("clouds", () => {
     expect(Math.abs(size(0.452) - size(0.45))).toBeLessThan(0.35);
   });
 
-  it("sits every lobe on or above its base", () => {
+  it("stands every lobe up out of its base, the middle the highest", () => {
     for (const shape of CLOUD_SHAPES) {
       expect(shape).toHaveLength(LOBES);
-      for (const [, y, , r] of shape) { expect(r).toBeGreaterThan(0.1); expect(y).toBeGreaterThanOrEqual(0); }
+      for (const [, y, , r] of shape) { expect(r).toBeGreaterThan(0.1); expect(y + r).toBeGreaterThan(0.15); }
+      const top = (l: readonly number[]) => l[1] + l[3];
+      expect(Math.max(...shape.slice(1, LOBES - 1).map(top))).toBeLessThan(Math.max(top(shape[0]), top(shape[LOBES - 1])));
     }
+  });
+
+  it("bakes each shape's card: covered inside, clear at its edges, normals facing the viewer", () => {
+    const w = 64, a = bakeCloudAtlas(w), W = w * 2, h = w / 2;
+    // Shape 0's tile: its middle a little above the base is cloud, its corners are sky.
+    const px = (i: number, j: number) => a.subarray((j * W + i) * 4, (j * W + i) * 4 + 4);
+    expect(px(w / 2, Math.round(h * 0.4))[3]).toBe(255);
+    expect(px(0, h - 1)[3]).toBe(0);
+    expect(px(w - 1, 0)[3]).toBe(0);
+    expect(px(w / 2, Math.round(h * 0.4))[2]).toBeGreaterThan(0);
   });
 
   it("bends the skyline down by the dip, overhead not at all, keeping the order", () => {

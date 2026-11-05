@@ -15,6 +15,14 @@ Approved: sky2-moon, sky2-phone.
 - sky2-weather (redo): "cloud needs redone, rain snow fog looks good"
 - sky2-wind (redo): "its so random rn and it doesnt have like any proper logic behind it, it shouldnt feel just slapped on, so more faint, and have different types of animation, cuz they are all just swirels and it should blow the same way as the wind and squire like like 2 second and 0.3 opacity"
 
+David sent cloud references on 2026-11-05 (relayed by the coordinator): five third-party screenshots, vault only, never
+in the repo, at `~/Library/Mobile Documents/iCloud~md~obsidian/Documents/ClaudeBrain/TSI Game/References/Sky references/`
+(`sky-valley-light.png`, `sky-cloud-sea-isles.png`: Sky: Children of the Light style, huge soft clouds, light shafts;
+`painted-tree-mountain.png`, `painted-clouds-up.png`, `painted-sunset-clouds-sea.png`: Genshin, small painted cumulus
+with clean broken edges, pink and gold sunset cumulus with wispy streaks). Tune the clouds to their look (never trace
+or copy them); show each direction beside its closest reference; a painted card or billboard that matches best is the
+pick.
+
 Build:
 1. Clouds, reimagined. Pitch at least three directions side by side, each with clips at day, golden hour, sunset and in weather, plus its cost with the sky in view:
    - (a) 2D clouds in the sky, round 1's direction done crisp under the pixel pass, shaded by the sun so they read as lit volumes;

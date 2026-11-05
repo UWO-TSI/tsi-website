@@ -10,14 +10,14 @@
  *   stylised volume (a wrapped sun with a soft second step, the sky's light from above and the sea's from below, the
  *   lower lobes in their own shade, a bright edge toward the sun). One instanced draw.
  * - **Sprites** (direction c): every cloud one card facing the camera, carrying its shape's normals and thickness
- *   (baked once, in code, from the same lobes: `bakeCloudAtlas`), lit live: the sun's side bright, the light through
+ *   (baked once, in code, from the same lobes: clouds.ts `bakeCloudAtlas`), lit live: the sun's side bright, the light through
  *   the thin edges when the sun is behind it (the silver lining), the thick middle darker. One instanced draw.
  */
 
 import { useEffect, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { CLOUD_MAX, CLOUD_SHAPES, LOBES, SHAPES } from "@/lib/game/clouds";
+import { CLOUD_MAX, LOBES, SHAPES, bakeCloudAtlas } from "@/lib/game/clouds";
 import { skyUniforms, type CloudStyle } from "@/lib/game/skyShader";
 
 /** Where the clouds are drawn, as a share of the camera's far plane (the dome sits at the far plane, behind them). */
@@ -139,7 +139,9 @@ void main() {
   vec3 ls = vec3(dot(uSunDir, vRight), dot(uSunDir, vUp), -dot(uSunDir, vToward));
   vec3 lm = vec3(dot(uMoonDir, vRight), dot(uMoonDir, vUp), -dot(uMoonDir, vToward));
   float thick = t.b * 1.6;
+  // The references' soft two tone: a bright sunlit side, a cool shade, a soft terminator between.
   float wrap = clamp((dot(n, ls) + 0.5) / 1.5, 0.0, 1.0);
+  wrap = mix(wrap, smoothstep(0.32, 0.62, wrap), 0.6);
   float wrapM = clamp((dot(n, lm) + 0.5) / 1.5, 0.0, 1.0);
   // Thick middles darker, the base in shade; the light through the thin edges when the sun is behind.
   float dense = 1.0 - 0.32 * smoothstep(0.2, 1.2, thick);
@@ -149,48 +151,6 @@ void main() {
   vec3 col = amb * mix(0.85, 1.0, dense) + (uSunLight * (wrap * dense + through) + uMoonLight * wrapM * dense) * direct;
   gl_FragColor = vec4(hazeInto(overcast(col), vToward, vKm), a);
 }`;
-
-/**
- * The sprite atlas: each shape's card (3.6 sizes across, 1.2 tall) seen side on, 2 × SHAPES/2 tiles of `w` × `w/2`:
- * the front surface's normal (r, g), the thickness through the cloud (b, in sizes / 1.6) and the coverage (a, its edge a
- * texel wide). The same lobes as every other style, flat-based.
- */
-export function bakeCloudAtlas(w = 256): Uint8Array {
-  const h = w / 2, cols = 2, rows = SHAPES / 2, W = w * cols, out = new Uint8Array(W * h * rows * 4), per = w / 3.6;
-  CLOUD_SHAPES.forEach((lobes, k) => {
-    const ox = (k % cols) * w, oy = Math.floor(k / cols) * h;
-    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
-      const x = ((i + 0.5) / w * 2 - 1) * 1.8, y = -0.1 + ((j + 0.5) / h) * 1.2;
-      let sd = -1e9, front = -1e9, back = 1e9, nx = 0, ny = 0, nz = 0, wsum = 0;
-      const fronts: number[] = [];
-      for (const [lx, ly, lz, r] of lobes) {
-        const dx = x - lx, dy = y - ly, d2 = dx * dx + dy * dy;
-        sd = Math.max(sd, r - Math.sqrt(d2));
-        if (d2 < r * r) { const s = Math.sqrt(r * r - d2); fronts.push(lz + s); front = Math.max(front, lz + s); back = Math.min(back, lz - s); }
-        else fronts.push(-1e9);
-      }
-      sd = Math.min(sd, y + 0.02);
-      // The front's normal, softened across the lobes that meet near it so the creases stay soft.
-      lobes.forEach(([lx, ly, , r], m) => {
-        if (fronts[m] < -1e8) return;
-        const wgt = Math.exp(-(front - fronts[m]) / 0.06), s = fronts[m] - lobes[m][2];
-        nx += ((x - lx) / r) * wgt; ny += ((y - ly) / r) * wgt; nz += (s / r) * wgt; wsum += wgt;
-      });
-      const o = ((oy + j) * W + ox + i) * 4, cover = Math.min(1, Math.max(0, sd * per + 0.5));
-      if (wsum > 0) {
-        // Toward the base the surface turns down into it.
-        const base = Math.max(0, 1 - y / 0.16);
-        nx /= wsum; ny = ny / wsum - 0.8 * base; nz = nz / wsum + 0.6 * base;
-        const len = Math.hypot(nx, ny, nz) || 1;
-        out[o] = Math.round((nx / len * 0.5 + 0.5) * 255);
-        out[o + 1] = Math.round((ny / len * 0.5 + 0.5) * 255);
-        out[o + 2] = Math.round(Math.min(1, (front - back) / 1.6) * 255);
-      } else { out[o] = out[o + 1] = 128; out[o + 2] = 0; }
-      out[o + 3] = Math.round(cover * 255);
-    }
-  });
-  return out;
-}
 
 const shared = () => ({
   uSunDir: skyUniforms.uSunDir, uMoonDir: skyUniforms.uMoonDir, uSunLight: skyUniforms.uSunLight, uMoonLight: skyUniforms.uMoonLight,

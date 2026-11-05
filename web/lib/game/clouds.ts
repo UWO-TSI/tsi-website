@@ -36,17 +36,19 @@ export function hash3(a: number, b: number, c: number): number {
 
 /**
  * The shapes, in units of the cloud's size: [x, y, z, r] per lobe, x along the cloud, y up from its flat base, z across.
- * Lobe 0 is the tall middle; the rest alternate sides, smaller and lower the further out they sit, one crowning the top.
+ * Lobe 0 is the tall middle; the rest alternate sides, smaller and sunk lower the further out they sit (only their caps
+ * stand above the base), one crowning the top.
  */
 export const CLOUD_SHAPES: readonly (readonly [number, number, number, number])[][] = Array.from({ length: SHAPES }, (_, k) => {
   const r = (i: number, j: number) => hash3(k + 11, i, j);
-  const lobes: [number, number, number, number][] = [[0, 0.16, 0, 0.6]];
+  const lobes: [number, number, number, number][] = [[(r(0, 1) - 0.5) * 0.3, 0.06, 0, 0.6]];
   for (let i = 1; i < LOBES - 1; i++) {
     const side = i % 2 ? -1 : 1, x = side * (0.3 + 0.24 * Math.ceil(i / 2) + 0.18 * r(i, 1));
     const rad = 0.6 * (1 - 0.32 * Math.abs(x)) * (0.78 + 0.3 * r(i, 2));
-    lobes.push([x, rad * (0.05 + 0.4 * r(i, 3)), (r(i, 4) - 0.5) * 0.55, rad]);
+    // Half sunk into the base, the further out the more, so the outline falls away in domes to the ends.
+    lobes.push([x, rad * (0.15 - 0.45 * r(i, 3)) - 0.06 * Math.abs(x), (r(i, 4) - 0.5) * 0.55, rad]);
   }
-  lobes.push([(r(9, 1) - 0.5) * 0.5, 0.52 + 0.12 * r(9, 2), (r(9, 3) - 0.5) * 0.2, 0.36 + 0.08 * r(9, 4)]);
+  lobes.push([(r(9, 1) - 0.5) * 0.8, 0.3 + 0.12 * r(9, 2), (r(9, 3) - 0.5) * 0.2, 0.34 + 0.08 * r(9, 4)]);
   return lobes;
 });
 
@@ -103,6 +105,91 @@ const cand = Array.from({ length: CLOUD_MAX }, () => ({ d: 0, i: 0, j: 0, x: 0, 
 const scratch: [Vec3, Vec3] = [[0, 0, 0], [0, 0, 0]];
 
 const smooth = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+// ─── The sprites' atlas ──────────────────────────────────────────────────
+
+/**
+ * The sprite atlas: each shape's card (3.6 sizes across, 1.2 tall) seen side on, 2 × SHAPES/2 tiles of `w` × `w/2`:
+ * the front surface's normal (r, g), the thickness through the cloud (b, in sizes / 1.6) and the coverage (a, its edge a
+ * texel wide). Painted the way David's references paint cumulus (2026-11-05): the same lobes as every other style,
+ * flat-based, with smaller bumps crowding their tops, the outline broken up by a little noise so it reads as brushed
+ * rather than drawn with a compass, and a few loose puffs torn off the edges. Baked once, so all that detail costs
+ * nothing a frame.
+ */
+export function bakeCloudAtlas(w = 256): Uint8Array {
+  const h = w / 2, cols = 2, rows = SHAPES / 2, W = w * cols, out = new Uint8Array(W * h * rows * 4), per = w / 3.6, step = 3.6 / w;
+  const height = new Float32Array(w * h), blur = new Float32Array(w * h);
+  CLOUD_SHAPES.forEach((lobes, k) => {
+    const rnd = (i: number, j: number) => hash3(k + 101, i, j);
+    const balls: [number, number, number, number][] = lobes.map(l => [...l]);
+    // Bumps along each lobe's upper rim, and loose puffs just off the outline.
+    lobes.forEach(([lx, ly, lz, r], i) => {
+      for (let m = 0; m < 5; m++) {
+        const a = (rnd(i, m) - 0.5) * 2.8, br = r * (0.14 + 0.2 * rnd(i, m + 9));
+        balls.push([lx + Math.sin(a) * r * 0.86, ly + Math.cos(a) * r * 0.86, lz + 0.05, br]);
+      }
+    });
+    for (let m = 0; m < 9; m++) {
+      const src = lobes[Math.floor(rnd(20, m) * LOBES)], a = (rnd(21, m) - 0.5) * 3.2, out = 1.12 + 0.2 * rnd(23, m);
+      balls.push([src[0] + Math.sin(a) * src[3] * out, Math.max(0.03, src[1] + Math.cos(a) * src[3] * out), src[2], src[3] * (0.05 + 0.09 * rnd(22, m))]);
+    }
+    const noise = (x: number, y: number) => {
+      // Two octaves of value noise over the card (smooth, so the edge breaks into lobes, not grain).
+      let v = 0, f = 7, amp = 0.6;
+      for (let o = 0; o < 3; o++, f *= 2.3, amp *= 0.5) {
+        const X = x * f, Y = y * f, xi = Math.floor(X), yi = Math.floor(Y), u = X - xi, t = Y - yi, su = u * u * (3 - 2 * u), st = t * t * (3 - 2 * t);
+        const c = (a: number, b: number) => hash3(k * 7 + o, xi + a, yi + b);
+        v += amp * ((c(0, 0) * (1 - su) + c(1, 0) * su) * (1 - st) + (c(0, 1) * (1 - su) + c(1, 1) * su) * st);
+      }
+      return v - 0.5;
+    };
+    const ox = (k % cols) * w, oy = Math.floor(k / cols) * h;
+    const cover = new Float32Array(w * h), thick = new Float32Array(w * h);
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+      const x = ((i + 0.5) / w * 2 - 1) * 1.8, y = -0.1 + ((j + 0.5) / h) * 1.2;
+      let sd = -1e9, front = -1, back = 1e9;
+      for (const [bx, by, bz, r] of balls) {
+        const dx = x - bx, dy = y - by, d2 = dx * dx + dy * dy;
+        sd = Math.max(sd, r - Math.sqrt(d2));
+        if (d2 < r * r) { const q = Math.sqrt(r * r - d2); front = Math.max(front, bz + q); back = Math.min(back, bz - q); }
+      }
+      // The brushed outline, and the flat base a little ragged too.
+      sd += 0.07 * noise(x, y);
+      sd = Math.min(sd, y + 0.02 + 0.02 * noise(x * 2, 9));
+      const at = j * w + i;
+      cover[at] = Math.min(1, Math.max(0, sd * per + 0.5));
+      height[at] = Math.max(front, 0);
+      thick[at] = front > back ? front - back : 0;
+    }
+    // The surface's normal from its height, softened over a few texels so the light runs smoothly over the lobes.
+    for (let pass = 0; pass < 2; pass++) {
+      const src = pass ? blur : height, dst = pass ? height : blur;
+      for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+        let sum = 0, n = 0;
+        for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+          const a = i + di, b = j + dj;
+          if (a >= 0 && a < w && b >= 0 && b < h) { sum += src[b * w + a]; n++; }
+        }
+        dst[j * w + i] = sum / n;
+      }
+    }
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+      const at = j * w + i, hx = (height[j * w + Math.min(w - 1, i + 1)] - height[j * w + Math.max(0, i - 1)]) / (2 * step);
+      const hy = (height[Math.min(h - 1, j + 1) * w + i] - height[Math.max(0, j - 1) * w + i]) / (2 * step);
+      // Toward the base the surface turns down into it.
+      const y = -0.1 + ((j + 0.5) / h) * 1.2, base = Math.max(0, 1 - y / 0.16);
+      let nx = -hx, ny = -hy - 1.6 * base, nz = 1;
+      const len = Math.hypot(nx, ny, nz);
+      nx /= len; ny /= len; nz /= len;
+      const o = ((oy + j) * W + ox + i) * 4;
+      out[o] = Math.round((nx * 0.5 + 0.5) * 255);
+      out[o + 1] = Math.round((ny * 0.5 + 0.5) * 255);
+      out[o + 2] = Math.round(Math.min(1, thick[at] / 1.6) * 255);
+      out[o + 3] = Math.round(cover[at] * 255);
+    }
+  });
+  return out;
+}
 
 // ─── The sky's bend ──────────────────────────────────────────────────────
 
