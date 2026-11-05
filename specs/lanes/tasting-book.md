@@ -2,6 +2,29 @@
 
 Worktree `.claude/worktrees/tasting-book`, branch `game/tasting-book`, cut from `game/fishing-depth` at 0db249b4 (it needs that branch's new menu layout; fishing-depth merges to main first, then this one). Agent type `uwotsi-lane`. Dev port 3476.
 
+## Round 6: David's tasting book round 5 review (2026-11-05, verbatim; https://claude.ai/artifact/BLVZqS9MJitK139U74p5sT)
+
+Approved: tb5-learnt, tb5-questions, tb5-seat-later, tb5-seat, tb5-tank-given, tb5-tank-pick.
+- tb5-look-close (redo), no note
+- tb5-look (redo): "book is better modeled more prominent in the center of the t able"
+- tb5-newfish-key (redo): "make it display all fish thats already given, allow you to open bag to give fish in inv but grey out ones you already given"
+- tb5-newfish (redo): "make the ui more intuitive for page one collection and make it obvious it s a collection that give sperm boosts" (read: permanent boosts)
+- tb5-pages (approve): "i think the pages need to be reorganized in a userfriendly intuitive way"
+- tb5-tank (approve): "ok but like i wanna open the museum for fish provided, i think the hq tank will just be a seperate thing if you wanna drop but it doesnt do anything, its a very small thing"
+
+Build:
+1. The counter menu: model the book better, and place it prominently in the middle of the counter in front of your stool. Show it close up and in the game, as in r5. tb5-look-close had no note; tb5-look's note covers it.
+2. Page one:
+   - Make it obviously a collection, and make it obvious that a fish given there gives a permanent boost.
+   - Show every fish already given, with the boost each one gave.
+   - Open your bag from there to give a fish from your inventory. Fish already given are greyed out.
+3. The pages after page one (approved with a note): reorganise them into a user-friendly, intuitive order and layout. Say what you changed and why.
+4. The tank (approved with a note):
+   - Given fish go to a museum. Find what the museum is today (the treasure spec mentions one for finds), pitch how given fish show there, and say what this changes from round 3 (the tank's count marks).
+   - HQ's tank becomes a separate small thing: you can drop a fish in, and it does nothing.
+5. tb5-questions was approved: a key fish given on page one unlocks its dish. With the tank doing nothing now, page one is where giving happens. Note anything this leaves open on the questions card.
+6. `20261102120000_tasting_book.sql` is still unapplied, so changing it in place is fine.
+
 ## Round 5: David's tasting book round 4 review (2026-11-04, verbatim; https://claude.ai/artifact/M4Z2KdpsLFTQwTuTgakqiY)
 
 Approved: tb4-choice, tb4-leave, tb4-menu-down, tb4-menu-open, tb4-questions, tb4-tank-prompt.
