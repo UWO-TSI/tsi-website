@@ -16,7 +16,7 @@ into sharp creases between them and every edge stays crisp. The body tapers to a
 a spine down the middle; the blades lean, outer edge forward, taper toward the point and stack like armour lames, each
 lapping over the next. A plate's slope is dark iron with a thin polished lip along its top (the bright edge material,
 the drawing's edge highlights), as are the foot trough's side walls and the outline's steep rim; the cross is inlaid
-in a dark groove, and under its point stands a faceted arrowhead. A flat back and a thin wall round the outline close it into one solid; the
+in a dark groove, and under it stands the arrowhead boss: domed, convex sides, notched for its point. A flat back and a thin wall round the outline close it into one solid; the
 back fittings (rim, braces, handle on posts, forearm strap) are merged on, the cross's runes cut in, then the whole is
 curved round the arm once.
 
@@ -58,7 +58,7 @@ RIM = 4 / 876                                # ... within this of the outline (4
 # it tapers toward the point (0: none, 1: down to nothing at its foot; the crown rings fade out so their foot leaves no
 # crease across the arches).
 SPEC = {"body": (0.014, 0.0, 0.0), "crown": (0.006, 0.0, 1.0), "blade": (0.006, 0.010, 0.55), "vpanel": (0.005, 0.0, 0.0),
-        "lower_v": (0.008, 0.009, 0.0), "arch": (0.009, 0.0, 0.0), "arrow": (0.020, 0.0, 0.0),
+        "arch": (0.009, 0.0, 0.0), "boss": (0.024, 0.0, 0.0),
         "cross_back": (-0.006, 0.0, 0.0), "cross": (0.008, 0.0, 0.0),
         "bottom": (-0.008, 0.0, 0.0), "lens": (0.010, 0.0, 0.0), "bar": (0.005, 0.0, 0.0)}
 # The blades stack like armour lames, the innermost on top: each rank down stands this much lower, so every blade's
@@ -133,7 +133,10 @@ def heights(pts, plates):
         if taper:
             zt, zb = poly[:, 1].max(), poly[:, 1].min()
             top = top * (1 - taper * np.clip((zt - pts[:, 1]) / max(zt - zb, 1e-6), 0, 1))
-        h += np.where(ind, top * np.clip(d / max(pl["w"], 1e-6), 0, 1), 0.0)
+        t = np.clip(d / max(pl["w"], 1e-6), 0, 1)
+        if pl.get("profile") == "dome":
+            t = 1 - (1 - t) ** 2                                  # convex: steep at its edge, rounding over its crown
+        h += np.where(ind, top * t, 0.0)
     return h
 
 
@@ -164,22 +167,32 @@ def face_mesh(m, tier, plate, edge):
     """The sculpted solid: the face triangulated with every plate line as a constraint, heights applied, a flat back
     and a wall round the outline."""
     plates = {k: v for k, v in P.PLATES.items() if k != "body"}
-    loops = [P.PLATES["body"]["poly"], P.PLATES["body"]["inset"]] + [pl[k] for pl in plates.values() for k in ("poly", "inset", "lip") if k in pl]
+    loops = [P.PLATES["body"]["poly"], P.PLATES["body"]["inset"]] + [pl[k] for pl in plates.values() for k in ("poly", "inset", "lip", "glint") if k in pl]
+    loops += [r for pl in plates.values() for r in pl.get("rings", [])]          # a dome's level lines
     verts, edges = [], []
     for lp in loops:
         base = len(verts)
         verts += [Vector(p) for p in lp]
         edges += [(base + i, base + (i + 1) % len(lp)) for i in range(len(lp))]
-    for pl in plates.values():                                   # a pyramid's ridges, so its creases come out straight
-        for a, b in pl.get("ridges", []):
-            verts += [Vector(a), Vector(b)]
-            edges.append((len(verts) - 2, len(verts) - 1))
     outline = np.array(loops[0])
     lo, hi = outline.min(0), outline.max(0)
     gx, gz = np.meshgrid(np.arange(lo[0], hi[0], GRID), np.arange(lo[1], hi[1], GRID))
     grid = np.stack([gx.ravel(), gz.ravel()], 1)
     grid = grid[inside(grid, outline)]
     grid = grid[edge_distance(grid, outline) > GRID * 0.4]
+    # off every plate line too: where two walls run a few px apart, a grid point dropped in the valley between them
+    # only now and then, and the triangles bridging it stepped the walls in grid-sized terraces
+    segs = np.concatenate([np.stack([np.array(lp), np.roll(np.array(lp), -1, 0)], 1) for lp in loops[1:]])
+    near = np.zeros(len(grid), bool)
+    for i in range(0, len(segs), 400):
+        a_, b_ = segs[i:i + 400, 0], segs[i:i + 400, 1]
+        ab = b_ - a_
+        t = np.clip(np.einsum("nmk,mk->nm", grid[:, None, :] - a_[None], ab) / np.maximum(np.einsum("mk,mk->m", ab, ab), 1e-12), 0, 1)
+        near |= np.min(np.linalg.norm(grid[:, None, :] - (a_[None] + t[..., None] * ab[None]), axis=2), 1) < GRID * 0.4
+    grid = grid[~near]
+    for pl in plates.values():                                   # a dome triangulates between its level lines alone:
+        if pl.get("rings"):                                      # grid triangles across them shaded in steps
+            grid = grid[~inside(grid, np.array(pl["poly"]))]
     verts += [Vector(p) for p in grid]
     # points closer than 5e-5 (0.04 px) merge here: where several plate lines cross in a pixel, nearer points made
     # slivers that the pipeline's 1e-5 weld folded into non-manifold edges
@@ -200,6 +213,7 @@ def face_mesh(m, tier, plate, edge):
     cent = np.array([(f.calc_center_median().x, f.calc_center_median().z) for f in tris])
     in_cross, in_lens = inside(cent, cross), inside(cent, lens)
     in_groove = inside(cent, groove) & ~in_cross                 # the groove's walls stay dark: the drawing's black outline
+    glint = inside(cent, np.array(P.PLATES["boss"]["glint"]))    # the boss's notch wall: the drawing's bright white V
     # A plate's slope is dark iron, its wall in shadow, but for the polished lip along its top edge: thick overlapping
     # parts, not outlines (every steep wall bright read as lines drawn on the face). Steep faces on no plate's slope,
     # the outline's spikes and rim, stay bright.
@@ -223,8 +237,8 @@ def face_mesh(m, tier, plate, edge):
     slot = [slots.index(n) for n in names]
     steep = math.cos(math.radians(EDGE_ANGLE))
     rim = edge_distance(cent, outline) < RIM                     # the bright rim: steep faces at the outline only
-    for f, c, l, w, g, sl, lp, r in zip(tris, in_cross, in_lens, wall, in_groove, on_slope, on_lip, rim):
-        f.material_index = slot[2 if c else 3 if l else 0 if g else 1 if (w or lp) else 0 if sl else (1 if r and -f.normal.y < steep else 0)]
+    for f, c, l, w, g, sl, lp, r, gl in zip(tris, in_cross, in_lens, wall, in_groove, on_slope, on_lip, rim, glint):
+        f.material_index = slot[2 if c else 3 if l else 0 if g else 1 if (w or lp or gl) else 0 if sl else (1 if r and -f.normal.y < steep else 0)]
     for f in walls:
         f.material_index = slot[1]
     back.material_index = slot[0]
@@ -326,6 +340,9 @@ def curve(ob):
     bm.from_mesh(ob.data)
     for x in SLICES:
         bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=(x, 0, 0), plane_no=(1, 0, 0))
+    # a slice passing a hair from a vertex leaves a sliver that the pipeline's weld folds: clear them at the face's 5e-5
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=5e-5)
+    bmesh.ops.dissolve_degenerate(bm, dist=5e-5, edges=bm.edges)
     for v in bm.verts:
         v.co.y += BEND * (v.co.x - CX) ** 2
     bm.to_mesh(ob.data)

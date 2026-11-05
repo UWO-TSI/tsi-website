@@ -1314,6 +1314,24 @@ Fixed on the way: on tiers 1 to 3 the cross came out on M_Cloth, because repeate
 
 Review round 4: same page, ids sh4-front, sh4-close, sh4-angle, sh4-tiers, sh4-held, sh4-back, sh4-world.
 
+**Round 5 (2026-11-05), David on round 4, verbatim:** "the shape is still incorrect, its not a triangel its more so a convex curved shape" (the arrowhead under the cross).
+
+- **The arrowhead** is now one plate, `boss`, replacing round 4's faceted triangle and the V band under it (`LOWER_V`).
+  - Read off the drawing's lit left half. Its extra width from the view stands in for WIDEN.
+  - Its sides bow outward to its point at y 546; it is 120 px wide at the top.
+  - It is notched at the top in a V that takes the cross's point. The drawing's bright white V is the notch's lit wall: a 7 px band, `glint`.
+  - Its surface is a dome, `1 - (1 - d/D)²`, triangulated along five level lines with no grid inside it.
+  - Its outline and glint are exact (not traced back off a raster), so they share the notch line.
+  - The V panel stops at it.
+- **Clean-up:**
+  - Plate insets use the exact distance transform at 2x. The fast 5x5 one terraced the slopes on slanted edges.
+  - Blade and V panel edges are smoothed where they're cut by curves.
+  - Grid points are kept 0.4 of the grid spacing off every plate line. Where two walls ran a few px apart, a grid point that fell in the valley only now and then stepped them in grid-sized terraces; a faint step remains up close at the boss's lower-left edge.
+  - The bend's slices are cleared of slivers at 5e-5.
+- **Results:** high-def 15,392 to 15,666 triangles (fewer grid points on plate edges; the same shape); world copy 1,000; silhouette front 0.987, side 0.960, top 0.971; one closed solid each.
+
+Review round 5: same page, ids sh5-close, sh5-front, sh5-angle, sh5-tiers, sh5-held, sh5-back, sh5-world.
+
 **The pilot (David, 2026-11-04):** the Guardian's hull-plate shield, modelled fully first (high-def, low-poly, five tiers) before the other eight. References come from David before any modelling. The pipeline is ready: `art/weapons/pipeline.py` reduces each tier's high-def to the low-poly, checks the node layout, the trim-kit material names, the budget and the silhouette (IoU of at least 0.97 from three sides), exports both and renders a review sheet. Tested on stand-in data (the old shield-and-sword subdivided): all five tiers at 1,399 of 1,400 triangles, silhouettes 0.988 or better (the real weapon budget is 1,000: `lib/game/perf/budget.ts`). Found on the way: no current weapon GLB has UVs (Models rule 3); the pipeline generates them.
 
 **The other seven: all kept** (David, the picks page, 2026-11-04). Each keeps today's weapon and gets the high-def and low-poly remodel. Two ideas become skins (shop `weapon_skin`, §1.10), verbatim:

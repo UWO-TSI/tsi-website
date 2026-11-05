@@ -16,8 +16,8 @@ Needs OpenCV and numpy (a scratch venv: pip install opencv-python-headless). Ste
    boundary lines read off the drawing's bright blade strokes, each from under a side spike down and in to the centre
    line (the first along the V panel's edge), each with its rank (0 innermost) for the builder to stack them.
 5. The centre pieces read off the straightened drawing on a grid (px, x right, y down, centre x 215): the V panel
-   under the crossbar, the cross and the groove it's set in, the raised arrowhead under its point, the V trough under
-   that, the sunken trough at the foot with its teeth, the bar and the lens. Round the cross's top arm, one arch band.
+   under the crossbar, the cross and the groove it's set in, the domed arrowhead boss under it (notched for its point),
+   the sunken trough at the foot with its teeth, the bar and the lens. Round the cross's top arm, one arch band.
 Units: the shield is 1.0 rig units tall (the drawing's 876 px), point down at z = -0.265 (just above the ground with the
 left hand at 0.285 in Idle), centred CX = 0.04 outboard of the hand.
 """
@@ -53,10 +53,14 @@ VPANEL = [(215, 212), (300, 222), (282, 300), (252, 400), (226, 470), (215, 486)
 CROSS_UP = dict(half=6.5, top=115, full_to=410, tip=428)                             # the upright, ending in a short point
 CROSS_BAR = dict(half=6.5, y=202, reach=106)                                         # the crossbar, centred on y
 CROSS_GROW = 5                                                                       # the groove it's set into
-# Under the cross's foot: the raised arrowhead (a faceted pyramid, ridges to its centre), the cross's point set into it.
-ARROWHEAD = dict(corner=(247, 410), point=(215, 492))                                # its right top corner and its point
-# Under the cross's foot: the V trough, its two halves sloping in (outer edge, then the inner edge back up).
-LOWER_V = [(215, 528), (232, 470), (262, 408), (284, 412), (240, 520), (222, 566), (215, 572)]
+# Under the cross: the arrowhead boss, one domed plate with convex sides bowing out to its point, notched at the top
+# in a V that takes the cross's point (right half: the notch's foot, up the notch, then round the outside to the point).
+# Read off the drawing's lit left half (its grey gradient: a curved surface, not facets), whose extra width from the
+# view stands in for WIDEN. The drawing's bright white V is the notch's lit wall: BOSS_GLINT px wide.
+BOSS = [(215, 492), (248, 400), (275, 399), (271, 420), (266, 445), (260, 465), (252.5, 485), (244, 505), (234, 525),
+        (222.5, 540), (215, 546)]
+BOSS_GLINT = 7
+BOSS_RINGS = (0.06, 0.16, 0.3, 0.5, 0.75)                                         # its dome's level lines, as fractions of its depth
 # The foot, read off the right half (the left is wider in the view; mirrored and widened it put the teeth on the rim):
 # a sunken trough open at the top under the V, its walls the side blades' inner edges with two teeth a side jutting out,
 # converging to a point on the short bar; under that the lens, then the point's two plain facets.
@@ -71,7 +75,7 @@ FOOT_EDGE = [(760, 275), (780, 275), (800, 273), (820, 266), (840, 257), (860, 2
 # The notch at the top, a clean U between two horns (y, x of its right inner edge): the mask had it ragged.
 TOP_NOTCH = [(18, 230), (25, 232), (32, 232), (40, 229), (46, 224), (50, 219), (53, 215)]
 # Each plate's slope width (px): its edge runs down this far to the creases round it.
-CHAMFER = dict(body=18, crown=5, blade=6, vpanel=5, lower_v=4, arch=5, cross_back=2, cross=2, bottom=9, lens=2, bar=1)
+CHAMFER = dict(body=18, crown=5, blade=6, vpanel=5, arch=5, cross_back=2, cross=2, bottom=9, lens=2, bar=1)
 CROWN_INSETS = [13]
 LIP = 1.5                                                                           # a plate's polished edge (px), at the top of its slope
 CROWN_BELOW = 150                                                                   # the arches stop where the blades begin
@@ -100,11 +104,38 @@ def arch_polys():
     return out
 
 
-def incentre(tri):
-    """A triangle's incentre: where a pyramid over it (height = distance to the edge) peaks."""
-    A, B, Cc = (np.array(p, float) for p in tri)
-    a, b, c = np.linalg.norm(B - Cc), np.linalg.norm(Cc - A), np.linalg.norm(A - B)
-    return tuple((a * A + b * B + c * Cc) / (a + b + c))
+def smoothed(region, sigma=1.2):
+    """A region cut by curves on the pixel grid, its edge smoothed: traced as it is, a curved cut (round the boss)
+    came out in stair-steps that its lip and wall showed. Blobs, not the outline's spikes, so blurring is safe here."""
+    return (cv2.GaussianBlur(region.astype(np.float32), (0, 0), sigma) > 0.5).astype(np.uint8)
+
+
+def level_lines(poly_px, depth, fractions, k=4):
+    """Lines at fixed distances in from a polygon's edge, for a domed plate: triangulated along them, its curve comes out
+    smooth (the grid alone cut across it in steps). Read off a k-times supersampled distance field."""
+    big = np.zeros((940 * k, 430 * k), np.uint8)
+    cv2.fillPoly(big, [np.round(np.array(poly_px) * k).astype(np.int32)], 1)
+    dist = cv2.distanceTransform(big, cv2.DIST_L2, cv2.DIST_MASK_PRECISE) / k
+    out = []
+    for f in fractions:
+        ring = dist >= f * depth
+        if ring.sum() > 16 * k * k:
+            out.append(model(contour(ring, 0.6 * k) / k))
+    return out
+
+
+def glint_half():
+    """The boss's notch wall, right half: the notch line and its parallel BOSS_GLINT px into the boss, from the boss's
+    top edge down to the centre line."""
+    n, t = np.array(BOSS[0], float), np.array(BOSS[1], float)
+    d = (t - n) / np.linalg.norm(t - n)
+    off = np.array([-d[1], d[0]]) * BOSS_GLINT                   # the normal into the boss (right of the notch's up line)
+    if off[0] < 0:
+        off = -off
+    a, b = n + off, t + off
+    top = a + (b - a) * (t[1] - a[1]) / (b[1] - a[1])            # the parallel, run up to the notch's top
+    foot = a + (b - a) * (C - a[0]) / (b[0] - a[0])              # and down to the centre line
+    return [tuple(n), tuple(t), (round(top[0], 2), t[1]), (C, round(foot[1], 2))]
 
 
 def cross_poly(g):
@@ -197,20 +228,28 @@ def plate(poly_px=None, mask=None, w=0, lip=None):
     """A plate as the builder needs it: its outline and the line where its slope meets its top (inset by w px), in rig
     units, plus the slope width. From a polygon (rasterised) or a mask. `lip` (px in from the outline, or None) adds the
     line bounding its bright polished edge: by default the top LIP px of its slope, under the inset."""
+    k = 2                                                        # the inset lines, read at twice the drawing's pixels
     if mask is None:
         mask = np.zeros((940, 430), np.uint8)
         cv2.fillPoly(mask, [np.array(poly_px, np.int32)], 1)
+        big = np.zeros((940 * k, 430 * k), np.uint8)
+        cv2.fillPoly(big, [np.round(np.array(poly_px) * k).astype(np.int32)], 1)
+    else:
+        big = cv2.resize(mask.astype(np.uint8), None, fx=k, fy=k, interpolation=cv2.INTER_NEAREST)
     if mask.sum() < 60:
         return None                                              # a sliver: no plate
-    dist = cv2.distanceTransform(mask.astype(np.uint8), cv2.DIST_L2, 5)
+    # the exact distance: the fast 5x5 one's level lines came out terraced on slanted edges, and every plate's slope
+    # showed the steps
+    dist = cv2.distanceTransform(big, cv2.DIST_L2, cv2.DIST_MASK_PRECISE) / k
     w = min(w, max(1, int(dist.max()) - 1))                      # a thin plate's slope narrows to fit
+    line = lambda region: contour(region, 1.4 * k) / k
     outline = contour(mask)
-    inset = contour(dist >= w) if w else outline
+    inset = line(dist >= w) if w else outline
     out = {"poly": model(outline), "inset": model(inset), "w": round(w * SCALE, 5)}
     if lip is None and w >= 4:
         lip = w - LIP
     if lip:
-        out["lip"] = model(contour(dist >= lip))
+        out["lip"] = model(line(dist >= lip))
         out["lip_side"] = "top" if lip > w / 2 else "foot"     # the band above the lip line, or below it
     return out
 
@@ -242,10 +281,10 @@ def blades(sym):
         curves.append(pts)
     # 6 px in from the outline: a blade wall a pixel inside the base's would graze its bevel, and the exact boolean
     # leaves non-manifold edges there; the base shows as a thin rim round the edge instead.
-    inner = cv2.distanceTransform(sym, cv2.DIST_L2, 5) >= 6
+    inner = cv2.distanceTransform(sym, cv2.DIST_L2, cv2.DIST_MASK_PRECISE) >= 6
     right = sym.astype(bool) & (xx >= C) & inner
     stop = np.zeros_like(sym)
-    for poly in (mirror_half(BOTTOM_PANEL), mirror_half(LOWER_V), mirror_half(FOOT)):     # the blades end where these begin
+    for poly in (mirror_half(BOTTOM_PANEL), mirror_half(BOSS), mirror_half(FOOT)):     # the blades end where these begin
         cv2.fillPoly(stop, [np.array(poly, np.int32)], 1)
     right &= cv2.dilate(stop, np.ones((5, 5), np.uint8)) == 0
     out = []
@@ -255,7 +294,7 @@ def blades(sym):
         region = cv2.morphologyEx(region, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))   # no slivers
         if region.sum() < 1200:
             continue                                             # slivers where the trough cuts a blade: a busy ladder of lips
-        out.append((k - 1, contour(region, 1.2)))
+        out.append((k - 1, contour(smoothed(region), 1.2)))
     left = [(k, np.array([(2 * C - x, y) for x, y in poly[::-1]])) for k, poly in out]
     return out + left, curves
 
@@ -279,7 +318,7 @@ def main():
         front[y, C:int(round(np.interp(y, N[:, 0], N[:, 1])))] = 0
     front[:int(N[0, 0]), C:int(N[0, 1])] = 0
     sym = mirrored(front)
-    dist = cv2.distanceTransform(sym, cv2.DIST_L2, 5)
+    dist = cv2.distanceTransform(sym, cv2.DIST_L2, cv2.DIST_MASK_PRECISE)
     above = (np.mgrid[0:sym.shape[0], 0:sym.shape[1]][0] < CROWN_BELOW)
     crown = [contour((dist >= d) & above) for d in CROWN_INSETS]
     blade_px, curves = blades(sym)
@@ -294,15 +333,21 @@ def main():
         if pl:
             pl["rank"] = rank                                    # 0 the innermost: the builder stacks them, inner over outer
         plates[f"blade{i}"] = pl
-    plates["vpanel"] = plate(mirror_half(VPANEL), w=ch["vpanel"], lip=0)      # blade0's lip draws its V; its top would double the crossbar's
-    plates["lower_v"] = plate(mirror_half(LOWER_V), w=ch["lower_v"])
+    boss = np.zeros((940, 430), np.uint8)
+    cv2.fillPoly(boss, [np.array(mirror_half(BOSS), np.int32)], 1)
+    vp = np.zeros_like(boss)
+    cv2.fillPoly(vp, [np.array(mirror_half(VPANEL), np.int32)], 1)
+    vp &= cv2.dilate(boss, np.ones((5, 5), np.uint8)) == 0        # the V panel ends at the boss: no crease through it
+    plates["vpanel"] = plate(mask=smoothed(vp), w=ch["vpanel"], lip=0)     # blade0's lip draws its V; its top would double the crossbar's
     for k, poly in enumerate(arch_polys()):
         plates[f"arch{k}"] = plate(poly, w=ch["arch"])
-    (ax, ay), point = ARROWHEAD["corner"], ARROWHEAD["point"]
-    head = [(2 * C - ax, ay), (ax, ay), point]
-    plates["arrow"] = plate(head, w=99, lip=4)                   # slope all the way in, a pyramid; its rim bright, the drawing's V
-    cx, cy = incentre(head)
-    plates["arrow"]["ridges"] = [model([p, (cx, cy)]) for p in head]
+    # The boss's outline and its glint are exact (not traced back off a raster), so they share the notch line: two
+    # near-copies of it made stair-stepped slivers along the bright V.
+    plates["boss"] = plate(mask=boss, w=99, lip=0)              # its slope runs all the way in: the builder domes it
+    plates["boss"]["poly"] = model(mirror_half(BOSS))
+    plates["boss"]["profile"] = "dome"
+    plates["boss"]["rings"] = level_lines(mirror_half(BOSS), plates["boss"]["w"] / SCALE, BOSS_RINGS)
+    plates["boss"]["glint"] = model(mirror_half(glint_half()))
     plates["cross_back"] = plate(cross_poly(CROSS_GROW), w=ch["cross_back"])
     plates["cross"] = plate(cross, w=ch["cross"])
     bp = np.zeros((940, 430), np.uint8)
