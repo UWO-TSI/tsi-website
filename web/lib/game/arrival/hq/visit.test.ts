@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { HQ_END, HQ_END_TOUR, HQ_SCRIPT, type HqEvent } from "./script";
 import { hqQuest, newVisit, parseVisit, visitCue, visitEvent, waitingFor, type HqState } from "./visit";
-import { CHECKIN_CARD, FLY_CARDS, FOUNDER_PLAQUE, HQ_TRACKER, ID_CARD, LORE_CARD, TOOL_LINES, WREN_LINES, trackerEsc } from "./lines";
+import { CHECKIN_CARD, FLY_CARDS, FOUNDER_PLAQUE, HQ_TRACKER, ID_CARD, LORE_CARD, PHONE_PITCH, TOOL_LINES, WREN_LINES, trackerEsc } from "./lines";
 import { tourSteps } from "./uiTour";
 import { END_LINE } from "../lines";
 
@@ -133,7 +133,7 @@ describe("the HQ visit with Alice (row 312)", () => {
     expect(FOUNDER_PLAQUE).toBeNull();
     const tour = tourSteps({ wheel: "tab", emote: "g", bag: "i", collection: "b", quests: "j", map: "m", mail: "l", phone: "x" });
     const all = [...Object.values(WREN_LINES).flat(), ...Object.values(HQ_TRACKER), ...LORE_CARD.pages.flatMap(p => [p.title, p.text]),
-      ...Object.values(FLY_CARDS).flatMap(c => [c.name, c.text]), ...Object.values(ID_CARD).flat(), ...CHECKIN_CARD.steps.filter(x => !x.includes("{host}")), CHECKIN_CARD.note,
+      ...Object.values(FLY_CARDS).flatMap(c => [c.name, c.text]), ...Object.values(ID_CARD).flat(), ...Object.values(PHONE_PITCH).flat(), ...CHECKIN_CARD.steps.filter(x => !x.includes("{host}")), CHECKIN_CARD.note,
       ...tour.map(t => t.title), ...Object.values(TOOL_LINES).flatMap(t => [t.given, t.done, ...t.offer, ...t.during])];
     for (const line of all) {
       expect(line, line).not.toMatch(/—/);
