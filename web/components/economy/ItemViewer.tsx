@@ -45,9 +45,10 @@ function measure(o: THREE.Object3D): THREE.Box3 {
 /**
  * The model, centred on the stage's middle and scaled to `span` across its biggest side. `hang` draws things hanging
  * from its top (a rod's tip): placed at the tip, in stage units, with down still down as it turns. A rod whose GLB names
- * an effect wears it here as it does in a hand (RodAura), so the shop and the bag show the aura too.
+ * an effect wears it here as it does in a hand (RodAura), so the shop and the bag show the aura too, at `aura` strength
+ * (RodAura `strength`; the awakening cutscene's).
  */
-export function FittedModel({ spec, span = 1.7, hang }: { spec: IconSpec; span?: number; hang?: ReactNode }) {
+export function FittedModel({ spec, span = 1.7, hang, aura }: { spec: IconSpec; span?: number; hang?: ReactNode; aura?: number }) {
   const { scene } = useGLTF(spec.url);
   const hangs = hang !== undefined;
   const object = useMemo(() => {
@@ -74,7 +75,7 @@ export function FittedModel({ spec, span = 1.7, hang }: { spec: IconSpec; span?:
   }, [scene, spec, span, hangs]);
   return <primitive object={object.outer}>
     {hang && object.tip && <group position={object.tip} scale={1 / object.k}>{hang}</group>}
-    {object.fx && <Suspense fallback={null}><RodAura rod={object.model} url={object.fx} /></Suspense>}
+    {object.fx && <Suspense fallback={null}><RodAura rod={object.model} url={object.fx} strength={aura} /></Suspense>}
   </primitive>;
 }
 

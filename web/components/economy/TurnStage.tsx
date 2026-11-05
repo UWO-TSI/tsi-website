@@ -91,6 +91,9 @@ function Studio() {
   return null;
 }
 
+/** Sized by its box's layout size, not its bounding box: a stage that comes in scaled (the awakening's) still fills its box. */
+const OFFSET_SIZE = { offsetSize: true };
+
 export default function TurnStage({ children, className, cameraZ = 4.2, label, sway }: {
   children: ReactNode; className?: string; cameraZ?: number; label: string;
   /** Rock this far either way (rad) instead of turning all the way round. */
@@ -122,7 +125,7 @@ export default function TurnStage({ children, className, cameraZ = 4.2, label, s
         (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
       }}
       onPointerCancel={() => { turn.current.down = false; armed.current = null; }}>
-      <Canvas dpr={STAGE_PIXEL} camera={{ position: [0, 0.15, cameraZ], fov: 30 }} gl={{ antialias: false, alpha: true }} style={{ imageRendering: "pixelated" }}
+      <Canvas dpr={STAGE_PIXEL} resize={OFFSET_SIZE} camera={{ position: [0, 0.15, cameraZ], fov: 30 }} gl={{ antialias: false, alpha: true }} style={{ imageRendering: "pixelated" }}
         onCreated={({ gl }) => { gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
         <StudioLights />
         <Studio />

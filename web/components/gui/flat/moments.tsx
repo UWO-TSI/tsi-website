@@ -18,8 +18,9 @@
  *                the middle over a light scrim, one button under it
  *   PaperField   a field written on paper: a write-in line, for a card being filled in
  *   Awakening    a thing changing into its better self, as a Pokémon evolves (David 2026-11-04): large in the middle
- *                over a deep scrim, it turns white and glows, pulses between its two forms faster and faster, bursts
- *                in a flash, and comes back as the new one in its rarity's ring, a card of what changed beside it
+ *                over a deep scrim, a glow gathers on it in its old rung's colour, it pulses between its two forms
+ *                faster and faster, the glow flares into the new rung's colour, it shows its new form alone, then
+ *                steps aside for a card of what changed
  * Colours: the theme's --ui-* tokens only. Plain props; nothing here knows the game.
  */
 import { useEffect, useRef, useState, type CSSProperties, type InputHTMLAttributes, type PointerEvent, type ReactNode } from "react";
@@ -244,23 +245,29 @@ export function PaperField(props: InputHTMLAttributes<HTMLInputElement>) {
 }
 
 /** An Awakening's beats (ms), in order; the reveal stays until it's closed. */
-export const AWAKEN_MS = { frame: 900, glow: 1100, pulse: 2600, burst: 650 } as const;
+export const AWAKEN_MS = { frame: 900, glow: 1100, pulse: 2600, burst: 650, show: 1900 } as const;
 export type AwakenPhase = keyof typeof AWAKEN_MS | "reveal";
 const AWAKEN_ORDER = Object.keys(AWAKEN_MS) as (keyof typeof AWAKEN_MS)[];
+/** How much bigger than its stage the thing's box is: room for its glow and its motion, so neither meets an edge. */
+export const AWAKEN_ROOM = 1.6;
+/** When the card has landed after the reveal (ms): what changed moves only then, one thing at a time. */
+export const AWAKEN_CARD_MS = 900;
 
 /**
  * A thing changing into its better self (a rod's awakening; David 2026-11-04: "like how when pokemon evlolve"). It plays
  * on mount (a new React `key` plays it again): `frame` it comes in large over a deep scrim with `lead` above it, `glow`
- * it turns white and glows, `pulse` it swells between its old form and its new one faster and faster, `burst` a flash
- * and sparks, `reveal` the new form in colour in a ring of its rung's colour (`rarity`), and a card beside it (under it
- * on a phone): `eyebrow`, `name`, the rung's pill (`rarityLabel`), `text`, `children` (what changed) and `action`.
- * `thing(after)` draws it: its old form until the burst (`after` false), its new one on the pulse's up beats and after.
- * `onPhase` hears each beat and each pulse (for sounds and what changes with them). `ready` false holds it on the scrim
- * and the lead until the thing can be drawn (a model still loading). Escape closes it, at any beat.
- * Under reduced motion it opens on the reveal.
+ * a glow gathers on it (on the thing itself, no light behind it: David 2026-11-05) in the colour of the rung it had
+ * (`from`), `pulse` it swells between its old form and its new one faster and faster, `burst` the glow flares and turns
+ * the new rung's colour (`rarity`), `show` the new form plays its own motion alone in the middle, then `reveal` it
+ * steps aside, a faint edge of its rung's colour on it, and a card comes in beside it (under it on a phone): `eyebrow`,
+ * `name`, the rung's pill (`rarityLabel`), `text`, `children` (what changed; move them after `AWAKEN_CARD_MS`) and
+ * `action`. `thing(after, phase)` draws it: its old form until the burst (`after` false), its new one on the pulse's up
+ * beats and after; its box is `AWAKEN_ROOM` times its stage. `onPhase` hears each beat and each pulse (for sounds and
+ * what changes with them). `ready` false holds it on the scrim and the lead until the thing can be drawn (a model still
+ * loading). Escape closes it, at any beat. Under reduced motion it opens on the reveal.
  */
-export function Awakening({ label, thing, rarity, rarityLabel, lead, eyebrow, name, text, children, action, onPhase, onClose, ready = true, testId }: {
-  label: string; thing: (after: boolean) => ReactNode; rarity: string; rarityLabel: ReactNode; lead: ReactNode;
+export function Awakening({ label, thing, from, rarity, rarityLabel, lead, eyebrow, name, text, children, action, onPhase, onClose, ready = true, testId }: {
+  label: string; thing: (after: boolean, phase: AwakenPhase) => ReactNode; from: string; rarity: string; rarityLabel: ReactNode; lead: ReactNode;
   eyebrow: ReactNode; name: ReactNode; text?: ReactNode; children?: ReactNode; action?: ReactNode;
   onPhase?: (phase: AwakenPhase | "beat") => void; onClose: () => void; ready?: boolean; testId?: string;
 }) {
@@ -286,14 +293,10 @@ export function Awakening({ label, thing, rarity, rarityLabel, lead, eyebrow, na
   return <div className={`${m.layer} gui`} data-gui-flat="">
     <div className={m.awScrim} aria-hidden="true" />
     <section ref={ref} role="dialog" aria-modal aria-label={label} tabIndex={-1} data-gui-overlay className={m.awaken} data-phase={phase} data-ready={ready || undefined} data-after={after || undefined}
-      style={{ "--edge": `var(--ui-rarity-${rarity})` } as CSSProperties} data-testid={testId}>
+      style={{ "--edge": `var(--ui-rarity-${rarity})`, "--from": `var(--ui-rarity-${from})`, "--room": AWAKEN_ROOM } as CSSProperties} data-testid={testId}>
       <p className={m.awLead} aria-live="polite">{phase === "reveal" ? null : lead}</p>
       <div className={m.awStage}>
-        <span className={m.awRays} aria-hidden="true" />
-        <span className={m.awHalo} aria-hidden="true" />
-        <span className={m.awRing} aria-hidden="true" />
-        <div className={m.awThing}>{thing(after)}</div>
-        <span className={m.awSparks} aria-hidden="true">{Array.from({ length: 14 }, (_, i) => <i key={i} style={{ "--a": `${i * (360 / 14)}deg` } as CSSProperties} />)}</span>
+        <div className={m.awThing}>{thing(after, phase)}</div>
       </div>
       {phase === "reveal" && <div className={m.awCard}>
         <p className={m.eyebrow}>{eyebrow}</p>

@@ -178,16 +178,24 @@ Build:
   - **Rod box:** `DetailView quiet` has no back on the stage (no "All"); the rail goes back (the bag's rail now does too: `visit` in BagSheet). The faint chevrons stay.
   - Evidence: `specs/evidence/rod-gear/r7/` (shots.mjs makes them; clips by CDP screencast, since Playwright's recordVideo wants its own ffmpeg build).
 
+- **Round 8 built** on `game/rod-gear` (on c56e45356; gates: see the commit and the report):
+  - **The cutscene redone** (kit `Awakening`, components/gui/flat/moments.tsx and moments.module.css): no ring, halo, rays or sparks (the sparks drew a ring as they set off). The glow is on the thing itself: stacked `drop-shadow`s on `.awThing` in `--glow`, which is `--from` (the rung it had, new prop `from`) until the burst, then `--edge` (the new rung). The burst flares that glow and tints the whole screen in the new rung's colour at a third (no shape, no edge; never white). New beat `show` (1900 ms) after the burst: the new form plays its motion alone; at the `reveal` it steps aside, keeps a faint edge in its rung's colour, and the card comes in. `AWAKEN_CARD_MS` (900): the radar grows only then (RodAwakening). `thing(after, phase)` now gets the phase. Phone reveal: the stage at translateY(-52%) scale(0.55), clear of the card.
+  - **The hard edge was the canvas:** R3F measured the stage's canvas through the `.awThing` scale(0.72) transform, so the canvas was 72% of its box, top-left (the rod sat high and left, its glow cut by the canvas edge). `TurnStage` now sizes by layout (`resize={{ offsetSize: true }}`), and the thing's box is `AWAKEN_ROOM` (1.6) times the stage with the camera pulled back to match, so the motion and the glow never reach an edge.
+  - **Each rod its own motion** (components/game/rodMotion.ts, pure, tested): Training lifts and twirls; Titanium rises level with a band of light (a point light, always mounted, dark when unused) running up its steel; Tidewarden rides a swell (bob, roll lagging, drift); Tempest whips in gusts with a shake and lightning flashes on it. `BEAT` sets each phase's energy, inner glow and aura gain; `Motion` in RodAwakening.tsx eases to them and lights the rod's own materials from within (emissive) in the glow's colour, read from the theme tokens on the client.
+  - **The aura's strength setting** (approved pick): `RodAura strength` (default 1, eased per holder): spins and bobs faster and further, swelling parts grow (the Tidewarden's pearl, the Tempest's tornado), halos grow, sparks come more often. `FittedModel aura` passes it. The cutscene uses `auraAt(look)` (1 + 0.5 per awakening) plus the beat's gain. Not used in the world yet (a held rod's stage isn't known there): asked on the questions card.
+  - The table is on the questions card (`rg8-questions.png`), numbers unchanged.
+  - Evidence: `specs/evidence/rod-gear/r8/` (shots.mjs makes them; CLIP= and ONLY=clips,table). Clip frame times are swiftshader's and mean nothing for a GPU.
+
 ## David's decisions
 
 - 2026-10-28 review (verbatim in the coordinator's round-2 prompt): rarity outline on shop cards (common grey, uncommon green, rare blue, epic purple, legendary yellow, divine purple holo); shop sells up to rare rods; hook caps by rod rarity; Flimsy common, Lighthouse rare; divine text white; gui-tiles approved; radar redone (bigger, minimal, lighter, icons with hover lines at the corners, out of 100, the base faint behind the build, linear slide); bait and bobber slots bottom-right of your own rod's square only, fitted ones show on the rod model with a settle; the bobber's detail shows only the bobber with its own radar; bobber and bait to be remodelled properly in Blender (HD for the shop, LP on the rod; the lucky bobber a four-leaf clover), **waiting on David's references** (coordinator asked him).
 
 ## Next
 
-1. Coordinator: apply `20261102170000_rod_catches` then `20261102170100_catalogue_seed` (before the code deploys); David reviews `specs/evidence/rod-gear/r7/`.
-2. David's marks on the awakening table (rg7-table) and the cutscene clips; on approval, wire RodAwakening in place of the "Awakened!" card (Status, round 7). How the Tempest rod is earned is still open (found-only).
-2b. The awakened looks: real per-awakening models need tool-pipeline and David's references; until then the cutscene's `FINISH` recolour is a stand-in.
-3. A stronger aura per awakening, if David wants it: RodAura needs a strength input (tool-pipeline's file).
+1. Coordinator: apply `20261102170000_rod_catches` then `20261102170100_catalogue_seed` (before the code deploys).
+2. David reviews `specs/evidence/rod-gear/r8/` (the clips and the questions card). On approval, wire RodAwakening in place of the "Awakened!" card (his approved pick: "the cutscene replaces the card on every awakening"): rodNews dispatches the rod and stage, a host in DefaultIslandWorld mounts RodAwakening, the gift card goes. How the Tempest rod is earned is still open (found-only).
+2b. The awakened looks: real per-awakening models need tool-pipeline and David's references (Tempest, Tidewarden, Riptide awaited); until then the cutscene's `FINISH` recolour is the stand-in, shown only in the cutscene.
+3. If David says yes on the card: the held rod wears `RodAura strength = auraAt(stage)` in the world (Character.tsx needs the rod's stage).
 4. Glass to uncommon only on David's pick (round 4 item 4). Riptide, Titanium and Tempest's redone models land on tool-pipeline with the same names: nothing to rewire.
 5. When references arrive: model the base bobber, the lucky four-leaf-clover bobber and the bait in Blender (design bible Models).
 

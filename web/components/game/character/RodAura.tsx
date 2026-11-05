@@ -10,6 +10,10 @@
  * faces you, anything else lit as the rod). Each `Halo` empty is a glow sprite of its `size` and `color`, and the
  * scene's extras throw the sparks into the scene's one glow pool (GlowFx). Brighter at dusk and night (glow.ts).
  *
+ * `strength` (1 as made) makes one holder's effect stronger, easing to it: its parts turn and bob faster and further, its
+ * swelling parts (the Tidewarden's pearl, the Tempest's tornado) and its halos grow, and it throws sparks more often (the
+ * awakening cutscene; David's pick 2026-11-05: "the aura gets a strength setting").
+ *
  * The parts are shared by every holder (one template per effect, cloned): a holder costs one draw per effect mesh
  * and one per halo (at most five, specs/perf/effects-cost.md), no shadow, no shader compiled into anything lit.
  */
@@ -106,20 +110,20 @@ function template(scene: THREE.Object3D): Template {
 const nodesOf = (root: THREE.Object3D) => root.children.filter(n => ["spin", "bob", "pulse", "flicker"].some(k => n.userData[k] !== undefined));
 
 /** `rod` the held model (the effect rides it, popping out and putting away with it). */
-export default function RodAura({ rod, url }: { rod: THREE.Object3D; url: string }) {
+export default function RodAura({ rod, url, strength = 1 }: { rod: THREE.Object3D; url: string; strength?: number }) {
   const { scene } = useGLTF(url);
   const glow = useGlowParticles();
   const fx = useMemo(() => {
     const t = template(scene), group = t.root.clone(true);
     group.name = "RodAura";
     const halos = t.halos.map(h => { const s = new THREE.Sprite(h.material); s.renderOrder = 2; s.raycast = () => {}; s.userData.fx = true; group.add(s); return s; });
-    return { t, group, halos, moving: nodesOf(group), clock: { next: 0, seed: rod.id * 7919 } };
+    return { t, group, halos, moving: nodesOf(group), clock: { next: 0, seed: rod.id * 7919, k: 1 } };
   }, [scene, rod]);
   useEffect(() => {
     rod.add(fx.group);
     return () => { fx.group.removeFromParent(); };
   }, [rod, fx]);
-  useFrame(({ camera, clock }, delta) => idle(rod, fx, glow, camera, clock.elapsedTime, delta));
+  useFrame(({ camera, clock }, delta) => idle(rod, fx, glow, camera, clock.elapsedTime, delta, strength));
   return null;
 }
 
@@ -128,9 +132,10 @@ const v = new THREE.Vector3(), cam = new THREE.Vector3(), s = new THREE.Vector3(
 const crackle = (t: number) => { const k = Math.floor(t * 16); return 0.55 + 0.45 * Math.abs(Math.sin(k * 12.9898) * 43758.5453 % 1); };
 
 /** Module scope (the react compiler forbids writing through hook values): the idle animation, the glows and sparks. */
-function idle(rod: THREE.Object3D, fx: { t: Template; group: THREE.Object3D; halos: THREE.Sprite[]; moving: THREE.Object3D[]; clock: { next: number; seed: number } },
-  glow: GlowParticles, camera: THREE.Camera, t: number, delta: number) {
+function idle(rod: THREE.Object3D, fx: { t: Template; group: THREE.Object3D; halos: THREE.Sprite[]; moving: THREE.Object3D[]; clock: { next: number; seed: number; k: number } },
+  glow: GlowParticles, camera: THREE.Camera, t: number, delta: number, strength: number) {
   const night = nightLit(), b = breath(t, 1.3), { t: tpl } = fx;
+  const power = fx.clock.k += (strength - fx.clock.k) * (1 - Math.exp(-Math.min(delta, 0.1) * 3)), grow = 1 + 0.45 * (power - 1);
   // Shared materials: once a frame.
   if (tpl.frame !== Math.floor(t * 1000)) {
     tpl.frame = Math.floor(t * 1000);
@@ -140,9 +145,9 @@ function idle(rod: THREE.Object3D, fx: { t: Template; group: THREE.Object3D; hal
   }
   for (const n of fx.moving) {
     const home = n.userData.home as { position: THREE.Vector3; rotation: number; phase: number }, u = n.userData;
-    if (u.spin) n.rotation.y = home.rotation + t * Number(u.spin);
-    if (u.bob) n.position.y = home.position.y + Math.sin(t * TAU * Number(u.rate ?? 1) + home.phase) * Number(u.bob);
-    const pulse = u.pulse ? 1 + Number(u.pulse) * Math.sin(t * 2.6 + home.phase) : 1;
+    if (u.spin) n.rotation.y = home.rotation + (u.turned = Number(u.turned ?? t * Number(u.spin)) + Math.min(delta, 0.1) * Number(u.spin) * power);
+    if (u.bob) n.position.y = home.position.y + Math.sin(t * TAU * Number(u.rate ?? 1) + home.phase) * Number(u.bob) * power;
+    const pulse = u.pulse ? grow * (1 + Number(u.pulse) * Math.sin(t * 2.6 + home.phase)) : 1;
     // A crackle jitters across the rod a little, stepped like the light.
     const jit = u.flicker ? 1 + 0.18 * (crackle(t + 0.37) - 0.75) : 1;
     n.scale.set(pulse * jit, pulse, pulse * (2 - jit));
@@ -156,13 +161,13 @@ function idle(rod: THREE.Object3D, fx: { t: Template; group: THREE.Object3D; hal
     const at = rod.localToWorld(v.copy(h.at)), sprite = fx.halos[i];
     at.add(cam.clone().sub(at).normalize().multiplyScalar(0.1));
     sprite.position.copy(rod.worldToLocal(at));
-    sprite.scale.setScalar((h.size * 1.3 * (0.95 + 0.1 * b) * (1 + 0.2 * night)) / k);
+    sprite.scale.setScalar((h.size * 1.3 * (0.95 + 0.1 * b) * (1 + 0.2 * night) * (1 + 0.3 * (power - 1))) / k);
   });
   const sp = tpl.sparks;
   if (!sp || rod.scale.x < 0.5) return;
   fx.clock.next -= delta;
   if (fx.clock.next > 0) return;
-  fx.clock.next = sp.every;
+  fx.clock.next = sp.every / Math.max(1, power);
   const seed = ++fx.clock.seed, r = (n: number) => Math.abs(Math.sin(seed * 78.233 + n * 12.9898) * 43758.5453 % 1);
   const p = rod.localToWorld(v.set((r(1) - 0.5) * 0.08, sp.lo + (sp.hi - sp.lo) * r(2), (r(3) - 0.5) * 0.08));
   glow.pool.burst(sp.recipe, p.x, p.y, p.z, p.y - 2, 0, 0, 1, sp.tint, seed);
