@@ -252,7 +252,7 @@ export function ReelMinigame({
     fish, boss: bossMode, raidId, rig, initialInput, focus: reelRef, onDone,
     onPause: (paused) => { if (pausedLabelRef.current) pausedLabelRef.current.hidden = !paused; },
     onFrame: ({ sim: simulation, events, now, raid }) => {
-      const { position: pos, fishPosition: fishPos, inside, progress } = simulation;
+      const { drawnBar: pos, drawnFish: fishPos, inside, progress } = simulation;
       if (raid) {
         const who = `Raid: ${raid.helpers} reeling`;
         if (fightLabelRef.current && fightLabelRef.current.textContent !== who) fightLabelRef.current.textContent = who;
