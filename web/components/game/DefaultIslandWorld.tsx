@@ -209,6 +209,7 @@ import { useHomeLayout } from "@/lib/homes/useHomeLayout";
 import { catalogueItem } from "@/lib/homes/catalogue";
 import { ROOM_PRICE } from "@/lib/homes/layout";
 import { PROBE_FRAMES, PROBE_WARMUP, medianFrameMs, tierDpr, tierForFrameMs, type QualityTier } from "@/lib/game/qualityTier";
+import { useSkyLab } from "@/lib/game/skyLab";
 import { ISLAND_PHASES, torontoHour, type IslandPhase } from "@/lib/game/islandTime";
 import CraftingSheet, { BeachBottle } from "./crafting/Workshop";
 import StudySeats from "./study/StudySeats";
@@ -1065,7 +1066,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const liteMode = graphics.liteMode;
   // The canvas's resolution: half with the pixel finish; without it up to 1.5 device pixels per CSS pixel, but never
   // past 1 on Lite (the weaker GPUs Lite is for draw every extra pixel; v1 performance, specs/perf/2026-10-v1-results.md).
-  const canvasDpr = tierDpr(liteMode, graphics.pixelated ? 0.5 : [1, 1.5]);
+  // The lab's lighter pixel finish on the sky (development, ?skypx=light): full resolution, the world pixelated in PostFX.
+  const skyPx = useSkyLab().skypx === "light" && graphics.pixelated;
+  const canvasDpr = tierDpr(liteMode, graphics.pixelated && !skyPx ? 0.5 : skyPx ? 1 : [1, 1.5]);
   const castShadows = graphics.shadows && !liteMode;
   // The creator and the wardrobe cover the screen: the island stops drawing under them (it resumes as they close).
   const creatorOpen = useCreatorOpen();
@@ -1430,7 +1433,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       {/* The branded dark round the rooms that show the space outside them (InteriorBackdrop): behind the canvas. */}
       {inside === "shop" || inside === "hq" || inside === "museum" || inside === "cafe" ? <InteriorBackdrop room={inside} /> : null}
       <DevUiTheme />
-      <Canvas ref={canvasRef} tabIndex={0} role="application" aria-label="Island walking area" style={{ zIndex: 0, imageRendering: graphics.pixelated ? "pixelated" : "auto" }} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={canvasDpr}
+      <Canvas ref={canvasRef} tabIndex={0} role="application" aria-label="Island walking area" style={{ zIndex: 0, imageRendering: graphics.pixelated && !skyPx ? "pixelated" : "auto" }} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={canvasDpr}
         camera={{ position: [0, 10.2, -21], fov: BASE_FOV, near: 0.1, far: 120 }} shadows={castShadows ? "percentage" : false} frameloop={creatorOpen ? "never" : "always"}
         onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
         <Suspense fallback={null}>
@@ -1453,7 +1456,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           {/* Classes v2: the subclass's aura replaces the family's once its kit exists (§1.9). */}
           {DROPS.classes && identity.aura && (classAura ? <Suspense fallback={null}><SubclassAura player={player} kit={classAura.kit} mastery={classAura.mastery} colour={classAura.colour} /></Suspense>
             : identity.family && <Suspense fallback={null}><FamilyAura player={player} color={FAMILIES[identity.family].light} /></Suspense>)}
-          <PostFX antialias={!graphics.liteMode && !graphics.pixelated} grade={grade} fx={lookFx(lookPreset, !liteMode)} dof={photo.open ? { at: photoRig.focus, strength: photo.focus } : null} />
+          <PostFX antialias={!graphics.liteMode && !graphics.pixelated} grade={grade} fx={lookFx(lookPreset, !liteMode)} dof={photo.open ? { at: photoRig.focus, strength: photo.focus } : null} skyPixels={skyPx} />
           <LookMaterials preset={lookPreset} />
           <SunShadows />
           <Performance player={player} output={perfOutput} />

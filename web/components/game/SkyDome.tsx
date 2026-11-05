@@ -9,10 +9,11 @@
  * and only the pixels where sky shows pay for it.
  */
 
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { DRIFT_WRAP, skyDome, skyUniforms } from "@/lib/game/skyShader";
+import { CLOUD_STYLE, DRIFT_WRAP, cloudTexture, cloudData, skyDome, skyUniforms, type CloudStyle } from "@/lib/game/skyShader";
+import { cloudField, skyBend, type CloudView } from "@/lib/game/clouds";
 import { SKY_GRADE, compassDir, gradeSky, moonPosition, skyExposure, skyRadiance, starFrame, transmittance, type Vec3 } from "@/lib/game/atmosphere";
 import { NIGHT_SKY } from "@/lib/game/lookPreset";
 import { skyInstant, solarPosition } from "@/lib/game/sunPath";
@@ -20,7 +21,9 @@ import { LONDON_ON, type IslandWeather } from "@/lib/game/islandWeather";
 import { WIND_DIR } from "@/lib/game/worldFx";
 import { ACTIVE_WORLD_BEND, ACTIVE_WORLD_BEND_SIDE } from "@/lib/game/curvedWorld";
 import { worldNow, worldTime } from "@/lib/game/worldClock";
-import { WIND_LAB } from "@/lib/game/skyLab";
+import { useSkyLab } from "@/lib/game/skyLab";
+import { WIND } from "@/lib/game/wind";
+import SkyClouds from "./SkyClouds";
 
 /** Inside every canvas's far plane (game 120, title 140); the vertex shader puts it at the far plane anyway. */
 const RADIUS = 110;
@@ -45,7 +48,21 @@ const ease = (from: number, to: number, x: number) => { const t = THREE.MathUtil
 
 const state = { slowAt: -Infinity, weather: null as number[] | null, speed: 0, moonIllum: 0 };
 const sun: Vec3 = [0, 1, 0], moon: Vec3 = [0, 1, 0], tmp: Vec3 = [0, 0, 0], tmp2: Vec3 = [0, 0, 0];
-const rot = new THREE.Matrix3(), horizon = new THREE.Color(), raised: Vec3 = [0, 0, 0];
+const rot = new THREE.Matrix3(), horizon = new THREE.Color(), raised: Vec3 = [0, 0, 0], drawn: Vec3 = [0, 0, 0];
+const fwd = new THREE.Vector3(), sea = new THREE.Vector3(), view: CloudView = { x: 0, y: 0, z: 1, cos: -1 };
+
+/**
+ * How far below the true horizon the sea's far edge shows (radians): the far plane's sea straight ahead, bent as the
+ * curved world bends it (curvedWorld, view space). The sky's skyline is drawn there (clouds.ts skyBend).
+ */
+function seaDip(camera: THREE.PerspectiveCamera): number {
+  camera.getWorldDirection(fwd);
+  const h = Math.hypot(fwd.x, fwd.z) || 1, far = camera.far * 0.95;
+  sea.set(camera.position.x + (fwd.x / h) * far, 0, camera.position.z + (fwd.z / h) * far).applyMatrix4(camera.matrixWorldInverse);
+  sea.y -= sea.z * sea.z * ACTIVE_WORLD_BEND + sea.x * sea.x * ACTIVE_WORLD_BEND_SIDE;
+  sea.applyMatrix4(camera.matrixWorld).sub(camera.position);
+  return Math.min(0.6, Math.max(0, -Math.atan2(sea.y, Math.hypot(sea.x, sea.z))));
+}
 
 /** What the dome draws toward `dir` before clouds (the shader's sum, on the CPU): for the light the clouds take from the sky. */
 function skyAt(dir: Vec3, exposure: number, moonE: number, night: number, out: THREE.Color): THREE.Color {
@@ -83,16 +100,18 @@ function slowFrame(moonIllum: number, moonUp: number) {
   // The sky's light on them: from above the zenith's colour and a grey share of its brightness, from below the
   // skyline's (the sea's bounce), so they keep their shape as the light goes.
   const top = skyAt([0, 1, 0], exposure, moonE, night, u.uAmbTop.value), l = 0.2126 * top.r + 0.7152 * top.g + 0.0722 * top.b;
+  u.uSkyTop.value.copy(top);
   // By night they are darker than the sky behind them, so they read as cloud, not glass.
   const dim = 1 - 0.4 * night;
   top.multiplyScalar(0.35).addScalar(0.4 * l).multiplyScalar(dim);
   const hz = u.uAmbBottom.value.setRGB(0, 0, 0);
   for (let i = 0; i < 4; i++) hz.add(skyAt(compassDir(5, i * 90), exposure, moonE, night, horizon).multiplyScalar(0.25));
+  u.uSkyHorizon.value.copy(hz);
   hz.multiplyScalar(0.6 * dim);
 }
 
 /** Module scope (the react compiler forbids writing through hook values): the sky for this frame. */
-function skyFrame(camera: THREE.Camera, scene: THREE.Scene, weather: IslandWeather, dt: number) {
+function skyFrame(camera: THREE.PerspectiveCamera, scene: THREE.Scene, weather: IslandWeather, style: CloudStyle, dt: number) {
   const u = skyUniforms, now = skyInstant() ?? worldNow();
   u.uTime.value = worldTime();
   const s = solarPosition(new Date(now));
@@ -115,17 +134,27 @@ function skyFrame(camera: THREE.Camera, scene: THREE.Scene, weather: IslandWeath
   // Fair-weather cumulus melt away after sunset (an overcast stays).
   u.uCloud.value.set(w[0] * (1 - 0.6 * u.uNight.value * (1 - w[2])), w[1], w[2], w[3]);
   u.uHaze.value = w[4];
-  const lab = WIND_LAB.on, speed = w[5] * (lab ? WIND_LAB.grass : 1), dx = lab ? WIND_LAB.dirX : WIND_DIR.x, dz = lab ? WIND_LAB.dirZ : WIND_DIR.z;
+  // Carried by the one wind (lib/game/wind.ts), faster as it swells.
+  const speed = w[5] * WIND.swell, dx = WIND_DIR.x, dz = WIND_DIR.z;
   // Every client starts where the world clock puts the clouds, then carries them on at the weather's speed.
   if (state.speed === 0) u.uDrift.value.set(dx, dz).multiplyScalar((w[5] * u.uTime.value) % DRIFT_WRAP);
   state.speed = speed;
   u.uDrift.value.x = (u.uDrift.value.x + dx * speed * dt) % DRIFT_WRAP;
   u.uDrift.value.y = (u.uDrift.value.y + dz * speed * dt) % DRIFT_WRAP;
 
-  // The dome's skyline drops with the world's bend as far as the sea reaches (the far plane, a little past).
-  const reach = ((camera as THREE.PerspectiveCamera).far ?? 120) * 1.05 / RADIUS;
-  u.uBend.value.set(ACTIVE_WORLD_BEND * reach, ACTIVE_WORLD_BEND_SIDE * reach);
+  // The sky's skyline drawn down to the sea's far edge; the sun and the moon where the dome draws them.
   camera.updateMatrixWorld();
+  const dip = (u.uDip.value = seaDip(camera));
+  u.uSunDraw.value.set(...skyBend(sun, dip, drawn));
+  u.uMoonDraw.value.set(...skyBend(moon, dip, drawn));
+  // The clouds in view, nearest first (all three styles read them; round 2's traced ones walk their own).
+  if (style !== "traced") {
+    const half = Math.atan(Math.tan((camera.fov * Math.PI) / 360) * Math.hypot(1, camera.aspect));
+    view.x = fwd.x; view.y = fwd.y; view.z = fwd.z; view.cos = Math.cos(Math.min(Math.PI, half + dip + 0.05));
+    const d = u.uDrift.value;
+    u.uCloudN.value = cloudField(u.uCloud.value.x, u.uCloud.value.y, d, dip, cloudData, view);
+    cloudTexture.needsUpdate = true;
+  }
   const e = camera.matrixWorld.elements;
   u.uCamRight.value.set(e[0], e[1], e[2]).normalize();
   u.uCamUp.value.set(e[4], e[5], e[6]).normalize();
@@ -139,12 +168,17 @@ function skyFrame(camera: THREE.Camera, scene: THREE.Scene, weather: IslandWeath
 }
 
 export default function SkyDome({ weather }: { weather: IslandWeather }) {
-  const { geometry, material } = useMemo(() => skyDome(), []);
+  const lab = useSkyLab(), style = lab.clouds ?? CLOUD_STYLE;
+  useEffect(() => { skyUniforms.uStarPx.value = lab.skypx === "light" ? 1.8 : 1; }, [lab.skypx]);
+  const { geometry, material } = useMemo(() => skyDome(style), [style]);
   const mesh = useRef<THREE.Mesh>(null);
   useFrame(({ camera, scene }, dt) => {
     mesh.current?.position.copy(camera.position);
-    skyFrame(camera, scene, weather, Math.min(dt, 0.1));
+    skyFrame(camera as THREE.PerspectiveCamera, scene, weather, style, Math.min(dt, 0.1));
   });
   // After the island's opaque meshes (the far plane only fills what they left), before its transparent ones.
-  return <mesh ref={mesh} geometry={geometry} material={material} scale={RADIUS} frustumCulled={false} renderOrder={1000} />;
+  return <>
+    <mesh ref={mesh} geometry={geometry} material={material} scale={RADIUS} frustumCulled={false} renderOrder={1000} />
+    <SkyClouds style={style} />
+  </>;
 }

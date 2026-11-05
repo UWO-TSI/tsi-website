@@ -1,7 +1,7 @@
 import { LONDON_ON } from "./islandWeather";
 import type { IslandPhase } from "./islandTime";
 import { torontoInstant } from "@/lib/time";
-import { DAWN_HOURS, EVENING_HALF_HOURS, sunFor, torontoDate, type SunDay } from "./sunTimes";
+import { EVENING_HALF_HOURS, sunFor, torontoDate, type SunDay } from "./sunTimes";
 
 /**
  * The real sun over London, Ontario (ledger row 239, specs/look-development.md
@@ -41,17 +41,21 @@ export function solarPosition(date: Date, { latitude, longitude } = LONDON_ON): 
   return { elevation, azimuth: ((azimuth % 360) + 360) % 360 };
 }
 
+/** How long before sunrise `?time=dawn` previews (inside the hour of dawn, DAWN_HOURS). */
+const DAWN_PREVIEW_HOURS = 20 / 60;
+
 /** How often the light follows the sun: two minutes is about half a degree of its travel across the sky. */
 export const SUN_STEP_MS = 120_000;
 
 /**
  * A phase's preview time on a date's Toronto day (`?time=<phase>`, the
- * options menu, the static profiles): mid-dawn, 11:45 (the picked look),
- * half an hour before sunset, late night (the moon does not move).
+ * options menu, the static profiles): 20 minutes before sunrise (the pink of
+ * dawn, not the blue hour before it: sky-ambient round 2's pick), 11:45 (the
+ * picked look), half an hour before sunset, late night (the moon does not move).
  */
 export function phaseInstant(phase: IslandPhase, date: Date, days?: readonly SunDay[] | null): Date {
   const { sunrise, sunset } = sunFor(date, days);
-  const hour = { dawn: sunrise - DAWN_HOURS / 2, day: 11.75, evening: sunset - EVENING_HALF_HOURS / 2, night: 23 }[phase];
+  const hour = { dawn: sunrise - DAWN_PREVIEW_HOURS, day: 11.75, evening: sunset - EVENING_HALF_HOURS / 2, night: 23 }[phase];
   return torontoInstant(torontoDate(date).key, hour);
 }
 

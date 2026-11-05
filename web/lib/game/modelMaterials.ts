@@ -2,7 +2,7 @@ import { Color, DoubleSide, FrontSide, Material, Mesh, MeshBasicMaterial, MeshDe
 import { CASTER_MATERIAL, meshShadow, shadowClassFor, type ShadowClass } from "./shadows";
 import { addCutout } from "./occluders";
 import { SHAKE, SHAKE_RADIUS, SHAKE_SLOTS, TREE_SHAKE } from "./treeShake";
-import { skyLab } from "./skyLab";
+import { FRONT_GLSL } from "./wind";
 
 let flagTexture: Texture | null = null;
 let shopSignTexture: Texture | null = null;
@@ -60,28 +60,33 @@ export function setLeafTint(hex: string): void {
  * that never drive it are unchanged.
  */
 export const TREE_WIND = { value: new Vector2(0, 0) };
-/** The shared wind pitch's lean (development only, ?wind=, lib/game/skyLab.ts): world x and z the crowns bend downwind. 0 today. */
+/**
+ * The one wind's lean (lib/game/wind.ts, IslandAtmosphere WindDriver): world x and z the crowns bend downwind at a
+ * gust front's crest, and where the fronts are (wind.ts frontPhase). 0 where nothing drives it.
+ */
 export const TREE_LEAN = { value: new Vector2(0, 0) };
+export const TREE_FRONT = { value: 0 };
 /**
  * A shaken tree's wobble (specs/polish/forage-craft-museum.md 2; lib/game/treeShake.ts): up to SHAKE_SLOTS slots of
  * (x, z, start second on the world clock, strength). A tree whose root stands on a slot's spot wobbles, damped; the
  * formula is treeShake.shakeOffset's, so the fruit in its crown moves with it.
  */
-/** The lean is compiled in only on a ?wind= page load (development): the shipped sway is untouched. */
-const LEAN_GLSL = skyLab().wind === null ? "" : `
-    // The lean is a world direction: back through the tree's own turn and scale into its model space.
+/** The lean into the gust fronts: a world direction, back through the tree's own turn and scale into its model space. */
+const LEAN_GLSL = `
     #ifdef USE_INSTANCING
       mat3 swayM = mat3(modelMatrix * instanceMatrix);
     #else
       mat3 swayM = mat3(modelMatrix);
     #endif
-    transformed += transpose(swayM) * vec3(uTreeLean.x, 0.0, uTreeLean.y) / max(dot(swayM[0], swayM[0]), 1e-6) * swayH;
+    float swayFront = 0.25 + 0.75 * windFront(swayRoot.xz, uTreeFront);
+    transformed += transpose(swayM) * vec3(uTreeLean.x, 0.0, uTreeLean.y) / max(dot(swayM[0], swayM[0]), 1e-6) * swayH * swayFront;
 `;
 function addTreeSway(shader: WebGLProgramParametersWithUniforms) {
   shader.uniforms.uTreeWind = TREE_WIND;
   shader.uniforms.uTreeLean = TREE_LEAN;
+  shader.uniforms.uTreeFront = TREE_FRONT;
   shader.uniforms.uTreeShake = TREE_SHAKE;
-  shader.vertexShader = `uniform vec2 uTreeWind;\nuniform vec2 uTreeLean;\nuniform vec4 uTreeShake[${SHAKE_SLOTS}];\n` + shader.vertexShader.replace("#include <begin_vertex>", `
+  shader.vertexShader = `uniform vec2 uTreeWind;\nuniform vec2 uTreeLean;\nuniform float uTreeFront;\nuniform vec4 uTreeShake[${SHAKE_SLOTS}];\n${FRONT_GLSL}` + shader.vertexShader.replace("#include <begin_vertex>", `
     #include <begin_vertex>
     float swayH = clamp(position.y / 3.0, 0.0, 1.0);
     swayH *= swayH;

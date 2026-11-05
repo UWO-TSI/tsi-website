@@ -36,3 +36,21 @@ To rebuild: `python3 art/audio/synth_volleyball.py <wav dir> [<preview dir>]`, t
 | `vb-call.ogg` | "Mine!" (round 4): a plain alert, two soft chime notes up (E5, A5) | synth_volleyball.py | game/volleyball (Tethos) | CC0 |
 | `vb-out.ogg` | out: a referee's pea whistle, one short blast and one long | synth_volleyball.py | game/volleyball (Tethos) | CC0 |
 | `vb-heat.ogg`, `vb-fire.ogg` | the rally heating up (round 4: a simple three-note blip up, C5 E5 G5); the ball catching fire | synth_volleyball.py | game/volleyball (Tethos) | CC0 |
+
+## Ambient beds (`../ambient/bed-*.ogg`)
+
+Self-made: synthesised from noise and sines by `art/audio/synth_ambience.py` (2026-11-05, game/sky-ambient round 3), with
+nothing fetched or sampled, released as CC0 1.0 (https://creativecommons.org/publicdomain/zero/1.0/). Seamless 24 s loops
+for the member island's ambient channel (lib/game/audio.ts `ambientCandidates`): the weather's bed, else the time of day's.
+To rebuild: `python3 art/audio/synth_ambience.py <wav dir>`, then the ffmpeg line at the top of that script.
+
+| File | What it is | Source | Author | Licence |
+|---|---|---|---|---|
+| `bed-dawn.ogg` | the sea washing in and out, a light breeze, a few birds waking | synth_ambience.py | game/sky-ambient (Tethos) | CC0 |
+| `bed-day.ogg` | the sea, a breeze that comes and goes, birds calling now and then | synth_ambience.py | game/sky-ambient (Tethos) | CC0 |
+| `bed-dusk.ogg` | the sea, the breeze, the last birds, the first crickets | synth_ambience.py | game/sky-ambient (Tethos) | CC0 |
+| `bed-night.ogg` | the sea, a breath of wind, crickets in a few voices | synth_ambience.py | game/sky-ambient (Tethos) | CC0 |
+| `bed-wind.ogg` | the sea and a gusty wind with a whistle in the gusts | synth_ambience.py | game/sky-ambient (Tethos) | CC0 |
+| `bed-rain.ogg` | rain on leaves and sand (a hiss, close drops), the sea under it | synth_ambience.py | game/sky-ambient (Tethos) | CC0 |
+| `bed-snow.ogg` | a soft wind, everything muffled | synth_ambience.py | game/sky-ambient (Tethos) | CC0 |
+| `bed-fog.ogg` | the sea, slow and muffled | synth_ambience.py | game/sky-ambient (Tethos) | CC0 |
