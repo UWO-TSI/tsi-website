@@ -39,10 +39,10 @@ Approved: mq7-critical, mq7-hud, mq7-levelup-strip, mq7-levelup, mq7-questions.
 - mq7-stamina (approve): "make opacity lower"
 - mq7-vitals (approve): "2"
 
-**Held:** "2" on mq7-vitals against Capsule approved on mq7-questions; asked David whether 2 means Hearts or Capsule. Start once he answers.
+**David's answer (2026-11-05, verbatim):** "capsule". The vitals use the Capsule look. "2" on mq7-vitals is settled; the round is no longer held.
 
 Build:
-1. The vitals in the look David names.
+1. The vitals in the Capsule look.
 2. The shield overlaps the health bar or extends it, not a separate row (mq7-shield), with its own colour at every level.
 3. The stamina arc at lower opacity, and adaptive so it keeps its size and place through zooming in and out.
 
