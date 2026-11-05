@@ -35,6 +35,32 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 13: David's tutorial round 12 review (2026-11-05, verbatim; https://claude.ai/artifact/8sNHHXTmmPUrQ6C4kvzu9M)
+
+Approved: t12-app, t12-away, t12-close, t12-cost, t12-desktop, t12-hud, t12-key, t12-phone, t12-reduced-smooth, t12-tilt, t12-tour-phone.
+- t12-corner (approve): "good"
+- t12-highlight (redo): "the ui and app design needs to be redone to fit the theme"
+- t12-model (redo): "the ui screen needs to be remodeled, and wondering if the ui can have less pixel pass cuz its hard to read the icons on the phone"
+- t12-questions (redo): "charm needs proper physics, i think maybe what if we scratch the id idea and alice gives them a phone instead which makes them make a profile on the phone and has the other apps? thoughts?"
+- t12-screen (redo): "ui needs redone, should have pixel wash but shouldnt be pixel wash over pixel, should be 1 and lighter"
+- t12-slide (approve): "better charm physics"
+- t12-turnaround (redo): "the charm on the phone is a accessory, and it has proper physics, charms will be swappable later"
+
+Build:
+1. The phone's UI, redone to fit the phone:
+   - Give it its own app design that matches the phone (pearl and lime, and only the pixel style from the DS reference: no Nintendo art, font or text). It is no longer today's game UI.
+   - Remodel the screen itself (t12-model).
+   - One pixel wash, lighter, and never a wash over the world's pixel pass: keep the phone's screen out of the world pass, or draw it after, so icons and keypad digits read at real size. That also fixes round 12's broken-up digits.
+2. The charm: an accessory with its own model and proper physics. It swings and settles with the phone's slide, snap and lean, and stays swappable later.
+3. David's idea: drop the ID, and Alice hands you the phone, where you make your profile and which has the other apps.
+   - The coordinator's answer to him: worth doing. The phone is already what the tour teaches, so it gets a story reason to exist and there's one object to learn instead of two. The print-and-stamp moment can move onto the phone's screen.
+   - Pitch it with clips: Alice hands over the phone at registration, it starts up, you fill in your profile on it (existing profile fields only), and it's stamped.
+   - List everything the ID touches today (code, tour steps, other players viewing your ID) and what replaces each.
+   - Nothing about the ID ships until David picks.
+4. Keep everything approved: X, the corner, the HUD flying in, the tilt, putting it away, the tour on the phone, desktop and phone, reduced motion, cost.
+5. Merge origin/main first; this lane hasn't merged it yet.
+6. `specs/references/phone/` is third-party art and is untracked. Never commit it.
+
 ## Round 12: David's tutorial rounds 9, 10 and 11 reviews (2026-11-04, verbatim; https://claude.ai/artifact/99FLDZKNXT2AG9KJ9uBn4M, https://claude.ai/artifact/RyNFwoRguwVeQ649Ye5VLc, https://claude.ai/artifact/8SM3Qk28k3Vma8c5hKCvHU)
 
 Round 9 page:
