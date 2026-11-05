@@ -29,6 +29,22 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 10: David's fishing round 9 review (2026-11-05, verbatim; https://claude.ai/artifact/1STF7T9QNBh95Pzy3QyKdm)
+
+Approved: f9-board-phone, f9-board-wide.
+- f9-board-close (redo): "move the lamp backwards, lamp and stands should clear way of the deck area "
+- f9-board-deck (redo): "move all lamp most more the the edge of the deck, have landers on the dock wood stumps"
+- f9-questions (approve): "and lantern"
+
+Build:
+1. Move the lamp post back, so that it and the stands keep the deck's walking area clear.
+2. Move all the deck's lamp posts further out toward the deck's edge.
+3. Put lanterns on the dock's wooden stumps (the posts along the deck edge).
+4. f9-questions was approved "and lantern": the hand lantern stays removed with the barrels and crate.
+5. Show before and after from round 9's cameras (close, wide, deck, phone), at the same time of day in both.
+6. Then get the lane ready to merge: rerun the gates (vitest, tsc, eslint on touched files, `next build`). The coordinator applies `20261102031338_catalogue_seed.sql` to prod before merging.
+7. Report where each lamp and lantern ended up. The world-editor lane is extending `/lab/world`, so David can tweak placements himself after this.
+
 ## Round 9: David's fishing round 8 review (2026-11-05, verbatim; https://claude.ai/artifact/HZ1DSnZgB2dCFaaWtMCh71)
 
 Approved: f8-board-deck, f8-board-phone, f8-icons-all, f8-icons-phone, f8-icons, f8-questions.
