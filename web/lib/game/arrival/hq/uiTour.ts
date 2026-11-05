@@ -9,7 +9,7 @@
  */
 
 /** The bindings the tour teaches, as `KeyboardEvent.key` in lower case ("tab", "g", "enter"). */
-export interface TourKeys { wheel: string; emote: string; hud: string; bag: string; collection: string; quests: string; map: string; mail: string; phone: string }
+export interface TourKeys { wheel: string; emote: string; bag: string; collection: string; quests: string; map: string; mail: string; phone: string }
 /** A part of your screen a key brings in (DefaultIslandWorld shows it from that press until the tour ends). */
 export type HudPiece = "hud" | "chat" | "bag" | "collection" | "quests" | "map" | "mail" | "phone";
 /** The pieces that aren't on screen at all before their key, then show off above the card and fly to their place
@@ -20,8 +20,10 @@ export interface TourStep {
   id: string;
   /** What pressing it brings onto your screen (the wheels open only out in the world: none). */
   piece?: HudPiece;
-  /** The key to press (`KeyboardEvent.key`, lower case). */
+  /** The key to press (`KeyboardEvent.key`, lower case); none for a step that plays by itself (`auto`). */
   key: string;
+  /** No key: its piece comes in by itself, then the next key lights (the HUD, round 12). */
+  auto?: boolean;
   /** Held (the wheels, the HUD) rather than pressed. */
   hold: boolean;
   /** What it's for, in a word or two (David's v4 review: "less uncessary text"). */
@@ -35,7 +37,8 @@ export function tourSteps(k: TourKeys): TourStep[] {
   return [
     { id: "wheel", key: k.wheel, hold: true, title: "Tools" },
     { id: "emote", key: k.emote, hold: true, title: "Emotes" },
-    { id: "hud", piece: "hud", key: k.hud, hold: true, title: "At a glance" },
+    // Round 12 (David on H: "what does h do, is it even necessary"): no key, the HUD flies in by itself.
+    { id: "hud", piece: "hud", key: "", hold: false, auto: true, title: "At a glance" },
     { id: "chat", piece: "chat", key: "enter", hold: false, title: "Chat" },
     { id: "bag", piece: "bag", key: k.bag, hold: false, title: "Bag" },
     { id: "collection", piece: "collection", key: k.collection, hold: false, title: "Collection" },
@@ -55,7 +58,7 @@ export type TourInput = { type: "down" | "up"; key: string; repeat?: boolean; at
 export interface TourProgress { step: number; holdFrom: number | null }
 export function tourInput(p: TourProgress, steps: readonly TourStep[], e: TourInput): TourProgress {
   const step = steps[p.step];
-  if (!step || e.key.toLowerCase() !== step.key) return p;
+  if (!step || step.auto || e.key.toLowerCase() !== step.key) return p;
   if (e.type === "down") {
     if (e.repeat) return p;
     return step.hold ? { ...p, holdFrom: e.at } : { step: p.step + 1, holdFrom: null };

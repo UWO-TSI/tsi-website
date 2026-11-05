@@ -131,7 +131,7 @@ describe("the HQ visit with Alice (row 312)", () => {
 
   it("keeps to the lore: no Founder words written for David, no school words, no em dashes", () => {
     expect(FOUNDER_PLAQUE).toBeNull();
-    const tour = tourSteps({ wheel: "tab", emote: "g", hud: "h", bag: "i", collection: "b", quests: "j", map: "m", mail: "l", phone: "y" });
+    const tour = tourSteps({ wheel: "tab", emote: "g", bag: "i", collection: "b", quests: "j", map: "m", mail: "l", phone: "x" });
     const all = [...Object.values(WREN_LINES).flat(), ...Object.values(HQ_TRACKER), ...LORE_CARD.pages.flatMap(p => [p.title, p.text]),
       ...Object.values(FLY_CARDS).flatMap(c => [c.name, c.text]), ...Object.values(ID_CARD).flat(), ...CHECKIN_CARD.steps.filter(x => !x.includes("{host}")), CHECKIN_CARD.note,
       ...tour.map(t => t.title), ...Object.values(TOOL_LINES).flatMap(t => [t.given, t.done, ...t.offer, ...t.during])];

@@ -40,13 +40,11 @@
   --ui-scrim: rgb(64 52 36 / 0.3);
   --ui-shade: 114 92 78;
   /* The fishing reel's water (components/gui/flat/reel): the track, and its ripples and edge. */
-  /* The phone's screen in pixel art (bible UI 8d; components/gui/flat/pixel.tsx): the rendered glass shows through, so
-     these are the phone's own colours in every theme: deep green lines and type, cream, mint and its shade, star yellow. */
-  --ui-phone-ink: #2f6b4a;
-  --ui-phone-cream: #fbfdf2;
-  --ui-phone-mint: #b6e6c0;
-  --ui-phone-mint-deep: #7cc48c;
-  --ui-phone-star: #f6d44c;
+  /* The phone's screen (bible UI 8d; components/gui/flat/phone.tsx): today's UI on the backlit glass, its highlights
+     green (round 12, David: "current ui but green highlights"). */
+  --ui-phone-screen: #f1f6e6;
+  --ui-phone-glow: #3fb85a;
+  --ui-phone-glow-soft: #e4f4d6;
   --ui-water: #d9eef4;
   --ui-water-line: #9fcbdb;
   --ui-water-deep: #2f8aa6;

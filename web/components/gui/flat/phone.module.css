@@ -1,114 +1,13 @@
-/* The kit's phone (phone.tsx; design bible UI 8d): the rendered slider phone bottom right, its screen live HTML in pixel
-   art. It comes up with the spring (about 12% overshoot), the top half slides up to show the keypad with a small settle
-   and the star swings; putting it away slides the top back down and drops it. An open app tucks it down. Every size is
-   a whole number of pixels (--px, the world's pixel finish: phone.tsx lays the boxes out on that grid), and the pixel
-   art is scaled up without smoothing, so its pixels stay square at the island's size. */
-.phone {
-  /* The body's width on screen; the box is wider (the charm) and as tall as the open phone. It fits between the
-     screen's foot and the top right's HUD (the wallet's slot in the UI view ends about 380 px down), and the keypad's
-     plain foot below the keys hangs off the bottom edge, like a phone held up from below. Where the window is too short
-     for even the smallest phone, it sinks lower instead, so its top still clears the wallet. */
-  --phone-clear: 400px;
-  --phone-raw: calc((100dvh - var(--phone-clear)) / var(--phone-tall));
-  --phone-body: clamp(150px, var(--phone-raw), 220px);
-  --phone-sink: max(0px, (var(--phone-body) - var(--phone-raw)) * var(--phone-tall));
-  position: absolute; right: var(--hud-edge, 16px); z-index: 13; pointer-events: none;
-  bottom: round(calc(var(--hud-floor, 16px) - 0.2 * var(--phone-body) - var(--phone-sink)), 1px);
-  width: round(calc(var(--phone-body) * var(--phone-ratio)), var(--px));
-  font-family: var(--gui-font);
-  animation: phoneIn 0.42s cubic-bezier(0.34, 1.32, 0.64, 1) both; transition: translate 0.28s cubic-bezier(0.5, 0, 0.75, 0), opacity 0.2s ease;
-}
-.phone[data-state="closing"] { animation: phoneOut 0.22s cubic-bezier(0.5, 0, 0.75, 0) 0.16s forwards; }
-/* An app is open: the phone tucks down out of the way, and comes back up when the app closes. */
-.phone[data-away] { translate: 0 calc(100% + 40px); opacity: 0; pointer-events: none; transition: translate 0.24s cubic-bezier(0.5, 0, 0.75, 0), opacity 0.2s ease 0.04s; }
-.phone:not([data-away]) { transition: translate 0.42s cubic-bezier(0.34, 1.32, 0.64, 1), opacity 0.16s ease; }
-@keyframes phoneIn { from { translate: 0 calc(100% + 40px); rotate: 4deg; } }
-@keyframes phoneOut { to { translate: 0 calc(100% + 40px); rotate: 4deg; opacity: 0; } }
-
-.layer { position: absolute; pointer-events: auto; }
-.base { filter: drop-shadow(0 10px 16px rgb(var(--ui-shade) / 0.22)); }
-.top { filter: drop-shadow(0 5px 7px rgb(var(--ui-shade) / 0.2)); }
-.charm { pointer-events: none; animation: swing 1.1s ease-out 0.3s both; }
-/* The top half: up by the render's slide once the phone has come up, with a small settle; back down to put it away. */
-.slider { position: absolute; inset: 0; translate: var(--slide); animation: slideUp 0.36s cubic-bezier(0.34, 1.4, 0.64, 1) 0.26s both; }
-.phone[data-state="closing"] .slider { animation: slideDown 0.18s cubic-bezier(0.5, 0, 0.75, 0) forwards; }
-@keyframes slideUp { from { translate: 0 0; } }
-@keyframes slideDown { to { translate: 0 0; } }
-@keyframes swing { 18% { rotate: 12deg; } 40% { rotate: -7deg; } 62% { rotate: 3.5deg; } 82% { rotate: -1.2deg; } }
-
-/* The screen: on the rendered glass (its backlit green shows through), the pixel frame one pixel in from its edge, a
-   title pill on the frame's top line, the apps, and the home button on its bottom line. The frames are 9-slices of
-   pixel.tsx's sprites (--px-*), each slice a whole number of pixels. */
-.screen { position: absolute; pointer-events: auto; image-rendering: pixelated; color: var(--ui-phone-ink); }
-.screen::before {
-  content: ""; position: absolute; inset: var(--px); pointer-events: none;
-  border: 0 solid transparent; border-image: var(--px-frame) 7 / calc(7 * var(--px)) stretch;
-}
-.title {
-  position: absolute; top: 0; left: 50%; translate: -50% 0; display: flex;
-  height: calc(9 * var(--px)); padding: calc(2 * var(--px)) calc(4 * var(--px)); box-sizing: border-box; gap: calc(2 * var(--px));
-  border: 0 solid transparent; border-image: var(--px-pill) 4 fill / calc(4 * var(--px));
-}
-.title i { width: calc(5 * var(--px)); height: calc(5 * var(--px)); background: var(--px-clover) 0 0 / 100% 100%; }
-.title i + i { background-image: var(--px-heart); }
-.title i + i + i { background-image: var(--px-star); }
-
-/* The apps: square tiles, three across, the label under each. */
-.grid {
-  position: absolute; inset: calc(10 * var(--px)) calc(3 * var(--px)) calc(9 * var(--px)); display: grid;
-  grid-template-columns: repeat(3, calc(var(--t) * var(--px))); grid-auto-rows: calc((var(--t) + 7) * var(--px));
-  gap: calc(3 * var(--px)) calc(2 * var(--px)); justify-content: center; align-content: center;
-}
-.app { position: relative; display: grid; grid-template-rows: calc(var(--t) * var(--px)) auto; justify-items: center; align-content: start; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
-.tile {
-  position: relative; display: grid; place-items: center; width: calc(var(--t) * var(--px)); height: calc(var(--t) * var(--px)); box-sizing: border-box;
-  border: 0 solid transparent; border-image: var(--px-tile) 3 fill / calc(3 * var(--px));
-}
-/* Hovered, or picked with the keyboard: mint in a star-yellow ring, up a pixel; the keyboard's pick gets the hand. */
-.app:is(:hover, :focus-visible) .tile { border-image: var(--px-tileOn) 4 fill / calc(4 * var(--px)) / var(--px); translate: 0 calc(-1 * var(--px)); }
-.app:active .tile { translate: none; }
+/* The kit's phone (phone.tsx; design bible UI 8d): a box bottom right holding the live model's canvas, drawn at the
+   world's pixel finish, and the screen's invisible buttons, laid on the tilted glass by phone.tsx (a matrix3d from the
+   glass's projected corners), so a click, a hover and a tab land where the texture draws them. */
+.phone { position: absolute; z-index: 13; pointer-events: none; font-family: var(--gui-font); }
+.phone[data-state="open"]:not([data-away]) .hit, .phone[data-state="open"]:not([data-away]) .app { pointer-events: auto; }
+.stage { position: absolute !important; inset: 0; pointer-events: none !important; }
+/* The phone's face (the base and the top half): it takes the click, so a click on the phone never reaches the island. */
+.hit { position: absolute; left: 0; top: 0; width: 100px; height: 100px; transform-origin: 0 0; pointer-events: none; }
+.screen { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.app { position: absolute; padding: 0; border: 0; border-radius: 6px; background: none; cursor: pointer; pointer-events: none; }
 .app:focus-visible { outline: none; }
-.app:focus-visible .tile::before {
-  content: ""; position: absolute; z-index: 2; left: calc(-7 * var(--px)); top: calc((var(--t) - 7) * var(--px) / 2);
-  width: calc(9 * var(--px)); height: calc(7 * var(--px)); background: var(--px-hand) 0 0 / 100% 100%;
-  animation: point 0.7s steps(1) infinite;
-}
-@keyframes point { 50% { translate: calc(-1 * var(--px)) 0; } }
-.tile kbd, .home kbd {
-  display: inline-grid; place-items: center; box-sizing: border-box; min-width: calc(7 * var(--px)); height: calc(7 * var(--px)); padding: 0 calc(1.5 * var(--px));
-  border: 0 solid transparent; border-image: var(--px-key) 2 fill / calc(2 * var(--px));
-  color: var(--ui-phone-cream); font: 800 calc(4.5 * var(--px))/1 var(--gui-font);
-}
-.tile kbd { position: absolute; right: calc(-3 * var(--px)); bottom: calc(-3 * var(--px)); }
-.badge { position: absolute; top: calc(-3 * var(--px)); right: calc(-3 * var(--px)); }
-.label {
-  margin-top: var(--px); font-size: calc(var(--t) * var(--px) * 0.22 * var(--tsi-text-scale, 1)); font-weight: 800; line-height: calc(6 * var(--px));
-  white-space: nowrap;
-}
-
-/* The home button on the frame's bottom line: a bar (and its key) that puts the phone away. */
-.home {
-  position: absolute; bottom: var(--px); left: 50%; translate: -50% 0; display: flex; align-items: center; gap: calc(2 * var(--px));
-  height: calc(7 * var(--px)); padding: 0 calc(3 * var(--px)); box-sizing: border-box; background: none; color: inherit; cursor: pointer;
-  border: 0 solid transparent; border-image: var(--px-button) 3 fill / calc(3 * var(--px));
-}
-.home:hover { border-image-source: var(--px-buttonOn); }
-.home:focus-visible { outline: none; border-image-source: var(--px-buttonOn); }
-.home i { width: calc(12 * var(--px)); height: calc(2 * var(--px)); background: var(--ui-phone-ink); }
-.home kbd { min-width: calc(5 * var(--px)); height: calc(5 * var(--px)); padding: 0 var(--px); font-size: calc(3.5 * var(--px)); }
-
-/* A phone screen: the phone takes more of it, with no keys on the tiles. */
-@media (max-width: 700px) {
-  .phone { --phone-clear: 300px; --phone-body: clamp(150px, min(calc((100vw - 2 * var(--hud-edge, 16px)) / var(--phone-ratio)), var(--phone-raw)), 280px); }
-  .tile kbd { display: none; }
-}
-/* Reduced motion: it appears open where it sits, fading in and out; no rise, no slide, no swing, no bob. */
-@media (prefers-reduced-motion: reduce) {
-  .phone { animation: phoneFade 0.16s ease both; }
-  .phone[data-state="closing"] { animation: phoneFade 0.16s ease reverse forwards; }
-  .slider, .phone[data-state="closing"] .slider, .charm, .app:focus-visible .tile::before { animation: none; }
-  .phone, .phone[data-away], .phone:not([data-away]) { transition: opacity 0.16s ease; }
-  .phone[data-away] { translate: none; }
-  .app:is(:hover, :focus-visible) .tile { translate: none; }
-}
-@keyframes phoneFade { from { opacity: 0; } }
+/* The icon is drawn into the texture; here it only lends its drawing and tone. */
+.icon { position: absolute; inset: 0; opacity: 0; display: grid; place-items: center; }

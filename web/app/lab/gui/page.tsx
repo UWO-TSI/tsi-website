@@ -28,7 +28,7 @@ import { RodRadar, TackleRadar } from "@/components/economy/RodGear";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import { CircleDot, Waves, Worm } from "lucide-react";
 import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
-import { ActionBar, ActionIcon, BigMoment, CallTag, CardOverlay, DarkButton, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, FlyHome, KeyBoard, Keyword, KeywordLine, PaperField, Phone, PixelIcon, PrintedCard, ProgressCard, QuestCheck, RankBadge, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot, type PeekKind, type PhoneApp } from "@/components/gui/flat";
+import { ActionBar, ActionIcon, BigMoment, CallTag, CardOverlay, DarkButton, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, FlyHome, KeyBoard, Keyword, KeywordIcon, KeywordLine, PaperField, Phone, PrintedCard, ProgressCard, QuestCheck, RankBadge, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot, type PeekKind, type PhoneApp } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
 import { BoardBody } from "@/components/game/volleyball/BoardSheet";
 import { DEFAULT_LOOK } from "@/lib/game/character/look";
@@ -96,20 +96,20 @@ function KeyBoardShow() {
     </Spotlight>
   </>;
 }
-/** The phone (design bible UI, the phone): it slides up bottom right, an app opens (the phone tucks down while it's
- *  open), the app closes and the phone comes back, then it's put away. */
+/** The phone (design bible UI, the phone): it pulls out bottom right and flips open, an app opens (the phone tucks down
+ *  while it's open), the app closes and the phone comes back, then it's put away. */
 function PhoneShow() {
   const [t, setT] = useState(0);
   useEffect(() => { const i = window.setInterval(() => setT(v => (v + 1) % 10), 700); return () => window.clearInterval(i); }, []);
   const apps: PhoneApp[] = [
-    { id: "settings", label: "Settings", icon: <PixelIcon kind="settings" />, onOpen: () => {} },
-    { id: "quests", label: "Quests", icon: <PixelIcon kind="quest" />, keyLabel: "J", onOpen: () => {} },
-    { id: "bag", label: "Bag", icon: <PixelIcon kind="bag" />, keyLabel: "I", onOpen: () => {} },
-    { id: "collection", label: "Collection", icon: <PixelIcon kind="collection" />, keyLabel: "B", onOpen: () => {} },
-    { id: "friends", label: "Friends", icon: <PixelIcon kind="friend" />, badge: 1, onOpen: () => {} },
-    { id: "mail", label: "Mail", icon: <PixelIcon kind="mail" />, keyLabel: "L", badge: 2, onOpen: () => {} },
+    { id: "settings", label: "Settings", icon: <KeywordIcon kind="settings" />, onOpen: () => {} },
+    { id: "quests", label: "Quests", icon: <KeywordIcon kind="quest" />, keyLabel: "J", onOpen: () => {} },
+    { id: "bag", label: "Bag", icon: <KeywordIcon kind="bag" />, keyLabel: "I", onOpen: () => {} },
+    { id: "collection", label: "Collection", icon: <KeywordIcon kind="collection" />, keyLabel: "B", onOpen: () => {} },
+    { id: "friends", label: "Friends", icon: <KeywordIcon kind="friend" />, badge: 1, onOpen: () => {} },
+    { id: "mail", label: "Mail", icon: <KeywordIcon kind="mail" />, keyLabel: "L", badge: 2, onOpen: () => {} },
   ];
-  return <Phone open={t < 9} away={t >= 4 && t < 7} apps={apps} hint={<kbd>Y</kbd>} onClose={() => {}} />;
+  return <Phone open={t < 9} away={t >= 4 && t < 7} apps={apps} hint="X" onClose={() => {}} />;
 }
 /** Every peek (TourPeek in the kit's KeyPeek), one after another: each pops in, plays its loop, then fades as if the key
  *  were let go. The HUD and the minimap have none: the real pieces fly in from above the card (FlyHome, above). */

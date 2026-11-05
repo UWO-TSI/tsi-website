@@ -7,7 +7,7 @@ import { useProgress } from "@react-three/drei";
 import * as THREE from "three";
 import { Smartphone } from "lucide-react";
 import { Toggle } from "@/components/gui";
-import { DarkButton, Phone, PixelIcon, type PhoneApp } from "@/components/gui/flat";
+import { DarkButton, KeywordIcon, Phone, inCorner, type PhoneApp } from "@/components/gui/flat";
 import GridWorld from "./grid/GridWorld";
 import GridOcean from "./grid/GridOcean";
 import Seabed from "./water/Seabed";
@@ -1012,7 +1012,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     wheel: keyName(wheelKeys.wheel), bag: keyName(identity.settings.key_bindings.openJournal), touch }), [moveKeys, wheelKeys.wheel, identity.settings.key_bindings.openJournal, touch]);
   // Alice's UI tour names your own keys too (t-hq).
   const binds = identity.settings.key_bindings;
-  const tourKeys = useMemo(() => ({ wheel: wheelKeys.wheel, emote: wheelKeys.emote, hud: wheelKeys.hud, bag: binds.openBag, collection: binds.openJournal,
+  const tourKeys = useMemo(() => ({ wheel: wheelKeys.wheel, emote: wheelKeys.emote, bag: binds.openBag, collection: binds.openJournal,
     quests: "j", map: binds.openMap, mail: binds.openMail, phone: binds.openPhone }), [wheelKeys, binds]);
   const armed = useCombatValue(() => combat.rt.player.armed);
   const weaponList = useCombatValue(() => combat.rt.player.owned.join(","));
@@ -1339,10 +1339,12 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // the key flies them in (KeyboardTour's FlyHome).
   const tourWaits = (piece: HudPiece) => touring && !tourShown.has(piece);
   const full = isFullHud({ always: alwaysFullHud, keyHeld: hudKey, uiView, cinematic: hudCinematic }) || tourShown.has("hud");
-  // The phone (round 9; design bible UI, the phone): bottom right, its apps the menus. Y (the account's binding) brings
-  // it up over play and puts it away; the UI view (Esc 1, or the touch screen's phone button) brings it with the fuller
-  // HUD. An app opens its sheet and the phone tucks away until the sheet closes back to it.
+  // The phone (round 9; design bible UI, the phone): bottom right, its apps the menus. X (the account's binding; round
+  // 12) or the cursor touching the window's bottom-right corner brings it up over play and puts it away; the UI view
+  // (Esc 1, or the touch screen's phone button) brings it with the fuller HUD. An app opens its sheet and the phone tucks
+  // away until the sheet closes back to it.
   const [phoneUp, setPhoneUp] = useState(false);
+  const togglePhone = useRef(() => {});
   // The Friends app's count: friend requests waiting.
   const friends = useFriends();
   useEffect(() => { holdCursor("phone", phoneUp); }, [phoneUp]);
@@ -1350,16 +1352,33 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const netSheet = useNetSheet();
   const appOpen = !!sheet || bagOpen || netSheet !== null || mapOpen;
   const phoneApps = useMemo<PhoneApp[]>(() => [
-    { id: "settings", label: "Settings", icon: <PixelIcon kind="settings" />, onOpen: () => setSheet("settings") },
-    { id: "quests", label: "Quests", icon: <PixelIcon kind="quest" />, keyLabel: touch ? undefined : "J", onOpen: () => setSheet("journal") },
-    { id: "bag", label: "Bag", icon: <PixelIcon kind="bag" />, keyLabel: touch ? undefined : keyName(binds.openBag), onOpen: () => setSheet("bag") },
-    { id: "collection", label: "Collection", icon: <PixelIcon kind="collection" />, keyLabel: touch ? undefined : keyName(binds.openJournal), onOpen: () => setBagOpen(true) },
-    { id: "friends", label: "Friends", icon: <PixelIcon kind="friend" />, badge: friends.asking, onOpen: () => setNetSheet("friends") },
-    { id: "mail", label: "Mail", icon: <PixelIcon kind="mail" />, keyLabel: touch ? undefined : keyName(binds.openMail), badge: progression.unreadLetters, onOpen: () => setSheet("letters") },
+    { id: "settings", label: "Settings", icon: <KeywordIcon kind="settings" />, onOpen: () => setSheet("settings") },
+    { id: "quests", label: "Quests", icon: <KeywordIcon kind="quest" />, keyLabel: touch ? undefined : "J", onOpen: () => setSheet("journal") },
+    { id: "bag", label: "Bag", icon: <KeywordIcon kind="bag" />, keyLabel: touch ? undefined : keyName(binds.openBag), onOpen: () => setSheet("bag") },
+    { id: "collection", label: "Collection", icon: <KeywordIcon kind="collection" />, keyLabel: touch ? undefined : keyName(binds.openJournal), onOpen: () => setBagOpen(true) },
+    { id: "friends", label: "Friends", icon: <KeywordIcon kind="friend" />, badge: friends.asking, onOpen: () => setNetSheet("friends") },
+    { id: "mail", label: "Mail", icon: <KeywordIcon kind="mail" />, keyLabel: touch ? undefined : keyName(binds.openMail), badge: progression.unreadLetters, onOpen: () => setSheet("letters") },
   ], [touch, binds, friends.asking, progression.unreadLetters]);
   // Alice's tour brings the phone in an app at a time (Bag, Collection, Quests, Mail), then whole with its own key.
   const tourApps = useMemo(() => (tourShown.has("phone") ? phoneApps : phoneApps.filter(a => tourShown.has(a.id as HudPiece))), [tourShown, phoneApps]);
-  const phoneOn = touring ? tourApps.length > 0 : (uiView || phoneUp) && !hudCinematic;
+  // At the tour's phone step it's put away, so its key is what brings it up (round 12, David: "phone is one of the most
+  // important thing so like make sure the button for it is obvious").
+  const [tourStep, setTourStep] = useState("");
+  const phoneOn = touring ? tourApps.length > 0 && (tourStep !== "phone" || tourShown.has("phone")) : (uiView || phoneUp) && !hudCinematic;
+  useEffect(() => { togglePhone.current = () => { if (welcoming || touring || hudCinematic) return; if (layer) setLayer(null); setPhoneUp(up => !up && !layer); }; });
+  // The corner (round 10, David: "if your mouse hits the bottom right of the screen without clicking it will pop up and
+  // hiting it again retracts"): coming into it toggles the phone; it has to leave before it toggles again.
+  useEffect(() => {
+    let inside = false;
+    const move = (e: PointerEvent) => {
+      if (e.pointerType !== "mouse" || document.pointerLockElement) return;
+      const hit = inCorner(e.clientX, e.clientY, window.innerWidth, window.innerHeight);
+      if (hit && !inside) togglePhone.current();
+      inside = hit;
+    };
+    window.addEventListener("pointermove", move);
+    return () => window.removeEventListener("pointermove", move);
+  }, []);
   // On a phone the menu button opens the UI view; the heading and touch hint flash (world audit item 11).
   const compact = compactTouchHud({ touch, always: alwaysFullHud });
   // Mouse-look ending on its own (Esc, the window losing focus) opens the UI view; capturing again closes the layers.
@@ -1425,8 +1444,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       if (menu === "openWallet") setSheet("wallet");
       if (!menu && event.key.toLowerCase() === "j") setSheet("journal");
       if (menu === "openMail") setSheet("letters");
-      // Y: the phone up over play, or away again (with the UI view, if that brought it).
-      if (menu === "openPhone") { if (layer) setLayer(null); setPhoneUp(up => !up && !layer); }
+      // X: the phone up over play, or away again (with the UI view, if that brought it). Decorating, X puts the piece
+      // away; in the ruins an ability slot on the key wins.
+      if (menu === "openPhone" && !decor.decorating && !(site === "ruins" && Object.values(abilityKeys).includes(event.key.toLowerCase()))) togglePhone.current();
       // The Esc that ended mouse-look is the browser's (it opened the UI view); a later one closes what's open, then
       // steps through the Esc layers, indoors too (playtest round 1: a room is left by its door; lib/game/sceneGate.ts).
       if (event.key === "Escape") {
@@ -1578,8 +1598,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         <BagButton full={tourShown.has("bag")} keyLabel={keyName(identity.settings.key_bindings.openBag)} onOpen={() => setSheet("bag")} />
       </div>
       {/* The phone (round 9): bottom right, its apps the menus; their sheets close back to it. */}
-      <Phone open={phoneOn} apps={touring ? tourApps : phoneApps} away={appOpen && !touring} pixelated={graphics.pixelated} onClose={() => { setPhoneUp(false); setLayer(null); }}
-        hint={touch ? undefined : <kbd>{keyName(binds.openPhone)}</kbd>} />
+      <Phone open={phoneOn} apps={touring ? tourApps : phoneApps} away={appOpen && !touring} pixelated={graphics.pixelated} touch={touch} onClose={() => { setPhoneUp(false); setLayer(null); }}
+        hint={touch ? undefined : keyName(binds.openPhone)} />
       {/* Esc 2: the system menu. Resume asks for the mouse again; Escape (or ✕) goes back to the game. */}
       <SystemMenu open={layer === "system" && !hudCinematic} signedIn={identity.signedIn} name={identity.display_name} onClose={() => setLayer(null)}
         onResume={() => { setLayer(null); requestResume(); }} onSettings={() => setSheet("settings")} />
@@ -1599,7 +1619,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <CheckInCard open={hq.card === "checkin"} onDone={() => hqEvent("checkin")} />
       <PlaqueCard open={sheet === "plaque"} onClose={() => setSheet(null)} />
       <LoreOverlay open={hq.card === "lore"} onDone={() => hqEvent("lore")} />
-      <KeyboardTour open={touring} keys={tourKeys} onShow={showPiece} onDone={() => hqEvent("tour")} />
+      <KeyboardTour open={touring} keys={tourKeys} onShow={showPiece} onStep={setTourStep} onDone={() => hqEvent("tour")} />
       <ShopkeeperChoice open={sheet === "shopkeeper"} onClose={() => setSheet(null)} onChoose={section => {
         setShopSection(section);
         if (section === "merch") window.dispatchEvent(new CustomEvent("tsi:shopkeeper-say", { detail: { line: MERCH_LINE, clip: "Chat" } }));

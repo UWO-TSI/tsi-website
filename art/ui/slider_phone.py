@@ -1,35 +1,39 @@
-"""The in-game phone as a 3D slider phone (tutorial round 10, David 2026-11-04: "phone model, make it 3d blender with a
-slide up animation"; his reference specs/references/phone/, untracked). Cream-white with a mint tint, rounded and chunky:
-the top half carries the screen, three heart keys, a round d-pad with teardrop soft keys, and clover, flower, heart and
-star marks (our own motifs: no character stickers); the bottom half is a 4 by 3 keypad of glowing pill keys, hidden
-until the top slides up; a braided strap with a jelly star charm hangs off the left side.
+"""The in-game phone, a 3D slider phone (tutorial round 10, David 2026-11-04: "phone model, make it 3d blender with a
+slide up animation"; his reference specs/references/phone/, untracked). Round 12 remodel (David on round 10: "bigger
+longer screen, the dial buttons are flatter take up less of the phone, the buttons are clear and not neon green, the
+number use a different font and flatter, the screen is bigger and longer, the things on the phone are stickers, model
+the phone without stickers first, the color isnt right, the charm is added on and customizable"):
 
-The game shows it as three pre-rendered layers (the body with the keypad, the sliding top, the charm), moved in CSS,
-with the screen as live HTML laid over the rendered glass (design bible UI 8d). One orthographic camera, so a flat
-plane in the model is an affine map in the picture; untipped, the glass is an upright rectangle the HTML screen sits on.
+- pearl white with clear lime edges, no marks or stickers;
+- the top half mostly screen (a long glass, 86% of its width), with small flat clear keys under it: three hearts, a
+  round d-pad with its OK, teardrop soft keys and two round keys;
+- the bottom half a 4 by 3 keypad of flat clear pill keys, the digits printed flat in Nunito (the game's font);
+- the strap and its jelly star are their own model, hung on the top half's `charm_mount`, so a charm can be swapped.
 
-  Blender -b --factory-startup -P art/ui/slider_phone.py -- layers <dir>      the three layers + meta.json (closed)
-  Blender -b --factory-startup -P art/ui/slider_phone.py -- turnaround <dir>  front, side, back, three-quarter; closed, open
-Then `python3 art/ui/phone_layers.py <dir>` crops the layers to WebP in web/public and writes phoneArt.ts.
-Units: the phone is 5 wide; front faces -Y, up is +Z.
+The game draws it live (components/gui/flat/phone.tsx): the top half slides on the base, and the screen's UI is a
+texture on the `screen` mesh (UVs 0..1 across the glass), so the UI sits in the phone's plane.
+
+  Blender -b --factory-startup -P art/ui/slider_phone.py -- glb <dir>          phone.glb and charm-star.glb
+  Blender -b --factory-startup -P art/ui/slider_phone.py -- turnaround <dir>   front, side, back, three-quarter; closed, open
+Then copy the GLBs into web/public/assets/ui/phone/ and run `cd web && node scripts/pack-glbs.mjs <those files>`.
+Units: the phone is 5 wide; front faces -Y, up is +Z (glTF: front +Z, up +Y).
 """
-import bpy, bmesh, json, math, sys
+import bpy, bmesh, math, os, sys
 from mathutils import Matrix, Vector
 
-ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else ["layers", "/tmp/phone"]
+ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else ["glb", "/tmp/phone"]
 MODE, OUT = ARGS[0], ARGS[1]
-SAMPLES = int(ARGS[2]) if len(ARGS) > 2 else 96   # a quick look: pass 16
+SAMPLES = int(ARGS[2]) if len(ARGS) > 2 else 64
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+FONT = os.path.join(ROOT, "web/public/fonts/nunito/Nunito-Variable.ttf")
 
-W, H, R = 5.0, 9.4, 1.0          # each half: width, height, plan corner
-SLIDE = 4.2                       # how far the top half slides up
-BASE_Y = (0.0, 0.8)               # the body (bottom half) from its front face back
-TOP_Y = (-0.74, -0.14)            # the top half's shell; its mint back plate fills -0.14..0
-# The game's view: turned to show the right side, not tipped (round 11): with no tilt the glass stays an upright
-# rectangle in the picture, so the screen's pixel UI lays over it unskewed, its pixels square on the world's grid.
-TURN, TILT = math.radians(-20), 0.0
-PPU = 150                         # pixels per unit in the layers (the phone 750 px wide: sharp on a phone screen)
-SCREEN = (4.0, 4.4, 0.38, 1.7)    # the glass: width, height, corner, centre height on the top half
-GLASS_Y = -0.76
+W, H, R = 5.0, 10.2, 0.9          # each half: width, height, plan corner
+SLIDE = 4.8                       # how far the top half slides up
+BASE_Y = (-0.1, 0.72)             # the body (bottom half) from its front face back
+TOP_Y = (-0.62, -0.12)            # the top half's shell; its clear back plate fills -0.12..-0.1
+SCREEN = (4.3, 6.2, 0.32, 1.5)    # the glass: width, height, corner, centre height on the top half
+GLASS_Y = TOP_Y[0] - 0.012        # just proud of the face, inside its clear frame
+F = TOP_Y[0]                      # the top half's face
 
 # ---------------------------------------------------------------- scene
 for o in list(bpy.data.objects): bpy.data.objects.remove(o, do_unlink=True)
@@ -39,56 +43,39 @@ def srgb(h):
     c = [int(h[i:i + 2], 16) / 255 for i in (1, 3, 5)]
     return tuple((x / 12.92 if x <= 0.04045 else ((x + 0.055) / 1.055) ** 2.4) for x in c) + (1.0,)
 
-def material(name, color, rough=0.4, metal=0.0, trans=0.0, emit=None, emit_k=0.0, coat=0.0, speck=False, bump=0.0):
+def material(name, color, rough=0.4, metal=0.0, alpha=1.0, emit=None, emit_k=0.0):
     m = bpy.data.materials.new(name); m.use_nodes = True
-    nt = m.node_tree; b = next(n for n in nt.nodes if n.type == "BSDF_PRINCIPLED")
+    b = next(n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
     b.inputs["Base Color"].default_value = srgb(color)
     b.inputs["Roughness"].default_value = rough
     b.inputs["Metallic"].default_value = metal
-    b.inputs["Transmission Weight"].default_value = trans
-    b.inputs["Coat Weight"].default_value = coat
+    b.inputs["Alpha"].default_value = alpha
+    if alpha < 1:
+        m.surface_render_method = "BLENDED"
     if emit:
         b.inputs["Emission Color"].default_value = srgb(emit); b.inputs["Emission Strength"].default_value = emit_k
-    if speck or bump:  # the subtle texture: a fine grain in the plastic, and a few soft specks (the reference's glitter)
-        tc = nt.nodes.new("ShaderNodeTexCoord"); nz = nt.nodes.new("ShaderNodeTexNoise")
-        nz.inputs["Scale"].default_value = 55.0; nz.inputs["Detail"].default_value = 6.0
-        nt.links.new(tc.outputs["Object"], nz.inputs["Vector"])
-        if bump:
-            bp = nt.nodes.new("ShaderNodeBump"); bp.inputs["Strength"].default_value = bump; bp.inputs["Distance"].default_value = 0.02
-            nt.links.new(nz.outputs["Fac"], bp.inputs["Height"]); nt.links.new(bp.outputs["Normal"], b.inputs["Normal"])
-        if speck:
-            v = nt.nodes.new("ShaderNodeTexVoronoi"); v.inputs["Scale"].default_value = 26.0
-            nt.links.new(tc.outputs["Object"], v.inputs["Vector"])
-            ramp = nt.nodes.new("ShaderNodeValToRGB"); ramp.color_ramp.elements[0].position = 0.0; ramp.color_ramp.elements[1].position = 0.06
-            ramp.color_ramp.elements[0].color = (0.82, 0.9, 0.82, 1); ramp.color_ramp.elements[1].color = (1, 1, 1, 1)
-            mix = nt.nodes.new("ShaderNodeMix"); mix.data_type = "RGBA"; mix.blend_type = "MULTIPLY"; mix.inputs["Factor"].default_value = 1.0
-            nt.links.new(v.outputs["Distance"], ramp.inputs["Fac"])
-            mix.inputs[6].default_value = srgb(color); nt.links.new(ramp.outputs["Color"], mix.inputs[7])
-            nt.links.new(mix.outputs[2], b.inputs["Base Color"])
     return m
 
+# Plain colours with the light response of what they are (lane rules: plastic a soft gloss, clear plastic glossy and
+# see-through, metal with a sheen). The clear keys are frosted, not glowing (David: "clear and not neon").
 M = {
-    "body": material("phone_body", "#f3f5e8", rough=0.38, coat=0.25, bump=0.06),
-    "body_low": material("phone_body_speck", "#f0f3e4", rough=0.42, coat=0.2, speck=True, bump=0.06),
-    "mint": material("phone_mint", "#b5e6c0", rough=0.3, trans=0.25, coat=0.4),
-    "jelly": material("phone_jelly", "#9fe0a2", rough=0.12, trans=0.55, emit="#c9f4c2", emit_k=0.35, coat=0.6),
-    "glass": material("phone_glass", "#bfe6a8", rough=0.25, emit="#b9e89f", emit_k=0.35),
-    "key": material("phone_key", "#c8ecb8", rough=0.28, trans=0.3, emit="#78d860", emit_k=0.55, coat=0.5),
-    "digit": material("phone_digit", "#3f9a48", rough=0.5),
-    "print": material("phone_print", "#7ccb82", rough=0.35, coat=0.3),
-    "clover": material("phone_clover", "#5fb868", rough=0.35, coat=0.3),
-    "star": material("phone_star", "#f2d35c", rough=0.3, coat=0.4),
-    "strap": material("phone_strap", "#59b84a", rough=0.55),
+    "pearl": material("phone_pearl", "#f3f5f1", rough=0.34),
+    "plate": material("phone_plate", "#e9eee6", rough=0.4),
+    "clear": material("phone_clear", "#9ede84", rough=0.12, alpha=0.62),
+    "key": material("phone_key", "#e4f4dc", rough=0.16, alpha=0.78),
+    "digit": material("phone_digit", "#2f6b3c", rough=0.5),
+    "screen": material("phone_screen", "#e8f5e2", rough=0.3, emit="#e8f5e2", emit_k=0.6),
+    "lens": material("phone_lens", "#2b3a33", rough=0.1),
     "silver": material("phone_silver", "#d6dadf", rough=0.22, metal=1.0),
-    "charm": material("phone_charm", "#b4f03a", rough=0.06, trans=0.85, emit="#c8f55a", emit_k=0.3, coat=1.0),
-    "lens": material("phone_lens", "#2b3a33", rough=0.1, coat=1.0),
+    "strap": material("phone_strap", "#4fae45", rough=0.6),
+    "charm": material("phone_charm", "#b6ef3c", rough=0.06, alpha=0.82, emit="#c8f55a", emit_k=0.25),
 }
 
 def coll(name):
     c = bpy.data.collections.new(name); scene.collection.children.link(c); return c
 C_BASE, C_TOP, C_CHARM = coll("Base"), coll("Top"), coll("Charm")
 pivot = bpy.data.objects.new("phone", None); scene.collection.objects.link(pivot)
-top_root = bpy.data.objects.new("top_half", None); C_TOP.objects.link(top_root); top_root.parent = pivot
+top_root = bpy.data.objects.new("top", None); C_TOP.objects.link(top_root); top_root.parent = pivot
 
 # ---------------------------------------------------------------- shapes (outlines in the XZ plane)
 def rrect(w, h, r, seg=12, cx=0.0, cz=0.0):
@@ -100,10 +87,7 @@ def rrect(w, h, r, seg=12, cx=0.0, cz=0.0):
             if not pts or math.dist(p, pts[-1]) > 1e-5: pts.append(p)  # a pill or a circle: the arcs meet, no zero edge
     return pts if math.dist(pts[0], pts[-1]) > 1e-5 else pts[:-1]
 
-def polar(f, n=96, s=1.0, cx=0.0, cz=0.0, rot=0.0):
-    return [(cx + s * f(t) * math.cos(t + rot), cz + s * f(t) * math.sin(t + rot)) for t in (math.tau * i / n for i in range(n))]
-
-def heart(s, cx, cz, n=72):
+def heart(s, cx, cz, n=40):
     pts = []
     for i in range(n):
         t = math.tau * i / n
@@ -111,19 +95,13 @@ def heart(s, cx, cz, n=72):
         pts.append((cx + s * x / 17, cz + s * (z + 2) / 17))
     return pts[::-1]
 
-def clover(s, cx, cz):  # four heart-shaped leaves meeting at the middle
-    def f(t):
-        u = (t % (math.pi / 2)) - math.pi / 4
-        return 0.12 + 0.88 * abs(math.sin(2 * t)) ** 0.28 * (1 - 0.2 * math.exp(-(u / 0.13) ** 2))
-    return polar(f, 160, s, cx, cz, math.pi / 4)
-
-def flower(s, cx, cz): return polar(lambda t: 0.5 + 0.5 * abs(math.cos(2.5 * t)) ** 0.45, 150, s, cx, cz, math.pi / 2)
 def star(s, cx, cz, rot=math.pi / 2, inner=0.52):
     return [(cx + s * (1 if i % 2 == 0 else inner) * math.cos(rot + math.pi * i / 5), cz + s * (1 if i % 2 == 0 else inner) * math.sin(rot + math.pi * i / 5)) for i in range(10)]
+
 def teardrop(s, cx, cz, rot):  # round at one end, a soft point at the other
     pts = []
-    for i in range(80):
-        t = math.tau * i / 80
+    for i in range(48):
+        t = math.tau * i / 48
         x, z = 0.66 * math.sin(t) * math.sin(t / 2) ** 0.9, -math.cos(t)
         c, sn = math.cos(rot), math.sin(rot)
         pts.append((cx + s * (x * c - z * sn), cz + s * (x * sn + z * c)))
@@ -159,161 +137,188 @@ def prism(name, outline, y0, y1, mat, bevel=0.0, segs=4, hole=None, col=C_TOP, p
         wn = ob_.modifiers.new("normals", "WEIGHTED_NORMAL"); wn.keep_sharp = True  # flat caps, no seams across the fans
     return ob_
 
-def mark(name, pts, y, h, mat, col=C_TOP, bevel=0.035): return prism(name, pts, y - h, y + 0.02, mat, bevel, 3, col=col)
+def flat_key(name, outline, mat, proud=0.035, col=C_TOP, face=F):
+    """A flat key: a thin plate a little proud of the face, its edge softly rounded (David: "flatter")."""
+    return prism(name, outline, face - proud, face + 0.02, mat, 0.014, 2, col=col)
 
 # ---------------------------------------------------------------- the body (bottom half) and its keypad
-prism("body", rrect(W, H, R), BASE_Y[0], BASE_Y[1], M["body_low"], 0.26, 6, col=C_BASE)
-KX, KZ = (-1.45, 0.0, 1.45), (-1.05, -1.85, -2.65, -3.45)
+prism("body", rrect(W, H, R), BASE_Y[0], BASE_Y[1], M["pearl"], 0.24, 6, col=C_BASE)
+prism("key_plate", rrect(W - 0.5, 4.4, 0.45, 12, 0, -2.75), BASE_Y[0] - 0.012, BASE_Y[0] + 0.02, M["plate"], 0.01, 2, col=C_BASE)
+font = bpy.data.fonts.load(FONT)
+KX, KZ = (-1.45, 0.0, 1.45), (-1.18, -2.06, -2.94, -3.82)
 for r, z in enumerate(KZ):
     for c, x in enumerate(KX):
-        prism(f"key_{r}{c}", rrect(1.2, 0.56, 0.28, 10, x, z), -0.12, 0.02, M["key"], 0.05, 3, col=C_BASE)
-        cu = bpy.data.curves.new(f"digit_{r}{c}", "FONT"); cu.body = "123456789*0#"[r * 3 + c]
-        cu.align_x, cu.align_y, cu.size, cu.extrude = "CENTER", "CENTER", 0.36, 0.012
+        flat_key(f"key_{r}{c}", rrect(1.24, 0.6, 0.3, 10, x, z), M["key"], 0.03, C_BASE, BASE_Y[0] - 0.012)
+        cu = bpy.data.curves.new(f"digit_{r}{c}", "FONT"); cu.body = "123456789*0#"[r * 3 + c]; cu.font = font; cu.resolution_u = 4
+        cu.align_x, cu.align_y, cu.size, cu.extrude, cu.offset = "CENTER", "CENTER", 0.4, 0.0, 0.022
         t = bpy.data.objects.new(cu.name, cu); C_BASE.objects.link(t); t.parent = pivot
-        t.location = (x, -0.13, z); t.rotation_euler = (math.radians(90), 0, 0); cu.materials.append(M["digit"])
-mark("body_clover", clover(0.26, 0, -4.18), 0.0, 0.03, M["clover"], C_BASE)
-mark("mic", rrect(0.16, 0.16, 0.08, 6, 1.95, -4.2), 0.0, 0.01, M["lens"], C_BASE)
-# the back: a camera ring and a clover
-prism("lens_ring", rrect(1.0, 1.0, 0.5, 16, 0, 3.0), BASE_Y[1] - 0.02, BASE_Y[1] + 0.08, M["mint"], 0.03, 3, hole=rrect(0.64, 0.64, 0.32, 16, 0, 3.0), col=C_BASE)
-prism("lens", rrect(0.64, 0.64, 0.32, 16, 0, 3.0), BASE_Y[1] - 0.01, BASE_Y[1] + 0.05, M["lens"], 0.02, 2, col=C_BASE)
-prism("back_clover", clover(0.7, 0, 0.6), BASE_Y[1] - 0.02, BASE_Y[1] + 0.04, M["clover"], 0.02, 2, col=C_BASE)
+        t.location = (x, BASE_Y[0] - 0.012 - 0.036, z - (0.02 if cu.body == "*" else 0)); t.rotation_euler = (math.radians(90), 0, 0); cu.materials.append(M["digit"])
+prism("mic", rrect(0.14, 0.14, 0.07, 6, 0, -4.55), BASE_Y[0] - 0.005, BASE_Y[0] + 0.02, M["lens"], 0, col=C_BASE)
+# the back: a camera ring and its lens
+prism("lens_ring", rrect(1.0, 1.0, 0.5, 16, 0, 3.0), BASE_Y[1] - 0.02, BASE_Y[1] + 0.06, M["clear"], 0.02, 2, hole=rrect(0.64, 0.64, 0.32, 16, 0, 3.0), col=C_BASE)
+prism("lens", rrect(0.64, 0.64, 0.32, 16, 0, 3.0), BASE_Y[1] - 0.01, BASE_Y[1] + 0.04, M["lens"], 0.015, 2, col=C_BASE)
 
 # ---------------------------------------------------------------- the top half
-prism("top_shell", rrect(W, H, R), TOP_Y[0], TOP_Y[1], M["body"], 0.26, 6)
-prism("top_plate", rrect(W - 0.2, H - 0.2, R - 0.1), TOP_Y[1] - 0.02, 0.0, M["mint"], 0.05, 3)
+prism("top_shell", rrect(W, H, R), TOP_Y[0], TOP_Y[1], M["pearl"], 0.22, 6)
+# the clear lime edge all round (the reference's see-through frame), and its back plate
+prism("top_rim", rrect(W + 0.06, H + 0.06, R + 0.03, 12), TOP_Y[0] + 0.1, TOP_Y[1] - 0.04, M["clear"], 0.04, 3, hole=rrect(W - 0.3, H - 0.3, R - 0.15, 12))
+prism("top_plate", rrect(W - 0.2, H - 0.2, R - 0.1), TOP_Y[1] - 0.02, BASE_Y[0] - 0.004, M["clear"], 0.03, 2)
 sw, sh, sr, sz = SCREEN
-prism("screen_frame", rrect(sw + 0.36, sh + 0.36, sr + 0.18, 12, 0, sz), TOP_Y[0] - 0.07, TOP_Y[0] + 0.02, M["mint"], 0.04, 3, hole=rrect(sw, sh, sr, 12, 0, sz))
-prism("screen_glass", rrect(sw, sh, sr, 12, 0, sz), GLASS_Y, TOP_Y[0] + 0.02, M["glass"])
-mark("bezel_heart", heart(0.2, 0, 4.25), TOP_Y[0], 0.06, M["print"])
-mark("bezel_clover", clover(0.3, -1.65, 4.25), TOP_Y[0], 0.04, M["clover"])
-mark("bezel_star", star(0.26, 1.65, 4.25), TOP_Y[0], 0.05, M["star"])
-mark("side_star_l", star(0.15, -2.27, 0.3), TOP_Y[0], 0.04, M["star"])
-mark("side_star_r", star(0.15, 2.27, 2.9), TOP_Y[0], 0.04, M["star"])
-for i, x in enumerate((-0.95, 0.0, 0.95)):
-    prism(f"heart_key_{i}", heart(0.34, x, -1.08), TOP_Y[0] - 0.15, TOP_Y[0] + 0.02, M["jelly"], 0.07, 4)
-prism("dpad_ring", rrect(2.0, 2.0, 1.0, 20, 0, -2.75), TOP_Y[0] - 0.13, TOP_Y[0] + 0.02, M["jelly"], 0.06, 4, hole=rrect(1.12, 1.12, 0.56, 20, 0, -2.75))
-prism("dpad_well", rrect(2.24, 2.24, 1.12, 20, 0, -2.75), TOP_Y[0] - 0.03, TOP_Y[0] + 0.02, M["mint"], 0.02, 2, hole=rrect(2.0, 2.0, 1.0, 20, 0, -2.75))
-ok = prism("dpad_ok", rrect(1.0, 1.0, 0.5, 20, 0, -2.75), TOP_Y[0] - 0.14, TOP_Y[0] + 0.02, M["body"], 0.12, 5)
-mark("ok_flower", flower(0.24, 0, -2.75), TOP_Y[0] - 0.14, 0.05, M["print"])
-for s in (-1, 1):
-    prism(f"soft_key_{s}", teardrop(0.42, s * 1.78, -2.2, s * math.radians(-28)), TOP_Y[0] - 0.13, TOP_Y[0] + 0.02, M["jelly"], 0.06, 4)
-    prism(f"round_key_{s}", rrect(0.74, 0.74, 0.37, 16, s * 1.78, -3.4), TOP_Y[0] - 0.12, TOP_Y[0] + 0.02, M["body"], 0.08, 4)
-mark("round_clover", clover(0.24, -1.78, -3.4), TOP_Y[0] - 0.12, 0.04, M["clover"])
-mark("round_flower", flower(0.23, 1.78, -3.4), TOP_Y[0] - 0.12, 0.04, M["print"])
-mark("small_heart", heart(0.14, 0.0, -1.9), TOP_Y[0], 0.03, M["print"])
-mark("small_clover", clover(0.2, 1.25, -4.2), TOP_Y[0], 0.03, M["clover"])
+prism("screen_frame", rrect(sw + 0.24, sh + 0.24, sr + 0.12, 12, 0, sz), F - 0.03, F + 0.02, M["clear"], 0.02, 2, hole=rrect(sw, sh, sr, 12, 0, sz))
+prism("earpiece", rrect(0.9, 0.12, 0.06, 6, 0, 4.78), F - 0.006, F + 0.02, M["lens"], 0)
 
-# ---------------------------------------------------------------- the strap and the jelly star (hang off the left side)
-charm_root = bpy.data.objects.new("charm", None); C_CHARM.objects.link(charm_root); charm_root.parent = top_root
-LUG = Vector((-W / 2 - 0.02, -0.44, 2.6))
-lug = bpy.data.objects.new("lug", bpy.data.meshes.new("lug")); C_TOP.objects.link(lug); lug.parent = top_root
-bm = bmesh.new(); bmesh.ops.create_cone(bm, cap_ends=True, segments=16, radius1=0.16, radius2=0.16, depth=0.36); bm.to_mesh(lug.data); bm.free()
-lug.location = LUG + Vector((0.08, 0, 0)); lug.rotation_euler = (math.radians(90), 0, 0); lug.data.materials.append(M["mint"])
-for p in lug.data.polygons: p.use_smooth = True
-lug.data.set_sharp_from_angle(angle=math.radians(40))
-ring_at = LUG + Vector((-0.75, 0, -3.3))
+def screen_mesh():
+    """The glass: a flat rounded rectangle facing -Y, its UVs 0..1 across its width and height (the UI's texture)."""
+    pts = rrect(sw, sh, sr, 12, 0, sz)
+    bm = bmesh.new(); uv = bm.loops.layers.uv.new("UVMap")
+    c = bm.verts.new((0, GLASS_Y, sz)); ring = [bm.verts.new((x, GLASS_Y, z)) for x, z in pts]
+    for i in range(len(ring)):
+        f = bm.faces.new((ring[(i + 1) % len(ring)], ring[i], c))
+        for lp in f.loops: lp[uv].uv = ((lp.vert.co.x + sw / 2) / sw, (lp.vert.co.z - (sz - sh / 2)) / sh)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    me = bpy.data.meshes.new("screen"); bm.to_mesh(me); bm.free()
+    me.materials.append(M["screen"])
+    o = bpy.data.objects.new("screen", me); C_TOP.objects.link(o); o.parent = top_root
+    if me.polygons[0].normal.y > 0:  # it must face the front
+        me.flip_normals()
+    return o
+screen = screen_mesh()
+
+# the keys under the glass: small, flat and clear (David: "flatter, take up less of the phone")
+for i, x in enumerate((-0.62, 0.0, 0.62)):
+    flat_key(f"heart_key_{i}", heart(0.21, x, -2.12), M["key"])
+DZ = -3.5
+flat_key("dpad", rrect(1.56, 1.56, 0.78, 12, 0, DZ), M["key"], 0.03)
+prism("dpad_ok", rrect(0.76, 0.76, 0.38, 12, 0, DZ), F - 0.05, F + 0.02, M["pearl"], 0.02, 2)
+for s in (-1, 1):
+    flat_key(f"soft_key_{s}", teardrop(0.3, s * 1.55, -2.95, s * math.radians(-28)), M["key"])
+    flat_key(f"round_key_{s}", rrect(0.56, 0.56, 0.28, 16, s * 1.55, -4.15), M["key"])
+
+# the charm's mount: where the strap's loop hangs, on the left edge near the top
+LUG = Vector((-W / 2 - 0.02, (TOP_Y[0] + TOP_Y[1]) / 2, 3.4))
+lug = prism("lug", rrect(0.34, 0.34, 0.17, 10, LUG.x + 0.08, LUG.z), TOP_Y[0] + 0.12, TOP_Y[1] - 0.12, M["clear"], 0.03, 2)
+mount = bpy.data.objects.new("charm_mount", None); C_TOP.objects.link(mount); mount.parent = top_root; mount.location = LUG
+
+# ---------------------------------------------------------------- the charm: a braided strap and a jelly star
+charm_root = bpy.data.objects.new("charm", None); C_CHARM.objects.link(charm_root)
+DROP = Vector((-0.55, 0, -2.9))   # from the lug to the jump ring
 
 def braid():  # three strands woven along the hanging line, each a curve with a round profile
-    d = ring_at - LUG; n = 140
+    n = 72
     for k in range(3):
-        cu = bpy.data.curves.new(f"strand_{k}", "CURVE"); cu.dimensions = "3D"; cu.bevel_depth = 0.055; cu.bevel_resolution = 3
+        cu = bpy.data.curves.new(f"strand_{k}", "CURVE"); cu.dimensions = "3D"; cu.bevel_depth = 0.05; cu.bevel_resolution = 1
         sp = cu.splines.new("POLY"); sp.points.add(n - 1)
         for i in range(n):
             t = i / (n - 1); ph = t * math.tau * 6 + k * math.tau / 3
-            side = Vector((-d.z, 0, d.x)).normalized()
-            p = LUG + d * t + side * (0.09 * math.sin(ph)) + Vector((0, 0.06 * math.sin(2 * ph), 0)) + Vector((-0.25 * math.sin(math.pi * t), 0, 0))
+            side = Vector((-DROP.z, 0, DROP.x)).normalized()
+            p = DROP * t + side * (0.08 * math.sin(ph)) + Vector((0, 0.055 * math.sin(2 * ph), 0)) + Vector((-0.22 * math.sin(math.pi * t), 0, 0))
             sp.points[i].co = (*p, 1)
         cu.materials.append(M["strap"])
         o = bpy.data.objects.new(cu.name, cu); C_CHARM.objects.link(o); o.parent = charm_root
 braid()
-bpy.ops.mesh.primitive_torus_add(major_radius=0.2, minor_radius=0.045, location=ring_at + Vector((0, 0, -0.12)), rotation=(0, math.radians(90), 0))
+bpy.ops.mesh.primitive_torus_add(major_radius=0.18, minor_radius=0.04, location=DROP + Vector((0, 0, -0.1)), rotation=(0, math.radians(90), 0))
 tor = bpy.context.active_object
 for c in tor.users_collection: c.objects.unlink(tor)
 C_CHARM.objects.link(tor); tor.parent = charm_root; tor.name = "jump_ring"; tor.data.materials.append(M["silver"])
 for p in tor.data.polygons: p.use_smooth = True
-star_c = ring_at + Vector((-0.05, 0, -1.15))
-charm = prism("jelly_star", star(0.95, star_c.x, star_c.z, math.radians(102), 0.55), star_c.y - 0.28, star_c.y + 0.28, M["charm"], 0.24, 6, col=C_CHARM, parent=charm_root, angle=30)
-sub = charm.modifiers.new("soft", "SUBSURF"); sub.levels = sub.render_levels = 2
-
-# ---------------------------------------------------------------- light and render
-scene.render.engine = "CYCLES"
-try:
-    prefs = bpy.context.preferences.addons["cycles"].preferences; prefs.compute_device_type = "METAL"; prefs.get_devices()
-    for d in prefs.devices: d.use = True
-    scene.cycles.device = "GPU"
-except Exception as e:
-    print("phone: CPU render", e)
-scene.cycles.samples = SAMPLES; scene.cycles.use_denoising = True
-scene.render.film_transparent = True
-scene.view_settings.view_transform = "Standard"  # true colours (AgX greys the mint)
-world = bpy.data.worlds.new("w"); scene.world = world; world.use_nodes = True
-bg = next(n for n in world.node_tree.nodes if n.type == "BACKGROUND"); bg.inputs["Color"].default_value = srgb("#eef5ee"); bg.inputs["Strength"].default_value = 0.6
-
-def light(name, loc, energy, size, color="#ffffff"):
-    ld = bpy.data.lights.new(name, "AREA"); ld.energy = energy; ld.size = size; ld.color = srgb(color)[:3]
-    o = bpy.data.objects.new(name, ld); scene.collection.objects.link(o); o.location = loc
-    o.rotation_euler = (Vector((0, 0, 0)) - Vector(loc)).to_track_quat("-Z", "Y").to_euler()
-light("key", (-9, -14, 12), 1900, 10)
-light("fill", (11, -12, 2), 600, 12, "#f2fff2")
-light("rim", (6, 10, 8), 1200, 6)
-
-cam = bpy.data.objects.new("cam", bpy.data.cameras.new("cam")); scene.collection.objects.link(cam); scene.camera = cam
-cam.data.type = "ORTHO"; cam.rotation_euler = (math.radians(90), 0, 0)
+star_c = DROP + Vector((-0.04, 0, -1.0))
+jelly = prism("jelly_star", star(0.85, star_c.x, star_c.z, math.radians(102), 0.55), star_c.y - 0.24, star_c.y + 0.24, M["charm"], 0.2, 5, col=C_CHARM, parent=charm_root, angle=30)
+sub = jelly.modifiers.new("soft", "SUBSURF"); sub.levels = sub.render_levels = 1
 
 def set_open(open_):
     top_root.location = (0, 0, SLIDE if open_ else 0)
     bpy.context.view_layer.update()
 
-def world_pts(cols):
-    dg = bpy.context.evaluated_depsgraph_get(); pts = []
-    for c in cols:
-        for o in c.all_objects:
-            if o.type not in ("MESH", "CURVE", "FONT"): continue
-            ev = o.evaluated_get(dg); me = ev.to_mesh()
-            pts += [ev.matrix_world @ v.co for v in me.vertices]; ev.to_mesh_clear()
-    return pts
-
-def frame(pts, ppu, pad=0.18):
-    x0 = min(p.x for p in pts) - pad; x1 = max(p.x for p in pts) + pad
-    z0 = min(p.z for p in pts) - pad; z1 = max(p.z for p in pts) + pad
-    w, h = x1 - x0, z1 - z0
-    cam.location = ((x0 + x1) / 2, -60, (z0 + z1) / 2); cam.data.ortho_scale = max(w, h)
-    scene.render.resolution_x, scene.render.resolution_y = round(w * ppu), round(h * ppu)
-    scene.render.resolution_percentage = 100
-    return x0, z1
-
-def render(path, show):
-    for c in (C_BASE, C_TOP, C_CHARM): c.hide_render = c not in show
-    scene.render.image_settings.file_format = "PNG"; scene.render.image_settings.color_mode = "RGBA"
-    scene.render.filepath = path; bpy.ops.render.render(write_still=True)
-
-def pose(turn, tilt):
-    pivot.rotation_mode = "XYZ"; pivot.rotation_euler = (0, 0, 0)
-    pivot.matrix_world = Matrix.Rotation(tilt, 4, "X") @ Matrix.Rotation(turn, 4, "Z")
+# The charm hangs from the mount (the game re-parents it the same way when it loads a charm).
+def hang_charm():
+    charm_root.parent = mount; charm_root.matrix_parent_inverse = Matrix.Identity(4); charm_root.location = (0, 0, 0)
     bpy.context.view_layer.update()
 
-ALL = (C_BASE, C_TOP, C_CHARM)
-if MODE == "layers":
-    pose(TURN, TILT)
-    set_open(True); pts = world_pts(ALL); set_open(False); pts += world_pts(ALL)
-    x0, ztop = frame(pts, PPU)
-    def px(v): return [round((v.x - x0) * PPU, 2), round((ztop - v.z) * PPU, 2)]
-    mw = top_root.matrix_world
-    meta = {
-        "canvas": [scene.render.resolution_x, scene.render.resolution_y], "ppu": PPU,
-        "body": [W * PPU, round(W * math.cos(TURN) * PPU, 2)],
-        "screen": {"size": [sw * PPU, sh * PPU], "radius": sr * PPU,
-                   "tl": px(mw @ Vector((-sw / 2, GLASS_Y, sz + sh / 2))), "tr": px(mw @ Vector((sw / 2, GLASS_Y, sz + sh / 2))),
-                   "bl": px(mw @ Vector((-sw / 2, GLASS_Y, sz - sh / 2)))},
-        "slide": [round(a - b, 2) for a, b in zip(px(pivot.matrix_world @ Vector((0, 0, SLIDE))), px(pivot.matrix_world @ Vector((0, 0, 0))))],
-        "pivot": px(mw @ LUG),
-    }
-    with open(f"{OUT}/meta.json", "w") as f: json.dump(meta, f, indent=1)
-    render(f"{OUT}/base.png", (C_BASE,)); render(f"{OUT}/top.png", (C_TOP,)); render(f"{OUT}/charm.png", (C_CHARM,))
+# ---------------------------------------------------------------- export
+def merge(objs, name, parent):
+    """The objects as one mesh (modifiers applied, curves and text filled), in `parent`'s space: one node, a draw a
+    material."""
+    dg = bpy.context.evaluated_depsgraph_get(); bm = bmesh.new(); mats = []
+    inv = parent.matrix_world.inverted()
+    for o in objs:
+        ev = o.evaluated_get(dg); me = bpy.data.meshes.new_from_object(ev)
+        me.transform(inv @ o.matrix_world)
+        if (inv @ o.matrix_world).determinant() < 0: me.flip_normals()
+        remap = []
+        for m in me.materials:
+            if m not in mats: mats.append(m)
+            remap.append(mats.index(m))
+        for p in me.polygons: p.material_index = remap[p.material_index] if remap else 0
+        bm.from_mesh(me); bpy.data.meshes.remove(me)
+    out = bpy.data.meshes.new(name); bm.to_mesh(out); bm.free()
+    for m in mats: out.materials.append(m)
+    while out.uv_layers: out.uv_layers.remove(out.uv_layers[0])  # only the screen has a texture
+    for p in out.polygons: p.use_smooth = True
+    out.set_sharp_from_angle(angle=math.radians(40))
+    o = bpy.data.objects.new(name, out); scene.collection.objects.link(o); o.parent = parent
+    return o
+
+def export(path, objs):
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in objs: o.select_set(True)
+    bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", export_yup=True, use_selection=True,
+                              export_apply=True, export_normals=True, export_texcoords=True, export_materials="EXPORT",
+                              export_vertex_color="NONE", export_animations=False, export_skins=False,
+                              export_morph=False, export_cameras=False, export_lights=False, export_extras=False)
+
+if MODE == "glb":
+    os.makedirs(OUT, exist_ok=True)
+    set_open(False)
+    mesh_types = ("MESH", "CURVE", "FONT")
+    base_objs = [o for o in C_BASE.objects if o.type in mesh_types]
+    top_objs = [o for o in C_TOP.objects if o.type in mesh_types and o is not screen]
+    charm_objs = [o for o in C_CHARM.objects if o.type in mesh_types]
+    base = merge(base_objs, "base", pivot)
+    top = merge(top_objs, "top_body", top_root)
+    charm_mesh = merge(charm_objs, "charm_body", charm_root)
+    for o in base_objs + top_objs + charm_objs: bpy.data.objects.remove(o, do_unlink=True)
+    export(os.path.join(OUT, "phone.glb"), [pivot, base, top_root, top, screen, mount])
+    export(os.path.join(OUT, "charm-star.glb"), [charm_root, charm_mesh])
 else:
+    hang_charm()
+    scene.render.engine = "CYCLES"
+    try:
+        prefs = bpy.context.preferences.addons["cycles"].preferences; prefs.compute_device_type = "METAL"; prefs.get_devices()
+        for d in prefs.devices: d.use = True
+        scene.cycles.device = "GPU"
+    except Exception as e:
+        print("phone: CPU render", e)
+    scene.cycles.samples = SAMPLES; scene.cycles.use_denoising = True
+    scene.render.film_transparent = True
+    scene.view_settings.view_transform = "Standard"  # true colours (AgX greys the mint)
+    world = bpy.data.worlds.new("w"); scene.world = world; world.use_nodes = True
+    bg = next(n for n in world.node_tree.nodes if n.type == "BACKGROUND"); bg.inputs["Color"].default_value = srgb("#eef5ee"); bg.inputs["Strength"].default_value = 0.6
+
+    def light(name, loc, energy, size, color="#ffffff"):
+        ld = bpy.data.lights.new(name, "AREA"); ld.energy = energy; ld.size = size; ld.color = srgb(color)[:3]
+        o = bpy.data.objects.new(name, ld); scene.collection.objects.link(o); o.location = loc
+        o.rotation_euler = (Vector((0, 0, 0)) - Vector(loc)).to_track_quat("-Z", "Y").to_euler()
+    light("key", (-9, -14, 12), 1900, 10)
+    light("fill", (11, -12, 2), 600, 12, "#f2fff2")
+    light("rim", (6, 10, 8), 1200, 6)
+    cam = bpy.data.objects.new("cam", bpy.data.cameras.new("cam")); scene.collection.objects.link(cam); scene.camera = cam
+    cam.data.type = "ORTHO"; cam.rotation_euler = (math.radians(90), 0, 0)
+
+    def frame(ppu=52, pad=0.5):
+        dg = bpy.context.evaluated_depsgraph_get(); pts = []
+        for o in scene.objects:
+            if o.type not in ("MESH", "CURVE", "FONT"): continue
+            ev = o.evaluated_get(dg); me = ev.to_mesh(); pts += [ev.matrix_world @ v.co for v in me.vertices]; ev.to_mesh_clear()
+        x0 = min(p.x for p in pts) - pad; x1 = max(p.x for p in pts) + pad; z0 = min(p.z for p in pts) - pad; z1 = max(p.z for p in pts) + pad
+        cam.location = ((x0 + x1) / 2, -60, (z0 + z1) / 2); cam.data.ortho_scale = max(x1 - x0, z1 - z0)
+        scene.render.resolution_x, scene.render.resolution_y = round((x1 - x0) * ppu), round((z1 - z0) * ppu)
+        scene.render.resolution_percentage = 100
+
     views = {"front": (0, 0), "side": (math.radians(-90), 0), "back": (math.radians(180), 0), "three-quarter": (math.radians(-35), math.radians(10))}
     for name, (turn, tilt) in views.items():
         for state in ("closed", "open"):
-            pose(turn, tilt); set_open(state == "open"); frame(world_pts(ALL), 52, 0.5)
-            render(f"{OUT}/{name}-{state}.png", ALL)
+            pivot.matrix_world = Matrix.Rotation(tilt, 4, "X") @ Matrix.Rotation(turn, 4, "Z")
+            set_open(state == "open"); frame()
+            scene.render.image_settings.file_format = "PNG"; scene.render.image_settings.color_mode = "RGBA"
+            scene.render.filepath = f"{OUT}/{name}-{state}.png"; bpy.ops.render.render(write_still=True)
 print("phone: done", MODE)

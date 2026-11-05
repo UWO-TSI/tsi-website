@@ -12,8 +12,10 @@
  * minimap have no peek card and aren't on screen before their key (round 9, David: "the hud doesnt exist, you press it
  * it shows off above the keyboard and it flies to where it usually sits"): the key's press brings the real ones in
  * (`onShow`), they pop up above the card, show off a beat and fly to their place (FlyHome), and the next key waits for
- * them to land. The last key is the phone's, which slides in bottom right with all its apps. The steps and words:
- * lib/game/arrival/hq/uiTour.ts. `onDone` after the last, or on Skip.
+ * them to land. The HUD has no key any more (round 12, David: "what does h do, is it even necessary"): its step plays
+ * by itself, a beat after it lights. The last key is the phone's: it's put away for that step (`onStep`), and the key
+ * pulls it out and flips it open with all its apps. The steps and words: lib/game/arrival/hq/uiTour.ts. `onDone` after
+ * the last, or on Skip.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check } from "lucide-react";
@@ -23,8 +25,11 @@ import { AudioManager } from "@/lib/game/audio";
 import TourPeek from "./TourPeek";
 import { FLY_PIECES, HOLD_MS, UI_TOUR, tourInput, tourSteps, tourTick, type HudPiece, type TourKeys, type TourProgress } from "@/lib/game/arrival/hq/uiTour";
 
-/** A finished step stays lit this long before the next key lights up (ms); the last one, before it closes. */
-const NEXT_MS = 650, END_MS = 1100;
+/** A finished step stays lit this long before the next key lights up (ms); the last one (the phone's), before it
+ * closes: long enough to see the phone come out and open with every app on it. */
+const NEXT_MS = 650, END_MS = 2600;
+/** A step with no key plays this long after it lights (ms). */
+const AUTO_MS = 700;
 /** A peek stays at least this long (a quick press still shows it), then fades out over PEEK_FADE_MS. */
 const PEEK_MIN_MS = 1100, PEEK_FADE_MS = 240;
 const START: TourProgress = { step: 0, holdFrom: null };
@@ -45,10 +50,12 @@ const NO_PEEK = new Set(["hud", "map", "phone"]);
 /** The peeks that sit above the card instead of on its right. */
 const ABOVE = new Set<PeekKind>(["wheel"]);
 
-export default function KeyboardTour({ open, keys, onShow, onDone }: {
+export default function KeyboardTour({ open, keys, onShow, onStep, onDone }: {
   open: boolean; keys: TourKeys;
   /** A step done brings its part of the screen in (shown until the tour closes). */
   onShow: (piece: HudPiece) => void;
+  /** The step lit now (its id). */
+  onStep?: (id: string) => void;
   onDone: () => void;
 }) {
   const steps = useMemo(() => tourSteps(keys), [keys]);
@@ -140,11 +147,20 @@ export default function KeyboardTour({ open, keys, onShow, onDone }: {
     return () => cancelAnimationFrame(raf);
   }, [open, p.holdFrom]);
 
+  // A step with no key (the HUD) plays by itself: a beat after it lights, it's done and its piece flies in.
+  useEffect(() => {
+    if (!open || won !== null || !steps[p.step]?.auto) return;
+    const at = p.step;
+    const t = window.setTimeout(() => { setP({ step: at + 1, holdFrom: null }); complete.current(at); }, AUTO_MS);
+    return () => window.clearTimeout(t);
+  }, [open, p.step, won, steps]);
+
   const shown = won ?? Math.min(p.step, steps.length - 1), step = steps[shown];
+  useEffect(() => { if (open) onStep?.(step.id); }, [open, step.id, onStep]);
   // The step's word carries its library icon (round 7: the bag, the map... the same drawing everywhere).
   const title = <KeywordLine line={step.title} />;
   const lead = won !== null ? <><Check size={16} aria-hidden /> {won >= steps.length - 1 ? UI_TOUR.done : title}</>
-    : <>{step.hold ? UI_TOUR.hold : UI_TOUR.press} <Keycap>{boardLabel(step.key)}</Keycap> {title}</>;
+    : step.auto ? title : <>{step.hold ? UI_TOUR.hold : UI_TOUR.press} <Keycap>{boardLabel(step.key)}</Keycap> {title}</>;
   return <>
     <Spotlight light open={open} label={`${UI_TOUR.eyebrow}: ${step.title}`} lead={lead} steps={{ count: steps.length, at: shown }}
       testId="ui-tour" dataset={{ "data-step": step.id, "data-won": won !== null ? "" : undefined }}
