@@ -103,9 +103,9 @@ function MemberReel({ fish, known, onDone, initialInput, rig, help, boss, raidId
     onPause: (paused) => { if (pausedRef.current) pausedRef.current.hidden = !paused; },
     onFrame: ({ sim, now, raid }) => {
       const st = state.current, track = trackRef.current;
-      if (windowRef.current) windowRef.current.style.transform = `translateX(${(sim.position / sim.barWidth) * 100}%)`;
+      if (windowRef.current) windowRef.current.style.transform = `translateX(${(sim.drawnBar / sim.barWidth) * 100}%)`;
       if (windowRef.current) windowRef.current.style.width = `${sim.barWidth * 100}%`;
-      if (markerRef.current) markerRef.current.style.transform = `translate(${sim.fishPosition * 100}%, ${Math.sin(now / 160) * 2}px)`;
+      if (markerRef.current) markerRef.current.style.transform = `translate(${sim.drawnFish * 100}%, ${Math.sin(now / 160) * 2}px)`;
       // In the window (it glows and breathes), or slipping out (a soft red flash and a low tick); back in, it springs.
       if (sim.inside !== st.inside && track) {
         st.inside = sim.inside;
@@ -115,12 +115,12 @@ function MemberReel({ fish, known, onDone, initialInput, rig, help, boss, raidId
         else AudioManager.playSFX("click", { rate: 0.55, gain: 0.3 });
       }
       // The fight: droplets fly off the fish when it darts (a few a second at most).
-      const speed = Math.abs(sim.fishPosition - st.fishAt);
-      st.fishAt = sim.fishPosition;
+      const speed = Math.abs(sim.drawnFish - st.fishAt);
+      st.fishAt = sim.drawnFish;
       if (speed > 0.004 && now - st.splashAt > 260 && track && markerRef.current?.dataset.away !== "true") {
         st.splashAt = now;
         const box = track.getBoundingClientRect();
-        splash(box.left + sim.fishPosition * box.width, box.top + box.height / 2, speed > 0.012 ? 4 : 2);
+        splash(box.left + sim.drawnFish * box.width, box.top + box.height / 2, speed > 0.012 ? 4 : 2);
       }
       // Each tenth the line gains, the gauge surges with a spring and ticks a little higher.
       const step = Math.floor(sim.progress * 10);

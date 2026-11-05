@@ -25,9 +25,9 @@ import { RARITIES, RARITY_LABEL } from "@/lib/rarity";
 import { RODS, TACKLE } from "@/lib/game/rods";
 import { RodRadar, TackleRadar } from "@/components/economy/RodGear";
 import { useSearch } from "@/lib/game/useMediaQuery";
-import { CircleDot, Sparkles, UserRound, Waves, Worm } from "lucide-react";
+import { ChevronLeft, CircleDot, Sparkles, UserRound, Waves, Worm } from "lucide-react";
 import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
-import { ActionBar, ActionIcon, CallTag, CardOverlay, DarkButton, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, KeyPeek, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, QuestCheck, RankBadge, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, StaminaArc, VITALS_LOOKS, VitalBar, Vitals, WalletSlot, XpRing, LevelUpMoment, type PeekKind } from "@/components/gui/flat";
+import { ActionBar, ActionIcon, CallTag, CardOverlay, DarkButton, FlatField, FlatSlider, FlatToggle, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, KeyPeek, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, QuestCheck, RankBadge, RewardPop, RoundButton, ServeMeter, SlotPop, SpinPicker, Spotlight, StaminaArc, VITALS_LOOKS, VitalBar, Vitals, WalletSlot, XpRing, LevelUpMoment, type PeekKind } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
 import { BoardBody } from "@/components/game/volleyball/BoardSheet";
 import { DEFAULT_LOOK } from "@/lib/game/character/look";
@@ -339,6 +339,19 @@ export default function GuiShowroom() {
     <Section id="progress-card" title="Progress card (flat)" note="The flat kit’s loading card: a white card, the stage in a quiet line, the real progress as a thin ink line.">
       <Row><ProgressCard icon={<Sprout size={24} />} title="Tethos Island" status="Sweeping the plaza…" value={0.42} label="Loading the island" />
         <ProgressCard title="Saving" status="Nearly there" value={0.9} label="Saving" /></Row>
+    </Section>
+
+    <Section id="flat-fields" title="Fields and buttons (flat)" note="The title's sign-in: grey-well fields (the label is the placeholder, read aloud), the dark pill for the one action, the white pill beside it, the round back, the switch and the slider (the title’s Settings).">
+      <Row><div style={{ display: "grid", gap: 10, width: 280 }}>
+        <RoundButton label="Back"><ChevronLeft size={18} /></RoundButton>
+        <FlatField label="Email" type="email" />
+        <FlatField label="Password" type="password" defaultValue="hunter22" />
+        <DarkButton>Sign in</DarkButton>
+        <GhostButton>Not now</GhostButton>
+        <FlatToggle checked onChange={() => {}} hint="The island's crisp pixel look">Pixel finish</FlatToggle>
+        <FlatToggle checked={false} onChange={() => {}}>Sun shadows</FlatToggle>
+        <FlatSlider label="Volume" value={70} onChange={() => {}} format={v => `${v}%`} />
+      </div></Row>
     </Section>
 
     <Section id="serve-meter" title="Serve meter (flat)" note="The volleyball serve’s power: a triangle wide at the top, the fill warming from sea to coral to gold; it leans in and trembles as it fills, and flashes Max at the top.">
