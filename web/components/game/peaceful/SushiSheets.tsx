@@ -253,7 +253,7 @@ export function MenuPickup({ open, onClose, waters = ["sea", "river"], transport
   const dishPart: ReactNode[] = [
     <>
       <PanelSection title="Your dishes">
-        <p className={m.welcome}>Give Bancha a key fish and he learns its dish. Each one helps your fishing for a while.</p>
+        <p className={`${m.welcome} ${m.wordy}`}>Give Bancha a key fish and he learns its dish. Each one helps your fishing for a while.</p>
         <div className={m.rows}>{dishes.map(d => {
           const learnt = book.has(d.unlock);
           return <PaperRow key={d.id} art={<BookSlot filter={ink} name={NAME.get(d.unlock) ?? d.unlock} state={learnt ? "given" : "empty"} picture={<PixelImage src={iconUrl(d.unlock)} px={30} />} />}

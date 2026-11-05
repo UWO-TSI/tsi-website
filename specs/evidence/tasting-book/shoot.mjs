@@ -383,8 +383,10 @@ const FLOW = {
     // The parts, by the words under the menu, and the page after each.
     mark("pages");
     for (const [part, name] of [["Dishes", "tb6-dishes"], ["Menu", "tb6-menu"], ["All fish", "tb6-allfish"], ["Collection", "tb6-collection-after"]]) {
-      await page.getByRole("button", { name: part, exact: true }).first().click({ force: true }).catch(e => console.log("part", part, e.message.slice(0, 120)));
-      await page.mouse.move(4, VH - 4);
+      // (Scoped to the parts: a phone's HUD has its own "Menu" button.)
+      await page.getByRole("navigation", { name: "Parts of the menu" }).getByRole("button", { name: part, exact: true }).click({ force: true }).catch(e => console.log("part", part, e.message.slice(0, 120)));
+      // (A phone has no mouse: moving it over the vignette would tilt the seated view up and put the menu down.)
+      if (!PHONE) await page.mouse.move(4, VH - 4);
       await wait(1300);
       await menuShot(name);
       if (part !== "Collection") { await turnPage(); await menuShot(`${name}-2`); }
