@@ -139,6 +139,32 @@ Redo:
 
 ## Status
 
+**Round 8** (game/main-quest, on origin/main a8a03985, merged clean apart from two import lines in
+web/app/lab/gui/page.tsx and web/components/gui/flat/index.tsx; evidence specs/evidence/main-quest/r8/, befores are
+round 7's capsule shots). Done, waiting for David's review:
+- One look, Capsule (David 11-05): `Vitals` lost `look`, VITALS_LOOKS and VitalsLook are gone, HudBars lost `lookOf`
+  and `?vitals=`, the hearts and dial CSS and the DefaultIslandWorld `.heading` steps for them are deleted. The capsule
+  never showed icons, so VitalBar lost its icon (and lucide's Heart, Shield, Droplet) and its `.track` span: the `.bar`
+  is the rimmed capsule, `<i>` the fill.
+- Shield extends the health bar (mq7-shield): VitalBar `shield={{ value, max }}`; the capsule grows by the shield's
+  points (`--hp` is health's share, width `--w / --hp`), a rim-white seam, then the shield's end in --ui-shield over a
+  well tinted with it, so it keeps its own colour at every level, empty included. Tallies run every 20 points across
+  both; the critical flash covers the health part only. VitalKind is health or mana; mana stays a slimmer bar under it.
+  Nothing in game has a shield yet (the shots put the `<b>` and `--hp` on the live bar).
+- Stamina arc: opacity 0.6 when shown (was 1). Through the zoom it keeps its zoom-1 size (`body * orbit.view.zoom`)
+  and stands right of the body by BODY_HALF 0.32 body heights (clears the hair at the nearest zoom) plus ARC_GAP 0.04
+  at zoom 1. Measured: 73 to 67 px tall from zoom 0.6 to 1.6 on desktop, 51 to 47 on the phone (r7 scaled with the
+  body, about 2.7x over that range).
+- Bible UI 8b: the capsule, the shield extending health, the arc's opacity and zoom.
+- Touched in the HUD and lab gui (tutorial-v2 will conflict there): web/components/gui/flat/vitals.tsx,
+  vitals.module.css, index.tsx, web/components/game/HudBars.tsx, DefaultIslandWorld.module.css (4 lines deleted),
+  web/app/lab/gui/page.tsx (the hud-bars section and the import line).
+- Gates: tsc clean; vitest 399 files passed (2 skipped), 3761 tests passed, 4 skipped, 0 failed; eslint clean on the 4
+  changed TS files; `next build` passed, 231 pages (this worktree has no web/.env.local, so `/admin/recruit` can't
+  prerender with the env blanked: build with a placeholder `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:9
+  NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder`, scratchpad `mqrun/build.sh`); `git grep '("development" as string)' --
+  web` empty. No perf:check (UI only).
+
 **Round 7** (game/main-quest, on origin/main 18362223; evidence specs/evidence/main-quest/r7/, befores are round 6's
 after shots). Done, waiting for David's review and his pick of the vitals look:
 - "Level up!" is type alone (the Sparkles icon is gone: a hanging icon can't balance it), centred on the screen; the
@@ -237,12 +263,15 @@ Done, waiting for David's review:
 
 ## Next
 
-1. Wait for David's review of round 7 (specs/evidence/main-quest/r7/) and his vitals pick; then delete the other two
-   looks (see Status) and reshoot the pick.
+1. Wait for David's review of round 8 (specs/evidence/main-quest/r8/). Open: a shield far over 40 points would push
+   the phone capsule into the minimap (40 on 100 health ends a few px short); cap it if a class gets a big shield.
 2. The round 3 migrations (20261030010000_main_quest, 20261030010100_main_quest_r2, renamed from their 20261028 names) are applied to prod: no migration waits on this lane.
 
 ## Tools and gotchas
 
+- Browser runner (round 8): scratchpad `mqrun/qrun9.sh mq8lab mq8hud mq8hud-phone` (run9.sh, out to mq-r8, about 6 min
+  once the lock is free; run it in the background); `mqrun/evid8.py` builds r8/, the mp4 clips trimmed from the
+  context's recorded webm by the `clip` marks in log.json, a webp poster each. open() takes a `video` size.
 - Browser runner (round 7): scratchpad `mqrun/qrun8.sh <scenes>` (run8.sh, out to mq-r7/$MQ_OUT; scenes mq7lab,
   mq7hud, mq7hud-phone); `mqrun/evid7.py` builds r7/; `mqrun/sheet.py` makes quick contact sheets for checking. The
   looks are pure CSS on `.hud[data-look]`, so the scene sets the attribute and shoots all three from one load. The

@@ -27,7 +27,7 @@ import { RodRadar, TackleRadar } from "@/components/economy/RodGear";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import { ChevronLeft, CircleDot, Sparkles, UserRound, Waves, Worm } from "lucide-react";
 import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
-import { ActionBar, ActionIcon, CallTag, CardOverlay, DarkButton, FlatField, FlatSlider, FlatToggle, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, KeyPeek, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, QuestCheck, RankBadge, RewardPop, RoundButton, ServeMeter, SlotPop, SpinPicker, Spotlight, StaminaArc, VITALS_LOOKS, VitalBar, Vitals, WalletSlot, XpRing, LevelUpMoment, type PeekKind } from "@/components/gui/flat";
+import { ActionBar, ActionIcon, CallTag, CardOverlay, DarkButton, FlatField, FlatSlider, FlatToggle, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, KeyPeek, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, QuestCheck, RankBadge, RewardPop, RoundButton, ServeMeter, SlotPop, SpinPicker, Spotlight, StaminaArc, VitalBar, Vitals, WalletSlot, XpRing, LevelUpMoment, type PeekKind } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
 import { BoardBody } from "@/components/game/volleyball/BoardSheet";
 import { DEFAULT_LOOK } from "@/lib/game/character/look";
@@ -428,13 +428,16 @@ export default function GuiShowroom() {
       <div className={s.toastStage}><ToastHub /></div>
     </Section>
 
-    <Section id="hud-bars" title="The vitals, the level ring and the stamina arc (flat kit)" note="specs/design-bible.md UI 8: the level in a ring of XP (hover for the exact XP) with health, sliding from its full colour through amber to its low colour as it empties, a notch every 20 points, critical flashing with a beating heart; a class's shield or mana is one more row. Three looks (r7 pitch): capsule, hearts, dial. Stamina is a ) beside the character, only at a quarter or under. components/gui/flat/vitals.tsx; the island's are components/game/HudBars.tsx.">
-      {VITALS_LOOKS.map(look => <Row key={look}>
+    <Section id="hud-bars" title="The vitals, the level ring and the stamina arc (flat kit)" note="specs/design-bible.md UI 8: the level in a ring of XP (hover for the exact XP) with health, sliding from its full colour through amber to its low colour as it empties, a notch every 20 points, critical flashing; the Capsule look (David 11-05). A class's shield extends the health bar in its own colour; its mana is a slimmer bar under it. Stamina is a ) beside the character, only at a quarter or under. components/gui/flat/vitals.tsx; the island's are components/game/HudBars.tsx.">
+      <Row>
         {([[1, "100"], [0.5, "50"], [0.15, "15"]] as const).map(([h, n]) =>
-          <Vitals key={n} look={look} ring={<XpRing level={3} fill={0.42} into={126} needed={300} />}><VitalBar kind="health" value={h} critical={h < 0.25} label={`Health ${n} of 100`} /></Vitals>)}
-        <Vitals look={look} ring={<XpRing level={3} fill={0.42} into={126} needed={300} />}><VitalBar kind="health" value={0.8} label="Health 80 of 100" /><VitalBar kind="shield" value={0.6} max={60} label="Shield 36 of 60" /></Vitals>
-        <Vitals look={look} ring={<XpRing level={3} fill={0.42} into={126} needed={300} />}><VitalBar kind="health" value={0.8} label="Health 80 of 100" /><VitalBar kind="mana" value={0.35} label="Mana 35 of 100" /></Vitals>
-      </Row>)}
+          <Vitals key={n} ring={<XpRing level={3} fill={0.42} into={126} needed={300} />}><VitalBar kind="health" value={h} critical={h < 0.25} label={`Health ${n} of 100`} /></Vitals>)}
+      </Row>
+      <Row>
+        {([[1, 1], [0.8, 0.5], [0.15, 0.2]] as const).map(([h, sh]) =>
+          <Vitals key={h} ring={<XpRing level={3} fill={0.42} into={126} needed={300} />}><VitalBar kind="health" value={h} critical={h < 0.25} shield={{ value: sh, max: 40 }} label={`Health ${h * 100} of 100, shield ${sh * 40} of 40`} /></Vitals>)}
+        <Vitals ring={<XpRing level={3} fill={0.42} into={126} needed={300} />}><VitalBar kind="health" value={0.8} label="Health 80 of 100" /><VitalBar kind="mana" value={0.35} label="Mana 35 of 100" /></Vitals>
+      </Row>
       <Row>{[1, 0.5, 0].map(st => <div key={st} style={{ position: "relative", width: 60, height: 120 }}>
         <StaminaArc ref={el => { el?.toggleAttribute("data-show", true); el?.style.setProperty("--vital", String(st)); el?.style.setProperty("--x", "0.2"); el?.style.setProperty("--h", "1"); }} /></div>)}</Row>
     </Section>

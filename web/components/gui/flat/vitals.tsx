@@ -5,12 +5,14 @@
  * a shield or mana bar for different classes", "all the bars should change color as it depleats, so perifiral visiion
  * you cna tell how youre doing and have tallies for every like 20", "exp bar should exists somewhere seperate, maybe a
  * circular bar around a number somewhere and hover shows specific xp amount"; r6: the vitals "needs to be reimagined").
- * - `Vitals`: the level ring and the `VitalBar` rows as one piece, in a `look` (r7 pitch, David picks one):
- *   capsule (the ring at the head of a thick rimmed bar), hearts (a heart per 20 points on a white pill) or dial (health
- *   as an arc round the ring, on one white medallion). A class's shield or mana is one more row (its kind is here).
- * - `VitalBar`: icon and track; the fill slides from its full colour through amber to its low colour as it empties, so
- *   it reads from the corner of the eye; a thin notch every 20 points of `max`. `critical` (r4: "more red and critical
- *   and flashes"): the well flashes red and the icon beats like a heart (both still under reduced motion: a red well).
+ * - `Vitals`: the level ring at the head of the bars, the Capsule look (r7, David 11-05: "capsule"): one thick bar with a
+ *   white rim and a soft shadow straight over the world, its left end tucked under the ring; a class's mana is a slimmer
+ *   bar under it.
+ * - `VitalBar`: the fill slides from its full colour through amber to its low colour as it empties, so it reads from the
+ *   corner of the eye; a thin notch every 20 points. A `shield` extends the health bar (r7: "shield should either overlap
+ *   the health bar or extend the health bar not seperate"): the capsule grows by the shield's points, and the shield
+ *   fills that end in its own colour at every level. `critical` (r4: "more red and critical and flashes"): the health
+ *   well flashes red (a still red well under reduced motion).
  * - `XpRing`: the level number in a round ring that fills with the XP into the level; hover, focus or a tap shows the
  *   exact XP (the kit's HoverTip).
  * - `StaminaArc` (r6: "stamina could be rewored to not be a bar under health but rather incorporated to be beside the
@@ -20,32 +22,27 @@
  * Colours: the theme's --ui-* tokens. Shown on /lab/gui.
  */
 import type { CSSProperties, ReactNode, Ref } from "react";
-import { Droplet, Heart, Shield } from "lucide-react";
 import { HoverTip } from "./pieces";
 import v from "./vitals.module.css";
 
-export type VitalKind = "health" | "shield" | "mana";
-export type VitalsLook = "capsule" | "hearts" | "dial";
-export const VITALS_LOOKS: readonly VitalsLook[] = ["capsule", "hearts", "dial"];
-const ICON = { health: Heart, shield: Shield, mana: Droplet } as const;
+export type VitalKind = "health" | "mana";
 /** One notch every this many points. */
 export const TALLY = 20;
 
-/** One vital, `value` 0 to 1 of `max` points; the fill eases (a little spring). `critical`: nearly gone
- * (lib/game/lowHealth.ts CRITICAL), it flashes. */
-export function VitalBar({ kind, value, max = 100, label, critical }: { kind: VitalKind; value: number; max?: number; label: string; critical?: boolean }) {
-  const Icon = ICON[kind];
+/** One vital, `value` 0 to 1 of `max` points; the fill eases (a little spring). `shield`: its `value` 0 to 1 of its own
+ * `max` points, on the end of this bar. `critical`: nearly gone (lib/game/lowHealth.ts CRITICAL), it flashes. */
+export function VitalBar({ kind, value, max = 100, shield, label, critical }: { kind: VitalKind; value: number; max?: number; shield?: { value: number; max: number }; label: string; critical?: boolean }) {
+  const all = max + (shield?.max ?? 0), clamp = (n: number) => Math.max(0, Math.min(1, n));
   return <div className={v.bar} data-kind={kind} data-critical={critical || undefined}
-    style={{ "--vital": Math.max(0, Math.min(1, value)), "--tally": TALLY / Math.max(TALLY, max), "--n": Math.max(1, Math.round(max / TALLY)) } as CSSProperties}
+    style={{ "--vital": clamp(value), "--shield": clamp(shield?.value ?? 0), "--hp": all ? max / all : 1, "--tally": TALLY / Math.max(TALLY, all) } as CSSProperties}
     role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(value * 100)}>
-    <Icon className={v.icon} size={14} strokeWidth={2.75} aria-hidden />
-    <span className={v.track} aria-hidden><i /></span>
+    <i aria-hidden />{shield && <b aria-hidden />}
   </div>;
 }
 
-/** The vitals: the level `ring` and the rows, in one `look`. */
-export function Vitals({ look = "capsule", ring, children, hidden }: { look?: VitalsLook; ring?: ReactNode; children: ReactNode; hidden?: boolean }) {
-  return <div className={v.hud} data-look={look} data-hidden={hidden || undefined}>
+/** The vitals: the level `ring` and the bars. */
+export function Vitals({ ring, children, hidden }: { ring?: ReactNode; children: ReactNode; hidden?: boolean }) {
+  return <div className={v.hud} data-hidden={hidden || undefined}>
     {ring}
     <div className={v.card} data-testid="hud-vitals">{children}</div>
   </div>;

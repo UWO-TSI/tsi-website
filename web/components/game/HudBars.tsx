@@ -6,31 +6,35 @@
  * - the level ring: the HUD's total as levels (lib/combat/progression.ts levelProgress), the XP into the level round the
  *   number; hover or a tap shows the exact XP. A gain fills it; a level up fills it to the end, says so (LEVEL_FILLED:
  *   the level-up moment plays then), and rolls it over to what's left;
- * - health (the combat runtime's hp of maxHp, full on the island) with the ring, in the kit's look (r7 pitch: capsule,
- *   hearts or dial; `?vitals=` picks one in dev until David chooses). At CRITICAL or under (lib/game/lowHealth.ts) it
- *   flashes and its heart beats; the world's side is PostFX's. A class's shield or mana would be one more row;
+ * - health (the combat runtime's hp of maxHp, full on the island) with the ring, in the kit's Capsule look (David
+ *   11-05). At CRITICAL or under (lib/game/lowHealth.ts) it flashes; the world's side is PostFX's. A class's shield
+ *   would extend the health bar (VitalBar `shield`), its mana one more bar;
  * - stamina (the movement sim's, lib/game/movement/sim.ts) beside the character, not in the card (r6: "fades in a )
  *   shaped bar beside the character when stamina is low but doesnt show when it is above 25%"): the kit's StaminaArc,
- *   placed after each frame is drawn (the camera final, as LabelLayer does) from where the avatar is (hudLive).
+ *   placed after each frame is drawn (the camera final, as LabelLayer does) from where the avatar is (hudLive). It
+ *   keeps its size through the zoom (r7: "make sure zooming in and out keeps the bar like adaptive"): the size it has
+ *   at zoom 1, beside the body at any zoom.
  */
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { addAfterEffect } from "@react-three/fiber";
 import { Vector3, type PerspectiveCamera } from "three";
-import { StaminaArc, VITALS_LOOKS, VitalBar, Vitals, XpRing, type VitalsLook } from "@/components/gui/flat";
+import { StaminaArc, VitalBar, Vitals, XpRing } from "@/components/gui/flat";
 import { CHARACTER_HEIGHT } from "@/components/game/character/Character";
 import { levelProgress } from "@/lib/combat/progression";
 import { combat, useCombatValue } from "@/lib/game/combat/runtime";
 import { hudLive, useHud } from "@/lib/game/hudStore";
 import { CRITICAL } from "@/lib/game/lowHealth";
+import { orbit } from "@/lib/game/orbitCamera";
 
 /** Fired as the XP ring reaches its end on a level up (detail: { level }). */
 export const LEVEL_FILLED = "tsi:level-filled";
 /** How long the ring takes to fill to its end before the level turns over. */
 const FILL_MS = 650;
 /** Stamina shows at or under this (r6: "doesnt show when it is above 25%"), and the arc is that last quarter: full as
- * it fades in, empty when you're winded. The arc: its height as a share of the character's, and how far right of the
- * body's middle it stands (in body heights). */
-const STAMINA_SHOW = 0.25, ARC_SIZE = 0.74, ARC_GAP = 0.34;
+ * it fades in, empty when you're winded. The arc: its height as a share of the character's at zoom 1; it stands right
+ * of the body's middle by half the body's width (BODY_HALF, body heights, so it clears the body at any zoom) and a
+ * fixed gap (ARC_GAP, body heights at zoom 1). */
+const STAMINA_SHOW = 0.25, ARC_SIZE = 0.74, BODY_HALF = 0.32, ARC_GAP = 0.04;
 
 interface XpView { level: number; fill: number; snap: boolean; into: number; needed: number }
 const fillOf = (xp: number) => { const p = levelProgress(xp); return { level: p.level, fill: p.needed ? p.into / p.needed : 1, into: p.into, needed: p.needed }; };
@@ -78,18 +82,13 @@ function useStaminaArc(el: RefObject<HTMLDivElement | null>) {
       const mx = v.x, my = v.y;
       v.set(x, y + CHARACTER_HEIGHT * 0.95, z).project(cam);
       const body = v.y - my; // the body's height, as a share of the screen's (NDC spans 2; this is half a body of it)
-      arc.style.setProperty("--x", String((mx + 1) / 2 + (body * ARC_GAP) / ((cam as PerspectiveCamera).aspect || 1)));
+      const size = body * orbit.view.zoom; // the body's height at zoom 1: the camera's distance scales with the zoom
+      arc.style.setProperty("--x", String((mx + 1) / 2 + (body * BODY_HALF + size * ARC_GAP) / ((cam as PerspectiveCamera).aspect || 1)));
       arc.style.setProperty("--y", String((1 - my) / 2));
-      arc.style.setProperty("--h", String(body * ARC_SIZE));
+      arc.style.setProperty("--h", String(size * ARC_SIZE));
     });
   }, [el]);
 }
-
-/** The look in play: the pick, or `?vitals=` in dev while David chooses. */
-const lookOf = (): VitalsLook => {
-  const q = process.env.NODE_ENV !== "production" && typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("vitals") : null;
-  return VITALS_LOOKS.find(l => l === q) ?? "capsule";
-};
 
 export default function HudBars({ hidden, className }: { hidden?: boolean; className?: string }) {
   const hud = useHud();
@@ -97,11 +96,10 @@ export default function HudBars({ hidden, className }: { hidden?: boolean; class
   const xp = useXpBar(hud.xp);
   const arcEl = useRef<HTMLDivElement>(null);
   useStaminaArc(arcEl);
-  const [look] = useState(lookOf);
   const health = maxHp > 0 ? hp / maxHp : 1;
   return <>
     <div className={className}>
-      <Vitals look={look} hidden={hidden} ring={xp && <XpRing level={xp.level} fill={xp.fill} snap={xp.snap} into={xp.into} needed={xp.needed} />}>
+      <Vitals hidden={hidden} ring={xp && <XpRing level={xp.level} fill={xp.fill} snap={xp.snap} into={xp.into} needed={xp.needed} />}>
         <VitalBar kind="health" value={health} max={maxHp} critical={health <= CRITICAL} label={`Health ${Math.round(hp)} of ${Math.round(maxHp)}`} />
       </Vitals>
     </div>

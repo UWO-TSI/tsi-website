@@ -41,7 +41,7 @@ export { useNudge };
 export { GoalMeter, HeartMeter, RewardTrack, PrizeWheel, WHEEL_SPIN_MS, type TrackStep, type WheelPrize } from "./rewards";
 export { HexRadar, type RadarAxis } from "./HexRadar";
 export { GearSlot, type GearOption } from "./GearSlot";
-export { StaminaArc, TALLY, VITALS_LOOKS, VitalBar, Vitals, XpRing, type VitalKind, type VitalsLook } from "./vitals";
+export { StaminaArc, TALLY, VitalBar, Vitals, XpRing, type VitalKind } from "./vitals";
 export { LEVEL_UP_MS, LevelUpMoment, type LevelBeat, type MomentItem } from "./levelUp";
 
 /** A rarity's thin outline (design bible UI 7) on a card or a stage: `data-rarity` and its colour as `--edge`. */

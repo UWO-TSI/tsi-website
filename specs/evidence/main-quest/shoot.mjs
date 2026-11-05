@@ -4,7 +4,7 @@
 // `?progression=demo` (the real progression service on an in-memory store; `&chapter=` and `&tally=` set where the
 // member is). Headless Chromium, muted, under the shared browser lock.
 //   HOST=http://localhost:3147 node specs/evidence/main-quest/shoot.mjs <out_dir> <scene> [<scene> ...]
-// Scenes: mq7hud, mq7hud-phone (round 7); mq6hud, mq6hud-phone (round 6); mq5hud, mq5hud-phone (round 5); mq4hud, mq4hud-phone, mq4sand (round 4); r2flow, r2museum, r2dig, pops, strips (round 2); flow, chapters, dig, pickaxe (round 1; the new world: run the dev server with NEXT_PUBLIC_GAME_WORLD=new); village (the
+// Scenes: mq8lab, mq8hud, mq8hud-phone (round 8: clips under <out_dir>/video, marks in log.json); mq7hud, mq7hud-phone (round 7); mq6hud, mq6hud-phone (round 6); mq5hud, mq5hud-phone (round 5); mq4hud, mq4hud-phone, mq4sand (round 4); r2flow, r2museum, r2dig, pops, strips (round 2); flow, chapters, dig, pickaxe (round 1; the new world: run the dev server with NEXT_PUBLIC_GAME_WORLD=new); village (the
 // default world, no env: the village's one tracker line, unchanged).
 // Places are the new world's (lib/collections/rolls.ts activeVillage("new"): museum 4,70.5; dig-sand-0 -17,102;
 // dig-soil-15 35,84; rock-1 38,25.1).
@@ -25,8 +25,9 @@ const CAMERA = JSON.stringify({ yaw: 0, pitch: 0.55, zoom: 1, sensitivity: 1, in
 
 /** A phone (round 4): a touch screen's size; the game's touch layout. */
 const PHONE = { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true };
-async function open(query, store = {}, view = { viewport: { width: 1440, height: 900 } }) {
-  const ctx = await browser.newContext(view);
+async function open(query, store = {}, view = { viewport: { width: 1440, height: 900 } }, video = null) {
+  const ctx = await browser.newContext(video ? { ...view, recordVideo: { dir: `${OUT}/video`, size: video } } : view);
+  ctx.t0 = Date.now();
   const page = await ctx.newPage();
   page.on("pageerror", e => { errors.push(e.message.slice(0, 300)); console.log("pageerror", e.message.slice(0, 300)); });
   await page.goto(`${HOST}/lab/island`, { waitUntil: "domcontentloaded" });
@@ -185,6 +186,99 @@ async function levelUpStrip(page, prefix, wide, times = [["a", 250], ["b", 850],
 }
 
 for (const scene of SCENES) try {
+  if (scene === "mq8lab") {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } }), page = await ctx.newPage();
+    page.on("pageerror", e => errors.push(e.message.slice(0, 300)));
+    await page.goto(`${HOST}/lab/gui?only=hud-bars`, { waitUntil: "networkidle", timeout: 300000 });
+    await sleep(2500);
+    const el = await page.$("#hud-bars") ?? await page.$("section");
+    await el.screenshot({ path: `${OUT}/mq8-lab-vitals.png` });
+    log.push({ name: "mq8-lab-vitals" });
+    await ctx.close();
+  }
+  if (scene === "mq8hud" || scene === "mq8hud-phone") {
+    // Round 8: the Capsule vitals at full, half, low and critical; a shield extending the health bar (nothing in game
+    // has one yet: the shield's end is put on the live bar, as VitalBar's `shield` renders it); the stamina arc at its
+    // lower opacity; the arc through the zoom (its box logged at each zoom). Clips: the zoom sweep, the arc fading in
+    // and out, the shield then health draining.
+    const phone = scene.endsWith("phone");
+    const { ctx, page } = await open("time=day", {}, phone ? PHONE : undefined, phone ? { width: 390, height: 844 } : { width: 960, height: 600 });
+    const mark = (clip, edge) => log.push({ clip: `${phone ? "mq8-phone" : "mq8"}-${clip}`, [edge]: (Date.now() - ctx.t0) / 1000 });
+    await go(page, 30, 46, Math.PI);
+    await hudIn(page);
+    const p = phone ? "mq8-phone" : "mq8";
+    const corner = phone ? { x: 0, y: 40, width: 390, height: 120 } : { x: 0, y: 40, width: 460, height: 100 };
+    const hp = h => page.evaluate(x => { window.__combat.rt.player.hp = Math.round(window.__combat.rt.player.maxHp * x); window.__publishCombat(); }, h);
+    for (const [k, h] of [["full", 1], ["half", 0.5], ["low", 0.3]]) await vitalsAt(page, `${p}-${k}`, h, 1, corner);
+    await hp(0.12); await sleep(1200);
+    const t0 = Date.now();
+    for (let i = 0; i < 6; i++) {
+      const at = i * 150; if (Date.now() - t0 < at) await sleep(at - (Date.now() - t0));
+      await page.screenshot({ path: `${OUT}/${p}-critical-${i}.png`, clip: corner });
+    }
+    await shot(page, `${p}-critical-screen`);
+    // The shield: 40 points on the end of 100 health (VitalBar's --hp, --tally and its <b>).
+    const shield = sh => page.evaluate(x => { const bar = document.querySelector("[data-testid=hud-vitals] [role=meter]");
+      if (!bar.querySelector("b")) { bar.appendChild(document.createElement("b")); bar.style.setProperty("--hp", String(100 / 140)); bar.style.setProperty("--tally", String(20 / 140)); }
+      bar.style.setProperty("--shield", String(x)); const h = document.querySelector("main header"); if (h) h.dataset.fading = "false"; }, sh);
+    for (const [k, h, sh] of [["full", 1, 1], ["half", 0.8, 0.5], ["low", 0.3, 0.25], ["critical", 0.12, 0.6], ["empty", 0.6, 0]]) {
+      await hp(h); await shield(sh); await sleep(1100);
+      await shot(page, `${p}-shield-${k}`, corner);
+    }
+    await hp(0.8); await shield(0.7); await sleep(1100);
+    await shot(page, `${p}-shield-fit`, phone ? { x: 0, y: 40, width: 390, height: 200 } : { x: 0, y: 40, width: 460, height: 180 });
+    // Clip: the shield drains first, then health, the shield's end keeping its colour to empty.
+    await hp(1); await shield(1); await sleep(1200);
+    mark("shield", "from");
+    for (let i = 10; i >= 0; i--) { await shield(i / 10); await sleep(220); }
+    for (let i = 10; i >= 1; i--) { await hp(i / 10); await sleep(260); }
+    await sleep(1800); mark("shield", "to");
+    await page.evaluate(() => { const b = document.querySelector("[data-testid=hud-vitals] [role=meter] b"); b?.parentElement.style.setProperty("--hp", "1"); b?.parentElement.style.setProperty("--tally", "0.2"); b?.remove(); });
+    await hp(1); await sleep(1200);
+    await shot(page, `${p}-hud-rest`);
+    // The stamina arc, held at each value (the refill's rest held back), then let go to refill past a quarter.
+    const arcLog = () => page.evaluate(() => { const a = document.querySelector("[data-testid=hud-stamina]"), s = window.__move.sim.current.state, me = window.__move.screen();
+      return { stamina: +s.stamina.toFixed(3), show: a.hasAttribute("data-show"), opacity: getComputedStyle(a).opacity, zoom: +window.__orbit.orbit.view.zoom.toFixed(2),
+        box: (({ left, top, width, height }) => [left, top, width, height].map(Math.round))(a.getBoundingClientRect()), me: me && { x: Math.round(me.x), y: Math.round(me.y) } }; });
+    const hold = x => page.evaluate(v => { const s = window.__move.sim.current.state; s.stamina = v; s.staminaRest = -100; s.winded = v <= 0; }, x);
+    const around = () => page.evaluate(ph => { const me = window.__move.screen(); return ph ? { x: Math.max(0, me.x - 150), y: Math.max(40, me.y - 170), width: 300, height: 280 } : { x: me.x - 180, y: me.y - 200, width: 360, height: 300 }; }, phone);
+    let box = await around();
+    for (const [k, v] of [["a30", 0.3], ["b25", 0.25], ["c18", 0.18], ["d10", 0.1], ["e04", 0.04], ["f00", 0]]) {
+      await hold(v); await sleep(500);
+      await page.screenshot({ path: `${OUT}/${p}-stamina-${k}.png`, clip: box });
+      log.push({ name: `${p}-stamina-${k}`, arc: await arcLog() });
+      if (k === "d10") await shot(page, `${p}-stamina-screen`);
+    }
+    await page.evaluate(() => { window.__move.sim.current.state.staminaRest = 1; });
+    for (const k of ["g", "h", "i", "j", "k"]) {
+      await sleep(260);
+      await page.screenshot({ path: `${OUT}/${p}-stamina-${k}.png`, clip: box });
+      log.push({ name: `${p}-stamina-${k}`, arc: await arcLog() });
+    }
+    await sleep(1500);
+    // Clip: stamina drains past a quarter (the arc fades in), runs out (it shakes), then refills (it fades out).
+    mark("stamina", "from");
+    for (let i = 40; i >= 0; i--) { await hold(i / 100); await sleep(70); }
+    await sleep(900);
+    await page.evaluate(() => { window.__move.sim.current.state.staminaRest = 1; });
+    await sleep(3500); mark("stamina", "to");
+    // The zoom: the arc held at 12%, shot at each zoom (set at once), its box logged.
+    await hold(0.12); await sleep(600);
+    const zoom = z => page.evaluate(x => { const o = window.__orbit.orbit; o.target.zoom = x; o.view.zoom = x; }, z);
+    for (const z of [0.6, 0.8, 1, 1.3, 1.6]) {
+      await zoom(z); await sleep(700);
+      const tag = `z${String(Math.round(z * 10)).padStart(2, "0")}`;
+      await shot(page, `${p}-zoom-${tag}`);
+      log.push({ name: `${p}-zoom-${tag}`, arc: await arcLog() });
+    }
+    // Clip: the wheel's own ease, in to the nearest and out to the farthest, the arc held.
+    await zoom(1); await sleep(800);
+    mark("zoom", "from");
+    for (const z of [0.6, 1.6, 1]) { await page.evaluate(x => { window.__orbit.orbit.target.zoom = x; }, z); for (let i = 0; i < 6; i++) { await sleep(500); await hold(0.12); } }
+    mark("zoom", "to");
+    await ctx.close();
+    log.push({ video: await page.video().path(), t0: ctx.t0 });
+  }
   if (scene === "mq7lab") {
     // The showroom's vitals section (kit pieces first, bible How it's built 3).
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } }), page = await ctx.newPage();
