@@ -4,7 +4,7 @@ import { islandOf } from "./defaultIsland";
 import { objectsOf, type Village } from "./villageMap";
 import { loadWorldFromDisk } from "./world/disk";
 import { villageOfWorld } from "./world/village";
-import { BUOYS, MOORED, marketBoardsOf, SEA_Y, deckPieces, dockToWorld, fitPlane, floatBoat, floatBuoy, mooredPose, newBoatPose, newFloat, newRide, tackleCounterOf, worldToDock, type Dock } from "./wharf";
+import { BUOYS, MOORED, boardsOf, marketBoardsOf, SEA_Y, deckPieces, dockToWorld, fitPlane, floatBoat, floatBuoy, mooredPose, newBoatPose, newFloat, newRide, tackleCounterOf, worldToDock, type Dock } from "./wharf";
 import { TRAINS, waterWaveAt, waveState } from "./waves";
 import { mirrorWaterField } from "./waterField";
 import { TUNING_DEFAULTS } from "./tuning";
@@ -161,7 +161,7 @@ describe("the wharf kit on the deck squares", () => {
 describe("the fish market's boards and the tackle shop's counter (David, 2026-10-28)", () => {
   it("stands the catch board and the task board on open ground before the fish market, clear of the stall, and the counter at the tackle shop's door", () => {
     const v = villageOfWorld(loadWorldFromDisk(fileURLToPath(new URL("../../data/world/", import.meta.url)))) as Village;
-    const props = objectsOf("prop", v), boards = marketBoardsOf(props)!, island = islandOf(v);
+    const props = objectsOf("prop", v), boards = boardsOf(objectsOf("board", v))!, island = islandOf(v);
     const barrel = props.find(o => o.model === "sell-barrel")!, market = props.find(o => o.model === "fish-market")!;
     for (const b of [boards.catch, boards.tasks]) {
       const front = dockToWorld({ x: b.x, z: b.z, yaw: b.yaw }, 0, 1.2, { x: 0, z: 0 });
@@ -173,6 +173,20 @@ describe("the fish market's boards and the tackle shop's counter (David, 2026-10
     const counter = tackleCounterOf(props)!;
     expect(counter).not.toBeNull();
     expect(marketBoardsOf([])).toBeNull();
+    expect(boardsOf([{ id: "catch", x: 0, z: 0 }])).toBeNull();
     expect(tackleCounterOf([])).toBeNull();
+  }, 60_000);
+
+  // The world editor moves the boards like any prop (world-editor r1). Until David does (`pin`), they stand where
+  // MARKET_BOARDS puts them, so a change to MARKET_BOARDS has to rewrite their two rows in world.json (or rerun the layout).
+  it("reads the boards from the world's board objects, where MARKET_BOARDS puts them until David moves them", () => {
+    const v = villageOfWorld(loadWorldFromDisk(fileURLToPath(new URL("../../data/world/", import.meta.url)))) as Village;
+    const placed = objectsOf("board", v), want = marketBoardsOf(objectsOf("prop", v))!;
+    expect(placed.map(o => o.id).sort()).toEqual(["catch", "tasks"]);
+    for (const o of placed.filter(b => !b.pin)) {
+      const w = want[o.id as "catch" | "tasks"];
+      expect([o.x, o.z, o.yaw], o.id).toEqual([+w.x.toFixed(2), +w.z.toFixed(2), +w.yaw.toFixed(4)]);
+    }
+    expect(boardsOf([{ id: "catch", x: 1, z: 2, yaw: 0.5, lift: 0.2 }, { id: "tasks", x: 3, z: 4 }])).toEqual({ catch: { x: 1, z: 2, yaw: 0.5, lift: 0.2 }, tasks: { x: 3, z: 4, yaw: 0 } });
   }, 60_000);
 });

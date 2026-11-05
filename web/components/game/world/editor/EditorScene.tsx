@@ -15,10 +15,10 @@ import type { IslandMap } from "@/lib/game/grid";
 import { objectFootprint } from "@/lib/game/defaultIsland";
 import { snapPlacement } from "@/lib/game/painterTools";
 import { cellAt, cellSquare } from "@/lib/game/world/brushes";
-import { idFor } from "@/lib/game/world/editorTools";
+import { idFor, propScaleOf } from "@/lib/game/world/editorTools";
 import { rayTerrain } from "@/lib/game/world/raycast";
 import { terrainHeight, type WorldTerrain } from "@/lib/game/world/terrain";
-import type { MapObject } from "@/lib/game/villageMap";
+import { standing, type MapObject } from "@/lib/game/villageMap";
 import GridOcean from "../../grid/GridOcean";
 import { useWaterFrame } from "../../grid/GridWorld";
 import SmoothTerrain from "../SmoothTerrain";
@@ -77,6 +77,7 @@ function Controller() {
     ed.camera.x = camera.position.x; ed.camera.y = camera.position.y; ed.camera.z = camera.position.z;
     // The crosshair: the ground (or, placing and selecting, the water's surface) at the middle of the view.
     camera.getWorldDirection(_dir);
+    Object.assign(ed.ray, { x: camera.position.x, y: camera.position.y, z: camera.position.z, dx: _dir.x, dy: _dir.y, dz: _dir.z });
     const it = item(), onWater = it.type === "place" || it.type === "select";
     ed.hit = rayTerrain(t, camera.position.x, camera.position.y, camera.position.z, _dir.x, _dir.y, _dir.z, 800, onWater);
     if (ed.stroke) {
@@ -149,12 +150,12 @@ function Objects({ terrain }: { terrain: WorldTerrain }) {
   let ghost: { o: MapObject; building: boolean } | null = null;
   if (it.type === "place" && hit) {
     const probe = { id: idFor(it, ed.objects), kind: it.object.kind, x: 0, z: 0, ...(it.object.model ? { model: it.object.model } : {}), yaw: ed.ghostYaw,
-      ...(it.object.kind === "landmark" && it.building ? { scale: 1.15 } : {}) } as MapObject;
+      ...(it.object.kind === "landmark" && it.building ? { scale: 1.15 } : it.object.kind === "prop" ? { scale: propScaleOf(it.object.model, ed.objects) } : {}) } as MapObject;
     const f = it.building ? objectFootprint(probe) : null;
     const [x, z] = f ? snapPlacement(hit.x, hit.z, 0, [f.hw, f.hd]) : snapPlacement(hit.x, hit.z, 0.5);
     ghost = { o: { ...probe, x, z }, building: !!it.building };
   }
-  return <EditorObjects terrain={terrain} objects={ed.objects} light={LIGHT} ghost={ghost} selected={selectedObject()} />;
+  return <EditorObjects terrain={terrain} objects={standing(ed.objects)} light={LIGHT} ghost={ghost} selected={selectedObject()} />;
 }
 
 /** Re-render the ghost as the crosshair moves (a few times a second is enough for a preview). */
@@ -174,7 +175,7 @@ function Scene({ terrain, ocean }: { terrain: WorldTerrain; ocean: IslandMap }) 
   useWaterFrame(LIGHT, false, "waves", "own");
   const onView = useCallback((v: TerrainView | null) => { ed.view = v; if (v) v.forceLod = null; }, []);
   // No blades under a building or a trunk.
-  const objects = ed.objects;
+  const objects = standing(ed.objects);
   const clear = useMemo(() => {
     return (x: number, z: number) => !objects.some(o => {
       const f = objectFootprint(o);

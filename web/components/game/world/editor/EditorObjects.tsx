@@ -11,11 +11,12 @@ import * as THREE from "three";
 import { ACNHBuilding, ACNHParts, CHALET_VARIANTS } from "../../ACNHBuilding";
 import { InstancedModels } from "../../InstancedNature";
 import { GLBProp, sceneryOf } from "../../NatureModels";
-import { BRIDGE_URL } from "@/lib/game/propModels";
+import { BRIDGE_URL, propUrl } from "@/lib/game/propModels";
+import { CatchChalk, TaskChalk } from "../../peaceful/CatchBoard";
 import { Lanterns } from "../../AmbientProps";
 import CafeBuilding from "../../study/CafeBuilding";
 import Wharf from "../../wharf/Wharf";
-import { JETTY } from "@/lib/game/wharf";
+import { JETTY, boardsOf } from "@/lib/game/wharf";
 import { houseModel, objectFootprint } from "@/lib/game/defaultIsland";
 import type { IslandLight } from "@/lib/game/islandLighting";
 import type { MapObject, Village } from "@/lib/game/villageMap";
@@ -61,6 +62,9 @@ export function Footprint({ o, y, color }: { o: MapObject; y: number; color: str
   </group>;
 }
 
+/** The editor's noon on a fine day for the catch board's chalk. */
+const BOARD_MOMENT = { hour: 12, month: 6, weather: "clear" } as const;
+
 export default function EditorObjects({ terrain, objects, light, ghost, selected }: {
   terrain: WorldTerrain; objects: readonly MapObject[]; light: IslandLight;
   /** The placement ghost (an object not yet placed), and whether it is a building. */
@@ -70,6 +74,7 @@ export default function EditorObjects({ terrain, objects, light, ghost, selected
   const ground = useMemo(() => (x: number, z: number) => terrainHeight(terrain, x, z), [terrain]);
   // The game's own placement of nature, props and barriers, from a stand-in village holding these objects.
   const scenery = useMemo(() => sceneryOf({ objects } as unknown as Village, ground, "summer"), [objects, ground]);
+  const boards = useMemo(() => boardsOf(objects.filter(o => o.kind === "board")), [objects]);
   const lamps = useMemo(() => objects.filter(o => o.kind === "lamp").map((o): [number, number, number] => [o.x, ground(o.x, o.z), o.z]), [objects, ground]);
   return <>
     <InstancedModels items={scenery} />
@@ -78,11 +83,17 @@ export default function EditorObjects({ terrain, objects, light, ghost, selected
     <Suspense fallback={null}>
       {objects.filter(MODELLED).map(o => <BuildingModel key={`${o.kind}:${o.id}`} o={o} y={ground(o.x, o.z)} light={light} />)}
     </Suspense>
+    {boards && <>
+      <CatchChalk at={boards.catch} y={ground(boards.catch.x, boards.catch.z) + (boards.catch.lift ?? 0)} waters={["sea"]} {...BOARD_MOMENT} />
+      <TaskChalk at={boards.tasks} y={ground(boards.tasks.x, boards.tasks.z) + (boards.tasks.lift ?? 0)} waters={["sea"]} />
+    </>}
     {objects.filter(o => !MODELLED(o) && MARKER[o.kind]).map(o => <Marker key={`${o.kind}:${o.id}`} o={o} y={ground(o.x, o.z)} color={MARKER[o.kind]!} />)}
     {ghost && <>
       <Footprint o={ghost.o} y={ground(ghost.o.x, ghost.o.z)} color="#7fffd4" />
-      {ghost.building ? <Suspense fallback={null}><BuildingModel o={ghost.o} y={ground(ghost.o.x, ghost.o.z)} light={light} /></Suspense> : <Marker o={ghost.o} y={ground(ghost.o.x, ghost.o.z)} color="#7fffd4" />}
+      {ghost.building ? <Suspense fallback={null}><BuildingModel o={ghost.o} y={ground(ghost.o.x, ghost.o.z)} light={light} /></Suspense>
+        : ghost.o.kind === "prop" && ghost.o.model ? <Suspense fallback={null}><GLBProp url={propUrl(ghost.o.model)} scale={ghost.o.scale} position={[ghost.o.x, ground(ghost.o.x, ghost.o.z), ghost.o.z]} rotation={[0, ghost.o.yaw ?? 0, 0]} /></Suspense>
+        : <Marker o={ghost.o} y={ground(ghost.o.x, ghost.o.z)} color="#7fffd4" />}
     </>}
-    {selected && <Footprint o={selected} y={ground(selected.x, selected.z)} color="#ffd166" />}
+    {selected && <Footprint o={selected} y={ground(selected.x, selected.z) + (selected.lift ?? 0)} color="#ffd166" />}
   </>;
 }
