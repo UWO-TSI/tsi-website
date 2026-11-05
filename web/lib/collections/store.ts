@@ -92,7 +92,7 @@ export interface CollectionsStore {
   tourneyEntries(goalId: string, cycle: number): Promise<TourneyEntry[]>;
   /**
    * The member's fishing buff, which their casts roll with: the sushi bar's meal while it lasts (member_buffs) plus the
-   * tasting book's permanent luck (bookLuck of their cooked slots); null when neither.
+   * tasting book's permanent luck (bookLuck of their filled slots); null when neither.
    */
   buff(memberId: string, now: Date): Promise<{ luck: number; size: number } | null>;
   showcase(memberId: string): Promise<(string | null)[]>;

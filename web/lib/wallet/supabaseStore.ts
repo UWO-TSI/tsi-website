@@ -120,12 +120,12 @@ export function supabaseEconomyStore(db: SupabaseClient): EconomyStore {
       return { balance: Number(r.balance), paid: Number(r.paid), buff: { source: String(r.source), luck: Number(r.luck), size: Number(r.size), until: String(r.until) }, replayed: r.replayed === true };
     },
     async tasting(m) {
-      const { data, error } = await db.from("tasting_book").select("species_key, way").eq("member_id", m).order("created_at");
+      const { data, error } = await db.from("tasting_book").select("species_key").eq("member_id", m).order("created_at");
       if (error) raise(error);
-      return ((data ?? []) as Row[]).map((r) => ({ species_key: String(r.species_key), way: r.way === "aquarium" ? "aquarium" : "cooked" }));
+      return ((data ?? []) as Row[]).map((r) => ({ species_key: String(r.species_key) }));
     },
     async aquarium(limit) {
-      const { data, error } = await db.from("tasting_book").select("species_key").eq("way", "aquarium").order("created_at", { ascending: false }).limit(500);
+      const { data, error } = await db.from("tasting_serves").select("species_key").eq("way", "tank").order("created_at", { ascending: false }).limit(500);
       if (error) raise(error);
       return [...new Set(((data ?? []) as Row[]).map((r) => String(r.species_key)))].slice(0, limit);
     },

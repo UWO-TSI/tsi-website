@@ -1,7 +1,7 @@
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { CallTag, CardGrid, DetailView, FlatPanel, HairlineRow, IconRail, ItemCard, PayRow, Purse, SidePanel, SpecBand, WithSide, badgeText, priced, railStep, type RailItem } from ".";
+import { BoostTrack, CallTag, CardGrid, DetailView, FlatPanel, FoldedMenu, GivenFish, HairlineRow, IconRail, ItemCard, PayRow, Purse, SidePanel, SpecBand, WithSide, badgeText, priced, railStep, spreadOf, type RailItem } from ".";
 import { NUDGE, markerOf, nudgeOf } from "../motion";
 
 const html = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(el);
@@ -60,6 +60,7 @@ describe("ItemCard", () => {
   it("covers a sold-out card and an owned one with the word", () => {
     expect(card({ cover: "sold-out" })).toMatch(/data-cover="sold-out"[\s\S]*>Sold out<\/span><\/button>$/);
     expect(card({ cover: "owned" })).toMatch(/data-cover="owned"[\s\S]*>Owned<\/span><\/button>$/);
+    expect(card({ cover: "given", onClick: undefined })).toMatch(/data-cover="given"[\s\S]*>Given<\/span><\/div>$/);
     expect(card()).not.toMatch(/data-cover|Sold out|Owned/);
   });
   it("shows something not found yet as a silhouette, with no word over it", () => {
@@ -211,5 +212,28 @@ describe("CallTag", () => {
     const chip = html(h(CallTag, { kind: "block", team: "var(--ui-away)", live: true, children: "Block" }));
     expect(chip).toContain("<svg"); expect(chip).toContain('data-kind="block"'); expect(chip).toContain("data-live"); expect(chip).toContain("--team:var(--ui-away)");
     expect(html(h(CallTag, { kind: "good", children: "Good" }))).not.toContain("data-live");
+  });
+});
+
+describe("the menu's collection (tasting-book round 6)", () => {
+  it("shows the boost large and a track of stamps to the cap, the filled ones sealed", () => {
+    const out = html(h(BoostTrack, { icon: "L", value: "+6%", label: "luck, for good", filled: 6, total: 20, note: "+1% a new fish", filter: "ink" }));
+    expect(out).toContain("+6%");
+    expect(out).toContain('aria-label="+6% luck, for good, 6 of 20"');
+    expect(out.match(/<i[ >]/g)).toHaveLength(20);
+    expect(out.match(/<i data-on="true"/g)).toHaveLength(6);
+    expect(out.match(/<svg/g)).toHaveLength(6);
+  });
+  it("shows a fish given, stamped, with what it gave", () => {
+    const out = html(h(GivenFish, { picture: "P", name: "Dace", gave: "Luck +1%", extra: "Dace karaage", fresh: true, filter: "ink" }));
+    expect(out).toContain('data-state="given"');
+    expect(out).toContain("Dace. Given: stamped");
+    expect(out).toMatch(/<b>Dace<\/b><span>Luck \+1%<\/span><span>Dace karaage<\/span>/);
+  });
+  it("names the menu's parts under it, the one you are in inked", () => {
+    expect([0, 1, 2, 3, 10].map(spreadOf)).toEqual([1, 1, 2, 2, 6]);
+    const parts = [{ label: "Collection", panel: 0 }, { label: "Menu", panel: 2 }];
+    // Closed on its cover: no parts, the dots.
+    expect(html(h(FoldedMenu, { cover: "C", panels: ["a", "b", "c", "d"], label: "M", chapters: parts }))).not.toContain("Parts of the menu");
   });
 });

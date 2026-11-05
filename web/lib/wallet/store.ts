@@ -51,8 +51,8 @@ export interface ActiveBuff {
   size: number;
   until: string;
 }
-/** A filled slot of the tasting book (tasting_book): the species Bancha cooked (its stamp), or gave to HQ's tank. */
-export interface TastingSlot { species_key: string; way: "cooked" | "aquarium" }
+/** A filled slot of the tasting book (tasting_book): a species given to Bancha on the menu's first page (its stamp). */
+export interface TastingSlot { species_key: string }
 /** A fish served at the counter: the fee paid, whether its slot got its stamp, and the milestones it paid (`marks`). */
 export interface TastingServe { balance: number; remaining: number; paid: number; stamped: boolean; earned: number; marks: string[]; replayed: boolean }
 
@@ -95,16 +95,17 @@ export interface EconomyStore {
   order(memberId: string, dish: string, price: number, fishKey: string | null, buff: ActiveBuff, key: string): Promise<{ balance: number; paid: number; buff: ActiveBuff; replayed: boolean }>;
   /** The member's tasting book: the slots filled. */
   tasting(memberId: string): Promise<TastingSlot[]>;
-  /** The club's aquarium: the species members gave to HQ's tank, newest first, each once, at most `limit`. */
+  /** HQ's tank: the species members dropped in, newest first, each once, at most `limit`. */
   aquarium(limit: number): Promise<string[]>;
   /**
-   * Atomic, once per key (tasting_serve): one unlocked fish of a rod species whose slot is empty (already_in_book) leaves
-   * the bag. `cook` pays `fee.base` plus `fee.step` for each species cooked before and stamps the slot; `aquarium` fills
-   * it for free, and only a gift pays the milestones (`marks` by the fish in the tank, `full` for a water all in it).
+   * Atomic, once per key (tasting_serve): one unlocked fish of a rod species leaves the bag. `cook` (the give) needs its
+   * slot empty (already_in_book), pays `fee.base` plus `fee.step` for each species given before, stamps the slot and pays
+   * the milestones (`marks` by the fish given, `full` for a water's page filled); `tank` drops it in HQ's tank, and that
+   * is all it does.
    */
-  serve(memberId: string, speciesKey: string, way: "cook" | "aquarium", fee: { base: number; step: number }, marks: readonly { at: number; coins: number }[], full: number, key: string): Promise<TastingServe>;
+  serve(memberId: string, speciesKey: string, way: "cook" | "tank", fee: { base: number; step: number }, marks: readonly { at: number; coins: number }[], full: number, key: string): Promise<TastingServe>;
   /**
-   * Atomic, once per key (tasting_dish): a dish the book taught (not_learned until `unlock` is in the book, either way): one of each of
+   * Atomic, once per key (tasting_dish): a dish the book taught (not_learned until `unlock` is in the book): one of each of
    * `ingredients` (a key twice is two) leaves the bag, `price` coins are paid, and `buff` replaces the meal buff.
    */
   bookDish(memberId: string, dish: string, price: number, unlock: string, ingredients: readonly string[], buff: ActiveBuff, key: string): Promise<{ balance: number; paid: number; buff: ActiveBuff; replayed: boolean }>;

@@ -258,20 +258,19 @@ export async function orderDish(store: EconomyStore, m: string, input: { dish: s
   return run(() => store.order(m, dish.id, dish.price ?? 0, input.fish ?? null, buffOf(dish.id, dish.buff, now), input.idempotency_key));
 }
 
-/** The tasting book: your filled slots, and the club's aquarium (the species given to HQ's tank, newest first). */
+/** The tasting book: your filled slots, in the order given, and HQ's tank (the species members dropped in, newest first). */
 export interface TastingView { book: TastingSlot[]; aquarium: string[] }
-/** How many of the club's gifts swim in HQ's tank at once (the newest). */
+/** How many of the club's drops swim in HQ's tank at once (the newest). */
 export const AQUARIUM_MAX = 12;
 export const tastingView = (store: EconomyStore, m: string) =>
   run<TastingView>(async () => { const [book, aquarium] = await Promise.all([store.tasting(m), store.aquarium(AQUARIUM_MAX)]); return { book, aquarium }; });
 /**
- * Bring Bancha a fish whose slot in your book is empty (catalogue TASTING): `cook` stamps it for the fee (tastingFee,
- * summed in the store under its lock), which raises your casts' luck for good (bookLuck) and gives nothing else;
- * `aquarium` gives it to HQ's tank for free, where it counts toward the book's milestones. Either way a key fish teaches
- * Bancha its dish (round 5).
- * The server prices it all.
+ * Give Bancha a fish not yet in your book (catalogue TASTING; `cook`, the menu's first page): the fee (tastingFee, summed
+ * in the store under its lock) and its stamp, which raises your casts' luck for good (bookLuck), pays the milestones,
+ * and for a key fish teaches Bancha its dish. Or drop any rod fish in HQ's tank (`tank`; round 6, David: "if you wanna
+ * drop but it doesnt do anything"): it swims there, and that is all. The server prices it all.
  */
-export const serveFish = (store: EconomyStore, m: string, input: { fish: string; way: "cook" | "aquarium"; idempotency_key: string }) =>
+export const serveFish = (store: EconomyStore, m: string, input: { fish: string; way: "cook" | "tank"; idempotency_key: string }) =>
   run(async () => {
     if (!tastingWater(input.fish)) throw new EconomyError("not_found");
     return store.serve(m, input.fish, input.way, TASTING.fee, TASTING.marks, TASTING.full, input.idempotency_key);

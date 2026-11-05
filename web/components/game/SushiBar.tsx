@@ -47,8 +47,9 @@ const STAFF_IN = 40, STAFF_OUT = 44;
 
 /**
  * The menu lying on the counter before your stool (tasting-book round 4, David: "have menu be on the table"; round 5:
- * "make the menu on the table actually our menu"): the menu you pick up (SushiSheets MenuPickup), closed, its cover the
- * menu's own (art/buildings/build_sushi_menu.py: a bound washi menu, the cover rendered from the game's), one draw.
+ * "make the menu on the table actually our menu"; round 6: "better modeled more prominent in the center"): the menu you
+ * pick up (SushiSheets MenuPickup), closed, square in the middle of your place, its cover the menu's own
+ * (art/buildings/build_sushi_menu.py: a bound washi menu, the cover rendered from the game's, the stab binding's thread), one draw.
  * Loaded the first time you sit.
  */
 function CounterMenu() {
@@ -61,7 +62,7 @@ function CounterMenu() {
 /** Module scope (the react compiler forbids writing through hook values): the counter's menu before stool `i` (none at -1), down unless `down` is false. */
 function layMenu(menu: THREE.Object3D, i: number, down: boolean) {
   menu.visible = i >= 0 && down;
-  if (i >= 0) { menu.position.set(...menuAt(STOOLS[i])); menu.rotation.y = 0.06; }
+  if (i >= 0) menu.position.set(...menuAt(STOOLS[i]));
 }
 
 /** Module scope (the react compiler forbids writing through hook values): the glow's materials and the pools' gain. */

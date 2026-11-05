@@ -1,34 +1,31 @@
 -- The tasting book (game/tasting-book; David, fishing r4 review 2026-11-01: "the tasting book should be impliment ed and
 -- one per fish kinda thing and they can either turn into meal that gets buff and a stamp or in the aquarium"; round 2,
 -- 2026-11-02: "cooking fee like 100 ... a perm small like 1% buff for fishing for new species and it can unlcok dishes
--- taht are temp big buff but require ingredients and expensive. the fee for cooking scales with new fish unlock"; round 3,
--- 2026-11-03: "key fish, tank is the route for milestones and unlocks and cooking is solely for bonuses, no"; round 5,
--- 2026-11-04: "the pages after are temp boosts that unlcok recipe based on the fishes you provide").
--- * tasting_book: one slot per member per rod species, filled once: 'cooked' (Bancha cooked it: its stamp) or
---   'aquarium' (given to HQ's tank). Owner reads; nobody writes but tasting_serve. The permanent fishing buff is no column:
---   the server's casts add the luck of the member's cooked slots (lib/wallet/rules.ts bookLuck, read by
+-- taht are temp big buff but require ingredients and expensive. the fee for cooking scales with new fish unlock"; round 5,
+-- 2026-11-04: "the pages after are temp boosts that unlcok recipe based on the fishes you provide"; round 6, 2026-11-05:
+-- the menu's first page is the collection, and HQ's tank "doesnt do anything, its a very small thing").
+-- * tasting_book: one slot per member per rod species, filled once, when the member gives Bancha that fish on the menu's
+--   first page (its stamp). Owner reads; nobody writes but tasting_serve. The permanent fishing buff is no column: the
+--   server's casts add the luck of the member's slots (lib/wallet/rules.ts bookLuck, read by
 --   lib/collections/supabaseStore.ts buff), so it can never drift from the stamps.
--- * tasting_serve: the member brings one unlocked fish of a rod species whose slot is empty (already_in_book otherwise;
---   collections_take_one: it leaves the bag). 'cook' pays p_fee plus p_fee_step for each species cooked before (a 'shop'
---   debit, summed here under the member's lock) and stamps the slot, and that is all a cook gives; 'aquarium' fills it
---   free. The milestones are paid once as a 'quest' credit in the same transaction: a gift whose tank count reaches one
---   of p_marks (pays the matching p_mark_pay), and any fill, cooked too (round 4, 2026-11-04 pick), that completes the
---   slot's water (every rod species of its collection_species.biome in the book: p_full_pay). Once per key (tasting_serves). The server prices it all
---   (lib/wallet/catalogue.ts TASTING); this bounds it. Service role only.
--- * tasting_dish: a dish the book taught (TASTING.dishes): not_learned until its key fish p_unlock is in the book, cooked
---   at the bar or given to the tank (round 5); one of each
---   p_ingredients entry leaves the bag (a key twice is two), p_price coins are paid ('shop'), and the dish's buff
+-- * tasting_serve: the member brings one unlocked fish of a rod species (collections_take_one: it leaves the bag).
+--   'cook' (the give) needs its slot empty (already_in_book otherwise), pays p_fee plus p_fee_step for each species in
+--   the book before it (a 'shop' debit, summed here under the member's lock) and stamps the slot. The milestones are
+--   paid once as a 'quest' credit in the same transaction: a give whose book count reaches one of p_marks (pays the
+--   matching p_mark_pay), and a give that completes the slot's water (every rod species of its collection_species.biome
+--   in the book: p_full_pay). 'tank' drops the fish in HQ's tank: nothing paid, no slot, no milestone. Once per key
+--   (tasting_serves). The server prices it all (lib/wallet/catalogue.ts TASTING); this bounds it. Service role only.
+-- * tasting_dish: a dish the book taught (TASTING.dishes): not_learned until its key fish p_unlock is in the book; one of
+--   each p_ingredients entry leaves the bag (a key twice is two), p_price coins are paid ('shop'), and the dish's buff
 --   replaces the meal buff (member_buffs), like sushi_order. Once per key, in sushi_orders. Service role only.
--- * HQ's tank shows the club's gifts: the service reads every 'aquarium' slot (lib/wallet/service.ts tastingView).
+-- * HQ's tank shows the club's drops: the service reads the newest 'tank' serves (lib/wallet/service.ts tastingView).
 
 CREATE TABLE IF NOT EXISTS tasting_book (
   member_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   species_key TEXT NOT NULL REFERENCES collection_species(key) ON DELETE CASCADE,
-  way TEXT NOT NULL CHECK (way IN ('cooked', 'aquarium')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (member_id, species_key)
 );
-CREATE INDEX IF NOT EXISTS idx_tasting_book_aquarium ON tasting_book (created_at DESC) WHERE way = 'aquarium';
 ALTER TABLE tasting_book ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Tasting book readable by owner" ON tasting_book;
 CREATE POLICY "Tasting book readable by owner" ON tasting_book FOR SELECT USING ((select auth.uid()) = member_id);
@@ -38,7 +35,7 @@ CREATE TABLE IF NOT EXISTS tasting_serves (
   member_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   idempotency_key TEXT NOT NULL CHECK (char_length(idempotency_key) BETWEEN 6 AND 200),
   species_key TEXT NOT NULL,
-  way TEXT NOT NULL CHECK (way IN ('cook', 'aquarium')),
+  way TEXT NOT NULL CHECK (way IN ('cook', 'tank')),
   paid INTEGER NOT NULL CHECK (paid >= 0),
   remaining INTEGER NOT NULL,
   stamped BOOLEAN NOT NULL,
@@ -47,6 +44,7 @@ CREATE TABLE IF NOT EXISTS tasting_serves (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (member_id, idempotency_key)
 );
+CREATE INDEX IF NOT EXISTS idx_tasting_serves_tank ON tasting_serves (created_at DESC) WHERE way = 'tank';
 ALTER TABLE tasting_serves ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Tasting serves readable by owner" ON tasting_serves;
 CREATE POLICY "Tasting serves readable by owner" ON tasting_serves FOR SELECT USING ((select auth.uid()) = member_id);
@@ -75,33 +73,37 @@ BEGIN
     SELECT w.coins INTO v_bal FROM wallets w WHERE w.member_id = p_member_id;
     RETURN QUERY SELECT COALESCE(v_bal, 0), s.remaining, s.paid, s.stamped, s.earned, s.marks, TRUE; RETURN;
   END IF;
-  IF p_way NOT IN ('cook', 'aquarium') OR p_fee < 1 OR p_fee > 500 OR p_fee_step < 0 OR p_fee_step > 50 OR p_full_pay < 0 OR p_full_pay > 5000
+  IF p_way NOT IN ('cook', 'tank') OR p_fee < 1 OR p_fee > 500 OR p_fee_step < 0 OR p_fee_step > 50 OR p_full_pay < 0 OR p_full_pay > 5000
      OR p_marks IS NULL OR p_mark_pay IS NULL OR cardinality(p_marks) <> cardinality(p_mark_pay) OR cardinality(p_marks) > 5
      OR EXISTS (SELECT 1 FROM unnest(p_marks) n WHERE n < 1 OR n > 500) OR EXISTS (SELECT 1 FROM unnest(p_mark_pay) c WHERE c < 0 OR c > 5000) THEN
     RAISE EXCEPTION 'bad_qty';
   END IF;
-  -- Only what a rod brings in has a slot, and a slot fills once.
+  -- Only what a rod brings in has a slot (or goes in the tank).
   SELECT sp.biome INTO v_biome FROM collection_species sp WHERE sp.key = p_species_key AND sp.tool = 'rod' AND sp.active;
   IF v_biome IS NULL THEN RAISE EXCEPTION 'not_found'; END IF;
+  -- A drop in HQ's tank takes the fish, and that is all it does.
+  IF p_way = 'tank' THEN
+    v_have := public.collections_take_one(p_member_id, p_species_key);
+    SELECT w.coins INTO v_bal FROM wallets w WHERE w.member_id = p_member_id;
+    INSERT INTO tasting_serves (member_id, idempotency_key, species_key, way, paid, remaining, stamped, earned, marks)
+    VALUES (p_member_id, p_idempotency_key, p_species_key, 'tank', 0, v_have, FALSE, 0, '{}');
+    RETURN QUERY SELECT COALESCE(v_bal, 0), v_have, 0, FALSE, 0, '{}'::TEXT[], FALSE; RETURN;
+  END IF;
+  -- A slot fills once.
   IF EXISTS (SELECT 1 FROM tasting_book b WHERE b.member_id = p_member_id AND b.species_key = p_species_key) THEN
     RAISE EXCEPTION 'already_in_book';
   END IF;
   v_have := public.collections_take_one(p_member_id, p_species_key);
-  IF p_way = 'cook' THEN
-    v_fee := p_fee + p_fee_step * (SELECT count(*) FROM tasting_book b WHERE b.member_id = p_member_id AND b.way = 'cooked')::INTEGER;
-    SELECT a.balance INTO v_bal FROM public.wallet_apply(p_member_id, 'coins', -v_fee, 'shop', 'tasting:' || p_species_key, 'tasting:' || p_idempotency_key) a;
-  ELSE
-    SELECT w.coins INTO v_bal FROM wallets w WHERE w.member_id = p_member_id;
-  END IF;
-  INSERT INTO tasting_book (member_id, species_key, way) VALUES (p_member_id, p_species_key, CASE WHEN p_way = 'cook' THEN 'cooked' ELSE 'aquarium' END);
-  -- The count milestones are the tank's: gifts fill one at a time, so its count passes each mark once.
-  IF p_way = 'aquarium' THEN
-    SELECT count(*) INTO v_count FROM tasting_book b WHERE b.member_id = p_member_id AND b.way = 'aquarium';
-    FOR i IN 1 .. cardinality(p_marks) LOOP
-      IF v_count = p_marks[i] THEN v_earned := v_earned + p_mark_pay[i]; v_marks := v_marks || ('count:' || v_count); END IF;
-    END LOOP;
-  END IF;
-  -- A water's page pays whichever fill completes it, cooked or given (a slot fills once, so it completes once).
+  SELECT count(*) INTO v_count FROM tasting_book b WHERE b.member_id = p_member_id;
+  v_fee := p_fee + p_fee_step * v_count;
+  SELECT a.balance INTO v_bal FROM public.wallet_apply(p_member_id, 'coins', -v_fee, 'shop', 'tasting:' || p_species_key, 'tasting:' || p_idempotency_key) a;
+  INSERT INTO tasting_book (member_id, species_key) VALUES (p_member_id, p_species_key);
+  -- The count milestones: gives fill one slot at a time, so the count passes each mark once.
+  v_count := v_count + 1;
+  FOR i IN 1 .. cardinality(p_marks) LOOP
+    IF v_count = p_marks[i] THEN v_earned := v_earned + p_mark_pay[i]; v_marks := v_marks || ('count:' || v_count); END IF;
+  END LOOP;
+  -- A water's page pays the give that completes it (a slot fills once, so it completes once).
   IF NOT EXISTS (SELECT 1 FROM collection_species sp WHERE sp.tool = 'rod' AND sp.active AND sp.biome = v_biome
                  AND NOT EXISTS (SELECT 1 FROM tasting_book b WHERE b.member_id = p_member_id AND b.species_key = sp.key)) THEN
     v_earned := v_earned + p_full_pay; v_marks := v_marks || ('water:' || v_biome);
@@ -110,8 +112,8 @@ BEGIN
     SELECT a.balance INTO v_bal FROM public.wallet_apply(p_member_id, 'coins', v_earned, 'quest', 'tasting:' || array_to_string(v_marks, ','), 'tasting_mark:' || p_idempotency_key) a;
   END IF;
   INSERT INTO tasting_serves (member_id, idempotency_key, species_key, way, paid, remaining, stamped, earned, marks)
-  VALUES (p_member_id, p_idempotency_key, p_species_key, p_way, v_fee, v_have, p_way = 'cook', v_earned, v_marks);
-  RETURN QUERY SELECT COALESCE(v_bal, 0), v_have, v_fee, p_way = 'cook', v_earned, v_marks, FALSE;
+  VALUES (p_member_id, p_idempotency_key, p_species_key, 'cook', v_fee, v_have, TRUE, v_earned, v_marks);
+  RETURN QUERY SELECT COALESCE(v_bal, 0), v_have, v_fee, TRUE, v_earned, v_marks, FALSE;
 END;
 $$;
 

@@ -42,20 +42,25 @@
 .order:active:not(:disabled) { transform: scale(0.96); }
 .order:disabled { opacity: 0.5; cursor: default; }
 .order:focus-visible { outline: 2px solid var(--ui-paper-ink); outline-offset: 2px; }
-/* The counter's choice for a fish you bring (the tasting book): your fish, then cook it or give it to the tank. */
+/* A dish's ingredients from your bag. */
 .fishRow { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; width: 100%; }
-/* The first page's fish from your bag (round 5): read from the left, as the page's words are. */
-.newFish { justify-content: flex-start; margin: 2% 0 4%; }
-.choice { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; width: 100%; }
-.choice .quiet { flex-basis: 100%; text-align: right; }
+/* The collection's fish given (round 6): a grid of stamped slots with what each gave, the newest first; it scrolls in its page. */
+.given { display: grid; grid-template-columns: repeat(auto-fill, minmax(clamp(62px, 10vh, 86px), 1fr)); gap: clamp(8px, 1.6vh, 14px) 6px; align-content: start;
+  max-height: calc(var(--h) * 0.6); overflow-y: auto; scrollbar-width: thin; padding: 4px 2px; }
+/* The dishes' contents: a line a dish. */
+.rows { display: grid; }
+/* HQ's tank: your fish to drop in, and the one button. */
+.tankRow { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-height: 40dvh; overflow-y: auto; padding: 4px; }
+.tankAction { display: flex; justify-content: center; }
+/* A price inside a button: the amount and its coin on one line. */
+.price { display: inline-flex; align-items: center; gap: 6px; }
 /* A phone: smaller fish with room for their counts, and the put-down button over the menu's top right (not off the screen). */
 @media (max-aspect-ratio: 3/4) {
   .fishRow { gap: 10px 9px; }
   .fishRow > * { --thumb: 30px !important; }
   .down { right: 4px; bottom: auto; top: -42px; }
   .backSeal { display: none; }
-  /* The first page on a phone: the fish and Give, without the words over them (the page's name and the dish's rows say it). */
-  .newFishNote { display: none; }
+  .given { grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); max-height: calc(var(--h) * 0.56); }
 }
 .order[data-quiet] { background: transparent; color: var(--ui-paper-ink); box-shadow: inset 0 0 0 1.5px var(--ui-paper-ink); }
 .quiet { color: var(--ui-paper-quiet); font: 500 12px/1.3 var(--gui-font); }

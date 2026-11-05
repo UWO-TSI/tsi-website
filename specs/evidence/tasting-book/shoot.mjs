@@ -1,7 +1,8 @@
 // tasting-book evidence: headless Chromium (never a window), muted, signed out, the dev server on :3476 with
 // the Supabase env blanked and NEXT_PUBLIC_GAME_WORLD=new, the new world (/lab/island) with the demo data.
 //   VIEW=phone node specs/evidence/tasting-book/shoot.mjs <out_dir> <flow> [<flow> ...]
-// VIEW: desktop (1280 x 800, the default) or phone (390 x 844, touch). Flows: showroom, counter (choice, cook, stamp, book), aquarium, book3, book4, tank4, book5, tank5.
+// VIEW: desktop (1280 x 800, the default) or phone (390 x 844, touch). Flows: showroom, counter (choice, cook, stamp, book), aquarium, book3, book4, tank4, book5, tank5, book6, tank6, museum6.
+// CLIP=1 records the run (Playwright's video, <out_dir>/video) and writes <out_dir>/marks.json, each clip's start and end in it.
 import { createRequire } from "node:module";
 import { readFileSync, writeFileSync } from "node:fs";
 const require = createRequire("/opt/homebrew/lib/node_modules/");
@@ -12,8 +13,12 @@ const HOST = "http://localhost:3476";
 const browser = await chromium.launch({ headless: true, args: ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist", "--enable-gpu"] });
 const PHONE = process.env.VIEW === "phone";
 const VW = PHONE ? 390 : 1280, VH = PHONE ? 844 : 800;
-const ctx = await browser.newContext({ viewport: { width: VW, height: VH }, deviceScaleFactor: PHONE ? 2 : 1, reducedMotion: "no-preference", ...(PHONE ? { isMobile: true, hasTouch: true } : {}) });
+const ctx = await browser.newContext({ viewport: { width: VW, height: VH }, deviceScaleFactor: PHONE ? 2 : 1, reducedMotion: "no-preference", ...(PHONE ? { isMobile: true, hasTouch: true } : {}),
+  ...(process.env.CLIP ? { recordVideo: { dir: `${OUT}/video`, size: { width: VW, height: VH } } } : {}) });
 const page = await ctx.newPage();
+const T0 = Date.now(), MARKS = {};
+/** A clip's start or end on the video's clock. */
+const mark = (name, end = false) => { (MARKS[name] ??= {})[end ? "to" : "from"] = (Date.now() - T0) / 1000; };
 page.on("pageerror", e => console.log("pageerror", e.message.slice(0, 300)));
 page.on("console", m => { if (m.type() === "error" && !/Failed to load resource|supabase|401|503|404/i.test(m.text())) console.log("console", m.text().slice(0, 240)); });
 const LOOK = { skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [], bangs: "bangs_straight", back: "back_bob",
@@ -51,7 +56,7 @@ const turnPage = async () => { await centre(page.getByRole("button", { name: "Tu
 const menuBox = async () => (await page.locator('[aria-roledescription="folded menu"]').first().boundingBox());
 const menuShot = async name => {
   const b = await menuBox();
-  await shot(name, page, b ? { clip: { x: Math.max(0, b.x - 10), y: Math.max(0, b.y - 10), width: Math.min(VW - Math.max(0, b.x - 10), b.width + 20), height: Math.min(VH - Math.max(0, b.y - 10), b.height + 20) } } : {});
+  await shot(name, page, b ? { clip: { x: Math.max(0, b.x - 10), y: Math.max(0, b.y - 10), width: Math.min(VW - Math.max(0, b.x - 10), b.width + 20), height: Math.min(VH - Math.max(0, b.y - 10), b.height + 56) } } : {});
 };
 
 const FLOW = {
@@ -325,6 +330,106 @@ const FLOW = {
     await wait(1800);
     await shot("tb5-tank-given");
   },
+  /** Round 6 (tb6-*): the menu centred on the counter, the collection (luck for good, every fish given), your bag over the
+   * menu (given fish greyed), a give landing in the collection, a key fish teaching its dish, then each part of the menu. */
+  async book6() {
+    await world("at=-47,114.4&at=19:30&time=evening&bag=23&dish=1", { settle: 12000, press: false, click: false });
+    const seatLine = () => page.getByText(/down to read the menu/).count();
+    for (let i = 0; i < 40 && !(await seatLine()); i++) { await page.keyboard.press("e"); for (let t = 0; t < 20 && !(await seatLine()); t++) await wait(250); }
+    await wait(1500);
+    mark("look");
+    if (PHONE) {
+      await page.evaluate(async () => {
+        const el = document.querySelector("canvas"), at = (type, y) => el.dispatchEvent(new PointerEvent(type, { pointerType: "touch", pointerId: 7, clientX: 195, clientY: y, bubbles: true, isPrimary: true }));
+        at("pointerdown", 380);
+        for (let y = 384; y <= 480; y += 4) { at("pointermove", y); await new Promise(r => setTimeout(r, 16)); }
+        window.dispatchEvent(new PointerEvent("pointerup", { pointerType: "touch", pointerId: 7, clientX: 195, clientY: 480, bubbles: true }));
+      });
+    } else {
+      await page.mouse.move(VW / 2, VH / 2);
+      for (let i = 0; i < 25; i++) { await page.mouse.move(VW / 2, VH / 2 + 4 * (i + 1)); await wait(16); }
+    }
+    await wait(2500);
+    await shot("tb6-look");
+    await shot("tb6-look-close", page, { clip: PHONE ? { x: 0, y: VH * 0.25, width: VW, height: VH * 0.5 } : { x: VW / 2 - 320, y: VH * 0.3, width: 640, height: VH * 0.45 } });
+    await page.getByRole("button", { name: /Read the menu/ }).first().click({ timeout: 10000 }).catch(e => console.log("read", e.message.slice(0, 120)));
+    await wait(1800);
+    mark("look", true);
+    await centre(page.getByRole("button", { name: "Open the menu" }));
+    await wait(1600);
+    await menuShot("tb6-collection");
+    // Your bag over the menu: a plain fish given (it lands in the collection), then a key fish (the menu turns to its dish).
+    mark("give");
+    const bagGive = async (key, name) => {
+      await testid("open-bag").click({ force: true }).catch(e => console.log("bag", e.message.slice(0, 120)));
+      await wait(1200);
+      if (name === "tb6-bag") await shot(name);
+      await page.locator(`[data-testid="give-bag"] [data-key="${key}"]`).first().click({ timeout: 10000 }).catch(e => console.log("pick", key, e.message.slice(0, 120)));
+      await wait(900);
+      await shot(`${name}-pick`);
+      await testid("give-fish").click({ timeout: 10000 }).catch(e => console.log("give", e.message.slice(0, 120)));
+    };
+    await bagGive("fish_carp", "tb6-bag");
+    await wait(500);
+    await shot("tb6-given-toast");
+    await wait(1400);
+    await menuShot("tb6-given");
+    mark("give", true);
+    mark("key");
+    await bagGive("fish_red_snapper", "tb6-bag-key");
+    await wait(2200);
+    await menuShot("tb6-learnt");
+    mark("key", true);
+    // The parts, by the words under the menu, and the page after each.
+    mark("pages");
+    for (const [part, name] of [["Dishes", "tb6-dishes"], ["Menu", "tb6-menu"], ["All fish", "tb6-allfish"], ["Collection", "tb6-collection-after"]]) {
+      await page.getByRole("button", { name: part, exact: true }).first().click({ force: true }).catch(e => console.log("part", part, e.message.slice(0, 120)));
+      await page.mouse.move(4, VH - 4);
+      await wait(1300);
+      await menuShot(name);
+      if (part !== "Collection") { await turnPage(); await menuShot(`${name}-2`); }
+    }
+    mark("pages", true);
+  },
+  /** Round 6: HQ's tank, a small thing: E, pick a fish, drop it in; it swims, and nothing else happens. */
+  async tank6() {
+    await world("hq=inside&at=0,4.2&time=day&bag=23&dish=1", { press: false, settle: 14000 });
+    for (const [x, z] of [[-5.2, 0], [-5.2, 6.9], [-0.6, 6.9]]) {
+      await page.evaluate(([x, z]) => window.dispatchEvent(new CustomEvent("tsi:interior-move", { detail: { x, z } })), [x, z]);
+      await wait(3200);
+    }
+    console.log("tank prompt", await page.getByText("Drop a fish in").count());
+    await shot("tb6-tank-prompt");
+    mark("tank");
+    for (let i = 0; i < 6 && !(await testid("tank-sheet").count()); i++) { await page.keyboard.press("e"); await wait(1500); }
+    await wait(1000);
+    await shot("tb6-tank");
+    await page.locator('[data-testid="tank-sheet"] button[aria-label="Squid"]').first().click({ timeout: 10000 }).catch(e => console.log("pick", e.message.slice(0, 120)));
+    await wait(800);
+    await shot("tb6-tank-pick");
+    await testid("tank-drop").click({ timeout: 10000 }).catch(e => console.log("drop", e.message.slice(0, 120)));
+    await wait(700);
+    await shot("tb6-tank-drop");
+    await wait(3500);
+    await shot("tb6-tank-swim");
+    mark("tank", true);
+  },
+  /** Round 6: the kit's new paper pieces in the showroom (the collection's boost track, a fish given, a contents row, the parts under the menu). */
+  async showroom6() {
+    await page.goto(`${HOST}/lab/gui?only=flat-pieces`, { waitUntil: "domcontentloaded" });
+    await wait(8000);
+    await page.getByRole("button", { name: "Open the menu" }).first().click({ force: true }).catch(e => console.log("open", e.message.slice(0, 120)));
+    await wait(1500);
+    await menuShot("tb6-showroom");
+  },
+  /** Round 6: the museum today (the pitch's where): its aquarium wing, from the door and close. */
+  async museum6() {
+    await world("museum=inside&time=day", { press: false, settle: 14000 });
+    await shot("tb6-museum-today");
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent("tsi:interior-move", { detail: { x: 5.2, z: 0.5 } })));
+    await wait(4000);
+    await shot("tb6-museum-aquarium");
+  },
   async aquarium() {
     await world("hq=inside&at=0,4.2&time=day", { press: false, settle: 14000 });
     await page.keyboard.down("w"); await wait(400); await page.keyboard.up("w");
@@ -339,4 +444,6 @@ const FLOW = {
 for (const f of FLOWS) {
   try { await FLOW[f](); } catch (e) { console.log("flow", f, e.message.slice(0, 200)); }
 }
+if (process.env.CLIP) writeFileSync(`${OUT}/marks.json`, JSON.stringify(MARKS, null, 1));
+await ctx.close();
 await browser.close();

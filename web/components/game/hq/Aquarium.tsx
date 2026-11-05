@@ -15,9 +15,9 @@
  * - the fish: one instanced mesh, every fish swimming its path in the vertex shader (lib/game/hqAquarium.ts has the
  *   same sums), so the tank is one draw and a uniform a frame.
  * Every shader goes through three's shared project_vertex, so the curved world bends the tank with the room.
- * The club's gifts (the tasting book, David 2026-11-01: a fish "in the aquarium"): every species members gave the tank,
- * the newest AQUARIUM_MAX, swim among the schools as their own models, lit by the tank like the reef (`Gifts`). The tank
- * is the club's, as HQ is: everyone sees everyone's gifts.
+ * The club's drops (tasting-book round 6, David: "if you wanna drop but it doesnt do anything"): every species members
+ * dropped in, the newest AQUARIUM_MAX, swim among the schools as their own models, lit by the tank like the reef
+ * (`Gifts`). The tank is the club's, as HQ is: everyone sees everyone's.
  */
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
@@ -217,11 +217,11 @@ function GiftFish({ def, path }: { def: FishDef; path: Path }) {
   return <group ref={group}><primitive object={body} /></group>;
 }
 
-/** The club's gifts to the tank (GET /api/economy/tasting `aquarium`); nothing when signed out or none yet. */
+/** The club's drops in the tank (GET /api/economy/tasting `aquarium`); nothing when signed out or none yet. */
 function Gifts() {
   const [keys, setKeys] = useState<string[]>([]);
   useEffect(() => {
-    // Again after a gift at the tank (TankSheet's tsi:tank), so yours swims in at once.
+    // Again after a drop at the tank (TankSheet's tsi:tank), so yours swims in at once.
     let live = true;
     const load = () => httpEconomyTransport.tasting().then(v => { if (live) setKeys(v.aquarium); }, () => {});
     void load();

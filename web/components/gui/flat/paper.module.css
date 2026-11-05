@@ -129,13 +129,49 @@
 .slotArt canvas { width: 100%; height: 100%; }
 .slot[data-state="empty"] .slotArt { filter: brightness(0); opacity: 0.1; }
 .slot:not([data-state="empty"]) { background: var(--ui-paper-plate); box-shadow: 0 0 0 1px var(--ui-paper-rule), 0 2px 4px rgb(var(--ui-shade) / 0.12); }
-.slotSeal, .slotWave { position: absolute; right: -8%; bottom: -8%; width: 46%; height: 46%; transform: rotate(-8deg); }
-.slotWave circle { fill: var(--ui-paper); stroke: var(--ui-paper-ink); stroke-width: 1.2; }
-.slotWave path { fill: none; stroke: var(--ui-paper-ink); stroke-width: 1.5; stroke-linecap: round; }
-.slot[data-fresh] .slotSeal, .slot[data-fresh] .slotWave { animation: press 0.6s var(--spring) 0.2s both; }
+.slotSeal { position: absolute; right: -8%; bottom: -8%; width: 46%; height: 46%; transform: rotate(-8deg); }
+.slot[data-fresh] .slotSeal { animation: press 0.6s var(--spring) 0.2s both; }
 .slot[data-fresh] .slotArt { animation: ink 0.6s ease-out both; }
 @keyframes press { from { opacity: 0; transform: scale(2.4) rotate(-24deg); } }
 @keyframes ink { from { filter: brightness(0); opacity: 0.1; } }
+
+/* The collection (the menu's first page): the boost large, a track of stamps to the cap; the fish given, each with what it gave. */
+.boost { display: grid; gap: 10px; justify-items: start; }
+.boostValue { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; margin: 0; color: var(--ui-paper-quiet); font: 600 13px/1.2 var(--gui-font); }
+.boostValue b { color: var(--ui-paper-ink); font: 700 clamp(26px, 5vh, 44px)/1 var(--gui-font); letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.boostIcon { display: grid; place-items: center; width: clamp(30px, 5vh, 42px); aspect-ratio: 1; border-radius: 50%; background: var(--ui-paper-plate); color: var(--ui-paper-ink);
+  box-shadow: 0 0 0 1px var(--ui-paper-rule); }
+.boostIcon svg { width: 55%; height: 55%; }
+.track { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; width: 100%; max-width: 260px; }
+.track i { display: grid; place-items: center; aspect-ratio: 1; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--ui-paper-rule); }
+.track i[data-on] { box-shadow: none; }
+.track i svg { width: 100%; height: 100%; }
+.boostNote { color: var(--ui-paper-quiet); font: 500 12px/1.4 var(--gui-font); }
+.given { display: grid; justify-items: center; align-content: start; gap: 5px; margin: 0; text-align: center; }
+.given .slot { width: clamp(34px, 6.4vh, 56px); }
+.given figcaption { display: grid; gap: 2px; min-width: 0; max-width: 100%; color: var(--ui-paper-quiet); font: 600 10.5px/1.25 var(--gui-font); }
+.given figcaption span { display: inline-flex; align-items: center; justify-content: center; gap: 3px; }
+.given figcaption b { overflow: hidden; color: var(--ui-paper-ink); font: 700 11.5px/1.2 var(--gui-font); text-overflow: ellipsis; white-space: nowrap; }
+.given[data-fresh] figcaption { animation: open 0.4s ease-out 0.5s both; }
+/* A line that turns to its page: a small picture, the words, its state at the end. */
+.row { all: unset; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 6px 4px; border-bottom: 1px solid var(--ui-paper-rule);
+  font-family: var(--gui-font); color: var(--ui-paper-ink); }
+button.row { cursor: pointer; border-radius: 6px; transition: background 0.2s ease-out; }
+button.row:hover { background: var(--ui-paper-hover); }
+button.row:focus-visible { outline: 2px solid var(--ui-paper-ink); outline-offset: 1px; }
+.rowArt { display: grid; place-items: center; width: clamp(30px, 5vh, 40px); }
+.rowArt .slot { width: 100%; }
+.rowText { display: grid; gap: 2px; min-width: 0; }
+.rowText b { font: 700 13px/1.2 var(--gui-font); }
+.rowText span { color: var(--ui-paper-quiet); font: 500 11.5px/1.3 var(--gui-font); }
+.rowEnd { color: var(--ui-paper-quiet); font: 600 11px/1 var(--gui-font); }
+/* The menu's parts, under it: a word each, the one you are in inked. */
+.chapters { position: absolute; left: 50%; bottom: -36px; display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: rgb(var(--ui-shade) / 0.4); transform: translateX(-50%); }
+.chapters button { all: unset; padding: 5px 11px; border-radius: 999px; color: var(--ui-paper); font: 600 12px/1 var(--gui-font); opacity: 0.8; cursor: pointer; white-space: nowrap;
+  transition: background 0.2s ease-out, color 0.2s ease-out, opacity 0.2s ease-out; }
+.chapters button:hover { opacity: 1; }
+.chapters button[data-on] { background: var(--ui-paper); color: var(--ui-paper-ink); opacity: 1; }
+.chapters button:focus-visible { outline: 2px solid var(--ui-paper); outline-offset: 2px; }
 
 /* A phone held upright: a taller menu, so each narrow panel stacks its dishes, the photo over the words. */
 @media (max-aspect-ratio: 3/4) {
@@ -151,10 +187,15 @@
   .dots { display: none; }
   .dish[data-open] .stats { display: none; }
   .slots { grid-template-columns: repeat(auto-fill, minmax(22px, 1fr)); gap: 3px; }
-  .slotSeal, .slotWave { width: 52%; height: 52%; }
+  .slotSeal { width: 52%; height: 52%; }
+  .track { gap: 3px; }
+  .boostValue { font-size: 11px; }
+  .chapters { bottom: -34px; }
+  .chapters button { padding: 5px 8px; font-size: 11px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .spread, .turn, .photo { transition: none; }
-  .leaf, .dishAction, .slot[data-fresh] .slotSeal, .slot[data-fresh] .slotWave, .slot[data-fresh] .slotArt { animation: none; }
+  .leaf, .dishAction, .slot[data-fresh] .slotSeal, .slot[data-fresh] .slotArt, .given[data-fresh] figcaption { animation: none; }
+  .chapters button, button.row { transition: none; }
 }

@@ -281,7 +281,7 @@ const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   bram: "Talk to Bram",
   founder: "Look at the Founder's desk",
   // HQ's new stations (specs/interiors/hq.md; the lines are drafts for David).
-  coffee: "Get a coffee", aquarium: "Give a fish to the tank", admin: "Try the door",
+  coffee: "Get a coffee", aquarium: "Drop a fish in", admin: "Try the door",
   // The new world's quick-sell barrel by the fish market.
   sell: "Visit the fish market",
   // The fish market's two chalkboards (d-now; David 2026-10-28): what bites when, and the fishing tasks.
@@ -1137,7 +1137,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     // The plaza's board and HQ's own (the visit with Alice waits for you to read it there).
     if (action === "notice" || action === "board") { setSheet("notice"); return; }
     if (action === "founder") { setSheet("plaque"); return; }
-    // HQ's tank takes your fish for the tasting book (TankSheet; round 4: the bar only cooks).
+    // HQ's tank: drop a fish in, and that is all (TankSheet; round 6).
     if (action === "aquarium") { setSheet("tank"); return; }
     // HQ's coffee bar and locked admin doors: a line each, nothing more (principle 3: no reward for visiting).
     if (action === "coffee" || action === "admin") { toast(HQ_LINES[action], action === "coffee" ? iconUrl("lounge-tea") : undefined); return; }

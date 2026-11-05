@@ -171,13 +171,13 @@ export function CardGrid({ title, min, phoneMin, label, children }: { title?: Re
   </>;
 }
 
-export type CardCover = "sold-out" | "owned" | "not-found";
+export type CardCover = "sold-out" | "owned" | "given" | "not-found";
 /** A price: its amount and currency. An amount of nothing (unset, or 0) is a price still to come. */
 export type Price = { amount: number | null | undefined; currency: string };
 export const PRICE_TO_COME = "Price to come";
 /** Has it a price you can pay? */
 export const priced = (p: Price | null | undefined): boolean => !!p && !!p.amount;
-const COVER_TEXT: Record<Exclude<CardCover, "not-found">, string> = { "sold-out": "Sold out", owned: "Owned" };
+const COVER_TEXT: Record<Exclude<CardCover, "not-found">, string> = { "sold-out": "Sold out", owned: "Owned", given: "Given" };
 
 /**
  * A white card: the picture centred with lots of air (a URL gets the pixel finish, `PixelImage`), the name small and a

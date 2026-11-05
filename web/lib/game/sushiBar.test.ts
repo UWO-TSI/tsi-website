@@ -63,10 +63,10 @@ describe("sushi bar", () => {
     expect(barSeat(bar, sx, sz, false, () => true)?.key).toBe(stoolKey(bar, 4));
   });
 
-  it("lays the menu on the counter before the stool, centred by the full look down, in view past MENU_LOOK (round 4)", () => {
+  it("lays the menu on the counter in the middle before the stool (round 6), centred by the full look down, in view past MENU_LOOK (round 4)", () => {
     for (const lx of STOOLS) {
       const { eye, look } = seatView(lx), [mx, my, mz] = menuAt(lx);
-      expect(Math.abs(mx - lx)).toBeLessThan(0.3);
+      expect(mx).toBe(lx);
       expect(mz).toBeGreaterThan(1.0); expect(mz).toBeLessThan(STOOL_Z - 0.5);
       const base = Math.atan2(eye[1] - look[1], eye[2] - look[2]), menu = Math.atan2(eye[1] - my, eye[2] - mz);
       expect(Math.abs(base + (PITCH_MAX - DEFAULT_PITCH) * SEAT_TILT_DOWN - menu)).toBeLessThan(0.05);

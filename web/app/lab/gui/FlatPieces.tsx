@@ -5,10 +5,10 @@
  * tiles and their rarity edges, a hover card, the conditions, the day strip, odds, the reveal, tasks and the paper menu.
  */
 import { useState, type CSSProperties } from "react";
-import { Clock, Droplets, Leaf, MapPin, Ruler, Sun, Sunset, Waves } from "lucide-react";
+import { Check, Clock, Clover, Droplets, Leaf, Lock, MapPin, Ruler, Sun, Sunset, Waves } from "lucide-react";
 import { CurrencyIcon } from "@/components/economy/Amount";
 import PixelImage from "@/components/economy/PixelImage";
-import { BiomeTag, BuffChip, BookPage, BookSlot, Conditions, FlatDialog, DarkButton, FoldedMenu, GachaReveal, InkArt, InkDefs, MenuDish, OddsTable, SeasonDots, PanelSection, TaskCard, Thumb, TimeStrip, TipBody, useInkId, type OddsRow } from "@/components/gui/flat";
+import { BiomeTag, BoostTrack, BuffChip, BookPage, BookSlot, Conditions, GivenFish, PaperRow, FlatDialog, DarkButton, FoldedMenu, GachaReveal, InkArt, InkDefs, MenuDish, OddsTable, SeasonDots, PanelSection, TaskCard, Thumb, TimeStrip, TipBody, useInkId, type OddsRow } from "@/components/gui/flat";
 import { catchLanes } from "@/components/game/peaceful/CatchBoard";
 import { dishStats, MenuCover } from "@/components/game/peaceful/SushiSheets";
 import { mealRows } from "@/components/economy/statIcons";
@@ -65,14 +65,25 @@ export default function FlatPieces() {
     <div style={{ display: "grid", placeItems: "center", padding: "20px 0 40px", "--h": "560px" } as CSSProperties}>
       <InkDefs id={ink} />
       <FoldedMenu label="A folded menu" cover={<MenuCover ink={ink} />}
+        chapters={[{ label: "Collection", panel: 0 }, { label: "Menu", panel: 2 }]}
         panels={[
+          <PanelSection key="c" title="Collection">
+            <BoostTrack filter={ink} icon={<Clover />} value="+6%" label="luck, for good" filled={6} total={20} note="+1% a new fish, up to +20%." />
+          </PanelSection>,
+          <PanelSection key="g" title="Given">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+              {RIVER.slice(0, 5).map((k, i) => <GivenFish key={k} filter={ink} name={k.replace("fish_", "")} fresh={i === 0} picture={<PixelImage src={iconUrl(k)} px={40} />} gave={<><Clover size={10} /> Luck +1%</>} extra={i === 0 ? "Dace karaage" : undefined} />)}
+            </div>
+            <PaperRow art={<BookSlot filter={ink} name="dace" state="given" picture={<PixelImage src={iconUrl("fish_dace")} px={30} />} />} title="Dace karaage" detail="From your dace" end={<Check size={15} />} onClick={() => {}} />
+            <PaperRow art={<BookSlot filter={ink} name="squid" state="empty" picture={<PixelImage src={iconUrl("fish_squid")} px={30} />} />} title="Squid tempura" detail="Give a squid" end={<Lock size={13} />} />
+          </PanelSection>,
           <PanelSection key="a" title="Nigiri and rolls">{dish("salmon_nigiri")}{dish("tuna_roll", true)}</PanelSection>,
           <div key="b" style={{ display: "grid", gap: 12 }}><InkArt kind="bamboo" filter={ink} /><InkArt kind="pagoda" filter={ink} /></div>,
         ]} />
     </div>
     <div style={{ maxWidth: 380, padding: "18px 22px", borderRadius: 4, background: "var(--ui-paper)", color: "var(--ui-paper-ink)" }}>
       <BookPage title="River" filled={6} total={RIVER.length} note={<>A full page: {TASTING.full}<CurrencyIcon size={11} /></>}>
-        {RIVER.map((k, i) => <BookSlot key={k} filter={ink} name={k} state={i < 5 ? "cooked" : i === 6 ? "aquarium" : "empty"} fresh={i === 4} picture={<PixelImage src={iconUrl(k)} px={36} />} />)}
+        {RIVER.map((k, i) => <BookSlot key={k} filter={ink} name={k} state={i < 6 ? "given" : "empty"} fresh={i === 4} picture={<PixelImage src={iconUrl(k)} px={36} />} />)}
       </BookPage>
     </div>
     {/* The HUD's meal buff (tasting-book r3): faint, on the right edge in the game; one stat and two here. */}

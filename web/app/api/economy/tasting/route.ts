@@ -4,16 +4,16 @@ import { supabaseEconomyStore } from "@/lib/wallet/supabaseStore";
 import { IdemKey, jsonResult, withStore } from "@/lib/server/memberContext";
 import { serveFish, tastingView } from "@/lib/wallet/service";
 
-const Body = z.object({ fish: z.string().regex(/^[a-z0-9_]{1,64}$/), way: z.enum(["cook", "aquarium"]), idempotency_key: IdemKey });
+const Body = z.object({ fish: z.string().regex(/^[a-z0-9_]{1,64}$/), way: z.enum(["cook", "tank"]), idempotency_key: IdemKey });
 
-// GET /api/economy/tasting: your tasting book's filled slots and the club's aquarium (the species in HQ's tank).
+// GET /api/economy/tasting: your tasting book's filled slots and HQ's tank (the species members dropped in).
 export async function GET() {
   const ctx = await withStore(supabaseEconomyStore);
   if (ctx instanceof NextResponse) return ctx;
   return jsonResult(await tastingView(ctx.store, ctx.userId), "tasting");
 }
 
-// POST /api/economy/tasting: bring Bancha a fish not yet in your book, to cook (the fee, its stamp) or for the aquarium; retry with the same key.
+// POST /api/economy/tasting: give Bancha a fish not yet in your book (the fee, its stamp), or drop one in HQ's tank; retry with the same key.
 export async function POST(request: Request) {
   const ctx = await withStore(supabaseEconomyStore);
   if (ctx instanceof NextResponse) return ctx;

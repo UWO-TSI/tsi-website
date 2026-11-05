@@ -26,7 +26,7 @@ export interface EconomyTransport {
   sushi(): Promise<SushiView>;
   order(dish: string, key: string, fish?: string): Promise<{ balance: number; paid: number; buff: ActiveBuff; replayed: boolean }>;
   tasting(): Promise<TastingView>;
-  serve(fish: string, way: "cook" | "aquarium", key: string): Promise<TastingServe>;
+  serve(fish: string, way: "cook" | "tank", key: string): Promise<TastingServe>;
   inventory(): Promise<InventoryView>;
   equip(itemId: string, equipped: boolean): Promise<InventoryView>;
   dailyGift(): Promise<GiftView>;

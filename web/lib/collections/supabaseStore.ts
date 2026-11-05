@@ -172,7 +172,7 @@ export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
     async buff(memberId, now) {
       const [meal, book] = await Promise.all([
         db.from("member_buffs").select("luck, size").eq("member_id", memberId).gt("until", now.toISOString()).maybeSingle(),
-        db.from("tasting_book").select("species_key", { count: "exact", head: true }).eq("member_id", memberId).eq("way", "cooked"),
+        db.from("tasting_book").select("species_key", { count: "exact", head: true }).eq("member_id", memberId),
       ]);
       // Before the buffs' migrations (or any read failure) a cast rolls plain rather than failing.
       const r = meal.error ? null : (meal.data as Row | null), luck = (r ? Number(r.luck) : 0) + bookLuck(book.error ? 0 : (book.count ?? 0));

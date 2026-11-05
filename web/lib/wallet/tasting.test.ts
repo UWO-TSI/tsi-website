@@ -22,25 +22,25 @@ describe("the tasting book (David, 2026-11-01: \"one per fish\"; 2026-11-02: \"p
     expect(tastingWater("bug_ladybug")).toBeNull();
   });
 
-  it("cooks a new fish for a fee that grows with the species cooked, stamping its slot once", async () => {
+  it("takes a new fish for a fee that grows with the species given, stamping its slot once", async () => {
     const m = memoryEconomyStore();
     m.fund(A, 1000);
     m.give(A, "fish_dace", 2);
     m.give(A, "fish_sea_bass", 1);
     m.give(A, "fish_anchovy", 1);
     m.give(A, "fish_squid", 1);
-    const serve = (key: string, fish = "fish_dace", way: "cook" | "aquarium" = "cook") => serveFish(m.store, A, { fish, way, idempotency_key: key });
+    const serve = (key: string, fish = "fish_dace", way: "cook" | "tank" = "cook") => serveFish(m.store, A, { fish, way, idempotency_key: key });
     expect(await serve("tb-0001")).toMatchObject({ ok: true, data: { paid: tastingFee(0), stamped: true, remaining: 1, earned: 0 } });
     expect(m.coinsOf(A)).toBe(1000 - 100);
     expect(await m.store.buff(A, noon)).toBeNull(); // the stamp is the reward, not a meal
     expect(await serve("tb-0001")).toMatchObject({ ok: true, data: { replayed: true, stamped: true } });
     expect(m.coinsOf(A)).toBe(900);
-    // A stamped fish isn't cooked again (its dish is where a second one goes).
+    // A stamped fish isn't given again (its dish is where a second one goes).
     expect(await serve("tb-0002")).toMatchObject({ ok: false, code: "already_in_book" });
     expect(await serve("tb-0003", "fish_sea_bass")).toMatchObject({ ok: true, data: { paid: 105 } });
-    await serve("tb-0004", "fish_anchovy", "aquarium");
-    expect(await serve("tb-0005", "fish_squid")).toMatchObject({ ok: true, data: { paid: 110 } }); // gifts don't raise it
-    expect(await tastingView(m.store, A)).toMatchObject({ ok: true, data: { book: [{ species_key: "fish_dace", way: "cooked" }, { species_key: "fish_sea_bass" }, { species_key: "fish_anchovy", way: "aquarium" }, { species_key: "fish_squid" }] } });
+    await serve("tb-0004", "fish_anchovy", "tank");
+    expect(await serve("tb-0005", "fish_squid")).toMatchObject({ ok: true, data: { paid: 110 } }); // a drop in the tank doesn't raise it
+    expect(await tastingView(m.store, A)).toMatchObject({ ok: true, data: { book: [{ species_key: "fish_dace" }, { species_key: "fish_sea_bass" }, { species_key: "fish_squid" }] } });
   });
 
   it("prices the fee from about 100 and the permanent luck at 1% a species to a +20% cap", () => {
@@ -60,7 +60,7 @@ describe("the tasting book (David, 2026-11-01: \"one per fish\"; 2026-11-02: \"p
     expect(b?.size).toBe(0.3);
   });
 
-  it("teaches a dish when its key fish fills its slot, cooked or in the tank (round 5), then serves it for coins and ingredients, all or nothing", async () => {
+  it("teaches a dish when its key fish is given, never from the tank, then serves it for coins and ingredients, all or nothing", async () => {
     const d = TASTING.dishes[0], m = memoryEconomyStore();
     m.fund(A, 1000);
     m.give(A, d.unlock, 2);
@@ -70,7 +70,10 @@ describe("the tasting book (David, 2026-11-01: \"one per fish\"; 2026-11-02: \"p
     m.give(A, "fish_dace", 1);
     await serveFish(m.store, A, { fish: "fish_dace", way: "cook", idempotency_key: "tb-0406" });
     expect(await orderDish(m.store, A, { dish: dace.id, idempotency_key: "tb-0407" }, noon)).toMatchObject({ ok: false, code: "insufficient_items" });
-    await serveFish(m.store, A, { fish: d.unlock, way: "aquarium", idempotency_key: "tb-0402" });
+    await serveFish(m.store, A, { fish: d.unlock, way: "tank", idempotency_key: "tb-0408" });
+    expect(await order("tb-0409")).toMatchObject({ ok: false, code: "not_learned" });
+    m.give(A, d.unlock, 1);
+    await serveFish(m.store, A, { fish: d.unlock, way: "cook", idempotency_key: "tb-0402" });
     const coins = m.coinsOf(A);
     expect(await order("tb-0403")).toMatchObject({ ok: false, code: "insufficient_items" });
     expect(m.coinsOf(A)).toBe(coins);
@@ -84,18 +87,23 @@ describe("the tasting book (David, 2026-11-01: \"one per fish\"; 2026-11-02: \"p
     expect(await orderDish(m.store, A, { dish: d.id, fish: "fish_tuna", idempotency_key: "tb-0405" }, noon)).toMatchObject({ ok: false, code: "invalid" });
   });
 
-  it("gives a fish to the club's aquarium for free, only into an empty slot", async () => {
+  it("drops any rod fish in HQ's tank, and that is all it does (round 6: \"it doesnt do anything\")", async () => {
     const m = memoryEconomyStore();
-    m.give(A, "fish_pike", 2);
+    m.fund(A, 500);
+    m.give(A, "fish_pike", 3);
     m.give(B, "fish_tuna", 1);
-    const serve = (who: string, fish: string, key: string) => serveFish(m.store, who, { fish, way: "aquarium", idempotency_key: key });
-    expect(await serve(A, "fish_pike", "tb-0101")).toMatchObject({ ok: true, data: { paid: 0, stamped: false, remaining: 1 } });
+    const drop = (who: string, fish: string, key: string) => serveFish(m.store, who, { fish, way: "tank", idempotency_key: key });
+    expect(await drop(A, "fish_pike", "tb-0101")).toMatchObject({ ok: true, data: { paid: 0, stamped: false, earned: 0, marks: [], remaining: 2 } });
+    expect(await drop(A, "fish_pike", "tb-0101")).toMatchObject({ ok: true, data: { replayed: true, remaining: 2 } });
+    // Again, and given after: the tank fills no slot, so the give still finds it empty.
+    expect(await drop(A, "fish_pike", "tb-0102")).toMatchObject({ ok: true, data: { remaining: 1 } });
+    expect(m.coinsOf(A)).toBe(500);
     expect(await m.store.buff(A, noon)).toBeNull();
-    expect(await serve(A, "fish_pike", "tb-0102")).toMatchObject({ ok: false, code: "already_in_book" });
-    await serve(B, "fish_tuna", "tb-0103");
-    // The tank is the club's: everyone's gifts, newest first.
-    expect(await tastingView(m.store, A)).toMatchObject({ ok: true, data: { book: [{ species_key: "fish_pike", way: "aquarium" }], aquarium: ["fish_tuna", "fish_pike"] } });
-    expect(await serveFish(m.store, A, { fish: "bug_ladybug", way: "cook", idempotency_key: "tb-0104" })).toMatchObject({ ok: false, code: "not_found" });
+    await drop(B, "fish_tuna", "tb-0103");
+    expect(await serveFish(m.store, A, { fish: "fish_pike", way: "cook", idempotency_key: "tb-0105" })).toMatchObject({ ok: true, data: { stamped: true } });
+    // The tank is the club's: everyone's drops, newest first, each once.
+    expect(await tastingView(m.store, A)).toMatchObject({ ok: true, data: { book: [{ species_key: "fish_pike" }], aquarium: ["fish_tuna", "fish_pike"] } });
+    expect(await serveFish(m.store, A, { fish: "bug_ladybug", way: "tank", idempotency_key: "tb-0104" })).toMatchObject({ ok: false, code: "not_found" });
   });
 
   it("refuses a locked fish and a cook it can't pay for, keeping the fish", async () => {
@@ -103,29 +111,31 @@ describe("the tasting book (David, 2026-11-01: \"one per fish\"; 2026-11-02: \"p
     m.give(A, "fish_pike", 1);
     expect(await serveFish(m.store, A, { fish: "fish_pike", way: "cook", idempotency_key: "tb-0201" })).toMatchObject({ ok: false, code: "insufficient" });
     m.lock(A, "fish_pike", true);
-    expect(await serveFish(m.store, A, { fish: "fish_pike", way: "aquarium", idempotency_key: "tb-0202" })).toMatchObject({ ok: false, code: "locked" });
+    m.fund(A, 500);
+    expect(await serveFish(m.store, A, { fish: "fish_pike", way: "cook", idempotency_key: "tb-0202" })).toMatchObject({ ok: false, code: "locked" });
+    expect(await serveFish(m.store, A, { fish: "fish_pike", way: "tank", idempotency_key: "tb-0203" })).toMatchObject({ ok: false, code: "locked" });
     expect((await m.store.collections(A))[0].count).toBe(1);
   });
 
-  it("pays the marks as the tank fills, never for a cook, and a full water once, cooked slots counting", async () => {
-    const ten = new Map(Array.from({ length: 10 }, (_, i) => [`x${i}`, "aquarium" as const]));
+  it("pays the marks as the fish given add up, never for a drop in the tank, and a full water once", async () => {
+    const ten = new Set(Array.from({ length: 10 }, (_, i) => `x${i}`));
     expect(tastingMarks(ten, "x0")).toEqual({ earned: TASTING.marks[0].coins, marks: ["count:10"] });
-    expect(tastingMarks(new Map([...ten, ["x0", "cooked" as const]]), "x0")).toEqual({ earned: 0, marks: [] });
+    expect(tastingMarks(new Set([...ten, "x10"]), "x10")).toEqual({ earned: 0, marks: [] });
     const m = memoryEconomyStore();
-    // Nine in the tank and a tenth fish cooked: the count is the tank's, so no mark.
+    m.fund(A, 5000);
+    // Nine given, then a tenth dropped in the tank (no mark), then the tenth given (the mark).
     const river = tastingPages().find((p) => p.water === "river")!.species;
-    for (const [i, key] of river.slice(0, 9).entries()) { m.give(A, key, 1); await serveFish(m.store, A, { fish: key, way: "aquarium", idempotency_key: `tb-05${i}0` }); }
-    m.fund(A, 1000);
-    m.give(A, river[9], 1);
-    expect(await serveFish(m.store, A, { fish: river[9], way: "cook", idempotency_key: "tb-0599" })).toMatchObject({ ok: true, data: { earned: 0, marks: [] } });
-    m.give(A, river[10], 1);
-    expect(await serveFish(m.store, A, { fish: river[10], way: "aquarium", idempotency_key: "tb-0598" })).toMatchObject({ ok: true, data: { earned: TASTING.marks[0].coins, marks: ["count:10"] } });
-    // The cliff pools: all but one in the tank, the last cooked; the page is full, so the cook pays the water (round 4 pick).
+    for (const [i, key] of river.slice(0, 9).entries()) { m.give(A, key, 1); await serveFish(m.store, A, { fish: key, way: "cook", idempotency_key: `tb-05${i}0` }); }
+    m.give(A, river[9], 2);
+    expect(await serveFish(m.store, A, { fish: river[9], way: "tank", idempotency_key: "tb-0599" })).toMatchObject({ ok: true, data: { earned: 0, marks: [] } });
+    expect(await serveFish(m.store, A, { fish: river[9], way: "cook", idempotency_key: "tb-0598" })).toMatchObject({ ok: true, data: { earned: TASTING.marks[0].coins, marks: ["count:10"] } });
+    // The cliff pools: every one given, the last fills the page and pays the water.
     const cliff = tastingPages().find((p) => p.water === "cliff_pool")!.species;
-    for (const [i, key] of cliff.slice(0, -1).entries()) { m.give(A, key, 1); await serveFish(m.store, A, { fish: key, way: "aquarium", idempotency_key: `tb-03${i}0` }); }
+    for (const [i, key] of cliff.slice(0, -1).entries()) { m.give(A, key, 1); await serveFish(m.store, A, { fish: key, way: "cook", idempotency_key: `tb-03${i}0` }); }
     m.give(A, cliff.at(-1)!, 1);
-    expect(await serveFish(m.store, A, { fish: cliff.at(-1)!, way: "cook", idempotency_key: "tb-0399" })).toMatchObject({ ok: true, data: { paid: tastingFee(1), earned: TASTING.full, marks: ["water:cliff_pool"] } });
-    expect(m.coinsOf(A)).toBe(1000 - tastingFee(0) + TASTING.marks[0].coins - tastingFee(1) + TASTING.full);
+    const before = m.coinsOf(A), n = 10 + cliff.length - 1;
+    expect(await serveFish(m.store, A, { fish: cliff.at(-1)!, way: "cook", idempotency_key: "tb-0399" })).toMatchObject({ ok: true, data: { paid: tastingFee(n), earned: TASTING.full, marks: ["water:cliff_pool"] } });
+    expect(m.coinsOf(A)).toBe(before - tastingFee(n) + TASTING.full);
     expect(m.ledger.filter((l) => l.member === A && l.amount > 0 && l.source === "quest")).toHaveLength(2);
   });
 
@@ -145,7 +155,7 @@ describe("the tasting book (David, 2026-11-01: \"one per fish\"; 2026-11-02: \"p
     expect(mealOf("snapper_chazuke")).toMatchObject({ name: "Snapper chazuke", buff: TASTING.dishes[0].buff });
     expect(mealOf("omakase")?.buff).toBe(SUSHI_MENU.find((d) => d.id === "omakase")!.buff);
     expect(mealOf("gone")).toBeNull();
-    // Each key fish is a rod fish with a slot (so it can go to the tank), and teaches one dish.
+    // Each key fish is a rod fish with a slot (so it can be given), and teaches one dish.
     for (const d of TASTING.dishes) expect(tastingWater(d.unlock)).not.toBeNull();
     expect(new Set(TASTING.dishes.map((d) => d.unlock)).size).toBe(TASTING.dishes.length);
   });

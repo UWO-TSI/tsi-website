@@ -173,21 +173,46 @@ export function MenuDish({ picture, name, price, stats, note, standIn, open, dis
 
 // ── The tasting book (the menu's back pages) ────────────────────────────────────────────────────────────────────────
 
-/** What a book slot holds: nothing yet, a cooked fish (its red stamp), or a fish given to the aquarium (a wave mark). */
-export type BookSlotState = "empty" | "cooked" | "aquarium";
-const SLOT_WORD: Record<BookSlotState, string> = { empty: "Not yet", cooked: "Cooked: stamped", aquarium: "In the aquarium" };
+/** What a book slot holds: nothing yet, or a fish given to Bancha (its red stamp). */
+export type BookSlotState = "empty" | "given";
+const SLOT_WORD: Record<BookSlotState, string> = { empty: "Not yet", given: "Given: stamped" };
 /**
- * One species' slot in the tasting book: an empty one shows the fish as a faint ink shadow; a cooked one in colour with
- * the hanko pressed over its corner; an aquarium one in colour with a wave mark. `fresh`: the stamp or mark just landed
- * (it presses down with a spring). Hover says what it is.
+ * One species' slot in the tasting book: an empty one shows the fish as a faint ink shadow; a given one in colour with
+ * the hanko pressed over its corner. `fresh`: the stamp just landed (it presses down with a spring). Hover says what it is.
  */
 export function BookSlot({ picture, name, state, fresh, filter }: { picture: ReactNode; name: string; state: BookSlotState; fresh?: boolean; filter: string }) {
-  const label = `${state === "empty" ? "Not tasted yet" : name}. ${SLOT_WORD[state]}`;
+  const label = `${state === "empty" ? "Not given yet" : name}. ${SLOT_WORD[state]}`;
   return <span className={p.slot} data-state={state} data-fresh={fresh || undefined} role="img" aria-label={label} title={label}>
     <span className={p.slotArt}>{picture}</span>
-    {state === "cooked" ? <Hanko filter={filter} size={18} className={p.slotSeal} /> : null}
-    {state === "aquarium" ? <svg viewBox="0 0 20 20" className={p.slotWave} aria-hidden><circle cx={10} cy={10} r={9} /><path d="M4 8.5 C6 6.5 8 10.5 10 8.5 C12 6.5 14 10.5 16 8.5 M4 12.5 C6 10.5 8 14.5 10 12.5 C12 10.5 14 14.5 16 12.5" /></svg> : null}
+    {state === "given" ? <Hanko filter={filter} size={18} className={p.slotSeal} /> : null}
   </span>;
+}
+
+/**
+ * A collection's permanent boost, as the menu's first page shows it (round 6, David: "make it obvious it s a collection
+ * that give [permanent] boosts"): the boost large with its icon, what it is, and a track of `total` slots with `filled`
+ * of them stamped, one a fish, to the cap; `note` under it.
+ */
+export function BoostTrack({ icon, value, label, filled, total, note, filter }: { icon: ReactNode; value: ReactNode; label: ReactNode; filled: number; total: number; note?: ReactNode; filter: string }) {
+  return <div className={p.boost} role="group" aria-label={`${value} ${label}, ${filled} of ${total}`}>
+    <p className={p.boostValue}><span className={p.boostIcon} aria-hidden>{icon}</span><b>{value}</b><span>{label}</span></p>
+    <span className={p.track} aria-hidden>{Array.from({ length: total }, (_, i) => <i key={i} data-on={i < filled || undefined}>{i < filled ? <Hanko filter={filter} size={10} /> : null}</i>)}</span>
+    {note ? <span className={p.boostNote}>{note}</span> : null}
+  </div>;
+}
+
+/** A fish in the collection: its stamped slot, its name, and what it gave (`gave`, one line; `extra`, a second). */
+export function GivenFish({ picture, name, gave, extra, fresh, filter }: { picture: ReactNode; name: string; gave: ReactNode; extra?: ReactNode; fresh?: boolean; filter: string }) {
+  return <figure className={p.given} data-fresh={fresh || undefined}>
+    <BookSlot picture={picture} name={name} state="given" fresh={fresh} filter={filter} />
+    <figcaption><b>{name}</b><span>{gave}</span>{extra ? <span>{extra}</span> : null}</figcaption>
+  </figure>;
+}
+
+/** A line on a page that turns to its page (the dishes' contents): a small picture, the name, a quiet second line, and its state at the end. */
+export function PaperRow({ art, title, detail, end, onClick }: { art: ReactNode; title: ReactNode; detail?: ReactNode; end?: ReactNode; onClick?: () => void }) {
+  const face = <><span className={p.rowArt} aria-hidden>{art}</span><span className={p.rowText}><b>{title}</b>{detail ? <span>{detail}</span> : null}</span>{end ? <span className={p.rowEnd}>{end}</span> : null}</>;
+  return onClick ? <button type="button" className={p.row} onClick={onClick}>{face}</button> : <div className={p.row}>{face}</div>;
 }
 
 /** A page of the book, one water: its name down the side, how many of its slots are filled, a quiet `note`, the slots. */
@@ -208,7 +233,13 @@ const TURN_MS = 720;
  */
 /** Turns a FoldedMenu from outside: to a spread (0 the cover, then one a pair of panels). */
 export interface FoldedMenuHandle { turn(spread: number): void }
-export function FoldedMenu({ cover, panels, label, onTurn, handle }: { cover: ReactNode; panels: readonly ReactNode[]; label: string; onTurn?: (spread: number) => void; handle?: Ref<FoldedMenuHandle> }) {
+/** The spread panel `i` is on (0 the cover, then one a pair). */
+export const spreadOf = (panel: number) => 1 + Math.floor(panel / 2);
+/**
+ * `chapters` (round 6, David: "the pages need to be reorganized in a userfriendly intuitive way"): under the opened menu,
+ * a word for each part (from its first panel) in place of the dots; the part you are in is inked, a click turns to it.
+ */
+export function FoldedMenu({ cover, panels, label, onTurn, handle, chapters }: { cover: ReactNode; panels: readonly ReactNode[]; label: string; onTurn?: (spread: number) => void; handle?: Ref<FoldedMenuHandle>; chapters?: readonly { label: string; panel: number }[] }) {
   const spreads: [ReactNode, ReactNode][] = [[null, cover]];
   for (let i = 0; i < panels.length; i += 2) spreads.push([panels[i], panels[i + 1] ?? null]);
   const [spread, setSpread] = useState(0), [turn, setTurn] = useState<{ from: number; to: number } | null>(null);
@@ -245,7 +276,11 @@ export function FoldedMenu({ cover, panels, label, onTurn, handle }: { cover: Re
       <button type="button" className={p.turn} data-side="left" aria-label={spread === 1 ? "Close the menu to its cover" : "Turn back"} onClick={() => go(spread - 1)}><ChevronLeft size={18} aria-hidden /></button>
       {spread < spreads.length - 1 ? <button type="button" className={p.turn} data-side="right" aria-label="Turn the page" onClick={() => go(spread + 1)}><ChevronRight size={18} aria-hidden /></button> : null}
     </> : null}
-    {!turn ? <span className={p.folio} aria-hidden>{spreads.map((_, i) => <i key={i} data-on={i === spread || undefined} />)}</span> : null}
+    {chapters && !closed ? <nav className={p.chapters} aria-label="Parts of the menu">{chapters.map((c, i) => {
+      const at = spreadOf(c.panel), here = (turn ? turn.to : spread) >= at && (turn ? turn.to : spread) < (chapters[i + 1] ? spreadOf(chapters[i + 1].panel) : Infinity);
+      return <button key={c.label} type="button" data-on={here || undefined} aria-current={here ? "page" : undefined} onClick={() => go(at)}>{c.label}</button>;
+    })}</nav>
+      : !turn ? <span className={p.folio} aria-hidden>{spreads.map((_, i) => <i key={i} data-on={i === spread || undefined} />)}</span> : null}
   </div>;
 }
 
