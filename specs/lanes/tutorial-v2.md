@@ -35,6 +35,51 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 12: David's tutorial rounds 9, 10 and 11 reviews (2026-11-04, verbatim; https://claude.ai/artifact/99FLDZKNXT2AG9KJ9uBn4M, https://claude.ai/artifact/RyNFwoRguwVeQ649Ye5VLc, https://claude.ai/artifact/8SM3Qk28k3Vma8c5hKCvHU)
+
+Round 9 page:
+Approved: t9-app, t9-map.
+- t9-apps-phone (redo)
+- t9-esc-phone (redo)
+- t9-esc (redo): "make a button that brings up the phone and have animation of it poping up and putting it back down animatino so its not just always in the bottom right"
+- t9-hud (redo): "i dont get this one, arent we already showing the coins and gems and shit, what does h do, is it even necessary"
+- t9-phone-in (redo)
+- t9-phone (redo): "phone needs to be remodeled, i will provide refrences"
+- t9-questions (redo)
+- t9-tour (redo): "phone is one of the most important thing so like make sure the button for it is obvious like zxc  or smth"
+
+Round 10 page:
+Approved: none.
+- t10-app (redo)
+- t10-beside (redo): "bigger longer screen, the dial buttons are flatter take up less of the phonem the buttoins are clear and not newon creen, the n8umber use a different font and flatterm the screen is bigger and longer, the things on the phone are stuckers, model the phone withou stickers first , the color isnt right, the charm is added on and customizable, the app needs to be redesign to fit this style, the camera angle for the phone is off. and the ui of the phone needs to be redone to fit that style. also make it so if your mouse hits the bottom right of the screen without clicking it will pop up and hiting it again retracts"
+- t10-esc (redo)
+- t10-grid (redo)
+- t10-phone-slide (redo)
+- t10-phone (redo)
+- t10-questions (redo)
+- t10-slide (redo)
+- t10-turnaround (redo)
+
+Round 11 page:
+Approved: t11-app, t11-desktop, t11-finish, t11-phone-slide, t11-short.
+- t11-beside (redo): "i like it so far but i want it to be a blend of the current ui with a pixel wash if that makes sense, like current ui but green highlights and giving it a pixel finish from the overall pixelation"
+- t11-close (redo): "the phone is angled so the ui also needs to have the same angle, i want either the ui to be baked in the model or like find a way to make it naturally angled and tilted within  the blender model"
+- t11-highlight (redo)
+- t11-phone (redo): "the phone tiles with the mouse, the phone ui needs to be fixed"
+- t11-questions (redo)
+- t11-screen (redo)
+- t11-slide (approve): "make it pull out and filp open and not 1 motion"
+
+Rounds 9 and 10 were marked after round 11 was built, so read all three together; round 11's approved cards (app, desktop, finish, phone slide, short) stand.
+
+Build:
+1. **The phone remodelled** (t10-beside): a bigger, longer screen; flatter dial buttons that take up less of the phone, clear rather than neon; the numbers in a different, flatter font; the colour fixed; no stickers (model it bare first); a charm hung on that can be swapped later (a cosmetic slot, the model only for now); fix the camera angle on the phone. Never model a Sanrio character. Headless Blender only.
+2. **The motion** (t11-slide): it pulls out, then flips open: two motions, not one.
+3. **The screen in the phone's plane** (t11-close, t11-phone, t11-questions): the phone keeps a natural tilt and follows the mouse, and the UI tilts with it. Either bake the UI into the screen (render it to a texture on the screen mesh) or otherwise put it in the model's plane. Not a flat overlay.
+4. **The UI style** (t11-beside, t10-app): today's game UI with a pixel wash: the current layout and look, green highlights, and an overall pixel finish from the pixelation. The apps redesigned to fit. Keep the round font and the pixel pointing hand unless the new style needs otherwise, and say which.
+5. **Opening it** (t9-esc, t9-tour, t10-beside): not always sitting in the bottom right. A key that's obvious, one of Z, X or C (whichever is free; check the bindings and the settings page), brings it up with the pull-out and flip, and puts it away again. The mouse touching the bottom-right corner (no click) pops it up, and touching it again puts it away. The tour teaches the key clearly; the phone is one of the most important things.
+6. **The H step** (t9-hud): David asks what H does and whether it's needed. Drop the key: at that step the HUD flies in by itself (above the keyboard card, then to its places). Say on the card that this is the coordinator's default.
+
 ## Round 11: the phone's screen in a pixel style (David, 2026-11-04, verbatim)
 
 "phone ui reference, change color but  keep the pixel-y style" (with a reference image: `specs/references/phone/phone-ui-ref.png` and its README entry; untracked, third-party (a Nintendo DS game), never in git). Rounds 9 (https://claude.ai/artifact/99FLDZKNXT2AG9KJ9uBn4M) and 10 (https://claude.ai/artifact/RyNFwoRguwVeQ649Ye5VLc) are still waiting for marks: the coordinator forwards them if they arrive while you work.
