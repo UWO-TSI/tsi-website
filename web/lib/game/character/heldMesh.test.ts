@@ -3,13 +3,15 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { heldTemplate, mergeHeld } from "./heldMesh";
 import { lookClassFor } from "../modelMaterials";
 
 const ASSETS = join(__dirname, "../../../public/assets/game");
 const load = (file: string) => new Promise<THREE.Object3D>((resolve, reject) => {
   const buf = readFileSync(join(ASSETS, file));
-  new GLTFLoader().parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength), "", g => resolve(g.scene), reject);
+  // Tools ship meshopt-compressed (scripts/pack-glbs.mjs), as the game's useGLTF decodes them.
+  new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength), "", g => resolve(g.scene), reject);
 });
 const meshes = (o: THREE.Object3D) => { const out: THREE.Mesh[] = []; o.traverse(c => { if ((c as THREE.Mesh).isMesh) out.push(c as THREE.Mesh); }); return out; };
 const triangles = (o: THREE.Object3D) => meshes(o).reduce((n, m) => n + (m.geometry.index ? m.geometry.index.count : m.geometry.getAttribute("position").count) / 3, 0);

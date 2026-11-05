@@ -30,6 +30,17 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 8 additions: David's rod models notes (2026-11-05, verbatim, relayed by the coordinator; https://claude.ai/artifact/LFoFkQq2pABPtHPEZS4A7L)
+
+- rm3-cedar (redo): "more leaves it loosk naked"
+- rm2-tempest (redo): "no epic enough, shape isnt right and the effects on the rod also isnt right, i will provide references, the aura doesnt look rightm and the light coming off of it being circle isnt right. i want you to make a mini effect library that organizes types of effects and its a standard so future vfx or effects and r eference and take the template"
+
+Build (coordinator):
+1. Cedar: more leaves, growing naturally the way a cedar's do (rm2-cedar's earlier note).
+2. A small effects library: a standard set of effect types that future VFX copy as a template (aura, glow on the object, particles, trails, pulses, sparks and bursts), each with its parameters, a strength setting and a preview clip. No circle or ring glows. Build round 8's awakening effects from it.
+3. Tempest: rework it with the library against `specs/references/rods/epic-tempest-ref.png`. More references are coming: say so on the questions card.
+4. Tidewarden and Riptide have no references on file yet: keep them as they are, and list that on the questions card.
+
 ## Round 8: David's rods awakening round 7 review (2026-11-05, verbatim; https://claude.ai/artifact/BHtKmVCxwLk6MdRxugfPFg)
 
 Approved: rg7-awakened-card, rg7-gary, rg7-questions, rg7-rodbox-bag, rg7-rodbox, rg7-traded.
@@ -178,13 +189,20 @@ Build:
   - **Rod box:** `DetailView quiet` has no back on the stage (no "All"); the rail goes back (the bag's rail now does too: `visit` in BagSheet). The faint chevrons stay.
   - Evidence: `specs/evidence/rod-gear/r7/` (shots.mjs makes them; clips by CDP screencast, since Playwright's recordVideo wants its own ffmpeg build).
 
-- **Round 8 built** on `game/rod-gear` (on c56e45356; gates: see the commit and the report):
+- **Round 8 built** on `game/rod-gear` (on c56e45356; gates at the end of the round: tsc clean, full vitest 3801 passed + 4 skipped in the new world (3 heldMesh failures from the packed GLBs fixed and rerun), eslint clean on changed files, perf:check v2 passed (high 5.10 ms, lite 3.10 ms, draws 356 and 281) before the additions; the cutscene isn't a bench scene, its clip frame times are swiftshader's):
   - **The cutscene redone** (kit `Awakening`, components/gui/flat/moments.tsx and moments.module.css): no ring, halo, rays or sparks (the sparks drew a ring as they set off). The glow is on the thing itself: stacked `drop-shadow`s on `.awThing` in `--glow`, which is `--from` (the rung it had, new prop `from`) until the burst, then `--edge` (the new rung). The burst flares that glow and tints the whole screen in the new rung's colour at a third (no shape, no edge; never white). New beat `show` (1900 ms) after the burst: the new form plays its motion alone; at the `reveal` it steps aside, keeps a faint edge in its rung's colour, and the card comes in. `AWAKEN_CARD_MS` (900): the radar grows only then (RodAwakening). `thing(after, phase)` now gets the phase. Phone reveal: the stage at translateY(-52%) scale(0.55), clear of the card.
   - **The hard edge was the canvas:** R3F measured the stage's canvas through the `.awThing` scale(0.72) transform, so the canvas was 72% of its box, top-left (the rod sat high and left, its glow cut by the canvas edge). `TurnStage` now sizes by layout (`resize={{ offsetSize: true }}`), and the thing's box is `AWAKEN_ROOM` (1.6) times the stage with the camera pulled back to match, so the motion and the glow never reach an edge.
   - **Each rod its own motion** (components/game/rodMotion.ts, pure, tested): Training lifts and twirls; Titanium rises level with a band of light (a point light, always mounted, dark when unused) running up its steel; Tidewarden rides a swell (bob, roll lagging, drift); Tempest whips in gusts with a shake and lightning flashes on it. `BEAT` sets each phase's energy, inner glow and aura gain; `Motion` in RodAwakening.tsx eases to them and lights the rod's own materials from within (emissive) in the glow's colour, read from the theme tokens on the client.
   - **The aura's strength setting** (approved pick): `RodAura strength` (default 1, eased per holder): spins and bobs faster and further, swelling parts grow (the Tidewarden's pearl, the Tempest's tornado), halos grow, sparks come more often. `FittedModel aura` passes it. The cutscene uses `auraAt(look)` (1 + 0.5 per awakening) plus the beat's gain. Not used in the world yet (a held rod's stage isn't known there): asked on the questions card.
   - The table is on the questions card (`rg8-questions.png`), numbers unchanged.
   - Evidence: `specs/evidence/rod-gear/r8/` (shots.mjs makes them; CLIP= and ONLY=clips,table). Clip frame times are swiftshader's and mean nothing for a GPU.
+
+- **Round 8 additions built** (David's rod models notes, above; game/tool-pipeline's rm3 Cedar merged first at a0b49bd33):
+  - **The effects library** (`specs/fx-library.md`, the standard): types, parameters and what grows with strength in `web/lib/game/fx/library.ts` (`FX`, `fxAt`, `fxGrow`; tested); Blender templates in `art/pipeline/fx_library.py` (`part`, `glow`, `light`, `aura_hug`, `trail`, `particles`; `model`, `export` moved there from build_rods.py, which imports them); the code types in `web/lib/game/fx/glowOn.ts` (`glowOn`, `sparkRecipe`); RodAura reads the library's growth and draws **trails** (a `trail` and `trailFrom` extra on a part: a fading additive ribbon, one draw; RodAura.test counts trails in the five draws). Previews at `/lab/fx` (each type on a stand-in rod, strength 1 and 2.5; samples `props/fxlib-<type>.glb` from `fx_library.py -- samples`). The awakening uses it (glowOn, sparks at the burst, the burst's peak). No halos in the library; `halo()` stays only for the Tidewarden and the Titanium (made before it).
+  - **Cedar** (`cedar()`, `whorl()`): twelve close layers of 4-triangle sprays (8 down to 3 a layer, 74 sprays) in two greens (`Leaf`, new `Fresh` lighter; the upper half lighter), shallow notches so each layer reads full; the hidden band dropped and the other band now Grip. 597 tris, 5 materials.
+  - **Tempest** (`tempest()`), against epic-tempest-ref.png: a chain of nine hexagonal icy links, each a quarter turn from the last, leaning with a bolt's zigzag; a crystal spike, jagged ice shards, white reel with a dark hub, black grip in white rings (600 tris, 4 materials). Effect, no discs: `Bolts` (lightning down both sides of the chain with forks, the shards' charge and the butt cap; flicker), `Spark` (the tip's four-point spark; pulse), `Gust` (a wisp of wind winding up the chain; spin, bob, trail), `Aura` (aura_hug along the chain); particles. The tornado and both halos are gone. Icon re-rendered.
+  - GLBs packed (`node scripts/pack-glbs.mjs <files>`; it needs the file list). RodAura.test now decodes meshopt.
+  - Tidewarden and Riptide: no references on file; unchanged.
 
 ## David's decisions
 
@@ -210,6 +228,11 @@ Build:
 - The SQL smoke chain re-applies the backpack migration inside backpack_smoke, which brings back the 4-arg `collections_cast`: rod_catches_smoke drops it first.
 - Memory stores: `m.caught(member, rod, n)` seeds rod_catches (both the collections and the economy store).
 - The vitest seed check fails until `node scripts/gen-seeds.mjs` runs after any catalogue text change; delete the lane's own unapplied seed first, and update the chain in launch-fixes/sql-smoke.sh.
+
+- Rods: `Blender -b --factory-startup -P art/pipeline/build_rods.py -- only cedar,tempest [render <dir>]` (under `withlock.sh blender`); it exports before its budget assert, so a failed assert leaves an over-budget GLB: rebuild. Then `cd web && node scripts/pack-glbs.mjs <the files>` (with no files it does nothing). Effect samples: `fx_library.py -- samples`.
+- In-hand shots: tool-pipeline's `specs/evidence/tool-pipeline/rods-r2/shoot.mjs` (HOST, CLIP=420,240,440,480, `<name>=<rod glb>@day|night@140,8,0.6`). Icons: `BASE=... node scripts/render-icons.mjs rod_tempest rod_cedar`.
+- A Canvas under a CSS scale measures the scaled box: TurnStage sizes by layout (`resize offsetSize`). A TurnStage needs a sized className (its div has no size of its own).
+- r8 evidence: `specs/evidence/rod-gear/r8/shots.mjs` (ONLY=clips,fx,table; CLIP= picks clips). Clip frame times are swiftshader's.
 
 ## Rules
 

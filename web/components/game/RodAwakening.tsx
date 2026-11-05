@@ -22,6 +22,8 @@ import { AudioManager } from "@/lib/game/audio";
 import { awakened, type RodTier } from "@/lib/game/rods";
 import { keyModel } from "@/lib/icons/itemModel";
 import { RARITY_LABEL } from "@/lib/rarity";
+import { glowOn, sparkRecipe } from "@/lib/game/fx/glowOn";
+import { useGlowParticles, type GlowParticles } from "./GlowFx";
 import { BEAT, auraAt, moveOf, type Move } from "./rodMotion";
 
 /**
@@ -76,25 +78,28 @@ export default function RodAwakening({ rod, stage, onClose }: { rod: RodTier; st
 }
 
 /**
- * The rod's own motion and the glow on it, eased to each beat (rodMotion BEAT): its pose on top of the stage's turn, its
- * materials lit from within in the glow's colour (the rung it had, `from`, until the burst, then the rung it reaches, `to`;
+ * The rod's own motion and the glow on it (the effects library's motion, glow and sparks: lib/game/fx/library.ts), eased to each beat (rodMotion BEAT): its pose on top of the stage's turn, its
+ * materials lit from within (glowOn) in the glow's colour (the rung it had, `from`, until the burst, then the rung it reaches, `to`;
  * the theme's colours), and where its motion has a
- * sheen, a band of light running up it (the light stays in the scene, dark when unused, so nothing recompiles).
+ * sheen, a band of light running up it (the light stays in the scene, dark when unused, so nothing recompiles). At the
+ * burst, sparks fly off it in the new colour.
  */
 function Motion({ move, phase, from, to, children }: { move: Move; phase: AwakenPhase; from: string; to: string; children: ReactNode }) {
   const group = useRef<THREE.Group>(null), light = useRef<THREE.PointLight>(null);
   const [live] = useState(() => {
     const css = getComputedStyle(document.documentElement), of = (r: string) => new THREE.Color(css.getPropertyValue(`--ui-rarity-${r}`).trim() || "#000000");
-    return { e: 0, glow: 0, twirl: 0, colour: of(from), from: of(from), to: of(to), lit: new Map<THREE.MeshStandardMaterial, THREE.Color>() };
+    return { e: 0, glow: 0, twirl: 0, colour: of(from), from: of(from), to: of(to), lit: new Map<THREE.MeshStandardMaterial, THREE.Color>(), burst: false };
   });
-  useFrame(({ clock }, dt) => { if (group.current) pose(group.current, light.current, live, move, phase, clock.elapsedTime, Math.min(dt, 0.1)); });
+  const glow = useGlowParticles();
+  useFrame(({ clock }, dt) => { if (group.current) pose(group.current, light.current, live, glow, move, phase, clock.elapsedTime, Math.min(dt, 0.1)); });
   return <group ref={group}>{children}<pointLight ref={light} intensity={0} distance={0.9} decay={1} /></group>;
 }
 
 const LATER: AwakenPhase[] = ["burst", "show", "reveal"];
 /** Module scope (the react compiler forbids writing through hook values): one frame of Motion. */
-function pose(g: THREE.Group, light: THREE.PointLight | null, live: { e: number; glow: number; twirl: number; colour: THREE.Color; from: THREE.Color; to: THREE.Color; lit: Map<THREE.MeshStandardMaterial, THREE.Color> },
-  move: Move, phase: AwakenPhase, t: number, dt: number) {
+type Live = { e: number; glow: number; twirl: number; colour: THREE.Color; from: THREE.Color; to: THREE.Color; lit: Map<THREE.MeshStandardMaterial, THREE.Color>; burst: boolean };
+const at = new THREE.Vector3();
+function pose(g: THREE.Group, light: THREE.PointLight | null, live: Live, pool: GlowParticles, move: Move, phase: AwakenPhase, t: number, dt: number) {
   const ease = 1 - Math.exp(-dt * 3), beat = BEAT[phase];
   live.e += (beat.energy - live.e) * ease;
   live.glow += (beat.glow - live.glow) * (phase === "burst" ? 1 - Math.exp(-dt * 10) : ease);
@@ -103,16 +108,13 @@ function pose(g: THREE.Group, light: THREE.PointLight | null, live: { e: number;
   live.twirl += p.twirl * dt;
   g.position.set(p.x, p.y, 0);
   g.rotation.set(p.tip, live.twirl, p.roll);
-  // The rod's own parts (not its effect's) glow from within; each keeps its own glow underneath.
   // Under its full colour, so the rod keeps its own colours inside the glow instead of washing out pale.
-  const glow = 0.7 * (live.glow + p.flash);
-  g.traverse(o => {
-    const mesh = o as THREE.Mesh, m = mesh.material as THREE.MeshStandardMaterial;
-    if (!mesh.isMesh || mesh.userData.fx || !m.isMeshStandardMaterial) return;
-    if (!live.lit.has(m)) live.lit.set(m, m.emissive.clone().multiplyScalar(m.emissiveIntensity));
-    m.emissive.copy(live.colour).multiplyScalar(glow).add(live.lit.get(m)!);
-    m.emissiveIntensity = 1;
-  });
+  glowOn(g, live.colour, 0.7 * (live.glow + p.flash), live.lit);
+  if (phase === "burst" && !live.burst) {
+    live.burst = true;
+    g.getWorldPosition(at);
+    pool.pool.burst(sparkRecipe(1.4), at.x, at.y, at.z, at.y - 5, 0, 0, 1, live.to.getHex(), 7);
+  }
   if (light) {
     light.position.set(0, -1 + 2 * (p.sheen ?? 0), 0.45);
     light.intensity = p.sheen === null ? 0 : 6 * live.e;

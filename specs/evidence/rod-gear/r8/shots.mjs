@@ -1,5 +1,5 @@
 // rod-gear round 8 evidence: headless Chromium against a dev server (BASE), muted, never headed.
-// Run: PW=<path to playwright/index.mjs> SHELL_BIN=<chrome-headless-shell> BASE=http://localhost:<port> [ONLY=clips,table] [CLIP=name,...] node specs/evidence/rod-gear/r8/shots.mjs
+// Run: PW=<path to playwright/index.mjs> SHELL_BIN=<chrome-headless-shell> BASE=http://localhost:<port> [ONLY=clips,fx,table] [CLIP=name,...] node specs/evidence/rod-gear/r8/shots.mjs
 // Clips: the awakening cutscene (/dev/economy?view=awakening&rod=&stage=), recorded as a CDP screencast (Playwright's own
 // video needs its ffmpeg build), from its first frame, made mp4 with ffmpeg; each gets a poster (the reveal) and a strip of its beats.
 import { dirname, join } from "node:path";
@@ -75,6 +75,35 @@ if (want("clips")) {
   }
 }
 
+if (want("fx")) {
+  // The effects library's previews (/lab/fx): one recording of the grid (strength 1, then 2.5, then 1), cut into a clip per type.
+  const KINDS = ["glow", "aura", "particles", "trail", "pulse", "motion", "flicker", "sparks", "burst"], W = 1280, H = 1240;
+  const p = await page(W, H), dir = join(OUT, ".video-fx"); mkdirSync(dir, { recursive: true });
+  const cdp = await p.context().newCDPSession(p), shots = [];
+  cdp.on("Page.screencastFrame", ({ data, metadata, sessionId }) => { shots.push({ data, t: metadata.timestamp }); void cdp.send("Page.screencastFrameAck", { sessionId }).catch(() => {}); });
+  await p.goto(`${BASE}/lab/fx`); await p.getByTestId("fx-lab").waitFor({ timeout: 180000 }); await p.waitForTimeout(4000);
+  await p.waitForFunction(() => document.querySelector('[data-testid="fx-lab"]')?.getAttribute("data-k") === "2.5", null, { timeout: 20000 });
+  await p.waitForFunction(() => document.querySelector('[data-testid="fx-lab"]')?.getAttribute("data-k") === "1", null, { timeout: 20000 });
+  await cdp.send("Page.startScreencast", { format: "jpeg", quality: 90, maxWidth: W, maxHeight: H, everyNthFrame: 1 });
+  await p.waitForTimeout(8600);
+  await cdp.send("Page.stopScreencast");
+  const boxes = await p.$$eval("[data-fx]", (els) => els.map((e) => { const r = e.getBoundingClientRect(); return [e.getAttribute("data-fx"), Math.round(r.x), Math.round(r.y), Math.round(r.width), Math.round(r.height)]; }));
+  await p.context().close();
+  const list = shots.map((f, i) => { const file = join(dir, `${String(i).padStart(5, "0")}.jpg`); writeFileSync(file, Buffer.from(f.data, "base64"));
+    return `file '${file}'\nduration ${((shots[i + 1]?.t ?? f.t + 0.04) - f.t).toFixed(4)}`; });
+  writeFileSync(join(dir, "list.txt"), `${list.join("\n")}\nfile '${join(dir, `${String(shots.length - 1).padStart(5, "0")}.jpg`)}'\n`);
+  const grid = join(dir, "grid.mp4");
+  ff("-f", "concat", "-safe", "0", "-i", join(dir, "list.txt"), "-vf", "fps=30,scale=trunc(iw/2)*2:trunc(ih/2)*2", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "22", grid);
+  for (const [kind, x, y, w, h] of boxes.filter((b) => KINDS.includes(b[0]))) {
+    const mp4 = join(OUT, `rg8-fx-${kind}.mp4`);
+    ff("-i", grid, "-vf", `crop=${w}:${h}:${x}:${y}`, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "22", "-movflags", "+faststart", mp4);
+    ff("-ss", "1.5", "-i", mp4, "-frames:v", "1", join(OUT, `rg8-fx-${kind}-poster.png`));
+  }
+  ff("-ss", "1.5", "-i", grid, "-frames:v", "1", "-vf", "scale=960:-1", join(OUT, "rg8-fx-library.png"));
+  rmSync(dir, { recursive: true });
+  console.log(`fx: ${boxes.length} types`);
+}
+
 if (want("table")) {
   // The awakenings per rod (lib/game/rods.ts, proposed 2026-11-04): luck, bite, strength, reel, lure, control.
   const WEB = join(OUT, "../../../../web");
@@ -94,6 +123,10 @@ if (want("table")) {
     ["At the burst the whole screen takes the new rung's colour for a moment, at about a third strength, with no shape and no edge. Keep it?", "Keep it"],
     ["While the stats grow, the rod keeps its slow turn, as in the shop. Or hold it still?", "Keep the slow turn"],
     ["A held rod in the world wears its stronger aura after each awakening (the aura's new strength setting, in your hand too)?", "Yes, next round"],
+    ["The effects library has nine types: glow on the thing, aura, particles, trail, pulse, motion, flicker, sparks, burst (rg8-fx-*). Add or drop any?", "Keep these nine"],
+    ["Tempest is rebuilt from the library against epic-tempest-ref.png. You said more references are coming: rework it again when they land?", "Yes, when they land"],
+    ["Tidewarden and Riptide have no references on file yet, so they stay as they are. Send them when you can?", "Yes: they wait for yours"],
+    ["Tidewarden and Titanium were made before the library and still have round discs of light and spindle auras. Move them onto the library now, or with their references?", "With their references"],
   ];
   const html = `<!doctype html><meta charset=utf-8><style>body{font:13px system-ui;margin:24px;color:#222;background:#fff}table{border-collapse:collapse}th,td{padding:5px 8px;text-align:right}
 tr.rod td{border-top:1px solid #ddd}th{font-weight:600;color:#666}td.n,th.n{text-align:left}td.p{text-align:left;color:#444;max-width:300px}i{color:#2a8a4a;font-style:normal;font-size:11px}h1{font-size:17px;margin:0 0 4px}p{margin:0 0 14px;color:#666}</style>

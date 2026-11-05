@@ -4,6 +4,7 @@
  * so the cutscene's frame loop only applies them.
  */
 import type { AwakenPhase } from "@/components/gui/flat";
+import { fxAt } from "@/lib/game/fx/library";
 
 /**
  * One frame of a rod's motion, on top of the stage's turn: lifted `y` and slid `x` (stage units), rolled `roll` and
@@ -37,15 +38,16 @@ export const MOVES: Record<string, Move> = {
 export const moveOf = (key: string): Move => MOVES[key] ?? MOVES.rod_training;
 
 /**
- * Each beat's targets (the frame loop eases to them): `energy` the rod's motion, `glow` the glow on the rod itself (its
- * old rung's colour until the burst, then its new one's), `aura` what its effect gains over its look's own strength.
+ * Each beat's targets (the frame loop eases to them; the effects library's motion, glow and burst): `energy` the
+ * rod's motion, `glow` the glow on the rod itself (its old rung's colour until the burst, then its new one's), `aura`
+ * what its effect gains over its look's own strength.
  * The new form plays its motion alone at the `show`; at the `reveal` it is still, so what changed is the only thing moving.
  */
 export const BEAT: Record<AwakenPhase, { energy: number; glow: number; aura: number }> = {
   frame: { energy: 0.1, glow: 0, aura: 0 },
   glow: { energy: 0.45, glow: 0.75, aura: 0.5 },
   pulse: { energy: 1, glow: 1, aura: 1 },
-  burst: { energy: 1.25, glow: 1.4, aura: 1.6 },
+  burst: { energy: 1.25, glow: fxAt("burst", "peak"), aura: 1.6 },
   show: { energy: 1, glow: 0, aura: 1 },
   reveal: { energy: 0, glow: 0, aura: 0 },
 };

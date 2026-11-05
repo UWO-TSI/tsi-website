@@ -29,6 +29,8 @@ sys.path.insert(0, os.path.join(ROOT, "art", "characters"))
 sys.path.insert(0, os.path.join(ROOT, "art", "props-enemies"))
 import kit  # noqa: E402
 from pe import lathe  # noqa: E402
+sys.path.insert(0, HERE)
+from fx_library import aura_hug, export, glow, light, model, particles, trail, part as fx_part  # noqa: E402
 
 TOOLS = os.path.join(ROOT, "web", "public", "assets", "game", "tools")
 PROPS = os.path.join(ROOT, "web", "public", "assets", "game", "props")
@@ -144,45 +146,13 @@ def helix(c0, c1, r0, r1, turns, n, phase=0.0):
 MADE = {}       # name -> (rod object, [fx objects])
 
 
-def model(name, mats, build, grad=(0.8, 1.0)):
-    m = {k: kit.material(f"{name}_{k}", v) for k, v in mats.items()}
-    pc = kit.Piece(region="torso", mat=next(iter(mats)))
-    build(pc)
-    return pc.finish(name, None, m, sharp=50, grad=grad)
-
-
-def fx_part(name, mats, build, pivot=(0, 0, 0), **extras):
-    """One moving or glowing node of an effect, its origin at `pivot` (what it spins about)."""
-    ob = model(name, mats, build, grad=(1.0, 1.0))
-    ob.data.transform(__import__("mathutils").Matrix.Translation(-V(pivot)))
-    ob.location = pivot
-    for k, v in extras.items():
-        ob[k] = v
-    return ob
-
-
 def halo(at, size, color):
+    """A disc of light (the rods before the effects library: Tidewarden, Titanium). New effects don't use it (fx_library.py)."""
     e = bpy.data.objects.new("Halo", None)
     bpy.context.scene.collection.objects.link(e)
     e.location = at
     e["size"], e["color"] = size, color
     return e
-
-
-def export(objs, path, extras=None):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    sc = bpy.context.scene
-    for k in list(sc.keys()):
-        del sc[k]
-    for k, v in (extras or {}).items():
-        sc[k] = v
-    bpy.ops.object.select_all(action="DESELECT")
-    for o in objs:
-        o.select_set(True)
-    bpy.context.view_layer.objects.active = objs[0]
-    bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", use_selection=True, export_yup=True, export_normals=True,
-                              export_vertex_color="ACTIVE", export_all_vertex_colors=False, export_skins=False,
-                              export_animations=False, export_extras=True)
 
 
 def tris(ob):
@@ -252,31 +222,34 @@ def training():
 
 
 # ================================================================ the reworked two
-def whorl(pc, c, R, n, phase, rise=0.35, droop=0.7, arch=0.12, seed=0):
-    """One layer of a cedar: `n` flat needle sprays fanned round the blank at `c` (the trunk), joined at their foot and
-    split by deep notches, each a raised midrib with branchlets pointing out along both edges, rising off the trunk
-    then drooping; 8 * n triangles."""
-    c, k = V(c), lambda j: 1.0 + 0.12 * math.sin(5.1 * j + 2.7 * seed)       # a little uneven, spray to spray
+def whorl(pc, c, R, n, phase, rise=0.35, droop=0.7, seed=0, mats=("Leaf", "Leaf")):
+    """One layer of a cedar: `n` flat needle sprays fanned round the blank at `c` (the trunk), meeting at shallow
+    notches so the layer reads full, each a pointed spray with a branchlet out on either side, rising off the trunk
+    then drooping, each a little higher or lower and longer or shorter than the next; the sprays alternate between
+    the two greens of `mats` (new growth lighter). 4 * n triangles."""
+    c = V(c)
+    k = lambda j: 1.0 + 0.16 * math.sin(5.1 * j + 2.7 * seed)                 # uneven, spray to spray
+    lift = lambda j: 0.06 * R * math.sin(3.3 * j + 1.9 * seed)
     step = TAU / n
 
-    def at(j, u, v, lift=0.0):              # u out along spray j (of its reach), v across it (1 = the notch)
+    def at(j, u, v):                        # u out along spray j (of its reach), v across it (1 = the notch)
         a, r = phase + step * (j + 0.5 * v), R * k(j) * u
-        return pc.v(c + V((math.cos(a) * r, math.sin(a) * r, rise * r - droop * r * r / R + lift * R)))
+        return pc.v(c + V((math.cos(a) * r, math.sin(a) * r, rise * r - droop * r * r / R + lift(j))))
     hub = pc.v(c)
-    notch = [at(j - 0.5, 0.26, 0) for j in range(n)]
+    notch = [at(j - 0.5, 0.38, 0) for j in range(n)]
     below = lambda vs: sum((v.co for v in vs), V()) / len(vs) - V((0, 0, 0.05))
     for j in range(n):
-        mid = at(j, 0.52, 0, arch)
-        edge = [notch[j], at(j, 0.6, -0.78), at(j, 0.64, -0.26), at(j, 1.0, 0.04), at(j, 0.76, 0.28), at(j, 0.8, 0.74),
-                notch[(j + 1) % n]]               # out, in, the tip, in, out: the branchlets alternate a little
-        for q in [[hub, notch[j], mid], [hub, mid, notch[(j + 1) % n]]] + [[e0, e1, mid] for e0, e1 in zip(edge, edge[1:])]:
+        pc.mat = mats[j % 2]
+        tip, left, right = at(j, 1.0, 0), at(j, 0.72, -0.9), at(j, 0.68, 0.9)
+        for q in ([hub, notch[j], tip], [hub, tip, notch[(j + 1) % n]], [notch[j], left, tip], [tip, right, notch[(j + 1) % n]]):
             pc.f(q, below(q))
 
 
 def cedar():
-    """Uncommon, rod-2 (David 11-03: "the leave should grow in a natural looking way, make it look like a cedar tree").
-    The blank is the trunk of a little cedar: layers of flat needle sprays up its top half, a cone wide and drooping
-    low and small near the tip, each layer turned on from the last, the blank's tip standing out as the leader."""
+    """Uncommon, rod-2 (David 11-03: "the leave should grow in a natural looking way, make it look like a cedar tree";
+    11-05: "more leaves it loosk naked"). The blank is the trunk of a little cedar: twelve close layers of flat needle
+    sprays up its top part, a full cone wide and drooping low and small near the tip, each layer turned on from the
+    last so the gaps fill, the sprays in two greens (new growth lighter at the top), the blank's tip as the leader."""
     L = 0.76
     bend = bender(L)
     rad = lambda z: 0.0135 - 0.0075 * (z - 0.06) / (L - 0.06)
@@ -287,18 +260,17 @@ def cedar():
         zs = [0.06 + (L - 0.06) * k / 6 for k in range(7)]
         pc.mat = "Blank"
         loft(pc, [bend(z) for z in zs], [rad(z) for z in zs], sides=6, tip=True)
-        pc.mat = "Band"
-        for z in (0.075, 0.3):
-            c, r = bend(z), rad(z)
-            pc.tube([c - V((0, 0, 0.006)), c + V((0, 0, 0.006))], [r * 1.25, r * 1.25], sides=6, tip=False, cap=False)
+        pc.mat = "Grip"                          # the band at the grip's top (the foliage covers the rest)
+        c, r = bend(0.075), rad(0.075)
+        pc.tube([c - V((0, 0, 0.006)), c + V((0, 0, 0.006))], [r * 1.25, r * 1.25], sides=6, tip=False, cap=False)
         reel(pc, z=0.02, mat="Grip")
-        pc.mat = "Leaf"
-        layers = [  # z, reach, sprays: a cone of layers, wide and drooping low, small near the tip
-            (0.35, 0.1, 6), (0.415, 0.088, 6), (0.48, 0.075, 5), (0.545, 0.061, 5), (0.605, 0.047, 4), (0.66, 0.034, 4), (0.71, 0.022, 3)]
-        for w, (z, R, n) in enumerate(layers):
-            whorl(pc, bend(z), R, n, 0.4 + w * 2.4, droop=0.85 - 0.06 * w, seed=w)   # each layer turned on from the last
+        n = 12                                   # z, reach and sprays: the cone, from the bottom layer to the top
+        layers = [(0.27 + 0.44 * w / (n - 1), 0.118 - 0.096 * w / (n - 1), (8, 8, 8, 7, 7, 7, 6, 6, 5, 5, 4, 3)[w]) for w in range(n)]
+        for w, (z, R, m) in enumerate(layers):
+            whorl(pc, bend(z), R, m, 0.4 + w * 2.4, droop=0.9 - 0.04 * w, seed=w,
+                  mats=("Leaf", "Fresh") if w < n // 2 else ("Fresh", "Leaf"))
         line(pc, (0, -0.048, 0.034), bend, L, "Line")
-    return model("rod-2", {"Grip": "#C8A27A", "Blank": "#9A5A3A", "Band": "#6D3B26", "Line": "#F2ECDD", "Leaf": "#4A7A38"}, b)
+    return model("rod-2", {"Grip": "#C8A27A", "Blank": "#9A5A3A", "Fresh": "#6A9A48", "Line": "#F2ECDD", "Leaf": "#4A7A38"}, b)
 
 
 def glass():
@@ -442,56 +414,81 @@ def tidewarden():
 
 
 def tempest():
-    """Epic (David's epic-tempest-ref.png, epic-tornado.png for the aura). A storm caught on a handle: a black grip in
-    white rings, a white reel with an ice hub, and for a blank a chain of icy lightning links zigzagging up to an ice
-    crystal, with jagged ice shards flaring from the reel. The effect: a crackling arc of light round the chain, a
-    tornado of light spinning round the reel, an ice-blue aura, glows at the tip and the reel, sparks."""
-    L = 0.86
-    z0 = 0.065
+    """Epic (David's epic-tempest-ref.png; 11-05: "no epic enough, shape isnt right and the effects on the rod also isnt
+    right ... the aura doesnt look right and the light coming off of it being circle isnt right"). Rebuilt with the
+    effects library (fx_library.py): a long chain of icy links for a blank, each link turned a quarter from the last
+    and leaning with the zigzag of a bolt, a crystal spike at the tip, ice shards off the reel, a white reel, a black
+    grip in white rings. The effect, all in the rod's own shape and no discs of light: lightning running down both
+    sides of the chain and crackling (glow, flicker), a spark at the tip that swells (glow, pulse), a gust of wind
+    winding up the chain with a ribbon behind it (light, motion, trail), an aura hugging the chain (aura), and
+    sparks drifting off it (particles)."""
+    L, z0, k = 0.92, 0.07, 9
+    zig = lambda j: 0.012 * (1 if j % 2 else -1) * min(1.0, j / 2)       # the bolt's zigzag, calm at the reel
+    joints = [V((zig(j), 0.003 * j / k, z0 + (L - z0) * j / k)) for j in range(k + 1)]
+    half = lambda j: 0.021 - 0.008 * j / k                                  # a link's half width, thinning up the chain
+
+    def link(pc, j):
+        """Link j: a long hexagonal loop from joint j to j + 1 (overlapping both), in a plane turned a quarter each link."""
+        a, b = joints[j] - V((0, 0, 0.012)), joints[j + 1] + V((0, 0, 0.012))
+        d, w = (b - a).normalized(), half(j)
+        side = V((1, 0, 0)) if j % 2 == 0 else V((0, 1, 0))
+        side = (side - d * side.dot(d)).normalized()
+        pts = [a, a.lerp(b, 0.22) + side * w, a.lerp(b, 0.78) + side * w * 0.9, b, a.lerp(b, 0.78) - side * w * 0.9, a.lerp(b, 0.22) - side * w]
+        pc.mat = "Ice" if j % 2 else "Pale"
+        pc.tube(pts, [0.0058 - 0.0016 * j / k] * 6, sides=3, closed_loop=True)
 
     def b(pc):
         grip(pc, [(0, -0.12), (0.017, -0.12), (0.02, -0.105), (0.019, 0.03), (0.016, 0.06)], n=7, mat=lambda band, q: "White" if band in (0, 2) else "Grip")
-        # the links: a zigzag chain, thick in each link's middle and pinched at the joints
-        k = 8
-        joints = [V((0.022 * (1 if j % 2 else -1) * (0.3 if j == 0 else 1), 0.004 * j / k, z0 + (L - z0) * j / k)) for j in range(k + 1)]
-        path, rad = [], []
         for j in range(k):
-            path += [joints[j], joints[j].lerp(joints[j + 1], 0.5)]
-            rad += [0.0062, 0.022 - 0.008 * j / k]
-        path.append(joints[-1]); rad.append(0.006)
-        loft(pc, path, rad, sides=4, phase=math.pi / 4, mat=lambda i, s: "Ice" if (i // 2) % 2 else "Pale", tip=False, cap=True)
-        pc.mat = "Ice"                           # the crystal at the tip
+            link(pc, j)
+        pc.mat = "Ice"                            # the crystal spike at the tip
         top = joints[-1]
-        loft(pc, [top, top + V((0, 0, 0.035)), top + V((0, 0, 0.085))], [0.006, 0.017, 0.004], sides=4, phase=math.pi / 4, tip=True, cap=False)
-        pc.mat = "Pale"                          # ice shards flaring from the reel seat, up and back, and two down
+        loft(pc, [top, top + V((0, 0, 0.03)), top + V((0, 0, 0.075))], [0.005, 0.012, 0.003], sides=4, phase=math.pi / 4, tip=True, cap=False)
+        pc.mat = "Pale"                           # ice shards off the reel seat, jagged, up and back, and one down
         for s in (-1, 1):
-            leaf(pc, (s * 0.014, 0.004, 0.07), V((s * 0.62, 0.3, 0.72)), 0.23, 0.03, side=V((0, 1, 0)), curl=-0.025, lobes=(0.5, 1.0, 0.55, 0.85, 0.3), thick=0.005)
-            leaf(pc, (s * 0.014, 0.004, 0.02), V((s * 0.62, 0.3, -0.72)), 0.12, 0.022, side=V((0, 1, 0)), lobes=(0.6, 1.0, 0.4), thick=0.005)
-        reel(pc, z=0.025, r=0.034, mat="White", knob="Ice")
-        pc.mat = "Ice"
-        lathe(pc, (0.0, -0.048, 0.025), [(0.0, 0.0145), (0.012, 0.0155), (0, 0.019)], n=7, axis=(-1, 0, 0))
-        line(pc, (0, -0.05, 0.041), lambda z: V((0, 0, z)), L, "White", ahead=-0.034, tip=top + V((0, -0.005, 0.088)))
-    rod = model("rod-tempest", {"Grip": "#2A2E39", "White": "#EEF4F8", "Ice": "#7FC6EC", "Pale": "#D3EEFA"}, b)
-    top = L + 0.085
+            leaf(pc, (s * 0.014, 0.004, 0.08), V((s * 0.55, 0.35, 0.76)), 0.15, 0.022, side=V((0, 1, 0)), curl=-0.02, lobes=(0.45, 1.0, 0.6, 0.2), thick=0.004, sides=3)
+        leaf(pc, (0.0, 0.01, 0.02), V((0.2, 0.5, -0.84)), 0.08, 0.018, side=V((1, 0, 0)), lobes=(0.6, 1.0, 0.3), thick=0.004, sides=3)
+        reel(pc, z=0.025, r=0.034, mat="White", knob="Ice", n=8)
+        pc.mat = "Grip"                           # the reel's dark hub
+        lathe(pc, (0.0, -0.048, 0.025), [(0.0, 0.0145), (0.013, 0.0155), (0, 0.019)], n=6, axis=(-1, 0, 0))
+        line(pc, (0, -0.05, 0.041), lambda z: V((0, 0, z)), L, "White", ahead=-0.03, zs=(0.45,), tip=top + V((0, -0.004, 0.07)))
+    rod = model("rod-tempest", {"Grip": "#23262F", "White": "#EEF4F8", "Ice": "#8FD0F2", "Pale": "#DDF2FC"}, b)
+    tip = joints[-1] + V((0, 0, 0.09))
 
-    def arc(pc):                                 # lightning arcing round the chain, with two forks
+    def bolts(pc):                               # lightning down both sides of the chain, forked, and the reel's charge
         pc.mat = "Glow"
-        pts = [V((0.034 * math.sin(i * 2.3) + (0.01 if i % 2 else -0.01), 0.022 * math.cos(i * 1.7), z0 + 0.01 + (top - z0 - 0.04) * i / 13)) for i in range(14)]
-        pc.tube(pts, [0.0032] * 14, sides=3, tip=True)
-        for j, s in ((4, 1), (9, -1)):
-            pc.tube([pts[j], pts[j] + V((s * 0.035, 0.004, 0.015)), pts[j] + V((s * 0.045, 0.0, 0.04))], [0.003, 0.0022, 0.0012], sides=3, tip=True)
+        for s, ph in ((-1, 0.0), (1, 1.9)):
+            pts = [V((zig(j) + s * (half(j) * 1.05 + 0.004 * math.sin(3.1 * j + ph)), 0.006 * math.cos(2.3 * j + ph), z0 + (L - z0) * j / k)) for j in range(k + 1)]
+            mids = []
+            for j in range(k):                   # a kink between each pair of joints: the bolt's jag
+                m = pts[j].lerp(pts[j + 1], 0.5) + V((s * 0.006 * (1 if j % 2 else -1), 0, 0))
+                mids += [pts[j], m]
+            mids.append(pts[-1])
+            pc.tube(mids, [0.0032] * len(mids), sides=3, tip=True)
+            for j in (3, 6):                     # forks flicking off
+                f = mids[2 * j + 1]
+                pc.tube([f, f + V((s * 0.022, 0.0, 0.012)), f + V((s * 0.03, 0.002, 0.03))], [0.002, 0.0016, 0.001], sides=3, tip=True)
+        for s in (-1, 1):                        # the charge along the reel's shards and the butt's cap
+            leaf(pc, (s * 0.016, 0.0, 0.085), V((s * 0.55, 0.35, 0.76)), 0.11, 0.006, side=V((0, 1, 0)), curl=-0.02, lobes=(0.5, 1.0, 0.4), thick=0.002, sides=3)
+        lathe(pc, (0, 0, -0.124), [(0.0, -0.006), (0.016, -0.004), (0.017, 0.002), (0.0, 0.004)], n=7)
 
-    def tornado(pc):                             # the funnel of light round the reel (epic-tornado.png)
+    def spark(pc):                               # the spark at the tip: four jagged points
+        pc.mat = "Glow"
+        for d in (V((0, 0, 1)), V((0.8, 0.1, 0.35)), V((-0.75, -0.1, 0.25)), V((0.15, 0, -0.6))):
+            d = d.normalized()
+            side = d.cross(V((0, 1, 0))).normalized()
+            pc.tube([tip, tip + d * 0.018 + side * 0.004, tip + d * 0.04], [0.006, 0.004, 0.0], sides=3, tip=False)
+
+    def gust(pc):                                # a wisp of wind, winding up the chain
         pc.mat = "Light"
-        pc.tube(helix((0, 0, -0.03), (0, 0, 0.3), 0.04, 0.1, 3.2, 34), [(0.0055, 0.0018)] * 34, sides=4, tip=False, cap=False, up=V((0, 0, 1)))
-
-    def shell(pc):
-        aura_shell(pc, top + 0.04, r=0.1)
-    fx = [fx_part("Arc", {"Glow": "#8DF2FF"}, arc, flicker=1.0),
-          fx_part("Tornado", {"Light": "#79D2FF"}, tornado, pivot=(0, 0, 0.1), spin=3.2, pulse=0.05),
-          fx_part("Aura", {"Aura": "#5CC4FF"}, shell),
-          halo((0, -0.004, top - 0.03), 0.5, "#A8F4FF"), halo((0, -0.048, 0.025), 0.22, "#8FE6FF")]
-    return rod, fx, {"rodFx": "tempest"}, {"spark": "#C9F6FF", "sparkSprite": "sparkle", "sparkEvery": 0.06, "sparkSize": 0.09, "sparkRise": 0.5}
+        pc.tube([V((0.05, -0.01, 0.4)), V((0.055, 0.012, 0.43)), V((0.045, 0.03, 0.46))], [0.004, 0.006, 0.002], sides=3, tip=True)
+    axis = [V((0, 0, z0 - 0.02))] + joints + [tip]
+    radii = [0.012] + [half(j if j < k else k - 1) for j in range(k + 1)] + [0.01]
+    fx = [glow("Bolts", "#55DCFF", bolts, flicker=1.0),
+          glow("Spark", "#C8F7FF", spark, pivot=tuple(tip), pulse=0.14),
+          light("Gust", "#9EDCFF", gust, pivot=(0, 0, 0.43), spin=2.4, bob=0.12, rate=0.35, **trail(0.016, (0.05, 0.012, 0.0))),
+          aura_hug("Aura", "#2A86E0", axis, radii, inflate=1.7)]
+    return rod, fx, {"rodFx": "tempest"}, particles("#C9F6FF", "sparkle", every=0.07, size=0.07, rise=0.45)
 
 
 def titanium():

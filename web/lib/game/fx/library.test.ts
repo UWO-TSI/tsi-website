@@ -1,0 +1,35 @@
+import { describe, expect, it } from "vitest";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { FX, fxAt, fxGrow, type FxKind } from "./library";
+
+const KINDS = Object.keys(FX) as FxKind[];
+
+describe("the effects library (David 2026-11-05)", () => {
+  it("has the standard types, each said in plain words with how it's made and its parameters", () => {
+    expect(KINDS.sort()).toEqual(["aura", "burst", "flicker", "glow", "motion", "particles", "pulse", "sparks", "trail"]);
+    for (const k of KINDS) {
+      expect(FX[k].what.length).toBeGreaterThan(10);
+      expect(FX[k].authored.length).toBeGreaterThan(10);
+      expect(Object.keys(FX[k].params).length).toBeGreaterThan(0);
+    }
+  });
+
+  it("is as made at strength 1, and what grows only grows with strength", () => {
+    for (const k of KINDS) for (const [name, q] of Object.entries(FX[k].params)) {
+      expect(fxAt(k, name, 1)).toBe(q.value);
+      expect(fxGrow(k, name, 2)).toBeGreaterThanOrEqual(1);
+    }
+    expect(fxGrow("pulse", "size", 2)).toBeGreaterThan(1);      // the orb grows
+    expect(fxGrow("motion", "spin", 2)).toBe(2);
+  });
+
+  it("makes no discs or rings of light", () => {
+    expect(KINDS.some(k => /halo|ring|circle|disc/i.test(k + FX[k].name))).toBe(false);
+  });
+
+  it("has a preview sample for each type drawn by RodAura", () => {
+    for (const k of ["glow", "aura", "particles", "trail", "pulse", "motion", "flicker"])
+      expect(existsSync(join(__dirname, `../../../public/assets/game/props/fxlib-${k}.glb`))).toBe(true);
+  });
+});

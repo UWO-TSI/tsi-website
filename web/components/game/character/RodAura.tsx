@@ -10,9 +10,12 @@
  * faces you, anything else lit as the rod). Each `Halo` empty is a glow sprite of its `size` and `color`, and the
  * scene's extras throw the sparks into the scene's one glow pool (GlowFx). Brighter at dusk and night (glow.ts).
  *
+ * The types and what grows with `strength` are the effects library's (lib/game/fx/library.ts, specs/fx-library.md).
+ * A node with a `trail` extra leaves a fading ribbon (that wide, from its `trailFrom` point) in its own colour.
  * `strength` (1 as made) makes one holder's effect stronger, easing to it: its parts turn and bob faster and further, its
- * swelling parts (the Tidewarden's pearl, the Tempest's tornado) and its halos grow, and it throws sparks more often (the
- * awakening cutscene; David's pick 2026-11-05: "the aura gets a strength setting").
+ * swelling parts (the Tidewarden's pearl, the Tempest's tornado) grow, trails last longer, and it throws sparks more
+ * often (the awakening cutscene; David's pick 2026-11-05: "the aura gets a strength setting"). `Halo` sprites are
+ * the rods made before the library (Tidewarden, Titanium): a disc of light, which the library no longer makes.
  *
  * The parts are shared by every holder (one template per effect, cloned): a holder costs one draw per effect mesh
  * and one per halo (at most five, specs/perf/effects-cost.md), no shadow, no shader compiled into anything lit.
@@ -23,6 +26,7 @@ import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { breath, glowTexture, nightLit } from "@/lib/game/glow";
 import { FACE, type Recipe } from "@/lib/game/fx/particles";
+import { fxAt, fxGrow } from "@/lib/game/fx/library";
 import { useGlowParticles, type GlowParticles } from "../GlowFx";
 
 /** The effect a rod's GLB names (its scene extras), or null. */
@@ -47,6 +51,7 @@ interface Template {
   auras: THREE.ShaderMaterial[];
   halos: { at: THREE.Vector3; size: number; material: THREE.SpriteMaterial }[];
   sparks: { recipe: Recipe<string>; tint: number; every: number; lo: number; hi: number } | null;
+  trails: { name: string; width: number; from: THREE.Vector3; material: THREE.MeshBasicMaterial }[];
   frame: number;
 }
 const templates = new WeakMap<THREE.Object3D, Template>();
@@ -101,7 +106,13 @@ function template(scene: THREE.Object3D): Template {
       speed: [0, 0.06], spread: Math.PI, up: [Number(x.sparkRise ?? 0.3) * 0.5, Number(x.sparkRise ?? 0.3)], gravity: 0, drag: 0, wind: 0.3, alpha: 0.95, face: FACE.billboard, jitter: 0.05 } as Recipe<string>,
     tint: new THREE.Color(x.spark).getHex(), every: Number(x.sparkEvery ?? 0.2), lo: box.min.y, hi: box.max.y,
   } : null;
-  const t: Template = { root, glows, auras, halos, sparks, frame: -1 };
+  const trails = root.children.filter(n => n.userData.trail).map(n => {
+    const m = (n as THREE.Mesh).material as THREE.MeshBasicMaterial | undefined;
+    return { name: n.name, width: Number(n.userData.trail), from: new THREE.Vector3(...((n.userData.trailFrom as number[] | undefined) ?? [0, 0, 0])),
+      material: new THREE.MeshBasicMaterial({ color: m?.color ?? new THREE.Color(1, 1, 1), vertexColors: true, transparent: true, depthWrite: false,
+        blending: THREE.AdditiveBlending, side: THREE.DoubleSide, toneMapped: false, fog: false }) };
+  });
+  const t: Template = { root, glows, auras, halos, sparks, trails, frame: -1 };
   templates.set(scene, t);
   return t;
 }
@@ -117,7 +128,9 @@ export default function RodAura({ rod, url, strength = 1 }: { rod: THREE.Object3
     const t = template(scene), group = t.root.clone(true);
     group.name = "RodAura";
     const halos = t.halos.map(h => { const s = new THREE.Sprite(h.material); s.renderOrder = 2; s.raycast = () => {}; s.userData.fx = true; group.add(s); return s; });
-    return { t, group, halos, moving: nodesOf(group), clock: { next: 0, seed: rod.id * 7919, k: 1 } };
+    const trails = t.trails.map(tr => ({ tr, node: group.getObjectByName(tr.name)!, ribbon: ribbon(tr.material), at: [] as THREE.Vector3[], wait: 0 }));
+    for (const x of trails) group.add(x.ribbon);
+    return { t, group, halos, trails, moving: nodesOf(group), clock: { next: 0, seed: rod.id * 7919, k: 1 } };
   }, [scene, rod]);
   useEffect(() => {
     rod.add(fx.group);
@@ -127,15 +140,51 @@ export default function RodAura({ rod, url, strength = 1 }: { rod: THREE.Object3
   return null;
 }
 
+/** A trail's ribbon: TRAIL_N points, two vertices each, fading toward its end (additive, so black is clear). */
+const TRAIL_N = 18;
+function ribbon(material: THREE.MeshBasicMaterial): THREE.Mesh {
+  const g = new THREE.BufferGeometry(), idx: number[] = [], fade = new Float32Array(TRAIL_N * 6);
+  for (let i = 0; i < TRAIL_N; i++) { const f = (1 - i / (TRAIL_N - 1)) ** 1.6; fade.set([f, f, f, f, f, f], i * 6); }
+  for (let i = 0; i < TRAIL_N - 1; i++) idx.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2);
+  g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(TRAIL_N * 6), 3));
+  g.setAttribute("color", new THREE.BufferAttribute(fade, 3));
+  g.setIndex(idx);
+  const mesh = new THREE.Mesh(g, material);
+  mesh.frustumCulled = false; mesh.renderOrder = 2; mesh.raycast = () => {}; mesh.userData.fx = true; mesh.visible = false;
+  return mesh;
+}
+type Trail = { tr: Template["trails"][number]; node: THREE.Object3D; ribbon: THREE.Mesh; at: THREE.Vector3[]; wait: number };
+const up = new THREE.Vector3();
+/** One frame of a trail: sample its point (in the effect's space) every length / TRAIL_N seconds, and lay the ribbon along them. */
+function lay(x: Trail, group: THREE.Object3D, dt: number, k: number) {
+  x.wait -= dt;
+  if (x.wait <= 0) {
+    x.wait = fxAt("trail", "length", k) / TRAIL_N;
+    x.at.unshift(group.worldToLocal(x.node.localToWorld(x.tr.from.clone())));
+    x.at.length = Math.min(x.at.length, TRAIL_N);
+  } else if (x.at.length) x.at[0] = group.worldToLocal(x.node.localToWorld(x.tr.from.clone()));
+  if (x.at.length < 2) return;
+  x.ribbon.visible = true;
+  // Across the ribbon: the part's own up, in the effect's space, the trail's width.
+  up.set(0, 1, 0).transformDirection(x.node.matrix).multiplyScalar(x.tr.width / 2);
+  const pos = x.ribbon.geometry.getAttribute("position") as THREE.BufferAttribute;
+  for (let i = 0; i < TRAIL_N; i++) {
+    const p = x.at[Math.min(i, x.at.length - 1)];
+    pos.setXYZ(i * 2, p.x + up.x, p.y + up.y, p.z + up.z);
+    pos.setXYZ(i * 2 + 1, p.x - up.x, p.y - up.y, p.z - up.z);
+  }
+  pos.needsUpdate = true;
+}
+
 const v = new THREE.Vector3(), cam = new THREE.Vector3(), s = new THREE.Vector3();
 /** A step of crackle, the same for every holder in a frame: a fresh random level every 1/16 s. */
 const crackle = (t: number) => { const k = Math.floor(t * 16); return 0.55 + 0.45 * Math.abs(Math.sin(k * 12.9898) * 43758.5453 % 1); };
 
 /** Module scope (the react compiler forbids writing through hook values): the idle animation, the glows and sparks. */
-function idle(rod: THREE.Object3D, fx: { t: Template; group: THREE.Object3D; halos: THREE.Sprite[]; moving: THREE.Object3D[]; clock: { next: number; seed: number; k: number } },
+function idle(rod: THREE.Object3D, fx: { t: Template; group: THREE.Object3D; halos: THREE.Sprite[]; trails: Trail[]; moving: THREE.Object3D[]; clock: { next: number; seed: number; k: number } },
   glow: GlowParticles, camera: THREE.Camera, t: number, delta: number, strength: number) {
   const night = nightLit(), b = breath(t, 1.3), { t: tpl } = fx;
-  const power = fx.clock.k += (strength - fx.clock.k) * (1 - Math.exp(-Math.min(delta, 0.1) * 3)), grow = 1 + 0.45 * (power - 1);
+  const power = fx.clock.k += (strength - fx.clock.k) * (1 - Math.exp(-Math.min(delta, 0.1) * 3)), grow = fxGrow("pulse", "size", power);
   // Shared materials: once a frame.
   if (tpl.frame !== Math.floor(t * 1000)) {
     tpl.frame = Math.floor(t * 1000);
@@ -145,8 +194,8 @@ function idle(rod: THREE.Object3D, fx: { t: Template; group: THREE.Object3D; hal
   }
   for (const n of fx.moving) {
     const home = n.userData.home as { position: THREE.Vector3; rotation: number; phase: number }, u = n.userData;
-    if (u.spin) n.rotation.y = home.rotation + (u.turned = Number(u.turned ?? t * Number(u.spin)) + Math.min(delta, 0.1) * Number(u.spin) * power);
-    if (u.bob) n.position.y = home.position.y + Math.sin(t * TAU * Number(u.rate ?? 1) + home.phase) * Number(u.bob) * power;
+    if (u.spin) n.rotation.y = home.rotation + (u.turned = Number(u.turned ?? t * Number(u.spin)) + Math.min(delta, 0.1) * Number(u.spin) * fxGrow("motion", "spin", power));
+    if (u.bob) n.position.y = home.position.y + Math.sin(t * TAU * Number(u.rate ?? 1) + home.phase) * Number(u.bob) * fxGrow("motion", "bob", power);
     const pulse = u.pulse ? grow * (1 + Number(u.pulse) * Math.sin(t * 2.6 + home.phase)) : 1;
     // A crackle jitters across the rod a little, stepped like the light.
     const jit = u.flicker ? 1 + 0.18 * (crackle(t + 0.37) - 0.75) : 1;
@@ -154,6 +203,7 @@ function idle(rod: THREE.Object3D, fx: { t: Template; group: THREE.Object3D; hal
   }
   if (!rod.visible) return;
   rod.updateWorldMatrix(true, false);
+  if (fx.trails.length) { fx.group.updateMatrixWorld(true); for (const x of fx.trails) lay(x, fx.group, Math.min(delta, 0.1), power); }
   const k = rod.getWorldScale(s).x || 1;
   camera.getWorldPosition(cam);
   tpl.halos.forEach((h, i) => {
@@ -167,7 +217,7 @@ function idle(rod: THREE.Object3D, fx: { t: Template; group: THREE.Object3D; hal
   if (!sp || rod.scale.x < 0.5) return;
   fx.clock.next -= delta;
   if (fx.clock.next > 0) return;
-  fx.clock.next = sp.every / Math.max(1, power);
+  fx.clock.next = sp.every / Math.max(1, fxGrow("particles", "rate", power));
   const seed = ++fx.clock.seed, r = (n: number) => Math.abs(Math.sin(seed * 78.233 + n * 12.9898) * 43758.5453 % 1);
   const p = rod.localToWorld(v.set((r(1) - 0.5) * 0.08, sp.lo + (sp.hi - sp.lo) * r(2), (r(3) - 0.5) * 0.08));
   glow.pool.burst(sp.recipe, p.x, p.y, p.z, p.y - 2, 0, 0, 1, sp.tint, seed);
