@@ -6,6 +6,7 @@ import { Color } from "three";
 import type { IslandWeather, WeatherBlend } from "./islandWeather";
 import { leanHue, leanWater, type SeasonLook } from "./seasonalLook";
 import { CURRENT, lookToLight, type LookPreset, type PhaseBase } from "./lookPreset";
+import type { MoonSky } from "./atmosphere";
 import { phaseInstant, solarPosition, type SunAngles } from "./sunPath";
 
 /**
@@ -91,9 +92,9 @@ const PHASE_BASE: Record<IslandPhase, PhaseBase> = {
   },
 };
 
-/** A look preset at a phase of the day, lit by the real sun (compass angles; null keeps the preset's key). */
-export function islandLight(look: LookPreset, phase: IslandPhase, sun: SunAngles | null = null): IslandLight {
-  return lookToLight(look, PHASE_BASE[phase], phase, sun);
+/** A look preset at a phase of the day, lit by the real sun (compass angles; null keeps the preset's key) and at night by the real moon. */
+export function islandLight(look: LookPreset, phase: IslandPhase, sun: SunAngles | null = null, moon: MoonSky | null = null): IslandLight {
+  return lookToLight(look, PHASE_BASE[phase], phase, sun, moon);
 }
 
 /**
@@ -102,10 +103,10 @@ export function islandLight(look: LookPreset, phase: IslandPhase, sun: SunAngles
  * position is the real one in both (the moon at night); lamps and fireflies switch at the midpoint, and the lamps
  * and windows ease themselves on from there.
  */
-export function islandLightAt(look: LookPreset, blend: { from: IslandPhase; to: IslandPhase; t: number }, sun: SunAngles | null = null): IslandLight {
-  const a = islandLight(look, blend.from, sun);
+export function islandLightAt(look: LookPreset, blend: { from: IslandPhase; to: IslandPhase; t: number }, sun: SunAngles | null = null, moon: MoonSky | null = null): IslandLight {
+  const a = islandLight(look, blend.from, sun, moon);
   if (blend.from === blend.to || blend.t <= 0) return a;
-  const b = islandLight(look, blend.to, sun);
+  const b = islandLight(look, blend.to, sun, moon);
   if (blend.t >= 1) return b;
   // A rim only one side has fades in from nothing in that side's colour.
   const rimA = a.rim ?? (b.rim && { color: b.rim.color, intensity: 0 }), rimB = b.rim ?? (a.rim && { color: a.rim.color, intensity: 0 });

@@ -2,27 +2,28 @@
 
 /**
  * AmbienceFX (game-feel wave G2, 2026-07-07) — the approved ambience set:
- * drifting cloud shadows, falling leaves and mist.
+ * drifting cloud shadows, falling leaves and mist; wind swirls on windy days (sky-ambient round 2).
  *
  * Everything here is deliberately cheap: one scrolling texture plane, a few
  * small InstancedMeshes and quads. No postprocessing, no per-frame allocations.
  *
- * Clouds, leaves and mist are world state (look spec §7, row 238): placed by
+ * Clouds, leaves, mist and swirls are world state (look spec §7, row 238): placed by
  * lib/game/worldFx.ts from world position, the world clock and the world wind,
  * never around the player. The view only culls what is far from where the
  * camera looks.
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useTexture } from "@react-three/drei";
 import { worldTime } from "@/lib/game/worldClock";
 import type { IslandPhase } from "@/lib/game/islandTime";
 import {
-  CLOUD_SPEED, LEAF_SLOTS, MIST_BANKS, MIST_TILE, WIND_DIR, leafAt, mistBank, viewFocus, windowFade,
-  type LeafPose, type LeafTree, type WorldWind,
+  CLOUD_SPEED, LEAF_SLOTS, MIST_BANKS, MIST_TILE, SWIRL_NEAREST, WIND_DIR, leafAt, mistBank, swirlAge, viewFocus, windowFade,
+  type LeafPose, type LeafTree, type Point3, type WorldWind,
 } from "@/lib/game/worldFx";
+import { ACTIVE_WORLD_BEND, ACTIVE_WORLD_BEND_SIDE } from "@/lib/game/curvedWorld";
 
 
 // ─── Cloud shadows (item 20) ────────────────────────────────────────────
@@ -182,4 +183,95 @@ export function MistBanks({ color, opacity = 0.32, wind, ground }: { color: stri
       <spriteMaterial map={glow} color={color} transparent opacity={0} depthWrite={false} fog={false} />
     </sprite>
   ))}</group>;
+}
+
+// ─── Wind swirls (sky-ambient round 2) ───────────────────────────────────
+// White curls of air on windy days (David, round 1: "less opacity and faster and better placement logics"): faint,
+// quick, over the treetops, along the shore and across open ground (worldFx swirlSpots), each spot its own swirl
+// now and then on the world clock (swirlAge), so every client sees the same ones; the nearest of them to where the
+// camera looks are drawn, none on the lens. One instanced draw.
+const SWIRL_VERT = /* glsl */ `
+attribute float aU;
+attribute float aSide;
+attribute vec4 iSwirl;
+attribute float iFade;
+uniform vec2 uWind;
+varying float vA;
+varying float vU;
+float h(float n) { return fract(sin(n * 127.1 + 311.7) * 43758.5453); }
+// A run downwind, a loop up and over, and on.
+vec3 path(float u, vec3 o, vec3 d, float L, float r) {
+  float s = u * L, at = L * 0.5, loopLen = 6.2832 * r;
+  if (s < at) return o + d * s + vec3(0.0, sin(s * 1.3) * 0.05, 0.0);
+  if (s < at + loopLen) { float a = (s - at) / r; return o + d * (at + r * sin(a)) + vec3(0.0, r * (1.0 - cos(a)), 0.0); }
+  return o + d * (s - loopLen) + vec3(0.0, sin(s * 1.1) * 0.04, 0.0);
+}
+void main() {
+  float age = iSwirl.w, seed = iSwirl.x * 0.37 + iSwirl.z * 0.61;
+  vec3 d = vec3(uWind.x, 0.0, uWind.y), o = iSwirl.xyz - d * 2.6;
+  float L = 6.0, r = 0.26 + 0.18 * h(seed), head = age * 1.5, len = 0.36;
+  float u = clamp(head - len + aU * len, 0.0, 1.0);
+  vec3 p = path(u, o, d, L, r), q = path(min(u + 0.01, 1.0), o, d, L, r);
+  vec3 side = normalize(cross(normalize(q - p + vec3(0.0, 1e-5, 0.0)), normalize(cameraPosition - p)));
+  p += side * aSide * 0.034 * sin(aU * 3.1416);
+  vA = smoothstep(0.0, 0.15, age) * smoothstep(1.0, 0.65, age) * iFade;
+  vU = aU;
+  vec4 mv = modelViewMatrix * vec4(p, 1.0);
+  mv.y -= mv.z * mv.z * ${ACTIVE_WORLD_BEND.toFixed(6)} + mv.x * mv.x * ${ACTIVE_WORLD_BEND_SIDE.toFixed(6)};
+  gl_Position = projectionMatrix * mv;
+}`;
+const SWIRL_FRAG = /* glsl */ `
+varying float vA;
+varying float vU;
+// Faint, and fainter down the tail.
+void main() { gl_FragColor = vec4(1.0, 1.0, 1.0, 0.42 * vA * (0.3 + 0.7 * vU)); }`;
+
+const SWIRLS = 14, SWIRL_SEGMENTS = 32, SWIRL_VIEW = 22;
+const _swirlCam = new THREE.Vector3();
+/** Module scope (the react compiler forbids writing through hook values): this frame's swirls into the instances. */
+function stepSwirls(geo: THREE.InstancedBufferGeometry, spots: readonly Point3[], camera: THREE.Camera, chance: number) {
+  viewFocus(camera.position, camera.getWorldDirection(_dir), _focus);
+  camera.getWorldPosition(_swirlCam);
+  const t = worldTime(), at = geo.getAttribute("iSwirl") as THREE.InstancedBufferAttribute, fade = geo.getAttribute("iFade") as THREE.InstancedBufferAttribute;
+  let n = 0;
+  for (let i = 0; i < spots.length && n < SWIRLS; i++) {
+    const s = spots[i], dx = s.x - _focus.x, dz = s.z - _focus.z;
+    if (Math.abs(dx) > SWIRL_VIEW || Math.abs(dz) > SWIRL_VIEW) continue;
+    const age = swirlAge(i, t, chance);
+    if (age < 0) continue;
+    const near = THREE.MathUtils.smoothstep(Math.hypot(s.x - _swirlCam.x, s.y - _swirlCam.y, s.z - _swirlCam.z), SWIRL_NEAREST, SWIRL_NEAREST + 5);
+    const k = near * windowFade(dx, dz, SWIRL_VIEW * 2);
+    if (k < 0.01) continue;
+    at.setXYZW(n, s.x, s.y, s.z, age);
+    fade.setX(n, k);
+    n++;
+  }
+  geo.instanceCount = n;
+  at.needsUpdate = true;
+  fade.needsUpdate = true;
+}
+
+export function WindSwirls({ spots, wind }: { spots: readonly Point3[]; wind: WorldWind }) {
+  const [geo, mat] = useMemo(() => {
+    const g = new THREE.InstancedBufferGeometry(), u: number[] = [], side: number[] = [], index: number[] = [];
+    for (let i = 0; i <= SWIRL_SEGMENTS; i++) { u.push(i / SWIRL_SEGMENTS, i / SWIRL_SEGMENTS); side.push(-1, 1); }
+    for (let i = 0; i < SWIRL_SEGMENTS; i++) { const a = i * 2; index.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+    g.setIndex(index);
+    g.setAttribute("position", new THREE.Float32BufferAttribute(new Array(u.length * 3).fill(0), 3));
+    g.setAttribute("aU", new THREE.Float32BufferAttribute(u, 1));
+    g.setAttribute("aSide", new THREE.Float32BufferAttribute(side, 1));
+    g.setAttribute("iSwirl", new THREE.InstancedBufferAttribute(new Float32Array(SWIRLS * 4), 4).setUsage(THREE.DynamicDrawUsage));
+    g.setAttribute("iFade", new THREE.InstancedBufferAttribute(new Float32Array(SWIRLS), 1).setUsage(THREE.DynamicDrawUsage));
+    g.instanceCount = 0;
+    const m = new THREE.ShaderMaterial({
+      vertexShader: SWIRL_VERT, fragmentShader: SWIRL_FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+      uniforms: { uWind: { value: new THREE.Vector2(wind.x, wind.z).normalize() } },
+    });
+    return [g, m];
+  }, [wind]);
+  useEffect(() => () => { geo.dispose(); mat.dispose(); }, [geo, mat]);
+  // How many spots have a swirl at once: by the wind's strength (none in a calm).
+  const chance = THREE.MathUtils.clamp((wind.speed - 1.2) / 6, 0, 0.5);
+  useFrame(({ camera }) => stepSwirls(geo, spots, camera, chance));
+  return <mesh geometry={geo} material={mat} frustumCulled={false} renderOrder={5} />;
 }

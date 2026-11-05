@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  LEAF_SLOTS, MIST_BANKS, MIST_TILE, RAIN_TILE, hash01, leafAt, mistBank, rainStreak, sheddingTrees, viewFocus, windowFade, worldWind,
+  LEAF_SLOTS, MIST_BANKS, MIST_TILE, RAIN_TILE, hash01, leafAt, mistBank, rainStreak, sheddingTrees, swirlAge, swirlSpots, viewFocus, windowFade, worldWind,
   type LeafPose, type Point3,
 } from "./worldFx";
 
@@ -145,4 +145,25 @@ describe("view focus", () => {
 
 it("hash01 stays in [0, 1) for large cycle numbers", () => {
   for (let b = 1e5; b < 1e5 + 2000; b++) { const h = hash01(7, b); expect(h).toBeGreaterThanOrEqual(0); expect(h).toBeLessThan(1); }
+});
+
+describe("wind swirls", () => {
+  it("blow over the crowns, the shore and open ground, never the sea", () => {
+    // Land is x < 10; a tree stands at (0, 0).
+    const ground = (x: number) => (x < 10 ? 1 : -1);
+    const spots = swirlSpots([{ x: 0, y: 1, z: 0 }], ground, 0, { x0: -18, x1: 18, z0: -9, z1: 9 });
+    expect(spots[0]).toEqual({ x: 0, y: 4.4, z: 0 });
+    expect(spots.every(s => s.x < 10)).toBe(true);
+    expect(spots.some(s => s.x === 9)).toBe(true);
+    expect(spots.some(s => Math.abs(s.x) < 3 && Math.abs(s.z) < 3 && s.y < 3)).toBe(false);
+  });
+
+  it("come and go on the world clock, more often the windier", () => {
+    const count = (chance: number) => { let n = 0; for (let i = 0; i < 200; i++) if (swirlAge(i, 1000, chance) >= 0) n++; return n; };
+    expect(count(0)).toBe(0);
+    expect(count(0.2)).toBeLessThan(count(0.6));
+    const a = swirlAge(3, 500, 1), b = swirlAge(3, 500 + 0.5, 1);
+    expect(a).toBeGreaterThanOrEqual(0);
+    expect(b).toBeGreaterThanOrEqual(0);
+  });
 });

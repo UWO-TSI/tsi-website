@@ -2,19 +2,18 @@
 
 /**
  * Development only: the sky-ambient lane's round 1 pitches on the island (lib/game/skyLab.ts, specs/sky-ambient.md).
- * Mounted by IslandAtmosphere only while a `?sky=`, `?wind=`, `?amb=` or `?skytilt=` switch is set, never in production.
+ * Mounted by IslandAtmosphere only while a `?wind=`, `?amb=`, `?skytilt=` or `?skyface=` switch is set, never in production.
  *
  * - The shared wind: one direction, strength and slow gusts on the world clock, written into the grass (WIND_LAB), the
  *   trees (TREE_WIND, TREE_LEAN), the clouds (SkyDome) and the particles below.
  * - Light motes: pollen and dust drifting downwind round the view, brighter looking toward the sun (one draw).
- * - Wind swirls: a few white curls riding the gusts on breezy and stormy days (one draw).
  * - The shoot's hooks: the view's tilt and turn, and `window.__sky` (swap the pitch, move the clock, set the view).
  */
 import { useEffect, useMemo } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { setSkyLab, sharedWindAt, skyLab, useSkyLab, WIND_LAB, type SharedWind, type SkyLabState } from "@/lib/game/skyLab";
-import { skyLabUniforms, skyUniforms } from "@/lib/game/skyShader";
+import { skyUniforms } from "@/lib/game/skyShader";
 import { TREE_LEAN, TREE_WIND } from "@/lib/game/modelMaterials";
 import { worldTime, setWorldClockOffset } from "@/lib/game/worldClock";
 import { parseClockOverride } from "@/lib/game/islandTime";
@@ -49,7 +48,7 @@ if (typeof window !== "undefined") {
 function SkyCamera({ tilt, face }: { tilt: number; face: SkyLabState["face"] }) {
   useFrame(({ camera }) => {
     if (face) {
-      const d = face === "sun" ? skyLabUniforms.uSunDir.value : skyLabUniforms.uMoonDir.value;
+      const d = face === "sun" ? skyUniforms.uSunDir.value : skyUniforms.uMoonDir.value;
       orbit.target.yaw = orbit.view.yaw = Math.atan2(d.x, d.z);
     }
     if (tilt) { camera.rotateX(THREE.MathUtils.degToRad(tilt)); camera.updateMatrixWorld(); }
@@ -118,11 +117,6 @@ function stepMotes(mat: THREE.ShaderMaterial, camera: THREE.Camera, ground: (x: 
   u.uSize.value = 0.14 * height;
 }
 
-function stepSwirls(mat: THREE.ShaderMaterial, camera: THREE.Camera, ground: (x: number, z: number) => number) {
-  stepFocus(mat, camera, ground);
-  mat.uniforms.uChance.value = THREE.MathUtils.clamp((wind.strength - 0.8) / 2, 0, 0.95);
-}
-
 /** Light motes: pollen and dust, world-anchored on a tile round the view, drifting downwind (one draw). */
 function Motes({ ground, count }: { ground: (x: number, z: number) => number; count: number }) {
   const { gl } = useThree();
@@ -136,7 +130,7 @@ function Motes({ ground, count }: { ground: (x: number, z: number) => number; co
       vertexShader: MOTE_VERT, fragmentShader: MOTE_FRAG, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
       uniforms: {
         uTime: { value: 0 }, uTile: { value: 22 }, uStrength: { value: 1 }, uDay: { value: 1 }, uSize: { value: 40 },
-        uFocus: { value: new THREE.Vector3() }, uSunDir: skyLabUniforms.uSunDir, uWind: { value: new THREE.Vector2() },
+        uFocus: { value: new THREE.Vector3() }, uSunDir: skyUniforms.uSunDir, uWind: { value: new THREE.Vector2() },
         uColor: { value: new THREE.Color(1, 0.93, 0.72) },
       },
     });
@@ -147,74 +141,13 @@ function Motes({ ground, count }: { ground: (x: number, z: number) => number; co
   return <points geometry={geo} material={mat} frustumCulled={false} renderOrder={5} />;
 }
 
-const SWIRL_VERT = /* glsl */ `
-attribute float aU, aSide;
-attribute float iSeed;
-uniform float uTime, uTile, uChance;
-uniform vec3 uFocus;
-uniform vec2 uWind;
-varying float vA;
-float h(float n) { return fract(sin(n * 127.1 + 311.7) * 43758.5453); }
-// A run downwind, a loop up and over, and on.
-vec3 path(float u, vec3 o, vec3 d, float L, float r) {
-  float s = u * L, at = L * 0.5, loopLen = 6.2832 * r;
-  if (s < at) return o + d * s + vec3(0.0, sin(s * 1.3) * 0.06, 0.0);
-  if (s < at + loopLen) { float a = (s - at) / r; return o + d * (at + r * sin(a)) + vec3(0.0, r * (1.0 - cos(a)), 0.0); }
-  return o + d * (s - loopLen) + vec3(0.0, sin(s * 1.1) * 0.05, 0.0);
-}
-void main() {
-  float P = 3.4, t = uTime + iSeed * 1.37, c = floor(t / P), age = (t - c * P) / P, k = iSeed * 17.0 + c;
-  vA = 0.0;
-  if (h(k + 0.5) > uChance) { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); return; }
-  vec3 d = vec3(uWind.x, 0.0, uWind.y);
-  vec3 o = vec3(uFocus.x + (h(k + 1.1) - 0.5) * uTile, uFocus.y + 0.5 + h(k + 2.3) * 2.0, uFocus.z + (h(k + 3.7) - 0.5) * uTile) - d * 2.5;
-  float L = 5.5, r = 0.32 + 0.22 * h(k + 4.1), head = age * 1.45, len = 0.42;
-  float uu = clamp(head - len + aU * len, 0.0, 1.0);
-  vec3 p = path(uu, o, d, L, r), q = path(min(uu + 0.01, 1.0), o, d, L, r);
-  vec3 side = normalize(cross(normalize(q - p + vec3(0.0, 1e-5, 0.0)), normalize(cameraPosition - p)));
-  p += side * aSide * 0.045 * sin(aU * 3.1416);
-  vA = smoothstep(0.0, 0.12, age) * smoothstep(1.0, 0.7, age);
-  vec4 mv = modelViewMatrix * vec4(p, 1.0);
-  ${BEND}
-  gl_Position = projectionMatrix * mv;
-}`;
-const SWIRL_FRAG = /* glsl */ `
-varying float vA;
-void main() { gl_FragColor = vec4(1.0, 1.0, 1.0, 0.75 * vA); }`;
-
-const SWIRLS = 8, SEGMENTS = 32;
-/** Wind swirls: white curls riding the gusts (one instanced draw); how many show is the wind's strength. */
-function Swirls({ ground }: { ground: (x: number, z: number) => number }) {
-  const [geo, mat] = useMemo(() => {
-    const g = new THREE.InstancedBufferGeometry(), u: number[] = [], side: number[] = [], index: number[] = [];
-    for (let i = 0; i <= SEGMENTS; i++) { u.push(i / SEGMENTS, i / SEGMENTS); side.push(-1, 1); }
-    for (let i = 0; i < SEGMENTS; i++) { const a = i * 2; index.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
-    g.setIndex(index);
-    g.setAttribute("position", new THREE.Float32BufferAttribute(new Array(u.length * 3).fill(0), 3));
-    g.setAttribute("aU", new THREE.Float32BufferAttribute(u, 1));
-    g.setAttribute("aSide", new THREE.Float32BufferAttribute(side, 1));
-    g.setAttribute("iSeed", new THREE.InstancedBufferAttribute(new Float32Array([...Array(SWIRLS).keys()]), 1));
-    g.instanceCount = SWIRLS;
-    const m = new THREE.ShaderMaterial({
-      vertexShader: SWIRL_VERT, fragmentShader: SWIRL_FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide,
-      uniforms: { uTime: { value: 0 }, uTile: { value: 20 }, uChance: { value: 0 }, uFocus: { value: new THREE.Vector3() }, uWind: { value: new THREE.Vector2() } },
-    });
-    return [g, m];
-  }, []);
-  useEffect(() => () => { geo.dispose(); mat.dispose(); }, [geo, mat]);
-  useFrame(({ camera }) => stepSwirls(mat, camera, ground));
-  return <mesh geometry={geo} material={mat} frustumCulled={false} renderOrder={5} />;
-}
-
 export default function SkyLab({ weather, ground }: { weather: IslandWeather; ground: (x: number, z: number) => number }) {
   const s = useSkyLab();
-  // A ?weather=wind day with no ?wind= set blows a storm through the swirls; otherwise the pitch's level.
-  const level = s.wind ?? (s.amb.has("swirls") ? (weather === "wind" ? "storm" : "breeze") : null);
+  const level = s.wind;
   const wet = weather === "rain" || weather === "snow" || weather === "fog";
   return <>
     {(s.tilt !== 0 || s.face) && <SkyCamera tilt={s.tilt} face={s.face} />}
     {level && <SharedWindDriver level={level} />}
     {s.amb.has("motes") && !wet && <Motes ground={ground} count={160} />}
-    {s.amb.has("swirls") && <Swirls ground={ground} />}
   </>;
 }

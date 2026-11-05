@@ -14,7 +14,7 @@ import Puddles from "./Puddles";
 import SkyDome from "./SkyDome";
 import { FX_BENCH, useFxBench } from "@/lib/game/perf/fxBench";
 import { setPuddles } from "@/lib/game/puddles";
-import { CloudShadows, MistBanks, TreeLeaves } from "./AmbienceFX";
+import { CloudShadows, MistBanks, TreeLeaves, WindSwirls } from "./AmbienceFX";
 import { Fireflies } from "./AmbientLife";
 import RainFX from "./RainFX";
 import { applyEnvironment, disposeEnvironment } from "@/lib/game/envLight";
@@ -28,7 +28,7 @@ import { setLeafTint, TREE_WIND, WORLD_SNOW } from "@/lib/game/modelMaterials";
 import { TERRAIN_SNOW } from "./grid/GridTerrain";
 import { WORLD_BEND } from "@/lib/game/curvedWorld";
 import { worldTime } from "@/lib/game/worldClock";
-import { sheddingTrees, worldWind } from "@/lib/game/worldFx";
+import { sheddingTrees, swirlSpots, worldWind } from "@/lib/game/worldFx";
 import { juiceShake } from "@/lib/game/cameraJuice";
 import { bossCam } from "@/lib/game/bossCam";
 import { treeParts } from "./NatureModels";
@@ -130,6 +130,14 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
     const models = SEASON_TREES[look.season];
     return sheddingTrees(trees.map(t => { const [tree] = treeParts(t.seed, models); return { x: t.x, y: ground(t.x, t.z), z: t.z, model: tree.url, scale: tree.scale }; }), look.season);
   }, [trees, ground, look.season]);
+  // Where the windy days' swirls blow: the crowns, the shore and open ground round the island's trees.
+  const windy = !liteMode && weather === "wind";
+  const swirls = useMemo(() => {
+    if (!windy || !trees.length) return [];
+    const xs = trees.map(t => t.x), zs = trees.map(t => t.z), pad = 30;
+    return swirlSpots(trees.map(t => ({ x: t.x, y: ground(t.x, t.z), z: t.z })), ground, 0,
+      { x0: Math.min(...xs) - pad, x1: Math.max(...xs) + pad, z0: Math.min(...zs) - pad, z1: Math.max(...zs) + pad });
+  }, [windy, trees, ground]);
   const groundSite = useMemo(() => fauna && { map: fauna.site.map, ground, surface: fauna.surface, top: fauna.top, player: fauna.player }, [fauna, ground]);
   const puddleBlobs = useMemo(() => puddles.map(([x, z], i) => ({ x, z, y: ground(x, z) + 0.01, rx: 0.5 + (i % 3) * 0.18, rz: 0.32 + (i % 2) * 0.12, yaw: 0 })), [puddles, ground]);
   // Footsteps splash in them while it rains (lib/game/puddles.ts), whoever steps.
@@ -144,7 +152,7 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
         The background colour stays behind both as the backstop past the dome's radius. */}
     {flat
       ? light.skyTop ? <SkyGradient top={light.skyTop} horizon={light.sky} /> : <color attach="background" args={[light.sky]} />
-      : <><color attach="background" args={[light.sky]} /><SkyDome light={light} weather={weather} /></>}
+      : <><color attach="background" args={[light.sky]} /><SkyDome weather={weather} /></>}
     <fog attach="fog" args={[light.fogColor, overview ? light.fogNear + 28 + overviewFog : light.fogNear, overview ? light.fogFar + 15 + overviewFog : light.fogFar]} />
     <ambientLight ref={ambient} intensity={light.ambient} color={light.fill} />
     <hemisphereLight ref={hemisphere} args={[light.fill, light.bounce, light.hemisphere]} />
@@ -164,6 +172,7 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
     {!liteMode && weather !== "rain" && weather !== "snow" && (look.season === "spring" || look.season === "autumn") &&
       <TreeLeaves trees={leafTrees} mode={look.season === "spring" ? "petals" : "leaves"} wind={wind} ground={ground} />}
     <TreeWind strength={liteMode ? 0 : weather === "wind" ? 0.14 : 0.035} />
+    {swirls.length > 0 && <WindSwirls spots={swirls} wind={wind} />}
     {fauna && <AmbientFauna {...fauna} season={look.season} weather={weather} liteMode={liteMode} />}
     {fauna && <WeatherGround site={groundSite!} rain={weather === "rain"} snow={look.snow >= 0.5} puddles={puddleBlobs} />}
     {lab && <SkyLab weather={weather} ground={ground} />}

@@ -54,3 +54,11 @@ export function phaseInstant(phase: IslandPhase, date: Date, days?: readonly Sun
   const hour = { dawn: sunrise - DAWN_HOURS / 2, day: 11.75, evening: sunset - EVENING_HALF_HOURS / 2, night: 23 }[phase];
   return torontoInstant(torontoDate(date).key, hour);
 }
+
+let skyAt: number | null = null;
+/**
+ * The instant the sky shows (SkyDome: its sun, moon and stars): a forced phase's preview time while one is set
+ * (`?time=`, the options menu, the title's night), else null for the world clock. Written by useIslandConditions.
+ */
+export const skyInstant = () => skyAt;
+export const setSkyInstant = (ms: number | null) => { skyAt = ms; };

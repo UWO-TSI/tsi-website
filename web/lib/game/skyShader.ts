@@ -1,433 +1,453 @@
 /**
- * skyShader — the sky dome: a gradient, plus whichever of COZY's eight cloud
- * shaders is selected.
+ * skyShader: the sky dome (sky-ambient round 2, specs/sky-ambient.md §R2). David, round 1: "i want you to properly
+ * redesign the sky use proper sky box and design techniques", "take the sky design seriously because thats where the
+ * feeling comes from and the lighting". Everything is drawn from maths, nothing from a picture, so it stays crisp at
+ * any resolution:
  *
- * REPLACES eight painted equirectangular panoramas that cost 89MB of video
- * memory to display flat gradients. Measured, the sky was 97MB of the game's
- * 104MB of texture memory: 93%, for the thing furthest away and least detailed.
- * A gradient is three lines of maths.
+ * - **The air:** Earth's atmosphere by single scattering (lib/game/atmosphere.ts), integrated per vertex of a dome
+ *   whose rings crowd the horizon, the phase functions per pixel. The real sun's height and bearing make the blue
+ *   noon, the gold and rose of a low sun, the Earth's shadow and the belt of Venus at dusk, and the violet twilight.
+ *   The moon scatters the same way, by its phase, so a full moon makes a blue night and a new moon a dark one.
+ * - **The sun and the moon** as discs with antialiased edges a pixel wide. The moon is a lit sphere: the real sun
+ *   lights it from where it really is, so its phase and the tilt of its terminator follow the calendar.
+ * - **The stars:** points hashed on the celestial sphere (two layers: many faint, a few bright with a soft four-point
+ *   sparkle), a pixel across at any resolution, twinkling gently, turning with the sidereal time; the Milky Way along
+ *   the real galactic plane; a shooting star now and then. A bright moon washes the faint ones out.
+ * - **The clouds:** a cumulus layer ray-marched as a heightfield (flat bases 1.5 km up, rounded tops), lit by the sun
+ *   through the air (gold at sunset, its light from atmosphere.ts) and by the sky's own colour, shadowing themselves,
+ *   silver-edged toward the sun, hazing into the distance; thin cirrus higher up that stays lit after sunset. The
+ *   weather sets how many, how thick and how grey.
  *
- * The cloud maths lives in `skyVariants.ts`, one entry per COZY shader. This
- * file is the frame around them: the dome, the projection, the gradient, the
- * time-of-day colours, and the uniforms every variant can read.
- *
- * ── THE PROJECTION ──────────────────────────────────────────────────────
- * Clouds are an INFINITE SHEET overhead, not a wrap on the dome:
- *
- *     uv = dir.xz / (dir.y + k)
- *
- * the intersection of the view ray with a horizontal plane. That is what makes
- * clouds shrink and crowd toward the horizon the way real ones do, and it is
- * why the source art is square and tiling rather than equirectangular: there is
- * no spherical unwrap here, so none of the equirect problems (pole pinch, wrap
- * seam, horizon pinned to the vertical centre) exist.
- *
- * ── NORMALISED ELEVATION ────────────────────────────────────────────────
- * CameraControls clamps maxPolarAngle to PI/2 and the FOV is 48 vertical, so
- * the top of frame is 24 degrees up and elevation never exceeds about 0.42.
- * Every height-shaped term therefore works in elN, which divides that out.
- * Writing them against a full dome is what made the first version render as
- * bare gradient with the clouds erased: the whole of the 0..1 range they were
- * tuned for sits above the visible band.
+ * The dome is drawn after everything opaque, at the far plane, so only the pixels where sky shows pay for it.
  */
 
 import * as THREE from "three";
-import {
-  VORONOI_GLSL,
-  skyVariant,
-  samplerName,
-  type SkyVariantId,
-  type SkyVariant,
-} from "./skyVariants";
-
-const TEX_DIR = "/assets/sky/layers/";
-
-export interface SkyLayerWeights {
-  cumulus: number;
-  altocumulus: number;
-  cirrus: number;
-  cirrostratus: number;
-  nimbus: number;
-}
-
-export interface SkyShape {
-  nimbusHeight: number;
-  nimbusVariation: number;
-  borderHeight: number;
-  borderEffect: number;
-  borderVariation: number;
-}
+import { ATMOSPHERE_GLSL } from "./atmosphere";
 
 /**
- * Held module-side so the frame loop can write without React seeing it. Same
- * pattern as the water block in terrainMaterials.ts and the sea block in
- * Ocean.tsx, and for the same reason: a uniform block exists to be mutated, and
- * the react-compiler lint rejects mutating anything a hook returned.
+ * Held module-side so the frame loop can write without React seeing it (the react-compiler lint rejects mutating
+ * anything a hook returned). SkyDome writes them every frame; the title writes `uStarry`.
  */
 export const skyUniforms = {
   uTime: { value: 0 },
-  uZenith: { value: new THREE.Color(0x4fb6f5) },
-  uHorizon: { value: new THREE.Color(0xa9dcf2) },
-  uCloudLit: { value: new THREE.Color(0xffffff) },
-  uCloudDark: { value: new THREE.Color(0xb9cbdc) },
-  /** The four coverage sliders. What they mean is up to the variant. */
-  uCover: { value: new THREE.Vector4(0.6, 0.25, 0, 0) },
-  /** bandHeight, bandEffect, stormReach, chemtrails. */
-  uShape: { value: new THREE.Vector4(0.52, 1, 1, 0) },
-  uCloudScale: { value: 0.5 },
-  uWind: { value: 0.3 },
-  uNight: { value: 0 },
-  uValue: { value: 1 },
-  uStars: { value: null as THREE.Texture | null },
-  uNoise: { value: null as THREE.Texture | null },
-};
-
-const VERT = /* glsl */ `
-varying vec3 vDir;
-void main() {
-  // Object-space direction on the dome. The dome is pinned to the camera, so
-  // this is a world direction without needing the camera matrix.
-  vDir = normalize(position);
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-}
-`;
-
-/** Everything a variant's clouds() can rely on. */
-const PREAMBLE = /* glsl */ `
-uniform float uTime;
-uniform vec3 uZenith;
-uniform vec3 uHorizon;
-uniform vec3 uCloudLit;
-uniform vec3 uCloudDark;
-uniform vec4 uCover;
-uniform vec4 uShape;
-uniform float uCloudScale;
-uniform float uWind;
-uniform float uNight;
-uniform float uValue;
-uniform sampler2D uStars;
-uniform sampler2D uNoise;
-varying vec3 vDir;
-
-float elN;
-float band;
-float breakUp;
-float stormMask;
-float cover0, cover1, cover2, cover3;
-float uChemtrails;
-
-vec2 uvAt(float scale, vec2 drift) {
-  float t = uTime * (0.06 + uWind * 0.34);
-  return vDir.xz / (max(vDir.y, 0.0) + 0.28) * (uCloudScale * scale) + drift * t;
-}
-`;
-
-const MAIN = /* glsl */ `
-void main() {
-  float el = max(vDir.y, 0.0);
-  elN = clamp(el / 0.42, 0.0, 1.0);
-
-  vec3 sky = mix(uHorizon, uZenith, pow(elN, 0.7));
-  float fade = smoothstep(0.0, 0.16, elN);
-#ifdef SKY_LAB
-  labSky(sky, fade);
-#endif
-
-  cover0 = uCover.x; cover1 = uCover.y; cover2 = uCover.z; cover3 = uCover.w;
-  uChemtrails = uShape.w;
-
-  // Clouds gather at a height and thin toward the skyline. Wide and low,
-  // because the visible band is only 24 degrees tall and a band centred
-  // halfway up would leave the bottom two thirds of every frame bare.
-  float b = smoothstep(uShape.x - 0.75, uShape.x + 0.75, elN);
-  band = mix(1.0, b, clamp(uShape.y, 0.0, 1.0));
-
-  // A storm ceiling reaches DOWN, which makes it a lid rather than a layer.
-  stormMask = smoothstep(0.0, mix(0.9, 0.15, uShape.z), elN);
-
-  // Soft fractal noise, larger and slower, MULTIPLIED in so it thins and
-  // thickens coverage rather than adding cloud of its own. Without it a fixed
-  // sheet reads as a decal sliding past.
-  float n = texture2D(uNoise, uvAt(1.9, vec2(0.006, 0.002))).r;
-  breakUp = mix(1.0, 0.35 + n * 0.9, 0.55);
-
-  float density = 0.0;
-  float shade = 1.0;
-#ifdef SKY_LAB
-  labClouds(density, shade);
-#else
-  clouds(density, shade);
-#endif
-  density = clamp(density, 0.0, 1.0) * fade;
-  shade = clamp(shade, 0.0, 1.0);
-
-  vec3 cloud = mix(uCloudDark, uCloudLit, shade);
-#ifdef SKY_LAB
-  labCloud(cloud, density, shade);
-#else
-  if (uNight > 0.001) {
-    float s = texture2D(uStars, uvAt(0.9, vec2(0.0))).r;
-    sky += vec3(0.85, 0.9, 1.0) * pow(s, 2.2) * uNight * fade * 2.2;
-  }
-#endif
-
-  gl_FragColor = vec4(mix(sky, cloud, density) * uValue, 1.0);
-}
-`;
-
-const loader = new THREE.TextureLoader();
-const texCache = new Map<string, THREE.Texture>();
-
-/**
- * MIRRORED repeat. Several of the source sheets do not tile (measured: 107 and
- * 41 edge error against an 87 control) and the projection is an infinite
- * overhead plane, so clamping would put cloud in one direction and empty sky
- * everywhere else. Mirroring makes any organic texture tile, and on shapes this
- * irregular the reflection is invisible.
- */
-function tex(key: string): THREE.Texture {
-  const hit = texCache.get(key);
-  if (hit) return hit;
-  const t = loader.load(`${TEX_DIR}${key}.webp`);
-  // Masks are DATA. Tagging them sRGB would gamma-decode coverage and thin
-  // every cloud.
-  t.colorSpace = THREE.NoColorSpace;
-  t.wrapS = t.wrapT = THREE.MirroredRepeatWrapping;
-  t.minFilter = THREE.LinearMipmapLinearFilter;
-  texCache.set(key, t);
-  return t;
-}
-
-/**
- * Development only (lib/game/skyLab.ts, specs/sky-ambient.md): the round 1 sky directions' uniforms, written by SkyDome
- * while `?sky=` is set. The shipped dome never declares them.
- */
-export const skyLabUniforms = {
-  /** The real sun (below the horizon too), world direction. */
+  /** The real sun and moon, world directions (below the horizon too). */
   uSunDir: { value: new THREE.Vector3(0, 1, 0) },
   uMoonDir: { value: new THREE.Vector3(0, 0.4, 0.9).normalize() },
-  /** The moon's age, 0 new, 0.5 full. */
-  uMoonPhase: { value: 0.5 },
-  uGalaxy: { value: null as THREE.Texture | null },
+  /** The moon's light on the air (its lit share times its strength), and the share of its disc lit. */
+  uMoonE: { value: 0 },
+  uExposure: { value: 20 },
+  /** 0 by day to 1 in full night: the night's own sky colour, and the stars. */
+  uNight: { value: 0 },
+  uNightTop: { value: new THREE.Color(0x07112c) },
+  uNightHorizon: { value: new THREE.Color(0x1a2c4a) },
+  /** The sun's disc colour (through the air) and the stars' visibility (less under a bright moon). */
+  uSunDisc: { value: new THREE.Color(1, 1, 1) },
+  uStarVis: { value: 0 },
+  /** The title's starry night: 0 the game's sky, 1 its stars brighter and twinkling more, its clouds thinned. */
+  uStarry: { value: 0 },
+  /** World to the equatorial frame (atmosphere.ts starFrame). */
+  uStarRot: { value: new THREE.Matrix3() },
+  /** The camera's right and up, world: the bright stars' sparkle lies along the screen. */
+  uCamRight: { value: new THREE.Vector3(1, 0, 0) },
+  uCamUp: { value: new THREE.Vector3(0, 1, 0) },
+  /** The world's bend (curvedWorld, view space) scaled so the dome's skyline drops as far as the sea's far edge. */
+  uBend: { value: new THREE.Vector2() },
+  /** The scene's fog colour: the skyline and below it meet the fogged sea in it. */
+  uFog: { value: new THREE.Color() },
+  /** Cumulus cover (the share of squares with a cloud), their size (km), how grey (0 white to 1 overcast), cirrus (0..1). */
+  uCloud: { value: new THREE.Vector4(0.45, 1.1, 0, 0.5) },
+  /** Haze at the skyline (fog days), 0..1. */
+  uHaze: { value: 0 },
+  /** How far the wind has carried the clouds, km (wrapped). */
+  uDrift: { value: new THREE.Vector2() },
+  /** Light on the clouds: the sun's and the moon's (through the air), the sky's from above and below, and the cirrus's. */
+  uSunLight: { value: new THREE.Color(1, 1, 1) },
+  uMoonLight: { value: new THREE.Color(0, 0, 0) },
+  uAmbTop: { value: new THREE.Color(0.3, 0.5, 0.9) },
+  uAmbBottom: { value: new THREE.Color(0.4, 0.5, 0.6) },
+  uCirrusLight: { value: new THREE.Color(1, 1, 1) },
 };
 
+/** The dome's angular sizes (radians): drawn larger than life so the pixel finish still shows them round. */
+export const SUN_RADIUS = 0.02, MOON_RADIUS = 0.028;
 /**
- * The three directions as one block behind SKY_LAB (1 A painted, 2 B toon, 3 C storybook). Each fills the same hooks in
- * MAIN: labSky (the gradient, the sun, the moon, the stars and meteors, under the clouds), labClouds (which clouds) and
- * labCloud (their colour).
+ * The cumulus layer: its floor (km up), one cloud's square (km) and the balls in it; the drift wraps at a multiple of
+ * the square (the shader's noise for the deck and the cirrus is smooth across the wrap's rare jump).
  */
-const LAB_GLSL = /* glsl */ `
+export const CLOUD_BASE = 1.5, CLOUD_CELL = 2, PUFFS = 6, DRIFT_WRAP = 3000;
+
+const VERT = /* glsl */ `
 uniform vec3 uSunDir;
 uniform vec3 uMoonDir;
-uniform float uMoonPhase;
-uniform sampler2D uGalaxy;
-// The view direction renormalised per pixel: vDir is interpolated across the dome's faces, which squares off a sun.
-vec3 lDir;
-
-float labHash(float n) { return fract(sin(n * 127.1 + 311.7) * 43758.5453); }
-
-// 1 while the sun is near the horizon (about -9 to 15 degrees): dawn, golden hour, sunset and dusk.
-float lowSun() { return smoothstep(0.26, 0.06, uSunDir.y) * smoothstep(-0.16, -0.03, uSunDir.y); }
-float sunSide() { return dot(normalize(lDir.xz + 1e-5), normalize(uSunDir.xz + 1e-5)); }
-
-// A shooting star now and then on the world clock, in the moon's half of the sky (so the moon-facing view catches it).
-float meteor() {
-  float P = 11.0, c = floor(uTime / P), age = uTime - c * P;
-  if (labHash(c) > 0.6 || age > 1.1) return 0.0;
-  float maz = atan(uMoonDir.z, uMoonDir.x);
-  float az = maz + (labHash(c + 3.1) - 0.5) * 1.6, e = 0.12 + labHash(c + 7.7) * 0.2;
-  vec3 a = vec3(cos(az) * cos(e), sin(e), sin(az) * cos(e));
-  vec3 side = normalize(cross(a, vec3(0.0, 1.0, 0.0))) * (labHash(c + 1.3) > 0.5 ? 1.0 : -1.0);
-  vec3 vel = normalize(side - vec3(0.0, 0.5, 0.0)) * 0.42;
-  vec3 head = normalize(a + vel * age), tail = normalize(a + vel * max(age - 0.25, 0.0));
-  vec3 ab = head - tail;
-  float u = clamp(dot(lDir - tail, ab) / max(dot(ab, ab), 1e-7), 0.0, 1.0);
-  float d = length(lDir - (tail + ab * u));
-  float life = smoothstep(0.0, 0.12, age) * smoothstep(1.1, 0.7, age);
-  return smoothstep(0.0032, 0.0008, d) * u * life;
-}
-
-void labSky(inout vec3 sky, float fade) {
-  lDir = normalize(vDir);
-  // How clear the sky is: overcast (rain, snow, fog) hides the sun, its glow, the moon and the stars.
-  float clear = 1.0 - clamp(uCover.z * 1.15, 0.0, 1.0);
-  float low = lowSun() * clear, toSun = sunSide(), up = smoothstep(-0.07, 0.01, uSunDir.y) * clear, day = 1.0 - uNight;
-  vec3 glow = mix(vec3(1.0, 0.5, 0.44), vec3(1.0, 0.76, 0.46), smoothstep(-0.04, 0.16, uSunDir.y));
-#if SKY_LAB == 2
-  // Toon: the gradient in soft steps, a flat sun with a ring, a gentle wash on the sun's side.
-  float g = pow(elN, 0.7) * 4.0;
-  g = (floor(g) + smoothstep(0.35, 0.65, fract(g))) / 4.0;
-  sky = mix(uHorizon, uZenith, g);
-  sky = mix(sky, glow, low * pow(max(toSun, 0.0), 2.0) * pow(1.0 - elN, 2.0) * 0.5);
-#elif SKY_LAB == 3
-  // Storybook: its own richer palette by the sun's height (a deeper blue noon; a violet zenith over an orange and rose
-  // skyline at the low sun, the rose band opposite it: the belt of Venus), over today's, which keeps the night.
-  float e = uSunDir.y;
-  vec3 zen = mix(vec3(0.24, 0.25, 0.6), vec3(0.22, 0.5, 0.9), smoothstep(0.08, 0.4, e));
-  zen = mix(vec3(0.13, 0.13, 0.36), zen, smoothstep(-0.12, 0.02, e));
-  vec3 hor = mix(mix(vec3(0.8, 0.5, 0.62), vec3(0.96, 0.47, 0.2), pow(max(toSun, 0.0), 1.5)), vec3(0.64, 0.83, 0.96), smoothstep(0.12, 0.4, e));
-  hor = mix(vec3(0.42, 0.28, 0.5), hor, smoothstep(-0.12, 0.0, e));
-  sky = mix(sky, mix(hor, zen, pow(elN, 0.6)), 0.88 * day * (1.0 - 0.85 * clamp(uCover.z, 0.0, 1.0)));
-  sky = mix(sky, vec3(1.0, 0.42, 0.16), low * pow(max(toSun, 0.0), 4.0) * pow(1.0 - elN, 3.0) * 0.6);
-  float anti = max(-toSun, 0.0);
-  sky = mix(sky, vec3(0.86, 0.5, 0.7), low * anti * anti * smoothstep(0.02, 0.2, elN) * smoothstep(0.75, 0.3, elN) * 0.55);
-#else
-  // Painted: today's gradient with a soft wash toward the low sun.
-  sky = mix(sky, glow, low * pow(max(toSun, 0.0), 3.0) * pow(1.0 - elN, 2.0) * 0.55);
-#endif
-
-  // The sun: a disc and its halo, gone once it sets.
-  float sd = dot(lDir, uSunDir);
-  vec3 sunC = mix(vec3(1.0, 0.98, 0.9), vec3(1.0, 0.74, 0.48), low);
-#if SKY_LAB == 2
-  float disc = smoothstep(0.99835, 0.99850, sd) + 0.5 * smoothstep(0.99700, 0.99712, sd) * (1.0 - smoothstep(0.99722, 0.99734, sd));
-  float halo = pow(max(sd, 0.0), 60.0) * 0.18;
-#else
-  float disc = smoothstep(0.99884, 0.99904, sd);
-  float halo = pow(max(sd, 0.0), 220.0) * 0.45 + pow(max(sd, 0.0), 22.0) * (0.04 + 0.08 * low);
-#endif
-  sky += sunC * halo * up * day;
-  sky = mix(sky, sunC * 1.12, clamp(disc, 0.0, 1.0) * up * day);
-
-  // The moon: its phase from the calendar, a few soft craters, a halo by how full it is; from deep dusk on.
-  vec3 mr = normalize(cross(vec3(0.0, 1.0, 0.0), uMoonDir)), mu = cross(uMoonDir, mr);
-  float R = 0.032;
-  vec2 mp = vec2(dot(lDir, mr), dot(lDir, mu)) / R;
-  float md = dot(lDir, uMoonDir), mlen = length(mp);
-  float mIn = md > 0.0 ? 1.0 - smoothstep(0.9, 1.0, mlen) : 0.0;
-  float k = cos(6.2832 * uMoonPhase), edge = sqrt(max(0.0, 1.0 - mp.y * mp.y));
-  float lit = smoothstep(-0.1, 0.1, (uMoonPhase < 0.5 ? mp.x : -mp.x) - k * edge);
-  float crater = 1.0 - 0.12 * (smoothstep(0.32, 0.2, length(mp - vec2(-0.3, 0.25))) + smoothstep(0.22, 0.12, length(mp - vec2(0.35, -0.2))) + smoothstep(0.16, 0.08, length(mp - vec2(0.1, 0.5))));
-  float mVis = smoothstep(0.15, 0.6, uNight) * clear;
-  vec3 moonC = vec3(1.0, 0.97, 0.86) * crater;
-#if SKY_LAB == 2
-  moonC = vec3(1.0, 0.95, 0.72) * mix(1.0, crater, 0.6);
-#endif
-  sky = mix(sky, mix(sky * 1.15 + 0.02, moonC, lit), mIn * mVis);
-  sky += vec3(0.62, 0.72, 1.0) * (pow(max(md, 0.0), 900.0) * 0.4 + pow(max(md, 0.0), 60.0) * 0.08) * mVis * (1.0 - k) * 0.5 * (1.0 - mIn);
-
-  // Stars, twinkling as the title's do (each its own beat), never over the moon; the odd shooting star.
-  if (uNight > 0.001) {
-    vec2 starUv = uvAt(0.9, vec2(0.0));
-    float s = texture2D(uStars, starUv).r * clear;
-    float ph = texture2D(uNoise, starUv * 0.37).r * 43.0;
-#if SKY_LAB == 2
-    float starry = 1.0;
-#else
-    float starry = 0.6;
-#endif
-    float tw = 1.0 + starry * (1.1 - 0.7 * sin(uTime * 2.1 + ph));
-    sky += vec3(0.85, 0.9, 1.0) * pow(s, 2.2 + starry * 1.4) * tw * uNight * fade * 2.2 * (1.0 - mIn);
-#if SKY_LAB == 3
-    sky += vec3(0.5, 0.46, 0.8) * texture2D(uGalaxy, uvAt(0.32, vec2(0.0))).rgb * uNight * fade * 0.55 * (1.0 - mIn);
-#endif
-    sky += vec3(1.0, 0.96, 0.85) * meteor() * uNight * fade * 1.4 * clear;
-  }
-}
-
-void labClouds(out float density, out float shade) {
-#if SKY_LAB == 2
-  // Toon clouds: soft noise cut to crisp puffs, lit on the side toward the sun, cool underneath; weather thickens them
-  // (coverage), greys them (overcast) and darkens their bellies (storm).
-  float cov = clamp(cover0 * 0.5 + cover1 * 0.45 + cover2 * 0.35 + cover3 * 0.3, 0.0, 1.0) * (1.0 - 0.45 * uNight);
-  vec2 uv = uvAt(0.42, vec2(0.011, 0.004));
-  float n = (texture2D(uNoise, uv).r * 0.7 + texture2D(uNoise, uv * 2.7 + 0.37).r * 0.3) * mix(0.7, 1.0, band);
-  float thr = mix(0.64, 0.3, cov);
-  float d = smoothstep(thr, thr + 0.03, n);
-  vec2 lift = normalize(uSunDir.xz + vec2(1e-4)) * 0.05 * (1.0 - 0.6 * uNight);
-  float n2 = texture2D(uNoise, uv + lift).r * 0.7 + texture2D(uNoise, (uv + lift) * 2.7 + 0.37).r * 0.3;
-  float litSide = smoothstep(-0.015, 0.02, n2 - n + 0.012);
-  float core = smoothstep(thr + 0.05, thr + 0.2, n);
-  shade = mix(0.62, 1.0, max(litSide, 1.0 - core));
-  shade = mix(shade, 0.42 + 0.25 * litSide, cover3);
-  density = max(d, cover2 * 0.7 * smoothstep(-0.3, 0.5, elN));
-  shade = mix(shade, 0.7, cover2 * (1.0 - d) * 0.8);
-  // Night: fewer, darker puffs, so the stars and the moon lead.
-  shade *= 1.0 - 0.35 * uNight;
-#else
-  clouds(density, shade);
-#endif
-}
-
-void labCloud(inout vec3 cloud, float density, float shade) {
-#if SKY_LAB == 3
-  // Storybook: the low sun paints the clouds' lit side, deepest toward it, with a bright rim on thin edges.
-  float low = lowSun(), toSun = max(sunSide(), 0.0);
-  vec3 warm = mix(vec3(1.0, 0.5, 0.45), vec3(1.0, 0.72, 0.45), smoothstep(-0.04, 0.16, uSunDir.y));
-  cloud = mix(cloud, warm * (0.6 + 0.35 * shade), low * (0.5 + 0.5 * toSun));
-  cloud = mix(cloud, vec3(0.4, 0.32, 0.54), low * (1.0 - shade) * 0.8);
-  cloud = mix(cloud, cloud * vec3(0.9, 0.95, 1.05), (1.0 - low) * (1.0 - uNight) * 0.5);
-  cloud += warm * low * toSun * smoothstep(0.55, 0.1, density) * smoothstep(0.0, 0.08, density) * 0.35;
-#elif SKY_LAB == 2
-  cloud = mix(cloud, cloud * vec3(1.0, 0.86, 0.78), lowSun() * max(sunSide(), 0.0) * shade * 0.6);
-#endif
+uniform float uMoonE;
+uniform vec2 uBend;
+varying vec3 vDir;
+varying vec3 vRay;
+varying vec3 vMie;
+varying vec3 vAmb;
+varying vec3 vRayM;
+varying vec3 vMieM;
+${ATMOSPHERE_GLSL}
+void main() {
+  // The dome is pinned to the camera, so its object-space direction is a world direction.
+  vDir = normalize(position);
+  vec3 r = vec3(0.0), m = vec3(0.0), a = vec3(0.0);
+  if (uSunDir.y > -0.25) atmosphere(vDir, uSunDir, r, m, a);
+  vRay = r; vMie = m; vAmb = a;
+  r = vec3(0.0); m = vec3(0.0);
+  if (uMoonE > 0.0 && uMoonDir.y > -0.1) atmosphere(vDir, uMoonDir, r, m, a);
+  vRayM = r; vMieM = m;
+  // Bent down with the world (curvedWorld), as far as the sea's far edge, so the skyline meets the sea.
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  mv.y -= mv.z * mv.z * uBend.x + mv.x * mv.x * uBend.y;
+  gl_Position = projectionMatrix * mv;
+  // At the far plane (a hair inside it, so it is never clipped): drawn last among the opaque, it only shades where
+  // nothing else is.
+  gl_Position.z = gl_Position.w * 0.999999;
 }
 `;
 
-const matCache = new Map<string, THREE.ShaderMaterial>();
+const FRAG = /* glsl */ `
+uniform float uTime;
+uniform vec3 uSunDir;
+uniform vec3 uMoonDir;
+uniform float uMoonE;
+uniform float uExposure;
+uniform float uNight;
+uniform vec3 uNightTop;
+uniform vec3 uNightHorizon;
+uniform vec3 uSunDisc;
+uniform float uStarVis;
+uniform float uStarry;
+uniform mat3 uStarRot;
+uniform vec3 uCamRight;
+uniform vec3 uCamUp;
+uniform vec3 uFog;
+uniform vec4 uCloud;
+uniform float uHaze;
+uniform vec2 uDrift;
+uniform vec3 uSunLight;
+uniform vec3 uMoonLight;
+uniform vec3 uAmbTop;
+uniform vec3 uAmbBottom;
+uniform vec3 uCirrusLight;
+varying vec3 vDir;
+varying vec3 vRay;
+varying vec3 vMie;
+varying vec3 vAmb;
+varying vec3 vRayM;
+varying vec3 vMieM;
+${ATMOSPHERE_GLSL}
+const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
+const float SUN_R = ${SUN_RADIUS.toFixed(4)}, MOON_R = ${MOON_RADIUS.toFixed(4)};
+const float CLOUD_BASE = ${CLOUD_BASE.toFixed(2)}, CELL = ${CLOUD_CELL.toFixed(1)};
 
-/** The dome material for one variant (and, in development, one round 1 direction: 1, 2 or 3). Cached; call freely. */
-export function skyMaterial(id: SkyVariantId = "luxury", lab = 0): THREE.ShaderMaterial {
-  const key = `${id}:${lab}`, hit = matCache.get(key);
-  if (hit) return hit;
-
-  const v: SkyVariant = skyVariant(id);
-  skyUniforms.uStars.value = tex("stars");
-  skyUniforms.uNoise.value = tex("cumulusNoise");
-
-  // Only this variant's own textures are declared and bound. Binding all twenty
-  // would cost 134MB of VRAM for the sixteen a given shader never reads.
-  const decls = v.textures.map((k) => `uniform sampler2D ${samplerName(k)};`).join("\n");
-  const uniforms: Record<string, { value: unknown }> = { ...skyUniforms };
-  for (const k of v.textures) uniforms[samplerName(k)] = { value: tex(k) };
-  if (lab) {
-    skyLabUniforms.uGalaxy.value = tex("galaxy");
-    Object.assign(uniforms, skyLabUniforms);
-  }
-
-  const mat = new THREE.ShaderMaterial({
-    side: THREE.BackSide,
-    depthWrite: false,
-    fog: false,
-    defines: lab ? { SKY_LAB: lab } : {},
-    uniforms: uniforms as { [k: string]: THREE.IUniform },
-    vertexShader: VERT,
-    fragmentShader: PREAMBLE + decls + "\n" + VORONOI_GLSL + v.glsl + "\n" + (lab ? LAB_GLSL : "") + MAIN,
-  });
-  mat.name = `sky:${id}${lab ? `:lab${lab}` : ""}`;
-  matCache.set(key, mat);
-  return mat;
+float hash1(float n) { return fract(sin(n * 127.1 + 311.7) * 43758.5453); }
+vec4 hash4(vec2 p) {
+  vec4 q = vec4(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)), dot(p, vec2(419.2, 371.9)), dot(p, vec2(113.5, 271.9)));
+  return fract(sin(q) * 43758.5453);
+}
+float vnoise(vec3 p) {
+  vec3 i = floor(p), f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  float n = i.x + i.y * 57.0 + i.z * 113.0;
+  return mix(mix(mix(hash1(n), hash1(n + 1.0), f.x), mix(hash1(n + 57.0), hash1(n + 58.0), f.x), f.y),
+             mix(mix(hash1(n + 113.0), hash1(n + 114.0), f.x), mix(hash1(n + 170.0), hash1(n + 171.0), f.x), f.y), f.z);
 }
 
+// ─── Stars ───────────────────────────────────────────────────────────────
+// A direction in the equatorial frame onto a cube face: the face's uv in -1..1, its index, and how far off its middle.
+vec2 cubeFace(vec3 e, out float face, out float m) {
+  vec3 a = abs(e);
+  if (a.x >= a.y && a.x >= a.z) { face = e.x > 0.0 ? 0.0 : 1.0; m = a.x; return e.yz / a.x; }
+  if (a.y >= a.z) { face = e.y > 0.0 ? 2.0 : 3.0; m = a.y; return e.xz / a.y; }
+  face = e.z > 0.0 ? 4.0 : 5.0; m = a.z; return e.xy / a.z;
+}
+vec3 faceDir(float face, vec2 uv) {
+  if (face < 1.5) return normalize(vec3(face < 0.5 ? 1.0 : -1.0, uv));
+  if (face < 3.5) return normalize(vec3(uv.x, face < 2.5 ? 1.0 : -1.0, uv.y));
+  return normalize(vec3(uv, face < 4.5 ? 1.0 : -1.0));
+}
+// One layer of stars: one in a share \`density\` of the cells of an n × n grid per face, a gaussian a pixel wide
+// (\`px\`, radians), \`sparkle\` the bright layer's soft cross along the screen.
+vec3 starLayer(vec3 d, vec3 e, float n, float density, float px, float bright, float sparkle) {
+  float face, m;
+  vec2 uv = cubeFace(e, face, m);
+  vec2 g = (uv * 0.5 + 0.5) * n, cell = floor(g);
+  vec4 h = hash4(cell + vec2(face * 131.0 + n, face * 17.0));
+  if (h.x > density) return vec3(0.0);
+  vec2 at = 0.25 + 0.5 * h.yz;
+  float ang = length(g - cell - at) * 2.0 / n * m * m;
+  float b = bright * (0.25 + pow(h.w, 5.0) * 2.4);
+  // Twinkle: each star its own beat, more near the skyline, more on the title.
+  float up = max(d.y, 0.0);
+  b *= 1.0 + (0.22 + 0.4 * uStarry) * (1.0 - 0.5 * up) * sin(uTime * (1.6 + 2.6 * h.y) + h.z * 40.0);
+  float s = px * 0.62, core = exp(-ang * ang / (s * s));
+  vec3 tint = mix(vec3(0.72, 0.82, 1.0), vec3(1.0, 0.86, 0.68), h.z);
+  vec3 c = tint * b * core;
+  if (sparkle > 0.0 && h.w > 0.55) {
+    vec3 w = faceDir(face, ((cell + at) / n) * 2.0 - 1.0) * uStarRot;
+    vec3 off = d - w;
+    float sx = dot(off, uCamRight) / px, sy = dot(off, uCamUp) / px;
+    float len = (1.5 + 3.5 * (h.w - 0.55)) * (0.7 + 0.3 * sin(uTime * 1.3 + h.y * 30.0)) * (1.0 + 0.5 * uStarry);
+    float cross = exp(-sy * sy * 3.0) * max(0.0, 1.0 - abs(sx) / len) + exp(-sx * sx * 3.0) * max(0.0, 1.0 - abs(sy) / len);
+    c += tint * b * cross * 0.32 * sparkle;
+  }
+  return c;
+}
+// The Milky Way along the real galactic plane (pole RA 192.86°, Dec 27.13°; centre RA 266.4°, Dec -28.9°).
+vec3 milkyWay(vec3 e) {
+  float lat = dot(e, vec3(-0.8676, -0.1981, 0.4560));
+  float band = exp(-lat * lat / 0.022);
+  if (band < 0.01) return vec3(0.0);
+  float core = 0.45 + 0.55 * smoothstep(-0.3, 1.0, dot(e, vec3(-0.0549, -0.8734, -0.4838)));
+  float n = vnoise(e * 7.0) * 0.6 + vnoise(e * 19.0) * 0.4;
+  float dust = smoothstep(0.5, 0.72, vnoise(e * 11.0 + 3.1)) * exp(-lat * lat / 0.004);
+  return vec3(0.55, 0.6, 0.85) * band * core * (0.35 + 0.9 * n) * (1.0 - 0.7 * dust);
+}
+// A shooting star now and then on the world clock (about five a minute round the whole sky, so a view sees one or two).
+float meteor(vec3 d) {
+  float P = 12.0, c = floor(uTime / P), age = uTime - c * P - hash1(c + 9.1) * 9.0;
+  if (hash1(c) > 0.9 || age < 0.0 || age > 1.1) return 0.0;
+  float az = hash1(c + 3.1) * 6.2832, el = 0.25 + hash1(c + 7.7) * 0.45;
+  vec3 a = vec3(cos(az) * cos(el), sin(el), sin(az) * cos(el));
+  vec3 side = normalize(cross(a, vec3(0.0, 1.0, 0.0))) * (hash1(c + 1.3) > 0.5 ? 1.0 : -1.0);
+  vec3 vel = normalize(side - vec3(0.0, 0.5, 0.0)) * 0.42;
+  vec3 head = normalize(a + vel * age), tail = normalize(a + vel * max(age - 0.25, 0.0)), ab = head - tail;
+  float u = clamp(dot(d - tail, ab) / max(dot(ab, ab), 1e-7), 0.0, 1.0);
+  float dist = length(d - (tail + ab * u));
+  return smoothstep(0.003, 0.0008, dist) * u * smoothstep(0.0, 0.12, age) * smoothstep(1.1, 0.7, age);
+}
+
+// ─── Clouds ──────────────────────────────────────────────────────────────
+// Distance along d from the eye to the shell h km above the sea.
+float shell(vec3 d, float h) {
+  float r = PLANET_R + EYE_H, b = r * d.y, R = PLANET_R + h;
+  return -b + sqrt(max(0.0, b * b + R * R - r * r));
+}
+float cover() { return uCloud.x * (1.0 - 0.6 * uStarry); }
+// The cumulus: one cloud (or none) in each CELL-km square of the layer, a cluster of PUFFS balls whose bases are cut
+// flat at the layer's floor, all inside the square (so walking the squares a ray crosses finds every ball it can
+// meet). Ball i of the cloud in \`cell\` (cloud space: the world plus the drift): its centre (km,
+// eye-relative, the planet's curve taken off) and radius.
+vec4 puff(vec2 cell, float i, float size) {
+  vec4 h = hash4(cell * 1.37 + vec2(i * 7.31, i * 3.17));
+  float lead = step(i, 0.5);
+  vec2 off = (h.xy - 0.5) * vec2(1.4, 0.7) * size * (1.0 - lead);
+  float r = size * mix(0.28 + 0.3 * h.z, 0.62, lead);
+  vec2 xz = (cell + 0.5) * CELL + off - uDrift;
+  float y = CLOUD_BASE - EYE_H + r * mix(0.15 + 0.45 * h.w, 0.32, lead) - dot(xz, xz) / (2.0 * PLANET_R);
+  return vec4(xz.x, y, xz.y, r);
+}
+// Where d meets ball b (the near side), or -1; and how near it came, in pixels past its rim (for the soft edge).
+float ball(vec3 d, vec4 b, float px, float floorY, inout float miss) {
+  float tc = dot(b.xyz, d);
+  if (tc <= 0.0) return -1.0;
+  float h2 = dot(b.xyz, b.xyz) - tc * tc, r2 = b.w * b.w;
+  // A near miss only counts above the floor (the cut-away part of a ball has no rim).
+  if (h2 > r2) { if ((d * tc).y > floorY) miss = min(miss, (sqrt(h2) - b.w) / (tc * px)); return -1.0; }
+  return tc - sqrt(r2 - h2);
+}
+// Under overcast every cloud greys and darkens toward the storm's slate.
+vec3 overcast(vec3 c) { return mix(c, vec3(dot(c, LUMA)) * vec3(0.92, 0.96, 1.02) * 0.62, uCloud.z); }
+float hg(float mu, float g) { float g2 = g * g; return (1.0 - g2) / (4.0 * SKY_PI * pow(1.0 + g2 - 2.0 * g * mu, 1.5)); }
+// The cumulus along d over the clear sky \`sky\` (for the haze): colour and coverage.
+vec4 cumulus(vec3 d, float px, vec3 sky) {
+  float cov = cover();
+  if (d.y < 0.004 || cov <= 0.0) return vec4(0.0);
+  float t0 = shell(d, CLOUD_BASE), size = uCloud.y;
+  if (t0 > 90.0) return vec4(0.0);
+  float t1 = shell(d, CLOUD_BASE + size * 1.4);
+  // Walk the cells the ray's ground track crosses between the layer's floor and its top (nearest first).
+  vec2 q = d.xz * t0 + uDrift, q1 = d.xz * t1 + uDrift, dir = q1 - q;
+  vec2 cell = floor(q / CELL), stepC = sign(dir), inv = 1.0 / max(abs(dir), vec2(1e-5));
+  vec2 next = ((cell + max(stepC, 0.0)) * CELL - q) * stepC * inv, delta = CELL * inv;
+  float hitT = 1e9, miss = 1e9, floorHit = 0.0;
+  vec4 hitBall = vec4(0.0), nearBall = vec4(0.0);
+  vec2 hitCell = cell;
+  float floorY = CLOUD_BASE - EYE_H;
+  for (int k = 0; k < 12; k++) {
+    vec4 hc = hash4(cell);
+    if (hc.x < cov) {
+      float s = min(size * (0.65 + 0.55 * hc.y), CELL * 0.39);
+      for (int i = 0; i < ${PUFFS}; i++) {
+        vec4 b = puff(cell, float(i), s);
+        float m0 = miss, t = ball(d, b, px, floorY - dot(b.xz, b.xz) / (2.0 * PLANET_R), miss);
+        if (miss < m0) nearBall = b;
+        if (t > 0.0) {
+          vec3 p = d * t;
+          float base = floorY - dot(p.xz, p.xz) / (2.0 * PLANET_R);
+          // Entered under the floor: it meets the flat base instead, if the base is inside the ball there.
+          if (p.y < base) { vec3 f = d * t0; if (length(f - b.xyz) < b.w) { t = t0; p = f; } else t = -1.0; }
+          if (t > 0.0 && t < hitT) { hitT = t; hitBall = b; hitCell = cell; floorHit = p.y <= base + 1e-3 ? 1.0 : 0.0; }
+        }
+      }
+      if (hitT < 1e8) break;
+    }
+    if (next.x < next.y) { if (next.x > 1.0) break; cell.x += stepC.x; next.x += delta.x; }
+    else { if (next.y > 1.0) break; cell.y += stepC.y; next.y += delta.y; }
+  }
+  bool hit = hitT < 1e8;
+  vec4 b = hit ? hitBall : nearBall;
+  float t = hit ? hitT : max(dot(b.xyz, d), t0);
+  if (!hit && miss > 1.0) return vec4(0.0);
+  vec3 p = d * t;
+  // The normal of the cloud as one soft body (the balls' normals blended where they meet), and how much the others
+  // stand between the point and the sun.
+  vec4 hc = hash4(hitCell);
+  float s = min(size * (0.65 + 0.55 * hc.y), CELL * 0.39), sunOcc = 0.0, wsum = 0.0, wmax = 0.0;
+  vec3 n = vec3(0.0);
+  for (int i = 0; i < ${PUFFS}; i++) {
+    vec4 o = hit ? puff(hitCell, float(i), s) : b;
+    vec3 rel = p - o.xyz;
+    float dist = length(rel), w = exp(-24.0 * max(dist - o.w, 0.0) / o.w);
+    n += rel / max(dist, 1e-4) * w;
+    wsum += w; wmax = max(wmax, w);
+    float tc = dot(-rel, uSunDir), h2 = dot(rel, rel) - tc * tc;
+    if (hit && tc > o.w * 0.2) sunOcc = max(sunOcc, 1.0 - smoothstep(0.55, 1.0, sqrt(h2) / o.w));
+  }
+  // Where two balls meet the weights split: a crease, a little darker, so each lobe reads.
+  float crease = wmax / max(wsum, 1e-4);
+  n = normalize(n / max(wsum, 1e-4));
+  // The flat base still carries the lobes' shape, so its edge rounds into the body instead of cutting.
+  if (floorHit > 0.5) n = normalize(vec3(0.0, -1.0, 0.0) + n * 0.7);
+  // The silhouette soft over a pixel.
+  float a = hit ? 1.0 : 1.0 - smoothstep(0.0, 1.0, miss);
+  float up = clamp((p.y - (CLOUD_BASE - EYE_H)) / (s * 1.1), 0.0, 1.0);
+  float lit = clamp((dot(n, uSunDir) + 0.8) / 1.8, 0.0, 1.0) * (1.0 - 0.5 * sunOcc) * (floorHit > 0.5 ? 0.3 : 1.0);
+  float litM = clamp((dot(n, uMoonDir) + 0.8) / 1.8, 0.0, 1.0) * (floorHit > 0.5 ? 0.3 : 1.0);
+  // The sky lights them from all round: its zenith on their tops, its skyline and the sea's bounce underneath.
+  vec3 amb = mix(uAmbBottom, uAmbTop, clamp(n.y * 0.5 + 0.5, 0.0, 1.0)) * mix(0.75, 1.0, up);
+  // The silver lining on the outer rim toward the light (not on the creases between lobes).
+  float rim = pow(1.0 - clamp(dot(n, -d), 0.0, 1.0), 4.0) * (hit ? 1.0 : 0.0) * smoothstep(0.6, 0.95, wmax / max(wsum, 1e-4));
+  // Under an overcast the deck above takes the sun's direct light.
+  float direct = 1.0 - 0.85 * uCloud.z;
+  vec3 col = amb + (uSunLight * lit + uMoonLight * litM
+    + (uSunLight * hg(dot(d, uSunDir), 0.6) + uMoonLight * hg(dot(d, uMoonDir), 0.6)) * rim * 1.5) * direct;
+  // A little cauliflower texture on the surface, and the creases.
+  float bump = vnoise((p - b.xyz) / max(b.w, 0.05) * 3.2 + hc.zwx * 17.0);
+  col *= (0.9 + 0.14 * bump) * mix(0.82, 1.0, smoothstep(0.35, 0.9, crease));
+  col = overcast(col);
+  col = mix(col, sky, (1.0 - exp(-t / 55.0)) * 0.8);
+  a *= 1.0 - smoothstep(55.0, 90.0, t);
+  return vec4(col, a);
+}
+// Overcast: a grey deck at the layer's floor, mottled, thickest overhead.
+vec4 deck(vec3 d, vec3 sky) {
+  if (uCloud.z <= 0.0 || d.y < 0.0) return vec4(0.0);
+  float t = shell(d, CLOUD_BASE + 0.3);
+  vec2 xz = d.xz * t + uDrift * 0.7;
+  // Long soft rolls across the wind, broken up.
+  float n = vnoise(vec3(xz.x * 0.18, xz.y * 0.5, 0.0)) * 0.55 + vnoise(vec3(xz * 0.9, 3.0)) * 0.3 + vnoise(vec3(xz * 2.6, 5.0)) * 0.15;
+  vec3 col = overcast((uAmbTop + uAmbBottom) * 0.7 * (0.75 + 0.5 * n) + uSunLight * 0.1 * n);
+  col = mix(col, sky, (1.0 - exp(-t / 40.0)) * 0.45);
+  return vec4(col, smoothstep(0.1, 0.6, uCloud.z) * (0.85 + 0.15 * n));
+}
+// Cirrus 7 km up: streaks drawn out along the wind, still lit after the low clouds have gone grey.
+vec4 cirrus(vec3 d, vec3 sky) {
+  if (uCloud.w <= 0.0 || d.y < 0.01) return vec4(0.0);
+  float t = shell(d, 7.0);
+  vec2 xz = d.xz * t + uDrift * 2.0;
+  float c = vnoise(vec3(xz.x * 0.06, xz.y * 0.22, 1.0)) * 0.65 + vnoise(vec3(xz.x * 0.16, xz.y * 0.5, 2.0)) * 0.35;
+  float a = smoothstep(0.55, 0.85, c) * uCloud.w * 0.5 * (1.0 - smoothstep(60.0, 200.0, t));
+  return vec4(mix(uCirrusLight + uAmbTop * 0.5, sky, 1.0 - exp(-t / 90.0)), a);
+}
+
+void main() {
+  vec3 d = normalize(vDir);
+  float px = max(length(fwidth(d)), 1e-5), up = max(d.y, 0.0);
+  float mu = dot(d, uSunDir), muM = dot(d, uMoonDir);
+
+  // The air, lit by the sun and the moon, then the night's own blue.
+  vec3 sky = gradeSky((skyPhase(vRay, vMie, mu) + vAmb + uMoonE * skyPhase(vRayM, vMieM, muM)) * uExposure);
+  sky += mix(uNightHorizon, uNightTop, sqrt(up)) * uNight;
+  // Overcast greys the clear sky that shows between the clouds.
+  sky = mix(sky, vec3(dot(sky, LUMA)) * vec3(0.94, 0.98, 1.05), uCloud.z * 0.8);
+  vec3 clear = sky;
+
+  // The sun's disc, limb darkened, its edge a pixel wide; gone below the skyline.
+  float above0 = smoothstep(-px, px, d.y);
+  float ang = sqrt(max(2.0 * (1.0 - mu), 0.0));
+  float disc = (1.0 - smoothstep(SUN_R - px * 0.7, SUN_R + px * 0.7, ang)) * above0;
+  float limb = 1.0 - 0.4 * (1.0 - sqrt(max(0.0, 1.0 - pow(min(ang / SUN_R, 1.0), 2.0))));
+  sky = mix(sky, uSunDisc * limb, disc * (1.0 - uCloud.z));
+
+  // The moon: a sphere the real sun lights, so its phase and terminator are the calendar's; earthshine on the dark
+  // side by night; a pale disc on the blue by day.
+  if (muM > 0.99) {
+    vec3 mr = normalize(cross(vec3(0.0, 1.0, 0.0), uMoonDir)), mup = cross(uMoonDir, mr);
+    vec2 q = vec2(dot(d, mr), dot(d, mup)) / MOON_R;
+    float qr = length(q), edge = px / MOON_R;
+    float inDisc = (1.0 - smoothstep(1.0 - edge * 0.7, 1.0 + edge * 0.7, qr)) * above0;
+    vec3 nrm = mr * q.x + mup * q.y - uMoonDir * sqrt(max(0.0, 1.0 - min(dot(q, q), 1.0)));
+    float lit = smoothstep(-0.04, 0.1, dot(nrm, uSunDir));
+    float albedo = 0.8 - 0.28 * smoothstep(0.45, 0.7, vnoise(vec3(q * 2.4, 1.7)) * 0.7 + vnoise(vec3(q * 6.0, 4.2)) * 0.3);
+    vec3 face = vec3(1.0, 0.97, 0.9) * albedo * (lit * mix(0.55, 1.15, uNight) + 0.045 * uNight);
+    vec3 moon = mix(sky + face * 0.7 * lit, face + sky * 0.15, uNight);
+    sky = mix(sky, moon, inDisc * (1.0 - uCloud.z));
+  }
+
+  // The night sky: the stars, the Milky Way and the odd shooting star.
+  if (uStarVis > 0.001) {
+    vec3 e = uStarRot * d;
+    vec3 stars = starLayer(d, e, 160.0, 0.09, px, 0.5, 0.0) + starLayer(d, e, 30.0, 0.16, px, 1.3, 1.0) + milkyWay(e) * 0.09;
+    float vis = uStarVis * (1.0 + 0.5 * uStarry) * smoothstep(0.0, 0.08, d.y);
+    sky += stars * vis * (1.0 - uCloud.z);
+    sky += vec3(1.0, 0.95, 0.85) * meteor(d) * uStarVis * 1.4 * (1.0 - uCloud.z);
+  }
+
+  // The clouds over it all: cirrus behind, the overcast deck, the cumulus in front.
+  vec4 ci = cirrus(d, clear);
+  sky = mix(sky, ci.rgb, ci.a);
+  vec4 dk = deck(d, clear);
+  sky = mix(sky, dk.rgb, dk.a);
+  vec4 cu = cumulus(d, px, clear);
+  sky = mix(sky, cu.rgb, cu.a);
+
+  // The skyline sinks into the fog the sea is drawn in; on a fog day the haze climbs the sky.
+  sky = mix(sky, uFog, 1.0 - smoothstep(-0.012, 0.022 + 0.12 * uHaze, d.y));
+  sky = mix(sky, uFog, uHaze * 0.55 * (1.0 - smoothstep(0.0, 0.6, d.y)));
+  gl_FragColor = vec4(sky, 1.0);
+}
+`;
+
 /**
- * Push a frame at the sky.
- *
- * The four cloud weights mean different things per variant. For Luxury they are
- * the coverage ladder; for the procedural ones only the first is a threshold.
- * That is why they arrive as an unnamed vec4 rather than pretending to be
- * meteorology.
+ * The dome's mesh: rings close together at the skyline (where the air changes fastest with height, and the vertex
+ * integral needs them) and wider overhead, few below the horizon (fog there).
  */
-export function advanceSky(
-  elapsed: number,
-  clouds: SkyLayerWeights,
-  shape: SkyShape,
-  colors: { zenith: THREE.Color; horizon: THREE.Color; lit: THREE.Color; dark: THREE.Color },
-  night: number,
-  value: number,
-  wind: number,
-  cloudScale: number,
-  chemtrails = 0
-): void {
-  const u = skyUniforms;
-  u.uTime.value = elapsed;
-  u.uZenith.value.copy(colors.zenith);
-  u.uHorizon.value.copy(colors.horizon);
-  u.uCloudLit.value.copy(colors.lit);
-  u.uCloudDark.value.copy(colors.dark);
-  u.uCover.value.set(clouds.cumulus, clouds.altocumulus, clouds.cirrostratus, clouds.nimbus);
-  u.uShape.value.set(shape.borderHeight, shape.borderEffect, shape.nimbusHeight, chemtrails);
-  u.uNight.value = night;
-  u.uValue.value = value;
-  u.uWind.value = wind;
-  u.uCloudScale.value = cloudScale;
+function domeGeometry(): THREE.BufferGeometry {
+  const AZ = 96, UP = 26, elev: number[] = [-90, -40, -16, -6, -2.5];
+  for (let i = 0; i <= UP; i++) elev.push(90 * Math.pow(i / UP, 1.55));
+  const pos: number[] = [], index: number[] = [];
+  for (const e of elev) {
+    const r = Math.cos(e * Math.PI / 180), y = Math.sin(e * Math.PI / 180);
+    for (let j = 0; j <= AZ; j++) { const a = (j / AZ) * Math.PI * 2; pos.push(r * Math.cos(a), y, r * Math.sin(a)); }
+  }
+  for (let i = 0; i < elev.length - 1; i++) for (let j = 0; j < AZ; j++) {
+    const a = i * (AZ + 1) + j, b = a + AZ + 1;
+    index.push(a, a + 1, b, a + 1, b + 1, b);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(index);
+  return g;
+}
+
+let material: THREE.ShaderMaterial | null = null;
+let geometry: THREE.BufferGeometry | null = null;
+/** The dome's mesh and material, made once (both are shared by every scene that draws the sky). */
+export function skyDome(): { geometry: THREE.BufferGeometry; material: THREE.ShaderMaterial } {
+  if (!material) {
+    material = new THREE.ShaderMaterial({
+      // Seen only from its centre, so which way its faces wind doesn't matter.
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      fog: false,
+      uniforms: skyUniforms as unknown as { [k: string]: THREE.IUniform },
+      vertexShader: VERT,
+      fragmentShader: FRAG,
+    });
+    material.name = "sky:atmosphere";
+  }
+  return { geometry: (geometry ??= domeGeometry()), material };
 }

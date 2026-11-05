@@ -166,7 +166,7 @@ import HqInterior from "./hq/HqInterior";
 import { HQ_LINES } from "@/lib/game/hqLayout";
 import { hqEvent } from "@/lib/game/arrival/hq/store";
 import { WREN } from "@/lib/game/arrival/hq/lines";
-import { phaseInstant, solarPosition } from "@/lib/game/sunPath";
+import { phaseInstant, setSkyInstant, solarPosition } from "@/lib/game/sunPath";
 import type { WeatherBlend } from "@/lib/game/islandWeather";
 import { saveName } from "./character/PlayerCharacterUI";
 import { saveMyLook, useMyLook } from "@/lib/game/character/lookStore";
@@ -1084,7 +1084,11 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const weatherBlend = useMemo((): WeatherBlend => (golden ? { from: "clear", to: "clear", t: 1 } : conditions.weatherBlend), [golden, conditions.weatherBlend]);
   const sceneWeather: IslandWeather = golden ? "clear" : weather;
   const scenePhase: IslandPhase = golden ? "dawn" : phase;
-  const dayLight = useMemo(() => weatherLight(withSeason(islandLightAt(lookPreset, blend, sun), look), weatherBlend), [blend, look, weatherBlend, lookPreset, sun]);
+  const moon = preset || golden ? null : conditions.moon;
+  // The crossing's dome shows its dawn too (after the conditions' own write, which this follows).
+  const dawnAt = golden ? phaseInstant("dawn", new Date(dawnStep * 600_000)).getTime() : null;
+  useEffect(() => setSkyInstant(dawnAt ?? conditions.skyAt), [dawnAt, conditions.skyAt]);
+  const dayLight = useMemo(() => weatherLight(withSeason(islandLightAt(lookPreset, blend, sun, moon), look), weatherBlend), [blend, look, weatherBlend, lookPreset, sun, moon]);
   // A fog night eases in with the dark (the porch-light curve) while a tradition has fog nights on; never on the crossing.
   const fogNight = traditions.content.fog_nights && !inside && !golden ? windowLit(dayLight) : 0;
   // The new world (a heightfield in the village's place) has its own warmer fog and livelier night.
