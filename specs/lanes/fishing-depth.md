@@ -29,6 +29,18 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 8: David's round 7 review (2026-11-04, verbatim; https://claude.ai/artifact/4iTHWu7zSStkHNk8K66tb6)
+
+Approved: f7-reel, f7-reel-bar, f7-hud-phone.
+- f7-hud (approve): "give village meadow icons as well"
+- f7-board (redo): "remove the landern barral, move the stands more to the left and move the lamp post between sign and stands"
+
+The reel fix ships ahead to main from 14a309f5's reel files (fishingReel.ts and its test, useReelLoop.ts, useOrbitInput.ts, IslandAtmosphere.tsx's useFollowCamera, the drawnBar/drawnFish lines in MemberFishing.tsx and FishingOverlay.tsx). Leave those lines as they are; merge origin/main before your last shots (the same hunks, so it merges clean).
+
+Build:
+1. The HUD's place tag gets its own icon per place, Village and Meadow first (today away from water it shows a plain pin), in the same style as the water icons. Cover every place `places.ts` names so none falls back to the pin, and show each one in a crop.
+2. The catch board area by the wharf: remove the barrel with the lantern on it; move the stands further left; put the lamp post between the sign and the stands. "Sign" and "stands" are David's words: say on the card which objects you read them as (likely the catch board and the striped fish stand), and show a wide shot from the wharf, a close one, and a phone shot, before left and after right. Keep the board's facing (approved in round 6).
+
 ## Round 7: David's round 6 review (2026-11-03, verbatim; https://claude.ai/artifact/MjtzeKrEZESrahRE1YLo9S)
 
 Approved: f6-board-fish, f6-bin-fish, f6-board-world, f6-model, f6-coins, f6-coins-kit, f6-phone.
