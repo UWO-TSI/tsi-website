@@ -23,7 +23,7 @@ import IdHeadshot from "./IdHeadshot";
 /** The print's beats (ms): out of the slot, then the stamp, then Done. */
 const PRINT_MS = 1500, STAMP_MS = 1300;
 type Phase = "form" | "print" | "stamp" | "card";
-interface Answers { name: string; pronouns: string; birthday: string; about: string }
+export interface Answers { name: string; pronouns: string; birthday: string; about: string }
 
 /** "March 14" from YYYY-MM-DD (the year stays off the card). */
 export const birthdayLabel = (ymd: string) => {
@@ -31,7 +31,8 @@ export const birthdayLabel = (ymd: string) => {
   return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).toLocaleDateString("en-CA", { month: "long", day: "numeric" }) : "";
 };
 
-async function save(a: Answers, was: Answers, signedIn: boolean): Promise<boolean> {
+/** Saves what changed: the world name, then the profile fields. Signed out (a preview), nothing. */
+export async function saveId(a: Answers, was: Answers, signedIn: boolean): Promise<boolean> {
   if (!signedIn) return true;
   try {
     if (a.name.trim() && a.name.trim() !== was.name) {
@@ -74,7 +75,7 @@ export default function IdCard({ open, name, signedIn, friendCode, onDone }: {
     e.preventDefault();
     setPhase("print");
     AudioManager.playSFX("blip1", { rate: 0.8, gain: 0.4 });
-    void save(a, was, signedIn).then(ok => { setSaved(ok); if (ok) setWas(a); });
+    void saveId(a, was, signedIn).then(ok => { setSaved(ok); if (ok) setWas(a); });
     // The stamper comes down; its thump lands with it (moments.module.css: the hit at 0.3 s).
     window.setTimeout(() => setPhase("stamp"), PRINT_MS);
     window.setTimeout(() => AudioManager.playSFX("click", { rate: 0.6, gain: 0.9 }), PRINT_MS + 300);

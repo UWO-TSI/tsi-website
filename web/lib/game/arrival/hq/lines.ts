@@ -112,6 +112,26 @@ export type FlyTarget = keyof typeof FLY_CARDS;
  * pronouns"): your world name, your pronouns, your birthday (private) and a line about you (`bio`), plus your friend
  * code. Your world name only, never a real name.
  */
+/**
+ * A pitch, not shipped (round 13, dev only, ?idphone=1): Alice hands you the phone at the ID's beat and you make your
+ * profile on it (components/game/hq/PhoneSignup.tsx). Her two ID lines, as they'd read, and what the phone says.
+ */
+export const PHONE_PITCH = {
+  idAsk: [
+    "[happy] Now, every islander gets a phone. Here's yours.",
+    "Make your profile on it, and I'll stamp you in.",
+  ],
+  idDone: [
+    "[happy] There. That's you, {name}. Official.",
+    "Your friend code's on your phone. Give it to anyone you want to find again.",
+  ],
+  hello: "Hello!",
+  title: "Profile",
+  stampIt: "Stamp it",
+  app: "Profile",
+  noCode: "Soon",
+} as const;
+
 export const ID_CARD = {
   eyebrow: "HQ front desk",
   title: "Your island ID",

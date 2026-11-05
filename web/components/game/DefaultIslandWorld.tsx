@@ -7,7 +7,7 @@ import { useProgress } from "@react-three/drei";
 import * as THREE from "three";
 import { Smartphone } from "lucide-react";
 import { Toggle } from "@/components/gui";
-import { DarkButton, KeywordIcon, Phone, inCorner, type PhoneApp } from "@/components/gui/flat";
+import { DarkButton, Phone, inCorner, type PhoneApp } from "@/components/gui/flat";
 import GridWorld from "./grid/GridWorld";
 import GridOcean from "./grid/GridOcean";
 import Seabed from "./water/Seabed";
@@ -160,6 +160,7 @@ import { isCampfireHour } from "@/lib/game/campfire";
 import { useHqOnboarding } from "./hq/useHqOnboarding";
 import { CheckInCard, FlyCard, LoreOverlay, PlaqueCard } from "./hq/HqCards";
 import IdCard from "./hq/IdCard";
+import PhoneSignup from "./hq/PhoneSignup";
 import KeyboardTour from "./hq/KeyboardTour";
 import type { HudPiece } from "@/lib/game/arrival/hq/uiTour";
 import HqInterior from "./hq/HqInterior";
@@ -864,6 +865,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const [reset, setReset] = useState(0);
   // Dev: ?home=1 starts on the home island, ?home=inside in the house; ?decorate=1&place=<piece> opens decorating.
   const [devHome] = useState(() => (process.env.NODE_ENV !== "production" && typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams()));
+  const idPhone = devHome.get("idphone") === "1";
   const [site, setSite] = useState<"village" | "home" | "ruins">(devHome.get("home") ? "home" : devHome.get("ruins") ? "ruins" : "village");
   const [inside, setInside] = useState<"hq" | "house" | "museum" | "oracle" | "cafe" | "shop" | null>(devHome.get("home") === "inside" ? "house" : devHome.get("cafe") === "inside" ? "cafe" : devHome.get("museum") === "inside" ? "museum" : devHome.get("hq") === "inside" ? "hq" : devHome.get("temple") === "inside" ? "oracle" : devHome.get("shop") === "inside" ? "shop" : null);
   // Walking into HQ clears the tutorial dock for good (its box; David's v3 review).
@@ -1352,12 +1354,12 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const netSheet = useNetSheet();
   const appOpen = !!sheet || bagOpen || netSheet !== null || mapOpen;
   const phoneApps = useMemo<PhoneApp[]>(() => [
-    { id: "settings", label: "Settings", icon: <KeywordIcon kind="settings" />, onOpen: () => setSheet("settings") },
-    { id: "quests", label: "Quests", icon: <KeywordIcon kind="quest" />, keyLabel: touch ? undefined : "J", onOpen: () => setSheet("journal") },
-    { id: "bag", label: "Bag", icon: <KeywordIcon kind="bag" />, keyLabel: touch ? undefined : keyName(binds.openBag), onOpen: () => setSheet("bag") },
-    { id: "collection", label: "Collection", icon: <KeywordIcon kind="collection" />, keyLabel: touch ? undefined : keyName(binds.openJournal), onOpen: () => setBagOpen(true) },
-    { id: "friends", label: "Friends", icon: <KeywordIcon kind="friend" />, badge: friends.asking, onOpen: () => setNetSheet("friends") },
-    { id: "mail", label: "Mail", icon: <KeywordIcon kind="mail" />, keyLabel: touch ? undefined : keyName(binds.openMail), badge: progression.unreadLetters, onOpen: () => setSheet("letters") },
+    { id: "settings", label: "Settings", onOpen: () => setSheet("settings") },
+    { id: "quests", label: "Quests", keyLabel: touch ? undefined : "J", onOpen: () => setSheet("journal") },
+    { id: "bag", label: "Bag", keyLabel: touch ? undefined : keyName(binds.openBag), onOpen: () => setSheet("bag") },
+    { id: "collection", label: "Collection", keyLabel: touch ? undefined : keyName(binds.openJournal), onOpen: () => setBagOpen(true) },
+    { id: "friends", label: "Friends", badge: friends.asking, onOpen: () => setNetSheet("friends") },
+    { id: "mail", label: "Mail", keyLabel: touch ? undefined : keyName(binds.openMail), badge: progression.unreadLetters, onOpen: () => setSheet("letters") },
   ], [touch, binds, friends.asking, progression.unreadLetters]);
   // Alice's tour brings the phone in an app at a time (Bag, Collection, Quests, Mail), then whole with its own key.
   const tourApps = useMemo(() => (tourShown.has("phone") ? phoneApps : phoneApps.filter(a => tourShown.has(a.id as HudPiece))), [tourShown, phoneApps]);
@@ -1613,8 +1615,11 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <NoticeSheet open={sheet === "notice"} onClose={() => setSheet(null)} keys={STATION_KEY} />
       <BoardSheet open={sheet === "vboard"} onClose={() => setSheet(null)} me={identity.display_name} />
       {/* The HQ visit's cards (row 312): your island ID, where the check-in code goes, the Founder's plaque, the fly cards. */}
-      <IdCard open={hq.card === "id" || sheet === "id"} name={identity.signedIn ? identity.display_name : null} signedIn={identity.signedIn} friendCode={friends.view?.code ?? null}
+      <IdCard open={(hq.card === "id" && !idPhone) || sheet === "id"} name={identity.signedIn ? identity.display_name : null} signedIn={identity.signedIn} friendCode={friends.view?.code ?? null}
         onDone={() => (sheet === "id" ? setSheet(null) : hqEvent("signed"))} />
+      {/* The phone pitch (round 13, dev only, ?idphone=1): Alice hands you the phone in place of the ID. Not shipped. */}
+      {idPhone && <PhoneSignup open={hq.card === "id"} name={identity.signedIn ? identity.display_name : null} signedIn={identity.signedIn} friendCode={friends.view?.code ?? null}
+        onDone={() => hqEvent("signed")} />}
       <FlyCard target={hq.fly} onDone={() => hqEvent("flown")} />
       <CheckInCard open={hq.card === "checkin"} onDone={() => hqEvent("checkin")} />
       <PlaqueCard open={sheet === "plaque"} onClose={() => setSheet(null)} />

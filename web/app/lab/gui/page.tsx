@@ -28,9 +28,10 @@ import { RodRadar, TackleRadar } from "@/components/economy/RodGear";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import { ChevronLeft, CircleDot, Waves, Worm } from "lucide-react";
 import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
-import { ActionBar, ActionIcon, BigMoment, CallTag, CardOverlay, DarkButton, FlatField, FlatSlider, FlatToggle, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, FlyHome, KeyBoard, Keyword, KeywordIcon, KeywordLine, PaperField, Phone, PrintedCard, ProgressCard, QuestCheck, RankBadge, RewardPop, RoundButton, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot, type PeekKind, type PhoneApp } from "@/components/gui/flat";
+import { ActionBar, ActionIcon, BigMoment, CallTag, CardOverlay, DarkButton, FlatField, FlatSlider, FlatToggle, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, FlyHome, KeyBoard, Keyword, KeywordLine, PaperField, Phone, PrintedCard, ProgressCard, QuestCheck, RankBadge, RewardPop, RoundButton, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot, type PeekKind, type PhoneApp } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
 import { BoardBody } from "@/components/game/volleyball/BoardSheet";
+import PhoneSignup from "@/components/game/hq/PhoneSignup";
 import { DEFAULT_LOOK } from "@/lib/game/character/look";
 import s from "./showroom.module.css";
 import FlatRewards from "./FlatRewards";
@@ -102,14 +103,20 @@ function PhoneShow() {
   const [t, setT] = useState(0);
   useEffect(() => { const i = window.setInterval(() => setT(v => (v + 1) % 10), 700); return () => window.clearInterval(i); }, []);
   const apps: PhoneApp[] = [
-    { id: "settings", label: "Settings", icon: <KeywordIcon kind="settings" />, onOpen: () => {} },
-    { id: "quests", label: "Quests", icon: <KeywordIcon kind="quest" />, keyLabel: "J", onOpen: () => {} },
-    { id: "bag", label: "Bag", icon: <KeywordIcon kind="bag" />, keyLabel: "I", onOpen: () => {} },
-    { id: "collection", label: "Collection", icon: <KeywordIcon kind="collection" />, keyLabel: "B", onOpen: () => {} },
-    { id: "friends", label: "Friends", icon: <KeywordIcon kind="friend" />, badge: 1, onOpen: () => {} },
-    { id: "mail", label: "Mail", icon: <KeywordIcon kind="mail" />, keyLabel: "L", badge: 2, onOpen: () => {} },
+    { id: "settings", label: "Settings", onOpen: () => {} },
+    { id: "quests", label: "Quests", keyLabel: "J", onOpen: () => {} },
+    { id: "bag", label: "Bag", keyLabel: "I", onOpen: () => {} },
+    { id: "collection", label: "Collection", keyLabel: "B", onOpen: () => {} },
+    { id: "friends", label: "Friends", badge: 1, onOpen: () => {} },
+    { id: "mail", label: "Mail", keyLabel: "L", badge: 2, onOpen: () => {} },
   ];
   return <Phone open={t < 9} away={t >= 4 && t < 7} apps={apps} hint="X" onClose={() => {}} />;
+}
+/** The pitch (round 13, not shipped): Alice's phone in place of the ID, again from the start each time it's done. It sits
+ *  straight in the overlay (Loop's wrapper has no size, and the phone sizes itself to its parent). */
+function PitchShow() {
+  const [n, setN] = useState(0);
+  return <PhoneSignup key={n} open name="Marlowe" signedIn={false} friendCode={null} onDone={() => window.setTimeout(() => setN(v => v + 1), 1200)} />;
 }
 /** Every peek (TourPeek in the kit's KeyPeek), one after another: each pops in, plays its loop, then fades as if the key
  *  were let go. The HUD and the minimap have none: the real pieces fly in from above the card (FlyHome, above). */
@@ -175,6 +182,7 @@ function WalletShow() {
 const OVERLAYS: { id: string; title: string; render: () => ReactNode }[] = [
   { id: "key-board", title: "Keys (a light Spotlight, KeyBoard, KeyPeek, SlotPop and FlyHome)", render: () => <KeyBoardShow /> },
   { id: "phone", title: "The phone (Phone): up, an app open (it tucks away), back", render: () => <PhoneShow /> },
+  { id: "phone-pitch", title: "A pitch, not shipped: the phone in place of the ID (PhoneSignup, round 13)", render: () => <PitchShow /> },
   { id: "key-peek", title: "A key's peek (KeyPeek), every kind", render: () => <KeyPeekShow /> },
   { id: "wallet", title: "The wallet (WalletSlot), its slot under the time", render: () => <WalletShow /> },
   { id: "keyword", title: "Keywords in a line (Keyword)", render: () => <KeywordShow /> },

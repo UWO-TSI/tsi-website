@@ -6,11 +6,11 @@
 // ── The motion (round 12, David: "make it pull out and flip open and not 1 motion") ──────────────────────
 /** One spring a motion: `x` 0 (away) to 1 (out, or open), `v` its speed. */
 export interface Spring { x: number; v: number }
-/** The phone's state: pulled out (`rise`), flipped open (`slide`, the top half up), and the strap's swing. */
-export interface PhoneMotion { rise: Spring; slide: Spring; swing: Spring }
-export const restMotion = (): PhoneMotion => ({ rise: { x: 0, v: 0 }, slide: { x: 0, v: 0 }, swing: { x: 0, v: 0 } });
+/** The phone's state: pulled out (`rise`) and flipped open (`slide`, the top half up). The charm swings on its own (below). */
+export interface PhoneMotion { rise: Spring; slide: Spring }
+export const restMotion = (): PhoneMotion => ({ rise: { x: 0, v: 0 }, slide: { x: 0, v: 0 } });
 /** About 12% overshoot (bible UI 9) at these: the pull-out settles in about 0.45 s, the flip in about 0.3 s. */
-const RISE = { k: 150, c: 13 }, SLIDE = { k: 340, c: 20 }, SWING = { k: 60, c: 4.5 };
+const RISE = { k: 150, c: 13 }, SLIDE = { k: 340, c: 20 };
 /** Pulled out this far, and nearly still, it flips open (the beat between the two motions). */
 const OUT_AT = 0.97, STILL = 0.6;
 
@@ -20,32 +20,26 @@ function step(s: Spring, to: number, p: { k: number; c: number }, dt: number) {
 }
 /**
  * One frame (dt seconds) toward `want`: `open` pulls it out, then once it's out flips it open; away, it flips shut,
- * then drops. `tucked` (an app is open) drops it while it stays open, so it comes back as it was. The strap swings with
- * the motions. Reduced motion: it is where it's going at once.
+ * then drops. `tucked` (an app is open) drops it while it stays open, so it comes back as it was. Reduced motion: it is
+ * where it's going at once.
  */
 export function stepMotion(m: PhoneMotion, want: { open: boolean; tucked?: boolean }, dt: number, reduced = false): PhoneMotion {
   const out = want.open && !want.tucked;
   if (reduced) {
-    m.rise = { x: out ? 1 : 0, v: 0 }; m.slide = { x: want.open ? 1 : 0, v: 0 }; m.swing = { x: 0, v: 0 };
+    m.rise = { x: out ? 1 : 0, v: 0 }; m.slide = { x: want.open ? 1 : 0, v: 0 };
     return m;
   }
   // Opening, it flips open once it's out (or stays open, coming back from an app); closing, it drops once it's shut.
   const slideTo = !want.open ? 0 : want.tucked || m.slide.x > 0.5 || (m.rise.x > OUT_AT && Math.abs(m.rise.v) < STILL) ? 1 : 0;
   const riseTo = out ? 1 : want.tucked || m.slide.x < 0.03 ? 0 : m.rise.x > 0.5 ? 1 : 0;
   const h = Math.min(dt, 1 / 15) / 4;  // four steps a frame: steady at a slow frame, and on time
-  for (let i = 0; i < 4; i++) {
-    const rv = m.rise.v, sv = m.slide.v;
-    step(m.rise, riseTo, RISE, h); step(m.slide, slideTo, SLIDE, h);
-    // The strap lags each change of speed, then swings back.
-    m.swing.v -= ((m.rise.v - rv) * 0.9 + (m.slide.v - sv) * 0.5);
-    step(m.swing, 0, SWING, h);
-  }
+  for (let i = 0; i < 4; i++) { step(m.rise, riseTo, RISE, h); step(m.slide, slideTo, SLIDE, h); }
   return m;
 }
 /** Where it's going, and nothing moving: it can stop drawing. */
 export const settled = (m: PhoneMotion, want: { open: boolean; tucked?: boolean }) =>
   Math.abs(m.rise.x - (want.open && !want.tucked ? 1 : 0)) < 1e-3 && Math.abs(m.slide.x - (want.open ? 1 : 0)) < 1e-3 &&
-  Math.abs(m.rise.v) < 1e-3 && Math.abs(m.slide.v) < 1e-3 && Math.abs(m.swing.x) < 0.01 && Math.abs(m.swing.v) < 0.03;
+  Math.abs(m.rise.v) < 1e-3 && Math.abs(m.slide.v) < 1e-3;
 
 // ── Where it sits ──────────────────────────────────────────────────────────────────────────────────────────
 /**
@@ -78,23 +72,23 @@ export function phoneBox(vw: number, vh: number, touch: boolean, px: number) {
 }
 
 // ── The screen ─────────────────────────────────────────────────────────────────────────────────────────────
-/** The screen in its own pixels (the glass is 4.3 by 6.2 units): what the UI is laid out in, and the texture drawn
- * at TEX times that, so the world's pixel finish samples it down like any other surface. */
+/** The screen in its own pixels (the glass is 4.3 by 6.2 units): what the UI is laid out and drawn in, as pixel art.
+ * The texture is TEX texture pixels a screen pixel, so each stays a sharp square however the glass is turned. */
 export const SCREEN = { w: 108, h: 156 } as const;
-export const TEX = 3;
+export const TEX = 4;
 type Rect = readonly [number, number, number, number];
 /**
- * The home screen today's UI way (round 12, David: "current ui but green highlights"): a slim status line, the apps as
- * white cards two across (the icon over its name), and the home bar at the foot.
+ * The home screen (round 13, phoneScreen.ts): the band at the top inside the frame, the apps as square tiles two
+ * across, and the home bar at the foot.
  */
 export function screenLayout(count: number) {
-  const pad = 6, gap = 5, bar = 11, home = 12;
+  const pad = 6, gap = 4, top = 17, foot = 18;
   const cols = 2, rows = Math.max(1, Math.ceil(count / cols));
   const cw = Math.floor((SCREEN.w - 2 * pad - gap * (cols - 1)) / cols);
-  const ch = Math.min(40, Math.floor((SCREEN.h - bar - home - pad - gap * (rows - 1)) / rows));
-  const top = bar + Math.floor((SCREEN.h - bar - home - pad - (rows * ch + gap * (rows - 1))) / 2);
-  const tiles: Rect[] = Array.from({ length: count }, (_, i) => [pad + (i % cols) * (cw + gap), top + Math.floor(i / cols) * (ch + gap), cw, ch]);
-  return { tiles, bar: [0, 0, SCREEN.w, bar] as Rect, home: [Math.round(SCREEN.w / 2 - 22), SCREEN.h - home + 1, 44, home - 3] as Rect };
+  const ch = Math.min(40, Math.floor((SCREEN.h - top - foot - gap * (rows - 1)) / rows));
+  const y0 = top + Math.floor((SCREEN.h - top - foot - (rows * ch + gap * (rows - 1))) / 2);
+  const tiles: Rect[] = Array.from({ length: count }, (_, i) => [pad + (i % cols) * (cw + gap), y0 + Math.floor(i / cols) * (ch + gap), cw, ch]);
+  return { tiles, bar: [4, 4, SCREEN.w - 8, 11] as Rect, home: [Math.round(SCREEN.w / 2 - 22), SCREEN.h - 15, 44, 11] as Rect };
 }
 
 // ── The screen on the glass ────────────────────────────────────────────────────────────────────────────────
@@ -116,3 +110,49 @@ export function quadMatrix(w: number, h: number, [x0, y0]: P, [x1, y1]: P, [x2, 
 /** How close to the window's bottom-right corner the cursor has to come (CSS px each way). */
 export const CORNER_PX = 14;
 export const inCorner = (x: number, y: number, vw: number, vh: number) => x >= vw - CORNER_PX && y >= vh - CORNER_PX;
+
+// ── The charm (round 13, David: "the charm on the phone is a accessory, and it has proper physics, charms will be swappable later") ──
+export type V3 = [number, number, number];
+/**
+ * The charm as a short chain: the strap's end and the pendant's middle, each a point a fixed length from the one above
+ * it (the first from the mount), swung by gravity and by the mount's own motion (the pull-out, the flip, the lean).
+ * `p` the points now, `q` a step ago (Verlet), `at` the mount a step ago.
+ */
+export interface CharmSim { p: V3[]; q: V3[]; len: number[]; at: V3 }
+/** Gravity (phone units a second squared: about a 1 s swing on the strap's length) and the air's drag (a second). */
+const GRAVITY = 120, DRAG = 2.6, H = 1 / 240;
+const sub = (a: V3, b: V3): V3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const len3 = (a: V3) => Math.hypot(a[0], a[1], a[2]);
+/** Hanging still straight down from the mount. */
+export function hangCharm(mount: V3, len: readonly number[]): CharmSim {
+  let y = mount[1];
+  const p = len.map(l => [mount[0], (y -= l), mount[2]] as V3);
+  return { p, q: p.map(v => [...v] as V3), len: [...len], at: [...mount] as V3 };
+}
+/**
+ * One frame (dt seconds) with the mount now at `mount`: fixed steps, the mount eased from where it was, each point
+ * pulled back to its length, and `solid` (the phone's body) pushing a point out of it. Reduced motion: it hangs still.
+ */
+export function stepCharm(s: CharmSim, mount: V3, dt: number, solid?: (p: V3, i: number) => V3 | null, reduced = false): CharmSim {
+  if (reduced) return Object.assign(s, hangCharm(mount, s.len));
+  const n = Math.max(1, Math.round(Math.min(dt, 1 / 15) / H)), from = s.at;
+  for (let k = 1; k <= n; k++) {
+    const m: V3 = [0, 1, 2].map(i => from[i] + (mount[i] - from[i]) * (k / n)) as V3;
+    s.p.forEach((p, i) => {
+      const q = s.q[i], keep = 1 - DRAG * H;
+      const v: V3 = [(p[0] - q[0]) * keep, (p[1] - q[1]) * keep, (p[2] - q[2]) * keep];
+      s.q[i] = [...p] as V3;
+      s.p[i] = [p[0] + v[0], p[1] + v[1] - GRAVITY * H * H, p[2] + v[2]];
+    });
+    for (let pass = 0; pass < 2; pass++) s.p.forEach((p, i) => {
+      const up = i ? s.p[i - 1] : m, d = sub(p, up), l = len3(d) || 1, f = s.len[i] / l;
+      s.p[i] = [up[0] + d[0] * f, up[1] + d[1] * f, up[2] + d[2] * f];
+      const out = solid?.(s.p[i], i);
+      if (out) s.p[i] = out;
+    });
+  }
+  s.at = [...mount] as V3;
+  return s;
+}
+/** Nearly still (phone units a second). */
+export const charmStill = (s: CharmSim) => s.p.every((p, i) => len3(sub(p, s.q[i])) / H < 0.15);

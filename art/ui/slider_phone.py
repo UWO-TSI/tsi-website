@@ -31,9 +31,10 @@ W, H, R = 5.0, 10.2, 0.9          # each half: width, height, plan corner
 SLIDE = 4.8                       # how far the top half slides up
 BASE_Y = (-0.1, 0.72)             # the body (bottom half) from its front face back
 TOP_Y = (-0.62, -0.12)            # the top half's shell; its clear back plate fills -0.12..-0.1
-SCREEN = (4.3, 6.2, 0.32, 1.5)    # the glass: width, height, corner, centre height on the top half
-GLASS_Y = TOP_Y[0] - 0.012        # just proud of the face, inside its clear frame
+SCREEN = (4.3, 6.2, 0.32, 1.46)   # the glass: width, height, corner, centre height on the top half
 F = TOP_Y[0]                      # the top half's face
+BEZEL = (0.09, 0.18)              # round 13: the screen's raised clear bezel, how proud and how wide
+GLASS_Y = F - 0.03                # the glass, sunk 0.06 behind the bezel's front, in front of its dark mask
 
 # ---------------------------------------------------------------- scene
 for o in list(bpy.data.objects): bpy.data.objects.remove(o, do_unlink=True)
@@ -66,6 +67,7 @@ M = {
     "digit": material("phone_digit", "#2f6b3c", rough=0.5),
     "screen": material("phone_screen", "#e8f5e2", rough=0.3, emit="#e8f5e2", emit_k=0.6),
     "lens": material("phone_lens", "#2b3a33", rough=0.1),
+    "mask": material("phone_mask", "#33463a", rough=0.5),
     "silver": material("phone_silver", "#d6dadf", rough=0.22, metal=1.0),
     "strap": material("phone_strap", "#4fae45", rough=0.6),
     "charm": material("phone_charm", "#b6ef3c", rough=0.06, alpha=0.82, emit="#c8f55a", emit_k=0.25),
@@ -164,8 +166,12 @@ prism("top_shell", rrect(W, H, R), TOP_Y[0], TOP_Y[1], M["pearl"], 0.22, 6)
 prism("top_rim", rrect(W + 0.06, H + 0.06, R + 0.03, 12), TOP_Y[0] + 0.1, TOP_Y[1] - 0.04, M["clear"], 0.04, 3, hole=rrect(W - 0.3, H - 0.3, R - 0.15, 12))
 prism("top_plate", rrect(W - 0.2, H - 0.2, R - 0.1), TOP_Y[1] - 0.02, BASE_Y[0] - 0.004, M["clear"], 0.03, 2)
 sw, sh, sr, sz = SCREEN
-prism("screen_frame", rrect(sw + 0.24, sh + 0.24, sr + 0.12, 12, 0, sz), F - 0.03, F + 0.02, M["clear"], 0.02, 2, hole=rrect(sw, sh, sr, 12, 0, sz))
-prism("earpiece", rrect(0.9, 0.12, 0.06, 6, 0, 4.78), F - 0.006, F + 0.02, M["lens"], 0)
+# Round 13, the screen remodelled (David: "the ui screen needs to be remodeled"): a raised clear bezel round a sunk
+# glass, and a thin dark mask between them, like a real display's edge, so the screen reads as a screen.
+bh, bw = BEZEL
+prism("screen_bezel", rrect(sw + 2 * bw, sh + 2 * bw, sr + bw, 12, 0, sz), F - bh, F + 0.02, M["clear"], 0.04, 3, hole=rrect(sw + 0.1, sh + 0.1, sr + 0.05, 12, 0, sz))
+prism("screen_mask", rrect(sw + 0.14, sh + 0.14, sr + 0.07, 12, 0, sz), F - 0.02, F + 0.01, M["mask"], 0)
+prism("earpiece", rrect(0.9, 0.1, 0.05, 6, 0, 4.88), F - 0.006, F + 0.02, M["lens"], 0)
 
 def screen_mesh():
     """The glass: a flat rounded rectangle facing -Y, its UVs 0..1 across its width and height (the UI's texture)."""
@@ -216,6 +222,11 @@ def braid():  # three strands woven along the hanging line, each a curve with a 
         cu.materials.append(M["strap"])
         o = bpy.data.objects.new(cu.name, cu); C_CHARM.objects.link(o); o.parent = charm_root
 braid()
+# The pendant (the jump ring and the star) is its own node, `pendant`, its origin where it hangs from the strap's end,
+# so the game swings it on the strap (round 13, David: "the charm on the phone is a accessory, and it has proper
+# physics, charms will be swappable later"). Another charm is a GLB with the same two parts: `charm` (its origin at the
+# lug) holding `strap`, and `pendant` at the strap's end.
+pendant = bpy.data.objects.new("pendant", None); C_CHARM.objects.link(pendant); pendant.parent = charm_root; pendant.location = DROP
 bpy.ops.mesh.primitive_torus_add(major_radius=0.18, minor_radius=0.04, location=DROP + Vector((0, 0, -0.1)), rotation=(0, math.radians(90), 0))
 tor = bpy.context.active_object
 for c in tor.users_collection: c.objects.unlink(tor)
@@ -270,15 +281,20 @@ if MODE == "glb":
     os.makedirs(OUT, exist_ok=True)
     set_open(False)
     mesh_types = ("MESH", "CURVE", "FONT")
-    base_objs = [o for o in C_BASE.objects if o.type in mesh_types]
+    # The digits are their own node: the game draws them after the pixel pass, at their real size (round 13).
+    digit_objs = [o for o in C_BASE.objects if o.type == "FONT"]
+    base_objs = [o for o in C_BASE.objects if o.type in mesh_types and o not in digit_objs]
     top_objs = [o for o in C_TOP.objects if o.type in mesh_types and o is not screen]
-    charm_objs = [o for o in C_CHARM.objects if o.type in mesh_types]
+    hang = [jelly, tor]
+    strap_objs = [o for o in C_CHARM.objects if o.type in mesh_types and o not in hang]
     base = merge(base_objs, "base", pivot)
+    digits = merge(digit_objs, "digits", pivot)
     top = merge(top_objs, "top_body", top_root)
-    charm_mesh = merge(charm_objs, "charm_body", charm_root)
-    for o in base_objs + top_objs + charm_objs: bpy.data.objects.remove(o, do_unlink=True)
-    export(os.path.join(OUT, "phone.glb"), [pivot, base, top_root, top, screen, mount])
-    export(os.path.join(OUT, "charm-star.glb"), [charm_root, charm_mesh])
+    strap = merge(strap_objs, "strap", charm_root)
+    hang_mesh = merge(hang, "pendant_body", pendant)
+    for o in base_objs + digit_objs + top_objs + strap_objs + hang: bpy.data.objects.remove(o, do_unlink=True)
+    export(os.path.join(OUT, "phone.glb"), [pivot, base, digits, top_root, top, screen, mount])
+    export(os.path.join(OUT, "charm-star.glb"), [charm_root, strap, pendant, hang_mesh])
 else:
     hang_charm()
     scene.render.engine = "CYCLES"

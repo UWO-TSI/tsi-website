@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SCREEN, VIEW, inCorner, phoneBox, quadMatrix, restMotion, screenLayout, settled, stepMotion, type PhoneMotion } from "./phoneMotion";
+import { SCREEN, VIEW, charmStill, hangCharm, inCorner, phoneBox, quadMatrix, restMotion, screenLayout, settled, stepCharm, stepMotion, type PhoneMotion, type V3 } from "./phoneMotion";
 
 const run = (m: PhoneMotion, want: { open: boolean; tucked?: boolean }, s: number, each?: (m: PhoneMotion, t: number) => void) => {
   for (let t = 0; t < s; t += 1 / 60) { stepMotion(m, want, 1 / 60); each?.(m, t); }
@@ -73,7 +73,7 @@ describe("the screen", () => {
     const L = screenLayout(6);
     for (const [x, y, w, h] of L.tiles) {
       expect(x).toBeGreaterThanOrEqual(0); expect(x + w).toBeLessThanOrEqual(SCREEN.w);
-      expect(y).toBeGreaterThanOrEqual(L.bar[3]); expect(y + h).toBeLessThanOrEqual(L.home[1]);
+      expect(y).toBeGreaterThan(L.bar[1] + L.bar[3]); expect(y + h).toBeLessThan(L.home[1]);
     }
     expect(new Set(L.tiles.map(t => t[0])).size).toBe(2);
   });
@@ -91,5 +91,42 @@ describe("the screen", () => {
   it("opens from the very corner only", () => {
     expect(inCorner(1435, 895, 1440, 900)).toBe(true);
     expect(inCorner(1400, 895, 1440, 900)).toBe(false);
+  });
+});
+
+describe("the charm", () => {
+  const run = (mount: (t: number) => V3, secs: number, solid?: Parameters<typeof stepCharm>[3]) => {
+    const s = hangCharm(mount(0), [2.9, 1]);
+    let most = 0;
+    for (let t = 1 / 60; t <= secs; t += 1 / 60) {
+      stepCharm(s, mount(t), 1 / 60, solid);
+      const [x, y] = [s.p[1][0] - mount(t)[0], s.p[1][1] - mount(t)[1]];
+      most = Math.max(most, Math.abs(Math.atan2(x, -y)));
+    }
+    return { s, most };
+  };
+  it("hangs still when nothing moves", () => {
+    const { s, most } = run(() => [0, 0, 0], 2);
+    expect(most).toBeLessThan(1e-6);
+    expect(charmStill(s)).toBe(true);
+  });
+  it("swings when the mount moves, then settles straight down again", () => {
+    // The flip open: the mount snaps up and to the side in a quarter second.
+    const { s, most } = run(t => [Math.min(t, 0.25) * 8, Math.min(t, 0.25) * 16, 0], 4);
+    expect(most).toBeGreaterThan(0.15);
+    expect(charmStill(s)).toBe(true);
+    expect(Math.abs(s.p[1][0] - 2)).toBeLessThan(0.02);
+    expect(s.p[1][1]).toBeCloseTo(4 - 3.9, 1);
+  });
+  it("keeps its length on the strap", () => {
+    const { s } = run(t => [Math.sin(t * 9) * 2, 0, Math.cos(t * 7)], 1.5);
+    const [m, a, b] = [[Math.sin(1.5 * 9) * 2, 0, Math.cos(1.5 * 7)], s.p[0], s.p[1]];
+    expect(Math.hypot(a[0] - m[0], a[1] - m[1], a[2] - m[2])).toBeCloseTo(2.9, 1);
+    expect(Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2])).toBeCloseTo(1, 2);
+  });
+  it("stays out of the phone", () => {
+    const wall = (p: V3): V3 | null => (p[0] > -0.5 ? [-0.5, p[1], p[2]] : null);
+    const { s } = run(t => [Math.min(t, 0.2) * -20, 0, 0], 2, wall);
+    expect(Math.max(...s.p.map(p => p[0]))).toBeLessThanOrEqual(-0.5 + 1e-9);
   });
 });
