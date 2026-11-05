@@ -267,12 +267,14 @@ export const SUSHI_MENU: readonly Dish[] = [
  * turn into meal that gets buff and a stamp or in the aquarium"; round 2, 2026-11-02: "cooking fee like 100 ... a perm
  * small like 1% buff for fishing for new species and it can unlcok dishes taht are temp big buff but require ingredients
  * and expensive. the fee for cooking scales with new fish unlock"; round 3, 2026-11-03: "key fish, tank is the route for
- * milestones and unlocks and cooking is solely for bonuses, no"). A rod fish whose slot is still empty: Bancha cooks it
+ * milestones and unlocks and cooking is solely for bonuses, no"; round 5, 2026-11-04: "the pages after are temp boosts that
+ * unlcok recipe based on the fishes you provide"). A rod fish whose slot is still empty: Bancha cooks it
  * (`nigiri`) for `fee.base` coins plus `fee.step` for each species he has cooked for you before, and its stamp makes your
- * casts a little luckier for good (bookLuck: `luck.each` a species up to `luck.cap`, round 4: +20%), and that is all a cook gives; or it goes to HQ's tank, free, filling the slot instead. A filled slot is
- * never cooked again, and a duplicate gets no nigiri (it goes into a dish or the sell sheet). The tank is the route to
- * the rest: its gifts pay at `marks` (fish in the tank), any fill pays for a water whose page it completes (`full`, round 4), and a key
- * fish in it teaches Bancha its dish (`dishes`, by `unlock`).
+ * casts a little luckier for good (bookLuck: `luck.each` a species up to `luck.cap`, round 4: +20%); or it goes to HQ's
+ * tank, free, filling the slot instead. A filled slot is never cooked again, and a duplicate gets no nigiri (it goes into
+ * a dish or the sell sheet). The tank's gifts pay at `marks` (fish in the tank), any fill pays for a water whose page it
+ * completes (`full`, round 4), and a key fish teaches Bancha its dish whichever way it fills its slot (`dishes`, by
+ * `unlock`; round 5: the menu's first page takes your new fish, the pages after are the dishes they unlock).
  */
 export interface BookDish extends Dish { price: number; unlock: string; ingredients: readonly (readonly [key: string, n: number])[] }
 export const TASTING = {
@@ -281,7 +283,7 @@ export const TASTING = {
   luck: { each: 0.01, cap: 0.2 },
   marks: [{ at: 10, coins: 150 }, { at: 25, coins: 400 }],
   full: 250,
-  /** The book's dishes: learnt when their key fish (`unlock`) is in the tank, then ordered for coins and `ingredients` from your bag. */
+  /** The book's dishes: learnt when their key fish (`unlock`) is in your book (cooked or in the tank), then ordered for coins and `ingredients` from your bag. */
   dishes: [
     { id: "snapper_chazuke", name: "Snapper chazuke", blurb: "Snapper over rice, hot tea poured at the counter.", price: 250, unlock: "fish_red_snapper",
       ingredients: [["fish_red_snapper", 1], ["fish_sea_bass", 2]], buff: { luck: 0.1, bite: 0.1, minutes: 45 } },

@@ -7,7 +7,7 @@
  * seal (`Hanko`), soft ink-wash art that fades into the paper (`InkArt`: plum, bamboo, pagoda, mist; drawn here as SVG),
  * each dish as a photo with its name, price and what it does beside it (`MenuDish`), and the menu itself, a cover and
  * inner panels that turn like a folded menu (`FoldedMenu`), and its back pages, the tasting book (`BookPage`, a page per
- * water of `BookSlot`s, and `BookMarks`). Shown at /lab/gui?only=flat-pieces. Tokens only.
+ * water of `BookSlot`s). Shown at /lab/gui?only=flat-pieces. Tokens only.
  */
 import { useCallback, useEffect, useId, useImperativeHandle, useRef, useState, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -141,12 +141,13 @@ export interface DishStat { icon: ReactNode; label: string; value: ReactNode; le
  * A dish as the menu shows it (round 4, David: "simple photo of food and then price on the side with like stats"): its
  * photo (the model's icon on a plate, or a marked stand-in), and beside it the name, the price, and what it does, one
  * row a stat. `note`: one quiet line under them. It is the action: picked (`open`), `children` (the order) show under it.
+ * Without `onPick` it is no button, only the dish and its `children` (open); on a phone without its photo, as what it is
+ * about was picked above it.
  */
 export function MenuDish({ picture, name, price, stats, note, standIn, open, disabled, onPick, children }: {
   picture: ReactNode; name: ReactNode; price: ReactNode; stats: readonly DishStat[]; note?: ReactNode; standIn?: boolean; open?: boolean; disabled?: boolean; onPick?: () => void; children?: ReactNode;
 }) {
-  return <div className={p.dish} data-open={open || undefined} data-disabled={disabled || undefined}>
-    <button type="button" className={p.dishPick} disabled={disabled} aria-expanded={open} onClick={onPick}>
+  const face = <>
       <span className={p.photo}>
         <span className={p.plate}>{picture}</span>
         {standIn ? <small className={p.standIn}>stand-in</small> : null}
@@ -163,8 +164,10 @@ export function MenuDish({ picture, name, price, stats, note, standIn, open, dis
         </span>
         {note ? <span className={p.dishNote}>{note}</span> : null}
       </span>
-    </button>
-    {open ? <div className={p.dishAction}>{children}</div> : null}
+  </>;
+  return <div className={p.dish} data-open={open || undefined} data-disabled={disabled || undefined}>
+    {onPick ? <button type="button" className={p.dishPick} disabled={disabled} aria-expanded={open} onClick={onPick}>{face}</button> : <div className={p.dishPick}>{face}</div>}
+    {open || !onPick ? <div className={p.dishAction}>{children}</div> : null}
   </div>;
 }
 
@@ -193,11 +196,6 @@ export function BookPage({ title, filled, total, note, children }: { title: stri
     <p className={p.bookCount}><b>{filled}</b><span>of {total}</span>{note ? <span className={p.bookNote}>{note}</span> : null}</p>
     <div className={p.slots}>{children}</div>
   </PanelSection>;
-}
-
-/** The book's milestones: at each count, its reward; a reached one is inked in. */
-export function BookMarks({ marks }: { marks: readonly { at: number; reward: ReactNode; done: boolean }[] }) {
-  return <p className={p.bookMarks}>{marks.map(m => <span key={m.at} data-done={m.done || undefined}><b>{m.at}</b>{m.reward}</span>)}</p>;
 }
 
 // ── The folded menu ─────────────────────────────────────────────────────────────────────────────────────────────────

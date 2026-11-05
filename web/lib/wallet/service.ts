@@ -39,7 +39,7 @@ const ERR: Record<string, [number, string]> = {
   already_claimed: [409, "Already claimed."],
   not_rare_enough: [422, "Bancha only cooks an epic or legendary fish into a feast."],
   already_in_book: [409, "That fish already has its slot in your book."],
-  not_learned: [409, "Bancha hasn't learnt that one yet. Cook its fish for the book first."],
+  not_learned: [409, "Bancha hasn't learnt that one yet. Give him its fish first."],
   failed: [500, "Something went wrong. Try again."],
 };
 const fail = <T>(err: unknown): Result<T> => toFailure(ERR, err);
@@ -267,7 +267,8 @@ export const tastingView = (store: EconomyStore, m: string) =>
 /**
  * Bring Bancha a fish whose slot in your book is empty (catalogue TASTING): `cook` stamps it for the fee (tastingFee,
  * summed in the store under its lock), which raises your casts' luck for good (bookLuck) and gives nothing else;
- * `aquarium` gives it to HQ's tank for free, where it counts toward the book's milestones and a key fish teaches its dish.
+ * `aquarium` gives it to HQ's tank for free, where it counts toward the book's milestones. Either way a key fish teaches
+ * Bancha its dish (round 5).
  * The server prices it all.
  */
 export const serveFish = (store: EconomyStore, m: string, input: { fish: string; way: "cook" | "aquarium"; idempotency_key: string }) =>

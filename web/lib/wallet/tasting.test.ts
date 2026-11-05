@@ -60,7 +60,7 @@ describe("the tasting book (David, 2026-11-01: \"one per fish\"; 2026-11-02: \"p
     expect(b?.size).toBe(0.3);
   });
 
-  it("teaches a dish when its key fish goes to the tank (a cooked one teaches nothing), then serves it for coins and ingredients, all or nothing", async () => {
+  it("teaches a dish when its key fish fills its slot, cooked or in the tank (round 5), then serves it for coins and ingredients, all or nothing", async () => {
     const d = TASTING.dishes[0], m = memoryEconomyStore();
     m.fund(A, 1000);
     m.give(A, d.unlock, 2);
@@ -69,7 +69,7 @@ describe("the tasting book (David, 2026-11-01: \"one per fish\"; 2026-11-02: \"p
     const dace = TASTING.dishes.find((x) => x.unlock === "fish_dace")!;
     m.give(A, "fish_dace", 1);
     await serveFish(m.store, A, { fish: "fish_dace", way: "cook", idempotency_key: "tb-0406" });
-    expect(await orderDish(m.store, A, { dish: dace.id, idempotency_key: "tb-0407" }, noon)).toMatchObject({ ok: false, code: "not_learned" });
+    expect(await orderDish(m.store, A, { dish: dace.id, idempotency_key: "tb-0407" }, noon)).toMatchObject({ ok: false, code: "insufficient_items" });
     await serveFish(m.store, A, { fish: d.unlock, way: "aquarium", idempotency_key: "tb-0402" });
     const coins = m.coinsOf(A);
     expect(await order("tb-0403")).toMatchObject({ ok: false, code: "insufficient_items" });

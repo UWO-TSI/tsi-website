@@ -2,7 +2,8 @@
 -- one per fish kinda thing and they can either turn into meal that gets buff and a stamp or in the aquarium"; round 2,
 -- 2026-11-02: "cooking fee like 100 ... a perm small like 1% buff for fishing for new species and it can unlcok dishes
 -- taht are temp big buff but require ingredients and expensive. the fee for cooking scales with new fish unlock"; round 3,
--- 2026-11-03: "key fish, tank is the route for milestones and unlocks and cooking is solely for bonuses, no").
+-- 2026-11-03: "key fish, tank is the route for milestones and unlocks and cooking is solely for bonuses, no"; round 5,
+-- 2026-11-04: "the pages after are temp boosts that unlcok recipe based on the fishes you provide").
 -- * tasting_book: one slot per member per rod species, filled once: 'cooked' (Bancha cooked it: its stamp) or
 --   'aquarium' (given to HQ's tank). Owner reads; nobody writes but tasting_serve. The permanent fishing buff is no column:
 --   the server's casts add the luck of the member's cooked slots (lib/wallet/rules.ts bookLuck, read by
@@ -14,7 +15,8 @@
 --   of p_marks (pays the matching p_mark_pay), and any fill, cooked too (round 4, 2026-11-04 pick), that completes the
 --   slot's water (every rod species of its collection_species.biome in the book: p_full_pay). Once per key (tasting_serves). The server prices it all
 --   (lib/wallet/catalogue.ts TASTING); this bounds it. Service role only.
--- * tasting_dish: a dish the book taught (TASTING.dishes): not_learned until its key fish p_unlock is in the tank; one of each
+-- * tasting_dish: a dish the book taught (TASTING.dishes): not_learned until its key fish p_unlock is in the book, cooked
+--   at the bar or given to the tank (round 5); one of each
 --   p_ingredients entry leaves the bag (a key twice is two), p_price coins are paid ('shop'), and the dish's buff
 --   replaces the meal buff (member_buffs), like sushi_order. Once per key, in sushi_orders. Service role only.
 -- * HQ's tank shows the club's gifts: the service reads every 'aquarium' slot (lib/wallet/service.ts tastingView).
@@ -130,7 +132,7 @@ BEGIN
     RETURN QUERY SELECT COALESCE(v_bal, 0), o.paid, o.dish, o.luck, o.size, o.until, TRUE; RETURN;
   END IF;
   IF p_price < 1 OR p_price > 5000 OR p_ingredients IS NULL OR cardinality(p_ingredients) NOT BETWEEN 1 AND 12 THEN RAISE EXCEPTION 'bad_qty'; END IF;
-  IF NOT EXISTS (SELECT 1 FROM tasting_book b WHERE b.member_id = p_member_id AND b.species_key = p_unlock AND b.way = 'aquarium') THEN
+  IF NOT EXISTS (SELECT 1 FROM tasting_book b WHERE b.member_id = p_member_id AND b.species_key = p_unlock) THEN
     RAISE EXCEPTION 'not_learned';
   END IF;
   FOREACH k IN ARRAY p_ingredients LOOP PERFORM public.collections_take_one(p_member_id, k); END LOOP;

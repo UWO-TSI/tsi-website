@@ -1,7 +1,7 @@
 // tasting-book evidence: headless Chromium (never a window), muted, signed out, the dev server on :3476 with
 // the Supabase env blanked and NEXT_PUBLIC_GAME_WORLD=new, the new world (/lab/island) with the demo data.
 //   VIEW=phone node specs/evidence/tasting-book/shoot.mjs <out_dir> <flow> [<flow> ...]
-// VIEW: desktop (1280 x 800, the default) or phone (390 x 844, touch). Flows: showroom, counter (choice, cook, stamp, book), aquarium, book3, book4.
+// VIEW: desktop (1280 x 800, the default) or phone (390 x 844, touch). Flows: showroom, counter (choice, cook, stamp, book), aquarium, book3, book4, tank4, book5, tank5.
 import { createRequire } from "node:module";
 import { readFileSync, writeFileSync } from "node:fs";
 const require = createRequire("/opt/homebrew/lib/node_modules/");
@@ -258,6 +258,72 @@ const FLOW = {
     await shot("tb4-tank-given");
     await page.keyboard.press("Escape"); await wait(3000);
     await shot("tb4-tank-swim");
+  },
+  /** Round 5 (tb5-*): the quiet seated reminder, the menu on the counter (the menu's own model), the menu's first page (new
+   * fish, Give), a key fish given (the page turns to the dish it taught), the pages after (the dishes, then the house's). */
+  async book5() {
+    await world("at=-47,114.4&at=19:30&time=evening&bag=23&dish=1", { settle: 12000, press: false, click: false });
+    const seatLine = () => page.getByText(/down to read the menu/).count();
+    // The reminder fades after a few seconds: catch it as it comes.
+    for (let i = 0; i < 40 && !(await seatLine()); i++) { await page.keyboard.press("e"); for (let t = 0; t < 20 && !(await seatLine()); t++) await wait(250); }
+    await wait(1600);
+    console.log("seat hint", JSON.stringify(await page.evaluate(() => {
+      const el = [...document.querySelectorAll("p")].find(p => /down to read the menu/.test(p.textContent ?? ""));
+      if (!el) return null;
+      const cs = getComputedStyle(el), r = el.getBoundingClientRect();
+      return { cls: el.className, opacity: cs.opacity, anim: cs.animationName, bottom: cs.bottom, pos: cs.position, box: [r.x, r.y, r.width, r.height] };
+    })));
+    await shot("tb5-seat");
+    await shot("tb5-seat-crop", page, { clip: PHONE ? { x: 0, y: VH - 300, width: VW, height: 200 } : { x: VW / 2 - 300, y: VH - 220, width: 600, height: 160 } });
+    await wait(6000);
+    await shot("tb5-seat-later");
+    if (PHONE) {
+      await page.evaluate(async () => {
+        const el = document.querySelector("canvas"), at = (type, y) => el.dispatchEvent(new PointerEvent(type, { pointerType: "touch", pointerId: 7, clientX: 195, clientY: y, bubbles: true, isPrimary: true }));
+        at("pointerdown", 380);
+        for (let y = 384; y <= 480; y += 4) { at("pointermove", y); await new Promise(r => setTimeout(r, 16)); }
+        window.dispatchEvent(new PointerEvent("pointerup", { pointerType: "touch", pointerId: 7, clientX: 195, clientY: 480, bubbles: true }));
+      });
+    } else {
+      await page.mouse.move(VW / 2, VH / 2);
+      for (let i = 0; i < 25; i++) { await page.mouse.move(VW / 2, VH / 2 + 4 * (i + 1)); await wait(16); }
+    }
+    await wait(2500);
+    await shot("tb5-look");
+    await shot("tb5-look-crop", page, { clip: PHONE ? { x: 0, y: VH * 0.25, width: VW, height: VH * 0.5 } : { x: VW / 2 - 320, y: VH * 0.3, width: 640, height: VH * 0.45 } });
+    await page.getByRole("button", { name: /Read the menu/ }).first().click({ timeout: 10000 }).catch(e => console.log("read", e.message.slice(0, 120)));
+    await wait(1800);
+    await menuShot("tb5-menu-cover");
+    await centre(page.getByRole("button", { name: "Open the menu" }));
+    await wait(1400);
+    await menuShot("tb5-newfish");
+    await page.getByRole("button", { name: "Red Snapper", exact: true }).first().click({ force: true }).catch(e => console.log("snapper", e.message.slice(0, 120)));
+    await page.mouse.move(4, VH - 4);
+    await wait(700);
+    await menuShot("tb5-newfish-key");
+    await testid("give-fish").click({ force: true }).catch(e => console.log("give", e.message.slice(0, 120)));
+    await wait(500);
+    await shot("tb5-given-toast");
+    await wait(1600);
+    await menuShot("tb5-learnt");
+    for (const name of ["tb5-recipes-2", "tb5-house", "tb5-house-2", "tb5-book"]) { await turnPage(); await menuShot(name); }
+  },
+  /** Round 5: HQ's tank on the flat kit: the cards, a fish picked (the side says what it does, Give), after the give. */
+  async tank5() {
+    await world("hq=inside&at=0,4.2&time=day&bag=23&dish=1", { press: false, settle: 14000 });
+    for (const [x, z] of [[-5.2, 0], [-5.2, 6.9], [-0.6, 6.9]]) {
+      await page.evaluate(([x, z]) => window.dispatchEvent(new CustomEvent("tsi:interior-move", { detail: { x, z } })), [x, z]);
+      await wait(3200);
+    }
+    for (let i = 0; i < 6 && !(await testid("tank-sheet").count()); i++) { await page.keyboard.press("e"); await wait(1500); }
+    await wait(1200);
+    await shot("tb5-tank");
+    await page.locator('[data-testid="tank-sheet"] [data-key="fish_squid"]').first().click({ timeout: 10000 }).catch(e => console.log("pick", e.message.slice(0, 120)));
+    await wait(900);
+    await shot("tb5-tank-pick");
+    await page.getByRole("button", { name: "Give to the tank" }).first().click({ timeout: 10000 }).catch(e => console.log("give", e.message.slice(0, 120)));
+    await wait(1800);
+    await shot("tb5-tank-given");
   },
   async aquarium() {
     await world("hq=inside&at=0,4.2&time=day", { press: false, settle: 14000 });

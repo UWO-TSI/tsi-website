@@ -1554,7 +1554,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           look down and press e to open"): looking down at the menu on the counter, E (a tap) reads it; moving gets you up. */}
       {barSeated && !sheet && !cinematic && !talking && (barLook
         ? <button className={styles.interact} onClick={() => setSheet("sushi")}><kbd>{touch ? "Tap" : "E"}</kbd>Read the menu</button>
-        : <p className={styles.interact} data-closed="true" role="status">{touch ? "Drag down to the menu · the stick gets you up" : "Look down at the menu · move to get up"}</p>)}
+        // The reminder while you sit, quiet (round 5, David: "make reminder less bold and in your face"): small, faint, gone after a few seconds.
+        : <p className={styles.seatHint} role="status">{touch ? "Drag down to read the menu · the stick to get up" : "Look down to read the menu · move to get up"}</p>)}
       {/* The held item's use (specs/game-ui.md §2): what left click does with it here, or the tool something in reach wants. Touch presses the prompt. */}
       {!sheet && !cinematic && !talking && !fishing && !inside && site !== "ruins" && (toolAction && (toolAction.target && (toolNear || toolAction.verb === "eat"))
         ? <button className={styles.interact} data-use onPointerDown={e => { if (e.pointerType !== "mouse" || capture.state !== "captured") applyTool(); }}><kbd>{touch ? "Tap" : "Click"}</kbd>{toolAction.label}</button>

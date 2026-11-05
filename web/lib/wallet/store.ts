@@ -104,7 +104,7 @@ export interface EconomyStore {
    */
   serve(memberId: string, speciesKey: string, way: "cook" | "aquarium", fee: { base: number; step: number }, marks: readonly { at: number; coins: number }[], full: number, key: string): Promise<TastingServe>;
   /**
-   * Atomic, once per key (tasting_dish): a dish the book taught (not_learned until `unlock` is in the tank): one of each of
+   * Atomic, once per key (tasting_dish): a dish the book taught (not_learned until `unlock` is in the book, either way): one of each of
    * `ingredients` (a key twice is two) leaves the bag, `price` coins are paid, and `buff` replaces the meal buff.
    */
   bookDish(memberId: string, dish: string, price: number, unlock: string, ingredients: readonly string[], buff: ActiveBuff, key: string): Promise<{ balance: number; paid: number; buff: ActiveBuff; replayed: boolean }>;

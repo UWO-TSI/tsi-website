@@ -44,6 +44,8 @@
 .order:focus-visible { outline: 2px solid var(--ui-paper-ink); outline-offset: 2px; }
 /* The counter's choice for a fish you bring (the tasting book): your fish, then cook it or give it to the tank. */
 .fishRow { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; width: 100%; }
+/* The first page's fish from your bag (round 5): read from the left, as the page's words are. */
+.newFish { justify-content: flex-start; margin: 2% 0 4%; }
 .choice { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; width: 100%; }
 .choice .quiet { flex-basis: 100%; text-align: right; }
 /* A phone: smaller fish with room for their counts, and the put-down button over the menu's top right (not off the screen). */
@@ -52,6 +54,8 @@
   .fishRow > * { --thumb: 30px !important; }
   .down { right: 4px; bottom: auto; top: -42px; }
   .backSeal { display: none; }
+  /* The first page on a phone: the fish and Give, without the words over them (the page's name and the dish's rows say it). */
+  .newFishNote { display: none; }
 }
 .order[data-quiet] { background: transparent; color: var(--ui-paper-ink); box-shadow: inset 0 0 0 1.5px var(--ui-paper-ink); }
 .quiet { color: var(--ui-paper-quiet); font: 500 12px/1.3 var(--gui-font); }

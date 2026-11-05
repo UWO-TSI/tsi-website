@@ -70,9 +70,9 @@ BEGIN
   PERFORM collections_record_catch(T, 'fish_sea_bass', 31, true);
   BEGIN PERFORM tasting_dish(T, 'snapper_chazuke', 250, 'fish_red_snapper', '{fish_red_snapper,fish_sea_bass,fish_sea_bass}', 0.1, 0, '2030-01-01', 'tb-d001'); RAISE EXCEPTION 'x';
   EXCEPTION WHEN raise_exception THEN ASSERT SQLERRM = 'not_learned', 'unlearnt: ' || SQLERRM; END;
-  -- the dace was cooked, so its dish isn't learnt
+  -- the dace was cooked, and a cooked key fish teaches its dish too (round 5): no not_learned
   BEGIN PERFORM tasting_dish(T, 'dace_karaage', 200, 'fish_dace', '{fish_dace}', 0, 0, '2030-01-01', 'tb-d007'); RAISE EXCEPTION 'x';
-  EXCEPTION WHEN raise_exception THEN ASSERT SQLERRM = 'not_learned', 'a cooked key fish: ' || SQLERRM; END;
+  EXCEPTION WHEN raise_exception THEN ASSERT SQLERRM <> 'not_learned', 'a cooked key fish teaches: ' || SQLERRM; END;
   PERFORM tasting_serve(T, 'fish_red_snapper', 'aquarium', 100, 5, '{10,25}', '{150,400}', 250, 'tb-d002');
   SELECT coins INTO v_coins FROM wallets WHERE member_id = T;
   -- one sea bass short: nothing taken, nothing paid

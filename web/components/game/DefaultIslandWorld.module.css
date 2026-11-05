@@ -383,6 +383,13 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 /* The clean HUD (row 283): the objective slides in when it changes and fades after; the place name fades after a scene comes in. */
 @keyframes hudFade { to { opacity: 0; transform: translateY(6px); } }
 .interact[data-use] kbd { background: var(--gui-wood); }
+/* Seated at the bar, the reminder (tasting-book round 5, David: "make reminder less bold and in your face"): faint as the
+   meal's buff is (flat BuffChip): small light words on a see-through slip, low on the screen, gone after a few seconds. */
+.seatHint { position: absolute; bottom: var(--hud-lane-bottom); left: 50%; transform: translateX(-50%); margin: 0; max-width: calc(100% - 32px); box-sizing: border-box;
+  padding: 5px 12px; border-radius: 999px; background: color-mix(in srgb, var(--ui-card) 55%, transparent); color: var(--ui-ink-2);
+  font: 600 11px/1.3 var(--gui-font); text-align: center; white-space: nowrap; pointer-events: none; animation: seatHint 7s ease-out 0.6s both; zoom: var(--tsi-text-scale, 1); }
+@keyframes seatHint { 0% { opacity: 0; } 8%, 70% { opacity: 0.6; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .seatHint { animation: none; opacity: 0.5; } }
 
 /* ── The GUI sheet over the ruins and the Oracle's path sheet (row 285) ─────────────────────────────────────────────
    Appended rather than edited in place, so the classes v2 kits can keep editing the rules above. Paper, the kit's

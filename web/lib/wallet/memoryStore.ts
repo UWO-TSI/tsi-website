@@ -187,7 +187,7 @@ export function memoryEconomyStore(clock: () => Date = () => new Date(), random:
     async bookDish(m, dish, price, unlock, ingredients, buff, key) {
       const prior = orders.get(`${m}:${key}`);
       if (prior) return { balance: coins.get(m) ?? 0, ...prior, replayed: true };
-      if (!book.some((b) => b.member === m && b.slot.species_key === unlock && b.slot.way === "aquarium")) throw new EconomyError("not_learned");
+      if (!book.some((b) => b.member === m && b.slot.species_key === unlock)) throw new EconomyError("not_learned");
       if ((coins.get(m) ?? 0) < price) throw new EconomyError("insufficient");
       // All or nothing, as the transaction: check the bag before taking.
       const need = new Map<string, number>();

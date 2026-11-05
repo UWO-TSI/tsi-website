@@ -90,7 +90,7 @@
 /* A dish: its photo, and beside it the name and price on a hairline, then what it does, a row a stat. */
 .dish { display: grid; gap: 8px; }
 .dishPick { all: unset; display: grid; grid-template-columns: clamp(96px, 18vh, 168px) minmax(0, 1fr); align-items: start; gap: clamp(10px, 1.8vh, 16px); cursor: pointer; }
-.dishPick:disabled { cursor: default; }
+.dishPick:disabled, div.dishPick { cursor: default; }
 .dishPick:focus-visible { outline: 2px solid var(--ui-paper-ink); outline-offset: 4px; border-radius: 6px; }
 /* The photo: a print laid on the menu, a plate seen from above on a soft ground. */
 .photo { position: relative; display: grid; place-items: center; aspect-ratio: 1; padding: 6%; box-sizing: border-box; border-radius: 3px;
@@ -136,17 +136,13 @@
 .slot[data-fresh] .slotArt { animation: ink 0.6s ease-out both; }
 @keyframes press { from { opacity: 0; transform: scale(2.4) rotate(-24deg); } }
 @keyframes ink { from { filter: brightness(0); opacity: 0.1; } }
-.bookMarks { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 2% 0 0; color: var(--ui-paper-quiet); font: 500 11.5px/1.3 var(--gui-font); }
-.bookMarks span { display: inline-flex; align-items: center; gap: 4px; }
-.bookMarks b { display: grid; place-items: center; min-width: 20px; height: 20px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--ui-paper-rule); color: var(--ui-paper-quiet); font: 700 10px/1 var(--gui-font); }
-.bookMarks [data-done] { color: var(--ui-paper-ink); }
-.bookMarks [data-done] b { background: var(--ui-paper-seal); box-shadow: none; color: var(--ui-paper); }
 
 /* A phone held upright: a taller menu, so each narrow panel stacks its dishes, the photo over the words. */
 @media (max-aspect-ratio: 3/4) {
   .book { width: min(96vw, calc(var(--h) * 0.78)); aspect-ratio: 0.78; }
   .panel { padding: 10% 7% 8%; }
   .dishPick { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  div.dishPick .photo { display: none; }
   .photo { width: min(100%, 76px); }
   .dishLine { grid-template-columns: minmax(0, 1fr); gap: 3px; }
   .stat { gap: 5px; font-size: 11px; }

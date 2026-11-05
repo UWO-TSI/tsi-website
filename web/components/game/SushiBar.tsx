@@ -15,7 +15,6 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
-import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import Character, { type CharacterMotion, type ClipName } from "./character/Character";
 import LampPools from "./hq/LampPools";
 import { STAFF_URL, parseLook } from "@/lib/game/character/look";
@@ -24,7 +23,7 @@ import { easeFacing } from "@/lib/game/locomotion";
 import { worldNow, worldTime } from "@/lib/game/worldClock";
 import { OWNER_WALK, ownerAt, type OwnerPose } from "@/lib/game/cafe";
 import type { IslandPhase } from "@/lib/game/islandTime";
-import { SUSHI_BAR_GETA_URL, SUSHI_BAR_GLOW_URL, SUSHI_BAR_HOURS_URL, SUSHI_BAR_ISLES_URL, SUSHI_KNIFE_URL } from "@/lib/game/propModels";
+import { SUSHI_BAR_GETA_URL, SUSHI_BAR_GLOW_URL, SUSHI_BAR_HOURS_URL, SUSHI_BAR_ISLES_URL, SUSHI_BAR_MENU_URL, SUSHI_KNIFE_URL } from "@/lib/game/propModels";
 import { localAvatar } from "@/lib/net/localAvatar";
 import { isSeatedPose } from "@/lib/game/seatPrompt";
 import { DEFAULT_PITCH, orbit } from "@/lib/game/orbitCamera";
@@ -47,22 +46,16 @@ const ISLES_NEAR = 1.5;
 const STAFF_IN = 40, STAFF_OUT = 44;
 
 /**
- * The menu lying on the counter before your stool (tasting-book round 4, David: "have menu be on the table"): a folded
- * washi card with its name in an ink strip down the cover and the red seal, as the menu in your hands (SushiSheets
- * MenuPickup). One mesh in vertex colour, paper's matte (cloth's preset): small, so plain colour, one draw.
+ * The menu lying on the counter before your stool (tasting-book round 4, David: "have menu be on the table"; round 5:
+ * "make the menu on the table actually our menu"): the menu you pick up (SushiSheets MenuPickup), closed, its cover the
+ * menu's own (art/buildings/build_sushi_menu.py: a bound washi menu, the cover rendered from the game's), one draw.
+ * Loaded the first time you sit.
  */
-function counterMenu() {
-  const part = (size: [number, number, number], at: [number, number, number], hex: string) => {
-    const g = new THREE.BoxGeometry(...size).translate(...at), c = new THREE.Color(hex), n = g.attributes.position.count;
-    g.setAttribute("color", new THREE.Float32BufferAttribute(Array.from({ length: n }, () => [c.r, c.g, c.b]).flat(), 3));
-    return g;
-  };
-  const geo = mergeGeometries([
-    part([0.24, 0.012, 0.34], [0, 0.006, 0], "#efe5cf"),
-    part([0.036, 0.002, 0.2], [0.05, 0.013, -0.04], "#3a3025"),
-    part([0.03, 0.002, 0.03], [0.05, 0.013, 0.1], "#b23a2a"),
-  ]);
-  return new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ name: "BarMenu", vertexColors: true, roughness: 1, metalness: 0 }));
+function CounterMenu() {
+  const gltf = useGLTF(SUSHI_BAR_MENU_URL);
+  const model = useMemo(() => prepareModel(gltf.scene, SUSHI_BAR_MENU_URL), [gltf.scene]);
+  useEffect(() => () => disposeModelMaterials(model), [model]);
+  return <primitive object={model} />;
 }
 
 /** Module scope (the react compiler forbids writing through hook values): the counter's menu before stool `i` (none at -1), down unless `down` is false. */
@@ -155,8 +148,7 @@ export default function SushiBar({ bar, y, player, phase, viewRef, onNear }: {
   useEffect(() => () => { getas.meshes.forEach(m => m.geometry.dispose()); disposeModelMaterials(getas.model); }, [getas]);
   const pools = useRef<THREE.Group>(null);
   const [seated, setSeated] = useState(false), [staffOn, setStaffOn] = useState(false);
-  const menu = useMemo(() => counterMenu(), []);
-  useEffect(() => () => { menu.geometry.dispose(); (menu.material as THREE.Material).dispose(); }, [menu]);
+  const menu = useMemo(() => new THREE.Group(), []);
   const ear = useMemo(() => barEarshot(onNear), [onNear]);
   const s = useRef({
     on: 0, open: open ? 1 : 0, staff: false, stool: -1, prep: [NaN, NaN], getas: { served: -1, carried: false },
@@ -215,7 +207,7 @@ export default function SushiBar({ bar, y, player, phase, viewRef, onNear }: {
     <primitive object={glow.model} />
     <primitive object={hours.model} />
     {seated && <Suspense fallback={null}><Isles viewRef={viewRef} /></Suspense>}
-    {seated && <primitive object={menu} />}
+    {seated && <primitive object={menu}><Suspense fallback={null}><CounterMenu /></Suspense></primitive>}
     <group ref={pools}><LampPools pools={BAR_POOLS} gain={0} /></group>
     <primitive object={getas.group} />
     {staffOn && <Staff look={CHEF_LOOK} stations={CHEF_STATIONS} outside={open ? null : CHEF_OUTSIDE} />}
