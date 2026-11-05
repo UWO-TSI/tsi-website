@@ -112,7 +112,8 @@ function skyFrame(camera: THREE.Camera, scene: THREE.Scene, weather: IslandWeath
   const target = WEATHER_SKY[weather];
   const w = (state.weather ??= [...target]), k = 1 - Math.exp(-WEATHER_RATE * dt);
   for (let i = 0; i < w.length; i++) w[i] += (target[i] - w[i]) * k;
-  u.uCloud.value.set(w[0], w[1], w[2], w[3]);
+  // Fair-weather cumulus melt away after sunset (an overcast stays).
+  u.uCloud.value.set(w[0] * (1 - 0.6 * u.uNight.value * (1 - w[2])), w[1], w[2], w[3]);
   u.uHaze.value = w[4];
   const lab = WIND_LAB.on, speed = w[5] * (lab ? WIND_LAB.grass : 1), dx = lab ? WIND_LAB.dirX : WIND_DIR.x, dz = lab ? WIND_LAB.dirZ : WIND_DIR.z;
   // Every client starts where the world clock puts the clouds, then carries them on at the weather's speed.

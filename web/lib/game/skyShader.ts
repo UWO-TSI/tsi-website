@@ -69,7 +69,7 @@ export const skyUniforms = {
 };
 
 /** The dome's angular sizes (radians): drawn larger than life so the pixel finish still shows them round. */
-export const SUN_RADIUS = 0.02, MOON_RADIUS = 0.028;
+export const SUN_RADIUS = 0.02, MOON_RADIUS = 0.034;
 /**
  * The cumulus layer: its floor (km up), one cloud's square (km) and the balls in it; the drift wraps at a multiple of
  * the square (the shader's noise for the deck and the cirrus is smooth across the wrap's rare jump).
@@ -382,8 +382,10 @@ void main() {
     vec3 nrm = mr * q.x + mup * q.y - uMoonDir * sqrt(max(0.0, 1.0 - min(dot(q, q), 1.0)));
     float lit = smoothstep(-0.04, 0.1, dot(nrm, uSunDir));
     float albedo = 0.8 - 0.28 * smoothstep(0.45, 0.7, vnoise(vec3(q * 2.4, 1.7)) * 0.7 + vnoise(vec3(q * 6.0, 4.2)) * 0.3);
-    vec3 face = vec3(1.0, 0.97, 0.9) * albedo * (lit * mix(0.55, 1.15, uNight) + 0.045 * uNight);
-    vec3 moon = mix(sky + face * 0.7 * lit, face + sky * 0.15, uNight);
+    vec3 face = vec3(1.0, 0.97, 0.9) * albedo * mix(0.55, 0.82, uNight);
+    // The dark side hides the stars and barely shows (earthshine); by day only the lit side shows on the blue.
+    vec3 dark = sky * mix(1.0, 0.86, uNight) + vec3(0.02, 0.025, 0.035) * albedo * uNight;
+    vec3 moon = mix(sky + face * 0.7 * lit, mix(dark, face, lit), uNight);
     sky = mix(sky, moon, inDisc * (1.0 - uCloud.z));
   }
 

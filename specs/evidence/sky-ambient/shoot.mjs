@@ -14,7 +14,7 @@ const ZOOM = Number(process.env.ZOOM ?? 1), DATE = "2026-07-29", SPOT = process.
 const TIMES = { dawn: "06:05", midday: "12:30", golden: "20:00", sunset: "20:40", dusk: "21:10", night: "23:30" };
 // "sky": toward the sun by day (the moon at night), tilted up; "island": back over the island at the lowest orbit tilt.
 const VIEWS = {
-  sky: t => ({ face: t === "night" ? "moon" : "sun", tilt: t === "night" ? 24 : 16, view: { pitch: 0.35, zoom: ZOOM } }),
+  sky: t => ({ face: t === "night" ? "moon" : "sun", tilt: t === "night" ? 30 : 16, view: { pitch: 0.35, zoom: ZOOM } }),
   island: () => ({ face: null, tilt: 8, view: { yaw: Math.PI, pitch: 0.35, zoom: ZOOM } }),
   // What a player sees at the orbit's lowest tilt, looking back over the island.
   play: () => ({ face: null, tilt: 0, view: { yaw: Math.PI, pitch: 0.35, zoom: 1.4 } }),
@@ -22,7 +22,7 @@ const VIEWS = {
   lamps: () => ({ face: null, tilt: 4, view: { yaw: Number(process.env.LAMP_YAW ?? 2.4), pitch: 0.42, zoom: 1.25 } }),
 };
 // The moon through its month (2026, a full moon on 07-29 and a new moon on 08-12), each at an hour it is up.
-const MOONS = { crescent: ["21:50", "2026-07-17"], quarter: ["22:00", "2026-07-21"], gibbous: ["23:30", "2026-07-25"], full: ["23:30", "2026-07-29"],
+const MOONS = { crescent: ["21:50", "2026-07-17"], quarter: ["22:00", "2026-07-21"], gibbous: ["23:30", "2026-07-25"], full: ["01:30", "2026-07-30"],
   waning: ["01:30", "2026-08-04"], new: ["23:30", "2026-08-12"] };
 const PLANS = {
   test: [{ size: "desktop", weather: "clear", times: ["midday", "golden", "sunset", "night"], views: ["sky"] }],

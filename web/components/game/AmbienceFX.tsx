@@ -213,7 +213,8 @@ void main() {
   float u = clamp(head - len + aU * len, 0.0, 1.0);
   vec3 p = path(u, o, d, L, r), q = path(min(u + 0.01, 1.0), o, d, L, r);
   vec3 side = normalize(cross(normalize(q - p + vec3(0.0, 1e-5, 0.0)), normalize(cameraPosition - p)));
-  p += side * aSide * 0.034 * sin(aU * 3.1416);
+  // A thin stroke that stays about two pixels wide however far off it is (never a flickering hair).
+  p += side * aSide * (0.02 + 0.0025 * distance(cameraPosition, p)) * sin(aU * 3.1416);
   vA = smoothstep(0.0, 0.15, age) * smoothstep(1.0, 0.65, age) * iFade;
   vU = aU;
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
