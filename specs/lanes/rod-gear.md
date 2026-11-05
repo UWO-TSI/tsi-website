@@ -30,6 +30,24 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 7: David's rod data round 6 review (2026-11-04, verbatim; https://claude.ai/artifact/YSyC1PSg7s3yeftBuVcdJu)
+
+Approved: rg6-epic, rg6-passive, rg6-shop, rg6-stats, rg6-training-phone.
+- rg6-awaken (redo): "awakening needs animation and cut scene, like how when pokemon evlolve, same concept with rod"
+- rg6-quest (approve): "dont say nobody sells it,"
+- rg6-questions (redo): "epic awaken depends, stats change also depend on the rod, and its not all 200 800 some have solo awakenings. rod seller will be named Gary"
+- rg6-rodbox (approve): "remove the all top left"
+- rg6-traded (redo): "like should hit that it has potential the more you fish with it"
+- rg6-training (approve): "when awakened, rarity change and the rod design will have improvements"
+
+Build:
+1. **The awakening as a cutscene** (rg6-awaken), like a Pokémon evolution: the camera frames the rod, it glows and pulses, a burst, and it comes back in its new rarity's outline and an improved design (rg6-training: the rarity changes and the rod's model gets improvements at each awakening). Pitch it with clips; it only replaces the card once David approves.
+2. **Awakenings per rod** (rg6-questions): not every epic awakens at 200 and 800, stats don't all rise the same way, and some rods have a single awakening. Propose a per-rod table (thresholds, how many awakenings, which stats change and by how much) for David to mark.
+3. **The rod seller is named Gary.** Use the name wherever the seller speaks or is shown.
+4. The trade quest's text: don't say nobody sells it (rg6-quest).
+5. The rod box: remove "All" in the top left (rg6-rodbox).
+6. After the trade (rg6-traded): hint that the Training rod has potential that grows the more you fish with it.
+
 ## Round 6: David's rod data round 5 review (2026-11-04, verbatim; https://claude.ai/artifact/1sHjWWpEULGjw1m2rTgeF9)
 
 Approved: rg5-aura, rg5-bag, rg5-models, rg5-shelf, rg5-epics ("i will check": Riptide rare and Titanium epic, both crafted at the workbench; Tempest epic from a quest or event).
