@@ -29,6 +29,17 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 9: David's fishing round 8 review (2026-11-05, verbatim; https://claude.ai/artifact/HZ1DSnZgB2dCFaaWtMCh71)
+
+Approved: f8-board-deck, f8-board-phone, f8-icons-all, f8-icons-phone, f8-icons, f8-questions.
+- f8-board-close (redo): "move the lamp more to the left , remove the lanter, barrel crate in the way"
+- f8-board-wide (redo): "i should just  have a editor screen like minecraft creative for me to place everything"
+
+Build:
+1. The catch board area, from f8-board-close: move the lamp post further left, remove the lantern, and move or remove the barrel and crate that stand in the way of the board. Show before and after from r8's cameras (close, wide, deck, phone).
+2. The editor in f8-board-wide is its own lane (world-editor); don't build one here. In the report, say where the wharf props' positions live, so the editor lane can read them.
+3. Then get the lane ready to merge: merge origin/main, run vitest, tsc, eslint on touched files and `next build`, and report the results. The coordinator applies the prod migration `20261102031338_catalogue_seed.sql` before merging.
+
 ## Round 8: David's round 7 review (2026-11-04, verbatim; https://claude.ai/artifact/4iTHWu7zSStkHNk8K66tb6)
 
 Approved: f7-reel, f7-reel-bar, f7-hud-phone.
