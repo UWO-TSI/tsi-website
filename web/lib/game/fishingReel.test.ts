@@ -29,6 +29,31 @@ describe("fishing reel simulation", () => {
     }
   });
 
+  it("draws the bar and the fish on every frame between the 60 Hz steps, a press shown on the next frame", () => {
+    const state = createFishingReel(FISH.find(f => f.key === "fish_black_bass")!);
+    const random = seededRandom();
+    let held = 0, last = state.drawnBar;
+    for (let frame = 0; frame < 60; frame++) {
+      const stepped = state.elapsed;
+      advanceFishingReel(state, 1 / 120, true, 1, random);
+      if (state.elapsed === stepped) held++; // no step this frame: the fight itself stood still
+      if (state.drawnBar < 1 - state.barWidth) expect(state.drawnBar).toBeGreaterThan(last);
+      expect(state.drawnBar).toBeGreaterThanOrEqual(0);
+      expect(state.drawnBar + state.barWidth).toBeLessThanOrEqual(1);
+      expect(state.drawnFish).toBeGreaterThanOrEqual(0);
+      expect(state.drawnFish).toBeLessThanOrEqual(1);
+      last = state.drawnBar;
+    }
+    expect(held).toBeGreaterThan(20);
+    // A release on a frame with no step still turns the drawn bar's pull (a frame half a step after the last step).
+    advanceFishingReel(state, 1 / 120, true, 1, random);
+    if (state.remainder < 1 / 240) advanceFishingReel(state, 1 / 120, true, 1, random);
+    const before = { elapsed: state.elapsed, drawn: state.drawnBar };
+    advanceFishingReel(state, 0, false, 1, random);
+    expect(state.elapsed).toBe(before.elapsed);
+    expect(state.drawnBar).toBeLessThan(before.drawn);
+  });
+
   it("bounds both actors and finishes exactly once at caught or escaped", () => {
     const fish = FISH[0];
     for (const holding of [true, false]) {

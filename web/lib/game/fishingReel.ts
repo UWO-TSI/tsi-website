@@ -84,6 +84,9 @@ export function createFishingReel(fish: FishDef, boss = bossOf(fish.rarity), flo
     retargetAt: 0.6,
     elapsed: 0,
     remainder: 0,
+    /** Where the bar and the fish are drawn this frame: the last step carried on by the time since it (advanceFishingReel). */
+    drawnBar: 0,
+    drawnFish: 0.15,
     progress: boss ? BOSS.line : START_PROGRESS,
     tension: 0,
     inside: true,
@@ -160,6 +163,13 @@ export function advanceFishingReel(state: FishingReel, delta: number, holding: b
     if (state.progress === 1) state.result = true;
     else if (state.progress === 0) state.result = false;
   }
+  // Drawn between steps (round 7, David: "the current reel in is laggy and not smooth"): the fight steps at 60 Hz and a
+  // frame lands anywhere in a step, so drawing the last step held the bar still on some frames and jumped it two steps
+  // on others (every other frame on a 120 Hz screen). Carried on by the time since that step, with the press or release
+  // already in its pull, the bar and the fish move every frame and a press shows on the next one.
+  const r = state.remainder, pull = (holding ? HOLD_ACCEL : -GRAVITY) * (boss?.stage === "live" && boss.move === "dive" ? BOSS.diveHeavy : 1);
+  state.drawnBar = Math.max(0, Math.min(1 - state.barWidth, state.position + state.velocity * r + 0.5 * pull * r * r));
+  state.drawnFish = Math.max(0, Math.min(1, state.fishPosition + state.fishVelocity * r));
   return events;
 }
 

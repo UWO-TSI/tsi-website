@@ -54,7 +54,7 @@ export function useOrbitInput(pick = true) {
     const el = gl.domElement, doc = el.ownerDocument;
     const fine = window.matchMedia("(pointer: fine)").matches;
     const cursorCompute = get().events.compute;
-    let rightUpAt = -Infinity, selfExit = false;
+    let rightUpAt = -Infinity, selfExit = false, picks = "";
     // What's under the aim dot: R3F's hover run again from the dot (its last event; the moves under the lock are kept
     // from it), and the name of the first clickable thing hovered.
     const aimNow = () => {
@@ -69,7 +69,9 @@ export function useOrbitInput(pick = true) {
       setCaptureState(step.state);
       // In mouse-look a click picks from the aim dot outside combat (and nothing in the ruins); otherwise from the cursor.
       const aiming = step.state === "captured";
-      setEvents(aiming ? (picking.current ? { enabled: true, compute: aimAt } : { enabled: false }) : { enabled: true, compute: cursorCompute });
+      // Only when it changes: each setEvents is a new R3F store, and a click that asks for the lock and is refused sent three.
+      const next = aiming ? (picking.current ? "aim" : "none") : "cursor";
+      if (next !== picks) { picks = next; setEvents(aiming ? (picking.current ? { enabled: true, compute: aimAt } : { enabled: false }) : { enabled: true, compute: cursorCompute }); }
       if (prev === "captured" && !aiming) {
         // Leaving the dot: what it hovered is let go (the cursor's own moves hover from here).
         get().events.handlers?.onPointerLeave?.(new PointerEvent("pointerleave"));

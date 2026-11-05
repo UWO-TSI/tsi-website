@@ -216,7 +216,9 @@ const CLEARANCE = 0.8;
  * player (lib/game/occluders.ts).
  */
 export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: number, overview: Overview | null, scene?: FollowScene) {
-  const { camera } = useThree();
+  // The camera alone: the whole store would re-render the world that calls this (IslandScene) on every change to it
+  // (a click's event setup, the governor's pixel ratio), 40 ms of React each time (round 7's reel profile).
+  const camera = useThree(s => s.camera);
   useOrbitInput(!scene?.aim);
   const rig = useMemo(() => ({ ahead: LOOK_AHEAD, cut: 0, chest: new THREE.Vector3(), head: new THREE.Vector3(), last: new THREE.Vector3(NaN, 0, 0), vx: 0, vz: 0,
     seat: 0, seatEye: new THREE.Vector3(), seatLook: new THREE.Vector3(), from: new THREE.Vector3(), fromLook: new THREE.Vector3(), lastCam: new THREE.Vector3(), lastLook: new THREE.Vector3(),
