@@ -2,6 +2,21 @@
 
 Worktree `.claude/worktrees/tasting-book`, branch `game/tasting-book`, cut from `game/fishing-depth` at 0db249b4 (it needs that branch's new menu layout; fishing-depth merges to main first, then this one). Agent type `uwotsi-lane`. Dev port 3476.
 
+## Round 5: David's tasting book round 4 review (2026-11-04, verbatim; https://claude.ai/artifact/M4Z2KdpsLFTQwTuTgakqiY)
+
+Approved: tb4-choice, tb4-leave, tb4-menu-down, tb4-menu-open, tb4-questions, tb4-tank-prompt.
+- tb4-look (redo): "make the menu on the table actually our menu"
+- tb4-nigiri (approve): "make design of the menu more intuitive, we have teh first page which is offering new fish theres a button that gives them new fish from your inv , and the pages after are temp boosts that unlcok recipe based on the fishes you provide for the unlocking new recipes"
+- tb4-seat (redo): "make reminder less bold and in your face"
+- tb4-tank-given (redo): "why are you back on the old ui"
+- tb4-tank (redo): "change ui"
+
+Build:
+1. The menu lying on the counter is our real menu (the teahouse menu's look), not a stand-in card (tb4-look). Model it in headless Blender if it needs a model.
+2. The menu's design, more intuitive (tb4-nigiri): the first page offers new fish, with a button that gives the bar a new fish from your bag; the pages after are the temporary boosts, whose recipes unlock from the fish you've given.
+3. The seated reminder quieter: smaller, lighter, not in your face (tb4-seat).
+4. The tank sheet and the after-give view on the current flat UI kit (`web/components/gui/flat`, the design bible), not the old UI (tb4-tank, tb4-tank-given: "why are you back on the old ui").
+
 ## Round 4: David's tasting book round 3 review (2026-11-04, verbatim; https://claude.ai/artifact/9TZdz2Gtq8aNbN1AiqVaJQ)
 
 Approved: tb3-book, tb3-buff, tb3-dishes, tb3-learnt, tb3-numbers, tb3-questions (all four picks: count cooked slots for the full-water prize, lower the permanent luck cap to +20%, one vocabulary on the menu, the buff on the right edge half faint).
