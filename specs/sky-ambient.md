@@ -1,4 +1,4 @@
-# Sky, wind and ambient effects (lane sky-ambient, round 1)
+# Sky, wind and ambient effects (lane sky-ambient)
 
 David, 2026-11-04: "i want you to run a lane and artifact process for game skybox and ambiant, so sky wind, effects etc".
 
@@ -8,6 +8,111 @@ their switches get deleted, and the pick is built properly in round 2.
 
 Evidence: `specs/evidence/sky-ambient/r1/` (ids `sky1-*`). Boards first: `sky1-board-day.jpg`,
 `sky1-board-weather.jpg`, `sky1-board-today.jpg`, `sky1-board-phone.jpg`.
+
+## R2. Round 2: the sky built properly (2026-11-05)
+
+David, round 1: "i want you take the sky design seriously because thats where the feeling comes from and the
+lighting", "use proper sky box and design techniques", "all the clounds are ugly and need proper redesign", "the stars
+should be shiny with subtle sparkling animation", "moon has to be responsive to moon cycle", "wind swirls too bold,
+less opacity and faster and better placement logics"; on the title: the lights "isnt a hard cut off, rather the glow
+fades very softly so it doesnt look like yellow circles". C's direction stands. Nothing ships until David marks it.
+Evidence `specs/evidence/sky-ambient/r2/` (ids `sky2-*`), boards first: `sky2-board-day.jpg`, `sky2-board-weather.jpg`,
+`sky2-board-moon.jpg`, `sky2-board-phone.jpg`.
+
+### What was blurry
+
+Three things: the clouds and stars were painted sheets (1024 and 2048 px) stretched over an overhead projection, so
+they magnified into mush at the game's half-resolution pixel finish; the sky stopped at true horizontal while the
+curved world bends the sea some twenty degrees below it, so a flat band of fog colour filled the gap (round 1's
+"cream"); and every colour was a phase table's flat gradient. The new sky uses no picture at all.
+
+### How it is built (L/atmosphere.ts, L/skyShader.ts, C/SkyDome.tsx)
+
+| Piece | Technique |
+|---|---|
+| The air | Earth's atmosphere by single scattering (Rayleigh, Mie, ozone; Bruneton's and Hillaire's constants, ozone doubled for C's violet twilight), integrated per vertex of a dome whose rings crowd the horizon, phase functions per pixel, plus a skylight term so twilight and the Earth's shadow stay blue. The real sun's height and bearing over London, Ontario make the blue noon, the gold and rose low sun, the Earth's shadow with the belt of Venus at dusk, the violet twilight. An exposure that half adapts as the sky darkens, a white balance and saturation fitted so noon lands on the look's picked #4a9de0 / #bfe0f2 (tested), a soft clip under white |
+| The skyline | The dome bends down with the world (curvedWorld) as far as the sea reaches, so the sky meets the sea: no fog band |
+| The light | The light's sky colours (the background, the fog, the water's mirror, the environment light, the Light tier's gradient) come from the same atmosphere for the real sun (lookPreset `realSky`), so the island and the dome agree all day; the key and fill stay the phase table's |
+| Sun | A disc 2.3° across, limb darkened, its edge a pixel wide, its colour the sun through the air (white to orange) |
+| Moon | Meeus's lunar theory (place, rising, phase; tested on the 2024-04-08 eclipse and the 2024-09-18 full moon). Drawn as a sphere the real sun lights, so the phase and the tilt of the terminator are the calendar's; maria; a quiet dark limb with earthshine; a pale disc by day. It scatters light into the air by its phase (a full moon makes a blue night, a new moon a dark one), washes out the faint stars, and sets the night key's strength (`moonKey`: 0.45 with no moon to 1 for a high full moon) |
+| Stars | Hashed on the celestial sphere turned by the sidereal time (the sky wheels round the pole star, tested), two layers: many faint, a few bright with a soft four-point sparkle along the screen that slowly breathes; each twinkles on its own beat, more near the skyline; a gaussian a pixel wide at any resolution; the Milky Way along the real galactic plane with dust lanes; about five shooting stars a minute round the whole sky (one or two in a view); the title's `uStarry` kept |
+| Cumulus | Analytic: one cloud or none per 2 km square, a cluster of six balls cut flat at a 1.5 km floor, traced per pixel (walk the squares the ray crosses, ray-ball tests), the balls' normals blended into one soft body with creases between lobes, a little cauliflower texture, self shadow toward the sun, the sun's light through the air (gold to rose, and still on them for a degree after sunset), the sky's light from above and the skyline's below, a silver lining toward the light, haze with distance, a pixel-wide soft silhouette. Fair-weather clouds thin out after dark |
+| Cirrus, overcast | Cirrus streaks 7 km up that stay lit about three degrees past sunset; a mottled grey deck and greyed, darkened cumulus under overcast, the sun's direct light taken away (rain is grey, snow paler, fog a hazy sky) |
+| Weather | Cover, size, grey, cirrus, haze and drift per weather, eased (never switched) |
+
+### Lights, swirls
+
+- **Lamp and firefly glow** (fixed in the world, so the title gets it): the shared glow (lib/game/glow.ts `softGlow`) is a
+  hot core with a long tail that reaches nothing at its rim with no slope left, 128 px and dithered; the lamp halos are
+  camera-facing quads lifted toward the camera past the lamp's head (the glass never cuts them), white-hot at the core,
+  amber outside, a little taller than wide, breathing with the flame; the ground pools and the fireflies use the same
+  soft glow (the fireflies' painted ring sprite is gone).
+- **Wind swirls**, windy days only (AmbienceFX `WindSwirls`, worldFx `swirlSpots`, `swirlAge`): over the tree crowns,
+  along the shoreline and across open ground, each spot its own swirl now and then on the world clock (every client
+  sees the same), none within 7 of the camera; 0.42 opacity fading down the tail (round 1: 0.75), 2.2 s each (round 1:
+  3.4 s), a stroke about two pixels wide at any distance.
+
+### Cards (evidence under `r2/`)
+
+| Card | Shows | Evidence |
+|---|---|---|
+| sky2-day | Dawn to night on the beach (the sky view toward the sun, the island view, the play view) | `sky2-board-day.jpg`, `sky2-day-desktop-clear-*`, `sky2-clip-day-desktop.mp4` (the whole day in 22 s), `sky2-clip-golden-desktop.mp4`, `sky2-clip-sunset-desktop.mp4` |
+| sky2-clouds | The new cumulus by day, gold and rose at the low sun, grey at night | the day board, `sky2-crisp-clouds-desktop.jpg` (a 2× crop), the golden and sunset clips |
+| sky2-night | Stars, sparkle, the Milky Way, a shooting star, a full moon night and a new moon night | `sky2-day-desktop-clear-night-*`, `sky2-crisp-stars-desktop.jpg`, `sky2-clip-night-desktop.mp4`, `sky2-clip-night-new-desktop.mp4` |
+| sky2-moon | The moon through July and August 2026: crescent, first quarter, gibbous, full, waning, new | `sky2-board-moon.jpg`, `sky2-moon-desktop-clear-*`, `sky2-crisp-moon-desktop.jpg` |
+| sky2-weather | Rain, snow, fog and wind at midday, sunset and night | `sky2-board-weather.jpg`, `sky2-weather-desktop-*`, `sky2-clip-rain-desktop.mp4`, `sky2-clip-snow-desktop.mp4`, `sky2-clip-fog-desktop.mp4` |
+| sky2-wind | The swirls on a windy day over the meadow's trees and along the shore | `sky2-clip-wind-desktop.mp4`, `sky2-clip-wind-shore-desktop.mp4`, `sky2-clip-wind-phone.mp4` |
+| sky2-glow | The plaza's lamps and the fireflies at dusk and night | `sky2-lamps-desktop-clear-*`, `sky2-glow-crop-desktop.jpg`, `sky2-glow-crop2-desktop.jpg`, `sky2-clip-lamps-desktop.mp4`, `sky2-clip-lamps-phone.mp4` |
+| sky2-phone | The day on a phone, sky and play views, and rain and wind | `sky2-board-phone.jpg`, `sky2-phone-phone-*`, `sky2-phoneweather-*`, `sky2-clip-{day,sunset,night,lamps,wind}-phone.mp4` |
+
+Every clip has a `-poster.jpg`.
+
+### Cost (back to back against main a8a03985, v2, 24 bots, measurement builds)
+
+| | High: frame / p95 / CPU ms | High: draws / triangles | Lite: frame / p95 / CPU ms | Lite: draws / triangles |
+|---|---|---|---|---|
+| This branch | 4.70 / 7.20 / 4.10 | 357 / 746.8k | 2.90 / 5.40 / 2.60 | 284 / 556.1k |
+| main | 4.80 / 7.20 / 4.20 | 358 / 743.4k | 2.90 / 5.40 / 2.70 | 282 / 556.5k |
+
+The dome's own share (world bench `domeOff`, measured on main before building and again after): nothing measurable
+at the follow camera on either; with sky in view about 0.1 ms GPU with the pixel finish (main about 0) and about
+0.3 ms at full resolution (main about 0). One draw, 5,952 triangles (main 3,072). About 50 MB less video memory (the
+COZY sheets and the star sheet deleted). Load average 3.5 to 7 through the runs: not a quiet machine.
+`specs/perf/effects-cost.md` "The sky", raw runs in `r2/cost/`.
+
+### Deleted
+
+The COZY Luxury dome and its seven sibling cloud shaders (`lib/game/skyVariants.ts`), the 20 painted layers in
+`public/assets/sky/layers/` (5 MB on disk), `scripts/preview-sky.mjs`, the tune bench's sky specimen and the `sky` block
+of `lib/game/tuning.ts`, round 1's `?sky=A|B|C` directions and their shader block, `skyLab.moonPhase` (now
+`atmosphere.moonPosition`), the lab's swirls (now `WindSwirls`), the fireflies' painted glow sprite.
+
+### Questions for David (round 2)
+
+| Question | Pick |
+|---|---|
+| The night's key light: only its strength follows the moon (built), or its direction too (shadows swing with the real moon, a moonless night lit from overhead)? | Strength only |
+| Fair-weather cumulus thin out after dark, as real ones do: keep? | Keep |
+| The moon is drawn about four times its real size so it reads at the pixel finish: bigger, smaller? | As built |
+| `?time=dawn` previews 45 minutes before sunrise, which is now the blue hour, not pink: move the preview nearer sunrise? | Move it to 20 minutes before |
+| Shooting stars about five a minute round the sky (one or two in a view): right? | Yes |
+| The twilight's violet comes from doubling the ozone (C's palette): keep, or the measured ozone (a bluer twilight)? | Keep |
+| Round 1's approved motes (golden hour) and the one shared wind module are not in the game yet: round 3? | Round 3 |
+| Ambient sound beds (round 1, question 8): still open | CC0 or synthesised, round 3 |
+
+### Not verified
+
+A real phone's GPU (the phone shots are headless Chrome at 390 × 844 on the Mac mini); the Light tier's gradient and
+the applicant island (both take the new sky colours through `lookToLight`; neither was shot); the title screen itself
+(title-r2's staged scenes are not merged here; it shares `SkyDome`, `uStarry` and `LampGlow`); swirls across two clients
+(deterministic by the world clock, unit tested); the moon's place beyond the tests (about a degree).
+
+### Merging with title-r2
+
+`lib/game/skyShader.ts` conflicts (title-r2 edits the old file): take this branch's file whole; it keeps
+`skyUniforms.uStarry` with the same meaning (stars brighter and twinkling more, clouds thinned 60%), so the title's
+`TitleScene.tsx` needs no change. `components/game/AmbientProps.tsx`: both sides add imports (title-r2 `NEW_LAMPS`,
+this branch `curvedWorld`) and edit different functions (title-r2 `Lanterns` and `lampParts`, this branch `LampGlow`).
 
 ## 1. What the player sees of the sky today
 
@@ -173,6 +278,7 @@ within the bench's noise (±0.2 ms frame, ±6 draws from the bots moving); the p
 
 ## 8. How to see them (dev server)
 
-`/lab/island?sky=A|B|C&wind=calm|breeze|storm&amb=motes,swirls&skytilt=16&skyface=sun|moon`, with `?at=HH:MM&date=`
-and `?weather=`. At run time `window.__sky.set({...})`, `__sky.at("20:40", "2026-07-29")`, `__sky.view({ yaw, pitch,
-zoom })`. Shots: `specs/evidence/sky-ambient/shoot.mjs` (stills) and `clip.mjs` (mp4), headless.
+Round 2: `/lab/island?skytilt=16&skyface=sun|moon&wind=calm|breeze|storm&amb=motes`, with `?at=HH:MM&date=` and
+`?weather=` (the swirls come with `?weather=wind`). Round 1's `?sky=A|B|C` is gone. At run time `window.__sky.set({...})`,
+`__sky.at("20:40", "2026-07-29")`, `__sky.view({ yaw, pitch, zoom })`. Shots: `specs/evidence/sky-ambient/shoot.mjs`
+(stills, `PLAN=day|weather|phone|phoneweather|moon|lamps`) and `clip.mjs` (mp4), headless.

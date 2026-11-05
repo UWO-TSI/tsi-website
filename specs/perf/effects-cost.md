@@ -37,3 +37,15 @@ watch.**
 | Movement juice (jump, land, dash, slide, glide, splash) | +1 draw, +0.3k triangles, +0.06 ms | Within | – |
 | The bite's "!" by tier (fish-tiers, 2026-10-27) | 0 draws: a DOM label in the label layout (the rig's existing slot); a legendary bite adds 30 short-lived DOM sparks, a divine 48 plus a beam, rays and two rings, all finite (under 2.2 s), only on your own bite. The legendary and divine bite also burst the catch's crown (fishLeaps) once: the existing pool | Within | – |
 | Boss creatures (fish-tiers, behind NEXT_PUBLIC_FISH_BOSSES, off) | 0 when the flag is off (not mounted). On: two placeholder groups of spheres (about 21 meshes, shared materials, no shadows) parked below the world and frustum-culled until a boss surfaces | Not measured with the flag on | Merge each placeholder into one mesh when real models replace them |
+
+## The sky (sky-ambient round 2, 2026-11-05)
+
+The dome rebuilt (single-scattering atmosphere per vertex, sun, moon, stars and ball-cluster cumulus per pixel, drawn
+at the far plane after the opaque meshes so only sky pixels shade), measured against main a8a03985 back to back on
+the v2 scene, 24 bots, measurement builds (`specs/evidence/sky-ambient/r2/cost/`). `perf:check`: High 4.70 / 7.20 /
+4.10 ms against main's 4.80 / 7.20 / 4.20, 357 against 358 draws; Lite 2.90 / 5.40 / 2.60 against 2.90 / 5.40 / 2.70.
+The dome's own share (world bench `domeOff`, 3 valid pairs each): at the follow camera nothing measurable on either
+branch; with a band of sky in view (pitch 0.35) about 0.1 ms GPU with the pixel finish (main's about 0), about 0.3 ms
+GPU at full resolution (main's about 0); the main thread unchanged. One draw as before, 5,952 triangles (main's
+3,072). The five COZY cloud sheets and the 2048 star sheet are gone: about 50 MB less video memory. Wind swirls, windy
+days only: one more draw of up to 14 strips. The lamp halos stay one draw (instanced quads in place of points).

@@ -51,27 +51,45 @@ Build (a review page again, nothing ships until David marks it):
 
 ## Status
 
-Round 1 done (head: see the last `[build]` commit on `game/sky-ambient`; report has the SHA). Nothing ships; awaiting David's marks.
-- Audit, three sky directions (A painted, B toon, C storybook), one shared wind, three ambient pitches (shooting stars
-  and twinkle, wind swirls, light motes): `specs/sky-ambient.md`. Pick: C, the shared wind, all three ambient pitches.
-- Switches, dev only: `?sky=A|B|C`, `?wind=calm|breeze|storm`, `?amb=motes,swirls`, `?skytilt=`, `?skyface=sun|moon`,
-  `window.__sky` (lib/game/skyLab.ts, components/game/SkyLab.tsx; shader block `SKY_LAB` in lib/game/skyShader.ts;
-  `WIND_LAB` read in GrassField; `TREE_LEAN` in modelMaterials, compiled only on a `?wind=` load).
-- Evidence `specs/evidence/sky-ambient/r1/` (124 stills, 18 clips, 4 boards `sky1-board-*.jpg`).
-- Gates: tsc clean; full vitest 399 files / 3759 tests passed, no load timeouts; eslint clean on changed files;
-  perf:check v2 branch = main back to back (4.80 / 3.00 ms, 355 vs 357 draws high, 280 both lite).
+Round 2 built, awaiting David's marks (head: the last `[build]` commit on `game/sky-ambient`; the report has the SHA).
+Nothing ships until he marks it. Spec `specs/sky-ambient.md` §R2 (what was blurry, the techniques, cards sky2-day,
+-clouds, -night, -moon, -weather, -wind, -glow, -phone, cost, questions, not verified, merging with title-r2).
+- The sky: `lib/game/atmosphere.ts` (single scattering, grade, moon by Meeus, star frame; tests), `lib/game/skyShader.ts`
+  (dome: per-vertex air, sun, moon sphere, stars, Milky Way, meteors, ball-cluster cumulus, cirrus, overcast deck,
+  bent with the world, at the far plane), `components/game/SkyDome.tsx` (per frame: sun, moon, stars, weather ease,
+  drift; every 0.5 s the exposure and the clouds' light). The light's sky colours come from it (`lookPreset realSky`,
+  `moonKey` for the night key's strength; `useIslandConditions` gives `moon` and `skyAt`; `sunPath skyInstant`).
+- Glow: `lib/game/glow.ts softGlow` and the 128 px dithered texture; `AmbientProps LampGlow` halos as lifted billboards;
+  fireflies on the soft glow.
+- Swirls: `AmbienceFX WindSwirls`, `worldFx swirlSpots`/`swirlAge` (tests), mounted on `?weather=wind` days.
+- Deleted: COZY dome and `skyVariants.ts`, `public/assets/sky/layers/`, `scripts/preview-sky.mjs`, the tune bench's sky,
+  `tuning.sky`, `?sky=A|B|C`, the lab swirls.
+- Evidence `specs/evidence/sky-ambient/r2/` (74 stills with 4 boards and 5 crops, 16 clips each with a poster, `cost/`).
+- Gates: tsc clean; vitest 400 files / 3765 tests passed, with and without NEXT_PUBLIC_GAME_WORLD=new; eslint clean on
+  the touched files. perf:check back to back with main a8a03985: High 4.70 / 7.20 / 4.10 vs 4.80 / 7.20 / 4.20 ms,
+  357 vs 358 draws; Lite 2.90 vs 2.90 ms, 284 vs 282 draws.
 
 ## Next
 
-1. Wait for David's marks on the review page (the coordinator relays them here, verbatim, under David's decisions).
-2. Delete the losing directions and every switch that goes with them (`SKY_LAB` blocks, `?sky=` values, unused
-   `amb` keys), then build the pick properly: if C, move its low-sun colours into lookPreset so fog, water and dome
-   agree; the shared wind as one module replacing `WIND_DIR`, `WIND_SPEED`, `TREE_WIND`'s amplitudes, `CLOUD_SPEED`
-   and the dome drift (rain slant, leaves, mist, cloud shadows read it); swirls placed on a world tile like the rain
-   (the pitch places them round the view focus, which breaks the world-state rule, look spec §7.1).
-3. Merge `game/title-r2`'s `uStarry` once it lands on main, so the title and the game share one twinkle.
+1. Wait for David's marks (the coordinator relays them here, verbatim, under David's decisions).
+2. On merge with title-r2: take this branch's `lib/game/skyShader.ts` whole (it keeps `skyUniforms.uStarry`).
+3. Round 3 candidates (from the questions): the motes at golden hour, the one shared wind module (lane file round 1
+   Next 2), the dawn preview nearer sunrise, ambient sound beds.
 
 ## Tools and gotchas
+
+- Round 2 shots: `PORT=3480 PLAN=day|weather|phone|phoneweather|moon|lamps node specs/evidence/sky-ambient/shoot.mjs
+  <out>` (lamps: `SPOT=40,52 LAMP_YAW=-1.57`); clips `CLIPS="day night:phone ..." node .../clip.mjs <out>` (`day` is a
+  lapse of the world clock, 05:30 to 23:50; it records for about 55 s: speed it to 22 s with ffmpeg `setpts`).
+  Boards: `python3 specs/evidence/sky-ambient/board.py <out.jpg> <cols> <cell_w> <files...>`.
+- A held dev server for iterating: `LANE=game/sky-ambient withlock.sh devserver specs/evidence/sky-ambient/serve.sh
+  $PWD/web dev 3480 sleep 1500` in the background, then shoot against it; end it by killing its `sleep` (it frees the
+  lock). With swap over 9 GB the heavy lock waits for it: no tsc or vitest while it runs.
+- `lib/game/atmosphere.ts` has no imports, so node runs it directly: a CPU panorama of the sky (radiance through
+  `skyExposure` and `gradeSky`) is the fastest way to tune colours before a browser.
+- A GLSL error leaves the sky a flat colour (the background) and the shoot prints nothing: functions must be declared
+  before they are used. The dome's own mesh is wound the other way from SphereGeometry: it draws DoubleSide.
+- The dome sits at the far plane (`z = w * 0.999999`) with renderOrder 1000; anything opaque drawn later still covers it.
 
 - Shots: `PORT=3480 PLAN=today|day|weather|phone|phoneplay|test node specs/evidence/sky-ambient/shoot.mjs <out>`
   (one load per weather and size; sky, clock and view switch at run time); clips: `CLIPS="name[:phone] ..." node
