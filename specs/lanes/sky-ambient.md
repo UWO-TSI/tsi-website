@@ -2,6 +2,43 @@
 
 Worktree `.claude/worktrees/sky-ambient`, branch `game/sky-ambient`, cut from origin/main f3d24212. Agent type `uwotsi-lane`. Dev port 3480.
 
+## Round 3: David's sky round 2 review (2026-11-05, verbatim; https://claude.ai/artifact/Ui1UYHzRuhoTiUYCefzJJR)
+
+Approved: sky2-moon, sky2-phone.
+- sky2-clouds (redo): "cloud needs remodeling and retexture"
+- sky2-cost (redo): "performance not as good"
+- sky2-day (redo): "clouds model look horrible, i wanna know whats the best way for good looking clouds without sacrificing too much performance, before it was a 2d cloud incorperated in the sky, is there anyway to have the cloud feel 3d and react the lighting while not ruining the performance"
+- sky2-glow (approve): "a lot better"
+- sky2-golden (redo), no note (the clouds are in every golden-hour shot)
+- sky2-night (redo): "looks a lot betterm but the perspective of the sky look slightly weird idk how to explain it, and is it possibe to have the pixel pass be less strong on the sky, or do you think we should keep it the same in order to perserve simplicity and perforamnce"
+- sky2-questions (approve): "clouds redone and reimagined which direction to go 3d or 2d art or alternative,"
+- sky2-weather (redo): "cloud needs redone, rain snow fog looks good"
+- sky2-wind (redo): "its so random rn and it doesnt have like any proper logic behind it, it shouldnt feel just slapped on, so more faint, and have different types of animation, cuz they are all just swirels and it should blow the same way as the wind and squire like like 2 second and 0.3 opacity"
+
+Build:
+1. Clouds, reimagined. Pitch at least three directions side by side, each with clips at day, golden hour, sunset and in weather, plus its cost with the sky in view:
+   - (a) 2D clouds in the sky, round 1's direction done crisp under the pixel pass, shaded by the sun so they read as lit volumes;
+   - (b) stylised 3D cloud models with real lighting;
+   - (c) an alternative, for example clouds built in headless Blender and rendered to lit sprites for several sun angles, or a cheap 2.5D noise layer in the sky shader.
+   - Answer David's question in a sentence: the best way to get good-looking clouds that feel 3D and react to the light without hurting performance. Give a pick.
+   - Never fetch art or textures. David supplies references; ask for them on the questions card if they'd help.
+2. Performance ("performance not as good"):
+   - Measure where David would notice it: with the sky in view, at the title camera and at the follow camera, on high and lite, on the GPU (not software rendering), against main.
+   - Find what got slower and fix it.
+   - Check that the recorded clips play smoothly; a choppy clip reads as a slow game.
+3. Night:
+   - Find what makes the sky's perspective look off (the dome's projection, star size or spacing toward the horizon, the horizon's height against the sea, the Milky Way's curve) and fix it.
+   - David asked about a lighter pixel pass on the sky. The coordinator's answer: it's possible at almost no cost, because the post pass can tell sky pixels apart by depth. Show the current strength and a lighter sky side by side, and give a pick.
+4. Wind:
+   - Tie the effects to the shared wind (its direction and strength), and place them by a rule: where wind would show. They must never look random.
+   - Use several kinds of animation, not only swirls: for example streaks, gusts over grass, blown leaves.
+   - Each lasts about 2 s at about 0.3 opacity.
+5. Approved and kept:
+   - The soft glow ("a lot better").
+   - Rain, snow and fog ("rain snow fog looks good").
+   - The sky2-questions picks: night light follows moon strength only; fair-weather clouds thin after dark; the moon as built; the dawn preview 20 min before sunrise; about five shooting stars a minute; the ozone kept.
+   - Also from those picks: round 1's golden-hour motes, the shared wind, and ambient sound (CC0 or synthesised, listed in SOURCES.md) come in this round.
+
 ## Round 2: David's round 1 review (2026-11-04, verbatim; https://claude.ai/artifact/MPx8YzktucAxuzvvRQyUor)
 
 Approved: sky1-motes, sky1-today, sky1-weather-1, sky1-weather-2, sky1-wind-today, sky1-wind.
