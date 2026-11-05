@@ -55,7 +55,7 @@ export const CATALOGUE: CatalogueEntry[] = [
   // Tempest rods are never sold (FOUND_ONLY): their prices are only their nominal value.
   rodRow("rod-precision", "Precision rod", 1000, "basic", "A wide catch bar and a long bite window.", 1001),
   rodRow("rod-carrot", "Carrot rod", 3000, "mid", "A thick carrot of a rod. Fish can't help but nibble.", 1002),
-  rodRow("rod-training", "Training rod", 2500, "mid", "Traded for, never sold. A plain rod. Keep fishing with it.", 1003),
+  rodRow("rod-training", "Training rod", 2500, "mid", "Gary's trade for your Flimsy. Plain for now, with potential: the more you fish with it, the more it grows.", 1003),
   rodRow("rod-tempest", "Tempest rod", 16000, "premium", "An epic rod that comes with a storm. Never sold.", 1004),
   e("bobber-lucky", "Lucky bobber", "tool", 600, { tier: "premium", slot: "bobber", catalogue_ref: "bobber_lucky", description: "A bobber for your rod: +20 luck, so rarer fish bite more often." }),
   e("net-basic", "Bug net", "tool", 100, { tier: "basic", slot: "net" }),
@@ -205,7 +205,7 @@ export const TAUGHT_TOOL_SLUGS = ["net-basic", "shovel-basic", "pickaxe-basic"];
 /** Tools that did nothing in the shop (David 2026-10-27, v1-gameplay "some shop items did nothing"): the basic rod
  * (no tool behind it: the flimsy rod is everyone's) and the tier 2 net and shovel (no tier effect yet). Off sale. */
 export const HOLLOW_TOOLS = ["rod-basic", "net-mid", "shovel-mid"];
-/** Rods nobody sells: the Training rod (traded for, lib/game/rods.ts TRAINING) and the Tempest rod (a quest or event, not built yet). Off sale; owners keep them. */
+/** Rods off the shelf: the Training rod (traded for, lib/game/rods.ts TRAINING) and the Tempest rod (a quest or event, not built yet). Off sale; owners keep them. */
 export const FOUND_ONLY = ["rod-training", "rod-tempest"];
 /** The placeholder tote and sticker pack, which aren't real merch (David, 2026-10-22: "Take both off sale"). */
 export const PLACEHOLDER_MERCH = ["merch-sticker-pack", "merch-tote"];

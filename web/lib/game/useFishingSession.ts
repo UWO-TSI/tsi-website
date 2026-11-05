@@ -15,7 +15,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AudioManager } from "./audio";
 import { castLine, claimRaid, collect, landCatch, localCollections, localRecord, mergeWithLocal, type CatchAnswer } from "./collections";
 import { RARITY_LABEL } from "@/lib/rarity";
-import { TRAINING, inPlay, rodByKey, rodByTier, stageAt, type RodTier } from "./rods";
+import { ROD_SELLER, TRAINING, inPlay, rodByKey, rodByTier, stageAt, type RodTier } from "./rods";
 import type { CatchReply } from "@/lib/collections/service";
 import { rollFishFor } from "./peaceful";
 import type { WaterType } from "./fishingSpots";
@@ -449,7 +449,7 @@ export function useFishingSession({ onActiveChange, collectionScope, zoneOverrid
 }
 
 /**
- * What a land did to its rod (rod_catches): the Flimsy rod's quest catch starts the rod seller's quest (a toast; the
+ * What a land did to its rod (rod_catches): the Flimsy rod's quest catch starts Gary's quest (a toast; the
  * tracker re-reads the counts), and a rod's awakening lands as a surprise (David 2026-11-04: "its supposed to be
  * sudden"): the reward card in the rarity its stats now match, and the rod's stats re-read.
  */
@@ -458,7 +458,7 @@ export function rodNews(reply: CatchReply) {
   if (!reply.rod || !r) return;
   const n = reply.rod.catches, stage = stageAt(r, n);
   if (r.key === TRAINING.quest.rod && n === TRAINING.quest.catches) {
-    window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: "A new quest: the rod seller at the tackle shop wants a word." } }));
+    window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `A new quest: ${ROD_SELLER} at the tackle shop wants a word.` } }));
   } else if (stage > stageAt(r, n - 1)) {
     const looks = r.awakenings[stage - 1].looks;
     window.dispatchEvent(new CustomEvent("tsi:gift", { detail: { key: r.key.replace("_", "-"), name: r.name, rarity: looks, // its shop row: the icon (lib/game/reward.ts madeIcon)

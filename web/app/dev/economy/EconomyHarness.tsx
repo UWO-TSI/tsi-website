@@ -3,15 +3,18 @@
 /**
  * /dev/economy?view=shop|overlay|bag|sell|inventory|wallet|admin|unlock[&tab=specials][&section=items|merch|rods: the shop
  * overlay's two answers, or the rod shop][&found=0: before the Training rod is found][&tide=1: a Tidewarden rod in the bag]
+ * /dev/economy?view=awakening[&rod=rod_training][&stage=1]: a rod's awakening cutscene (RodAwakening), again on Nice!
  */
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { InventorySheet, SellSheet, ShopBody, WalletSheet } from "@/components/economy/EconomySheets";
 import MerchFulfilment from "@/components/economy/MerchFulfilment";
 import ShopOverlay from "@/components/economy/ShopOverlay";
 import { BagSheet } from "@/components/game/Bag";
+import RodAwakening from "@/components/game/RodAwakening";
 import RodSellerTalk from "@/components/game/RodSellerTalk";
 import RewardCard from "@/components/game/RewardCard";
 import { rodNews } from "@/lib/game/useFishingSession";
+import { rodByKey } from "@/lib/game/rods";
 import { merchViewer } from "@/components/game/ShopCounter";
 import { memoryEconomyStore } from "@/lib/wallet/memoryStore";
 import { memoryEconomyTransport } from "@/lib/wallet/memoryTransport";
@@ -91,7 +94,9 @@ export default function EconomyHarness() {
       {view === "admin" ? <div style={{ maxWidth: 1000, margin: "0 auto" }}><MerchFulfilment transport={t} /></div> : null}
       {/* An awakening, as the fishing session shows it: the Training rod's 50th fish (?view=awaken) */}
       {view === "awaken" ? <Awaken /> : null}
-      {/* The rod seller's ask (use with &found=0): ?view=trade */}
+      {/* The awakening as a cutscene, the pitch (David's review): ?view=awakening&rod=rod_training&stage=1 */}
+      {view === "awakening" ? <Cutscene rod={q.get("rod") ?? "rod_training"} stage={Number(q.get("stage") ?? 1)} /> : null}
+      {/* Gary's ask (use with &found=0): ?view=trade */}
       {view === "trade" ? <><RodSellerTalk open onClose={close} transport={t} /><RewardCard /></> : null}
     </main>
   );
@@ -103,4 +108,11 @@ function Awaken() {
     return () => window.clearTimeout(t);
   }, []);
   return <RewardCard />;
+}
+
+function Cutscene({ rod, stage }: { rod: string; stage: number }) {
+  const [n, setN] = useState(0);
+  const r = rodByKey(rod);
+  if (!r || !r.awakenings[stage - 1]) return <p style={{ padding: 20 }}>No awakening {stage} on {rod}.</p>;
+  return <RodAwakening key={n} rod={r} stage={stage} onClose={() => setN(x => x + 1)} />;
 }

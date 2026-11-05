@@ -20,7 +20,7 @@ import f from "./flat.module.css";
 
 /** The kit's class names, for the odd surface that lays out its own content in the flat style. */
 export { f as flatStyles };
-export { CardOverlay, FLY_MS, FlyIn, KEYBOARD, KeyBoard, PaperField, PrintedCard, QUEST_CHECK_MS, QuestCheck, SlotPop, Spotlight, boardLabel, type BoardKey } from "./moments";
+export { AWAKEN_MS, Awakening, CardOverlay, FLY_MS, FlyIn, KEYBOARD, KeyBoard, PaperField, PrintedCard, QUEST_CHECK_MS, QuestCheck, SlotPop, Spotlight, boardLabel, type AwakenPhase, type BoardKey } from "./moments";
 export { CountUp, WalletSlot } from "./wallet";
 export { KEYWORD_KINDS, KEYWORD_LIBRARY, Keyword, KeywordLine, keywordParts, type KeywordKind, type LinePart } from "./keyword";
 export { ProgressCard } from "./ProgressCard";
@@ -275,14 +275,17 @@ export function DetailView({ stage, onBack, backLabel = "All", steps, hint = "Dr
   rarity?: Rarity | null;
   /** Small things in the stage's bottom-right corner (a rod's bait and bobber slots). */
   corner?: ReactNode;
-  /** Quiet paging (a rod's box, David 2026-11-04): back without its arrow, previous and next as faint small chevrons at the sides. */
+  /**
+   * Quiet paging (a rod's box, David 2026-11-04: "remove the all top left"): no back on the stage (the rail goes back),
+   * previous and next as faint small chevrons at the sides.
+   */
   quiet?: boolean;
 }) {
   return <div className={f.detail} data-testid={testId}>
     <div className={f.stageWrap} {...rarityEdge(rarity)}>
       {stage}
       {corner ? <span className={f.stageCorner}>{corner}</span> : null}
-      <button type="button" className={f.back} onClick={onBack}>{!quiet && <ArrowLeft size={16} aria-hidden />}{backLabel}</button>
+      {!quiet && <button type="button" className={f.back} onClick={onBack}><ArrowLeft size={16} aria-hidden />{backLabel}</button>}
       {steps && quiet && <>
         <button type="button" className={f.faintStep} data-side="prev" aria-label={steps.prev.label} onClick={steps.prev.onClick}><ChevronLeft size={16} strokeWidth={1.5} aria-hidden /></button>
         <button type="button" className={f.faintStep} data-side="next" aria-label={steps.next.label} onClick={steps.next.onClick}><ChevronRight size={16} strokeWidth={1.5} aria-hidden /></button>

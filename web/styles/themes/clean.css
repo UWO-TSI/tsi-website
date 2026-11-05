@@ -38,6 +38,9 @@ body, [data-ui-theme="clean"] {
   --ui-heart: #ef6f86;
   --ui-focus: #151515;
   --ui-scrim: rgb(18 18 18 / 0.42);
+  /* A big moment's backdrop (an awakening), the world nearly gone, and its light (the glow, the flash). */
+  --ui-scrim-deep: rgb(14 16 28 / 0.88);
+  --ui-glow: #ffffff;
   --ui-shade: 0 0 0;
   /* The fishing reel's water (components/gui/flat/reel): the track, and its ripples and edge. */
   --ui-water: #e4f2f8;

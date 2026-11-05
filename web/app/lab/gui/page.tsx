@@ -27,7 +27,7 @@ import { RodRadar, TackleRadar } from "@/components/economy/RodGear";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import { CircleDot, Waves, Worm } from "lucide-react";
 import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
-import { ActionBar, ActionIcon, BigMoment, CallTag, CardOverlay, DarkButton, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, KeyPeek, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, QuestCheck, RankBadge, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot, type PeekKind } from "@/components/gui/flat";
+import { ActionBar, ActionIcon, Awakening, BigMoment, CallTag, CardOverlay, DarkButton, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, KeyPeek, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, QuestCheck, RankBadge, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot, type PeekKind } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
 import { BoardBody } from "@/components/game/volleyball/BoardSheet";
 import { DEFAULT_LOOK } from "@/lib/game/character/look";
@@ -161,6 +161,10 @@ const OVERLAYS: { id: string; title: string; render: () => ReactNode }[] = [
     <FlyIn icon={<Coins size={52} />} name="Coins" text="For things on the island" to={['[data-hud-slot="coins"]']} onDone={done} /></>}</Loop> },
   { id: "quest-check", title: "Quest complete", render: () => <Loop ms={3000}>{() => <QuestCheck eyebrow="Quest complete" title="Walk with Bram" />}</Loop> },
   { id: "printed-card", title: "Printed card as the overlay (CardOverlay, PrintedCard, PaperField)", render: () => <PrintedShow /> },
+  { id: "awakening", title: "An awakening (Awakening): glow, pulse, burst, reveal", render: () => <Loop ms={9000}>{done => <Awakening label="Awakened" rarity="rare" rarityLabel="Rare rod"
+    lead="Your Training rod is glowing…" eyebrow="Awakened!" name="Training rod" text="It fishes like a rare rod now." onClose={done}
+    thing={after => <img src="/assets/icons/rod_training.webp" alt="" style={{ objectFit: "contain", imageRendering: "pixelated", filter: after ? "hue-rotate(160deg)" : undefined }} />}
+    action={<DarkButton onClick={done}>Nice!</DarkButton>} />}</Loop> },
   { id: "fish-reveal", title: "Fish reveal", render: () => <Loop ms={9000}>{done => <FishReveal fish={FISH.find(f => f.rarity === "rare") ?? FISH[0]} sizeCm={42} onDone={done} />}</Loop> },
   { id: "oracle-reveal", title: "Oracle reveal card", render: () => <FamilyReveal family="Warden" type="INFP" onContinue={() => {}} /> },
   { id: "rune", title: "Rune overlay", render: () => <Loop ms={30000}>{done => <IncantationOverlay runeId="cross" title="Cross" effect="A warding cross" onDone={done} onCancel={done} />}</Loop> },

@@ -183,7 +183,7 @@ import { clickAction, heldItem, toolNeeded, wheelContents, type Reach, type Whee
 import { holdItem, swapHeld, useHeld } from "@/lib/game/heldStore";
 import { useRuinsHand } from "@/lib/game/ruinsHand";
 import { useWheelKeys } from "@/lib/game/movement/keys";
-import { heldRig, trainingQuest } from "@/lib/game/rods";
+import { ROD_SELLER, heldRig, trainingQuest } from "@/lib/game/rods";
 import { eatItem, localCollections, mergeWithLocal } from "@/lib/game/collections";
 import { capture } from "@/lib/game/orbitCamera";
 import { iconUrl } from "@/lib/icons/keys";
@@ -935,7 +935,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   useEffect(loadFriends, []);
   const peacefulRaw = usePeacefulContext(weather, conditions.now);
   const peaceful = useMemo(() => ({ ...peacefulRaw, glider: peacefulRaw.glider && unlocks.glider }), [peacefulRaw, unlocks.glider]);
-  // The rod seller's quest (David 2026-11-04): 35 fish on the Flimsy rod, until the Training rod is yours.
+  // Gary's quest (David 2026-11-04): 35 fish on the Flimsy rod, until the Training rod is yours.
   const rodQuest = useMemo(() => trainingQuest(peaceful.catches, peaceful.owned), [peaceful.catches, peaceful.owned]);
   // Audio pass (row 169 / polish-ownership item 9): the hourly music player
   // follows the real clock everywhere on this island; cafe and other
@@ -1123,7 +1123,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     if (action === "sell") { setSheet("sell"); return; }
     if (action === "catchboard") { setSheet("outnow"); return; }
     if (action === "tasks") { setSheet("tasks"); return; }
-    // The rod seller's quest (rods.ts trainingQuest): while it's on, the counter's E is his ask first.
+    // Gary's quest (rods.ts trainingQuest): while it's on, the counter's E is his ask first.
     if (action === "tackle") { setSheet(rodQuest ? "rodseller" : "tackle"); return; }
     if (action === "chef") { setSheet("chef"); return; }
     if (action === "owner") { window.dispatchEvent(new CustomEvent("tsi:cafe-owner-talk")); return; }
@@ -1521,7 +1521,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       </section>}
       {near && !toolNear && !sheet && !hq.card && !cinematic && !talking && !(reveal && inside === "oracle") && (CLOSED.includes(near)
         ? <p className={styles.interact} data-closed="true" role="status">{NEAR_LABELS[near]}</p>
-        : fishing ? null : <button className={styles.interact} onClick={() => act(near)}><kbd>{touch ? "Tap" : "E"}</kbd>{near === "forage" ? targetLabel ?? NEAR_LABELS[near] : near === "talk" && talkNow.nearName ? `Talk to ${talkNow.nearName}` : near === "bram" ? bramPrompt() : near === "desk" && hq.waiting === "wren" ? `Talk to ${WREN.name}` : near === "stool" && seated ? "Leave the bar" : near === "bench" || near === "stool" || near === "bed" ? seatPrompt(NEAR_LABELS[near], seated) : NEAR_LABELS[near]}</button>)}
+        : fishing ? null : <button className={styles.interact} onClick={() => act(near)}><kbd>{touch ? "Tap" : "E"}</kbd>{near === "forage" ? targetLabel ?? NEAR_LABELS[near] : near === "talk" && talkNow.nearName ? `Talk to ${talkNow.nearName}` : near === "bram" ? bramPrompt() : near === "desk" && hq.waiting === "wren" ? `Talk to ${WREN.name}` : near === "tackle" && rodQuest ? `Talk to ${ROD_SELLER}` : near === "stool" && seated ? "Leave the bar" : near === "bench" || near === "stool" || near === "bed" ? seatPrompt(NEAR_LABELS[near], seated) : NEAR_LABELS[near]}</button>)}
       {/* The held item's use (specs/game-ui.md §2): what left click does with it here, or the tool something in reach wants. Touch presses the prompt. */}
       {!sheet && !cinematic && !talking && !fishing && !inside && site !== "ruins" && (toolAction && (toolAction.target && (toolNear || toolAction.verb === "eat"))
         ? <button className={styles.interact} data-use onPointerDown={e => { if (e.pointerType !== "mouse" || capture.state !== "captured") applyTool(); }}><kbd>{touch ? "Tap" : "Click"}</kbd>{toolAction.label}</button>

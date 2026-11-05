@@ -139,6 +139,8 @@ export function BagSheet({ open, onClose, keys, transport, initialShelf = "pocke
   transport?: EconomyTransport; initialShelf?: Shelf;
 }) {
   const [shelf, setShelf] = useState<Shelf>(initialShelf);
+  // Each press on the rail: it also goes back from a rod's box to its shelf (the box has no back, David 2026-11-04).
+  const [visit, setVisit] = useState(0);
   const bag = useBag();
   useEffect(() => { if (open) void loadBag(); }, [open]);
   // You looked: the New marks go as the bag closes.
@@ -150,9 +152,9 @@ export function BagSheet({ open, onClose, keys, transport, initialShelf = "pocke
   const shown = shelves.some(x => x.id === shelf) ? shelf : "pockets";
   return <FlatPanel open={open} onClose={close} title="Bag" keys={keys} testId="bag-sheet" contentKey={shown}
     purse={view ? <Readout used={view.used} capacity={view.capacity} label="Pockets" /> : undefined}
-    rail={<IconRail label="Bag" value={shown} onChange={setShelf} items={shelves.map(x => ({ ...x, badge: x.id === "pockets" ? bag.fresh.length : undefined }))} />}>
+    rail={<IconRail label="Bag" value={shown} onChange={id => { setShelf(id); setVisit(v => v + 1); }} items={shelves.map(x => ({ ...x, badge: x.id === "pockets" ? bag.fresh.length : undefined }))} />}>
     {POCKET_FILTERS.has(shown) ? <Pockets filter={shown === "pockets" ? null : shown as BagKind} title={SHELVES.find(x => x.id === shown)!.label} />
-      : <Owned group={shown as "tools" | "outfits" | "furniture"} transport={transport} />}
+      : <Owned group={shown as "tools" | "outfits" | "furniture"} transport={transport} visit={visit} />}
   </FlatPanel>;
 }
 
@@ -268,9 +270,11 @@ const SLOT_NAME: Record<string, string> = { rod: "Fishing rod", net: "Bug net", 
 const rowPicture = (r: InventoryRow) => r.item.sprite_url ?? shopIcon(r.item);
 
 /** One shelf of what you own (tools, clothes, furniture and finishes): cards, and the picked one in the side panel. */
-function Owned({ group, transport = httpEconomyTransport }: { group: "tools" | "outfits" | "furniture"; transport?: EconomyTransport }) {
+function Owned({ group, transport = httpEconomyTransport, visit = 0 }: { group: "tools" | "outfits" | "furniture"; transport?: EconomyTransport; visit?: number }) {
   const { data, error, reload, setError } = useLoad<InventoryView>(useCallback(() => transport.inventory(), [transport]));
-  const [picked, setPicked] = useState<string | null>(null);
+  // What's picked, on the rail press it was picked under (a new press puts it back).
+  const [pick, setPick] = useState<{ id: string; visit: number } | null>(null);
+  const picked = pick?.visit === visit ? pick.id : null, setPicked = (id: string | null) => setPick(id === null ? null : { id, visit });
   const [busy, setBusy] = useState(false);
   const toggle = async (id: string, on: boolean) => {
     setBusy(true);
@@ -287,9 +291,11 @@ function Owned({ group, transport = httpEconomyTransport }: { group: "tools" | "
   // the build (RodGear.tsx), the fish it has landed (rod_catches), its awakening bar and its passive. An add-on shows its own radar.
   const rod = rodByKey(row?.item.catalogue_ref), add = tackleByKey(row?.item.catalogue_ref), on = equippedTackle(rows);
   const caught = (ref: string | null) => data.catches?.[ref ?? ""] ?? 0;
+  /** A rod card's outline: the rarity it has awakened to. */
+  const rodRarity = (ref: string | null) => { const r = rodByKey(ref); return r ? awakened(r, caught(ref)).rarity : undefined; };
   if (row && rod) return <>
     {error && <StatusLine error><SignInText text={error} /></StatusLine>}
-    <DetailView testId="bag-rod" rarity={rod.rarity} quiet onBack={() => setPicked(null)} stage={<RodStage rod={rod} tackle={on} className={STAGE.stage} />}
+    <DetailView testId="bag-rod" rarity={awakened(rod, caught(rod.key)).rarity} quiet onBack={() => setPicked(null)} stage={<RodStage rod={rod} tackle={on} className={STAGE.stage} />}
       corner={<RodSlots rows={rows} busy={busy} onEquip={(id, eq) => void toggle(id, eq)} />}
       info={<><InfoHead kind={rodLine(awakened(rod, caught(rod.key)))} title={row.item.display_name} text={row.item.description ?? undefined} /><RodRecord rod={rod} catches={caught(rod.key)} /><RodRadar rod={awakened(rod, caught(rod.key))} tackle={on} /></>}
       fine="Take it out from the tool wheel." />
@@ -304,7 +310,7 @@ function Owned({ group, transport = httpEconomyTransport }: { group: "tools" | "
   return <>
     {!row && error && <StatusLine error><SignInText text={error} /></StatusLine>}
     {rows.length === 0 ? <Quiet>{SHELF_EMPTY[group]}</Quiet>
-      : <WithSide side={side}><CardGrid title={title} min={170} phoneMin={150}>{rows.map(r => <ItemCard key={r.item.id} size="md" arrow={false} rarity={rodByKey(r.item.catalogue_ref)?.rarity} picture={rowPicture(r)} name={r.item.display_name}
+      : <WithSide side={side}><CardGrid title={title} min={170} phoneMin={150}>{rows.map(r => <ItemCard key={r.item.id} size="md" arrow={false} rarity={rodRarity(r.item.catalogue_ref)} picture={rowPicture(r)} name={r.item.display_name}
         line={rodByKey(r.item.catalogue_ref) ? `${caught(r.item.catalogue_ref).toLocaleString()} fish caught` : r.item.slot ? kind(r) : USE_HINT[group] ?? kind(r)} selected={r.item.id === picked}
         pill={r.equipped ? "Equipped" : r.qty > 1 ? `×${r.qty}` : null} onClick={() => setPicked(r.item.id === picked ? null : r.item.id)} label={`${r.item.display_name}${r.equipped ? ", equipped" : ""}`} />)}</CardGrid></WithSide>}
   </>;

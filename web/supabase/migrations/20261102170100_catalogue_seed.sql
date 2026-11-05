@@ -10,7 +10,7 @@ INSERT INTO shop_items (slug, display_name, category, description, price_coins, 
   ('rod-glass', 'Glass rod', 'tool', 'The pier regulars'' favourite. Clear as water, and about as tough.', 6000, NULL, 'premium', 'rod', FALSE, FALSE, NULL, 'rod_glass', 3),
   ('rod-precision', 'Precision rod', 'tool', 'A wide catch bar and a long bite window.', 1000, NULL, 'basic', 'rod', FALSE, FALSE, NULL, 'rod_precision', 1001),
   ('rod-carrot', 'Carrot rod', 'tool', 'A thick carrot of a rod. Fish can''t help but nibble.', 3000, NULL, 'mid', 'rod', FALSE, FALSE, NULL, 'rod_carrot', 1002),
-  ('rod-training', 'Training rod', 'tool', 'Traded for, never sold. A plain rod. Keep fishing with it.', 2500, NULL, 'mid', 'rod', FALSE, FALSE, NULL, 'rod_training', 1003),
+  ('rod-training', 'Training rod', 'tool', 'Gary''s trade for your Flimsy. Plain for now, with potential: the more you fish with it, the more it grows.', 2500, NULL, 'mid', 'rod', FALSE, FALSE, NULL, 'rod_training', 1003),
   ('rod-tempest', 'Tempest rod', 'tool', 'An epic rod that comes with a storm. Never sold.', 16000, NULL, 'premium', 'rod', FALSE, FALSE, NULL, 'rod_tempest', 1004),
   ('bobber-lucky', 'Lucky bobber', 'tool', 'A bobber for your rod: +20 luck, so rarer fish bite more often.', 600, NULL, 'premium', 'bobber', FALSE, FALSE, NULL, 'bobber_lucky', 4),
   ('net-basic', 'Bug net', 'tool', '', 100, NULL, 'basic', 'net', FALSE, FALSE, NULL, NULL, 5),
@@ -107,7 +107,7 @@ INSERT INTO shop_items (slug, display_name, category, description, price_coins, 
   ('rod-glass', 'Glass rod', 'tool', 'The pier regulars'' favourite. Clear as water, and about as tough.', 6000, NULL, 'premium', 'rod', FALSE, FALSE, NULL, 'rod_glass', 3),
   ('rod-precision', 'Precision rod', 'tool', 'A wide catch bar and a long bite window.', 1000, NULL, 'basic', 'rod', FALSE, FALSE, NULL, 'rod_precision', 1001),
   ('rod-carrot', 'Carrot rod', 'tool', 'A thick carrot of a rod. Fish can''t help but nibble.', 3000, NULL, 'mid', 'rod', FALSE, FALSE, NULL, 'rod_carrot', 1002),
-  ('rod-training', 'Training rod', 'tool', 'Traded for, never sold. A plain rod. Keep fishing with it.', 2500, NULL, 'mid', 'rod', FALSE, FALSE, NULL, 'rod_training', 1003),
+  ('rod-training', 'Training rod', 'tool', 'Gary''s trade for your Flimsy. Plain for now, with potential: the more you fish with it, the more it grows.', 2500, NULL, 'mid', 'rod', FALSE, FALSE, NULL, 'rod_training', 1003),
   ('rod-tempest', 'Tempest rod', 'tool', 'An epic rod that comes with a storm. Never sold.', 16000, NULL, 'premium', 'rod', FALSE, FALSE, NULL, 'rod_tempest', 1004)
 ON CONFLICT (slug) DO UPDATE SET display_name = EXCLUDED.display_name, category = EXCLUDED.category, description = EXCLUDED.description, price_coins = EXCLUDED.price_coins, tc_price = EXCLUDED.tc_price, tier = EXCLUDED.tier, slot = EXCLUDED.slot, special_pool = EXCLUDED.special_pool, stackable = EXCLUDED.stackable, catalogue_ref = EXCLUDED.catalogue_ref, position = EXCLUDED.position;
 

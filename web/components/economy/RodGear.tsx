@@ -59,11 +59,11 @@ const STAT_ICON: Record<RodStat, ReactNode> = {
 };
 const axis = (k: RodStat, value: number, base?: number) => ({ label: STAT_INFO[k].label, hint: STAT_INFO[k].does, icon: STAT_ICON[k], value, base });
 
-/** A rod's radar: the rod alone, or (`tackle`) the build with its add-ons over the rod alone. */
-export function RodRadar({ rod, tackle, size }: { rod: RodTier; tackle?: readonly string[]; size?: number }) {
-  const on = tackle ? rig(rod, tackle) : null;
-  return <HexRadar label={`${rod.name} stats`} max={STAT_MAX} size={size} testId="rod-radar"
-    axes={STAT_KEYS.map(k => axis(k, on ? on.stats[k] : rod.base[k], on ? rod.base[k] : undefined))} />;
+/** A rod's radar: the rod alone, or (`tackle`) the build with its add-ons over the rod alone, or (`from`) the rod over what it was. */
+export function RodRadar({ rod, tackle, from, size }: { rod: RodTier; tackle?: readonly string[]; from?: RodTier; size?: number }) {
+  const on = tackle ? rig(rod, tackle) : null, under = on ? rod : from;
+  return <HexRadar label={`${rod.name} stats`} max={STAT_MAX} size={size} testId="rod-radar" baseLabel={on ? undefined : "before"}
+    axes={STAT_KEYS.map(k => axis(k, on ? on.stats[k] : rod.base[k], under?.base[k]))} />;
 }
 
 /** An add-on's own radar: only what it adds (David 2026-10-28: "only show the bobber and not on a rod"). */

@@ -17,6 +17,9 @@
  *   CardOverlay  a thing as the overlay (the v3 review: "the card itself is the overlay"): no panel, the thing large in
  *                the middle over a light scrim, one button under it
  *   PaperField   a field written on paper: a write-in line, for a card being filled in
+ *   Awakening    a thing changing into its better self, as a Pokémon evolves (David 2026-11-04): large in the middle
+ *                over a deep scrim, it turns white and glows, pulses between its two forms faster and faster, bursts
+ *                in a flash, and comes back as the new one in its rarity's ring, a card of what changed beside it
  * Colours: the theme's --ui-* tokens only. Plain props; nothing here knows the game.
  */
 import { useEffect, useRef, useState, type CSSProperties, type InputHTMLAttributes, type PointerEvent, type ReactNode } from "react";
@@ -238,4 +241,69 @@ export function CardOverlay({ open, label, children, action, testId, dataset }: 
 /** A field written on paper (a card being filled in): a write-in line in the paper's ink. */
 export function PaperField(props: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={m.paperField} />;
+}
+
+/** An Awakening's beats (ms), in order; the reveal stays until it's closed. */
+export const AWAKEN_MS = { frame: 900, glow: 1100, pulse: 2600, burst: 650 } as const;
+export type AwakenPhase = keyof typeof AWAKEN_MS | "reveal";
+const AWAKEN_ORDER = Object.keys(AWAKEN_MS) as (keyof typeof AWAKEN_MS)[];
+
+/**
+ * A thing changing into its better self (a rod's awakening; David 2026-11-04: "like how when pokemon evlolve"). It plays
+ * on mount (a new React `key` plays it again): `frame` it comes in large over a deep scrim with `lead` above it, `glow`
+ * it turns white and glows, `pulse` it swells between its old form and its new one faster and faster, `burst` a flash
+ * and sparks, `reveal` the new form in colour in a ring of its rung's colour (`rarity`), and a card beside it (under it
+ * on a phone): `eyebrow`, `name`, the rung's pill (`rarityLabel`), `text`, `children` (what changed) and `action`.
+ * `thing(after)` draws it: its old form until the burst (`after` false), its new one on the pulse's up beats and after.
+ * `onPhase` hears each beat and each pulse (for sounds and what changes with them). `ready` false holds it on the scrim
+ * and the lead until the thing can be drawn (a model still loading). Escape closes it, at any beat.
+ * Under reduced motion it opens on the reveal.
+ */
+export function Awakening({ label, thing, rarity, rarityLabel, lead, eyebrow, name, text, children, action, onPhase, onClose, ready = true, testId }: {
+  label: string; thing: (after: boolean) => ReactNode; rarity: string; rarityLabel: ReactNode; lead: ReactNode;
+  eyebrow: ReactNode; name: ReactNode; text?: ReactNode; children?: ReactNode; action?: ReactNode;
+  onPhase?: (phase: AwakenPhase | "beat") => void; onClose: () => void; ready?: boolean; testId?: string;
+}) {
+  const [phase, setPhase] = useState<AwakenPhase>("frame"), [after, setAfter] = useState(false);
+  const ref = useWorldDialog<HTMLElement>(true, onClose, [], true);
+  const cb = useRef(onPhase);
+  useEffect(() => { cb.current = onPhase; }, [onPhase]);
+  useEffect(() => {
+    if (!ready) return;
+    const ts: number[] = [], go = (p: AwakenPhase) => { setPhase(p); if (p === "burst" || p === "reveal") setAfter(true); cb.current?.(p); };
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) { const t = window.setTimeout(() => go("reveal"), 0); return () => window.clearTimeout(t); }
+    let at = 0;
+    for (const p of AWAKEN_ORDER) { const t = at; ts.push(window.setTimeout(() => go(p), t)); at += AWAKEN_MS[p]; }
+    ts.push(window.setTimeout(() => go("reveal"), at));
+    // The pulse: old, new, old, new, each beat quicker than the last.
+    const start = AWAKEN_MS.frame + AWAKEN_MS.glow;
+    for (let t = 0, gap = 420, up = true; t + gap < AWAKEN_MS.pulse; t += gap, gap = Math.max(70, gap * 0.8), up = !up) {
+      const next = up;
+      ts.push(window.setTimeout(() => { setAfter(next); cb.current?.("beat"); }, start + t + gap));
+    }
+    return () => ts.forEach(t => window.clearTimeout(t));
+  }, [ready]);
+  return <div className={`${m.layer} gui`} data-gui-flat="">
+    <div className={m.awScrim} aria-hidden="true" />
+    <section ref={ref} role="dialog" aria-modal aria-label={label} tabIndex={-1} data-gui-overlay className={m.awaken} data-phase={phase} data-ready={ready || undefined} data-after={after || undefined}
+      style={{ "--edge": `var(--ui-rarity-${rarity})` } as CSSProperties} data-testid={testId}>
+      <p className={m.awLead} aria-live="polite">{phase === "reveal" ? null : lead}</p>
+      <div className={m.awStage}>
+        <span className={m.awRays} aria-hidden="true" />
+        <span className={m.awHalo} aria-hidden="true" />
+        <span className={m.awRing} aria-hidden="true" />
+        <div className={m.awThing}>{thing(after)}</div>
+        <span className={m.awSparks} aria-hidden="true">{Array.from({ length: 14 }, (_, i) => <i key={i} style={{ "--a": `${i * (360 / 14)}deg` } as CSSProperties} />)}</span>
+      </div>
+      {phase === "reveal" && <div className={m.awCard}>
+        <p className={m.eyebrow}>{eyebrow}</p>
+        <h2 className={m.title}>{name}</h2>
+        <span className={m.awPill}>{rarityLabel}</span>
+        {text && <p className={m.text}>{text}</p>}
+        {children}
+        {action}
+      </div>}
+    </section>
+    <div className={m.awFlash} data-phase={phase} aria-hidden="true" />
+  </div>;
 }

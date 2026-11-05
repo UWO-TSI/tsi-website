@@ -172,11 +172,24 @@ describe("awakenings (David 2026-11-04: no levels, only awakenings)", () => {
   it("epic and up awaken in the open; rare and below (but the Training rod) never do", () => {
     for (const r of RODS) expect(r.awakenings.length > 0, r.key).toBe(r.key === TRAINING.key || r.rarity === "epic");
     const tide = rodByKey("rod_tidewarden")!;
-    expect(nextAwakening(tide, 120)?.at).toBe(200);
-    expect(nextAwakening(tide, 900)).toBeNull();
-    expect(awakened(tide, 800).passive?.text).toContain("luck");
-    expect(awakened(tide, 200).passive).toBe(tide.passive);
+    expect(nextAwakening(tide, 120)?.at).toBe(300);
+    expect(nextAwakening(tide, 1300)).toBeNull();
+    expect(awakened(tide, 1200).passive?.text).toContain("luck");
+    expect(awakened(tide, 300).passive).toBe(tide.passive);
     expect(awakened(rodByKey("rod_glass")!, 5000)).toBe(rodByKey("rod_glass"));
+  });
+  it("each epic awakens its own way (David 2026-11-04: \"its not all 200 800 some have solo awakenings\")", () => {
+    const epics = RODS.filter(r => r.rarity === "epic");
+    expect(new Set(epics.map(r => r.awakenings.map(a => a.at).join())).size).toBe(epics.length);
+    expect(rodByKey("rod_titanium")!.awakenings).toHaveLength(1);
+    // Only what the rod is for grows: Titanium's line, never its luck.
+    const ti = rodByKey("rod_titanium")!, woke = awakened(ti, 400);
+    expect(woke.base.strength).toBeGreaterThan(ti.base.strength);
+    expect(woke.base.luck).toBe(ti.base.luck);
+  });
+  it("takes the rarity its stats now match (David 2026-11-04: \"when awakened, rarity change\")", () => {
+    expect([0, 50, 250, 1000].map(n => awakened(training, n).rarity)).toEqual(["common", "rare", "epic", "legendary"]);
+    expect(awakened(rodByKey("rod_tempest")!, 600).rarity).toBe("epic");
   });
 });
 
@@ -186,9 +199,10 @@ describe("the Training rod's trade (David 2026-11-04)", () => {
     expect(onSale(row)).toBe(false);
     expect(CATALOGUE.filter(e => e.slot === "rod" && onSale(e)).map(e => e.catalogue_ref)).toEqual(["rod_cedar", "rod_glass", "rod_precision", "rod_carrot"]);
   });
-  it("starts the rod seller's quest at the Flimsy's 35th fish, until the Training rod is yours", () => {
+  it("starts Gary's quest at the Flimsy's 35th fish, until the Training rod is yours", () => {
     expect(trainingQuest({ rod_flimsy: 34 }, [])).toBeNull();
     expect(trainingQuest({ rod_flimsy: 35 }, [])?.steps.map(s => s.done)).toEqual([true, false]);
+    expect(trainingQuest({ rod_flimsy: 35 }, [])?.steps[1].label).toContain("Gary");
     expect(trainingQuest({ rod_flimsy: 80 }, [TRAINING.key])).toBeNull();
   });
   it("retires the Flimsy rod once traded: off the wheel, refused on a cast", () => {

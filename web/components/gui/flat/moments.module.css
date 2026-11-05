@@ -194,9 +194,73 @@
 @keyframes pop { 0% { opacity: 0; transform: scale(0.2) rotate(-20deg); } 70% { opacity: 1; transform: scale(1.12) rotate(3deg); } 100% { transform: none; } }
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes fade { from { opacity: 0; } }
+/* The awakening (Awakening): the thing large in the middle over a deep scrim; white and glowing, pulsing between its
+   two forms, a burst, then its new form in its rung's ring (--edge) with a card beside it (under it on a phone). */
+.awScrim { position: absolute; inset: 0; background: var(--ui-scrim-deep); animation: fade 0.5s ease-out both; }
+.awaken { --s: min(440px, 58vh, 84vw); position: absolute; inset: 0; outline: none; pointer-events: none; }
+.awaken > * { pointer-events: auto; }
+.awLead { position: absolute; left: 50%; top: calc(50% - var(--s) / 2 - 44px); width: max-content; max-width: calc(100vw - 32px); margin: 0; translate: -50% 0;
+  color: var(--ui-glow); font: 700 18px/1.3 var(--gui-font); text-align: center; animation: rise 0.5s 0.3s ease both; }
+.awStage { position: absolute; left: 50%; top: 50%; width: var(--s); height: var(--s); margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2);
+  transition: transform 0.7s cubic-bezier(0.34, 1.3, 0.64, 1); }
+.awThing { position: absolute; inset: 0; display: grid; transform: scale(0.72); transition: transform 0.9s cubic-bezier(0.2, 0.9, 0.3, 1.12), filter 0.9s ease;
+  animation: awIn 0.9s cubic-bezier(0.2, 0.9, 0.3, 1.12) both; }
+.awThing > * { width: 100%; height: 100%; }
+.awaken:not([data-ready]) .awThing { opacity: 0; animation: none; }
+.awaken:not([data-phase="frame"]) .awThing { transform: scale(0.94); }
+/* White and glowing from the glow to the burst; on the pulse it swells on each beat of its new form. */
+.awaken:is([data-phase="glow"], [data-phase="pulse"], [data-phase="burst"]) .awThing {
+  filter: brightness(0) invert(1) drop-shadow(0 0 6px var(--ui-glow)) drop-shadow(0 0 22px var(--ui-glow)); }
+.awaken[data-phase="pulse"] .awThing { transition: transform 0.07s ease-out, filter 0.9s ease; }
+.awaken[data-phase="pulse"][data-after] .awThing { transform: scale(1.06); }
+.awaken[data-phase="reveal"] .awThing { transform: scale(0.9); transition: transform 0.6s cubic-bezier(0.34, 1.3, 0.64, 1), filter 0.5s ease; }
+/* The light behind it: a soft white glow that grows and breathes, then takes the rung's colour. */
+.awHalo { position: absolute; inset: 6%; border-radius: 50%; background: radial-gradient(closest-side, var(--ui-glow), transparent); opacity: 0; scale: 0.5;
+  transition: opacity 0.9s ease, scale 0.9s ease, background 0.6s ease; }
+.awaken:is([data-phase="glow"], [data-phase="pulse"]) .awHalo { opacity: 0.45; scale: 0.9; }
+.awaken[data-phase="pulse"] .awHalo { animation: awBreathe 0.5s ease-in-out infinite alternate; }
+.awaken[data-phase="burst"] .awHalo { opacity: 0.9; scale: 1.25; }
+.awaken[data-phase="reveal"] .awHalo { opacity: 0.55; scale: 1; background: radial-gradient(closest-side, var(--edge), transparent); }
+/* Rays turning behind it, faint on the pulse and bright at the burst. */
+.awRays { position: absolute; inset: -30%; border-radius: 50%; opacity: 0; transition: opacity 0.6s ease;
+  background: repeating-conic-gradient(from 0deg, var(--ui-sheen) 0deg 5deg, transparent 5deg 20deg);
+  mask-image: radial-gradient(closest-side, black 30%, transparent); animation: awTurn 9s linear infinite; }
+.awaken[data-phase="pulse"] .awRays { opacity: 0.25; }
+.awaken[data-phase="burst"] .awRays { opacity: 0.9; transition-duration: 0.15s; }
+/* The rung's ring, drawn round it at the reveal. */
+.awRing { position: absolute; inset: 4%; border-radius: 50%; border: 3px solid var(--edge); opacity: 0; scale: 1.2; }
+.awaken[data-phase="reveal"] .awRing { opacity: 1; scale: 1; animation: awRing 0.7s cubic-bezier(0.34, 1.4, 0.64, 1) both; }
+.awSparks { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
+.awSparks i { position: absolute; left: -5px; top: -5px; width: 10px; height: 10px; border-radius: 50%; background: var(--ui-glow); opacity: 0; }
+.awSparks i:nth-child(3n) { background: var(--edge); }
+.awaken:is([data-phase="burst"], [data-phase="reveal"]) .awSparks i { animation: awSpark 1.1s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+/* The burst: the whole screen goes white a moment, then clears onto the reveal. */
+.awFlash { position: absolute; inset: 0; background: var(--ui-glow); opacity: 0; pointer-events: none; }
+.awFlash:is([data-phase="burst"], [data-phase="reveal"]) { animation: awFlash 1.25s ease-out both; }
+/* The card of what changed: beside it on a wide screen, under it on a phone; the stage steps aside for it. */
+.awCard { position: absolute; left: 50%; top: 50%; display: grid; justify-items: start; gap: 8px; width: 340px; box-sizing: border-box; padding: 20px 22px 18px;
+  border-radius: 22px; background: var(--ui-card); box-shadow: 0 24px 80px rgb(var(--ui-shade) / 0.4); translate: 12px -50%;
+  animation: awCard 0.55s 0.25s cubic-bezier(0.34, 1.3, 0.64, 1) both; }
+.awCard .text { max-width: none; }
+.awPill { padding: 3px 10px; border-radius: 999px; border: 1.5px solid var(--edge); color: var(--ui-ink); font: 700 12px/1.3 var(--gui-font); }
+.awaken[data-phase="reveal"] .awStage { transform: translateX(-52%); }
+@media (max-width: 720px) {
+  .awaken { --s: min(340px, 44vh, 84vw); }
+  .awaken[data-phase="reveal"] .awStage { transform: translateY(-36%) scale(0.62); }
+  .awCard { left: 16px; right: 16px; top: auto; bottom: 16px; width: auto; translate: none; max-height: 62vh; overflow: auto; }
+}
+@keyframes awIn { from { opacity: 0; } }
+@keyframes awBreathe { to { scale: 1.02; opacity: 0.6; } }
+@keyframes awTurn { to { rotate: 1turn; } }
+@keyframes awRing { 0% { opacity: 0; scale: 1.25; } 100% { opacity: 1; scale: 1; } }
+@keyframes awSpark { 0% { opacity: 1; transform: rotate(var(--a)) translateY(-30px) scale(1.2); } 100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(var(--s) * -0.62)) scale(0.3); } }
+@keyframes awFlash { 0% { opacity: 0; } 18% { opacity: 1; } 45% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes awCard { from { opacity: 0; transform: translateY(14px) scale(0.96); } }
+
 @media (prefers-reduced-motion: reduce) {
   .scrim, .spotlight, .lead, .key, .key[data-lit], .key[data-won], .flyDim, .flyIcon, .flyIcon > span, .flyName, .flyRing, .pop, .disc, .ring, .spark,
-  .popEyebrow, .popTitle, .printed[data-printing] .slot, .printed[data-printing] .paper, .stamp, .held { animation: none; transition: none; }
+  .popEyebrow, .popTitle, .printed[data-printing] .slot, .printed[data-printing] .paper, .stamp, .held,
+  .awScrim, .awLead, .awStage, .awThing, .awHalo, .awRays, .awRing, .awSparks i, .awFlash, .awCard { animation: none; transition: none; }
   .paper[data-tilt] { transform: none; }
   .stamper { display: none; }
   .paper[data-stamped], .paper[data-stamped]::after, .printed[data-printing] .slot::after { animation: none; }

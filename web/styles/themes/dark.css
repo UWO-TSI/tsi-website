@@ -37,6 +37,8 @@
   --ui-heart: #f58aa0;
   --ui-focus: #f2f2f2;
   --ui-scrim: rgb(0 0 0 / 0.55);
+  --ui-scrim-deep: rgb(0 0 0 / 0.9);
+  --ui-glow: #ffffff;
   --ui-shade: 0 0 0;
   /* The fishing reel's water (components/gui/flat/reel): the track, and its ripples and edge. */
   --ui-water: #1c3240;

@@ -3,7 +3,7 @@
  * a rarity and six stats on the hex radar (up to STAT_MAX), and add-on slots for bait and a bobber whose gains stack on
  * the rod's stats. Every stat is a real effect inside the cast/bite/reel loop (`effects`). The rod's rarity caps the
  * fish it hooks (`hookCap`, David 2026-10-28). Shop rods are lib/wallet/catalogue.ts, crafted ones lib/crafting/recipes.ts;
- * the Training rod is traded for at the tackle shop, never sold (`TRAINING`). No levels: some rods awaken as they land
+ * the Training rod is traded for at the tackle shop, never on the shelf (`TRAINING`). No levels: some rods awaken as they land
  * fish (`awakened`, David 2026-11-04), and rare and up carry a passive (`inPlay`). Every landed cast counts toward its
  * rod (rod_catches, 20261102170000_rod_catches.sql).
  * The server rolls a cast with the held rod plus the equipped add-ons the member owns (lib/collections/service.ts).
@@ -107,14 +107,12 @@ export interface Awakening { at: number; base: Stats; looks: Rarity; hooks?: Rar
  */
 export const hookCap = (rod: Rarity): Rarity => OBTAINABLE[Math.min(OBTAINABLE.indexOf(rod === "contraband" ? "divine" : rod) + 1, OBTAINABLE.length - 1)];
 const stats = (luck: number, bite: number, strength: number, reel: number, lure: number, control: number): Stats => ({ luck, bite, strength, reel, lure, control });
-const plus = (s: Stats, n: number): Stats => Object.fromEntries(STAT_KEYS.map(k => [k, Math.min(STAT_MAX, s[k] + n)])) as Stats;
+/** `s` with `gains` added, capped at STAT_MAX. */
+const up = (s: Stats, gains: Partial<Stats>): Stats => Object.fromEntries(STAT_KEYS.map(k => [k, Math.min(STAT_MAX, s[k] + (gains[k] ?? 0))])) as Stats;
 const rod = (tier: RodTier["tier"], key: string, name: string, rarity: Rarity, source: RodTier["source"], base: Stats,
   x: { passive?: Passive; awakenings?: Awakening[]; hooks?: Rarity } = {}): RodTier =>
   ({ tier, key, name, rarity, source, base, stats: base, tackle: [], hooks: x.hooks ?? hookCap(rarity), passive: x.passive ?? null, awakenings: x.awakenings ?? [], stage: 0, ...effects(base) });
 const passive = (name: string, text: string, gains: Partial<Stats>, when: Passive["when"]): Passive => ({ name, text, gains, when });
-/** An epic's two awakenings (proposed for David's OK, 2026-11-04): +6 to every stat at 200 fish, +6 more at 800. */
-const epicAwakenings = (base: Stats, last?: Passive): Awakening[] =>
-  [{ at: 200, base: plus(base, 6), looks: "epic" }, { at: 800, base: plus(base, 12), looks: "epic", ...(last ? { passive: last } : {}) }];
 
 const TIDEWARDEN = stats(56, 64, 56, 50, 50, 50), TITANIUM = stats(46, 50, 68, 56, 44, 48), TEMPEST = stats(60, 52, 54, 64, 58, 46);
 
@@ -141,29 +139,42 @@ export const RODS: readonly RodTier[] = [
     { passive: passive("Current", "+10 reel speed in the sea.", { reel: 10 }, { water: ["sea"] }) }),
   rod(4, "rod_lighthouse", "Lighthouse rod", "rare", "crafted", stats(44, 46, 38, 36, 40, 34),
     { passive: passive("Beacon", "+10 luck after dark (8 pm to 6 am).", { luck: 10 }, { night: true }) }),
+  // The epics' awakenings, each its own (proposed for David's OK, 2026-11-04: "epic awaken depends, stats change also
+  // depend on the rod ... some have solo awakenings"): what grows is what the rod is for.
+  // Titanium: one awakening, late; its line and its hold.
   rod(5, "rod_titanium", "Titanium rod", "epic", "crafted", TITANIUM, {
-    passive: passive("Steel line", "+10 line strength in rivers and ponds.", { strength: 10 }, { water: ["river", "pond"] }), awakenings: epicAwakenings(TITANIUM) }),
+    passive: passive("Steel line", "+10 line strength in rivers and ponds.", { strength: 10 }, { water: ["river", "pond"] }),
+    awakenings: [{ at: 400, base: up(TITANIUM, { strength: 14, control: 6, reel: 4 }), looks: "epic" }] }),
+  // Tidewarden: two, slow; the widest bite window grows wider, and its last widens its passive.
   rod(5, "rod_tidewarden", "Tidewarden rod", "epic", "crafted", TIDEWARDEN, {
     passive: passive("Tide keeper", "+10 line strength in the sea.", { strength: 10 }, { water: ["sea"] }),
-    awakenings: epicAwakenings(TIDEWARDEN, passive("Tide keeper", "+10 line strength and +10 luck in the sea.", { strength: 10, luck: 10 }, { water: ["sea"] })) }),
+    awakenings: [{ at: 300, base: up(TIDEWARDEN, { bite: 8, luck: 6, strength: 4 }), looks: "epic" },
+      { at: 1200, base: up(TIDEWARDEN, { bite: 16, luck: 12, strength: 4, lure: 8, reel: 6 }), looks: "epic",
+        passive: passive("Tide keeper", "+10 line strength and +10 luck in the sea.", { strength: 10, luck: 10 }, { water: ["sea"] }) }] }),
+  // Tempest: two, quick (it is found, not made); its reel first, then its luck, and its last brings the storm in on cloud.
   rod(5, "rod_tempest", "Tempest rod", "epic", "found", TEMPEST, {
-    passive: passive("Storm born", "+10 reel speed and +10 luck in the rain.", { reel: 10, luck: 10 }, { weather: ["rain"] }), awakenings: epicAwakenings(TEMPEST) }),
+    passive: passive("Storm born", "+10 reel speed and +10 luck in the rain.", { reel: 10, luck: 10 }, { weather: ["rain"] }),
+    awakenings: [{ at: 150, base: up(TEMPEST, { reel: 8, lure: 6 }), looks: "epic" },
+      { at: 600, base: up(TEMPEST, { reel: 16, lure: 6, luck: 10, control: 6 }), looks: "epic",
+        passive: passive("Storm born", "+10 reel speed and +10 luck in rain or cloud.", { reel: 10, luck: 10 }, { weather: ["rain", "cloudy"] }) }] }),
 ];
+/** The rod seller at the tackle shop (David 2026-11-04: "rod seller will be named Gary"). */
+export const ROD_SELLER = "Gary";
 /**
- * The Training rod (David 2026-11-04): nobody sells it. At the `quest.catches`th fish landed with the `quest.rod` a quest
- * starts: the rod seller at the tackle shop trades it for your Flimsy rod (the Flimsy leaves your bag). The server
- * repeats these numbers in rod_training_trade (20261102170000_rod_catches.sql; rods.test.ts keeps them equal).
+ * The Training rod (David 2026-11-04): never on the shelf. At the `quest.catches`th fish landed with the `quest.rod` a
+ * quest starts: Gary trades it for your Flimsy rod (the Flimsy leaves your bag). The server repeats these numbers in
+ * rod_training_trade (20261102170000_rod_catches.sql; rods.test.ts keeps them equal).
  */
 export const TRAINING = { key: "rod_training", quest: { rod: "rod_flimsy", catches: 35 } } as const;
 /**
- * The rod seller's quest for the tracker: once the Flimsy rod has landed TRAINING.quest.catches fish, until the
- * Training rod is yours. Null otherwise.
+ * Gary's quest for the tracker: once the Flimsy rod has landed TRAINING.quest.catches fish, until the Training rod is
+ * yours. Null otherwise.
  */
 export function trainingQuest(catches: Readonly<Record<string, number>>, owned: readonly string[]): TrackedQuest | null {
   const { rod, catches: need } = TRAINING.quest;
   if ((catches[rod] ?? 0) < need || owned.includes(TRAINING.key)) return null;
-  return { id: "rod-seller", title: "The rod seller", kind: "quest", hint: "The tackle shop's counter, on the wharf",
-    steps: [{ id: "fish", label: `Land ${need} fish with the Flimsy rod`, done: true }, { id: "talk", label: "Talk to the rod seller at the tackle shop", done: false }] };
+  return { id: "rod-seller", title: `${ROD_SELLER} wants a word`, kind: "quest", hint: "The tackle shop's counter, on the wharf",
+    steps: [{ id: "fish", label: `Land ${need} fish with the Flimsy rod`, done: true }, { id: "talk", label: `Talk to ${ROD_SELLER} at the tackle shop`, done: false }] };
 }
 /** Whether a rod's awakenings stay a surprise (the Training rod's: its card shows only its fish count). */
 export const secretAwakenings = (r: Pick<RodTier, "key">) => r.key === TRAINING.key;
@@ -171,12 +182,15 @@ export const secretAwakenings = (r: Pick<RodTier, "key">) => r.key === TRAINING.
 export const stageAt = (r: Pick<RodTier, "awakenings">, catches: number) => r.awakenings.filter(a => catches >= a.at).length;
 /** The next awakening after `catches` fish, or null (none, or all reached). */
 export const nextAwakening = (r: Pick<RodTier, "awakenings">, catches: number) => r.awakenings.find(a => catches < a.at) ?? null;
-/** A rod as it is after `catches` fish landed with it: its last awakening's stats, hooks and passive. */
+/**
+ * A rod as it is after `catches` fish landed with it: its last awakening's rarity (David 2026-11-04: "when awakened,
+ * rarity change"), stats, hooks and passive.
+ */
 export function awakened(r: RodTier, catches = 0): RodTier {
   const stage = stageAt(r, catches);
   if (stage === 0) return r;
   const a = r.awakenings[stage - 1], passive = r.awakenings.slice(0, stage).reverse().find(x => x.passive)?.passive ?? r.passive;
-  return { ...r, base: a.base, stats: a.base, hooks: a.hooks ?? r.hooks, passive, stage, ...effects(a.base) };
+  return { ...r, rarity: a.looks, base: a.base, stats: a.base, hooks: a.hooks ?? r.hooks, passive, stage, ...effects(a.base) };
 }
 /** Whether a passive holds for this cast. Night is 8 pm to 6 am on the island. */
 export const passiveHolds = (p: Passive, at: CastScene) =>
