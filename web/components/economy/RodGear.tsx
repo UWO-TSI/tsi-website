@@ -15,7 +15,7 @@ import { CircleDot, Clover, Link, Magnet, MoveHorizontal, RefreshCw, Timer, Worm
 import { GearSlot, HexRadar } from "@/components/gui/flat";
 import { prepareModel } from "@/lib/game/modelMaterials";
 import { worldModel } from "@/lib/game/world/active";
-import { keyModel } from "@/lib/icons/itemModel";
+import { rodSpec } from "@/lib/icons/itemModel";
 import { shopIcon } from "@/lib/icons/keys";
 import { RARITY_LABEL } from "@/lib/rarity";
 import { SLOTS, STAT_INFO, TACKLE, STAT_KEYS, STAT_MAX, awakened, nextAwakening, rig, secretAwakenings, tackleByKey, type RodStat, type RodTier, type Tackle, type TackleSlot } from "@/lib/game/rods";
@@ -137,9 +137,9 @@ function Hang({ tackle }: { tackle: readonly Tackle[] }) {
   </group>;
 }
 
-/** Your rod large and turning, with what's on its slots hanging from the tip; `corner` holds the slots. */
+/** Your rod (as awakened) large and turning, with what's on its slots hanging from the tip; `corner` holds the slots. */
 export function RodStage({ rod, tackle, className }: { rod: RodTier; tackle: readonly string[]; className?: string }) {
-  const spec = keyModel(rod.key);
+  const spec = rodSpec(rod);
   const on = rig(rod, tackle).tackle.map(k => tackleByKey(k)!);
   if (!spec) return null;
   return <TurnStage className={className} label={rod.name}>

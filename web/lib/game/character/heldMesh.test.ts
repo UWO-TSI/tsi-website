@@ -22,7 +22,7 @@ describe("held items as one mesh per look class", () => {
   const items = [...readdirSync(join(ASSETS, "tools")).map(f => `tools/${f}`), "props/leaf-glider.glb"];
   it.each(items)("%s is one mesh, the same shape and size", async file => {
     const scene = await load(file), url = `/assets/game/${file}`, merged = mergeHeld(scene, url);
-    expect(meshes(scene).length).toBeGreaterThan(1);
+    expect(meshes(scene).length).toBeGreaterThan(0);       // in parts, or one already (a rod of one material: the Titanium)
     expect(meshes(merged)).toHaveLength(1);
     expect(triangles(merged)).toBe(triangles(scene));
     const a = bounds(scene), b = bounds(merged);

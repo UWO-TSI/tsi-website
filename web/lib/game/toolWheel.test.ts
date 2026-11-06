@@ -8,6 +8,12 @@ const ids = (ctx: Partial<WheelContext>) => wheelContents({ ...base, ...ctx }).m
 const NOTHING = { water: false, bug: null, dig: null };
 
 describe("the tool wheel's contents (specs/game-ui.md §1)", () => {
+  it("holds an awakened rod as it has awakened: its own model in the hand, its own icon (rods.ts awakenedLook)", () => {
+    const rod = (catches: Record<string, number>) => wheelContents({ ...base, owned: ["rod_titanium"], catches }).find(i => i.kind === "rod")!;
+    expect(rod({ rod_titanium: 120 })).toMatchObject({ key: "rod_titanium", icon: "/assets/icons/rod_titanium.webp" });
+    expect(rod({ rod_titanium: 120 }).model).toBeUndefined();
+    expect(rod({ rod_titanium: 400 })).toMatchObject({ key: "rod_titanium", icon: "/assets/icons/rod_titanium_a1.webp", model: "/assets/game/tools/rod-titanium-a1.glb" });
+  });
   it("holds everyone's tier-1 rod, net and shovel, and the best owned once you have more", () => {
     expect(ids({})).toEqual(["rod:rod_flimsy", "net:net-basic", "shovel:shovel-basic"]);
     expect(ids({ owned: ["rod_glass", "rod_cedar", "net-mid", "shovel-gold"] })).toEqual(["rod:rod_glass", "net:net-mid", "shovel:shovel-gold"]);

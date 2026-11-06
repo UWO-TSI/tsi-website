@@ -22,7 +22,10 @@ describe("rods' effects (art/pipeline/build_rods.py, fx_library.py, RodAura)", (
     for (const url of rods) named.set(url.split("/").pop()!, rodFxUrl(mergeHeld(await load(url), url)));
     expect(named.get("rod-tempest.glb")).toBe("/assets/game/props/rodfx-tempest.glb");
     expect(named.get("rod-5.glb")).toBe("/assets/game/props/rodfx-tidewarden.glb");
-    expect([...named.values()].filter(Boolean)).toHaveLength(4);
+    expect(named.get("rod-titanium.glb")).toBe("/assets/game/props/rodfx-titanium.glb");
+    expect(named.get("rod-titanium-a1.glb")).toBe("/assets/game/props/rodfx-titanium-a1.glb");
+    expect(named.get("rod-reserved-slate.glb")).toBe("/assets/game/props/rodfx-reserved-slate.glb");
+    expect([...named.values()].filter(Boolean)).toHaveLength(6);
     expect(named.get("rod-1.glb")).toBeNull();
   });
 
@@ -32,6 +35,20 @@ describe("rods' effects (art/pipeline/build_rods.py, fx_library.py, RodAura)", (
     expect(names.some(n => n.startsWith("Halo"))).toBe(false);
     expect(parts.getObjectByName("Gust")?.userData.trail).toBeGreaterThan(0);
     expect(names.some(n => n.startsWith("Aura"))).toBe(true);
+  });
+
+  it("keeps the Titanium quiet (metal, not magic) and builds its awakening's energy from the library (rod-titanium round 1)", async () => {
+    const names = async (url: string) => { const n: string[] = []; (await load(url)).traverse(o => n.push(o.name)); return n; };
+    const base = await names("/assets/game/props/rodfx-titanium.glb"), woke = await names("/assets/game/props/rodfx-titanium-a1.glb");
+    expect([...base, ...woke].some(n => n.startsWith("Halo"))).toBe(false);
+    expect(base.some(n => n.startsWith("Aura"))).toBe(false);
+    expect(woke).toEqual(expect.arrayContaining(["Energy", "Core", "Blades", "Aura"]));
+    // The rod itself: one polished metal material, so it draws once in a hand and reflects like machined metal.
+    for (const url of ["/assets/game/tools/rod-titanium.glb", "/assets/game/tools/rod-titanium-a1.glb"]) {
+      const held = mergeHeld(await load(url), url), meshes: THREE.Mesh[] = [];
+      held.traverse(o => { if ((o as THREE.Mesh).isMesh) meshes.push(o as THREE.Mesh); });
+      expect(meshes.map(m => (m.material as THREE.Material).name)).toEqual(["P_Polished"]);
+    }
   });
 
   it.each(rods)("%s: its effect exists, costs at most five draws a holder, and never moves the tip", async url => {

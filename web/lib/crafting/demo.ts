@@ -25,6 +25,8 @@ export function installCraftingDemo(): void {
     void learnFromQuest(m.store, ME, "rod-lighthouse");
     void learnFromQuest(m.store, ME, "glider-leaf");
     void learnFromQuest(m.store, ME, "furn-floor-lamp");
+    // &ti=1: the Titanium rod's recipe too (it isn't on the shop's shelf: the workbench is where it shows).
+    if (new URLSearchParams(window.location.search).get("ti") === "1") void learnFromQuest(m.store, ME, "rod-titanium");
     const pockets = { wood_branch: 6, rock_iron_nugget: 5, sea_pearl_oyster: 1, fish_black_bass: 2, rock_stone: 6, rock_clay: 2, bug_firefly: 1, flower_windflower: 2, bug_red_dragonfly: 1 };
     for (const [key, n] of Object.entries(pockets)) m.eco.give(ME, key, n);
     m.eco.fund(ME, 1500);
