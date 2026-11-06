@@ -55,3 +55,8 @@ specs/tools/*/dist/
 
 # Meshy output never ships raw (art/meshy/meshy.mjs)
 art/meshy/raw/
+
+# SFX library (game/sfx-library): downloads stay out of the repo; candidates are built from them
+art/audio/staging/
+specs/evidence/sfx-library/r1/*.ogg
+!web/data/sfx-library.json

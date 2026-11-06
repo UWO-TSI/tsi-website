@@ -21,6 +21,32 @@ Also: the effects library on game/rod-gear is renamed the **VFX library** (rod-g
 
 **Gates:** tsc, vitest (both worlds) if code changes, the manifest validated (every file exists, every licence CC0 or ours).
 
+## Status
+
+Round 1 built (head: see `git log -1` on game/sfx-library; the commit "[build] sfx-library round 1"). Not yet reviewed by David.
+
+- **54 sounds, 159 candidates** (2 or 3 each), all CC0: UI 7 sounds / 21 candidates, rewards 15 / 44, actions 19 / 55, voice 1 / 3, ambience 12 / 36. Of them 53 are ours (`art/audio/synth_sfxlib.py`), the rest Kenney packs (7, each page "Creative Commons CC0" plus the License.txt in its zip) and Freesound sounds whose own page shows "Creative Commons 0" (checked by the fetch, logged in `art/audio/staging/freesound/records.tsv`), and today's game files (CREDITS.md).
+- Covers all 25 of game-feel's "Sound slots" (`specs/game-feel.md` on game/game-feel, 23 committed at 485d7215b plus `equip` and `fish-escape` in its working copy), by the same names, plus the lane file's extra categories.
+- The standard: `specs/sfx-library.md`. The manifest: `web/data/sfx-library.json` (gitignore exception added). The build: `art/audio/sfxlib.py` (SOUNDS table, levels, loops, encode, waveform, `--check`).
+- Candidates for the review page: `specs/evidence/sfx-library/r1/sfxlib1-<id>-<a|b|c>.ogg` + `.png`. The pngs are committed; the oggs are gitignored (18 MB; the build remakes them from staging + synth).
+- `--check` passes: every file there, every source CC0 with a url, one-shots within 1 LU of target unless the -3 dBTP ceiling held them back, every bed's seam no bigger than the bed's own 95th-percentile change.
+- Nothing is in `web/public/audio/` and `audio.ts` is unchanged: that waits for David's picks.
+
+## Next
+
+1. The coordinator publishes the SFX Library page from the manifest (one card per sound, its candidates playable, approve/redo).
+2. On David's picks: copy each pick to `web/public/audio/sfx/<id>.ogg` (beds to `ambient/<id>.ogg`), set `pick` in the manifest, credit them in CREDITS.md / SOURCES.md, wire them in `audio.ts` (SFXName, file map) so game-feel can swap its placeholders by name. Redo marks: change the SOUNDS row or the synth function, `python3 -I art/audio/sfxlib.py <id>`, bump to r2.
+3. If game-feel's slot list grows, add rows with the same ids.
+
+## Tools and gotchas
+
+- `python3 -I art/audio/sfxlib.py [ids]` (about 90 s for all), `--check`. In zsh split an id list with `${=ids}`.
+- Kenney zips need the page as referer: `curl -A Mozilla/5.0 -e https://kenney.nl/assets/<pack> https://kenney.nl/download-link/<hex of "assets/<pack>">` returns a signed url.
+- Freesound: search `https://freesound.org/search/?q=..&f=license:"Creative Commons 0"`; a sound page's licence link must be publicdomain/zero; the hq preview is `...-hq.ogg` (lossy, about 192 kbps). Downloads are slow (a 5 min field recording takes minutes). Originals need an API login, which we don't have: the previews are what's here.
+- ffmpeg's vorbis encoder takes stereo only, and it overshoots a limiter on sharp transients by up to 2.5 dB: the build re-limits and re-encodes until the true peak is under -3.
+- Loudest-400 ms levelling makes a 10 ms click peak-bound (Kenney click_002 lands at -26): expected.
+- Never play audio here: judge by levels, seam numbers, spectrograms.
+
 ## Rules
 
 - Headless only: never open a window, tab, app or audio on David's screen; never `open`; never play sound on this machine's speakers (render and measure offline). Never the Playwright MCP, claude-in-chrome or blender MCP tools.
