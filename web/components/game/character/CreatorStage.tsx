@@ -89,9 +89,12 @@ function easeTurn(yaw: { now: number; target: number }, motion: CharacterMotion,
 /** Which set the portrait stands on: the cream studio's warm lights, or the flat creator's white one. */
 export type Studio = "warm" | "white";
 
-/** The portrait: camera easing between framings, the turn eased toward its target. */
-export function Portrait({ look, framing, yaw, studio = "warm" }: { look: CharacterLook; framing: Framing; yaw: RefObject<{ now: number; target: number }>; studio?: Studio }) {
-  const motion = useRef<CharacterMotion>({ speed: 0, yaw: FRAMES[framing].yaw, lift: 0, pose: null, play: null });
+/** The portrait: camera easing between framings, the turn eased toward its target; `motion` lets the host play a clip or lift it (the level-up moment's jump). */
+export function Portrait({ look, framing, yaw, studio = "warm", motion: given }: {
+  look: CharacterLook; framing: Framing; yaw: RefObject<{ now: number; target: number }>; studio?: Studio; motion?: RefObject<CharacterMotion>;
+}) {
+  const own = useRef<CharacterMotion>({ speed: 0, yaw: FRAMES[framing].yaw, lift: 0, pose: null, play: null });
+  const motion = given ?? own;
   const at = useRef(new THREE.Vector3(...FRAMES[framing].at));
   const snapped = useRef(false);
   useFrame(({ camera }, delta) => {

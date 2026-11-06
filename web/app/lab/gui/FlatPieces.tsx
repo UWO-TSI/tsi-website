@@ -8,13 +8,14 @@ import { useState, type CSSProperties } from "react";
 import { Check, Clock, Clover, Droplets, Leaf, Lock, MapPin, Ruler, Sun, Sunset, Waves } from "lucide-react";
 import { CurrencyIcon } from "@/components/economy/Amount";
 import PixelImage from "@/components/economy/PixelImage";
-import { BiomeTag, BoostTrack, BuffChip, BookPage, BookSlot, Conditions, GivenFish, PaperRow, FlatDialog, DarkButton, FoldedMenu, GachaReveal, InkArt, InkDefs, MenuDish, OddsTable, SeasonDots, PanelSection, TaskCard, Thumb, TimeStrip, TipBody, useInkId, type OddsRow } from "@/components/gui/flat";
+import { BiomeTag, PLACE_LOOK, Conditions, CoverTitle, FlatDialog, DarkButton, FoldedMenu, GachaReveal, InkArt, InkDefs, MenuDish, OddsTable, SeasonDots, PanelSection, TaskCard, Thumb, TimeStrip, TipBody, useInkId, BoostTrack, BuffChip, BookPage, BookSlot, GivenFish, PaperRow, type OddsRow } from "@/components/gui/flat";
 import { catchLanes } from "@/components/game/peaceful/CatchBoard";
 import { dishStats, MenuCover } from "@/components/game/peaceful/SushiSheets";
 import { mealRows } from "@/components/economy/statIcons";
 import { SUSHI_MENU, TASTING } from "@/lib/wallet/catalogue";
 import { tastingPages } from "@/lib/wallet/rules";
 import { iconUrl } from "@/lib/icons/keys";
+import type { Place } from "@/lib/game/world/places";
 import { RARITY_LABEL, type Rarity } from "@/lib/rarity";
 import { odds, prizeByKey } from "@/lib/wallet/tackle";
 
@@ -49,7 +50,8 @@ export default function FlatPieces() {
       <Thumb picture={iconUrl("fish_dace")} size={64} dim label="Not out now" />
     </section>
     <Conditions items={[{ icon: <Leaf />, label: "Season", value: "Autumn", tint: "amber", note: "Winter on Dec 21" }, { icon: <Sun />, label: "Weather", value: "Clear", tint: "sky" }, { icon: <Sunset />, label: "Time of day", value: "Evening", tint: "amber" }]} />
-    <div style={{ display: "flex", gap: 8, margin: "0 0 14px" }}><BiomeTag water="sea" /><BiomeTag water="river" /><BiomeTag water="pond" /></div>
+    <div style={{ display: "flex", gap: 8, margin: "0 0 14px" }}><BiomeTag water="sea" /><BiomeTag water="river" /><BiomeTag water="pond" /><BiomeTag water="sea" place="Wharf" /></div>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, margin: "0 0 14px" }} data-testid="place-tags">{(Object.keys(PLACE_LOOK) as Place[]).map(at => <BiomeTag key={at} place={at} />)}</div>
     <TimeStrip now={14.5} lanes={lanes} label="Catch board" tip={f => <TipBody picture={f.picture} rarity={f.rarity} kind={f.rarity} name={f.label} />} />
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 22 }}>
       <OddsTable rows={rows} />

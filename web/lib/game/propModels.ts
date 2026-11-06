@@ -125,6 +125,8 @@ export const SCENERY_URLS: Readonly<Record<string, string>> = {
   // tipped toward +z, and a hoist whose jib reaches along +x.
   ...Object.fromEntries(["dock-pile-rope", "rope-net", "life-ring", "net-heap", "crate-net", "crate-cloth", "fish-crate", "dock-hoist"]
     .map(m => [m, `/assets/game/wharf/${m}.glb`])),
+  // The hand lantern on an edge pile (wharf.ts PILE_LANTERN), lit with the island's lamps (DefaultIslandWorld).
+  "pile-lantern": NEW_LAMPS.hand.url,
   // game/village-art: the path's edges: mossy side rocks (art/props/build_stones.py, remodelled organic by game/village-art2;
   // scale them freely), and the loose fence in short runs along x (art/props/build_path_edge.py; leave gaps between runs,
   // the lone post fills one); and a meadow patch of wild flowers in grass and a clump of tall grass (art/trees/build_flowers.py,

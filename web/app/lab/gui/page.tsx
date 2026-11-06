@@ -25,9 +25,9 @@ import { RARITIES, RARITY_LABEL } from "@/lib/rarity";
 import { RODS, TACKLE } from "@/lib/game/rods";
 import { RodRadar, TackleRadar } from "@/components/economy/RodGear";
 import { useSearch } from "@/lib/game/useMediaQuery";
-import { CircleDot, Waves, Worm } from "lucide-react";
+import { ChevronLeft, CircleDot, Sparkles, UserRound, Waves, Worm } from "lucide-react";
 import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
-import { ActionBar, ActionIcon, BigMoment, CallTag, CardOverlay, DarkButton, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, KeyPeek, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, Purse, QuestCheck, RankBadge, flyCoins, RewardPop, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot, type PeekKind } from "@/components/gui/flat";
+import { ActionBar, ActionIcon, CallTag, CardOverlay, DarkButton, FlatField, FlatSlider, FlatToggle, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, KeyPeek, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, Purse, QuestCheck, RankBadge, flyCoins, RewardPop, RoundButton, ServeMeter, SlotPop, SpinPicker, Spotlight, StaminaArc, VitalBar, Vitals, WalletSlot, XpRing, LevelUpMoment, type PeekKind } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
 import { BoardBody } from "@/components/game/volleyball/BoardSheet";
 import { DEFAULT_LOOK } from "@/lib/game/character/look";
@@ -361,6 +361,19 @@ export default function GuiShowroom() {
         <ProgressCard title="Saving" status="Nearly there" value={0.9} label="Saving" /></Row>
     </Section>
 
+    <Section id="flat-fields" title="Fields and buttons (flat)" note="The title's sign-in: grey-well fields (the label is the placeholder, read aloud), the dark pill for the one action, the white pill beside it, the round back, the switch and the slider (the title’s Settings).">
+      <Row><div style={{ display: "grid", gap: 10, width: 280 }}>
+        <RoundButton label="Back"><ChevronLeft size={18} /></RoundButton>
+        <FlatField label="Email" type="email" />
+        <FlatField label="Password" type="password" defaultValue="hunter22" />
+        <DarkButton>Sign in</DarkButton>
+        <GhostButton>Not now</GhostButton>
+        <FlatToggle checked onChange={() => {}} hint="The island's crisp pixel look">Pixel finish</FlatToggle>
+        <FlatToggle checked={false} onChange={() => {}}>Sun shadows</FlatToggle>
+        <FlatSlider label="Volume" value={70} onChange={() => {}} format={v => `${v}%`} />
+      </div></Row>
+    </Section>
+
     <Section id="serve-meter" title="Serve meter (flat)" note="The volleyball serve’s power: a triangle wide at the top, the fill warming from sea to coral to gold; it leans in and trembles as it fills, and flashes Max at the top.">
       <Row><ServeMeter value={0.3} label="Serve power"><Keycap>Hold</Keycap></ServeMeter><ServeMeter value={0.72} label="Serve power" /><ServeMeter value={0.97} label="Serve power, max" /></Row>
     </Section>
@@ -435,23 +448,30 @@ export default function GuiShowroom() {
       <div className={s.toastStage}><ToastHub /></div>
     </Section>
 
-    <Section id="hud-bars" title="The HUD's bars (flat kit)" note="specs/design-bible.md UI 8: health and XP always on, stamina on its own pill while it's used (warm and shaking once when it runs out). components/gui/flat StatBar and StatBars; the island's are components/game/HudBars.tsx.">
+    <Section id="hud-bars" title="The vitals, the level ring and the stamina arc (flat kit)" note="specs/design-bible.md UI 8: the level in a ring of XP (hover for the exact XP) with health, sliding from its full colour through amber to its low colour as it empties, a notch every 20 points, critical flashing; the Capsule look (David 11-05). A class's shield extends the health bar in its own colour; its mana is a slimmer bar under it. Stamina is a ) beside the character, only at a quarter or under. components/gui/flat/vitals.tsx; the island's are components/game/HudBars.tsx.">
       <Row>
-        <StatBars><StatBar kind="health" value={1} label="Health 100 of 100" /><StatBar kind="xp" value={0.42} label="Level 3" /></StatBars>
-        <StatBars><StatBar kind="health" value={0.7} label="Health 70 of 100" /><StatBar kind="xp" value={0.42} badge="Lv 3" label="Level 3" /></StatBars>
-        <StatBar kind="stamina" value={0.55} alone label="Stamina" />
-        <StatBar kind="stamina" value={0} alone low label="Stamina run out" />
+        {([[1, "100"], [0.5, "50"], [0.15, "15"]] as const).map(([h, n]) =>
+          <Vitals key={n} ring={<XpRing level={3} fill={0.42} into={126} needed={300} />}><VitalBar kind="health" value={h} critical={h < 0.25} label={`Health ${n} of 100`} /></Vitals>)}
       </Row>
+      <Row>
+        {([[1, 1], [0.8, 0.5], [0.15, 0.2]] as const).map(([h, sh]) =>
+          <Vitals key={h} ring={<XpRing level={3} fill={0.42} into={126} needed={300} />}><VitalBar kind="health" value={h} critical={h < 0.25} shield={{ value: sh, max: 40 }} label={`Health ${h * 100} of 100, shield ${sh * 40} of 40`} /></Vitals>)}
+        <Vitals ring={<XpRing level={3} fill={0.42} into={126} needed={300} />}><VitalBar kind="health" value={0.8} label="Health 80 of 100" /><VitalBar kind="mana" value={0.35} label="Mana 35 of 100" /></Vitals>
+      </Row>
+      <Row>{[1, 0.5, 0].map(st => <div key={st} style={{ position: "relative", width: 60, height: 120 }}>
+        <StaminaArc ref={el => { el?.toggleAttribute("data-show", true); el?.style.setProperty("--vital", String(st)); el?.style.setProperty("--x", "0.2"); el?.style.setProperty("--h", "1"); }} /></div>)}</Row>
     </Section>
 
-    <Section id="rewards" title="Rewards and moments (flat kit)" note="specs/design-bible.md UI 4 and 7: a reward pops with its rarity as the outline (divine: the holo); a level up is the big moment. components/gui/flat RewardPop and BigMoment.">
+    <Section id="rewards" title="Rewards and moments (flat kit)" note="specs/design-bible.md UI 4 and 7: a reward pops with its rarity as the outline (divine: the holo); a level up is the big moment (motes into the figure, a flash per mote, the burst, then what it unlocks). components/gui/flat RewardPop and LevelUpMoment.">
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 18 }}>
         {POPS.map(([rarity, key, name, title, facts]) => <RewardPop key={rarity ?? key} picture={iconUrl(key)} title={title} name={name} rarity={rarity}
           rarityLabel={rarity ? rarity[0].toUpperCase() + rarity.slice(1) : null} facts={facts ? <span>{facts}</span> : null} isNew={rarity === "rare"} note="The one-liner, quiet." testId={`pop-${rarity ?? key}`} />)}
       </div>
       <Row><Button size="sm" onClick={() => setMoment(true)}>Show the level up</Button></Row>
-      {moment && <BigMoment kicker="Level up" big={2} title="You're level 2" onClose={() => setMoment(false)} testId="showroom-moment"
-        items={[{ key: "quest", icon: <BookOpen size={18} />, title: "New quest: Odile's net", line: "Odile at the museum has a spare net." }]} />}
+      {moment && <LevelUpMoment level={2} title="You're level 2" onClose={() => setMoment(false)} testId="showroom-moment"
+        figure={<UserRound size={200} strokeWidth={1.25} style={{ display: "block", margin: "60px auto 0", color: "var(--ui-ink-2)" }} />}
+        items={[{ key: "quest", icon: <BookOpen size={28} />, motion: "flip", title: "New quest: Odile's net", line: "Odile at the museum has a spare net." },
+          { key: "points", icon: <Sparkles size={28} />, motion: "twinkle", title: "3 stat points", line: "Spend them on your path (P)." }]} />}
     </Section>
 
     <section id="overlays" className={s.section}>

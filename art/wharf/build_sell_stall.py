@@ -2,8 +2,8 @@
 after specs/references/terrain/fish-shop-2026-10-26/sell-stall-fisk.jpg and sell-cart-coco.jpg: "barrel front of fish
 shop to sell"). It replaces wharf-art2's lone sell barrel under the same name, so the world's placement and the sell
 interaction keep working. A wooden display crate on legs tipped toward the buyer, heaped with bright fish, a crab, an
-octopus and a starfish, a net slung under its front; a barrel with a lantern on it and a tub of fish on the left; a
-barrel with a coil of rope and a life ring on the right; behind, a frame of two posts carrying a coral SELL board (the
+octopus and a starfish, a net slung under its front; a tub of fish on the left (round 8 took the barrel with a lantern
+on it away, David: "remove the landern barral"); a barrel with a coil of rope and a life ring on the right; behind, a frame of two posts carrying a coral SELL board (the
 cart's colour), a net sagging under it, a fish hung off one end and a lantern off the other, two gulls on the top bar.
 
   /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P art/wharf/build_sell_stall.py [-- review <dir> [az:el ...]]
@@ -281,9 +281,7 @@ def sell_stall(Mw, Mp):
     lip = lambda u: tray_pt((-0.6 + 1.2 * u, 0.02, 0.45))
     net(k, Mp, lip, lambda u: (-0.56 + 1.12 * u, 0.32 + 0.1 * abs(math.sin(math.pi * 3 * u)), front + 0.06), 6, 2, 0.05)
     sign(k, Mw, Mp)
-    # Left: a barrel with a lantern on it, a tub of fish before it, a float. Right: a barrel with a coil of rope, a life ring.
-    placed(k, K.game_rot(yaw=0.4), (-0.98, 0.0, -0.14), lambda: barrel(k, Mw, Mp, 1))
-    placed(k, Matrix.Identity(3), (-0.98, 0.72, -0.14), lambda: iron_lantern(k, LANTERN, (0, 0, 0), 0.95))
+    # Left: a tub of fish, a float. Right: a barrel with a coil of rope, a life ring.
     placed(k, K.game_rot(yaw=1.1), (-0.86, 0.0, 0.36), lambda: tub(k, Mw, Mp))
     k.blob((-1.2, 0.08, 0.3), (0.09, 0.075, 0.09), Mp, "#f2c84b", segs=7, rings=5)
     placed(k, K.game_rot(yaw=-0.7), (0.98, 0.0, -0.12), lambda: barrel(k, Mw, Mp, 4))

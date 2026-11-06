@@ -4,7 +4,7 @@
 // `?progression=demo` (the real progression service on an in-memory store; `&chapter=` and `&tally=` set where the
 // member is). Headless Chromium, muted, under the shared browser lock.
 //   HOST=http://localhost:3147 node specs/evidence/main-quest/shoot.mjs <out_dir> <scene> [<scene> ...]
-// Scenes: r2flow, r2museum, r2dig, pops, strips (round 2); flow, chapters, dig, pickaxe (round 1; the new world: run the dev server with NEXT_PUBLIC_GAME_WORLD=new); village (the
+// Scenes: mq8lab, mq8hud, mq8hud-phone (round 8: clips under <out_dir>/video, marks in log.json); mq7hud, mq7hud-phone (round 7); mq6hud, mq6hud-phone (round 6); mq5hud, mq5hud-phone (round 5); mq4hud, mq4hud-phone, mq4sand (round 4); r2flow, r2museum, r2dig, pops, strips (round 2); flow, chapters, dig, pickaxe (round 1; the new world: run the dev server with NEXT_PUBLIC_GAME_WORLD=new); village (the
 // default world, no env: the village's one tracker line, unchanged).
 // Places are the new world's (lib/collections/rolls.ts activeVillage("new"): museum 4,70.5; dig-sand-0 -17,102;
 // dig-soil-15 35,84; rock-1 38,25.1).
@@ -23,8 +23,11 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 const LOOK = JSON.stringify({ skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", extras: [], bangs: "", back: "hair_wispy_ponytail", top: "top_hoodie", bottom: "bottom_joggers", onepiece: null, shoes: "shoes_sneakers", acc: {}, colors: { top_hoodie: 2 } });
 const CAMERA = JSON.stringify({ yaw: 0, pitch: 0.55, zoom: 1, sensitivity: 1, invertY: false, mouseLook: false, autoFollow: false });
 
-async function open(query, store = {}) {
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+/** A phone (round 4): a touch screen's size; the game's touch layout. */
+const PHONE = { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true };
+async function open(query, store = {}, view = { viewport: { width: 1440, height: 900 } }, video = null) {
+  const ctx = await browser.newContext(video ? { ...view, recordVideo: { dir: `${OUT}/video`, size: video } } : view);
+  ctx.t0 = Date.now();
   const page = await ctx.newPage();
   page.on("pageerror", e => { errors.push(e.message.slice(0, 300)); console.log("pageerror", e.message.slice(0, 300)); });
   await page.goto(`${HOST}/lab/island`, { waitUntil: "domcontentloaded" });
@@ -118,7 +121,380 @@ const widths = page => page.evaluate(() => {
   return { bar: t?.getBoundingClientRect().width ?? null, list: l?.getBoundingClientRect().width ?? null, barLeft: t?.getBoundingClientRect().left ?? null, listLeft: l?.getBoundingClientRect().left ?? null };
 });
 
-for (const scene of SCENES) {
+/** Round 4: the vitals at a health and stamina (0 to 1), the HUD's corner cropped. */
+async function vitalsAt(page, name, health, stamina, clip) {
+  await page.evaluate(h => { window.__combat.rt.player.hp = Math.round(window.__combat.rt.player.maxHp * h); window.__publishCombat(); }, health);
+  await sleep(1000);
+  await page.evaluate(s => { window.__move.sim.current.state.stamina = s; }, stamina);
+  await sleep(60);
+  await shot(page, name, clip);
+  log.push({ name, vitals: await page.evaluate(() => [...document.querySelectorAll("[data-testid=hud-vitals] [role=meter]")].map(m => [m.getAttribute("aria-label"), getComputedStyle(m).getPropertyValue("--vital").trim(), getComputedStyle(m).color])) });
+}
+/** Round 4: the level-up moment as a strip: a chapter's XP fills the ring, then the moment's beats (times from its start, ms). */
+async function levelUpStrip(page, prefix, wide, times = [["a", 250], ["b", 850], ["c", 1500], ["e", 2420], ["f", 2750], ["g", 3700], ["h", 4600]], seek = null) {
+  const xp = (total, levelled) => page.evaluate(([t, l]) => window.dispatchEvent(new CustomEvent("tsi:api-write", { detail: { path: "/api/progression/chapters/advance", data: { xp_gain: { amount: 0, total: t, level: l ? 2 : 1, levelled_up: l } } } })), [total, levelled]);
+  await xp(90, false); await sleep(1500);
+  // A chapter's level up (its check-mark first), so the reveal lists the quest it opens.
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent("tsi:quest-complete", { detail: { title: "Settle in" } })));
+  await xp(160, true);
+  await page.waitForSelector("[data-testid=level-up]", { timeout: 8000 });
+  const t0 = await page.evaluate(() => performance.now());
+  const card = async () => {
+    // A phone's whole screen (the moment has no card to crop to, and the jump grows past its box).
+    if (!wide && /^mq[567]/.test(prefix)) return { x: 0, y: 40, width: 390, height: 804 };
+    const b = await page.$eval("[data-testid=level-up] section", el => { const r = el.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; });
+    const m = wide ? 70 : 10;
+    return { x: Math.max(0, b.x - m), y: Math.max(0, b.y - m), width: b.w + 2 * m, height: b.h + 2 * m };
+  };
+  let clip = null;
+  for (const [k, at] of times) {
+    const now = await page.evaluate(() => performance.now());
+    if (at > now - t0) await sleep(at - (now - t0));
+    clip = clip ?? await card();
+    const took = Math.round(await page.evaluate(() => performance.now()) - t0);
+    await page.screenshot({ path: `${OUT}/${prefix}-${k}.png`, clip });
+    log.push({ name: `${prefix}-${k}`, ms: took, phase: await page.$eval("[data-testid=level-up]", el => el.dataset.phase).catch(() => null) });
+    if (k === "c") {
+      // A flash frame: a landing mote whitens the figure for two frames, too short to catch, so it is held for this shot.
+      await page.evaluate(() => { const f = document.querySelector("[data-testid=level-up-hero]")?.parentElement; if (f) f.dataset.flash = ""; });
+      await page.screenshot({ path: `${OUT}/${prefix}-d.png`, clip });
+      await page.evaluate(() => { const f = document.querySelector("[data-testid=level-up-hero]")?.parentElement; if (f) delete f.dataset.flash; });
+      log.push({ name: `${prefix}-d (flash held)` });
+    }
+  }
+  if (seek) {
+    // The reveal frame by frame: at its first frame every animation is paused, then each is stepped on by the same ms
+    // (headless frames under load are too slow to catch a 0.45 s fade). Then they run on.
+    await page.waitForFunction(() => document.querySelector("[data-testid=level-up]")?.dataset.phase === "reveal", null, { timeout: 8000, polling: "raf" });
+    await page.evaluate(() => { window.__anims = document.getAnimations().map(a => { a.pause(); return [a, a.currentTime ?? 0]; }); });
+    for (const ms of seek) {
+      await page.evaluate(t => { for (const [a, base] of window.__anims) a.currentTime = base + t; }, ms);
+      await sleep(120);
+      await page.screenshot({ path: `${OUT}/${prefix}-r${String(ms).padStart(4, "0")}.png`, clip });
+      log.push({ name: `${prefix}-r${ms}`, seek: ms });
+    }
+    await page.evaluate(() => window.__anims.forEach(([a]) => a.play()));
+    await sleep(600);
+  }
+  log.push({ name: `${prefix}-centre`, shout: await page.evaluate(() => {
+    const el = document.querySelector("[data-testid=level-up] strong"), r = document.createRange(); r.selectNodeContents(el);
+    const b = r.getBoundingClientRect(); return { text: el.textContent, left: Math.round(b.left), right: Math.round(b.right), offFromCentre: +((b.left + b.right) / 2 - window.innerWidth / 2).toFixed(1) };
+  }).catch(e => String(e)) });
+  await shot(page, `${prefix}-full`);
+  log.push({ name: `${prefix}-full`, card: await page.$eval("[data-testid=level-up]", el => el.textContent).catch(() => null) });
+  await page.keyboard.press("Escape"); await sleep(1000);
+}
+
+for (const scene of SCENES) try {
+  if (scene === "mq8lab") {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } }), page = await ctx.newPage();
+    page.on("pageerror", e => errors.push(e.message.slice(0, 300)));
+    await page.goto(`${HOST}/lab/gui?only=hud-bars`, { waitUntil: "networkidle", timeout: 300000 });
+    await sleep(2500);
+    const el = await page.$("#hud-bars") ?? await page.$("section");
+    await el.screenshot({ path: `${OUT}/mq8-lab-vitals.png` });
+    log.push({ name: "mq8-lab-vitals" });
+    await ctx.close();
+  }
+  if (scene === "mq8hud" || scene === "mq8hud-phone") {
+    // Round 8: the Capsule vitals at full, half, low and critical; a shield extending the health bar (nothing in game
+    // has one yet: the shield's end is put on the live bar, as VitalBar's `shield` renders it); the stamina arc at its
+    // lower opacity; the arc through the zoom (its box logged at each zoom). Clips: the zoom sweep, the arc fading in
+    // and out, the shield then health draining.
+    const phone = scene.endsWith("phone");
+    const { ctx, page } = await open("time=day", {}, phone ? PHONE : undefined, phone ? { width: 390, height: 844 } : { width: 960, height: 600 });
+    const mark = (clip, edge) => log.push({ clip: `${phone ? "mq8-phone" : "mq8"}-${clip}`, [edge]: (Date.now() - ctx.t0) / 1000 });
+    await go(page, 30, 46, Math.PI);
+    await hudIn(page);
+    const p = phone ? "mq8-phone" : "mq8";
+    const corner = phone ? { x: 0, y: 40, width: 390, height: 120 } : { x: 0, y: 40, width: 460, height: 100 };
+    const hp = h => page.evaluate(x => { window.__combat.rt.player.hp = Math.round(window.__combat.rt.player.maxHp * x); window.__publishCombat(); }, h);
+    for (const [k, h] of [["full", 1], ["half", 0.5], ["low", 0.3]]) await vitalsAt(page, `${p}-${k}`, h, 1, corner);
+    await hp(0.12); await sleep(1200);
+    const t0 = Date.now();
+    for (let i = 0; i < 6; i++) {
+      const at = i * 150; if (Date.now() - t0 < at) await sleep(at - (Date.now() - t0));
+      await page.screenshot({ path: `${OUT}/${p}-critical-${i}.png`, clip: corner });
+    }
+    await shot(page, `${p}-critical-screen`);
+    // The shield: 40 points on the end of 100 health (VitalBar's --hp, --tally and its <b>).
+    const shield = sh => page.evaluate(x => { const bar = document.querySelector("[data-testid=hud-vitals] [role=meter]");
+      if (!bar.querySelector("b")) { bar.appendChild(document.createElement("b")); bar.style.setProperty("--hp", String(100 / 140)); bar.style.setProperty("--tally", String(20 / 140)); }
+      bar.style.setProperty("--shield", String(x)); const h = document.querySelector("main header"); if (h) h.dataset.fading = "false"; }, sh);
+    for (const [k, h, sh] of [["full", 1, 1], ["half", 0.8, 0.5], ["low", 0.3, 0.25], ["critical", 0.12, 0.6], ["empty", 0.6, 0]]) {
+      await hp(h); await shield(sh); await sleep(1100);
+      await shot(page, `${p}-shield-${k}`, corner);
+    }
+    await hp(0.8); await shield(0.7); await sleep(1100);
+    await shot(page, `${p}-shield-fit`, phone ? { x: 0, y: 40, width: 390, height: 200 } : { x: 0, y: 40, width: 460, height: 180 });
+    // Clip: the shield drains first, then health, the shield's end keeping its colour to empty.
+    await hp(1); await shield(1); await sleep(1200);
+    mark("shield", "from");
+    for (let i = 10; i >= 0; i--) { await shield(i / 10); await sleep(220); }
+    for (let i = 10; i >= 1; i--) { await hp(i / 10); await sleep(260); }
+    await sleep(1800); mark("shield", "to");
+    await page.evaluate(() => { const b = document.querySelector("[data-testid=hud-vitals] [role=meter] b"); b?.parentElement.style.setProperty("--hp", "1"); b?.parentElement.style.setProperty("--tally", "0.2"); b?.remove(); });
+    await hp(1); await sleep(1200);
+    await shot(page, `${p}-hud-rest`);
+    // The stamina arc, held at each value (the refill's rest held back), then let go to refill past a quarter.
+    const arcLog = () => page.evaluate(() => { const a = document.querySelector("[data-testid=hud-stamina]"), s = window.__move.sim.current.state, me = window.__move.screen();
+      return { stamina: +s.stamina.toFixed(3), show: a.hasAttribute("data-show"), opacity: getComputedStyle(a).opacity, zoom: +window.__orbit.orbit.view.zoom.toFixed(2),
+        box: (({ left, top, width, height }) => [left, top, width, height].map(Math.round))(a.getBoundingClientRect()), me: me && { x: Math.round(me.x), y: Math.round(me.y) } }; });
+    const hold = x => page.evaluate(v => { const s = window.__move.sim.current.state; s.stamina = v; s.staminaRest = -100; s.winded = v <= 0; }, x);
+    const around = () => page.evaluate(ph => { const me = window.__move.screen(); return ph ? { x: Math.max(0, me.x - 150), y: Math.max(40, me.y - 170), width: 300, height: 280 } : { x: me.x - 180, y: me.y - 200, width: 360, height: 300 }; }, phone);
+    let box = await around();
+    for (const [k, v] of [["a30", 0.3], ["b25", 0.25], ["c18", 0.18], ["d10", 0.1], ["e04", 0.04], ["f00", 0]]) {
+      await hold(v); await sleep(500);
+      await page.screenshot({ path: `${OUT}/${p}-stamina-${k}.png`, clip: box });
+      log.push({ name: `${p}-stamina-${k}`, arc: await arcLog() });
+      if (k === "d10") await shot(page, `${p}-stamina-screen`);
+    }
+    await page.evaluate(() => { window.__move.sim.current.state.staminaRest = 1; });
+    for (const k of ["g", "h", "i", "j", "k"]) {
+      await sleep(260);
+      await page.screenshot({ path: `${OUT}/${p}-stamina-${k}.png`, clip: box });
+      log.push({ name: `${p}-stamina-${k}`, arc: await arcLog() });
+    }
+    await sleep(1500);
+    // Clip: stamina drains past a quarter (the arc fades in), runs out (it shakes), then refills (it fades out).
+    mark("stamina", "from");
+    for (let i = 40; i >= 0; i--) { await hold(i / 100); await sleep(70); }
+    await sleep(900);
+    await page.evaluate(() => { window.__move.sim.current.state.staminaRest = 1; });
+    await sleep(3500); mark("stamina", "to");
+    // The zoom: the arc held at 12%, shot at each zoom (set at once), its box logged.
+    await hold(0.12); await sleep(600);
+    const zoom = z => page.evaluate(x => { const o = window.__orbit.orbit; o.target.zoom = x; o.view.zoom = x; }, z);
+    for (const z of [0.6, 0.8, 1, 1.3, 1.6]) {
+      await zoom(z); await sleep(700);
+      const tag = `z${String(Math.round(z * 10)).padStart(2, "0")}`;
+      await shot(page, `${p}-zoom-${tag}`);
+      log.push({ name: `${p}-zoom-${tag}`, arc: await arcLog() });
+    }
+    // Clip: the wheel's own ease, in to the nearest and out to the farthest, the arc held.
+    await zoom(1); await sleep(800);
+    mark("zoom", "from");
+    for (const z of [0.6, 1.6, 1]) { await page.evaluate(x => { window.__orbit.orbit.target.zoom = x; }, z); for (let i = 0; i < 6; i++) { await sleep(500); await hold(0.12); } }
+    mark("zoom", "to");
+    await ctx.close();
+    log.push({ video: await page.video().path(), t0: ctx.t0 });
+  }
+  if (scene === "mq7lab") {
+    // The showroom's vitals section (kit pieces first, bible How it's built 3).
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } }), page = await ctx.newPage();
+    page.on("pageerror", e => errors.push(e.message.slice(0, 300)));
+    await page.goto(`${HOST}/lab/gui?only=hud-bars`, { waitUntil: "networkidle", timeout: 300000 });
+    await sleep(2500);
+    const el = await page.$("#hud-bars") ?? await page.$("section");
+    await el.screenshot({ path: `${OUT}/mq7-lab-vitals.png` });
+    log.push({ name: "mq7-lab-vitals" });
+    await ctx.close();
+  }
+  if (scene === "mq7hud" || scene === "mq7hud-phone") {
+    // Round 7: the three vitals looks (capsule, hearts, dial: the CSS reads .hud's data-look, so one load shoots all
+    // three) at full, half, low and critical, with a shield row fitted; the stamina arc beside the character from 30%
+    // down to empty and back; the level up with "Level up!" measured against the screen's centre line.
+    const phone = scene.endsWith("phone");
+    const { ctx, page } = await open("time=day", {}, phone ? PHONE : undefined);
+    await go(page, 30, 46, Math.PI);
+    await hudIn(page);
+    const p = phone ? "mq7-phone" : "mq7";
+    const corner = phone ? { x: 0, y: 40, width: 390, height: 170 } : { x: 0, y: 40, width: 420, height: 130 };
+    const setLook = look => page.evaluate(l => { document.querySelector("[data-look]").dataset.look = l; }, look);
+    for (const look of ["capsule", "hearts", "dial"]) {
+      await setLook(look); await sleep(300);
+      for (const [k, h] of [["full", 1], ["half", 0.5], ["low", 0.3]]) await vitalsAt(page, `${p}-${look}-${k}`, h, 1, corner);
+      await page.evaluate(() => { window.__combat.rt.player.hp = Math.round(window.__combat.rt.player.maxHp * 0.12); window.__publishCombat(); });
+      await sleep(1200);
+      const t0 = Date.now();
+      for (let i = 0; i < 6; i++) {
+        const at = i * 150; if (Date.now() - t0 < at) await sleep(at - (Date.now() - t0));
+        await page.screenshot({ path: `${OUT}/${p}-${look}-critical-${i}.png`, clip: corner });
+      }
+      await shot(page, `${p}-${look}-critical-screen`);
+      await page.evaluate(() => { window.__combat.rt.player.hp = Math.round(window.__combat.rt.player.maxHp * 0.8); window.__publishCombat(); });
+      await sleep(1200);
+      // A class's shield row (fit check): the health row cloned in as a shield of 60.
+      await page.evaluate(() => { const v = document.querySelector("[data-testid=hud-vitals]"); const r = v.firstElementChild.cloneNode(true); r.dataset.kind = "shield"; r.removeAttribute("data-critical"); r.style.setProperty("--vital", "0.6"); r.style.setProperty("--tally", "0.333"); r.style.setProperty("--n", "3"); r.setAttribute("aria-label", "Shield (fit check)"); v.appendChild(r);
+        const h = document.querySelector("main header"); if (h) h.dataset.fading = "false"; });
+      await sleep(400);
+      await shot(page, `${p}-${look}-shield`, phone ? { x: 0, y: 40, width: 390, height: 220 } : { x: 0, y: 40, width: 460, height: 180 });
+      await page.evaluate(() => { const v = document.querySelector("[data-testid=hud-vitals]"); if (v.children.length > 1) v.lastElementChild.remove(); });
+    }
+    await page.evaluate(() => { window.__combat.rt.player.hp = window.__combat.rt.player.maxHp; window.__publishCombat(); });
+    await setLook("capsule"); await sleep(1200);
+    await shot(page, `${p}-hud-rest`);
+    // The stamina arc: held at each value (the refill's rest timer held back), then let go to refill past a quarter.
+    const arcLog = () => page.evaluate(() => { const a = document.querySelector("[data-testid=hud-stamina]"), s = window.__move.sim.current.state;
+      return { stamina: +s.stamina.toFixed(3), show: a.hasAttribute("data-show"), opacity: getComputedStyle(a).opacity, box: (({ left, top, width, height }) => [left, top, width, height].map(Math.round))(a.getBoundingClientRect()) }; });
+    const me = await page.evaluate(() => window.__move.screen());
+    const around = phone ? { x: Math.max(0, me.x - 150), y: Math.max(40, me.y - 170), width: 300, height: 280 } : { x: me.x - 180, y: me.y - 200, width: 360, height: 300 };
+    log.push({ name: "avatar on screen", me });
+    for (const [k, v] of [["a30", 0.3], ["b25", 0.25], ["c18", 0.18], ["d10", 0.1], ["e04", 0.04], ["f00", 0]]) {
+      await page.evaluate(x => { const s = window.__move.sim.current.state; s.stamina = x; s.staminaRest = -100; s.winded = x <= 0; }, v);
+      await sleep(500);
+      await page.screenshot({ path: `${OUT}/${p}-stamina-${k}.png`, clip: around });
+      log.push({ name: `${p}-stamina-${k}`, arc: await arcLog() });
+      if (k === "d10") await shot(page, `${p}-stamina-screen`);
+    }
+    await page.evaluate(() => { window.__move.sim.current.state.staminaRest = 1; });
+    for (const k of ["g", "h", "i", "j", "k"]) {
+      await sleep(260);
+      await page.screenshot({ path: `${OUT}/${p}-stamina-${k}.png`, clip: around });
+      log.push({ name: `${p}-stamina-${k}`, arc: await arcLog() });
+    }
+    await sleep(1500);
+    log.push({ name: `${p}-stamina-after`, arc: await arcLog() });
+    await page.mouse.move(phone ? 200 : 900, 600);
+    await levelUpStrip(page, `${p}-levelup`, !phone, [["a", 250], ["b", 1500], ["c", 2420]], [0, 300, 650, 1150, 3500]);
+    await ctx.close();
+  }
+  if (scene === "mq6hud" || scene === "mq6hud-phone") {
+    // Round 6: the vitals on the white card (full, half, low; critical as a strip), a third row cloned in to show a
+    // shield or mana bar fits, and the level up: the figure fades, "Level up" moves up, the unlocks take the centre.
+    const phone = scene.endsWith("phone");
+    const { ctx, page } = await open("time=day", {}, phone ? PHONE : undefined);
+    await go(page, 30, 46, Math.PI);
+    await hudIn(page);
+    const p = phone ? "mq6-phone" : "mq6";
+    const corner = phone ? { x: 0, y: 40, width: 390, height: 160 } : { x: 0, y: 40, width: 460, height: 110 };
+    await shot(page, `${p}-hud-rest`);
+    for (const [k, h, st] of [["full", 1, 1], ["half", 0.5, 0.5], ["low", 0.14, 0.1]]) await vitalsAt(page, `${p}-vitals-${k}`, h, st, corner);
+    const t0 = Date.now();
+    for (let i = 0; i < 8; i++) {
+      const at = i * 110; if (Date.now() - t0 < at) await sleep(at - (Date.now() - t0));
+      await page.screenshot({ path: `${OUT}/${p}-critical-${i}.png`, clip: phone ? { x: 0, y: 95, width: 260, height: 85 } : { x: 0, y: 40, width: 300, height: 80 } });
+    }
+    await page.evaluate(() => { window.__combat.rt.player.hp = window.__combat.rt.player.maxHp; window.__publishCombat(); });
+    await sleep(1500);
+    // A third row (a class's shield or mana): the stamina row cloned in as the shield, with the place name showing.
+    await page.evaluate(() => { const v = document.querySelector("[data-testid=hud-vitals]"); const r = v.lastElementChild.cloneNode(true); r.dataset.kind = "shield"; r.removeAttribute("data-quiet"); r.style.setProperty("--vital", "0.7"); r.setAttribute("aria-label", "Shield (fit check)"); v.appendChild(r);
+      const h = document.querySelector("main header"); if (h) h.dataset.fading = "false"; });
+    await sleep(400);
+    await shot(page, `${p}-vitals-three`, phone ? { x: 0, y: 40, width: 390, height: 200 } : { x: 0, y: 40, width: 460, height: 160 });
+    await page.evaluate(() => { const v = document.querySelector("[data-testid=hud-vitals]"); if (v.children.length > 2) v.lastElementChild.remove(); });
+    await page.mouse.move(phone ? 200 : 900, 600);
+    await levelUpStrip(page, `${p}-levelup`, !phone, [["a", 250], ["b", 1500], ["c", 2420]], [0, 150, 300, 450, 650, 800, 950, 1150, 3500]);
+    await ctx.close();
+  }
+  if (scene === "mq5hud" || scene === "mq5hud-phone") {
+    // Round 5: the vitals bare and on the card, critical's flash and heartbeat as strips, the world as health falls
+    // (vignette, then the drain), the level up with no card, the phone's camera and compact controls.
+    const phone = scene.endsWith("phone");
+    const { ctx, page } = await open("time=day", {}, phone ? PHONE : undefined);
+    await go(page, 30, 46, Math.PI);
+    await hudIn(page);
+    const p = phone ? "mq5-phone" : "mq5";
+    const corner = phone ? { x: 0, y: 40, width: 390, height: 140 } : { x: 0, y: 40, width: 460, height: 80 };
+    const card = on => page.evaluate(c => { const v = document.querySelector("[data-testid=hud-vitals]"); if (c) v.removeAttribute("data-bare"); else v.setAttribute("data-bare", ""); }, on);
+    await shot(page, `${p}-hud-rest`);
+    log.push({ name: `${p}-hud-rest`, emoteButton: await page.$("[aria-label='Open the emote wheel']").then(e => !!e), camera: await page.evaluate(() => { const c = window.__orbit.three().camera; return c.position.toArray().map(n => +n.toFixed(2)); }) });
+    for (const [k, h, st] of [["full", 1, 1], ["half", 0.5, 0.5], ["low", 0.14, 0.1]]) {
+      await vitalsAt(page, `${p}-vitals-${k}-bare`, h, st, corner);
+      await card(true); await sleep(80);
+      await shot(page, `${p}-vitals-${k}-card`, corner);
+      await card(false);
+    }
+    // Critical: the well flashes and the heart beats (0.9 s a cycle): a strip, bare then card.
+    for (const look of ["bare", "card"]) {
+      await card(look === "card"); await sleep(120);
+      const t0 = Date.now();
+      for (let i = 0; i < 8; i++) {
+        const at = i * 110; if (Date.now() - t0 < at) await sleep(at - (Date.now() - t0));
+        await page.screenshot({ path: `${OUT}/${p}-critical-${look}-${i}.png`, clip: phone ? { x: 0, y: 95, width: 260, height: 75 } : { x: 0, y: 40, width: 300, height: 70 } });
+      }
+    }
+    await card(false);
+    // The world as health falls: a wide shot at each (the grade eases in about a second).
+    for (const [k, h] of [["100", 1], ["50", 0.5], ["35", 0.35], ["14", 0.14]]) {
+      await page.evaluate(v => { window.__combat.rt.player.hp = Math.round(window.__combat.rt.player.maxHp * v); window.__publishCombat(); }, h);
+      await sleep(2200);
+      await shot(page, `${p}-world-${k}`);
+    }
+    await page.evaluate(() => { window.__combat.rt.player.hp = window.__combat.rt.player.maxHp; window.__publishCombat(); });
+    await sleep(2200);
+    await page.mouse.move(phone ? 200 : 900, 600);
+    await levelUpStrip(page, `${p}-levelup`, !phone);
+    await ctx.close();
+  }
+  if (scene === "mq4tap") {
+    // The phone's ring tapped for its tip (the full phone pass is mq4hud-phone).
+    const { ctx, page } = await open("", {}, PHONE);
+    await go(page, 30, 46, Math.PI);
+    await hudIn(page);
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent("tsi:api-write", { detail: { path: "/api/progression/chapters/advance", data: { xp_gain: { amount: 0, total: 60, level: 1, levelled_up: false } } } })));
+    await sleep(1400);
+    log.push({ name: "ring hit", at: await page.evaluate(() => { const r = document.querySelector("[data-testid=hud-xp]").getBoundingClientRect(); const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return [Math.round(r.left), Math.round(r.top), Math.round(r.width), e?.tagName, String(e?.className?.baseVal ?? e?.className), e?.closest("[data-testid=hud-xp]") ? "ring" : "other"]; }) });
+    const r = await page.$eval("[data-testid=hud-xp]", el => { const b = el.getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; });
+    await page.touchscreen.tap(r[0], r[1]);
+    await sleep(700);
+    log.push({ name: "mq4-phone-xp-tap", tip: await page.$eval("[role=tooltip]", el => el.textContent).catch(() => null), active: await page.evaluate(() => document.activeElement?.getAttribute("data-testid")) });
+    await shot(page, "mq4-phone-xp-tap", { x: 0, y: 0, width: 390, height: 300 });
+    await ctx.close();
+  }
+  if (scene === "mq4hud" || scene === "mq4hud-phone") {
+    const phone = scene.endsWith("phone");
+    const { ctx, page } = await open("", {}, phone ? PHONE : undefined);
+    await go(page, 30, 46, Math.PI);
+    await hudIn(page);
+    const p = phone ? "mq4-phone" : "mq4";
+    const corner = phone ? { x: 0, y: 0, width: 390, height: 200 } : { x: 0, y: 0, width: 460, height: 190 };
+    await shot(page, `${p}-hud-rest`);
+    await vitalsAt(page, `${p}-vitals-full`, 1, 1, corner);
+    await sleep(2000);
+    await shot(page, `${p}-vitals-rested`, corner);
+    await vitalsAt(page, `${p}-vitals-half`, 0.5, 0.5, corner);
+    await vitalsAt(page, `${p}-vitals-low`, 0.14, 0.1, corner);
+    await shot(page, `${p}-vitals-low-wide`);
+    await vitalsAt(page, `${p}-vitals-back`, 1, 1, corner);
+    // The XP ring: some XP in, then hover (a tap on the phone) for the exact XP.
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent("tsi:api-write", { detail: { path: "/api/progression/chapters/advance", data: { xp_gain: { amount: 0, total: 60, level: 1, levelled_up: false } } } })));
+    await sleep(1400);
+    await shot(page, `${p}-xp-ring`, corner);
+    if (phone) log.push({ name: "ring hit", at: await page.evaluate(() => { const r = document.querySelector("[data-testid=hud-xp]").getBoundingClientRect(); const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return [Math.round(r.left), Math.round(r.top), Math.round(r.width), e?.tagName, e?.className?.baseVal ?? e?.className, e?.closest("[data-testid=hud-xp]") ? "ring" : "other"]; }) });
+    if (phone) await page.tap("[data-testid=hud-xp]", { timeout: 8000 }).catch(e => log.push({ name: "tap failed", e: e.message.slice(0, 200) })); else await page.hover("[data-testid=hud-xp]");
+    await sleep(600);
+    await shot(page, `${p}-xp-hover`, { ...corner, height: phone ? 260 : 240 });
+    log.push({ name: `${p}-xp-hover`, tip: await page.$eval("[role=tooltip]", el => el.textContent).catch(() => null) });
+    await page.mouse.move(phone ? 200 : 900, 600); await page.evaluate(() => document.activeElement?.blur());
+    await sleep(800);
+    await levelUpStrip(page, `${p}-levelup`, !phone);
+    await shot(page, `${p}-after-levelup`, corner);
+    await ctx.close();
+  }
+  if (scene === "mq4lab") {
+    // The showroom (/lab/gui): the vitals full, half and low, a 200-point bar, and the level ring.
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await ctx.newPage();
+    await page.goto(`${HOST}/lab/gui`, { waitUntil: "domcontentloaded" });
+    await page.waitForSelector("#hud-bars", { timeout: 300000 });
+    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" }).catch(() => {});
+    await page.$eval("#hud-bars", el => el.scrollIntoView());
+    await sleep(1500);
+    await (await page.$("#hud-bars")).screenshot({ path: `${OUT}/mq4-showroom-vitals.png` });
+    await ctx.close();
+  }
+  if (scene === "mq4sand") {
+    // The sand's mark twitching: a burst of crops round the mark, then the frames where it moved.
+    const { ctx, page } = await open("collections=demo&time=day", { "tsi.held.v1": JSON.stringify({ held: "shovel:shovel-basic" }) });
+    await hudIn(page);
+    await go(page, -15.8, 99.5, 0);
+    await sleep(2500);
+    await shot(page, "mq4-sand");
+    const clip = await markClip(page);
+    // The nearest mark's scale and turn as each crop is taken (the mesh's own, so a twitch is proven, not guessed).
+    const pose = () => page.evaluate(() => {
+      const { camera, scene } = window.__orbit.three(); let best = null;
+      scene.traverse(o => { if (o.isMesh && o.material?.name === "DigSpot") { const d = o.getWorldPosition(o.position.clone()).distanceTo(camera.position); if (!best || d < best.d) best = { d, s: o.scale.x, r: o.rotation.y }; } });
+      return best && [+best.s.toFixed(3), +best.r.toFixed(3)];
+    });
+    for (let i = 0; i < 150; i++) {
+      await page.screenshot({ path: `${OUT}/mq4-sand-burst-${String(i).padStart(3, "0")}.png`, clip: { x: clip.x + 50, y: clip.y + 70, width: 80, height: 50 } });
+      log.push({ name: `mq4-sand-burst-${i}`, pose: await pose() });
+    }
+    await ctx.close();
+  }
+
   if (scene === "r3bars") {
     // The HUD's bars: at rest; stamina spent sprinting and on dashes, then refilling; XP filling into a level up.
     const { ctx, page } = await open("");
@@ -469,7 +845,7 @@ for (const scene of SCENES) {
     log.push({ name: "50-village-line", dropdown: !!(await page.$("[data-testid=quest-tracker] button[aria-expanded]")), label: await page.$eval("[data-testid=quest-tracker]", el => el.getAttribute("aria-label")) });
     await ctx.close();
   }
-}
+} catch (e) { errors.push(`${scene}: ${e.message.slice(0, 300)}`); console.log("scene failed", scene, e.message.slice(0, 300)); }
 writeFileSync(`${OUT}/log.json`, JSON.stringify({ log, errors }, null, 2));
 await browser.close();
 console.log("errors", errors.length);

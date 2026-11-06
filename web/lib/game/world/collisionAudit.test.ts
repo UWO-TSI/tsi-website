@@ -165,7 +165,7 @@ function blockerOf(it: Item): string {
 const blocked = (x: number, z: number) => island.top(x, z) > ground(x, z) + 0.3;
 
 /** Models that should not stop a body (the lane file's soft list). */
-const SOFT = /^(flower|bug|shell|bottle)|:(flower-meadow|flower-tallgrass|shrub-|reeds-|coral|lily-pads|river-stones|starfish|sand-dollar|conch|beach-towel|beach-ball|bunting|plaza-tiles|driftwood|forest-tree|sushi-bar-pier|shipwright-ship)|kit:(life-ring|rope-net|wharf-ladder|dock-pile-rope)|lamp:hand|^tree:/;
+const SOFT = /^(flower|bug|shell|bottle)|:(flower-meadow|flower-tallgrass|shrub-|reeds-|coral|lily-pads|river-stones|starfish|sand-dollar|conch|beach-towel|beach-ball|bunting|plaza-tiles|driftwood|forest-tree|sushi-bar-pier|shipwright-ship)|kit:(life-ring|rope-net|wharf-ladder|dock-pile-rope|pile-lantern)|lamp:hand|^tree:/;
 
 function png(file: string, w: number, h: number, rgb: Uint8Array) {
   const raw = Buffer.alloc((w * 3 + 1) * h);
