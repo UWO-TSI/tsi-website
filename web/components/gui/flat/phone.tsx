@@ -145,12 +145,12 @@ function frameCamera(cam: THREE.PerspectiveCamera, v: Box["view"]) {
 
 const v3 = (v: THREE.Vector3): V3 => [v.x, v.y, v.z];
 const tmp = { a: new THREE.Vector3(), b: new THREE.Vector3(), q: new THREE.Quaternion() };
-/** The phone's side and faces, in its own space: the charm's points stay outside them (the star's and the ring's size). */
+/** The phone's side and faces, in its own space: the charm's points stay outside them (the star's size; the strap a little off the side, so it hangs where it's seen, not along the phone). */
 function solidFor(phone: THREE.Object3D, pendantAt: number) {
   const inv = new THREE.Matrix4();
   return (p: V3, i: number): V3 | null => {
     inv.copy(phone.matrixWorld).invert();
-    const l = tmp.a.set(...p).applyMatrix4(inv), r = i === pendantAt ? 0.75 : 0.2, side = -2.5 - r, front = 0.62 + r, back = -0.72 - r;
+    const l = tmp.a.set(...p).applyMatrix4(inv), r = i === pendantAt ? 0.75 : 0.45, side = -2.5 - r, front = 0.62 + r, back = -0.72 - r;
     if (l.x <= side || l.z >= front || l.z <= back) return null;
     const out = [side - l.x, front - l.z, back - l.z];
     const k = [Math.abs(out[0]), Math.abs(out[1]), Math.abs(out[2])].reduce((best, d, j, all) => (d < all[best] ? j : best), 0);
