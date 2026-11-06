@@ -1,21 +1,27 @@
 /* Paper (paper.tsx): a folded teahouse menu in washi and ink. The theme's --ui-* tokens only (--ui-paper and friends). */
 .book { --h: min(84dvh, 820px); --ease: cubic-bezier(0.45, 0.05, 0.25, 1); --spring: cubic-bezier(0.34, 1.4, 0.64, 1);
   position: relative; width: min(96vw, calc(var(--h) * 1.3)); aspect-ratio: 1.3; outline: none; font-family: var(--gui-font); color: var(--ui-paper-ink); }
-.spread { position: relative; display: grid; grid-template-columns: 1fr 1fr; width: 100%; height: 100%; perspective: 2400px; transform-style: preserve-3d;
+.spread { position: relative; display: grid; grid-template-columns: 1fr 1fr; width: 100%; height: 100%; perspective: 2400px;
   transition: transform 0.72s var(--ease); }
+/* The book's shadow on the counter, under both pages at once (round 7, David: "the creese in the middle apear after the
+   page is turned and it flashes in"): a page's own shadow fell across the fold onto the other page, so the crease came
+   and went as the turning leaf covered it. Now the crease is the pages' fold shade alone, the same on the leaf as under it. */
+.spread::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: 4px; pointer-events: none;
+  box-shadow: 0 26px 60px rgb(var(--ui-shade) / 0.3), 0 4px 10px rgb(var(--ui-shade) / 0.12); transition: left 0.72s var(--ease); }
 /* Closed, only the cover shows: the book slides half a panel so the cover sits in the middle. */
 .book[data-closed] .spread { transform: translateX(-25%); }
+.book[data-closed] .spread::before { left: 50%; }
 .page { position: relative; }
 
 /* A panel of washi: the paper colour under our fibre texture; the fold's shade on its inner edge. */
 .panel { all: unset; position: absolute; inset: 0; display: grid; align-content: start; gap: 4%; box-sizing: border-box; padding: 9% 8% 8%; overflow: hidden;
   background-color: var(--ui-paper); background-image: var(--ui-paper-washi); background-size: 256px; color: var(--ui-paper-ink); font-family: var(--gui-font);
-  box-shadow: 0 1px 0 var(--ui-paper-edge), 0 26px 60px rgb(var(--ui-shade) / 0.3), 0 4px 10px rgb(var(--ui-shade) / 0.12); }
+  box-shadow: 0 1px 0 var(--ui-paper-edge); }
 .panel[data-side="left"] { border-radius: 4px 0 0 4px; }
 .panel[data-side="right"] { border-radius: 0 4px 4px 0; }
 .panel::after { content: ""; position: absolute; top: 0; bottom: 0; width: 9%; pointer-events: none; }
-.panel[data-side="left"]::after { right: 0; background: linear-gradient(to left, rgb(var(--ui-shade) / 0.13), transparent); }
-.panel[data-side="right"]::after { left: 0; background: linear-gradient(to right, rgb(var(--ui-shade) / 0.1), transparent); }
+.panel[data-side="left"]::after { right: 0; background: linear-gradient(to left, rgb(var(--ui-shade) / 0.2), rgb(var(--ui-shade) / 0.06) 30%, transparent); }
+.panel[data-side="right"]::after { left: 0; background: linear-gradient(to right, rgb(var(--ui-shade) / 0.16), rgb(var(--ui-shade) / 0.05) 30%, transparent); }
 /* The cover: a bound edge with its stitches, and a click opens it. */
 .cover { cursor: pointer; border-radius: 4px; justify-items: center; align-content: stretch; grid-template-rows: auto 1fr; padding-left: 13%; }
 /* The spine: darker, sewn across with thread every few centimetres, as a bound teahouse menu is. */
@@ -31,8 +37,10 @@
 @keyframes turnBack { from { transform: rotateY(-180deg); } to { transform: rotateY(0deg); } }
 .leafFace, .leafBack { position: absolute; inset: 0; backface-visibility: hidden; }
 .leafBack { transform: rotateY(180deg); }
+/* The leaf darkens a little toward the fold as it stands up, on both faces (the back's fold is its right edge). */
 .leafFace::after, .leafBack::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to right, rgb(var(--ui-shade) / 0.18), transparent 60%); opacity: 0;
   animation: leafShade 0.72s var(--ease) both; pointer-events: none; }
+.leafBack::after { background: linear-gradient(to left, rgb(var(--ui-shade) / 0.18), transparent 60%); }
 @keyframes leafShade { 50% { opacity: 1; } }
 
 .turn { all: unset; position: absolute; bottom: 2.6%; z-index: 4; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; color: var(--ui-paper-quiet);
@@ -129,8 +137,6 @@
 .slotArt canvas { width: 100%; height: 100%; }
 .slot[data-state="empty"] .slotArt { filter: brightness(0); opacity: 0.1; }
 .slot:not([data-state="empty"]) { background: var(--ui-paper-plate); box-shadow: 0 0 0 1px var(--ui-paper-rule), 0 2px 4px rgb(var(--ui-shade) / 0.12); }
-.slotSeal { position: absolute; right: -8%; bottom: -8%; width: 46%; height: 46%; transform: rotate(-8deg); }
-.slot[data-fresh] .slotSeal { animation: press 0.6s var(--spring) 0.2s both; }
 .slot[data-fresh] .slotArt { animation: ink 0.6s ease-out both; }
 @keyframes press { from { opacity: 0; transform: scale(2.4) rotate(-24deg); } }
 @keyframes ink { from { filter: brightness(0); opacity: 0.1; } }
@@ -142,10 +148,16 @@
 .boostIcon { display: grid; place-items: center; width: clamp(30px, 5vh, 42px); aspect-ratio: 1; border-radius: 50%; background: var(--ui-paper-plate); color: var(--ui-paper-ink);
   box-shadow: 0 0 0 1px var(--ui-paper-rule); }
 .boostIcon svg { width: 55%; height: 55%; }
-.track { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; width: 100%; max-width: 260px; }
+.track { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; width: 100%; max-width: 310px; }
 .track i { display: grid; place-items: center; aspect-ratio: 1; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--ui-paper-rule); }
 .track i[data-on] { box-shadow: none; }
 .track i svg { width: 100%; height: 100%; }
+/* The stamp (round 7): round red ink pressed into the washi, a touch see-through so the paper's fibre shows in it. */
+.stamp { display: block; overflow: visible; mix-blend-mode: multiply; opacity: 0.94; }
+.stampLine { fill: none; stroke: var(--ui-paper-seal); }
+.stampInk { fill: var(--ui-paper-seal); }
+.stampEye { fill: var(--ui-paper); }
+.track i[data-fresh] svg { animation: press 0.6s var(--spring) 0.2s both; }
 .boostNote { color: var(--ui-paper-quiet); font: 500 12px/1.4 var(--gui-font); }
 .given { display: grid; justify-items: center; align-content: start; gap: 5px; margin: 0; text-align: center; }
 .given .slot { width: clamp(34px, 6.4vh, 56px); }
@@ -187,7 +199,6 @@ button.row:focus-visible { outline: 2px solid var(--ui-paper-ink); outline-offse
   .dots { display: none; }
   .dish[data-open] .stats { display: none; }
   .slots { grid-template-columns: repeat(auto-fill, minmax(22px, 1fr)); gap: 3px; }
-  .slotSeal { width: 52%; height: 52%; }
   .track { gap: 3px; }
   .boostValue { font-size: 11px; }
   .chapters { bottom: -34px; }
@@ -196,6 +207,6 @@ button.row:focus-visible { outline: 2px solid var(--ui-paper-ink); outline-offse
 
 @media (prefers-reduced-motion: reduce) {
   .spread, .turn, .photo { transition: none; }
-  .leaf, .dishAction, .slot[data-fresh] .slotSeal, .slot[data-fresh] .slotArt, .given[data-fresh] figcaption { animation: none; }
+  .leaf, .dishAction, .track i[data-fresh] svg, .slot[data-fresh] .slotArt, .given[data-fresh] figcaption { animation: none; }
   .chapters button, button.row { transition: none; }
 }

@@ -262,6 +262,13 @@ export function seatView(lx: number): { eye: [number, number, number]; look: [nu
  */
 export const menuAt = (lx: number) => [lx, 0.84, 1.32] as const;
 export const SEAT_TILT_DOWN = 2.3, MENU_LOOK = 0.1;
+/**
+ * The counter's menu on the screen while you sit (round 7, David: "make click and view animation transition smoother
+ * where you look down, briung book closer to you and you open it"): SushiBar writes where it is each frame (CSS px,
+ * `seen` once its model is in), the menu picked up (SushiSheets MenuPickup) rises from exactly there, and while it's
+ * `held` the counter's copy is hidden.
+ */
+export const counterMenu = { x: 0, y: 0, w: 0, h: 0, seen: false, held: false };
 /** Seated, whether the orbit's tilt `pitch` (over its middle `mid`) looks down at the menu; `was` the last answer (it holds till the middle). */
 export const looksAtMenu = (pitch: number, mid: number, was: boolean) => pitch - mid > (was ? 0 : MENU_LOOK);
 

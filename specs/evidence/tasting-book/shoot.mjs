@@ -1,7 +1,7 @@
 // tasting-book evidence: headless Chromium (never a window), muted, signed out, the dev server on :3476 with
 // the Supabase env blanked and NEXT_PUBLIC_GAME_WORLD=new, the new world (/lab/island) with the demo data.
 //   VIEW=phone node specs/evidence/tasting-book/shoot.mjs <out_dir> <flow> [<flow> ...]
-// VIEW: desktop (1280 x 800, the default) or phone (390 x 844, touch). Flows: showroom, counter (choice, cook, stamp, book), aquarium, book3, book4, tank4, book5, tank5, book6, tank6, museum6.
+// VIEW: desktop (1280 x 800, the default) or phone (390 x 844, touch). Flows: showroom, counter (choice, cook, stamp, book), aquarium, book3, book4, tank4, book5, tank5, book6, tank6, museum6, book7, turn7.
 // CLIP=1 records the run (Playwright's video, <out_dir>/video) and writes <out_dir>/marks.json, each clip's start and end in it.
 import { createRequire } from "node:module";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -423,6 +423,87 @@ const FLOW = {
     await page.getByRole("button", { name: "Open the menu" }).first().click({ force: true }).catch(e => console.log("open", e.message.slice(0, 120)));
     await wait(1500);
     await menuShot("tb6-showroom");
+  },
+  /**
+   * Round 7 (David's tb6 review): sit, look down, read the menu in one move (the view looks down, the menu comes up from
+   * the counter, it opens: frames tb7-open-*), the collection with its round stamps (a give presses the next one), the
+   * fish without stamps, a page turn at SLOW speed (frames tb7-turn-*), all fish, and the menu put down.
+   */
+  async book7() {
+    await world("at=-47,114.4&at=19:30&time=evening&bag=23&dish=1", { settle: 12000, press: false, click: false });
+    const seatLine = () => page.getByText(/down to read the menu/).count();
+    for (let i = 0; i < 40 && !(await seatLine()); i++) { await page.keyboard.press("e"); for (let t = 0; t < 20 && !(await seatLine()); t++) await wait(250); }
+    await wait(1500);
+    if (PHONE) {
+      await page.evaluate(async () => {
+        const el = document.querySelector("canvas"), at = (type, y) => el.dispatchEvent(new PointerEvent(type, { pointerType: "touch", pointerId: 7, clientX: 195, clientY: y, bubbles: true, isPrimary: true }));
+        at("pointerdown", 380);
+        for (let y = 384; y <= 480; y += 4) { at("pointermove", y); await new Promise(r => setTimeout(r, 16)); }
+        window.dispatchEvent(new PointerEvent("pointerup", { pointerType: "touch", pointerId: 7, clientX: 195, clientY: 480, bubbles: true }));
+      });
+    } else {
+      await page.mouse.move(VW / 2, VH / 2);
+      for (let i = 0; i < 25; i++) { await page.mouse.move(VW / 2, VH / 2 + 4 * (i + 1)); await wait(16); }
+    }
+    await wait(2500);
+    await shot("tb7-look");
+    mark("open");
+    const t0 = Date.now();
+    await page.getByRole("button", { name: /Read the menu/ }).first().click({ timeout: 10000 }).catch(e => console.log("read", e.message.slice(0, 120)));
+    for (const [n, at] of [[1, 120], [2, 450], [3, 700], [4, 950], [5, 1350], [6, 1700], [7, 2300]]) { await wait(Math.max(0, at - (Date.now() - t0))); await shot(`tb7-open-${n}`); }
+    await wait(500);
+    mark("open", true);
+    if (!PHONE) await page.mouse.move(4, VH - 4);
+    console.log("opened to", await page.getByRole("navigation", { name: "Parts of the menu" }).count() ? "the collection" : "the cover");
+    await menuShot("tb7-collection");
+    // A fish given: its stamp presses into the next circle of the track; the fish shows on the Given page, unstamped.
+    mark("stamp");
+    await testid("open-bag").click({ force: true }).catch(e => console.log("bag", e.message.slice(0, 120)));
+    await wait(1200);
+    await page.locator('[data-testid="give-bag"] [data-key="fish_carp"]').first().click({ timeout: 10000 }).catch(e => console.log("pick", e.message.slice(0, 120)));
+    await wait(900);
+    await testid("give-fish").click({ timeout: 10000 }).catch(e => console.log("give", e.message.slice(0, 120)));
+    await wait(2600);
+    mark("stamp", true);
+    await menuShot("tb7-given");
+    const track = await page.locator('[role="group"][aria-label*="luck, for good"]').first().boundingBox();
+    if (track) await shot("tb7-stamp-close", page, { clip: { x: track.x - 8, y: track.y - 8, width: track.width + 16, height: track.height + 16 }, scale: "device" });
+    const fishPage = await testid("given").boundingBox();
+    if (fishPage) await shot("tb7-fish-page", page, { clip: { x: fishPage.x - 8, y: fishPage.y - 40, width: fishPage.width + 16, height: Math.min(VH - fishPage.y + 40, fishPage.height + 60) } });
+    // A page turn, slowed (the page's animations at SLOW of their speed; the turn ends on the leaf's own animation).
+    const slow = Number(process.env.SLOW ?? 0.15), cdp = await ctx.newCDPSession(page);
+    await cdp.send("Animation.enable");
+    await cdp.send("Animation.setPlaybackRate", { playbackRate: slow });
+    mark("turn");
+    const t1 = Date.now();
+    await centre(page.getByRole("button", { name: "Turn the page" }));
+    for (let n = 1; n <= 6; n++) { await wait(Math.max(0, (n * 760 / slow) / 6 - (Date.now() - t1))); await menuShot(`tb7-turn-${n}`); }
+    await wait(1000);
+    mark("turn", true);
+    await cdp.send("Animation.setPlaybackRate", { playbackRate: 1 });
+    await page.getByRole("navigation", { name: "Parts of the menu" }).getByRole("button", { name: "All fish", exact: true }).click({ force: true }).catch(e => console.log("part", e.message.slice(0, 120)));
+    if (!PHONE) await page.mouse.move(4, VH - 4);
+    await wait(1400);
+    await menuShot("tb7-allfish");
+    await page.keyboard.press("Escape");
+    await wait(1200);
+    await shot("tb7-down");
+  },
+  /** Round 7: a page turn in slow motion (the page's animations at SLOW of their speed, CDP), a frame of the book about every 0.1 s. */
+  async turn7() {
+    await page.goto(`${HOST}/lab/gui?only=flat-pieces`, { waitUntil: "domcontentloaded" });
+    await wait(8000);
+    await page.getByRole("button", { name: "Open the menu" }).first().click({ force: true }).catch(e => console.log("open", e.message.slice(0, 120)));
+    await wait(1500);
+    const slow = Number(process.env.SLOW ?? 0.1), cdp = await ctx.newCDPSession(page);
+    await cdp.send("Animation.enable");
+    await cdp.send("Animation.setPlaybackRate", { playbackRate: slow });
+    mark("turn");
+    await centre(page.getByRole("button", { name: "Turn the page" }).first());
+    const t0 = Date.now();
+    for (let i = 0; Date.now() - t0 < 720 / slow + 1500; i++) await menuShot(`turn7-${String(i).padStart(3, "0")}`);
+    mark("turn", true);
+    await cdp.send("Animation.setPlaybackRate", { playbackRate: 1 });
   },
   /** Round 6: the museum today (the pitch's where): its aquarium wing, from the door and close. */
   async museum6() {

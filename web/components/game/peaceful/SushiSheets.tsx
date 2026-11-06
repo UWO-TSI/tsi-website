@@ -4,8 +4,8 @@
  * The sushi bar's menu (f-sushi phase B; David, 2026-10-28: "BAR MENU SHOULD BE PAPER MENU LIKE REAL RESTAURANCE ...
  * these food should have a detailed food model on the menu and you can pick it up first person and hover over dishes
  * show what they do"). Seated at the bar, Menu picks it up: the camera leans in and looks down (SushiBar's readingView,
- * on tsi:bar-menu) while a folded teahouse menu (David's references, specs/references/sushi-menu/) rises into your
- * hands and fills the view; it opens from its cover, and its panels turn. Each dish is a photo (its high-def model's icon
+ * on tsi:bar-menu), then the folded teahouse menu (David's references, specs/references/sushi-menu/) comes up from
+ * where it lies on the counter into your hands and opens from its cover, one move (round 7); its panels turn. Each dish is a photo (its high-def model's icon
  * once made: DISH_ART; a marked stand-in until then) with its name, price and what it does beside it (round 4, David:
  * "simple photo of food and then price on the side with like stats"). Pick a dish, then order it: coins, or for the feast one of your own epic or legendary fish. The
  * server prices everything and rolls your casts with the meal's buff (lib/wallet/service.ts orderDish).
@@ -33,11 +33,12 @@ import { usePresence, useWorldDialog } from "@/lib/game/useWorldDialog";
 import { httpEconomyTransport, type EconomyTransport } from "@/lib/wallet/transport";
 import { useMoveKeys } from "@/lib/game/movement/keys";
 import { DEFAULT_PITCH, lookOrbit, orbit } from "@/lib/game/orbitCamera";
+import { counterMenu } from "@/lib/game/sushiBar";
 import { CurrencyIcon } from "@/components/economy/Amount";
 import { mealRows } from "@/components/economy/statIcons";
 import PixelImage from "@/components/economy/PixelImage";
 import { errText } from "@/components/economy/EconomySheets";
-import { BookPage, BookSlot, BoostTrack, CardGrid, CoverTitle, DarkButton, FlatDialog, FlatPanel, FoldedMenu, GivenFish, Hanko, InkArt, InkDefs, ItemCard, MenuDish, PanelSection, PaperRow, Quiet, SidePanel, spreadOf, StatusLine, Thumb, useInkId, WithSide, type DishStat, type FoldedMenuHandle } from "@/components/gui/flat";
+import { BookPage, BookSlot, BoostTrack, CardGrid, CoverTitle, DarkButton, FlatDialog, FlatPanel, FoldedMenu, GivenFish, InkArt, InkDefs, ItemCard, MenuDish, PanelSection, PaperRow, Quiet, SidePanel, spreadOf, StatusLine, Thumb, useInkId, WithSide, type DishStat, type FoldedMenuHandle } from "@/components/gui/flat";
 import { toast } from "@/components/gui";
 import type { Rarity } from "@/lib/rarity";
 import { HQ_LINES } from "@/lib/game/hqLayout";
@@ -117,6 +118,24 @@ export function MenuCover({ ink }: { ink: string }) {
 
 /** Tell the bar the menu is up or down: the seated camera leans in to read it (SushiBar). */
 const lift = (up: boolean) => window.dispatchEvent(new CustomEvent("tsi:bar-menu", { detail: up }));
+/** How long the view looks down before the menu leaves the counter (round 7: look down, it comes closer, it opens). */
+const LOOK_MS = 350;
+/**
+ * Module scope (the react compiler forbids writing through hook values): the menu leaves the counter. The one in your
+ * hands starts exactly where the counter's lies on the screen (counterMenu, its cover over it) and comes up to you
+ * (menu.module.css pickUp, from `--from`); the counter's is hidden while you hold it. Away from the bar, it rises from below.
+ */
+function pickUp(el: HTMLElement | null) {
+  const book = el?.querySelector('[aria-roledescription="folded menu"]')?.getBoundingClientRect();
+  if (!el || !book) return;
+  if (counterMenu.seen) {
+    const hands = el.getBoundingClientRect(), cx = book.left + book.width / 2, cy = book.top + book.height / 2;
+    el.style.transformOrigin = `${cx - hands.left}px ${cy - hands.top}px`;
+    el.style.setProperty("--from", `translate(${counterMenu.x + counterMenu.w / 2 - cx}px, ${counterMenu.y + counterMenu.h / 2 - cy}px) scale(${counterMenu.w / (book.width / 2)}, ${counterMenu.h / book.height})`);
+  }
+  counterMenu.held = true;
+  el.dataset.lift = "";
+}
 
 /**
  * The menu picked up at the bar: a folded teahouse menu in your hands (David's references, 2026-10-28): its cover first
@@ -150,13 +169,16 @@ export function MenuPickup({ open, onClose, waters = ["sea", "river"], transport
   const load = useCallback(() => Promise.all([transport.sushi(), transport.sellable(), transport.tasting().catch(() => null)]).then(setData, e => setError(errText(e))), [transport]);
   useEffect(() => {
     if (!open) return;
+    // One move (round 7): the view looks down (SushiBar's reading view), the menu comes up from the counter, then it opens (onAnimationEnd).
     lift(true);
+    const still = !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const up = window.setTimeout(() => { pickUp(panel.current); if (still) folded.current?.turn(1); }, still ? 0 : LOOK_MS);
     void load();
     setPicked(null);
     setFresh(null);
     setBag(false);
-    return () => { lift(false); };
-  }, [open, load]);
+    return () => { window.clearTimeout(up); counterMenu.held = false; lift(false); };
+  }, [open, load, panel]);
   if (!state) return null;
   const menu = data?.[0].menu ?? SUSHI_MENU, buff = data?.[0].buff ?? null, ate = mealOf(buff?.source);
   const rare = (data?.[1] ?? []).filter(e => (e.category === "fish" || e.category === "sea") && FEAST_RARITIES.includes(e.rarity) && !e.locked);
@@ -231,19 +253,18 @@ export function MenuPickup({ open, onClose, waters = ["sea", "river"], transport
     <>
       <PanelSection title="Collection">
         <p className={m.welcome}>Every fish you give Bancha stays in your book and makes your fishing luckier, for good.</p>
-        <BoostTrack filter={ink} icon={<Clover />} value={pct(bookLuck(given.length))} label="luck, for good" filled={Math.min(given.length, LUCK_SLOTS)} total={LUCK_SLOTS}
+        <BoostTrack filter={ink} icon={<Clover />} value={pct(bookLuck(given.length))} label="luck, for good" filled={Math.min(given.length, LUCK_SLOTS)} total={LUCK_SLOTS} fresh={!!fresh && given.length <= LUCK_SLOTS}
           note={`${pct(TASTING.luck.each)} a new fish, up to ${pct(TASTING.luck.cap)}. A key fish teaches him a dish too.`} />
         <span><button type="button" className={m.order} onClick={() => setBag(true)} disabled={!data} data-testid="open-bag"><Backpack size={15} aria-hidden />Open your bag</button></span>
         {next ? <p className={m.meal}><Coins size={13} aria-hidden />At {next.at} fish given, Bancha pays {next.coins}<CurrencyIcon size={11} /></p> : null}
       </PanelSection>
-      <Hanko filter={ink} size={24} className={m.backSeal} />
     </>,
     <>
       <PanelSection title="Given">
         <p className={m.welcome}>{given.length ? `${given.length} fish, the newest first` : "Nothing given yet. Open your bag and give Bancha a fish."}</p>
         <div className={m.given} data-testid="given">{given.map((k, i) => {
           const t = teachOf(k);
-          return <GivenFish key={k} filter={ink} picture={<PixelImage src={iconUrl(k)} px={40} />} name={NAME.get(k) ?? k} fresh={fresh === k}
+          return <GivenFish key={k} picture={<PixelImage src={iconUrl(k)} px={40} />} name={NAME.get(k) ?? k} fresh={fresh === k}
             gave={gaveLuck(i) > 0 ? <><Clover size={10} aria-hidden /> Luck {pct(gaveLuck(i))}</> : "Luck full"} extra={t ? t.name : undefined} />;
         }).reverse()}</div>
       </PanelSection>
@@ -256,7 +277,7 @@ export function MenuPickup({ open, onClose, waters = ["sea", "river"], transport
         <p className={`${m.welcome} ${m.wordy}`}>Give Bancha a key fish and he learns its dish. Each one helps your fishing for a while.</p>
         <div className={m.rows}>{dishes.map(d => {
           const learnt = book.has(d.unlock);
-          return <PaperRow key={d.id} art={<BookSlot filter={ink} name={NAME.get(d.unlock) ?? d.unlock} state={learnt ? "given" : "empty"} picture={<PixelImage src={iconUrl(d.unlock)} px={30} />} />}
+          return <PaperRow key={d.id} art={<BookSlot name={NAME.get(d.unlock) ?? d.unlock} state={learnt ? "given" : "empty"} picture={<PixelImage src={iconUrl(d.unlock)} px={30} />} />}
             title={d.name} detail={learnt ? `From your ${(NAME.get(d.unlock) ?? d.unlock).toLowerCase()}` : `Give a ${(NAME.get(d.unlock) ?? d.unlock).toLowerCase()}`}
             end={learnt ? <Check size={15} aria-label="Learnt" /> : <Lock size={13} aria-label="Not yet" />} onClick={() => folded.current?.turn(dishSpread(d, book))} />;
         })}</div>
@@ -287,7 +308,7 @@ export function MenuPickup({ open, onClose, waters = ["sea", "river"], transport
     const note = opensLater ?? (filled === species.length ? "Full" : <>A full page: {TASTING.full}<CurrencyIcon size={11} /></>);
     return <>
       <BookPage title={WATER_TITLE[water]} filled={filled} total={species.length} note={note}>
-        {species.map(k => <BookSlot key={k} filter={ink} name={NAME.get(k) ?? k} state={book.has(k) ? "given" : "empty"} fresh={fresh === k} picture={<PixelImage src={iconUrl(k)} px={36} />} />)}
+        {species.map(k => <BookSlot key={k} name={NAME.get(k) ?? k} state={book.has(k) ? "given" : "empty"} fresh={fresh === k} picture={<PixelImage src={iconUrl(k)} px={36} />} />)}
       </BookPage>
       {PAGE_ART[i]}
     </>;
@@ -298,7 +319,8 @@ export function MenuPickup({ open, onClose, waters = ["sea", "river"], transport
     <div className={m.layer} data-state={state}>
       {/* Round the menu the mouse still tilts the seated view: back up to the middle puts it down (DefaultIslandWorld, tsi:bar-look). */}
       <div className={m.vignette} onClick={onClose} onPointerMove={e => { if (e.pointerType === "mouse") lookOrbit(0, e.movementY); }} aria-hidden />
-      <div ref={panel} role="dialog" aria-modal aria-label="Menu" tabIndex={-1} data-gui-dialog data-gui-overlay className={m.hands} data-testid="sushi-menu">
+      <div ref={panel} role="dialog" aria-modal aria-label="Menu" tabIndex={-1} data-gui-dialog data-gui-overlay className={m.hands} data-testid="sushi-menu"
+        onAnimationEnd={e => { if (e.target === e.currentTarget && state === "open") folded.current?.turn(1); }}>
         <InkDefs id={ink} />
         {error ? <p className={m.error} role="status">{error}</p> : null}
         <FoldedMenu cover={<MenuCover ink={ink} />} panels={panels} label="Bancha's menu" handle={folded} chapters={CHAPTERS} onTurn={() => setPicked(null)} />

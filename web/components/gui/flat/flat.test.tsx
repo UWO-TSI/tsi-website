@@ -216,18 +216,23 @@ describe("CallTag", () => {
 });
 
 describe("the menu's collection (tasting-book round 6)", () => {
-  it("shows the boost large and a track of stamps to the cap, the filled ones sealed", () => {
-    const out = html(h(BoostTrack, { icon: "L", value: "+6%", label: "luck, for good", filled: 6, total: 20, note: "+1% a new fish", filter: "ink" }));
+  it("shows the boost large and a track of round stamps to the cap, the last one pressed when fresh", () => {
+    const out = html(h(BoostTrack, { icon: "L", value: "+6%", label: "luck, for good", filled: 6, total: 20, fresh: true, note: "+1% a new fish", filter: "ink" }));
     expect(out).toContain("+6%");
     expect(out).toContain('aria-label="+6% luck, for good, 6 of 20"');
     expect(out.match(/<i[ >]/g)).toHaveLength(20);
     expect(out.match(/<i data-on="true"/g)).toHaveLength(6);
+    // Round 7: each stamp is round (its rings are circles, no square seal) and only the sixth presses down.
     expect(out.match(/<svg/g)).toHaveLength(6);
+    expect(out).not.toContain("<rect");
+    expect(out.match(/data-fresh="true"/g)).toHaveLength(1);
+    expect(out.split("<i ")[6]).toContain('data-fresh="true"');
   });
-  it("shows a fish given, stamped, with what it gave", () => {
-    const out = html(h(GivenFish, { picture: "P", name: "Dace", gave: "Luck +1%", extra: "Dace karaage", fresh: true, filter: "ink" }));
+  it("shows a fish given with what it gave, and no stamp on it (round 7)", () => {
+    const out = html(h(GivenFish, { picture: "P", name: "Dace", gave: "Luck +1%", extra: "Dace karaage", fresh: true }));
     expect(out).toContain('data-state="given"');
-    expect(out).toContain("Dace. Given: stamped");
+    expect(out).toContain("Dace. Given");
+    expect(out).not.toContain("<svg");
     expect(out).toMatch(/<b>Dace<\/b><span>Luck \+1%<\/span><span>Dace karaage<\/span>/);
   });
   it("names the menu's parts under it, the one you are in inked", () => {
