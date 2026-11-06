@@ -2,6 +2,23 @@
 
 Worktree `.claude/worktrees/tasting-book`, branch `game/tasting-book`, cut from `game/fishing-depth` at 0db249b4 (it needs that branch's new menu layout; fishing-depth merges to main first, then this one). Agent type `uwotsi-lane`. Dev port 3476.
 
+## Round 7: David's tasting book round 6 review (2026-11-06, verbatim; https://claude.ai/artifact/ARdwK7bVoFno9WTNEUb3wz)
+
+Approved: tb6-learnt, tb6-look-close, tb6-newfish-key, tb6-questions, tb6-tank.
+- tb6-collection (redo): "the stanmp is squre while its circle, also make it look nicer make the fish page not have stamp"
+- tb6-look (redo): "make click and view animation transition smoother where you look down, briung book closer to you and you open it"
+- tb6-museum (approve): "this museum is gonna be redone completely"
+- tb6-pages (redo): "the creese in the middle apear after the page is turned and it flashes in and its not natural and smooth"
+
+Build (coordinator):
+0. Merge `feat/game-default-island` first: fishing-depth r10 is merged there (your branch came from fishing-depth).
+1. **The stamp:** it should be round but shows square; fix that and make it nicer. No stamp on the fish page.
+2. **Opening the book:** one smooth move: the view looks down, the book comes closer, then it opens.
+3. **The page turn:** the centre crease must not flash in after the turn; it stays put, smooth and natural, through the whole turn.
+4. **The museum:** it's being redone completely, so don't spend more on it.
+
+Evidence `tb7-*`: the stamp close, the fish page, the opening (clip), the page turn (slow clip), phone, a questions card.
+
 ## Round 6: David's tasting book round 5 review (2026-11-05, verbatim; https://claude.ai/artifact/BLVZqS9MJitK139U74p5sT)
 
 Approved: tb5-learnt, tb5-questions, tb5-seat-later, tb5-seat, tb5-tank-given, tb5-tank-pick.
