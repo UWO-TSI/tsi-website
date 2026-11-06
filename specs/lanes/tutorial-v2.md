@@ -35,6 +35,26 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 14: David's tutorial round 13 review (2026-11-06, verbatim; https://claude.ai/artifact/CJxfiyeMpYweNfUvNL7LpY)
+
+Approved: t13-highlight, t13-kept, t13-model, t13-questions, t13-reduced, t13-slide.
+- t13-charm (redo): "charm physics is broken because the string is not made to physics and is mdoeeld with the phone solid"
+- t13-desktop (redo, no note)
+- t13-digits (redo): "numbers can be lighter with the pixel effect on it"
+- t13-pitch (approve): "dont say there you official its so aied, say like nice! your profile is set up or smth"
+- t13-screen (redo): "no i like the old ui i lied, keep it old but lewss blurry"
+- t13-wash (redo, no note)
+
+Build (coordinator):
+0. Merge `feat/game-default-island` first: main-quest r8 is in it and touches `web/app/lab/gui/page.tsx` and `web/components/gui/flat/index.tsx` too.
+1. **The charm:** the string is its own piece, separate from the phone, and simulated (a short rope of a few links, pinned at the phone), so the charm swings and settles when the phone moves. Model the string apart from the phone body.
+2. **The keypad digits:** lighter, so they read under the pixel finish.
+3. **The pitch copy:** drop "there, you're official" (it reads AI-written); something plain like "Nice! Your profile is set up."
+4. **The phone screen:** back to the old UI, but less blurry (find what blurs it: scale, filtering, the pixel pass, and fix that).
+5. **t13-desktop and t13-wash** came back redo with no note: put your best guess at what's wrong next to a fixed version on the questions card.
+
+Evidence `t14-*`: the charm swinging (clip), the digits, the copy, the screen old vs now (sharpness), desktop and wash, phone, a questions card.
+
 ## Round 13: David's tutorial round 12 review (2026-11-05, verbatim; https://claude.ai/artifact/8sNHHXTmmPUrQ6C4kvzu9M)
 
 Approved: t12-app, t12-away, t12-close, t12-cost, t12-desktop, t12-hud, t12-key, t12-phone, t12-reduced-smooth, t12-tilt, t12-tour-phone.
