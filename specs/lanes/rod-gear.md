@@ -30,6 +30,34 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 9: the Tidewarden and the water effect (David, 2026-11-05, verbatim)
+
+- With `specs/references/rods/fx-aquatic-water-ref.png`: "look at this water effect on the sword i want you to turn it into a effect with that foam look and water crashing, i want you to model this as 1:! as possible serious job use wtv u can"
+- Right after, with `specs/references/rods/epic-tidewarden-ref.png`: "tide warden reference"
+
+Both images are third-party: they stay untracked in `specs/references/rods/` (README.md there describes them) and in the vault. Never commit them; evidence may show them side by side with our renders.
+
+Round 8 is still waiting on David's marks (https://claude.ai/artifact/AgE5pgESXMPef71FiPT1Bx). Build on it; its notes come back as round 10.
+
+Build (coordinator):
+1. **The water effect, a new library type** (`Water` in `web/lib/game/fx/library.ts`, `specs/fx-library.md`, a template in `art/pipeline/fx_library.py`). Match the Aquatic sword's water as closely as you can, it's a "serious job":
+   - the body: deep teal-blue with darker diagonal streaks and pale highlights, moving (it flows; it is never a still texture);
+   - the foam: white with a faint cyan edge, breaking along the water's edges in ragged, curling tongues;
+   - the crash: a foam crown that breaks and re-forms where the water ends, splash tendrils curling off, droplets flying out and falling.
+   Pick colours off the reference. Use whatever gets closest: Blender for the shapes (headless only), a custom shader (flow, foam edge, alpha cut in the toon look), the existing particle pack (`web/lib/game/fx/pack.ts` splash crown, `fishingFx.ts` FOAM_TINT and the crown recipes) and the sea's water shader. Search those first and reuse them. Keep the library's rules: no rings or discs, one material per part, a holder's effect at most five draws (RodAura.test). Say what grows with strength (more foam, more of the shaft wrapped, more splashes).
+2. **A 1:1 study of the reference:** model the Aquatic sword itself (the shell hilt and the water blade) as the Water type's sample on `/lab/fx`, at the reference's angle and framing, and show our render beside the reference. It's the proof the effect matches; it's not a game item.
+3. **The Tidewarden, remodelled 1:1 from its reference:** a golden trident, three blue-tipped prongs with the two round cut-outs and the spurs, teal veins cracking through the gold head, the long thin shaft, the teal wrap and the four-point star butt cap. It stays a working rod (the line leaves the middle prong's tip; a reel only if the rig needs one, small and quiet). Tool budget (600 tris, 5 materials, nothing emissive on the rod). Its effect GLB (`rodfx-tidewarden`) wears the Water type: the ribbon of water wrapping the shaft under the head with splashes and droplets trailing off (as drawn), the teal veins as Glow. The old Halo discs, the spindle aura and the pearl go (the reference has none), so the Tidewarden is on the library like the Tempest. Its wave motion (round 8, `rodMotion.ts`) stays and fits the water: the rod is never still. Re-render its icon.
+4. **Where it shows:** the shop detail, the bag's rod stage, the awakening cutscene (`/dev/economy?view=awakening&rod=tidewarden&stage=1|2`, with the effect's strength rising per awakening) and in hand on the island.
+
+Evidence `rg9-*` in `specs/evidence/rod-gear/r9/`:
+- the water study beside the reference (still);
+- the Water type on `/lab/fx` at strength 1 and 2.5 (clips);
+- the Tidewarden beside its reference (still), turning (clip), and in the shop, bag, cutscene and hand (desktop and phone);
+- its draws and tris against the budget;
+- a questions card (Riptide still has no reference; anything else you need decided).
+
+Gates as usual, one `perf:check` at the end on the scenes you touched.
+
 ## Round 8 additions: David's rod models notes (2026-11-05, verbatim, relayed by the coordinator; https://claude.ai/artifact/LFoFkQq2pABPtHPEZS4A7L)
 
 - rm3-cedar (redo): "more leaves it loosk naked"
