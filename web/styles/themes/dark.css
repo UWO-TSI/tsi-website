@@ -12,6 +12,9 @@
   --ui-highlight: #f2f2f2;
   --ui-marker: rgb(255 204 0 / 0.28);
   --ui-gold: #f2c14e;
+  /* A sale's coins landing: the wallet glows from the light yellow to the deep (more coins, deeper). */
+  --ui-gold-light: #ffe48a;
+  --ui-gold-deep: #d98a1a;
   --ui-silver: #c3cad4;
   --ui-bronze: #d9965e;
   --ui-title-outline: #8fcfd6;
@@ -42,6 +45,16 @@
   --ui-water: #1c3240;
   --ui-water-line: #3f6c82;
   --ui-water-deep: #5cc0de;
+  /* Condition colours (the catch board's chips, the seasons, the water signs): one hue each. */
+  --ui-tint-rose: #f19ab4;
+  --ui-tint-sun: #f5c24a;
+  --ui-tint-amber: #f08f4a;
+  --ui-tint-ice: #84c4ea;
+  --ui-tint-sky: #67b6ee;
+  --ui-tint-rain: #7894cc;
+  --ui-tint-mist: #a9b2bb;
+  --ui-tint-leaf: #62c4aa;
+  --ui-tint-night: #8186d6;
   /* Paper, the material (the design bible's rule 2: only for things that are paper in the world: a printed card, a letter). */
   --ui-paper: #efe8d8;
   --ui-paper-edge: #cfc3a8;
@@ -72,10 +85,16 @@
   /* A little texture where it helps (UI 1, "not so flat"): a fine grain over a card, and a glint across rare things. */
   --ui-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
   --ui-glint: linear-gradient(115deg, transparent 38%, rgb(255 255 255 / 0.55) 48%, transparent 58%);
-  /* The HUD's bars (UI 8): health, stamina (and run out), XP. */
-  --ui-health: #f07b6e;
-  --ui-stamina: #6cc979;
+  /* The HUD's vitals (UI 8): each bar's colour when full and when nearly empty, the shared amber between; XP's ring. */
+  --ui-health: #6cc979;
+  --ui-health-low: #ff4f42;
+  --ui-stamina: #5fc2ea;
   --ui-stamina-low: #f59a5c;
+  --ui-shield: #93a8ff;
+  --ui-mana: #b892ff;
+  --ui-vital-mid: #f5c04f;
+  /* Type straight over the world on a soft scrim (the level-up moment): white, whatever the theme. */
+  --ui-on-scrim: #ffffff;
   --ui-xp: #f5c04f;
   --ui-sheen: rgb(255 255 255 / 0.35);
   /* Paper, the material (design bible UI 2): only for what is paper in the world (the sushi bar's folded menu, a
@@ -86,7 +105,6 @@
   --ui-paper-hover: #dfd9cb;
   --ui-paper-seal: #a83028;
   --ui-paper-tray: #26221e;
-  --ui-paper-tray-hi: #433b34;
   --ui-paper-plate: #f2efe8;
   --ui-paper-washi: url("/assets/ui/washi.png");
 }

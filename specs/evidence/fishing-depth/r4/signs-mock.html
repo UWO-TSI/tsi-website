@@ -1,0 +1,49 @@
+<!doctype html>
+<!-- fishing-depth round 4: a mock only (not built). One small wooden sign per kind of water, standing where that water
+     starts: what kind of water it is, how to fish it, and three of what bites there. Rendered to signs-mock.png by
+     shoot.mjs (flow "signs"). The fish pictures are the game's own icons. -->
+<html><head><meta charset="utf-8"><style>
+  :root { --wood: #9a6a42; --wood-dark: #6e4a2c; --plank: #f4ecdc; --ink: #2b2b2b; --quiet: #7a7266; --bg: #e9efe6; }
+  body { margin: 0; padding: 36px 40px 30px; background: var(--bg); font-family: Nunito, ui-rounded, system-ui, sans-serif; color: var(--ink); }
+  h1 { margin: 0 0 4px; font: 700 22px/1.2 Nunito, ui-rounded, system-ui, sans-serif; }
+  p.lead { margin: 0 0 26px; color: var(--quiet); font: 500 14px/1.4 Nunito, ui-rounded, system-ui, sans-serif; }
+  .row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 26px; align-items: end; }
+  .sign { display: grid; justify-items: center; }
+  .board { position: relative; width: 100%; box-sizing: border-box; padding: 16px 16px 14px; border-radius: 14px; background: var(--plank);
+    box-shadow: 0 0 0 7px var(--wood), 0 0 0 9px var(--wood-dark), 0 14px 24px rgb(0 0 0 / 0.18); display: grid; gap: 8px; justify-items: center; text-align: center; }
+  .icon { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; color: #fff; }
+  .icon svg { width: 30px; height: 30px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .name { font: 800 20px/1 Nunito, ui-rounded, system-ui, sans-serif; letter-spacing: 0.02em; }
+  .how { color: var(--quiet); font: 600 12.5px/1.35 Nunito, ui-rounded, system-ui, sans-serif; min-height: 34px; }
+  .fish { display: flex; gap: 6px; }
+  .fish img { width: 46px; height: 46px; padding: 3px; border-radius: 10px; background: #fff; box-shadow: inset 0 0 0 1.5px var(--edge, #bbb); object-fit: contain; image-rendering: pixelated; }
+  .count { color: var(--quiet); font: 600 12px/1 Nunito, ui-rounded, system-ui, sans-serif; }
+  .post { width: 16px; height: 70px; background: linear-gradient(90deg, var(--wood-dark), var(--wood) 40%, var(--wood-dark)); border-radius: 0 0 4px 4px; }
+  .note { margin: 22px 0 0; color: var(--quiet); font: 500 13px/1.5 Nunito, ui-rounded, system-ui, sans-serif; max-width: 980px; }
+</style></head><body>
+  <h1>Signs for each kind of water (a proposal, not built)</h1>
+  <p class="lead">One sign where each water starts, so you know where you are and what to fish for. The colour of the ring is the water's, everywhere it shows: the sign, the catch board's lane, the collection book.</p>
+  <div class="row">
+    <div class="sign"><div class="board">
+      <span class="icon" style="background:#4f9bd0"><svg viewBox="0 0 24 24"><path d="M12 3c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11z"/></svg></span>
+      <span class="name">River</span><span class="how">Cast from the bank. Small fish all day, bigger ones at dusk.</span>
+      <span class="fish"><img src="../../../../web/public/assets/icons/fish_dace.webp"><img src="../../../../web/public/assets/icons/fish_salmon.webp" style="--edge:#4caf50"><img src="../../../../web/public/assets/icons/fish_pike.webp" style="--edge:#3b82f6"></span>
+      <span class="count">30 kinds</span></div><span class="post"></span></div>
+    <div class="sign"><div class="board">
+      <span class="icon" style="background:#6aa86a"><svg viewBox="0 0 24 24"><path d="M3 16c3-2 5-2 9 0s6 2 9 0"/><path d="M8 11l4-6 4 6"/></svg></span>
+      <span class="name">Mountain pond</span><span class="how">Still water up the mountain. Opens when the mountain does.</span>
+      <span class="fish"><img src="../../../../web/public/assets/icons/fish_goldfish.webp"><img src="../../../../web/public/assets/icons/fish_carp.webp" style="--edge:#4caf50"><img src="../../../../web/public/assets/icons/fish_golden_koi.webp" style="--edge:#e2b400"></span>
+      <span class="count">13 kinds</span></div><span class="post"></span></div>
+    <div class="sign"><div class="board">
+      <span class="icon" style="background:#2f7fa8"><svg viewBox="0 0 24 24"><path d="M2 10c2.5-2 4.5-2 7 0s4.5 2 7 0 4.5-2 6 0"/><path d="M2 16c2.5-2 4.5-2 7 0s4.5 2 7 0 4.5-2 6 0"/></svg></span>
+      <span class="name">Sea</span><span class="how">Off the pier and the beach. Crabs and shells on the sea floor.</span>
+      <span class="fish"><img src="../../../../web/public/assets/icons/fish_sea_bass.webp"><img src="../../../../web/public/assets/icons/fish_squid.webp" style="--edge:#4caf50"><img src="../../../../web/public/assets/icons/fish_tuna.webp" style="--edge:#3b82f6"></span>
+      <span class="count">44 kinds, sea floor too</span></div><span class="post"></span></div>
+    <div class="sign"><div class="board">
+      <span class="icon" style="background:#24406e"><svg viewBox="0 0 24 24"><path d="M4 7c2.5-2 4.5-2 7 0s4.5 2 7 0"/><path d="M12 11v9"/><path d="M8 16l4 4 4-4"/></svg></span>
+      <span class="name">Deep sea</span><span class="how">Out past the buoys, by boat. Big fish, long fights.</span>
+      <span class="fish"><img src="../../../../web/public/assets/icons/fish_blue_marlin.webp" style="--edge:#3b82f6"><img src="../../../../web/public/assets/icons/fish_oarfish.webp" style="--edge:#9b5de5"><img src="../../../../web/public/assets/icons/fish_coelacanth.webp" style="--edge:#e2b400"></span>
+      <span class="count">new: from the boat</span></div><span class="post"></span></div>
+  </div>
+  <p class="note">If David likes it: each sign is a small low-poly prop (one model, four plaques), placed where each water starts (by his layout), and E on a sign opens the catch board on that water's lane. Deep sea would be a new water (boat fishing past the buoys), which the game doesn't have yet.</p>
+</body></html>

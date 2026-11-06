@@ -26,6 +26,7 @@ import { weatherMods } from "./weatherPerks";
 import { SEASONAL_GOALS } from "@/lib/progression/defaults";
 import { ROSTER } from "@/lib/collections/roster";
 import { availableAt, type WorldMoment } from "@/lib/collections/logic";
+import { seasonBlend, seasonsOf, type Season } from "./season";
 
 import { RARITY_LABEL, type Rarity } from "@/lib/rarity";
 export type { Rarity } from "@/lib/rarity";
@@ -161,7 +162,7 @@ export const FISH: FishDef[] = [...CORE_FISH, ...EXTRA_FISH, ...SEA_CREATURES].m
   return {
     ...f, model, raw: f.raw && model === f.model, rarity: s.rarity, sizeCm: s.size, zone: s.biome === "sea" ? "sea" : "river",
     ...(gated && {
-      when: (hour: number, weather: string) => availableAt(gated, { hour, month: 1, weather: weather as WorldMoment["weather"] }),
+      when: (hour: number, weather: string) => availableAt(gated, { hour, month: 1, season: "spring", soon: "spring", weather: weather as WorldMoment["weather"] }),
       whenLabel: gated.hours ? hoursLabel({ ...gated, hours: gated.hours }) : `${gated.weather.join(" or ")} only`,
     }),
   };
@@ -180,21 +181,21 @@ let eventCatches: EventCatches = { limited: new Set(SEASONAL_GOALS.flatMap((g) =
 export function setEventCatches(next: EventCatches): void {
   eventCatches = next;
 }
-/** `month` (1-12, Toronto): fish with a roster months list only bite in those months (David, 2026-09-30); absent = any month. */
-export interface FishingContext { hour: number; weather: string; month?: number; catches?: EventCatches }
-/** Roster months per species that has a season (the journal's and catch board's "Sep–Nov"). */
-const SEASON_MONTHS = new Map(ROSTER.filter((s) => s.months.length).map((s) => [s.key, s.months]));
-const biting = (f: FishDef, zone: "river" | "sea", { hour, weather, month, catches = eventCatches }: FishingContext) => {
+/** `season`: the island's (lib/game/season.ts); fish with seasons bite only in them (David, 2026-11-01: "i want it fish to be in seasons and not monthly"); absent = any season. */
+export interface FishingContext { hour: number; weather: string; season?: Season; catches?: EventCatches }
+/** Each seasonal fish's seasons (the roster's months, by season: lib/game/season.ts seasonsOf). */
+const FISH_SEASONS = new Map(ROSTER.flatMap((s) => { const on = seasonsOf(s.months); return on.length ? [[s.key, on] as const] : []; }));
+const biting = (f: FishDef, zone: "river" | "sea", { hour, weather, season, catches = eventCatches }: FishingContext) => {
   if ((f.zone ?? "river") !== zone || (f.when && !f.when(hour, weather))) return false;
   // A limited-time fish's season is its event's window, wherever an admin puts it.
   if (catches.limited.has(f.key)) return catches.open.has(f.key);
-  return month === undefined || (SEASON_MONTHS.get(f.key)?.includes(month) ?? true);
+  return season === undefined || (FISH_SEASONS.get(f.key)?.includes(season) ?? true);
 };
 
-/** The reel's context: Toronto hour and month and the island's weather, as the server roll sees them (lib/collections/rolls.ts). */
+/** The reel's context: Toronto hour, the island's season and weather, as the server roll sees them (lib/collections/rolls.ts). */
 export function currentFishingContext(): FishingContext {
-  const { hour, minute, month } = torontoParts();
-  return { hour: getLabHour() ?? hour + minute / 60, weather: reelWeather(liveIslandWeather()), month };
+  const { hour, minute } = torontoParts();
+  return { hour: getLabHour() ?? hour + minute / 60, weather: reelWeather(liveIslandWeather()), season: seasonBlend().season };
 }
 
 export function fishWeight(f: FishDef, weather: string): number {

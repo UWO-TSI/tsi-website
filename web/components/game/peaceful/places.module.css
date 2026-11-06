@@ -11,7 +11,7 @@
 .tasks > p { grid-column: 1 / -1; }
 
 /* Quick sell */
-.thumbGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 14px; justify-items: center; padding: 18px; border-radius: 20px; background: var(--ui-card); }
+.count { color: var(--ui-ink); font-weight: 700; font-variant-numeric: tabular-nums; }
 .bar { position: sticky; bottom: 0; display: flex; align-items: center; justify-content: flex-end; gap: 18px; padding: 14px 18px; border-radius: 18px; background: var(--ui-card);
   box-shadow: 0 -6px 20px rgb(var(--ui-shade) / 0.06); }
 .total { display: inline-flex; align-items: center; gap: 10px; color: var(--ui-ink-2); font: 600 20px/1 var(--gui-font); }

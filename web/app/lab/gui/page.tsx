@@ -7,7 +7,7 @@
  * game's overlays standalone. Dev only (the lab layout 404s in production). `?only=<id>` shows one overlay full
  * screen, for screenshots.
  */
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Backpack, BookOpen, Coins, Fish, Mail, MapIcon, PackageOpen, Settings, ShoppingBasket, Sprout, Volume2 } from "lucide-react";
 import FishReveal from "@/components/game/FishReveal";
 import FlatPieces from "./FlatPieces";
@@ -25,9 +25,9 @@ import { RARITIES, RARITY_LABEL } from "@/lib/rarity";
 import { RODS, TACKLE } from "@/lib/game/rods";
 import { RodRadar, TackleRadar } from "@/components/economy/RodGear";
 import { useSearch } from "@/lib/game/useMediaQuery";
-import { ChevronLeft, CircleDot, Waves, Worm } from "lucide-react";
+import { ChevronLeft, CircleDot, Sparkles, UserRound, Waves, Worm } from "lucide-react";
 import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
-import { ActionBar, ActionIcon, BigMoment, CallTag, CardOverlay, DarkButton, FlatField, FlatSlider, FlatToggle, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, KeyPeek, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, QuestCheck, RankBadge, RewardPop, RoundButton, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot, type PeekKind } from "@/components/gui/flat";
+import { ActionBar, ActionIcon, CallTag, CardOverlay, DarkButton, FlatField, FlatSlider, FlatToggle, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, KeyPeek, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, Purse, QuestCheck, RankBadge, flyCoins, RewardPop, RoundButton, ServeMeter, SlotPop, SpinPicker, Spotlight, StaminaArc, VitalBar, Vitals, WalletSlot, XpRing, LevelUpMoment, type PeekKind } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
 import { BoardBody } from "@/components/game/volleyball/BoardSheet";
 import { DEFAULT_LOOK } from "@/lib/game/character/look";
@@ -151,6 +151,25 @@ function WalletShow() {
   </div>;
 }
 
+/** A sale: the fish's card in the middle, its coins flying to the purse, which ticks up, swells and glows as they land. */
+function CoinFlyShow() {
+  const card = useRef<HTMLDivElement>(null), count = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    let n = 1240;
+    const t = window.setTimeout(() => {
+      const r = card.current?.querySelector("canvas")?.getBoundingClientRect();
+      if (r) flyCoins({ from: r, amount: 196, onLand: share => { n += share; if (count.current) count.current.textContent = n.toLocaleString(); } });
+    }, 400);
+    return () => window.clearTimeout(t);
+  }, []);
+  return <>
+    <span style={{ position: "absolute", top: 20, left: 24 }}><Purse coins={1240} gems={35} coinsRef={count} /></span>
+    <div ref={card} style={{ position: "absolute", left: "50%", top: "50%", width: 168, transform: "translate(-50%, -50%)" }}>
+      <ItemCard size="md" arrow={false} picture={iconUrl("fish_golden_trout")} rarity="epic" name="Golden Trout" line="Epic · River" price={{ amount: 196, currency: "coins" }} />
+    </div>
+  </>;
+}
+
 const OVERLAYS: { id: string; title: string; render: () => ReactNode }[] = [
   { id: "key-board", title: "Keys (a light Spotlight, KeyBoard, KeyPeek and SlotPop)", render: () => <KeyBoardShow /> },
   { id: "key-peek", title: "A key's peek (KeyPeek), every kind", render: () => <KeyPeekShow /> },
@@ -159,6 +178,7 @@ const OVERLAYS: { id: string; title: string; render: () => ReactNode }[] = [
   { id: "keyword-library", title: "The icon library (every word Keyword knows)", render: () => <KeywordLibrary /> },
   { id: "fly-in", title: "Fly-in, into the wallet's slot", render: () => <Loop ms={3600}>{done => <><span style={{ position: "absolute", top: 16, right: 16 }}><WalletSlot coins={1240} gems={35} at="in" landing="coins" /></span>
     <FlyIn icon={<Coins size={52} />} name="Coins" text="For things on the island" to={['[data-hud-slot="coins"]']} onDone={done} /></>}</Loop> },
+  { id: "coin-fly", title: "A sale's coins, into the purse (flyCoins)", render: () => <Loop ms={3400}>{() => <CoinFlyShow />}</Loop> },
   { id: "quest-check", title: "Quest complete", render: () => <Loop ms={3000}>{() => <QuestCheck eyebrow="Quest complete" title="Walk with Bram" />}</Loop> },
   { id: "printed-card", title: "Printed card as the overlay (CardOverlay, PrintedCard, PaperField)", render: () => <PrintedShow /> },
   { id: "fish-reveal", title: "Fish reveal", render: () => <Loop ms={9000}>{done => <FishReveal fish={FISH.find(f => f.rarity === "rare") ?? FISH[0]} sizeCm={42} onDone={done} />}</Loop> },
@@ -428,23 +448,30 @@ export default function GuiShowroom() {
       <div className={s.toastStage}><ToastHub /></div>
     </Section>
 
-    <Section id="hud-bars" title="The HUD's bars (flat kit)" note="specs/design-bible.md UI 8: health and XP always on, stamina on its own pill while it's used (warm and shaking once when it runs out). components/gui/flat StatBar and StatBars; the island's are components/game/HudBars.tsx.">
+    <Section id="hud-bars" title="The vitals, the level ring and the stamina arc (flat kit)" note="specs/design-bible.md UI 8: the level in a ring of XP (hover for the exact XP) with health, sliding from its full colour through amber to its low colour as it empties, a notch every 20 points, critical flashing; the Capsule look (David 11-05). A class's shield extends the health bar in its own colour; its mana is a slimmer bar under it. Stamina is a ) beside the character, only at a quarter or under. components/gui/flat/vitals.tsx; the island's are components/game/HudBars.tsx.">
       <Row>
-        <StatBars><StatBar kind="health" value={1} label="Health 100 of 100" /><StatBar kind="xp" value={0.42} label="Level 3" /></StatBars>
-        <StatBars><StatBar kind="health" value={0.7} label="Health 70 of 100" /><StatBar kind="xp" value={0.42} badge="Lv 3" label="Level 3" /></StatBars>
-        <StatBar kind="stamina" value={0.55} alone label="Stamina" />
-        <StatBar kind="stamina" value={0} alone low label="Stamina run out" />
+        {([[1, "100"], [0.5, "50"], [0.15, "15"]] as const).map(([h, n]) =>
+          <Vitals key={n} ring={<XpRing level={3} fill={0.42} into={126} needed={300} />}><VitalBar kind="health" value={h} critical={h < 0.25} label={`Health ${n} of 100`} /></Vitals>)}
       </Row>
+      <Row>
+        {([[1, 1], [0.8, 0.5], [0.15, 0.2]] as const).map(([h, sh]) =>
+          <Vitals key={h} ring={<XpRing level={3} fill={0.42} into={126} needed={300} />}><VitalBar kind="health" value={h} critical={h < 0.25} shield={{ value: sh, max: 40 }} label={`Health ${h * 100} of 100, shield ${sh * 40} of 40`} /></Vitals>)}
+        <Vitals ring={<XpRing level={3} fill={0.42} into={126} needed={300} />}><VitalBar kind="health" value={0.8} label="Health 80 of 100" /><VitalBar kind="mana" value={0.35} label="Mana 35 of 100" /></Vitals>
+      </Row>
+      <Row>{[1, 0.5, 0].map(st => <div key={st} style={{ position: "relative", width: 60, height: 120 }}>
+        <StaminaArc ref={el => { el?.toggleAttribute("data-show", true); el?.style.setProperty("--vital", String(st)); el?.style.setProperty("--x", "0.2"); el?.style.setProperty("--h", "1"); }} /></div>)}</Row>
     </Section>
 
-    <Section id="rewards" title="Rewards and moments (flat kit)" note="specs/design-bible.md UI 4 and 7: a reward pops with its rarity as the outline (divine: the holo); a level up is the big moment. components/gui/flat RewardPop and BigMoment.">
+    <Section id="rewards" title="Rewards and moments (flat kit)" note="specs/design-bible.md UI 4 and 7: a reward pops with its rarity as the outline (divine: the holo); a level up is the big moment (motes into the figure, a flash per mote, the burst, then what it unlocks). components/gui/flat RewardPop and LevelUpMoment.">
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 18 }}>
         {POPS.map(([rarity, key, name, title, facts]) => <RewardPop key={rarity ?? key} picture={iconUrl(key)} title={title} name={name} rarity={rarity}
           rarityLabel={rarity ? rarity[0].toUpperCase() + rarity.slice(1) : null} facts={facts ? <span>{facts}</span> : null} isNew={rarity === "rare"} note="The one-liner, quiet." testId={`pop-${rarity ?? key}`} />)}
       </div>
       <Row><Button size="sm" onClick={() => setMoment(true)}>Show the level up</Button></Row>
-      {moment && <BigMoment kicker="Level up" big={2} title="You're level 2" onClose={() => setMoment(false)} testId="showroom-moment"
-        items={[{ key: "quest", icon: <BookOpen size={18} />, title: "New quest: Odile's net", line: "Odile at the museum has a spare net." }]} />}
+      {moment && <LevelUpMoment level={2} title="You're level 2" onClose={() => setMoment(false)} testId="showroom-moment"
+        figure={<UserRound size={200} strokeWidth={1.25} style={{ display: "block", margin: "60px auto 0", color: "var(--ui-ink-2)" }} />}
+        items={[{ key: "quest", icon: <BookOpen size={28} />, motion: "flip", title: "New quest: Odile's net", line: "Odile at the museum has a spare net." },
+          { key: "points", icon: <Sparkles size={28} />, motion: "twinkle", title: "3 stat points", line: "Spend them on your path (P)." }]} />}
     </Section>
 
     <section id="overlays" className={s.section}>

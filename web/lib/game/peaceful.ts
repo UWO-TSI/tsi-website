@@ -7,6 +7,7 @@ import { FISH, fishingPool, type FishDef, type FishingContext } from "./fishing"
 import { RODS, canHook, castLuck, type RodTier } from "./rods";
 import type { WaterType } from "./fishingSpots";
 import { fnv1a } from "./weatherSystem";
+import type { Season } from "./season";
 import { torontoParts } from "@/lib/time";
 import { ROSTER, RARITY_RANK, type Biome, type Rarity, type Species } from "@/lib/collections/roster";
 import { availableAt, type WorldMoment } from "@/lib/collections/logic";
@@ -46,10 +47,10 @@ export function fishOut(waters: readonly WaterType[], context: FishingContext): 
   }
   return out;
 }
-/** Everything out at some hour of a fair-weather day in `month` (the fish market's daily requests: none waits on rain). */
-export function fishOutToday(waters: readonly WaterType[], month: number): { fish: FishDef; water: WaterType }[] {
+/** Everything out at some hour of a fair-weather day in `season` (the fishing tasks: none waits on rain). */
+export function fishOutToday(waters: readonly WaterType[], season: Season): { fish: FishDef; water: WaterType }[] {
   const all = new Map<string, { fish: FishDef; water: WaterType }>();
-  for (const weather of ["sunny", "cloudy"]) for (let hour = 0; hour < 24; hour++) for (const o of fishOut(waters, { hour, weather, month })) if (!all.has(o.fish.key)) all.set(o.fish.key, o);
+  for (const weather of ["sunny", "cloudy"]) for (let hour = 0; hour < 24; hour++) for (const o of fishOut(waters, { hour, weather, season })) if (!all.has(o.fish.key)) all.set(o.fish.key, o);
   return [...all.values()];
 }
 
