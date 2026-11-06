@@ -27,10 +27,10 @@ const MONO = "ui-monospace, Menlo, monospace";
 const PANEL = { background: "rgba(11,14,20,0.82)", color: "#f1ffff", font: `12px ${MONO}`, borderRadius: 6, padding: "6px 10px" } as const;
 const MOVE_KEYS = new Set(["w", "a", "s", "d", " ", "q"]);
 
-const itemTag = (it: EditorItem) => (it.type === "brush" ? "tool" : it.type === "paint" ? "paint" : it.type === "road" ? "road" : it.type === "select" ? "select" : it.object.kind === "landmark" || it.object.kind === "house" ? "building" : "place");
+const itemTag = (it: EditorItem) => (it.type === "brush" ? "tool" : it.type === "paint" ? "paint" : it.type === "road" ? "road" : it.type === "select" ? "select" : it.type === "erase" ? "erase" : it.object.kind === "landmark" || it.object.kind === "house" ? "building" : "place");
 
 function Swatch({ it }: { it: EditorItem }) {
-  const color = it.type === "paint" ? `rgb(${PAINT_SWATCH[it.paint].join(",")})` : it.type === "road" ? "#ba9664" : it.type === "brush" ? "#7fd1c0" : it.type === "select" ? "#ffd166" : "#ff8f4a";
+  const color = it.type === "paint" ? `rgb(${PAINT_SWATCH[it.paint].join(",")})` : it.type === "road" ? "#ba9664" : it.type === "brush" ? "#7fd1c0" : it.type === "select" ? "#ffd166" : it.type === "erase" ? "#ff5a5a" : "#ff8f4a";
   return <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: color, marginRight: 4, verticalAlign: "middle" }} />;
 }
 
@@ -71,7 +71,7 @@ const CONTROLS: [string, string][] = [
   ["Scroll", "brush size (cell mode: N × N)"], ["Shift + scroll", "strength (cell mode: the step)"], ["H", "hard edge ⇄ soft (banks, quays)"],
   ["Alt + click · middle click", "sample the level height"], ["R · Shift + R", "turn the ghost or the selection"], ["+ · −", "scale the selection"],
   ["] · [ (Alt: more)", "raise · lower the selection (props, boards)"], ["G", "snap the selection to the ground"],
-  ["Delete · X", "delete the selection"], ["Ctrl+Z · Ctrl+Shift+Z", "undo · redo"], ["O · Tab", "overhead view"], ["Ctrl+S", "save to web/data/world"],
+  ["Delete · X", "delete the selection"], ["Eraser", "click an object to delete it; hold and drag to erase all you pass over"], ["Ctrl+Z · Ctrl+Shift+Z", "undo · redo"], ["O · Tab", "overhead view"], ["Ctrl+S", "save to web/data/world"],
   ["P", "walk it: play from the camera"], ["?", "these controls"],
 ];
 

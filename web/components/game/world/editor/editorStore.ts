@@ -151,7 +151,7 @@ export function beginStroke(button: 0 | 2, alt: boolean): void {
   ed.stroke = { item: it, button, dir, at: performance.now(), rect: null, seed: Math.floor(Math.random() * 1e6) };
   ed.history.begin(it.label);
   if (it.type === "place") { placeOrRemove(it, dir, hit); return; }
-  if (it.type === "select") { if (button === 0) pick(hit); else if (selectedObject()) ed.history.objects(ed.objects); return; }
+  if (it.type === "select") { if (button === 0) pick(); else if (selectedObject()) ed.history.objects(ed.objects); return; }
   if (it.type === "road") { if (button === 0) { endRoad(); say("Road ended"); } else roadTo(hit, it.paint); return; }
   if (it.type === "brush" && it.tool === "flatten") ed.stroke.target = hit.y;
   if (it.type === "brush" && it.tool === "level" && ed.levelTarget === null) { ed.levelTarget = hit.y; bump(); }
@@ -164,6 +164,7 @@ export function strokeFrame(dt: number, first = false): void {
   if (!s || !hit || !t) return;
   const it = s.item;
   if (it.type === "select" && s.button === 2) { moveSelected(hit); return; }
+  if (it.type === "erase") { erase(); return; }
   if (it.type === "road" && s.button === 2 && !first) {
     // Dragging: lay the road on in 2-unit segments.
     if (ed.road && Math.hypot(hit.x - ed.road.x, hit.z - ed.road.z) >= 2) roadTo(hit, it.paint);
@@ -325,8 +326,21 @@ function placeOrRemove(it: Extract<EditorItem, { type: "place" }>, dir: 1 | -1, 
   if (placed) { ed.selected = keyOf(placed); if (it.building) padFor(placed); say(`Placed ${placed.kind} ${placed.id}`); }
 }
 
-function pick(hit: RayHit) {
-  const o = objectOnRay() ?? objectAt(hit.x, hit.z);
+/** What a click here picks or erases: what the ray passes through, else what stands on the ground under the crosshair. */
+export const objectUnderAim = (reach?: number) => objectOnRay() ?? (ed.hit ? objectAt(ed.hit.x, ed.hit.z, reach) : null);
+
+/** The eraser's work at the crosshair: whatever it is over goes (the generator's stays as a pinned `gone`); the stroke's one undo brings them all back. */
+function erase() {
+  const o = objectUnderAim(0.8);
+  if (!o) return;
+  ed.history.objects(ed.objects);
+  setObjects(without(o));
+  if (ed.selected === keyOf(o)) ed.selected = null;
+  say(`Erased ${o.kind} ${o.id}`);
+}
+
+function pick() {
+  const o = objectUnderAim();
   ed.selected = o ? keyOf(o) : null;
   say(o ? `Selected ${o.kind} ${o.id}${o.model ? ` (${o.model})` : ""}` : "Nothing selected");
 }

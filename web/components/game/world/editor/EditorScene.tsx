@@ -24,7 +24,7 @@ import { useWaterFrame } from "../../grid/GridWorld";
 import SmoothTerrain from "../SmoothTerrain";
 import type { TerrainView } from "../terrainView";
 import EditorObjects from "./EditorObjects";
-import { bump, ed, item, selectedObject, strokeFrame, useEditor } from "./editorStore";
+import { bump, ed, item, keyOf, objectUnderAim, selectedObject, strokeFrame, useEditor } from "./editorStore";
 
 /** Held keys and the mouse's movement since the last frame (the page's listeners fill them). */
 export const input = { keys: new Set<string>(), dx: 0, dy: 0 };
@@ -78,7 +78,7 @@ function Controller() {
     // The crosshair: the ground (or, placing and selecting, the water's surface) at the middle of the view.
     camera.getWorldDirection(_dir);
     Object.assign(ed.ray, { x: camera.position.x, y: camera.position.y, z: camera.position.z, dx: _dir.x, dy: _dir.y, dz: _dir.z });
-    const it = item(), onWater = it.type === "place" || it.type === "select";
+    const it = item(), onWater = it.type === "place" || it.type === "select" || it.type === "erase";
     ed.hit = rayTerrain(t, camera.position.x, camera.position.y, camera.position.z, _dir.x, _dir.y, _dir.z, 800, onWater);
     if (ed.stroke) {
       const t0 = performance.now();
@@ -107,7 +107,7 @@ function Controller() {
 function drawCursor(line: THREE.LineLoop) {
   const t = ed.world?.terrain, hit = ed.hit, it = item();
   const p = line.geometry.getAttribute("position") as THREE.BufferAttribute, a = p.array as Float32Array;
-  line.visible = !!t && !!hit && it.type !== "place" && it.type !== "select";
+  line.visible = !!t && !!hit && it.type !== "place" && it.type !== "select" && it.type !== "erase";
   if (!line.visible || !t || !hit) return;
   const cellMode = ed.mode === "cell" && (it.type === "paint" || (it.type === "brush" && ["raise", "lower", "flatten", "level"].includes(it.tool)));
   const color = it.type === "paint" ? "#ffd166" : it.type === "road" ? "#e0a060" : it.type === "brush" && (it.tool === "lower") ? "#ff8f6a" : "#ffffff";
@@ -155,7 +155,7 @@ function Objects({ terrain }: { terrain: WorldTerrain }) {
     const [x, z] = f ? snapPlacement(hit.x, hit.z, 0, [f.hw, f.hd]) : snapPlacement(hit.x, hit.z, 0.5);
     ghost = { o: { ...probe, x, z }, building: !!it.building };
   }
-  return <EditorObjects terrain={terrain} objects={standing(ed.objects)} light={LIGHT} ghost={ghost} selected={selectedObject()} />;
+  return <EditorObjects terrain={terrain} objects={standing(ed.objects)} light={LIGHT} ghost={ghost} selected={it.type === "erase" ? objectUnderAim(0.8) : selectedObject()} />;
 }
 
 /** Re-render the ghost as the crosshair moves (a few times a second is enough for a preview). */
@@ -163,8 +163,8 @@ function GhostTicker() {
   const last = useRef("");
   useFrame(() => {
     const it = item();
-    if (it.type !== "place" || !ed.hit) return;
-    const key = `${Math.round(ed.hit.x * 2)}:${Math.round(ed.hit.z * 2)}:${ed.ghostYaw}`;
+    if ((it.type !== "place" && it.type !== "erase") || !ed.hit) return;
+    const aimed = it.type === "erase" ? objectUnderAim(0.8) : null, key = aimed ? keyOf(aimed) : `${Math.round(ed.hit.x * 2)}:${Math.round(ed.hit.z * 2)}:${ed.ghostYaw}`;
     if (key !== last.current) { last.current = key; bump(); }
   });
   return null;

@@ -19,13 +19,17 @@ export type EditorItem =
   | { type: "paint"; paint: number; label: string }
   | { type: "road"; paint: number; label: string }
   | { type: "place"; object: Pick<MapObject, "kind"> & Partial<Pick<MapObject, "id" | "model" | "seed">>; label: string; building?: boolean }
-  | { type: "select"; label: string };
+  | { type: "select"; label: string }
+  | { type: "erase"; label: string };
 
 const brush = (tool: Exclude<BrushTool, "paint">, label: string): EditorItem => ({ type: "brush", tool, label });
 const place = (kind: ObjectKind, label: string, extra: Partial<Pick<MapObject, "id" | "model" | "seed">> = {}, building = false): EditorItem => ({ type: "place", object: { kind, ...extra }, label, building });
 
 /** Buildings: the landmarks with a footprint (one of each on a map: placing one again moves it) and the houses. */
 const LANDMARK_BUILDINGS: readonly LandmarkId[] = ["hq", "shop", "cafe", "museum", "oracle", "monument", "mailbox", "notice", "catch"];
+
+/** Click an object to delete it, or hold and drag to delete everything the crosshair passes over (one undo). */
+const ERASE: EditorItem = { type: "erase", label: "Eraser" };
 
 export const PALETTE: readonly { group: string; items: readonly EditorItem[] }[] = [
   { group: "Terrain", items: [brush("raise", "Raise"), brush("lower", "Lower"), brush("smooth", "Smooth"), brush("flatten", "Flatten"), brush("level", "Level"), brush("roughen", "Roughen"), brush("erode", "Erode")] },
@@ -77,17 +81,17 @@ export const PALETTE: readonly { group: string; items: readonly EditorItem[] }[]
   },
   // The residents' anchors by the ids their schedules name (lib/content/residents.ts): one each, placing again moves it.
   { group: "Anchors", items: Object.entries(RESIDENT_ANCHORS).map(([id, a]) => place("anchor", `Anchor: ${a.label}`, { id })) },
-  { group: "Select", items: [{ type: "select", label: "Select · move · rotate · scale · delete" }] },
+  { group: "Select", items: [{ type: "select", label: "Select · move · rotate · scale · delete" }, ERASE] },
 ];
 
-/** The hotbar as it starts: raise, lower, smooth, flatten, level, paint path, road, a house, select. */
+/** The hotbar as it starts: raise, lower, smooth, flatten, level, paint path, eraser, a house, select. */
 export const DEFAULT_HOTBAR: readonly EditorItem[] = [
   PALETTE[0].items[0], PALETTE[0].items[1], PALETTE[0].items[2], PALETTE[0].items[3], PALETTE[0].items[4],
-  PALETTE[1].items[Paint.Path], PALETTE[2].items[0], PALETTE[3].items.find(i => i.type === "place" && i.object.kind === "house")!, PALETTE.at(-1)!.items[0],
+  PALETTE[1].items[Paint.Path], ERASE, PALETTE[3].items.find(i => i.type === "place" && i.object.kind === "house")!, PALETTE.at(-1)!.items[0],
 ];
 
 /** Where the hotbar is kept between visits (this browser). */
-export const HOTBAR_KEY = "lab-world-hotbar-v1";
+export const HOTBAR_KEY = "lab-world-hotbar-v2";
 
 /** A hotbar from storage (labels matched against the palette), falling back to the default slot by slot. */
 export function hotbarFrom(saved: unknown): EditorItem[] {

@@ -63,7 +63,7 @@ export function Footprint({ o, y, color }: { o: MapObject; y: number; color: str
 }
 
 /** The editor's noon on a fine day for the catch board's chalk. */
-const BOARD_MOMENT = { hour: 12, month: 6, weather: "clear" } as const;
+const BOARD_MOMENT = { hour: 12, season: "summer", weather: "clear" } as const;
 
 export default function EditorObjects({ terrain, objects, light, ghost, selected }: {
   terrain: WorldTerrain; objects: readonly MapObject[]; light: IslandLight;

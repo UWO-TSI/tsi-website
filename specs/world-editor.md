@@ -58,7 +58,7 @@ Decided with David on 2026-10-14, after he walked the terrain v2 world and said 
    - Every object sits on the surface. Barriers, grass `clear` lists, the campfire and resident routes keep working.
 5. **Editor at `/lab/world`** (dev only; 404 in production):
    - the fly camera and crosshair, with a brush ring drawn on the ground;
-   - the hotbar tools: raise, lower, smooth, flatten, level (sample a height with middle-click or Alt), paint surface, place object (a palette of the existing object kinds and models), and select, move, rotate, scale and delete objects;
+   - the hotbar tools: raise, lower, smooth, flatten, level (sample a height with middle-click or Alt), paint surface, place object (a palette of the existing object kinds and models), select, move, rotate, scale and delete objects, and the eraser (click an object to delete it, or hold and drag to erase all the crosshair passes over; one undo brings a drag back);
    - undo and redo (Ctrl+Z, Ctrl+Shift+Z);
    - the overhead toggle;
    - save, which writes the files through a dev-only API route;
@@ -130,6 +130,7 @@ Dev only (404 in production). It loads and saves `web/data/world/` through `/api
 | ] / [ (Alt: 0.25 a step) | Raise or lower the selection 0.05 off the ground (props and the market boards) |
 | G | Snap the selection back onto the ground |
 | Delete, Backspace, X | Delete the selection |
+| Eraser (hotbar slot 7) | Click an object to delete it; hold and drag to erase everything the crosshair passes over (one undo) |
 | Ctrl+Z, Ctrl+Shift+Z (Ctrl+Y) | Undo, redo (a stroke at a time, 200 deep) |
 | O, Tab | Overhead view (WASD pans, Space and Shift change the height) |
 | Ctrl+S | Save to `web/data/world/` |
