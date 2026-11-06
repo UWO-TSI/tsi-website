@@ -1,6 +1,6 @@
-"""Traces David's two round 9 references into model data (rods round 9, David 2026-11-05: "model this as 1:! as possible
+"""Traces David's round 9 reference into model data (rods round 9, David 2026-11-05: "model this as 1:! as possible
 serious job use wtv u can"). The references are third-party and stay untracked (specs/references/rods/); this reads them
-and writes art/pipeline/traced_refs.py, plain numbers, which build_rods.py and fx_library.py build from, so a build never
+and writes art/pipeline/traced_refs.py, plain numbers, which build_rods.py builds from, so a build never
 needs the images.
 
   python3 -I art/pipeline/trace_refs.py          (numpy, opencv, scipy)
@@ -8,9 +8,7 @@ needs the images.
 - The Tidewarden (epic-tidewarden-ref.png): the picture turned upright (its shaft fitted), then the gold head's outline,
   cut at each prong where its gold turns mint and then blue (the three colours' own outlines), and the teal veins as
   filled shapes (their painted width), triangulated inside their outline. Rig units: the hand at the wrap's top.
-- The Aquatic sword (fx-aquatic-water-ref.png): the water blade as a ribbon (each row's two edges), the foam as meshes
-  (each vertex's depth into the foam, 0 at its edge), the loose drops as drops (centre, size). Units: the picture's own
-  framing, 1 = the sword's height, the tail's foot at 0.
+  (The Aquatic sword's trace went with its study, VFX round 1: the Water type is drawn on any holder now.)
 """
 import os, sys
 import numpy as np, cv2
@@ -24,39 +22,6 @@ OUT = os.path.join(HERE, "traced_refs.py")
 def hsv(im):
     h = cv2.cvtColor(im, cv2.COLOR_BGR2HSV)
     return [h[..., i].astype(int) for i in range(3)]
-
-
-def outlines(mask, eps, min_area):
-    cs, _ = cv2.findContours(mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    return [cv2.approxPolyDP(c, eps, True)[:, 0, :].astype(float) for c in cs if cv2.contourArea(c) >= min_area]
-
-
-def ear_clip(poly):
-    """A simple polygon's triangles (ear clipping; its outline as traced, concave and narrow slots kept)."""
-    pts = [tuple(map(float, p)) for p in poly]
-    area = sum(a[0] * b[1] - b[0] * a[1] for a, b in zip(pts, pts[1:] + pts[:1]))
-    idx = list(range(len(pts))) if area > 0 else list(range(len(pts)))[::-1]
-    cross = lambda o, a, b: (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
-
-    def inside(p, a, b, c):
-        return cross(a, b, p) >= 0 and cross(b, c, p) >= 0 and cross(c, a, p) >= 0
-    tris = []
-    while len(idx) > 3:
-        for k in range(len(idx)):
-            i0, i1, i2 = idx[k - 1], idx[k], idx[(k + 1) % len(idx)]
-            a, b, c = pts[i0], pts[i1], pts[i2]
-            if cross(a, b, c) <= 0:
-                continue
-            if any(inside(pts[j], a, b, c) for j in idx if j not in (i0, i1, i2)):
-                continue
-            tris.append([i0, i1, i2])
-            idx.pop(k)
-            break
-        else:                                    # nothing clean left (a pinch): take the flattest corner
-            k = min(range(len(idx)), key=lambda k: abs(cross(pts[idx[k - 1]], pts[idx[k]], pts[idx[(k + 1) % len(idx)]])))
-            idx.pop(k)
-    tris.append(idx[:])
-    return tris
 
 
 def smooth_outline(mask, sigma, eps):
@@ -125,37 +90,6 @@ def crack_lines(mask, min_len):
     return keep
 
 
-def fill_mesh(mask, step, eps=1.2, depth_px=10.0):
-    """`mask` triangulated: its outline's points and a grid inside (every `step` px; 0 none), Delaunay, kept where a triangle lies inside the
-    mask. Returns (points px, triangles, each point's depth into the mask, 0 at its edge to 1 at `depth_px`)."""
-    m = mask.astype(np.uint8)
-    cs, _ = cv2.findContours(m, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
-    pts = [p for c in cs for p in cv2.approxPolyDP(c, eps, True)[:, 0, :].tolist()]
-    dist = cv2.distanceTransform(m, cv2.DIST_L2, 5)
-    ys, xs = np.mgrid[0:m.shape[0]:step, 0:m.shape[1]:step] if step else (np.zeros(0, int), np.zeros(0, int))
-    for x, y in zip(xs.ravel(), ys.ravel()):
-        if dist[y, x] > 2.5:
-            pts.append([int(x), int(y)])
-    pts = np.unique(np.array(pts), axis=0).astype(float)
-    if len(pts) < 3:
-        return pts, [], []
-    tri = Delaunay(pts)
-    grown = cv2.dilate(m, np.ones((3, 3), np.uint8))
-    inside = lambda p: grown[min(int(round(p[1])), m.shape[0] - 1), min(int(round(p[0])), m.shape[1] - 1)] > 0
-    keep = []
-    for t in tri.simplices:
-        a, b, c = pts[t]
-        if all(inside(q) for q in ((a + b + c) / 3, (a + b) / 2, (b + c) / 2, (c + a) / 2)):
-            keep.append(t.tolist())
-    d = [min(1.0, float(dist[min(int(p[1]), m.shape[0] - 1), min(int(p[0]), m.shape[1] - 1)]) / depth_px) for p in pts]
-    return pts, keep, d
-
-
-def r3(xs):
-    return [round(float(x), 4) for x in xs]
-
-
-# ================================================================ the Tidewarden
 def tidewarden():
     im = cv2.imread(os.path.join(REFS, "epic-tidewarden-ref.png"))[..., :3]
     H, S, V = hsv(im)
@@ -303,53 +237,10 @@ def tidewarden():
 
 
 # ================================================================ the Aquatic sword
-def aquatic():
-    im = cv2.imread(os.path.join(REFS, "fx-aquatic-water-ref.png"))[..., :3]
-    H, S, V = hsv(im)
-    bch, gch, rch = [im[..., i].astype(int) for i in range(3)]
-    water = (S > 70) & (H > 85) & (H < 115)
-    foam = (V > 215) & (bch - rch >= -2) & ~water
-    water = cv2.morphologyEx(water.astype(np.uint8), cv2.MORPH_CLOSE, np.ones((7, 7), np.uint8)) > 0
-    n, lab, st, _ = cv2.connectedComponentsWithStats(water.astype(np.uint8))
-    water = lab == 1 + np.argmax(st[1:, cv2.CC_STAT_AREA])
-    # the foam: the big pieces above the shell's mouth as meshes, the small loose ones as drops
-    foam[1000:] = False
-    foam = cv2.morphologyEx(foam.astype(np.uint8), cv2.MORPH_OPEN, np.ones((2, 2), np.uint8)) > 0
-    hull = cv2.dilate(water.astype(np.uint8), np.ones((3, 3), np.uint8)) > 0
-    nf, fl, fs, fc = cv2.connectedComponentsWithStats(foam.astype(np.uint8))
-    sil = np.where(water | foam)
-    top, foot_row = sil[0].min(), 1265
-    s = 1.0 / float(foot_row - top)
-    mid = 375
-    to2 = lambda p: (round((p[0] - mid) * s, 4), round((foot_row - p[1]) * s, 4))
-    pieces, drops = [], []
-    for i in range(1, nf):
-        area, (x, y) = fs[i, cv2.CC_STAT_AREA], fc[i]
-        piece = fl == i
-        if (piece & ~hull).sum() < 0.3 * area:            # a bubble in the water: the shader makes its own
-            continue
-        w_, h_ = fs[i, cv2.CC_STAT_WIDTH], fs[i, cv2.CC_STAT_HEIGHT]
-        if area < 160 and max(w_, h_) < 2.2 * min(w_, h_) + 2:     # round and small: a drop; a thin tendril stays foam
-            drops.append((to2((x, y)), round(np.sqrt(area / np.pi) * s, 4)))
-            continue
-        piece = cv2.dilate(piece.astype(np.uint8), np.ones((5, 5), np.uint8)) > 0     # over the water's edge a little
-        pts, tris, depth = fill_mesh(piece, 6, eps=1.2, depth_px=12.0)
-        if tris:
-            pieces.append({"points": [to2(p) for p in pts], "tris": tris, "depth": r3(depth)})
-    # the blade: each row's two edges, every 14 px, from the crown down to where the shell hides it
-    rows = []
-    for y in range(int(np.where(water.any(1))[0].min()), int(np.where(water.any(1))[0].max()) + 1, 14):
-        xs = np.where(water[y])[0]
-        if len(xs) > 3:
-            rows.append((to2((xs.min(), y))[0], to2((xs.max() + 1, y))[0], to2((0, y))[1]))
-    return {"scale": s, "blade": rows, "foam": pieces, "drops": drops}
-
-
 if __name__ == "__main__":
-    tw, aq = tidewarden(), aquatic()
+    tw = tidewarden()
     with open(OUT, "w") as f:
         f.write('"""Traced from the round 9 references by trace_refs.py: do not edit (rerun it). Plain numbers, no image."""\n')
-        f.write(f"TIDEWARDEN = {tw!r}\n\nAQUATIC = {aq!r}\n")
+        f.write(f"TIDEWARDEN = {tw!r}\n")
     print("shaft_r", tw["shaft_r"], "tip", tw["tip"], "neck", tw["neck"], "star", tw["star"])
-    print("blade rows", len(aq["blade"]), "foam pieces", [len(p["tris"]) for p in aq["foam"]], "drops", len(aq["drops"]))
     sys.exit(0)

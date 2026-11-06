@@ -50,10 +50,10 @@ describe("each rod's awakening motion (David 2026-11-05)", () => {
     expect(AWAKEN_MS.hush).toBeGreaterThan(300);
   });
 
-  it("strikes the rods whose awakening brings a new look or effect from outside: the Tempest by lightning, the Tidewarden by a wave", () => {
+  it("strikes the rods whose awakening brings a new look or effect from outside: the Tempest by lightning", () => {
     expect(AWAKEN_FX.rod_tempest).toMatchObject({ strike: "lightning", sound: "aw-thunder" });
     expect(AWAKEN_FX.rod_tempest.wears).toContain("electricity");
-    expect(AWAKEN_FX.rod_tidewarden.strike).toBe("wave");
+    expect(AWAKEN_FX.rod_tidewarden).toBeUndefined();          // its wave deleted (VFX round 1)
     expect(AWAKEN_FX.rod_training).toBeUndefined();
   });
 

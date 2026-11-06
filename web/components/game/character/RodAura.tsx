@@ -10,7 +10,7 @@
  * faces you, anything else lit as the rod). Each `Halo` empty is a glow sprite of its `size` and `color`, and the
  * scene's extras throw the sparks into the scene's one glow pool (GlowFx). Brighter at dusk and night (glow.ts).
  *
- * The types and what grows with `strength` are the effects library's (lib/game/fx/library.ts, specs/fx-library.md).
+ * The types and what grows with `strength` are the effects library's (lib/game/fx/library.ts, specs/vfx-library.md).
  * A node with a `trail` extra leaves a fading ribbon (that wide, from its `trailFrom` point) in its own colour. Parts
  * whose material is `Water`, `Foam` or `Spray` are the Water type (lib/game/fx/water.ts): each holder has its own copy
  * of those materials, so its water runs, foams, reaches and splashes at its own strength.

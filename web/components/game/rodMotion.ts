@@ -61,15 +61,13 @@ export const BEAT: Record<AwakenPhase, { energy: number; glow: number; aura: num
 /**
  * What acts on a rod from outside when its awakening brings it a new look or a new effect (David 2026-11-06: "if its a
  * new model or new effect external things will attach like a lighting related will strike it with thunder"): the
- * strike (lightning, a wave: lib/game/fx/holder.ts) gathers in the hush and lands on the burst, with its sound, and
- * `wears` the library types its new form wears from the burst on. A rod not listed awakens without one (the Training
- * rod's is a new finish).
+ * strike (lightning: lib/game/fx/holder.ts) gathers in the hush and lands on the burst, with its sound, and `wears` the
+ * library types its new form wears from the burst on. A rod not listed awakens without one (the Training rod's is a new
+ * finish; the Tidewarden's wave was deleted with the VFX library's wave, David 2026-11-06: "yeah just delete ts").
  */
 export const AWAKEN_FX: Record<string, { strike: StrikeKind; sound: AwSfx; soundAt: "hush" | "burst"; wears?: FxKind[] }> = {
   // the storm rod: struck by lightning (the thunder's crack is the hit), and the lightning stays on it, crawling over the chain
   rod_tempest: { strike: "lightning", sound: "aw-thunder", soundAt: "burst", wears: ["electricity"] },
-  // the sea rod: a wave breaks over it (its sound rushes in over the hush and crashes on the hit), and its water runs further down it
-  rod_tidewarden: { strike: "wave", sound: "aw-wave", soundAt: "hush" },
 };
 /** An effect rod's aura at a look (0 as bought, 1 after its first awakening, ...): a little stronger each awakening. */
 export const auraAt = (look: number) => 1 + 0.5 * look;

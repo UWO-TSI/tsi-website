@@ -10,7 +10,7 @@ Writes
   web/lib/game/fx/combatPack.ts              its layout (generated: edit the COMBAT_SPRITES list here)
   specs/evidence/classes/K0-combat-atlas.webp   every combat row through three sample ramps, as the engine maps heat
   web/public/assets/fx/fire-pack.webp        the campfire's and the candles' rows of the combat pack, cut out (build_fire)
-  web/public/assets/fx/fxlib-pack.webp       the effects library's rows (specs/fx-library.md): combat rows cut out, and
+  web/public/assets/fx/fxlib-pack.webp       the effects library's rows (specs/vfx-library.md): combat rows cut out, and
                                              a sakura petal tumbling, painted as heat (build_fxlib)
 
   python3 art/fx/build_pack.py fire          only the fire pack, cut from the committed combat pack (nothing repainted)
@@ -2395,7 +2395,7 @@ def build_fire():
 OUT_FXLIB = os.path.join(ROOT, "web", "public", "assets", "fx", "fxlib-pack.webp")
 # The effects library's rows (lib/game/fx/fxMaterial.ts FXLIB_PACK, same order; components/game/fx/HolderFx.tsx and the
 # awakening's strikes): the combat pack's, cut out, then the sakura petal, painted here.
-FXLIB_ROWS = ("mote", "sparkBurst", "flare", "bolt", "flame", "wave", "droplet")
+FXLIB_ROWS = ("mote", "sparkBurst", "flare", "bolt", "flame", "droplet")
 
 
 def sakura(t):

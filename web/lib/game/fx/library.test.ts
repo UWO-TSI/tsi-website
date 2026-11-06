@@ -1,13 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
 import { FX, fxAt, fxGrow, type FxKind } from "./library";
 
 const KINDS = Object.keys(FX) as FxKind[];
 
-describe("the effects library (David 2026-11-05)", () => {
+describe("the VFX library (David 2026-11-05, 2026-11-06)", () => {
   it("has the standard types, each said in plain words with how it's made and its parameters", () => {
-    expect(KINDS.sort()).toEqual(["aura", "burst", "electricity", "embers", "flame", "flicker", "gather", "glow", "motion", "particles", "petals", "pulse", "sparks", "sway", "trail", "water"]);
+    expect(KINDS.sort()).toEqual(["burst", "electricity", "embers", "energy", "flame", "gather", "glow", "motion", "particles", "petals", "pulse", "sparks", "sway", "trail", "water"]);
     for (const k of KINDS) {
       expect(FX[k].what.length).toBeGreaterThan(10);
       expect(FX[k].authored.length).toBeGreaterThan(10);
@@ -32,7 +30,8 @@ describe("the effects library (David 2026-11-05)", () => {
     expect(KINDS.some(k => /halo|ring|circle|disc/i.test(k + FX[k].name))).toBe(false);
   });
 
-  it("has the Water type's sample (every other type is drawn by code on any holder: HolderFx)", () => {
-    expect(existsSync(join(__dirname, "../../../public/assets/game/props/fxlib-water.glb"))).toBe(true);
+  it("sorts them in David's two families: auras worn on its parts (energy), effects that happen", () => {
+    expect(KINDS.filter(k => FX[k].family === "aura").sort()).toEqual(["energy", "glow", "pulse"]);
+    expect(FX.energy.name).toBe("Energy");
   });
 });
