@@ -26,6 +26,7 @@ import {
 import { FRONT_SPEED, WIND, lastFront, stirs, type FrontPass } from "@/lib/game/wind";
 import { skyUniforms } from "@/lib/game/skyShader";
 import { ACTIVE_WORLD_BEND, ACTIVE_WORLD_BEND_SIDE } from "@/lib/game/curvedWorld";
+import { SEA_LEVEL } from "@/lib/game/world/terrain";
 
 
 // ─── Cloud shadows (item 20) ────────────────────────────────────────────
@@ -347,75 +348,81 @@ export function WindMarks({ spots, season }: { spots: readonly WindSpot[]; seaso
   </>;
 }
 
-// ─── Golden-hour motes (sky-ambient round 1, approved; built round 3) ────
-// Pollen and dust drifting downwind round where the camera looks, catching the low sun: brighter looking toward it,
-// faint away from it, only while the sun is low (they fade in as it sinks under about 15° and out as it sets). World
-// anchored on a tile round the view, so they never ride the camera. One draw of points.
+// ─── Golden-hour motes (sky-ambient round 1, approved; round 4 moved over the sea) ────
+// David, round 3: "its kinda crazy and distracting make it less distracting and should it be on the ocean water and no
+// grass?" Yes: a few glints of light hanging low over the sea, slow, small and sparse, brightest toward the low sun (the
+// sparkles over the water in his sunset reference), and none over the land. Only while the sun is low (they fade in as
+// it sinks under about 15° and out as it sets). World anchored on a tile round where the camera looks, carried slowly
+// downwind; one over the shallows fades as the water thins, so none ever pops. One draw of points.
+const MOTES = 48, MOTE_TILE = 34;
 const MOTE_VERT = /* glsl */ `
-attribute vec4 seed;
-uniform float uTime, uTile, uStrength, uSize, uGolden;
-uniform vec3 uFocus, uSunDir;
-uniform vec2 uWind;
+attribute float alpha;
+uniform float uSize;
+uniform vec3 uSunDir;
 varying float vA;
 void main() {
-  float t = uTime;
-  vec2 xz = seed.xz * uTile + uWind * t * (0.3 + 0.3 * seed.w) * uStrength
-    + vec2(sin(t * 0.7 + seed.w * 6.28), cos(t * 0.53 + seed.y * 6.28)) * 0.45;
-  xz = uFocus.xz + mod(xz - uFocus.xz + uTile * 0.5, uTile) - uTile * 0.5;
-  vec3 p = vec3(xz.x, uFocus.y + 0.3 + seed.y * 3.0 + sin(t * 0.9 + seed.w * 12.0) * 0.25, xz.y);
-  vec4 mv = modelViewMatrix * vec4(p, 1.0);
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
   mv.y -= mv.z * mv.z * ${ACTIVE_WORLD_BEND.toFixed(6)} + mv.x * mv.x * ${ACTIVE_WORLD_BEND_SIDE.toFixed(6)};
   gl_Position = projectionMatrix * mv;
-  float edge = length(xz - uFocus.xz) / (uTile * 0.5);
-  float beam = pow(max(dot(normalize(p - cameraPosition), uSunDir), 0.0), 3.0);
-  vA = uGolden * (1.0 - smoothstep(0.6, 1.0, edge)) * (0.25 + 1.5 * beam) * (0.65 + 0.35 * sin(t * 2.3 + seed.w * 40.0));
-  gl_PointSize = uSize * (0.6 + 0.8 * seed.w) / -mv.z;
+  float beam = pow(max(dot(normalize(position - cameraPosition), uSunDir), 0.0), 4.0);
+  vA = alpha * (0.12 + 1.1 * beam);
+  gl_PointSize = uSize / -mv.z;
 }`;
 const MOTE_FRAG = /* glsl */ `
 uniform vec3 uColor;
 varying float vA;
 void main() {
-  float a = smoothstep(0.5, 0.1, length(gl_PointCoord - 0.5)) * vA;
+  float a = smoothstep(0.5, 0.05, length(gl_PointCoord - 0.5)) * vA;
   gl_FragColor = vec4(uColor * a, a);
 }`;
 
 /** How golden the hour is for a sun this high (its direction's y): 0 by day and after sunset, 1 with the sun a few degrees up. */
 export const goldenHour = (sunY: number) => THREE.MathUtils.smoothstep(sunY, -0.01, 0.05) * (1 - THREE.MathUtils.smoothstep(sunY, 0.16, 0.27));
 
-/** Module scope: the view, the clock, the wind and the sun into the motes' uniforms; hidden outside golden hour. */
-function stepMotes(points: THREE.Points, mat: THREE.ShaderMaterial, camera: THREE.Camera, ground: (x: number, z: number) => number, height: number, always: boolean) {
-  const u = mat.uniforms, golden = always ? 1 : goldenHour(skyUniforms.uSunDir.value.y);
+/** Module scope: the motes for this moment (positions and alphas into the geometry); hidden outside golden hour. */
+function stepMotes(points: THREE.Points, mat: THREE.ShaderMaterial, seed: Float32Array, camera: THREE.Camera, ground: (x: number, z: number) => number, height: number, always: boolean) {
+  const golden = always ? 1 : goldenHour(skyUniforms.uSunDir.value.y);
   points.visible = golden > 0.001;
   if (!points.visible) return;
   camera.getWorldDirection(_dir);
   viewFocus(camera.position, _dir, _focus);
-  u.uTime.value = worldTime();
-  u.uFocus.value.set(_focus.x, ground(_focus.x, _focus.z), _focus.z);
-  u.uStrength.value = WIND.strength * WIND.swell;
-  u.uGolden.value = golden;
+  const t = worldTime(), drift = (0.12 + 0.1 * WIND.strength) * WIND.swell, geo = points.geometry;
+  const pos = geo.getAttribute("position") as THREE.BufferAttribute, alpha = geo.getAttribute("alpha") as THREE.BufferAttribute;
+  const half = MOTE_TILE / 2, sea = SEA_LEVEL;
+  for (let i = 0; i < MOTES; i++) {
+    const a = seed[i * 4], b = seed[i * 4 + 1], c = seed[i * 4 + 2], d = seed[i * 4 + 3];
+    const run = t * drift * (0.6 + 0.6 * d);
+    let x = a * MOTE_TILE + WIND_DIR.x * run + Math.sin(t * 0.21 + d * 6.28) * 0.4;
+    let z = c * MOTE_TILE + WIND_DIR.z * run + Math.cos(t * 0.17 + b * 6.28) * 0.4;
+    x = _focus.x + THREE.MathUtils.euclideanModulo(x - _focus.x + half, MOTE_TILE) - half;
+    z = _focus.z + THREE.MathUtils.euclideanModulo(z - _focus.z + half, MOTE_TILE) - half;
+    // Over water only: faded in as the sea deepens past the shallows.
+    const water = THREE.MathUtils.smoothstep(sea - ground(x, z), 0.05, 0.6);
+    const edge = 1 - THREE.MathUtils.smoothstep(Math.hypot(x - _focus.x, z - _focus.z) / half, 0.55, 1);
+    pos.setXYZ(i, x, sea + 0.35 + b * 1.6 + Math.sin(t * 0.5 + d * 12) * 0.12, z);
+    alpha.setX(i, 0.55 * golden * water * edge * (0.6 + 0.4 * Math.sin(t * 1.1 + d * 40)));
+  }
+  pos.needsUpdate = true;
+  alpha.needsUpdate = true;
   // The canvas's height sets a point's pixels: the pixel finish draws at half size.
-  u.uSize.value = 0.14 * height;
+  mat.uniforms.uSize.value = 0.09 * height;
 }
 
-export function GoldenMotes({ ground, count = 160, always = false }: { ground: (x: number, z: number) => number; count?: number; always?: boolean }) {
+export function GoldenMotes({ ground, always = false }: { ground: (x: number, z: number) => number; always?: boolean }) {
   const ref = useRef<THREE.Points>(null);
-  const [geo, mat] = useMemo(() => {
-    const g = new THREE.BufferGeometry(), seed = new Float32Array(count * 4);
+  const [geo, mat, seed] = useMemo(() => {
+    const g = new THREE.BufferGeometry(), seed = new Float32Array(MOTES * 4);
     let h = 7;
     for (let i = 0; i < seed.length; i++) { h = (h * 16807) % 2147483647; seed[i] = h / 2147483647; }
-    g.setAttribute("seed", new THREE.BufferAttribute(seed, 4));
-    g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(count * 3), 3));
+    g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(MOTES * 3), 3));
+    g.setAttribute("alpha", new THREE.BufferAttribute(new Float32Array(MOTES), 1));
     const m = new THREE.ShaderMaterial({
       vertexShader: MOTE_VERT, fragmentShader: MOTE_FRAG, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-      uniforms: {
-        uTime: { value: 0 }, uTile: { value: 22 }, uStrength: { value: 1 }, uSize: { value: 40 }, uGolden: { value: 0 },
-        uFocus: { value: new THREE.Vector3() }, uSunDir: skyUniforms.uSunDir, uWind: { value: new THREE.Vector2(WIND_DIR.x, WIND_DIR.z) },
-        uColor: { value: new THREE.Color(1, 0.88, 0.62) },
-      },
+      uniforms: { uSize: { value: 40 }, uSunDir: skyUniforms.uSunDir, uColor: { value: new THREE.Color(1, 0.88, 0.62) } },
     });
-    return [g, m];
-  }, [count]);
+    return [g, m, seed];
+  }, []);
   useEffect(() => () => { geo.dispose(); mat.dispose(); }, [geo, mat]);
-  useFrame(({ camera, gl }) => { if (ref.current) stepMotes(ref.current, mat, camera, ground, gl.domElement.height, always); });
+  useFrame(({ camera, gl }) => { if (ref.current) stepMotes(ref.current, mat, seed, camera, ground, gl.domElement.height, always); });
   return <points ref={ref} geometry={geo} material={mat} frustumCulled={false} renderOrder={5} />;
 }

@@ -9,6 +9,47 @@ their switches get deleted, and the pick is built properly in round 2.
 Evidence: `specs/evidence/sky-ambient/r1/` (ids `sky1-*`). Boards first: `sky1-board-day.jpg`,
 `sky1-board-weather.jpg`, `sky1-board-today.jpg`, `sky1-board-phone.jpg`.
 
+## R4. Round 4: the clouds remodelled, their lives, the night, the motes, the weather, the sound (2026-11-06)
+
+David's sky round 3 marks are verbatim in `specs/lanes/sky-ambient.md` (Round 4). Approved and kept: the clouds as lit
+painted cards ("I like C the best"), the cost, the phone, the wind (marks at 0.3, "0,3"), the pixel finish on the sky as
+it is ("keep for now"). Evidence `specs/evidence/sky-ambient/r4/` (ids `sky4-*`).
+
+### The clouds remodelled (L/clouds.ts, C/SkyClouds.tsx)
+
+David: "the clouds still look too 3d model-y and needs remodeld, dont make clouds just spawn and despawn then need to
+break apard and fade like real clouds ... add more variety of clouds that arent stricly the same shape and size look
+closer to reference"; on the lit cards: "further develop towrds the lit cards run and refine it to look more similar to
+the genshin clouds".
+
+- **What read as a model, and what changed:** round 3 lit every lobe as its own ball (sharp per-lobe normals), so the
+  cards showed a heap of spheres, worst by night when only the moon's relief was left. Now the light runs over each
+  cloud as one soft mass (the height blurred over a good share of a lobe before its normal is taken), the painted two
+  tone is set across the whole cloud, the base sits in its own shade by height, and the relief eases off by night.
+- **Twelve shapes of five kinds** after the Genshin references: four lopsided cumulus (one side climbing higher, some with
+  two heads, cauliflower bumps on bumps along the tops, a flat but waved base rounded into the lobes), two of broken
+  scraps (small flat-based heaps, as the sky looking up), two flat rolls, two towers (the sunset's), two wisps (soft
+  streaks, no outline). Sizes from small scraps to big banks (0.5 to 1.45 of the weather's size). An overcast picks the
+  flat, broken and wispy kinds.
+- **A life, never a pop:** each square of the layer grows a cloud on the world clock, keeps it, lets it go and grows
+  another (a new shape, size and spot): a cycle of 6 to 12 minutes, forming over one to two minutes, breaking up
+  over two to three. Forming, a cloud gathers out of scraps (the card eaten by noise from its thin parts inward, the threshold
+  falling); breaking up, it comes apart into tatters that are pulled downwind, spread a little and thin away. The
+  weather's cover gates a cloud the same soft way (and eases ten times slower than the rest of the weather), so a change
+  of weather or nightfall dissolves clouds rather than shrinking them; far ones fade into the haze. Unit tests hold a
+  cloud's presence continuous from moment to moment and across a change of cover.
+- **By night:** the moon lights the clouds flat (most of the relief gone), a little brighter toward their tops, silver
+  at their thin edges near the moon; the night's sky light under them, so they read as cloud against the sky, not as
+  models.
+- **In weather** (David: "it feels too 3d model-y made out of bullshit spheres"): under an overcast the cards lie lower
+  and wider, are read from a blurrier level of their atlas (soft, ragged edges), and are mostly flat rolls, scraps and
+  wisps, so rain and snow skies are ragged grey banks under the deck rather than heaps of balls.
+- **Draw order:** the cards draw first among the see-through things (after the dome, the last opaque), so a cloud behind
+  a lamp's glow never covers it (David, title round 5: "the cloud is also covering the glow").
+- **Deleted:** the losing styles, (a) painted in the dome and (b) the models (`CLOUD_STYLE` 0..2 blocks in skyShader,
+  `SkyClouds Models`), round 2's tracer, `?clouds=`, the lobes in the cloud texture (2 texels a cloud now, not 10),
+  `?skypx=` with PostFX `SkyPixelsEffect` and `uStarPx`, and the world bench's cloud variants.
+
 ## R3. Round 3: clouds reimagined, the cost, the night, the one wind (2026-11-05)
 
 David, round 2: "clouds model look horrible, i wanna know whats the best way for good looking clouds without

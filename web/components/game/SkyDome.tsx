@@ -9,10 +9,10 @@
  * and only the pixels where sky shows pay for it.
  */
 
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { CLOUD_STYLE, DRIFT_WRAP, cloudTexture, cloudData, skyDome, skyUniforms, type CloudStyle } from "@/lib/game/skyShader";
+import { DRIFT_WRAP, cloudTexture, cloudData, skyDome, skyUniforms } from "@/lib/game/skyShader";
 import { cloudField, skyBend, type CloudView } from "@/lib/game/clouds";
 import { SKY_GRADE, compassDir, gradeSky, moonPosition, skyExposure, skyRadiance, starFrame, transmittance, type Vec3 } from "@/lib/game/atmosphere";
 import { NIGHT_SKY } from "@/lib/game/lookPreset";
@@ -21,7 +21,6 @@ import { LONDON_ON, type IslandWeather } from "@/lib/game/islandWeather";
 import { WIND_DIR } from "@/lib/game/worldFx";
 import { ACTIVE_WORLD_BEND, ACTIVE_WORLD_BEND_SIDE } from "@/lib/game/curvedWorld";
 import { worldNow, worldTime } from "@/lib/game/worldClock";
-import { useSkyLab } from "@/lib/game/skyLab";
 import { WIND } from "@/lib/game/wind";
 import SkyClouds from "./SkyClouds";
 
@@ -30,14 +29,14 @@ const RADIUS = 110;
 
 /** Per weather: the share of the sky's squares with a cumulus, their size (km), grey, cirrus, haze at the skyline, drift (km a second). */
 const WEATHER_SKY: Record<IslandWeather, readonly [number, number, number, number, number, number]> = {
-  clear: [0.55, 0.6, 0, 0.55, 0, 0.05],
-  wind: [0.5, 0.5, 0.04, 0.3, 0, 0.16],
-  fog: [0.35, 0.55, 0.35, 0, 1, 0.03],
-  rain: [0.9, 0.65, 0.72, 0, 0.45, 0.09],
-  snow: [0.85, 0.65, 0.55, 0, 0.6, 0.05],
+  clear: [0.7, 0.6, 0, 0.55, 0, 0.05],
+  wind: [0.62, 0.5, 0.04, 0.3, 0, 0.16],
+  fog: [0.42, 0.55, 0.35, 0, 1, 0.03],
+  rain: [1, 0.65, 0.72, 0, 0.45, 0.09],
+  snow: [0.95, 0.65, 0.55, 0, 0.6, 0.05],
 };
-/** How fast the sky follows a change of weather (per second, an ease). */
-const WEATHER_RATE = 0.4;
+/** How fast the sky follows a change of weather (per second, an ease); the cumulus gather and thin far slower. */
+const WEATHER_RATE = 0.4, COVER_RATE = 0.04;
 /** The moon's light on the air for a full moon (a deep blue night through the night's exposure). */
 const MOON_SKY = 0.0035;
 /** How often the slower sums (the exposure, the light on the clouds) are redone, ms: the sun moves 0.004° a second. */
@@ -112,7 +111,7 @@ function slowFrame(moonIllum: number, moonUp: number) {
 }
 
 /** Module scope (the react compiler forbids writing through hook values): the sky for this frame. */
-function skyFrame(camera: THREE.PerspectiveCamera, scene: THREE.Scene, weather: IslandWeather, style: CloudStyle, dt: number) {
+function skyFrame(camera: THREE.PerspectiveCamera, scene: THREE.Scene, weather: IslandWeather, dt: number) {
   const u = skyUniforms, now = skyInstant() ?? worldNow();
   u.uTime.value = worldTime();
   const s = solarPosition(new Date(now));
@@ -131,7 +130,7 @@ function skyFrame(camera: THREE.PerspectiveCamera, scene: THREE.Scene, weather: 
   // The weather: eased, never switched.
   const target = WEATHER_SKY[weather];
   const w = (state.weather ??= [...target]), k = 1 - Math.exp(-WEATHER_RATE * dt);
-  for (let i = 0; i < w.length; i++) w[i] += (target[i] - w[i]) * k;
+  for (let i = 0; i < w.length; i++) w[i] += (target[i] - w[i]) * (i === 0 ? 1 - Math.exp(-COVER_RATE * dt) : k);
   // Fair-weather cumulus melt away after sunset (an overcast stays).
   u.uCloud.value.set(w[0] * (1 - 0.6 * u.uNight.value * (1 - w[2])), w[1], w[2], w[3]);
   u.uHaze.value = w[4];
@@ -148,14 +147,12 @@ function skyFrame(camera: THREE.PerspectiveCamera, scene: THREE.Scene, weather: 
   const dip = (u.uDip.value = seaDip(camera));
   u.uSunDraw.value.set(...skyBend(sun, dip, drawn));
   u.uMoonDraw.value.set(...skyBend(moon, dip, drawn));
-  // The clouds in view, nearest first (all three styles read them; round 2's traced ones walk their own).
-  if (style !== "traced") {
-    const half = Math.atan(Math.tan((camera.fov * Math.PI) / 360) * Math.hypot(1, camera.aspect));
-    view.x = fwd.x; view.y = fwd.y; view.z = fwd.z; view.cos = Math.cos(Math.min(Math.PI, half + dip + 0.05));
-    const d = u.uDrift.value;
-    u.uCloudN.value = cloudField(u.uCloud.value.x, u.uCloud.value.y, d, dip, cloudData, view);
-    cloudTexture.needsUpdate = true;
-  }
+  // The clouds in view, nearest first, each at its point in its life on the world clock.
+  const half = Math.atan(Math.tan((camera.fov * Math.PI) / 360) * Math.hypot(1, camera.aspect));
+  view.x = fwd.x; view.y = fwd.y; view.z = fwd.z; view.cos = Math.cos(Math.min(Math.PI, half + dip + 0.05));
+  const c = u.uCloud.value;
+  u.uCloudN.value = cloudField(c.x, c.y, c.z, u.uTime.value, u.uDrift.value, dip, cloudData, view);
+  cloudTexture.needsUpdate = true;
   const e = camera.matrixWorld.elements;
   u.uCamRight.value.set(e[0], e[1], e[2]).normalize();
   u.uCamUp.value.set(e[4], e[5], e[6]).normalize();
@@ -169,17 +166,15 @@ function skyFrame(camera: THREE.PerspectiveCamera, scene: THREE.Scene, weather: 
 }
 
 export default function SkyDome({ weather }: { weather: IslandWeather }) {
-  const lab = useSkyLab(), style = lab.clouds ?? CLOUD_STYLE;
-  useEffect(() => { skyUniforms.uStarPx.value = lab.skypx === "light" ? 1.8 : 1; }, [lab.skypx]);
-  const { geometry, material } = useMemo(() => skyDome(style), [style]);
+  const { geometry, material } = useMemo(() => skyDome(), []);
   const mesh = useRef<THREE.Mesh>(null);
   useFrame(({ camera, scene }, dt) => {
     mesh.current?.position.copy(camera.position);
-    skyFrame(camera as THREE.PerspectiveCamera, scene, weather, style, Math.min(dt, 0.1));
+    skyFrame(camera as THREE.PerspectiveCamera, scene, weather, Math.min(dt, 0.1));
   });
   // After the island's opaque meshes (the far plane only fills what they left), before its transparent ones.
   return <>
     <mesh ref={mesh} geometry={geometry} material={material} scale={RADIUS} frustumCulled={false} renderOrder={1000} />
-    <SkyClouds style={style} />
+    <SkyClouds />
   </>;
 }

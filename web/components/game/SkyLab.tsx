@@ -16,11 +16,11 @@ import { orbit } from "@/lib/game/orbitCamera";
 if (typeof window !== "undefined") {
   Object.assign(window, { __sky: {
     set: (next: Partial<Omit<SkyLabState, "amb">> & { amb?: string[] }) => setSkyLab({ ...next, amb: next.amb ? new Set(next.amb) as SkyLabState["amb"] : skyLab().amb }),
-    /** Move the world clock to HH:MM (Toronto) on a date; the island re-reads it at once. */
-    at: (hhmm: string, date: string) => {
+    /** Move the world clock to HH:MM (Toronto) on a date, `plusMs` after it; the island re-reads it at once. */
+    at: (hhmm: string, date: string, plusMs = 0) => {
       const d = parseClockOverride(new URLSearchParams({ at: hhmm, date }));
       if (!d) return false;
-      setWorldClockOffset(d.getTime() - Date.now());
+      setWorldClockOffset(d.getTime() + plusMs - Date.now());
       document.dispatchEvent(new Event("visibilitychange"));
       return true;
     },

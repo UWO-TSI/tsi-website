@@ -163,11 +163,13 @@ function glowFrame(u: GlowUniforms, objects: readonly THREE.Object3D[], on: bool
 }
 
 /**
- * A lamp's halo (sky-ambient round 2; David, the title's round 4: the lights "should look kinda real likes where it
- * molds around the light source, and also it isnt a hard cut off, rather the glow fades very softly"): a quad facing the
- * camera, lifted toward it past the lamp's head so the glass never cuts it, a white-hot core in the flame's colour
- * wrapping the glass and a long tail that fades to nothing (glow.ts softGlow, here in the shader, dithered), a little
- * taller than wide like the glass, breathing with the flame. One instanced draw for every lamp.
+ * A lamp's halo (sky-ambient rounds 2 and 4; David, the title's round 4: the lights "should look kinda real likes where
+ * it molds around the light source, and also it isnt a hard cut off, rather the glow fades very softly"; round 5: "the
+ * clow is still so circular"): a quad facing the camera, lifted toward it past the lamp's head so the glass never cuts
+ * it. The glow is measured from the glass, a small upright pane (`uGlass`), not from a point: a hot core hugging the
+ * pane, then light falling off with the distance from it (two exponentials, so it has no rim and no circle), the quad's
+ * own edge faded out in a square far below where the light still shows. Dithered, breathing with the flame. One
+ * instanced draw for every lamp.
  */
 const HALO_VERT = /* glsl */ `
 uniform float uTime;
@@ -190,12 +192,15 @@ const HALO_FRAG = /* glsl */ `
 uniform float uOn;
 uniform vec3 uCore;
 uniform vec3 uEdge;
+uniform vec2 uGlass;
 varying vec2 vUv;
 varying float vBreath;
 void main() {
-  float r2 = dot(vUv, vUv);
-  if (r2 >= 1.0) discard;
-  float core = exp(-r2 / 0.03), glow = pow(1.0 - r2, 2.5) * (0.22 + 0.78 * exp(-r2 / 0.045));
+  vec2 q = max(abs(vUv) - uGlass, 0.0);
+  float dist = length(q);
+  float core = exp(-dist * dist / 0.003), glow = 0.6 * exp(-dist * 9.0) + 0.4 * exp(-dist * 3.6);
+  vec2 edge = 1.0 - smoothstep(0.55, 1.0, abs(vUv));
+  glow *= edge.x * edge.y;
   float dither = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
   float a = max(0.0, glow * uOn * vBreath + dither / 255.0);
   gl_FragColor = vec4(mix(uEdge, uCore, core), a);
@@ -219,7 +224,9 @@ export function LampGlow({ points, ground, on, halo = 2.6, pool = 5.5, color }: 
     const edge = new THREE.Color(color ?? "#ff9a40"), core = color ? new THREE.Color(color).lerp(new THREE.Color(1, 1, 1), 0.5) : new THREE.Color("#fff1d6");
     const material = new THREE.ShaderMaterial({
       vertexShader: HALO_VERT, fragmentShader: HALO_FRAG, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-      uniforms: { ...uniforms, uSize: { value: new THREE.Vector2(halo, halo * 1.15) }, uLift: { value: halo * 0.3 }, uCore: { value: core }, uEdge: { value: edge } },
+      uniforms: { ...uniforms, uSize: { value: new THREE.Vector2(halo, halo * 1.15) }, uLift: { value: halo * 0.3 }, uCore: { value: core }, uEdge: { value: edge },
+        // The glass, in the quad's half sizes: a small upright pane (the fountain's jet a taller one).
+        uGlass: { value: color ? new THREE.Vector2(0.05, 0.2) : new THREE.Vector2(0.045, 0.085) } },
     });
     const mesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), material, points.length), m = new THREE.Matrix4();
     points.forEach(([x, y, z], i) => mesh.setMatrixAt(i, m.makeTranslation(x, y, z)));

@@ -1,7 +1,7 @@
 // Sky-ambient clips (specs/sky-ambient.md): a few seconds of the sky, the weathers, the wind and the lamps on the new
 // world (/lab/island), headless and muted, against a dev server on PORT. Needs ffmpeg.
-//   PORT=3480 CLIPS="day night:phone" [STYLE=sprites] [Q="skypx=light"] [TAG=sky3] [SECONDS=6] node specs/evidence/sky-ambient/clip.mjs <out_dir>
-// Per clip: <TAG>-clip-<name>-<size>[-<STYLE>].mp4 and a -poster.jpg (the frame a third of the way in).
+//   PORT=3480 CLIPS="day night:phone" [Q="amb=motes"] [TAG=sky4] [SECONDS=6] node specs/evidence/sky-ambient/clip.mjs <out_dir>
+// Per clip: <TAG>-clip-<name>-<size>.mp4 and a -poster.jpg (the frame a third of the way in).
 //
 // Round 3: frame by frame, so every clip plays at a steady 30 fps whatever the headless browser manages (round 2
 // recorded the screen as it went, and a busy machine made the clips stutter). Once the scene has settled the page's
@@ -14,7 +14,7 @@ const require = createRequire("/opt/homebrew/lib/node_modules/");
 const { chromium } = require("playwright");
 
 const [OUT = "/tmp/sky3-clips"] = process.argv.slice(2), PORT = process.env.PORT ?? 3480, DATE = "2026-07-29", FPS = 30;
-const TAG = process.env.TAG ?? "sky3", STYLE = process.env.STYLE ?? "", Q = process.env.Q ?? "";
+const TAG = process.env.TAG ?? "sky4", Q = process.env.Q ?? "";
 const MEADOW = "60,22", BEACH = "14,111";
 // Across the meadow, side on to the wind (it blows toward +x, a little +z: worldFx WIND_DIR), so its fronts cross the view.
 const GROUND = { yaw: 0, pitch: 0.42, zoom: 1.25 }, SEA = { yaw: Math.PI, pitch: 0.35, zoom: 1.4 };
@@ -24,6 +24,11 @@ const PLAZA = "40,52", PLAZA_VIEW = { yaw: -1.57, pitch: 0.42, zoom: 1.25 };
 const CLIPS = {
   // The whole day, 05:30 to 23:50, in twenty seconds.
   "day": { spot: BEACH, at: "05:30", lapse: ["05:30", "23:50"], view: WEST, tilt: 14, seconds: 20 },
+  // The clouds' lives sped up (about 50 times: twenty minutes in 24 s, the wind at its own pace): clouds gathering out of
+  // scraps, holding, and breaking apart into tatters that thin away. Midday away from the sun, the sunset toward it, the night.
+  "life-day": { spot: BEACH, at: "12:20", lapse: ["12:20", "12:40"], tilt: 22, view: { yaw: 1.2, pitch: 0.35, zoom: 1.1 }, seconds: 24 },
+  "life-sunset": { spot: BEACH, at: "20:22", lapse: ["20:22", "20:40"], face: "sun", tilt: 12, view: { pitch: 0.35, zoom: 1.1 }, seconds: 24 },
+  "life-night": { spot: BEACH, at: "23:10", lapse: ["23:10", "23:30"], face: "moon", tilt: 16, view: { pitch: 0.35, zoom: 1 }, seconds: 24 },
   // Real time: midday's clouds across the sky away from the sun, the clouds drifting at golden hour and sunset.
   "midday": { spot: BEACH, at: "12:30", tilt: 22, view: { yaw: 1.2, pitch: 0.35, zoom: 1.1 }, seconds: 8 },
   "golden": { spot: BEACH, at: "20:00", face: "sun", tilt: 12, view: { pitch: 0.35, zoom: 1.1 }, seconds: 8 },
@@ -44,6 +49,9 @@ const CLIPS = {
   "motes": { spot: MEADOW, at: "19:50", face: "sun", tilt: 4, view: { pitch: 0.42, zoom: 1.1 }, seconds: 8 },
   // The plaza's lamps and the fireflies at night: the soft glow, breathing.
   "lamps": { spot: PLAZA, at: "23:30", view: PLAZA_VIEW, tilt: 4, seconds: 8 },
+  // The lamps' glow against the night sky, clouds going by behind it (their lives sped up 60 times): the glow shaped by
+  // the glass, never covered by a cloud.
+  "glow": { spot: PLAZA, at: "23:15", lapse: ["23:15", "23:27"], view: { yaw: -1.57, pitch: 0.36, zoom: 1.1 }, tilt: 14, seconds: 12 },
 };
 const SIZES = { desktop: { width: 1280, height: 800 }, phone: { width: 390, height: 844 } };
 const LOOK = JSON.stringify({ skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [], bangs: "bangs_curtain", back: "back_bob", top: "top_hoodie", bottom: "bottom_joggers", onepiece: null, shoes: "shoes_sneakers", acc: {}, colors: {} });
@@ -70,7 +78,7 @@ const browser = await chromium.launch({ headless: true, args: ["--mute-audio", "
 for (const item of (process.env.CLIPS ?? Object.keys(CLIPS).join(" ")).split(" ")) {
   const [name, size = "desktop"] = item.split(":"), c = CLIPS[name], phone = size === "phone", viewport = SIZES[size];
   const seconds = Number(process.env.SECONDS ?? c.seconds ?? 6), frames = Math.round(seconds * FPS);
-  const base = `${OUT}/${TAG}-clip-${name}-${size}${STYLE ? `-${STYLE}` : ""}`, tmp = `${base}.frames`;
+  const base = `${OUT}/${TAG}-clip-${name}-${size}`, tmp = `${base}.frames`;
   rmSync(tmp, { recursive: true, force: true });
   mkdirSync(tmp, { recursive: true });
   const ctx = await browser.newContext({ viewport, deviceScaleFactor: 1, isMobile: phone, hasTouch: phone });
@@ -85,7 +93,6 @@ for (const item of (process.env.CLIPS ?? Object.keys(CLIPS).join(" ")).split(" "
   const q = new URLSearchParams({ season: c.season ?? "summer", weather: c.weather ?? "clear", date: c.date ?? DATE });
   q.append("at", c.spot); q.append("at", c.at);
   for (const k of ["wind", "amb"]) if (c[k]) q.set(k, c[k]);
-  if (STYLE) q.set("clouds", STYLE);
   for (const [k, v] of new URLSearchParams(Q)) q.set(k, v);
   await page.goto(`http://localhost:${PORT}/lab/island?${q}`, { timeout: 300000 });
   await page.waitForFunction(() => !!window.__move?.sim?.current && !!window.__sky, null, { timeout: 240000 });
@@ -104,8 +111,9 @@ for (const item of (process.env.CLIPS ?? Object.keys(CLIPS).join(" ")).split(" "
   for (let f = 0; f < frames; f++) {
     const k = f / Math.max(1, frames - 1);
     if (lapse) {
-      const m = Math.round(lapse[0] + (lapse[1] - lapse[0]) * k);
-      await page.evaluate(([hhmm, date]) => window.__sky.at(hhmm, date), [`${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`, c.date ?? DATE]);
+      // To the second (a lapse of a few minutes, the clouds' lives, moves smoothly).
+      const at = lapse[0] + (lapse[1] - lapse[0]) * k, m = Math.floor(at);
+      await page.evaluate(([hhmm, date, plus]) => window.__sky.at(hhmm, date, plus), [`${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`, c.date ?? DATE, (at - m) * 60000]);
     }
     if (c.turn) await page.evaluate(yaw => window.__sky.view({ yaw }), c.turn[0] + (c.turn[1] - c.turn[0]) * k);
     await page.evaluate(ms => window.__clip.step(ms), 1000 / FPS);

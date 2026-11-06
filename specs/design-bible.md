@@ -2,7 +2,7 @@
 
 The one canon for how the game looks: UI, art and models. On these topics it wins over every other spec. A spec, lane file or asset that disagrees with it gets fixed or archived; it isn't followed. Changes to the bible are recorded as rows in the decision ledger (`specs/game-world-development-plan.md`).
 
-Chapters: **UI** and **Models** are set (2026-10-28, ledger rows 320 and 319). **Art** is being written from the 2026-10-28 codebase review; until it lands, `specs/art-direction-oct17.md` is the art reference. Older UI docs (`specs/polish/gui-sheet.md`, `specs/polish/ui-themes.md`, `specs/cozy-lighting-and-adaptive-ui-2026-09-17.md`, `specs/game-ui-questions.md`, `web/DESIGN_SYSTEM.md`, `web/STYLE.md`) are history wherever they disagree with this file.
+Chapters: **UI** and **Models** are set (2026-10-28, ledger rows 320 and 319); **Sky** holds David's sky calls (2026-11-06, sky-ambient round 4). **Art** is being written from the 2026-10-28 codebase review; until it lands, `specs/art-direction-oct17.md` is the art reference. Older UI docs (`specs/polish/gui-sheet.md`, `specs/polish/ui-themes.md`, `specs/cozy-lighting-and-adaptive-ui-2026-09-17.md`, `specs/game-ui-questions.md`, `web/DESIGN_SYSTEM.md`, `web/STYLE.md`) are history wherever they disagree with this file.
 
 ## UI
 
@@ -68,3 +68,18 @@ David, 2026-10-28: "models should be considered to have a high def version and a
 4. **Finished before review.** A model goes to David in both versions: the high-def in its close-up view, and the low-poly in the world from the game camera, beside the model it replaces.
 5. **One version in the repo.** When a model replaces another, the old file is deleted or moved to `archive/`, and every path that loaded it moves to the new one. No parallel old copies.
 6. **Budgets.** The low-poly fits the world's triangle budget (`specs/perf/`). The high-def is sized for one model on screen at a time.
+
+## Sky
+
+David, 2026-11-06, on the sky reference beside sky round 3 (`sky3-ref-sky`, the valley in the style of Sky: Children of the Light, vault `References/Sky references/sky-valley-light.png`): "that sky is beautiful, keep that in in mind so future skyes refrence that lighitng". Earlier: "take the sky design seriously because thats where the feeling comes from and the lighting" (2026-11-04).
+
+1. **The lighting reference for every sky** is that valley's light. Read it, never trace or copy it (third-party; vault only, never in the repo):
+   - High key and airy: the whole frame is bright, and the darkest values are a soft blue, never near black.
+   - The air glows: distance lifts everything toward a pale sky blue, so far ridges and clouds melt into the sky's own colour while near ground keeps its saturated green.
+   - The sun reads as light, not as a disc: a warm white bloom behind the clouds, soft shafts through the air, sunlit edges glowing.
+   - Shade is cool and coloured: lavender to blue under the clouds and on the shaded sides, warm white on the lit ones, with a soft step between them.
+   - Clouds are huge, soft and lit: bright white tops, blue-grey undersides, edges that dissolve into the air rather than outlines that end.
+2. **The clouds** are lit painted cards (sky round 3 pick c, `components/game/SkyClouds.tsx`), refined toward David's Genshin references: painted cumulus with clean broken edges, bright tops over a soft cool shade, flat-ish bases, loose puffs, wisps at sunset. They never read as 3D models; they form and break apart, never pop.
+3. **The ambient white cirrus** curving across the sky stays, a touch more prominent (round 3); by night it is a faint moonlit veil.
+4. **Night:** stars are crisp points with a faint glow, high contrast between them; the moon follows the real lunar cycle.
+5. **The pixel finish** covers the sky as it covers the world (round 3: "keep for now").

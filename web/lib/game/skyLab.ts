@@ -4,13 +4,10 @@
  *
  * - `?amb=motes`: golden hour's motes at any hour (AmbienceFX GoldenMotes; the world bench prices them).
  * - `?skytilt=<deg>` tilts the view up for sky shots; `?skyface=sun|moon` turns the orbit toward it.
- * - `?clouds=painted|models|sprites|traced`: round 3's ways of drawing the cumulus (skyShader.ts CloudStyle).
- * - `?skypx=light`: round 3's lighter pixel finish on the sky (PostFX SkyPixels).
  *
  * At run time `window.__sky` swaps these, moves the clock and the view, so a shoot keeps one page load per weather.
  */
 import { useSyncExternalStore } from "react";
-import { CLOUD_STYLES, type CloudStyle } from "./skyShader";
 
 export const SKY_LAB = process.env.NODE_ENV !== "production";
 
@@ -21,24 +18,20 @@ export interface SkyLabState {
   /** Degrees the view tilts up, after the follow camera. */
   tilt: number;
   face: "sun" | "moon" | null;
-  clouds: CloudStyle | null;
-  skypx: "light" | null;
 }
 
 const AMB: readonly string[] = ["motes"];
 
 export function parseSkyLab(search: string): SkyLabState {
-  const q = new URLSearchParams(search), face = q.get("skyface"), clouds = q.get("clouds") ?? "";
+  const q = new URLSearchParams(search), face = q.get("skyface");
   return {
     amb: new Set((q.get("amb") ?? "").split(",").filter(k => AMB.includes(k)) as AmbientKey[]),
     tilt: Number(q.get("skytilt")) || 0,
     face: face === "sun" || face === "moon" ? face : null,
-    clouds: (CLOUD_STYLES as readonly string[]).includes(clouds) ? clouds as CloudStyle : null,
-    skypx: q.get("skypx") === "light" ? "light" : null,
   };
 }
 
-const OFF: SkyLabState = { amb: new Set(), tilt: 0, face: null, clouds: null, skypx: null };
+const OFF: SkyLabState = { amb: new Set(), tilt: 0, face: null };
 let state: SkyLabState = SKY_LAB && typeof window !== "undefined" ? parseSkyLab(window.location.search) : OFF;
 const listeners = new Set<() => void>();
 export const skyLab = () => state;
@@ -47,6 +40,6 @@ export function setSkyLab(next: Partial<SkyLabState>): void {
   state = { ...state, ...next };
   for (const l of listeners) l();
 }
-export const skyLabOn = () => SKY_LAB && (state.amb.size > 0 || state.tilt !== 0 || state.face !== null || state.clouds !== null || state.skypx !== null);
+export const skyLabOn = () => SKY_LAB && (state.amb.size > 0 || state.tilt !== 0 || state.face !== null);
 export const useSkyLab = (): SkyLabState =>
   useSyncExternalStore(l => { listeners.add(l); return () => { listeners.delete(l); }; }, skyLab, skyLab);

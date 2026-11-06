@@ -14,9 +14,8 @@
 // v1 water (VARIANTS=water): each piece of the water pass off against the water as shipped:
 //   seabedOff the seabed's props; foamOff the foam rings; glassOff glass water (High's refraction wobble); fishOff the
 //   decorative fish (lib/game/perf/fxBench.ts WORLD_KEYS).
-// Sky-ambient (VARIANTS=sky): domeOff (the dome's own cost, as above), motes (golden hour's motes at noon), and round 3's
-//   cloud styles (painted, models, sprites, traced: ?clouds=, lib/game/skyShader.ts), each against the sky as built
-//   (window.__sky, components/game/SkyLab.tsx). The wind's marks need ?weather=wind: bench them with WEATHER=wind.
+// Sky-ambient (VARIANTS=sky): domeOff (the dome's own cost, as above), and motes (golden hour's motes at noon), each against
+//   the sky as built (window.__sky, components/game/SkyLab.tsx). The wind's marks need ?weather=wind: bench them with WEATHER=wind.
 //   TILT (degrees) tips the view up after the follow camera, for the sky in view.
 // The title has no probe and no switches: its frame and main-thread time are sampled alone (`title`).
 // Headed, off to the side, muted, never brought to the front; the real GPU; uncapped.
@@ -45,12 +44,8 @@ const ALL_VARIANTS = {
   // Sky-ambient (specs/sky-ambient.md; lib/game/skyLab.ts, development switches): the shared wind (stormy) and the
   // motes pitch, against the sky as built.
   motes: { off: [], tune: null, sky: { amb: ["motes"] } },
-  painted: { off: [], tune: null, sky: { clouds: "painted" } },
-  models: { off: [], tune: null, sky: { clouds: "models" } },
-  sprites: { off: [], tune: null, sky: { clouds: "sprites" } },
-  traced: { off: [], tune: null, sky: { clouds: "traced" } },
 };
-const SETS = { world: ["domeOff", "grassHalf", "grass0", "rocksOff"], water: ["seabedOff", "foamOff", "glassOff", "fishOff"], sky: ["domeOff", "motes"], clouds: ["painted", "models", "sprites", "traced"] };
+const SETS = { world: ["domeOff", "grassHalf", "grass0", "rocksOff"], water: ["seabedOff", "foamOff", "glassOff", "fishOff"], sky: ["domeOff", "motes"] };
 const VARIANTS = Object.fromEntries((SETS[process.env.VARIANTS ?? "world"] ?? (process.env.VARIANTS ?? "").split(",")).map(k => [k, ALL_VARIANTS[k]]));
 const SHIPPED = { off: [], tune: null };
 
@@ -75,7 +70,7 @@ for (const scene of ONLY.split(",")) {
   }
   await page.waitForTimeout(5000);
   const metrics = async () => Object.fromEntries((await cdp.send("Performance.getMetrics")).metrics.map(m => [m.name, m.value]));
-  const apply = v => page.evaluate(([v, TILT]) => { window.__fx.set({ off: v.off }); if (v.tune) window.__fx.tune(...v.tune); else window.__fx.tune(); window.__sky?.set({ amb: [], clouds: null, tilt: TILT, ...v.sky }); }, [v, TILT]);
+  const apply = v => page.evaluate(([v, TILT]) => { window.__fx.set({ off: v.off }); if (v.tune) window.__fx.tune(...v.tune); else window.__fx.tune(); window.__sky?.set({ amb: [], tilt: TILT, ...v.sky }); }, [v, TILT]);
   async function sample(v) {
     if (probe) { await apply(v); await page.waitForTimeout(SETTLE * 1000); }
     const m0 = await metrics();

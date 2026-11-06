@@ -26,7 +26,7 @@ import { EffectComposer, Bloom, DepthOfField, FXAA, N8AO, TiltShift2, ToneMappin
 import { createGraphicsContextStore } from "@/lib/game/graphicsContext";
 import type { Grade } from "@/lib/game/grading";
 import type { LookFx, ToneMap } from "@/lib/game/lookPreset";
-import { BlendFunction, Effect, EffectAttribute, ToneMappingMode, type DepthOfFieldEffect } from "postprocessing";
+import { BlendFunction, Effect, ToneMappingMode, type DepthOfFieldEffect } from "postprocessing";
 import { Uniform, Vector3, type Scene } from "three";
 
 /**
@@ -115,25 +115,6 @@ class PastelEffect extends Effect {
 }
 
 /**
- * Development preview (sky-ambient round 3, `?skypx=light`, lib/game/skyLab.ts): a lighter pixel finish on the sky.
- * David, round 2: "is it possibe to have the pixel pass be less strong on the sky". The canvas draws at full
- * resolution and this pass gives everything nearer than the sky dome (it sits at the far plane) the pixel finish's
- * 2 × 2 blocks again, so only the sky shows at full resolution. Built for the game, the world would draw at half
- * resolution as now and only the dome at full: the look is the same, the cost is the dome's pixels at full size.
- */
-const SKY_PIXELS_FRAG = /* glsl */ `
-void mainImage(const in vec4 inputColor, const in vec2 uv, const in float depth, out vec4 outputColor) {
-  vec2 cell = (floor(uv * resolution * 0.5) * 2.0 + 0.5) * texelSize;
-  outputColor = readDepth(cell) < 0.99999 ? texture2D(inputBuffer, cell) : inputColor;
-}
-`;
-class SkyPixelsEffect extends Effect {
-  constructor() {
-    super("SkyPixels", SKY_PIXELS_FRAG, { blendFunction: BlendFunction.NORMAL, attributes: EffectAttribute.DEPTH });
-  }
-}
-
-/**
  * The AO pass's two extra scene renders (specs/perf/2026-10-baseline.md item 1). N8AO is transparency aware once the
  * scene holds a transparent material (it always does here): every frame it renders the scene twice more, the
  * transparent objects alone, into its own targets. Each `renderer.render` would walk the whole scene graph for world
@@ -164,15 +145,12 @@ interface PostFXProps {
   fx: LookFx;
   /** Photo mode's depth of field (v1): its focus point and strength; null or a strength of 0 is off. */
   dof?: { at: Vector3; strength: number } | null;
-  /** Development preview: the pixel finish on everything but the sky (SkyPixelsEffect). */
-  skyPixels?: boolean;
 }
 
 const TONE_MAPPING: Record<ToneMap, ToneMappingMode> = { neutral: ToneMappingMode.NEUTRAL, aces: ToneMappingMode.ACES_FILMIC, agx: ToneMappingMode.AGX };
 
-export default function PostFX({ antialias = false, grade: g, fx, dof = null, skyPixels = false }: PostFXProps) {
+export default function PostFX({ antialias = false, grade: g, fx, dof = null }: PostFXProps) {
   const pastel = useMemo(() => new PastelEffect(), []);
-  const skyPx = useMemo(() => (skyPixels ? new SkyPixelsEffect() : null), [skyPixels]);
   const gl = useThree((s) => s.gl);
   const context = useMemo(() => createGraphicsContextStore(gl.getContext(), gl.domElement), [gl]);
   const contextAvailable = useSyncExternalStore(context.subscribe, context.getSnapshot, () => false);
@@ -196,7 +174,6 @@ export default function PostFX({ antialias = false, grade: g, fx, dof = null, sk
   return (
     <EffectComposer multisampling={0}>
       {/* Look lab AO runs on the raw scene render, before anything filters it. */}
-      {skyPx ? <primitive object={skyPx} /> : <></>}
       {fx.ao ? <N8AO ref={ao as never} aoRadius={fx.ao.radius} intensity={fx.ao.intensity} distanceFalloff={1} quality="performance" halfRes /> : <></>}
       {/* FXAA samples neighboring input pixels. Run it before the merged grade
           so its center and neighbor samples use the same color space. */}

@@ -48,9 +48,9 @@ To rebuild: `python3 art/audio/synth_ambience.py <wav dir>`, then the ffmpeg lin
 |---|---|---|---|---|
 | `bed-dawn.ogg` | the sea washing in and out, a light breeze, a few birds waking | synth_ambience.py | game/sky-ambient (Tethos) | CC0 |
 | `bed-day.ogg` | the sea, a breeze that comes and goes, birds calling now and then | synth_ambience.py | game/sky-ambient (Tethos) | CC0 |
-| `bed-dusk.ogg` | the sea, the breeze, the last birds, the first crickets | synth_ambience.py | game/sky-ambient (Tethos) | CC0 |
-| `bed-night.ogg` | the sea, a breath of wind, crickets in a few voices | synth_ambience.py | game/sky-ambient (Tethos) | CC0 |
+| `bed-dusk.ogg` | the sea, the breeze, the last birds, the first crickets (round 4's) | synth_ambience.py | game/sky-ambient (Tethos) | CC0 |
+| `bed-night.ogg` | the sea, a breath of wind, crickets near and far (soft pulsed chirps, round 4), a tree cricket's trill | synth_ambience.py | game/sky-ambient (Tethos) | CC0 |
 | `bed-wind.ogg` | the sea and a gusty wind with a whistle in the gusts | synth_ambience.py | game/sky-ambient (Tethos) | CC0 |
-| `bed-rain.ogg` | rain on leaves and sand (a hiss, close drops), the sea under it | synth_ambience.py | game/sky-ambient (Tethos) | CC0 |
+| `bed-rain.ogg` | a soft wash of rain, its low body on leaves and sand, a gentle rounded patter (round 4: no hiss, no clicks), the sea under it | synth_ambience.py | game/sky-ambient (Tethos) | CC0 |
 | `bed-snow.ogg` | a soft wind, everything muffled | synth_ambience.py | game/sky-ambient (Tethos) | CC0 |
 | `bed-fog.ogg` | the sea, slow and muffled | synth_ambience.py | game/sky-ambient (Tethos) | CC0 |
