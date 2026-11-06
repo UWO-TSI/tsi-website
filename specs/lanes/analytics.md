@@ -26,6 +26,42 @@ Evidence `an1-*` in `specs/evidence/analytics/r1/`.
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, the SQL smoke chain with the new migration, headless shots. Show that the tracking adds no work per frame.
 
+## Status (round 1 built, awaiting review)
+
+Head: see `git log -1` on game/analytics. Not merged, migration not applied.
+
+- **Event log:** `web/lib/analytics/steps.ts` (the one list), `track.ts` (tab side: batched, beacon on pagehide, 3-min heartbeat while visible, no-op until the member island calls `startSession`), `POST /api/analytics/events` (session checked, ids only, 25 a request, 40 a member a minute).
+- **Hooks:** `DefaultIslandWorld` (session, screen, arrival phases and walk stops through `subscribeArrival`), `hq/store.ts` (HQ beats), `lookStore.saveMyLook` (creator), `collections.ts` catchRequest (fishing, foraging). Features also come from `API_WRITE`.
+- **Page:** `/student/dashboard/admin/game` ("Players" on the admin hub), `components/portal/GameAnalytics.tsx`. It reads `GET /api/admin/game-analytics?days=` (adminContext), and `lib/analytics/report.ts` adds it up on the server. The dev twin is `/dev/analytics` (made-up players, or `?source=backfill` with `ANALYTICS_SNAPSHOT=<json>`).
+- **Migration** `20261106210000_game_events.sql` (unapplied):
+  - the `game_events` table, with RLS on, no policies, and access revoked from anon and authenticated;
+  - `game_events_prune` (180 days; daily pg_cron job `game-events-prune` where pg_cron exists);
+  - `game_analytics_snapshot(p_since)` (service_role only).
+  - Smoke: `web/supabase/tests/game_events_smoke.sql`, added to the canonical chain.
+- **Spec:** `specs/analytics.md` covers what's collected, privacy and the history sources.
+- **Gates (r1):**
+  - tsc clean;
+  - vitest 3805 passed, both with and without `NEXT_PUBLIC_GAME_WORLD=new`;
+  - eslint clean on the changed files;
+  - the lane's SQL smoke fails before the migration and passes after, applies twice, and the security smoke still passes;
+  - the canonical chain passes except `world_chat_smoke` "the rest", which also fails with this migration cut (pre-existing).
+
+## Next
+
+1. The coordinator reviews and publishes the an1 page with the questions below. David answers.
+2. Apply his answers: cut or rename funnel steps (`steps.ts`), the quiet window (`GONE_DAYS`), the retention window (180 days in the migration's prune, while the migration is still unapplied), and who counts as a player.
+3. The coordinator applies the migration after David approves the page. Until then, the route answers 503 and the tab stops sending (`off`).
+
+Questions for David: Are these the funnel steps he wants (28 rows: every opening phase, walk stop and HQ beat), or a shorter list? Is 7 days the right "never came back" mark? Should events be kept 180 days? Is a player a member, or anyone who played? Anything to cut?
+
+## Tools and gotchas
+
+- SQL: `zsh specs/evidence/analytics/r1/sql-smoke.sh [out.json]`. With a path, it also loads `backfill.sql` (90 made-up players) and writes the snapshot JSON there. Postgres port 55498.
+- Shots: `LANE=game/analytics withlock.sh devserver zsh specs/evidence/analytics/r1/shoot.sh <snapshot.json>` (dev :3498, headless). The devserver lock is heavily contended: a wait can time out (exit 75), so retry.
+- `member_identity` needs `world_name_key` with `world_name` (check constraint).
+- `catch_rolls` rows are pruned after a day, so they're no history. Use `member_collections.first_collected_at`.
+- `player_positions` is never written, and `profiles.last_login_at` and `first_seen_at` are never written either: don't use them.
+
 ## Rules
 
 - Headless only: never open a window, tab, app or audio on David's screen; never `open`; never the Playwright MCP, claude-in-chrome or blender MCP tools.

@@ -60,7 +60,7 @@ BEGIN
     END IF;
     INSERT INTO daily_login_claims (member_id, day, coins, claimed_at) VALUES (m, joined::date, 5, joined + INTERVAL '30 seconds');
     -- Coming back: more often the further they got.
-    visits := CASE WHEN arrived THEN floor(random() * 12)::int ELSE floor(random() * 2)::int END;
+    visits := CASE WHEN arrived THEN floor(random() * 12)::int ELSE floor(random() * 1.4)::int END;
     d := joined;
     FOR v IN 1..visits LOOP
       d := d + (0.6 + random() ^ 2 * 7) * INTERVAL '1 day';
@@ -70,7 +70,7 @@ BEGIN
         INSERT INTO member_quest_progress (member_id, chapter_id, status, started_at, completed_at) VALUES (m, ch, 'completed', joined, d)
         ON CONFLICT DO NOTHING;
       END IF;
-      IF random() < 0.6 THEN
+      IF arrived AND random() < 0.6 THEN
         INSERT INTO wallet_ledger (member_id, amount, balance_after, source, ref, idempotency_key, created_at)
         VALUES (m, 8, 20, 'sell', fish, 'sell:bf-' || i || '-' || v, d + INTERVAL '5 minutes');
       END IF;

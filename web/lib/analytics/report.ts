@@ -112,14 +112,14 @@ export function buildReport(snap: Snapshot, opts: { from: string; to: string; no
   const sessions = snap.sessions.filter((s) => inRange(s.start));
   const minutes = (s: { start: string; end: string }) => Math.max(0, (Date.parse(s.end) - Date.parse(s.start)) / 60_000);
   const quitKey = (s: { last_step: string | null; screen: string | null }) => s.screen ? `screen:${s.screen}` : s.last_step ? `step:${s.last_step}` : "none";
-  const quitLabel = (k: string) => k === "none" ? "Nothing logged" : k.startsWith("screen:") ? `On ${k.slice(7).replace(/_/g, " ")}` : `After ${STEP_LABEL[k.slice(5) as StepId] ?? k.slice(5)}`;
+  const quitLabel = (k: string) => k === "none" ? "Nothing logged" : k.startsWith("screen:") ? `On ${k === "screen:hq" ? "HQ" : k[7].toUpperCase() + k.slice(8)}` : `After ${STEP_LABEL[k.slice(5) as StepId] ?? k.slice(5)}`;
   const lastSession = new Map<string, Snapshot["sessions"][number]>();
   for (const s of snap.sessions) if (!(Date.parse(lastSession.get(s.m)?.end ?? "") >= Date.parse(s.end))) lastSession.set(s.m, s);
   const gonePlayers = snap.players.filter((p) => isGone(p.id) && (inRange(p.joined) || lastSession.has(p.id)));
   // Before going quiet: the last session's screen if it was logged, else the furthest funnel step (history).
   const goneKey = (p: Snapshot["players"][number]) => {
     const s = lastSession.get(p.id);
-    return s ? quitKey(s) : `step:${[...FUNNEL].reverse().find((st) => reachedStep(p.id, p.joined, st)) ?? "signed_in"}`;
+    return s ? quitKey(s) : `step:${[...FUNNEL].reverse().find((st) => !st.startsWith("day_") && reachedStep(p.id, p.joined, st)) ?? "signed_in"}`;
   };
 
   // Time per tutorial step: from reaching one funnel step to reaching the next, for players who reached both.

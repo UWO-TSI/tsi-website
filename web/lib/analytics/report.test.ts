@@ -49,9 +49,9 @@ describe("the admin page's numbers", () => {
   });
 
   it("where people quit: the last screen of each session, and of each player gone quiet", () => {
-    expect(report.quitSession.map((q) => [q.label, q.n])).toEqual([["On museum", 1], ["On opening", 1], ["On village", 1]]);
-    // A has no logged session: the furthest step known stands in (A came back on day 2, then stopped).
-    expect(report.quitGone.map((q) => q.label).sort()).toEqual(["After Came back day 2", "On opening"]);
+    expect(report.quitSession.map((q) => [q.label, q.n])).toEqual([["On Museum", 1], ["On Opening", 1], ["On Village", 1]]);
+    // A has no logged session: the furthest step known stands in (not the day-2 return: where in the game they stopped).
+    expect(report.quitGone.map((q) => q.label).sort()).toEqual(["After Arrival done", "On Opening"]);
   });
 
   it("engagement: session length, sessions a player, time between steps", () => {
