@@ -217,6 +217,6 @@ describe("seeded hashes stay identical across callers", () => {
       ]
     `);
     expect(pickupCode("m", "k")).toMatchInlineSnapshot(`"FDX68"`);
-    expect(rollNode("m", "node-1", "2026-09-26T10", ["flowers"], { hour: 10, month: 9, weather: "clear" })?.key).toMatchInlineSnapshot(`"bug_common_butterfly"`);
+    expect(rollNode("m", "node-1", "2026-09-26T10", ["flowers"], { hour: 10, month: 9, season: "autumn", soon: "autumn", weather: "clear" })?.key).toMatchInlineSnapshot(`"bug_common_butterfly"`);
   });
 });

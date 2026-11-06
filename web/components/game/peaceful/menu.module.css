@@ -21,12 +21,11 @@
 @keyframes putDown { to { transform: translateY(82dvh) rotateX(60deg) scale(0.92); } }
 @keyframes held { 0%, 100% { transform: rotate(-0.3deg) translateY(0); } 50% { transform: rotate(0.25deg) translateY(-3px); } }
 
-/* The cover's foot: the hanko, a pagoda in mist with a plum branch over it. */
+/* The cover's foot: a pagoda far off in mist, a plum branch reaching in over it from the right. */
 .coverFoot { position: relative; align-self: stretch; width: 100%; min-height: 0; }
-.coverSeal { position: absolute; top: 4%; left: 50%; transform: translateX(-50%); }
-.coverPagoda { position: absolute; left: 0; bottom: 4%; width: 52%; height: 60%; opacity: 0.9; }
-.coverPlum { position: absolute; right: -8%; bottom: 0; width: 84%; height: 96%; }
-.coverMist { position: absolute; left: -10%; right: -10%; bottom: -2%; height: 22%; }
+.coverPagoda { position: absolute; left: 4%; bottom: 8%; width: 40%; height: 56%; opacity: 0.75; }
+.coverPlum { position: absolute; right: -12%; bottom: 2%; width: 78%; height: 100%; }
+.coverMist { position: absolute; left: -14%; right: -14%; bottom: -2%; height: 30%; }
 
 .welcome { margin: 0 0 4%; color: var(--ui-paper-quiet); font: 500 12px/1.7 var(--gui-font); letter-spacing: 0.02em; }
 .meal { display: inline-flex; align-items: center; gap: 6px; margin: 2% 0 0; color: var(--ui-paper-quiet); font: 600 12px/1 var(--gui-font); }

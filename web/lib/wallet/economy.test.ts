@@ -5,6 +5,7 @@ import { BOX_CATEGORIES, BOX_GEAR, boxPool, CATALOGUE, HOLLOW_TOOLS, SETTINGS, W
 import { memoryEconomyStore } from "./memoryStore";
 import { dailySpecials, isOnSale, seedItems, sellPrice, speciesClass, speciesSellPrice, torontoDay, chefOrder, fishingTasks } from "./rules";
 import { DROPS } from "@/lib/game/drops";
+import { seasonBlend } from "@/lib/game/season";
 import { ROSTER } from "@/lib/collections/roster";
 import { buy, claimDailyGift, equip, getShop, getWallet, pickupCode, reserveMerch, resolveMerch, sell, sellList, type GiftView, chefView, claimFishingTask, fillChefOrder, fishingTasksView, orderDish, rollAtTackle } from "./service";
 import { odds, prizeItems, rollTackle, TACKLE_COUNTERS, TACKLE_PRIZES } from "./tackle";
@@ -133,8 +134,8 @@ describe("the fishing tasks (David, 2026-10-28: \"if you did it you claim it\")"
   it("only asks for fish that bite in the waters given, and never a pond fish while the pond is the closed mountain's", () => {
     const pond = new Set(ROSTER.filter((s) => s.biome === "pond").map((s) => s.key));
     for (let d = 0; d < 365; d += 3) {
-      const day = new Date(Date.UTC(2026, 0, 1 + d)).toISOString().slice(0, 10), month = Number(day.slice(5, 7));
-      const t = fishingTasks(day, day, waters), out = new Set(fishOutToday(waters, month).map((o) => o.fish.key));
+      const day = new Date(Date.UTC(2026, 0, 1 + d)).toISOString().slice(0, 10), season = seasonBlend(new Date(`${day}T17:00:00Z`)).season;
+      const t = fishingTasks(day, day, waters), out = new Set(fishOutToday(waters, season).map((o) => o.fish.key));
       expect([...t.day, ...t.week].every((x) => x.item_key === null || out.has(x.item_key))).toBe(true);
       expect([...t.day, ...t.week].some((x) => pond.has(x.item_key ?? ""))).toBe(false);
       expect(pond.has(chefOrder(day, waters)?.item_key ?? "")).toBe(false);

@@ -7,7 +7,7 @@
  * game's overlays standalone. Dev only (the lab layout 404s in production). `?only=<id>` shows one overlay full
  * screen, for screenshots.
  */
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Backpack, BookOpen, Coins, Fish, Mail, MapIcon, PackageOpen, Settings, ShoppingBasket, Sprout, Volume2 } from "lucide-react";
 import FishReveal from "@/components/game/FishReveal";
 import FlatPieces from "./FlatPieces";
@@ -27,7 +27,7 @@ import { RodRadar, TackleRadar } from "@/components/economy/RodGear";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import { ChevronLeft, CircleDot, Waves, Worm } from "lucide-react";
 import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
-import { ActionBar, ActionIcon, BigMoment, CallTag, CardOverlay, DarkButton, FlatField, FlatSlider, FlatToggle, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, KeyPeek, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, QuestCheck, RankBadge, RewardPop, RoundButton, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot, type PeekKind } from "@/components/gui/flat";
+import { ActionBar, ActionIcon, BigMoment, CallTag, CardOverlay, DarkButton, FlatField, FlatSlider, FlatToggle, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, KeyPeek, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, Purse, QuestCheck, RankBadge, flyCoins, RewardPop, RoundButton, ServeMeter, SlotPop, SpinPicker, Spotlight, StatBar, StatBars, WalletSlot, type PeekKind } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
 import { BoardBody } from "@/components/game/volleyball/BoardSheet";
 import { DEFAULT_LOOK } from "@/lib/game/character/look";
@@ -151,6 +151,25 @@ function WalletShow() {
   </div>;
 }
 
+/** A sale: the fish's card in the middle, its coins flying to the purse, which ticks up, swells and glows as they land. */
+function CoinFlyShow() {
+  const card = useRef<HTMLDivElement>(null), count = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    let n = 1240;
+    const t = window.setTimeout(() => {
+      const r = card.current?.querySelector("canvas")?.getBoundingClientRect();
+      if (r) flyCoins({ from: r, amount: 196, onLand: share => { n += share; if (count.current) count.current.textContent = n.toLocaleString(); } });
+    }, 400);
+    return () => window.clearTimeout(t);
+  }, []);
+  return <>
+    <span style={{ position: "absolute", top: 20, left: 24 }}><Purse coins={1240} gems={35} coinsRef={count} /></span>
+    <div ref={card} style={{ position: "absolute", left: "50%", top: "50%", width: 168, transform: "translate(-50%, -50%)" }}>
+      <ItemCard size="md" arrow={false} picture={iconUrl("fish_golden_trout")} rarity="epic" name="Golden Trout" line="Epic · River" price={{ amount: 196, currency: "coins" }} />
+    </div>
+  </>;
+}
+
 const OVERLAYS: { id: string; title: string; render: () => ReactNode }[] = [
   { id: "key-board", title: "Keys (a light Spotlight, KeyBoard, KeyPeek and SlotPop)", render: () => <KeyBoardShow /> },
   { id: "key-peek", title: "A key's peek (KeyPeek), every kind", render: () => <KeyPeekShow /> },
@@ -159,6 +178,7 @@ const OVERLAYS: { id: string; title: string; render: () => ReactNode }[] = [
   { id: "keyword-library", title: "The icon library (every word Keyword knows)", render: () => <KeywordLibrary /> },
   { id: "fly-in", title: "Fly-in, into the wallet's slot", render: () => <Loop ms={3600}>{done => <><span style={{ position: "absolute", top: 16, right: 16 }}><WalletSlot coins={1240} gems={35} at="in" landing="coins" /></span>
     <FlyIn icon={<Coins size={52} />} name="Coins" text="For things on the island" to={['[data-hud-slot="coins"]']} onDone={done} /></>}</Loop> },
+  { id: "coin-fly", title: "A sale's coins, into the purse (flyCoins)", render: () => <Loop ms={3400}>{() => <CoinFlyShow />}</Loop> },
   { id: "quest-check", title: "Quest complete", render: () => <Loop ms={3000}>{() => <QuestCheck eyebrow="Quest complete" title="Walk with Bram" />}</Loop> },
   { id: "printed-card", title: "Printed card as the overlay (CardOverlay, PrintedCard, PaperField)", render: () => <PrintedShow /> },
   { id: "fish-reveal", title: "Fish reveal", render: () => <Loop ms={9000}>{done => <FishReveal fish={FISH.find(f => f.rarity === "rare") ?? FISH[0]} sizeCm={42} onDone={done} />}</Loop> },

@@ -9,9 +9,15 @@
  */
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type FocusEvent, type PointerEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Check, Moon, Sun, Sunrise, Sunset, X } from "lucide-react";
+import {
+  Anchor, Castle, Check, Compass, Droplet, Droplets, Flower2, Gem, House, Leaf, Moon, Mountain, MountainSnow, Snowflake, Sparkles, Sprout, Sun,
+  Sunrise, Sunset, TreePalm, Umbrella, Waves, X,
+} from "lucide-react";
 import PixelImage from "@/components/economy/PixelImage";
 import { usePresence, useWorldDialog } from "@/lib/game/useWorldDialog";
+import type { Season } from "@/lib/game/season";
+import type { WaterType } from "@/lib/game/fishingSpots";
+import type { Place } from "@/lib/game/world/places";
 import { GuiVariantContext } from "../variant";
 import p from "./pieces.module.css";
 
@@ -83,20 +89,62 @@ export function TipBody({ picture, rarity, kind, name, facts, children }: {
   </div>;
 }
 
-/** Twelve month dots, the `on` months filled and this month ringed (a hover card's season). */
-export function MonthDots({ on, now }: { on: readonly number[]; now: number }) {
-  return <span className={p.months} aria-label={on.length >= 12 ? "All year" : `In season: ${on.map(m => MONTHS[m - 1]).join(", ")}`}>
-    {MONTHS.map((m, i) => <i key={m} title={m} data-on={on.includes(i + 1) || undefined} data-now={i + 1 === now || undefined}>{m[0]}</i>)}
+/** The four seasons as their icons, each in its colour when `on` ([] = all year), the island's season now ringed (a hover card's seasons). */
+export function SeasonDots({ on, now }: { on: readonly Season[]; now: Season }) {
+  const all = on.length === 0;
+  return <span className={p.seasons} aria-label={all ? "All year" : `In season: ${on.map(s => SEASON_LOOK[s].word).join(", ")}`}>
+    {SEASON_ORDER.map(s => <span key={s} className={p.season} data-tint={SEASON_LOOK[s].tint} data-on={all || on.includes(s) || undefined} data-now={s === now || undefined}>
+      <i aria-hidden>{SEASON_LOOK[s].icon}</i><small>{SEASON_LOOK[s].word}</small>
+    </span>)}
   </span>;
 }
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const SEASON_ORDER: readonly Season[] = ["spring", "summer", "autumn", "winter"];
+/** Each season's icon, word and colour (the theme's --ui-tint-*), for the season chip and the season dots. */
+export const SEASON_LOOK: Record<Season, { word: string; icon: ReactNode; tint: Tint }> = {
+  spring: { word: "Spring", icon: <Flower2 />, tint: "rose" }, summer: { word: "Summer", icon: <Sun />, tint: "sun" },
+  autumn: { word: "Autumn", icon: <Leaf />, tint: "amber" }, winter: { word: "Winter", icon: <Snowflake />, tint: "ice" },
+};
+/** Each water's icon, word and colour: the biome tag on the reel and the HUD, the catch board's lanes. */
+export const BIOME_LOOK: Record<WaterType, { word: string; icon: ReactNode; tint: Tint }> = {
+  sea: { word: "Sea", icon: <Waves />, tint: "sky" }, river: { word: "River", icon: <Droplets />, tint: "rain" }, pond: { word: "Pond", icon: <Mountain />, tint: "leaf" },
+};
+/** A lighthouse, drawn as lucide draws (24 box, round strokes): the tapered tower, its gallery and lamp, two beams. */
+function Lighthouse() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M6 21h12M9 21l1.5-11h3L15 21M8.5 10h7M10 10V6.5a2 2 0 0 1 4 0V10M3 5l3.5 1.5M21 5l-3.5 1.5" />
+  </svg>;
+}
+/**
+ * Each place's icon and colour on the HUD's tag away from water (round 8, David: "give village meadow icons as well"),
+ * the talk library's where it names the place (wharf, beach, ruins, island), the water's own for River and Pond.
+ */
+export const PLACE_LOOK: Record<Place, { icon: ReactNode; tint: Tint }> = {
+  Village: { icon: <House />, tint: "amber" }, Wharf: { icon: <Anchor />, tint: "sky" }, Beach: { icon: <Umbrella />, tint: "sun" },
+  Meadow: { icon: <Sprout />, tint: "leaf" }, Mountain: { icon: <MountainSnow />, tint: "ice" }, Ruins: { icon: <Castle />, tint: "mist" },
+  "Oracle Temple": { icon: <Sparkles />, tint: "rose" }, Falls: { icon: <Droplet />, tint: "sky" }, "North Island": { icon: <Compass />, tint: "ice" },
+  Cave: { icon: <Gem />, tint: "night" }, River: BIOME_LOOK.river, Pond: BIOME_LOOK.pond, Lighthouse: { icon: <Lighthouse />, tint: "sun" },
+  Islands: { icon: <TreePalm />, tint: "sky" },
+};
+/**
+ * The biome you fish (round 6, David: "it should say the biome when you fish on the fish bar, there should also be a
+ * biome tag in the ui"): a small pill, the water's icon on a disc in its colour and its word. With `place` (the HUD,
+ * round 7: "should also show like the location like village wharf plains etc") the place leads ("Wharf · Sea"), and
+ * away from water it is the place alone, on its own icon.
+ */
+export function BiomeTag({ water, place }: { water?: WaterType | null; place?: Place | null }) {
+  const b = water ? BIOME_LOOK[water] : null, look = b ?? (place ? PLACE_LOOK[place] : null);
+  return <span className={p.biome} data-tint={look?.tint} data-testid="biome-tag"><i aria-hidden>{look?.icon}</i>{place && b && place !== b.word ? `${place} · ${b.word}` : place ?? b?.word}</span>;
+}
+/** The theme's condition colours (--ui-tint-*): the seasons, the sky and the time of day each wear one. */
+export type Tint = "rose" | "sun" | "amber" | "ice" | "sky" | "rain" | "mist" | "leaf" | "night";
 
 // ── The day strip ───────────────────────────────────────────────────────────────────────────────────────────────────
 
 export interface StripItem { key: string; picture: string; rarity?: string | null; label: string; mark?: boolean }
 /** A row of things on at the same hours (`hours`: 24 flags, hour 0 first). */
 export interface StripBand<T extends StripItem = StripItem> { id: string; hours: readonly boolean[]; items: readonly T[] }
-export interface StripLane<T extends StripItem = StripItem> { id: string; icon: ReactNode; label: string; bands: readonly StripBand<T>[]; closed?: ReactNode }
+/** `label`: the lane's whole name (its title); `short`: the word under its icon ("Sea"), so it reads without hovering. */
+export interface StripLane<T extends StripItem = StripItem> { id: string; icon: ReactNode; label: string; short?: string; bands: readonly StripBand<T>[]; closed?: ReactNode }
 
 /** A band's runs of hours on, as [from, to) hour pairs; a run over midnight is two. */
 export function runsOf(hours: readonly boolean[]): [number, number][] {
@@ -134,7 +182,7 @@ export function TimeStrip<T extends StripItem>({ now, lanes, tip, label }: { now
       </span>
     </div>
     {lanes.map(lane => <section key={lane.id} className={p.lane} aria-label={lane.label} data-closed={lane.closed ? "" : undefined}>
-      <span className={p.laneIcon} title={lane.label}>{lane.icon}</span>
+      <span className={p.laneIcon} title={lane.label}>{lane.icon}{lane.short ? <small>{lane.short}</small> : null}</span>
       <div className={p.laneTrack}>
         {lane.closed ? <div className={p.closed}>{lane.closed}</div> : lane.bands.map(band => {
           const runs = runsOf(band.hours), share = shareOut(runs, band.items.length);
@@ -152,6 +200,20 @@ export function TimeStrip<T extends StripItem>({ now, lanes, tip, label }: { now
     </section>)}
     <i className={p.needle} aria-hidden />
   </div>;
+}
+
+/**
+ * What is true right now, in a row of chips (the catch board's season, weather and time of day; David, 2026-11-01: "make
+ * more intuitive and colors"): each in its own colour (`tint`), its icon on a solid tile, a quiet word for what it is,
+ * its value, and a quiet `note` when there is one ("Winter on Dec 21").
+ */
+export function Conditions({ items, label = "Right now" }: { items: readonly { icon: ReactNode; label: string; value: ReactNode; tint: Tint; note?: ReactNode }[]; label?: string }) {
+  return <dl className={p.conditions} aria-label={label}>
+    {items.map(it => <div key={it.label} className={p.condition} data-tint={it.tint}>
+      <dt><span className={p.conditionIcon} aria-hidden>{it.icon}</span><span>{it.label}</span></dt>
+      <dd>{it.value}{it.note ? <small>{it.note}</small> : null}</dd>
+    </div>)}
+  </dl>;
 }
 
 // ── Odds ────────────────────────────────────────────────────────────────────────────────────────────────────────────

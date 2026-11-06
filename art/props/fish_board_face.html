@@ -1,0 +1,19 @@
+<!doctype html>
+<!-- The fish market board's header plank (art/props/build_fish_board.py), icons only (David, 2026-11-02: "make it no text
+     just simple icons"): two of the game's fish either side of a clock (what bites when). fish_board_face.mjs
+     screenshots it to header.png. The fish pictures are the game's own icons. -->
+<html><head><meta charset="utf-8"><style>
+  :root { --plank: #f4ecdc; }
+  body { margin: 0; background: #000; }
+  .header { box-sizing: border-box; width: 1536px; height: 256px; padding: 0 70px; background: var(--plank); display: flex; align-items: center; justify-content: center; gap: 56px; position: relative; }
+  .header::before { content: ""; position: absolute; inset: 14px; border: 6px solid #e47b33; border-radius: 22px; }
+  .header img { width: 340px; height: 236px; object-fit: contain; image-rendering: pixelated; scale: 1.55; }
+  .clock { display: grid; place-items: center; width: 176px; height: 176px; border-radius: 50%; background: #24406e; box-shadow: inset 0 -10px 0 rgb(0 0 0 / 0.16); }
+  .clock svg { width: 116px; height: 116px; fill: none; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+</style></head><body>
+  <div class="header" id="header">
+    <img src="../../web/public/assets/icons/fish_salmon.webp">
+    <span class="clock"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span>
+    <img src="../../web/public/assets/icons/fish_tuna.webp" style="transform: scaleX(-1)">
+  </div>
+</body></html>

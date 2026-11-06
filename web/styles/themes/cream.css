@@ -13,6 +13,9 @@
   --ui-highlight: #ffcc00;
   --ui-marker: rgb(255 204 0 / 0.55);
   --ui-gold: #f2b636;
+  /* A sale's coins landing: the wallet glows from the light yellow to the deep (more coins, deeper). */
+  --ui-gold-light: #ffe27a;
+  --ui-gold-deep: #c9770c;
   --ui-silver: #b8c0cc;  /* podium places (the leaderboard): gold, silver, bronze edges */
   --ui-bronze: #d08a52;
   --ui-title-outline: #234a52;
@@ -43,6 +46,16 @@
   --ui-water: #d9eef4;
   --ui-water-line: #9fcbdb;
   --ui-water-deep: #2f8aa6;
+  /* Condition colours (the catch board's chips, the seasons, the water signs): one hue each. */
+  --ui-tint-rose: #e98aa6;
+  --ui-tint-sun: #efb02b;
+  --ui-tint-amber: #e47b33;
+  --ui-tint-ice: #62afe0;
+  --ui-tint-sky: #45a3e6;
+  --ui-tint-rain: #5b7db8;
+  --ui-tint-mist: #949fa9;
+  --ui-tint-leaf: #43ad93;
+  --ui-tint-night: #5a5db3;
   /* Paper, the material (the design bible's rule 2: only for things that are paper in the world: a printed card, a letter). */
   --ui-paper: #fffaf0;
   --ui-paper-edge: #e8dcc0;
@@ -87,7 +100,6 @@
   --ui-paper-hover: #ece3cf;
   --ui-paper-seal: #b4342b;
   --ui-paper-tray: #2e2823;
-  --ui-paper-tray-hi: #4d443b;
   --ui-paper-plate: #fbf8f1;
   --ui-paper-washi: url("/assets/ui/washi.png");
 }

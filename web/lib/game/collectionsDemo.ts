@@ -11,7 +11,7 @@ import { torontoParts } from "@/lib/time";
 import { bagAction, bagView, catchAction, donate, enterMonthly, getShowcase, handIn, journal, monthBoard, museum, setShowcase, tourney, trophies } from "@/lib/collections/service";
 import { chefOrder, fishingTasks, speciesClass, speciesSellPrice, torontoDay } from "@/lib/wallet/rules";
 import { claimFishingTask, fishingTasksView, rollAtTackle, tackleView } from "@/lib/wallet/service";
-import { weekStart } from "@/lib/collections/logic";
+import { seasonsAt, weekStart } from "@/lib/collections/logic";
 import { SUSHI_MENU } from "@/lib/wallet/catalogue";
 import type { ActiveBuff } from "@/lib/wallet/store";
 import { memoryEconomyStore } from "@/lib/wallet/memoryStore";
@@ -102,7 +102,7 @@ export function installCollectionsDemo(): void {
           return new Response(JSON.stringify({ collections: (await m.store.memberItems(ME)).map(i => ({ item_key: i.item_key, count: i.count })) }));
         case "/api/collections/journal": {
           const { hour, month } = torontoParts(now);
-          return reply(await journal(m.store, ME, url.searchParams.get("category") ?? "fish", { hour, month, weather: "clear" }), "page");
+          return reply(await journal(m.store, ME, url.searchParams.get("category") ?? "fish", { hour, month, weather: "clear", ...seasonsAt(now) }), "page");
         }
         case "/api/collections/museum": return reply(await museum(m.store), "wings");
         case "/api/collections/museum/donate": return reply(await donate(m.store, ME, body.species_key, body.idempotency_key), "donation");
