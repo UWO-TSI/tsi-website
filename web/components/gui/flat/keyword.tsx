@@ -9,14 +9,21 @@
  * market and "fishing rod" the rod), no marking needed. A new thing in the game that people talk about gets its row
  * here, never a one-off icon in a line. Colours: the theme's --ui-word-* tokens, one per tone. The whole library is on
  * /lab/gui?only=keyword-library.
+ *
+ * Round 6 review: "expand the icon library n the same design, then slowly impliment these icons so its uniform". The
+ * UI's own words are rows too (menus, weather, gear, places), and the UI draws a thing's icon from here
+ * (`KeywordIcon`: the kind's icon on its own, in its tone, still) so the bag is the same backpack in the dock, the bag's
+ * rail and a talk line. UI text (toasts, the tour's cards) goes through `KeywordLine` like talk does.
  */
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import {
-  Anchor, Apple, ArrowLeftRight, Axe, Backpack, BadgeCheck, Barrel, Bird, Bone, BookOpen, Bug, Building2, Castle, Coffee,
-  CookingPot, Crown, Fish, Flower2, Footprints, Gamepad2, Gift, Hammer, HandCoins, HandHeart, Heart, House, IdCard, Landmark,
-  Mail, Map as MapIcon, MessageCircle, Mountain, MoveUp, PartyPopper, Pickaxe, QrCode, ScrollText, Shell, Shirt, Ship,
-  ShoppingBasket, ShoppingCart, Shovel, Smartphone, Smile, Sofa, Sparkles, Star, Store, TreePalm, Trophy, Umbrella, Users,
-  Waves, Worm, Wrench, Zap,
+  Anchor, Apple, Archive, ArrowLeftRight, Axe, Backpack, BadgeCheck, Barrel, BatteryMedium, Bird, Bone, BookMarked, BookOpen, Bug,
+  Building2, Camera, Castle, ClipboardList, CloudRain, Coffee, Compass, CookingPot, Crown, Droplets, Eye, Fish, Flag, Flame, Flower2,
+  Footprints, Gamepad2, Gift, Hammer, HandCoins, HandHeart, Heart, HeartPulse, House, IdCard, KeyRound, LandPlot, Landmark, Leaf,
+  Library, Mail, Map as MapIcon, MessageCircle, Milestone, Moon, Mountain, MoveUp, Music, NotebookPen, PackageCheck, PackageOpen,
+  Paintbrush, PartyPopper, Pickaxe, QrCode, ScrollText, Settings, Shell, Shield, Shirt, Ship, ShoppingBasket, ShoppingCart, Shovel,
+  Skull, Smartphone, Smile, Snowflake, Sofa, Sparkles, Sprout, Star, Sticker, Store, Sunrise, Sword, Swords, TreeDeciduous, TreePalm,
+  Trophy, Umbrella, Unlock, UserRound, Users, Utensils, Volleyball, Wallet, Waves, Wind, Worm, Wrench, Zap,
 } from "lucide-react";
 import { CurrencyIcon } from "@/components/economy/Amount";
 import k from "./keyword.module.css";
@@ -40,16 +47,18 @@ export type Tone = "fish" | "bug" | "coin" | "gem" | "place" | "item" | "person"
 const KEYWORDS = {
   // Creatures.
   fish: { icon: <Fish />, tone: "fish", words: ["fish", "fishes", "fishing"] },
-  shell: { icon: <Shell />, tone: "fish", words: ["shell", "shells", "seashell", "seashells"] },
-  bug: { icon: <Bug />, tone: "bug", words: ["bug", "bugs", "insect", "insects", "beetle", "beetles", "butterfly", "butterflies"] },
+  shell: { icon: <Shell />, tone: "fish", words: ["shell", "shells", "seashell", "seashells", "sea creature", "sea creatures", "crab", "crabs", "clam", "clams"] },
+  bug: { icon: <Bug />, tone: "bug", words: ["bug", "bugs", "insect", "insects", "beetle", "beetles", "butterfly", "butterflies", "firefly", "fireflies", "ladybug", "ladybugs", "dragonfly", "dragonflies", "cicada", "cicadas"] },
   bird: { icon: <Bird />, tone: "bug", words: ["bird", "birds", "gull", "gulls"] },
   bait: { icon: <Worm />, tone: "bug", words: ["bait", "worm", "worms"] },
   fossil: { icon: <Bone />, tone: "bug", words: ["fossil", "fossils"] },
+  monster: { icon: <Skull />, tone: "bug", words: ["monster", "monsters", "enemy", "enemies"] },
   // Money and what it buys.
   coin: { icon: <CurrencyIcon size={18} />, tone: "coin", words: ["coin", "coins"] },
   gem: { icon: <CurrencyIcon currency="gems" size={18} />, tone: "gem", words: ["gem", "gems"] },
-  merch: { icon: <Shirt />, tone: "gem", words: ["merch"] },
-  reward: { icon: <Trophy />, tone: "gem", words: ["reward", "rewards", "prize", "prizes"] },
+  merch: { icon: <PackageOpen />, tone: "gem", words: ["merch"] },
+  reward: { icon: <Trophy />, tone: "gem", words: ["reward", "rewards", "prize", "prizes", "trophy", "trophies"] },
+  wallet: { icon: <Wallet />, tone: "coin", words: ["wallet"] },
   gathering: { icon: <PartyPopper />, tone: "gem", words: ["gathering", "gatherings", "event", "events", "Genesis"] },
   // Things you carry and use.
   rod: { icon: <Rod />, tone: "item", words: ["rod", "rods", "fishing rod"] },
@@ -64,7 +73,7 @@ const KEYWORDS = {
   fruit: { icon: <Apple />, tone: "item", words: ["fruit", "apple", "apples", "coconut", "coconuts"] },
   flower: { icon: <Flower2 />, tone: "item", words: ["flower", "flowers"] },
   rock: { icon: <Mountain />, tone: "item", words: ["rock", "rocks", "stone", "stones", "ore"] },
-  recipe: { icon: <ScrollText />, tone: "item", words: ["recipe", "recipes"] },
+  recipe: { icon: <NotebookPen />, tone: "item", words: ["recipe", "recipes"] },
   quest: { icon: <ScrollText />, tone: "item", words: ["quest", "quests", "task", "tasks"] },
   gift: { icon: <Gift />, tone: "item", words: ["gift", "gifts"] },
   id: { icon: <IdCard />, tone: "item", words: ["ID", "ID card"] },
@@ -73,6 +82,20 @@ const KEYWORDS = {
   phone: { icon: <Smartphone />, tone: "item", words: ["phone"] },
   qr: { icon: <QrCode />, tone: "item", words: ["QR", "QR code", "check-in", "check in"] },
   xp: { icon: <Star />, tone: "item", words: ["XP", "level", "levels", "level up"] },
+  health: { icon: <HeartPulse />, tone: "item", words: ["health", "heal", "heals"] },
+  stamina: { icon: <BatteryMedium />, tone: "item", words: ["stamina", "energy"] },
+  collection: { icon: <BookMarked />, tone: "item", words: ["collection", "collections", "catalogue"] },
+  settings: { icon: <Settings />, tone: "item", words: ["settings"] },
+  chest: { icon: <Archive />, tone: "item", words: ["chest", "storage"] },
+  photo: { icon: <Camera />, tone: "item", words: ["photo", "photos", "camera"] },
+  sticker: { icon: <Sticker />, tone: "item", words: ["sticker", "stickers"] },
+  keychain: { icon: <KeyRound />, tone: "item", words: ["keychain", "keychains", "lanyard", "lanyards"] },
+  glider: { icon: <Leaf />, tone: "item", words: ["glider", "leaf glider"] },
+  seed: { icon: <Sprout />, tone: "item", words: ["seed", "seeds", "sapling", "saplings"] },
+  tree: { icon: <TreeDeciduous />, tone: "item", words: ["tree", "trees", "wood", "branch", "branches"] },
+  food: { icon: <Utensils />, tone: "item", words: ["food", "meal", "meals", "dish", "dishes", "sushi", "snack", "snacks"] },
+  weapon: { icon: <Sword />, tone: "item", words: ["sword", "swords", "weapon", "weapons"] },
+  shield: { icon: <Shield />, tone: "item", words: ["shield", "shields"] },
   // Places.
   island: { icon: <TreePalm />, tone: "place", words: ["island", "Tethos", "Tethos Island"] },
   beach: { icon: <Umbrella />, tone: "place", words: ["beach", "shore"] },
@@ -83,7 +106,18 @@ const KEYWORDS = {
   market: { icon: <ShoppingBasket />, tone: "place", words: ["market", "fish market"] },
   cafe: { icon: <Coffee />, tone: "place", words: ["café", "cafe", "coffee"] },
   museum: { icon: <Landmark />, tone: "place", words: ["museum"] },
-  hq: { icon: <Building2 />, tone: "place", words: ["HQ"] },
+  hq: { icon: <Building2 />, tone: "place", words: ["HQ", "clubhouse"] },
+  river: { icon: <Droplets />, tone: "place", words: ["river", "rivers", "pond", "ponds", "stream"] },
+  monument: { icon: <Milestone />, tone: "place", words: ["monument", "plaza"] },
+  plot: { icon: <LandPlot />, tone: "place", words: ["plot", "plots"] },
+  library: { icon: <Library />, tone: "place", words: ["library"] },
+  board: { icon: <ClipboardList />, tone: "place", words: ["notice board", "job board", "bounty", "bounties"] },
+  campfire: { icon: <Flame />, tone: "place", words: ["campfire", "bonfire"] },
+  oracle: { icon: <Eye />, tone: "place", words: ["oracle", "temple", "shrine"] },
+  rain: { icon: <CloudRain />, tone: "place", words: ["rain", "rainy", "storm", "storms"] },
+  snow: { icon: <Snowflake />, tone: "place", words: ["snow", "snowy", "winter"] },
+  dawn: { icon: <Sunrise />, tone: "place", words: ["dawn", "dusk", "sunrise", "sunset"] },
+  night: { icon: <Moon />, tone: "place", words: ["night", "nights", "tonight"] },
   home: { icon: <House />, tone: "place", words: ["home", "house"] },
   ruins: { icon: <Castle />, tone: "place", words: ["ruins"] },
   barrel: { icon: <Barrel />, tone: "place", words: ["barrel"] },
@@ -95,6 +129,9 @@ const KEYWORDS = {
   founder: { icon: <Crown />, tone: "person", words: ["Founder"] },
   curator: { icon: <Landmark />, tone: "person", words: ["curator"] },
   keeper: { icon: <Store />, tone: "person", words: ["shopkeeper", "wharf keeper", "barista", "chef"] },
+  guide: { icon: <Compass />, tone: "person", words: ["guide", "guides"] },
+  guest: { icon: <UserRound />, tone: "person", words: ["guest", "guests", "visitor", "visitors"] },
+  club: { icon: <Flag />, tone: "person", words: ["club"] },
   // Things you do.
   study: { icon: <BookOpen />, tone: "act", words: ["study", "studying"] },
   sell: { icon: <HandCoins />, tone: "act", words: ["sell", "sells", "selling", "sold"] },
@@ -110,6 +147,13 @@ const KEYWORDS = {
   explore: { icon: <Footprints />, tone: "act", words: ["explore", "exploring"] },
   chat: { icon: <MessageCircle />, tone: "act", words: ["chat"] },
   emote: { icon: <Smile />, tone: "act", words: ["emote", "emotes"] },
+  dance: { icon: <Music />, tone: "act", words: ["dance", "dances", "dancing"] },
+  glide: { icon: <Wind />, tone: "act", words: ["glide", "gliding"] },
+  decorate: { icon: <Paintbrush />, tone: "act", words: ["decorate", "decorating", "decor"] },
+  deliver: { icon: <PackageCheck />, tone: "act", words: ["deliver", "delivers", "delivery", "deliveries", "hand in"] },
+  fight: { icon: <Swords />, tone: "act", words: ["fight", "fights", "battle", "battles", "combat"] },
+  unlock: { icon: <Unlock />, tone: "act", words: ["unlock", "unlocks", "unlocked"] },
+  volleyball: { icon: <Volleyball />, tone: "act", words: ["volleyball"] },
   rare: { icon: <Sparkles />, tone: "gem", words: ["rare"] },
 } satisfies Record<string, { icon: ReactNode; tone: Tone; words: string[] }>;
 export type KeywordKind = keyof typeof KEYWORDS;
@@ -138,6 +182,12 @@ export function Keyword({ kind, off, children }: { kind: KeywordKind; off?: bool
   const e = KEYWORDS[kind];
   return <span className={k.word} data-tone={e.tone} data-off={off || undefined}><i className={k.icon} aria-hidden="true">{e.icon}</i>{children}</span>;
 }
+/** A kind's icon on its own, for the UI (a menu entry, a rail, a tab): the same drawing in its tone, still. `size` in px. */
+export function KeywordIcon({ kind, size = 20 }: { kind: KeywordKind; size?: number }) {
+  return <i className={k.glyph} data-tone={KEYWORDS[kind].tone} style={{ "--g": `${size}px` } as CSSProperties} aria-hidden="true">{KEYWORDS[kind].icon}</i>;
+}
+/** The icon itself (tests, and a piece that draws it its own way). */
+export const keywordIcon = (kind: KeywordKind): ReactNode => KEYWORDS[kind].icon;
 /** A whole line with its keywords. */
 export function KeywordLine({ line }: { line: string }) {
   return <>{keywordParts(line).map(p => (p.kind ? <Keyword key={p.at} kind={p.kind}>{p.text}</Keyword> : <span key={p.at}>{p.text}</span>))}</>;

@@ -12,9 +12,9 @@
 import { RodRadar, RodSlots, RodStage, TackleRadar, equippedTackle, rodLine, rodOf } from "@/components/economy/RodGear";
 import { tackleByKey } from "@/lib/game/rods";
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
-import { Apple, ArrowDownWideNarrow, Backpack, Bug, Fish, Gem, Lock, LockOpen, Pin, PinOff, Shirt, Sofa, Wrench, X } from "lucide-react";
+import { ArrowDownWideNarrow, Lock, LockOpen, Pin, PinOff, X } from "lucide-react";
 import { ConfirmDialog, SignInText } from "@/components/gui";
-import { CardGrid, DarkButton, DetailView, FlatPanel, GhostButton, IconRail, InfoHead, ItemCard, NUDGE_GRID, Quiet, STAGE, SidePanel, StatusLine, WithSide, flatStyles as f, useNudge } from "@/components/gui/flat";
+import { CardGrid, DarkButton, DetailView, FlatPanel, GhostButton, IconRail, InfoHead, ItemCard, KeywordIcon, NUDGE_GRID, Quiet, STAGE, SidePanel, StatusLine, WithSide, flatStyles as f, useNudge } from "@/components/gui/flat";
 import { Amount } from "@/components/economy/Amount";
 import { arrange, itemInfo, slotCounts, stackSize, type Slot } from "@/lib/collections/bag";
 import type { BagView } from "@/lib/collections/service";
@@ -121,14 +121,15 @@ export function bagKind(key: string): BagKind {
   return c === "fish" || c === "sea" ? "fish" : c === "bug" ? "bugs" : c === "fruit" || c === "nature" ? "forage" : c === "mineral" ? "materials" : "other";
 }
 const SHELVES: { id: Shelf; label: string; icon: ReactNode }[] = [
-  { id: "pockets", label: "Everything in your pockets", icon: <Backpack size={22} /> },
-  { id: "fish", label: "Fish and sea creatures", icon: <Fish size={22} /> },
-  { id: "bugs", label: "Bugs", icon: <Bug size={22} /> },
-  { id: "forage", label: "Forage and fruit", icon: <Apple size={22} /> },
-  { id: "materials", label: "Materials", icon: <Gem size={22} /> },
-  { id: "tools", label: "Tools", icon: <Wrench size={22} /> },
-  { id: "outfits", label: "Clothes", icon: <Shirt size={22} /> },
-  { id: "furniture", label: "Furniture and finishes", icon: <Sofa size={22} /> },
+  // The icon library's drawings (round 7: one icon per thing, everywhere).
+  { id: "pockets", label: "Everything in your pockets", icon: <KeywordIcon kind="bag" size={22} /> },
+  { id: "fish", label: "Fish and sea creatures", icon: <KeywordIcon kind="fish" size={22} /> },
+  { id: "bugs", label: "Bugs", icon: <KeywordIcon kind="bug" size={22} /> },
+  { id: "forage", label: "Forage and fruit", icon: <KeywordIcon kind="fruit" size={22} /> },
+  { id: "materials", label: "Materials", icon: <KeywordIcon kind="rock" size={22} /> },
+  { id: "tools", label: "Tools", icon: <KeywordIcon kind="tool" size={22} /> },
+  { id: "outfits", label: "Clothes", icon: <KeywordIcon kind="clothes" size={22} /> },
+  { id: "furniture", label: "Furniture and finishes", icon: <KeywordIcon kind="furniture" size={22} /> },
 ];
 const POCKET_FILTERS = new Set<Shelf>(["pockets", "fish", "bugs", "forage", "materials"]);
 

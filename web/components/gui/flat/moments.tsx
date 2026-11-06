@@ -8,6 +8,8 @@
  *   KeyBoard     a small drawn QWERTY keyboard on a light well: a key lit to press or hold (its fill runs as it's
  *                held), keys you've done, keys down now
  *   SlotPop      a part of the screen arriving in its place: it springs in and its place rings once
+ *   FlyHome      parts of the screen arriving from above a card: they pop up over it, show off a beat, then fly to
+ *                where they sit and their places ring (the keyboard tour's HUD and minimap)
  *   FlyIn        an icon pops up in the middle over a slightly darker screen with its name, then flies to its slot
  *                on screen (a selector), which rings once
  *   QuestCheck   a quest done: a white disc pops in, a check draws itself, a ring and a few sparks; "Quest complete"
@@ -27,7 +29,7 @@ import { iconUrl } from "@/lib/icons/keys";
 import m from "./moments.module.css";
 
 /** A step that wants your whole attention: a flat panel in the middle over a light scrim. Holds the world's keys. */
-export function Spotlight({ open, label, eyebrow, title, lead, text, story, light, steps, children, footer, aside, testId, dataset }: {
+export function Spotlight({ open, label, eyebrow, title, lead, text, story, light, steps, children, footer, aside, asideAt, testId, dataset }: {
   open: boolean; label: string; eyebrow?: ReactNode; title?: ReactNode;
   /** Under the title: what to do now, in a word or two (it changes with a little rise); then a quiet line about it. */
   lead?: ReactNode; text?: ReactNode;
@@ -38,8 +40,8 @@ export function Spotlight({ open, label, eyebrow, title, lead, text, story, ligh
   /** A dot per step, `at` the one showing, the ones before it done. */
   steps?: { count: number; at: number };
   children?: ReactNode; footer?: ReactNode; testId?: string;
-  /** Shown beside the card on its right (the keyboard tour's KeyPeek). */
-  aside?: ReactNode;
+  /** Shown beside the card on its right (the keyboard tour's KeyPeek), or above it (`asideAt` "top"). */
+  aside?: ReactNode; asideAt?: "right" | "top";
   /** More data attributes for the evidence scripts (a step's id). */
   dataset?: Record<`data-${string}`, string | undefined>;
 }) {
@@ -59,7 +61,7 @@ export function Spotlight({ open, label, eyebrow, title, lead, text, story, ligh
         {steps && <span className={m.dots} aria-hidden="true">{Array.from({ length: steps.count }, (_, i) => <i key={i} data-on={i === steps.at || undefined} data-done={i < steps.at || undefined} />)}</span>}
         {footer}
       </footer>}
-      {aside && <div className={m.aside}>{aside}</div>}
+      {aside && <div className={m.aside} data-at={asideAt}>{aside}</div>}
     </section>
   </div>;
 }
@@ -87,6 +89,60 @@ export function SlotPop({ to }: { to: readonly string[] }) {
   }, []);
   return ring && <div className={`${m.fly} gui`} aria-hidden="true">
     <i className={m.flyRing} style={{ left: ring.x, top: ring.y, width: ring.w, height: ring.h }} />
+  </div>;
+}
+
+type Box = { x: number; y: number; w: number; h: number };
+/** FlyHome's beats (ms): popping up above the card, showing off there, flying to its place. */
+export const FLY_HOME_MS = { pop: 380, show: 1000, fly: 760 } as const;
+/**
+ * Parts of the screen arriving from above a card (round 9, David on the keyboard tour's HUD and minimap: "you press it
+ * it shows off above the keyboard and it flies to where it usually sits"). Every element `to` matches (selectors; the
+ * parts already laid out where they sit) pops up in a row above `from` (the card's selector), a little larger, shows off
+ * for a beat, then flies to its own place and stays; its place rings once as it lands. Reduced motion: they fade in
+ * where they sit. Mount it in the commit that shows the parts; a new React `key` plays it again.
+ */
+export function FlyHome({ to, from }: { to: readonly string[]; from: string }) {
+  const [rings, setRings] = useState<Box[]>([]);
+  const where = useRef({ to, from });
+  useEffect(() => {
+    const anims: Animation[] = [];
+    let land = 0;
+    // Two frames: the parts show in the same commit as this, and lay out in the next.
+    let raf = requestAnimationFrame(() => { raf = requestAnimationFrame(() => {
+      const els = where.current.to.flatMap(sel => [...document.querySelectorAll<HTMLElement>(sel)]).filter(e => e.getBoundingClientRect().width > 0);
+      if (!els.length) return;
+      const rs = els.map(e => e.getBoundingClientRect());
+      const ring = () => setRings(rs.map(r => ({ x: r.left - 6, y: r.top - 6, w: r.width + 12, h: r.height + 12 })));
+      const card = document.querySelector(where.current.from)?.getBoundingClientRect();
+      if (!card || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        els.forEach(e => anims.push(e.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 360, easing: "ease-out" })));
+        ring();
+        return;
+      }
+      // The row above the card: side by side, centred on it, as large as fits (a little larger than they sit).
+      const GAP = 20, sum = rs.reduce((n, r) => n + r.width, 0);
+      const k = Math.min(1.25, (window.innerWidth - 32 - GAP * (rs.length - 1)) / sum);
+      const tall = Math.max(...rs.map(r => r.height)) * k, y = Math.max(16 + tall / 2, card.top - 24 - tall / 2);
+      let x = card.left + card.width / 2 - (sum * k + GAP * (rs.length - 1)) / 2;
+      const { pop, show, fly } = FLY_HOME_MS, total = pop + show + fly;
+      rs.forEach((r, i) => {
+        const w = r.width * k, at = `${x + w / 2 - (r.left + r.width / 2)}px ${y - (r.top + r.height / 2)}px`;
+        x += w + GAP;
+        anims.push(els[i].animate([
+          { translate: at, scale: String(k * 0.4), opacity: 0, easing: "cubic-bezier(0.34, 1.56, 0.64, 1)" },
+          { translate: at, scale: String(k), opacity: 1, offset: pop / total, easing: "ease-in-out" },
+          { translate: at, scale: String(k * 1.05), offset: (pop + show / 2) / total, easing: "ease-in-out" },
+          { translate: at, scale: String(k), offset: (pop + show) / total, easing: "cubic-bezier(0.5, 0, 0.25, 1.12)" },
+          { translate: "0px 0px", scale: "1", opacity: 1 },
+        ], { duration: total }));
+      });
+      land = window.setTimeout(ring, total);
+    }); });
+    return () => { cancelAnimationFrame(raf); window.clearTimeout(land); anims.forEach(a => a.cancel()); };
+  }, []);
+  return rings.length > 0 && <div className={`${m.fly} gui`} aria-hidden="true">
+    {rings.map((r, i) => <i key={i} className={m.flyRing} style={{ left: r.x, top: r.y, width: r.w, height: r.h }} />)}
   </div>;
 }
 

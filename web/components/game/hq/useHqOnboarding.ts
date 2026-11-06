@@ -21,7 +21,7 @@ import type { FlyTarget } from "@/lib/game/arrival/hq/lines";
 import { finishToolQuest, giveTool, hqEvent, hqSnapshot, setToolsTaught, startVisit, syncHq, useHq } from "@/lib/game/arrival/hq/store";
 import { hqQuest, visitCue, waitingFor } from "@/lib/game/arrival/hq/visit";
 import { givenKeys, handOver, isTaughtTool, questFinished, teacherOf, teacherTalk, type CatchKind } from "@/lib/game/arrival/hq/teachers";
-import { TOOL_LINES, WREN, WREN_LINES, escPhrase, trackerEsc } from "@/lib/game/arrival/hq/lines";
+import { PHONE_PITCH, TOOL_LINES, WREN, WREN_LINES, escPhrase, trackerEsc } from "@/lib/game/arrival/hq/lines";
 import { HQ_END, HQ_END_TOUR, HQ_SCRIPT, type HqCard, type HqEvent } from "@/lib/game/arrival/hq/script";
 
 const WREN_TALKER = { id: "hq:wren", slug: WREN.slug, name: WREN.name, post: WREN.post, seed: 3 };
@@ -118,19 +118,22 @@ export function useHqOnboarding(w: HqWorld, dev: URLSearchParams | null) {
   const sayKeys = cue?.kind === "say" ? cue.keys.join("+") : null;
   const atHq = w.inside === "hq";
   const { free, name, touch, closeMenu } = w;
+  const pitch = dev?.get("idphone") === "1";
   const farewell = !!visit && visit.beat >= HQ_SCRIPT.length;
   useEffect(() => {
     if (!sayKeys || !atHq || !free) return;
     const t = window.setTimeout(() => {
       if (talkStore.active) return;
       // The camera's lines are for a mouse: a touch screen hasn't one.
-      const lines = sayKeys.split("+").filter(k => !(touch && k === "camera")).flatMap(k => WREN_LINES[k] ?? [])
+      // The phone pitch (dev, ?idphone=1): her ID lines as they'd read if she handed you the phone instead.
+      const said = (k: string) => (pitch && (k === "idAsk" || k === "idDone") ? PHONE_PITCH[k] : WREN_LINES[k]) ?? [];
+      const lines = sayKeys.split("+").filter(k => !(touch && k === "camera")).flatMap(said)
         .map(raw => parseTalkLine(fillName(raw.replaceAll("{esc}", escPhrase(touch)), name)));
       closeMenu();
       startTalk(beginTalk(WREN_TALKER, lines, performance.now() / 1000, "hq"));
     }, farewell ? MENU_SAY_MS : SAY_DELAY_MS);
     return () => window.clearTimeout(t);
-  }, [sayKeys, atHq, free, name, touch, closeMenu, farewell]);
+  }, [sayKeys, atHq, free, name, touch, closeMenu, farewell, pitch]);
 
   /** The card due now (the ID, the check-in card, a fly): at HQ with nothing else over the room. */
   const card: HqCard | null = cue?.kind === "card" && atHq && free ? cue.card : null;

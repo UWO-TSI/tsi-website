@@ -212,7 +212,7 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
       return b && b.until > at ? b : null;
     },
     async showcase(m) {
-      return showcases.get(m) ?? [null, null, null];
+      return showcases.get(m) ?? [null];
     },
     async setShowcase(m, keys) {
       showcases.set(m, [...keys]);

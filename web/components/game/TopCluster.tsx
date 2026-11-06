@@ -1,16 +1,11 @@
 "use client";
 
 /**
- * The cream top cluster (hud-first-login §2, row 124): the caller's buttons (the
- * gear), shown in the full HUD (the UI view, Esc 1; the HUD key held; the setting;
- * `buttons`, default `full`). The level and its XP are the HUD's bars (HudBars),
- * the island clock is `HudClock`, under the minimap, and the wallet `HudWallet`
- * under the clock; mail is in the UI view's dock.
- *
- * `hidden`: a cinematic moment (talking, the greeting, the boat trip; world
- * audit item 7), where the whole cluster fades out, flashes included.
+ * The top right's pieces (hud-first-login §2, row 124): the island clock `HudClock`, under the minimap, and the wallet
+ * `HudWallet` under the clock. The level and its XP are the HUD's bars (HudBars); Settings and mail are in the UI view's
+ * dock (round 8: the gear that sat here moved into the dock, so the cluster itself is gone).
  */
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { CloudFog, CloudRain, Moon, Snowflake, Sun, Sunrise, Sunset, Wind } from "lucide-react";
 import { useHud } from "@/lib/game/hudStore";
 import { worldNow } from "@/lib/game/worldClock";
@@ -21,9 +16,6 @@ import { FLASH_MS } from "@/lib/game/hudPrefs";
 import { WalletSlot } from "@/components/gui/flat";
 import { useFlash } from "./useFlash";
 import styles from "./TopCluster.module.css";
-
-/** The round cream button class, for the buttons a caller puts in the cluster. */
-export const hudButton = styles.button;
 
 const WEATHER_NAME: Record<IslandWeather, string> = { clear: "Clear", fog: "Foggy", rain: "Rain", snow: "Snow", wind: "Windy" };
 const PHASE_NAME: Record<IslandPhase, string> = { dawn: "dawn", day: "daytime", evening: "evening", night: "night" };
@@ -101,14 +93,4 @@ export function HudWallet({ full, showcase = null, onWallet, walletKey }: {
   if (at === null || (hud.coins === null && hud.gems === null && !shown)) return null;
   return <WalletSlot coins={hud.coins ?? 0} gems={hud.gems ?? 0} at={at} landing={shown?.kind ?? null}
     onOpen={onWallet} title={walletKey ? `Wallet (${walletKey})` : "Wallet"} />;
-}
-
-export default function TopCluster({ full = true, buttons = full, hidden = false, className, children }: {
-  full?: boolean; buttons?: boolean; hidden?: boolean; className?: string; children?: ReactNode;
-}) {
-  return (
-    <div className={className ? `${styles.cluster} ${className}` : styles.cluster} data-clean={full ? undefined : ""} data-hidden={hidden || undefined} aria-hidden={hidden || undefined}>
-      {buttons && children && <div className={styles.buttons}>{children}</div>}
-    </div>
-  );
 }
