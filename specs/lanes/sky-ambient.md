@@ -96,32 +96,52 @@ Build (a review page again, nothing ships until David marks it):
 
 ## Status
 
-Round 2 built, awaiting David's marks (head: the last `[build]` commit on `game/sky-ambient`; the report has the SHA).
-Nothing ships until he marks it. Spec `specs/sky-ambient.md` §R2 (what was blurry, the techniques, cards sky2-day,
--clouds, -night, -moon, -weather, -wind, -glow, -phone, cost, questions, not verified, merging with title-r2).
-- The sky: `lib/game/atmosphere.ts` (single scattering, grade, moon by Meeus, star frame; tests), `lib/game/skyShader.ts`
-  (dome: per-vertex air, sun, moon sphere, stars, Milky Way, meteors, ball-cluster cumulus, cirrus, overcast deck,
-  bent with the world, at the far plane), `components/game/SkyDome.tsx` (per frame: sun, moon, stars, weather ease,
-  drift; every 0.5 s the exposure and the clouds' light). The light's sky colours come from it (`lookPreset realSky`,
-  `moonKey` for the night key's strength; `useIslandConditions` gives `moon` and `skyAt`; `sunPath skyInstant`).
-- Glow: `lib/game/glow.ts softGlow` and the 128 px dithered texture; `AmbientProps LampGlow` halos as lifted billboards;
-  fireflies on the soft glow.
-- Swirls: `AmbienceFX WindSwirls`, `worldFx swirlSpots`/`swirlAge` (tests), mounted on `?weather=wind` days.
-- Deleted: COZY dome and `skyVariants.ts`, `public/assets/sky/layers/`, `scripts/preview-sky.mjs`, the tune bench's sky,
-  `tuning.sky`, `?sky=A|B|C`, the lab swirls.
-- Evidence `specs/evidence/sky-ambient/r2/` (74 stills with 4 boards and 5 crops, 16 clips each with a poster, `cost/`).
-- Gates: tsc clean; vitest 400 files / 3765 tests passed, with and without NEXT_PUBLIC_GAME_WORLD=new; eslint clean on
-  the touched files. perf:check back to back with main a8a03985: High 4.70 / 7.20 / 4.10 vs 4.80 / 7.20 / 4.20 ms,
-  357 vs 358 draws; Lite 2.90 vs 2.90 ms, 284 vs 282 draws.
+Round 3 built, awaiting David's marks (head: the last `[build]` commit on `game/sky-ambient`; the report has the SHA).
+Nothing ships until he marks it. Spec `specs/sky-ambient.md` §R3 (the answer to his cloud question, the three directions,
+cost, the night's bend, the sky pixel preview, the one wind, marks, motes, sound, cards sky3-*, questions, not verified).
+- Clouds: one field `lib/game/clouds.ts` (`cloudField`, `CLOUD_SHAPES`, `bakeCloudAtlas`, `skyBend`; tests) drawn three
+  ways behind `?clouds=painted|models|sprites|traced` (`skyShader.ts CLOUD_STYLE`, shipped default `sprites`): painted in
+  the dome (`CLOUD_STYLE 1`), models and sprites in `components/game/SkyClouds.tsx`, round 2's tracer kept for the cost
+  only. Tuned to David's references (2026-11-05, vault only): brushed outlines, sunk outer lobes, loose puffs, a soft
+  two tone, the sky's light on them lighter. Pick (c) sprites.
+- Night: the dome's view-space bend replaced by a rigid elevation map (`uDip` from `SkyDome seaDip`); discs, stars,
+  Milky Way, meteors and clouds drawn in the bent sky; stars dim toward the skyline.
+- `?skypx=light` preview: canvas at dpr 1 and PostFX `SkyPixelsEffect` re-pixelates everything nearer than the dome.
+  Pick: keep as now.
+- Wind: `lib/game/wind.ts` (strength by weather, swell, gust fronts on the world clock, GLSL twin; tests), driven by
+  `IslandAtmosphere WindDriver`; grass (`GrassField uFront`), trees (`modelMaterials` lean, shipped), cloud drift.
+  `AmbienceFX WindMarks` (streak, curl, sand, leaves; 2 s, 0.3 opacity, at fronts over `worldFx windSpots`) and
+  `GoldenMotes` (golden hour, clear and windy, High). Round 1's `?wind=` pitch deleted.
+- Sound: `art/audio/synth_ambience.py` → `web/public/audio/ambient/bed-*.ogg` (8 beds, CC0, `public/audio/sfx/SOURCES.md`),
+  played by `audio.ts ambientCandidates` (the weather's bed, else the time of day's).
+- `?time=dawn` previews 20 min before sunrise (`sunPath DAWN_PREVIEW_HOURS`).
+- Evidence `specs/evidence/sky-ambient/r3/` (153 files: boards, 42 cloud stills, 27 clips each with a poster, 4 sound
+  clips, `cost/`). Reference boards (David's references beside our shots) are outside the repo, in the session scratchpad
+  `sky3/refboards/`: the coordinator puts them on the review page; never commit them.
+- Gates: tsc clean; vitest 402 files / 3774 tests passed (4 skipped); eslint clean on the 24 touched files. perf:check back to back with main, sky in
+  view (PITCH=0.35): High 5.00 / 7.40 / 4.40 vs 4.90 / 7.40 / 4.40 ms, 363 vs 361 draws; Lite 3.00 vs 2.90 ms, 286 vs 286.
 
 ## Next
 
 1. Wait for David's marks (the coordinator relays them here, verbatim, under David's decisions).
-2. On merge with title-r2: take this branch's `lib/game/skyShader.ts` whole (it keeps `skyUniforms.uStarry`).
-3. Round 3 candidates (from the questions): the motes at golden hour, the one shared wind module (lane file round 1
-   Next 2), the dawn preview nearer sunrise, ambient sound beds.
+2. After the pick: delete the losing cloud styles, round 2's tracer and `?clouds=` (skyShader `CLOUD_STYLE 0..2` blocks,
+   `SkyClouds Models`), and `?skypx=` with `SkyPixelsEffect` unless he wants the lighter sky built (then: the world at
+   half resolution into a target, the dome at full resolution where the depth says sky, one composite pass).
+3. Candidates: the wind bed swelling with the gust fronts live; a night reference from David; light shafts.
 
 ## Tools and gotchas
+
+- Round 3: never hold the devserver lock open (the coordinator, 2026-11-05: six lanes queued behind a held server). Each
+  shoot or clip runs as its own command: `withlock.sh devserver specs/evidence/sky-ambient/serve.sh $PWD/web dev 3480 bash
+  -c "<shoot or clip>"`; retry on exit 75, and pause a minute between batches so other lanes get the lock.
+- Clips (`clip.mjs`) now render frame by frame on a stepped clock (`window.__clip`): `CLIPS="name[:phone]" STYLE=
+  [Q=skypx=light] TAG=` → `<TAG>-clip-<name>-<size>[-<style>].mp4` at an even 30 fps. Shots: `PLAN=clouds|cloudweather`
+  with `STYLES=painted,models,sprites` shoot every view in each style on one page.
+- Cost of the cloud styles: `VARIANTS=domeOff,painted,models,traced TILT=20 PITCH=0.35 [PIXEL=0] node
+  specs/perf/world-bench.mjs` on a measurement build; `perf-bench.mjs` takes `PITCH` and `TIME` (perf:check passes them).
+- Headless Chrome here renders on the real GPU (ANGLE Metal, Apple M4): check with `UNMASKED_RENDERER_WEBGL`.
+- `bakeCloudAtlas` is pure (clouds.ts): node runs clouds.ts directly to preview the atlas.
+- Sprites must draw after the dome (transparent, renderOrder 1001), far to near (`uCloudN - 1 - gl_InstanceID`).
 
 - Round 2 shots: `PORT=3480 PLAN=day|weather|phone|phoneweather|moon|lamps node specs/evidence/sky-ambient/shoot.mjs
   <out>` (lamps: `SPOT=40,52 LAMP_YAW=-1.57`); clips `CLIPS="day night:phone ..." node .../clip.mjs <out>` (`day` is a

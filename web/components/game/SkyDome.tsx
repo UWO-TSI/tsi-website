@@ -96,18 +96,19 @@ function slowFrame(moonIllum: number, moonUp: number) {
   transmittance(raised, tmp);
   u.uCirrusLight.value.setRGB(tmp[0] ** 0.6 * k, 1.03 * tmp[1] ** 0.6 * k, 1.1 * tmp[2] ** 0.6 * k, THREE.LinearSRGBColorSpace);
   u.uMoonLight.value.setRGB(0.16, 0.18, 0.24).multiplyScalar(moonIllum * moonUp * night);
-  // The sky's light on them: from above a share of the zenith's blue over a grey floor, from below the skyline's.
   // The sky's light on them: from above the zenith's colour and a grey share of its brightness, from below the
   // skyline's (the sea's bounce), so they keep their shape as the light goes.
   const top = skyAt([0, 1, 0], exposure, moonE, night, u.uAmbTop.value), l = 0.2126 * top.r + 0.7152 * top.g + 0.0722 * top.b;
   u.uSkyTop.value.copy(top);
   // By night they are darker than the sky behind them, so they read as cloud, not glass.
   const dim = 1 - 0.4 * night;
-  top.multiplyScalar(0.35).addScalar(0.4 * l).multiplyScalar(dim);
+  // Lighter than round 2: David's references keep even the shaded side near the sky's own brightness (a pale blue by
+  // day, lavender at sunset).
+  top.multiplyScalar(0.5).addScalar(0.45 * l).multiplyScalar(dim);
   const hz = u.uAmbBottom.value.setRGB(0, 0, 0);
   for (let i = 0; i < 4; i++) hz.add(skyAt(compassDir(5, i * 90), exposure, moonE, night, horizon).multiplyScalar(0.25));
   u.uSkyHorizon.value.copy(hz);
-  hz.multiplyScalar(0.6 * dim);
+  hz.multiplyScalar(0.75 * dim);
 }
 
 /** Module scope (the react compiler forbids writing through hook values): the sky for this frame. */

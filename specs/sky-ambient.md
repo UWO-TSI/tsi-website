@@ -39,7 +39,57 @@ sunk lower toward the ends, a crown), turned and sized per cloud. So the three c
 | (c) lit sprites (the pick) | every cloud a camera-facing card of a baked atlas (eight 256 × 128 cards: normal, thickness, coverage), painted after the references: bumps crowding the lobes' tops, a brushed outline, loose puffs; lit live with the references' soft two tone, the thick middle darker, the sun through the thin edges | one instanced draw of up to 40 quads; the atlas baked once (about 0.14 s) |
 | traced (round 2, for the cost only) | ray-traced balls per sky pixel | the dome's per-pixel tracer |
 
-COST_TABLE
+### Cost ("performance not as good"), measured on the GPU (ANGLE on Metal, Apple M4; the renderer string checked)
+
+Back to back against main a8a03985, measurement builds, v2 with 24 bots, 1280 × 800, the pixel finish on, two runs
+each (load average 4 to 7: a busy machine). "Sky band" is the orbit's lowest tilt (pitch 0.35), the follow camera is
+the default (0.62). Frame / p95 / CPU ms are medians; GPU ms from the timer query.
+
+| View | Build | Frame / p95 / CPU ms | GPU ms | Draws | Triangles |
+|---|---|---|---|---|---|
+| High, sky band, day | main | 5.00 / 7.50 / 4.35 | 4.56 | 360 | 746.4k |
+| | this round | 5.05 / 7.60 / 4.45 | 4.56 | 362 | 749.4k |
+| High, follow, day | main | 4.80 / 7.30 / 4.15 | 5.65 | 358 | 745.0k |
+| | this round | 5.25 / 7.90 / 4.55 | 5.76 | 360 | 746.7k |
+| High, sky band, night | main | 5.10 / 7.60 / 4.50 | 4.55 | 378 | 791.7k |
+| | this round | 5.20 / 7.70 / 4.60 | 4.60 | 380 | 798.9k |
+| Lite, sky band, day | main | 2.95 / 5.50 / 2.70 | 1.81 | 287 | 561.9k |
+| | this round | 3.05 / 5.55 / 2.80 | 1.89 | 285 | 559.5k |
+| Lite, follow, day | main | 3.00 / 5.40 / 2.70 | 1.98 | 282 | 554.3k |
+| | this round | 3.00 / 5.40 / 2.70 | 1.99 | 282 | 556.1k |
+| Title | main | 3.33 / 4.53 (main thread 3.37) | | | |
+| | this round | 3.40 / 4.50 (main thread 3.39) | | | |
+
+The High follow pair is the one gap above noise in these runs; a third pair with CPU profiles straight after went the
+other way (main 5.6, this round 5.1 ms) and showed no new function among the busiest, so it is the machine. The cloud
+field costs about 0.01 ms a frame on the CPU (timed alone).
+
+**What got slower in round 2, and what this round does about it:** at the pixel finish round 2's sky cost about
+0.16 ms of GPU with sky in view (r2 against main, the same bench), small on the M4 but per sky pixel, so it grows with a
+weaker GPU and with the pixel finish off (full resolution): there the traced clouds alone cost 0.75 ms and the
+painted ones 0.9 ms (below). The pick draws the clouds as one draw of quads instead, and the dome no longer traces
+anything, so the sky costs about what main's did. Round 2's clips were recorded at whatever pace the busy headless
+browser kept (Playwright's screen recording), so they stuttered and read as a slow game; this round's are rendered on a
+stepped clock at an even 30 fps.
+
+**Each cloud style's own cost**, the sky tipped 20° up from the lowest orbit (mostly sky), against the pick (sprites),
+GPU ms, three valid pairs each (world bench `VARIANTS=domeOff,painted,models,traced`):
+
+| Against sprites | Pixel finish (as shipped) | Full resolution (pixel finish off) |
+|---|---|---|
+| (a) painted | +0.08 | +0.92 |
+| (b) models | +0.08 (+60k to 94k triangles, +1 draw) | +0.13 |
+| traced (round 2) | +0.07 | +0.75 |
+| no dome at all | -0.00 | -0.12 |
+
+**The gate** (`npm run perf:check`, `SKIP_BUILD=1 SCENES=v2 PITCH=0.35`, main's build then this round's, straight
+after one another): main High 4.90 / 7.40 / 4.40 ms, 361 draws, 747.1k triangles, Lite 2.90 / 5.40 / 2.70, 286, 560.2k;
+this round High 5.00 / 7.40 / 4.40, 363, 752.0k, Lite 3.00 / 5.40 / 2.70, 286, 560.2k. Both pass. (A first run of this
+round alone, at load 7.4 with a 44% spread between runs, failed against the October baseline, which was taken at the
+follow camera on a quiet machine: `r3/cost/perf-check-first-busy.txt`.)
+
+So the pick's whole sky (dome and clouds) is about 0.1 ms of GPU at full resolution and lost in the noise at the pixel
+finish. Raw runs: `r3/cost/`.
 
 ### The night's perspective (L/clouds.ts skyBend)
 
@@ -56,7 +106,8 @@ skyline's fog use the true direction. The stars dim toward the skyline as the ai
 The preview draws the canvas at full resolution and gives everything nearer than the dome the pixel finish's 2 × 2
 blocks again, so only the sky (and the sprites) shows at full resolution: stars a crisp point, the moon's limb and the
 clouds' edges smooth. Built for the game it would draw the world at half resolution as now and only the dome at full.
-PIXEL_COST
+Cost: the dome's pixels at full size, which the table above prices at about 0.1 ms at full resolution on the M4
+(sprites' cards draw at full resolution already), plus one full-resolution pass to lay the pixelated world over it.
 
 ### The one wind (L/wind.ts), its marks and the motes (C/AmbienceFX.tsx)
 
@@ -82,6 +133,57 @@ the weather's bed, else the time of day's, under the music (lib/game/audio.ts `a
 
 - `?time=dawn` previews 20 minutes before sunrise (round 2's pick).
 - Clips are recorded frame by frame on a stepped clock (clip.mjs), so they play at an even 30 fps.
+
+### Against David's references
+
+Side by side boards (each reference beside the three styles) are kept outside the repo, with the references, for the
+review page; the repo's evidence holds only our shots. Nearest: the Genshin midday and sunset skies (painted
+cumulus, brushed edges, bright tops over a cool shade, pink and gold at sunset), which (c) gets closest to (soft
+painted volumes, broken outlines, light through the edges) for one draw; (a) gets the outline and the two tone but
+reads flatter and costs 0.9 ms at full resolution; (b) gets real 3D occlusion but its outline stays round (brushed
+edges would need far more triangles). None of the three does the Sky references' huge soft cloud banks or light
+shafts: that would be its own pass.
+
+### Cards (evidence under `r3/`; every clip has a `-poster.jpg`)
+
+| Card | Shows | Evidence |
+|---|---|---|
+| sky3-clouds | The three directions on the same sky: midday, golden hour, sunset, dusk, and in rain, snow and wind | `sky3-board-clouds.jpg`, `sky3-board-cloudweather.jpg`, `sky3-crop-clouds-golden.jpg` (1:1), `sky3-clouds-*`, `sky3-cloudweather-*`, `sky3-clip-{midday,golden,sunset,rain}-desktop-{painted,models,sprites}.mp4` |
+| sky3-cost | The round against main with the sky in view, the gate, each style's own cost | the tables above, `cost/` |
+| sky3-day | The whole day with the pick (05:30 to 23:50 in 20 s), sky, island and play views | `sky3-clip-day-desktop.mp4`, `sky3-board-day.jpg`, `sky3-day-desktop-clear-*` |
+| sky3-night | The rigid sky: round 2 beside round 3, the night, the sky turning as one piece | `sky3-night-before-after.jpg`, `sky3-clip-night-desktop.mp4`, `sky3-clip-night-turn-desktop.mp4` |
+| sky3-skypx | The pixel finish on the sky as now and lighter | `sky3-skypx-crops.jpg`, `sky3-test-desktop-clear-*-sky.jpg` beside `sky3px-test-desktop-clear-*-sky.jpg`, `sky3px-clip-{night,sunset}-desktop.mp4` |
+| sky3-wind | The one wind on a windy day over the meadow and the shore, a clear day's breeze, on a phone | `sky3-clip-wind-desktop.mp4`, `sky3-clip-wind-shore-desktop.mp4`, `sky3-clip-breeze-desktop.mp4`, `sky3-clip-wind-phone.mp4` |
+| sky3-motes | Golden hour's motes over the meadow toward the low sun | `sky3-clip-motes-desktop.mp4` |
+| sky3-sound | The beds, with sound: day, night, rain, wind; and what is in each | `sky3-sound-{day,night,rain,wind}-desktop.mp4`, `sky3-sound-spectra.png` |
+| sky3-weather | Snow and fog moving with the pick (rain under sky3-clouds) | `sky3-clip-snow-desktop.mp4`, `sky3-clip-fog-desktop.mp4` |
+| sky3-phone | The day on a phone, sky and play views, rain and wind | `sky3-board-phone.jpg`, `sky3-phone-phone-*`, `sky3-phoneweather-*`, `sky3-clip-{day,wind,night,sunset}-phone.mp4` |
+
+### Questions for David (round 3)
+
+| Question | Pick |
+|---|---|
+| Which clouds: (a) painted in the sky, (b) 3D models, (c) lit painted sprites? | (c): nearest the references, lit live, the cheapest |
+| The pixel finish on the sky: as now, or lighter (the sky at full resolution, the world pixelated)? | As now: the lighter sky is a small gain (crisper stars, smoother cloud edges) for a change to how every frame is drawn; build it if you prefer the right-hand crops |
+| The wind's marks at 0.3 opacity are faint, as asked: keep, or a little stronger (0.4)? | Keep 0.3 |
+| Leaves blown off the crowns in a clear day's breeze too, now and then: keep? | Keep |
+| The sound beds under the music at the ambience slider (0.6 by default): right level? Should the wind bed swell with the gust fronts live (next round)? | Level as built; the live gusts next round |
+| A reference for the night sky you like (stars, Milky Way, night clouds) would help tune it as the cloud references did | Ask |
+| Light shafts and big soft cloud banks like the Sky references: a later pass? | Later |
+
+### Not verified
+
+A real phone's GPU (headless Chrome at 390 × 844 on the Mac mini); the sound by ear (the beds were checked by their
+spectra and their loop seams, not listened to); the title screen and the applicant island with the new clouds (both
+draw the same SkyDome; neither was shot); the wind's marks across two clients (on the world clock, unit tested); how
+the marks read in motion beyond single frames.
+
+### Deleted
+
+Round 2's swirls (`WindSwirls`, `swirlAge`, `swirlSpots`, replaced by `WindMarks`, `windSpots`); round 1's wind lab pitch
+(`?wind=`, `WIND_LAB`, `sharedWindAt`, `gustAt`, `SharedWindDriver`, the lab-only tree lean), replaced by `lib/game/wind.ts`;
+the lab's `Motes` (now `GoldenMotes`, shipped); the dome's view-space bend (`uBend`). After David's pick the losing
+cloud styles and round 2's tracer go, with `?clouds=`.
 
 ## R2. Round 2: the sky built properly (2026-11-05)
 

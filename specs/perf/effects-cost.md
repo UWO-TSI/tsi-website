@@ -38,6 +38,22 @@ watch.**
 | The bite's "!" by tier (fish-tiers, 2026-10-27) | 0 draws: a DOM label in the label layout (the rig's existing slot); a legendary bite adds 30 short-lived DOM sparks, a divine 48 plus a beam, rays and two rings, all finite (under 2.2 s), only on your own bite. The legendary and divine bite also burst the catch's crown (fishLeaps) once: the existing pool | Within | – |
 | Boss creatures (fish-tiers, behind NEXT_PUBLIC_FISH_BOSSES, off) | 0 when the flag is off (not mounted). On: two placeholder groups of spheres (about 21 meshes, shared materials, no shadows) parked below the world and frustum-culled until a boss surfaces | Not measured with the flag on | Merge each placeholder into one mesh when real models replace them |
 
+## The sky's clouds, the wind and the motes (sky-ambient round 3, 2026-11-05)
+
+From the round's runs (specs/sky-ambient.md §R3 "Cost", raw runs in `specs/evidence/sky-ambient/r3/cost/`), Apple M4,
+1280 × 800, v2 with 24 bots, the sky tipped 20° up (mostly sky), GPU ms against the shipped lit sprites:
+
+| Effect | Draws | Triangles | GPU, pixel finish | GPU, full resolution |
+|---|---|---|---|---|
+| Lit sprite clouds (shipped pick) and the dome together | 2 | about 6k | lost in noise (dome off: -0.00) | about 0.12 |
+| Painted clouds in the dome (direction a) | 1 | about 6k | +0.08 | +0.92 |
+| Cloud models (direction b) | 2 | +60k to 94k | +0.08 | +0.13 |
+| Round 2's traced clouds | 1 | about 6k | +0.07 | +0.75 |
+
+The cloud field is about 0.01 ms of CPU a frame. The wind's marks (one ribbon draw and one leaf draw, at most 24 and 96
+instances) and golden hour's motes (one draw of 160 points, hidden outside golden hour) are inside the round's
+back-to-back noise: High 5.00 / 7.40 / 4.40 ms against main's 4.90 / 7.40 / 4.40 at perf:check with the sky in view.
+
 ## The sky (sky-ambient round 2, 2026-11-05)
 
 The dome rebuilt (single-scattering atmosphere per vertex, sun, moon, stars and ball-cluster cumulus per pixel, drawn
