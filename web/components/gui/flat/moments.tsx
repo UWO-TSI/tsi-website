@@ -250,6 +250,8 @@ export type AwakenPhase = keyof typeof AWAKEN_MS | "reveal";
 const AWAKEN_ORDER = Object.keys(AWAKEN_MS) as (keyof typeof AWAKEN_MS)[];
 /** How much bigger than its stage the thing's box is: room for its glow and its motion, so neither meets an edge. */
 export const AWAKEN_ROOM = 1.6;
+/** Painted frames each impact frame holds (three of them as the burst lands). */
+const IMPACT_FRAMES = 4;
 /** When the card has landed after the reveal (ms): what changed moves only then, one thing at a time. */
 export const AWAKEN_CARD_MS = 900;
 
@@ -275,7 +277,7 @@ export function Awakening({ label, thing, from, rarity, rarityLabel, lead, eyebr
   eyebrow: ReactNode; name: ReactNode; text?: ReactNode; children?: ReactNode; action?: ReactNode;
   onPhase?: (phase: AwakenPhase | "beat") => void; onClose: () => void; ready?: boolean; testId?: string;
 }) {
-  const [phase, setPhase] = useState<AwakenPhase>("frame"), [after, setAfter] = useState(false);
+  const [phase, setPhase] = useState<AwakenPhase>("frame"), [after, setAfter] = useState(false), [impact, setImpact] = useState(0);
   const ref = useWorldDialog<HTMLElement>(true, onClose, [], true);
   const cb = useRef(onPhase);
   useEffect(() => { cb.current = onPhase; }, [onPhase]);
@@ -294,9 +296,24 @@ export function Awakening({ label, thing, from, rarity, rarityLabel, lead, eyebr
     }
     return () => ts.forEach(t => window.clearTimeout(t));
   }, [ready]);
+  // The impact frames as the hit lands: three, each held for IMPACT_FRAMES painted frames and 60 ms (on a slow device,
+  // at least one frame and 140 ms), so every one is seen; they end with the burst whatever happens.
+  useEffect(() => {
+    if (phase !== "burst") return;
+    let raf = 0, step = 1, frames = 0, since = performance.now();
+    const tick = (now: number) => {
+      frames++;
+      if ((frames >= IMPACT_FRAMES && now - since >= 60) || now - since >= 140) { step++; frames = 0; since = now; }
+      setImpact(step > 3 ? 0 : step);
+      if (step <= 3) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => { cancelAnimationFrame(raf); setImpact(0); };
+  }, [phase]);
   return <div className={`${m.layer} gui`} data-gui-flat="">
     <div className={m.awScrim} aria-hidden="true" />
     <section ref={ref} role="dialog" aria-modal aria-label={label} tabIndex={-1} data-gui-overlay className={m.awaken} data-phase={phase} data-ready={ready || undefined} data-after={after || undefined}
+      data-impact={impact || undefined}
       style={{ "--edge": `var(--ui-rarity-${rarity})`, "--from": `var(--ui-rarity-${from})`, "--room": AWAKEN_ROOM } as CSSProperties} data-testid={testId}>
       <div className={m.awDeep} aria-hidden="true" />
       <div className={m.awImpact} aria-hidden="true" />
@@ -314,6 +331,6 @@ export function Awakening({ label, thing, from, rarity, rarityLabel, lead, eyebr
         {action}
       </div>}
     </section>
-    <div className={m.awFlash} data-phase={phase} aria-hidden="true" />
+    <div className={m.awFlash} data-phase={phase} data-impact={impact || undefined} aria-hidden="true" />
   </div>;
 }

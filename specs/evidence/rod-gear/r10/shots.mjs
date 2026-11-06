@@ -1,6 +1,6 @@
 // rod-gear round 10 evidence: headless Chromium against a dev server (BASE), muted, never headed.
 // Run: PW=<path to playwright/index.mjs> SHELL_BIN=<chrome-headless-shell> BASE=http://localhost:<port> [ONLY=clips,fx,cards] [CLIP=name,...] [FX=kind,...] node specs/evidence/rod-gear/r10/shots.mjs
-// Clips are CDP screencasts (Playwright's own video wants its ffmpeg build) joined with the system ffmpeg; frame times are swiftshader's.
+// Clips are CDP screencasts (Playwright's own video wants its ffmpeg build) joined with the system ffmpeg, drawn on the GPU (ANGLE Metal, still headless).
 //   clips  the awakening cutscene (/dev/economy?view=awakening&rod=&stage=): the Training rod, the Tempest (struck by
 //          lightning), the Tidewarden (a wave), the Tempest on a phone; each with a poster (the reveal), a strip of its
 //          beats and a strip of its impact frames
@@ -18,7 +18,7 @@ const ONLY = process.env.ONLY?.split(",");
 const want = (k) => !ONLY || ONLY.includes(k);
 const ff = (...a) => execFileSync("ffmpeg", ["-loglevel", "error", "-y", ...a]);
 
-const browser = await chromium.launch({ headless: true, executablePath: process.env.SHELL_BIN, args: ["--mute-audio", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
+const browser = await chromium.launch({ headless: true, executablePath: process.env.SHELL_BIN, args: ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist"] });
 const errors = [];
 const hideChrome = () => document.addEventListener("DOMContentLoaded", () => {
   const s = document.createElement("style"); s.textContent = ".ld-overlay, nextjs-portal { display: none !important; } body > header, nav[aria-label] { visibility: hidden !important; }"; document.head.append(s);
@@ -37,17 +37,34 @@ async function record(p, w, h, file, until, from = 0) {
   cdp.on("Page.screencastFrame", ({ data, metadata, sessionId }) => { shots.push({ data, t: metadata.timestamp }); void cdp.send("Page.screencastFrameAck", { sessionId }).catch(() => {}); });
   await cdp.send("Page.startScreencast", { format: "jpeg", quality: 90, maxWidth: w, maxHeight: h, everyNthFrame: 1 });
   const start = (from || Date.now() / 1000) - 0.05;
+  record.start = start;
   await until();
   await cdp.send("Page.stopScreencast");
+  shots.sort((a, b) => a.t - b.t);
   const kept = shots.filter((f, i) => f.t >= start || shots[i + 1]?.t > start);
+  if (!kept.length) throw new Error(`no frames for ${file}: ${shots.length} shot, first at ${shots[0]?.t}, start ${start}`);
   const list = kept.map((f, i) => { const jpg = join(dir, `${String(i).padStart(5, "0")}.jpg`); writeFileSync(jpg, Buffer.from(f.data, "base64"));
-    return `file '${jpg}'\nduration ${((kept[i + 1]?.t ?? f.t + 0.04) - Math.max(f.t, start)).toFixed(4)}`; });
+    return `file '${jpg}'\nduration ${Math.max(0.001, (kept[i + 1]?.t ?? f.t + 0.04) - Math.max(f.t, start)).toFixed(4)}`; });
   writeFileSync(join(dir, "list.txt"), `${list.join("\n")}\nfile '${join(dir, `${String(kept.length - 1).padStart(5, "0")}.jpg`)}'\n`);
   ff("-f", "concat", "-safe", "0", "-i", join(dir, "list.txt"), "-vf", "fps=30,scale=trunc(iw/2)*2:trunc(ih/2)*2", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "23", "-movflags", "+faststart", file);
   rmSync(dir, { recursive: true });
   return Number(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file]).toString());
 }
 const still = (mp4, t, png, scale) => ff("-ss", String(Math.max(0, t)), "-i", mp4, "-frames:v", "1", ...(scale ? ["-vf", `scale=${scale}:-1`] : []), png);
+/**
+ * The impact frames in the clip, read off its brightness at 30 fps from `from`: the first frame the screen jumps to the
+ * rung's colour (impact 1), the first it falls dark again (2, the rod lit), the next jump (3); null if none.
+ */
+function impactAt(mp4, from, to) {
+  const dir = `${mp4}.probe`; mkdirSync(dir, { recursive: true });
+  ff("-ss", String(Math.max(0, from)), "-t", String(to - from), "-i", mp4, "-vf", "fps=30,scale=32:-1", join(dir, "%04d.png"));
+  const means = execFileSync("magick", ["identify", "-format", "%[fx:mean]\n", join(dir, "*.png")]).toString().trim().split("\n").map(Number);
+  rmSync(dir, { recursive: true });
+  const base = means[0], up = (m) => m > base + 0.12, i1 = means.findIndex(up);
+  if (i1 < 0) return null;
+  const i2 = means.findIndex((m, i) => i > i1 && !up(m)), i3 = means.findIndex((m, i) => i > i2 && up(m));
+  return [i1, i2, i3 < 0 ? i2 + 2 : i3].map((i) => Math.max(0, from) + (i + 0.5) / 30);
+}
 function strip(mp4, times, png, scale) {
   const parts = times.map((t, i) => { const f = `${png}.${i}.png`; still(mp4, t, f, scale); return f; });
   execFileSync("magick", [...parts, "-bordercolor", "white", "-border", "4", "+append", png]);
@@ -59,7 +76,6 @@ if (want("clips")) {
   await warm.goto(`${BASE}/dev/economy?view=awakening`); await warm.getByTestId("rod-awakening").waitFor({ timeout: 240000 });
   await warm.context().close();
   // AWAKEN_MS: frame 900, glow 1300, pulse 2800, hush 500, burst 700 (its first 210 ms the impact frames), show 1900.
-  const BURST = 0.9 + 1.3 + 2.8 + 0.5;
   const CLIPS = [["rg10-awaken-training-1", "rod_training", 1, 1280, 800], ["rg10-awaken-tempest-1", "rod_tempest", 1, 1280, 800],
     ["rg10-awaken-tidewarden-1", "rod_tidewarden", 1, 1280, 800], ["rg10-phone-awaken-tempest-1", "rod_tempest", 1, 390, 844]];
   for (const [name, rod, stage, w, h] of CLIPS) {
@@ -67,20 +83,40 @@ if (want("clips")) {
     const p = await page(w, h), mp4 = join(OUT, `${name}.mp4`);
     await p.goto(`${BASE}/dev/economy?view=awakening&rod=${rod}&stage=${stage}`);
     await p.locator('[data-testid="rod-awakening"]').waitFor({ timeout: 120000 });
-    let mount = 0;
+    // When each beat came, by the page's clock (the timers run late under swiftshader, so the beats are read, not assumed).
+    await p.evaluate(() => { const at = (window.__beats = {}), el = document.querySelector('[data-testid="rod-awakening"]');
+      new MutationObserver(() => { const ph = el.getAttribute("data-phase"); if (!(ph in at)) at[ph] = Date.now() / 1000; }).observe(el, { attributes: true, attributeFilter: ["data-phase"] }); });
     const dur = await record(p, w, h, mp4, async () => {
-      await p.locator('[data-testid="rod-awakening"][data-ready]').waitFor({ timeout: 120000 });
-      mount = Date.now() / 1000;
-      await p.locator('[data-phase="reveal"]').first().waitFor({ timeout: 30000 });
+      await p.locator('[data-phase="reveal"]').first().waitFor({ state: "attached", timeout: 60000 });
       await p.waitForTimeout(3600);
     });
+    const beats = Object.fromEntries(Object.entries(await p.evaluate(() => window.__beats)).map(([k, t]) => [k, t - record.start]));
     await p.context().close();
-    // The clip starts before the cutscene's first beat (the model loading): line the beats up from the end instead.
-    const lead = dur - (BURST + 0.7 + 1.9 + 3.6);
+    // The page paints late under swiftshader: shift the beats by how late the impact frames show in the clip.
+    const hit = impactAt(mp4, beats.burst - 0.3, beats.burst + 2.5), lag = hit ? hit[0] - beats.burst : 0;
+    const b = (k, d = 0) => (beats[k] ?? 0) + lag + d;
     still(mp4, dur - 0.4, join(OUT, `${name}-poster.png`));
-    strip(mp4, [1.6, 3.4, 5.0, 5.4, 5.75, 6.6, 7.8].map((t) => t + lead), join(OUT, `${name}-strip.png`), w > 600 ? 360 : 180);
-    strip(mp4, [-0.1, 0.03, 0.1, 0.17, 0.3, 0.55].map((t) => BURST + t + lead), join(OUT, `${name}-impact.png`), w > 600 ? 300 : 150);
-    console.log(`${name}: ${dur.toFixed(1)} s (lead ${lead.toFixed(2)} s, ready after ${mount ? "" : "?"})`);
+    strip(mp4, [b("glow", 0.8), b("pulse", 1.2), b("pulse", 2.6), b("hush", 0.3), b("burst", 0.35), b("show", 0.8), b("reveal", 1.5)], join(OUT, `${name}-strip.png`), w > 600 ? 360 : 180);
+    strip(mp4, [b("hush", 0.3), ...(hit ?? [b("burst"), b("burst", 0.07), b("burst", 0.14)]), b("burst", 0.45), b("show", 0.3)], join(OUT, `${name}-impact.png`), w > 600 ? 300 : 150);
+    console.log(`${name}: ${dur.toFixed(1)} s, painted ${lag.toFixed(2)} s late, beats ${Object.entries(beats).map(([k, t]) => `${k} ${t.toFixed(2)}`).join(", ")}`);
+  }
+}
+
+if (want("impact")) {
+  // The impact frames as drawn, one at a time (the clips catch them as swiftshader paints them, late): the cutscene run to
+  // its show, then the first two impact states set on it (the third is the first again).
+  for (const rod of ["rod_tempest", "rod_tidewarden"]) {
+    const p = await page(1280, 800), shots = [];
+    await p.goto(`${BASE}/dev/economy?view=awakening&rod=${rod}&stage=1`, { timeout: 240000 });
+    await p.locator('[data-phase="show"]').first().waitFor({ state: "attached", timeout: 120000 });
+    for (const n of ["1", "2"]) {
+      await p.evaluate((n) => { const s = document.querySelector('[data-testid="rod-awakening"]'); s.setAttribute("data-phase", "burst"); s.setAttribute("data-impact", n); }, n);
+      await p.waitForTimeout(400);
+      const f = join(OUT, `.impact-${n}.png`); await p.screenshot({ path: f }); shots.push(f);
+    }
+    await p.context().close();
+    execFileSync("magick", [shots[0], shots[1], shots[0], "-resize", "420x", "-bordercolor", "white", "-border", "4", "+append", join(OUT, `rg10-impact-frames-${rod.slice(4)}.png`)]);
+    shots.forEach((f) => rmSync(f));
   }
 }
 

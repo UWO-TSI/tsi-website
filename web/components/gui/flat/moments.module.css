@@ -211,7 +211,7 @@
 .awaken > .awDeep, .awaken > .awImpact, .awaken > .awImpactTint { pointer-events: none; }
 .awLead { position: absolute; left: 50%; top: calc(50% - var(--s) / 2 - 44px); width: max-content; max-width: calc(100vw - 32px); margin: 0; translate: -50% 0;
   color: var(--ui-glow); font: 700 18px/1.3 var(--gui-font); text-align: center; animation: rise 0.5s 0.3s ease both; transition: opacity 0.3s ease; }
-.awaken:is([data-phase="hush"], [data-phase="burst"], [data-phase="show"]) .awLead { opacity: 0; }
+.awaken:is([data-phase="hush"], [data-phase="burst"], [data-phase="show"]) .awLead { animation: none; opacity: 0; }
 /* The stage pushes in as it builds (slowly over the pulse, a last lean in the hush), and shakes when the hit lands. */
 .awStage { position: absolute; left: 50%; top: 50%; width: var(--s); height: var(--s); margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2);
   transition: transform 0.7s cubic-bezier(0.34, 1.3, 0.64, 1); }
@@ -232,7 +232,7 @@
 .awaken[data-phase="pulse"][data-after] .awThing { transform: scale(1.06); filter: brightness(1.5) drop-shadow(0 0 6px var(--glow)) drop-shadow(0 0 22px var(--glow)) drop-shadow(0 0 54px var(--glow)); }
 .awaken[data-phase="hush"] .awThing { filter: drop-shadow(0 0 2px var(--glow)) drop-shadow(0 0 6px var(--glow)) drop-shadow(0 0 0 transparent); transition: filter 0.25s ease, transform 0.5s ease-in; transform: scale(0.98); }
 .awaken[data-phase="burst"] .awThing { filter: drop-shadow(0 0 6px var(--glow)) drop-shadow(0 0 28px var(--glow)) drop-shadow(0 0 80px var(--glow)); transition: filter 0.25s ease-out, transform 0.3s ease-out;
-  transform: scale(1.08); animation: awImpactThing 0.21s linear both; }
+  transform: scale(1.08); }
 .awaken[data-phase="show"] .awThing { filter: drop-shadow(0 0 3px var(--glow)) drop-shadow(0 0 12px var(--glow)) drop-shadow(0 0 30px var(--glow)); transition: filter 1.4s ease, transform 0.6s ease; }
 .awaken[data-phase="reveal"] .awThing { transform: scale(0.9); filter: drop-shadow(0 0 2px var(--glow)) drop-shadow(0 0 8px var(--glow)) drop-shadow(0 0 0 transparent);
   transition: transform 0.6s cubic-bezier(0.34, 1.3, 0.64, 1), filter 0.8s ease; }
@@ -241,11 +241,15 @@
    (white times the colour, through the tint), then the colour once more; never white. */
 .awImpact, .awImpactTint { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
 .awImpactTint { background: var(--edge); mix-blend-mode: multiply; }
-.awaken[data-phase="burst"] .awImpact { animation: awImpact 0.21s linear both; }
-.awaken[data-phase="burst"] .awImpactTint { animation: awImpactTint 0.21s linear both; }
+.awaken:is([data-impact="1"], [data-impact="3"]) .awImpact { opacity: 1; background: var(--edge); }
+.awaken[data-impact="2"] .awImpact { opacity: 1; background: var(--ui-ink); }
+.awaken[data-impact="2"] .awImpactTint { opacity: 1; }
+.awaken[data-impact] .awThing { transition: none; }
+.awaken:is([data-impact="1"], [data-impact="3"]) .awThing { filter: brightness(0); }
+.awaken[data-impact="2"] .awThing { filter: brightness(0) invert(1); }
 /* The burst: the screen takes the new rung's colour a moment (never white), with no shape and no edge, then clears. */
 .awFlash { position: absolute; inset: 0; background: var(--edge); opacity: 0; pointer-events: none; }
-.awFlash[data-phase="burst"] { animation: awFlash 1s 0.21s ease-out both; }
+.awFlash[data-phase="burst"]:not([data-impact]) { animation: awFlash 1s ease-out both; }
 /* The card of what changed: beside it on a wide screen, under it on a phone; the stage steps aside for it. */
 .awCard { position: absolute; left: 50%; top: 50%; display: grid; justify-items: start; gap: 8px; width: 340px; box-sizing: border-box; padding: 20px 22px 18px;
   border-radius: 22px; background: var(--ui-card); box-shadow: 0 24px 80px rgb(var(--ui-shade) / 0.4); translate: 12px -50%;
@@ -259,10 +263,7 @@
   .awCard { left: 16px; right: 16px; top: auto; bottom: 16px; width: auto; translate: none; max-height: 62vh; overflow: auto; }
 }
 @keyframes awIn { from { opacity: 0; } }
-@keyframes awFlash { 0% { opacity: 0.75; } 100% { opacity: 0; } }
-@keyframes awImpact { 0%, 33% { opacity: 1; background: var(--edge); } 33.01%, 66% { opacity: 1; background: var(--ui-ink); } 66.01%, 99.9% { opacity: 1; background: var(--edge); } 100% { opacity: 0; } }
-@keyframes awImpactTint { 0%, 33% { opacity: 0; } 33.01%, 66% { opacity: 1; } 66.01%, 100% { opacity: 0; } }
-@keyframes awImpactThing { 0%, 33% { filter: brightness(0); } 33.01%, 66% { filter: brightness(0) invert(1); } 66.01%, 99.9% { filter: brightness(0); } }
+@keyframes awFlash { 0% { opacity: 0.45; } 100% { opacity: 0; } }
 @keyframes awShake { 0% { translate: 0 0; } 10% { translate: -9px 5px; } 20% { translate: 8px -6px; } 30% { translate: -6px -4px; } 40% { translate: 5px 5px; }
   55% { translate: -3px 2px; } 70% { translate: 2px -2px; } 85% { translate: -1px 1px; } 100% { translate: 0 0; } }
 @keyframes awCard { from { opacity: 0; transform: translateY(14px) scale(0.96); } }

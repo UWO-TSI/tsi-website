@@ -84,7 +84,7 @@ function Cedar({ k }: { k: number }) {
     // a quick swing out and back over a second, then held still for two
     if (g) g.rotation.z = t < 1 ? 0.55 * Math.sin(Math.PI * 2 * t) * (1 - t) : 0;
   });
-  return <group ref={swing} position={[0, -1.1, 0]} scale={2.4}><primitive object={rod} />{fx && <RodAura rod={rod} url={fx} strength={k} />}</group>;
+  return <group ref={swing} position={[0, -1.05, 0]} scale={1.9}><primitive object={rod} />{fx && <RodAura rod={rod} url={fx} strength={k} />}</group>;
 }
 
 /** One type alone, large, on both holders, its strength rising from 1 to 2.5 and back every few seconds. */

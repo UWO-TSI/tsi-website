@@ -95,14 +95,24 @@ function shapeOf(holder: THREE.Object3D): Shape | null {
   if (!parts.length) return null;
   const geometry = mergeVertices(mergeGeometries(parts), 1e-4);
   geometry.computeVertexNormals();
-  geometry.computeBoundingBox();
-  const box = geometry.boundingBox!, dim = box.getSize(new THREE.Vector3()), mid = box.getCenter(new THREE.Vector3());
-  const ext = [dim.x, dim.y, dim.z], long = ext.indexOf(Math.max(...ext)), axis = new THREE.Vector3().setComponent(long, 1);
-  const length = ext[long], thick = [...ext].sort((a, b) => a - b)[1];
   const sampler = new MeshSurfaceSampler(new THREE.Mesh(geometry)).build(), p = new THREE.Vector3(), nm = new THREE.Vector3();
-  const points = new Float32Array(POINTS * 3), normals = new Float32Array(POINTS * 3);
+  const points = new Float32Array(POINTS * 3), normals = new Float32Array(POINTS * 3), cloud: THREE.Vector3[] = [];
   for (let i = 0; i < POINTS; i++) { sampler.sample(p, nm); p.toArray(points, i * 3); nm.toArray(normals, i * 3); }
-  return { geometry, points, normals, base: mid.clone().addScaledVector(axis, -length / 2), tip: mid.clone().addScaledVector(axis, length / 2), length, thick };
+  for (let i = 0; i < 256; i++) { const v = new THREE.Vector3(); sampler.sample(v, nm); cloud.push(v); }
+  // Its long axis: the cloud's main direction (power iteration on its spread), so a thing lying on a slant has it too;
+  // its tip the end that is higher in the world as it is held now (a rod's, a sword's).
+  const mid = cloud.reduce((m, v) => m.add(v), new THREE.Vector3()).divideScalar(cloud.length), axis = new THREE.Vector3(0.3, 1, 0.2).normalize(), d = new THREE.Vector3();
+  for (let it = 0; it < 24; it++) {
+    const next = new THREE.Vector3();
+    for (const v of cloud) { d.subVectors(v, mid); next.addScaledVector(d, d.dot(axis)); }
+    if (next.lengthSq() < 1e-12) break;
+    axis.copy(next.normalize());
+  }
+  if (axis.clone().transformDirection(holder.matrixWorld).y < 0) axis.negate();
+  let lo = Infinity, hi = -Infinity, spread = 0;
+  for (const v of cloud) { const u = d.subVectors(v, mid).dot(axis); lo = Math.min(lo, u); hi = Math.max(hi, u); spread += d.addScaledVector(axis, -u).lengthSq(); }
+  const length = hi - lo, thick = 2 * Math.sqrt(spread / cloud.length) * 1.4;
+  return { geometry, points, normals, base: mid.clone().addScaledVector(axis, lo), tip: mid.clone().addScaledVector(axis, hi), length, thick };
 }
 
 const shellMaterial = (frag: string, uniforms: Record<string, THREE.IUniform>) => new THREE.ShaderMaterial({
@@ -127,7 +137,15 @@ export default function HolderFx({ holder, kinds, strength = 1, colour = "#7FD8F
   const scene = useThree(s => s.scene);
   const fx = useMemo((): Fx => {
     const table = (sharedRamps.table ??= new RampTable()), rows = new Map<string, number>();
-    const rowOf = (kind: string) => rows.get(kind) ?? rows.set(kind, table.row(KIND_RAMP[kind as PoolKind] ?? rampOf(colour))).get(kind)!;
+    // a kind's ramp row, added on first use (and the ramp texture flagged for upload: a strike's row comes late)
+    const rowOf = (kind: string) => {
+      const known = rows.get(kind);
+      if (known !== undefined) return known;
+      const row = table.row(KIND_RAMP[kind as PoolKind] ?? rampOf(colour));
+      rows.set(kind, row);
+      rampMap(table);
+      return row;
+    };
     const pool = new HolderPool(CAPACITY), geometry = new THREE.InstancedBufferGeometry(), quad = new THREE.PlaneGeometry(1, 1);
     geometry.index = quad.index;
     for (const n of ["position", "uv"]) geometry.setAttribute(n, quad.getAttribute(n));
@@ -145,6 +163,7 @@ export default function HolderFx({ holder, kinds, strength = 1, colour = "#7FD8F
     tg.setAttribute("position", new THREE.BufferAttribute(new Float32Array(TRAIL_N * 6), 3).setUsage(THREE.DynamicDrawUsage));
     tg.setAttribute("aTrail", new THREE.BufferAttribute(new Float32Array(TRAIL_N * 4), 2).setUsage(THREE.DynamicDrawUsage));
     tg.setIndex(idx);
+    for (const kind of [...kinds, strike?.kind]) if (kind) rowOf(kind);     // its rows ready before the first frame
     const trailMat = createTrailMaterial(rampMap(table));
     trailMat.uniforms.uRow.value = rowOf("trail");
     const trail = new THREE.Mesh(tg, trailMat);
@@ -152,7 +171,6 @@ export default function HolderFx({ holder, kinds, strength = 1, colour = "#7FD8F
     const glow = shellMaterial(GLOW_FRAG, { uColor: { value: new THREE.Color(colour) } });
     const [core, mid, edge] = rampOf(colour);
     const aura = shellMaterial(AURA_FRAG, { uCore: { value: new THREE.Color(core) }, uMid: { value: new THREE.Color(mid) }, uEdge: { value: new THREE.Color(edge) }, uWobble: { value: 0.45 } });
-    rampMap(table);
     return { pool, mesh, attrs, rowOf, trail, glow, aura, rnd: seeded(holder.id * 7919 + 3), state: {} as Record<string, number>, strikeState: {} as Record<string, number>,
       live: { k: strength, t: 0, flare: 0, once, strikeKey: strike?.key ?? 0, strikeT: -1, shape: null as Shape | null, shells: [] as THREE.Mesh[], trailAt: [] as { a: THREE.Vector3; b: THREE.Vector3; t: number }[] } };
     // the holder and its colour make it; strength, once and strike are read each frame
@@ -189,6 +207,7 @@ function frame(fx: Fx, holder: THREE.Object3D, kinds: readonly FxKind[], strengt
     if (!L.shape) return;
     const s = L.shape, axis = s.tip.clone().sub(s.base).normalize();
     for (const m of [fx.glow, fx.aura]) { m.uniforms.uBase.value.copy(s.base); m.uniforms.uAxis.value.copy(axis); m.uniforms.uLen.value = s.length; }
+    fx.trail.visible = kinds.includes("trail");
     for (const [mat, on] of [[fx.glow, kinds.some(k => SHELL_KINDS.includes(k))], [fx.aura, kinds.includes("aura")]] as const) {
       if (!on) continue;
       const shell = new THREE.Mesh(s.geometry, mat);
@@ -227,8 +246,8 @@ function frame(fx: Fx, holder: THREE.Object3D, kinds: readonly FxKind[], strengt
   }
   fx.pool.step(dt);
   const n = fx.pool.write(right, up);
+  // always drawn (no instances when empty), so its shader compiles when it mounts, not on a strike's first frame
   (fx.mesh.geometry as THREE.InstancedBufferGeometry).instanceCount = n;
-  fx.mesh.visible = n > 0;
   if (n) for (const at of fx.attrs) { at.clearUpdateRanges(); at.addUpdateRange(0, n * 4); at.needsUpdate = true; }
   // The shells.
   const beat = kinds.includes("pulse") ? lubdub(t) * fxGrow("pulse", "size", k) : 0;
@@ -257,7 +276,7 @@ function laySweep(fx: Fx, h: Holder, t: number, length: number, shown: boolean) 
   while (at.length > TRAIL_N || (at.length && t - at[at.length - 1].t > length)) at.pop();
   const pos = fx.trail.geometry.getAttribute("position") as THREE.BufferAttribute, age = fx.trail.geometry.getAttribute("aTrail") as THREE.BufferAttribute;
   const moved = at.length > 1 && at[0].b.distanceTo(at[at.length - 1].b) > h.size * 0.05;
-  fx.trail.visible = moved;
+  fx.trail.geometry.setDrawRange(0, moved ? Infinity : 0);
   if (!moved) return;
   for (let i = 0; i < TRAIL_N; i++) {
     const s = at[Math.min(i, at.length - 1)], u = Math.min(1, (t - s.t) / length);
