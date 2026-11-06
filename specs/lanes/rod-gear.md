@@ -30,6 +30,27 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 10: David's rods awakening round 8 review (2026-11-06, verbatim; https://claude.ai/artifact/AgE5pgESXMPef71FiPT1Bx)
+
+Approved: rg8-awaken-epic, rg8-awaken-legendary, rg8-questions.
+- rg8-awaken-training (redo): "the awakening animation looks better but needs more flash and almost impact flash frames and make it more juicy and exciting and more suspense, if its a new model or new effect external things will attach like a lighting related will strike it with thunder and stuff you know"
+- rg8-cedar (redo): "more dense and move more down to the handle area, the leaves sway a lil when moved like physics"
+- rg8-fx (redo): "non of these have proper animation i need you to redo them, and add more and show me one by one the animation, have a pedals animation liek sakura flower pedals, electricity, puslign fire sparks, flame, water allat. this wont only be for fishing rod but for weapon, vfx clothes etc"
+- rg8-table (redo): "tide warden titanium and tempes only have 1 awakenings, and they are all very high cap at 600 ish"
+- rg8-tempest-hand (redo): "tempes aura is not on the rod body"
+- rg8-tempest (redo): "still doesnt look good looks wonkey ill provide reference"
+
+Round 9 (Tidewarden and Water) is on its own page (https://claude.ai/artifact/YFRYq9Ngqr2cKSaf37YiGj), waiting on marks. game/rod-titanium (the new Titanium, its mecha awakening, the general awakened-model wiring) runs in parallel and merges into this branch; leave the Titanium's model and effect alone.
+
+Build (coordinator):
+1. **The awakening, juicier:** impact flash frames (a few frames of full flash at the burst, like a hit), more suspense in the build-up, a stronger, more exciting burst. When the awakening brings a new model or a new effect, outside things act on it: a lightning rod is struck by lightning with thunder, a water rod is hit by a wave, a fire rod catches flame, and so on per rod.
+2. **The effects library, redone:** every type gets proper animation (none of today's read as animated). Add types: sakura petals, electricity, pulsing fire sparks, flame, and water (round 9's). The library is for weapons, VFX on clothes and more, not only rods: keep the types holder-agnostic. Show each one by one, each its own clip on `/lab/fx`.
+3. **Awakenings:** Tidewarden, Titanium and Tempest each have one awakening, at about 600 fish. Update the table and the cutscene harness.
+4. **Cedar:** denser, the foliage reaching further down toward the handle, and the leaves sway a little with physics when the rod moves.
+5. **Tempest:** its aura isn't on the rod's body in hand: fix that. The model waits for David's new reference ("ill provide reference"): don't remodel it yet.
+
+Evidence `rg10-*`: the awakening (Training and one rod with a new effect, the outside strike), each library type one by one (clips), the new table, the Cedar swaying (clip), the Tempest in hand, a questions card.
+
 ## Round 9: the Tidewarden and the water effect (David, 2026-11-05, verbatim)
 
 - With `specs/references/rods/fx-aquatic-water-ref.png`: "look at this water effect on the sword i want you to turn it into a effect with that foam look and water crashing, i want you to model this as 1:! as possible serious job use wtv u can"
