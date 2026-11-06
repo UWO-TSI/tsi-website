@@ -20,6 +20,7 @@ for (const [name, path, viewport, part] of shots) {
   const page = await browser.newPage({ viewport, deviceScaleFactor: 1 });
   page.on("pageerror", (e) => console.log(name, "pageerror", e.message.slice(0, 200)));
   await page.goto(HOST + path, { waitUntil: "networkidle", timeout: 180_000 });
+  await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" }); // the dev overlay's badge
   await page.waitForTimeout(1500);
   const wide = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
   if (wide) console.log(name, "horizontal page scroll!");

@@ -34,18 +34,26 @@ describe("the admin page's numbers", () => {
     expect(report.totals).toMatchObject({ players: 3, newInRange: 3, activeWeek: 1, gone: 2 });
   });
 
-  it("the funnel: every step in order, tables' steps over everyone, the log's only over players who joined after it began", () => {
+  it("the funnel: every step in order, over the players the log has seen from the start; earlier ones in the history", () => {
     expect(report.funnel.map((f) => f.step)).toEqual(STEP_IDS);
-    expect(step("signed_in")).toMatchObject({ reached: 3, of: 3, pct: 100 });
-    expect(step("creator")).toMatchObject({ reached: 2, of: 3 });
-    // A joined before the log's first session: the opening's beats are out of B and C only.
-    expect(step("arrival_aboard")).toMatchObject({ reached: 2, of: 2, pct: 100 });
-    expect(step("arrived")).toMatchObject({ reached: 2, of: 3 });
-    expect(step("first_sale")).toMatchObject({ reached: 1, of: 3 });
-    // Day 2: A (played the day after joining) and B (came back nine days later).
-    expect(step("day_2")).toMatchObject({ reached: 2 });
+    // A joined before the log's first session: the funnel is B and C, every step out of the same two.
+    expect(new Set(report.funnel.map((f) => f.of))).toEqual(new Set([2]));
+    expect(step("arrival_aboard")).toMatchObject({ reached: 2, pct: 100 });
+    expect(step("creator")).toMatchObject({ reached: 1, pct: 50 });
+    expect(step("arrived")).toMatchObject({ reached: 1 });
+    expect(step("day_2")).toMatchObject({ reached: 1 });
     // Nobody logged opening the creator: that step loses everyone the step before had.
     expect(step("arrival_creator")).toMatchObject({ reached: 0, dropPct: 100 });
+    // A, from the tables: made a character, arrived, sold, came back the next day.
+    expect(report.history.filter((h) => h.reached).map((h) => h.step)).toEqual(["signed_in", "creator", "first_sale", "arrived", "day_2"]);
+    expect(report.history.every((h) => h.of === 1)).toBe(true);
+  });
+
+  it("before any log, the funnel is the tables' steps over everyone, the log's steps empty", () => {
+    const old = buildReport({ ...snap, sessions: [] }, { ...rangeOf(30, NOW), now: NOW });
+    expect(old.funnel.find((f) => f.step === "arrival_aboard")).toMatchObject({ of: 0, reached: 0 });
+    expect(old.funnel.find((f) => f.step === "arrived")).toMatchObject({ of: 3, reached: 2 });
+    expect(old.history).toEqual([]);
   });
 
   it("where people quit: the last screen of each session, and of each player gone quiet", () => {

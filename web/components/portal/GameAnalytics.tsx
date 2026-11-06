@@ -73,15 +73,23 @@ export default function GameAnalytics({ report, days, onDays }: { report: Report
       <DayBars days={report.perDay} />
     </Section>
 
-    <Section title="The funnel" note={`Players who joined in the range (${totals.newInRange}), and how many reached each step. The badge is the drop from the step before.`}>
+    <Section title="The funnel" note={report.logSince
+      ? `Players who joined in the range since the log began (${short(report.logSince)}): ${funnel[0]?.of ?? 0}. How many reached each step; the badge is the drop from the step before.`
+      : "Players who joined in the range. Until the log runs, only the steps the game's own tables keep."}>
       <div className="space-y-3">
         {funnel.map((f, i) => (
           <div key={f.step} className="flex items-center gap-3">
-            <Progress className="flex-1" value={f.reached} max={funnel[0]?.reached || 1} label={f.label} showLabel valueText={`${f.reached} (${f.pct}%)`} />
+            {f.of ? <Progress className="flex-1" value={f.pct} max={100} label={f.label} showLabel valueText={`${f.reached} (${f.pct}%)`} />
+              : <p className="flex-1 text-sm text-[var(--gui-muted)]">{f.label}: not logged yet</p>}
             <span className="w-16 shrink-0 text-right">{i > 0 && f.dropPct > 0 ? <Badge tone={f.dropPct >= 25 ? "danger" : "warn"}>-{f.dropPct}%</Badge> : null}</span>
           </div>
         ))}
       </div>
+      {report.history.length > 0 && <>
+        <h3 className="mt-6 mb-2 text-sm font-extrabold text-[var(--gui-ink-strong)]">Joined before the log ({report.history[0].of})</h3>
+        <p className={NOTE}>What the game&apos;s own tables kept for them.</p>
+        <div className="space-y-3">{report.history.map((h) => <Progress key={h.step} value={h.pct} max={100} label={h.label} showLabel valueText={`${h.reached} (${h.pct}%)`} />)}</div>
+      </>}
     </Section>
 
     <div className="grid gap-6 lg:grid-cols-2">

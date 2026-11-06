@@ -13,8 +13,9 @@ It shows:
 - **Players:** the total, new in the range, played today, played this week, and quiet for 7 days or more. There's a chart of players per day (new ones darker) and a list of every player: world name, joined, last seen, sessions, time played and furthest step.
 - **The funnel:** each step in `web/lib/analytics/steps.ts`, in order. It runs from sign-in through the opening, the creator, the crossing, every walk-along stop and every HQ beat, then the first fish, the first sale, arrival done, the first chapter, day 2 and day 7.
   - For each step: how many players reached it, out of how many, and the drop from the step before.
-  - It counts players who joined in the range.
-  - Steps only the event log knows (`log` in `steps.ts`) count only players who joined after the log's first session, so history doesn't read as drop-off.
+  - It counts players who joined in the range since the log's first session, the same people at every step, so each drop is real.
+  - Before the log has run, it counts everyone who joined in the range, over the steps the tables keep. Steps only the log knows (`log` in `steps.ts`) show "not logged yet".
+  - Players in the range who joined before the log get their own short list, "Joined before the log", built from the tables' steps.
 - **Where sessions end:** the screen the player was on when the session ended (island, room, or open sheet), ranked.
 - **Where people stop for good:** for players quiet for 7 days or more, the last screen of their last session, ranked. With no logged session (history), it uses the furthest step they reached.
 - **Engagement:** sessions, typical and average length, sessions per player, and the typical minutes between consecutive funnel steps.

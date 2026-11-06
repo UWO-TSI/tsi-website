@@ -25,8 +25,10 @@ export interface Report {
   range: { from: string; to: string };
   totals: { players: number; newInRange: number; activeToday: number; activeWeek: number; gone: number };
   perDay: { d: string; new: number; active: number }[];
-  /** `of`: the players the share is of (log-only steps count only players who joined after the log started). */
+  /** Players who joined in the range, since the log began (every step); before it, everyone (log-only steps `of` 0). */
   funnel: { step: StepId; label: string; reached: number; of: number; pct: number; dropPct: number }[];
+  /** Players in the range who joined before the log: the steps the tables know (empty when the funnel is them). */
+  history: { step: StepId; label: string; reached: number; of: number; pct: number }[];
   logSince: string | null;
   quitSession: { key: string; label: string; n: number }[];
   quitGone: { key: string; label: string; n: number }[];
@@ -95,16 +97,23 @@ export function buildReport(snap: Snapshot, opts: { from: string; to: string; no
   // The log's first day: before it, only the tables' steps can be known.
   const loggedAt = snap.sessions.reduce((a, s) => Math.min(a, Date.parse(s.start)), Infinity);
   const logged = Number.isFinite(loggedAt) ? new Date(loggedAt).toISOString() : null;
+  // One base for the whole funnel, so each drop is the same people's: the players the log has seen from the start.
   const logCohort = logged ? cohort.filter((p) => Date.parse(p.joined) >= loggedAt) : [];
+  const preLog = logCohort.length ? cohort.filter((p) => Date.parse(p.joined) < loggedAt) : [];
+  const base = logCohort.length ? logCohort : cohort;
   let prevPct = 100;
   const funnel = FUNNEL.map((step) => {
-    const base = LOG_ONLY.has(step) ? logCohort : cohort;
-    const reached = base.filter((p) => reachedStep(p.id, p.joined, step)).length;
-    const share = pct(reached, base.length);
-    const row = { step, label: STEP_LABEL[step], reached, of: base.length, pct: share, dropPct: base.length && prevPct ? Math.max(0, Math.round((1 - share / prevPct) * 1000) / 10) : 0 };
-    if (base.length) prevPct = share;
+    const of = LOG_ONLY.has(step) && !logCohort.length ? 0 : base.length;
+    const reached = of ? base.filter((p) => reachedStep(p.id, p.joined, step)).length : 0;
+    const share = pct(reached, of);
+    const row = { step, label: STEP_LABEL[step], reached, of, pct: share, dropPct: of && prevPct ? Math.max(0, Math.round((1 - share / prevPct) * 1000) / 10) : 0 };
+    if (of) prevPct = share;
     return row;
   });
+  const history = preLog.length ? FUNNEL.filter((s) => !LOG_ONLY.has(s)).map((step) => {
+    const reached = preLog.filter((p) => reachedStep(p.id, p.joined, step)).length;
+    return { step, label: STEP_LABEL[step], reached, of: preLog.length, pct: pct(reached, preLog.length) };
+  }) : [];
   const furthest = (id: string, joined: string) => {
     let last: StepId = "signed_in";
     for (const s of FUNNEL) if (reachedStep(id, joined, s)) last = s;
@@ -176,6 +185,7 @@ export function buildReport(snap: Snapshot, opts: { from: string; to: string; no
     },
     perDay,
     funnel,
+    history,
     logSince: logged,
     quitSession: ranked(sessions.map(quitKey), quitLabel).slice(0, 10),
     quitGone: ranked(gonePlayers.map(goneKey), quitLabel).slice(0, 10),
