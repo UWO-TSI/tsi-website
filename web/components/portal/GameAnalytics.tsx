@@ -6,7 +6,7 @@ import { RANGES, type Report } from "@/lib/analytics/report";
 
 const H2 = "mb-1 text-base font-extrabold text-[var(--gui-ink-strong)]";
 const NOTE = "mb-4 text-sm text-[var(--gui-muted)]";
-const TABLE = "w-full min-w-[34rem] text-left text-sm";
+const TABLE = "w-full text-left text-sm";
 const TH = "py-2 pr-3 text-xs font-extrabold uppercase tracking-wide text-[var(--gui-muted)]";
 const TD = "py-2 pr-3 text-[var(--gui-ink-2)]";
 const short = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("en-CA", { month: "short", day: "numeric", timeZone: "UTC" }) : "never");
@@ -132,7 +132,7 @@ export default function GameAnalytics({ report, days, onDays }: { report: Report
     </Section>
 
     <Section title="Every player" note="World names only. Last seen is the last time they did anything on the island.">
-      <div className="max-h-[32rem] overflow-auto"><table className={TABLE}>
+      <div className="max-h-[32rem] overflow-auto"><table className={`${TABLE} min-w-[34rem]`}>
         <thead className="sticky top-0 bg-[var(--gui-paper-hi)]"><tr><th className={TH}>Player</th><th className={TH}>Joined</th><th className={TH}>Last seen</th><th className={TH}>Sessions</th><th className={TH}>Played</th><th className={TH}>Furthest</th></tr></thead>
         <tbody>{report.list.map((p, i) => <tr key={i} className="border-t border-[var(--gui-paper-edge)]">
           <td className={TD}>{p.name}{p.gone && <Badge tone="neutral" className="ml-2">quiet</Badge>}</td>
