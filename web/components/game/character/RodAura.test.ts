@@ -22,10 +22,9 @@ describe("rods' effects (art/pipeline/build_rods.py, fx_library.py, RodAura)", (
     for (const url of rods) named.set(url.split("/").pop()!, rodFxUrl(mergeHeld(await load(url), url)));
     expect(named.get("rod-tempest.glb")).toBe("/assets/game/props/rodfx-tempest.glb");
     expect(named.get("rod-5.glb")).toBe("/assets/game/props/rodfx-tidewarden.glb");
-    expect(named.get("rod-titanium.glb")).toBe("/assets/game/props/rodfx-titanium.glb");
+    expect(named.get("rod-titanium.glb")).toBeNull();
     expect(named.get("rod-titanium-a1.glb")).toBe("/assets/game/props/rodfx-titanium-a1.glb");
-    expect(named.get("rod-reserved-slate.glb")).toBe("/assets/game/props/rodfx-reserved-slate.glb");
-    expect([...named.values()].filter(Boolean)).toHaveLength(6);
+    expect([...named.values()].filter(Boolean)).toHaveLength(4);
     expect(named.get("rod-1.glb")).toBeNull();
   });
 
@@ -37,20 +36,28 @@ describe("rods' effects (art/pipeline/build_rods.py, fx_library.py, RodAura)", (
     expect(names.some(n => n.startsWith("Aura"))).toBe(true);
   });
 
-  it("keeps the Titanium quiet (metal, not magic) and builds its awakening's energy from the library (rod-titanium round 1)", async () => {
-    const names = async (url: string) => { const n: string[] = []; (await load(url)).traverse(o => n.push(o.name)); return n; };
-    const base = await names("/assets/game/props/rodfx-titanium.glb"), woke = await names("/assets/game/props/rodfx-titanium-a1.glb");
-    expect([...base, ...woke].some(n => n.startsWith("Halo"))).toBe(false);
-    expect(base.some(n => n.startsWith("Aura"))).toBe(false);
-    expect(woke).toEqual(expect.arrayContaining(["Energy", "Core", "Blades"]));
-    // Solid on the shop's white: no aura or additive light washing the plates (rod-titanium round 1b).
-    expect(woke.some(n => n.startsWith("Aura"))).toBe(false);
-    // Each rod is one preset material, so it draws once in a hand: the machined rod polished metal, the armour paint.
-    for (const [url, finish] of [["/assets/game/tools/rod-titanium.glb", "P_Polished"], ["/assets/game/tools/rod-titanium-a1.glb", "P_Paint"]]) {
-      const held = mergeHeld(await load(url), url), meshes: THREE.Mesh[] = [];
-      held.traverse(o => { if ((o as THREE.Mesh).isMesh) meshes.push(o as THREE.Mesh); });
-      expect(meshes.map(m => (m.material as THREE.Material).name)).toEqual([finish]);
+  it("keeps the Titanium plain and opens it when it awakens (rod-titanium round 2)", async () => {
+    // One polished material with a thin film (the rainbow glisten), so each draws once in a hand.
+    const held = async (url: string) => { const m: THREE.Mesh[] = []; mergeHeld(await load(url), url).traverse(o => { if ((o as THREE.Mesh).isMesh) m.push(o as THREE.Mesh); }); return m; };
+    const [shut] = await held("/assets/game/tools/rod-titanium.glb"), woke = await held("/assets/game/tools/rod-titanium-a1.glb");
+    expect(woke).toHaveLength(1);
+    for (const m of [shut, woke[0]]) {
+      expect((m.material as THREE.Material).name).toBe("P_Polished");
+      expect((m.material as THREE.MeshPhysicalMaterial).iridescence).toBeGreaterThan(0);
     }
+    // The awakened rod is the same rod opened: its morph target is the closed rod, and it ships open.
+    const g = woke[0].geometry, pos = g.getAttribute("position"), delta = g.morphAttributes.position![0];
+    expect(woke[0].morphTargetInfluences).toEqual([0]);
+    const closed = new THREE.Box3(), v = new THREE.Vector3(), d = new THREE.Vector3();
+    for (let i = 0; i < pos.count; i++) closed.expandByPoint(v.fromBufferAttribute(pos, i).add(g.morphTargetsRelative ? d.fromBufferAttribute(delta, i) : d.fromBufferAttribute(delta, i).sub(v)));
+    shut.geometry.computeBoundingBox(); g.computeBoundingBox();
+    expect(closed.min.distanceTo(shut.geometry.boundingBox!.min) + closed.max.distanceTo(shut.geometry.boundingBox!.max)).toBeLessThan(1e-4);
+    expect(g.boundingBox!.max.x - g.boundingBox!.min.x).toBeGreaterThan(closed.max.x - closed.min.x);
+    // Its energy from the library: a core and hexagons of light, no halo or aura.
+    const names: string[] = [];
+    (await load("/assets/game/props/rodfx-titanium-a1.glb")).traverse(o => names.push(o.name));
+    expect(names).toEqual(expect.arrayContaining(["Core", "Rings"]));
+    expect(names.some(n => n.startsWith("Halo") || n.startsWith("Aura"))).toBe(false);
   });
 
   it.each(rods)("%s: its effect exists, costs at most five draws a holder, and never moves the tip", async url => {

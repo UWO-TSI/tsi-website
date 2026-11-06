@@ -1,4 +1,4 @@
-// rod-titanium round 1 (copied from tool-pipeline rods-r2/shoot.mjs, VIEW=<w>x<h> for a phone): the rods in hand: headless Chromium only, muted, signed out, against a dev server with
+// rod-titanium round 2 (copied from tool-pipeline rods-r2/shoot.mjs, VIEW=<w>x<h> for a phone): the rods in hand: headless Chromium only, muted, signed out, against a dev server with
 // the Supabase env blanked. Never headed. One browser and one page for every shot (the island's assets stay cached).
 //   HOST=http://localhost:3347 node specs/evidence/tool-pipeline/rods-r2/shoot.mjs <out_dir> <shot> ...
 // A shot: <name>=<rod file>@<time>[@yaw,pitch,zoom][@strip]. The Flimsy rod (everyone's starter) goes in hand and its

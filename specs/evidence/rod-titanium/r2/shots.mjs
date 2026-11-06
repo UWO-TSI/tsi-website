@@ -1,5 +1,5 @@
-// rod-titanium round 1 evidence: headless Chromium against a dev server (BASE), muted, never headed.
-// Run under the devserver lock through serve.sh: ONLY=look|stages|clips|... node specs/evidence/rod-titanium/r1/shots.mjs
+// rod-titanium round 2 evidence: headless Chromium against a dev server (BASE), muted, never headed.
+// Run under the devserver lock through serve.sh: ONLY=look|stages|clips|... node specs/evidence/rod-titanium/r2/shots.mjs
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
@@ -49,7 +49,7 @@ if (want("wb")) {
 
 if (want("stages")) {
   // The Titanium where it shows: the workbench's recipe (it isn't on the shop's shelf: epic, crafted), the bag's tools
-  // shelf and the rod open in it, machined (0 fish) and awakened (400), on a desktop and a phone.
+  // shelf and the rod open in it, closed (0 fish) and awakened (400), on a desktop and a phone.
   for (const [dev, w, h] of [["desktop", 1280, 800], ["phone", 390, 844]]) {
     const p = await page(w, h);
     await p.goto(`${BASE}/dev/flat-ui?surface=crafting&crafting=demo&ti=1`);
@@ -60,20 +60,20 @@ if (want("stages")) {
     const recipe = p.getByRole("button", { name: /^Titanium rod/ }).first();
     await recipe.waitFor({ timeout: 60000 }); await recipe.click();
     await p.getByTestId("recipe-detail").waitFor(); await p.waitForTimeout(4500);
-    await p.screenshot({ path: join(OUT, `rti1-workbench-${dev}.png`) });
+    await p.screenshot({ path: join(OUT, `rti2-workbench-${dev}.png`) });
     for (const ti of [0, 400]) {
       await p.goto(`${BASE}/dev/economy?view=bag&ti=${ti}`);
       await p.getByRole("button", { name: /^Titanium rod/ }).waitFor({ timeout: 180000 }); await p.waitForTimeout(1500);
-      await p.screenshot({ path: join(OUT, `rti1-bag-${ti ? "awakened" : "machined"}-shelf-${dev}.png`) });
+      await p.screenshot({ path: join(OUT, `rti2-bag-${ti ? "awakened" : "closed"}-shelf-${dev}.png`) });
       await p.getByRole("button", { name: /^Titanium rod/ }).click(); await p.getByTestId("bag-rod").waitFor(); await p.waitForTimeout(4500);
-      await p.screenshot({ path: join(OUT, `rti1-bag-${ti ? "awakened" : "machined"}-${dev}.png`) });
+      await p.screenshot({ path: join(OUT, `rti2-bag-${ti ? "awakened" : "closed"}-${dev}.png`) });
     }
     await p.context().close();
   }
 }
 
 if (want("cut")) {
-  // The cutscene's first frame (the machined rod) and its reveal (the mecha form), large.
+  // The cutscene's first frame (the closed rod) and its reveal (the mecha form), large.
   const p = await page(1280, 800);
   await p.goto(`${BASE}/dev/economy?view=awakening&rod=rod_titanium&stage=1`);
   await p.locator('[data-testid="rod-awakening"][data-ready]').waitFor({ timeout: 180000 });
@@ -87,7 +87,7 @@ if (want("cards")) {
   // The draws-and-triangles card and the questions card (cards.html), each its own still.
   const p = await page(1000, 800);
   await p.goto(`file://${join(OUT, "cards.html")}`);
-  for (const id of ["budget", "questions"]) await p.locator(`#${id}`).screenshot({ path: join(OUT, `rti1-${id}.png`) });
+  for (const id of ["budget", "questions"]) await p.locator(`#${id}`).screenshot({ path: join(OUT, `rti2-${id}.png`) });
 }
 
 /** Record a page as a CDP screencast from `go` until `until` resolves, made an mp4 with ffmpeg (each frame held until the next came). */
@@ -114,8 +114,8 @@ async function record(name, w, h, go, until) {
 }
 
 if (want("clips")) {
-  // The cutscene: the machined rod to the mecha form (desktop, phone).
-  for (const [name, w, h] of [["rti1-awaken", 1280, 800], ["rti1-awaken-phone", 390, 844]]) {
+  // The cutscene: the closed rod to the mecha form (desktop, phone).
+  for (const [name, w, h] of [["rti2-awaken", 1280, 800], ["rti2-awaken-phone", 390, 844]]) {
     await record(name, w, h, (p) => p.goto(`${BASE}/dev/economy?view=awakening&rod=rod_titanium&stage=1`), async (p) => {
       await p.locator('[data-testid="rod-awakening"][data-ready]').waitFor({ timeout: 180000 });
       const start = Date.now() / 1000 - 0.3;
@@ -124,7 +124,7 @@ if (want("clips")) {
     });
   }
   // Each form turning on the bag's stage, as the game draws it (the pixel finish, the studio room in its metal).
-  for (const [name, ti] of [["rti1-titanium-stage", 0], ["rti1-a1-stage", 400]]) {
+  for (const [name, ti] of [["rti2-titanium-stage", 0], ["rti2-a1-stage", 400]]) {
     await record(name, 900, 760, (p) => bagRod(p, ti), async (p) => { const start = Date.now() / 1000; await p.waitForTimeout(11500); return start; });
   }
 }

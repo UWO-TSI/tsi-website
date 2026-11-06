@@ -88,7 +88,7 @@ function Motion({ move, phase, from, to, children }: { move: Move; phase: Awaken
   const group = useRef<THREE.Group>(null), light = useRef<THREE.PointLight>(null);
   const [live] = useState(() => {
     const css = getComputedStyle(document.documentElement), of = (r: string) => new THREE.Color(css.getPropertyValue(`--ui-rarity-${r}`).trim() || "#000000");
-    return { e: 0, glow: 0, twirl: 0, colour: of(from), from: of(from), to: of(to), lit: new Map<THREE.MeshStandardMaterial, THREE.Color>(), burst: false };
+    return { e: 0, glow: 0, twirl: 0, shut: 1, colour: of(from), from: of(from), to: of(to), lit: new Map<THREE.MeshStandardMaterial, THREE.Color>(), burst: false };
   });
   const glow = useGlowParticles();
   useFrame(({ clock }, dt) => { if (group.current) pose(group.current, light.current, live, glow, move, phase, clock.elapsedTime, Math.min(dt, 0.1)); });
@@ -96,8 +96,13 @@ function Motion({ move, phase, from, to, children }: { move: Move; phase: Awaken
 }
 
 const LATER: AwakenPhase[] = ["burst", "show", "reveal"];
+/**
+ * How shut an awakened model that opens is (its morph target is the form it awakens from, rods.ts `Awakening.model`):
+ * shut, a crack of its light on the pulse, opening at the burst (the Titanium's plates parting round its core).
+ */
+const SHUT: Record<AwakenPhase, number> = { frame: 1, glow: 1, pulse: 0.85, burst: 0, show: 0, reveal: 0 };
 /** Module scope (the react compiler forbids writing through hook values): one frame of Motion. */
-type Live = { e: number; glow: number; twirl: number; colour: THREE.Color; from: THREE.Color; to: THREE.Color; lit: Map<THREE.MeshStandardMaterial, THREE.Color>; burst: boolean };
+type Live = { e: number; glow: number; twirl: number; shut: number; colour: THREE.Color; from: THREE.Color; to: THREE.Color; lit: Map<THREE.MeshStandardMaterial, THREE.Color>; burst: boolean };
 const at = new THREE.Vector3();
 function pose(g: THREE.Group, light: THREE.PointLight | null, live: Live, pool: GlowParticles, move: Move, phase: AwakenPhase, t: number, dt: number) {
   const ease = 1 - Math.exp(-dt * 3), beat = BEAT[phase];
@@ -108,6 +113,8 @@ function pose(g: THREE.Group, light: THREE.PointLight | null, live: Live, pool: 
   live.twirl += p.twirl * dt;
   g.position.set(p.x, p.y, 0);
   g.rotation.set(p.tip, live.twirl, p.roll);
+  live.shut += (SHUT[phase] - live.shut) * (1 - Math.exp(-dt * 2.5));
+  g.traverse(o => { const m = (o as THREE.Mesh).morphTargetInfluences; if (m) m[0] = live.shut; });
   // Under its full colour, so the rod keeps its own colours inside the glow instead of washing out pale.
   glowOn(g, live.colour, 0.7 * (live.glow + p.flash), live.lit);
   if (phase === "burst" && !live.burst) {

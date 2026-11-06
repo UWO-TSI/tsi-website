@@ -491,74 +491,20 @@ def tempest():
     return rod, fx, {"rodFx": "tempest"}, particles("#C9F6FF", "sparkle", every=0.07, size=0.07, rise=0.45)
 
 
-def reserved_slate():
-    """Reserved (David 2026-11-05: "the current titanium rod shuold be something else it look nice ... the current is
-    reserved for smth else"): the Titanium as it was until rod-titanium round 1, out of the roster, for a rod David names
-    later (its reference, epic-titanium-ref.png, goes with it). Armour more than rod: a dark slate blank of stacked hexagonal cups, a
-    chunky hex reel spiked round its rim, and pale lilac claws sweeping off the reel, two down and back, one up. The
-    effect: lilac light in every seam and in the reel's core, hex plates orbiting the blank, a lilac aura, motes."""
-    L = 0.86
-    segs = [(0.06, 0.18, 0.029), (0.18, 0.3, 0.027), (0.3, 0.42, 0.025), (0.42, 0.54, 0.0225), (0.54, 0.65, 0.02), (0.65, 0.76, 0.0175), (0.76, L, 0.015)]
-
-    def b(pc):
-        grip(pc, [(0, -0.112), (0.018, -0.11), (0.0195, -0.09), (0.0195, 0.03), (0.016, 0.06)], n=6, mat=lambda band, q: "Slate" if band == 0 else "Dark")
-        pc.mat = "Slate"                         # the hex pommel
-        lathe(pc, (0, 0, -0.112), [(0.016, 0.0), (0.021, -0.012), (0.0, -0.03)], n=6)
-        path, rad, mats = [], [], []
-        for z0_, z1, r in segs:                  # each segment a cup: narrow at its foot, flaring to a flat rim
-            path += [V((0, 0, z0_)), V((0, 0, z1 - 0.012)), V((0, 0, z1))]
-            rad += [r * 0.74, r, r]
-        loft(pc, path, rad, sides=6, mat=lambda i, k: "Dark" if i % 3 == 2 else "Slate", tip=True, cap=True)
-        # the reel: a chunky hex drum with three spikes and a lilac core
-        pc.mat = "Slate"
-        y, z = -0.062, 0.03
-        pc.tube([(0, -0.016, z), (0, y + 0.016, z)], [0.008, 0.008], sides=4, tip=False)
-        lathe(pc, (0, y, z), [(0.0, -0.024), (0.042, -0.022), (0.05, -0.007), (0.05, 0.007), (0.042, 0.022), (0.0, 0.024)], n=6, axis=(1, 0, 0), phase=math.pi / 6)
-        for a in (0.4, 2.5, 4.6):
-            d = V((0, math.cos(a), math.sin(a)))
-            pc.tube([V((0, y, z)) + d * 0.045, V((0, y, z)) + d * 0.088], [0.009, 0.0], sides=4, tip=False)
-        pc.mat = "Lilac"
-        pc.blob((0.025, y, z), (0.005, 0.018, 0.018), segs=6, rings=4)
-        # the claws: two sweeping down and back, one up and back (the reference's wings)
-        for s in (-1, 1):
-            pts = [V((s * 0.02, y + 0.01, z - 0.01)), V((s * 0.06, y + 0.035, z - 0.07)), V((s * 0.085, y + 0.075, z - 0.14)), V((s * 0.08, y + 0.11, z - 0.21)),
-                   V((s * 0.055, y + 0.12, z - 0.25))]
-            loft(pc, pts, [(0.02, 0.005), (0.028, 0.005), (0.021, 0.0045), (0.012, 0.0035), (0.004, 0.002)], sides=4, tip=True, cap=True, ref=(0, 0, 1))
-        pts = [V((0, y + 0.035, z + 0.015)), V((0, y + 0.09, z + 0.07)), V((0, y + 0.125, z + 0.15)), V((0, y + 0.115, z + 0.22))]
-        loft(pc, pts, [(0.005, 0.018), (0.005, 0.022), (0.004, 0.013), (0.002, 0.004)], sides=4, tip=True, cap=True, ref=(1, 0, 0))
-        line(pc, (0, y, z + 0.02), lambda zz: V((0, 0, zz)), L, "Lilac", ahead=-0.022, tip=V((0, -0.004, L + 0.012)))
-    rod = model("rod-reserved-slate", {"Slate": "#5A6474", "Dark": "#2D323C", "Lilac": "#CDB6EE"}, b)
-
-    def seams(pc):                               # lilac light in every seam, and the reel's core
-        pc.mat = "Glow"
-        for _, z1, r in segs[:-1]:
-            pc.tube([V((math.cos(TAU * k / 6 + math.pi / 6 * 0) * r * 0.96, math.sin(TAU * k / 6) * r * 0.96, z1 + 0.003)) for k in range(6)], [0.0026] * 6, sides=3, closed_loop=True)
-        lathe(pc, (0.029, -0.062, 0.03), [(0.0, 0.0), (0.013, 0.001), (0.0, 0.004)], n=6, axis=(1, 0, 0))
-
-    def plates(pc):                              # hex plates of lilac light orbiting the blank
-        pc.mat = "Glow"
-        for k, (a, z) in enumerate(((0.0, 0.62), (TAU / 3, 0.48), (2 * TAU / 3, 0.34))):
-            c = V((math.cos(a) * 0.085, math.sin(a) * 0.085, z))
-            d = V((math.cos(a), math.sin(a), 0.35)).normalized()
-            loft(pc, [c - d * 0.005, c + d * 0.005], [0.028, 0.028], sides=6, tip=False, cap=True, ref=(0, 0, 1))
-
-    def shell(pc):
-        aura_shell(pc, L + 0.05, r=0.1)
-    fx = [fx_part("Seams", {"Glow": "#B583FF"}, seams, pulse=0.0, flicker=0.35),
-          fx_part("Plates", {"Glow": "#B98CFF"}, plates, pivot=(0, 0, 0.48), spin=0.7, bob=0.015, rate=0.9),
-          fx_part("Aura", {"Aura": "#A884FF"}, shell),
-          halo((0.03, -0.062, 0.03), 0.24, "#D9B8FF"), halo((0, -0.004, L + 0.01), 0.36, "#D9B8FF")]
-    return rod, fx, {"rodFx": "reserved-slate"}, {"spark": "#E2CCFF", "sparkSprite": "glow", "sparkEvery": 0.11, "sparkSize": 0.055, "sparkRise": 0.3}
-
-
-# ================================================================ the Titanium (rod-titanium round 1)
-# David 2026-11-05, epic-titanium-metal-ref.png: "titanium reference, clean like cnc machined rod, thick too and reflects
-# this glow because its metal". Machined titanium: one P_Polished material (modelMaterials.ts MATERIAL_PRESETS: polished metal, so
-# it reflects the stage's studio room and the island's sky), its colour in COLOR_0: the anodised run of the reference,
-# pale steel at the point through straw gold and bronze to blue and violet at the butt. Flat ground facets, crisp edges.
+# ================================================================ the Titanium (rod-titanium round 2)
+# David 2026-11-06 (rti1 review): the old model again, touched up ("the old one looks better just needs a touch up and no
+# purple glow on the unawakened"), in the metal of epic-titanium-metal-ref.png ("the texture of the alumninum needs to
+# shink and have that rainbow glisten, no sparkes") with a simple, closed mecha feel (epic-titanium-awakened-ref.png);
+# "the awakened will be the rod opened with glowing blue energy core". One body built at an opening (0 closed, 1
+# open): stacked hexagonal cups, each two half plates that part along X; a hex reel whose two halves part; claws
+# that spread. The closed rod has no effect; the awakened one is the same mesh opened, with the closed shape as a
+# morph target (the cutscene opens it), and its blue core in its effect.
 ANODISED = [(0.0, "#DCE3E8"), (0.12, "#E3D592"), (0.26, "#C9A443"), (0.4, "#A6873C"), (0.5, "#74508F"), (0.6, "#5246C8"),
             (0.76, "#2C55E0"), (1.0, "#33279C")]
-TI_L = 0.875                                    # the point
+TI_L = 0.86                                     # the tip
+TI_CUPS = [(0.06, 0.195, 0.031), (0.195, 0.33, 0.0285), (0.33, 0.465, 0.026), (0.465, 0.595, 0.0232), (0.595, 0.73, 0.0205), (0.73, TI_L, 0.0178)]
+TI_REEL = V((0, -0.062, 0.03))                  # the reel's hub
+EPS = 2e-5                                      # the halves never touch, closed (kit's weld would join them in one build only)
 
 
 def ramp(stops, u):
@@ -570,39 +516,77 @@ def ramp(stops, u):
     return kit.lin(stops[-1][1])
 
 
-def oct_(z, r):
-    """A station of a machined body: a regular octagon."""
-    return (z, r, r, TAU / 16)
+def ti_part(op, r):
+    """How far a half moves out at opening `op`: about its radius, so the core shows between."""
+    return op * (0.75 * r + 0.005)
 
 
-def dia(z, rx, ry, c=0.2):
-    """A station ground to a diamond: four wide flats meeting at chamfered ridges (c the chamfer's half angle)."""
-    return (z, rx, ry, c)
+def cup_half(pc, z0, z1, r, s, dx, tip=None):
+    """Half of a hexagonal cup (s=+1 the +X side): narrow at its foot, flaring to its rim with a seam band under it,
+    moved `dx` out along X; `tip` a point the last cup rises to. Its outer flats stop short of the parting plane, so
+    where the halves meet, front and back, a dark groove runs down the rod (its cut faces): the plates' panel line."""
+    angs = [math.radians(a) for a in ((-83, -30, 30, 83) if s > 0 else (97, 150, 210, 263))]
+    ox = s * (dx + EPS)
+    prof = [(z0, 0.74 * r, "Body"), (z1 - 0.012, r, "Seam"), (z1, r, None)]
+    rings = [[pc.v(V((ox + math.cos(a) * rr, math.sin(a) * rr, z))) for a in angs] for z, rr, _ in prof]
+    c = V((ox, 0, (z0 + z1) / 2))
+    for (_, _, m), lo, hi in zip(prof, rings, rings[1:]):
+        pc.mat = m
+        for k in range(3):
+            pc.f([lo[k], lo[k + 1], hi[k + 1], hi[k]], c)
+    pc.mat = "Body"
+    pc.f(rings[0], c)                           # its foot
+    top = rings[-1]
+    if tip:
+        apex = pc.v(V((ox, 0, tip)))
+        for k in range(3):
+            pc.f([top[k], top[k + 1], apex], c)
+    else:
+        pc.f(top, c)                            # its rim
+    pc.mat = "Cut"
+    pc.f([rings[0][0], rings[1][0], rings[2][0]] + ([apex] if tip else []) + [rings[2][3], rings[1][3], rings[0][3]], c + V((s * 0.1, 0, 0)))
 
 
-def machined(pc, stations, tip):
-    """A machined body up +Z through (z, rx, ry, c) stations, eight points each on an ellipse (the faces between
-    them alternating ground flats and chamfers), flat face to flat face, a flat foot, every face of the last run to
-    the ground point `tip`."""
-    rings = [[pc.v(V((math.cos(a) * rx, math.sin(a) * ry, z))) for k in range(4) for a in (k * TAU / 4 - c, k * TAU / 4 + c)]
-             for z, rx, ry, c in stations]
-    for i in range(len(rings) - 1):
-        mid = V((0, 0, (stations[i][0] + stations[i + 1][0]) / 2))
-        for k in range(8):
-            pc.f([rings[i][k], rings[i][(k + 1) % 8], rings[i + 1][(k + 1) % 8], rings[i + 1][k]], mid)
-    foot, end = pc.v(V((0, 0, stations[0][0]))), pc.v(V(tip))
-    for k in range(8):
-        pc.f([rings[0][(k + 1) % 8], rings[0][k], foot], V((0, 0, stations[0][0] + 0.02)))
-        pc.f([rings[-1][k], rings[-1][(k + 1) % 8], end], V((0, 0, stations[-1][0] - 0.01)))
+def turned(pts, root, axis, ang):
+    from mathutils import Matrix
+    m = Matrix.Rotation(ang, 3, axis)
+    return [V(root) + m @ (V(p) - V(root)) for p in pts]
 
 
-FINISHES = {"P_Polished": (0.85, 0.14), "P_Paint": (0.0, 0.45)}   # metallic, roughness (modelMaterials.ts MATERIAL_PRESETS)
+def ti_body(op):
+    def b(pc):
+        grip(pc, [(0, -0.112), (0.018, -0.11), (0.0195, -0.09), (0.0195, 0.03), (0.016, 0.06)], n=6, mat=lambda band, q: "Pommel" if band == 0 else "Grip")
+        pc.mat = "Pommel"                        # the hex pommel
+        lathe(pc, (0, 0, -0.112), [(0.016, 0.0), (0.021, -0.012), (0.0, -0.03)], n=6)
+        for i, (z0, z1, r) in enumerate(TI_CUPS):
+            for s in (-1, 1):
+                cup_half(pc, z0, z1, r, s, ti_part(op, r), tip=TI_L + 0.032 if i == len(TI_CUPS) - 1 else None)
+        y, z = TI_REEL.y, TI_REEL.z
+        pc.mat = "Reel"
+        pc.tube([(0, -0.016, z), (0, y + 0.016, z)], [0.008, 0.008], sides=4, tip=False)
+        d = op * 0.016                           # the reel's halves part along its axle
+        for s in (-1, 1):
+            lathe(pc, (s * (d + EPS), y, z), [(0.0, 0.0), (0.05, 0.0), (0.05, 0.007), (0.042, 0.022), (0.0, 0.024)], n=6, axis=(s, 0, 0), phase=math.pi / 6)
+        for a in (0.4, 2.5, 4.6):                # three spikes round its rim, on its outer half
+            dd = V((0, math.cos(a), math.sin(a)))
+            pc.tube([V((d + 0.012, y, z)) + dd * 0.045, V((d + 0.012, y, z)) + dd * 0.088], [0.009, 0.0], sides=4, tip=False)
+        pc.mat = "Claw"                          # the claws: two down and back, one up and back; open, they spread
+        for s in (-1, 1):
+            root = V((s * 0.02, y + 0.01, z - 0.01))
+            pts = [root, V((s * 0.065, y + 0.04, z - 0.08)), V((s * 0.085, y + 0.09, z - 0.17)), V((s * 0.06, y + 0.12, z - 0.25))]
+            loft(pc, turned(pts, root, (0, 1, 0), -s * 0.32 * op), [(0.021, 0.005), (0.027, 0.005), (0.016, 0.004), (0.004, 0.002)], sides=4, tip=True, cap=True, ref=(0, 0, 1))
+        root = V((0, y + 0.035, z + 0.015))
+        pts = [root, V((0, y + 0.09, z + 0.07)), V((0, y + 0.125, z + 0.15)), V((0, y + 0.115, z + 0.22))]
+        loft(pc, turned(pts, root, (1, 0, 0), -0.3 * op), [(0.005, 0.018), (0.005, 0.022), (0.004, 0.013), (0.002, 0.004)], sides=4, tip=True, cap=True, ref=(1, 0, 0))
+        line(pc, (0, y, z + 0.02), lambda zz: V((0, 0, zz)), TI_L, "Line", ahead=-0.022, tip=V((0, -0.004, TI_L + 0.03)))
+    return b
 
 
-def metal(ob, colour, deg=14.0, finish="P_Polished"):
-    """Machined metal: each corner's COLOR_0 from `colour(position, part, normal)` (the part a build-time material name), then
-    one preset material for the whole rod (one draw in a hand: `P_Polished`, or `P_Paint` for painted armour), and
-    every edge sharper than `deg` a hard edge."""
+def metal(ob, colour, deg=14.0):
+    """Polished anodised metal: each corner's COLOR_0 from `colour(position, part, normal)` (the part a build-time
+    material name), then one `P_Polished` material for the whole rod (one draw in a hand) with a thin film over it
+    (glTF KHR_materials_iridescence: the rainbow glisten slides over it as it turns), and every edge sharper than
+    `deg` a hard edge."""
     import bmesh
     me = ob.data
     col, tags = me.color_attributes["Color"], [m.name.split("_")[-1] for m in me.materials]
@@ -612,14 +596,24 @@ def metal(ob, colour, deg=14.0, finish="P_Polished"):
         poly.material_index = 0
     while len(me.materials) > 1:
         me.materials.pop()
-    shared = bpy.data.materials.get(finish)                # one material per finish for the rods made in this run
+    shared = bpy.data.materials.get("P_Polished")          # one material for the rods made in this run
     if shared:
         me.materials[0] = shared
     else:
-        me.materials[0].name = finish
-        bs = next(n for n in me.materials[0].node_tree.nodes if n.type == "BSDF_PRINCIPLED")
+        mat = me.materials[0]
+        mat.name = "P_Polished"
+        bs = next(n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
         bs.inputs["Base Color"].default_value = (1, 1, 1, 1)
-        bs.inputs["Metallic"].default_value, bs.inputs["Roughness"].default_value = FINISHES[finish]
+        bs.inputs["Metallic"].default_value, bs.inputs["Roughness"].default_value = 0.6, 0.16    # modelMaterials.ts polished
+        bs.inputs["Thin Film Thickness"].default_value, bs.inputs["Thin Film IOR"].default_value = 180.0, 1.8
+        # The exporter reads the film's amount off this group; it finds it only in the material as authored, which it
+        # keeps (instead of an inlined copy that drops the group) when the group has an Occlusion input (Blender 5.2).
+        ng = bpy.data.node_groups.new("glTF Material Output", "ShaderNodeTree")
+        for name in ("Iridescence Factor", "Iridescence Thickness Minimum", "Occlusion"):
+            ng.interface.new_socket(name, in_out="INPUT", socket_type="NodeSocketFloat")
+        out = mat.node_tree.nodes.new("ShaderNodeGroup")
+        out.node_tree = ng
+        out.inputs["Iridescence Factor"].default_value, out.inputs["Iridescence Thickness Minimum"].default_value = 0.5, 100.0
     bm = bmesh.new()
     bm.from_mesh(me)
     for e in bm.edges:
@@ -629,178 +623,70 @@ def metal(ob, colour, deg=14.0, finish="P_Polished"):
     return ob
 
 
-# Each wide flat of a ground body, by the quarter it faces: its shift along the anodised run and its brightness. Ground
-# titanium's oxide differs flat to flat, as in the reference: one flat bright straw and steel, the next deep blue.
-FLATS = ((0.0, 1.1), (0.22, 0.55), (0.08, 1.0), (0.26, 0.62))
+def ti_colour(p, part, n):
+    """The anodised run, pale steel and straw at the tip through gold and bronze to violet and blue at the butt; each
+    hex flat its own shift along it, as ground titanium's oxide differs flat to flat; the seams and cut faces dark."""
+    u = max(0.0, (TI_L - p.z) / (TI_L + 0.142)) ** 1.3
+    if part == "Line":
+        return kit.lin("#E6ECF0")
+    if part == "Cut":
+        return kit.lin("#1A1E2A")
+    if part in ("Reel", "Claw"):                 # heat-coloured from the hub out, as anodised bolts are
+        return ramp(ANODISED, 1.0 - 0.8 * min(1.0, (p - TI_REEL).length / (0.06 if part == "Reel" else 0.27)))
+    if part == "Grip":
+        return tuple(0.5 * x for x in ramp(ANODISED, 0.95))
+    if part == "Pommel":
+        return ramp(ANODISED, 0.8)
+    flat = math.cos(3 * math.atan2(n.y, n.x)) if abs(n.z) < 0.6 else 0.0
+    c = tuple(min(1.0, x * (1.0 + 0.14 * flat)) for x in ramp(ANODISED, u + 0.07 * flat))
+    return tuple(0.28 * x for x in c) if part == "Seam" else c
 
 
-def ground(u, n, lift=0.5):
-    """A machined body's colour at `u` along the anodised run (0 the point, 1 the butt) on a face of normal `n`: each
-    flat its own (FLATS), the chamfers between them polished brighter, a crisp line of light down every edge."""
-    c = ramp(ANODISED, u)
-    if abs(n.z) >= 0.6:
-        return c
-    a = math.degrees(math.atan2(n.y, n.x)) % 360.0
-    if min(a % 90.0, 90.0 - a % 90.0) < 12.0:
-        return tuple(x + (1.0 - x) * lift for x in c)
-    shift, gain = FLATS[int(a // 90.0) % 4]
-    k = min(1.0, u * 3.0)                                    # the point stays pale steel on every flat, as the reference's
-    return tuple(min(1.0, x * (1.0 + (gain - 1.0) * k)) for x in ramp(ANODISED, u + shift * k))
-
-
-def ti_reel_colour(c, r):
-    """The reel heat-coloured from its hub out, as anodised bolts are: violet at the hub, bronze and straw at the rim."""
-    return lambda p: ramp(ANODISED, 1.0 - 0.78 * min(1.0, math.hypot(p.y - c[1], p.z - c[2]) / r))
+TI_MATS = {k: "#FFFFFF" for k in ("Body", "Seam", "Cut", "Grip", "Pommel", "Reel", "Claw", "Line")}
 
 
 def titanium():
-    """Epic (David 2026-11-05: "make a new model of the titanium thats closer related", epic-titanium-metal-ref.png).
-    A thick machined bar: a chamfered octagonal pommel and grip with a machined groove, a collar for the reel seat, a
-    blank ground to a diamond that tapers and flattens into a ground point, a ferrule ring where its two halves meet, a
-    machined reel. Its effect is quiet (it's metal, not magic): a glint at the point and a few glints off it."""
-    y, z, r = -0.105, 0.05, 0.045              # the reel: hub, height, rim
-    st = [oct_(-0.126, 0.027), oct_(-0.12, 0.039), oct_(-0.1, 0.039), oct_(-0.095, 0.033),               # the pommel, chamfered
-          oct_(-0.09, 0.0345), oct_(-0.052, 0.036), oct_(-0.048, 0.031), oct_(-0.040, 0.031), oct_(-0.036, 0.036),
-          oct_(-0.004, 0.036), oct_(0.0, 0.031), oct_(0.008, 0.031), oct_(0.012, 0.036),                     # two machined grooves
-          oct_(0.020, 0.036), oct_(0.026, 0.047), oct_(0.076, 0.047), oct_(0.084, 0.04),                     # the reel seat collar
-          dia(0.09, 0.062, 0.046), dia(0.40, 0.058, 0.043),                                                  # thick bar stock, ground
-          oct_(0.405, 0.068), oct_(0.423, 0.068), dia(0.428, 0.057, 0.042),                                  # the ferrule ring
-          dia(0.62, 0.054, 0.039), dia(0.70, 0.05, 0.021)]                                                   # ground flat into a broad point
-
-    def b(pc):
-        pc.mat = "Body"
-        machined(pc, st, (0, 0, TI_L))
-        pc.mat = "Reel"
-        pc.tube([(0, -0.03, z), (0, y + 0.012, z)], [0.009, 0.009], sides=4, tip=False)
-        lathe(pc, (0, y, z), [(0.0, -0.017), (r * 0.82, -0.017), (r, -0.011), (r * 0.86, -0.005), (r * 0.86, 0.005), (r, 0.011), (r * 0.82, 0.017), (0.0, 0.017)],
-              n=10, axis=(1, 0, 0), phase=math.pi / 10)
-        pc.tube([(0.018, y, z), (0.03, y + 0.004, z - 0.02)], [(0.0045, 0.0025), (0.0045, 0.0025)], sides=4, tip=False)   # the crank, flat
-        lathe(pc, (0.03, y + 0.004, z - 0.02), [(0.0, -0.0), (0.0065, 0.002), (0.0065, 0.011), (0.0, 0.013)], n=6, axis=(1, 0, 0))
-        line(pc, (0, y, z + r * 0.86), lambda zz: V((0, 0, zz)), TI_L, "Line", ahead=-0.056, zs=(0.42,), tip=V((0, -0.012, 0.84)))
-    rod = model("rod-titanium", {"Body": "#FFFFFF", "Reel": "#FFFFFF", "Line": "#FFFFFF"}, b)
-    reel_col = ti_reel_colour((0, y, z), r)
-    metal(rod, lambda p, part, n: kit.lin("#E6ECF0") if part == "Line" else reel_col(p) if part == "Reel" else ground(((TI_L - p.z) / (TI_L + 0.126)) ** 1.6, n))
-
-    tip = V((0, 0, TI_L))
-
-    def glint(pc):                               # a glint on the point: six thin rays, the long ones up and across
-        pc.mat = "Light"
-        for d, n in ((V((0, 0, 1)), 0.05), (V((0, 0, -1)), 0.03), (V((1, 0, 0)), 0.035), (V((-1, 0, 0)), 0.035), (V((0, 1, 0)), 0.022), (V((0, -1, 0)), 0.022)):
-            pc.tube([tip, tip + d * n * 0.3, tip + d * n], [0.0035, 0.0022, 0.0], sides=3, tip=False)
-    fx = [light("Glint", "#F4EAC8", glint, pivot=tuple(tip), pulse=0.35)]
-    return rod, fx, {"rodFx": "titanium"}, particles("#FFF2D2", "sparkle", every=0.5, size=0.04, rise=0.12)
-
-
-def inset(outline, d):
-    """A convex outline (y, z) moved in by d (a plate's face inside its chamfer)."""
-    pts = [V(p) for p in outline]
-    out = []
-    for i, p in enumerate(pts):
-        e0, e1 = (p - pts[i - 1]).normalized(), (pts[(i + 1) % len(pts)] - p).normalized()
-        n0, n1 = V((-e0.y, e0.x)), V((-e1.y, e1.x))
-        bis = (n0 + n1).normalized()
-        out.append(p + bis * d / max(0.25, bis.dot(n0)))
-    return out
-
-
-def ccw(outline):
-    area = sum(a[0] * b[1] - b[0] * a[1] for a, b in zip(outline, outline[1:] + outline[:1]))
-    return list(outline) if area > 0 else list(reversed(outline))
-
-
-def plate(pc, outline, t, ch, y0=0.0, tags=("Edge", "Wall", "Face")):
-    """A hard-edged armour plate: a convex outline (x, z) in the rod's broad plane (the one the follow camera and the
-    icon see), `t` thick front to back about y0, every edge chamfered `ch`; `tags` its chamfers, the walls between
-    them (its panel lines) and its two faces."""
-    outline = ccw(outline)
-    inner = inset(outline, ch)
-    lay = lambda pts, y: [pc.v(V((p[0], y, p[1]))) for p in pts]
-    a, b_, c_, d_ = lay(inner, y0 - t / 2), lay(outline, y0 - t / 2 + ch), lay(outline, y0 + t / 2 - ch), lay(inner, y0 + t / 2)
-    mid = V((sum(p[0] for p in outline) / len(outline), y0, sum(p[1] for p in outline) / len(outline)))
-    n = len(outline)
-    for ring0, ring1, m in ((a, b_, tags[0]), (b_, c_, tags[1]), (c_, d_, tags[0])):
-        pc.mat = m
-        for k in range(n):
-            pc.f([ring0[k], ring0[(k + 1) % n], ring1[(k + 1) % n], ring1[k]], mid)
-    pc.mat = tags[2]
-    pc.f(list(reversed(a)), mid)
-    pc.f(d_, mid)
-
-
-# The awakened Titanium's plates, (x, z) in its broad plane, thickness, chamfer (and y, off the middle): the long blade
-# down its right, two stepped plates on its left, cheeks over the seat front and back, a fin sweeping down off it
-# (epic-titanium-awakened-ref.png, loosely, its profile turned to face the camera).
-A1_PLATES = [([(0.008, 0.10), (0.06, 0.15), (0.072, 0.35), (0.044, 0.395), (0.008, 0.38)], 0.026, 0.005),            # the right, stepped
-             ([(0.008, 0.39), (0.054, 0.42), (0.06, 0.62), (0.036, 0.76), (0.008, 0.835)], 0.02, 0.0045),
-             ([(-0.008, 0.11), (-0.056, 0.17), (-0.064, 0.30), (-0.036, 0.37), (-0.008, 0.35)], 0.03, 0.005),     # the left
-             ([(-0.007, 0.43), (-0.044, 0.47), (-0.048, 0.6), (-0.024, 0.67), (-0.007, 0.64)], 0.024, 0.0045),
-             ([(-0.028, 0.03), (0.028, 0.03), (0.03, 0.1), (0.016, 0.3), (-0.026, 0.1)], 0.008, 0.0025, 0.026),     # its cheeks
-             ([(-0.028, 0.03), (0.028, 0.03), (0.03, 0.1), (0.016, 0.3), (-0.026, 0.1)], 0.008, 0.0025, -0.026),
-             ([(0.012, 0.12), (0.04, 0.11), (0.092, -0.03), (0.06, 0.03), (0.012, 0.08)], 0.009, 0.0025)]          # the fin
+    """Epic, the Titanium (closed). Stacked hexagonal cups of polished anodised titanium, a hex reel with three spikes,
+    three claws off the reel. Metal, not magic: no effect."""
+    return metal(model("rod-titanium", TI_MATS, ti_body(0.0)), ti_colour)
 
 
 def titanium_a1():
-    """The Titanium awakened (David 2026-11-05, epic-titanium-awakened-ref.png: "like this type of hard edge looks like
-    this reference loosely as a rod and the awakenign will have the blue energy thing built in should be very meccha
-    looking"): the machined rod armoured. Stepped hard-edged plates along it (pale painted armour, its chamfers and
-    walls dark: the panel lines), a ring hub where the reel was, a guard bar round the hand. Its energy is all in the effect: cyan
-    lines in the plates' panels (glow, flicker), a core in the hub that swells (glow, pulse), solid energy blades under
-    the front plates (glow, pulse), and motes. No aura: the plates stay solid, never washed pale."""
-    y, z = -0.06, 0.05                          # the ring hub, on the front of the seat's cheek, facing the camera
-    st = [oct_(-0.124, 0.02), oct_(-0.103, 0.025), oct_(-0.099, 0.0205),
-          oct_(-0.093, 0.0215), oct_(0.020, 0.0225), oct_(0.025, 0.0275), oct_(0.082, 0.0275), oct_(0.088, 0.0215),
-          dia(0.094, 0.019, 0.017), dia(0.70, 0.0115, 0.0095), dia(0.795, 0.0095, 0.0056)]
+    """The Titanium awakened: the same rod opened. Each cup's halves part, the reel's halves part, the claws spread; a
+    blue energy core shows between (glow, pulse), hexagons of its light ring the core, turning (glow, motion). Its
+    mesh keeps the closed rod as the morph target `Closed`, so the awakening opens it."""
+    shut = model("rod-titanium-shut", TI_MATS, ti_body(0.0))
+    rod = metal(model("rod-titanium-a1", TI_MATS, ti_body(1.0)), ti_colour)
+    assert len(shut.data.vertices) == len(rod.data.vertices), "the closed and open bodies must match vertex for vertex"
+    rod.shape_key_add(name="Basis")
+    key = rod.shape_key_add(name="Closed")
+    key.value = 0.0                              # open as it ships (glTF weights)
+    for kv, v in zip(key.data, shut.data.vertices):
+        kv.co = v.co
+    bpy.data.objects.remove(shut)
 
-    def b(pc):
-        pc.mat = "Body"
-        machined(pc, st, (0, 0, TI_L))
-        for outline, t, ch, *x0 in A1_PLATES:
-            plate(pc, outline, t, ch, *x0)
-        pc.mat = "Hub"                           # the ring hub, hard-edged, round the energy core
-        pc.tube([(0, -0.016, z), (0, y + 0.006, z)], [0.008, 0.008], sides=4, tip=False)
-        lathe(pc, (0, y, z), [(0.026, -0.011), (0.042, -0.013), (0.05, -0.007), (0.05, 0.007), (0.042, 0.013), (0.026, 0.011), (0.026, -0.011)],
-              n=8, axis=(0, 1, 0), phase=math.pi / 8)
-        pc.mat = "Wall"                          # the knuckle guard, from the seat round the hand to the pommel
-        loft(pc, [V((-0.02, -0.004, 0.024)), V((-0.058, -0.004, -0.028)), V((-0.052, -0.004, -0.1)), V((-0.018, -0.004, -0.122))],
-             [(0.0085, 0.006)] * 4, sides=4, tip=False, cap=True, phase=math.pi / 4, ref=(0, 1, 0))
-        line(pc, (0, y, z + 0.05), lambda zz: V((0, 0, zz)), TI_L, "Line", ahead=-0.024, zs=(0.42,), tip=V((0, -0.006, 0.81)))
-    rod = model("rod-titanium-a1", {k: "#FFFFFF" for k in ("Body", "Edge", "Wall", "Face", "Hub", "Line")}, b)
-    # Pale plates outlined dark (their chamfers and walls: the panel lines), so they hold on the shop's white and in the dark.
-    paint = {"Edge": kit.lin("#283044"), "Face": kit.lin("#98A1B1"), "Wall": kit.lin("#3A4358"), "Hub": kit.lin("#343C50"), "Line": kit.lin("#E6ECF0")}
-    # Painted armour (solid grey and white on any stage, never a mirror of the room), over the anodised core.
-    metal(rod, lambda p, part, n: paint.get(part) or tuple(0.5 * c for c in ramp(ANODISED, 0.55 + 0.45 * (TI_L - p.z) / (TI_L + 0.126))), finish="P_Paint")
-
-    def energy(pc):                              # cyan lines in each plate's panel, on both faces, and the blade's edge
+    def core(pc):                                # the core up the blank and the reel's core between its halves
         pc.mat = "Glow"
-        for (_, t, *_), panel in zip(A1_PLATES, (((0.044, 0.16), (0.054, 0.33)), ((0.04, 0.43), (0.045, 0.61), (0.026, 0.73)),
-                                               ((-0.04, 0.18), (-0.048, 0.29), (-0.029, 0.345)), ((-0.032, 0.48), (-0.035, 0.6), (-0.018, 0.65)))):
-            for s in (-1, 1):
-                pc.tube([V((px, s * (t / 2 + 0.0009), pz)) for px, pz in panel], [0.0032] * len(panel), sides=3, tip=False)
-        for s in (-1, 1):                        # and down each cheek
-            pc.tube([V((px, s * 0.0309, pz)) for px, pz in ((-0.016, 0.05), (0.018, 0.05), (0.02, 0.1), (0.01, 0.25))], [0.0022] * 4, sides=3, tip=False)
-        pc.tube([V((px, 0, pz)) for px, pz in ((0.0555, 0.42), (0.0615, 0.62), (0.0375, 0.76), (0.0095, 0.835))], [0.0024] * 4, sides=3, tip=True)
+        loft(pc, [V((0, 0, z)) for z in (0.06, 0.33, 0.6, TI_L)], [0.016, 0.0125, 0.0095, 0.0075], sides=6, phase=math.pi / 2, tip=True, cap=True)
+        lathe(pc, TI_REEL, [(0.0, -0.012), (0.04, -0.01), (0.04, 0.01), (0.0, 0.012)], n=6, axis=(1, 0, 0), phase=math.pi / 6)
 
-    def core(pc):                                # the hub's core
+    def rings(pc):                               # hexagons of light round the core, one in each cup, turning
         pc.mat = "Glow"
-        lathe(pc, (0, y, z), [(0.0, -0.009), (0.02, -0.007), (0.024, 0.0), (0.02, 0.007), (0.0, 0.009)], n=8, axis=(0, 1, 0), phase=math.pi / 8)
-
-    def blades(pc):                              # energy blades under the front plates, hard-edged, solid (an additive
-        pc.mat = "Glow"                          # light vanishes on the shop's white and washes the plates)
-        for outline in ([(-0.056, 0.19), (-0.095, 0.22), (-0.105, 0.34), (-0.062, 0.31)], [(-0.044, 0.48), (-0.076, 0.5), (-0.083, 0.62), (-0.048, 0.6)]):
-            plate(pc, outline, 0.003, 0.0008, tags=("Glow",) * 3)
-    fx = [glow("Energy", "#3ED8FF", energy, flicker=0.2),
-          glow("Core", "#A6F4FF", core, pivot=(0, y, z), pulse=0.14),
-          glow("Blades", "#2FC4FF", blades, pivot=(-0.06, 0, 0.4), pulse=0.05)]
-    return rod, fx, {"rodFx": "titanium-a1"}, particles("#9EEBFF", "sparkle", every=0.12, size=0.05, rise=0.3)
+        for z0, z1, r in TI_CUPS:
+            pc.tube([V((math.cos(TAU * k / 6 + math.pi / 2) * r * 0.62, math.sin(TAU * k / 6 + math.pi / 2) * r * 0.62, (z0 + z1) / 2)) for k in range(6)],
+                    [0.0032] * 6, sides=3, closed_loop=True)
+    fx = [glow("Core", "#2FA8FF", core, pivot=(0, 0, 0.46), pulse=0.04),
+          glow("Rings", "#9BEFFF", rings, spin=1.1)]
+    return rod, fx, {"rodFx": "titanium-a1", "fxRoom": 0.0}, {}   # its core is inside it: it takes the stage as the closed rod does
 
 
 # ================================================================ build
 ROD_FILES = {"carrot": "rod-carrot", "precision": "rod-precision", "training": "rod-training", "cedar": "rod-2", "glass": "rod-3",
              "riptide": "rod-riptide", "tidewarden": "rod-5", "tempest": "rod-tempest", "titanium": "rod-titanium",
-             "titanium-a1": "rod-titanium-a1", "reserved-slate": "rod-reserved-slate"}
+             "titanium-a1": "rod-titanium-a1"}
 BUILD = {"carrot": carrot, "precision": precision, "training": training, "cedar": cedar, "glass": glass,
          "riptide": riptide, "tidewarden": tidewarden, "tempest": tempest, "titanium": titanium,
-         "titanium-a1": titanium_a1, "reserved-slate": reserved_slate}
+         "titanium-a1": titanium_a1}
 only = ARGS[ARGS.index("only") + 1].split(",") if "only" in ARGS else list(BUILD)
 for name in only:
     out = BUILD[name]()

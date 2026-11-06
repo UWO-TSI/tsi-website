@@ -97,7 +97,8 @@ export interface Passive {
  * An awakening (David 2026-11-04: "no levels, only awakenings for rods"): at `at` fish landed with the rod its stats
  * become `base`, it may hook rarer fish (`hooks`) and take a new passive. `looks` is the rung its stats now match, for
  * the reveal's outline. `model` is the awakened rod's own model (art/pipeline/build_rods.py), which it wears from then
- * on wherever it shows (`awakenedLook`); without one it keeps the model it was bought with.
+ * on wherever it shows (`awakenedLook`); without one it keeps the model it was bought with. A model whose first morph
+ * target is the form it awakens from opens out of it in the cutscene (RodAwakening `SHUT`).
  */
 export interface Awakening { at: number; base: Stats; looks: Rarity; hooks?: Rarity; passive?: Passive; model?: string }
 
