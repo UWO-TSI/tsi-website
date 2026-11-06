@@ -33,6 +33,17 @@ describe("the eraser", () => {
     expect(ed.objects.find(o => o.id === "a")?.gone).toBeUndefined();
   });
 
+  it("takes one object from a held click, not the ones behind it", () => {
+    reset();
+    ed.objects.push(prop("a2", 10.2, 10.1));
+    aim(t, 10, 10);
+    beginStroke(0, false);
+    for (let i = 0; i < 5; i++) strokeFrame(0.016);
+    endStroke();
+    expect(ed.objects.filter(o => !o.gone).map(o => o.id)).toEqual(expect.arrayContaining(["b", "c"]));
+    expect(ed.objects.filter(o => !o.gone && o.id.startsWith("a"))).toHaveLength(1);
+  });
+
   it("erases everything a held drag passes over as one undo, and a placed object just goes", () => {
     reset();
     beginStroke(0, false);

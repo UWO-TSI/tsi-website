@@ -54,8 +54,8 @@ const hover = page => page.evaluate(() => { const W = window.__worldEditor; retu
 // one Ctrl+Z brings the whole drag back.
 const { ctx, page } = await newPage(true);
 await openEditor(page);
-// The prop cluster on the deck by the tackle shop: barrels, crates, a cart, a net (market-6, -7, -12, -14, -19, -20 in world.json; the camera is inland of it).
-const from = [58.5, 3.4, 51.5], over = [66.9, 1.3, 55.0];
+// The prop cluster on the deck by the tackle shop: barrels, crates, a cart, a net (market-6, -7, -12, -14, -19, -20 in world.json, seen from well above so only what the crosshair is over is in its way).
+const from = [62.5, 7, 49.5], over = [66.9, 1.3, 55.0];
 await aim(page, from, over);
 await page.evaluate(() => { const W = window.__worldEditor; W.selectSlot(6); });
 await page.waitForTimeout(2500);

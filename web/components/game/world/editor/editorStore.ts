@@ -164,7 +164,7 @@ export function strokeFrame(dt: number, first = false): void {
   if (!s || !hit || !t) return;
   const it = s.item;
   if (it.type === "select" && s.button === 2) { moveSelected(hit); return; }
-  if (it.type === "erase") { erase(); return; }
+  if (it.type === "erase") { erase(s, hit); return; }
   if (it.type === "road" && s.button === 2 && !first) {
     // Dragging: lay the road on in 2-unit segments.
     if (ed.road && Math.hypot(hit.x - ed.road.x, hit.z - ed.road.z) >= 2) roadTo(hit, it.paint);
@@ -330,7 +330,11 @@ function placeOrRemove(it: Extract<EditorItem, { type: "place" }>, dir: 1 | -1, 
 export const objectUnderAim = (reach?: number) => objectOnRay() ?? (ed.hit ? objectAt(ed.hit.x, ed.hit.z, reach) : null);
 
 /** The eraser's work at the crosshair: whatever it is over goes (the generator's stays as a pinned `gone`); the stroke's one undo brings them all back. */
-function erase() {
+function erase(s: Stroke, hit: RayHit) {
+  // Held still it takes one (a click is a few frames long): only moving the aim on takes the next.
+  const aim = `${Math.round(hit.x * 4)}:${Math.round(hit.z * 4)}:${Math.round(ed.ray.dx * 50)}:${Math.round(ed.ray.dy * 50)}`;
+  if (aim === s.cell) return;
+  s.cell = aim;
   const o = objectUnderAim(0.8);
   if (!o) return;
   ed.history.objects(ed.objects);

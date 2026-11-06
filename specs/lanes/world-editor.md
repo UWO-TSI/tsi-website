@@ -40,6 +40,12 @@ Build (a working first version plus one pitch; nothing ships until David marks i
 
 ## Status
 
+**Round 2 built (merge-ready; the head SHA is in the report).** feat/game-default-island is merged (fishing-depth r10: the new fish-board model and sizes, hand lanterns on the piles, SellBinFish, seasons). Conflicts resolved in wharf.ts (upstream's BOARD sizes and MARKET_BOARDS, plus `BoardSpot.lift`, `boardsOf`), DefaultIslandWorld.tsx (boardsOf and lift with upstream's season and SellBinFish), wharf.test.ts and world.json. The two `board` rows (catch 65.59, 26.09, yaw 0.7996; tasks 60.61, 28.26, yaw 3.889) were written from marketBoardsOf's values; no other object was moved and no generator rerun (it would rewrite the terrain). wharf.test passes. EditorObjects' board moment takes a `season` now.
+**The eraser** (hotbar slot 7, palette group Select, item "Eraser"; hotbar storage key bumped to v2 so a saved bar picks it up): a click deletes the object the crosshair passes through (else the one on the ground under it, within 0.8), and a held drag erases each object the aim moves over (held still it takes one, so a click doesn't peel what is behind). It uses the existing `without` (the generator's objects stay as a pinned `gone`, David's own just go) and the stroke's one history snapshot, so one Ctrl+Z restores a whole drag. The object it is about to erase shows the selection box. Code: editorStore.ts (`erase`, `objectUnderAim`), editorTools.ts (`ERASE`), EditorScene.tsx, WorldEditor.tsx; test components/game/world/editor/eraser.test.ts. Evidence: specs/evidence/world-editor/r2/ (we2-erase.mp4 and poster, shots we2-01 to we2-04, clips.mjs). The demo erases are not saved (no layout change).
+Gates: vitest 3780 passed and 4 skipped (403 files), default and with NEXT_PUBLIC_GAME_WORLD=new (both run before the click-takes-one fix; the editor tests were rerun after it); tsc clean; eslint clean.
+
+Round 1 (below) was approved by David in round 2's review.
+
 Round 1 built on game/world-editor (the commit "[build] world-editor r1: evidence"). Gates: vitest 3761 passed and 4 skipped (398 files); tsc clean; eslint clean on the 16 touched ts and tsx files. Not reviewed yet; nothing ships.
 
 **What was already there.** `/lab/world` (the lab's top bar, "World editor"; specs/world-editor.md) is already a creative-mode editor. It has fly, the hotbar and palette, select, move, rotate, scale, delete, place, undo and redo, Ctrl+S save to web/data/world through the dev route `/api/lab/world`, and P to walk it in the game. Round 1 extends it; there is no second editor. `/lab/map` is the old grid painter, and it doesn't edit the member world.
@@ -89,8 +95,8 @@ Round 1 built on game/world-editor (the commit "[build] world-editor r1: evidenc
 
 ## Next
 
-1. David reviews round 1.
-2. When game/fishing-depth merges: its MARKET_BOARDS change moves the boards only through their two `board` rows in world.json. wharf.test ("reads the boards from the world's board objects") fails until they are rewritten (rerun generate-world, or put marketBoardsOf's values in the two rows).
+1. David reviews round 2 (the eraser).
+2. Done: the fishing-depth merge and the two board rows (round 2).
 3. If David picks (b): the draft migration, the admin route, the in-game Build toggle, the bake script.
 
 ## Tools and gotchas
