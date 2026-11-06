@@ -152,12 +152,12 @@ export const RODS: readonly RodTier[] = [
   rod(5, "rod_tidewarden", "Tidewarden rod", "epic", "crafted", TIDEWARDEN, {
     passive: passive("Tide keeper", "+10 line strength in the sea.", { strength: 10 }, { water: ["sea"] }),
     awakenings: [{ at: AWAKEN_AT, base: up(TIDEWARDEN, { bite: 16, luck: 12, strength: 4, lure: 8, reel: 6 }), looks: "epic",
-      passive: passive("Tide keeper", "+10 line strength and +10 luck in the sea.", { strength: 10, luck: 10 }, { water: ["sea"] }) }] }),
+      passive: passive("Tide keeper", "+10 line strength and +10 luck in the sea.", { strength: 10, luck: 10 }, { water: ["sea"] }), model: "/assets/game/tools/rod-tidewarden-a1.glb" }] }),
   // Tempest: its reel and its luck, and it brings the storm in on cloud.
   rod(5, "rod_tempest", "Tempest rod", "epic", "found", TEMPEST, {
     passive: passive("Storm born", "+10 reel speed and +10 luck in the rain.", { reel: 10, luck: 10 }, { weather: ["rain"] }),
     awakenings: [{ at: AWAKEN_AT, base: up(TEMPEST, { reel: 16, lure: 6, luck: 10, control: 6 }), looks: "epic",
-      passive: passive("Storm born", "+10 reel speed and +10 luck in rain or cloud.", { reel: 10, luck: 10 }, { weather: ["rain", "cloudy"] }) }] }),
+      passive: passive("Storm born", "+10 reel speed and +10 luck in rain or cloud.", { reel: 10, luck: 10 }, { weather: ["rain", "cloudy"] }), model: "/assets/game/tools/rod-tempest-a1.glb" }] }),
 ];
 /** The rod seller at the tackle shop (David 2026-11-04: "rod seller will be named Gary"). */
 export const ROD_SELLER = "Gary";

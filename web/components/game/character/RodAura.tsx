@@ -17,7 +17,8 @@
  * A node with a `sway` extra is soft (the library's Sway: the Cedar's foliage, David 2026-11-06: "the leaves sway a lil
  * when moved like physics"): lit as the rod, each holder its own copy of its materials, every vertex bent by a spring
  * that follows the holder's motion (and a little breeze), more the further it reaches from the rod's axis.
- * `strength` (1 as made) makes one holder's effect stronger, easing to it: its parts turn and bob faster and further, its
+ * `strength` (1 as made; times the effect scene's `fxStrength`, the strength it is drawn at as made: an awakened rod's
+ * water made to wind on, build_rods.py tidewarden) makes one holder's effect stronger, easing to it: its parts turn and bob faster and further, its
  * swelling parts (the Tempest's tip spark) grow, trails last longer, and it throws sparks more
  * often (the awakening cutscene; David's pick 2026-11-05: "the aura gets a strength setting"). `Halo` sprites are
  * the Titanium's, made before the library: a disc of light, which the library no longer makes.
@@ -148,13 +149,14 @@ export default function RodAura({ rod, url, strength = 1 }: { rod: THREE.Object3
       if (WATER_PART.test((mesh.material as THREE.Material).name)) waters.push((mesh.material = (mesh.material as THREE.ShaderMaterial).clone()));
       for (let n: THREE.Object3D | null = mesh; n && n !== group; n = n.parent) if (n.userData.sway) { mesh.material = swaying(mesh.material as THREE.MeshStandardMaterial, sway, Number(n.userData.sway)); break; }
     });
-    return { t, group, halos, trails, waters, sway, moving: nodesOf(group), clock: { next: 0, seed: rod.id * 7919, k: 1 } };
+    const made = Number(scene.userData.fxStrength ?? 1);
+    return { t, group, halos, trails, waters, sway, made, moving: nodesOf(group), clock: { next: 0, seed: rod.id * 7919, k: made } };
   }, [scene, rod]);
   useEffect(() => {
     rod.add(fx.group);
     return () => { fx.group.removeFromParent(); };
   }, [rod, fx]);
-  useFrame(({ camera, clock }, delta) => idle(rod, fx, glow, camera, clock.elapsedTime, delta, strength));
+  useFrame(({ camera, clock }, delta) => idle(rod, fx, glow, camera, clock.elapsedTime, delta, strength * fx.made));
   return null;
 }
 

@@ -352,27 +352,41 @@ def aura_shell(pc, top, r=0.075):
     lathe(pc, (0, 0.01, -0.14), [(0, 0.0), (r * 0.55, 0.06), (r, 0.22), (r, top * 0.6), (r * 0.7, top * 0.9), (0, top + 0.22)], n=10)
 
 
-def tidewarden():
+def tidewarden(woke=False):
     """Epic, rod-5, remodelled from David's epic-tidewarden-ref.png (rods round 9 and 9b; traced by trace_refs.py): a
     golden trident. The head is the sketch's own outline smoothed into clean curves (three prongs, the middle tallest,
     the two round cut-outs, the side spurs and crescents), made solid: bevelled to a fine edge all round and raised along
     its medial axis, a ridge down each prong and the body, so it turns well and reads edge-on. Its colour runs in the
     vertices: gold, each prong's tip fading through mint into blue as sketched. Stylised to read at game size: the head
     1.2 times the sketch's (the tip where it was, the shaft a little shorter), the shaft thicker than drawn. A teal wrap
-    at the butt, a four-point star cap with its diamond cut. The line leaves the middle prong's tip, so no reel. Its
-    effect, on the effects library: the ribbon of water wrapping the shaft under the head with foam on its edges and
-    flecks, a streamer and a wisp peeling off as drawn, foam where they crash, drops trailing away (water); the teal veins
-    as continuous branching cracks lying on the relief (glow). No discs, no aura."""
+    at the butt, a four-point star cap with its diamond cut, and (round 11, David: "add the reel and line component to
+    this that matches its style") a gold reel with a teal crank and knob, its teal line up the shaft and the middle
+    prong's face to its tip. Its effect: the teal veins as continuous branching cracks lying on the relief (glow). No
+    water as bought (round 11: the water comes with its awakening), no discs, no aura.
+
+    `woke`: rod-tidewarden-a1, its awakening (round 11, David: "the awakened will have waves wrapped around and it will
+    have wave movement animation with like wave articles flowing around and water dripping and make the head of the
+    drident longer and glowing"). The head half as long again (its width as before) and lit, its colour reaching
+    further into mint and blue, a glowing rim round its edge with the veins. Its water (the library's Water type, one
+    spinning node so the waves run round the shaft): two ribbons wound the length of the shaft against each other, a
+    crest curling off under the head, foam where they break, drops flung off and dripping (spray), motes dripping
+    off it. The wrap is gated down the shaft (`wrap`): under strength 1 there is none, and from 1 to about 1.5 it runs
+    down from the head to the grip, so the cutscene winds it on (rodMotion AWAKEN_FX); the effect is drawn at 1.5 as
+    made (`fxStrength`, RodAura), so in a hand or the bag the whole wrap shows."""
     from traced_refs import TIDEWARDEN as T
     R = 0.0095                                   # the shaft (traced 0.0064): stylised over measured, for the pixel finish
     K, HALF, BEVEL = 1.2, 0.0058, 16.0           # the head's scale, its half thickness at the ridge, the bevel's width (px)
+    KZ = 1.55 if woke else K                     # its length: the awakened head longer
     tip, neck0, star = T["tip"][1], T["neck"][1], T["star"]
-    neck = tip - (tip - neck0) * K
-    at = lambda x, z: (x * K, neck + (z - neck0) * K)
+    neck = tip - (tip - neck0) * K               # the neck stays where it was; a longer head reaches higher
+    top_z = neck + (tip - neck0) * KZ
+    at = lambda x, z: (x * K, neck + (z - neck0) * KZ)
     lift = lambda d, ridge=False: HALF * min(1.0, d / BEVEL) ** 0.75 + (0.0012 if ridge and d > 0 else 0.0)
     H = T["head"]
-    gold, mint, blue = (kit.lin(c) for c in ("#E2C47F", "#A9D9C2", "#5FA8DA"))
+    gold, mint, blue = (kit.lin(c) for c in (("#F3D88E", "#B9F6E2", "#62D2F2") if woke else ("#E2C47F", "#A9D9C2", "#5FA8DA")))
+    reach = 1.45 if woke else 1.0                # how far up the prongs the mint and blue reach
     shade = {}
+    rz = 0.06                                    # the reel's height
 
     def b(pc):
         # the head: the front raised toward -Y, the back the same toward +Y, meeting at the outline (one closed solid)
@@ -383,6 +397,7 @@ def tidewarden():
             h = lift(d, r)
             front.append(pc.v((X, -h, Z)))
             back.append(pc.v((X, h, Z)))
+            bd = min(bd * reach, 2.0)
             u, w = min(bd, 1.0), max(bd - 1.0, 0.0)
             col = [g + (m - g) * u + (bl - m) * w for g, m, bl in zip(gold, mint, blue)]
             shade[(round(X, 4), round(Z, 4))] = col
@@ -392,7 +407,7 @@ def tidewarden():
             pc.f([front[i] for i in t], mid + V((0, 1, 0)))
             pc.f([back[i] for i in t], mid - V((0, 1, 0)))
         pc.mat = "Shaft"
-        pc.tube([(0, 0, star["centre"]), (0, 0, 0.3), (0, 0, neck + 0.02)], [R, R * 0.95, R * 0.9], sides=6, tip=False)
+        pc.tube([(0, 0, star["centre"]), (0, 0, 0.3), (0, 0, neck + 0.02)], [R, R * 0.95, R * 0.9], sides=5, tip=False)
         # the star: four points, the bottom one longest, concave between them, a diamond cut through its middle
         c, w = V((0, 0, star["centre"])), star["span"] / 2
         tips = [c + V((0, 0, 0.032)), c + V((w, 0, 0)), V((0, 0, star["foot"])), c + V((-w, 0, 0))]
@@ -408,9 +423,27 @@ def tidewarden():
             pc.f([D[i], Vv[i], D[j]], bk)
         # the teal wrap: a ring round the shaft over the star, and a band winding up from it
         pc.mat = "Teal"
-        pc.tube([V((math.cos(TAU * k / 8) * (R + 0.005), math.sin(TAU * k / 8) * (R + 0.005), -0.03 + 0.006 * math.cos(TAU * k / 8))) for k in range(8)], [0.0036] * 8, sides=3, closed_loop=True)
-        pc.tube(helix((0, 0, -0.026), (0, 0, 0.028), R + 0.0015, R + 0.0015, 1.25, 11), [(0.005, 0.0016)] * 11, sides=3, tip=False, cap=False, up=V((0, 0, 1)))
-    rod = model("rod-5", {"Gold": "#FFFFFF", "Shaft": "#E0C07E", "Teal": "#3DB8B6"}, b, grad=(0.85, 1.0))
+        pc.tube([V((math.cos(TAU * k / 5) * (R + 0.005), math.sin(TAU * k / 5) * (R + 0.005), -0.03 + 0.006 * math.cos(TAU * k / 5))) for k in range(5)], [0.0036] * 5, sides=3, closed_loop=True)
+        pc.tube(helix((0, 0, -0.026), (0, 0, 0.028), R + 0.0015, R + 0.0015, 1.25, 7), [(0.005, 0.0016)] * 7, sides=3, tip=False, cap=False, up=V((0, 0, 1)))
+        # the reel: gold, a teal crank and knob; built hanging toward -Y, then turned a quarter back, so the rod's final
+        # quarter turn (below) leaves it toward the character's front like every rod's
+        vs0, fs0 = set(pc.bm.verts), set(pc.ref)
+        pc.mat = "Shaft"                         # the reel: a stem and a gold spool, lean (the Tool budget)
+        pc.tube([(0, -0.008, rz), (0, -0.034, rz)], [0.0055, 0.0055], sides=4, tip=False, cap=False)
+        lathe(pc, (0, -0.044, rz), [(0, -0.012), (0.027, -0.009), (0.027, 0.009), (0, 0.012)], n=6, axis=(1, 0, 0))
+        pc.mat = "Teal"                          # the crank's arm and its teal knob
+        pc.tube([(0.014, -0.044, rz), (0.026, -0.044, rz - 0.012), (0.03, -0.044, rz - 0.02)], [0.0035, 0.0035, 0.006], sides=4, tip=False)
+        turn = Matrix.Rotation(-math.pi / 2, 3, "Z")
+        for v_ in set(pc.bm.verts) - vs0:
+            v_.co = turn @ v_.co
+        for f_ in set(pc.ref) - fs0:
+            pc.ref[f_] = turn @ V(pc.ref[f_])
+        # the line: from the reel up the shaft in front of it, onto the middle prong's face, to just under its tip
+        face = -(HALF + 0.0016)
+        pts = [V((-0.044, 0, rz + 0.016)), V((-0.014, 0, rz + 0.08)), V((-0.011, 0, neck - 0.03)),
+               V((0, face, neck + 0.04)), V((0, face * 0.5, top_z - 0.008))]
+        pc.tube(pts, [0.0021] * len(pts), sides=3, tip=False)
+    rod = model("rod-tidewarden-a1" if woke else "rod-5", {"Gold": "#FFFFFF", "Shaft": "#E0C07E", "Teal": "#3DB8B6"}, b, grad=(0.85, 1.0))
     # the head's colour into its vertices (times the shared top-light gradient); a sheen on all of it, gold as metal
     me = rod.data
     col = me.color_attributes["Color"]
@@ -428,10 +461,10 @@ def tidewarden():
         bs.inputs["Roughness"].default_value = 0.45
         bs.inputs["Metallic"].default_value = 0.35
 
-    # ---- the effect: the veins (glow) and the water (the library's Water type)
+    # ---- the effect: the veins (glow), and awakened, the rim's glow and the water (the library's Water type)
     vv, vf = [], []
-    for line in T["veins"]:                      # each crack a thin ribbon lying just over the relief, both faces
-        pts = [(V(at(x, z)).to_3d(), d) for x, z, d in line]
+    for line_ in T["veins"]:                     # each crack a thin ribbon lying just over the relief, both faces
+        pts = [(V(at(x, z)).to_3d(), d) for x, z, d in line_]
         for side in (-1, 1):
             k0 = len(vv)
             for i, (p, d) in enumerate(pts):
@@ -441,80 +474,98 @@ def tidewarden():
                 y = side * (lift(d) + 0.0008)
                 vv += [V((p.x + n.x, y, p.y + n.y)), V((p.x - n.x, y, p.y - n.y))]
             vf += [(k0 + 2 * i, k0 + 2 * i + 1, k0 + 2 * i + 3, k0 + 2 * i + 2) for i in range(len(pts) - 1)]
-    veins = sheet("Veins", "Glow", "#5FE3D8", vv, vf)
-    # the ribbon: down from under the head round the shaft (as drawn, a turn and a half), then peeling off to the right
-    # and down as a streamer; past that, more of it winding further down the shaft, shown only with strength
-    shift = neck - neck0                          # the drawn water and drops follow the head down the shaft
-    top, wrap_end = neck - 0.014, neck - 0.1
-    rings, gate = [], []
+    if woke:                                     # the rim: every outline edge of the head, a band standing out of it
+        used = {}
+        for t in H["tris"]:
+            for i, j in ((t[0], t[1]), (t[1], t[2]), (t[2], t[0])):
+                used[frozenset((i, j))] = used.get(frozenset((i, j)), 0) + 1
+        ctr = V((0, (neck + top_z) / 2))
+        for e, n_ in used.items():
+            if n_ != 1:
+                continue
+            i, j = tuple(e)
+            a_, b_ = V(at(*H["points"][i])), V(at(*H["points"][j]))
+            d = (b_ - a_).normalized()
+            out = V((-d.y, d.x))
+            if out.dot((a_ + b_) / 2 - ctr) < 0:
+                out = -out
+            k0 = len(vv)
+            for p in (a_, b_, b_ + out * 0.0032, a_ + out * 0.0032):
+                vv.append(V((p.x, 0.0, p.y)))
+            vf.append((k0, k0 + 1, k0 + 2, k0 + 3))
+    veins = sheet("Veins", "Glow", "#8FFFF2" if woke else "#5FE3D8", vv, vf)
+    turn = Matrix.Rotation(math.pi / 2, 4, "Z")
+    if not woke:
+        rod.data.transform(turn)
+        veins.data.transform(turn)
+        return rod, [veins], {"rodFx": "tidewarden", "fxRoom": 0.04}, {}
+
+    rings, gate, cuts = [], [], []
+    low, high = 0.1, neck - 0.012               # the wrap runs from under the head down to just over the reel
+    G = 0.3                                      # the gate at the bottom (shown from strength 1.45: library.ts wrap)
+
     def band(a, z, r, w, da, dz):
-        """Across a ribbon lying on the shaft at angle a, height z: square to its run (da rad and dz m a step)."""
+        """Across a ribbon lying on the shaft at angle a, height z: square to its run, its outer edge lifted (a crest)."""
         out, run = V((math.cos(a), math.sin(a), 0)), V((-math.sin(a) * r * da, math.cos(a) * r * da, dz)).normalized()
         across = out.cross(run).normalized()
         c = out * r + V((0, 0, z))
-        return [c + across * (w * (j / 2 - 1)) + out * (0.0025 * math.sin(math.pi * j / 4)) for j in range(5)]
-    N, TURNS = 18, 1.0
-    for i in range(N):                            # the wrap as drawn: a ribbon winding down the shaft under the head
-        u = i / (N - 1)
-        rings.append(band(TAU * TURNS * u - 0.6, top + (wrap_end - top) * u, R + 0.007, 0.022, TAU * TURNS / (N - 1), (wrap_end - top) / (N - 1)))
-        gate.append(0.0)
-    a_end = TAU * TURNS - 0.6
-    base = V((math.cos(a_end) * (R + 0.007), math.sin(a_end) * (R + 0.007), wrap_end))
+        return [c + across * (w * (j / 2 - 1)) + out * (0.0035 * math.sin(math.pi * j / 4) + 0.002 * j / 4) for j in range(5)]
 
-    def strip(a, b, half, n, sag=0.0, taper=(1.0, 0.45)):
-        """A loose run of water from a to b, sagging, its width tapering from taper[0] to taper[1] of `half`."""
-        a, b = V(a), V(b)
-        d = (b - a).normalized()
-        nrm = d.cross(V((0, 1, 0))).normalized()
+    def wind(turns, n, a0, r, w, sign):
+        da = sign * TAU * turns / (n - 1)
         for i in range(n):
             u = i / (n - 1)
-            c = a.lerp(b, u) + V((0, 0, -sag * 4 * u * (1 - u)))
-            w = half * (taper[0] + (taper[1] - taper[0]) * u)
-            rings.append([c + nrm * w * (j / 2 - 1) for j in range(5)])
-            gate.append(0.0)
-        return len(rings) - 1
-    # the streamer peeling off to the right and drooping (as drawn), a loose wisp below it, a long drop flung out
-    rings.pop(), gate.pop()
-    cuts = [strip(base, base + V((0.07, -0.006, -0.036)), 0.017, 9, sag=0.008, taper=(1.0, 0.4))]
-    cuts.append(strip((0.058, -0.004, neck - 0.125), (0.11, -0.006, neck - 0.165), 0.01, 6, sag=0.007, taper=(1.0, 0.4)))
-    cuts.append(strip((0.14, -0.002, neck - 0.095), (0.182, -0.002, neck - 0.103), 0.008, 5, taper=(0.5, 1.0)))
-    M = 30
-    for i in range(M):                            # more wrap, further down the shaft, shown with strength (its own strip)
-        u = i / (M - 1)
-        rings.append(band(a_end + 0.4 + TAU * 3.0 * u, wrap_end - 0.012 - 0.22 * u, R + 0.006, 0.013, TAU * 3.0 / (M - 1), -0.22 / (M - 1)))
-        gate.append(0.02 + 0.98 * u)
-    body = water("Tide", "#2E9CC8", rings, gate, cut=tuple(cuts))
-    # foam: the streamer's end crashing, the wisp's end, and flecks of foam riding the wrap's edges
-    blobs = [(base + V((0.072, -0.008, -0.04)), 0.011, 1.0), (V((0.112, -0.008, neck - 0.167)), 0.008, 0.7)]
-    for k in range(5):                            # flecks on the wrap, on its side toward you
-        a = TAU * TURNS * (0.1 + 0.18 * k) - 0.6
-        if math.sin(a) < 0.2:
-            blobs.append((V((math.cos(a) * (R + 0.011), math.sin(a) * (R + 0.011) - 0.002, top + (wrap_end - top) * (0.1 + 0.18 * k) - 0.012)), 0.0045, 0.3))
+            z = high + (low - high) * u
+            wave = 0.0025 * math.sin(TAU * 3.0 * u + a0)        # the ribbon swelling out and in: waves along it
+            rings.append(band(a0 + da * i, z, r + wave, w * (1.0 - 0.35 * u), da, (low - high) / (n - 1)))
+            gate.append(G * u)
+        cuts.append(len(rings) - 1)
+    wind(4.0, 44, -0.6, R + 0.008, 0.02, 1)
+    wind(3.0, 34, 2.4, R + 0.006, 0.012, -1)
+    # the crest: a wave curling off under the head, up and over toward you (as the sketch's streamer, now a breaker)
+    a0 = -0.6
+    base = V((math.cos(a0) * (R + 0.008), math.sin(a0) * (R + 0.008), high))
+    for i in range(8):
+        u = i / 7
+        ang = math.pi * 0.9 * u
+        c = base + V((0.012 + 0.03 * u, -0.004, 0.0)) + V((0.0, 0.0, 0.026 * math.sin(ang)))
+        c += V((0.012 * (1 - math.cos(ang)), 0, 0))
+        w = 0.016 * (1.0 - 0.6 * u)
+        rings.append([c + V((0, w * (j / 2 - 1), 0)) for j in range(5)])
+        gate.append(0.0)
+    body = water("Tide", "#2E9CC8", rings, gate, cut=tuple(cuts), spin=1.1)
+    # foam: the crest breaking, and flecks on the wrap's edges near the head (where the water is from the start)
+    crest = base + V((0.054, -0.004, 0.012))
+    blobs = [(crest, 0.012, 1.0), (base + V((0.004, -0.006, -0.006)), 0.008, 0.6)]
+    for k in range(4):
+        a = -0.6 + TAU * 0.25 * k
+        blobs.append((V((math.cos(a) * (R + 0.014), math.sin(a) * (R + 0.014), high - 0.03 - 0.03 * k)), 0.005, 0.3))
     fv, ft, fd, fp, fc = [], [], [], [], []
     for n, (c, r, crown) in enumerate(blobs):
         k0 = len(fv)
         fv.append(c)
         fd.append(1.0)
-        for j in range(12):                       # a ragged blob, its tongues reaching out and back
-            ang = TAU * j / 12
-            reach = r * (1.0 + 0.55 * (j % 3 == 0) + 0.25 * math.sin(3 * ang + n))
-            fv.append(c + V((math.cos(ang) * reach, -0.002, math.sin(ang) * reach * 0.8)))
+        for j in range(10):                       # a ragged blob, its tongues reaching out and back
+            ang = TAU * j / 10
+            rch = r * (1.0 + 0.55 * (j % 3 == 0) + 0.25 * math.sin(3 * ang + n))
+            fv.append(c + V((math.cos(ang) * rch, -0.002, math.sin(ang) * rch * 0.8)))
             fd.append(0.0)
-        for j in range(12):
-            ft.append((k0, k0 + 1 + j, k0 + 1 + (j + 1) % 12))
-        fp += [0.23 * n + 0.1] * 13
-        fc += [crown] * 13
-    froth = foam("Crash", "#F4FEFF", fv, ft, fd, fp, fc)
-    D = [((0.15, 0, 0.446), 0.005, 0.5), ((0.092, 0, 0.338), 0.0055, 0.5), ((0.145, 0, 0.40), 0.004, 0.2), ((0.108, 0, 0.30), 0.004, 0.8),
-         ((0.19, 0, 0.43), 0.0045, 0.65), ((0.074, 0, 0.39), 0.004, 0.35)]           # the drops as drawn (traced positions)
-    drops = [((x, y, z + shift), sz, ph, 0.3 + 0.1 * i, False) for i, ((x, y, z), sz, ph) in enumerate(D)]
-    drops += [((0.06 + 0.022 * (i % 4), 0.01 * ((i % 3) - 1), neck - 0.11 - 0.035 * i), 0.0045, (0.37 * i) % 1, 0.5 + 0.06 * i, True) for i in range(8)]
+        for j in range(10):
+            ft.append((k0, k0 + 1 + j, k0 + 1 + (j + 1) % 10))
+        fp += [0.23 * n + 0.1] * 11
+        fc += [crown] * 11
+    froth = foam("Crash", "#F4FEFF", fv, ft, fd, fp, fc, spin=1.1)
+    # drops: flung off the wrap all down the shaft, and dripping off the prongs' tips and the crest
+    drops = []
+    for i in range(12):
+        a, z = 1.7 * i, high - (high - low) * (i + 0.5) / 12
+        drops.append(((math.cos(a) * 0.03, math.sin(a) * 0.03, z), 0.0042, (0.29 * i) % 1, 0.35 + 0.03 * i, i % 3 == 2))
+    for x, z in ((0.0, top_z - 0.02), (0.07, neck + 0.12), (-0.07, neck + 0.12), (0.05, high + 0.01)):
+        drops.append(((x, 0.0, z), 0.0036, (0.53 * x * 10) % 1, 0.3, False))
     spray_ = spray("Drops", "#4FC3DD", drops)
-    # the head's face to the holder's side (a quarter turn about the shaft): held, the third-person camera sees its face,
-    # not its edge (the sketch's own face is front-on in /lab/fx?study=tidewarden, which turns it back)
     for ob in [rod, veins, body, froth, spray_]:
-        ob.data.transform(Matrix.Rotation(math.pi / 2, 4, "Z"))
-    return rod, [veins, body, froth, spray_], {"rodFx": "tidewarden", "fxRoom": 0.04}, {}
+        ob.data.transform(turn)
+    return rod, [veins, body, froth, spray_], {"rodFx": "tidewarden-a1", "fxRoom": 0.06}, {"fxStrength": 1.5, **particles("#9EE7F5", "glow", every=0.09, size=0.045, rise=-0.35)}
 
 
 def tempest():
@@ -593,6 +644,81 @@ def tempest():
           light("Gust", "#9EDCFF", gust, pivot=(0, 0, 0.43), spin=2.4, bob=0.12, rate=0.35, **trail(0.016, (0.05, 0.012, 0.0))),
           aura_hug("Aura", "#2A86E0", axis, radii, inflate=1.7)]
     return rod, fx, {"rodFx": "tempest"}, particles("#C9F6FF", "sparkle", every=0.07, size=0.07, rise=0.45)
+
+
+def tempest_a1():
+    """The Tempest awakened, rod-tempest-a1 (round 11, David on rg10-awaken-tempest: "needs to redo the awakened model but
+    animation looks good"): the storm caught in it. Fewer, bolder links zigzagging harder up the chain (the bolt's
+    shape), a crown of three ice spikes forked like a bolt's end where the one spike was, the white reel swallowed by a
+    storm cloud, two long jagged shards off the seat, a deep navy grip in ice rings. Its effect as the Tempest's, all
+    stronger: lightning down both sides of the chain forking more often (glow, flicker), the crown's spark (glow,
+    pulse), the gust winding up it (light, motion, trail), the aura hugging the chain, sparks off it (particles). The
+    lightning strike and the electricity it wears after are the cutscene's (rodMotion AWAKEN_FX); the base Tempest
+    waits for David's reference."""
+    L, z0, k = 0.96, 0.07, 7
+    zig = lambda j: 0.017 * (1 if j % 2 else -1) * min(1.0, j / 1.5)
+    joints = [V((zig(j), 0.003 * j / k, z0 + (L - z0) * j / k)) for j in range(k + 1)]
+    half = lambda j: 0.024 - 0.008 * j / k
+    top = joints[-1]
+    spikes = [(V((0, 0, 1)), 0.09, 0.013), (V((0.62, 0.0, 0.78)), 0.06, 0.009), (V((-0.55, 0.0, 0.83)), 0.05, 0.008)]
+
+    def b(pc):
+        grip(pc, [(0, -0.12), (0.017, -0.12), (0.02, -0.105), (0.019, 0.03), (0.016, 0.06)], n=6, mat=lambda band, q: "White" if band in (0, 2) else "Grip")
+        for j in range(k):                       # each link a long hexagonal loop, a quarter turned from the last
+            a, b_ = joints[j] - V((0, 0, 0.014)), joints[j + 1] + V((0, 0, 0.014))
+            d, w = (b_ - a).normalized(), half(j)
+            side = V((1, 0, 0)) if j % 2 == 0 else V((0, 1, 0))
+            side = (side - d * side.dot(d)).normalized()
+            pts = [a, a.lerp(b_, 0.22) + side * w, a.lerp(b_, 0.78) + side * w * 0.9, b_, a.lerp(b_, 0.78) - side * w * 0.9, a.lerp(b_, 0.22) - side * w]
+            pc.mat = "Ice" if j % 2 else "Pale"
+            pc.tube(pts, [0.0068 - 0.0018 * j / k] * 6, sides=3, closed_loop=True)
+        for n, (d, length, r) in enumerate(spikes):   # the crown: three spikes, forked like a bolt's end
+            pc.mat = "Pale" if n else "Ice"
+            d = d.normalized()
+            loft(pc, [top, top + d * length * 0.4, top + d * length], [r * 0.5, r, r * 0.25], sides=4, phase=math.pi / 4, tip=True, cap=False)
+        pc.mat = "Pale"                           # two long jagged shards off the seat, up and back
+        for s in (-1, 1):
+            leaf(pc, (s * 0.016, 0.004, 0.085), V((s * 0.5, 0.3, 0.8)), 0.2, 0.026, side=V((0, 1, 0)), curl=-0.02, lobes=(0.5, 1.0, 0.55, 0.2), thick=0.004, sides=3)
+        pc.mat = "White"                          # the reel's stem, into the cloud
+        pc.tube([(0, -0.012, 0.03), (0, -0.04, 0.03)], [0.006, 0.006], sides=5, tip=False)
+        pc.mat = "Storm"                          # the storm cloud the reel is now: three puffs
+        for c, r in (((0, -0.052, 0.03), 0.026), ((0.022, -0.046, 0.042), 0.017), ((-0.02, -0.048, 0.02), 0.018)):
+            pc.blob(c, r, segs=6, rings=4)
+        line(pc, (0, -0.06, 0.052), lambda z: V((0, 0, z)), L, "White", ahead=-0.03, zs=(0.45,), tip=top + V((0, -0.004, 0.08)))
+    rod = model("rod-tempest-a1", {"Grip": "#1B2140", "White": "#F2F8FC", "Ice": "#62B9F0", "Pale": "#DDF2FC", "Storm": "#4A5078"}, b)
+    tip = top + V((0, 0, 0.1))
+
+    def bolts(pc):                               # lightning down both sides of the chain, forking at every other link
+        pc.mat = "Glow"
+        for s, ph in ((-1, 0.0), (1, 1.9)):
+            pts = [V((zig(j) + s * (half(j) * 1.05 + 0.004 * math.sin(3.1 * j + ph)), 0.006 * math.cos(2.3 * j + ph), z0 + (L - z0) * j / k)) for j in range(k + 1)]
+            mids = []
+            for j in range(k):
+                mids += [pts[j], pts[j].lerp(pts[j + 1], 0.5) + V((s * 0.008 * (1 if j % 2 else -1), 0, 0))]
+            mids.append(pts[-1])
+            pc.tube(mids, [0.0036] * len(mids), sides=3, tip=True)
+            for j in (1, 3, 5):
+                f = mids[2 * j + 1]
+                pc.tube([f, f + V((s * 0.026, 0.0, 0.014)), f + V((s * 0.036, 0.002, 0.036))], [0.0024, 0.0018, 0.001], sides=3, tip=True)
+        lathe(pc, (0, 0, -0.124), [(0.0, -0.006), (0.016, -0.004), (0.017, 0.002), (0.0, 0.004)], n=6)
+
+    def spark(pc):                               # the crown's spark: five jagged points
+        pc.mat = "Glow"
+        for d in (V((0, 0, 1)), V((0.8, 0.1, 0.35)), V((-0.75, -0.1, 0.25)), V((0.15, 0, -0.6)), V((-0.3, 0.2, 0.9))):
+            d = d.normalized()
+            side = d.cross(V((0, 1, 0))).normalized()
+            pc.tube([tip, tip + d * 0.022 + side * 0.005, tip + d * 0.05], [0.007, 0.0045, 0.0], sides=3, tip=False)
+
+    def gust(pc):
+        pc.mat = "Light"
+        pc.tube([V((0.055, -0.01, 0.42)), V((0.06, 0.014, 0.45)), V((0.05, 0.034, 0.48))], [0.005, 0.007, 0.002], sides=3, tip=True)
+    axis = [V((0, 0, z0 - 0.02))] + joints + [tip]
+    radii = [0.012] + [half(j if j < k else k - 1) for j in range(k + 1)] + [0.012]
+    fx = [glow("Bolts", "#7FE9FF", bolts, flicker=1.0),
+          glow("Spark", "#E4FBFF", spark, pivot=tuple(tip), pulse=0.2),
+          light("Gust", "#A8E4FF", gust, pivot=(0, 0, 0.45), spin=3.0, bob=0.14, rate=0.4, **trail(0.02, (0.055, 0.014, 0.0))),
+          aura_hug("Aura", "#3C7BFF", axis, radii, inflate=1.8)]
+    return rod, fx, {"rodFx": "tempest-a1"}, particles("#D6F8FF", "sparkle", every=0.05, size=0.075, rise=0.5)
 
 
 def reserved_slate():
@@ -901,10 +1027,10 @@ def titanium_a1():
 # ================================================================ build
 ROD_FILES = {"carrot": "rod-carrot", "precision": "rod-precision", "training": "rod-training", "cedar": "rod-2", "glass": "rod-3",
              "riptide": "rod-riptide", "tidewarden": "rod-5", "tempest": "rod-tempest", "titanium": "rod-titanium",
-             "titanium-a1": "rod-titanium-a1", "reserved-slate": "rod-reserved-slate"}
+             "titanium-a1": "rod-titanium-a1", "tidewarden-a1": "rod-tidewarden-a1", "tempest-a1": "rod-tempest-a1", "reserved-slate": "rod-reserved-slate"}
 BUILD = {"carrot": carrot, "precision": precision, "training": training, "cedar": cedar, "glass": glass,
          "riptide": riptide, "tidewarden": tidewarden, "tempest": tempest, "titanium": titanium,
-         "titanium-a1": titanium_a1, "reserved-slate": reserved_slate}
+         "titanium-a1": titanium_a1, "tidewarden-a1": lambda: tidewarden(True), "tempest-a1": tempest_a1, "reserved-slate": reserved_slate}
 only = ARGS[ARGS.index("only") + 1].split(",") if "only" in ARGS else list(BUILD)
 for name in only:
     out = BUILD[name]()

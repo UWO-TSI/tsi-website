@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { AWAKEN_MS } from "@/components/gui/flat";
 import { RODS } from "@/lib/game/rods";
-import { AWAKEN_FX, BEAT, MOVES, auraAt, moveOf } from "./rodMotion";
+import { AWAKEN_FX, BEAT, MOVES, auraAt, gatherAt, moveOf } from "./rodMotion";
 
 const awakening = RODS.filter(r => r.awakenings.length);
 const at = (t: number, e: number, key: string) => moveOf(key)(t, e);
@@ -50,11 +50,23 @@ describe("each rod's awakening motion (David 2026-11-05)", () => {
     expect(AWAKEN_MS.hush).toBeGreaterThan(300);
   });
 
-  it("strikes the rods whose awakening brings a new look or effect from outside: the Tempest by lightning, the Tidewarden by a wave", () => {
+  it("strikes the Tempest with lightning; winds the Tidewarden's water on instead (round 11: its wave strike is gone)", () => {
     expect(AWAKEN_FX.rod_tempest).toMatchObject({ strike: "lightning", sound: "aw-thunder" });
     expect(AWAKEN_FX.rod_tempest.wears).toContain("electricity");
-    expect(AWAKEN_FX.rod_tidewarden.strike).toBe("wave");
+    const tide = AWAKEN_FX.rod_tidewarden;
+    expect(tide.strike).toBeUndefined();
+    // a little further on each beat of the pulse, drawn off in the hush, crashing on at the hit, settling at the reveal
+    expect(tide.strength!("pulse", 12)).toBeGreaterThan(tide.strength!("pulse", 0));
+    expect(tide.strength!("hush", 20)).toBeLessThan(tide.strength!("pulse", 20));
+    expect(tide.strength!("burst", 20)).toBeGreaterThan(tide.strength!("reveal", 20));
+    expect(tide.strength!("reveal", 20)).toBe(1);
     expect(AWAKEN_FX.rod_training).toBeUndefined();
+  });
+
+  it("gathers light in small and slow, building on every beat of the pulse (round 11)", () => {
+    expect(gatherAt("glow", 0)).toBeLessThan(0.5);
+    expect(gatherAt("pulse", 20)).toBeGreaterThan(2 * gatherAt("pulse", 2));
+    expect(gatherAt("hush", 20)).toBe(0);
   });
 
   it("grows the aura with each awakening", () => {

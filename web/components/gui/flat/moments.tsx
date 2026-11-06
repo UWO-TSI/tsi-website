@@ -251,7 +251,7 @@ const AWAKEN_ORDER = Object.keys(AWAKEN_MS) as (keyof typeof AWAKEN_MS)[];
 /** How much bigger than its stage the thing's box is: room for its glow and its motion, so neither meets an edge. */
 export const AWAKEN_ROOM = 1.6;
 /** Painted frames each impact frame holds (three of them as the burst lands). */
-const IMPACT_FRAMES = 4;
+const IMPACT_FRAMES = 5;
 /** When the card has landed after the reveal (ms): what changed moves only then, one thing at a time. */
 export const AWAKEN_CARD_MS = 900;
 
@@ -296,14 +296,14 @@ export function Awakening({ label, thing, from, rarity, rarityLabel, lead, eyebr
     }
     return () => ts.forEach(t => window.clearTimeout(t));
   }, [ready]);
-  // The impact frames as the hit lands: three, each held for IMPACT_FRAMES painted frames and 60 ms (on a slow device,
-  // at least one frame and 140 ms), so every one is seen; they end with the burst whatever happens.
+  // The impact frames as the hit lands: three, each held for IMPACT_FRAMES painted frames and 80 ms (on a slow device,
+  // at least one frame and 160 ms), so every one is seen; they end with the burst whatever happens.
   useEffect(() => {
     if (phase !== "burst") return;
     let raf = 0, step = 1, frames = 0, since = performance.now();
     const tick = (now: number) => {
       frames++;
-      if ((frames >= IMPACT_FRAMES && now - since >= 60) || now - since >= 140) { step++; frames = 0; since = now; }
+      if ((frames >= IMPACT_FRAMES && now - since >= 80) || now - since >= 160) { step++; frames = 0; since = now; }
       setImpact(step > 3 ? 0 : step);
       if (step <= 3) raf = requestAnimationFrame(tick);
     };

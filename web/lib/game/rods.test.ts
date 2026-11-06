@@ -193,6 +193,12 @@ describe("awakenings (David 2026-11-04: no levels, only awakenings)", () => {
     expect(look).toEqual({ model: "/assets/game/tools/rod-titanium-a1.glb", icon: "rod_titanium_a1" });
     expect(existsSync(join(__dirname, "../../public", look.model))).toBe(true);
     expect(existsSync(join(__dirname, "../../public/assets/icons", `${look.icon}.webp`))).toBe(true);
+    // The Tidewarden and the Tempest awaken into their own models too (round 11).
+    for (const key of ["rod_tidewarden", "rod_tempest"]) {
+      const l = awakenedLook(awakened(rodByKey(key)!, AWAKEN_AT))!;
+      expect(existsSync(join(__dirname, "../../public", l.model))).toBe(true);
+      expect(existsSync(join(__dirname, "../../public/assets/icons", `${l.icon}.webp`))).toBe(true);
+    }
     // A rod whose awakenings have no model of their own keeps its own (the cutscene's stand-in recolour stays).
     expect(awakenedLook(awakened(training, 1000))).toBeNull();
   });

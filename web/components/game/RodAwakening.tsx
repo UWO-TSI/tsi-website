@@ -26,7 +26,7 @@ import { glowOn, sparkRecipe } from "@/lib/game/fx/glowOn";
 import { useGlowParticles, type GlowParticles } from "./GlowFx";
 import type { FxKind } from "@/lib/game/fx/library";
 import HolderFx from "./fx/HolderFx";
-import { AWAKEN_FX, BEAT, auraAt, moveOf, type Move } from "./rodMotion";
+import { AWAKEN_FX, BEAT, auraAt, gatherAt, moveOf, type Move } from "./rodMotion";
 
 const GATHER: FxKind[] = ["gather"], NONE: FxKind[] = [];
 
@@ -38,9 +38,6 @@ const FINISH: Record<string, readonly Record<string, string>[]> = {
   // A steel-blue blank, a deep-blue grip, silver fittings; then violet with gold fittings; then gold with ivory and brass.
   rod_training: [{ Yellow: "#9fb8dd", Blue: "#1f4fa8", Red: "#e8edf3", Cream: "#ffffff" }, { Yellow: "#7a4fd8", Blue: "#2d2448", Red: "#f2c14e", Cream: "#f4edff" },
     { Yellow: "#f2c14e", Blue: "#fff4d6", Red: "#b8862a", Cream: "#fffaf0" }],
-  // (its head is white with its colours in its vertices: a tint over them; the shaft is its own gold)
-  rod_tidewarden: [{ Teal: "#1ad6c4", Gold: "#fff1c4", Shaft: "#ffd75e" }],
-  rod_tempest: [{ Ice: "#8fd3ff", Pale: "#eef7ff" }],
 };
 
 /** `rod` (as bought) reaching its `stage`th awakening (1 is its first); `onClose` when it's put away. */
@@ -51,7 +48,7 @@ export default function RodAwakening({ rod, stage, onClose }: { rod: RodTier; st
     const spec = rodSpec(awakened(rod, rod.awakenings[n - 1]?.at ?? 0)), finish = FINISH[rod.key]?.[n - 1];
     return spec && finish ? { ...spec, tints: { ...spec.tints, ...finish } } : spec;
   }), [rod, stage]);
-  const [grown, setGrown] = useState(false), [ready, setReady] = useState(false), [struck, setStruck] = useState(0);
+  const [grown, setGrown] = useState(false), [ready, setReady] = useState(false), [struck, setStruck] = useState(0), [beat, setBeat] = useState(0);
   const loaded = useCallback(() => setReady(true), []);
   const beats = useRef(0), timer = useRef(0);
   useEffect(() => () => window.clearTimeout(timer.current), []);
@@ -64,7 +61,7 @@ export default function RodAwakening({ rod, stage, onClose }: { rod: RodTier; st
   // the strike's sound (a wave's crash lands on the burst, so it starts in the hush), the hit, the thunder.
   const onPhase = (p: AwakenPhase | "beat") => {
     if (p === "glow") AudioManager.playSFX("aw-riser", { gain: 0.6 });
-    if (p === "beat") AudioManager.playSFX("aw-heart", { rate: 0.85 + 0.05 * beats.current++, gain: 0.55 });
+    if (p === "beat") { AudioManager.playSFX("aw-heart", { rate: 0.85 + 0.05 * beats.current++, gain: 0.55 }); setBeat(beats.current); }
     if (p === "hush") { setStruck(n => n + 1); if (outside?.soundAt === "hush") AudioManager.playSFX(outside.sound, { gain: 0.8 }); }
     if (p === "burst") { AudioManager.playSFX("aw-impact", { gain: 0.9 }); if (outside?.soundAt === "burst") AudioManager.playSFX(outside.sound, { gain: 0.85 }); }
     if (p === "reveal") {
@@ -81,11 +78,11 @@ export default function RodAwakening({ rod, stage, onClose }: { rod: RodTier; st
       <Suspense fallback={null}>
         <Motion move={moveOf(rod.key)} phase={phase} from={before.rarity} to={after.rarity}>
           <primitive object={oldForm} visible={!next}><FittedModel spec={looks[0]} aura={auraAt(stage - 1) + BEAT[phase].aura} /></primitive>
-          <primitive object={newForm} visible={next}><FittedModel spec={looks[1]} aura={auraAt(stage) + BEAT[phase].aura} /></primitive>
+          <primitive object={newForm} visible={next}><FittedModel spec={looks[1]} aura={outside?.strength?.(phase, beat) ?? auraAt(stage) + BEAT[phase].aura} /></primitive>
         </Motion>
-        <HolderFx holder={oldForm} kinds={GATHER} strength={BEAT[phase].gather} colour={colours.from} />
-        {outside && <HolderFx holder={newForm} kinds={outside.wears ?? NONE} strength={auraAt(stage) + BEAT[phase].aura} colour={colours.to}
-          strike={{ kind: outside.strike, hit: AWAKEN_MS.hush / 1000, key: struck }} />}
+        <HolderFx holder={oldForm} kinds={GATHER} strength={gatherAt(phase, beat)} colour={colours.from} />
+        {(outside?.strike || outside?.wears) && <HolderFx holder={newForm} kinds={outside.wears ?? NONE} strength={auraAt(stage) + BEAT[phase].aura} colour={colours.to}
+          strike={outside.strike && { kind: outside.strike, hit: AWAKEN_MS.hush / 1000, key: struck }} />}
         <Loaded onLoad={loaded} />
       </Suspense>
     </TurnStage>}
