@@ -4,6 +4,23 @@ Worktree `.claude/worktrees/rod-titanium`, branch `game/rod-titanium`, cut from 
 
 rod-gear owns the rods and runs round 9 in parallel (the Tidewarden and a `Water` effect type) in `art/pipeline/build_rods.py`, `fx_library.py`, `web/lib/game/fx/library.ts` and `RodAura`. Keep your edits to the Titanium's own functions and lines so the two branches merge cleanly; this branch merges into `game/rod-gear`. Read `specs/lanes/rod-gear.md` (Status, Tools and gotchas, Rules) and `specs/fx-library.md` first: the effects library, the awakening cutscene, rodMotion and the Blender pipeline are all there.
 
+## Round 2: David's Titanium 1 review (2026-11-06, verbatim; https://claude.ai/artifact/86pLJkarHExN3epnHF88TR)
+
+Approved: rti1-budget, rti1-questions. Every other card is redo; the references were misread. They were studies of feeling and material, not models to copy:
+- rti1-titanium (redo): "no im simply showing you the feeling of the rod, which is the texture of the alumninum needs to shink and have that rainbow glisten, no sparkes, this is simply for material texture study"
+- rti1-a1 (redo): "no this one is to show the mecha parts and what the feeling of it looks like, i want you to rebuild based off the old titanium rod with the material from above and this weapons mecha feel, keep it simple and a closed version of the titanium rod, the awakened will be the rod opened with glowing blue energy core"
+- rti1-reserved (redo): "the old one looks better just needs a touch up and no purple glow on the unawakened and you can have the glow with the hexagons in the awakened"
+- rti1-awaken, rti1-bag, rti1-bag-awakened, rti1-hand, rti1-shelf, rti1-workbench (redo, no note: they follow from the above)
+
+Build (coordinator):
+1. **The Titanium is the old model again**, touched up: the reserved name goes away (`titanium()`, `rod-titanium.glb`). No purple glow and no sparkles when unawakened. Delete round 1's machined bar.
+2. **Its material** from the first photo: shiny, polished metal with the anodised rainbow glisten as light moves over it.
+3. **The mecha feel** from the second reference, kept simple: the base rod is the closed version, with clean panel lines and plates.
+4. **The awakened form is the same rod opened:** its plates part and reveal a glowing blue energy core; the hexagon glow belongs here. The cutscene shows it opening. Keep the general awakened-model wiring from round 1.
+5. The VFX library now has its own lane (game/vfx-library, renaming "Aura" to Energy); use its types, don't change them.
+
+Evidence `rti2-*`: the closed rod beside the old one (studio, turning), the material (light sliding over it), the opening (clip), the awakened form, the bag and hand (desktop and phone), a questions card. Side-by-sides with David's pictures stay out of git.
+
 ## Round 1: David's notes (2026-11-05, verbatim)
 
 - "the current titanium rod shuold be something else it look nice, but i want you to make a new model of the titanium thats closer related while the current is reserved for smth else"
