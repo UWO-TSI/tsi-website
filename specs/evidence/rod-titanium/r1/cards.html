@@ -1,0 +1,35 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Titanium cards</title>
+<style>
+  body { margin: 0; background: #f3f4f6; font: 15px/1.45 -apple-system, "Helvetica Neue", Arial, sans-serif; color: #1d2330; }
+  section { width: 980px; padding: 28px 32px; background: #fff; margin: 0 0 24px; box-sizing: border-box; }
+  h1 { font-size: 22px; margin: 0 0 4px; } p.sub { margin: 0 0 18px; color: #5b6374; }
+  table { border-collapse: collapse; width: 100%; } th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e3e6eb; vertical-align: top; }
+  th { font-size: 13px; color: #5b6374; font-weight: 600; } td.n { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  ol { margin: 0; padding-left: 22px; } li { margin: 0 0 12px; } li b { display: block; }
+  .ok { color: #17804a; font-weight: 600; }
+</style></head><body>
+<section id="budget">
+  <h1>The Titanium: draws and triangles</h1>
+  <p class="sub">The Tool budget is 600 triangles and 5 materials on the rod, nothing emissive; an effect costs at most 5 draws a holder (specs/perf/effects-cost.md, RodAura.test).</p>
+  <table>
+    <tr><th></th><th>Rod</th><th>Effect</th><th>Draws in a hand</th><th>File (packed, brotli)</th></tr>
+    <tr><td>Titanium (new)</td><td class="n">578 tris, 1 material (P_Polished)</td><td>1 part (Glint, 72 tris) and glints from the shared spark pool</td><td class="n">1 + 1 = 2</td><td class="n">37.6 KB (5.9 KB) + 5.5 KB (1.5 KB)</td></tr>
+    <tr><td>Titanium, awakened</td><td class="n">590 tris, 1 material (P_Paint)</td><td>3 parts (Energy, Core, Blades; 308 tris) and sparks</td><td class="n">1 + 3 = 4</td><td class="n">35.6 KB (5.6 KB) + 17.8 KB (3.9 KB)</td></tr>
+    <tr><td>Reserved (the old Titanium)</td><td class="n">578 tris, 3 materials (one mesh in a hand)</td><td>3 parts and 2 halos (unchanged)</td><td class="n">1 + 5 = 6</td><td class="n">30.0 KB (6.2 KB) + 20.2 KB (3.3 KB)</td></tr>
+  </table>
+  <p class="sub" style="margin-top:14px">Both new rods are inside the budget (<span class="ok">578 and 590 of 600</span>, one material each). The machined Titanium in a hand costs 2 draws where the old one cost 6; the awakened one 4.</p>
+</section>
+<section id="questions">
+  <h1>The Titanium, round 1: questions</h1>
+  <p class="sub">Where it still differs from the references, and what to decide.</p>
+  <ol>
+    <li><b>What does the reserved rod become?</b> The old Titanium (dark slate hex cups, lilac claws, lilac seams, orbiting plates) is kept as rod-reserved-slate, out of the roster, with its reference epic-titanium-ref.png. Name the rod it becomes and its rarity, and we wire it in.</li>
+    <li><b>Machined Titanium against the metal reference.</b> Close: thick bar stock (about twice the width of round 1) ground to a diamond, tapering only into a broad ground point; the anodised run (pale steel at the point, straw and gold down the front half, purple, blue and violet to the butt); each flat its own oxide (one bright gold or steel, the next deep blue), polished chamfers as crisp lines of light, and polished metal (P_Polished: metallic 0.85, roughness 0.14) so the light slides from flat to flat as it turns. Still different: it is a rod, so it stays longer and slimmer than the photo's short bar, with a reel and a grip; the photo's rounded end and its hole are a pommel here.</li>
+    <li><b>Awakened Titanium against the mecha reference.</b> It reads as the reference loosely: stepped hard-edged plates, painted solid grey (P_Paint, so they hold on the shop's white instead of mirroring it) and outlined dark (the panel lines), cyan energy in the panels, solid cyan energy blades (no aura or additive light washing it pale), a ring hub with a glowing core, a knuckle guard. Still different: it is slimmer and simpler (590 of the 600 triangles a held rod may have): fewer steps and notches, no gun body or text decals, a slim guard instead of the D-handle, and two energy blades instead of the reference's full cyan glass blade. Want a high-def copy for the close-ups (the bag, the cutscene) with the full detail (design bible, Models, rule 2)?</li>
+    <li><b>The shop.</b> The Titanium isn't on the shop's shelf (epic, made at the workbench), so its shop detail is the workbench's recipe. An awakened one shows in your bag (its stage and its card's icon), in your hand and in the cutscene. List it in the rod shop too?</li>
+    <li><b>Other players.</b> Your hand shows the awakened model; other players still see the machined one, because what you hold goes to them as the rod alone. Send the awakening too, so everyone sees the mecha form?</li>
+    <li><b>The cutscene's glow.</b> It glows in the epic rung's violet before and after (the library's rule: the rung's colour). Keep it, or let a mecha awakening flare in its own cyan?</li>
+  </ol>
+</section>
+</body></html>

@@ -96,9 +96,10 @@ export interface Passive {
 /**
  * An awakening (David 2026-11-04: "no levels, only awakenings for rods"): at `at` fish landed with the rod its stats
  * become `base`, it may hook rarer fish (`hooks`) and take a new passive. `looks` is the rung its stats now match, for
- * the reveal's outline.
+ * the reveal's outline. `model` is the awakened rod's own model (art/pipeline/build_rods.py), which it wears from then
+ * on wherever it shows (`awakenedLook`); without one it keeps the model it was bought with.
  */
-export interface Awakening { at: number; base: Stats; looks: Rarity; hooks?: Rarity; passive?: Passive }
+export interface Awakening { at: number; base: Stats; looks: Rarity; hooks?: Rarity; passive?: Passive; model?: string }
 
 /**
  * The rarest fish a rod hooks: one rung above its own (David 2026-10-28: a rare rod hooks up to epic, an epic rod up to
@@ -146,7 +147,7 @@ export const RODS: readonly RodTier[] = [
   // Titanium: its line and its hold.
   rod(5, "rod_titanium", "Titanium rod", "epic", "crafted", TITANIUM, {
     passive: passive("Steel line", "+10 line strength in rivers and ponds.", { strength: 10 }, { water: ["river", "pond"] }),
-    awakenings: [{ at: AWAKEN_AT, base: up(TITANIUM, { strength: 14, control: 6, reel: 4 }), looks: "epic" }] }),
+    awakenings: [{ at: AWAKEN_AT, base: up(TITANIUM, { strength: 14, control: 6, reel: 4 }), looks: "epic", model: "/assets/game/tools/rod-titanium-a1.glb" }] }),
   // Tidewarden: the widest bite window grows wider, and its passive widens.
   rod(5, "rod_tidewarden", "Tidewarden rod", "epic", "crafted", TIDEWARDEN, {
     passive: passive("Tide keeper", "+10 line strength in the sea.", { strength: 10 }, { water: ["sea"] }),
@@ -191,6 +192,14 @@ export function awakened(r: RodTier, catches = 0): RodTier {
   if (stage === 0) return r;
   const a = r.awakenings[stage - 1], passive = r.awakenings.slice(0, stage).reverse().find(x => x.passive)?.passive ?? r.passive;
   return { ...r, rarity: a.looks, base: a.base, stats: a.base, hooks: a.hooks ?? r.hooks, passive, stage, ...effects(a.base) };
+}
+/**
+ * The model an awakened rod (`awakened`) wears, from its last awakening that has one, and that model's icon key
+ * (`<rod key>_a<n>`); null while it wears the one it was bought with.
+ */
+export function awakenedLook(r: RodTier): { model: string; icon: string } | null {
+  for (let n = r.stage; n > 0; n--) { const model = r.awakenings[n - 1].model; if (model) return { model, icon: `${r.key}_a${n}` }; }
+  return null;
 }
 /** Whether a passive holds for this cast. Night is 8 pm to 6 am on the island. */
 export const passiveHolds = (p: Passive, at: CastScene) =>

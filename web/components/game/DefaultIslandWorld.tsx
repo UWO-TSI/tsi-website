@@ -1103,8 +1103,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // A first arrival starts with an empty tool bag: the wheel holds only what Bram has handed over (lib/game/arrival/tools.ts).
   const arrivalTools = useArrivalTools();
   // After it (row 312), a new arrival's net and shovel come from residents: `taught`, and `owned` with what they've handed over.
-  const wheelItems = useMemo(() => gateWheel(wheelContents({ site: wheelSite, owned: hq.owned, chosen: heldState.chosen, weapons: weaponList.split(","), defaultWeapon, armed, pins: heldState.pins, stock, taught: hq.taught }), arrivalTools),
-    [wheelSite, hq.owned, hq.taught, heldState.chosen, weaponList, defaultWeapon, armed, heldState.pins, stock, arrivalTools]);
+  const wheelItems = useMemo(() => gateWheel(wheelContents({ site: wheelSite, owned: hq.owned, chosen: heldState.chosen, weapons: weaponList.split(","), defaultWeapon, armed, pins: heldState.pins, stock, taught: hq.taught, catches: peaceful.catches }), arrivalTools),
+    [wheelSite, hq.owned, hq.taught, heldState.chosen, weaponList, defaultWeapon, armed, heldState.pins, stock, arrivalTools, peaceful.catches]);
   // Indoors you walk with empty hands (the wheel is outdoors and in the ruins).
   const held = inside ? null : heldItem(heldState, wheelItems);
   const [eating, setEating] = useState(false);

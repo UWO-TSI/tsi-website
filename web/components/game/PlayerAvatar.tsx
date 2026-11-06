@@ -866,7 +866,7 @@ export function heldView(item: WheelItem | null): HeldView | null {
   if (item.kind === "glider") return { url: LEAF_URL, hold: "glider" };
   if (item.kind === "pin") { const m = itemModel(item.key); return m && { url: m.url, hold: "front", fit: m.fit }; }
   const tool = item.kind === "rod" || item.kind === "net" || item.kind === "shovel" || item.kind === "pickaxe" ? toolByKey(item.key) : null;
-  return tool && { url: tool.model, hold: tool.kind };
+  return tool && { url: item.model ?? tool.model, hold: tool.kind };
 }
 
 /**

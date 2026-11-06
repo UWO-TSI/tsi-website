@@ -149,7 +149,7 @@ const METAL_BODY = /\/(props\/streetlamp|props\/park-clock)\.glb:m(ReBody|Body)$
  * Shared material presets for plain-colour parts (lane rules, David 2026-10-17: textures only where they show, and a
  * plain colour must still read as its material). A GLB part made of one is named `P_<Preset>` (P_Wood, P_Stone,
  * P_Metal, P_Paint, P_Glass, P_Cloth, P_Leather, P_Velvet) with its colour in COLOR_0, so every part of one preset in a model shares a
- * material and draws as one; prepareModel gives it the preset's roughness and metalness whatever it was authored with,
+ * material and draws as one (P_Polished too); prepareModel gives it the preset's roughness and metalness whatever it was authored with,
  * and lookClassFor its look class (metal and glass reflect, the rest are props). Paint is painted wood and plastic.
  * Leather is a smooth hide with a gentle highlight; velvet a soft pile whose sheen at grazing angles comes in its GLB
  * (KHR_materials_sheen: the HQ build, art/interiors/build_hq.py; David, 2026-10-22: "make the textures of things more
@@ -159,14 +159,17 @@ export const MATERIAL_PRESETS = {
   wood: { roughness: 0.9, metalness: 0, look: "props" },
   stone: { roughness: 0.95, metalness: 0, look: "props" },
   metal: { roughness: 0.4, metalness: 0.75, look: "metal" },
+  // Machined and polished metal (the Titanium rod): sharp streaks of the room and the sky slide over its facets, the
+  // studio's room seen brighter in it than in a matte part (the island's sky is seen at its own brightness: lookPreset).
+  polished: { roughness: 0.14, metalness: 0.85, look: "metal", env: 2.2 },
   paint: { roughness: 0.45, metalness: 0, look: "props" },
   glass: { roughness: 0.08, metalness: 0, look: "glass" },
   cloth: { roughness: 1, metalness: 0, look: "props" },
   leather: { roughness: 0.36, metalness: 0, look: "props" },
   velvet: { roughness: 0.85, metalness: 0, look: "props" },
-} as const satisfies Record<string, { roughness: number; metalness: number; look: "props" | "glass" | "metal" }>;
+} as const satisfies Record<string, { roughness: number; metalness: number; look: "props" | "glass" | "metal"; env?: number }>;
 export type MaterialPreset = keyof typeof MATERIAL_PRESETS;
-const PRESET = /^P_(Wood|Stone|Metal|Paint|Glass|Cloth|Leather|Velvet)(?:\.\d+)?$/;
+const PRESET = /^P_(Wood|Stone|Metal|Polished|Paint|Glass|Cloth|Leather|Velvet)(?:\.\d+)?$/;
 /** The preset a material's name asks for (Blender's ".001" suffixes allowed), or null. */
 export function presetFor(name: string): MaterialPreset | null {
   const m = PRESET.exec(name);
@@ -244,6 +247,8 @@ export function prepareModel(source: Object3D, url: string, emissiveIntensity?: 
       if (preset && material instanceof MeshStandardMaterial) {
         material.roughness = MATERIAL_PRESETS[preset].roughness;
         material.metalness = MATERIAL_PRESETS[preset].metalness;
+        const p = MATERIAL_PRESETS[preset];
+        if ("env" in p) material.envMapIntensity = p.env;
       }
       material.side = glassShell ? FrontSide : DoubleSide;
       if (role.front) material.shadowSide = FrontSide;

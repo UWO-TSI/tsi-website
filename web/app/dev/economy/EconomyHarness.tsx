@@ -2,7 +2,7 @@
 
 /**
  * /dev/economy?view=shop|overlay|bag|sell|inventory|wallet|admin|unlock[&tab=specials][&section=items|merch|rods: the shop
- * overlay's two answers, or the rod shop][&found=0: before the Training rod is found][&tide=1: a Tidewarden rod in the bag]
+ * overlay's two answers, or the rod shop][&found=0: before the Training rod is found][&tide=1: a Tidewarden rod in the bag][&ti=<fish>: a Titanium rod]
  * /dev/economy?view=awakening[&rod=rod_training][&stage=1]: a rod's awakening cutscene (RodAwakening), again on Nice!
  */
 import { useEffect, useState, useSyncExternalStore } from "react";
@@ -60,6 +60,13 @@ async function seed(): Promise<EconomyTransport> {
     const item = { ...m.items.find((i) => i.slug === "rod-training")!, id: "dev-rod-tidewarden", slug: "rod-tidewarden", display_name: "Tidewarden rod", catalogue_ref: "rod_tidewarden",
       description: "An epic rod with the widest bite window on the island." };
     m.inventory.set(`${ME}:${item.id}`, { item, qty: 1, equipped: false, acquired_at: now.toISOString() });
+  }
+  // ?ti=<fish>: a Titanium rod in the bag with that many fish landed (400 awakens it: it wears its awakened model).
+  if (q.get("ti") !== null) {
+    const item = { ...m.items.find((i) => i.slug === "rod-training")!, id: "dev-rod-titanium", slug: "rod-titanium", display_name: "Titanium rod", catalogue_ref: "rod_titanium",
+      description: "An epic rod that never gives. Crafted at a workbench.", sprite_url: null };
+    m.inventory.set(`${ME}:${item.id}`, { item, qty: 1, equipped: false, acquired_at: now.toISOString() });
+    m.caught(ME, "rod_titanium", Number(q.get("ti")));
   }
   m.fund(MAYA, 0, 800);
   m.fund(JORDAN, 0, 2000);

@@ -20,7 +20,7 @@ import { RodRadar } from "@/components/economy/RodGear";
 import TurnStage from "@/components/economy/TurnStage";
 import { AudioManager } from "@/lib/game/audio";
 import { awakened, type RodTier } from "@/lib/game/rods";
-import { keyModel } from "@/lib/icons/itemModel";
+import { rodSpec } from "@/lib/icons/itemModel";
 import { RARITY_LABEL } from "@/lib/rarity";
 import { glowOn, sparkRecipe } from "@/lib/game/fx/glowOn";
 import { useGlowParticles, type GlowParticles } from "./GlowFx";
@@ -31,14 +31,13 @@ import { AWAKEN_FX, BEAT, auraAt, moveOf, type Move } from "./rodMotion";
 const GATHER: FxKind[] = ["gather"], NONE: FxKind[] = [];
 
 /**
- * The improved design at each awakening (by rod, first awakening first), as a stand-in until the awakened models land
- * from the tool pipeline: the rod's parts re-tinted, by material.
+ * The improved design at each awakening (by rod, first awakening first) for a rod whose awakening has no model of its
+ * own yet (rods.ts Awakening `model`): the rod's parts re-tinted, by material, a stand-in until the model lands.
  */
 const FINISH: Record<string, readonly Record<string, string>[]> = {
   // A steel-blue blank, a deep-blue grip, silver fittings; then violet with gold fittings; then gold with ivory and brass.
   rod_training: [{ Yellow: "#9fb8dd", Blue: "#1f4fa8", Red: "#e8edf3", Cream: "#ffffff" }, { Yellow: "#7a4fd8", Blue: "#2d2448", Red: "#f2c14e", Cream: "#f4edff" },
     { Yellow: "#f2c14e", Blue: "#fff4d6", Red: "#b8862a", Cream: "#fffaf0" }],
-  rod_titanium: [{ Slate: "#cdd6e0", Lilac: "#b98cff" }],
   // (its head is white with its colours in its vertices: a tint over them; the shaft is its own gold)
   rod_tidewarden: [{ Teal: "#1ad6c4", Gold: "#fff1c4", Shaft: "#ffd75e" }],
   rod_tempest: [{ Ice: "#8fd3ff", Pale: "#eef7ff" }],
@@ -47,10 +46,11 @@ const FINISH: Record<string, readonly Record<string, string>[]> = {
 /** `rod` (as bought) reaching its `stage`th awakening (1 is its first); `onClose` when it's put away. */
 export default function RodAwakening({ rod, stage, onClose }: { rod: RodTier; stage: number; onClose: () => void }) {
   const before = awakened(rod, rod.awakenings[stage - 2]?.at ?? 0), after = awakened(rod, rod.awakenings[stage - 1].at);
-  const looks = useMemo(() => {
-    const spec = keyModel(rod.key), finish = (n: number) => FINISH[rod.key]?.[n - 1];
-    return spec && ([stage - 1, stage] as const).map(n => (finish(n) ? { ...spec, tints: { ...spec.tints, ...finish(n) } } : spec));
-  }, [rod.key, stage]);
+  // Before and after: each the rod as it was then (its awakened model, rods.ts awakenedLook, or a FINISH stand-in).
+  const looks = useMemo(() => ([stage - 1, stage] as const).map(n => {
+    const spec = rodSpec(awakened(rod, rod.awakenings[n - 1]?.at ?? 0)), finish = FINISH[rod.key]?.[n - 1];
+    return spec && finish ? { ...spec, tints: { ...spec.tints, ...finish } } : spec;
+  }), [rod, stage]);
   const [grown, setGrown] = useState(false), [ready, setReady] = useState(false), [struck, setStruck] = useState(0);
   const loaded = useCallback(() => setReady(true), []);
   const beats = useRef(0), timer = useRef(0);
@@ -77,7 +77,7 @@ export default function RodAwakening({ rod, stage, onClose }: { rod: RodTier; st
     lead={`Your ${rod.name} is glowing…`} eyebrow="Awakened!" name={rod.name} onPhase={onPhase} onClose={onClose} ready={ready}
     text={<>{after.rarity === before.rarity ? "Something in it woke up. Its stats are up." : `It fishes like a ${rung.toLowerCase()} rod now, and hooks up to ${RARITY_LABEL[after.hooks].toLowerCase()}.`}
       {newPassive && <><br /><b>{newPassive.name}</b> {newPassive.text}</>}</>}
-    thing={(next, phase) => looks && <TurnStage label={rod.name} cameraZ={3.3 * AWAKEN_ROOM}>
+    thing={(next, phase) => looks[0] && looks[1] && <TurnStage label={rod.name} cameraZ={3.3 * AWAKEN_ROOM}>
       <Suspense fallback={null}>
         <Motion move={moveOf(rod.key)} phase={phase} from={before.rarity} to={after.rarity}>
           <primitive object={oldForm} visible={!next}><FittedModel spec={looks[0]} aura={auraAt(stage - 1) + BEAT[phase].aura} /></primitive>

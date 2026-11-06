@@ -23,7 +23,10 @@ describe("rods' effects (art/pipeline/build_rods.py, fx_library.py, RodAura)", (
     expect(named.get("rod-tempest.glb")).toBe("/assets/game/props/rodfx-tempest.glb");
     expect(named.get("rod-5.glb")).toBe("/assets/game/props/rodfx-tidewarden.glb");
     expect(named.get("rod-2.glb")).toBe("/assets/game/props/rodfx-cedar.glb");
-    expect([...named.values()].filter(Boolean)).toHaveLength(5);
+    expect(named.get("rod-titanium.glb")).toBe("/assets/game/props/rodfx-titanium.glb");
+    expect(named.get("rod-titanium-a1.glb")).toBe("/assets/game/props/rodfx-titanium-a1.glb");
+    expect(named.get("rod-reserved-slate.glb")).toBe("/assets/game/props/rodfx-reserved-slate.glb");
+    expect([...named.values()].filter(Boolean)).toHaveLength(7);
     expect(named.get("rod-1.glb")).toBeNull();
   });
 
@@ -58,6 +61,22 @@ describe("rods' effects (art/pipeline/build_rods.py, fx_library.py, RodAura)", (
     for (let i = 0; i < gate.count; i++) { lo = Math.min(lo, gate.getY(i)); hi = Math.max(hi, gate.getY(i)); }
     expect(lo).toBe(0);
     expect(hi).toBeGreaterThan(0.9);
+  });
+
+  it("keeps the Titanium quiet (metal, not magic) and builds its awakening's energy from the library (rod-titanium round 1)", async () => {
+    const names = async (url: string) => { const n: string[] = []; (await load(url)).traverse(o => n.push(o.name)); return n; };
+    const base = await names("/assets/game/props/rodfx-titanium.glb"), woke = await names("/assets/game/props/rodfx-titanium-a1.glb");
+    expect([...base, ...woke].some(n => n.startsWith("Halo"))).toBe(false);
+    expect(base.some(n => n.startsWith("Aura"))).toBe(false);
+    expect(woke).toEqual(expect.arrayContaining(["Energy", "Core", "Blades"]));
+    // Solid on the shop's white: no aura or additive light washing the plates (rod-titanium round 1b).
+    expect(woke.some(n => n.startsWith("Aura"))).toBe(false);
+    // Each rod is one preset material, so it draws once in a hand: the machined rod polished metal, the armour paint.
+    for (const [url, finish] of [["/assets/game/tools/rod-titanium.glb", "P_Polished"], ["/assets/game/tools/rod-titanium-a1.glb", "P_Paint"]]) {
+      const held = mergeHeld(await load(url), url), meshes: THREE.Mesh[] = [];
+      held.traverse(o => { if ((o as THREE.Mesh).isMesh) meshes.push(o as THREE.Mesh); });
+      expect(meshes.map(m => (m.material as THREE.Material).name)).toEqual([finish]);
+    }
   });
 
   it.each(rods)("%s: its effect exists, costs at most five draws a holder, and never moves the tip", async url => {

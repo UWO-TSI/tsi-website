@@ -15,7 +15,7 @@ import { BadgePercent, HandCoins, House, KeyRound, LayoutGrid, Lock, Shirt, Sofa
 import { ApiError, newKey } from "@/lib/apiClient";
 import { countUp, sellAtCounter } from "@/lib/game/shopCounter";
 import { iconUrl, shopIcon } from "@/lib/icons/keys";
-import { itemModel } from "@/lib/icons/itemModel";
+import { itemModel, rodSpec } from "@/lib/icons/itemModel";
 import { httpEconomyTransport, type EconomyTransport, type MerchView } from "@/lib/wallet/transport";
 import type { SellEntry, ShopEntry, ShopView } from "@/lib/wallet/service";
 import { merchKind, merchSpecs, merchTag, MERCH_KINDS } from "@/lib/wallet/merchShelf";
@@ -82,10 +82,11 @@ function Detail({ e, catches, list, onPick, onBack, busy, onPay, viewer }: {
   const i = list.findIndex(x => x.id === e.id);
   const prev = list[(i - 1 + list.length) % list.length], next = list[(i + 1) % list.length];
   const merch = e.category === "merch";
-  const spec = useMemo(() => itemModel(e), [e]);
+  const rod = rodByKey(e.catalogue_ref), gear = !!rod || !!tackleByKey(e.catalogue_ref);
+  // A rod you own shows as it has awakened (its awakened model, rods.ts awakenedLook), as its outline does.
+  const spec = useMemo(() => (rod ? rodSpec(awakened(rod, catches)) : itemModel(e)), [e, rod, catches]);
   // A hair dye's colour dots: the other dyes on the shelf.
   const dyes = e.category === "hair" ? list.filter(x => x.category === "hair") : [];
-  const rod = rodByKey(e.catalogue_ref), gear = !!rod || !!tackleByKey(e.catalogue_ref);
   const action = merch ? "Redeem" : e.owned > 0 && e.can_buy ? "Buy another" : e.owned > 0 ? "Owned" : "Buy";
   // A rod's box keeps its paging quiet (David 2026-11-04): no back on the stage (the rail goes back), faint small
   // chevrons for the next rod; its outline is the rarity it has awakened to.

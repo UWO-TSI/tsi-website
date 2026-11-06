@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { RODS, STAT_KEYS, STAT_MAX, TACKLE, TRAINING, awakened, bestOwnedRod, heldRig, inPlay, nextAwakening, ownedRig, ownsRod, biteWindowMs, canHook, castLuck, hookCap,
+import { RODS, STAT_KEYS, STAT_MAX, TACKLE, TRAINING, awakened, awakenedLook, bestOwnedRod, heldRig, inPlay, nextAwakening, ownedRig, ownsRod, biteWindowMs, canHook, castLuck, hookCap,
   AWAKEN_AT, onShopShelf, rig, rodByKey, rodByTier, secretAwakenings, stageAt, trainingQuest, type Stats } from "./rods";
 import { TOOLS, checkHeld } from "./tools";
 import { CATALOGUE, onSale } from "@/lib/wallet/catalogue";
@@ -185,6 +185,16 @@ describe("awakenings (David 2026-11-04: no levels, only awakenings)", () => {
     const ti = rodByKey("rod_titanium")!, woke = awakened(ti, AWAKEN_AT);
     expect(woke.base.strength).toBeGreaterThan(ti.base.strength);
     expect(woke.base.luck).toBe(ti.base.luck);
+  });
+  it("wears its awakening's own model once it reaches it, and keeps the one it was bought with until then (rod-titanium round 1)", () => {
+    const ti = rodByKey("rod_titanium")!;
+    expect(awakenedLook(awakened(ti, AWAKEN_AT - 1))).toBeNull();
+    const look = awakenedLook(awakened(ti, AWAKEN_AT))!;
+    expect(look).toEqual({ model: "/assets/game/tools/rod-titanium-a1.glb", icon: "rod_titanium_a1" });
+    expect(existsSync(join(__dirname, "../../public", look.model))).toBe(true);
+    expect(existsSync(join(__dirname, "../../public/assets/icons", `${look.icon}.webp`))).toBe(true);
+    // A rod whose awakenings have no model of their own keeps its own (the cutscene's stand-in recolour stays).
+    expect(awakenedLook(awakened(training, 1000))).toBeNull();
   });
   it("takes the rarity its stats now match (David 2026-11-04: \"when awakened, rarity change\")", () => {
     expect([0, 50, 250, 1000].map(n => awakened(training, n).rarity)).toEqual(["common", "rare", "epic", "legendary"]);
