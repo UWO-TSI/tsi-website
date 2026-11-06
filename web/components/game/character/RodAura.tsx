@@ -14,6 +14,9 @@
  * A node with a `trail` extra leaves a fading ribbon (that wide, from its `trailFrom` point) in its own colour. Parts
  * whose material is `Water`, `Foam` or `Spray` are the Water type (lib/game/fx/water.ts): each holder has its own copy
  * of those materials, so its water runs, foams, reaches and splashes at its own strength.
+ * A node with a `sway` extra is soft (the library's Sway: the Cedar's foliage, David 2026-11-06: "the leaves sway a lil
+ * when moved like physics"): lit as the rod, each holder its own copy of its materials, every vertex bent by a spring
+ * that follows the holder's motion (and a little breeze), more the further it reaches from the rod's axis.
  * `strength` (1 as made) makes one holder's effect stronger, easing to it: its parts turn and bob faster and further, its
  * swelling parts (the Tempest's tip spark) grow, trails last longer, and it throws sparks more
  * often (the awakening cutscene; David's pick 2026-11-05: "the aura gets a strength setting"). `Halo` sprites are
@@ -38,11 +41,13 @@ export const rodFxUrl = (rod: THREE.Object3D): string | null =>
 
 const HALO_STOPS = [[0, 1], [0.15, 0.7], [0.4, 0.22], [1, 0]] as const;
 
+// Through project_vertex, so it bends with the curved world as the rod it hugs does (curvedWorld.ts; rg8-tempest-hand:
+// "tempes aura is not on the rod body" was the unbent shell floating off the bent rod in hand).
 const AURA_VERT = `varying float vFace;
 void main() {
-  vec4 mv = modelViewMatrix * vec4(position, 1.0);
-  vFace = abs(dot(normalize(normalMatrix * normal), normalize(-mv.xyz)));
-  gl_Position = projectionMatrix * mv;
+  vec3 transformed = position;
+  #include <project_vertex>
+  vFace = abs(dot(normalize(normalMatrix * normal), normalize(-mvPosition.xyz)));
 }`;
 const AURA_FRAG = `uniform vec3 color; uniform float opacity; varying float vFace;
 void main() { gl_FragColor = vec4(color, opacity * vFace * vFace); }`;
@@ -135,13 +140,15 @@ export default function RodAura({ rod, url, strength = 1 }: { rod: THREE.Object3
     const halos = t.halos.map(h => { const s = new THREE.Sprite(h.material); s.renderOrder = 2; s.raycast = () => {}; s.userData.fx = true; group.add(s); return s; });
     const trails = t.trails.map(tr => ({ tr, node: group.getObjectByName(tr.name)!, ribbon: ribbon(tr.material), at: [] as THREE.Vector3[], wait: 0 }));
     for (const x of trails) group.add(x.ribbon);
-    // the water's materials are this holder's own: its strength is its own
-    const waters: THREE.ShaderMaterial[] = [];
+    // the water's and the soft parts' materials are this holder's own: its strength and its swing are its own
+    const waters: THREE.ShaderMaterial[] = [], sway = swayOf();
     group.traverse(o => {
       const mesh = o as THREE.Mesh;
-      if (mesh.isMesh && WATER_PART.test((mesh.material as THREE.Material).name)) waters.push((mesh.material = (mesh.material as THREE.ShaderMaterial).clone()));
+      if (!mesh.isMesh) return;
+      if (WATER_PART.test((mesh.material as THREE.Material).name)) waters.push((mesh.material = (mesh.material as THREE.ShaderMaterial).clone()));
+      for (let n: THREE.Object3D | null = mesh; n && n !== group; n = n.parent) if (n.userData.sway) { mesh.material = swaying(mesh.material as THREE.MeshStandardMaterial, sway, Number(n.userData.sway)); break; }
     });
-    return { t, group, halos, trails, waters, moving: nodesOf(group), clock: { next: 0, seed: rod.id * 7919, k: 1 } };
+    return { t, group, halos, trails, waters, sway, moving: nodesOf(group), clock: { next: 0, seed: rod.id * 7919, k: 1 } };
   }, [scene, rod]);
   useEffect(() => {
     rod.add(fx.group);
@@ -192,7 +199,7 @@ const v = new THREE.Vector3(), cam = new THREE.Vector3(), s = new THREE.Vector3(
 const crackle = (t: number) => { const k = Math.floor(t * 16); return 0.55 + 0.45 * Math.abs(Math.sin(k * 12.9898) * 43758.5453 % 1); };
 
 /** Module scope (the react compiler forbids writing through hook values): the idle animation, the glows and sparks. */
-function idle(rod: THREE.Object3D, fx: { t: Template; group: THREE.Object3D; halos: THREE.Sprite[]; trails: Trail[]; waters: THREE.ShaderMaterial[]; moving: THREE.Object3D[]; clock: { next: number; seed: number; k: number } },
+function idle(rod: THREE.Object3D, fx: { t: Template; group: THREE.Object3D; halos: THREE.Sprite[]; trails: Trail[]; waters: THREE.ShaderMaterial[]; sway: Sway; moving: THREE.Object3D[]; clock: { next: number; seed: number; k: number } },
   glow: GlowParticles, camera: THREE.Camera, t: number, delta: number, strength: number) {
   const night = nightLit(), b = breath(t, 1.3), { t: tpl } = fx;
   const power = fx.clock.k += (strength - fx.clock.k) * (1 - Math.exp(-Math.min(delta, 0.1) * 3)), grow = fxGrow("pulse", "size", power);
@@ -215,6 +222,7 @@ function idle(rod: THREE.Object3D, fx: { t: Template; group: THREE.Object3D; hal
   }
   if (!rod.visible) return;
   rod.updateWorldMatrix(true, false);
+  if (fx.sway.used) spring(fx.sway, rod, t, Math.min(delta, 0.1), power);
   if (fx.trails.length) { fx.group.updateMatrixWorld(true); for (const x of fx.trails) lay(x, fx.group, Math.min(delta, 0.1), power); }
   const k = rod.getWorldScale(s).x || 1;
   camera.getWorldPosition(cam);
@@ -235,3 +243,43 @@ function idle(rod: THREE.Object3D, fx: { t: Template; group: THREE.Object3D; hal
   glow.pool.burst(sp.recipe, p.x, p.y, p.z, p.y - 2, 0, 0, 1, sp.tint, seed);
 }
 const TAU = Math.PI * 2;
+
+/**
+ * The Sway type's spring, one per holder: where the soft part's middle is in the world (`at`, `vel`), and how far it
+ * hangs back (`off`, `offVel`, in the rod's own space). `uniforms` are shared by every material of this holder.
+ */
+interface Sway { used: boolean; at: THREE.Vector3; vel: THREE.Vector3; off: THREE.Vector3; offVel: THREE.Vector3; primed: boolean; uniforms: { uSway: { value: THREE.Vector3 }; uSwayT: { value: number } } }
+const swayOf = (): Sway => ({ used: false, at: new THREE.Vector3(), vel: new THREE.Vector3(), off: new THREE.Vector3(), offVel: new THREE.Vector3(), primed: false,
+  uniforms: { uSway: { value: new THREE.Vector3() }, uSwayT: { value: 0 } } });
+/** The middle of the soft part, in the rod's own space (a rod's foliage). */
+const SWAY_AT = new THREE.Vector3(0, 0.42, 0);
+/** A lit material bent by the holder's spring: each vertex moved by the swing times (its reach from the rod's axis / `reach`) squared, and a breeze. */
+function swaying(src: THREE.MeshStandardMaterial, sway: Sway, swing: number): THREE.MeshStandardMaterial {
+  sway.used = true;
+  const m = src.clone();
+  m.onBeforeCompile = shader => {
+    Object.assign(shader.uniforms, sway.uniforms, { uSwing: { value: swing } });
+    shader.vertexShader = "uniform vec3 uSway; uniform float uSwayT; uniform float uSwing;\n" + shader.vertexShader.replace("#include <begin_vertex>", `#include <begin_vertex>
+  float reach = clamp(length(position.xz) / 0.13, 0.0, 1.0);
+  float give = reach * reach * uSwing;
+  transformed += (uSway + vec3(sin(uSwayT * 1.7 + position.y * 9.0), 0.0, cos(uSwayT * 1.3 + position.y * 7.0)) * 0.0025) * give;`);
+  };
+  m.customProgramCacheKey = () => "rod-sway-v1";
+  return m;
+}
+const sw = new THREE.Vector3(), sv = new THREE.Vector3(), sa = new THREE.Vector3(), inv = new THREE.Quaternion();
+/** One frame of a holder's spring: the soft part's middle's acceleration (in the rod's own space) pushes it back the other way. */
+function spring(s: Sway, rod: THREE.Object3D, t: number, dt: number, power: number) {
+  const now = rod.localToWorld(sw.copy(SWAY_AT)), scale = rod.getWorldScale(v).x || 1;
+  if (!s.primed || dt <= 0) { s.at.copy(now); s.vel.set(0, 0, 0); s.primed = true; return; }
+  const vel = sv.copy(now).sub(s.at).divideScalar(dt), acc = sa.copy(vel).sub(s.vel).divideScalar(dt);
+  s.at.copy(now); s.vel.copy(vel);
+  // into the rod's own space, in its own units
+  acc.applyQuaternion(rod.getWorldQuaternion(inv).invert()).divideScalar(scale);
+  const k = fxAt("sway", "stiffness"), d = fxAt("sway", "damping"), g = fxGrow("sway", "swing", power);
+  // o'' = -k o - d o' - a / 8: a hard swing (8 units/s²) hangs it back about 0.026, and it springs past and settles
+  s.offVel.addScaledVector(s.off, -k * dt).addScaledVector(s.offVel, -d * dt).addScaledVector(acc.clampLength(0, 60), -0.125 * g * dt);
+  s.off.addScaledVector(s.offVel, dt).clampLength(0, 0.035);
+  s.uniforms.uSway.value.copy(s.off);
+  s.uniforms.uSwayT.value = t;
+}

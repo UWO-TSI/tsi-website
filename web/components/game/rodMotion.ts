@@ -4,7 +4,9 @@
  * so the cutscene's frame loop only applies them.
  */
 import type { AwakenPhase } from "@/components/gui/flat";
-import { fxAt } from "@/lib/game/fx/library";
+import type { AwSfx } from "@/lib/game/audio";
+import type { StrikeKind } from "@/lib/game/fx/holder";
+import { fxAt, type FxKind } from "@/lib/game/fx/library";
 
 /**
  * One frame of a rod's motion, on top of the stage's turn: lifted `y` and slid `x` (stage units), rolled `roll` and
@@ -38,18 +40,36 @@ export const MOVES: Record<string, Move> = {
 export const moveOf = (key: string): Move => MOVES[key] ?? MOVES.rod_training;
 
 /**
- * Each beat's targets (the frame loop eases to them; the effects library's motion, glow and burst): `energy` the
- * rod's motion, `glow` the glow on the rod itself (its old rung's colour until the burst, then its new one's), `aura`
- * what its effect gains over its look's own strength.
- * The new form plays its motion alone at the `show`; at the `reveal` it is still, so what changed is the only thing moving.
+ * Each beat's targets (the frame loop eases to them; the effects library's motion, glow, gather and burst): `energy`
+ * the rod's motion, `glow` the glow on the rod itself (its old rung's colour until the burst, then its new one's),
+ * `aura` what its effect gains over its look's own strength, `shake` how hard it trembles (rad), `gather` the light
+ * drawn in to it (the gather type's strength, 0 for none).
+ * The suspense (David 2026-11-06: "more suspense"): it trembles harder and draws more light in through the pulse, then
+ * in the `hush` it goes still and dim, holding its breath, before the hit. The new form plays its motion alone at the
+ * `show`; at the `reveal` it is still, so what changed is the only thing moving.
  */
-export const BEAT: Record<AwakenPhase, { energy: number; glow: number; aura: number }> = {
-  frame: { energy: 0.1, glow: 0, aura: 0 },
-  glow: { energy: 0.45, glow: 0.75, aura: 0.5 },
-  pulse: { energy: 1, glow: 1, aura: 1 },
-  burst: { energy: 1.25, glow: fxAt("burst", "peak"), aura: 1.6 },
-  show: { energy: 1, glow: 0, aura: 1 },
-  reveal: { energy: 0, glow: 0, aura: 0 },
+export const BEAT: Record<AwakenPhase, { energy: number; glow: number; aura: number; shake: number; gather: number }> = {
+  frame: { energy: 0.1, glow: 0, aura: 0, shake: 0, gather: 0 },
+  glow: { energy: 0.45, glow: 0.75, aura: 0.5, shake: 0.004, gather: 1 },
+  pulse: { energy: 1, glow: 1, aura: 1, shake: 0.03, gather: 2.2 },
+  hush: { energy: 0.04, glow: 0.2, aura: 0, shake: 0.008, gather: 0 },
+  burst: { energy: 1.25, glow: fxAt("burst", "peak"), aura: 1.6, shake: 0, gather: 0 },
+  show: { energy: 1, glow: 0, aura: 1, shake: 0, gather: 0 },
+  reveal: { energy: 0, glow: 0, aura: 0, shake: 0, gather: 0 },
+};
+
+/**
+ * What acts on a rod from outside when its awakening brings it a new look or a new effect (David 2026-11-06: "if its a
+ * new model or new effect external things will attach like a lighting related will strike it with thunder"): the
+ * strike (lightning, a wave: lib/game/fx/holder.ts) gathers in the hush and lands on the burst, with its sound, and
+ * `wears` the library types its new form wears from the burst on. A rod not listed awakens without one (the Training
+ * rod's is a new finish).
+ */
+export const AWAKEN_FX: Record<string, { strike: StrikeKind; sound: AwSfx; soundAt: "hush" | "burst"; wears?: FxKind[] }> = {
+  // the storm rod: struck by lightning (the thunder's crack is the hit), and the lightning stays on it, crawling over the chain
+  rod_tempest: { strike: "lightning", sound: "aw-thunder", soundAt: "burst", wears: ["electricity"] },
+  // the sea rod: a wave breaks over it (its sound rushes in over the hush and crashes on the hit), and its water runs further down it
+  rod_tidewarden: { strike: "wave", sound: "aw-wave", soundAt: "hush" },
 };
 /** An effect rod's aura at a look (0 as bought, 1 after its first awakening, ...): a little stronger each awakening. */
 export const auraAt = (look: number) => 1 + 0.5 * look;

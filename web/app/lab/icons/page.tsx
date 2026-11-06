@@ -147,6 +147,12 @@ async function subjectFor(spec: IconSpec): Promise<THREE.Object3D> {
     return matte(g);
   }
   const model = spec.skinned ? cloneSkinned(scene) : prepareModel(scene, spec.url);
+  // A rod's effect GLB (RodAura) holds its soft parts (the Cedar's foliage, the library's Sway): they are its design, so
+  // the picture has them; its light (Glow, Light, Aura, water) is left out.
+  if (typeof scene.userData.rodFx === "string") {
+    const fx = (await loader.loadAsync(`/assets/game/props/rodfx-${scene.userData.rodFx}.glb`)).scene;
+    for (const part of [...fx.children]) if (part.userData.sway) model.add(part);
+  }
   const g = new THREE.Group();
   let atlas: THREE.Texture | undefined;
   if (spec.atlas) {

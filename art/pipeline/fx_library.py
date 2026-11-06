@@ -19,8 +19,8 @@ Motion is extras on a part: `spin` (rad/s about its own up), `bob` (m) at `rate`
 of it being circle isnt right").
 
   Blender -b --factory-startup -P art/pipeline/fx_library.py -- samples
-writes one sample effect per type, round a stand-in rod (z 0.06 to 0.76, rig units), to
-web/public/assets/game/props/fxlib-<type>.glb for /lab/fx's previews. The Water type's sample is a 1:1 study of David's
+writes the Water type's sample to web/public/assets/game/props/fxlib-water.glb for /lab/fx (every other type is drawn
+by code on any holder since round 10: components/game/fx/HolderFx.tsx). The sample is a 1:1 study of David's
 reference (fx-aquatic-water-ref.png, rods round 9): the Aquatic sword, its shell hilt and its water blade, from the
 reference's own outlines (traced_refs.py), 1 unit its height, the tail's foot at 0, drawn flat to the camera (-Y).
 """
@@ -239,55 +239,14 @@ def aquatic():
     return [hilt, blade, foam_, spray_]
 
 
-# ================================================================ the samples, round a stand-in rod
+# ================================================================ the sample
 def samples(only=None):
-    """One effect per type round the stand-in rod, in one neutral sample colour, for the previews (`only` some)."""
-    Z0, Z1, C, PALE = 0.06, 0.76, "#7FD8FF", "#CFF4FF"
-    axis = [V((0, 0, Z0 + (Z1 - Z0) * k / 6)) for k in range(7)]
-    rad = [0.012 - 0.006 * k / 6 for k in range(7)]
-
-    def edge(pc):                                # glow: light along the blank's two edges and at its tip
-        pc.mat = "Glow"
-        for s in (-1, 1):
-            pc.tube([p + V((s * r * 1.05, 0, 0)) for p, r in zip(axis, rad)], [0.0022] * 7, sides=3, tip=True)
-        pc.blob((0, 0, Z1 + 0.02), 0.012, segs=6, rings=4)
-
-    def orb(pc):                                 # pulse: an orb over the tip
-        pc.mat = "Glow"
-        pc.blob((0, 0, Z1 + 0.05), 0.02, segs=8, rings=6)
-
-    def plates(pc):                              # motion: three plates orbiting the blank
-        pc.mat = "Glow"
-        for a, z in ((0.0, 0.6), (TAU / 3, 0.45), (2 * TAU / 3, 0.3)):
-            c = V((math.cos(a) * 0.07, math.sin(a) * 0.07, z))
-            pc.tube([c - V((0, 0, 0.004)), c + V((0, 0, 0.004))], [0.018, 0.018], sides=6, tip=False, cap=True)
-
-    def bolt(pc):                                # flicker: a lightning bolt down the blank
-        pc.mat = "Glow"
-        pts = [V((0.03 * math.sin(i * 2.3), 0.02 * math.cos(i * 1.7), Z0 + 0.02 + (Z1 - Z0) * i / 11)) for i in range(12)]
-        pc.tube(pts, [0.0028] * 12, sides=3, tip=True)
-
-    def wisp(pc):                                # trail: a wisp of light orbiting the blank
-        pc.mat = "Light"
-        pc.blob((0.07, 0, 0.42), 0.008, segs=6, rings=4)
-
-    # particles: no part of its own, only the motes; a hair-thin anchor spans the blank so they rise from all of it
-    anchor = lambda: part("Anchor", {"Glow": C}, lambda pc: pc.tube([V((0, 0, Z0)), V((0, 0, Z1))], [0.0001, 0.0001], sides=3, tip=False))
-    made = {
-        "glow": ([glow("Edge", C, edge)], {}),
-        "aura": ([aura_hug("Aura", C, axis, rad, inflate=2.4)], {}),
-        "particles": ([anchor()], particles(PALE, "glow", 0.12, 0.06, 0.35)),
-        "trail": ([light("Wisp", C, wisp, pivot=(0, 0, 0.42), spin=3.0, bob=0.03, rate=0.7, **trail(0.012, (0.07, 0, 0)))], {}),
-        "pulse": ([glow("Orb", C, orb, pivot=(0, 0, Z1 + 0.05), pulse=0.12)], {}),
-        "motion": ([glow("Plates", C, plates, pivot=(0, 0, 0.45), spin=1.2, bob=0.02, rate=0.8)], {}),
-        "flicker": ([glow("Bolt", C, bolt, flicker=1.0)], {}),
-        "water": (aquatic() if not only or "water" in only else [], {}),
-    }
-    for kind, (objs, extras) in made.items():
-        if only and kind not in only:
-            continue
-        export(objs, os.path.join(PROPS, f"fxlib-{kind}.glb"), extras)
-        print(f"MODEL props/fxlib-{kind} tris={sum(kit.ntris(o) for o in objs if o.type == 'MESH')}")
+    """The Water type's sample for /lab/fx (every other type is drawn by code on any holder since round 10:
+    components/game/fx/HolderFx.tsx)."""
+    if only and "water" not in only:
+        return
+    export(aquatic(), os.path.join(PROPS, "fxlib-water.glb"), {})
+    print("MODEL props/fxlib-water")
 
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []

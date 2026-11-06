@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { AWAKEN_MS } from "@/components/gui/flat";
 import { RODS } from "@/lib/game/rods";
-import { BEAT, MOVES, auraAt, moveOf } from "./rodMotion";
+import { AWAKEN_FX, BEAT, MOVES, auraAt, moveOf } from "./rodMotion";
 
 const awakening = RODS.filter(r => r.awakenings.length);
 const at = (t: number, e: number, key: string) => moveOf(key)(t, e);
@@ -20,7 +20,7 @@ describe("each rod's awakening motion (David 2026-11-05)", () => {
       for (const v of [p.x, p.y, p.roll, p.tip, p.twirl, p.flash]) expect(Math.abs(v)).toBeLessThan(1e-9);
       expect(p.sheen).toBeNull();
     }
-    expect(BEAT.reveal).toEqual({ energy: 0, glow: 0, aura: 0 });
+    expect(BEAT.reveal).toEqual({ energy: 0, glow: 0, aura: 0, shake: 0, gather: 0 });
   });
 
   it("never stands still on the Tidewarden: it rides a swell up and down and rolls with it", () => {
@@ -40,6 +40,21 @@ describe("each rod's awakening motion (David 2026-11-05)", () => {
     expect(AWAKEN_MS.show).toBeGreaterThan(1000);
     expect(BEAT.show.glow).toBe(0);
     expect(BEAT.show.energy).toBeGreaterThan(0.5);
+  });
+
+  it("builds suspense: trembling harder and drawing more light in through the pulse, then still and dim in the hush before the hit", () => {
+    expect(BEAT.pulse.shake).toBeGreaterThan(BEAT.glow.shake);
+    expect(BEAT.pulse.gather).toBeGreaterThan(BEAT.glow.gather);
+    expect(BEAT.hush.energy).toBeLessThan(0.1);
+    expect(BEAT.hush.glow).toBeLessThan(BEAT.pulse.glow);
+    expect(AWAKEN_MS.hush).toBeGreaterThan(300);
+  });
+
+  it("strikes the rods whose awakening brings a new look or effect from outside: the Tempest by lightning, the Tidewarden by a wave", () => {
+    expect(AWAKEN_FX.rod_tempest).toMatchObject({ strike: "lightning", sound: "aw-thunder" });
+    expect(AWAKEN_FX.rod_tempest.wears).toContain("electricity");
+    expect(AWAKEN_FX.rod_tidewarden.strike).toBe("wave");
+    expect(AWAKEN_FX.rod_training).toBeUndefined();
   });
 
   it("grows the aura with each awakening", () => {

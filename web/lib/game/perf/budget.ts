@@ -110,7 +110,7 @@ export const EFFECT_BUDGET: Record<string, EffectBudget> = {
 };
 
 /**
- * Particle pools (the scene's fixed capacities: nothing allocated as effects fire). Every `new ParticlePool(` in the
+ * Particle pools (the scene's fixed capacities: nothing allocated as effects fire). Every `new ParticlePool(` (or `HolderPool(`) in the
  * code is listed here with the most its file may hold in all; budget.test.ts reads the sources, so a new pool fails
  * until it is registered.
  */
@@ -121,6 +121,7 @@ export const PARTICLE_POOLS: Record<string, number> = {
   "components/game/combat/MobFx.tsx": 360,
   "components/game/oracle/CandleFire.tsx": 48,
   "components/game/campfire/Campfire.tsx": 64, // the beach fire's tongues and embers (about 40 alive with eight dancers)
+  "components/game/fx/HolderFx.tsx": 320, // one holder's code-drawn effects (lib/game/fx/holder.ts HolderPool): flame at full strength about 60
 };
 /** Particles one movement event may throw (one avatar, juice amount 1): the heaviest today is a heavy landing on grass, 19. */
 export const JUICE_EVENT_PARTICLES = 24;

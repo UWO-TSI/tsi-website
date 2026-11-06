@@ -247,9 +247,12 @@ def whorl(pc, c, R, n, phase, rise=0.35, droop=0.7, seed=0, mats=("Leaf", "Leaf"
 
 def cedar():
     """Uncommon, rod-2 (David 11-03: "the leave should grow in a natural looking way, make it look like a cedar tree";
-    11-05: "more leaves it loosk naked"). The blank is the trunk of a little cedar: twelve close layers of flat needle
-    sprays up its top part, a full cone wide and drooping low and small near the tip, each layer turned on from the
-    last so the gaps fill, the sprays in two greens (new growth lighter at the top), the blank's tip as the leader."""
+    11-05: "more leaves it loosk naked"; 11-06: "more dense and move more down to the handle area, the leaves sway a lil
+    when moved like physics"). The blank is the trunk of a little cedar: eighteen close layers of flat needle sprays
+    from just above the grip to the tip, each with a short inner layer filling it in, a full cone wide and drooping low
+    near the grip and small near the tip, each layer turned on from the last so the gaps fill, in two greens (new growth
+    lighter at the top), the blank's tip as the leader. The foliage is the rod's effect (`rodfx-cedar`, the library's
+    Sway: RodAura springs it after the rod's motion), so the rod itself stays one plain mesh."""
     L = 0.76
     bend = bender(L)
     rad = lambda z: 0.0135 - 0.0075 * (z - 0.06) / (L - 0.06)
@@ -264,13 +267,20 @@ def cedar():
         c, r = bend(0.075), rad(0.075)
         pc.tube([c - V((0, 0, 0.006)), c + V((0, 0, 0.006))], [r * 1.25, r * 1.25], sides=6, tip=False, cap=False)
         reel(pc, z=0.02, mat="Grip")
-        n = 12                                   # z, reach and sprays: the cone, from the bottom layer to the top
-        layers = [(0.27 + 0.44 * w / (n - 1), 0.118 - 0.096 * w / (n - 1), (8, 8, 8, 7, 7, 7, 6, 6, 5, 5, 4, 3)[w]) for w in range(n)]
-        for w, (z, R, m) in enumerate(layers):
-            whorl(pc, bend(z), R, m, 0.4 + w * 2.4, droop=0.9 - 0.04 * w, seed=w,
-                  mats=("Leaf", "Fresh") if w < n // 2 else ("Fresh", "Leaf"))
         line(pc, (0, -0.048, 0.034), bend, L, "Line")
-    return model("rod-2", {"Grip": "#C8A27A", "Blank": "#9A5A3A", "Fresh": "#6A9A48", "Line": "#F2ECDD", "Leaf": "#4A7A38"}, b)
+    rod = model("rod-2", {"Grip": "#C8A27A", "Blank": "#9A5A3A", "Line": "#F2ECDD"}, b)
+
+    def foliage(pc):
+        n = 18                                   # z, reach and sprays: the cone, from just above the grip to the tip
+        for w in range(n):
+            u = w / (n - 1)
+            z, R, m = 0.11 + 0.61 * u, 0.13 - 0.108 * u, max(3, round(10 - 7 * u))
+            mats = ("Leaf", "Fresh") if w < n // 2 else ("Fresh", "Leaf")
+            whorl(pc, bend(z), R, m, 0.4 + w * 2.4, droop=0.9 - 0.03 * w, seed=w, mats=mats)
+            # the inner layer: short sprays between the long ones, a little above them, filling the cone in
+            whorl(pc, bend(z + 0.012), R * 0.55, max(3, m - 3), 0.4 + w * 2.4 + math.pi / m, rise=0.5, droop=0.6, seed=w + 40, mats=mats[::-1])
+    leaves = fx_part("Leaves", {"Leaf": "#4A7A38", "Fresh": "#6A9A48"}, foliage, sway=1.0)
+    return rod, [leaves], {"rodFx": "cedar"}, {}
 
 
 def glass():

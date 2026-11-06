@@ -39,7 +39,8 @@ const WATER_VERT = /* glsl */ `
 varying vec2 vUv; varying vec3 vData;
 void main() {
   vUv = uv; vData = vec3(color);
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  vec3 transformed = position;
+  #include <project_vertex>
 }`;
 const WATER_FRAG = /* glsl */ `${UNIFORMS}${NOISE}
 varying vec2 vUv; varying vec3 vData;
@@ -84,7 +85,8 @@ void main() {
   p.x += sin(t * 2.3 + p.y * 31.0 + ph) * 0.004 * lift;
   p.y += cos(t * 1.9 + p.x * 27.0 + ph) * 0.003 * lift;
   vPos = position;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+  vec3 transformed = p;
+  #include <project_vertex>
 }`;
 const FOAM_FRAG = /* glsl */ `${UNIFORMS}${NOISE}
 varying vec3 vData, vPos;
@@ -117,10 +119,11 @@ void main() {
   vec3 p = home + out_ * (0.03 + 0.09 * speed) * x + vec3(0.0, 0.07 * x - 0.22 * (tau * tau - 0.25), 0.0);
   vLive = grown > 0.5 ? step(speed, uSplash - 1.0) : 1.0;          // the drops that come with strength
   float s = size * smoothstep(0.0, 0.12, tau) * (1.0 - smoothstep(0.72, 1.0, tau)) * vLive;
-  vec4 mv = modelViewMatrix * vec4(p, 1.0);
-  mv.xy += corner * s * length((modelViewMatrix * vec4(1.0, 0.0, 0.0, 0.0)).xyz);
+  vec3 transformed = p;
+  #include <project_vertex>
+  mvPosition.xy += corner * s * length((modelViewMatrix * vec4(1.0, 0.0, 0.0, 0.0)).xyz);
   vCorner = corner;
-  gl_Position = projectionMatrix * mv;
+  gl_Position = projectionMatrix * mvPosition;
 }`;
 const SPRAY_FRAG = /* glsl */ `${UNIFORMS}
 uniform vec3 uColor;

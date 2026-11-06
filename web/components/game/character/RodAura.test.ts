@@ -17,13 +17,24 @@ const load = (url: string) => new Promise<THREE.Object3D>((resolve, reject) => {
 const rods = readdirSync(join(PUBLIC, "assets/game/tools")).filter(f => f.startsWith("rod-")).map(f => `/assets/game/tools/${f}`);
 
 describe("rods' effects (art/pipeline/build_rods.py, fx_library.py, RodAura)", () => {
-  it("names its effect on the epic and the rare rods, through the held merge", async () => {
+  it("names its effect on the epic and the rare rods (and the Cedar, whose foliage sways), through the held merge", async () => {
     const named = new Map<string, string | null>();
     for (const url of rods) named.set(url.split("/").pop()!, rodFxUrl(mergeHeld(await load(url), url)));
     expect(named.get("rod-tempest.glb")).toBe("/assets/game/props/rodfx-tempest.glb");
     expect(named.get("rod-5.glb")).toBe("/assets/game/props/rodfx-tidewarden.glb");
-    expect([...named.values()].filter(Boolean)).toHaveLength(4);
+    expect(named.get("rod-2.glb")).toBe("/assets/game/props/rodfx-cedar.glb");
+    expect([...named.values()].filter(Boolean)).toHaveLength(5);
     expect(named.get("rod-1.glb")).toBeNull();
+  });
+
+  it("gives the Cedar's foliage to its effect as the library's Sway, the rod itself left plain (David 2026-11-06)", async () => {
+    const fx = await load("/assets/game/props/rodfx-cedar.glb"), rod = await load("/assets/game/tools/rod-2.glb");
+    const soft = fx.children.filter(n => n.userData.sway);
+    expect(soft).toHaveLength(1);
+    const mats = new Set<string>();
+    fx.traverse(o => { const m = o as THREE.Mesh; if (m.isMesh) mats.add((m.material as THREE.Material).name); });
+    expect([...mats].sort()).toEqual(["Leaves_Fresh", "Leaves_Leaf"]);
+    rod.traverse(o => { const m = o as THREE.Mesh; if (m.isMesh) expect((m.material as THREE.Material).name).not.toMatch(/Leaf|Fresh/); });
   });
 
   it("builds the Tempest from the effects library: no discs of light, a trail, a hugging aura", async () => {

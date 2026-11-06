@@ -14,7 +14,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { AWAKEN_CARD_MS, AWAKEN_ROOM, Awakening, DarkButton, type AwakenPhase } from "@/components/gui/flat";
+import { AWAKEN_CARD_MS, AWAKEN_MS, AWAKEN_ROOM, Awakening, DarkButton, type AwakenPhase } from "@/components/gui/flat";
 import { FittedModel } from "@/components/economy/ItemViewer";
 import { RodRadar } from "@/components/economy/RodGear";
 import TurnStage from "@/components/economy/TurnStage";
@@ -24,7 +24,11 @@ import { keyModel } from "@/lib/icons/itemModel";
 import { RARITY_LABEL } from "@/lib/rarity";
 import { glowOn, sparkRecipe } from "@/lib/game/fx/glowOn";
 import { useGlowParticles, type GlowParticles } from "./GlowFx";
-import { BEAT, auraAt, moveOf, type Move } from "./rodMotion";
+import type { FxKind } from "@/lib/game/fx/library";
+import HolderFx from "./fx/HolderFx";
+import { AWAKEN_FX, BEAT, auraAt, moveOf, type Move } from "./rodMotion";
+
+const GATHER: FxKind[] = ["gather"], NONE: FxKind[] = [];
 
 /**
  * The improved design at each awakening (by rod, first awakening first), as a stand-in until the awakened models land
@@ -36,8 +40,8 @@ const FINISH: Record<string, readonly Record<string, string>[]> = {
     { Yellow: "#f2c14e", Blue: "#fff4d6", Red: "#b8862a", Cream: "#fffaf0" }],
   rod_titanium: [{ Slate: "#cdd6e0", Lilac: "#b98cff" }],
   // (its head is white with its colours in its vertices: a tint over them; the shaft is its own gold)
-  rod_tidewarden: [{ Teal: "#22b8aa" }, { Teal: "#1ad6c4", Gold: "#fff1c4", Shaft: "#ffd75e" }],
-  rod_tempest: [{ Ice: "#b6e2ff" }, { Ice: "#8fd3ff", Pale: "#eef7ff" }],
+  rod_tidewarden: [{ Teal: "#1ad6c4", Gold: "#fff1c4", Shaft: "#ffd75e" }],
+  rod_tempest: [{ Ice: "#8fd3ff", Pale: "#eef7ff" }],
 };
 
 /** `rod` (as bought) reaching its `stage`th awakening (1 is its first); `onClose` when it's put away. */
@@ -47,13 +51,22 @@ export default function RodAwakening({ rod, stage, onClose }: { rod: RodTier; st
     const spec = keyModel(rod.key), finish = (n: number) => FINISH[rod.key]?.[n - 1];
     return spec && ([stage - 1, stage] as const).map(n => (finish(n) ? { ...spec, tints: { ...spec.tints, ...finish(n) } } : spec));
   }, [rod.key, stage]);
-  const [grown, setGrown] = useState(false), [ready, setReady] = useState(false);
+  const [grown, setGrown] = useState(false), [ready, setReady] = useState(false), [struck, setStruck] = useState(0);
   const loaded = useCallback(() => setReady(true), []);
   const beats = useRef(0), timer = useRef(0);
   useEffect(() => () => window.clearTimeout(timer.current), []);
+  const outside = AWAKEN_FX[rod.key];
+  // The holders of the library's types: the old form (light gathering in), the new form (the strike, what it wears).
+  const [[oldForm, newForm]] = useState(() => [new THREE.Group(), new THREE.Group()] as const);
+  const [colours] = useState(() => { const css = getComputedStyle(document.documentElement), of = (r: string) => css.getPropertyValue(`--ui-rarity-${r}`).trim() || "#7FD8FF";
+    return { from: of(before.rarity), to: of(after.rarity) }; });
+  // The suspense and the hit: the riser under the glow and the pulse (cut dead at the hush), a heartbeat on each beat,
+  // the strike's sound (a wave's crash lands on the burst, so it starts in the hush), the hit, the thunder.
   const onPhase = (p: AwakenPhase | "beat") => {
-    if (p === "beat") AudioManager.playSFX("blip3", { rate: 0.8 + 0.05 * beats.current++, gain: 0.3 });
-    if (p === "burst") AudioManager.playSFX("bite-legendary", { gain: 0.7 });
+    if (p === "glow") AudioManager.playSFX("aw-riser", { gain: 0.6 });
+    if (p === "beat") AudioManager.playSFX("aw-heart", { rate: 0.85 + 0.05 * beats.current++, gain: 0.55 });
+    if (p === "hush") { setStruck(n => n + 1); if (outside?.soundAt === "hush") AudioManager.playSFX(outside.sound, { gain: 0.8 }); }
+    if (p === "burst") { AudioManager.playSFX("aw-impact", { gain: 0.9 }); if (outside?.soundAt === "burst") AudioManager.playSFX(outside.sound, { gain: 0.85 }); }
     if (p === "reveal") {
       AudioManager.playSFX("confirm", { rate: 0.92, gain: 0.7 });
       timer.current = window.setTimeout(() => setGrown(true), AWAKEN_CARD_MS);
@@ -67,9 +80,12 @@ export default function RodAwakening({ rod, stage, onClose }: { rod: RodTier; st
     thing={(next, phase) => looks && <TurnStage label={rod.name} cameraZ={3.3 * AWAKEN_ROOM}>
       <Suspense fallback={null}>
         <Motion move={moveOf(rod.key)} phase={phase} from={before.rarity} to={after.rarity}>
-          <group visible={!next}><FittedModel spec={looks[0]} aura={auraAt(stage - 1) + BEAT[phase].aura} /></group>
-          <group visible={next}><FittedModel spec={looks[1]} aura={auraAt(stage) + BEAT[phase].aura} /></group>
+          <primitive object={oldForm} visible={!next}><FittedModel spec={looks[0]} aura={auraAt(stage - 1) + BEAT[phase].aura} /></primitive>
+          <primitive object={newForm} visible={next}><FittedModel spec={looks[1]} aura={auraAt(stage) + BEAT[phase].aura} /></primitive>
         </Motion>
+        <HolderFx holder={oldForm} kinds={GATHER} strength={BEAT[phase].gather} colour={colours.from} />
+        {outside && <HolderFx holder={newForm} kinds={outside.wears ?? NONE} strength={auraAt(stage) + BEAT[phase].aura} colour={colours.to}
+          strike={{ kind: outside.strike, hit: AWAKEN_MS.hush / 1000, key: struck }} />}
         <Loaded onLoad={loaded} />
       </Suspense>
     </TurnStage>}
@@ -89,7 +105,7 @@ function Motion({ move, phase, from, to, children }: { move: Move; phase: Awaken
   const group = useRef<THREE.Group>(null), light = useRef<THREE.PointLight>(null);
   const [live] = useState(() => {
     const css = getComputedStyle(document.documentElement), of = (r: string) => new THREE.Color(css.getPropertyValue(`--ui-rarity-${r}`).trim() || "#000000");
-    return { e: 0, glow: 0, twirl: 0, colour: of(from), from: of(from), to: of(to), lit: new Map<THREE.MeshStandardMaterial, THREE.Color>(), burst: false };
+    return { e: 0, glow: 0, twirl: 0, shake: 0, colour: of(from), from: of(from), to: of(to), lit: new Map<THREE.MeshStandardMaterial, THREE.Color>(), burst: false };
   });
   const glow = useGlowParticles();
   useFrame(({ clock }, dt) => { if (group.current) pose(group.current, light.current, live, glow, move, phase, clock.elapsedTime, Math.min(dt, 0.1)); });
@@ -98,17 +114,19 @@ function Motion({ move, phase, from, to, children }: { move: Move; phase: Awaken
 
 const LATER: AwakenPhase[] = ["burst", "show", "reveal"];
 /** Module scope (the react compiler forbids writing through hook values): one frame of Motion. */
-type Live = { e: number; glow: number; twirl: number; colour: THREE.Color; from: THREE.Color; to: THREE.Color; lit: Map<THREE.MeshStandardMaterial, THREE.Color>; burst: boolean };
+type Live = { e: number; glow: number; twirl: number; shake: number; colour: THREE.Color; from: THREE.Color; to: THREE.Color; lit: Map<THREE.MeshStandardMaterial, THREE.Color>; burst: boolean };
 const at = new THREE.Vector3();
 function pose(g: THREE.Group, light: THREE.PointLight | null, live: Live, pool: GlowParticles, move: Move, phase: AwakenPhase, t: number, dt: number) {
   const ease = 1 - Math.exp(-dt * 3), beat = BEAT[phase];
   live.e += (beat.energy - live.e) * ease;
   live.glow += (beat.glow - live.glow) * (phase === "burst" ? 1 - Math.exp(-dt * 10) : ease);
   live.colour.lerp(LATER.includes(phase) ? live.to : live.from, 1 - Math.exp(-dt * 6));
-  const p = move(t, live.e);
+  live.shake += (beat.shake - live.shake) * ease;
+  const p = move(t, live.e), j = live.shake;
   live.twirl += p.twirl * dt;
-  g.position.set(p.x, p.y, 0);
-  g.rotation.set(p.tip, live.twirl, p.roll);
+  // The tremble on top (the suspense): fast and uneven, harder as it builds.
+  g.position.set(p.x + j * 0.5 * Math.sin(t * 47.3), p.y + j * 0.3 * Math.sin(t * 39.1 + 1), 0);
+  g.rotation.set(p.tip + j * Math.sin(t * 53.7 + 2), live.twirl, p.roll + j * Math.sin(t * 61.3));
   // Under its full colour, so the rod keeps its own colours inside the glow instead of washing out pale.
   glowOn(g, live.colour, 0.7 * (live.glow + p.flash), live.lit);
   if (phase === "burst" && !live.burst) {

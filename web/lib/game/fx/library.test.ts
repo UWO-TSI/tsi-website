@@ -7,7 +7,7 @@ const KINDS = Object.keys(FX) as FxKind[];
 
 describe("the effects library (David 2026-11-05)", () => {
   it("has the standard types, each said in plain words with how it's made and its parameters", () => {
-    expect(KINDS.sort()).toEqual(["aura", "burst", "flicker", "glow", "motion", "particles", "pulse", "sparks", "trail", "water"]);
+    expect(KINDS.sort()).toEqual(["aura", "burst", "electricity", "embers", "flame", "flicker", "gather", "glow", "motion", "particles", "petals", "pulse", "sparks", "sway", "trail", "water"]);
     for (const k of KINDS) {
       expect(FX[k].what.length).toBeGreaterThan(10);
       expect(FX[k].authored.length).toBeGreaterThan(10);
@@ -32,8 +32,7 @@ describe("the effects library (David 2026-11-05)", () => {
     expect(KINDS.some(k => /halo|ring|circle|disc/i.test(k + FX[k].name))).toBe(false);
   });
 
-  it("has a preview sample for each type drawn by RodAura", () => {
-    for (const k of ["glow", "aura", "particles", "trail", "pulse", "motion", "flicker", "water"])
-      expect(existsSync(join(__dirname, `../../../public/assets/game/props/fxlib-${k}.glb`))).toBe(true);
+  it("has the Water type's sample (every other type is drawn by code on any holder: HolderFx)", () => {
+    expect(existsSync(join(__dirname, "../../../public/assets/game/props/fxlib-water.glb"))).toBe(true);
   });
 });
