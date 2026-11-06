@@ -28,6 +28,10 @@ Build (coordinator):
 7. **Sound:** redo the night crickets; the rain is too crispy and crackly. Natural, ambient, cozy. Synthesised or CC0 only (SOURCES.md), no ElevenLabs.
 8. **The questions card:** "c, keep for now" and "0,3": apply as your card asked. sky3-skypx came back redo with no note: give your best guess and a fix on the card.
 9. title-r2 merges before sky-ambient; leave the title's files alone.
+10. **The lamps' glow** (coordinator, mid-round, from David's title 5 note, verbatim: "the clow is still so circular idk
+    how to explain it and the cloud is also covering the glow which makes it weird and the firefly glow is too strong and
+    radius too big"): the lamp glow follows the light's shape and falls off softly with no round edge; clouds never draw
+    over it. The firefly glow (AmbientLife) is title-r2's: leave it. A `sky4-glow` clip (night, lamps, a cloud passing).
 
 Evidence `sky4-*`: day, sunset, night (clips showing clouds forming, breaking apart and fading), the ambient layer day and night, stars close, motes, weather, the sound (short clips with audio), phone, cost, a questions card.
 
@@ -125,40 +129,43 @@ Build (a review page again, nothing ships until David marks it):
 
 ## Status
 
-Round 3 built, awaiting David's marks (head: the last `[build]` commit on `game/sky-ambient`; the report has the SHA).
-Nothing ships until he marks it. Spec `specs/sky-ambient.md` §R3 (the answer to his cloud question, the three directions,
-cost, the night's bend, the sky pixel preview, the one wind, marks, motes, sound, cards sky3-*, questions, not verified).
-- Clouds: one field `lib/game/clouds.ts` (`cloudField`, `CLOUD_SHAPES`, `bakeCloudAtlas`, `skyBend`; tests) drawn three
-  ways behind `?clouds=painted|models|sprites|traced` (`skyShader.ts CLOUD_STYLE`, shipped default `sprites`): painted in
-  the dome (`CLOUD_STYLE 1`), models and sprites in `components/game/SkyClouds.tsx`, round 2's tracer kept for the cost
-  only. Tuned to David's references (2026-11-05, vault only): brushed outlines, sunk outer lobes, loose puffs, a soft
-  two tone, the sky's light on them lighter. Pick (c) sprites.
-- Night: the dome's view-space bend replaced by a rigid elevation map (`uDip` from `SkyDome seaDip`); discs, stars,
-  Milky Way, meteors and clouds drawn in the bent sky; stars dim toward the skyline.
-- `?skypx=light` preview: canvas at dpr 1 and PostFX `SkyPixelsEffect` re-pixelates everything nearer than the dome.
-  Pick: keep as now.
-- Wind: `lib/game/wind.ts` (strength by weather, swell, gust fronts on the world clock, GLSL twin; tests), driven by
-  `IslandAtmosphere WindDriver`; grass (`GrassField uFront`), trees (`modelMaterials` lean, shipped), cloud drift.
-  `AmbienceFX WindMarks` (streak, curl, sand, leaves; 2 s, 0.3 opacity, at fronts over `worldFx windSpots`) and
-  `GoldenMotes` (golden hour, clear and windy, High). Round 1's `?wind=` pitch deleted.
-- Sound: `art/audio/synth_ambience.py` → `web/public/audio/ambient/bed-*.ogg` (8 beds, CC0, `public/audio/sfx/SOURCES.md`),
-  played by `audio.ts ambientCandidates` (the weather's bed, else the time of day's).
-- `?time=dawn` previews 20 min before sunrise (`sunPath DAWN_PREVIEW_HOURS`).
-- Evidence `specs/evidence/sky-ambient/r3/` (153 files: boards, 42 cloud stills, 27 clips each with a poster, 4 sound
-  clips, `cost/`). Reference boards (David's references beside our shots) are outside the repo, in the session scratchpad
-  `sky3/refboards/`: the coordinator puts them on the review page; never commit them.
-- Gates: tsc clean; vitest 402 files / 3774 tests passed (4 skipped); eslint clean on the 24 touched files. perf:check back to back with main, sky in
-  view (PITCH=0.35): High 5.00 / 7.40 / 4.40 vs 4.90 / 7.40 / 4.40 ms, 363 vs 361 draws; Lite 3.00 vs 2.90 ms, 286 vs 286.
+Round 4 built, awaiting David's marks (head: the last `[build]` commit on `game/sky-ambient`; the report has the SHA).
+Spec `specs/sky-ambient.md` §R4 (what changed and why, sound, glow, cost, the questions card applied, cards sky4-*,
+questions, not verified). Main merged (origin/main b4fae244) at the start of the round.
+- Clouds: the lit cards only (`?clouds=`, the painted and model styles, round 2's tracer, `?skypx=` and PostFX
+  `SkyPixelsEffect`, `uStarPx` deleted). `lib/game/clouds.ts`: `cloudLife` (each 2.1 km square grows, keeps and lets go a
+  cloud on the world clock; presence never pops; the weather's cover gates softly and eases at `COVER_RATE`),
+  `cloudShape` (12 shapes: cumulus, broken, flat, tower, wisp), `bakeCloudAtlas` (rasterised balls, the height blurred
+  for soft whole-cloud light; 0.13 s), 2 texels a cloud. `SkyClouds.tsx`: erosion by noise as a cloud forms or breaks
+  apart, flat moonlight with silver edges by night, overcast banks (mip-biased atlas, flattened, grey), drawn first among
+  the transparent things (renderOrder -100) so no cloud covers a glow.
+- Cirrus more prominent, a thin moonlit veil by night; stars hard pixel discs under the bloom (`skyShader.ts`).
+- Motes over the sea only, 48, faint, near the view (`AmbienceFX GoldenMotes`).
+- Lamp halo measured from the glass (`AmbientProps LampGlow`, `uGlass`).
+- Sound: new crickets (dusk, night) and rain in `art/audio/synth_ambience.py`; `bed-{dusk,night,rain}.ogg`; SOURCES.md.
+- Design bible: new **Sky** chapter (the valley reference's lighting); needs a ledger row from the coordinator.
+- Evidence `specs/evidence/sky-ambient/r4/` (boards, stills `sky4-r4-*`, 9 clips with posters, 2 sound clips, spectra,
+  stars and cirrus comparisons, `cost/perf-check.txt`).
+- Gates: tsc clean; vitest 402 files / 3776 tests passed (4 skipped); eslint clean on the 12 touched TS files.
+  perf:check (v2, PITCH=0.35, sky in view): High 4.70 / 7.10 / 4.20 ms, 359 draws; Lite 2.70 / 5.20 / 2.50, 283. Passed.
 
 ## Next
 
-1. Wait for David's marks (the coordinator relays them here, verbatim, under David's decisions).
-2. After the pick: delete the losing cloud styles, round 2's tracer and `?clouds=` (skyShader `CLOUD_STYLE 0..2` blocks,
-   `SkyClouds Models`), and `?skypx=` with `SkyPixelsEffect` unless he wants the lighter sky built (then: the world at
-   half resolution into a target, the dome at full resolution where the depth says sky, one composite pass).
-3. Candidates: the wind bed swelling with the gust fronts live; a night reference from David; light shafts.
+1. Wait for David's marks on round 4 (the coordinator relays them here, verbatim).
+2. Candidates he may pick (questions card): the valley reference's soft light shafts and big soft banks (price first);
+   the wind bed swelling with the gust fronts live; tuning from a night reference.
 
 ## Tools and gotchas
+
+- Round 4: `PLAN=check|golden|r4` in shoot.mjs (`r4` is the round's stills, one command); clips `life-day life-sunset
+  life-night glow motes` added (lapses to the second: `__sky.at(hhmm, date, plusMs)`). Two clips of 24 s fit one locked
+  command under 10 min; three or four short ones too.
+- A quick CPU preview of the cloud cards, no browser: a scratch script importing clouds.ts under `node
+  --experimental-strip-types` and lighting the atlas like the shader (it was in the session scratchpad, `sky4/preview.mjs`).
+- `island.ground` gives the seabed offshore (about -4 out at sea), so `SEA_LEVEL - ground` is the water's depth.
+- viewFocus puts the focus 80 units out when the camera is tipped above the horizon: clamp it for anything that should
+  stay near the view.
+- AdditiveBlending multiplies by alpha: output `vec4(colour, a)`, not `vec4(colour * a, a)`.
 
 - Round 3: never hold the devserver lock open (the coordinator, 2026-11-05: six lanes queued behind a held server). Each
   shoot or clip runs as its own command: `withlock.sh devserver specs/evidence/sky-ambient/serve.sh $PWD/web dev 3480 bash

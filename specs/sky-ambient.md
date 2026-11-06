@@ -50,6 +50,118 @@ the genshin clouds".
   `SkyClouds Models`), round 2's tracer, `?clouds=`, the lobes in the cloud texture (2 texels a cloud now, not 10),
   `?skypx=` with PostFX `SkyPixelsEffect` and `uStarPx`, and the world bench's cloud variants.
 
+### The ambient white layer, the stars (L/skyShader.ts)
+
+- **The curved light white streaks** (the cirrus 7 km up; David: "i want to keep that and make it slightly more
+  prominent"): a little more of the sky covered and a quarter more opaque by day. By night it was lit as by day's sky
+  and read as grey bands; now it is a faint veil, thinner (0.4 of the day's), only a touch lighter than the sky behind
+  it, brighter near the moon, so the stars keep their contrast.
+- **The stars** (David: "more contrast bectween actual star and the glow around"): each a hard little disc about a pixel
+  across (full bright wherever it falls between the pixel finish's pixels) held under the bloom's threshold, so the
+  bloom no longer smears a halo round every one; the bright ones keep a faint tight glow of their own and a thinner
+  sparkle. `sky4-stars-close.jpg` (round 3 beside round 4, 2×).
+
+### Motes (C/AmbienceFX.tsx GoldenMotes)
+
+David: "needs to be redone its kinda crazy and distracting make it less distracting and should it be on the ocean water
+and no grass?" Yes, over the water: the sunset reference has a few sparkles hanging over a calm sea, and that is where
+golden light on drifting motes reads as glints rather than as dust in the player's face. So: 48 instead of 160, smaller,
+fainter away from the sun, slow, carried gently downwind, low over the sea (0.35 to 2 units up), none over the land (one
+over the shallows fades out as the water thins, so none pops), and kept within 20 units of the camera so a view tipped up
+toward the low sun still sees them. Round 3 also drew every mote's colour times its alpha twice over (squared): fixed.
+`sky4-clip-motes-desktop.mp4`.
+
+### Weather (C/SkyClouds.tsx under an overcast)
+
+Rain and snow skies are now soft grey banks: the flat, broken and wispy kinds, laid lower and wider, read from a
+blurrier level of the atlas (soft, ragged edges), in a soft grey of the deck's own tone. Rain, snow and fog particles
+are as approved in round 2. `sky4-board-weather.jpg`, `sky4-clip-rain-desktop.mp4`, `sky4-clip-snow-desktop.mp4`.
+
+### Sound (art/audio/synth_ambience.py; bed-night, bed-rain, bed-dusk)
+
+David: "the night cricet chirps needs to be redone, rain sound is too crispy and crackly, these sounds should sound
+more natural and more ambient and cozy feeling". Still synthesised, CC0, logged in `public/audio/sfx/SOURCES.md`.
+- **Crickets:** round 3 gated a tone with square pulses (a buzz with hard edges). Now each cricket sings chirps of three
+  or four soft pulses (16 ms each, eased in and out, the pitch dipping a touch), a couple of chirps a second at its own
+  pace, a little uneven, in bouts; six voices near and far; a faint tree cricket's trill under them; the whole in a soft
+  tail of air (a short dark reverb). Dusk has three of them.
+- **Rain:** round 3 was a hiss up to 7 kHz with clicks for drops (half its energy above 4 kHz, spiky). Now a soft wash
+  (250 Hz to 2 kHz, no hiss above the mids), the low body of rain on leaves and sand, and a gentle patter of rounded
+  bursts with no hard edge, in the same soft tail; under 5% of its energy above 4 kHz and no spikes (kurtosis 2.4 to
+  0.1). 1.5 dB quieter than the other beds (it is the widest).
+- Evidence: `sky4-sound-night-desktop.mp4`, `sky4-sound-rain-desktop.mp4` (6 dB over the game's bed level so they can
+  be heard alone), `sky4-sound-spectra.jpg` (round 3 beside round 4, both as shipped).
+
+### The lamps' glow (C/AmbientProps.tsx LampGlow; the coordinator, from David's title round 5)
+
+David: "the clow is still so circular ... the cloud is also covering the glow which makes it weird". The halo is now
+measured from the glass (a small upright pane), not from a point: a hot core hugging the pane, then light falling off
+with the distance from it (two exponentials, no rim), the quad's own edge faded out in a square far below where the
+light still shows. Clouds draw before every see-through thing, so none covers a glow. The fireflies' glow
+(AmbientLife) is title-r2's and left alone. `sky4-clip-glow-desktop.mp4`, `sky4-r4-desktop-clear-{dusk,night}-lamps.jpg`.
+
+### The sky reference's lighting, in the design bible
+
+David on `sky3-ref-sky`: "that sky is beautiful, keep that in in mind so future skyes refrence that lighitng". Written
+as the design bible's new **Sky** chapter (`specs/design-bible.md`): the valley's light described in words (high key,
+glowing air that lifts distance to the sky's blue, the sun as light and soft shafts, cool coloured shade, huge soft lit
+clouds), with the settled sky calls. It needs a ledger row (the coordinator's).
+
+### Cost (one perf:check with the sky in view)
+
+`SKIP_BUILD=1 SCENES=v2 PITCH=0.35 npm run perf:check` on this round's measurement build: High 4.70 / 7.10 / 4.20 ms,
+359 draws, 749.5k triangles; Lite 2.70 / 5.20 / 2.50 ms, 283 draws, 557.4k. Passed (against the October baseline:
+4.80 and 2.90 ms). Round 3 at the same check was High 5.00 / 7.40 / 4.40, 363 draws, Lite 3.00, 286 (main then 4.90 and
+2.90), so this round costs nothing measurable. The clouds are still one instanced draw (up to 48 quads; the field's
+cells are smaller, 2.1 km, so more clouds); the cards' fragment work adds two value-noise reads; the atlas bake at load
+is 0.13 s (twelve shapes; round 3's eight took 0.14). `r4/cost/perf-check.txt`.
+
+### The questions card, applied
+
+"c, keep for now ... 0,3 everything else good": the clouds are the lit cards; the pixel finish stays on the sky as it
+is (`?skypx=` and its pass deleted); the wind's marks stay at 0.3; leaves in a breeze kept; the beds' level kept.
+**sky3-skypx** came back redo with no note. Best guess: the sky under the pixel finish (as now) still looked soft, the
+stars most of all (round 3's stars were gaussians smeared over the 2 × 2 blocks, with the bloom's halo round them). The
+fix is in the sky itself, not a lighter finish: crisp star discs a pixel across held under the bloom, and the cloud
+cards' edges antialiased in their atlas. If he meant something else, the card asks.
+
+### Cards (evidence under `r4/`; every clip has a `-poster.jpg`)
+
+| Card | Shows | Evidence |
+|---|---|---|
+| sky4-day | The clear day toward the sun and back over the island, dawn to night | `sky4-board-day.jpg`, `sky4-r4-desktop-clear-*` |
+| sky4-life | Clouds forming, holding and breaking apart (their lives 45 to 50 times faster, the wind at its own pace): midday, sunset, night | `sky4-clip-life-day-desktop.mp4`, `sky4-clip-life-sunset-desktop.mp4`, `sky4-clip-life-night-desktop.mp4` |
+| sky4-sunset | The sunset's clouds | `sky4-r4-desktop-clear-sunset-sky.jpg`, `sky4-clip-life-sunset-desktop.mp4` |
+| sky4-night | Night clouds lit flat by the moon, the sky turning | `sky4-r4-desktop-clear-night-*.jpg`, `sky4-clip-night-desktop.mp4`, `sky4-clip-life-night-desktop.mp4` |
+| sky4-ambient | The white streaks by day and by night, round 3 beside round 4 | `sky4-cirrus-day-night.jpg` |
+| sky4-stars | The stars close, round 3 beside round 4 | `sky4-stars-close.jpg` |
+| sky4-motes | Golden hour's motes over the sea | `sky4-clip-motes-desktop.mp4` |
+| sky4-weather | Rain, snow and fog skies, midday and sunset | `sky4-board-weather.jpg`, `sky4-clip-rain-desktop.mp4`, `sky4-clip-snow-desktop.mp4` |
+| sky4-sound | The new night and rain, with sound | `sky4-sound-night-desktop.mp4`, `sky4-sound-rain-desktop.mp4`, `sky4-sound-spectra.jpg` |
+| sky4-glow | The lamps' glow at night with clouds going by | `sky4-clip-glow-desktop.mp4`, `sky4-r4-desktop-clear-{dusk,night}-lamps.jpg` |
+| sky4-phone | The day on a phone | `sky4-board-phone.jpg`, `sky4-clip-day-phone.mp4` |
+| sky4-cost | The gate with the sky in view | the table above, `cost/perf-check.txt` |
+| sky4-questions | The questions below | |
+
+### Questions for David (round 4)
+
+| Question | Pick |
+|---|---|
+| The motes over the sea only, faint and few: keep, fainter still, or none? | Keep |
+| A cloud lives 6 to 12 minutes (forms over one to two, breaks up over two to three): right pace? | As built |
+| Rain and snow skies as soft grey banks under the deck: right? | Yes |
+| The valley reference's soft light shafts and big soft cloud banks (the lighting you liked): next round, priced first? | Yes, next |
+| sky3-skypx: was it the stars (now crisp) or something else on the sky under the pixel finish? | Ask |
+| A night sky reference (stars, night clouds) would still help | Ask |
+
+### Not verified
+
+A real phone's GPU (headless Chrome at 390 × 844 on the Mac mini); the sound by ear (checked by spectra, kurtosis and
+loop seams, not listened to); the title screen and the applicant island with the new clouds and glow (both draw the
+same SkyDome and LampGlow; neither was shot); a cloud passing directly behind a lamp's halo in frame (the draw order
+guarantees it; the glow clip shows clouds near the lamps, not one crossing a halo); the motes from the play camera
+(shot only from the beach toward the sun); two clients' skies matching (on the world clock, unit tested).
+
 ## R3. Round 3: clouds reimagined, the cost, the night, the one wind (2026-11-05)
 
 David, round 2: "clouds model look horrible, i wanna know whats the best way for good looking clouds without
