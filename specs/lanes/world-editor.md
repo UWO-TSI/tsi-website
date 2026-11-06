@@ -2,6 +2,16 @@
 
 Worktree `.claude/worktrees/world-editor`, branch `game/world-editor`, cut from origin/main a8a03985. Agent type `uwotsi-lane`. Dev port 3482.
 
+## Round 2: David's world editor round 1 review (2026-11-06, verbatim; https://claude.ai/artifact/3dwrvQDvL8UsEvRfLXGBmF)
+
+Approved: we1-board, we1-catalogue, we1-map, we1-place.
+- we1-questions (approve): "erase tool?"
+
+Build (coordinator):
+0. Merge `feat/game-default-island` (fishing-depth r10 is in it), then rewrite your two board rows in world.json or rerun the layout so wharf.test passes (round 1's merge note).
+1. **An erase tool** in the hotbar: click an object to delete it, or hold and drag to erase everything you pass over; it uses the existing delete (gone tombstones) and undo.
+2. Then you're merge-ready: gates, one short clip of the eraser (`we2-erase`), report.
+
 ## Round 1: David's ask (2026-11-05, verbatim; on f8-board-wide, https://claude.ai/artifact/HZ1DSnZgB2dCFaaWtMCh71)
 
 - "i should just  have a editor screen like minecraft creative for me to place everything"
