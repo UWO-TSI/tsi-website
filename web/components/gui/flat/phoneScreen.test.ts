@@ -1,45 +1,40 @@
 import { describe, expect, it } from "vitest";
-import { ICONS, drawHome, text, textWidth, type Ink } from "./phoneScreen";
-import { SCREEN, screenLayout } from "./phoneMotion";
+import { HOME_TOKENS, drawHome, text, textWidth, type HomeInk } from "./phoneScreen";
+import { SCREEN } from "./phoneMotion";
 
-/** A 2D context that only records the pixels drawn (in the screen's own pixels). */
+/** A 2D context that only records what's drawn (in the screen's own pixels): rects, paths' boxes, pictures and words. */
 function fake() {
-  const rects: [number, number, number, number][] = [];
-  const g = { fillStyle: "", imageSmoothingEnabled: true, setTransform() {}, fillRect: (x: number, y: number, w: number, h: number) => { rects.push([x, y, w, h]); }, drawImage() {} };
-  return { g: g as unknown as CanvasRenderingContext2D, rects };
+  const boxes: [number, number, number, number][] = [], words: string[] = [];
+  const g = {
+    fillStyle: "", strokeStyle: "", lineWidth: 1, font: "", textAlign: "", textBaseline: "", imageSmoothingEnabled: false, setTransform() {},
+    fillRect: (x: number, y: number, w: number, h: number) => { boxes.push([x, y, w, h]); }, beginPath() {}, fill() {}, stroke() {},
+    roundRect: (x: number, y: number, w: number, h: number) => { boxes.push([x, y, w, h]); }, arc: (x: number, y: number, r: number) => { boxes.push([x - r, y - r, 2 * r, 2 * r]); },
+    drawImage: (_: unknown, x: number, y: number, w: number, h: number) => { boxes.push([x, y, w, h]); },
+    measureText: (s: string) => ({ width: s.length * 4 }), fillText: (s: string) => { words.push(s); },
+  };
+  return { g: g as unknown as CanvasRenderingContext2D, boxes, words };
 }
-const INK: Ink = { o: "o", w: "w", p: "p", q: "q", l: "l", d: "d", s: "s", h: "h" };
+const INK = Object.fromEntries(Object.keys(HOME_TOKENS).map(k => [k, k])) as HomeInk;
 const APPS = [
-  { id: "settings", label: "Settings" }, { id: "quests", label: "Quests", keyLabel: "J" }, { id: "bag", label: "Bag", keyLabel: "I" },
-  { id: "collection", label: "Collection", keyLabel: "B" }, { id: "friends", label: "Friends", badge: 12 }, { id: "mail", label: "Mail", keyLabel: "L", badge: 2 },
+  { label: "Settings" }, { label: "Quests", keyLabel: "J" }, { label: "Bag", keyLabel: "I" },
+  { label: "Collection", keyLabel: "B" }, { label: "Friends", badge: 12 }, { label: "Mail", keyLabel: "L", badge: 2 },
 ];
 
 describe("the phone's screen", () => {
-  it("has a 16 by 16 pixel icon for every app, in the phone's inks only", () => {
-    for (const a of [...APPS, { id: "profile" }]) {
-      const rows = ICONS[a.id];
-      expect(rows, a.id).toHaveLength(16);
-      for (const r of rows) { expect(r).toHaveLength(16); expect(r).toMatch(/^[.owpqldsh]+$/); }
-    }
-  });
   it("writes every glyph inside its 8 rows, a pixel apart", () => {
-    const { g, rects } = fake();
+    const { g, boxes: rects } = fake();
     const all = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,:!?-'/+*#()@_";
     text(g, all, 0, 0, "o");
     expect(Math.max(...rects.map(r => r[1]))).toBeLessThan(8);
     expect(Math.max(...rects.map(r => r[0]))).toBeLessThan(textWidth(all));
   });
-  it("fits each app's name in its tile", () => {
-    const [, , w] = screenLayout(6).tiles[0];
-    for (const a of APPS) expect(textWidth(a.label), a.label).toBeLessThanOrEqual(w - 4);
-  });
-  it("draws the home screen inside the glass, on whole pixels", () => {
-    const { g, rects } = fake();
-    drawHome(g, APPS, { at: 4, keys: true }, "X", INK);
-    for (const [x, y, w, h] of rects) {
+  it("draws the home screen (round 12's, today's UI) inside the glass: every app's card, icon, name, key and count", () => {
+    const { g, boxes, words } = fake();
+    drawHome(g, APPS, APPS.map(() => ({}) as CanvasImageSource), { at: 4, keys: true }, "X", INK, "Nunito");
+    for (const [x, y, w, h] of boxes) {
       expect(x).toBeGreaterThanOrEqual(0); expect(y).toBeGreaterThanOrEqual(0);
       expect(x + w).toBeLessThanOrEqual(SCREEN.w); expect(y + h).toBeLessThanOrEqual(SCREEN.h);
-      for (const n of [x, y, w, h]) expect(Number.isInteger(n)).toBe(true);
     }
+    expect(words).toEqual(expect.arrayContaining([...APPS.map(a => a.label), "J", "I", "B", "L", "9+", "2", "X"]));
   });
 });

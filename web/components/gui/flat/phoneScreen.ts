@@ -1,11 +1,10 @@
 /**
- * The phone's own screen (round 13; design bible UI 8d; David on round 12: "the ui and app design needs to be redone to
- * fit the theme", "should have pixel wash but shouldnt be pixel wash over pixel, should be 1 and lighter"). Its own
- * design, not the game's menus: pearl and lime, drawn as pixel art on the screen's own grid (SCREEN, each pixel a
- * square TEX texture pixels wide), so it carries one pixel finish, finer than the island's, and nothing samples it
- * down again. The style only is from David's DS reference (stepped frames, a dark outer and a light inner line, a pill
- * band, square tiles, a pointing hand): the frames, the icons and the font are our own. Colours: the theme's
- * --ui-phone-* tokens (and --ui-heart for a count).
+ * The phone's screen (design bible UI 8d). The home screen is today's game UI on the glass (round 12's, back in round 14,
+ * David: "no i like the old ui i lied, keep it old but lewss blurry"): a slim status line, white cards two across (the
+ * app's icon from the icon library over its name in the kit's font), green highlights, and the home bar. Drawn smooth
+ * at TEX texture pixels a screen pixel; its one light pixel finish is phone.tsx's sharp pass (a CSS pixel a pixel).
+ * The pixel helpers (round 13's font, sprites and stepped frames) draw the moments on the glass, like setting it up
+ * (components/game/hq/PhoneSignup.tsx). Colours: the theme's --ui-* tokens.
  */
 import { SCREEN, TEX, screenLayout } from "./phoneMotion";
 
@@ -38,50 +37,6 @@ const GLYPHS: Record<string, string> = {
   "/": "...#/..#./..#./.#../.#../#...", "+": ".../.../.#./###/.#./...", "*": ".../.../#.#/.#./#.#/...",
   "#": "...../.#.#./#####/.#.#./#####/.#.#.", "(": ".#/#./#./#./#./.#", ")": "#./.#/.#/.#/.#/#.",
   "@": ".###./#...#/#.###/#.#.#/#.##./.###.", "_": "..../..../..../..../..../####",
-};
-export const ICONS: Record<string, readonly string[]> = {
-  settings: [
-    ".......oo.......", "......ollo......", "......ollo......", "..oo.ollllo.oo..",
-    ".ollollllllollo.", ".olllloooollllo.", "..ollo....ollo..", "...olo....olo...",
-    "...olo....odo...", "..ollo....oddo..", ".ollllooooddddo.", ".ollollldddoddo.",
-    "..oo.oldddo.oo..", "......oddo......", "......oddo......", ".......oo.......",
-  ],
-  quests: [
-    "....oooooooo....", "..oooddddddooo..", ".owwoossssoowwo.", ".owwwoooooowwwo.",
-    ".owwwwwwwwwwwwo.", ".owwwwlwwwwwwwo.", ".owlwlwwoooowwo.", ".owwlwwwwwwwwwo.",
-    ".owwwwwwwwwwwwo.", ".owwwwlwwwwwwwo.", ".owlwlwwoooowwo.", ".owwlwwwwwwwwwo.",
-    ".owwwwwwwwwwwwo.", ".owwwwwwwwwwwso.", ".oooooooooooooo.", "................",
-  ],
-  bag: [
-    "......oooo......", ".....o....o.....", ".....o....o.....", "..oooooooooooo..",
-    ".osssssssssssdo.", ".ollllllllllldo.", ".ollloooooolldo.", ".ollowwwwwwoldo.",
-    ".ollowwoowwoldo.", ".ollowwwwwwoldo.", ".ollowwwwwwoldo.", ".ollloooooolldo.",
-    ".ollllllllllldo.", ".oddddddddddddo.", "..oooooooooooo..", "................",
-  ],
-  collection: [
-    "................", ".oooooooooooo...", "olllllllllllloo.", "ollwwwwwwwwllohh",
-    "ollwwwwwwwwllohh", "ollwoooooowllohh", "ollwwwwwwwwllohh", "ollwoooowwwllo..",
-    "ollwwwwwwwwllo..", "ollwwwwwwwwllo..", "olllllllllllloo.", "odddddddddddddo.",
-    "owwwwwwwwwwwwwo.", "owwwwwwwwwwwwwo.", ".oooooooooooooo.", "................",
-  ],
-  friends: [
-    "................", "...ooo..........", "..olllo...ooo...", ".olllllo.owwwo..",
-    ".olllllo.owwwwo.", ".olllllooowwwwo.", "..olllo..owwwo..", "...ooo....ooo...",
-    ".ooooooo........", "olllllllooooooo.", "ollllllloowwwwwo", "olllllllowwwwwwo",
-    "olllllllowwwwwwo", "olllllllowwwwwwo", "oooooooooooooooo", "................",
-  ],
-  mail: [
-    "................", "................", "................", "oooooooooooooooo",
-    "olowwwwwwwwwwolo", "owlowwwwwwwwolwo", "owwlowwwwwwolwwo", "owwwlowwwwolwwwo",
-    "owwwwloooolwwwwo", "owwwwwllllwwwwwo", "owwwwwwwwwwwwwwo", "owwwwwwwwwwwwwwo",
-    "oooooooooooooooo", "................", "................", "................",
-  ],
-  profile: [
-    "................", "oooooooooooooooo", "olllllllllllllll", "oddddddddddddddo",
-    "owwwwwwwwwwwwwwo", "owoooowwwwwwwwwo", "owollowooooooowo", "owollowwwwwwwwwo",
-    "owoooowoooooowwo", "owllllwwwwwwwwwo", "owllllwoooowwwwo", "owwwwwwwwwwwwwwo",
-    "owwwwwwwwwwwwwwo", "oooooooooooooooo", "................", "................",
-  ],
 };
 /** The ink each art character stands for. */
 export type Ink = Record<"o" | "w" | "p" | "q" | "l" | "d" | "s" | "h", string>;
@@ -129,65 +84,61 @@ export function frame(g: G, x: number, y: number, w: number, h: number, cut: rea
   box(g, x + 2, y + 2, w - 4, h - 4, cut.slice(2), fill);
 }
 
-/** The pointing hand on the keyboard's pick (round 11's), and the home bar's house. */
-const HAND = ["..ooo....", ".owwwoooo", "owwwwwwwo", "owwwwoooo", "owwwwwo..", ".owwsso..", "..oooo..."];
-const HOUSE = ["...o...", "..ooo..", ".ooooo.", "ooooooo", ".o...o.", ".o.o.o.", ".ooooo."];
-/** The band's marks: a clover, a heart and a star (the phone's own motifs). */
-const MARKS = [
-  ["ll.ll", "lldll", "..d..", "lldll", "ll.ll"], [".w.w.", "wwwww", "wwwww", ".www.", "..w.."], ["..l..", ".lll.", "lllll", ".lll.", ".l.l."],
-];
-const TILE = [2, 1], SCREEN_CUT = [5, 3, 2, 1, 1];
+/** The pointing hand on the keyboard's pick (round 11's pixel hand): o its outline, w its fill. */
+const HAND = ["..ooo....", ".owwwoooo", "owwwwwwwo", "owwwwoooo", "owwwwwo..", ".owwwwo..", "..oooo..."];
+/** The home screen's inks (the game UI's tokens). */
+export type HomeInk = Record<"screen" | "card" | "ink" | "ink2" | "line" | "glow" | "glowSoft" | "pill" | "badge" | "badgeInk" | "shade", string>;
+export const HOME_TOKENS: HomeInk = {
+  screen: "--ui-phone-screen", card: "--ui-card", ink: "--ui-ink", ink2: "--ui-ink-2", line: "--ui-line", glow: "--ui-phone-glow",
+  glowSoft: "--ui-phone-glow-soft", pill: "--ui-pill", badge: "--ui-heart", badgeInk: "--ui-accent-ink", shade: "--ui-shade",
+};
+const round = (g: G, x: number, y: number, w: number, h: number, r: number) => { g.beginPath(); g.roundRect(x, y, w, h, r); };
 
-export interface ScreenApp { id: string; label: string; keyLabel?: string; badge?: number }
+export interface ScreenApp { label: string; keyLabel?: string; badge?: number }
 /**
- * The home screen, in the screen's own pixels: the frame round the glass on a pearl lattice, a band with the signal,
- * the marks and the battery, the apps as square tiles two across (each its own pixel icon over its name), and the home
- * bar with the key that puts the phone away. The pick (hovered or the keyboard's) turns lime and lifts a pixel.
+ * The home screen, in the screen's own pixels (SCREEN, drawn at TEX times): the status line, the app cards (each its
+ * icon, a picture of the library's drawing, over its name), and the home bar with the key that puts the phone away.
+ * The pick (hovered or the keyboard's) turns green and lifts a pixel; the keyboard's gets the pixel hand.
  */
-export function drawHome(g: G, apps: readonly ScreenApp[], pick: { at: number | null; keys: boolean }, hint: string | undefined, ink: Ink,
-  fallback: readonly (CanvasImageSource | null)[] = []) {
-  const L = screenLayout(apps.length), { w: W, h: H } = SCREEN;
+export function drawHome(g: G, apps: readonly ScreenApp[], icons: readonly (CanvasImageSource | null)[], pick: { at: number | null; keys: boolean },
+  hint: string | undefined, ink: HomeInk, font: string) {
+  const L = screenLayout(apps.length);
   g.setTransform(TEX, 0, 0, TEX, 0, 0);
-  g.imageSmoothingEnabled = false;
-  g.fillStyle = ink.p; g.fillRect(0, 0, W, H);
-  // The frame round the glass, and inside it a faint lattice of diagonals, as on the reference's back.
-  frame(g, 1, 1, W - 2, H - 2, SCREEN_CUT, ink.o, ink.w, ink.p);
-  g.fillStyle = ink.q;
-  for (let y = 5; y < H - 5; y++) for (let x = 3 + (y % 8); x < W - 3; x += 8) { g.fillRect(x, y, 1, 1); g.fillRect(W - 1 - x, y, 1, 1); }
-  // The band: the signal, the marks and the battery.
-  const [bx, by, bw, bh] = L.bar;
-  box(g, bx, by, bw, bh, [2, 1], ink.o);
-  g.fillStyle = ink.l;
-  for (let i = 0; i < 3; i++) g.fillRect(bx + 5 + i * 3, by + bh - 3 - i, 2, 1 + i);
-  MARKS.forEach((m, i) => sprite(g, m, Math.round(W / 2 - 10 + i * 7), by + 3, ink));
-  g.fillStyle = ink.w; g.fillRect(bx + bw - 15, by + 3, 9, 5); g.fillRect(bx + bw - 6, by + 4, 1, 3);
-  g.fillStyle = ink.o; g.fillRect(bx + bw - 14, by + 4, 7, 3);
-  g.fillStyle = ink.l; g.fillRect(bx + bw - 14, by + 4, 5, 3);
-  // The apps.
-  L.tiles.forEach(([x, y0, w, h], i) => {
-    const a = apps[i], on = pick.at === i, y = y0 - (on ? 1 : 0);
-    box(g, x, y0 + 1, w, h, TILE, on ? ink.d : ink.q);  // its shadow: deeper when it lifts
-    if (on) box(g, x - 1, y - 1, w + 2, h + 2, [3, 1], ink.l);
-    frame(g, x, y, w, h, TILE, ink.o, on ? ink.l : ink.w, on ? ink.s : ink.w);
-    box(g, x + 2, y + h - 4, w - 4, 2, [], on ? ink.l : ink.s);
-    const icon = ICONS[a.id], ix = Math.round(x + (w - 16) / 2), iy = y + 4;
-    if (icon) sprite(g, icon, ix, iy, ink);
-    else if (fallback[i]) g.drawImage(fallback[i]!, ix, iy, 16, 16);
-    text(g, a.label, x + w / 2, y + 22, ink.o, true);
+  g.imageSmoothingEnabled = true;
+  g.fillStyle = ink.screen; g.fillRect(0, 0, SCREEN.w, SCREEN.h);
+  // The status line: the signal and the battery, quiet.
+  g.fillStyle = ink.ink2;
+  for (let i = 0; i < 3; i++) g.fillRect(8 + i * 3, 7 - i * 1.5, 2, 1.5 + i * 1.5);
+  g.strokeStyle = ink.ink2; g.lineWidth = 1; round(g, SCREEN.w - 19.5, 3.5, 10, 5, 1.2); g.stroke();
+  g.fillRect(SCREEN.w - 9, 5, 1.2, 2); g.fillStyle = ink.glow; g.fillRect(SCREEN.w - 18, 5, 7, 2);
+  g.textAlign = "center"; g.textBaseline = "middle";
+  L.tiles.forEach(([x, y, w, h], i) => {
+    const a = apps[i], on = pick.at === i, lift = on ? -1 : 0;
+    // A white card in a soft shadow; picked, it's green (round 12: "green highlights") and up a pixel.
+    g.fillStyle = `rgb(${ink.shade} / 0.13)`; round(g, x, y + 1.5, w, h, 6); g.fill();
+    g.fillStyle = on ? ink.glowSoft : ink.card; round(g, x, y + lift, w, h, 6); g.fill();
+    g.lineWidth = on ? 1.6 : 0.8; g.strokeStyle = on ? ink.glow : ink.line; round(g, x + 0.4, y + lift + 0.4, w - 0.8, h - 0.8, 5.6); g.stroke();
+    const icon = icons[i];
+    if (icon) g.drawImage(icon, x + w / 2 - 9, y + lift + 5, 18, 18);
+    let size = 8.5;
+    g.font = `800 ${size}px ${font}`;
+    while (size > 6 && g.measureText(a.label).width > w - 6) g.font = `800 ${(size -= 0.5)}px ${font}`;
+    g.fillStyle = ink.ink; g.fillText(a.label, x + w / 2, y + lift + h - 8.5);
     if (a.keyLabel) {
-      const kw = textWidth(a.keyLabel) + 4;
-      box(g, x + 3, y + 3, kw, 9, [1], ink.o); text(g, a.keyLabel, x + 5, y + 4, ink.w);
+      g.fillStyle = ink.pill; round(g, x + 3, y + lift + 3, 9, 9, 2.5); g.fill();
+      g.fillStyle = ink.ink2; g.font = `800 6.5px ${font}`; g.fillText(a.keyLabel, x + 7.5, y + lift + 7.8);
     }
     if (a.badge) {
-      const n = a.badge > 9 ? "9+" : String(a.badge), bw2 = Math.max(9, textWidth(n) + 5);
-      box(g, x + w - bw2 - 2, y + 2, bw2, 9, [2, 1], ink.h); text(g, n, x + w - 2 - bw2 / 2, y + 3, ink.w, true);
+      g.fillStyle = ink.badge; g.beginPath(); g.arc(x + w - 5, y + lift + 5, 4.5, 0, Math.PI * 2); g.fill();
+      g.fillStyle = ink.badgeInk; g.font = `800 6px ${font}`; g.fillText(a.badge > 9 ? "9+" : String(a.badge), x + w - 5, y + lift + 5.4);
     }
-    if (on && pick.keys) sprite(g, HAND, x - 4, y + Math.round(h / 2) - 3, ink);
+    if (on && pick.keys) HAND.forEach((row, r) => [...row].forEach((ch, col) => {
+      if (ch === ".") return;
+      g.fillStyle = ch === "o" ? ink.ink : ink.card; g.fillRect(x - 3 + col * 1.5, y + lift + h / 2 - 5 + r * 1.5, 1.5, 1.5);
+    }));
   });
-  // The home bar: the house and the key that puts it away; lime when picked.
+  // The home bar: a pill with the key that puts it away; green when picked.
   const [hx, hy, hw, hh] = L.home, homeOn = pick.at === apps.length;
-  frame(g, hx, hy, hw, hh, [2, 1], ink.o, homeOn ? ink.l : ink.w, homeOn ? ink.s : ink.w);
-  const content = 7 + (hint ? 3 + textWidth(hint) : 0), cx = Math.round(hx + (hw - content) / 2);
-  sprite(g, HOUSE, cx, hy + 2, { ...ink, o: homeOn ? ink.d : ink.o });
-  if (hint) text(g, hint, cx + 10, hy + 2, ink.o);
+  g.fillStyle = homeOn ? ink.glow : ink.pill; round(g, hx, hy, hw, hh, hh / 2); g.fill();
+  if (hint) { g.fillStyle = homeOn ? ink.card : ink.ink2; g.font = `800 6.5px ${font}`; g.fillText(hint, hx + hw / 2, hy + hh / 2 + 0.4); }
 }

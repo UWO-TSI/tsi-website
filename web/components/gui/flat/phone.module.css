@@ -10,3 +10,5 @@
 .screen { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 .app { position: absolute; padding: 0; border: 0; border-radius: 6px; background: none; cursor: pointer; pointer-events: none; }
 .app:focus-visible { outline: none; }
+/* The icon is drawn into the texture; here it only lends its drawing and tone. */
+.icon { position: absolute; inset: 0; opacity: 0; display: grid; place-items: center; }

@@ -72,23 +72,23 @@ export function phoneBox(vw: number, vh: number, touch: boolean, px: number) {
 }
 
 // ── The screen ─────────────────────────────────────────────────────────────────────────────────────────────
-/** The screen in its own pixels (the glass is 4.3 by 6.2 units): what the UI is laid out and drawn in, as pixel art.
- * The texture is TEX texture pixels a screen pixel, so each stays a sharp square however the glass is turned. */
+/** The screen in its own pixels (the glass is 4.3 by 6.2 units): what the UI is laid out and drawn in. The texture
+ * is TEX texture pixels a screen pixel, finer than the glass's CSS pixels, so the sharp pass's light finish is its only one. */
 export const SCREEN = { w: 108, h: 156 } as const;
 export const TEX = 4;
 type Rect = readonly [number, number, number, number];
 /**
- * The home screen (round 13, phoneScreen.ts): the band at the top inside the frame, the apps as square tiles two
- * across, and the home bar at the foot.
+ * The home screen today's UI way (rounds 12 and 14, David: "current ui but green highlights", "keep it old"): a slim
+ * status line, the apps as white cards two across (the icon over its name), and the home bar at the foot.
  */
 export function screenLayout(count: number) {
-  const pad = 6, gap = 4, top = 17, foot = 18;
+  const pad = 6, gap = 5, bar = 11, home = 12;
   const cols = 2, rows = Math.max(1, Math.ceil(count / cols));
   const cw = Math.floor((SCREEN.w - 2 * pad - gap * (cols - 1)) / cols);
-  const ch = Math.min(40, Math.floor((SCREEN.h - top - foot - gap * (rows - 1)) / rows));
-  const y0 = top + Math.floor((SCREEN.h - top - foot - (rows * ch + gap * (rows - 1))) / 2);
-  const tiles: Rect[] = Array.from({ length: count }, (_, i) => [pad + (i % cols) * (cw + gap), y0 + Math.floor(i / cols) * (ch + gap), cw, ch]);
-  return { tiles, bar: [4, 4, SCREEN.w - 8, 11] as Rect, home: [Math.round(SCREEN.w / 2 - 22), SCREEN.h - 15, 44, 11] as Rect };
+  const ch = Math.min(40, Math.floor((SCREEN.h - bar - home - pad - gap * (rows - 1)) / rows));
+  const top = bar + Math.floor((SCREEN.h - bar - home - pad - (rows * ch + gap * (rows - 1))) / 2);
+  const tiles: Rect[] = Array.from({ length: count }, (_, i) => [pad + (i % cols) * (cw + gap), top + Math.floor(i / cols) * (ch + gap), cw, ch]);
+  return { tiles, bar: [0, 0, SCREEN.w, bar] as Rect, home: [Math.round(SCREEN.w / 2 - 22), SCREEN.h - home + 1, 44, home - 3] as Rect };
 }
 
 // ── The screen on the glass ────────────────────────────────────────────────────────────────────────────────
@@ -111,16 +111,19 @@ export function quadMatrix(w: number, h: number, [x0, y0]: P, [x1, y1]: P, [x2, 
 export const CORNER_PX = 14;
 export const inCorner = (x: number, y: number, vw: number, vh: number) => x >= vw - CORNER_PX && y >= vh - CORNER_PX;
 
-// ── The charm (round 13, David: "the charm on the phone is a accessory, and it has proper physics, charms will be swappable later") ──
+// ── The charm (rounds 13 and 14, David: "the charm on the phone is a accessory, and it has proper physics", "the string is not made to physics") ──
 export type V3 = [number, number, number];
 /**
- * The charm as a short chain: the strap's end and the pendant's middle, each a point a fixed length from the one above
- * it (the first from the mount), swung by gravity and by the mount's own motion (the pull-out, the flip, the lean).
- * `p` the points now, `q` a step ago (Verlet), `at` the mount a step ago.
+ * The charm as a short rope: the strap's joints, then the pendant's middle, each a point a fixed length from the one
+ * above it (the first from the mount, where it's pinned), swung by gravity and by the mount's own motion (the pull-out,
+ * the flip, the lean). The strap's mesh bends along its points (phone.tsx). `p` the points now, `q` a step ago
+ * (Verlet), `at` the mount a step ago.
  */
 export interface CharmSim { p: V3[]; q: V3[]; len: number[]; at: V3 }
 /** Gravity (phone units a second squared: about a 1 s swing on the strap's length) and the air's drag (a second). */
 const GRAVITY = 120, DRAG = 2.6, H = 1 / 240;
+/** The strap's give (a second): how fast a point's way evens out with the point above it's. */
+const GIVE = 8;
 const sub = (a: V3, b: V3): V3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const len3 = (a: V3) => Math.hypot(a[0], a[1], a[2]);
 /** Hanging still straight down from the mount. */
@@ -136,15 +139,23 @@ export function hangCharm(mount: V3, len: readonly number[]): CharmSim {
 export function stepCharm(s: CharmSim, mount: V3, dt: number, solid?: (p: V3, i: number) => V3 | null, reduced = false): CharmSim {
   if (reduced) return Object.assign(s, hangCharm(mount, s.len));
   const n = Math.max(1, Math.round(Math.min(dt, 1 / 15) / H)), from = s.at;
+  let was = from;
   for (let k = 1; k <= n; k++) {
     const m: V3 = [0, 1, 2].map(i => from[i] + (mount[i] - from[i]) * (k / n)) as V3;
+    // Each point keeps its way (less the air's drag, and less what it moves apart from the point above it: the strap's
+    // own give, so a whip down the rope dies out like a string's), then falls a step.
+    let up = sub(m, was);
     s.p.forEach((p, i) => {
-      const q = s.q[i], keep = 1 - DRAG * H;
-      const v: V3 = [(p[0] - q[0]) * keep, (p[1] - q[1]) * keep, (p[2] - q[2]) * keep];
+      const q = s.q[i], keep = 1 - DRAG * H, give = Math.min(1, GIVE * H);
+      const v = [0, 1, 2].map(j => (p[j] - q[j]) * keep) as V3;
+      if (i) for (let j = 0; j < 3; j++) v[j] -= (v[j] - up[j]) * give;
       s.q[i] = [...p] as V3;
       s.p[i] = [p[0] + v[0], p[1] + v[1] - GRAVITY * H * H, p[2] + v[2]];
+      up = v;
     });
-    for (let pass = 0; pass < 2; pass++) s.p.forEach((p, i) => {
+    was = m;
+    // Each link pulled back to its length, down from the pin, a few times over so the rope doesn't stretch.
+    for (let pass = 0; pass < 4; pass++) s.p.forEach((p, i) => {
       const up = i ? s.p[i - 1] : m, d = sub(p, up), l = len3(d) || 1, f = s.len[i] / l;
       s.p[i] = [up[0] + d[0] * f, up[1] + d[1] * f, up[2] + d[2] * f];
       const out = solid?.(s.p[i], i);

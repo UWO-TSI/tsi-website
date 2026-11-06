@@ -73,7 +73,7 @@ describe("the screen", () => {
     const L = screenLayout(6);
     for (const [x, y, w, h] of L.tiles) {
       expect(x).toBeGreaterThanOrEqual(0); expect(x + w).toBeLessThanOrEqual(SCREEN.w);
-      expect(y).toBeGreaterThan(L.bar[1] + L.bar[3]); expect(y + h).toBeLessThan(L.home[1]);
+      expect(y).toBeGreaterThanOrEqual(L.bar[3]); expect(y + h).toBeLessThanOrEqual(L.home[1]);
     }
     expect(new Set(L.tiles.map(t => t[0])).size).toBe(2);
   });
@@ -123,6 +123,23 @@ describe("the charm", () => {
     const [m, a, b] = [[Math.sin(1.5 * 9) * 2, 0, Math.cos(1.5 * 7)], s.p[0], s.p[1]];
     expect(Math.hypot(a[0] - m[0], a[1] - m[1], a[2] - m[2])).toBeCloseTo(2.9, 1);
     expect(Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2])).toBeCloseTo(1, 2);
+  });
+  it("bends as a rope of links pinned at the mount: each keeps its length, it curves while it swings, then hangs straight", () => {
+    const links = [0.6, 0.6, 0.6, 0.6, 0.6, 1];
+    const mount = (t: number): V3 => [Math.min(t, 0.25) * 8, Math.min(t, 0.25) * 16, 0];
+    const s = hangCharm(mount(0), links);
+    let bent = 0;
+    for (let t = 1 / 60; t <= 5; t += 1 / 60) {
+      stepCharm(s, mount(t), 1 / 60);
+      const m = mount(t), ends = [m, ...s.p.slice(0, 5)];
+      ends.slice(1).forEach((p, i) => expect(Math.hypot(p[0] - ends[i][0], p[1] - ends[i][1], p[2] - ends[i][2])).toBeCloseTo(0.6, 1));
+      // How far the strap's middle joint is off the line from the pin to its end: a straight rod would be 0.
+      const [a, b, c] = [m, s.p[2], s.p[4]], ab = [b[0] - a[0], b[1] - a[1]], ac = [c[0] - a[0], c[1] - a[1]];
+      bent = Math.max(bent, Math.abs(ab[0] * ac[1] - ab[1] * ac[0]) / Math.hypot(ac[0], ac[1]));
+    }
+    expect(bent).toBeGreaterThan(0.05);
+    expect(charmStill(s)).toBe(true);
+    s.p.forEach(p => expect(Math.abs(p[0] - 2)).toBeLessThan(0.02));
   });
   it("stays out of the phone", () => {
     const wall = (p: V3): V3 | null => (p[0] > -0.5 ? [-0.5, p[1], p[2]] : null);

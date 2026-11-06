@@ -64,7 +64,7 @@ M = {
     "plate": material("phone_plate", "#e9eee6", rough=0.4),
     "clear": material("phone_clear", "#9ede84", rough=0.12, alpha=0.62),
     "key": material("phone_key", "#e4f4dc", rough=0.16, alpha=0.78),
-    "digit": material("phone_digit", "#2f6b3c", rough=0.5),
+    "digit": material("phone_digit", "#6aa564", rough=0.5),  # round 14: lighter, so they read under the wash
     "screen": material("phone_screen", "#e8f5e2", rough=0.3, emit="#e8f5e2", emit_k=0.6),
     "lens": material("phone_lens", "#2b3a33", rough=0.1),
     "mask": material("phone_mask", "#33463a", rough=0.5),
@@ -209,15 +209,18 @@ mount = bpy.data.objects.new("charm_mount", None); C_TOP.objects.link(mount); mo
 charm_root = bpy.data.objects.new("charm", None); C_CHARM.objects.link(charm_root)
 DROP = Vector((-0.55, 0, -2.9))   # from the lug to the jump ring
 
+# Round 14 (David: "charm physics is broken because the string is not made to physics and is mdoeeld with the phone
+# solid"): the strap is modelled straight along the hanging line, apart from the phone; the game bends it along a short
+# simulated rope pinned at the lug (phone.tsx, phoneMotion.stepCharm), so it hangs, swings and settles like a string.
 def braid():  # three strands woven along the hanging line, each a curve with a round profile
-    n = 72
+    n = 96
     for k in range(3):
         cu = bpy.data.curves.new(f"strand_{k}", "CURVE"); cu.dimensions = "3D"; cu.bevel_depth = 0.05; cu.bevel_resolution = 1
         sp = cu.splines.new("POLY"); sp.points.add(n - 1)
         for i in range(n):
             t = i / (n - 1); ph = t * math.tau * 6 + k * math.tau / 3
             side = Vector((-DROP.z, 0, DROP.x)).normalized()
-            p = DROP * t + side * (0.08 * math.sin(ph)) + Vector((0, 0.055 * math.sin(2 * ph), 0)) + Vector((-0.22 * math.sin(math.pi * t), 0, 0))
+            p = DROP * t + side * (0.08 * math.sin(ph)) + Vector((0, 0.055 * math.sin(2 * ph), 0))
             sp.points[i].co = (*p, 1)
         cu.materials.append(M["strap"])
         o = bpy.data.objects.new(cu.name, cu); C_CHARM.objects.link(o); o.parent = charm_root

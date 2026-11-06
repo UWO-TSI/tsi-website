@@ -134,6 +134,6 @@ export default function PhoneSignup({ open, name, signedIn, friendCode, onDone }
     </> : phase === "stamped" ? <button type="button" style={at(BUTTON)} aria-label={ID_CARD.done} data-testid="hq-id-done" onClick={finish} ref={first} /> : null,
   };
   // After the stamp: its home screen, with your profile among the apps, then it's put away.
-  const apps = useMemo(() => [{ id: "profile", label: PHONE_PITCH.app, onOpen: () => {} }], []);
+  const apps = useMemo(() => [{ id: "profile", label: PHONE_PITCH.app, icon: "player" as const, onOpen: () => {} }], []);
   return <Phone open={open && !gone} apps={apps} view={view} onClose={() => {}} hint="X" testId="phone-signup" />;
 }

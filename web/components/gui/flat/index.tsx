@@ -23,7 +23,7 @@ export { f as flatStyles };
 export { CardOverlay, COIN_SLOTS, FLY_HOME_MS, FLY_MS, FlyHome, FlyIn, coinCount, coinHeat, coinShares, flyCoins, KEYBOARD, KeyBoard, PaperField, PrintedCard, QUEST_CHECK_MS, QuestCheck, SlotPop, Spotlight, boardLabel, type BoardKey } from "./moments";
 export { CountUp, WalletSlot } from "./wallet";
 export { Phone, type PhoneApp, type PhoneView } from "./phone";
-export { box, frame, sprite, text, textWidth, ICONS, type Ink } from "./phoneScreen";
+export { box, frame, sprite, text, textWidth, type Ink } from "./phoneScreen";
 export { inCorner } from "./phoneMotion";
 export { KEYWORD_KINDS, KEYWORD_LIBRARY, Keyword, KeywordIcon, KeywordLine, keywordParts, type KeywordKind, type LinePart } from "./keyword";
 export { ProgressCard } from "./ProgressCard";

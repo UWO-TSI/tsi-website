@@ -27,7 +27,7 @@ export const WREN_LINES: Readonly<Record<string, readonly string[]>> = {
     "A few questions, then I'll print it for you.",
   ],
   idDone: [
-    "[happy] There. That's you, {name}. Official.",
+    "[happy] Nice! Your profile is set up, {name}.",
     "Your friend code's on it. Give it to anyone you want to find again.",
   ],
   // Money: each currency's icon pops up and flies to where it lives on your screen.
@@ -122,7 +122,7 @@ export const PHONE_PITCH = {
     "Make your profile on it, and I'll stamp you in.",
   ],
   idDone: [
-    "[happy] There. That's you, {name}. Official.",
+    "[happy] Nice! Your profile is set up, {name}.",
     "Your friend code's on your phone. Give it to anyone you want to find again.",
   ],
   hello: "Hello!",

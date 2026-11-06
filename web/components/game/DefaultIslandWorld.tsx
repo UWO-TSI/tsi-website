@@ -1383,12 +1383,12 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const netSheet = useNetSheet();
   const appOpen = !!sheet || bagOpen || netSheet !== null || mapOpen;
   const phoneApps = useMemo<PhoneApp[]>(() => [
-    { id: "settings", label: "Settings", onOpen: () => setSheet("settings") },
-    { id: "quests", label: "Quests", keyLabel: touch ? undefined : "J", onOpen: () => setSheet("journal") },
-    { id: "bag", label: "Bag", keyLabel: touch ? undefined : keyName(binds.openBag), onOpen: () => setSheet("bag") },
-    { id: "collection", label: "Collection", keyLabel: touch ? undefined : keyName(binds.openJournal), onOpen: () => setBagOpen(true) },
-    { id: "friends", label: "Friends", badge: friends.asking, onOpen: () => setNetSheet("friends") },
-    { id: "mail", label: "Mail", keyLabel: touch ? undefined : keyName(binds.openMail), badge: progression.unreadLetters, onOpen: () => setSheet("letters") },
+    { id: "settings", label: "Settings", icon: "settings", onOpen: () => setSheet("settings") },
+    { id: "quests", label: "Quests", icon: "quest", keyLabel: touch ? undefined : "J", onOpen: () => setSheet("journal") },
+    { id: "bag", label: "Bag", icon: "bag", keyLabel: touch ? undefined : keyName(binds.openBag), onOpen: () => setSheet("bag") },
+    { id: "collection", label: "Collection", icon: "collection", keyLabel: touch ? undefined : keyName(binds.openJournal), onOpen: () => setBagOpen(true) },
+    { id: "friends", label: "Friends", icon: "friend", badge: friends.asking, onOpen: () => setNetSheet("friends") },
+    { id: "mail", label: "Mail", icon: "mail", keyLabel: touch ? undefined : keyName(binds.openMail), badge: progression.unreadLetters, onOpen: () => setSheet("letters") },
   ], [touch, binds, friends.asking, progression.unreadLetters]);
   // Alice's tour brings the phone in an app at a time (Bag, Collection, Quests, Mail), then whole with its own key.
   const tourApps = useMemo(() => (tourShown.has("phone") ? phoneApps : phoneApps.filter(a => tourShown.has(a.id as HudPiece))), [tourShown, phoneApps]);

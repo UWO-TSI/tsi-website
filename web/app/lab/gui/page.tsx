@@ -28,7 +28,7 @@ import { RodRadar, TackleRadar } from "@/components/economy/RodGear";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import { ChevronLeft, CircleDot, Sparkles, UserRound, Waves, Worm } from "lucide-react";
 import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
-import { ActionBar, ActionIcon, CallTag, CardOverlay, DarkButton, FlatField, FlatSlider, FlatToggle, FlyHome, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, KeyPeek, Keyword, KeywordLine, LevelUpMoment, PaperField, Phone, PrintedCard, ProgressCard, Purse, QuestCheck, RankBadge, flyCoins, RewardPop, RoundButton, ServeMeter, SlotPop, SpinPicker, Spotlight, StaminaArc, VitalBar, Vitals, WalletSlot, XpRing, type PeekKind, type PhoneApp } from "@/components/gui/flat";
+import { ActionBar, ActionIcon, CallTag, CardOverlay, DarkButton, FlatField, FlatSlider, FlatToggle, FlyHome, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, Keyword, KeywordLine, LevelUpMoment, PaperField, Phone, PrintedCard, ProgressCard, Purse, QuestCheck, RankBadge, flyCoins, RewardPop, RoundButton, ServeMeter, SlotPop, SpinPicker, Spotlight, StaminaArc, VitalBar, Vitals, WalletSlot, XpRing, type PeekKind, type PhoneApp } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
 import { BoardBody } from "@/components/game/volleyball/BoardSheet";
 import PhoneSignup from "@/components/game/hq/PhoneSignup";
@@ -103,12 +103,12 @@ function PhoneShow() {
   const [t, setT] = useState(0);
   useEffect(() => { const i = window.setInterval(() => setT(v => (v + 1) % 10), 700); return () => window.clearInterval(i); }, []);
   const apps: PhoneApp[] = [
-    { id: "settings", label: "Settings", onOpen: () => {} },
-    { id: "quests", label: "Quests", keyLabel: "J", onOpen: () => {} },
-    { id: "bag", label: "Bag", keyLabel: "I", onOpen: () => {} },
-    { id: "collection", label: "Collection", keyLabel: "B", onOpen: () => {} },
-    { id: "friends", label: "Friends", badge: 1, onOpen: () => {} },
-    { id: "mail", label: "Mail", keyLabel: "L", badge: 2, onOpen: () => {} },
+    { id: "settings", label: "Settings", icon: "settings", onOpen: () => {} },
+    { id: "quests", label: "Quests", icon: "quest", keyLabel: "J", onOpen: () => {} },
+    { id: "bag", label: "Bag", icon: "bag", keyLabel: "I", onOpen: () => {} },
+    { id: "collection", label: "Collection", icon: "collection", keyLabel: "B", onOpen: () => {} },
+    { id: "friends", label: "Friends", icon: "friend", badge: 1, onOpen: () => {} },
+    { id: "mail", label: "Mail", icon: "mail", keyLabel: "L", badge: 2, onOpen: () => {} },
   ];
   return <Phone open={t < 9} away={t >= 4 && t < 7} apps={apps} hint="X" onClose={() => {}} />;
 }
