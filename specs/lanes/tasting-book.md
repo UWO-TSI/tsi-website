@@ -2,6 +2,18 @@
 
 Worktree `.claude/worktrees/tasting-book`, branch `game/tasting-book`, cut from `game/fishing-depth` at 0db249b4 (it needs that branch's new menu layout; fishing-depth merges to main first, then this one). Agent type `uwotsi-lane`. Dev port 3476.
 
+## Round 8: David's tasting book 7 review (2026-11-06, verbatim; https://claude.ai/artifact/2QEpbBSXpfBQrwW8gw8gpB)
+
+Approved: tb7-collection, tb7-fish-page, tb7-look, tb7-pages, tb7-phone.
+- tb7-questions (approve): "the museum will be redone"
+- tb7-stamp (redo): "make the stamping more dramatic, like comes down like a hard stamp"
+
+Build (coordinator):
+1. **The stamp lands hard:** it lifts, comes down fast, hits with weight (a short squash, a thump, the page and the book jolting, ink spreading out at the hit), then settles. A heavy stamp sound (synthesised or CC0; the game-feel and sfx-library lanes are building stamp sounds: reuse theirs if they exist by then, else make a placeholder).
+2. Then you're merge-ready: merge feat/game-default-island, gates, and report. Your migration (`20261102120000_tasting_book.sql`) is applied by the coordinator before the merge.
+
+Evidence `tb8-stamp` (clip, desktop and phone).
+
 ## Round 7: David's tasting book round 6 review (2026-11-06, verbatim; https://claude.ai/artifact/ARdwK7bVoFno9WTNEUb3wz)
 
 Approved: tb6-learnt, tb6-look-close, tb6-newfish-key, tb6-questions, tb6-tank.
