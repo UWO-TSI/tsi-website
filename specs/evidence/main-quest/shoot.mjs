@@ -4,7 +4,7 @@
 // `?progression=demo` (the real progression service on an in-memory store; `&chapter=` and `&tally=` set where the
 // member is). Headless Chromium, muted, under the shared browser lock.
 //   HOST=http://localhost:3147 node specs/evidence/main-quest/shoot.mjs <out_dir> <scene> [<scene> ...]
-// Scenes: mq8lab, mq8hud, mq8hud-phone (round 8: clips under <out_dir>/video, marks in log.json); mq7hud, mq7hud-phone (round 7); mq6hud, mq6hud-phone (round 6); mq5hud, mq5hud-phone (round 5); mq4hud, mq4hud-phone, mq4sand (round 4); r2flow, r2museum, r2dig, pops, strips (round 2); flow, chapters, dig, pickaxe (round 1; the new world: run the dev server with NEXT_PUBLIC_GAME_WORLD=new); village (the
+// Scenes: mq9lab, mq9hud, mq9hud-phone (round 9: clips under <out_dir>/video, marks in log.json); mq8lab, mq8hud, mq8hud-phone (round 8: clips under <out_dir>/video, marks in log.json); mq7hud, mq7hud-phone (round 7); mq6hud, mq6hud-phone (round 6); mq5hud, mq5hud-phone (round 5); mq4hud, mq4hud-phone, mq4sand (round 4); r2flow, r2museum, r2dig, pops, strips (round 2); flow, chapters, dig, pickaxe (round 1; the new world: run the dev server with NEXT_PUBLIC_GAME_WORLD=new); village (the
 // default world, no env: the village's one tracker line, unchanged).
 // Places are the new world's (lib/collections/rolls.ts activeVillage("new"): museum 4,70.5; dig-sand-0 -17,102;
 // dig-soil-15 35,84; rock-1 38,25.1).
@@ -186,15 +186,65 @@ async function levelUpStrip(page, prefix, wide, times = [["a", 250], ["b", 850],
 }
 
 for (const scene of SCENES) try {
-  if (scene === "mq8lab") {
+  if (scene === "mq8lab" || scene === "mq9lab") {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } }), page = await ctx.newPage();
     page.on("pageerror", e => errors.push(e.message.slice(0, 300)));
     await page.goto(`${HOST}/lab/gui?only=hud-bars`, { waitUntil: "networkidle", timeout: 300000 });
     await sleep(2500);
     const el = await page.$("#hud-bars") ?? await page.$("section");
-    await el.screenshot({ path: `${OUT}/mq8-lab-vitals.png` });
-    log.push({ name: "mq8-lab-vitals" });
+    await el.screenshot({ path: `${OUT}/${scene.slice(0, 3)}-lab-vitals.png` });
+    log.push({ name: `${scene.slice(0, 3)}-lab-vitals` });
     await ctx.close();
+  }
+  if (scene === "mq9hud" || scene === "mq9hud-phone") {
+    // Round 9: the grey shield on the end of the health bar; the stamina arc (held at 12%) beside the character at three
+    // zooms and three camera angles, its box logged; clips turning the camera right round at the nearest, the default
+    // and the farthest zoom, and one tilting while it turns.
+    const phone = scene.endsWith("phone"), p = phone ? "mq9-phone" : "mq9";
+    const { ctx, page } = await open("time=day", {}, phone ? PHONE : undefined, phone ? { width: 390, height: 844 } : { width: 960, height: 600 });
+    const mark = (clip, edge) => log.push({ clip: `${p}-${clip}`, [edge]: (Date.now() - ctx.t0) / 1000 });
+    await go(page, 30, 46, Math.PI);
+    await hudIn(page);
+    const corner = phone ? { x: 0, y: 40, width: 390, height: 120 } : { x: 0, y: 40, width: 460, height: 100 };
+    const hp = h => page.evaluate(x => { window.__combat.rt.player.hp = Math.round(window.__combat.rt.player.maxHp * x); window.__publishCombat(); }, h);
+    const shield = sh => page.evaluate(x => { const bar = document.querySelector("[data-testid=hud-vitals] [role=meter]");
+      if (!bar.querySelector("b")) { bar.appendChild(document.createElement("b")); bar.style.setProperty("--hp", String(100 / 140)); bar.style.setProperty("--tally", String(20 / 140)); }
+      bar.style.setProperty("--shield", String(x)); const h = document.querySelector("main header"); if (h) h.dataset.fading = "false"; }, sh);
+    for (const [k, h, sh] of [["full", 1, 1], ["half", 0.8, 0.5], ["low", 0.3, 0.25], ["critical", 0.12, 0.6], ["empty", 0.6, 0]]) {
+      await hp(h); await shield(sh); await sleep(1100);
+      await shot(page, `${p}-shield-${k}`, corner);
+    }
+    await page.evaluate(() => { const b = document.querySelector("[data-testid=hud-vitals] [role=meter] b"); b?.parentElement.style.setProperty("--hp", "1"); b?.parentElement.style.setProperty("--tally", "0.2"); b?.remove(); });
+    await hp(1); await sleep(800);
+    const arcLog = () => page.evaluate(() => { const a = document.querySelector("[data-testid=hud-stamina]"), o = window.__orbit.orbit.view;
+      return { show: a.hasAttribute("data-show"), yaw: +o.yaw.toFixed(2), pitch: +o.pitch.toFixed(2), zoom: +o.zoom.toFixed(2),
+        box: (({ left, top, width, height }) => [left, top, width, height].map(Math.round))(a.getBoundingClientRect()) }; });
+    const hold = x => page.evaluate(v => { const s = window.__move.sim.current.state; s.stamina = v; s.staminaRest = -100; s.winded = v <= 0; }, x);
+    const view = (yaw, pitch, zoom) => page.evaluate(([y, t, z]) => { const o = window.__orbit.orbit; Object.assign(o.target, { yaw: y, pitch: t, zoom: z }); Object.assign(o.view, { yaw: y, pitch: t, zoom: z }); }, [yaw, pitch, zoom]);
+    await hold(0.12); await sleep(600);
+    for (const [ak, yaw, pitch] of [["a", Math.PI, 0.55], ["b", Math.PI + 1.4, 0.35], ["c", Math.PI - 2.2, 0.82]])
+      for (const z of [0.6, 1, 1.6]) {
+        await view(yaw, pitch, z); await hold(0.12); await sleep(700);
+        const name = `${p}-arc-${ak}-z${String(Math.round(z * 10)).padStart(2, "0")}`;
+        await shot(page, name);
+        log.push({ name, arc: await arcLog() });
+      }
+    // Clips: the camera turned right round (the orbit's own ease), the arc held.
+    const turn = async (clip, z, pitch, tilt = null) => {
+      await view(Math.PI, pitch, z); await hold(0.12); await sleep(800);
+      mark(clip, "from");
+      for (let i = 1; i <= 48; i++) {
+        await page.evaluate(([y, t]) => { const o = window.__orbit.orbit.target; o.yaw = y; if (t !== null) o.pitch = t; }, [Math.PI + (i / 48) * Math.PI * 2, tilt && tilt(i / 48)]);
+        await hold(0.12); await sleep(110);
+      }
+      await sleep(900); mark(clip, "to");
+    };
+    await turn("turn-near", 0.6, 0.55);
+    await turn("turn-default", 1, 0.55);
+    await turn("turn-far", 1.6, 0.55);
+    await turn("turn-tilt", 1.3, 0.35, f => 0.35 + 0.47 * Math.sin(f * Math.PI));
+    await ctx.close();
+    log.push({ video: await page.video().path(), t0: ctx.t0 });
   }
   if (scene === "mq8hud" || scene === "mq8hud-phone") {
     // Round 8: the Capsule vitals at full, half, low and critical; a shield extending the health bar (nothing in game

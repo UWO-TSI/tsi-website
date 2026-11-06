@@ -158,6 +158,24 @@ Redo:
 
 ## Status
 
+**Round 9** (game/main-quest, on origin/main b4fae244, merged clean; evidence specs/evidence/main-quest/r9/, befores are
+round 8's shots). Done, waiting for David's review:
+- The stamina arc's place (mq8-zoom redo). Root cause of r8's "over the head when zoomed out": the arc was projected
+  flat, but the world is drawn through the curved-world bend (lib/game/curvedWorld.ts), which sinks far points, so the
+  farther the camera the higher the arc sat over the drawn body. HudBars `arcPlace` now projects through the bend
+  (net/projection.ts `projectCurved`, as the nameplates do): its middle level with the body's (0.45 heights up), its
+  left end half a body width (0.32 heights) along the camera's right from the body, so it is on the right at any turn
+  and tilt and follows the camera as it turns. Its size is CSS, one size on screen (68 px, 50 px under 700 px wide) and
+  a 4 px gap; `--h`, ARC_SIZE, BODY_HALF, ARC_GAP and the orbit import are gone (and the showroom's `--h`). Measured in
+  game: 68 px (phone 50) at zoom 0.6, 1 and 1.6 at three camera angles. HudBars.test.ts checks it against the body's
+  drawn silhouette at 2 aspects x 3 zooms x 4 turns x 3 tilts, and that r8's flat projection sat over the crown.
+- The shield is grey (mq8-showroom): --ui-shield #949ca6 clean, #9a958a cream, #a3a9b2 dark.
+- mq8-questions "extend": the shield already extends the health bar (round 8); nothing else to change.
+- Bible UI 8b: the grey shield, the arc's one size and place at every zoom and angle.
+- Touched: web/components/game/HudBars.tsx, HudBars.test.ts (new), web/components/gui/flat/vitals.module.css,
+  web/styles/themes/{clean,cream,dark}.css, web/app/lab/gui/page.tsx (one line), specs/design-bible.md,
+  specs/evidence/main-quest/shoot.mjs (mq9lab, mq9hud, mq9hud-phone).
+
 **Round 8** (game/main-quest, on origin/main a8a03985, merged clean apart from two import lines in
 web/app/lab/gui/page.tsx and web/components/gui/flat/index.tsx; evidence specs/evidence/main-quest/r8/, befores are
 round 7's capsule shots). Done, waiting for David's review:
@@ -282,11 +300,21 @@ Done, waiting for David's review:
 
 ## Next
 
-1. Wait for David's review of round 8 (specs/evidence/main-quest/r8/). Open: a shield far over 40 points would push
-   the phone capsule into the minimap (40 on 100 health ends a few px short); cap it if a class gets a big shield.
-2. The round 3 migrations (20261030010000_main_quest, 20261030010100_main_quest_r2, renamed from their 20261028 names) are applied to prod: no migration waits on this lane.
+1. Wait for David's review of round 9 (specs/evidence/main-quest/r9/).
+2. Health bar with combat (David 11-06 on mq8-shield: "ok but i think introduce health bar when combat is going to be
+   introduced"): nothing to build now; when combat comes to the island, bring the health capsule in with it (and
+   decide then whether the corner shows health before any fight).
+3. Open: a shield far over 40 points would push the phone capsule into the minimap (40 on 100 health ends a few px
+   short); cap it if a class gets a big shield.
+4. The round 3 migrations are applied to prod: no migration waits on this lane.
 
 ## Tools and gotchas
+
+- Browser runner (round 9): scratchpad `mqrun/qrun10.sh mq9lab mq9hud mq9hud-phone` (run10.sh, port 3486, out to
+  mq-r9, about 8 min; run it in the background); `mqrun/evid9.py` builds r9/. `mqrun/gates.sh` runs tsc, vitest and
+  vitest with NEXT_PUBLIC_GAME_WORLD=new under the heavy lock.
+- Anything placed over the canvas from a world point must go through the bend (`projectCurved`), never
+  `Vector3.project`: `__move.screen()` (moveFx screenOf) is flat and drifts above the drawn body as the camera backs off.
 
 - Browser runner (round 8): scratchpad `mqrun/qrun9.sh mq8lab mq8hud mq8hud-phone` (run9.sh, out to mq-r8, about 6 min
   once the lock is free; run it in the background); `mqrun/evid8.py` builds r8/, the mp4 clips trimmed from the

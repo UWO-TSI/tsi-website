@@ -79,7 +79,7 @@ body, [data-ui-theme="clean"] {
   --ui-health-low: #e5302a;
   --ui-stamina: #4db6e2;
   --ui-stamina-low: #f08a4b;
-  --ui-shield: #7f97f2;
+  --ui-shield: #949ca6;
   --ui-mana: #a77cf0;
   --ui-vital-mid: #f4bd3a;
   /* Type straight over the world on a soft scrim (the level-up moment): white, whatever the theme. */
