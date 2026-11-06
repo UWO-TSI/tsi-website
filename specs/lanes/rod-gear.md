@@ -30,6 +30,32 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 11: David's rods 9 and rods 10 reviews (2026-11-06, verbatim; https://claude.ai/artifact/YFRYq9Ngqr2cKSaf37YiGj and https://claude.ai/artifact/GiX3bxPqLYRnenR9bybssB)
+
+Rods 9 approved: rg9-bag, rg9-budget, rg9-hand-close, rg9-hand, rg9-questions, rg9-study.
+- rg9-awaken (redo, no note)
+- rg9-fx-water (redo): "water effect needs to be faster, the lighter blue white s are the foam from crashing, make the water flwo faster and make the cashing of the water naturally create the foam and make it faster and crash harder. and water dripping off should feel natural"
+- rg9-tidewarden (redo): "add the reel and line component to this that matches its style, make all bobber smaller in general"
+
+Rods 10 approved: rg10-cedar, rg10-fx-pulse, rg10-fx-sway, rg10-impact, rg10-questions, rg10-table, rg10-tempest-hand.
+- rg10-awaken-tempest (approve): "needs to redo the awakened model but animation looks good"
+- rg10-awaken-tidewarden (redo): "that wave animation sucks. i think have the rod not have the wave wrapped aound and the the animation is that the waves wrap around the rod and the awakened will have waves wrapped around and it will have wave movement animation with like wave articles flowing around and water dripping and make the head of the drident longer and glowing"
+- rg10-awaken-training (redo): "the flash frame should have more impact like if its lighting related strike with lighting or in this case make the particle gather small and slow and ramp up and the flash frame needs to fit"
+- rg10-fx-burst (redo): "this should be turned into its own lane artifacr called aura and effects and not in rod awakenings"
+- Every other rg10-fx-* note goes to the new **vfx-library** lane (below).
+
+**The VFX library leaves this lane.** A new lane, `vfx-library` (game/vfx-library, cut from this branch at 544018464), owns the library from now on: `web/lib/game/fx/library.ts`, `water.ts`, the effect types and their shaders, `art/pipeline/fx_library.py`, `/lab/fx`, `specs/fx-library.md` (renamed the VFX library), with its own review page. This lane uses its types and doesn't change them; if a rod needs a library change, tell the coordinator. game/rod-titanium also runs in parallel (the Titanium only).
+
+Build (coordinator):
+1. **Tidewarden:** add a reel and the line, styled to match the trident (gold, teal). The base rod has no water wrapped round it.
+2. **All bobbers smaller**, everywhere they show.
+3. **The Tidewarden's awakening:** the waves wrap around the rod during the animation (replace the wave strike that "sucks"); the awakened form has waves wrapped round it with wave motion, water particles flowing around it and water dripping, and a longer, glowing trident head (a new awakened model, like the Titanium's per-awakening model).
+4. **The Training rod's awakening:** the gather starts small and slow and ramps up; the flash frame lands harder and fits the moment.
+5. **The Tempest:** the animation is approved; its awakened model is redone (keep the lightning strike), within the Tool budget. Its base model still waits for David's reference.
+6. rg9-awaken came back redo with no note: give your best guess and a fix on the questions card.
+
+Evidence `rg11-*`: the Tidewarden with its reel and line (vs the sketch, untracked composite), bobbers before and after, the Tidewarden's awakening and its awakened form (clips), Training's awakening, the Tempest's awakened model, a questions card.
+
 ## Round 10: David's rods awakening round 8 review (2026-11-06, verbatim; https://claude.ai/artifact/AgE5pgESXMPef71FiPT1Bx)
 
 Approved: rg8-awaken-epic, rg8-awaken-legendary, rg8-questions.
