@@ -2,7 +2,8 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { FISH } from "@/lib/game/fishing";
-import { availableAt, clueFor, journalPage, laterToday, museumWings, validateShowcase, weekStart, weeklyTrophies, type WeeklyBest } from "./logic";
+import { availableAt, clueFor, inSeason, journalPage, laterToday, museumWings, validateShowcase, weekStart, weeklyTrophies, type WeeklyBest } from "./logic";
+import { SEASON_MONTHS, seasonsOf, type Season } from "@/lib/game/season";
 import { memoryCollectionsStore } from "./memoryStore";
 import { LAUNCH_ROSTER, ROSTER, type Species } from "./roster";
 import { donate, enterMonthly, journal, monthBoard, trophies } from "./service";
@@ -10,7 +11,7 @@ import { donate, enterMonthly, journal, monthBoard, trophies } from "./service";
 const A = "00000000-0000-4000-8000-0000000000aa";
 const B = "00000000-0000-4000-8000-0000000000bb";
 const sp = (key: string) => ROSTER.find((s) => s.key === key)!;
-const noon = { hour: 12, month: 9, weather: "clear" as const };
+const noon = { hour: 12, month: 9, weather: "clear" as const, season: "autumn" as const, soon: "autumn" as const };
 const WEB = join(__dirname, "..", "..");
 
 describe("roster", () => {
@@ -34,7 +35,7 @@ describe("roster", () => {
       for (const weather of ["clear", "rain"] as const) {
         for (let h = 0; h < 24; h++) {
           const game = f!.when ? f!.when(h + 0.5, weather) : true;
-          expect(availableAt({ ...s, months: [] }, { hour: h + 0.5, month: 1, weather }), `${s.key} @${h} ${weather}`).toBe(game);
+          expect(availableAt({ ...s, months: [] }, { hour: h + 0.5, month: 1, season: "winter", soon: "winter", weather }), `${s.key} @${h} ${weather}`).toBe(game);
         }
       }
     }
@@ -50,16 +51,30 @@ describe("availability and clues", () => {
     expect(availableAt(sp("fish_catfish"), noon)).toBe(false);
     expect(availableAt(sp("fish_catfish"), { ...noon, weather: "rain" })).toBe(true);
     expect(laterToday(sp("fish_catfish"), noon)).toBe(true);
-    expect(availableAt(sp("fish_coelacanth"), { hour: 22, month: 5, weather: "clear" })).toBe(false);
-    expect(availableAt(sp("fish_coelacanth"), { hour: 22, month: 5, weather: "rain" })).toBe(true);
-    expect(availableAt(sp("fish_salmon"), { ...noon, month: 6 })).toBe(false);
+    expect(availableAt(sp("fish_coelacanth"), { hour: 22, month: 5, season: "spring", soon: "spring", weather: "clear" })).toBe(false);
+    expect(availableAt(sp("fish_coelacanth"), { hour: 22, month: 5, season: "spring", soon: "spring", weather: "rain" })).toBe(true);
+    expect(availableAt(sp("fish_salmon"), { ...noon, month: 6, season: "summer" })).toBe(false);
+  });
+  it("puts a rod catch in whole seasons and checks it by the island's season (David, 2026-11-01: \"i want it fish to be in seasons and not monthly\")", () => {
+    expect(seasonsOf([9])).toEqual(["autumn"]);
+    expect(seasonsOf([7, 8, 9])).toEqual(["summer"]);
+    expect(seasonsOf([11, 12, 1, 2, 3])).toEqual(["winter"]);
+    expect(seasonsOf([8, 9])).toEqual(["summer", "autumn"]);
+    expect(seasonsOf([3, 4, 5, 6, 9, 10, 11])).toEqual(["spring", "autumn"]);
+    expect(seasonsOf([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])).toEqual([]);
+    expect(seasonsOf([])).toEqual([]);
+    for (const s of ROSTER) if (s.tool === "rod") expect(s.months, s.key).toEqual(seasonsOf(s.months).flatMap((x) => SEASON_MONTHS[x]));
+    // By the season, not the month: December 5 is still autumn on the island, so an autumn fish bites; a bug goes by its month.
+    expect(inSeason(sp("fish_salmon"), { month: 12, season: "autumn" })).toBe(true);
+    expect(inSeason(sp("fish_salmon"), { month: 9, season: "summer" })).toBe(false);
+    expect(inSeason(sp("bug_red_dragonfly"), { month: 9, season: "summer" })).toBe(true);
   });
   it("never names the species in a clue", () => {
     for (const s of ROSTER) {
       const clue = clueFor(s).toLowerCase();
       expect(clue, s.key).not.toContain(s.name.toLowerCase());
     }
-    expect(clueFor(sp("fish_stringfish"))).toBe("In the cliff pools · 21:00–04:00 (any hour in rain) · any weather · Dec–Mar · a big shadow");
+    expect(clueFor(sp("fish_stringfish"))).toBe("In the cliff pools · 21:00–04:00 (any hour in rain) · any weather · winter · a big shadow");
   });
 });
 
@@ -212,13 +227,13 @@ describe("showcase", () => {
   });
 });
 
-it("journal pages carry the seasonal view: in season this month, leaving after it, back next month", () => {
+it("journal pages carry the seasonal view: a fish in season now, leaving before the season a month on, or back by then", () => {
   const autumn = ROSTER.find((s) => s.category === "fish" && s.months.join() === "9,10,11")!;
-  const entry = (month: number) => journalPage(ROSTER, "fish", [], [], A, { hour: 12, month, weather: "clear" }).entries.find((e) => e.clue === clueFor(autumn))!;
-  expect(entry(10)).toMatchObject({ in_season: true, leaving: false, arriving: false });
-  expect(entry(11)).toMatchObject({ in_season: true, leaving: true, arriving: false });
-  expect(entry(8)).toMatchObject({ in_season: false, leaving: false, arriving: true });
-  const allYear = journalPage(ROSTER, "fish", [], [], A, { hour: 12, month: 3, weather: "clear" }).entries.filter((e, i) => !ROSTER.filter((s) => s.category === "fish").sort((a, b) => a.position - b.position)[i].months.length);
+  const entry = (season: Season, soon: Season) => journalPage(ROSTER, "fish", [], [], A, { hour: 12, month: 10, weather: "clear", season, soon }).entries.find((e) => e.clue === clueFor(autumn))!;
+  expect(entry("autumn", "autumn")).toMatchObject({ in_season: true, leaving: false, arriving: false });
+  expect(entry("autumn", "winter")).toMatchObject({ in_season: true, leaving: true, arriving: false });
+  expect(entry("summer", "autumn")).toMatchObject({ in_season: false, leaving: false, arriving: true });
+  const allYear = journalPage(ROSTER, "fish", [], [], A, { hour: 12, month: 3, weather: "clear", season: "spring", soon: "spring" }).entries.filter((e, i) => !ROSTER.filter((s) => s.category === "fish").sort((a, b) => a.position - b.position)[i].months.length);
   expect(allYear.every((e) => e.in_season && !e.leaving && !e.arriving)).toBe(true);
 });
 
@@ -226,8 +241,8 @@ it("keeps a closed habitat's species never out, in season or coming (the mountai
   const pondKeys = new Set(ROSTER.filter((s) => s.category === "fish" && s.biome === "pond").map((s) => s.key));
   const fish = ROSTER.filter((s) => s.category === "fish").sort((a, b) => a.position - b.position);
   const mine = [...pondKeys].map((k) => ({ item_key: k, count: 1, total_collected: 1, best_size_cm: null, first_collected_at: "" }));
-  for (const month of [1, 4, 7, 10]) for (const hour of [3, 12, 21]) {
-    const page = journalPage(ROSTER, "fish", mine, [], A, { hour, month, weather: "clear" }, new Set(["pond"]));
+  for (const [month, season] of [[1, "winter"], [4, "spring"], [7, "summer"], [10, "autumn"]] as const) for (const hour of [3, 12, 21]) {
+    const page = journalPage(ROSTER, "fish", mine, [], A, { hour, month, season, soon: season, weather: "clear" }, new Set(["pond"]));
     page.entries.forEach((e, i) => {
       if (!pondKeys.has(fish[i].key)) return expect(e.closed).toBe(false);
       expect(e).toMatchObject({ closed: true, available_now: false, later_today: false, in_season: false, leaving: false, arriving: false });
@@ -236,7 +251,7 @@ it("keeps a closed habitat's species never out, in season or coming (the mountai
 });
 
 it("journal page helper exposes clue + availability on known entries too", () => {
-  const page = journalPage(ROSTER, "bug", [{ item_key: "bug_firefly", count: 1, total_collected: 1, best_size_cm: null, first_collected_at: "x" }], [], A, { hour: 21, month: 6, weather: "clear" });
+  const page = journalPage(ROSTER, "bug", [{ item_key: "bug_firefly", count: 1, total_collected: 1, best_size_cm: null, first_collected_at: "x" }], [], A, { hour: 21, month: 6, season: "summer", soon: "summer", weather: "clear" });
   expect(page.entries.find((e) => e.discovered)).toMatchObject({ key: "bug_firefly", available_now: true });
 });
 

@@ -40,7 +40,7 @@ BEGIN
     'email = ''x@evil.test''', 'uwo_email = ''x@evil.test''', 'gdrive_email = ''x@evil.test''',
     'id = ''00000000-0000-4000-8000-00000000000b''', 'created_at = now() - interval ''1 year''',
     'last_login_at = now()', 'first_seen_at = now()', 'portfolio = ''x''', 'side = ''x''',
-    'avatar_config = ''{"hair":"a"}'''
+    'avatar_config = ''{"hair":"a"}''', 'membership = ''member'''
   ] LOOP
     BEGIN
       EXECUTE 'UPDATE profiles SET ' || col || ' WHERE id = auth.uid()';
@@ -72,6 +72,12 @@ BEGIN
   UPDATE profiles SET tier = tier, tethos_coins = tethos_coins, display_name = 'Maya L' WHERE id = auth.uid();
   GET DIAGNOSTICS n = ROW_COUNT;
   ASSERT n = 1, 'FAIL: no-op write of privileged column refused';
+  -- pronouns is member-editable (20261105230000_profiles_pronouns_editable). Read back in the final check: the
+  -- column has no SELECT grant for members (the app reads it server-side, GET /api/profile).
+  UPDATE profiles SET pronouns = 'she/her' WHERE id = auth.uid();
+  GET DIAGNOSTICS n = ROW_COUNT;
+  ASSERT n = 1, 'FAIL: pronouns refused';
+  RAISE NOTICE 'ok: own pronouns update succeeds';
   RAISE NOTICE 'ok: all 25 editable columns update on own row (class/subclass server-only since 20260926151200, avatar_config since 20260926180000)';
 
   -- No self-insert (the INSERT policy is gone; handle_new_user creates rows).
@@ -153,6 +159,7 @@ COMMIT;
 
 -- Nothing member A tried stuck.
 DO $$ BEGIN
+  ASSERT (SELECT pronouns FROM profiles WHERE id = '00000000-0000-4000-8000-00000000000a') = 'she/her', 'FAIL: pronouns not saved';
   ASSERT (SELECT tier = 4 AND tethos_coins = 0 AND xp = 0 AND email = 'a@example.test' AND display_name = 'Maya L'
           FROM profiles WHERE id = '00000000-0000-4000-8000-00000000000a'), 'FAIL: A row state';
   ASSERT (SELECT display_name FROM profiles WHERE id = '00000000-0000-4000-8000-00000000000b') = 'b',

@@ -3,9 +3,9 @@
 /**
  * Paper, the material (design bible UI 2: only for what is paper in the world), as a folded teahouse menu (David's
  * references, 2026-10-28, specs/references/sushi-menu/; studied, not copied): washi with soft fibre (`--ui-paper-washi`,
- * our texture), ink-black type with a vertical brush-style title (`InkTitle`), one red hanko seal (`Hanko`), soft
- * ink-wash art that fades into the paper (`InkArt`: plum, bamboo, pagoda, mist; drawn here as SVG), dishes on a lacquer
- * tray and plate with their names and small prices on hairline rules (`TrayDish`), and the menu itself, a cover and
+ * our texture), ink-black type, the cover's name over a small emblem, a hairline and one quiet line (`CoverTitle`), one red hanko
+ * seal (`Hanko`), soft ink-wash art that fades into the paper (`InkArt`: plum, bamboo, pagoda, mist; drawn here as SVG),
+ * each dish as a photo with its name, price and what it does beside it (`MenuDish`), and the menu itself, a cover and
  * inner panels that turn like a folded menu (`FoldedMenu`). Shown at /lab/gui?only=flat-pieces. Tokens only.
  */
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
@@ -102,16 +102,25 @@ export function Hanko({ size = 34, filter, className }: { size?: number; filter:
   </svg>;
 }
 
-/** A vertical brush-style title (writing top to bottom, the game's type with a brushed ink edge) beside small horizontal text. */
-export function InkTitle({ title, side, filter }: { title: string; side?: ReactNode; filter: string }) {
-  return <div className={p.title}>
+/**
+ * The cover's words (round 4, David: the cover "looks crappy"; the references' cover: a small emblem, the name with
+ * room round it, a seal, then quiet small words): a thin ink ring with the fish in it, the name in light brushed ink
+ * over a pale wash, a hairline with the kind of place and the hanko, and one `line` in the game's voice.
+ */
+export function CoverTitle({ title, kind, line, filter }: { title: string; kind: string; line: ReactNode; filter: string }) {
+  return <div className={p.coverTitle}>
+    <svg viewBox="0 0 40 40" className={p.emblem} filter={`url(#${filter})`} aria-hidden>
+      <circle cx={20} cy={20} r={17.5} className={p.emblemRing} />
+      <path className={p.emblemFish} d="M9 21 C13 14 22 13 27 19 L32 15 L31 21 L32 27 L27 23 C22 29 13 28 9 21 Z" />
+    </svg>
     <span className={p.titleWrap}>
-      <svg viewBox="0 0 60 300" preserveAspectRatio="none" className={p.swash} filter={`url(#${filter}-wash)`} aria-hidden>
-        <path d="M30 4 C44 10 47 40 44 80 C41 130 47 180 42 230 C39 262 36 286 27 296 C22 286 20 260 18 230 C14 180 18 120 15 80 C13 44 16 12 30 4 Z" />
+      <svg viewBox="0 0 300 60" preserveAspectRatio="none" className={p.swash} filter={`url(#${filter}-wash)`} aria-hidden>
+        <path d="M6 34 C40 18 110 22 160 24 C210 26 260 18 294 28 C270 40 210 44 150 42 C90 40 40 46 6 34 Z" />
       </svg>
       <h2 className={p.titleInk} style={{ filter: `url(#${filter})` }}>{title}</h2>
     </span>
-    {side ? <><i className={p.titleRule} aria-hidden /><p className={p.titleSide}>{side}</p></> : null}
+    <span className={p.kindRow}><i aria-hidden /><span>{kind}</span><Hanko filter={filter} size={18} /><i aria-hidden /></span>
+    <p className={p.coverLine} data-cover-line="">{line}</p>
   </div>;
 }
 
@@ -125,23 +134,34 @@ export function PanelSection({ title, children }: { title: string; children: Rea
   </section>;
 }
 
+/** One thing a dish does, as the menu lists it beside the photo: an icon, the words, and how much (`level` of 5 as dots). */
+export interface DishStat { icon: ReactNode; label: string; value: ReactNode; level?: number }
 /**
- * A dish on a lacquer tray and a plate (its picture: the model's icon, or a marked stand-in), its name and small price on
- * a hairline rule. Hovered or focused, one quiet line of what it does (David: "hover over dishes show what they do").
- * It is the action: picked (`open`), `children` (the order) show under it.
+ * A dish as the menu shows it (round 4, David: "simple photo of food and then price on the side with like stats"): its
+ * photo (the model's icon on a plate, or a marked stand-in), and beside it the name, the price, and what it does, one
+ * row a stat. `note`: one quiet line under them. It is the action: picked (`open`), `children` (the order) show under it.
  */
-export function TrayDish({ picture, name, price, does, standIn, open, disabled, onPick, children }: {
-  picture: ReactNode; name: ReactNode; price: ReactNode; does: ReactNode; standIn?: boolean; open?: boolean; disabled?: boolean; onPick?: () => void; children?: ReactNode;
+export function MenuDish({ picture, name, price, stats, note, standIn, open, disabled, onPick, children }: {
+  picture: ReactNode; name: ReactNode; price: ReactNode; stats: readonly DishStat[]; note?: ReactNode; standIn?: boolean; open?: boolean; disabled?: boolean; onPick?: () => void; children?: ReactNode;
 }) {
   return <div className={p.dish} data-open={open || undefined} data-disabled={disabled || undefined}>
     <button type="button" className={p.dishPick} disabled={disabled} aria-expanded={open} onClick={onPick}>
-      <span className={p.tray} aria-hidden>
-        <i className={p.chopsticks} />
+      <span className={p.photo}>
         <span className={p.plate}>{picture}</span>
         {standIn ? <small className={p.standIn}>stand-in</small> : null}
       </span>
-      <span className={p.dishLine}><b>{name}</b><span className={p.dishPrice}>{price}</span></span>
-      <span className={p.dishDoes}>{does}</span>
+      <span className={p.dishInfo}>
+        <span className={p.dishLine}><b>{name}</b><span className={p.dishPrice}>{price}</span></span>
+        <span className={p.stats}>
+          {stats.map(st => <span key={st.label} className={p.stat}>
+            <span className={p.statIcon} aria-hidden>{st.icon}</span>
+            <span className={p.statLabel}>{st.label}</span>
+            {st.level !== undefined ? <span className={p.dots} aria-hidden>{[1, 2, 3, 4, 5].map(i => <i key={i} data-on={i <= st.level! || undefined} />)}</span> : <span />}
+            <span className={p.statValue}>{st.value}</span>
+          </span>)}
+        </span>
+        {note ? <span className={p.dishNote}>{note}</span> : null}
+      </span>
     </button>
     {open ? <div className={p.dishAction}>{children}</div> : null}
   </div>;

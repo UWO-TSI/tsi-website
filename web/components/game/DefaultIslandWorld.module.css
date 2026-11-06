@@ -21,7 +21,8 @@
 }
 /* The island wears the GUI sheet (styles/game-tokens.css): the root also carries the global `gui` class. */
 .world { position: relative; width: 100%; height: calc(100dvh - var(--island-top, 40px)); min-height: 480px; overflow: hidden; background: #b7dce0; color: var(--gui-ink); }
-.heading { position: absolute; top: 28px; left: 36px; pointer-events: none; color: var(--gui-ink-strong); text-shadow: 0 1px 0 #fffbe7b3, 0 2px 14px #fffbe7d9; transition: opacity 0.6s ease 0.15s, transform 0.6s ease 0.15s; }
+/* The place name, under the vitals in the top left corner. */
+.heading { position: absolute; top: 86px; left: 36px; pointer-events: none; color: var(--gui-ink-strong); text-shadow: 0 1px 0 #fffbe7b3, 0 2px 14px #fffbe7d9; transition: opacity 0.6s ease 0.15s, transform 0.6s ease 0.15s; }
 /* The scene title fades out with a door fade and back in, renamed, once the next scene shows. */
 .heading[data-fading="true"] { opacity: 0; transform: translateY(-4px); transition-duration: 0.25s; transition-delay: 0s; }
 .heading h1 { margin: 0; font: 800 clamp(22px, 2.6vw, 34px)/1.1 var(--gui-font); letter-spacing: -0.01em; }
@@ -80,6 +81,9 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .hudLead { display: flex; align-items: flex-start; gap: 10px; }
 .hudLead > * { pointer-events: auto; }
 .hudColumn { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; zoom: var(--tsi-text-scale, 1); }
+/* The time's row: the biome tag (where you fish) left of the time. */
+/* The time, the biome tag under it (round 7, David: "move it under. the time"), both right-aligned under the minimap. */
+.clockRow { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 /* The quest tracker (QuestTracker.tsx), one line on the minimap's top row, centred on the 44px chips beside it. */
 .hudLead > .questSlot { position: static; margin-top: 4px; }
 /* A phone: no room for the gear, the line and the big map in one row, so the line keeps the top and the cluster drops
@@ -107,8 +111,8 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 /* The decorate panel itself is components/game/home/DecorateSheet.module.css (the flat UI). */
 .decorateToggle { position: absolute; right: var(--hud-edge); bottom: var(--hud-side-bottom); min-height: 44px; padding: 0 16px 0 10px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper); color: var(--gui-ink-strong); font: inherit; font-size: var(--gui-text-sm); font-weight: 800; cursor: pointer; box-shadow: var(--gui-shadow-md); z-index: 11; display: inline-flex; align-items: center; gap: 7px; }
 .world[data-inside] .heading { color: var(--gui-paper); text-shadow: 0 2px 12px #11152a; }
-/* The player's bars (HudBars), top left above the Bag and under the place name; stamina's pill beside them. */
-.hudBars { position: absolute; left: var(--hud-edge); top: 94px; z-index: 11; display: flex; align-items: center; gap: 8px; pointer-events: none; zoom: var(--tsi-text-scale, 1); }
+/* The player's level ring and vitals (HudBars): the top left corner, level with the quest line top right (bible UI 8b). */
+.hudBars { position: absolute; left: var(--hud-edge); top: max(16px, env(safe-area-inset-top)); z-index: 11; display: flex; align-items: flex-start; gap: 8px; pointer-events: none; zoom: var(--tsi-text-scale, 1); }
 .bagButtons { position: absolute; left: 16px; top: 150px; z-index: 11; display: flex; align-items: center; gap: 8px; }
 .bagButton { position: relative; display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 0 16px 0 10px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper); color: var(--gui-ink-strong); font: inherit; font-size: var(--gui-text-sm); font-weight: 800; cursor: pointer; box-shadow: var(--gui-shadow-md); z-index: 11; }
 .curatorLine { margin: 0 0 12px; padding: 10px 14px; border-radius: var(--gui-r-card); background: var(--gui-paper-warm); color: var(--gui-ink); font-style: italic; }
@@ -438,9 +442,20 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .menuButton { display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: var(--gui-paper); color: var(--gui-ink-strong); box-shadow: var(--gui-shadow-md); cursor: pointer; zoom: var(--tsi-text-scale, 1); }
 .menuButton[aria-expanded="true"] { background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm), inset 0 0 0 2px var(--gui-paper-edge); }
 .world[data-compact] .bagButtons { top: max(14px, env(safe-area-inset-top)); left: var(--hud-edge); flex-direction: column; align-items: flex-start; }
+/* Its column box reaches over the vitals under it: only its buttons take a tap (no specificity, so the Bag's own
+   hidden state, pointer-events none, still wins). */
+.world[data-compact] .bagButtons { pointer-events: none; }
+:where(.world[data-compact] .bagButtons > *) { pointer-events: auto; }
 .world[data-compact] .heading { top: calc(max(14px, env(safe-area-inset-top)) + 6px); left: calc(var(--hud-edge) + 56px); }
-/* Narrow: the top cluster's buttons share that row, so the place name drops just under the menu button. */
-@media (max-width: 700px) { .world[data-compact] .heading { top: calc(max(14px, env(safe-area-inset-top)) + 54px); left: var(--hud-edge); } }
+/* Narrow: the top cluster's buttons share that row, so the place name drops under the menu button and the vitals. */
+/* Touch: the level ring and the vitals sit under the menu button (it keeps the corner). */
+.world[data-compact] .hudBars { top: calc(max(14px, env(safe-area-inset-top)) + 54px); }
+@media (max-width: 700px) { .world[data-compact] .heading { top: calc(max(14px, env(safe-area-inset-top)) + 112px); left: var(--hud-edge); } }
+/* A phone upright, more compact (David r4: "make it more compact"): smaller stick and buttons, lower, and a smaller map. */
+@media (pointer: coarse) and (max-width: 700px) {
+  .world[data-compact] { --touch-stick: 112px; --touch-scale: 0.8; --hud-stick-bottom: calc(var(--hud-floor) + 32px); }
+  .world[data-compact] .hudColumn { --minimap-size: 96px; }
+}
 .touchControls[data-flash="out"] { animation: hintFade 0.32s ease-in forwards; }
 @keyframes hintFade { to { opacity: 0; } }
 :global(html[data-contrast="high"]) .world .menuButton { background: #000000; color: #ffffff; box-shadow: 0 0 0 2px #ffffff; }

@@ -433,6 +433,8 @@ export function useFishingSession({ onActiveChange, collectionScope, zoneOverrid
 
   return {
     phase, fish, caughtSize, wasNew, newRecord, learned, buddy, missNote, device, maxCast, bossMode, raidId, rod,
+    /** The water this cast went into (the world names it at tsi:fish-start), or null where it didn't say. */
+    water: waterRef.current,
     /** Species this player has caught (a first catch shows ??? on the reel). */
     owned: ownedRef.current,
     /** The input held from the hook into the reel. */

@@ -206,6 +206,12 @@
 @keyframes pop { 0% { opacity: 0; transform: scale(0.2) rotate(-20deg); } 70% { opacity: 1; transform: scale(1.12) rotate(3deg); } 100% { transform: none; } }
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes fade { from { opacity: 0; } }
+/* A sale's coins (flyCoins): each coin on its own, flying over everything; the sparkles where they land. */
+.coins { position: fixed; inset: 0; z-index: 90; pointer-events: none; }
+.coin { position: absolute; width: 28px; height: 28px; margin: -14px 0 0 -14px; image-rendering: pixelated; filter: drop-shadow(0 2px 3px rgb(var(--ui-shade) / 0.3)); will-change: transform; }
+.coinSpark { position: absolute; width: 12px; height: 12px; background: var(--ui-gold-light); clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  filter: drop-shadow(0 0 3px var(--ui-gold)); }
+
 @media (prefers-reduced-motion: reduce) {
   .scrim, .spotlight, .lead, .key, .key[data-lit], .key[data-won], .flyDim, .flyIcon, .flyIcon > span, .flyName, .flyRing, .pop, .disc, .ring, .spark,
   .popEyebrow, .popTitle, .printed[data-printing] .slot, .printed[data-printing] .paper, .stamp, .held { animation: none; transition: none; }

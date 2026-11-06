@@ -19,10 +19,13 @@
  *   CardOverlay  a thing as the overlay (the v3 review: "the card itself is the overlay"): no panel, the thing large in
  *                the middle over a light scrim, one button under it
  *   PaperField   a field written on paper: a write-in line, for a card being filled in
+ *   flyCoins     a sale's coins: they burst from what was sold and fly, one after another, to the wallet, which ticks
+ *                up and swells a little as each lands, glowing a deeper yellow the more comes in, with sparkles
  * Colours: the theme's --ui-* tokens only. Plain props; nothing here knows the game.
  */
 import { useEffect, useRef, useState, type CSSProperties, type InputHTMLAttributes, type PointerEvent, type ReactNode } from "react";
 import { useWorldDialog } from "@/lib/game/useWorldDialog";
+import { iconUrl } from "@/lib/icons/keys";
 import m from "./moments.module.css";
 
 /** A step that wants your whole attention: a flat panel in the middle over a light scrim. Holds the world's keys. */
@@ -218,6 +221,108 @@ export function FlyIn({ icon, name, text, to, onBeat, onDone, testId }: {
     <p className={m.flyName}><b>{name}</b>{text && <span>{text}</span>}</p>
     {f.phase === "land" && f.ring && <i className={m.flyRing} style={{ left: f.ring.x, top: f.ring.y, width: f.ring.w, height: f.ring.h }} aria-hidden="true" />}
   </div>;
+}
+
+/** Where a sale's coins land: the open sheet's purse, else the HUD's wallet. */
+export const COIN_SLOTS = ['[data-purse="coins"]', '[data-hud-slot="coins"]'] as const;
+/** How many coins fly for `amount`: more for more, 3 to 12, never more coins than money. */
+export const coinCount = (amount: number) => Math.min(Math.max(0, Math.floor(amount)), Math.max(3, Math.min(12, Math.round(2 + Math.sqrt(Math.max(0, amount)) / 1.6))));
+/** `amount` over `n` coins: whole numbers that add up to it, the bigger shares last. */
+export function coinShares(amount: number, n: number): number[] {
+  const base = Math.floor(amount / n), extra = amount - base * n;
+  return Array.from({ length: n }, (_, i) => base + (i >= n - extra ? 1 : 0));
+}
+/** How deep the wallet's yellow glows with `amount` in (0 the light yellow, 1 the deep). */
+export const coinHeat = (amount: number) => Math.max(0.1, Math.min(1, Math.log10(Math.max(1, amount)) / 3.2));
+
+const COIN = { pop: 170, fly: 560, gap: 75 } as const;
+const glowing = new Map<HTMLElement, { flights: number; css: string }>();
+let layer: HTMLDivElement | null = null;
+/**
+ * A sale's coins (David, 2026-11-02: "coins fly from the fish you sold to the wallet ... mult coin fly staggered to the
+ * wallet, wallet coin num count up, glows yellow based on how much coin is added. add sparkles, yellow gets darker if
+ * more coins, the nnumberinflates as cions enter"). From `from` (the sold thing's box) coinCount(amount) coins pop up
+ * and fly one after another to the first slot of `to` on screen; as each lands `onLand` hears its share (the caller ticks
+ * its number and plays the coin), the slot swells a little more each time, glows a deeper yellow for what has come in so
+ * far, and throws a few sparkles. `onDone` after the last. With no slot on screen, or under reduced motion, it all lands
+ * at once. Transform and opacity only (the Web Animations API, so a slowed clock slows it whole).
+ */
+export function flyCoins({ from, amount, to = COIN_SLOTS, onLand, onDone }: {
+  from: DOMRect; amount: number; to?: readonly string[]; onLand?: (share: number, i: number, n: number) => void; onDone?: () => void;
+}) {
+  const n = coinCount(amount), shares = coinShares(amount, n);
+  const slot = to.map(sel => document.querySelector<HTMLElement>(sel)).find(e => e && e.getBoundingClientRect().width > 0);
+  if (!slot || !n || typeof document.body.animate !== "function" || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (n) onLand?.(amount, n - 1, n);
+    onDone?.();
+    return;
+  }
+  if (!layer?.isConnected) {
+    layer = Object.assign(document.createElement("div"), { className: `${m.coins} gui` });
+    layer.setAttribute("aria-hidden", "true");
+    document.body.appendChild(layer);
+  }
+  const box = layer, r = slot.getBoundingClientRect(), tx = r.left + Math.min(r.width / 2, 14), ty = r.top + r.height / 2;
+  const glow = glowing.get(slot) ?? { flights: 0, css: slot.style.cssText };
+  glow.flights++;
+  glowing.set(slot, glow);
+  let landed = 0;
+  shares.forEach((share, i) => {
+    const coin = document.createElement("img");
+    coin.src = iconUrl("coin");
+    coin.alt = "";
+    coin.className = m.coin;
+    const x = from.left + from.width / 2 + (Math.random() - 0.5) * from.width * 0.5, y = from.top + from.height * 0.42 + (Math.random() - 0.5) * from.height * 0.3;
+    coin.style.left = `${x}px`;
+    coin.style.top = `${y}px`;
+    box.appendChild(coin);
+    const dx = tx - x, dy = ty - y, burst = { x: (Math.random() - 0.5) * 90, y: -40 - Math.random() * 50 }, bend = (Math.random() - 0.5) * 140;
+    const at = (k: number) => `translate(${burst.x + (dx - burst.x) * k + bend * k * (1 - k)}px, ${burst.y + (dy - burst.y) * k * k - 60 * k * (1 - k)}px)`;
+    const flight = coin.animate([
+      { transform: "translate(0, 0) scale(0.3) rotate(0deg)", opacity: 0 },
+      { transform: `translate(${burst.x}px, ${burst.y}px) scale(1.15) rotate(${burst.x}deg)`, opacity: 1, offset: COIN.pop / (COIN.pop + COIN.fly), easing: "cubic-bezier(0.4, 0, 0.6, 1)" },
+      { transform: `${at(0.5)} scale(0.95) rotate(${burst.x * 3}deg)`, opacity: 1, offset: (COIN.pop + COIN.fly * 0.5) / (COIN.pop + COIN.fly) },
+      { transform: `${at(1)} scale(0.55) rotate(${burst.x * 5}deg)`, opacity: 1 },
+    ], { duration: COIN.pop + COIN.fly, delay: i * COIN.gap, easing: "linear", fill: "backwards" });
+    flight.onfinish = () => {
+      coin.remove();
+      landed += share;
+      onLand?.(share, i, n);
+      land(slot, coinHeat(landed), i / Math.max(1, n - 1), box, tx, ty);
+      if (i === n - 1) {
+        slot.animate([{ filter: "brightness(1.15)" }, { filter: "brightness(1)" }], { duration: 900, easing: "ease-out" }).onfinish = () => {
+          if (--glow.flights > 0) return;
+          // The glow fades out (its transition), then the slot has its own look back.
+          slot.style.backgroundColor = "transparent";
+          slot.style.boxShadow = "none";
+          window.setTimeout(() => { if (glow.flights) return; slot.style.cssText = glow.css; glowing.delete(slot); }, 300);
+        };
+        onDone?.();
+      }
+    };
+  });
+}
+/** One coin into the slot: it swells (more with each, `k` 0 to 1), glows in the yellow for `heat`, and sparkles. */
+function land(slot: HTMLElement, heat: number, k: number, box: HTMLElement, x: number, y: number) {
+  const tone = `color-mix(in oklab, var(--ui-gold-deep) ${Math.round(heat * 100)}%, var(--ui-gold-light))`;
+  slot.style.borderRadius = "999px";
+  slot.style.transition = "background-color 0.25s ease, box-shadow 0.25s ease";
+  slot.style.backgroundColor = `color-mix(in srgb, ${tone} ${Math.round(28 + 30 * heat)}%, transparent)`;
+  slot.style.boxShadow = `0 0 0 5px color-mix(in srgb, ${tone} 70%, transparent), 0 0 ${Math.round(8 + 22 * heat)}px ${Math.round(2 + 6 * heat)}px color-mix(in srgb, ${tone} 75%, transparent)`;
+  slot.animate([{ transform: "scale(1)" }, { transform: `scale(${(1.1 + 0.16 * k).toFixed(3)})`, offset: 0.3 }, { transform: "scale(1)" }],
+    { duration: 300, easing: "cubic-bezier(0.3, 1.5, 0.5, 1)" });
+  for (let s = 0; s < 3; s++) {
+    const spark = document.createElement("i"), a = Math.random() * Math.PI * 2, d = 22 + Math.random() * 22;
+    spark.className = m.coinSpark;
+    spark.style.left = `${x}px`;
+    spark.style.top = `${y}px`;
+    box.appendChild(spark);
+    spark.animate([
+      { transform: "translate(-50%, -50%) scale(0) rotate(0deg)", opacity: 1 },
+      { transform: `translate(calc(-50% + ${Math.cos(a) * d}px), calc(-50% + ${Math.sin(a) * d}px)) scale(1) rotate(45deg)`, opacity: 1, offset: 0.5 },
+      { transform: `translate(calc(-50% + ${Math.cos(a) * d * 1.3}px), calc(-50% + ${Math.sin(a) * d * 1.3}px)) scale(0) rotate(90deg)`, opacity: 0 },
+    ], { duration: 520, easing: "ease-out" }).onfinish = () => spark.remove();
+  }
 }
 
 /** How long a QuestCheck plays before it's gone (ms): its caller unmounts it then. */

@@ -13,6 +13,9 @@ body, [data-ui-theme="clean"] {
   --ui-highlight: #151515;
   --ui-marker: rgb(255 204 0 / 0.55);
   --ui-gold: #f2b636;
+  /* A sale's coins landing: the wallet glows from the light yellow to the deep (more coins, deeper). */
+  --ui-gold-light: #ffe27a;
+  --ui-gold-deep: #c9770c;
   --ui-silver: #b8c0cc;  /* podium places (the leaderboard): gold, silver, bronze edges */
   --ui-bronze: #d08a52;
   --ui-title-outline: #234a52;  /* the title banner's deep island teal: logo, wordmark and hint pill */
@@ -53,6 +56,16 @@ body, [data-ui-theme="clean"] {
   --ui-water-line: #a9d2e3;
   /* The reel's accent: the catch window, the line's fill and the droplets (calm water, not yellow or black). */
   --ui-water-deep: #2a92b8;
+  /* Condition colours (the catch board's chips, the seasons, the water signs): one hue each. */
+  --ui-tint-rose: #e98aa6;
+  --ui-tint-sun: #efb02b;
+  --ui-tint-amber: #e47b33;
+  --ui-tint-ice: #62afe0;
+  --ui-tint-sky: #45a3e6;
+  --ui-tint-rain: #5b7db8;
+  --ui-tint-mist: #949fa9;
+  --ui-tint-leaf: #43ad93;
+  --ui-tint-night: #5a5db3;
   /* Paper, the material (the design bible's rule 2: only for things that are paper in the world: a printed card, a letter). */
   --ui-paper: #fbf7ec;
   --ui-paper-edge: #e9dfc9;
@@ -83,10 +96,16 @@ body, [data-ui-theme="clean"] {
   /* A little texture where it helps (UI 1, "not so flat"): a fine grain over a card, and a glint across rare things. */
   --ui-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.3 0 0 0 0 0.3 0 0 0 0 0.3 0 0 0 0.07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
   --ui-glint: linear-gradient(115deg, transparent 38%, rgb(255 255 255 / 0.55) 48%, transparent 58%);
-  /* The HUD's bars (UI 8): health, stamina (and run out), XP. */
-  --ui-health: #ec6a5c;
-  --ui-stamina: #5dbb63;
+  /* The HUD's vitals (UI 8): each bar's colour when full and when nearly empty, the shared amber between; XP's ring. */
+  --ui-health: #5ec46c;
+  --ui-health-low: #e5302a;
+  --ui-stamina: #4db6e2;
   --ui-stamina-low: #f08a4b;
+  --ui-shield: #7f97f2;
+  --ui-mana: #a77cf0;
+  --ui-vital-mid: #f4bd3a;
+  /* Type straight over the world on a soft scrim (the level-up moment): white, whatever the theme. */
+  --ui-on-scrim: #ffffff;
   --ui-xp: #f2b33d;
   --ui-sheen: rgb(255 255 255 / 0.35);
   /* Paper, the material (design bible UI 2): only for what is paper in the world (the sushi bar's folded menu, a
@@ -97,7 +116,6 @@ body, [data-ui-theme="clean"] {
   --ui-paper-hover: #ebe5d8;
   --ui-paper-seal: #b4342b;
   --ui-paper-tray: #2b2622;
-  --ui-paper-tray-hi: #4a423b;
   --ui-paper-plate: #faf8f3;
   --ui-paper-washi: url("/assets/ui/washi.png");
 }
