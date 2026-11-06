@@ -649,7 +649,7 @@ def titanium():
           oct_(0.020, 0.0225), oct_(0.025, 0.03), oct_(0.076, 0.03), oct_(0.082, 0.0245),                    # the reel seat collar
           dia(0.088, 0.029, 0.024), dia(0.392, 0.0232, 0.019),                                               # the blank, ground
           oct_(0.396, 0.0255), oct_(0.414, 0.0255), dia(0.418, 0.0228, 0.0186),                              # the ferrule ring
-          dia(0.74, 0.0172, 0.0128), dia(0.79, 0.0164, 0.0072)]                                               # flattening to a chisel point
+          dia(0.68, 0.0178, 0.0134), dia(0.76, 0.0172, 0.0074)]                                               # ground flat to a chisel point
 
     def b(pc):
         pc.mat = "Body"
@@ -714,10 +714,10 @@ def plate(pc, outline, t, ch, y0=0.0, tags=("Edge", "Wall", "Face")):
 # The awakened Titanium's plates, (x, z) in its broad plane, thickness, chamfer (and y, off the middle): the long blade
 # down its right, two stepped plates on its left, cheeks over the seat front and back, a fin sweeping down off it
 # (epic-titanium-awakened-ref.png, loosely, its profile turned to face the camera).
-A1_PLATES = [([(0.008, 0.10), (0.05, 0.14), (0.06, 0.35), (0.038, 0.395), (0.008, 0.38)], 0.026, 0.005),            # the back, stepped
-             ([(0.008, 0.39), (0.044, 0.415), (0.05, 0.62), (0.03, 0.76), (0.008, 0.835)], 0.02, 0.0045),
-             ([(-0.008, 0.11), (-0.046, 0.16), (-0.054, 0.30), (-0.03, 0.37), (-0.008, 0.35)], 0.03, 0.005),     # the front
-             ([(-0.007, 0.43), (-0.036, 0.47), (-0.04, 0.6), (-0.02, 0.67), (-0.007, 0.64)], 0.024, 0.0045),
+A1_PLATES = [([(0.008, 0.10), (0.06, 0.15), (0.072, 0.35), (0.044, 0.395), (0.008, 0.38)], 0.026, 0.005),            # the right, stepped
+             ([(0.008, 0.39), (0.054, 0.42), (0.06, 0.62), (0.036, 0.76), (0.008, 0.835)], 0.02, 0.0045),
+             ([(-0.008, 0.11), (-0.056, 0.17), (-0.064, 0.30), (-0.036, 0.37), (-0.008, 0.35)], 0.03, 0.005),     # the left
+             ([(-0.007, 0.43), (-0.044, 0.47), (-0.048, 0.6), (-0.024, 0.67), (-0.007, 0.64)], 0.024, 0.0045),
              ([(-0.028, 0.03), (0.028, 0.03), (0.03, 0.1), (0.016, 0.3), (-0.026, 0.1)], 0.008, 0.0025, 0.026),     # its cheeks
              ([(-0.028, 0.03), (0.028, 0.03), (0.03, 0.1), (0.016, 0.3), (-0.026, 0.1)], 0.008, 0.0025, -0.026),
              ([(0.012, 0.12), (0.04, 0.11), (0.092, -0.03), (0.06, 0.03), (0.012, 0.08)], 0.009, 0.0025)]          # the fin
@@ -744,9 +744,9 @@ def titanium_a1():
         pc.tube([(0, -0.016, z), (0, y + 0.006, z)], [0.008, 0.008], sides=4, tip=False)
         lathe(pc, (0, y, z), [(0.026, -0.011), (0.042, -0.013), (0.05, -0.007), (0.05, 0.007), (0.042, 0.013), (0.026, 0.011), (0.026, -0.011)],
               n=8, axis=(0, 1, 0), phase=math.pi / 8)
-        pc.mat = "Wall"                          # the guard bar, from under the hub round the hand to the pommel
-        loft(pc, [V((0, y, z - 0.05)), V((0, y - 0.012, -0.03)), V((0, y + 0.004, -0.1)), V((0, -0.02, -0.122))],
-             [(0.006, 0.0085)] * 4, sides=4, tip=False, cap=True, phase=math.pi / 4, ref=(1, 0, 0))
+        pc.mat = "Wall"                          # the knuckle guard, from the seat round the hand to the pommel
+        loft(pc, [V((-0.02, -0.004, 0.024)), V((-0.058, -0.004, -0.028)), V((-0.052, -0.004, -0.1)), V((-0.018, -0.004, -0.122))],
+             [(0.0085, 0.006)] * 4, sides=4, tip=False, cap=True, phase=math.pi / 4, ref=(0, 1, 0))
         line(pc, (0, y, z + 0.05), lambda zz: V((0, 0, zz)), TI_L, "Line", ahead=-0.024, zs=(0.42,), tip=V((0, -0.006, 0.81)))
     rod = model("rod-titanium-a1", {k: "#FFFFFF" for k in ("Body", "Edge", "Wall", "Face", "Hub", "Line")}, b)
     paint = {"Edge": kit.lin("#E6EBF1"), "Face": kit.lin("#8A94A7"), "Wall": kit.lin("#242A3A"), "Hub": kit.lin("#343C50"), "Line": kit.lin("#E6ECF0")}
@@ -754,13 +754,13 @@ def titanium_a1():
 
     def energy(pc):                              # cyan lines in each plate's panel, on both faces, and the blade's edge
         pc.mat = "Glow"
-        for (_, t, *_), panel in zip(A1_PLATES, (((0.036, 0.15), (0.044, 0.33)), ((0.032, 0.43), (0.036, 0.61), (0.021, 0.73)),
-                                               ((-0.033, 0.17), (-0.04, 0.29), (-0.024, 0.345)), ((-0.026, 0.48), (-0.029, 0.6), (-0.015, 0.65)))):
+        for (_, t, *_), panel in zip(A1_PLATES, (((0.044, 0.16), (0.054, 0.33)), ((0.04, 0.43), (0.045, 0.61), (0.026, 0.73)),
+                                               ((-0.04, 0.18), (-0.048, 0.29), (-0.029, 0.345)), ((-0.032, 0.48), (-0.035, 0.6), (-0.018, 0.65)))):
             for s in (-1, 1):
                 pc.tube([V((px, s * (t / 2 + 0.0009), pz)) for px, pz in panel], [0.0024] * len(panel), sides=3, tip=False)
         for s in (-1, 1):                        # and down each cheek
             pc.tube([V((px, s * 0.0309, pz)) for px, pz in ((-0.016, 0.05), (0.018, 0.05), (0.02, 0.1), (0.01, 0.25))], [0.0022] * 4, sides=3, tip=False)
-        pc.tube([V((px, 0, pz)) for px, pz in ((0.0455, 0.415), (0.0515, 0.62), (0.0315, 0.76), (0.0095, 0.835))], [0.0024] * 4, sides=3, tip=True)
+        pc.tube([V((px, 0, pz)) for px, pz in ((0.0555, 0.42), (0.0615, 0.62), (0.0375, 0.76), (0.0095, 0.835))], [0.0024] * 4, sides=3, tip=True)
 
     def core(pc):                                # the hub's core
         pc.mat = "Glow"
@@ -768,13 +768,13 @@ def titanium_a1():
 
     def blades(pc):                              # energy blades under the front plates, hard-edged
         pc.mat = "Light"
-        for outline in ([(-0.044, 0.18), (-0.08, 0.21), (-0.09, 0.33), (-0.05, 0.30)], [(-0.034, 0.48), (-0.064, 0.5), (-0.07, 0.62), (-0.038, 0.6)]):
+        for outline in ([(-0.056, 0.19), (-0.095, 0.22), (-0.105, 0.34), (-0.062, 0.31)], [(-0.044, 0.48), (-0.076, 0.5), (-0.083, 0.62), (-0.048, 0.6)]):
             plate(pc, outline, 0.003, 0.0008, tags=("Light",) * 3)
     axis = [V((0, 0.0, -0.11)), V((0, -0.01, 0.05)), V((0.004, 0, 0.3)), V((0.006, 0, 0.6)), V((0.004, 0, 0.8))]
     fx = [glow("Energy", "#3ED8FF", energy, flicker=0.2),
           glow("Core", "#A6F4FF", core, pivot=(0, y, z), pulse=0.14),
-          light("Blades", "#2FB4FF", blades, pivot=(-0.045, 0, 0.4), pulse=0.05),
-          aura_hug("Aura", "#2A86E0", axis, [0.03, 0.05, 0.04, 0.032, 0.02], inflate=1.4)]
+          light("Blades", "#2FB4FF", blades, pivot=(-0.06, 0, 0.4), pulse=0.05),
+          aura_hug("Aura", "#2A86E0", axis, [0.03, 0.06, 0.06, 0.05, 0.028], inflate=1.4)]
     return rod, fx, {"rodFx": "titanium-a1"}, particles("#9EEBFF", "sparkle", every=0.12, size=0.05, rise=0.3)
 
 
