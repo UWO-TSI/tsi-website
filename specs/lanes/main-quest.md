@@ -31,6 +31,25 @@ Others use these once they land. Ask the coordinator to merge the owner's commit
 
 **Gates:** vitest (once), tsc, eslint, the SQL smoke chain, plus headless shots or an in-game run for anything a player sees. One `perf:check` at the end only if you change what renders. Report at each milestone and at the end with the head SHA, gates, evidence and anything you couldn't verify.
 
+## Round 9: David's main quest round 8 review (2026-11-06, verbatim; https://claude.ai/artifact/LJWHGJsMqdu7jHzmZtfTVT)
+
+David: "aoorive qyest 8 ... the stamina bar needs redo". Round 8 is merged into feat/game-default-island (2748fa1a1, with fishing-depth r10).
+
+Approved: mq8-critical, mq8-stamina, mq8-vitals.
+- mq8-questions (approve): "extend,"
+- mq8-shield (approve): "ok but i think introduce health bar when combat is going to be introduced"
+- mq8-showroom (approve): "shielf should be grey color"
+- mq8-zoom (redo): "it should be beside the character even when zoomed out, it should always be to the right of the character and adaptive to camera angels"
+
+Build (coordinator):
+0. Start by merging `feat/game-default-island` (it has your round 8 and fishing r10).
+1. **The stamina bar's place:** always just to the right of the character on screen, at every zoom (in and out) and every camera angle, following the character as the camera turns. Keep it the same size on screen at any zoom. Desktop and phone.
+2. **The shield is grey.**
+3. **Health bar:** nothing to build now. It comes in with combat; note it in the lane file's Next.
+4. The questions card's "extend": apply it as your card asked.
+
+Evidence `mq9-*`: the stamina arc beside the character zoomed in, default and zoomed out, at three camera angles (clips while turning), desktop and phone; the grey shield; a questions card.
+
 ## Round 8: David's round 7 review (2026-11-04, verbatim; https://claude.ai/artifact/W9eXPZWT3w3xfwpfp1eqiE)
 
 Approved: mq7-critical, mq7-hud, mq7-levelup-strip, mq7-levelup, mq7-questions.
