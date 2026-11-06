@@ -12,7 +12,7 @@
  *   - one material per effect node, so each is one draw (specs/perf/effects-cost.md).
  */
 
-export type FxKind = "glow" | "aura" | "particles" | "trail" | "pulse" | "motion" | "flicker" | "sparks" | "burst";
+export type FxKind = "glow" | "aura" | "particles" | "trail" | "pulse" | "motion" | "flicker" | "sparks" | "burst" | "water";
 
 /** A parameter as made, what it does, and how much of it grows with strength (`value * (1 + grows * (k - 1))`). */
 export interface FxParam { value: number; what: string; grows: number }
@@ -49,7 +49,7 @@ export const FX: Record<FxKind, FxType> = {
     params: { length: p(0.4, "how long it lasts (s)", 0.5), width: p(0.012, "how wide (m)") },
   },
   pulse: {
-    name: "Pulse", what: "A part swelling and easing back; with strength the whole part grows (the Tidewarden's pearl).",
+    name: "Pulse", what: "A part swelling and easing back; with strength the whole part grows (the Tempest's tip spark).",
     authored: "A node's `pulse` extra (the swell, a share of its size).",
     params: { swell: p(0.08, "the swell, a share of its size"), rate: p(2.6, "rad/s"), size: p(1, "its size", 0.45) },
   },
@@ -67,6 +67,15 @@ export const FX: Record<FxKind, FxType> = {
     name: "Sparks", what: "A one-off spray of sparks flying off the thing and fading.",
     authored: "sparkBurst (lib/game/fx/glowOn.ts) into the scene's glow pool, from the thing's own parts.",
     params: { count: p(18, "sparks", 0.6), speed: p(0.9, "m/s"), life: p(0.9, "s") },
+  },
+  water: {
+    name: "Water", what: "Water running along the thing: a deep teal-blue body with darker crests, foam breaking along its edges, a crown of foam crashing where it ends, drops flying off and falling.",
+    authored: "fx_library.py water (a ribbon, its material `Water`), foam (meshes, `Foam`: each vertex's depth into the foam, a phase, a crown weight) and spray (drops, `Spray`); drawn by lib/game/fx/water.ts, flat colours with hard edges, one draw each.",
+    params: {
+      flow: p(0.35, "how fast it runs (widths a second)", 0.3), foam: p(0.13, "the edge foam's width (a share of the water's)", 0.5),
+      wrap: p(1, "how far it reaches: as made at 1, the grown water (made to show only with strength) past it", 0.667),
+      splashes: p(1, "the foam's hold and the drops thrown: the drops made to come with strength join in", 1),
+    },
   },
   burst: {
     name: "Burst", what: "A one-off flare: the glow peaks and turns its new colour, the screen takes that colour a moment, then clears.",

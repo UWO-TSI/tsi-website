@@ -6,7 +6,7 @@
  * Awakening with the rod's own model large and turning. A glow gathers on the rod itself in the colour of the rung it
  * had (never white, David 2026-11-05), it moves its own way (rodMotion: the Tidewarden rides a swell, the Tempest whips
  * in the wind, the Titanium's steel catches a sheen, the Training rod twirls; its effect grows stronger, the
- * Tidewarden's pearl swelling), pulses between its old look and its new one, flares into its new rung's colour, shows
+ * Tidewarden's water wrapping further down its shaft), pulses between its old look and its new one, flares into its new rung's colour, shows
  * its improved design alone, and only then steps aside for the card, where its stats slide from the old shape to the
  * new on its radar once the card has landed ("the eye cant look at two things at once"). A pitch for David's review on /dev/economy?view=awakening; the land's reward card ("Awakened!",
  * rodNews in lib/game/useFishingSession.ts) stays until he approves it.

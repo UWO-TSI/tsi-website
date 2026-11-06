@@ -7,7 +7,7 @@ const KINDS = Object.keys(FX) as FxKind[];
 
 describe("the effects library (David 2026-11-05)", () => {
   it("has the standard types, each said in plain words with how it's made and its parameters", () => {
-    expect(KINDS.sort()).toEqual(["aura", "burst", "flicker", "glow", "motion", "particles", "pulse", "sparks", "trail"]);
+    expect(KINDS.sort()).toEqual(["aura", "burst", "flicker", "glow", "motion", "particles", "pulse", "sparks", "trail", "water"]);
     for (const k of KINDS) {
       expect(FX[k].what.length).toBeGreaterThan(10);
       expect(FX[k].authored.length).toBeGreaterThan(10);
@@ -22,6 +22,10 @@ describe("the effects library (David 2026-11-05)", () => {
     }
     expect(fxGrow("pulse", "size", 2)).toBeGreaterThan(1);      // the orb grows
     expect(fxGrow("motion", "spin", 2)).toBe(2);
+    // the water: more foam, reaching all of its grown water by 2.5, more drops
+    expect(fxGrow("water", "foam", 2.5)).toBeGreaterThan(1);
+    expect(fxAt("water", "wrap", 2.5) - 1).toBeCloseTo(1, 2);
+    expect(fxAt("water", "splashes", 2.5)).toBeGreaterThan(fxAt("water", "splashes", 1));
   });
 
   it("makes no discs or rings of light", () => {
@@ -29,7 +33,7 @@ describe("the effects library (David 2026-11-05)", () => {
   });
 
   it("has a preview sample for each type drawn by RodAura", () => {
-    for (const k of ["glow", "aura", "particles", "trail", "pulse", "motion", "flicker"])
+    for (const k of ["glow", "aura", "particles", "trail", "pulse", "motion", "flicker", "water"])
       expect(existsSync(join(__dirname, `../../../public/assets/game/props/fxlib-${k}.glb`))).toBe(true);
   });
 });

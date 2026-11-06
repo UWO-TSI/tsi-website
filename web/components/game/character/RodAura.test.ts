@@ -34,6 +34,21 @@ describe("rods' effects (art/pipeline/build_rods.py, fx_library.py, RodAura)", (
     expect(names.some(n => n.startsWith("Aura"))).toBe(true);
   });
 
+  it("builds the Tidewarden from the library: the Water type and its veins as Glow, no discs, no aura", async () => {
+    const parts = await load("/assets/game/props/rodfx-tidewarden.glb"), mats: string[] = [], names: string[] = [];
+    parts.traverse(o => { names.push(o.name); const m = (o as THREE.Mesh).material as THREE.Material | undefined; if (m) mats.push(m.name); });
+    expect(names.some(n => n.startsWith("Halo"))).toBe(false);
+    expect(mats.some(m => /Aura/.test(m))).toBe(false);
+    for (const kind of ["Water", "Foam", "Spray", "Glow"]) expect(mats.some(m => m.endsWith(kind))).toBe(true);
+    // the water's own data came through the export: uv across and along, and the grown water gated past the drawn wrap
+    const tide = parts.getObjectByName("Tide") as THREE.Mesh, gate = tide.geometry.getAttribute("color");
+    expect(tide.geometry.getAttribute("uv")).toBeDefined();
+    let lo = 1, hi = 0;
+    for (let i = 0; i < gate.count; i++) { lo = Math.min(lo, gate.getY(i)); hi = Math.max(hi, gate.getY(i)); }
+    expect(lo).toBe(0);
+    expect(hi).toBeGreaterThan(0.9);
+  });
+
   it.each(rods)("%s: its effect exists, costs at most five draws a holder, and never moves the tip", async url => {
     const rod = mergeHeld(await load(url), url), fx = rodFxUrl(rod);
     if (!fx) return;

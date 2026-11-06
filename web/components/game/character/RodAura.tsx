@@ -11,11 +11,13 @@
  * scene's extras throw the sparks into the scene's one glow pool (GlowFx). Brighter at dusk and night (glow.ts).
  *
  * The types and what grows with `strength` are the effects library's (lib/game/fx/library.ts, specs/fx-library.md).
- * A node with a `trail` extra leaves a fading ribbon (that wide, from its `trailFrom` point) in its own colour.
+ * A node with a `trail` extra leaves a fading ribbon (that wide, from its `trailFrom` point) in its own colour. Parts
+ * whose material is `Water`, `Foam` or `Spray` are the Water type (lib/game/fx/water.ts): each holder has its own copy
+ * of those materials, so its water runs, foams, reaches and splashes at its own strength.
  * `strength` (1 as made) makes one holder's effect stronger, easing to it: its parts turn and bob faster and further, its
- * swelling parts (the Tidewarden's pearl, the Tempest's tornado) grow, trails last longer, and it throws sparks more
+ * swelling parts (the Tempest's tip spark) grow, trails last longer, and it throws sparks more
  * often (the awakening cutscene; David's pick 2026-11-05: "the aura gets a strength setting"). `Halo` sprites are
- * the rods made before the library (Tidewarden, Titanium): a disc of light, which the library no longer makes.
+ * the Titanium's, made before the library: a disc of light, which the library no longer makes.
  *
  * The parts are shared by every holder (one template per effect, cloned): a holder costs one draw per effect mesh
  * and one per halo (at most five, specs/perf/effects-cost.md), no shadow, no shader compiled into anything lit.
@@ -27,6 +29,7 @@ import * as THREE from "three";
 import { breath, glowTexture, nightLit } from "@/lib/game/glow";
 import { FACE, type Recipe } from "@/lib/game/fx/particles";
 import { fxAt, fxGrow } from "@/lib/game/fx/library";
+import { WATER_PART, waterAt, waterMaterial } from "@/lib/game/fx/water";
 import { useGlowParticles, type GlowParticles } from "../GlowFx";
 
 /** The effect a rod's GLB names (its scene extras), or null. */
@@ -75,7 +78,8 @@ function template(scene: THREE.Object3D): Template {
     let m = made.get(src);
     if (!m) {
       const color = src.color.clone(), name = src.name;
-      if (/Aura/.test(name)) {
+      if (WATER_PART.test(name)) m = waterMaterial(name, color);
+      else if (/Aura/.test(name)) {
         const a = new THREE.ShaderMaterial({ name, vertexShader: AURA_VERT, fragmentShader: AURA_FRAG, uniforms: { color: { value: color }, opacity: { value: 0.4 } },
           transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.FrontSide });
         auras.push(a);
@@ -93,6 +97,7 @@ function template(scene: THREE.Object3D): Template {
     mesh.castShadow = mesh.receiveShadow = false;
     mesh.userData.fx = true;
     mesh.raycast = () => {};
+    if (WATER_PART.test(m.name)) mesh.frustumCulled = false;      // its drops and tongues move off its bounds
     if (!/Aura/.test(m.name)) box.expandByObject(mesh);
     // A crackling node crackles its own glow.
     const flicker = Number(o.userData.flicker ?? 0);
@@ -130,7 +135,13 @@ export default function RodAura({ rod, url, strength = 1 }: { rod: THREE.Object3
     const halos = t.halos.map(h => { const s = new THREE.Sprite(h.material); s.renderOrder = 2; s.raycast = () => {}; s.userData.fx = true; group.add(s); return s; });
     const trails = t.trails.map(tr => ({ tr, node: group.getObjectByName(tr.name)!, ribbon: ribbon(tr.material), at: [] as THREE.Vector3[], wait: 0 }));
     for (const x of trails) group.add(x.ribbon);
-    return { t, group, halos, trails, moving: nodesOf(group), clock: { next: 0, seed: rod.id * 7919, k: 1 } };
+    // the water's materials are this holder's own: its strength is its own
+    const waters: THREE.ShaderMaterial[] = [];
+    group.traverse(o => {
+      const mesh = o as THREE.Mesh;
+      if (mesh.isMesh && WATER_PART.test((mesh.material as THREE.Material).name)) waters.push((mesh.material = (mesh.material as THREE.ShaderMaterial).clone()));
+    });
+    return { t, group, halos, trails, waters, moving: nodesOf(group), clock: { next: 0, seed: rod.id * 7919, k: 1 } };
   }, [scene, rod]);
   useEffect(() => {
     rod.add(fx.group);
@@ -181,10 +192,11 @@ const v = new THREE.Vector3(), cam = new THREE.Vector3(), s = new THREE.Vector3(
 const crackle = (t: number) => { const k = Math.floor(t * 16); return 0.55 + 0.45 * Math.abs(Math.sin(k * 12.9898) * 43758.5453 % 1); };
 
 /** Module scope (the react compiler forbids writing through hook values): the idle animation, the glows and sparks. */
-function idle(rod: THREE.Object3D, fx: { t: Template; group: THREE.Object3D; halos: THREE.Sprite[]; trails: Trail[]; moving: THREE.Object3D[]; clock: { next: number; seed: number; k: number } },
+function idle(rod: THREE.Object3D, fx: { t: Template; group: THREE.Object3D; halos: THREE.Sprite[]; trails: Trail[]; waters: THREE.ShaderMaterial[]; moving: THREE.Object3D[]; clock: { next: number; seed: number; k: number } },
   glow: GlowParticles, camera: THREE.Camera, t: number, delta: number, strength: number) {
   const night = nightLit(), b = breath(t, 1.3), { t: tpl } = fx;
   const power = fx.clock.k += (strength - fx.clock.k) * (1 - Math.exp(-Math.min(delta, 0.1) * 3)), grow = fxGrow("pulse", "size", power);
+  for (const m of fx.waters) waterAt(m, t, power);
   // Shared materials: once a frame.
   if (tpl.frame !== Math.floor(t * 1000)) {
     tpl.frame = Math.floor(t * 1000);
