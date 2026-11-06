@@ -85,10 +85,16 @@
   /* A little texture where it helps (UI 1, "not so flat"): a fine grain over a card, and a glint across rare things. */
   --ui-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
   --ui-glint: linear-gradient(115deg, transparent 38%, rgb(255 255 255 / 0.55) 48%, transparent 58%);
-  /* The HUD's bars (UI 8): health, stamina (and run out), XP. */
-  --ui-health: #f07b6e;
-  --ui-stamina: #6cc979;
+  /* The HUD's vitals (UI 8): each bar's colour when full and when nearly empty, the shared amber between; XP's ring. */
+  --ui-health: #6cc979;
+  --ui-health-low: #ff4f42;
+  --ui-stamina: #5fc2ea;
   --ui-stamina-low: #f59a5c;
+  --ui-shield: #93a8ff;
+  --ui-mana: #b892ff;
+  --ui-vital-mid: #f5c04f;
+  /* Type straight over the world on a soft scrim (the level-up moment): white, whatever the theme. */
+  --ui-on-scrim: #ffffff;
   --ui-xp: #f5c04f;
   --ui-sheen: rgb(255 255 255 / 0.35);
   /* Paper, the material (design bible UI 2): only for what is paper in the world (the sushi bar's folded menu, a

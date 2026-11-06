@@ -9,8 +9,8 @@
  * (styles/themes). Nothing here knows about the shop: every piece takes plain props.
  */
 import type { Rarity } from "@/lib/rarity";
-import { Fragment, useEffect, useId, useMemo, useRef, type ButtonHTMLAttributes, type CSSProperties, type HTMLAttributes, type InputHTMLAttributes, type KeyboardEvent, type ReactNode, type Ref } from "react";
-import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Heart, Sparkles, Star, X, Zap } from "lucide-react";
+import { Fragment, useId, useMemo, useRef, type ButtonHTMLAttributes, type CSSProperties, type HTMLAttributes, type InputHTMLAttributes, type KeyboardEvent, type ReactNode, type Ref } from "react";
+import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Sparkles, X } from "lucide-react";
 import { usePresence, useWorldDialog } from "@/lib/game/useWorldDialog";
 import { CurrencyIcon } from "@/components/economy/Amount";
 import PixelImage from "@/components/economy/PixelImage";
@@ -41,6 +41,8 @@ export { useNudge };
 export { GoalMeter, HeartMeter, RewardTrack, PrizeWheel, WHEEL_SPIN_MS, type TrackStep, type WheelPrize } from "./rewards";
 export { HexRadar, type RadarAxis } from "./HexRadar";
 export { GearSlot, type GearOption } from "./GearSlot";
+export { StaminaArc, TALLY, VitalBar, Vitals, XpRing, type VitalKind } from "./vitals";
+export { LEVEL_UP_MS, LevelUpMoment, type LevelBeat, type MomentItem } from "./levelUp";
 
 /** A rarity's thin outline (design bible UI 7) on a card or a stage: `data-rarity` and its colour as `--edge`. */
 export const rarityEdge = (rarity: Rarity | null | undefined) =>
@@ -447,69 +449,6 @@ export function RewardPop({ picture, title, name, rarity, rarityLabel, facts, no
   </article>;
 }
 
-// ── The HUD's bars ──────────────────────────────────────────────────────────────────────────────────────────────────
-
-export type StatKind = "health" | "stamina" | "xp";
-const STAT_ICON = { health: Heart, stamina: Zap, xp: Star } as const;
-
-/**
- * One of the player's bars (specs/design-bible.md UI 8, 8b: health, stamina and XP): its icon and a rounded track filled to
- * `value` (0 to 1), then `badge` if any (the level, beside the XP bar in the UI view). The fill eases with a little spring; `snap` sets it without
- * (an XP bar rolling over), `live` drops the ease for a value written every frame through the element's `--v`.
- * `low`: a soft warning (stamina run out). `alone`: on its own little card (stamina, which shows only while it's used).
- */
-export function StatBar({ kind, value, label, badge, low, snap, live, alone, shown = true, ref }: {
-  kind: StatKind; value: number; label: string; badge?: ReactNode; low?: boolean; snap?: boolean; live?: boolean; alone?: boolean; shown?: boolean; ref?: Ref<HTMLDivElement>;
-}) {
-  const Icon = STAT_ICON[kind];
-  return <div ref={ref} className={f.stat} data-kind={kind} data-low={low || undefined} data-snap={snap || undefined} data-live={live || undefined}
-    data-alone={alone || undefined} data-shown={shown || undefined} style={{ "--v": Math.max(0, Math.min(1, value)) } as CSSProperties}
-    role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(value * 100)} aria-hidden={!shown || undefined}>
-    <span className={f.statLead} aria-hidden><Icon size={13} strokeWidth={2.75} /></span>
-    <span className={f.statTrack} aria-hidden><i /></span>
-    {badge != null && <span className={f.statBadge} aria-hidden>{badge}</span>}
-  </div>;
-}
-
-/** The bars' card, top left: one soft white card for the bars that are always on. */
-export function StatBars({ children, hidden, className }: { children: ReactNode; hidden?: boolean; className?: string }) {
-  return <div className={className ? `${f.stats} ${className}` : f.stats} data-hidden={hidden || undefined} data-testid="hud-bars">{children}</div>;
-}
-
-export interface MomentItem { key: string; icon: ReactNode; title: ReactNode; line?: ReactNode }
-
-/**
- * A big moment over the world (a level up): a scrim, one white card that springs in, the kicker, the big number or word
- * with a burst behind it, what it brings (icon rows) and one dark button. Escape, Enter or E, a click on the scrim or
- * the button put it away.
- */
-export function BigMoment({ kicker, big, title, items, action = "Nice!", onClose, testId }: {
-  kicker: ReactNode; big: ReactNode; title?: ReactNode; items?: readonly MomentItem[]; action?: ReactNode; onClose: () => void; testId?: string;
-}) {
-  const close = useRef(onClose);
-  useEffect(() => { close.current = onClose; });
-  useEffect(() => {
-    const key = (e: globalThis.KeyboardEvent) => {
-      if (e.key !== "Escape" && e.key !== "Enter" && e.key.toLowerCase() !== "e") return;
-      e.stopPropagation(); e.preventDefault(); close.current();
-    };
-    window.addEventListener("keydown", key, true);
-    return () => window.removeEventListener("keydown", key, true);
-  }, []);
-  return <div className={f.momentLayer} onClick={onClose} data-testid={testId}>
-    <section className={f.moment} role="dialog" aria-modal="true" aria-labelledby="moment-big" onClick={e => e.stopPropagation()}>
-      <span className={f.momentBurst} aria-hidden>{Array.from({ length: 10 }, (_, i) => <i key={i} style={{ "--k": i } as CSSProperties} />)}</span>
-      <span className={f.momentKicker}><Sparkles size={14} aria-hidden />{kicker}</span>
-      <strong id="moment-big" className={f.momentBig}>{big}</strong>
-      {title && <span className={f.momentTitle}>{title}</span>}
-      {items && items.length > 0 && <ul className={f.momentList}>{items.map((it, i) => <li key={it.key} style={{ "--i": i } as CSSProperties}>
-        <span className={f.momentIcon} aria-hidden>{it.icon}</span>
-        <span><b>{it.title}</b>{it.line && <small>{it.line}</small>}</span>
-      </li>)}</ul>}
-      <DarkButton onClick={onClose} autoFocus>{action}</DarkButton>
-    </section>
-  </div>;
-}
 /** The day strip, the hover card, odds, the reveal, tasks and the small panel (pieces.tsx). */
 export * from "./pieces";
 /** Paper for what is paper in the world: the folded menu, ink art, the hanko, a dish on its tray (paper.tsx). */

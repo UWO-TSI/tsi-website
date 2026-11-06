@@ -49,13 +49,13 @@ export function Thumb({ picture, rarity, size = 52, count, dim, mark, tip, label
 /**
  * A white card that says what something is, beside it, on hover and on keyboard focus (David: "you can hover to see what
  * the fish is"). It floats over everything (a portal), so a scrolling panel never clips it, and turns away from the
- * screen's edges.
+ * screen's edges. A tap on something focusable inside keeps it up until focus moves on.
  */
 export function HoverTip({ tip, children }: { tip: ReactNode; children: ReactNode }) {
   const [at, setAt] = useState<DOMRect | null>(null);
   const id = useId();
   const show = (e: PointerEvent<HTMLSpanElement> | FocusEvent<HTMLSpanElement>) => setAt((e.currentTarget.firstElementChild ?? e.currentTarget).getBoundingClientRect());
-  return <span className={p.tipHost} onPointerEnter={show} onPointerLeave={() => setAt(null)} onFocus={show} onBlur={() => setAt(null)} aria-describedby={at ? id : undefined}>
+  return <span className={p.tipHost} onPointerEnter={show} onPointerLeave={e => { if (e.pointerType !== "touch" || !e.currentTarget.contains(document.activeElement)) setAt(null); }} onFocus={show} onBlur={() => setAt(null)} aria-describedby={at ? id : undefined}>
     {children}
     {at ? <TipCard id={id} at={at}>{tip}</TipCard> : null}
   </span>;

@@ -1,0 +1,84 @@
+/* The vitals and the level ring (vitals.tsx; specs/design-bible.md UI 1, 8, 9), the Capsule look (David 11-05): the ring
+   at the head of one thick bar, its left end tucked under the ring, a white rim and a soft shadow straight over the
+   world (no card), a highlight on the fill. A bar's colour is its fill: full colour near full, the shared amber at half,
+   its low colour (a strong red for health) by a quarter. Critical: the health well flashes red. A shield extends the
+   bar by its points (--hp: health's share of it) in its own colour at every level; a class's mana is a slimmer bar
+   under it (`.bar + .bar`). */
+@property --vital { syntax: "<number>"; inherits: true; initial-value: 1; }
+@property --shield { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --xp { syntax: "<number>"; inherits: true; initial-value: 0; }
+
+.hud { position: relative; display: flex; align-items: center; pointer-events: auto; transition: opacity 0.3s ease, transform 0.3s ease; }
+.hud[data-hidden] { opacity: 0; transform: translateY(-4px); pointer-events: none; }
+.card { display: grid; gap: 3px; width: max-content; margin-left: -14px; }
+
+.bar { --full: var(--ui-health); --low: var(--ui-health-low); --w: 200px; --end: 11px;
+  --hi: clamp(0%, calc((var(--vital) - 0.5) * 200%), 100%); --lo: clamp(0%, calc((var(--vital) - 0.25) * 400%), 100%);
+  --fill: color-mix(in oklab, var(--full) var(--hi), color-mix(in oklab, var(--ui-vital-mid) var(--lo), var(--low)));
+  position: relative; width: calc(var(--w) / var(--hp, 1)); height: 20px; box-sizing: border-box; overflow: hidden;
+  border: 3px solid var(--ui-card); border-radius: 99px; background: var(--ui-well);
+  box-shadow: inset 0 1px 2px rgb(var(--ui-shade) / 0.12), 0 2px 0 rgb(var(--ui-shade) / 0.06), 0 6px 16px rgb(var(--ui-shade) / 0.2);
+  transition: --vital 0.6s cubic-bezier(0.34, 1.12, 0.64, 1), --shield 0.6s cubic-bezier(0.34, 1.12, 0.64, 1), opacity 0.4s ease; }
+.bar[data-kind="mana"] { --full: var(--ui-mana); --low: var(--ui-stamina-low); }
+.bar + .bar { --w: 168px; height: 11px; border-width: 2px; }
+.bar > *, .bar::before, .bar::after { content: ""; position: absolute; inset: 0 0 0 var(--end); }
+.bar i { border-radius: 0 99px 99px 0; background: var(--fill); box-shadow: inset 0 2px 0 var(--ui-sheen);
+  transform-origin: left; transform: scaleX(calc(var(--vital) * var(--hp, 1))); }
+/* The shield's end of the bar, past a rim-white seam: its own colour over a well tinted with it, so even empty it reads. */
+.bar b { left: calc(var(--end) + (100% - var(--end)) * var(--hp)); border-left: 2px solid var(--ui-card);
+  background: linear-gradient(var(--ui-sheen) 0 2px, transparent 0) 0 0 / calc(var(--shield) * 100%) 100% no-repeat,
+    linear-gradient(90deg, var(--ui-shield) calc(var(--shield) * 100%), color-mix(in oklab, var(--ui-shield) 22%, var(--ui-well)) 0); }
+/* The tallies: a hairline of the rim's white every 20 points, over the fill and the well alike. */
+.bar::after { --seg: calc(var(--tally) * 100%);
+  background: repeating-linear-gradient(90deg, transparent 0 calc(var(--seg) - 1px), var(--ui-card) calc(var(--seg) - 1px) var(--seg)); opacity: 0.85; }
+/* Critical: the health well under the fill flashes the low red. */
+.bar::before { right: calc((100% - var(--end)) * (1 - var(--hp, 1))); background: var(--low); opacity: 0; }
+.bar[data-critical]::before { animation: flash 0.9s ease-in-out infinite; }
+@keyframes flash { 0%, 100% { opacity: 0.12; } 18% { opacity: 0.6; } 50% { opacity: 0.2; } }
+
+@keyframes shake { 0%, 100% { transform: none; } 25% { transform: translateX(-3px); } 50% { transform: translateX(3px); } 75% { transform: translateX(-2px); } }
+
+/* The level ring: the number on a white disc, the XP round it from the top, clockwise. */
+.ring { position: relative; display: grid; place-items: center; width: 50px; height: 50px; padding: 0; border: 0; border-radius: 50%; cursor: default;
+  background: var(--ui-grain), var(--ui-card); color: var(--ui-ink); font: 800 17px/1 var(--gui-font); font-variant-numeric: tabular-nums;
+  box-shadow: inset 0 -2px 0 rgb(var(--ui-shade) / 0.05), 0 3px 0 rgb(var(--ui-shade) / 0.05), 0 8px 22px rgb(var(--ui-shade) / 0.13);
+  z-index: 1; transition: --xp 0.65s cubic-bezier(0.34, 1.12, 0.64, 1); }
+.ring[data-snap] { transition: none; }
+.ring:focus-visible { outline: 2px solid var(--ui-ink); outline-offset: 2px; }
+.ring svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring circle { fill: none; stroke-width: 4.5; }
+.ringWell { stroke: var(--ui-well); }
+/* Empty, the round cap would leave a dot: hidden until there is some XP. */
+.ringFill { stroke: var(--ui-xp); stroke-linecap: round; stroke-dasharray: 1 1; stroke-dashoffset: calc(1 - var(--xp)); opacity: clamp(0, calc(var(--xp) * 100), 1); }
+.level { position: relative; animation: levelIn 0.5s cubic-bezier(0.34, 1.6, 0.64, 1) both; }
+@keyframes levelIn { from { transform: scale(0.4); opacity: 0; } }
+.tip { display: grid; gap: 2px; font: 500 13px/1.3 var(--gui-font); font-variant-numeric: tabular-nums; }
+.tip b { font-weight: 800; font-size: 14px; }
+.tip small { color: var(--ui-muted); font-size: 12px; }
+
+/* Stamina beside the character (StaminaArc): a ")" with a white rim over a dark well, filling from the bottom (--vital
+   0 to 1 of what it shows), blue when full and its low orange near empty. The host places it (--x, --y: where its left
+   middle goes, --h: its height, fractions of the layer it sits in) and shows it; it fades in and out. Run out: it
+   shakes once. */
+.arc { --sfill: color-mix(in oklab, var(--ui-stamina) clamp(0%, calc(var(--vital) * 160%), 100%), var(--ui-stamina-low));
+  position: absolute; left: calc(var(--x, 0.5) * 100%); top: calc(var(--y, 0.5) * 100%); height: calc(var(--h, 0.1) * 100%); aspect-ratio: 30 / 100;
+  translate: 0 -50%; pointer-events: none; opacity: 0; transition: opacity 0.35s ease; }
+.arc[data-show] { opacity: 0.6; }
+.arc[data-hidden] { opacity: 0; }
+.arc[data-low] { animation: shake 0.45s ease-in-out; }
+.arc svg { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 2px 4px rgb(var(--ui-shade) / 0.25)); }
+.arc path { fill: none; stroke-linecap: round; }
+.arcRim { stroke: var(--ui-card); stroke-width: 12; }
+.arcWell { stroke: rgb(var(--ui-shade) / 0.32); stroke-width: 7; }
+.arcFill { stroke: var(--sfill); stroke-width: 7; stroke-dasharray: 1 1; stroke-dashoffset: calc(1 - var(--vital)); opacity: clamp(0, calc(var(--vital) * 100), 1); }
+
+@media (max-width: 700px) {
+  .bar { --w: 140px; }
+  .bar + .bar { --w: 118px; }
+  .ring { width: 44px; height: 44px; font-size: 15px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar, .ring { transition: opacity 0.3s ease; }
+  .arc[data-low], .level { animation: none; }
+  .bar[data-critical]::before { animation: none; opacity: 0.35; }
+}
