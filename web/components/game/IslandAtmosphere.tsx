@@ -14,7 +14,7 @@ import Puddles from "./Puddles";
 import SkyDome from "./SkyDome";
 import { FX_BENCH, useFxBench } from "@/lib/game/perf/fxBench";
 import { setPuddles } from "@/lib/game/puddles";
-import { CloudShadows, MistBanks, TreeLeaves } from "./AmbienceFX";
+import { CloudShadows, GoldenMotes, MistBanks, TreeLeaves, WindMarks } from "./AmbienceFX";
 import { Fireflies } from "./AmbientLife";
 import RainFX from "./RainFX";
 import { applyEnvironment, disposeEnvironment } from "@/lib/game/envLight";
@@ -24,11 +24,12 @@ import { shadowCentre } from "@/lib/game/shadows";
 import { SEASON_TREES, type SeasonLook } from "@/lib/game/seasonalLook";
 import type { IslandWeather } from "@/lib/game/islandWeather";
 import type { IslandPhase } from "@/lib/game/islandTime";
-import { setLeafTint, TREE_WIND, WORLD_SNOW } from "@/lib/game/modelMaterials";
+import { setLeafTint, TREE_FRONT, TREE_LEAN, TREE_WIND, WORLD_SNOW } from "@/lib/game/modelMaterials";
 import { TERRAIN_SNOW } from "./grid/GridTerrain";
 import { WORLD_BEND } from "@/lib/game/curvedWorld";
 import { worldTime } from "@/lib/game/worldClock";
-import { sheddingTrees, worldWind } from "@/lib/game/worldFx";
+import { sheddingTrees, windSpots, worldWind } from "@/lib/game/worldFx";
+import { WIND, WIND_STRENGTH, frontPhase, swellAt } from "@/lib/game/wind";
 import { juiceShake } from "@/lib/game/cameraJuice";
 import { bossCam } from "@/lib/game/bossCam";
 import { treeParts } from "./NatureModels";
@@ -39,6 +40,8 @@ import { SEAT_TILT_DOWN } from "@/lib/game/sushiBar";
 import { CROWN_REACH, CUT_FLOOR, CUT_RADIUS, CUTOUT, CUTOUT_CROWN, CUTOUT_VIEW, canopyAround, groundBlocks, lineBlocked, type Occluder } from "@/lib/game/occluders";
 import { bendViewPoint } from "@/lib/game/worldProjection";
 import { orbitKeys, useOrbitInput } from "./useOrbitInput";
+import SkyLab from "./SkyLab";
+import { SKY_LAB, skyLabOn, useSkyLab } from "@/lib/game/skyLab";
 
 /** Screen-space vertical sky gradient (a plain 2D background texture): `top` at the top, `horizon` from mid-screen down. */
 export function SkyGradient({ top, horizon }: { top: string; horizon: string }) {
@@ -57,12 +60,24 @@ export function SkyGradient({ top, horizon }: { top: string; horizon: string }) 
 }
 
 /** Drives the shared tree sway uniform; eases between calm, breezy and off (Light). */
-function TreeWind({ strength }: { strength: number }) {
-  useFrame((_, delta) => {
-    TREE_WIND.value.x = worldTime();
-    TREE_WIND.value.y = THREE.MathUtils.damp(TREE_WIND.value.y, strength, 1.5, delta);
-  });
-  useEffect(() => () => { TREE_WIND.value.y = 0; }, []);
+/**
+ * The one wind (lib/game/wind.ts) for this weather, eased in: its strength and slow swell for the grass, the marks and
+ * the motes, and the trees' sway and lean into the gust fronts. Module scope writes (the react compiler forbids
+ * writing through hook values).
+ */
+function stepWind(weather: IslandWeather, sway: number, delta: number) {
+  const t = worldTime();
+  WIND.strength = THREE.MathUtils.damp(WIND.strength, WIND_STRENGTH[weather], 0.6, delta);
+  WIND.swell = swellAt(t);
+  TREE_WIND.value.x = t;
+  TREE_WIND.value.y = THREE.MathUtils.damp(TREE_WIND.value.y, sway * WIND.swell, 1.5, delta);
+  const lean = sway * 0.45;
+  TREE_LEAN.value.set(WIND.x * lean, WIND.z * lean);
+  TREE_FRONT.value = frontPhase(t);
+}
+function WindDriver({ weather, sway }: { weather: IslandWeather; sway: number }) {
+  useFrame((_, delta) => stepWind(weather, sway, delta));
+  useEffect(() => () => { TREE_WIND.value.y = 0; TREE_LEAN.value.set(0, 0); }, []);
   return null;
 }
 
@@ -129,18 +144,31 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
     const models = SEASON_TREES[look.season];
     return sheddingTrees(trees.map(t => { const [tree] = treeParts(t.seed, models); return { x: t.x, y: ground(t.x, t.z), z: t.z, model: tree.url, scale: tree.scale }; }), look.season);
   }, [trees, ground, look.season]);
+  // Where the wind shows (its marks, on clear and windy days): the trees' crowns, and the shore and open ground across
+  // the land (its extent, the cloud shadows' size, centred on the world's origin; else round the trees).
+  const blowing = !liteMode && (weather === "wind" || weather === "clear");
+  const windSpotsHere = useMemo(() => {
+    if (!blowing || (!trees.length && !cloudSize)) return [];
+    const xs = trees.map(t => t.x), zs = trees.map(t => t.z), pad = 30;
+    const bounds = cloudSize ? { x0: -cloudSize[0] / 2, x1: cloudSize[0] / 2, z0: -cloudSize[1] / 2, z1: cloudSize[1] / 2 }
+      : { x0: Math.min(...xs) - pad, x1: Math.max(...xs) + pad, z0: Math.min(...zs) - pad, z1: Math.max(...zs) + pad };
+    return windSpots(trees.map(t => ({ x: t.x, y: ground(t.x, t.z), z: t.z })), ground, 0, bounds);
+  }, [blowing, trees, ground, cloudSize]);
   const groundSite = useMemo(() => fauna && { map: fauna.site.map, ground, surface: fauna.surface, top: fauna.top, player: fauna.player }, [fauna, ground]);
   const puddleBlobs = useMemo(() => puddles.map(([x, z], i) => ({ x, z, y: ground(x, z) + 0.01, rx: 0.5 + (i % 3) * 0.18, rz: 0.32 + (i % 2) * 0.12, yaw: 0 })), [puddles, ground]);
   // Footsteps splash in them while it rains (lib/game/puddles.ts), whoever steps.
   useEffect(() => { setPuddles(weather === "rain" ? puddleBlobs : []); return () => setPuddles([]); }, [weather, puddleBlobs]);
   // Development (the world bench, lib/game/perf/fxBench.ts): the dome off draws the gradient as Light does.
   const fx = useFxBench(), flat = liteMode || (FX_BENCH && fx.off.has("skyDome"));
+  // Development only: the sky-ambient pitches (?sky=, ?wind=, ?amb=; lib/game/skyLab.ts).
+  const labState = useSkyLab();
+  const lab = SKY_LAB && skyLabOn(), labMotes = lab && labState.amb.has("motes");
   return <>
     {/* The full tier flies the tuned dome (sun-phase colours, weather clouds, stars); Light keeps the flat gradient.
         The background colour stays behind both as the backstop past the dome's radius. */}
     {flat
       ? light.skyTop ? <SkyGradient top={light.skyTop} horizon={light.sky} /> : <color attach="background" args={[light.sky]} />
-      : <><color attach="background" args={[light.sky]} /><SkyDome light={light} weather={weather} /></>}
+      : <><color attach="background" args={[light.sky]} /><SkyDome weather={weather} /></>}
     <fog attach="fog" args={[light.fogColor, overview ? light.fogNear + 28 + overviewFog : light.fogNear, overview ? light.fogFar + 15 + overviewFog : light.fogFar]} />
     <ambientLight ref={ambient} intensity={light.ambient} color={light.fill} />
     <hemisphereLight ref={hemisphere} args={[light.fill, light.bounce, light.hemisphere]} />
@@ -159,9 +187,12 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
     {weather === "fog" && <MistBanks color={light.sky} opacity={liteMode ? 0.22 : 0.34} wind={wind} ground={ground} />}
     {!liteMode && weather !== "rain" && weather !== "snow" && (look.season === "spring" || look.season === "autumn") &&
       <TreeLeaves trees={leafTrees} mode={look.season === "spring" ? "petals" : "leaves"} wind={wind} ground={ground} />}
-    <TreeWind strength={liteMode ? 0 : weather === "wind" ? 0.14 : 0.035} />
+    <WindDriver weather={weather} sway={liteMode ? 0 : weather === "wind" ? 0.14 : 0.035} />
+    {windSpotsHere.length > 0 && <WindMarks spots={windSpotsHere} season={look.season} />}
+    {blowing && <GoldenMotes ground={ground} always={labMotes} />}
     {fauna && <AmbientFauna {...fauna} season={look.season} weather={weather} liteMode={liteMode} />}
     {fauna && <WeatherGround site={groundSite!} rain={weather === "rain"} snow={look.snow >= 0.5} puddles={puddleBlobs} />}
+    {lab && <SkyLab />}
     {fireflyNight(light, weather) && <Fireflies anchors={fireflyAnchors} count={liteMode ? 8 : Math.min(64, fireflyAnchors.length * 2)} groundHeight={ground} />}
   </>;
 }

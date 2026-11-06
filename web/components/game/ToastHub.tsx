@@ -3,6 +3,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { createToastQueue, type GameToast } from "@/lib/game/toastQueue";
 import { SignInText } from "@/components/gui/SignIn";
+import { KeywordLine } from "@/components/gui/flat";
 import styles from "./ToastHub.module.css";
 
 /** `icon`: an image path, or a single emoji. */
@@ -33,8 +34,9 @@ export default function ToastHub() {
       {entries.map((entry) => (
         <div key={entry.id} className={styles.toast} data-action={entry.signIn || undefined} data-quiet={entry.quiet || undefined} style={{ "--toast-ms": `${entry.duration}ms` } as CSSProperties}>
           {entry.icon && <ToastIcon src={entry.icon} />}
-          {/* A note asking you to sign in links its words back here (reachability §3). */}
-          <span className={styles.text}>{entry.signIn ? <SignInText text={entry.text} /> : entry.text}</span>
+          {/* A note asking you to sign in links its words back here (reachability §3); every other note's words carry the
+              icon library's icons (design bible UI 8c; round 7: UI text too). */}
+          <span className={styles.text}>{entry.signIn ? <SignInText text={entry.text} /> : <KeywordLine line={entry.text} />}</span>
         </div>
       ))}
     </div>

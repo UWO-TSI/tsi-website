@@ -19,9 +19,10 @@
  *     (`musicSchedule.ts`), else the CC0 time-of-day track, which is on disk.
  *     A musical loop layer (the campfire's drums, the soft beat) ducks it while
  *     it plays, so the drums replace the bed instead of stacking on it.
- *   - ambient: real ambience only (a listed weather or season variant; none is
- *     authored yet, so the member island's is silent). The applicant island's
- *     Stream Cafe track plays here, as it always has: that island's bed.
+ *   - ambient: real ambience only: a listed weather or season variant, else the
+ *     member island's synthesised beds (the sea, wind, birds, crickets, rain;
+ *     sky-ambient round 3). The applicant island's Stream Cafe track plays here,
+ *     as it always has: that island's bed.
  *
  * Public API:
  *   AudioManager.enable()                        — user gesture unlock
@@ -631,7 +632,9 @@ export const AMBIENT_VARIANTS: ReadonlySet<string> = new Set<string>([]);
 
 /**
  * Ambient candidate list: a listed weather variant, then a listed season variant. The applicant island ends on its
- * scene track (on disk); the member island's time-of-day track is the music bed's, so with no variant it stays silent.
+ * scene track (on disk). The member island ends on its synthesised beds (sky-ambient round 3,
+ * art/audio/synth_ambience.py, public/audio/sfx/SOURCES.md): the weather's (wind, rain, snow, fog), else the time of
+ * day's (the sea, the breeze, birds by day, crickets at night).
  */
 export function ambientCandidates(input: { phase: AmbientPhase; weather?: IslandWeather; season?: Season }, variants: ReadonlySet<string> = AMBIENT_VARIANTS): string[] {
   const { phase, weather, season } = input;
@@ -639,6 +642,10 @@ export function ambientCandidates(input: { phase: AmbientPhase; weather?: Island
   if (weather && weather !== "clear" && variants.has(`${phase}-${weather}`)) list.push(`/audio/ambient/${phase}-${weather}.ogg`);
   if (season && variants.has(`${phase}-${season}`)) list.push(`/audio/ambient/${phase}-${season}.ogg`);
   if (phase === "applicant-island" || phase === "applicant-hq") list.push(MANIFEST.ambient[phase]);
+  else {
+    if (weather && weather !== "clear") list.push(`/audio/ambient/bed-${weather}.ogg`);
+    list.push(`/audio/ambient/bed-${phase}.ogg`);
+  }
   return list;
 }
 

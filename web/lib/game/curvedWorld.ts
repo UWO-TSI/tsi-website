@@ -82,6 +82,9 @@ const MARKER = "// tsi-curved-world";
 // inside prefixFragment) — so we stamp our own onto ShaderLib.depth, which is
 // what WebGLPrograms maps MeshDepthMaterial to (WebGLPrograms.js:23).
 const SHADOW_PASS_DEFINE = "TSI_SHADOW_PASS";
+/** A material that stands outside the world (the phone, a UI model in its own small canvas) sets this define and
+ * stays unbent: the bend is the island's horizon, and a model a few units from its own camera would sink by it. */
+export const FLAT_DEFINE = "TSI_FLAT";
 
 if (typeof window !== "undefined") {
   // Aerial survey loads (?aerial=1, collab track) compile a FLAT world —
@@ -116,7 +119,7 @@ mvPosition.xy += rotatedPosition;`
     THREE.ShaderChunk.project_vertex = chunk.replace(
       "gl_Position = projectionMatrix * mvPosition;",
       `${MARKER}
-#if !defined( ${SHADOW_PASS_DEFINE} ) && !defined( DISTANCE )
+#if !defined( ${SHADOW_PASS_DEFINE} ) && !defined( DISTANCE ) && !defined( ${FLAT_DEFINE} )
 mvPosition.y -= mvPosition.z * mvPosition.z * ${bend.toFixed(6)} + mvPosition.x * mvPosition.x * ${bendSide.toFixed(6)};
 #endif
 gl_Position = projectionMatrix * mvPosition;`

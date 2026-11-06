@@ -57,8 +57,8 @@ describe("world audio lifecycle", () => {
     expect(FakeAudio.all.at(-1)?.src).toBe("/audio/ambient/applicant-willow-tree.ogg");
     expect(FakeAudio.all.at(-1)?.volume).toBeCloseTo(0.7 * 0.6 * 0.18);
     expect(manager.getState().volumes).toEqual({ master: 0.7, ambient: 0.6, music: 0.55, sfx: 0.8 });
-    manager.setAmbience({ phase: "day" }); // the member island's ambience: nothing to play, so the applicant track stops
-    expect(FakeAudio.all.every(track => track.paused)).toBe(true);
+    manager.setAmbience({ phase: "day" }); frame(1600); // the member island's ambience: its own bed takes over from the applicant track
+    expect(FakeAudio.all.filter(track => !track.paused).map(track => track.src)).toEqual(["/audio/ambient/bed-day.ogg"]);
     manager.stop();
   });
   it("keeps the applicant soundtrack muted across HQ transitions", () => {

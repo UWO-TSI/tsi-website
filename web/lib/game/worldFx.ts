@@ -187,3 +187,31 @@ export function leafAt(tree: LeafTree, slot: number, t: number, wind: WorldWind,
   out.scale = scale;
   return out;
 }
+
+// ─── Where the wind shows ─────────────────────────────────────────────────
+// Sky-ambient round 3 (David, round 2: "its so random rn and it doesnt have like any proper logic behind it"): the
+// wind's marks (AmbienceFX WindMarks) show where wind would: blown off the tree crowns, along the shore, across open
+// ground, and only as a gust front (lib/game/wind.ts) rolls over the spot.
+/** Seconds one mark lasts, and how near the camera one may show (world units: never on the lens). */
+export const MARK_SECONDS = 2, MARK_NEAREST = 5;
+
+export type WindSpotKind = "crown" | "shore" | "open";
+export interface WindSpot extends Point3 { kind: WindSpotKind }
+
+/**
+ * Where the wind can show: every tree's crown, the shoreline (land just above the sea with water beside it) and open
+ * ground away from the trees, scanned every `step` units across `bounds`.
+ */
+export function windSpots(trees: readonly Point3[], ground: Ground, sea: number, bounds: { x0: number; x1: number; z0: number; z1: number }, step = 3): WindSpot[] {
+  const out: WindSpot[] = trees.map(t => ({ x: t.x, y: t.y + 3.4, z: t.z, kind: "crown" }));
+  const nearTree = (x: number, z: number) => trees.some(t => Math.abs(t.x - x) < 3 && Math.abs(t.z - z) < 3);
+  for (let x = bounds.x0; x <= bounds.x1; x += step) for (let z = bounds.z0; z <= bounds.z1; z += step) {
+    const h = ground(x, z);
+    if (h < sea + 0.02 || nearTree(x, z)) continue;
+    const shore = h < sea + 0.6 && [[step, 0], [-step, 0], [0, step], [0, -step]].some(([dx, dz]) => ground(x + dx, z + dz) < sea);
+    // Open ground on a coarser grid than the shore, so the shore and the crowns lead.
+    const open = !shore && Math.round(x / step) % 2 === 0 && Math.round(z / step) % 2 === 0;
+    if (shore || open) out.push({ x, y: h + 0.4, z, kind: shore ? "shore" : "open" });
+  }
+  return out;
+}

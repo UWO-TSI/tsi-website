@@ -214,7 +214,7 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
       return meal || luck > 0 ? { luck, size: meal?.size ?? 0 } : null;
     },
     async showcase(m) {
-      return showcases.get(m) ?? [null, null, null];
+      return showcases.get(m) ?? [null];
     },
     async setShowcase(m, keys) {
       showcases.set(m, [...keys]);

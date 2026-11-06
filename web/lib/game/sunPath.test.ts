@@ -29,9 +29,10 @@ describe("sun over London, ON (row 239)", () => {
     expect(step).toBeGreaterThan(0.4);
     expect(step).toBeLessThan(0.6);
   });
-  it("previews each phase at a time inside it: mid-dawn, 11:45, half an hour before sunset, late night", () => {
+  it("previews each phase at a time inside it: 20 minutes before sunrise, 11:45, half an hour before sunset, late night", () => {
     const day = new Date("2026-09-27T16:00:00Z"), days = [{ date: "2026-09-27", sunrise: 7.28, sunset: 19.23 }];
     for (const phase of ["dawn", "day", "evening", "night"] as const) expect(islandPhase(phaseInstant(phase, day, days), days)).toBe(phase);
+    expect(phaseInstant("dawn", day, days).toISOString()).toBe("2026-09-27T10:57:00.000Z");
     expect(phaseInstant("day", day, days).toISOString()).toBe("2026-09-27T15:45:00.000Z");
     expect(phaseInstant("evening", day, days).toISOString()).toBe("2026-09-27T22:44:00.000Z");
   });
