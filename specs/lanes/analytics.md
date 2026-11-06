@@ -46,6 +46,15 @@ Head: see `git log -1` on game/analytics. Not merged, migration not applied.
   - the lane's SQL smoke fails before the migration and passes after, applies twice, and the security smoke still passes;
   - the canonical chain passes except `world_chat_smoke` "the rest", which also fails with this migration cut (pre-existing).
 
+- **Evidence** (`specs/evidence/analytics/r1/`):
+  - `an1-demo-desktop.png` and `an1-demo-phone.png`: the whole page on 140 made-up players (`/dev/analytics`), desktop and phone.
+  - `an1-backfill-funnel.png`: the funnel from the local backfill (90 made-up players in the game's tables, the log for the last three weeks), with the "Joined before the log" history.
+  - `an1-backfill-quit.png`: where sessions end, and where people stop for good, from the backfill.
+  - `an1-backfill-phone.png`: the backfill page on a phone.
+  - `an1-gate-signed-out.png`: the page signed out shows "Admins only". Both routes answered 503 in dev with Supabase blanked; route tests cover 401 and 403.
+  - `an1-no-per-frame.txt`: the tracking adds no per-frame work.
+  - Scripts: `sql-smoke.sh`, `backfill.sql`, `shoot.sh`, `shoot.mjs`.
+
 ## Next
 
 1. The coordinator reviews and publishes the an1 page with the questions below. David answers.
