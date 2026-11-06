@@ -36,7 +36,8 @@ export interface Report {
   list: { name: string; joined: string; last: string | null; sessions: number; minutes: number; furthest: string; gone: boolean }[];
 }
 
-const dayOf = (iso: string) => iso.slice(0, 10);
+/** The UTC day of a time (any offset) or of a plain date. */
+const dayOf = (iso: string) => (iso.length === 10 ? iso : new Date(iso).toISOString().slice(0, 10));
 
 /** The page's ranges (days back from today); the snapshot always reads the log's whole 180 days and a margin. */
 export const RANGES = [7, 30, 90, 180] as const;
@@ -92,8 +93,9 @@ export function buildReport(snap: Snapshot, opts: { from: string; to: string; no
   const reachedStep = (id: string, joined: string, step: StepId) =>
     step === "day_2" ? cameBack(id, joined, 2) : step === "day_7" ? cameBack(id, joined, 7) : step === "signed_in" || !!firstAt.get(id)?.has(step);
   // The log's first day: before it, only the tables' steps can be known.
-  const logged = snap.sessions.map((s) => s.start).sort()[0] ?? null;
-  const logCohort = logged ? cohort.filter((p) => p.joined >= logged) : [];
+  const loggedAt = snap.sessions.reduce((a, s) => Math.min(a, Date.parse(s.start)), Infinity);
+  const logged = Number.isFinite(loggedAt) ? new Date(loggedAt).toISOString() : null;
+  const logCohort = logged ? cohort.filter((p) => Date.parse(p.joined) >= loggedAt) : [];
   let prevPct = 100;
   const funnel = FUNNEL.map((step) => {
     const base = LOG_ONLY.has(step) ? logCohort : cohort;
