@@ -26,13 +26,6 @@ def hsv(im):
     return [h[..., i].astype(int) for i in range(3)]
 
 
-def outline(mask, eps):
-    """The biggest outline in `mask`, simplified to within `eps` px, counter-clockwise in a y-up frame."""
-    cs, _ = cv2.findContours(mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    c = max(cs, key=cv2.contourArea)
-    return cv2.approxPolyDP(c, eps, True)[:, 0, :].astype(float)
-
-
 def outlines(mask, eps, min_area):
     cs, _ = cv2.findContours(mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     return [cv2.approxPolyDP(c, eps, True)[:, 0, :].astype(float) for c in cs if cv2.contourArea(c) >= min_area]
