@@ -54,7 +54,7 @@ import confetti from "canvas-confetti";
 import type { InteriorStation } from "./interiorShared";
 import { villageIsland, villageSpawn, villageScale, landmark, landmarks, landmarkPoint, turn, wharfDecks, wharfDock, benchSeat, propFootprint, BENCH_SEAT_TOP, houseHalf, houseModel, type Landmark } from "@/lib/game/defaultIsland";
 import { village, objectsOf, type Village } from "@/lib/game/villageMap";
-import { PILE_LANTERN, SELL_BARREL, marketBoardsOf, tackleCounterOf } from "@/lib/game/wharf";
+import { PILE_LANTERN, SELL_BARREL, boardsOf, tackleCounterOf } from "@/lib/game/wharf";
 import { CatchBoardSheet, CatchChalk, SellBinFish, TaskChalk } from "@/components/game/peaceful/CatchBoard";
 import { LEVEL_STEP, levelAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
@@ -385,10 +385,10 @@ function villageLayout(v: Village) {
     reefs: objectsOf("prop", v).filter(o => o.model?.startsWith("coral-reef-")).map(xz),
     /** The new world's quick-sell barrel (lib/game/wharf.ts SELL_BARREL), or none. */
     sellBarrel: (b => (b ? xz(b) : null))(objectsOf("prop", v).find(o => o.id === SELL_BARREL)),
-    /** Where the sell stall stands and faces (its flopping fish ride on it). */
+    /** Where the sell stall stands and which way it faces (its flopping fish ride on it). */
     sellStall: objectsOf("prop", v).find(o => o.id === SELL_BARREL) ?? null,
-    /** The fish market's catch board and task board (lib/game/wharf.ts marketBoardsOf), or none. */
-    boards: marketBoardsOf(objectsOf("prop", v)),
+    /** The fish market's catch board and task board (the world's `board` objects: lib/game/wharf.ts boardsOf), or none. */
+    boards: boardsOf(objectsOf("board", v)),
     /** The tackle shop's counter, at its door (lib/game/wharf.ts tackleCounterOf), or none. */
     tackle: (t => (t ? xz(t) : null))(tackleCounterOf(objectsOf("prop", v))),
     /** The water types the island has (the catch board lists fish for those). */
@@ -708,8 +708,8 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       {fountain && <LampGlow points={fountain.jet} ground={fountain.water} on={light.lampsOn} halo={2.4} pool={3} color="#a8e8ff" />}
       {fountain && <FadeLight position={fountain.light} color="#ffd59a" intensity={light.lampsOn ? light.lamp * 2 : 0} distance={12} />}
       {layout.boards && <>
-        <CatchChalk at={layout.boards.catch} y={island.ground(layout.boards.catch.x, layout.boards.catch.z)} waters={layout.waters} hour={peaceful.moment.hour} season={peaceful.moment.season} weather={weather} />
-        <TaskChalk at={layout.boards.tasks} y={island.ground(layout.boards.tasks.x, layout.boards.tasks.z)} waters={layout.waters} />
+        <CatchChalk at={layout.boards.catch} y={island.ground(layout.boards.catch.x, layout.boards.catch.z) + (layout.boards.catch.lift ?? 0)} waters={layout.waters} hour={peaceful.moment.hour} season={peaceful.moment.season} weather={weather} />
+        <TaskChalk at={layout.boards.tasks} y={island.ground(layout.boards.tasks.x, layout.boards.tasks.z) + (layout.boards.tasks.lift ?? 0)} waters={layout.waters} />
       </>}
       {layout.sellStall && <SellBinFish at={layout.sellStall} y={island.ground(layout.sellStall.x, layout.sellStall.z)} />}
       {bar && <Suspense fallback={null}><SushiBar bar={bar} y={barY} player={player} phase={phase} viewRef={barView} onNear={onBar} /></Suspense>}

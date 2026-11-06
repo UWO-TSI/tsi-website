@@ -17,7 +17,7 @@ import { villageOfWorld } from "@/lib/game/world/village";
 import type { IslandMap } from "@/lib/game/grid";
 import EditorCanvas, { input, pose } from "./EditorScene";
 import {
-  bakeShore, beginStroke, bump, deleteSelected, ed, endStroke, item, loadHotbar, rotate, save, say, scaleSelected, selectSlot,
+  bakeShore, beginStroke, bump, deleteSelected, ed, endStroke, item, liftSelected, loadHotbar, rotate, save, say, scaleSelected, selectSlot,
   selectedObject, setSlotItem, undo, useEditor,
 } from "./editorStore";
 
@@ -27,10 +27,10 @@ const MONO = "ui-monospace, Menlo, monospace";
 const PANEL = { background: "rgba(11,14,20,0.82)", color: "#f1ffff", font: `12px ${MONO}`, borderRadius: 6, padding: "6px 10px" } as const;
 const MOVE_KEYS = new Set(["w", "a", "s", "d", " ", "q"]);
 
-const itemTag = (it: EditorItem) => (it.type === "brush" ? "tool" : it.type === "paint" ? "paint" : it.type === "road" ? "road" : it.type === "select" ? "select" : it.object.kind === "landmark" || it.object.kind === "house" ? "building" : "place");
+const itemTag = (it: EditorItem) => (it.type === "brush" ? "tool" : it.type === "paint" ? "paint" : it.type === "road" ? "road" : it.type === "select" ? "select" : it.type === "erase" ? "erase" : it.object.kind === "landmark" || it.object.kind === "house" ? "building" : "place");
 
 function Swatch({ it }: { it: EditorItem }) {
-  const color = it.type === "paint" ? `rgb(${PAINT_SWATCH[it.paint].join(",")})` : it.type === "road" ? "#ba9664" : it.type === "brush" ? "#7fd1c0" : it.type === "select" ? "#ffd166" : "#ff8f4a";
+  const color = it.type === "paint" ? `rgb(${PAINT_SWATCH[it.paint].join(",")})` : it.type === "road" ? "#ba9664" : it.type === "brush" ? "#7fd1c0" : it.type === "select" ? "#ffd166" : it.type === "erase" ? "#ff5a5a" : "#ff8f4a";
   return <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: color, marginRight: 4, verticalAlign: "middle" }} />;
 }
 
@@ -70,7 +70,8 @@ const CONTROLS: [string, string][] = [
   ["1–9", "hotbar slot"], ["E", "palette: choose what the slot holds"], ["B", "cell mode ⇄ brush mode"],
   ["Scroll", "brush size (cell mode: N × N)"], ["Shift + scroll", "strength (cell mode: the step)"], ["H", "hard edge ⇄ soft (banks, quays)"],
   ["Alt + click · middle click", "sample the level height"], ["R · Shift + R", "turn the ghost or the selection"], ["+ · −", "scale the selection"],
-  ["Delete · X", "delete the selection"], ["Ctrl+Z · Ctrl+Shift+Z", "undo · redo"], ["O · Tab", "overhead view"], ["Ctrl+S", "save to web/data/world"],
+  ["] · [ (Alt: more)", "raise · lower the selection (props, boards)"], ["G", "snap the selection to the ground"],
+  ["Delete · X", "delete the selection"], ["Eraser", "click an object to delete it; hold and drag to erase all you pass over"], ["Ctrl+Z · Ctrl+Shift+Z", "undo · redo"], ["O · Tab", "overhead view"], ["Ctrl+S", "save to web/data/world"],
   ["P", "walk it: play from the camera"], ["?", "these controls"],
 ];
 
@@ -87,7 +88,7 @@ function Info({ onWalk, onSave }: { onWalk: () => void; onSave: () => void }) {
       <div style={{ color: "#8a939a" }}>
         {ed.hit ? `aim ${ed.hit.x.toFixed(1)}, ${ed.hit.z.toFixed(1)} · height ${ed.hit.y.toFixed(2)}` : "aim: sky"} · {ed.stats.fps} FPS (worst {ed.stats.frameMs} ms{ed.stats.editMs ? `, edit ${ed.stats.editMs} ms` : ""}) · {ed.stats.draws} draws · {(ed.stats.triangles / 1000).toFixed(0)}k tris · undo {ed.history.depth}
       </div>
-      {sel && <div style={{ color: "#ffd166" }}>selected {sel.kind} {sel.id}{sel.model ? ` (${sel.model})` : ""} · R turn · +/− scale · X delete · right-drag moves</div>}
+      {sel && <div style={{ color: "#ffd166" }}>selected {sel.kind} {sel.id}{sel.model ? ` (${sel.model})` : ""}{sel.lift ? ` · lift ${sel.lift.toFixed(2)}` : ""} · right-drag moves · R turn · ] [ raise, lower · G ground · +/− scale · X delete</div>}
     </div>
     <div style={{ position: "absolute", top: 8, right: 8, zIndex: 20, display: "flex", gap: 6 }}>
       <button onClick={onSave} style={{ ...PANEL, cursor: "pointer", color: ed.dirty ? "#ffd166" : "#c9d1d6" }}>{ed.saving ? "Saving…" : "Save (Ctrl+S)"}</button>
@@ -173,6 +174,9 @@ export default function WorldEditor() {
       if (key === "=" || key === "+") { scaleSelected(1.1); return; }
       if (key === "-" || key === "_") { scaleSelected(1 / 1.1); return; }
       if (key === "Delete" || key === "Backspace" || key === "x") { deleteSelected(); return; }
+      // By the key's place, not its character (Alt+] types another one on a Mac); Alt for big steps, since Shift flies down.
+      if (e.code === "BracketRight" || e.code === "BracketLeft") { liftSelected((e.code === "BracketRight" ? 1 : -1) * (e.altKey ? 0.25 : 0.05)); return; }
+      if (key === "g") { liftSelected(null); return; }
       if (key === "p") { walk(); return; }
       if (key === "?" || key === "F1") { e.preventDefault(); ed.help = !ed.help; bump(); return; }
     };
@@ -226,7 +230,7 @@ export default function WorldEditor() {
 
   // The automation hook (the evidence shots drive the editor headless, where there is no pointer lock).
   useEffect(() => {
-    (window as unknown as { __worldEditor?: unknown }).__worldEditor = { ed, pose, input, beginStroke, endStroke, selectSlot, setSlotItem, undo, palette: PALETTE, bump };
+    (window as unknown as { __worldEditor?: unknown }).__worldEditor = { ed, pose, input, beginStroke, endStroke, selectSlot, setSlotItem, undo, palette: PALETTE, bump, rotate, liftSelected, deleteSelected, save };
   }, []);
 
   if (error) return <p style={{ padding: 32, font: `14px ${MONO}`, color: "#ff8f6a" }}>The world editor could not load web/data/world: {error}</p>;

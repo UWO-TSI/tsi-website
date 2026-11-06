@@ -61,6 +61,6 @@ describe("the committed world files", () => {
     const v = villageOfWorld(world);
     expect(groundKind(v)).toBe("heightfield");
     expect(v.map.width).toBe(world.terrain.width);
-    expect(v.objects).toBe(world.objects);
+    expect(v.objects).toEqual(world.objects.filter(o => !o.gone));
   });
 });

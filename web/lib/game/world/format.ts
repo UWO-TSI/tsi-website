@@ -12,7 +12,7 @@
  * so load → save gives the same bytes and save → load → save is stable. The PNG writer is deterministic.
  */
 import type { MapAnnotation } from "../grid";
-import { parseObjects, type MapObject } from "../villageMap";
+import { parseObjects, type MapObject, type VillageDoc } from "../villageMap";
 import { decodePng, encodeGray16, encodeIndexed, gray16Of, indicesOf } from "./png";
 import { PAINT_NAMES, PAINT_SWATCH, createTerrain, type WorldTerrain } from "./terrain";
 
@@ -44,7 +44,7 @@ export interface WorldDoc {
   /** Where the terrain came from (the conversion stamps it). Written, never read. */
   source?: string;
   annotations?: { name: string; color?: string; cells: number[][] }[];
-  objects?: { id: string; kind: string; x: number; z: number; yaw?: number; scale?: number; seed?: number; model?: string }[];
+  objects?: VillageDoc["objects"];
 }
 
 /** A world in memory: its terrain, its objects and its annotations. */

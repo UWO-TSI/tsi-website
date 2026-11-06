@@ -22,7 +22,7 @@ import type { World } from "./format";
 import { Paint, cellMapOf, createTerrain, paintAt, sampleX, sampleZ, terrainHeight, terrainSteepness } from "./terrain";
 import { hash01 } from "../worldFx";
 import { COURT } from "../volleyball/court";
-import { JETTY, SELL_BARREL, dockToWorld } from "../wharf";
+import { JETTY, SELL_BARREL, dockToWorld, marketBoardsOf } from "../wharf";
 import type { ObjectKind } from "../villageMap";
 import type { NEW_LAMPS } from "../propModels";
 
@@ -443,6 +443,9 @@ function scenery(): Obj[] {
   const out: Obj[] = [];
   for (let z = DECK_Z[0]; z <= DECK_Z[1]; z += 4) for (const d of [1, 5]) { const q = quayAt(z, d); out.push(obj("deck", `deck-${out.length}`, q.x, q.z, q.yaw)); }
   MARKET.forEach(([model, z, d, turn, scale], i) => { const q = quayAt(z, d); out.push(obj("prop", `market-${i}`, q.x, q.z, q.yaw + Math.PI + turn, scale, model)); });
+  // The market's two chalkboards where MARKET_BOARDS puts them (lib/game/wharf.ts), objects so the editor can move them.
+  const boards = marketBoardsOf(out.filter(o => o.kind === "prop"))!;
+  out.push(obj("board", "catch", boards.catch.x, boards.catch.z, boards.catch.yaw), obj("board", "tasks", boards.tasks.x, boards.tasks.z, boards.tasks.yaw));
   // The quick-sell stall (wharf-art3's) at the fish market's south corner, its buyer's side along the deck toward the
   // jetty's gangways, room to walk up to it (David, R2c: "a big barrel that you can sell outside for quick sell"): E
   // there opens the sell sheet (DefaultIslandWorld, by its id).
@@ -801,13 +804,40 @@ function forestTrees(): Obj[] {
   return out;
 }
 
-/** The kinds only the generator places (every one of them is rebuilt each run). */
-const GENERATED: ReadonlySet<string> = new Set(["deck", "prop", "house", "bush", "fence", "lamp", "tree", "flower"]);
-/** The layout's moves, then the generated objects (the border and the scenery) in place of any earlier copy of them. */
+/** The kinds only the generator places (every one of them is rebuilt each run, but what David pinned in the editor). */
+const GENERATED: ReadonlySet<string> = new Set(["deck", "prop", "house", "bush", "fence", "lamp", "tree", "flower", "board"]);
+/** How far the generator's copy of a pinned object may have moved (a reshaped quay) and still be known as it. */
+const PIN_REACH = 3;
+/**
+ * The layout's moves, then the generated objects (the border and the scenery) in place of any earlier copy of them.
+ * What David placed, moved or deleted in the world editor (`pin`) stays as he left it. One that came from here (`of`,
+ * where it stood) stands in for the generated object of its kind and model nearest that spot, and takes its id: ids
+ * are positions in this file's lists, which shift as they change.
+ */
 export function layoutObjects(objects: World["objects"]): World["objects"] {
-  const made = [...borderObjects(), ...scenery(), ...forestTrees()], ids = new Set(made.map(o => `${o.kind}:${o.id}`));
-  const stale = (o: Obj) => GENERATED.has(o.kind) || ids.has(`${o.kind}:${o.id}`) || (o.kind === "barrier" && o.model === "border") || (o.kind === "bug" && o.id.startsWith("bug-lamp-"));
-  return [...objects.filter(o => !stale(o)).map(o => (LAYOUT[o.id] ? { ...o, ...LAYOUT[o.id] } : o)), ...made];
+  const key = (o: Obj) => `${o.kind}:${o.id}`;
+  let made = [...borderObjects(), ...scenery(), ...forestTrees()];
+  const twins = objects.filter(o => o.pin).map(o => {
+    if (!o.of) return [o, null] as const;
+    let twin: Obj | null = null, best = PIN_REACH;
+    for (const m of made) {
+      const d = m.kind === o.kind && m.model === o.model ? Math.hypot(m.x - o.of[0], m.z - o.of[1]) : Infinity;
+      if (d < best) { best = d; twin = m; }
+    }
+    if (twin) made = made.filter(m => m !== twin);
+    return [o, twin] as const;
+  });
+  const ids = new Set(made.map(key));
+  // One the generator no longer makes is David's own now (a deletion of it is moot), under an id of its own.
+  const mine = twins.flatMap(([o, twin]): Obj[] => {
+    if (twin) return [{ ...o, id: twin.id, of: [twin.x, twin.z] }];
+    if (!o.of) return [o];
+    const { of: _of, ...own } = o;
+    void _of;
+    return o.gone ? [] : [ids.has(key(o)) ? { ...own, id: `placed-${o.id}` } : own];
+  });
+  const stale = (o: Obj) => o.pin || GENERATED.has(o.kind) || ids.has(key(o)) || (o.kind === "barrier" && o.model === "border") || (o.kind === "bug" && o.id.startsWith("bug-lamp-"));
+  return [...objects.filter(o => !stale(o)).map(o => (LAYOUT[o.id] ? { ...o, ...LAYOUT[o.id] } : o)), ...mine, ...made];
 }
 
 /** The village's house and lot marks for David's editor session, in the gaps round the new plaza (5 x 5 cells each). */
