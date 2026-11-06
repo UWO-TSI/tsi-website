@@ -3,9 +3,9 @@
 /**
  * Fireflies (night only), as one instanced system (specs/polish/forage-craft-museum.md 5): the swarm's positions,
  * headings and glows come from lib/game/fireflySwarm.ts (seeded per firefly, on the shared world clock, written into
- * its own typed arrays), drawn as one instanced mesh per part of the firefly's model and one of their glows, the glow
- * our painted pack's (additive, so it reads in the dark). It used to be a model, a sun-texture sprite and a frame loop
- * per firefly, with three arrays allocated for each every frame.
+ * its own typed arrays), drawn as one instanced mesh per part of the firefly's model and one of their glows, the soft
+ * glow every light shares (glow.ts, additive, so it reads in the dark). It used to be a model, a sun-texture sprite and
+ * a frame loop per firefly, with three arrays allocated for each every frame.
  */
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
@@ -14,12 +14,13 @@ import * as THREE from "three";
 import { prepareModel } from "@/lib/game/modelMaterials";
 import { FireflySwarm } from "@/lib/game/fireflySwarm";
 import { worldTime } from "@/lib/game/worldClock";
-import { packMap, spriteQuad } from "./movement/moveFx";
+import { glowTexture } from "@/lib/game/glow";
 
 const URL = "/assets/acnh/critters/firefly.glb";
 /** The critter model at the size it always flew at (it hangs head down in its file: a quarter turn lays it level). */
 const BODY_SCALE = 0.012;
-const GLOW_SIZE = 0.17, GLOW_TINT = new THREE.Color("#ffec8b");
+/** The glow round each (glow.ts softGlow: a pale core, a soft tail with no edge), and its tint. */
+const GLOW_SIZE = 0.5, GLOW_TINT = new THREE.Color("#fff0a0");
 
 interface Part { geometry: THREE.BufferGeometry; material: THREE.Material | THREE.Material[] }
 /** The model's meshes baked into its own frame, level and at its size: one instanced draw each. */
@@ -36,8 +37,8 @@ function bodyParts(scene: THREE.Object3D): Part[] {
 }
 
 let glowMaterial: THREE.MeshBasicMaterial | null = null;
-const glowLook = () => (glowMaterial ??= new THREE.MeshBasicMaterial({ name: "FireflyGlow", map: packMap(), transparent: true, depthWrite: false, toneMapped: false, blending: THREE.AdditiveBlending }));
-const GLOW_GEO = spriteQuad("glow", 3, 1);
+const glowLook = () => (glowMaterial ??= new THREE.MeshBasicMaterial({ name: "FireflyGlow", map: glowTexture(), transparent: true, depthWrite: false, toneMapped: false, blending: THREE.AdditiveBlending }));
+const GLOW_GEO = new THREE.PlaneGeometry(1, 1);
 
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0), _c = new THREE.Color();
 /** Module scope (the react compiler forbids writing through hook values): every body and glow where the swarm has it. */

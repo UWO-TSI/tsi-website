@@ -2,6 +2,7 @@ import { Color, DoubleSide, FrontSide, Material, Mesh, MeshBasicMaterial, MeshDe
 import { CASTER_MATERIAL, meshShadow, shadowClassFor, type ShadowClass } from "./shadows";
 import { addCutout } from "./occluders";
 import { SHAKE, SHAKE_RADIUS, SHAKE_SLOTS, TREE_SHAKE } from "./treeShake";
+import { FRONT_GLSL } from "./wind";
 
 let flagTexture: Texture | null = null;
 let shopSignTexture: Texture | null = null;
@@ -60,14 +61,32 @@ export function setLeafTint(hex: string): void {
  */
 export const TREE_WIND = { value: new Vector2(0, 0) };
 /**
+ * The one wind's lean (lib/game/wind.ts, IslandAtmosphere WindDriver): world x and z the crowns bend downwind at a
+ * gust front's crest, and where the fronts are (wind.ts frontPhase). 0 where nothing drives it.
+ */
+export const TREE_LEAN = { value: new Vector2(0, 0) };
+export const TREE_FRONT = { value: 0 };
+/**
  * A shaken tree's wobble (specs/polish/forage-craft-museum.md 2; lib/game/treeShake.ts): up to SHAKE_SLOTS slots of
  * (x, z, start second on the world clock, strength). A tree whose root stands on a slot's spot wobbles, damped; the
  * formula is treeShake.shakeOffset's, so the fruit in its crown moves with it.
  */
+/** The lean into the gust fronts: a world direction, back through the tree's own turn and scale into its model space. */
+const LEAN_GLSL = `
+    #ifdef USE_INSTANCING
+      mat3 swayM = mat3(modelMatrix * instanceMatrix);
+    #else
+      mat3 swayM = mat3(modelMatrix);
+    #endif
+    float swayFront = 0.25 + 0.75 * windFront(swayRoot.xz, uTreeFront);
+    transformed += transpose(swayM) * vec3(uTreeLean.x, 0.0, uTreeLean.y) / max(dot(swayM[0], swayM[0]), 1e-6) * swayH * swayFront;
+`;
 function addTreeSway(shader: WebGLProgramParametersWithUniforms) {
   shader.uniforms.uTreeWind = TREE_WIND;
+  shader.uniforms.uTreeLean = TREE_LEAN;
+  shader.uniforms.uTreeFront = TREE_FRONT;
   shader.uniforms.uTreeShake = TREE_SHAKE;
-  shader.vertexShader = `uniform vec2 uTreeWind;\nuniform vec4 uTreeShake[${SHAKE_SLOTS}];\n` + shader.vertexShader.replace("#include <begin_vertex>", `
+  shader.vertexShader = `uniform vec2 uTreeWind;\nuniform vec2 uTreeLean;\nuniform float uTreeFront;\nuniform vec4 uTreeShake[${SHAKE_SLOTS}];\n${FRONT_GLSL}` + shader.vertexShader.replace("#include <begin_vertex>", `
     #include <begin_vertex>
     float swayH = clamp(position.y / 3.0, 0.0, 1.0);
     swayH *= swayH;
@@ -80,7 +99,7 @@ function addTreeSway(shader: WebGLProgramParametersWithUniforms) {
     float swayPhase = uTreeWind.x * 1.7 + swayRoot.x * 0.37 + swayRoot.z * 0.23;
     transformed.x += sin(swayPhase) * uTreeWind.y * swayH;
     transformed.z += cos(swayPhase * 0.8) * uTreeWind.y * 0.6 * swayH;
-    for (int i = 0; i < ${SHAKE_SLOTS}; i++) {
+${LEAN_GLSL}    for (int i = 0; i < ${SHAKE_SLOTS}; i++) {
       vec4 shk = uTreeShake[i];
       float shkAge = uTreeWind.x - shk.z;
       if (shk.w > 0.0 && shkAge >= 0.0 && shkAge < ${SHAKE.duration.toFixed(2)} && distance(swayRoot.xz, shk.xy) < ${SHAKE_RADIUS.toFixed(2)}) {

@@ -3,7 +3,8 @@
 //   PORT=3158 node specs/perf/world-bench.mjs <out.jsonl> [scenes]
 //   scenes: comma list of village, v2, title (default all). Env: TIER=high|lite (the dome is High's only), REPS (4),
 //   SECONDS (4), SETTLE (1.5), PIXEL=0 (the pixel finish off: the canvas at full resolution) and W, H (the window,
-//   default 1280 × 800): with both, the GPU's share of the frame grows, as on a weaker GPU.
+//   default 1280 × 800): with both, the GPU's share of the frame grows, as on a weaker GPU. PITCH (0.62) tilts the
+//   camera: 0.35, the orbit's lowest, puts a band of sky in the frame. TIME (day) is the ?time= override.
 // Each scene opens once (24 bots as in perf-bench.mjs, everything as shipped). Each variant is measured between two
 // shipped samples, as fx-bench.mjs does (pairs whose shipped samples disagree are rejected and retried):
 //   domeOff   the sky dome off: the flat gradient Light draws (lib/game/perf/fxBench.ts `skyDome`);
@@ -13,6 +14,9 @@
 // v1 water (VARIANTS=water): each piece of the water pass off against the water as shipped:
 //   seabedOff the seabed's props; foamOff the foam rings; glassOff glass water (High's refraction wobble); fishOff the
 //   decorative fish (lib/game/perf/fxBench.ts WORLD_KEYS).
+// Sky-ambient (VARIANTS=sky): domeOff (the dome's own cost, as above), and motes (golden hour's motes at noon), each against
+//   the sky as built (window.__sky, components/game/SkyLab.tsx). The wind's marks need ?weather=wind: bench them with WEATHER=wind.
+//   TILT (degrees) tips the view up after the follow camera, for the sky in view.
 // The title has no probe and no switches: its frame and main-thread time are sampled alone (`title`).
 // Headed, off to the side, muted, never brought to the front; the real GPU; uncapped.
 import { createRequire } from "node:module";
@@ -22,11 +26,11 @@ const require = createRequire("/opt/homebrew/lib/node_modules/");
 const { chromium } = require("playwright");
 const [OUT = "/tmp/world-bench.jsonl", ONLY = "village,v2,title"] = process.argv.slice(2);
 const PORT = process.env.PORT ?? 3158, REPS = Number(process.env.REPS ?? 4), SECONDS = Number(process.env.SECONDS ?? 4), SETTLE = Number(process.env.SETTLE ?? 1.5);
-const TIER_NAME = process.env.TIER ?? "high", W = Number(process.env.W ?? 1280), H = Number(process.env.H ?? 800);
+const PITCH = Number(process.env.PITCH ?? 0.62), TILT = Number(process.env.TILT ?? 0), TIER_NAME = process.env.TIER ?? "high", W = Number(process.env.W ?? 1280), H = Number(process.env.H ?? 800);
 const TIER = { high: { "tsi.liteMode.v1": "false", "tsi.shadows.v1": "true" }, lite: { "tsi.liteMode.v1": "true", "tsi.shadows.v1": "false" } }[TIER_NAME];
 if (process.env.PIXEL === "0") TIER["tsi.pixelated.v1"] = "false";
 const LOOK = JSON.stringify({ skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [], bangs: "bangs_curtain", back: "back_bob", top: "top_hoodie", bottom: "bottom_joggers", onepiece: null, shoes: "shoes_sneakers", acc: {}, colors: {} });
-const BASE = "time=day&weather=clear&season=summer";
+const BASE = `time=${process.env.TIME ?? "day"}&weather=${process.env.WEATHER ?? "clear"}&season=summer`;
 const URLS = { village: `/lab/island?${BASE}&bots=24`, v2: `/lab/island?${BASE}&fixture=v2&bots=24`, title: "/student?time=day" };
 const ALL_VARIANTS = {
   domeOff: { off: ["skyDome"], tune: null },
@@ -37,19 +41,22 @@ const ALL_VARIANTS = {
   foamOff: { off: ["foamRings"], tune: null },
   glassOff: { off: ["glassWater"], tune: null },
   fishOff: { off: ["fish"], tune: null },
+  // Sky-ambient (specs/sky-ambient.md; lib/game/skyLab.ts, development switches): the shared wind (stormy) and the
+  // motes pitch, against the sky as built.
+  motes: { off: [], tune: null, sky: { amb: ["motes"] } },
 };
-const SETS = { world: ["domeOff", "grassHalf", "grass0", "rocksOff"], water: ["seabedOff", "foamOff", "glassOff", "fishOff"] };
+const SETS = { world: ["domeOff", "grassHalf", "grass0", "rocksOff"], water: ["seabedOff", "foamOff", "glassOff", "fishOff"], sky: ["domeOff", "motes"] };
 const VARIANTS = Object.fromEntries((SETS[process.env.VARIANTS ?? "world"] ?? (process.env.VARIANTS ?? "").split(",")).map(k => [k, ALL_VARIANTS[k]]));
 const SHIPPED = { off: [], tune: null };
 
 const browser = await chromium.launch({ headless: process.env.HEADED !== "1", args: ["--mute-audio", "--window-position=2400,0", "--use-angle=metal", "--ignore-gpu-blocklist", "--enable-precise-memory-info", "--disable-gpu-vsync", "--disable-frame-rate-limit"] });
 for (const scene of ONLY.split(",")) {
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
-  await ctx.addInitScript(([look, store]) => { try {
+  await ctx.addInitScript(([look, store, pitch]) => { try {
     localStorage.setItem("tsi.look.v1", look); localStorage.setItem("tsi.hud.full.v1", "true");
-    localStorage.setItem("tsi.camera.v1", JSON.stringify({ yaw: 1.05, pitch: 0.62, zoom: 1.12, mouseLook: false, autoFollow: false, sensitivity: 1, invertY: false }));
+    localStorage.setItem("tsi.camera.v1", JSON.stringify({ yaw: 1.05, pitch, zoom: 1.12, mouseLook: false, autoFollow: false, sensitivity: 1, invertY: false }));
     for (const [k, v] of Object.entries(store)) localStorage.setItem(k, v);
-  } catch {} }, [LOOK, TIER]);
+  } catch {} }, [LOOK, TIER, PITCH]);
   const page = await ctx.newPage();
   page.on("pageerror", e => console.log("pageerror", e.message.slice(0, 200)));
   const cdp = await ctx.newCDPSession(page);
@@ -63,7 +70,7 @@ for (const scene of ONLY.split(",")) {
   }
   await page.waitForTimeout(5000);
   const metrics = async () => Object.fromEntries((await cdp.send("Performance.getMetrics")).metrics.map(m => [m.name, m.value]));
-  const apply = v => page.evaluate(v => { window.__fx.set({ off: v.off }); if (v.tune) window.__fx.tune(...v.tune); else window.__fx.tune(); }, v);
+  const apply = v => page.evaluate(([v, TILT]) => { window.__fx.set({ off: v.off }); if (v.tune) window.__fx.tune(...v.tune); else window.__fx.tune(); window.__sky?.set({ amb: [], tilt: TILT, ...v.sky }); }, [v, TILT]);
   async function sample(v) {
     if (probe) { await apply(v); await page.waitForTimeout(SETTLE * 1000); }
     const m0 = await metrics();

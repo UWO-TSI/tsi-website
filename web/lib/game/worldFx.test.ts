@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  LEAF_SLOTS, MIST_BANKS, MIST_TILE, RAIN_TILE, hash01, leafAt, mistBank, rainStreak, sheddingTrees, viewFocus, windowFade, worldWind,
+  LEAF_SLOTS, MIST_BANKS, MIST_TILE, RAIN_TILE, hash01, leafAt, mistBank, rainStreak, sheddingTrees, windSpots, viewFocus, windowFade, worldWind,
   type LeafPose, type Point3,
 } from "./worldFx";
 
@@ -145,4 +145,18 @@ describe("view focus", () => {
 
 it("hash01 stays in [0, 1) for large cycle numbers", () => {
   for (let b = 1e5; b < 1e5 + 2000; b++) { const h = hash01(7, b); expect(h).toBeGreaterThanOrEqual(0); expect(h).toBeLessThan(1); }
+});
+
+describe("where the wind shows", () => {
+  it("over the crowns, the shore and open ground, never the sea", () => {
+    // Low land is x < 10; a tree stands at (0, 0).
+    const ground = (x: number) => (x < 10 ? 0.3 : -1);
+    const spots = windSpots([{ x: 0, y: 0.3, z: 0 }], ground, 0, { x0: -18, x1: 18, z0: -9, z1: 9 });
+    expect(spots[0]).toMatchObject({ x: 0, z: 0, kind: "crown" });
+    expect(spots[0].y).toBeCloseTo(3.7);
+    expect(spots.every(s => s.x < 10)).toBe(true);
+    expect(spots.some(s => s.x === 9 && s.kind === "shore")).toBe(true);
+    expect(spots.some(s => s.kind === "open")).toBe(true);
+    expect(spots.some(s => Math.abs(s.x) < 3 && Math.abs(s.z) < 3 && s.y < 3)).toBe(false);
+  });
 });
