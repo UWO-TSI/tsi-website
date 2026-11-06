@@ -58,7 +58,7 @@ Decided with David on 2026-10-14, after he walked the terrain v2 world and said 
    - Every object sits on the surface. Barriers, grass `clear` lists, the campfire and resident routes keep working.
 5. **Editor at `/lab/world`** (dev only; 404 in production):
    - the fly camera and crosshair, with a brush ring drawn on the ground;
-   - the hotbar tools: raise, lower, smooth, flatten, level (sample a height with middle-click or Alt), paint surface, place object (a palette of the existing object kinds and models), and select, move, rotate, scale and delete objects;
+   - the hotbar tools: raise, lower, smooth, flatten, level (sample a height with middle-click or Alt), paint surface, place object (a palette of the existing object kinds and models), select, move, rotate, scale and delete objects, and the eraser (click an object to delete it, or hold and drag to erase all the crosshair passes over; one undo brings a drag back);
    - undo and redo (Ctrl+Z, Ctrl+Shift+Z);
    - the overhead toggle;
    - save, which writes the files through a dev-only API route;
@@ -127,7 +127,10 @@ Dev only (404 in production). It loads and saves `web/data/world/` through `/api
 | Alt + click, middle click | Sample the height the level tool uses |
 | R, Shift + R | Turn the placement ghost or the selection by 15° |
 | + / − | Scale the selection |
+| ] / [ (Alt: 0.25 a step) | Raise or lower the selection 0.05 off the ground (props and the market boards) |
+| G | Snap the selection back onto the ground |
 | Delete, Backspace, X | Delete the selection |
+| Eraser (hotbar slot 7) | Click an object to delete it; hold and drag to erase everything the crosshair passes over (one undo) |
 | Ctrl+Z, Ctrl+Shift+Z (Ctrl+Y) | Undo, redo (a stroke at a time, 200 deep) |
 | O, Tab | Overhead view (WASD pans, Space and Shift change the height) |
 | Ctrl+S | Save to `web/data/world/` |
@@ -138,6 +141,8 @@ Dev only (404 in production). It loads and saves `web/data/world/` through `/api
 - **Cell mode:** raise, lower, flatten and level act on whole cells. A press sets the N × N square a step up or down onto the step grid, holding steps again every 0.35 s, and dragging carries that level on. Squares get a rounded lip, and squares at one level side by side merge flat. Paint in cell mode paints whole cells.
 - **Buildings** (HQ, shop, café, museum, Oracle temple, monument, the boards, the mailbox and three house colours): a ghost shows the model and its footprint, snapped so the footprint's edges sit on cell edges. A placed or moved building flattens its pad. A landmark already on the map moves rather than duplicating.
 - **Roads:** right-click point to point, or drag. The road paints the path (or stone) 2.4 u wide and grades the ground under it to a smooth profile, level across and no steeper than 0.18, easing into the land over a 1.6 u shoulder.
+- **Props and the market boards** (world-editor r1, David 2026-11-05: "an editor screen like minecraft creative for me to place everything"): the palette's "Scenery props" group holds every scenery model (propModels.ts SCENERY_URLS) and the fish market's catch and task boards (`board` objects, ids `catch` and `tasks`, one each). A placed prop takes the scale the world already uses for its model, and its ghost shows the model. Select picks what the crosshair passes through, not the ground behind it.
+- **Pinned edits.** Whatever the editor places, moves, turns, scales, raises or deletes is saved `pin`ned. `scripts/generate-world.ts` re-lays props, decks, lamps, houses and the boards on every run, but it keeps pinned objects. One it had placed (`of`: where it stood) replaces the generator's object of the same kind and model nearest that spot, so its list positions (market-5) can shift freely. A delete stays in the file as a pinned `gone`, which no world shows. New objects get `placed-N` ids.
 - **Proposals:** pending ones (`web/data/proposals/`) are listed with Accept (undoable).
 - **Cost while brushing:** only the touched chunks are rewritten in place, along with the paint rows and the water blocks. The shore field is re-baked for the stroke's region when it ends, and the grass refills four times a second. A radius-20 brush costs about 3 ms a frame on the Mac mini (stroke and chunk rewrite together).
 

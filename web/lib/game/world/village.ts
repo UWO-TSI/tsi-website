@@ -6,7 +6,7 @@
  */
 import { heightField, type MapAnnotation } from "../grid";
 import { setBerths, setWaterSource } from "../seabed";
-import { landBounds, type MapObject, type Village } from "../villageMap";
+import { landBounds, standing, type MapObject, type Village } from "../villageMap";
 import { riverCells } from "./cells";
 import { cellMapOf, seabedDepth, terrainShoreField, type WorldTerrain } from "./terrain";
 
@@ -25,5 +25,5 @@ export function villageOfWorld(w: { terrain: WorldTerrain; objects: readonly Map
   setWaterSource(map, { dip: (x, z) => seabedDepth(t, x, z), shore: () => (shore ??= terrainShoreField(t)) });
   // Its wharves' berths stay calm-ish for the moored boats (the waves' calm, lib/game/seabed.ts bakeWaveCalm).
   setBerths(map, w.objects.filter(o => o.kind === "landmark" && o.id === "wharf").map(o => ({ x: o.x, z: o.z, yaw: o.yaw ?? 0 })));
-  return { map, field: heightField(map), objects: w.objects, bounds: landBounds(map), terrain: t, rivers: riverCells(w.annotations) };
+  return { map, field: heightField(map), objects: standing(w.objects), bounds: landBounds(map), terrain: t, rivers: riverCells(w.annotations) };
 }

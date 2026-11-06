@@ -4,7 +4,10 @@ import { LEVEL_STEP } from "../grid";
 import { objectFootprint } from "../defaultIsland";
 import type { MapObject } from "../villageMap";
 import { applyBrush, cellHeight, cellSet, cellSquare, falloff, layRoad, nextLevel, padUnder, ROAD } from "./brushes";
-import { DEFAULT_HOTBAR, PALETTE, hotbarFrom, idFor, placeItem, type EditorItem } from "./editorTools";
+import { parseObjects, standing } from "../villageMap";
+import { SCENERY_URLS } from "../propModels";
+import { DEFAULT_HOTBAR, PALETTE, hotbarFrom, idFor, pinned, placeItem, type EditorItem } from "./editorTools";
+import { layoutObjects } from "./generate";
 import { History } from "./history";
 import { rayTerrain } from "./raycast";
 import { Paint, createTerrain, paintAt, sampleX, sampleZ, terrainHeight, terrainSteepness, type WorldTerrain } from "./terrain";
@@ -200,9 +203,9 @@ describe("the hotbar and palette", () => {
     const tree = PALETTE.flatMap(g => g.items).find(i => i.label === "Tree: Cedar") as Extract<EditorItem, { type: "place" }>;
     const hq = PALETTE.flatMap(g => g.items).find(i => i.type === "place" && i.object.id === "hq") as Extract<EditorItem, { type: "place" }>;
     let objects: MapObject[] = [{ id: "tree-0", kind: "tree", x: 0, z: 0 }, { id: "hq", kind: "landmark", x: 1, z: 1, scale: 1.15 }];
-    expect(idFor(tree, objects)).toBe("tree-1");
+    expect(idFor(tree, objects)).toBe("placed-0");
     objects = placeItem(tree, objects, 5, 6, 0, 0.5);
-    expect(objects[2]).toMatchObject({ id: "tree-1", kind: "tree", x: 5, z: 6 });
+    expect(objects[2]).toMatchObject({ id: "placed-0", kind: "tree", x: 5, z: 6, pin: true });
     expect((objects[2].seed ?? 0) % 4).toBe(3);
     objects = placeItem(hq, objects, 9, 9, Math.PI / 2);
     expect(objects).toHaveLength(3);
@@ -215,10 +218,61 @@ describe("the hotbar and palette", () => {
     expect(anchors.map(i => i.object.id).sort()).toEqual(Object.keys(RESIDENT_ANCHORS).sort());
     const wharf = anchors.find(i => i.object.id === "wharf")!;
     let objects = placeItem(wharf, [], 3, 4);
-    expect(objects).toEqual([{ id: "wharf", kind: "anchor", x: 3, z: 4 }]);
+    expect(objects).toEqual([{ id: "wharf", kind: "anchor", x: 3, z: 4, pin: true }]);
     objects = placeItem(wharf, objects, 7, 8);
-    expect(objects).toEqual([{ id: "wharf", kind: "anchor", x: 7, z: 8 }]);
+    expect(objects).toEqual([{ id: "wharf", kind: "anchor", x: 7, z: 8, pin: true }]);
     const edge = all.find(i => i.object.kind === "bug" && i.object.model === "water_edge")!;
-    expect(placeItem(edge, objects, 1, 2)[1]).toMatchObject({ kind: "bug", model: "water_edge", id: "bug-0" });
+    expect(placeItem(edge, objects, 1, 2)[1]).toMatchObject({ kind: "bug", model: "water_edge", id: "placed-0" });
+  });
+});
+
+// world-editor r1 (David: "an editor screen like minecraft creative for me to place everything").
+describe("placing props", () => {
+  const all = PALETTE.flatMap(g => g.items).filter((i): i is Extract<EditorItem, { type: "place" }> => i.type === "place");
+
+  it("offers every scenery model and the market's two boards, a board one of each", () => {
+    const models = new Set(all.filter(i => i.object.kind === "prop").map(i => i.object.model));
+    for (const m of Object.keys(SCENERY_URLS)) expect(models.has(m), m).toBe(true);
+    const board = all.find(i => i.label === "Market catch board")!;
+    const moved = placeItem(board, [{ id: "catch", kind: "board", x: 0, z: 0, yaw: 1 }], 4, 5);
+    expect(moved).toEqual([{ id: "catch", kind: "board", x: 4, z: 5, yaw: 1, pin: true, of: [0, 0] }]);
+  });
+
+  it("pins what it places, at the scale the world already uses for that model", () => {
+    const barrel = all.find(i => i.object.kind === "prop" && i.object.model === "barrel")!;
+    const placed = placeItem(barrel, [{ id: "market-5", kind: "prop", x: 0, z: 0, scale: 0.07, model: "barrel" }], 2, 3, 0.5);
+    expect(placed[1]).toEqual({ id: "placed-0", kind: "prop", x: 2, z: 3, model: "barrel", scale: 0.07, yaw: 0.5, pin: true });
+    expect(placeItem(barrel, [], 2, 3)[0].scale).toBeUndefined();
+  });
+
+  it("reads a lift, a pin, where it stood and a deletion back from the file, dropping a lift of 0; no world shows a gone one", () => {
+    const doc = [{ id: "a", kind: "prop", x: 1, z: 2, model: "crate", lift: 0.3, pin: true, of: [4, 5] }, { id: "b", kind: "prop", x: 1, z: 2, lift: 0, pin: true, gone: true }];
+    const objects = parseObjects(doc);
+    expect(objects).toEqual([{ id: "a", kind: "prop", x: 1, z: 2, model: "crate", lift: 0.3, pin: true, of: [4, 5] }, { id: "b", kind: "prop", x: 1, z: 2, pin: true, gone: true }]);
+    expect(standing(objects).map(o => o.id)).toEqual(["a"]);
+    expect(pinned(objects[1], { x: 9 })).toMatchObject({ x: 9, pin: true });
+    expect(pinned({ id: "c", kind: "prop", x: 1, z: 2 }, { x: 9 })).toEqual({ id: "c", kind: "prop", x: 9, z: 2, pin: true, of: [1, 2] });
+  });
+
+  // The generator's ids are positions in its lists (market-5 is the sixth thing at the market): a pinned object is
+  // known by its kind, its model and where it stood, never its id (the coordinator, 2026-11-05).
+  it("keeps what David moved, deleted or placed through the generator's re-layout, even after its lists shift", () => {
+    const fresh = layoutObjects([]), market = fresh.find(o => o.id === "market-0")!, barrel = fresh.find(o => o.id === "market-5")!;
+    const crate = fresh.find(o => o.model === "crate")!;
+    const moved = pinned(barrel, { x: barrel.x + 3, lift: 0.2 }), gone = pinned(crate, { gone: true });
+    const mine: MapObject = { id: "placed-0", kind: "prop", x: 1, z: 2, model: "conch", pin: true };
+    // Its ids shifted: the barrel is market-6 now, the crate's old id names something else.
+    const again = layoutObjects([{ ...moved, id: "market-4" }, gone, mine, { ...market, x: market.x + 9 }]);
+    const same = (o: MapObject) => again.filter(a => a.kind === o.kind && a.id === o.id);
+    expect(same(barrel)).toEqual([moved]);
+    expect(same(crate)).toEqual([gone]);
+    expect(same(mine)).toEqual([mine]);
+    expect(same(market)).toEqual([market]);
+    expect(again.filter(o => o.kind === "board").map(o => o.id)).toEqual(["catch", "tasks"]);
+    expect(new Set(again.map(o => `${o.kind}:${o.id}`)).size).toBe(again.length);
+    expect(again.length).toBe(fresh.length + 1);
+    // One the generator no longer makes is David's own, a deletion of it dropped.
+    const lost = layoutObjects([{ ...moved, of: [900, 900] }, { ...gone, of: [900, 900] }]);
+    expect(lost.filter(o => o.pin)).toEqual([{ id: "placed-market-5", kind: "prop", x: moved.x, z: moved.z, yaw: moved.yaw, scale: moved.scale, model: "barrel", lift: 0.2, pin: true }]);
   });
 });

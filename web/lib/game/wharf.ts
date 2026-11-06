@@ -295,13 +295,22 @@ export type BoardSize = (typeof BOARD)[keyof typeof BOARD];
  * the barrels are rn"): the same facing, 2.6 m to the left where three barrels stood; they took its old place.
  */
 export const MARKET_BOARDS = { catch: { x: -2.9, z: 5.35, turn: 2.173 - Math.PI / 2 }, tasks: { x: -8.2, z: 6.5, turn: Math.PI + 0.55 } } as const;
-export interface BoardSpot { x: number; z: number; yaw: number }
-/** Where the market's boards stand in the world and which way they face; null on a world without the market. */
+export interface BoardSpot { x: number; z: number; yaw: number; lift?: number }
+/**
+ * Where the market's boards stand by default and which way they face, from the market (the generator lays the `board`
+ * objects here: lib/game/world/generate.ts); null on a world without the market. The game reads the objects (boardsOf).
+ */
 export function marketBoardsOf(props: readonly { model?: string; x: number; z: number; yaw?: number }[]): { catch: BoardSpot; tasks: BoardSpot } | null {
   const m = props.find(o => o.model === FISH_MARKET);
   if (!m) return null;
   const d = { x: m.x, z: m.z, yaw: m.yaw ?? 0 }, at = (b: { x: number; z: number; turn: number }) => ({ ...dockToWorld(d, b.x, b.z, { x: 0, z: 0 }), yaw: d.yaw + b.turn });
   return { catch: at(MARKET_BOARDS.catch), tasks: at(MARKET_BOARDS.tasks) };
+}
+/** The boards as the world places them (its `board` objects, by id; moved in the world editor like any prop); null without both. */
+export function boardsOf(boards: readonly { id: string; x: number; z: number; yaw?: number; lift?: number }[]): { catch: BoardSpot; tasks: BoardSpot } | null {
+  const spot = (id: string) => { const b = boards.find(o => o.id === id); return b && { x: b.x, z: b.z, yaw: b.yaw ?? 0, ...(b.lift ? { lift: b.lift } : {}) }; };
+  const c = spot("catch"), t = spot("tasks");
+  return c && t ? { catch: c, tasks: t } : null;
 }
 /**
  * The tackle shop's counter (David: "the tackle shop should be like a gatcha roll"): its door on the porch, in the shop's

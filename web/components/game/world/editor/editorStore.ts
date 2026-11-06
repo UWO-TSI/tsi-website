@@ -9,11 +9,11 @@ import { LEVEL_STEP } from "@/lib/game/grid";
 import { objectFootprint } from "@/lib/game/defaultIsland";
 import { isJoinedFence } from "@/lib/game/fences";
 import { snapPlacement } from "@/lib/game/painterTools";
-import type { MapObject } from "@/lib/game/villageMap";
+import { parseObjects, type MapObject } from "@/lib/game/villageMap";
 import {
   applyBrush, cellAt, cellHeight, cellSet, cellSquare, layRoad, nextLevel, padUnder, unionRect, CELL_EDGE, PAD, ROAD, type BrushTool, type Rect,
 } from "@/lib/game/world/brushes";
-import { DEFAULT_HOTBAR, HOTBAR_KEY, hotbarFrom, placeItem, type EditorItem } from "@/lib/game/world/editorTools";
+import { DEFAULT_HOTBAR, HOTBAR_KEY, hotbarFrom, pinned, placeItem, type EditorItem } from "@/lib/game/world/editorTools";
 import { encodeWorld, toBase64, type World } from "@/lib/game/world/format";
 import { History } from "@/lib/game/world/history";
 import type { RayHit } from "@/lib/game/world/raycast";
@@ -65,6 +65,8 @@ export const ed = {
   locked: false,
   walking: false,
   hit: null as RayHit | null,
+  /** The crosshair's ray from the camera (unit direction), for picking what stands in its way. */
+  ray: { x: 0, y: 0, z: 0, dx: 0, dy: 0, dz: -1 },
   stroke: null as Stroke | null,
   /** The road being laid with clicks (point to point), until another tool or the left button ends it. */
   road: null as { x: number; z: number; y: number } | null,
@@ -149,7 +151,7 @@ export function beginStroke(button: 0 | 2, alt: boolean): void {
   ed.stroke = { item: it, button, dir, at: performance.now(), rect: null, seed: Math.floor(Math.random() * 1e6) };
   ed.history.begin(it.label);
   if (it.type === "place") { placeOrRemove(it, dir, hit); return; }
-  if (it.type === "select") { if (button === 0) pick(hit); else if (selectedObject()) ed.history.objects(ed.objects); return; }
+  if (it.type === "select") { if (button === 0) pick(); else if (selectedObject()) ed.history.objects(ed.objects); return; }
   if (it.type === "road") { if (button === 0) { endRoad(); say("Road ended"); } else roadTo(hit, it.paint); return; }
   if (it.type === "brush" && it.tool === "flatten") ed.stroke.target = hit.y;
   if (it.type === "brush" && it.tool === "level" && ed.levelTarget === null) { ed.levelTarget = hit.y; bump(); }
@@ -162,6 +164,7 @@ export function strokeFrame(dt: number, first = false): void {
   if (!s || !hit || !t) return;
   const it = s.item;
   if (it.type === "select" && s.button === 2) { moveSelected(hit); return; }
+  if (it.type === "erase") { erase(s, hit); return; }
   if (it.type === "road" && s.button === 2 && !first) {
     // Dragging: lay the road on in 2-unit segments.
     if (ed.road && Math.hypot(hit.x - ed.road.x, hit.z - ed.road.z) >= 2) roadTo(hit, it.paint);
@@ -241,7 +244,7 @@ export function endRoad(): void { ed.road = null; }
 
 // ── Objects ──────────────────────────────────────────────────────────
 export const keyOf = (o: Pick<MapObject, "kind" | "id">) => `${o.kind}:${o.id}`;
-export const selectedObject = () => ed.objects.find(o => keyOf(o) === ed.selected) ?? null;
+export const selectedObject = () => ed.objects.find(o => keyOf(o) === ed.selected && !o.gone) ?? null;
 
 function setObjects(next: MapObject[]) {
   ed.objects = next;
@@ -254,6 +257,7 @@ function setObjects(next: MapObject[]) {
 export function objectAt(x: number, z: number, reach = 1.4): MapObject | null {
   let best: MapObject | null = null, bestD = reach;
   for (const o of ed.objects) {
+    if (o.gone) continue;
     const f = objectFootprint(o), yaw = o.yaw ?? 0, dx = x - o.x, dz = z - o.z;
     if (f) {
       const lx = dx * Math.cos(yaw) - dz * Math.sin(yaw) - f.cx, lz = dx * Math.sin(yaw) + dz * Math.cos(yaw) - f.cz;
@@ -264,6 +268,35 @@ export function objectAt(x: number, z: number, reach = 1.4): MapObject | null {
   }
   return best;
 }
+
+/**
+ * What the crosshair's ray passes through, nearest the ray: each object stands as an upright post (its footprint's
+ * reach, or 0.7 round) from its foot to 2.2 over it, so a prop is picked by aiming at it, not at the ground behind.
+ * Straight down (the overhead view) there is no side on, so it falls back to the ground under the crosshair.
+ */
+function objectOnRay(): MapObject | null {
+  const r = ed.ray, t = ed.world?.terrain, flat = r.dx * r.dx + r.dz * r.dz;
+  if (!t || flat < 0.01) return null;
+  const far = ed.hit ? Math.hypot(ed.hit.x - r.x, ed.hit.y - r.y, ed.hit.z - r.z) : Infinity;
+  let best: MapObject | null = null, bestScore = 1;
+  for (const o of ed.objects) {
+    if (o.gone) continue;
+    const f = objectFootprint(o), reach = f ? Math.max(f.hw, f.hd) : 0.7;
+    const along = ((o.x - r.x) * r.dx + (o.z - r.z) * r.dz) / flat;
+    if (along <= 0 || along > far + reach) continue;
+    const y = r.y + along * r.dy, foot = terrainHeight(t, o.x, o.z) + (o.lift ?? 0);
+    if (y < foot - 0.3 || y > foot + 2.2) continue;
+    const score = Math.hypot(r.x + along * r.dx - o.x, r.z + along * r.dz - o.z) / reach;
+    if (score < bestScore) { bestScore = score; best = o; }
+  }
+  return best;
+}
+
+/**
+ * The objects without one: what the generator placed stays as a pinned `gone` (so a re-layout doesn't put it back), what
+ * David placed himself just goes.
+ */
+const without = (o: MapObject) => (o.pin && !o.of ? ed.objects.filter(x => x !== o) : ed.objects.map(x => (x === o ? pinned(o, { gone: true }) : x)));
 
 /** Is this a building (it levels its pad)? */
 const isBuilding = (o: MapObject) => o.kind === "house" || (o.kind === "landmark" && o.id !== "wharf" && !!objectFootprint(o));
@@ -279,7 +312,7 @@ function placeOrRemove(it: Extract<EditorItem, { type: "place" }>, dir: 1 | -1, 
   ed.history.objects(ed.objects);
   if (dir < 0) {
     const o = objectAt(hit.x, hit.z);
-    if (o) { setObjects(ed.objects.filter(x => x !== o)); say(`Removed ${o.kind} ${o.id}`); }
+    if (o) { setObjects(without(o)); say(`Removed ${o.kind} ${o.id}`); }
     return;
   }
   // Buildings sit their footprint's edges on cell edges (ACNH grid law, as /lab/map snaps them); the rest on half cells.
@@ -293,8 +326,25 @@ function placeOrRemove(it: Extract<EditorItem, { type: "place" }>, dir: 1 | -1, 
   if (placed) { ed.selected = keyOf(placed); if (it.building) padFor(placed); say(`Placed ${placed.kind} ${placed.id}`); }
 }
 
-function pick(hit: RayHit) {
-  const o = objectAt(hit.x, hit.z);
+/** What a click here picks or erases: what the ray passes through, else what stands on the ground under the crosshair. */
+export const objectUnderAim = (reach?: number) => objectOnRay() ?? (ed.hit ? objectAt(ed.hit.x, ed.hit.z, reach) : null);
+
+/** The eraser's work at the crosshair: whatever it is over goes (the generator's stays as a pinned `gone`); the stroke's one undo brings them all back. */
+function erase(s: Stroke, hit: RayHit) {
+  // Held still it takes one (a click is a few frames long): only moving the aim on takes the next.
+  const aim = `${Math.round(hit.x * 4)}:${Math.round(hit.z * 4)}:${Math.round(ed.ray.dx * 50)}:${Math.round(ed.ray.dy * 50)}`;
+  if (aim === s.cell) return;
+  s.cell = aim;
+  const o = objectUnderAim(0.8);
+  if (!o) return;
+  ed.history.objects(ed.objects);
+  setObjects(without(o));
+  if (ed.selected === keyOf(o)) ed.selected = null;
+  say(`Erased ${o.kind} ${o.id}`);
+}
+
+function pick() {
+  const o = objectUnderAim();
   ed.selected = o ? keyOf(o) : null;
   say(o ? `Selected ${o.kind} ${o.id}${o.model ? ` (${o.model})` : ""}` : "Nothing selected");
 }
@@ -303,7 +353,7 @@ function moveSelected(hit: RayHit) {
   const o = selectedObject();
   if (!o) return;
   const r = (v: number) => (isJoinedFence(o) ? Math.round(v) : Math.round(v * 1000) / 1000);
-  setObjects(ed.objects.map(x => (x === o ? { ...o, x: r(hit.x), z: r(hit.z) } : x)));
+  setObjects(ed.objects.map(x => (x === o ? pinned(o, { x: r(hit.x), z: r(hit.z) }) : x)));
 }
 
 function padSelected() {
@@ -318,7 +368,7 @@ export function rotate(step: number): void {
   if (!o) return;
   ed.history.begin("Rotate");
   ed.history.objects(ed.objects);
-  setObjects(ed.objects.map(x => (x === o ? { ...o, yaw: Math.round((((o.yaw ?? 0) + step) % (Math.PI * 2)) * 1000) / 1000 } : x)));
+  setObjects(ed.objects.map(x => (x === o ? pinned(o, { yaw: Math.round((((o.yaw ?? 0) + step) % (Math.PI * 2)) * 1000) / 1000 }) : x)));
   const moved = selectedObject();
   if (moved && isBuilding(moved)) padFor(moved);
   endStrokeHistory();
@@ -330,8 +380,24 @@ export function scaleSelected(factor: number): void {
   ed.history.begin("Scale");
   ed.history.objects(ed.objects);
   const scale = Math.max(0.3, Math.min(3, Math.round((o.scale ?? 1) * factor * 100) / 100));
-  setObjects(ed.objects.map(x => (x === o ? { ...o, ...(scale === 1 ? { scale: undefined } : { scale }) } : x)));
+  setObjects(ed.objects.map(x => (x === o ? pinned(o, { scale: scale === 1 ? undefined : scale }) : x)));
   endStrokeHistory();
+}
+
+/** Props and the market's boards stand on the ground under them, raised or sunk by their `lift`. */
+const liftable = (o: MapObject) => o.kind === "prop" || o.kind === "board";
+
+/** Raise (or with a negative step lower) the selection off the ground; `null` snaps it back down onto the ground. */
+export function liftSelected(step: number | null): void {
+  const o = selectedObject();
+  if (!o) return;
+  if (!liftable(o)) { say(`A ${o.kind} stands on the ground: only props and boards raise and lower`); return; }
+  ed.history.begin(step === null ? "Snap to the ground" : "Raise");
+  ed.history.objects(ed.objects);
+  const lift = step === null ? 0 : Math.round(((o.lift ?? 0) + step) * 100) / 100;
+  setObjects(ed.objects.map(x => (x === o ? pinned(o, { lift: lift || undefined }) : x)));
+  endStrokeHistory();
+  say(lift ? `${o.id} ${lift > 0 ? "raised" : "sunk"} ${Math.abs(lift).toFixed(2)} off the ground` : `${o.id} on the ground`);
 }
 
 export function deleteSelected(): void {
@@ -339,7 +405,7 @@ export function deleteSelected(): void {
   if (!o) return;
   ed.history.begin("Delete");
   ed.history.objects(ed.objects);
-  setObjects(ed.objects.filter(x => x !== o));
+  setObjects(without(o));
   ed.selected = null;
   endStrokeHistory();
   say(`Deleted ${o.kind} ${o.id}`);
@@ -368,7 +434,8 @@ export async function save(): Promise<void> {
   ed.saving = true;
   say("Saving…");
   try {
-    const files = encodeWorld({ ...ed.world, objects: ed.objects });
+    // Each object's fields in the file's own order (parseObjects), so a load saves back to the same bytes.
+    const files = encodeWorld({ ...ed.world, objects: parseObjects(ed.objects) });
     const res = await fetch("/api/lab/world", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ json: files.json, height: toBase64(files.height), surface: toBase64(files.surface) }) });
     const body = await res.json();
     if (!res.ok) throw new Error(body.error ?? res.statusText);
