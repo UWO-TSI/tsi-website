@@ -36,6 +36,8 @@ const PLANS = {
     ...["rain", "snow", "fog"].map(weather => ({ size: "desktop", weather, season: weather === "snow" ? "winter" : "summer", times: ["midday", "sunset"], views: ["sky", "island"] })),
     { size: "desktop", weather: "clear", times: ["dusk", "night"], views: ["lamps"], spot: "40,52" },
     { size: "phone", weather: "clear", times: ["midday", "golden", "night"], views: ["sky", "play"] }],
+  // Golden hour toward the sun over the sea (the motes), and the night sky (the stars).
+  golden: [{ size: "desktop", weather: "clear", times: ["golden", "night"], views: ["sky"] }],
   // The clouds: the sky toward the sun and away over the island, and in weather.
   clouds: [{ size: "desktop", weather: "clear", times: ["midday", "golden", "sunset", "dusk"], views: ["sky", "island"] }],
   cloudweather: ["rain", "snow", "wind"].map(weather => ({ size: "desktop", weather, season: weather === "snow" ? "winter" : "summer", times: ["midday", "sunset"], views: ["island"] })),

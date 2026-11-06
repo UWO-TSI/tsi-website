@@ -45,8 +45,8 @@ const CLIPS = {
   "wind": { spot: MEADOW, at: "12:30", weather: "wind", view: GROUND, seconds: 10 },
   "wind-shore": { spot: BEACH, at: "12:30", weather: "wind", view: SEA, seconds: 10 },
   "breeze": { spot: MEADOW, at: "12:30", view: GROUND, seconds: 10 },
-  // Golden hour's motes, toward the low sun over the meadow.
-  "motes": { spot: MEADOW, at: "19:50", face: "sun", tilt: 4, view: { pitch: 0.42, zoom: 1.1 }, seconds: 8 },
+  // Golden hour's motes, over the sea toward the low sun (round 4: over the water, none over the grass).
+  "motes": { spot: BEACH, at: "20:05", face: "sun", tilt: 2, view: { pitch: 0.4, zoom: 1.1 }, seconds: 8 },
   // The plaza's lamps and the fireflies at night: the soft glow, breathing.
   "lamps": { spot: PLAZA, at: "23:30", view: PLAZA_VIEW, tilt: 4, seconds: 8 },
   // The lamps' glow against the night sky, clouds going by behind it (their lives sped up 60 times): the glow shaped by

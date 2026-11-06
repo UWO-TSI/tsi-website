@@ -197,9 +197,10 @@ vec3 starLayer(vec3 d, vec3 e, float n, float density, float px, float bright, f
   b *= 1.0 + (0.22 + 0.4 * uStarry) * (1.0 - 0.5 * up) * sin(uTime * (1.6 + 2.6 * h.y) + h.z * 40.0);
   // Crisp (David, round 3: "more contrast bectween actual star and the glow around"): the point a pixel wide and held
   // under the bloom's reach, so it stays a sharp point; the bright ones keep a faint tight glow of their own.
-  float s = px * 0.5, core = exp(-ang * ang / (s * s)), glow = exp(-ang * ang / (6.0 * px * px));
+  // A hard little disc about a pixel across (full bright wherever it falls between pixels), not a gaussian smear.
+  float core = smoothstep(px * 0.95, px * 0.35, ang), glow = exp(-ang * ang / (6.0 * px * px));
   vec3 tint = mix(vec3(0.72, 0.82, 1.0), vec3(1.0, 0.86, 0.68), h.z);
-  vec3 c = tint * (min(b, 0.9) * core + 0.05 * b * glow * sparkle);
+  vec3 c = tint * (min(b * 1.25, 0.95) * core + 0.05 * b * glow * sparkle);
   if (sparkle > 0.0 && h.w > 0.55) {
     vec3 w = faceDir(face, ((cell + at) / n) * 2.0 - 1.0) * uStarRot;
     vec3 off = d - w;
@@ -261,8 +262,9 @@ vec4 cirrus(vec3 d, vec3 sky) {
   float t = shell(d, 7.0);
   vec2 xz = d.xz * t + uDrift * 2.0;
   float c = vnoise(vec3(xz.x * 0.06, xz.y * 0.22, 1.0)) * 0.65 + vnoise(vec3(xz.x * 0.16, xz.y * 0.5, 2.0)) * 0.35;
-  float a = smoothstep(0.5, 0.84, c) * uCloud.w * 0.64 * (1.0 - smoothstep(60.0, 200.0, t)) * (1.0 - 0.4 * uNight);
-  vec3 lit = mix(uCirrusLight + uAmbTop * 0.5, sky * 1.3 + uMoonLight * (0.8 + 2.0 * pow(max(0.0, dot(d, uMoonDir)), 6.0)), uNight);
+  float a = smoothstep(0.5, 0.84, c) * uCloud.w * 0.64 * (1.0 - smoothstep(60.0, 200.0, t)) * (1.0 - 0.6 * uNight);
+  // By night thinner and only a little lighter than the sky, brighter near the moon, so the stars keep their contrast.
+  vec3 lit = mix(uCirrusLight + uAmbTop * 0.5, sky * 1.12 + uMoonLight * (0.4 + 2.0 * pow(max(0.0, dot(d, uMoonDir)), 6.0)), uNight);
   return vec4(mix(lit, sky, 1.0 - exp(-t / 90.0)), a);
 }
 

@@ -354,7 +354,7 @@ export function WindMarks({ spots, season }: { spots: readonly WindSpot[]; seaso
 // sparkles over the water in his sunset reference), and none over the land. Only while the sun is low (they fade in as
 // it sinks under about 15° and out as it sets). World anchored on a tile round where the camera looks, carried slowly
 // downwind; one over the shallows fades as the water thins, so none ever pops. One draw of points.
-const MOTES = 48, MOTE_TILE = 34;
+const MOTES = 48, MOTE_TILE = 34, MOTE_NEAR = 20;
 const MOTE_VERT = /* glsl */ `
 attribute float alpha;
 uniform float uSize;
@@ -365,15 +365,16 @@ void main() {
   mv.y -= mv.z * mv.z * ${ACTIVE_WORLD_BEND.toFixed(6)} + mv.x * mv.x * ${ACTIVE_WORLD_BEND_SIDE.toFixed(6)};
   gl_Position = projectionMatrix * mv;
   float beam = pow(max(dot(normalize(position - cameraPosition), uSunDir), 0.0), 4.0);
-  vA = alpha * (0.12 + 1.1 * beam);
+  vA = alpha * (0.1 + 1.4 * beam);
   gl_PointSize = uSize / -mv.z;
 }`;
 const MOTE_FRAG = /* glsl */ `
 uniform vec3 uColor;
 varying float vA;
 void main() {
+  // Added once (the blend multiplies by alpha): round 3's colour times alpha, squared, all but hid the faint ones.
   float a = smoothstep(0.5, 0.05, length(gl_PointCoord - 0.5)) * vA;
-  gl_FragColor = vec4(uColor * a, a);
+  gl_FragColor = vec4(uColor, a);
 }`;
 
 /** How golden the hour is for a sun this high (its direction's y): 0 by day and after sunset, 1 with the sun a few degrees up. */
@@ -386,6 +387,9 @@ function stepMotes(points: THREE.Points, mat: THREE.ShaderMaterial, seed: Float3
   if (!points.visible) return;
   camera.getWorldDirection(_dir);
   viewFocus(camera.position, _dir, _focus);
+  // Kept within MOTE_NEAR of the camera: a view tipped up toward the low sun puts its focus far out, where they'd be specks.
+  const fx = _focus.x - camera.position.x, fz = _focus.z - camera.position.z, far = Math.hypot(fx, fz);
+  if (far > MOTE_NEAR) { _focus.x = camera.position.x + (fx / far) * MOTE_NEAR; _focus.z = camera.position.z + (fz / far) * MOTE_NEAR; }
   const t = worldTime(), drift = (0.12 + 0.1 * WIND.strength) * WIND.swell, geo = points.geometry;
   const pos = geo.getAttribute("position") as THREE.BufferAttribute, alpha = geo.getAttribute("alpha") as THREE.BufferAttribute;
   const half = MOTE_TILE / 2, sea = SEA_LEVEL;
@@ -400,12 +404,12 @@ function stepMotes(points: THREE.Points, mat: THREE.ShaderMaterial, seed: Float3
     const water = THREE.MathUtils.smoothstep(sea - ground(x, z), 0.05, 0.6);
     const edge = 1 - THREE.MathUtils.smoothstep(Math.hypot(x - _focus.x, z - _focus.z) / half, 0.55, 1);
     pos.setXYZ(i, x, sea + 0.35 + b * 1.6 + Math.sin(t * 0.5 + d * 12) * 0.12, z);
-    alpha.setX(i, 0.55 * golden * water * edge * (0.6 + 0.4 * Math.sin(t * 1.1 + d * 40)));
+    alpha.setX(i, 0.7 * golden * water * edge * (0.6 + 0.4 * Math.sin(t * 1.1 + d * 40)));
   }
   pos.needsUpdate = true;
   alpha.needsUpdate = true;
   // The canvas's height sets a point's pixels: the pixel finish draws at half size.
-  mat.uniforms.uSize.value = 0.09 * height;
+  mat.uniforms.uSize.value = 0.11 * height;
 }
 
 export function GoldenMotes({ ground, always = false }: { ground: (x: number, z: number) => number; always?: boolean }) {
