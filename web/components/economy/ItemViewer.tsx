@@ -62,8 +62,9 @@ export function FittedModel({ spec, span = 1.7, hang, aura }: { spec: IconSpec; 
     if (spec.view === "diagonal") inner.rotation.z = -Math.PI / 4;
     measure(inner).getSize(size);
     box.getCenter(mid);
-    // An effect rod wears its aura beyond the rod: leave it room.
-    const k = span * (rodFxUrl(model) ? 0.78 : 1) / Math.max(size.x, size.y, size.z, 1e-3);
+    // An effect rod wears its aura beyond the rod: leave it room (22%, or the share its GLB's `fxRoom` extra asks for:
+    // the Tidewarden's water hugs its shaft, so it takes the stage as other rods do).
+    const k = span * (rodFxUrl(model) ? 1 - Number(model.userData.fxRoom ?? 0.22) : 1) / Math.max(size.x, size.y, size.z, 1e-3);
     const outer = new THREE.Group();
     inner.position.set(-mid.x, -mid.y, -mid.z);
     outer.add(inner);

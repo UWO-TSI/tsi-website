@@ -59,6 +59,72 @@ def ear_clip(poly):
     return tris
 
 
+def smooth_outline(mask, sigma, eps):
+    """The mask's outline as clean curves: its contour smoothed (a Gaussian round the loop), then simplified."""
+    from scipy.ndimage import gaussian_filter1d
+    cs, _ = cv2.findContours(mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    c = max(cs, key=cv2.contourArea)[:, 0, :].astype(float)
+    c = np.stack([gaussian_filter1d(c[:, 0], sigma, mode="wrap"), gaussian_filter1d(c[:, 1], sigma, mode="wrap")], 1)
+    # then as few points as keep the curve within `eps` px (the prong tips and spurs are where it turns: they stay)
+    return cv2.approxPolyDP(c.astype(np.float32).reshape(-1, 1, 2), eps, True)[:, 0, :].astype(float)
+
+
+def ridge_points(mask, spacing):
+    """Points along the mask's medial axis (its ridge), at least `spacing` px apart."""
+    from skimage.morphology import medial_axis
+    sk, dist = medial_axis(mask > 0, return_distance=True)
+    ys, xs = np.where(sk & (dist > 2.5))
+    order = np.argsort(-dist[ys, xs])
+    picked = []
+    for i in order:
+        p = np.array([xs[i], ys[i]], float)
+        if all(np.hypot(*(p - q)) >= spacing for q in picked):
+            picked.append(p)
+    return np.array(picked)
+
+
+def inside_tris(pts, mask):
+    """Delaunay of `pts`, kept where a triangle lies inside the mask (its centre and its edges' middles)."""
+    tri = Delaunay(pts)
+    grown = cv2.dilate(mask.astype(np.uint8), np.ones((3, 3), np.uint8))
+    at = lambda p: grown[min(max(int(round(p[1])), 0), mask.shape[0] - 1), min(max(int(round(p[0])), 0), mask.shape[1] - 1)] > 0
+    return [t.tolist() for t in tri.simplices
+            if all(at(q) for q in ((pts[t[0]] + pts[t[1]] + pts[t[2]]) / 3, (pts[t[0]] + pts[t[1]]) / 2, (pts[t[1]] + pts[t[2]]) / 2, (pts[t[2]] + pts[t[0]]) / 2))]
+
+
+def crack_lines(mask, min_len):
+    """The mask thinned to centre lines and traced into polylines between its ends and its branch points; spurs shorter
+    than `min_len` px that end in nothing are dropped. Each line simplified to within a pixel."""
+    from skimage.morphology import skeletonize
+    sk = skeletonize(mask > 0)
+    pix = set(zip(*np.where(sk)))
+    nb = lambda p: [(p[0] + dy, p[1] + dx) for dy in (-1, 0, 1) for dx in (-1, 0, 1) if (dy or dx) and (p[0] + dy, p[1] + dx) in pix]
+    nodes = {p for p in pix if len(nb(p)) != 2}
+    lines, seen = [], set()
+    for n0 in nodes:
+        for q in nb(n0):
+            if (n0, q) in seen:
+                continue
+            path, prev, cur = [n0, q], n0, q
+            while cur not in nodes:
+                nxt = [r for r in nb(cur) if r != prev and r not in path[-3:]]
+                if not nxt:
+                    break
+                prev, cur = cur, nxt[0]
+                path.append(cur)
+            seen.add((path[-1], path[-2]))
+            seen.add((n0, q))
+            lines.append(path)
+    keep = []
+    for path in lines:
+        dead = len(nb(path[0])) <= 1 or len(nb(path[-1])) <= 1
+        if dead and len(path) < min_len:
+            continue
+        xy = np.array([(x, y) for y, x in path], np.float32).reshape(-1, 1, 2)
+        keep.append(cv2.approxPolyDP(xy, 1.0, False)[:, 0, :].tolist())
+    return keep
+
+
 def fill_mesh(mask, step, eps=1.2, depth_px=10.0):
     """`mask` triangulated: its outline's points and a grid inside (every `step` px; 0 none), Delaunay, kept where a triangle lies inside the
     mask. Returns (points px, triangles, each point's depth into the mask, 0 at its edge to 1 at `depth_px`)."""
@@ -137,6 +203,12 @@ def tidewarden():
     head = cv2.GaussianBlur(head.astype(np.float32), (0, 0), 2.0) > 0.5     # the pencil's ragged edge, smoothed
     # inside the pencil: the drawn line sits on the edge, half of it outside the shape (about 2 px)
     head = cv2.erode(head.astype(np.uint8), cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))) > 0
+    # the two round cut-outs as drawn: the sketch's pencil rings them, so the mask keeps only a sliver of their white
+    # middles; open each to its drawn size (centre and radius read off the sketch, in this crop's px)
+    head = head.astype(np.uint8)
+    for c, r in (((292, 454), 18), ((355, 497), 19)):
+        cv2.circle(head, c, r, 0, -1)
+    head = head > 0
     inner = cv2.erode(head.astype(np.uint8), np.ones((5, 5), np.uint8)) > 0     # veins well inside the outline
     vein = (H >= 80) & (H <= 96) & (S > 70) & (V > 160) & inner
     blue = (H >= 92) & (H <= 125) & (S > 35) & ~vein & head
@@ -160,28 +232,60 @@ def tidewarden():
         b_end = max(blues) + 1 if blues else y0
         m_end = g0
         prongs.append((x0, x1, b_end, max(m_end, b_end + 6)))
-    tip_m, mint_m = np.zeros_like(head), np.zeros_like(head)
-    for x0, x1, b_end, m_end in prongs:
-        tip_m[:b_end, x0:x1 + 1] = head[:b_end, x0:x1 + 1]
-        mint_m[b_end:m_end, x0:x1 + 1] = head[b_end:m_end, x0:x1 + 1]
-    gold_m = head & ~tip_m & ~mint_m
     s = 1.12 / float(foot)                               # the whole trident 1.12 rig units long
     hand = foot - int(round(0.13 / s))                   # the hand at the wrap's top, 0.13 above the star's point
     to3 = lambda p: (round((p[0] - 300) * s, 4), round((hand - p[1]) * s, 4))
-    # each colour's part triangulated inside its own outline (the slots are too narrow for a polygon fill to keep)
-    head_mesh = {}
-    for name, mask in (("Gold", gold_m), ("Mint", mint_m), ("Tip", tip_m)):
-        pts, tris = [], []
-        for poly in outlines(mask, 1.8, 30):
-            k = len(pts)
-            pts += poly.tolist()
-            tris += [[k + i for i in t] for t in ear_clip(poly)]
-        head_mesh[name] = {"points": [to3(p) for p in pts], "tris": tris}
-    vm = cv2.morphologyEx(vein.astype(np.uint8), cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8))
+    # the head as a relief (rods round 9b): its outline smoothed into clean curves, triangulated with its medial axis, each
+    # vertex's depth into the head (px, for the bevel and the ridge), whether it is on the ridge, and its colour band
+    # (0 gold, 1 mint, 2 blue: each prong's tip fading into the gold, smoothly, where the sketch's colours change)
+    outline_px = smooth_outline(head, sigma=3.0, eps=1.7)
+    clean = np.zeros_like(head, dtype=np.uint8)
+    cv2.fillPoly(clean, [np.round(outline_px).astype(np.int32)], 1)
+    depth = cv2.distanceTransform(clean, cv2.DIST_L2, 5)
+    ridge = ridge_points(clean, 36.0)
+    for _ in range(8):                                   # conforming: split every outline edge the triangulation misses
+        tri = Delaunay(np.vstack([outline_px, ridge]))
+        edges = {tuple(sorted((int(t[i]), int(t[(i + 1) % 3])))) for t in tri.simplices for i in range(3)}
+        n = len(outline_px)
+        miss = [i for i in range(n) if tuple(sorted((i, (i + 1) % n))) not in edges]
+        if not miss:
+            break
+        out = []
+        for i in range(n):
+            out.append(outline_px[i])
+            if i in miss:
+                out.append((outline_px[i] + outline_px[(i + 1) % n]) / 2)
+        outline_px = np.array(out)
+    pts = np.vstack([outline_px, ridge])
+    tris = inside_tris(pts, clean)
+    cover = np.zeros_like(clean)
+    for t in tris:
+        cv2.fillPoly(cover, [np.round(pts[t]).astype(np.int32)], 1)
+    print("head relief", len(outline_px), "+", len(ridge), "points", len(tris), "tris, covers", round(float((cover & clean).sum() / clean.sum()), 3), "of the outline")
+
+    def band(x, y):
+        for x0, x1, b_end, m_end in prongs:
+            if x0 - 3 <= x <= x1 + 3 and y < m_end + 30:
+                ss = lambda e0, e1, v: float(np.clip((v - e0) / (e1 - e0), 0, 1)) ** 2 * (3 - 2 * float(np.clip((v - e0) / (e1 - e0), 0, 1)))
+                return round(2.0 - ss(b_end - 18, b_end + 18, y) - ss(m_end - 18, m_end + 24, y), 3)
+        return 0.0
+    head_mesh = {"points": [to3(p) for p in pts], "tris": tris,
+                 "depth": [round(float(depth[min(int(round(y)), depth.shape[0] - 1), min(int(round(x)), depth.shape[1] - 1)]), 1) if i >= len(outline_px) else 0.0 for i, (x, y) in enumerate(pts)],
+                 "ridge": [1 if i >= len(outline_px) else 0 for i in range(len(pts))],
+                 "band": [band(x, y) for x, y in pts]}
+    # the veins as cracks: the sketch's teal lines, joined where the brush broke them, thinned to their centre lines and
+    # traced into branching polylines (spurs pruned), each point with its depth into the head (they lie on the relief)
+    # on the gold any teal is a crack (gold is orange: no confusion), so the paler strokes count there too; on the prongs'
+    # mint and blue only the strong teal does
+    goldzone = np.ones_like(head)
+    for x0, x1, b_end, m_end in prongs:
+        goldzone[:m_end + 6, max(0, x0 - 3):x1 + 4] = False
+    vein = vein | ((H >= 78) & (H <= 100) & (S > 30) & (V > 140) & goldzone)
+    vm = cv2.morphologyEx((vein & (clean > 0)).astype(np.uint8), cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7)))
     nv, vl, vs, _ = cv2.connectedComponentsWithStats(vm)
-    vm = np.isin(vl, [i for i in range(1, nv) if vs[i, cv2.CC_STAT_AREA] >= 40])
-    vm = cv2.dilate(vm.astype(np.uint8), np.ones((3, 3), np.uint8)) & head      # the painted crack and its bright edge
-    vp, vt, _ = fill_mesh(vm, 6, eps=1.0)
+    vm = np.isin(vl, [i for i in range(1, nv) if vs[i, cv2.CC_STAT_AREA] >= 30]) & (cv2.erode(clean, np.ones((3, 3), np.uint8)) > 0)
+    cracks = [[(*to3(p), round(float(depth[int(p[1]), int(p[0])]), 1)) for p in line] for line in crack_lines(vm, 10)]
+    print("veins", len(cracks), "cracks,", sum(len(c) - 1 for c in cracks), "segments")
     # the shaft's width and the butt: the star's arms and the wrap's ring
     shaft = [np.where(fill[y, 250:350])[0] for y in range(neck + 40, hand - 60, 20)]
     shaft_r = float(np.median([len(r) for r in shaft if len(r)])) / 2 * s
@@ -193,7 +297,7 @@ def tidewarden():
                   "ppu": round(1 / s, 1), "lean": round(float(np.degrees(np.arctan(k))), 2)},
         "scale": s, "shaft_r": round(shaft_r, 4), "tip": to3((300, 2)), "neck": to3((300, neck)),
         "head": head_mesh,
-        "veins": {"points": [to3(p) for p in vp], "tris": vt},
+        "veins": cracks,
         "star": {"span": round((sx.max() - sx.min()) * s, 4), "foot": to3((300, foot))[1], "centre": to3((300, hand + 40 + np.median(sy)))[1]},
     }
 
@@ -246,7 +350,6 @@ if __name__ == "__main__":
     with open(OUT, "w") as f:
         f.write('"""Traced from the round 9 references by trace_refs.py: do not edit (rerun it). Plain numbers, no image."""\n')
         f.write(f"TIDEWARDEN = {tw!r}\n\nAQUATIC = {aq!r}\n")
-    print("head", {k: len(v["tris"]) for k, v in tw["head"].items()}, "veins", len(tw["veins"]["tris"]), "shaft_r", tw["shaft_r"],
-          "tip", tw["tip"], "neck", tw["neck"], "star", tw["star"])
+    print("shaft_r", tw["shaft_r"], "tip", tw["tip"], "neck", tw["neck"], "star", tw["star"])
     print("blade rows", len(aq["blade"]), "foam pieces", [len(p["tris"]) for p in aq["foam"]], "drops", len(aq["drops"]))
     sys.exit(0)

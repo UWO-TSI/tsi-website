@@ -100,7 +100,7 @@ if (want("awaken")) {
   await warm.context().close();
   for (const [name, stage, w, h] of [["rg9-awaken-tidewarden-1", 1, 1280, 800], ["rg9-awaken-tidewarden-2", 2, 1280, 800], ["rg9-phone-awaken-tidewarden-2", 2, 390, 844]]) {
     const p = await page(w, h);
-    await clip(p, name, w, h, async () => { await p.goto(`${BASE}/dev/economy?view=awakening&rod=rod_tidewarden&stage=${stage}`); await p.locator('[data-testid="rod-awakening"][data-ready]').waitFor({ timeout: 120000 }); }, 11000, -0.6);
+    await clip(p, name, w, h, async () => { await p.goto(`${BASE}/dev/economy?view=awakening&rod=rod_tidewarden&stage=${stage}`); await p.locator('[data-testid="rod-awakening"][data-ready]').waitFor({ timeout: 120000 }); }, 11000, -2.5);   // the reveal, its head face-on as the stage turns
     await p.context().close();
   }
 }
@@ -117,7 +117,8 @@ if (want("cards")) {
 <tr><td>perf:check</td><td>${BUDGET.perf ?? "see the report"}</td><td>6.5 ms high</td></tr></table>`);
   const Q = [
     ["The Water type (rg9-study-water-vs-ref, rg9-fx-water-*): does it read as your Aquatic sword's water? Where it still differs: the body's streaks are drawn by a shader (flat bands, not painted strokes), the foam has no soft painted shading (flat white with a cyan edge), and the tiny splash tendrils at the crown are fewer. The shell hilt is modelled to its landmarks, not traced: simpler and paler than drawn (it is the study's, not the effect's).", "Approve the look; I keep tuning on your notes"],
-    ["The Tidewarden (rg9-tidewarden-vs-ref): its head is traced from your sketch, so the prongs, the two cut-outs and the spurs are its own outline. It has no pencil outline or painted shading (the game's flat colours), and its shaft is a touch thicker than drawn (0.0072 against 0.0064) so it holds up in the pixel finish. The head is one flat sheet drawn from both sides (as sketched), so edge-on, in hand, it reads thin. OK?", "Yes"],
+    ["The Tidewarden (rg9-tidewarden-vs-ref): its outline is traced from your sketch and smoothed into clean curves (the three prongs, the two round cut-outs opened to their drawn size, the spurs and crescents), made solid: bevelled to a fine edge and raised in a ridge down each prong and the body, gold with a sheen, each tip fading through mint into blue, the veins as branching cracks. Stylised to read at game size: the head 1.2 times the sketch's (the tip where it was), the shaft thicker than drawn (0.0095 against 0.0064), and the head faces the holder's side so in hand you see its face, not its edge. Where it still differs: no pencil outline or painted shading, its faces are low-poly (560 of the 600 triangles), and the sketch's veins are a fuller network than the cracks traced off it. OK?", "Yes"],
+    ["In the bag (and the shop's detail) an effect rod is fitted 22% smaller to leave its aura room. The Tidewarden's water hugs its shaft, so I let a rod's model say how much room it needs (fxRoom) and gave the Tidewarden 4%: it fills the stage as the Cedar does. Keep that, or a different share?", "Keep it"],
     ["What grows with the water's strength (each awakening): it runs faster, the foam widens and holds more, the water wraps further down the shaft (about three more turns by 2.5), more drops are thrown. Right things to grow?", "Yes"],
     ["The Tidewarden isn't sold in the shop (epics are crafted, your round 2 rule), so it shows in the bag's rod stage, the cutscene and in hand; the shop's detail uses the same stage. Fine?", "Yes"],
     ["Its water doesn't spin round the shaft (the streamer trails one way, as drawn); it flows, its foam breaks and re-forms and its drops fly, and the rod rides its swell in the cutscene. Or should the wrap turn too?", "Keep it as drawn"],

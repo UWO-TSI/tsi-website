@@ -35,7 +35,8 @@ const FINISH: Record<string, readonly Record<string, string>[]> = {
   rod_training: [{ Yellow: "#9fb8dd", Blue: "#1f4fa8", Red: "#e8edf3", Cream: "#ffffff" }, { Yellow: "#7a4fd8", Blue: "#2d2448", Red: "#f2c14e", Cream: "#f4edff" },
     { Yellow: "#f2c14e", Blue: "#fff4d6", Red: "#b8862a", Cream: "#fffaf0" }],
   rod_titanium: [{ Slate: "#cdd6e0", Lilac: "#b98cff" }],
-  rod_tidewarden: [{ Teal: "#22b8aa" }, { Teal: "#1ad6c4", Gold: "#ffd75e" }],
+  // (its head is white with its colours in its vertices: a tint over them; the shaft is its own gold)
+  rod_tidewarden: [{ Teal: "#22b8aa" }, { Teal: "#1ad6c4", Gold: "#fff1c4", Shaft: "#ffd75e" }],
   rod_tempest: [{ Ice: "#b6e2ff" }, { Ice: "#8fd3ff", Pale: "#eef7ff" }],
 };
 

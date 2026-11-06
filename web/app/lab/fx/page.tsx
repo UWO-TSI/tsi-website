@@ -42,9 +42,10 @@ function Sword({ k }: { k: number }) {
 
 /** Each study's reference: its size, its paper, px per unit, where the thing's origin is (px) and its lean (degrees). */
 const STUDY = {
-  water: { w: 736, h: 1307, bg: "#BBB4AC", ppu: 1225, at: [375, 1265], lean: 0 },
+  water: { w: 736, h: 1307, bg: "#BBB4AC", ppu: 1225, at: [375, 1265], lean: 0, face: 0 },
   // the trident's frame from art/pipeline/traced_refs.py (TIDEWARDEN frame): its hand, its px per rig unit, its lean
-  tidewarden: { w: 1012, h: 1798, bg: "#F6F6F6", ppu: 1726.8, at: [817, 1588.6], lean: 23.91 },
+  // (the rod's head faces its holder's side, a quarter turn about the shaft: `face` turns it back to you)
+  tidewarden: { w: 1012, h: 1798, bg: "#F6F6F6", ppu: 1726.8, at: [817, 1588.6], lean: 23.91, face: -Math.PI / 2 },
 } as const;
 
 function Trident({ k }: { k: number }) {
@@ -59,7 +60,7 @@ function Study({ k, of }: { k: number; of: keyof typeof STUDY }) {
   return <div style={{ position: "fixed", left: 0, top: 0, zIndex: 100000, width: f.w, height: f.h, background: f.bg }} data-testid="fx-study">
     <Canvas orthographic flat dpr={1} camera={{ zoom: f.ppu, position: [at[0], at[1], 5] }} onCreated={({ camera }) => camera.lookAt(at[0], at[1], 0)} gl={{ antialias: true }}>
       <ambientLight intensity={1.3} /><directionalLight position={[-1, 2, 3]} intensity={1.2} />
-      <group rotation={[0, 0, (f.lean * Math.PI) / 180]}><Suspense fallback={null}>{of === "water" ? <Sword k={k} /> : <Trident k={k} />}</Suspense></group>
+      <group rotation={[0, 0, (f.lean * Math.PI) / 180]}><group rotation={[0, f.face, 0]}><Suspense fallback={null}>{of === "water" ? <Sword k={k} /> : <Trident k={k} />}</Suspense></group></group>
     </Canvas>
   </div>;
 }
