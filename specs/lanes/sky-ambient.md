@@ -2,6 +2,35 @@
 
 Worktree `.claude/worktrees/sky-ambient`, branch `game/sky-ambient`, cut from origin/main f3d24212. Agent type `uwotsi-lane`. Dev port 3480.
 
+## Round 4: David's sky round 3 review (2026-11-06, verbatim; https://claude.ai/artifact/7rsDh2sd3hZPxtyDLCAvSL)
+
+Approved: sky3-cost, sky3-phone, sky3-wind.
+- sky3-clouds (approve): "I like C the best"
+- sky3-day (redo): "i like the light white clouds effect, like not the main cloud, the cuved ambient sky thing, i want to keep that and make it slightly more prominent, the clouds still look too 3d model-y and needs remodeld, dont make clouds just spawn and despawn then need to break apard and fade like real clouds, also the light white cuved cloud doesnt look as good in night and clouds in general stop looking good at night because of how it interacts with lighting at night and you can really see the 3d model, add more variety of clouds that arent stricly the same shape and size look closer to reference"
+- sky3-motes (redo): "needs to be redone its kinda crazy and distracting make it less distracting and should it be on the ocean water and no grass?"
+- sky3-night (redo): "the stars can be more crisp"
+- sky3-pick (approve): "yes i like the lit cards and it loooks great, further develop towrds the lit cards run and refine it to look more similar to the genshin clouds"
+- sky3-questions (approve): "c, keep for now, night sky stars should be more crisp tho so more contrast bectween actual star and the glow around, 0,3 everything else good"
+- sky3-ref-day (redo): same note as sky3-pick
+- sky3-ref-sky (approve): "that sky is beautiful, keep that in in mind so future skyes refrence that lighitng"
+- sky3-ref-sunset (redo): same note as sky3-pick
+- sky3-skypx (redo, no note)
+- sky3-sound (redo): "the night cricet chirps needs to be redone, rain sound is too crispy and crackly, these sounds should sound more natural and more ambient and cozy feeling"
+- sky3-weather (redo): "it feels too 3d model-y made out of bullshit spheres, needs better design and redone to look more natural"
+
+Build (coordinator):
+1. **Clouds:** style C, developed along the lit-cards run toward the Genshin references (`References/Sky references/` in the vault; your r3 copies). They must stop reading as 3D models: remodel them, more variety in shape and size, and clouds never pop in or out: they break apart and fade like real clouds. Make them look good at night too (the night lighting is what exposes the model).
+2. **The curved, light white ambient sky layer** (not the main clouds): keep it, slightly more prominent, and fix how it looks at night.
+3. **The sky reference (sky3-ref-sky):** David calls it beautiful; its lighting is the reference for future skies. Write that into the design bible's sky section.
+4. **Stars:** crisper, with more contrast between the star's point and its glow.
+5. **Motes:** much less distracting. David asks if they belong over the ocean water and not over grass: say what you'd do and show it.
+6. **Weather:** redesign it so it looks natural, not built from spheres.
+7. **Sound:** redo the night crickets; the rain is too crispy and crackly. Natural, ambient, cozy. Synthesised or CC0 only (SOURCES.md), no ElevenLabs.
+8. **The questions card:** "c, keep for now" and "0,3": apply as your card asked. sky3-skypx came back redo with no note: give your best guess and a fix on the card.
+9. title-r2 merges before sky-ambient; leave the title's files alone.
+
+Evidence `sky4-*`: day, sunset, night (clips showing clouds forming, breaking apart and fading), the ambient layer day and night, stars close, motes, weather, the sound (short clips with audio), phone, cost, a questions card.
+
 ## Round 3: David's sky round 2 review (2026-11-05, verbatim; https://claude.ai/artifact/Ui1UYHzRuhoTiUYCefzJJR)
 
 Approved: sky2-moon, sky2-phone.
