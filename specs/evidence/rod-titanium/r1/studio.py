@@ -30,7 +30,7 @@ w = bpy.data.worlds.new("Studio")
 sc.world = w
 w.use_nodes = True
 bg = next(n for n in w.node_tree.nodes if n.type == "BACKGROUND")
-bg.inputs[0].default_value = (0.09, 0.075, 0.07, 1)    # a dim warm room (the reference sits on brown leather)
+bg.inputs[0].default_value = (0.16, 0.13, 0.12, 1)    # a dim warm room (the reference sits on brown leather)
 bg.inputs[1].default_value = 1.0
 
 for o in list(sc.objects):
@@ -59,7 +59,7 @@ cam.data.lens = 70
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "..", "art", "characters"))
 import kit  # noqa: E402
 kit.show_vertex_colors(sc)
-FX = {"titanium": ["Glint"], "titanium-a1": ["Energy", "Core", "Blades"]}      # the aura is left out: the model alone
+FX = {"titanium": ["Glint"], "titanium-a1": ["Energy", "Core", "Blades"]}
 for o in sc.objects:                             # the effect's light as the game draws it: unlit, in its colour
     if o.type == "MESH":
         for m in o.data.materials:

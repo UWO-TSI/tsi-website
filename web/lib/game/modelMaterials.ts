@@ -161,7 +161,7 @@ export const MATERIAL_PRESETS = {
   metal: { roughness: 0.4, metalness: 0.75, look: "metal" },
   // Machined and polished metal (the Titanium rod): sharp streaks of the room and the sky slide over its facets, the
   // studio's room seen brighter in it than in a matte part (the island's sky is seen at its own brightness: lookPreset).
-  polished: { roughness: 0.2, metalness: 0.45, look: "metal", env: 2.2 },
+  polished: { roughness: 0.14, metalness: 0.85, look: "metal", env: 2.2 },
   paint: { roughness: 0.45, metalness: 0, look: "props" },
   glass: { roughness: 0.08, metalness: 0, look: "glass" },
   cloth: { roughness: 1, metalness: 0, look: "props" },

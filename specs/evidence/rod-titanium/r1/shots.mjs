@@ -32,10 +32,10 @@ async function bagRod(p, ti) {
 }
 
 if (want("look")) {
-  const p = await page(1920, 1200);
+  const p = await page(900, 760);
   for (const ti of [0, 400]) {
     await bagRod(p, ti);
-    await p.getByTestId("bag-rod").locator("canvas").first().screenshot({ path: join(OUT, `look-${ti}.png`) });
+    for (let i = 0; i < 4; i++) { await p.getByTestId("bag-rod").locator("canvas").first().screenshot({ path: join(OUT, `look-${ti}-${i}.png`) }); await p.waitForTimeout(1400); }
   }
 }
 if (want("wb")) {

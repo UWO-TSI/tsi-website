@@ -42,12 +42,14 @@ describe("rods' effects (art/pipeline/build_rods.py, fx_library.py, RodAura)", (
     const base = await names("/assets/game/props/rodfx-titanium.glb"), woke = await names("/assets/game/props/rodfx-titanium-a1.glb");
     expect([...base, ...woke].some(n => n.startsWith("Halo"))).toBe(false);
     expect(base.some(n => n.startsWith("Aura"))).toBe(false);
-    expect(woke).toEqual(expect.arrayContaining(["Energy", "Core", "Blades", "Aura"]));
-    // The rod itself: one polished metal material, so it draws once in a hand and reflects like machined metal.
-    for (const url of ["/assets/game/tools/rod-titanium.glb", "/assets/game/tools/rod-titanium-a1.glb"]) {
+    expect(woke).toEqual(expect.arrayContaining(["Energy", "Core", "Blades"]));
+    // Solid on the shop's white: no aura or additive light washing the plates (rod-titanium round 1b).
+    expect(woke.some(n => n.startsWith("Aura"))).toBe(false);
+    // Each rod is one preset material, so it draws once in a hand: the machined rod polished metal, the armour paint.
+    for (const [url, finish] of [["/assets/game/tools/rod-titanium.glb", "P_Polished"], ["/assets/game/tools/rod-titanium-a1.glb", "P_Paint"]]) {
       const held = mergeHeld(await load(url), url), meshes: THREE.Mesh[] = [];
       held.traverse(o => { if ((o as THREE.Mesh).isMesh) meshes.push(o as THREE.Mesh); });
-      expect(meshes.map(m => (m.material as THREE.Material).name)).toEqual(["P_Polished"]);
+      expect(meshes.map(m => (m.material as THREE.Material).name)).toEqual([finish]);
     }
   });
 
