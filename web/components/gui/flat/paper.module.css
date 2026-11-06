@@ -138,7 +138,6 @@
 .slot[data-state="empty"] .slotArt { filter: brightness(0); opacity: 0.1; }
 .slot:not([data-state="empty"]) { background: var(--ui-paper-plate); box-shadow: 0 0 0 1px var(--ui-paper-rule), 0 2px 4px rgb(var(--ui-shade) / 0.12); }
 .slot[data-fresh] .slotArt { animation: ink 0.6s ease-out both; }
-@keyframes press { from { opacity: 0; transform: scale(2.4) rotate(-24deg); } }
 @keyframes ink { from { filter: brightness(0); opacity: 0.1; } }
 
 /* The collection (the menu's first page): the boost large, a track of stamps to the cap; the fish given, each with what it gave. */
@@ -157,7 +156,39 @@
 .stampLine { fill: none; stroke: var(--ui-paper-seal); }
 .stampInk { fill: var(--ui-paper-seal); }
 .stampEye { fill: var(--ui-paper); }
-.track i[data-fresh] svg { animation: press 0.6s var(--spring) 0.2s both; }
+/* The stamp coming down (round 8, StampDown): 0.15 s in, a lift, the slam at 0.7 s (HIT), a squash, then away. */
+.track i[data-fresh] { position: relative; z-index: 2; --hit: 0.7s; }
+.track i[data-fresh] svg.stamp { animation: inked 0.45s ease-out var(--hit) both; }
+.track i[data-fresh] svg.stampTool { position: absolute; left: -6%; bottom: -4%; width: 112%; height: auto; transform-origin: 50% 100%; overflow: visible;
+  filter: drop-shadow(0 3px 2px rgb(var(--ui-shade) / 0.3)); animation: toolDown 0.55s linear 0.15s both, toolUp 0.75s linear var(--hit) forwards; }
+.toolFace { fill: var(--ui-paper-seal); }
+.toolWood { fill: var(--ui-paper-ink); }
+.toolTop { fill: var(--ui-paper-quiet); }
+.toolShine { fill: var(--ui-paper); opacity: 0.3; }
+.stampShade, .stampSplat { position: absolute; inset: 0; border-radius: 50%; pointer-events: none; }
+.stampShade { background: radial-gradient(closest-side, rgb(var(--ui-shade) / 0.5), transparent); animation: shadeDown 0.55s linear 0.15s both, shadeUp 0.6s ease-in var(--hit) forwards; }
+/* The ink squeezed out round the face at the hit, a ring and a few drops, fading as it spreads. */
+.stampSplat { inset: -45%; mix-blend-mode: multiply;
+  background: radial-gradient(circle at 12% 30%, var(--ui-paper-seal) 0 3%, transparent 4%), radial-gradient(circle at 88% 64%, var(--ui-paper-seal) 0 2.5%, transparent 3.5%),
+    radial-gradient(circle at 70% 8%, var(--ui-paper-seal) 0 2%, transparent 3%), radial-gradient(circle at 24% 90%, var(--ui-paper-seal) 0 2%, transparent 3%),
+    radial-gradient(closest-side, transparent 52%, color-mix(in srgb, var(--ui-paper-seal) 45%, transparent) 58%, transparent 70%);
+  animation: splat 0.55s cubic-bezier(0.2, 0.8, 0.3, 1) var(--hit) both; }
+@keyframes inked { from { opacity: 0; transform: scale(0.86); } 30% { opacity: 1; transform: scale(1.06); } }
+@keyframes toolDown {
+  0% { opacity: 0; transform: translateY(-230%) scale(1.3); }
+  22% { opacity: 1; transform: translateY(-250%) scale(1.3); animation-timing-function: ease-in-out; }
+  62% { transform: translateY(-310%) scale(1.34) rotate(-4deg); animation-timing-function: cubic-bezier(0.7, 0, 1, 0.5); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes toolUp {
+  0% { transform: translateY(0) scale(1.14, 0.8); }
+  10% { transform: translateY(0) scale(0.96, 1.05); }
+  20%, 42% { transform: translateY(0) scale(1); opacity: 1; animation-timing-function: cubic-bezier(0.3, 0, 0.2, 1); }
+  100% { transform: translateY(-260%) scale(1.25); opacity: 0; }
+}
+@keyframes shadeDown { 0% { opacity: 0; transform: scale(2.2); } 62% { opacity: 0.25; transform: scale(2.4); animation-timing-function: cubic-bezier(0.7, 0, 1, 0.5); } 100% { opacity: 1; transform: scale(1.05); } }
+@keyframes shadeUp { 0%, 40% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0; transform: scale(2.2); } }
+@keyframes splat { from { opacity: 1; transform: scale(0.55) rotate(-10deg); } to { opacity: 0; transform: scale(1.15); } }
 .boostNote { color: var(--ui-paper-quiet); font: 500 12px/1.4 var(--gui-font); }
 .given { display: grid; justify-items: center; align-content: start; gap: 5px; margin: 0; text-align: center; }
 .given .slot { width: clamp(34px, 6.4vh, 56px); }
@@ -207,6 +238,7 @@ button.row:focus-visible { outline: 2px solid var(--ui-paper-ink); outline-offse
 
 @media (prefers-reduced-motion: reduce) {
   .spread, .turn, .photo { transition: none; }
-  .leaf, .dishAction, .track i[data-fresh] svg, .slot[data-fresh] .slotArt, .given[data-fresh] figcaption { animation: none; }
+  .leaf, .dishAction, .track i[data-fresh] svg.stamp, .slot[data-fresh] .slotArt, .given[data-fresh] figcaption { animation: none; }
   .chapters button, button.row { transition: none; }
+  .stampTool, .stampShade, .stampSplat { display: none; }
 }

@@ -38,6 +38,7 @@ import { CurrencyIcon } from "@/components/economy/Amount";
 import { mealRows } from "@/components/economy/statIcons";
 import PixelImage from "@/components/economy/PixelImage";
 import { errText } from "@/components/economy/EconomySheets";
+import { AudioManager } from "@/lib/game/audio";
 import { BookPage, BookSlot, BoostTrack, CardGrid, CoverTitle, DarkButton, FlatDialog, FlatPanel, FoldedMenu, GivenFish, InkArt, InkDefs, ItemCard, MenuDish, PanelSection, PaperRow, Quiet, SidePanel, spreadOf, StatusLine, Thumb, useInkId, WithSide, type DishStat, type FoldedMenuHandle } from "@/components/gui/flat";
 import { toast } from "@/components/gui";
 import type { Rarity } from "@/lib/rarity";
@@ -253,7 +254,7 @@ export function MenuPickup({ open, onClose, waters = ["sea", "river"], transport
     <>
       <PanelSection title="Collection">
         <p className={m.welcome}>Every fish you give Bancha stays in your book and makes your fishing luckier, for good.</p>
-        <BoostTrack filter={ink} icon={<Clover />} value={pct(bookLuck(given.length))} label="luck, for good" filled={Math.min(given.length, LUCK_SLOTS)} total={LUCK_SLOTS} fresh={!!fresh && given.length <= LUCK_SLOTS}
+        <BoostTrack filter={ink} icon={<Clover />} value={pct(bookLuck(given.length))} label="luck, for good" filled={Math.min(given.length, LUCK_SLOTS)} total={LUCK_SLOTS} fresh={!!fresh && given.length <= LUCK_SLOTS} onLand={() => AudioManager.playSFX("stamp-heavy")}
           note={`${pct(TASTING.luck.each)} a new fish, up to ${pct(TASTING.luck.cap)}. A key fish teaches him a dish too.`} />
         <span><button type="button" className={m.order} onClick={() => setBag(true)} disabled={!data} data-testid="open-bag"><Backpack size={15} aria-hidden />Open your bag</button></span>
         {next ? <p className={m.meal}><Coins size={13} aria-hidden />At {next.at} fish given, Bancha pays {next.coins}<CurrencyIcon size={11} /></p> : null}

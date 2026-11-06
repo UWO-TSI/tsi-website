@@ -7,7 +7,7 @@ import { useProgress } from "@react-three/drei";
 import * as THREE from "three";
 import { Smartphone } from "lucide-react";
 import { Toggle } from "@/components/gui";
-import { BiomeTag, DarkButton, Phone, inCorner, type PhoneApp } from "@/components/gui/flat";
+import { BiomeTag, Phone, inCorner, type PhoneApp } from "@/components/gui/flat";
 import GridWorld from "./grid/GridWorld";
 import GridOcean from "./grid/GridOcean";
 import Seabed from "./water/Seabed";

@@ -204,16 +204,48 @@ export function Stamp({ filter, turn = 0, className }: { filter: string; turn?: 
 /** A hand's tilt for the stamp at `i`, never twice the same in a row. */
 const tilt = (i: number) => ((i * 37) % 17) - 8;
 
+/** The page and the book jolting under the stamp's hit. */
+const JOLT: [string, Keyframe[], number][] = [
+  [p.spread, [{ transform: "none" }, { transform: "translateY(7px) rotate(0.35deg)", offset: 0.12 }, { transform: "translateY(-3px) rotate(-0.15deg)", offset: 0.32 },
+    { transform: "translateY(1.5px)", offset: 0.55 }, { transform: "none" }], 460],
+  [p.panel, [{ transform: "none" }, { transform: "scale(0.985) translateY(2px)", offset: 0.15 }, { transform: "none" }], 320],
+];
+
+/**
+ * The stamp coming down on a fresh circle (round 8, David: "make the stamping more dramatic, like comes down like a hard
+ * stamp"): the block lifts, slams down fast, squashes on the paper and lifts away; at the hit the ink spreads out, the page
+ * and the book jolt and `onLand` runs (the thump). Its shadow on the paper darkens as it falls.
+ */
+function StampDown({ onLand }: { onLand?: () => void }) {
+  const hit = (e: AnimationEvent<HTMLElement>) => {
+    for (const [cls, frames, ms] of JOLT) e.currentTarget.closest(`.${cls}`)?.animate(frames, { duration: ms, easing: "ease-out" });
+    onLand?.();
+  };
+  return <>
+    <b className={p.stampShade} />
+    <b className={p.stampSplat} onAnimationStart={hit} />
+    <svg viewBox="0 0 40 72" className={p.stampTool} aria-hidden>
+      <rect x={1} y={62} width={38} height={7} rx={1.5} className={p.toolFace} />
+      <rect x={2} y={49} width={36} height={14} rx={2.5} className={p.toolWood} />
+      <ellipse cx={20} cy={49.5} rx={18} ry={3.5} className={p.toolTop} />
+      <rect x={15} y={22} width={10} height={28} className={p.toolWood} />
+      <ellipse cx={20} cy={16} rx={10} ry={9} className={p.toolWood} />
+      <ellipse cx={16} cy={12} rx={3.5} ry={2.4} className={p.toolShine} />
+    </svg>
+  </>;
+}
+
 /**
  * A collection's permanent boost, as the menu's first page shows it (round 6, David: "make it obvious it s a collection
  * that give [permanent] boosts"): the boost large with its icon, what it is, and a track of `total` circles with
  * `filled` of them stamped, one a fish, to the cap; `fresh`, the last stamp just pressed; `note` under it.
  */
-export function BoostTrack({ icon, value, label, filled, total, fresh, note, filter }: { icon: ReactNode; value: ReactNode; label: ReactNode; filled: number; total: number; fresh?: boolean; note?: ReactNode; filter: string }) {
+export function BoostTrack({ icon, value, label, filled, total, fresh, note, filter, onLand }: { icon: ReactNode; value: ReactNode; label: ReactNode; filled: number; total: number; fresh?: boolean; note?: ReactNode; filter: string; onLand?: () => void }) {
   return <div className={p.boost} role="group" aria-label={`${value} ${label}, ${filled} of ${total}`}>
     <p className={p.boostValue}><span className={p.boostIcon} aria-hidden>{icon}</span><b>{value}</b><span>{label}</span></p>
     <span className={p.track} aria-hidden>{Array.from({ length: total }, (_, i) => <i key={i} data-on={i < filled || undefined} data-fresh={(fresh && i === filled - 1) || undefined}>
-      {i < filled ? <Stamp filter={filter} turn={tilt(i)} /> : null}</i>)}</span>
+      {i < filled ? <Stamp filter={filter} turn={tilt(i)} /> : null}
+      {fresh && i === filled - 1 ? <StampDown onLand={onLand} /> : null}</i>)}</span>
     {note ? <span className={p.boostNote}>{note}</span> : null}
   </div>;
 }

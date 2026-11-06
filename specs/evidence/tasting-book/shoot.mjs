@@ -1,7 +1,7 @@
 // tasting-book evidence: headless Chromium (never a window), muted, signed out, the dev server on :3476 with
 // the Supabase env blanked and NEXT_PUBLIC_GAME_WORLD=new, the new world (/lab/island) with the demo data.
 //   VIEW=phone node specs/evidence/tasting-book/shoot.mjs <out_dir> <flow> [<flow> ...]
-// VIEW: desktop (1280 x 800, the default) or phone (390 x 844, touch). Flows: showroom, counter (choice, cook, stamp, book), aquarium, book3, book4, tank4, book5, tank5, book6, tank6, museum6, book7, turn7.
+// VIEW: desktop (1280 x 800, the default) or phone (390 x 844, touch). Flows: showroom, counter (choice, cook, stamp, book), aquarium, book3, book4, tank4, book5, tank5, book6, tank6, museum6, book7, turn7, book8.
 // CLIP=1 records the run (Playwright's video, <out_dir>/video) and writes <out_dir>/marks.json, each clip's start and end in it.
 import { createRequire } from "node:module";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -46,6 +46,25 @@ const click = async (name, ms = 1200) => {
   await page.getByRole("button", { name, exact: true }).first().click({ timeout: 10000 }).catch(e => console.log("click", name, e.message.slice(0, 120)));
   await wait(ms);
 };
+/** Sat at the sushi bar in the evening with the demo's pockets, looking down at the menu. */
+async function sitAndLook() {
+  await world("at=-47,114.4&at=19:30&time=evening&bag=23&dish=1", { settle: 12000, press: false, click: false });
+  const seatLine = () => page.getByText(/down to read the menu/).count();
+  for (let i = 0; i < 40 && !(await seatLine()); i++) { await page.keyboard.press("e"); for (let t = 0; t < 20 && !(await seatLine()); t++) await wait(250); }
+  await wait(1500);
+  if (PHONE) {
+    await page.evaluate(async () => {
+      const el = document.querySelector("canvas"), at = (type, y) => el.dispatchEvent(new PointerEvent(type, { pointerType: "touch", pointerId: 7, clientX: 195, clientY: y, bubbles: true, isPrimary: true }));
+      at("pointerdown", 380);
+      for (let y = 384; y <= 480; y += 4) { at("pointermove", y); await new Promise(r => setTimeout(r, 16)); }
+      window.dispatchEvent(new PointerEvent("pointerup", { pointerType: "touch", pointerId: 7, clientX: 195, clientY: 480, bubbles: true }));
+    });
+  } else {
+    await page.mouse.move(VW / 2, VH / 2);
+    for (let i = 0; i < 25; i++) { await page.mouse.move(VW / 2, VH / 2 + 4 * (i + 1)); await wait(16); }
+  }
+  await wait(2500);
+}
 const testid = id => page.locator(`[data-testid="${id}"]`).first();
 const centre = async locator => {
   const box = await locator.boundingBox();
@@ -430,22 +449,7 @@ const FLOW = {
    * fish without stamps, a page turn at SLOW speed (frames tb7-turn-*), all fish, and the menu put down.
    */
   async book7() {
-    await world("at=-47,114.4&at=19:30&time=evening&bag=23&dish=1", { settle: 12000, press: false, click: false });
-    const seatLine = () => page.getByText(/down to read the menu/).count();
-    for (let i = 0; i < 40 && !(await seatLine()); i++) { await page.keyboard.press("e"); for (let t = 0; t < 20 && !(await seatLine()); t++) await wait(250); }
-    await wait(1500);
-    if (PHONE) {
-      await page.evaluate(async () => {
-        const el = document.querySelector("canvas"), at = (type, y) => el.dispatchEvent(new PointerEvent(type, { pointerType: "touch", pointerId: 7, clientX: 195, clientY: y, bubbles: true, isPrimary: true }));
-        at("pointerdown", 380);
-        for (let y = 384; y <= 480; y += 4) { at("pointermove", y); await new Promise(r => setTimeout(r, 16)); }
-        window.dispatchEvent(new PointerEvent("pointerup", { pointerType: "touch", pointerId: 7, clientX: 195, clientY: 480, bubbles: true }));
-      });
-    } else {
-      await page.mouse.move(VW / 2, VH / 2);
-      for (let i = 0; i < 25; i++) { await page.mouse.move(VW / 2, VH / 2 + 4 * (i + 1)); await wait(16); }
-    }
-    await wait(2500);
+    await sitAndLook();
     await shot("tb7-look");
     mark("open");
     const t0 = Date.now();
@@ -488,6 +492,48 @@ const FLOW = {
     await page.keyboard.press("Escape");
     await wait(1200);
     await shot("tb7-down");
+  },
+  /** Round 8: the stamp coming down hard on a give, at speed (the clip `stamp`), then a second give slowed (`stamp-slow`, frames of the track). */
+  async book8() {
+    page.on("request", r => { if (r.url().includes("stamp-heavy")) console.log("sound fetched", r.url().replace(HOST, "")); });
+    await sitAndLook();
+    await page.getByRole("button", { name: /Read the menu/ }).first().click({ timeout: 10000 }).catch(e => console.log("read", e.message.slice(0, 120)));
+    await wait(3200);
+    if (!PHONE) await page.mouse.move(4, VH - 4);
+    const KEYS = /red_snapper|dace|squid|catfish|tuna/;
+    const give = async () => {
+      await testid("open-bag").click({ force: true }).catch(e => console.log("bag", e.message.slice(0, 120)));
+      await wait(1200);
+      const key = await page.evaluate(k => [...document.querySelectorAll('[data-testid="give-bag"] [data-key]')].map(e => e.dataset.key).find(x => !new RegExp(k).test(x)), KEYS.source);
+      console.log("give", key);
+      await page.locator(`[data-testid="give-bag"] [data-key="${key}"]`).first().click({ timeout: 10000 }).catch(e => console.log("pick", e.message.slice(0, 120)));
+      await wait(900);
+      await testid("give-fish").click({ timeout: 10000 }).catch(e => console.log("give", e.message.slice(0, 120)));
+    };
+    const track = () => page.locator('[role="group"][aria-label*="luck, for good"]').first().boundingBox();
+    mark("stamp");
+    await give();
+    await wait(2400);
+    mark("stamp", true);
+    const box = await track();
+    const area = box && { x: box.x - 16, y: box.y - 110, width: box.width + 32, height: box.height + 130 };
+    if (area) await shot("tb8-stamp-close", page, { clip: area, scale: "device" });
+    await menuShot("tb8-given");
+    // The second give at SLOW of its speed (the CSS and the jolt run on the page's animation clock), framed.
+    const slow = Number(process.env.SLOW ?? 0.2), cdp = await ctx.newCDPSession(page);
+    await cdp.send("Animation.enable");
+    mark("stamp-slow");
+    await testid("open-bag").click({ force: true }).catch(e => console.log("bag", e.message.slice(0, 120)));
+    await cdp.send("Animation.setPlaybackRate", { playbackRate: slow });
+    await wait(1200 / slow * 0.25);
+    const key = await page.evaluate(k => [...document.querySelectorAll('[data-testid="give-bag"] [data-key]')].map(e => e.dataset.key).find(x => !new RegExp(k).test(x)), KEYS.source);
+    await page.locator(`[data-testid="give-bag"] [data-key="${key}"]`).first().click({ timeout: 10000 }).catch(e => console.log("pick", e.message.slice(0, 120)));
+    await wait(900);
+    await testid("give-fish").click({ timeout: 10000 }).catch(e => console.log("give", e.message.slice(0, 120)));
+    const t0 = Date.now();
+    for (let i = 0; Date.now() - t0 < 1700 / slow; i++) { if (area) await shot(`tb8-slow-${String(i).padStart(2, "0")}`, page, { clip: area, scale: "device" }); await wait(120); }
+    mark("stamp-slow", true);
+    await cdp.send("Animation.setPlaybackRate", { playbackRate: 1 });
   },
   /** Round 7: a page turn in slow motion (the page's animations at SLOW of their speed, CDP), a frame of the book about every 0.1 s. */
   async turn7() {

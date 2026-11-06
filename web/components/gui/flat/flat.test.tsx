@@ -223,10 +223,14 @@ describe("the menu's collection (tasting-book round 6)", () => {
     expect(out.match(/<i[ >]/g)).toHaveLength(20);
     expect(out.match(/<i data-on="true"/g)).toHaveLength(6);
     // Round 7: each stamp is round (its rings are circles, no square seal) and only the sixth presses down.
-    expect(out.match(/<svg/g)).toHaveLength(6);
-    expect(out).not.toContain("<rect");
+    // Round 8: the stamp block comes down on that sixth one alone (David: "comes down like a hard stamp").
+    const cells = out.split("<i ").slice(1);
+    expect(cells.filter(c => c.includes("<svg"))).toHaveLength(6);
+    expect(cells.slice(0, 5).join("")).not.toContain("<rect");
     expect(out.match(/data-fresh="true"/g)).toHaveLength(1);
-    expect(out.split("<i ")[6]).toContain('data-fresh="true"');
+    expect(cells[5]).toContain('data-fresh="true"');
+    expect(cells[5].match(/<svg/g)).toHaveLength(2);
+    expect(html(h(BoostTrack, { icon: "L", value: "+6%", label: "luck", filled: 6, total: 20, filter: "ink" })).match(/<svg/g)).toHaveLength(6);
   });
   it("shows a fish given with what it gave, and no stamp on it (round 7)", () => {
     const out = html(h(GivenFish, { picture: "P", name: "Dace", gave: "Luck +1%", extra: "Dace karaage", fresh: true }));
