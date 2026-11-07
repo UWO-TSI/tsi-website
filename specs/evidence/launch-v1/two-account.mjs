@@ -175,23 +175,24 @@ async function closeSheets(p) {
     await p.page.waitForTimeout(250);
   }
 }
-/** Esc 1, the menu dock (with nothing else up). */
+/** The phone, bottom right (tutorial r9 to r14: it replaced the Esc menu dock); its apps are the menus. */
 async function openDock(p) {
   await closeSheets(p);
   await focusWorld(p);
-  await p.page.keyboard.press("Escape");
-  await p.page.waitForSelector("[data-testid=menu-dock]", { timeout: 5000 });
+  await p.page.keyboard.press("x");
+  await p.page.waitForSelector('[data-testid="phone"]', { timeout: 5000 });
 }
-/** The dock's people entry ("Here (2)"), or null. */
+/** The people count, as "Here (n)": the Friends app's "Who's on the island (n)" (the dock's "Here (n)" folded in). */
 async function peopleLabel(p) {
-  await openDock(p);
-  const label = await p.page.locator("[data-testid=menu-dock] button", { hasText: /^Here/ }).first().textContent({ timeout: 2000 }).catch(() => null);
+  await openFriends(p);
+  const text = await p.page.locator("button", { hasText: /Who.s on the island \(\d+\)/ }).first().textContent({ timeout: 4000 }).catch(() => null);
   await closeSheets(p);
-  return label;
+  const n = text?.match(/\((\d+)\)/)?.[1];
+  return n ? `Here (${n})` : null;
 }
 async function openFriends(p) {
   await openDock(p);
-  await p.page.locator("[data-testid=menu-dock] button", { hasText: /^Friends/ }).first().click();
+  await p.page.locator('[data-testid="phone"] [aria-label^="Friends"]').first().click();
   await p.page.waitForTimeout(500);
 }
 /** The emote wheel: hold G (the ring opens after a beat), click the middle to flip to the dances, click the petal, let go. */
