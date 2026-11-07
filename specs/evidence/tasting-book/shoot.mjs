@@ -515,8 +515,9 @@ const FLOW = {
     await give();
     await wait(2400);
     mark("stamp", true);
+    await wait(800);
     const box = await track();
-    const area = box && { x: box.x - 16, y: box.y - 110, width: box.width + 32, height: box.height + 130 };
+    const area = box && { x: box.x - 24, y: box.y - 170, width: box.width + 48, height: box.height + 190 };
     if (area) await shot("tb8-stamp-close", page, { clip: area, scale: "device" });
     await menuShot("tb8-given");
     // The second give at SLOW of its speed (the CSS and the jolt run on the page's animation clock), framed.
