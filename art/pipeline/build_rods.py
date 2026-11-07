@@ -653,7 +653,7 @@ def titanium():
 
 def titanium_a1():
     """The Titanium awakened: the same rod opened. Each cup's halves part, the reel's halves part, the claws spread; a
-    blue energy core shows between (glow, pulse), hexagons of its light ring the core, turning (glow, motion). Its
+    blue energy core shows between (glow), hexagons of its light ring the core, turning (glow, motion). Its
     mesh keeps the closed rod as the morph target `Closed`, so the awakening opens it."""
     shut = model("rod-titanium-shut", TI_MATS, ti_body(0.0))
     rod = metal(model("rod-titanium-a1", TI_MATS, ti_body(1.0)), ti_colour)
@@ -675,7 +675,7 @@ def titanium_a1():
         for z0, z1, r in TI_CUPS:
             pc.tube([V((math.cos(TAU * k / 6 + math.pi / 2) * r * 0.62, math.sin(TAU * k / 6 + math.pi / 2) * r * 0.62, (z0 + z1) / 2)) for k in range(6)],
                     [0.0032] * 6, sides=3, closed_loop=True)
-    fx = [glow("Core", "#2FA8FF", core, pivot=(0, 0, 0.46), pulse=0.04),
+    fx = [glow("Core", "#2FA8FF", core),
           glow("Rings", "#9BEFFF", rings, spin=1.1)]
     return rod, fx, {"rodFx": "titanium-a1", "fxRoom": 0.0}, {}   # its core is inside it: it takes the stage as the closed rod does
 

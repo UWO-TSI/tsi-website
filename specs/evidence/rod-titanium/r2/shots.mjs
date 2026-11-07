@@ -87,7 +87,7 @@ if (want("cards")) {
   // The draws-and-triangles card and the questions card (cards.html), each its own still.
   const p = await page(1000, 800);
   await p.goto(`file://${join(OUT, "cards.html")}`);
-  for (const id of ["budget", "questions"]) await p.locator(`#${id}`).screenshot({ path: join(OUT, `rti2-${id}.png`) });
+  for (const id of ["questions"]) await p.locator(`#${id}`).screenshot({ path: join(OUT, `rti2-${id}.png`) });
 }
 
 /** Record a page as a CDP screencast from `go` until `until` resolves, made an mp4 with ffmpeg (each frame held until the next came). */
