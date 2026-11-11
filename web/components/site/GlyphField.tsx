@@ -9,12 +9,15 @@ type Props = {
   phrase: string;
   className?: string;
   color?: string;
+  /** Optional colour for the brightest cells; the reference keeps everything one colour. */
   accent?: string;
+  /** "right": a full-bleed field with the picture on the right (up to 55% of the width), as the reference's features section. */
+  layout?: "contain" | "right";
 };
 
 const SCRAMBLE = "GENESIS0123456789+*#@%&";
-const LEVELS = 12;
-const BACKGROUND = 0.012;
+const LEVELS = 16;
+const BACKGROUND = 0.03;
 const FLIP_HZ = 0.18;
 const FLIP_THRESHOLD = 0.97;
 const FLIP_SWAPS = 2.5;
@@ -33,7 +36,7 @@ const smooth = (a: number, b: number, x: number) => { const t = Math.min(1, Math
  * twinkle, the pointer dims a stippled patch, clicks send a ring of scrambled characters, and the
  * figure arrives along a ring from its centre the first time it's seen. Draws only on screen.
  */
-export default function GlyphField({ src, phrase, className = "", color = "#f1ffff", accent = "#1d9bf0" }: Props) {
+export default function GlyphField({ src, phrase, className = "", color = "#f1ffff", accent, layout = "contain" }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -56,23 +59,23 @@ export default function GlyphField({ src, phrase, className = "", color = "#f1ff
       a.width = Math.ceil(cw * dpr) * glyphs.length;
       a.height = Math.ceil(ch * dpr) * (LEVELS + 1);
       const g = a.getContext("2d")!;
-      g.font = `500 ${Math.round(ch * 0.82 * dpr)}px "Sohne Mono", ui-monospace, monospace`;
+      g.font = `500 ${Math.round(ch * 0.8 * dpr)}px "Sohne Mono", ui-monospace, monospace`;
       g.textAlign = "center";
       g.textBaseline = "middle";
       const sw = Math.ceil(cw * dpr), sh = Math.ceil(ch * dpr);
       for (let l = 0; l <= LEVELS; l++) {
-        g.fillStyle = l === LEVELS ? accent : color;
+        g.fillStyle = l === LEVELS ? accent ?? color : color;
         g.globalAlpha = l === LEVELS ? 1 : (l + 1) / LEVELS;
         for (let i = 0; i < glyphs.length; i++) g.fillText(glyphs[i], i * sw + sw / 2, l * sh + sh / 2);
       }
       atlas = a;
     };
 
-    const layout = () => {
+    const relayout = () => {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = canvas.clientWidth, h = canvas.clientHeight;
-      ch = w < 520 ? 11 : 13;
-      cw = ch * 0.62;
+      ch = w < 520 ? 12 : 14;
+      cw = ch * 0.6;
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
       cols = Math.floor(w / cw);
@@ -80,9 +83,11 @@ export default function GlyphField({ src, phrase, className = "", color = "#f1ff
       rowOffset = Array.from({ length: rows }, (_, r) => Math.floor(hash1(r + 0.5) * phrase.length));
       if (img) {
         const aspect = img.w / img.h;
-        let rh = h * 0.98, rw = rh * aspect;
-        if (rw > w) { rw = w; rh = rw / aspect; }
-        region = { x: (w - rw) / 2, y: (h - rh) / 2, w: rw, h: rh };
+        const maxW = layout === "right" && w > 820 ? w * 0.55 : w;
+        let rh = h * 0.96, rw = rh * aspect;
+        if (rw > maxW) { rw = maxW; rh = rw / aspect; }
+        const x = layout === "right" && w > 820 ? w - rw - w * 0.06 : (w - rw) / 2;
+        region = { x, y: (h - rh) / 2, w: rw, h: rh };
       }
       buildAtlas();
     };
@@ -111,10 +116,11 @@ export default function GlyphField({ src, phrase, className = "", color = "#f1ff
         const y = r * ch + ch / 2;
         for (let c = 0; c < cols; c++) {
           const x = c * cw + cw / 2;
-          const b = sample(x, y);
+          // Lift the photo's mid-tones so the hand stands clear of the field.
+          const b = Math.min(1, sample(x, y) * 1.35);
           const inModel = b > 0.03;
           const level = Math.max(BACKGROUND, b);
-          let opacity = Math.pow(level, 0.6);
+          let opacity = Math.pow(level, 0.55);
           const threshold = hash(c, r + rows * 3.1);
 
           let entrance = 1;
@@ -147,7 +153,7 @@ export default function GlyphField({ src, phrase, className = "", color = "#f1ff
           if (flip) gi = 1 + Math.floor(hash1(threshold * 17.13 + flipFrame * 1.7) * (glyphs.length - 1));
           if (boost) gi = 1 + Math.floor(hash1(threshold * 7.13 + scrambleFrame) * (glyphs.length - 1));
 
-          const lvl = b > 0.93 && !boost ? LEVELS : Math.min(LEVELS - 1, Math.round(opacity * LEVELS) - 1);
+          const lvl = accent && b > 0.93 && !boost ? LEVELS : Math.min(LEVELS - 1, Math.round(opacity * LEVELS) - 1);
           if (lvl < 0) continue;
           ctx.drawImage(atlas, gi * sw, lvl * sh, sw, sh, Math.round(c * cw * dpr), Math.round(r * ch * dpr), sw, sh);
         }
@@ -169,7 +175,7 @@ export default function GlyphField({ src, phrase, className = "", color = "#f1ff
       const g = off.getContext("2d", { willReadFrequently: true })!;
       g.drawImage(image, 0, 0);
       img = { w: off.width, h: off.height, data: g.getImageData(0, 0, off.width, off.height).data };
-      layout();
+      relayout();
       if (reduce) draw(performance.now()); else start();
     };
     image.src = src;
@@ -194,12 +200,12 @@ export default function GlyphField({ src, phrase, className = "", color = "#f1ff
       ripples.push({ x: e.clientX - r.left, y: e.clientY - r.top, t: (performance.now() - started) / 1000 });
       if (ripples.length > 16) ripples.shift();
     };
-    const onResize = () => { layout(); if (reduce) draw(performance.now()); };
+    const onResize = () => { relayout(); if (reduce) draw(performance.now()); };
     canvas.addEventListener("pointermove", onMove);
     canvas.addEventListener("pointerleave", onLeave);
     canvas.addEventListener("pointerdown", onClick);
     window.addEventListener("resize", onResize);
-    document.fonts?.ready.then(() => { if (img) { layout(); if (reduce) draw(performance.now()); } });
+    document.fonts?.ready.then(() => { if (img) { relayout(); if (reduce) draw(performance.now()); } });
 
     return () => {
       io.disconnect();
@@ -209,7 +215,7 @@ export default function GlyphField({ src, phrase, className = "", color = "#f1ff
       canvas.removeEventListener("pointerdown", onClick);
       window.removeEventListener("resize", onResize);
     };
-  }, [src, phrase, color, accent]);
+  }, [src, phrase, color, accent, layout]);
 
   return <canvas ref={ref} className={className} style={{ width: "100%", height: "100%", display: "block" }} aria-hidden="true" />;
 }

@@ -89,9 +89,12 @@
     radial-gradient(28% 26% at 20% 20%, rgba(29, 155, 240, 0.08), transparent 70%);
   filter: blur(20px); animation: gx-aura 18s ease-in-out infinite alternate; }
 @keyframes gx-aura { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(-3%, 2%, 0) scale(1.08); } }
-.gx-hero__grid { position: relative; display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 6fr); gap: 32px; align-items: center; }
+.gx-hero__grid { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 560px); align-items: center; min-height: calc(100svh - 260px); pointer-events: none; }
+.gx-hero__grid > * { pointer-events: auto; }
 .gx-hero__copy { display: grid; gap: 24px; }
-.gx-hero__field { height: min(80svh, 860px); }
+.gx-hero__field { position: absolute; inset: 0; }
+/* Keeps the copy readable over the field; the hand on the right stays bright. */
+.gx-hero__field::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, rgba(8, 9, 11, 0.82) 0%, rgba(8, 9, 11, 0.55) 38%, transparent 62%); }
 .gx-word { font-family: var(--sans); font-weight: 500; font-size: clamp(4rem, 11vw, 10.5rem); line-height: 0.9; letter-spacing: -0.05em; margin: 0; }
 .gx-stats { display: flex; gap: 36px; margin: 8px 0 0; }
 .gx-stats > div { display: flex; flex-direction: column-reverse; gap: 6px; }
@@ -99,8 +102,8 @@
 .gx-stats .ts-label { color: var(--on-dark-3); }
 .gx-stats__note { margin-top: 10px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
 @media (max-width: 820px) {
-  .gx-hero__grid { grid-template-columns: 1fr; }
-  .gx-hero__field { height: 64svh; order: -1; }
+  .gx-hero__grid { grid-template-columns: 1fr; min-height: 0; }
+  .gx-hero__field { position: relative; height: 60svh; margin-top: -40px; }
   .gx-stats { gap: 24px; }
 }
 

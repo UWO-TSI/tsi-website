@@ -37,8 +37,11 @@ const ROTATION_Y = 3.45;
 // Module-level hover counter — GlobeNode writes, SceneContent reads
 let _nodeHoverCount = 0;
 
-/** How far the home page's dive has gone, 0 to 1 (a ref, read every frame, so scrolling never re-renders). */
-export type DiveRef = { current: number };
+/**
+ * How far the home page's dive has gone, 0 to 1 (a ref, read every frame, so scrolling never re-renders).
+ * `boost` scales the resting globe as it takes the centre; `interactive` says when people may drag it.
+ */
+export type DiveRef = { current: number; boost?: number; interactive?: boolean };
 const DiveContext = createContext<{ dive: DiveRef; base: number }>({ dive: { current: 0 }, base: 1 });
 /** The globe grows to this many times its resting size by the end of the dive, and rolls this far (radians). */
 const DIVE_SCALE = 3.2;
@@ -580,12 +583,12 @@ function SceneContent() {
     useFrame(() => {
         const d = dive.current;
         if (diveGroup.current) {
-            diveGroup.current.scale.setScalar(base * (1 + (DIVE_SCALE - 1) * d));
+            diveGroup.current.scale.setScalar(base * (dive.boost ?? 1) * (1 + (DIVE_SCALE - 1) * d));
             // Roll around the line of sight, so the canvas itself never turns and its corners never show.
             diveGroup.current.quaternion.setFromAxisAngle(viewAxis.copy(camera.position).normalize(), DIVE_ROLL * d);
         }
         if (controls.current) {
-            controls.current.enabled = d < 0.02;
+            controls.current.enabled = dive.interactive ?? d < 0.02;
             controls.current.autoRotate = !anyNodeHovered && d < 0.6;
         }
         invalidate();

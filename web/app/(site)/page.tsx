@@ -31,8 +31,8 @@ export default function HomePage() {
       <GlyphSeam from="deep" to="light" seed={4} />
       <Team />
       <GlyphSeam from="light" to="dark" seed={5} />
-      {/* The closing disc ends fully open on the light ground, so it meets the light footer without a seam. */}
       <Closing />
+      <GlyphSeam from="dark" to="light" seed={6} />
     </>
   );
 }

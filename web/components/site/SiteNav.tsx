@@ -38,9 +38,35 @@ function useToneUnder(ref: React.RefObject<HTMLElement | null>) {
   return tone;
 }
 
+/**
+ * Compact (a "dynamic island") once the page has scrolled and the reader is scrolling down; full again on
+ * scroll up, hover or keyboard focus.
+ */
+function useCompact() {
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    let last = window.scrollY, frame = 0;
+    const check = () => {
+      frame = 0;
+      const y = window.scrollY;
+      if (y < 120) setCompact(false);
+      else if (y > last + 4) setCompact(true);
+      else if (y < last - 12) setCompact(false);
+      last = y;
+    };
+    const onScroll = () => { if (!frame) frame = requestAnimationFrame(check); };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => { window.removeEventListener("scroll", onScroll); if (frame) cancelAnimationFrame(frame); };
+  }, []);
+  return compact;
+}
+
 export default function SiteNav({ cta, contact }: { cta: SeasonCta; contact: string }) {
   const navRef = useRef<HTMLElement>(null);
   const tone = useToneUnder(navRef);
+  const scrolledCompact = useCompact();
+  const [held, setHeld] = useState(false);
+  const compact = scrolledCompact && !held;
   const path = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -58,11 +84,21 @@ export default function SiteNav({ cta, contact }: { cta: SeasonCta; contact: str
 
   return (
     <>
-      <header ref={navRef} className="ts-nav" data-tone={tone}>
+      <header
+        ref={navRef}
+        className="ts-nav"
+        data-tone={tone}
+        data-compact={compact}
+        onPointerEnter={() => setHeld(true)}
+        onPointerLeave={() => setHeld(false)}
+        onFocus={() => setHeld(true)}
+        onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setHeld(false); }}
+      >
         <div className="ts-nav__bar">
           <Link href="/" className="ts-nav__logo" aria-label="Tethos home">
             <TsiLogo width={22} height={22} />
           </Link>
+          <div className="ts-nav__links-wrap">
           <nav className="ts-nav__links" aria-label="Main">
             {LINKS.map((l) => (
               <Link key={l.href} href={l.href} className="ts-nav__link" aria-current={path === l.href ? "page" : undefined}>{l.label}</Link>
@@ -70,6 +106,7 @@ export default function SiteNav({ cta, contact }: { cta: SeasonCta; contact: str
             <a href={`mailto:${contact}`} className="ts-nav__link">Contact</a>
             <a href={`${PLAY_ORIGIN}/`} className="ts-nav__link ts-nav__link--quiet">Student portal ↗</a>
           </nav>
+          </div>
           <div className="ts-nav__right">
             <Link href={cta.href} className="ts-btn ts-btn--primary" data-cta={cta.kind}>{cta.label}</Link>
             <button type="button" className="ts-nav__menu-btn" aria-label="Open menu" aria-expanded={open} onClick={() => setOpen(true)}>

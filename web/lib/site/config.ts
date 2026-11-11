@@ -20,7 +20,7 @@ export const TETHOS: SiteConfig = {
   name: "Tethos",
   accent: "#1d9bf0",
   accentOnLight: "#002fa7",
-  contact: "team@tethos.ca",
+  contact: "info@tethos.ca",
   instagram: "https://instagram.com/uwotsi",
   github: "https://github.com/UWO-TSI",
 };

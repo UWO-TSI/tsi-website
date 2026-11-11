@@ -6,6 +6,7 @@ import DotNav from "@/components/site/DotNav";
 import { Person } from "@/components/site/marks";
 import { GENESIS_2026 } from "@/lib/site/config";
 import { DEVELOPER_PROJECTS } from "@/lib/recruitment-projects";
+import { GENESIS_PHRASE } from "@/components/site/home/GenesisHome";
 
 export const metadata: Metadata = {
   title: "GENESIS",
@@ -63,6 +64,9 @@ export default function GenesisPage() {
       <DotNav sections={SECTIONS} />
       <section className="ts-section gx-hero" data-tone="deep" id="genesis-hero">
         <div className="gx-aura" aria-hidden="true" />
+        <div className="gx-hero__field" aria-hidden="true">
+          <GlyphField src="/images/site/genesis-hand.png" phrase={GENESIS_PHRASE} layout="right" />
+        </div>
         <div className="ts-wrap gx-hero__grid">
           <div className="gx-hero__copy">
             <Reveal><p className="ts-label">Tethos · Year-end showcase · March</p></Reveal>
@@ -80,9 +84,6 @@ export default function GenesisPage() {
               <a href="#sponsor" className="ts-btn ts-btn--primary">Sponsor GENESIS <span className="ts-btn__arrow">→</span></a>
               <a href={PACKAGE} className="ts-btn ts-btn--ghost">Sponsorship package (PDF)</a>
             </Reveal>
-          </div>
-          <div className="gx-hero__field">
-            <GlyphField src="/images/site/genesis-hand.png" phrase="GENESIS " />
           </div>
         </div>
       </section>

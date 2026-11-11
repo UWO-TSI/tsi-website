@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     .gte("created_at", since);
   if (countError) return NextResponse.json({ error: "We couldn't save your application right now. Please try again in a minute." }, { status: 503 });
   if ((count ?? 0) >= 3) {
-    return NextResponse.json({ error: "We already have your application. Email team@tethos.ca if you need to change it." }, { status: 429 });
+    return NextResponse.json({ error: "We already have your application. Email info@tethos.ca if you need to change it." }, { status: 429 });
   }
 
   const { data, error } = await admin

@@ -6,6 +6,7 @@ import SiteNav from "@/components/site/SiteNav";
 import SiteFooter from "@/components/site/SiteFooter";
 import SiteScroll from "@/components/site/SiteScroll";
 import PersonCursor from "@/components/site/PersonCursor";
+import AsciiGrain from "@/components/site/AsciiGrain";
 import { TETHOS } from "@/lib/site/config";
 import { loadSeasonCta } from "@/lib/site/season-server";
 
@@ -33,7 +34,7 @@ export default async function SiteLayout({ children }: { children: ReactNode }) 
     <div className={`ts ${fillSans.variable} ${fillMono.variable}`}>
       <SiteScroll />
       <PersonCursor />
-      <div className="ts-grain" aria-hidden="true" />
+      <AsciiGrain />
       <SiteNav cta={cta} contact={site.contact} />
       <main>{children}</main>
       <SiteFooter site={site} />
