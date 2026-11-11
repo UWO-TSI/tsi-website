@@ -19,6 +19,7 @@ declare module "three/webgpu" {
     export class PostProcessing {
         constructor(renderer: WebGPURenderer);
         outputNode: any;
+        outputColorTransform: boolean;
         render(): void;
         dispose(): void;
     }
@@ -34,6 +35,8 @@ declare module "three/tsl" {
     export function float(value: number): any;
     export function uniform(value: any): any;
     export function vec3(x: number, y: number, z: number): any;
+    export function vec4(x: any, w?: number): any;
+    export function renderOutput(color: any, toneMapping?: number | null, outputColorSpace?: string | null): any;
     export function fract(value: any): any;
     export function smoothstep(edge0: any, edge1: any, x: any): any;
     export function pass(scene: any, camera: any): any;

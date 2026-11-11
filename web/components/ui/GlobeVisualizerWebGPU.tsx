@@ -12,7 +12,7 @@ import {
     PostProcessing,
 } from "three/webgpu";
 import type { UniformNode } from "three/webgpu";
-import { attribute, float, fract, smoothstep, uniform, vec3, pass } from "three/tsl";
+import { attribute, float, fract, smoothstep, uniform, vec3, vec4, pass, renderOutput } from "three/tsl";
 import { bloom } from "three/examples/jsm/tsl/display/BloomNode.js";
 import globeData from "@/data/globe-nodes.json";
 
@@ -22,7 +22,8 @@ import globeData from "@/data/globe-nodes.json";
 
 const CONFIG = {
     topography: 0.10,
-    background: "#101011",
+    // The page ink. The globe is composited onto it after tone mapping, so it matches the page exactly.
+    background: "#0f0f10",
     land: "#6b9362",
     water: "#181a25",
     blend: 1.00,
@@ -513,7 +514,13 @@ function GlobePostProcessing({ children }: { children: ReactNode }) {
         bloomPass.strength.value = CONFIG.glow.strength;
         bloomPass.threshold.value = CONFIG.glow.threshold;
 
-        pp.outputNode = sceneOutput.add(bloomPass);
+        // Tone-map the globe and its glow, then lay them on the page ink in display space. Tone mapping
+        // the background too shifted it a few steps off the page colour (a visible edge on the left).
+        const ink = CONFIG.background;
+        const ground = vec3(parseInt(ink.slice(1, 3), 16) / 255, parseInt(ink.slice(3, 5), 16) / 255, parseInt(ink.slice(5, 7), 16) / 255);
+        const lit = renderOutput(sceneOutput.add(bloomPass));
+        pp.outputColorTransform = false;
+        pp.outputNode = vec4(ground.mul(float(1).sub(sceneOutput.a.clamp(0, 1))).add(lit.rgb), 1);
         postProcessing.current = pp;
 
         return () => {
@@ -565,8 +572,9 @@ function SceneContent() {
         };
     }, [camera, scene]);
 
+    // Transparent clear: the scene pass's alpha marks the globe, and the ink is added after tone mapping.
     useEffect(() => {
-        scene.background = new Color(CONFIG.background);
+        scene.background = null;
     }, [scene]);
 
     useEffect(() => {
