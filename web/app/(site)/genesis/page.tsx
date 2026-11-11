@@ -6,7 +6,7 @@ import DotNav from "@/components/site/DotNav";
 import { Person } from "@/components/site/marks";
 import { GENESIS_2026 } from "@/lib/site/config";
 import { DEVELOPER_PROJECTS } from "@/lib/recruitment-projects";
-import { GENESIS_PHRASE } from "@/components/site/home/GenesisHome";
+import { GENESIS_FIELD, GENESIS_PHRASE } from "@/components/site/home/GenesisHome";
 
 export const metadata: Metadata = {
   title: "GENESIS",
@@ -65,7 +65,7 @@ export default function GenesisPage() {
       <section className="ts-section gx-hero" data-tone="deep" id="genesis-hero">
         <div className="gx-aura" aria-hidden="true" />
         <div className="gx-hero__field" aria-hidden="true">
-          <GlyphField src="/images/site/genesis-sphere.png" phrase={GENESIS_PHRASE} layout="right" pixelCells />
+          <GlyphField src="/images/site/genesis-sphere.png" phrase={GENESIS_PHRASE} backgroundPhrase={GENESIS_FIELD} layout="right" pixelCells />
         </div>
         <div className="ts-wrap gx-hero__grid">
           <div className="gx-hero__copy">

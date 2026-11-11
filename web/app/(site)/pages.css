@@ -82,7 +82,7 @@
 /* ── /genesis: very dark, an aura behind the hero ─────── */
 
 .gx { background: var(--ink-deep); }
-.gx-hero { position: relative; overflow: hidden; padding-top: clamp(140px, 20vh, 200px); min-height: 100svh; }
+.gx-hero { position: relative; z-index: 56; overflow: hidden; padding-top: clamp(140px, 20vh, 200px); min-height: 100svh; }
 .gx-aura { position: absolute; inset: -20% -10% auto -10%; height: 140%; pointer-events: none; opacity: 0.9;
   background:
     radial-gradient(40% 35% at 70% 40%, rgba(29, 155, 240, 0.18), transparent 70%),

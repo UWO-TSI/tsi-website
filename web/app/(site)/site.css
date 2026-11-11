@@ -295,7 +295,7 @@
 
 /* ── Glyph wipe at a seam ───────────────────────────────── */
 
-.ts-seam { position: relative; height: 0; z-index: 2; }
+.ts-seam { position: relative; height: 0; z-index: 57; }
 .ts-seam canvas { position: absolute; left: 0; width: 100%; height: 192px; top: -96px; display: block; pointer-events: none; }
 
 /* ── Reveal on view ─────────────────────────────────────── */

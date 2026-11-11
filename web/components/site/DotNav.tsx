@@ -23,7 +23,7 @@ export default function DotNav({ sections }: { sections: DotSection[] }) {
   return (
     <nav
       aria-label="Sections"
-      style={{ position: "fixed", right: 18, top: "50%", transform: "translateY(-50%)", zIndex: 50, display: "flex", flexDirection: "column", gap: 12, mixBlendMode: "difference", opacity: shown ? 1 : 0, transition: "opacity 0.4s", pointerEvents: shown ? "auto" : "none" }}
+      style={{ position: "fixed", right: 18, top: "50%", transform: "translateY(-50%)", zIndex: 58, display: "flex", flexDirection: "column", gap: 12, mixBlendMode: "difference", opacity: shown ? 1 : 0, transition: "opacity 0.4s", pointerEvents: shown ? "auto" : "none" }}
       className="ts-dotnav"
     >
       {sections.map((s, i) => (

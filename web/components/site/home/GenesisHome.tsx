@@ -11,15 +11,15 @@ export const SPONSOR_GETS = [
 
 /** The words the GENESIS field is written in, as the reference writes its figure in its own claims. */
 export const GENESIS_PHRASE = "GENESIS · MARCH · STUDENT TEAMS · NONPROFITS · SPONSORS · BUILT FOR PURPOSE · ";
+/** The faint field around the figure: one layer, just the name. */
+export const GENESIS_FIELD = "GENESIS · ";
 
 export default function GenesisHome() {
   return (
     <section className="ts-section gn" data-tone="deep" id="genesis" aria-labelledby="genesis-title">
-      {/* The field fills the section and stays pinned while the list scrolls over it; the hand sits on the right. */}
+      {/* The field fills the section and scrolls with it; the hand and sphere sit still on the right. */}
       <div className="gn-bg" aria-hidden="true">
-        <div className="gn-bg__sticky">
-          <GlyphField src="/images/site/genesis-sphere.png" phrase={GENESIS_PHRASE} layout="right" pixelCells />
-        </div>
+        <GlyphField src="/images/site/genesis-sphere.png" phrase={GENESIS_PHRASE} backgroundPhrase={GENESIS_FIELD} layout="right" pixelCells />
       </div>
       <div className="ts-wrap gn-content">
         <div className="gn-copy">
