@@ -19,8 +19,8 @@ const SCRAMBLE = "GENESIS0123456789+*#@%&";
 const LEVELS = 16;
 // The faint field behind the figure (opacity = BACKGROUND ^ 0.6, about 5%). David found 12% messy.
 const BACKGROUND = 0.007;
-// The figure is lifted so the sphere and hand read clearly over the dark ground.
-const GAIN = 1.4;
+// The photo's mid-tones are lifted so the hand stands clear of the field.
+const GAIN = 1.35;
 const FLIP_HZ = 0.18;
 const FLIP_THRESHOLD = 0.97;
 const FLIP_SWAPS = 2.5;
@@ -40,7 +40,7 @@ const hash1 = (x: number) => { const s = Math.sin(x * 12.9898) * 43758.5453; ret
 /**
  * A picture written in characters (contentarchitecture.dev's glyph field, rebuilt on Canvas 2D).
  * Every cell shows the next letter of the phrase, each row from its own offset; the image only
- * raises a cell's opacity (brightness ^ 0.6) over a faint background. About 8% of image cells
+ * raises a cell's opacity (brightness ^ 0.55) over a faint background. About 8% of image cells
  * twinkle, the pointer dims a stippled patch, clicks send a ring of scrambled characters, and the
  * figure arrives along a ring from its centre the first time it's seen. Draws only on screen.
  */
@@ -143,7 +143,7 @@ export default function GlyphField({ src, phrase, className = "", color = "#f1ff
           const b = cellB[r * cols + c] ?? 0;
           const inModel = b > 0.03;
           const level = Math.max(BACKGROUND, b);
-          let opacity = Math.pow(level, 0.6);
+          let opacity = Math.pow(level, 0.55);
           const threshold = hash(c, r + rows * 3.1);
 
           let entrance = 1;
