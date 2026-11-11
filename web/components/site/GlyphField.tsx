@@ -19,6 +19,8 @@ const SCRAMBLE = "GENESIS0123456789+*#@%&";
 const LEVELS = 16;
 // The faint field behind the figure (opacity = BACKGROUND ^ 0.6, about 5%). David found 12% messy.
 const BACKGROUND = 0.007;
+// The figure is lifted so the sphere and hand read clearly over the dark ground.
+const GAIN = 1.4;
 const FLIP_HZ = 0.18;
 const FLIP_THRESHOLD = 0.97;
 const FLIP_SWAPS = 2.5;
@@ -98,10 +100,11 @@ export default function GlyphField({ src, phrase, className = "", color = "#f1ff
       rowOffset = Array.from({ length: rows }, (_, r) => Math.floor(hash1(r + 0.5) * phrase.length));
       if (img) {
         const aspect = img.w / img.h;
-        const maxW = layout === "right" && w > 820 ? w * 0.55 : w;
+        const maxW = layout === "right" && w > 820 ? w * 0.52 : w;
         let rh = h * 0.96, rw = rh * aspect;
         if (rw > maxW) { rw = maxW; rh = rw / aspect; }
-        const x = layout === "right" && w > 820 ? w - rw - w * 0.06 : (w - rw) / 2;
+        // Pushed toward the right edge, so there is a clear gap between the figure and the copy on the left.
+        const x = layout === "right" && w > 820 ? w - rw - w * 0.025 : (w - rw) / 2;
         region = { x, y: (h - rh) / 2, w: rw, h: rh };
       }
       // Each cell takes the average of the picture under it (4 x 4 samples), not one pixel, so the
@@ -111,7 +114,7 @@ export default function GlyphField({ src, phrase, className = "", color = "#f1ff
         for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
           let sum = 0;
           for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) sum += sample(c * cw + (i + 0.5) * cw / 4, r * ch + (j + 0.5) * ch / 4);
-          cellB[r * cols + c] = sum / 16;
+          cellB[r * cols + c] = Math.min(1, (sum / 16) * GAIN);
         }
       }
       buildAtlas();
