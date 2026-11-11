@@ -5,9 +5,10 @@
 .hd-track { position: relative; height: calc(100svh + 190svh); }
 .hd-stage { --t: 0; --hold: 0; --arrive: 0.55; --gx: 22vw; --gy: 0px;
   position: sticky; top: 0; z-index: 56; height: 100svh; overflow: hidden; background: var(--ink); }
-/* The stage is sticky, so it is its own layer: it sits above the page grain and carries its own behind the globe. */
-.hd-stage .hd-grain { z-index: 0; }
-.hd-globe { position: absolute; inset: -12%; z-index: 1; pointer-events: auto;
+/* The stage is sticky, so it is its own layer: it sits above the page grain and carries its own, laid over
+   the globe too (the globe's canvas is opaque, so grain under it would only show at the edge). */
+.hd-stage .hd-grain { z-index: 1; }
+.hd-globe { position: absolute; inset: -12%; z-index: 0; pointer-events: auto;
   transform: translate(calc(var(--gx) * (1 - var(--t))), calc(var(--gy) * (1 - var(--t))));
   will-change: transform; }
 .hd-globe__canvas { width: 100% !important; height: 100% !important; }

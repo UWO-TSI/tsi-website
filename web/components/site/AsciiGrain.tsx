@@ -18,7 +18,7 @@ const TICK_MS = 160;
  * contentarchitecture.dev). It is a repeating tile laid over the page, so it scrolls with the content
  * instead of sitting still on the screen; three versions of the tile, each with a few percent of cells
  * changed, cycle to make it twinkle. It inverts against whatever is underneath, so it shows on dark and
- * light grounds alike. The hero's sticky stage sits above it and carries its own copy behind the globe.
+ * light grounds alike. The hero's sticky stage sits above it and carries its own copy.
  */
 export default function AsciiGrain({ className }: { className?: string }) {
   const ref = useRef<HTMLDivElement>(null);

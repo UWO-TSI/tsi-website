@@ -185,9 +185,9 @@
   transition: height 0.42s var(--ease-settle), padding 0.42s var(--ease-settle), gap 0.42s var(--ease-settle), border-radius 0.42s var(--ease-settle), box-shadow 0.3s var(--ease-ui), filter 0.2s, transform 0.26s var(--ease-pop); }
 .ts-nav .ts-btn:hover { filter: brightness(1.08); transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -1px 0 rgba(0, 0, 0, 0.12), 0 10px 24px -8px rgba(29, 155, 240, 0.7); }
 .ts-nav .ts-btn:active { transform: scale(0.94); transition-duration: 0.08s; }
-.ts-nav[data-compact="true"] .ts-nav__cta { padding: 0 calc((var(--item) - 14px) / 2); gap: 0; border-radius: 50%; margin-left: 4px; }
+.ts-nav[data-compact="true"] .ts-nav__cta { padding: 0 calc((var(--item) - 15px) / 2); gap: 0; border-radius: 50%; margin-left: 4px; }
 .ts-nav__cta-label { display: inline-block; max-width: 12em; overflow: hidden; white-space: nowrap; transition: max-width 0.42s var(--ease-settle), opacity 0.2s var(--ease-ui); }
-.ts-nav__cta-icon { display: grid; place-items: center; width: 14px; transition: transform 0.34s var(--ease-pop); }
+.ts-nav__cta-icon { display: grid; place-items: center; width: 15px; transition: transform 0.34s var(--ease-pop); }
 .ts-nav .ts-btn:hover .ts-nav__cta-icon { transform: rotate(-10deg) scale(1.12); }
 .ts-nav[data-compact="true"] .ts-nav__cta-label { max-width: 0; opacity: 0; }
 

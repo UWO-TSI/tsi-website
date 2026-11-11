@@ -3,18 +3,19 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { FilePen, GraduationCap, HandCoins, HandHeart, LogIn, Mail, Sparkles, UserPlus } from "lucide-react";
+import { CoinHandIcon, EnvelopeIcon, HeartIcon, IslandIcon, PersonIcon, SparkIcon } from "@/components/site/icons";
 import TsiLogo from "@/components/ui/TsiLogo";
 import { PLAY_ORIGIN } from "@/lib/hosts";
 import type { SeasonCta } from "@/lib/site/season";
 
 const LINKS = [
-  { label: "Nonprofits", href: "/npo", Icon: HandHeart },
-  { label: "GENESIS", href: "/genesis", Icon: Sparkles },
-  { label: "Students", href: "/student/apply", Icon: GraduationCap },
+  { label: "Nonprofits", href: "/npo", Icon: HeartIcon },
+  { label: "GENESIS", href: "/genesis", Icon: SparkIcon },
+  { label: "Students", href: "/student/apply", Icon: PersonIcon },
 ];
 
-const CTA_ICON = { sponsors: HandCoins, nonprofits: FilePen, students: UserPlus } as const;
+/** The button takes the icon of whoever the season is calling. */
+const CTA_ICON = { sponsors: CoinHandIcon, nonprofits: HeartIcon, students: PersonIcon } as const;
 
 /** What the strip under the full nav scrolls. */
 const STRIP = { label: "Sponsor GENESIS", when: "March 2027", href: "/genesis" };
@@ -119,21 +120,21 @@ export default function SiteNav({ cta, contact }: { cta: SeasonCta; contact: str
             <nav className="ts-nav__icons" aria-label="Main">
               {LINKS.map((l, i) => (
                 <Link key={l.href} href={l.href} className="ts-nav__icon" style={{ "--i": i } as React.CSSProperties} aria-current={path === l.href ? "page" : undefined} {...tipProps(l.label)}>
-                  <l.Icon size={16} strokeWidth={2.1} aria-hidden="true" />
+                  <l.Icon size={16} />
                 </Link>
               ))}
               <a href={`mailto:${contact}`} className="ts-nav__icon" style={{ "--i": 3 } as React.CSSProperties} {...tipProps("Contact")}>
-                <Mail size={16} strokeWidth={2.1} aria-hidden="true" />
+                <EnvelopeIcon size={16} />
               </a>
               <a href={`${PLAY_ORIGIN}/`} className="ts-nav__icon" style={{ "--i": 4 } as React.CSSProperties} {...tipProps("Student portal")}>
-                <LogIn size={16} strokeWidth={2.1} aria-hidden="true" />
+                <IslandIcon size={16} />
               </a>
             </nav>
           </div>
           <div className="ts-nav__right">
             <Link href={cta.href} className="ts-btn ts-btn--primary ts-nav__cta" data-cta={cta.kind} aria-label={cta.label}
               onPointerEnter={compact ? showTip(cta.label) : undefined} onPointerLeave={() => setTip(null)}>
-              <span className="ts-nav__cta-icon" aria-hidden="true"><CtaIcon size={14} strokeWidth={2.2} /></span>
+              <span className="ts-nav__cta-icon" aria-hidden="true"><CtaIcon size={15} /></span>
               <span className="ts-nav__cta-label">{cta.label}</span>
             </Link>
             <button type="button" className="ts-nav__menu-btn" aria-label="Open menu" aria-expanded={open} onClick={() => setOpen(true)}>
