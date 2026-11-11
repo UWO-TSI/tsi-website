@@ -17,17 +17,23 @@ type Props = {
 
 const SCRAMBLE = "GENESIS0123456789+*#@%&";
 const LEVELS = 16;
-const BACKGROUND = 0.03;
+// The faint field behind the figure (opacity = BACKGROUND ^ 0.6, about 5%). David found 12% messy.
+const BACKGROUND = 0.007;
 const FLIP_HZ = 0.18;
 const FLIP_THRESHOLD = 0.97;
 const FLIP_SWAPS = 2.5;
-const RIPPLE_S = 1.8;
+const ENTRANCE_S = 1.8;
+// A click drops a stone in a pond: three rings that start fast, slow down, widen and fade.
+const RIPPLE_S = 2.4;
+const RINGS = 3;
+// The pointer's dim is a soft Gaussian falloff, not a hard-edged hole.
+const HOVER_SIGMA = 5.5;
 const ENTRANCE_FADE_S = 0.5;
 const FPS = 24;
+const FPS_ACTIVE = 60;
 
 const hash = (x: number, y: number) => { const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return s - Math.floor(s); };
 const hash1 = (x: number) => { const s = Math.sin(x * 12.9898) * 43758.5453; return s - Math.floor(s); };
-const smooth = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
 /**
  * A picture written in characters (contentarchitecture.dev's glyph field, rebuilt on Canvas 2D).
@@ -51,7 +57,7 @@ export default function GlyphField({ src, phrase, className = "", color = "#f1ff
     let glyphs = "";
     let rowOffset: number[] = [];
     let cellB = new Float32Array(0);
-    const mouse = { x: -1e4, y: -1e4, influence: 0, target: 0 };
+    const mouse = { x: -1e4, y: -1e4, sx: -1e4, sy: -1e4, influence: 0, target: 0, moved: 0 };
     const ripples: { x: number; y: number; t: number }[] = [];
 
     const buildAtlas = () => {
@@ -115,11 +121,14 @@ export default function GlyphField({ src, phrase, className = "", color = "#f1ff
       raf = 0;
       if (!atlas || !cols) return;
       const time = (now - started) / 1000;
-      mouse.influence += (mouse.target - mouse.influence) * 0.15;
+      mouse.influence += (mouse.target - mouse.influence) * 0.12;
+      if (mouse.sx < -1e3) { mouse.sx = mouse.x; mouse.sy = mouse.y; }
+      mouse.sx += (mouse.x - mouse.sx) * 0.22;
+      mouse.sy += (mouse.y - mouse.sy) * 0.22;
       const sw = Math.ceil(cw * dpr), sh = Math.ceil(ch * dpr);
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const radius = 7 * ch;
+      const sigma2 = 2 * (HOVER_SIGMA * ch) ** 2;
       const maxR = Math.hypot(canvas.clientWidth, canvas.clientHeight) * 0.6;
       const flipFrame = Math.floor(time * FLIP_SWAPS);
       const scrambleFrame = Math.floor(time * 24);
@@ -136,26 +145,33 @@ export default function GlyphField({ src, phrase, className = "", color = "#f1ff
 
           let entrance = 1;
           if (entranceStart < Infinity) {
-            const arrival = (Math.hypot(x - cx, y - cy) / maxR) * RIPPLE_S;
+            const arrival = (Math.hypot(x - cx, y - cy) / maxR) * ENTRANCE_S;
             entrance = Math.min(1, Math.max(0, (time - entranceStart - arrival) / ENTRANCE_FADE_S));
             if (entrance <= 0) continue;
           }
 
-          let ripple = 0;
+          // Pond rings: each lifts the cells it passes and nudges them outward a few pixels.
+          let ripple = 0, ox = 0, oy = 0;
           for (const rp of ripples) {
             const e = time - rp.t;
             if (e < 0 || e >= RIPPLE_S) continue;
-            const k = e / RIPPLE_S;
-            const wave = smooth(0, 1, k) * maxR;
-            const bell = 1 - smooth(0, 3 * ch, Math.abs(Math.hypot(x - rp.x, y - rp.y) - wave));
-            ripple = Math.max(ripple, bell * smooth(0, 0.22, k) * (1 - smooth(0.78, 1, k)));
+            const dx = x - rp.x, dy = y - rp.y, d = Math.hypot(dx, dy) || 1;
+            for (let j = 0; j < RINGS; j++) {
+              const ej = e - j * 0.17;
+              if (ej <= 0) continue;
+              const R = maxR * (1 - Math.exp(-ej * 1.5));
+              const w = ch * (1 + ej * 1.4);
+              const amp = Math.pow(Math.max(0, 1 - ej / RIPPLE_S), 1.7) * Math.pow(0.6, j);
+              const v = Math.exp(-((d - R) ** 2) / (2 * w * w)) * amp;
+              if (v > ripple) { ripple = v; ox = (dx / d) * v * 4; oy = (dy / d) * v * 4; }
+            }
           }
 
-          const hover = (1 - smooth(0, radius, Math.hypot(x - mouse.x, y - mouse.y))) * mouse.influence;
-          opacity *= 1 - hover;
-          if (hover > 0.001 && threshold < hover * 2.5) opacity = 0;
-          const boost = ripple > 0.001 && threshold < ripple * 0.5;
-          if (boost) opacity = 1;
+          const hover = Math.exp(-((x - mouse.sx) ** 2 + (y - mouse.sy) ** 2) / sigma2) * mouse.influence;
+          opacity *= 1 - 0.92 * hover;
+          if (threshold < hover * hover * 0.5) opacity = 0;
+          const boost = ripple > 0.35 && threshold < ripple * 0.55;
+          opacity = Math.max(opacity, Math.min(1, ripple * 1.15));
           opacity *= entrance;
           if (opacity < 0.03) continue;
 
@@ -166,7 +182,7 @@ export default function GlyphField({ src, phrase, className = "", color = "#f1ff
 
           const lvl = accent && b > 0.93 && !boost ? LEVELS : Math.min(LEVELS - 1, Math.round(opacity * LEVELS) - 1);
           if (lvl < 0) continue;
-          ctx.drawImage(atlas, gi * sw, lvl * sh, sw, sh, Math.round(c * cw * dpr), Math.round(r * ch * dpr), sw, sh);
+          ctx.drawImage(atlas, gi * sw, lvl * sh, sw, sh, Math.round((c * cw + ox) * dpr), Math.round((r * ch + oy) * dpr), sw, sh);
         }
       }
       for (let i = ripples.length - 1; i >= 0; i--) if (time - ripples[i].t > RIPPLE_S) ripples.splice(i, 1);
@@ -174,7 +190,9 @@ export default function GlyphField({ src, phrase, className = "", color = "#f1ff
 
     const loop = (now: number) => {
       if (!visible) return;
-      if (now - last >= 1000 / FPS) { last = now; draw(now); }
+      // Full frame rate while something moves (a ripple, the pointer), 24 fps at rest.
+      const active = ripples.length > 0 || now - mouse.moved < 600 || Math.abs(mouse.target - mouse.influence) > 0.01;
+      if (now - last >= 1000 / (active ? FPS_ACTIVE : FPS) - 1) { last = now; draw(now); }
       raf = requestAnimationFrame(loop);
     };
     const start = () => { if (!raf && visible) raf = requestAnimationFrame(loop); };
@@ -202,7 +220,7 @@ export default function GlyphField({ src, phrase, className = "", color = "#f1ff
 
     const onMove = (e: PointerEvent) => {
       const r = canvas.getBoundingClientRect();
-      mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top; mouse.target = 1;
+      mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top; mouse.target = 1; mouse.moved = performance.now();
     };
     const onLeave = () => { mouse.target = 0; };
     const onClick = (e: PointerEvent) => {

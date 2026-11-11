@@ -22,7 +22,7 @@ import globeData from "@/data/globe-nodes.json";
 
 const CONFIG = {
     topography: 0.10,
-    background: "#0f0f10",
+    background: "#101011",
     land: "#6b9362",
     water: "#181a25",
     blend: 1.00,

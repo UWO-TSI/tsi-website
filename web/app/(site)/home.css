@@ -3,7 +3,7 @@
 /* ── Hero and dive ─────────────────────────────────────── */
 
 .hd-track { position: relative; height: calc(100svh + 190svh); }
-.hd-stage { --t: 0; --hold: 0; --arrive: 0.55; --gx: 22vw; --gy: 0px;
+.hd-stage { --t: 0; --hold: 0; --arrive: 0.55; --gx: 28vw; --gy: 0px;
   position: sticky; top: 0; z-index: 56; height: 100svh; overflow: hidden; background: var(--ink); }
 /* The stage is sticky, so it is its own layer: it sits above the page grain and carries its own, laid over
    the globe too (the globe's canvas is opaque, so grain under it would only show at the edge). */
@@ -14,7 +14,9 @@
 .hd-globe__canvas { width: 100% !important; height: 100% !important; }
 .hd-copy { position: relative; z-index: 2; height: 100%; display: flex; flex-direction: column; justify-content: center; gap: 24px;
   pointer-events: none; opacity: calc(1 - var(--t) * 1.6); transform: translateX(calc(var(--t) * -96px)); }
-.hd-copy > * { pointer-events: auto; max-width: min(780px, 56vw); }
+.hd-copy > * { pointer-events: auto; max-width: min(760px, 48vw); }
+/* The hero's copy sits further left than the page column on wide screens, leaving a gap before the globe. */
+.hd-copy.ts-wrap { max-width: 1760px; }
 .hd-stage[data-taken="true"] .hd-copy { visibility: hidden; }
 .hd-title { display: block; line-height: 1.06; padding-bottom: 0.08em; }
 .hd-title__dim { color: var(--on-dark-3); }
