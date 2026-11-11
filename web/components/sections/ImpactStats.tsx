@@ -11,7 +11,7 @@ if (typeof window !== "undefined") {
 const STATS = [
   { value: "20+", label: "Deployed solutions" },
   { value: "100+", label: "Student developers" },
-  { value: "$300K+", label: "Value created" },
+  { value: "$500K+", label: "Value created" },
   { value: "2", label: "Active chapters" },
 ];
 
