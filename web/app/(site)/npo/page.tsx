@@ -67,7 +67,6 @@ export default function NpoPage() {
       <section className="ts-section np-hero" data-tone="dark" id="npo-hero">
         <div className="ts-wrap np-hero__grid">
           <div className="np-hero__copy">
-            <Reveal><p className="ts-label">For nonprofits</p></Reveal>
             <Reveal delay={0.06}><h1 className="ts-h1" style={{ fontSize: "clamp(2.5rem, 5.6vw, 5rem)" }}>An 8-month build for your organization, at no cost.</h1></Reveal>
             <Reveal delay={0.12}><p className="ts-lede">A team of student developers and designers, led by a project manager, works with you from October to April. You keep everything they build.</p></Reveal>
             <Reveal delay={0.18} style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -86,12 +85,11 @@ export default function NpoPage() {
         </div>
       </section>
       <GlyphSeam from="dark" to="light" seed={11} />
-      <RollingRows id="timeline" label="How it works" title="Eight months, step by step." rows={TIMELINE} />
+      <RollingRows id="timeline" title="Eight months, step by step." rows={TIMELINE} />
       <GlyphSeam from="light" to="dark" seed={12} />
       <section className="ts-section" data-tone="dark" id="deliverables" aria-labelledby="deliverables-title">
         <div className="ts-wrap">
-          <Reveal><p className="ts-label">What you get</p></Reveal>
-          <Reveal delay={0.06}><h2 className="ts-h2" id="deliverables-title" style={{ marginTop: 18, maxWidth: "14em" }}>Everything you need to run it yourself.</h2></Reveal>
+          <Reveal delay={0.06}><h2 className="ts-h2" id="deliverables-title" style={{ maxWidth: "14em" }}>Everything you need to run it yourself.</h2></Reveal>
           <ol className="np-list">
             {DELIVERABLES.map((d, i) => (
               <Reveal as="li" key={d.title} className="np-list__item" delay={0.05 * i}>
@@ -106,8 +104,7 @@ export default function NpoPage() {
       <GlyphSeam from="dark" to="light" seed={13} />
       <section className="ts-section" data-tone="light" id="cost" aria-labelledby="cost-title">
         <div className="ts-wrap">
-          <Reveal><p className="ts-label">Cost</p></Reveal>
-          <Reveal delay={0.06}><h2 className="ts-h2" id="cost-title" style={{ marginTop: 18, maxWidth: "14em" }}>Sponsors pay for the program, so you don&apos;t.</h2></Reveal>
+          <Reveal delay={0.06}><h2 className="ts-h2" id="cost-title" style={{ maxWidth: "14em" }}>Sponsors pay for the program, so you don&apos;t.</h2></Reveal>
           <Reveal className="ticket" delay={0.1}>
             <div className="ticket__price">
               <span className="ts-label">Cost to your organization</span>
@@ -125,8 +122,7 @@ export default function NpoPage() {
       <section className="ts-section" data-tone="dark" id="questions" aria-labelledby="questions-title">
         <div className="ts-wrap np-faq">
           <div>
-            <p className="ts-label">Questions</p>
-            <h2 className="ts-h2" id="questions-title" style={{ marginTop: 18 }}>Before you apply</h2>
+            <h2 className="ts-h2" id="questions-title">Before you apply</h2>
           </div>
           <Faq items={FAQ} />
         </div>
@@ -135,8 +131,7 @@ export default function NpoPage() {
       <section className="ts-section" data-tone="light" id="apply" aria-labelledby="apply-title">
         <div className="ts-wrap np-apply">
           <div className="np-apply__intro">
-            <p className="ts-label">Apply</p>
-            <h2 className="ts-h2" id="apply-title" style={{ marginTop: 18 }}>{open ? "Tell us what you need." : "Applications open Aug 10."}</h2>
+            <h2 className="ts-h2" id="apply-title">{open ? "Tell us what you need." : "Applications open Aug 10."}</h2>
             <p className="ts-body" style={{ marginTop: 18 }}>
               {open
                 ? "We choose partners in September."

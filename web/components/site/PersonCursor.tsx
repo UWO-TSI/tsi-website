@@ -3,12 +3,13 @@
 import { useEffect, useRef } from "react";
 import { Person } from "./marks";
 
-const BURST = "*+#01@%&";
+const BURST = "*+#01@%&<>/=:";
+const SPRAY = 16;
 
 /**
  * The cursor is one person from the Tethos mark (fine pointers only). It leans as it moves; over links and
- * buttons it turns blue, grows and gets a ring; it dips on press, and a click throws a ring of eight
- * characters outward (420ms).
+ * buttons it turns blue, grows and gets a faint ring; it dips on press, and a click sprays 16 blue
+ * characters that fly out, arc and fall as they fade.
  */
 export default function PersonCursor() {
   const ref = useRef<HTMLDivElement>(null);
@@ -45,17 +46,19 @@ export default function PersonCursor() {
       burst.className = "ts-burst";
       burst.style.left = `${e.clientX}px`;
       burst.style.top = `${e.clientY}px`;
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < SPRAY; i++) {
         const s = document.createElement("span");
-        const a = (i / 8) * Math.PI * 2 + Math.random() * 0.4;
-        const d = 16 + Math.random() * 10;
+        const a = (i / SPRAY) * Math.PI * 2 + (Math.random() - 0.5) * 0.7;
+        const d = 18 + Math.random() * 36;
         s.textContent = BURST[Math.floor(Math.random() * BURST.length)];
-        s.style.setProperty("--dx", `${Math.cos(a) * d}px`);
-        s.style.setProperty("--dy", `${Math.sin(a) * d}px`);
+        s.style.setProperty("--dx", `${(Math.cos(a) * d).toFixed(1)}px`);
+        s.style.setProperty("--dy", `${(Math.sin(a) * d).toFixed(1)}px`);
+        s.style.setProperty("--d", `${Math.round(Math.random() * 70)}ms`);
+        s.style.setProperty("--t", `${Math.round(420 + Math.random() * 260)}ms`);
         burst.appendChild(s);
       }
       document.body.appendChild(burst);
-      setTimeout(() => burst.remove(), 460);
+      setTimeout(() => burst.remove(), 800);
     };
     const onUp = () => { el.dataset.down = "false"; };
     const onLeave = () => { el.style.opacity = "0"; };

@@ -50,6 +50,7 @@ export default function GlyphField({ src, phrase, className = "", color = "#f1ff
     let atlas: HTMLCanvasElement | null = null;
     let glyphs = "";
     let rowOffset: number[] = [];
+    let cellB = new Float32Array(0);
     const mouse = { x: -1e4, y: -1e4, influence: 0, target: 0 };
     const ripples: { x: number; y: number; t: number }[] = [];
 
@@ -59,7 +60,7 @@ export default function GlyphField({ src, phrase, className = "", color = "#f1ff
       a.width = Math.ceil(cw * dpr) * glyphs.length;
       a.height = Math.ceil(ch * dpr) * (LEVELS + 1);
       const g = a.getContext("2d")!;
-      g.font = `500 ${Math.round(ch * 0.8 * dpr)}px "Sohne Mono", ui-monospace, monospace`;
+      g.font = `500 ${Math.round((ch - 2) * dpr)}px "Sohne Mono", ui-monospace, monospace`;
       g.textAlign = "center";
       g.textBaseline = "middle";
       const sw = Math.ceil(cw * dpr), sh = Math.ceil(ch * dpr);
@@ -71,11 +72,19 @@ export default function GlyphField({ src, phrase, className = "", color = "#f1ff
       atlas = a;
     };
 
+    const sample = (x: number, y: number) => {
+      if (!img) return 0;
+      const u = (x - region.x) / region.w, v = (y - region.y) / region.h;
+      if (u < 0 || u >= 1 || v < 0 || v >= 1) return 0;
+      return img.data[(Math.floor(v * img.h) * img.w + Math.floor(u * img.w)) * 4] / 255;
+    };
+
     const relayout = () => {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = canvas.clientWidth, h = canvas.clientHeight;
-      ch = w < 520 ? 12 : 14;
-      cw = ch * 0.6;
+      // The page grain's cell (AsciiGrain), so every ASCII surface on the site is one size.
+      ch = w < 520 ? 10 : 12;
+      cw = w < 520 ? 6 : 7;
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
       cols = Math.floor(w / cw);
@@ -89,14 +98,17 @@ export default function GlyphField({ src, phrase, className = "", color = "#f1ff
         const x = layout === "right" && w > 820 ? w - rw - w * 0.06 : (w - rw) / 2;
         region = { x, y: (h - rh) / 2, w: rw, h: rh };
       }
+      // Each cell takes the average of the picture under it (4 x 4 samples), not one pixel, so the
+      // figure keeps its shape at any size.
+      cellB = new Float32Array(cols * rows);
+      if (img) {
+        for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+          let sum = 0;
+          for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) sum += sample(c * cw + (i + 0.5) * cw / 4, r * ch + (j + 0.5) * ch / 4);
+          cellB[r * cols + c] = sum / 16;
+        }
+      }
       buildAtlas();
-    };
-
-    const sample = (x: number, y: number) => {
-      if (!img) return 0;
-      const u = (x - region.x) / region.w, v = (y - region.y) / region.h;
-      if (u < 0 || u >= 1 || v < 0 || v >= 1) return 0;
-      return img.data[(Math.floor(v * img.h) * img.w + Math.floor(u * img.w)) * 4] / 255;
     };
 
     const draw = (now: number) => {
@@ -116,11 +128,10 @@ export default function GlyphField({ src, phrase, className = "", color = "#f1ff
         const y = r * ch + ch / 2;
         for (let c = 0; c < cols; c++) {
           const x = c * cw + cw / 2;
-          // Lift the photo's mid-tones so the hand stands clear of the field.
-          const b = Math.min(1, sample(x, y) * 1.35);
+          const b = cellB[r * cols + c] ?? 0;
           const inModel = b > 0.03;
           const level = Math.max(BACKGROUND, b);
-          let opacity = Math.pow(level, 0.55);
+          let opacity = Math.pow(level, 0.6);
           const threshold = hash(c, r + rows * 3.1);
 
           let entrance = 1;

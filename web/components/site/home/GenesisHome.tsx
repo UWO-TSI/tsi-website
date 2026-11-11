@@ -23,7 +23,6 @@ export default function GenesisHome() {
       </div>
       <div className="ts-wrap gn-content">
         <div className="gn-copy">
-          <Reveal><p className="ts-label">GENESIS · March</p></Reveal>
           <Reveal delay={0.08}><h2 className="ts-h2" id="genesis-title" style={{ maxWidth: "12em" }}>Every project ends on one stage.</h2></Reveal>
           <Reveal delay={0.14}><p className="ts-lede">GENESIS is our year-end showcase. Student teams present what they built to the nonprofits they built it for, and to the sponsors who made it possible.</p></Reveal>
           <ol className="gn-list">

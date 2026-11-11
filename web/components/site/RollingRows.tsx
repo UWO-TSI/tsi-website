@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
-export type Row = { when: string; title: string; detail: string; tag?: string };
+export type Row = { when: string; title: string; detail: string };
 
 // The club's year runs from August.
 const MONTHS = ["Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"];
@@ -20,7 +20,7 @@ function monthSpan(when: string): [number, number] {
  * current row covers, and the row crossing the middle of the screen turns into a dark bar. Rows already
  * passed stay lit, later ones wait dim; rows are tight so each date takes a short scroll.
  */
-export default function RollingRows({ id, label, title, rows, tone = "light" }: { id: string; label: string; title: ReactNode; rows: readonly Row[]; tone?: "light" | "dark" }) {
+export default function RollingRows({ id, title, rows, tone = "light" }: { id: string; title: ReactNode; rows: readonly Row[]; tone?: "light" | "dark" }) {
   const [active, setActive] = useState(0);
   const refs = useRef<(HTMLLIElement | null)[]>([]);
 
@@ -37,8 +37,7 @@ export default function RollingRows({ id, label, title, rows, tone = "light" }: 
   return (
     <section className="ts-section" data-tone={tone} id={id} aria-labelledby={`${id}-title`}>
       <div className="ts-wrap">
-        <p className="ts-label">{label}</p>
-        <h2 className="ts-h2" id={`${id}-title`} style={{ maxWidth: "14em", marginTop: 18 }}>{title}</h2>
+        <h2 className="ts-h2" id={`${id}-title`} style={{ maxWidth: "14em" }}>{title}</h2>
         <div className="dt-grid">
           <div className="dt-pin" aria-hidden="true">
             <div className="dt-odo ts-num" key={active}>
@@ -59,7 +58,6 @@ export default function RollingRows({ id, label, title, rows, tone = "light" }: 
               <li key={r.title} ref={(el) => { refs.current[i] = el; }} data-index={i} className="dt-row" data-active={i === active} data-past={i < active}>
                 <span className="dt-row__when">{r.when}</span>
                 <div>
-                  {r.tag && <span className="dt-row__who">{r.tag}</span>}
                   <h3 className="ts-h3">{r.title}</h3>
                   <p className="ts-body dt-row__detail">{r.detail}</p>
                 </div>

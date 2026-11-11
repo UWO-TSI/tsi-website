@@ -45,7 +45,7 @@ export default function NpoApplyForm({ contact }: { contact: string }) {
   return (
     <form className="np-form" onSubmit={submit} noValidate={false}>
       <fieldset className="np-form__group">
-        <legend className="ts-label">Your organization</legend>
+        <legend className="np-legend">Your organization</legend>
         <label className="np-field"><span>Organization name</span><input name="org_name" required maxLength={200} autoComplete="organization" /></label>
         <label className="np-field"><span>Website <em>optional</em></span><input name="website" maxLength={300} inputMode="url" placeholder="example.org" /></label>
         <label className="np-field"><span>Type</span>
@@ -58,14 +58,14 @@ export default function NpoApplyForm({ contact }: { contact: string }) {
       </fieldset>
 
       <fieldset className="np-form__group">
-        <legend className="ts-label">You</legend>
+        <legend className="np-legend">You</legend>
         <label className="np-field"><span>Your name</span><input name="contact_name" required maxLength={160} autoComplete="name" /></label>
         <label className="np-field"><span>Email</span><input name="contact_email" type="email" required maxLength={254} autoComplete="email" /></label>
         <label className="np-field"><span>Your role <em>optional</em></span><input name="contact_role" maxLength={160} autoComplete="organization-title" /></label>
       </fieldset>
 
       <fieldset className="np-form__group">
-        <legend className="ts-label">What you need</legend>
+        <legend className="np-legend">What you need</legend>
         <label className="np-field np-field--wide"><span>What would you want built, and what problem does it solve?</span><textarea name="problem" required minLength={20} maxLength={4000} rows={5} /></label>
         <label className="np-field np-field--wide"><span>Who would use it? <em>optional</em></span><textarea name="users" maxLength={2000} rows={3} /></label>
         <label className="np-field np-field--wide"><span>What do you use today? <em>optional</em></span><textarea name="current_tools" maxLength={2000} rows={3} placeholder="Spreadsheets, a website builder, paper forms..." /></label>

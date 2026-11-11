@@ -69,15 +69,17 @@
 
 /* ── Type ───────────────────────────────────────────────── */
 
+/* Only for data (what a number is, a table column). No eyebrow labels over headings: David found them
+   AI-looking and had every one removed (2026-11-11). */
 .ts-label {
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 500;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--signal);
+  color: var(--on-dark-3);
 }
-[data-tone="light"] .ts-label { color: var(--signal-light); }
+[data-tone="light"] .ts-label { color: var(--on-light-3); }
 
 .ts-h1 { font-size: clamp(2.5rem, 6.2vw, 6rem); line-height: 1.02; letter-spacing: -0.035em; font-weight: 500; }
 .ts-h2 { font-size: clamp(2rem, 4.4vw, 3.75rem); line-height: 1.05; letter-spacing: -0.03em; font-weight: 500; }
@@ -116,8 +118,8 @@
    states, and every inner corner is that radius minus the padding, so the corners stay concentric. */
 
 .ts-nav {
-  --r: 22px; --pad: 6px; --item: 38px;
-  position: fixed; z-index: 60; top: 20px; left: 50%; translate: -50% 0;
+  --r: 24px; --pad: 8px; --item: 38px;
+  position: fixed; z-index: 60; top: 20px; left: 50%; translate: -50% 0; width: max-content;
   display: flex; flex-direction: column; align-items: stretch;
   border-radius: var(--r); overflow: clip;
   background: rgba(15, 15, 16, 0.72);
@@ -133,15 +135,15 @@
 @keyframes ts-island-in { 0% { scale: 1; } 38% { scale: 0.97 1.06; } 70% { scale: 1.012 0.985; } 100% { scale: 1; } }
 @keyframes ts-island-out { 0% { scale: 1; } 38% { scale: 1.025 0.95; } 70% { scale: 0.996 1.012; } 100% { scale: 1; } }
 
-.ts-nav__bar { display: flex; align-items: center; gap: 22px; padding: var(--pad) var(--pad) var(--pad) 18px;
+.ts-nav__bar { display: flex; align-items: center; gap: 36px; padding: var(--pad) var(--pad) var(--pad) 22px;
   transition: padding 0.42s var(--ease-settle), gap 0.42s var(--ease-settle); }
 .ts-nav[data-compact="true"] .ts-nav__bar { padding-left: 9px; gap: 4px; }
 .ts-nav__logo { display: flex; align-items: center; color: inherit; }
-/* The ring of six turns one place (60°) and shrinks, so it lands looking the same. */
-.ts-nav__logo svg { transition: transform 0.6s var(--ease-pop); }
-.ts-nav[data-compact="true"] .ts-nav__logo svg { transform: rotate(60deg) scale(0.8); }
-.ts-nav__logo:hover svg { transform: rotate(-12deg) scale(1.06); }
-.ts-nav[data-compact="true"] .ts-nav__logo:hover svg { transform: rotate(48deg) scale(0.88); }
+/* The logo stays upright; it only shrinks into the island and pops a little on hover. */
+.ts-nav__logo svg { transition: transform 0.5s var(--ease-pop); }
+.ts-nav[data-compact="true"] .ts-nav__logo svg { transform: scale(0.82); }
+.ts-nav__logo:hover svg { transform: scale(1.08); }
+.ts-nav[data-compact="true"] .ts-nav__logo:hover svg { transform: scale(0.9); }
 
 /* Text links and icons trade places (grid 1fr and 0fr animate the width). */
 .ts-nav__links-wrap, .ts-nav__icons-wrap { display: grid; transition: grid-template-columns 0.42s var(--ease-settle), opacity 0.2s var(--ease-ui); }
@@ -150,14 +152,14 @@
 .ts-nav__icons-wrap { grid-template-columns: 0fr; }
 .ts-nav[data-compact="true"] .ts-nav__links-wrap { grid-template-columns: 0fr; opacity: 0; }
 .ts-nav[data-compact="true"] .ts-nav__icons-wrap { grid-template-columns: 1fr; }
-.ts-nav__links { display: flex; align-items: center; gap: 22px; }
+.ts-nav__links { display: flex; align-items: center; gap: 30px; }
 .ts-nav__link { font-size: 14px; letter-spacing: 0.01em; color: rgba(241, 255, 255, 0.74); white-space: nowrap; transition: color 0.3s var(--ease-ui); }
 .ts-nav__link:hover, .ts-nav__link[aria-current="page"] { color: var(--on-dark); }
 .ts-nav__link:focus-visible { outline: 2px solid var(--signal); outline-offset: 4px; border-radius: 4px; }
 .ts-nav__link--quiet { color: rgba(241, 255, 255, 0.55); }
 
 .ts-nav__icons { display: flex; align-items: center; gap: 2px; padding-left: 6px; }
-.ts-nav__icon { display: grid; place-items: center; flex: none; width: var(--item); height: var(--item); border-radius: 50%; color: rgba(241, 255, 255, 0.72);
+.ts-nav__icon { display: grid; place-items: center; flex: none; width: var(--item); height: var(--item); border-radius: 50%; color: rgba(241, 255, 255, 0.88);
   opacity: 0; transform: translateY(6px) scale(0.6);
   transition: opacity 0.2s var(--ease-ui), transform 0.3s var(--ease-pop), background-color 0.2s var(--ease-ui), color 0.2s var(--ease-ui); }
 /* Icons pop in one after another once the links have gone. */
@@ -175,16 +177,19 @@
   opacity: 0; scale: 0.9; transition: translate 0.34s var(--ease-settle), opacity 0.16s var(--ease-ui), scale 0.26s var(--ease-pop); }
 .ts-nav__tip[data-show="true"] { opacity: 1; scale: 1; translate: calc(var(--x) - 50%) 0; }
 
-/* The button: the label folds away and the icon pops in, leaving a circle. */
-.ts-nav .ts-btn { height: var(--item); font-size: 14px; padding: 0 14px; gap: 0; border-radius: calc(var(--r) - var(--pad));
-  transition: height 0.42s var(--ease-settle), padding 0.42s var(--ease-settle), border-radius 0.42s var(--ease-settle), background-color 0.3s, transform 0.26s var(--ease-pop); }
-.ts-nav[data-compact="true"] .ts-nav__cta { padding: 0 calc((var(--item) - 14px) / 2); border-radius: 50%; margin-left: 4px; }
-.ts-nav__cta:active { transform: scale(0.92); }
+/* The button: its icon stays, the label folds away into a circle in the island. A lit top edge, a lift
+   on hover, a press. */
+.ts-nav .ts-btn { height: var(--item); font-size: 14px; font-weight: 500; padding: 0 16px 0 13px; gap: 8px; border-radius: calc(var(--r) - var(--pad));
+  background: linear-gradient(180deg, #3aa8f3, #1d9bf0 60%); color: var(--ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 -1px 0 rgba(0, 0, 0, 0.12), 0 6px 18px -6px rgba(29, 155, 240, 0.55);
+  transition: height 0.42s var(--ease-settle), padding 0.42s var(--ease-settle), gap 0.42s var(--ease-settle), border-radius 0.42s var(--ease-settle), box-shadow 0.3s var(--ease-ui), filter 0.2s, transform 0.26s var(--ease-pop); }
+.ts-nav .ts-btn:hover { filter: brightness(1.08); transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -1px 0 rgba(0, 0, 0, 0.12), 0 10px 24px -8px rgba(29, 155, 240, 0.7); }
+.ts-nav .ts-btn:active { transform: scale(0.94); transition-duration: 0.08s; }
+.ts-nav[data-compact="true"] .ts-nav__cta { padding: 0 calc((var(--item) - 14px) / 2); gap: 0; border-radius: 50%; margin-left: 4px; }
 .ts-nav__cta-label { display: inline-block; max-width: 12em; overflow: hidden; white-space: nowrap; transition: max-width 0.42s var(--ease-settle), opacity 0.2s var(--ease-ui); }
-.ts-nav__cta-icon { display: grid; place-items: center; width: 0; overflow: hidden; opacity: 0; transform: scale(0.4) rotate(-30deg);
-  transition: width 0.42s var(--ease-settle), opacity 0.2s var(--ease-ui), transform 0.34s var(--ease-pop); }
+.ts-nav__cta-icon { display: grid; place-items: center; width: 14px; transition: transform 0.34s var(--ease-pop); }
+.ts-nav .ts-btn:hover .ts-nav__cta-icon { transform: rotate(-10deg) scale(1.12); }
 .ts-nav[data-compact="true"] .ts-nav__cta-label { max-width: 0; opacity: 0; }
-.ts-nav[data-compact="true"] .ts-nav__cta-icon { width: 14px; opacity: 1; transform: none; transition-delay: 0.08s; }
 
 .ts-nav__right { display: flex; align-items: center; gap: 6px; }
 
@@ -197,7 +202,8 @@
 }
 .ts-nav__strip:hover { color: var(--on-dark); }
 .ts-nav[data-compact="true"] .ts-nav__strip { height: 0; border-top-color: transparent; opacity: 0; }
-.ts-nav__track { display: flex; gap: 40px; padding-left: 40px; white-space: nowrap; animation: ts-marquee 30s linear infinite; }
+.ts-nav__track { display: flex; gap: 72px; padding-left: 72px; white-space: nowrap; animation: ts-marquee 36s linear infinite; }
+.ts-nav__track span { display: inline-flex; gap: 14px; }
 .ts-nav__strip:hover .ts-nav__track { animation-play-state: paused; }
 .ts-nav__track b { color: var(--signal); font-weight: 500; }
 @keyframes ts-marquee { to { transform: translateX(-50%); } }
@@ -206,15 +212,13 @@
 .ts-nav[data-tone="light"] .ts-nav__link { color: rgba(15, 15, 16, 0.72); }
 .ts-nav[data-tone="light"] .ts-nav__link:hover, .ts-nav[data-tone="light"] .ts-nav__link[aria-current="page"] { color: var(--on-light); }
 .ts-nav[data-tone="light"] .ts-nav__link--quiet { color: rgba(15, 15, 16, 0.55); }
-.ts-nav[data-tone="light"] .ts-nav__icon { color: rgba(15, 15, 16, 0.7); }
+.ts-nav[data-tone="light"] .ts-nav__icon { color: rgba(15, 15, 16, 0.82); }
 .ts-nav[data-tone="light"] .ts-nav__icon:hover, .ts-nav[data-tone="light"] .ts-nav__icon:focus-visible { background: rgba(15, 15, 16, 0.07); color: var(--signal); }
 .ts-nav[data-tone="light"] .ts-nav__icon[aria-current="page"] { color: var(--on-light); }
 .ts-nav[data-tone="light"] .ts-nav__tip { background: rgba(241, 255, 255, 0.92); color: var(--on-light); border-color: var(--line-light); }
 .ts-nav[data-tone="light"] .ts-nav__strip { border-color: var(--line-light); color: rgba(15, 15, 16, 0.6); }
 .ts-nav[data-tone="light"] .ts-nav__strip:hover { color: var(--on-light); }
 .ts-nav[data-tone="light"] .ts-nav__track b { color: var(--signal-light); }
-.ts-nav[data-tone="light"] .ts-btn--primary { background: var(--signal-light); color: var(--ink); }
-
 .ts-nav__menu-btn { display: none; width: var(--item); height: var(--item); border-radius: calc(var(--r) - var(--pad)); border: 1px solid var(--line-dark); background: transparent; color: inherit; align-items: center; justify-content: center;
   transition: width 0.42s var(--ease-settle), height 0.42s var(--ease-settle), border-radius 0.42s var(--ease-settle); }
 .ts-nav[data-compact="true"] .ts-nav__menu-btn { border-radius: 50%; }
@@ -271,18 +275,23 @@
 /* It leans into the direction it moves (--lean, set per frame). */
 .ts-cursor svg { width: 100%; height: 100%; display: block; rotate: var(--lean, 0deg); transition: transform 0.3s var(--ease-pop); }
 /* Over anything clickable it turns blue, grows, and a ring pops out around it. */
-.ts-cursor::after { content: ""; position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; border: 1.5px solid currentColor;
+.ts-cursor::after { content: ""; position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; border: 1px solid currentColor;
   opacity: 0; scale: 0.3; transition: opacity 0.18s var(--ease-ui), scale 0.32s var(--ease-pop); }
 .ts-cursor[data-hover="true"] { color: var(--signal); mix-blend-mode: normal; }
 .ts-cursor[data-hover="true"] svg { transform: scale(1.6) translateY(-1px); }
-.ts-cursor[data-hover="true"]::after { opacity: 0.55; scale: 1; }
+.ts-cursor[data-hover="true"]::after { opacity: 0.28; scale: 1; }
 .ts-cursor[data-down="true"] svg { transform: scale(0.75) translateY(2px); transition-duration: 0.08s; }
-.ts-cursor[data-down="true"]::after { scale: 0.8; opacity: 0.9; transition-duration: 0.08s; }
+.ts-cursor[data-down="true"]::after { scale: 0.85; opacity: 0.4; transition-duration: 0.08s; }
 
 /* A click throws a ring of characters outward. */
-.ts-burst { position: fixed; z-index: 91; pointer-events: none; width: 0; height: 0; font-family: "Sohne Mono", ui-monospace, monospace; font-size: 10px; font-weight: 500; color: #1d9bf0; }
-.ts-burst span { position: absolute; left: -3px; top: -6px; animation: ts-burst 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
-@keyframes ts-burst { from { transform: translate(0, 0) scale(1); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(0.6); opacity: 0; } }
+/* A click sprays blue characters: they fly out, arc and fall a little as they fade. */
+.ts-burst { position: fixed; z-index: 91; pointer-events: none; width: 0; height: 0; font-family: "Sohne Mono", ui-monospace, monospace; font-size: 11px; font-weight: 600; color: #1d9bf0; }
+.ts-burst span { position: absolute; left: -3px; top: -7px; opacity: 0; animation: ts-burst var(--t, 0.55s) cubic-bezier(0.15, 0.75, 0.3, 1) var(--d, 0s) forwards; }
+@keyframes ts-burst {
+  0% { transform: translate(0, 0) scale(1.2); opacity: 1; }
+  55% { transform: translate(calc(var(--dx) * 0.8), calc(var(--dy) * 0.8 - 4px)) scale(1); opacity: 0.9; }
+  100% { transform: translate(var(--dx), calc(var(--dy) + 12px)) scale(0.5); opacity: 0; }
+}
 
 /* ── Glyph wipe at a seam ───────────────────────────────── */
 

@@ -35,11 +35,11 @@ export function siteFor(host: string | null | undefined): SiteConfig {
 
 /** Dates on the home page and the nav's marquee, in the order a year runs from August. */
 export const YEAR = [
-  { when: "Aug 10", title: "Nonprofit applications open", detail: "Apply for an 8-month build with a student team. Applications close Aug 31.", who: "Nonprofits" },
-  { when: "Sep", title: "Student hiring, round 1", detail: "Project managers and VP roles.", who: "Students" },
-  { when: "Sep", title: "Student hiring, round 2", detail: "Developers and directors. The applicant portal opens with each round.", who: "Students" },
-  { when: "Mar", title: "GENESIS", detail: "The year's projects on stage, in front of the nonprofits, sponsors and students behind them.", who: "Everyone" },
-  { when: "May", title: "Leadership hiring", detail: "Next year's executive team.", who: "Students" },
+  { when: "Aug 10", title: "Nonprofit applications open", detail: "Apply for an 8-month build with a student team." },
+  { when: "Aug 31", title: "Nonprofit applications close", detail: "Last day to apply. We choose partners in September." },
+  { when: "Sep", title: "Student hiring, round 1", detail: "Project managers and VP roles." },
+  { when: "Mar", title: "GENESIS", detail: "The year's projects on stage, in front of the nonprofits, sponsors and students behind them." },
+  { when: "May", title: "Leadership hiring", detail: "Next year's executive team." },
 ] as const;
 
 export const NUMBERS = [

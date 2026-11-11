@@ -69,7 +69,6 @@ export default function GenesisPage() {
         </div>
         <div className="ts-wrap gx-hero__grid">
           <div className="gx-hero__copy">
-            <Reveal><p className="ts-label">Tethos · Year-end showcase · March</p></Reveal>
             <Reveal delay={0.06}><h1 className="gx-word">GENESIS</h1></Reveal>
             <Reveal delay={0.12}><p className="ts-lede">Every March, student teams present the software they built for nonprofits to the organizations, sponsors and students behind it.</p></Reveal>
             <Reveal delay={0.18}>
@@ -90,8 +89,7 @@ export default function GenesisPage() {
 
       <section className="ts-section" data-tone="deep" id="projects" aria-labelledby="projects-title">
         <div className="ts-wrap">
-          <Reveal><p className="ts-label">On stage in March</p></Reveal>
-          <Reveal delay={0.06}><h2 className="ts-h2" id="projects-title" style={{ marginTop: 18, maxWidth: "14em" }}>This year&apos;s projects.</h2></Reveal>
+          <Reveal delay={0.06}><h2 className="ts-h2" id="projects-title" style={{ maxWidth: "14em" }}>This year&apos;s projects.</h2></Reveal>
           <ol className="gx-projects">
             {DEVELOPER_PROJECTS.map((p, i) => (
               <Reveal as="li" key={p.title} className="gx-project" delay={0.05 * i}>
@@ -107,8 +105,7 @@ export default function GenesisPage() {
 
       <section className="ts-section" data-tone="deep" id="where" aria-labelledby="where-title">
         <div className="ts-wrap">
-          <Reveal><p className="ts-label">Where your sponsorship goes</p></Reveal>
-          <Reveal delay={0.06}><h2 className="ts-h2" id="where-title" style={{ marginTop: 18, maxWidth: "15em" }}>From your support to software in use.</h2></Reveal>
+          <Reveal delay={0.06}><h2 className="ts-h2" id="where-title" style={{ maxWidth: "15em" }}>From your support to software in use.</h2></Reveal>
           <ol className="gx-flow">
             {FLOW.map((f, i) => (
               <Reveal as="li" key={f.who} className="gx-flow__step" delay={0.08 * i}>
@@ -126,8 +123,7 @@ export default function GenesisPage() {
 
       <section className="ts-section" data-tone="deep" id="sponsor" aria-labelledby="sponsor-title">
         <div className="ts-wrap">
-          <Reveal><p className="ts-label">Sponsorship tiers</p></Reveal>
-          <Reveal delay={0.06}><h2 className="ts-h2" id="sponsor-title" style={{ marginTop: 18, maxWidth: "12em" }}>Fund technology that matters.</h2></Reveal>
+          <Reveal delay={0.06}><h2 className="ts-h2" id="sponsor-title" style={{ maxWidth: "12em" }}>Fund technology that matters.</h2></Reveal>
           <Reveal className="gx-table-wrap" delay={0.1}>
             <table className="gx-table">
               <caption className="sr-only">What each sponsorship tier includes</caption>
@@ -171,7 +167,7 @@ export default function GenesisPage() {
 
       <section className="gx-thanks" data-tone="deep" id="thanks" aria-labelledby="thanks-title">
         <div className="ts-wrap">
-          <p className="ts-label" id="thanks-title">Thank you for making GENESIS 2026 happen</p>
+          <p className="ts-body gx-thanks__title" id="thanks-title">Thank you for making GENESIS 2026 happen.</p>
         </div>
         <div className="gx-thanks__strip">
           <div className="gx-thanks__track">

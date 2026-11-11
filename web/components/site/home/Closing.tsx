@@ -6,7 +6,6 @@ export default function Closing() {
   return (
     <section className="ts-section cl" data-tone="dark" id="join" aria-labelledby="join-title">
       <div className="ts-wrap cl__inner">
-        <Reveal><p className="ts-label">For students</p></Reveal>
         <Reveal delay={0.06}><h2 className="cl__title" id="join-title">Build with us.</h2></Reveal>
         <Reveal delay={0.12}>
           <p className="ts-lede" style={{ textAlign: "center", margin: "0 auto" }}>

@@ -10,8 +10,7 @@ export default function WhoAreYou() {
   return (
     <section className="ts-section" data-tone="dark" id="audiences" aria-labelledby="audiences-title">
       <div className="ts-wrap">
-        <Reveal><p className="ts-label">Who are you?</p></Reveal>
-        <Reveal delay={0.08}><h2 className="ts-h2" id="audiences-title" style={{ marginTop: 18, maxWidth: "16em" }}>Three ways in, depending on who you are.</h2></Reveal>
+        <Reveal delay={0.08}><h2 className="ts-h2" id="audiences-title" style={{ maxWidth: "16em" }}>Three ways in, depending on who you are.</h2></Reveal>
         <div className="wy-grid">
           {CARDS.map((c, i) => (
             <Reveal key={c.who} href={c.href} delay={0.1 + i * 0.1} className="wy-card">

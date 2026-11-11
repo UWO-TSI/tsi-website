@@ -96,7 +96,7 @@ export default function SiteNav({ cta, contact }: { cta: SeasonCta; contact: str
   const tipProps = (label: string) => ({ "aria-label": label, onPointerEnter: showTip(label), onFocus: showTip(label), onPointerLeave: () => setTip(null), onBlur: () => setTip(null) });
 
   const strip = Array.from({ length: 4 }, (_, i) => (
-    <span key={i}>{STRIP.label}&nbsp;&nbsp;<b>{STRIP.when}</b></span>
+    <span key={i}>{STRIP.label}<b>{STRIP.when}</b></span>
   ));
 
   return (
@@ -119,21 +119,21 @@ export default function SiteNav({ cta, contact }: { cta: SeasonCta; contact: str
             <nav className="ts-nav__icons" aria-label="Main">
               {LINKS.map((l, i) => (
                 <Link key={l.href} href={l.href} className="ts-nav__icon" style={{ "--i": i } as React.CSSProperties} aria-current={path === l.href ? "page" : undefined} {...tipProps(l.label)}>
-                  <l.Icon size={15} strokeWidth={1.8} aria-hidden="true" />
+                  <l.Icon size={16} strokeWidth={2.1} aria-hidden="true" />
                 </Link>
               ))}
               <a href={`mailto:${contact}`} className="ts-nav__icon" style={{ "--i": 3 } as React.CSSProperties} {...tipProps("Contact")}>
-                <Mail size={15} strokeWidth={1.8} aria-hidden="true" />
+                <Mail size={16} strokeWidth={2.1} aria-hidden="true" />
               </a>
               <a href={`${PLAY_ORIGIN}/`} className="ts-nav__icon" style={{ "--i": 4 } as React.CSSProperties} {...tipProps("Student portal")}>
-                <LogIn size={15} strokeWidth={1.8} aria-hidden="true" />
+                <LogIn size={16} strokeWidth={2.1} aria-hidden="true" />
               </a>
             </nav>
           </div>
           <div className="ts-nav__right">
             <Link href={cta.href} className="ts-btn ts-btn--primary ts-nav__cta" data-cta={cta.kind} aria-label={cta.label}
               onPointerEnter={compact ? showTip(cta.label) : undefined} onPointerLeave={() => setTip(null)}>
-              <span className="ts-nav__cta-icon" aria-hidden="true"><CtaIcon size={14} strokeWidth={2} /></span>
+              <span className="ts-nav__cta-icon" aria-hidden="true"><CtaIcon size={14} strokeWidth={2.2} /></span>
               <span className="ts-nav__cta-label">{cta.label}</span>
             </Link>
             <button type="button" className="ts-nav__menu-btn" aria-label="Open menu" aria-expanded={open} onClick={() => setOpen(true)}>

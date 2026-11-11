@@ -192,7 +192,6 @@ export default function HeroDive() {
         </div>
 
         <div className="ts-wrap hd-copy">
-          <p className="ts-label">Tethos Association</p>
           <h1 className="ts-h1 hd-title">
             <span className="hd-title__dim">Most tech is built to make money.</span>{" "}
             <span>We build it for purpose.</span>
@@ -215,7 +214,6 @@ export default function HeroDive() {
 
         <div className="hd-reveal" data-tone="light" id="about">
           <div className="ts-wrap hd-reveal__inner">
-            <p className="ts-label">What we do</p>
             <h2 className="ts-h2 hd-mission">We put student teams on real software for nonprofits, at no cost to them.</h2>
             <p className="ts-body hd-mission__body">
               Tethos runs Tech for Social Impact (TSI), our first branch, with chapters at Western and UBC. Each year its teams build for nonprofits and show the work at GENESIS.
