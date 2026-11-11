@@ -2,8 +2,8 @@
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, useGLTF, Html } from "@react-three/drei";
-import { Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Color, DirectionalLight, DoubleSide, Material, Mesh, Points, Vector3, QuadraticBezierCurve3, BufferGeometry, LineDashedMaterial, Line } from "three";
+import { createContext, Suspense, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Color, DirectionalLight, DoubleSide, Group, Material, Mesh, Points, Vector3, QuadraticBezierCurve3, BufferGeometry, LineDashedMaterial, Line } from "three";
 import {
     ACESFilmicToneMapping,
     SRGBColorSpace,
@@ -22,7 +22,7 @@ import globeData from "@/data/globe-nodes.json";
 
 const CONFIG = {
     topography: 0.10,
-    background: "#10121a",
+    background: "#0f0f10",
     land: "#6b9362",
     water: "#181a25",
     blend: 1.00,
@@ -36,6 +36,15 @@ const ROTATION_Y = 3.45;
 
 // Module-level hover counter — GlobeNode writes, SceneContent reads
 let _nodeHoverCount = 0;
+
+/** How far the home page's dive has gone, 0 to 1 (a ref, read every frame, so scrolling never re-renders). */
+export type DiveRef = { current: number };
+const DiveContext = createContext<{ dive: DiveRef; base: number }>({ dive: { current: 0 }, base: 1 });
+/** The globe grows to this many times its resting size by the end of the dive, and rolls this far (radians). */
+const DIVE_SCALE = 3.2;
+const DIVE_ROLL = -1.2;
+const viewAxis = new Vector3();
+const ARC = "#1d9bf0";
 
 // ═══════════════════════════════════════════
 // Node types & data
@@ -216,7 +225,7 @@ function ArcLine({ start, end }: { start: Vector3; end: Vector3 }) {
         const pts = c.getPoints(48);
         const geo = new BufferGeometry().setFromPoints(pts);
         const mat = new LineDashedMaterial({
-            color: "#9cff00",
+            color: ARC,
             dashSize: 0.02,
             gapSize: 0.01,
             opacity: 0.25,
@@ -241,7 +250,7 @@ function ArcLine({ start, end }: { start: Vector3; end: Vector3 }) {
             <primitive object={lineObj} />
             <mesh ref={dotRef}>
                 <sphereGeometry args={[0.006, 8, 8]} />
-                <meshBasicMaterial color="#9cff00" transparent opacity={0.9} />
+                <meshBasicMaterial color={ARC} transparent opacity={0.9} />
             </mesh>
         </>
     );
@@ -258,9 +267,10 @@ function GlobeNode({ node, position }: { node: GlobeNodeData; position: Vector3 
     const hoverRingRef = useRef<Mesh>(null);
     const isChapter = node.type === "chapter";
     const r = isChapter ? 0.018 : 0.01;
-    const nodeColor = isChapter ? "#6b8cff" : "#9cff00";
-    const hoverColor = isChapter ? "#a0b8ff" : "#c8ff50";
-    const accentColor = isChapter ? "#3a6aff" : "#6b9362";
+    const nodeColor = isChapter ? ARC : "#c9d6e3";
+    const hoverColor = isChapter ? "#7cc4f7" : "#ffffff";
+    const accentColor = isChapter ? ARC : "#8da8cc";
+    const { dive } = useContext(DiveContext);
 
     useFrame(({ clock }) => {
         // Pulse glow ring for chapters
@@ -307,8 +317,8 @@ function GlobeNode({ node, position }: { node: GlobeNodeData; position: Vector3 
 
             {/* Invisible larger hitbox */}
             <mesh
-                onPointerOver={(e) => { e.stopPropagation(); setHovered(true); _nodeHoverCount++; document.body.style.cursor = "pointer"; }}
-                onPointerOut={(e) => { e.stopPropagation(); setHovered(false); _nodeHoverCount--; document.body.style.cursor = "auto"; }}
+                onPointerOver={(e) => { e.stopPropagation(); if (dive.current > 0.02) return; setHovered(true); _nodeHoverCount++; document.body.style.cursor = "pointer"; }}
+                onPointerOut={(e) => { e.stopPropagation(); if (!hovered) return; setHovered(false); _nodeHoverCount--; document.body.style.cursor = "auto"; }}
             >
                 <sphereGeometry args={[r * 4, 12, 12]} />
                 <meshBasicMaterial visible={false} />
@@ -523,6 +533,10 @@ function GlobePostProcessing({ children }: { children: ReactNode }) {
 
 function SceneContent() {
     const { camera, gl, invalidate, scene } = useThree();
+    const { dive, base } = useContext(DiveContext);
+    const diveGroup = useRef<Group>(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const controls = useRef<any>(null);
     const lightRef = useRef<DirectionalLight | null>(null);
     const [anyNodeHovered, setAnyNodeHovered] = useState(false);
 
@@ -564,6 +578,16 @@ function SceneContent() {
     }, [gl]);
 
     useFrame(() => {
+        const d = dive.current;
+        if (diveGroup.current) {
+            diveGroup.current.scale.setScalar(base * (1 + (DIVE_SCALE - 1) * d));
+            // Roll around the line of sight, so the canvas itself never turns and its corners never show.
+            diveGroup.current.quaternion.setFromAxisAngle(viewAxis.copy(camera.position).normalize(), DIVE_ROLL * d);
+        }
+        if (controls.current) {
+            controls.current.enabled = d < 0.02;
+            controls.current.autoRotate = !anyNodeHovered && d < 0.6;
+        }
         invalidate();
     });
 
@@ -575,8 +599,11 @@ function SceneContent() {
                 color={CONFIG.light.color}
                 intensity={CONFIG.light.intensity}
             />
-            <Globe />
+            <group ref={diveGroup}>
+                <Globe />
+            </group>
             <OrbitControls
+                ref={controls}
                 autoRotate={!anyNodeHovered}
                 autoRotateSpeed={0.3}
                 dampingFactor={0.03}
@@ -592,10 +619,15 @@ function SceneContent() {
 // Exported component
 // ═══════════════════════════════════════════
 
-export default function GlobeVisualizerWebGPU({ className = "" }: { className?: string }) {
+const NO_DIVE: DiveRef = { current: 0 };
+
+/** `base` scales the resting globe (the home hero draws it on a full-screen canvas, so it starts small). */
+export default function GlobeVisualizerWebGPU({ className = "", dive = NO_DIVE, base = 1 }: { className?: string; dive?: DiveRef; base?: number }) {
     return (
         <div className={className} style={{ position: "relative", width: "100%", height: "100%", minHeight: 500 }}>
+          <DiveContext.Provider value={{ dive, base }}>
             <Canvas
+                dpr={[1, 1.75]}
                 camera={{ position: [0, 1, 5.1], fov: 30 }}
                 gl={async (props: any) => {
                     const renderer = new WebGPURenderer({
@@ -616,6 +648,7 @@ export default function GlobeVisualizerWebGPU({ className = "" }: { className?: 
                     </GlobePostProcessing>
                 </Suspense>
             </Canvas>
+          </DiveContext.Provider>
         </div>
     );
 }

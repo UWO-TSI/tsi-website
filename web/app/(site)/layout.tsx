@@ -1,17 +1,42 @@
+import "./site.css";
 import type { ReactNode } from "react";
-import DropdownNav from "@/components/layout/DropdownNav";
-import CustomCursor from "@/components/ui/CustomCursor";
-import Footer from "@/components/layout/Footer";
-import NoiseOverlay from "@/components/ui/NoiseOverlay";
+import type { Metadata } from "next";
+import { Geist_Mono, Inter_Tight } from "next/font/google";
+import SiteNav from "@/components/site/SiteNav";
+import SiteFooter from "@/components/site/SiteFooter";
+import SiteScroll from "@/components/site/SiteScroll";
+import PersonCursor from "@/components/site/PersonCursor";
+import { TETHOS } from "@/lib/site/config";
+import { loadSeasonCta } from "@/lib/site/season-server";
 
-export default function SiteLayout({ children }: { children: ReactNode }) {
+// Fill-ins for the characters the Söhne trial cuts don't have ($ + ? ' : # @ and the rest).
+const fillSans = Inter_Tight({ subsets: ["latin"], variable: "--font-fill-sans", preload: false, display: "swap" });
+const fillMono = Geist_Mono({ subsets: ["latin"], variable: "--font-fill-mono", preload: false, display: "swap" });
+
+// The nav's call to action follows open hiring rounds; pages rebuild every 5 minutes.
+export const revalidate = 300;
+
+const DESCRIPTION = "Most tech is built to make money. We build it for purpose. Tethos is a student-run nonprofit building pro bono technology for nonprofits and the communities they serve.";
+
+export const metadata: Metadata = {
+  title: { default: "Tethos", template: "%s | Tethos" },
+  description: DESCRIPTION,
+  openGraph: { title: "Tethos", description: DESCRIPTION, siteName: "Tethos", type: "website" },
+  twitter: { card: "summary_large_image", title: "Tethos", description: DESCRIPTION },
+};
+
+export default async function SiteLayout({ children }: { children: ReactNode }) {
+  // One site today. Branch sites will pick their config by host (lib/site/config.ts `siteFor`).
+  const site = TETHOS;
+  const cta = await loadSeasonCta();
   return (
-    <>
-      <CustomCursor />
-      <NoiseOverlay opacity={0.03} />
-      <DropdownNav />
+    <div className={`ts ${fillSans.variable} ${fillMono.variable}`}>
+      <SiteScroll />
+      <PersonCursor />
+      <div className="ts-grain" aria-hidden="true" />
+      <SiteNav cta={cta} contact={site.contact} />
       <main>{children}</main>
-      <Footer />
-    </>
+      <SiteFooter site={site} />
+    </div>
   );
 }
