@@ -13,13 +13,18 @@ type Props = {
   accent?: string;
   /** "right": a full-bleed field with the picture on the right (up to 55% of the width), as the reference's features section. */
   layout?: "contain" | "right";
+  /**
+   * Each pixel of the picture is one character cell, as the reference draws its 160 x 88 model: no
+   * scaling or averaging, so the figure keeps its exact shape and may run past the edge. Wide screens only.
+   */
+  pixelCells?: boolean;
 };
 
 const SCRAMBLE = "GENESIS0123456789+*#@%&";
 const LEVELS = 16;
 // The faint field behind the figure (opacity = BACKGROUND ^ 0.6, about 5%). David found 12% messy.
 const BACKGROUND = 0.007;
-// The photo's mid-tones are lifted so the hand stands clear of the field.
+// Scaled pictures have their mid-tones lifted so the figure stands clear of the field.
 const GAIN = 1.35;
 const FLIP_HZ = 0.18;
 const FLIP_THRESHOLD = 0.97;
@@ -44,7 +49,7 @@ const hash1 = (x: number) => { const s = Math.sin(x * 12.9898) * 43758.5453; ret
  * twinkle, the pointer dims a stippled patch, clicks send a ring of scrambled characters, and the
  * figure arrives along a ring from its centre the first time it's seen. Draws only on screen.
  */
-export default function GlyphField({ src, phrase, className = "", color = "#f1ffff", accent, layout = "contain" }: Props) {
+export default function GlyphField({ src, phrase, className = "", color = "#f1ffff", accent, layout = "contain", pixelCells = false }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -110,7 +115,16 @@ export default function GlyphField({ src, phrase, className = "", color = "#f1ff
       // Each cell takes the average of the picture under it (4 x 4 samples), not one pixel, so the
       // figure keeps its shape at any size.
       cellB = new Float32Array(cols * rows);
-      if (img) {
+      if (img && pixelCells && w >= 1200) {
+        // The picture starts right of the middle, far enough left that the whole sphere (the first
+        // ~110 columns) stays on screen; the hand runs off the right edge. Top-aligned when taller than the screen.
+        const x0 = Math.round(Math.min(w * 0.46, w - 800) / cw), y0 = Math.max(0, Math.round((rows - img.h) / 2));
+        region = { x: x0 * cw, y: y0 * ch, w: img.w * cw, h: img.h * ch };
+        for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+          const u = c - x0, v = r - y0;
+          if (u >= 0 && u < img.w && v >= 0 && v < img.h) cellB[r * cols + c] = img.data[(v * img.w + u) * 4] / 255;
+        }
+      } else if (img) {
         for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
           let sum = 0;
           for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) sum += sample(c * cw + (i + 0.5) * cw / 4, r * ch + (j + 0.5) * ch / 4);
@@ -247,7 +261,7 @@ export default function GlyphField({ src, phrase, className = "", color = "#f1ff
       canvas.removeEventListener("pointerdown", onClick);
       window.removeEventListener("resize", onResize);
     };
-  }, [src, phrase, color, accent, layout]);
+  }, [src, phrase, color, accent, layout, pixelCells]);
 
   return <canvas ref={ref} className={className} style={{ width: "100%", height: "100%", display: "block" }} aria-hidden="true" />;
 }

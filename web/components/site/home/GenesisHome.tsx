@@ -18,7 +18,7 @@ export default function GenesisHome() {
       {/* The field fills the section and stays pinned while the list scrolls over it; the hand sits on the right. */}
       <div className="gn-bg" aria-hidden="true">
         <div className="gn-bg__sticky">
-          <GlyphField src="/images/site/genesis-hand.png" phrase={GENESIS_PHRASE} layout="right" />
+          <GlyphField src="/images/site/genesis-sphere.png" phrase={GENESIS_PHRASE} layout="right" pixelCells />
         </div>
       </div>
       <div className="ts-wrap gn-content">
