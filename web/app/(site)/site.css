@@ -24,7 +24,7 @@
   --line-dark: rgba(241, 255, 255, 0.12);
   --line-light: rgba(15, 15, 16, 0.12);
   --signal: #1d9bf0;
-  --signal-light: #002fa7;
+  --signal-light: #1d9bf0;
 
   --sans: "Sohne", var(--font-fill-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --mono: "Sohne Mono", var(--font-fill-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -35,6 +35,9 @@
   --ease-ui: cubic-bezier(0.4, 0, 0.2, 1);
   /* A slight overshoot, so the nav settles like a dynamic island. */
   --ease-island: cubic-bezier(0.34, 1.32, 0.64, 1);
+  /* The two curves from the UI microanimation library: settle for moves, pop for things arriving. */
+  --ease-settle: cubic-bezier(0.22, 0.7, 0.2, 1);
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
 
   background: var(--ink);
   color: var(--on-dark);
@@ -99,8 +102,8 @@
 .ts-btn:focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; }
 .ts-btn--primary { background: var(--signal); color: var(--ink); }
 .ts-btn--primary:hover { background: #4cb1f4; }
-[data-tone="light"] .ts-btn--primary { background: var(--signal-light); color: #fff; }
-[data-tone="light"] .ts-btn--primary:hover { background: #1a46b8; }
+[data-tone="light"] .ts-btn--primary { background: var(--signal-light); color: var(--ink); }
+[data-tone="light"] .ts-btn--primary:hover { background: #4cb1f4; }
 .ts-btn--ghost { border-color: var(--line-dark); color: var(--on-dark); }
 .ts-btn--ghost:hover { border-color: rgba(241, 255, 255, 0.4); }
 [data-tone="light"] .ts-btn--ghost { border-color: var(--line-light); color: var(--on-light); }
@@ -108,42 +111,94 @@
 .ts-btn__arrow { font-family: var(--mono); font-size: 13px; transition: transform 0.3s var(--ease-ui); }
 .ts-btn:hover .ts-btn__arrow { transform: translateX(3px); }
 
-/* ── Nav (the Modus pill, readable, with a tone switch over light sections) ─── */
+/* ── Nav (the Modus pill, with a tone switch over light sections) ───
+   Full: links and a strip. Compact (scrolling down): a thin island of icons. One corner radius in both
+   states, and every inner corner is that radius minus the padding, so the corners stay concentric. */
 
 .ts-nav {
-  position: fixed; z-index: 60; top: 20px; left: 50%; transform: translateX(-50%);
+  --r: 22px; --pad: 6px; --item: 38px;
+  position: fixed; z-index: 60; top: 20px; left: 50%; translate: -50% 0;
   display: flex; flex-direction: column; align-items: stretch;
-  border-radius: 20px; overflow: hidden;
+  border-radius: var(--r); overflow: clip;
   background: rgba(15, 15, 16, 0.72);
   -webkit-backdrop-filter: blur(24px) saturate(1.2); backdrop-filter: blur(24px) saturate(1.2);
   border: 1px solid var(--line-dark);
-  transition: background-color 0.35s var(--ease-ui), border-color 0.35s var(--ease-ui), color 0.35s var(--ease-ui), border-radius 0.5s var(--ease-island);
+  transition: background-color 0.35s var(--ease-ui), border-color 0.35s var(--ease-ui), color 0.35s var(--ease-ui), top 0.42s var(--ease-settle);
   color: var(--on-dark);
 }
-.ts-nav__bar { display: flex; align-items: center; gap: 22px; padding: 8px 8px 8px 18px; transition: padding 0.5s var(--ease-island), gap 0.5s var(--ease-island); }
-/* The links collapse to nothing in compact mode (grid 1fr to 0fr animates the width). */
-.ts-nav__links-wrap { display: grid; grid-template-columns: 1fr; transition: grid-template-columns 0.5s var(--ease-island), opacity 0.25s var(--ease-ui); }
-.ts-nav__links-wrap > .ts-nav__links { min-width: 0; overflow: hidden; }
-.ts-nav[data-compact="true"] { border-radius: 999px; }
-.ts-nav[data-compact="true"] .ts-nav__bar { padding: 5px 5px 5px 14px; gap: 12px; }
-.ts-nav[data-compact="true"] .ts-nav__links-wrap { grid-template-columns: 0fr; opacity: 0; }
-.ts-nav[data-compact="true"] .ts-nav__strip { height: 0; border-top-color: transparent; opacity: 0; }
-.ts-nav[data-compact="true"] .ts-btn { height: 34px; border-radius: 999px; }
+.ts-nav[data-compact="true"] { --pad: 3px; --item: 26px; top: 12px; overflow: visible; }
+/* A small squash and rebound as the island changes size. */
+.ts-nav[data-moved][data-compact="true"] { animation: ts-island-in 0.56s var(--ease-settle); }
+.ts-nav[data-moved][data-compact="false"] { animation: ts-island-out 0.56s var(--ease-settle); }
+@keyframes ts-island-in { 0% { scale: 1; } 38% { scale: 0.97 1.06; } 70% { scale: 1.012 0.985; } 100% { scale: 1; } }
+@keyframes ts-island-out { 0% { scale: 1; } 38% { scale: 1.025 0.95; } 70% { scale: 0.996 1.012; } 100% { scale: 1; } }
+
+.ts-nav__bar { display: flex; align-items: center; gap: 22px; padding: var(--pad) var(--pad) var(--pad) 18px;
+  transition: padding 0.42s var(--ease-settle), gap 0.42s var(--ease-settle); }
+.ts-nav[data-compact="true"] .ts-nav__bar { padding-left: 9px; gap: 4px; }
 .ts-nav__logo { display: flex; align-items: center; color: inherit; }
+/* The ring of six turns one place (60°) and shrinks, so it lands looking the same. */
+.ts-nav__logo svg { transition: transform 0.6s var(--ease-pop); }
+.ts-nav[data-compact="true"] .ts-nav__logo svg { transform: rotate(60deg) scale(0.8); }
+.ts-nav__logo:hover svg { transform: rotate(-12deg) scale(1.06); }
+.ts-nav[data-compact="true"] .ts-nav__logo:hover svg { transform: rotate(48deg) scale(0.88); }
+
+/* Text links and icons trade places (grid 1fr and 0fr animate the width). */
+.ts-nav__links-wrap, .ts-nav__icons-wrap { display: grid; transition: grid-template-columns 0.42s var(--ease-settle), opacity 0.2s var(--ease-ui); }
+.ts-nav__links-wrap > *, .ts-nav__icons-wrap > * { min-width: 0; overflow: hidden; }
+.ts-nav__links-wrap { grid-template-columns: 1fr; }
+.ts-nav__icons-wrap { grid-template-columns: 0fr; }
+.ts-nav[data-compact="true"] .ts-nav__links-wrap { grid-template-columns: 0fr; opacity: 0; }
+.ts-nav[data-compact="true"] .ts-nav__icons-wrap { grid-template-columns: 1fr; }
 .ts-nav__links { display: flex; align-items: center; gap: 22px; }
-.ts-nav__link { font-size: 14px; letter-spacing: 0.01em; color: rgba(241, 255, 255, 0.74); transition: color 0.3s var(--ease-ui); }
+.ts-nav__link { font-size: 14px; letter-spacing: 0.01em; color: rgba(241, 255, 255, 0.74); white-space: nowrap; transition: color 0.3s var(--ease-ui); }
 .ts-nav__link:hover, .ts-nav__link[aria-current="page"] { color: var(--on-dark); }
 .ts-nav__link:focus-visible { outline: 2px solid var(--signal); outline-offset: 4px; border-radius: 4px; }
 .ts-nav__link--quiet { color: rgba(241, 255, 255, 0.55); }
-.ts-nav .ts-btn { height: 38px; font-size: 14px; padding: 0 14px; transition: height 0.5s var(--ease-island), border-radius 0.5s var(--ease-island), background-color 0.3s; }
+
+.ts-nav__icons { display: flex; align-items: center; gap: 2px; padding-left: 6px; }
+.ts-nav__icon { display: grid; place-items: center; flex: none; width: var(--item); height: var(--item); border-radius: 50%; color: rgba(241, 255, 255, 0.72);
+  opacity: 0; transform: translateY(6px) scale(0.6);
+  transition: opacity 0.2s var(--ease-ui), transform 0.3s var(--ease-pop), background-color 0.2s var(--ease-ui), color 0.2s var(--ease-ui); }
+/* Icons pop in one after another once the links have gone. */
+.ts-nav[data-compact="true"] .ts-nav__icon { opacity: 1; transform: none; transition-delay: calc(90ms + var(--i) * 35ms), calc(90ms + var(--i) * 35ms), 0s, 0s; }
+.ts-nav__icon svg { transition: transform 0.26s var(--ease-pop); }
+.ts-nav__icon:hover, .ts-nav__icon:focus-visible { background: rgba(241, 255, 255, 0.1); color: var(--signal); outline: none; }
+.ts-nav__icon:hover svg { transform: translateY(-1px) scale(1.14); }
+.ts-nav__icon:active svg { transform: scale(0.88); transition-duration: 0.08s; }
+.ts-nav__icon[aria-current="page"] { color: var(--on-dark); }
+
+/* The label under the island, gliding between icons. */
+.ts-nav__tip { position: absolute; top: calc(100% + 8px); left: 0; translate: calc(var(--x) - 50%) -4px; pointer-events: none; white-space: nowrap;
+  padding: 4px 8px; border-radius: 8px; background: rgba(15, 15, 16, 0.88); color: var(--on-dark); border: 1px solid var(--line-dark);
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
+  opacity: 0; scale: 0.9; transition: translate 0.34s var(--ease-settle), opacity 0.16s var(--ease-ui), scale 0.26s var(--ease-pop); }
+.ts-nav__tip[data-show="true"] { opacity: 1; scale: 1; translate: calc(var(--x) - 50%) 0; }
+
+/* The button: the label folds away and the icon pops in, leaving a circle. */
+.ts-nav .ts-btn { height: var(--item); font-size: 14px; padding: 0 14px; gap: 0; border-radius: calc(var(--r) - var(--pad));
+  transition: height 0.42s var(--ease-settle), padding 0.42s var(--ease-settle), border-radius 0.42s var(--ease-settle), background-color 0.3s, transform 0.26s var(--ease-pop); }
+.ts-nav[data-compact="true"] .ts-nav__cta { padding: 0 calc((var(--item) - 14px) / 2); border-radius: 50%; margin-left: 4px; }
+.ts-nav__cta:active { transform: scale(0.92); }
+.ts-nav__cta-label { display: inline-block; max-width: 12em; overflow: hidden; white-space: nowrap; transition: max-width 0.42s var(--ease-settle), opacity 0.2s var(--ease-ui); }
+.ts-nav__cta-icon { display: grid; place-items: center; width: 0; overflow: hidden; opacity: 0; transform: scale(0.4) rotate(-30deg);
+  transition: width 0.42s var(--ease-settle), opacity 0.2s var(--ease-ui), transform 0.34s var(--ease-pop); }
+.ts-nav[data-compact="true"] .ts-nav__cta-label { max-width: 0; opacity: 0; }
+.ts-nav[data-compact="true"] .ts-nav__cta-icon { width: 14px; opacity: 1; transform: none; transition-delay: 0.08s; }
+
+.ts-nav__right { display: flex; align-items: center; gap: 6px; }
+
 .ts-nav__strip {
-  width: 0; min-width: 100%;
-  transition: height 0.45s var(--ease-island), opacity 0.25s var(--ease-ui), border-color 0.3s;
-  border-top: 1px solid var(--line-dark); height: 24px; overflow: hidden; display: flex; align-items: center;
-  font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(241, 255, 255, 0.6);
+  display: flex; align-items: center; width: 0; min-width: 100%; height: 24px; overflow: hidden;
+  border-top: 1px solid var(--line-dark); color: rgba(241, 255, 255, 0.6);
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
+  transition: height 0.42s var(--ease-settle), opacity 0.2s var(--ease-ui), border-color 0.3s, color 0.3s;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
 }
-.ts-nav__track { display: flex; gap: 40px; padding-left: 40px; white-space: nowrap; animation: ts-marquee 42s linear infinite; }
+.ts-nav__strip:hover { color: var(--on-dark); }
+.ts-nav[data-compact="true"] .ts-nav__strip { height: 0; border-top-color: transparent; opacity: 0; }
+.ts-nav__track { display: flex; gap: 40px; padding-left: 40px; white-space: nowrap; animation: ts-marquee 30s linear infinite; }
+.ts-nav__strip:hover .ts-nav__track { animation-play-state: paused; }
 .ts-nav__track b { color: var(--signal); font-weight: 500; }
 @keyframes ts-marquee { to { transform: translateX(-50%); } }
 
@@ -151,15 +206,24 @@
 .ts-nav[data-tone="light"] .ts-nav__link { color: rgba(15, 15, 16, 0.72); }
 .ts-nav[data-tone="light"] .ts-nav__link:hover, .ts-nav[data-tone="light"] .ts-nav__link[aria-current="page"] { color: var(--on-light); }
 .ts-nav[data-tone="light"] .ts-nav__link--quiet { color: rgba(15, 15, 16, 0.55); }
+.ts-nav[data-tone="light"] .ts-nav__icon { color: rgba(15, 15, 16, 0.7); }
+.ts-nav[data-tone="light"] .ts-nav__icon:hover, .ts-nav[data-tone="light"] .ts-nav__icon:focus-visible { background: rgba(15, 15, 16, 0.07); color: var(--signal); }
+.ts-nav[data-tone="light"] .ts-nav__icon[aria-current="page"] { color: var(--on-light); }
+.ts-nav[data-tone="light"] .ts-nav__tip { background: rgba(241, 255, 255, 0.92); color: var(--on-light); border-color: var(--line-light); }
 .ts-nav[data-tone="light"] .ts-nav__strip { border-color: var(--line-light); color: rgba(15, 15, 16, 0.6); }
+.ts-nav[data-tone="light"] .ts-nav__strip:hover { color: var(--on-light); }
 .ts-nav[data-tone="light"] .ts-nav__track b { color: var(--signal-light); }
-.ts-nav[data-tone="light"] .ts-btn--primary { background: var(--signal-light); color: #fff; }
+.ts-nav[data-tone="light"] .ts-btn--primary { background: var(--signal-light); color: var(--ink); }
 
-.ts-nav__menu-btn { display: none; width: 38px; height: 38px; border-radius: 12px; border: 1px solid var(--line-dark); background: transparent; color: inherit; align-items: center; justify-content: center; }
+.ts-nav__menu-btn { display: none; width: var(--item); height: var(--item); border-radius: calc(var(--r) - var(--pad)); border: 1px solid var(--line-dark); background: transparent; color: inherit; align-items: center; justify-content: center;
+  transition: width 0.42s var(--ease-settle), height 0.42s var(--ease-settle), border-radius 0.42s var(--ease-settle); }
+.ts-nav[data-compact="true"] .ts-nav__menu-btn { border-radius: 50%; }
 .ts-nav[data-tone="light"] .ts-nav__menu-btn { border-color: var(--line-light); }
 .ts-nav__menu-btn span { display: block; width: 14px; height: 1.5px; background: currentColor; position: relative; }
 .ts-nav__menu-btn span::before, .ts-nav__menu-btn span::after { content: ""; position: absolute; left: 0; width: 14px; height: 1.5px; background: currentColor; }
 .ts-nav__menu-btn span::before { top: -5px; } .ts-nav__menu-btn span::after { top: 5px; }
+.ts-nav[data-compact="true"] .ts-nav__menu-btn span, .ts-nav[data-compact="true"] .ts-nav__menu-btn span::before, .ts-nav[data-compact="true"] .ts-nav__menu-btn span::after { width: 11px; }
+.ts-nav[data-compact="true"] .ts-nav__menu-btn span::before { top: -4px; } .ts-nav[data-compact="true"] .ts-nav__menu-btn span::after { top: 4px; }
 
 .ts-sheet {
   position: fixed; inset: 0; z-index: 70; background: rgba(15, 15, 16, 0.94);
@@ -177,11 +241,12 @@
 .ts-sheet__foot { margin-top: auto; display: flex; flex-direction: column; gap: 16px; }
 
 @media (max-width: 820px) {
-  .ts-nav { top: 12px; width: calc(100% - 24px); }
+  .ts-nav { top: 12px; width: calc(100% - 24px); transition: background-color 0.35s var(--ease-ui), border-color 0.35s var(--ease-ui), color 0.35s var(--ease-ui), top 0.42s var(--ease-settle), width 0.42s var(--ease-settle); }
+  .ts-nav[data-compact="true"] { top: 10px; width: 132px; }
   .ts-nav__bar { justify-content: space-between; gap: 10px; }
-  .ts-nav__links-wrap { display: none; }
+  .ts-nav__links-wrap, .ts-nav__icons-wrap { display: none; }
   .ts-nav__menu-btn { display: inline-flex; }
-  .ts-nav__right { display: flex; gap: 8px; align-items: center; }
+  .ts-nav__right { display: flex; gap: 6px; align-items: center; }
 }
 
 /* ── Footer ─────────────────────────────────────────────── */
@@ -196,14 +261,23 @@
 
 /* ── ASCII grain over the whole site ───────────────────── */
 
-.ts-ascii-grain { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 55; pointer-events: none; opacity: 0.07; mix-blend-mode: difference; }
+.ts { position: relative; }
+/* Laid over the whole page (not the screen), so it scrolls with the content. */
+.ts-ascii-grain { position: absolute; inset: 0; z-index: 55; pointer-events: none; opacity: 0.07; mix-blend-mode: difference; background-repeat: repeat; }
 
 /* ── Cursor ─────────────────────────────────────────────── */
 
-.ts-cursor { position: fixed; top: 0; left: 0; z-index: 90; pointer-events: none; width: 14px; height: 17px; margin: -8px 0 0 -7px; color: var(--on-dark); mix-blend-mode: difference; transition: opacity 0.2s; will-change: transform; }
-.ts-cursor svg { width: 100%; height: 100%; display: block; transition: transform 0.25s var(--ease-out); }
-.ts-cursor[data-hover="true"] svg { transform: scale(1.4); }
+.ts-cursor { position: fixed; top: 0; left: 0; z-index: 90; pointer-events: none; width: 14px; height: 17px; margin: -8px 0 0 -7px; color: var(--on-dark); mix-blend-mode: difference; transition: opacity 0.2s, color 0.2s var(--ease-ui); will-change: transform; }
+/* It leans into the direction it moves (--lean, set per frame). */
+.ts-cursor svg { width: 100%; height: 100%; display: block; rotate: var(--lean, 0deg); transition: transform 0.3s var(--ease-pop); }
+/* Over anything clickable it turns blue, grows, and a ring pops out around it. */
+.ts-cursor::after { content: ""; position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; border: 1.5px solid currentColor;
+  opacity: 0; scale: 0.3; transition: opacity 0.18s var(--ease-ui), scale 0.32s var(--ease-pop); }
+.ts-cursor[data-hover="true"] { color: var(--signal); mix-blend-mode: normal; }
+.ts-cursor[data-hover="true"] svg { transform: scale(1.6) translateY(-1px); }
+.ts-cursor[data-hover="true"]::after { opacity: 0.55; scale: 1; }
 .ts-cursor[data-down="true"] svg { transform: scale(0.75) translateY(2px); transition-duration: 0.08s; }
+.ts-cursor[data-down="true"]::after { scale: 0.8; opacity: 0.9; transition-duration: 0.08s; }
 
 /* A click throws a ring of characters outward. */
 .ts-burst { position: fixed; z-index: 91; pointer-events: none; width: 0; height: 0; font-family: "Sohne Mono", ui-monospace, monospace; font-size: 10px; font-weight: 500; color: #1d9bf0; }
@@ -213,7 +287,7 @@
 /* ── Glyph wipe at a seam ───────────────────────────────── */
 
 .ts-seam { position: relative; height: 0; z-index: 2; }
-.ts-seam canvas { position: absolute; left: 0; width: 100%; height: 160px; top: -80px; display: block; pointer-events: none; }
+.ts-seam canvas { position: absolute; left: 0; width: 100%; height: 192px; top: -96px; display: block; pointer-events: none; }
 
 /* ── Reveal on view ─────────────────────────────────────── */
 
@@ -222,6 +296,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .ts-nav__track { animation: none; }
+  .ts-nav[data-moved] { animation: none !important; }
   .ts-reveal { opacity: 1; transform: none; transition: none; }
   .ts-sheet, .ts-sheet__link { transition: none; }
 }

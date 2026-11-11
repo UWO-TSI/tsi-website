@@ -3,16 +3,21 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { FilePen, GraduationCap, HandCoins, HandHeart, LogIn, Mail, Sparkles, UserPlus } from "lucide-react";
 import TsiLogo from "@/components/ui/TsiLogo";
 import { PLAY_ORIGIN } from "@/lib/hosts";
-import { YEAR } from "@/lib/site/config";
 import type { SeasonCta } from "@/lib/site/season";
 
 const LINKS = [
-  { label: "Nonprofits", href: "/npo" },
-  { label: "GENESIS", href: "/genesis" },
-  { label: "Students", href: "/student/apply" },
+  { label: "Nonprofits", href: "/npo", Icon: HandHeart },
+  { label: "GENESIS", href: "/genesis", Icon: Sparkles },
+  { label: "Students", href: "/student/apply", Icon: GraduationCap },
 ];
+
+const CTA_ICON = { sponsors: HandCoins, nonprofits: FilePen, students: UserPlus } as const;
+
+/** What the strip under the full nav scrolls. */
+const STRIP = { label: "Sponsor GENESIS", when: "March 2027", href: "/genesis" };
 
 /** The tone of the section under the nav's middle, so the pill stays readable over light grounds. */
 function useToneUnder(ref: React.RefObject<HTMLElement | null>) {
@@ -39,8 +44,8 @@ function useToneUnder(ref: React.RefObject<HTMLElement | null>) {
 }
 
 /**
- * Compact (a "dynamic island") once the page has scrolled and the reader is scrolling down; full again on
- * scroll up, hover or keyboard focus.
+ * Compact (a "dynamic island" of icons) once the page has scrolled and the reader is scrolling down;
+ * full again on scroll up or near the top.
  */
 function useCompact() {
   const [compact, setCompact] = useState(false);
@@ -64,11 +69,14 @@ function useCompact() {
 export default function SiteNav({ cta, contact }: { cta: SeasonCta; contact: string }) {
   const navRef = useRef<HTMLElement>(null);
   const tone = useToneUnder(navRef);
-  const scrolledCompact = useCompact();
-  const [held, setHeld] = useState(false);
-  const compact = scrolledCompact && !held;
+  const compact = useCompact();
+  // The squash only plays once the island has moved, never on load.
+  const [moved, setMoved] = useState(false);
+  if (compact && !moved) setMoved(true);
+  const [tip, setTip] = useState<{ label: string; x: number } | null>(null);
   const path = usePathname();
   const [open, setOpen] = useState(false);
+  const CtaIcon = CTA_ICON[cta.kind];
 
   useEffect(() => {
     if (!open) return;
@@ -78,45 +86,65 @@ export default function SiteNav({ cta, contact }: { cta: SeasonCta; contact: str
     return () => { window.removeEventListener("keydown", onKey); document.documentElement.style.overflow = ""; };
   }, [open]);
 
-  const strip = YEAR.map((d) => (
-    <span key={d.title}><b>{d.when}</b>&nbsp;&nbsp;{d.title}</span>
+  /** The label under the island glides to whichever icon is hovered or focused. */
+  const showTip = (label: string) => (e: React.SyntheticEvent<HTMLElement>) => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const a = e.currentTarget.getBoundingClientRect(), b = nav.getBoundingClientRect();
+    setTip({ label, x: a.left - b.left + a.width / 2 });
+  };
+  const tipProps = (label: string) => ({ "aria-label": label, onPointerEnter: showTip(label), onFocus: showTip(label), onPointerLeave: () => setTip(null), onBlur: () => setTip(null) });
+
+  const strip = Array.from({ length: 4 }, (_, i) => (
+    <span key={i}>{STRIP.label}&nbsp;&nbsp;<b>{STRIP.when}</b></span>
   ));
 
   return (
     <>
-      <header
-        ref={navRef}
-        className="ts-nav"
-        data-tone={tone}
-        data-compact={compact}
-        onPointerEnter={() => setHeld(true)}
-        onPointerLeave={() => setHeld(false)}
-        onFocus={() => setHeld(true)}
-        onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setHeld(false); }}
-      >
+      <header ref={navRef} className="ts-nav" data-tone={tone} data-compact={compact} data-moved={moved || undefined}>
         <div className="ts-nav__bar">
           <Link href="/" className="ts-nav__logo" aria-label="Tethos home">
             <TsiLogo width={22} height={22} />
           </Link>
-          <div className="ts-nav__links-wrap">
-          <nav className="ts-nav__links" aria-label="Main">
-            {LINKS.map((l) => (
-              <Link key={l.href} href={l.href} className="ts-nav__link" aria-current={path === l.href ? "page" : undefined}>{l.label}</Link>
-            ))}
-            <a href={`mailto:${contact}`} className="ts-nav__link">Contact</a>
-            <a href={`${PLAY_ORIGIN}/`} className="ts-nav__link ts-nav__link--quiet">Student portal ↗</a>
-          </nav>
+          <div className="ts-nav__links-wrap" inert={compact}>
+            <nav className="ts-nav__links" aria-label="Main">
+              {LINKS.map((l) => (
+                <Link key={l.href} href={l.href} className="ts-nav__link" aria-current={path === l.href ? "page" : undefined}>{l.label}</Link>
+              ))}
+              <a href={`mailto:${contact}`} className="ts-nav__link">Contact</a>
+              <a href={`${PLAY_ORIGIN}/`} className="ts-nav__link ts-nav__link--quiet">Student portal ↗</a>
+            </nav>
+          </div>
+          <div className="ts-nav__icons-wrap" inert={!compact}>
+            <nav className="ts-nav__icons" aria-label="Main">
+              {LINKS.map((l, i) => (
+                <Link key={l.href} href={l.href} className="ts-nav__icon" style={{ "--i": i } as React.CSSProperties} aria-current={path === l.href ? "page" : undefined} {...tipProps(l.label)}>
+                  <l.Icon size={15} strokeWidth={1.8} aria-hidden="true" />
+                </Link>
+              ))}
+              <a href={`mailto:${contact}`} className="ts-nav__icon" style={{ "--i": 3 } as React.CSSProperties} {...tipProps("Contact")}>
+                <Mail size={15} strokeWidth={1.8} aria-hidden="true" />
+              </a>
+              <a href={`${PLAY_ORIGIN}/`} className="ts-nav__icon" style={{ "--i": 4 } as React.CSSProperties} {...tipProps("Student portal")}>
+                <LogIn size={15} strokeWidth={1.8} aria-hidden="true" />
+              </a>
+            </nav>
           </div>
           <div className="ts-nav__right">
-            <Link href={cta.href} className="ts-btn ts-btn--primary" data-cta={cta.kind}>{cta.label}</Link>
+            <Link href={cta.href} className="ts-btn ts-btn--primary ts-nav__cta" data-cta={cta.kind} aria-label={cta.label}
+              onPointerEnter={compact ? showTip(cta.label) : undefined} onPointerLeave={() => setTip(null)}>
+              <span className="ts-nav__cta-icon" aria-hidden="true"><CtaIcon size={14} strokeWidth={2} /></span>
+              <span className="ts-nav__cta-label">{cta.label}</span>
+            </Link>
             <button type="button" className="ts-nav__menu-btn" aria-label="Open menu" aria-expanded={open} onClick={() => setOpen(true)}>
               <span />
             </button>
           </div>
         </div>
-        <div className="ts-nav__strip" aria-label="This year's dates">
-          <div className="ts-nav__track">{strip}{strip}</div>
-        </div>
+        <Link href={STRIP.href} className="ts-nav__strip" aria-label={`${STRIP.label}, ${STRIP.when}`} inert={compact}>
+          <div className="ts-nav__track" aria-hidden="true">{strip}{strip}</div>
+        </Link>
+        <span className="ts-nav__tip" data-show={compact && !!tip} style={{ "--x": `${tip?.x ?? 0}px` } as React.CSSProperties} aria-hidden="true">{tip?.label}</span>
       </header>
 
       <div className="ts-sheet" data-open={open} inert={!open} role="dialog" aria-modal="true" aria-label="Menu">

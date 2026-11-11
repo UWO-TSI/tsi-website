@@ -7,7 +7,7 @@
 export type SiteConfig = {
   key: string;
   name: string;
-  /** The single signal colour: light blue on dark grounds, `accentOnLight` on light ones. */
+  /** The single signal colour, light blue on every ground (David, 2026-11-11). */
   accent: string;
   accentOnLight: string;
   contact: string;
@@ -19,7 +19,7 @@ export const TETHOS: SiteConfig = {
   key: "tethos",
   name: "Tethos",
   accent: "#1d9bf0",
-  accentOnLight: "#002fa7",
+  accentOnLight: "#1d9bf0",
   contact: "info@tethos.ca",
   instagram: "https://instagram.com/uwotsi",
   github: "https://github.com/UWO-TSI",

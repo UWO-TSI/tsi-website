@@ -6,9 +6,18 @@ const GROUND = { dark: "#0f0f10", deep: "#08090b", light: "#f1ffff" } as const;
 type Ground = keyof typeof GROUND;
 
 const GLYPHS = "01<>[]{}()/\\|=+*#%&$@!?;:.~ABCDEF0123456789";
-const CELL_W = 12;
-const CELL_H = 17;
-const HEIGHT = 160;
+// The same cell as the page grain (AsciiGrain), so the characters match the texture behind them.
+const CELL_W = 7;
+const CELL_H = 12;
+const HEIGHT = 192;
+// The seam steps through this many tones from one ground to the other, each step its own jagged edge.
+const STEPS = 5;
+
+const hex = (c: string) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
+const mix = (a: string, b: string, t: number) => {
+  const x = hex(a), y = hex(b);
+  return `rgb(${x.map((v, i) => Math.round(v + (y[i] - v) * t)).join(",")})`;
+};
 
 /** Smooth 1D value noise from a fixed random table, so each seam keeps its own skyline. */
 function makeNoise(seed: number) {
@@ -25,9 +34,10 @@ function makeNoise(seed: number) {
 }
 
 /**
- * The seam between two grounds, drawn as a stepped horizon of characters (contentarchitecture.dev's
- * glyph wipe, rebuilt). The skyline is jagged while the seam rises up the screen and settles as it
- * passes the top third. Characters at the edge flicker 8 times a second, only while on screen.
+ * The seam between two grounds, drawn as stepped horizons of characters (contentarchitecture.dev's
+ * glyph wipe, rebuilt): the ground changes in five tones (black, dark grey, grey, light grey, white),
+ * each with its own jagged edge. The edges are jagged while the seam rises up the screen and settle as
+ * it passes the top third. Characters at the edges flicker 8 times a second, only while on screen.
  */
 export default function GlyphSeam({ from, to, seed = 1 }: { from: Ground; to: Ground; seed?: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -36,8 +46,8 @@ export default function GlyphSeam({ from, to, seed = 1 }: { from: Ground; to: Gr
     const canvas = ref.current!;
     const ctx = canvas.getContext("2d")!;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const noise = makeNoise(seed);
-    const top = GROUND[from], bottom = GROUND[to];
+    const noises = Array.from({ length: STEPS - 1 }, (_, i) => [makeNoise(seed + i * 7.31), makeNoise(seed * 3.7 + i * 2.9)]);
+    const tones = Array.from({ length: STEPS }, (_, i) => mix(GROUND[from], GROUND[to], i / (STEPS - 1)));
     let cols = 0, rows = 0, dpr = 1, visible = false, timer = 0, raf = 0;
 
     const resize = () => {
@@ -61,36 +71,46 @@ export default function GlyphSeam({ from, to, seed = 1 }: { from: Ground; to: Gr
       raf = 0;
       if (!cols) return;
       const p = reduce ? 1 : progress();
-      const amp = 3.2 * (1 - 0.75 * p);
+      const amp = 2.4 * (1 - 0.6 * p);
       const frame = Math.floor(performance.now() / 125);
-      const mid = rows / 2;
+      // The edges sit evenly through the middle of the seam, about three rows apart.
+      const gap = 3, first = Math.round(rows / 2 - (gap * (STEPS - 2)) / 2);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.fillStyle = top;
+      ctx.fillStyle = tones[0];
       ctx.fillRect(0, 0, canvas.clientWidth, HEIGHT);
-      ctx.fillStyle = bottom;
-      const edges: number[] = [];
-      for (let c = 0; c < cols; c++) {
-        const n = noise(c * 0.18) * 0.7 + noise(c * 0.61 + 17) * 0.3;
-        const edge = Math.round(mid + (n - 0.5) * 2 * amp);
-        edges.push(edge);
-        ctx.fillRect(c * CELL_W, edge * CELL_H, CELL_W + 1, HEIGHT);
+      const edges: number[][] = [];
+      for (let k = 0; k < STEPS - 1; k++) {
+        const [n1, n2] = noises[k];
+        const row: number[] = [];
+        ctx.fillStyle = tones[k + 1];
+        for (let c = 0; c < cols; c++) {
+          const n = n1(c * 0.1) * 0.7 + n2(c * 0.36 + 17) * 0.3;
+          let edge = Math.round(first + k * gap + (n - 0.5) * 2 * amp);
+          if (k > 0) edge = Math.max(edge, edges[k - 1][c]);
+          row.push(edge);
+          ctx.fillRect(c * CELL_W, edge * CELL_H, CELL_W + 1, HEIGHT);
+        }
+        edges.push(row);
       }
-      ctx.font = `500 ${CELL_H * 0.72}px "Sohne Mono", ui-monospace, monospace`;
+      ctx.font = `500 ${CELL_H - 2}px "Sohne Mono", ui-monospace, monospace`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      for (let c = 0; c < cols; c++) {
-        const edge = edges[c];
-        for (let d = -2; d <= 1; d++) {
-          const row = edge + d;
-          if (row < 0 || row >= rows) continue;
-          const h = Math.sin((c * 31.7 + row * 11.3 + seed) * 12.9898) * 43758.5453;
-          const seedCell = h - Math.floor(h);
-          const odds = d === -1 || d === 0 ? 0.55 : 0.22;
-          if (seedCell > odds) continue;
-          const g = GLYPHS[Math.floor((seedCell * 977 + (reduce ? 0 : frame * (1 + (c % 3)))) % GLYPHS.length)];
-          ctx.fillStyle = d < 0 ? bottom : top;
-          ctx.globalAlpha = 0.35 + 0.65 * ((seedCell * 7) % 1);
-          ctx.fillText(g, c * CELL_W + CELL_W / 2, row * CELL_H + CELL_H / 2);
+      for (let k = 0; k < STEPS - 1; k++) {
+        for (let c = 0; c < cols; c++) {
+          const edge = edges[k][c];
+          for (let d = -2; d <= 1; d++) {
+            const row = edge + d;
+            if (row < 0 || row >= rows) continue;
+            const h = Math.sin((c * 31.7 + row * 11.3 + seed + k * 5.1) * 12.9898) * 43758.5453;
+            const seedCell = h - Math.floor(h);
+            const odds = d === -1 || d === 0 ? 0.45 : 0.16;
+            if (seedCell > odds) continue;
+            const g = GLYPHS[Math.floor((seedCell * 977 + (reduce ? 0 : frame * (1 + (c % 3)))) % GLYPHS.length)];
+            // Characters above an edge take the next tone down, those below it the tone above.
+            ctx.fillStyle = d < 0 ? tones[Math.min(STEPS - 1, k + 1)] : tones[k];
+            ctx.globalAlpha = 0.45 + 0.55 * ((seedCell * 7) % 1);
+            ctx.fillText(g, c * CELL_W + CELL_W / 2, row * CELL_H + CELL_H / 2);
+          }
         }
       }
       ctx.globalAlpha = 1;

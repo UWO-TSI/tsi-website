@@ -6,8 +6,9 @@ import { Person } from "./marks";
 const BURST = "*+#01@%&";
 
 /**
- * The cursor is one person from the Tethos mark (fine pointers only). It grows over links and buttons,
- * dips on press, and a click throws a ring of eight characters outward (420ms).
+ * The cursor is one person from the Tethos mark (fine pointers only). It leans as it moves; over links and
+ * buttons it turns blue, grows and gets a ring; it dips on press, and a click throws a ring of eight
+ * characters outward (420ms).
  */
 export default function PersonCursor() {
   const ref = useRef<HTMLDivElement>(null);
@@ -18,19 +19,23 @@ export default function PersonCursor() {
     root?.classList.add("has-cursor");
     const el = ref.current!;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    let x = -100, y = -100, cx = -100, cy = -100, frame = 0;
+    let x = -100, y = -100, cx = -100, cy = -100, lean = 0, frame = 0;
 
     const draw = () => {
       cx += (x - cx) * (reduce ? 1 : 0.35);
       cy += (y - cy) * (reduce ? 1 : 0.35);
       el.style.transform = `translate3d(${cx}px, ${cy}px, 0)`;
-      frame = Math.abs(x - cx) + Math.abs(y - cy) > 0.1 ? requestAnimationFrame(draw) : 0;
+      if (!reduce) {
+        lean += (Math.max(-18, Math.min(18, (x - cx) * 0.9)) - lean) * 0.25;
+        el.style.setProperty("--lean", `${lean.toFixed(2)}deg`);
+      }
+      frame = Math.abs(x - cx) + Math.abs(y - cy) + Math.abs(lean) > 0.1 ? requestAnimationFrame(draw) : 0;
     };
     const onMove = (e: PointerEvent) => {
       x = e.clientX; y = e.clientY;
       el.style.opacity = "1";
       const target = e.target as Element | null;
-      el.dataset.hover = String(!!target?.closest("a, button, [role='button'], label"));
+      el.dataset.hover = String(!!target?.closest("a, button, [role='button'], label, summary, select, input[type='submit'], input[type='checkbox'], input[type='radio']"));
       if (!frame) frame = requestAnimationFrame(draw);
     };
     const onDown = (e: PointerEvent) => {

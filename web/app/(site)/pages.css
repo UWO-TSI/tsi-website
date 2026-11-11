@@ -68,7 +68,7 @@
   font: inherit; font-size: 16px; transition: border-color 0.2s, box-shadow 0.2s;
 }
 .np-field textarea { resize: vertical; min-height: 96px; line-height: 1.5; }
-.np-field input:focus, .np-field select:focus, .np-field textarea:focus { outline: none; border-color: var(--signal-light); box-shadow: 0 0 0 3px rgba(0, 47, 167, 0.15); }
+.np-field input:focus, .np-field select:focus, .np-field textarea:focus { outline: none; border-color: var(--signal-light); box-shadow: 0 0 0 3px rgba(29, 155, 240, 0.2); }
 .np-check { display: flex; gap: 12px; align-items: flex-start; font-size: 15px; color: var(--on-light); }
 .np-check input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--signal-light); }
 .np-trap { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
@@ -85,7 +85,7 @@
 .gx-aura { position: absolute; inset: -20% -10% auto -10%; height: 140%; pointer-events: none; opacity: 0.9;
   background:
     radial-gradient(40% 35% at 70% 40%, rgba(29, 155, 240, 0.18), transparent 70%),
-    radial-gradient(30% 30% at 82% 62%, rgba(0, 47, 167, 0.28), transparent 70%),
+    radial-gradient(30% 30% at 82% 62%, rgba(29, 155, 240, 0.12), transparent 70%),
     radial-gradient(28% 26% at 20% 20%, rgba(29, 155, 240, 0.08), transparent 70%);
   filter: blur(20px); animation: gx-aura 18s ease-in-out infinite alternate; }
 @keyframes gx-aura { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(-3%, 2%, 0) scale(1.08); } }
