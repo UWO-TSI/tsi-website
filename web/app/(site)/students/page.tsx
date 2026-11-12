@@ -34,13 +34,15 @@ const STEPS = [
   { when: "October to April", step: "Build", line: "Your team builds for its nonprofit, then shows it at GENESIS in March." },
 ];
 
-/** The club outside the projects. Photo tiles say only what the photo shows. */
-const LIFE: { title: string; line: string; img?: string; alt?: string; size: "wide" | "tall" | "small" }[] = [
-  { title: "Cottage trip", line: "A weekend away in late August to meet the team before the year starts.", size: "small" },
-  { title: "This year's team", line: "Together outside, in TSI hoodies.", img: "/images/site/tsi-team-2026.webp", alt: "The 2026–27 TSI team in navy TSI hoodies, gathered outside behind a TSI banner", size: "wide" },
-  { title: "Townhalls", line: "The whole club meets every month, often with a social after.", size: "small" },
-  { title: "Volunteering", line: "With Common Grounds we made 344 sandwiches for Arc Aid.", img: "/images/site/tsi-common-grounds.webp", alt: "TSI members in a kitchen behind three bins of sandwiches made for Arc Aid", size: "tall" },
-  { title: "GENESIS", line: "Every team demos what it built, in March.", img: "/images/site/genesis-presenting.webp", alt: "Students presenting to a crowd at GENESIS 2026", size: "tall" },
+/** The club outside the projects, from the club's own photos. Each caption says only what its photo shows. */
+const LIFE: { title: string; line: string; img: string; alt: string; size: "wide" | "tall" }[] = [
+  { title: "Cottage trip", line: "A weekend away in late August to meet the team before the year starts.", img: "/images/site/students/cottage-dinner.webp", alt: "TSI members at dinner on a cottage deck", size: "wide" },
+  { title: "On the water", line: "Kayaking at the cottage.", img: "/images/site/students/cottage-kayak.webp", alt: "Two members in an inflatable kayak on a lake, seen from the shore", size: "tall" },
+  { title: "Skating", line: "A March social on the rink, then Korean barbecue.", img: "/images/site/students/skating.webp", alt: "A group of members in winter coats on an outdoor rink", size: "tall" },
+  { title: "Town halls", line: "The whole club meets every month, often with a social after.", img: "/images/site/students/town-hall.webp", alt: "Members in TSI hoodies with their arms up in a courtyard", size: "tall" },
+  { title: "GENESIS", line: "Every team demos what it built, in March.", img: "/images/site/students/genesis-hearts.webp", alt: "Members making heart hands at GENESIS", size: "tall" },
+  { title: "Arcade night", line: "A night out in March.", img: "/images/site/students/arcade.webp", alt: "A group of members posing in an arcade", size: "tall" },
+  { title: "Volunteering", line: "Making sandwiches for ArkAid.", img: "/images/site/students/sandwiches.webp", alt: "Members in a kitchen behind bins of sandwiches", size: "tall" },
   { title: "Tethos Island", line: "The club's own game, for members, at play.tethos.ca.", img: "/images/site/tethos-island.webp", alt: "Tethos Island, the member world: a small island with the club's buildings", size: "tall" },
 ];
 
@@ -130,20 +132,10 @@ export default async function StudentsPage() {
           </div>
           <ul className="st-life">
             {LIFE.map((t, i) => (
-              <Reveal as="li" key={t.title} className={`st-tile st-tile--${t.size}${t.img ? "" : " st-tile--text"}`} delay={0.05 * (i % 3)}>
-                {t.img ? (
-                  <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={t.img} alt={t.alt} loading="lazy" />
-                    <div className="st-tile__cap"><b>{t.title}</b><span>{t.line}</span></div>
-                  </>
-                ) : (
-                  <>
-                    <span className="st-tile__people" aria-hidden="true">{Array.from({ length: 5 }, (_, k) => <Person key={k} className="st-tile__person" />)}</span>
-                    <h3 className="ts-h3">{t.title}</h3>
-                    <p className="ts-body">{t.line}</p>
-                  </>
-                )}
+              <Reveal as="li" key={t.title} className={`st-tile st-tile--${t.size}`} delay={0.05 * (i % 3)}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={t.img} alt={t.alt} loading="lazy" />
+                <div className="st-tile__cap"><b>{t.title}</b><span>{t.line}</span></div>
               </Reveal>
             ))}
           </ul>
