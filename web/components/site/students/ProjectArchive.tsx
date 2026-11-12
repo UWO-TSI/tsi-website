@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { motion, useMotionTemplate, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion, useMotionTemplate, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { glitch } from "@/components/site/npo/FaqAscii";
@@ -13,7 +13,10 @@ const WIDE = "(min-width: 821px)";
 // The cover's character cell, and the letters it may flicker through.
 const CW = 5;
 const CH = 9;
-const TILT = -22;
+// A shallow camera, so the files read nearly face on.
+const TILT = -8;
+// How far the files away from the front are turned edge on (90 would be a full rolodex fin).
+const FIN = 58;
 
 /** The file's cover: its short name drawn big in Söhne, sampled per cell and written in the client's own letters. */
 function Cover({ mark, client }: { mark: string; client: string }) {
@@ -72,7 +75,7 @@ type File = ArchiveProject & { year: string; note: string; yi: number };
  * lifts 50 px and grows to 1.15, tilts up to 15 degrees toward the pointer on a spring, and a shine follows the pointer
  * with a blue glow behind it.
  */
-function FileCard({ f, i, n, onPick }: { f: File; i: number; n: number; onPick: () => void }) {
+function FileCard({ f, i, n, onPick }: { f: File; i: number; n: number; onPick: (from: DOMRect) => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState(false);
   const mx = useMotionValue(0), my = useMotionValue(0);
@@ -89,7 +92,7 @@ function FileCard({ f, i, n, onPick }: { f: File; i: number; n: number; onPick: 
   const leave = () => { setHover(false); mx.set(0); my.set(0); };
 
   return (
-    <li className="st-file" data-year={f.yi} data-on="false" style={{ ["--i" as string]: i }} onClick={onPick}>
+    <li className="st-file" data-year={f.yi} data-on="false" style={{ ["--i" as string]: i }} onClick={() => { const r = ref.current?.getBoundingClientRect(); if (r) onPick(r); }}>
       <motion.div
         ref={ref}
         className="st-file__body"
@@ -135,6 +138,67 @@ function FileCard({ f, i, n, onPick }: { f: File; i: number; n: number; onPick: 
 }
 
 /**
+ * A file opened: it flies from its place in the ring to the middle of the screen, big, with the team's photo across
+ * the top and the project under it. Clicking outside it, the close button or Escape puts it back; the page holds still
+ * while it is open.
+ */
+function FileOpen({ f, i, n, from, onClose }: { f: File; i: number; n: number; from: DOMRect; onClose: () => void }) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const before = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus({ preventScroll: true });
+    const key = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", key);
+    const lenis = (window as unknown as { __lenis?: { stop: () => void; start: () => void } }).__lenis;
+    const html = document.documentElement, overflow = html.style.overflow;
+    if (lenis) lenis.stop(); else html.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", key);
+      if (lenis) lenis.start(); else html.style.overflow = overflow;
+      before?.focus?.({ preventScroll: true });
+    };
+  }, [onClose]);
+
+  const w = Math.min(window.innerWidth - 32, 780);
+  const dx = from.left + from.width / 2 - window.innerWidth / 2, dy = from.top + from.height / 2 - window.innerHeight / 2, k = from.width / w;
+  const spring = { type: "spring" as const, stiffness: 260, damping: 28 };
+
+  return (
+    <motion.div className="st-open" role="dialog" aria-modal="true" aria-labelledby={`st-open-${f.slug}`} onClick={onClose}
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
+      <motion.article className="st-open__card" data-year={f.yi} style={{ width: w }} onClick={(e) => e.stopPropagation()}
+        initial={{ x: dx, y: dy, scale: k }} animate={{ x: 0, y: 0, scale: 1 }} exit={{ x: dx, y: dy, scale: k, opacity: 0 }} transition={spring}>
+        <span className="st-file__tab">{f.year}</span>
+        <div className="st-open__head">
+        <div className="st-open__photo">
+          {f.photo
+            ? // eslint-disable-next-line @next/next/no-img-element
+              <img src={f.photo} alt={`The ${f.client} team`} />
+            : <Cover mark={f.mark} client={f.client} />}
+        </div>
+        {f.logo && (
+          <span className="st-file__sticker st-open__sticker" data-dark={f.logoDark || undefined}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={f.logo} alt={`${f.client} logo`} />
+          </span>
+        )}
+        </div>
+        <div className="st-open__text">
+          <p className="st-open__meta">
+            <span>File {String(i + 1).padStart(2, "0")} / {String(n).padStart(2, "0")}</span>
+            <span>{f.year} · {f.note}</span>
+            {f.teams && <span>{f.teams} teams</span>}
+          </p>
+          <h3 className="st-open__client" id={`st-open-${f.slug}`}>{f.client}</h3>
+          <p className="st-open__built">{f.built}</p>
+        </div>
+        <button ref={closeRef} type="button" className="st-open__close" onClick={onClose}>Close <kbd>Esc</kbd></button>
+      </motion.article>
+    </motion.div>
+  );
+}
+
+/**
  * Every project as a file in a card index (David's references: a ring of cards you scroll through, and folders with
  * their files peeking out). On wide screens the section pins and the files stand in a tilted ring, edge on like a
  * rolodex; scrolling turns the ring, and the file at the front swings out to face you, so each scroll step brings up
@@ -167,7 +231,7 @@ export default function ProjectArchive({ years }: { years: readonly ArchiveYear[
     const apply = (p: number) => {
       if (!wide.matches || reduce) {
         list.style.transform = "";
-        cards.forEach((c) => { c.style.transform = ""; c.dataset.on = "false"; });
+        cards.forEach((c) => { c.style.transform = ""; c.style.opacity = ""; c.style.pointerEvents = ""; c.dataset.on = "false"; });
         return;
       }
       radius = Math.max(440, Math.min(window.innerWidth * 0.38, 700));
@@ -180,9 +244,13 @@ export default function ProjectArchive({ years }: { years: readonly ArchiveYear[
         // Edge on in the ring (a quarter turn, each side turned so its front shows); the one at the front turns to
         // face you, steps out and rises.
         const ang = ((((d * step + 180) % 360) + 360) % 360) - 180;
-        const face = 90 * (1 - a) * (ang < 0 ? 1 : -1);
+        const face = FIN * (1 - a) * (ang < 0 ? 1 : -1);
         c.style.transform = `rotateY(${ang.toFixed(2)}deg) translateZ(${(radius + 150 * a).toFixed(1)}px) rotateY(${face.toFixed(2)}deg) rotateX(${(-TILT * a).toFixed(2)}deg) translateY(${(-24 * a).toFixed(1)}px) scale(${(1 + 0.16 * a).toFixed(3)})`;
         c.dataset.on = a > 0.6 ? "true" : "false";
+        // The far side of the ring dims away, so it never clutters the files in front.
+        const near = Math.min(1, Math.max(0, (Math.cos((ang * Math.PI) / 180) + 0.45) / 0.65));
+        c.style.opacity = (0.08 + 0.92 * near).toFixed(3);
+        c.style.pointerEvents = near < 0.3 ? "none" : "";
       });
       setActive(Math.min(n - 1, Math.max(0, Math.round(f))));
       last = p;
@@ -288,6 +356,15 @@ export default function ProjectArchive({ years }: { years: readonly ArchiveYear[
     else window.scrollTo({ top: y, behavior: "smooth" });
   };
 
+  // Clicking a file brings it to the front of the ring and opens it in the middle of the screen.
+  const [opened, setOpened] = useState<{ i: number; from: DOMRect } | null>(null);
+  const pick = (i: number, from: DOMRect) => {
+    if (dragged.current) return;
+    go(i);
+    setOpened({ i, from });
+  };
+  const close = useCallback(() => setOpened(null), []);
+
   return (
     <section ref={section} className="st-ring" data-tone="dark" id="projects" aria-labelledby="projects-title" style={{ ["--n" as string]: files.length }}>
       <div className="st-ring__stage">
@@ -303,7 +380,7 @@ export default function ProjectArchive({ years }: { years: readonly ArchiveYear[
         </div>
         <div ref={view} className="st-ring__view">
           <ol ref={ring} className="st-ring__ring">
-            {files.map((f, i) => <FileCard key={f.slug} f={f} i={i} n={files.length} onPick={() => go(i)} />)}
+            {files.map((f, i) => <FileCard key={f.slug} f={f} i={i} n={files.length} onPick={(from) => pick(i, from)} />)}
           </ol>
         </div>
         <p className="st-ring__year" aria-hidden="true">
@@ -311,6 +388,9 @@ export default function ProjectArchive({ years }: { years: readonly ArchiveYear[
           <b ref={yearRef}>{years[0].year}</b>
         </p>
       </div>
+      <AnimatePresence>
+        {opened && <FileOpen key={opened.i} f={files[opened.i]} i={opened.i} n={files.length} from={opened.from} onClose={close} />}
+      </AnimatePresence>
     </section>
   );
 }

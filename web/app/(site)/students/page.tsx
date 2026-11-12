@@ -49,7 +49,6 @@ const LIFE: { title: string; line: string; img: string; alt: string; size: "wide
   { title: "Tethos Island", line: "The club's own game, for members, at play.tethos.ca.", img: "/images/site/tethos-island.webp", alt: "Tethos Island, the member world: a small island with the club's buildings", size: "tall" },
 ];
 
-const CHAPTER_MAIL = `mailto:${TETHOS.contact}?subject=${encodeURIComponent("Starting a TSI chapter")}`;
 
 const SECTIONS = [
   { id: "students", label: "Students" },
@@ -58,7 +57,6 @@ const SECTIONS = [
   { id: "alumni", label: "Where members worked" },
   { id: "life", label: "Outside the projects" },
   { id: "portal", label: "Portal opens" },
-  { id: "chapter", label: "Start a chapter" },
 ];
 
 export default async function StudentsPage() {
@@ -107,18 +105,6 @@ export default async function StudentsPage() {
       </section>
 
       <HiringPortal open={open} />
-      <section className="ts-section cl st-chapter-section" data-tone="dark" id="chapter" aria-labelledby="chapter-title">
-        <div className="ts-wrap st-chapter">
-          <Reveal delay={0.06}><h2 className="cl__title st-chapter__title" id="chapter-title">Start a chapter at your school.</h2></Reveal>
-          <Reveal delay={0.12}>
-            <p className="ts-lede" style={{ textAlign: "center", margin: "0 auto", maxWidth: "34em" }}>TSI started at Western and has a chapter at UBC. If you want one on your campus, email us and tell us about your school.</p>
-          </Reveal>
-          <Reveal delay={0.18} style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
-            <a href={CHAPTER_MAIL} className="ts-btn ts-btn--primary">Email {TETHOS.contact} <span className="ts-btn__arrow">→</span></a>
-            <Link href={APPLY} className="ts-btn ts-btn--ghost">See open roles</Link>
-          </Reveal>
-        </div>
-      </section>
       <GlyphSeam from="dark" to="light" seed={33} />
     </>
   );

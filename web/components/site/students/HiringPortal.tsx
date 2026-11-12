@@ -162,8 +162,8 @@ export default function HiringPortal({ open }: { open: boolean }) {
       // hole kept clear is the same oval shape, so the swirl never ends in a straight line.
       const hw = (rgt - l) / 2 + 2 * cw, hh = (bot - top) / 2 + ch;
       cx = (l + rgt) / 2; cy = (top + bot) / 2;
-      rx = Math.max(Math.min(w * 0.47, 820), hw / 0.5);
-      ry = Math.max(Math.min(h * 0.44, 430), hh / 0.45);
+      rx = Math.max(Math.min(w * 0.42, 820), hw / 0.52);
+      ry = Math.max(Math.min(h * 0.34, 420), hh / 0.45);
       hole = Math.hypot(hw / rx, hh / ry) + 0.03;
     };
 
@@ -193,7 +193,8 @@ export default function HiringPortal({ open }: { open: boolean }) {
         const d = Math.hypot(nx, ny);
         if (d < hole || d > 1.9) continue;
         // The swirl fades in over a short stretch outside the hole.
-        const fade = Math.min(1, (d - hole) / 0.1);
+        // ...and toward the section's edges, so the ring is never cut off by them.
+        const fade = Math.min(1, (d - hole) / 0.1, r / 10, (rows - 1 - r) / 10, c / 8, (cols - 1 - c) / 8);
         const a = Math.atan2(ny, nx);
         const rim = Math.exp(-(((d - 0.86) / 0.12) ** 2));
         const ring = d < 0.86 ? 0.4 * Math.exp(-(((d - 0.68) / 0.05) ** 2)) : 0.4 * Math.exp(-(d - 0.86) / 0.32);
