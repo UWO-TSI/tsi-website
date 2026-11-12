@@ -34,5 +34,5 @@ export function inNpoWindow(now: Date): boolean {
 export function seasonCta(now: Date, positions: PositionTimes[]): SeasonCta {
   if (positions.some((p) => isOpenRound(p, now))) return { kind: "students", label: "Join the team", href: "/student/apply" };
   if (inNpoWindow(now)) return { kind: "nonprofits", label: "Apply for the program", href: "/npo#apply" };
-  return { kind: "sponsors", label: "Sponsor GENESIS", href: "/genesis" };
+  return { kind: "sponsors", label: "Sponsor GENESIS", href: "/genesis#sponsor" };
 }

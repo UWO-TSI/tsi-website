@@ -29,6 +29,6 @@ describe("the nav's seasonal call to action", () => {
       { ...round("2026-11-01T16:00:00Z", "2026-11-30T20:00:00Z"), archived_at: "2026-11-02T00:00:00Z" },
       { ...round("2026-11-01T16:00:00Z", "2026-11-30T20:00:00Z"), is_active: false },
     ];
-    expect(seasonCta(now, positions)).toEqual({ kind: "sponsors", label: "Sponsor GENESIS", href: "/genesis" });
+    expect(seasonCta(now, positions)).toEqual({ kind: "sponsors", label: "Sponsor GENESIS", href: "/genesis#sponsor" });
   });
 });

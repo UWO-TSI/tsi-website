@@ -38,7 +38,7 @@ export default function GenesisHome() {
             ))}
           </ol>
           <Reveal>
-            <Link href="/genesis" className="ts-btn ts-btn--primary" style={{ marginTop: 8 }}>Sponsor GENESIS <span className="ts-btn__arrow">→</span></Link>
+            <Link href="/genesis#sponsor" className="ts-btn ts-btn--primary" style={{ marginTop: 8 }}>Sponsor GENESIS <span className="ts-btn__arrow">→</span></Link>
           </Reveal>
         </div>
       </div>

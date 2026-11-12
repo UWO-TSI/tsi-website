@@ -72,6 +72,8 @@
 .np-field input:focus, .np-field select:focus, .np-field textarea:focus { outline: none; border-color: var(--signal-light); box-shadow: 0 0 0 3px rgba(29, 155, 240, 0.2); }
 .np-check { display: flex; gap: 12px; align-items: flex-start; font-size: 15px; color: var(--on-light); }
 .np-check input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--signal-light); }
+.np-check--half { grid-column: auto; }
+.np-legend__note { font-style: normal; font-size: 14px; font-weight: 400; color: var(--on-light-3); margin-left: 6px; }
 .np-trap { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
 .np-form__send { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
 .np-form__error { color: #b42318; font-size: 15px; }
@@ -114,19 +116,18 @@
 .gx-flow__arrow { position: absolute; right: 12px; top: 28px; font-family: var(--mono); font-size: 22px; color: var(--on-dark-3); }
 @media (max-width: 820px) { .gx-flow { grid-template-columns: 1fr; } .gx-flow__step { padding-right: 0; } .gx-flow__arrow { position: static; transform: rotate(90deg); width: 22px; } }
 
-.gx-table-wrap { margin-top: 56px; overflow-x: auto; }
-.gx-table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 15px; }
-.gx-table th, .gx-table td { padding: 16px 14px; border-bottom: 1px solid var(--line-dark); text-align: center; }
-.gx-table th[scope="row"], .gx-table thead th:first-child { text-align: left; font-weight: 400; color: var(--on-dark-2); padding-left: 0; }
-.gx-table thead th { vertical-align: bottom; }
-.gx-table__tier { display: block; font-size: 20px; font-weight: 500; color: var(--on-dark); letter-spacing: -0.01em; }
-.gx-table__label { display: block; margin-top: 4px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--on-dark-3); font-weight: 400; }
-.gx-table [data-featured="true"] { background: rgba(29, 155, 240, 0.07); }
-.gx-table thead [data-featured="true"] { border-top: 2px solid var(--signal); }
-.gx-table__yes { color: var(--signal); font-size: 10px; }
-.gx-table__no { color: var(--on-dark-3); }
-.gx-table td { color: var(--on-dark); }
-.gx-cta { margin-top: 36px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px; }
+
+/* GENESIS 2026 at a glance: the stats, then the photos two by two, wide and narrow alternating. */
+.gx-glance__stats { display: flex; flex-wrap: wrap; gap: 24px 64px; margin: 40px 0 0; }
+.gx-glance__stats > div { display: flex; flex-direction: column-reverse; gap: 8px; }
+.gx-glance__stats dd { margin: 0; font-size: clamp(2.6rem, 5vw, 4.4rem); line-height: 1; }
+.gx-glance__stats .ts-label { color: var(--on-dark-3); }
+.gx-glance__photos { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 12px; margin-top: 56px; }
+.gx-glance__photo { grid-column: span 5; display: grid; gap: 10px; }
+.gx-glance__photo:nth-child(4n + 1), .gx-glance__photo:nth-child(4n + 4) { grid-column: span 7; }
+.gx-glance__photo img { width: 100%; height: 100%; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 6px; display: block; }
+.gx-glance__photo figcaption { font-size: 14px; color: var(--on-dark-3); }
+@media (max-width: 820px) { .gx-glance__photo, .gx-glance__photo:nth-child(4n + 1), .gx-glance__photo:nth-child(4n + 4) { grid-column: 1 / -1; } }
 
 .gx-thanks { padding: 72px 0 96px; border-top: 1px solid var(--line-dark); }
 .gx-thanks__title { color: var(--on-dark-2); }
