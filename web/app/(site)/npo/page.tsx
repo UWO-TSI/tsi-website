@@ -51,7 +51,7 @@ const FAQ = [
   { q: "Who can apply?", a: "Registered charities, nonprofits and social enterprises with a clear technology need and a limited budget for custom software." },
   { q: "Is there really no cost?", a: "The build is free: sponsors fund the program. The only costs are the ones that come with running it yourself, like your domain name." },
   { q: "What do you build with?", a: "Whatever fits the project. Most often Next.js, React, Node.js, PostgreSQL and Supabase. We decide together at kickoff." },
-  { q: "What happens after the support window?", a: "You have the full source code and documentation. Many organizations keep it running with their own staff or apply again for a follow-up project." },
+  { q: "What happens after the support window?", a: "You have the full source code and documentation. Many organizations keep it running with their own staff or apply again for a follow-up project. We also partner with software companies that will maintain it for you at a discounted rate." },
 ];
 
 const SECTIONS = [
