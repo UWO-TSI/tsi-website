@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { inNpoWindow, seasonCta } from "./season";
+import { inNpoWindow, nextHiringOpen, seasonCta } from "./season";
 
 const round = (opens: string, closes: string) => ({ is_active: true, archived_at: null, opens_at: opens, closes_at: closes });
 
@@ -30,5 +30,12 @@ describe("the nav's seasonal call to action", () => {
       { ...round("2026-11-01T16:00:00Z", "2026-11-30T20:00:00Z"), is_active: false },
     ];
     expect(seasonCta(now, positions)).toEqual({ kind: "sponsors", label: "Sponsor GENESIS", href: "/genesis#sponsor" });
+  });
+
+  it("counts down to Sep 10 at midnight in Toronto, rolling to next year a day after it passes", () => {
+    expect(nextHiringOpen(new Date("2026-11-12T16:00:00Z")).toISOString()).toBe("2027-09-10T04:00:00.000Z");
+    expect(nextHiringOpen(new Date("2027-03-01T16:00:00Z")).toISOString()).toBe("2027-09-10T04:00:00.000Z");
+    expect(nextHiringOpen(new Date("2027-09-10T20:00:00Z")).toISOString()).toBe("2027-09-10T04:00:00.000Z");
+    expect(nextHiringOpen(new Date("2027-09-11T05:00:00Z")).toISOString()).toBe("2028-09-10T04:00:00.000Z");
   });
 });

@@ -6,6 +6,7 @@ import Reveal from "@/components/site/Reveal";
 import GlyphSeam from "@/components/site/GlyphSeam";
 import DotNav from "@/components/site/DotNav";
 import StudentCrowd from "@/components/site/students/StudentCrowd";
+import HiringPortal from "@/components/site/students/HiringPortal";
 import { TETHOS } from "@/lib/site/config";
 import { loadSeasonCta } from "@/lib/site/season-server";
 
@@ -43,6 +44,7 @@ const SECTIONS = [
   { id: "students", label: "Students" },
   { id: "hiring", label: "Hiring" },
   { id: "life", label: "Outside the projects" },
+  { id: "portal", label: "Portal opens" },
   { id: "chapter", label: "Start a chapter" },
 ];
 
@@ -110,6 +112,7 @@ export default async function StudentsPage() {
       </section>
 
       <GlyphSeam from="light" to="dark" seed={35} />
+      <HiringPortal open={open} />
       <section className="ts-section cl" data-tone="dark" id="chapter" aria-labelledby="chapter-title">
         <div className="ts-wrap st-chapter">
           <Reveal delay={0.06}><h2 className="cl__title st-chapter__title" id="chapter-title">Start a chapter at your school.</h2></Reveal>

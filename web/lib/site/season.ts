@@ -8,6 +8,16 @@ export type SeasonCta = { kind: "students" | "nonprofits" | "sponsors"; label: s
 /** Nonprofit applications run Aug 10 to Aug 31, Toronto time, every year. */
 export const NPO_WINDOW = { opens: { month: 8, day: 10 }, closes: { month: 8, day: 31 } } as const;
 
+/** The September hiring round's applications open Sep 10 at midnight, Toronto time (EDT, UTC-4, in September). */
+export const HIRING_OPENS = { month: 9, day: 10 } as const;
+
+/** When the application portal next opens: this year's Sep 10 until a day after it has passed, then next year's. */
+export function nextHiringOpen(now: Date): Date {
+  const at = (year: number) => new Date(Date.UTC(year, HIRING_OPENS.month - 1, HIRING_OPENS.day, 4));
+  const year = now.getUTCFullYear();
+  return now.getTime() < at(year).getTime() + 86_400_000 ? at(year) : at(year + 1);
+}
+
 type PositionTimes = { is_active: boolean; archived_at?: string | null; opens_at?: string | null; closes_at?: string | null };
 
 /** A role the public can apply to right now (same rule as `isPositionOpen` in lib/recruitment.ts). */

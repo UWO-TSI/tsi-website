@@ -169,6 +169,14 @@
 .st-tile__cap { position: absolute; left: 0; right: 0; bottom: 0; display: grid; gap: 4px; padding: 56px 20px 18px; background: linear-gradient(transparent, rgba(8, 9, 11, 0.8)); color: #f1ffff; font-size: 15px; line-height: 1.45; }
 .st-tile__cap b { font-size: 17px; font-weight: 500; }
 .st-tile__cap span { color: rgba(241, 255, 255, 0.8); }
+/* The application portal countdown: a swirl of characters around a clock written in characters. */
+.hp { position: relative; overflow: hidden; min-height: min(100svh, 960px); display: grid; place-items: center; }
+.hp__canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+.hp__inner { position: relative; z-index: 1; width: min(100% - 32px, max(960px, 56vw)); padding: 0; display: grid; justify-items: center; gap: 24px; text-align: center; }
+.hp__title { font-size: clamp(1.6rem, 3vw, 2.6rem); }
+.hp__clock { width: 100%; height: clamp(200px, 11vw, 290px); }
+.hp__date { margin: 0; font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--on-dark-2); }
+@media (max-width: 760px) { .hp__clock { height: 250px; } }
 .st-chapter { display: grid; justify-items: center; gap: 24px; text-align: center; }
 .st-chapter__title { font-size: clamp(2.4rem, 5vw, 4.8rem); max-width: 14em; }
 @media (max-width: 900px) {
