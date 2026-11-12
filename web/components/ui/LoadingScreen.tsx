@@ -8,9 +8,10 @@ const SEEN = "tethos-loaded";
 // Around the ring from the top, clockwise.
 const ORDER = [5, 2, 3, 4, 0, 1];
 const STEP = 60;
-// It waits for the mark to assemble and breathe once, the fonts and the page's load event (at most MAX_MS), then clicks.
-const MIN_MS = ORDER.length * STEP + 700;
-const MAX_MS = 5000;
+// The people light up only after the mark has assembled, one at a time at most every LIGHT_MS, as the page loads.
+const ASSEMBLE_MS = ORDER.length * STEP + 260;
+const LIGHT_MS = 150;
+const MAX_MS = 6000;
 const CLICK_MS = 560;
 const LIFT_MS = 440;
 // The game's UI click (Kenney, CC0), as mp3 so every browser plays it.
@@ -19,16 +20,18 @@ const SPRAY = "*+#01@%&<>/=:";
 const SPRAY_N = 24;
 
 /**
- * The loading screen (David, 2026-11-12: "just the logo, centred, simple"): on black, the Tethos mark alone in the
- * middle, its six people arriving one by one and then breathing slowly while the page loads (fonts, then the load
- * event, at most MAX_MS). When the page is ready the mark clicks: it presses in, plays the game's UI click, turns
- * blue, sprays characters and sends two rings out, then the black lifts. Once per visit; reduced motion skips it.
- * Browsers may hold back the sound until the visitor has interacted with the site.
+ * The loading screen (David, 2026-11-12: "just the logo, centred, simple", and "it should actually load so each guy
+ * turns blue"): on black, the Tethos mark alone in the middle. Its six people arrive one by one, then each turns blue
+ * as the page really loads: the document, the fonts, the page's (non-lazy) images and the load event, so the sixth
+ * lights only when loading is done (or after MAX_MS). Then the mark clicks: it presses in, plays the game's UI click,
+ * sprays characters and sends two rings out, and the black lifts. Once per visit; reduced motion skips it. Browsers
+ * may hold back the sound until the visitor has interacted with the site.
  */
 export default function LoadingScreen() {
   // The applicant island, the member island (/student/dashboard) and the portal's title screen (/student) have their own.
   const recruitment = /^\/student(\/(apply|dashboard\/?$)|\/?$)/.test(usePathname());
   const [phase, setPhase] = useState<"loading" | "click" | "lift" | "gone">("loading");
+  const [lit, setLit] = useState(0);
   const mark = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
@@ -71,28 +74,38 @@ export default function LoadingScreen() {
       later(() => burst.remove(), 1000);
     };
 
-    const finish = () => {
-      if (done) return;
-      done = true;
-      later(() => {
-        setPhase("click");
-        audio.play().catch(() => {});
-        spray();
-        later(() => setPhase("lift"), CLICK_MS);
-        later(() => setPhase("gone"), CLICK_MS + LIFT_MS);
-      }, Math.max(0, MIN_MS - (performance.now() - t0)));
+    const click = () => {
+      setPhase("click");
+      audio.play().catch(() => {});
+      spray();
+      later(() => setPhase("lift"), CLICK_MS);
+      later(() => setPhase("gone"), CLICK_MS + LIFT_MS);
     };
 
-    const update = () => { if (fonts && loaded) finish(); };
-    const onLoad = () => { loaded = true; update(); };
+    // How far the page has loaded, 0 to 1; it reaches 1 only with the load event (or the time limit).
+    const progress = () => {
+      if (loaded) return 1;
+      const imgs = Array.from(document.images).filter((im) => im.loading !== "lazy");
+      const images = imgs.length ? imgs.filter((im) => im.complete).length / imgs.length : 1;
+      return Math.min(0.95, 0.1 + (document.readyState !== "loading" ? 0.15 : 0) + (fonts ? 0.2 : 0) + 0.45 * images);
+    };
+    // One more person turns blue each tick while the progress is ahead of them; the sixth means done.
+    let shown = 0;
+    const tick = window.setInterval(() => {
+      if (performance.now() - t0 < ASSEMBLE_MS) return;
+      const target = Math.floor(progress() * ORDER.length + 1e-6);
+      if (shown < target) { shown += 1; setLit(shown); }
+      if (shown === ORDER.length && !done) { done = true; clearInterval(tick); later(click, 280); }
+    }, LIGHT_MS);
+    const onLoad = () => { loaded = true; };
     window.addEventListener("load", onLoad);
-    if (document.fonts) document.fonts.ready.then(() => { fonts = true; update(); }, () => { fonts = true; update(); });
+    if (document.fonts) document.fonts.ready.then(() => { fonts = true; }, () => { fonts = true; });
     else fonts = true;
-    update();
-    later(() => { fonts = true; loaded = true; update(); }, MAX_MS);
+    later(() => { fonts = true; loaded = true; }, MAX_MS);
 
     return () => {
       timers.forEach(clearTimeout);
+      clearInterval(tick);
       window.removeEventListener("load", onLoad);
     };
   }, [recruitment]);
@@ -108,7 +121,7 @@ export default function LoadingScreen() {
       <span className="tl-ring tl-ring--late" />
       <svg ref={mark} className="tl-mark" viewBox="0 0 1410 1352">
         {PEOPLE.map((p, i) => (
-          <path key={i} d={p.d} fillRule={p.evenodd ? "evenodd" : undefined} style={{ animationDelay: `${ORDER.indexOf(i) * STEP}ms` }} />
+          <path key={i} d={p.d} fillRule={p.evenodd ? "evenodd" : undefined} className={ORDER.indexOf(i) < lit ? "is-lit" : undefined} style={{ animationDelay: `${ORDER.indexOf(i) * STEP}ms` }} />
         ))}
       </svg>
     </div>
@@ -119,7 +132,9 @@ const CSS = `
 [data-ts-loader]{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:#0f0f10;transition:transform ${LIFT_MS}ms cubic-bezier(.7,0,.3,1)}
 [data-ts-loader][data-phase=lift]{transform:translateY(-100%)}
 .tl-mark{position:relative;z-index:1;width:72px;height:69px;fill:#f1ffff;transition:fill .2s ease}
-.tl-mark path{opacity:0;transform-box:fill-box;transform-origin:center;animation:tl-arrive .22s cubic-bezier(.25,1,.5,1) forwards}
+.tl-mark path{opacity:0;transform-box:fill-box;transform-origin:center;transition:fill .25s ease;animation:tl-arrive .22s cubic-bezier(.25,1,.5,1) forwards}
+.tl-mark path.is-lit{fill:#1d9bf0;animation:tl-arrive .22s cubic-bezier(.25,1,.5,1) forwards,tl-lit .42s cubic-bezier(.34,1.56,.64,1)}
+@keyframes tl-lit{40%{scale:1.22}}
 @keyframes tl-arrive{from{opacity:0;transform:scale(.82)}to{opacity:1;transform:none}}
 [data-phase=loading] .tl-mark{animation:tl-breathe 3.2s ease-in-out .6s infinite}
 @keyframes tl-breathe{50%{opacity:.55}}

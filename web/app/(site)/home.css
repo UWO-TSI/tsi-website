@@ -23,8 +23,12 @@
 .hd-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
 .hd-cue { position: absolute; z-index: 2; left: 50%; bottom: 28px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 10px;
   font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--on-dark-3); opacity: calc(1 - var(--t) * 3); }
-.hd-cue__ring { width: 22px; height: 22px; border-radius: 50%; border: 1px dotted currentColor; animation: hd-cue 2.2s ease-out infinite; }
-@keyframes hd-cue { 0% { transform: scale(0.7); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+/* An arrow in characters: three v's lighting top to bottom, over and over. */
+.hd-cue__arrow { display: grid; justify-items: center; font-family: var(--mono); font-size: 13px; line-height: 0.62; color: var(--on-dark); }
+.hd-cue__arrow i { font-style: normal; opacity: 0.12; animation: hd-cue 1.4s ease-in-out infinite; }
+.hd-cue__arrow i:nth-child(2) { animation-delay: 0.18s; }
+.hd-cue__arrow i:nth-child(3) { animation-delay: 0.36s; }
+@keyframes hd-cue { 0%, 100% { opacity: 0.12; transform: translateY(-2px); } 30% { opacity: 1; transform: none; color: var(--signal); } 60% { opacity: 0.35; } }
 .hd-hint { position: absolute; z-index: 2; left: 50%; bottom: 30px; transform: translate(-50%, calc((1 - var(--hold)) * 8px)); pointer-events: none;
   font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--on-dark-2);
   opacity: var(--hold); transition: opacity 0.4s var(--ease-ui), transform 0.4s var(--ease-ui); }
@@ -182,7 +186,7 @@
   .hd-reveal { position: relative; clip-path: none; visibility: visible !important; padding-block: 120px; background: var(--paper); }
   .hd-wipe, .hd-hint { display: none; }
   .hd-reveal__inner { transform: none; }
-  .hd-cue__ring { animation: none; }
+  .hd-cue__arrow i { animation: none; opacity: 0.6; }
   .tm-window { transform: none; opacity: 1; transition: none; }
   .tm-photo img { transform: none; transition: none; }
   .dt-odo span { animation: none; transform: none; }
