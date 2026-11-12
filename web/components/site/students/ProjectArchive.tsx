@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { motion, useMotionTemplate, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { glitch } from "@/components/site/npo/FaqAscii";
-import type { ArchiveYear } from "@/lib/site/projects";
+import type { ArchiveProject, ArchiveYear } from "@/lib/site/projects";
 
 if (typeof window !== "undefined") gsap.registerPlugin(ScrollTrigger);
 
@@ -41,7 +42,7 @@ function Cover({ mark, client }: { mark: string; client: string }) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
       ctx.font = `500 ${CH - 1}px "Sohne Mono", ui-monospace, monospace`;
-      ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "#0f0f10";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "#f1ffff";
       for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
         let sum = 0;
         for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) {
@@ -59,6 +60,72 @@ function Cover({ mark, client }: { mark: string; client: string }) {
     document.fonts?.ready.then(draw, () => {});
   }, [mark, client]);
   return <canvas ref={ref} className="st-file__cover" aria-hidden="true" />;
+}
+
+type File = ArchiveProject & { year: string; note: string; yi: number };
+
+/**
+ * One project's file: a folder with the team's photo (or, until there is one, the client's short name in characters on
+ * a sheet) peeking out of it, the client's logo stuck on the front as a sticker, and the project on the folder. It
+ * reacts to the pointer the way the old pathway fan cards did (components/cards/Interactive3DCard): pointed at, it
+ * lifts 50 px and grows to 1.15, tilts up to 15 degrees toward the pointer on a spring, and a shine follows the pointer
+ * with a blue glow behind it.
+ */
+function FileCard({ f, i, n, onPick }: { f: File; i: number; n: number; onPick: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [hover, setHover] = useState(false);
+  const mx = useMotionValue(0), my = useMotionValue(0);
+  const rotateX = useSpring(useTransform(my, [-0.5, 0.5], [15, -15]), { stiffness: 150, damping: 20 });
+  const rotateY = useSpring(useTransform(mx, [-0.5, 0.5], [-15, 15]), { stiffness: 150, damping: 20 });
+  const shineX = useTransform(mx, [-0.5, 0.5], [0, 100]), shineY = useTransform(my, [-0.5, 0.5], [0, 100]);
+  const shine = useMotionTemplate`radial-gradient(circle at ${shineX}% ${shineY}%, rgba(255,255,255,0.2) 0%, transparent 60%)`;
+  const move = (e: React.PointerEvent) => {
+    const r = ref.current?.getBoundingClientRect();
+    if (!r) return;
+    mx.set((e.clientX - r.left - r.width / 2) / r.width);
+    my.set((e.clientY - r.top - r.height / 2) / r.height);
+  };
+  const leave = () => { setHover(false); mx.set(0); my.set(0); };
+
+  return (
+    <li className="st-file" data-year={f.yi} data-on="false" onClick={onPick}>
+      <motion.div
+        ref={ref}
+        className="st-file__body"
+        animate={{ scale: hover ? 1.15 : 1, y: hover ? -50 : 0 }}
+        transition={{ scale: { type: "spring", stiffness: 300, damping: 25 }, y: { type: "spring", stiffness: 300, damping: 25 } }}
+        onPointerMove={move}
+        onPointerEnter={(e) => { if (e.pointerType === "mouse") setHover(true); }}
+        onPointerLeave={leave}
+      >
+        <motion.div className="st-file__folder" style={{ rotateX: hover ? rotateX : 0, rotateY: hover ? rotateY : 0 }}>
+          <span className="st-file__tab">{f.year}</span>
+          <div className="st-file__photo">
+            {f.photo
+              ? // eslint-disable-next-line @next/next/no-img-element
+                <img src={f.photo} alt={`The ${f.client} team`} loading="lazy" />
+              : <Cover mark={f.mark} client={f.client} />}
+          </div>
+          <div className="st-file__front">
+            {f.logo && (
+              <span className="st-file__sticker" data-dark={f.logoDark || undefined}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={f.logo} alt={`${f.client} logo`} loading="lazy" />
+              </span>
+            )}
+            <p className="st-file__meta">
+              <span>File {String(i + 1).padStart(2, "0")} / {String(n).padStart(2, "0")}</span>
+              {f.teams && <span>{f.teams} teams</span>}
+            </p>
+            <h3 className="st-file__client">{f.client}</h3>
+            <p className="st-file__built">{f.built}</p>
+          </div>
+          <motion.span className="st-file__shine" aria-hidden="true" style={{ background: shine }} animate={{ opacity: hover ? 0.6 : 0 }} transition={{ duration: 0.3 }} />
+        </motion.div>
+        <motion.span className="st-file__glow" aria-hidden="true" animate={{ opacity: hover ? 1 : 0 }} transition={{ duration: 0.3 }} />
+      </motion.div>
+    </li>
+  );
 }
 
 /**
@@ -150,7 +217,7 @@ export default function ProjectArchive({ years }: { years: readonly ArchiveYear[
   };
 
   return (
-    <section ref={section} className="st-ring" data-tone="light" id="projects" aria-labelledby="projects-title" style={{ ["--n" as string]: files.length }}>
+    <section ref={section} className="st-ring" data-tone="deep" id="projects" aria-labelledby="projects-title" style={{ ["--n" as string]: files.length }}>
       <div className="st-ring__stage">
         <div className="ts-wrap st-ring__head">
           <h2 className="ts-h2" id="projects-title">What teams have built.</h2>
@@ -164,20 +231,7 @@ export default function ProjectArchive({ years }: { years: readonly ArchiveYear[
         </div>
         <div className="st-ring__view">
           <ol ref={ring} className="st-ring__ring">
-            {files.map((f, i) => (
-              <li key={`${f.year}-${f.client}`} className="st-file" data-year={f.yi} data-on="false" onClick={() => go(i)}>
-                <span className="st-file__tab">{f.year}</span>
-                <div className="st-file__sheet">
-                  <p className="st-file__meta">
-                    <span>File {String(i + 1).padStart(2, "0")} / {String(files.length).padStart(2, "0")}</span>
-                    {f.teams && <span>{f.teams} teams</span>}
-                  </p>
-                  <Cover mark={f.mark} client={f.client} />
-                  <h3 className="st-file__client">{f.client}</h3>
-                  <p className="st-file__built">{f.built}</p>
-                </div>
-              </li>
-            ))}
+            {files.map((f, i) => <FileCard key={f.slug} f={f} i={i} n={files.length} onPick={() => go(i)} />)}
           </ol>
         </div>
         <p className="st-ring__year" aria-hidden="true">

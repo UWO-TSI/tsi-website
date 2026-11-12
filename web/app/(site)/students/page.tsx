@@ -95,9 +95,7 @@ export default async function StudentsPage() {
 
       <NpoTimeline id="year" title="A year at TSI." stops={YEAR} months={YEAR_MONTHS} />
 
-      <GlyphSeam from="dark" to="light" seed={36} />
-      <ProjectArchive years={[...PROJECT_YEARS].reverse()} />
-      <GlyphSeam from="light" to="dark" seed={37} />
+      <ProjectArchive years={PROJECT_YEARS} />
       <AlumniLogos companies={ALUMNI_COMPANIES} />
 
       <section className="ts-section" data-tone="dark" id="hiring" aria-labelledby="hiring-title">

@@ -4,7 +4,18 @@
  * channels in the club's Discord. Each line says only what the team built; nothing here is estimated.
  */
 /** `mark`: the short name drawn in characters on the file's cover (the club's own abbreviations where it has them). */
-export type ArchiveProject = { client: string; mark: string; built: string; teams?: number };
+export type ArchiveProject = {
+  client: string;
+  slug: string;
+  mark: string;
+  built: string;
+  teams?: number;
+  /** The client's logo, shown as a sticker on the file; `logoDark` puts a white logo on a dark sticker. */
+  logo?: string;
+  logoDark?: boolean;
+  /** A photo of the team (or its project), from the club's own photos. */
+  photo?: string;
+};
 export type ArchiveYear = { year: string; note: string; projects: readonly ArchiveProject[] };
 
 export const PROJECT_YEARS: readonly ArchiveYear[] = [
@@ -12,40 +23,40 @@ export const PROJECT_YEARS: readonly ArchiveYear[] = [
     year: "2026–27",
     note: "Building now",
     projects: [
-      { client: "Boys and Girls Club London", mark: "BGC", built: "The MAP Program App: registration, each student's action plan, tutoring bookings and progress toward scholarship eligibility, in one app." },
-      { client: "Ark Aid Mission", mark: "AAM", built: "A kitchen dashboard for meals produced, people served, what goes into the meals and inventory on hand, plus the logging behind it." },
-      { client: "Grand Theatre", mark: "GT", built: "A carbon and energy dashboard that replaces an emissions spreadsheet and pulls in the building's live energy data." },
-      { client: "Brain Tumour Foundation of Canada", mark: "BTF", built: "A support hub for the Brain Tumour Walk: registration, donations, volunteer assignments and point of sale." },
-      { client: "Growing Chefs!", mark: "GC", built: "A dietary restriction system that tells chefs what a child can't eat and what to substitute." },
+      { client: "Boys and Girls Club London", slug: "bgc-2026", logo: "/logos/partners/bgc.svg", mark: "BGC", built: "The MAP Program App: registration, each student's action plan, tutoring bookings and progress toward scholarship eligibility, in one app." },
+      { client: "Ark Aid Mission", slug: "ark-aid", logo: "/logos/partners/arkaid.svg", mark: "AAM", built: "A kitchen dashboard for meals produced, people served, what goes into the meals and inventory on hand, plus the logging behind it." },
+      { client: "Grand Theatre", slug: "grand-theatre", logo: "/logos/partners/grand-theatre.svg", mark: "GT", built: "A carbon and energy dashboard that replaces an emissions spreadsheet and pulls in the building's live energy data." },
+      { client: "Brain Tumour Foundation of Canada", slug: "brain-tumour", logo: "/logos/partners/brain-tumour.svg", mark: "BTF", built: "A support hub for the Brain Tumour Walk: registration, donations, volunteer assignments and point of sale." },
+      { client: "Growing Chefs!", slug: "growing-chefs", logo: "/logos/partners/growing-chefs.svg", mark: "GC", built: "A dietary restriction system that tells chefs what a child can't eat and what to substitute." },
     ],
   },
   {
     year: "2025–26",
     note: "Shown at GENESIS 2026",
     projects: [
-      { client: "World Vision", mark: "WV", built: "An internal multi-agent platform and reusable workflows that speed up research, segmentation and project discovery." },
-      { client: "International Rescue Committee", mark: "IRC", built: "A pipeline that uses language models to turn inconsistent provider spreadsheets into one standard format, ready for a database." },
-      { client: "London Children's Museum", mark: "LCM", built: "A spacewalk repair exhibit: kids use a sensor glove and a joystick to control a virtual hand." },
-      { client: "ChildCan", mark: "CC", built: "A website redesign and migration for better accessibility, navigation, donations and resources." },
-      { client: "Plan International", mark: "PI", built: "A web app that replaces a legacy reconciliation tool and automates monthly expense intake, calculations and reports." },
-      { client: "Plan Catalyst", mark: "PC", built: "A cloud pipeline and machine-learning forecasts of public development indicators, shown on an interactive map." },
-      { client: "Canadian Red Cross", mark: "CRC", built: "SharePoint tagging, better search and automated reminders, so teams find accurate internal resources faster." },
+      { client: "World Vision", slug: "world-vision", logo: "/logos/projects/world-vision.svg", mark: "WV", built: "An internal multi-agent platform and reusable workflows that speed up research, segmentation and project discovery." },
+      { client: "International Rescue Committee", slug: "irc", logo: "/logos/projects/irc.svg", mark: "IRC", built: "A pipeline that uses language models to turn inconsistent provider spreadsheets into one standard format, ready for a database." },
+      { client: "London Children's Museum", slug: "lcm", logo: "/logos/projects/lcm.png", mark: "LCM", built: "A spacewalk repair exhibit: kids use a sensor glove and a joystick to control a virtual hand." },
+      { client: "ChildCan", slug: "childcan", logo: "/logos/projects/childcan.png", mark: "CC", built: "A website redesign and migration for better accessibility, navigation, donations and resources." },
+      { client: "Plan International", slug: "plan-international", logo: "/logos/projects/plan-international.svg", mark: "PI", built: "A web app that replaces a legacy reconciliation tool and automates monthly expense intake, calculations and reports." },
+      { client: "Plan Catalyst", slug: "plan-catalyst", logo: "/logos/projects/plan-catalyst.png", logoDark: true, mark: "PC", built: "A cloud pipeline and machine-learning forecasts of public development indicators, shown on an interactive map." },
+      { client: "Canadian Red Cross", slug: "red-cross", mark: "CRC", built: "SharePoint tagging, better search and automated reminders, so teams find accurate internal resources faster." },
     ],
   },
   {
     year: "2024–25",
     note: "The first year",
     projects: [
-      { client: "Daya Counselling Centre", mark: "DAYA", built: "A redesign and upgrade of its WordPress site." },
-      { client: "Youth Opportunities Unlimited", mark: "YOU", built: "A workflow tool for workshop tasks that ties them to skills and issues completion certificates." },
-      { client: "Boys and Girls Club London", mark: "BGC", built: "Campaign tracking: a link and a QR code for every channel, all landing on one tracked page." },
-      { client: "Thames Region Ecological Association", mark: "TREA", built: "A circular-economy website it can run itself, and a social media plan." },
-      { client: "United Way Elgin-Middlesex", mark: "UW", built: "A leaderboard app for the TD StairClimb fundraiser." },
-      { client: "Jet Aircraft Museum", mark: "JAM", built: "An interactive exhibit triggered by RFID tags, and a website redesign." },
-      { client: "GO Hockey", mark: "GO", built: "A membership website with registration, admin controls and checkout." },
-      { client: "EmpowHER TO", mark: "EHTO", built: "A website with FAQ pages and an admin dashboard, from one of its two teams.", teams: 2 },
-      { client: "Fund Homecare Canada", mark: "FHC", built: "A weekly grant scraper and dashboard, a website redesign and an analytics prototype.", teams: 3 },
-      { client: "Western Sales Club", mark: "WSC", built: "A website and an event-management app." },
+      { client: "Daya Counselling Centre", slug: "daya", logo: "/logos/projects/daya.png", mark: "DAYA", built: "A redesign and upgrade of its WordPress site." },
+      { client: "Youth Opportunities Unlimited", slug: "you", logo: "/logos/projects/you.png", mark: "YOU", built: "A workflow tool for workshop tasks that ties them to skills and issues completion certificates." },
+      { client: "Boys and Girls Club London", slug: "bgc-2024", logo: "/logos/projects/bgc-2024.png", mark: "BGC", built: "Campaign tracking: a link and a QR code for every channel, all landing on one tracked page." },
+      { client: "Thames Region Ecological Association", slug: "trea", logo: "/logos/projects/trea.png", mark: "TREA", built: "A circular-economy website it can run itself, and a social media plan." },
+      { client: "United Way Elgin-Middlesex", slug: "united-way", logo: "/logos/projects/united-way.png", mark: "UW", built: "A leaderboard app for the TD StairClimb fundraiser." },
+      { client: "Jet Aircraft Museum", slug: "jam", logo: "/logos/projects/jam.png", mark: "JAM", built: "An interactive exhibit triggered by RFID tags, and a website redesign." },
+      { client: "GO Hockey", slug: "go-hockey", logo: "/logos/projects/go-hockey.png", mark: "GO", built: "A membership website with registration, admin controls and checkout." },
+      { client: "EmpowHER TO", slug: "empowher", logo: "/logos/projects/empowher.png", mark: "EHTO", built: "A website with FAQ pages and an admin dashboard, from one of its two teams.", teams: 2 },
+      { client: "Fund Homecare Canada", slug: "fund-homecare", logo: "/logos/projects/fund-homecare.png", mark: "FHC", built: "A weekly grant scraper and dashboard, a website redesign and an analytics prototype.", teams: 3 },
+      { client: "Western Sales Club", slug: "wsc", logo: "/logos/projects/wsc.png", mark: "WSC", built: "A website and an event-management app." },
     ],
   },
 ];
