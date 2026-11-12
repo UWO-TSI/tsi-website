@@ -78,3 +78,15 @@ export const ALUMNI_COMPANIES: readonly { name: string; logo: string }[] = [
   { name: "Scotiabank", logo: "/logos/alumni/scotiabank.svg" },
   { name: "KPMG", logo: "/logos/alumni/kpmg.svg" },
 ];
+
+/**
+ * Every nonprofit a team has built for, once each, newest first, for the logo wall on /npo. Western Sales Club (a
+ * student club) and Plan Catalyst (Plan International's for-profit arm) aren't nonprofits, and the Red Cross emblem
+ * can't be used without the Red Cross's permission, so those three aren't on it.
+ */
+const NOT_ON_WALL = new Set(["wsc", "plan-catalyst"]);
+export const BUILT_FOR: readonly { name: string; logo: string }[] = PROJECT_YEARS.flatMap((y) => y.projects)
+  .filter((p) => p.logo && !NOT_ON_WALL.has(p.slug))
+  .filter((p, i, all) => all.findIndex((q) => q.client === p.client) === i)
+  // Each one's icon (its mark alone, cropped from the logo and turned into black ink, so it reads in characters).
+  .map((p) => ({ name: p.client, logo: `/logos/icons/${p.slug}.png` }));

@@ -17,7 +17,7 @@ const SETTLE_MS = 520;
  * reads as denser, so white letters in a logo stay open), and every inked cell spells the company's name. Pointing at
  * it turns it blue, each cell flickering through noise before it settles. Draws only when something changes.
  */
-function LogoGlyph({ name, src }: { name: string; src: string }) {
+function LogoGlyph({ name, src, dense = false }: { name: string; src: string; dense?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -62,7 +62,7 @@ function LogoGlyph({ name, src }: { name: string; src: string }) {
         return { cc, rr, k: Math.min(((cc - 2) * cell.cw) / bw, ((rr - 2) * cell.ch) / bh) };
       };
       let f = fit(CELL), cell = CELL;
-      if ((bh * f.k) / CELL.ch < MIN_ROWS) { cell = FINE; f = fit(FINE); }
+      if (dense || (bh * f.k) / CELL.ch < MIN_ROWS) { cell = FINE; f = fit(FINE); }
       CW = cell.cw; CH = cell.ch; cols = f.cc; rows = f.rr;
       const k = f.k;
       const ox = (cols * CW - bw * k) / 2, oy = (rows * CH - bh * k) / 2;
@@ -73,7 +73,8 @@ function LogoGlyph({ name, src }: { name: string; src: string }) {
           const sx = Math.floor(x0 + ((c * CW + (i + 0.5) * CW / 3) - ox) / k), sy = Math.floor(y0 + ((r * CH + (j + 0.5) * CH / 3) - oy) / k);
           if (sx >= x0 && sx <= x1 && sy >= y0 && sy <= y1) sum += ink[sy * iw + sx] / max;
         }
-        cover[r * cols + c] = sum / 9;
+        // Dense walls (icons with thin strokes) lift light coverage, so a hairline still gets a character.
+        cover[r * cols + c] = dense ? Math.min(1, Math.pow(sum / 9, 0.5)) : sum / 9;
       }
       settle = Float32Array.from({ length: cols * rows }, () => Math.random() * SETTLE_MS);
     };
@@ -115,21 +116,24 @@ function LogoGlyph({ name, src }: { name: string; src: string }) {
     tile.addEventListener("pointerenter", enter);
     tile.addEventListener("pointerleave", leave);
     return () => { ro.disconnect(); cancelAnimationFrame(raf); tile.removeEventListener("pointerenter", enter); tile.removeEventListener("pointerleave", leave); };
-  }, [name, src]);
+  }, [name, src, dense]);
 
   return <canvas ref={ref} className="st-logo__glyph" aria-hidden="true" />;
 }
 
-/** Where members and alumni have worked, each company's logo written in characters, its name underneath. */
-export default function AlumniLogos({ companies }: { companies: readonly { name: string; logo: string }[] }) {
+/**
+ * A wall of logos, each written in characters with its name underneath: where members and alumni have worked (on
+ * /students), and the nonprofits teams have built for (on /npo).
+ */
+export default function AlumniLogos({ companies, id = "alumni", title = "Where our members and alumni have worked.", cols = 5, dense = false }: { companies: readonly { name: string; logo: string }[]; id?: string; title?: string; cols?: number; dense?: boolean }) {
   return (
-    <section className="ts-section" data-tone="dark" id="alumni" aria-labelledby="alumni-title">
+    <section className="ts-section" data-tone="dark" id={id} aria-labelledby={`${id}-title`}>
       <div className="ts-wrap">
-        <Reveal delay={0.06}><h2 className="ts-h2" id="alumni-title" style={{ maxWidth: "14em" }}>Where our members and alumni have worked.</h2></Reveal>
-        <ul className="st-logos">
+        <Reveal delay={0.06}><h2 className="ts-h2" id={`${id}-title`} style={{ maxWidth: "14em" }}>{title}</h2></Reveal>
+        <ul className="st-logos" data-dense={dense || undefined} style={{ ["--cols" as string]: cols }}>
           {companies.map((co, i) => (
             <Reveal as="li" key={co.name} className="st-logo" delay={0.04 * (i % 5)}>
-              <LogoGlyph name={co.name} src={co.logo} />
+              <LogoGlyph name={co.name} src={co.logo} dense={dense} />
               <span className="st-logo__name">{co.name}</span>
             </Reveal>
           ))}

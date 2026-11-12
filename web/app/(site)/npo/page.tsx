@@ -7,6 +7,8 @@ import DotNav from "@/components/site/DotNav";
 import NpoApplyForm from "@/components/site/npo/NpoApplyForm";
 import NpoTimeline, { type TimelineStop } from "@/components/site/npo/NpoTimeline";
 import FaqAscii from "@/components/site/npo/FaqAscii";
+import AlumniLogos from "@/components/site/students/AlumniLogos";
+import { BUILT_FOR } from "@/lib/site/projects";
 import { npoFormOpen, NPO_WINDOW_LABEL } from "@/lib/npo-applications";
 import { TETHOS } from "@/lib/site/config";
 
@@ -56,6 +58,7 @@ const FAQ = [
 
 const SECTIONS = [
   { id: "npo-hero", label: "Program" },
+  { id: "built-for", label: "We've built for" },
   { id: "timeline", label: "Timeline" },
   { id: "questions", label: "Questions" },
   { id: "apply", label: "Apply" },
@@ -89,6 +92,8 @@ export default function NpoPage() {
           </div>
         </div>
       </section>
+
+      <AlumniLogos id="built-for" title="We've built for." companies={BUILT_FOR} cols={6} dense />
 
       <NpoTimeline title="Eight months, step by step." stops={TIMELINE} />
 
