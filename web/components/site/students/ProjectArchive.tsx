@@ -65,8 +65,9 @@ function Cover({ mark, client }: { mark: string; client: string }) {
 type File = ArchiveProject & { year: string; note: string; yi: number };
 
 /**
- * One project's file: a folder with the team's photo (or, until there is one, the client's short name in characters on
- * a sheet) peeking out of it, the client's logo stuck on the front as a sticker, and the project on the folder. It
+ * One project's file, landscape: the team's photo (or, without one, the client's short name in characters) fills the
+ * card, the project sits on a dark fade at the bottom, the year is on the folder tab and the client's logo is stuck on
+ * the corner as a sticker. Idle, it floats a little. It
  * reacts to the pointer the way the old pathway fan cards did (components/cards/Interactive3DCard): pointed at, it
  * lifts 50 px and grows to 1.15, tilts up to 15 degrees toward the pointer on a spring, and a shine follows the pointer
  * with a blue glow behind it.
@@ -88,41 +89,46 @@ function FileCard({ f, i, n, onPick }: { f: File; i: number; n: number; onPick: 
   const leave = () => { setHover(false); mx.set(0); my.set(0); };
 
   return (
-    <li className="st-file" data-year={f.yi} data-on="false" onClick={onPick}>
+    <li className="st-file" data-year={f.yi} data-on="false" style={{ ["--i" as string]: i }} onClick={onPick}>
       <motion.div
         ref={ref}
         className="st-file__body"
-        animate={{ scale: hover ? 1.15 : 1, y: hover ? -50 : 0 }}
-        transition={{ scale: { type: "spring", stiffness: 300, damping: 25 }, y: { type: "spring", stiffness: 300, damping: 25 } }}
+        animate={{ scale: hover ? 1.15 : 1, y: hover ? -50 : 0, z: hover ? 90 : 0 }}
+        transition={{ scale: { type: "spring", stiffness: 300, damping: 25 }, y: { type: "spring", stiffness: 300, damping: 25 }, z: { type: "spring", stiffness: 300, damping: 25 } }}
         onPointerMove={move}
         onPointerEnter={(e) => { if (e.pointerType === "mouse") setHover(true); }}
         onPointerLeave={leave}
       >
-        <motion.div className="st-file__folder" style={{ rotateX: hover ? rotateX : 0, rotateY: hover ? rotateY : 0 }}>
-          <span className="st-file__tab">{f.year}</span>
-          <div className="st-file__photo">
-            {f.photo
-              ? // eslint-disable-next-line @next/next/no-img-element
-                <img src={f.photo} alt={`The ${f.client} team`} loading="lazy" />
-              : <Cover mark={f.mark} client={f.client} />}
-          </div>
-          <div className="st-file__front">
+        {/* Idle, every file floats a little, each on its own beat. */}
+        <div className="st-file__float">
+          <motion.div className="st-file__card" style={{ rotateX: hover ? rotateX : 0, rotateY: hover ? rotateY : 0 }}>
+            <span className="st-file__tab">{f.year}</span>
+            <div className="st-file__surface">
+              <div className="st-file__bg" data-photo={f.photo ? "" : undefined}>
+                {f.photo
+                  ? // eslint-disable-next-line @next/next/no-img-element
+                    <img src={f.photo} alt={`The ${f.client} team`} loading="lazy" draggable={false} />
+                  : <Cover mark={f.mark} client={f.client} />}
+              </div>
+              <p className="st-file__meta">
+                <span>File {String(i + 1).padStart(2, "0")} / {String(n).padStart(2, "0")}</span>
+                {f.teams && <span>{f.teams} teams</span>}
+              </p>
+              <div className="st-file__text">
+                <h3 className="st-file__client">{f.client}</h3>
+                <p className="st-file__built">{f.built}</p>
+              </div>
+              <motion.span className="st-file__shine" aria-hidden="true" style={{ background: shine }} animate={{ opacity: hover ? 0.6 : 0 }} transition={{ duration: 0.3 }} />
+            </div>
             {f.logo && (
               <span className="st-file__sticker" data-dark={f.logoDark || undefined}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={f.logo} alt={`${f.client} logo`} loading="lazy" />
+                <img src={f.logo} alt={`${f.client} logo`} loading="lazy" draggable={false} />
               </span>
             )}
-            <p className="st-file__meta">
-              <span>File {String(i + 1).padStart(2, "0")} / {String(n).padStart(2, "0")}</span>
-              {f.teams && <span>{f.teams} teams</span>}
-            </p>
-            <h3 className="st-file__client">{f.client}</h3>
-            <p className="st-file__built">{f.built}</p>
-          </div>
-          <motion.span className="st-file__shine" aria-hidden="true" style={{ background: shine }} animate={{ opacity: hover ? 0.6 : 0 }} transition={{ duration: 0.3 }} />
-        </motion.div>
-        <motion.span className="st-file__glow" aria-hidden="true" animate={{ opacity: hover ? 1 : 0 }} transition={{ duration: 0.3 }} />
+          </motion.div>
+          <motion.span className="st-file__glow" aria-hidden="true" animate={{ opacity: hover ? 1 : 0 }} transition={{ duration: 0.3 }} />
+        </div>
       </motion.div>
     </li>
   );
@@ -164,12 +170,13 @@ export default function ProjectArchive({ years }: { years: readonly ArchiveYear[
         cards.forEach((c) => { c.style.transform = ""; c.dataset.on = "false"; });
         return;
       }
-      radius = Math.max(360, Math.min(window.innerWidth * 0.3, 560));
+      radius = Math.max(440, Math.min(window.innerWidth * 0.38, 700));
       list.style.transform = `translateZ(${-radius}px) rotateX(${TILT}deg)`;
       const f = p * (n - 1);
       cards.forEach((c, i) => {
         const d = i - f;
-        const a = ease(Math.max(0, 1 - Math.abs(d) / 1.15));
+        // A short swing (within 0.7 of a step), so two neighbours never stand half-turned into each other.
+        const a = ease(Math.max(0, 1 - Math.abs(d) / 0.7));
         // Edge on in the ring (a quarter turn, each side turned so its front shows); the one at the front turns to
         // face you, steps out and rises.
         const ang = ((((d * step + 180) % 360) + 360) % 360) - 180;
@@ -181,11 +188,6 @@ export default function ProjectArchive({ years }: { years: readonly ArchiveYear[
       last = p;
     };
 
-    trigger.current = ScrollTrigger.create({ trigger: el, start: "top top", end: "bottom bottom", onUpdate: (s) => apply(s.progress) });
-    apply(trigger.current.progress);
-    const onResize = () => apply(trigger.current?.progress ?? last);
-    window.addEventListener("resize", onResize);
-    wide.addEventListener("change", onResize);
     // Click and drag turns the ring: the drag moves the page's own scroll position (the ring follows the scroll), so a
     // drag and the wheel never disagree; letting go settles on the nearest file.
     const vw = view.current!;
@@ -199,6 +201,26 @@ export default function ProjectArchive({ years }: { years: readonly ArchiveYear[
       else window.scrollTo({ top: y, behavior: immediate ? "auto" : "smooth" });
     };
     let drag: { x: number; f0: number } | null = null;
+    // When the scroll comes to rest between two files, the ring settles on the nearer one.
+    let settle = 0;
+    trigger.current = ScrollTrigger.create({
+      trigger: el, start: "top top", end: "bottom bottom",
+      onUpdate: (s) => {
+        apply(s.progress);
+        clearTimeout(settle);
+        if (!wide.matches || reduce || drag) return;
+        settle = window.setTimeout(() => {
+          const t = trigger.current;
+          if (!t || !t.isActive || drag) return;
+          const f = t.progress * (n - 1);
+          if (Math.abs(f - Math.round(f)) > 0.02) scrollToFile(Math.round(f), false);
+        }, 220);
+      },
+    });
+    apply(trigger.current.progress);
+    const onResize = () => apply(trigger.current?.progress ?? last);
+    window.addEventListener("resize", onResize);
+    wide.addEventListener("change", onResize);
     const perFile = () => Math.max(70, Math.min(150, window.innerWidth / 13));
     const down = (e: PointerEvent) => {
       dragged.current = false;
@@ -224,6 +246,7 @@ export default function ProjectArchive({ years }: { years: readonly ArchiveYear[
     window.addEventListener("pointercancel", up);
 
     return () => {
+      clearTimeout(settle);
       trigger.current?.kill();
       window.removeEventListener("resize", onResize);
       wide.removeEventListener("change", onResize);
@@ -266,7 +289,7 @@ export default function ProjectArchive({ years }: { years: readonly ArchiveYear[
   };
 
   return (
-    <section ref={section} className="st-ring" data-tone="deep" id="projects" aria-labelledby="projects-title" style={{ ["--n" as string]: files.length }}>
+    <section ref={section} className="st-ring" data-tone="dark" id="projects" aria-labelledby="projects-title" style={{ ["--n" as string]: files.length }}>
       <div className="st-ring__stage">
         <div className="ts-wrap st-ring__head">
           <h2 className="ts-h2" id="projects-title">What teams have built.</h2>

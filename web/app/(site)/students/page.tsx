@@ -37,15 +37,6 @@ const YEAR: TimelineStop[] = [
   { at: 9, when: "May", title: "Next year's team", detail: "The executive team for next year is hired, and the cycle starts again." },
 ];
 
-/** How a September round runs, from the applicant portal's stages (screening, interview, final review). */
-const STEPS = [
-  { when: "September", step: "Apply", line: "Roles open in the applicant portal for about two weeks." },
-  { when: "After you apply", step: "Interview", line: "If you're shortlisted, your invite comes through the portal." },
-  { when: "Early October", step: "Final round", line: "In person, with the team." },
-  { when: "October", step: "Decision", line: "You hear back in the portal." },
-  { when: "October to April", step: "Build", line: "Your team builds for its nonprofit, then shows it at GENESIS in March." },
-];
-
 /** The club outside the projects, from the club's own photos. Each caption says only what its photo shows. */
 const LIFE: { title: string; line: string; img: string; alt: string; size: "wide" | "tall" }[] = [
   { title: "Cottage trip", line: "A weekend away in late August to meet the team before the year starts.", img: "/images/site/students/cottage-dinner.webp", alt: "TSI members at dinner on a cottage deck", size: "wide" },
@@ -65,7 +56,6 @@ const SECTIONS = [
   { id: "year", label: "A year at TSI" },
   { id: "projects", label: "Projects" },
   { id: "alumni", label: "Where members worked" },
-  { id: "hiring", label: "Hiring" },
   { id: "life", label: "Outside the projects" },
   { id: "portal", label: "Portal opens" },
   { id: "chapter", label: "Start a chapter" },
@@ -98,30 +88,7 @@ export default async function StudentsPage() {
       <ProjectArchive years={PROJECT_YEARS} />
       <AlumniLogos companies={ALUMNI_COMPANIES} />
 
-      <section className="ts-section" data-tone="dark" id="hiring" aria-labelledby="hiring-title">
-        <div className="ts-wrap">
-          <div className="st-hiring__head">
-            <Reveal delay={0.06}><h2 className="ts-h2" id="hiring-title">How hiring works.</h2></Reveal>
-            {open && <Reveal delay={0.1}><Link href={APPLY} className="st-open"><i aria-hidden="true" />Applications are open now</Link></Reveal>}
-          </div>
-          <ol className="st-steps">
-            {STEPS.map((s, i) => (
-              <Reveal as="li" key={s.step} className="st-step" delay={0.06 * i}>
-                <span className="st-step__dot" aria-hidden="true" />
-                <span className="st-step__when">{s.when}</span>
-                <h3 className="ts-h3">{s.step}</h3>
-                <p className="ts-body">{s.line}</p>
-              </Reveal>
-            ))}
-          </ol>
-          <Reveal delay={0.1}>
-            <p className="ts-body st-hiring__note">Next year&apos;s executive team is hired in May, the same way. <Link href={APPLY}>See open roles <span aria-hidden="true">→</span></Link></p>
-          </Reveal>
-        </div>
-      </section>
-
-      <GlyphSeam from="dark" to="light" seed={34} />
-      <section className="ts-section" data-tone="light" id="life" aria-labelledby="life-title">
+      <section className="ts-section" data-tone="dark" id="life" aria-labelledby="life-title">
         <div className="ts-wrap">
           <div className="st-life__head">
             <Reveal delay={0.06}><h2 className="ts-h2" id="life-title">Outside the projects.</h2></Reveal>
@@ -139,7 +106,6 @@ export default async function StudentsPage() {
         </div>
       </section>
 
-      <GlyphSeam from="light" to="dark" seed={35} />
       <HiringPortal open={open} />
       <section className="ts-section cl st-chapter-section" data-tone="dark" id="chapter" aria-labelledby="chapter-title">
         <div className="ts-wrap st-chapter">
