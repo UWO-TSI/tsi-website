@@ -209,7 +209,7 @@ export default function HeroDive() {
         </div>
 
         <div className="hd-cue" aria-hidden="true">
-          <span className="hd-cue__arrow"><i>v</i><i>v</i><i>v</i></span>
+          <span className="hd-cue__arrow"><i>v</i></span>
           Scroll
         </div>
         <div className="hd-hint" aria-hidden="true">Drag to explore · scroll to dive in</div>
