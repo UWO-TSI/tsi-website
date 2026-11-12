@@ -15,6 +15,7 @@ Current facts only: what's live, where, and the rules for changing it. Update it
 - **Prod migrations:** see the coordinator handoff for the applied and pending lists. The applied record is `~/tethos-launch-2026-09-29/migrations.log`.
 - **Realtime:** Fly `tethos-rt` v7.
 - **Marketing site (2026-11-11):** the redesigned www.tethos.ca (home, `/npo`, `/genesis`; spec `specs/site/revamp.md`) is live from `site/revamp` (3571b37f4). Its migration `20261111200000_npo_applications` was applied to prod first (dump `prod-before-npo-applications-20261111-1726.dump`, logged in `migrations.log`).
+- **Marketing site (2026-11-12):** second round live from `site/grain-words` (9ecafd0c8): new `/students` and `/contact`, `/npo` rebuilt (walking timeline, ASCII questions, one-screen form), `/genesis` sponsor form (`POST /api/sponsor-inquiries`, emails the sponsorship leads), progress loader, faster GENESIS fields. Migration `20261112000000_sponsor_inquiries` applied to prod first (dump `prod-before-sponsor-inquiries-20261111-2000.dump`, logged).
 - **Story canon:** `specs/lore.md`. **Classes v2:** on `main` behind `economy_settings.classes_v2` (0 in production).
 
 ## Branches and deploys
