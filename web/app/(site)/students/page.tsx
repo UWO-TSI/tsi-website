@@ -96,7 +96,7 @@ export default async function StudentsPage() {
       <NpoTimeline id="year" title="A year at TSI." stops={YEAR} months={YEAR_MONTHS} />
 
       <GlyphSeam from="dark" to="light" seed={36} />
-      <ProjectArchive years={PROJECT_YEARS} />
+      <ProjectArchive years={[...PROJECT_YEARS].reverse()} />
       <GlyphSeam from="light" to="dark" seed={37} />
       <AlumniLogos companies={ALUMNI_COMPANIES} />
 
